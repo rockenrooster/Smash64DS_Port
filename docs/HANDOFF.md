@@ -1,160 +1,163 @@
 # Handoff
 
-Updated: 2026-08-04 (cycle 64). **PUBLISHED AT THE SOURCE-EFFECTS DEFAULT, and
-Boundary is GREEN on the new binary.** New baseline:
-`smash64ds-battle-playable-hwtri.nds` `9DAC2CBE...46751004`,
-`smash64ds.nds` `73082983...441E4255`. Tick-HUD sibling
-`builds/build-c64-tickhud-pub` (`67770E49...FF77D7FC`) -- the instrument every
-measurement runs on, so rebuild it whenever the published pair is rebuilt. Two
-parked rollbacks, neither deletable: `builds/armB-flag0-published/` is the last
-flag-0 publish (`F9F00354...EC046ECE` / `4537DE66...CD6CCA9F`) and this cycle's
-A-arm; `builds/armA-preflip-baseline/` is the pre-campaign pair.
+Updated: 2026-08-05 (cycle 77). **The campaign is on R2-07's performance gate,
+and the instrument was rebuilt underneath it.** Nothing is published from this
+work yet; the shipping pair is still cycle 75
+(`smash64ds-battle-playable-hwtri.nds` `D16815BE…`, `smash64ds.nds`
+`369FA999…`, tick-HUD sibling `builds/build-c75-tickhud-publish`
+`15FD0F8E…`).
 
-**Gate 6 is closed by owner decision** -- *"36k p95 is worth it for
-correctness"*. `NDS_R2_SOURCE_EFFECTS_FULL` and `NDS_TASK39_FX_SHIELD` are
-DELETED, not set: the shield, respawn platform, impact wave and Fox reflector
-draw their source EFDesc models and the procedural stand-ins are gone (-627
-lines). Paired 128-frame price against the previous publish: WORK-H P50 +6,592,
-P95 +25,600, over-gate 15 -> 19 of 128, slips 0. Retirement inventory, what was
-deliberately KEPT, census and soak: `docs/BUGS.md` "GATE 6 CLOSED".
+## Read this first: every 128-frame measurement in the archive is unusable
 
-Nothing is blocked engineering-side. Every open `BUGS.md` row carries an explicit
-`OWNER ASK` line and all of them are now answerable on the published ROM -- read
-`docs/BUGS.md` first, it is their board. The one small owed item is a capture of
-Fox's entry Arwing, which needs a low frame-counter lock because the entry runs
-before the match clock starts.
+The owner directed the campaign onto the both-CPU configuration and a wider
+window. Doing so found that **the 128-frame window reads the cheapest 6% of the
+match.** Same ROM, same options, Boundary arm:
 
-## What the atlas bound actually was, because it was not contiguity
+| window | `WORK-H` P95 | over gate |
+|---|---:|---:|
+| 128 frames (441–568) | 1,156,992 | 8.7% |
+| **whole match (440–2040)** | **1,463,104** | **44.6%** |
 
-`ndsRendererHardwarePrepareBattleStaticTextures` asserted
-`gNdsRendererBattleStaticTextureBankMask == 3` -- that the static corpus
-STRADDLES texture banks A and B. That is a restatement of one corpus size, not
-a property of a correct corpus. Repacking the corpus to DS paletted made it
-small enough to fit in bank A alone, the mask read 1, residency failed closed
-at zero keys, and the renderer fell back to ordinary texture resolution. A
-stage whose static textures never became resident renders untextured -- the
-exact symptom that got charged to a 32,768-byte particle sheet running beside
-it.
+P95 understated by ~306,000; over-gate rate by five times. It sits in
+stop0–stop1: stop0 is 8 of 96 over gate, stop2 is 97 of 97. `sample-tick-hud-buckets.ps1`
+takes repeated ring dumps as of `58ca8723` (`-Samples` to 4096, `-RingStopStride`
+default 96, **ROM byte-identical** so older evidence stays comparable). Never
+take a gate reading on 128 frames again.
 
-The mask is derived from preparedBytes now, and so are the span end and the
-residency byte count in the verifier, which restated the same size at **six**
-sites. If a generated size ever appears as a literal in a gate again, that is
-the defect, not the size.
+## The two baselines — label every figure with its arm
 
-## Where the atlas landed
+| arm | role | `WORK-H` P50 | P95 | over gate |
+|---|---|---:|---:|---:|
+| **Boundary** mode 163 | **gate of record** | 1,092,032 | **1,463,104** | 713/1600 (44.6%) |
+| both-CPU | optimization target | 1,098,240 | 1,605,440 | 704/1600 (44.0%) |
 
-Four sheets of 8,192 bytes -- the allocation size that has never been refused --
-instead of one of 32,768. Same texels, bound per cell from the frame table; a
-sheet change costs a rebind plus a new primitive group, which is what an
-alpha-bucket change already cost. `NDS_PARTICLE_QUAD_ATLAS_SHEETS` is the free
-variable; **the sheet SIZE is the invariant**. Growing coverage means more
-sheets, never a bigger one.
+Slips 0 in both. **Gap is 343,104.** `Makefile:305-308` forbids reporting a
+both-CPU P95 as the Boundary figure; `PROJECT_GOAL.md` gates on representative
+gameplay. Both-CPU is only ~10% worse at P95 — harder, not a different animal.
 
-Every admitted cell is at SOURCE resolution now (cell cap 64, no reduction):
-shield 16x32 where it was 8x16, respawn halo 32x16 where it was 16x8, dust at
-its full 64x64. The static repack that paid for it is lossless and freed 74,496
-bytes; it also gained the oracle it never had, because nothing compared the
-repacked bytes -- `output_sha256` and the slow oracle both compare the canonical
-image upstream of the repack.
+## The target: effect DObj submits, and the denominator is the display list
 
-## Freezes are structurally closed now, and yesterday's fix was one of thirty-five
+`MISC` is the tail and it is a **cost, not a marker** — it passes the test that
+killed the old 0.21-quads-per-frame claim (`MISC`-hot and `SRC`-hot are
+near-disjoint; among `SRC`-normal frames `MISC`-hot is 79.9% over gate against
+32.9%). Inside `MISC`, effect DObj submits are **99.3%** of the excursion:
+359,717 ticks/frame on over-gate frames, **0** on clean ones.
 
-`rg 'while \(TRUE\);'` over the compiled decomp returns **35** sites. The
-2026-08-03 fix converted **2**, both in `syTaskmanCheckBufferLengths`, and the
-note it left read as though taskman owned the freeze. The owner filed "Shield
-freeze bug happened again" that afternoon against a build containing it.
+Phase split — an **exact partition**, nine phases summing with delta 0, all four
+nesting invariants holding. 160,627,648 ticks · 21,854 triangles · **1,360
+display lists** · 1,436 nodes:
 
-objman.c held nineteen more, and they are the ones a shield hits -- a shield
-effect allocates a GObj, a DObj and an MObj on the frame it spawns, and every
-exhausted pool ended in a spin. They record and fail the allocation now;
-`gNdsObjmanPanicCount` must read 0 and `gNdsObjmanPanicMask` names the site in
-source order. Left spinning on purpose: main.c's idle thread (a spin IS the
-behaviour) and scheduler.c's PAL branch (unreachable).
+| phase | share | per list |
+|---|---:|---:|
+| **generic DL interpreter (Exec − Tex)** | **65.57%** | 77,440 |
+| **texture resolve (Tex)** | **21.41%** | 25,289 |
+| Matrix | 6.93% | 8,179 |
+| everything else | ~5.8% | — |
 
-## The confetti structural difference, found and not yet fixed
+**Recoverable is ~315,000, not 363,004** — `MISC` +365,136 against `WORK-H`
++317,136 means ~48,000 displaces `FTR` rather than adding to the frame.
 
-`mnvsresults.c:3208` makes **two** emitters at different depths on different
-generator links: `(0,1000,-1000)` with `is_genlink_mask` FALSE, which
-`efmanager.c:6206` turns into `bankID | LBPARTICLE_MASK_GENLINK(3)`, and
-`(0,1000,-400)` with TRUE, which is `bankID` alone. `MASK_GENLINK(3)` is 32, so
-they land in alloc slots 0 and 4 -- one behind the fighters, one in front. The
-owner sees only the far one, which is the whole of "falls behind the fighter
-instead of infront".
+## What is dead, so nobody re-derives it
 
-The port's per-link gate is **source-exact** -- `lbparticle.c:1500` uses the
-same `gobj->camera_mask & (1 << j)` -- so the draw loop is not the defect, and a
-GDB run confirms both calls execute (breakpoints hit at `mnvsresults.c:3216` and
-`:3217`). What is unproven is whether the second emitter ALLOCATES
-(`efManagerConfettiMakeEffect` returns NULL on a short pool) and whether the
-Results GObj's `camera_mask` carries both slots. Blocked on the probe symbol
-below. Both emitters sit at x=0, so "not centered on the camera view" is the
-Results camera, not the emitter.
+- **Projectiles** — weapon DObj submit medians **44 ticks/frame**. Fox's laser
+  and Mario's fireball are not the tail. Native projectile owners are
+  architecture work, not gate work.
+- **Particles** — flat ~47,000/frame, hot–cold delta 4,838, inside the floor.
+  A P50 lever, never a gate lever. This retires SwitchPlan §7 option 2 (15 Hz
+  round-robin) as a *gate* answer.
+- **Texture thrash** — 1 upload per ~1,408 frames, 0 evictions, 0.0071% of the
+  effect cost. `Tex` is entirely cache-**hit** key-build/hash/lookup.
+- **`Find`** (0.44%) and **`Material`** (0.25%) — both named prime suspects,
+  both refuted. `Material` also clears §3.11: it bump-allocates from
+  `gSYTaskmanGraphicsHeap` with its caller saving/restoring the pointer and
+  bounds-checking, so it cannot block the way `syMallocSet` can.
+- **`FTR` as the gate** — flat only inside the bad window; across the match it
+  drops −161,024 on `MISC`-hot frames and is **anti-correlated** with the tail.
+- **Task 56 strips** — REVERT, and not for the recorded reason: 1,878 → 1,012
+  vertices links in, but **the ROM hangs the present loop** (cannot reach
+  presented frame 12 in 900 s; control does frames 10–13 in 30 s). Three
+  attempts, two builds, three days. The `PERF_LEDGER` KILL row citing `FTR`
+  +5,824 has no completed run behind it.
+- **L7 fixed-point collision** — wired, priced at +534 won against 6,481 lost to
+  its own text, removed. Collision is 2.9% of the over-gate premium.
 
-## THE FOUR ASSET ROWS ARE CLOSED HERE -- BUGS.md OWNS THEM NOW
+## The interpreter is honestly generic — ANSWERED, so the packet path is correct
 
-They all draw from their source models in the published ROM as of cycle 64. What
-is still worth knowing before touching this area:
+The cap-versus-end question is settled and the interpretation was fixed before
+the number arrived:
 
-* An `EFDesc` names the display link it draws on, and the port once accepted
-  link 18 only. Shield and reflector are on 15, halo and wave on 10, KO burst on
-  18 -- which is why the KO burst was the only one that ever worked.
-* The KO blast pillar is `efManagerDeadExplodeMakeEffect` (particle script 0x2D
-  plus a model on link 18), NOT `efManagerSparkleWhiteDeadMakeEffect` / 0x5C.
-  0x5C is the Star KO and fires zero times in the canonical run.
-* The pacing harness cannot judge these rows -- `sample-tick-hud-buckets.ps1`
-  reads zero effects over its window. Use the per-row probes under `scripts/`.
-* A capture tic comes from the effect's own SOURCE lifetime, never a fixed
-  offset below its spawn tic. The rebirth halo travels 90 tics before it can be
-  on screen, and that cost cycle 60 a wrong verdict.
+| | |
+|---|---:|
+| lists | 1,360 |
+| commands executed | 217,686 |
+| **mean commands per list** | **160.1** |
+| terminated at `G_ENDDL` | **1,360** |
+| terminated at cap | **0** |
+| other blockers | 0 (mask `0x0`) |
 
-Current state, predictions and owner asks: `docs/BUGS.md`. Do not re-derive it
-from here.
+**Every list stops at its own terminator.** Nothing hits `max_commands`, nothing
+ends on `BAD_BRANCH` / `TOO_DEEP` / `UNSUPPORTED` / `NO_END`. There is no
+overrun to fix. **The honest per-command cost is 626 ticks** (136,334,848 exec
+ticks over 217,686 commands) — the circular 12.54 was 50× too low, and 160
+commands at 626 ticks is exactly the ~100,246 per-list constant.
 
-## A counter nothing reads is a counter the linker deletes
+So the **precompiled-packet path is the answer, not a workaround**, and it has
+no defect-shaped alternative in front of it: build the GX packet at match load,
+reserve patch offsets for the matrix and dynamic colour words, patch per frame,
+submit. No re-parse, no per-list config rebuild, no per-command dispatch.
 
-`probe-results-confetti.ps1` fails with "No symbol gNdsConfettiFanCount in
-current context" even though `battleship_efmanager.c:1472` defines it. The build
-uses `-fdata-sections` with `--gc-sections`, and a `volatile u32` that is only
-ever incremented has no reader, so its section is collected. Counters survive
-only because a marker block in `taskman_seam.c` names them. Add a new diagnostic
-to a marker dump in the same change that adds the counter, or it measures
-nothing.
+## Next single step
 
-## Standing hazards this cycle re-proved
+The **`Tex` memo** — designed and approved, not yet built: keyed on
+(display-list pointer, bind ordinal), revalidated on `entry->ready` /
+`entry->name` / `entry->key_generation`, **reset at scene entry** per §3.12,
+with the level-2 verify arm. It must keep touching `last_used_frame` (the
+eviction LRU), so the recoverable share is the key build, hash and lookup — not
+the whole 34.4M. Land it on its **own** arm; two changes in one arm is how a
+null result becomes unattributable.
 
-- **A saturated counter is a floor, not a measurement.** The particle pools were
-  graded twice from matches that never ran a KO burst, then trimmed to fit a
-  reading that had hit its cap; two of six KO bursts drew nothing. Now proven
-  below cap — if either ever pins at 24 again the demand is unmeasured.
-- **Check that the all-clear counter covers the failure.**
-  `gNdsParticleRejectCount` read 0 through both saturations — struct rejects only.
-- **A symbol's guard must be the guard of the thing it belongs to**, not of
-  whatever it was typed next to. `ndsRendererSetParticleCamera` lived inside
-  `#if NDS_RENDERER_HW_TRIANGLES` with an unguarded caller, so the one ROM that
-  ships was the only one that failed to link; the rebirth display proc repeated
-  the shape the same day inside `#if NDS_TASK39_FX_SHIELD`.
-- **Two equal counters are only saturation when the second one is the bound.**
-  `probe-results-confetti.ps1` printed `gens_used=24 gens_max=24`, which reads
-  exactly like the pool saturation above; `gens_max` is
-  `gNdsParticleGeneratorsMax`, a HIGH-WATER MARK, and the Results cap is 48 from
-  the override at `battleship_mnvsresults.c:236`. A pool bump was made and
-  reverted on that misread — cost one build. The field is now printed as
-  `gens_highwater`. `structs_used=384` against that scene's 384 **is** real
-  saturation, and it is the one that matters: the confetti fan divides a fixed
-  pool six ways.
-- **Coverage is count x AREA, and three raises only ever bought count.** The
-  confetti row went 112 -> 192 -> 384 pieces, each costing a VBlank of Results
-  interval, while piece size sat at the source's 20.0 — even though the owner's
-  own first wording was "pieces do not look like they are large enough". 32.0 is
-  2.56x the area at the same 384 pieces and `census-results-frame-cost` reads
-  3.95 VBlanks/present, unchanged. When a raise keeps hitting a resource bound,
-  check whether the other factor in the product was ever moved.
-- **Read the asset before assuming the atlas can hold it.** The Fox reflector
-  row looked like the shield and rebirth rows and is not: those two carry SHAPE,
-  which A5I3's one shared 8-entry palette can encode as white plus coverage.
-  The reflector carries COLOUR — two flat tones, no shape — so the same
-  treatment maps its 81% body to alpha 0 and deletes it. A twenty-line offline
-  probe over `relocData/346.vpk0.bin` settled that without spending a ROM.
+**Boundary for all of it.** Same geometry, same textures, same materials — the
+effect models are a closed `BUGS.md` row the owner confirmed by eye and paid for
+deliberately. Cheaper, never worse. A change that alters a visible pixel of the
+shield, revival platform, impact wave or reflector needs the owner.
+
+## Measurement rules this cycle established or re-proved
+
+- **Per-bucket placement floor is ≥8,544**, not the ±5,376 that applies to
+  `WORK-H` P95 — calibrated by an arm that only *removed* code and moved `FTR`
+  +8,544. Judge on `WORK-H`; buckets locate, they never decide.
+- **1.85 cycles of `FTR` mean per byte of added ARM text.** A change that adds
+  text must beat its own footprint.
+- **Verify a counter is live in the shipped configuration BEFORE the measuring
+  run.** Six per-stop counters read 0 all match because they were proof-scoped;
+  a zero is only reportable once the counter has been shown able to be non-zero.
+- **Eliminate candidates with a liveness probe on an already-built ROM** before
+  spending a measuring run. The GX flush (64–128 ticks) and the OAM path (0)
+  came off the list that way.
+- **`ALL` is VBlank-quantized** and hid a +52,928 that came straight out of the
+  wait. Read `WORK-H`.
+- **Do not multiply a number back by what you divided it by.** The "8192 × 12.54
+  = 102,727 against 102,730" agreement was circular and was not evidence.
+
+## Open and unowned
+
+- **+52,928 ticks/frame** measured on identical frame ids between `2494daf9ad`
+  and `e49a98167c` with a null control — real, but **not** in the three hunks it
+  was attributed to (reverting all three moves `STG` −704, `MISC` −4,928).
+  Untested suspects: `38bba475`'s `G_CC_BLENDPE` prim/env texture-variant bake
+  and `key_generation` fence, `0a060c7b`'s alpha/blend recogniser,
+  `e8c675d3` / `999fcdf8`. Re-open against the whole-match instrument, not the
+  128-frame one.
+- **`check-decomp-header-mirror.py` is RED on HEAD** — `FTSTAT_OPENING1_START`
+  and `nSYAudioBGMExplain`, pre-existing, in files this cycle never touched. A
+  guard that exists to catch a class of bug is currently blind to it.
+- **`sNdsRendererRuntimeTextureCacheEvictCount` liveness is unproven** — it read
+  0 all run and never moved once. Do not cite evictions from that probe.
+- **The GATE 6 price the owner accepted was mismeasured.** The source-effects
+  flip was sold at +36,032 P95 on the bad window; the real cost is ~360,000 on
+  every frame an effect is alive. The decision stands on its merits — the answer
+  is to make the submit path cheap, not to delete the models — but the number
+  behind it did not.
 
 ## Restart surface
 
@@ -163,37 +166,18 @@ nothing.
 git status --short
 ```
 
-`docs/P1_EXECUTION_BOARD.md` is the only dynamic queue. `docs/BUGS.md` carries
-the owner's verdicts and one stage line per row; the owner edits it directly
-during a session, so preserve their wording and ordering verbatim.
+`docs/P1_EXECUTION_BOARD.md` is the only dynamic queue;
+`docs/Smash64DS_Runtime2_SwitchPlan.md` is the charter. `docs/BUGS.md` carries
+the owner's verdicts — they edit it directly, so preserve their wording.
 
-Uncommitted in the tree: the owner's own `AGENTS.md` edit and their in-progress
-`.agents/skills` / `.claude/skills` rename to the `nds-*` set. Leave both alone.
-
-Useful captures:
-
-```powershell
-# Five minutes ends MID-MATCH, which is why this one completed. A seven-minute
-# run ends into the static post-match screen and trips the detector honestly.
-# -PollSeconds also HALVES the threshold: it trips at IdenticalFramesToTrip x
-# PollSeconds, so 8 x 5 = 40s lands on the ~30s NitroFS scene-load dead air.
-.\scripts\soak-freeze-watch.ps1 -Build build-r2-bothcpu -MinutesToRun 5 -IdenticalFramesToTrip 16
-.\scripts\probe-ko-vfx.ps1
-.\scripts\capture-sudden-death-entry.ps1 -CaptureAnnounce 20   # TIME UP
-```
+**Uncommitted and not ours:** `docs/BUGS_BACKLOG.md` staged-as-deleted is the
+owner's own half-finished rename. Leave it alone.
 
 A clean checkout must build through `build.ps1`, not bare `make`: four of six
-generated `.inc` files are gitignored. `-j`/`MAKEFLAGS` rules are in `AGENTS.md`
-`## Builds`. Preserve canonical mode 163, renderer mode 9, mip 0, static
-textures, source countdown, Dream Land water at frame 0, Task 16 `1/1/1`. Do not
-edit `decomp/`.
-
-If the owner rejects a visual row, it is now a SOURCE MODEL question, not an
-atlas one: shield, respawn pad, wave and reflector stopped being quad-sheet
-cells in cycle 64. Their cells are still packed but nothing draws them —
-reclaiming that space needs a before/after picture, because dropping a cell
-re-runs the packer's admission. The 8,192-byte sheet size is still the
-invariant for the effects that DO use it; grow coverage with more sheets, never
-a bigger one.
+generated `.inc` files are gitignored. Never pass `-j`, never override
+`MAKEFLAGS`, one build at a time. Never build a published target name for lab
+work — those hardcode output to the project root whatever `BUILD=` says.
+Preserve canonical mode 163, renderer mode 9, mip 0, static textures, source
+countdown, Dream Land water at frame 0, Task 16 `1/1/1`. Do not edit `decomp/`.
 
 Run `New-Smash64DSSnapshot.ps1` last, and nothing after it.

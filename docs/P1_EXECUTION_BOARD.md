@@ -244,15 +244,35 @@ probe in a different build — 7% apart.**
 at 102,730 Exec ticks/list; per-triangle reads 4,819 only because the list
 happens to carry 16, and the constant barely tracks triangle count.
 
-**Open, and it decides whether the packet rewrite happens at all.** With
-`max_commands = 8192`, 8192 × 12.54 = **102,727 against a measured 102,730 —
-three ticks apart.** A re-parse of a 50-command list costs 50 commands, not
-8,192. That arithmetic is the signature of a loop running to its **cap** rather
-than to the list's end. Being measured now, interpretation fixed in advance:
-trip count ≈ 8,192 terminating on "cap exhausted" is a **bounded defect worth
-~105M ticks** and the rewrite is deferred; trip count ≈ real list length
-terminating on `G_ENDDL` means the interpreter is honestly generic and the
-precompiled-packet path is correct.
+**ANSWERED — the interpreter is honestly generic, so the packet path is the
+answer rather than a workaround.** The question was whether the executor was
+running to its `max_commands = 8192` cap instead of to the list's end. It is
+not:
+
+| | |
+|---|---:|
+| lists | 1,360 |
+| commands executed | 217,686 |
+| **mean commands per list** | **160.1** |
+| terminated at `G_ENDDL` | **1,360** |
+| terminated at cap | **0** |
+| other blockers | 0 (mask `0x0`) |
+
+Every list stops at its own terminator; nothing ends on `BAD_BRANCH`,
+`TOO_DEEP`, `UNSUPPORTED` or `NO_END` either. **The honest per-command cost is
+626 ticks** — 136,334,848 exec ticks over 217,686 commands — and 160 commands at
+626 is exactly the ~100,246 per-list constant.
+
+**The "8192 × 12.54 = 102,727 against 102,730, three ticks apart" claim that
+raised this question was CIRCULAR and was not evidence.** 12.54 had been derived
+as 102,730 ÷ 8192, so multiplying it back could only return 102,730 — it would
+have agreed equally well for any cap. The true per-command cost is 50× higher.
+Standing rule: **never multiply a number back by what you divided it by and call
+the agreement a finding.** The instrument itself cost nothing new — the executor
+already sets `stats->blocker = NDS_RENDERER_BLOCKER_BUDGET` on that path
+(`nds_renderer.c:28303`, `:28428`) and the effect path already published a
+command count; they were only last-value-wins, so a stop read one list instead
+of the window.
 
 **`Tex` is entirely cache-HIT cost**, not conversion or upload — the upload probe
 already proved 1 upload per ~1,408 frames and 0 evictions. It is the ~30-field
