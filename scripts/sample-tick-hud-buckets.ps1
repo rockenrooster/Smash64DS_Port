@@ -60,6 +60,22 @@ param(
     # the asset-load frames with the over-gate frames -- and was blocked on
     # exactly that (board, 2026-07-31). Anything per-frame belongs here.
     [string[]]$PerFrameGlobals = @(),
+    # Globals read ONCE PER RING STOP, stitched alongside the buckets and
+    # labelled with the stop's frame range. This is the third granularity and
+    # it exists because the other two cannot answer a whole-match question:
+    # -ExtraGlobals reads once at the end ("how many did this run do"), and
+    # -PerFrameGlobals is incompatible with -RingDump by construction (the ring
+    # carries bucket words only), so a repeated-ring-dump run had no way to
+    # carry any counter at all.
+    #
+    # Per stop is the right granularity for event counters anyway. The KO,
+    # respawn and effect counters are CUMULATIVE, so differencing consecutive
+    # stops gives the events inside each stop's window, which is what locates a
+    # KO in a match without adding a single byte to the ROM. Use counters that
+    # already exist and already have an in-ROM reader: a `volatile u32` whose
+    # only consumer is a debugger gets collected by --gc-sections, so a NEW one
+    # needs a marker-block reader added in the same change.
+    [string[]]$PerStopGlobals = @(),
     # Per-frame rows as CSV, one line per presented sample. The percentile table
     # answers "how big is P95"; it cannot answer "which frames are the P95", and
     # every excursion investigation this campaign has run needed the second
@@ -87,7 +103,12 @@ param(
     [ValidateRange(8,120)][int]$RingStopStride = 96,
     [ValidateRange(1,4096)][int]$Samples = 32,
     [ValidateRange(1,1000000)][int]$StartFrame = 438,
-    [ValidateRange(30,3600)][int]$TimeoutSeconds = 900,
+    # 3600 used to be the cap, which a whole 3600-tick match cannot fit: the
+    # match alone is ~60 s of guest time and this emulator runs it far slower
+    # than real time under a GDB stub. A cap that binds turns "the run needed
+    # longer" into a failure that looks exactly like a stall, which is the
+    # confusion the timeout message below exists to end.
+    [ValidateRange(30,14400)][int]$TimeoutSeconds = 900,
     [string]$JsonOut = ''
 )
 
@@ -221,7 +242,8 @@ try {
                     'gNdsBattlePlayablePacingPresentedFrames',
                     'sBattleTickHudRing', 'sBattleTickHudRingHead',
                     'sBattleTickHudRingCount')
-    if (($ExtraGlobals.Count + $PerFrameGlobals.Count + $alwaysRead.Count) -ne 0) {
+    if (($ExtraGlobals.Count + $PerFrameGlobals.Count + $PerStopGlobals.Count +
+         $alwaysRead.Count) -ne 0) {
         $nm = Join-Path (Split-Path -Parent $Gdb) 'arm-none-eabi-nm.exe'
         if (Test-Path -LiteralPath $nm -PathType Leaf) {
             $symbols = [System.Collections.Generic.HashSet[string]]::new(
@@ -230,6 +252,7 @@ try {
             foreach ($pair in @(
                 @{ n = '-ExtraGlobals';    v = $ExtraGlobals },
                 @{ n = '-PerFrameGlobals'; v = $PerFrameGlobals },
+                @{ n = '-PerStopGlobals';  v = $PerStopGlobals },
                 @{ n = 'always-read';      v = $alwaysRead })) {
                 # Validate the BASE identifier so an array element is readable:
                 # `gNdsTickHudNativeOwnerFallbackByReason[13]` is a legal GDB
@@ -354,6 +377,10 @@ try {
         ('printf "TICKRING' + $i + '=%u,%u,%u\n", ' +
             'sBattleTickHudRingHead, sBattleTickHudRingCount, ' +
             'gNdsBattlePlayablePacingPresentedFrames')
+        $(if ($PerStopGlobals.Count -ne 0) {
+            "printf `"TICKSTOP$i=$((, '%u' * $PerStopGlobals.Count) -join ',')\n`", " +
+                ($PerStopGlobals -join ', ')
+        })
         # dump binary memory splits its arguments on whitespace, so the bounds
         # have to be single tokens -- a cast like "(char *)&ring" parses as two
         # arguments and fails. Index one past the last bucket row for the end
@@ -464,33 +491,80 @@ try {
         # the stdout carries no frame number; read the counter once from the
         # still-running emulator and name it. Confined to the timeout branch:
         # the measurement path is untouched whether or not this read works.
-        $frozenAt = $null
-        try {
-            $probeScript = Join-Path $temp 'tickhud-frozen-probe.gdb'
-            Set-Content -LiteralPath $probeScript -Encoding ASCII -Value @(
-                'set pagination off', 'set confirm off', 'set remotetimeout 10',
-                "target remote 127.0.0.1:$($context.GdbPort)",
-                'printf "FROZENAT=%u\n", gNdsBattlePlayablePacingPresentedFrames',
-                'detach', 'quit')
-            $probeOut = Join-Path $temp 'tickhud-frozen-probe.out'
-            $probe = Start-Process -FilePath $Gdb `
-                -ArgumentList @('-q', '-batch', '-x', $probeScript, $elf) `
-                -WorkingDirectory $root -RedirectStandardOutput $probeOut `
-                -RedirectStandardError (Join-Path $temp 'tickhud-frozen-probe.err') `
-                -WindowStyle Hidden -PassThru
-            if ($probe.WaitForExit(30000)) {
-                $m = [regex]::Match((Get-Content $probeOut -Raw), 'FROZENAT=(\d+)')
-                if ($m.Success) { $frozenAt = [uint32]$m.Groups[1].Value }
-            } else { Stop-Process -Id $probe.Id -Force }
-        } catch { }
-        if ($null -ne $frozenAt) {
-            throw ("Tick-HUD run FROZEN-AT-$frozenAt after ${TimeoutSeconds}s: " +
-                "gNdsBattlePlayablePacingPresentedFrames stopped at $frozenAt, " +
-                "short of the $ringEndFrame this run needs. The battle present " +
-                "loop stopped advancing -- this is a stall to diagnose, not a " +
-                "slow run to re-time with a longer -TimeoutSeconds.")
+        # TWO reads, seconds apart, not one. A single counter value cannot tell
+        # "stalled" from "slow", and this harness reported both as the same
+        # generic timeout: the Task 56 strip arm blew 900 s twice and then
+        # 2400 s, looked like a slow run all three times across three days, and
+        # was in fact never advancing at all. The second read is what makes the
+        # difference a measurement instead of a guess.
+        $readPresented = {
+            $value = $null
+            try {
+                $probeScript = Join-Path $temp 'tickhud-frozen-probe.gdb'
+                Set-Content -LiteralPath $probeScript -Encoding ASCII -Value @(
+                    'set pagination off', 'set confirm off',
+                    'set remotetimeout 10',
+                    "target remote 127.0.0.1:$($context.GdbPort)",
+                    ('printf "FROZENAT=%u\n", ' +
+                        'gNdsBattlePlayablePacingPresentedFrames'),
+                    'detach', 'quit')
+                $probeOut = Join-Path $temp 'tickhud-frozen-probe.out'
+                $probe = Start-Process -FilePath $Gdb `
+                    -ArgumentList @('-q', '-batch', '-x', $probeScript, $elf) `
+                    -WorkingDirectory $root -RedirectStandardOutput $probeOut `
+                    -RedirectStandardError `
+                        (Join-Path $temp 'tickhud-frozen-probe.err') `
+                    -WindowStyle Hidden -PassThru
+                if ($probe.WaitForExit(30000)) {
+                    $m = [regex]::Match((Get-Content $probeOut -Raw),
+                        'FROZENAT=(\d+)')
+                    if ($m.Success) { $value = [uint64]$m.Groups[1].Value }
+                } else { Stop-Process -Id $probe.Id -Force }
+            } catch { }
+            return $value
         }
-        throw "Tick-HUD GDB run exceeded ${TimeoutSeconds}s before $Samples samples."
+        $liveA = & $readPresented
+        Start-Sleep -Seconds 6
+        $liveB = & $readPresented
+        # How far the run actually got. Every completed ring stop already
+        # printed its own frame number, so the stdout carries the progress the
+        # breakpoint script is otherwise silent about.
+        $partial = [string](Get-Content $gdbOut -Raw -ErrorAction SilentlyContinue)
+        $reached = @([regex]::Matches($partial, 'TICKRING(\d+)=\d+,\d+,(\d+)'))
+        $progress = if ($reached.Count -ne 0) {
+            $last = $reached[$reached.Count - 1]
+            ("reached ring stop $($last.Groups[1].Value) of " +
+                "$($ringStopTargets.Count) at presented frame " +
+                "$($last.Groups[2].Value)")
+        } else {
+            "never reached ring stop 0 (target frame $($ringStopTargets[0]))"
+        }
+        if (($null -ne $liveA) -and ($null -ne $liveB)) {
+            if ($liveB -eq $liveA) {
+                throw ("Tick-HUD run STALLED after ${TimeoutSeconds}s: " +
+                    'gNdsBattlePlayablePacingPresentedFrames read ' +
+                    "$liveA twice, 6 s apart, so the battle present loop is " +
+                    "NOT advancing. $progress; this run needs " +
+                    "$ringEndFrame. This is a stall to diagnose (check GXSTAT " +
+                    'for a geometry-engine hang), NOT a slow run to re-time ' +
+                    'with a longer -TimeoutSeconds.')
+            }
+            $rate = ($liveB - $liveA) / 6.0
+            $remaining = if ($ringEndFrame -gt $liveB) {
+                $ringEndFrame - $liveB } else { 0 }
+            $eta = if ($rate -gt 0) {
+                '{0:N0}' -f ($remaining / $rate) } else { 'unknown' }
+            throw ("Tick-HUD run TOO SLOW after ${TimeoutSeconds}s: the guest " +
+                "IS advancing ($liveA -> $liveB in 6 s, " +
+                ('{0:N1}' -f $rate) + " presented frames/s) but is still " +
+                "$remaining frames short of $ringEndFrame. $progress. " +
+                "Re-run with -TimeoutSeconds about $eta s longer; this is not " +
+                'a stall.')
+        }
+        throw ("Tick-HUD GDB run exceeded ${TimeoutSeconds}s before $Samples " +
+            "samples, and the liveness probe could not read " +
+            "gNdsBattlePlayablePacingPresentedFrames, so stalled-vs-slow is " +
+            "UNRESOLVED. $progress.")
     }
     if ($gdbProcess.ExitCode -ne 0) {
         throw "Tick-HUD GDB run failed: $(Get-Content $gdbErr -Raw)"
@@ -516,6 +590,9 @@ try {
         } else { $null }
         $stitched = New-Object 'System.Collections.Generic.List[uint64[]]'
         $ringStopSkews = New-Object 'System.Collections.Generic.List[object]'
+        $ringStopReads = New-Object 'System.Collections.Generic.List[object]'
+        $prevStopValues = @(0..([Math]::Max($PerStopGlobals.Count - 1, 0)) |
+            ForEach-Object { [uint64]0 })
         $prevHead = -1
         $prevFrame = [uint64]0
         for ($k = 0; $k -lt $ringStopTargets.Count; $k++) {
@@ -524,6 +601,38 @@ try {
                 throw ("Tick-HUD ring dump produced no TICKRING$k line " +
                     "(stop $($k + 1) of $($ringStopTargets.Count), target " +
                     "frame $($ringStopTargets[$k])). GDB output:`n$output")
+            }
+            if ($PerStopGlobals.Count -ne 0) {
+                $sm = [regex]::Match($output,
+                    "TICKSTOP$k=([0-9]+(?:,[0-9]+){$($PerStopGlobals.Count - 1)})")
+                if (-not $sm.Success) {
+                    throw ("Tick-HUD stop $k printed no TICKSTOP$k line for the " +
+                        "$($PerStopGlobals.Count) requested -PerStopGlobals. " +
+                        "GDB output:`n$output")
+                }
+                $vals = @($sm.Groups[1].Value -split ',' |
+                    ForEach-Object { [uint64]$_ })
+                $rec = [ordered]@{
+                    stop = $k
+                    frame = [uint64]$m.Groups[3].Value
+                    fromFrame = if ($k -eq 0) { [uint64]$StartFrame }
+                                else { $prevFrame }
+                }
+                for ($g = 0; $g -lt $PerStopGlobals.Count; $g++) {
+                    # Cumulative value AND the delta since the previous stop.
+                    # The counters this is aimed at (dead frames, rebirth
+                    # phases, hit-spark spawns) only count upward, so the delta
+                    # is the events inside this stop's window and is the column
+                    # a KO-versus-tail question actually needs.
+                    $rec[$PerStopGlobals[$g]] = $vals[$g]
+                    $rec[($PerStopGlobals[$g] + 'Delta')] = if ($k -eq 0) {
+                        [uint64]0
+                    } elseif ($vals[$g] -ge $prevStopValues[$g]) {
+                        $vals[$g] - $prevStopValues[$g]
+                    } else { [uint64]0 }
+                }
+                $ringStopReads.Add([pscustomobject]$rec)
+                $prevStopValues = $vals
             }
             $head = [int]$m.Groups[1].Value
             $count = [int]$m.Groups[2].Value
@@ -890,6 +999,8 @@ try {
         # .ToArray() both work.
         ringStopSkews = if ($RingDump -and ($null -ne $ringStopSkews)) {
             $ringStopSkews.ToArray() } else { @() }
+        ringStopReads = if ($RingDump -and ($null -ne $ringStopReads)) {
+            $ringStopReads.ToArray() } else { @() }
         capturedUtc = (Get-Date).ToUniversalTime().ToString('o')
     }
 
