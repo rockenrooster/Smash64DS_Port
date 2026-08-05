@@ -68,7 +68,24 @@ param(
     # out. The JSON only ever carried the summary, so that identification was
     # being redone by hand each time.
     [string]$RowsCsv = '',
-    [ValidateRange(1,512)][int]$Samples = 32,
+    # Presented frames between repeated ring stops. sBattleTickHudRing is 128
+    # entries and sBattleTickHudRingCount saturates there (nds_platform.c:2137),
+    # so ONE stop can never yield more than 128 samples however large -Samples
+    # is; the guard further down already fails loudly on that rather than
+    # silently returning the last 128. To cover a whole match, stop repeatedly
+    # and concatenate instead of enlarging the ring: growing NDS_TICK_HUD_WINDOW
+    # would cost ~24 KB of bss and change the instrument's own cache footprint,
+    # which on this target has repeatedly moved the number being measured, and
+    # it would make every prior measurement incomparable.
+    #
+    # The default is deliberately below 128. The ring advances once per
+    # finalized iteration and a presented frame can carry TWO iterations (see
+    # -AllowRepeatedFrames), so iterations >= presented frames; leaving headroom
+    # is what lets the stitcher PROVE it did not alias a wrap rather than assume
+    # it. A stride at 128 would make a full wrap indistinguishable from no
+    # advance at all.
+    [ValidateRange(8,120)][int]$RingStopStride = 96,
+    [ValidateRange(1,4096)][int]$Samples = 32,
     [ValidateRange(1,1000000)][int]$StartFrame = 438,
     [ValidateRange(30,3600)][int]$TimeoutSeconds = 900,
     [string]$JsonOut = ''
@@ -292,6 +309,60 @@ try {
     $ringWindow = 128
     $ringBytes = $bucketNames.Count * $ringWindow * 4
     $ringEndFrame = $StartFrame + $Samples
+    # REPEATED RING STOPS. One stop yields at most $ringWindow samples, so a
+    # whole-match window needs several, each taken before the ring can wrap.
+    # The last target is always $ringEndFrame so the requested window still ends
+    # exactly where a single-stop run would have ended.
+    $ringStopTargets = @()
+    if ($RingDump) {
+        if ($Samples -le $ringWindow) {
+            $ringStopTargets = @($ringEndFrame)
+        } else {
+            $t = $StartFrame + $RingStopStride
+            while ($t -lt $ringEndFrame) {
+                $ringStopTargets += $t
+                $t += $RingStopStride
+            }
+            $ringStopTargets += $ringEndFrame
+        }
+        if ($FallbackCensus -and ($ringStopTargets.Count -gt 1)) {
+            # The fallback ring shares the bucket ring's index, so stitching it
+            # would need the same per-stop treatment. Rather than half-support
+            # it and hand back a column that is quietly wrong for every stop
+            # after the first, refuse.
+            throw ('-FallbackCensus is single-stop only, but this run needs ' +
+                "$($ringStopTargets.Count) ring stops for $Samples samples. " +
+                "Lower -Samples to $ringWindow or drop -FallbackCensus.")
+        }
+    }
+    $ringStopPaths = @(for ($i = 0; $i -lt $ringStopTargets.Count; $i++) {
+        Join-Path $temp "tick-hud-ring-$i.bin"
+    })
+    # One unrolled stop per target rather than a GDB-side loop: the breakpoint
+    # condition changes per stop, and `delete` + a fresh `break` is the same
+    # shape the -FallbackCensus baseline stop already uses and is known to work
+    # in batch mode.
+    $ringStopLines = @(for ($i = 0; $i -lt $ringStopTargets.Count; $i++) {
+        'break ndsBattlePlayableFrameCompleteMarker'
+        'commands'
+        'silent'
+        "if gNdsBattlePlayablePacingPresentedFrames < $($ringStopTargets[$i])"
+        'continue'
+        'end'
+        'end'
+        'continue'
+        ('printf "TICKRING' + $i + '=%u,%u,%u\n", ' +
+            'sBattleTickHudRingHead, sBattleTickHudRingCount, ' +
+            'gNdsBattlePlayablePacingPresentedFrames')
+        # dump binary memory splits its arguments on whitespace, so the bounds
+        # have to be single tokens -- a cast like "(char *)&ring" parses as two
+        # arguments and fails. Index one past the last bucket row for the end
+        # bound, which is the same form the Task 34 stage-stream dump uses.
+        ("dump binary memory $($ringStopPaths[$i]) " +
+            "&sBattleTickHudRing[0][0] " +
+            "&sBattleTickHudRing[$($bucketNames.Count)][0]")
+        'delete'
+    })
     $gdbLines = if ($RingDump) {
         @(
         'set pagination off',
@@ -316,24 +387,8 @@ try {
                 ((0..($fallbackReasons.Count - 1) | ForEach-Object {
                     "gNdsTickHudNativeOwnerFallbackByReason[$_]" }) -join ', ')
         }),
-        $(if ($FallbackCensus) { 'delete' }),
-        'break ndsBattlePlayableFrameCompleteMarker',
-        'commands',
-        'silent',
-        "if gNdsBattlePlayablePacingPresentedFrames < $ringEndFrame",
-        'continue',
-        'end',
-        'end',
-        'continue',
-        ('printf "TICKRING=%u,%u,%u\n", ' +
-            'sBattleTickHudRingHead, sBattleTickHudRingCount, ' +
-            'gNdsBattlePlayablePacingPresentedFrames'),
-        # dump binary memory splits its arguments on whitespace, so the bounds
-        # have to be single tokens -- a cast like "(char *)&ring" parses as two
-        # arguments and fails. Index one past the last bucket row for the end
-        # bound, which is the same form the Task 34 stage-stream dump uses.
-        ("dump binary memory $ringPath &sBattleTickHudRing[0][0] " +
-            "&sBattleTickHudRing[$($bucketNames.Count)][0]"),
+        $(if ($FallbackCensus) { 'delete' })
+        ) + $ringStopLines + @(
         $(if ($FallbackCensus) {
             "dump binary memory $fbRingPath &sBattleTickHudFallbackRing[0] " +
                 "&sBattleTickHudFallbackRing[$ringWindow]" }),
@@ -443,32 +498,10 @@ try {
 
     $output = Get-Content $gdbOut -Raw
     $rows = if ($RingDump) {
-        $ringMatch = [regex]::Match($output, 'TICKRING=([0-9]+),([0-9]+),([0-9]+)')
-        if (-not $ringMatch.Success) {
-            throw "Tick-HUD ring dump produced no TICKRING line. GDB output:`n$output"
-        }
-        $ringHead = [int]$ringMatch.Groups[1].Value
-        $ringCount = [int]$ringMatch.Groups[2].Value
-        $ringFrame = [uint64]$ringMatch.Groups[3].Value
-        if (-not (Test-Path -LiteralPath $ringPath -PathType Leaf)) {
-            throw "Tick-HUD ring dump wrote no file at $ringPath."
-        }
-        $raw = [System.IO.File]::ReadAllBytes($ringPath)
-        if ($raw.Length -ne $ringBytes) {
-            throw ("Tick-HUD ring dump is $($raw.Length) bytes, expected " +
-                "$ringBytes ($($bucketNames.Count) buckets x $ringWindow).")
-        }
-        if ($ringCount -lt $Samples) {
-            throw ("Tick-HUD ring holds $ringCount iterations, fewer than the " +
-                "$Samples requested. Raise -StartFrame or lower -Samples.")
-        }
-        # Oldest-first walk. Once the ring has wrapped the oldest entry is the
-        # one the head is about to overwrite; before that it has not moved off
-        # zero yet.
-        $ringStart = if ($ringCount -lt $ringWindow) { 0 } else { $ringHead }
-        $skip = $ringCount - $Samples
         # Task 70: the per-frame fallback deltas share the ring index, so they
         # append as one more column and every frame carries its own count.
+        # Single-stop only -- the guard where $ringStopTargets is built refuses
+        # the combination rather than emitting a quietly wrong column.
         $fbRaw = if ($FallbackCensus) {
             if (-not (Test-Path -LiteralPath $fbRingPath -PathType Leaf)) {
                 throw ("Fallback ring dump wrote no file at $fbRingPath. The " +
@@ -481,24 +514,117 @@ try {
             }
             $bytes
         } else { $null }
-        @(0..($Samples - 1) | ForEach-Object {
-            $slot = ($ringStart + $skip + $_) % $ringWindow
-            # The label is derived from the presented-frame counter read at the
-            # stop, and is only a label: in ring mode the identity of a sample
-            # is its position in the ring, which advances exactly once per call
-            # to ndsPlatformTickHudSample and therefore exactly once per
-            # finalized iteration.
-            $row = New-Object 'System.Collections.Generic.List[uint64]'
-            $row.Add([uint64]($ringFrame - ($Samples - 1 - $_)))
-            for ($b = 0; $b -lt $bucketNames.Count; $b++) {
-                $row.Add([BitConverter]::ToUInt32($raw,
-                    ((($b * $ringWindow) + $slot) * 4)))
+        $stitched = New-Object 'System.Collections.Generic.List[uint64[]]'
+        $ringStopSkews = New-Object 'System.Collections.Generic.List[object]'
+        $prevHead = -1
+        $prevFrame = [uint64]0
+        for ($k = 0; $k -lt $ringStopTargets.Count; $k++) {
+            $m = [regex]::Match($output, "TICKRING$k=([0-9]+),([0-9]+),([0-9]+)")
+            if (-not $m.Success) {
+                throw ("Tick-HUD ring dump produced no TICKRING$k line " +
+                    "(stop $($k + 1) of $($ringStopTargets.Count), target " +
+                    "frame $($ringStopTargets[$k])). GDB output:`n$output")
             }
-            if ($null -ne $fbRaw) {
-                $row.Add([BitConverter]::ToUInt32($fbRaw, ($slot * 4)))
+            $head = [int]$m.Groups[1].Value
+            $count = [int]$m.Groups[2].Value
+            $frame = [uint64]$m.Groups[3].Value
+            if (-not (Test-Path -LiteralPath $ringStopPaths[$k] -PathType Leaf)) {
+                throw "Tick-HUD ring dump wrote no file at $($ringStopPaths[$k])."
             }
-            , [uint64[]]$row.ToArray()
-        })
+            $raw = [System.IO.File]::ReadAllBytes($ringStopPaths[$k])
+            if ($raw.Length -ne $ringBytes) {
+                throw ("Tick-HUD ring dump $k is $($raw.Length) bytes, expected " +
+                    "$ringBytes ($($bucketNames.Count) buckets x $ringWindow).")
+            }
+            # How many ring slots this stop contributes, and whether that number
+            # can be trusted. The ring index is the sample identity; the
+            # presented-frame counter is only a label and can advance more
+            # slowly than the ring (one presented frame can carry two
+            # iterations), so iterations >= presented frames ALWAYS. That
+            # inequality is what turns a silent wrap into a hard failure.
+            $newCount = if ($k -eq 0) {
+                [Math]::Min($count, $ringWindow)
+            } else {
+                $delta = ($head - $prevHead) % $ringWindow
+                if ($delta -lt 0) { $delta += $ringWindow }
+                $presentedDelta = [int]($frame - $prevFrame)
+                if ($presentedDelta -gt $ringWindow) {
+                    throw ("Tick-HUD ring stop $k advanced $presentedDelta " +
+                        "presented frames (frames $prevFrame..$frame), more " +
+                        "than the $ringWindow-entry ring can hold, so at least " +
+                        "$($presentedDelta - $ringWindow) frames were " +
+                        'overwritten before they were read. Lower ' +
+                        '-RingStopStride.')
+                }
+                if (($delta -eq 0) -and ($presentedDelta -gt 0)) {
+                    throw ("Tick-HUD ring stop $k read an unchanged ring head " +
+                        "($head) after $presentedDelta presented frames " +
+                        "(frames $prevFrame..$frame). That is either a stalled " +
+                        'ring or an exact 128-slot wrap, and the two are ' +
+                        'indistinguishable from the head alone. Lower ' +
+                        '-RingStopStride.')
+                }
+                # RING SLOTS vs PRESENTED FRAMES ARE NOT THE SAME COUNT, and
+                # this records the difference instead of asserting one.
+                #
+                # Measured 2026-08-04 on the baseline ROM: a 64-presented-frame
+                # span (536..600) advanced the ring 63 slots. The stop is taken
+                # at ndsBattlePlayableFrameCompleteMarker, which is not the same
+                # point in the iteration as the ndsPlatformTickHudSample call
+                # that advances the ring, so the two counters are read at a
+                # fixed skew that does not have to be zero -- and a presented
+                # frame can carry two iterations, which pushes the other way.
+                #
+                # Failing on a small mismatch would be asserting an invariant
+                # this harness has not established. Failing on NO mismatch would
+                # hide a wrap. So: hard-fail only where loss is certain
+                # (presentedDelta > ringWindow, checked above, and delta == 0),
+                # and carry the per-stop skew out in the JSON so a series that
+                # drifted is visible in the evidence rather than argued about.
+                $skew = $presentedDelta - $delta
+                $ringStopSkews.Add([pscustomobject]@{
+                    stop = $k
+                    targetFrame = $ringStopTargets[$k]
+                    frame = [uint64]$frame
+                    head = $head
+                    ringSlots = $delta
+                    presentedFrames = $presentedDelta
+                    skew = $skew
+                })
+                $delta
+            }
+            # Oldest-first walk of just this stop's new slots, ending at $head.
+            $start = (($head - $newCount) % $ringWindow)
+            if ($start -lt 0) { $start += $ringWindow }
+            for ($j = 0; $j -lt $newCount; $j++) {
+                $slot = ($start + $j) % $ringWindow
+                $row = New-Object 'System.Collections.Generic.List[uint64]'
+                $row.Add([uint64]($frame - ($newCount - 1 - $j)))
+                for ($b = 0; $b -lt $bucketNames.Count; $b++) {
+                    $row.Add([BitConverter]::ToUInt32($raw,
+                        ((($b * $ringWindow) + $slot) * 4)))
+                }
+                if ($null -ne $fbRaw) {
+                    $row.Add([BitConverter]::ToUInt32($fbRaw, ($slot * 4)))
+                }
+                $stitched.Add([uint64[]]$row.ToArray())
+            }
+            $prevHead = $head
+            $prevFrame = $frame
+        }
+        if ($stitched.Count -lt $Samples) {
+            throw ("Tick-HUD ring stitched $($stitched.Count) iterations from " +
+                "$($ringStopTargets.Count) stop(s), fewer than the $Samples " +
+                'requested. Raise -StartFrame or lower -Samples.')
+        }
+        # Explicit index walk, not `Select-Object -Last`: the pipeline wraps
+        # each uint64[] row in a PSObject and the downstream percentile code
+        # indexes the rows directly, which then fails with "Argument types do
+        # not match" AFTER the CSV has already been written -- i.e. it looks
+        # like a stats bug, not a plumbing one. The comma operator keeps each
+        # row from being unrolled into the result array.
+        $firstRow = $stitched.Count - $Samples
+        @(for ($r = $firstRow; $r -lt $stitched.Count; $r++) { , $stitched[$r] })
     } else {
         @([regex]::Matches($output,
             "TICKHUD=([0-9]+(?:,[0-9]+){$sampleColumnCount})") | ForEach-Object {
@@ -751,6 +877,19 @@ try {
         cadenceViolations = if ($slipMatch.Success) {
             [uint64]$slipMatch.Groups[1].Value } else { 0 }
         extras = $extras
+        # Per-stop gap accounting for a repeated-ring-dump run. Empty for a
+        # single-stop run. A reader deciding whether a whole-match series is
+        # trustworthy needs the skew per stop, not a pass/fail: a gap that
+        # lands on a KO is exactly the sample that must not vanish quietly.
+        ringStops = if ($RingDump) { $ringStopTargets.Count } else { 0 }
+        # .ToArray(), NOT @(...). Wrapping a List[object] in @() and then
+        # putting it in the hashtable a [pscustomobject] is built from throws
+        # "Argument types do not match" -- and it throws AFTER -RowsCsv has
+        # already been written, so it reads like a percentile bug rather than a
+        # plumbing one. Cost one 16-minute run to find; the raw list and
+        # .ToArray() both work.
+        ringStopSkews = if ($RingDump -and ($null -ne $ringStopSkews)) {
+            $ringStopSkews.ToArray() } else { @() }
         capturedUtc = (Get-Date).ToUniversalTime().ToString('o')
     }
 

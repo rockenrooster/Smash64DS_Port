@@ -1,0 +1,204 @@
+{
+  "target": "smash64ds-battle-playable-tickhud-hwtri",
+  "rom": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\builds\\build-r207-c1-scangate\\smash64ds-battle-playable-tickhud-hwtri.nds",
+  "romSha256": "C0FEC329849C0E7C1F1CABD0647AE81F654A46589F35025ABDBA4E7CD5085917",
+  "melonDS": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\emulators\\melonds\\melonDS.exe",
+  "melonDSSha256": "DE80E46BDCF1FD986162DE6AFFD9EE1148F8C40565DBAF667B9C2B3EF5475715",
+  "melonDSVersion": "1.0",
+  "gitShort": "c74a7b30",
+  "gitDirtyPaths": 4,
+  "dldiEnabled": true,
+  "ringDump": true,
+  "samples": 4,
+  "startFrame": 201,
+  "endFrame": 204,
+  "buckets": [
+    {
+      "bucket": "ALL",
+      "mean": 1259920,
+      "p50": 1119872,
+      "p95": 1120000,
+      "min": 1119616,
+      "max": 1680192
+    },
+    {
+      "bucket": "FTR",
+      "mean": 390256,
+      "p50": 389888,
+      "p95": 390080,
+      "min": 389760,
+      "max": 391296
+    },
+    {
+      "bucket": "STG",
+      "mean": 192960,
+      "p50": 192704,
+      "p95": 192768,
+      "min": 192576,
+      "max": 193792
+    },
+    {
+      "bucket": "BG",
+      "mean": 3968,
+      "p50": 3968,
+      "p95": 3968,
+      "min": 3904,
+      "max": 4032
+    },
+    {
+      "bucket": "AUD",
+      "mean": 2416,
+      "p50": 2368,
+      "p95": 2432,
+      "min": 2368,
+      "max": 2496
+    },
+    {
+      "bucket": "HUD",
+      "mean": 100080,
+      "p50": 16768,
+      "p95": 16896,
+      "min": 16384,
+      "max": 350272
+    },
+    {
+      "bucket": "SRC",
+      "mean": 295872,
+      "p50": 296192,
+      "p95": 297216,
+      "min": 292480,
+      "max": 297600
+    },
+    {
+      "bucket": "MISC",
+      "mean": 94880,
+      "p50": 94528,
+      "p95": 94848,
+      "min": 94400,
+      "max": 95744
+    },
+    {
+      "bucket": "OTHR",
+      "mean": 179488,
+      "p50": 121408,
+      "p95": 126720,
+      "min": 119744,
+      "max": 350080
+    },
+    {
+      "bucket": "WAIT",
+      "mean": 153008,
+      "p50": 94976,
+      "p95": 99968,
+      "min": 93440,
+      "max": 323648
+    },
+    {
+      "bucket": "WORK",
+      "mean": 1106912,
+      "p50": 1024640,
+      "p95": 1026560,
+      "min": 1019904,
+      "max": 1356544
+    },
+    {
+      "bucket": "WORK-H",
+      "mean": 1006832,
+      "p50": 1006272,
+      "p95": 1007872,
+      "min": 1003520,
+      "max": 1009664
+    }
+  ],
+  "bucketNames": [
+    "ALL",
+    "FTR",
+    "STG",
+    "BG",
+    "AUD",
+    "HUD",
+    "SRC",
+    "MISC",
+    "OTHR",
+    "WAIT",
+    "WORK"
+  ],
+  "rows": [
+    [
+      201,
+      1120000,
+      391296,
+      192704,
+      3968,
+      2432,
+      16896,
+      297216,
+      95744,
+      119744,
+      93440,
+      1026560
+    ],
+    [
+      202,
+      1680192,
+      390080,
+      192768,
+      3904,
+      2368,
+      350272,
+      296192,
+      94528,
+      350080,
+      323648,
+      1356544
+    ],
+    [
+      203,
+      1119872,
+      389760,
+      193792,
+      3968,
+      2368,
+      16384,
+      292480,
+      94400,
+      126720,
+      99968,
+      1019904
+    ],
+    [
+      204,
+      1119616,
+      389888,
+      192576,
+      4032,
+      2496,
+      16768,
+      297600,
+      94848,
+      121408,
+      94976,
+      1024640
+    ]
+  ],
+  "meanAll": 1259920,
+  "meanNamed": 1080432.0,
+  "vbi2": 168,
+  "vbi3": 22,
+  "vbi4": 6,
+  "vbi5plus": 8,
+  "vbiMax": 20,
+  "vbiTotal": 204,
+  "cadenceViolations": 0,
+  "extras": [
+    {
+      "name": "gNdsGbiOtherModeLWriteCount",
+      "value": 5548
+    },
+    {
+      "name": "gNdsStageGCDrawAllLoopCapturedDisplayCount",
+      "value": 5705
+    }
+  ],
+  "capturedUtc": "2026-08-05T03:22:06.6749933Z"
+}
