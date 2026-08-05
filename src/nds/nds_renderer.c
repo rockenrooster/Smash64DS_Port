@@ -639,6 +639,180 @@ ndsRendererTask34StageStreamEndSegment(void)
 }
 #endif
 
+#if NDS_TICK_HUD
+/* G3 STEP 1 -- THE EFFECT GX STREAM CAPTURE, and the question it exists to
+ * settle before a packet builder is written: what SHAPE is the GX stream an
+ * effect display list emits, and can a captured copy of it be replayed?
+ *
+ * This matters because the precompiled-packet mechanism the board's G3 row
+ * describes ALREADY EXISTS in this file as Task 36 replay
+ * (NDSRendererTask36ReplayOwner, below): a captured word stream, a fixed static
+ * arena, per-run word offsets, and a segment admission mask. What Task 36 also
+ * carries is the reason it admits only three stage segments, recorded at its
+ * NDS_TASK36_REPLAY_SEGMENT_MASK -- a RIGID binding records PUSH + MULT4x4 of a
+ * constant world under a camera the segment bracket loads live each frame, so
+ * it replays; a DYNAMIC binding records LOAD4x4 per triangle of
+ * projection x view x model, so replaying it pins that geometry to the camera
+ * the capture frame happened to have. R2-02 E3 and E4 widened that mask twice
+ * and produced a smear of specks across Whispy's trunk and then a lost flower
+ * bed.
+ *
+ * Effect instances MOVE -- each one spawns somewhere else and fades on its own
+ * clock -- so E3's failure is the DEFAULT outcome for a verbatim effect packet.
+ * The design survives only if the stream carries one patchable matrix per list
+ * rather than one per triangle, and that count is what this instrument returns.
+ *
+ * Geometry, colour and matrix words are hashed SEPARATELY, and the split is the
+ * experiment rather than a convenience. Effect colour fades over an effect's
+ * life and effect position changes per instance, so the colour and matrix
+ * hashes MUST vary across instances of one template: they are the positive
+ * control proving the comparator can see a difference at all. Only against that
+ * control does an invariant GEOMETRY hash mean model-space words rather than a
+ * comparator that always answers "same". */
+#define NDS_EFFECT_PACKET_CAPTURE_WORDS 1024u
+
+volatile u32 gNdsEffectPacketWords[NDS_EFFECT_PACKET_CAPTURE_WORDS];
+volatile u32 gNdsEffectPacketClassCommands[NDS_TASK29_GX_CLASS_COUNT];
+volatile u32 gNdsEffectPacketClassWords[NDS_TASK29_GX_CLASS_COUNT];
+volatile u32 gNdsEffectPacketGeomHash;
+volatile u32 gNdsEffectPacketColorHash;
+volatile u32 gNdsEffectPacketMatrixHash;
+volatile u32 gNdsEffectPacketGeomWords;
+volatile u32 gNdsEffectPacketColorWords;
+volatile u32 gNdsEffectPacketMatrixWords;
+volatile u32 gNdsEffectPacketCaptureCount;
+volatile u32 gNdsEffectPacketDroppedWords;
+volatile u32 gNdsEffectPacketFaultCount;
+volatile u32 gNdsEffectPacketLastWordCount;
+/* Cumulative twins of the four per-list figures above. The per-list ones are
+ * reset by every CaptureBegin, so a single end-of-run read returns the LAST
+ * list's shape and nothing about the other 580; these are never reset, so
+ * dividing by gNdsEffectPacketCaptureCount gives the per-instance average over
+ * the whole window. gNdsEffectPacketTotalVertexCommands exists to be divided
+ * that way and checked against the board's banked per-instance vertex count
+ * (40.95 gate / 48.2 Boundary): a capture that is seeing the effect layer and
+ * nothing else must reproduce it. */
+volatile u32 gNdsEffectPacketTotalGeomWords;
+volatile u32 gNdsEffectPacketTotalColorWords;
+volatile u32 gNdsEffectPacketTotalMatrixWords;
+volatile u32 gNdsEffectPacketTotalMatrixCommands;
+volatile u32 gNdsEffectPacketTotalVertexCommands;
+
+static u32 sNdsEffectPacketArmed;
+static u32 sNdsEffectPacketCursor;
+
+/* FNV-1a. The offset basis is not decorative: a zero seed makes the empty
+ * stream and a stream of one zero word hash identically, and an effect list
+ * that emits no colour at all is a real case here. */
+#define NDS_EFFECT_PACKET_HASH_SEED 2166136261u
+
+static u32 ndsEffectPacketClassBucket(u32 command_class)
+{
+    switch (command_class)
+    {
+    case (u32)NDS_TASK29_GX_COLOR:
+        return 1u;
+    case (u32)NDS_TASK29_GX_MATRIX_MODE:
+    case (u32)NDS_TASK29_GX_MATRIX_IDENTITY:
+    case (u32)NDS_TASK29_GX_MATRIX_LOAD4X4:
+    case (u32)NDS_TASK29_GX_MATRIX_MULT4X4:
+    case (u32)NDS_TASK29_GX_MATRIX_MULT4x3:
+    case (u32)NDS_TASK29_GX_MATRIX_PUSH:
+    case (u32)NDS_TASK29_GX_MATRIX_POP:
+    case (u32)NDS_TASK29_GX_MATRIX_STORE:
+    case (u32)NDS_TASK29_GX_MATRIX_RESTORE:
+        return 2u;
+    default:
+        break;
+    }
+    return 0u;
+}
+
+static void ndsEffectPacketRecord(u32 command_class, const u32 *words,
+                                  u32 word_count)
+{
+    u32 bucket;
+    u32 hash;
+    u32 index;
+
+    if (command_class >= (u32)NDS_TASK29_GX_CLASS_COUNT)
+    {
+        gNdsEffectPacketFaultCount++;
+        return;
+    }
+    gNdsEffectPacketClassCommands[command_class]++;
+    gNdsEffectPacketClassWords[command_class] += word_count;
+    if (command_class == (u32)NDS_TASK29_GX_VERTEX16)
+    {
+        gNdsEffectPacketTotalVertexCommands++;
+    }
+    bucket = ndsEffectPacketClassBucket(command_class);
+    hash = (bucket == 1u) ? gNdsEffectPacketColorHash :
+        ((bucket == 2u) ? gNdsEffectPacketMatrixHash :
+                          gNdsEffectPacketGeomHash);
+    /* The class tag is folded in ahead of its words so a stream that moves the
+     * same word between two classes cannot hash equal to the original. */
+    hash = (hash ^ command_class) * 16777619u;
+    for (index = 0u; index < word_count; index++)
+    {
+        u32 word = (words != NULL) ? words[index] : 0u;
+        u32 cursor = sNdsEffectPacketCursor;
+
+        /* The buffer holds one list for a gdb dump; the HASHES cover the whole
+         * stream whether or not it fits, so a truncated capture can never read
+         * as agreement. */
+        if (cursor < NDS_EFFECT_PACKET_CAPTURE_WORDS)
+        {
+            gNdsEffectPacketWords[cursor] = word;
+            sNdsEffectPacketCursor = cursor + 1u;
+        }
+        else
+        {
+            gNdsEffectPacketDroppedWords++;
+        }
+        hash = (hash ^ word) * 16777619u;
+    }
+    if (bucket == 1u)
+    {
+        gNdsEffectPacketColorHash = hash;
+        gNdsEffectPacketColorWords += word_count;
+        gNdsEffectPacketTotalColorWords += word_count;
+    }
+    else if (bucket == 2u)
+    {
+        gNdsEffectPacketMatrixHash = hash;
+        gNdsEffectPacketMatrixWords += word_count;
+        gNdsEffectPacketTotalMatrixWords += word_count;
+        gNdsEffectPacketTotalMatrixCommands++;
+    }
+    else
+    {
+        gNdsEffectPacketGeomHash = hash;
+        gNdsEffectPacketGeomWords += word_count;
+        gNdsEffectPacketTotalGeomWords += word_count;
+    }
+}
+
+void ndsEffectPacketCaptureBegin(void)
+{
+    sNdsEffectPacketCursor = 0u;
+    gNdsEffectPacketGeomWords = 0u;
+    gNdsEffectPacketColorWords = 0u;
+    gNdsEffectPacketMatrixWords = 0u;
+    gNdsEffectPacketGeomHash = NDS_EFFECT_PACKET_HASH_SEED;
+    gNdsEffectPacketColorHash = NDS_EFFECT_PACKET_HASH_SEED;
+    gNdsEffectPacketMatrixHash = NDS_EFFECT_PACKET_HASH_SEED;
+    sNdsEffectPacketArmed = 1u;
+}
+
+void ndsEffectPacketCaptureEnd(void)
+{
+    sNdsEffectPacketArmed = 0u;
+    gNdsEffectPacketLastWordCount = sNdsEffectPacketCursor;
+    gNdsEffectPacketCaptureCount++;
+}
+#endif
+
 #if NDS_TASK36_HW_COMPOSE == 2
 /* Task 44 item 2: the single source of truth for "the replay capture window is
  * open". It lives out here, next to the wrapped GX record sites, so the hot
@@ -805,6 +979,12 @@ ndsRendererTask29GXRecord(
 #endif
 #if NDS_TASK36_HW_COMPOSE == 2
     NDS_TASK36_REPLAY_RECORD(command_class, words, word_count);
+#endif
+#if NDS_TICK_HUD
+    if (sNdsEffectPacketArmed != 0u)
+    {
+        ndsEffectPacketRecord((u32)command_class, words, word_count);
+    }
 #endif
     /* Task 49 GX-differ hook (mirror of the lean-funnel hook below). */
 #if NDS_TASK49_GX_DIFFER
@@ -977,6 +1157,12 @@ static inline void ndsRendererTask29GXRecord(
 #endif
 #if NDS_TASK36_HW_COMPOSE == 2
     NDS_TASK36_REPLAY_RECORD(command_class, words, word_count);
+#endif
+#if NDS_TICK_HUD
+    if (sNdsEffectPacketArmed != 0u)
+    {
+        ndsEffectPacketRecord((u32)command_class, words, word_count);
+    }
 #endif
     /* Task 49 GX-differ hook: the single writer touch on this TU for the
      * differ. Records the per-owner stream word-for-word (body in the

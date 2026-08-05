@@ -486,6 +486,77 @@ load and build eagerly. Lazy discovery would be gameplay-time allocation, and
 compile-time assert, and fall back to the interpreter for any list not in the
 prebuilt set — correctness-preserving and allocation-free.
 
+### G3 step 1 — THE PACKET DESIGN IS REFUTED AS BRIEFED (cycle 88). Effect geometry is the per-instance data, not the invariant.
+
+**The row assumed geometry is template-constant and that matrix + colour are the
+per-frame patch. Measured, it is exactly inverted.** Boundary arm, frames
+900–907, 645 effect list instances over 7 templates, DLDI on, build
+`builds/build-tick-hud-buckets`; artifact
+`artifacts/performance/2026-08-05_c88-effect-packet-stream-boundary.json`.
+The instrument hashes the captured GX word stream per list in three classes and
+compares each against that template's first sighting:
+
+| | matches | variants |
+|---|---:|---:|
+| **geometry** (VERTEX16 + TEX_COORD + BEGIN/END/POLY_FMT) | **0** | **638** |
+| colour | 638 | 0 |
+| matrix | 638 | 0 |
+| geometry **word count** | — | **0** |
+
+638 = 645 − 7, i.e. **every comparable instance varied, 100%**, while the stream
+LENGTH never varied once. Colour and matrix words are byte-identical across
+instances and are the positive control: the comparator demonstrably detects a
+difference (638 times) and demonstrably reports agreement (1,276 times), so
+"geometry always differs" is a reading and not a broken hash.
+
+**What it means.** If the hardware were transforming, every instance of a
+template would emit identical model-space vertices and the MATRIX would carry
+the per-instance difference. The matrix is constant and the vertices move, so
+**the transform is already baked into the vertex words** — effect lists take the
+CPU-projected submit shape (`ndsRendererHardwareClipVertex` divides x/w and y/w
+and emits screen-space v16). A packet captured from that stream pins the effect
+to the position and camera of the capture instance. **This is R2-02 E3's "smear
+of specks" failure, measured on the effect layer for the first time.**
+
+Patching "the matrix and the dynamic colour words" therefore patches the two
+things that were already constant, and leaves all ~235 geometry words per list —
+the actual per-instance payload — unpatched. **The briefed design cannot work on
+the current submit path**, and no arena, capacity or overflow policy changes
+that.
+
+**The precondition this creates, and it is the real G3 row now:** effects must
+first be moved from the projected submit shape to the raw one (load the
+composed matrix into GX once per list, emit model-space vertices). Then geometry
+becomes template-constant and the packet design works with the matrix as the
+per-instance patch, exactly as briefed. `ndsRendererHardwareClassifySubmit`
+(`nds_renderer.c`) returns `PROJECTED_NO_Z` on its **first** predicate when
+`source_zbuffered == FALSE`, before any range or matrix-compatibility check, so
+effects plausibly never reach the raw path at all — that attribution is read
+from the code and is NOT yet measured; the class histogram is the next probe.
+
+**The mechanism G3 wants already exists: Task 36 replay.** `NDS_TASK36_HW_COMPOSE
+== 2` is already on in the tick-HUD ROM. `NDSRendererTask36ReplayOwner`
+(`nds_renderer.c`) is a fixed 4,608-word static arena with per-run word offsets,
+a segment admission mask, capture/replay states and a real packed DS display
+list — `ndsRendererTask36ReplayOpcode` encodes FIFO opcodes with parameter
+counts and deliberately drops the state classes its BeginRun re-issues live.
+Its `NDS_TASK36_REPLAY_SEGMENT_MASK` comment already states the rigid-versus-
+dynamic law this measurement just confirmed for effects. **Do not build a second
+packet arena; admit effects to this one once their stream is rigid.**
+
+Instrument: `gNdsEffectPacket*`, all behind `#if NDS_TICK_HUD`, hooked into the
+GX record funnel in `nds_renderer.c` and compared beside the census in
+`reloc_backend_renderer_dl.c` (same key, same population). Cost **bss +5,032,
+text ~+912** (nm-measured); headroom 114,272 proven, `check-boot-headroom.ps1`
+OK. **The shipped ROM pays nothing** — the `NDS_TICK_HUD=0` link check
+(`smash64ds-battle-playable-proof-hwtri`) contains **0** `EffectPacket` symbols.
+Engagement is exact rather than plausible: capture count 645 equals
+`gNdsEffectDLSubmitCount` 645, templates 7 equals `gNdsEffectDLCensusUnique` 7,
+and the capture's own VERTEX16 command total **31,941 equals the renderer's
+independent `gNdsEffectDLVertexTotal` 31,941** — the capture sees the effect
+layer's complete vertex stream and nothing else. Verts/tris is exactly 3.000,
+reproducing the census.
+
 ### G3 — RE-PRICED ON THE GATE ARM (cycle 79). The prize is 4–9x smaller than this row claims.
 
 **Every number below this heading is Boundary-derived and carries no arm

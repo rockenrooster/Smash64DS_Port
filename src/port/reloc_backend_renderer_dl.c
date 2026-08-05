@@ -9123,6 +9123,79 @@ static void ndsEffectDLCensusRecord(const Gfx *dl, u32 commands,
     }
     gNdsEffectDLCensusUnique = count + 1u;
 }
+
+/* G3 STEP 1 -- the per-template verdict on the captured GX stream. The capture
+ * itself is in nds_renderer.c, hooked into the GX record funnel; this is the
+ * comparison, and it deliberately reuses the census's own key so the two answer
+ * for exactly the same template population.
+ *
+ * 32 entries against a measured 8 uniques is 4x margin, and the overflow is
+ * counted rather than wrapped: a table that silently dropped a template would
+ * report perfect agreement for the ones it kept. */
+#define NDS_EFFECT_PACKET_TEMPLATE_CAPACITY 32u
+
+static const Gfx *sNdsEffectPacketKey[NDS_EFFECT_PACKET_TEMPLATE_CAPACITY];
+static u32 sNdsEffectPacketGeomHashSeen[NDS_EFFECT_PACKET_TEMPLATE_CAPACITY];
+static u32 sNdsEffectPacketColorHashSeen[NDS_EFFECT_PACKET_TEMPLATE_CAPACITY];
+static u32 sNdsEffectPacketMatrixHashSeen[NDS_EFFECT_PACKET_TEMPLATE_CAPACITY];
+static u32 sNdsEffectPacketGeomWordsSeen[NDS_EFFECT_PACKET_TEMPLATE_CAPACITY];
+
+static void ndsEffectPacketVerdictRecord(const Gfx *dl)
+{
+    u32 count = gNdsEffectPacketTemplates;
+    u32 i;
+
+    for (i = 0u; i < count; i++)
+    {
+        if (sNdsEffectPacketKey[i] != dl)
+        {
+            continue;
+        }
+        if (sNdsEffectPacketGeomHashSeen[i] == gNdsEffectPacketGeomHash)
+        {
+            gNdsEffectPacketGeomMatchCount++;
+        }
+        else
+        {
+            gNdsEffectPacketGeomVariantCount++;
+        }
+        if (sNdsEffectPacketGeomWordsSeen[i] != gNdsEffectPacketGeomWords)
+        {
+            /* Separate from the hash verdict on purpose: a stream that changed
+             * LENGTH is a different failure from one that changed VALUES, and
+             * only the second is a candidate for a patch table. */
+            gNdsEffectPacketGeomWordVariantCount++;
+        }
+        if (sNdsEffectPacketColorHashSeen[i] == gNdsEffectPacketColorHash)
+        {
+            gNdsEffectPacketColorMatchCount++;
+        }
+        else
+        {
+            gNdsEffectPacketColorVariantCount++;
+        }
+        if (sNdsEffectPacketMatrixHashSeen[i] == gNdsEffectPacketMatrixHash)
+        {
+            gNdsEffectPacketMatrixMatchCount++;
+        }
+        else
+        {
+            gNdsEffectPacketMatrixVariantCount++;
+        }
+        return;
+    }
+    if (count >= NDS_EFFECT_PACKET_TEMPLATE_CAPACITY)
+    {
+        gNdsEffectPacketTableOverflow++;
+        return;
+    }
+    sNdsEffectPacketKey[count] = dl;
+    sNdsEffectPacketGeomHashSeen[count] = gNdsEffectPacketGeomHash;
+    sNdsEffectPacketColorHashSeen[count] = gNdsEffectPacketColorHash;
+    sNdsEffectPacketMatrixHashSeen[count] = gNdsEffectPacketMatrixHash;
+    sNdsEffectPacketGeomWordsSeen[count] = gNdsEffectPacketGeomWords;
+    gNdsEffectPacketTemplates = count + 1u;
+}
 #endif
 
 static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
@@ -9412,6 +9485,11 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
 #if NDS_TICK_HUD
     if (phase_effect != FALSE)
     {
+        /* Armed OUTSIDE the Exec tick bracket so the capture's own setup is not
+         * charged to Exec. The per-word recording inside it necessarily is,
+         * which is why this build's Exec ticks are not a performance reading --
+         * this run is about the stream's SHAPE, not its cost. */
+        ndsEffectPacketCaptureBegin();
         phase_mark = cpuGetTiming();
     }
 #endif
@@ -9427,6 +9505,7 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
     if (phase_effect != FALSE)
     {
         gNdsEffectPhaseExecTicks += cpuGetTiming() - phase_mark;
+        ndsEffectPacketCaptureEnd();
     }
 #endif
     if (sNdsRendererAdapterEffectSubmitActive != FALSE)
@@ -9531,6 +9610,12 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
             ndsEffectDLCensusRecord(dl, render_stats->command_count,
                                     (u32)gNdsEffectDLSubmitOtherModeIn,
                                     census_tris, census_verts);
+            /* Same key, same instant, same population as the census above. If
+             * the capture's own arming condition ever disagreed with this one,
+             * gNdsEffectPacketCaptureCount would diverge from
+             * gNdsEffectDLSubmitCount -- both are published, so the
+             * disagreement would be visible rather than silent. */
+            ndsEffectPacketVerdictRecord(dl);
         }
 #endif
     }

@@ -4377,6 +4377,44 @@ extern volatile u32 gNdsEffectDLVertexTotal;
 extern volatile u32 gNdsEffectDLCensusGeomVariants;
 extern volatile u32 gNdsEffectDLCensusTrisMaxTotal;
 extern volatile u32 gNdsEffectDLCensusVertsMaxTotal;
+/* G3 step 1: the effect GX stream capture. Defined in nds_renderer.c beside the
+ * GX record funnel it hooks; the comment there states what it is for and why
+ * geometry, colour and matrix words are hashed apart. Arrays are declared
+ * unsized so this header does not have to see NDS_TASK29_GX_CLASS_COUNT, which
+ * is itself behind a renderer-config guard. */
+extern volatile u32 gNdsEffectPacketWords[];
+extern volatile u32 gNdsEffectPacketClassCommands[];
+extern volatile u32 gNdsEffectPacketClassWords[];
+extern volatile u32 gNdsEffectPacketGeomHash;
+extern volatile u32 gNdsEffectPacketColorHash;
+extern volatile u32 gNdsEffectPacketMatrixHash;
+extern volatile u32 gNdsEffectPacketGeomWords;
+extern volatile u32 gNdsEffectPacketColorWords;
+extern volatile u32 gNdsEffectPacketMatrixWords;
+extern volatile u32 gNdsEffectPacketCaptureCount;
+extern volatile u32 gNdsEffectPacketDroppedWords;
+extern volatile u32 gNdsEffectPacketFaultCount;
+extern volatile u32 gNdsEffectPacketLastWordCount;
+extern volatile u32 gNdsEffectPacketTotalGeomWords;
+extern volatile u32 gNdsEffectPacketTotalColorWords;
+extern volatile u32 gNdsEffectPacketTotalMatrixWords;
+extern volatile u32 gNdsEffectPacketTotalMatrixCommands;
+extern volatile u32 gNdsEffectPacketTotalVertexCommands;
+void ndsEffectPacketCaptureBegin(void);
+void ndsEffectPacketCaptureEnd(void);
+/* The per-template verdict, accumulated in reloc_backend_renderer_dl.c beside
+ * the unique-template census whose key table it reuses. Match and Variant are
+ * reported as a PAIR for each of the three word classes: a variant count alone
+ * cannot distinguish "invariant" from "never compared". */
+extern volatile u32 gNdsEffectPacketTemplates;
+extern volatile u32 gNdsEffectPacketTableOverflow;
+extern volatile u32 gNdsEffectPacketGeomMatchCount;
+extern volatile u32 gNdsEffectPacketGeomVariantCount;
+extern volatile u32 gNdsEffectPacketColorMatchCount;
+extern volatile u32 gNdsEffectPacketColorVariantCount;
+extern volatile u32 gNdsEffectPacketMatrixMatchCount;
+extern volatile u32 gNdsEffectPacketMatrixVariantCount;
+extern volatile u32 gNdsEffectPacketGeomWordVariantCount;
 #endif
 /* The Task 75 load counter lives inside the NDS_TICK_HUD block above, but its
  * call site in reloc_backend_assets.c is unconditional, so a non-tick-HUD

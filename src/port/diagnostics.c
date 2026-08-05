@@ -3130,6 +3130,20 @@ volatile u32 gNdsEffectDLVertexTotal;
 volatile u32 gNdsEffectDLCensusGeomVariants;
 volatile u32 gNdsEffectDLCensusTrisMaxTotal;
 volatile u32 gNdsEffectDLCensusVertsMaxTotal;
+/* G3 step 1, the effect GX stream verdict. The capture globals themselves live
+ * in nds_renderer.c beside the GX funnel that fills them; these are the
+ * per-template comparison, accumulated in reloc_backend_renderer_dl.c beside
+ * the unique-template census whose key table it reuses. Cumulative from boot
+ * for the same reason the census is: the question is about the whole match. */
+volatile u32 gNdsEffectPacketTemplates;
+volatile u32 gNdsEffectPacketTableOverflow;
+volatile u32 gNdsEffectPacketGeomMatchCount;
+volatile u32 gNdsEffectPacketGeomVariantCount;
+volatile u32 gNdsEffectPacketColorMatchCount;
+volatile u32 gNdsEffectPacketColorVariantCount;
+volatile u32 gNdsEffectPacketMatrixMatchCount;
+volatile u32 gNdsEffectPacketMatrixVariantCount;
+volatile u32 gNdsEffectPacketGeomWordVariantCount;
 /* Task 66: the idle VBlank span, owned by the tick HUD rather than borrowed
  * from gNdsRendererProfileVBlankWaitTicks. That counter only accumulates under
  * NDS_RENDERER_PROFILE_LEVEL >= 1, and both the tick-HUD and proof targets pin
