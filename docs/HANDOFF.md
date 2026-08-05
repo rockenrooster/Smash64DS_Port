@@ -27,12 +27,14 @@ take a gate reading on 128 frames again.
 
 | arm | role | `WORK-H` P50 | P95 | over gate |
 |---|---|---:|---:|---:|
-| **Boundary** mode 163 | **gate of record** | 1,092,032 | **1,463,104** | 713/1600 (44.6%) |
-| both-CPU | optimization target | 1,098,240 | 1,605,440 | 704/1600 (44.0%) |
+| **both-CPU** | **THE GATE (owner, 2026-08-05)** | 1,098,240 | **1,605,440** | 704/1600 (44.0%) |
+| **Boundary** mode 163 | shipped configuration | 1,092,032 | 1,463,104 | 713/1600 (44.6%) |
 
-Slips 0 in both. **Gap is 343,104.** `Makefile:305-308` forbids reporting a
-both-CPU P95 as the Boundary figure; `PROJECT_GOAL.md` gates on representative
-gameplay. Both-CPU is only ~10% worse at P95 — harder, not a different animal.
+Slips 0 in both. **Gap to the gate is 485,060** (Boundary trails at 343,104).
+The owner's bar: the whole match under the P95 budget on the both-CPU config,
+loading states excluded; the shipped ROM stays the Boundary hwtri pair.
+`Makefile:305-308` still forbids reporting a both-CPU P95 as the Boundary
+figure. Both-CPU is only ~10% worse at P95 — harder, not a different animal.
 
 ## The target: effect DObj submits, and the denominator is the display list
 

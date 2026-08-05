@@ -13,9 +13,12 @@ and equivalence. **R2-07 is the live phase.** The board
 baselines, the settled diagnosis, and the gate lane (G1–G4); this file stays
 the charter and is not a status log.
 
-**The battle-frame P95 gate is NOT met. Gap: 343,104** — Boundary whole-match
-`WORK-H` P95 1,463,104 against the 1,120,380 gate; both-CPU stress 1,605,440
-(2026-08-04, git `f24f0cc1`, dldi=ON; tables on the board). The settled
+**The battle-frame P95 gate is NOT met, and the owner has set the bar at the
+both-CPU stress config (2026-08-05, confirming §7's stress gate): the whole
+match under P95 ≤ 1.12M, loading states excluded, while the shipped ROM stays
+the Boundary hwtri configuration. Gap to that gate: 485,060** — both-CPU
+whole-match `WORK-H` P95 1,605,440; the Boundary arm trails at 1,463,104
+(gap 343,104) (2026-08-04, git `f24f0cc1`, dldi=ON; tables on the board). The settled
 attribution: **effect DObj submits own the tail** — 99.3% of the `MISC`
 excursion, ~360K ticks on over-gate frames, 0 on clean ones, ~315K net
 recoverable — and the cost is a **per-list constant** (generic DL
@@ -216,14 +219,14 @@ per-bucket "wins" in that band cannot be distinguished from placement. Judge a
 change on `WORK-H`; use bucket deltas to locate, never to decide.
 
 **Two configurations, two numbers, never merged.** `NDS_R2_BOTH_CPU=1` (Mario
-CPU vs Fox CPU, continuous attacks, maximal live hitbox population) is the
-**optimization target** — it is the most stressful way the game is actually
-played, and the default Boundary understates cost badly because with no
-controller attached the human Mario stands still for the whole window.
-`NDS_R2_BOTH_CPU=0` at mode 163 is the **gate of record**, because
-`PROJECT_GOAL.md` gates on *representative* gameplay and `Makefile:305-308`
-forbids reporting a stress P95 as the Boundary figure. Label every figure with
-the arm it came from.
+CPU vs Fox CPU, continuous attacks, maximal live hitbox population) is **the
+gate** (owner, 2026-08-05): the whole match must sit under the P95 budget on
+this, the most stressful way the game is actually played — the default
+Boundary understates cost because with no controller attached the human Mario
+stands still. `NDS_R2_BOTH_CPU=0` at mode 163 remains the **shipped
+configuration** and the milestone's reported Boundary figure;
+`Makefile:305-308` still forbids presenting a stress P95 as the Boundary
+number. Label every figure with the arm it came from.
 
 **A 128-frame window is a weak instrument for anything transient.** It is ~4.3 s
 of a 60 s match at a fixed early offset, so it can miss every KO, respawn and
@@ -476,10 +479,10 @@ exists so R2-06/R2-07 can be gated without a recorded input stream, and as a
 deliberate stress case: two CPUs attack continuously, which maximises the live
 hitbox population that R2-03 E35 measured as the owner of the `SRC` P95
 excursion. The shipped Boundary stays Mario human vs level-3 Fox CPU at mode
-`163`, and `PROJECT_GOAL.md`'s P95 gate is defined on *representative* gameplay —
-so a P95 read off the stress config is a harder number than the milestone
-requires and must be reported as such, never swapped in silently for the
-Boundary figure (`NDS_R2_BOTH_CPU` in the Makefile).
+`163`. Since 2026-08-05 the owner gates the milestone on the stress config
+itself (§3.9): the both-CPU whole match must sit under the P95 budget, loading
+states excluded. Still never swap a stress figure in silently for the Boundary
+number (`NDS_R2_BOTH_CPU` in the Makefile).
 
 - Mario CPU vs Fox CPU on Dream Land through `NDS_R2_PATH`: 60 Hz gameplay,
   collision, damage, knockback, shields, CPU behavior, camera, 30 FPS

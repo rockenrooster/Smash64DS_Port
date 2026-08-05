@@ -18,12 +18,19 @@ of the match (P95 understated ~306,000, over-gate rate 5×).
 
 | arm | role | `WORK-H` P50 | P95 | over gate | VBI 2/3/4/5+ (max) |
 |---|---|---:|---:|---:|---|
-| **Boundary** mode 163 | **gate of record** | 1,092,032 | **1,463,104** | 713/1600 (44.6%) | 1161/827/41/10 (20) |
-| both-CPU `NDS_R2_BOTH_CPU=1` | optimization target | 1,098,240 | 1,605,440 | 704/1600 (44.0%) | 1118/822/90/9 (20) |
+| **both-CPU** `NDS_R2_BOTH_CPU=1` | **THE GATE (owner, 2026-08-05)** | 1,098,240 | **1,605,440** | 704/1600 (44.0%) | 1118/822/90/9 (20) |
+| **Boundary** mode 163 | shipped configuration | 1,092,032 | 1,463,104 | 713/1600 (44.6%) | 1161/827/41/10 (20) |
 
-**Gap: 343,104.** Gate is `PROJECT_GOAL.md`'s P95 ≤ 1.12M (2 VBlanks =
-1,120,380). Never report a both-CPU figure as the Boundary number
-(`Makefile:305-308`). Clean-frame P95 ~1,056,640 is ~63K inside the gate.
+**Gap to the gate: 485,060** (both-CPU 1,605,440 against 1,120,380 = 2
+VBlanks); the shipped Boundary configuration trails at 343,104. The owner set
+the bar (2026-08-05, confirming the charter §7 stress gate): **the whole match
+must sit under the P95 budget on the both-CPU config — the most stressful way
+the game is played — loading states excluded** (stated rule: drop frames with
+`SRC` > 2× that arm's own `SRC` median). The shipped ROM remains
+`smash64ds-battle-playable-hwtri.nds` (Boundary, mode 163). Label every figure
+with its arm; never present a both-CPU figure as the Boundary number
+(`Makefile:305-308`). Boundary clean-frame P95 ~1,056,640 is ~63K inside the
+budget; no both-CPU clean-frame figure is banked yet.
 
 Noise floors: `WORK-H` P95 cross-build ±5,376; per-bucket placement ≥8,544 —
 buckets locate, `WORK-H` decides. 1.85 cycles of `FTR` mean per byte of added
@@ -109,15 +116,17 @@ valid iteration metric — flip the route mid-run and read both constants from
 the same run, same frames, zero placement noise, zero extra builds. The
 whole-match sampling run is reserved for the KEEP decision and re-baseline.
 Success at iteration scale: packet-route ticks/list ≪ 102,730 (the submit-only
-residue should be a few thousand); at gate scale: Boundary whole-match P95
-moves by most of the ~315K recoverable.
+residue should be a few thousand); at gate scale: whole-match P95 moves by
+most of the ~315K recoverable in both arms.
 
 ### G4 — Re-baseline and pick the next lever from the residue
 
 After G3 KEEP: bank new whole-match baselines (both arms — run them
 concurrently on two runner slots once the parked calibration row passes).
-Expected landing: near clean-frame P95 (~1,056,640), i.e. **inside the gate**.
-If a residual gap remains, promote from Parked in this order: the +52,928
+**The gate decision reads on the both-CPU arm** (owner, 2026-08-05); bank its
+load-frame-excluded P95 explicitly — the Boundary clean-frame figure
+(~1,056,640, inside the budget) has no banked both-CPU sibling yet. If a
+residual gap remains, promote from Parked in this order: the +52,928
 regression bisect (largest known flat cost), `Tex` residue on non-effect
 paths, then the charter §7 contingency ladder (rate reduction → fidelity →
 owner-approved 30 Hz) — never widen the gate.
@@ -127,10 +136,11 @@ owner-approved 30 Hz) — never widen the gate.
 The P1 acceptance-level rows, highest impact first. The gate lane above is
 row 1's execution plan.
 
-1. **Stable 30 FPS** — qualify representative active gameplay at P95 ≤ 1.12M
-   ARM9 ticks per presented frame on the accuracy melonDS fork (gap 343,104;
-   lane G1–G4). Hardware remains the final check for mechanisms the emulator
-   cannot referee.
+1. **Stable 30 FPS** — qualify the whole match at P95 ≤ 1.12M ARM9 ticks per
+   presented frame on the **both-CPU stress config**, loading states excluded
+   (owner, 2026-08-05; gap 485,060; lane G1–G4), on the accuracy melonDS
+   fork. The shipped ROM stays the Boundary hwtri configuration. Hardware
+   remains the final check for mechanisms the emulator cannot referee.
 2. **Mario/Fox completeness** — replace battle-reachable weak status callbacks
    with source-backed behavior and prove both complete movesets naturally.
 3. **Dream Land completeness** — close the remaining Whispy material/animation
