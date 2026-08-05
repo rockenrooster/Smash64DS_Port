@@ -9052,9 +9052,19 @@ static sb32 ndsRendererAdapterPrepareMaterialSegment(
 static const Gfx *sNdsEffectDLCensusKey[NDS_EFFECT_DL_CENSUS_CAPACITY];
 static u32 sNdsEffectDLCensusOtherMode[NDS_EFFECT_DL_CENSUS_CAPACITY];
 static u32 sNdsEffectDLCensusCommands[NDS_EFFECT_DL_CENSUS_CAPACITY];
+/* PER-TEMPLATE GEOMETRY, AND IT MUST BE THE MAX RATHER THAN THE FIRST SIGHTING.
+ * hardware_triangle_count is a POST-CULL count, so the same template submits
+ * different geometry on different frames as it moves through the frustum. A
+ * packet has to encode the template's whole content, so the sizing input is the
+ * largest submission ever seen, not a sample of one. GeomVariants says whether
+ * culling moves it at all: 0 means the geometry is frame-invariant and the max
+ * is exact; non-zero means the max is the honest lower bound on static content
+ * and the arena wants margin over it. */
+static u32 sNdsEffectDLCensusTrisMax[NDS_EFFECT_DL_CENSUS_CAPACITY];
+static u32 sNdsEffectDLCensusVertsMax[NDS_EFFECT_DL_CENSUS_CAPACITY];
 
 static void ndsEffectDLCensusRecord(const Gfx *dl, u32 commands,
-                                    u32 othermode_in)
+                                    u32 othermode_in, u32 tris, u32 verts)
 {
     u32 count = gNdsEffectDLCensusUnique;
     u32 i;
@@ -9071,6 +9081,24 @@ static void ndsEffectDLCensusRecord(const Gfx *dl, u32 commands,
             {
                 gNdsEffectDLCensusCommandVariants++;
             }
+            if (tris != sNdsEffectDLCensusTrisMax[i])
+            {
+                gNdsEffectDLCensusGeomVariants++;
+            }
+            /* Totals are maintained incrementally so the report never needs a
+             * second pass over the table. */
+            if (tris > sNdsEffectDLCensusTrisMax[i])
+            {
+                gNdsEffectDLCensusTrisMaxTotal +=
+                    tris - sNdsEffectDLCensusTrisMax[i];
+                sNdsEffectDLCensusTrisMax[i] = tris;
+            }
+            if (verts > sNdsEffectDLCensusVertsMax[i])
+            {
+                gNdsEffectDLCensusVertsMaxTotal +=
+                    verts - sNdsEffectDLCensusVertsMax[i];
+                sNdsEffectDLCensusVertsMax[i] = verts;
+            }
             return;
         }
     }
@@ -9084,7 +9112,11 @@ static void ndsEffectDLCensusRecord(const Gfx *dl, u32 commands,
     sNdsEffectDLCensusKey[count] = dl;
     sNdsEffectDLCensusOtherMode[count] = othermode_in;
     sNdsEffectDLCensusCommands[count] = commands;
+    sNdsEffectDLCensusTrisMax[count] = tris;
+    sNdsEffectDLCensusVertsMax[count] = verts;
     gNdsEffectDLCensusUniqueCommandTotal += commands;
+    gNdsEffectDLCensusTrisMaxTotal += tris;
+    gNdsEffectDLCensusVertsMaxTotal += verts;
     if (commands > gNdsEffectDLCensusCommandMax)
     {
         gNdsEffectDLCensusCommandMax = commands;
@@ -9486,14 +9518,20 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
 #if NDS_TICK_HUD
         /* Cumulative twins of the two last-value-wins deltas above: a stop reads
          * one list from those, and the census needs the whole window. */
-        gNdsEffectDLTriangleTotal +=
-            render_stats->hardware_triangle_count - effect_hw_triangle_before;
-        gNdsEffectDLVertexTotal +=
-            render_stats->hardware_vertex_count - effect_hw_vertex_before;
-        /* OtherModeIn was latched for THIS list before the executor ran, so it
-         * is the entry state; render_stats->othermode_l is now the exit one. */
-        ndsEffectDLCensusRecord(dl, render_stats->command_count,
-                                (u32)gNdsEffectDLSubmitOtherModeIn);
+        {
+            u32 census_tris = render_stats->hardware_triangle_count -
+                effect_hw_triangle_before;
+            u32 census_verts = render_stats->hardware_vertex_count -
+                effect_hw_vertex_before;
+
+            gNdsEffectDLTriangleTotal += census_tris;
+            gNdsEffectDLVertexTotal += census_verts;
+            /* OtherModeIn was latched for THIS list before the executor ran, so
+             * it is the entry state; render_stats->othermode_l is now exit. */
+            ndsEffectDLCensusRecord(dl, render_stats->command_count,
+                                    (u32)gNdsEffectDLSubmitOtherModeIn,
+                                    census_tris, census_verts);
+        }
 #endif
     }
 #if NDS_RENDERER_HW_TRIANGLES

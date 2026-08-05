@@ -451,15 +451,40 @@ WORK-H P95 1,480,576 vs 1,476,672 (+3,904) and gate 1,621,696 vs 1,624,064
 (−2,368) — both inside the ±5,376 floor, so the instrument does not move what it
 measures. **Neither is a new baseline; 1,624,064 still stands.**
 
-**Not measured, and it is the one gap before the arena constant is fixed:**
-per-template triangle/vertex counts. The census totals are per *instance*, so
-packet bytes for the 8 templates is currently an inference from the 1.91x
-command skew (~67 tris / ~200 verts over the set, order 4–8 KB of packet).
-Accumulating tris/verts per table entry is a small addition to the same
-instrument. **The census counts templates actually submitted, so 8 is a LOWER
-bound**: the builder must enumerate the closed effect-model set at match load
-rather than discover templates lazily, because lazy discovery is gameplay-time
-allocation and §3.11 makes that a freeze, not a slowdown.
+**THE ARENA CONSTANT IS MEASURED (cycle 87, step 0). 83 triangles / 249
+vertices / 669 commands over the 8 templates — identical on both arms.**
+Artifacts `artifacts/performance/2026-08-05_c87-geomcensus-{boundary,bothcpu}.json`.
+
+| | gate | Boundary |
+|---|---:|---:|
+| tris over the 8 templates | 83 | 83 |
+| verts over the 8 templates | 249 | 249 |
+| `GeomVariants` / instances | 2 / 581 | **0** / 1,366 |
+
+`hardware_triangle_count` is POST-CULL, so per-instance geometry can vary and a
+packet must encode the template's whole content — the census therefore records
+the **max** per template, not a first sighting. `GeomVariants` is its confidence,
+and at 0 (Boundary) and 2 of 581 (gate) the geometry is frame-invariant, so the
+maxima are exact rather than a lower bound. Verts are exactly 3x tris on both
+arms, consistent with the per-instance 3.000x ratio.
+
+**The inference this replaced was 20% low** (~67 tris / ~200 verts from the 1.91x
+command skew), which is why §3.11 requires the arena constant to be measured: an
+undersized arena is a freeze, not a slowdown.
+
+Packet-byte estimate on the measured basis: 249 verts x 16 B (VTX_16 two words +
+TEXCOORD + COLOR) = 3,984, plus <=83 BEGIN_VTXS (332), plus per-template state
+(matrix 4x3, polygon format, texture params, colours ~80 B x 8 = 640), plus
+packed-command-byte overhead — order **6 KB for the entire effect set**. A 16 KB
+fixed arena is 2.6x margin; 32 KB is 5.2x. Against 125,248 bytes of proven
+static headroom this is not a constraint.
+
+**8 remains a LOWER bound on templates**: the census counts templates actually
+submitted, so the builder must enumerate the closed effect-model set at match
+load and build eagerly. Lazy discovery would be gameplay-time allocation, and
+§3.11 makes that a freeze. Overflow policy: size at build time with a
+compile-time assert, and fall back to the interpreter for any list not in the
+prebuilt set — correctness-preserving and allocation-free.
 
 ### G3 — RE-PRICED ON THE GATE ARM (cycle 79). The prize is 4–9x smaller than this row claims.
 

@@ -3127,6 +3127,9 @@ volatile u32 gNdsEffectDLCensusCommandMax;
 volatile u32 gNdsEffectDLCensusUniqueCommandTotal;
 volatile u32 gNdsEffectDLTriangleTotal;
 volatile u32 gNdsEffectDLVertexTotal;
+volatile u32 gNdsEffectDLCensusGeomVariants;
+volatile u32 gNdsEffectDLCensusTrisMaxTotal;
+volatile u32 gNdsEffectDLCensusVertsMaxTotal;
 /* Task 66: the idle VBlank span, owned by the tick HUD rather than borrowed
  * from gNdsRendererProfileVBlankWaitTicks. That counter only accumulates under
  * NDS_RENDERER_PROFILE_LEVEL >= 1, and both the tick-HUD and proof targets pin

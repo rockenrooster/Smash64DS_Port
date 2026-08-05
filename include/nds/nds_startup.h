@@ -4370,6 +4370,13 @@ extern volatile u32 gNdsEffectDLCensusCommandMax;
 extern volatile u32 gNdsEffectDLCensusUniqueCommandTotal;
 extern volatile u32 gNdsEffectDLTriangleTotal;
 extern volatile u32 gNdsEffectDLVertexTotal;
+/* The ARENA CONSTANT, measured rather than inferred: the sum over unique
+ * templates of the largest geometry each was ever seen to submit. GeomVariants
+ * is its confidence -- 0 means culling never moved a template's output, so the
+ * maxima are exact. */
+extern volatile u32 gNdsEffectDLCensusGeomVariants;
+extern volatile u32 gNdsEffectDLCensusTrisMaxTotal;
+extern volatile u32 gNdsEffectDLCensusVertsMaxTotal;
 #endif
 /* The Task 75 load counter lives inside the NDS_TICK_HUD block above, but its
  * call site in reloc_backend_assets.c is unconditional, so a non-tick-HUD

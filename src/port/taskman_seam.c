@@ -5122,7 +5122,10 @@ static void ndsBattlePlayableFinalizePresentedIteration(void)
             gNdsEffectDLCensusCommandVariants +
             gNdsEffectDLCensusCommandMax +
             gNdsEffectDLCensusUniqueCommandTotal +
-            gNdsEffectDLTriangleTotal + gNdsEffectDLVertexTotal;
+            gNdsEffectDLTriangleTotal + gNdsEffectDLVertexTotal +
+            gNdsEffectDLCensusGeomVariants +
+            gNdsEffectDLCensusTrisMaxTotal +
+            gNdsEffectDLCensusVertsMaxTotal;
         gNdsTickHudBuckets[nNDSTickHudBucketFighters] =
             gNdsTickHudFighterTicks;
         gNdsTickHudBuckets[nNDSTickHudBucketStage] = gNdsTickHudStageTicks;
