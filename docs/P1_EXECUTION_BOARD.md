@@ -267,6 +267,16 @@ samples, frames 441–2040, stride 96, DLDI on:
 | effect submits as share of `MISC` excursion | 99.3% | **71.5%** |
 | recoverable on WORK-H P95 | ~315,000 | **33,699 – 75,264** |
 
+**CAVEAT, cycle 80 — the gate-arm column came off the 12.6% window.** It was
+measured on `build-c79-g1-bothcpu`, which still seeded the 420-second match, and
+was labelled "whole match". The same applies to G1's *2,953 consults over 563
+lists*. Counts **per window** are unaffected (both are 1,600 presented frames),
+but "per match" is the wrong denominator, and the effect density of an opening
+minute is not that of a full match with its KO-heavy endgame. **Re-measure these
+on the corrected seed before sizing G3 against them.** Already re-derived: the
+`MISC` share of the WORK-H excursion is 25.7% (was 29.1%), and the `MISC` lever
+is 48,002 (was 58,240) — still inside the bracket below.
+
 The recoverable is a bracket, both ends measured on this arm: 33,699 charging
 each ring stop's effect ticks uniformly across its 96 frames, 75,264 charging
 all of them to that stop's most expensive frames (concentration-favourable
