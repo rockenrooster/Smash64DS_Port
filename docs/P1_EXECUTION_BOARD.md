@@ -1,10 +1,114 @@
 # P1 Execution Board
 
-Updated: 2026-08-04 (cycle 64)
+Updated: 2026-08-04 (cycle 76)
 
 Boundary: `battle_playable_realtime`, mode `163`
 
-## PUBLISHED 2026-08-04 AT THE SOURCE-EFFECTS DEFAULT. Boundary GREEN. New baseline:
+## R2-07 GATE — the gap is 53,760, and a regression that size landed today (2026-08-04, cycle 76)
+
+Fresh 128-frame baseline on `f24f0cc1`, rom `F04F5D98…`, `dldi=ON`, ring dump
+(`artifacts/performance/r207-baseline-2026-08-04-128.json` + `.csv`):
+
+| | value |
+|---|---:|
+| `WORK-H` P50 | 1,027,136 |
+| `WORK-H` P95 | **1,173,760** |
+| gap vs 1,120,000 | **53,760** |
+| over gate | 12 of 128 |
+| VBlank | 2:449 3:101 4:10 5+:8, max 20, slips 0 |
+
+**A flat cut of 53,760 closes the gate outright.** P95 is sorted index 120 of
+128; it does not matter which frames the ticks come from.
+
+**THIS RETIRES THE REASONING THAT KILLED THE FIGHTER-RENDER CLASS.** The row
+below ("This retires an entire class of candidate, and Task 56 is the first
+casualty") argued that `FTR` and `STG` are flat between clean and over-gate
+frames and therefore "not on the critical path for the gate at all however large
+they look in the P50." That is a **level/variance confusion**. `SRC` explains
+*why* some frames are worse than others; it does not follow that only `SRC` sets
+the *height* of the P95 frame. A flat bucket is paid in full on every frame
+including the P95 one, so a flat cut of X moves P95 by X, 1:1. Clean-median vs
+over-gate-median on this run: `FTR` **−160**, `STG` +672, `MISC` +6,688, `SRC`
+**+279,392** — the same shape the old row read, with the opposite conclusion.
+`FTR` 389,056 against its 250K line is the largest single lever on this board.
+
+**Task 56 is REVERT, and not for the recorded reason: the arm has never run.**
+Engagement is statically proven — `builds/build-t56-strips/nds_build_config.h`
+carries `NDS_TASK56_FIGHTER_PRIMITIVES 2`, and the candidate ELF links
+`sNdsNativeFighterPrimitiveVertices` 0x7e8 = **1,012 strip vertices** (67 runs,
+162 primitive groups) against the control's `sNdsNativeFighterPackedCorners`
+0xeac = **1,878** individual submissions, a 46.1% cut; none of those symbols
+exist in the control ELF. **But the ROM hangs the battle present loop**: melonDS
+held a full core for 2,400 s without reaching presented frame 568, and on a
+reduced ask could not reach presented frame **12** in 900 s, while the control
+walks frames 10–13 in ~30 s (`artifacts/performance/r207-control-sanity8.json`).
+Three attempts, two builds, three days, same symptom. So the 2026-08-01 attempt
+was **never abandoned on reasoning — it has never once completed**, and the
+`PERF_LEDGER` *Task 56 … KILL* row citing `FTR` +5,824 has no completed run
+behind it either. Lead for whoever reopens it, unconfirmed: the emitter switches
+primitive type with a bare `glBegin` per group at `src/nds/nds_renderer.c:21295`
+inside a batch already opened by `PrepareProductionRun`; that idiom is sanctioned
+here (`:12395-12404`) but the same comment records that FIFO desynchronisation
+presents as `GXSTAT=0e008900`, geometry-engine-busy forever — which is what
+full-CPU-with-no-frame-advance looks like. One GXSTAT read settles it.
+
+**+52,928 ticks/frame of unpriced regression landed today**, measured on
+*identical frame ids* between `2494daf9ad` and `f24f0cc1` (67 shared frames),
+with `c72-tickhud-control.json` as a null control (STG +864, MISC −768, WORK
+−320 — the instrument agrees with itself):
+
+| bucket | `2494daf9ad` | `f24f0cc1` | delta |
+|---|---:|---:|---:|
+| **STG** | 176,064 | 194,880 | **+18,816** |
+| **MISC** | 61,952 | 90,688 | **+28,736** |
+| **WORK-H** median | 981,760 | 1,033,280 | **+51,520** |
+
+**`ALL` is identical in both arms** (1,119,872, pinned at 2 VBlanks) — the work
+came straight out of the VBlank wait, so anyone reading `ALL` concludes nothing
+changed. Window narrowed by measurement to `2494daf9ad..999fcdf8`; no flag
+regressed to a default, and the owner-accepted source-effects flip (`afb404f5`)
+costs `STG` only +1,280 and is not this. Attribution, code-level:
+
+* **`STG`, commit `38bba475`** — (a) a full pre-pass over every run of every
+  stage segment on every segment commit calling
+  `ndsRendererNativeStagePreparedTextureValid` (`src/nds/nds_renderer.c:26697`,
+  `:4707`), 54 runs chasing `prepared->texture_entry` into the texture-cache
+  array, while `BeginRun` repeats the same check as its last gate — twice per run
+  per frame; (b) `NDS_RENDERER_GEOM_LIGHTING` OR'd into the stage traversal's
+  geometry mode (`src/port/reloc_backend_movement.c:12782`), so every stage
+  vertex now pays a light prepare, a diffuse dot and **three divisions by 127**
+  in `ndsRendererHardwareLitShadeColorPrepared` (`src/nds/nds_renderer.c:9159`).
+* **`MISC`, commit `d9b61c1e`** — `ndsRendererAdapterScanDisplayProcOtherMode`
+  (`src/port/reloc_backend_renderer_dl.c:6127`) called from
+  `MarkDisplayProcHeads` (`:6164`) for **every** display proc
+  (`src/port/reloc_backend_movement.c:13463`), walking 4 DL heads × up to 32
+  `Gfx` each, before the STG bracket opens at `:13489` — so it lands in `MISC`
+  by construction. Its consumer is effect-scoped.
+
+**Neither is content, and neither may be reverted.** `38bba475` fixed the dark
+revival platform and `d9b61c1e` fixed the zeroed render modes; both rows are
+closed in `docs/BUGS.md` on the owner's eye. The fixes stay; the per-frame price
+comes off — the stage shade is a pure function of a static light set and static
+geometry and belongs at load time (`PROJECT_GOAL.md`, "Compute Once, Not Every
+Frame"), the pre-pass becomes a per-segment validity epoch the texture cache
+bumps on eviction, and the span scan hoists inside the effect-submit guard.
+
+**Owner report, 2026-08-04, corroborating `MISC` independently of the numbers:**
+*"the most demanding parts of the game are drawing the VFX like projectiles (fox
+laser gun, Mario fireball), the revival platform, impact wave, etc."*
+
+## PUBLISHED 2026-08-04, cycle 75. Boundary NOT re-run (owner's decision). Current baseline:
+
+| ROM | sha256 |
+|---|---|
+| `smash64ds-battle-playable-hwtri.nds` | `D16815BEA6A1BA25…` |
+| `smash64ds.nds` | `369FA9993823605A…` |
+
+The tick-HUD sibling for that pair is
+`builds/build-c75-tickhud-publish/smash64ds-battle-playable-tickhud-hwtri.nds`
+(12,131,328 B, `15FD0F8E1467878C…`).
+
+## PUBLISHED 2026-08-04 AT THE SOURCE-EFFECTS DEFAULT (cycle 64). Boundary GREEN. Superseded by the pair above:
 
 | ROM | sha256 |
 |---|---|
