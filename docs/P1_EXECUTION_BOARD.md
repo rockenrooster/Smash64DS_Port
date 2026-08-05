@@ -99,6 +99,67 @@ not the same count (a 64-frame span advances the ring 63 slots), so the stitcher
 records per-stop `ringStopSkews`; skews are ±1 and **both signs occur**, which is
 why it records skew instead of asserting a direction.
 
+### `MISC` DECOMPOSED — it is ONE sub-path, and the GATE 6 price was mismeasured
+
+Boundary mode 163, whole match, 1600 samples, 50 stops, stride 32. `WORK-H` P50
+1,094,336 / P95 1,463,616, over gate 723/1600 (45.2%) — matches the banked
+baseline, so the new brackets did not move what they measure. Per-frame sub-path
+ticks, conditioned on windows ≥50% over gate (18 hot vs 31 cold):
+
+| sub-path | hot | cold | delta |
+|---|---:|---:|---:|
+| **effect DObj submit** | **359,717** | **0** | **+359,717** |
+| particle pass | 50,292 | 45,454 | +4,838 |
+| weapon DObj submit | 138 | 0 | +138 |
+| `MISC` bucket | 454,832 | 92,704 | +362,128 |
+| `WORK-H` | 1,344,240 | 1,027,104 | +317,136 |
+
+**Effect DObj submits are 99.3% of the `MISC` excursion**, and the `MISC` gap
+exceeds the entire `WORK-H` gap — so part of the effect cost *displaces* other
+work rather than adding to it, and only part of the 360K is recoverable.
+
+**Three suspects removed from the list, two of them before a build was spent:**
+
+* **Projectiles are REFUTED as a lever** — weapon DObj submit medians **44
+  ticks/frame** across the match. Mario's fireball and Fox's laser are not the
+  tail. `OPTIMIZATION_IDEAS.md`'s "native projectile owner" is architecture
+  work, not gate work.
+* **Particles are a P50 lever, not a tail lever** — ~47,000 ticks/frame
+  *constant*, ~4% of the frame, real work worth having, but the hot–cold delta
+  of **4,838 is inside the 8,544 placement floor**. Optimising them moves the
+  median, never the gate. This retires SwitchPlan §7 option 2 (15 Hz round-robin
+  particles) as a *gate* answer.
+* **The GX flush (64–128 ticks/frame) and the OAM sprite path (0)** are not
+  `MISC` components at all — eliminated by a liveness probe on an
+  already-built ROM rather than by a wasted measuring run.
+
+**THE GATE 6 PRICE THE OWNER AGREED TO WAS MEASURED ON THE BAD WINDOW.** The
+source-effects flip was priced at **+36,032 P95** and accepted — *"36k p95 is
+worth it for correctness"*. That figure came from a 128-frame window now known
+to read the cheapest 6% of the match. The real cost of those `EFDesc` models is
+**~360,000 ticks on every frame an effect is alive**. The decision is not
+automatically reversed — correctness still matters and the right answer is to
+make the submit path cheap rather than to remove the models — but the owner
+agreed to a price that was understated by an order of magnitude and is owed
+that correction.
+
+**Open, being probed: is 359,717 a design cost or a defect?** A few small models
+on a few DL links should cost thousands, not a third of a frame, and the profile
+is zero-then-360K rather than merely generic. Named suspect, already written down
+as an unmeasured risk in its own commit message: `38bba475`'s `G_CC_BLENDPE`
+prim/env texture-variant bake, which *"any effect that ramps or fades its colour
+mints one per frame… unmeasured"*. Every effect in this set ramps or fades — the
+wave expands and fades, the platform pulses, the shield scales. Per-frame key
+minting would thrash the 69-slot texture cache into an upload-plus-resolve-plus-
+evict loop and produce exactly this signature. It is also the prime untested
+suspect for the parked +52,928. **Instrument before architecting**: a native
+runtime that inherits a per-frame upload is only a faster way to do the wrong
+thing.
+
+**New instrument:** `gNdsMiscWeaponDrawTicks` / `gNdsMiscEffectDrawTicks` /
+`gNdsMiscParticleDrawTicks`, cumulative, `NDS_TICK_HUD`-only, read via
+`-PerStopGlobals`.
+
 ## R2-07 — the cycle-76 row, superseded above but kept for the findings it still owns
 
 Fresh 128-frame baseline on `f24f0cc1`, rom `F04F5D98…`, `dldi=ON`, ring dump
