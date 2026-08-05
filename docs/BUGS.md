@@ -3,4 +3,4 @@ AI Agent should mark fixed items with **FIXED** prefix or a 20 word summary if n
 These bugs should be fixed for P1 delivery:
 
 - Mario's Up B coin VFX looks like a solid yellow coin shaped object
-  LOCALIZED quad atlas packs frame 0 only (global frame cap 1); source frame 0 is a flat disc. Not the palette.
+  LOCALIZED global frame cap 1 freezes all 19 animated particle textures at frame 0; per-texture budget restores 8 free.
