@@ -5662,8 +5662,22 @@ void ftMainSearchGroundHit(GObj *fighter_gobj)
 
 void ftMainProcSearchHitAll(GObj *fighter_gobj)
 {
+    /* Cycle 85 SHDT. Live-hitbox hit detection, bracketed here on the port-side
+     * wrapper so no decomp/ edit is needed. This span is nested inside the SRC
+     * bracket in ndsRunMarioFoxProofUpdate; cpuGetTiming is a read of the
+     * free-running timer pair, never a reset, so nesting it inside SRC's own
+     * bracket is safe. R2-03 E35 measured this population as the owner of the
+     * SRC excursion but did so on a 128-frame window; this is the whole-match
+     * re-measurement. */
+#if NDS_TICK_HUD
+    u32 hit_start = cpuGetTiming();
+#endif
+
     NDS_FREEZE_DIAGNOSTICS_MARK(NDS_FREEZE_BREADCRUMB_HIT_SEARCH);
     battleship_ftMainProcSearchHitAll(fighter_gobj);
+#if NDS_TICK_HUD
+    gNdsTickHudSrcHitDetectTicks += cpuGetTiming() - hit_start;
+#endif
 }
 
 void ftMainProcParams(GObj *fighter_gobj)

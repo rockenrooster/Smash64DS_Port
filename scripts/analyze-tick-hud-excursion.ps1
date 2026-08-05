@@ -45,6 +45,25 @@ $owners = @('FTR', 'STG', 'BG', 'AUD', 'SRC', 'MISC')
 $rows = @(Import-Csv -LiteralPath $RowsCsv)
 if ($rows.Count -eq 0) { throw "No rows in $RowsCsv." }
 
+# SRC SUB-OWNERS (cycle 85). SRC is 68.9% of the both-CPU gate arm's excursion
+# and a residual cannot be optimised, so builds carrying the SHDT/SWRM ring
+# buckets split it three ways:
+#
+#   SHDT  ftMainProcSearchHitAll      live-hitbox hit detection
+#   SWRM  ndsR2AnimCachePreloadStep   anim-cache warm step (the one load in SRC)
+#   SBAS  SRC - SHDT - SWRM           the decomp sim path, derived not ringed
+#
+# SBAS is a residual on purpose: it costs no bytes on a ROM 96 bytes from a boot
+# cliff when this was designed, and SBAS >= 0 on every frame is the proof that
+# the two ringed spans really are nested inside SRC. If a frame goes negative the
+# bracket is outside SRC and the split is meaningless, so that throws.
+#
+# Detected, not required: every banked CSV predates these columns and must still
+# analyse, because reproducing the banked table is how this script gets trusted.
+$csvColumns = @($rows[0].PSObject.Properties.Name)
+$srcSubOwners = @('SHDT', 'SWRM', 'SBAS')
+$hasSrcSplit = ($csvColumns -contains 'SHDT') -and ($csvColumns -contains 'SWRM')
+
 function Get-Pct {
     param([int64[]]$Values, [double]$Q)
     $sorted = @($Values | Sort-Object)
@@ -59,8 +78,27 @@ $all = @($rows | ForEach-Object {
         $r[$b] = [int64]$_.$b
     }
     $r['OTHR-WAIT'] = $r['OTHR'] - $r['WAIT']
+    if ($hasSrcSplit) {
+        $r['SHDT'] = [int64]$_.SHDT
+        $r['SWRM'] = [int64]$_.SWRM
+        $r['SBAS'] = $r['SRC'] - $r['SHDT'] - $r['SWRM']
+    }
     [pscustomobject]$r
 })
+
+# The nesting proof. A negative residual means a bracketed span ran outside the
+# SRC bracket, which makes every share below meaningless.
+if ($hasSrcSplit) {
+    $negative = @($all | Where-Object { $_.SBAS -lt 0 })
+    if ($negative.Count -ne 0) {
+        $worst = ($negative | Sort-Object SBAS | Select-Object -First 1)
+        throw ("SRC sub-buckets are not nested inside SRC: $($negative.Count) of " +
+               "$($all.Count) frames have SRC - SHDT - SWRM < 0 (worst frame " +
+               "$($worst.frame): SRC $($worst.SRC), SHDT $($worst.SHDT), " +
+               "SWRM $($worst.SWRM), residual $($worst.SBAS)). The split cannot " +
+               "be attributed.")
+    }
+}
 
 # Verify the identity on every frame BEFORE using it to judge completeness
 # later. A CSV from a build whose buckets do not close is not analysable.
@@ -137,6 +175,46 @@ Write-Host ("    {0,-10} {1,12:N0}  (identity closes, per-frame max error {2})" 
     'SUM', $ownerSum, $maxIdentityError)
 Write-Host ''
 
+$srcTable = @()
+if ($hasSrcSplit) {
+    $srcDelta = (Get-Mean $hot 'SRC') - (Get-Mean $clean 'SRC')
+    foreach ($b in $srcSubOwners) {
+        $hotMean = Get-Mean $hot $b
+        $cleanMean = Get-Mean $clean $b
+        $exc = $hotMean - $cleanMean
+        $srcTable += [pscustomobject]@{
+            owner = $b
+            excursion = [math]::Round($exc, 0)
+            shareOfSrc = $(if ($srcDelta -ne 0) { $exc / $srcDelta } else { 0 })
+            shareOfWorkH = $(if ($workDelta -ne 0) { $exc / $workDelta } else { 0 })
+            hotMean = [math]::Round($hotMean, 0)
+            cleanMean = [math]::Round($cleanMean, 0)
+            p95 = Get-Pct -Values @($kept.$b) -Q 0.95
+        }
+    }
+    # SBAS is defined as SRC - SHDT - SWRM, so the three excursions must sum to
+    # SRC's exactly. This can only fail on an arithmetic mistake in this script,
+    # which is precisely the failure a share table would hide.
+    $srcSum = ($srcTable | Measure-Object -Property excursion -Sum).Sum
+    $srcClosure = [math]::Abs($srcSum - $srcDelta)
+    if ($srcClosure -gt ($srcTable.Count + 1)) {
+        throw ("SRC sub-owner excursions sum to $srcSum but SRC moved " +
+               "$srcDelta (error $srcClosure).")
+    }
+    Write-Host ("  SRC SPLIT -- SRC excursion {0:N0} is {1:P1} of WORK-H" -f
+        $srcDelta, $(if ($workDelta -ne 0) { $srcDelta / $workDelta } else { 0 }))
+    Write-Host ("    {0,-6} {1,12} {2,8} {3,8} {4,12} {5,12}" -f
+        'owner', 'excursion', '%SRC', '%WORK-H', 'clean mean', 'hot mean')
+    foreach ($t in ($srcTable | Sort-Object -Property excursion -Descending)) {
+        Write-Host ("    {0,-6} {1,12:N0} {2,8:P1} {3,8:P1} {4,12:N0} {5,12:N0}" -f
+            $t.owner, $t.excursion, $t.shareOfSrc, $t.shareOfWorkH,
+            $t.cleanMean, $t.hotMean)
+    }
+    Write-Host ("    {0,-6} {1,12:N0}  (closes against SRC, error {2})" -f
+        'SUM', $srcSum, $srcClosure)
+    Write-Host ''
+}
+
 if ($JsonOut) {
     $payload = [ordered]@{
         analysis = 'tick-hud excursion attribution'; arm = $Arm; rowsCsv = $RowsCsv
@@ -147,6 +225,8 @@ if ($JsonOut) {
         workHHotMinusClean = $workDelta; ownerExcursionSum = $ownerSum
         identityMaxErrorTicks = $maxIdentityError; closureErrorTicks = $closureError
         owners = $table
+        srcSplitPresent = $hasSrcSplit
+        srcSubOwners = $srcTable
         capturedUtc = (Get-Date).ToUniversalTime().ToString('o')
     }
     $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path

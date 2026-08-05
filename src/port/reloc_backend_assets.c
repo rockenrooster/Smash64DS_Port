@@ -6423,13 +6423,25 @@ void ndsR2AnimCachePreloadMatch(void)
  * miss a seam. */
 void ndsR2AnimCachePreloadStep(void)
 {
+    /* Cycle 85 SWRM. The one asset load inside SRC, and therefore the honest
+     * load signal the owner's loading-state exclusion actually wants -- the
+     * banked rule thresholds on SRC itself, which is circular for SRC (board,
+     * cycle 81). The guard is inverted rather than early-returning so the
+     * bracket has a single exit and the exhausted-cursor frames, which are most
+     * of the match, are still charged their validate-and-compare cost. */
+#if NDS_TICK_HUD
+    u32 warm_start = cpuGetTiming();
+#endif
+
     ndsR2AnimCacheValidateGeneration();
-    if (sNdsR204AnimWarmCursor >= (sizeof(sNdsR204AnimWarmList) /
-                                   sizeof(sNdsR204AnimWarmList[0])))
+    if (sNdsR204AnimWarmCursor < (sizeof(sNdsR204AnimWarmList) /
+                                  sizeof(sNdsR204AnimWarmList[0])))
     {
-        return;
+        ndsR2AnimWarmLoadOne(sNdsR204AnimWarmList[sNdsR204AnimWarmCursor++]);
     }
-    ndsR2AnimWarmLoadOne(sNdsR204AnimWarmList[sNdsR204AnimWarmCursor++]);
+#if NDS_TICK_HUD
+    gNdsTickHudSrcAnimWarmTicks += cpuGetTiming() - warm_start;
+#endif
 }
 #endif
 

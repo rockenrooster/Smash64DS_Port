@@ -4178,6 +4178,21 @@ enum NDSTickHudBucket {
      * the number that decides the milestone. */
     nNDSTickHudBucketVBlankWait,
     nNDSTickHudBucketWork,
+    /* Cycle 85. SRC sub-owners, appended after WORK for the same reason Task 66
+     * appended after OTHR: every index that already existed keeps its value, so
+     * every banked measurement stays comparable and the named/OTHR/WORK identity
+     * is byte-identical.
+     *
+     * These are SUB-buckets of SRC, not new work. SRC brackets
+     * ndsTask39EffectsUpdate + scVSBattleFuncUpdate (taskman_seam.c), and both
+     * spans below are nested strictly inside it, so they are deliberately NOT
+     * added to `named` -- doing so would double-count them against ALL and
+     * corrupt OTHR. The third sub-owner (the decomp sim path, "SBAS") is the
+     * residual SRC - SHDT - SWRM and is derived by the analyzer rather than
+     * ringed: it costs no bytes, and its non-negativity on every frame is the
+     * proof that these two spans really are nested inside SRC. */
+    nNDSTickHudBucketSrcHitDetect,
+    nNDSTickHudBucketSrcAnimWarm,
     nNDSTickHudBucketCount,
     /* The on-screen table stops at OTHR: the console is 24 rows and rows 20-23
      * already carry the legend, the VBlank histogram and the build stamp. WAIT
@@ -4269,6 +4284,11 @@ extern volatile u32 gNdsTickHudBackgroundTicks;
 extern volatile u32 gNdsTickHudForegroundTicks;
 extern volatile u32 gNdsTickHudAudioTicks;
 extern volatile u32 gNdsTickHudSourceTicks;
+/* Cycle 85 SRC split. Per-frame like gNdsTickHudSourceTicks (reset alongside it,
+ * not cumulative), because a hot-vs-clean excursion needs the per-frame series
+ * the ring carries and not a pair of differenced totals. */
+extern volatile u32 gNdsTickHudSrcHitDetectTicks;
+extern volatile u32 gNdsTickHudSrcAnimWarmTicks;
 extern volatile u32 gNdsTickHudFlushTicks;
 /* R2-07 MISC split. Cumulative, never reset per frame -- difference them
  * across two ring stops with -PerStopGlobals. See diagnostics.c. */

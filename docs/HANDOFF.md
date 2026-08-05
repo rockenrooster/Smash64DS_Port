@@ -128,7 +128,7 @@ control **`0x022947a4`**. **Text counts as much as bss.** Run
 UNPROVEN / OVER CLIFF, exit 1); a failing arm never reaches presented frame 1 and
 the harness reports a timeout that looks exactly like a hung emulator.
 
-## Next single step — the gate number changed, and the instrument is not ready
+## Next single step — split SBAS, the measured owner of the gate arm's tail
 
 **The load-frame exclusion is REFUTED; the gap is 503,684, not 237,956.** The
 owner's "loading states excluded" bar must not be applied through the
@@ -139,12 +139,12 @@ evenly through play, `FTR` 1.01x / `STG` 0.99x / `MISC` 1.04x, only `SRC` up. It
 moves the gate arm 3.08x but Boundary only 1.09x; no loading filter could do
 that. Audit: `scripts/analyze-load-frame-exclusion.ps1`.
 
-**The SRC instrument is blocked on RAM — settled cycle 82, so G2 is next.** The
-splitting build (ring rows + names, **both brackets omitted**, bss-identical to
-the failing arm and 88 bytes smaller in text) **still died** while the c80
-control booted to frames 60–67 in the same session. It is the cliff, not a
-defect: +1,056 bytes of inert `.bss` kills the ROM. A ring bucket costs 520 bytes
-against 96 proven, so **G2 now gates the instrument, not only G3**. G1 is closed.
+**The SRC instrument LANDED (cycle 85); hit detection is NOT the owner.** G2's
+headroom paid for it (+1,152 bytes, boot PASS, arena at full request). Both arms,
+whole match, identity error 0: `SBAS` (decomp sim path residual) owns **87.1%** of
+SRC's excursion on the gate arm / **89.0%** on Boundary against `SHDT` 12.9%/11.0%,
+`SWRM` inert; gate-arm upper bounds `SBAS` 315,456, `SHDT` 55,104. E35 is real but
+minority — 79.2% of over-gate frames sit at the `SHDT` floor. **Split `SBAS` next.**
 
 **Boundary for all of it.** Same geometry, same textures, same materials — the
 effect models are a closed `BUGS.md` row the owner confirmed by eye and paid for

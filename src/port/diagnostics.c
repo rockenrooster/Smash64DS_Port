@@ -3019,6 +3019,15 @@ volatile u32 gNdsTickHudBackgroundTicks;
 volatile u32 gNdsTickHudForegroundTicks;
 volatile u32 gNdsTickHudAudioTicks;
 volatile u32 gNdsTickHudSourceTicks;
+/* Cycle 85 SRC split. SRC owns 68.9% of the both-CPU gate arm's WORK-H
+ * excursion (board, cycle 80) and a residual cannot be optimised, so these name
+ * what is inside it: SHDT is live-hitbox hit detection
+ * (ftMainProcSearchHitAll), SWRM is the anim-cache warm step
+ * (ndsR2AnimCachePreloadStep, the one asset load inside SRC). Both spans are
+ * nested inside the SRC bracket in ndsRunMarioFoxProofUpdate, so they are
+ * published as their own ring buckets but NOT added to `named`. */
+volatile u32 gNdsTickHudSrcHitDetectTicks;
+volatile u32 gNdsTickHudSrcAnimWarmTicks;
 volatile u32 gNdsTickHudFlushTicks;
 /* R2-07: MISC is DrawTicks minus (FTR + STG + BG + HUD) plus the flush, i.e.
  * everything drawn that no other bucket claims. It is now the campaign, and a

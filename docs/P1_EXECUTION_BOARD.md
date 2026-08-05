@@ -503,6 +503,56 @@ capping both moved P95 by 538,560. That is P95 being a position in a sorted
 list rather than a sum. It is not an arithmetic error; do not "correct" it
 into an addition.
 
+### The SRC split — MEASURED, cycle 85. Hit detection is NOT the owner.
+
+The instrument booted and both arms ran. `SBAS` (the decomp sim path) owns
+`SRC`, not hit detection, and **the ratio is arm-independent** — which is what
+makes it a structural finding rather than a config artefact. Whole match, 1,600
+samples, frames 442–2041, stride 96, DLDI on, 86.7% coverage, `slips=0` on both.
+Builds `builds/build-c85-src-bothcpu` and `builds/build-c85-src-boundary`;
+artifacts `artifacts/performance/2026-08-05_c85-{gate-bothcpu,boundary}-*.json`.
+Both identities close with **max per-frame error 0**.
+
+| sub-owner | both-CPU excursion | % of SRC | % of WORK-H | Boundary excursion | % of SRC |
+|---|---:|---:|---:|---:|---:|
+| **SBAS** decomp sim path | **184,316** | **87.1%** | **61.5%** | **80,768** | **89.0%** |
+| `SHDT` hit detection | 27,389 | 12.9% | 9.1% | 10,019 | 11.0% |
+| `SWRM` anim warm | 12 | 0.0% | 0.0% | 6 | 0.0% |
+
+Lever prices, same counterfactual as the table above (cap the bucket at its own
+clean-frame mean — an **upper bound**, it assumes every hot-frame excess is
+removable). `artifacts/performance/2026-08-05_c85-src-lever-prices.json`:
+
+| lever | both-CPU delta | residual vs gate | Boundary delta |
+|---|---:|---:|---:|
+| **SBAS capped** | **315,456** | 177,092 | 73,685 |
+| `SHDT` capped | 55,104 | 437,444 | 5,824 |
+| `SWRM` capped | 0 | 492,548 | 65 |
+| `SBAS` + `MISC` | 454,280 | **38,268** | 369,442 |
+
+`SHDT` + `SBAS` capped reproduces `SRC` capped to the digit (391,552 on the gate
+arm), which is the cross-check that the split is exhaustive: `SWRM` is inert, so
+the two remaining sub-owners are all of `SRC`.
+
+**Consequence for the lane.** `SBAS` + `MISC` leaves the gate arm 38,268 over,
+where `SRC` + `MISC` lands 47,384 under — the difference is exactly `SHDT`. So
+the gate needs the sim-path residual, the packet path, **and** a slice of hit
+detection; no two of the three suffice.
+
+**`SBAS` is a residual, not a target.** It is everything in
+`ndsTask39EffectsUpdate` + `scVSBattleFuncUpdate` except the hit search and the
+warm step: the fighter animation/event interpreter, physics and status
+transitions, CPU AI, particle bytecode, map collision, camera. **Splitting it is
+the next instrument row** — it cannot be optimised as one thing, and the same
+mistake that made `MISC` a campaign is available here.
+
+**`SWRM` is measured INERT over the gate window, and that is a negative result
+worth keeping.** It was designed as the honest load signal the circular
+`SRC > 2x median` rule needs. It cannot serve: the 41-entry warm list is
+exhausted long before the window opens at frame 442, so `SWRM` is a flat ~772
+ticks/frame constant (hot 783, clean 772, p50 768 on both arms). A load-signal
+rule for this window needs the Task 75 asset-load counter instead.
+
 **Owner decision 2026-08-05: both tracks are in scope. G3 is NOT parked.**
 These numbers force it — SRC alone leaves 97,243 over gate, `MISC` alone
 leaves 433,412, and only both together land inside. SRC is necessary but not
@@ -602,63 +652,45 @@ row 1's execution plan.
 
 ## Parked — open items with owners' notes, promote deliberately
 
-- **SRC sub-owner instrument: BLOCKED ON RAM, and the brackets are exonerated
-  (cycle 82).** The splitting experiment ran: enum + ring rows + published names,
-  **both accumulate brackets omitted**, so the only executable change left was a
-  loop bound. `builds/build-c82-src-nobracket` is **bss-identical to the failing
-  c81 arm (1,717,192) and 88 bytes SMALLER in text**, and it **still died** —
-  240 s, never reached ring stop 0, the liveness probe could not read
-  `gNdsBattlePlayablePacingPresentedFrames` at all (the §3.11 total-freeze
-  signature). `build-c80-gate-bothcpu` booted to frames 60–67 through the
-  identical harness in the same session. **So it is the cliff, not a defect:
-  +1,056 bytes of inert `.bss` is enough to kill the ROM on its own.** The arm
-  linked at `0x02294ba4`, 128 bytes above the lowest address ever measured to
-  fail; it was never committed. Control artifact
-  `artifacts/performance/2026-08-05_c82-bootprobe-control-c80.json`; the
-  candidate produced **no** JSON — it threw
-  `"exceeded 240s before 8 samples ... never reached ring stop 0"`, which is the
-  outcome, not a missing artifact.
-  **A ring bucket costs 520 bytes (128×4 ring + P50 + P95), so two cost 1,040
-  against 96 bytes of proven headroom — G2 is a hard prerequisite, and no
-  redesign of the brackets will change that.** The cheap fallback if G2 stalls:
-  two cumulative `volatile u32` counters (8 bytes) read through
-  `-PerStopGlobals` and differenced across ring stops — that buys per-stop sums
-  but **not** the per-frame series a hot-vs-clean excursion split needs.
-  The original design, still valid, follows.
-- **SRC sub-owner instrument: designed and built, DOES NOT BOOT (cycle 81).**
-  Two ring buckets appended after `WORK` (so every existing index and the
-  `named`/`OTHR`/`WORK` identity stay byte-identical): `SHDT` =
-  `ftMainProcSearchHitAll` (live-hitbox hit detection, the E35 claim under
-  test) and `SWRM` = `ndsR2AnimCachePreloadStep` (the one asset load inside
-  `SRC`, and the honest load signal the exclusion rule needs). Both bracket
-  **existing port-side wrappers**, so no `decomp/` edit is required —
-  `reloc_backend_diagnostic_recorders.c:5663` and
-  `battleship_scvsbattle.c:344`. Diff kept out of tree; re-derive from this
-  note.
-  **Two builds, neither reached presented frame 1** (the c80 control reached
-  frame 60 and produced 8 samples through the identical harness, so it is the
-  ROM, not the invocation): three buckets = text +168 / bss +1,600 = **+1,768**;
-  two buckets = text +64 / bss +1,056 = **+1,120**. The second is *below* the
-  +1,408-boots line the board records, so **size versus functional defect is
-  UNRESOLVED** — the +1,408/+2,208 band was measured on a smaller ROM and may
-  simply have tightened. **The splitting experiment is one build:** grow the
-  enum/ring and publish the buckets but leave the two accumulate brackets out.
-  Boots ⇒ the brackets are at fault; still dead ⇒ the cliff has moved and G2's
-  headroom is a hard prerequisite for any new instrument.
-  Note `scripts/sample-tick-hud-buckets.ps1`'s `$bucketNames` must move in the
-  same commit as the enum: an 11-bucket ROM read with 14 names returns adjacent
-  memory as plausible columns (`named` read 220.4% of `ALL`, `SWRM` 842,496 on
-  a ROM with no such bucket).
-- **R2-03 E35's magnitudes are no longer quotable; its mechanism stands.** It
-  measured live hitbox population as the owner of the `SRC` P95 excursion
-  (softfloat 283,072/frame, collision 75,088) — but on a **128-frame window,
-  frames 439–566, profiling 517–521 against 508–512**, which is exactly the
-  window class cycle 80 retired for reading the cheapest 6% of the match. What
-  survives is structural and window-robust: on hot frames a `gmCollision*` /
-  `func_ovl2_800ED490` population appears that is *exactly zero* on clean
-  frames. What does not survive is every tick figure it published, and the
-  `scene_harness.c` comment that cites it as the reason the both-CPU arm
-  exists. `SHDT` above is the re-measurement.
+- **SRC sub-owner instrument: LANDED, cycle 85.** Three cycles of "does not
+  boot" were the boot cliff, exactly as cycle 82 concluded; G2 freed the room and
+  the same design booted first try. **Cost +1,152 bytes** (text +80, bss +1,056)
+  against 134,496 proven — 116x margin — links at `0x02273f24`, boot probe PASS
+  (frames 60–67, 8 samples, `slips=0`), and the arena stayed at its full request
+  (`gNdsTaskmanArenaChosenSize` 1,376,256, `AllocFailCount` 0), so the instrument
+  did not re-starve what G2 just fed.
+  **The shipped ROM pays none of it.** Every part — enum, globals, ring, names,
+  both brackets, the publish and the two resets — sits behind `#if NDS_TICK_HUD`,
+  and the published `smash64ds-battle-playable-hwtri` builds `NDS_TICK_HUD 0`.
+  The only unconditional source change is inverting the early-return guard in
+  `ndsR2AnimCachePreloadStep` so the bracket has a single exit, which is
+  mechanically identical (`if (c >= N) return; load();` == `if (c < N) load();`).
+  **Two ring buckets, not three.** `SHDT` = `ftMainProcSearchHitAll`
+  (`reloc_backend_diagnostic_recorders.c:5663`) and `SWRM` =
+  `ndsR2AnimCachePreloadStep` (`reloc_backend_assets.c:6424`, called from
+  `battleship_scvsbattle.c:344`), both bracketing existing port wrappers so **no
+  `decomp/` edit was needed**. The third sub-owner `SBAS` is **derived** as
+  `SRC - SHDT - SWRM` by `analyze-tick-hud-excursion.ps1`: it costs no bytes, and
+  `SBAS >= 0` on every frame is the *proof* the two ringed spans are nested
+  inside SRC — the script throws if any frame goes negative. Appended after
+  `WORK`, kept out of `named` (they are sub-spans of `SRC`, which `named` already
+  counts), so `OTHR`/`WORK` and the WORK-H identity are byte-identical.
+  `$bucketNames` moved in the same commit as the enum, and the sub-buckets are
+  excluded from the sampler's `named` share too — verified on the boot probe,
+  where `meanNamed` read 949,400 exactly and would have read 954,720 if they had
+  been wrongly included.
+- **R2-03 E35: mechanism CONFIRMED at whole-match scale, ownership REFUTED.**
+  Its magnitudes were already retired for sitting on a 128-frame window. Cycle 85
+  re-measured the mechanism on 1,600 frames and both halves of the verdict are
+  now evidence. **Confirmed:** hit detection is genuinely bimodal and
+  switches on with expensive frames — elevated `SHDT` (>5,500) occurs on 173 of
+  1,600 frames and **82.7% of those are over gate against a 42.9% base rate**;
+  hot p95 203,008 against clean p95 5,312, a 38x tail separation. **Refuted:**
+  it does not own the excursion. **544 of 687 over-gate frames (79.2%) sit at the
+  `SHDT` floor**, so hit detection can explain at most 20.8% of them, and it is
+  12.9% of SRC's excursion against `SBAS`'s 87.1%. The honest reading is that
+  E35 found a real minority mechanism and its window flattered it into the
+  majority one.
 
 - **Task 56 strips may have been closed on the boot cliff, not on strips
   (cycle 82, address evidence only — NOT re-tested).** `builds/build-t56-strips`

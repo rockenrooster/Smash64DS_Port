@@ -222,8 +222,19 @@ if ($RingDump -and ($PerFrameGlobals.Count -ne 0)) {
 
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $target = 'smash64ds-battle-playable-tickhud-hwtri'
+# MUST match enum NDSTickHudBucket in include/nds/nds_startup.h, in order and in
+# count -- this list sizes the ring read ($ringBytes = count * 128 * 4), so a
+# mismatch does not fail, it returns ADJACENT MEMORY as plausible columns. Cycle
+# 82 read an 11-bucket ROM with 14 names and got `named` at 220.4% of ALL and a
+# 842,496-tick figure for a bucket the ROM did not have. Move this list in the
+# same commit as the enum, never after it.
+#
+# SHDT/SWRM are SRC sub-buckets (cycle 85), appended after WORK so every existing
+# index is unchanged. They are nested inside SRC and must stay out of every
+# "named" total below, or the share double-counts them.
 $bucketNames = @('ALL', 'FTR', 'STG', 'BG', 'AUD', 'HUD', 'SRC', 'MISC', 'OTHR',
-                 'WAIT', 'WORK')
+                 'WAIT', 'WORK', 'SHDT', 'SWRM')
+$srcSubBuckets = @('SHDT', 'SWRM')
 # Must match enum NDSTickHudNativeOwnerFallbackReason in include/nds/nds_startup.h.
 $fallbackReasons = if ($FallbackCensus) {
     @('calls', 'eligible', 'animLock', 'selected', 'displayList',
@@ -967,8 +978,12 @@ try {
     # excluded from the named share, which exists so a future run can tell "the
     # loop got slower" from "attribution drifted".
     $meanAll = ($stats | Where-Object { $_.bucket -eq 'ALL' }).mean
+    # SHDT/SWRM join the four views-of-ALL in this exclusion because they are
+    # sub-spans of SRC, which is already in the sum. Counting them would inflate
+    # `named` past ALL and read exactly like attribution drift.
     $meanNamed = (($stats | Where-Object {
-        $_.bucket -notin @('ALL', 'OTHR', 'WAIT', 'WORK', 'WORK-H') } |
+        $_.bucket -notin (@('ALL', 'OTHR', 'WAIT', 'WORK', 'WORK-H') +
+                          $srcSubBuckets) } |
         Measure-Object -Property mean -Sum).Sum)
 
     $vbiMatch = [regex]::Match($output, 'TICKVBI=([0-9]+(?:,[0-9]+){4})')

@@ -5151,6 +5151,16 @@ static void ndsBattlePlayableFinalizePresentedIteration(void)
         gNdsTickHudBuckets[nNDSTickHudBucketWork] =
             (all >= gNdsTickHudVBlankWaitTicks) ?
             (all - gNdsTickHudVBlankWaitTicks) : 0u;
+        /* Cycle 85 SRC split. Published AFTER `named` is summed and deliberately
+         * absent from it: both spans are nested inside SRC, which `named`
+         * already counts, so adding them would double-count against ALL and
+         * corrupt OTHR -- the accounting remainder every excursion ranking
+         * depends on. Appending here instead keeps the identity
+         * WORK-H = (FTR+STG+BG+AUD+SRC+MISC) + (OTHR-WAIT) byte-identical. */
+        gNdsTickHudBuckets[nNDSTickHudBucketSrcHitDetect] =
+            gNdsTickHudSrcHitDetectTicks;
+        gNdsTickHudBuckets[nNDSTickHudBucketSrcAnimWarm] =
+            gNdsTickHudSrcAnimWarmTicks;
         /* Feed the HUD percentile window here, on the per-iteration path. The
          * HUD renderer only runs about twice a second, so sampling inside it
          * would build the distribution from half-second-spaced single frames
@@ -5222,6 +5232,8 @@ void ndsR2HostBattleIterationBegin(void)
     gNdsTickHudForegroundTicks = 0u;
     gNdsTickHudAudioTicks = 0u;
     gNdsTickHudSourceTicks = 0u;
+    gNdsTickHudSrcHitDetectTicks = 0u;
+    gNdsTickHudSrcAnimWarmTicks = 0u;
     gNdsTickHudFlushTicks = 0u;
     gNdsTickHudVBlankWaitTicks = 0u;
 #endif
@@ -7920,6 +7932,8 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
                 gNdsTickHudForegroundTicks = 0u;
                 gNdsTickHudAudioTicks = 0u;
                 gNdsTickHudSourceTicks = 0u;
+                gNdsTickHudSrcHitDetectTicks = 0u;
+                gNdsTickHudSrcAnimWarmTicks = 0u;
                 gNdsTickHudFlushTicks = 0u;
                 gNdsTickHudVBlankWaitTicks = 0u;
 #endif
