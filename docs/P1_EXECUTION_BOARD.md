@@ -277,10 +277,68 @@ it. Confirm with a config-level trace before removing, and remember `.bss` is
 static — the lever is deleting or `#if`-guarding the buffer out of the battle
 configuration, never freeing it at runtime.
 
-**Unexamined larger targets, in order:** `gSYFramebufferSets` (441,600),
-`sNdsAudioFgmCache` (204,800), `sNdsRelocSceneFileBuffer` (185,696),
-`gSYZBuffer` (140,800). Between them they hold 972,896 bytes — 56.9% of bss —
-and none has been traced.
+**ALL FOUR LARGE TARGETS NOW TRACED (cycle 83). Two refuted, two live, nothing
+freed yet.** Trace = who writes it, who reads it, in which configuration.
+
+- **`gSYFramebufferSets` 441,600 — LIVE, do NOT delete.** Three N64 software
+  framebuffers (`[3][230][320]` u16, `include/sys/video.h:55`). It **is
+  dereferenced on DS**: `decomp/…/src/lb/lbtransition.c:228` reads through
+  `gSYSchedulerCurrentFramebuffer`, and `src/import/battleship_lbtransition.c:47`
+  deliberately points that at `&gSYFramebufferSets[0]` when NULL — the photo wipe
+  into **VS Results, which is in P1 scope**. Also fully cleared by the patched
+  `scmanager.c:855-865` loop (NDS arm bounded by `sizeof`, N64 used
+  `end = 0x80400000`). **Open question, and it is a FIDELITY question, not a free
+  deletion:** the DS renders through GX into VRAM, so the readback may be
+  sampling the cleared black — exactly the failure libultraship documented in
+  `decomp/…/port/bridge/framebuffer_capture.h:19`. Answer that before sizing it.
+- **`gSYZBuffer` 140,800 — BEST REMAINING CANDIDATE.** An N64 *software* Z-buffer
+  on hardware that has a depth buffer in VRAM. Every DS consumer found is a
+  pointer store or comparison — `SYVIDEO_ZBUFFER_START` (which resolves 6,400
+  bytes *below* the array base), `setup.zbuffer`, and `video_bootstrap.c:34`'s
+  `gSYVideoZBuffer == gSYZBuffer` equality check. **No dereference found.**
+  Entangled but tractable: the definition and extern live in `decomp`
+  (`src/sys/zbuffer.c:4`, `src/sys/video.h:69`) and are mirrored by
+  `include/sys/video.h:54`, so a decomp patch and the mirror must move together
+  or `sizeof`-bounded code overruns.
+- **`sNdsRelocSceneFileBuffer` 185,696 — REFUTED as free.** Already
+  harness-guarded (`reloc_backend_assets.c:352-358`): in harness builds the union
+  is sized exactly `CASTLE_STATIC + BANK_113_STATIC` and serves as the **battle**
+  static-asset staging store. This is the 2026-07-16 PORTING optimization,
+  already banked; there is no second helping.
+- **`sNdsAudioFgmCache` 204,800 — REFUTED without an owner decision.** A live
+  8-slot FGM sample cache; capacities `{53,248, 3×28,672, 4×16,384}`
+  (`nds_audio_fgm.c:440-443`) sum to exactly 204,800. Shrinking it trades audio
+  fidelity — charter §7, the owner's call, not this row's.
+
+### The failing boot-time allocation IS NAMED (cycle 83), and it gives G2 a real ceiling
+
+`sNdsTaskmanArenaBytes = calloc(1, arena_size + 0x10)` at
+`src/port/diagnostics.c:7646`. It requests `NDS_TASKMAN_ARENA_SIZE` = `0x150000`
+(1,376,256) and walks **down** in `0x1000` steps to a floor of `0x130000`. Read
+off the booting gate-arm control (`build-c80-gate-bothcpu`, 8 samples, frames
+60–67, artifact `artifacts/performance/2026-08-05_c83-arena-ceiling.json`):
+
+```
+gNdsTaskmanArenaChosenSize     = 1,245,184   (0x130000 -- the FLOOR)
+gNdsTaskmanArenaAllocFailCount = 32
+```
+
+1,376,256 − 1,245,184 = **131,072 = exactly 32 steps of 0x1000**, matching the
+fail count to the digit. **The arena is pinned at the bottom rung of its own
+ladder, 128 KB short of what it asks for, on a ROM that boots.** It degrades
+instead of freezing only because the ladder exists; below it sit
+`0x100000/0xc0000/0x80000/0x40000` and then the §3.11 `syMallocSet` spin.
+
+**This is a better G2 instrument than the boot probe, because it is continuous
+rather than binary.** Free N bytes of static footprint and
+`gNdsTaskmanArenaChosenSize` should rise by ~N (quantised to 0x1000) while
+`gNdsTaskmanArenaAllocFailCount` falls by ~N/4,096 — a zero-ambiguity engagement
+proof for any candidate, readable with `-ExtraGlobals` in ~50 s and **no build**.
+Pair it with `check-boot-headroom.ps1`; the arena number says how much the free
+was *worth*, the headroom check says whether the build still boots. Note the
+first 131,072 bytes freed are absorbed by this deficit before the request is even
+met, so **G2's ≥32 KB exit buys arena, not slack** — the boot cliff and the arena
+starvation are two separate shortages and both are real.
 
 **Not done this cycle:** the +2,208 failing allocation is **not named** — that
 needs a `fake_heap_start` build plus a gdb probe for the `syMallocSet` spin,
