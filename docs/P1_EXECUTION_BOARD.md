@@ -215,9 +215,39 @@ is genuine extra AI work):
 The `MISC` figure (58,240) falls inside the independently-derived
 33,699–75,264 effect bracket, which cross-validates the method. **`SRC` is
 worth 6.8x the `MISC` lever, and the two together put the gate arm inside
-budget.** `SRC` is gameplay/CPU-AI cost, not renderer cost, so its lever is
-charter §7 territory (rate reduction / simulation-rate change) and needs the
-owner — it is not a G-lane renderer task.
+budget.**
+
+The combined figure is **super-additive** — 394,409 + 58,240 = 452,649, but
+capping both moved P95 by 549,440. That is P95 being a position in a sorted
+list rather than a sum. It is not an arithmetic error; do not "correct" it
+into an addition.
+
+**Owner decision 2026-08-05: both tracks are in scope. G3 is NOT parked.**
+These numbers force it — SRC alone leaves 97,243 over gate, `MISC` alone
+leaves 433,412, and only both together land inside. SRC is necessary but not
+sufficient. G3's disposition reads **"required, second in order, and primary
+for the shipped configuration"** — not "refuted". What was refuted is only
+the claim that it alone closes the gate. The second, independent reason to
+keep it: **the shipped ROM is Boundary**, and on Boundary `MISC` is 70.6% of
+the excursion against SRC's 27.8%, so the packet path is the *dominant*
+lever for the configuration that actually ships. Two arms, two different
+primary owners, both legitimate. G2's ≥32 KB headroom is therefore back on,
+because it funds G3.
+
+**SRC is not a charter §7 question yet and must not be escalated as one.**
+`PROJECT_GOAL.md` requires exhausting specialization, approximation,
+precomputation, lower-frequency processing, interpolation, event-driven
+updates, simplified representations and DS-specific implementations *first*,
+and it explicitly encourages fighter- and move-specific native code,
+precomputed hitbox trajectories, large lookup tables, and compile-time
+baking. `decomp/` is read-only as a **tree**, not as an **algorithm**: a
+mechanically equivalent DS-optimized port-side equivalent is wanted, not a
+compromise. Rate reduction and simulation-rate change are the LAST resort
+and the owner's call.
+
+**All of the above is PROVISIONAL on standing rule 1's window finding** —
+these both-CPU shares were computed inside a window now measured to cover
+12.6% of that arm's match.
 
 ### G3 (original row, Boundary-derived) — the effect packet path
 
@@ -330,7 +360,43 @@ row 1's execution plan.
 ## Standing measurement rules (the ones that gate evidence)
 
 1. Whole-match `-RingDump` sampling is the only gate instrument; label every
-   figure with its arm; DLDI-on only.
+   figure with its arm **and its window**; DLDI-on only.
+   **"Whole match" is FALSE on the both-CPU gate arm (measured 2026-08-05).**
+   `scene_harness.c:221` seeds `time_limit = 7` under `NDS_R2_BOTH_CPU` — a
+   420 s match, sized for the freeze soak, never for tick sampling — against
+   `:182`'s `time_limit = 1` for Boundary. Both arms sample frames 440–2040.
+   Measured with `scripts/probe-match-window.ps1`:
+
+   | | Boundary (163) | both-CPU (gate) |
+   |---|---:|---:|
+   | configured match | 60 s | **420 s** |
+   | clock at frame 440 → 2040 | 52 s → **0 s** | 412 s → 359 s |
+   | **fraction of match covered** | **86.7%** | **12.6%** |
+   | logic : presented | 2.000 | 2.000 |
+
+   Boundary's window is the last 52 s ending exactly at the buzzer, so its
+   label is essentially true and it does **not** spill into Results. The
+   both-CPU window is the **first 53 s of a 7-minute match**. The frames-to-
+   seconds conversion is 1,600 presented = 3,200 logic = 53.3 s, because the
+   sim runs 60 Hz and presents 30 Hz (ratio measured at exactly 2.000, not
+   assumed from the VBI histogram).
+
+   **Consequences, all live:** the banked both-CPU P95 is an early-match
+   figure and the 485,060 gap derived from it may be optimistic; and the
+   SRC/MISC inversion between arms **may be a window artefact rather than a
+   config difference**, since Boundary's window includes the KO-heavy endgame
+   and the buzzer while both-CPU's covers opening play only. Every both-CPU
+   share below (SRC 69.6% / MISC 29.1%) and every lever price derived from
+   them is **PROVISIONAL** until re-measured on a comparable window. Shares
+   already drift 2.1x (both-CPU `MISC` 104,076–221,815) and 4.2x (Boundary
+   `MISC` 94,756–399,021) across 200-frame blocks *inside* the sampled
+   window, so stability across the match should not be assumed.
+
+   Fixing this is a window/harness decision for the owner, not a silent
+   re-run: either sample the both-CPU arm across its whole 420 s, or seed the
+   stress arm at `time_limit = 1` so the two arms are the same match length.
+   The soak's own need for 7 minutes is why the value is 7, so the two uses
+   now conflict and cannot both be served by one seed.
 2. Verify a counter is live in the shipped configuration BEFORE the measuring
    run; a proof-scoped counter reads 0, indistinguishable from clean.
 3. Eliminate candidates with a liveness probe on an already-built ROM before
