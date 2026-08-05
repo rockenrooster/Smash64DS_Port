@@ -9,28 +9,52 @@ Closed work goes to that archive (append a dated section), not back onto this
 board. The charter is `docs/Smash64DS_Runtime2_SwitchPlan.md`; measurement and
 workflow rules live in `docs/VERIFYING.md`.
 
-## Banked baselines — whole match, the only gate instrument
+## THE MATCH LENGTH RULE (owner, 2026-08-05) — read before banking anything
+
+> "the soak was only meant to catch freezes, boundary and both cpu gates should
+> be the 60 sec match"
+
+**Both gate arms run the one-minute match.** The soak's long match exists only
+to catch freezes and belongs on its own flag — it must never again ride on
+`NDS_R2_BOTH_CPU`, because that silently made the gate arm sample a 420-second
+match. Reseeding is queued as row G2d; until it lands, every both-CPU figure
+below is superseded.
+
+**A window is "whole match" only if its coverage was measured against the match
+clock.** Coverage is part of a baseline's identity now, not a footnote. The
+conversion: the sim runs 60 Hz and presents 30 Hz, ratio **measured at exactly
+2.000**, so 1,600 presented = 3,200 logic = **53.3 s**.
+
+## Banked baselines — Boundary sound, both-CPU SUPERSEDED
 
 1,600 samples, frames 440–2040, `dldi=ON`, git `f24f0cc1`, ROM `F04F5D98…`,
 `sample-tick-hud-buckets.ps1 -RingDump` (stride 96, ROM byte-identical).
 **Never take a gate reading on a 128-frame window** — it reads the cheapest 6%
 of the match (P95 understated ~306,000, over-gate rate 5×).
 
-| arm | role | `WORK-H` P50 | P95 | over gate | VBI 2/3/4/5+ (max) |
-|---|---|---:|---:|---:|---|
-| **both-CPU** `NDS_R2_BOTH_CPU=1` | **THE GATE (owner, 2026-08-05)** | 1,098,240 | **1,605,440** | 704/1600 (44.0%) | 1118/822/90/9 (20) |
-| **Boundary** mode 163 | shipped configuration | 1,092,032 | 1,463,104 | 713/1600 (44.6%) | 1161/827/41/10 (20) |
+| arm | role | coverage | `WORK-H` P50 | P95 | over gate |
+|---|---|---|---:|---:|---:|
+| **Boundary** mode 163 | shipped configuration | **86.7%** of 60 s, ends at the buzzer — sound | 1,092,032 | 1,463,104 | 713/1600 (44.6%) |
+| ~~both-CPU~~ `NDS_R2_BOTH_CPU=1` | **SUPERSEDED — 420 s seed** | **12.6%** of 420 s (opening minute only) | 1,098,240 | 1,605,440 | 704/1600 (44.0%) |
 
-**Gap to the gate: 485,060** (both-CPU 1,605,440 against 1,120,380 = 2
-VBlanks); the shipped Boundary configuration trails at 343,104. The owner set
-the bar (2026-08-05, confirming the charter §7 stress gate): **the whole match
-must sit under the P95 budget on the both-CPU config — the most stressful way
-the game is played — loading states excluded** (stated rule: drop frames with
-`SRC` > 2× that arm's own `SRC` median). The shipped ROM remains
+VBI 2/3/4/5+ (max): Boundary 1161/827/41/10 (20); both-CPU 1118/822/90/9 (20).
+
+**The superseded figures are kept deliberately** — the gap between them and the
+corrected re-bank measures how badly the window distorted the lane, which is
+itself evidence. What is superseded: the both-CPU P50/P95/over-gate above, the
+**485,060 gap**, and *everything derived from them* — the SRC 69.6% / MISC 29.1%
+split, the 394,409 and 58,240 lever caps, and the 549,440 combined figure. The
+early-match window means the gate P95 is likely **optimistic**, so the real gap
+may be larger. Treat the SRC/MISC inversion between arms as **unproven**: it may
+be a window artefact, since Boundary's window holds the KO-heavy endgame and the
+buzzer while both-CPU's held only opening play.
+
+Boundary's own numbers stand: it trails the gate by 343,104, and its clean-frame
+P95 ~1,056,640 is ~63K inside budget. The shipped ROM remains
 `smash64ds-battle-playable-hwtri.nds` (Boundary, mode 163). Label every figure
-with its arm; never present a both-CPU figure as the Boundary number
-(`Makefile:305-308`). Boundary clean-frame P95 ~1,056,640 is ~63K inside the
-budget; no both-CPU clean-frame figure is banked yet.
+with its arm AND its coverage; never present a both-CPU figure as the Boundary
+number (`Makefile:305-308`). Loading states are excluded from the gate by the
+owner's stated rule: drop frames with `SRC` > 2× that arm's own `SRC` median.
 
 Noise floors: `WORK-H` P95 cross-build ±5,376; per-bucket placement ≥8,544 —
 buckets locate, `WORK-H` decides. 1.85 cycles of `FTR` mean per byte of added
@@ -167,13 +191,34 @@ the battle scene never populates them. `src/port/port_probe.c:53` says the
 "original asset previews now own the top-screen visual signal", which is a
 **dev preview** role.
 
-**The cheap next step is already wired:** `gNdsOriginalSpritePreviewReady`
-(`nds_platform.c:218`) is a published `volatile u32` set at `:617`/`:768`.
-Read it in battle on the existing tick-HUD ROM — zero build. If it stays 0
-through a match, the battle configuration never populates 300 KB of preview
-buffer and the deletion/guarding case is made on measurement rather than on
-the name. **Do not delete on the name alone**; `AGENTS.md` requires tracing
-unfamiliar assets before removing them, and these have a live dev role.
+**MEASURED AND REFUTED (same cycle, zero build).** Read deep in battle
+(frame 1200) on the existing tick-HUD ROM:
+
+```
+gNdsOriginalSpritePreviewReady = 1      gNdsOriginalDLPreviewReady = 0
+```
+
+**`sOriginalSpritePreview` is populated and in use during battle**, so the
+153,600-byte buffer — and by association its 153,600-byte display twin — is
+**not** a free deletion. The 300 KB headline is dead. This is exactly why the
+flag was read instead of trusting the symbol name and the "dev preview"
+comment: deleting on the name would have removed something battle actively
+uses, which is the name-driven-logic failure mode in its purest form.
+
+**What survives as a candidate: 21,600 bytes.** `gNdsOriginalDLPreviewReady`
+is **0** in battle, so `sOriginalDLPreview` (13,824) and
+`sOriginalDLDisplayPreview` (7,776) are not populated there. That is 21,600
+bytes — **below the 32 KB exit on its own**, so G2 needs at least one more
+source. Note a ready flag is a *state*, not proof of never-use: it shows the
+buffer is unpopulated at that moment, not that no configuration ever fills
+it. Confirm with a config-level trace before removing, and remember `.bss` is
+static — the lever is deleting or `#if`-guarding the buffer out of the battle
+configuration, never freeing it at runtime.
+
+**Unexamined larger targets, in order:** `gSYFramebufferSets` (441,600),
+`sNdsAudioFgmCache` (204,800), `sNdsRelocSceneFileBuffer` (185,696),
+`gSYZBuffer` (140,800). Between them they hold 972,896 bytes — 56.9% of bss —
+and none has been traced.
 
 **Not done this cycle:** the +2,208 failing allocation is **not named** — that
 needs a `fake_heap_start` build plus a gdb probe for the `syMallocSet` spin,
@@ -445,11 +490,10 @@ row 1's execution plan.
    `MISC` 94,756–399,021) across 200-frame blocks *inside* the sampled
    window, so stability across the match should not be assumed.
 
-   Fixing this is a window/harness decision for the owner, not a silent
-   re-run: either sample the both-CPU arm across its whole 420 s, or seed the
-   stress arm at `time_limit = 1` so the two arms are the same match length.
-   The soak's own need for 7 minutes is why the value is 7, so the two uses
-   now conflict and cannot both be served by one seed.
+   **RULED, owner 2026-08-05 — see "THE MATCH LENGTH RULE" at the top of this
+   board.** Both gate arms run the 60-second match; the soak keeps its long
+   match on its own flag, because it was only ever meant to catch freezes.
+   Row G2d carries the reseed, the soak split, and the re-bank.
 2. Verify a counter is live in the shipped configuration BEFORE the measuring
    run; a proof-scoped counter reads 0, indistinguishable from clean.
 3. Eliminate candidates with a liveness probe on an already-built ROM before

@@ -156,6 +156,13 @@ imported level-3 Fox CPU on Dream Land, items off, one-minute (`3600` tick) Time
 mode. A diagnostic ROM may pause Fox decision/input only; proof runs and milestone
 acceptance enable it. Never launch the obsolete five-minute configuration, except for specific instruction to do so.
 
+**Both gate arms run the one-minute match** (owner, 2026-08-05: *"the soak was
+only meant to catch freezes, boundary and both cpu gates should be the 60 sec
+match"*). `NDS_R2_BOTH_CPU=1` is the stress arm: same 60 s, Mario also a level-3
+CPU; never published as the Boundary figure. **The soak's long match is a
+separate flag** — it must not ride on the gate seed, and a soak that quietly
+drops to 60 s reads NO-FREEZE having exercised almost nothing. Board has both.
+
 ## Documentation Ownership
 
 `PROJECT_GOAL.md` owns the product contract; `docs/README.md` owns other roles.
