@@ -4280,6 +4280,19 @@ extern volatile u32 gNdsMiscSplitAccountedTicks;
 extern volatile u32 gNdsMiscTexUploadTicks;
 extern volatile u32 gNdsMiscTexUploadCount;
 extern volatile u32 gNdsMiscTexUploadBytes;
+/* R2-08 effect-submit phase split, all cumulative and NESTED. See diagnostics.c
+ * for which span contains which -- they subtract, they do not sum. */
+extern volatile u32 gNdsEffectPhaseColorTicks;
+extern volatile u32 gNdsEffectPhaseTreeTicks;
+extern volatile u32 gNdsEffectPhaseDLTicks;
+extern volatile u32 gNdsEffectPhaseFindTicks;
+extern volatile u32 gNdsEffectPhaseMaterialTicks;
+extern volatile u32 gNdsEffectPhaseMatrixTicks;
+extern volatile u32 gNdsEffectPhaseExecTicks;
+extern volatile u32 gNdsEffectPhaseTexTicks;
+extern volatile u32 gNdsEffectPhaseDLCount;
+extern volatile u32 gNdsEffectPhaseNodeCount;
+extern volatile u32 gNdsEffectPhaseActive;
 #endif
 /* The Task 75 load counter lives inside the NDS_TICK_HUD block above, but its
  * call site in reloc_backend_assets.c is unconditional, so a non-tick-HUD

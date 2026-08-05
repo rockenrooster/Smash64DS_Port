@@ -13170,7 +13170,15 @@ static void ndsStageGCDrawAllLoopSubmitEffectDObj(GObj *effect_gobj,
         gNdsStageGCDrawAllLoopHardwareTextureRejectCount;
     /* Consume the colour this effect's own proc_display just emitted, before
      * the tree submit inherits the previous list's persistent RDP state. */
+#if NDS_TICK_HUD
+    {
+        u32 phase_mark = cpuGetTiming();
+        ndsRendererAdapterCaptureDisplayProcColors();
+        gNdsEffectPhaseColorTicks += cpuGetTiming() - phase_mark;
+    }
+#else
     ndsRendererAdapterCaptureDisplayProcColors();
+#endif
     ndsRendererAdapterBeginStageTraversal();
     /* The effect path, and the only caller that walks the tree. An effect
      * EFDesc is a model -- shield, rebirth halo, Fox reflector, impact wave are
@@ -13192,11 +13200,23 @@ static void ndsStageGCDrawAllLoopSubmitEffectDObj(GObj *effect_gobj,
      * still emits nothing from it. texready and texreject are both 0, so it
      * does not even reach texture handling. That is the next seam and it is
      * inside SubmitStageDL, not here. */
+#if NDS_TICK_HUD
+    {
+        u32 phase_mark = cpuGetTiming();
+        ndsRendererAdapterSubmitEffectDObjTree(
+            root,
+            callback_kind,
+            sNdsStageGCDrawAllLoopCurrentCameraGObj,
+            ndsStageGCDrawAllLoopInitialGeometryMode());
+        gNdsEffectPhaseTreeTicks += cpuGetTiming() - phase_mark;
+    }
+#else
     ndsRendererAdapterSubmitEffectDObjTree(
         root,
         callback_kind,
         sNdsStageGCDrawAllLoopCurrentCameraGObj,
         ndsStageGCDrawAllLoopInitialGeometryMode());
+#endif
     ndsRendererAdapterEndStageTraversal();
     triangle_delta =
         gNdsStageGCDrawAllLoopHardwareTriangleCount - triangle_before;

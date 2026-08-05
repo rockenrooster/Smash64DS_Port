@@ -9062,18 +9062,53 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
     sb32 inherited_tile = FALSE;
     sb32 inherited_segment = FALSE;
 #endif
+#if NDS_TICK_HUD
+    /* R2-08 phase split. Latched once at entry rather than re-read per phase:
+     * the flag is cleared by the tree submit's own epilogue, and a phase that
+     * started inside the effect layer must be charged to it whatever the flag
+     * says by the time the phase ends. */
+    sb32 phase_effect = FALSE;
+    u32 phase_dl_mark = 0u;
+    u32 phase_mark = 0u;
+#endif
 
     if ((dobj == NULL) || (dl == NULL))
     {
         return;
     }
 
+#if NDS_TICK_HUD
+    phase_effect =
+        (sNdsRendererAdapterEffectSubmitActive != FALSE) ? TRUE : FALSE;
+    if (phase_effect != FALSE)
+    {
+        gNdsEffectPhaseDLCount++;
+        phase_dl_mark = cpuGetTiming();
+        phase_mark = phase_dl_mark;
+    }
+#endif
     loaded = ndsRelocFindLoadedFileContaining(dl, sizeof(*dl));
     if ((loaded == NULL) &&
         (ndsFighterDLScanRangeInTaskmanArena(dl, sizeof(*dl)) == FALSE))
     {
+#if NDS_TICK_HUD
+        /* The REJECT exit still costs a full loaded-file scan plus an arena
+         * scan, so it is charged rather than dropped -- an unmeasured early
+         * return is exactly how a phase split acquires a residual. */
+        if (phase_effect != FALSE)
+        {
+            gNdsEffectPhaseFindTicks += cpuGetTiming() - phase_mark;
+            gNdsEffectPhaseDLTicks += cpuGetTiming() - phase_dl_mark;
+        }
+#endif
         return;
     }
+#if NDS_TICK_HUD
+    if (phase_effect != FALSE)
+    {
+        gNdsEffectPhaseFindTicks += cpuGetTiming() - phase_mark;
+    }
+#endif
 
 #if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
     detailed_output = (ndsRendererHardwareNoOracleEnabled() == FALSE) ?
@@ -9142,7 +9177,20 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
     step_start = cpuGetTiming();
 #endif
 #endif
+#if NDS_TICK_HUD
+    if (phase_effect != FALSE)
+    {
+        phase_mark = cpuGetTiming();
+    }
+#endif
     ndsRendererAdapterPrepareMaterialSegment(dobj, &state);
+#if NDS_TICK_HUD
+    if (phase_effect != FALSE)
+    {
+        gNdsEffectPhaseMaterialTicks += cpuGetTiming() - phase_mark;
+        phase_mark = cpuGetTiming();
+    }
+#endif
 #if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL >= 1)
     gNdsRendererProfileMaterialTicks += cpuGetTiming() - step_start;
     step_start = cpuGetTiming();
@@ -9159,6 +9207,12 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
                                              &initial_projection_ptr,
                                              &initial_modelview,
                                              &initial_modelview_ptr);
+#if NDS_TICK_HUD
+    if (phase_effect != FALSE)
+    {
+        gNdsEffectPhaseMatrixTicks += cpuGetTiming() - phase_mark;
+    }
+#endif
 #if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL >= 1)
     gNdsRendererProfileMatrixTicks += cpuGetTiming() - step_start;
 #endif
@@ -9255,6 +9309,12 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
         effect_hw_vertex_before = render_stats->hardware_vertex_count;
         effect_hw_triangle_before = render_stats->hardware_triangle_count;
     }
+#if NDS_TICK_HUD
+    if (phase_effect != FALSE)
+    {
+        phase_mark = cpuGetTiming();
+    }
+#endif
     ndsRendererExecuteDisplayListWithVertexCache(
         dl,
         &config,
@@ -9263,6 +9323,12 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
         render_stats,
         (sNdsRendererAdapterStagePersistentActive != FALSE) ?
             &sNdsRendererAdapterStageVertexCache : NULL);
+#if NDS_TICK_HUD
+    if (phase_effect != FALSE)
+    {
+        gNdsEffectPhaseExecTicks += cpuGetTiming() - phase_mark;
+    }
+#endif
     if (sNdsRendererAdapterEffectSubmitActive != FALSE)
     {
         /* The config's matrices read from OUR locals, and the executor's own
@@ -9424,6 +9490,12 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
                 render_stats->hardware_texture_height;
         }
     }
+#if NDS_TICK_HUD
+    if (phase_effect != FALSE)
+    {
+        gNdsEffectPhaseDLTicks += cpuGetTiming() - phase_dl_mark;
+    }
+#endif
 }
 
 /* ONE NODE IS NOT A TREE, AND THAT IS WHY THE SHIELD WAS A QUARTER CIRCLE.
@@ -9491,6 +9563,12 @@ static void ndsRendererAdapterSubmitStageDObjTreeDepth(
         return;
     }
     gNdsRendererStageDObjNodeCount++;
+#if NDS_TICK_HUD
+    if (sNdsRendererAdapterEffectSubmitActive != FALSE)
+    {
+        gNdsEffectPhaseNodeCount++;
+    }
+#endif
     ndsRendererAdapterSubmitStageDObjNode(dobj, kind, camera_gobj,
                                           initial_geometry_mode);
     if (dobj->child != NULL)
@@ -9542,8 +9620,14 @@ void ndsRendererAdapterSubmitEffectDObjTree(void *dobj_ptr, u32 kind,
                                             u32 initial_geometry_mode)
 {
     sNdsRendererAdapterEffectSubmitActive = TRUE;
+#if NDS_TICK_HUD
+    gNdsEffectPhaseActive = 1u;
+#endif
     ndsRendererAdapterSubmitStageDObjTreeDepth(dobj_ptr, kind, camera_gobj_ptr,
                                                initial_geometry_mode, 0u);
+#if NDS_TICK_HUD
+    gNdsEffectPhaseActive = 0u;
+#endif
     sNdsRendererAdapterEffectSubmitActive = FALSE;
 }
 

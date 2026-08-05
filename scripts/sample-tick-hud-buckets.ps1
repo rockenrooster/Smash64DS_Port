@@ -160,6 +160,17 @@ $PerFrameGlobals = @($PerFrameGlobals |
     ForEach-Object { $_ -split ',' } |
     ForEach-Object { $_.Trim() } |
     Where-Object { $_ -ne '' })
+# -PerStopGlobals needs it for the SAME reason, and did not have it: the three
+# lists above were normalised when they were added and this one was added later
+# (R2-07) without noticing the pattern. A single comma-joined string then
+# reaches the symbol guard as ONE element, so every requested name is reported
+# missing at once -- which reads as "the counters were never linked" and sends
+# the next hour into the build instead of the harness. The tell is in the error
+# text: the guard joins with ', ' and the failure printed bare commas.
+$PerStopGlobals = @($PerStopGlobals |
+    ForEach-Object { $_ -split ',' } |
+    ForEach-Object { $_.Trim() } |
+    Where-Object { $_ -ne '' })
 # -RingDump reads ONE ring of bucket words out of the ROM at a single stop
 # ($ringBytes = bucketNames * 128 * 4). Per-frame globals are not in that ring
 # -- they ride the per-frame printf, which -RingDump does not execute -- so the

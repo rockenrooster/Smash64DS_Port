@@ -15531,11 +15531,27 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
     return TRUE;
 }
 
+/* R2-08: the three thin wrappers below are the whole call surface of
+ * ndsRendererHardwareResolveOrBindTexture, so bracketing them charges the
+ * texture-RESOLVE phase (distinct from upload, which the previous probe already
+ * eliminated at 6.7 ticks/frame) without touching a function that has a dozen
+ * early returns. Charged only while the effect tree submit is on the stack. */
 static s32 ndsRendererHardwareBindTexture(
     NDSRendererStats *stats,
     const NDSRendererConfig *config,
     NDSRendererTraversalState *state)
 {
+#if NDS_TICK_HUD
+    if (gNdsEffectPhaseActive != 0u)
+    {
+        u32 phase_mark = cpuGetTiming();
+        s32 phase_result = ndsRendererHardwareResolveOrBindTexture(
+            stats, config, state, NULL, FALSE);
+
+        gNdsEffectPhaseTexTicks += cpuGetTiming() - phase_mark;
+        return phase_result;
+    }
+#endif
     return ndsRendererHardwareResolveOrBindTexture(
         stats, config, state, NULL, FALSE);
 }
@@ -15551,6 +15567,17 @@ static s32 ndsRendererHardwareResolveResidentTexture(
         return FALSE;
     }
     memset(resolved, 0, sizeof(*resolved));
+#if NDS_TICK_HUD
+    if (gNdsEffectPhaseActive != 0u)
+    {
+        u32 phase_mark = cpuGetTiming();
+        s32 phase_result = ndsRendererHardwareResolveOrBindTexture(
+            stats, config, state, resolved, FALSE);
+
+        gNdsEffectPhaseTexTicks += cpuGetTiming() - phase_mark;
+        return phase_result;
+    }
+#endif
     return ndsRendererHardwareResolveOrBindTexture(
         stats, config, state, resolved, FALSE);
 }
@@ -15566,6 +15593,17 @@ static s32 ndsRendererHardwareResolveStageSourceFrameTexture(
         return FALSE;
     }
     memset(resolved, 0, sizeof(*resolved));
+#if NDS_TICK_HUD
+    if (gNdsEffectPhaseActive != 0u)
+    {
+        u32 phase_mark = cpuGetTiming();
+        s32 phase_result = ndsRendererHardwareResolveOrBindTexture(
+            stats, config, state, resolved, TRUE);
+
+        gNdsEffectPhaseTexTicks += cpuGetTiming() - phase_mark;
+        return phase_result;
+    }
+#endif
     return ndsRendererHardwareResolveOrBindTexture(
         stats, config, state, resolved, TRUE);
 }

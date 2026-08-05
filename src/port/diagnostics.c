@@ -3058,6 +3058,38 @@ volatile u32 gNdsMiscSplitAccountedTicks;
 volatile u32 gNdsMiscTexUploadTicks;
 volatile u32 gNdsMiscTexUploadCount;
 volatile u32 gNdsMiscTexUploadBytes;
+/* R2-08 effect-submit PHASE SPLIT. The upload probe above refuted cache thrash
+ * (1 upload in ~1,408 steady-state frames, 0.0071% of the effect cost) and left
+ * 6,990 ticks per effect triangle unexplained, so this splits the submit itself.
+ *
+ * THE PHASE NAMES COME FROM THE CALL GRAPH, not from a guess: SubmitEffectDObjTree
+ * -> SubmitStageDObjTreeDepth (recursive) -> SubmitStageDObjNode -> SubmitStageDL,
+ * and SubmitStageDL does four separable things before it executes anything --
+ * a loaded-file lookup, a material-segment synthesis, an initial-matrix build,
+ * and then the generic interpreter. Two of those (Find, Material) are NOT in any
+ * a-priori taxonomy of "walk / dispatch / matrix / texture / submit" and are
+ * exactly why the graph was read first.
+ *
+ * NESTED SPANS, so they subtract rather than sum: Tree contains every DL, and DL
+ * contains Find+Material+Matrix+Exec. Tree-DL is the walk; DL-(the four) is the
+ * per-list overhead; Exec-Tex is vertex/primitive submission. The residual the
+ * report owes is EffectDraw - Color - Tree, and it is reported even when zero. */
+volatile u32 gNdsEffectPhaseColorTicks;
+volatile u32 gNdsEffectPhaseTreeTicks;
+volatile u32 gNdsEffectPhaseDLTicks;
+volatile u32 gNdsEffectPhaseFindTicks;
+volatile u32 gNdsEffectPhaseMaterialTicks;
+volatile u32 gNdsEffectPhaseMatrixTicks;
+volatile u32 gNdsEffectPhaseExecTicks;
+volatile u32 gNdsEffectPhaseTexTicks;
+volatile u32 gNdsEffectPhaseDLCount;
+volatile u32 gNdsEffectPhaseNodeCount;
+/* Set for the duration of the effect tree submit so nds_renderer.c can charge
+ * texture resolves to the effect layer without knowing anything about it.
+ * sNdsRendererAdapterEffectSubmitActive already exists but is file-static in
+ * reloc_backend_renderer_dl.c; this is its cross-TU twin, set from the same
+ * seam so the two cannot drift. */
+volatile u32 gNdsEffectPhaseActive;
 /* Task 66: the idle VBlank span, owned by the tick HUD rather than borrowed
  * from gNdsRendererProfileVBlankWaitTicks. That counter only accumulates under
  * NDS_RENDERER_PROFILE_LEVEL >= 1, and both the tick-HUD and proof targets pin

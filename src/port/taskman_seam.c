@@ -5100,7 +5100,18 @@ static void ndsBattlePlayableFinalizePresentedIteration(void)
         gNdsMiscSplitAccountedTicks =
             gNdsMiscWeaponDrawTicks + gNdsMiscEffectDrawTicks +
             gNdsMiscParticleDrawTicks + gNdsMiscTexUploadTicks +
-            gNdsMiscTexUploadCount + gNdsMiscTexUploadBytes;
+            gNdsMiscTexUploadCount + gNdsMiscTexUploadBytes +
+            /* R2-08 phase split, same reason: every one of these is written
+             * only from a #if NDS_TICK_HUD block and read only by a debugger,
+             * which is precisely the shape --gc-sections collects. Naming them
+             * here is what keeps the measuring run from reading eleven zeros.
+             * gNdsEffectPhaseActive is excluded deliberately -- it is a live
+             * flag tested by nds_renderer.c, so it already has a reader. */
+            gNdsEffectPhaseColorTicks + gNdsEffectPhaseTreeTicks +
+            gNdsEffectPhaseDLTicks + gNdsEffectPhaseFindTicks +
+            gNdsEffectPhaseMaterialTicks + gNdsEffectPhaseMatrixTicks +
+            gNdsEffectPhaseExecTicks + gNdsEffectPhaseTexTicks +
+            gNdsEffectPhaseDLCount + gNdsEffectPhaseNodeCount;
         gNdsTickHudBuckets[nNDSTickHudBucketFighters] =
             gNdsTickHudFighterTicks;
         gNdsTickHudBuckets[nNDSTickHudBucketStage] = gNdsTickHudStageTicks;
