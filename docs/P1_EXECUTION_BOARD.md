@@ -127,7 +127,46 @@ candidates. **Exit: ≥32 KB static headroom demonstrated by the same
 `fake_heap_start` probe**, so G3's builder text plus arena bookkeeping fit with
 margin. No performance claim — this row is measured in bytes, not ticks.
 
-### G3 — The effect packet path (the 65.57% + 6.93% shares)
+### G3 — RE-PRICED ON THE GATE ARM (cycle 79). The prize is 4–9x smaller than this row claims.
+
+**Every number below this heading is Boundary-derived and carries no arm
+label. The gate reads on both-CPU, and on that arm they do not hold.**
+Measured on `build-c79-g1-bothcpu`, route 0 (shipped), whole match, 1600
+samples, frames 441–2040, stride 96, DLDI on:
+
+| | Boundary (banked, unlabelled) | **both-CPU (gate arm)** |
+|---|---:|---:|
+| effect display lists / match | 1,360 | **527–563** |
+| Exec ticks / list | ~102,730 | **83,632** |
+| effect submits as share of `MISC` excursion | 99.3% | **71.5%** |
+| recoverable on WORK-H P95 | ~315,000 | **33,699 – 75,264** |
+
+The recoverable is a bracket, both ends measured on this arm: 33,699 charging
+each ring stop's effect ticks uniformly across its 96 frames, 75,264 charging
+all of them to that stop's most expensive frames (concentration-favourable
+upper bound). **Removing 100% of effect DObj submits leaves WORK-H P95 at
+1,536,768–1,578,333 against a 1,120,380 gate — a residual gap of
+416,388–457,953.** G3 cannot close the gate on the arm the gate reads on.
+
+**What actually owns the gate-arm tail.** Match-total excursion above each
+bucket's own P50 (`WAIT` and `HUD` are excluded from WORK-H by construction,
+so they are not targets):
+
+| bucket | excursion | share of WORK-H-relevant |
+|---|---:|---:|
+| **OTHR** | 206,132,288 | **48.3%** |
+| **SRC** | 131,354,880 | **30.8%** |
+| `MISC` | 72,218,624 | 16.9% |
+| AUD / STG / FTR / BG | 17,151,680 | 4.0% |
+
+Effect submits are 71.5% of `MISC`, so they are **~12.1% of the gate arm's
+WORK-H excursion**. `OTHR` — unattributed tick-HUD time — is the single
+largest owner and has never been broken down. **Attributing `OTHR` is the
+highest-value next measurement on this lane**, ahead of any packet-builder
+work. `SRC` is second and is plausibly inflated by the stress config itself
+(both fighters CPU-driven), which is worth confirming before it is optimised.
+
+### G3 (original row, Boundary-derived) — the effect packet path
 
 Build the GX packet per unique effect display list **at match load**, reserve
 patch offsets for matrix and dynamic colour words, patch per frame, submit.
