@@ -4276,6 +4276,10 @@ extern volatile u32 gNdsMiscWeaponDrawTicks;
 extern volatile u32 gNdsMiscEffectDrawTicks;
 extern volatile u32 gNdsMiscParticleDrawTicks;
 extern volatile u32 gNdsMiscSplitAccountedTicks;
+/* R2-07 effect-cost probe, all cumulative. See diagnostics.c. */
+extern volatile u32 gNdsMiscTexUploadTicks;
+extern volatile u32 gNdsMiscTexUploadCount;
+extern volatile u32 gNdsMiscTexUploadBytes;
 #endif
 /* The Task 75 load counter lives inside the NDS_TICK_HUD block above, but its
  * call site in reloc_backend_assets.c is unconditional, so a non-tick-HUD

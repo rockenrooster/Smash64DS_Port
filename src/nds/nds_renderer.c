@@ -3066,6 +3066,12 @@ static inline void ndsRendererProfileRecordTextureUpload(u32 bytes)
 #else
     sNdsRendererRuntimeFrameSummary.texture_uploads++;
     sNdsRendererRuntimeFrameSummary.texture_upload_bytes += bytes;
+#if NDS_TICK_HUD
+    /* R2-07: cumulative mirrors. The struct above is memset every frame, so a
+     * ring stop can only ever read one frame of it. */
+    gNdsMiscTexUploadCount++;
+    gNdsMiscTexUploadBytes += bytes;
+#endif
 #endif
 }
 
@@ -14406,6 +14412,13 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
     u32 convert_start;
     u32 upload_start;
 #endif
+#if NDS_TICK_HUD
+    /* OUTSIDE the PROFILE_LEVEL guard on purpose. Its two uses are guarded on
+     * NDS_TICK_HUD alone, and the tick-HUD build is PROFILE_LEVEL 0 -- nesting
+     * this declaration inside the level-1 block compiled it out from under
+     * them. */
+    u32 tickhud_upload_mark = 0u;
+#endif
     NDSRendererHardwareTextureKey key;
     NDSRendererHardwareTextureCacheEntry *entry;
     NDSRendererHardwareTextureCacheEntry *fraction_entry;
@@ -15344,6 +15357,11 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
 
     upload_start = cpuGetTiming();
 #endif
+#if NDS_TICK_HUD
+    /* R2-07: the same span, re-marked, because upload_start above only exists
+     * at NDS_RENDERER_PROFILE_LEVEL >= 1 and the tick-HUD build is level 0. */
+    tickhud_upload_mark = cpuGetTiming();
+#endif
 #if NDS_RENDERER_PROFILE_LEVEL < 2
     if (upload_buffer == sNdsRendererHardwareTextureRefreshLarge)
     {
@@ -15460,6 +15478,9 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
     ndsRendererHardwareBindTextureName(stats, (u32)entry->name);
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
     gNdsRendererProfileTextureUploadTicks += cpuGetTiming() - upload_start;
+#endif
+#if NDS_TICK_HUD
+    gNdsMiscTexUploadTicks += cpuGetTiming() - tickhud_upload_mark;
 #endif
 
 #if NDS_RENDERER_PROFILE_LEVEL < 2

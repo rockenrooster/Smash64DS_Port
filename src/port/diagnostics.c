@@ -3041,6 +3041,23 @@ volatile u32 gNdsMiscParticleDrawTicks;
  * the cross-check -- MISC minus this is the part of the bucket the split does
  * not yet explain. */
 volatile u32 gNdsMiscSplitAccountedTicks;
+/* R2-07 effect-cost probe. The MISC split put 359,717 ticks/frame in the
+ * effect DObj submit on over-gate windows and 0 on clean ones, which is the
+ * shape of something rebuilt per frame rather than of a merely generic walk.
+ * 38bba475's own message flags the suspect: its G_CC_BLENDPE prim/env bake
+ * "mints a distinct cached texture variant per distinct (prim,env) pair, so
+ * any effect that ramps or fades its colour mints one per frame", and it says
+ * that is unmeasured. Every effect in this set ramps or fades.
+ *
+ * Upload TICKS do not exist below NDS_RENDERER_PROFILE_LEVEL 1 and the tick-HUD
+ * build is level 0, so the span is re-bracketed here rather than reused. Counts
+ * and bytes do have a level-0 path but only into a per-frame struct that a ring
+ * stop can sample one frame of; these are cumulative so a per-stop delta gives
+ * the whole window. Evictions need no new counter --
+ * sNdsRendererRuntimeTextureCacheEvictCount is already cumulative. */
+volatile u32 gNdsMiscTexUploadTicks;
+volatile u32 gNdsMiscTexUploadCount;
+volatile u32 gNdsMiscTexUploadBytes;
 /* Task 66: the idle VBlank span, owned by the tick HUD rather than borrowed
  * from gNdsRendererProfileVBlankWaitTicks. That counter only accumulates under
  * NDS_RENDERER_PROFILE_LEVEL >= 1, and both the tick-HUD and proof targets pin

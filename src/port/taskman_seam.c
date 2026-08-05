@@ -5099,7 +5099,8 @@ static void ndsBattlePlayableFinalizePresentedIteration(void)
          * unexplained. */
         gNdsMiscSplitAccountedTicks =
             gNdsMiscWeaponDrawTicks + gNdsMiscEffectDrawTicks +
-            gNdsMiscParticleDrawTicks;
+            gNdsMiscParticleDrawTicks + gNdsMiscTexUploadTicks +
+            gNdsMiscTexUploadCount + gNdsMiscTexUploadBytes;
         gNdsTickHudBuckets[nNDSTickHudBucketFighters] =
             gNdsTickHudFighterTicks;
         gNdsTickHudBuckets[nNDSTickHudBucketStage] = gNdsTickHudStageTicks;
