@@ -3,4 +3,4 @@ AI Agent should mark fixed items with **FIXED** prefix or a 20 word summary if n
 These bugs should be fixed for P1 delivery:
 
 - Mario's Up B coin VFX looks like a solid yellow coin shaped object
-  LOCALIZED global frame cap 1 freezes all 19 animated particle textures at frame 0; per-texture budget restores 8 free.
+  OWNER-QUEUED texture 25 now holds source frame 2, proven byte-exact inside the published ROM; starburst frames 12-14 still draw solid.
