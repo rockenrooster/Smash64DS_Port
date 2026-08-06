@@ -1515,6 +1515,41 @@ P95 is 1,475,328 against the control's 1,650,240 (−174,912) with over-gate
 52.4% → 23.0% — that is what removing all fighter geometry buys, on a ROM that
 draws no fighters.
 
+### The pre-submission 172,092 — SEAMS NAMED, cycle 97. **No edit made; read the blocker before briefing an implementation.**
+
+The 172,092 is per fighter per frame at 1.94 draws/frame ⇒ **~88,700 per fighter
+per frame**. Its five seams, each with the question that decides whether it is a
+deletion — *what input can change between frames?* Work whose inputs are fixed
+at match load is re-proving a constant.
+
+| seam | site | input that can change | verdict |
+|---|---|---|---|
+| **walk** | `ndsFighterCollectAllDObjsWithDL` | DObj tree topology | **match-load constant** for Mario/Fox — poses move, topology does not. Bake the collection order at load. Needs proof no status/motion alters the DObj set. |
+| **reset** | `ndsFighterDLDrawResetTransientRendererStats` `:5041` | nothing — it clears | **deletion-shaped.** The Task 91 note at `:13474` already records that **70% of this function's memset traffic** is two sites here, clearing the per-list proof/counter prefix *once per part list per fighter per frame*. Those are diagnostic fields; much may already be dead at profile 0 / `NDS_TICK_HUD=0`. |
+| **validate** | `ndsRendererAdapterValidateNativeOwnerCached` `:8679` | asset bases, selected count, root offsets | already *named* cached — **but see the blocker.** |
+| **matrix prep** | `PrepareNativeOwnerHierarchy` / `…Matrices` | joint matrices, camera | **genuinely varies.** Not a deletion. The contract's routes are precomputed/quantized poses and reduced update rates — those are fidelity-adjacent and owner-gated. |
+| **material prep** | `ndsRendererAdapterBuildNativeMaterialSnapshot` `:6895` | damage-flash modulate only | mostly **match-load constant**; 18.8% of scene memset traffic per the same note. Bake per model, patch the modulate per frame. |
+
+**THE BLOCKER, and it is the same lesson the stage taught.**
+`ndsRendererAdapterValidateNativeOwnerCached` **carries no engagement counter.**
+The stage's equivalent did (`gNdsR2StagePrepareReuseCount` / `…BuildCount`),
+and that is precisely how cycle 93 refuted the stage-prepare candidate at
+**99.9% reuse for free, with no build**. Here there is no way to tell a hit from
+a miss without adding one.
+
+**So the first move is one counter pair, not an edit.** Spending a build
+deleting work whose cache already hits would repeat the exact mistake cycle 93
+avoided — and on this ROM a wrong guess costs a build, a whole-match run, and a
+Boundary run. Add reuse/build counters to the fighter owner validate (and to
+the material snapshot), read them on one whole-match gate-arm run, and only then
+choose which seam to delete.
+
+**Not done, deliberately:** no edit, no build, no run this row. The chain
+(add counters → build → run → design the deletion → dual-route build → two runs
+→ Boundary) did not fit the remaining budget, and this row touches the hot draw
+path where an unverified commit is the worst outcome. A proven seam with no fix
+beats a fix with no proof.
+
 ### G3 (original row, Boundary-derived) — the effect packet path
 
 Build the GX packet per unique effect display list **at match load**, reserve
