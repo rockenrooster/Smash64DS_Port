@@ -1252,12 +1252,94 @@ for the flag's exact scope and for the stop-aligned repeat mechanism.
 
 **INHERITED — the next row is NOT pricing `SITR` (owner, cycle 92).** The
 excursion method is structurally blind to flat cost, and the gate arm's P50
-(1,094,464) already sits within ~26K of the 1,120,380 gate. So the next row
-measures the **flat** buckets against their charter budget lines — `FTR` ~389K
-against 250K, `STG` ~195K against 180K — which is §7 rung 1 and **not**
-owner-gated. `SITR` pricing (specialization, precomputation, event-driven status
-updates, fighter/move-specific native code, large LUTs) remains available behind
-it, with `docs/optimization/OPTIMIZATION_IDEAS.md` as the ideas store.
+already sits within ~26K of the 1,120,380 gate. So the next row measures the
+**flat** buckets against their charter budget lines, which is §7 rung 1 and
+**not** owner-gated. **DONE, cycle 93 — see "The flat buckets" below**: the
+overage is 166,416 (31.4% of the gap), `FTR` owns 81.6% of it, and the row that
+follows is the `FTR` phase split, because `FTR` is the only major bucket that
+has never been partitioned. `SITR` pricing (specialization, precomputation,
+event-driven status updates, fighter/move-specific native code, large LUTs)
+remains available behind it, with
+`docs/optimization/OPTIMIZATION_IDEAS.md` as the ideas store.
+
+### The flat buckets — MEASURED, cycle 93. `FTR` owns 82% of the flat overage, and it is the one bucket never partitioned.
+
+§7 rung 1, both arms, whole match, 1,600 samples, frames 441–2040, **86.7%
+coverage, DLDI ON, exclusion OFF**, `-AllowRepeatedFrames` (3/1600 on each,
+valid for a ranking), `slips=0` on both. Builds
+`builds/build-c93-flat-{bothcpu,boundary}`, git `8770a246`; artifacts
+`artifacts/performance/2026-08-05_c93-flat-{bothcpu,boundary}{,-rows.csv,-excursion.json}`.
+
+**Both arms agree to within 1.2% on both buckets** — as expected for rendering
+owners that do not depend on match dynamics, and the cross-check that makes
+these usable.
+
+| bucket | arm | mean | P50 | P95 | **clean mean** | hot mean | hot/clean | line | **over line** |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| **FTR** | **gate** | 383,930 | 394,944 | 398,080 | **385,814** | 382,216 | 0.99x | 250,000 | **+135,814** |
+| FTR | Boundary | 383,693 | 394,112 | 397,504 | 381,085 | 386,354 | 1.01x | 250,000 | +131,085 |
+| **STG** | **gate** | 214,338 | 210,240 | 218,496 | **210,602** | 217,735 | 1.03x | 180,000 | **+30,602** |
+| STG | Boundary | 215,005 | 210,816 | 218,688 | 210,919 | 219,173 | 1.04x | 180,000 | +30,919 |
+
+**Ranked flat overage, gate arm: `FTR` +135,814 (81.6%), `STG` +30,602 (18.4%),
+total 166,416** — **31.4% of the gate arm's 529,860 gap**, and it is the part
+the excursion method cannot see. Both are genuinely flat: `FTR` spread
+P95/P50 **1.01**, `STG` **1.04**.
+
+**The premise holds, and it is tighter than the brief assumed. Gate-arm
+clean-frame P95 is 1,115,072 against the 1,120,380 gate — 5,308 of margin**
+(Boundary 1,108,480, 11,900). The frames that are *not* excursions are already
+at the budget, so every flat tick removed passes to P95 one-for-one.
+
+**Correction to §7: the charter understates `STG`.** It says "`STG` at ~195K
+against 180K"; measured clean mean is **210,602**, so the overage is **30,602,
+not ~15,000 — 2.0x**. Its `FTR` figure is good (~389K stated, 385,814 measured).
+
+**Two STG candidates REFUTED from the same run, no extra build.**
+`-ExtraGlobals` on the Boundary arm, whole match (2,041 frames):
+
+- **Stage-prepare rebuild is not happening.** `gNdsR2StagePrepareReuseCount`
+  **2,039** against `gNdsR2StagePrepareBuildCount` **2** — the R2-02 E1a reuse
+  key hits **99.9%**. There is nothing to win by making it hit.
+- **Task 103's generic-emit lever is dead as a per-frame cost.**
+  `gNdsStageGCDrawAllLoopDObjDrawCallbackCount` = **8 for the whole match**, so
+  the traversal/run-loop site (`reloc_backend_movement.c:13625`) fires 8 times,
+  not per frame — the Task 36 replay is armed and the loop only runs during
+  capture. The archived 2026-07-27 figures ("21 generic runs, 103 triangles,
+  63,903 ticks/frame", `ClaudeOpus5_Task103_TheStageIsNotWhereWeLooked`) no
+  longer describe the steady state. **Do not restart that lever from that
+  document.**
+
+**What is left in STG is the display-commit site.**
+`gNdsStageGCDrawAllLoopCapturedDisplayCount` = **56,178 = 27.5/frame**, i.e.
+`ndsRendererAdapterCommitNativeStageDisplay` (`:13521`) is the only
+high-frequency STG accumulation site remaining. `ndsRendererAdapterFinishNativeStageOwner`
+(`reloc_backend_renderer_dl.c:8376`) is an **empty function** in this
+configuration, so the `:14044` site is timer overhead only. The
+Prepare-versus-Display split is **not** measured on the current build.
+
+**FTR IS THE ROW, AND IT IS THE ONLY MAJOR BUCKET WITH NO PHASE PARTITION.**
+`SRC` has three generations of splits (c85, c86, c92); `STG` has Task 103; `FTR`
+has none on the tick instrument. Its bracket
+(`reloc_backend_renderer_dl.c:14604–14678`) contains exactly two calls per
+fighter — `ndsFighterDisplayContractCapture` then
+`ndsFighterMarioFoxDLAllDrawForSlot` — at `gNdsFighterMarioFoxDLAllDrawCount`
+**3,955 = 1.94 draws/frame** and `gNdsFighterDisplayContractSubmittedCount`
+**63,534 = 16.1 contract events per fighter per frame**, i.e. **~198,900 ticks
+per fighter draw per frame**.
+
+A split already exists but **cannot be used**: `m2_contract_capture_ticks`
+(`:14613`) is gated on `NDS_RENDERER_PROFILE_LEVEL == 1 &&
+NDS_RENDERER_M2_DETAILED_LEDGER`, and the renderer benchmark path asserts
+`TICK_HUD=0`, so it cannot run on the whole-match gate instrument. **Next row:
+fork the two existing timestamps into `#if NDS_TICK_HUD` counters at those two
+sites** — the Task 103 precedent exactly, which added *no* new timer reads
+because every site already computed the stamp it needed. Cost is order tens of
+bytes against **111,584** proven headroom
+(`build-c93-flat-bothcpu` links at `0x02279424`), so the boot cliff does not
+bind. Until that split exists, any FTR price is a guess: the honest bracket on
+the lever is **0 to 135,814**, and naming a narrower one without the partition
+would be the self-time-is-not-a-subsystem-budget mistake again.
 
 ### G3 (original row, Boundary-derived) — the effect packet path
 
