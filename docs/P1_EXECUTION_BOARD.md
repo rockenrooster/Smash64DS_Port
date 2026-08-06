@@ -1856,7 +1856,13 @@ row 1's execution plan.
    presentation debt without reintroducing gameplay-time texture conversion.
 4. **Audio completeness** — implement or explicitly qualify every reachable
    voice, pitch schedule, composite cue, and overlapping match-audio path.
-5. **Final acceptance** — the CPU-on one-minute match, complete-match capture,
+5. **Hit-effect presentation** — owner filed three rows against the N64
+   reference on 2026-08-05: the A-attack spark is oversized, normal-A should
+   return to the blue spark, and the fire *burn* is absent. Detail, seams and
+   the owner's verbatim wording are in `docs/BUGS.md`; do not restate them here.
+   The spark ceiling is explicitly a port choice with the owner as oracle
+   (`386fb8e2`), so it closes on their eye, not on a measurement.
+6. **Final acceptance** — the CPU-on one-minute match, complete-match capture,
    owner play/listen pass, reserve gate, Results transition, and teardown
    proof on the exact candidate ROM.
 
