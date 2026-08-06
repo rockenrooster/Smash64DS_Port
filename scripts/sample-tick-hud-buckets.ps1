@@ -234,13 +234,22 @@ $target = 'smash64ds-battle-playable-tickhud-hwtri'
 # "named" total below, or the share double-counts them.
 $bucketNames = @('ALL', 'FTR', 'STG', 'BG', 'AUD', 'HUD', 'SRC', 'MISC', 'OTHR',
                  'WAIT', 'WORK', 'SHDT', 'SWRM',
-                 'GCRA', 'SCPU', 'SCAT', 'SPRM')
+                 'GCRA', 'SCPU', 'SCAT', 'SPRM',
+                 'SINT', 'SPHD', 'SPHC')
 # GCRA/SCPU/SCAT/SPRM are the cycle-86 SBAS split, appended after the cycle-85
 # pair on the same terms: sub-spans of SRC, so out of every "named" total.
 # GCRA is gcRunAll -- the whole simulation; SCPU/SCAT/SPRM are three of the six
 # per-fighter procs. The analyzer derives SOUT = SBAS - GCRA and
 # SGCO = GCRA - SCPU - SCAT - SHDT - SPRM at zero byte cost.
-$srcSubBuckets = @('SHDT', 'SWRM', 'GCRA', 'SCPU', 'SCAT', 'SPRM')
+#
+# SINT/SPHD/SPHC are the cycle-92 SGCO split, appended again on the same terms.
+# They are the OTHER three per-fighter procs (ftmanager.c:858-860): the interrupt
+# proc (with SCPU nested inside it) and the two mutually exclusive physics/map
+# arms. The analyzer derives SITR = SINT - SCPU and the non-fighter remainder
+# SOBJ = GCRA - SINT - SPHD - SPHC - SCAT - SHDT - SPRM, so SGCO stops being a
+# residual and stays derivable as SITR + SPHD + SPHC + SOBJ for regression.
+$srcSubBuckets = @('SHDT', 'SWRM', 'GCRA', 'SCPU', 'SCAT', 'SPRM',
+                   'SINT', 'SPHD', 'SPHC')
 # Must match enum NDSTickHudNativeOwnerFallbackReason in include/nds/nds_startup.h.
 $fallbackReasons = if ($FallbackCensus) {
     @('calls', 'eligible', 'animLock', 'selected', 'displayList',

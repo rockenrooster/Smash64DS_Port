@@ -2065,7 +2065,11 @@ static u32 sBattleTickHudP95[nNDSTickHudBucketCount];
 static const char *const sBattleTickHudNames[nNDSTickHudBucketCount] = {
     "ALL ", "FTR ", "STG ", "BG  ", "AUD ", "HUD ", "SRC ",
     "MISC", "OTHR", "WAIT", "WORK", "SHDT", "SWRM",
-    "GCRA", "SCPU", "SCAT", "SPRM"
+    "GCRA", "SCPU", "SCAT", "SPRM",
+    /* Cycle 92 SGCO split. This array is sized by nNDSTickHudBucketCount, so a
+     * bucket added without a name here leaves a NULL the HUD would dereference;
+     * it must move with the enum. */
+    "SINT", "SPHD", "SPHC"
 };
 
 /* Shell sort, Knuth gaps: no recursion, no allocation, and no worst case that

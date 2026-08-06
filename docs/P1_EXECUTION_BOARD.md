@@ -1141,6 +1141,124 @@ corrected 60-second match at 86.7% coverage and moved by less than a
 percentage point, so the two-track scope rests on measurement, not on the
 window. The superseded 12.6%-window figures are in the cycle-79 archive.
 
+### The SGCO split — MEASURED, cycle 92. `SITR` owns it on BOTH arms.
+
+`SGCO` was 52.0% of the gate arm's WORK-H excursion and the campaign's largest
+remaining lever. It is no longer a residual. The three per-fighter procs cycle 86
+could not bracket are now bracketed, and the non-fighter GObjs fall out as a
+derived remainder:
+
+```
+SGCO = SITR + SPHD + SPHC + SOBJ          (identity, checked per frame)
+SITR = SINT - SCPU                        interrupt proc less its AI
+SOBJ = GCRA - SINT - SPHD - SPHC - SCAT - SHDT - SPRM
+```
+
+Whole match, 1,600 samples, stride 96, **86.7% coverage, DLDI ON, exclusion
+OFF**, `slips=0` both arms. Builds `builds/build-c92-sgco-{bothcpu,boundary}`;
+artifacts `artifacts/performance/2026-08-05_c92-{gate-bothcpu,boundary}{,-rows,-excursion}`.
+Identity closes with **max per-frame error 0** on both arms; both derived
+residuals non-negative on every frame; the `SGCO` partition identity holds.
+
+**Gate arm (both-CPU), frames 440–2038:**
+
+| sub-owner | excursion | %SRC | %WORK-H | clean | hot | **hot/clean** |
+|---|---:|---:|---:|---:|---:|---:|
+| **`SITR`** interrupt less AI | **95,136** | **48.5%** | **31.8%** | 103,329 | 198,465 | **1.92x** |
+| `SPHD` physics/map default | 25,828 | 13.2% | 8.6% | 71,725 | 97,553 | 1.36x |
+| `SHDT` hit detection | 23,170 | 11.8% | 7.7% | 3,998 | 27,169 | 6.79x |
+| `SOBJ` non-fighter GObjs | 19,967 | 10.2% | 6.7% | 80,099 | 100,066 | 1.25x |
+| `SCPU` CPU AI | 19,240 | 9.8% | 6.4% | 38,588 | 57,828 | 1.50x |
+| `SPRM` params | 12,853 | 6.5% | 4.3% | 1,765 | 14,618 | **8.28x** |
+| `SCAT`/`SPHC`/`SWRM`/`SOUT` | 89 / 33 / 8 / −91 | ~0% | ~0% | — | — | ~1.0x |
+| `SGCO` roll-up | 140,964 | 71.8% | 47.1% | 255,770 | 396,734 | 1.55x |
+
+**Boundary arm (shipped), frames 438–2038:**
+
+| sub-owner | excursion | %SRC | %WORK-H | clean | hot | **hot/clean** |
+|---|---:|---:|---:|---:|---:|---:|
+| **`SITR`** | **49,452** | **53.8%** | **13.6%** | 105,715 | 155,168 | 1.47x |
+| `SOBJ` | 23,594 | 25.7% | 6.5% | 79,068 | 102,661 | 1.30x |
+| `SHDT` | 9,290 | 10.1% | 2.5% | 4,176 | 13,466 | 3.22x |
+| `SPHD` | 5,298 | 5.8% | 1.5% | 67,474 | 72,772 | 1.08x |
+| `SPRM` | 4,721 | 5.1% | 1.3% | 1,929 | 6,651 | 3.45x |
+| `SCAT`/`SPHC`/`SWRM`/`SOUT`/`SCPU` | 89 / 36 / 6 / −128 / **−419** | ~0% | ~0% | — | — | ~1.0x |
+| `SGCO` roll-up | 78,380 | 85.3% | 21.5% | 252,899 | 331,279 | 1.31x |
+
+**`SITR` owns `SGCO` on both arms — 67.5% of it on the gate arm, 63.1% on
+Boundary.** Like the cycle-85 and cycle-86 ratios, that arm-independence is what
+makes it structural rather than a stress-config artifact. It is also the highest
+switching ratio of any large owner (1.92x), so it is a gate lever and not only a
+P50 one.
+
+Cross-checks: the `SGCO` roll-up's clean mean is **255,770 (gate) / 252,899
+(Boundary) against banked 256,011 / 254,300 — 0.09% and 0.55% apart**, so the
+instrument does not move the cost it subdivides. `SCPU`'s two-CPU control
+reproduces: clean 38,588 (gate) vs 20,524 (Boundary) = **1.88x**, against the
+expected ~2x.
+
+**Three negative results, do not re-derive.** `SOBJ` is **flat on both arms**
+(1.25x / 1.30x) — the camera, effects, items, weapons and interface GObjs inside
+`gcRunAll` are **not** the tail, which closes the largest open hypothesis about
+`SGCO`'s content. `SPHC` is ~0 on both arms while its bracket demonstrably runs
+(clean mean 618/642) — the mutually exclusive capture arm costs nothing in a
+match without grabs, exactly as predicted from ftmain.c:1918-1937. `SCPU` on
+Boundary is **negative** (−419, 0.98x), confirming it is not a gate lever on the
+shipped arm at all.
+
+**`mpProcessUpdateMain` was NOT bracketed, deliberately.** It is the one seam
+here with an existing port wrapper, but decomp has ~20 call sites across
+`mp/mpcommon.c`, `it/itmap.c` and `wp/wpmap.c` — so it is an **overlay** spanning
+`SPHD`/`SPHC` *and* `SOBJ`, not a disjoint owner, and the identity accounts for it
+by not naming it (fighter-side cost inside `SPHD`/`SPHC`, item/weapon cost inside
+`SOBJ`, no double count). Its call frequency is an order of magnitude above every
+existing bracket, and the cycle-90/91 phase instrument already showed a
+high-frequency bracket moving WORK-H P95 +15,808/+45,568. Measure it with a call
+counter or on the fighter entry points only — never a timer on the shared leaf.
+
+**The ITCM problem cycle 86 stopped at is solved, and the fix has two mirrors.**
+The three procs were pinned by decomp symbol name at `linker/nds_hot_text.ld`.
+They are renamed with the port's existing `#define`-before-`#include` pattern
+(`src/import/battleship_ftmain.c`) and the three pins were rewritten **in place**
+to `.text.battleship_ftMainProc*`. In place matters — the Task 94 note on that
+file records the list is a curated 8 KiB working set whose members re-address
+each other when the order changes. **Verified in the linked ELF, not assumed:**
+`.text.hot` spans `0x020013c0`–`0x02002460` and all three renamed bases sit inside
+it at their original positions (`0x16b8`/`0x1700`/`0x1748`), with the shared
+`ftMainProcPhysicsMap` still pinned and the wrappers in `.main`. **No `decomp/`
+patch was needed.** Two things must move with any future rename here:
+`scripts/check-gbi-decode-fixtures.ps1:2098-2109` mirrors the pin list and is the
+only guard that catches a half-done rename (an unmatched linker input-section
+pattern fails **silently** — the member just drops out of hot text), and the
+sampler's `$bucketNames` must move in the same commit as the enum.
+
+**Instrument cost and health.** +1,832 bytes (text +232, bss +1,600) against
+**111,584 proven headroom** — 61x margin, `check-boot-headroom.ps1` OK,
+`fake_heap_start 0x02279424`. `named` = 1,112,522 = FTR+STG+BG+AUD+HUD+SRC+MISC
+exactly, so the three buckets are excluded from `named` and the identity is
+byte-identical to every banked measurement. **The shipped ROM pays no instrument
+bytes** — the `NDS_TICK_HUD=0` link check contains **0** of the new symbols
+against **3** in the lab ELF (a control that can find them). It does pay **one
+extra call indirection per proc**, because the rename is unconditional: guarding
+it on `NDS_TICK_HUD` would give the lab and shipped ROMs different ITCM layouts
+and the measurement would no longer be of the shipped program. That is the same
+cost `SCAT`/`SHDT`/`SPRM` have carried since cycle 86.
+
+**NOT a new baseline. 1,624,064 stands.** These runs read WORK-H P95 1,650,240
+(gate) and 1,589,056 (Boundary); the instrument perturbs and both runs used
+`-AllowRepeatedFrames` (5/1600 gate, 3/1600 Boundary), which is valid for a
+ranking and invalid for a per-presented-frame percentile. See `docs/VERIFYING.md`
+for the flag's exact scope and for the stop-aligned repeat mechanism.
+
+**INHERITED — the next row is NOT pricing `SITR` (owner, cycle 92).** The
+excursion method is structurally blind to flat cost, and the gate arm's P50
+(1,094,464) already sits within ~26K of the 1,120,380 gate. So the next row
+measures the **flat** buckets against their charter budget lines — `FTR` ~389K
+against 250K, `STG` ~195K against 180K — which is §7 rung 1 and **not**
+owner-gated. `SITR` pricing (specialization, precomputation, event-driven status
+updates, fighter/move-specific native code, large LUTs) remains available behind
+it, with `docs/optimization/OPTIMIZATION_IDEAS.md` as the ideas store.
+
 ### G3 (original row, Boundary-derived) — the effect packet path
 
 Build the GX packet per unique effect display list **at match load**, reserve

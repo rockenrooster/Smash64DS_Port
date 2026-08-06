@@ -91,10 +91,47 @@ R2-07 iteration rules (cycle 79):
   proves the route took, and that counter is checked before its ticks are
   read.** Do not diagnose this class from console output — the console is
   exactly where it hides.
-- **Per-list constants make short probes valid for iteration.** Effect-submit
-  cost is ~102,730 ticks/list; ticks-per-list from a few stops is a sound
-  progress metric for board lane G3. The P95 verdict still needs the
-  whole-match run.
+- **The general form: ANY construct between the harness and your eyes hides
+  its failures.** This has now cost four cycles as `Select-Object -First`, as
+  `Where-Object`, and (cycle 92) as the redirect itself — `2>&1 | Out-File`
+  writes a **zero-byte file** when the pipeline throws, so a failing run and a
+  silent one are indistinguishable. Let a harness write to the console or to
+  its own artifact; do not wrap it. A **default argument** is the same class:
+  see the exclusion rule below.
+- **Never rank `SRC` with the load-frame exclusion on, and the default is ON.**
+  `analyze-tick-hud-excursion.ps1` defaults `-LoadFrameSrcMultiple 2.0`, and
+  that rule thresholds on the very bucket being attributed, so it is circular
+  for `SRC` (cycle 81). On the banked c86 gate arm it reports `SGCO` **81,595
+  instead of 153,291 — understated 1.88x**, and both tables look equally
+  plausible. Pass `-LoadFrameSrcMultiple 0`. The script now warns loudly rather
+  than leaving this to be remembered.
+- **`-AllowRepeatedFrames` relaxes the duplicate-label gate only.** It is
+  consulted at `sample-tick-hud-buckets.ps1:857`, long after stitching; the
+  ring-wrap proof at `:738-759` (hard-fail on `presentedDelta > 128` and on
+  `delta == 0 && presentedDelta > 0`) runs regardless and is **not** weakened.
+  So the flag is safe for an excursion *ranking* — each repeat is two genuinely
+  distinct iterations with differing payloads, not one frame counted twice —
+  and wrong for a per-**presented**-frame P50/P95, where that frame's true cost
+  is the sum of its iterations. Do not re-bank a baseline from a run that used
+  it.
+- **Repeated presented frames are stop-aligned, so a quieter host will not fix
+  them.** Cycle 92 gate arm: repeats at frames 534, 822, 1111, 1302, 1591 —
+  deltas 288, 289, 191, 289, and **288 = 3 x 96 = exactly three ring stops**.
+  The GDB stop stretches the frame until the guest's own pacing drops a
+  present, which is a host-induced change to *guest* behaviour, not a host-side
+  double-sample. Do not chase host quiet as the remedy; budget ~3-5 repeats per
+  1,600-sample run (measured 5, 5, 3 over three runs) and use the flag.
+- **A per-unit constant makes a short probe valid for iteration.** Where a cost
+  is genuinely constant per unit of work (per list, per instance, per call),
+  cost-per-unit read from a few stops is a sound iteration metric even though
+  the window is short — the constant, not the window, is what carries it. The
+  P95 verdict still needs the whole-match run, and a **short window is never a
+  gate reading** (it samples the cheapest ~6% of the match).
+  **Label the constant with its arm**: effect-submit cost is ~102,730
+  ticks/list on **Boundary** and 80,394–83,632 on the **both-CPU gate arm**, a
+  gap wide enough to invert a decision. (The G3 lane this was written for is
+  closed — cycle 89–91 proved the packet path and the N64 painter order are
+  mutually exclusive — so do not restart it on the strength of this metric.)
 - **New tables or code: state the byte cost and run the 8-sample
   `-StartFrame 60` boot probe (~50 s) before any measuring run.** The ROM is
   ~1.4–2.2 KB from a boot cliff, and text counts as much as bss.
@@ -228,6 +265,21 @@ fighter standing in the sampled region, lowers its variation. On 2026-08-02 it
 threw `left_bush variation 22.379%` against a 40% floor and a correct change was
 nearly reverted on that one arm; re-running the same candidate passed. Re-run
 before believing it, the same way an A/B would.
+
+**AND CHECK THE CAPTURE'S PIXEL DIMENSIONS BEFORE THE ROM (2026-08-05).** This
+gate counts adjacent-pixel deltas, so it scales with capture RESOLUTION, not
+only with what was drawn: a window captured at a lower effective scale averages
+neighbouring texels and drops the variation with no rendered pixel changing.
+Measured on one day, same region `left_bush:72,104,32,16,0.40,32`, same ROM
+behaviour: **six captures at 877x1400 passed (58.065% on the control) and four
+at 620x1212 failed (29.6%–31.3%)** — the split is exactly on window geometry,
+and the failing captures show a visually correct Dream Land at FPS 29.9. Four
+verifier runs went into that before the dimensions were compared. The assertion
+now prints the source capture's name and size in its failure message, so the
+comparison is in front of you; **do not delete `emulators/melonds/melonDS.toml`
+to "reset" the window** — it carries required paths, the emulator then never
+reaches the GDB listener, and the run dies at `gdb-markers.ps1` with a
+connection timeout that looks nothing like the problem you were chasing.
 
 When `-Build` is genuinely warranted: it is the **only** routine command that
 builds the default configuration, and the default is the published

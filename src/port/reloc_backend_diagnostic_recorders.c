@@ -5425,6 +5425,10 @@ extern void battleship_ftMainSearchHitWeapon(GObj *fighter_gobj);
 extern void battleship_ftMainSearchGroundHit(GObj *fighter_gobj);
 extern void battleship_ftMainProcSearchHitAll(GObj *fighter_gobj);
 extern void battleship_ftMainProcParams(GObj *fighter_gobj);
+/* Cycle 92 SGCO split: the other three of the six per-fighter procs. */
+extern void battleship_ftMainProcUpdateInterrupt(GObj *fighter_gobj);
+extern void battleship_ftMainProcPhysicsMapDefault(GObj *fighter_gobj);
+extern void battleship_ftMainProcPhysicsMapCapture(GObj *fighter_gobj);
 
 sb32 ftMainCheckGetUpdateDamage(FTStruct *fp, s32 *damage)
 {
@@ -5709,6 +5713,70 @@ void ftMainProcParams(GObj *fighter_gobj)
 #endif
 #if NDS_TICK_HUD
     gNdsTickHudSrcParamsTicks += cpuGetTiming() - params_start;
+#endif
+}
+
+/* Cycle 92 SGCO split. The remaining three of the six per-fighter procs
+ * (decomp ft/ftmanager.c:858-860, priorities 5/4/3). Cycle 86 left these
+ * unbracketed because linker/nds_hot_text.ld pinned them into ITCM by their
+ * decomp symbol names; that is resolved by renaming them in
+ * src/import/battleship_ftmain.c and moving the three .ld pins to the new names
+ * IN PLACE in the same commit, so the curated 8 KiB hot list keeps its size,
+ * its membership and its ORDER. These wrappers themselves land in .main like
+ * the three above them, which is the same indirection SCAT/SHDT/SPRM already
+ * pay.
+ *
+ * With these three bracketed, SGCO stops being a residual:
+ *   SGCO = (SINT - SCPU) + SPHD + SPHC + SOBJ
+ * where SOBJ is the analyzer-derived non-fighter remainder (camera, effects,
+ * items, weapons, interface, and gcRunAll's own two dispatch loops). */
+void ftMainProcUpdateInterrupt(GObj *fighter_gobj)
+{
+    /* SINT. Fighter proc priority 5, the first to run. The level-3 CPU AI is
+     * nested INSIDE this proc (ftmain.c:1269, case nFTPlayerKindCom) and is
+     * already bracketed as SCPU, so this span deliberately includes it and the
+     * analyzer subtracts: SITR = SINT - SCPU. That keeps SCPU's banked series
+     * unchanged and makes SITR's non-negativity the proof the nesting is real. */
+#if NDS_TICK_HUD
+    u32 interrupt_start = cpuGetTiming();
+#endif
+
+    battleship_ftMainProcUpdateInterrupt(fighter_gobj);
+#if NDS_TICK_HUD
+    gNdsTickHudSrcInterruptTicks += cpuGetTiming() - interrupt_start;
+#endif
+}
+
+void ftMainProcPhysicsMapDefault(GObj *fighter_gobj)
+{
+    /* SPHD. Fighter proc priority 4. This and SPHC are mutually exclusive arms
+     * of the same capture predicate (ftmain.c:1918-1937): each calls the shared
+     * ftMainProcPhysicsMap only when its own condition holds, so bracketing both
+     * outer procs is disjoint and exhaustive over the shared worker. In a match
+     * without grabs SPHD does the work and SPHC is a two-field early-out, which
+     * is the prediction these two are checked against. */
+#if NDS_TICK_HUD
+    u32 physics_default_start = cpuGetTiming();
+#endif
+
+    battleship_ftMainProcPhysicsMapDefault(fighter_gobj);
+#if NDS_TICK_HUD
+    gNdsTickHudSrcPhysicsDefaultTicks +=
+        cpuGetTiming() - physics_default_start;
+#endif
+}
+
+void ftMainProcPhysicsMapCapture(GObj *fighter_gobj)
+{
+    /* SPHC. Fighter proc priority 3, the captured arm of the pair above. */
+#if NDS_TICK_HUD
+    u32 physics_capture_start = cpuGetTiming();
+#endif
+
+    battleship_ftMainProcPhysicsMapCapture(fighter_gobj);
+#if NDS_TICK_HUD
+    gNdsTickHudSrcPhysicsCaptureTicks +=
+        cpuGetTiming() - physics_capture_start;
 #endif
 }
 #else

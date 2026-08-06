@@ -2102,9 +2102,13 @@ $task17HotSelectors = @(
     '*battleship_ftcomputer.o(.text.ndsBaseFTComputerProcessAll)',
     '*battleship_ftmain.o(.text.battleship_ftMainProcSearchHitAll)',
     '*battleship_ftmain.o(.text.battleship_ftMainProcSearchCatch)',
-    '*battleship_ftmain.o(.text.ftMainProcPhysicsMapDefault)',
-    '*battleship_ftmain.o(.text.ftMainProcPhysicsMapCapture)',
-    '*battleship_ftmain.o(.text.ftMainProcUpdateInterrupt)',
+    # Cycle 92 renamed these three (SGCO split gave them port wrappers, so the
+    # ITCM pins had to follow the new symbol names). An input-section pattern
+    # that matches nothing fails silently in the linker, which is exactly why
+    # this mirror exists.
+    '*battleship_ftmain.o(.text.battleship_ftMainProcPhysicsMapDefault)',
+    '*battleship_ftmain.o(.text.battleship_ftMainProcPhysicsMapCapture)',
+    '*battleship_ftmain.o(.text.battleship_ftMainProcUpdateInterrupt)',
     '*battleship_ftcomputer.o(.text.ftComputerProcessAll)',
     '*battleship_ftmain.o(.text.ftMainProcPhysicsMap)')
 $battlePlayableVerifier = Get-Content (Join-Path $root 'scripts/verify-battle-playable-harness.ps1') -Raw

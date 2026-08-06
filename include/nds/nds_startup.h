@@ -4228,6 +4228,66 @@ enum NDSTickHudBucket {
     nNDSTickHudBucketSrcComputer,
     nNDSTickHudBucketSrcCatch,
     nNDSTickHudBucketSrcParams,
+    /* Cycle 92 SGCO split, appended after the cycle-86 four on the same terms:
+     * every index that already existed keeps its value, so every banked
+     * measurement stays comparable and named/OTHR/WORK stays byte-identical.
+     *
+     * SGCO carried 153,291 of the gate arm's WORK-H excursion (52.0%, 73.6% of
+     * SRC) and 81.3% of Boundary's SRC excursion -- arm-independent, therefore
+     * structural. It is a residual, and a residual cannot be optimised, so it is
+     * split in turn. These three close the fighter half of it by bracketing the
+     * remaining three of the six procs at ftmanager.c:858-860:
+     *
+     *   SINT  ftMainProcUpdateInterrupt   priority 5, SCPU nested inside it
+     *   SPHD  ftMainProcPhysicsMapDefault priority 4, the uncaptured physics arm
+     *   SPHC  ftMainProcPhysicsMapCapture priority 3, the captured physics arm
+     *
+     * The cycle-86 note above said these three could not be wrapped without
+     * moving them out of ITCM. That is answered rather than ignored: they are
+     * renamed with the same #define-before-#include pattern the other three
+     * procs already use (src/import/battleship_ftmain.c), and
+     * linker/nds_hot_text.ld is edited IN PLACE in the same commit so the pins
+     * follow the new symbol names at their existing positions. Editing in place
+     * matters -- the Task 94 note on that file records that this list is a
+     * curated 8 KiB working set whose members re-address each other when the
+     * order changes, so a rename must not become a move.
+     *
+     * Verified before instrumenting, not assumed. Each of the three has exactly
+     * ONE call site -- the gcAddGObjProcess registration in decomp ftmanager.c,
+     * a different TU that does not see the renames -- so the registration takes
+     * the address of the port wrapper. This is the identical mechanism that
+     * already carries SCAT/SHDT/SPRM, which register in the same if-block at
+     * ftmanager.c:861-863 and already measure non-zero; that is what proves the
+     * three below are live before a run is spent on them.
+     *
+     * PhysicsMapDefault and PhysicsMapCapture are MUTUALLY EXCLUSIVE arms of the
+     * same test (ftmain.c:1918-1937): each calls the shared ftMainProcPhysicsMap
+     * only when its capture predicate holds. The shared worker keeps its own name
+     * and its own ITCM pin, so bracketing the two outer procs is disjoint and
+     * exhaustive over it.
+     *
+     * Two more residuals are DERIVED by the analyzer at zero byte cost:
+     *   SITR = SINT - SCPU    the interrupt proc less its AI
+     *   SOBJ = GCRA - SINT - SPHD - SPHC - SCAT - SHDT - SPRM
+     *                         the NON-FIGHTER GObjs: camera, effects, items,
+     *                         weapons, interface, plus gcRunAll's own two loops
+     * so that SGCO = SITR + SPHD + SPHC + SOBJ exactly, and the banked SGCO
+     * stays derivable as a regression check. Non-negativity of both on every
+     * frame is the falsifier, the same one the cycle-85 and cycle-86 residuals
+     * use. Like every SRC sub-bucket these are NOT added to `named`.
+     *
+     * NOT bracketed, deliberately: mpProcessUpdateMain. It is the one seam here
+     * that already has a port wrapper (battleship_mpprocess_live_bridge.c:150),
+     * but it is called from ~20 sites across fighter, ITEM and WEAPON map
+     * (mpcommon.c, itmap.c, wpmap.c), so it is an overlay spanning SPHD/SPHC and
+     * SOBJ rather than a disjoint owner, and its call frequency is an order of
+     * magnitude above every existing bracket. The cycle-90/91 phase instrument
+     * already showed a high-frequency bracket moving WORK-H P95 +15,808 and
+     * +45,568, far outside the +/-5,376 floor. Measure it with a call counter or
+     * on the fighter entry points only, never with a timer on the shared leaf. */
+    nNDSTickHudBucketSrcInterrupt,
+    nNDSTickHudBucketSrcPhysicsDefault,
+    nNDSTickHudBucketSrcPhysicsCapture,
     nNDSTickHudBucketCount,
     /* The on-screen table stops at OTHR: the console is 24 rows and rows 20-23
      * already carry the legend, the VBlank histogram and the build stamp. WAIT
@@ -4329,6 +4389,10 @@ extern volatile u32 gNdsTickHudSrcRunAllTicks;
 extern volatile u32 gNdsTickHudSrcComputerTicks;
 extern volatile u32 gNdsTickHudSrcCatchTicks;
 extern volatile u32 gNdsTickHudSrcParamsTicks;
+/* Cycle 92 SGCO split. Per-frame, reset alongside gNdsTickHudSourceTicks. */
+extern volatile u32 gNdsTickHudSrcInterruptTicks;
+extern volatile u32 gNdsTickHudSrcPhysicsDefaultTicks;
+extern volatile u32 gNdsTickHudSrcPhysicsCaptureTicks;
 extern volatile u32 gNdsTickHudFlushTicks;
 /* R2-07 MISC split. Cumulative, never reset per frame -- difference them
  * across two ring stops with -PerStopGlobals. See diagnostics.c. */

@@ -204,9 +204,17 @@ SECTIONS {
 		*battleship_ftcomputer.o(.text.ndsBaseFTComputerProcessAll)
 		*battleship_ftmain.o(.text.battleship_ftMainProcSearchHitAll)
 		*battleship_ftmain.o(.text.battleship_ftMainProcSearchCatch)
-		*battleship_ftmain.o(.text.ftMainProcPhysicsMapDefault)
-		*battleship_ftmain.o(.text.ftMainProcPhysicsMapCapture)
-		*battleship_ftmain.o(.text.ftMainProcUpdateInterrupt)
+		/* Cycle 92 renamed these three in place -- NOT moved. They gained port
+		 * wrappers in src/import/battleship_ftmain.c so the SGCO residual could
+		 * be split (SINT/SPHD/SPHC), and an input-section pattern that matches
+		 * nothing fails SILENTLY, dropping the member out of hot text. Position
+		 * is preserved because the Task 94 note above records that this list is
+		 * a curated 8 KiB working set whose members re-address each other when
+		 * the order changes. scripts/check-gbi-decode-fixtures.ps1 mirrors this
+		 * list and must move with it. */
+		*battleship_ftmain.o(.text.battleship_ftMainProcPhysicsMapDefault)
+		*battleship_ftmain.o(.text.battleship_ftMainProcPhysicsMapCapture)
+		*battleship_ftmain.o(.text.battleship_ftMainProcUpdateInterrupt)
 		*battleship_ftcomputer.o(.text.ftComputerProcessAll)
 		*battleship_ftmain.o(.text.ftMainProcPhysicsMap)
 		. = ALIGN(4);

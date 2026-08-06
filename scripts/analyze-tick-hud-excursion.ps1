@@ -80,12 +80,36 @@ if ($rows.Count -eq 0) { throw "No rows in $RowsCsv." }
 # roll-up SBAS = SRC - SHDT - SWRM is reported as SOUT+SCPU+SCAT+SPRM+SGCO.
 # Both derived residuals are non-negative by construction if and only if the
 # nesting is real, so both throw -- the same falsifier, one level deeper.
+# SGCO SPLIT (cycle 92). SGCO carried 153,291 of the gate arm's WORK-H excursion
+# (52.0%, and 73.6% of SRC) and 81.3% of Boundary's SRC excursion. Same reasoning
+# one level deeper: it is a residual, and a residual cannot be optimised. The
+# three remaining per-fighter procs (ftmanager.c:858-860) are ringed, which
+# leaves the non-fighter GObjs as the only unnamed part:
+#
+#   SINT  ftMainProcUpdateInterrupt    proc priority 5, SCPU nested INSIDE it
+#   SPHD  ftMainProcPhysicsMapDefault  proc priority 4, uncaptured physics arm
+#   SPHC  ftMainProcPhysicsMapCapture  proc priority 3, captured physics arm
+#   SITR  SINT - SCPU                  the interrupt proc less its AI (derived)
+#   SOBJ  GCRA - SINT - SPHD - SPHC - SCAT - SHDT - SPRM
+#                                      camera/effects/items/weapons/interface
+#                                      GObjs + gcRunAll's own two dispatch loops
+#
+# SGCO = SITR + SPHD + SPHC + SOBJ exactly, so it is still reported (as a
+# roll-up) and stays comparable against the banked 153,291 -- that equality is
+# the regression check on this script before it is trusted on new data. The
+# partition below therefore replaces SGCO with its four parts and stays exact.
 $csvColumns = @($rows[0].PSObject.Properties.Name)
 $hasSrcSplit = ($csvColumns -contains 'SHDT') -and ($csvColumns -contains 'SWRM')
 $hasSbasSplit = $hasSrcSplit -and
     (@('GCRA', 'SCPU', 'SCAT', 'SPRM') |
         Where-Object { $csvColumns -notcontains $_ }).Count -eq 0
-$srcSubOwners = if ($hasSbasSplit) {
+$hasSgcoSplit = $hasSbasSplit -and
+    (@('SINT', 'SPHD', 'SPHC') |
+        Where-Object { $csvColumns -notcontains $_ }).Count -eq 0
+$srcSubOwners = if ($hasSgcoSplit) {
+    @('SHDT', 'SWRM', 'SOUT', 'SCPU', 'SCAT', 'SPRM',
+      'SITR', 'SPHD', 'SPHC', 'SOBJ')
+} elseif ($hasSbasSplit) {
     @('SHDT', 'SWRM', 'SOUT', 'SCPU', 'SCAT', 'SPRM', 'SGCO')
 } else { @('SHDT', 'SWRM', 'SBAS') }
 
@@ -116,6 +140,16 @@ $all = @($rows | ForEach-Object {
         $r['SOUT'] = $r['SRC'] - $r['SWRM'] - $r['GCRA']
         $r['SGCO'] = $r['GCRA'] - $r['SCPU'] - $r['SCAT'] -
                      $r['SHDT'] - $r['SPRM']
+    }
+    if ($hasSgcoSplit) {
+        $r['SINT'] = [int64]$_.SINT
+        $r['SPHD'] = [int64]$_.SPHD
+        $r['SPHC'] = [int64]$_.SPHC
+        # SCPU runs inside the interrupt proc, so SINT already contains it.
+        # Subtract rather than re-ring, which keeps SCPU's banked series intact.
+        $r['SITR'] = $r['SINT'] - $r['SCPU']
+        $r['SOBJ'] = $r['GCRA'] - $r['SINT'] - $r['SPHD'] - $r['SPHC'] -
+                     $r['SCAT'] - $r['SHDT'] - $r['SPRM']
     }
     [pscustomobject]$r
 })
@@ -155,6 +189,48 @@ if ($hasSbasSplit) {
                    "residual $($worst.($probe.col))). The split cannot be " +
                    "attributed.")
         }
+    }
+}
+
+# The same falsifier one level deeper again (cycle 92). SITR < 0 means the CPU AI
+# ran outside the interrupt proc it is supposed to nest inside; SOBJ < 0 means a
+# bracketed fighter proc ran outside gcRunAll -- which is exactly what a botched
+# rename would produce, because a proc whose ITCM pin stopped matching still runs
+# but no longer where this arithmetic assumes. Either throws.
+if ($hasSgcoSplit) {
+    foreach ($probe in @(
+        @{ col = 'SITR'
+           why = ('ftComputerProcessAll (SCPU) is not nested inside the ' +
+                  'interrupt proc: SINT - SCPU < 0') }
+        @{ col = 'SOBJ'
+           why = ('a bracketed fighter proc is not nested inside gcRunAll: ' +
+                  'GCRA - SINT - SPHD - SPHC - SCAT - SHDT - SPRM < 0') })) {
+        $bad = @($all | Where-Object { $_.($probe.col) -lt 0 })
+        if ($bad.Count -ne 0) {
+            $worst = ($bad | Sort-Object -Property $probe.col |
+                Select-Object -First 1)
+            throw ("$($probe.why): $($bad.Count) of $($all.Count) frames " +
+                   "(worst frame $($worst.frame): GCRA $($worst.GCRA), " +
+                   "SINT $($worst.SINT), SPHD $($worst.SPHD), " +
+                   "SPHC $($worst.SPHC), SCPU $($worst.SCPU), " +
+                   "SCAT $($worst.SCAT), SHDT $($worst.SHDT), " +
+                   "SPRM $($worst.SPRM), residual $($worst.($probe.col))). " +
+                   "The split cannot be attributed.")
+        }
+    }
+    # SGCO = SITR + SPHD + SPHC + SOBJ is an identity, not a measurement, so any
+    # mismatch is an arithmetic mistake in this script -- precisely the failure a
+    # share table would hide. It is also what keeps the cycle-86 SGCO figure
+    # comparable across the instrument change.
+    $worstSgcoError = 0
+    foreach ($r in $all) {
+        $err = [math]::Abs($r.SGCO - ($r.SITR + $r.SPHD + $r.SPHC + $r.SOBJ))
+        if ($err -gt $worstSgcoError) { $worstSgcoError = $err }
+    }
+    if ($worstSgcoError -ne 0) {
+        throw ("SGCO does not equal SITR + SPHD + SPHC + SOBJ (max per-frame " +
+               "error $worstSgcoError). The cycle-92 split is not a partition " +
+               "of the cycle-86 residual.")
     }
 }
 
@@ -247,6 +323,14 @@ if ($hasSrcSplit) {
             shareOfWorkH = $(if ($workDelta -ne 0) { $exc / $workDelta } else { 0 })
             hotMean = [math]::Round($hotMean, 0)
             cleanMean = [math]::Round($cleanMean, 0)
+            # The column that decides whether an owner is a GATE lever or only a
+            # P50 lever, computed here because it has been a hand calculation on
+            # the board and that is how SCPU nearly got nominated: 72,512 ticks
+            # at p50 looks like the prize, but it switches only 1.33x hot-vs-
+            # clean, so capping it cannot move a P95. Absolute size and switching
+            # behaviour are different questions and only the second owns a tail.
+            hotOverClean = $(if ($cleanMean -ne 0) {
+                [math]::Round($hotMean / $cleanMean, 2) } else { $null })
             p95 = Get-Pct -Values @($kept.$b) -Q 0.95
         }
     }
@@ -259,17 +343,50 @@ if ($hasSrcSplit) {
         throw ("SRC sub-owner excursions sum to $srcSum but SRC moved " +
                "$srcDelta (error $srcClosure).")
     }
+    # The cycle-81 audit closed this as "never rank SRC with the exclusion on":
+    # the rule thresholds on the very bucket being attributed, so it shrinks
+    # SRC's share whether or not a load happened. The default is still 2.0, so
+    # the wrong ranking is one omitted argument away -- on the banked c86 gate
+    # arm it reports SGCO 81,595 instead of 153,291, understated 1.88x, and both
+    # tables look equally plausible. Say so on the table itself rather than
+    # trusting the reader to have carried the caveat.
+    if ($LoadFrameSrcMultiple -ne 0) {
+        Write-Warning ("SRC is being ranked with the load-frame exclusion ON " +
+            "(-LoadFrameSrcMultiple $LoadFrameSrcMultiple, $dropped frames " +
+            'dropped). That rule thresholds on SRC itself, so this SRC split ' +
+            'is CIRCULAR and understates every sub-owner. Re-run with ' +
+            '-LoadFrameSrcMultiple 0 before quoting any figure below.')
+    }
     Write-Host ("  SRC SPLIT -- SRC excursion {0:N0} is {1:P1} of WORK-H" -f
         $srcDelta, $(if ($workDelta -ne 0) { $srcDelta / $workDelta } else { 0 }))
-    Write-Host ("    {0,-6} {1,12} {2,8} {3,8} {4,12} {5,12}" -f
-        'owner', 'excursion', '%SRC', '%WORK-H', 'clean mean', 'hot mean')
+    Write-Host ("    {0,-6} {1,12} {2,8} {3,8} {4,12} {5,12} {6,10}" -f
+        'owner', 'excursion', '%SRC', '%WORK-H', 'clean mean', 'hot mean',
+        'hot/clean')
     foreach ($t in ($srcTable | Sort-Object -Property excursion -Descending)) {
-        Write-Host ("    {0,-6} {1,12:N0} {2,8:P1} {3,8:P1} {4,12:N0} {5,12:N0}" -f
+        Write-Host ("    {0,-6} {1,12:N0} {2,8:P1} {3,8:P1} {4,12:N0} {5,12:N0} {6,10}" -f
             $t.owner, $t.excursion, $t.shareOfSrc, $t.shareOfWorkH,
-            $t.cleanMean, $t.hotMean)
+            $t.cleanMean, $t.hotMean,
+            $(if ($null -ne $t.hotOverClean) { '{0:N2}x' -f $t.hotOverClean }
+              else { 'n/a' }))
     }
     Write-Host ("    {0,-6} {1,12:N0}  (closes against SRC, error {2})" -f
         'SUM', $srcSum, $srcClosure)
+    if ($hasSgcoSplit) {
+        # The cycle-86 residual, still reported as a roll-up of its four parts so
+        # the new instrument stays comparable against the banked 153,291 figure.
+        $sgcoHot = Get-Mean $hot 'SGCO'
+        $sgcoClean = Get-Mean $clean 'SGCO'
+        Write-Host ("    {0,-6} {1,12:N0} {2,8:P1} {3,8:P1} {4,12:N0} {5,12:N0} {6,10}" -f
+            'SGCO*', [math]::Round($sgcoHot - $sgcoClean, 0),
+            $(if ($srcDelta -ne 0) { ($sgcoHot - $sgcoClean) / $srcDelta } else { 0 }),
+            $(if ($workDelta -ne 0) { ($sgcoHot - $sgcoClean) / $workDelta } else { 0 }),
+            [math]::Round($sgcoClean, 0), [math]::Round($sgcoHot, 0),
+            $(if ($sgcoClean -ne 0) { '{0:N2}x' -f ($sgcoHot / $sgcoClean) }
+              else { 'n/a' }))
+        Write-Host ('    * SGCO is the cycle-86 roll-up SITR+SPHD+SPHC+SOBJ, ' +
+            'NOT a partition member -- shown for comparison against the ' +
+            'banked figure only.')
+    }
     Write-Host ''
 }
 

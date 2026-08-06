@@ -82,8 +82,27 @@ function Measure-HorizontalDetail {
     Write-Output ("Horizontal detail {0}: varied={1}/{2} ({3:P3}) max-flat-run={4}px ({5})." -f
         $Spec.Name, $varied, $pairs, $variation, $maxFlatRun, $flatRunGate)
     if ($variation -lt $Spec.MinVariation) {
-        throw ("Horizontal detail region {0} variation {1:P3} is below required {2:P3}." -f
-            $Spec.Name, $variation, $Spec.MinVariation)
+        # ALWAYS name the source capture's geometry in the failure. This gate
+        # measures adjacent-pixel deltas, so it is a function of capture
+        # RESOLUTION as much as of what the ROM drew: a window captured at a
+        # lower effective scale averages neighbouring texels and drops the
+        # variation without a single rendered pixel changing. On 2026-08-05 six
+        # captures at 877x1400 passed this exact region and two at 620x1212
+        # failed it (29.6%/31.3%) with a visually identical, correctly rendered
+        # scene -- and the bare percentage read as a rendering regression for
+        # four verifier runs. Print the geometry so the next reader can compare
+        # it against a passing capture before suspecting the ROM.
+        # NOTE the parentheses around the concatenation: -f binds TIGHTER than
+        # +, so `"a" + "b" -f $x` formats only "b" and emits the rest with its
+        # placeholders raw -- which is exactly what this message did on its
+        # first draft.
+        throw (("Horizontal detail region {0} variation {1:P3} is below " +
+            "required {2:P3}. Source capture {3} is {4}x{5}; this gate scales " +
+            "with capture resolution, so compare that against a passing " +
+            "capture before attributing it to the ROM.") -f
+            $Spec.Name, $variation, $Spec.MinVariation,
+            $script:DetailSourceImageName, $script:DetailSourceImageWidth,
+            $script:DetailSourceImageHeight)
     }
     if (($Spec.MaxFlatRun -gt 0) -and
         ($maxFlatRun -gt $Spec.MaxFlatRun)) {
@@ -92,6 +111,10 @@ function Measure-HorizontalDetail {
     }
 }
 $windowBitmap = [System.Drawing.Bitmap]::FromFile((Resolve-Path $Image).Path)
+# Captured for the failure message above; see the comment there for why.
+$script:DetailSourceImageName = Split-Path -Leaf $Image
+$script:DetailSourceImageWidth = $windowBitmap.Width
+$script:DetailSourceImageHeight = $windowBitmap.Height
 $bitmap = $null
 try {
     $bitmap = Convert-MelonDSWindowTopToNativeBitmap `

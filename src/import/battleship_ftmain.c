@@ -68,6 +68,16 @@ sb32 ndsDiagnosticsHandleImportedFTMainSetStatusBefore(GObj *fighter_gobj,
 #define ftMainRunUpdateColAnim battleship_ftMainRunUpdateColAnim
 #define ftMainPlayAnimEventsAll battleship_ftMainPlayAnimEventsAll
 #define ftMainSetStatus battleship_ftMainSetStatus
+/* Cycle 92 SGCO split. The last three of the six per-fighter procs registered
+ * at decomp ft/ftmanager.c:858-863; the other three are renamed above. Each has
+ * exactly ONE call site -- that gcAddGObjProcess registration, in a different TU
+ * that never sees these renames -- so the registration binds the port wrapper in
+ * src/port/reloc_backend_diagnostic_recorders.c and the bracket measures every
+ * invocation. linker/nds_hot_text.ld carries the matching ITCM pins under these
+ * new names, edited in place so the hot list keeps its order. */
+#define ftMainProcUpdateInterrupt battleship_ftMainProcUpdateInterrupt
+#define ftMainProcPhysicsMapDefault battleship_ftMainProcPhysicsMapDefault
+#define ftMainProcPhysicsMapCapture battleship_ftMainProcPhysicsMapCapture
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftmain.c"
 #undef ftMainCheckGetUpdateDamage
 #undef ftMainPlayHitSFX
@@ -93,6 +103,9 @@ sb32 ndsDiagnosticsHandleImportedFTMainSetStatusBefore(GObj *fighter_gobj,
 #undef ftMainRunUpdateColAnim
 #undef ftMainPlayAnimEventsAll
 #undef ftMainSetStatus
+#undef ftMainProcUpdateInterrupt
+#undef ftMainProcPhysicsMapDefault
+#undef ftMainProcPhysicsMapCapture
 
 void ftMainPlayAnimEventsAll(GObj *fighter_gobj)
 {

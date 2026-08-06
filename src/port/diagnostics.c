@@ -3037,6 +3037,16 @@ volatile u32 gNdsTickHudSrcRunAllTicks;
 volatile u32 gNdsTickHudSrcComputerTicks;
 volatile u32 gNdsTickHudSrcCatchTicks;
 volatile u32 gNdsTickHudSrcParamsTicks;
+/* Cycle 92 SGCO split. The remaining three of the six per-fighter procs, which
+ * cycle 86 could not bracket because they were ITCM-pinned by their decomp
+ * symbol names. They are renamed now and linker/nds_hot_text.ld moved with them
+ * in the same commit. Nested inside GCRA exactly like the four above, so they
+ * are published after `named` is summed and never added to it. SCPU nests
+ * inside SINT, so the analyzer derives SITR = SINT - SCPU rather than double
+ * counting the AI. */
+volatile u32 gNdsTickHudSrcInterruptTicks;
+volatile u32 gNdsTickHudSrcPhysicsDefaultTicks;
+volatile u32 gNdsTickHudSrcPhysicsCaptureTicks;
 volatile u32 gNdsTickHudFlushTicks;
 /* R2-07: MISC is DrawTicks minus (FTR + STG + BG + HUD) plus the flush, i.e.
  * everything drawn that no other bucket claims. It is now the campaign, and a
