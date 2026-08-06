@@ -746,6 +746,16 @@ NDS_R2_PARTICLE_RUNTIME ?= 1
 # starving the stage's texture resolve -- fixed by the 8,192-byte sheet, which
 # is a measured hard bound, not a budget (generate_nds_particle_banks.py).
 NDS_R2_PARTICLE_DRAW ?= 1
+# Draw the shield as one camera-facing quad instead of interpreting its source
+# model's display list. EXPERIMENT, OFF BY DEFAULT -- see the block comment in
+# battleship_efmanager.c. Owner observed 2026-08-06 that the N64 shield is
+# always camera facing, and the source asset's drawing node is a 21-command DL
+# over four vertices, so both routes draw the same textured quad and only the
+# submit differs. The model route stays default because the owner bought it
+# deliberately on 2026-08-04 ("36k p95 is worth it for correctness"); this flag
+# exists to re-measure that price on the whole-match instrument, since the 36k
+# came off a 128-frame window.
+NDS_R2_SHIELD_QUAD ?= 0
 # NDS_R2_PARTICLE_V16_HEADROOM IS DELETED, AND A FIXED FACTOR IS WHY.
 #
 # It bought one extra bit of range (x16 -> x8, reach +/-2047.9 -> +/-4095.9) at
@@ -2631,6 +2641,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_FIGHTER_ANIM_AUDIT $(NDS_FIGHTER_ANIM_AUDIT)'; \
 		echo '#define NDS_FIGHTER_ANIM_CYCLER_KIND $(NDS_FIGHTER_ANIM_CYCLER_KIND)'; \
 		echo '#define NDS_R2_PARTICLE_DRAW $(NDS_R2_PARTICLE_DRAW)'; \
+		echo '#define NDS_R2_SHIELD_QUAD $(NDS_R2_SHIELD_QUAD)'; \
 		echo '#define NDS_R2_COLLISION_L7_ORACLE $(NDS_R2_COLLISION_L7_ORACLE)'; \
 		echo '#define NDS_TASK39_FX_SPRITES $(NDS_TASK39_FX_SPRITES)'; \
 		echo '#define NDS_TASK39_FX_FLASH $(NDS_TASK39_FX_FLASH)'; \

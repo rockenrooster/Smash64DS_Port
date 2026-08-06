@@ -1155,6 +1155,87 @@ static void ndsEFManagerBoundEffectPool(void)
     gNdsEffectPoolDepth = (u32)depth;
 }
 
+#if NDS_R2_SHIELD_QUAD
+/* THE SHIELD AS A CAMERA-FACING QUAD. An experiment, DEFAULT OFF.
+ *
+ * Owner, 2026-08-06: "the shield is always camera facing too, so it behaves
+ * like a billboard". The source asset agrees and says it more precisely --
+ * dFTManagerCommon_Shield's one drawing node is a 21-command DL over exactly
+ * FOUR vertices carrying an IA8 16x32 texture. Four vertices is a quad, so the
+ * PICTURE is a textured quad on either route. What differs is the SUBMIT:
+ * interpreting 21 display-list commands at ~626 ticks each, against one direct
+ * camera-facing quad the particle pass already knows how to emit.
+ *
+ * THIS IS NOT A REVERT OF 2026-08-04. That change routed the shield to its
+ * source EFDesc model and the owner priced it deliberately -- "36k p95 is worth
+ * it for correctness". The model remains the default and this flag is off
+ * unless a build asks for it. Two things make the trade worth re-TESTING rather
+ * than re-litigating: the owner's observation above, and the fact that the 36k
+ * was measured on a 128-frame window that the whole-match instrument later
+ * showed reads the cheapest ~6% of a match, so the real price is unknown.
+ *
+ * The tree draw stays as the fallback on any quad refusal -- no atlas, texture
+ * not seated, degenerate camera. That sentence is inherited from the path this
+ * revives and it still holds: a shield that silently stops drawing is worse
+ * than one drawn plainly. */
+#define NDS_R2_SHIELD_QUAD_SIZE 180.0F
+/* 0xC0 on both prim and env for all five source entries (efmanager.c:4112).
+ * Alpha is most of what a shield looks like. */
+#define NDS_R2_SHIELD_QUAD_ALPHA 0xC0u
+/* BGR555, NOT 0xRRGGBB. ndsRendererSubmitParticleQuad takes the DS's own vertex
+ * colour packing -- red bits 0-4, green 5-9, blue 10-14. This function first
+ * used 0xRRGGBB constants, and 0xff0000 read through that packing is r=0 g=0
+ * b=0: the owner reported the shield as "Looks Black in color", which is
+ * exactly what it was. A wrong-unit colour does not look wrong, it looks like a
+ * different bug. */
+#define NDS_R2_BGR555(r, g, b) \
+    ((((u32)(r) >> 3) & 31u) | ((((u32)(g) >> 3) & 31u) << 5) | \
+     ((((u32)(b) >> 3) & 31u) << 10))
+
+/* Engagement pair. Draw counting up with Fallback at 0 is the quad route
+ * working; Fallback climbing means the quad is being refused every frame and
+ * the tree is carrying the picture, which looks identical and costs MORE than
+ * the default -- so a measurement taken without reading these would be
+ * meaningless. */
+volatile u32 gNdsShieldQuadDrawCount;
+volatile u32 gNdsShieldQuadFallbackCount;
+
+static u32 ndsEFManagerShieldQuadColor(s32 player)
+{
+    static const u32 rim[] = {
+        NDS_R2_BGR555(0xff, 0x00, 0x00),
+        NDS_R2_BGR555(0x00, 0xff, 0x00),
+        NDS_R2_BGR555(0x00, 0x00, 0xff),
+        NDS_R2_BGR555(0x40, 0x40, 0x40)
+    };
+
+    return ((u32)player < ARRAY_COUNT(rim)) ?
+        rim[player] : NDS_R2_BGR555(0xc0, 0xc0, 0xc0);
+}
+
+static void ndsEFManagerShieldQuadProcDisplay(GObj *effect_gobj)
+{
+    EFStruct *ep = efGetStruct(effect_gobj);
+    DObj *dobj = DObjGetStruct(effect_gobj);
+
+    if ((ep == NULL) || (dobj == NULL))
+    {
+        return;
+    }
+    if (ndsParticleDrawSourceAssetQuad(
+            NDS_PARTICLE_QUAD_SHIELD_TEXTURE, &dobj->translate.vec.f,
+            dobj->scale.vec.f.x * NDS_R2_SHIELD_QUAD_SIZE,
+            ndsEFManagerShieldQuadColor(ep->effect_vars.shield.player),
+            NDS_R2_SHIELD_QUAD_ALPHA) != FALSE)
+    {
+        gNdsShieldQuadDrawCount++;
+        return;
+    }
+    gNdsShieldQuadFallbackCount++;
+    gcDrawDObjTreeForGObj(effect_gobj);
+}
+#endif /* NDS_R2_SHIELD_QUAD */
+
 void efManagerInitEffects(void)
 {
     ndsTask39EffectCensusReset();
@@ -1168,6 +1249,16 @@ void efManagerInitEffects(void)
     gNdsVisualEffectTemplateBytes = 0u;
     ndsBaseEFManagerInitEffects();
     ndsEFManagerResolveAllDescOffsets();
+#if NDS_R2_SHIELD_QUAD
+    /* AFTER the resolver and BEFORE any shield exists. The source maker copies
+     * proc_display off the desc when it builds the effect, so overriding the
+     * desc here reaches every shield made this match without touching the maker
+     * or decomp. Descs are already patched in place by the resolver above, so
+     * writing one more field is the same kind of write. */
+    gNdsShieldQuadDrawCount = 0u;
+    gNdsShieldQuadFallbackCount = 0u;
+    dEFManagerShieldEffectDesc.proc_display = ndsEFManagerShieldQuadProcDisplay;
+#endif
     ndsEFManagerBoundEffectPool();
     ndsEFManagerInitVisualTemplates();
 }
