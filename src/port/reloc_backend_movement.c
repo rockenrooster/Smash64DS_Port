@@ -1,6 +1,12 @@
 #include "nds_scene_harness_config.h"
 #include <nds/nds_effects.h>
 #include <nds/nds_scene_harness.h>
+#if NDS_R2_FIREBALL_QUAD
+/* The baked fireball texels/palettes and the GL_RGB16 upload they need. Only
+ * this flag's path uses either, so neither is pulled in unconditionally. */
+#include <nds/generated/nds_particle_banks.generated.h>
+#include <nds/nds_renderer.h>
+#endif
 
 #ifndef NDS_SCENE_MIP_CACHE_LAB
 #define NDS_SCENE_MIP_CACHE_LAB 0
@@ -12914,6 +12920,153 @@ static void ndsStageGCDrawAllLoopRecordEffectCapture(GObj *gobj,
     }
 }
 
+#if NDS_R2_FIREBALL_QUAD
+/* MARIO'S FIREBALL AS ONE CAMERA-FACING QUAD, the shield experiment applied to
+ * a projectile. Same shape of change and the same reason it is worth making:
+ * the source model is a SINGLE flat quad behind a display list, so both routes
+ * put the same four vertices on screen and only the submit differs.
+ *
+ * Decoded from relocData file 297 on 2026-08-06 rather than assumed:
+ *
+ *   Vtx[0..3]  pos (0, +-150, +-150), st 0..512 in S10.5 = exactly 0..16
+ *   Tex        CI4 16x16, indices 0..12 used, only index 0 transparent
+ *   WPDesc     main matrix kind nGCMatrixKindTra (translation ONLY, so there
+ *              is no joint scale to recover the way the shield's 0x2C had),
+ *              secondary 0x47 = the MVP-recalc billboard
+ *              (reloc_backend_renderer_dl.c:1853, "replace all three
+ *              orientation rows ... the translation row stays live")
+ *
+ * A billboard whose orientation is discarded and whose translation survives is
+ * precisely what ndsParticleDrawOwnTextureQuad draws, so the quad reproduces
+ * the transform rather than approximating it.
+ *
+ * MEASURED FIRST, on the whole-match instrument (ROM E61D608B, 2026-08-06):
+ * one live fireball costs 64,700 ticks/frame at P50 -- SRC 26,752 and MISC
+ * 33,088 -- against 129,468 ticks of headroom under the two-VBlank boundary.
+ * Two of them therefore consume all of it and the frame steps to three
+ * VBlanks, which is the 30 -> 20 FPS collapse the owner reported. This flag
+ * addresses the MISC half only; the SRC half is wpMapTestAll running full
+ * stage collision for the projectile every frame and is a separate seam.
+ *
+ * The fireball census at the bottom of the submit below (FireballSubmitCount,
+ * FireballTriangleCount, FireballCustom47*) counts the GENERIC route and
+ * therefore reads zero with this flag on. That is correct, not a regression:
+ * the counters here are its replacement. */
+/* BGR555, NOT 0xRRGGBB -- red bits 0-4, green 5-9, blue 10-14. Duplicated from
+ * battleship_efmanager.c deliberately rather than shared: a two-line packing
+ * macro promoted to a header would be a speculative abstraction, and the
+ * comment there records that getting this wrong shipped a black shield. */
+#define NDS_R2_FIREBALL_BGR555(r, g, b) \
+    ((((u32)(r) >> 3) & 31u) | ((((u32)(g) >> 3) & 31u) << 5) | \
+     ((((u32)(b) >> 3) & 31u) << 10))
+
+/* Engagement pair, same contract as the shield's. Draw climbing with Fallback
+ * at 0 is the quad route working; Fallback climbing means the quad is refused
+ * every frame and the display list is still carrying the picture -- which looks
+ * identical on screen and costs MORE than the default. A measurement taken
+ * without reading these would be meaningless. */
+volatile u32 gNdsFireballQuadDrawCount;
+volatile u32 gNdsFireballQuadFallbackCount;
+
+static u32 sNdsFireballTextureName[NDS_FIREBALL_PALETTE_COUNT];
+
+static s32 ndsFireballTexelFill(u8 *pixels, u32 bytes, void *user_data)
+{
+    (void)user_data;
+    if ((pixels == NULL) || (bytes < NDS_FIREBALL_TEX_BYTES))
+    {
+        return FALSE;
+    }
+    memcpy(pixels, gNdsFireballTexels, NDS_FIREBALL_TEX_BYTES);
+    return TRUE;
+}
+
+/* NOTHING IS COMPUTED HERE, and unlike the shield nothing was quantised in the
+ * generator either: CI4 with an RGBA5551 TLUT whose entry 0 has alpha 0 IS
+ * GL_RGB16 + COLOR0_TRANSPARENT, so preparing the fireball is an upload of the
+ * source's own texels and a pointer to the source's own palette. */
+static u32 ndsFireballTexture(s32 palette_index)
+{
+    u32 slot = ((u32)palette_index < NDS_FIREBALL_PALETTE_COUNT)
+        ? (u32)palette_index : 0u;
+
+    if (sNdsFireballTextureName[slot] != 0u)
+    {
+        return sNdsFireballTextureName[slot];
+    }
+    if (ndsRendererHardwarePrepareIFCommonPal16Atlas(
+            NDS_FIREBALL_TEX_WIDTH, NDS_FIREBALL_TEX_HEIGHT,
+            gNdsFireballPalettes[slot], ndsFireballTexelFill, NULL,
+            &sNdsFireballTextureName[slot]) == FALSE)
+    {
+        sNdsFireballTextureName[slot] = 0u;
+    }
+    return sNdsFireballTextureName[slot];
+}
+
+/* Give last match's names back before this one allocates -- START at the
+ * results screen restarts the match, and a name held across restarts would
+ * grow the texture cache by one per fireball palette every time. Called from
+ * efManagerInitEffects beside the shield's identical release. */
+void ndsWeaponReleaseBakedTextures(void)
+{
+    u32 slot;
+
+    for (slot = 0u; slot < ARRAY_COUNT(sNdsFireballTextureName); slot++)
+    {
+        if (sNdsFireballTextureName[slot] != 0u)
+        {
+            ndsRendererHardwareReleaseIFCommonCloudAtlas(
+                &sNdsFireballTextureName[slot]);
+            sNdsFireballTextureName[slot] = 0u;
+        }
+    }
+    gNdsFireballQuadDrawCount = 0u;
+    gNdsFireballQuadFallbackCount = 0u;
+}
+
+static sb32 ndsStageGCDrawAllLoopDrawFireballQuad(DObj *root, WPStruct *wp)
+{
+    u32 texture_name;
+
+    if ((root == NULL) || (wp == NULL))
+    {
+        return FALSE;
+    }
+    /* weapon_vars.fireball.index is the OWNER, not a frame: 0 Mario, 1 Luigi,
+     * and wpmariofireball.c:189 writes the MObj palette_id from the same index.
+     * So it selects the palette here for exactly the reason it does there. */
+    texture_name = ndsFireballTexture(wp->weapon_vars.fireball.index);
+    if (texture_name == 0u)
+    {
+        return FALSE;
+    }
+    return ndsParticleDrawOwnTextureQuad(
+        texture_name, NDS_FIREBALL_TEX_WIDTH, NDS_FIREBALL_TEX_HEIGHT,
+        &root->translate.vec.f, NDS_FIREBALL_QUAD_HALF_EXTENT,
+        NDS_R2_FIREBALL_BGR555(0xff, 0xff, 0xff), 0xffu, 0.0F,
+        /* THE SOURCE SPIN, not an approximation: the fireball's own update
+         * adds 20 deg/frame to rotate.vec.f.x (wpmariofireball.c:98), and the
+         * 0x47 orientation is RotRpyR(rotate.x, rotate.y, 0) -- the
+         * interpreter path visibly rolls the quad as it flies. The quad
+         * submit rolls the camera-facing basis by the SAME angle, so the spin
+         * matches it frame for frame instead of being a static billboard.
+         *
+         * THE FACING DEPENDENCE IS A TEXTURE MIRROR, carried by rotate.vec.f.y:
+         * wpMainVelSetModelPitch (wpmain.c:52-57) sets rotate.y = +90 deg
+         * when vel.x >= 0 (facing right) and -90 deg facing left, at spawn
+         * and again on every rebound (wpmariofireball.c:191/:118). In the
+         * 0x47 matrix the +90 deg pitch maps the quad's local Z axis to
+         * -screen-X and the -90 deg pitch to +screen-X -- a horizontal
+         * mirror of the texture -- and the apparent roll direction reverses
+         * with it. The mirror is VISIBLE on the flame streaks, so it is
+         * applied to the basis here and the roll stays +rotate.x exactly as
+         * the source writes it. */
+        root->rotate.vec.f.x,
+        (root->rotate.vec.f.y >= 0.0F) ? TRUE : FALSE);
+}
+#endif /* NDS_R2_FIREBALL_QUAD */
+
 static void ndsStageGCDrawAllLoopSubmitWeaponDObj(GObj *weapon_gobj,
                                                   u32 callback_kind)
 {
@@ -12975,6 +13128,29 @@ static void ndsStageGCDrawAllLoopSubmitWeaponDObj(GObj *weapon_gobj,
         gNdsRendererAdapterCustom47RejectCount;
     custom47_translation_mismatch_before =
         gNdsRendererAdapterCustom47TranslationMismatchCount;
+#if NDS_R2_FIREBALL_QUAD
+    /* Before the tree walk, not inside it: the whole point is to spend neither
+     * the walk nor the display list. Falls through to the generic route on any
+     * refusal -- a missing texture name or a camera the quad path will not
+     * accept -- so a failure here is a slow fireball, never an absent one. */
+    {
+        WPStruct *fireball_wp = weapon_gobj->user_data.p;
+
+        if ((fireball_wp != NULL) && (fireball_wp->kind == nWPKindFireball))
+        {
+            if (ndsStageGCDrawAllLoopDrawFireballQuad(root, fireball_wp) !=
+                FALSE)
+            {
+                gNdsFireballQuadDrawCount++;
+                sNdsStageGCDrawAllLoopHardwareSubmitCount++;
+                gNdsStageGCDrawAllLoopHardwareSubmitCount =
+                    sNdsStageGCDrawAllLoopHardwareSubmitCount;
+                return;
+            }
+            gNdsFireballQuadFallbackCount++;
+        }
+    }
+#endif
     initial_geometry_mode = ndsStageGCDrawAllLoopInitialGeometryMode();
     if ((initial_geometry_mode & NDS_RENDERER_GEOM_ZBUFFER) == 0u)
     {

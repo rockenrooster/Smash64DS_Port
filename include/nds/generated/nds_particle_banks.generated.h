@@ -118,6 +118,30 @@ extern const u8 gNdsShieldTexels[NDS_SHIELD_TEX_BYTES];
 /* Indexed by dEFManagerShieldColors entry -- player 0..3 then shield-damage. */
 extern const u16 gNdsShieldPalettes[NDS_SHIELD_PALETTE_COUNT]
                                    [NDS_SHIELD_TEX_PALETTE_ENTRIES];
+
+/* THE FIREBALL IS NOT A QUAD-SHEET CELL EITHER, but for the opposite reason to
+ * the shield: not because a cell is too lossy, but because the source asset is
+ * ALREADY a DS texture. CI4 with an RGBA5551 TLUT whose entry 0 has alpha 0 is
+ * bit-for-bit GL_RGB16 + COLOR0_TRANSPARENT, so this bakes with nothing
+ * quantised -- no index/alpha trade, no ramp, no feather. Putting it in the
+ * A3I5 sheet would have thrown that away and spent sheet texels the atlas has
+ * measured to be scarce.
+ *
+ * Two palettes, selected by MObj palette_id at spawn: 0 is Mario's red-orange
+ * ramp, 1 is Luigi's green. See FIREBALL_ASSET for why that is a character
+ * variant and not an animation. */
+#define NDS_FIREBALL_TEX_WIDTH 16u
+#define NDS_FIREBALL_TEX_HEIGHT 16u
+#define NDS_FIREBALL_TEX_BYTES 128u
+#define NDS_FIREBALL_TEX_PALETTE_ENTRIES 16u
+#define NDS_FIREBALL_PALETTE_COUNT 2u
+/* The source quad's half-extent in world units, off Vtx[0..3] of file 297. */
+#define NDS_FIREBALL_QUAD_HALF_EXTENT 150.0F
+/* PACKED nibbles, two texels per byte, low nibble leftmost -- DS order, which
+ * is the reverse of the source's. Not one byte per texel like the shield. */
+extern const u8 gNdsFireballTexels[NDS_FIREBALL_TEX_BYTES];
+extern const u16 gNdsFireballPalettes[NDS_FIREBALL_PALETTE_COUNT]
+                                     [NDS_FIREBALL_TEX_PALETTE_ENTRIES];
 #define NDS_PARTICLE_QUAD_ASSET_BYTES 32832u
 #define NDS_PARTICLE_QUAD_TEXEL_ASSET_BYTES 32768u
 #define NDS_PARTICLE_QUAD_PALETTE_OFFSET 32768u

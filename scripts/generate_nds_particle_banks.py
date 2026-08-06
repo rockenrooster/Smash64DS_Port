@@ -180,6 +180,46 @@ SHIELD_A5I3_ASSET = {
     "feather": 0,
 }
 
+# Mario's fireball. Unlike the shield this needs NO format compromise at all:
+# the source is CI4 with an RGBA5551 TLUT whose entry 0 has alpha 0, which is
+# bit-for-bit what GL_RGB16 + COLOR0_TRANSPARENT is. Sixteen entries, 4bpp, 128
+# bytes of texels and 32 bytes of palette, and nothing is quantised on the way.
+#
+# The fireball SHARES Super Jump Punch's relocData file. Its WPAttributes
+# (204_MarioSpecial1.c) point `data` at &dMarioSpecial3_JointVerts_Vtx[4] and
+# `p_mobjsubs` at file 297's MObjSub, so 297 carries the texture, both palettes
+# and the quad. Decoded from the file's own bytes on 2026-08-06:
+#
+#   Tex  @0x0058  CI4 16x16, indices 0..12 used, only index 0 transparent
+#   Vtx  @0x0168  [0..3] pos (0, +-150, +-150), st 0..512 in S10.5 = 0..16
+#   Vtx  @0x01A8  [4..6] decode as garbage -- this is the fireball's DObjDesc
+#                 mistyped as Vtx, not geometry. Do not read it as vertices.
+#
+# So the model is ONE flat 300x300 quad, and WPDesc's secondary matrix kind
+# 0x47 is the MVP-recalc billboard (reloc_backend_renderer_dl.c:1853), which
+# means a camera-facing quad at the DObj's translation reproduces it.
+FIREBALL_ASSET = {
+    "name": "FIREBALL",
+    "file": "297.vpk0.bin",
+    "offset": 0x0058,
+    "width": 16,
+    "height": 16,
+    "symbol": "dMarioSpecial3_Tex_0x0058",
+    # dMarioSpecial3_palettes_0x00DC = {palette_0x0030, palette_0x0008, NULL},
+    # and wpmariofireball.c:189 sets mobj->palette_id from the attributes'
+    # anim_frame -- 0.0F for Mario, 1.0F for Luigi. Index 0 is therefore Mario's
+    # red-orange ramp and index 1 is Luigi's green one, selected ONCE at spawn.
+    # This is a character variant, not a per-frame palette animation, which is
+    # what makes a static baked texture lossless here.
+    "palette_offsets": (0x0030, 0x0008),
+}
+
+# The half-extent of the source quad in world units, straight off Vtx[0..3]
+# above. The runtime multiplies nothing into it: WPDesc's main matrix kind is
+# nGCMatrixKindTra, translation only, so unlike the shield there is no joint
+# scale to recover.
+FIREBALL_QUAD_HALF_EXTENT = 150.0
+
 SOURCE_QUAD_ASSETS = (
     {
         # THE NAME IS WRONG AND IS KEPT ONLY BECAUSE IT IS ALREADY THE SYMBOL.
@@ -2102,6 +2142,58 @@ def build_shield_palettes(repo_root: Path) -> list[list[int]]:
     return palettes
 
 
+def build_fireball_pal16(repo_root: Path) -> tuple[bytes, int, int]:
+    """Mario's fireball as its own GL_RGB16 texture -- a straight repack.
+
+    The source nibbles are copied, not converted: CI4 and GL_RGB16 are the same
+    4bpp paletted layout and the palette carries the alpha in both. The ONE
+    difference is nibble order within the byte. N64 CI4 puts the leftmost texel
+    in the HIGH nibble; DS 4bpp paletted puts it in the LOW one (GBATEK, "4bit
+    depth: lower 4bit = left dot"). Swapping every byte is the whole conversion.
+    """
+    asset = FIREBALL_ASSET
+    path = repo_root / RELOC_ASSET_DIR / asset["file"]
+    if not path.is_file():
+        raise SystemExit(f"{path}: missing reloc payload for the fireball "
+                         f"({asset['symbol']})")
+    count = (asset["width"] * asset["height"]) // 2
+    raw = path.read_bytes()[asset["offset"]:asset["offset"] + count]
+    if len(raw) != count:
+        raise SystemExit(f"FIREBALL: wanted {count} CI4 bytes at "
+                         f"0x{asset['offset']:x}, file holds {len(raw)}")
+    texels = bytes(((byte & 0x0F) << 4) | (byte >> 4) for byte in raw)
+    return texels, asset["width"], asset["height"]
+
+
+def build_fireball_palettes(repo_root: Path) -> list[list[int]]:
+    """The source TLUTs, requantised by NOTHING.
+
+    Both formats are five bits a channel, so the fields move across as they
+    stand: N64 RGBA5551 is (r << 11) | (g << 6) | (b << 1) | a big-endian, DS
+    palette entries are BGR555. Entry 0's alpha bit is dropped on the floor
+    because COLOR0_TRANSPARENT already says what it says -- and it is asserted
+    rather than assumed, since a source palette whose entry 0 were opaque would
+    render the fireball as a black square instead of a flame.
+    """
+    asset = FIREBALL_ASSET
+    raw = (repo_root / RELOC_ASSET_DIR / asset["file"]).read_bytes()
+    palettes = []
+    for which, offset in enumerate(asset["palette_offsets"]):
+        entries = []
+        for i in range(16):
+            word = struct.unpack_from(">H", raw, offset + i * 2)[0]
+            r, g, b, a = ((word >> 11) & 31, (word >> 6) & 31,
+                          (word >> 1) & 31, word & 1)
+            if (i == 0) and (a != 0):
+                raise SystemExit(
+                    f"FIREBALL: palette {which} at 0x{offset:x} has entry 0 "
+                    f"OPAQUE ({word:04X}); GL_RGB16 transparency is index 0, "
+                    f"so this asset cannot be baked as it stands")
+            entries.append(r | (g << 5) | (b << 10))
+        palettes.append(entries)
+    return palettes
+
+
 def build_source_asset_quads(repo_root: Path,
                              frames_by_texture: dict[int, list[list]]
                              ) -> list[dict]:
@@ -2287,6 +2379,7 @@ def build_pack(repo_root: Path) -> dict:
     quads = build_quad_sheet(textures, report_rows, frames_by_texture,
                              pupupu["quad_candidates"] + source_quads)
     shield_texels, shield_w, shield_h = build_shield_a5i3(repo_root)
+    fireball_texels, fireball_w, fireball_h = build_fireball_pal16(repo_root)
     return {
         "pupupu": pupupu,
         "source_quads": source_quads,
@@ -2294,6 +2387,9 @@ def build_pack(repo_root: Path) -> dict:
         "shield": {"texels": shield_texels,
                    "width": shield_w, "height": shield_h,
                    "palettes": build_shield_palettes(repo_root)},
+        "fireball": {"texels": fireball_texels,
+                     "width": fireball_w, "height": fireball_h,
+                     "palettes": build_fireball_palettes(repo_root)},
         "scripts": scripts, "textures": textures, "reach": reach,
         "script_payload": script_payload, "rows": rows,
         "texture_data": bytes(texture_data), "palette_data": palette_data,
@@ -2452,6 +2548,30 @@ extern const u8 gNdsShieldTexels[NDS_SHIELD_TEX_BYTES];
 /* Indexed by dEFManagerShieldColors entry -- player 0..3 then shield-damage. */
 extern const u16 gNdsShieldPalettes[NDS_SHIELD_PALETTE_COUNT]
                                    [NDS_SHIELD_TEX_PALETTE_ENTRIES];
+
+/* THE FIREBALL IS NOT A QUAD-SHEET CELL EITHER, but for the opposite reason to
+ * the shield: not because a cell is too lossy, but because the source asset is
+ * ALREADY a DS texture. CI4 with an RGBA5551 TLUT whose entry 0 has alpha 0 is
+ * bit-for-bit GL_RGB16 + COLOR0_TRANSPARENT, so this bakes with nothing
+ * quantised -- no index/alpha trade, no ramp, no feather. Putting it in the
+ * A3I5 sheet would have thrown that away and spent sheet texels the atlas has
+ * measured to be scarce.
+ *
+ * Two palettes, selected by MObj palette_id at spawn: 0 is Mario's red-orange
+ * ramp, 1 is Luigi's green. See FIREBALL_ASSET for why that is a character
+ * variant and not an animation. */
+#define NDS_FIREBALL_TEX_WIDTH {pack["fireball"]["width"]}u
+#define NDS_FIREBALL_TEX_HEIGHT {pack["fireball"]["height"]}u
+#define NDS_FIREBALL_TEX_BYTES {len(pack["fireball"]["texels"])}u
+#define NDS_FIREBALL_TEX_PALETTE_ENTRIES 16u
+#define NDS_FIREBALL_PALETTE_COUNT {len(pack["fireball"]["palettes"])}u
+/* The source quad's half-extent in world units, off Vtx[0..3] of file 297. */
+#define NDS_FIREBALL_QUAD_HALF_EXTENT {FIREBALL_QUAD_HALF_EXTENT}F
+/* PACKED nibbles, two texels per byte, low nibble leftmost -- DS order, which
+ * is the reverse of the source's. Not one byte per texel like the shield. */
+extern const u8 gNdsFireballTexels[NDS_FIREBALL_TEX_BYTES];
+extern const u16 gNdsFireballPalettes[NDS_FIREBALL_PALETTE_COUNT]
+                                     [NDS_FIREBALL_TEX_PALETTE_ENTRIES];
 #define NDS_PARTICLE_QUAD_ASSET_BYTES {len(pack["quads"]["payload"])}u
 #define NDS_PARTICLE_QUAD_TEXEL_ASSET_BYTES {pack["quads"]["atlas_bytes"]}u
 #define NDS_PARTICLE_QUAD_PALETTE_OFFSET {pack["quads"]["palette_offset"]}u
@@ -2601,6 +2721,21 @@ def render_inc(pack: dict) -> str:
         + "\n    },"
         for ramp in pack["shield"]["palettes"]
     )
+    fireball = pack["fireball"]["texels"]
+    fireball_rows = "\n".join(
+        "    " + ", ".join(f"0x{value:02x}u"
+                           for value in fireball[index:index + 12]) + ","
+        for index in range(0, len(fireball), 12)
+    )
+    fireball_palette_rows = "\n".join(
+        "    {\n"
+        + "\n".join(
+            "        " + ", ".join(f"0x{entry:04x}u"
+                                   for entry in ramp[index:index + 8]) + ","
+            for index in range(0, len(ramp), 8))
+        + "\n    },"
+        for ramp in pack["fireball"]["palettes"]
+    )
     return f"""/* Generated by scripts/generate_nds_particle_banks.py. */
 /* efcommon source SHA256-lo 0x{pack["source_checksum"]:08x}, table 0x{pack["table_checksum"]:08x}. */
 
@@ -2643,6 +2778,22 @@ const u8 gNdsShieldTexels[NDS_SHIELD_TEX_BYTES] = {{
 const u16 gNdsShieldPalettes[NDS_SHIELD_PALETTE_COUNT]
                             [NDS_SHIELD_TEX_PALETTE_ENTRIES] = {{
 {shield_palette_rows}
+}};
+
+/* The fireball's CI4 texels with each byte's nibbles swapped, and NOTHING
+ * else: N64 CI4 puts the leftmost texel in the high nibble, the DS puts it in
+ * the low one. Format, depth and palette semantics are identical, so this is
+ * the one baked asset in this file that loses no precision anywhere. */
+const u8 gNdsFireballTexels[NDS_FIREBALL_TEX_BYTES] = {{
+{fireball_rows}
+}};
+
+/* The source TLUTs with the 5-bit fields moved from RGBA5551 to BGR555. Entry
+ * 0 is transparent by COLOR0_TRANSPARENT rather than by an alpha bit; the
+ * generator asserts the source agrees. Index 0 is Mario, 1 is Luigi. */
+const u16 gNdsFireballPalettes[NDS_FIREBALL_PALETTE_COUNT]
+                              [NDS_FIREBALL_TEX_PALETTE_ENTRIES] = {{
+{fireball_palette_rows}
 }};
 
 u8 gNdsParticleScriptBank[NDS_PARTICLE_SCRIPT_BANK_BYTES]

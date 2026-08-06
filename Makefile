@@ -756,6 +756,22 @@ NDS_R2_PARTICLE_DRAW ?= 1
 # exists to re-measure that price on the whole-match instrument, since the 36k
 # came off a 128-frame window.
 NDS_R2_SHIELD_QUAD ?= 0
+# Draw Mario's fireball as one camera-facing quad instead of interpreting its
+# source model's display list. EXPERIMENT, OFF BY DEFAULT, same terms as the
+# shield above -- see the block comment in reloc_backend_movement.c.
+#
+# The asset is why this is worth trying: relocData 297's Vtx[0..3] is a single
+# flat 300x300 quad and its texture is CI4 16x16 whose palette entry 0 is
+# transparent, which is bit-for-bit DS GL_RGB16 + COLOR0_TRANSPARENT. So unlike
+# the shield -- which had to trade index bits against alpha bits -- this bakes
+# with nothing quantised, and both routes draw the same four vertices.
+#
+# Measured on the whole-match instrument (ROM E61D608B, 2026-08-06): one live
+# fireball costs 64,700 ticks/frame at P50, MISC 33,088 of it. This flag
+# addresses that half. The other half is SRC 26,752 -- wpMapTestAll running
+# full stage collision for the projectile every frame -- and is a separate
+# seam that this does not touch.
+NDS_R2_FIREBALL_QUAD ?= 0
 # SEEDS gNdsBattlePlayableFoxCpuEnabled FOR A ROM NOBODY DRIVES WITH GDB. 1 is
 # the published source-normal battle (3/2/1/GO, live match timer, level-3 Fox);
 # 0 skips the countdown, unlocks at GO, freezes the timer and leaves Fox
@@ -2651,6 +2667,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_FIGHTER_ANIM_CYCLER_KIND $(NDS_FIGHTER_ANIM_CYCLER_KIND)'; \
 		echo '#define NDS_R2_PARTICLE_DRAW $(NDS_R2_PARTICLE_DRAW)'; \
 		echo '#define NDS_R2_SHIELD_QUAD $(NDS_R2_SHIELD_QUAD)'; \
+		echo '#define NDS_R2_FIREBALL_QUAD $(NDS_R2_FIREBALL_QUAD)'; \
 		echo '#define NDS_R2_FOX_CPU_DEFAULT $(NDS_R2_FOX_CPU_DEFAULT)'; \
 		echo '#define NDS_R2_COLLISION_L7_ORACLE $(NDS_R2_COLLISION_L7_ORACLE)'; \
 		echo '#define NDS_TASK39_FX_SPRITES $(NDS_TASK39_FX_SPRITES)'; \

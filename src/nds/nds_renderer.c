@@ -1518,6 +1518,27 @@ static inline void ndsRendererTask29GlVertex3v16(v16 x, v16 y, v16 z)
 #define glVertex3v16 ndsRendererTask29GlVertex3v16
 #endif
 
+/* The bin macro is defined by the G3 capture block above, which is itself
+ * nested inside the GX-record configuration guard. This classifier is not, so
+ * the fallback has to be unconditional rather than an #else on that block --
+ * otherwise a configuration that compiles the classifier without the capture
+ * fails at the first bin call rather than simply not counting. These three
+ * must sit OUTSIDE every NDS_RENDERER_HW_TRIANGLES-guarded block AND before
+ * the first use: the primaries live under NDS_TICK_HUD at line 886, the first
+ * use is inside the hardware block at 17434, and d34917b9 put the fallback
+ * inside that same block, which left a default build with neither flag -- the
+ * plain `make` target -- with no definition at all. The #ifndefs are belt and
+ * braces now, since nothing else defines them on this path. */
+#ifndef NDS_EFFECT_SUBMIT_BIN
+#define NDS_EFFECT_SUBMIT_BIN(bin) ((void)0)
+#endif
+#ifndef NDS_EFFECT_PHASE_VTX
+#define NDS_EFFECT_PHASE_VTX(call) do { call; } while (0)
+#endif
+#ifndef NDS_EFFECT_PHASE_TRI
+#define NDS_EFFECT_PHASE_TRI(call) do { call; } while (0)
+#endif
+
 static inline void ndsRendererHardwareWriteColorWord(u32 value)
 {
 #if !NDS_RENDERER_HW_TRIANGLES
@@ -10954,21 +10975,38 @@ static s32 ndsRendererHardwarePrepareIFCommonAtlas(
     int size_y;
     int name = 0;
     u32 bytes;
+    u32 param;
     u32 upload_attempts = 0u;
     u8 *pixels = (u8 *)sNdsRendererHardwareTextureScratch;
 
     if ((fill == NULL) || (palette == NULL) || (texture_name == NULL) ||
         (((texture_format == GL_RGB8_A5) && (palette_entries > 8u)) ||
          ((texture_format == GL_RGB32_A3) && (palette_entries > 32u)) ||
+         ((texture_format == GL_RGB16) && (palette_entries > 16u)) ||
          ((texture_format != GL_RGB8_A5) &&
-          (texture_format != GL_RGB32_A3)) || (palette_entries == 0u)) ||
+          (texture_format != GL_RGB32_A3) &&
+          (texture_format != GL_RGB16)) || (palette_entries == 0u)) ||
         (height == 0u) || (width > (UINT32_MAX / height)) ||
         (ndsRendererHardwareTextureSizeEnum(width, &size_x) == FALSE) ||
         (ndsRendererHardwareTextureSizeEnum(height, &size_y) == FALSE))
     {
         return FALSE;
     }
-    bytes = width * height;
+    /* GL_RGB16 is the only 4bpp format here -- two texels to the byte -- and it
+     * carries no alpha in the texel, so index 0 reads as opaque black unless
+     * COLOR0_TRANSPARENT is set. The other two are 8bpp with the alpha bits in
+     * the texel itself and must NOT get the flag, or their index 0 would stop
+     * being a usable colour. */
+    if (texture_format == GL_RGB16)
+    {
+        bytes = (width * height) / 2u;
+        param = (u32)TEXGEN_TEXCOORD | (u32)GL_TEXTURE_COLOR0_TRANSPARENT;
+    }
+    else
+    {
+        bytes = width * height;
+        param = (u32)TEXGEN_TEXCOORD;
+    }
     if ((bytes > sizeof(sNdsRendererHardwareTextureScratch)) ||
         (fill(pixels, bytes, user_data) == FALSE))
     {
@@ -10986,7 +11024,7 @@ static s32 ndsRendererHardwarePrepareIFCommonAtlas(
     ndsRendererHardwareBindTextureState(name);
     while (ndsRendererHardwareFencedGlTexImage2D(
                GL_TEXTURE_2D, 0, (int)texture_format, size_x, size_y, 0,
-               TEXGEN_TEXCOORD, pixels) == 0)
+               (int)param, pixels) == 0)
     {
         ndsRendererHardwareFencedGlDeleteTextures(1, &name);
         name = 0;
@@ -11032,6 +11070,22 @@ s32 ndsRendererHardwarePrepareIFCommonA3I5Atlas(
 {
     return ndsRendererHardwarePrepareIFCommonAtlas(
         width, height, GL_RGB32_A3, palette, 32u,
+        fill, user_data, texture_name);
+}
+
+/* Source CI4 with an RGBA5551 TLUT whose entry 0 has alpha 0 -- Mario's
+ * fireball is exactly this -- maps onto GL_RGB16 with NO loss: 16 palette
+ * entries, 4bpp, and index 0 clear. The two formats above both had to trade
+ * index bits against alpha bits; this one does not, so it is the format to
+ * reach for whenever the source asset is CI4 and its palette carries the
+ * transparency. `fill` writes PACKED nibbles here, two texels per byte, low
+ * nibble first -- not one byte per texel as the A5I3/A3I5 fills do. */
+s32 ndsRendererHardwarePrepareIFCommonPal16Atlas(
+    u32 width, u32 height, const u16 palette[16],
+    NDSRendererTextureFillCallback fill, void *user_data, u32 *texture_name)
+{
+    return ndsRendererHardwarePrepareIFCommonAtlas(
+        width, height, GL_RGB16, palette, 16u,
         fill, user_data, texture_name);
 }
 
@@ -17381,15 +17435,6 @@ static s32 ndsRendererHardwareRawMatrixCompatible(
  * the fallback has to be unconditional rather than an #else on that block --
  * otherwise a configuration that compiles the classifier without the capture
  * fails at the first bin call rather than simply not counting. */
-#ifndef NDS_EFFECT_SUBMIT_BIN
-#define NDS_EFFECT_SUBMIT_BIN(bin) ((void)0)
-#endif
-#ifndef NDS_EFFECT_PHASE_VTX
-#define NDS_EFFECT_PHASE_VTX(call) do { call; } while (0)
-#endif
-#ifndef NDS_EFFECT_PHASE_TRI
-#define NDS_EFFECT_PHASE_TRI(call) do { call; } while (0)
-#endif
 
 static NDSRendererHWSubmitClass ndsRendererHardwareClassifySubmit(
     const NDSRendererTraversalState *state,

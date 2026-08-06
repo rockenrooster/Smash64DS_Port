@@ -1362,7 +1362,8 @@ static void ndsEFManagerShieldQuadProcDisplay(GObj *effect_gobj)
                  &world_pos, guard_scale * NDS_R2_SHIELD_QUAD_SIZE,
                  NDS_R2_BGR555(0xff, 0xff, 0xff),
                  NDS_R2_SHIELD_QUAD_ALPHA,
-                 NDS_R2_SHIELD_QUAD_DEPTH_BIAS) != FALSE))
+                 NDS_R2_SHIELD_QUAD_DEPTH_BIAS,
+                 0.0F, FALSE) != FALSE))
         {
             gNdsShieldQuadDrawCount++;
             return;
@@ -1411,6 +1412,17 @@ void efManagerInitEffects(void)
     gNdsShieldQuadDrawCount = 0u;
     gNdsShieldQuadFallbackCount = 0u;
     dEFManagerShieldEffectDesc.proc_display = ndsEFManagerShieldQuadProcDisplay;
+#endif
+#if NDS_R2_FIREBALL_QUAD && NDS_RENDERER_HW_TRIANGLES
+    /* The fireball's baked texture has the same match lifetime as the shield's
+     * and is released here for the same reason: START at the results screen
+     * restarts the match. It lives in the port file that owns the weapon
+     * submit, so this is the call rather than another release loop. The
+     * NDS_RENDERER_HW_TRIANGLES term matches the definition's own home: the
+     * quad hook sits inside the hardware-submit block in
+     * reloc_backend_movement.c (12778-13413), so a software build that links
+     * this call against nothing would fail exactly the way this one just did. */
+    ndsWeaponReleaseBakedTextures();
 #endif
     ndsEFManagerBoundEffectPool();
     ndsEFManagerInitVisualTemplates();

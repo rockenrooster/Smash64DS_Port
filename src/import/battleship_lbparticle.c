@@ -1668,7 +1668,8 @@ static void ndsParticleBiasTowardEye(const Vec3f *pos, f32 depth_bias,
  * header). Fails closed and shares the source-asset miss mask. */
 sb32 ndsParticleDrawOwnTextureQuad(u32 texture_name, u32 texture_w,
                                    u32 texture_h, const Vec3f *pos, f32 size,
-                                   u32 color, u8 alpha, f32 depth_bias)
+                                   u32 color, u8 alpha, f32 depth_bias,
+                                   f32 roll, sb32 mirror_x)
 {
     Vec3f right;
     Vec3f up;
@@ -1687,6 +1688,57 @@ sb32 ndsParticleDrawOwnTextureQuad(u32 texture_name, u32 texture_w,
         gNdsSourceAssetQuadMissMask |= 1u << 3;
         return FALSE;
     }
+    /* The source spin: the weapon update adds 0.349066 rad (20 deg) to
+     * dobj->rotate.vec.f.x every frame, and the 0x47 matrix kind applies it
+     * as RotRpyR(rotate.x, rotate.y, 0) -- a roll of the camera-facing quad
+     * about the axis pointing at the camera. Replicated with the source's OWN
+     * sin table and its exact index/sign convention (lbdef.h syGetSinCosUShort),
+     * so the quad spins at the same rate and phase the interpreter path
+     * does. Rotating the billboard basis in its own plane is the whole
+     * operation; nothing else about the quad changes.
+     *
+     * The mirror MUST land before the roll, not after: the 0x47 pitch term
+     * (rotate.y = +-90 deg from wpMainVelSetModelPitch, wpmain.c:52-57)
+     * maps the quad's local Z to -screen-X or +screen-X, which mirrors the
+     * texture AND reverses the apparent roll direction. Negating the right
+     * basis is that mirror; the roll then spins the mirrored basis exactly
+     * as the source's RotRpyR composes the two terms. */
+    if (mirror_x != FALSE)
+    {
+        right.x = -right.x;
+        right.y = -right.y;
+        right.z = -right.z;
+    }
+    if (roll != 0.0F)
+    {
+        s32 roll_id = SINTABLE_RAD_TO_ID(roll) & 0xFFF;
+        s32 roll_sin = gSYSinTable[roll_id & 0x7FF];
+        s32 roll_cos;
+        Vec3f base_right;
+        Vec3f base_up;
+
+        if ((roll_id & 0x800) != 0)
+        {
+            roll_sin = -roll_sin;
+        }
+        roll_id = (roll_id + 0x400) & 0xFFF;
+        roll_cos = gSYSinTable[roll_id & 0x7FF];
+        if ((roll_id & 0x800) != 0)
+        {
+            roll_cos = -roll_cos;
+        }
+        base_right = right;
+        base_up = up;
+        /* Q15 table: sin/cos sit in the top 15 bits of the u16. The division
+         * is by the same 32768.0F constant the source's own fixed-to-float
+         * matrix conversions use, so the angle is reproduced as-is. */
+        right.x = (roll_cos * base_right.x + roll_sin * base_up.x) / 32768.0F;
+        right.y = (roll_cos * base_right.y + roll_sin * base_up.y) / 32768.0F;
+        right.z = (roll_cos * base_right.z + roll_sin * base_up.z) / 32768.0F;
+        up.x = (-roll_sin * base_right.x + roll_cos * base_up.x) / 32768.0F;
+        up.y = (-roll_sin * base_right.y + roll_cos * base_up.y) / 32768.0F;
+        up.z = (-roll_sin * base_right.z + roll_cos * base_up.z) / 32768.0F;
+    }
     ndsParticleBiasTowardEye(pos, depth_bias, &draw_pos);
     if (ndsRendererSubmitParticleQuad(texture_name, &draw_pos, size, color,
                                       alpha, &right, &up, 0u, 0u,
@@ -1701,7 +1753,8 @@ sb32 ndsParticleDrawOwnTextureQuad(u32 texture_name, u32 texture_w,
     return TRUE;
 #else
     (void)texture_name; (void)texture_w; (void)texture_h; (void)color;
-    (void)right; (void)up; (void)draw_pos; (void)depth_bias;
+    (void)right; (void)up; (void)draw_pos; (void)depth_bias; (void)roll;
+    (void)mirror_x;
     gNdsSourceAssetQuadMissMask |= 1u << 5;
     return FALSE;
 #endif

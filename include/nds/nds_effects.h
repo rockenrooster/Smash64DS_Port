@@ -40,13 +40,33 @@ typedef enum NDSVisualEffectKind
 sb32 ndsParticleDrawSourceAssetQuad(u32 texture_id, const Vec3f *pos, f32 size,
                                     u32 color, u8 alpha, f32 depth_bias);
 /* The same submit over a texture the particle pass does not own, with the whole
- * image as the cell. For art the shared sheet cannot hold -- see the shield. */
+ * image as the cell. For art the shared sheet cannot hold -- see the shield.
+ * roll rotates the camera-facing quad about the axis pointing at the camera,
+ * in radians, using the source's own sin table (macros.h SINTABLE_RAD_TO_ID):
+ * the fireball's 0x47 orientation is RotRpyR(rotate.x, 0, 0) and its update
+ * advances rotate.x by 20 deg/frame (wpmariofireball.c:98), which is exactly
+ * the screen-plane spin this reproduces. mirror_x is the horizontal texture
+ * mirror that same 0x47 matrix carries in its pitch term (rotate.y = +-90 deg
+ * from wpMainVelSetModelPitch): the fireball's flame streaks point the other
+ * way for one facing, and the apparent roll reverses with the mirror, so the
+ * roll is applied AFTER the mirror exactly as the source composes it. 0 leaves
+ * the caller's orientation. */
 sb32 ndsParticleDrawOwnTextureQuad(u32 texture_name, u32 texture_w,
                                    u32 texture_h, const Vec3f *pos, f32 size,
-                                   u32 color, u8 alpha, f32 depth_bias);
+                                   u32 color, u8 alpha, f32 depth_bias,
+                                   f32 roll, sb32 mirror_x);
 extern volatile u32 gNdsSourceAssetQuadAttempts;
 extern volatile u32 gNdsSourceAssetQuadDrawn;
 extern volatile u32 gNdsSourceAssetQuadMissMask;
+/* NDS_R2_FIREBALL_QUAD runtime, owned by the weapon submit in
+ * reloc_backend_movement.c. Called from efManagerInitEffects beside the shield
+ * release so the baked texture has the same match lifetime: START at the
+ * results screen restarts the match, and a name held across restarts would
+ * grow the texture cache by one per fireball palette every time. Also resets
+ * the quad's engagement counters, which is the same reset the shield gets. */
+void ndsWeaponReleaseBakedTextures(void);
+extern volatile u32 gNdsFireballQuadDrawCount;
+extern volatile u32 gNdsFireballQuadFallbackCount;
 
 GObj *ndsEFManagerMakeVisualEffect(NDSVisualEffectKind kind,
                                     const Vec3f *pos, f32 scale, s32 lr,

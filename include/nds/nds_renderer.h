@@ -1291,6 +1291,13 @@ s32 ndsRendererHardwarePrepareIFCommonCloudAtlas(
 s32 ndsRendererHardwarePrepareIFCommonA3I5Atlas(
     u32 width, u32 height, const u16 palette[32],
     NDSRendererTextureFillCallback fill, void *user_data, u32 *texture_name);
+/* The lossless sibling, for a source CI4 asset whose TLUT already carries the
+ * transparency in entry 0: 16 palette entries, no alpha bits spent, and the
+ * fill writes PACKED nibbles (two texels per byte) rather than one byte per
+ * texel. Same upload and the same release as the two above. */
+s32 ndsRendererHardwarePrepareIFCommonPal16Atlas(
+    u32 width, u32 height, const u16 palette[16],
+    NDSRendererTextureFillCallback fill, void *user_data, u32 *texture_name);
 void ndsRendererHardwareReleaseIFCommonCloudAtlas(u32 *texture_name);
 s32 ndsRendererHardwareDrawIFCommonCloudAtlas(
     u32 texture_name, s32 x_q16, s32 y_q16,

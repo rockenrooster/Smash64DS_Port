@@ -58,7 +58,7 @@ feel; the DS implementation may differ radically from the original engine.
 - Rendering-side changes may approximate: See PROJECT_GOAL.md
 - Device A/B reports must show the 2/3/4/5+ VBlank-interval histogram and the
   max interval, and P50/P95
-- Run `scripts/New-Smash64DSSnapshot.ps1` after verified progress as the final project command. Run nothing after it.
+- Run `scripts/New-Smash64DSSnapshot.ps1` after verified progress during an autonomous work cycle.
 
 ## DS Visual Fidelity
 

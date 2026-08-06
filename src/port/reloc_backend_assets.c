@@ -320,6 +320,12 @@
 #define NDS_RELOC_SYMBOL_GR_INISHIE_MAP_HEADER 0x14u
 #define NDS_RELOC_SYMBOL_MARIO_MAIN_ATTRIBUTES 0x428u
 #define NDS_RELOC_SYMBOL_FOX_MAIN_ATTRIBUTES 0x46cu
+/* Both weapon attribute structs sit at file offset 0: the fireball's in file
+ * 204 (llMarioSpecial1FireballWeaponAttributes = 0x0) and the blaster's in
+ * file 210 (llFoxSpecial1BlasterWeaponAttributes = 0x0), per
+ * decomp/BattleShip-main/tools/reloc_data_symbols.us.txt:3838/:3842. */
+#define NDS_RELOC_SYMBOL_MARIO_SPECIAL1_FIREBALL_WEAPON_ATTRIBUTES 0x0u
+#define NDS_RELOC_SYMBOL_FOX_SPECIAL1_BLASTER_WEAPON_ATTRIBUTES 0x0u
 
 #define NDS_OPENING_PORTRAITS_CARD_WIDTH 300u
 #define NDS_OPENING_PORTRAITS_CARD_HEIGHT 55u
@@ -3374,6 +3380,7 @@ static void ndsRelocSwapNativeU16WordLanes(void *word)
 static s32 ndsRelocFighterAttributesMatchSource(
     u32 asset_id, const FTAttributes *attr)
 {
+
     if (attr == NULL)
     {
         return FALSE;
@@ -3468,6 +3475,7 @@ static s32 ndsRelocNormalizeFighterAttributesFile(
 
 static size_t ndsRelocAssetAllocSize(u32 asset_id);
 static s32 ndsRelocFinalizeLoadedFile(NDSRelocLoadedFile *loaded);
+static s32 ndsRelocNormalizeWeaponAttributesFile(NDSRelocLoadedFile *loaded);
 static s32 ndsRelocNormalizeBattleInterfaceSprites(
     NDSRelocLoadedFile *loaded);
 static size_t ndsRelocExternTreeAllocSize(u32 asset_id, u32 *seen,
@@ -3690,6 +3698,7 @@ volatile u32 gNdsR2FixupFinalizeMaxTicks;
 volatile u32 gNdsR2FixupInternalTicks;
 volatile u32 gNdsR2FixupAObj16Ticks;
 volatile u32 gNdsR2FixupAttributesTicks;
+volatile u32 gNdsR2FixupWeaponAttributesTicks;
 volatile u32 gNdsR2FixupExternalTicks;
 volatile u32 gNdsR2FixupSpritesTicks;
 #endif
@@ -3740,6 +3749,13 @@ static s32 ndsRelocFinalizeLoadedFile(NDSRelocLoadedFile *loaded)
     }
     gNdsR2FixupAttributesTicks += cpuGetTiming() - fixup_phase;
     fixup_phase = cpuGetTiming();
+    if (ndsRelocNormalizeWeaponAttributesFile(loaded) == FALSE)
+    {
+        loaded->fixups_applying = FALSE;
+        return FALSE;
+    }
+    gNdsR2FixupWeaponAttributesTicks += cpuGetTiming() - fixup_phase;
+    fixup_phase = cpuGetTiming();
     if (ndsRelocApplyExternalPointerFixups(loaded) == FALSE)
     {
         loaded->fixups_applying = FALSE;
@@ -3750,6 +3766,7 @@ static s32 ndsRelocFinalizeLoadedFile(NDSRelocLoadedFile *loaded)
     if ((ndsRelocApplyInternalPointerFixups(loaded) == FALSE) ||
         (ndsRelocNormalizeFighterAObj16File(loaded) == FALSE) ||
         (ndsRelocNormalizeFighterAttributesFile(loaded) == FALSE) ||
+        (ndsRelocNormalizeWeaponAttributesFile(loaded) == FALSE) ||
         (ndsRelocApplyExternalPointerFixups(loaded) == FALSE))
     {
         loaded->fixups_applying = FALSE;
@@ -3835,6 +3852,130 @@ static void ndsRelocSwapWordS16Halves(void *base, u32 begin, u32 end)
 
         ndsRelocSwapS16Pair(&pair[0], &pair[1]);
     }
+}
+
+/* WPAttributes s16 runs are scrambled by the loader's blanket u32 word swap,
+ * exactly the way the fighter attributes' u16 pairs were: each u32 word in the
+ * O2R payload holds TWO s16 lanes, and the byte swap reverses their order, so
+ * a plain C struct read (which wpManagerMakeWeapon does at wpmanager.c:285-288
+ * and itmanager.c does for items) sees every s16 pair swapped. The fireball is
+ * the visible casualty -- map_coll {top 50, center 0, bottom -50, width 50}
+ * (204_MarioSpecial1.c:33) reads as {0, 50, +50, -50}, so the floor clamp
+ * rests the weapon translate at floor_y - 50 instead of floor_y + 50 and the
+ * quad sinks a full collision box into the ground before bouncing.
+ *
+ * The runs that need un-swapping are the ONLY s16-carrying fields in the
+ * struct, both 4-aligned, both pure-s16: attack_offsets[2] (6 s16, 12 bytes at
+ * offset 0x10) and map_coll top/center/bottom/width (4 s16 at 0x1C). The
+ * bitfield words from 0x24 on are single-u32 and survive the word swap
+ * correctly -- swapping THEIR halves would corrupt size/angle/damage, which
+ * is why the range stops at map_coll_width. */
+static void ndsRelocNormalizeWeaponAttributes(WPAttributes *attr)
+{
+    _Static_assert((offsetof(WPAttributes, attack_offsets) %
+                    sizeof(u32)) == 0u,
+                   "WPAttributes attack_offsets must start on a word");
+    _Static_assert((offsetof(WPAttributes, map_coll_width) -
+                    offsetof(WPAttributes, attack_offsets)) == 18u,
+                   "WPAttributes s16 run must be attack_offsets[2] plus "
+                   "map_coll top/center/bottom/width");
+
+    if (attr == NULL)
+    {
+        return;
+    }
+    ndsRelocSwapWordS16Halves(
+        attr,
+        (u32)offsetof(WPAttributes, attack_offsets),
+        (u32)offsetof(WPAttributes, map_coll_width) + (u32)sizeof(s16));
+}
+
+/* Engagement + integrity check after the swap. The map_coll box is the
+ * gameplay-visible value -- a wrong box makes projectiles sink into floors or
+ * float over them -- so it is pinned to the source's literal values
+ * (204_MarioSpecial1.c:33 for the fireball, 210_FoxSpecial1.c:27 for the
+ * blaster) rather than guessed. attack_offsets are all zero for the P1 weapons
+ * (fireball, blaster), so they are pinned too: a weapon whose offsets are
+ * non-zero will fail here until this table grows, which is the intended
+ * fail-closed behaviour for an asset this loader has never examined. */
+static s32 ndsRelocWeaponAttributesMatchSource(u32 asset_id,
+                                               const WPAttributes *attr)
+{
+    s32 i;
+
+    if (attr == NULL)
+    {
+        return FALSE;
+    }
+    for (i = 0; i < 2; i++)
+    {
+        if ((attr->attack_offsets[i].x != 0) ||
+            (attr->attack_offsets[i].y != 0) ||
+            (attr->attack_offsets[i].z != 0))
+        {
+            return FALSE;
+        }
+    }
+    if (asset_id == NDS_RELOC_ASSET_MARIO_SPECIAL1)
+    {
+        return (attr->map_coll_top == 50) &&
+               (attr->map_coll_center == 0) &&
+               (attr->map_coll_bottom == -50) &&
+               (attr->map_coll_width == 50);
+    }
+    if (asset_id == NDS_RELOC_ASSET_FOX_SPECIAL1)
+    {
+        return (attr->map_coll_top == 10) &&
+               (attr->map_coll_center == 0) &&
+               (attr->map_coll_bottom == -10) &&
+               (attr->map_coll_width == 10);
+    }
+    return TRUE;
+}
+
+static s32 ndsRelocNormalizeWeaponAttributesFile(
+    NDSRelocLoadedFile *loaded)
+{
+    u32 attr_offset;
+    u8 *attr_bytes;
+    WPAttributes *attr;
+
+    if ((loaded == NULL) || (loaded->data == NULL))
+    {
+        return FALSE;
+    }
+    if (loaded->asset_id == NDS_RELOC_ASSET_MARIO_SPECIAL1)
+    {
+        attr_offset = NDS_RELOC_SYMBOL_MARIO_SPECIAL1_FIREBALL_WEAPON_ATTRIBUTES;
+    }
+    else if (loaded->asset_id == NDS_RELOC_ASSET_FOX_SPECIAL1)
+    {
+        attr_offset = NDS_RELOC_SYMBOL_FOX_SPECIAL1_BLASTER_WEAPON_ATTRIBUTES;
+    }
+    else
+    {
+        return TRUE;
+    }
+    if (ndsRelocRangeInLoadedFile(
+            loaded, attr_offset, sizeof(WPAttributes)) == FALSE)
+    {
+        ndsRelocRecordExternalFixupFail(loaded->asset_id);
+        return FALSE;
+    }
+
+    attr_bytes = (u8 *)loaded->data + attr_offset;
+    attr = (WPAttributes *)attr_bytes;
+    if (loaded->format_fixups_applied == FALSE)
+    {
+        ndsRelocNormalizeWeaponAttributes(attr);
+        loaded->format_fixups_applied = TRUE;
+    }
+    if (ndsRelocWeaponAttributesMatchSource(loaded->asset_id, attr) == FALSE)
+    {
+        ndsRelocRecordExternalFixupFail(loaded->asset_id);
+        return FALSE;
+    }
+    return TRUE;
 }
 
 /* MPGroundData has TWO s16-only runs, both 4-aligned: the camera/map bounds
