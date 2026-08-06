@@ -1941,10 +1941,21 @@ static void ndsRendererAdapterApplyMvpRecalc(
 }
 
 #if NDS_RENDERER_HW_TRIANGLES
+#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+/* Cycle 99, charter section 3.12: the baked fighter draw plan holds DObj and
+ * loaded-file pointers, so it is re-derived at every scene entry -- including a
+ * START-restart out of Results -- and never trusted across one. Defined with
+ * the plan itself, next to the draw. */
+static void ndsFighterDrawPlanInvalidate(void);
+#endif
+
 static void ndsRendererAdapterResetSceneCaches(void)
 {
     ndsRendererHardwareResetSourceCaches();
     ndsRendererResetNativeStageValidationCache();
+#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+    ndsFighterDrawPlanInvalidate();
+#endif
     sNdsRendererAdapterCameraCacheFrame = 0u;
     sNdsRendererAdapterCameraCacheCount = 0u;
     sNdsRendererAdapterDObjWorldCache = NULL;
@@ -13485,6 +13496,248 @@ u32 gNdsTask91GxBusyEnd;
 u32 gNdsTask91GxStatOr;
 #endif
 
+#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+/* ---------------------------------------------------------------------------
+ * Cycle 99 -- the baked fighter draw plan.
+ *
+ * Cycle 98 proved the DObj collection is a match-load constant: 3,961 same, 0
+ * variant over a whole both-CPU match, hashing the selected DObj pointers
+ * together with the display list each is drawn from. Everything the eligibility
+ * pass then derives from that collection is a function of it plus the owner
+ * asset file -- the resolved NDSRelocLoadedFile, the root offsets, the material
+ * counts, the matrix bindings and the material DObjs. So the pass is not
+ * building anything per frame; it is re-proving a constant, once per selected
+ * root per fighter per frame, with a loaded-file search at its centre. Charter
+ * R2-03 names exactly this ("no PrepareProductionRun policy re-checks, no
+ * per-frame texture identity proof").
+ *
+ * This bakes that derivation once per (slot, owner-asset identity) and replays
+ * it. It deletes, per fighter per frame: the collection walk, the whole
+ * eligibility loop, and ndsRendererAdapterValidateNativeOwnerCached.
+ *
+ * Why dropping the validate is equivalence and not a shortcut: the plan key IS
+ * that validator's identity key (data / asset_id / owner_generation /
+ * data_size), and the offsets and material counts it compares are the very
+ * arrays the plan carries. A plan hit therefore implies the validator's
+ * identity path would have hit and returned TRUE without doing anything else.
+ *
+ * Section 3.12: the plan is keyed on the loaded file's identity and is
+ * additionally cleared from ndsRendererAdapterResetSceneCaches, so a scene
+ * entry -- including a START-restart out of Results -- re-derives it. No
+ * pointer is trusted across a scene boundary.
+ *
+ * gNdsFtrPlanRoute 0 is the default and reproduces shipped behaviour exactly:
+ * nothing is captured and nothing is replayed.
+ * ------------------------------------------------------------------------- */
+
+typedef enum NDSFighterDrawPlanResult
+{
+    nNDSFighterDrawPlanOk = 0,
+    nNDSFighterDrawPlanSelected,
+    nNDSFighterDrawPlanDisplayList,
+    nNDSFighterDrawPlanMaterialCount
+} NDSFighterDrawPlanResult;
+
+/* Derived data only. The memcmp verification below compares this whole struct,
+ * so it must contain nothing that is legitimately per-frame. */
+typedef struct NDSFighterDrawPlanData
+{
+    NDSFighterDLAllDrawCollection collection;
+    NDSRelocLoadedFile *owner_file;
+    NDSRelocLoadedFile *loaded[NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED];
+    u32 root_offsets[NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED];
+    u32 material_counts[NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED];
+    DObj *matrix_bindings[NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED];
+    DObj *material_dobjs[NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED];
+} NDSFighterDrawPlanData;
+
+typedef struct NDSFighterDrawPlan
+{
+    NDSFighterDrawPlanData data;
+    const void *key_data;
+    u32 key_asset_id;
+    u32 key_owner_generation;
+    u32 key_data_size;
+    u32 valid;
+} NDSFighterDrawPlan;
+
+static NDSFighterDrawPlan sNdsFighterDrawPlan[2];
+
+static void ndsFighterDrawPlanInvalidate(void)
+{
+    sNdsFighterDrawPlan[0].valid = 0u;
+    sNdsFighterDrawPlan[1].valid = 0u;
+}
+
+static sb32 ndsFighterDrawPlanHit(u32 slot)
+{
+    const NDSFighterDrawPlan *plan;
+    const NDSRelocLoadedFile *file;
+
+    if ((gNdsFtrPlanRoute == 0u) || (slot > 1u))
+    {
+        return FALSE;
+    }
+    plan = &sNdsFighterDrawPlan[slot];
+    file = plan->data.owner_file;
+    if ((plan->valid == 0u) || (file == NULL))
+    {
+        return FALSE;
+    }
+    return ((file->data == plan->key_data) &&
+            (file->asset_id == plan->key_asset_id) &&
+            (file->owner_generation == plan->key_owner_generation) &&
+            (file->data_size == plan->key_data_size)) ? TRUE : FALSE;
+}
+
+/* The eligibility pass, lifted out of the draw so the live path, the capture
+ * and the verification all run one copy of it. It writes the same workspace
+ * fields, in the same order, that the inline loop wrote, so route 0 performs
+ * byte-identical work to the build this replaces. Read-only apart from the
+ * workspace, which is what makes it safe to run twice in the verify arm. */
+static NDSFighterDrawPlanResult ndsFighterDrawPlanResolve(
+    u32 expected_asset_id,
+    const NDSFighterDLAllDrawCollection *collection,
+    NDSRendererAdapterNativeOwnerWorkspace *workspace,
+    NDSRelocLoadedFile **out_owner_file)
+{
+    NDSRelocLoadedFile *owner_file = NULL;
+    u32 i;
+
+    *out_owner_file = NULL;
+    if ((collection->selected_count == 0u) ||
+        (collection->selected_count > NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED))
+    {
+        return nNDSFighterDrawPlanSelected;
+    }
+    for (i = 0u; i < collection->selected_count; i++)
+    {
+        const NDSFighterDisplayContractEvent *event =
+            (sNdsFighterDisplayContractPlayback != FALSE) ?
+                &sNdsFighterDisplayContract.events[
+                    collection->indices[i]] : NULL;
+        const Gfx *native_dl =
+            (event != NULL) ? event->dl : collection->dobjs[i]->dl;
+        DObj *material_dobj =
+            (event != NULL) ? event->material_dobj : collection->dobjs[i];
+        NDSRelocLoadedFile *loaded =
+            ndsRelocFindLoadedFileContaining(
+                native_dl, sizeof(*native_dl));
+        MObj *mobj;
+        u32 material_count = 0u;
+
+        if ((native_dl == NULL) || (loaded == NULL) ||
+            (loaded->data == NULL) ||
+            (loaded->asset_id != expected_asset_id) ||
+            ((owner_file != NULL) && (loaded != owner_file)) ||
+            (loaded->data_size < sizeof(*native_dl)) ||
+            ((uintptr_t)native_dl < (uintptr_t)loaded->data) ||
+            (((uintptr_t)native_dl - (uintptr_t)loaded->data) >
+             (loaded->data_size - sizeof(*native_dl))))
+        {
+            *out_owner_file = owner_file;
+            return nNDSFighterDrawPlanDisplayList;
+        }
+        owner_file = loaded;
+        workspace->loaded[i] = loaded;
+        workspace->root_offsets[i] =
+            (u32)((uintptr_t)native_dl - (uintptr_t)loaded->data);
+        workspace->matrix_bindings[i] =
+            (event != NULL) ? event->matrix_dobj : collection->dobjs[i];
+        workspace->material_dobjs[i] = material_dobj;
+        for (mobj = (material_dobj != NULL) ? material_dobj->mobj : NULL;
+             mobj != NULL;
+             mobj = mobj->next)
+        {
+            material_count++;
+            if (material_count > NDS_RENDERER_ADAPTER_NATIVE_MATERIAL_MAX)
+            {
+                workspace->material_counts[i] = material_count;
+                *out_owner_file = owner_file;
+                return nNDSFighterDrawPlanMaterialCount;
+            }
+        }
+        workspace->material_counts[i] = material_count;
+    }
+    *out_owner_file = owner_file;
+    return nNDSFighterDrawPlanOk;
+}
+
+/* Gather the resolved prefix out of the workspace. Only the used prefix is
+ * touched; the tail beyond selected_count is never read by anything, and is
+ * left zeroed so a whole-struct memcmp is meaningful. */
+static void ndsFighterDrawPlanGather(
+    const NDSFighterDLAllDrawCollection *collection,
+    NDSRelocLoadedFile *owner_file,
+    const NDSRendererAdapterNativeOwnerWorkspace *workspace,
+    NDSFighterDrawPlanData *out)
+{
+    u32 i;
+
+    bzero(out, sizeof(*out));
+    out->collection = *collection;
+    out->owner_file = owner_file;
+    for (i = 0u; i < collection->selected_count; i++)
+    {
+        out->loaded[i] = workspace->loaded[i];
+        out->root_offsets[i] = workspace->root_offsets[i];
+        out->material_counts[i] = workspace->material_counts[i];
+        out->matrix_bindings[i] = workspace->matrix_bindings[i];
+        out->material_dobjs[i] = workspace->material_dobjs[i];
+    }
+}
+
+/* Replay the baked plan into the shared owner workspace the rest of the draw
+ * reads. This is the whole per-frame cost of the baked route. */
+static void ndsFighterDrawPlanApply(
+    const NDSFighterDrawPlanData *plan,
+    NDSRendererAdapterNativeOwnerWorkspace *workspace)
+{
+    u32 i;
+
+    for (i = 0u; i < plan->collection.selected_count; i++)
+    {
+        workspace->loaded[i] = plan->loaded[i];
+        workspace->root_offsets[i] = plan->root_offsets[i];
+        workspace->material_counts[i] = plan->material_counts[i];
+        workspace->matrix_bindings[i] = plan->matrix_bindings[i];
+        workspace->material_dobjs[i] = plan->material_dobjs[i];
+    }
+}
+
+#if NDS_TICK_HUD
+/* Equivalence by construction, and it supersedes any variance rate: on a draw
+ * that took the baked path, derive the plan live and memcmp it against the
+ * baked one. Zero mismatches over a whole match is the claim, and it covers
+ * fields no cycle-98 counter covered (material_dobj, matrix_dobj, the resolved
+ * file and the root offsets). Armed only by gNdsFtrPlanVerify, because
+ * computing both paths is exactly what a tick measurement must not do. The
+ * caller applies the baked plan AFTER this returns, so the workspace this
+ * scribbles on is overwritten before it is read. */
+static NDSFighterDrawPlanData sNdsFighterDrawPlanVerifyScratch;
+
+static void ndsFighterDrawPlanVerify(
+    u32 slot, DObj *root, u32 expected_asset_id,
+    NDSRendererAdapterNativeOwnerWorkspace *workspace)
+{
+    NDSFighterDrawPlanData *scratch = &sNdsFighterDrawPlanVerifyScratch;
+    NDSFighterDLAllDrawCollection live;
+    NDSRelocLoadedFile *owner_file = NULL;
+
+    ndsFighterCollectAllDObjsWithDL(root, &live);
+    (void)ndsFighterDrawPlanResolve(
+        expected_asset_id, &live, workspace, &owner_file);
+    ndsFighterDrawPlanGather(&live, owner_file, workspace, scratch);
+    gNdsFtrPlanVerifyRuns++;
+    if (memcmp(scratch, &sNdsFighterDrawPlan[slot].data,
+               sizeof(*scratch)) != 0)
+    {
+        gNdsFtrPlanVerifyMismatch++;
+    }
+}
+#endif
+#endif
+
 static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
                                                u16 *pixels, u32 pitch)
 {
@@ -13545,6 +13798,9 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
     sb32 native_owner_production_attempted = FALSE;
     sb32 native_owner_production_mode;
     sb32 native_owner_hierarchy_mode;
+    /* Cycle 99. TRUE == this draw replayed the baked plan instead of walking
+     * the DObj tree and re-resolving every selected root. */
+    sb32 native_owner_plan_hit = FALSE;
 #else
     NDSRendererNativeMaterial *native_materials =
         sNdsRendererAdapterNativeMaterials;
@@ -13593,7 +13849,22 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
     task91_total_start = cpuGetTiming();
     task91_phase_start = task91_total_start;
 #endif
+#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+    native_owner_plan_hit = ndsFighterDrawPlanHit(slot);
+    if (native_owner_plan_hit != FALSE)
+    {
+        /* The walk is deleted here, not memoised: the collection is a
+         * match-load constant (cycle 98, 3,961 same / 0 variant) and the plan
+         * carries the one it produced. */
+        collection = sNdsFighterDrawPlan[slot].data.collection;
+    }
+    else
+    {
+        ndsFighterCollectAllDObjsWithDL(root, &collection);
+    }
+#else
     ndsFighterCollectAllDObjsWithDL(root, &collection);
+#endif
 #if NDS_TASK91_DRAW_PHASE_CENSUS
     gNdsTask91WalkTicks += cpuGetTiming() - task91_phase_start;
 #endif
@@ -13785,6 +14056,95 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
         m2_phase_start = cpuGetTiming();
 #endif
 
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+        if (native_owner_plan_hit != FALSE)
+        {
+            /* THE DELETION. The eligibility pass and
+             * ndsRendererAdapterValidateNativeOwnerCached are both skipped
+             * outright, not memoised. The plan key is that validator's own
+             * identity key and the plan carries the offsets and material
+             * counts it compares, so a plan hit implies its identity path
+             * would have hit and returned TRUE without doing anything else. */
+#if NDS_TICK_HUD
+            gNdsFtrPlanHit++;
+            if (gNdsFtrPlanVerify != 0u)
+            {
+                ndsFighterDrawPlanVerify(
+                    slot, root, expected_asset_id,
+                    &sNdsRendererAdapterNativeOwnerWorkspace);
+            }
+#endif
+            native_owner_file = sNdsFighterDrawPlan[slot].data.owner_file;
+            ndsFighterDrawPlanApply(
+                &sNdsFighterDrawPlan[slot].data,
+                &sNdsRendererAdapterNativeOwnerWorkspace);
+        }
+        else
+        {
+            NDSFighterDrawPlanResult plan_result =
+                ndsFighterDrawPlanResolve(
+                    expected_asset_id, &collection,
+                    &sNdsRendererAdapterNativeOwnerWorkspace,
+                    &native_owner_file);
+
+            if (plan_result != nNDSFighterDrawPlanOk)
+            {
+                native_owner_enabled = FALSE;
+#if NDS_TICK_HUD
+                if (plan_result == nNDSFighterDrawPlanSelected)
+                {
+                    NDS_TICK_HUD_NATIVE_OWNER_FALLBACK(
+                        nNDSTickHudNativeOwnerFallbackSelected);
+                }
+                else if (plan_result == nNDSFighterDrawPlanMaterialCount)
+                {
+                    NDS_TICK_HUD_NATIVE_OWNER_FALLBACK(
+                        nNDSTickHudNativeOwnerFallbackMaterialCount);
+                }
+                else
+                {
+                    NDS_TICK_HUD_NATIVE_OWNER_FALLBACK(
+                        nNDSTickHudNativeOwnerFallbackDisplayList);
+                }
+#endif
+            }
+            if ((native_owner_enabled != FALSE) &&
+                ((native_owner_file == NULL) ||
+                 (ndsRendererAdapterValidateNativeOwnerCached(
+                      slot, native_owner_file,
+                      collection.selected_count,
+                      native_owner_root_offsets,
+                      native_owner_material_counts) == FALSE)))
+            {
+                native_owner_enabled = FALSE;
+#if NDS_TICK_HUD
+                NDS_TICK_HUD_NATIVE_OWNER_FALLBACK(
+                    nNDSTickHudNativeOwnerFallbackValidate);
+#endif
+            }
+            else if ((native_owner_enabled != FALSE) &&
+                     (gNdsFtrPlanRoute != 0u) && (slot <= 1u))
+            {
+                /* Bake. The derivation and the validator have both just
+                 * succeeded, so key the result on the same loaded-file
+                 * identity the validator caches. */
+                NDSFighterDrawPlan *plan = &sNdsFighterDrawPlan[slot];
+
+                ndsFighterDrawPlanGather(
+                    &collection, native_owner_file,
+                    &sNdsRendererAdapterNativeOwnerWorkspace, &plan->data);
+                plan->key_data = native_owner_file->data;
+                plan->key_asset_id = native_owner_file->asset_id;
+                plan->key_owner_generation =
+                    native_owner_file->owner_generation;
+                plan->key_data_size = native_owner_file->data_size;
+                plan->valid = 1u;
+#if NDS_TICK_HUD
+                gNdsFtrPlanBuild++;
+#endif
+            }
+        }
+#else
         if ((collection.selected_count == 0u) ||
             (collection.selected_count >
              NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED))
@@ -13863,19 +14223,11 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
         }
         if ((native_owner_enabled != FALSE) &&
             ((native_owner_file == NULL) ||
-#if NDS_RENDERER_PROFILE_LEVEL < 2
-            (ndsRendererAdapterValidateNativeOwnerCached(
-                 slot, native_owner_file,
-                 collection.selected_count,
-                 native_owner_root_offsets,
-                 native_owner_material_counts) == FALSE)))
-#else
             (ndsRendererValidateNativeFighterOwner(
                  slot, native_owner_file->data_size,
                  collection.selected_count,
                  native_owner_root_offsets,
                  native_owner_material_counts) == FALSE)))
-#endif
         {
             native_owner_enabled = FALSE;
 #if NDS_TICK_HUD
@@ -13883,6 +14235,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
                 nNDSTickHudNativeOwnerFallbackValidate);
 #endif
         }
+#endif
 #if NDS_TASK91_DRAW_PHASE_CENSUS
         task91_mark = cpuGetTiming();
         gNdsTask91ValidateTicks += task91_mark - task91_phase_start;

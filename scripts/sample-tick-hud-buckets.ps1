@@ -1026,6 +1026,43 @@ try {
         }
     })
 
+    # Standing rule 8 -- a routed arm must PROVE the route took, and until now
+    # that proof existed only on the console. The pokes above already print a
+    # readback, but nothing parsed it, so a poke that did not stick produced an
+    # artifact that is byte-for-byte as plausible as one that did. Cycle 99 lost
+    # a whole cycle to exactly that: three whole-match JSONs, every one of them
+    # complete, every one of them route 0, and the only evidence otherwise was
+    # in console scrollback that no longer exists. Parse the readback into the
+    # artifact, and refuse the run when it disagrees with what was requested --
+    # a percentile table from an arm whose route never engaged is not a slower
+    # candidate, it is a mislabelled control.
+    $setGlobalReadbacks = @(foreach ($pair in $SetGlobals) {
+        $n = ($pair -split '=')[0].Trim()
+        # printf reads it back with %u, so compare in the same 32-bit unsigned
+        # domain the guest stores it in; -SetGlobals accepts a leading '-'.
+        $wantU = [uint32]([int64](($pair -split '=')[1].Trim()) -band 0xFFFFFFFF)
+        $m = [regex]::Match($output, "SETGLOBAL=$([regex]::Escape($n)),([0-9]+)")
+        if (-not $m.Success) {
+            throw ("-SetGlobals $n produced no SETGLOBAL readback line, so the " +
+                "poke cannot be shown to have landed. GDB output:`n$output")
+        }
+        [PSCustomObject]@{
+            name = $n
+            requested = $wantU
+            readback = [uint32]$m.Groups[1].Value
+            stuck = ([uint32]$m.Groups[1].Value -eq $wantU)
+        }
+    })
+    $setGlobalFailed = @($setGlobalReadbacks | Where-Object { -not $_.stuck })
+    if ($setGlobalFailed.Count -ne 0) {
+        throw ('-SetGlobals did not stick: ' + (($setGlobalFailed | ForEach-Object {
+            '{0} requested {1} but read back {2}' -f $_.name, $_.requested, $_.readback
+        }) -join '; ') + '. The readback is taken in the same stop as the poke, ' +
+            'so this is a failed write, not the guest overwriting it later. ' +
+            'Refusing to emit a percentile table for an arm whose route did ' +
+            'not engage.')
+    }
+
     $melonVersion = (Get-Item -LiteralPath $context.MelonDSPath).VersionInfo.FileVersion
     $dldiEnabled = Get-MelonDSDldiEnabled -ConfigPath $configState.Config
     $result = [PSCustomObject]@{
@@ -1074,6 +1111,10 @@ try {
         cadenceViolations = if ($slipMatch.Success) {
             [uint64]$slipMatch.Groups[1].Value } else { 0 }
         extras = $extras
+        # What was poked and what it read back in the same stop. Empty for an
+        # unrouted run; the run throws above rather than reaching here with a
+        # readback that disagrees, so every value present here is `stuck`.
+        setGlobals = $setGlobalReadbacks
         # Per-stop gap accounting for a repeated-ring-dump run. Empty for a
         # single-stop run. A reader deciding whether a whole-match series is
         # trustworthy needs the skew per stop, not a pass/fail: a gap that

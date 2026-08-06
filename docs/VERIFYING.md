@@ -91,6 +91,35 @@ R2-07 iteration rules (cycle 79):
   proves the route took, and that counter is checked before its ticks are
   read.** Do not diagnose this class from console output — the console is
   exactly where it hides.
+- **THE WHOLE-MATCH NOISE FLOOR, calibrated cycle 100. The ±5,376 quoted
+  elsewhere is a 128-frame-era number and is far too tight.**
+  - *Same binary, same invocation: **zero*** — the run reproduces
+    bit-identically (six runs, three binaries, rows-CSV SHA256 equal across
+    every repeat pair). A figure that fails to reproduce exactly means
+    something in the invocation or the binary changed.
+  - *Cross-build `WORK-H` P95: **≥14,080, sign unreliable*** — one change,
+    three A/B pairs, P95 moved −8,832, −2,368 and **+5,248**. This holds even
+    when both arms link at the identical `fake_heap_start` with identical
+    text/data/bss.
+  - *Cross-build `WORK-H` P50: ~5,700*, and P50 kept its sign in all three
+    pairs. **Rank an A/B on P50, mean and over-gate count.** P95 is the gate's
+    definition; it is not a usable discriminator at these magnitudes.
+  - So the protocol is: run each arm twice and require each to reproduce
+    itself. Two self-reproducing arms give an exact delta; judging that delta
+    still needs the cross-build floors above, because layout-identical is not
+    execution-identical.
+- **A `-SetGlobals` poke can land and still not be seen (cycle 100).** The stub
+  writes main RAM; the ARM9 keeps its own copy. When the target shares its
+  32-byte D-cache line with anything the guest writes, the line stays dirty, the
+  guest reads its stale value forever, and each writeback stamps that value back
+  over the poke — while the readback still reports success. Measured on
+  `gNdsFtrPlanRoute`: poked 7, read back 7, **0** hits over 1,216 draws, 0 at end
+  of run; a sibling in the previous line survived the same batch and one 12 bytes
+  higher in the *same* line died with it. Route a flag at runtime only if it owns
+  a clean line — otherwise put it at build time. The harness now records every
+  poke's readback in the JSON (`setGlobals`) and throws instead of printing a
+  percentile table when a poke did not take, but note it **cannot** catch this
+  case: the readback comes from RAM, which is exactly where the write did land.
 - **The general form: ANY construct between the harness and your eyes hides
   its failures.** This has now cost four cycles as `Select-Object -First`, as
   `Where-Object`, and (cycle 92) as the redirect itself — `2>&1 | Out-File`

@@ -3230,6 +3230,44 @@ volatile u32 gNdsTickHudNativeOwnerFallbackByReason[
 volatile u32 gNdsTask75AssetLoadCount;
 #endif
 #endif
+/* Cycle 99: the baked fighter draw plan. These sit OUTSIDE the NDS_TICK_HUD
+ * block on purpose and the placement is load-bearing: gNdsFtrPlanRoute is the
+ * shipped route selector, read by the draw itself, so defining it inside that
+ * block broke the NDS_TICK_HUD=0 link with an undefined reference from
+ * ndsFighterMarioFoxDLAllDrawForSlot. That is exactly what the proof-target
+ * link check exists to catch -- it caught it here on the first try.
+ *
+ * The other five are written only from #if NDS_TICK_HUD code and referenced
+ * only by the taskman_seam marker block, so --gc-sections drops them from the
+ * shipped ROM; the shipped cost of this group is the four bytes of Route. */
+/* Cycle 100: the route is selected at BUILD time, not poked, and it is pinned
+ * to .data in both arms.
+ *
+ * The poke does not work here and the mechanism is measured, not guessed:
+ * `-SetGlobals` writes main RAM through the GDB stub, and this flag shares its
+ * 32-byte ARM9 D-cache line with gNdsTickHudVBlankWaitTicks, which the tick HUD
+ * writes every frame. That line is permanently resident and dirty, so the guest
+ * reads its stale cached 0 and every writeback stamps that 0 back over the
+ * poke. Measured: poked 7, read back 7 in the same stop, 0 plan hits over 1,216
+ * draws, 0 at end of run -- while gNdsFtrPlanVerify four bytes lower, in the
+ * PREVIOUS cache line, survived the identical batch. There is no rogue store;
+ * the disassembly's only three references to this address are loads.
+ *
+ * Pinning it to .data (rather than letting the 0 arm fall into .bss) is what
+ * makes the A/B honest: both arms then place every section identically and
+ * differ in exactly this one initialised word. */
+volatile u32 gNdsFtrPlanRoute __attribute__((section(".data"))) =
+    NDS_FTR_PLAN_ROUTE;
+/* Same treatment, and here the cache-line argument is not merely a hazard but a
+ * certainty: gNdsFtrPlanVerify shares its 32-byte line with gNdsFtrPlanHit,
+ * which increments on every baked draw, so on the arm worth verifying the line
+ * is always dirty and a poke is always stamped back to 0. */
+volatile u32 gNdsFtrPlanVerify __attribute__((section(".data"))) =
+    NDS_FTR_PLAN_VERIFY;
+volatile u32 gNdsFtrPlanHit;
+volatile u32 gNdsFtrPlanBuild;
+volatile u32 gNdsFtrPlanVerifyRuns;
+volatile u32 gNdsFtrPlanVerifyMismatch;
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
 volatile u32 gNdsRendererProfileLoopWallTicks;
 volatile u32 gNdsRendererProfileInputTicks;

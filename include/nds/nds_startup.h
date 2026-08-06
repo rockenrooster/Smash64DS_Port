@@ -4559,6 +4559,31 @@ extern volatile u32 gNdsFtrPreMatEvict;
 extern volatile u32 gNdsFtrPreResetTransient;
 extern volatile u32 gNdsFtrPreResetRuntime;
 #endif
+
+/* Cycle 99 -- the baked fighter draw plan (reloc_backend_renderer_dl.c).
+ *
+ * gNdsFtrPlanRoute 0 (default) = the eligibility pass and the owner-validate
+ * cache run every draw, exactly as shipped. 1 = both are replaced by replaying
+ * a plan baked on the first draw after scene entry.
+ *
+ * Hit/Build are the engagement proof and the negative control in one: neither
+ * can be non-zero on route 0, and Hit cannot be zero on route 1 once the plan
+ * is baked. Build is the per-scene bake count, so it also says whether the
+ * plan is being thrown away and re-derived.
+ *
+ * gNdsFtrPlanVerify 1 arms the equivalence check: derive the plan live on
+ * every baked draw and memcmp it against the baked one.
+ * VerifyMismatch is the whole claim -- 0 over a match means the baked plan is
+ * byte-identical to what the live pass would have produced, which is a
+ * stronger statement than any variance rate. VerifyRuns is its control: a zero
+ * mismatch count with a zero run count proves nothing. Never read ticks from a
+ * run with Verify armed; it computes both paths by design. */
+extern volatile u32 gNdsFtrPlanRoute;
+extern volatile u32 gNdsFtrPlanVerify;
+extern volatile u32 gNdsFtrPlanHit;
+extern volatile u32 gNdsFtrPlanBuild;
+extern volatile u32 gNdsFtrPlanVerifyRuns;
+extern volatile u32 gNdsFtrPlanVerifyMismatch;
 /* The Task 75 load counter lives inside the NDS_TICK_HUD block above, but its
  * call site in reloc_backend_assets.c is unconditional, so a non-tick-HUD
  * target (the published ROM) saw no definition at all. Fail the macro open to a

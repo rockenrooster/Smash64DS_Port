@@ -73,9 +73,23 @@ with its arm AND its coverage; never present a both-CPU figure as the Boundary
 number (`Makefile:305-308`). Loading states are excluded from the gate by the
 owner's stated rule: drop frames with `SRC` > 2× that arm's own `SRC` median.
 
-Noise floors: `WORK-H` P95 cross-build ±5,376; per-bucket placement ≥8,544 —
-buckets locate, `WORK-H` decides. 1.85 cycles of `FTR` mean per byte of added
-ARM text: a change that adds text must beat its own footprint.
+Noise floors — **recalibrated whole-match, cycle 100; the old ±5,376 was a
+128-frame-era number and is far too tight**:
+
+- **Same binary, same invocation: ZERO.** A whole-match run reproduces
+  **bit-identically** — six runs over three binaries, rows-CSV SHA256 equal
+  across every repeat pair. A figure that does not reproduce exactly means the
+  invocation or the binary changed, not that the host was noisy.
+- **Cross-build `WORK-H` P95: ≥14,080, and the sign is not reliable.** The same
+  change measured on three A/B pairs moved P95 by −8,832, −2,368 and **+5,248**.
+  Do not decide anything on a P95 delta below ~14,000, even between builds that
+  link at the identical address.
+- **Cross-build `WORK-H` P50: ~5,700**, and P50 kept its sign in all three
+  pairs. **Rank on P50, mean and over-gate count; P95 is the gate's definition,
+  not a usable A/B discriminator at these magnitudes.**
+- Per-bucket placement ≥8,544 — buckets locate, `WORK-H` decides. 1.85 cycles of
+  `FTR` mean per byte of added ARM text: a change that adds text must beat its
+  own footprint.
 
 ### The load-frame exclusion does NOT select loading states — do not apply it (cycle 81)
 
@@ -1705,26 +1719,77 @@ exactly. Cost: text **+1,008**, data 0, bss **+2,816**; headroom 108,480 →
 model predicts for +3,840. `NDS_TICK_HUD=0` links and carries only
 `gNdsFtrPlanRoute` (4 B) and `sNdsFighterDrawPlan` (1,864 B) — no instrument.
 
-**3. THE BLOCKER, and it is not this row's code: something zeroes a fixed `.bss`
-address.** `gNdsFtrPlanRoute` linked at **`0x0226c564`** and the poke engaged;
-after an unrelated relink moved it to **`0x0226c560`** the identical poke stops
-sticking — `set var gNdsFtrPlanRoute=7` reports no gdb error and the variable
-reads **0** at end of run, while `gNdsFtrPlanVerify=5` poked in the *same* gdb
-batch, four bytes lower, survives. **No source anywhere writes
-`gNdsFtrPlanRoute`** (whole-tree grep: 2 reads, 1 definition, 1 extern). So a
-4-byte store lands on `0x0226c560` and silently destroys whatever global the
-linker puts there. That is a live memory defect, it is older than this row, and
-**it makes `-SetGlobals` unreliable as a function of link address** — which is
-the mechanism standing rule 7 depends on. Find the writer before the next
-dual-route arm is trusted.
+**3. RETRACTED, cycle 100 — there is no rogue store and the shipped ROM is not
+corrupt.** This row read "something zeroes a fixed `.bss` address … that is a
+live memory defect, it is older than this row". It is neither. The poke *lands*
+and the guest never sees it: `-SetGlobals` writes main RAM through the GDB stub,
+while `gNdsFtrPlanRoute` at `0x0226c560` begins a 32-byte ARM9 D-cache line
+shared with `gNdsTickHudVBlankWaitTicks` (`0x0226c564`), which the tick HUD
+writes every frame. That line is permanently resident and dirty, so the guest
+keeps reading its stale cached 0 and each writeback stamps that 0 back over the
+poke. See the cycle-100 section for the three-modality proof. `gNdsFtrPlanRoute`
+is now selected at build time and the blocker is closed.
 
-**4. Same-binary run-to-run noise is ~9,800 on `WORK-H` P95.** Two whole-match
-runs of one binary in one route read **1,689,984** and **1,699,776**
-(`artifacts/performance/2026-08-05_c99-plan-route0-bothcpu.json` and
-`...-routefailed-armB-bothcpu.json` — both are route 0, the second is
-mislabelled by intent and renamed to say so). That is **above** the ±5,376
-cross-build floor the board quotes, so a single-run A/B inside ~10,000 is not
-resolvable. Neither is a baseline; **1,624,064 still stands.**
+**4. SUPERSEDED, cycle 100 — "same-binary noise is ~9,800" is wrong.** The two
+runs quoted here (**1,689,984** and **1,699,776**) are not a repeat pair: 1,586
+of their 1,600 rows differ, largest single-frame delta −4,196,672, so they are
+two different trajectory alignments rather than jitter on one. Measured
+properly, a whole-match run **reproduces bit-identically** under a fixed binary
+and invocation. The real floor is cross-build, it is much larger, and it is
+calibrated in the cycle-100 section. Neither run is a baseline; **1,624,064
+still stands.**
+
+### The baked draw plan is PRICED and KEPT — a P50 lever, not gate progress (cycle 100)
+
+**Default flipped to on** (`NDS_FTR_PLAN_ROUTE ?= 1`). The plan is now selected
+at build time, not poked, for the reason in item 3 above.
+
+**Equivalence first, and this time it survives in artifacts.** The cycle-99
+claim of `VerifyMismatch` 0 existed only in console scrollback — all three c99
+JSONs record `gNdsFtrPlanVerifyRuns` **0**, i.e. no surviving run ever engaged
+the route. Re-established on both arms, whole match, 1,600 samples:
+
+| arm | `VerifyRuns` | `VerifyMismatch` | `Hit`+`Build` | draws | fighter triangles |
+|---|---:|---:|---:|---:|---|
+| both-CPU | 3,960 | **0** | 3,960+3 | 3,963 | 636,480 / 604,044 |
+| Boundary | 3,954 | **0** | 3,954+3 | 3,957 | 612,800 / 624,852 |
+
+`Hit + Build == draw count` on both, and triangles are **byte-identical to the
+control arm** on both. `gNdsFtrPreValidateReuse` falls **3,961 → 1**: the
+owner-validate now runs 3 times a match instead of 3,963.
+
+**The price — three A/B pairs, each pair two layout-identical builds** (both
+arms pin the route flag to `.data`, so every pair links at the same
+`fake_heap_start` with identical text/data/bss and the only difference is one
+initialised word). Whole match, 1,600 samples, frames 442–2041, DLDI ON,
+exclusion OFF, `slips=0`:
+
+| pair | arm | `WORK-H` P50 | `WORK-H` P95 | over gate | `named` mean |
+|---|---|---:|---:|---:|---:|
+| c100b | **Boundary** | **−3,776** | −8,832 | −6 | −6,841 |
+| c100 | both-CPU | −5,056 | −2,368 | −38 | −15,208 |
+| c100b | both-CPU | **−9,472** | **+5,248** | −31 | −4,916 |
+
+**P50 falls in every pair; P95 changes sign between pairs.** The P95 delta
+spans 14,080 across three pairs of the same change, so **P95 is not resolvable
+at this magnitude and no gate figure may be banked from this row.** This is the
+same shape G1 measured and the board already predicted for `FTR`: it is a P50
+lever, anti-correlated with the tail. `FTR` mean −9,415, `FTR` clean mean
+−6,485 (c100 both-CPU pair).
+
+Cost: shipped ROM pays `sNdsFighterDrawPlan` **1,864 B** `.bss` plus **8 B**
+`.data` (the two route flags, which `.data` pinning keeps out of
+`--gc-sections`), and **no instrument** — the `NDS_TICK_HUD=0` link
+(`smash64ds-battle-playable-proof-hwtri`) carries exactly those three symbols
+and none of the counters. Lab arms link at `0x0227af24`, **104,672 B** proven
+headroom; the shipped-config link at `0x02272da4`, **137,824 B**. Arena
+`ChosenSize` 1,347,584 / `AllocFailCount` 7 and heap
+`gNdsTaskmanGeneralHeapFreeMin` 220,312 are **identical in both arms**, so the
+plan adds no runtime memory pressure. Boundary verifier green; root ROMs
+unchanged.
+
+**Not done:** no new gate baseline (1,624,064 still stands), and the plan was
+not extended past the fighter draw.
 
 ### G3 (original row, Boundary-derived) — the effect packet path
 
@@ -1970,6 +2035,28 @@ row 1's execution plan.
    `-SetGlobals` did this on its first two runs (see `VERIFYING.md`). Pair
    every `-SetGlobals` with an `-ExtraGlobals` counter that cannot be zero if
    the route engaged.
+
+   **The readback is now IN THE ARTIFACT (cycle 100).** The harness always
+   printed `SETGLOBAL=<name>,<value>` straight after each poke, but nothing
+   parsed it, so the proof lived on the console — the one place this project
+   has repeatedly agreed not to read. `sample-tick-hud-buckets.ps1` now parses
+   it into a `setGlobals` block (`requested` / `readback` / `stuck`) and
+   **throws** rather than emitting a percentile table when a poke did not take.
+9. **A poke can land and still not be seen — check the cache line before
+   trusting `-SetGlobals`.** The stub writes main RAM; the ARM9 keeps its own
+   copy. If the target shares its 32-byte line with anything the guest writes,
+   that line is dirty, the guest keeps reading its stale value, and every
+   writeback stamps it back over the poke — the readback still says the write
+   succeeded. Measured cycle 100 on `gNdsFtrPlanRoute` (`0x0226c560`, sharing a
+   line with the per-frame `gNdsTickHudVBlankWaitTicks`): poked 7, read back 7,
+   **0** route hits over 1,216 draws, 0 at end of run — while a sibling four
+   bytes lower in the **previous** line survived the identical batch, and a
+   second variable 12 bytes *higher* in the **same** line was erased with it. A
+   4-byte store cannot do that; a 32-byte line writeback does exactly it, and
+   the disassembly's only three references to the address are loads.
+   **Consequence: a flag that must be routed at runtime needs its own clean
+   cache line, or it belongs at build time.** The fighter draw plan took the
+   build-time route (`NDS_FTR_PLAN_ROUTE`).
 
 ## Acceptance Matrix
 

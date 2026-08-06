@@ -5137,7 +5137,14 @@ static void ndsBattlePlayableFinalizePresentedIteration(void)
             gNdsFtrPreMatCalls + gNdsFtrPreMatSame +
             gNdsFtrPreMatVariant + gNdsFtrPreMatNew +
             gNdsFtrPreMatEvict + gNdsFtrPreResetTransient +
-            gNdsFtrPreResetRuntime;
+            gNdsFtrPreResetRuntime +
+            /* Cycle 99 baked-plan engagement/equivalence counters, same
+             * reason: written only from #if NDS_TICK_HUD blocks and read only
+             * by a debugger. gNdsFtrPlanRoute/Verify are poked rather than
+             * written by the guest, so they need this even more. */
+            gNdsFtrPlanRoute + gNdsFtrPlanVerify + gNdsFtrPlanHit +
+            gNdsFtrPlanBuild + gNdsFtrPlanVerifyRuns +
+            gNdsFtrPlanVerifyMismatch;
         gNdsTickHudBuckets[nNDSTickHudBucketFighters] =
             gNdsTickHudFighterTicks;
         gNdsTickHudBuckets[nNDSTickHudBucketStage] = gNdsTickHudStageTicks;

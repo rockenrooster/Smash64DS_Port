@@ -405,6 +405,41 @@ NDS_TASK106_UPDATES_PER_PRESENT ?= 2
 # update rate unchanged, so the tail is loading, not simulation.
 # Sample with -FallbackCensus -RingDump; lab only, default 0.
 NDS_TASK75_LOAD_CENSUS ?= 0
+# Cycle 100: the INITIAL VALUE of gNdsFtrPlanRoute (the baked fighter draw
+# plan). 0 = the eligibility pass and the owner-validate cache run every draw,
+# exactly as shipped; 1 = both are replaced by replaying a plan baked at scene
+# entry.
+#
+# This exists because the runtime poke cannot reach that flag, and the reason is
+# worth stating so nobody re-derives it: `-SetGlobals` writes main RAM through
+# the GDB stub, but gNdsFtrPlanRoute shares its 32-byte ARM9 D-cache line with
+# gNdsTickHudVBlankWaitTicks, which the tick HUD writes every frame. The line is
+# therefore permanently resident and dirty, so the guest keeps reading its stale
+# cached 0 and each writeback stamps that 0 back over the poke. Measured cycle
+# 100: poked 7, read back 7 in the same stop, 0 plan hits over 1,216 draws, and
+# 0 at end of run -- while a sibling four bytes lower, in the PREVIOUS cache
+# line, survived the same batch. Both arms compile identical text and both keep
+# the flag in .data (see diagnostics.c), so the two builds differ in exactly one
+# word of initialised data and nothing else moves.
+#
+# DEFAULT 1 = KEEP, cycle 100. Equivalence first: gNdsFtrPlanVerifyMismatch 0
+# over 3,960 verified draws on the both-CPU arm and 3,954 on Boundary, with
+# fighter triangles byte-identical on both (636,480/604,044 and
+# 612,800/624,852), and the validate call count falling 3,963 -> 3 per match.
+# Price, three A/B pairs of layout-identical builds, whole match, 1,600 samples:
+# WORK-H P50 -3,776 (Boundary), -5,056 and -9,472 (both-CPU); over-gate frames
+# -6, -38, -31. It is a P50/mean lever and NOT gate progress -- the P95 delta
+# read -8,832, -2,368 and +5,248 across those same pairs, so P95 is not
+# resolvable for a change this size and no gate figure may be banked from it.
+NDS_FTR_PLAN_ROUTE ?= 1
+# Cycle 100: arm the baked plan's equivalence check (derive the plan live on
+# every baked draw and memcmp it against the baked one). Build-time for the same
+# cache-line reason as the route above, and the reason is sharper here:
+# gNdsFtrPlanVerify shares its line with gNdsFtrPlanHit, which increments on
+# every baked draw -- so on the arm you would want to verify, the line is
+# guaranteed dirty and the poke is guaranteed to be stamped back to 0.
+# Never read ticks from a build with this on; it computes both paths by design.
+NDS_FTR_PLAN_VERIFY ?= 0
 # Second-entry (Sudden Death / rematch) MObj chain validator. Records the
 # fighter material chain before the counting pass and again immediately before
 # the writing pass, so "when does the list first become invalid" is measured
@@ -2543,6 +2578,8 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_TASK104_STAGE_STATS_ELISION $(NDS_TASK104_STAGE_STATS_ELISION)'; \
 		echo '#define NDS_TASK106_UPDATES_PER_PRESENT $(NDS_TASK106_UPDATES_PER_PRESENT)u'; \
 		echo '#define NDS_TASK75_LOAD_CENSUS $(NDS_TASK75_LOAD_CENSUS)'; \
+		echo '#define NDS_FTR_PLAN_ROUTE $(NDS_FTR_PLAN_ROUTE)u'; \
+		echo '#define NDS_FTR_PLAN_VERIFY $(NDS_FTR_PLAN_VERIFY)u'; \
 		echo '#define NDS_R2_SECOND_ENTRY_DIAG $(NDS_R2_SECOND_ENTRY_DIAG)'; \
 		echo '#define NDS_R2_PATH $(NDS_R2_PATH)'; \
 		echo '#define NDS_R2_STAGE_DIRECT $(NDS_R2_STAGE_DIRECT)'; \
