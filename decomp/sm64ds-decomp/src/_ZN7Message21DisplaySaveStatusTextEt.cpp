@@ -1,0 +1,35 @@
+//cpp
+// @symbol _ZN7Message21DisplaySaveStatusTextEt
+/* recovered: named members + shared header, declarations from a shared header */
+#include "decl_common.h"
+/* recovered: named members + shared header */
+#include "Message.h"
+extern "C" {
+extern unsigned short data_0209d6d4;
+extern unsigned char data_0209d660;
+extern unsigned char data_0209d668;
+extern unsigned char data_0209d6a8;
+extern int _ZN3G2S13GetBG0CharPtrEv(void);
+extern int _ZN3G2S12GetBG0ScrPtrEv(void);
+extern void MultiStore_Int(int a, int b, int n);
+extern void MultiStore16(int a, int b, int n);
+
+void _ZN7Message21DisplaySaveStatusTextEt(unsigned short n) {
+    volatile int li;
+    volatile unsigned short ls;
+    int p, s;
+    data_0209d6d4 = n;
+    data_0209d660 = 0;
+    func_0201eaac();
+    data_0209d668 = 1;
+    data_0209d6a8 = 0;
+    data_0209d674 = 0;
+    p = _ZN3G2S13GetBG0CharPtrEv() + 0x4000;
+    li = 0;
+    MultiStore_Int(li, p, 0x2000);
+    s = _ZN3G2S12GetBG0ScrPtrEv();
+    ls = 0x2ff;
+    MultiStore16(ls, s, 0x800);
+    func_0201d418(0x109, 0x70);
+}
+}

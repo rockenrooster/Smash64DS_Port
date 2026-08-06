@@ -1,0 +1,80 @@
+#pragma once
+
+/**
+ * RelocPointerTable — 32-bit token ↔ 64-bit pointer mapping.
+ *
+ * On N64, relocated pointer slots in file data are 4 bytes (sizeof(void*) == 4).
+ * On 64-bit PC, void* is 8 bytes and won't fit in the 4-byte slots.
+ *
+ * The token system solves this:
+ *   - During relocation, the bridge computes the real 64-bit pointer and
+ *     registers it, getting back a 32-bit token.
+ *   - The token is written into the 4-byte data slot (fits perfectly).
+ *   - Game code resolves tokens back to pointers via RELOC_RESOLVE().
+ *
+ * Token 0 is reserved for NULL.
+ * Tokens contain a generation plus an index into a flat array — resolution is
+ * O(1), and stale tokens from earlier scene/setup generations are rejected.
+ */
+
+#include <stddef.h>
+#include <stdint.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/**
+ * Register a 64-bit pointer and get back a 32-bit token.
+ * Passing NULL returns 0 (the NULL token).
+ */
+uint32_t portRelocRegisterPointer(void *ptr);
+
+/**
+ * Resolve a 32-bit token back to a 64-bit pointer.
+ * Token 0 returns NULL.
+ */
+void *portRelocResolvePointer(uint32_t token);
+void *portRelocResolvePointerDebug(uint32_t token, const char *file, int line);
+
+/**
+ * Try to resolve a token without logging when the value is not registered.
+ * This is useful for consumers that must distinguish reloc tokens from
+ * other 32-bit address encodings such as N64 segmented addresses.
+ */
+void *portRelocTryResolvePointer(uint32_t token);
+
+/**
+ * Reset the token table (hard wipe — clears all slots, resets free list).
+ *
+ * Historically called from lbRelocInitSetup() on every scene boundary,
+ * which invalidated tokens for intern-buffer files that persist across
+ * scenes (mainmotion, submotion, model, special1-4, shieldpose) — the
+ * source of the variant-1/2/3 stale-data crash family. With the per-slot
+ * generational model this wholesale reset is no longer needed for normal
+ * scene cycling; use portRelocInvalidateRange() instead. Kept for
+ * diagnostic or test paths that need to discard all token state.
+ */
+void portRelocResetPointerTable(void);
+
+/**
+ * Selectively invalidate slots whose stored pointer falls in [base, base+size).
+ * Each affected slot is NULLed and its generation bumped so stale tokens
+ * fail decode; the slot index is recycled via an internal free list.
+ *
+ * Called from port_taskman_evict_arena_caches() with the scene-arena
+ * range so tokens for arena-allocated data become stale at exactly the
+ * point that data is freed, while tokens pointing at the intern buffer
+ * (which survives the scene transition) remain valid.
+ */
+void portRelocInvalidateRange(const void *base, size_t size);
+
+#ifdef __cplusplus
+}
+#endif
+
+/**
+ * Macro for game code to resolve a token stored in a struct field.
+ * Usage: void *ptr = RELOC_RESOLVE(dobjdesc->dl_token);
+ */
+#define RELOC_RESOLVE(token) portRelocResolvePointer((uint32_t)(token))

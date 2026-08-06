@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>SSB64 CSS Icon Editor</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #1a1a1a; color: #ddd;
+    font-family: monospace; font-size: 13px;
+    display: flex; flex-direction: column; align-items: center;
+    padding: 12px; gap: 10px; min-height: 100vh;
+  }
+  h1 { font-size: 15px; letter-spacing: 1px; color: #aaa; }
+
+  /* --- toolbar --- */
+  #toolbar {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    background: #252525; padding: 8px 12px; border-radius: 6px; width: 100%; max-width: 820px;
+  }
+  .tool-btn {
+    background: #333; border: 1px solid #555; color: #ddd;
+    padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 12px;
+    transition: background 0.1s;
+  }
+  .tool-btn:hover { background: #444; }
+  .tool-btn.active { background: #5a8de0; border-color: #7aacff; color: #fff; }
+  .sep { width: 1px; height: 24px; background: #444; }
+
+  /* --- color picker area --- */
+  #color-area {
+    display: flex; align-items: center; gap: 8px;
+  }
+  #color-swatch {
+    width: 32px; height: 32px; border: 2px solid #888; border-radius: 3px;
+    cursor: pointer; flex-shrink: 0;
+  }
+  #color-hex {
+    width: 76px; background: #111; border: 1px solid #555; color: #eee;
+    padding: 3px 5px; border-radius: 3px; font-family: monospace; font-size: 12px;
+    text-align: center;
+  }
+  #alpha-toggle {
+    display: flex; align-items: center; gap: 4px; font-size: 11px;
+  }
+  label[for="native-picker"] { cursor: pointer; }
+
+  /* --- palette row --- */
+  #palette-row {
+    display: flex; align-items: center; gap: 4px; flex-wrap: wrap;
+    background: #252525; padding: 6px 10px; border-radius: 6px;
+    width: 100%; max-width: 820px;
+  }
+  .palette-label { color: #888; font-size: 11px; margin-right: 4px; }
+  .pal-swatch {
+    width: 20px; height: 20px; border: 1px solid #555; border-radius: 2px;
+    cursor: pointer; flex-shrink: 0;
+    transition: transform 0.08s;
+  }
+  .pal-swatch:hover { transform: scale(1.3); border-color: #aaa; }
+
+  /* --- canvas container --- */
+  #canvas-wrap {
+    position: relative; cursor: crosshair;
+    border: 1px solid #444;
+    image-rendering: pixelated;
+    /* prevent context menu on right-click */
+  }
+  #canvas-main {
+    display: block;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+  }
+  #canvas-grid {
+    position: absolute; top: 0; left: 0; pointer-events: none;
+    image-rendering: pixelated;
+  }
+
+  /* --- status bar --- */
+  #statusbar {
+    font-size: 11px; color: #888; width: 100%; max-width: 820px;
+    display: flex; justify-content: space-between; padding: 0 4px;
+  }
+
+  /* --- toast --- */
+  #toast {
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+    background: #2a6; color: #fff; padding: 8px 20px; border-radius: 20px;
+    font-size: 13px; opacity: 0; transition: opacity 0.3s;
+    pointer-events: none; z-index: 100;
+  }
+  #toast.show { opacity: 1; }
+
+  /* --- native picker hidden --- */
+  #native-picker { opacity: 0; position: absolute; width: 0; height: 0; }
+</style>
+</head>
+<body>
+
+<h1>SSB64 CSS Icon Editor — RGBA16 (5-5-5-1)</h1>
+
+<!-- Toolbar -->
+<div id="toolbar">
+  <div id="color-area">
+    <div id="color-swatch" title="Click to open color picker"></div>
+    <input type="color" id="native-picker" tabindex="-1">
+    <input type="text" id="color-hex" maxlength="7" title="Hex color (snapped to RGBA16)">
+    <div id="alpha-toggle">
+      <input type="checkbox" id="alpha-on" checked>
+      <label for="alpha-on">Opaque</label>
+    </div>
+  </div>
+
+  <div class="sep"></div>
+
+  <button class="tool-btn active" id="btn-pencil"  data-tool="pencil"  title="Pencil (P)">✏ Pencil</button>
+  <button class="tool-btn"        id="btn-fill"    data-tool="fill"    title="Fill bucket (F)">🪣 Fill</button>
+  <button class="tool-btn"        id="btn-eyedrop" data-tool="eyedrop" title="Eyedropper (E)">🔍 Pick</button>
+
+  <div class="sep"></div>
+
+  <button class="tool-btn" id="btn-undo" title="Undo (Ctrl/Cmd-Z)">↩ Undo</button>
+  <button class="tool-btn" id="btn-redo" title="Redo (Ctrl/Cmd-Shift-Z)">↪ Redo</button>
+
+  <div class="sep"></div>
+
+  <button class="tool-btn" id="btn-save"   title="Save PNG to disk">💾 Save</button>
+  <button class="tool-btn" id="btn-reload" title="Reload from disk">🔄 Reload</button>
+  <button class="tool-btn" id="btn-quit"   title="Shut down server and close">✖ Quit</button>
+</div>
+
+<!-- Palette row (in-image colors) -->
+<div id="palette-row">
+  <span class="palette-label">IN-IMAGE:</span>
+  <!-- populated by JS -->
+</div>
+
+<!-- Canvas -->
+<div id="canvas-wrap">
+  <canvas id="canvas-main"></canvas>
+  <canvas id="canvas-grid"></canvas>
+</div>
+
+<!-- Status bar -->
+<div id="statusbar">
+  <span id="status-pos">—</span>
+  <span id="status-color">—</span>
+  <span id="status-tool">Pencil</span>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<script>
+const W = 48, H = 36;
+const ZOOM = 16;          // pixels per cell
+const GRID_COLOR = "rgba(80,80,80,0.6)";
+const MAX_HISTORY = 20;
+const INITIAL_DATA_URL = "__INITIAL_PNG_DATA_URL__";
+
+function snapChannel(v) {
+  return Math.min(248, Math.round(v / 8) * 8);
+}
+function snapRGBA16(r, g, b, a) {
+  return {
+    r: snapChannel(r),
+    g: snapChannel(g),
+    b: snapChannel(b),
+    a: a >= 128 ? 255 : 0,
+  };
+}
+function colorToHex(r, g, b) {
+  return '#' + [r, g, b].map(v => v.toString(16).padStart(2, '0')).join('');
+}
+function hexToRgb(hex) {
+  hex = hex.replace(/^#/, '');
+  if (hex.length === 3) hex = hex.split('').map(c => c + c).join('');
+  const n = parseInt(hex, 16);
+  return { r: (n >> 16) & 0xFF, g: (n >> 8) & 0xFF, b: n & 0xFF };
+}
+
+let pixels = new Uint8ClampedArray(W * H * 4); // RGBA8, working buffer
+let activeColor = { r: 248, g: 0, b: 0, a: 255 }; // default: opaque red
+let activeTool = 'pencil'; // 'pencil' | 'fill' | 'eyedrop'
+let isPainting = false;
+let lastPx = null; // { x, y } — for Bresenham
+let history = [];  // array of Uint8ClampedArray snapshots
+let histIdx = -1;  // points to current state in history
+let unsaved = false;
+
+const canvasMain = document.getElementById('canvas-main');
+const ctxMain = canvasMain.getContext('2d', { willReadFrequently: true });
+const canvasGrid = document.getElementById('canvas-grid');
+const ctxGrid = canvasGrid.getContext('2d');
+const wrap = document.getElementById('canvas-wrap');
+const colorSwatch = document.getElementById('color-swatch');
+const nativePicker = document.getElementById('native-picker');
+const hexInput = document.getElementById('color-hex');
+const alphaCheck = document.getElementById('alpha-on');
+const paletteRow = document.getElementById('palette-row');
+const statusPos = document.getElementById('status-pos');
+const statusColor = document.getElementById('status-color');
+const statusTool = document.getElementById('status-tool');
+const toast = document.getElementById('toast');
+
+function setupCanvases() {
+  canvasMain.width = W * ZOOM;
+  canvasMain.height = H * ZOOM;
+  canvasGrid.width = W * ZOOM;
+  canvasGrid.height = H * ZOOM;
+  drawGrid();
+}
+
+function drawGrid() {
+  ctxGrid.clearRect(0, 0, canvasGrid.width, canvasGrid.height);
+  ctxGrid.strokeStyle = GRID_COLOR;
+  ctxGrid.lineWidth = 0.5;
+  for (let x = 0; x <= W; x++) {
+    ctxGrid.beginPath();
+    ctxGrid.moveTo(x * ZOOM, 0);
+    ctxGrid.lineTo(x * ZOOM, H * ZOOM);
+    ctxGrid.stroke();
+  }
+  for (let y = 0; y <= H; y++) {
+    ctxGrid.beginPath();
+    ctxGrid.moveTo(0, y * ZOOM);
+    ctxGrid.lineTo(W * ZOOM, y * ZOOM);
+    ctxGrid.stroke();
+  }
+}
+
+function redrawCanvas() {
+  const img = new ImageData(new Uint8ClampedArray(pixels), W, H);
+  const off = new OffscreenCanvas(W, H);
+  const octx = off.getContext('2d');
+  octx.putImageData(img, 0, 0);
+  ctxMain.clearRect(0, 0, canvasMain.width, canvasMain.height);
+  ctxMain.imageSmoothingEnabled = false;
+  ctxMain.drawImage(off, 0, 0, W * ZOOM, H * ZOOM);
+}
+
+function getPixelIdx(px, py) { return (py * W + px) * 4; }
+
+function getPixel(px, py) {
+  const i = getPixelIdx(px, py);
+  return { r: pixels[i], g: pixels[i+1], b: pixels[i+2], a: pixels[i+3] };
+}
+
+function setPixel(px, py, color) {
+  const i = getPixelIdx(px, py);
+  pixels[i]   = color.r;
+  pixels[i+1] = color.g;
+  pixels[i+2] = color.b;
+  pixels[i+3] = color.a;
+}
+
+function colorsEqual(a, b) {
+  return a.r === b.r && a.g === b.g && a.b === b.b && a.a === b.a;
+}
+
+function pushHistory() {
+  history = history.slice(0, histIdx + 1);
+  history.push(new Uint8ClampedArray(pixels));
+  if (history.length > MAX_HISTORY + 1) history.shift();
+  histIdx = history.length - 1;
+  unsaved = true;
+}
+
+function applyHistory(idx) {
+  if (idx < 0 || idx >= history.length) return;
+  histIdx = idx;
+  pixels = new Uint8ClampedArray(history[histIdx]);
+  redrawCanvas();
+  rebuildPalette();
+}
+
+function undo() { applyHistory(histIdx - 1); }
+function redo() { applyHistory(histIdx + 1); }
+
+function paintPixel(px, py, color) {
+  if (px < 0 || px >= W || py < 0 || py >= H) return;
+  setPixel(px, py, color);
+}
+
+function bresenham(x0, y0, x1, y1, color) {
+  let dx = Math.abs(x1 - x0), sx = x0 < x1 ? 1 : -1;
+  let dy = -Math.abs(y1 - y0), sy = y0 < y1 ? 1 : -1;
+  let err = dx + dy;
+  while (true) {
+    paintPixel(x0, y0, color);
+    if (x0 === x1 && y0 === y1) break;
+    const e2 = 2 * err;
+    if (e2 >= dy) { err += dy; x0 += sx; }
+    if (e2 <= dx) { err += dx; y0 += sy; }
+  }
+}
+
+function floodFill(px, py, fillColor) {
+  const target = getPixel(px, py);
+  if (colorsEqual(target, fillColor)) return;
+  const stack = [[px, py]];
+  const visited = new Uint8Array(W * H);
+  visited[py * W + px] = 1;
+  while (stack.length) {
+    const [cx, cy] = stack.pop();
+    if (!colorsEqual(getPixel(cx, cy), target)) continue;
+    setPixel(cx, cy, fillColor);
+    const neighbors = [[cx-1,cy],[cx+1,cy],[cx,cy-1],[cx,cy+1]];
+    for (const [nx, ny] of neighbors) {
+      if (nx < 0 || nx >= W || ny < 0 || ny >= H) continue;
+      if (visited[ny * W + nx]) continue;
+      visited[ny * W + nx] = 1;
+      if (colorsEqual(getPixel(nx, ny), target)) stack.push([nx, ny]);
+    }
+  }
+}
+
+function eventToPixel(e) {
+  const rect = canvasMain.getBoundingClientRect();
+  const cx = e.clientX - rect.left;
+  const cy = e.clientY - rect.top;
+  return {
+    x: Math.floor(cx / ZOOM),
+    y: Math.floor(cy / ZOOM),
+  };
+}
+
+function setActiveColor(r, g, b, a) {
+  activeColor = { r, g, b, a };
+  const hex = colorToHex(r, g, b);
+  colorSwatch.style.background = a === 0 ? 'transparent' : hex;
+  colorSwatch.style.border = a === 0 ? '2px dashed #888' : '2px solid #888';
+  hexInput.value = hex;
+  alphaCheck.checked = (a !== 0);
+}
+
+function pickColorFromNative() {
+  const { r, g, b } = hexToRgb(nativePicker.value);
+  const a = alphaCheck.checked ? 255 : 0;
+  const snapped = snapRGBA16(r, g, b, a);
+  setActiveColor(snapped.r, snapped.g, snapped.b, snapped.a);
+}
+
+function commitHexInput() {
+  const raw = hexInput.value.trim();
+  try {
+    const { r, g, b } = hexToRgb(raw);
+    const a = alphaCheck.checked ? 255 : 0;
+    const snapped = snapRGBA16(r, g, b, a);
+    setActiveColor(snapped.r, snapped.g, snapped.b, snapped.a);
+  } catch (_) {}
+}
+
+function rebuildPalette() {
+  const seen = new Map();
+  for (let i = 0; i < W * H; i++) {
+    const r = pixels[i*4], g = pixels[i*4+1], b = pixels[i*4+2], a = pixels[i*4+3];
+    const snapped = snapRGBA16(r, g, b, a);
+    const key = `${snapped.r},${snapped.g},${snapped.b},${snapped.a}`;
+    seen.set(key, snapped);
+  }
+
+  Array.from(paletteRow.querySelectorAll('.pal-swatch')).forEach(el => el.remove());
+
+  for (const [, col] of seen) {
+    const sw = document.createElement('div');
+    sw.className = 'pal-swatch';
+    if (col.a === 0) {
+      sw.style.background = 'repeating-linear-gradient(45deg,#555 0 4px,#222 4px 8px)';
+    } else {
+      sw.style.background = colorToHex(col.r, col.g, col.b);
+    }
+    sw.title = col.a === 0 ? 'transparent' : colorToHex(col.r, col.g, col.b);
+    sw.addEventListener('click', () => setActiveColor(col.r, col.g, col.b, col.a));
+    paletteRow.appendChild(sw);
+  }
+}
+
+function loadFromDataURL(dataURL) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const off = new OffscreenCanvas(W, H);
+      const octx = off.getContext('2d');
+      octx.clearRect(0, 0, W, H);
+      octx.drawImage(img, 0, 0, W, H);
+      const id = octx.getImageData(0, 0, W, H);
+      pixels = new Uint8ClampedArray(id.data);
+      for (let i = 0; i < W * H; i++) {
+        const s = snapRGBA16(pixels[i*4], pixels[i*4+1], pixels[i*4+2], pixels[i*4+3]);
+        pixels[i*4] = s.r; pixels[i*4+1] = s.g; pixels[i*4+2] = s.b; pixels[i*4+3] = s.a;
+      }
+      resolve();
+    };
+    img.onerror = reject;
+    img.src = dataURL;
+  });
+}
+
+async function saveToDisk() {
+  const off = new OffscreenCanvas(W, H);
+  const octx = off.getContext('2d');
+  const id = new ImageData(new Uint8ClampedArray(pixels), W, H);
+  octx.putImageData(id, 0, 0);
+  const blob = await off.convertToBlob({ type: 'image/png' });
+  const ab = await blob.arrayBuffer();
+  const b64 = btoa(String.fromCharCode(...new Uint8Array(ab)));
+  const dataURL = 'data:image/png;base64,' + b64;
+
+  const resp = await fetch('/save', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ dataURL }),
+  });
+  const json = await resp.json();
+  if (json.ok) {
+    unsaved = false;
+    showToast('Saved!');
+  } else {
+    showToast('Save failed: ' + (json.error || '?'));
+  }
+}
+
+async function reloadFromDisk() {
+  if (unsaved && !confirm('Discard unsaved changes and reload from disk?')) return;
+  window.location.reload();
+}
+
+async function quitServer() {
+  if (unsaved && !confirm('You have unsaved changes. Quit anyway?')) return;
+  try { await fetch('/quit', { method: 'POST' }); } catch (_) {}
+  window.close();
+  document.body.innerHTML = '<p style="color:#aaa;padding:2em">Server stopped. You can close this tab.</p>';
+}
+
+let toastTimer = null;
+function showToast(msg) {
+  toast.textContent = msg;
+  toast.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.classList.remove('show'), 2000);
+}
+
+function selectTool(name) {
+  activeTool = name;
+  document.querySelectorAll('.tool-btn[data-tool]').forEach(b => {
+    b.classList.toggle('active', b.dataset.tool === name);
+  });
+  statusTool.textContent = name.charAt(0).toUpperCase() + name.slice(1);
+  canvasMain.style.cursor = name === 'eyedrop' ? 'crosshair' : 'crosshair';
+}
+
+function handlePointerDown(e) {
+  e.preventDefault();
+
+  if (e.altKey) {
+    const { x, y } = eventToPixel(e);
+    if (x < 0 || x >= W || y < 0 || y >= H) return;
+    const col = getPixel(x, y);
+    setActiveColor(col.r, col.g, col.b, col.a);
+    showToast('Picked ' + (col.a === 0 ? 'transparent' : colorToHex(col.r, col.g, col.b)));
+    return;
+  }
+
+  const { x, y } = eventToPixel(e);
+  if (x < 0 || x >= W || y < 0 || y >= H) return;
+
+  if (activeTool === 'eyedrop') {
+    const col = getPixel(x, y);
+    setActiveColor(col.r, col.g, col.b, col.a);
+    showToast('Picked ' + (col.a === 0 ? 'transparent' : colorToHex(col.r, col.g, col.b)));
+    return;
+  }
+
+  if (activeTool === 'fill') {
+    pushHistory();
+    const fillCol = e.button === 2 ? { r:0,g:0,b:0,a:0 } : activeColor;
+    floodFill(x, y, fillCol);
+    redrawCanvas();
+    rebuildPalette();
+    return;
+  }
+
+  pushHistory();
+  isPainting = true;
+  lastPx = { x, y };
+  const paintCol = e.button === 2 ? { r:0,g:0,b:0,a:0 } : activeColor;
+  paintPixel(x, y, paintCol);
+  redrawCanvas();
+}
+
+function handlePointerMove(e) {
+  const { x, y } = eventToPixel(e);
+
+  if (x >= 0 && x < W && y >= 0 && y < H) {
+    const col = getPixel(x, y);
+    statusPos.textContent = `(${x}, ${y})`;
+    statusColor.textContent = col.a === 0 ? 'transparent' : colorToHex(col.r, col.g, col.b);
+  } else {
+    statusPos.textContent = '—';
+    statusColor.textContent = '—';
+  }
+
+  if (!isPainting) return;
+  if (x < 0 || x >= W || y < 0 || y >= H) return;
+
+  const paintCol = (e.buttons & 2) ? { r:0,g:0,b:0,a:0 } : activeColor;
+  if (lastPx) {
+    bresenham(lastPx.x, lastPx.y, x, y, paintCol);
+  } else {
+    paintPixel(x, y, paintCol);
+  }
+  lastPx = { x, y };
+  redrawCanvas();
+}
+
+function handlePointerUp(e) {
+  if (isPainting) {
+    rebuildPalette();
+  }
+  isPainting = false;
+  lastPx = null;
+}
+
+document.addEventListener('keydown', e => {
+  const meta = e.metaKey || e.ctrlKey;
+
+  if (meta && e.shiftKey && e.key === 'z') { e.preventDefault(); redo(); return; }
+  if (meta && e.key === 'z') { e.preventDefault(); undo(); return; }
+  if (meta && e.key === 's') { e.preventDefault(); saveToDisk(); return; }
+
+  if (document.activeElement === hexInput) return;
+
+  if (e.key === 'p' || e.key === 'P') { selectTool('pencil'); }
+  if (e.key === 'f' || e.key === 'F') { selectTool('fill'); }
+  if (e.key === 'e' || e.key === 'E') { selectTool('eyedrop'); }
+});
+
+colorSwatch.addEventListener('click', () => {
+  nativePicker.value = colorToHex(activeColor.r, activeColor.g, activeColor.b);
+  nativePicker.click();
+});
+nativePicker.addEventListener('input', pickColorFromNative);
+nativePicker.addEventListener('change', pickColorFromNative);
+
+hexInput.addEventListener('change', commitHexInput);
+hexInput.addEventListener('keydown', e => { if (e.key === 'Enter') commitHexInput(); });
+
+alphaCheck.addEventListener('change', () => {
+  const a = alphaCheck.checked ? 255 : 0;
+  setActiveColor(activeColor.r, activeColor.g, activeColor.b, a);
+});
+
+document.getElementById('btn-pencil').addEventListener('click',  () => selectTool('pencil'));
+document.getElementById('btn-fill').addEventListener('click',    () => selectTool('fill'));
+document.getElementById('btn-eyedrop').addEventListener('click', () => selectTool('eyedrop'));
+document.getElementById('btn-undo').addEventListener('click',    undo);
+document.getElementById('btn-redo').addEventListener('click',    redo);
+document.getElementById('btn-save').addEventListener('click',    saveToDisk);
+document.getElementById('btn-reload').addEventListener('click',  reloadFromDisk);
+document.getElementById('btn-quit').addEventListener('click',    quitServer);
+
+canvasMain.addEventListener('mousedown',  handlePointerDown);
+canvasMain.addEventListener('mousemove',  handlePointerMove);
+canvasMain.addEventListener('mouseup',    handlePointerUp);
+canvasMain.addEventListener('mouseleave', handlePointerUp);
+canvasMain.addEventListener('contextmenu', e => e.preventDefault());
+
+(async () => {
+  setupCanvases();
+
+  try {
+    await loadFromDataURL(INITIAL_DATA_URL);
+  } catch (err) {
+    console.error('Failed to load initial image:', err);
+    showToast('Could not load image!');
+  }
+
+  history = [new Uint8ClampedArray(pixels)];
+  histIdx = 0;
+  unsaved = false;
+
+  redrawCanvas();
+  rebuildPalette();
+
+  for (let i = 0; i < W * H; i++) {
+    if (pixels[i*4+3] !== 0) {
+      setActiveColor(pixels[i*4], pixels[i*4+1], pixels[i*4+2], 255);
+      break;
+    }
+  }
+})();
+</script>
+</body>
+</html>

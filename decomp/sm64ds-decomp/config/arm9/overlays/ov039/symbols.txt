@@ -1,0 +1,56 @@
+_ZN5CloudD1Ev kind:function(arm,size=0x30) addr:0x021111a0
+_ZN5CloudD0Ev kind:function(arm,size=0x44) addr:0x021111d0
+func_ov039_02111214 kind:function(arm,size=0x40) addr:0x02111214
+_ZN5Cloud16CleanupResourcesEv kind:function(arm,size=0x24) addr:0x02111254
+_ZN5Cloud6RenderEv kind:function(arm,size=0x28) addr:0x02111278
+_ZN5Cloud8BehaviorEv kind:function(arm,size=0x8c) addr:0x021112a0
+_ZN5Cloud13InitResourcesEv kind:function(arm,size=0x50) addr:0x0211132c
+Cloud_Spawn kind:function(arm,size=0x38) addr:0x0211137c
+__sinit_ov039_021113b4 kind:function(arm,size=0x40) addr:0x021113b4
+.p__sinit_ov039_021113b4 kind:data(word) addr:0x021113f4
+data_ov039_02111400 kind:data(any) addr:0x02111400
+data_ov039_02111404 kind:data(any) addr:0x02111404
+data_ov039_02111408 kind:data(any) addr:0x02111408
+data_ov039_0211140c kind:data(any) addr:0x0211140c
+data_ov039_02111414 kind:data(any) addr:0x02111414
+data_ov039_0211141c kind:data(any) addr:0x0211141c
+data_ov039_02111428 kind:data(any) addr:0x02111428
+data_ov039_02111438 kind:data(any) addr:0x02111438 ambiguous
+data_ov039_02111454 kind:data(any) addr:0x02111454
+data_ov039_02111470 kind:data(any) addr:0x02111470
+data_ov039_02111498 kind:data(any) addr:0x02111498
+data_ov039_021114d8 kind:data(any) addr:0x021114d8
+data_ov039_0211150c kind:data(any) addr:0x0211150c ambiguous
+data_ov039_02111518 kind:data(any) addr:0x02111518
+data_ov039_02111520 kind:data(any) addr:0x02111520 ambiguous
+data_ov039_0211153c kind:data(any) addr:0x0211153c ambiguous
+data_ov039_02111548 kind:data(any) addr:0x02111548 ambiguous
+data_ov039_0211155c kind:data(any) addr:0x0211155c ambiguous
+data_ov039_02111560 kind:data(any) addr:0x02111560 ambiguous
+data_ov039_0211159c kind:data(any) addr:0x0211159c ambiguous
+data_ov039_021115bc kind:data(any) addr:0x021115bc ambiguous
+data_ov039_021115e0 kind:data(any) addr:0x021115e0 ambiguous
+data_ov039_021115e4 kind:data(any) addr:0x021115e4 ambiguous
+data_ov039_021115f4 kind:data(any) addr:0x021115f4 ambiguous
+data_ov039_02111624 kind:data(any) addr:0x02111624 ambiguous
+data_ov039_02111640 kind:data(any) addr:0x02111640 ambiguous
+data_ov039_02111658 kind:data(any) addr:0x02111658
+data_ov039_02111660 kind:data(any) addr:0x02111660 ambiguous
+data_ov039_02111680 kind:data(any) addr:0x02111680 ambiguous
+data_ov039_021116a0 kind:data(any) addr:0x021116a0 ambiguous
+data_ov039_021116c0 kind:data(any) addr:0x021116c0 ambiguous
+data_ov039_021116e0 kind:data(any) addr:0x021116e0 ambiguous
+data_ov039_02111700 kind:data(any) addr:0x02111700 ambiguous
+data_ov039_02111720 kind:data(any) addr:0x02111720 ambiguous
+data_ov039_02111740 kind:data(any) addr:0x02111740 ambiguous
+data_ov039_02111760 kind:data(any) addr:0x02111760 ambiguous
+data_ov039_02111768 kind:data(any) addr:0x02111768 ambiguous
+data_ov039_02111818 kind:data(any) addr:0x02111818
+data_ov039_02111824 kind:data(any) addr:0x02111824
+Cloud_SpawnInfo kind:data(any) addr:0x02111834 ambiguous
+data_ov039_02111844 kind:data(any) addr:0x02111844 ambiguous
+_ZTV5Cloud kind:data(any) addr:0x02111858
+_ZTV11daObjKumo_c kind:data(any) addr:0x02111858
+data_ov039_021118e0 kind:bss addr:0x021118e0
+data_ov039_021118e4 kind:bss addr:0x021118e4
+data_ov039_021118ec kind:bss addr:0x021118ec

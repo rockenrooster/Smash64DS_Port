@@ -1,0 +1,151 @@
+func_ov043_021111a0 kind:function(arm,size=0x44) addr:0x021111a0
+func_ov043_021111e4 kind:function(arm,size=0x58) addr:0x021111e4
+func_ov043_0211123c kind:function(arm,size=0x44) addr:0x0211123c
+func_ov043_02111280 kind:function(arm,size=0x28) addr:0x02111280
+func_ov043_021112a8 kind:function(arm,size=0x78) addr:0x021112a8
+func_ov043_02111320 kind:function(arm,size=0xac) addr:0x02111320
+DiamondLift_Spawn kind:function(arm,size=0x30) addr:0x021113cc
+func_ov043_021113fc kind:function(arm,size=0x50) addr:0x021113fc
+func_ov043_0211144c kind:function(arm,size=0x64) addr:0x0211144c
+func_ov043_021114b0 kind:function(arm,size=0x14) addr:0x021114b0
+func_ov043_021114c4 kind:function(arm,size=0x18) addr:0x021114c4
+RickshawBdw_Spawn kind:function(arm,size=0x3c) addr:0x021114dc
+_ZN11RickshawBdwD1Ev kind:function(arm,size=0x50) addr:0x02111518
+_ZN11RickshawBdwD0Ev kind:function(arm,size=0x64) addr:0x02111568
+_ZN11RickshawBdw16CleanupResourcesEv kind:function(arm,size=0x14) addr:0x021115cc
+_ZN11RickshawBdw13InitResourcesEv kind:function(arm,size=0x14) addr:0x021115e0
+RickshawPlatformBdw_Spawn kind:function(arm,size=0x3c) addr:0x021115f4
+_ZN19RickshawPlatformBdwD1Ev kind:function(arm,size=0x80) addr:0x02111630
+_ZN19RickshawPlatformBdwD0Ev kind:function(arm,size=0x94) addr:0x021116b0
+_ZN19RickshawPlatformBdw16CleanupResourcesEv kind:function(arm,size=0x14) addr:0x02111744
+_ZN19RickshawPlatformBdw13InitResourcesEv kind:function(arm,size=0x14) addr:0x02111758
+StairsBdw_Spawn kind:function(arm,size=0x90) addr:0x0211176c
+__sinit_ov043_021117fc kind:function(arm,size=0x6c) addr:0x021117fc
+__sinit_ov043_02111868 kind:function(arm,size=0x6c) addr:0x02111868
+__sinit_ov043_021118d4 kind:function(arm,size=0x6c) addr:0x021118d4
+__sinit_ov043_02111940 kind:function(arm,size=0x1a8) addr:0x02111940
+.p__sinit_ov043_021117fc kind:data(word) addr:0x02111ae8
+.p__sinit_ov043_02111868 kind:data(word) addr:0x02111aec
+.p__sinit_ov043_021118d4 kind:data(word) addr:0x02111af0
+.p__sinit_ov043_02111940 kind:data(word) addr:0x02111af4
+data_ov043_02111b00 kind:data(any) addr:0x02111b00
+data_ov043_02111b04 kind:data(any) addr:0x02111b04
+data_ov043_02111b08 kind:data(any) addr:0x02111b08
+data_ov043_02111b10 kind:data(any) addr:0x02111b10
+data_ov043_02111b14 kind:data(any) addr:0x02111b14 ambiguous
+data_ov043_02111b18 kind:data(any) addr:0x02111b18
+data_ov043_02111b24 kind:data(any) addr:0x02111b24
+data_ov043_02111b34 kind:data(any) addr:0x02111b34
+data_ov043_02111b44 kind:data(any) addr:0x02111b44 ambiguous
+data_ov043_02111b60 kind:data(any) addr:0x02111b60
+data_ov043_02111b64 kind:data(any) addr:0x02111b64 ambiguous
+data_ov043_02111b68 kind:data(any) addr:0x02111b68 ambiguous
+data_ov043_02111b6c kind:data(any) addr:0x02111b6c ambiguous
+data_ov043_02111b74 kind:data(any) addr:0x02111b74 ambiguous
+data_ov043_02111b80 kind:data(any) addr:0x02111b80
+data_ov043_02111b88 kind:data(any) addr:0x02111b88 ambiguous
+data_ov043_02111ba0 kind:data(any) addr:0x02111ba0
+data_ov043_02111bc0 kind:data(any) addr:0x02111bc0
+data_ov043_02111bd4 kind:data(any) addr:0x02111bd4 ambiguous
+data_ov043_02111be0 kind:data(any) addr:0x02111be0 ambiguous
+data_ov043_02111c00 kind:data(any) addr:0x02111c00
+data_ov043_02111c20 kind:data(any) addr:0x02111c20 ambiguous
+data_ov043_02111c40 kind:data(any) addr:0x02111c40
+data_ov043_02111c54 kind:data(any) addr:0x02111c54 ambiguous
+data_ov043_02111c60 kind:data(any) addr:0x02111c60
+data_ov043_02111c80 kind:data(any) addr:0x02111c80
+data_ov043_02111ca0 kind:data(any) addr:0x02111ca0
+data_ov043_02111cc8 kind:data(any) addr:0x02111cc8
+data_ov043_02111d10 kind:data(any) addr:0x02111d10
+data_ov043_02111d60 kind:data(any) addr:0x02111d60
+data_ov043_02111dc0 kind:data(any) addr:0x02111dc0
+data_ov043_02111fc0 kind:data(any) addr:0x02111fc0 ambiguous
+data_ov043_02111fd0 kind:data(any) addr:0x02111fd0
+data_ov043_0211208c kind:data(any) addr:0x0211208c ambiguous
+data_ov043_021120a4 kind:data(any) addr:0x021120a4 ambiguous
+data_ov043_021120bc kind:data(any) addr:0x021120bc ambiguous
+data_ov043_021120d8 kind:data(any) addr:0x021120d8 ambiguous
+data_ov043_021120f8 kind:data(any) addr:0x021120f8 ambiguous
+data_ov043_02112104 kind:data(any) addr:0x02112104 ambiguous
+data_ov043_02112118 kind:data(any) addr:0x02112118 ambiguous
+data_ov043_02112138 kind:data(any) addr:0x02112138 ambiguous
+data_ov043_02112158 kind:data(any) addr:0x02112158 ambiguous
+data_ov043_02112178 kind:data(any) addr:0x02112178 ambiguous
+data_ov043_02112198 kind:data(any) addr:0x02112198 ambiguous
+data_ov043_021121b8 kind:data(any) addr:0x021121b8 ambiguous
+data_ov043_021121c0 kind:data(any) addr:0x021121c0 ambiguous
+data_ov043_021121dc kind:data(any) addr:0x021121dc ambiguous
+data_ov043_021121f8 kind:data(any) addr:0x021121f8 ambiguous
+data_ov043_02112258 kind:data(any) addr:0x02112258 ambiguous
+data_ov043_02112270 kind:data(any) addr:0x02112270
+data_ov043_0211227c kind:data(any) addr:0x0211227c
+DiamondLift_SpawnInfo kind:data(any) addr:0x02112294 ambiguous
+data_ov043_0211229c kind:data(any) addr:0x0211229c ambiguous
+data_ov043_021122b8 kind:data(any) addr:0x021122b8
+data_ov043_02112320 kind:data(any) addr:0x02112320 ambiguous
+data_ov043_02112338 kind:data(any) addr:0x02112338
+data_ov043_02112344 kind:data(any) addr:0x02112344
+data_ov043_02112350 kind:data(any) addr:0x02112350
+data_ov043_02112358 kind:data(any) addr:0x02112358 ambiguous
+RickshawBdw_SpawnInfo kind:data(any) addr:0x02112368 ambiguous
+data_ov043_0211238c kind:data(any) addr:0x0211238c
+data_ov043_021123e4 kind:data(any) addr:0x021123e4 ambiguous
+data_ov043_021123f4 kind:data(any) addr:0x021123f4 ambiguous
+data_ov043_02112404 kind:data(any) addr:0x02112404 ambiguous
+data_ov043_0211240c kind:data(any) addr:0x0211240c
+data_ov043_02112418 kind:data(any) addr:0x02112418
+data_ov043_0211241c kind:data(any) addr:0x0211241c ambiguous
+data_ov043_02112424 kind:data(any) addr:0x02112424
+data_ov043_02112428 kind:data(any) addr:0x02112428 ambiguous
+data_ov043_02112434 kind:data(any) addr:0x02112434 ambiguous
+RickshawPlatformBdw_SpawnInfo kind:data(any) addr:0x02112438 ambiguous
+data_ov043_0211244c kind:data(any) addr:0x0211244c ambiguous
+_ZTV11RickshawBdw kind:data(any) addr:0x0211245c
+data_ov043_02112464 kind:data(any) addr:0x02112464 ambiguous
+data_ov043_02112494 kind:data(any) addr:0x02112494 ambiguous
+data_ov043_021124ac kind:data(any) addr:0x021124ac ambiguous
+data_ov043_021124c4 kind:data(any) addr:0x021124c4 ambiguous
+data_ov043_021124d4 kind:data(any) addr:0x021124d4 ambiguous
+data_ov043_021124dc kind:data(any) addr:0x021124dc
+data_ov043_021124e8 kind:data(any) addr:0x021124e8
+data_ov043_021124ec kind:data(any) addr:0x021124ec ambiguous
+data_ov043_021124f8 kind:data(any) addr:0x021124f8 ambiguous
+StairsBdw_SpawnInfo kind:data(any) addr:0x021124fc ambiguous
+data_ov043_02112518 kind:data(any) addr:0x02112518
+data_ov043_02112530 kind:data(any) addr:0x02112530 ambiguous
+_ZTV19RickshawPlatformBdw kind:data(any) addr:0x0211255c
+data_ov043_02112570 kind:data(any) addr:0x02112570 ambiguous
+data_ov043_02112590 kind:data(any) addr:0x02112590 ambiguous
+data_ov043_021125cc kind:data(any) addr:0x021125cc ambiguous
+data_ov043_021125e0 kind:bss addr:0x021125e0
+data_ov043_021125e8 kind:bss addr:0x021125e8
+data_ov043_021125f0 kind:bss addr:0x021125f0
+data_ov043_021125fc kind:bss addr:0x021125fc
+data_ov043_02112608 kind:bss addr:0x02112608
+data_ov043_02112610 kind:bss addr:0x02112610
+data_ov043_02112618 kind:bss addr:0x02112618
+data_ov043_02112624 kind:bss addr:0x02112624
+data_ov043_02112630 kind:bss addr:0x02112630
+data_ov043_02112638 kind:bss addr:0x02112638
+data_ov043_02112640 kind:bss addr:0x02112640
+data_ov043_0211264c kind:bss addr:0x0211264c
+data_ov043_02112658 kind:bss addr:0x02112658
+data_ov043_02112660 kind:bss addr:0x02112660
+data_ov043_02112668 kind:bss addr:0x02112668
+data_ov043_02112670 kind:bss addr:0x02112670
+data_ov043_02112678 kind:bss addr:0x02112678
+data_ov043_02112680 kind:bss addr:0x02112680
+data_ov043_02112688 kind:bss addr:0x02112688
+data_ov043_02112690 kind:bss addr:0x02112690
+data_ov043_02112698 kind:bss addr:0x02112698
+data_ov043_021126a0 kind:bss addr:0x021126a0
+data_ov043_021126a8 kind:bss addr:0x021126a8
+data_ov043_021126b4 kind:bss addr:0x021126b4
+data_ov043_021126c0 kind:bss addr:0x021126c0
+data_ov043_021126cc kind:bss addr:0x021126cc
+data_ov043_021126d8 kind:bss addr:0x021126d8
+data_ov043_021126e4 kind:bss addr:0x021126e4
+data_ov043_021126f0 kind:bss addr:0x021126f0
+data_ov043_021126fc kind:bss addr:0x021126fc
+data_ov043_02112708 kind:bss addr:0x02112708
+data_ov043_02112714 kind:bss addr:0x02112714

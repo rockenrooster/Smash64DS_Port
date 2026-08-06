@@ -1,0 +1,87 @@
+# SSB64 Audio ROM Segments — JP (NALJ) build
+#
+# ROM addresses from splat config (smashbrothers.jp.yaml).
+# These are outside the LBReloc file table and must be extracted separately.
+#
+# All segments are contiguous in ROM: each segment's (offset + size) equals the
+# next segment's offset. Sizes verified against ROM_START / ROM_END externs.
+#
+# Byte-swap notes (for Phase 3 — audio synthesis on PC):
+#   - CTL files contain ALBankFile structs with big-endian pointers and fields.
+#     Byte-swap will be handled at load time in the audio bridge, NOT here.
+#   - TBL files are raw ADPCM sample byte-streams — no endianness concern.
+#   - SBK header has big-endian s16/u32 fields; sequence data is byte-stream.
+#   - FGM files use SYAudioPackage format (s32 count + uintptr_t array) —
+#     big-endian fields need swap at load time.
+#   - All entries stay as BLOB; byte-swap is a runtime concern, not extraction.
+#
+# Game code reference: dSYAudioPublicSettings in src/sys/audio.c (lines 91-131)
+
+:config:
+  segments:
+    - [0x00, 0x000000]
+
+# ALSeqFile format: s16 seqCount + ALSeqData[] (u32 offset, s16 len) + sequence byte-stream.
+# Referenced by: dSYAudioPublicSettings.sbk_start (&S1_music_sbk_ROM_START)
+S1_music_sbk:
+  type: BLOB
+  offset: 0x96DA40
+  size: 0x26E10
+  symbol: S1_music_sbk
+
+# ALBankFile format: SFX instrument definitions (ALBank, ALInstrument, ALSound, ALWaveTable, etc.)
+# Pointers inside are big-endian offsets relative to CTL base — need byte-swap at load time.
+# Referenced by: dSYAudioPublicSettings.bank1_start/bank1_end (&B1_sounds1_ctl_ROM_START/END)
+B1_sounds1_ctl:
+  type: BLOB
+  offset: 0x994850
+  size: 0x6720
+  symbol: B1_sounds1_ctl
+
+# Raw ADPCM sample data for sound bank 1 (SFX). Byte-stream, no endianness concern.
+# Paired with B1_sounds1_ctl — CTL offsets index into this TBL.
+B1_sounds1_tbl:
+  type: BLOB
+  offset: 0x99AF70
+  size: 0x116970
+  symbol: B1_sounds1_tbl
+
+# ALBankFile format: music instrument definitions. Same struct layout as sounds1_ctl.
+# Referenced by: dSYAudioPublicSettings.bank2_start/bank2_end (&B1_sounds2_ctl_ROM_START/END)
+B1_sounds2_ctl:
+  type: BLOB
+  offset: 0xAB18E0
+  size: 0xFC40
+  symbol: B1_sounds2_ctl
+
+# Raw ADPCM sample data for sound bank 2 (music). Byte-stream, no endianness concern.
+# Paired with B1_sounds2_ctl — CTL offsets index into this TBL.
+B1_sounds2_tbl:
+  type: BLOB
+  offset: 0xAC1520
+  size: 0x2B05E0
+  symbol: B1_sounds2_tbl
+
+# SYAudioPackage format: s32 count + uintptr_t data[]. Purpose unknown.
+# Referenced by: dSYAudioPublicSettings.unk50/unk54 (&fgm_unk_ROM_START/END)
+fgm_unk:
+  type: BLOB
+  offset: 0xD71B00
+  size: 0x820
+  symbol: fgm_unk
+
+# SYAudioPackage format: s32 count + uintptr_t data[]. FGM sound-effect lookup table.
+# Referenced by: dSYAudioPublicSettings.fgm_table_start/fgm_table_end (&fgm_tbl_ROM_START/END)
+fgm_tbl:
+  type: BLOB
+  offset: 0xD72320
+  size: 0x2B50
+  symbol: fgm_tbl
+
+# SYAudioPackage format: s32 count + uintptr_t data[]. FGM microcode/parameter data.
+# Referenced by: dSYAudioPublicSettings.fgm_ucode_start/fgm_ucode_end (&fgm_ucd_ROM_START/END)
+fgm_ucd:
+  type: BLOB
+  offset: 0xD74E70
+  size: 0x47D0
+  symbol: fgm_ucd

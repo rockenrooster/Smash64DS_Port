@@ -1,0 +1,33 @@
+<!--
+    A button — N64 blue.
+
+    Flat injection-molded plastic look: a near-solid fill with a very
+    subtle top-to-bottom linear gradient (3% lighter at top, 6% darker
+    at bottom) to suggest volume without gloss, plus a 2px darker rim
+    stroke around the circle for definition.
+
+    No radial highlight, no rim shadow — those are what gave the previous
+    revision the "glass marble" look.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+        xmlns:aapt="http://schemas.android.com/aapt"
+        android:width="100dp" android:height="100dp"
+        android:viewportWidth="100" android:viewportHeight="100">
+
+    <!-- Body. 47-radius leaves room for the 2-unit-thick stroke ring drawn on top. -->
+    <path android:pathData="M50,50 m-47,0 a47,47 0 1,0 94,0 a47,47 0 1,0 -94,0">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="linear"
+                      android:startX="50" android:startY="3"
+                      android:endX="50"   android:endY="97">
+                <item android:offset="0.00" android:color="#FF3978FF"/>
+                <item android:offset="1.00" android:color="#FF1F58E0"/>
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Rim stroke: darker ring (path with thin annulus). -->
+    <path android:pathData="M50,50 m-48,0 a48,48 0 1,0 96,0 a48,48 0 1,0 -96,0 M50,50 m-46,0 a46,46 0 1,1 92,0 a46,46 0 1,1 -92,0"
+          android:fillColor="#FF0C3A95"
+          android:fillType="evenOdd"/>
+</vector>

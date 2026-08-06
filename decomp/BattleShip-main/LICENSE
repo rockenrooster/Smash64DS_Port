@@ -1,0 +1,119 @@
+MIT License
+
+Copyright (c) 2026 JRickey and contributors
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+---
+
+Scope notes:
+
+This MIT grant covers the port-specific source code in this repository — the
+`port/` layer, build scripts under `scripts/`, helper tools under `tools/` and
+`debug_tools/`, CMake configuration, documentation, and YAML extraction
+configs.
+
+It does NOT extend to:
+
+  * Anything owned by Nintendo / HAL Laboratory (game code, data, audio,
+    textures, models, trademarks). None of that is included in this
+    repository.
+  * The decompiled C source under the `decomp/` submodule, which is derived
+    from the VetriTheRetri/ssb-decomp-re project
+    (https://github.com/VetriTheRetri/ssb-decomp-re). At the time of writing,
+    the upstream decompilation does not publish an explicit license; this
+    repository makes no copyright claim over the decompiled source and
+    incorporates it by reference as a submodule. Refer to the upstream
+    project (and its contributors) for any rights, terms, or restrictions
+    governing reuse of the decomp tree.
+  * Decomp-derived content elsewhere in this repository, even though these
+    files live outside the `decomp/` submodule. They originate (verbatim or
+    derivatively) from the decomp's symbol and file-name tables; the port
+    makes no copyright claim over their content and defers to the upstream
+    decomp project on the same terms as the `decomp/` submodule above:
+      - `tools/reloc_data_symbols.us.txt` — vendored verbatim from
+        ssb-decomp-re's `symbols/reloc_data_symbols.us.txt`.
+      - `tools/relocFileDescriptions.us.txt` — decomp-authored file-name
+        table.
+      - `include/reloc_data.h` — auto-generated mirror of the symbols
+        table.
+      - `port/resource/RelocFileTable.cpp` — auto-generated
+        `file_id` → resource path mapping derived from the decomp's
+        symbol/file-name tables.
+      - `yamls/us/reloc_*.yml` — auto-generated Torch extraction recipes
+        keyed on decomp symbol names.
+    The generator scripts under `tools/` (`generate_reloc_stubs.py`,
+    `generate_reloc_table.py`, `generate_yamls.py`) are port-authored and
+    remain MIT-licensed; only the content they emit — when that content
+    originates from the decomp — is subject to the upstream-deference
+    clause above.
+  * The `libultraship/` submodule (https://github.com/Kenix3/libultraship),
+    licensed independently by its upstream maintainers under the MIT License:
+      Copyright (c) 2022 kenix3 <kenixwhisperwind@gmail.com>
+    libultraship was originated by the Harbour Masters team for the
+    Ship of Harkinian project and is now maintained at Kenix3/libultraship.
+  * The `torch/` submodule (https://github.com/HarbourMasters/Torch),
+    licensed independently by its upstream maintainers under the MIT License:
+      Copyright (c) 2023 Lywx <admin@undervolt.dev>
+    Torch is maintained by the Harbour Masters team.
+  * The font assets bundled under `assets/custom/fonts/`, which are licensed
+    under the SIL Open Font License, Version 1.1:
+      - Montserrat (Copyright 2011 The Montserrat Project Authors,
+        https://github.com/JulietaUla/Montserrat) — see
+        `assets/custom/fonts/Montserrat-OFL.txt`.
+      - Inconsolata (Copyright 2006 The Inconsolata Project Authors,
+        https://github.com/googlefonts/Inconsolata) — see
+        `assets/custom/fonts/Inconsolata-OFL.txt`.
+    The full OFL text accompanies each font in its respective `*-OFL.txt`
+    file and governs use, modification, and redistribution of the font files.
+
+Refer to each submodule and external project for its own license terms.
+
+---
+
+Third-party notices (in-tree code derived from external projects):
+
+The following portions of this repository contain or are derived from code
+authored by third parties. The MIT grant above continues to apply to those
+files as integrated here, and the upstream copyright notices are reproduced
+below in satisfaction of the MIT attribution requirement.
+
+  * `port/gui/Compat.h`, `port/gui/Menu.{cpp,h}`, `port/gui/MenuTypes.h`,
+    `port/gui/PortMenu.{cpp,h}`, `port/gui/UIWidgets.{cpp,hpp}` —
+    derived from the Ship of Harkinian (SoH) project.
+      Copyright (c) The Harbour Masters
+      https://github.com/HarbourMasters/Shipwright
+      Licensed under the MIT License.
+
+  * `port/audio/mixer.{c,h}`, and the watermark/buffering logic in
+    `port/audio/audio_playback.cpp` — derived from the Starship (Star Fox 64)
+    PC port.
+      Copyright (c) The Harbour Masters
+      https://github.com/HarbourMasters/Starship
+      Licensed under the MIT License.
+
+  * `port/renderdoc_app.h` — verbatim from the RenderDoc in-application API.
+      Copyright (c) 2015-2026 Baldur Karlsson
+      https://github.com/baldurk/renderdoc
+      Licensed under the MIT License (notice retained in the file).
+
+  * `gamecontrollerdb.txt` — community-maintained SDL game controller
+    mappings.
+      Source: https://github.com/mdqinc/SDL_GameControllerDB
+      Licensed under the zlib License.

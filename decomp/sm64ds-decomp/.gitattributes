@@ -1,0 +1,29 @@
+# The provenance ledgers are append-only JSONL: every contributor's PR adds rows at
+# the end, so two PRs in flight always "conflict" on the final line even though the
+# right resolution is simply to keep both sets of rows. `merge=union` makes git take
+# both sides' lines instead of raising a conflict, which is exactly correct for an
+# append-only log and stops concurrent match PRs from blocking each other.
+#
+# Order within the file stops being meaningful under union merge, but nothing depends
+# on it: both stores are keyed by id and read into a dict (last write wins), and the
+# CI stamper dedupes by content before appending. A duplicate row from two sides
+# stamping the same landing is harmless.
+config/match_provenance.jsonl merge=union
+config/match_attempts.jsonl   merge=union
+
+# nearmiss/db.jsonl and CLAIMS.md are union-merged too, so concurrent match PRs stop
+# conflicting on them (they conflicted on every pair of in-flight PRs, forcing a manual
+# resolve). Union keeps both sides' lines instead of raising a conflict.
+#
+# nearmiss/db.jsonl is one row per function keyed by (module, addr), so a union of two
+# edits to the same function leaves two rows for it with different divergence counts. That
+# is cleaned automatically: the update-chaos-data workflow runs `nearmiss_db.py dedupe` on
+# every push to main, collapsing duplicate keys to the LOWEST divergence (a merge never
+# regresses a tip). The duplicate rows are transient - present only between a merge and the
+# next CI refresh - and load_db()/save_db() already key by (module, addr), so nothing that
+# reads the DB is confused by them in the meantime.
+#
+# CLAIMS.md is a human-read coordination table; duplicate rows from two sides touching the
+# same claim are harmless (and the claims API is taking over live locking anyway).
+nearmiss/db.jsonl merge=union
+CLAIMS.md         merge=union

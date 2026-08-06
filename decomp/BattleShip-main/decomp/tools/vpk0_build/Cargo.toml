@@ -1,0 +1,7 @@
+[package]
+name = "vpk0cmd"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+vpk0 = "0.8.2"

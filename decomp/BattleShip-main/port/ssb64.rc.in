@@ -1,0 +1,11 @@
+// Windows resource: embeds the application icon into the .exe so
+// Explorer and the taskbar pick it up without needing an external .ico.
+// Built only on Windows (see CMakeLists.txt).
+//
+// This file is a CMake template (configure_file with @ONLY) — the icon
+// path is filled in at configure time from SSB64_RC_ICON_PATH:
+//   US build → <repo>/assets/icon.ico
+//   JP build → <repo>/assets/icon-jp.ico
+// Absolute path so the rc compiler resolves the same regardless of
+// where the generated ssb64.rc lands in the build tree.
+IDI_ICON1 ICON "@SSB64_RC_ICON_PATH@"

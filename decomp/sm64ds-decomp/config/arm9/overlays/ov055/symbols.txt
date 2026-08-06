@@ -1,0 +1,53 @@
+_ZN11MirrorLuigiD1Ev kind:function(arm,size=0x58) addr:0x021111a0
+_ZN11MirrorLuigiD0Ev kind:function(arm,size=0x6c) addr:0x021111f8
+func_ov055_02111264 kind:function(arm,size=0x24) addr:0x02111264
+func_ov055_02111288 kind:function(arm,size=0x34) addr:0x02111288
+func_ov055_021112bc kind:function(arm,size=0x8) addr:0x021112bc
+func_ov055_021112c4 kind:function(arm,size=0x54) addr:0x021112c4
+_ZN11MirrorLuigi16CleanupResourcesEv kind:function(arm,size=0x3c) addr:0x02111318
+_ZN11MirrorLuigi16OnPendingDestroyEv kind:function(arm,size=0x4) addr:0x02111354
+_ZN11MirrorLuigi6RenderEv kind:function(arm,size=0x1b0) addr:0x02111358
+_ZN11MirrorLuigi8BehaviorEv kind:function(arm,size=0x16c) addr:0x02111508
+_ZN11MirrorLuigi13InitResourcesEv kind:function(arm,size=0x1ec) addr:0x02111674
+MirrorLuigi_Spawn kind:function(arm,size=0x74) addr:0x02111860
+__sinit_ov055_021118d4 kind:function(arm,size=0x3c) addr:0x021118d4
+.p__sinit_ov055_021118d4 kind:data(word) addr:0x02111910
+data_ov055_02111920 kind:data(any) addr:0x02111920
+data_ov055_02111924 kind:data(any) addr:0x02111924
+data_ov055_02111928 kind:data(any) addr:0x02111928
+data_ov055_0211192c kind:data(any) addr:0x0211192c ambiguous
+data_ov055_02111930 kind:data(any) addr:0x02111930
+data_ov055_02111938 kind:data(any) addr:0x02111938
+data_ov055_02111940 kind:data(any) addr:0x02111940
+data_ov055_02111944 kind:data(any) addr:0x02111944 ambiguous
+data_ov055_0211194c kind:data(any) addr:0x0211194c
+data_ov055_02111958 kind:data(any) addr:0x02111958
+data_ov055_02111960 kind:data(any) addr:0x02111960 ambiguous
+data_ov055_02111968 kind:data(any) addr:0x02111968
+data_ov055_02111978 kind:data(any) addr:0x02111978
+data_ov055_02111994 kind:data(any) addr:0x02111994 ambiguous
+data_ov055_021119b0 kind:data(any) addr:0x021119b0
+data_ov055_021119d0 kind:data(any) addr:0x021119d0
+data_ov055_02111a00 kind:data(any) addr:0x02111a00
+data_ov055_02111a30 kind:data(any) addr:0x02111a30
+data_ov055_02111a4c kind:data(any) addr:0x02111a4c ambiguous
+data_ov055_02111a58 kind:data(any) addr:0x02111a58 ambiguous
+data_ov055_02111a78 kind:data(any) addr:0x02111a78 ambiguous
+data_ov055_02111a90 kind:data(any) addr:0x02111a90
+data_ov055_02111a94 kind:data(any) addr:0x02111a94
+data_ov055_02111a9c kind:data(any) addr:0x02111a9c
+data_ov055_02111aa4 kind:data(any) addr:0x02111aa4
+data_ov055_02111ab0 kind:data(any) addr:0x02111ab0
+MirrorLuigi_SpawnInfo kind:data(any) addr:0x02111abc ambiguous
+data_ov055_02111ad4 kind:data(any) addr:0x02111ad4 ambiguous
+_ZTV11MirrorLuigi kind:data(any) addr:0x02111ae0
+data_ov055_02111af4 kind:data(any) addr:0x02111af4 ambiguous
+data_ov055_02111b14 kind:data(any) addr:0x02111b14 ambiguous
+data_ov055_02111b34 kind:data(any) addr:0x02111b34 ambiguous
+data_ov055_02111b44 kind:data(any) addr:0x02111b44 ambiguous
+data_ov055_02111b60 kind:bss addr:0x02111b60
+data_ov055_02111b64 kind:bss addr:0x02111b64
+data_ov055_02111b68 kind:bss addr:0x02111b68
+data_ov055_02111b6c kind:bss addr:0x02111b6c
+data_ov055_02111b70 kind:bss addr:0x02111b70
+data_ov055_02111b74 kind:bss addr:0x02111b74 ambiguous

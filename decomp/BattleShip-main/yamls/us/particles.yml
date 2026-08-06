@@ -1,0 +1,163 @@
+# SSB64 particle data ROM segments
+# ROM addresses from splat config (smashbrothers.us.yaml)
+# These are outside the LBReloc file table and must be extracted separately.
+#
+# Each particle bank has two parts:
+#   - scb (script bank): particle bytecode scripts
+#   - txb (texture bank): particle texture data
+
+:config:
+  segments:
+    - [0x00, 0x000000]
+
+# ============================================================================
+#  Global particle banks (from linker script segments)
+# ============================================================================
+
+particles_unk0_scb:
+  type: BLOB
+  offset: 0xB16C80
+  size: 0x3E0
+  symbol: particles_unk0_scb
+  # Particle bank 0 script data
+
+particles_unk0_txb:
+  type: BLOB
+  offset: 0xB17060
+  size: 0x440
+  symbol: particles_unk0_txb
+  # Particle bank 0 texture data
+
+particles_unk1_scb:
+  type: BLOB
+  offset: 0xB174A0
+  size: 0x200
+  symbol: particles_unk1_scb
+  # Particle bank 1 script data
+
+particles_unk1_txb:
+  type: BLOB
+  offset: 0xB176A0
+  size: 0x2060
+  symbol: particles_unk1_txb
+  # Particle bank 1 texture data
+
+particles_unk2_scb:
+  type: BLOB
+  offset: 0xB19700
+  size: 0x150
+  symbol: particles_unk2_scb
+  # Particle bank 2 script data
+
+particles_unk2_txb:
+  type: BLOB
+  offset: 0xB19850
+  size: 0x2450
+  symbol: particles_unk2_txb
+  # Particle bank 2 texture data
+
+# ============================================================================
+#  Per-module particle banks (from linker Lo/Hi symbols in module headers)
+# ============================================================================
+
+# --- EFCommon (global effects) ---
+# src/ef/efdisplay.h: lEFCommonParticle{Script,Texture}Bank{Lo,Hi}
+
+efcommon_particle_scb:
+  type: BLOB
+  offset: 0xAC7340
+  size: 0x2AA0
+  symbol: efcommon_particle_scb
+  # EFCommon particle script bank (0xAC7340 → 0xAC9DE0)
+
+efcommon_particle_txb:
+  type: BLOB
+  offset: 0xAC9DE0
+  size: 0x4CEA0
+  symbol: efcommon_particle_txb
+  # EFCommon particle texture bank (0xAC9DE0 → 0xB16C80)
+
+# --- ITManager (items) ---
+# src/it/itmanager.h: lITManagerParticle{Script,Texture}Bank{Lo,Hi}
+
+itmanager_particle_scb:
+  type: BLOB
+  offset: 0xB1BCA0
+  size: 0x140
+  symbol: itmanager_particle_scb
+  # ITManager particle script bank (0xB1BCA0 → 0xB1BDE0)
+
+itmanager_particle_txb:
+  type: BLOB
+  offset: 0xB1BDE0
+  size: 0x2860
+  symbol: itmanager_particle_txb
+  # ITManager particle texture bank (0xB1BDE0 → 0xB1E640)
+
+# --- GRPupupu (Dream Land stage) ---
+# src/gr/grcommon/grpupupu.h: lGRPupupuParticle{Script,Texture}Bank{Lo,Hi}
+
+grpupupu_particle_scb:
+  type: BLOB
+  offset: 0xB1E640
+  size: 0x1A0
+  symbol: grpupupu_particle_scb
+  # GRPupupu particle script bank (0xB1E640 → 0xB1E7E0)
+
+grpupupu_particle_txb:
+  type: BLOB
+  offset: 0xB1E7E0
+  size: 0x1180
+  symbol: grpupupu_particle_txb
+  # GRPupupu particle texture bank (0xB1E7E0 → 0xB1F960)
+
+# --- GRHyrule (Hyrule Castle stage) ---
+# src/gr/grcommon/grhyrule.h: lGRHyruleParticle{Script,Texture}Bank{Lo,Hi}
+
+grhyrule_particle_scb:
+  type: BLOB
+  offset: 0xB1F960
+  size: 0x320
+  symbol: grhyrule_particle_scb
+  # GRHyrule particle script bank (0xB1F960 → 0xB1FC80)
+
+grhyrule_particle_txb:
+  type: BLOB
+  offset: 0xB1FC80
+  size: 0x2D00
+  symbol: grhyrule_particle_txb
+  # GRHyrule particle texture bank (0xB1FC80 → 0xB22980)
+
+# --- GRYoster (Yoshi's Island stage) ---
+# src/gr/grcommon/gryoster.h: lGRYosterParticle{Script,Texture}Bank{Lo,Hi}
+
+gryoster_particle_scb:
+  type: BLOB
+  offset: 0xB22980
+  size: 0x80
+  symbol: gryoster_particle_scb
+  # GRYoster particle script bank (0xB22980 → 0xB22A00)
+
+gryoster_particle_txb:
+  type: BLOB
+  offset: 0xB22A00
+  size: 0x230
+  symbol: gryoster_particle_txb
+  # GRYoster particle texture bank (0xB22A00 → 0xB22C30)
+
+# --- MNTitle (title screen menu) ---
+# src/mn/mncommon/mntitle.h: lMNTitleParticle{Script,Texture}Bank{Lo,Hi}
+
+mntitle_particle_scb:
+  type: BLOB
+  offset: 0xB22C30
+  size: 0x110
+  symbol: mntitle_particle_scb
+  # MNTitle particle script bank (0xB22C30 → 0xB22D40)
+
+mntitle_particle_txb:
+  type: BLOB
+  offset: 0xB22D40
+  size: 0x4A70
+  symbol: mntitle_particle_txb
+  # MNTitle particle texture bank (0xB22D40 → 0xB277B0)

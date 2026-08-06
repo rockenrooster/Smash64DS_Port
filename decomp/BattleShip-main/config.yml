@@ -1,0 +1,33 @@
+# Torch asset extraction config for Super Smash Bros. 64.
+# Torch hashes the user-supplied ROM and selects the matching entry; the
+# build is compiled per-region via CMake -DSSB64_VERSION={us,jp}. Both
+# entries emit BattleShip.o2r so the runtime archive name is constant.
+#
+# US: baserom.us.z64 (NTSC-U v1.0, Z64 big-endian)
+# JP: baserom.jp.z64 (Nintendo All-Star! Dairantou Smash Brothers, NALJ)
+
+e2929e10fccc0aa84e5776227e798abc07cedabf:
+  name: "Super Smash Bros. (U) (V1.0)"
+  path: yamls/us
+  config:
+    gbi: F3DEX2
+    sort: OFFSET
+    logging: INFO
+    output:
+      binary: BattleShip.o2r
+      headers: include/assets
+      code: src/assets
+      modding: src/assets
+
+4b71f0e01878696733eefa9c80d11c147ecb4984:
+  name: "Nintendo All-Star! Dairantou Smash Brothers (J)"
+  path: yamls/jp
+  config:
+    gbi: F3DEX2
+    sort: OFFSET
+    logging: INFO
+    output:
+      binary: BattleShip.o2r
+      headers: include/assets
+      code: src/assets
+      modding: src/assets

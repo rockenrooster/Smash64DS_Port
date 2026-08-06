@@ -1,0 +1,32 @@
+name: Report Progress
+
+# Build on every branch push, tag push, and pull request change:
+on: [push, pull_request_target]
+
+jobs:
+  report_progress:
+    name: Report progress
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      # matrix:
+      #   version: [us, jp]
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ github.event.pull_request.head.sha }}
+        
+    - name: Upload US progress report
+      uses: actions/upload-artifact@v4
+      with:
+        name: us_report
+        path: us_report.json
+
+    - name: Upload JP progress report
+      uses: actions/upload-artifact@v4
+      with:
+        name: jp_report
+        path: jp_report.json

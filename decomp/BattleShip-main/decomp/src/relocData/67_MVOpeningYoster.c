@@ -1,0 +1,2014 @@
+/* relocData file 67: MVOpeningYoster */
+/* Inlined block layout - edit this file directly. The .inc.c
+ * files referenced below live under build/src/relocData/ and
+ * are regenerated from the baserom by tools/extractRelocInc.py
+ * at extract time. */
+
+#include "relocdata_types.h"
+#include <sys/objdef.h>  // aobjEvent32* macros
+
+/* Forward decls auto-added/hoisted by hoistExterns.py */
+extern Gfx dMVOpeningYoster_DL_0x8120[];
+extern Gfx dMVOpeningYoster_DL_0xB1A8[];
+extern Gfx dMVOpeningYoster_DL_0xB518[];
+extern Gfx dMVOpeningYoster_DL_0x94B8[];
+extern u16 dMVOpeningYoster_Lut255_0x0008[];
+extern u16 dMVOpeningYoster_Lut255_0x0210[];
+extern u16 dMVOpeningYoster_Lut255_0x0418[];
+extern u16 dMVOpeningYoster_Lut255_0x0620[];
+extern u8 dMVOpeningYoster_Tex_0x0828[];
+extern u8 dMVOpeningYoster_Tex_0x1830[];
+extern u8 dMVOpeningYoster_Tex_0x2038[];
+extern u8 dMVOpeningYoster_Tex_0x2840[];
+extern u8 dMVOpeningYoster_Tex_0x3048[];
+extern u8 dMVOpeningYoster_Tex_0x3850[];
+extern u8 dMVOpeningYoster_Tex_0x4858[];
+extern u8 dMVOpeningYoster_Tex_0x5860[];
+extern u8 dMVOpeningYoster_Tex_0x6868[];
+extern u8 dMVOpeningYoster_Tex_0xA540[];
+extern u8 dMVOpeningYoster_Tex_0xA568[];
+extern u8 dMVOpeningYoster_Tex_0xA6F0[];
+extern u8 dMVOpeningYoster_Tex_0xA8F8[];
+extern u8 dMVOpeningYoster_Tex_0xAB00[];
+extern Vtx dMVOpeningYoster_Vtx_0x7868_Vtx[];
+extern Vtx dMVOpeningYoster_Vtx_0x7908_Vtx[];
+extern Vtx dMVOpeningYoster_Vtx_0x7948_Vtx[];
+extern Vtx dMVOpeningYoster_Vtx_0x7B48_Vtx[];
+extern Vtx dMVOpeningYoster_Vtx_0x7B58_Vtx[];
+extern Vtx dMVOpeningYoster_Vtx_0x7B68_Vtx[];
+extern Vtx dMVOpeningYoster_Vtx_0x7BB8_Vtx[];
+extern Vtx dMVOpeningYoster_Vtx_0x7BC8_Vtx[];
+extern Vtx dMVOpeningYoster_Vtx_0x7BE8_Vtx[];
+extern Vtx dMVOpeningYoster_Vtx_0x7C28_Vtx[];
+extern Vtx dMVOpeningYoster_Vtx_0x7C68_Vtx[];
+extern Vtx dMVOpeningYoster_Vtx_0x7CC8_Vtx[];
+extern Vtx dMVOpeningYoster_Vtx_0x7D08_Vtx[];
+extern Vtx dMVOpeningYoster_Vtx_0x7D48_Vtx[];
+extern Vtx dMVOpeningYoster_Vtx_0x7F48_Vtx[];
+extern Vtx dMVOpeningYoster_Vtx_0x7FC8_Vtx[];
+extern Vtx dMVOpeningYoster_Vtx_0x8008_Vtx[];
+extern Vtx dMVOpeningYoster_Vtx_0x8048_Vtx[];
+extern Vtx dMVOpeningYoster_Vtx_0x8088_Vtx[];
+extern Vtx dMVOpeningYoster_Vtx_0xAFE0_Vtx[];
+extern u16 dMVOpeningYoster_gap_0xA4C0_sub_0x30[];
+extern u16 dMVOpeningYoster_gap_0xA4C0_sub_0x58[];
+extern u16 dMVOpeningYoster_gap_0xA4C0_sub_0x8[];
+extern Vtx dMVOpeningYoster_gap_0xA4C0_sub_0x940[];
+extern Vtx dMVOpeningYoster_gap_0xA4C0_sub_0x980[];
+extern Vtx dMVOpeningYoster_gap_0xA4C0_sub_0x9C0[];
+extern Vtx dMVOpeningYoster_gap_0xA4C0_sub_0xA00[];
+extern Vtx dMVOpeningYoster_gap_0xA4C0_sub_0xA40[];
+extern Vtx dMVOpeningYoster_gap_0xA4C0_sub_0xA80[];
+extern Vtx dMVOpeningYoster_gap_0xA4C0_sub_0xAC0[];
+extern Vtx dMVOpeningYoster_gap_0xA4C0_sub_0xAF0[];
+extern Vtx dMVOpeningYoster_gap_0xA4C0_sub_0xB30[];
+extern Vtx dMVOpeningYoster_gap_0xA4C0_sub_0xB90[];
+extern Vtx dMVOpeningYoster_gap_0xA4C0_sub_0xBF0[];
+extern Vtx dMVOpeningYoster_gap_0xA4C0_sub_0xC50[];
+extern Gfx dMVOpeningYoster_DL_0x80C8[];
+extern Gfx dMVOpeningYoster_DL_0x81C8[];
+extern Gfx dMVOpeningYoster_DL_0x8248[];
+extern Gfx dMVOpeningYoster_DL_0x82D0[];
+extern Gfx dMVOpeningYoster_DL_0x8330[];
+extern Gfx dMVOpeningYoster_DL_0x8398[];
+extern Gfx dMVOpeningYoster_DL_0x8418[];
+extern Gfx dMVOpeningYoster_DL_0x84A0[];
+extern Gfx dMVOpeningYoster_DL_0x8500[];
+extern Gfx dMVOpeningYoster_DL_0x8568[];
+extern Gfx dMVOpeningYoster_DL_0x85E8[];
+extern Gfx dMVOpeningYoster_DL_0x8670[];
+extern Gfx dMVOpeningYoster_DL_0x86E0[];
+extern Gfx dMVOpeningYoster_DL_0x8758[];
+extern Gfx dMVOpeningYoster_DL_0x87D8[];
+extern Gfx dMVOpeningYoster_DL_0x8860[];
+extern Gfx dMVOpeningYoster_DL_0x88C0[];
+extern Gfx dMVOpeningYoster_DL_0x8A30[];
+extern Gfx dMVOpeningYoster_DL_0x8AD8[];
+extern Gfx dMVOpeningYoster_DL_0x8B98[];
+extern Gfx dMVOpeningYoster_DL_0x8C60[];
+extern Gfx dMVOpeningYoster_DL_0x8D10[];
+extern Gfx dMVOpeningYoster_DL_0x8DC8[];
+extern Gfx dMVOpeningYoster_DL_0x8E48[];
+extern Gfx dMVOpeningYoster_DL_0x8ED0[];
+extern Gfx dMVOpeningYoster_DL_0x8F30[];
+extern Gfx dMVOpeningYoster_DL_0x8FA0[];
+extern Gfx dMVOpeningYoster_DL_0x9020[];
+extern Gfx dMVOpeningYoster_DL_0x90A8[];
+extern Gfx dMVOpeningYoster_DL_0x9108[];
+extern Gfx dMVOpeningYoster_DL_0x9170[];
+extern Gfx dMVOpeningYoster_DL_0x91F8[];
+extern Gfx dMVOpeningYoster_DL_0x9280[];
+extern Gfx dMVOpeningYoster_DL_0x92E0[];
+extern Gfx dMVOpeningYoster_DL_0x9440[];
+extern Gfx dMVOpeningYoster_DL_0x9530[];
+extern Gfx dMVOpeningYoster_DL_0xB150[];
+extern Gfx dMVOpeningYoster_DL_0xB228[];
+extern Gfx dMVOpeningYoster_DL_0xB248[];
+extern Gfx dMVOpeningYoster_DL_0xB268[];
+extern Gfx dMVOpeningYoster_DL_0xB288[];
+extern Gfx dMVOpeningYoster_DL_0xB2A8[];
+extern Gfx dMVOpeningYoster_DL_0xB330[];
+extern Gfx dMVOpeningYoster_DL_0xB3B8[];
+extern Gfx dMVOpeningYoster_DL_0xB3D8[];
+extern Gfx dMVOpeningYoster_DL_0xB400[];
+extern Gfx dMVOpeningYoster_DL_0xB420[];
+extern Gfx dMVOpeningYoster_DL_0xB440[];
+extern Gfx dMVOpeningYoster_DL_0xB460[];
+extern Gfx dMVOpeningYoster_DL_0xB480[];
+extern Gfx dMVOpeningYoster_DL_0xB4D0[];
+extern Gfx dMVOpeningYoster_DL_0xB598[];
+extern Gfx dMVOpeningYoster_DL_0xB5D0[];
+extern Gfx dMVOpeningYoster_DL_0xB608[];
+extern Gfx dMVOpeningYoster_DL_0xB690[];
+extern Gfx dMVOpeningYoster_DL_0xB6B0[];
+extern Gfx dMVOpeningYoster_DL_0xB6D0[];
+extern Gfx dMVOpeningYoster_DL_0xB6F0[];
+extern Gfx dMVOpeningYoster_DL_0xB710[];
+extern Gfx dMVOpeningYoster_DL_0xB730[];
+extern Gfx dMVOpeningYoster_DL_0xB750[];
+extern Gfx dMVOpeningYoster_DL_0xB770[];
+extern Gfx dMVOpeningYoster_DL_0xB790[];
+
+PAD(8);
+
+/* Raw data from file offset 0x0008 to 0x0210 (520 bytes) */
+u16 dMVOpeningYoster_Lut255_0x0008[260] = {
+	#include <MVOpeningYoster/Lut255_0x0008.palette.inc.c>
+};
+
+/* Raw data from file offset 0x0210 to 0x0418 (520 bytes) */
+u16 dMVOpeningYoster_Lut255_0x0210[260] = {
+	#include <MVOpeningYoster/Lut255_0x0210.palette.inc.c>
+};
+
+/* Raw data from file offset 0x0418 to 0x0620 (520 bytes) */
+u16 dMVOpeningYoster_Lut255_0x0418[260] = {
+	#include <MVOpeningYoster/Lut255_0x0418.palette.inc.c>
+};
+
+/* Raw data from file offset 0x0620 to 0x0828 (520 bytes) */
+u16 dMVOpeningYoster_Lut255_0x0620[260] = {
+	#include <MVOpeningYoster/Lut255_0x0620.palette.inc.c>
+};
+
+/* Texture data @ 0x0828 (4104 bytes) */
+/* @tex fmt=RGBA16 dim=64x32 */
+u8 dMVOpeningYoster_Tex_0x0828[4096] = {
+	#include <MVOpeningYoster/Tex_0x0828.tex.inc.c>
+};
+
+PAD(8);
+
+/* Texture data @ 0x1830 (2056 bytes) */
+/* @tex fmt=CI8 dim=32x64 lut=dMVOpeningYoster_Lut255_0x0008 */
+u8 dMVOpeningYoster_Tex_0x1830[2056] = {
+	#include <MVOpeningYoster/Tex_0x1830.tex.inc.c>
+};
+
+/* Texture data @ 0x2038 (2056 bytes) */
+/* @tex fmt=CI8 dim=32x64 lut=dMVOpeningYoster_Lut255_0x0210 */
+u8 dMVOpeningYoster_Tex_0x2038[2056] = {
+	#include <MVOpeningYoster/Tex_0x2038.tex.inc.c>
+};
+
+/* Texture data @ 0x2840 (2056 bytes) */
+/* @tex fmt=CI8 dim=32x64 lut=dMVOpeningYoster_Lut255_0x0418 */
+u8 dMVOpeningYoster_Tex_0x2840[2048] = {
+	#include <MVOpeningYoster/Tex_0x2840.tex.inc.c>
+};
+
+PAD(8);
+
+/* Texture data @ 0x3048 (2056 bytes) */
+/* @tex fmt=CI8 dim=32x64 lut=dMVOpeningYoster_Lut255_0x0620 */
+u8 dMVOpeningYoster_Tex_0x3048[2056] = {
+	#include <MVOpeningYoster/Tex_0x3048.tex.inc.c>
+};
+
+/* Texture data @ 0x3850 (4104 bytes) */
+u8 dMVOpeningYoster_Tex_0x3850[4104] = {
+	#include <MVOpeningYoster/Tex_0x3850.tex.inc.c>
+};
+
+/* Texture data @ 0x4858 (4104 bytes) */
+/* @tex fmt=RGBA32 dim=32x32 */
+u8 dMVOpeningYoster_Tex_0x4858[4104] = {
+	#include <MVOpeningYoster/Tex_0x4858.tex.inc.c>
+};
+
+/* Texture data @ 0x5860 (4104 bytes) */
+/* @tex fmt=RGBA32 dim=32x32 */
+u8 dMVOpeningYoster_Tex_0x5860[4096] = {
+	#include <MVOpeningYoster/Tex_0x5860.tex.inc.c>
+};
+
+PAD(8);
+
+/* Texture data @ 0x6868 (4096 bytes) */
+/* @tex fmt=RGBA32 dim=32x32 */
+u8 dMVOpeningYoster_Tex_0x6868[4096] = {
+	#include <MVOpeningYoster/Tex_0x6868.tex.inc.c>
+};
+
+/* Vtx: Vtx_0x7868_Vtx @ 0x7868 (10 vertices) */
+Vtx dMVOpeningYoster_Vtx_0x7868_Vtx[10] = {
+	#include <MVOpeningYoster/Vtx_0x7868.vtx.inc.c>
+};
+
+/* Vtx: Vtx_0x7908 @ 0x7908 (4 vertices) */
+Vtx dMVOpeningYoster_Vtx_0x7908_Vtx[4] = {
+	#include <MVOpeningYoster/Vtx_0x7908.vtx.inc.c>
+};
+
+/* Vtx: Vtx_0x7948 @ 0x7948 (32 vertices) */
+Vtx dMVOpeningYoster_Vtx_0x7948_Vtx[32] = {
+	#include <MVOpeningYoster/Vtx_0x7948.vtx.inc.c>
+};
+
+/* Vtx: Vtx_0x7B48 @ 0x7B48 (1 vertices) */
+Vtx dMVOpeningYoster_Vtx_0x7B48_Vtx[1] = {
+	#include <MVOpeningYoster/Vtx_0x7B48.vtx.inc.c>
+};
+
+/* Vtx: Vtx_0x7B58 @ 0x7B58 (1 vertices) */
+Vtx dMVOpeningYoster_Vtx_0x7B58_Vtx[1] = {
+	#include <MVOpeningYoster/Vtx_0x7B58.vtx.inc.c>
+};
+
+/* Vtx: Vtx_0x7B68 @ 0x7B68 (5 vertices) */
+Vtx dMVOpeningYoster_Vtx_0x7B68_Vtx[5] = {
+	#include <MVOpeningYoster/Vtx_0x7B68.vtx.inc.c>
+};
+
+/* Vtx: Vtx_0x7BB8 @ 0x7BB8 (1 vertices) */
+Vtx dMVOpeningYoster_Vtx_0x7BB8_Vtx[1] = {
+	#include <MVOpeningYoster/Vtx_0x7BB8.vtx.inc.c>
+};
+
+/* Vtx: Vtx_0x7BC8 @ 0x7BC8 (2 vertices) */
+Vtx dMVOpeningYoster_Vtx_0x7BC8_Vtx[2] = {
+	#include <MVOpeningYoster/Vtx_0x7BC8.vtx.inc.c>
+};
+
+/* Vtx: Vtx_0x7BE8 @ 0x7BE8 (4 vertices) */
+Vtx dMVOpeningYoster_Vtx_0x7BE8_Vtx[4] = {
+	#include <MVOpeningYoster/Vtx_0x7BE8.vtx.inc.c>
+};
+
+/* Vtx: Vtx_0x7C28 @ 0x7C28 (4 vertices) */
+Vtx dMVOpeningYoster_Vtx_0x7C28_Vtx[4] = {
+	#include <MVOpeningYoster/Vtx_0x7C28.vtx.inc.c>
+};
+
+/* Vtx: Vtx_0x7C68 @ 0x7C68 (6 vertices) */
+Vtx dMVOpeningYoster_Vtx_0x7C68_Vtx[6] = {
+	#include <MVOpeningYoster/Vtx_0x7C68.vtx.inc.c>
+};
+
+/* Vtx: Vtx_0x7CC8 @ 0x7CC8 (4 vertices) */
+Vtx dMVOpeningYoster_Vtx_0x7CC8_Vtx[4] = {
+	#include <MVOpeningYoster/Vtx_0x7CC8.vtx.inc.c>
+};
+
+/* Vtx: Vtx_0x7D08 @ 0x7D08 (4 vertices) */
+Vtx dMVOpeningYoster_Vtx_0x7D08_Vtx[4] = {
+	#include <MVOpeningYoster/Vtx_0x7D08.vtx.inc.c>
+};
+
+/* Vtx: Vtx_0x7D48 @ 0x7D48 (32 vertices) */
+Vtx dMVOpeningYoster_Vtx_0x7D48_Vtx[32] = {
+	#include <MVOpeningYoster/Vtx_0x7D48.vtx.inc.c>
+};
+
+/* Vtx: Vtx_0x7F48 @ 0x7F48 (8 vertices) */
+Vtx dMVOpeningYoster_Vtx_0x7F48_Vtx[8] = {
+	#include <MVOpeningYoster/Vtx_0x7F48.vtx.inc.c>
+};
+
+/* Vtx: Vtx_0x7FC8 @ 0x7FC8 (4 vertices) */
+Vtx dMVOpeningYoster_Vtx_0x7FC8_Vtx[4] = {
+	#include <MVOpeningYoster/Vtx_0x7FC8.vtx.inc.c>
+};
+
+/* Vtx: Vtx_0x8008 @ 0x8008 (4 vertices) */
+Vtx dMVOpeningYoster_Vtx_0x8008_Vtx[4] = {
+	#include <MVOpeningYoster/Vtx_0x8008.vtx.inc.c>
+};
+
+/* Vtx: Vtx_0x8048 @ 0x8048 (4 vertices) */
+Vtx dMVOpeningYoster_Vtx_0x8048_Vtx[4] = {
+	#include <MVOpeningYoster/Vtx_0x8048.vtx.inc.c>
+};
+
+/* Vtx: Vtx_0x8088 @ 0x8088 (4 vertices) */
+Vtx dMVOpeningYoster_Vtx_0x8088_Vtx[4] = {
+	#include <MVOpeningYoster/Vtx_0x8088.vtx.inc.c>
+};
+
+/* Raw data from file offset 0x80C8 to 0x9808 (5952 bytes) */
+/* gap sub-block @ 0x80C8 (was gap+0x0, 88 bytes) */
+Gfx dMVOpeningYoster_DL_0x80C8[11] = {
+	#include <MVOpeningYoster/DL_0x80C8.dl.inc.c>
+};
+
+/* gap sub-block @ 0x8120 (was gap+0x58, 168 bytes) */
+Gfx dMVOpeningYoster_DL_0x8120[21] = {
+	#include <MVOpeningYoster/DL_0x8120.dl.inc.c>
+};
+
+/* gap sub-block @ 0x81C8 (was gap+0x100, 128 bytes) */
+Gfx dMVOpeningYoster_DL_0x81C8[16] = {
+	#include <MVOpeningYoster/DL_0x81C8.dl.inc.c>
+};
+
+/* gap sub-block @ 0x8248 (was gap+0x180, 136 bytes) */
+Gfx dMVOpeningYoster_DL_0x8248[17] = {
+	#include <MVOpeningYoster/DL_0x8248.dl.inc.c>
+};
+
+/* gap sub-block @ 0x82D0 (was gap+0x208, 96 bytes) */
+Gfx dMVOpeningYoster_DL_0x82D0[12] = {
+	#include <MVOpeningYoster/DL_0x82D0.dl.inc.c>
+};
+
+/* gap sub-block @ 0x8330 (was gap+0x268, 104 bytes) */
+Gfx dMVOpeningYoster_DL_0x8330[13] = {
+	#include <MVOpeningYoster/DL_0x8330.dl.inc.c>
+};
+
+/* gap sub-block @ 0x8398 (was gap+0x2D0, 128 bytes) */
+Gfx dMVOpeningYoster_DL_0x8398[16] = {
+	#include <MVOpeningYoster/DL_0x8398.dl.inc.c>
+};
+
+/* gap sub-block @ 0x8418 (was gap+0x350, 136 bytes) */
+Gfx dMVOpeningYoster_DL_0x8418[17] = {
+	#include <MVOpeningYoster/DL_0x8418.dl.inc.c>
+};
+
+/* gap sub-block @ 0x84A0 (was gap+0x3D8, 96 bytes) */
+Gfx dMVOpeningYoster_DL_0x84A0[12] = {
+	#include <MVOpeningYoster/DL_0x84A0.dl.inc.c>
+};
+
+/* gap sub-block @ 0x8500 (was gap+0x438, 104 bytes) */
+Gfx dMVOpeningYoster_DL_0x8500[13] = {
+	#include <MVOpeningYoster/DL_0x8500.dl.inc.c>
+};
+
+/* gap sub-block @ 0x8568 (was gap+0x4A0, 128 bytes) */
+Gfx dMVOpeningYoster_DL_0x8568[16] = {
+	#include <MVOpeningYoster/DL_0x8568.dl.inc.c>
+};
+
+/* gap sub-block @ 0x85E8 (was gap+0x520, 136 bytes) */
+Gfx dMVOpeningYoster_DL_0x85E8[17] = {
+	#include <MVOpeningYoster/DL_0x85E8.dl.inc.c>
+};
+
+/* gap sub-block @ 0x8670 (was gap+0x5A8, 112 bytes) */
+Gfx dMVOpeningYoster_DL_0x8670[14] = {
+	#include <MVOpeningYoster/DL_0x8670.dl.inc.c>
+};
+
+/* gap sub-block @ 0x86E0 (was gap+0x618, 120 bytes) */
+Gfx dMVOpeningYoster_DL_0x86E0[15] = {
+	#include <MVOpeningYoster/DL_0x86E0.dl.inc.c>
+};
+
+/* gap sub-block @ 0x8758 (was gap+0x690, 128 bytes) */
+Gfx dMVOpeningYoster_DL_0x8758[16] = {
+	#include <MVOpeningYoster/DL_0x8758.dl.inc.c>
+};
+
+/* gap sub-block @ 0x87D8 (was gap+0x710, 136 bytes) */
+Gfx dMVOpeningYoster_DL_0x87D8[17] = {
+	#include <MVOpeningYoster/DL_0x87D8.dl.inc.c>
+};
+
+/* gap sub-block @ 0x8860 (was gap+0x798, 96 bytes) */
+Gfx dMVOpeningYoster_DL_0x8860[12] = {
+	#include <MVOpeningYoster/DL_0x8860.dl.inc.c>
+};
+
+/* gap sub-block @ 0x88C0 (was gap+0x7F8, 368 bytes) */
+Gfx dMVOpeningYoster_DL_0x88C0[46] = {
+	#include <MVOpeningYoster/DL_0x88C0.dl.inc.c>
+};
+
+/* gap sub-block @ 0x8A30 (was gap+0x968, 168 bytes) */
+Gfx dMVOpeningYoster_DL_0x8A30[21] = {
+	#include <MVOpeningYoster/DL_0x8A30.dl.inc.c>
+};
+
+/* gap sub-block @ 0x8AD8 (was gap+0xA10, 192 bytes) */
+Gfx dMVOpeningYoster_DL_0x8AD8[24] = {
+	#include <MVOpeningYoster/DL_0x8AD8.dl.inc.c>
+};
+
+/* gap sub-block @ 0x8B98 (was gap+0xAD0, 200 bytes) */
+Gfx dMVOpeningYoster_DL_0x8B98[25] = {
+	#include <MVOpeningYoster/DL_0x8B98.dl.inc.c>
+};
+
+/* gap sub-block @ 0x8C60 (was gap+0xB98, 176 bytes) */
+Gfx dMVOpeningYoster_DL_0x8C60[22] = {
+	#include <MVOpeningYoster/DL_0x8C60.dl.inc.c>
+};
+
+/* gap sub-block @ 0x8D10 (was gap+0xC48, 184 bytes) */
+Gfx dMVOpeningYoster_DL_0x8D10[23] = {
+	#include <MVOpeningYoster/DL_0x8D10.dl.inc.c>
+};
+
+/* gap sub-block @ 0x8DC8 (was gap+0xD00, 128 bytes) */
+Gfx dMVOpeningYoster_DL_0x8DC8[16] = {
+	#include <MVOpeningYoster/DL_0x8DC8.dl.inc.c>
+};
+
+/* gap sub-block @ 0x8E48 (was gap+0xD80, 136 bytes) */
+Gfx dMVOpeningYoster_DL_0x8E48[17] = {
+	#include <MVOpeningYoster/DL_0x8E48.dl.inc.c>
+};
+
+/* gap sub-block @ 0x8ED0 (was gap+0xE08, 96 bytes) */
+Gfx dMVOpeningYoster_DL_0x8ED0[12] = {
+	#include <MVOpeningYoster/DL_0x8ED0.dl.inc.c>
+};
+
+/* gap sub-block @ 0x8F30 (was gap+0xE68, 112 bytes) */
+Gfx dMVOpeningYoster_DL_0x8F30[14] = {
+	#include <MVOpeningYoster/DL_0x8F30.dl.inc.c>
+};
+
+/* gap sub-block @ 0x8FA0 (was gap+0xED8, 128 bytes) */
+Gfx dMVOpeningYoster_DL_0x8FA0[16] = {
+	#include <MVOpeningYoster/DL_0x8FA0.dl.inc.c>
+};
+
+/* gap sub-block @ 0x9020 (was gap+0xF58, 136 bytes) */
+Gfx dMVOpeningYoster_DL_0x9020[17] = {
+	#include <MVOpeningYoster/DL_0x9020.dl.inc.c>
+};
+
+/* gap sub-block @ 0x90A8 (was gap+0xFE0, 96 bytes) */
+Gfx dMVOpeningYoster_DL_0x90A8[12] = {
+	#include <MVOpeningYoster/DL_0x90A8.dl.inc.c>
+};
+
+/* gap sub-block @ 0x9108 (was gap+0x1040, 104 bytes) */
+Gfx dMVOpeningYoster_DL_0x9108[13] = {
+	#include <MVOpeningYoster/DL_0x9108.dl.inc.c>
+};
+
+/* gap sub-block @ 0x9170 (was gap+0x10A8, 136 bytes) */
+Gfx dMVOpeningYoster_DL_0x9170[17] = {
+	#include <MVOpeningYoster/DL_0x9170.dl.inc.c>
+};
+
+/* gap sub-block @ 0x91F8 (was gap+0x1130, 136 bytes) */
+Gfx dMVOpeningYoster_DL_0x91F8[17] = {
+	#include <MVOpeningYoster/DL_0x91F8.dl.inc.c>
+};
+
+/* gap sub-block @ 0x9280 (was gap+0x11B8, 96 bytes) */
+Gfx dMVOpeningYoster_DL_0x9280[12] = {
+	#include <MVOpeningYoster/DL_0x9280.dl.inc.c>
+};
+
+/* gap sub-block @ 0x92E0 (was gap+0x1218, 352 bytes) */
+Gfx dMVOpeningYoster_DL_0x92E0[44] = {
+	#include <MVOpeningYoster/DL_0x92E0.dl.inc.c>
+};
+
+/* gap sub-block @ 0x9440 (was gap+0x1378, 120 bytes) */
+Gfx dMVOpeningYoster_DL_0x9440[15] = {
+	#include <MVOpeningYoster/DL_0x9440.dl.inc.c>
+};
+
+/* gap sub-block @ 0x94B8 (was gap+0x13F0, 120 bytes) */
+Gfx dMVOpeningYoster_DL_0x94B8[15] = {
+	#include <MVOpeningYoster/DL_0x94B8.dl.inc.c>
+};
+
+/* gap sub-block @ 0x9530 (was gap+0x1468, 152 bytes) */
+Gfx dMVOpeningYoster_DL_0x9530[19] = {
+	#include <MVOpeningYoster/DL_0x9530.dl.inc.c>
+};
+
+DObjDLLink dMVOpeningYoster_DLLink_0x95C8[2] = {
+	{ 1, dMVOpeningYoster_DL_0x9440 },
+	{ 4, NULL },
+};
+
+
+DObjDLLink dMVOpeningYoster_DLLink_0x95D8[2] = {
+	{ 1, dMVOpeningYoster_DL_0x9530 },
+	{ 4, NULL },
+};
+
+
+DObjDLLink dMVOpeningYoster_DLLink_0x95E8[2] = {
+	{ 0, dMVOpeningYoster_DL_0x80C8 },
+	{ 4, NULL },
+};
+
+
+DObjDLLink dMVOpeningYoster_DLLink_0x95F8[2] = {
+	{ 0, dMVOpeningYoster_DL_0x81C8 },
+	{ 4, NULL },
+};
+
+
+DObjDLLink dMVOpeningYoster_DLLink_0x9608[2] = {
+	{ 0, dMVOpeningYoster_DL_0x8248 },
+	{ 4, NULL },
+};
+
+
+DObjDLLink dMVOpeningYoster_DLLink_0x9618[2] = {
+	{ 0, dMVOpeningYoster_DL_0x82D0 },
+	{ 4, NULL },
+};
+
+
+DObjDLLink dMVOpeningYoster_DLLink_0x9628[2] = {
+	{ 0, dMVOpeningYoster_DL_0x8330 },
+	{ 4, NULL },
+};
+
+
+DObjDLLink dMVOpeningYoster_DLLink_0x9638[2] = {
+	{ 0, dMVOpeningYoster_DL_0x8398 },
+	{ 4, NULL },
+};
+
+
+DObjDLLink dMVOpeningYoster_DLLink_0x9648[2] = {
+	{ 0, dMVOpeningYoster_DL_0x8418 },
+	{ 4, NULL },
+};
+
+
+DObjDLLink dMVOpeningYoster_DLLink_0x9658[2] = {
+	{ 0, dMVOpeningYoster_DL_0x84A0 },
+	{ 4, NULL },
+};
+
+
+DObjDLLink dMVOpeningYoster_DLLink_0x9668[2] = {
+	{ 0, dMVOpeningYoster_DL_0x8500 },
+	{ 4, NULL },
+};
+
+
+DObjDLLink dMVOpeningYoster_DLLink_0x9678[2] = {
+	{ 0, dMVOpeningYoster_DL_0x8568 },
+	{ 4, NULL },
+};
+
+
+DObjDLLink dMVOpeningYoster_DLLink_0x9688[2] = {
+	{ 0, dMVOpeningYoster_DL_0x85E8 },
+	{ 4, NULL },
+};
+
+
+DObjDLLink dMVOpeningYoster_DLLink_0x9698[2] = {
+	{ 0, dMVOpeningYoster_DL_0x8670 },
+	{ 4, NULL },
+};
+
+
+DObjDLLink dMVOpeningYoster_DLLink_0x96A8[2] = {
+	{ 0, dMVOpeningYoster_DL_0x86E0 },
+	{ 4, NULL },
+};
+
+
+DObjDLLink dMVOpeningYoster_DLLink_0x96B8[2] = {
+	{ 0, dMVOpeningYoster_DL_0x8758 },
+	{ 4, NULL },
+};
+
+
+DObjDLLink dMVOpeningYoster_DLLink_0x96C8[2] = {
+	{ 0, dMVOpeningYoster_DL_0x87D8 },
+	{ 4, NULL },
+};
+
+
+DObjDLLink dMVOpeningYoster_DLLink_0x96D8[2] = {
+	{ 0, dMVOpeningYoster_DL_0x8860 },
+	{ 4, NULL },
+};
+
+
+DObjDLLink dMVOpeningYoster_DLLink_0x96E8[2] = {
+	{ 0, dMVOpeningYoster_DL_0x88C0 },
+	{ 4, NULL },
+};
+
+
+DObjDLLink dMVOpeningYoster_DLLink_0x96F8[2] = {
+	{ 0, dMVOpeningYoster_DL_0x8A30 },
+	{ 4, NULL },
+};
+
+
+DObjDLLink dMVOpeningYoster_DLLink_0x9708[2] = {
+	{ 0, dMVOpeningYoster_DL_0x8AD8 },
+	{ 4, NULL },
+};
+
+
+DObjDLLink dMVOpeningYoster_DLLink_0x9718[2] = {
+	{ 0, dMVOpeningYoster_DL_0x8B98 },
+	{ 4, NULL },
+};
+
+
+DObjDLLink dMVOpeningYoster_DLLink_0x9728[2] = {
+	{ 0, dMVOpeningYoster_DL_0x8C60 },
+	{ 4, NULL },
+};
+
+
+DObjDLLink dMVOpeningYoster_DLLink_0x9738[2] = {
+	{ 0, dMVOpeningYoster_DL_0x8D10 },
+	{ 4, NULL },
+};
+
+
+DObjDLLink dMVOpeningYoster_DLLink_0x9748[2] = {
+	{ 0, dMVOpeningYoster_DL_0x8DC8 },
+	{ 4, NULL },
+};
+
+
+DObjDLLink dMVOpeningYoster_DLLink_0x9758[2] = {
+	{ 0, dMVOpeningYoster_DL_0x8E48 },
+	{ 4, NULL },
+};
+
+
+DObjDLLink dMVOpeningYoster_DLLink_0x9768[2] = {
+	{ 0, dMVOpeningYoster_DL_0x8ED0 },
+	{ 4, NULL },
+};
+
+
+DObjDLLink dMVOpeningYoster_DLLink_0x9778[2] = {
+	{ 0, dMVOpeningYoster_DL_0x8F30 },
+	{ 4, NULL },
+};
+
+
+DObjDLLink dMVOpeningYoster_DLLink_0x9788[2] = {
+	{ 0, dMVOpeningYoster_DL_0x8FA0 },
+	{ 4, NULL },
+};
+
+
+DObjDLLink dMVOpeningYoster_DLLink_0x9798[2] = {
+	{ 0, dMVOpeningYoster_DL_0x9020 },
+	{ 4, NULL },
+};
+
+
+DObjDLLink dMVOpeningYoster_DLLink_0x97A8[2] = {
+	{ 0, dMVOpeningYoster_DL_0x90A8 },
+	{ 4, NULL },
+};
+
+
+DObjDLLink dMVOpeningYoster_DLLink_0x97B8[2] = {
+	{ 0, dMVOpeningYoster_DL_0x9108 },
+	{ 4, NULL },
+};
+
+
+DObjDLLink dMVOpeningYoster_DLLink_0x97C8[2] = {
+	{ 0, dMVOpeningYoster_DL_0x9170 },
+	{ 4, NULL },
+};
+
+
+DObjDLLink dMVOpeningYoster_DLLink_0x97D8[2] = {
+	{ 0, dMVOpeningYoster_DL_0x91F8 },
+	{ 4, NULL },
+};
+
+
+DObjDLLink dMVOpeningYoster_DLLink_0x97E8[2] = {
+	{ 0, dMVOpeningYoster_DL_0x9280 },
+	{ 4, NULL },
+};
+
+
+DObjDLLink dMVOpeningYoster_DLLink_0x97F8[2] = {
+	{ 0, dMVOpeningYoster_DL_0x92E0 },
+	{ 4, NULL },
+};
+
+
+/* DObjDesc: Nest @ 0x9808 (74 entries) */
+DObjDesc dMVOpeningYoster_Nest[] = {
+	{ 0, (void*)0x00000000, { 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 1, (void*)0x00000000, { 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 2, (void*)dMVOpeningYoster_DLLink_0x95C8, { 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 2, (void*)dMVOpeningYoster_DLLink_0x95D8, { 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 1, (void*)0x00000000, { 0.0f, 94.20000457763672f, 0.0f }, { 0.0f, 0.0f, 0.0f }, { 1.583920955657959f, 1.0f, 1.583920955657959f } },
+	{ 2, (void*)0x00000000, { 0.0f, 26.160005569458008f, 0.0f }, { 0.0f, -0.43633198738098145f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 3, (void*)0x00000000, { -95.42998504638672f, -24.599990844726562f, 87.05723571777344f }, { 0.0f, -0.6100000143051147f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 4, (void*)dMVOpeningYoster_DLLink_0x95E8, { 1.9999999949504854e-06f, 0.0f, 7.000000096013537e-06f }, { 0.0f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 4, (void*)0x00000000, { 1.9999999949504854e-06f, 0.0f, 60.00000762939453f }, { 0.34906598925590515f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 5, (void*)dMVOpeningYoster_DLLink_0x95F8, { 3.999999989900971e-06f, 1.4000000192027073e-05f, -9.999999747378752e-05f }, { 0.0f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 5, (void*)0x00000000, { -1.8000000636675395e-05f, 0.0f, 59.99995803833008f }, { 0.17453299462795258f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 6, (void*)dMVOpeningYoster_DLLink_0x9608, { 1.8000000636675395e-05f, 1.4000000192027073e-05f, -2.9000000722589903e-05f }, { 0.0f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 6, (void*)0x00000000, { 7.500000356230885e-05f, 0.0f, 59.999969482421875f }, { 0.17453299462795258f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 7, (void*)dMVOpeningYoster_DLLink_0x9618, { 3.899999865097925e-05f, -1.4000000192027073e-05f, -1.4000000192027073e-05f }, { 0.0f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 3, (void*)0x00000000, { 95.43000030517578f, -24.599990844726562f, -87.05699157714844f }, { 0.0f, 2.531593084335327f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 4, (void*)dMVOpeningYoster_DLLink_0x9628, { -7.000000096013537e-06f, 7.000000096013537e-06f, 1.4000000192027073e-05f }, { 0.0f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 4, (void*)0x00000000, { -7.000000096013537e-06f, 7.000000096013537e-06f, 60.000030517578125f }, { 0.34906598925590515f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 5, (void*)dMVOpeningYoster_DLLink_0x9638, { 7.000000096013537e-06f, -1.4000000192027073e-05f, -4.3000000005122274e-05f }, { 0.0f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 5, (void*)0x00000000, { 3.999999989900971e-06f, 0.0f, 59.99998474121094f }, { 0.17453299462795258f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 6, (void*)dMVOpeningYoster_DLLink_0x9648, { -3.600000127335079e-05f, 0.0f, -4.3000000005122274e-05f }, { 0.0f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 6, (void*)0x00000000, { -6.399999983841553e-05f, 2.9000000722589903e-05f, 59.99995803833008f }, { 0.17453299462795258f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 7, (void*)dMVOpeningYoster_DLLink_0x9658, { 1.8000000636675395e-05f, 1.4000000192027073e-05f, 0.0f }, { 0.0f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 3, (void*)0x00000000, { -95.43000793457031f, -24.599990844726562f, -87.0570068359375f }, { 0.0f, -2.531593084335327f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 4, (void*)dMVOpeningYoster_DLLink_0x9668, { -1.9999999949504854e-06f, 0.0f, -5.700000110664405e-05f }, { 0.0f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 4, (void*)0x00000000, { -9.000000318337698e-06f, 0.0f, 60.0f }, { 0.34906598925590515f, 0.0f, 0.0f }, { 1.0f, 1.0f, 0.9999989867210388f } },
+	{ 5, (void*)dMVOpeningYoster_DLLink_0x9678, { 1.5999999959603883e-05f, 0.0f, -9.999999747378752e-05f }, { 0.0f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 5, (void*)0x00000000, { 4.999999873689376e-06f, 0.0f, 59.99995803833008f }, { 0.17453299462795258f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 6, (void*)dMVOpeningYoster_DLLink_0x9688, { -1.9999999949504854e-06f, 2.9000000722589903e-05f, -2.9000000722589903e-05f }, { 0.0f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 6, (void*)0x00000000, { -1.9999999949504854e-06f, -2.9000000722589903e-05f, 59.99992752075195f }, { 0.17453299462795258f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 7, (void*)dMVOpeningYoster_DLLink_0x9698, { 2.099999983329326e-05f, -1.4000000192027073e-05f, 0.0f }, { 0.0f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 3, (void*)0x00000000, { 95.42902374267578f, -24.599990844726562f, 87.0572280883789f }, { 0.0f, 0.6100000143051147f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 4, (void*)dMVOpeningYoster_DLLink_0x96A8, { -3.999999989900971e-06f, 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 4, (void*)0x00000000, { -1.1000000085914508e-05f, 0.0f, 59.99998474121094f }, { 0.34906598925590515f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 5, (void*)dMVOpeningYoster_DLLink_0x96B8, { 2.9000000722589903e-05f, -2.9000000722589903e-05f, -0.0001289999927394092f }, { 0.0f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 5, (void*)0x00000000, { 3.999999989900971e-06f, 0.0f, 59.999916076660156f }, { 0.17453299462795258f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 6, (void*)dMVOpeningYoster_DLLink_0x96C8, { -1.8000000636675395e-05f, 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 6, (void*)0x00000000, { -1.8000000636675395e-05f, 0.0f, 60.000030517578125f }, { 0.17453299462795258f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 7, (void*)dMVOpeningYoster_DLLink_0x96D8, { 1.4000000192027073e-05f, -1.4000000192027073e-05f, 0.0f }, { 0.0f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 3, (void*)dMVOpeningYoster_DLLink_0x96E8, { 9.999999974752427e-07f, 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 2, (void*)0x00000000, { 0.0f, 0.0f, 0.0f }, { 0.0f, 0.43633198738098145f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 3, (void*)0x00000000, { 95.43001556396484f, -24.599998474121094f, -87.0570068359375f }, { 0.0f, 2.531593084335327f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 4, (void*)dMVOpeningYoster_DLLink_0x96F8, { 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 4, (void*)0x00000000, { -7.000000096013537e-06f, 0.0f, 60.00001525878906f }, { 0.34906598925590515f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 5, (void*)dMVOpeningYoster_DLLink_0x9708, { 1.8000000636675395e-05f, 0.0f, -8.600000001024455e-05f }, { 0.0f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 5, (void*)0x00000000, { -3.999999989900971e-06f, 0.0f, 59.99995803833008f }, { 0.17453299462795258f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 6, (void*)dMVOpeningYoster_DLLink_0x9718, { -1.1000000085914508e-05f, -1.4000000192027073e-05f, -2.9000000722589903e-05f }, { 0.0f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 6, (void*)0x00000000, { -2.499999936844688e-05f, -1.4000000192027073e-05f, 59.99998474121094f }, { 0.17453299462795258f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 7, (void*)dMVOpeningYoster_DLLink_0x9728, { 1.1000000085914508e-05f, -1.4000000192027073e-05f, 2.9000000722589903e-05f }, { 0.0f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 3, (void*)0x00000000, { -95.43000793457031f, -24.599998474121094f, -87.0570068359375f }, { 0.0f, -2.531593084335327f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 4, (void*)dMVOpeningYoster_DLLink_0x9738, { -4.999999873689376e-06f, 0.0f, 7.000000096013537e-06f }, { 0.0f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 4, (void*)0x00000000, { -1.2999999853491317e-05f, 0.0f, 60.00000762939453f }, { 0.34906598925590515f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 5, (void*)dMVOpeningYoster_DLLink_0x9748, { 7.000000096013537e-06f, 0.0f, -8.600000001024455e-05f }, { 0.0f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 5, (void*)0x00000000, { -7.000000096013537e-06f, -1.4000000192027073e-05f, 59.999969482421875f }, { 0.17453299462795258f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 6, (void*)dMVOpeningYoster_DLLink_0x9758, { 9.000000318337698e-06f, 1.4000000192027073e-05f, -2.9000000722589903e-05f }, { 0.0f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 6, (void*)0x00000000, { -1.9999999494757503e-05f, -1.4000000192027073e-05f, 59.999969482421875f }, { 0.17453299462795258f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 7, (void*)dMVOpeningYoster_DLLink_0x9768, { 2.300000051036477e-05f, -1.4000000192027073e-05f, 2.9000000722589903e-05f }, { 0.0f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 3, (void*)0x00000000, { 95.42901611328125f, -24.599998474121094f, 87.0572280883789f }, { 0.0f, 0.6100000143051147f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 4, (void*)dMVOpeningYoster_DLLink_0x9778, { 3.999999989900971e-06f, 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 4, (void*)0x00000000, { 7.000000096013537e-06f, 0.0f, 60.00004196166992f }, { 0.34906598925590515f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 5, (void*)dMVOpeningYoster_DLLink_0x9788, { 3.999999989900971e-06f, 1.4000000192027073e-05f, -8.600000001024455e-05f }, { 0.0f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 5, (void*)0x00000000, { -2.499999936844688e-05f, 0.0f, 59.99998474121094f }, { 0.17453299462795258f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 6, (void*)dMVOpeningYoster_DLLink_0x9798, { -1.8000000636675395e-05f, 1.4000000192027073e-05f, -4.3000000005122274e-05f }, { 0.0f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 6, (void*)0x00000000, { -2.499999936844688e-05f, -1.4000000192027073e-05f, 59.99998474121094f }, { 0.17453299462795258f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 7, (void*)dMVOpeningYoster_DLLink_0x97A8, { 4.3000000005122274e-05f, 0.0f, 7.200000254670158e-05f }, { 0.0f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 3, (void*)0x00000000, { -95.43001556396484f, -24.599998474121094f, 87.0572509765625f }, { 0.0f, -0.6100000143051147f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 4, (void*)dMVOpeningYoster_DLLink_0x97B8, { -1.9999999949504854e-06f, 0.0f, 1.4000000192027073e-05f }, { 0.0f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 4, (void*)0x00000000, { -4.999999873689376e-06f, 0.0f, 60.00001525878906f }, { 0.34906598925590515f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 5, (void*)dMVOpeningYoster_DLLink_0x97C8, { 1.9999999494757503e-05f, 0.0f, -7.200000254670158e-05f }, { 0.0f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 5, (void*)0x00000000, { -9.000000318337698e-06f, -2.9000000722589903e-05f, 59.999969482421875f }, { 0.17453299462795258f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 6, (void*)dMVOpeningYoster_DLLink_0x97D8, { -1.9999999494757503e-05f, 0.0f, -4.3000000005122274e-05f }, { 0.0f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 6, (void*)0x00000000, { -3.400000059627928e-05f, -1.4000000192027073e-05f, 59.99998474121094f }, { 0.17453299462795258f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 7, (void*)dMVOpeningYoster_DLLink_0x97E8, { 1.2999999853491317e-05f, 1.4000000192027073e-05f, 1.4000000192027073e-05f }, { 0.0f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 3, (void*)dMVOpeningYoster_DLLink_0x97F8, { 9.999999974752427e-07f, 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 18, (void*)0x00000000, { 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f } },
+};
+
+/* Raw data from file offset 0xA4C0 to 0xB990 (5328 bytes) */
+PAD(8);
+
+/* gap sub-block @ 0xA4C8 (was gap+0x8, 40 bytes) */
+u16 dMVOpeningYoster_gap_0xA4C0_sub_0x8[16] = {
+	#include <MVOpeningYoster/gap_0xA4C0_sub_0x8.palette.inc.c>
+};
+PAD(8);
+
+/* gap sub-block @ 0xA4F0 (was gap+0x30, 40 bytes) */
+u16 dMVOpeningYoster_gap_0xA4C0_sub_0x30[16] = {
+	#include <MVOpeningYoster/gap_0xA4C0_sub_0x30.palette.inc.c>
+};
+PAD(8);
+
+/* gap sub-block @ 0xA518 (was gap+0x58, 40 bytes) */
+u16 dMVOpeningYoster_gap_0xA4C0_sub_0x58[16] = {
+	#include <MVOpeningYoster/gap_0xA4C0_sub_0x58.palette.inc.c>
+};
+PAD(8);
+
+/* gap sub-block @ 0xA540 (was gap+0x80, 40 bytes) */
+/* @tex fmt=CI4 dim=16x4 lut=dMVOpeningYoster_gap_0xA4C0_sub_0x8 */
+u8 dMVOpeningYoster_Tex_0xA540[40] = {
+	#include <MVOpeningYoster/Tex_0xA540.tex.inc.c>
+};
+
+/* gap sub-block @ 0xA568 (was gap+0xA8, 392 bytes) */
+/* @tex fmt=CI4 dim=16x48 lut=dMVOpeningYoster_gap_0xA4C0_sub_0x30 */
+u8 dMVOpeningYoster_Tex_0xA568[392] = {
+	#include <MVOpeningYoster/Tex_0xA568.tex.inc.c>
+};
+
+/* gap sub-block @ 0xA6F0 (was gap+0x230, 520 bytes) */
+/* @tex fmt=CI4 dim=32x32 lut=dMVOpeningYoster_gap_0xA4C0_sub_0x58 */
+u8 dMVOpeningYoster_Tex_0xA6F0[520] = {
+	#include <MVOpeningYoster/Tex_0xA6F0.tex.inc.c>
+};
+
+/* gap sub-block @ 0xA8F8 (was gap+0x438, 520 bytes) */
+/* @tex fmt=I4 dim=32x32 */
+u8 dMVOpeningYoster_Tex_0xA8F8[520] = {
+	#include <MVOpeningYoster/Tex_0xA8F8.tex.inc.c>
+};
+
+/* gap sub-block @ 0xAB00 (was gap+0x640, 768 bytes) */
+/* @tex fmt=I4 dim=32x48 */
+u8 dMVOpeningYoster_Tex_0xAB00[768] = {
+	#include <MVOpeningYoster/Tex_0xAB00.tex.inc.c>
+};
+
+/* gap sub-block @ 0xAE00 (was gap+0x940, 64 bytes) */
+Vtx dMVOpeningYoster_gap_0xA4C0_sub_0x940[4] = {
+	#include <MVOpeningYoster/gap_0xA4C0_sub_0x940.vtx.inc.c>
+};
+
+/* gap sub-block @ 0xAE40 (was gap+0x980, 64 bytes) */
+Vtx dMVOpeningYoster_gap_0xA4C0_sub_0x980[4] = {
+	#include <MVOpeningYoster/gap_0xA4C0_sub_0x980.vtx.inc.c>
+};
+
+/* gap sub-block @ 0xAE80 (was gap+0x9C0, 64 bytes) */
+Vtx dMVOpeningYoster_gap_0xA4C0_sub_0x9C0[4] = {
+	#include <MVOpeningYoster/gap_0xA4C0_sub_0x9C0.vtx.inc.c>
+};
+
+/* gap sub-block @ 0xAEC0 (was gap+0xA00, 64 bytes) */
+Vtx dMVOpeningYoster_gap_0xA4C0_sub_0xA00[4] = {
+	#include <MVOpeningYoster/gap_0xA4C0_sub_0xA00.vtx.inc.c>
+};
+
+/* gap sub-block @ 0xAF00 (was gap+0xA40, 64 bytes) */
+Vtx dMVOpeningYoster_gap_0xA4C0_sub_0xA40[4] = {
+	#include <MVOpeningYoster/gap_0xA4C0_sub_0xA40.vtx.inc.c>
+};
+
+/* gap sub-block @ 0xAF40 (was gap+0xA80, 64 bytes) */
+Vtx dMVOpeningYoster_gap_0xA4C0_sub_0xA80[4] = {
+	#include <MVOpeningYoster/gap_0xA4C0_sub_0xA80.vtx.inc.c>
+};
+
+/* gap sub-block @ 0xAF80 (was gap+0xAC0, 48 bytes) */
+Vtx dMVOpeningYoster_gap_0xA4C0_sub_0xAC0[3] = {
+	#include <MVOpeningYoster/gap_0xA4C0_sub_0xAC0.vtx.inc.c>
+};
+
+/* gap sub-block @ 0xAFB0 (was gap+0xAF0, 48 bytes) */
+Vtx dMVOpeningYoster_gap_0xA4C0_sub_0xAF0[3] = {
+	#include <MVOpeningYoster/gap_0xA4C0_sub_0xAF0.vtx.inc.c>
+};
+
+/* Vtx: Vtx_0xAFE0 @ 0xAFE0 (1 vertices) */
+Vtx dMVOpeningYoster_Vtx_0xAFE0_Vtx[1] = {
+	#include <MVOpeningYoster/Vtx_0xAFE0.vtx.inc.c>
+};
+
+/* gap sub-block @ 0xAFF0 (was gap+0xB30, 96 bytes) */
+Vtx dMVOpeningYoster_gap_0xA4C0_sub_0xB30[6] = {
+	#include <MVOpeningYoster/gap_0xA4C0_sub_0xB30.vtx.inc.c>
+};
+
+/* gap sub-block @ 0xB050 (was gap+0xB90, 96 bytes) */
+Vtx dMVOpeningYoster_gap_0xA4C0_sub_0xB90[6] = {
+	#include <MVOpeningYoster/gap_0xA4C0_sub_0xB90.vtx.inc.c>
+};
+
+/* gap sub-block @ 0xB0B0 (was gap+0xBF0, 96 bytes) */
+Vtx dMVOpeningYoster_gap_0xA4C0_sub_0xBF0[6] = {
+	#include <MVOpeningYoster/gap_0xA4C0_sub_0xBF0.vtx.inc.c>
+};
+
+/* gap sub-block @ 0xB110 (was gap+0xC50, 64 bytes) */
+Vtx dMVOpeningYoster_gap_0xA4C0_sub_0xC50[4] = {
+	#include <MVOpeningYoster/gap_0xA4C0_sub_0xC50.vtx.inc.c>
+};
+
+/* gap sub-block @ 0xB150 (was gap+0xC90, 88 bytes) */
+Gfx dMVOpeningYoster_DL_0xB150[11] = {
+	#include <MVOpeningYoster/DL_0xB150.dl.inc.c>
+};
+
+/* gap sub-block @ 0xB1A8 (was gap+0xCE8, 128 bytes) */
+Gfx dMVOpeningYoster_DL_0xB1A8[16] = {
+	#include <MVOpeningYoster/DL_0xB1A8.dl.inc.c>
+};
+
+/* gap sub-block @ 0xB228 (was gap+0xD68, 32 bytes) */
+Gfx dMVOpeningYoster_DL_0xB228[4] = {
+	#include <MVOpeningYoster/DL_0xB228.dl.inc.c>
+};
+
+/* gap sub-block @ 0xB248 (was gap+0xD88, 32 bytes) */
+Gfx dMVOpeningYoster_DL_0xB248[4] = {
+	#include <MVOpeningYoster/DL_0xB248.dl.inc.c>
+};
+
+/* gap sub-block @ 0xB268 (was gap+0xDA8, 32 bytes) */
+Gfx dMVOpeningYoster_DL_0xB268[4] = {
+	#include <MVOpeningYoster/DL_0xB268.dl.inc.c>
+};
+
+/* gap sub-block @ 0xB288 (was gap+0xDC8, 32 bytes) */
+Gfx dMVOpeningYoster_DL_0xB288[4] = {
+	#include <MVOpeningYoster/DL_0xB288.dl.inc.c>
+};
+
+/* gap sub-block @ 0xB2A8 (was gap+0xDE8, 136 bytes) */
+Gfx dMVOpeningYoster_DL_0xB2A8[17] = {
+	#include <MVOpeningYoster/DL_0xB2A8.dl.inc.c>
+};
+
+/* gap sub-block @ 0xB330 (was gap+0xE70, 136 bytes) */
+Gfx dMVOpeningYoster_DL_0xB330[17] = {
+	#include <MVOpeningYoster/DL_0xB330.dl.inc.c>
+};
+
+/* gap sub-block @ 0xB3B8 (was gap+0xEF8, 32 bytes) */
+Gfx dMVOpeningYoster_DL_0xB3B8[4] = {
+	#include <MVOpeningYoster/DL_0xB3B8.dl.inc.c>
+};
+
+/* gap sub-block @ 0xB3D8 (was gap+0xF18, 40 bytes) */
+Gfx dMVOpeningYoster_DL_0xB3D8[5] = {
+	#include <MVOpeningYoster/DL_0xB3D8.dl.inc.c>
+};
+
+/* gap sub-block @ 0xB400 (was gap+0xF40, 32 bytes) */
+Gfx dMVOpeningYoster_DL_0xB400[4] = {
+	#include <MVOpeningYoster/DL_0xB400.dl.inc.c>
+};
+
+/* gap sub-block @ 0xB420 (was gap+0xF60, 32 bytes) */
+Gfx dMVOpeningYoster_DL_0xB420[4] = {
+	#include <MVOpeningYoster/DL_0xB420.dl.inc.c>
+};
+
+/* gap sub-block @ 0xB440 (was gap+0xF80, 32 bytes) */
+Gfx dMVOpeningYoster_DL_0xB440[4] = {
+	#include <MVOpeningYoster/DL_0xB440.dl.inc.c>
+};
+
+/* gap sub-block @ 0xB460 (was gap+0xFA0, 32 bytes) */
+Gfx dMVOpeningYoster_DL_0xB460[4] = {
+	#include <MVOpeningYoster/DL_0xB460.dl.inc.c>
+};
+
+/* gap sub-block @ 0xB480 (was gap+0xFC0, 80 bytes) */
+Gfx dMVOpeningYoster_DL_0xB480[10] = {
+	#include <MVOpeningYoster/DL_0xB480.dl.inc.c>
+};
+
+/* gap sub-block @ 0xB4D0 (was gap+0x1010, 72 bytes) */
+Gfx dMVOpeningYoster_DL_0xB4D0[9] = {
+	#include <MVOpeningYoster/DL_0xB4D0.dl.inc.c>
+};
+
+/* gap sub-block @ 0xB518 (was gap+0x1058, 128 bytes) */
+Gfx dMVOpeningYoster_DL_0xB518[16] = {
+	#include <MVOpeningYoster/DL_0xB518.dl.inc.c>
+};
+
+/* gap sub-block @ 0xB598 (was gap+0x10D8, 56 bytes) */
+Gfx dMVOpeningYoster_DL_0xB598[7] = {
+	#include <MVOpeningYoster/DL_0xB598.dl.inc.c>
+};
+
+/* gap sub-block @ 0xB5D0 (was gap+0x1110, 56 bytes) */
+Gfx dMVOpeningYoster_DL_0xB5D0[7] = {
+	#include <MVOpeningYoster/DL_0xB5D0.dl.inc.c>
+};
+
+/* gap sub-block @ 0xB608 (was gap+0x1148, 136 bytes) */
+Gfx dMVOpeningYoster_DL_0xB608[17] = {
+	#include <MVOpeningYoster/DL_0xB608.dl.inc.c>
+};
+
+/* gap sub-block @ 0xB690 (was gap+0x11D0, 32 bytes) */
+Gfx dMVOpeningYoster_DL_0xB690[4] = {
+	#include <MVOpeningYoster/DL_0xB690.dl.inc.c>
+};
+
+/* gap sub-block @ 0xB6B0 (was gap+0x11F0, 32 bytes) */
+Gfx dMVOpeningYoster_DL_0xB6B0[4] = {
+	#include <MVOpeningYoster/DL_0xB6B0.dl.inc.c>
+};
+
+/* gap sub-block @ 0xB6D0 (was gap+0x1210, 32 bytes) */
+Gfx dMVOpeningYoster_DL_0xB6D0[4] = {
+	#include <MVOpeningYoster/DL_0xB6D0.dl.inc.c>
+};
+
+/* gap sub-block @ 0xB6F0 (was gap+0x1230, 32 bytes) */
+Gfx dMVOpeningYoster_DL_0xB6F0[4] = {
+	#include <MVOpeningYoster/DL_0xB6F0.dl.inc.c>
+};
+
+/* gap sub-block @ 0xB710 (was gap+0x1250, 32 bytes) */
+Gfx dMVOpeningYoster_DL_0xB710[4] = {
+	#include <MVOpeningYoster/DL_0xB710.dl.inc.c>
+};
+
+/* gap sub-block @ 0xB730 (was gap+0x1270, 32 bytes) */
+Gfx dMVOpeningYoster_DL_0xB730[4] = {
+	#include <MVOpeningYoster/DL_0xB730.dl.inc.c>
+};
+
+/* gap sub-block @ 0xB750 (was gap+0x1290, 32 bytes) */
+Gfx dMVOpeningYoster_DL_0xB750[4] = {
+	#include <MVOpeningYoster/DL_0xB750.dl.inc.c>
+};
+
+/* gap sub-block @ 0xB770 (was gap+0x12B0, 32 bytes) */
+Gfx dMVOpeningYoster_DL_0xB770[4] = {
+	#include <MVOpeningYoster/DL_0xB770.dl.inc.c>
+};
+
+/* gap sub-block @ 0xB790 (was gap+0x12D0, 80 bytes) */
+Gfx dMVOpeningYoster_DL_0xB790[10] = {
+	#include <MVOpeningYoster/DL_0xB790.dl.inc.c>
+};
+
+DObjDLLink dMVOpeningYoster_DLLink_0xB7E0[2] = {
+	{ 1, dMVOpeningYoster_DL_0xB4D0 },
+	{ 4, NULL },
+};
+
+
+DObjDLLink dMVOpeningYoster_DLLink_0xB7F0[2] = {
+	{ 1, dMVOpeningYoster_DL_0xB598 },
+	{ 4, NULL },
+};
+
+
+DObjDLLink dMVOpeningYoster_DLLink_0xB800[2] = {
+	{ 1, dMVOpeningYoster_DL_0xB5D0 },
+	{ 4, NULL },
+};
+
+
+DObjDLLink dMVOpeningYoster_DLLink_0xB810[2] = {
+	{ 1, dMVOpeningYoster_DL_0xB608 },
+	{ 4, NULL },
+};
+
+
+DObjDLLink dMVOpeningYoster_DLLink_0xB820[2] = {
+	{ 1, dMVOpeningYoster_DL_0xB690 },
+	{ 4, NULL },
+};
+
+
+DObjDLLink dMVOpeningYoster_DLLink_0xB830[2] = {
+	{ 1, dMVOpeningYoster_DL_0xB6B0 },
+	{ 4, NULL },
+};
+
+
+DObjDLLink dMVOpeningYoster_DLLink_0xB840[2] = {
+	{ 1, dMVOpeningYoster_DL_0xB6D0 },
+	{ 4, NULL },
+};
+
+
+DObjDLLink dMVOpeningYoster_DLLink_0xB850[2] = {
+	{ 1, dMVOpeningYoster_DL_0xB6F0 },
+	{ 4, NULL },
+};
+
+
+DObjDLLink dMVOpeningYoster_DLLink_0xB860[2] = {
+	{ 1, dMVOpeningYoster_DL_0xB710 },
+	{ 4, NULL },
+};
+
+
+DObjDLLink dMVOpeningYoster_DLLink_0xB870[2] = {
+	{ 1, dMVOpeningYoster_DL_0xB730 },
+	{ 4, NULL },
+};
+
+
+DObjDLLink dMVOpeningYoster_DLLink_0xB880[2] = {
+	{ 1, dMVOpeningYoster_DL_0xB750 },
+	{ 4, NULL },
+};
+
+
+DObjDLLink dMVOpeningYoster_DLLink_0xB890[2] = {
+	{ 1, dMVOpeningYoster_DL_0xB770 },
+	{ 4, NULL },
+};
+
+
+DObjDLLink dMVOpeningYoster_DLLink_0xB8A0[2] = {
+	{ 1, dMVOpeningYoster_DL_0xB790 },
+	{ 4, NULL },
+};
+
+
+DObjDLLink dMVOpeningYoster_DLLink_0xB8B0[2] = {
+	{ 0, dMVOpeningYoster_DL_0xB150 },
+	{ 4, NULL },
+};
+
+
+DObjDLLink dMVOpeningYoster_DLLink_0xB8C0[2] = {
+	{ 0, dMVOpeningYoster_DL_0xB228 },
+	{ 4, NULL },
+};
+
+
+DObjDLLink dMVOpeningYoster_DLLink_0xB8D0[2] = {
+	{ 0, dMVOpeningYoster_DL_0xB248 },
+	{ 4, NULL },
+};
+
+
+DObjDLLink dMVOpeningYoster_DLLink_0xB8E0[2] = {
+	{ 0, dMVOpeningYoster_DL_0xB268 },
+	{ 4, NULL },
+};
+
+
+DObjDLLink dMVOpeningYoster_DLLink_0xB8F0[2] = {
+	{ 0, dMVOpeningYoster_DL_0xB288 },
+	{ 4, NULL },
+};
+
+
+DObjDLLink dMVOpeningYoster_DLLink_0xB900[2] = {
+	{ 0, dMVOpeningYoster_DL_0xB2A8 },
+	{ 4, NULL },
+};
+
+
+DObjDLLink dMVOpeningYoster_DLLink_0xB910[2] = {
+	{ 0, dMVOpeningYoster_DL_0xB330 },
+	{ 4, NULL },
+};
+
+
+DObjDLLink dMVOpeningYoster_DLLink_0xB920[2] = {
+	{ 0, dMVOpeningYoster_DL_0xB3B8 },
+	{ 4, NULL },
+};
+
+
+DObjDLLink dMVOpeningYoster_DLLink_0xB930[2] = {
+	{ 0, dMVOpeningYoster_DL_0xB3D8 },
+	{ 4, NULL },
+};
+
+
+DObjDLLink dMVOpeningYoster_DLLink_0xB940[2] = {
+	{ 0, dMVOpeningYoster_DL_0xB400 },
+	{ 4, NULL },
+};
+
+
+DObjDLLink dMVOpeningYoster_DLLink_0xB950[2] = {
+	{ 0, dMVOpeningYoster_DL_0xB420 },
+	{ 4, NULL },
+};
+
+
+DObjDLLink dMVOpeningYoster_DLLink_0xB960[2] = {
+	{ 0, dMVOpeningYoster_DL_0xB440 },
+	{ 4, NULL },
+};
+
+
+DObjDLLink dMVOpeningYoster_DLLink_0xB970[2] = {
+	{ 0, dMVOpeningYoster_DL_0xB460 },
+	{ 4, NULL },
+};
+
+
+DObjDLLink dMVOpeningYoster_DLLink_0xB980[2] = {
+	{ 0, dMVOpeningYoster_DL_0xB480 },
+	{ 4, NULL },
+};
+
+
+/* DObjDesc: GroundDObjDesc @ 0xB990 (34 entries, terminated by { 18, ... }
+ * sentinel at +0x5D8 = 0xBF68; the 28 trailing entries — formerly mis-labeled
+ * `NestDObjDesc` — are continuation of this same scene-graph walk. The actual
+ * llMVOpeningYosterNestDObjDesc symbol lives separately at file 0x9808.). */
+DObjDesc dMVOpeningYoster_GroundDObjDesc[] = {
+	{ 0, (void*)0x00000000, { 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 1, (void*)0x00000000, { 0.0f, 0.0f, 160.8000030517578f }, { 0.0f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 2, (void*)dMVOpeningYoster_DLLink_0xB7E0, { 699.8402709960938f, 707.1599731445312f, -639.0f }, { 0.0f, 0.0f, 6.350001811981201f }, { 1.0f, 1.0f, 1.0f } },
+	{ 2, (void*)dMVOpeningYoster_DLLink_0xB7F0, { -542.4000244140625f, 707.1599731445312f, -639.0f }, { 0.0f, 0.0f, -3.1415929794311523f }, { 0.9094399809837341f, 0.9094399809837341f, 0.9094399809837341f } },
+	{ 2, (void*)dMVOpeningYoster_DLLink_0xB800, { -379.8000183105469f, 839.7599487304688f, -753.5999145507812f }, { 0.0f, 0.0f, 1.3962630033493042f }, { 0.6299999952316284f, 0.6299999952316284f, 0.6299999952316284f } },
+	{ 1, (void*)0x00000000, { 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	/* +0x108 (file 0xBA98): continuation — nest scene-graph subtree. */
+	{ 0x8002, (void*)dMVOpeningYoster_DLLink_0xB810, { 729.0f, -68.40001f, 314.99997f }, { 0.0f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 0x8002, (void*)dMVOpeningYoster_DLLink_0xB820, { -729.00018f, -68.40001f, 314.99997f }, { 0.0f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 0x8002, (void*)dMVOpeningYoster_DLLink_0xB830, { -361.80002f, -68.40001f, 387.00006f }, { 0.0f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 0x8002, (void*)dMVOpeningYoster_DLLink_0xB840, { 361.79999f, -68.40001f, 387.00006f }, { 0.0f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 0x8002, (void*)dMVOpeningYoster_DLLink_0xB850, { 0.0f, -68.40001f, 459.0f }, { 0.0f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 1, NULL, { 0.0f, 0.0f, -772.79999f }, { 0.0f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 0x8002, (void*)dMVOpeningYoster_DLLink_0xB860, { 729.0f, -68.40001f, 458.99997f }, { 0.0f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 0x8002, (void*)dMVOpeningYoster_DLLink_0xB870, { -729.00018f, -68.40001f, 461.99997f }, { 0.0f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 0x8002, (void*)dMVOpeningYoster_DLLink_0xB880, { -361.80002f, -68.40001f, 387.00006f }, { 0.0f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 0x8002, (void*)dMVOpeningYoster_DLLink_0xB890, { 361.79999f, -68.40001f, 387.00006f }, { 0.0f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 0x8002, (void*)dMVOpeningYoster_DLLink_0xB8A0, { 0.0f, -68.40001f, 291.00009f }, { 0.0f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 1, NULL, { 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 0x8002, (void*)dMVOpeningYoster_DLLink_0xB8B0, { 0.0f, 138.00003f, 127.80f }, { 0.0f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 0x8002, (void*)dMVOpeningYoster_DLLink_0xB8C0, { 94.200005f, 138.00003f, 65.40f }, { 0.0f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 0x8002, (void*)dMVOpeningYoster_DLLink_0xB8D0, { -128.99997f, 138.00003f, 65.40f }, { 0.0f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 0x8002, (void*)dMVOpeningYoster_DLLink_0xB8E0, { -166.80003f, 138.00003f, -23.40f }, { 0.0f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 0x8002, (void*)dMVOpeningYoster_DLLink_0xB8F0, { 188.39996f, 138.00003f, 21.59997f }, { 0.0f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 1, NULL, { -25.504009f, 253.83424f, 192.27606f }, { 0.0f, 0.0f, 0.0f }, { 0.6515430f, 0.6515430f, 0.6593470f } },
+	{ 2, (void*)dMVOpeningYoster_DLLink_0xB900, { 138.69005f, 693.59979f, -933.60f }, { 0.0f, 0.0f, -0.3599740f }, { 1.0f, 1.0f, 1.0f } },
+	{ 2, (void*)dMVOpeningYoster_DLLink_0xB910, { -37.519169f, 147.69641f, -837.20978f }, { 0.0f, 0.0f, 2.96706f }, { 1.0f, 1.0f, 1.0f } },
+	{ 2, (void*)dMVOpeningYoster_DLLink_0xB920, { 549.36182f, 273.03436f, -837.20990f }, { 0.0f, 0.0f, 3.9269910f }, { 1.0f, 1.0f, 1.0f } },
+	{ 2, (void*)dMVOpeningYoster_DLLink_0xB930, { -338.76218f, 374.98813f, -837.20990f }, { 0.0f, 0.0f, 2.356194f }, { 1.0f, 1.0f, 1.0f } },
+	{ 2, (void*)dMVOpeningYoster_DLLink_0xB940, { 651.48694f, 693.42999f, -837.21008f }, { 0.0f, 0.0f, 4.712389f }, { 1.0f, 1.0f, 1.0f } },
+	{ 2, (void*)dMVOpeningYoster_DLLink_0xB950, { -362.85461f, 693.42999f, -837.20996f }, { 0.0f, 0.0f, 1.570796f }, { 1.0f, 1.0f, 1.0f } },
+	{ 2, (void*)dMVOpeningYoster_DLLink_0xB960, { 549.36182f, 1073.30652f, -837.21021f }, { 0.0f, 0.0f, 5.497787f }, { 1.0f, 1.0f, 1.0f } },
+	{ 2, (void*)dMVOpeningYoster_DLLink_0xB970, { -368.00711f, 1077.53918f, -837.21014f }, { 0.0f, 0.0f, 0.785398f }, { 1.0f, 1.0f, 1.0f } },
+	{ 2, (void*)dMVOpeningYoster_DLLink_0xB980, { 72.570915f, 1201.42542f, -837.21021f }, { 0.0f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 18, NULL, { 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f } },  /* DOBJ_ARRAY_MAX terminator */
+};
+PAD(8);
+
+/* Raw data from file offset 0xBF70 to 0xC940 (2512 bytes) */
+/* Script-table split: leading chain-pointer table at the
+ * start of the AnimJoint, followed by per-joint AObjEvent32
+ * scripts. Forward decls so the table can reference them. */
+extern u32 dMVOpeningYoster_GroundAnimJoint_AnimJoint_0xBFF4[];
+extern u32 dMVOpeningYoster_GroundAnimJoint_AnimJoint_0xC070[];
+extern u32 dMVOpeningYoster_GroundAnimJoint_AnimJoint_0xC0EC[];
+extern u32 dMVOpeningYoster_GroundAnimJoint_AnimJoint_0xC124[];
+extern u32 dMVOpeningYoster_GroundAnimJoint_AnimJoint_0xC174[];
+extern u32 dMVOpeningYoster_GroundAnimJoint_AnimJoint_0xC1C4[];
+extern u32 dMVOpeningYoster_GroundAnimJoint_AnimJoint_0xC214[];
+extern u32 dMVOpeningYoster_GroundAnimJoint_AnimJoint_0xC264[];
+extern u32 dMVOpeningYoster_GroundAnimJoint_AnimJoint_0xC2B4[];
+extern u32 dMVOpeningYoster_GroundAnimJoint_AnimJoint_0xC304[];
+extern u32 dMVOpeningYoster_GroundAnimJoint_AnimJoint_0xC354[];
+extern u32 dMVOpeningYoster_GroundAnimJoint_AnimJoint_0xC3A4[];
+extern u32 dMVOpeningYoster_GroundAnimJoint_AnimJoint_0xC3F4[];
+extern u32 dMVOpeningYoster_GroundAnimJoint_AnimJoint_0xC444[];
+extern u32 dMVOpeningYoster_GroundAnimJoint_AnimJoint_0xC4D0[];
+extern u32 dMVOpeningYoster_GroundAnimJoint_AnimJoint_0xC4F4[];
+extern u32 dMVOpeningYoster_GroundAnimJoint_AnimJoint_0xC520[];
+extern u32 dMVOpeningYoster_GroundAnimJoint_AnimJoint_0xC5B4[];
+extern u32 dMVOpeningYoster_GroundAnimJoint_AnimJoint_0xC644[];
+extern u32 dMVOpeningYoster_GroundAnimJoint_AnimJoint_0xC6D4[];
+extern u32 dMVOpeningYoster_GroundAnimJoint_AnimJoint_0xC740[];
+extern u32 dMVOpeningYoster_GroundAnimJoint_AnimJoint_0xC7AC[];
+extern u32 dMVOpeningYoster_GroundAnimJoint_AnimJoint_0xC83C[];
+extern u32 dMVOpeningYoster_GroundAnimJoint_AnimJoint_0xC8CC[];
+
+AObjEvent32 *dMVOpeningYoster_GroundAnimJoint_AnimJoint[33] = {
+	NULL,
+	NULL,
+	(AObjEvent32 *)dMVOpeningYoster_GroundAnimJoint_AnimJoint_0xBFF4,
+	(AObjEvent32 *)dMVOpeningYoster_GroundAnimJoint_AnimJoint_0xC070,
+	(AObjEvent32 *)dMVOpeningYoster_GroundAnimJoint_AnimJoint_0xC0EC,
+	NULL,
+	(AObjEvent32 *)dMVOpeningYoster_GroundAnimJoint_AnimJoint_0xC124,
+	(AObjEvent32 *)dMVOpeningYoster_GroundAnimJoint_AnimJoint_0xC174,
+	(AObjEvent32 *)dMVOpeningYoster_GroundAnimJoint_AnimJoint_0xC1C4,
+	(AObjEvent32 *)dMVOpeningYoster_GroundAnimJoint_AnimJoint_0xC214,
+	(AObjEvent32 *)dMVOpeningYoster_GroundAnimJoint_AnimJoint_0xC264,
+	NULL,
+	(AObjEvent32 *)dMVOpeningYoster_GroundAnimJoint_AnimJoint_0xC2B4,
+	(AObjEvent32 *)dMVOpeningYoster_GroundAnimJoint_AnimJoint_0xC304,
+	(AObjEvent32 *)dMVOpeningYoster_GroundAnimJoint_AnimJoint_0xC354,
+	(AObjEvent32 *)dMVOpeningYoster_GroundAnimJoint_AnimJoint_0xC3A4,
+	(AObjEvent32 *)dMVOpeningYoster_GroundAnimJoint_AnimJoint_0xC3F4,
+	NULL,
+	NULL,
+	NULL,
+	(AObjEvent32 *)dMVOpeningYoster_GroundAnimJoint_AnimJoint_0xC444,
+	NULL,
+	NULL,
+	(AObjEvent32 *)dMVOpeningYoster_GroundAnimJoint_AnimJoint_0xC4D0,
+	(AObjEvent32 *)dMVOpeningYoster_GroundAnimJoint_AnimJoint_0xC4F4,
+	(AObjEvent32 *)dMVOpeningYoster_GroundAnimJoint_AnimJoint_0xC520,
+	(AObjEvent32 *)dMVOpeningYoster_GroundAnimJoint_AnimJoint_0xC5B4,
+	(AObjEvent32 *)dMVOpeningYoster_GroundAnimJoint_AnimJoint_0xC644,
+	(AObjEvent32 *)dMVOpeningYoster_GroundAnimJoint_AnimJoint_0xC6D4,
+	(AObjEvent32 *)dMVOpeningYoster_GroundAnimJoint_AnimJoint_0xC740,
+	(AObjEvent32 *)dMVOpeningYoster_GroundAnimJoint_AnimJoint_0xC7AC,
+	(AObjEvent32 *)dMVOpeningYoster_GroundAnimJoint_AnimJoint_0xC83C,
+	(AObjEvent32 *)dMVOpeningYoster_GroundAnimJoint_AnimJoint_0xC8CC,
+};
+
+u32 dMVOpeningYoster_GroundAnimJoint_AnimJoint_0xBFF4[] = {
+	aobjEvent32SetValBlock(AOBJ_FLAG_ROTZ | AOBJ_FLAG_TRAX, 0),
+	    0x00000000,  /* 0.0f */
+	    0x44976CCC,  /* 1211.39990234375f */
+	aobjEvent32SetValAfterBlock(AOBJ_FLAG_ROTX | AOBJ_FLAG_ROTY | AOBJ_FLAG_TRAY | AOBJ_FLAG_TRAZ | AOBJ_FLAG_SCAZ, 0),
+	    0x00000000,  /* 0.0f */
+	    0x00000000,  /* 0.0f */
+	    0x4430CA3D,  /* 707.1599731445312f */
+	    0xC41FC000,  /* -639.0f */
+	    0x3F800000,  /* 1.0f */
+	aobjEvent32SetVal0RateBlock(AOBJ_FLAG_SCAX | AOBJ_FLAG_SCAY, 0),
+	    0x3F800000,  /* 1.0f */
+	    0x3F800000,  /* 1.0f */
+	aobjEvent32SetVal0Rate(AOBJ_FLAG_SCAX | AOBJ_FLAG_SCAY, 40),
+	    0x3F2E147A,  /* 0.6799999475479126f */
+	    0x3F2E147A,  /* 0.6799999475479126f */
+	aobjEvent32Cmd12(AOBJ_FLAG_SCAX | AOBJ_FLAG_SCAY, 1),
+	aobjEvent32SetVal(AOBJ_FLAG_ROTZ | AOBJ_FLAG_TRAX, 160),
+	    0x40CB3338,  /* 6.350002288818359f */
+	    0x442EF5C7,  /* 699.8402709960938f */
+	aobjEvent32Cmd12(AOBJ_FLAG_ROTZ | AOBJ_FLAG_TRAX, 1),
+	aobjEvent32Wait(39),
+	aobjEvent32SetVal0RateBlock(AOBJ_FLAG_SCAX | AOBJ_FLAG_SCAY, 40),
+	    0x3F800000,  /* 1.0f */
+	    0x3F800000,  /* 1.0f */
+	aobjEvent32SetVal0RateBlock(AOBJ_FLAG_SCAX | AOBJ_FLAG_SCAY, 40),
+	    0x3F2E147A,  /* 0.6799999475479126f */
+	    0x3F2E147A,  /* 0.6799999475479126f */
+	aobjEvent32SetVal0RateBlock(AOBJ_FLAG_SCAX | AOBJ_FLAG_SCAY, 40),
+	    0x3F800000,  /* 1.0f */
+	    0x3F800000,  /* 1.0f */
+	aobjEvent32End(),
+};
+
+u32 dMVOpeningYoster_GroundAnimJoint_AnimJoint_0xC070[] = {
+	aobjEvent32SetValBlock(AOBJ_FLAG_ROTZ | AOBJ_FLAG_TRAX, 0),
+	    0x00000000,  /* 0.0f */
+	    0xC4976CCD,  /* -1211.4000244140625f */
+	aobjEvent32SetValAfterBlock(AOBJ_FLAG_ROTX | AOBJ_FLAG_ROTY | AOBJ_FLAG_TRAY | AOBJ_FLAG_TRAZ, 0),
+	    0x00000000,  /* 0.0f */
+	    0x00000000,  /* 0.0f */
+	    0x4430CA3D,  /* 707.1599731445312f */
+	    0xC41FC000,  /* -639.0f */
+	aobjEvent32SetVal(AOBJ_FLAG_ROTZ | AOBJ_FLAG_TRAX, 160),
+	    0xC0490FDA,  /* -3.141592502593994f */
+	    0xC407999A,  /* -542.4000244140625f */
+	aobjEvent32Cmd12(AOBJ_FLAG_ROTZ | AOBJ_FLAG_TRAX, 1),
+	aobjEvent32SetValRate(AOBJ_FLAG_SCAX | AOBJ_FLAG_SCAY, 0),
+	    0x3FA662D1,  /* 1.2998906373977661f */
+	    0xBB75C28D,  /* -0.003749999450519681f */
+	    0x3FA662D1,  /* 1.2998906373977661f */
+	    0xBB75C28D,  /* -0.003749999450519681f */
+	aobjEvent32SetVal0RateBlock(AOBJ_FLAG_SCAZ, 0),
+	    0x3F80003B,  /* 1.0000070333480835f */
+	aobjEvent32SetValRateBlock(AOBJ_FLAG_SCAXYZ, 79),
+	    0x3F800000,  /* 1.0f */
+	    0xBB20EF37,  /* -0.0024556645657867193f */
+	    0x3F800000,  /* 1.0f */
+	    0xBB20EF37,  /* -0.0024556645657867193f */
+	    0x3F800000,  /* 1.0f */
+	    0xBA155182,  /* -0.0005696044536307454f */
+	aobjEvent32SetVal0RateBlock(AOBJ_FLAG_SCAXYZ, 80),
+	    0x3F68D10E,  /* 0.9094399213790894f */
+	    0x3F68D10E,  /* 0.9094399213790894f */
+	    0x3F68D10E,  /* 0.9094399213790894f */
+	aobjEvent32End(),
+};
+
+u32 dMVOpeningYoster_GroundAnimJoint_AnimJoint_0xC0EC[] = {
+	aobjEvent32SetValBlock(AOBJ_FLAG_ROTZ, 0),
+	    0x00000000,  /* 0.0f */
+	aobjEvent32SetValAfterBlock(AOBJ_FLAG_ROTX | AOBJ_FLAG_ROTY, 0),
+	    0x00000000,  /* 0.0f */
+	    0x00000000,  /* 0.0f */
+	aobjEvent32SetVal(AOBJ_FLAG_ROTZ, 160),
+	    0x3FB2B8C2,  /* 1.3962633609771729f */
+	aobjEvent32Cmd12(AOBJ_FLAG_ROTZ, 1),
+	aobjEvent32SetValAfter(AOBJ_FLAG_SCAXYZ, 0),
+	    0x3F2147AE,  /* 0.6299999952316284f */
+	    0x3F2147AE,  /* 0.6299999952316284f */
+	    0x3F2147AE,  /* 0.6299999952316284f */
+	aobjEvent32Wait(159),
+	aobjEvent32End(),
+};
+
+u32 dMVOpeningYoster_GroundAnimJoint_AnimJoint_0xC124[] = {
+	aobjEvent32SetValAfterBlock(AOBJ_FLAG_SCAZ, 0),
+	    0x3F800000,  /* 1.0f */
+	aobjEvent32SetVal0RateBlock(AOBJ_FLAG_SCAX | AOBJ_FLAG_SCAY, 0),
+	    0x3F800000,  /* 1.0f */
+	    0x3F800000,  /* 1.0f */
+	aobjEvent32SetVal0Rate(AOBJ_FLAG_SCAX | AOBJ_FLAG_SCAY, 40),
+	    0x3F99999A,  /* 1.2000000476837158f */
+	    0x3F99999A,  /* 1.2000000476837158f */
+	aobjEvent32Cmd12(AOBJ_FLAG_SCAX | AOBJ_FLAG_SCAY, 1),
+	aobjEvent32Wait(39),
+	aobjEvent32SetVal0RateBlock(AOBJ_FLAG_SCAX | AOBJ_FLAG_SCAY, 40),
+	    0x3F800000,  /* 1.0f */
+	    0x3F800000,  /* 1.0f */
+	aobjEvent32SetVal0RateBlock(AOBJ_FLAG_SCAX | AOBJ_FLAG_SCAY, 40),
+	    0x3F99999A,  /* 1.2000000476837158f */
+	    0x3F99999A,  /* 1.2000000476837158f */
+	aobjEvent32SetVal0RateBlock(AOBJ_FLAG_SCAX | AOBJ_FLAG_SCAY, 40),
+	    0x3F800000,  /* 1.0f */
+	    0x3F800000,  /* 1.0f */
+	aobjEvent32End(),
+};
+
+u32 dMVOpeningYoster_GroundAnimJoint_AnimJoint_0xC174[] = {
+	aobjEvent32SetValAfterBlock(AOBJ_FLAG_SCAZ, 0),
+	    0x3F800000,  /* 1.0f */
+	aobjEvent32SetVal0RateBlock(AOBJ_FLAG_SCAX | AOBJ_FLAG_SCAY, 0),
+	    0x3F800000,  /* 1.0f */
+	    0x3F800000,  /* 1.0f */
+	aobjEvent32SetVal0Rate(AOBJ_FLAG_SCAX | AOBJ_FLAG_SCAY, 40),
+	    0x3F99999A,  /* 1.2000000476837158f */
+	    0x3F99999A,  /* 1.2000000476837158f */
+	aobjEvent32Cmd12(AOBJ_FLAG_SCAX | AOBJ_FLAG_SCAY, 1),
+	aobjEvent32Wait(39),
+	aobjEvent32SetVal0RateBlock(AOBJ_FLAG_SCAX | AOBJ_FLAG_SCAY, 40),
+	    0x3F800000,  /* 1.0f */
+	    0x3F800000,  /* 1.0f */
+	aobjEvent32SetVal0RateBlock(AOBJ_FLAG_SCAX | AOBJ_FLAG_SCAY, 40),
+	    0x3F99999A,  /* 1.2000000476837158f */
+	    0x3F99999A,  /* 1.2000000476837158f */
+	aobjEvent32SetVal0RateBlock(AOBJ_FLAG_SCAX | AOBJ_FLAG_SCAY, 40),
+	    0x3F800000,  /* 1.0f */
+	    0x3F800000,  /* 1.0f */
+	aobjEvent32End(),
+};
+
+u32 dMVOpeningYoster_GroundAnimJoint_AnimJoint_0xC1C4[] = {
+	aobjEvent32SetValAfterBlock(AOBJ_FLAG_SCAZ, 0),
+	    0x3F800000,  /* 1.0f */
+	aobjEvent32SetVal0RateBlock(AOBJ_FLAG_SCAX | AOBJ_FLAG_SCAY, 0),
+	    0x3F800000,  /* 1.0f */
+	    0x3F800000,  /* 1.0f */
+	aobjEvent32SetVal0Rate(AOBJ_FLAG_SCAX | AOBJ_FLAG_SCAY, 40),
+	    0x3F99999A,  /* 1.2000000476837158f */
+	    0x3F99999A,  /* 1.2000000476837158f */
+	aobjEvent32Cmd12(AOBJ_FLAG_SCAX | AOBJ_FLAG_SCAY, 1),
+	aobjEvent32Wait(39),
+	aobjEvent32SetVal0RateBlock(AOBJ_FLAG_SCAX | AOBJ_FLAG_SCAY, 40),
+	    0x3F800000,  /* 1.0f */
+	    0x3F800000,  /* 1.0f */
+	aobjEvent32SetVal0RateBlock(AOBJ_FLAG_SCAX | AOBJ_FLAG_SCAY, 40),
+	    0x3F99999A,  /* 1.2000000476837158f */
+	    0x3F99999A,  /* 1.2000000476837158f */
+	aobjEvent32SetVal0RateBlock(AOBJ_FLAG_SCAX | AOBJ_FLAG_SCAY, 40),
+	    0x3F800000,  /* 1.0f */
+	    0x3F800000,  /* 1.0f */
+	aobjEvent32End(),
+};
+
+u32 dMVOpeningYoster_GroundAnimJoint_AnimJoint_0xC214[] = {
+	aobjEvent32SetValAfterBlock(AOBJ_FLAG_SCAZ, 0),
+	    0x3F800000,  /* 1.0f */
+	aobjEvent32SetVal0RateBlock(AOBJ_FLAG_SCAX | AOBJ_FLAG_SCAY, 0),
+	    0x3F800000,  /* 1.0f */
+	    0x3F800000,  /* 1.0f */
+	aobjEvent32SetVal0Rate(AOBJ_FLAG_SCAX | AOBJ_FLAG_SCAY, 40),
+	    0x3F99999A,  /* 1.2000000476837158f */
+	    0x3F99999A,  /* 1.2000000476837158f */
+	aobjEvent32Cmd12(AOBJ_FLAG_SCAX | AOBJ_FLAG_SCAY, 1),
+	aobjEvent32Wait(39),
+	aobjEvent32SetVal0RateBlock(AOBJ_FLAG_SCAX | AOBJ_FLAG_SCAY, 40),
+	    0x3F800000,  /* 1.0f */
+	    0x3F800000,  /* 1.0f */
+	aobjEvent32SetVal0RateBlock(AOBJ_FLAG_SCAX | AOBJ_FLAG_SCAY, 40),
+	    0x3F99999A,  /* 1.2000000476837158f */
+	    0x3F99999A,  /* 1.2000000476837158f */
+	aobjEvent32SetVal0RateBlock(AOBJ_FLAG_SCAX | AOBJ_FLAG_SCAY, 40),
+	    0x3F800000,  /* 1.0f */
+	    0x3F800000,  /* 1.0f */
+	aobjEvent32End(),
+};
+
+u32 dMVOpeningYoster_GroundAnimJoint_AnimJoint_0xC264[] = {
+	aobjEvent32SetValAfterBlock(AOBJ_FLAG_SCAZ, 0),
+	    0x3F800000,  /* 1.0f */
+	aobjEvent32SetVal0RateBlock(AOBJ_FLAG_SCAX | AOBJ_FLAG_SCAY, 0),
+	    0x3F800000,  /* 1.0f */
+	    0x3F800000,  /* 1.0f */
+	aobjEvent32SetVal0Rate(AOBJ_FLAG_SCAX | AOBJ_FLAG_SCAY, 40),
+	    0x3F99999A,  /* 1.2000000476837158f */
+	    0x3F99999A,  /* 1.2000000476837158f */
+	aobjEvent32Cmd12(AOBJ_FLAG_SCAX | AOBJ_FLAG_SCAY, 1),
+	aobjEvent32Wait(39),
+	aobjEvent32SetVal0RateBlock(AOBJ_FLAG_SCAX | AOBJ_FLAG_SCAY, 40),
+	    0x3F800000,  /* 1.0f */
+	    0x3F800000,  /* 1.0f */
+	aobjEvent32SetVal0RateBlock(AOBJ_FLAG_SCAX | AOBJ_FLAG_SCAY, 40),
+	    0x3F99999A,  /* 1.2000000476837158f */
+	    0x3F99999A,  /* 1.2000000476837158f */
+	aobjEvent32SetVal0RateBlock(AOBJ_FLAG_SCAX | AOBJ_FLAG_SCAY, 40),
+	    0x3F800000,  /* 1.0f */
+	    0x3F800000,  /* 1.0f */
+	aobjEvent32End(),
+};
+
+u32 dMVOpeningYoster_GroundAnimJoint_AnimJoint_0xC2B4[] = {
+	aobjEvent32SetValAfterBlock(AOBJ_FLAG_SCAZ, 0),
+	    0x3F800000,  /* 1.0f */
+	aobjEvent32SetVal0RateBlock(AOBJ_FLAG_SCAX | AOBJ_FLAG_SCAY, 0),
+	    0x3F800000,  /* 1.0f */
+	    0x3F800000,  /* 1.0f */
+	aobjEvent32SetVal0Rate(AOBJ_FLAG_SCAX | AOBJ_FLAG_SCAY, 40),
+	    0x3F99999A,  /* 1.2000000476837158f */
+	    0x3F99999A,  /* 1.2000000476837158f */
+	aobjEvent32Cmd12(AOBJ_FLAG_SCAX | AOBJ_FLAG_SCAY, 1),
+	aobjEvent32Wait(39),
+	aobjEvent32SetVal0RateBlock(AOBJ_FLAG_SCAX | AOBJ_FLAG_SCAY, 40),
+	    0x3F800000,  /* 1.0f */
+	    0x3F800000,  /* 1.0f */
+	aobjEvent32SetVal0RateBlock(AOBJ_FLAG_SCAX | AOBJ_FLAG_SCAY, 40),
+	    0x3F99999A,  /* 1.2000000476837158f */
+	    0x3F99999A,  /* 1.2000000476837158f */
+	aobjEvent32SetVal0RateBlock(AOBJ_FLAG_SCAX | AOBJ_FLAG_SCAY, 40),
+	    0x3F800000,  /* 1.0f */
+	    0x3F800000,  /* 1.0f */
+	aobjEvent32End(),
+};
+
+u32 dMVOpeningYoster_GroundAnimJoint_AnimJoint_0xC304[] = {
+	aobjEvent32SetValAfterBlock(AOBJ_FLAG_SCAZ, 0),
+	    0x3F800000,  /* 1.0f */
+	aobjEvent32SetVal0RateBlock(AOBJ_FLAG_SCAX | AOBJ_FLAG_SCAY, 0),
+	    0x3F800000,  /* 1.0f */
+	    0x3F800000,  /* 1.0f */
+	aobjEvent32SetVal0Rate(AOBJ_FLAG_SCAX | AOBJ_FLAG_SCAY, 40),
+	    0x3F99999A,  /* 1.2000000476837158f */
+	    0x3F99999A,  /* 1.2000000476837158f */
+	aobjEvent32Cmd12(AOBJ_FLAG_SCAX | AOBJ_FLAG_SCAY, 1),
+	aobjEvent32Wait(39),
+	aobjEvent32SetVal0RateBlock(AOBJ_FLAG_SCAX | AOBJ_FLAG_SCAY, 40),
+	    0x3F800000,  /* 1.0f */
+	    0x3F800000,  /* 1.0f */
+	aobjEvent32SetVal0RateBlock(AOBJ_FLAG_SCAX | AOBJ_FLAG_SCAY, 40),
+	    0x3F99999A,  /* 1.2000000476837158f */
+	    0x3F99999A,  /* 1.2000000476837158f */
+	aobjEvent32SetVal0RateBlock(AOBJ_FLAG_SCAX | AOBJ_FLAG_SCAY, 40),
+	    0x3F800000,  /* 1.0f */
+	    0x3F800000,  /* 1.0f */
+	aobjEvent32End(),
+};
+
+u32 dMVOpeningYoster_GroundAnimJoint_AnimJoint_0xC354[] = {
+	aobjEvent32SetValAfterBlock(AOBJ_FLAG_SCAZ, 0),
+	    0x3F800000,  /* 1.0f */
+	aobjEvent32SetVal0RateBlock(AOBJ_FLAG_SCAX | AOBJ_FLAG_SCAY, 0),
+	    0x3F800000,  /* 1.0f */
+	    0x3F800000,  /* 1.0f */
+	aobjEvent32SetVal0Rate(AOBJ_FLAG_SCAX | AOBJ_FLAG_SCAY, 40),
+	    0x3F99999A,  /* 1.2000000476837158f */
+	    0x3F99999A,  /* 1.2000000476837158f */
+	aobjEvent32Cmd12(AOBJ_FLAG_SCAX | AOBJ_FLAG_SCAY, 1),
+	aobjEvent32Wait(39),
+	aobjEvent32SetVal0RateBlock(AOBJ_FLAG_SCAX | AOBJ_FLAG_SCAY, 40),
+	    0x3F800000,  /* 1.0f */
+	    0x3F800000,  /* 1.0f */
+	aobjEvent32SetVal0RateBlock(AOBJ_FLAG_SCAX | AOBJ_FLAG_SCAY, 40),
+	    0x3F99999A,  /* 1.2000000476837158f */
+	    0x3F99999A,  /* 1.2000000476837158f */
+	aobjEvent32SetVal0RateBlock(AOBJ_FLAG_SCAX | AOBJ_FLAG_SCAY, 40),
+	    0x3F800000,  /* 1.0f */
+	    0x3F800000,  /* 1.0f */
+	aobjEvent32End(),
+};
+
+u32 dMVOpeningYoster_GroundAnimJoint_AnimJoint_0xC3A4[] = {
+	aobjEvent32SetValAfterBlock(AOBJ_FLAG_SCAZ, 0),
+	    0x3F800000,  /* 1.0f */
+	aobjEvent32SetVal0RateBlock(AOBJ_FLAG_SCAX | AOBJ_FLAG_SCAY, 0),
+	    0x3F800000,  /* 1.0f */
+	    0x3F800000,  /* 1.0f */
+	aobjEvent32SetVal0Rate(AOBJ_FLAG_SCAX | AOBJ_FLAG_SCAY, 40),
+	    0x3F99999A,  /* 1.2000000476837158f */
+	    0x3F99999A,  /* 1.2000000476837158f */
+	aobjEvent32Cmd12(AOBJ_FLAG_SCAX | AOBJ_FLAG_SCAY, 1),
+	aobjEvent32Wait(39),
+	aobjEvent32SetVal0RateBlock(AOBJ_FLAG_SCAX | AOBJ_FLAG_SCAY, 40),
+	    0x3F800000,  /* 1.0f */
+	    0x3F800000,  /* 1.0f */
+	aobjEvent32SetVal0RateBlock(AOBJ_FLAG_SCAX | AOBJ_FLAG_SCAY, 40),
+	    0x3F99999A,  /* 1.2000000476837158f */
+	    0x3F99999A,  /* 1.2000000476837158f */
+	aobjEvent32SetVal0RateBlock(AOBJ_FLAG_SCAX | AOBJ_FLAG_SCAY, 40),
+	    0x3F800000,  /* 1.0f */
+	    0x3F800000,  /* 1.0f */
+	aobjEvent32End(),
+};
+
+u32 dMVOpeningYoster_GroundAnimJoint_AnimJoint_0xC3F4[] = {
+	aobjEvent32SetValAfterBlock(AOBJ_FLAG_SCAZ, 0),
+	    0x3F800000,  /* 1.0f */
+	aobjEvent32SetVal0RateBlock(AOBJ_FLAG_SCAX | AOBJ_FLAG_SCAY, 0),
+	    0x3F800000,  /* 1.0f */
+	    0x3F800000,  /* 1.0f */
+	aobjEvent32SetVal0Rate(AOBJ_FLAG_SCAX | AOBJ_FLAG_SCAY, 40),
+	    0x3F99999A,  /* 1.2000000476837158f */
+	    0x3F99999A,  /* 1.2000000476837158f */
+	aobjEvent32Cmd12(AOBJ_FLAG_SCAX | AOBJ_FLAG_SCAY, 1),
+	aobjEvent32Wait(39),
+	aobjEvent32SetVal0RateBlock(AOBJ_FLAG_SCAX | AOBJ_FLAG_SCAY, 40),
+	    0x3F800000,  /* 1.0f */
+	    0x3F800000,  /* 1.0f */
+	aobjEvent32SetVal0RateBlock(AOBJ_FLAG_SCAX | AOBJ_FLAG_SCAY, 40),
+	    0x3F99999A,  /* 1.2000000476837158f */
+	    0x3F99999A,  /* 1.2000000476837158f */
+	aobjEvent32SetVal0RateBlock(AOBJ_FLAG_SCAX | AOBJ_FLAG_SCAY, 40),
+	    0x3F800000,  /* 1.0f */
+	    0x3F800000,  /* 1.0f */
+	aobjEvent32End(),
+};
+
+u32 dMVOpeningYoster_GroundAnimJoint_AnimJoint_0xC444[] = {
+	aobjEvent32SetValAfterBlock(AOBJ_FLAG_SCAZ, 0),
+	    0x3F800000,  /* 1.0f */
+	aobjEvent32SetVal0RateBlock(AOBJ_FLAG_SCAX | AOBJ_FLAG_SCAY, 0),
+	    0x3F800000,  /* 1.0f */
+	    0x3F800000,  /* 1.0f */
+	aobjEvent32SetValRate(AOBJ_FLAG_SCAX | AOBJ_FLAG_SCAY, 15),
+	    0x3F800000,  /* 1.0f */
+	    0xB8836CC2,  /* -6.266824493650347e-05f */
+	    0x3F800000,  /* 1.0f */
+	    0x38398733,  /* 4.4233351218281314e-05f */
+	aobjEvent32Cmd12(AOBJ_FLAG_SCAX | AOBJ_FLAG_SCAY, 1),
+	aobjEvent32Wait(14),
+	aobjEvent32SetVal0RateBlock(AOBJ_FLAG_SCAX | AOBJ_FLAG_SCAY, 9),
+	    0x3F866666,  /* 1.0499999523162842f */
+	    0x3F866666,  /* 1.0499999523162842f */
+	aobjEvent32SetValRateBlock(AOBJ_FLAG_SCAX | AOBJ_FLAG_SCAY, 6),
+	    0x3F800000,  /* 1.0f */
+	    0x3BEA0EAB,  /* 0.0071428618393838406f */
+	    0x3F800000,  /* 1.0f */
+	    0x3BEA0EAB,  /* 0.0071428618393838406f */
+	aobjEvent32SetVal0RateBlock(AOBJ_FLAG_SCAX | AOBJ_FLAG_SCAY, 15),
+	    0x3F99999A,  /* 1.2000000476837158f */
+	    0x3F99999A,  /* 1.2000000476837158f */
+	aobjEvent32SetValRateBlock(AOBJ_FLAG_SCAX | AOBJ_FLAG_SCAY, 15),
+	    0x3F800000,  /* 1.0f */
+	    0xBBDA7411,  /* -0.006666668225079775f */
+	    0x3F800000,  /* 1.0f */
+	    0xBBDA7411,  /* -0.006666668225079775f */
+	aobjEvent32SetVal0RateBlock(AOBJ_FLAG_SCAX | AOBJ_FLAG_SCAY, 15),
+	    0x3F800000,  /* 1.0f */
+	    0x3F800000,  /* 1.0f */
+	aobjEvent32SetValBlock(AOBJ_FLAG_SCAX | AOBJ_FLAG_SCAY, 85),
+	    0x3F800000,  /* 1.0f */
+	    0x3F800000,  /* 1.0f */
+	aobjEvent32End(),
+};
+
+u32 dMVOpeningYoster_GroundAnimJoint_AnimJoint_0xC4D0[] = {
+	aobjEvent32SetValAfter(AOBJ_FLAG_TRAXYZ | AOBJ_FLAG_SCAXYZ, 0),
+	    0xC1CC0836,  /* -25.504009246826172f */
+	    0x437DD591,  /* 253.83424377441406f */
+	    0x434046AC,  /* 192.27606201171875f */
+	    0x3F26CB80,  /* 0.6515426635742188f */
+	    0x3F26CB80,  /* 0.6515426635742188f */
+	    0x3F28CAFF,  /* 0.6593474745750427f */
+	aobjEvent32Wait(159),
+	aobjEvent32End(),
+};
+
+u32 dMVOpeningYoster_GroundAnimJoint_AnimJoint_0xC4F4[] = {
+	aobjEvent32SetValRateBlock(AOBJ_FLAG_ROTZ, 0),
+	    0x00000000,  /* 0.0f */
+	    0x3C3C0AEB,  /* 0.01147721242159605f */
+	aobjEvent32SetVal0Rate(AOBJ_FLAG_ROTZ, 64),
+	    0x3F060A92,  /* 0.5235987901687622f */
+	aobjEvent32Cmd12(AOBJ_FLAG_ROTZ, 1),
+	aobjEvent32Wait(63),
+	aobjEvent32SetVal0Rate(AOBJ_FLAG_ROTZ, 128),
+	    0xBF060A92,  /* -0.5235987901687622f */
+	aobjEvent32Wait(96),
+	aobjEvent32End(),
+};
+
+u32 dMVOpeningYoster_GroundAnimJoint_AnimJoint_0xC520[] = {
+	aobjEvent32SetValBlock(AOBJ_FLAG_TRAY, 0),
+	    0x4313B24C,  /* 147.69647216796875f */
+	aobjEvent32SetVal(AOBJ_FLAG_TRAY, 16),
+	    0x4278404A,  /* 62.062782287597656f */
+	aobjEvent32Cmd12(AOBJ_FLAG_TRAY, 1),
+	aobjEvent32SetValBlock(AOBJ_FLAG_TRAX, 0),
+	    0xC25274A6,  /* -52.613914489746094f */
+	aobjEvent32SetValBlock(AOBJ_FLAG_TRAX, 15),
+	    0xC25274A6,  /* -52.613914489746094f */
+	aobjEvent32SetValBlock(AOBJ_FLAG_TRAX | AOBJ_FLAG_TRAY, 16),
+	    0xC21613A1,  /* -37.519168853759766f */
+	    0x4313B248,  /* 147.6964111328125f */
+	aobjEvent32SetValBlock(AOBJ_FLAG_TRAX | AOBJ_FLAG_TRAY, 16),
+	    0xC25274A6,  /* -52.613914489746094f */
+	    0x4278404A,  /* 62.062782287597656f */
+	aobjEvent32SetValBlock(AOBJ_FLAG_TRAX | AOBJ_FLAG_TRAY, 16),
+	    0xC21613A1,  /* -37.519168853759766f */
+	    0x4313B248,  /* 147.6964111328125f */
+	aobjEvent32SetValBlock(AOBJ_FLAG_TRAX | AOBJ_FLAG_TRAY, 16),
+	    0xC25274A6,  /* -52.613914489746094f */
+	    0x4278404A,  /* 62.062782287597656f */
+	aobjEvent32SetValBlock(AOBJ_FLAG_TRAX | AOBJ_FLAG_TRAY, 16),
+	    0xC21613A1,  /* -37.519168853759766f */
+	    0x4313B248,  /* 147.6964111328125f */
+	aobjEvent32SetValBlock(AOBJ_FLAG_TRAX | AOBJ_FLAG_TRAY, 16),
+	    0xC25274A6,  /* -52.613914489746094f */
+	    0x4278404A,  /* 62.062782287597656f */
+	aobjEvent32SetValBlock(AOBJ_FLAG_TRAX | AOBJ_FLAG_TRAY, 16),
+	    0xC21613A1,  /* -37.519168853759766f */
+	    0x4313B248,  /* 147.6964111328125f */
+	aobjEvent32SetValBlock(AOBJ_FLAG_TRAX | AOBJ_FLAG_TRAY, 16),
+	    0xC25274A6,  /* -52.613914489746094f */
+	    0x4278404A,  /* 62.062782287597656f */
+	aobjEvent32SetValBlock(AOBJ_FLAG_TRAX | AOBJ_FLAG_TRAY, 16),
+	    0xC21613A1,  /* -37.519168853759766f */
+	    0x4313B248,  /* 147.6964111328125f */
+	aobjEvent32End(),
+};
+
+u32 dMVOpeningYoster_GroundAnimJoint_AnimJoint_0xC5B4[] = {
+	aobjEvent32SetValBlock(AOBJ_FLAG_TRAX | AOBJ_FLAG_TRAY, 0),
+	    0x44095728,  /* 549.36181640625f */
+	    0x43888469,  /* 273.0344543457031f */
+	aobjEvent32SetVal(AOBJ_FLAG_TRAX | AOBJ_FLAG_TRAY, 16),
+	    0x4418C305,  /* 611.0471801757812f */
+	    0x435374BC,  /* 211.45599365234375f */
+	aobjEvent32Cmd12(AOBJ_FLAG_TRAX | AOBJ_FLAG_TRAY, 1),
+	aobjEvent32Wait(15),
+	aobjEvent32SetValBlock(AOBJ_FLAG_TRAX | AOBJ_FLAG_TRAY, 16),
+	    0x44095728,  /* 549.36181640625f */
+	    0x43888466,  /* 273.03436279296875f */
+	aobjEvent32SetValBlock(AOBJ_FLAG_TRAX | AOBJ_FLAG_TRAY, 16),
+	    0x4418C305,  /* 611.0471801757812f */
+	    0x435374BC,  /* 211.45599365234375f */
+	aobjEvent32SetValBlock(AOBJ_FLAG_TRAX | AOBJ_FLAG_TRAY, 16),
+	    0x44095728,  /* 549.36181640625f */
+	    0x43888466,  /* 273.03436279296875f */
+	aobjEvent32SetValBlock(AOBJ_FLAG_TRAX | AOBJ_FLAG_TRAY, 16),
+	    0x4418C305,  /* 611.0471801757812f */
+	    0x435374BC,  /* 211.45599365234375f */
+	aobjEvent32SetValBlock(AOBJ_FLAG_TRAX | AOBJ_FLAG_TRAY, 16),
+	    0x44095728,  /* 549.36181640625f */
+	    0x43888466,  /* 273.03436279296875f */
+	aobjEvent32SetValBlock(AOBJ_FLAG_TRAX | AOBJ_FLAG_TRAY, 16),
+	    0x4418C305,  /* 611.0471801757812f */
+	    0x435374BC,  /* 211.45599365234375f */
+	aobjEvent32SetValBlock(AOBJ_FLAG_TRAX | AOBJ_FLAG_TRAY, 16),
+	    0x44095728,  /* 549.36181640625f */
+	    0x43888466,  /* 273.03436279296875f */
+	aobjEvent32SetValBlock(AOBJ_FLAG_TRAX | AOBJ_FLAG_TRAY, 16),
+	    0x4418C305,  /* 611.0471801757812f */
+	    0x435374BC,  /* 211.45599365234375f */
+	aobjEvent32SetValBlock(AOBJ_FLAG_TRAX | AOBJ_FLAG_TRAY, 16),
+	    0x44095728,  /* 549.36181640625f */
+	    0x43888466,  /* 273.03436279296875f */
+	aobjEvent32End(),
+};
+
+u32 dMVOpeningYoster_GroundAnimJoint_AnimJoint_0xC644[] = {
+	aobjEvent32SetValBlock(AOBJ_FLAG_TRAX | AOBJ_FLAG_TRAY, 0),
+	    0xC3A96190,  /* -338.76220703125f */
+	    0x43BB7E7B,  /* 374.9881286621094f */
+	aobjEvent32SetVal(AOBJ_FLAG_TRAX | AOBJ_FLAG_TRAY, 16),
+	    0xC3C83944,  /* -400.4473876953125f */
+	    0x439CA6C0,  /* 313.302734375f */
+	aobjEvent32Cmd12(AOBJ_FLAG_TRAX | AOBJ_FLAG_TRAY, 1),
+	aobjEvent32Wait(15),
+	aobjEvent32SetValBlock(AOBJ_FLAG_TRAX | AOBJ_FLAG_TRAY, 16),
+	    0xC3A9618F,  /* -338.7621765136719f */
+	    0x43BB7E7B,  /* 374.9881286621094f */
+	aobjEvent32SetValBlock(AOBJ_FLAG_TRAX | AOBJ_FLAG_TRAY, 16),
+	    0xC3C83944,  /* -400.4473876953125f */
+	    0x439CA6C0,  /* 313.302734375f */
+	aobjEvent32SetValBlock(AOBJ_FLAG_TRAX | AOBJ_FLAG_TRAY, 16),
+	    0xC3A9618F,  /* -338.7621765136719f */
+	    0x43BB7E7B,  /* 374.9881286621094f */
+	aobjEvent32SetValBlock(AOBJ_FLAG_TRAX | AOBJ_FLAG_TRAY, 16),
+	    0xC3C83944,  /* -400.4473876953125f */
+	    0x439CA6C0,  /* 313.302734375f */
+	aobjEvent32SetValBlock(AOBJ_FLAG_TRAX | AOBJ_FLAG_TRAY, 16),
+	    0xC3A9618F,  /* -338.7621765136719f */
+	    0x43BB7E7B,  /* 374.9881286621094f */
+	aobjEvent32SetValBlock(AOBJ_FLAG_TRAX | AOBJ_FLAG_TRAY, 16),
+	    0xC3C83944,  /* -400.4473876953125f */
+	    0x439CA6C0,  /* 313.302734375f */
+	aobjEvent32SetValBlock(AOBJ_FLAG_TRAX | AOBJ_FLAG_TRAY, 16),
+	    0xC3A9618F,  /* -338.7621765136719f */
+	    0x43BB7E7B,  /* 374.9881286621094f */
+	aobjEvent32SetValBlock(AOBJ_FLAG_TRAX | AOBJ_FLAG_TRAY, 16),
+	    0xC3C83944,  /* -400.4473876953125f */
+	    0x439CA6C0,  /* 313.302734375f */
+	aobjEvent32SetValBlock(AOBJ_FLAG_TRAX | AOBJ_FLAG_TRAY, 16),
+	    0xC3A9618F,  /* -338.7621765136719f */
+	    0x43BB7E7B,  /* 374.9881286621094f */
+	aobjEvent32End(),
+};
+
+u32 dMVOpeningYoster_GroundAnimJoint_AnimJoint_0xC6D4[] = {
+	aobjEvent32SetValBlock(AOBJ_FLAG_TRAX, 0),
+	    0x4422DF2A,  /* 651.4869384765625f */
+	aobjEvent32SetVal(AOBJ_FLAG_TRAX, 16),
+	    0x4438A4A0,  /* 738.572265625f */
+	aobjEvent32Cmd12(AOBJ_FLAG_TRAX, 1),
+	aobjEvent32SetValAfter(AOBJ_FLAG_TRAY, 0),
+	    0x442D5B85,  /* 693.4299926757812f */
+	aobjEvent32Wait(15),
+	aobjEvent32SetValBlock(AOBJ_FLAG_TRAX, 16),
+	    0x4422DF2A,  /* 651.4869384765625f */
+	aobjEvent32SetValBlock(AOBJ_FLAG_TRAX, 16),
+	    0x4438A4A0,  /* 738.572265625f */
+	aobjEvent32SetValBlock(AOBJ_FLAG_TRAX, 16),
+	    0x4422DF2A,  /* 651.4869384765625f */
+	aobjEvent32SetValBlock(AOBJ_FLAG_TRAX, 16),
+	    0x4438A4A0,  /* 738.572265625f */
+	aobjEvent32SetValBlock(AOBJ_FLAG_TRAX, 16),
+	    0x4422DF2A,  /* 651.4869384765625f */
+	aobjEvent32SetValBlock(AOBJ_FLAG_TRAX, 16),
+	    0x4438A4A0,  /* 738.572265625f */
+	aobjEvent32SetValBlock(AOBJ_FLAG_TRAX, 16),
+	    0x4422DF2A,  /* 651.4869384765625f */
+	aobjEvent32SetValBlock(AOBJ_FLAG_TRAX, 16),
+	    0x4438A4A0,  /* 738.572265625f */
+	aobjEvent32SetValBlock(AOBJ_FLAG_TRAX, 16),
+	    0x4422DF2A,  /* 651.4869384765625f */
+	aobjEvent32End(),
+};
+
+u32 dMVOpeningYoster_GroundAnimJoint_AnimJoint_0xC740[] = {
+	aobjEvent32SetVal(AOBJ_FLAG_TRAX, 0),
+	    0xC3B56D65,  /* -362.8546447753906f */
+	aobjEvent32SetValAfter(AOBJ_FLAG_TRAY, 0),
+	    0x442D5B85,  /* 693.4299926757812f */
+	aobjEvent32SetValBlock(AOBJ_FLAG_TRAX, 5),
+	    0xC3B56D65,  /* -362.8546447753906f */
+	aobjEvent32SetValBlock(AOBJ_FLAG_TRAX, 10),
+	    0xC3E0F847,  /* -449.9396667480469f */
+	aobjEvent32SetValBlock(AOBJ_FLAG_TRAX, 16),
+	    0xC3B56D64,  /* -362.8546142578125f */
+	aobjEvent32SetValBlock(AOBJ_FLAG_TRAX, 16),
+	    0xC3E0F847,  /* -449.9396667480469f */
+	aobjEvent32SetValBlock(AOBJ_FLAG_TRAX, 16),
+	    0xC3B56D64,  /* -362.8546142578125f */
+	aobjEvent32SetValBlock(AOBJ_FLAG_TRAX, 16),
+	    0xC3E0F847,  /* -449.9396667480469f */
+	aobjEvent32SetValBlock(AOBJ_FLAG_TRAX, 16),
+	    0xC3B56D64,  /* -362.8546142578125f */
+	aobjEvent32SetValBlock(AOBJ_FLAG_TRAX, 16),
+	    0xC3E0F847,  /* -449.9396667480469f */
+	aobjEvent32SetValBlock(AOBJ_FLAG_TRAX, 16),
+	    0xC3B56D64,  /* -362.8546142578125f */
+	aobjEvent32SetValBlock(AOBJ_FLAG_TRAX, 16),
+	    0xC3E0F847,  /* -449.9396667480469f */
+	aobjEvent32SetValBlock(AOBJ_FLAG_TRAX, 16),
+	    0xC3B56D64,  /* -362.8546142578125f */
+	aobjEvent32End(),
+};
+
+u32 dMVOpeningYoster_GroundAnimJoint_AnimJoint_0xC7AC[] = {
+	aobjEvent32SetValBlock(AOBJ_FLAG_TRAX | AOBJ_FLAG_TRAY, 0),
+	    0x44095728,  /* 549.36181640625f */
+	    0x448629CF,  /* 1073.3065185546875f */
+	aobjEvent32SetVal(AOBJ_FLAG_TRAX | AOBJ_FLAG_TRAY, 16),
+	    0x4418C305,  /* 611.0471801757812f */
+	    0x448DDC55,  /* 1134.8853759765625f */
+	aobjEvent32Cmd12(AOBJ_FLAG_TRAX | AOBJ_FLAG_TRAY, 1),
+	aobjEvent32Wait(15),
+	aobjEvent32SetValBlock(AOBJ_FLAG_TRAX | AOBJ_FLAG_TRAY, 16),
+	    0x44095728,  /* 549.36181640625f */
+	    0x448629CF,  /* 1073.3065185546875f */
+	aobjEvent32SetValBlock(AOBJ_FLAG_TRAX | AOBJ_FLAG_TRAY, 16),
+	    0x4418C305,  /* 611.0471801757812f */
+	    0x448DDC53,  /* 1134.8851318359375f */
+	aobjEvent32SetValBlock(AOBJ_FLAG_TRAX | AOBJ_FLAG_TRAY, 16),
+	    0x44095728,  /* 549.36181640625f */
+	    0x448629CF,  /* 1073.3065185546875f */
+	aobjEvent32SetValBlock(AOBJ_FLAG_TRAX | AOBJ_FLAG_TRAY, 16),
+	    0x4418C305,  /* 611.0471801757812f */
+	    0x448DDC53,  /* 1134.8851318359375f */
+	aobjEvent32SetValBlock(AOBJ_FLAG_TRAX | AOBJ_FLAG_TRAY, 16),
+	    0x44095728,  /* 549.36181640625f */
+	    0x448629CF,  /* 1073.3065185546875f */
+	aobjEvent32SetValBlock(AOBJ_FLAG_TRAX | AOBJ_FLAG_TRAY, 16),
+	    0x4418C305,  /* 611.0471801757812f */
+	    0x448DDC53,  /* 1134.8851318359375f */
+	aobjEvent32SetValBlock(AOBJ_FLAG_TRAX | AOBJ_FLAG_TRAY, 16),
+	    0x44095728,  /* 549.36181640625f */
+	    0x448629CF,  /* 1073.3065185546875f */
+	aobjEvent32SetValBlock(AOBJ_FLAG_TRAX | AOBJ_FLAG_TRAY, 16),
+	    0x4418C305,  /* 611.0471801757812f */
+	    0x448DDC53,  /* 1134.8851318359375f */
+	aobjEvent32SetValBlock(AOBJ_FLAG_TRAX | AOBJ_FLAG_TRAY, 16),
+	    0x44095728,  /* 549.36181640625f */
+	    0x448629CF,  /* 1073.3065185546875f */
+	aobjEvent32End(),
+};
+
+u32 dMVOpeningYoster_GroundAnimJoint_AnimJoint_0xC83C[] = {
+	aobjEvent32SetValBlock(AOBJ_FLAG_TRAX | AOBJ_FLAG_TRAY, 0),
+	    0xC3B800E7,  /* -368.0070495605469f */
+	    0x4486B140,  /* 1077.5390625f */
+	aobjEvent32SetVal(AOBJ_FLAG_TRAX | AOBJ_FLAG_TRAY, 16),
+	    0xC3D6CF58,  /* -429.619873046875f */
+	    0x448E63C7,  /* 1139.1180419921875f */
+	aobjEvent32Cmd12(AOBJ_FLAG_TRAX | AOBJ_FLAG_TRAY, 1),
+	aobjEvent32Wait(15),
+	aobjEvent32SetValBlock(AOBJ_FLAG_TRAX | AOBJ_FLAG_TRAY, 16),
+	    0xC3B800E9,  /* -368.0071105957031f */
+	    0x4486B141,  /* 1077.5391845703125f */
+	aobjEvent32SetValBlock(AOBJ_FLAG_TRAX | AOBJ_FLAG_TRAY, 16),
+	    0xC3D6CF58,  /* -429.619873046875f */
+	    0x448E63C7,  /* 1139.1180419921875f */
+	aobjEvent32SetValBlock(AOBJ_FLAG_TRAX | AOBJ_FLAG_TRAY, 16),
+	    0xC3B800E9,  /* -368.0071105957031f */
+	    0x4486B141,  /* 1077.5391845703125f */
+	aobjEvent32SetValBlock(AOBJ_FLAG_TRAX | AOBJ_FLAG_TRAY, 16),
+	    0xC3D6CF58,  /* -429.619873046875f */
+	    0x448E63C7,  /* 1139.1180419921875f */
+	aobjEvent32SetValBlock(AOBJ_FLAG_TRAX | AOBJ_FLAG_TRAY, 16),
+	    0xC3B800E9,  /* -368.0071105957031f */
+	    0x4486B141,  /* 1077.5391845703125f */
+	aobjEvent32SetValBlock(AOBJ_FLAG_TRAX | AOBJ_FLAG_TRAY, 16),
+	    0xC3D6CF58,  /* -429.619873046875f */
+	    0x448E63C7,  /* 1139.1180419921875f */
+	aobjEvent32SetValBlock(AOBJ_FLAG_TRAX | AOBJ_FLAG_TRAY, 16),
+	    0xC3B800E9,  /* -368.0071105957031f */
+	    0x4486B141,  /* 1077.5391845703125f */
+	aobjEvent32SetValBlock(AOBJ_FLAG_TRAX | AOBJ_FLAG_TRAY, 16),
+	    0xC3D6CF58,  /* -429.619873046875f */
+	    0x448E63C7,  /* 1139.1180419921875f */
+	aobjEvent32SetValBlock(AOBJ_FLAG_TRAX | AOBJ_FLAG_TRAY, 16),
+	    0xC3B800E9,  /* -368.0071105957031f */
+	    0x4486B141,  /* 1077.5391845703125f */
+	aobjEvent32End(),
+};
+
+u32 dMVOpeningYoster_GroundAnimJoint_AnimJoint_0xC8CC[] = {
+	aobjEvent32SetVal(AOBJ_FLAG_TRAY, 0),
+	    0x44962D9D,  /* 1201.4254150390625f */
+	aobjEvent32SetValAfter(AOBJ_FLAG_TRAX, 0),
+	    0x4291244F,  /* 72.57091522216797f */
+	aobjEvent32SetValBlock(AOBJ_FLAG_TRAY, 1),
+	    0x44962D9D,  /* 1201.4254150390625f */
+	aobjEvent32SetValBlock(AOBJ_FLAG_TRAY, 14),
+	    0x44A11056,  /* 1288.510498046875f */
+	aobjEvent32SetValBlock(AOBJ_FLAG_TRAY, 16),
+	    0x44962D9D,  /* 1201.4254150390625f */
+	aobjEvent32SetValBlock(AOBJ_FLAG_TRAY, 16),
+	    0x44A11056,  /* 1288.510498046875f */
+	aobjEvent32SetValBlock(AOBJ_FLAG_TRAY, 16),
+	    0x44962D9D,  /* 1201.4254150390625f */
+	aobjEvent32SetValBlock(AOBJ_FLAG_TRAY, 16),
+	    0x44A11056,  /* 1288.510498046875f */
+	aobjEvent32SetValBlock(AOBJ_FLAG_TRAY, 16),
+	    0x44962D9D,  /* 1201.4254150390625f */
+	aobjEvent32SetValBlock(AOBJ_FLAG_TRAY, 16),
+	    0x44A11056,  /* 1288.510498046875f */
+	aobjEvent32SetValBlock(AOBJ_FLAG_TRAY, 16),
+	    0x44962D9D,  /* 1201.4254150390625f */
+	aobjEvent32SetValBlock(AOBJ_FLAG_TRAY, 16),
+	    0x44A11056,  /* 1288.510498046875f */
+	aobjEvent32SetValBlock(AOBJ_FLAG_TRAY, 16),
+	    0x44962D9D,  /* 1201.4254150390625f */
+	aobjEvent32End(),
+};
+
+PAD(8);
+
+/* Raw data from file offset 0xC940 to 0xC9A0 (96 bytes) */
+u32 dMVOpeningYoster_Cam_AnimJoint[21] = {
+	aobjEvent32SetValAfterBlock(AOBJ_FLAG_ROTY | AOBJ_FLAG_TRAY | AOBJ_FLAG_TRAZ, 0),
+	    0x43BBABF2,  /* 375.34332275390625f */
+	    0x438922E8,  /* 274.272705078125f */
+	    0xC2875278,  /* -67.66107177734375f */
+	aobjEvent32SetVal0RateBlock(AOBJ_FLAG_ROTX | AOBJ_FLAG_ROTZ | AOBJ_FLAG_TRAX, 0),
+	    0xC202C30E,  /* -32.69048309326172f */
+	    0x447DE941,  /* 1015.6445922851562f */
+	    0xC202C30E,  /* -32.69048309326172f */
+	aobjEvent32SetVal0Rate(AOBJ_FLAG_ROTX | AOBJ_FLAG_ROTZ | AOBJ_FLAG_TRAX, 90),
+	    0x00000000,  /* 0.0f */
+	    0x44D4D49D,  /* 1702.6441650390625f */
+	    0x00000000,  /* 0.0f */
+	aobjEvent32Cmd12(AOBJ_FLAG_ROTX | AOBJ_FLAG_ROTZ | AOBJ_FLAG_TRAX, 1),
+	aobjEvent32SetValAfter(AOBJ_FLAG_SCAZ, 0),
+	    0x42262863,  /* 41.5394401550293f */
+	aobjEvent32Wait(89),
+	aobjEvent32SetVal0RateBlock(AOBJ_FLAG_ROTX | AOBJ_FLAG_ROTZ | AOBJ_FLAG_TRAX, 70),
+	    0x00000000,  /* 0.0f */
+	    0x44D4D49D,  /* 1702.6441650390625f */
+	    0x00000000,  /* 0.0f */
+	aobjEvent32End(),
+};

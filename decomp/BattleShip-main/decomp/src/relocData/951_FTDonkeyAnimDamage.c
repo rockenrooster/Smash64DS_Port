@@ -1,0 +1,177 @@
+/* AnimJoint data for relocData file 951 (FTDonkeyAnimDamage) */
+/* 432 bytes: 100-byte header + per-joint AObjEvent16 scripts */
+
+#include "relocdata_types.h"
+
+extern u16 dFTDonkeyAnimDamage_joint1[12];
+extern u16 dFTDonkeyAnimDamage_joint2[8];
+extern u16 dFTDonkeyAnimDamage_joint4[8];
+extern u16 dFTDonkeyAnimDamage_joint5[16];
+extern u16 dFTDonkeyAnimDamage_joint7[16];
+extern u16 dFTDonkeyAnimDamage_joint10[8];
+extern u16 dFTDonkeyAnimDamage_joint11[22];
+extern u16 dFTDonkeyAnimDamage_joint13[14];
+extern u16 dFTDonkeyAnimDamage_joint16[10];
+extern u16 dFTDonkeyAnimDamage_joint17[8];
+extern u16 dFTDonkeyAnimDamage_joint19[8];
+extern u16 dFTDonkeyAnimDamage_joint21[8];
+extern u16 dFTDonkeyAnimDamage_joint22[8];
+extern u16 dFTDonkeyAnimDamage_joint24[8];
+extern u16 dFTDonkeyAnimDamage_joint25[10];
+
+/* Joint pointer table (25 entries, 100 bytes) */
+AObjEvent32 * dFTDonkeyAnimDamage_joints[] = {
+	(AObjEvent32 *)dFTDonkeyAnimDamage_joint1, /* [0] joint 1 */
+	(AObjEvent32 *)dFTDonkeyAnimDamage_joint2, /* [1] joint 2 */
+	(AObjEvent32 *)dFTDonkeyAnimDamage_joint4, /* [2] joint 4 */
+	NULL, /* [3] NULL */
+	(AObjEvent32 *)dFTDonkeyAnimDamage_joint5, /* [4] joint 5 */
+	(AObjEvent32 *)dFTDonkeyAnimDamage_joint7, /* [5] joint 7 */
+	NULL, /* [6] NULL */
+	(AObjEvent32 *)dFTDonkeyAnimDamage_joint10, /* [7] joint 10 */
+	NULL, /* [8] NULL */
+	NULL, /* [9] NULL */
+	(AObjEvent32 *)dFTDonkeyAnimDamage_joint11, /* [10] joint 11 */
+	(AObjEvent32 *)dFTDonkeyAnimDamage_joint13, /* [11] joint 13 */
+	NULL, /* [12] NULL */
+	(AObjEvent32 *)dFTDonkeyAnimDamage_joint16, /* [13] joint 16 */
+	NULL, /* [14] NULL */
+	NULL, /* [15] NULL */
+	(AObjEvent32 *)dFTDonkeyAnimDamage_joint17, /* [16] joint 17 */
+	(AObjEvent32 *)dFTDonkeyAnimDamage_joint19, /* [17] joint 19 */
+	NULL, /* [18] NULL */
+	(AObjEvent32 *)dFTDonkeyAnimDamage_joint21, /* [19] joint 21 */
+	NULL, /* [20] NULL */
+	(AObjEvent32 *)dFTDonkeyAnimDamage_joint22, /* [21] joint 22 */
+	(AObjEvent32 *)dFTDonkeyAnimDamage_joint24, /* [22] joint 24 */
+	NULL, /* [23] NULL */
+	(AObjEvent32 *)dFTDonkeyAnimDamage_joint25, /* [24] joint 25 */
+};
+
+/* 4-byte alignment padding */
+static u32 dFTDonkeyAnimDamage_pad[1] = { 0 };
+
+/* Joint 1 */
+u16 dFTDonkeyAnimDamage_joint1[12] = {
+	ftAnimSetValAfterBlock(FT_ANIM_TRAX | FT_ANIM_TRAY | FT_ANIM_TRAZ), 20, 771, -633,
+	ftAnimSetValAfterT(FT_ANIM_TRAX | FT_ANIM_TRAY | FT_ANIM_TRAZ, 5), 123, 917, -710,
+	ftAnimBlock(0, 4),
+	ftAnimEnd(),
+};
+
+/* Joint 2 */
+u16 dFTDonkeyAnimDamage_joint2[8] = {
+	ftAnimSetValAfter(FT_ANIM_ROTX | FT_ANIM_ROTY | FT_ANIM_ROTZ), 0, 0, 0,
+	ftAnimBlock(0, 4),
+	ftAnimEnd(),
+	0x0000,
+};
+
+/* Joint 4 */
+u16 dFTDonkeyAnimDamage_joint4[8] = {
+	ftAnimSetValAfter(FT_ANIM_ROTX | FT_ANIM_ROTY | FT_ANIM_ROTZ), 357, 0, 0,
+	ftAnimBlock(0, 4),
+	ftAnimEnd(),
+	0x0000,
+};
+
+/* Joint 5 */
+u16 dFTDonkeyAnimDamage_joint5[16] = {
+	ftAnimSetValRate(FT_ANIM_ROTY), -451, 0,
+	ftAnimSetValAfterBlock(FT_ANIM_ROTX | FT_ANIM_ROTZ), -2458, -875,
+	ftAnimSetValRateBlockT(FT_ANIM_ROTY, 3), -451, 0,
+	ftAnimSetValRateBlockT(FT_ANIM_ROTY, 1), -451, 0,
+	ftAnimEnd(),
+	0x0000,
+};
+
+/* Joint 7 */
+u16 dFTDonkeyAnimDamage_joint7[16] = {
+	ftAnimSetValRate(FT_ANIM_ROTZ), -640, 0,
+	ftAnimSetValAfterBlock(FT_ANIM_ROTX | FT_ANIM_ROTY), 0, 0,
+	ftAnimSetValRateBlockT(FT_ANIM_ROTZ, 3), -640, 0,
+	ftAnimSetValRateBlockT(FT_ANIM_ROTZ, 1), -640, 0,
+	ftAnimEnd(),
+	0x0000,
+};
+
+/* Joint 10 */
+u16 dFTDonkeyAnimDamage_joint10[8] = {
+	ftAnimSetValAfter(FT_ANIM_ROTX | FT_ANIM_ROTY | FT_ANIM_ROTZ), -536, 0, 0,
+	ftAnimBlock(0, 4),
+	ftAnimEnd(),
+	0x0000,
+};
+
+/* Joint 11 */
+u16 dFTDonkeyAnimDamage_joint11[22] = {
+	ftAnimSetValRateBlock(FT_ANIM_ROTX | FT_ANIM_ROTY | FT_ANIM_ROTZ), 1122, 0, 1362, 0, 486, 0,
+	ftAnimSetVal0RateBlockT(FT_ANIM_ROTX | FT_ANIM_ROTY | FT_ANIM_ROTZ, 3), 1122, 1362, 486,
+	ftAnimSetValRateBlockT(FT_ANIM_ROTX | FT_ANIM_ROTY | FT_ANIM_ROTZ, 1), 1122, 0, 1362, 0, 486, 0,
+	ftAnimEnd(),
+	0x0000,
+};
+
+/* Joint 13 */
+u16 dFTDonkeyAnimDamage_joint13[14] = {
+	ftAnimSetValRate(FT_ANIM_ROTZ), -434, 0,
+	ftAnimSetValAfterBlock(FT_ANIM_ROTX | FT_ANIM_ROTY), 0, 0,
+	ftAnimSetVal0RateBlockT(FT_ANIM_ROTZ, 3), -434,
+	ftAnimSetValRateBlockT(FT_ANIM_ROTZ, 1), -434, 0,
+	ftAnimEnd(),
+};
+
+/* Joint 16 */
+u16 dFTDonkeyAnimDamage_joint16[10] = {
+	ftAnimSetValAfter(FT_ANIM_ROTX | FT_ANIM_ROTY | FT_ANIM_ROTZ | FT_ANIM_TRAX | FT_ANIM_TRAY | FT_ANIM_TRAZ), 1114, -887, -300, 118, 122, 46,
+	ftAnimBlock(0, 4),
+	ftAnimEnd(),
+};
+
+/* Joint 17 */
+u16 dFTDonkeyAnimDamage_joint17[8] = {
+	ftAnimSetValAfter(FT_ANIM_ROTX | FT_ANIM_ROTY | FT_ANIM_ROTZ), 87, -479, -1292,
+	ftAnimBlock(0, 4),
+	ftAnimEnd(),
+	0x0000,
+};
+
+/* Joint 19 */
+u16 dFTDonkeyAnimDamage_joint19[8] = {
+	ftAnimSetValAfter(FT_ANIM_ROTX | FT_ANIM_ROTY | FT_ANIM_ROTZ), 0, 0, 794,
+	ftAnimBlock(0, 4),
+	ftAnimEnd(),
+	0x0000,
+};
+
+/* Joint 21 */
+u16 dFTDonkeyAnimDamage_joint21[8] = {
+	ftAnimSetValAfter(FT_ANIM_ROTX | FT_ANIM_ROTY | FT_ANIM_ROTZ), 126, 288, 23,
+	ftAnimBlock(0, 4),
+	ftAnimEnd(),
+	0x0000,
+};
+
+/* Joint 22 */
+u16 dFTDonkeyAnimDamage_joint22[8] = {
+	ftAnimSetValAfter(FT_ANIM_ROTX | FT_ANIM_ROTY | FT_ANIM_ROTZ), 552, 369, -627,
+	ftAnimBlock(0, 4),
+	ftAnimEnd(),
+	0x0000,
+};
+
+/* Joint 24 */
+u16 dFTDonkeyAnimDamage_joint24[8] = {
+	ftAnimSetValAfter(FT_ANIM_ROTX | FT_ANIM_ROTY | FT_ANIM_ROTZ), 0, 0, 583,
+	ftAnimBlock(0, 4),
+	ftAnimEnd(),
+	0x0000,
+};
+
+/* Joint 25 */
+u16 dFTDonkeyAnimDamage_joint25[10] = {
+	ftAnimSetValAfter(FT_ANIM_ROTX | FT_ANIM_ROTY | FT_ANIM_ROTZ), -445, -266, 24,
+	ftAnimBlock(0, 4),
+	ftAnimEnd(),
+	0x0000, 0x0000, 0x0000,
+};

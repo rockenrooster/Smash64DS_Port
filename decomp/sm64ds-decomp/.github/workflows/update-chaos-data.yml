@@ -1,0 +1,91 @@
+# On every push to main, regenerate all the derived progress views from committed
+# data and land them in ONE commit (README bar + treemap + contributions.json on
+# main; chaos-db.json on the chaos-data branch), so the hosted viewer and charts
+# self-update without spamming the #github channel with a commit per file. details/
+# chunks on the chaos-data branch are preserved (they need the ROM; refreshed locally).
+name: update-chaos-data
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "config/**"
+      - "nearmiss/**"
+      - "tools/chaos_db_ci.py"
+      - "tools/chaosviewer.config.json"
+      - "attribution.json"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: chaos-data
+  cancel-in-progress: true
+
+jobs:
+  regen:
+    runs-on: ubuntu-latest
+    # This job's own refresh commit now touches config/ (the provenance ledger), which
+    # is a watched path, so without this guard it would retrigger itself once per run.
+    # Skipping the bot's own pushes is safe: a refresh commit never contains new matches.
+    if: github.event_name == 'workflow_dispatch' || github.actor != 'github-actions[bot]'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # full history: per-function authors come from git log
+      - uses: actions/checkout@v4
+        with:
+          ref: chaos-data
+          path: _chaos_data
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install tool dependencies
+        # tools/nearmiss_db.py imports match.py/swarm.py at module level, which need
+        # pyelftools + capstone; without them the dedupe step kills the whole run
+        # before the refresh commit (which is what keeps contributions.json moving).
+        run: pip install pyelftools capstone
+      - name: Regenerate chaos-db.json + contributions.json
+        run: python tools/chaos_db_ci.py --out _chaos_data/chaos-db.json --contrib-out contributions.json
+      - name: Push if changed
+        run: |
+          cd _chaos_data
+          if git diff --quiet -- chaos-db.json; then
+            echo "no data change"; exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add chaos-db.json
+          git commit -m "Refresh Chaos Viewer data from $(git -C .. rev-parse --short HEAD)"
+          git push origin chaos-data
+      - name: Stamp provenance for functions that landed in this push
+        # HOW a match was made is only knowable as it lands: a later backfill can
+        # recover the method for ~13% of matches and no more. Declines to guess, so an
+        # unlabelled commit leaves the function unstamped rather than inventing a model.
+        run: python tools/stamp_landed.py
+      - name: Collapse any duplicate near-miss rows from a union merge
+        # nearmiss/db.jsonl is merge=union (.gitattributes), so two PRs banking a tip for the
+        # same function land both rows instead of conflicting. Keep the lowest-divergence row
+        # per (module, addr); the duplicate is transient, cleaned here on the way to the
+        # refresh commit below (which already includes nearmiss/db.jsonl).
+        run: python tools/nearmiss_db.py dedupe
+      - name: Refresh README progress bar
+        run: python tools/progress.py --write-readme --from-db _chaos_data/chaos-db.json
+      - name: Regenerate treemap (README SVG + Pages HTML)
+        run: python tools/treemap.py --from-db _chaos_data/chaos-db.json --out docs/index.html --svg docs/progress-treemap.svg
+      - name: Commit progress refresh if changed
+        # README bar + treemap + contributions in ONE commit, to keep the #github channel
+        # from filling with a separate refresh commit per generated file.
+        # safe from retrigger loops: no workflow watches README.md, docs/**, or contributions.json
+        run: |
+          if git diff --quiet -- README.md docs/index.html docs/progress-treemap.svg contributions.json config/match_provenance.jsonl config/match_attempts.jsonl nearmiss/db.jsonl; then
+            echo "progress unchanged"; exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add README.md docs/index.html docs/progress-treemap.svg contributions.json config/match_provenance.jsonl config/match_attempts.jsonl nearmiss/db.jsonl
+          git commit -m "Refresh progress (README, treemap, contributions, provenance)"
+          git pull --rebase origin main
+          git push origin main

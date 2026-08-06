@@ -1,0 +1,47 @@
+_ZN15RecRoomCupboardD1Ev kind:function(arm,size=0x40) addr:0x021111a0
+_ZN15RecRoomCupboardD0Ev kind:function(arm,size=0x54) addr:0x021111e0
+_ZN15RecRoomCupboard16CleanupResourcesEv kind:function(arm,size=0x8) addr:0x02111234
+_ZN15RecRoomCupboard8BehaviorEv kind:function(arm,size=0x3e0) addr:0x0211123c
+_ZN15RecRoomCupboard13InitResourcesEv kind:function(arm,size=0x6c) addr:0x0211161c
+RecRoomCupboard_Spawn kind:function(arm,size=0x5c) addr:0x02111688
+data_ov058_02111700 kind:data(any) addr:0x02111700
+data_ov058_02111704 kind:data(any) addr:0x02111704
+data_ov058_0211170c kind:data(any) addr:0x0211170c
+data_ov058_02111714 kind:data(any) addr:0x02111714
+data_ov058_0211171c kind:data(any) addr:0x0211171c
+data_ov058_02111720 kind:data(any) addr:0x02111720 ambiguous
+data_ov058_02111724 kind:data(any) addr:0x02111724
+data_ov058_0211172c kind:data(any) addr:0x0211172c
+data_ov058_02111734 kind:data(any) addr:0x02111734
+data_ov058_0211173c kind:data(any) addr:0x0211173c
+data_ov058_02111740 kind:data(any) addr:0x02111740 ambiguous
+data_ov058_02111744 kind:data(any) addr:0x02111744
+data_ov058_02111754 kind:data(any) addr:0x02111754
+data_ov058_02111760 kind:data(any) addr:0x02111760 ambiguous
+data_ov058_02111768 kind:data(any) addr:0x02111768 ambiguous
+data_ov058_02111784 kind:data(any) addr:0x02111784
+data_ov058_021117a4 kind:data(any) addr:0x021117a4
+data_ov058_021117c8 kind:data(any) addr:0x021117c8
+data_ov058_021117f8 kind:data(any) addr:0x021117f8
+data_ov058_02111830 kind:data(any) addr:0x02111830
+data_ov058_02111834 kind:data(any) addr:0x02111834 ambiguous
+data_ov058_02111844 kind:data(any) addr:0x02111844 ambiguous
+data_ov058_02111878 kind:data(any) addr:0x02111878
+data_ov058_021118c0 kind:data(any) addr:0x021118c0
+data_ov058_0211190c kind:data(any) addr:0x0211190c ambiguous
+data_ov058_02111920 kind:data(any) addr:0x02111920
+data_ov058_02111928 kind:data(any) addr:0x02111928 ambiguous
+data_ov058_0211192c kind:data(any) addr:0x0211192c ambiguous
+data_ov058_02111944 kind:data(any) addr:0x02111944 ambiguous
+data_ov058_02111960 kind:data(any) addr:0x02111960 ambiguous
+data_ov058_02111994 kind:data(any) addr:0x02111994 ambiguous
+data_ov058_021119a0 kind:data(any) addr:0x021119a0
+data_ov058_02111a30 kind:data(any) addr:0x02111a30
+data_ov058_02111a3c kind:data(any) addr:0x02111a3c
+RecRoomCupboard_SpawnInfo kind:data(any) addr:0x02111a4c ambiguous
+data_ov058_02111a58 kind:data(any) addr:0x02111a58 ambiguous
+_ZTV15RecRoomCupboard kind:data(any) addr:0x02111a70
+data_ov058_02111a78 kind:data(any) addr:0x02111a78 ambiguous
+data_ov058_02111abc kind:data(any) addr:0x02111abc ambiguous
+data_ov058_02111ad4 kind:data(any) addr:0x02111ad4 ambiguous
+data_ov058_02111af4 kind:data(any) addr:0x02111af4 ambiguous

@@ -1,0 +1,4598 @@
+# FILE_COUNT: 2107
+
+# FILE NAMES
+
+-000: MNCommon
+-001: MNMain
+-002: MN1P
+-003: MNIndex
+-004: MNOption
+-005: MNData
+-006: MNVSMode
+-007: MNVSOptions
+-008: MNVSItemSwitch
+-009: MNMessage
+-010: SC1PChallenger
+-011: SC1PIntro
+-012: CharacterNames
+-013: BonusPicture
+-014: BonusPicturePlatform
+-015: MNScreenAdjust
+-016: MNCharacters
+-017: MNPlayersCommon
+-018: MNPlayersGameModes
+-019: MNPlayersPortraits
+-020: FTEmblemSprites
+-021: MNSelectCommon
+-022: MNPlayersSpotlight
+-023: MNPlayers1PMode
+-024: MNPlayersDifficulty
+-025: FTStocksZako
+-026: GRWallpaperTrainingBlack
+-027: GRWallpaperTrainingYellow
+-028: GRWallpaperTrainingBlue
+-029: IFCommonItemNames
+-030: MNMaps
+-031: MNVSRecordMain
+-032: MNDataCommon
+-033: MNCommonFonts
+-034: MNVSResults
+-035: FTEmblemModels
+-036: IFCommonDigits
+-037: IFCommonAnnounceCommon
+-038: IFCommonPlayerTags
+-039: IFCommonObject
+-040: LBTransitionAeroplane
+-041: LBTransitionCheck
+-042: LBTransitionGakubuthi
+-043: LBTransitionKannon
+-044: LBTransitionStar
+-045: LBTransitionSudare1
+-046: LBTransitionSudare2
+-048: LBTransitionBlock
+-047: LBTransitionPaperAirplane
+-049: LBTransitionRotScale
+-050: LBTransitionCurtain
+-051: LBTransitionCamera
+-052: MVCommon
+-053: MVOpeningPortraitsSet1
+-054: MVOpeningPortraitsSet2
+-055: MVOpeningRun
+-056: MVOpeningRoomScene1
+-057: MVOpeningRoomScene2
+-058: MVOpeningRoomScene3
+-059: MVOpeningRoomScene4
+-060: MVOpeningRunMain
+-061: MVOpeningNewcomers1
+-062: MVOpeningNewcomers2
+-063: MVOpeningRoomTransition
+-064: MVOpeningJungle
+-065: MVOpeningCommon
+-066: MVOpeningClashWallpaper
+-067: MVOpeningYoster
+-068: MVOpeningCliff
+-069: MVOpeningStandoff
+-070: MVOpeningStandoffWallpaper
+-071: MVOpeningYamabuki
+-072: MVOpeningClashFighters
+-073: MVOpeningSector
+-074: MVOpeningSectorWallpaper
+-075: MVOpeningRunCrash
+-076: MVEnding
+-077: MNBackupClear
+-078: MNBackupClearHeaderOption
+-079: MN1PContinue
+-080: SC1PStageClear1
+-081: SC1PStageClear2
+-082: IFCommonGameStatus
+-083: EFCommonEffects1
+-084: EFCommonEffects2
+-085: EFCommonEffects3
+-086: ITCommonObject
+-087: IFCommonItem
+-088: StageDreamLand
+-089: StageZebes
+-090: MVOpeningRoomWallpaper
+-091: StageInishieBackground
+-092: StageJungle
+-093: StageYoshi
+-094: StagePokemon
+-095: StageCastle
+-096: StageLastBackground
+-097: StageBattlefieldBackground
+-098: StageMetalBackground
+-099: StageSector
+-100: StagePupupuBetaImages
+-101: StagePupupuBeta1
+-102: StagePupupuBeta2
+-103: StagePupupuImages
+-104: StagePupupuFile2
+-105: StageZebesFile2
+-106: StageCastleFile2
+-107: StageInishieFile2
+-108: StageJungleFile2
+-109: StageSectorFile2
+-110: StageYosterImages
+-111: StageYosterFile2
+-112: StageYamabukiFile2
+-113: StageHyruleFile2
+-114: StageLastFile2
+-115: StageExplainFile2
+-116: StageBattlefieldFile2
+-117: StageMetalFile2
+-118: StageYosterSmallFile2
+-119: Bonus1CommonBackground
+-120: Bonus1CommonImages1
+-121: Bonus1CommonImages2
+-122: Bonus1CommonImages3
+-123: Bonus1CommonImages4
+-124: GRBonus1MarioFile2
+-125: GRBonus1FoxFile2
+-126: GRBonus1DonkeyFile2
+-127: GRBonus1SamusFile2
+-128: GRBonus1LuigiFile2
+-129: GRBonus1LinkFile2
+-130: GRBonus1YoshiFile2
+-131: GRBonus1CaptainFile2
+-132: GRBonus1KirbyFile2
+-133: GRBonus1PikachuFile2
+-134: GRBonus1PurinFile2
+-135: GRBonus1NessFile2
+-136: Bonus2Common
+-137: GRBonus2MarioFile2
+-138: GRBonus2FoxFile2
+-139: GRBonus2DonkeyFile2
+-140: GRBonus2SamusFile2
+-141: GRBonus2LuigiFile2
+-142: GRBonus2LinkFile2
+-143: GRBonus2YoshiFile2
+-144: GRBonus2CaptainFile2
+-145: GRBonus2KirbyFile2
+-146: GRBonus2PikachuFile2
+-147: GRBonus2PurinFile2
+-148: GRBonus2NessFile2
+-149: GRBonus3File2
+-150: ITBonus1Object
+-151: SC1PStageClear3
+-152: StagePupupuFile3
+-153: StageSectorFile3
+-154: StageYosterFile3
+-155: StageInishieFile3
+-156: StageCastleFile3
+-157: StageZebesFile3
+-158: StageJungleFile3
+-159: StageYamabukiFile3
+-160: StageYamabukiFile4
+-161: FoxSpecial3
+-162: GRBonus3File3
+# FTManagerCommon contains dobj, mobjsub, and animjoint for effects
+-163: FTManagerCommon
+-164: IFCommonPlayerDamage
+-165: IFCommonTimer
+-166: IFCommonPlayer
+-167: MNTitle
+-168: MNTitleFireAnim
+-169: MNNoController
+-170: SCStaffroll
+-171: MNSoundTest
+-172: IFCommonBattlePause
+-173: SCExplainGraphics
+-174: SYKseg1Validate
+-175: SYSignValidate
+-176: FTCommonMoveset
+-177: MarioMainMotion
+-178: MarioMain
+-179: MarioSpecial1
+-180: MMarioMainMotion
+-181: MMarioMain
+-182: NMarioMain
+-183: FoxMainMotion
+-184: FoxMain
+-185: FoxSpecial1
+-186: NFoxMain
+-187: DonkeyMainMotion
+-188: DonkeyMain
+-189: NDonkeyMain
+-190: GDonkeyMain
+-191: SamusMainMotion
+-192: SamusMain
+-193: SamusSpecial1
+-194: NSamusMain
+-195: LuigiMainMotion
+-196: LuigiMain
+-197: LuigiSpecial1
+-198: NLuigiMain
+-199: LinkMainMotion
+-200: LinkMain
+-201: LinkSpecial1
+-202: NLinkMain
+-203: KirbyMainMotion
+-204: KirbyMain
+-205: KirbySpecial1
+-206: NKirbyMain
+-207: PurinMainMotion
+-208: PurinMain
+-209: NPurinMain
+-210: CaptainMainMotion
+-211: CaptainMain
+-212: NCaptainMain
+-213: NessMainMotion
+-214: NessMain
+-215: NessSpecial1
+-216: NNessMain
+-217: PikachuMainMotion
+-218: PikachuMain
+-219: PikachuSpecial1
+-220: NPikachuMain
+-221: YoshiMainMotion
+-222: YoshiMain
+-223: NYoshiMain
+-224: BossMainMotion
+-225: BossMain
+-226: ITCommonData
+-227: SCExplainMain
+-228: ITBonus1ObjectHeader
+-229: SC1PTrainingMode
+-230: GRPupupuMap
+-231: GRPupupuSmallMap
+-232: GRZebesMap
+-233: GRPupupuTestMap
+-234: GRCastleMap
+-235: GRInishieMap
+-236: GRJungleMap
+-237: GRSectorMap
+-238: GRYosterMap
+-239: GRYamabukiMap
+-240: GRHyruleMap
+-241: GRLastMap
+-242: GRExplainMap
+-243: GRZakoMap
+-244: GRMetalMap
+-245: GRYosterSmallMap
+-246: GRBonus1MarioMap
+-247: GRBonus1FoxMap
+-248: GRBonus1DonkeyMap
+-249: GRBonus1SamusMap
+-250: GRBonus1LuigiMap
+-251: GRBonus1LinkMap
+-252: GRBonus1YoshiMap
+-253: GRBonus1CaptainMap
+-254: GRBonus1KirbyMap
+-255: GRBonus1PikachuMap
+-256: GRBonus1PurinMap
+-257: GRBonus1NessMap
+-258: GRBonus2MarioMap
+-259: GRBonus2FoxMap
+-260: GRBonus2DonkeyMap
+-261: GRBonus2SamusMap
+-262: GRBonus2LuigiMap
+-263: GRBonus2LinkMap
+-264: GRBonus2YoshiMap
+-265: GRBonus2CaptainMap
+-266: GRBonus2KirbyMap
+-267: GRBonus2PikachuMap
+-268: GRBonus2PurinMap
+-269: GRBonus2NessMap
+-270: GRBonus3Map
+-271: MarioModel
+-272: MarioSpecial3
+-273: MarioShieldPose
+-274: MarioSecondaryImage
+-275: MMarioModel
+-276: NMarioModel
+-277: NCommonTexture
+-278: NFoxModel
+-279: NYoshiModel
+-280: NKirbyModel
+-281: NPurinModel
+-282: NPikachuModel
+-283: NDonkeyModel
+-284: NSamusModel
+-285: NLinkModel
+-286: NCaptainModel
+-287: NNessModel
+-288: FoxModel
+-289: FoxShieldPose
+-290: FoxUnknown
+-291: FoxSpecial4
+-292: DonkeyModel
+-293: DonkeyShieldPose
+-294: DkIcon
+-295: SamusModel
+-296: SamusSpecial3
+-297: SamusShieldPose
+-298: LuigiModel
+-299: LinkModel
+-300: LinkSpecial3
+-301: LinkBoomerangModel
+-302: LinkShieldPose
+-303: KirbyModel
+-304: KirbyShieldPose
+-305: PurinModel
+-306: PurinShieldPose
+-307: CaptainModel
+-308: CaptainSpecial3
+-309: CaptainShieldPose
+-310: NessModel
+-311: NessSpecial3
+-312: NessShieldPose
+-313: YoshiModel
+-314: YoshiSpecial3
+-315: YoshiShieldPose
+-316: PikachuModel
+-317: PikachuSpecial3
+-318: PikachuShieldPose
+-319: BossModel
+-320: MasterHandIcon
+-321: FoxSpecial2
+-322: PikachuSpecial2
+-323: KirbySpecial2
+-324: SamusSpecial2
+-325: CaptainSpecial2
+-326: PurinSpecial2
+-327: NessSpecial2
+-328: LinkSpecial2
+-329: YoshiSpecial2
+-330: DonkeySpecial2
+-331: MarioSpecial2
+-332: FTMarioAnimWin2
+-333: FTMarioAnimWin3
+-334: FTMarioAnimSelected
+-335: FTMarioAnimWinBeta
+-336: FTMarioAnimClaps
+-337: FTMarioAnimDollPickUp
+-338: FTMarioAnimDollFalls
+-339: FTMarioAnimDollRevival
+-340: FTMarioAnimIntroVsKirby
+-341: FTMarioAnimIntro
+-342: FTMarioAnimIntro2
+-343: FTMarioAnimPose
+-344: FTMarioAnimPose2
+-345: FTFoxAnimWin1
+-346: FTFoxAnimWin2
+-347: FTFoxAnimSelected
+-348: FTFoxAnimClaps
+-349: FTFoxAnimDollPickUp
+-350: FTFoxAnimDollFall
+-351: FTFoxAnimDoll
+-352: FTFoxAnimDollRevival
+-353: FTFoxAnimPose1Frame
+-354: FTFoxAnimPosePostBlaster
+-355: FTFoxAnimPoseBlaster2
+-356: FTDonkeyAnimSelected
+-357: FTDonkeyAnimWin1
+-358: FTDonkeyAnimWin2
+-359: FTDonkeyAnimWin3
+-360: FTDonkeyAnimClaps
+-361: FTDonkeyAnimDollPickUp
+-362: FTDonkeyAnimDollFall
+-363: FTDonkeyAnimDollRevival
+-364: FTDonkeyAnimIntro
+-365: FTDonkeyAnimUnknown
+-366: FTDonkeyAnimPose1P
+-367: FTGDonkeyAnimPose1P
+-368: FTSamusAnimWin3
+-369: FTSamusAnimWin1
+-370: FTSamusAnimSelected
+-371: FTSamusAnimClaps
+-372: FTSamusAnimDollPickUp
+-373: FTSamusAnimDollFall
+-374: FTSamusAnimDollRevival
+-375: FTSamusAnimIntro
+-376: FTSamusAnimPoseEnemy
+-377: FTSamusAnimPosePlayer
+-378: FTSamusAnimUnknown
+-379: FTLinkAnimSelected
+-380: FTLinkAnimWin1
+-381: FTLinkAnimWin2
+-382: FTLinkAnimClaps
+-383: FTLinkAnimDollPickUp
+-384: FTLinkAnimDollFall
+-385: FTLinkAnimDollRevival
+-386: FTLinkAnimClaps2
+-387: FTLinkAnimIntro
+-388: FTLinkAnimPoseAlly
+-389: FTLinkAnimPosePlayer
+-390: FTLinkAnimPoseOpponent
+-391: FTKirbyAnimWin1
+-392: FTKirbyAnimWin2
+-393: FTKirbyAnimSelected
+-394: FTKirbyAnimClaps
+-395: FTKirbyAnimDollPickUp
+-396: FTKirbyAnimDollFall
+-397: FTKirbyAnimDollRevival
+-398: FTKirbyAnimUnknown
+-399: FTKirbyAnimIntro
+-400: FTKirbyAnimIntro2
+-401: FTKirbyAnimIntroPose
+-402: FTKirbyAnimPose
+-403: FTKirbyAnimPose2
+-404: FTCaptainAnimSelected
+-405: FTCaptainAnimVictory1
+-406: FTCaptainAnimVictory2
+-407: FTCaptainAnimClaps
+-408: FTCaptainAnimDollFall
+-409: FTCaptainAnimDollRevival
+-410: FTCaptainAnimUnknown
+-411: FTNessAnimWin1
+-412: FTNessAnimSelected
+-413: FTNessAnimWin2
+-414: FTNessAnimClaps
+-415: FTNessAnimDollFall
+-416: FTNessAnimDollRevival
+-417: FTNessAnimPosePlayer
+-418: FTYoshiAnimWin1
+-419: FTYoshiAnimSelected
+-420: FTYoshiAnimWin2
+-421: FTYoshiAnimUnknown1
+-422: FTYoshiAnimDollPickUp
+-423: FTYoshiAnimDollFall
+-424: FTYoshiAnimDollRevival
+-425: FTYoshiAnimUnknown2
+-426: FTYoshiAnimUnknown3
+-427: FTYoshiAnimUnknown4
+-428: FTYoshiAnimUnknown5
+-429: FTYoshiAnimUnknown6
+-430: FTYoshiAnimIntroPose
+-431: FTYoshiAnimUnknown7
+-432: FTYoshiAnimTeamPoses
+-433: FTYoshiAnimUnknown8
+-434: FTYoshiAnimUnknown9
+-435: FTYoshiAnimUnknown10
+-436: FTBossAnimPose1P
+-437: FTLuigiAnimSelected
+-438: FTLuigiAnimWin1
+-439: FTLuigiAnimWin2
+-440: FTLuigiAnimDollFall
+-441: FTLuigiAnimDollRevival
+-442: FTLuigiAnimPosePlayer
+-443: FTLuigiAnimPoseEnemy
+-444: FTLuigiAnimUnknown
+-445: FTPurinAnimSelected
+-446: FTPurinAnimWin1
+-447: FTPurinAnimWin2
+-448: FTPurinAnimDollFall
+-449: FTPurinAnimDollRevival
+-450: FTPurinAnimUnknown
+-451: FTPikachuAnimSelected
+-452: FTPikachuAnimWin1
+-453: FTPikachuAnimWin2
+-454: FTPikachuAnimClaps
+-455: FTPikachuAnimDollPickUp
+-456: FTPikachuAnimDollFall
+-457: FTPikachuAnimDollRevival
+-458: FTPikachuAnimUnknown1
+-459: FTPikachuAnimUnknown2
+-460: FTPikachuAnimPoseAlly
+-461: FTPikachuAnimPosePlayer
+-462: FTPikachuAnimPoseEnemy
+-463: FTMMarioAnimPose1P
+-464: FTNMarioAnimPose1P
+-465: FTNFoxAnimPose1P
+-466: FTNDonkeyAnimPose1P
+-467: FTNSamusAnimPose1P
+-468: FTNLinkAnimPose1P
+-469: FTNYoshiAnimPose1P
+-470: FTNCaptainAnimPose1P
+-471: FTNKirbyAnimPose1P
+-472: FTNPikachuAnimPose1P
+-473: FTNNessAnimPose1P
+-474: FTMarioAnimWait
+-475: FTMarioAnimWalk1
+-476: FTMarioAnimWalk2
+-477: FTMarioAnimWalk3
+-478: FTMarioAnimWalkEnd
+-479: FTMarioAnimDash
+-480: FTMarioAnimRun
+-481: FTMarioAnimRunBrake
+-482: FTMarioAnimTurn
+-483: FTMarioAnimTurnRun
+-484: FTMarioAnimJumpF
+-485: FTMarioAnimJumpB
+-486: FTMarioAnimJumpAerialF
+-487: FTMarioAnimJumpAerialB
+-488: FTMarioAnimFall
+-489: FTMarioAnimFallAerial
+-490: FTMarioAnimCrouch
+-491: FTMarioAnimCrouchIdle
+-492: FTMarioAnimCrouchEnd
+-493: FTMarioAnimLandingAirX
+-494: FTMarioAnimShieldDrop
+-495: FTMarioAnimTeeter
+-496: FTMarioAnimTeeterstart
+-497: FTMarioAnimSleep
+-498: FTMarioAnimDamaged1
+-499: FTMarioAnimDamaged2
+-500: FTMarioAnimFalconDivePulled
+-501: FTMarioAnimDamageX1
+-502: FTMarioAnimDamageX2
+-503: FTMarioAnimDamageX3
+-504: FTMarioAnimDamaged3
+-505: FTMarioAnimDamaged4
+-506: FTMarioAnimDamaged5
+-507: FTMarioAnimDamaged6
+-508: FTMarioAnimDamageAir
+-509: FTMarioAnimDamaged7
+-510: FTMarioAnimDamageFlyX1
+-511: FTMarioAnimDamageFlyX2
+-512: FTMarioAnimDamage2
+-513: FTMarioAnimShieldBreak
+-514: FTMarioAnimDamageFlyTop
+-515: FTMarioAnimDamaged
+-516: FTMarioAnimFallSpecial
+-517: FTMarioAnimCeilingBonk
+-518: FTMarioAnimDownBounceD
+-519: FTMarioAnimStunLandU
+-520: FTMarioAnimDownStandD
+-521: FTMarioAnimStunStartU
+-522: FTMarioAnimTechF
+-523: FTMarioAnimTechB
+-524: FTMarioAnimDownForwardD
+-525: FTMarioAnimDownForwardU
+-526: FTMarioAnimDownBackD
+-527: FTMarioAnimDownBackU
+-528: FTMarioAnimDownAttackD
+-529: FTMarioAnimDownAttackU
+-530: FTMarioAnimTech
+-531: FTMarioAnimClangRecoil
+-532: FTMarioAnimShieldOn
+-533: FTMarioAnimShieldOff
+-534: FTMarioAnimRollF
+-535: FTMarioAnimRollB
+-536: FTMarioAnimCatch
+-537: FTMarioAnimCatchPull
+-538: FTMarioAnimThrowF
+-539: FTMarioAnimThrowB
+-540: FTMarioAnimEggLayPulled
+-541: FTMarioAnimThrownDKPulled
+-542: FTMarioAnimThrownMarioBros
+-543: FTMarioAnimThrownDK
+-544: FTMarioAnimThrown2
+-545: FTMarioAnimThrown1
+-546: FTMarioAnimTaunt
+-547: FTMarioAnimCliffCatch
+-548: FTMarioAnimCliffWait
+-549: FTMarioAnimCliffQuick
+-550: FTMarioAnimCliffClimbQuick1
+-551: FTMarioAnimCliffClimbQuick2
+-552: FTMarioAnimCliffSlow
+-553: FTMarioAnimCliffClimbSlow1
+-554: FTMarioAnimCliffClimbSlow2
+-555: FTMarioAnimCliffAttackQuick1
+-556: FTMarioAnimCliffAttackQuick2
+-557: FTMarioAnimCliffAttackSlow1
+-558: FTMarioAnimCliffAttackSlow2
+-559: FTMarioAnimCliffEscapeQuick1
+-560: FTMarioAnimCliffEscapeQuick2
+-561: FTMarioAnimCliffEscapeSlow1
+-562: FTMarioAnimCliffEscapeSlow2
+-563: FTMarioAnimLightItemPickup
+-564: FTMarioAnimItemThrowSmashB
+-565: FTMarioAnimItemThrowSmashU
+-566: FTMarioAnimItemThrowSmashD
+-567: FTMarioAnimItemThrowDash
+-568: FTMarioAnimItemDrop
+-569: FTMarioAnimItemThrowAirSmashB
+-570: FTMarioAnimItemThrowAirSmashU
+-571: FTMarioAnimItemThrowAirSmashF
+-572: FTMarioAnimHeavyItemPickup
+-573: FTMarioAnimHeavyItemThrowSmashB
+-574: FTMarioAnimStarRodNeutral
+-575: FTMarioAnimStarRodTilt
+-576: FTMarioAnimStarRodSmash
+-577: FTMarioAnimStarRodDash
+-578: FTMarioAnimHammerIdle
+-579: FTMarioAnimHammerLanding
+-580: FTMarioAnimFireFlowerShoot
+-581: FTMarioAnimJab1
+-582: FTMarioAnimJab2
+-583: FTMarioAnimJab3
+-584: FTMarioAnimDashAttack
+-585: FTMarioAnimFTiltHigh
+-586: FTMarioAnimFTilt
+-587: FTMarioAnimFTiltLow
+-588: FTMarioAnimUTilt
+-589: FTMarioAnimDTilt
+-590: FTMarioAnimFSmashHigh
+-591: FTMarioAnimFSmashMidHigh
+-592: FTMarioAnimFSmash
+-593: FTMarioAnimFSmashMidLow
+-594: FTMarioAnimFSmashLow
+-595: FTMarioAnimUSmash
+-596: FTMarioAnimDSmash
+-597: FTMarioAnimAttackAirN
+-598: FTMarioAnimAttackAirF
+-599: FTMarioAnimAttackAirB
+-600: FTMarioAnimAttackAirU
+-601: FTMarioAnimAttackAirD
+-602: FTMarioAnimLandingAirF
+-603: FTMarioAnimLandingAirB
+-604: FTMarioAnimLandingAirU
+-605: FTMarioAnimEnterPipe
+-606: FTMarioAnimExitPipe
+-607: FTMarioAnimExitPipeWalk
+-608: FTMarioAnimAppear1
+-609: FTMarioAnimAppear2
+-610: FTMarioAnimFireballGround
+-611: FTMarioAnimFireballAir
+-612: FTMarioAnimSuperJumpPunchAir
+-613: FTMarioAnimMarioTornadoGround
+-614: FTMarioAnimMarioTornadoAir
+-615: FTMarioAnimDamage
+-616: FTMarioAnimFireFlowerShootAir
+-617: FTFoxAnimEggLay
+-618: FTFoxAnimWalk1
+-619: FTFoxAnimWalk2
+-620: FTFoxAnimWalk3
+-621: FTFoxAnimWalkEnd
+-622: FTFoxAnimDash
+-623: FTFoxAnimRun
+-624: FTFoxAnimRunBrake
+-625: FTFoxAnimTurn
+-626: FTFoxAnimTurnRun
+-627: FTFoxAnimJumpF
+-628: FTFoxAnimJumpB
+-629: FTFoxAnimJumpAerialF
+-630: FTFoxAnimJumpAerialB
+-631: FTFoxAnimFall
+-632: FTFoxAnimFallAerial
+-633: FTFoxAnimCrouch
+-634: FTFoxAnimCrouchIdle
+-635: FTFoxAnimCrouchEnd
+-636: FTFoxAnimLandingAirX
+-637: FTFoxAnimShieldDrop
+-638: FTFoxAnimTeeter
+-639: FTFoxAnimTeeterstart
+-640: FTFoxAnimSleep
+-641: FTFoxAnimDamaged1
+-642: FTFoxAnimDamaged2
+-643: FTFoxAnimFalconDivePulled
+-644: FTFoxAnimDamageX1
+-645: FTFoxAnimDamageX2
+-646: FTFoxAnimDamageX3
+-647: FTFoxAnimDamaged3
+-648: FTFoxAnimDamaged4
+-649: FTFoxAnimDamaged5
+-650: FTFoxAnimDamaged6
+-651: FTFoxAnimDamageAir
+-652: FTFoxAnimDamaged7
+-653: FTFoxAnimDamageFlyX1
+-654: FTFoxAnimDamageFlyX2
+-655: FTFoxAnimDamage2
+-656: FTFoxAnimShieldBreak
+-657: FTFoxAnimDamageFlyTop
+-658: FTFoxAnimDamaged
+-659: FTFoxAnimFallSpecial
+-660: FTFoxAnimCeilingBonk
+-661: FTFoxAnimStunLandD
+-662: FTFoxAnimStunLandU
+-663: FTFoxAnimStunStartD
+-664: FTFoxAnimStunStartU
+-665: FTFoxAnimTechF
+-666: FTFoxAnimTechB
+-667: FTFoxAnimDownForwardD
+-668: FTFoxAnimDownForwardU
+-669: FTFoxAnimDownBackD
+-670: FTFoxAnimDownBackU
+-671: FTFoxAnimDownAttackD
+-672: FTFoxAnimDownAttackU
+-673: FTFoxAnimTech
+-674: FTFoxAnimClangRecoil
+-675: FTFoxAnimShieldOn
+-676: FTFoxAnimShieldOff
+-677: FTFoxAnimRollF
+-678: FTFoxAnimRollB
+-679: FTFoxAnimCatch
+-680: FTFoxAnimCatchPull
+-681: FTFoxAnimThrowF
+-682: FTFoxAnimThrowB
+-683: FTFoxAnimEggLayPulled
+-684: FTFoxAnimThrownDKPulled
+-685: FTFoxAnimThrownMarioBros
+-686: FTFoxAnimThrownDK
+-687: FTFoxAnimThrown2
+-688: FTFoxAnimThrown1
+-689: FTFoxAnimThrown3
+-690: FTFoxAnimThrownFoxB
+-691: FTFoxAnimTaunt
+-692: FTFoxAnimCliffCatch
+-693: FTFoxAnimCliffWait
+-694: FTFoxAnimCliffQuick
+-695: FTFoxAnimCliffClimbQuick1
+-696: FTFoxAnimCliffClimbQuick2
+-697: FTFoxAnimCliffSlow
+-698: FTFoxAnimCliffClimbSlow1
+-699: FTFoxAnimCliffClimbSlow2
+-700: FTFoxAnimCliffAttackQuick1
+-701: FTFoxAnimCliffAttackQuick2
+-702: FTFoxAnimCliffAttackSlow1
+-703: FTFoxAnimCliffAttackSlow2
+-704: FTFoxAnimCliffEscapeQuick1
+-705: FTFoxAnimCliffEscapeQuick2
+-706: FTFoxAnimCliffEscapeSlow1
+-707: FTFoxAnimCliffEscapeSlow2
+-708: FTFoxAnimLightItemPickup
+-709: FTFoxAnimItemThrowSmashB
+-710: FTFoxAnimItemThrowSmashU
+-711: FTFoxAnimItemThrowSmashD
+-712: FTFoxAnimItemThrowDash
+-713: FTFoxAnimItemDrop
+-714: FTFoxAnimItemThrowAirSmashB
+-715: FTFoxAnimItemThrowAirSmashU
+-716: FTFoxAnimItemThrowAirSmashF
+-717: FTFoxAnimHeavyItemPickup
+-718: FTFoxAnimHeavyItemThrowSmashB
+-719: FTFoxAnimStarRodNeutral
+-720: FTFoxAnimStarRodTilt
+-721: FTFoxAnimStarRodSmash
+-722: FTFoxAnimStarRodDash
+-723: FTFoxAnimHammerIdle
+-724: FTFoxAnimHammerLanding
+-725: FTFoxAnimFireFlowerShoot
+-726: FTFoxAnimJab1
+-727: FTFoxAnimJab2
+-728: FTFoxAnimJabLoopStart
+-729: FTFoxAnimJabLoop
+-730: FTFoxAnimJabLoopEnd
+-731: FTFoxAnimDashAttack
+-732: FTFoxAnimFTiltHigh
+-733: FTFoxAnimFTiltMidHigh
+-734: FTFoxAnimFTilt
+-735: FTFoxAnimFTiltMidLow
+-736: FTFoxAnimFTiltLow
+-737: FTFoxAnimUTilt
+-738: FTFoxAnimDTilt
+-739: FTFoxAnimFSmash
+-740: FTFoxAnimUSmash
+-741: FTFoxAnimDSmash
+-742: FTFoxAnimAttackAirN
+-743: FTFoxAnimAttackAirF
+-744: FTFoxAnimAttackAirB
+-745: FTFoxAnimAttackAirU
+-746: FTFoxAnimAttackAirD
+-747: FTFoxAnimLandingAirF
+-748: FTFoxAnimLandingAirB
+-749: FTFoxAnimEnterPipe
+-750: FTFoxAnimExitPipe
+-751: FTFoxAnimExitPipeWalk
+-752: FTFoxAnimAppear
+-753: FTFoxAnimArwing
+-754: FTFoxAnimLaser
+-755: FTFoxAnimLaserAerial
+-756: FTFoxAnimFireFoxStartGround
+-757: FTFoxAnimReadyingFireFoxGround
+-758: FTFoxAnimFireFoxGround
+-759: FTFoxAnimFireFoxEndGround
+-760: FTFoxAnimFireFoxStartAerial
+-761: FTFoxAnimReadyingFireFoxAir
+-762: FTFoxAnimFireFoxAir
+-763: FTFoxAnimFireFoxEndAir
+-764: FTFoxAnimLandingWhileFireFoxAir
+-765: FTFoxAnimShineStart
+-766: FTFoxAnimSwitchDirectionShine
+-767: FTFoxAnimReflecting
+-768: FTFoxAnimShine
+-769: FTFoxAnimShireStartAir
+-770: FTFoxAnimSwitchDirectionShineAir
+-771: FTFoxAnimUnknown
+-772: FTFoxAnimShineAirEnd
+-773: FTFoxAnimDamage
+-774: FTFoxAnimFireFlowerShootAir
+-775: FTDonkeyAnimEggLay
+-776: FTDonkeyAnimWalk1
+-777: FTDonkeyAnimWalk2
+-778: FTDonkeyAnimWalk3
+-779: FTDonkeyAnimWalkEnd
+-780: FTDonkeyAnimDash
+-781: FTDonkeyAnimRun
+-782: FTDonkeyAnimRunBrake
+-783: FTDonkeyAnimTurn
+-784: FTDonkeyAnimTurnRun
+-785: FTDonkeyAnimJumpF
+-786: FTDonkeyAnimJumpB
+-787: FTDonkeyAnimJumpAerialF
+-788: FTDonkeyAnimJumpAerialB
+-789: FTDonkeyAnimFall
+-790: FTDonkeyAnimFallAerial
+-791: FTDonkeyAnimCrouch
+-792: FTDonkeyAnimCrouchIdle
+-793: FTDonkeyAnimCrouchEnd
+-794: FTDonkeyAnimLandingAirX
+-795: FTDonkeyAnimShieldDrop
+-796: FTDonkeyAnimTeeter
+-797: FTDonkeyAnimTeeterstart
+-798: FTDonkeyAnimSleep
+-799: FTDonkeyAnimDamaged1
+-800: FTDonkeyAnimDamaged2
+-801: FTDonkeyAnimFalconDivePulled
+-802: FTDonkeyAnimDamageX1
+-803: FTDonkeyAnimDamageX2
+-804: FTDonkeyAnimDamageX3
+-805: FTDonkeyAnimDamaged3
+-806: FTDonkeyAnimDamaged4
+-807: FTDonkeyAnimDamaged5
+-808: FTDonkeyAnimDamaged6
+-809: FTDonkeyAnimDamageAir
+-810: FTDonkeyAnimDamaged7
+-811: FTDonkeyAnimDamageFlyX1
+-812: FTDonkeyAnimDamageFlyX2
+-813: FTDonkeyAnimDamage2
+-814: FTDonkeyAnimShieldBreak
+-815: FTDonkeyAnimDamageFlyTop
+-816: FTDonkeyAnimDamaged
+-817: FTDonkeyAnimFallSpecial
+-818: FTDonkeyAnimCeilingBonk
+-819: FTDonkeyAnimStunLandD
+-820: FTDonkeyAnimStunLandU
+-821: FTDonkeyAnimStunStartD
+-822: FTDonkeyAnimStunStartU
+-823: FTDonkeyAnimTechF
+-824: FTDonkeyAnimTechB
+-825: FTDonkeyAnimDownForwardD
+-826: FTDonkeyAnimDownForwardU
+-827: FTDonkeyAnimDownBackD
+-828: FTDonkeyAnimDownBackU
+-829: FTDonkeyAnimDownAttackD
+-830: FTDonkeyAnimDownAttackU
+-831: FTDonkeyAnimTech
+-832: FTDonkeyAnimClangRecoil
+-833: FTDonkeyAnimShieldOn
+-834: FTDonkeyAnimShieldOff
+-835: FTDonkeyAnimRollF
+-836: FTDonkeyAnimRollB
+-837: FTDonkeyAnimCatch
+-838: FTDonkeyAnimCatchPull
+-839: FTDonkeyAnimThrowF
+-840: FTDonkeyAnimThrowB
+-841: FTDonkeyAnimEggLayPulled
+-842: FTDonkeyAnimThrownDKPulled
+-843: FTDonkeyAnimThrownFoxFStart
+-844: FTDonkeyAnimThrownMarioBros
+-845: FTDonkeyAnimThrownDK
+-846: FTDonkeyAnimThrown2
+-847: FTDonkeyAnimThrown1
+-848: FTDonkeyAnimTaunt
+-849: FTDonkeyAnimCliffCatch
+-850: FTDonkeyAnimCliffWait
+-851: FTDonkeyAnimCliffSlow
+-852: FTDonkeyAnimCliffClimbSlow1
+-853: FTDonkeyAnimCliffClimbSlow2
+-854: FTDonkeyAnimCliffQuick
+-855: FTDonkeyAnimCliffClimbQuick1
+-856: FTDonkeyAnimCliffClimbQuick2
+-857: FTDonkeyAnimCliffAttackQuick1
+-858: FTDonkeyAnimCliffAttackQuick2
+-859: FTDonkeyAnimCliffAttackSlow1
+-860: FTDonkeyAnimCliffAttackSlow2
+-861: FTDonkeyAnimCliffEscapeQuick1
+-862: FTDonkeyAnimCliffEscapeQuick2
+-863: FTDonkeyAnimCliffEscapeSlow1
+-864: FTDonkeyAnimCliffEscapeSlow2
+-865: FTDonkeyAnimLightItemPickup
+-866: FTDonkeyAnimItemThrowSmashB
+-867: FTDonkeyAnimItemThrowSmashU
+-868: FTDonkeyAnimItemThrowSmashD
+-869: FTDonkeyAnimItemThrowDash
+-870: FTDonkeyAnimItemDrop
+-871: FTDonkeyAnimItemThrowAirSmashB
+-872: FTDonkeyAnimItemThrowAirSmashU
+-873: FTDonkeyAnimItemThrowAirSmashF
+-874: FTDonkeyAnimHeavyItemPickup
+-875: FTDonkeyAnimStarRodNeutral
+-876: FTDonkeyAnimStarRodTilt
+-877: FTDonkeyAnimStarRodSmash
+-878: FTDonkeyAnimStarRodDash
+-879: FTDonkeyAnimHammerIdle
+-880: FTDonkeyAnimHammerLanding
+-881: FTDonkeyAnimFireFlowerShoot
+-882: FTDonkeyAnimJab1
+-883: FTDonkeyAnimJab2
+-884: FTDonkeyAnimDashAttack
+-885: FTDonkeyAnimFTiltHigh
+-886: FTDonkeyAnimFTilt
+-887: FTDonkeyAnimFTiltLow
+-888: FTDonkeyAnimUTilt
+-889: FTDonkeyAnimDTilt
+-890: FTDonkeyAnimFSmashHigh
+-891: FTDonkeyAnimFSmashMidHigh
+-892: FTDonkeyAnimFSmash
+-893: FTDonkeyAnimFSmashMidLow
+-894: FTDonkeyAnimFSmashLow
+-895: FTDonkeyAnimUSmash
+-896: FTDonkeyAnimDSmash
+-897: FTDonkeyAnimAttackAirN
+-898: FTDonkeyAnimAttackAirF
+-899: FTDonkeyAnimAttackAirB
+-900: FTDonkeyAnimAttackAirU
+-901: FTDonkeyAnimAttackAirD
+-902: FTDonkeyAnimLandingAirF
+-903: FTDonkeyAnimLandingAirB
+-904: FTDonkeyAnimEnterPipe
+-905: FTDonkeyAnimExitPipe
+-906: FTDonkeyAnimExitPipeWalk
+-907: FTDonkeyAnimAppear1
+-908: FTDonkeyAnimAppear2
+-909: FTDonkeyAnimGiantPunchGroundLoopStart
+-910: FTDonkeyAnimGiantPunchGroundLoop
+-911: FTDonkeyAnimGiantPunchGroundFullyChargedPunch
+-912: FTDonkeyAnimGiantPunchAirLoopStart
+-913: FTDonkeyAnimGiantPunchAirLoop
+-914: FTDonkeyAnimGiantPunchAirFullyChargedPunch
+-915: FTDonkeyAnimSpinningKongGround
+-916: FTDonkeyAnimSpinningKongAir
+-917: FTDonkeyAnimHandSlapStart
+-918: FTDonkeyAnimHandSlapLoop
+-919: FTDonkeyAnimHandSlapEnd
+-920: FTDonkeyAnimCargoAirThrow
+-921: FTDonkeyAnimCargoLanding
+-922: FTDonkeyAnimCargoVerySlowWalk
+-923: FTDonkeyAnimCargoSlowWalk
+-924: FTDonkeyAnimCargoWalk
+-925: FTDonkeyAnimCargoTurn
+-926: FTDonkeyAnimDamage
+-927: FTDonkeyAnimFireFlowerShootAir
+-928: FTSamusAnimEggLay
+-929: FTSamusAnimWalk1
+-930: FTSamusAnimWalk2
+-931: FTSamusAnimWalk3
+-932: FTSamusAnimWalkEnd
+-933: FTSamusAnimDash
+-934: FTSamusAnimRun
+-935: FTSamusAnimRunBrake
+-936: FTSamusAnimTurn
+-937: FTSamusAnimTurnRun
+-938: FTSamusAnimJumpF
+-939: FTSamusAnimJumpB
+-940: FTSamusAnimJumpAerialF
+-941: FTSamusAnimJumpAerialB
+-942: FTSamusAnimFall
+-943: FTSamusAnimFallAerial
+-944: FTSamusAnimCrouch
+-945: FTSamusAnimCrouchIdle
+-946: FTSamusAnimCrouchEnd
+-947: FTSamusAnimLandingAirX
+-948: FTSamusAnimShieldDrop
+-949: FTSamusAnimTeeter
+-950: FTSamusAnimTeeterstart
+-951: FTSamusAnimSleep
+-952: FTSamusAnimDamaged1
+-953: FTSamusAnimDamaged2
+-954: FTSamusAnimFalconDivePulled
+-955: FTSamusAnimDamageX1
+-956: FTSamusAnimDamageX2
+-957: FTSamusAnimDamageX3
+-958: FTSamusAnimDamaged3
+-959: FTSamusAnimDamaged4
+-960: FTSamusAnimDamaged5
+-961: FTSamusAnimDamaged6
+-962: FTSamusAnimDamageAir
+-963: FTSamusAnimDamaged7
+-964: FTSamusAnimDamageFlyX1
+-965: FTSamusAnimDamageFlyX2
+-966: FTSamusAnimDamage2
+-967: FTSamusAnimShieldBreak
+-968: FTSamusAnimDamageFlyTop
+-969: FTSamusAnimDamaged
+-970: FTSamusAnimFallSpecial
+-971: FTSamusAnimCeilingBonk
+-972: FTSamusAnimStunLandD
+-973: FTSamusAnimStunLandU
+-974: FTSamusAnimStunStartD
+-975: FTSamusAnimStunStartU
+-976: FTSamusAnimTechF
+-977: FTSamusAnimTechB
+-978: FTSamusAnimDownForwardD
+-979: FTSamusAnimDownForwardU
+-980: FTSamusAnimDownBackD
+-981: FTSamusAnimDownBackU
+-982: FTSamusAnimDownAttackD
+-983: FTSamusAnimDownAttackU
+-984: FTSamusAnimTech
+-985: FTSamusAnimClangRecoil
+-986: FTSamusAnimShieldOn
+-987: FTSamusAnimShieldOff
+-988: FTSamusAnimRollF
+-989: FTSamusAnimRollB
+-990: FTSamusAnimCatch
+-991: FTSamusAnimCatchPull
+-992: FTSamusAnimThrowF
+-993: FTSamusAnimThrowB
+-994: FTSamusAnimEggLayPulled
+-995: FTSamusAnimThrownDKPulled
+-996: FTSamusAnimThrownMarioBros
+-997: FTSamusAnimThrownFoxFStart
+-998: FTSamusAnimThrownDK
+-999: FTSamusAnimThrown1
+-1000: FTSamusAnimThrown3
+-1001: FTSamusAnimThrown2
+-1002: FTSamusAnimThrownFoxB
+-1003: FTSamusAnimTaunt
+-1004: FTSamusAnimCliffCatch
+-1005: FTSamusAnimCliffWait
+-1006: FTSamusAnimCliffQuick
+-1007: FTSamusAnimCliffClimbQuick1
+-1008: FTSamusAnimCliffClimbQuick2
+-1009: FTSamusAnimCliffSlow
+-1010: FTSamusAnimCliffClimbSlow1
+-1011: FTSamusAnimCliffClimbSlow2
+-1012: FTSamusAnimCliffAttackQuick1
+-1013: FTSamusAnimCliffAttackQuick2
+-1014: FTSamusAnimCliffAttackSlow1
+-1015: FTSamusAnimCliffAttackSlow2
+-1016: FTSamusAnimCliffEscapeQuick1
+-1017: FTSamusAnimCliffEscapeQuick2
+-1018: FTSamusAnimCliffEscapeSlow1
+-1019: FTSamusAnimCliffEscapeSlow2
+-1020: FTSamusAnimLightItemPickup
+-1021: FTSamusAnimItemThrowSmashB
+-1022: FTSamusAnimItemThrowSmashU
+-1023: FTSamusAnimItemThrowSmashD
+-1024: FTSamusAnimItemThrowDash
+-1025: FTSamusAnimItemDrop
+-1026: FTSamusAnimItemThrowAirSmashB
+-1027: FTSamusAnimItemThrowAirSmashU
+-1028: FTSamusAnimItemThrowAirSmashF
+-1029: FTSamusAnimHeavyItemPickup
+-1030: FTSamusAnimHeavyItemThrowSmashB
+-1031: FTSamusAnimStarRodNeutral
+-1032: FTSamusAnimStarRodTilt
+-1033: FTSamusAnimStarRodSmash
+-1034: FTSamusAnimStarRodDash
+-1035: FTSamusAnimHammerIdle
+-1036: FTSamusAnimHammerLanding
+-1037: FTSamusAnimFireFlowerShoot
+-1038: FTSamusAnimJab1
+-1039: FTSamusAnimJab2
+-1040: FTSamusAnimDashAttack
+-1041: FTSamusAnimFTiltHigh
+-1042: FTSamusAnimFTiltMidHigh
+-1043: FTSamusAnimFTilt
+-1044: FTSamusAnimFTiltMidLow
+-1045: FTSamusAnimFTiltLow
+-1046: FTSamusAnimUTilt
+-1047: FTSamusAnimDTilt
+-1048: FTSamusAnimFSmashHigh
+-1049: FTSamusAnimFSmashMidHigh
+-1050: FTSamusAnimFSmash
+-1051: FTSamusAnimFSmashMidLow
+-1052: FTSamusAnimFSmashLow
+-1053: FTSamusAnimUSmash
+-1054: FTSamusAnimDSmash
+-1055: FTSamusAnimAttackAirN
+-1056: FTSamusAnimAttackAirF
+-1057: FTSamusAnimAttackAirB
+-1058: FTSamusAnimAttackAirU
+-1059: FTSamusAnimAttackAirD
+-1060: FTSamusAnimLandingAirB
+-1061: FTSamusAnimLandingAirU
+-1062: FTSamusAnimEnterPipe
+-1063: FTSamusAnimExitPipe
+-1064: FTSamusAnimExitPipeWalk
+-1065: FTSamusAnimAppear1
+-1066: FTSamusAnimAppear2
+-1067: FTSamusAnimStartingChargeShot
+-1068: FTSamusAnimChargingNeutralSpecial
+-1069: FTSamusAnimShooting
+-1070: FTSamusAnimStartingChargeShotAir
+-1071: FTSamusAnimShootingAir
+-1072: FTSamusAnimScrewAttackGround
+-1073: FTSamusAnimScrewAttackAir
+-1074: FTSamusAnimBomb
+-1075: FTSamusAnimBombAir
+-1076: FTSamusAnimDamage
+-1077: FTSamusAnimFireFlowerShootAir
+-1078: FTLuigiAnimEggLay
+-1079: FTLuigiAnimDash
+-1080: FTLuigiAnimRunBrake
+-1081: FTLuigiAnimTurnRun
+-1082: FTLuigiAnimTaunt
+-1083: FTLuigiAnimDashAttack
+-1084: FTLuigiAnimDTilt
+-1085: FTLuigiAnimFSmashHigh
+-1086: FTLuigiAnimFSmashMidHigh
+-1087: FTLuigiAnimFSmash
+-1088: FTLuigiAnimFSmashMidLow
+-1089: FTLuigiAnimFSmashLow
+-1090: FTLinkAnimEggLay
+-1091: FTLinkAnimWalk1
+-1092: FTLinkAnimWalk2
+-1093: FTLinkAnimWalk3
+-1094: FTLinkAnimWalkEnd
+-1095: FTLinkAnimDash
+-1096: FTLinkAnimRun
+-1097: FTLinkAnimRunBrake
+-1098: FTLinkAnimTurn
+-1099: FTLinkAnimTurnRun
+-1100: FTLinkAnimJumpF
+-1101: FTLinkAnimJumpB
+-1102: FTLinkAnimJumpAerialF
+-1103: FTLinkAnimJumpAerialB
+-1104: FTLinkAnimFall
+-1105: FTLinkAnimFallAerial
+-1106: FTLinkAnimCrouch
+-1107: FTLinkAnimCrouchIdle
+-1108: FTLinkAnimCrouchEnd
+-1109: FTLinkAnimLandingAirX
+-1110: FTLinkAnimShieldDrop
+-1111: FTLinkAnimTeeter
+-1112: FTLinkAnimTeeterstart
+-1113: FTLinkAnimSleep
+-1114: FTLinkAnimDamaged1
+-1115: FTLinkAnimDamaged2
+-1116: FTLinkAnimFalconDivePulled
+-1117: FTLinkAnimDamageX1
+-1118: FTLinkAnimDamageX2
+-1119: FTLinkAnimDamageX3
+-1120: FTLinkAnimDamaged3
+-1121: FTLinkAnimDamaged4
+-1122: FTLinkAnimDamaged5
+-1123: FTLinkAnimDamaged6
+-1124: FTLinkAnimDamageAir
+-1125: FTLinkAnimDamaged7
+-1126: FTLinkAnimDamageFlyX1
+-1127: FTLinkAnimDamageFlyX2
+-1128: FTLinkAnimDamage2
+-1129: FTLinkAnimShieldBreak
+-1130: FTLinkAnimDamageFlyTop
+-1131: FTLinkAnimDamaged
+-1132: FTLinkAnimFallSpecial
+-1133: FTLinkAnimCeilingBonk
+-1134: FTLinkAnimStunLandD
+-1135: FTLinkAnimStunLandU
+-1136: FTLinkAnimStunStartD
+-1137: FTLinkAnimStunStartU
+-1138: FTLinkAnimTechF
+-1139: FTLinkAnimTechB
+-1140: FTLinkAnimDownForwardD
+-1141: FTLinkAnimDownForwardU
+-1142: FTLinkAnimDownBackD
+-1143: FTLinkAnimDownBackU
+-1144: FTLinkAnimDownAttackD
+-1145: FTLinkAnimDownAttackU
+-1146: FTLinkAnimTech
+-1147: FTLinkAnimClangRecoil
+-1148: FTLinkAnimShieldOn
+-1149: FTLinkAnimShieldOff
+-1150: FTLinkAnimRollF
+-1151: FTLinkAnimRollB
+-1152: FTLinkAnimCatch
+-1153: FTLinkAnimCatchPull
+-1154: FTLinkAnimThrowF
+-1155: FTLinkAnimThrowB
+-1156: FTLinkAnimEggLayPulled
+-1157: FTLinkAnimThrownDKPulled
+-1158: FTLinkAnimThrownDK
+-1159: FTLinkAnimThrownMarioBros
+-1160: FTLinkAnimThrownFoxFStart
+-1161: FTLinkAnimThrown2
+-1162: FTLinkAnimThrown1
+-1163: FTLinkAnimTaunt
+-1164: FTLinkAnimCliffCatch
+-1165: FTLinkAnimCliffWait
+-1166: FTLinkAnimCliffQuick
+-1167: FTLinkAnimCliffClimbQuick1
+-1168: FTLinkAnimCliffClimbQuick2
+-1169: FTLinkAnimCliffSlow
+-1170: FTLinkAnimCliffClimbSlow1
+-1171: FTLinkAnimCliffClimbSlow2
+-1172: FTLinkAnimCliffAttackQuick1
+-1173: FTLinkAnimCliffAttackQuick2
+-1174: FTLinkAnimCliffAttackSlow1
+-1175: FTLinkAnimCliffAttackSlow2
+-1176: FTLinkAnimCliffEscapeQuick1
+-1177: FTLinkAnimCliffEscapeQuick2
+-1178: FTLinkAnimCliffEscapeSlow1
+-1179: FTLinkAnimCliffEscapeSlow2
+-1180: FTLinkAnimLightItemPickup
+-1181: FTLinkAnimItemThrowSmashB
+-1182: FTLinkAnimItemThrowSmashU
+-1183: FTLinkAnimItemThrowSmashD
+-1184: FTLinkAnimItemThrowDash
+-1185: FTLinkAnimItemDrop
+-1186: FTLinkAnimItemThrowAirSmashB
+-1187: FTLinkAnimItemThrowAirSmashU
+-1188: FTLinkAnimItemThrowAirSmashF
+-1189: FTLinkAnimHeavyItemPickup
+-1190: FTLinkAnimHeavyItemThrowSmashB
+-1191: FTLinkAnimStarRodNeutral
+-1192: FTLinkAnimStarRodTilt
+-1193: FTLinkAnimStarRodSmash
+-1194: FTLinkAnimStarRodDash
+-1195: FTLinkAnimHammerIdle
+-1196: FTLinkAnimHammerLanding
+-1197: FTLinkAnimFireFlowerShoot
+-1198: FTLinkAnimJab1
+-1199: FTLinkAnimJab2
+-1200: FTLinkAnimJab3
+-1201: FTLinkAnimJabLoopStart
+-1202: FTLinkAnimJabLoop
+-1203: FTLinkAnimJabLoopEnd
+-1204: FTLinkAnimDashAttack
+-1205: FTLinkAnimFTilt
+-1206: FTLinkAnimUTilt
+-1207: FTLinkAnimDTilt
+-1208: FTLinkAnimFSmash
+-1209: FTLinkAnimUSmash
+-1210: FTLinkAnimDSmash
+-1211: FTLinkAnimAttackAirN
+-1212: FTLinkAnimAttackAirF
+-1213: FTLinkAnimAttackAirB
+-1214: FTLinkAnimAttackAirU
+-1215: FTLinkAnimAttackAirD
+-1216: FTLinkAnimLandingAirF
+-1217: FTLinkAnimLandingAirD
+-1218: FTLinkAnimEnterPipe
+-1219: FTLinkAnimExitPipe
+-1220: FTLinkAnimExitPipeWalk
+-1221: FTLinkAnimAppear1
+-1222: FTLinkAnimAppear2
+-1223: FTLinkAnimUpSpecialGround
+-1224: FTLinkAnimUpSpecialEndGround
+-1225: FTLinkAnimUpSpecialAir
+-1226: FTLinkAnimMissingBoomerang
+-1227: FTLinkAnimCatchingBoomerang
+-1228: FTLinkAnimMissingBoomerangAir
+-1229: FTLinkAnimCatchingBoomerangAir
+-1230: FTLinkAnimBomb
+-1231: FTLinkAnimBombAir
+-1232: FTLinkAnimDamage
+-1233: FTLinkAnimFireFlowerShootAir
+-1234: FTKirbyAnimEggLay
+-1235: FTKirbyAnimWalk1
+-1236: FTKirbyAnimWalk2
+-1237: FTKirbyAnimWalk3
+-1238: FTKirbyAnimWalkEnd
+-1239: FTKirbyAnimDash
+-1240: FTKirbyAnimRun
+-1241: FTKirbyAnimRunBrake
+-1242: FTKirbyAnimTurn
+-1243: FTKirbyAnimTurnRun
+-1244: FTKirbyAnimJumpF
+-1245: FTKirbyAnimJumpB
+-1246: FTKirbyAnimJump2
+-1247: FTKirbyAnimJump3
+-1248: FTKirbyAnimJump4
+-1249: FTKirbyAnimJump5
+-1250: FTKirbyAnimJump6
+-1251: FTKirbyAnimFall
+-1252: FTKirbyAnimFallAerial
+-1253: FTKirbyAnimCrouch
+-1254: FTKirbyAnimCrouchIdle
+-1255: FTKirbyAnimCrouchEnd
+-1256: FTKirbyAnimLandingAirX
+-1257: FTKirbyAnimShieldDrop
+-1258: FTKirbyAnimTeeter
+-1259: FTKirbyAnimTeeterstart
+-1260: FTKirbyAnimSleep
+-1261: FTKirbyAnimDamaged1
+-1262: FTKirbyAnimDamaged2
+-1263: FTKirbyAnimFalconDivePulled
+-1264: FTKirbyAnimDamageX1
+-1265: FTKirbyAnimDamageX2
+-1266: FTKirbyAnimDamageX3
+-1267: FTKirbyAnimDamaged3
+-1268: FTKirbyAnimDamaged4
+-1269: FTKirbyAnimDamaged5
+-1270: FTKirbyAnimDamaged6
+-1271: FTKirbyAnimDamageAir
+-1272: FTKirbyAnimDamaged7
+-1273: FTKirbyAnimDamageFlyX1
+-1274: FTKirbyAnimDamageFlyX2
+-1275: FTKirbyAnimDamage2
+-1276: FTKirbyAnimShieldBreak
+-1277: FTKirbyAnimDamageFlyTop
+-1278: FTKirbyAnimDamaged
+-1279: FTKirbyAnimFallSpecial
+-1280: FTKirbyAnimCeilingBonk
+-1281: FTKirbyAnimStunLandD
+-1282: FTKirbyAnimStunLandU
+-1283: FTKirbyAnimStunStartD
+-1284: FTKirbyAnimStunStartU
+-1285: FTKirbyAnimTechF
+-1286: FTKirbyAnimTechB
+-1287: FTKirbyAnimDownForwardD
+-1288: FTKirbyAnimDownForwardU
+-1289: FTKirbyAnimDownBackD
+-1290: FTKirbyAnimDownBackU
+-1291: FTKirbyAnimDownAttackD
+-1292: FTKirbyAnimDownAttackU
+-1293: FTKirbyAnimTech
+-1294: FTKirbyAnimClangRecoil
+-1295: FTKirbyAnimShieldOn
+-1296: FTKirbyAnimShieldOff
+-1297: FTKirbyAnimRollF
+-1298: FTKirbyAnimRollB
+-1299: FTKirbyAnimCatch
+-1300: FTKirbyAnimCatchPull
+-1301: FTKirbyAnimForwardThrow
+-1302: FTKirbyAnimForwardThrowFall
+-1303: FTKirbyAnimForwardThrowRecoil
+-1304: FTKirbyAnimThrowB
+-1305: FTKirbyAnimEggLayPulled
+-1306: FTKirbyAnimThrownDKPulled
+-1307: FTKirbyAnimThrownMarioBros
+-1308: FTKirbyAnimThrownDK
+-1309: FTKirbyAnimThrown2
+-1310: FTKirbyAnimThrown1
+-1311: FTKirbyAnimThrownFoxB
+-1312: FTKirbyAnimThrown3
+-1313: FTKirbyAnimTaunt
+-1314: FTKirbyAnimCliffCatch
+-1315: FTKirbyAnimCliffWait
+-1316: FTKirbyAnimCliffQuick
+-1317: FTKirbyAnimCliffClimbQuick1
+-1318: FTKirbyAnimCliffClimbQuick2
+-1319: FTKirbyAnimCliffSlow
+-1320: FTKirbyAnimCliffClimbSlow1
+-1321: FTKirbyAnimCliffClimbSlow2
+-1322: FTKirbyAnimCliffAttackQuick1
+-1323: FTKirbyAnimCliffAttackQuick2
+-1324: FTKirbyAnimCliffAttackSlow1
+-1325: FTKirbyAnimCliffAttackSlow2
+-1326: FTKirbyAnimCliffEscapeQuick1
+-1327: FTKirbyAnimCliffEscapeQuick2
+-1328: FTKirbyAnimCliffEscapeSlow1
+-1329: FTKirbyAnimCliffEscapeSlow2
+-1330: FTKirbyAnimLightItemPickup
+-1331: FTKirbyAnimItemThrowSmashB
+-1332: FTKirbyAnimItemThrowSmashU
+-1333: FTKirbyAnimItemThrowSmashD
+-1334: FTKirbyAnimItemThrowDash
+-1335: FTKirbyAnimItemDrop
+-1336: FTKirbyAnimItemThrowAirSmashB
+-1337: FTKirbyAnimItemThrowAirSmashU
+-1338: FTKirbyAnimItemThrowAirSmashF
+-1339: FTKirbyAnimHeavyItemPickup
+-1340: FTKirbyAnimHeavyItemThrowSmashB
+-1341: FTKirbyAnimStarRodNeutral
+-1342: FTKirbyAnimStarRodTilt
+-1343: FTKirbyAnimStarRodSmash
+-1344: FTKirbyAnimStarRodDash
+-1345: FTKirbyAnimHammerIdle
+-1346: FTKirbyAnimHammerLanding
+-1347: FTKirbyAnimFireFlowerShoot
+-1348: FTKirbyAnimJab1
+-1349: FTKirbyAnimJab2
+-1350: FTKirbyAnimJabLoopStart
+-1351: FTKirbyAnimJabLoop
+-1352: FTKirbyAnimJabLoopEnd
+-1353: FTKirbyAnimDashAttack
+-1354: FTKirbyAnimFTiltHigh
+-1355: FTKirbyAnimFTilt
+-1356: FTKirbyAnimFTiltLow
+-1357: FTKirbyAnimUTilt
+-1358: FTKirbyAnimDTilt
+-1359: FTKirbyAnimFSmash
+-1360: FTKirbyAnimUSmash
+-1361: FTKirbyAnimDSmash
+-1362: FTKirbyAnimAttackAirN
+-1363: FTKirbyAnimAttackAirF
+-1364: FTKirbyAnimAttackAirB
+-1365: FTKirbyAnimAttackAirU
+-1366: FTKirbyAnimAttackAirD
+-1367: FTKirbyAnimLandingAirF
+-1368: FTKirbyAnimLandingAirB
+-1369: FTKirbyAnimEnterPipe
+-1370: FTKirbyAnimExitPipe
+-1371: FTKirbyAnimExitPipeWalk
+-1372: FTKirbyAnimLuigiFireballGround
+-1373: FTKirbyAnimLuigiFireballAir
+-1374: FTKirbyAnimChargePunchStartGround
+-1375: FTKirbyAnimChargePunchGround
+-1376: FTKirbyAnimChargePunchGroundFull
+-1377: FTKirbyAnimChargeStartAir
+-1378: FTKirbyAnimChargePunchAir
+-1379: FTKirbyAnimChargePunchAirFull
+-1380: FTKirbyAnimChargeShotStart
+-1381: FTKirbyAnimCharging
+-1382: FTKirbyAnimShootingChargeShot
+-1383: FTKirbyAnimChargeShotAir
+-1384: FTKirbyAnimShootingChargeShotAir
+-1385: FTKirbyAnimLaserGround
+-1386: FTKirbyAnimLaserAir
+-1387: FTKirbyAnimDKStaringGround
+-1388: FTKirbyAnimDKStaringAir
+-1389: FTKirbyAnimThunderJoltGround
+-1390: FTKirbyAnimThunderJoltAir
+-1391: FTKirbyAnimPKFireGround
+-1392: FTKirbyAnimPKFireAir
+-1393: FTKirbyAnimFinalCutter
+-1394: FTKirbyAnimFinalCutterLand
+-1395: FTKirbyAnimFinalCutterImpact
+-1396: FTKirbyAnimStoneStartGround
+-1397: FTKirbyAnimStoneGround
+-1398: FTKirbyAnimStoneCancel
+-1399: FTKirbyAnimStoneStartAir
+-1400: FTKirbyAnimInhaleStartGround
+-1401: FTKirbyAnimInhaleSwallowed
+-1402: FTKirbyAnimInhaleSpit
+-1403: FTKirbyAnimInhaleStuffed
+-1404: FTKirbyAnimInhaleTurn
+-1405: FTKirbyAnimInhaleAbsorb
+-1406: FTKirbyAnimInhaleGround
+-1407: FTKirbyAnimInhaleEnd
+-1408: FTKirbyAnimBoomerangMiss
+-1409: FTKirbyAnimBoomerangCatch
+-1410: FTKirbyAnimBoomerangAirMiss
+-1411: FTKirbyAnimBoomerangAirCatch
+-1412: FTKirbyAnimFalconPunchGround
+-1413: FTKirbyAnimFalconPunchAir
+-1414: FTKirbyAnimEggLayGround
+-1415: FTKirbyAnimEggThrowGround
+-1416: FTKirbyAnimEggThrowAir
+-1417: FTKirbyAnimEggThrowEndAir
+-1418: FTKirbyAnimDamage
+-1419: FTKirbyAnimFireFlowerShootAir
+-1420: FTPurinAnimTaunt
+-1421: FTPurinAnimJab1
+-1422: FTPurinAnimJab2
+-1423: FTPurinAnimAttackAirB
+-1424: FTPurinAnimAttackAirN
+-1425: FTPurinAnimAttackAirF
+-1426: FTPurinAnimAttackAirU
+-1427: FTPurinAnimAttackAirD
+-1428: FTPurinAnimDashAttack
+-1429: FTPurinAnimUTilt
+-1430: FTPurinAnimUSmash
+-1431: FTPurinAnimDTilt
+-1432: FTPurinAnimDSmash
+-1433: FTPurinAnimFTiltHigh
+-1434: FTPurinAnimFTiltLow
+-1435: FTPurinAnimFTilt
+-1436: FTPurinAnimFSmash
+-1437: FTPurinAnimItemThrowDash
+-1438: FTPurinAnimDash
+-1439: FTPurinAnimRollB
+-1440: FTPurinAnimRollF
+-1441: FTPurinAnimFallAerial
+-1442: FTPurinAnimFallSpecial
+-1443: FTPurinAnimFall
+-1444: FTPurinAnimShieldOn
+-1445: FTPurinAnimShieldOff
+-1446: FTPurinAnimJump2
+-1447: FTPurinAnimJump3
+-1448: FTPurinAnimJump4
+-1449: FTPurinAnimJump5
+-1450: FTPurinAnimJump6
+-1451: FTPurinAnimJumpB
+-1452: FTPurinAnimJumpF
+-1453: FTPurinAnimJumpSquat
+-1454: FTPurinAnimLandingAirB
+-1455: FTPurinAnimPass
+-1456: FTPurinAnimTeeter
+-1457: FTPurinAnimTech
+-1458: FTPurinAnimRunBrake
+-1459: FTPurinAnimTurnRun
+-1460: FTPurinAnimRun
+-1461: FTPurinAnimCeilingBonk
+-1462: FTPurinAnimCrouch
+-1463: FTPurinAnimBatSmash
+-1464: FTPurinAnimBatDash
+-1465: FTPurinAnimItemThrowB
+-1466: FTPurinAnimTurn
+-1467: FTPurinAnimEggLay
+-1468: FTPurinAnimWalk3
+-1469: FTPurinAnimWalk2
+-1470: FTPurinAnimWalk1
+-1471: FTPurinAnimThrownDKPulled
+-1472: FTPurinAnimThrownDK
+-1473: FTPurinAnimCatchPull
+-1474: FTPurinAnimThrowF
+-1475: FTPurinAnimThrowB
+-1476: FTPurinAnimRestAir
+-1477: FTPurinAnimPoundGround
+-1478: FTPurinAnimPoundAir
+-1479: FTPurinAnimSingAir
+-1480: FTPurinAnimAppear1
+-1481: FTPurinAnimAppear2
+-1482: FTPurinAnimExitPipeWalk
+-1483: FTPurinAnimHeavyItemPickup
+-1484: FTPurinAnimHeavyItemThrowB
+-1485: FTPurinAnimFireFlowerShoot
+-1486: FTPurinAnimDamage
+-1487: FTCaptainAnimEggLay
+-1488: FTCaptainAnimWalk1
+-1489: FTCaptainAnimWalk2
+-1490: FTCaptainAnimWalk3
+-1491: FTCaptainAnimWalkEnd
+-1492: FTCaptainAnimDash
+-1493: FTCaptainAnimRun
+-1494: FTCaptainAnimRunBrake
+-1495: FTCaptainAnimTurn
+-1496: FTCaptainAnimTurnRun
+-1497: FTCaptainAnimJumpF
+-1498: FTCaptainAnimJumpB
+-1499: FTCaptainAnimJumpAerialF
+-1500: FTCaptainAnimJumpAerialB
+-1501: FTCaptainAnimFall
+-1502: FTCaptainAnimFallAerial
+-1503: FTCaptainAnimCrouch
+-1504: FTCaptainAnimCrouchIdle
+-1505: FTCaptainAnimCrouchEnd
+-1506: FTCaptainAnimLandingAirX
+-1507: FTCaptainAnimShieldDrop
+-1508: FTCaptainAnimTeeter
+-1509: FTCaptainAnimTeeterstart
+-1510: FTCaptainAnimSleep
+-1511: FTCaptainAnimDamaged1
+-1512: FTCaptainAnimDamaged2
+-1513: FTCaptainAnimFalconDivePulled
+-1514: FTCaptainAnimDamageX1
+-1515: FTCaptainAnimDamageX2
+-1516: FTCaptainAnimDamageX3
+-1517: FTCaptainAnimDamaged3
+-1518: FTCaptainAnimDamaged4
+-1519: FTCaptainAnimDamaged5
+-1520: FTCaptainAnimDamaged6
+-1521: FTCaptainAnimDamageAir
+-1522: FTCaptainAnimDamaged7
+-1523: FTCaptainAnimDamageFlyX1
+-1524: FTCaptainAnimDamageFlyX2
+-1525: FTCaptainAnimDamage2
+-1526: FTCaptainAnimShieldBreak
+-1527: FTCaptainAnimDamageFlyTop
+-1528: FTCaptainAnimDamaged
+-1529: FTCaptainAnimFallSpecial
+-1530: FTCaptainAnimCeilingBonk
+-1531: FTCaptainAnimStunLandD
+-1532: FTCaptainAnimStunLandU
+-1533: FTCaptainAnimStunStartD
+-1534: FTCaptainAnimStunStartU
+-1535: FTCaptainAnimTechF
+-1536: FTCaptainAnimTechB
+-1537: FTCaptainAnimDownForwardD
+-1538: FTCaptainAnimDownForwardU
+-1539: FTCaptainAnimDownBackD
+-1540: FTCaptainAnimDownBackU
+-1541: FTCaptainAnimDownAttackD
+-1542: FTCaptainAnimDownAttackU
+-1543: FTCaptainAnimTech
+-1544: FTCaptainAnimClangRecoil
+-1545: FTCaptainAnimShieldOn
+-1546: FTCaptainAnimShieldOff
+-1547: FTCaptainAnimRollF
+-1548: FTCaptainAnimRollB
+-1549: FTCaptainAnimCatch
+-1550: FTCaptainAnimCatchPull
+-1551: FTCaptainAnimThrowF
+-1552: FTCaptainAnimThrowB
+-1553: FTCaptainAnimEggLayPulled
+-1554: FTCaptainAnimThrownDKPulled
+-1555: FTCaptainAnimThrownMarioBros
+-1556: FTCaptainAnimThrownDK
+-1557: FTCaptainAnimThrown2
+-1558: FTCaptainAnimThrown1
+-1559: FTCaptainAnimTaunt
+-1560: FTCaptainAnimCliffCatch
+-1561: FTCaptainAnimCliffWait
+-1562: FTCaptainAnimCliffQuick
+-1563: FTCaptainAnimCliffClimbQuick1
+-1564: FTCaptainAnimCliffClimbQuick2
+-1565: FTCaptainAnimCliffSlow
+-1566: FTCaptainAnimCliffClimbSlow1
+-1567: FTCaptainAnimCliffClimbSlow2
+-1568: FTCaptainAnimCliffAttackQuick1
+-1569: FTCaptainAnimCliffAttackQuick2
+-1570: FTCaptainAnimCliffAttackSlow1
+-1571: FTCaptainAnimCliffAttackSlow2
+-1572: FTCaptainAnimCliffEscapeQuick1
+-1573: FTCaptainAnimCliffEscapeQuick2
+-1574: FTCaptainAnimCliffEscapeSlow1
+-1575: FTCaptainAnimCliffEscapeSlow2
+-1576: FTCaptainAnimLightItemPickup
+-1577: FTCaptainAnimItemThrowSmashB
+-1578: FTCaptainAnimItemThrowSmashU
+-1579: FTCaptainAnimItemThrowSmashD
+-1580: FTCaptainAnimItemThrowDash
+-1581: FTCaptainAnimItemDrop
+-1582: FTCaptainAnimItemThrowAirSmashB
+-1583: FTCaptainAnimItemThrowAirSmashU
+-1584: FTCaptainAnimItemThrowAirSmashF
+-1585: FTCaptainAnimHeavyItemPickup
+-1586: FTCaptainAnimHeavyItemThrowSmashB
+-1587: FTCaptainAnimStarRodNeutral
+-1588: FTCaptainAnimStarRodTilt
+-1589: FTCaptainAnimStarRodSmash
+-1590: FTCaptainAnimStarRodDash
+-1591: FTCaptainAnimHammerIdle
+-1592: FTCaptainAnimHammerLanding
+-1593: FTCaptainAnimFireFlowerShoot
+-1594: FTCaptainAnimJab1
+-1595: FTCaptainAnimJab2
+-1596: FTCaptainAnimJab3
+-1597: FTCaptainAnimJabLoopStart
+-1598: FTCaptainAnimJabLoop
+-1599: FTCaptainAnimJabLoopEnd
+-1600: FTCaptainAnimDashAttack
+-1601: FTCaptainAnimFTiltHigh
+-1602: FTCaptainAnimFTiltMidHigh
+-1603: FTCaptainAnimFTilt
+-1604: FTCaptainAnimFTiltMidLow
+-1605: FTCaptainAnimFTiltLow
+-1606: FTCaptainAnimUTilt
+-1607: FTCaptainAnimDTilt
+-1608: FTCaptainAnimFSmashHigh
+-1609: FTCaptainAnimFSmash
+-1610: FTCaptainAnimFSmashLow
+-1611: FTCaptainAnimUSmash
+-1612: FTCaptainAnimDSmash
+-1613: FTCaptainAnimAttackAirN
+-1614: FTCaptainAnimAttackAirF
+-1615: FTCaptainAnimAttackAirB
+-1616: FTCaptainAnimAttackAirU
+-1617: FTCaptainAnimAttackAirD
+-1618: FTCaptainAnimLandingAirF
+-1619: FTCaptainAnimLandingAirB
+-1620: FTCaptainAnimEnterPipe
+-1621: FTCaptainAnimExitPipe
+-1622: FTCaptainAnimExitPipeWalk
+-1623: FTCaptainAnimAppearAir
+-1624: FTCaptainAnimAppear
+-1625: FTCaptainAnimBlueFalcon1
+-1626: FTCaptainAnimBlueFalcon2
+-1627: FTCaptainAnimFalconPunchGround
+-1628: FTCaptainAnimFalconPunchAir
+-1629: FTCaptainAnimDownSpecial
+-1630: FTCaptainAnimVelocityXDownSpecialAir
+-1631: FTCaptainAnimLandingDownSpecial
+-1632: FTCaptainAnimDownSpecialAir
+-1633: FTCaptainAnimFalconDive
+-1634: FTCaptainAnimCatchingEnemyWhileDiving
+-1635: FTCaptainAnimFalconDiveEnd1
+-1636: FTCaptainAnimFalconDiveEnd2
+-1637: FTCaptainAnimDamage
+-1638: FTCaptainAnimFireFlowerShootAir
+-1639: FTNessAnimEggLay
+-1640: FTNessAnimWalk1
+-1641: FTNessAnimWalk2
+-1642: FTNessAnimWalk3
+-1643: FTNessAnimWalkEnd
+-1644: FTNessAnimDash
+-1645: FTNessAnimRun
+-1646: FTNessAnimRunBrake
+-1647: FTNessAnimTurn
+-1648: FTNessAnimTurnRun
+-1649: FTNessAnimJumpF
+-1650: FTNessAnimJumpB
+-1651: FTNessAnimJumpAerialF
+-1652: FTNessAnimJumpAerialB
+-1653: FTNessAnimFall
+-1654: FTNessAnimFallAerial
+-1655: FTNessAnimCrouch
+-1656: FTNessAnimCrouchIdle
+-1657: FTNessAnimCrouchEnd
+-1658: FTNessAnimLandingAirX
+-1659: FTNessAnimShieldDrop
+-1660: FTNessAnimTeeter
+-1661: FTNessAnimTeeterstart
+-1662: FTNessAnimSleep
+-1663: FTNessAnimDamaged1
+-1664: FTNessAnimDamaged2
+-1665: FTNessAnimFalconDivePulled
+-1666: FTNessAnimDamageX1
+-1667: FTNessAnimDamageX2
+-1668: FTNessAnimDamageX3
+-1669: FTNessAnimDamaged3
+-1670: FTNessAnimDamaged4
+-1671: FTNessAnimDamaged5
+-1672: FTNessAnimDamaged6
+-1673: FTNessAnimDamageAir
+-1674: FTNessAnimDamaged7
+-1675: FTNessAnimDamageFlyX1
+-1676: FTNessAnimDamageFlyX2
+-1677: FTNessAnimDamage2
+-1678: FTNessAnimShieldBreak
+-1679: FTNessAnimDamageFlyTop
+-1680: FTNessAnimClashingDuringPKTA
+-1681: FTNessAnimFallSpecial
+-1682: FTNessAnimCeilingBonk
+-1683: FTNessAnimStunLandD
+-1684: FTNessAnimStunLandU
+-1685: FTNessAnimStunStartD
+-1686: FTNessAnimStunStartU
+-1687: FTNessAnimTechF
+-1688: FTNessAnimTechB
+-1689: FTNessAnimDownForwardD
+-1690: FTNessAnimDownForwardU
+-1691: FTNessAnimDownBackD
+-1692: FTNessAnimDownBackU
+-1693: FTNessAnimDownAttackD
+-1694: FTNessAnimDownAttackU
+-1695: FTNessAnimTech
+-1696: FTNessAnimClangRecoil
+-1697: FTNessAnimShieldOn
+-1698: FTNessAnimShieldOff
+-1699: FTNessAnimRollF
+-1700: FTNessAnimRollB
+-1701: FTNessAnimCatch
+-1702: FTNessAnimCatchPull
+-1703: FTNessAnimThrowF
+-1704: FTNessAnimThrowB
+-1705: FTNessAnimEggLayPulled
+-1706: FTNessAnimThrownDKPulled
+-1707: FTNessAnimThrownMarioBros
+-1708: FTNessAnimThrownDK
+-1709: FTNessAnimThrown2
+-1710: FTNessAnimThrown1
+-1711: FTNessAnimTaunt
+-1712: FTNessAnimCliffCatch
+-1713: FTNessAnimCliffWait
+-1714: FTNessAnimCliffQuick
+-1715: FTNessAnimCliffClimbQuick1
+-1716: FTNessAnimCliffClimbQuick2
+-1717: FTNessAnimCliffSlow
+-1718: FTNessAnimCliffClimbSlow1
+-1719: FTNessAnimCliffClimbSlow2
+-1720: FTNessAnimCliffAttackQuick1
+-1721: FTNessAnimCliffAttackQuick2
+-1722: FTNessAnimCliffAttackSlow1
+-1723: FTNessAnimCliffAttackSlow2
+-1724: FTNessAnimCliffEscapeQuick1
+-1725: FTNessAnimCliffEscapeQuick2
+-1726: FTNessAnimCliffEscapeSlow1
+-1727: FTNessAnimCliffEscapeSlow2
+-1728: FTNessAnimLightItemPickup
+-1729: FTNessAnimItemThrowSmashB
+-1730: FTNessAnimItemThrowSmashU
+-1731: FTNessAnimItemThrowSmashD
+-1732: FTNessAnimItemThrowDash
+-1733: FTNessAnimItemDrop
+-1734: FTNessAnimItemThrowAirSmashB
+-1735: FTNessAnimItemThrowAirSmashU
+-1736: FTNessAnimItemThrowAirSmashF
+-1737: FTNessAnimHeavyItemPickup
+-1738: FTNessAnimHeavyItemThrowSmashB
+-1739: FTNessAnimStarRodNeutral
+-1740: FTNessAnimStarRodTilt
+-1741: FTNessAnimStarRodSmash
+-1742: FTNessAnimStarRodDash
+-1743: FTNessAnimHammerIdle
+-1744: FTNessAnimHammerLanding
+-1745: FTNessAnimFireFlowerShoot
+-1746: FTNessAnimJab1
+-1747: FTNessAnimJab2
+-1748: FTNessAnimJab3
+-1749: FTNessAnimDashAttack
+-1750: FTNessAnimFTiltHigh
+-1751: FTNessAnimFTilt
+-1752: FTNessAnimFTiltLow
+-1753: FTNessAnimUTilt
+-1754: FTNessAnimDTilt
+-1755: FTNessAnimFSmash
+-1756: FTNessAnimUSmash
+-1757: FTNessAnimDSmash
+-1758: FTNessAnimAttackAirN
+-1759: FTNessAnimAttackAirF
+-1760: FTNessAnimAttackAirB
+-1761: FTNessAnimAttackAirU
+-1762: FTNessAnimAttackAirD
+-1763: FTNessAnimLandingAirF
+-1764: FTNessAnimLandingAirB
+-1765: FTNessAnimDownBStartGround
+-1766: FTNessAnimHealingDownB
+-1767: FTNessAnimDownSpecialEndGround
+-1768: FTNessAnimDownSpecialStartAir
+-1769: FTNessAnimHealingAirDownB
+-1770: FTNessAnimDownSpecialEndAir
+-1771: FTNessAnimEnterPipe
+-1772: FTNessAnimExitPipe
+-1773: FTNessAnimExitPipeWalk
+-1774: FTNessAnimAppearStart1
+-1775: FTNessAnimAppearStart2
+-1776: FTNessAnimAppear1
+-1777: FTNessAnimAppear2
+-1778: FTNessAnimAppearEnd
+-1779: FTNessAnimPKFireGround
+-1780: FTNessAnimPKFireAir
+-1781: FTNessAnimPKThunderStartGround1
+-1782: FTNessAnimPKThunderStartGround2
+-1783: FTNessAnimPKThunderEnd
+-1784: FTNessAnimPKThunderStartAir
+-1785: FTNessAnimPKThunderAir
+-1786: FTNessAnimPKThunderEndAir
+-1787: FTNessAnimDKTAAir
+-1788: FTNessAnimDamage
+-1789: FTNessAnimFireFlowerShootAir
+-1790: FTYoshiAnimEggLay
+-1791: FTYoshiAnimWalk1
+-1792: FTYoshiAnimWalk2
+-1793: FTYoshiAnimWalk3
+-1794: FTYoshiAnimWalkEnd
+-1795: FTYoshiAnimDash
+-1796: FTYoshiAnimRun
+-1797: FTYoshiAnimRunBrake
+-1798: FTYoshiAnimTurn
+-1799: FTYoshiAnimTurnRun
+-1800: FTYoshiAnimJumpF
+-1801: FTYoshiAnimJumpB
+-1802: FTYoshiAnimJumpAerialB
+-1803: FTYoshiAnimFall
+-1804: FTYoshiAnimFallAerial
+-1805: FTYoshiAnimCrouch
+-1806: FTYoshiAnimCrouchIdle
+-1807: FTYoshiAnimCrouchEnd
+-1808: FTYoshiAnimLandingAirX
+-1809: FTYoshiAnimShieldDrop
+-1810: FTYoshiAnimTeeter
+-1811: FTYoshiAnimTeeterstart
+-1812: FTYoshiAnimSleep
+-1813: FTYoshiAnimDamaged1
+-1814: FTYoshiAnimDamaged2
+-1815: FTYoshiAnimFalconDivePulled
+-1816: FTYoshiAnimDamageX1
+-1817: FTYoshiAnimDamageX2
+-1818: FTYoshiAnimDamageX3
+-1819: FTYoshiAnimDamaged3
+-1820: FTYoshiAnimDamaged4
+-1821: FTYoshiAnimDamaged5
+-1822: FTYoshiAnimDamaged6
+-1823: FTYoshiAnimDamageAir
+-1824: FTYoshiAnimDamaged7
+-1825: FTYoshiAnimDamageFlyX1
+-1826: FTYoshiAnimDamageFlyX2
+-1827: FTYoshiAnimDamage2
+-1828: FTYoshiAnimShieldBreak
+-1829: FTYoshiAnimDamageFlyTop
+-1830: FTYoshiAnimDamaged
+-1831: FTYoshiAnimFallSpecial
+-1832: FTYoshiAnimCeilingBonk
+-1833: FTYoshiAnimStunLandD
+-1834: FTYoshiAnimStunLandU
+-1835: FTYoshiAnimStunStartD
+-1836: FTYoshiAnimStunStartU
+-1837: FTYoshiAnimTechF
+-1838: FTYoshiAnimTechB
+-1839: FTYoshiAnimDownForwardD
+-1840: FTYoshiAnimDownForwardU
+-1841: FTYoshiAnimDownBackD
+-1842: FTYoshiAnimDownBackU
+-1843: FTYoshiAnimDownAttackD
+-1844: FTYoshiAnimDownAttackU
+-1845: FTYoshiAnimTech
+-1846: FTYoshiAnimClangRecoil
+-1847: FTYoshiAnimShieldOn
+-1848: FTYoshiAnimShieldOff
+-1849: FTYoshiAnimRollF
+-1850: FTYoshiAnimRollB
+-1851: FTYoshiAnimCatch
+-1852: FTYoshiAnimCatchPull
+-1853: FTYoshiAnimThrowF
+-1854: FTYoshiAnimThrowB
+-1855: FTYoshiAnimEggLayPulled
+-1856: FTYoshiAnimThrownDKPulled
+-1857: FTYoshiAnimThrownMarioBros
+-1858: FTYoshiAnimThrownDK
+-1859: FTYoshiAnimThrown2
+-1860: FTYoshiAnimThrown1
+-1861: FTYoshiAnimTaunt
+-1862: FTYoshiAnimCliffCatch
+-1863: FTYoshiAnimCliffWait
+-1864: FTYoshiAnimCliffQuick
+-1865: FTYoshiAnimCliffClimbQuick1
+-1866: FTYoshiAnimCliffClimbQuick2
+-1867: FTYoshiAnimCliffSlow
+-1868: FTYoshiAnimCliffClimbSlow1
+-1869: FTYoshiAnimCliffClimbSlow2
+-1870: FTYoshiAnimCliffAttackQuick1
+-1871: FTYoshiAnimCliffAttackQuick2
+-1872: FTYoshiAnimCliffAttackSlow1
+-1873: FTYoshiAnimCliffAttackSlow2
+-1874: FTYoshiAnimCliffEscapeQuick1
+-1875: FTYoshiAnimCliffEscapeQuick2
+-1876: FTYoshiAnimCliffEscapeSlow1
+-1877: FTYoshiAnimCliffEscapeSlow2
+-1878: FTYoshiAnimLightItemPickup
+-1879: FTYoshiAnimItemThrowSmashB
+-1880: FTYoshiAnimItemThrowSmashU
+-1881: FTYoshiAnimItemThrowSmashD
+-1882: FTYoshiAnimItemThrowDash
+-1883: FTYoshiAnimItemDrop
+-1884: FTYoshiAnimItemThrowAirSmashB
+-1885: FTYoshiAnimItemThrowAirSmashU
+-1886: FTYoshiAnimItemThrowAirSmashF
+-1887: FTYoshiAnimHeavyItemPickup
+-1888: FTYoshiAnimHeavyItemThrowSmashB
+-1889: FTYoshiAnimStarRodNeutral
+-1890: FTYoshiAnimStarRodTilt
+-1891: FTYoshiAnimStarRodSmash
+-1892: FTYoshiAnimStarRodDash
+-1893: FTYoshiAnimHammerIdle
+-1894: FTYoshiAnimHammerLanding
+-1895: FTYoshiAnimFireFlowerShoot
+-1896: FTYoshiAnimJab1
+-1897: FTYoshiAnimJab2
+-1898: FTYoshiAnimDashAttack
+-1899: FTYoshiAnimFTiltHigh
+-1900: FTYoshiAnimFTilt
+-1901: FTYoshiAnimFTiltLow
+-1902: FTYoshiAnimUTilt
+-1903: FTYoshiAnimDTilt
+-1904: FTYoshiAnimFSmashHigh
+-1905: FTYoshiAnimFSmash
+-1906: FTYoshiAnimFSmashLow
+-1907: FTYoshiAnimUSmash
+-1908: FTYoshiAnimDSmash
+-1909: FTYoshiAnimAttackAirN
+-1910: FTYoshiAnimAttackAirF
+-1911: FTYoshiAnimAttackAirB
+-1912: FTYoshiAnimAttackAirU
+-1913: FTYoshiAnimAttackAirD
+-1914: FTYoshiAnimLandingAirF
+-1915: FTYoshiAnimLandingAirB
+-1916: FTYoshiAnimEnterPipe
+-1917: FTYoshiAnimExitPipe
+-1918: FTYoshiAnimExitPipeWalk
+-1919: FTYoshiAnimEggThrowGround
+-1920: FTYoshiAnimEggThrowAir
+-1921: FTYoshiAnimGroundPoundGroundStart
+-1922: FTYoshiAnimGroundPoundLanding
+-1923: FTYoshiAnimGroundPoundAir
+-1924: FTYoshiAnimEggLayGrabbedSomeoneStillGoingOut
+-1925: FTYoshiAnimEggLayGrabbedSomeoneComingInAndSwallowing
+-1926: FTYoshiAnimEggLayAirGrabOut
+-1927: FTYoshiAnimEggLayAirGrabIn
+-1928: FTYoshiAnimAppear1
+-1929: FTYoshiAnimAppear2
+-1930: FTYoshiAnimDamage
+-1931: FTYoshiAnimFireFlowerShootAir
+-1932: FTPikachuAnimIdle
+-1933: FTPikachuAnimWalk1
+-1934: FTPikachuAnimWalk2
+-1935: FTPikachuAnimWalk3
+-1936: FTPikachuAnimWalkEnd
+-1937: FTPikachuAnimDash
+-1938: FTPikachuAnimRun
+-1939: FTPikachuAnimRunBrake
+-1940: FTPikachuAnimTurn
+-1941: FTPikachuAnimTurnRun
+-1942: FTPikachuAnimJumpF
+-1943: FTPikachuAnimJumpB
+-1944: FTPikachuAnimJumpAerialF
+-1945: FTPikachuAnimJumpAerialB
+-1946: FTPikachuAnimFall
+-1947: FTPikachuAnimFallAerial
+-1948: FTPikachuAnimCrouch
+-1949: FTPikachuAnimCrouchIdle
+-1950: FTPikachuAnimCrouchEnd
+-1951: FTPikachuAnimLandingAirX
+-1952: FTPikachuAnimShieldDrop
+-1953: FTPikachuAnimTeeter
+-1954: FTPikachuAnimTeeterstart
+-1955: FTPikachuAnimSleep
+-1956: FTPikachuAnimDamaged1
+-1957: FTPikachuAnimDamaged2
+-1958: FTPikachuAnimFalconDivePulled
+-1959: FTPikachuAnimDamageX1
+-1960: FTPikachuAnimDamageX2
+-1961: FTPikachuAnimDamageX3
+-1962: FTPikachuAnimDamaged3
+-1963: FTPikachuAnimDamaged4
+-1964: FTPikachuAnimDamaged5
+-1965: FTPikachuAnimFallSpecial
+-1966: FTPikachuAnimStunLandD
+-1967: FTPikachuAnimStunLandU
+-1968: FTPikachuAnimCatch
+-1969: FTPikachuAnimCatchPull
+-1970: FTPikachuAnimThrowF
+-1971: FTPikachuAnimThrowB
+-1972: FTPikachuAnimTaunt
+-1973: FTPikachuAnimLightItemPickup
+-1974: FTPikachuAnimItemThrowSmashB
+-1975: FTPikachuAnimItemThrowSmashU
+-1976: FTPikachuAnimItemThrowSmashD
+-1977: FTPikachuAnimItemDrop
+-1978: FTPikachuAnimItemThrowDash
+-1979: FTPikachuAnimItemThrowAirSmashB
+-1980: FTPikachuAnimItemThrowAirSmashU
+-1981: FTPikachuAnimItemThrowAirSmashF
+-1982: FTPikachuAnimHeavyItemPickup
+-1983: FTPikachuAnimHeavyItemThrowSmashB
+-1984: FTPikachuAnimStarRodNeutral
+-1985: FTPikachuAnimStarRodTilt
+-1986: FTPikachuAnimStarRodSmash
+-1987: FTPikachuAnimStarRodDash
+-1988: FTPikachuAnimHammerIdle
+-1989: FTPikachuAnimHammerLanding
+-1990: FTPikachuAnimFireFlowerShoot
+-1991: FTPikachuAnimJab1
+-1992: FTPikachuAnimDashAttack
+-1993: FTPikachuAnimFTiltHigh
+-1994: FTPikachuAnimFTilt
+-1995: FTPikachuAnimFTiltLow
+-1996: FTPikachuAnimUTilt
+-1997: FTPikachuAnimDTilt
+-1998: FTPikachuAnimFSmash
+-1999: FTPikachuAnimUSmash
+-2000: FTPikachuAnimDSmash
+-2001: FTPikachuAnimAttackAirN
+-2002: FTPikachuAnimAttackAirF
+-2003: FTPikachuAnimAttackAirB
+-2004: FTPikachuAnimAttackAirU
+-2005: FTPikachuAnimAttackAirD
+-2006: FTPikachuAnimLandingAirF
+-2007: FTPikachuAnimLandingAirD
+-2008: FTPikachuAnimShieldOn
+-2009: FTPikachuAnimShieldOff
+-2010: FTPikachuAnimRollF
+-2011: FTPikachuAnimRollB
+-2012: FTPikachuAnimCliffCatch
+-2013: FTPikachuAnimCliffWait
+-2014: FTPikachuAnimCliffQuick
+-2015: FTPikachuAnimCliffClimbQuick1
+-2016: FTPikachuAnimCliffClimbQuick2
+-2017: FTPikachuAnimCliffSlow
+-2018: FTPikachuAnimCliffClimbSlow1
+-2019: FTPikachuAnimCliffClimbSlow2
+-2020: FTPikachuAnimCliffAttackQuick1
+-2021: FTPikachuAnimCliffAttackQuick2
+-2022: FTPikachuAnimCliffAttackSlow1
+-2023: FTPikachuAnimCliffAttackSlow2
+-2024: FTPikachuAnimCliffEscapeQuick1
+-2025: FTPikachuAnimCliffEscapeQuick2
+-2026: FTPikachuAnimCliffEscapeSlow1
+-2027: FTPikachuAnimCliffEscapeSlow2
+-2028: FTPikachuAnimEggLayPulled
+-2029: FTPikachuAnimDamaged6
+-2030: FTPikachuAnimDamageAir
+-2031: FTPikachuAnimDamaged7
+-2032: FTPikachuAnimDamageFlyX1
+-2033: FTPikachuAnimDamageFlyX2
+-2034: FTPikachuAnimDamage2
+-2035: FTPikachuAnimDamaged
+-2036: FTPikachuAnimStunStartD
+-2037: FTPikachuAnimStunStartU
+-2038: FTPikachuAnimTech
+-2039: FTPikachuAnimDamageFlyTop
+-2040: FTPikachuAnimDownForwardD
+-2041: FTPikachuAnimDownForwardU
+-2042: FTPikachuAnimDownBackD
+-2043: FTPikachuAnimDownBackU
+-2044: FTPikachuAnimDownAttackD
+-2045: FTPikachuAnimDownAttackU
+-2046: FTPikachuAnimCeilingBonk
+-2047: FTPikachuAnimShieldBreak
+-2048: FTPikachuAnimClangRecoil
+-2049: FTPikachuAnimTechF
+-2050: FTPikachuAnimTechB
+-2051: FTPikachuAnimThrownDKPulled
+-2052: FTPikachuAnimThrownDK
+-2053: FTPikachuAnimThrownMarioBros
+-2054: FTPikachuAnimThrown1
+-2055: FTPikachuAnimThrown2
+-2056: FTPikachuAnimAppear1
+-2057: FTPikachuAnimAppear2
+-2058: FTPikachuAnimEnterPipe
+-2059: FTPikachuAnimExitPipe
+-2060: FTPikachuAnimExitPipeWalk
+-2061: FTPikachuAnimNeutralSpecialGround
+-2062: FTPikachuAnimNeutralSpecialAir
+-2063: FTPikachuAnimUpSpecialEnd
+-2064: FTPikachuAnimUpSpecialAirEnd
+-2065: FTPikachuAnimDownSpecialStart
+-2066: FTPikachuAnimGettingThundered
+-2067: FTPikachuAnimDownSpecialEnd
+-2068: FTPikachuAnimDownSpecialStartAir
+-2069: FTPikachuAnimDownSpecialThunderedAir
+-2070: FTPikachuAnimDownSpecialEndAir
+-2071: FTPikachuAnimDamage
+-2072: FTPikachuAnimFireFlowerShootAir
+-2073: FTBossAnimDefault
+-2074: FTBossAnimSlap
+-2075: FTBossAnimShoo
+-2076: FTBossAnimLaunch
+-2077: FTBossAnimFly
+-2078: FTBossAnimLanding
+-2079: FTBossAnimWalkStart
+-2080: FTBossAnimWalk
+-2081: FTBossAnimUnknown1
+-2082: FTBossAnimFlick
+-2083: FTBossAnimChargeStart1
+-2084: FTBossAnimChargeStart2
+-2085: FTBossAnimLanding2
+-2086: FTBossAnimPunch1
+-2087: FTBossAnimPointStart
+-2088: FTBossAnimPoke
+-2089: FTBossAnimPoint
+-2090: FTBossAnimDrill
+-2091: FTBossAnimPunch2
+-2092: FTBossAnimGunDraw
+-2093: FTBossAnimGunShoot
+-2094: FTBossAnimGunAim
+-2095: FTBossAnimUnknown2
+-2096: FTBossAnimUnknown3
+-2097: FTBossAnimUnknown4
+-2098: FTBossAnimUnknown5
+-2099: FTBossAnimSlamStart
+-2100: FTBossAnimPunch3
+-2101: FTBossAnimPunchEnd
+-2102: FTBossAnimSlam
+-2103: FTBossAnimDyingStart
+-2104: FTBossAnimDying
+-2105: FTBossAnimUnknown6
+-2106: FTBossAnimAppear
+
+
+# FILE CONTENTS
+
+[0]
+Sprite OptionTabLeft 0x1e8
+Sprite OptionTabMiddle 0x330
+Sprite OptionTabRight 0x568
+Sprite Frame 0x1420
+Sprite OnTextJap 0x15c0
+Sprite OffTextJap 0x1760
+Sprite AutoTextJap 0x1968
+Sprite DecalPaper 0x2a30
+Sprite SmashLogo 0x31f8
+Sprite FightBackground 0xb6d0
+Sprite OnText 0xb818
+Sprite OffText 0xb958
+Sprite Slash 0xba28
+Sprite GameModeText 0xd240
+Sprite Digit0 0xd310
+Sprite Digit1 0xd3e0
+Sprite Digit2 0xd4b0
+Sprite Digit3 0xd580
+Sprite Digit4 0xd650
+Sprite Digit5 0xd720
+Sprite Digit6 0xd7f0
+Sprite Digit7 0xd8c0
+Sprite Digit8 0xd990
+Sprite Digit9 0xda60
+Sprite Percentage 0xdb30
+Sprite Infinity 0xdc48
+Sprite Colon 0xdcf0
+Sprite ArrowR 0xdd90
+Sprite ArrowL 0xde30
+Sprite AutoText 0xdf48
+Sprite SmashBrosCollage 0x18000
+
+[1]
+Sprite 1PModeTextJap 0x4c8
+Sprite VsModeTextJap 0x960
+Sprite DataTextJap 0xe00
+Sprite ControllerIcon 0x1990
+Sprite ConsoleIcon 0x2520
+Sprite DataIcon 0x30b0
+Sprite ModeSelectText 0x40f0
+Sprite SettingsIcon 0x4c80
+Sprite OptionTextJap 0x5300
+Sprite 1PModeText 0x5570
+Sprite VsModeText 0x57e0
+Sprite DataText 0x5980
+Sprite ControllerIconDark 0x6048
+Sprite ConsoleIconDark 0x6708
+Sprite DataIconDark 0x6dc8
+Sprite DecalBarEdge 0x72e8
+Sprite SmashLogo 0x7aa8
+Sprite DecalBarMiddle 0x7c38
+Sprite SettingsIconDark 0x82f8
+Sprite OptionText 0x84f8
+
+[2]
+Sprite 1PGameTextJap 0x4c8
+Sprite OptionTab 0x1108
+Sprite TrainingModeTextJap 0x1618
+Sprite Bonus1PracticeTextJap 0x1df8
+Sprite Bonus2PracticeTextJap 0x25d8
+Sprite 1PGameText 0x2a28
+Sprite ControllerIconDark 0x50f8
+Sprite 1PText 0x5338
+Sprite TrainingModeText 0x5ac8
+Sprite Bonus1PracticeText 0x5f28
+Sprite Bonus2PracticeText 0x6388
+
+[3]
+Sprite BubbleLeft 0xf0
+Sprite BubbleMiddle 0x230
+Sprite BubbleRight 0x370
+Sprite CharactersTextJap 0xa68
+Sprite VsRecordTextJap 0xe88
+Sprite SoundTextJap 0x12a8
+Sprite SoundTestTextJap 0x18a8
+Sprite ScreenAdjustTextJap 0x1cc8
+Sprite IndexText 0x27a0
+Sprite CharactersText 0x2bc0
+Sprite VsRecordText 0x2fe0
+Sprite SoundText 0x32f0
+Sprite TestText 0x34f0
+Sprite ScreenAdjustText 0x3b88
+Sprite DataIconDark 0x6258
+
+[4]
+Sprite SoundTextJap 0x3d8
+Sprite StereoTextJap 0x6a8
+Sprite MonoTextJap 0x978
+Sprite FlashingTextJap 0xff0
+Sprite ScreenAdjustTextJap 0x1580
+Sprite BackupClearTextJap 0x1cf0
+Sprite WarningText 0x21b8
+Sprite PhotosensitivityWarningTextJap 0x68b0
+Sprite WarningIcon 0x6fd8
+Sprite StereoText 0x71f8
+Sprite MonoText 0x73a8
+Sprite SoundText 0x7628
+Sprite FlashingText 0x7aa8
+Sprite ScreenAdjustText 0x8138
+Sprite BackupClearText 0x8780
+Sprite OptionText 0x9288
+Sprite SettingsIconDark 0xb958
+
+[5]
+Sprite CharactersTextJap 0x6a8
+Sprite VSRecordTextJap 0xac8
+Sprite SoundTestTextJap 0x10c8
+Sprite CharactersText 0x14e0
+Sprite VSRecordText 0x1900
+Sprite SoundTestText 0x1d20
+Sprite DataText 0x23a8
+Sprite DataIconDark 0x4a78
+
+[6]
+Sprite VSStartTextJap 0x540
+Sprite BattleTextJap 0x800
+Sprite TimeBasedTextJap 0xb38
+Sprite StockTextJap 0xee0
+Sprite TeamTextJap 0x11a0
+Sprite TimeLimitTextJap 0x1550
+Sprite RemaningPlayersTextJap 0x19f0
+Sprite MatchOptionsTextJap 0x2070
+Sprite VSStartText 0x24c8
+Sprite RulePeriodText 0x2748
+Sprite TimeText 0x28e0
+Sprite StockText 0x2a80
+Sprite TeamText 0x2c20
+Sprite TimePeriodText 0x2ec8
+Sprite MinText 0x2fc8
+Sprite StockPeriodText 0x3248
+Sprite VSOptionsText 0x3618
+Sprite ConsoleIconDark 0x5ca0
+Sprite VSText 0x5f08
+
+[7]
+Sprite HandicapTextJap 0x360
+Sprite TeamAttackTextJap 0x9e0
+Sprite StageSelectTextJap 0xf70
+Sprite DamageTextJap 0x15f0
+Sprite ItemSwitchTextJap 0x1c70
+Sprite VSOptionsText 0x25d8
+Sprite Bubble 0x3348
+Sprite HandicapText 0x3600
+Sprite TeamAttackText 0x38d8
+Sprite StageSelectText 0x3c68
+Sprite ItemSwitchText 0x3f38
+Sprite DamageText 0x4198
+Sprite ConsoleIconDark 0x5ed0
+
+[8]
+Sprite LabelVSOptions 0x918
+Sprite LabelItemSwitch 0xA90
+Sprite AppearanceNone 0xC58
+Sprite AppearanceVeryLow 0xE18
+Sprite AppearanceLow 0xF08
+Sprite AppearanceMiddle 0x1040
+Sprite AppearanceHigh 0x1158
+Sprite AppearanceVeryHigh 0x1318
+Sprite ToggleOn 0x13F8
+Sprite ToggleOff 0x14D8
+Sprite ToggleSlash 0x1578
+Sprite DecalButton 0x33A0
+Sprite Frame 0x38B8
+Sprite ItemList 0x5DD0
+Sprite Cursor 0x6318
+Sprite AppearancePercentTextJap 0x6530
+Sprite BeamSwordTextJap 0x6750
+Sprite HomerunBatTextJap 0x6970
+Sprite HammerTextJap 0x6B90
+Sprite 0x6e40 0x6DB0
+Sprite HarisenTextJap 0x6FD0
+Sprite 0x7280 0x71F0
+Sprite BombTrooperTextJap 0x7410
+Sprite BumperTextJap 0x7630
+Sprite ShellTextJap 0x7850
+Sprite MonsterBallTextJap 0x7A70
+Sprite LayGunTextJap 0x7C90
+Sprite FireFlowerTextJap 0x7EB0
+Sprite StarRodTextJap 0x80D0
+Sprite MaximTomatoTextJap 0x82F0
+Sprite HeartTextJap 0x8510
+Sprite StarTextJap 0x8730
+Sprite MotionSensorBombTextJap 0x8B08
+Sprite VeryLowTextJap 0x8D20
+Sprite LowTextJap 0x8F40
+Sprite MiddleTextJap 0x9160
+Sprite HighTextJap 0x9380
+Sprite VeryHighTextJap 0x95A0
+Sprite NothingTextJap 0x97C0
+
+[9]
+Sprite UnlockLuigi 0x700
+Sprite UnlockNess 0xd80
+Sprite UnlockCaptain 0x1b20
+Sprite UnlockPurin 0x2270
+Sprite UnlockInishie 0x27b8
+Sprite UnlockSoundTest 0x3470
+Sprite UnlockItemSwitch 0x4210
+Sprite DecalExclaim 0x4660
+
+[10]
+Sprite ChallengerText 0x1f8
+Sprite ApproachingText 0x488
+Sprite WarningText 0x968
+Sprite DecalExclaim 0xdb0
+
+[11]
+Sprite VSDecal 0x1f10
+Sprite Number1 0x2018
+Sprite Number2 0x2118
+Sprite Number3 0x2218
+Sprite Number4 0x2318
+Sprite Number5 0x2418
+Sprite Number6 0x2518
+Sprite Number7 0x2618
+Sprite Number8 0x2718
+Sprite Number9 0x2818
+Sprite Number10 0x29b8
+Sprite Cross 0x2b58
+Sprite StageText 0x2e38
+Sprite BonusText 0x30f8
+Sprite FinalText 0x3320
+Sprite BreakTheTargetsText 0x3888
+Sprite BoardThePlatformsText 0x3DE8
+Sprite RaceToTheFinishText 0x44c8
+Sprite 0x5028 0x4FD8
+Sprite Dash 0x4ae8
+Sprite MetalMarioText 0x4d28
+Sprite MasterHandText 0x4fc8
+Sprite GiantDKText 0x5508
+Sprite FoxMcCloudText 0x58c8
+Sprite KirbyTeamVS8Text 0x5bc8
+Sprite MarioBrosText 0x5E68
+Sprite FightingPolygonTeamVS30Text 0x61c8
+Sprite SamusAranText 0x6468
+Sprite YoshiTeamVS18Text 0x67C8
+Sprite VSText 0x6888
+Sprite AllyText 0x6a08
+Sprite AllyText2 0x6BE8
+AnimJoint FighterMarioCam 0x6C30
+AnimJoint FighterFoxCam 0x6C60
+AnimJoint FighterDonkeyCam 0x6C90
+AnimJoint FighterSamusCam 0x6CC0
+AnimJoint FighterLuigiCam 0x6CF0
+AnimJoint FighterLinkCam 0x6D20
+AnimJoint FighterYoshiCam 0x6D50
+AnimJoint FighterCaptainCam 0x6D80
+AnimJoint FighterKirbyCam 0x6DB0
+AnimJoint FighterPikachuCam 0x6DE0
+AnimJoint FighterPurinCam 0x6E10
+AnimJoint FighterNessCam 0x6E40
+AnimJoint StageKirbyCam 0x6E70
+AnimJoint StageSamusCam 0x6F00
+AnimJoint StageFoxCam 0x6F30
+AnimJoint StagePikachuCam 0x6F60
+AnimJoint StageLinkCam 0x6F90
+AnimJoint StageYoshiCam 0x6EA0
+AnimJoint StageBossCam 0x6ED0
+AnimJoint StageDonkeyCam 0x6FC0
+AnimJoint StageMarioCam 0x6FF0
+AnimJoint StageMMarioCam 0x7020
+AnimJoint StageZakoCam 0x7050
+Sprite LinkMarker 0x7180
+Sprite YoshiMarker 0x72D0
+Sprite FoxMarker 0x7420
+Sprite MarioBrosMarker 0x7570
+Sprite PikachuMarker 0x76C0
+Sprite DKMarker 0x7810
+Sprite KirbyMarker 0x7960
+Sprite SamusMarker 0x7AB0
+Sprite MarioMarker 0x7C00
+Sprite ExclamationMark 0x7D10
+Sprite BossMarker 0x7E20
+Sprite BonusMarker 0x7EF0
+Sprite BannerTop 0xC848
+Sprite BannerBottom 0xECB0
+Sprite Sky 0x14BA0
+
+[12]
+Sprite Mario 0x138
+Sprite Fox 0x318
+Sprite Donkey 0x5b8
+Sprite Samus 0x738
+Sprite Luigi 0x8b8
+Sprite Link 0xa38
+Sprite Yoshi 0xbb8
+Sprite Captain 0xd98
+Sprite Kirby 0xf18
+Sprite Pikachu 0x10f8
+Sprite Purin 0x1278
+Sprite Ness 0x1398
+
+[13]
+Sprite Target 0xe980
+Sprite Race 0x1a658
+
+[14]
+Sprite - 0x27388
+
+[15]
+Sprite Instruction 0x6a8
+Sprite Guide 0x9630
+
+[16]
+Sprite Label 0x630
+Sprite NameTagDefault 0x1230
+Sprite NameTagTall 0x28f0
+Sprite MarioName 0x2f98
+Sprite FoxName 0x33a0
+Sprite DonkeyName 0x4290
+Sprite SamusName 0x4910
+Sprite LuigiName 0x4f78
+Sprite LinkName 0x5398
+Sprite YoshiName 0x58f8
+Sprite CaptainName 0x6828
+Sprite KirbyName 0x6e48
+Sprite PikachuName 0x7628
+Sprite PurinName 0x7ba8
+Sprite NessName 0x80e8
+Sprite MarioStory 0xA568
+Sprite FoxStory 0xC9E8
+Sprite DonkeyStory 0xEE68
+Sprite SamusStory 0x112E8
+Sprite LuigiStory 0x13768
+Sprite LinkStory 0x15BE8
+Sprite YoshiStory 0x18068
+Sprite CaptainStory 0x1A4E8
+Sprite KirbyStory 0x1C968
+Sprite PikachuStory 0x1EDE8
+Sprite PurinStory 0x21268
+Sprite NessStory 0x236E8
+Sprite WorksWallpaper 0x24918
+Sprite MarioWorks 0x25328
+Sprite FoxWorks 0x25D38
+Sprite DonkeyWorks 0x26748
+Sprite SamusWorks 0x27158
+Sprite LuigiWorks 0x27B68
+Sprite LinkWorks 0x28578
+Sprite YoshiWorks 0x28f88
+Sprite CaptainWorks 0x29998
+Sprite KirbyWorks 0x2A3a8
+Sprite PikachuWorks 0x2adb8
+Sprite PurinWorks 0x2B7c8
+Sprite NessWorks 0x2C1d8
+Sprite MotionSpecialHiInput 0x2C2a8
+Sprite MotionSpecialNInput 0x2C378
+Sprite MotionSpecialLwInput 0x2C448
+Sprite MarioSpecialHiName 0x2C588
+Sprite FoxSpecialHiName 0x2C6C8
+Sprite DonkeySpecialHiName 0x2C808
+Sprite SamusSpecialHiName 0x2C948
+Sprite LinkSpecialHiName 0x2CA88
+Sprite YoshiSpecialHiName 0x2CBC8
+Sprite CaptainSpecialHiName 0x2CD08
+Sprite KirbySpecialHiName 0x2CE48
+Sprite PikachuSpecialHiName 0x2CF88
+Sprite PurinSpecialHiName 0x2D0C8
+Sprite NessSpecialHiName 0x2D208
+Sprite MarioSpecialNName 0x2D348
+Sprite FoxSpecialNName 0x2D488
+Sprite DonkeySpecialNName 0x2D5C8
+Sprite SamusSpecialNName 0x2D708
+Sprite LinkSpecialNName 0x2D848
+Sprite YoshiSpecialNName 0x2D988
+Sprite CaptainSpecialNName 0x2DAC8
+Sprite KirbySpecialNName 0x2DC40
+Sprite PikachuSpecialNName 0x2DD88
+Sprite PurinSpecialNName 0x2DEC8
+Sprite NessSpecialNName 0x2E008
+Sprite MarioSpecialLwName 0x2E148
+Sprite FoxSpecialLwName 0x2E288
+Sprite DonkeySpecialLwName 0x2E3C8
+Sprite SamusSpecialLwName 0x2E508
+Sprite LuigiSpecialLwName 0x2E648
+Sprite LinkSpecialLwName 0x2E788
+Sprite YoshiSpecialLwName 0x2E8C8
+Sprite CaptainSpecialLwName 0x2EA08
+Sprite KirbySpecialLwName 0x2EB48
+Sprite PikachuSpecialLwName 0x2EC88
+Sprite PurinSpecialLwName 0x2EDC8
+Sprite NessSpecialLwName 0x2EF08
+Sprite StoryWallpaper 0x2FD88
+
+[17]
+Sprite ManText 0x40
+Sprite ComText 0xd0
+Sprite Colon0Text 0x160
+Sprite Colon1Text 0x1f0
+Sprite Colon2Text 0x280
+Sprite Colon3Text 0x310
+Sprite Colon4Text 0x3a0
+Sprite PlayerText 0x458
+Sprite 1Text 0x4e0
+Sprite 2Text 0x570
+Sprite 3Text 0x600
+Sprite 4Text 0x690
+Sprite 1PText 0x878
+Sprite 2PText 0xa58
+Sprite 3PText 0xc38
+Sprite 4PText 0xe18
+Sprite CPText 0xff8
+Sprite HandicapText 0x1108
+Sprite CPLevelText 0x1218
+Sprite PushText 0x12c8
+Sprite StartText 0x1378
+Sprite ButtonText 0x1428
+Sprite PressText 0x14d8
+Sprite MarioText 0x1788
+Sprite LuigiText 0x1a68
+Sprite DKText 0x1f48
+Sprite SamusText 0x22a8
+Sprite FoxText 0x2508
+Sprite KirbyText 0x2838
+Sprite LinkText 0x2af0
+Sprite YoshiText 0x2e28
+Sprite PikachuText 0x3248
+Sprite NessText 0x3500
+Sprite CaptainFalconText 0x38e8
+Sprite JigglypuffText 0x3c18
+Sprite InfinityDark 0x3d50
+Sprite TimeSelector 0x4710
+Sprite StockSelector 0x50D0
+Sprite 0Dark 0x51E8
+Sprite 1Dark 0x52A0
+Sprite 2Dark 0x53B8
+Sprite 3Dark 0x54C8
+Sprite 4Dark 0x55D8
+Sprite 5Dark 0x56E8
+Sprite 6Dark 0x57F8
+Sprite 7Dark 0x5908
+Sprite 8Dark 0x5A18
+Sprite 9Dark 0x5B28
+Sprite HmnLabel 0x5EA8
+Sprite CPLabel 0x6228
+Sprite NALabel 0x65A8
+Sprite CursorHandPoint 0x6DE8
+Sprite CursorHandGrab 0x7548
+Sprite CursorHandHover 0x7FC8
+Sprite 1PTextGradient 0x80C8
+Sprite 2PTextGradient 0x81C8
+Sprite 3PTextGradient 0x82C8
+Sprite 4PTextGradient 0x83C8
+Sprite 1PPuck 0x8EA8
+Sprite 2PPuck 0x9988
+Sprite 3PPuck 0xA468
+Sprite 4PPuck 0xAF48
+Sprite CPPuck 0xBA28
+Sprite SmashLogoCardLeft 0xCC10
+Sprite SmashLogoCardRight 0xDE00
+Sprite RedLabel 0xE228
+Sprite GreenLabel 0xE648
+Sprite BlueLabel 0xEA68
+Sprite ArrowL 0xEB48
+Sprite ArrowR 0xEC28
+Sprite ReadyToFightText 0xF2A8
+Sprite ReadyBanner 0xF390
+LUT GateMan1P 0x10258
+LUT GateMan2P 0x10280
+LUT GateMan4P 0x102A8
+LUT GateMan3P 0x102D0
+LUT GateCom1P 0x111D8
+LUT GateCom2P 0x11200
+LUT GateCom4P 0x11228
+LUT GateCom3P 0x11250
+Sprite RedCard 0x10310
+Sprite GrayCard 0x11290
+Sprite BackButton 0x11428
+
+[18]
+Sprite FreeForAllText 0x280
+Sprite TeamBattleText 0x4e0
+Sprite TrainingModeText 0x758
+Sprite Bonus1BreakTheTargetsText 0xb80
+Sprite Bonus2BoardThePlatformsText 0x1008
+
+[19]
+Sprite Cross 0x2B8
+Sprite WhiteSquare 0x6F0
+Sprite PortraitQuestionMark 0xF68
+Sprite BlackSquare 0x13d0
+Sprite PortraitFireBg 0x24D0
+Sprite Mario 0x4728
+Sprite Luigi 0x6978
+Sprite Donkey 0x8bc8
+Sprite Samus 0xae18
+Sprite Fox 0xd068
+Sprite Kirby 0xf2b8
+Sprite Link 0x11508
+Sprite Yoshi 0x13758
+Sprite Pikachu 0x159a8
+Sprite Ness 0x17bf8
+Sprite Captain 0x19e48
+Sprite Purin 0x1c098
+Sprite CaptainShadow 0x1e2e8
+Sprite LuigiShadow 0x20538
+Sprite NessShadow 0x22788
+Sprite PurinShadow 0x249d8
+
+[20]
+Sprite Mario 0x618
+Sprite Donkey 0xc78
+Sprite Metroid 0x12d8
+Sprite Fox 0x1938
+Sprite Kirby 0x1f98
+Sprite Zelda 0x25f8
+Sprite Yoshi 0x2c58
+Sprite FZero 0x32b8
+Sprite PMonsters 0x3918
+Sprite Mother 0x3f78
+
+[21]
+MObjSub PlayersSpotlight 0x408
+Sprite StoneBackground 0x440
+DObjDesc PlayersSpotlight 0x568
+
+[22]
+MObjSub - 0x408
+DObjDesc - 0x568
+
+[23]
+Sprite 1PlayerGameText 0x228
+Sprite ClosingParenthesis 0x2c8
+Sprite OpeningParenthesis 0x368
+Sprite LevelColonText 0x488
+Sprite StockColonText 0x5a8
+Sprite OptionOutline 0x1208
+Sprite BestTimeText 0x12e0
+Sprite TotalBestTimeText 0x1410
+Sprite TargetsText 0x1658
+Sprite PlatformsText 0x1898
+Sprite SmashLogo 0x1950
+Sprite OptionText 0x1ec8
+Sprite Sec 0x1f48
+Sprite CSec 0x1fc8
+LUT GateCP 0x3238
+Sprite RedCard 0x32a8
+
+[24]
+Sprite EasyText 0x98
+Sprite HardText 0x178
+Sprite NormalText 0x2d8
+Sprite VeryEasyText 0x438
+Sprite VeryHardText 0x598
+
+[25]
+Sprite - 0x80
+
+[26]
+Sprite - 0x20718
+
+[27]
+Sprite - 0x20718
+
+[28]
+Sprite - 0x20718
+
+[29]
+Sprite Digit0 0x98
+Sprite Digit1 0x178
+Sprite Digit2 0x2d8
+Sprite Digit3 0x3b8
+Sprite Digit4 0x518
+Sprite Digit5 0x678
+Sprite Digit6 0x7d8
+Sprite Digit7 0x938
+Sprite Digit8 0xa98
+Sprite Digit9 0xbf8
+Sprite NoneText 0xe58
+Sprite MaximTomatoText 0x14b8
+Sprite HeartText 0x1798
+Sprite StarText 0x19f8
+Sprite BeamSwordText 0x1f58
+Sprite HomerunBatText 0x24b8
+Sprite FanText 0x2698
+Sprite StarRodText 0x2af8
+Sprite RayGunText 0x2e58
+Sprite FireFlowerText 0x33b8
+Sprite HammerText 0x3798
+Sprite MotionSensorBomb 0x3ff8
+Sprite BobOmbText 0x43d8
+Sprite BumperText 0x4738
+Sprite GreenShellText 0x4c98
+Sprite RedShellText 0x50f8
+Sprite PokeballText 0x5558
+Sprite OneSlashOneText 0x5738
+Sprite OneSlashTwoText 0x5918
+Sprite TwoSlashThreeText 0x5b78
+Sprite OneSlashFourText 0x5d58
+Sprite StandText 0x6038
+Sprite WalkText 0x6318
+Sprite EvadeText 0x65f8
+Sprite JumpText 0x68d8
+Sprite AttackText 0x6c38
+Sprite OpeningBracket 0x6d18
+Sprite ClosingBracket 0x6df8
+Sprite PercentageSign 0x6f58
+Sprite DamageColonText 0x7338
+Sprite ComboColonText 0x7698
+Sprite EnemyColonText 0x79f8
+Sprite SpeedColonText 0x7cd8
+Sprite NoneText2 0x7f90
+Sprite MaximTomatoText2 0x85f8
+Sprite HeartText2 0x88d8
+Sprite StarText2 0x8b38
+Sprite BeamSwordText2 0x9048
+Sprite HomerunBatText2 0x9558
+Sprite FanText2 0x9720
+Sprite StarRodText2 0x9b08
+Sprite RayGunText2 0x9e38
+Sprite FireFlowerText2 0xa318
+Sprite HammerText2 0xa6f8
+Sprite MotionSensorBomb2 0xad30
+Sprite BobOmbText2 0xb158
+Sprite BumperText2 0xb538
+Sprite GreenShellText2 0xba18
+Sprite RedShellText2 0xbdf8
+Sprite PokeballText2 0xc1a0
+Sprite OneSlashOneText2 0xc388
+Sprite OneSlashTwoText2 0xc568
+Sprite TwoSlashThreeText2 0xc748
+Sprite OneSlashFourText2 0xc928
+Sprite StandText2 0xcc08
+Sprite WalkText2 0xcee8
+Sprite EvadeText2 0xd1a0
+Sprite JumpText2 0xd488
+Sprite AttackText2 0xd7e8
+Sprite CPColonText 0xdb90
+Sprite ExitText 0xdec8
+Sprite ItemColonText 0xe270
+Sprite RedSphere 0xe6d8
+Sprite ResetText 0xea08
+Sprite SpeedText 0xedb0
+Sprite ViewColonText 0xf160
+Sprite CloseUpText 0xf588
+Sprite NormalText 0xf8e8
+Sprite BoxTop 0xfb10
+Sprite BoxLeft 0x10060
+Sprite BoxRight 0x105b0
+Sprite BoxBottom 0x107e0
+Sprite ArrowL 0x10890
+Sprite ArrowR 0x10940
+Sprite NoneTextJap 0x10a68
+Sprite MaximTomatoTextJap 0x10ca8
+Sprite HeartTextJap 0x10ee8
+Sprite StarTextJap 0x11068
+Sprite BeamSwordTextJap 0x11248
+Sprite HomerunBatTextJap 0x11488
+Sprite FanTextJap 0x11608
+Sprite StarRodTextJap 0x11848
+Sprite RayGunTextJap 0x119c8
+Sprite FireFlowerTextJap 0x11c08
+Sprite HammerTextJap 0x11d88
+Sprite MotionSensorBombJap 0x12048
+Sprite BobOmbTextJap 0x121c8
+Sprite BumperTextJap 0x12348
+Sprite GreenShellTextJap 0x12588
+Sprite RedShellTextJap 0x12768
+Sprite PokeballTextJap 0x129a8
+Sprite OneSlashOneTextJap 0x12ac8
+Sprite OneSlashTwoTextJap 0x12be8
+Sprite TwoSlashThreeTextJap 0x12d08
+Sprite OneSlashFourTextJap 0x12e28
+Sprite StandTextJap 0x12f48
+Sprite WalkTextJap 0x13068
+Sprite EvadeTextJap 0x131e8
+Sprite JumpTextJap 0x13368
+Sprite AttackTextJap 0x13488
+Sprite EnemyStatusTextJap 0x13668
+Sprite QuitTextJap 0x13968
+Sprite ItemTextJap 0x13ae8
+Sprite ResetTextJap 0x13c68
+Sprite SlowTextJap 0x13de8
+Sprite CameraTextJap 0x13f68
+Sprite NearTextJap 0x14088
+Sprite NormalTextJap 0x141a8
+
+[30]
+Sprite PeachsCastleText 0x1A8
+Sprite SectorZText 0x348
+Sprite CongoJungleText 0x538
+Sprite PlanetZebesText 0x728
+Sprite HyruleCastleText 0x8a8
+Sprite YoshisIslandText 0xae8
+Sprite SaffronCityText 0xcd8
+Sprite MushroomKingdomText 0xec8
+Sprite DreamLandText 0x1758
+Sprite Cursor 0x1568
+Sprite QuestionMark 0x1a78
+Sprite StageSelectText 0x2340
+Sprite WoodenCircle 0x34E0
+Sprite PlateRight 0x3908
+Sprite PlateMiddle 0x3A08
+Sprite PlateLeft 0x3C48
+Sprite PeachsCastle 0x4A28
+Sprite SectorZ 0x5808
+Sprite CongoJungle 0x65E8
+Sprite PlanetZebes 0x73C8
+Sprite HyruleCastle 0x81A8
+Sprite YoshisIsland 0x8F88
+Sprite SaffronCity 0x9D68
+Sprite MushroomKingdom 0xAB48
+Sprite DreamLand 0xB928
+Sprite Tiles 0xC3C8
+Sprite RandomSmall 0xC7B0
+Sprite RandomBig 0xDAD0
+
+[31]
+Sprite Question 0x70
+Sprite Unknown 0x168
+Sprite LabelTotal 0x258
+Sprite Digit0 0x2f0
+Sprite Digit1 0x390
+Sprite Digit2 0x430
+Sprite Digit3 0x4d0
+Sprite Digit4 0x570
+Sprite Digit5 0x610
+Sprite Digit6 0x6b0
+Sprite Digit7 0x750
+Sprite Digit8 0x7f0
+Sprite Digit9 0x890
+Sprite SymbolPoint 0x910
+Sprite LabelWinPercent 0xa08
+Sprite LabelKOs 0xaf8
+Sprite LabelTKO 0xbe8
+Sprite LabelSDPercent 0xcd8
+Sprite LabelTime 0xe10
+Sprite LabelUsePercent 0xf08
+Sprite LabelAvg 0x1008
+Sprite LabelKOd 0x1140
+Sprite SymbolSlash 0x11d0
+Sprite Unknown1 0x1318
+Sprite Unknown2 0x1458
+Sprite BattleScore 0x15d0
+Sprite DownArrows 0x1668
+Sprite SideArrows 0x17a8
+Sprite MarioIconBW 0x1918
+Sprite FoxIconBW 0x1a98
+Sprite DonkeyIconBW 0x1ca8
+Sprite SamusIconBW 0x1e88
+Sprite LuigiIconBW 0x2008
+Sprite YoshiIconBW 0x2178
+Sprite LinkIconBW 0x2370
+Sprite CaptainIconBW 0x2540
+Sprite NessIconBW 0x2698
+Sprite PurinIconBW 0x27c8
+Sprite KirbyIconBW 0x2930
+Sprite PikachuIconBW 0x2b30
+Sprite MarioIconColor 0x2d18
+Sprite FoxIconColor 0x2ef8
+Sprite DonkeyIconColor 0x3198
+Sprite SamusIconColor 0x3438
+Sprite LuigiIconColor 0x3618
+Sprite YoshiIconColor 0x37f8
+Sprite LinkIconColor 0x3a38
+Sprite CaptainIconColor 0x3cd8
+Sprite NessIconColor 0x3eb8
+Sprite PurinIconColor 0x4098
+Sprite KirbyIconColor 0x4308
+Sprite PikachuIconColor 0x45a8
+Sprite PortraitWallpaper 0x4d30
+Sprite Label 0x5428
+Sprite SymbolColon 0x54c0
+
+[32]
+Sprite DataHeader 0xb40
+Sprite ArrowL 0xbe0
+Sprite ArrowR 0xc80
+
+[33]
+Sprite LetterA 0x40
+Sprite LetterB 0xd0
+Sprite LetterC 0x160
+Sprite LetterD 0x1f0
+Sprite LetterE 0x280
+Sprite LetterF 0x310
+Sprite LetterG 0x3a0
+Sprite LetterH 0x430
+Sprite LetterI 0x4c0
+Sprite LetterJ 0x550
+Sprite LetterK 0x5e0
+Sprite LetterL 0x670
+Sprite LetterM 0x700
+Sprite LetterN 0x790
+Sprite LetterO 0x820
+Sprite LetterP 0x8b0
+Sprite LetterQ 0x940
+Sprite LetterR 0x9d0
+Sprite LetterS 0xa60
+Sprite LetterT 0xaf0
+Sprite LetterU 0xb80
+Sprite LetterV 0xc10
+Sprite LetterW 0xca0
+Sprite LetterX 0xd30
+Sprite LetterY 0xdc0
+Sprite LetterZ 0xe50
+Sprite SymbolApostrophe 0xed0
+Sprite SymbolPercent 0xf60
+Sprite SymbolPeriod 0xfd0
+
+[34]
+Sprite TKOText 0x358
+Sprite PlaceText 0x990
+Sprite KOsText 0xd38
+Sprite PtsText 0x10d8
+Sprite 0x48c8 0x48c8
+Sprite 1PArrow 0x49e8
+Sprite 2PArrow 0x4b08
+Sprite 3PArrow 0x4c28
+Sprite 4PArrow 0x4d48
+Sprite Wallpaper 0xd5c8
+Sprite Winner 0xe2a0
+
+[35]
+MObjSub Mario 0x0000
+DObjDesc Mario 0x0990
+MatAnimJoint Mario 0x0A14
+MObjSub Fox 0x1940
+DObjDesc Fox 0x21D0
+MatAnimJoint Fox 0x2254
+MObjSub Donkey 0x0B00
+DObjDesc Donkey 0x1348
+MatAnimJoint Donkey 0x13CC
+MObjSub Metroid 0x1470
+DObjDesc Metroid 0x1860
+MatAnimJoint Metroid 0x18E4
+MObjSub Zelda 0x22B0
+DObjDesc Zelda 0x2520
+MatAnimJoint Zelda 0x25A4
+MObjSub Yoshi 0x2690
+DObjDesc Yoshi 0x2F10
+MatAnimJoint Yoshi 0x2F94
+MObjSub FZero 0x2FF0
+DObjDesc FZero 0x3828
+MatAnimJoint FZero 0x38AC
+MObjSub Kirby 0x3900
+DObjDesc Kirby 0x3E68
+MatAnimJoint Kirby 0x3EEC
+MObjSub PMonsters 0x3F40
+DObjDesc PMonsters 0x4710
+MatAnimJoint PMonsters 0x4794
+MObjSub Mother 0x4840
+DObjDesc Mother 0x5A00
+MatAnimJoint Mother 0x5A84
+
+[36]
+Sprite 0 0x68
+Sprite 1 0x118
+Sprite 2 0x1c8
+Sprite 3 0x278
+Sprite 4 0x328
+Sprite 5 0x3d8
+Sprite 6 0x488
+Sprite 7 0x538
+Sprite 8 0x5e8
+Sprite 9 0x698
+Sprite Dash 0x710
+Sprite Cross 0x828
+Sprite Colon 0x8d8
+
+[37]
+Sprite LetterA 0x5e0
+Sprite LetterB 0x9a8
+Sprite LetterC 0xd80
+Sprite LetterD 0x1268
+Sprite LetterE 0x1628
+Sprite LetterF 0x1a00
+Sprite LetterG 0x1f08
+Sprite LetterH 0x2408
+Sprite LetterI 0x26b8
+Sprite LetterJ 0x2a90
+Sprite LetterK 0x2f98
+Sprite LetterL 0x3358
+Sprite LetterM 0x3980
+Sprite LetterN 0x3e88
+Sprite LetterO 0x44b0
+Sprite LetterP 0x4890
+Sprite LetterQ 0x4f10
+Sprite LetterR 0x5418
+Sprite LetterS 0x57f0
+Sprite LetterT 0x5bd0
+Sprite LetterU 0x60d8
+Sprite LetterV 0x65d8
+Sprite LetterW 0x6c00
+Sprite LetterX 0x7108
+Sprite LetterY 0x7608
+Sprite LetterZ 0x7ae8
+Sprite SymbolExclaim 0x7d98
+Sprite SymbolPeriod 0x7e50
+
+[38]
+Sprite 1P 0x258
+Sprite 2P 0x4f8
+Sprite 3P 0x798
+Sprite 4P 0xa38
+Sprite CP 0xcd8
+Sprite Ally 0xeb8
+
+[40]
+DObjDesc - 0xB3F8
+AnimJoint - 0xB710
+
+[41]
+DObjDesc - 0x3E80
+AnimJoint - 0x4038
+
+[42]
+DObjDesc - 0x0F98
+AnimJoint - 0x101C
+
+[43]
+DObjDesc - 0x1F00
+AnimJoint - 0x1FB0
+
+[44]
+DObjDesc - 0x2450
+AnimJoint - 0x24D4
+
+[45]
+DObjDesc - 0x74A8
+AnimJoint - 0x7660
+
+[46]
+DObjDesc - 0x3EA0
+AnimJoint - 0x3F50
+
+[48]
+DObjDesc - 0x4E18
+AnimJoint - 0x536C
+
+[49]
+DObjDesc - 0x0F98
+AnimJoint - 0x101C
+
+[50]
+DObjDesc - 0x7AE0
+AnimJoint - 0x7C98
+
+[51]
+DObjDesc - 0x3F90
+AnimJoint - 0x4148
+
+[52]
+MObjSub RoomBackground 0x042F8
+DObjDesc RoomBackground 0x07E98
+MatAnimJoint RoomBackground 0x08788
+DObjDesc RoomDesk 0x08DF8
+DisplayList RoomHaze 0x098F8
+DObjDesc RoomBooks 0x0A6F8
+AnimJoint RoomBooks 0x0A7B0
+DObjDesc RoomPencils 0x0AEB8
+AnimJoint RoomPencils 0x0AF70
+DObjDesc RoomLamp 0x0BDC0
+AnimJoint RoomLamp 0x0BEA0
+DisplayList RoomTissues 0x0C690
+AnimJoint RoomTissues 0x0C884
+MObjSub RoomLogo 0x1BC60
+DObjDesc RoomLogo 0x1C4A8
+MatAnimJoint RoomLogo 0x1C52C
+DObjDesc RoomSnap 0x1CA68
+AnimJoint RoomSnap 0x1CAF0
+MObjSub RoomCloseUpEffectAir 0x1DCA0
+DObjDesc RoomCloseUpEffectAir 0x1DF28
+MatAnimJoint RoomCloseUpEffectAir 0x1DFD8
+AnimJoint RoomCloseUpEffectAir 0x1E010
+MObjSub RoomCloseUpEffectGround 0x1F0F8
+DObjDesc RoomCloseUpEffectGround 0x1F270
+MatAnimJoint RoomCloseUpEffectGround 0x1F2F4
+AnimJoint RoomCloseUpEffectGround 0x1F330
+DisplayList RoomBossShadow 0x1F790
+AnimJoint RoomBossShadow 0x1F924
+MObjSub RoomDeskGround 0x20480
+DObjDesc RoomDeskGround 0x22440
+MatAnimJoint RoomDeskGround 0x225CC
+MObjSub RoomSpotlight 0x22C90
+DisplayList RoomSpotlight 0x22E18
+MatAnimJoint RoomSpotlight 0x22F10
+DisplayList RoomOutside 0x24200
+DisplayList RoomSunlight 0x24708
+
+[53]
+Sprite Samus 0x9960
+Sprite Mario 0x13310
+Sprite Fox 0x1ccc0
+Sprite Pikachu 0x26670
+Sprite Cover 0x2b2d0
+
+[54]
+Sprite Link 0x9960
+Sprite Kirby 0x13310
+Sprite Donkey 0x1ccc0
+Sprite Yoshi 0x26670
+
+[55]
+AnimJoint Mario 0x0004
+AnimJoint Fox 0x00B4
+AnimJoint Donkey 0x0124
+AnimJoint Samus 0x0184
+AnimJoint Link 0x0224
+AnimJoint Yoshi 0x0334
+AnimJoint Kirby 0x03A4
+AnimJoint Pikachu 0x0484
+Sprite Wallpaper 0x58a0
+
+[56]
+AnimJoint Cam 0x0
+
+[57]
+AnimJoint Cam 0x0
+
+[58]
+AnimJoint Cam 0x0
+
+[59]
+AnimJoint Cam 0x0
+
+[60]
+AnimJoint Cam 0x0
+
+[61]
+DisplayList PurinShow 0x05C28
+AnimJoint Purin 0x05E44
+DisplayList LuigiShow 0x1C838
+AnimJoint Luigi 0x1CE94
+DisplayList PurinHidden 0x203A8
+DisplayList LuigiHidden 0x28C28
+
+[62]
+DisplayList CaptainShow 0x1C238
+AnimJoint Captain 0x1C9D4
+DisplayList NessShow 0x2A448
+AnimJoint Ness 0x2A864
+DisplayList CaptainHidden 0x355C0
+DisplayList NessHidden 0x3BAF8
+
+[63]
+DisplayList Overlay 0x5A0
+AnimJoint Overlay 0x714
+DisplayList Outline 0xF40
+AnimJoint Outline 0x11C4
+
+[64]
+AnimJoint Cam 0x0
+
+[65]
+AnimJoint MarioCam 0x0
+AnimJoint DonkeyCam 0x30
+AnimJoint SamusCam 0x60
+AnimJoint FoxCam 0x90
+AnimJoint LinkCam 0xC0
+AnimJoint YoshiCam 0xF0
+AnimJoint PikachuCam 0x120
+AnimJoint KirbyCam 0x150
+
+[66]
+AnimJoint Cam 0x4AB0
+MObjSub LL 0x3050
+DisplayList LL 0x32A8
+MatAnimJoint LL 0x3458
+AnimJoint LL 0x36D0
+MObjSub LR 0x36E0
+DisplayList LR 0x3938
+MatAnimJoint LR 0x3AE8
+AnimJoint LR 0x3D60
+MObjSub UL 0x3D70
+DisplayList UL 0x3FC8
+MatAnimJoint UL 0x4180
+AnimJoint UL 0x4400
+MObjSub UR 0x4410
+DisplayList UR 0x4668
+MatAnimJoint UR 0x4820
+AnimJoint UR 0x4AA0
+
+[67]
+DObjDesc Nest 0x9808
+DObjDesc Ground 0xb990
+AnimJoint Ground 0xbf70
+AnimJoint Cam 0xc940
+
+[68]
+DObjDesc Hills 0x37A0
+DObjDesc Ocarina 0x67A0
+AnimJoint Ocarina 0x6850
+AnimJoint Cam 0x8910
+
+[69]
+DisplayList Ground 0x1C10
+MObjSub Lightning 0x6140
+DObjDesc Lightning 0x6950
+MatAnimJoint Lightning 0x6BB8
+AnimJoint Lightning 0x6D60
+AnimJoint Cam 0x7250
+
+[70]
+Sprite - 0xb500
+
+[71]
+DObjDesc Legs 0x09548
+AnimJoint Legs 0x098c0
+DObjDesc LegsShadow 0x0b2b0
+AnimJoint LegsShadow 0x0b390
+DObjDesc MBall 0x0c9e0
+AnimJoint MBall 0x0cac0
+AnimJoint Cam 0x0d330
+Sprite Wallpaper 0x3ee58
+
+[72]
+AnimJoint Cam 0x1440
+
+[73]
+DObjDesc GreatFox 0xD820
+AnimJoint GreatFox 0xDA10
+AnimJoint Cam 0xF9A0
+AnimJoint Arwing0 0xE110
+AnimJoint Arwing1 0xE910
+AnimJoint Arwing2 0xF1C0
+Sprite Cockpit 0x3cc90
+
+[74]
+Sprite - 0x26c88
+
+[75]
+MObjSub - 0x2AA8
+DObjDesc - 0x35F8
+MatAnimJoint - 0x3700
+
+[76]
+AnimJoint OperatorCam 0x0
+
+[77]
+Sprite HeaderBackupClear 0xb60
+Sprite 0x11e0 0x11e0
+Sprite 0x1770 0x1770
+Sprite 0x1b98 0x1b98
+Sprite 0x2300 0x2300
+Sprite 0x2890 0x2890
+Sprite 0x2d30 0x2d30
+Sprite 0x33b0 0x33b0
+Sprite OptionNewcomers 0x3a00
+Sprite Option1PHighScore 0x4050
+Sprite OptionVSRecord 0x46a0
+Sprite OptionSubjectMode 0x4cf0
+Sprite OptionPrize 0x5340
+Sprite OptionAllDataClear 0x5990
+Sprite OptionCircle 0x5db8
+Sprite IsOkayText 0x6238
+Sprite AreYouSureText 0x63f8
+Sprite OptionBonusStageTime 0x6a40
+Palette OptionYesHighlight 0x6f20
+Palette OptionYesNot 0x6f48
+Palette OptionConfirm 0x6F70
+Sprite OptionYes 0x6fa0
+Palette OptionNoHighlight 0x7480
+Palette OptionNoNot 0x74a8
+Sprite OptionNo 0x74d8
+
+[78]
+Sprite - 0xb40
+
+[79]
+Sprite ContinueText 0x18f0
+Sprite YesText 0x1e08
+Sprite NoText 0x2318
+Sprite Cursor 0x2df8
+Sprite Room 0x1e3d8
+Sprite Spotlight 0x21900
+Sprite Shadow 0x224f8
+
+[80]
+Sprite StageText 0x9d8
+Sprite GameText 0x1338
+Sprite ClearText 0x1d58
+Sprite SpecialBonusText 0x2060
+Sprite ColonText 0x2120
+Sprite TimerText 0x25e8
+Sprite DamageText 0x2b48
+Sprite 0x3028 0x3028
+Sprite 0x30f8 0x30f8
+Sprite 0x31c8 0x31c8
+Sprite BonusBorder 0xa4b8
+Sprite ResultText 0xaf98
+Sprite TargetText 0xb4f8
+Sprite BonusPageArrow 0xb6a8
+Sprite TimerDamageDigit0 0xb808
+Sprite TimerDamageDigit1 0xb968
+Sprite TimerDamageDigit2 0xbac8
+Sprite TimerDamageDigit3 0xbc28
+Sprite TimerDamageDigit4 0xbd88
+Sprite TimerDamageDigit5 0xbee8
+Sprite TimerDamageDigit6 0xc048
+Sprite TimerDamageDigit7 0xc1a8
+Sprite TimerDamageDigit8 0xc308
+Sprite TimerDamageDigit9 0xc468
+Sprite TextShadow 0xd1c8
+Sprite BonusText 0xd340
+Sprite CheapShotText 0xd528
+Sprite StarFinishText 0xd708
+Sprite NoItemText 0xd8e8
+Sprite ShieldBreakerText 0xdac8
+Sprite JudoWarriorText 0xdca8
+Sprite HawkText 0xde88
+Sprite ShooterText 0xe068
+Sprite HeavyDamageText 0xe248
+Sprite AllVariationsText 0xe428
+Sprite ItemStrikeText 0xe608
+Sprite DoubleKOText 0xe7e8
+Sprite TricksterText 0xe9c8
+Sprite GiantImpactText 0xeba8
+Sprite SpeedsterText 0xed88
+Sprite ItemThrowText 0xef68
+Sprite TripleKOText 0xf148
+Sprite LastChanceText 0xf328
+Sprite PacifistText 0xf508
+Sprite PerfectText 0xf6e8
+Sprite NoMissText 0xf8c8
+Sprite NoDamageText 0xfaa8
+Sprite FullPowerText 0xfc88
+Sprite MewCatcherText 0xfe68
+Sprite StarClearText 0x10048
+Sprite VegetarianText 0x10228
+Sprite HeartThrobText 0x10408
+Sprite ThrowDownText 0x105e8
+Sprite SmashManiaText 0x107c8
+Sprite SmashlessText 0x109a8
+Sprite SpecialMoveText 0x10b88
+Sprite SingleMoveText 0x10d68
+Sprite PokemonFinishText 0x10f48
+Sprite BoobyTrapText 0x11128
+Sprite FighterStanceText 0x11308
+Sprite MysticText 0x114e8
+Sprite CometMysticText 0x116c8
+Sprite AcidClearText 0x118a8
+Sprite BumperClearText 0x11a88
+Sprite TornadoClearText 0x11c68
+Sprite ArwingClearText 0x11e48
+Sprite CounterAttackText 0x12028
+Sprite MeteorSmashText 0x12208
+Sprite AerialText 0x123e8
+Sprite LastSecondText 0x125c8
+Sprite Lucky3Text 0x127a8
+Sprite JackpotText 0x12988
+Sprite YoshiRainbowText 0x12b68
+Sprite KirbyRanksText 0x12d48
+Sprite BrosCalamityText 0x12f28
+Sprite DKDefenderText 0x13108
+Sprite DKPerfectText 0x132e8
+Sprite GoodFriendText 0x134c8
+Sprite TrueFriendText 0x136a8
+Sprite NoMissClearText 0x13888
+Sprite NoDamageClearText 0x13a68
+Sprite SpeedKingText 0x13c48
+Sprite SpeedDemonText 0x13e28
+Sprite VeryEasyClearText 0x14008
+Sprite EasyClearText 0x141e8
+Sprite NormalClearText 0x143c8
+Sprite HardClearText 0x145a8
+Sprite VeryHardClearText 0x14788
+
+[81]
+Sprite ScoreText 0x408
+
+[82]
+Sprite OrangeLetterG 0x4d78
+Sprite OrangeLetterO 0xa730
+Sprite OrangeExclamationMark 0xc370
+Sprite BlueLetterT 0xe4a8
+Sprite BlueLetterI 0xf740
+Sprite BlueLetterM 0x127e0
+Sprite BlueLetterE 0x144e0
+Sprite BlueLetterU 0x16eb8
+Sprite BlueLetterP 0x18fe8
+Sprite BlueLetterS 0x1b5f8
+Sprite BlueLetterA 0x1de68
+Sprite BlueLetterG 0x20788
+Sprite Rod 0x20990
+Sprite Frame 0x21760
+Sprite RodShadow 0x21878
+Sprite LampRedDim 0x21950
+Sprite LampYellowDim 0x21a10
+Sprite LampBlueDim 0x21ba8
+Sprite LampRedLight 0x22128
+Sprite LampYellowLight 0x22588
+Sprite LampBlueLight 0x22f18
+Sprite LampRedContour 0x23a28
+Sprite LampYellowContour 0x24620
+Sprite LampBlueContour 0x25290
+
+[83]
+MObjSub DamageSlash 0x73E0
+DObjDesc DamageSlash 0x7750
+AnimJoint DamageSlash 0x7800
+MatAnimJoint DamageSlash 0x7860
+MObjSub ImpactWave 0x7A80
+DObjDesc ImpactWave 0x7C28
+AnimJoint ImpactWave 0x7D40
+MatAnimJoint ImpactWave 0x7DA0
+DObjDesc FlyOrbs 0x7E80
+AnimJoint FlyOrbs 0x7F40
+MObjSub CommonSpark 0x8EC0
+DObjDesc CommonSpark 0x8FA0
+AnimJoint CommonSpark 0x9050
+MatAnimJoint CommonSpark 0x90C0
+MObjSub DamageFlyMDust 0xC978
+DObjDesc DamageFlyMDust 0xCAC8
+AnimJoint DamageFlyMDust 0xCAE0
+MatAnimJoint DamageFlyMDust 0xCB40
+AnimJoint QuakeMag0 0xCBC0
+AnimJoint QuakeMag1 0xCC20
+AnimJoint QuakeMag2 0xCCF0
+AnimJoint QuakeMag3 0xCDC0
+
+[84]
+MObjSub ShockSmall 0x1428
+DObjDesc ShockSmall 0x1500
+MatAnimJoint ShockSmall 0x1570
+MObjSub FireSpark 0x1EA0
+DObjDesc FireSpark 0x2040
+AnimJoint FireSpark 0x20D0
+MatAnimJoint FireSpark 0x2170
+MObjSub CatchSwirl 0x2760
+DObjDesc CatchSwirl 0x22B8
+AnimJoint CatchSwirl 0x28A0
+MatAnimJoint CatchSwirl 0x2AB0
+MObjSub ReflectBreak 0x3398
+DObjDesc ReflectBreak 0x2F78
+AnimJoint ReflectBreak 0x34A0
+MatAnimJoint ReflectBreak 0x35A0
+TextureImage Shadow 0x3A68
+MObjSub DeadExplodeDefault 0x53E8
+DObjDesc DeadExplodeDefault 0x4F08
+AnimJoint DeadExplodeDefault 0x54D0
+MatAnimJoint DeadExplodeDefault 0x5870
+MatAnimJoint DeadExplode1 0x58E0
+MatAnimJoint DeadExplode2 0x5800
+MatAnimJoint DeadExplode3 0x5950
+MatAnimJoint DeadExplode4 0x5870
+MObjSub NessPKFlash 0x6D00
+DObjDesc NessPKFlash 0x6B40
+AnimJoint NessPKFlash 0x6D90
+MatAnimJoint NessPKFlash 0x6E20
+
+[85]
+MObjSub MBallRays 0x0108
+DObjDesc MBallRays 0x0628
+AnimJoint MBallRays 0x0710
+MatAnimJoint MBallRays 0x0860
+DObjDesc RebirthHalo 0x2AC0
+AnimJoint RebirthHalo 0x2B70
+MObjSub ItemGetSwirl 0x2CA8
+DObjDesc ItemGetSwirl 0x3170
+AnimJoint ItemGetSwirl 0x32B0
+MatAnimJoint ItemGetSwirl 0x3490
+
+[87]
+Sprite Arrow 0x50
+
+[88]
+Sprite - 0x26c88
+
+[89]
+Sprite - 0x26c88
+
+[90]
+Sprite - 0x26c88
+
+[91]
+Sprite 0x26c88 0x26c88
+
+[92]
+Sprite - 0x26c88
+
+[93]
+Sprite - 0x26c88
+
+[94]
+Sprite - 0x26c88
+
+[95]
+Sprite - 0x26c88
+
+[96]
+Sprite 0x26c88 0x26c88
+
+[97]
+Sprite 0x26c88 0x26c88
+
+[98]
+Sprite 0x26c88 0x26c88
+
+[99]
+Sprite - 0x26c88
+
+[119]
+Sprite 0x26c88 0x26c88
+
+[136]
+DObjDesc PlatformSmall 0x3DA8
+AnimJoint PlatformSmall 0x3E60
+MObjSub PlatformSmall 0x3720
+MatAnimJoint PlatformSmall 0x3F00
+DObjDesc PlatformMedium 0x45D8
+AnimJoint PlatformMedium 0x4690
+MObjSub PlatformMedium 0x3F70
+MatAnimJoint PlatformMedium 0x4730
+DObjDesc PlatformLarge 0x4E08
+AnimJoint PlatformLarge 0x4EC0
+MObjSub PlatformLarge 0x47A0
+MatAnimJoint PlatformLarge 0x4F70
+DObjDesc BoardedPlatformSmall 0x5520
+AnimJoint BoardedPlatformSmall 0x55D0
+DObjDesc BoardedPlatformMedium 0x5B80
+AnimJoint BoardedPlatformMedium 0x5C30
+DObjDesc BoardedPlatformLarge 0x61E0
+AnimJoint BoardedPlatformLarge 0x6290
+
+[151]
+Sprite Platform 0xc0
+Sprite Target 0x1d0
+
+[161]
+AnimJoint _1B34_ 0x1B34
+AnimJoint _1B84_ 0x1B84
+DObjDesc EntryArwing 0x2C30
+AnimJoint _2E74_ 0x2E74
+AnimJoint _2EB4_ 0x2EB4
+
+[163]
+DObjDesc Shield 0x300
+
+[164]
+Sprite Digit0 0x148
+Sprite Digit1 0x2d8
+Sprite Digit2 0x500
+Sprite Digit3 0x698
+Sprite Digit4 0x8c0
+Sprite Digit5 0xa58
+Sprite Digit6 0xc80
+Sprite Digit7 0xe18
+Sprite Digit8 0x1040
+Sprite Digit9 0x1270
+Sprite SymbolPercent 0x1458
+Sprite SymbolHP 0x15d8
+
+[165]
+Sprite Digit0 0x138
+Sprite Digit1 0x228
+Sprite Digit2 0x3a8
+Sprite Digit3 0x528
+Sprite Digit4 0x6a8
+Sprite Digit5 0x828
+Sprite Digit6 0x9a8
+Sprite Digit7 0xb28
+Sprite Digit8 0xca8
+Sprite Digit9 0xe28
+Sprite SymbolColon 0xf08
+Sprite SymbolCross 0x1018
+Sprite SymbolUnderscore 0x1090
+Sprite SymbolSec 0x1140
+Sprite SymbolCSec 0x1238
+
+[166]
+DObjDesc Arrows 0x188
+AnimJoint Arrows 0x270
+Image MagnifyFrame 0x2C8
+DisplayList Magnify 0x030
+
+[167]
+Sprite LogoAnimCutout 0x8fc8
+Sprite LogoAnimStrikeV 0x97e8
+Sprite LogoAnimStrikeH 0x9b48
+Sprite LogoAnimFull 0xbbb0
+Sprite BorderUpper 0xc208
+Sprite Gradient 0xf278
+Sprite TM 0xf398
+Sprite Cutout 0x11988
+Sprite TMUnk 0x11aa8
+Sprite Copyright 0x15320
+Sprite PressStart 0x1A408
+Sprite Super 0x16728
+Sprite Smash 0x245c8
+Sprite Bros 0x25188
+AnimJoint Logo 0x1a450
+AnimJoint Labels 0x1a5d0
+AnimJoint PressStart 0x1a9f0
+AnimJoint Unknown 0x1AF20
+AnimJoint Slash 0x1AF90
+AnimJoint SlashMat 0x1B080
+DObjDesc Logo 0x1b140
+DObjDesc Labels 0x1b250
+DObjDesc PressStart 0x1b540
+DObjDesc Unknown 0x1BD50
+MObjSub Slash 0x1DA58
+DObjDesc Slash 0x1E028
+DObjDesc Fire 0x1e130
+AnimJoint Fire 0x1e290
+
+[168]
+Sprite Frame1 0x1018
+Sprite Frame2 0x2078
+Sprite Frame3 0x30d8
+Sprite Frame4 0x4138
+Sprite Frame5 0x5198
+Sprite Frame6 0x61f8
+Sprite Frame7 0x7258
+Sprite Frame8 0x82b8
+Sprite Frame9 0x9318
+Sprite Frame10 0xa378
+Sprite Frame11 0xb3d8
+Sprite Frame12 0xc438
+Sprite Frame13 0xd498
+Sprite Frame14 0xe4f8
+Sprite Frame15 0xf558
+Sprite Frame16 0x105b8
+Sprite Frame17 0x11618
+Sprite Frame18 0x12678
+Sprite Frame19 0x136d8
+Sprite Frame20 0x14738
+Sprite Frame21 0x15798
+Sprite Frame22 0x167f8
+Sprite Frame23 0x17858
+Sprite Frame24 0x188b8
+Sprite Frame25 0x19918
+Sprite Frame26 0x1a978
+Sprite Frame27 0x1b9d8
+Sprite Frame28 0x1ca38
+Sprite Frame29 0x1da98
+Sprite Frame30 0x1eaf8
+
+[169]
+Sprite - 0x8460
+
+[170]
+Image NameAndJobAUpper 0x0008
+Image NameAndJobALower 0x0178
+Image NameAndJobBUpper 0x0218
+Image NameAndJobBLower 0x02D8
+Image NameAndJobCUpper 0x0398
+Image NameAndJobCLower 0x0458
+Image NameAndJobDUpper 0x04F8
+Image NameAndJobDLower 0x0668
+Image NameAndJobEUpper 0x0728
+Image NameAndJobELower 0x07E8
+Image NameAndJobFUpper 0x0888
+Image NameAndJobFLower 0x0948
+Image NameAndJobGUpper 0x0A08
+Image NameAndJobGLower 0x0B78
+Image NameAndJobHUpper 0x0C38
+Image NameAndJobHLower 0x0DA8
+Image NameAndJobIUpper 0x0E68
+Image NameAndJobILower 0x0F28
+Image NameAndJobJUpper 0x0FE8
+Image NameAndJobJLower 0x10A8
+Image NameAndJobKUpper 0x1188
+Image NameAndJobKLower 0x12F8
+Image NameAndJobLUpper 0x13B8
+Image NameAndJobLLower 0x1478
+Image NameAndJobMUpper 0x1538
+Image NameAndJobMLower 0x16A8
+Image NameAndJobNUpper 0x17D8
+Image NameAndJobNLower 0x1948
+Image NameAndJobOUpper 0x19E8
+Image NameAndJobOLower 0x1B58
+Image NameAndJobPUpper 0x1C88
+Image NameAndJobPLower 0x1D48
+Image NameAndJobQUpper 0x1E08
+Image NameAndJobQLower 0x1F78
+Image NameAndJobRUpper 0x2038
+Image NameAndJobRLower 0x20F8
+Image NameAndJobSUpper 0x2198
+Image NameAndJobSLower 0x2258
+Image NameAndJobTUpper 0x22F8
+Image NameAndJobTLower 0x23B8
+Image NameAndJobUUpper 0x2478
+Image NameAndJobULower 0x2538
+Image NameAndJobVUpper 0x25D8
+Image NameAndJobVLower 0x2748
+Image NameAndJobWUpper 0x27E8
+Image NameAndJobWLower 0x2958
+Image NameAndJobXUpper 0x2A88
+Image NameAndJobXLower 0x2BF8
+Image NameAndJobYUpper 0x2C98
+Image NameAndJobYLower 0x2D58
+Image NameAndJobZUpper 0x2E18
+Image NameAndJobZLower 0x2F88
+Image NameAndJobComma 0x3018
+Image NameAndJobPeriod 0x3078
+Image NameAndJobApostrophe 0x30B8
+Image NameAndJob4 0x3118
+Sprite TextBoxAUpper 0x3198
+Sprite TextBoxALower 0x3250
+Sprite TextBoxBUpper 0x3328
+Sprite TextBoxBLower 0x33F0
+Sprite TextBoxCUpper 0x34C8
+Sprite TextBoxCLower 0x3580
+Sprite TextBoxDUpper 0x3658
+Sprite TextBoxDLower 0x3720
+Sprite TextBoxEUpper 0x37F8
+Sprite TextBoxELower 0x38B0
+Sprite TextBoxFUpper 0x3988
+Sprite TextBoxFLower 0x3A50
+Sprite TextBoxGUpper 0x3B28
+Sprite TextBoxGLower 0x3BE8
+Sprite TextBoxHUpper 0x3CB8
+Sprite TextBoxHLower 0x3D80
+Sprite TextBoxIUpper 0x3E58
+Sprite TextBoxILower 0x3F20
+Sprite TextBoxJUpper 0x3FF8
+Sprite TextBoxJLower 0x40C8
+Sprite TextBoxKUpper 0x4198
+Sprite TextBoxKLower 0x4260
+Sprite TextBoxLUpper 0x4338
+Sprite TextBoxLLower 0x4400
+Sprite TextBoxMUpper 0x44D8
+Sprite TextBoxMLower 0x4590
+Sprite TextBoxNUpper 0x4668
+Sprite TextBoxNLower 0x4720
+Sprite TextBoxOUpper 0x47F8
+Sprite TextBoxOLower 0x48B0
+Sprite TextBoxPUpper 0x4988
+Sprite TextBoxPLower 0x4A48
+Sprite TextBoxQUpper 0x4B18
+Sprite TextBoxQLower 0x4BD8
+Sprite TextBoxRUpper 0x4CA8
+Sprite TextBoxRLower 0x4D60
+Sprite TextBoxSUpper 0x4E38
+Sprite TextBoxSLower 0x4EF0
+Sprite TextBoxTUpper 0x4FC8
+Sprite TextBoxTLower 0x5090
+Sprite TextBoxUUpper 0x5168
+Sprite TextBoxULower 0x5220
+Sprite TextBoxVUpper 0x52F8
+Sprite TextBoxVLower 0x53B0
+Sprite TextBoxWUpper 0x5488
+Sprite TextBoxWLower 0x5540
+Sprite TextBoxXUpper 0x5618
+Sprite TextBoxXLower 0x56D0
+Sprite TextBoxYUpper 0x57A8
+Sprite TextBoxYLower 0x5868
+Sprite TextBoxZUpper 0x5938
+Sprite TextBoxZLower 0x59F0
+Sprite TextBoxColon 0x5AB0
+Sprite TextBoxComma 0x5B40
+Sprite TextBoxPeriod 0x5BD0
+Sprite TextBoxDash 0x5C58
+Sprite TextBox1 0x5D28
+Sprite TextBox2 0x5DF8
+Sprite TextBox3 0x5EC8
+Sprite TextBox4 0x5F98
+Sprite TextBox5 0x6068
+Sprite TextBox6 0x6138
+Sprite TextBox7 0x6208
+Sprite TextBox8 0x62D8
+Sprite TextBox9 0x63A8
+Sprite TextBox0 0x6478
+Sprite TextBoxQuote 0x6500
+Sprite TextBoxAmpers 0x65D8
+Sprite TextBoxSlash 0x6698
+Sprite TextBoxApostrophe 0x6720
+Sprite TextBoxQuestion 0x67F8
+Sprite TextBoxBracketOpen 0x68C8
+Sprite TextBoxBracketClose 0x6998
+Sprite Crosshair 0x6BC8
+Sprite TextBoxBracketLeft 0x6E08
+Interpolation - 0x7174
+AnimJoint - 0x71A8
+DObjDesc - 0x7730
+Sprite TextBoxBracketRight 0x7048
+
+[171]
+Sprite MusicText 0x438
+Sprite SoundText 0x9c0
+Sprite VoiceText 0xe48
+Sprite CapsuleRight 0x1138
+Sprite ColonExitText 0x1208
+Sprite ColonFadeOutText 0x1348
+Sprite ColonPlayText 0x1450
+Sprite SoundTestText 0x1bb8
+Sprite StartButton 0x1d50
+
+[172]
+Sprite PlayerNum1P 0x78
+Sprite PlayerNum2P 0x138
+Sprite PlayerNum3P 0x1f8
+Sprite PlayerNum4P 0x2b8
+Sprite DecalPause 0x438
+Sprite DecalPlus 0x4d8
+Sprite DecalReset 0x610
+Sprite DecalSmashBall 0x6d8
+Sprite DecalRetry 0x828
+Sprite DecalAButton 0x958
+Sprite DecalBButton 0xa88
+Sprite DecalZTrigger 0xbd8
+Sprite DecalRTrigger 0xcf8
+Sprite DecalArrows 0x1538
+Sprite DecalControlStick 0x17a8
+Sprite DecalLTrigger 0x18c8
+
+[173]
+MObjSub Stick 0x5028
+DObjDesc Stick 0x5300
+MatAnimJoint StickNeutral 0x5390
+MatAnimJoint StickHoldUp 0x53C0
+MatAnimJoint StickTapUp 0x53F0
+MatAnimJoint StickHoldForward 0x5430
+MatAnimJoint StickTapForward 0x5450
+MObjSub TapSpark 0x5A98
+DisplayList TapSpark 0x5B68
+MatAnimJoint TapSpark 0x5C20
+DisplayList SpecialMoveRGB 0x5E40
+Sprite Damage1 0x6c58
+Sprite Damage2 0x72d8
+Sprite Damage3 0x7c38
+Sprite Shield 0x8218
+Sprite StartFighting 0x8c78
+Sprite PlayerCount 0x91a8
+Sprite HereText 0x9b68
+Sprite Banner 0x10260
+Sprite TapTheStick 0x12260
+Sprite Jump 0x12b60
+Sprite MidairJump 0x13658
+Sprite Attack 0x139f0
+Sprite PowerAttack 0x14448
+Sprite SmashAttack 0x14e30
+Sprite KnockThemOff 0x15c40
+Sprite BUpGetBack 0x17fe0
+Sprite SpecialMoves 0x1a440
+Sprite Dodge 0x1aa10
+Sprite ThrowEnemy 0x1b468
+Sprite GrabItems 0x1b950
+Sprite UseItems 0x1beb0
+Sprite ThrowItems 0x1cd20
+Sprite AButton 0x1dfb8
+Sprite BButton 0x1e5c8
+Sprite ZButton 0x1ebd8
+Sprite PlusSymbol 0x1ec98
+
+[174]
+Func - 0x0
+NBytes - 0x30
+
+[175]
+Func - 0x0
+NBytes - 0x40
+
+[178]
+WeaponAttributes Fireball 0x0
+
+[179]
+WeaponAttributes Fireball 0x0
+
+[183]
+FTSpecialColl LwReflector 0x19D0
+
+[185]
+WeaponAttributes Blaster 0x0
+
+[192]
+WeaponAttributes Bomb 0xC
+
+[193]
+WeaponAttributes ChargeShot 0x0
+
+[197]
+WeaponAttributes Fireball 0x0
+
+[200]
+WeaponAttributes SpinAttack 0xC
+ItemAttributes Bomb 0x40
+AttackEvents Bomb 0x88
+BloatScales Bomb 0xA8
+
+[201]
+WeaponAttributes Boomerang 0x0
+
+[203]
+FTKirbyCopy SpecialN 0x0
+ftKirbyAttack100Effect - 0x1208
+
+[204]
+WeaponAttributes Cutter 0x8
+
+[210]
+Vec2h SpecialHi 0x0
+
+[213]
+FTSpecialColl AttackS4Reflector 0x1114
+FTSpecialColl LwAbsorb 0x16CC
+
+[214]
+WeaponAttributes PKThunder 0xC
+WeaponAttributes PKThunderTrail 0x40
+
+[215]
+WeaponAttributes PKFire 0x0
+ItemAttributes PKFire 0x34
+
+[218]
+WeaponAttributes ThunderHead 0xC
+WeaponAttributes ThunderTrail 0x40
+
+[219]
+WeaponAttributes ThunderJoltAir 0x0
+WeaponAttributes ThunderJoltGround 0x34
+
+[222]
+WeaponAttributes EggThrow 0xC
+WeaponAttributes Star 0x40
+
+[224]
+WeaponAttributes BulletNormal 0x774
+WeaponAttributes BulletHard 0x7A8
+
+[226]
+VelocitiesY Container 0x0
+ItemAttributes Capsule 0x50
+AttackEvents Capsule 0x98
+ItemAttributes Tomato 0xB8
+ItemAttributes Heart 0x100
+ItemAttributes Star 0x148
+ItemAttributes Sword 0x190
+ItemAttributes Bat 0x1D8
+ItemAttributes Harisen 0x220
+ItemAttributes LGun 0x268
+WeaponAttributes LGunAmmo 0x2B0
+ItemAttributes FFlower 0x2E4
+WeaponAttributes FFlowerFlame 0x32C
+Angles FFlowerFlame 0x360
+ItemAttributes Hammer 0x374
+ItemAttributes MSBomb 0x3BC
+AttackEvents MSBomb 0x404
+ItemAttributes BombHei 0x424
+AttackEvents BombHei 0x46C
+ItemAttributes StarRod 0x48C
+WeaponAttributes StarRod 0x4D4
+WeaponAttributes StarRodSmash 0x508
+ItemAttributes GShell 0x53C
+ItemAttributes RShell 0x584
+ItemAttributes Box 0x5CC
+AttackEvents Box 0x614
+ItemAttributes Taru 0x634
+AttackEvents Taru 0x67C
+FileHead MBallThrown 0x6E4
+ItemAttributes MBall 0x6E4
+ItemAttributes Wark 0x72C
+WeaponAttributes WarkRock 0x774
+ItemAttributes Kabigon 0x7A8
+ItemAttributes Tosakinto 0x7F0
+ItemAttributes Mew 0x838
+ItemAttributes Nyars 0x880
+WeaponAttributes NyarsCoin 0x8C8
+ItemAttributes Lizardon 0x8FC
+WeaponAttributes LizardonFlame 0x944
+ItemAttributes Spear 0x98C
+WeaponAttributes SpearSwarm 0x9D4
+ItemAttributes Kamex 0xA08
+WeaponAttributes KamexHydro 0xA50
+ItemAttributes MLucky 0xA84
+ItemAttributes Egg 0xACC
+AttackEvents Egg 0xB14
+ItemAttributes Starmie 0xB34
+WeaponAttributes StarmieSwift 0xB7C
+ItemAttributes Sawamura 0xBB0
+ItemAttributes Dogas 0xBF8
+WeaponAttributes DogasSmog 0xC40
+ItemAttributes Pippi 0xC74
+WeaponAttributes PippiSwarm 0xCBC
+ItemAttributes GBumper 0xCF0
+DataStart Harisen 0x2198
+DataStart BombHei 0x33F8
+DisplayList BombHeiWalkRight 0x3310
+DisplayList BombHeiWalkLeft 0x34C0
+MatAnimJoint BombHeiWalk 0x35B8
+DObjDesc KirbyStar 0x5458
+DataStart Shell 0x5F88
+AnimJoint Shell 0x6018
+MatAnimJoint Shell 0x6048
+DataStart Box 0x6778
+EffectDisplayList Box 0x68F0
+ItemAttributes NBumper 0x69C
+DataStart NBumper 0x7648
+MObjSub NBumperWait 0x7A38
+DisplayList NBumperWait 0x7AF8
+MObjSub MBallThrown 0x9120
+DataStart MBall 0x9430
+DObjDesc MBallThrown 0x9430
+MatAnimJoint MBall 0x9520
+AnimJoint MBallThrownL 0x95E0
+AnimJoint MBallThrownR 0x9690
+MatAnimJoint MBallThrownL 0x9740
+MatAnimJoint MBallThrownR 0x9810
+DataStart Wark 0xA140
+DisplayList Wark 0xA640
+AnimJoint Kabigon 0xB158
+DataStart Tosakinto 0xB708
+AnimJoint Tosakinto 0xB7CC
+MatAnimJoint Tosakinto 0xB90C
+DataStart Mew 0xBCC0
+AnimJoint Nyars 0xC130
+DataStart Lizardon 0xD5C0
+AnimJoint Lizardon 0xD658
+MatAnimJoint Lizardon 0xD688
+DataStart Spear 0xDF38
+AnimJoint Spear 0xDFFC
+MatAnimJoint Spear 0xE12C
+DisplayList Kamex 0xED60
+DataStart Kamex 0xEA60
+DataStart Starmie 0x112A0
+MatAnimJoint Starmie 0x11338
+DataStart Dogas 0x12820
+AnimJoint Dogas 0x128DC
+DataStart Lucky 0x10000
+AnimJoint Lucky 0x100BC
+DataStart Sawamura 0x11F40
+DisplayList Sawamura 0x12340
+DataStart Pippi 0x13598
+AnimBankStart Monster 0x13624
+
+[227]
+KeyEvent 0 0x0
+KeyEvent 1 0x874
+KeyEvent 2 0x10C8
+KeyEvent 3 0x10cc
+ExplainPhase - 0x10d0
+
+[229]
+PosSpriteArray DisplayLabel 0x000
+SpriteArray DisplayOption 0x020
+PosSpriteArray MenuLabel 0x0BC
+SpriteArray MenuOption 0x13C
+PosSpriteArray 0x10C 0x10C
+PosSpriteArray 0x1B8 0x1B8
+
+[230]
+MapHeader - 0x14
+MObjSub WhispyEyesTransformKinds 0x0F00
+MapHead - 0x10F0
+DObjDesc WhispyEyesTransformKinds 0x10F0
+MObjSub WhispyMouthTransformKinds 0x13B0
+DObjDesc WhispyMouthTransformKinds 0x1770
+DObjDesc FlowersBackTransformKinds 0x2A80
+DObjDesc FlowersFrontTransformKinds 0x31F8
+AnimJoint WhispyEyesLeftTurn 0x11A0
+MatAnimJoint WhispyEyesLeftTurn 0x11E0
+AnimJoint WhispyEyesLeftBlink 0x12B0
+AnimJoint WhispyEyesRightTurn 0x1220
+MatAnimJoint WhispyEyesRightTurn 0x1270
+AnimJoint WhispyEyesRightBlink 0x1330
+AnimJoint WhispyMouthLeftStretch 0x18B0
+MatAnimJoint WhispyMouthLeftStretch 0x1A00
+AnimJoint WhispyMouthLeftTurn 0x1BE0
+MatAnimJoint WhispyMouthLeftTurn 0x1CE0
+AnimJoint WhispyMouthLeftOpen 0x1E80
+MatAnimJoint WhispyMouthLeftOpen 0x20B0
+AnimJoint WhispyMouthLeftClose 0x2100
+MatAnimJoint WhispyMouthLeftClose 0x22A0
+AnimJoint WhispyMouthRightStretch 0x1A40
+MatAnimJoint WhispyMouthRightStretch 0x1BA0
+AnimJoint WhispyMouthRightTurn 0x1D30
+MatAnimJoint WhispyMouthRightTurn 0x1E30
+AnimJoint WhispyMouthRightOpen 0x22F0
+MatAnimJoint WhispyMouthRightOpen 0x2540
+AnimJoint WhispyMouthRightClose 0x2590
+MatAnimJoint WhispyMouthRightClose 0x2740
+Texture WhispyMouthLeftOpen 0x2BE0
+Texture WhispyMouthLeftBlow 0x2C30
+Texture WhispyMouthLeftClose 0x2C80
+Texture WhispyMouthRightOpen 0x2CD0
+Texture WhispyMouthRightBlow 0x2D20
+Texture WhispyMouthRightClose 0x2D70
+Texture WhispyEyesLeft0 0x33E0
+Texture WhispyEyesLeft1 0x3450
+Texture WhispyEyesLeft2 0x34B0
+Texture WhispyEyesRight0 0x3510
+Texture WhispyEyesRight1 0x35C0
+Texture WhispyEyesRight2 0x3660
+DObjDesc Bronto 0x33B8
+AnimJoint BrontoL 0x3440
+MatAnimJoint BrontoL 0x34E0
+MObjSub Bronto 0x31F0
+AnimJoint BrontoR 0x36E0
+MatAnimJoint BrontoR 0x37A0
+DataStart - 0x1CE0
+DObjDesc Dedede 0x3E80
+AnimJoint DededeFar 0x3F10
+AnimJoint DededeNear 0x4080
+
+[231]
+MapHeader - 0x14
+
+[232]
+MapHeader - 0x14
+GRAttackColl Acid 0xBC
+MObjSub Acid 0x8C0
+DObjDesc Acid 0xB08
+AnimJoint Acid 0xB90
+MatAnimJoint Acid 0xBD0
+DataStart - 0x5AC0
+AnimJoint Ridley 0xCF70
+DObjDesc Ridley 0xCEE8
+MObjSub Ridley 0xCC90
+MatAnimJoint Ridley 0xD030
+AnimJoint Ship 0xDEB0
+DObjDesc Ship 0xDE28
+MObjSub Ship 0xDAE0
+MatAnimJoint Ship 0xDF10
+
+[233]
+MapHeader - 0x14
+
+[234]
+MapHeader - 0x14
+MapHead - 0x0
+DataStart - 0x2A08
+DObjDesc Lakitu 0x4118
+AnimJoint LakituR 0x4220
+AnimJoint LakituL 0x4370
+
+[235]
+MapHeader - 0x14
+DObjDesc Scale 0x380
+MapHead - 0x5F0
+AnimJoint ScaleRetract 0x734
+GRAttackColl PowerBlock 0x0BC
+ItemAttributes Pakkun 0x120
+AnimJoint PakkunAppear 0xCC8
+MatAnimJoint PakkunAppear 0xCF8
+MatAnimJoint PakkunDamaged 0xE04
+ItemAttributes PowerBlock 0xD8
+DataStart PowerBlock 0x11F8
+AnimJoint PowerBlock 0x1288
+
+[236]
+MapHeader - 0x14
+HitDesc TaruCannThrow 0xBC
+MapHead - 0xA98
+AnimJoint TaruCannDefault 0xB20
+AnimJoint TaruCannFill 0xB68
+AnimJoint TaruCannShoot 0xBF8
+MObjSub Bird 0xF230
+DObjDesc Bird 0xF400
+AnimJoint Bird 0xF490
+MatAnimJoint Bird 0xF510
+DataStart - 0x9878
+
+[237]
+MapHeader - 0x14
+MapHead - 0x0
+WeaponAttributes ArwingLaser2D 0xBC
+WeaponAttributes ArwingLaser3D 0xF0
+SectorDesc Arwing0 0x0000
+SectorDesc Arwing1 0x0250
+SectorDesc Arwing2 0x06D0
+SectorDesc Arwing3 0x03E0
+SectorDesc Arwing4 0x0D10
+SectorDesc Arwing5 0x0EB0
+SectorDesc Arwing6 0x1510
+SectorDesc Arwing7 0x11D0
+AnimJoint Arwing0 0x0000
+AnimJoint Arwing1 0x1D34
+AnimJoint Arwing2 0x1DA4
+AnimJoint Arwing3 0x1DC4
+AnimJoint Arwing4 0x1D54
+AnimJoint Arwing5 0x1DE4
+DataStart - 0x8680
+AnimJoint Rocket 0xADB0
+DObjDesc Rocket 0xAD00
+DObjDesc Ship 0xB6F8
+AnimJoint ShipL 0xB780
+MObjSub Ship 0xB3C0
+MatAnimJoint Ship 0xB7B0
+AnimJoint ShipR 0xB7E0
+
+[238]
+MapHeader - 0x14
+MapHead - 0x100
+AnimJoint _1E0_ 0x1E0
+MObjSub _4B8_ 0x4B8
+DisplayList Cloud 0x580
+MatAnimJoint CloudSolid 0x670
+MatAnimJoint CloudEvaporate 0x690
+AnimJoint Bird 0x7870
+DObjDesc Bird 0x77E0
+MObjSub Bird 0x7610
+MatAnimJoint Bird 0x7950
+DataStart - 0x4E78
+AnimJoint HeihoFast 0xB4E0
+DObjDesc HeihoFast 0xB458
+MObjSub HeihoFast 0xB290
+MatAnimJoint HeihoFast 0xB550
+AnimJoint HeihoFruitFast 0xA630
+DObjDesc HeihoFruitFast 0xA5A8
+MObjSub HeihoFruitFast 0xA3E0
+MatAnimJoint HeihoFruitFast 0xA6A0
+AnimJoint HeihoFruitSlow 0x8800
+MObjSub HeihoFruitSlow 0x8360
+DObjDesc HeihoFruitSlowL 0x8528
+MatAnimJoint HeihoFruitSlow 0x8930
+DObjDesc HeihoFruitSlowR 0x8778
+AnimJoint HeihoSlow 0x9770
+DObjDesc HeihoSlow 0x96E8
+MObjSub HeihoSlow 0x9520
+MatAnimJoint HeihoSlow 0x97F0
+
+[239]
+MapHeader - 0x14
+ItemHead - 0x14
+ItemAttributes GLucky 0xBC
+ItemAttributes Marumine 0x104
+AttackEvents Marumine 0x14C
+ItemAttributes Porygon 0x16C
+HitParties Porygon 0x1B4
+ItemAttributes Hitokage 0x1FC
+WeaponAttributes HitokageFlame 0x244
+ItemAttributes Fushigibana 0x278
+HitParties Fushigibana 0x2C0
+WeaponAttributes FushigibanaRazor 0x308
+AnimJoint GateOpen 0x9B0
+AnimJoint GateClose 0xA20
+MapHead - 0x8A0
+AnimJoint Butterfree 0x9180
+DObjDesc Butterfree 0x90f8
+MObjSub Butterfree 0x8f30
+MatAnimJoint Butterfree 0x9560
+DataStart - 0x6210
+AnimJoint Fire 0xC0c0
+DObjDesc Fire 0xC030
+MObjSub Fire 0xbe60
+MatAnimJoint Fire 0xC180
+AnimJoint Onidrill 0xdc30
+DObjDesc Onidrill 0xdba0
+MObjSub Onidrill 0xd9d0
+MatAnimJoint Onidrill 0xdd60
+AnimJoint Poppo 0xF680
+DObjDesc Poppo 0xF5f8
+MObjSub Poppo 0xF430
+MatAnimJoint Poppo 0xF770
+
+[240]
+MapHeader - 0x14
+HitDesc TwisterThrow 0xBC
+
+[241]
+MapHeader - 0x0
+FileHead - 0x4D48
+MObjSub Effects0 0x086D8
+DObjDesc Effects0 0x08960
+AnimJoint Anims0 0x08A40
+MatAnimJoint Anims0 0x08C50
+MObjSub Effects1 0x097B0
+DObjDesc Effects1 0x0A188
+AnimJoint Anims1 0x0A340
+MatAnimJoint Anims1 0x0B1B0
+MObjSub Effects2_0 0x0D470
+DObjDesc Effects2_0 0x0DD90
+MObjSub Effects2_1 0x10788
+DObjDesc Effects2_1 0x11268
+AnimJoint Anims2_0 0x0DE70
+MatAnimJoint Anims2_0 0x0DEC0
+MatAnimJoint Anims2_1 0x11420
+MObjSub Effects3_0 0x10788
+DObjDesc Effects3_0 0x11268
+DObjDesc Effects3_1 0x12858
+MatAnimJoint Anims3_0 0x115C0
+AnimJoint Anims3_1 0x128E0
+
+[242]
+MapHeader - 0x0
+
+[243]
+MapHeader - 0x14
+
+[244]
+MapHeader - 0x14
+
+[245]
+MapHeader - 0x14
+
+[246]
+MapHeader - 0x0
+TargetsStart - 0x1EB0
+DObjDesc Targets 0x2150
+AnimJoint Targets 0x2360
+
+[247]
+MapHeader - 0x0
+TargetsStart - 0x2068
+DObjDesc Targets 0x24B0
+AnimJoint Targets 0x26C0
+
+[248]
+MapHeader - 0x0
+TargetsStart - 0x1F20
+DObjDesc Targets 0x2250
+AnimJoint Targets 0x2460
+
+[249]
+MapHeader - 0x0
+TargetsStart - 0x1868
+DObjDesc Targets 0x1B30
+AnimJoint Targets 0x1D40
+
+[250]
+MapHeader - 0x0
+TargetsStart - 0x1BA0
+DObjDesc Targets 0x2020
+AnimJoint Targets 0x2230
+
+[251]
+MapHeader - 0x0
+TargetsStart - 0x2378
+DObjDesc Targets 0x2770
+AnimJoint Targets 0x2980
+
+[252]
+MapHeader - 0x0
+TargetsStart - 0x2D68
+DObjDesc Targets 0x3290
+AnimJoint Targets 0x34A0
+
+[253]
+MapHeader - 0x0
+TargetsStart - 0x1888
+DObjDesc Targets 0x1B70
+AnimJoint Targets 0x1D80
+
+[254]
+MapHeader - 0x0
+TargetsStart - 0x2150
+DObjDesc Targets 0x2510
+AnimJoint Targets 0x2720
+
+[255]
+MapHeader - 0x0
+TargetsStart - 0x2658
+DObjDesc Targets 0x2A70
+AnimJoint Targets 0x2C80
+
+[256]
+MapHeader - 0x0
+TargetsStart - 0x1FF8
+DObjDesc Targets 0x23A0
+AnimJoint Targets 0x25B0
+
+[257]
+MapHeader - 0x0
+TargetsStart - 0x2940
+DObjDesc Targets 0x2E60
+AnimJoint Targets 0x3070
+
+[258]
+MapHeader - 0x0
+
+[259]
+MapHeader - 0x0
+DObjDesc Bumpers 0xE160
+AnimJoint Bumpers 0xE350
+
+[260]
+MapHeader - 0x0
+
+[261]
+MapHeader - 0x0
+DObjDesc Bumpers 0x2910
+AnimJoint Bumpers 0x29C0
+
+[262]
+MapHeader - 0x0
+
+[263]
+MapHeader - 0x0
+
+[264]
+MapHeader - 0x0
+
+[265]
+MapHeader - 0x0
+
+[266]
+MapHeader - 0x0
+DObjDesc Bumpers 0x3920
+AnimJoint Bumpers 0x3A60
+
+[267]
+MapHeader - 0x0
+
+[268]
+MapHeader - 0x0
+DObjDesc Bumpers 0x4FE0
+AnimJoint Bumpers 0x5120
+
+[269]
+MapHeader - 0x0
+DObjDesc Bumpers 0x3FE0
+AnimJoint Bumpers 0x4090
+
+[270]
+MapHeader - 0x0
+MapHead - 0x0
+ItemHead - 0x0
+DObjDesc Bumpers 0x0
+ItemAttributes TaruBomb 0xA8
+AttackEvents TaruBomb 0xF0
+AnimJoint Bumpers 0x110
+DataStart TaruBomb 0x788
+DisplayList TaruBombEffect 0x8A0
+
+[271]
+Sprite Stock 0x72d0
+Sprite FTEmblem 0x74c8
+
+[275]
+Sprite Stock 0x2d00
+Sprite FTEmblem 0x2ef8
+
+[288]
+Sprite Stock 0x7c28
+Sprite FTEmblem 0x7e08
+
+[294]
+Sprite Stock 0x130
+Sprite FTEmblem 0x2f8
+
+[295]
+Sprite Stock 0xe2f0
+Sprite FTEmblem 0xe508
+
+[298]
+Sprite Stock 0x7cd8
+Sprite FTEmblem 0x7ec8
+
+[299]
+Sprite Stock 0x11d48
+Sprite FTEmblem 0x11f28
+
+[303]
+Sprite Stock 0x1d5e0
+Sprite FTEmblem 0x1d7d8
+
+[305]
+Sprite Stock 0x7bb0
+Sprite FTEmblem 0x7d98
+
+[307]
+Sprite Stock 0xc6a8
+Sprite FTEmblem 0xc848
+
+[308]
+DObjDesc FalconPunch 0x0760
+MObjSub FalconPunch 0x0690
+MatAnimJoint FalconPunch 0x0830
+
+[310]
+DObjDesc PKThunderTrail 0x9050
+MObjSub PKThunderWave 0x9870
+DObjDesc PKThunderWave 0x9A10
+AnimJoint PKThunderWave 0x9AC0
+MatAnimJoint PKThunderWave 0x9BB0
+Sprite Stock 0xc188
+Sprite FTEmblem 0xc378
+
+[313]
+Sprite Stock 0xaaa8
+DObjDesc Shield 0xa860
+Sprite FTEmblem 0xac98
+
+[314]
+DObjDesc EggLay 0x960
+AnimJoint EggLayBreak 0x9F0
+AnimJoint EggLayThrow 0xB90
+AnimJoint EggLayWait 0xDB0
+
+[316]
+MObjSub ThunderTrail 0x9420
+DObjDesc ThunderTrail 0x95B0
+Sprite Stock 0x9a00
+Sprite FTEmblem 0x9be8
+
+[317]
+AnimJoint ThunderJoltB 0x1A20
+MatAnimJoint ThunderJoltB 0x1AE0
+DObjDesc ThunderJolt 0x2258
+MObjSub ThunderJolt 0x20A0
+AnimJoint ThunderJolt 0x22E0
+MatAnimJoint ThunderJolt 0x2350
+
+[320]
+Sprite Stock 0xc0
+Sprite FTEmblem 0x2b8
+
+[321]
+DObjDesc Reflector 0x2B0
+AnimJoint EntryArwingL 0x590
+AnimJoint EntryArwingR 0x9E0
+AnimJoint ReflectorStart 0x340
+AnimJoint ReflectorHit 0x3A0
+AnimJoint ReflectorEnd 0x430
+AnimJoint ReflectorLoop 0x4C0
+
+[322]
+MObjSub Unk 0x0640
+DObjDesc Unk 0x0800
+AnimJoint Unk 0x0890
+MatAnimJoint Unk 0x0900
+MObjSub ThunderShock 0x13A0
+DObjDesc ThunderShock 0x1640
+AnimJoint ThunderShock0 0x1720
+AnimJoint ThunderShock1 0x1850
+AnimJoint ThunderShock2 0x1970
+MatAnimJoint ThunderShock0 0x1A80
+MatAnimJoint ThunderShock1 0x1AC0
+MatAnimJoint ThunderShock2 0x1B10
+
+[323]
+DObjDesc VulcanJab 0x0B20
+DObjDesc CutterUp 0x12E8
+AnimJoint CutterUp 0x1470
+DObjDesc CutterDown 0x2390
+AnimJoint CutterDown 0x24D0
+DObjDesc CutterDraw 0x2888
+DObjDesc CutterTrail 0x0DF8
+AnimJoint CutterTrail 0x13F0
+DObjDesc EntryStar 0x1DA8
+AnimJoint EntryStarL 0x1E30
+AnimJoint EntryStarR 0x1EA0
+
+[324]
+DObjDesc GrappleBeam 0x0380
+MObjSub GrappleBeam 0x0210
+AnimJoint GrappleBeam 0x0410
+MatAnimJoint GrappleBeam 0x0480
+DObjDesc EntryPoint 0x0B90
+AnimJoint EntryPoint 0x0C20
+
+[325]
+DObjDesc FalconKick 0x0B08
+MObjSub FalconKick 0x0960
+AnimJoint FalconKick 0x0B90
+MatAnimJoint FalconKick 0x0C00
+DObjDesc EntryCar 0x5FC0
+AnimJoint _6200_ 0x6200
+AnimJoint _6518_ 0x6518
+AnimJoint _6598_ 0x6598
+
+[326]
+DObjDesc Sing 0x2130
+MObjSub Sing 0x1C20
+AnimJoint Sing 0x2270
+MatAnimJoint Sing 0x2D70
+
+[327]
+MObjSub PsychicMagnet 0x0810
+DObjDesc PsychicMagnet 0x09A8
+AnimJoint PsychicMagnet 0x0A30
+MatAnimJoint PsychicMagnet 0x0AD0
+
+[328]
+DObjDesc EntryWave 0x03F8
+MObjSub EntryWave 0x0130
+AnimJoint EntryWave 0x0840
+MatAnimJoint EntryWave 0x0B90
+DObjDesc EntryBeam 0x07B8
+MObjSub EntryBeam 0x04F0
+AnimJoint EntryBeam 0x0B60
+MatAnimJoint EntryBeam 0x0BF0
+DObjDesc SpinAttack 0x11C0
+MObjSub SpinAttack 0x1038
+AnimJoint SpinAttack 0x1250
+MatAnimJoint SpinAttack 0x12F0
+
+[329]
+DObjDesc EntryEgg 0x0530
+MObjSub EntryEgg 0x0460
+AnimJoint EntryEgg 0x0600
+MatAnimJoint EntryEgg 0x0780
+
+[330]
+DObjDesc EntryTaru 0x07C8
+AnimJoint EntryTaru 0x0850
+
+[331]
+DObjDesc EntryDokan 0x0608
+AnimJoint EntryDokan 0x06C0

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Auto Backup rules (referenced from AndroidManifest as
+    `android:fullBackupContent="@xml/backup_rules"`).
+
+    Scope: include only the SRAM save file. We intentionally do NOT back
+    up extracted .o2r files — they're large (BattleShip.o2r alone is the
+    full game asset bundle), the user's ROM is needed to reproduce them
+    anyway, and Auto Backup has a 25 MB per-app quota on Google's side.
+
+    Excludes:
+      - logs/        runtime debug logs, no value across devices
+      - cache/       SDL/glcache temp files
+      - *.o2r        extracted asset bundles (regenerated from APK assets
+                     on first launch of the new install)
+-->
+<full-backup-content>
+    <!-- LUS routes saves through SDL_AndroidGetExternalStoragePath, which
+         lands at getExternalFilesDir(NULL). That maps to domain="external"
+         in Android backup rules, not domain="file" (internal filesDir).
+
+         When <include> elements are present, only the listed paths are
+         backed up — everything else is implicitly excluded. So we
+         enumerate exactly the save file and let .o2r / logs / cache stay
+         out of the backup automatically. -->
+    <include domain="external" path="ssb64_save.bin" />
+</full-backup-content>

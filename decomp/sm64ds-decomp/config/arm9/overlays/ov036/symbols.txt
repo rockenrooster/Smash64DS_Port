@@ -1,0 +1,258 @@
+func_ov036_021111a0 kind:function(arm,size=0x44) addr:0x021111a0
+func_ov036_021111e4 kind:function(arm,size=0x58) addr:0x021111e4
+func_ov036_0211123c kind:function(arm,size=0x48) addr:0x0211123c
+func_ov036_02111284 kind:function(arm,size=0x44) addr:0x02111284
+func_ov036_021112c8 kind:function(arm,size=0x28) addr:0x021112c8
+func_ov036_021112f0 kind:function(arm,size=0x8c) addr:0x021112f0
+func_ov036_0211137c kind:function(arm,size=0x98) addr:0x0211137c
+SwingingPlatform_Spawn kind:function(arm,size=0x30) addr:0x02111414
+func_ov036_02111444 kind:function(arm,size=0x50) addr:0x02111444
+func_ov036_02111494 kind:function(arm,size=0x64) addr:0x02111494
+func_ov036_021114f8 kind:function(arm,size=0x14) addr:0x021114f8
+func_ov036_0211150c kind:function(arm,size=0x38) addr:0x0211150c
+RotatingPlatformRr_Spawn kind:function(arm,size=0x3c) addr:0x02111544
+_ZN18RotatingPlatformRrD1Ev kind:function(arm,size=0x30) addr:0x02111580
+_ZN18RotatingPlatformRrD0Ev kind:function(arm,size=0x44) addr:0x021115b0
+_ZN18RotatingPlatformRr16CleanupResourcesEv kind:function(arm,size=0x24) addr:0x021115f4
+func_ov036_02111618 kind:function(arm,size=0x84) addr:0x02111618
+_ZN18RotatingPlatformRr6RenderEv kind:function(arm,size=0x24) addr:0x0211169c
+_ZN18RotatingPlatformRr8BehaviorEv kind:function(arm,size=0x194) addr:0x021116c0
+_ZN18RotatingPlatformRr13InitResourcesEv kind:function(arm,size=0xb0) addr:0x02111854
+ShipWing_Spawn kind:function(arm,size=0x38) addr:0x02111904
+_ZN8ShipWingD1Ev kind:function(arm,size=0x4c) addr:0x0211193c
+_ZN8ShipWingD0Ev kind:function(arm,size=0x60) addr:0x02111988
+_ZN8ShipWing16CleanupResourcesEv kind:function(arm,size=0x44) addr:0x021119e8
+_ZN8ShipWing16OnPendingDestroyEv kind:function(arm,size=0x4) addr:0x02111a2c
+_ZN8ShipWing6RenderEv kind:function(arm,size=0x34) addr:0x02111a30
+_ZN8ShipWing8BehaviorEv kind:function(arm,size=0x154) addr:0x02111a64
+_ZN8ShipWing13InitResourcesEv kind:function(arm,size=0xec) addr:0x02111bb8
+func_ov036_02111ca4 kind:function(arm,size=0x20) addr:0x02111ca4
+func_ov036_02111cc4 kind:function(arm,size=0x14) addr:0x02111cc4
+DonutBlock_Spawn kind:function(arm,size=0x3c) addr:0x02111cd8
+_ZN10DonutBlockD1Ev kind:function(arm,size=0x44) addr:0x02111d14
+_ZN10DonutBlockD0Ev kind:function(arm,size=0x58) addr:0x02111d58
+_ZN10DonutBlock16CleanupResourcesEv kind:function(arm,size=0x48) addr:0x02111db0
+_ZN10DonutBlock6RenderEv kind:function(arm,size=0x28) addr:0x02111df8
+_ZN10DonutBlock8BehaviorEv kind:function(arm,size=0x90) addr:0x02111e20
+_ZN10DonutBlock13InitResourcesEv kind:function(arm,size=0xac) addr:0x02111eb0
+ArmedRotatingPlatform_Spawn kind:function(arm,size=0x30) addr:0x02111f5c
+_ZN21ArmedRotatingPlatformD1Ev kind:function(arm,size=0x80) addr:0x02111f8c
+_ZN21ArmedRotatingPlatformD0Ev kind:function(arm,size=0x94) addr:0x0211200c
+_ZN21ArmedRotatingPlatform16CleanupResourcesEv kind:function(arm,size=0x14) addr:0x021120a0
+_ZN21ArmedRotatingPlatform13InitResourcesEv kind:function(arm,size=0x14) addr:0x021120b4
+TrickyTriangles_Spawn kind:function(arm,size=0x90) addr:0x021120c8
+func_ov036_02112158 kind:function(arm,size=0x70) addr:0x02112158
+func_ov036_021121c8 kind:function(arm,size=0x84) addr:0x021121c8
+func_ov036_0211224c kind:function(arm,size=0x74) addr:0x0211224c
+func_ov036_021122c0 kind:function(arm,size=0x58) addr:0x021122c0
+func_ov036_02112318 kind:function(arm,size=0x60) addr:0x02112318
+func_ov036_02112378 kind:function(arm,size=0x50) addr:0x02112378
+func_ov036_021123c8 kind:function(arm,size=0x84) addr:0x021123c8
+func_ov036_0211244c kind:function(arm,size=0xec) addr:0x0211244c
+FlyingCarpet_Spawn kind:function(arm,size=0x78) addr:0x02112538
+__sinit_ov036_021125b0 kind:function(arm,size=0x6c) addr:0x021125b0
+__sinit_ov036_0211261c kind:function(arm,size=0x6c) addr:0x0211261c
+__sinit_ov036_02112688 kind:function(arm,size=0x40) addr:0x02112688
+__sinit_ov036_021126c8 kind:function(arm,size=0x68) addr:0x021126c8
+__sinit_ov036_02112730 kind:function(arm,size=0x6c) addr:0x02112730
+__sinit_ov036_0211279c kind:function(arm,size=0x1a8) addr:0x0211279c
+__sinit_ov036_02112944 kind:function(arm,size=0x98) addr:0x02112944
+.p__sinit_ov036_021125b0 kind:data(word) addr:0x021129dc
+.p__sinit_ov036_0211261c kind:data(word) addr:0x021129e0
+.p__sinit_ov036_02112688 kind:data(word) addr:0x021129e4
+.p__sinit_ov036_021126c8 kind:data(word) addr:0x021129e8
+.p__sinit_ov036_02112730 kind:data(word) addr:0x021129ec
+.p__sinit_ov036_0211279c kind:data(word) addr:0x021129f0
+.p__sinit_ov036_02112944 kind:data(word) addr:0x021129f4
+data_ov036_02112a00 kind:data(any) addr:0x02112a00
+data_ov036_02112a04 kind:data(any) addr:0x02112a04
+data_ov036_02112a08 kind:data(any) addr:0x02112a08
+data_ov036_02112a10 kind:data(any) addr:0x02112a10
+data_ov036_02112a18 kind:data(any) addr:0x02112a18
+data_ov036_02112a24 kind:data(any) addr:0x02112a24
+data_ov036_02112a34 kind:data(any) addr:0x02112a34
+data_ov036_02112a44 kind:data(any) addr:0x02112a44
+data_ov036_02112a54 kind:data(any) addr:0x02112a54
+data_ov036_02112a6c kind:data(any) addr:0x02112a6c ambiguous
+data_ov036_02112a88 kind:data(any) addr:0x02112a88
+data_ov036_02112aa4 kind:data(any) addr:0x02112aa4 ambiguous
+data_ov036_02112aa8 kind:data(any) addr:0x02112aa8 ambiguous
+data_ov036_02112ac0 kind:data(any) addr:0x02112ac0 ambiguous
+data_ov036_02112ac8 kind:data(any) addr:0x02112ac8
+data_ov036_02112adc kind:data(any) addr:0x02112adc ambiguous
+data_ov036_02112ae8 kind:data(any) addr:0x02112ae8
+data_ov036_02112b08 kind:data(any) addr:0x02112b08 ambiguous
+data_ov036_02112b28 kind:data(any) addr:0x02112b28
+data_ov036_02112b48 kind:data(any) addr:0x02112b48
+data_ov036_02112b68 kind:data(any) addr:0x02112b68
+data_ov036_02112b84 kind:data(any) addr:0x02112b84 ambiguous
+data_ov036_02112b88 kind:data(any) addr:0x02112b88
+data_ov036_02112ba8 kind:data(any) addr:0x02112ba8 ambiguous
+data_ov036_02112bc8 kind:data(any) addr:0x02112bc8
+data_ov036_02112bdc kind:data(any) addr:0x02112bdc ambiguous
+data_ov036_02112be8 kind:data(any) addr:0x02112be8
+data_ov036_02112bec kind:data(any) addr:0x02112bec ambiguous
+data_ov036_02112c08 kind:data(any) addr:0x02112c08
+data_ov036_02112c18 kind:data(any) addr:0x02112c18 ambiguous
+data_ov036_02112c28 kind:data(any) addr:0x02112c28
+data_ov036_02112c44 kind:data(any) addr:0x02112c44 ambiguous
+data_ov036_02112c4c kind:data(any) addr:0x02112c4c ambiguous
+data_ov036_02112c54 kind:data(any) addr:0x02112c54
+data_ov036_02112c58 kind:data(any) addr:0x02112c58 ambiguous
+data_ov036_02112c68 kind:data(any) addr:0x02112c68 ambiguous
+data_ov036_02112c88 kind:data(any) addr:0x02112c88 ambiguous
+data_ov036_02112c94 kind:data(any) addr:0x02112c94
+data_ov036_02112ca8 kind:data(any) addr:0x02112ca8 ambiguous
+data_ov036_02112cc8 kind:data(any) addr:0x02112cc8 ambiguous
+data_ov036_02112cd0 kind:data(any) addr:0x02112cd0 ambiguous
+data_ov036_02112cd4 kind:data(any) addr:0x02112cd4
+data_ov036_02112d1c kind:data(any) addr:0x02112d1c
+data_ov036_02112d48 kind:data(any) addr:0x02112d48 ambiguous
+data_ov036_02112d98 kind:data(any) addr:0x02112d98 ambiguous
+data_ov036_02112dfc kind:data(any) addr:0x02112dfc
+data_ov036_02112e5c kind:data(any) addr:0x02112e5c ambiguous
+data_ov036_02112f2c kind:data(any) addr:0x02112f2c ambiguous
+data_ov036_02112f58 kind:data(any) addr:0x02112f58 ambiguous
+data_ov036_02112f7c kind:data(any) addr:0x02112f7c ambiguous
+data_ov036_02112fd0 kind:data(any) addr:0x02112fd0 ambiguous
+data_ov036_02112ffc kind:data(any) addr:0x02112ffc ambiguous
+data_ov036_0211306c kind:data(any) addr:0x0211306c
+data_ov036_021130cc kind:data(any) addr:0x021130cc ambiguous
+data_ov036_021130d0 kind:data(any) addr:0x021130d0 ambiguous
+data_ov036_02113228 kind:data(any) addr:0x02113228 ambiguous
+data_ov036_021132ec kind:data(any) addr:0x021132ec ambiguous
+data_ov036_02113344 kind:data(any) addr:0x02113344 ambiguous
+data_ov036_02113384 kind:data(any) addr:0x02113384
+data_ov036_021133a8 kind:data(any) addr:0x021133a8 ambiguous
+data_ov036_02113434 kind:data(any) addr:0x02113434 ambiguous
+data_ov036_02113518 kind:data(any) addr:0x02113518 ambiguous
+data_ov036_02113534 kind:data(any) addr:0x02113534 ambiguous
+data_ov036_02113554 kind:data(any) addr:0x02113554 ambiguous
+data_ov036_021135d4 kind:data(any) addr:0x021135d4 ambiguous
+data_ov036_021135f4 kind:data(any) addr:0x021135f4 ambiguous
+data_ov036_021136d4 kind:data(any) addr:0x021136d4 ambiguous
+data_ov036_021136f4 kind:data(any) addr:0x021136f4 ambiguous
+data_ov036_0211373c kind:data(any) addr:0x0211373c ambiguous
+data_ov036_021137e4 kind:data(any) addr:0x021137e4 ambiguous
+data_ov036_021137f8 kind:data(any) addr:0x021137f8 ambiguous
+data_ov036_02113800 kind:data(any) addr:0x02113800 ambiguous
+data_ov036_02113804 kind:data(any) addr:0x02113804 ambiguous
+data_ov036_02113820 kind:data(any) addr:0x02113820 ambiguous
+data_ov036_0211382c kind:data(any) addr:0x0211382c ambiguous
+data_ov036_021138a8 kind:data(any) addr:0x021138a8 ambiguous
+data_ov036_021138bc kind:data(any) addr:0x021138bc ambiguous
+data_ov036_021138c4 kind:data(any) addr:0x021138c4 ambiguous
+data_ov036_021138d8 kind:data(any) addr:0x021138d8 ambiguous
+data_ov036_021138f0 kind:data(any) addr:0x021138f0 ambiguous
+data_ov036_021138fc kind:data(any) addr:0x021138fc ambiguous
+data_ov036_02113934 kind:data(any) addr:0x02113934 ambiguous
+data_ov036_02113980 kind:data(any) addr:0x02113980 ambiguous
+data_ov036_02113998 kind:data(any) addr:0x02113998 ambiguous
+data_ov036_021139b0 kind:data(any) addr:0x021139b0 ambiguous
+data_ov036_021139f4 kind:data(any) addr:0x021139f4 ambiguous
+data_ov036_02113a00 kind:data(any) addr:0x02113a00 ambiguous
+data_ov036_02113a50 kind:data(any) addr:0x02113a50 ambiguous
+data_ov036_02113a54 kind:data(any) addr:0x02113a54
+data_ov036_02113a60 kind:data(any) addr:0x02113a60
+SwingingPlatform_SpawnInfo kind:data(any) addr:0x02113a74 ambiguous
+data_ov036_02113a98 kind:data(any) addr:0x02113a98
+data_ov036_02113aa0 kind:data(any) addr:0x02113aa0 ambiguous
+data_ov036_02113abc kind:data(any) addr:0x02113abc ambiguous
+data_ov036_02113b10 kind:data(any) addr:0x02113b10 ambiguous
+data_ov036_02113b18 kind:data(any) addr:0x02113b18
+data_ov036_02113b1c kind:data(any) addr:0x02113b1c
+data_ov036_02113b20 kind:data(any) addr:0x02113b20
+data_ov036_02113b2c kind:data(any) addr:0x02113b2c
+data_ov036_02113b38 kind:data(any) addr:0x02113b38
+RotatingPlatformRr_SpawnInfo kind:data(any) addr:0x02113b50 ambiguous
+data_ov036_02113b74 kind:data(any) addr:0x02113b74
+data_ov036_02113b7c kind:data(any) addr:0x02113b7c ambiguous
+data_ov036_02113b80 kind:data(any) addr:0x02113b80 ambiguous
+data_ov036_02113b90 kind:data(any) addr:0x02113b90 ambiguous
+data_ov036_02113bf4 kind:data(any) addr:0x02113bf4
+data_ov036_02113c00 kind:data(any) addr:0x02113c00
+data_ov036_02113c08 kind:data(any) addr:0x02113c08 ambiguous
+ShipWing_SpawnInfo kind:data(any) addr:0x02113c14 ambiguous
+data_ov036_02113c20 kind:data(any) addr:0x02113c20 ambiguous
+data_ov036_02113c28 kind:data(any) addr:0x02113c28 ambiguous
+_ZTV18RotatingPlatformRr kind:data(any) addr:0x02113c38
+_ZTV14daObjRc_Hane_c kind:data(any) addr:0x02113c38
+data_ov036_02113c48 kind:data(any) addr:0x02113c48 ambiguous
+data_ov036_02113cb4 kind:data(any) addr:0x02113cb4
+data_ov036_02113cc0 kind:data(any) addr:0x02113cc0
+data_ov036_02113ccc kind:data(any) addr:0x02113ccc ambiguous
+DonutBlock_SpawnInfo kind:data(any) addr:0x02113cd4 ambiguous
+data_ov036_02113cec kind:data(any) addr:0x02113cec ambiguous
+data_ov036_02113cf4 kind:data(any) addr:0x02113cf4 ambiguous
+_ZTV8ShipWing kind:data(any) addr:0x02113cf8
+_ZTV16daObjRc_Tikuwa_c kind:data(any) addr:0x02113cf8
+data_ov036_02113d30 kind:data(any) addr:0x02113d30 ambiguous
+data_ov036_02113d78 kind:data(any) addr:0x02113d78
+data_ov036_02113d84 kind:data(any) addr:0x02113d84
+data_ov036_02113d90 kind:data(any) addr:0x02113d90
+ArmedRotatingPlatform_SpawnInfo kind:data(any) addr:0x02113da8 ambiguous
+data_ov036_02113dc4 kind:data(any) addr:0x02113dc4 ambiguous
+_ZTV10DonutBlock kind:data(any) addr:0x02113dcc
+data_ov036_02113e00 kind:data(any) addr:0x02113e00 ambiguous
+data_ov036_02113e4c kind:data(any) addr:0x02113e4c
+data_ov036_02113e50 kind:data(any) addr:0x02113e50 ambiguous
+data_ov036_02113e58 kind:data(any) addr:0x02113e58
+TrickyTriangles_SpawnInfo kind:data(any) addr:0x02113e6c ambiguous
+data_ov036_02113e88 kind:data(any) addr:0x02113e88
+_ZTV21ArmedRotatingPlatform kind:data(any) addr:0x02113ecc
+data_ov036_02113f20 kind:data(any) addr:0x02113f20 ambiguous
+data_ov036_02113f4c kind:data(any) addr:0x02113f4c
+data_ov036_02113f58 kind:data(any) addr:0x02113f58
+data_ov036_02113f64 kind:data(any) addr:0x02113f64
+FlyingCarpet_SpawnInfo kind:data(any) addr:0x02113f78 ambiguous
+data_ov036_02113f9c kind:data(any) addr:0x02113f9c
+data_ov036_02113ff4 kind:data(any) addr:0x02113ff4 ambiguous
+data_ov036_02114010 kind:data(any) addr:0x02114010 ambiguous
+data_ov036_02114020 kind:bss addr:0x02114020
+data_ov036_02114028 kind:bss addr:0x02114028
+data_ov036_02114030 kind:bss addr:0x02114030
+data_ov036_0211403c kind:bss addr:0x0211403c
+data_ov036_02114048 kind:bss addr:0x02114048
+data_ov036_02114050 kind:bss addr:0x02114050
+data_ov036_02114058 kind:bss addr:0x02114058
+data_ov036_02114064 kind:bss addr:0x02114064
+data_ov036_02114070 kind:bss addr:0x02114070
+data_ov036_02114078 kind:bss addr:0x02114078
+data_ov036_02114084 kind:bss addr:0x02114084
+data_ov036_0211408c kind:bss addr:0x0211408c
+data_ov036_02114094 kind:bss addr:0x02114094
+data_ov036_021140a0 kind:bss addr:0x021140a0
+data_ov036_021140ac kind:bss addr:0x021140ac
+data_ov036_021140b4 kind:bss addr:0x021140b4
+data_ov036_021140b8 kind:bss addr:0x021140b8 ambiguous
+data_ov036_021140bc kind:bss addr:0x021140bc
+data_ov036_021140c8 kind:bss addr:0x021140c8
+data_ov036_021140d4 kind:bss addr:0x021140d4
+data_ov036_021140dc kind:bss addr:0x021140dc
+data_ov036_021140e4 kind:bss addr:0x021140e4
+data_ov036_021140ec kind:bss addr:0x021140ec
+data_ov036_021140f4 kind:bss addr:0x021140f4
+data_ov036_021140f8 kind:bss addr:0x021140f8 ambiguous
+data_ov036_021140fc kind:bss addr:0x021140fc
+data_ov036_02114104 kind:bss addr:0x02114104
+data_ov036_02114108 kind:bss addr:0x02114108 ambiguous
+data_ov036_0211410c kind:bss addr:0x0211410c
+data_ov036_02114114 kind:bss addr:0x02114114
+data_ov036_0211411c kind:bss addr:0x0211411c
+data_ov036_02114124 kind:bss addr:0x02114124
+data_ov036_02114130 kind:bss addr:0x02114130
+data_ov036_0211413c kind:bss addr:0x0211413c
+data_ov036_02114148 kind:bss addr:0x02114148
+data_ov036_02114154 kind:bss addr:0x02114154
+data_ov036_02114160 kind:bss addr:0x02114160
+data_ov036_0211416c kind:bss addr:0x0211416c
+data_ov036_02114178 kind:bss addr:0x02114178
+data_ov036_0211417c kind:bss addr:0x0211417c ambiguous
+data_ov036_02114184 kind:bss addr:0x02114184
+data_ov036_02114190 kind:bss addr:0x02114190
+data_ov036_0211419c kind:bss addr:0x0211419c
+data_ov036_021141a4 kind:bss addr:0x021141a4
+data_ov036_021141ac kind:bss addr:0x021141ac
+data_ov036_021141b4 kind:bss addr:0x021141b4
+data_ov036_021141c0 kind:bss addr:0x021141c0
+data_ov036_021141cc kind:bss addr:0x021141cc

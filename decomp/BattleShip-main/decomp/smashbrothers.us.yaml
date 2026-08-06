@@ -1,0 +1,2050 @@
+name: Smash Brothers (North America)
+sha1: e2929e10fccc0aa84e5776227e798abc07cedabf
+options:
+  basename: smashbrothers
+  target_path: baserom.us.z64
+  elf_path: build/smashbrothers.elf
+  base_path: .
+  platform: n64
+  compiler: IDO
+
+  build_path: build/us
+  asm_path: asm/us
+  asset_path: assets/us
+
+  ld_script_path: .splat/us/smashbrothers.ld
+  ld_dependencies: True
+  asm_emit_size_directive: True
+
+  header_encoding: ASCII
+
+  o_as_suffix: True
+  use_legacy_include_asm: False
+
+  asm_function_macro: glabel
+  asm_jtbl_label_macro: jlabel
+  asm_data_macro: dlabel
+  symbol_name_format: $VRAM_$ROM
+
+  symbol_addrs_path:
+    - symbols/libultra.txt
+    - symbols/system.txt
+    - symbols/scmanager.txt
+
+    - symbols/ovl0.txt
+    - symbols/ovl1.txt
+    - symbols/ovl2.txt
+    - symbols/ovl8.txt
+
+    - symbols/not_found.txt
+    - symbols/splatignore.txt
+  reloc_addrs_path:
+    - reloc_addrs.txt
+
+  undefined_funcs_auto_path: .splat/us/undefined_funcs_auto.txt
+  undefined_syms_auto_path: .splat/us/undefined_syms_auto.txt
+
+  extensions_path: tools/splat_ext
+
+  rodata_string_guesser_level: 3
+  data_string_guesser_level: 3
+
+  hasm_in_src_path: True
+
+  # elf_section_list_path: build/smashbrothers.elf
+  # asm_path: asm
+  # src_path: src
+  # create_asm_dependencies: True
+  # rom_address_padding: True
+  # dump_symbols: True
+  # section_order: [".text", ".data", ".rodata", ".bss"]
+  # auto_all_sections: [".data", ".rodata", ".bss"]
+  # string_encoding: ASCII
+  # data_string_encoding: ASCII
+  # libultra_symbols: True
+  # hardware_regs: True
+  # gfx_ucode: # one of [f3d, f3db, f3dex, f3dexb, f3dex2]
+
+segments:
+  - [0x000000, header, header]
+
+  - name: ipl3 #is this actually ipl3?
+    type: databin
+    start: 0x000040
+
+  - name: entry
+    type: code
+    start: 0x1000
+    vram: 0x80000400
+    subsegments:
+      - [0x1000, hasm, entry]
+
+  - name: main
+    type: code
+    start: 0x1060
+    vram: 0x80000460
+    follows_vram: entry
+    bss_size: 0x61EA0
+    subsegments:
+      - [0x001060, c, sys/main]
+      - [0x001510, pad, pad0x001510]
+      - [0x001520, c, sys/scheduler]
+      - [0x003660, c, sys/dma]
+      - [0x004800, c, sys/controller]
+      - [0x0054D0, c, sys/taskman]
+      - [0x0078E0, c, sys/malloc]
+      - [0x007970, c, sys/video]
+      - [0x007C80, c, sys/rdp]
+      - [0x007FE0, c, sys/objman]
+      - [0x00B8D0, c, sys/objscript]
+      - [0x00BAF0, c, sys/objhelper]
+      - [0x00C7B0, c, sys/objanim]
+      - [0x011970, c, sys/objdisplay]
+      - [0x0190E0, c, sys/utils]
+      - [0x019AE0, c, sys/vector]
+      - [0x01A870, c, sys/matrix]
+      - [0x01E210, c, sys/interp]
+      - [0x01F1C0, c, sys/audio]
+      - [0x021CC0, c, sys/debug]
+      - [0x024440, c, sys/unref] # One func, that's entirely unreferenced.
+      - [0x024470, c, libultra/sp/setattribute]
+      - [0x024480, c, libultra/sp/sprite]
+      - [0x026AF0, c, libultra/sp/clearattribute]
+      - [0x026B10, c, libultra/sp/hide]
+      - [0x026B30, c, libultra/sp/show]
+      - [0x026B50, c, libultra/sp/spscale]
+      - [0x026BC0, c, libultra/n_audio/n_cspsetpriority]
+      - [0x026C10, c, libultra/n_audio/n_cspsetfxmix]
+      - [0x026C70, c, libultra/n_audio/n_env]
+      - [0x02E220, c, libultra/n_audio/n_synaddplayer]
+      - [0x02E380, c, libultra/n_audio/n_synstopvoice]
+      - [0x02E3F0, c, libultra/n_audio/n_synallocvoice]
+      - [0x02E620, c, libultra/n_audio/n_synsetpan]
+      - [0x02E6A0, c, libultra/n_audio/n_synstartvoiceparam]
+      - [0x02E870, c, libultra/n_audio/n_seqplayer]
+      - [0x0302A0, c, libultra/n_audio/n_synsetpriority]
+      - [0x0302C0, c, libultra/n_audio/n_seqpgetvol]
+      - [0x0302E0, c, libultra/n_audio/n_seq]
+      - [0x030670, c, libultra/n_audio/n_cspsetseq]
+      - [0x0306B0, c, libultra/n_audio/n_synsetpitch]
+      - [0x030730, c, libultra/n_audio/n_cspsetbank]
+      - [0x030810, c, libultra/n_audio/n_cspsetvol]
+      - [0x030850, c, libultra/n_audio/n_synsetfxmix]
+      - [0x030980, c, libultra/n_audio/n_syndelete]
+      - [0x0309B0, c, libultra/n_audio/n_cspplay]
+      - [0x0309E0, c, libultra/n_audio/n_seqpgetchlvol]
+      - [0x030A30, c, libultra/n_audio/n_synallocfx]
+      - [0x030A90, c, libultra/n_audio/n_cspstop]
+      - [0x030AC0, c, libultra/n_audio/n_synfreevoice]
+      - [0x030B60, c, libultra/n_audio/n_synsetvol]
+      - [0x030C00, c, libultra/os/sendmesg]
+      - [0x030D50, c, libultra/os/stopthread]
+      - [0x030E10, c, libultra/os/recvmesg]
+      - [0x030F50, hasm, libultra/os/setintmask]
+      - [0x030FF0, c, libultra/gu/sinf]
+      - [0x0311B0, c, libultra/io/sptask]
+      - [0x0314A0, c, libultra/os/destroythread]
+      - [0x0315B0, c, libultra/libc/ll]
+      - [0x031870, hasm, libultra/os/exceptasm]
+      - [0x032170, c, libultra/os/thread]
+      - [0x0321B0, hasm, libultra/libc/bzero]
+      - [0x032250, c, libultra/io/motor]
+      - [0x032620, c, libultra/io/siacs]
+      - [0x0326E0, c, libultra/io/controller]
+      - [0x032A20, c, libultra/os/createthread]
+      - [0x032B70, c, libultra/io/contreaddata]
+      - [0x032D50, c, libultra/os/virtualtophysical]
+      - [0x032DD0, hasm, libultra/os/writebackdcache]
+      - [0x032E50, c, libultra/os/initialize]
+      - [0x0331B0, c, libultra/io/pirawread]
+      - [0x033210, pad, pad0x033210]
+      - [0x033270, hasm, libultra/os/setsr]
+      - [0x033280, hasm, libultra/os/getsr]
+      - [0x033290, c, libultra/io/vigetnextframebuf]
+      - [0x0332D0, c, libultra/io/sprawdma]
+      - [0x033360, c, libultra/io/sirawdma]
+      - [0x033410, c, libultra/io/epilinkhandle]
+      - [0x033460, c, libultra/io/viblack]
+      - [0x0334D0, c, libultra/io/sirawread]
+      - [0x033520, c, libultra/io/sptaskyield]
+      - [0x033540, c, libultra/gu/mtxutil]
+      - [0x0337B0, c, libultra/io/visetmode]
+      - [0x033820, hasm, libultra/os/probetlb]
+      - [0x0338E0, c, libultra/io/pimgr]
+      - [0x033A50, c, libultra/io/piacs]
+      - [0x033B10, pad, padding0x033B10]
+      - [0x033B20, c, libultra/io/devmgr]
+      - [0x033FB0, c, libultra/io/pirawdma]
+      - [0x034090, hasm, libultra/os/getcount]
+      - [0x0340A0, c, libultra/os/seteventmesg]
+      - [0x034110, hasm, libultra/gu/sqrtf]
+      - [0x034120, c, libultra/os/afterprenmi]
+      - [0x034140, c, libultra/io/contquery]
+      - [0x0341F0, c, libultra/libc/xprintf]
+      - [0x034EB0, hasm, libultra/os/unmaptlball]
+      - [0x034F00, c, libultra/io/epidma]
+      - [0x034FE0, c, libultra/libc/string]
+      - [0x035080, c, libultra/os/createmesgqueue]
+      - [0x0350B0, hasm, libultra/os/invalicache]
+      - [0x035130, hasm, libultra/os/invaldcache]
+      - [0x0351E0, c, libultra/io/sp]
+      - [0x035210, c, libultra/io/si]
+      - [0x035240, c, libultra/os/jammesg]
+      - [0x035390, c, libultra/os/setthreadpri]
+      - [0x035470, c, libultra/os/getthreadpri]
+      - [0x035490, c, libultra/io/viswapbuf]
+      - [0x0354E0, c, libultra/gu/mtxxfmf]
+      - [0x035580, c, libultra/gu/mtxcatf]
+      - [0x0356F0, c, libultra/io/epirawdma]
+      - [0x0358D0, c, libultra/io/sptaskyielded]
+      - [0x035950, c, libultra/os/gettime]
+      - [0x0359E0, c, libultra/os/timerintr]
+      - [0x035DE0, c, libultra/os/setglobalintmask]
+      - [0x035E30, c, libultra/io/aisetfreq]
+      - [0x035F80, c, libultra/gu/normalize]
+      - [0x036010, hasm, libultra/os/setcompare]
+      - [0x036020, c, libultra/os/getactivequeue]
+      - [0x036030, hasm, libultra/libc/bcopy]
+      - [0x036340, c, libultra/audio/alCopy]
+      - [0x0363C0, c, libultra/os/resetglobalintmask]
+      - [0x036420, hasm, libultra/os/interrupt]
+      - [0x036460, c, libultra/io/vi]
+      - [0x0365A0, c, libultra/io/viswapcontext]
+      - [0x0368A0, c, libultra/io/pigetcmdq]
+      - [0x0368D0, c, libultra/gu/cosf]
+      - [0x036A40, c, libultra/os/settime]
+      - [0x036A70, c, libultra/io/visetevent]
+      - [0x036AE0, c, libultra/io/cartrominit]
+      - [0x036CC0, c, libultra/io/pfsselectbank]
+      - [0x036D40, hasm, libultra/os/setfpccsr]
+      - [0x036D50, c, libultra/io/epirawread]
+      - [0x036EB0, hasm, libultra/os/maptlbrdb]
+      - [0x036F10, c, libultra/os/yieldthread]
+      - [0x036F60, c, libultra/audio/cents2ratio]
+      - [0x036FB0, c, libultra/io/contramwrite]
+      - [0x037200, c, libultra/io/pfsgetstatus]
+      - [0x037430, c, libultra/io/contpfs]
+      - [0x037FB0, hasm, libultra/libc/bcmp]
+      - [0x0380D0, c, libultra/io/contramread]
+      - [0x038300, c, libultra/io/crc]
+      - [0x038470, c, libultra/io/pfsisplug]
+      - [0x0387B0, c, libultra/io/epirawwrite]
+      - [0x038910, c, libultra/os/settimer]
+      - [0x0389F0, c, libultra/libc/xldtob]
+      - [0x0394B0, c, libultra/libc/ldiv]
+      - [0x039640, c, libultra/libc/xlitob]
+      - [0x0398E0, c, libultra/io/sirawwrite]
+      - [0x039930, c, libultra/io/dpsetnextbuf]
+      - [0x0399E0, c, libultra/io/dp]
+      - [0x039A10, c, libultra/io/spsetstat]
+      - [0x039A20, c, libultra/io/spgetstat]
+      - [0x039A30, pad, padding_39A30]
+      - [0x039A40, c, libultra/io/vimgr]
+      - [0x039D50, c, libultra/io/vigetcurrcontext]
+      - [0x039D60, hasm, libultra/os/writebackdcacheall]
+      - [0x039D90, c, libultra/os/startthread]
+      - [0x039EE0, c, libultra/io/visetyscale]
+      - [0x039F40, c, libultra/libc/llcvt]
+      - [0x03A150, c, libultra/io/aisetnextbuf]
+      - [0x03A200, c, libultra/io/ai]
+      - [0x03A230, c, libultra/io/vigetcurrframebuf]
+      - [0x03A270, c, libultra/io/spsetpc]
+      - [0x03A2B0, hasm, libultra/os/setwatchlo]
+      - [0x03A2C0, textbin, rsp/n_aspmain]
+      - [0x03AF20, textbin, rsp/gspF3DEX2_fifo] # F3DEX2 fifo 2.04H .code (includes 0x200 overlay tail formerly split as unk_3C0B0)
+      - [0x03C2B0, .data, sys/main]
+      - [0x03C2E0, .data, sys/taskman]
+      - [0x03C350, .data, sys/rdp]
+      - [0x03C470, .data, sys/objman]
+      - [0x03C530, .data, sys/objdisplay]
+      - [0x03C540, .data, sys/utils]
+      - [0x03C550, .data, sys/sintable]
+      - [0x03D550, .data, sys/audio]
+      - [0x03D7B0, .data, sys/debug]
+      - [0x03DC70, .data, libultra/sp/sprite]
+      - [0x03DC80, .data, libultra/n_audio/n_env]
+      - [0x03DF30, .data, libultra/vimodes/vimodepallan1] # osViModePalLan1
+      - [0x03DF80, .data, libultra/os/exceptasm]
+      - [0x03DFB0, .data, libultra/os/thread]
+      - [0x03DFD0, .data, libultra/io/siacs]
+      - [0x03DFE0, .data, libultra/io/controller]
+      - [0x03DFF0, .data, libultra/os/initialize]
+      - [0x03E010, .data, libultra/io/pimgr]
+      - [0x03E040, .data, libultra/io/piacs]
+      - [0x03E050, .data, libultra/libc/xprintf]
+      - [0x03E0A0, .data, libultra/os/timerintr]
+      - [0x03E0B0, .data, libultra/vimodes/vimodentsclan1] # osViModeNtscLan1
+      - [0x03E100, .data, libultra/vimodes/vimodempallan1] # osViModeMpalLan1
+      - [0x03E150, .data, libultra/io/vi]
+      - [0x03E1C0, .data, libultra/io/cartrominit]
+      - [0x03E1D0, .data, libultra/io/contpfs]
+      - [0x03E1E0, .data, libultra/io/contramread]
+      - [0x03E1F0, .data, libultra/libc/xlitob]
+      - [0x03E220, .data, libultra/io/vimgr]
+      - [0x03E240, .data, libultra/io/aisetnextbuf]
+      - [0x03E250, .rodata, sys/main]
+      - [0x03E270, .rodata, sys/scheduler]
+      - [0x03E2D0, .rodata, sys/controller]
+      - [0x03E2F0, .rodata, sys/taskman]
+      - [0x03E510, .rodata, sys/malloc]
+      - [0x03E530, .rodata, sys/objman]
+      - [0x03E980, .rodata, sys/objscript]
+      - [0x03E9A0, .rodata, sys/objhelper]
+      - [0x03E9D0, .rodata, sys/objanim]
+      - [0x03ED10, .rodata, sys/objdisplay]
+      - [0x03EF50, .rodata, sys/utils]
+      - [0x03EFA0, .rodata, sys/matrix]
+      - [0x03EFF0, .rodata, sys/interp]
+      - [0x03F010, .rodata, sys/audio]
+      - [0x03F020, .rodata, sys/debug]
+      - [0x03F460, .rodata, libultra/sp/sprite]
+      - [0x03F470, .rodata, libultra/n_audio/n_env]
+      - [0x03FAA0, .rodata, libultra/n_audio/n_seqplayer]
+      - [0x03FCE0, .rodata, libultra/os/setintmask]
+      - [0x03FD60, .rodata, libultra/gu/sinf]
+      - [0x03FDB0, .rodata, libultra/os/exceptasm]
+      - [0x03FE00, .rodata, libultra/io/devmgr]
+      - [0x03FE20, .rodata, libultra/libc/xprintf]
+      - [0x03FF20, .rodata, libultra/gu/cosf]
+      - [0x03FF70, .rodata, libultra/gu/libm_vals]
+      - [0x03FF80, .rodata, libultra/audio/cents2ratio]
+      - [0x03FF90, .rodata, libultra/libc/xldtob]
+      - [0x03FFF0, .rodata, libultra/libc/llcvt]
+      - { start: 0x040000, type: databin, name: rsp/n_aspmain,      linker_section_order: .rodata }
+      - { start: 0x0402B0, type: databin, name: rsp/gspF3DEX2_fifo, linker_section_order: .rodata }
+      - { start: 0x0406D0, type: .bss, name: sys/main,                 vram: 0x8003FAD0 }
+      - { start: 0x045AC0, type: .bss, name: sys/scheduler,            vram: 0x80044EC0 }
+      - { start: 0x045C40, type: .bss, name: sys/dma,                  vram: 0x80045040 }
+      - { start: 0x045CF0, type: .bss, name: sys/controller,           vram: 0x800450F0 }
+      - { start: 0x046070, type: .bss, name: sys/maindevice,           vram: 0x80045470 }
+      - { start: 0x046080, type: .bss, name: sys/taskman,              vram: 0x80045480 }
+      - { start: 0x047270, type: .bss, name: sys/video,                vram: 0x80046670 }
+      - { start: 0x0472A0, type: .bss, name: sys/rdp,                  vram: 0x800466A0 }
+      - { start: 0x0472B0, type: .bss, name: sys/objman,               vram: 0x800466B0 }
+      - { start: 0x047BA0, type: .bss, name: sys/objdisplay,           vram: 0x80046FA0 }
+      - { start: 0x047ED0, type: .bss, name: sys/audio,                vram: 0x800472D0 }
+      - { start: 0x09E600, type: .bss, name: sys/debug,                vram: 0x8009DA00 }
+      - { start: 0x09F9C0, type: .bss, name: libultra/sp/sprite,       vram: 0x8009EDC0 }
+      - { start: 0x09F9D0, type: .bss, name: libultra/n_audio/n_env,   vram: 0x8009EDD0 }
+      - { start: 0x09FA40, type: .bss, name: libultra/io/sptask,       vram: 0x8009EE40 }
+      - { start: 0x09FA80, type: .bss, name: libultra/io/motor,        vram: 0x8009EE80 }
+      - { start: 0x09FB80, type: .bss, name: libultra/io/siacs,        vram: 0x8009EF80 }
+      - { start: 0x09FBA0, type: .bss, name: libultra/io/controller,   vram: 0x8009EFA0 }
+      - { start: 0x09FC30, type: .bss, name: libultra/os/initialize,   vram: 0x8009F030 }
+      - { start: 0x09FC40, type: .bss, name: libultra/os/threadsave,   vram: 0x8009F040 }
+      - { start: 0x09FDF0, type: .bss, name: libultra/io/pimgr,        vram: 0x8009F1F0 }
+      - { start: 0x0A10B0, type: .bss, name: libultra/io/piacs,        vram: 0x800A04B0 }
+      - { start: 0x0A10D0, type: .bss, name: libultra/os/seteventmesg, vram: 0x800A04D0 }
+      - { start: 0x0A1150, type: .bss, name: libultra/os/timerintr,    vram: 0x800A0550 }
+      - { start: 0x0A1190, type: .bss, name: libultra/io/cartrominit,  vram: 0x800A0590 }
+      - { start: 0x0A1210, type: .bss, name: libultra/io/contpfs,      vram: 0x800A0610 }
+      - { start: 0x0A1310, type: .bss, name: libultra/io/pfsisplug,    vram: 0x800A0710 }
+      - { start: 0x0A1350, type: .bss, name: libultra/io/vimgr,        vram: 0x800A0750 }
+
+  - name: scmanager
+    type: code
+    start: 0x0406D0
+    vram: 0x800A1980
+    subsegments:
+      - [0x0406D0, c, sc/scmanager]
+      - [0x041DC0, .data, sc/scmanager]
+      - [0x042F30, .rodata, sc/scmanager]
+      - { start: auto, type: .bss, name: sc/scmanager }
+
+  - name: zbuffer
+    exclusive_ram_id: zbuffers
+    type: code
+    follows_vram: scmanager
+    subsegments:
+    - { start: auto, type: .bss, name: sys/zbuffer }
+
+  - name: ovl0
+    type: code
+    start: 0x043220
+    vram: 0x800C7840
+    follows_vram: zbuffer
+    subsegments:
+    # ovl0 text
+      - [0x043220, c, lb/lbcommon]
+      - [0x049000, c, lb/lbreloc]
+      - [0x049A00, pad, pad0x049A00]
+      - [0x049A20, c, lb/lbparticle]
+      - [0x04F860, c, lb/lbfade]
+      - [0x04FB10, c, lb/lbtransition]
+      - [0x04FF00, c, lb/lbbackup]
+
+    # ovl0 data
+      - [0x050680, .data, lb/lbcommon]
+      - [0x051730, .data, lb/lbparticle]
+      - [0x051740, .data, lb/lbtransition]
+
+    # ovl0 rodata
+      - [0x0517F0, .rodata, lb/lbcommon]
+      - [0x0518C0, .rodata, lb/lbreloc]
+      - [0x0519A0, .rodata, lb/lbparticle]
+      - [0x051C80, .rodata, lb/lbtransition]
+
+    # ovl0 bss
+      - { start: auto, type: .bss, name: lb/lbcommon }
+      - { start: auto, type: .bss, name: lb/lbreloc }
+      - { start: auto, type: .bss, name: lb/lbparticle}
+      - { start: auto, type: .bss, name: lb/lbfade }
+      - { start: auto, type: .bss, name: lb/lbtransition }
+
+  - name: ovl2
+    type: code
+    start: 0x051C90
+    vram: 0x800D6490
+    follows_vram: ovl0
+    exclusive_ram_id: overlay_800D6490
+    subsegments:
+    # ovl2 text
+      - [0x051C90, c, sc/sc1pmode/sc1pmanager]
+      - [0x0527E0, c, ft/ftmanager]
+      - [0x053FD0, c, ft/ftphysics]
+      - [0x054C80, c, ft/ftanimend]
+      - [0x054D10, c, mp/mpprocess]
+      - [0x059020, c, mp/mpcommon]
+      - [0x05A8E0, pad, pad0x05A8E0]
+      - [0x05A8F0, c, ft/ftmain]
+      - [0x0632C0, pad, pad0x0632C0]
+      - [0x0632D0, c, ft/ftparam]
+      - [0x067960, c, ft/ftanim]
+      - [0x068580, c, gm/gmcollision]
+      - [0x06C820, c, ft/ftdisplaymain]
+      - [0x06EEE0, c, ft/fthammer]
+      - [0x06F1F0, c, mp/mpcollision]
+      - [0x078370, c, ft/ftdisplaylights]
+      - [0x0784C0, c, ef/efdisplay]
+      - [0x078B00, c, ef/efmanager]
+      - [0x07FE20, c, gr/grwallpaper]
+      - [0x080590, c, gr/grdisplay]
+      - [0x080E00, c, gr/grcommonsetup]
+      - [0x080EC0, c, gr/grmainsetup]
+      - [0x080F60, c, gr/grmodelsetup]
+      - [0x0810D0, pad, pad0x0810D0]
+      - [0x0810E0, c, gr/grcommon/grpupupu]
+      - [0x081F30, c, gr/grcommon/grsector]
+      - [0x083820, c, gr/grcommon/grzebes]
+      - [0x083D50, c, gr/grcommon/gryoster]
+      - [0x0844D0, c, gr/grcommon/grinishie]
+      - [0x0854B0, c, gr/grcommon/grjungle]
+      - [0x085940, c, gr/grcommon/grhyrule]
+      - [0x0864D0, c, gr/grcommon/gryamabuki]
+      - [0x086B40, c, gr/grcommon/grcastle]
+      - [0x086CD0, c, gr/grbonus/grbonus3]
+      - [0x087010, c, gm/gmcamera]
+      - [0x089E90, c, if/ifcommon]
+      - [0x090630, c, gm/gmrumble]
+      - [0x091090, c, ef/efparticle]
+      - [0x091310, c, ft/ftkey]
+      - [0x0913F0, c, if/ifscreenflash]
+      - [0x091680, c, ef/efground]
+
+    # ovl2 data
+      - [0x0923D0, .data, gm/gmcommon]
+      - [0x0923F0, .data, sc/sc1pmode/sc1pmanager]
+      - [0x0925D0, .data, ft/ftdata]
+      - [0x0A4500, .data, ft/ftmain]
+      - [0x0A6FB0, .data, ft/ftparam]
+      - [0x0A7110, .data, ft/ftanim]
+      - [0x0A7130, .data, ft/ftdisplaymain]
+      - [0x0A7CE0, .data, mp/mpcollision]
+      - [0x0A8030, .data, ft/ftcommondata]
+      - [0x0A8290, .data, gm/gmcolscripts]
+      - [0x0A9680, .data, ef/efmanager]
+      - [0x0A9FC0, .data, gr/grwallpaper]
+      - [0x0AA000, .data, gr/grdisplay]
+      - [0x0AA040, .data, gr/grcommonsetup]
+      - [0x0AA070, .data, gr/grcommon/grpupupu]
+      - [0x0AA140, .data, gr/grcommon/grsector]
+      - [0x0AA260, .data, gr/grcommon/grzebes]
+      - [0x0AA320, .data, gr/grcommon/gryoster]
+      - [0x0AA330, .data, gr/grcommon/grinishie]
+      - [0x0AA350, .data, gr/grcommon/grjungle]
+      - [0x0AA360, .data, gr/grcommon/gryamabuki]
+      - [0x0AA370, .data, gm/gmcamera]
+      - [0x0AA3F0, .data, if/ifcommon]
+      - [0x0AA990, pad, pad0x0AA990]
+      - [0x0AA9A0, .data, gm/gmrumble]
+      - [0x0AAA40, .data, ef/efground]
+
+    # ovl2 read-only data
+      - [0x0AB250, .rodata, ft/ftmanager]
+      - [0x0AB300, .rodata, mp/mpcommon]
+      - [0x0AB380, .rodata, ft/ftmain]
+      - [0x0AB6A0, .rodata, ft/ftparam]
+      - [0x0AB900, .rodata, ft/ftanim]
+      - [0x0AB980, .rodata, gm/gmcollision]
+      - [0x0ABA60, .rodata, ft/ftdisplaymain]
+      - [0x0ABA70, .rodata, mp/mpcollision]
+      - [0x0AC110, .rodata, ft/ftdisplaylights]
+      - [0x0AC120, .rodata, ef/efmanager]
+      - [0x0AC230, .rodata, gr/grwallpaper]
+      - [0x0AC290, .rodata, gr/grcommon/grpupupu]
+      - [0x0AC2C0, .rodata, gr/grcommon/grsector]
+      - [0x0AC300, .rodata, gr/grcommon/gryoster]
+      - [0x0AC310, .rodata, gr/grcommon/grinishie]
+      - [0x0AC360, .rodata, gr/grcommon/grjungle]
+      - [0x0AC370, .rodata, gr/grcommon/grhyrule]
+      - [0x0AC3B0, .rodata, gr/grbonus/grbonus3]
+      - [0x0AC3D0, .rodata, gm/gmcamera]
+      - [0x0AC460, .rodata, if/ifcommon]
+      - [0x0AC4D0, .rodata, gm/gmrumble]
+      - [0x0AC510, .rodata, ef/efparticle]
+      - [0x0AC530, .rodata, ef/efground]
+
+    # ovl2 bss
+      - { start: auto, type: .bss, name: gm/gmcommon }
+      - { start: auto, type: .bss, name: sc/sc1pmode/sc1pmanager }
+      - { start: auto, type: .bss, name: ft/ftmanager }
+      - { start: auto, type: .bss, name: mp/mpprocess }
+      - { start: auto, type: .bss, name: mp/mpcommon }
+      - { start: auto, type: .bss, name: ft/ftchar/ftmario/ftmario }
+      - { start: auto, type: .bss, name: ft/ftchar/ftmmario/ftmmario }
+      - { start: auto, type: .bss, name: ft/ftchar/ftnmario/ftnmario }
+      - { start: auto, type: .bss, name: ft/ftchar/ftfox/ftfox }
+      - { start: auto, type: .bss, name: ft/ftchar/ftnfox/ftnfox }
+      - { start: auto, type: .bss, name: ft/ftchar/ftdonkey/ftdonkey }
+      - { start: auto, type: .bss, name: ft/ftchar/ftndonkey/ftndonkey }
+      - { start: auto, type: .bss, name: ft/ftchar/ftgdonkey/ftgdonkey }
+      - { start: auto, type: .bss, name: ft/ftchar/ftsamus/ftsamus }
+      - { start: auto, type: .bss, name: ft/ftchar/ftnsamus/ftnsamus }
+      - { start: auto, type: .bss, name: ft/ftchar/ftluigi/ftluigi }
+      - { start: auto, type: .bss, name: ft/ftchar/ftnluigi/ftnluigi }
+      - { start: auto, type: .bss, name: ft/ftchar/ftlink/ftlink }
+      - { start: auto, type: .bss, name: ft/ftchar/ftnlink/ftnlink }
+      - { start: auto, type: .bss, name: ft/ftchar/ftyoshi/ftyoshi }
+      - { start: auto, type: .bss, name: ft/ftchar/ftnyoshi/ftnyoshi }
+      - { start: auto, type: .bss, name: ft/ftchar/ftcaptain/ftcaptain }
+      - { start: auto, type: .bss, name: ft/ftchar/ftncaptain/ftncaptain }
+      - { start: auto, type: .bss, name: ft/ftchar/ftkirby/ftkirby }
+      - { start: auto, type: .bss, name: ft/ftchar/ftnkirby/ftnkirby }
+      - { start: auto, type: .bss, name: ft/ftchar/ftpikachu/ftpikachu }
+      - { start: auto, type: .bss, name: ft/ftchar/ftnpikachu/ftnpikachu }
+      - { start: auto, type: .bss, name: ft/ftchar/ftpurin/ftpurin }
+      - { start: auto, type: .bss, name: ft/ftchar/ftnpurin/ftnpurin }
+      - { start: auto, type: .bss, name: ft/ftchar/ftness/ftness }
+      - { start: auto, type: .bss, name: ft/ftchar/ftnness/ftnness }
+      - { start: auto, type: .bss, name: ft/ftchar/ftboss/ftboss }
+      - { start: auto, type: .bss, name: ft/ftmain }
+      - { start: auto, type: .bss, name: ft/ftdisplaymain }
+      - { start: auto, type: .bss, name: mp/mpcollision }
+      - { start: auto, type: .bss, name: ef/efmanager }
+      - { start: auto, type: .bss, name: gr/grwallpaper }
+      - { start: auto, type: .bss, name: gr/grcommonsetup }
+      - { start: auto, type: .bss, name: gm/gmcamera }
+      - { start: auto, type: .bss, name: if/ifcommon }
+      - { start: auto, type: .bss, name: gm/gmrumble }
+      - { start: auto, type: .bss, name: ef/efparticle }
+      - { start: auto, type: .bss, name: if/ifscreenflash }
+      - { start: auto, type: .bss, name: ef/efground }
+
+  - name: ovl3
+    type: code
+    start: 0x0AC540
+    vram: 0x80131B00
+    follows_vram: ovl2
+    exclusive_ram_id: overlay_80131B00
+    subsegments:
+    # ovl3 text
+      - [0x0AC540, c, ft/ftcomputer]
+      - [0x0B5850, c, ft/ftshadow]
+      - [0x0B66A0, c, ft/ftcommon/ftcommondead]
+      - [0x0B79A0, c, ft/ftcommon/ftcommonrebirth]
+      - [0x0B7FC0, c, ft/ftcommon/ftcommonsleep]
+      - [0x0B8370, c, ft/ftcommon/ftcommonentry]
+      - [0x0B8AB0, c, ft/ftcommon/ftcommonwait]
+      - [0x0B8D20, c, ft/ftcommon/ftcommonwalk]
+      - [0x0B90D0, c, ft/ftcommon/ftcommonturn]
+      - [0x0B9480, c, ft/ftcommon/ftcommondash]
+      - [0x0B9890, c, ft/ftcommon/ftcommonrun]
+      - [0x0B99F0, c, ft/ftcommon/ftcommonrunbrake]
+      - [0x0B9BB0, c, ft/ftcommon/ftcommonturnrun]
+      - [0x0B9CE0, c, ft/ftcommon/ftcommonkneebend]
+      - [0x0BA0A0, c, ft/ftcommon/ftcommonjump]
+      - [0x0BA3E0, c, ft/ftcommon/ftcommonfall]
+      - [0x0BA4D0, c, ft/ftcommon/ftcommonjumpaerial]
+      - [0x0BAD80, c, ft/ftcommon/ftcommondamage]
+      - [0x0BC500, c, ft/ftcommon/ftcommonwalldamage]
+      - [0x0BC7A0, c, ft/ftcommon/ftcommonpass]
+      - [0x0BCA30, c, ft/ftcommon/ftcommondokan]
+      - [0x0BD290, c, ft/ftcommon/ftcommonottotto]
+      - [0x0BD5B0, c, ft/ftcommon/ftcommonlanding]
+      - [0x0BD8B0, c, ft/ftcommon/ftcommonsquat]
+      - [0x0BDFA0, c, ft/ftcommon/ftcommondamagefall]
+      - [0x0BE170, c, ft/ftcommon/ftcommonfallspecial]
+      - [0x0BE410, c, ft/ftcommon/ftcommontwister]
+      - [0x0BE850, c, ft/ftcommon/ftcommontarucann]
+      - [0x0BEC00, c, ft/ftcommon/ftcommonstopceil]
+      - [0x0BEC60, c, ft/ftcommon/ftcommondownwaitbounce]
+      - [0x0BEF70, c, ft/ftcommon/ftcommondownstand]
+      - [0x0BF0A0, c, ft/ftcommon/ftcommonpassive]
+      - [0x0BF140, c, ft/ftcommon/ftcommonpassivestand]
+      - [0x0BF220, c, ft/ftcommon/ftcommondownforwardback]
+      - [0x0BF350, c, ft/ftcommon/ftcommondownattack]
+      - [0x0BF450, c, ft/ftcommon/ftcommonrebound]
+      - [0x0BF570, c, ft/ftcommon/ftcommoncliffcatchwait]
+      - [0x0BF920, c, ft/ftcommon/ftcommoncliffclimb]
+      - [0x0C0060, c, ft/ftcommon/ftcommoncliffattack]
+      - [0x0C0220, c, ft/ftcommon/ftcommoncliffescape]
+      - [0x0C03D0, c, ft/ftcommon/ftcommonget]
+      - [0x0C0CE0, c, ft/ftcommon/ftcommonitemthrow]
+      - [0x0C1680, c, ft/ftcommon/ftcommonitemswing]
+      - [0x0C19F0, c, ft/ftcommon/ftcommonitemshoot]
+      - [0x0C23E0, c, ft/ftcommon/ftcommonhammerwalk]
+      - [0x0C24B0, c, ft/ftcommon/ftcommonhammerturn]
+      - [0x0C2620, c, ft/ftcommon/ftcommonhammerfall]
+      - [0x0C2900, c, ft/ftcommon/ftcommonhammerkneebend]
+      - [0x0C2A90, c, ft/ftcommon/ftcommonhammerlanding]
+      - [0x0C2B60, c, ft/ftcommon/ftcommonguard1]
+      - [0x0C3870, c, ft/ftcommon/ftcommonguard2]
+      - [0x0C3C10, c, ft/ftcommon/ftcommonescape]
+      - [0x0C3E80, c, ft/ftcommon/ftcommonshieldbreakfly]
+      - [0x0C40C0, c, ft/ftcommon/ftcommonshieldbreakdown]
+      - [0x0C4160, c, ft/ftcommon/ftcommonshieldbreakfall]
+      - [0x0C41E0, c, ft/ftcommon/ftcommonshieldbreakstand]
+      - [0x0C4250, c, ft/ftcommon/ftcommonfurafura]
+      - [0x0C4380, c, ft/ftcommon/ftcommonfurasleep]
+      - [0x0C4450, c, ft/ftcommon/ftcommoncatch1]
+      - [0x0C4900, c, ft/ftcommon/ftcommoncatch2]
+      - [0x0C4B00, c, ft/ftcommon/ftcommonthrow]
+      - [0x0C4E70, c, ft/ftchar/ftkirby/ftkirbythrowf]
+      - [0x0C5030, c, ft/ftcommon/ftcommoncapturepulled]
+      - [0x0C53C0, c, ft/ftcommon/ftcommoncapturewait]
+      - [0x0C5530, c, ft/ftcommon/ftcommonthrown1]
+      - [0x0C57F0, c, ft/ftcommon/ftcommonthrown2]
+      - [0x0C6130, pad, pad0x0C6130]
+      - [0x0C6140, c, ft/ftcommon/ftcommoncapturekirby]
+      - [0x0C71B0, c, ft/ftcommon/ftcommoncaptureyoshi]
+      - [0x0C7B30, c, ft/ftcommon/ftcommoncapturecaptain]
+      - [0x0C7E40, c, ft/ftchar/ftdonkey/ftdonkeythrowfwait]
+      - [0x0C7F70, c, ft/ftchar/ftdonkey/ftdonkeythrowfwalk]
+      - [0x0C8180, c, ft/ftchar/ftdonkey/ftdonkeythrowfturn]
+      - [0x0C8290, c, ft/ftchar/ftdonkey/ftdonkeythrowfkneebend]
+      - [0x0C8440, c, ft/ftchar/ftdonkey/ftdonkeythrowffall]
+      - [0x0C8690, c, ft/ftchar/ftdonkey/ftdonkeythrowflanding]
+      - [0x0C8740, c, ft/ftchar/ftdonkey/ftdonkeythrowff]
+      - [0x0C8A90, c, ft/ftchar/ftdonkey/ftdonkeythrowfdamage]
+      - [0x0C8C10, c, ft/ftcommon/ftcommoncapture]
+      - [0x0C90E0, c, ft/ftcommon/ftcommonappeal]
+      - [0x0C91F0, c, ft/ftcommon/ftcommonattack1]
+      - [0x0C9B10, c, ft/ftcommon/ftcommonattack100]
+      - [0x0CA0B0, c, ft/ftcommon/ftcommonattackdash]
+      - [0x0CA1A0, c, ft/ftcommon/ftcommonattacks3]
+      - [0x0CA490, c, ft/ftcommon/ftcommonattackhi3]
+      - [0x0CA630, c, ft/ftcommon/ftcommonattacklw3]
+      - [0x0CA880, c, ft/ftcommon/ftcommonattacks4]
+      - [0x0CB030, c, ft/ftcommon/ftcommonattackhi4]
+      - [0x0CB1A0, c, ft/ftcommon/ftcommonattacklw4]
+      - [0x0CB320, c, ft/ftcommon/ftcommonattackair]
+      - [0x0CB8C0, c, ft/ftcommon/ftcommonlandingair]
+      - [0x0CB910, c, ft/ftcommon/ftcommonspecialair]
+      - [0x0CBAA0, c, ft/ftcommon/ftcommonspecialn]
+      - [0x0CBBA0, c, ft/ftcommon/ftcommonspecialhi]
+      - [0x0CBC20, c, ft/ftcommon/ftcommonspeciallw]
+      - [0x0CBCA0, c, ft/ftchar/ftpurin/ftpurinspecialn]
+      - [0x0CBF90, c, ft/ftchar/ftpurin/ftpurinspecialhi]
+      - [0x0CC150, c, ft/ftchar/ftpurin/ftpurinspeciallw]
+      - [0x0CC2A0, c, ft/ftchar/ftkirby/ftkirbycopypurinspecialn]
+      - [0x0CC590, c, ft/ftchar/ftpikachu/ftpikachuspecialn]
+      - [0x0CC7F0, c, ft/ftchar/ftpikachu/ftpikachuspeciallw]
+      - [0x0CD1F0, c, ft/ftchar/ftpikachu/ftpikachuspecialhi]
+      - [0x0CE100, c, ft/ftchar/ftkirby/ftkirbycopypikachuspecialn]
+      - [0x0CE390, c, ft/ftchar/ftness/ftnessspecialn]
+      - [0x0CE690, c, ft/ftchar/ftness/ftnessspecialhi]
+      - [0x0CFC20, c, ft/ftchar/ftness/ftnessspeciallw]
+      - [0x0D0580, c, ft/ftchar/ftkirby/ftkirbycopynessspecialn]
+      - [0x0D0880, c, ft/ftchar/ftmario/ftmariospecialn]
+      - [0x0D0AE0, c, ft/ftchar/ftmario/ftmariospecialhi]
+      - [0x0D0F30, c, ft/ftchar/ftmario/ftmariospeciallw]
+      - [0x0D13F0, c, ft/ftchar/ftkirby/ftkirbycopymariospecialn]
+      - [0x0D16F0, c, ft/ftchar/ftkirby/ftkirbycopyfoxspecialn]
+      - [0x0D18A0, c, ft/ftchar/ftkirby/ftkirbycopysamusspecialn]
+      - [0x0D21E0, c, ft/ftchar/ftkirby/ftkirbycopydonkeyspecialn]
+      - [0x0D29A0, c, ft/ftchar/ftboss/ftbosscommon]
+      - [0x0D3190, c, ft/ftchar/ftboss/ftbossdefault]
+      - [0x0D31F0, c, ft/ftchar/ftboss/ftbosswait]
+      - [0x0D3BE0, c, ft/ftchar/ftboss/ftbossmove]
+      - [0x0D3DC0, c, ft/ftchar/ftboss/ftbosshippataku]
+      - [0x0D3E20, c, ft/ftchar/ftboss/ftbossharau]
+      - [0x0D3F40, c, ft/ftchar/ftboss/ftbossokuhikouki1]
+      - [0x0D3FE0, c, ft/ftchar/ftboss/ftbossokuhikouki2]
+      - [0x0D41C0, c, ft/ftchar/ftboss/ftbossokuhikouki3]
+      - [0x0D4270, c, ft/ftchar/ftboss/ftbosswalk]
+      - [0x0D4300, c, ft/ftchar/ftboss/ftbosswalkloop]
+      - [0x0D4470, c, ft/ftchar/ftboss/ftbosswalkwait]
+      - [0x0D44E0, c, ft/ftchar/ftboss/ftbosswalkshoot]
+      - [0x0D4530, pad, pad0x0D4530]
+      - [0x0D4540, c, ft/ftchar/ftboss/ftbossgootsubusuup]
+      - [0x0D4610, c, ft/ftchar/ftboss/ftbossgootsubusuwait]
+      - [0x0D47F0, c, ft/ftchar/ftboss/ftbossgootsubusuend]
+      - [0x0D4860, c, ft/ftchar/ftboss/ftbossgootsubusudown]
+      - [0x0D48E0, c, ft/ftchar/ftboss/ftbosstsutsuku1]
+      - [0x0D4930, c, ft/ftchar/ftboss/ftbosstsutsuku3]
+      - [0x0D4980, c, ft/ftchar/ftboss/ftbosstsutsuku2]
+      - [0x0D4B00, c, ft/ftchar/ftboss/ftbossdrill]
+      - [0x0D4D30, c, ft/ftchar/ftboss/ftbossokukouki]
+      - [0x0D4D90, c, ft/ftchar/ftboss/ftbossyubideppou1]
+      - [0x0D4E00, c, ft/ftchar/ftboss/ftbossyubideppou3]
+      - [0x0D5040, c, ft/ftchar/ftboss/ftbossyubideppou2]
+      - [0x0D51E0, c, ft/ftchar/ftboss/ftbossokupunch1]
+      - [0x0D5280, c, ft/ftchar/ftboss/ftbossokupunch2]
+      - [0x0D5450, c, ft/ftchar/ftboss/ftbossokupunch3]
+      - [0x0D54F0, c, ft/ftchar/ftboss/ftbossokutsubushi]
+      - [0x0D56F0, c, ft/ftchar/ftboss/ftbossokutsubushistart]
+      - [0x0D5790, c, ft/ftchar/ftboss/ftbossdeadleft]
+      - [0x0D5800, c, ft/ftchar/ftboss/ftbossdeadcenter]
+      - [0x0D58C0, c, ft/ftchar/ftboss/ftbossdeadright]
+      - [0x0D5920, c, ft/ftchar/ftboss/ftbossappear]
+      - [0x0D5950, c, ft/ftchar/ftdonkey/ftdonkeyspecialn]
+      - [0x0D6110, c, ft/ftchar/ftdonkey/ftdonkeyspecialhi]
+      - [0x0D6430, c, ft/ftchar/ftdonkey/ftdonkeyspeciallw]
+      - [0x0D6590, c, ft/ftchar/ftfox/ftfoxspecialn]
+      - [0x0D6740, c, ft/ftchar/ftfox/ftfoxspecialhi]
+      - [0x0D75C0, c, ft/ftchar/ftfox/ftfoxspeciallw]
+      - [0x0D7D40, c, ft/ftchar/ftsamus/ftsamusspecialn]
+      - [0x0D8680, c, ft/ftchar/ftsamus/ftsamusspecialhi]
+      - [0x0D8940, c, ft/ftchar/ftsamus/ftsamusspeciallw]
+      - [0x0D8D50, c, ft/ftchar/ftyoshi/ftyoshispecialn]
+      - [0x0D93C0, c, ft/ftchar/ftyoshi/ftyoshispecialhi]
+      - [0x0D9800, c, ft/ftchar/ftyoshi/ftyoshispeciallw]
+      - [0x0D9BC0, c, ft/ftchar/ftkirby/ftkirbycopyyoshispecialn]
+      - [0x0DA230, c, ft/ftchar/ftcaptain/ftcaptainspecialn]
+      - [0x0DA670, c, ft/ftchar/ftcaptain/ftcaptainspeciallw]
+      - [0x0DACC0, c, ft/ftchar/ftcaptain/ftcaptainspecialhi]
+      - [0x0DB250, c, ft/ftchar/ftkirby/ftkirbycopycaptainspecialn]
+      - [0x0DB5F0, c, ft/ftchar/ftkirby/ftkirbyspecialhi]
+      - [0x0DBDA0, c, ft/ftchar/ftkirby/ftkirbyspeciallw]
+      - [0x0DC6E0, c, ft/ftchar/ftkirby/ftkirbyspecialn]
+      - [0x0DE110, c, ft/ftchar/ftlink/ftlinkspecialn]
+      - [0x0DE580, c, ft/ftchar/ftlink/ftlinkspecialhi]
+      - [0x0DEE10, c, ft/ftchar/ftlink/ftlinkspeciallw]
+      - [0x0DF090, c, ft/ftchar/ftkirby/ftkirbycopylinkspecialn]
+      - [0x0DF4F0, c, ft/ftpublic]
+      - [0x0DFEF0, c, wp/wpmanager]
+      - [0x0E0910, c, wp/wpprocess]
+      - [0x0E18C0, c, wp/wpdisplay]
+      - [0x0E22C0, c, wp/wpmap]
+      - [0x0E28F0, c, wp/wpmain]
+      - [0x0E2F80, c, wp/wpmario/wpmariofireball]
+      - [0x0E3310, c, wp/wpfox/wpfoxblaster]
+      - [0x0E3540, c, wp/wpsamus/wpsamuschargeshot]
+      - [0x0E3940, c, wp/wpsamus/wpsamusbomb]
+      - [0x0E3DD0, c, wp/wppikachu/wppikachuthunderjolt]
+      - [0x0E5080, c, wp/wppikachu/wppikachuthunder]
+      - [0x0E5480, c, wp/wpness/wpnesspkfire]
+      - [0x0E5770, c, wp/wpness/wpnesspkthunder]
+      - [0x0E6690, c, wp/wpkirby/wpkirbycutter]
+      - [0x0E6990, c, wp/wpyoshi/wpyoshieggthrow]
+      - [0x0E6F80, c, wp/wpyoshi/wpyoshistar]
+      - [0x0E73E0, c, wp/wplink/wplinkspinattack]
+      - [0x0E7680, pad, pad0x0E7680]
+      - [0x0E7690, c, wp/wplink/wplinkboomerang]
+      - [0x0E8640, c, wp/wpboss/wpbossbullet]
+      - [0x0E88E0, c, it/itmanager]
+      - [0x0E9CC0, c, it/itprocess]
+      - [0x0EBDF0, c, it/itvisuals]
+      - [0x0EBE50, c, it/itdisplay]
+      - [0x0ECD50, c, it/itmain]
+      - [0x0EDEC0, c, it/itmap]
+      - [0x0EE9D0, c, it/itcommon/itcapsule]
+      - [0x0EEF00, c, it/itcommon/ittomato]
+      - [0x0EF130, c, it/itcommon/itheart]
+      - [0x0EF370, c, it/itcommon/itstar]
+      - [0x0EF590, c, it/itcommon/itsword]
+      - [0x0EF870, c, it/itcommon/itbat]
+      - [0x0EFB80, c, it/itcommon/itharisen]
+      - [0x0EFF30, c, it/itcommon/itlgun]
+      - [0x0F0560, c, it/itcommon/itfflower]
+      - [0x0F0B50, c, it/itcommon/ithammer]
+      - [0x0F0E90, c, it/itcommon/itmsbomb]
+      - [0x0F1AA0, c, it/itcommon/itbombhei]
+      - [0x0F28C0, c, it/itcommon/itstarrod]
+      - [0x0F3020, c, it/itcommon/itgshell]
+      - [0x0F3B60, c, it/itcommon/itbox]
+      - [0x0F45E0, c, it/itcommon/ittaru]
+      - [0x0F4DE0, c, it/itcommon/itrshell]
+      - [0x0F5E60, pad, pad0x0F5E60]
+      - [0x0F5E70, c, it/itcommon/itnbumper]
+      - [0x0F6AD0, c, it/itground/itpowerblock]
+      - [0x0F6C80, c, it/itground/itglucky]
+      - [0x0F70D0, c, it/itcommon/itmball]
+      - [0x0F7960, c, it/itground/itpakkun]
+      - [0x0F7FD0, c, it/itground/itgbumper]
+      - [0x0F8180, c, it/itmonster/itiwark]
+      - [0x0F8AB0, c, it/itmonster/itkabigon]
+      - [0x0F91E0, c, it/itmonster/ittosakinto]
+      - [0x0F9620, c, it/itmonster/itmew]
+      - [0x0F98F0, c, it/itmonster/itnyars]
+      - [0x0F9EB0, c, it/itmonster/itlizardon]
+      - [0x0FA800, c, it/itmonster/itspear]
+      - [0x0FB070, c, it/itmonster/itkamex]
+      - [0x0FBA00, c, it/itmonster/itmlucky]
+      - [0x0FC000, c, it/itcommon/itegg]
+      - [0x0FC660, c, it/itmonster/itstarmie]
+      - [0x0FD070, c, it/itmonster/itsawamura]
+      - [0x0FD6C0, c, it/itmonster/itdogas]
+      - [0x0FDC50, c, it/itmonster/itpippi]
+      - [0x0FE1E0, c, it/itground/itmarumine]
+      - [0x0FE550, c, it/itground/itporygon]
+      - [0x0FE7E0, c, it/itground/ithitokage]
+      - [0x0FEE80, c, it/itground/itfushigibana]
+      - [0x0FF4B0, c, it/itground/ittarubomb]
+      - [0x0FFD90, c, it/itfighter/itnesspkfire]
+      - [0x100400, c, it/itfighter/itlinkbomb]
+
+    # ovl3 data
+      - [0x1010A0, .data, ft/ftcomputer]
+      - [0x102E50, .data, ft/ftshadow]
+      - [0x102ED0, .data, ft/ftcommon/ftcommonrebirth]
+      - [0x102EE0, .data, ft/ftcommon/ftcommonentry]
+      - [0x102FC0, .data, ft/ftcommon/ftcommonjumpaerial]
+      - [0x102FE0, .data, ft/ftcommon/ftcommondamage]
+      - [0x103040, .data, ft/ftcommon/ftcommonitemswing]
+      - [0x1030A0, .data, ft/ftcommon/ftcommonitemshoot]
+      - [0x103100, .data, ft/ftcommon/ftcommonguard1]
+      - [0x103110, .data, ft/ftcommon/ftcommoncatch2]
+      - [0x103120, .data, ft/ftcommon/ftcommonthrown2]
+      - [0x103140, .data, ft/ftcommon/ftcommoncapturekirby]
+      - [0x103160, .data, ft/ftcommon/ftcommoncaptureyoshi]
+      - [0x103460, .data, ft/ftcommon/ftcommoncapturecaptain]
+      - [0x103470, .data, ft/ftcommon/ftcommoncapture]
+      - [0x103490, .data, ft/ftcommon/ftcommonspecialair]
+      - [0x103640, .data, ft/ftcommon/ftcommonspecialn]
+      - [0x103720, .data, ft/ftcommon/ftcommonspecialhi]
+      - [0x103790, .data, ft/ftcommon/ftcommonspeciallw]
+      - [0x103800, .data, ft/ftchar/ftboss/ftbosswait]
+      - [0x103840, .data, ft/ftchar/ftkirby/ftkirbyspecialn]
+      - [0x103850, .data, wp/wpdisplay]
+      - [0x103870, .data, wp/wpmario/wpmariofireball]
+      - [0x103910, .data, wp/wpfox/wpfoxblaster]
+      - [0x103950, .data, wp/wpsamus/wpsamuschargeshot]
+      - [0x103AB0, .data, wp/wpsamus/wpsamusbomb]
+      - [0x103AF0, .data, wp/wppikachu/wppikachuthunderjolt]
+      - [0x103B60, .data, wp/wppikachu/wppikachuthunder]
+      - [0x103BD0, .data, wp/wpness/wpnesspkfire]
+      - [0x103C10, .data, wp/wpness/wpnesspkthunder]
+      - [0x103CE0, .data, wp/wpkirby/wpkirbycutter]
+      - [0x103D20, .data, wp/wpyoshi/wpyoshieggthrow]
+      - [0x103D60, .data, wp/wpyoshi/wpyoshistar]
+      - [0x103DA0, .data, wp/wplink/wplinkspinattack]
+      - [0x103DE0, .data, wp/wplink/wplinkboomerang]
+      - [0x103E20, .data, wp/wpboss/wpbossbullet]
+      - [0x103E90, .data, it/itmanager]
+      - [0x103F60, .data, it/itmain]
+      - [0x104070, .data, it/itcommon/itcapsule]
+      - [0x104170, .data, it/itcommon/ittomato]
+      - [0x104210, .data, it/itcommon/itheart]
+      - [0x1042B0, .data, it/itcommon/itstar]
+      - [0x1042F0, .data, it/itcommon/itsword]
+      - [0x1043D0, .data, it/itcommon/itbat]
+      - [0x1044B0, .data, it/itcommon/itharisen]
+      - [0x104590, .data, it/itcommon/itlgun]
+      - [0x1046A0, .data, it/itcommon/itfflower]
+      - [0x1047B0, .data, it/itcommon/ithammer]
+      - [0x104890, .data, it/itcommon/itmsbomb]
+      - [0x1049D0, .data, it/itcommon/itbombhei]
+      - [0x104B30, .data, it/itcommon/itstarrod]
+      - [0x104C40, .data, it/itcommon/itgshell]
+      - [0x104D60, .data, it/itcommon/itbox]
+      - [0x104E90, .data, it/itcommon/ittaru]
+      - [0x104FB0, .data, it/itcommon/itrshell]
+      - [0x1050D0, .data, it/itcommon/itnbumper]
+      - [0x105210, .data, it/itground/itpowerblock]
+      - [0x105270, .data, it/itground/itglucky]
+      - [0x1052D0, .data, it/itcommon/itmball]
+      - [0x1053F0, .data, it/itground/itpakkun]
+      - [0x105490, .data, it/itground/itgbumper]
+      - [0x1054D0, .data, it/itmonster/itiwark]
+      - [0x105580, .data, it/itmonster/itkabigon]
+      - [0x105600, .data, it/itmonster/ittosakinto]
+      - [0x105680, .data, it/itmonster/itmew]
+      - [0x1056E0, .data, it/itmonster/itnyars]
+      - [0x105770, .data, it/itmonster/itlizardon]
+      - [0x105840, .data, it/itmonster/itspear]
+      - [0x105920, .data, it/itmonster/itkamex]
+      - [0x1059F0, .data, it/itmonster/itmlucky]
+      - [0x105AB0, .data, it/itcommon/itegg]
+      - [0x105BB0, .data, it/itmonster/itstarmie]
+      - [0x105C60, .data, it/itmonster/itsawamura]
+      - [0x105D00, .data, it/itmonster/itdogas]
+      - [0x105DB0, .data, it/itmonster/itpippi]
+      - [0x105E40, .data, it/itground/itmarumine]
+      - [0x105EA0, .data, it/itground/itporygon]
+      - [0x105EE0, .data, it/itground/ithitokage]
+      - [0x105F70, .data, it/itground/itfushigibana]
+      - [0x105FE0, .data, it/itground/ittarubomb]
+      - [0x106080, .data, it/itfighter/itnesspkfire]
+      - [0x106100, .data, it/itfighter/itlinkbomb]
+
+    # ovl3 read-only data
+      - [0x106200, .rodata, ft/ftcomputer]
+      - [0x106A70, .rodata, ft/ftcommon/ftcommondead]
+      - [0x106A90, .rodata, ft/ftcommon/ftcommonrebirth]
+      - [0x106AA0, .rodata, ft/ftcommon/ftcommonentry]
+      - [0x106B10, .rodata, ft/ftcommon/ftcommonjumpaerial]
+      - [0x106B20, .rodata, ft/ftcommon/ftcommondamage]
+      - [0x106B60, .rodata, ft/ftcommon/ftcommondokan]
+      - [0x106B70, .rodata, ft/ftcommon/ftcommontwister]
+      - [0x106B80, .rodata, ft/ftcommon/ftcommontarucann]
+      - [0x106B90, .rodata, ft/ftcommon/ftcommondownwaitbounce]
+      - [0x106BA0, .rodata, ft/ftcommon/ftcommondownstand]
+      - [0x106BB0, .rodata, ft/ftcommon/ftcommondownforwardback]
+      - [0x106BC0, .rodata, ft/ftcommon/ftcommoncliffclimb]
+      - [0x106BD0, .rodata, ft/ftcommon/ftcommonget]
+      - [0x106BE0, .rodata, ft/ftcommon/ftcommonitemthrow]
+      - [0x106C00, .rodata, ft/ftcommon/ftcommonitemswing]
+      - [0x106C10, .rodata, ft/ftcommon/ftcommonhammerturn]
+      - [0x106C20, .rodata, ft/ftcommon/ftcommonguard1]
+      - [0x106C40, .rodata, ft/ftcommon/ftcommonguard2]
+      - [0x106C50, .rodata, ft/ftcommon/ftcommonthrown2]
+      - [0x106C60, .rodata, ft/ftcommon/ftcommoncapturekirby]
+      - [0x106C70, .rodata, ft/ftchar/ftdonkey/ftdonkeythrowff]
+      - [0x106C80, .rodata, ft/ftcommon/ftcommoncapture]
+      - [0x106C90, .rodata, ft/ftcommon/ftcommonattack1]
+      - [0x106D60, .rodata, ft/ftcommon/ftcommonattack100]
+      - [0x106EE0, .rodata, ft/ftcommon/ftcommonattacks3]
+      - [0x106F00, .rodata, ft/ftcommon/ftcommonattackhi3]
+      - [0x106F10, .rodata, ft/ftcommon/ftcommonattacklw3]
+      - [0x106F20, .rodata, ft/ftcommon/ftcommonattacks4]
+      - [0x106F40, .rodata, ft/ftcommon/ftcommonattackair]
+      - [0x106F60, .rodata, ft/ftchar/ftpurin/ftpurinspecialn]
+      - [0x106F70, .rodata, ft/ftchar/ftkirby/ftkirbycopypurinspecialn]
+      - [0x106F80, .rodata, ft/ftchar/ftpikachu/ftpikachuspecialn]
+      - [0x106F90, .rodata, ft/ftchar/ftpikachu/ftpikachuspecialhi]
+      - [0x106FD0, .rodata, ft/ftchar/ftkirby/ftkirbycopypikachuspecialn]
+      - [0x106FE0, .rodata, ft/ftchar/ftness/ftnessspecialn]
+      - [0x106FF0, .rodata, ft/ftchar/ftness/ftnessspecialhi]
+      - [0x107050, .rodata, ft/ftchar/ftness/ftnessspeciallw]
+      - [0x107060, .rodata, ft/ftchar/ftkirby/ftkirbycopynessspecialn]
+      - [0x107070, .rodata, ft/ftchar/ftmario/ftmariospecialn]
+      - [0x1070C0, .rodata, ft/ftchar/ftmario/ftmariospecialhi]
+      - [0x1070E0, .rodata, ft/ftchar/ftkirby/ftkirbycopymariospecialn]
+      - [0x107130, .rodata, ft/ftchar/ftkirby/ftkirbycopysamusspecialn]
+      - [0x107140, .rodata, ft/ftchar/ftboss/ftbosscommon]
+      - [0x107170, .rodata, ft/ftchar/ftboss/ftbosswait]
+      - [0x107200, .rodata, ft/ftchar/ftboss/ftbossmove]
+      - [0x107210, .rodata, ft/ftchar/ftboss/ftbossokuhikouki2]
+      - [0x107220, .rodata, ft/ftchar/ftboss/ftbossokuhikouki3]
+      - [0x107230, .rodata, ft/ftchar/ftboss/ftbossgootsubusuup]
+      - [0x107240, .rodata, ft/ftchar/ftboss/ftbossgootsubusuwait]
+      - [0x107250, .rodata, ft/ftchar/ftboss/ftbosstsutsuku2]
+      - [0x107260, .rodata, ft/ftchar/ftboss/ftbossyubideppou2]
+      - [0x107270, .rodata, ft/ftchar/ftboss/ftbossokupunch2]
+      - [0x107280, .rodata, ft/ftchar/ftboss/ftbossokupunch3]
+      - [0x107290, .rodata, ft/ftchar/ftboss/ftbossokutsubushi]
+      - [0x1072A0, .rodata, ft/ftchar/ftboss/ftbossdeadcenter]
+      - [0x1072B0, .rodata, ft/ftchar/ftdonkey/ftdonkeyspecialhi]
+      - [0x1072C0, .rodata, ft/ftchar/ftfox/ftfoxspecialhi]
+      - [0x1072F0, .rodata, ft/ftchar/ftfox/ftfoxspeciallw]
+      - [0x107300, .rodata, ft/ftchar/ftsamus/ftsamusspecialn]
+      - [0x107310, .rodata, ft/ftchar/ftsamus/ftsamusspecialhi]
+      - [0x107320, .rodata, ft/ftchar/ftsamus/ftsamusspeciallw]
+      - [0x107330, .rodata, ft/ftchar/ftcaptain/ftcaptainspecialn]
+      - [0x107340, .rodata, ft/ftchar/ftcaptain/ftcaptainspecialhi]
+      - [0x107360, .rodata, ft/ftchar/ftkirby/ftkirbycopycaptainspecialn]
+      - [0x107370, .rodata, ft/ftchar/ftkirby/ftkirbyspecialhi]
+      - [0x107410, .rodata, ft/ftchar/ftkirby/ftkirbyspeciallw]
+      - [0x107420, .rodata, ft/ftchar/ftkirby/ftkirbyspecialn]
+      - [0x107430, .rodata, ft/ftchar/ftlink/ftlinkspecialhi]
+      - [0x107470, .rodata, wp/wpprocess]
+      - [0x1074C0, .rodata, wp/wpmain]
+      - [0x1074E0, .rodata, wp/wpfox/wpfoxblaster]
+      - [0x1074F0, .rodata, wp/wpsamus/wpsamuschargeshot]
+      - [0x107500, .rodata, wp/wpsamus/wpsamusbomb]
+      - [0x107510, .rodata, wp/wppikachu/wppikachuthunderjolt]
+      - [0x107530, .rodata, wp/wpness/wpnesspkfire]
+      - [0x107540, .rodata, wp/wpness/wpnesspkthunder]
+      - [0x107560, .rodata, wp/wpyoshi/wpyoshieggthrow]
+      - [0x107580, .rodata, wp/wpyoshi/wpyoshistar]
+      - [0x1075A0, .rodata, wp/wplink/wplinkspinattack]
+      - [0x1075B0, .rodata, wp/wplink/wplinkboomerang]
+      - [0x107620, .rodata, it/itmanager]
+      - [0x107660, .rodata, it/itprocess]
+      - [0x1076B0, .rodata, it/itmain]
+      - [0x1076F0, .rodata, it/itcommon/itcapsule]
+      - [0x107700, .rodata, it/itcommon/itsword]
+      - [0x107710, .rodata, it/itcommon/itbat]
+      - [0x107720, .rodata, it/itcommon/itharisen]
+      - [0x107730, .rodata, it/itcommon/itlgun]
+      - [0x107750, .rodata, it/itcommon/ithammer]
+      - [0x107760, .rodata, it/itcommon/itmsbomb]
+      - [0x107770, .rodata, it/itcommon/itbombhei]
+      - [0x107780, .rodata, it/itcommon/itstarrod]
+      - [0x107790, .rodata, it/itcommon/itgshell]
+      - [0x1077A0, .rodata, it/itcommon/itbox]
+      - [0x1077C0, .rodata, it/itcommon/ittaru]
+      - [0x1077E0, .rodata, it/itcommon/itrshell]
+      - [0x1077F0, .rodata, it/itcommon/itnbumper]
+      - [0x107810, .rodata, it/itground/itpowerblock]
+      - [0x107820, .rodata, it/itground/itglucky]
+      - [0x107830, .rodata, it/itcommon/itmball]
+      - [0x107840, .rodata, it/itground/itpakkun]
+      - [0x107860, .rodata, it/itground/itgbumper]
+      - [0x107870, .rodata, it/itmonster/itiwark]
+      - [0x107880, .rodata, it/itmonster/itkabigon]
+      - [0x107890, .rodata, it/itmonster/itmew]
+      - [0x1078A0, .rodata, it/itmonster/itnyars]
+      - [0x1078B0, .rodata, it/itmonster/itlizardon]
+      - [0x1078C0, .rodata, it/itmonster/itspear]
+      - [0x1078D0, .rodata, it/itmonster/itkamex]
+      - [0x1078F0, .rodata, it/itcommon/itegg]
+      - [0x107900, .rodata, it/itmonster/itstarmie]
+      - [0x107910, .rodata, it/itmonster/itsawamura]
+      - [0x107920, .rodata, it/itmonster/itpippi]
+      - [0x107930, .rodata, it/itground/itmarumine]
+      - [0x107940, .rodata, it/itground/itporygon]
+      - [0x107950, .rodata, it/itground/ithitokage]
+      - [0x107970, .rodata, it/itground/itfushigibana]
+      - [0x107980, .rodata, it/itground/ittarubomb]
+      - [0x1079B0, .rodata, it/itfighter/itlinkbomb]
+
+    # ovl3 bss
+      - { start: auto, type: .bss, name: ft/ftcommon/ftcommonthrown2 }
+      - { start: auto, type: .bss, name: ft/ftpublic }
+      - { start: auto, type: .bss, name: wp/wpmanager }
+      - { start: auto, type: .bss, name: it/itmanager }
+
+  - name: ovl1
+    type: code
+    start: 0x1079C0
+    vram: 0x803903E0
+    exclusive_ram_id: overlay_803903E0
+    subsegments:
+      - [0x1079C0, c, sc/scsubsys/scsubsysunused]
+      - [0x107AC0, c, sc/scsubsys/scsubsysfighter]
+      - [0x107CE0, c, sc/scsubsys/scsubsyscontroller]
+      - [0x1081C0, .data, sc/scsubsys/scsubsysdata]
+      - [0x1083B0, .data, sc/scsubsys/scsubsysdatamario]
+      - [0x108580, .data, sc/scsubsys/scsubsysdatammario]
+      - [0x108640, .data, sc/scsubsys/scsubsysdatanmario]
+      - [0x108700, .data, sc/scsubsys/scsubsysdatafox]
+      - [0x108870, .data, sc/scsubsys/scsubsysdatanfox]
+      - [0x108930, .data, sc/scsubsys/scsubsysdatadonkey]
+      - [0x108A10, .data, sc/scsubsys/scsubsysdatandonkey]
+      - [0x108AD0, .data, sc/scsubsys/scsubsysdatagdonkey]
+      - [0x108AE0, .data, sc/scsubsys/scsubsysdatasamus]
+      - [0x108C30, .data, sc/scsubsys/scsubsysdatansamus]
+      - [0x108CF0, .data, sc/scsubsys/scsubsysdataluigi]
+      - [0x108E70, .data, sc/scsubsys/scsubsysdatanluigi]
+      - [0x108E80, .data, sc/scsubsys/scsubsysdatalink]
+      - [0x1090C0, .data, sc/scsubsys/scsubsysdatanlink]
+      - [0x109180, .data, sc/scsubsys/scsubsysdatayoshi]
+      - [0x109380, .data, sc/scsubsys/scsubsysdatanyoshi]
+      - [0x109440, .data, sc/scsubsys/scsubsysdatacaptain]
+      - [0x109540, .data, sc/scsubsys/scsubsysdatancaptain]
+      - [0x109600, .data, sc/scsubsys/scsubsysdatakirby]
+      - [0x109770, .data, sc/scsubsys/scsubsysdatankirby]
+      - [0x109830, .data, sc/scsubsys/scsubsysdatapikachu]
+      - [0x1099B0, .data, sc/scsubsys/scsubsysdatanpikachu]
+      - [0x109A70, .data, sc/scsubsys/scsubsysdatapurin]
+      - [0x109C50, .data, sc/scsubsys/scsubsysdatanpurin]
+      - [0x109C60, .data, sc/scsubsys/scsubsysdataness]
+      - [0x109E10, .data, sc/scsubsys/scsubsysdatanness]
+      - [0x109ED0, .data, sc/scsubsys/scsubsysdataboss]
+      - { start: auto, type: .bss, name: sc/scsubsys/scsubsysunused }
+      - { start: auto, type: .bss, name: sc/scsubsys/scsubsysfighter }
+      - { start: auto, type: .bss, name: sc/scsubsys/scsubsyscontroller }
+
+  - name: ovl4
+    type: code
+    start: 0x109FB0
+    vram: 0x8018D0C0
+    follows_vram: ovl3
+    exclusive_ram_id: overlay_8018D0C0
+    subsegments:
+      - [0x109FB0, c, sc/sccommon/scvsbattle]
+      - [0x10B220, c, sc/sccommon/scvsbattlefiles]
+      - [0x10B2C0, .data, sc/sccommon/scvsbattle]
+      - { start: auto, type: .bss, name: sc/sccommon/scvsbattlefiles }
+
+  - name: ovl5
+    type: code
+    start: 0x10B370
+    vram: 0x8018D0C0
+    follows_vram: ovl3
+    exclusive_ram_id: overlay_8018D0C0
+    subsegments:
+      - [0x10B370, c, mv/mvunknownmario]
+      - [0x10B830, .data, mv/mvunknownmario]
+      - { start: auto, type: .bss, name: mv/mvunknownmario }
+
+  - name: ovl65
+    type: code
+    start: 0x10B920
+    vram: 0x8018D0C0
+    follows_vram: ovl3
+    exclusive_ram_id: overlay_8018D0C0
+    subsegments:
+    # Main 1P Game scene stuff
+      - [0x10B920, c, sc/sc1pmode/sc1pgame]
+    # Final Destination backgrounds
+      - [0x10F910, c, sc/sc1pmode/sc1pgameboss]
+    # Main 1P Game scene stuff
+      - [0x111060, .data, sc/sc1pmode/sc1pgame]
+    # Final Destination backgrounds
+      - [0x111420, .data, sc/sc1pmode/sc1pgameboss]
+    # Main 1P Game scene stuff
+      - [0x111670, .rodata, sc/sc1pmode/sc1pgame]
+    # Final Destination backgrounds
+      - [0x1117D0, .rodata, sc/sc1pmode/sc1pgameboss]
+    # Main 1P Game scene stuff
+      - { start: auto, type: .bss, name: sc/sc1pmode/sc1pgame }
+      - { start: auto, type: .bss, name: sc/sc1pmode/sc1pgameboss }
+
+  - name: ovl6
+    type: code
+    start: 0x111800
+    vram: 0x8018D0C0
+    follows_vram: ovl3
+    exclusive_ram_id: overlay_8018D0C0
+    subsegments:
+      - [0x111800, c, sc/sc1pmode/sc1pbonusstage]
+      - [0x1134B0, c, sc/sc1pmode/sc1pbonusstagefiles]
+      - [0x113550, c, it/itground/ittarget]
+      - [0x113600, .data, sc/sc1pmode/sc1pbonusstage]
+      - [0x113870, .data, it/itground/ittarget]
+      - [0x1138B0, .rodata, sc/sc1pmode/sc1pbonusstage]
+      - { start: auto, type: .bss, name: sc/sc1pmode/sc1pbonusstage }
+      - { start: auto, type: .bss, name: sc/sc1pmode/sc1pbonusstagefiles }
+
+  - name: ovl7
+    type: code
+    start: 0x1138E0
+    vram: 0x8018D0C0
+    follows_vram: ovl3
+    exclusive_ram_id: overlay_8018D0C0
+    subsegments:
+      - [0x1138E0, c, sc/sc1pmode/sc1ptrainingmode]
+      - [0x116F90, .data, sc/sc1pmode/sc1ptrainingmode]
+      - [0x117140, .rodata, sc/sc1pmode/sc1ptrainingmode]
+      - { start: auto, type: .bss, name: sc/sc1pmode/sc1ptrainingmode }
+
+  - name: ovl10
+    type: code
+    start: 0x117180
+    vram: 0x80131B00
+    follows_vram: ovl2
+    exclusive_ram_id: overlay_80131B00
+    subsegments:
+      - [0x117180, c, mn/mncommon/mntitle]
+      - [0x1197C0, c, mn/mncommon/mntitlefiles]
+      - [0x119860, .data, mn/mncommon/mntitle]
+      - [0x119AA0, .data, mn/mncommon/mntitlefiles]
+      - [0x119AB0, .rodata, mn/mncommon/mntitle]
+      - { start: auto, type: .bss, name: mn/mncommon/mntitle }
+      - { start: auto, type: .bss, name: mn/mncommon/mntitlefiles }
+
+  - name: ovl11
+    type: code
+    start: 0x119AC0
+    vram: 0x800D6490
+    exclusive_ram_id: overlay_800D6490
+    subsegments:
+      - [0x119AC0, c, mn/mncommon/mnnocontroller]
+      - [0x119C90, c, mn/mncommon/mnnocontrollerfiles]
+      - [0x119D30, .data, mn/mncommon/mnnocontroller]
+      - [0x119DE0, .data, mn/mncommon/mnnocontrollerfiles]
+      - { start: auto, type: .bss, name: mn/mncommon/mnnocontroller }
+      - { start: auto, type: .bss, name: mn/mncommon/mnnocontrollerfiles }
+
+  - name: ovl12
+    type: code
+    start: 0x119DF0
+    vram: 0x800D6490
+    exclusive_ram_id: overlay_800D6490
+    subsegments:
+      - [0x119DF0, c, db/dbmaps]
+      - [0x119FE0, .data, db/dbmaps]
+      - [0x11A170, .rodata, db/dbmaps]
+      - { start: auto, type: .bss, name: db/dbmaps }
+
+  - name: ovl13
+    type: code
+    start: 0x11A340
+    vram: 0x80131B00
+    follows_vram: ovl2
+    exclusive_ram_id: overlay_80131B00
+    subsegments:
+      - [0x11A340, c, db/dbcube]
+      - [0x11AA20, .data, db/dbcube]
+      - [0x11B860, .rodata, db/dbcube]
+      - { start: auto, type: .bss, name: db/dbcube }
+
+  - name: ovl14
+    type: code
+    start: 0x11B970
+    vram: 0x80131B00
+    follows_vram: ovl2
+    exclusive_ram_id: overlay_80131B00
+    subsegments:
+      - [0x11B970, c, db/dbbattle]
+      - [0x11C500, .data, db/dbbattle]
+      - [0x11C850, .rodata, db/dbbattle]
+      - { start: auto, type: .bss, name: db/dbbattle }
+
+  - name: ovl17
+    type: code
+    start: 0x11CA90
+    vram: 0x80131B00
+    follows_vram: ovl2
+    exclusive_ram_id: overlay_80131B00
+    subsegments:
+      - [0x11ca90, c, mn/mncommon/mnmodeselect]
+      - [0x11DB20, .data, mn/mncommon/mnmodeselect]
+      - { start: auto, type: .bss, name: mn/mncommon/mnmodeselect }
+
+  - name: ovl18
+    type: code
+    start: 0x11DC10
+    vram: 0x80131B00
+    follows_vram: ovl2
+    exclusive_ram_id: overlay_80131B00
+    subsegments:
+      - [0x11DC10, c, mn/mn1pmode/mn1pmode]
+      - [0x11F190, .data, mn/mn1pmode/mn1pmode]
+      - { start: auto, type: .bss, name: mn/mn1pmode/mn1pmode }
+
+  - name: ovl60
+    type: code
+    start: 0x11F2B0
+    vram: 0x80131B00
+    follows_vram: ovl2
+    exclusive_ram_id: overlay_80131B00
+    subsegments:
+      - [0x11F2B0, c, mn/mnoption/mnoption]
+      - [0x120DD0, .data, mn/mnoption/mnoption]
+      - { start: auto, type: .bss, name: mn/mnoption/mnoption }
+
+  - name: ovl61
+    type: code
+    start: 0x120F50
+    vram: 0x80131B00
+    follows_vram: ovl2
+    exclusive_ram_id: overlay_80131B00
+    subsegments:
+      - [0x120F50, c, mn/mndata/mndata]
+      - [0x122370, .data, mn/mndata/mndata]
+      - { start: auto, type: .bss, name: mn/mndata/mndata }
+
+  - name: ovl19
+    type: code
+    start: 0x1224B0
+    vram: 0x80131B00
+    follows_vram: ovl2
+    exclusive_ram_id: overlay_80131B00
+    subsegments:
+      - [0x1224b0, c, mn/mnvsmode/mnvsmode]
+      - [0x125160, .data, mn/mnvsmode/mnvsmode]
+      - { start: auto, type: .bss, name: mn/mnvsmode/mnvsmode }
+
+  - name: ovl20
+    type: code
+    start: 0x1252E0
+    vram: 0x80131B00
+    follows_vram: ovl2
+    exclusive_ram_id: overlay_80131B00
+    subsegments:
+      - [0x1252E0, c, mn/mnvsmode/mnvsoptions]
+      - [0x127EA0, .data, mn/mnvsmode/mnvsoptions]
+      - { start: auto, type: .bss, name: mn/mnvsmode/mnvsoptions }
+
+  - name: ovl21
+    type: code
+    start: 0x1280A0
+    vram: 0x80131B00
+    follows_vram: ovl2
+    exclusive_ram_id: overlay_80131B00
+    subsegments:
+      - [0x1280A0, c, mn/mnvsmode/mnvsitemswitch]
+      - [0x1297B0, .data, mn/mnvsmode/mnvsitemswitch]
+      - { start: auto, type: .bss, name: mn/mnvsmode/mnvsitemswitch }
+
+  - name: ovl22
+    type: code
+    start: 0x129970
+    vram: 0x80131B00
+    follows_vram: ovl2
+    exclusive_ram_id: overlay_80131B00
+    subsegments:
+      - [0x129970, c, mn/mncommon/mnmessage]
+      - [0x12A370, .data, mn/mncommon/mnmessage]
+      - { start: auto, type: .bss, name: mn/mncommon/mnmessage }
+
+  - name: ovl23
+    type: code
+    start: 0x12A4C0
+    vram: 0x80131B00
+    follows_vram: ovl2
+    exclusive_ram_id: overlay_80131B00
+    subsegments:
+      - [0x12A4C0, c, sc/sc1pmode/sc1pchallenger]
+      - [0x12AD30, .data, sc/sc1pmode/sc1pchallenger]
+      - { start: auto, type: .bss, name: sc/sc1pmode/sc1pchallenger }
+
+  - name: ovl24
+    type: code
+    start: 0x12AE40
+    vram: 0x80131B00
+    follows_vram: ovl2
+    exclusive_ram_id: overlay_80131B00
+    subsegments:
+      - [0x12AE40, c, sc/sc1pmode/sc1pintro]
+      - [0x12E130, .data, sc/sc1pmode/sc1pintro]
+      - [0x12EF20, .rodata, sc/sc1pmode/sc1pintro]
+      - { start: auto, type: .bss, name: sc/sc1pmode/sc1pintro }
+
+  - name: ovl25
+    type: code
+    start: 0x12EF60
+    vram: 0x80131B00
+    follows_vram: ovl2
+    exclusive_ram_id: overlay_80131B00
+    subsegments:
+      - [0x12EF60, c, mn/mnoption/mnscreenadjust]
+      - [0x12FC90, .data, mn/mnoption/mnscreenadjust]
+      - { start: auto, type: .bss, name: mn/mnoption/mnscreenadjust }
+
+  - name: ovl26
+    type: code
+    start: 0x12fd80
+    vram: 0x80131B00
+    follows_vram: ovl2
+    exclusive_ram_id: overlay_80131B00
+    subsegments:
+      - [0x12fd80, pad, pad0x12FD80]
+      - [0x12FDA0, c, mn/mnplayers/mnplayersvs]
+      - [0x139620, .data, mn/mnplayers/mnplayersvs]
+      - [0x139CB0, .rodata, mn/mnplayers/mnplayersvs]
+      - { start: auto, type: .bss, name: mn/mnplayers/mnplayersvs }
+
+  - name: ovl27
+    type: code
+    start: 0x139D00
+    vram: 0x80131B00
+    follows_vram: ovl2
+    exclusive_ram_id: overlay_80131B00
+    subsegments:
+      - [0x139D00, c, mn/mnplayers/mnplayers1pgame]
+      - [0x1407B0, .data, mn/mnplayers/mnplayers1pgame]
+      - [0x140F40, .rodata, mn/mnplayers/mnplayers1pgame]
+      - { start: auto, type: .bss, name: mn/mnplayers/mnplayers1pgame }
+
+  - name: ovl28
+    type: code
+    start: 0x1410E0
+    vram: 0x80131B00
+    follows_vram: ovl2
+    exclusive_ram_id: overlay_80131B00
+    subsegments:
+      - [0x1410E0, c, mn/mnplayers/mnplayers1ptraining]
+      - [0x147540, .data, mn/mnplayers/mnplayers1ptraining]
+      - [0x147AC0, .rodata, mn/mnplayers/mnplayers1ptraining]
+      - { start: auto, type: .bss, name: mn/mnplayers/mnplayers1ptraining }
+
+  - name: ovl29
+    type: code
+    start: 0x147B30
+    vram: 0x80131B00
+    follows_vram: ovl2
+    exclusive_ram_id: overlay_80131B00
+    subsegments:
+      - [0x147B30, c, mn/mnplayers/mnplayers1pbonus]
+      - [0x14CF80, .data, mn/mnplayers/mnplayers1pbonus]
+      - [0x14D610, .rodata, mn/mnplayers/mnplayers1pbonus]
+      - { start: auto, type: .bss, name: mn/mnplayers/mnplayers1pbonus }
+
+  - name: ovl30
+    type: code
+    start: 0x14D670
+    vram: 0x80131B00
+    follows_vram: ovl2
+    exclusive_ram_id: overlay_80131B00
+    subsegments:
+      - [0x14D670, c, mn/mnmaps/mnmaps]
+      - [0x150040, .data, mn/mnmaps/mnmaps]
+      - [0x150530, .rodata, mn/mnmaps/mnmaps]
+      - { start: auto, type: .bss, name: mn/mnmaps/mnmaps }
+
+  - name: ovl15
+    type: code
+    start: 0x150740
+    vram: 0x800D6490
+    exclusive_ram_id: overlay_800D6490
+    subsegments:
+      - [0x150740, c, db/dbfalls]
+      - [0x150990, .data, db/dbfalls]
+      - [0x150C00, .rodata, db/dbfalls]
+      - { start: auto, type: .bss, name: db/dbfalls }
+
+  - name: ovl31
+    type: code
+    start: 0x150CA0
+    vram: 0x80131B00
+    follows_vram: ovl2
+    exclusive_ram_id: overlay_80131B00
+    subsegments:
+      - [0x150CA0, pad, pad0x150CA0]
+      - [0x150CC0, c, mn/mnvsmode/mnvsresults]
+      - [0x158090, .data, mn/mnvsmode/mnvsresults]
+      - [0x158960, .rodata, mn/mnvsmode/mnvsresults]
+      - { start: auto, type: .bss, name: mn/mnvsmode/mnvsresults }
+
+  - name: ovl32
+    type: code
+    start: 0x158A40
+    vram: 0x80131B00
+    follows_vram: ovl2
+    exclusive_ram_id: overlay_80131B00
+    subsegments:
+      - [0x158A40, c, mn/mndata/mnvsrecord]
+      - [0x15D570, .data, mn/mndata/mnvsrecord]
+      - [0x15D9C0, .rodata, mn/mndata/mnvsrecord]
+      - { start: auto, type: .bss, name: mn/mndata/mnvsrecord }
+
+  - name: ovl33
+    type: code
+    start: 0x15DB50
+    vram: 0x80131B00
+    follows_vram: ovl2
+    exclusive_ram_id: overlay_80131B00
+    subsegments:
+      - [0x15DB50, c, mn/mndata/mncharacters]
+      - [0x160100, .data, mn/mndata/mncharacters]
+      - [0x162600, .rodata, mn/mndata/mncharacters]
+      - { start: auto, type: .bss, name: mn/mndata/mncharacters }
+
+  - name: ovl34
+    type: code
+    start: 0x162640
+    vram: 0x80131B00
+    follows_vram: ovl2
+    exclusive_ram_id: overlay_80131B00
+    subsegments:
+      - [0x162640, c, mv/mvopening/mvopeningroom]
+      - [0x165560, .data, mv/mvopening/mvopeningroom]
+      - [0x1657C0, .rodata, mv/mvopening/mvopeningroom]
+      - { start: auto, type: .bss, name: mv/mvopening/mvopeningroom }
+
+  - name: ovl35
+    type: code
+    start: 0x165810
+    vram: 0x80131B00
+    follows_vram: ovl2
+    exclusive_ram_id: overlay_80131B00
+    subsegments:
+      - [0x165810, c, mv/mvopening/mvopeningportraits]
+      - [0x1665B0, .data, mv/mvopening/mvopeningportraits]
+      - { start: auto, type: .bss, name: mv/mvopening/mvopeningportraits }
+
+  - name: ovl36
+    type: code
+    start: 0x1666F0
+    vram: 0x8018D0C0
+    follows_vram: ovl3
+    exclusive_ram_id: overlay_8018D0C0
+    subsegments:
+      - [0x1666F0, c, mv/mvopening/mvopeningmario]
+      - [0x1676C0, .data, mv/mvopening/mvopeningmario]
+      - [0x167800, .rodata, mv/mvopening/mvopeningmario]
+      - { start: auto, type: .bss, name: mv/mvopening/mvopeningmario }
+
+  - name: ovl37
+    type: code
+    start: 0x167830
+    vram: 0x8018D0C0
+    follows_vram: ovl3
+    exclusive_ram_id: overlay_8018D0C0
+    subsegments:
+      - [0x167830, c, mv/mvopening/mvopeningdonkey]
+      - [0x1687E0, .data, mv/mvopening/mvopeningdonkey]
+      - [0x168900, .rodata, mv/mvopening/mvopeningdonkey]
+      - { start: auto, type: .bss, name: mv/mvopening/mvopeningdonkey }
+
+  - name: ovl38
+    type: code
+    start: 0x168930
+    vram: 0x8018D0C0
+    follows_vram: ovl3
+    exclusive_ram_id: overlay_8018D0C0
+    subsegments:
+      - [0x168930, c, mv/mvopening/mvopeningsamus]
+      - [0x169990, .data, mv/mvopening/mvopeningsamus]
+      - [0x169AB0, .rodata, mv/mvopening/mvopeningsamus]
+      - { start: auto, type: .bss, name: mv/mvopening/mvopeningsamus }
+
+  - name: ovl39
+    type: code
+    start: 0x169AE0
+    vram: 0x8018D0C0
+    follows_vram: ovl3
+    exclusive_ram_id: overlay_8018D0C0
+    subsegments:
+      - [0x169AE0, c, mv/mvopening/mvopeningfox]
+      - [0x16AAB0, .data, mv/mvopening/mvopeningfox]
+      - [0x16ABE0, .rodata, mv/mvopening/mvopeningfox]
+      - { start: auto, type: .bss, name: mv/mvopening/mvopeningfox }
+
+  - name: ovl40
+    type: code
+    start: 0x16AC10
+    vram: 0x8018D0C0
+    follows_vram: ovl3
+    exclusive_ram_id: overlay_8018D0C0
+    subsegments:
+      - [0x16AC10, c, mv/mvopening/mvopeninglink]
+      - [0x16BBC0, .data, mv/mvopening/mvopeninglink]
+      - [0x16BCE0, .rodata, mv/mvopening/mvopeninglink]
+      - { start: auto, type: .bss, name: mv/mvopening/mvopeninglink }
+
+  - name: ovl41
+    type: code
+    start: 0x16BD10
+    vram: 0x8018D0C0
+    follows_vram: ovl3
+    exclusive_ram_id: overlay_8018D0C0
+    subsegments:
+      - [0x16BD10, c, mv/mvopening/mvopeningyoshi]
+      - [0x16CD10, .data, mv/mvopening/mvopeningyoshi]
+      - [0x16CE40, .rodata, mv/mvopening/mvopeningyoshi]
+      - { start: auto, type: .bss, name: mv/mvopening/mvopeningyoshi }
+
+  - name: ovl42
+    type: code
+    start: 0x16CE70
+    vram: 0x8018D0C0
+    follows_vram: ovl3
+    exclusive_ram_id: overlay_8018D0C0
+    subsegments:
+      - [0x16CE70, c, mv/mvopening/mvopeningpikachu]
+      - [0x16DE70, .data, mv/mvopening/mvopeningpikachu]
+      - [0x16DFA0, .rodata, mv/mvopening/mvopeningpikachu]
+      - { start: auto, type: .bss, name: mv/mvopening/mvopeningpikachu }
+
+  - name: ovl43
+    type: code
+    start: 0x16DFD0
+    vram: 0x8018D0C0
+    follows_vram: ovl3
+    exclusive_ram_id: overlay_8018D0C0
+    subsegments:
+      - [0x16DFD0, c, mv/mvopening/mvopeningkirby]
+      - [0x16EFC0, .data, mv/mvopening/mvopeningkirby]
+      - [0x16F100, .rodata, mv/mvopening/mvopeningkirby]
+      - { start: auto, type: .bss, name: mv/mvopening/mvopeningkirby }
+
+  - name: ovl44
+    type: code
+    start: 0x16F130
+    vram: 0x80131B00
+    follows_vram: ovl2
+    exclusive_ram_id: overlay_80131B00
+    subsegments:
+      - [0x16F130, c, mv/mvopening/mvopeningrun]
+      - [0x16FC00, .data, mv/mvopening/mvopeningrun]
+      - [0x16FD30, .rodata, mv/mvopening/mvopeningrun]
+      - { start: auto, type: .bss, name: mv/mvopening/mvopeningrun }
+
+  - name: ovl45
+    type: code
+    start: 0x16FD40
+    vram: 0x80131B00
+    follows_vram: ovl2
+    exclusive_ram_id: overlay_80131B00
+    subsegments:
+      - [0x16FD40, c, mv/mvopening/mvopeningyoster]
+      - [0x170570, .data, mv/mvopening/mvopeningyoster]
+      - { start: auto, type: .bss, name: mv/mvopening/mvopeningyoster }
+
+  - name: ovl46
+    type: code
+    start: 0x170660
+    vram: 0x80131B00
+    follows_vram: ovl2
+    exclusive_ram_id: overlay_80131B00
+    subsegments:
+      - [0x170660, c, mv/mvopening/mvopeningcliff]
+      - [0x171230, .data, mv/mvopening/mvopeningcliff]
+      - [0x171310, .rodata, mv/mvopening/mvopeningcliff]
+      - { start: auto, type: .bss, name: mv/mvopening/mvopeningcliff }
+
+  - name: ovl47
+    type: code
+    start: 0x171320
+    vram: 0x80131B00
+    follows_vram: ovl2
+    exclusive_ram_id: overlay_80131B00
+    subsegments:
+      - [0x171320, c, mv/mvopening/mvopeningstandoff]
+      - [0x1720F0, .data, mv/mvopening/mvopeningstandoff]
+      - [0x1721D0, .rodata, mv/mvopening/mvopeningstandoff]
+      - { start: auto, type: .bss, name: mv/mvopening/mvopeningstandoff }
+
+  - name: ovl48
+    type: code
+    start: 0x1721E0
+    vram: 0x80131B00
+    follows_vram: ovl2
+    exclusive_ram_id: overlay_80131B00
+    subsegments:
+      - [0x1721E0, c, mv/mvopening/mvopeningyamabuki]
+      - [0x172A80, .data, mv/mvopening/mvopeningyamabuki]
+      - { start: auto, type: .bss, name: mv/mvopening/mvopeningyamabuki }
+
+  - name: ovl49
+    type: code
+    start: 0x172B60
+    vram: 0x80131B00
+    follows_vram: ovl2
+    exclusive_ram_id: overlay_80131B00
+    subsegments:
+      - [0x172B60, c, mv/mvopening/mvopeningclash]
+      - [0x173930, .data, mv/mvopening/mvopeningclash]
+      - { start: auto, type: .bss, name: mv/mvopening/mvopeningclash }
+
+  - name: ovl50
+    type: code
+    start: 0x173A30
+    vram: 0x80131B00
+    follows_vram: ovl2
+    exclusive_ram_id: overlay_80131B00
+    subsegments:
+      - [0x173A30, c, mv/mvopening/mvopeningsector]
+      - [0x174820, .data, mv/mvopening/mvopeningsector]
+      - [0x174920, .rodata, mv/mvopening/mvopeningsector]
+      - { start: auto, type: .bss, name: mv/mvopening/mvopeningsector }
+
+  - name: ovl51
+    type: code
+    start: 0x174940
+    vram: 0x8018D0C0
+    follows_vram: ovl3
+    exclusive_ram_id: overlay_8018D0C0
+    subsegments:
+      - [0x174940, c, mv/mvopening/mvopeningjungle]
+      - [0x1750F0, .data, mv/mvopening/mvopeningjungle]
+      - [0x175270, .rodata, mv/mvopening/mvopeningjungle]
+      - { start: auto, type: .bss, name: mv/mvopening/mvopeningjungle }
+
+  - name: ovl52
+    type: code
+    start: 0x1752C0
+    vram: 0x80131B00
+    follows_vram: ovl2
+    exclusive_ram_id: overlay_80131B00
+    subsegments:
+      - [0x1752C0, c, mv/mvopening/mvopeningnewcomers]
+      - [0x175E00, .data, mv/mvopening/mvopeningnewcomers]
+      - [0x175EE0, .rodata, mv/mvopening/mvopeningnewcomers]
+      - { start: auto, type: .bss, name: mv/mvopening/mvopeningnewcomers }
+
+  - name: ovl53
+    type: code
+    start: 0x175F00
+    vram: 0x80131B00
+    follows_vram: ovl2
+    exclusive_ram_id: overlay_80131B00
+    subsegments:
+      - [0x175F00, c, mn/mnoption/mnbackupclear]
+      - [0x177280, .data, mn/mnoption/mnbackupclear]
+      - [0x177470, .rodata, mn/mnoption/mnbackupclear]
+      - { start: auto, type: .bss, name: mn/mnoption/mnbackupclear }
+
+  - name: ovl54
+    type: code
+    start: 0x1774A0
+    vram: 0x80131B00
+    follows_vram: ovl2
+    exclusive_ram_id: overlay_80131B00
+    subsegments:
+      - [0x1774A0, c, mv/mvending/mvending]
+      - [0x178470, .data, mv/mvending/mvending]
+      - [0x178550, .rodata, mv/mvending/mvending]
+      - { start: auto, type: .bss, name: mv/mvending/mvending }
+
+  - name: ovl55
+    type: code
+    start: 0x178560
+    vram: 0x80131B00
+    follows_vram: ovl2
+    exclusive_ram_id: overlay_80131B00
+    subsegments:
+      - [0x178560, c, mn/mn1pmode/mn1pcontinue]
+      - [0x17ABC0, .data, mn/mn1pmode/mn1pcontinue]
+      - [0x17AD40, .rodata, mn/mn1pmode/mn1pcontinue]
+      - { start: auto, type: .bss, name: mn/mn1pmode/mn1pcontinue }
+
+  - name: ovl56
+    type: code
+    start: 0x17AD50
+    vram: 0x80131B00
+    follows_vram: ovl2
+    exclusive_ram_id: overlay_80131B00
+    subsegments:
+      - [0x17AD50, c, sc/sc1pmode/sc1pstageclear]
+      - [0x17E130, .data, sc/sc1pmode/sc1pstageclear]
+      - [0x17E4F0, .rodata, sc/sc1pmode/sc1pstageclear]
+      - { start: auto, type: .bss, name: sc/sc1pmode/sc1pstageclear }
+
+  - name: ovl57
+    type: code
+    start: 0x17E510
+    vram: 0x80131B00
+    follows_vram: ovl2
+    exclusive_ram_id: overlay_80131B00
+    subsegments:
+      - [0x17E510, c, mn/mncommon/mncongra]
+      - [0x17EB10, .data, mn/mncommon/mncongra]
+      - { start: auto, type: .bss, name: mn/mncommon/mncongra }
+
+  - name: ovl58
+    type: code
+    start: 0x17ECC0
+    vram: 0x80131B00
+    follows_vram: ovl2
+    exclusive_ram_id: overlay_80131B00
+    subsegments:
+      - [0x17ECC0, c, mn/mncommon/mnstartup]
+      - [0x17F110, .data, mn/mncommon/mnstartup]
+      - { start: auto, type: .bss, name: mn/mncommon/mnstartup }
+
+  - name: ovl59
+    type: code
+    start: 0x17F200
+    vram: 0x80131B00
+    follows_vram: ovl2
+    exclusive_ram_id: overlay_80131B00
+    subsegments:
+      - [0x17F200, c, sc/sccommon/scstaffroll]
+      - [0x182960, .data, sc/sccommon/scstaffroll]
+      - [0x187EB0, .rodata, sc/sccommon/scstaffroll]
+      - { start: auto, type: .bss, name: sc/sccommon/scstaffroll }
+
+  - name: ovl62
+    type: code
+    start: 0x187ED0
+    vram: 0x80131B00
+    follows_vram: ovl2
+    exclusive_ram_id: overlay_80131B00
+    subsegments:
+      - [0x187ED0, c, mn/mndata/mnsoundtest]
+      - [0x189DB0, .data, mn/mndata/mnsoundtest]
+      - [0x18A6C0, .rodata, mn/mndata/mnsoundtest]
+      - { start: auto, type: .bss, name: mn/mndata/mnsoundtest }
+
+  - name: ovl63
+    type: code
+    start: 0x18A6D0
+    vram: 0x8018D0C0
+    follows_vram: ovl3
+    exclusive_ram_id: overlay_8018D0C0
+    subsegments:
+      - [0x18A6D0, c, sc/sccommon/scexplain]
+      - [0x18BC50, c, sc/sccommon/scexplainfiles]
+      - [0x18BCF0, .data, sc/sccommon/scexplain]
+      - [0x18BDF0, .rodata, sc/sccommon/scexplain]
+      - { start: auto, type: .bss, name: sc/sccommon/scexplain }
+      - { start: auto, type: .bss, name: sc/sccommon/scexplainfiles }
+
+
+  - name: ovl64
+    type: code
+    start: 0x18BE00
+    vram: 0x8018D0C0
+    follows_vram: ovl3
+    exclusive_ram_id: overlay_8018D0C0
+    subsegments:
+      - [0x18BE00, c, sc/sccommon/scautodemo]
+      - [0x18CE00, c, sc/sccommon/scautodemofiles]
+      - [0x18CEA0, .data, sc/sccommon/scautodemo]
+      - [0x18D020, .rodata, sc/sccommon/scautodemo]
+      - { start: auto, type: .bss, name: sc/sccommon/scautodemo }
+      - { start: auto, type: .bss, name: sc/sccommon/scautodemofiles }
+
+  - name: ovl16
+    type: code
+    start: 0x18D030
+    vram: 0x800D6490
+    exclusive_ram_id: overlay_800D6490
+    subsegments:
+      - [0x18D030, c, mn/mncommon/mnunusedfighters]
+      - [0x18DBB0, .data, mn/mncommon/mnunusedfighters]
+      - [0x18DCA0, .rodata, mn/mncommon/mnunusedfighters]
+      - { start: auto, type: .bss, name: mn/mncommon/mnunusedfighters }
+
+  - name: ovl8
+    type: code
+    start: 0x18DCB0
+    vram: 0x80371460
+    bss_size: 0x1580
+    exclusive_ram_id: overlay_80371460
+    subsegments:
+      - [0x18DCB0, c, ovl8/ovl8_0]
+      - [0x18DFE0, c, ovl8/ovl8_1]
+      - [0x18DFF0, c, ovl8/ovl8_2]
+      - [0x18E800, c, ovl8/ovl8_3]
+      - [0x18EFE0, c, ovl8/ovl8_4]
+      - [0x18FBA0, c, ovl8/ovl8_5]
+      - [0x190CB0, c, ovl8/ovl8_6]
+      - [0x192100, c, ovl8/ovl8_6_1]
+      - [0x192D80, c, ovl8/ovl8_7]
+      - [0x1933B0, c, ovl8/ovl8_8]
+      - [0x198B20, c, ovl8/ovl8_9]
+      - [0x198C10, c, ovl8/ovl8_10]
+      - [0x198EB0, c, ovl8/ovl8_11]
+      - [0x1992B0, c, ovl8/ovl8_11_1]
+      - [0x199690, c, ovl8/ovl8_12]
+      - [0x199840, pad, pad0x199840]
+      - [0x199850, c, ovl8/ovl8_13]
+      - [0x19A5B0, c, ovl8/ovl8_13_2]
+      - [0x19B650, c, ovl8/ovl8_14]
+      - [0x19BB50, c, ovl8/ovl8_15]
+      - [0x19D710, c, ovl8/ovl8_16]
+      - [0x19D980, c, ovl8/ovl8_17]
+      - [0x19E3C0, c, ovl8/ovl8_18]
+      - [0x19E900, c, ovl8/ovl8_19]
+      - [0x19EF60, c, ovl8/ovl8_20]
+      - [0x19F330, c, ovl8/ovl8_21]
+      - [0x19F5E0, c, ovl8/ovl8_22]
+      - [0x19FBE0, pad, ovl8nops]
+      - [0x19FBF0, c, ovl8/ovl8_23]
+      - [0x1A0910, c, ovl8/ovl8_24]
+      - [0x1A0CB0, c, ovl8/ovl8_25]
+      - [0x1A19D0, c, ovl8/ovl8_26]
+      - [0x1A1CB0, c, ovl8/ovl8_27]
+      - [0x1A1E90, c, ovl8/ovl8_28]
+      - [0x1A22A0, c, ovl8/ovl8_29]
+      - [0x1A2660, c, ovl8/ovl8_30]
+      - [0x1A2D90, c, ovl8/ovl8_31]
+      - [0x1A41F0, c, ovl8/ovl8_32]
+      - [0x1A44F0, .data, ovl8/ovl8_8]
+      - [0x1A4790, .data, ovl8/ovl8_9]
+      - [0x1A69F0, .data, ovl8/ovl8_10]
+      - [0x1A6A20, .data, ovl8/ovl8_11]
+      - [0x1A6F50, .data, ovl8/ovl8_12]
+      - [0x1A70B0, .data, ovl8/ovl8_13]
+      - [0x1A7350, .data, ovl8/ovl8_13_2]
+      - [0x1A73C0, .data, ovl8/ovl8_14]
+      - [0x1A7620, .data, ovl8/ovl8_15]
+      - [0x1A8220, .data, ovl8/ovl8_16]
+      - [0x1A8480, .data, ovl8/ovl8_17]
+      - [0x1A8560, .data, ovl8/ovl8_18]
+      - [0x1A8570, .data, ovl8/ovl8_19]
+      - [0x1A8A10, .data, ovl8/ovl8_20]
+      - [0x1A8D30, .data, ovl8/ovl8_21]
+      - [0x1A8FE0, .data, ovl8/ovl8_22]
+      - [0x1A9260, .data, ovl8/ovl8_23]
+      - [0x1A95E0, .data, ovl8/ovl8_24]
+      - [0x1A9920, .data, ovl8/ovl8_25]
+      - [0x1A9EA0, .data, ovl8/ovl8_26]
+      - [0x1AA1B0, .data, ovl8/ovl8_27]
+      - [0x1AA450, .data, ovl8/ovl8_28]
+      - [0x1AA710, .data, ovl8/ovl8_29]
+      - [0x1AAA30, .data, ovl8/ovl8_30]
+      - [0x1AADF0, .data, ovl8/ovl8_31]
+      - [0x1AB330, .data, ovl8/ovl8_32]
+      - [0x1AB650, .rodata, ovl8/ovl8_8]
+      - [0x1AB6A0, .rodata, ovl8/ovl8_31]
+      - { start: 0x1AB6B0, type: bss, name: ovl8/ovl8_bss, vram: 0x8038EE60 }
+
+  - name: ovl9
+    type: code
+    start: 0x1AB6B0
+    vram: 0x80369240
+    exclusive_ram_id: overlay_80369240
+    subsegments:
+      - [0x1AB6B0, c, db/dbmenu]
+      - [0x1AC3D0, .data, db/dbmenu]
+      - [0x1AC820, .rodata, db/dbmenu]
+      - { start: auto, type: .bss, name: db/dbmenu }
+
+  - name: framebuffer
+    exclusive_ram_id: framebuffers
+    type: code
+    follows_vram: ovl1
+    subsegments:
+    - { start: auto, type: .bss, name: sys/framebuffer }
+
+  - [0x1AC870, bin, relocData]
+
+# Particle banks
+  - name: efcommon_scb
+    type: code
+    start: 0xAC7340
+    vram: 0x0
+    exclusive_ram_id: particles
+    subsegments:
+      - [0xAC7340, .rodata, particles/efcommon_scb]
+  - name: efcommon_txb
+    type: code
+    start: 0xAC9DE0
+    vram: 0x0
+    exclusive_ram_id: particles
+    subsegments:
+      - [0xAC9DE0, .rodata, particles/efcommon_txb]
+
+  - name: particles_unk0_scb
+    type: code
+    start: 0xB16C80
+    vram: 0x0
+    exclusive_ram_id: particles
+    subsegments:
+      - [0xB16C80, .rodata, particles/particles_unk0_scb]
+  - name: particles_unk0_txb
+    type: code
+    start: 0xB17060
+    vram: 0x0
+    exclusive_ram_id: particles
+    subsegments:
+      - [0xB17060, .rodata, particles/particles_unk0_txb]
+
+  - name: particles_unk1_scb
+    type: code
+    start: 0xB174A0
+    vram: 0x0
+    exclusive_ram_id: particles
+    subsegments:
+      - [0xB174A0, .rodata, particles/particles_unk1_scb]
+  - name: particles_unk1_txb
+    type: code
+    start: 0xB176A0
+    vram: 0x0
+    exclusive_ram_id: particles
+    subsegments:
+      - [0xB176A0, .rodata, particles/particles_unk1_txb]
+
+  - name: particles_unk2_scb
+    type: code
+    start: 0xB19700
+    vram: 0x0
+    exclusive_ram_id: particles
+    subsegments:
+      - [0xB19700, .rodata, particles/particles_unk2_scb]
+  - name: particles_unk2_txb
+    type: code
+    start: 0xB19850
+    vram: 0x0
+    exclusive_ram_id: particles
+    subsegments:
+      - [0xB19850, .rodata, particles/particles_unk2_txb]
+
+  - name: itcommon_scb
+    type: code
+    start: 0xB1BCA0
+    vram: 0x0
+    exclusive_ram_id: particles
+    subsegments:
+      - [0xB1BCA0, .rodata, particles/itcommon_scb]
+  - name: itcommon_txb
+    type: code
+    start: 0xB1BDE0
+    vram: 0x0
+    exclusive_ram_id: particles
+    subsegments:
+      - [0xB1BDE0, .rodata, particles/itcommon_txb]
+
+  - name: grpupupu_scb
+    type: code
+    start: 0xB1E640
+    vram: 0x0
+    exclusive_ram_id: particles
+    subsegments:
+      - [0xB1E640, .rodata, particles/grpupupu_scb]
+  - name: grpupupu_txb
+    type: code
+    start: 0xB1E7E0
+    vram: 0x0
+    exclusive_ram_id: particles
+    subsegments:
+      - [0xB1E7E0, .rodata, particles/grpupupu_txb]
+
+  - name: grhyrule_scb
+    type: code
+    start: 0xB1F960
+    vram: 0x0
+    exclusive_ram_id: particles
+    subsegments:
+      - [0xB1F960, .rodata, particles/grhyrule_scb]
+  - name: grhyrule_txb
+    type: code
+    start: 0xB1FC80
+    vram: 0x0
+    exclusive_ram_id: particles
+    subsegments:
+      - [0xB1FC80, .rodata, particles/grhyrule_txb]
+
+  - name: gryoster_scb
+    type: code
+    start: 0xB22980
+    vram: 0x0
+    exclusive_ram_id: particles
+    subsegments:
+      - [0xB22980, .rodata, particles/gryoster_scb]
+  - name: gryoster_txb
+    type: code
+    start: 0xB22A00
+    vram: 0x0
+    exclusive_ram_id: particles
+    subsegments:
+      - [0xB22A00, .rodata, particles/gryoster_txb]
+
+  - name: mntitle_scb
+    type: code
+    start: 0xB22C30
+    vram: 0x0
+    exclusive_ram_id: particles
+    subsegments:
+      - [0xB22C30, .rodata, particles/mntitle_scb]
+  - name: mntitle_txb
+    type: code
+    start: 0xB22D40
+    vram: 0x0
+    exclusive_ram_id: particles
+    subsegments:
+      - [0xB22D40, .rodata, particles/mntitle_txb]
+
+# Music and sound effects
+  - name: S1_music_sbk
+    type: code
+    start: 0xB277B0
+    vram: 0x0
+    exclusive_ram_id: audio
+    subsegments:
+      - [0xB277B0, .rodata, audio/S1_music_sbk]
+  - name: B1_sounds1_ctl
+    type: code
+    start: 0xB4E5C0
+    vram: 0x0
+    exclusive_ram_id: audio
+    subsegments:
+      - [0xB4E5C0, .rodata, audio/B1_sounds1_ctl]
+  - name: B1_sounds1.tbl
+    type: bin
+    start: 0xB54CE0
+  - name: B1_sounds2_ctl
+    type: code
+    start: 0xC6B650
+    vram: 0x0
+    exclusive_ram_id: audio
+    subsegments:
+      - [0xC6B650, .rodata, audio/B1_sounds2_ctl]
+  - name: B1_sounds2.tbl
+    type: bin
+    start: 0xC7B1F0
+
+  - name: fgm.unk # ???
+    type: bin
+    start: 0xF573D0
+  - name: fgm.tbl
+    type: bin # Sound table (?)
+    start: 0xF57BF0
+  - name: fgm.ucd
+    type: bin # FGM microcode
+    start: 0xF5A9C0
+
+  - name: rom_pad
+    type: bin
+    start: 0xF5F4E0
+
+  - [0x1000000]

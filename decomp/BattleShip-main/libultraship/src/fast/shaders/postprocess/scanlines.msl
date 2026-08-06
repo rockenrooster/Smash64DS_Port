@@ -1,0 +1,87 @@
+// SPDX-License-Identifier: CC0-1.0
+//
+// Default scanline shader (MSL companion to scanlines.glsl), dedicated
+// to the public domain by the author under CC0 1.0 Universal
+// (https://creativecommons.org/publicdomain/zero/1.0/). To the extent
+// possible under law, all copyright and related or neighboring rights
+// to this work have been waived; it may be used, modified, sublicensed
+// and redistributed without restriction or attribution.
+//
+// Hand-tuned MSL companion that takes priority over the transpiled
+// output PostProcessTranspiler would otherwise synthesize from
+// scanlines.glsl. Kept in tree so the bundled built-in matches what
+// shipped in earlier Phase 1 builds byte-for-byte.
+//
+// Vertex entry: postprocess_vertex(uint vertex_id [[vertex_id]])
+//   Emits a fullscreen triangle by indexing into compile-time arrays.
+//
+// Fragment entry: postprocess_fragment(stage_in, texture, sampler, uniforms)
+//   Bindings the LUS Metal backend supplies:
+//     - texture(0)  : Source           (the input game framebuffer)
+//     - sampler(0)  : SourceSampler    (linear, clamp-to-edge)
+//     - buffer(0)   : PostProcessUniforms (matches gfx_metal.h struct)
+
+#include <metal_stdlib>
+using namespace metal;
+
+struct PostProcessUniforms {
+    float2 SourceSize;
+    float2 OutputSize;
+    float2 InputSize;
+    int    FrameCount;
+    float  FrameDirection;
+};
+
+struct VOut {
+    float4 position [[position]];
+    float2 vTexCoord;
+};
+
+vertex VOut postprocess_vertex(uint vid [[vertex_id]]) {
+    // Fullscreen triangle, oversized to cover the [-1,1] viewport with no
+    // diagonal seam. UVs picked so clip-space Y=-1 reads texture V=1
+    // (Metal V grows top→bottom; clip Y grows bottom→top), preserving
+    // the orientation of the rendered source so ImGui downstream samples
+    // top-of-game at the top of its drawn quad.
+    const float2 positions[3] = {
+        float2(-1.0, -1.0),
+        float2( 3.0, -1.0),
+        float2(-1.0,  3.0),
+    };
+    const float2 texCoords[3] = {
+        float2(0.0, 1.0),
+        float2(2.0, 1.0),
+        float2(0.0, -1.0),
+    };
+    VOut o;
+    o.position = float4(positions[vid], 0.0, 1.0);
+    o.vTexCoord = texCoords[vid];
+    return o;
+}
+
+fragment float4 postprocess_fragment(VOut in [[stage_in]],
+                                     texture2d<float> Source [[texture(0)]],
+                                     sampler SourceSampler [[sampler(0)]],
+                                     constant PostProcessUniforms& u [[buffer(0)]]) {
+    float2 uv = in.vTexCoord;
+    float3 color = Source.sample(SourceSampler, uv).rgb;
+
+    const float scanMin = 0.75;
+    float row = uv.y * u.SourceSize.y;
+    float scan = mix(scanMin, 1.0, 0.5 + 0.5 * cos(row * 6.283185));
+    color *= scan;
+
+    const float maskStrength = 0.10;
+    float colMod = fmod(in.position.x, 3.0);
+    float3 mask;
+    if (colMod < 1.0) {
+        mask = float3(1.0 + maskStrength, 1.0 - maskStrength, 1.0 - maskStrength);
+    } else if (colMod < 2.0) {
+        mask = float3(1.0 - maskStrength, 1.0 + maskStrength, 1.0 - maskStrength);
+    } else {
+        mask = float3(1.0 - maskStrength, 1.0 - maskStrength, 1.0 + maskStrength);
+    }
+    color *= mask;
+
+    return float4(color, 1.0);
+}

@@ -1,0 +1,21 @@
+<!-- Start — N64 red (#C8252E). Flat plastic. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+        xmlns:aapt="http://schemas.android.com/aapt"
+        android:width="100dp" android:height="100dp"
+        android:viewportWidth="100" android:viewportHeight="100">
+
+    <path android:pathData="M50,50 m-47,0 a47,47 0 1,0 94,0 a47,47 0 1,0 -94,0">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="linear"
+                      android:startX="50" android:startY="3"
+                      android:endX="50"   android:endY="97">
+                <item android:offset="0.00" android:color="#FFD93640"/>
+                <item android:offset="1.00" android:color="#FFA31B22"/>
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <path android:pathData="M50,50 m-48,0 a48,48 0 1,0 96,0 a48,48 0 1,0 -96,0 M50,50 m-46,0 a46,46 0 1,1 92,0 a46,46 0 1,1 -92,0"
+          android:fillColor="#FF5A0A10"
+          android:fillType="evenOdd"/>
+</vector>

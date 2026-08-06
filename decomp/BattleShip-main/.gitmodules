@@ -1,0 +1,12 @@
+[submodule "libultraship"]
+	path = libultraship
+	url = https://github.com/JRickey/libultraship.git
+	branch = ssb64-android-rebased
+[submodule "torch"]
+	path = torch
+	url = https://github.com/JRickey/Torch.git
+	branch = ssb64
+[submodule "decomp"]
+	path = decomp
+	url = https://github.com/JRickey/ssb-decomp-re.git
+	branch = port-patches

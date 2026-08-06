@@ -1,0 +1,112 @@
+func_ov013_021111a0 kind:function(arm,size=0x30) addr:0x021111a0
+func_ov013_021111d0 kind:function(arm,size=0x44) addr:0x021111d0
+func_ov013_02111214 kind:function(arm,size=0x24) addr:0x02111214
+func_ov013_02111238 kind:function(arm,size=0x48) addr:0x02111238
+func_ov013_02111280 kind:function(arm,size=0x28) addr:0x02111280
+func_ov013_021112a8 kind:function(arm,size=0x94) addr:0x021112a8
+func_ov013_0211133c kind:function(arm,size=0x48) addr:0x0211133c
+ClockPaintingPendulum_Spawn kind:function(arm,size=0x38) addr:0x02111384
+_ZN22ClockPaintingHandShortD1Ev kind:function(arm,size=0x30) addr:0x021113bc
+_ZN22ClockPaintingHandShortD0Ev kind:function(arm,size=0x44) addr:0x021113ec
+func_ov013_02111430 kind:function(arm,size=0x48) addr:0x02111430
+_ZN22ClockPaintingHandShort16CleanupResourcesEv kind:function(arm,size=0x2c) addr:0x02111478
+_ZN22ClockPaintingHandShort6RenderEv kind:function(arm,size=0x28) addr:0x021114a4
+_ZN22ClockPaintingHandShort8BehaviorEv kind:function(arm,size=0x100) addr:0x021114cc
+_ZN22ClockPaintingHandShort13InitResourcesEv kind:function(arm,size=0x70) addr:0x021115cc
+ClockPaintingHandShort_Spawn kind:function(arm,size=0x38) addr:0x0211163c
+ClockPaintingHandLong_Spawn kind:function(arm,size=0x38) addr:0x02111674
+data_ov013_021116ac kind:data(any) addr:0x021116ac
+data_ov013_021116b0 kind:data(any) addr:0x021116b0
+__sinit_ov013_021116b8 kind:function(arm,size=0x40) addr:0x021116b8
+__sinit_ov013_021116f8 kind:function(arm,size=0x68) addr:0x021116f8
+.p__sinit_ov013_021116b8 kind:data(word) addr:0x02111760
+.p__sinit_ov013_021116f8 kind:data(word) addr:0x02111764
+data_ov013_02111780 kind:data(any) addr:0x02111780
+data_ov013_02111784 kind:data(any) addr:0x02111784
+data_ov013_0211178c kind:data(any) addr:0x0211178c
+data_ov013_02111794 kind:data(any) addr:0x02111794
+data_ov013_0211179c kind:data(any) addr:0x0211179c
+data_ov013_021117a4 kind:data(any) addr:0x021117a4
+data_ov013_021117ac kind:data(any) addr:0x021117ac
+data_ov013_021117b4 kind:data(any) addr:0x021117b4
+data_ov013_021117bc kind:data(any) addr:0x021117bc
+data_ov013_021117c4 kind:data(any) addr:0x021117c4
+data_ov013_021117cc kind:data(any) addr:0x021117cc
+data_ov013_021117d4 kind:data(any) addr:0x021117d4
+data_ov013_021117dc kind:data(any) addr:0x021117dc
+data_ov013_021117e4 kind:data(any) addr:0x021117e4
+data_ov013_021117ec kind:data(any) addr:0x021117ec
+data_ov013_021117f8 kind:data(any) addr:0x021117f8
+data_ov013_02111804 kind:data(any) addr:0x02111804
+data_ov013_02111814 kind:data(any) addr:0x02111814
+data_ov013_02111824 kind:data(any) addr:0x02111824
+data_ov013_02111834 kind:data(any) addr:0x02111834
+data_ov013_02111844 kind:data(any) addr:0x02111844 ambiguous
+data_ov013_02111860 kind:data(any) addr:0x02111860
+data_ov013_02111890 kind:data(any) addr:0x02111890
+data_ov013_021118d0 kind:data(any) addr:0x021118d0
+data_ov013_0211190c kind:data(any) addr:0x0211190c ambiguous
+data_ov013_02111918 kind:data(any) addr:0x02111918
+data_ov013_02111928 kind:data(any) addr:0x02111928 ambiguous
+data_ov013_0211192c kind:data(any) addr:0x0211192c ambiguous
+data_ov013_02111944 kind:data(any) addr:0x02111944 ambiguous
+data_ov013_02111960 kind:data(any) addr:0x02111960 ambiguous
+data_ov013_0211196c kind:data(any) addr:0x0211196c
+data_ov013_02111994 kind:data(any) addr:0x02111994 ambiguous
+data_ov013_021119cc kind:data(any) addr:0x021119cc
+data_ov013_02111a3c kind:data(any) addr:0x02111a3c
+data_ov013_02111a4c kind:data(any) addr:0x02111a4c ambiguous
+data_ov013_02111a58 kind:data(any) addr:0x02111a58 ambiguous
+data_ov013_02111a78 kind:data(any) addr:0x02111a78 ambiguous
+data_ov013_02111abc kind:data(any) addr:0x02111abc ambiguous
+data_ov013_02111ad4 kind:data(any) addr:0x02111ad4 ambiguous
+data_ov013_02111ae4 kind:data(any) addr:0x02111ae4
+data_ov013_02111af4 kind:data(any) addr:0x02111af4 ambiguous
+data_ov013_02111b14 kind:data(any) addr:0x02111b14 ambiguous
+data_ov013_02111b34 kind:data(any) addr:0x02111b34 ambiguous
+data_ov013_02111b44 kind:data(any) addr:0x02111b44 ambiguous
+data_ov013_02111b64 kind:data(any) addr:0x02111b64 ambiguous
+data_ov013_02111b68 kind:data(any) addr:0x02111b68 ambiguous
+data_ov013_02111b6c kind:data(any) addr:0x02111b6c ambiguous
+data_ov013_02111b74 kind:data(any) addr:0x02111b74 ambiguous
+data_ov013_02111b88 kind:data(any) addr:0x02111b88 ambiguous
+data_ov013_02111b94 kind:data(any) addr:0x02111b94
+data_ov013_02111bd4 kind:data(any) addr:0x02111bd4 ambiguous
+data_ov013_02111be0 kind:data(any) addr:0x02111be0 ambiguous
+data_ov013_02111c20 kind:data(any) addr:0x02111c20 ambiguous
+data_ov013_02111c54 kind:data(any) addr:0x02111c54
+data_ov013_02111cc8 kind:data(any) addr:0x02111cc8 ambiguous
+data_ov013_02111d28 kind:data(any) addr:0x02111d28
+data_ov013_02111e18 kind:data(any) addr:0x02111e18
+data_ov013_02111f18 kind:data(any) addr:0x02111f18
+data_ov013_02111fc0 kind:data(any) addr:0x02111fc0 ambiguous
+data_ov013_0211208c kind:data(any) addr:0x0211208c ambiguous
+data_ov013_021120a4 kind:data(any) addr:0x021120a4 ambiguous
+data_ov013_021120bc kind:data(any) addr:0x021120bc ambiguous
+data_ov013_021120d8 kind:data(any) addr:0x021120d8 ambiguous
+data_ov013_021120e0 kind:data(any) addr:0x021120e0
+data_ov013_021120ec kind:data(any) addr:0x021120ec
+data_ov013_021120f8 kind:data(any) addr:0x021120f8 ambiguous
+ClockPaintingPendulum_SpawnInfo kind:data(any) addr:0x02112104 ambiguous
+data_ov013_02112118 kind:data(any) addr:0x02112118 ambiguous
+data_ov013_02112128 kind:data(any) addr:0x02112128
+data_ov013_02112138 kind:data(any) addr:0x02112138 ambiguous
+data_ov013_02112158 kind:data(any) addr:0x02112158 ambiguous
+data_ov013_02112178 kind:data(any) addr:0x02112178 ambiguous
+data_ov013_02112198 kind:data(any) addr:0x02112198 ambiguous
+data_ov013_021121a4 kind:data(any) addr:0x021121a4
+data_ov013_021121b0 kind:data(any) addr:0x021121b0
+data_ov013_021121b8 kind:data(any) addr:0x021121b8 ambiguous
+ClockPaintingHandLong_SpawnInfo kind:data(any) addr:0x021121c0 ambiguous
+ClockPaintingHandShort_SpawnInfo kind:data(any) addr:0x021121dc ambiguous
+data_ov013_021121f8 kind:data(any) addr:0x021121f8 ambiguous
+_ZTV22ClockPaintingHandShort kind:data(any) addr:0x02112200
+_ZTV12daObjClock_c kind:data(any) addr:0x02112200
+data_ov013_02112258 kind:data(any) addr:0x02112258 ambiguous
+data_ov013_0211227c kind:data(any) addr:0x0211227c ambiguous
+data_ov013_02112280 kind:bss addr:0x02112280
+data_ov013_02112288 kind:bss addr:0x02112288
+data_ov013_02112294 kind:bss addr:0x02112294
+data_ov013_0211229c kind:bss addr:0x0211229c
+data_ov013_021122a4 kind:bss addr:0x021122a4
+data_ov013_021122b0 kind:bss addr:0x021122b0

@@ -1,0 +1,705 @@
+-------------------------------------
+Translated Report (Full Report Below)
+-------------------------------------
+Process:             BattleShip [25865]
+Path:                /Users/USER/*/BattleShip
+Identifier:          BattleShip
+Version:             ???
+Code Type:           ARM-64 (Native)
+Role:                Foreground
+Parent Process:      Exited process [25039]
+Coalition:           com.apple.Terminal [1110]
+Responsible Process: Terminal [1497]
+User ID:             501
+
+Date/Time:           2026-06-10 04:13:31.2612 -0400
+Launch Time:         2026-06-10 04:13:29.6668 -0400
+Hardware Model:      MacBookPro18,3
+OS Version:          macOS 26.5.1 (25F80)
+Release Type:        User
+
+Crash Reporter Key:  9C183AA1-F739-571F-E98F-17FB16643A10
+Incident Identifier: 12808630-42CA-4A66-881D-BF7370DE4FFB
+
+Sleep/Wake UUID:       8D6EC8B4-8BA4-4B63-803B-03EE6EC01F7B
+
+Time Awake Since Boot: 150000 seconds
+Time Since Wake:       145687 seconds
+
+System Integrity Protection: enabled
+
+Triggered by Thread: 0, Dispatch Queue: com.apple.main-thread
+
+Exception Type:    EXC_BAD_ACCESS (SIGBUS)
+Exception Subtype: KERN_PROTECTION_FAILURE at 0x000000011f6b4000
+Exception Codes:   0x0000000000000002, 0x000000011f6b4000
+
+
+VM Region Info: 0x11f6b4000 is in 0x11f6b4000-0x11f6b8000;  bytes after start: 0  bytes before end: 16383
+      REGION TYPE                    START - END         [ VSIZE] PRT/MAX SHRMOD  REGION DETAIL
+      VM_ALLOCATE                 11f674000-11f6b4000    [  256K] rw-/rwx SM=PRV  
+--->  VM_ALLOCATE                 11f6b4000-11f6b8000    [   16K] ---/rwx SM=PRV  
+      VM_ALLOCATE                 11f6b8000-11f6f8000    [  256K] rw-/rwx SM=PRV  
+
+Thread 0 Crashed::  Dispatch queue: com.apple.main-thread
+0   BattleShip                    	       0x103157304 (anonymous namespace)::WalkFPChain((anonymous namespace)::CrashRegs const&, void**, int) + 340 (port_watchdog.cpp:229)
+1   BattleShip                    	       0x103156d24 (anonymous namespace)::DumpBacktraceFromContext(void*) + 136 (port_watchdog.cpp:252)
+2   BattleShip                    	       0x103156188 (anonymous namespace)::CrashSignalHandler(int, __siginfo*, void*) + 664 (port_watchdog.cpp:319)
+3   libsystem_platform.dylib      	       0x180c4b744 _sigtramp + 56
+4   BattleShip                    	       0x102fd99d4 sc1PIntroSetupFighterFiles + 68 (sc1pintro.c:2084)
+5   BattleShip                    	       0x102fd99d4 sc1PIntroSetupFighterFiles + 68 (sc1pintro.c:2084)
+6   BattleShip                    	       0x102fd9bf8 sc1PIntroFuncStart + 256 (sc1pintro.c:2143)
+7   BattleShip                    	       0x1030252a4 syTaskmanLoadScene + 928 (taskman.c:1302)
+8   BattleShip                    	       0x1030256bc syTaskmanStartTask + 876 (taskman.c:1420)
+9   BattleShip                    	       0x102fedeb4 scManagerFuncUpdate + 24 (scmanager.c:1562)
+10  BattleShip                    	       0x102fd9dcc sc1PIntroStartScene + 88 (sc1pintro.c:2236)
+11  BattleShip                    	       0x102fdabe0 sc1PManagerUpdateScene + 2184 (sc1pmanager.c:456)
+12  BattleShip                    	       0x102fed538 scManagerRunLoop + 3080 (scmanager.c:1298)
+13  BattleShip                    	       0x102ff99f4 syMainThread5 + 564 (main.c:252)
+14  BattleShip                    	       0x1030778a8 ucontext_entry(unsigned int, unsigned int) + 64 (coroutine_posix.cpp:79)
+15  libsystem_platform.dylib      	       0x180c4cd40 _ctx_start + 32
+
+Thread 1:
+0   libsystem_kernel.dylib        	       0x180c0150c __psynch_cvwait + 8
+1   libsystem_pthread.dylib       	       0x180c42128 _pthread_cond_wait + 980
+2   libc++.1.dylib                	       0x180b57858 std::__1::condition_variable::wait(std::__1::unique_lock<std::__1::mutex>&) + 32
+3   libspdlog.1.17.0.dylib        	       0x105d19144 spdlog::details::mpmc_blocking_queue<spdlog::details::async_msg>::dequeue(spdlog::details::async_msg&) + 68
+4   libspdlog.1.17.0.dylib        	       0x105d19078 spdlog::details::thread_pool::process_next_msg_() + 116
+5   libspdlog.1.17.0.dylib        	       0x105d198cc void* std::__1::__thread_proxy[abi:ne200100]<std::__1::tuple<std::__1::unique_ptr<std::__1::__thread_struct, std::__1::default_delete<std::__1::__thread_struct>>, spdlog::details::thread_pool::thread_pool(unsigned long, unsigned long, std::__1::function<void ()>, std::__1::function<void ()>)::$_0>>(void*) + 80
+6   libsystem_pthread.dylib       	       0x180c41c58 _pthread_start + 136
+7   libsystem_pthread.dylib       	       0x180c3cc1c thread_start + 8
+
+Thread 2:
+0   libsystem_kernel.dylib        	       0x180c0150c __psynch_cvwait + 8
+1   libsystem_pthread.dylib       	       0x180c42128 _pthread_cond_wait + 980
+2   libc++.1.dylib                	       0x180b57858 std::__1::condition_variable::wait(std::__1::unique_lock<std::__1::mutex>&) + 32
+3   BattleShip                    	       0x1033f73b4 void std::__1::condition_variable::wait[abi:nqe210106]<BS::thread_pool::worker(unsigned int, std::__1::function<void ()> const&)::'lambda'()>(std::__1::unique_lock<std::__1::mutex>&, BS::thread_pool::worker(unsigned int, std::__1::function<void ()> const&)::'lambda'()) + 64 (condition_variable.h:112)
+4   BattleShip                    	       0x1033f7054 BS::thread_pool::worker(unsigned int, std::__1::function<void ()> const&) + 348 (BS_thread_pool.hpp:920)
+5   BattleShip                    	       0x1033f8ce4 std::__1::__invoke_result_impl<void, void (BS::thread_pool::*)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*, unsigned int, std::__1::function<void ()>>::type std::__1::__invoke[abi:nqe210106]<void (BS::thread_pool::*)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*, unsigned int, std::__1::function<void ()>>(void (BS::thread_pool::*&&)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*&&, unsigned int&&, std::__1::function<void ()>&&) + 144 (invoke.h:87)
+6   BattleShip                    	       0x1033f8c48 void std::__1::__thread_execute[abi:nqe210106]<std::__1::unique_ptr<std::__1::__thread_struct, std::__1::default_delete<std::__1::__thread_struct>>, void (BS::thread_pool::*)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*, unsigned int, std::__1::function<void ()>, 2ul, 3ul, 4ul>(std::__1::tuple<std::__1::unique_ptr<std::__1::__thread_struct, std::__1::default_delete<std::__1::__thread_struct>>, void (BS::thread_pool::*)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*, unsigned int, std::__1::function<void ()>>&, std::__1::__tuple_indices<2ul, 3ul, 4ul>) + 80 (thread.h:159)
+7   BattleShip                    	       0x1033f8914 void* std::__1::__thread_proxy[abi:nqe210106]<std::__1::tuple<std::__1::unique_ptr<std::__1::__thread_struct, std::__1::default_delete<std::__1::__thread_struct>>, void (BS::thread_pool::*)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*, unsigned int, std::__1::function<void ()>>>(void*) + 84 (thread.h:168)
+8   libsystem_pthread.dylib       	       0x180c41c58 _pthread_start + 136
+9   libsystem_pthread.dylib       	       0x180c3cc1c thread_start + 8
+
+Thread 3:
+0   libsystem_kernel.dylib        	       0x180c0150c __psynch_cvwait + 8
+1   libsystem_pthread.dylib       	       0x180c42128 _pthread_cond_wait + 980
+2   libc++.1.dylib                	       0x180b57858 std::__1::condition_variable::wait(std::__1::unique_lock<std::__1::mutex>&) + 32
+3   BattleShip                    	       0x1033f73b4 void std::__1::condition_variable::wait[abi:nqe210106]<BS::thread_pool::worker(unsigned int, std::__1::function<void ()> const&)::'lambda'()>(std::__1::unique_lock<std::__1::mutex>&, BS::thread_pool::worker(unsigned int, std::__1::function<void ()> const&)::'lambda'()) + 64 (condition_variable.h:112)
+4   BattleShip                    	       0x1033f7054 BS::thread_pool::worker(unsigned int, std::__1::function<void ()> const&) + 348 (BS_thread_pool.hpp:920)
+5   BattleShip                    	       0x1033f8ce4 std::__1::__invoke_result_impl<void, void (BS::thread_pool::*)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*, unsigned int, std::__1::function<void ()>>::type std::__1::__invoke[abi:nqe210106]<void (BS::thread_pool::*)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*, unsigned int, std::__1::function<void ()>>(void (BS::thread_pool::*&&)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*&&, unsigned int&&, std::__1::function<void ()>&&) + 144 (invoke.h:87)
+6   BattleShip                    	       0x1033f8c48 void std::__1::__thread_execute[abi:nqe210106]<std::__1::unique_ptr<std::__1::__thread_struct, std::__1::default_delete<std::__1::__thread_struct>>, void (BS::thread_pool::*)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*, unsigned int, std::__1::function<void ()>, 2ul, 3ul, 4ul>(std::__1::tuple<std::__1::unique_ptr<std::__1::__thread_struct, std::__1::default_delete<std::__1::__thread_struct>>, void (BS::thread_pool::*)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*, unsigned int, std::__1::function<void ()>>&, std::__1::__tuple_indices<2ul, 3ul, 4ul>) + 80 (thread.h:159)
+7   BattleShip                    	       0x1033f8914 void* std::__1::__thread_proxy[abi:nqe210106]<std::__1::tuple<std::__1::unique_ptr<std::__1::__thread_struct, std::__1::default_delete<std::__1::__thread_struct>>, void (BS::thread_pool::*)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*, unsigned int, std::__1::function<void ()>>>(void*) + 84 (thread.h:168)
+8   libsystem_pthread.dylib       	       0x180c41c58 _pthread_start + 136
+9   libsystem_pthread.dylib       	       0x180c3cc1c thread_start + 8
+
+Thread 4:
+0   libsystem_kernel.dylib        	       0x180c0150c __psynch_cvwait + 8
+1   libsystem_pthread.dylib       	       0x180c42128 _pthread_cond_wait + 980
+2   libc++.1.dylib                	       0x180b57858 std::__1::condition_variable::wait(std::__1::unique_lock<std::__1::mutex>&) + 32
+3   BattleShip                    	       0x1033f73b4 void std::__1::condition_variable::wait[abi:nqe210106]<BS::thread_pool::worker(unsigned int, std::__1::function<void ()> const&)::'lambda'()>(std::__1::unique_lock<std::__1::mutex>&, BS::thread_pool::worker(unsigned int, std::__1::function<void ()> const&)::'lambda'()) + 64 (condition_variable.h:112)
+4   BattleShip                    	       0x1033f7054 BS::thread_pool::worker(unsigned int, std::__1::function<void ()> const&) + 348 (BS_thread_pool.hpp:920)
+5   BattleShip                    	       0x1033f8ce4 std::__1::__invoke_result_impl<void, void (BS::thread_pool::*)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*, unsigned int, std::__1::function<void ()>>::type std::__1::__invoke[abi:nqe210106]<void (BS::thread_pool::*)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*, unsigned int, std::__1::function<void ()>>(void (BS::thread_pool::*&&)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*&&, unsigned int&&, std::__1::function<void ()>&&) + 144 (invoke.h:87)
+6   BattleShip                    	       0x1033f8c48 void std::__1::__thread_execute[abi:nqe210106]<std::__1::unique_ptr<std::__1::__thread_struct, std::__1::default_delete<std::__1::__thread_struct>>, void (BS::thread_pool::*)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*, unsigned int, std::__1::function<void ()>, 2ul, 3ul, 4ul>(std::__1::tuple<std::__1::unique_ptr<std::__1::__thread_struct, std::__1::default_delete<std::__1::__thread_struct>>, void (BS::thread_pool::*)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*, unsigned int, std::__1::function<void ()>>&, std::__1::__tuple_indices<2ul, 3ul, 4ul>) + 80 (thread.h:159)
+7   BattleShip                    	       0x1033f8914 void* std::__1::__thread_proxy[abi:nqe210106]<std::__1::tuple<std::__1::unique_ptr<std::__1::__thread_struct, std::__1::default_delete<std::__1::__thread_struct>>, void (BS::thread_pool::*)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*, unsigned int, std::__1::function<void ()>>>(void*) + 84 (thread.h:168)
+8   libsystem_pthread.dylib       	       0x180c41c58 _pthread_start + 136
+9   libsystem_pthread.dylib       	       0x180c3cc1c thread_start + 8
+
+Thread 5:
+0   libsystem_kernel.dylib        	       0x180c0150c __psynch_cvwait + 8
+1   libsystem_pthread.dylib       	       0x180c42128 _pthread_cond_wait + 980
+2   libc++.1.dylib                	       0x180b57858 std::__1::condition_variable::wait(std::__1::unique_lock<std::__1::mutex>&) + 32
+3   BattleShip                    	       0x1033f73b4 void std::__1::condition_variable::wait[abi:nqe210106]<BS::thread_pool::worker(unsigned int, std::__1::function<void ()> const&)::'lambda'()>(std::__1::unique_lock<std::__1::mutex>&, BS::thread_pool::worker(unsigned int, std::__1::function<void ()> const&)::'lambda'()) + 64 (condition_variable.h:112)
+4   BattleShip                    	       0x1033f7054 BS::thread_pool::worker(unsigned int, std::__1::function<void ()> const&) + 348 (BS_thread_pool.hpp:920)
+5   BattleShip                    	       0x1033f8ce4 std::__1::__invoke_result_impl<void, void (BS::thread_pool::*)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*, unsigned int, std::__1::function<void ()>>::type std::__1::__invoke[abi:nqe210106]<void (BS::thread_pool::*)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*, unsigned int, std::__1::function<void ()>>(void (BS::thread_pool::*&&)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*&&, unsigned int&&, std::__1::function<void ()>&&) + 144 (invoke.h:87)
+6   BattleShip                    	       0x1033f8c48 void std::__1::__thread_execute[abi:nqe210106]<std::__1::unique_ptr<std::__1::__thread_struct, std::__1::default_delete<std::__1::__thread_struct>>, void (BS::thread_pool::*)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*, unsigned int, std::__1::function<void ()>, 2ul, 3ul, 4ul>(std::__1::tuple<std::__1::unique_ptr<std::__1::__thread_struct, std::__1::default_delete<std::__1::__thread_struct>>, void (BS::thread_pool::*)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*, unsigned int, std::__1::function<void ()>>&, std::__1::__tuple_indices<2ul, 3ul, 4ul>) + 80 (thread.h:159)
+7   BattleShip                    	       0x1033f8914 void* std::__1::__thread_proxy[abi:nqe210106]<std::__1::tuple<std::__1::unique_ptr<std::__1::__thread_struct, std::__1::default_delete<std::__1::__thread_struct>>, void (BS::thread_pool::*)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*, unsigned int, std::__1::function<void ()>>>(void*) + 84 (thread.h:168)
+8   libsystem_pthread.dylib       	       0x180c41c58 _pthread_start + 136
+9   libsystem_pthread.dylib       	       0x180c3cc1c thread_start + 8
+
+Thread 6:
+0   libsystem_kernel.dylib        	       0x180c0150c __psynch_cvwait + 8
+1   libsystem_pthread.dylib       	       0x180c42128 _pthread_cond_wait + 980
+2   libc++.1.dylib                	       0x180b57858 std::__1::condition_variable::wait(std::__1::unique_lock<std::__1::mutex>&) + 32
+3   BattleShip                    	       0x1033f73b4 void std::__1::condition_variable::wait[abi:nqe210106]<BS::thread_pool::worker(unsigned int, std::__1::function<void ()> const&)::'lambda'()>(std::__1::unique_lock<std::__1::mutex>&, BS::thread_pool::worker(unsigned int, std::__1::function<void ()> const&)::'lambda'()) + 64 (condition_variable.h:112)
+4   BattleShip                    	       0x1033f7054 BS::thread_pool::worker(unsigned int, std::__1::function<void ()> const&) + 348 (BS_thread_pool.hpp:920)
+5   BattleShip                    	       0x1033f8ce4 std::__1::__invoke_result_impl<void, void (BS::thread_pool::*)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*, unsigned int, std::__1::function<void ()>>::type std::__1::__invoke[abi:nqe210106]<void (BS::thread_pool::*)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*, unsigned int, std::__1::function<void ()>>(void (BS::thread_pool::*&&)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*&&, unsigned int&&, std::__1::function<void ()>&&) + 144 (invoke.h:87)
+6   BattleShip                    	       0x1033f8c48 void std::__1::__thread_execute[abi:nqe210106]<std::__1::unique_ptr<std::__1::__thread_struct, std::__1::default_delete<std::__1::__thread_struct>>, void (BS::thread_pool::*)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*, unsigned int, std::__1::function<void ()>, 2ul, 3ul, 4ul>(std::__1::tuple<std::__1::unique_ptr<std::__1::__thread_struct, std::__1::default_delete<std::__1::__thread_struct>>, void (BS::thread_pool::*)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*, unsigned int, std::__1::function<void ()>>&, std::__1::__tuple_indices<2ul, 3ul, 4ul>) + 80 (thread.h:159)
+7   BattleShip                    	       0x1033f8914 void* std::__1::__thread_proxy[abi:nqe210106]<std::__1::tuple<std::__1::unique_ptr<std::__1::__thread_struct, std::__1::default_delete<std::__1::__thread_struct>>, void (BS::thread_pool::*)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*, unsigned int, std::__1::function<void ()>>>(void*) + 84 (thread.h:168)
+8   libsystem_pthread.dylib       	       0x180c41c58 _pthread_start + 136
+9   libsystem_pthread.dylib       	       0x180c3cc1c thread_start + 8
+
+Thread 7:
+0   libsystem_kernel.dylib        	       0x180c0150c __psynch_cvwait + 8
+1   libsystem_pthread.dylib       	       0x180c42128 _pthread_cond_wait + 980
+2   libc++.1.dylib                	       0x180b57858 std::__1::condition_variable::wait(std::__1::unique_lock<std::__1::mutex>&) + 32
+3   BattleShip                    	       0x1033f73b4 void std::__1::condition_variable::wait[abi:nqe210106]<BS::thread_pool::worker(unsigned int, std::__1::function<void ()> const&)::'lambda'()>(std::__1::unique_lock<std::__1::mutex>&, BS::thread_pool::worker(unsigned int, std::__1::function<void ()> const&)::'lambda'()) + 64 (condition_variable.h:112)
+4   BattleShip                    	       0x1033f7054 BS::thread_pool::worker(unsigned int, std::__1::function<void ()> const&) + 348 (BS_thread_pool.hpp:920)
+5   BattleShip                    	       0x1033f8ce4 std::__1::__invoke_result_impl<void, void (BS::thread_pool::*)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*, unsigned int, std::__1::function<void ()>>::type std::__1::__invoke[abi:nqe210106]<void (BS::thread_pool::*)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*, unsigned int, std::__1::function<void ()>>(void (BS::thread_pool::*&&)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*&&, unsigned int&&, std::__1::function<void ()>&&) + 144 (invoke.h:87)
+6   BattleShip                    	       0x1033f8c48 void std::__1::__thread_execute[abi:nqe210106]<std::__1::unique_ptr<std::__1::__thread_struct, std::__1::default_delete<std::__1::__thread_struct>>, void (BS::thread_pool::*)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*, unsigned int, std::__1::function<void ()>, 2ul, 3ul, 4ul>(std::__1::tuple<std::__1::unique_ptr<std::__1::__thread_struct, std::__1::default_delete<std::__1::__thread_struct>>, void (BS::thread_pool::*)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*, unsigned int, std::__1::function<void ()>>&, std::__1::__tuple_indices<2ul, 3ul, 4ul>) + 80 (thread.h:159)
+7   BattleShip                    	       0x1033f8914 void* std::__1::__thread_proxy[abi:nqe210106]<std::__1::tuple<std::__1::unique_ptr<std::__1::__thread_struct, std::__1::default_delete<std::__1::__thread_struct>>, void (BS::thread_pool::*)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*, unsigned int, std::__1::function<void ()>>>(void*) + 84 (thread.h:168)
+8   libsystem_pthread.dylib       	       0x180c41c58 _pthread_start + 136
+9   libsystem_pthread.dylib       	       0x180c3cc1c thread_start + 8
+
+Thread 8:
+0   libsystem_kernel.dylib        	       0x180c0150c __psynch_cvwait + 8
+1   libsystem_pthread.dylib       	       0x180c42128 _pthread_cond_wait + 980
+2   libc++.1.dylib                	       0x180b57858 std::__1::condition_variable::wait(std::__1::unique_lock<std::__1::mutex>&) + 32
+3   BattleShip                    	       0x1033f73b4 void std::__1::condition_variable::wait[abi:nqe210106]<BS::thread_pool::worker(unsigned int, std::__1::function<void ()> const&)::'lambda'()>(std::__1::unique_lock<std::__1::mutex>&, BS::thread_pool::worker(unsigned int, std::__1::function<void ()> const&)::'lambda'()) + 64 (condition_variable.h:112)
+4   BattleShip                    	       0x1033f7054 BS::thread_pool::worker(unsigned int, std::__1::function<void ()> const&) + 348 (BS_thread_pool.hpp:920)
+5   BattleShip                    	       0x1033f8ce4 std::__1::__invoke_result_impl<void, void (BS::thread_pool::*)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*, unsigned int, std::__1::function<void ()>>::type std::__1::__invoke[abi:nqe210106]<void (BS::thread_pool::*)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*, unsigned int, std::__1::function<void ()>>(void (BS::thread_pool::*&&)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*&&, unsigned int&&, std::__1::function<void ()>&&) + 144 (invoke.h:87)
+6   BattleShip                    	       0x1033f8c48 void std::__1::__thread_execute[abi:nqe210106]<std::__1::unique_ptr<std::__1::__thread_struct, std::__1::default_delete<std::__1::__thread_struct>>, void (BS::thread_pool::*)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*, unsigned int, std::__1::function<void ()>, 2ul, 3ul, 4ul>(std::__1::tuple<std::__1::unique_ptr<std::__1::__thread_struct, std::__1::default_delete<std::__1::__thread_struct>>, void (BS::thread_pool::*)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*, unsigned int, std::__1::function<void ()>>&, std::__1::__tuple_indices<2ul, 3ul, 4ul>) + 80 (thread.h:159)
+7   BattleShip                    	       0x1033f8914 void* std::__1::__thread_proxy[abi:nqe210106]<std::__1::tuple<std::__1::unique_ptr<std::__1::__thread_struct, std::__1::default_delete<std::__1::__thread_struct>>, void (BS::thread_pool::*)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*, unsigned int, std::__1::function<void ()>>>(void*) + 84 (thread.h:168)
+8   libsystem_pthread.dylib       	       0x180c41c58 _pthread_start + 136
+9   libsystem_pthread.dylib       	       0x180c3cc1c thread_start + 8
+
+Thread 9:
+0   libsystem_kernel.dylib        	       0x180c0150c __psynch_cvwait + 8
+1   libsystem_pthread.dylib       	       0x180c42128 _pthread_cond_wait + 980
+2   libc++.1.dylib                	       0x180b57858 std::__1::condition_variable::wait(std::__1::unique_lock<std::__1::mutex>&) + 32
+3   BattleShip                    	       0x1033f73b4 void std::__1::condition_variable::wait[abi:nqe210106]<BS::thread_pool::worker(unsigned int, std::__1::function<void ()> const&)::'lambda'()>(std::__1::unique_lock<std::__1::mutex>&, BS::thread_pool::worker(unsigned int, std::__1::function<void ()> const&)::'lambda'()) + 64 (condition_variable.h:112)
+4   BattleShip                    	       0x1033f7054 BS::thread_pool::worker(unsigned int, std::__1::function<void ()> const&) + 348 (BS_thread_pool.hpp:920)
+5   BattleShip                    	       0x1033f8ce4 std::__1::__invoke_result_impl<void, void (BS::thread_pool::*)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*, unsigned int, std::__1::function<void ()>>::type std::__1::__invoke[abi:nqe210106]<void (BS::thread_pool::*)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*, unsigned int, std::__1::function<void ()>>(void (BS::thread_pool::*&&)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*&&, unsigned int&&, std::__1::function<void ()>&&) + 144 (invoke.h:87)
+6   BattleShip                    	       0x1033f8c48 void std::__1::__thread_execute[abi:nqe210106]<std::__1::unique_ptr<std::__1::__thread_struct, std::__1::default_delete<std::__1::__thread_struct>>, void (BS::thread_pool::*)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*, unsigned int, std::__1::function<void ()>, 2ul, 3ul, 4ul>(std::__1::tuple<std::__1::unique_ptr<std::__1::__thread_struct, std::__1::default_delete<std::__1::__thread_struct>>, void (BS::thread_pool::*)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*, unsigned int, std::__1::function<void ()>>&, std::__1::__tuple_indices<2ul, 3ul, 4ul>) + 80 (thread.h:159)
+7   BattleShip                    	       0x1033f8914 void* std::__1::__thread_proxy[abi:nqe210106]<std::__1::tuple<std::__1::unique_ptr<std::__1::__thread_struct, std::__1::default_delete<std::__1::__thread_struct>>, void (BS::thread_pool::*)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*, unsigned int, std::__1::function<void ()>>>(void*) + 84 (thread.h:168)
+8   libsystem_pthread.dylib       	       0x180c41c58 _pthread_start + 136
+9   libsystem_pthread.dylib       	       0x180c3cc1c thread_start + 8
+
+Thread 10:
+0   libsystem_kernel.dylib        	       0x180c0150c __psynch_cvwait + 8
+1   libsystem_pthread.dylib       	       0x180c42128 _pthread_cond_wait + 980
+2   libc++.1.dylib                	       0x180b57858 std::__1::condition_variable::wait(std::__1::unique_lock<std::__1::mutex>&) + 32
+3   BattleShip                    	       0x1033f73b4 void std::__1::condition_variable::wait[abi:nqe210106]<BS::thread_pool::worker(unsigned int, std::__1::function<void ()> const&)::'lambda'()>(std::__1::unique_lock<std::__1::mutex>&, BS::thread_pool::worker(unsigned int, std::__1::function<void ()> const&)::'lambda'()) + 64 (condition_variable.h:112)
+4   BattleShip                    	       0x1033f7054 BS::thread_pool::worker(unsigned int, std::__1::function<void ()> const&) + 348 (BS_thread_pool.hpp:920)
+5   BattleShip                    	       0x1033f8ce4 std::__1::__invoke_result_impl<void, void (BS::thread_pool::*)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*, unsigned int, std::__1::function<void ()>>::type std::__1::__invoke[abi:nqe210106]<void (BS::thread_pool::*)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*, unsigned int, std::__1::function<void ()>>(void (BS::thread_pool::*&&)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*&&, unsigned int&&, std::__1::function<void ()>&&) + 144 (invoke.h:87)
+6   BattleShip                    	       0x1033f8c48 void std::__1::__thread_execute[abi:nqe210106]<std::__1::unique_ptr<std::__1::__thread_struct, std::__1::default_delete<std::__1::__thread_struct>>, void (BS::thread_pool::*)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*, unsigned int, std::__1::function<void ()>, 2ul, 3ul, 4ul>(std::__1::tuple<std::__1::unique_ptr<std::__1::__thread_struct, std::__1::default_delete<std::__1::__thread_struct>>, void (BS::thread_pool::*)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*, unsigned int, std::__1::function<void ()>>&, std::__1::__tuple_indices<2ul, 3ul, 4ul>) + 80 (thread.h:159)
+7   BattleShip                    	       0x1033f8914 void* std::__1::__thread_proxy[abi:nqe210106]<std::__1::tuple<std::__1::unique_ptr<std::__1::__thread_struct, std::__1::default_delete<std::__1::__thread_struct>>, void (BS::thread_pool::*)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*, unsigned int, std::__1::function<void ()>>>(void*) + 84 (thread.h:168)
+8   libsystem_pthread.dylib       	       0x180c41c58 _pthread_start + 136
+9   libsystem_pthread.dylib       	       0x180c3cc1c thread_start + 8
+
+Thread 11:
+
+Thread 12:
+
+Thread 13:
+
+Thread 14:: com.apple.NSEventThread
+0   libsystem_kernel.dylib        	       0x180bfdc34 mach_msg2_trap + 8
+1   libsystem_kernel.dylib        	       0x180c10574 mach_msg2_internal + 76
+2   libsystem_kernel.dylib        	       0x180c069c0 mach_msg_overwrite + 480
+3   libsystem_kernel.dylib        	       0x180bfdfc0 mach_msg + 24
+4   CoreFoundation                	       0x180cff0d8 __CFRunLoopServiceMachPort + 160
+5   CoreFoundation                	       0x180cfd9c4 __CFRunLoopRun + 1188
+6   CoreFoundation                	       0x180dd01c4 _CFRunLoopRunSpecificWithOptions + 532
+7   AppKit                        	       0x18524dc7c _NSEventThread + 184
+8   libsystem_pthread.dylib       	       0x180c41c58 _pthread_start + 136
+9   libsystem_pthread.dylib       	       0x180c3cc1c thread_start + 8
+
+Thread 15:
+
+Thread 16:: caulk.messenger.shared:17
+0   libsystem_kernel.dylib        	       0x180bfdbb0 semaphore_wait_trap + 8
+1   caulk                         	       0x18d58be00 caulk::semaphore::timed_wait(double) + 224
+2   caulk                         	       0x18d58bcac caulk::concurrent::details::worker_thread::run() + 32
+3   caulk                         	       0x18d58b94c void* caulk::thread_proxy<std::__1::tuple<caulk::thread::attributes, void (caulk::concurrent::details::worker_thread::*)(), std::__1::tuple<caulk::concurrent::details::worker_thread*>>>(void*) + 96
+4   libsystem_pthread.dylib       	       0x180c41c58 _pthread_start + 136
+5   libsystem_pthread.dylib       	       0x180c3cc1c thread_start + 8
+
+Thread 17:: caulk.messenger.shared:high
+0   libsystem_kernel.dylib        	       0x180bfdbb0 semaphore_wait_trap + 8
+1   caulk                         	       0x18d58be00 caulk::semaphore::timed_wait(double) + 224
+2   caulk                         	       0x18d58bcac caulk::concurrent::details::worker_thread::run() + 32
+3   caulk                         	       0x18d58b94c void* caulk::thread_proxy<std::__1::tuple<caulk::thread::attributes, void (caulk::concurrent::details::worker_thread::*)(), std::__1::tuple<caulk::concurrent::details::worker_thread*>>>(void*) + 96
+4   libsystem_pthread.dylib       	       0x180c41c58 _pthread_start + 136
+5   libsystem_pthread.dylib       	       0x180c3cc1c thread_start + 8
+
+Thread 18:: caulk::deferred_logger
+0   libsystem_kernel.dylib        	       0x180bfdbb0 semaphore_wait_trap + 8
+1   caulk                         	       0x18d58be00 caulk::semaphore::timed_wait(double) + 224
+2   caulk                         	       0x18d58bcac caulk::concurrent::details::worker_thread::run() + 32
+3   caulk                         	       0x18d58b94c void* caulk::thread_proxy<std::__1::tuple<caulk::thread::attributes, void (caulk::concurrent::details::worker_thread::*)(), std::__1::tuple<caulk::concurrent::details::worker_thread*>>>(void*) + 96
+4   libsystem_pthread.dylib       	       0x180c41c58 _pthread_start + 136
+5   libsystem_pthread.dylib       	       0x180c3cc1c thread_start + 8
+
+Thread 19:: com.apple.audio.IOThread.client
+0   libsystem_kernel.dylib        	       0x180bfdbbc semaphore_wait_signal_trap + 8
+1   caulk                         	       0x18d5a92a8 caulk::mach::semaphore::wait_signal_or_error(caulk::mach::semaphore&) + 36
+2   CoreAudio                     	       0x183f8ea40 HALC_ProxyIOContext::IOWorkLoop() + 4952
+3   CoreAudio                     	       0x183f8d04c invocation function for block in HALC_ProxyIOContext::HALC_ProxyIOContext(unsigned int, unsigned int) + 172
+4   CoreAudio                     	       0x18414b0ac HALC_IOThread::Entry(void*) + 88
+5   libsystem_pthread.dylib       	       0x180c41c58 _pthread_start + 136
+6   libsystem_pthread.dylib       	       0x180c3cc1c thread_start + 8
+
+Thread 20:: AudioSession - RootQueue
+0   libsystem_kernel.dylib        	       0x180bfdbc8 semaphore_timedwait_trap + 8
+1   libdispatch.dylib             	       0x180abbdb8 _dispatch_sema4_timedwait + 64
+2   libdispatch.dylib             	       0x180a88ae8 _dispatch_semaphore_wait_slow + 76
+3   libdispatch.dylib             	       0x180a9877c _dispatch_worker_thread + 324
+4   libsystem_pthread.dylib       	       0x180c41c58 _pthread_start + 136
+5   libsystem_pthread.dylib       	       0x180c3cc1c thread_start + 8
+
+Thread 21:
+
+Thread 22:
+0   libsystem_kernel.dylib        	       0x180c01308 __semwait_signal + 8
+1   libsystem_c.dylib             	       0x180addcc0 nanosleep + 220
+2   libc++.1.dylib                	       0x180b59f14 std::__1::this_thread::sleep_for(std::__1::chrono::duration<long long, std::__1::ratio<1l, 1000000000l>> const&) + 84
+3   BattleShip                    	       0x10315759c void std::__1::this_thread::sleep_for[abi:nqe210106]<long long, std::__1::ratio<1l, 1000l>>(std::__1::chrono::duration<long long, std::__1::ratio<1l, 1000l>> const&) + 244 (this_thread.h:51)
+4   BattleShip                    	       0x1031562b4 (anonymous namespace)::WatchdogLoop() + 160 (port_watchdog.cpp:373)
+5   BattleShip                    	       0x1031586b0 std::__1::__invoke_result_impl<void, void (*)()>::type std::__1::__invoke[abi:nqe210106]<void (*)()>(void (*&&)()) + 28 (invoke.h:87)
+6   BattleShip                    	       0x103158688 void std::__1::__thread_execute[abi:nqe210106]<std::__1::unique_ptr<std::__1::__thread_struct, std::__1::default_delete<std::__1::__thread_struct>>, void (*)()>(std::__1::tuple<std::__1::unique_ptr<std::__1::__thread_struct, std::__1::default_delete<std::__1::__thread_struct>>, void (*)()>&, std::__1::__tuple_indices<>) + 28 (thread.h:159)
+7   BattleShip                    	       0x1031584a4 void* std::__1::__thread_proxy[abi:nqe210106]<std::__1::tuple<std::__1::unique_ptr<std::__1::__thread_struct, std::__1::default_delete<std::__1::__thread_struct>>, void (*)()>>(void*) + 84 (thread.h:168)
+8   libsystem_pthread.dylib       	       0x180c41c58 _pthread_start + 136
+9   libsystem_pthread.dylib       	       0x180c3cc1c thread_start + 8
+
+
+Thread 0 crashed with ARM Thread State (64-bit):
+    x0: 0x0000000000000001   x1: 0x0000000000000000   x2: 0x0000000000000010   x3: 0x000000010415f518
+    x4: 0x000000010415f2c0   x5: 0xa9807f0968abfe81   x6: 0x000a2d2d2d2d2029   x7: 0xfffff0003ffff800
+    x8: 0x000000011f6b4000   x9: 0x00000000ffffffcd  x10: 0x0000000000000040  x11: 0x000000000000000d
+   x12: 0x0000000000000000  x13: 0x0000000000000000  x14: 0x0000000000000000  x15: 0x0000000000000000
+   x16: 0x0000000000000004  x17: 0x00000001ee3feed0  x18: 0x0000000000000000  x19: 0xa9807f0968abfe81
+   x20: 0x000000010415f728  x21: 0x00000001ecde0000  x22: 0xfffffffffffffff0  x23: 0x00000001ecdc3760
+   x24: 0x0000000000000001  x25: 0x000000016cf72d40  x26: 0x00000001ecdc3770  x27: 0x0000000000000000
+   x28: 0x0000000000000000   fp: 0x000000010415f230   lr: 0x00000001031572ec
+    sp: 0x000000010415f1e0   pc: 0x0000000103157304 cpsr: 0x60001000
+   far: 0x0000000000000000  esr: 0x56000080 (Syscall)
+
+Binary Images:
+       0x102e8c000 -        0x103cdffff BattleShip (*) <fe850b22-cb79-3834-b33c-d551fcb09c46> /Users/USER/*/BattleShip
+       0x105aa0000 -        0x105babfff libSDL2-2.0.0.dylib (*) <a7322e43-de04-3933-8c0e-2c8c0d8ad1f4> /opt/homebrew/*/libSDL2-2.0.0.dylib
+       0x1059c8000 -        0x105a17fff libGLEW.2.3.1.dylib (*) <86e041ca-f63e-3f87-b34f-778c069aa6e7> /opt/homebrew/*/libGLEW.2.3.1.dylib
+       0x105958000 -        0x10596bfff libzip.5.5.dylib (*) <d7a1623f-faea-3a2e-8ca0-7b577045c02a> /opt/homebrew/*/libzip.5.5.dylib
+       0x105980000 -        0x10598bfff libtinyxml2.11.0.0.dylib (*) <e3b1f993-df67-3ec3-a61c-6dfeb6cf0812> /opt/homebrew/*/libtinyxml2.11.0.0.dylib
+       0x105cfc000 -        0x105d23fff libspdlog.1.17.0.dylib (*) <0623dcdb-5ae6-36bf-89b7-48ffff72d610> /opt/homebrew/*/libspdlog.1.17.0.dylib
+       0x105c10000 -        0x105c23fff libfmt.12.1.0.dylib (*) <52690c9c-fca8-3d02-bf7e-8d61bfcaf455> /opt/homebrew/*/libfmt.12.1.0.dylib
+       0x105c3c000 -        0x105c5bfff liblzma.5.dylib (*) <43c01aff-c040-33ff-bb38-5e1ec42d9e75> /opt/homebrew/*/liblzma.5.dylib
+       0x105e0c000 -        0x105e93fff libzstd.1.5.7.dylib (*) <1ce1197a-4a2b-3036-984e-95599210332b> /opt/homebrew/*/libzstd.1.5.7.dylib
+       0x10bd08000 -        0x10c493fff com.apple.AGXMetalG13X (351.2) <7ba41324-25b3-31d6-8b07-0bc30dfe906b> /System/Library/Extensions/AGXMetalG13X.bundle/Contents/MacOS/AGXMetalG13X
+       0x106268000 -        0x106273fff libobjc-trampolines.dylib (*) <ca58aa96-b997-3a6d-9132-19d49be4b3e9> /usr/lib/libobjc-trampolines.dylib
+       0x11f7bc000 -        0x11f8f7fff com.apple.audio.units.Components (1.14) <39d246cc-28de-35c9-a46f-34bc747ca6cf> /System/Library/Components/CoreAudio.component/Contents/MacOS/CoreAudio
+       0x11f780000 -        0x11f797fff com.apple.iokit.IOHIDLib (2.0.0) <f9cc0803-6f3d-38b6-b311-789833568ac7> /System/Library/Extensions/IOHIDFamily.kext/Contents/PlugIns/IOHIDLib.plugin/Contents/MacOS/IOHIDLib
+       0x180c48000 -        0x180c50963 libsystem_platform.dylib (*) <160fd864-8d15-36fc-9e97-9725388cfafe> /usr/lib/system/libsystem_platform.dylib
+               0x0 - 0xffffffffffffffff ??? (*) <00000000-0000-0000-0000-000000000000> ???
+       0x180bfd000 -        0x180c3a2af libsystem_kernel.dylib (*) <cc1cf985-bc65-3725-809f-4c1e36b8f4ba> /usr/lib/system/libsystem_kernel.dylib
+       0x180c3b000 -        0x180c47b3b libsystem_pthread.dylib (*) <4f33683c-18c8-39a1-800b-2e3bd43bcc13> /usr/lib/system/libsystem_pthread.dylib
+       0x180b51000 -        0x180be1ae7 libc++.1.dylib (*) <5013c0f8-84a9-3b56-9feb-c353816a750f> /usr/lib/libc++.1.dylib
+       0x180c81000 -        0x1811df31f com.apple.CoreFoundation (6.9) <04e3598b-f226-3250-b3b2-ce938dd4db7e> /System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation
+       0x1850f3000 -        0x186815f9f com.apple.AppKit (6.9) <cf57a4fc-4be3-3d95-b543-d744e8718b26> /System/Library/Frameworks/AppKit.framework/Versions/C/AppKit
+       0x18d58a000 -        0x18d5b305f com.apple.audio.caulk (1.0) <47e71130-9608-3d99-aceb-df5638bc08df> /System/Library/PrivateFrameworks/caulk.framework/Versions/A/caulk
+       0x183d8d000 -        0x184522e7f com.apple.audio.CoreAudio (5.0) <242b3e7e-7a94-33da-9d5b-c6739557ceb9> /System/Library/Frameworks/CoreAudio.framework/Versions/A/CoreAudio
+       0x180a85000 -        0x180acc23f libdispatch.dylib (*) <f071efe4-299f-3089-acc4-0025b8ffb52a> /usr/lib/system/libdispatch.dylib
+       0x192543000 -        0x192604edf com.apple.MediaExperience (1.0) <507b3fe7-c5c1-30db-935c-c478ff7b4096> /System/Library/PrivateFrameworks/MediaExperience.framework/Versions/A/MediaExperience
+       0x180ad0000 -        0x180b50d9f libsystem_c.dylib (*) <694b7881-1bf3-3d0f-8f19-b50ae4e8ef8a> /usr/lib/system/libsystem_c.dylib
+
+External Modification Summary:
+  Calls made by other processes targeting this process:
+    task_for_pid: 0
+    thread_create: 0
+    thread_set_state: 0
+  Calls made by this process:
+    task_for_pid: 0
+    thread_create: 0
+    thread_set_state: 0
+  Calls made by all processes on this machine:
+    task_for_pid: 0
+    thread_create: 0
+    thread_set_state: 0
+
+VM Region Summary:
+ReadOnly portion of Libraries: Total=1.8G resident=0K(0%) swapped_out_or_unallocated=1.8G(100%)
+Writable regions: Total=461.9M written=705K(0%) resident=705K(0%) swapped_out=0K(0%) unallocated=461.2M(100%)
+
+                                VIRTUAL   REGION 
+REGION TYPE                        SIZE    COUNT (non-coalesced) 
+===========                     =======  ======= 
+Accelerate framework               128K        1 
+Activity Tracing                   256K        1 
+AttributeGraph Data               1024K        1 
+CG image                            96K        1 
+ColorSync                           16K        1 
+CoreAnimation                      320K       19 
+CoreGraphics                        48K        3 
+CoreUI image data                  496K        4 
+Foundation                          16K        1 
+Kernel Alloc Once                   32K        1 
+MALLOC                           112.0M       32 
+MALLOC guard page                 3184K        4 
+MALLOC_LARGE (reserved)          256.0M        1         reserved VM address space (unallocated)
+Memory Tag 22                     64.0M        1 
+STACK GUARD                        352K       22 
+Stack                             19.7M       23 
+Stack Guard                       56.0M        1 
+VM_ALLOCATE                       3344K       29 
+__AUTH                            5990K      631 
+__AUTH_CONST                      89.2M     1018 
+__CTF                               824        1 
+__DATA                            38.7M      976 
+__DATA_CONST                      34.9M     1035 
+__DATA_DIRTY                      8315K      873 
+__FONT_DATA                        2352        1 
+__LINKEDIT                       600.0M       14 
+__OBJC_RO                         79.1M        1 
+__OBJC_RW                         2599K        1 
+__TEXT                             1.2G     1057 
+__TPRO_CONST                       128K        2 
+dyld private memory                320K        2 
+mapped file                      284.3M       33 
+page table in kernel               705K        1 
+shared memory                     1552K       19 
+===========                     =======  ======= 
+TOTAL                              2.8G     5811 
+TOTAL, minus reserved VM space     2.6G     5811 
+
+
+-----------
+Full Report
+-----------
+
+{"app_name":"BattleShip","timestamp":"2026-06-10 04:13:52.00 -0400","app_version":"","slice_uuid":"fe850b22-cb79-3834-b33c-d551fcb09c46","build_version":"","platform":1,"share_with_app_devs":0,"is_first_party":1,"bug_type":"309","os_version":"macOS 26.5.1 (25F80)","roots_installed":0,"incident_id":"12808630-42CA-4A66-881D-BF7370DE4FFB","name":"BattleShip"}
+{
+  "uptime" : 150000,
+  "procRole" : "Foreground",
+  "version" : 2,
+  "userID" : 501,
+  "deployVersion" : 210,
+  "modelCode" : "MacBookPro18,3",
+  "coalitionID" : 1110,
+  "osVersion" : {
+    "train" : "macOS 26.5.1",
+    "build" : "25F80",
+    "releaseType" : "User"
+  },
+  "captureTime" : "2026-06-10 04:13:31.2612 -0400",
+  "codeSigningMonitor" : 2,
+  "incident" : "12808630-42CA-4A66-881D-BF7370DE4FFB",
+  "pid" : 25865,
+  "translated" : false,
+  "cpuType" : "ARM-64",
+  "procLaunch" : "2026-06-10 04:13:29.6668 -0400",
+  "procStartAbsTime" : 3630118079394,
+  "procExitAbsTime" : 3630155814595,
+  "procName" : "BattleShip",
+  "procPath" : "\/Users\/USER\/*\/BattleShip",
+  "parentProc" : "Exited process",
+  "parentPid" : 25039,
+  "coalitionName" : "com.apple.Terminal",
+  "crashReporterKey" : "9C183AA1-F739-571F-E98F-17FB16643A10",
+  "appleIntelligenceStatus" : {"state":"available"},
+  "developerMode" : 1,
+  "responsiblePid" : 1497,
+  "responsibleProc" : "Terminal",
+  "codeSigningID" : "BattleShip",
+  "codeSigningTeamID" : "",
+  "codeSigningFlags" : 570556929,
+  "codeSigningValidationCategory" : 10,
+  "codeSigningTrustLevel" : 4294967295,
+  "codeSigningAuxiliaryInfo" : 0,
+  "instructionByteStream" : {"beforePC":"KwAAFOAXQPkBAoDSRgAAlGAAADcBAAAUJQAAFOgXQPnoEwD56BNA+Q==","atPC":"CAFA+egPAPnoE0D5CAVA+egLAPnoC0D5aAAAtQEAABQZAAAU6AtA+Q=="},
+  "bootSessionUUID" : "3A748BA8-6352-4D81-AA7E-A6CCFFCFC09A",
+  "wakeTime" : 145687,
+  "sleepWakeUUID" : "8D6EC8B4-8BA4-4B63-803B-03EE6EC01F7B",
+  "sip" : "enabled",
+  "vmRegionInfo" : "0x11f6b4000 is in 0x11f6b4000-0x11f6b8000;  bytes after start: 0  bytes before end: 16383\n      REGION TYPE                    START - END         [ VSIZE] PRT\/MAX SHRMOD  REGION DETAIL\n      VM_ALLOCATE                 11f674000-11f6b4000    [  256K] rw-\/rwx SM=PRV  \n--->  VM_ALLOCATE                 11f6b4000-11f6b8000    [   16K] ---\/rwx SM=PRV  \n      VM_ALLOCATE                 11f6b8000-11f6f8000    [  256K] rw-\/rwx SM=PRV  ",
+  "exception" : {"codes":"0x0000000000000002, 0x000000011f6b4000","rawCodes":[2,4822089728],"type":"EXC_BAD_ACCESS","signal":"SIGBUS","subtype":"KERN_PROTECTION_FAILURE at 0x000000011f6b4000"},
+  "vmregioninfo" : "0x11f6b4000 is in 0x11f6b4000-0x11f6b8000;  bytes after start: 0  bytes before end: 16383\n      REGION TYPE                    START - END         [ VSIZE] PRT\/MAX SHRMOD  REGION DETAIL\n      VM_ALLOCATE                 11f674000-11f6b4000    [  256K] rw-\/rwx SM=PRV  \n--->  VM_ALLOCATE                 11f6b4000-11f6b8000    [   16K] ---\/rwx SM=PRV  \n      VM_ALLOCATE                 11f6b8000-11f6f8000    [  256K] rw-\/rwx SM=PRV  ",
+  "extMods" : {"caller":{"thread_create":0,"thread_set_state":0,"task_for_pid":0},"system":{"thread_create":0,"thread_set_state":0,"task_for_pid":0},"targeted":{"thread_create":0,"thread_set_state":0,"task_for_pid":0},"warnings":0},
+  "faultingThread" : 0,
+  "threads" : [{"triggered":true,"id":105737190,"threadState":{"x":[{"value":1},{"value":0},{"value":16},{"value":4363515160,"symbolLocation":64000,"symbol":"port_watchdog_init::s_altstack"},{"value":4363514560,"symbolLocation":63400,"symbol":"port_watchdog_init::s_altstack"},{"value":12213901867816320641},{"value":2864421821816873},{"value":18446726482597246976},{"value":4822089728},{"value":4294967245},{"value":64},{"value":13},{"value":0},{"value":0},{"value":0},{"value":0},{"value":4},{"value":8292134608},{"value":0},{"value":12213901867816320641},{"value":4363515688,"symbolLocation":64528,"symbol":"port_watchdog_init::s_altstack"},{"value":8268939264,"symbolLocation":16352,"symbol":"__libdispatch_workerfunction"},{"value":18446744073709551600},{"value":8268822368,"symbolLocation":0,"symbol":"vm_page_mask"},{"value":1},{"value":6123105600},{"value":8268822384,"symbolLocation":0,"symbol":"mach_task_self_"},{"value":0},{"value":0}],"flavor":"ARM_THREAD_STATE64","lr":{"value":4346704620},"cpsr":{"value":1610616832},"fp":{"value":4363514416},"sp":{"value":4363514336},"esr":{"value":1442840704,"description":"(Syscall)"},"pc":{"value":4346704644,"matchesCrashFrame":1},"far":{"value":0}},"queue":"com.apple.main-thread","frames":[{"imageOffset":2929412,"sourceLine":229,"sourceFile":"port_watchdog.cpp","symbol":"(anonymous namespace)::WalkFPChain((anonymous namespace)::CrashRegs const&, void**, int)","imageIndex":0,"symbolLocation":340},{"imageOffset":2927908,"sourceLine":252,"sourceFile":"port_watchdog.cpp","symbol":"(anonymous namespace)::DumpBacktraceFromContext(void*)","imageIndex":0,"symbolLocation":136},{"imageOffset":2924936,"sourceLine":319,"sourceFile":"port_watchdog.cpp","symbol":"(anonymous namespace)::CrashSignalHandler(int, __siginfo*, void*)","imageIndex":0,"symbolLocation":664},{"imageOffset":14148,"symbol":"_sigtramp","symbolLocation":56,"imageIndex":13},{"imageOffset":1366484,"sourceLine":2084,"sourceFile":"sc1pintro.c","symbol":"sc1PIntroSetupFighterFiles","imageIndex":0,"symbolLocation":68},{"imageOffset":1366484,"sourceLine":2084,"sourceFile":"sc1pintro.c","symbol":"sc1PIntroSetupFighterFiles","imageIndex":0,"symbolLocation":68},{"imageOffset":1367032,"sourceLine":2143,"sourceFile":"sc1pintro.c","symbol":"sc1PIntroFuncStart","imageIndex":0,"symbolLocation":256},{"imageOffset":1675940,"sourceLine":1302,"sourceFile":"taskman.c","symbol":"syTaskmanLoadScene","imageIndex":0,"symbolLocation":928},{"imageOffset":1676988,"sourceLine":1420,"sourceFile":"taskman.c","symbol":"syTaskmanStartTask","imageIndex":0,"symbolLocation":876},{"imageOffset":1449652,"sourceLine":1562,"sourceFile":"scmanager.c","symbol":"scManagerFuncUpdate","imageIndex":0,"symbolLocation":24},{"imageOffset":1367500,"sourceLine":2236,"sourceFile":"sc1pintro.c","symbol":"sc1PIntroStartScene","imageIndex":0,"symbolLocation":88},{"imageOffset":1371104,"sourceLine":456,"sourceFile":"sc1pmanager.c","symbol":"sc1PManagerUpdateScene","imageIndex":0,"symbolLocation":2184},{"imageOffset":1447224,"sourceLine":1298,"sourceFile":"scmanager.c","symbol":"scManagerRunLoop","imageIndex":0,"symbolLocation":3080},{"imageOffset":1497588,"sourceLine":252,"sourceFile":"main.c","symbol":"syMainThread5","imageIndex":0,"symbolLocation":564},{"imageOffset":2013352,"sourceLine":79,"sourceFile":"coroutine_posix.cpp","symbol":"ucontext_entry(unsigned int, unsigned int)","imageIndex":0,"symbolLocation":64},{"imageOffset":19776,"symbol":"_ctx_start","symbolLocation":32,"imageIndex":13}]},{"id":105738131,"frames":[{"imageOffset":17676,"symbol":"__psynch_cvwait","symbolLocation":8,"imageIndex":15},{"imageOffset":28968,"symbol":"_pthread_cond_wait","symbolLocation":980,"imageIndex":16},{"imageOffset":26712,"symbol":"std::__1::condition_variable::wait(std::__1::unique_lock<std::__1::mutex>&)","symbolLocation":32,"imageIndex":17},{"imageOffset":119108,"symbol":"spdlog::details::mpmc_blocking_queue<spdlog::details::async_msg>::dequeue(spdlog::details::async_msg&)","symbolLocation":68,"imageIndex":5},{"imageOffset":118904,"symbol":"spdlog::details::thread_pool::process_next_msg_()","symbolLocation":116,"imageIndex":5},{"imageOffset":121036,"symbol":"void* std::__1::__thread_proxy[abi:ne200100]<std::__1::tuple<std::__1::unique_ptr<std::__1::__thread_struct, std::__1::default_delete<std::__1::__thread_struct>>, spdlog::details::thread_pool::thread_pool(unsigned long, unsigned long, std::__1::function<void ()>, std::__1::function<void ()>)::$_0>>(void*)","symbolLocation":80,"imageIndex":5},{"imageOffset":27736,"symbol":"_pthread_start","symbolLocation":136,"imageIndex":16},{"imageOffset":7196,"symbol":"thread_start","symbolLocation":8,"imageIndex":16}],"threadState":{"x":[{"value":260},{"value":0},{"value":0},{"value":0},{"value":0},{"value":160},{"value":0},{"value":0},{"value":6123662600},{"value":0},{"value":0},{"value":2},{"value":2},{"value":0},{"value":0},{"value":0},{"value":305},{"value":8292134840},{"value":0},{"value":4398684856},{"value":4398684920},{"value":6123663584},{"value":0},{"value":0},{"value":0},{"value":1},{"value":256},{"value":0},{"value":0}],"flavor":"ARM_THREAD_STATE64","lr":{"value":6455304488},"cpsr":{"value":1610616832},"fp":{"value":6123662720},"sp":{"value":6123662576},"esr":{"value":1442840704,"description":"(Syscall)"},"pc":{"value":6455039244},"far":{"value":0}}},{"id":105738136,"frames":[{"imageOffset":17676,"symbol":"__psynch_cvwait","symbolLocation":8,"imageIndex":15},{"imageOffset":28968,"symbol":"_pthread_cond_wait","symbolLocation":980,"imageIndex":16},{"imageOffset":26712,"symbol":"std::__1::condition_variable::wait(std::__1::unique_lock<std::__1::mutex>&)","symbolLocation":32,"imageIndex":17},{"imageOffset":5682100,"sourceLine":112,"sourceFile":"condition_variable.h","symbol":"void std::__1::condition_variable::wait[abi:nqe210106]<BS::thread_pool::worker(unsigned int, std::__1::function<void ()> const&)::'lambda'()>(std::__1::unique_lock<std::__1::mutex>&, BS::thread_pool::worker(unsigned int, std::__1::function<void ()> const&)::'lambda'())","imageIndex":0,"symbolLocation":64},{"imageOffset":5681236,"sourceLine":920,"sourceFile":"BS_thread_pool.hpp","symbol":"BS::thread_pool::worker(unsigned int, std::__1::function<void ()> const&)","imageIndex":0,"symbolLocation":348},{"imageOffset":5688548,"sourceLine":87,"sourceFile":"invoke.h","symbol":"std::__1::__invoke_result_impl<void, void (BS::thread_pool::*)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*, unsigned int, std::__1::function<void ()>>::type std::__1::__invoke[abi:nqe210106]<void (BS::thread_pool::*)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*, unsigned int, std::__1::function<void ()>>(void (BS::thread_pool::*&&)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*&&, unsigned int&&, std::__1::function<void ()>&&)","imageIndex":0,"symbolLocation":144},{"imageOffset":5688392,"sourceLine":159,"sourceFile":"thread.h","symbol":"void std::__1::__thread_execute[abi:nqe210106]<std::__1::unique_ptr<std::__1::__thread_struct, std::__1::default_delete<std::__1::__thread_struct>>, void (BS::thread_pool::*)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*, unsigned int, std::__1::function<void ()>, 2ul, 3ul, 4ul>(std::__1::tuple<std::__1::unique_ptr<std::__1::__thread_struct, std::__1::default_delete<std::__1::__thread_struct>>, void (BS::thread_pool::*)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*, unsigned int, std::__1::function<void ()>>&, std::__1::__tuple_indices<2ul, 3ul, 4ul>)","imageIndex":0,"symbolLocation":80},{"imageOffset":5687572,"sourceLine":168,"sourceFile":"thread.h","symbol":"void* std::__1::__thread_proxy[abi:nqe210106]<std::__1::tuple<std::__1::unique_ptr<std::__1::__thread_struct, std::__1::default_delete<std::__1::__thread_struct>>, void (BS::thread_pool::*)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*, unsigned int, std::__1::function<void ()>>>(void*)","imageIndex":0,"symbolLocation":84},{"imageOffset":27736,"symbol":"_pthread_start","symbolLocation":136,"imageIndex":16},{"imageOffset":7196,"symbol":"thread_start","symbolLocation":8,"imageIndex":16}],"threadState":{"x":[{"value":4},{"value":0},{"value":485120},{"value":0},{"value":0},{"value":160},{"value":0},{"value":0},{"value":6124236152},{"value":0},{"value":256},{"value":1099511628034},{"value":1099511628034},{"value":256},{"value":0},{"value":1099511628032},{"value":305},{"value":8292134840},{"value":0},{"value":44266866088},{"value":44266865952},{"value":6124237024},{"value":0},{"value":0},{"value":485120},{"value":485120},{"value":487424},{"value":0},{"value":0}],"flavor":"ARM_THREAD_STATE64","lr":{"value":6455304488},"cpsr":{"value":1610616832},"fp":{"value":6124236272},"sp":{"value":6124236128},"esr":{"value":1442840704,"description":"(Syscall)"},"pc":{"value":6455039244},"far":{"value":0}}},{"id":105738137,"frames":[{"imageOffset":17676,"symbol":"__psynch_cvwait","symbolLocation":8,"imageIndex":15},{"imageOffset":28968,"symbol":"_pthread_cond_wait","symbolLocation":980,"imageIndex":16},{"imageOffset":26712,"symbol":"std::__1::condition_variable::wait(std::__1::unique_lock<std::__1::mutex>&)","symbolLocation":32,"imageIndex":17},{"imageOffset":5682100,"sourceLine":112,"sourceFile":"condition_variable.h","symbol":"void std::__1::condition_variable::wait[abi:nqe210106]<BS::thread_pool::worker(unsigned int, std::__1::function<void ()> const&)::'lambda'()>(std::__1::unique_lock<std::__1::mutex>&, BS::thread_pool::worker(unsigned int, std::__1::function<void ()> const&)::'lambda'())","imageIndex":0,"symbolLocation":64},{"imageOffset":5681236,"sourceLine":920,"sourceFile":"BS_thread_pool.hpp","symbol":"BS::thread_pool::worker(unsigned int, std::__1::function<void ()> const&)","imageIndex":0,"symbolLocation":348},{"imageOffset":5688548,"sourceLine":87,"sourceFile":"invoke.h","symbol":"std::__1::__invoke_result_impl<void, void (BS::thread_pool::*)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*, unsigned int, std::__1::function<void ()>>::type std::__1::__invoke[abi:nqe210106]<void (BS::thread_pool::*)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*, unsigned int, std::__1::function<void ()>>(void (BS::thread_pool::*&&)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*&&, unsigned int&&, std::__1::function<void ()>&&)","imageIndex":0,"symbolLocation":144},{"imageOffset":5688392,"sourceLine":159,"sourceFile":"thread.h","symbol":"void std::__1::__thread_execute[abi:nqe210106]<std::__1::unique_ptr<std::__1::__thread_struct, std::__1::default_delete<std::__1::__thread_struct>>, void (BS::thread_pool::*)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*, unsigned int, std::__1::function<void ()>, 2ul, 3ul, 4ul>(std::__1::tuple<std::__1::unique_ptr<std::__1::__thread_struct, std::__1::default_delete<std::__1::__thread_struct>>, void (BS::thread_pool::*)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*, unsigned int, std::__1::function<void ()>>&, std::__1::__tuple_indices<2ul, 3ul, 4ul>)","imageIndex":0,"symbolLocation":80},{"imageOffset":5687572,"sourceLine":168,"sourceFile":"thread.h","symbol":"void* std::__1::__thread_proxy[abi:nqe210106]<std::__1::tuple<std::__1::unique_ptr<std::__1::__thread_struct, std::__1::default_delete<std::__1::__thread_struct>>, void (BS::thread_pool::*)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*, unsigned int, std::__1::function<void ()>>>(void*)","imageIndex":0,"symbolLocation":84},{"imageOffset":27736,"symbol":"_pthread_start","symbolLocation":136,"imageIndex":16},{"imageOffset":7196,"symbol":"thread_start","symbolLocation":8,"imageIndex":16}],"threadState":{"x":[{"value":4},{"value":0},{"value":486656},{"value":0},{"value":0},{"value":160},{"value":0},{"value":0},{"value":6124809592},{"value":0},{"value":256},{"value":1099511628034},{"value":1099511628034},{"value":256},{"value":0},{"value":1099511628032},{"value":305},{"value":8292134840},{"value":0},{"value":44266866088},{"value":44266865952},{"value":6124810464},{"value":0},{"value":0},{"value":486656},{"value":486656},{"value":488960},{"value":0},{"value":0}],"flavor":"ARM_THREAD_STATE64","lr":{"value":6455304488},"cpsr":{"value":1610616832},"fp":{"value":6124809712},"sp":{"value":6124809568},"esr":{"value":1442840704,"description":"(Syscall)"},"pc":{"value":6455039244},"far":{"value":0}}},{"id":105738138,"frames":[{"imageOffset":17676,"symbol":"__psynch_cvwait","symbolLocation":8,"imageIndex":15},{"imageOffset":28968,"symbol":"_pthread_cond_wait","symbolLocation":980,"imageIndex":16},{"imageOffset":26712,"symbol":"std::__1::condition_variable::wait(std::__1::unique_lock<std::__1::mutex>&)","symbolLocation":32,"imageIndex":17},{"imageOffset":5682100,"sourceLine":112,"sourceFile":"condition_variable.h","symbol":"void std::__1::condition_variable::wait[abi:nqe210106]<BS::thread_pool::worker(unsigned int, std::__1::function<void ()> const&)::'lambda'()>(std::__1::unique_lock<std::__1::mutex>&, BS::thread_pool::worker(unsigned int, std::__1::function<void ()> const&)::'lambda'())","imageIndex":0,"symbolLocation":64},{"imageOffset":5681236,"sourceLine":920,"sourceFile":"BS_thread_pool.hpp","symbol":"BS::thread_pool::worker(unsigned int, std::__1::function<void ()> const&)","imageIndex":0,"symbolLocation":348},{"imageOffset":5688548,"sourceLine":87,"sourceFile":"invoke.h","symbol":"std::__1::__invoke_result_impl<void, void (BS::thread_pool::*)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*, unsigned int, std::__1::function<void ()>>::type std::__1::__invoke[abi:nqe210106]<void (BS::thread_pool::*)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*, unsigned int, std::__1::function<void ()>>(void (BS::thread_pool::*&&)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*&&, unsigned int&&, std::__1::function<void ()>&&)","imageIndex":0,"symbolLocation":144},{"imageOffset":5688392,"sourceLine":159,"sourceFile":"thread.h","symbol":"void std::__1::__thread_execute[abi:nqe210106]<std::__1::unique_ptr<std::__1::__thread_struct, std::__1::default_delete<std::__1::__thread_struct>>, void (BS::thread_pool::*)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*, unsigned int, std::__1::function<void ()>, 2ul, 3ul, 4ul>(std::__1::tuple<std::__1::unique_ptr<std::__1::__thread_struct, std::__1::default_delete<std::__1::__thread_struct>>, void (BS::thread_pool::*)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*, unsigned int, std::__1::function<void ()>>&, std::__1::__tuple_indices<2ul, 3ul, 4ul>)","imageIndex":0,"symbolLocation":80},{"imageOffset":5687572,"sourceLine":168,"sourceFile":"thread.h","symbol":"void* std::__1::__thread_proxy[abi:nqe210106]<std::__1::tuple<std::__1::unique_ptr<std::__1::__thread_struct, std::__1::default_delete<std::__1::__thread_struct>>, void (BS::thread_pool::*)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*, unsigned int, std::__1::function<void ()>>>(void*)","imageIndex":0,"symbolLocation":84},{"imageOffset":27736,"symbol":"_pthread_start","symbolLocation":136,"imageIndex":16},{"imageOffset":7196,"symbol":"thread_start","symbolLocation":8,"imageIndex":16}],"threadState":{"x":[{"value":4},{"value":0},{"value":485120},{"value":0},{"value":0},{"value":160},{"value":0},{"value":0},{"value":6125383032},{"value":0},{"value":256},{"value":1099511628034},{"value":1099511628034},{"value":256},{"value":0},{"value":1099511628032},{"value":305},{"value":8292134840},{"value":0},{"value":44266866088},{"value":44266865952},{"value":6125383904},{"value":0},{"value":0},{"value":485120},{"value":485120},{"value":487168},{"value":0},{"value":0}],"flavor":"ARM_THREAD_STATE64","lr":{"value":6455304488},"cpsr":{"value":1610616832},"fp":{"value":6125383152},"sp":{"value":6125383008},"esr":{"value":1442840704,"description":"(Syscall)"},"pc":{"value":6455039244},"far":{"value":0}}},{"id":105738139,"frames":[{"imageOffset":17676,"symbol":"__psynch_cvwait","symbolLocation":8,"imageIndex":15},{"imageOffset":28968,"symbol":"_pthread_cond_wait","symbolLocation":980,"imageIndex":16},{"imageOffset":26712,"symbol":"std::__1::condition_variable::wait(std::__1::unique_lock<std::__1::mutex>&)","symbolLocation":32,"imageIndex":17},{"imageOffset":5682100,"sourceLine":112,"sourceFile":"condition_variable.h","symbol":"void std::__1::condition_variable::wait[abi:nqe210106]<BS::thread_pool::worker(unsigned int, std::__1::function<void ()> const&)::'lambda'()>(std::__1::unique_lock<std::__1::mutex>&, BS::thread_pool::worker(unsigned int, std::__1::function<void ()> const&)::'lambda'())","imageIndex":0,"symbolLocation":64},{"imageOffset":5681236,"sourceLine":920,"sourceFile":"BS_thread_pool.hpp","symbol":"BS::thread_pool::worker(unsigned int, std::__1::function<void ()> const&)","imageIndex":0,"symbolLocation":348},{"imageOffset":5688548,"sourceLine":87,"sourceFile":"invoke.h","symbol":"std::__1::__invoke_result_impl<void, void (BS::thread_pool::*)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*, unsigned int, std::__1::function<void ()>>::type std::__1::__invoke[abi:nqe210106]<void (BS::thread_pool::*)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*, unsigned int, std::__1::function<void ()>>(void (BS::thread_pool::*&&)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*&&, unsigned int&&, std::__1::function<void ()>&&)","imageIndex":0,"symbolLocation":144},{"imageOffset":5688392,"sourceLine":159,"sourceFile":"thread.h","symbol":"void std::__1::__thread_execute[abi:nqe210106]<std::__1::unique_ptr<std::__1::__thread_struct, std::__1::default_delete<std::__1::__thread_struct>>, void (BS::thread_pool::*)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*, unsigned int, std::__1::function<void ()>, 2ul, 3ul, 4ul>(std::__1::tuple<std::__1::unique_ptr<std::__1::__thread_struct, std::__1::default_delete<std::__1::__thread_struct>>, void (BS::thread_pool::*)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*, unsigned int, std::__1::function<void ()>>&, std::__1::__tuple_indices<2ul, 3ul, 4ul>)","imageIndex":0,"symbolLocation":80},{"imageOffset":5687572,"sourceLine":168,"sourceFile":"thread.h","symbol":"void* std::__1::__thread_proxy[abi:nqe210106]<std::__1::tuple<std::__1::unique_ptr<std::__1::__thread_struct, std::__1::default_delete<std::__1::__thread_struct>>, void (BS::thread_pool::*)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*, unsigned int, std::__1::function<void ()>>>(void*)","imageIndex":0,"symbolLocation":84},{"imageOffset":27736,"symbol":"_pthread_start","symbolLocation":136,"imageIndex":16},{"imageOffset":7196,"symbol":"thread_start","symbolLocation":8,"imageIndex":16}],"threadState":{"x":[{"value":4},{"value":0},{"value":485632},{"value":0},{"value":0},{"value":160},{"value":0},{"value":0},{"value":6125956472},{"value":0},{"value":256},{"value":1099511628034},{"value":1099511628034},{"value":256},{"value":0},{"value":1099511628032},{"value":305},{"value":8292134840},{"value":0},{"value":44266866088},{"value":44266865952},{"value":6125957344},{"value":0},{"value":0},{"value":485632},{"value":485632},{"value":487936},{"value":0},{"value":0}],"flavor":"ARM_THREAD_STATE64","lr":{"value":6455304488},"cpsr":{"value":1610616832},"fp":{"value":6125956592},"sp":{"value":6125956448},"esr":{"value":1442840704,"description":"(Syscall)"},"pc":{"value":6455039244},"far":{"value":0}}},{"id":105738140,"frames":[{"imageOffset":17676,"symbol":"__psynch_cvwait","symbolLocation":8,"imageIndex":15},{"imageOffset":28968,"symbol":"_pthread_cond_wait","symbolLocation":980,"imageIndex":16},{"imageOffset":26712,"symbol":"std::__1::condition_variable::wait(std::__1::unique_lock<std::__1::mutex>&)","symbolLocation":32,"imageIndex":17},{"imageOffset":5682100,"sourceLine":112,"sourceFile":"condition_variable.h","symbol":"void std::__1::condition_variable::wait[abi:nqe210106]<BS::thread_pool::worker(unsigned int, std::__1::function<void ()> const&)::'lambda'()>(std::__1::unique_lock<std::__1::mutex>&, BS::thread_pool::worker(unsigned int, std::__1::function<void ()> const&)::'lambda'())","imageIndex":0,"symbolLocation":64},{"imageOffset":5681236,"sourceLine":920,"sourceFile":"BS_thread_pool.hpp","symbol":"BS::thread_pool::worker(unsigned int, std::__1::function<void ()> const&)","imageIndex":0,"symbolLocation":348},{"imageOffset":5688548,"sourceLine":87,"sourceFile":"invoke.h","symbol":"std::__1::__invoke_result_impl<void, void (BS::thread_pool::*)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*, unsigned int, std::__1::function<void ()>>::type std::__1::__invoke[abi:nqe210106]<void (BS::thread_pool::*)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*, unsigned int, std::__1::function<void ()>>(void (BS::thread_pool::*&&)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*&&, unsigned int&&, std::__1::function<void ()>&&)","imageIndex":0,"symbolLocation":144},{"imageOffset":5688392,"sourceLine":159,"sourceFile":"thread.h","symbol":"void std::__1::__thread_execute[abi:nqe210106]<std::__1::unique_ptr<std::__1::__thread_struct, std::__1::default_delete<std::__1::__thread_struct>>, void (BS::thread_pool::*)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*, unsigned int, std::__1::function<void ()>, 2ul, 3ul, 4ul>(std::__1::tuple<std::__1::unique_ptr<std::__1::__thread_struct, std::__1::default_delete<std::__1::__thread_struct>>, void (BS::thread_pool::*)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*, unsigned int, std::__1::function<void ()>>&, std::__1::__tuple_indices<2ul, 3ul, 4ul>)","imageIndex":0,"symbolLocation":80},{"imageOffset":5687572,"sourceLine":168,"sourceFile":"thread.h","symbol":"void* std::__1::__thread_proxy[abi:nqe210106]<std::__1::tuple<std::__1::unique_ptr<std::__1::__thread_struct, std::__1::default_delete<std::__1::__thread_struct>>, void (BS::thread_pool::*)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*, unsigned int, std::__1::function<void ()>>>(void*)","imageIndex":0,"symbolLocation":84},{"imageOffset":27736,"symbol":"_pthread_start","symbolLocation":136,"imageIndex":16},{"imageOffset":7196,"symbol":"thread_start","symbolLocation":8,"imageIndex":16}],"threadState":{"x":[{"value":4},{"value":0},{"value":486144},{"value":0},{"value":0},{"value":160},{"value":0},{"value":0},{"value":6126529912},{"value":0},{"value":256},{"value":1099511628034},{"value":1099511628034},{"value":256},{"value":0},{"value":1099511628032},{"value":305},{"value":8292134840},{"value":0},{"value":44266866088},{"value":44266865952},{"value":6126530784},{"value":0},{"value":0},{"value":486144},{"value":486144},{"value":488448},{"value":0},{"value":0}],"flavor":"ARM_THREAD_STATE64","lr":{"value":6455304488},"cpsr":{"value":1610616832},"fp":{"value":6126530032},"sp":{"value":6126529888},"esr":{"value":1442840704,"description":"(Syscall)"},"pc":{"value":6455039244},"far":{"value":0}}},{"id":105738141,"frames":[{"imageOffset":17676,"symbol":"__psynch_cvwait","symbolLocation":8,"imageIndex":15},{"imageOffset":28968,"symbol":"_pthread_cond_wait","symbolLocation":980,"imageIndex":16},{"imageOffset":26712,"symbol":"std::__1::condition_variable::wait(std::__1::unique_lock<std::__1::mutex>&)","symbolLocation":32,"imageIndex":17},{"imageOffset":5682100,"sourceLine":112,"sourceFile":"condition_variable.h","symbol":"void std::__1::condition_variable::wait[abi:nqe210106]<BS::thread_pool::worker(unsigned int, std::__1::function<void ()> const&)::'lambda'()>(std::__1::unique_lock<std::__1::mutex>&, BS::thread_pool::worker(unsigned int, std::__1::function<void ()> const&)::'lambda'())","imageIndex":0,"symbolLocation":64},{"imageOffset":5681236,"sourceLine":920,"sourceFile":"BS_thread_pool.hpp","symbol":"BS::thread_pool::worker(unsigned int, std::__1::function<void ()> const&)","imageIndex":0,"symbolLocation":348},{"imageOffset":5688548,"sourceLine":87,"sourceFile":"invoke.h","symbol":"std::__1::__invoke_result_impl<void, void (BS::thread_pool::*)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*, unsigned int, std::__1::function<void ()>>::type std::__1::__invoke[abi:nqe210106]<void (BS::thread_pool::*)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*, unsigned int, std::__1::function<void ()>>(void (BS::thread_pool::*&&)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*&&, unsigned int&&, std::__1::function<void ()>&&)","imageIndex":0,"symbolLocation":144},{"imageOffset":5688392,"sourceLine":159,"sourceFile":"thread.h","symbol":"void std::__1::__thread_execute[abi:nqe210106]<std::__1::unique_ptr<std::__1::__thread_struct, std::__1::default_delete<std::__1::__thread_struct>>, void (BS::thread_pool::*)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*, unsigned int, std::__1::function<void ()>, 2ul, 3ul, 4ul>(std::__1::tuple<std::__1::unique_ptr<std::__1::__thread_struct, std::__1::default_delete<std::__1::__thread_struct>>, void (BS::thread_pool::*)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*, unsigned int, std::__1::function<void ()>>&, std::__1::__tuple_indices<2ul, 3ul, 4ul>)","imageIndex":0,"symbolLocation":80},{"imageOffset":5687572,"sourceLine":168,"sourceFile":"thread.h","symbol":"void* std::__1::__thread_proxy[abi:nqe210106]<std::__1::tuple<std::__1::unique_ptr<std::__1::__thread_struct, std::__1::default_delete<std::__1::__thread_struct>>, void (BS::thread_pool::*)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*, unsigned int, std::__1::function<void ()>>>(void*)","imageIndex":0,"symbolLocation":84},{"imageOffset":27736,"symbol":"_pthread_start","symbolLocation":136,"imageIndex":16},{"imageOffset":7196,"symbol":"thread_start","symbolLocation":8,"imageIndex":16}],"threadState":{"x":[{"value":4},{"value":0},{"value":486912},{"value":0},{"value":0},{"value":160},{"value":0},{"value":0},{"value":6127103352},{"value":0},{"value":256},{"value":1099511628034},{"value":1099511628034},{"value":256},{"value":0},{"value":1099511628032},{"value":305},{"value":8292134840},{"value":0},{"value":44266866088},{"value":44266865952},{"value":6127104224},{"value":0},{"value":0},{"value":486912},{"value":486912},{"value":489216},{"value":0},{"value":0}],"flavor":"ARM_THREAD_STATE64","lr":{"value":6455304488},"cpsr":{"value":1610616832},"fp":{"value":6127103472},"sp":{"value":6127103328},"esr":{"value":1442840704,"description":"(Syscall)"},"pc":{"value":6455039244},"far":{"value":0}}},{"id":105738142,"frames":[{"imageOffset":17676,"symbol":"__psynch_cvwait","symbolLocation":8,"imageIndex":15},{"imageOffset":28968,"symbol":"_pthread_cond_wait","symbolLocation":980,"imageIndex":16},{"imageOffset":26712,"symbol":"std::__1::condition_variable::wait(std::__1::unique_lock<std::__1::mutex>&)","symbolLocation":32,"imageIndex":17},{"imageOffset":5682100,"sourceLine":112,"sourceFile":"condition_variable.h","symbol":"void std::__1::condition_variable::wait[abi:nqe210106]<BS::thread_pool::worker(unsigned int, std::__1::function<void ()> const&)::'lambda'()>(std::__1::unique_lock<std::__1::mutex>&, BS::thread_pool::worker(unsigned int, std::__1::function<void ()> const&)::'lambda'())","imageIndex":0,"symbolLocation":64},{"imageOffset":5681236,"sourceLine":920,"sourceFile":"BS_thread_pool.hpp","symbol":"BS::thread_pool::worker(unsigned int, std::__1::function<void ()> const&)","imageIndex":0,"symbolLocation":348},{"imageOffset":5688548,"sourceLine":87,"sourceFile":"invoke.h","symbol":"std::__1::__invoke_result_impl<void, void (BS::thread_pool::*)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*, unsigned int, std::__1::function<void ()>>::type std::__1::__invoke[abi:nqe210106]<void (BS::thread_pool::*)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*, unsigned int, std::__1::function<void ()>>(void (BS::thread_pool::*&&)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*&&, unsigned int&&, std::__1::function<void ()>&&)","imageIndex":0,"symbolLocation":144},{"imageOffset":5688392,"sourceLine":159,"sourceFile":"thread.h","symbol":"void std::__1::__thread_execute[abi:nqe210106]<std::__1::unique_ptr<std::__1::__thread_struct, std::__1::default_delete<std::__1::__thread_struct>>, void (BS::thread_pool::*)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*, unsigned int, std::__1::function<void ()>, 2ul, 3ul, 4ul>(std::__1::tuple<std::__1::unique_ptr<std::__1::__thread_struct, std::__1::default_delete<std::__1::__thread_struct>>, void (BS::thread_pool::*)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*, unsigned int, std::__1::function<void ()>>&, std::__1::__tuple_indices<2ul, 3ul, 4ul>)","imageIndex":0,"symbolLocation":80},{"imageOffset":5687572,"sourceLine":168,"sourceFile":"thread.h","symbol":"void* std::__1::__thread_proxy[abi:nqe210106]<std::__1::tuple<std::__1::unique_ptr<std::__1::__thread_struct, std::__1::default_delete<std::__1::__thread_struct>>, void (BS::thread_pool::*)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*, unsigned int, std::__1::function<void ()>>>(void*)","imageIndex":0,"symbolLocation":84},{"imageOffset":27736,"symbol":"_pthread_start","symbolLocation":136,"imageIndex":16},{"imageOffset":7196,"symbol":"thread_start","symbolLocation":8,"imageIndex":16}],"threadState":{"x":[{"value":260},{"value":0},{"value":485376},{"value":0},{"value":0},{"value":160},{"value":0},{"value":0},{"value":6127676792},{"value":0},{"value":256},{"value":1099511628034},{"value":1099511628034},{"value":256},{"value":0},{"value":1099511628032},{"value":305},{"value":8292134840},{"value":0},{"value":44266866088},{"value":44266865952},{"value":6127677664},{"value":0},{"value":0},{"value":485376},{"value":485376},{"value":487680},{"value":0},{"value":0}],"flavor":"ARM_THREAD_STATE64","lr":{"value":6455304488},"cpsr":{"value":1610616832},"fp":{"value":6127676912},"sp":{"value":6127676768},"esr":{"value":1442840704,"description":"(Syscall)"},"pc":{"value":6455039244},"far":{"value":0}}},{"id":105738143,"frames":[{"imageOffset":17676,"symbol":"__psynch_cvwait","symbolLocation":8,"imageIndex":15},{"imageOffset":28968,"symbol":"_pthread_cond_wait","symbolLocation":980,"imageIndex":16},{"imageOffset":26712,"symbol":"std::__1::condition_variable::wait(std::__1::unique_lock<std::__1::mutex>&)","symbolLocation":32,"imageIndex":17},{"imageOffset":5682100,"sourceLine":112,"sourceFile":"condition_variable.h","symbol":"void std::__1::condition_variable::wait[abi:nqe210106]<BS::thread_pool::worker(unsigned int, std::__1::function<void ()> const&)::'lambda'()>(std::__1::unique_lock<std::__1::mutex>&, BS::thread_pool::worker(unsigned int, std::__1::function<void ()> const&)::'lambda'())","imageIndex":0,"symbolLocation":64},{"imageOffset":5681236,"sourceLine":920,"sourceFile":"BS_thread_pool.hpp","symbol":"BS::thread_pool::worker(unsigned int, std::__1::function<void ()> const&)","imageIndex":0,"symbolLocation":348},{"imageOffset":5688548,"sourceLine":87,"sourceFile":"invoke.h","symbol":"std::__1::__invoke_result_impl<void, void (BS::thread_pool::*)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*, unsigned int, std::__1::function<void ()>>::type std::__1::__invoke[abi:nqe210106]<void (BS::thread_pool::*)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*, unsigned int, std::__1::function<void ()>>(void (BS::thread_pool::*&&)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*&&, unsigned int&&, std::__1::function<void ()>&&)","imageIndex":0,"symbolLocation":144},{"imageOffset":5688392,"sourceLine":159,"sourceFile":"thread.h","symbol":"void std::__1::__thread_execute[abi:nqe210106]<std::__1::unique_ptr<std::__1::__thread_struct, std::__1::default_delete<std::__1::__thread_struct>>, void (BS::thread_pool::*)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*, unsigned int, std::__1::function<void ()>, 2ul, 3ul, 4ul>(std::__1::tuple<std::__1::unique_ptr<std::__1::__thread_struct, std::__1::default_delete<std::__1::__thread_struct>>, void (BS::thread_pool::*)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*, unsigned int, std::__1::function<void ()>>&, std::__1::__tuple_indices<2ul, 3ul, 4ul>)","imageIndex":0,"symbolLocation":80},{"imageOffset":5687572,"sourceLine":168,"sourceFile":"thread.h","symbol":"void* std::__1::__thread_proxy[abi:nqe210106]<std::__1::tuple<std::__1::unique_ptr<std::__1::__thread_struct, std::__1::default_delete<std::__1::__thread_struct>>, void (BS::thread_pool::*)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*, unsigned int, std::__1::function<void ()>>>(void*)","imageIndex":0,"symbolLocation":84},{"imageOffset":27736,"symbol":"_pthread_start","symbolLocation":136,"imageIndex":16},{"imageOffset":7196,"symbol":"thread_start","symbolLocation":8,"imageIndex":16}],"threadState":{"x":[{"value":4},{"value":0},{"value":486400},{"value":0},{"value":0},{"value":160},{"value":0},{"value":0},{"value":6128250232},{"value":0},{"value":256},{"value":1099511628034},{"value":1099511628034},{"value":256},{"value":0},{"value":1099511628032},{"value":305},{"value":8292134840},{"value":0},{"value":44266866088},{"value":44266865952},{"value":6128251104},{"value":0},{"value":0},{"value":486400},{"value":486400},{"value":488704},{"value":0},{"value":0}],"flavor":"ARM_THREAD_STATE64","lr":{"value":6455304488},"cpsr":{"value":1610616832},"fp":{"value":6128250352},"sp":{"value":6128250208},"esr":{"value":1442840704,"description":"(Syscall)"},"pc":{"value":6455039244},"far":{"value":0}}},{"id":105738144,"frames":[{"imageOffset":17676,"symbol":"__psynch_cvwait","symbolLocation":8,"imageIndex":15},{"imageOffset":28968,"symbol":"_pthread_cond_wait","symbolLocation":980,"imageIndex":16},{"imageOffset":26712,"symbol":"std::__1::condition_variable::wait(std::__1::unique_lock<std::__1::mutex>&)","symbolLocation":32,"imageIndex":17},{"imageOffset":5682100,"sourceLine":112,"sourceFile":"condition_variable.h","symbol":"void std::__1::condition_variable::wait[abi:nqe210106]<BS::thread_pool::worker(unsigned int, std::__1::function<void ()> const&)::'lambda'()>(std::__1::unique_lock<std::__1::mutex>&, BS::thread_pool::worker(unsigned int, std::__1::function<void ()> const&)::'lambda'())","imageIndex":0,"symbolLocation":64},{"imageOffset":5681236,"sourceLine":920,"sourceFile":"BS_thread_pool.hpp","symbol":"BS::thread_pool::worker(unsigned int, std::__1::function<void ()> const&)","imageIndex":0,"symbolLocation":348},{"imageOffset":5688548,"sourceLine":87,"sourceFile":"invoke.h","symbol":"std::__1::__invoke_result_impl<void, void (BS::thread_pool::*)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*, unsigned int, std::__1::function<void ()>>::type std::__1::__invoke[abi:nqe210106]<void (BS::thread_pool::*)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*, unsigned int, std::__1::function<void ()>>(void (BS::thread_pool::*&&)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*&&, unsigned int&&, std::__1::function<void ()>&&)","imageIndex":0,"symbolLocation":144},{"imageOffset":5688392,"sourceLine":159,"sourceFile":"thread.h","symbol":"void std::__1::__thread_execute[abi:nqe210106]<std::__1::unique_ptr<std::__1::__thread_struct, std::__1::default_delete<std::__1::__thread_struct>>, void (BS::thread_pool::*)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*, unsigned int, std::__1::function<void ()>, 2ul, 3ul, 4ul>(std::__1::tuple<std::__1::unique_ptr<std::__1::__thread_struct, std::__1::default_delete<std::__1::__thread_struct>>, void (BS::thread_pool::*)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*, unsigned int, std::__1::function<void ()>>&, std::__1::__tuple_indices<2ul, 3ul, 4ul>)","imageIndex":0,"symbolLocation":80},{"imageOffset":5687572,"sourceLine":168,"sourceFile":"thread.h","symbol":"void* std::__1::__thread_proxy[abi:nqe210106]<std::__1::tuple<std::__1::unique_ptr<std::__1::__thread_struct, std::__1::default_delete<std::__1::__thread_struct>>, void (BS::thread_pool::*)(unsigned int, std::__1::function<void ()> const&), BS::thread_pool*, unsigned int, std::__1::function<void ()>>>(void*)","imageIndex":0,"symbolLocation":84},{"imageOffset":27736,"symbol":"_pthread_start","symbolLocation":136,"imageIndex":16},{"imageOffset":7196,"symbol":"thread_start","symbolLocation":8,"imageIndex":16}],"threadState":{"x":[{"value":4},{"value":0},{"value":485888},{"value":0},{"value":0},{"value":160},{"value":0},{"value":0},{"value":6128823672},{"value":0},{"value":256},{"value":1099511628034},{"value":1099511628034},{"value":256},{"value":0},{"value":1099511628032},{"value":305},{"value":8292134840},{"value":0},{"value":44266866088},{"value":44266865952},{"value":6128824544},{"value":0},{"value":0},{"value":485888},{"value":485888},{"value":488192},{"value":0},{"value":0}],"flavor":"ARM_THREAD_STATE64","lr":{"value":6455304488},"cpsr":{"value":1610616832},"fp":{"value":6128823792},"sp":{"value":6128823648},"esr":{"value":1442840704,"description":"(Syscall)"},"pc":{"value":6455039244},"far":{"value":0}}},{"id":105738147,"frames":[],"threadState":{"x":[{"value":6129397760},{"value":9219},{"value":6128861184},{"value":0},{"value":409604},{"value":18446744073709551615},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0}],"flavor":"ARM_THREAD_STATE64","lr":{"value":0},"cpsr":{"value":4096},"fp":{"value":0},"sp":{"value":6129397760},"esr":{"value":1442840704,"description":"(Syscall)"},"pc":{"value":6455282696},"far":{"value":0}}},{"id":105738148,"frames":[],"threadState":{"x":[{"value":6129971200},{"value":15619},{"value":6129434624},{"value":0},{"value":409604},{"value":18446744073709551615},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0}],"flavor":"ARM_THREAD_STATE64","lr":{"value":0},"cpsr":{"value":4096},"fp":{"value":0},"sp":{"value":6129971200},"esr":{"value":1442840704,"description":"(Syscall)"},"pc":{"value":6455282696},"far":{"value":0}}},{"id":105738195,"frames":[],"threadState":{"x":[{"value":6130544640},{"value":29987},{"value":6130008064},{"value":0},{"value":409604},{"value":18446744073709551615},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0}],"flavor":"ARM_THREAD_STATE64","lr":{"value":0},"cpsr":{"value":4096},"fp":{"value":0},"sp":{"value":6130544640},"esr":{"value":1442840704,"description":"(Syscall)"},"pc":{"value":6455282696},"far":{"value":0}}},{"id":105738202,"name":"com.apple.NSEventThread","threadState":{"x":[{"value":268451845},{"value":21592279046},{"value":8589934592},{"value":117660629073920},{"value":0},{"value":117660629073920},{"value":2},{"value":4294967295},{"value":0},{"value":17179869184},{"value":0},{"value":2},{"value":0},{"value":0},{"value":27395},{"value":0},{"value":18446744073709551569},{"value":8292136720},{"value":0},{"value":4294967295},{"value":2},{"value":117660629073920},{"value":0},{"value":117660629073920},{"value":21592279046},{"value":6131114120},{"value":8589934592},{"value":18446744073709550527},{"value":4412409862}],"flavor":"ARM_THREAD_STATE64","lr":{"value":6455100788},"cpsr":{"value":4096},"fp":{"value":6131113968},"sp":{"value":6131113888},"esr":{"value":1442840704,"description":"(Syscall)"},"pc":{"value":6455024692},"far":{"value":0}},"frames":[{"imageOffset":3124,"symbol":"mach_msg2_trap","symbolLocation":8,"imageIndex":15},{"imageOffset":79220,"symbol":"mach_msg2_internal","symbolLocation":76,"imageIndex":15},{"imageOffset":39360,"symbol":"mach_msg_overwrite","symbolLocation":480,"imageIndex":15},{"imageOffset":4032,"symbol":"mach_msg","symbolLocation":24,"imageIndex":15},{"imageOffset":516312,"symbol":"__CFRunLoopServiceMachPort","symbolLocation":160,"imageIndex":18},{"imageOffset":510404,"symbol":"__CFRunLoopRun","symbolLocation":1188,"imageIndex":18},{"imageOffset":1372612,"symbol":"_CFRunLoopRunSpecificWithOptions","symbolLocation":532,"imageIndex":18},{"imageOffset":1420412,"symbol":"_NSEventThread","symbolLocation":184,"imageIndex":19},{"imageOffset":27736,"symbol":"_pthread_start","symbolLocation":136,"imageIndex":16},{"imageOffset":7196,"symbol":"thread_start","symbolLocation":8,"imageIndex":16}]},{"id":105738221,"frames":[],"threadState":{"x":[{"value":6131691520},{"value":35587},{"value":6131154944},{"value":0},{"value":409604},{"value":18446744073709551615},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0}],"flavor":"ARM_THREAD_STATE64","lr":{"value":0},"cpsr":{"value":4096},"fp":{"value":0},"sp":{"value":6131691520},"esr":{"value":1442840704,"description":"(Syscall)"},"pc":{"value":6455282696},"far":{"value":0}}},{"id":105738472,"name":"caulk.messenger.shared:17","threadState":{"x":[{"value":14},{"value":23022534938},{"value":0},{"value":6132838506},{"value":23022534912},{"value":25},{"value":0},{"value":0},{"value":0},{"value":4294967295},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":18446744073709551580},{"value":8292139216},{"value":0},{"value":44274682976},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0}],"flavor":"ARM_THREAD_STATE64","lr":{"value":6666370560},"cpsr":{"value":2147487744},"fp":{"value":6132838272},"sp":{"value":6132838240},"esr":{"value":1442840704,"description":"(Syscall)"},"pc":{"value":6455024560},"far":{"value":0}},"frames":[{"imageOffset":2992,"symbol":"semaphore_wait_trap","symbolLocation":8,"imageIndex":15},{"imageOffset":7680,"symbol":"caulk::semaphore::timed_wait(double)","symbolLocation":224,"imageIndex":20},{"imageOffset":7340,"symbol":"caulk::concurrent::details::worker_thread::run()","symbolLocation":32,"imageIndex":20},{"imageOffset":6476,"symbol":"void* caulk::thread_proxy<std::__1::tuple<caulk::thread::attributes, void (caulk::concurrent::details::worker_thread::*)(), std::__1::tuple<caulk::concurrent::details::worker_thread*>>>(void*)","symbolLocation":96,"imageIndex":20},{"imageOffset":27736,"symbol":"_pthread_start","symbolLocation":136,"imageIndex":16},{"imageOffset":7196,"symbol":"thread_start","symbolLocation":8,"imageIndex":16}]},{"id":105738473,"name":"caulk.messenger.shared:high","threadState":{"x":[{"value":14},{"value":56579},{"value":56579},{"value":15},{"value":4294967295},{"value":0},{"value":0},{"value":0},{"value":0},{"value":4294967295},{"value":1},{"value":44280665640},{"value":0},{"value":0},{"value":0},{"value":0},{"value":18446744073709551580},{"value":8292139216},{"value":0},{"value":44274683424},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0}],"flavor":"ARM_THREAD_STATE64","lr":{"value":6666370560},"cpsr":{"value":2147487744},"fp":{"value":6133411712},"sp":{"value":6133411680},"esr":{"value":1442840704,"description":"(Syscall)"},"pc":{"value":6455024560},"far":{"value":0}},"frames":[{"imageOffset":2992,"symbol":"semaphore_wait_trap","symbolLocation":8,"imageIndex":15},{"imageOffset":7680,"symbol":"caulk::semaphore::timed_wait(double)","symbolLocation":224,"imageIndex":20},{"imageOffset":7340,"symbol":"caulk::concurrent::details::worker_thread::run()","symbolLocation":32,"imageIndex":20},{"imageOffset":6476,"symbol":"void* caulk::thread_proxy<std::__1::tuple<caulk::thread::attributes, void (caulk::concurrent::details::worker_thread::*)(), std::__1::tuple<caulk::concurrent::details::worker_thread*>>>(void*)","symbolLocation":96,"imageIndex":20},{"imageOffset":27736,"symbol":"_pthread_start","symbolLocation":136,"imageIndex":16},{"imageOffset":7196,"symbol":"thread_start","symbolLocation":8,"imageIndex":16}]},{"id":105738542,"name":"caulk::deferred_logger","threadState":{"x":[{"value":14},{"value":44292687575},{"value":0},{"value":6133985383},{"value":44292687552},{"value":22},{"value":0},{"value":0},{"value":0},{"value":4294967295},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":18446744073709551580},{"value":8292139216},{"value":0},{"value":44280316408},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0}],"flavor":"ARM_THREAD_STATE64","lr":{"value":6666370560},"cpsr":{"value":2147487744},"fp":{"value":6133985152},"sp":{"value":6133985120},"esr":{"value":1442840704,"description":"(Syscall)"},"pc":{"value":6455024560},"far":{"value":0}},"frames":[{"imageOffset":2992,"symbol":"semaphore_wait_trap","symbolLocation":8,"imageIndex":15},{"imageOffset":7680,"symbol":"caulk::semaphore::timed_wait(double)","symbolLocation":224,"imageIndex":20},{"imageOffset":7340,"symbol":"caulk::concurrent::details::worker_thread::run()","symbolLocation":32,"imageIndex":20},{"imageOffset":6476,"symbol":"void* caulk::thread_proxy<std::__1::tuple<caulk::thread::attributes, void (caulk::concurrent::details::worker_thread::*)(), std::__1::tuple<caulk::concurrent::details::worker_thread*>>>(void*)","symbolLocation":96,"imageIndex":20},{"imageOffset":27736,"symbol":"_pthread_start","symbolLocation":136,"imageIndex":16},{"imageOffset":7196,"symbol":"thread_start","symbolLocation":8,"imageIndex":16}]},{"id":105738543,"name":"com.apple.audio.IOThread.client","threadState":{"x":[{"value":14},{"value":129027},{"value":0},{"value":0},{"value":0},{"value":32},{"value":2},{"value":131072},{"value":1},{"value":943524929325563915},{"value":1099511628032},{"value":1099511628034},{"value":0},{"value":44280165840},{"value":23023307648},{"value":0},{"value":18446744073709551579},{"value":8292139224},{"value":0},{"value":44259874104},{"value":44259874096},{"value":44259874224},{"value":8269087752,"symbolLocation":0,"symbol":"StaticContainer<HALC_ShellInfo_Statics>::s_statics_initialized (.0)"},{"value":8269086720,"symbolLocation":2224,"symbol":"sVarispeedRateTable"},{"value":80},{"value":0},{"value":6514258767},{"value":6134558272},{"value":44259873280}],"flavor":"ARM_THREAD_STATE64","lr":{"value":6666490536},"cpsr":{"value":1610616832},"fp":{"value":6134557968},"sp":{"value":6134557952},"esr":{"value":1442840704,"description":"(Syscall)"},"pc":{"value":6455024572},"far":{"value":0}},"frames":[{"imageOffset":3004,"symbol":"semaphore_wait_signal_trap","symbolLocation":8,"imageIndex":15},{"imageOffset":127656,"symbol":"caulk::mach::semaphore::wait_signal_or_error(caulk::mach::semaphore&)","symbolLocation":36,"imageIndex":20},{"imageOffset":2103872,"symbol":"HALC_ProxyIOContext::IOWorkLoop()","symbolLocation":4952,"imageIndex":21},{"imageOffset":2097228,"symbol":"invocation function for block in HALC_ProxyIOContext::HALC_ProxyIOContext(unsigned int, unsigned int)","symbolLocation":172,"imageIndex":21},{"imageOffset":3924140,"symbol":"HALC_IOThread::Entry(void*)","symbolLocation":88,"imageIndex":21},{"imageOffset":27736,"symbol":"_pthread_start","symbolLocation":136,"imageIndex":16},{"imageOffset":7196,"symbol":"thread_start","symbolLocation":8,"imageIndex":16}]},{"id":105738569,"name":"AudioSession - RootQueue","threadState":{"x":[{"value":14},{"value":5},{"value":0},{"value":68719460488},{"value":44278638592},{"value":6750639351},{"value":0},{"value":6135132384},{"value":0},{"value":3},{"value":13835058055282163714},{"value":80000000},{"value":1178818207441531},{"value":1161223873911429},{"value":155648},{"value":26},{"value":18446744073709551578},{"value":8292139200},{"value":0},{"value":3630261588453},{"value":44271676608},{"value":1000000000},{"value":44271676472},{"value":6135132384},{"value":0},{"value":0},{"value":18446744071411073023},{"value":0},{"value":0}],"flavor":"ARM_THREAD_STATE64","lr":{"value":6453706168},"cpsr":{"value":2147487744},"fp":{"value":6135131968},"sp":{"value":6135131936},"esr":{"value":1442840704,"description":"(Syscall)"},"pc":{"value":6455024584},"far":{"value":0}},"frames":[{"imageOffset":3016,"symbol":"semaphore_timedwait_trap","symbolLocation":8,"imageIndex":15},{"imageOffset":224696,"symbol":"_dispatch_sema4_timedwait","symbolLocation":64,"imageIndex":22},{"imageOffset":15080,"symbol":"_dispatch_semaphore_wait_slow","symbolLocation":76,"imageIndex":22},{"imageOffset":79740,"symbol":"_dispatch_worker_thread","symbolLocation":324,"imageIndex":22},{"imageOffset":27736,"symbol":"_pthread_start","symbolLocation":136,"imageIndex":16},{"imageOffset":7196,"symbol":"thread_start","symbolLocation":8,"imageIndex":16}]},{"id":105738798,"frames":[],"threadState":{"x":[{"value":6132264960},{"value":0},{"value":6131728384},{"value":0},{"value":278532},{"value":18446744073709551615},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0}],"flavor":"ARM_THREAD_STATE64","lr":{"value":0},"cpsr":{"value":4096},"fp":{"value":0},"sp":{"value":6132264960},"esr":{"value":0},"pc":{"value":6455282696},"far":{"value":0}}},{"id":105738855,"frames":[{"imageOffset":17160,"symbol":"__semwait_signal","symbolLocation":8,"imageIndex":15},{"imageOffset":56512,"symbol":"nanosleep","symbolLocation":220,"imageIndex":24},{"imageOffset":36628,"symbol":"std::__1::this_thread::sleep_for(std::__1::chrono::duration<long long, std::__1::ratio<1l, 1000000000l>> const&)","symbolLocation":84,"imageIndex":17},{"imageOffset":2930076,"sourceLine":51,"sourceFile":"this_thread.h","symbol":"void std::__1::this_thread::sleep_for[abi:nqe210106]<long long, std::__1::ratio<1l, 1000l>>(std::__1::chrono::duration<long long, std::__1::ratio<1l, 1000l>> const&)","imageIndex":0,"symbolLocation":244},{"imageOffset":2925236,"sourceLine":373,"sourceFile":"port_watchdog.cpp","symbol":"(anonymous namespace)::WatchdogLoop()","imageIndex":0,"symbolLocation":160},{"imageOffset":2934448,"sourceLine":87,"sourceFile":"invoke.h","symbol":"std::__1::__invoke_result_impl<void, void (*)()>::type std::__1::__invoke[abi:nqe210106]<void (*)()>(void (*&&)())","imageIndex":0,"symbolLocation":28},{"imageOffset":2934408,"sourceLine":159,"sourceFile":"thread.h","symbol":"void std::__1::__thread_execute[abi:nqe210106]<std::__1::unique_ptr<std::__1::__thread_struct, std::__1::default_delete<std::__1::__thread_struct>>, void (*)()>(std::__1::tuple<std::__1::unique_ptr<std::__1::__thread_struct, std::__1::default_delete<std::__1::__thread_struct>>, void (*)()>&, std::__1::__tuple_indices<>)","imageIndex":0,"symbolLocation":28},{"imageOffset":2933924,"sourceLine":168,"sourceFile":"thread.h","symbol":"void* std::__1::__thread_proxy[abi:nqe210106]<std::__1::tuple<std::__1::unique_ptr<std::__1::__thread_struct, std::__1::default_delete<std::__1::__thread_struct>>, void (*)()>>(void*)","imageIndex":0,"symbolLocation":84},{"imageOffset":27736,"symbol":"_pthread_start","symbolLocation":136,"imageIndex":16},{"imageOffset":7196,"symbol":"thread_start","symbolLocation":8,"imageIndex":16}],"threadState":{"x":[{"value":4},{"value":0},{"value":1},{"value":1},{"value":0},{"value":500000000},{"value":52},{"value":0},{"value":8268857816,"symbolLocation":0,"symbol":"clock_sem"},{"value":16387},{"value":17},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":334},{"value":8292134960},{"value":0},{"value":6135704752},{"value":6135704752},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0}],"flavor":"ARM_THREAD_STATE64","lr":{"value":6453845184},"cpsr":{"value":1610616832},"fp":{"value":6135704736},"sp":{"value":6135704688},"esr":{"value":1442840704,"description":"(Syscall)"},"pc":{"value":6455038728},"far":{"value":0}}}],
+  "usedImages" : [
+  {
+    "source" : "P",
+    "arch" : "arm64",
+    "base" : 4343775232,
+    "size" : 15024128,
+    "uuid" : "fe850b22-cb79-3834-b33c-d551fcb09c46",
+    "path" : "\/Users\/USER\/*\/BattleShip",
+    "name" : "BattleShip"
+  },
+  {
+    "source" : "P",
+    "arch" : "arm64",
+    "base" : 4389994496,
+    "size" : 1097728,
+    "uuid" : "a7322e43-de04-3933-8c0e-2c8c0d8ad1f4",
+    "path" : "\/opt\/homebrew\/*\/libSDL2-2.0.0.dylib",
+    "name" : "libSDL2-2.0.0.dylib"
+  },
+  {
+    "source" : "P",
+    "arch" : "arm64",
+    "base" : 4389109760,
+    "size" : 327680,
+    "uuid" : "86e041ca-f63e-3f87-b34f-778c069aa6e7",
+    "path" : "\/opt\/homebrew\/*\/libGLEW.2.3.1.dylib",
+    "name" : "libGLEW.2.3.1.dylib"
+  },
+  {
+    "source" : "P",
+    "arch" : "arm64",
+    "base" : 4388651008,
+    "size" : 81920,
+    "uuid" : "d7a1623f-faea-3a2e-8ca0-7b577045c02a",
+    "path" : "\/opt\/homebrew\/*\/libzip.5.5.dylib",
+    "name" : "libzip.5.5.dylib"
+  },
+  {
+    "source" : "P",
+    "arch" : "arm64",
+    "base" : 4388814848,
+    "size" : 49152,
+    "uuid" : "e3b1f993-df67-3ec3-a61c-6dfeb6cf0812",
+    "path" : "\/opt\/homebrew\/*\/libtinyxml2.11.0.0.dylib",
+    "name" : "libtinyxml2.11.0.0.dylib"
+  },
+  {
+    "source" : "P",
+    "arch" : "arm64",
+    "base" : 4392468480,
+    "size" : 163840,
+    "uuid" : "0623dcdb-5ae6-36bf-89b7-48ffff72d610",
+    "path" : "\/opt\/homebrew\/*\/libspdlog.1.17.0.dylib",
+    "name" : "libspdlog.1.17.0.dylib"
+  },
+  {
+    "source" : "P",
+    "arch" : "arm64",
+    "base" : 4391501824,
+    "size" : 81920,
+    "uuid" : "52690c9c-fca8-3d02-bf7e-8d61bfcaf455",
+    "path" : "\/opt\/homebrew\/*\/libfmt.12.1.0.dylib",
+    "name" : "libfmt.12.1.0.dylib"
+  },
+  {
+    "source" : "P",
+    "arch" : "arm64",
+    "base" : 4391682048,
+    "size" : 131072,
+    "uuid" : "43c01aff-c040-33ff-bb38-5e1ec42d9e75",
+    "path" : "\/opt\/homebrew\/*\/liblzma.5.dylib",
+    "name" : "liblzma.5.dylib"
+  },
+  {
+    "source" : "P",
+    "arch" : "arm64",
+    "base" : 4393582592,
+    "size" : 557056,
+    "uuid" : "1ce1197a-4a2b-3036-984e-95599210332b",
+    "path" : "\/opt\/homebrew\/*\/libzstd.1.5.7.dylib",
+    "name" : "libzstd.1.5.7.dylib"
+  },
+  {
+    "source" : "P",
+    "arch" : "arm64e",
+    "base" : 4493180928,
+    "CFBundleShortVersionString" : "351.2",
+    "CFBundleIdentifier" : "com.apple.AGXMetalG13X",
+    "size" : 7913472,
+    "uuid" : "7ba41324-25b3-31d6-8b07-0bc30dfe906b",
+    "path" : "\/System\/Library\/Extensions\/AGXMetalG13X.bundle\/Contents\/MacOS\/AGXMetalG13X",
+    "name" : "AGXMetalG13X",
+    "CFBundleVersion" : "351.2"
+  },
+  {
+    "source" : "P",
+    "arch" : "arm64e",
+    "base" : 4398153728,
+    "size" : 49152,
+    "uuid" : "ca58aa96-b997-3a6d-9132-19d49be4b3e9",
+    "path" : "\/usr\/lib\/libobjc-trampolines.dylib",
+    "name" : "libobjc-trampolines.dylib"
+  },
+  {
+    "source" : "P",
+    "arch" : "arm64e",
+    "base" : 4823171072,
+    "CFBundleShortVersionString" : "1.14",
+    "CFBundleIdentifier" : "com.apple.audio.units.Components",
+    "size" : 1294336,
+    "uuid" : "39d246cc-28de-35c9-a46f-34bc747ca6cf",
+    "path" : "\/System\/Library\/Components\/CoreAudio.component\/Contents\/MacOS\/CoreAudio",
+    "name" : "CoreAudio",
+    "CFBundleVersion" : "1.14"
+  },
+  {
+    "source" : "P",
+    "arch" : "arm64e",
+    "base" : 4822925312,
+    "CFBundleShortVersionString" : "2.0.0",
+    "CFBundleIdentifier" : "com.apple.iokit.IOHIDLib",
+    "size" : 98304,
+    "uuid" : "f9cc0803-6f3d-38b6-b311-789833568ac7",
+    "path" : "\/System\/Library\/Extensions\/IOHIDFamily.kext\/Contents\/PlugIns\/IOHIDLib.plugin\/Contents\/MacOS\/IOHIDLib",
+    "name" : "IOHIDLib",
+    "CFBundleVersion" : "2.0.0"
+  },
+  {
+    "source" : "P",
+    "arch" : "arm64e",
+    "base" : 6455328768,
+    "size" : 35172,
+    "uuid" : "160fd864-8d15-36fc-9e97-9725388cfafe",
+    "path" : "\/usr\/lib\/system\/libsystem_platform.dylib",
+    "name" : "libsystem_platform.dylib"
+  },
+  {
+    "size" : 0,
+    "source" : "A",
+    "base" : 0,
+    "uuid" : "00000000-0000-0000-0000-000000000000"
+  },
+  {
+    "source" : "P",
+    "arch" : "arm64e",
+    "base" : 6455021568,
+    "size" : 250544,
+    "uuid" : "cc1cf985-bc65-3725-809f-4c1e36b8f4ba",
+    "path" : "\/usr\/lib\/system\/libsystem_kernel.dylib",
+    "name" : "libsystem_kernel.dylib"
+  },
+  {
+    "source" : "P",
+    "arch" : "arm64e",
+    "base" : 6455275520,
+    "size" : 52028,
+    "uuid" : "4f33683c-18c8-39a1-800b-2e3bd43bcc13",
+    "path" : "\/usr\/lib\/system\/libsystem_pthread.dylib",
+    "name" : "libsystem_pthread.dylib"
+  },
+  {
+    "source" : "P",
+    "arch" : "arm64e",
+    "base" : 6454317056,
+    "size" : 592616,
+    "uuid" : "5013c0f8-84a9-3b56-9feb-c353816a750f",
+    "path" : "\/usr\/lib\/libc++.1.dylib",
+    "name" : "libc++.1.dylib"
+  },
+  {
+    "source" : "P",
+    "arch" : "arm64e",
+    "base" : 6455562240,
+    "CFBundleShortVersionString" : "6.9",
+    "CFBundleIdentifier" : "com.apple.CoreFoundation",
+    "size" : 5628704,
+    "uuid" : "04e3598b-f226-3250-b3b2-ce938dd4db7e",
+    "path" : "\/System\/Library\/Frameworks\/CoreFoundation.framework\/Versions\/A\/CoreFoundation",
+    "name" : "CoreFoundation",
+    "CFBundleVersion" : "5026.5.4"
+  },
+  {
+    "source" : "P",
+    "arch" : "arm64e",
+    "base" : 6527332352,
+    "CFBundleShortVersionString" : "6.9",
+    "CFBundleIdentifier" : "com.apple.AppKit",
+    "size" : 24260512,
+    "uuid" : "cf57a4fc-4be3-3d95-b543-d744e8718b26",
+    "path" : "\/System\/Library\/Frameworks\/AppKit.framework\/Versions\/C\/AppKit",
+    "name" : "AppKit",
+    "CFBundleVersion" : "2685.60.104"
+  },
+  {
+    "source" : "P",
+    "arch" : "arm64e",
+    "base" : 6666362880,
+    "CFBundleShortVersionString" : "1.0",
+    "CFBundleIdentifier" : "com.apple.audio.caulk",
+    "size" : 168032,
+    "uuid" : "47e71130-9608-3d99-aceb-df5638bc08df",
+    "path" : "\/System\/Library\/PrivateFrameworks\/caulk.framework\/Versions\/A\/caulk",
+    "name" : "caulk"
+  },
+  {
+    "source" : "P",
+    "arch" : "arm64e",
+    "base" : 6506991616,
+    "CFBundleShortVersionString" : "5.0",
+    "CFBundleIdentifier" : "com.apple.audio.CoreAudio",
+    "size" : 7954048,
+    "uuid" : "242b3e7e-7a94-33da-9d5b-c6739557ceb9",
+    "path" : "\/System\/Library\/Frameworks\/CoreAudio.framework\/Versions\/A\/CoreAudio",
+    "name" : "CoreAudio",
+    "CFBundleVersion" : "5.0"
+  },
+  {
+    "source" : "P",
+    "arch" : "arm64e",
+    "base" : 6453481472,
+    "size" : 291392,
+    "uuid" : "f071efe4-299f-3089-acc4-0025b8ffb52a",
+    "path" : "\/usr\/lib\/system\/libdispatch.dylib",
+    "name" : "libdispatch.dylib"
+  },
+  {
+    "source" : "P",
+    "arch" : "arm64e",
+    "base" : 6749958144,
+    "CFBundleShortVersionString" : "1.0",
+    "CFBundleIdentifier" : "com.apple.MediaExperience",
+    "size" : 794336,
+    "uuid" : "507b3fe7-c5c1-30db-935c-c478ff7b4096",
+    "path" : "\/System\/Library\/PrivateFrameworks\/MediaExperience.framework\/Versions\/A\/MediaExperience",
+    "name" : "MediaExperience",
+    "CFBundleVersion" : "1"
+  },
+  {
+    "source" : "P",
+    "arch" : "arm64e",
+    "base" : 6453788672,
+    "size" : 527776,
+    "uuid" : "694b7881-1bf3-3d0f-8f19-b50ae4e8ef8a",
+    "path" : "\/usr\/lib\/system\/libsystem_c.dylib",
+    "name" : "libsystem_c.dylib"
+  }
+],
+  "sharedCache" : {
+  "base" : 6450118656,
+  "size" : 5990596608,
+  "uuid" : "ff7119a7-f64d-305d-8135-7e6eb1c207d1"
+},
+  "vmSummary" : "ReadOnly portion of Libraries: Total=1.8G resident=0K(0%) swapped_out_or_unallocated=1.8G(100%)\nWritable regions: Total=461.9M written=705K(0%) resident=705K(0%) swapped_out=0K(0%) unallocated=461.2M(100%)\n\n                                VIRTUAL   REGION \nREGION TYPE                        SIZE    COUNT (non-coalesced) \n===========                     =======  ======= \nAccelerate framework               128K        1 \nActivity Tracing                   256K        1 \nAttributeGraph Data               1024K        1 \nCG image                            96K        1 \nColorSync                           16K        1 \nCoreAnimation                      320K       19 \nCoreGraphics                        48K        3 \nCoreUI image data                  496K        4 \nFoundation                          16K        1 \nKernel Alloc Once                   32K        1 \nMALLOC                           112.0M       32 \nMALLOC guard page                 3184K        4 \nMALLOC_LARGE (reserved)          256.0M        1         reserved VM address space (unallocated)\nMemory Tag 22                     64.0M        1 \nSTACK GUARD                        352K       22 \nStack                             19.7M       23 \nStack Guard                       56.0M        1 \nVM_ALLOCATE                       3344K       29 \n__AUTH                            5990K      631 \n__AUTH_CONST                      89.2M     1018 \n__CTF                               824        1 \n__DATA                            38.7M      976 \n__DATA_CONST                      34.9M     1035 \n__DATA_DIRTY                      8315K      873 \n__FONT_DATA                        2352        1 \n__LINKEDIT                       600.0M       14 \n__OBJC_RO                         79.1M        1 \n__OBJC_RW                         2599K        1 \n__TEXT                             1.2G     1057 \n__TPRO_CONST                       128K        2 \ndyld private memory                320K        2 \nmapped file                      284.3M       33 \npage table in kernel               705K        1 \nshared memory                     1552K       19 \n===========                     =======  ======= \nTOTAL                              2.8G     5811 \nTOTAL, minus reserved VM space     2.6G     5811 \n",
+  "legacyInfo" : {
+  "threadTriggered" : {
+    "queue" : "com.apple.main-thread"
+  }
+},
+  "logWritingSignature" : "80313b4a6f2ef2aae3220874db1a4565ca7244b6",
+  "roots_installed" : 0,
+  "bug_type" : "309",
+  "trmStatus" : 1,
+  "trialInfo" : {
+  "rollouts" : [
+    {
+      "rolloutId" : "5ffde50ce2aacd000d47a95f",
+      "factorPackIds" : [
+
+      ],
+      "deploymentId" : 240000550
+    },
+    {
+      "rolloutId" : "682ef9612c2ae30e2f38d3a4",
+      "factorPackIds" : [
+
+      ],
+      "deploymentId" : 240000006
+    }
+  ],
+  "experiments" : [
+
+  ]
+}
+}
+
+Model: MacBookPro18,3, BootROM 18000.120.36, proc 10:8:2:0 processors, 16 GB, SMC 
+Graphics: Apple M1 Pro, Apple M1 Pro, Built-In
+Display: Color LCD, 3024 x 1964 Retina, Main, MirrorOff, Online
+Memory Module: LPDDR5, Hynix
+AirPort: spairport_wireless_card_type_wifi (0x14E4, 0x4387), wl0: Jan 20 2026 17:44:15 version 20.140.13.0.8.7.224 FWID 01-b2a3fd0d
+IO80211_driverkit-1561.3 "IO80211_driverkit-1561.3" Apr 18 2026 17:42:26
+AirPort: 
+Bluetooth: Version (null), 0 services, 0 devices, 0 incoming serial ports
+Network Service: Wi-Fi, AirPort, en0
+Thunderbolt Bus: MacBook Pro, Apple Inc.
+Thunderbolt Bus: MacBook Pro, Apple Inc.
+Thunderbolt Bus: MacBook Pro, Apple Inc.

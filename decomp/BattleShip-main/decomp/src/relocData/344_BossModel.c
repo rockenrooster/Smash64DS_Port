@@ -1,0 +1,415 @@
+/* relocData file 344: BossModel */
+/* Inlined block layout - edit this file directly. The .inc.c
+ * files referenced below live under build/src/relocData/ and
+ * are regenerated from the baserom by tools/extractRelocInc.py
+ * at extract time. */
+
+#include "relocdata_types.h"
+
+/* Vtx: JointVerts @ 0x0 (32 vertices) */
+
+/* Forward decls auto-added/hoisted by hoistExterns.py */
+extern Vtx dBossModel_JointVerts_Vtx[];
+extern u8 dBossModel_Tex_0x2880[];
+extern Vtx dBossModel_Vtx_0x0200_Vtx[];
+extern Vtx dBossModel_Vtx_0x0210_Vtx[];
+extern Vtx dBossModel_Vtx_0x0370_Vtx[];
+extern Vtx dBossModel_Vtx_0x0570_Vtx[];
+extern Vtx dBossModel_Vtx_0x0590_Vtx[];
+extern Vtx dBossModel_Vtx_0x05C0_Vtx[];
+extern Vtx dBossModel_Vtx_0x0620_Vtx[];
+extern Vtx dBossModel_Vtx_0x0680_Vtx[];
+extern Vtx dBossModel_Vtx_0x06E0_Vtx[];
+extern Vtx dBossModel_Vtx_0x07B0_Vtx[];
+extern Vtx dBossModel_Vtx_0x0810_Vtx[];
+extern Vtx dBossModel_Vtx_0x0870_Vtx[];
+extern Vtx dBossModel_Vtx_0x0940_Vtx[];
+extern Vtx dBossModel_Vtx_0x09A0_Vtx[];
+extern Vtx dBossModel_Vtx_0x0A00_Vtx[];
+extern Vtx dBossModel_Vtx_0x0AD0_Vtx[];
+extern Vtx dBossModel_Vtx_0x0C20_Vtx[];
+extern Vtx dBossModel_Vtx_0x0C30_Vtx[];
+extern Vtx dBossModel_Vtx_0x0C40_Vtx[];
+extern Vtx dBossModel_Vtx_0x0C50_Vtx[];
+extern Vtx dBossModel_Vtx_0x0C90_Vtx[];
+extern Vtx dBossModel_Vtx_0x0CA0_Vtx[];
+extern Vtx dBossModel_Vtx_0x0CB0_Vtx[];
+extern Vtx dBossModel_Vtx_0x0CC0_Vtx[];
+extern Vtx dBossModel_Vtx_0x0D20_Vtx[];
+extern Vtx dBossModel_Vtx_0x0D80_Vtx[];
+extern Vtx dBossModel_Vtx_0x0E50_Vtx[];
+extern Vtx dBossModel_Vtx_0x0EB0_Vtx[];
+extern Vtx dBossModel_Vtx_0x0F10_Vtx[];
+extern Vtx dBossModel_gap_0x2850_sub_0x230[];
+extern u16 dBossModel_gap_0x2850_sub_0x8[];
+Vtx dBossModel_JointVerts_Vtx[32] = {
+	#include <BossModel/JointVerts.vtx.inc.c>
+};
+
+/* Vtx: Vtx_0x0200 @ 0x200 (1 vertices) */
+Vtx dBossModel_Vtx_0x0200_Vtx[1] = {
+	#include <BossModel/Vtx_0x0200.vtx.inc.c>
+};
+
+/* Vtx: Vtx_0x0210 @ 0x210 (22 vertices) */
+Vtx dBossModel_Vtx_0x0210_Vtx[22] = {
+	#include <BossModel/Vtx_0x0210.vtx.inc.c>
+};
+
+/* Vtx: Vtx_0x0370_Vtx @ 0x370 (32 vertices) */
+Vtx dBossModel_Vtx_0x0370_Vtx[32] = {
+	#include <BossModel/Vtx_0x0370.vtx.inc.c>
+};
+
+/* Raw data from file offset 0x03C0 to 0x0410 (80 bytes) */
+
+/* Raw data from file offset 0x0450 to 0x04E0 (144 bytes) */
+
+/* Raw data from file offset 0x04F0 to 0x0570 (128 bytes) */
+
+/* Vtx: Vtx_0x0570_Vtx @ 0x570 (2 vertices) */
+Vtx dBossModel_Vtx_0x0570_Vtx[2] = {
+	#include <BossModel/Vtx_0x0570.vtx.inc.c>
+};
+
+/* Vtx: Vtx_0x0590 @ 0x590 (3 vertices) */
+Vtx dBossModel_Vtx_0x0590_Vtx[3] = {
+	#include <BossModel/Vtx_0x0590.vtx.inc.c>
+};
+
+/* Vtx: Vtx_0x05C0 @ 0x5C0 (6 vertices) */
+Vtx dBossModel_Vtx_0x05C0_Vtx[6] = {
+	#include <BossModel/Vtx_0x05C0.vtx.inc.c>
+};
+
+/* Vtx: Vtx_0x0620 @ 0x620 (6 vertices) */
+Vtx dBossModel_Vtx_0x0620_Vtx[6] = {
+	#include <BossModel/Vtx_0x0620.vtx.inc.c>
+};
+
+/* Vtx: Vtx_0x0680 @ 0x680 (6 vertices) */
+Vtx dBossModel_Vtx_0x0680_Vtx[6] = {
+	#include <BossModel/Vtx_0x0680.vtx.inc.c>
+};
+
+/* Vtx: Vtx_0x06E0 @ 0x6E0 (13 vertices) */
+Vtx dBossModel_Vtx_0x06E0_Vtx[13] = {
+	#include <BossModel/Vtx_0x06E0.vtx.inc.c>
+};
+
+/* Vtx: Vtx_0x07B0 @ 0x7B0 (6 vertices) */
+Vtx dBossModel_Vtx_0x07B0_Vtx[6] = {
+	#include <BossModel/Vtx_0x07B0.vtx.inc.c>
+};
+
+/* Vtx: Vtx_0x0810 @ 0x810 (6 vertices) */
+Vtx dBossModel_Vtx_0x0810_Vtx[6] = {
+	#include <BossModel/Vtx_0x0810.vtx.inc.c>
+};
+
+/* Vtx: Vtx_0x0870 @ 0x870 (13 vertices) */
+Vtx dBossModel_Vtx_0x0870_Vtx[13] = {
+	#include <BossModel/Vtx_0x0870.vtx.inc.c>
+};
+
+/* Vtx: Vtx_0x0940 @ 0x940 (6 vertices) */
+Vtx dBossModel_Vtx_0x0940_Vtx[6] = {
+	#include <BossModel/Vtx_0x0940.vtx.inc.c>
+};
+
+/* Vtx: Vtx_0x09A0 @ 0x9A0 (6 vertices) */
+Vtx dBossModel_Vtx_0x09A0_Vtx[6] = {
+	#include <BossModel/Vtx_0x09A0.vtx.inc.c>
+};
+
+/* Vtx: Vtx_0x0A00 @ 0xA00 (13 vertices) */
+Vtx dBossModel_Vtx_0x0A00_Vtx[13] = {
+	#include <BossModel/Vtx_0x0A00.vtx.inc.c>
+};
+
+/* Vtx: Vtx_0x0AD0_Vtx @ 0xAD0 (21 vertices) */
+Vtx dBossModel_Vtx_0x0AD0_Vtx[21] = {
+	#include <BossModel/Vtx_0x0AD0.vtx.inc.c>
+};
+
+/* Raw data from file offset 0x0B00 to 0x0B20 (32 bytes) */
+
+/* Raw data from file offset 0x0BD0 to 0x0C20 (80 bytes) */
+
+/* Vtx: Vtx_0x0C20 @ 0xC20 (1 vertices) */
+Vtx dBossModel_Vtx_0x0C20_Vtx[1] = {
+	#include <BossModel/Vtx_0x0C20.vtx.inc.c>
+};
+
+/* Vtx: Vtx_0x0C30 @ 0xC30 (1 vertices) */
+Vtx dBossModel_Vtx_0x0C30_Vtx[1] = {
+	#include <BossModel/Vtx_0x0C30.vtx.inc.c>
+};
+
+/* Vtx: Vtx_0x0C40 @ 0xC40 (1 vertices) */
+Vtx dBossModel_Vtx_0x0C40_Vtx[1] = {
+	#include <BossModel/Vtx_0x0C40.vtx.inc.c>
+};
+
+/* Vtx: Vtx_0x0C50 @ 0xC50 (4 vertices) */
+Vtx dBossModel_Vtx_0x0C50_Vtx[4] = {
+	#include <BossModel/Vtx_0x0C50.vtx.inc.c>
+};
+
+/* Vtx: Vtx_0x0C90 @ 0xC90 (1 vertices) */
+Vtx dBossModel_Vtx_0x0C90_Vtx[1] = {
+	#include <BossModel/Vtx_0x0C90.vtx.inc.c>
+};
+
+/* Vtx: Vtx_0x0CA0 @ 0xCA0 (1 vertices) */
+Vtx dBossModel_Vtx_0x0CA0_Vtx[1] = {
+	#include <BossModel/Vtx_0x0CA0.vtx.inc.c>
+};
+
+/* Vtx: Vtx_0x0CB0 @ 0xCB0 (1 vertices) */
+Vtx dBossModel_Vtx_0x0CB0_Vtx[1] = {
+	#include <BossModel/Vtx_0x0CB0.vtx.inc.c>
+};
+
+/* Vtx: Vtx_0x0CC0 @ 0xCC0 (6 vertices) */
+Vtx dBossModel_Vtx_0x0CC0_Vtx[6] = {
+	#include <BossModel/Vtx_0x0CC0.vtx.inc.c>
+};
+
+/* Vtx: Vtx_0x0D20 @ 0xD20 (6 vertices) */
+Vtx dBossModel_Vtx_0x0D20_Vtx[6] = {
+	#include <BossModel/Vtx_0x0D20.vtx.inc.c>
+};
+
+/* Vtx: Vtx_0x0D80 @ 0xD80 (13 vertices) */
+Vtx dBossModel_Vtx_0x0D80_Vtx[13] = {
+	#include <BossModel/Vtx_0x0D80.vtx.inc.c>
+};
+
+/* Vtx: Vtx_0x0E50 @ 0xE50 (6 vertices) */
+Vtx dBossModel_Vtx_0x0E50_Vtx[6] = {
+	#include <BossModel/Vtx_0x0E50.vtx.inc.c>
+};
+
+/* Vtx: Vtx_0x0EB0 @ 0xEB0 (6 vertices) */
+Vtx dBossModel_Vtx_0x0EB0_Vtx[6] = {
+	#include <BossModel/Vtx_0x0EB0.vtx.inc.c>
+};
+
+/* Vtx: Vtx_0x0F10 @ 0xF10 (13 vertices) */
+Vtx dBossModel_Vtx_0x0F10_Vtx[13] = {
+	#include <BossModel/Vtx_0x0F10.vtx.inc.c>
+};
+
+/* DisplayList: Joint_0x0FE0 @ 0xFE0 (464 bytes, 58 cmds) */
+Gfx dBossModel_Joint_0x0FE0_DisplayList[58] = {
+	#include <BossModel/Joint_0x0FE0.dl.inc.c>
+};
+
+/* DisplayList: Joint_0x11B0 @ 0x11B0 (280 bytes, 35 cmds) */
+Gfx dBossModel_Joint_0x11B0_DisplayList[35] = {
+	#include <BossModel/Joint_0x11B0.dl.inc.c>
+};
+
+/* Gfx DL: Joint_0x11B0_post @ 0x12C8 (33 cmds) */
+Gfx dBossModel_Joint_0x11B0_post[33] = {
+	#include <BossModel/Joint_0x11B0_post.dl.inc.c>
+};
+
+/* DisplayList: Joint_0x13D0 @ 0x13D0 (168 bytes, 21 cmds) */
+Gfx dBossModel_Joint_0x13D0_DisplayList[21] = {
+	#include <BossModel/Joint_0x13D0.dl.inc.c>
+};
+
+/* DisplayList: Joint_0x1478 @ 0x1478 (240 bytes, 30 cmds) */
+Gfx dBossModel_Joint_0x1478_DisplayList[30] = {
+	#include <BossModel/Joint_0x1478.dl.inc.c>
+};
+
+/* DisplayList: Joint_0x1568 @ 0x1568 (168 bytes, 21 cmds) */
+Gfx dBossModel_Joint_0x1568_DisplayList[21] = {
+	#include <BossModel/Joint_0x1568.dl.inc.c>
+};
+
+/* DisplayList: Joint_0x1610 @ 0x1610 (168 bytes, 21 cmds) */
+Gfx dBossModel_Joint_0x1610_DisplayList[21] = {
+	#include <BossModel/Joint_0x1610.dl.inc.c>
+};
+
+/* DisplayList: Joint_0x16B8 @ 0x16B8 (240 bytes, 30 cmds) */
+Gfx dBossModel_Joint_0x16B8_DisplayList[30] = {
+	#include <BossModel/Joint_0x16B8.dl.inc.c>
+};
+
+/* DisplayList: Joint_0x17A8 @ 0x17A8 (168 bytes, 21 cmds) */
+Gfx dBossModel_Joint_0x17A8_DisplayList[21] = {
+	#include <BossModel/Joint_0x17A8.dl.inc.c>
+};
+
+/* DisplayList: Joint_0x1850 @ 0x1850 (168 bytes, 21 cmds) */
+Gfx dBossModel_Joint_0x1850_DisplayList[21] = {
+	#include <BossModel/Joint_0x1850.dl.inc.c>
+};
+
+/* DisplayList: Joint_0x18F8 @ 0x18F8 (240 bytes, 30 cmds) */
+Gfx dBossModel_Joint_0x18F8_DisplayList[30] = {
+	#include <BossModel/Joint_0x18F8.dl.inc.c>
+};
+
+/* Gfx DL: Joint_0x18F8_post @ 0x19E8 (66 cmds) */
+Gfx dBossModel_Joint_0x18F8_post[66] = {
+	#include <BossModel/Joint_0x18F8_post.dl.inc.c>
+};
+
+/* DisplayList: Joint_0x1BF8 @ 0x1BF8 (168 bytes, 21 cmds) */
+Gfx dBossModel_Joint_0x1BF8_DisplayList[21] = {
+	#include <BossModel/Joint_0x1BF8.dl.inc.c>
+};
+
+/* DisplayList: Joint_0x1CA0 @ 0x1CA0 (168 bytes, 21 cmds) */
+Gfx dBossModel_Joint_0x1CA0_DisplayList[21] = {
+	#include <BossModel/Joint_0x1CA0.dl.inc.c>
+};
+
+/* DisplayList: Joint_0x1D48 @ 0x1D48 (240 bytes, 30 cmds) */
+Gfx dBossModel_Joint_0x1D48_DisplayList[30] = {
+	#include <BossModel/Joint_0x1D48.dl.inc.c>
+};
+
+/* DisplayList: Joint_0x1E38 @ 0x1E38 (168 bytes, 21 cmds) */
+Gfx dBossModel_Joint_0x1E38_DisplayList[21] = {
+	#include <BossModel/Joint_0x1E38.dl.inc.c>
+};
+
+/* DisplayList: Joint_0x1EE0 @ 0x1EE0 (168 bytes, 21 cmds) */
+Gfx dBossModel_Joint_0x1EE0_DisplayList[21] = {
+	#include <BossModel/Joint_0x1EE0.dl.inc.c>
+};
+
+/* DisplayList: Joint_0x1F88 @ 0x1F88 (240 bytes, 30 cmds) */
+Gfx dBossModel_Joint_0x1F88_DisplayList[30] = {
+	#include <BossModel/Joint_0x1F88.dl.inc.c>
+};
+
+/* Gfx DL: Joint_0x1F88_post @ 0x2078 (16 cmds) */
+Gfx dBossModel_Joint_0x1F88_post[16] = {
+	#include <BossModel/Joint_0x1F88_post.dl.inc.c>
+};
+
+/* Gfx DL: Joint_0x1F88_post_post @ 0x20F8 (13 cmds) */
+Gfx dBossModel_Joint_0x1F88_post_post[13] = {
+	#include <BossModel/Joint_0x1F88_post_post.dl.inc.c>
+};
+
+/* Gfx DL: Joint_0x1F88_post_post_post @ 0x2160 (13 cmds) */
+Gfx dBossModel_Joint_0x1F88_post_post_post[13] = {
+	#include <BossModel/Joint_0x1F88_post_post_post.dl.inc.c>
+};
+
+/* Gfx DL: Joint_0x1F88_post_post_post_post @ 0x21C8 (18 cmds) */
+Gfx dBossModel_Joint_0x1F88_post_post_post_post[18] = {
+	#include <BossModel/Joint_0x1F88_post_post_post_post.dl.inc.c>
+};
+
+/* Gfx DL: Joint_0x1F88_post_post_post_post_post @ 0x2258 (13 cmds) */
+Gfx dBossModel_Joint_0x1F88_post_post_post_post_post[13] = {
+	#include <BossModel/Joint_0x1F88_post_post_post_post_post.dl.inc.c>
+};
+
+/* Gfx DL: Joint_0x1F88_post_post_post_post_post_post @ 0x22C0 (12 cmds) */
+Gfx dBossModel_Joint_0x1F88_post_post_post_post_post_post[12] = {
+	#include <BossModel/Joint_0x1F88_post_post_post_post_post_post.dl.inc.c>
+};
+
+/* Raw tail after 1 DL(s) @ 0x2320 (184 bytes) */
+/* DObj.dls pre/post-matrix DL pairs (23 pairs, 184 bytes).
+ * Each 2-slot { dls[0], dls[1] } is the target of one DObjDesc.dl;
+ * dls[0] (when non-NULL) draws before gcPrepDObjMatrix, dls[1] after.
+ * See ftDisplayMainDrawDefault case 1. */
+Gfx *dBossModel_Joint_0x1F88_post_post_post_post_post_post_post[46] = {
+	NULL,                                            dBossModel_Joint_0x0FE0_DisplayList,
+	NULL,                                            dBossModel_Joint_0x11B0_DisplayList,
+	dBossModel_Joint_0x1F88_post,                    dBossModel_Joint_0x11B0_post,
+	NULL,                                            NULL,
+	NULL,                                            dBossModel_Joint_0x13D0_DisplayList,
+	NULL,                                            dBossModel_Joint_0x1478_DisplayList,
+	dBossModel_Joint_0x1F88_post_post,               NULL,
+	NULL,                                            dBossModel_Joint_0x1568_DisplayList,
+	NULL,                                            dBossModel_Joint_0x1610_DisplayList,
+	NULL,                                            dBossModel_Joint_0x16B8_DisplayList,
+	dBossModel_Joint_0x1F88_post_post_post,          NULL,
+	NULL,                                            dBossModel_Joint_0x17A8_DisplayList,
+	NULL,                                            dBossModel_Joint_0x1850_DisplayList,
+	NULL,                                            dBossModel_Joint_0x18F8_DisplayList,
+	dBossModel_Joint_0x1F88_post_post_post_post,     dBossModel_Joint_0x18F8_post,
+	dBossModel_Joint_0x1F88_post_post_post_post_post, NULL,
+	NULL,                                            dBossModel_Joint_0x1BF8_DisplayList,
+	NULL,                                            dBossModel_Joint_0x1CA0_DisplayList,
+	NULL,                                            dBossModel_Joint_0x1D48_DisplayList,
+	dBossModel_Joint_0x1F88_post_post_post_post_post_post, NULL,
+	NULL,                                            dBossModel_Joint_0x1E38_DisplayList,
+	NULL,                                            dBossModel_Joint_0x1EE0_DisplayList,
+	NULL,                                            dBossModel_Joint_0x1F88_DisplayList,
+};
+
+/* DObjDesc: JointTree @ 0x23D8 (26 entries) */
+DObjDesc dBossModel_JointTree[] = {
+	{ 0, (void*)0x00000000, { -71.9056167602539f, 1538.39794921875f, -142.32513427734375f }, { 0.0f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 1, (void*)0x00000000, { 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 1, (void*)dBossModel_Joint_0x1F88_post_post_post_post_post_post_post, { 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 2, (void*)(&dBossModel_Joint_0x1F88_post_post_post_post_post_post_post[2]), { 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 3, (void*)(&dBossModel_Joint_0x1F88_post_post_post_post_post_post_post[4]), { 170.97482299804688f, -320.1016540527344f, 38.93811798095703f }, { 0.0f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 4, (void*)(&dBossModel_Joint_0x1F88_post_post_post_post_post_post_post[6]), { 143.61004638671875f, -373.6783142089844f, -154.8404541015625f }, { -1.570796012878418f, 0.0f, -1.570796012878418f }, { 1.0f, 1.0f, 1.0f } },
+	{ 5, (void*)(&dBossModel_Joint_0x1F88_post_post_post_post_post_post_post[8]), { 0.0f, 0.0f, 0.0f }, { 5.203024864196777f, -2.439527988433838f, -3.1110360622406006f }, { 1.0f, 1.0f, 1.0f } },
+	{ 6, (void*)(&dBossModel_Joint_0x1F88_post_post_post_post_post_post_post[10]), { 141.70713806152344f, 0.0f, 7.000000096013537e-06f }, { 0.0f, 0.0f, -0.6879640221595764f }, { 1.0f, 1.0f, 1.0f } },
+	{ 3, (void*)(&dBossModel_Joint_0x1F88_post_post_post_post_post_post_post[12]), { 222.9892120361328f, -761.451904296875f, 121.36058807373047f }, { -1.570796012878418f, 0.0f, -1.570796012878418f }, { 1.0f, 1.0f, 1.0f } },
+	{ 4, (void*)(&dBossModel_Joint_0x1F88_post_post_post_post_post_post_post[14]), { 0.0f, 0.0f, 1.4000000192027073e-05f }, { -3.1811680793762207f, 6.175879001617432f, -5.929389953613281f }, { 1.0f, 1.0f, 1.0f } },
+	{ 5, (void*)(&dBossModel_Joint_0x1F88_post_post_post_post_post_post_post[16]), { 254.8060760498047f, -1.4000000192027073e-05f, 0.0f }, { 0.0f, 0.0f, -0.3065119981765747f }, { 1.0f, 1.0f, 1.0f } },
+	{ 6, (void*)(&dBossModel_Joint_0x1F88_post_post_post_post_post_post_post[18]), { 174.98837280273438f, 0.0f, -1.4000000192027073e-05f }, { 0.0f, 0.0f, -0.33496201038360596f }, { 1.0f, 1.0f, 1.0f } },
+	{ 3, (void*)(&dBossModel_Joint_0x1F88_post_post_post_post_post_post_post[20]), { 59.63404846191406f, -778.489990234375f, 118.3178482055664f }, { -1.570796012878418f, 0.0f, -1.570796012878418f }, { 1.0f, 1.0f, 1.0f } },
+	{ 4, (void*)(&dBossModel_Joint_0x1F88_post_post_post_post_post_post_post[22]), { 0.0f, 0.0f, -7.000000096013537e-06f }, { 3.1964290142059326f, 0.000371000001905486f, 0.13314999639987946f }, { 1.0f, 1.0f, 1.0f } },
+	{ 5, (void*)(&dBossModel_Joint_0x1F88_post_post_post_post_post_post_post[24]), { 270.6101989746094f, 7.000000096013537e-06f, -1.4000000192027073e-05f }, { 0.0f, 0.0f, -0.49797600507736206f }, { 1.0f, 1.0f, 1.0f } },
+	{ 6, (void*)(&dBossModel_Joint_0x1F88_post_post_post_post_post_post_post[26]), { 200.49293518066406f, 0.0f, 7.000000096013537e-06f }, { 0.0f, 0.0f, -0.358474999666214f }, { 1.0f, 1.0f, 1.0f } },
+	{ 3, (void*)(&dBossModel_Joint_0x1F88_post_post_post_post_post_post_post[28]), { -24.7927303314209f, -506.43768310546875f, 128.09046936035156f }, { 0.0f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 4, (void*)(&dBossModel_Joint_0x1F88_post_post_post_post_post_post_post[30]), { -85.6393814086914f, -279.32269287109375f, -21.989208221435547f }, { -1.570796012878418f, 0.0f, -1.570796012878418f }, { 1.0f, 1.0f, 1.0f } },
+	{ 5, (void*)(&dBossModel_Joint_0x1F88_post_post_post_post_post_post_post[32]), { 0.0f, 5.700000110664405e-05f, 0.0f }, { 0.0031079999171197414f, 3.0902318954467773f, 3.204596996307373f }, { 1.0f, 1.0f, 1.0f } },
+	{ 6, (void*)(&dBossModel_Joint_0x1F88_post_post_post_post_post_post_post[34]), { 270.6101989746094f, 0.0f, -2.099999983329326e-05f }, { 0.0f, 0.0f, -0.5489360094070435f }, { 1.0f, 1.0f, 1.0f } },
+	{ 7, (void*)(&dBossModel_Joint_0x1F88_post_post_post_post_post_post_post[36]), { 200.49290466308594f, 4.3000000005122274e-05f, 2.099999983329326e-05f }, { 0.0f, 0.0f, -0.41119399666786194f }, { 1.0f, 1.0f, 1.0f } },
+	{ 4, (void*)(&dBossModel_Joint_0x1F88_post_post_post_post_post_post_post[38]), { -252.5425262451172f, -262.1084899902344f, -42.99706268310547f }, { -1.570796012878418f, 0.0f, -1.570796012878418f }, { 1.0f, 1.0f, 1.0f } },
+	{ 5, (void*)(&dBossModel_Joint_0x1F88_post_post_post_post_post_post_post[40]), { 0.0f, 0.0f, 2.9000000722589903e-05f }, { -3.0365540981292725f, -6.120052814483643f, 0.34069299697875977f }, { 1.0f, 1.0f, 1.0f } },
+	{ 6, (void*)(&dBossModel_Joint_0x1F88_post_post_post_post_post_post_post[42]), { 188.21681213378906f, 1.4000000192027073e-05f, -5.700000110664405e-05f }, { 0.0f, 0.0f, -0.28429099917411804f }, { 1.0f, 1.0f, 1.0f } },
+	{ 7, (void*)(&dBossModel_Joint_0x1F88_post_post_post_post_post_post_post[44]), { 136.2127685546875f, -1.4000000192027073e-05f, 8.600000001024455e-05f }, { 0.0f, 0.0f, -0.29456499218940735f }, { 1.0f, 1.0f, 1.0f } },
+	{ 18, (void*)0x00000000, { 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f } },
+};
+
+/* Raw data from file offset 0x2850 to 0x2D40 (1264 bytes) */
+PAD(8);
+
+/* gap sub-block @ 0x2858 (was gap+0x8, 40 bytes) */
+u16 dBossModel_gap_0x2850_sub_0x8[16] = {
+	#include <BossModel/gap_0x2850_sub_0x8.palette.inc.c>
+};
+PAD(8);
+
+/* gap sub-block @ 0x2880 (was gap+0x30, 512 bytes) */
+/* @tex fmt=CI4 dim=32x32 lut=dBossModel_gap_0x2850_sub_0x8 */
+u8 dBossModel_Tex_0x2880[512] = {
+	#include <BossModel/Tex_0x2880.tex.inc.c>
+};
+
+/* gap sub-block @ 0x2A80 (was gap+0x230, 288 bytes) */
+Vtx dBossModel_gap_0x2850_sub_0x230[18] = {
+	#include <BossModel/gap_0x2850_sub_0x230.vtx.inc.c>
+};
+
+/* Gfx DL: gap_0x2850_sub_0x350 @ 0x2BA0 (35 cmds) */
+Gfx dBossModel_gap_0x2850_sub_0x350[35] = {
+	#include <BossModel/gap_0x2850_sub_0x350.dl.inc.c>
+};
+
+/* DObjDesc array @ 0x2CB8 (3 entries: 1 real + sentinel + leading id=0). */
+DObjDesc dBossModel_DObjDescs_0x2CB8[3] = {
+	{ 0,  (void *)0x00000000, { 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 1,  (void *)dBossModel_gap_0x2850_sub_0x350, { 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+	{ 18, (void *)0x00000000, { 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f } },
+};

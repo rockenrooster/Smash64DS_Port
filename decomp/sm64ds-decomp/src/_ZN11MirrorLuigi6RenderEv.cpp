@@ -1,0 +1,74 @@
+//cpp
+// @symbol _ZN11MirrorLuigi6RenderEv
+/* recovered: named members + shared header, real C++ method, declarations from a shared header */
+#include "decl_common.h"
+/* recovered: named members + shared header, real C++ method */
+#include "MirrorLuigi.h"
+struct Mtx { int m[12]; };
+struct Sub {
+    virtual void v0();
+    virtual void v1();
+    virtual void v2();
+    virtual void v3();
+    virtual void v4();
+    virtual void m5(int);
+};
+
+extern "C" {
+
+extern unsigned char data_0209f250;
+extern char* data_0209f394[];
+extern char data_020a0e68;
+
+char* func_ov002_020e496c(char* c);
+void func_0203c178(void* m, int a, int b, int c);
+void MulMat3x3Mat3x3(void* d, void* a, void* b);
+void _ZN5Model6RenderEPK7Vector3(void* m, void* v);
+void _ZN15TextureSequence6UpdateER15ModelComponents(void* ts, void* mc);
+
+}
+
+int MirrorLuigi::Render()
+{
+    char* player;
+    char* r8res;
+    char* comp;
+    char* q;
+    char* p_f0;
+    unsigned int i;
+    Mtx* dst;
+    Mtx* src;
+
+    if (data_ov055_02111b6c == 0) return 1;
+
+    player = data_0209f394[data_0209f250];
+    r8res = func_ov002_020e496c(player);
+
+    q = (char*)(int)(((long long)(int)((char*)&unk_0dc)));
+    comp = *(char**)q;
+    dst = *(Mtx**)(q + 0xc);
+    src = *(Mtx**)(r8res + 0x14);
+    for (i = 0; i < *(unsigned int*)(comp + 4); i++) {
+        *(Mtx*)(int)(((long long)(int)dst)) = *src;
+        src++;
+        dst++;
+    }
+
+    p_f0 = ((char*)this) + 0xf0;
+    *(Mtx*)p_f0 = *(Mtx*)(r8res + 0x1c);
+    *(int*)(p_f0 + 0x24) = -*(int*)(p_f0 + 0x24);
+    func_0203c178(&data_020a0e68, -0x1000, 0x1000, 0x1000);
+    MulMat3x3Mat3x3(p_f0, &data_020a0e68, p_f0);
+    *(Mtx*)((char*)&unk_154) = *(Mtx*)p_f0;
+
+    if (data_ov055_02111b64 & 0x20000) return 1;
+
+    _ZN5Model6RenderEPK7Vector3((void*)((char*)&mModelAnim), 0);
+    *(Mtx*)(*(char**)((char*)&unk_14c)) = *(Mtx*)(*(char**)((char*)&unk_0e8) + 0x2d0);
+    _ZN15TextureSequence6UpdateER15ModelComponents((void*)((char*)&unk_1b0), (void*)((char*)&unk_0dc));
+    unk_1b8 = (int)(*(unsigned char*)(player + 0x6fb)) << 12;
+    _ZN15TextureSequence6UpdateER15ModelComponents((void*)((char*)&unk_1c4), (void*)((char*)&unk_140));
+    unk_1cc = (int)(*(unsigned char*)(player + 0x6fb)) << 12;
+    ((Sub*)((char*)&mModel))->m5(0);
+    return 1;
+}

@@ -1,0 +1,101 @@
+// SPDX-License-Identifier: CC0-1.0
+//
+// Lottes-style CRT shader (MSL companion to crt-lottes.glsl), dedicated
+// to the public domain by the author under CC0 1.0 Universal
+// (https://creativecommons.org/publicdomain/zero/1.0/). To the extent
+// possible under law, all copyright and related or neighboring rights
+// to this work have been waived; it may be used, modified, sublicensed
+// and redistributed without restriction or attribution.
+//
+// The CRT emulation technique implemented here was pioneered by Timothy
+// Lottes ("CRT Simulation in a GPU Shader," GDC 2014); his reference
+// implementation is public domain. This file is an original
+// implementation, not transcribed from Lottes's source.
+//
+// Hand-tuned MSL companion that takes priority over the transpiled
+// output PostProcessTranspiler would otherwise synthesize from
+// crt-lottes.glsl. See the .glsl file for the full technique reference
+// and authorship note.
+
+#include <metal_stdlib>
+using namespace metal;
+
+struct PostProcessUniforms {
+    float2 SourceSize;
+    float2 OutputSize;
+    float2 InputSize;
+    int    FrameCount;
+    float  FrameDirection;
+};
+
+struct VOut {
+    float4 position [[position]];
+    float2 vTexCoord;
+};
+
+constant float kMaskStrength = 0.22;
+constant float kScanlineK = 5.0;
+constant float kBrightnessGain = 1.25;
+
+static inline float3 SrgbToLinear(float3 c) { return pow(c, float3(2.2)); }
+static inline float3 LinearToSrgb(float3 c) { return pow(c, float3(1.0 / 2.2)); }
+
+static inline float3 FetchScanline(texture2d<float> src, sampler s, float2 srcSize, float2 uv, float row) {
+    float2 rowUv = float2(uv.x, (row + 0.5) / srcSize.y);
+    float2 dx = float2(1.0 / srcSize.x, 0.0);
+    float3 a = SrgbToLinear(src.sample(s, rowUv - dx).rgb);
+    float3 b = SrgbToLinear(src.sample(s, rowUv).rgb);
+    float3 c = SrgbToLinear(src.sample(s, rowUv + dx).rgb);
+    return a * 0.25 + b * 0.5 + c * 0.25;
+}
+
+static inline float3 PhosphorMask(float fragX) {
+    float angle = fragX * (6.283185 / 3.0);
+    float3 phase = float3(0.0, 2.094395, 4.188790);
+    float3 m = 0.5 + 0.5 * cos(angle - phase);
+    return mix(float3(1.0 - kMaskStrength), float3(1.0 + kMaskStrength), m);
+}
+
+vertex VOut postprocess_vertex(uint vid [[vertex_id]]) {
+    const float2 positions[3] = {
+        float2(-1.0, -1.0),
+        float2( 3.0, -1.0),
+        float2(-1.0,  3.0),
+    };
+    const float2 texCoords[3] = {
+        float2(0.0, 1.0),
+        float2(2.0, 1.0),
+        float2(0.0, -1.0),
+    };
+    VOut o;
+    o.position = float4(positions[vid], 0.0, 1.0);
+    o.vTexCoord = texCoords[vid];
+    return o;
+}
+
+fragment float4 postprocess_fragment(VOut in [[stage_in]],
+                                     texture2d<float> Source [[texture(0)]],
+                                     sampler SourceSampler [[sampler(0)]],
+                                     constant PostProcessUniforms& u [[buffer(0)]]) {
+    float2 uv = in.vTexCoord;
+
+    float subY = uv.y * u.SourceSize.y;
+    float row0 = floor(subY);
+    float dA = subY - row0;
+    float dB = subY - (row0 + 1.0);
+
+    // Bandlimit the scanline Gaussian by the output pixel's source-row
+    // footprint. See crt-lottes.glsl for the variance-addition derivation.
+    float deltaY = fwidth(subY);
+    float kEff = kScanlineK / (1.0 + (deltaY * deltaY) * kScanlineK / 6.0);
+
+    float wA = exp(-(dA * dA) * kEff);
+    float wB = exp(-(dB * dB) * kEff);
+
+    float3 color = FetchScanline(Source, SourceSampler, u.SourceSize, uv, row0) * wA
+                 + FetchScanline(Source, SourceSampler, u.SourceSize, uv, row0 + 1.0) * wB;
+    color *= kBrightnessGain;
+    color *= PhosphorMask(in.position.x);
+
+    return float4(LinearToSrgb(color), 1.0);
+}
