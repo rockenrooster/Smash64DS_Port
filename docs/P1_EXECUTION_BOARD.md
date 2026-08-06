@@ -1550,6 +1550,115 @@ choose which seam to delete.
 path where an unverified commit is the worst outcome. A proven seam with no fix
 beats a fix with no proof.
 
+### The counters are in, and they refute two seams and name one (cycle 98)
+
+**Two of the five pre-submission seams are dead, the walk's invariance is proven
+for the first time, and the target is material prep at 99.95%.** No edit to the
+draw path beyond the counters; no deletion landed this cycle — see the closing
+paragraph for why, and what the next one inherits.
+
+Gate arm, both-CPU, whole match, 1,600 samples, frames **442–2041** (the banked
+arms landed on 441–2040; the one-frame offset is ordinary window jitter, same
+`-StartFrame 441`, same stride, same match config), DLDI ON, exclusion OFF,
+`-AllowRepeatedFrames`, `slips=0`. Build
+`builds/build-c98-ftrpre-bothcpu`; artifacts
+`artifacts/performance/2026-08-05_c98-ftrpre-bothcpu.json`, its `-rows.csv`, and
+`...c98-ftrpre-excursion-bothcpu.json`. Coverage is inherited from the banked
+arms' identity (same match config, same window) and was **not** re-measured with
+`probe-match-window.ps1` this cycle.
+
+| seam | counters | reading | verdict |
+|---|---|---:|---|
+| **validate** | `gNdsFtrPreValidateReuse` / `Build` / `Reject` | **3,961 / 2 / 0** | **REFUTED — the cache already hits 99.95%** |
+| **walk** | `gNdsFtrPreWalkSame` / `Variant` / `First` | **3,961 / 0 / 2** | **CONFIRMED match-load constant — 0 variants** |
+| **material** | `gNdsFtrPreMatSame` / `Variant` / `New` / `Evict` | **47,719 / 25 / 27 / 11,659** of 59,430 calls | **THE TARGET — 99.948% of comparable builds re-derive a byte-identical snapshot** |
+| **reset** | `gNdsFtrPreResetTransient` / `Runtime` | **0 / 4,625** | **REFUTED — already dead at the shipped profile** |
+
+**Engagement is an identity, not a plausibility.** Validate's three counters sum
+to **3,963** and the walk's three sum to **3,963**, and
+`gNdsFighterMarioFoxDLAllDrawCount` is **3,963** — so both censuses saw exactly
+the draws that happened, no more and no fewer. The material counters sum to
+59,430 == `gNdsFtrPreMatCalls`. Fighter triangles 636,480 / 604,044 against the
+control's 635,840 / 603,432 (+0.1%) confirm the fighters drew normally under the
+instrument.
+
+**Positive control, and it is what makes the two refutations readable.**
+`gNdsR2StagePrepareReuseCount` / `BuildCount` read **2,040 / 2 = 99.90%** in the
+same run, reproducing cycle 93's stage figure. A counter mechanism that
+reproduces a known result is what separates "this seam is already elided" from
+"this counter never linked" — which matters most for the reset seam, whose whole
+finding is a zero.
+
+- **Validate is refuted for the reason cycle 93 predicted.** Two rebuilds in a
+  whole match. Deleting the work behind this cache would have bought nothing,
+  and without the counter it was indistinguishable from a seam that rebuilds
+  every frame. This is the row's main justification: one run, no build spent on
+  a guess.
+- **The reset seam was already dead, and the source says why.** Both call sites
+  of `ndsFighterDLDrawResetTransientRendererStats` sit in the `detailed_output`
+  arm of an if/else (`:9417`/`:14271`), and the native owner production path is
+  itself gated on `detailed_output == FALSE` (`:13862`) — so the bzero the
+  cycle-97 table called "deletion-shaped" never executes on the gate arm.
+  `Runtime` at 4,625 is the negative control. **The 70%-of-memset figure in the
+  note at `:13474` is a Results-lab number and does not transfer to the gate
+  arm.** Do not re-brief this seam.
+- **The walk's inputs never moved once.** The hash covers `total_count`,
+  `selected_count`, `selected_index_mask`, and every selected DObj pointer
+  *together with the display-list pointer it will be drawn from* — 0 variants
+  over 3,961 frame-to-frame comparisons with both CPUs live. That is the proof
+  the cycle-97 table asked for ("needs proof no status/motion alters the DObj
+  set"). Note what it licenses and what it does not: it says a baked collection
+  order would be *correct*, not that the walk is expensive.
+- **Material prep is the target.** 47,744 builds could be compared against the
+  previous build for the same MObj; 47,719 were byte-identical. The 25 variants
+  are real (frac texture animation advances `texture_id_curr/next`), so a design
+  that simply freezes the snapshot is a fidelity change and is **not** what this
+  points at. What it points at is that `ndsRendererAdapterPrepareNativeMaterials`
+  (which walks each MObj chain twice) and `ndsRendererAdapterValidateNativeOwnerMaterials`
+  (up to three `ndsRelocFindLoadedFileContaining` searches per material per
+  fighter per frame — charter R2-03's "per-frame texture identity proof") are
+  re-proving a constant ~999 times in 1,000.
+
+**`Evict` 11,659 is table thrash, not variance — read it that way.** The census
+is a 256-entry direct-mapped table keyed on the MObj pointer; a handful of
+colliding key pairs ping-pong in one slot and every call for them counts as an
+evict. Those 11,659 calls are **unclassified**, not evidence of change. The
+classified sample is 47,744, which is what the 99.948% is taken over.
+**Actionable for whoever reuses this instrument:** make it 2-way or key on
+`(dobj, chain index)` instead, and Evict goes to ~0.
+
+**Instrument cost, and it is not a baseline.** text **+992**, data 0, bss
+**+2,112** = **+3,104**; `fake_heap_start` 0x02279424 → **0x0227a044**, the
+address delta 0xC20 equalling the section delta to the byte. Proven headroom
+111,584 → **108,480** (`check-boot-headroom.ps1` OK, 34.9x margin). The
+`NDS_TICK_HUD=0` configuration was link-checked via
+`smash64ds-battle-playable-proof-hwtri` and contains **0** `FtrPre` symbols, so
+the shipped ROM pays nothing. `FTR` clean mean reads **397,454** (hot/clean
+0.98x) against the control's 385,814 — **the instrument costs ~11,640 of the
+very bucket it measures**, which is why the seam verdicts above are counter
+readings and not tick figures. `WORK-H` P95 **1,671,104** against banked
+1,624,064 is +47,040, far outside the ±5,376 floor. **1,624,064 still stands;
+this arm is not a new baseline.**
+
+**One unattributed reading.** `gNdsTaskmanArenaChosenSize` 1,351,680 with
+`gNdsTaskmanArenaAllocFailCount` **6**. The G2 model predicts ~N/4,096 steps,
+i.e. 1 step for 3,104 bytes, not 6. The control's own arena counters were not
+read this cycle, so the *delta* is unmeasured and the 6 may largely predate this
+build. Nothing failed — the ROM booted and ran the full match — but do not quote
+the ~N/4,096 rule as confirmed until a control reading exists.
+
+**Not done, deliberately: no deletion landed.** The seam the numbers chose is
+material prep, and its cheapest correct form is genuinely open — a per-frame
+memo has to read most of the MObj state the build reads (so it saves the emit
+half, not the input half), while a match-load bake has to keep serving the 25
+real variants and so still needs a check. `PROJECT_GOAL.md` prefers the bake and
+the brief prefers deletion over caching; deciding between them needs a design
+step, and landing either needs a dual-route build plus two whole-match runs. That
+did not fit behind the run above, and this is the hot draw path, where an
+unverified commit is the worst available outcome. **The next cycle inherits a
+named seam with a number, an instrument already in the tree to verify against,
+and two seams it must not re-brief.**
+
 ### G3 (original row, Boundary-derived) — the effect packet path
 
 Build the GX packet per unique effect display list **at match load**, reserve

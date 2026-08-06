@@ -4516,6 +4516,48 @@ extern volatile u32 gNdsPainterSlotBgSum;
 extern volatile u32 gNdsPainterSlotFgSum;
 extern volatile u32 gNdsPainterSlotBgOverBand;
 extern volatile u32 gNdsPainterSlotFgOverBand;
+/* CYCLE 98 -- the FTR pre-submission census. The 172,092 ticks/frame between
+ * the DObj walk and the first submitted triangle (board, cycle 96/97) split
+ * over five seams, and four of them are only worth deleting if their inputs
+ * actually change between frames. Nothing here times anything: ITCM is 99.1%
+ * full (cycle 95) so no timer-based partition of the draw half can link. These
+ * are pure counters answering one question -- did this work reproduce a value
+ * it had already computed?
+ *
+ * The stage settled exactly this question for free with
+ * gNdsR2StagePrepareReuseCount/BuildCount at 99.9% reuse (cycle 93). The
+ * fighter owner validate had no such pair, so a cache hit and a cache miss were
+ * indistinguishable and any deletion here would have been a guess. */
+extern volatile u32 gNdsFtrPreValidateReuse;
+extern volatile u32 gNdsFtrPreValidateBuild;
+extern volatile u32 gNdsFtrPreValidateReject;
+/* Walk: the DObj collection's identity, hashed per slot and compared with the
+ * previous frame's. Same == the topology the walk rebuilds every frame is the
+ * one it built last frame. */
+extern volatile u32 gNdsFtrPreWalkSame;
+extern volatile u32 gNdsFtrPreWalkVariant;
+extern volatile u32 gNdsFtrPreWalkFirst;
+/* Material: BuildNativeMaterialSnapshot has no cache at all, so the question is
+ * not hit-versus-miss but whether the snapshot it produces equals the one it
+ * produced last time for that MObj. Same == the build re-derived a constant.
+ * New and Evict separate a genuinely first-seen MObj from table thrash, because
+ * a thrashing table reports every call as new and would read as "everything
+ * varies". */
+extern volatile u32 gNdsFtrPreMatCalls;
+extern volatile u32 gNdsFtrPreMatSame;
+extern volatile u32 gNdsFtrPreMatVariant;
+extern volatile u32 gNdsFtrPreMatNew;
+extern volatile u32 gNdsFtrPreMatEvict;
+/* Reset: Transient is the bzero-carrying one (70% of the fighter draw's memset
+ * traffic per the note at reloc_backend_renderer_dl.c:13474); Runtime is the
+ * eleven-store alternative. Both call sites choose between them on
+ * detailed_output, and the native owner production path is itself gated on
+ * detailed_output == FALSE -- so Transient is PREDICTED 0 on the gate arm.
+ * Runtime is its negative control: a zero meaning "already dead" and a zero
+ * meaning "the counter never linked" are the same zero, and Runtime is what
+ * tells them apart. */
+extern volatile u32 gNdsFtrPreResetTransient;
+extern volatile u32 gNdsFtrPreResetRuntime;
 #endif
 /* The Task 75 load counter lives inside the NDS_TICK_HUD block above, but its
  * call site in reloc_backend_assets.c is unconditional, so a non-tick-HUD

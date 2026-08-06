@@ -5045,6 +5045,15 @@ static void ndsFighterDLDrawResetTransientRendererStats(
     {
         return;
     }
+#if NDS_TICK_HUD
+    /* Cycle 98. Both call sites of this function sit in the `detailed_output`
+     * arm of an if/else whose other arm calls the Runtime reset below, and the
+     * native owner production path is itself gated on detailed_output == FALSE
+     * (:13862). So this is predicted to read 0 on the gate arm, i.e. the seam
+     * the board called "deletion-shaped" is predicted already dead. Runtime is
+     * the control that makes that zero readable. */
+    gNdsFtrPreResetTransient++;
+#endif
 
     /* The prefix is MOSTLY per-list proof/counter output. The renderer state
      * begins at othermode_h and remains live across BattleShip's stage heads
@@ -5081,6 +5090,9 @@ static void ndsFighterDLDrawResetRuntimeRendererStats(
     {
         return;
     }
+#if NDS_TICK_HUD
+    gNdsFtrPreResetRuntime++;
+#endif
 
     /* Profiles 0/1 keep the ordered RDP state below intact. The null-callback
      * path only needs traversal guards and the owner-level hardware totals;
@@ -7147,11 +7159,91 @@ static sb32 ndsRendererAdapterBuildNativeMaterialSnapshot(
     return TRUE;
 }
 
+#if NDS_TICK_HUD
+/* CYCLE 98 -- is the fighter material snapshot re-deriving a constant?
+ *
+ * BuildNativeMaterialSnapshot has no cache, so unlike the owner validate there
+ * is no hit/miss to count. The equivalent question is content invariance: hash
+ * the snapshot it just produced and compare it with the last snapshot produced
+ * for that same MObj. `Same` is then the number of calls that recomputed a
+ * value they had already computed, which is exactly the size of the deletion.
+ *
+ * Direct-mapped and O(1) on purpose. A linear table would search up to 128
+ * entries per call at tens of calls per fighter per frame -- instrument cost
+ * inside the very span being priced. Collisions are not hidden: a slot holding
+ * a different key is counted as Evict, so a thrashing table reads as thrash
+ * rather than as "every material varies".
+ *
+ * Charter 3.12: keyed on MObj pointers, which are arena addresses valid only
+ * within a scene. The census only has to survive the match it measures, and P1
+ * boots straight into one. */
+#define NDS_FTR_PRE_MAT_TABLE_SIZE 256u
+
+static const MObj *sNdsFtrPreMatKey[NDS_FTR_PRE_MAT_TABLE_SIZE];
+static u32 sNdsFtrPreMatHash[NDS_FTR_PRE_MAT_TABLE_SIZE];
+
+static void ndsFtrPreMaterialCensus(const MObj *mobj,
+                                    const NDSRendererNativeMaterial *out)
+{
+    const u32 *words = (const u32 *)(const void *)out;
+    u32 hash = 2166136261u;
+    u32 i;
+    u32 index;
+
+    /* The whole struct is bzero'd at the top of the snapshot builder, so any
+     * padding is deterministic and a word-wise hash is stable. */
+    for (i = 0u; i < (u32)(sizeof(*out) / sizeof(u32)); i++)
+    {
+        hash ^= words[i];
+        hash *= 16777619u;
+    }
+    /* Multiplicative rather than a low-bit mask: MObjs come out of the taskman
+     * arena at a fixed stride, so their low address bits are the least
+     * distinguishing ones they have. */
+    index = ((u32)(uintptr_t)mobj * 2654435761u) >> 24;
+    gNdsFtrPreMatCalls++;
+    if (sNdsFtrPreMatKey[index] == mobj)
+    {
+        if (sNdsFtrPreMatHash[index] == hash)
+        {
+            gNdsFtrPreMatSame++;
+        }
+        else
+        {
+            gNdsFtrPreMatVariant++;
+            sNdsFtrPreMatHash[index] = hash;
+        }
+        return;
+    }
+    if (sNdsFtrPreMatKey[index] != NULL)
+    {
+        gNdsFtrPreMatEvict++;
+    }
+    else
+    {
+        gNdsFtrPreMatNew++;
+    }
+    sNdsFtrPreMatKey[index] = mobj;
+    sNdsFtrPreMatHash[index] = hash;
+}
+#endif
+
 static sb32 ndsRendererAdapterBuildNativeMaterial(
     MObj *mobj, NDSRendererNativeMaterial *out)
 {
+#if NDS_TICK_HUD
+    sb32 built = ndsRendererAdapterBuildNativeMaterialSnapshot(
+        mobj, out, TRUE, NULL, NULL);
+
+    if (built != FALSE)
+    {
+        ndsFtrPreMaterialCensus(mobj, out);
+    }
+    return built;
+#else
     return ndsRendererAdapterBuildNativeMaterialSnapshot(
         mobj, out, TRUE, NULL, NULL);
+#endif
 }
 
 #if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
@@ -8691,6 +8783,9 @@ static sb32 ndsRendererAdapterValidateNativeOwnerCached(
         (root_offsets == NULL) || (material_counts == NULL) ||
         (root_count > NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED))
     {
+#if NDS_TICK_HUD
+        gNdsFtrPreValidateReject++;
+#endif
         return FALSE;
     }
     cache = &sNdsRendererAdapterNativeOwnerValidationCache[slot];
@@ -8715,9 +8810,18 @@ static sb32 ndsRendererAdapterValidateNativeOwnerCached(
     }
     if (identity_matches != FALSE)
     {
+#if NDS_TICK_HUD
+        /* Cycle 98. THE counter this row existed to add: without it a cache hit
+         * and a cache miss are indistinguishable here, and deleting work whose
+         * cache already hits is the mistake cycle 93 avoided on the stage. */
+        gNdsFtrPreValidateReuse++;
+#endif
         return TRUE;
     }
 
+#if NDS_TICK_HUD
+    gNdsFtrPreValidateBuild++;
+#endif
     cache->valid = FALSE;
     if (ndsRendererValidateNativeFighterOwner(
             slot, owner_file->data_size, root_count,
@@ -11679,6 +11783,64 @@ typedef struct NDSFighterDLAllDrawCollection {
     u32 selected_index_mask;
 } NDSFighterDLAllDrawCollection;
 
+#if NDS_TICK_HUD
+/* CYCLE 98 -- does the DObj walk rebuild the same collection every frame?
+ *
+ * The board's seam table calls the walk "match-load constant for Mario/Fox --
+ * poses move, topology does not", and flags that it needs proof no status or
+ * motion alters the DObj set. This is that proof, and it costs one u32 of state
+ * per slot: hash the collection's identity and compare it with the previous
+ * frame's hash for the same slot.
+ *
+ * The dl pointer is in the hash deliberately. A collection whose DObj set is
+ * unchanged but whose display lists have been re-pointed is NOT a constant for
+ * any purpose a baked collection order would serve, and hashing only the DObj
+ * pointers would report it as one. */
+static u32 sNdsFtrPreWalkHash[2];
+static u32 sNdsFtrPreWalkSeen[2];
+
+static void ndsFtrPreWalkCensus(
+    u32 slot, const NDSFighterDLAllDrawCollection *collection)
+{
+    u32 hash = 2166136261u;
+    u32 i;
+
+    if ((slot > 1u) || (collection == NULL))
+    {
+        return;
+    }
+#define NDS_FTR_PRE_MIX(v) \
+    do { hash ^= (u32)(v); hash *= 16777619u; } while (0)
+    NDS_FTR_PRE_MIX(collection->total_count);
+    NDS_FTR_PRE_MIX(collection->selected_count);
+    NDS_FTR_PRE_MIX(collection->selected_index_mask);
+    for (i = 0u; (i < collection->selected_count) &&
+                 (i < NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED); i++)
+    {
+        const DObj *dobj = collection->dobjs[i];
+
+        NDS_FTR_PRE_MIX(collection->indices[i]);
+        NDS_FTR_PRE_MIX((uintptr_t)dobj);
+        NDS_FTR_PRE_MIX((dobj != NULL) ? (uintptr_t)dobj->dl : 0u);
+    }
+#undef NDS_FTR_PRE_MIX
+    if (sNdsFtrPreWalkSeen[slot] == 0u)
+    {
+        gNdsFtrPreWalkFirst++;
+    }
+    else if (sNdsFtrPreWalkHash[slot] == hash)
+    {
+        gNdsFtrPreWalkSame++;
+    }
+    else
+    {
+        gNdsFtrPreWalkVariant++;
+    }
+    sNdsFtrPreWalkHash[slot] = hash;
+    sNdsFtrPreWalkSeen[slot] = 1u;
+}
+#endif
+
 #define NDS_FIGHTER_DL_ALL_FAIL_BLOCKER 0x1u
 #define NDS_FIGHTER_DL_ALL_FAIL_UNSUPPORTED_OPCODE 0x2u
 #define NDS_FIGHTER_DL_ALL_FAIL_UNSUPPORTED_COUNT 0x4u
@@ -13457,6 +13619,14 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
         gNdsFighterDLAllDrawP1SelectedIndexMask =
             collection.selected_index_mask;
     }
+#if NDS_TICK_HUD
+    /* Cycle 98. Placed after the publish so it sees the same collection the
+     * rest of the draw does, and before any early-out below, so
+     * Same+Variant+First is exactly the number of draws that reached here --
+     * which is what makes it checkable against
+     * gNdsFighterMarioFoxDLAllDrawCount rather than merely plausible. */
+    ndsFtrPreWalkCensus(slot, &collection);
+#endif
 
 #if NDS_TASK91_DRAW_PHASE_CENSUS
     /* Reset opens here. The bzeros a few lines down land in the memset symbol,

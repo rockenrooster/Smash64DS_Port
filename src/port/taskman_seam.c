@@ -5125,7 +5125,19 @@ static void ndsBattlePlayableFinalizePresentedIteration(void)
             gNdsEffectDLTriangleTotal + gNdsEffectDLVertexTotal +
             gNdsEffectDLCensusGeomVariants +
             gNdsEffectDLCensusTrisMaxTotal +
-            gNdsEffectDLCensusVertsMaxTotal;
+            gNdsEffectDLCensusVertsMaxTotal +
+            /* Cycle 98 FTR pre-submission census, same reason a fourth time:
+             * written only from #if NDS_TICK_HUD blocks and read only by a
+             * debugger, which is exactly the shape --gc-sections collects.
+             * Naming them here is what keeps the measuring run from reading
+             * thirteen zeros and calling every seam already-dead. */
+            gNdsFtrPreValidateReuse + gNdsFtrPreValidateBuild +
+            gNdsFtrPreValidateReject + gNdsFtrPreWalkSame +
+            gNdsFtrPreWalkVariant + gNdsFtrPreWalkFirst +
+            gNdsFtrPreMatCalls + gNdsFtrPreMatSame +
+            gNdsFtrPreMatVariant + gNdsFtrPreMatNew +
+            gNdsFtrPreMatEvict + gNdsFtrPreResetTransient +
+            gNdsFtrPreResetRuntime;
         gNdsTickHudBuckets[nNDSTickHudBucketFighters] =
             gNdsTickHudFighterTicks;
         gNdsTickHudBuckets[nNDSTickHudBucketStage] = gNdsTickHudStageTicks;

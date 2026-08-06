@@ -3176,6 +3176,24 @@ volatile u32 gNdsPainterSlotBgSum;
 volatile u32 gNdsPainterSlotFgSum;
 volatile u32 gNdsPainterSlotBgOverBand;
 volatile u32 gNdsPainterSlotFgOverBand;
+/* Cycle 98: the FTR pre-submission census. See nds_startup.h for what each
+ * group answers and why none of them is a timer. Cumulative from boot and
+ * deliberately never reset -- the question is about the whole match, and a
+ * per-frame value would have to be differenced across ring stops to answer it
+ * anyway. */
+volatile u32 gNdsFtrPreValidateReuse;
+volatile u32 gNdsFtrPreValidateBuild;
+volatile u32 gNdsFtrPreValidateReject;
+volatile u32 gNdsFtrPreWalkSame;
+volatile u32 gNdsFtrPreWalkVariant;
+volatile u32 gNdsFtrPreWalkFirst;
+volatile u32 gNdsFtrPreMatCalls;
+volatile u32 gNdsFtrPreMatSame;
+volatile u32 gNdsFtrPreMatVariant;
+volatile u32 gNdsFtrPreMatNew;
+volatile u32 gNdsFtrPreMatEvict;
+volatile u32 gNdsFtrPreResetTransient;
+volatile u32 gNdsFtrPreResetRuntime;
 /* Task 66: the idle VBlank span, owned by the tick HUD rather than borrowed
  * from gNdsRendererProfileVBlankWaitTicks. That counter only accumulates under
  * NDS_RENDERER_PROFILE_LEVEL >= 1, and both the tick-HUD and proof targets pin
