@@ -4,59 +4,9 @@ These bugs should be fixed for P1 delivery:
 
 ## Hit-effect presentation (owner, 2026-08-05, with N64/RetroArch reference shots)
 
-Owner's words, kept verbatim:
+**1. Some Crowd audio cues get cut off after big hits.**
+    Crowd audio cues should never be cut off, why is this happening
 
-> so the a attack VFX is a little too big.
-> I have a normal a attack and a strong a attack, they both look like 2d
-> animations like the coin effect.
-> also we are missing the fire burn effect, 2nd screenshot.
-
-> I'm talking more of the flame VFX that come off the victim
-
-> I noticed that when playing on the N64 version that ALL the VFX are
-> billboards (minus the platform) that always face the camera and have the same
-> z depth as the fighter, but always draw on top of them and some/parts of the
-> VFX have some alpha transparency.
-
-Reference: N64/RetroArch captures. (1) normal-A hit, large blue/white spark;
-(2) Mario fully engulfed in flame — the missing burn.
-
-**1. A-attack spark too big. FIXED 2026-08-06, owner-approved by play.**
-
-**Everything written here about `NDS_TASK39_HIT_SPARK_*` on 2026-08-05 was about
-DEAD CODE, and the note saying so was already in the tree.**
-`src/nds/nds_ifcommon_oam.c:1732` records that the whole sprite hit-spark path is
-unreachable in the shipping ROM: `battleship_efmanager.c` defines STRONG
-`efManagerDamageNormal{Light,Heavy}MakeEffect` under
-`NDS_R2_SOURCE_EFFECTS_PARTICLE` (Makefile default 1, no override), so the
-linker never takes the weak shims that reach `ndsTask39HitSparkSpawn`. That note
-post-dates `386fb8e2` and corrects it; `386fb8e2`'s 2.2 clamp changed nothing on
-screen. Do not tune `SCREEN_SCALE` or `SCALE_MAX` — nothing reads them.
-
-The live behaviour is SSB64's own, in
-`decomp/BattleShip-main/decomp/src/ef/efmanager.c`: LIGHT ramps `xf->scale` with
-damage (0.5 below 10, `(size-10)*0.13+1.0` above, **unclamped**, so 4.9x at the
-40-damage ceiling) and HEAVY never sets `xf->scale` at all, leaving it flat 1.0 —
-so a big light spark out-sizes the heavy flash it decays into. The port was
-reproducing source exactly; 4.9x simply does not survive 640x480 -> 256x192.
-
-Fixed **port-side** in `src/import/battleship_efmanager.c`: the two wrappers call
-the source maker unchanged and set `pc->xf->scale` on the way out to
-`ramp * NDS_DAMAGE_SPARK_SCALE` (0.5F), giving HEAVY the same ramp. `decomp/`
-is untouched — it is the specification, and a reader opening `efmanager.c` must
-find SSB64 there, not a port preference. Engagement proof
-`gNdsDamageSparkScaleCount`; retune via `-DNDS_DAMAGE_SPARK_SCALE`.
-
-**A first attempt did this as a `decomp/` patch and was reverted in full** on the
-owner's objection (2026-08-06). The eight existing decomp patches are all things
-that physically cannot work on DS — framebuffer addresses, taskman, objman. A
-cosmetic size preference is not that category. The port-side seam existed the
-whole time (`pc->xf`, used by `ndsParticleTransformForDraw`); it just was not
-checked first.
-
-`size_double` at `nds_ifcommon_oam.c:2453` is **not** a size multiplier — it is
-libnds's affine bounding-box flag ("double the sprite size for rotation",
-`sprite.h:396`). Recorded because it was reported as one.
 
 **2. Fire burn effect missing.** Not fixed. It is the victim burn
 (`efManagerDamageFireMakeEffect`), confirmed by the owner as "the flame VFX that

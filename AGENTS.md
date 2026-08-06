@@ -20,13 +20,11 @@ feel; the DS implementation may differ radically from the original engine.
 
 ## Hard Rules
 
-- Treat `decomp/` as read-only reference source. Never edit it. The one
-  sanctioned exception is `decomp/BattleShip-main/decomp`, which the Makefile
-  compiles in place: its five `SSB64_TARGET_NDS` edits are tracked as patches
-  under `scripts/decomp-patches/battleship/`. Change those files by editing the
-  patch, never the working tree. `/decomp/` is gitignored (third-party source
+- Treat `decomp/` as read-only reference source. Our Source of Truth. Never edit it. 
+ `/decomp/` is gitignored (third-party source
   plus ROM-derived data); `scripts/fetch-battleship-reference.ps1` rebuilds it
   from upstream at the pinned commits, and `-VerifyOnly` checks an existing tree.
+- Never edit Agents.md or Claude.md unless given permission.
 - Inspect relevant BattleShip source before changing gameplay or renderer behavior.
 - Inspect `decomp/sm64-nds` and `decomp/sm64ds-decomp` before substantial DS
   renderer, memory, asset, hardware, or backend architecture changes, or when stuck on an issue.
@@ -44,8 +42,8 @@ feel; the DS implementation may differ radically from the original engine.
 - Respect DS CPU, RAM, VRAM, bandwidth, alignment, fixed-point, and graphics
   limits.
 - Treat generated outputs and emulator payloads as generated; never hand-edit them.
-- Publish exactly `smash64ds.nds` and
-  `smash64ds-battle-playable-hwtri.nds`; all lab outputs stay in `builds/`.
+- Publish exactly `smash64ds.nds` for P2 and
+  `smash64ds-battle-playable-hwtri.nds` for P1; all lab outputs stay in `builds/`.
 - User-facing ROMs must be verifier-covered configurations.
 - Use only repo-local scripted melonDS. Do not commit runner configs, binaries,
   logs, or shard artifacts.
@@ -57,14 +55,9 @@ feel; the DS implementation may differ radically from the original engine.
 - Use the custom accuracy-focused melonDS build as the primary development and
   performance reference. Ordinary optimization does not block on repeated
   retail-hardware tests; reserve them for hardware-specific risk and acceptance.
-- Rendering-side changes may approximate: they gate on a reported fidelity
-  budget (synchronized screenshot diffs plus the owner's visual approval), not
-  pixel exactness. Gameplay/source behavior remains mechanically equivalent and
-  verifier-gated; bit exactness applies only to a named guaranteed quantity.
+- Rendering-side changes may approximate: See PROJECT_GOAL.md
 - Device A/B reports must show the 2/3/4/5+ VBlank-interval histogram and the
-  max interval, never min FPS or a half-second average. Min FPS is
-  discontinuous: one frame crossing the 4->5 VBlank boundary reads as ~12 FPS
-  while the histogram stays continuous and is the actual pacing signal.
+  max interval, and P50/P95
 - Run `scripts/New-Smash64DSSnapshot.ps1` after verified progress as the final project command. Run nothing after it.
 
 ## DS Visual Fidelity
