@@ -1443,16 +1443,75 @@ GObj *efManagerDeadExplodeMakeEffect(Vec3f *pos, s32 player, u32 type)
  * -- see ndsEFManagerResolveDescOffsets above. The "gSYTaskmanGeneralHeap down
  * to 200 bytes" reading was that walk, not eleven particles. */
 #if NDS_R2_SOURCE_EFFECTS_PARTICLE
+/* DAMAGE-SPARK SIZE IS A DS DIVERGENCE, AND IT LIVES HERE RATHER THAN IN THE
+ * SOURCE MAKER ON PURPOSE. `decomp/` is the behavioral specification: a reader
+ * who opens efmanager.c to learn what SSB64 does must find SSB64, not a port
+ * preference. So the source ramp is left exactly as it is and adjusted on the
+ * way out.
+ *
+ * What source does (efmanager.c, efManagerDamageNormalLight/HeavyMakeEffect):
+ * LIGHT ramps xf->scale with damage -- 0.5x below 10, (size-10)*0.13+1.0 above,
+ * unclamped, so 4.9x at the 40-damage ceiling. HEAVY never touches xf->scale at
+ * all, so it is a flat 1.0 and a big light spark out-sizes the heavy flash it
+ * decays into (efManagerDamageNormalHeavyProcDead respawns a light one).
+ *
+ * Owner, 2026-08-06, reviewing against N64 capture and then playing the build:
+ * halve both and give HEAVY the same ramp. Approved by eye -- this is a
+ * presentation choice with the owner as oracle, not a defect being corrected.
+ * 4.9x is right at 640x480 and reads as an orange ball at 256x192.
+ *
+ * Writing scale after the maker returns is the same position source writes it:
+ * both land after LBParticleProcessStruct, and ndsParticleTransformForDraw
+ * builds the affine lazily from transform_status, which is still Default here. */
+#ifndef NDS_DAMAGE_SPARK_SCALE
+#define NDS_DAMAGE_SPARK_SCALE 0.5F
+#endif
+
+/* Engagement proof for the route above: non-zero means the port-side adjust ran
+ * on a real transform. Zero after a match with hits means either the maker was
+ * never reached or pc->xf was NULL, and those need different fixes. */
+volatile u32 gNdsDamageSparkScaleCount;
+
+static void ndsDamageSparkScale(LBParticle *pc, s32 size)
+{
+    f32 ramp;
+
+    if ((pc == NULL) || (pc->xf == NULL))
+    {
+        return;
+    }
+    if (size < 0)
+    {
+        size = 0;
+    }
+    else if (size > 40)
+    {
+        size = 40;
+    }
+    ramp = (size < 10) ? (((10 - size) * -0.05F) + 1.0F)
+                       : (((size - 10) * 0.13F) + 1.0F);
+    pc->xf->scale.x = pc->xf->scale.y = pc->xf->scale.z =
+        ramp * NDS_DAMAGE_SPARK_SCALE;
+    gNdsDamageSparkScaleCount++;
+}
+
 LBParticle *efManagerDamageNormalLightMakeEffect(Vec3f *pos, s32 player,
                                                  s32 size, sb32 is_static)
 {
-    return ndsBaseEFManagerDamageNormalLightMakeEffect(pos, player, size,
-                                                       is_static);
+    LBParticle *pc = ndsBaseEFManagerDamageNormalLightMakeEffect(
+        pos, player, size, is_static);
+
+    ndsDamageSparkScale(pc, size);
+    return pc;
 }
 LBParticle *efManagerDamageNormalHeavyMakeEffect(Vec3f *pos, s32 player,
                                                  s32 size)
 {
-    return ndsBaseEFManagerDamageNormalHeavyMakeEffect(pos, player, size);
+    LBParticle *pc = ndsBaseEFManagerDamageNormalHeavyMakeEffect(pos, player,
+                                                                 size);
+
+    ndsDamageSparkScale(pc, size);
+    return pc;
 }
 LBParticle *efManagerDamageFireMakeEffect(Vec3f *pos, s32 size)
 {

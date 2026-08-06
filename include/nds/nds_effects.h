@@ -141,6 +141,11 @@ extern volatile u32 gNdsKOBurstDropMask;
 #define NDS_KO_BURST_DROP_SIBLING      (1u << 6) /* child->sib_next->sib_next */
 #define NDS_KO_BURST_DROP_SIBLING_MOBJ (1u << 7)
 #define NDS_KO_BURST_DROP_CHILD_MOBJ   (1u << 8)
+/* Damage-spark size adjust (src/import/battleship_efmanager.c). The source ramp
+ * is left untouched in decomp/ -- the specification stays the specification --
+ * and the DS scale is applied to the transform on the way out of the maker.
+ * Non-zero proves that adjust ran; see the block comment at its definition. */
+extern volatile u32 gNdsDamageSparkScaleCount;
 extern volatile u32 gNdsVisualEffectCreateCount;
 extern volatile u32 gNdsVisualEffectDestroyCount;
 extern volatile u32 gNdsVisualEffectDropCount;

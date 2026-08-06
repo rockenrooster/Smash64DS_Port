@@ -21,27 +21,42 @@ Owner's words, kept verbatim:
 Reference: N64/RetroArch captures. (1) normal-A hit, large blue/white spark;
 (2) Mario fully engulfed in flame — the missing burn.
 
-**1. A-attack spark too big.** Not fixed. TWO multipliers, neither
-source-derived. `spark->scale` ramps with damage in the LIGHT branch only
-(`src/nds/nds_ifcommon_oam.c:1820`): `0.5` below damage 10, `(size-10)*0.13+1.0`
-above it, clamped to `NDS_TASK39_HIT_SPARK_SCALE_MAX 2.2F` by `386fb8e2`. HEAVY
-is a **flat 1.0 and does not ramp at all**, which is why a big light hit can
-out-size the heavy one. That product is then multiplied by
-`NDS_TASK39_HIT_SPARK_SCREEN_SCALE 1.6F` (`:69`), so on a 16x16 cell the light
-spark spans 12.8px to **56px** on a 256px screen and the heavy one a flat
-25.6px.
+**1. A-attack spark too big. FIXED 2026-08-06, owner-approved by play.**
 
-`size_double` at `:2453` is **NOT** a third multiplier — corrected 2026-08-06
-after it was reported as one. It is libnds's affine bounding-box flag ("double
-the sprite size for rotation", `sprite.h:396`): it stops a scaled sprite being
-clipped at its cell edge, and the visible size comes from the affine matrix.
-Enabling it above 1.0 is correct.
+**Everything written here about `NDS_TASK39_HIT_SPARK_*` on 2026-08-05 was about
+DEAD CODE, and the note saying so was already in the tree.**
+`src/nds/nds_ifcommon_oam.c:1732` records that the whole sprite hit-spark path is
+unreachable in the shipping ROM: `battleship_efmanager.c` defines STRONG
+`efManagerDamageNormal{Light,Heavy}MakeEffect` under
+`NDS_R2_SOURCE_EFFECTS_PARTICLE` (Makefile default 1, no override), so the
+linker never takes the weak shims that reach `ndsTask39HitSparkSpawn`. That note
+post-dates `386fb8e2` and corrects it; `386fb8e2`'s 2.2 clamp changed nothing on
+screen. Do not tune `SCREEN_SCALE` or `SCALE_MAX` — nothing reads them.
 
-`386fb8e2` already recorded that no source number exists here (the N64 draws
-particles, not sprites) and that **the ceiling is a port choice with the owner
-as oracle**. Owner proposed `SCREEN_SCALE` 0.8; note that is global and halves
-the heavy spark to 12.8px as well, whereas `SCALE_MAX` reins in only the light
-ramp's top end. Owner picks.
+The live behaviour is SSB64's own, in
+`decomp/BattleShip-main/decomp/src/ef/efmanager.c`: LIGHT ramps `xf->scale` with
+damage (0.5 below 10, `(size-10)*0.13+1.0` above, **unclamped**, so 4.9x at the
+40-damage ceiling) and HEAVY never sets `xf->scale` at all, leaving it flat 1.0 —
+so a big light spark out-sizes the heavy flash it decays into. The port was
+reproducing source exactly; 4.9x simply does not survive 640x480 -> 256x192.
+
+Fixed **port-side** in `src/import/battleship_efmanager.c`: the two wrappers call
+the source maker unchanged and set `pc->xf->scale` on the way out to
+`ramp * NDS_DAMAGE_SPARK_SCALE` (0.5F), giving HEAVY the same ramp. `decomp/`
+is untouched — it is the specification, and a reader opening `efmanager.c` must
+find SSB64 there, not a port preference. Engagement proof
+`gNdsDamageSparkScaleCount`; retune via `-DNDS_DAMAGE_SPARK_SCALE`.
+
+**A first attempt did this as a `decomp/` patch and was reverted in full** on the
+owner's objection (2026-08-06). The eight existing decomp patches are all things
+that physically cannot work on DS — framebuffer addresses, taskman, objman. A
+cosmetic size preference is not that category. The port-side seam existed the
+whole time (`pc->xf`, used by `ndsParticleTransformForDraw`); it just was not
+checked first.
+
+`size_double` at `nds_ifcommon_oam.c:2453` is **not** a size multiplier — it is
+libnds's affine bounding-box flag ("double the sprite size for rotation",
+`sprite.h:396`). Recorded because it was reported as one.
 
 **2. Fire burn effect missing.** Not fixed. It is the victim burn
 (`efManagerDamageFireMakeEffect`), confirmed by the owner as "the flame VFX that
