@@ -1446,6 +1446,75 @@ whole 331,472 at ~zero) and report hot/clean beside it.
 being measured, and `linker/nds_hot_text.ld`'s curated list re-addresses itself
 when members move (Task 94 note).
 
+### The draw half splits 52/48 — MEASURED by suppression, cycle 96. Shading is already spent.
+
+Gate arm, whole match, 1,600 samples, frames 441–2040, **86.7% coverage, DLDI
+ON, exclusion OFF**, `-AllowRepeatedFrames`, `slips=0` on every arm. Ranked on
+**clean-frame mean**, because `FTR` is 0.99x hot/clean and an excursion ranking
+scores the entire 331,472 at ~zero. Zero instrument bytes: every arm is an
+existing default-off lab flag, reverted after.
+
+| arm | build | `FTR` clean mean | hot/clean | fighter triangles | Δ vs control |
+|---|---|---:|---:|---:|---:|
+| control | `build-c93-flat-bothcpu` | 385,814 | 0.99x | 635,840 / 603,432 | — |
+| `NDS_R2_FIGHTER_SHADE_SKIP=1` | `build-c96-shade-bothcpu` | 382,337 | 0.97x | 635,840 / 603,432 | **−3,477** |
+| `NDS_R2_FIGHTER_STATESPAN_SKIP=1` | `build-c96-statespan-bothcpu` | 226,434 | 0.98x | **0 / 0** | **−159,380** |
+| `NDS_R2_DRAW_SUPPRESS_MASK=3` | `build-c94-ftrsplit-bothcpu` | 54,342 | — | 0 / 0 | −331,472 |
+
+**The draw half decomposes additively, and it closes exactly:**
+
+```
+submission + state replay   385,814 - 226,434 = 159,380   48.1% of the draw
+pre-submission draw         226,434 -  54,342 = 172,092   51.9% of the draw
+                                       sum    = 331,472   == the draw half
+```
+
+Both parts non-negative, and the two independently-measured arms reproduce the
+`FTR` total to the byte.
+
+**`STATESPAN_SKIP` IS AN OVERLAY, NOT A SUB-OWNER — do not brief it as the
+state-span price.** Its `gNdsFighterDLAllDrawP{0,1}HardwareTriangleCount` are
+**0/0**: skipping the state spans also stops all geometry submission, so the
+159,380 is "state-delta replay **plus everything downstream that no longer
+happens**". The boundary between the two halves above is *where triangles stop
+being emitted*, not a function boundary. This is the same handling
+`mpProcessUpdateMain` gets.
+
+**REFUTED — shading is not a candidate.** −3,477 is **inside the ±5,376
+cross-build floor**, i.e. not resolvable from zero. The lever was already spent
+by R2-03 E28, which removed the software light preparation
+(`NDS_R2_FIGHTER_SOFT_LIGHT_KEEP` defaults 0, so the cut is in); `SHADE_SKIP`
+now only removes the residue. Do not re-price it.
+
+**The per-unit constant, which makes short probes valid here:** 1,239,272
+fighter triangles over 2,041 frames = **607.2 triangles/frame**, so submission
+costs **262 ticks per triangle** (gate arm). For calibration that is already
+**2.4x cheaper** than the stage's generic emit (620/triangle, Task 103) and the
+effect interpreter (626/command) — **the fighter submit path is not obviously
+wasteful**, which argues against attacking it first.
+
+**Where the cheapest mechanically-equivalent routes actually are.** The
+pre-submission 172,092 is per-fighter-per-frame *policy* work — walk, reset,
+validate, matrix prep, material prep — and it is precisely what charter R2-03
+already names for deletion ("no `PrepareProductionRun` policy re-checks, no
+traversal-state/stats dependency, no per-frame texture identity proof"). That
+is deletion-shaped and needs **no** visible change. The submission 159,380 is
+geometry, where the contract's allowed routes are pretransformed geometry,
+precomputed matrices, quantized poses and precompiled GX streams — all of which
+add text and must beat 1.85 cycles of `FTR` mean per byte.
+
+**Note the framing this creates:** in the `STATESPAN` arm `FTR` clean mean is
+**226,434, already under the charter's 250,000 line**. If fighter geometry
+submission were free, `FTR` would meet its budget outright — so the 250K line is
+reachable without touching the pre-submission half at all, and vice versa.
+
+**Not run: the combined arm.** With `SHADE_SKIP` at or below the noise floor its
+overlap with anything else is immaterial, so a third build would not have
+changed a number. **A ceiling, not a candidate:** the `STATESPAN` arm's `WORK-H`
+P95 is 1,475,328 against the control's 1,650,240 (−174,912) with over-gate
+52.4% → 23.0% — that is what removing all fighter geometry buys, on a ROM that
+draws no fighters.
+
 ### G3 (original row, Boundary-derived) — the effect packet path
 
 Build the GX packet per unique effect display list **at match load**, reserve
