@@ -5115,6 +5115,18 @@ void mpCommonSetFighterGround(FTStruct *fp)
     }
 }
 
+/* Declared here rather than through <ft/ftpublic.h>: the port mirrors many decomp
+ * headers under include/ but has no ftpublic.h of its own, and this is the only
+ * caller. The definition is already compiled -- src/import/battleship_ftpublic.c
+ * includes decomp's ftpublic.c -- it was simply --gc-sections'd out of the ROM
+ * for want of any caller at all, which is why the cue never fired. */
+extern void ftPublicPlayCliffReact(GObj *fighter_gobj, f32 knockback);
+
+/* Engagement proof for the crowd's near-KO gasp. Zero after a match in which
+ * someone was launched toward a blast zone and survived means the branch below
+ * never ran; the cue being silent while this counts is a different fault. */
+volatile u32 gNdsFtPublicCliffReactCount;
+
 void mpCommonSetFighterLandingParams(GObj *fighter_gobj)
 {
     FTStruct *fp = ftGetStruct(fighter_gobj);
@@ -5123,8 +5135,40 @@ void mpCommonSetFighterLandingParams(GObj *fighter_gobj)
     {
         return;
     }
-    /* The cliff-reaction FGM branch remains audio debt; do not clear another
-     * fighter's passive union through Mario's member while landing. */
+    /* THE CROWD'S NEAR-KO GASP. This function used to clear public_knockback and
+     * nothing else, and the note here called the missing branch "audio debt" --
+     * so FGM 615/616/617 (GaspL/M/S) were packed, allowlisted, and unreachable.
+     *
+     * Source, mpcommon.c:426-440: a fighter carrying >= 100 knockback who LANDS
+     * within 450 units of a blast bound gets a crowd reaction scaled by that
+     * knockback, and only then is the flag cleared. Both landing seams already
+     * called this function -- :9161 for a floor and :11603 for a cliff catch --
+     * so only the branch itself was absent.
+     *
+     * ftmain.c:1821 is the other half and is already live: it disarms
+     * public_knockback every frame the fighter is back between the bounds, so
+     * the flag survives only while they are still out by the edge. That is what
+     * makes this the "sent flying and saved it" gasp rather than a landing sound.
+     *
+     * The joint NULL check is a port addition; source dereferences it unguarded.
+     * The switch on fp->fkind below is still deliberately not ported: do not
+     * clear another fighter's passive union through Mario's member while
+     * landing. */
+    if (fp->public_knockback != 0.0F)
+    {
+        if ((fp->public_knockback >= 100.0F) &&
+            (fp->joints[nFTPartsJointTopN] != NULL))
+        {
+            f32 topn_x = fp->joints[nFTPartsJointTopN]->translate.vec.f.x;
+
+            if ((topn_x < (gMPCollisionBounds.current.left + 450.0F)) ||
+                (topn_x > (gMPCollisionBounds.current.right - 450.0F)))
+            {
+                ftPublicPlayCliffReact(fighter_gobj, fp->public_knockback);
+                gNdsFtPublicCliffReactCount++;
+            }
+        }
+    }
     fp->public_knockback = 0.0F;
     switch (fp->fkind)
     {

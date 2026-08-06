@@ -15,5 +15,10 @@ extern volatile u32 gNdsFtPublicPlayCommonCount;
 extern volatile u32 gNdsFtPublicLastCommonFGM;
 extern volatile u32 gNdsFtPublicCallStartCount;
 extern volatile u32 gNdsFtPublicLastCallFGM;
+/* The near-KO gasp (GaspL/M/S, FGM 615/616/617), wired 2026-08-06. Defined in
+ * reloc_backend_compat_shims.c beside mpCommonSetFighterLandingParams, which is
+ * the only place that can fire it. Non-zero proves a fighter landed near a blast
+ * bound still carrying >= 100 knockback and the crowd reacted. */
+extern volatile u32 gNdsFtPublicCliffReactCount;
 
 #endif /* SSB64_NDS_FTPUBLIC_H */
