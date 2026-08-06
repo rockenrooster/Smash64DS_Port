@@ -266,17 +266,50 @@ threw `left_bush variation 22.379%` against a 40% floor and a correct change was
 nearly reverted on that one arm; re-running the same candidate passed. Re-run
 before believing it, the same way an A/B would.
 
-**AND CHECK THE CAPTURE'S PIXEL DIMENSIONS BEFORE THE ROM (2026-08-05).** This
-gate counts adjacent-pixel deltas, so it scales with capture RESOLUTION, not
-only with what was drawn: a window captured at a lower effective scale averages
-neighbouring texels and drops the variation with no rendered pixel changing.
-Measured on one day, same region `left_bush:72,104,32,16,0.40,32`, same ROM
-behaviour: **six captures at 877x1400 passed (58.065% on the control) and four
-at 620x1212 failed (29.6%–31.3%)** — the split is exactly on window geometry,
-and the failing captures show a visually correct Dream Land at FPS 29.9. Four
-verifier runs went into that before the dimensions were compared. The assertion
-now prints the source capture's name and size in its failure message, so the
-comparison is in front of you; **do not delete `emulators/melonds/melonDS.toml`
+**THE "IT SCALES WITH CAPTURE RESOLUTION" DIAGNOSIS IS RETRACTED, AND THE GATE
+IS FIXED (cycle 93).** This section previously said the gate "scales with
+capture RESOLUTION" because "a window captured at a lower effective scale
+averages neighbouring texels". **That is wrong twice over**: the enforced
+profile pins *nearest* filtering, so rescaling replicates blocks and averages
+nothing — and the real defect was not in the metric at all.
+
+`Convert-MelonDSWindowTopToNativeBitmap` derived `scale` and `left` from the
+window but **hard-coded the content origin at `top = TopY` (56)**, i.e. the top
+of the *client area* rather than the top of the *content*. melonDS aspect-fits
+the stacked 256x192 pair into the client area and centres it on both axes, so
+any window taller than 256:384 letterboxes — and the crop then started inside
+the black bar and ran off the bottom of the top screen. Measured content top
+edge: **y=76 in an 877x1400 capture (24px letterbox), y=175 in a 620x1212
+capture (123px letterbox)**, chrome ending at y=51 in both. The second crop
+began ~119 source px (~50 native rows) too high, so `left_bush` read 29.6%
+against a 40% floor while the frame was rendered correctly.
+
+`top` is now derived from that layout. **The metric is resolution-independent by
+construction, not by normalisation**: the same stored frames now measure
+`left_bush` **278/496 = 56.048%** at 877x1400, at 620x1212, *and* at the 600x957
+the fixed harness produces — identical to three decimals across a 1.43x scale
+range. Normalising the metric or pinning the window would both have papered over
+a crop that was reading the wrong pixels.
+
+The varying resolution had its own cause, also fixed:
+`verify-battle-playable-realtime-harness.ps1` passes **`-MaximizeVertical`**, so
+`Set-MelonDSCaptureWindow` ignores the canonical 416x664 and sizes the window
+from `Screen.PrimaryScreen.WorkingArea` — a **host** property, which is why
+`check-melonds-policy.ps1` passes (it audits the TOML) while captures arrive at
+whatever the desktop allows. It sized off the work area's *height* alone, so a
+600x1212 work area asked for 759x1212, the window came back clamped to 620x1212
+with the 416:664 aspect destroyed, and ~13 columns of the guest hung off the
+screen edge where `CopyFromScreen` photographs desktop black. It now fits both
+axes. **A capture whose aspect is not ~0.6265 means the window was clamped**;
+the failure message prints the measured aspect beside the canonical one.
+
+Two things this did not change. Every threshold in the region specs was
+calibrated against the *misaligned* crop, so the corrected numbers move: the
+`-FastIteration` set Boundary runs (caps 32/112/96) passes with margin, but the
+non-fast `$textureDetailRegions` **`pond` flat-run cap of 80 now measures 81**.
+**Actionable:** re-calibrate that one cap from a fresh non-`-FastIteration`
+capture the next time that path is run; it is not on the Boundary path, so it
+was not retuned blind here. And **do not delete `emulators/melonds/melonDS.toml`
 to "reset" the window** — it carries required paths, the emulator then never
 reaches the GDB listener, and the run dies at `gdb-markers.ps1` with a
 connection timeout that looks nothing like the problem you were chasing.

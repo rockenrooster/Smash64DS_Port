@@ -82,27 +82,34 @@ function Measure-HorizontalDetail {
     Write-Output ("Horizontal detail {0}: varied={1}/{2} ({3:P3}) max-flat-run={4}px ({5})." -f
         $Spec.Name, $varied, $pairs, $variation, $maxFlatRun, $flatRunGate)
     if ($variation -lt $Spec.MinVariation) {
-        # ALWAYS name the source capture's geometry in the failure. This gate
-        # measures adjacent-pixel deltas, so it is a function of capture
-        # RESOLUTION as much as of what the ROM drew: a window captured at a
-        # lower effective scale averages neighbouring texels and drops the
-        # variation without a single rendered pixel changing. On 2026-08-05 six
-        # captures at 877x1400 passed this exact region and two at 620x1212
-        # failed it (29.6%/31.3%) with a visually identical, correctly rendered
-        # scene -- and the bare percentage read as a rendering regression for
-        # four verifier runs. Print the geometry so the next reader can compare
-        # it against a passing capture before suspecting the ROM.
+        # ALWAYS name the source capture's geometry in the failure -- but NOT
+        # for the reason first recorded here. The original text claimed this
+        # gate "scales with capture RESOLUTION" because "a window captured at a
+        # lower effective scale averages neighbouring texels". THAT IS
+        # RETRACTED (2026-08-05): the enforced profile pins nearest filtering,
+        # so a rescaled window replicates blocks and averages nothing, and once
+        # the crop is aligned the SAME frame measures 56.048% at both 877x1400
+        # and 620x1212. The real defect was in
+        # Convert-MelonDSWindowTopToNativeBitmap, which hard-coded the content
+        # origin instead of deriving it from melonDS's centred aspect-fit, so a
+        # letterboxed window made this crop read the wrong rows entirely.
+        # Geometry is still worth printing: it is the first thing to compare
+        # when a capture is suspect, and a non-canonical aspect now means the
+        # window was clamped rather than sized.
         # NOTE the parentheses around the concatenation: -f binds TIGHTER than
         # +, so `"a" + "b" -f $x` formats only "b" and emits the rest with its
         # placeholders raw -- which is exactly what this message did on its
         # first draft.
         throw (("Horizontal detail region {0} variation {1:P3} is below " +
-            "required {2:P3}. Source capture {3} is {4}x{5}; this gate scales " +
-            "with capture resolution, so compare that against a passing " +
-            "capture before attributing it to the ROM.") -f
+            "required {2:P3}. Source capture {3} is {4}x{5} (canonical aspect " +
+            "is {6:N4}, this is {7:N4}); a non-canonical aspect means the " +
+            "capture window was clamped, so check the geometry before " +
+            "attributing this to the ROM.") -f
             $Spec.Name, $variation, $Spec.MinVariation,
             $script:DetailSourceImageName, $script:DetailSourceImageWidth,
-            $script:DetailSourceImageHeight)
+            $script:DetailSourceImageHeight, (416.0 / 664.0),
+            ([double]$script:DetailSourceImageWidth /
+                [double]$script:DetailSourceImageHeight))
     }
     if (($Spec.MaxFlatRun -gt 0) -and
         ($maxFlatRun -gt $Spec.MaxFlatRun)) {

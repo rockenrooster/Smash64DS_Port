@@ -271,6 +271,20 @@ function Set-MelonDSCaptureWindow {
         $width = [Math]::Round($height * (
             $script:MelonDSCanonicalWindowWidth /
             [double]$script:MelonDSCanonicalWindowHeight))
+        if ($width -gt $workArea.Width) {
+            # FIT BOTH AXES, not just the vertical one. Sizing off the work
+            # area's HEIGHT alone silently assumes the desktop is at least as
+            # wide as the canonical aspect needs, and on 2026-08-05 it was not:
+            # a 600x1212 work area asked for a 759x1212 window, the window came
+            # back clamped to 620x1212, and that broke the 416:664 aspect every
+            # downstream crop depends on. It also left ~13 columns of the guest
+            # hanging off the right edge of the screen, where CopyFromScreen
+            # photographs desktop black rather than the emulator.
+            $width = $workArea.Width
+            $height = [Math]::Floor($width * (
+                [double]$script:MelonDSCanonicalWindowHeight /
+                $script:MelonDSCanonicalWindowWidth))
+        }
         [void][Smash64DSWindowCapture]::ShowWindow($WindowHandle, 9)
         [void][Smash64DSWindowCapture]::SetWindowPos(
             $WindowHandle, [IntPtr](-1), $workArea.X, $workArea.Y,

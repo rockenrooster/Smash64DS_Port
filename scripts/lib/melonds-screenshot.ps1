@@ -287,6 +287,17 @@ function Convert-MelonDSWindowTopToNativeBitmap {
         [int]$Height = 192,
         [int]$TopX = 8,
         [int]$TopY = 56,
+        # Window chrome above the client area (title bar + menu bar + top
+        # border). MEASURED at 52px on 2026-08-05 from the constant-colour runs
+        # down the centre column of two captures of very different sizes
+        # (877x1400 and 620x1212): both show RGB(243,243,243) for y 1..30 and
+        # RGB(255,255,255) for y 31..50, with guest content beginning below.
+        # Chrome does not scale with the window, which is why this is a constant
+        # while everything else here is derived. The content origin depends on
+        # it only at HALF strength (see $top below), so a theme that moved it a
+        # few pixels shifts the crop by half that.
+        [int]$ChromeHeight = 52,
+        [int]$WindowBorder = 8,
         [switch]$WindowScaledCapture
     )
 
@@ -294,11 +305,34 @@ function Convert-MelonDSWindowTopToNativeBitmap {
     $top = [double]$TopY
     $scale = 1.0
     if ($WindowScaledCapture) {
-        # Set-MelonDSCaptureWindow preserves a stacked 256x192 + 256x192
-        # layout inside the Windows client area. Account for the 8px frame and
-        # fixed title/menu height, then sample each native pixel at cell center.
-        $availableWidth = $Bitmap.Width - 16
-        $availableHeight = $Bitmap.Height - $TopY - 8
+        # melonDS aspect-fits the stacked 256x192 + 256x192 pair into the client
+        # area and CENTRES it on BOTH axes. Derive the origin from that layout;
+        # never assume one.
+        #
+        # THIS IS WHERE THE 2026-08-05 "left_bush" FAILURES CAME FROM, and the
+        # diagnosis on the board was wrong. `$left` was already centred, but
+        # `$top` was hard-coded to $TopY, i.e. the top of the CLIENT AREA rather
+        # than the top of the CONTENT. Whenever the window's aspect is taller
+        # than 256:384 the content is letterboxed, and the crop then began in
+        # the black bar and ran off the bottom of the top screen.
+        #
+        # Measured, same day, same ROM behaviour: content top edge y=76 in an
+        # 877x1400 capture (24px of letterbox) and y=175 in a 620x1212 capture
+        # (123px of letterbox) -- the code used 56 for both, so the second crop
+        # started ~119 source px (~50 native rows) too high. `left_bush` read
+        # 29.6% and failed a 40% floor while the frame was rendered correctly.
+        #
+        # It was recorded as "this gate scales with capture resolution, so a
+        # lower scale averages neighbouring texels". THAT IS RETRACTED: the
+        # profile pins nearest filtering, so scaling replicates blocks and
+        # averages nothing. With the origin correct, the SAME frame measures
+        # 56.048% at 877x1400 and 56.048% at 620x1212 -- identical to three
+        # decimals across a 1.43x scale difference. The metric is
+        # resolution-independent once the crop is aligned, so no normalisation
+        # and no pinned window size are needed; both would have papered over
+        # a crop that was reading the wrong pixels.
+        $availableWidth = $Bitmap.Width - (2 * $WindowBorder)
+        $availableHeight = $Bitmap.Height - $ChromeHeight - $WindowBorder
         $scale = [Math]::Min(
             [double]$availableWidth / [double]$Width,
             [double]$availableHeight / [double]($Height * 2))
@@ -306,6 +340,8 @@ function Convert-MelonDSWindowTopToNativeBitmap {
             throw "Invalid scaled melonDS window geometry $($Bitmap.Width)x$($Bitmap.Height)."
         }
         $left = ([double]$Bitmap.Width - ([double]$Width * $scale)) / 2.0
+        $top = [double]$ChromeHeight +
+            (([double]$availableHeight - ([double]($Height * 2) * $scale)) / 2.0)
     } elseif (($TopX + $Width) -gt $Bitmap.Width -or
               ($TopY + $Height) -gt $Bitmap.Height) {
         throw "Top-screen crop ${TopX},${TopY} ${Width}x${Height} exceeds image $($Bitmap.Width)x$($Bitmap.Height)."
