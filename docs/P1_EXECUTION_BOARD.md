@@ -1393,6 +1393,59 @@ code, then re-try. Do **not** un-pin ITCM symbols to make it fit: that moves hot
 text and changes the very cost being measured (`linker/nds_hot_text.ld`, Task 94
 note).
 
+### Why the census cannot link — ATTRIBUTED, cycle 95. **ITCM is 99.1% full**, and that is a standing constraint, not a Task 91 problem.
+
+Measured from the linked ELF of `build-c93-flat-bothcpu` and an object-level
+diff against `build-c94-ftr-bothcpu` (the two differ **only** by
+`NDS_TASK91_DRAW_PHASE_CENSUS`, both `NDS_R2_BOTH_CPU=1`):
+
+```
+.itcm section  32,448 bytes      ITCM region  0x7fe0 = 32,736
+FREE                288 bytes    census needs      +308   (nds_renderer.o .itcm 17,620 -> 17,928)
+```
+
+**The census was never the problem; the region is full.** `.itcm` is 99.1%
+occupied by 99 text symbols, and *no* timer-based partition of the draw half can
+be added without evicting something. This is the durable answer to "why has
+`FTR` never been partitioned", and it generalises: **treat ITCM as closed to new
+instrument code.**
+
+**The five biggest residents ARE the draw half** — 20,696 bytes, **63.8% of all
+ITCM**:
+
+| symbol | bytes |
+|---|---:|
+| `ndsRendererScanList` | 7,728 |
+| `ndsRendererExecuteNativeFighterOwnerProduction` | 3,628 |
+| `ndsRendererNativePrepareProductionRun` | 3,348 |
+| `ndsRendererSubmitHardwareTriangle` | 3,304 |
+| `ndsRendererHardwareSubmitVertex` | 2,688 |
+
+That is a *code-size* ranking, not a time ranking — do not read it as an
+attribution of the 331,472. It does say where the hot path lives.
+
+**Honest gap: the arithmetic does not fully reconcile.** Free 288 against +308
+predicts a 20-byte overflow; the linker reported **908**. The extra 888 is
+**unattributed** — most likely `--gc-sections` retaining symbols the census
+newly references, or alignment shifting between contributions, neither of which
+is measurable without a successful link. It does not change the conclusion in
+either direction: at 288 bytes free the census does not fit even on the
+optimistic reading.
+
+**Consequence for the next row — suppression, not timers.** The zero-byte
+technique that produced the 86/14 split is the only one immune to this, and it
+already has levers in the tree: `NDS_R2_FIGHTER_SHADE_SKIP`,
+`NDS_R2_FIGHTER_STATESPAN_SKIP` (`Makefile:570,575`) alongside
+`NDS_R2_DRAW_SUPPRESS_MASK`. **Both change what is drawn**, so each is a
+*price* in the lab and a `BLOCKED(decision: ...)` with a synchronized
+`artifacts/visibility` pair if it ever looks like landing. Rank on the
+**clean-frame mean** (`FTR` is 0.99x hot/clean; an excursion ranking scores the
+whole 331,472 at ~zero) and report hot/clean beside it.
+
+**Do NOT un-pin ITCM symbols to make room.** Moving hot text changes the cost
+being measured, and `linker/nds_hot_text.ld`'s curated list re-addresses itself
+when members move (Task 94 note).
+
 ### G3 (original row, Boundary-derived) — the effect packet path
 
 Build the GX packet per unique effect display list **at match load**, reserve
