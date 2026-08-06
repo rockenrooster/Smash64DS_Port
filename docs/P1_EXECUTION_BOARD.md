@@ -1856,12 +1856,15 @@ row 1's execution plan.
    presentation debt without reintroducing gameplay-time texture conversion.
 4. **Audio completeness** — implement or explicitly qualify every reachable
    voice, pitch schedule, composite cue, and overlapping match-audio path.
-5. **Hit-effect presentation** — owner filed three rows against the N64
-   reference on 2026-08-05: the A-attack spark is oversized, normal-A should
-   return to the blue spark, and the fire *burn* is absent. Detail, seams and
-   the owner's verbatim wording are in `docs/BUGS.md`; do not restate them here.
-   The spark ceiling is explicitly a port choice with the owner as oracle
-   (`386fb8e2`), so it closes on their eye, not on a measurement.
+5. **Hit-effect presentation** — owner filed against the N64 reference,
+   2026-08-05/06: the A-attack spark is oversized (two multipliers, light ramps
+   with damage to 56px, heavy is flat), and the fire *burn* on the victim is
+   absent. Detail, seams and the owner's verbatim wording are in `docs/BUGS.md`;
+   do not restate them here. The spark ceiling is explicitly a port choice with
+   the owner as oracle (`386fb8e2`), so it closes on their eye, not a
+   measurement. **`docs/BUGS.md` item 3 — the owner's billboard observation —
+   is a design input for any future effect work and bears directly on why the
+   G3 packet path was refuted; read it before opening that lane again.**
 6. **Final acceptance** — the CPU-on one-minute match, complete-match capture,
    owner play/listen pass, reserve gate, Results transition, and teardown
    proof on the exact candidate ROM.
