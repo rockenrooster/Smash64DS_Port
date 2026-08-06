@@ -1341,6 +1341,58 @@ bind. Until that split exists, any FTR price is a guess: the honest bracket on
 the lever is **0 to 135,814**, and naming a narrower one without the partition
 would be the self-time-is-not-a-subsystem-budget mistake again.
 
+### `FTR` is 86% draw / 14% capture — MEASURED, cycle 94. And the phase census below it is ITCM-blocked.
+
+**Correction to the row above: `FTR` is NOT "never partitioned".** Task 91
+(`NDS_TASK91_DRAW_PHASE_CENSUS`, default 0) is a complete partition of the draw
+half — walk / reset / validate / owner-prep / matrix-prep / material-prep /
+inputs / execute / total, plus five matrix sub-phases. **It no longer links.**
+`build-c94-ftr-bothcpu` died at `region 'itcm' overflowed by 908 bytes`: its
+timer sites sit in ITCM-pinned code (`ndsRendererExecuteNativeFighterOwnerProduction`
+at `0x01ffe43c`), and ITCM is `0x7fe0` holding 101 text symbols. *That* is why
+`FTR` has no partition on the whole-match instrument — not the absence of one.
+Do not brief "add FTR brackets" without this: the brackets exist.
+
+**The top-level split was taken a different way, with zero instrument.**
+`NDS_R2_DRAW_SUPPRESS_MASK=3` (existing default-off lab flag, R2-03 E13) returns
+from `ndsFighterMarioFoxDLAllDrawForSlot` at its first statement while the `FTR`
+bracket still spans `ndsFighterDisplayContractCapture`, so residual `FTR` **is**
+capture. Gate arm, whole match, 1,600 samples, frames 441–2040, 86.7% coverage,
+DLDI ON, exclusion OFF, `slips=0`; artifact
+`artifacts/performance/2026-08-05_c94-ftrsplit-bothcpu.json`.
+
+| | build | `FTR` mean | `FTR` P50 | share |
+|---|---|---:|---:|---:|
+| control | `build-c93-flat-bothcpu` | 385,814 (clean) | 394,944 | 100% |
+| draw suppressed | `build-c94-ftrsplit-bothcpu` | 54,342 | 55,360 | 14.1% |
+| **draw (derived)** | | **331,472** | **339,584** | **85.9%** |
+
+**Engagement is exact, not plausible:** `gNdsFighterMarioFoxDLAllDrawCount`
+3,955 → **0**, `gNdsFighterDisplayContractSubmittedCount` 63,534 → **0**, and
+both `gNdsFighterDLAllDrawP{0,1}HardwareTriangleCount` → **0**. Cross-build, so
+it pays placement noise — but `FTR`'s own spread is **1.02** and the delta is
+**60x** the ±5,376 floor, so the split is not in question.
+
+**A CEILING, NOT A CANDIDATE.** Deleting both fighter draws outright moves
+gate-arm `WORK-H` P95 **1,650,240 → 1,297,984 (−352,256)** and P50 1,128,192 →
+777,216. Read it the way Task 106's −119,744 is read: the most the whole
+fighter-draw lever can ever be worth, with no fighters on screen. VBI went
+2:965 → 2:1704.
+
+**REFUTED: the source display proc is not the cost.** Capture runs
+`gmCameraLookAtFuncMatrix` (once per *fighter*, on the same camera),
+`ndsFighterDisplayContractCountFlags`, and the decomp
+`ndsBaseFTDisplayMainProcDisplay` over the fighter's DObj tree — **all of it
+together is 54,342**, 14.1% of `FTR` and 4.5% of a clean frame. The duplicated
+per-fighter camera matrix is therefore bounded above by a fraction of that and
+is **not worth a build**. Spend the next row on the draw half, where 331,472 is.
+
+**Next row is the Task 91 census made buildable**, and the cheap form is a
+sub-flag excluding the five `gNdsTask91Mtx*` sites that live in ITCM-resident
+code, then re-try. Do **not** un-pin ITCM symbols to make it fit: that moves hot
+text and changes the very cost being measured (`linker/nds_hot_text.ld`, Task 94
+note).
+
 ### G3 (original row, Boundary-derived) — the effect packet path
 
 Build the GX packet per unique effect display list **at match load**, reserve
