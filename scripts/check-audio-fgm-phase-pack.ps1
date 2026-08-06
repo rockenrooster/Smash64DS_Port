@@ -66,7 +66,17 @@ if (([int]$metadata.format_version -ne 4) -or
     # inside the loop. 0.108 s monotone -> 1.725 s swept.
     # 913168 -> 920152: FGM 12 DeadUpStar joined it too, recovering the source loop
     # it was dropping (0.425 s of a 0.863 s note) and clearing its clipping.
-    ([int64]$metadata.resident_bytes -ne 920152) -or
+    # 920152 -> 938996 on 2026-08-06: FGM 617 GaspS and 622 DamageL joined as
+    # well. The 2026-08-02 note kept them flat because "their only DECLARED debt
+    # is untrimmed_shared_source_reuse, a dedup note, not a defect" -- true about
+    # forks and pitch automation, but it never asked whether the cue has a
+    # MULTI-NOTE SCHEDULE, which the flat path also cannot express. Both do:
+    # 617 is (6,7,70)(6,7,180) = 250 ticks and 622 is (7,7,80)(7,7,100)(7,7,200)
+    # = 380 ticks, so each rendered one one-shot and then silence -- 617 short by
+    # 299 ms, 622 by 744 ms. Now 1,437 ms and 2,185 ms, matching their note
+    # totals exactly. 605 and 609 carry `pitch_code`, not `notes`; they are
+    # genuinely single-note and stay flat.
+    ([int64]$metadata.resident_bytes -ne 938996) -or
     ([int64]$metadata.resident_limit_bytes -ne 204800) -or
     # ROM, not RAM: the runtime streams cues into resident_limit_bytes and never
     # holds the pack. 512 KiB blocked the five announcer lines and 768 KiB then
@@ -78,7 +88,10 @@ if (([int]$metadata.format_version -ne 4) -or
     # crowd cues gained the full-program AOT render. A mapping change is
     # expected whenever a cue's render strategy changes and must never be
     # repinned without one.
-    ($metadata.mapping_sha256_lo -ne '0x5d1c7cf5') -or
+    # 0xb6be788e -> 0x5d1c7cf5 -> 0x885657f4 on 2026-08-06 for 617 and 622
+    # changing render strategy, which is exactly the case this hash exists to
+    # catch and must never be repinned without.
+    ($metadata.mapping_sha256_lo -ne '0x885657f4') -or
     # Repinned 2026-08-02: FGM 11 (the rolling dodge) dropped 127 -> 96 -> 68 ->
     # 48 on the owner's ear via FGM_OWNER_VOLUME_TRIM, -8.4 dB total against the
     # source; the 68 pin was
@@ -96,8 +109,10 @@ if (([int]$metadata.format_version -ne 4) -or
     # PACK_ENTRY.pack writes, so the manifest claimed 96 while the ROM still
     # played 127. An unchanged hash after an intended payload change is the
     # signal that the change did not land.
+    # Repinned 2026-08-06 with the 617/622 render change; the prior pin was
+    # 5f12e380c4036401414cc490f4a29cc708281ba574813ccaf13acb56327fa6db.
     ($metadata.pack_sha256 -ne
-        '5f12e380c4036401414cc490f4a29cc708281ba574813ccaf13acb56327fa6db')) {
+        '51ac736c2421fe63b0f5cba4e791572ed5c453e1c85614303b464cd3374d749e')) {
     throw 'FGM pack format, budget, mapping, or binary identity changed.'
 }
 if ((@($metadata.excluded_entries).Count -ne 0) -or

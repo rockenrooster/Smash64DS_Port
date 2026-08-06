@@ -33,8 +33,13 @@
  * booted mute with gNdsAudioFgmFormatFailCount 1.  check-audio-fgm-phase-pack.ps1
  * now derives both from the pack binary and prints the values to set here, so
  * re-render, run it, and paste what it names.  Never pin them anywhere else. */
-#define NDS_AUDIO_FGM_PACK_BYTES 920152u
-#define NDS_AUDIO_FGM_PACK_MAPPING_SHA256_LO 0x5d1c7cf5u
+/* 920152 -> 938996 and 0x5d1c7cf5 -> 0x885657f4 on 2026-08-06: FGM 617 GaspS
+ * and 622 DamageL joined FULL_PROGRAM_AOT_IDS, because both carry a multi-note
+ * schedule the flat path cannot express -- it renders one one-shot and every
+ * note after the first is silence.  617 1,138 -> 1,437 ms, 622 1,441 -> 2,185
+ * ms, each now matching its own note total exactly. */
+#define NDS_AUDIO_FGM_PACK_BYTES 938996u
+#define NDS_AUDIO_FGM_PACK_MAPPING_SHA256_LO 0x885657f4u
 #define NDS_AUDIO_FGM_CACHE_BYTES 204800u
 #define NDS_AUDIO_FGM_HANDLE_CAPACITY 8u
 #define NDS_AUDIO_FGM_FIDELITY_DEBT_PITCH_AUTOMATION (1u << 2)

@@ -192,10 +192,30 @@ FULL_PROGRAM_AOT_IDS = frozenset((
     #       named is literally half its source. That is the "cut off".
     # This render answers both at once: it walks the note schedule and mixes
     # the simultaneous forks, which is what the seven existing fused repairs
-    # already do. 605, 609, 617 and 622 stay on the flat path -- their only
-    # declared debt is untrimmed_shared_source_reuse, which is a dedup note,
-    # not a defect.
+    # already do.
     615, 616, 618, 619, 620, 623, 625,
+    # 617 AND 622 BELONG HERE TOO, and the reasoning that excluded them was
+    # asking the wrong question (owner refiled the row 2026-08-06 pointing at
+    # fgm622 and saying the sample itself sounds incomplete -- it does).
+    #
+    # The old note kept 605, 609, 617 and 622 on the flat path because "their
+    # only DECLARED debt is untrimmed_shared_source_reuse, a dedup note, not a
+    # defect". True as far as it goes: neither has a fork and neither has pitch
+    # automation. But the test never asked whether the cue has a MULTI-NOTE
+    # SCHEDULE, which the flat path also cannot express -- it renders one
+    # one-shot, so every note after the first is silence.
+    #
+    #   617 GaspS   notes (6,7,70)(6,7,180)          250 ticks = 1,437 ms
+    #               sample 33,408 @ 29,344 Hz                  = 1,138 ms  -299
+    #   622 DamageL notes (7,7,80)(7,7,100)(7,7,200)  380 ticks = 2,185 ms
+    #               sample 44,800 @ 31,089 Hz                  = 1,441 ms  -744
+    #
+    # 605 and 609 carry `pitch_code`, not `notes` -- genuinely single-note, so
+    # they stay flat and the dedup note really is their only debt.
+    #
+    # Tick math is validated against this file's own figure: 623 is 150 ticks
+    # and nds_audio_fgm.c calls it an "862 ms note"; 150 * 5.75 ms = 862.5.
+    617, 622,
 ))
 
 ATTACK_ACTION_AUDIT_SHA256 = (
