@@ -30,8 +30,20 @@ typedef enum NDSVisualEffectKind
  * that is not a particle. Defined in src/import/battleship_lbparticle.c beside
  * the pass whose atlas and camera it borrows; texture_id is one of the
  * NDS_PARTICLE_QUAD_*_TEXTURE keys the bank generator emits. Fails closed. */
+/* depth_bias pulls the quad this many world units STRAIGHT TOWARD THE CAMERA
+ * EYE before it is submitted, which is the only way to put a quad in front of
+ * a fighter on this hardware. The DS has no depth-test-disable: POLYGON_ATTR
+ * exposes lights, shading mode, cull, fog, alpha and polygon id, and its one
+ * depth-test bit selects EQUAL instead of LESS -- stricter, not looser. So
+ * "always on top" is a position change, not a flag. 0 keeps the caller's own
+ * position. */
 sb32 ndsParticleDrawSourceAssetQuad(u32 texture_id, const Vec3f *pos, f32 size,
-                                    u32 color, u8 alpha);
+                                    u32 color, u8 alpha, f32 depth_bias);
+/* The same submit over a texture the particle pass does not own, with the whole
+ * image as the cell. For art the shared sheet cannot hold -- see the shield. */
+sb32 ndsParticleDrawOwnTextureQuad(u32 texture_name, u32 texture_w,
+                                   u32 texture_h, const Vec3f *pos, f32 size,
+                                   u32 color, u8 alpha, f32 depth_bias);
 extern volatile u32 gNdsSourceAssetQuadAttempts;
 extern volatile u32 gNdsSourceAssetQuadDrawn;
 extern volatile u32 gNdsSourceAssetQuadMissMask;

@@ -756,6 +756,15 @@ NDS_R2_PARTICLE_DRAW ?= 1
 # exists to re-measure that price on the whole-match instrument, since the 36k
 # came off a 128-frame window.
 NDS_R2_SHIELD_QUAD ?= 0
+# SEEDS gNdsBattlePlayableFoxCpuEnabled FOR A ROM NOBODY DRIVES WITH GDB. 1 is
+# the published source-normal battle (3/2/1/GO, live match timer, level-3 Fox);
+# 0 skips the countdown, unlocks at GO, freezes the timer and leaves Fox
+# standing still. The scripted harnesses keep writing the variable at
+# scVSBattleStartBattle and are unaffected either way -- this exists purely so a
+# hand-played inspection ROM can be built, which it could not be before
+# 2026-08-06. MUST STAY 1 for anything published or measured: a frozen Fox is
+# not representative gameplay and its ticks are not a Boundary figure.
+NDS_R2_FOX_CPU_DEFAULT ?= 1
 # NDS_R2_PARTICLE_V16_HEADROOM IS DELETED, AND A FIXED FACTOR IS WHY.
 #
 # It bought one extra bit of range (x16 -> x8, reach +/-2047.9 -> +/-4095.9) at
@@ -2642,6 +2651,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_FIGHTER_ANIM_CYCLER_KIND $(NDS_FIGHTER_ANIM_CYCLER_KIND)'; \
 		echo '#define NDS_R2_PARTICLE_DRAW $(NDS_R2_PARTICLE_DRAW)'; \
 		echo '#define NDS_R2_SHIELD_QUAD $(NDS_R2_SHIELD_QUAD)'; \
+		echo '#define NDS_R2_FOX_CPU_DEFAULT $(NDS_R2_FOX_CPU_DEFAULT)'; \
 		echo '#define NDS_R2_COLLISION_L7_ORACLE $(NDS_R2_COLLISION_L7_ORACLE)'; \
 		echo '#define NDS_TASK39_FX_SPRITES $(NDS_TASK39_FX_SPRITES)'; \
 		echo '#define NDS_TASK39_FX_FLASH $(NDS_TASK39_FX_FLASH)'; \

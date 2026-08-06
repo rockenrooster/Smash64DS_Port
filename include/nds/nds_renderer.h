@@ -1286,6 +1286,11 @@ typedef s32 (*NDSRendererTextureFillCallback)(u8 *pixels, u32 bytes,
 s32 ndsRendererHardwarePrepareIFCommonCloudAtlas(
     u32 width, u32 height, const u16 palette[8],
     NDSRendererTextureFillCallback fill, void *user_data, u32 *texture_name);
+/* The A3I5 sibling: 32 palette entries against 3 alpha bits, where the Cloud
+ * entry point is 8 entries against 5. Same upload and the same release. */
+s32 ndsRendererHardwarePrepareIFCommonA3I5Atlas(
+    u32 width, u32 height, const u16 palette[32],
+    NDSRendererTextureFillCallback fill, void *user_data, u32 *texture_name);
 void ndsRendererHardwareReleaseIFCommonCloudAtlas(u32 *texture_name);
 s32 ndsRendererHardwareDrawIFCommonCloudAtlas(
     u32 texture_name, s32 x_q16, s32 y_q16,

@@ -5,8 +5,22 @@
 #include <string.h>
 
 /* The published ROM is source-normal. Automated fast iteration explicitly
- * clears this at the pre-battle seam to skip CPU/countdown/timer work. */
+ * clears this at the pre-battle seam to skip CPU/countdown/timer work.
+ *
+ * NDS_R2_FOX_CPU_DEFAULT SEEDS IT FOR A HAND-PLAYED ROM, because until
+ * 2026-08-06 nothing could. Clearing this needs a gdb write at
+ * scVSBattleStartBattle, so every fast-iteration path was a scripted harness
+ * (capture-melonds.ps1:327) and a ROM the owner launches himself always got the
+ * level-3 Fox. That is the wrong default when the thing under inspection is a
+ * visual effect the owner has to stand still and look at. Flag stays 1 so the
+ * published battle ROM and every verifier are bit-identical to before; build
+ * NDS_R2_FOX_CPU_DEFAULT=0 for a look-at-it ROM, which also skips the 3/2/1/GO
+ * wait and freezes the match timer. */
+#if NDS_R2_FOX_CPU_DEFAULT
 volatile u32 gNdsBattlePlayableFoxCpuEnabled = 1u;
+#else
+volatile u32 gNdsBattlePlayableFoxCpuEnabled = 0u;
+#endif
 
 #ifndef DObjGetStruct
 #define DObjGetStruct(gobj) ((DObj *)((gobj)->obj))

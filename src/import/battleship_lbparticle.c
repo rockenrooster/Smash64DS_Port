@@ -1625,12 +1625,95 @@ volatile u32 gNdsSourceAssetQuadMissMask;
  * camera all leave the effect undrawn rather than drawing it wrong, and set a
  * bit in gNdsSourceAssetQuadMissMask so an absent shield is diagnosable instead
  * of mysterious. */
+/* TOWARD THE EYE, not along a cross product. right x up would give the view
+ * axis up to a sign that depends on the basis handedness, and getting that sign
+ * wrong pushes the quad BEHIND the fighter -- the same bug, silently inverted.
+ * eye - pos is the direction to the camera by construction, for any camera, and
+ * the perspective divide turns a step along it into less depth. A no-op at bias
+ * 0, which is every caller that wants the source position. */
+static void ndsParticleBiasTowardEye(const Vec3f *pos, f32 depth_bias,
+                                     Vec3f *out)
+{
+    CObj *cobj;
+
+    *out = *pos;
+    if (depth_bias == 0.0F)
+    {
+        return;
+    }
+    cobj = (gGCCurrentCamera != NULL) ? CObjGetStruct(gGCCurrentCamera) : NULL;
+    if (cobj != NULL)
+    {
+        f32 dx = cobj->vec.eye.x - pos->x;
+        f32 dy = cobj->vec.eye.y - pos->y;
+        f32 dz = cobj->vec.eye.z - pos->z;
+        f32 len = sqrtf((dx * dx) + (dy * dy) + (dz * dz));
+
+        /* A camera sitting on the quad has no direction to offer, and the
+         * divide would be the interesting kind of wrong. */
+        if (len > 1.0F)
+        {
+            out->x += (dx / len) * depth_bias;
+            out->y += (dy / len) * depth_bias;
+            out->z += (dz / len) * depth_bias;
+        }
+    }
+}
+
+/* ONE CAMERA-FACING QUAD OVER A TEXTURE THIS PASS DOES NOT OWN. Same submit as
+ * the atlas path, but the caller supplies the texture name and the whole image
+ * is the cell -- for art that cannot live on the shared sheet. The shield is
+ * the reason: its combiner needs a per-texel colour ramp, which a sheet whose
+ * cells are all white cannot express (see NDS_SHIELD_A5I3_* in the generated
+ * header). Fails closed and shares the source-asset miss mask. */
+sb32 ndsParticleDrawOwnTextureQuad(u32 texture_name, u32 texture_w,
+                                   u32 texture_h, const Vec3f *pos, f32 size,
+                                   u32 color, u8 alpha, f32 depth_bias)
+{
+    Vec3f right;
+    Vec3f up;
+    Vec3f draw_pos;
+
+    gNdsSourceAssetQuadAttempts++;
+    if ((pos == NULL) || (size <= 0.0F) || (alpha == 0u) ||
+        (texture_name == 0u) || (texture_w == 0u) || (texture_h == 0u))
+    {
+        gNdsSourceAssetQuadMissMask |= 1u << 0;
+        return FALSE;
+    }
+#if NDS_R2_PARTICLE_DRAW
+    if (ndsParticleSetCurrentCamera(&right, &up) == FALSE)
+    {
+        gNdsSourceAssetQuadMissMask |= 1u << 3;
+        return FALSE;
+    }
+    ndsParticleBiasTowardEye(pos, depth_bias, &draw_pos);
+    if (ndsRendererSubmitParticleQuad(texture_name, &draw_pos, size, color,
+                                      alpha, &right, &up, 0u, 0u,
+                                      texture_w, texture_h) == FALSE)
+    {
+        ndsRendererEndParticleQuads();
+        gNdsSourceAssetQuadMissMask |= 1u << 4;
+        return FALSE;
+    }
+    ndsRendererEndParticleQuads();
+    gNdsSourceAssetQuadDrawn++;
+    return TRUE;
+#else
+    (void)texture_name; (void)texture_w; (void)texture_h; (void)color;
+    (void)right; (void)up; (void)draw_pos; (void)depth_bias;
+    gNdsSourceAssetQuadMissMask |= 1u << 5;
+    return FALSE;
+#endif
+}
+
 sb32 ndsParticleDrawSourceAssetQuad(u32 texture_id, const Vec3f *pos, f32 size,
-                                    u32 color, u8 alpha)
+                                    u32 color, u8 alpha, f32 depth_bias)
 {
     const NDSParticleQuadFrame *row;
     Vec3f right;
     Vec3f up;
+    Vec3f draw_pos;
     u32 atlas_name;
 
     gNdsSourceAssetQuadAttempts++;
@@ -1657,11 +1740,12 @@ sb32 ndsParticleDrawSourceAssetQuad(u32 texture_id, const Vec3f *pos, f32 size,
         gNdsSourceAssetQuadMissMask |= 1u << 3;
         return FALSE;
     }
+    ndsParticleBiasTowardEye(pos, depth_bias, &draw_pos);
     /* Bind the sheet this cell was packed into -- see the note at the other
      * submit site. atlas_name above only proves the atlas prepared. */
     if (ndsRendererSubmitParticleQuad(
             ndsRendererHardwareParticleAtlasNameForSheet(row->sheet),
-            pos, size, color, alpha,
+            &draw_pos, size, color, alpha,
                                       &right, &up, row->x, row->y,
                                       row->width, row->height) == FALSE)
     {
@@ -1674,7 +1758,7 @@ sb32 ndsParticleDrawSourceAssetQuad(u32 texture_id, const Vec3f *pos, f32 size,
     return TRUE;
 #else
     (void)texture_id; (void)color; (void)row; (void)right; (void)up;
-    (void)atlas_name;
+    (void)atlas_name; (void)depth_bias; (void)draw_pos;
     gNdsSourceAssetQuadMissMask |= 1u << 5;
     return FALSE;
 #endif

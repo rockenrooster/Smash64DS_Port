@@ -10,10 +10,14 @@
 #include <nds/generated/nds_particle_banks.generated.h>
 #include <nds/nds_effects.h>
 #include <nds/nds_ifcommon_oam.h>
+#include <nds/nds_renderer.h>
 #include <nds/nds_task39_effect_census.h>
 #include <nds/timers.h>
 #include <sys/audio.h>
 #include <string.h>
+/* sqrtf, for the shield quad's guard scale. float only -- a double here would
+ * be a defect on ARM9. */
+#include <math.h>
 
 #include "battleship_efmanager_symbols.h"
 
@@ -1178,10 +1182,43 @@ static void ndsEFManagerBoundEffectPool(void)
  * not seated, degenerate camera. That sentence is inherited from the path this
  * revives and it still holds: a shield that silently stops drawing is worse
  * than one drawn plainly. */
-#define NDS_R2_SHIELD_QUAD_SIZE 180.0F
-/* 0xC0 on both prim and env for all five source entries (efmanager.c:4112).
- * Alpha is most of what a shield looks like. */
+/* WORLD HALF-EXTENT PER UNIT OF GUARD SCALE, AND IT IS THE SOURCE'S OWN
+ * NUMBER -- not a tuned one. dFTManagerCommon_gap_0x0000_sub_0x208, the
+ * shield's four vertices, are at x/y = +-30 with z 0 (decoded 2026-08-06), and
+ * the child DObj's matrix kind 0x2C is the billboard that multiplies them by
+ * gGCScaleX, the guard scale. So the bubble is 30 * guard_scale, which for Fox
+ * at full health is 30 * 9.3333 = 280 -- the same 280 as attr->shield_size,
+ * which is the arithmetic checking itself.
+ *
+ * The 180 that stood here was multiplied by the ROOT DObj's scale, which is
+ * always 1, so it asked for a flat 180 and sized the bubble that sat at the
+ * world origin. Damage shrink now comes along for free: the source scales this
+ * joint by ((0.65 * shield_health/55) + 0.35), which a constant could not
+ * express at all. */
+#define NDS_R2_SHIELD_QUAD_SIZE 30.0F
+/* THE SOURCE'S PRIM ALPHA, because the combiner's alpha term is exactly
+ * `TEXEL0_alpha * PRIMITIVE_alpha` and nothing else (SETCOMBINE FC309661
+ * 552EFF7F, decoded 2026-08-06). The texel's alpha nibble is a hard 15 across
+ * the whole disc with a two-texel margin, so the source bubble is a UNIFORM
+ * 0xC0 -- 75% -- and the generator now hands over that same flat coverage
+ * instead of a fold.
+ *
+ * This briefly sat at 0xFF to fight the fold's attenuation. That was treating a
+ * symptom: with coverage no longer multiplied by intensity there is nothing to
+ * compensate, and 0xFF would simply be more opaque than the N64. */
 #define NDS_R2_SHIELD_QUAD_ALPHA 0xC0u
+/* WORLD UNITS TOWARD THE CAMERA. The bubble sits ON the fighter's YRotN joint,
+ * so its depth and the fighter's body interleave and the opaque body wins
+ * wherever it is nearer -- the shield reads as being inside Mario rather than
+ * around him. There is no draw-on-top flag to reach for (see the depth_bias
+ * note on ndsParticleDrawSourceAssetQuad), so it is pulled forward instead.
+ *
+ * 150 is chosen against the thing it has to clear, not tuned: the fighter's
+ * body is a few tens of units deep either side of that joint, and the bubble's
+ * own full-health radius is 280, so 150 clears the torso while staying well
+ * inside the bubble's own extent -- it cannot detach and float. The owner
+ * judges it; this is presentation, not mechanics. */
+#define NDS_R2_SHIELD_QUAD_DEPTH_BIAS 150.0F
 /* BGR555, NOT 0xRRGGBB. ndsRendererSubmitParticleQuad takes the DS's own vertex
  * colour packing -- red bits 0-4, green 5-9, blue 10-14. This function first
  * used 0xRRGGBB constants, and 0xff0000 read through that packing is r=0 g=0
@@ -1200,36 +1237,136 @@ static void ndsEFManagerBoundEffectPool(void)
 volatile u32 gNdsShieldQuadDrawCount;
 volatile u32 gNdsShieldQuadFallbackCount;
 
-static u32 ndsEFManagerShieldQuadColor(s32 player)
-{
-    static const u32 rim[] = {
-        NDS_R2_BGR555(0xff, 0x00, 0x00),
-        NDS_R2_BGR555(0x00, 0xff, 0x00),
-        NDS_R2_BGR555(0x00, 0x00, 0xff),
-        NDS_R2_BGR555(0x40, 0x40, 0x40)
-    };
+/* ONE GL_RGB8_A5 TEXTURE PER SHIELDING PLAYER, built on first use and kept for
+ * the match. The texels are player-independent (generated, see
+ * NDS_SHIELD_A5I3_*); only the eight-entry palette is not, which is the whole
+ * reason the shield left the shared quad sheet -- that sheet's cells are white
+ * and take their colour from one vertex colour, and this asset needs a colour
+ * that varies per texel.
+ *
+ * Released in efManagerInitEffects rather than leaked: START at the results
+ * screen restarts the match, so a name allocated per match and never given back
+ * would accumulate across restarts. */
+static u32 sNdsShieldTextureName[5];
 
-    return ((u32)player < ARRAY_COUNT(rim)) ?
-        rim[player] : NDS_R2_BGR555(0xc0, 0xc0, 0xc0);
+static s32 ndsEFManagerShieldTexelFill(u8 *pixels, u32 bytes, void *user_data)
+{
+    (void)user_data;
+    if ((pixels == NULL) || (bytes < NDS_SHIELD_TEX_BYTES))
+    {
+        return FALSE;
+    }
+    memcpy(pixels, gNdsShieldTexels, NDS_SHIELD_TEX_BYTES);
+    return TRUE;
 }
 
+static u32 ndsEFManagerShieldTexture(s32 player)
+{
+    /* NOTHING IS COMPUTED HERE. gNdsShieldPalettes is the combiner's own ramp
+     * per dEFManagerShieldColors entry, evaluated by the generator out of that
+     * array in source, and gNdsShieldTexels is already in the hardware's A3I5
+     * layout -- so preparing the shield is an upload and a palette pointer,
+     * with no per-texel or per-entry work on the ARM9 at all. */
+    const u16 *palette;
+    u32 slot = ((u32)player < NDS_SHIELD_PALETTE_COUNT)
+        ? (u32)player : (NDS_SHIELD_PALETTE_COUNT - 1u);
+
+    if (sNdsShieldTextureName[slot] != 0u)
+    {
+        return sNdsShieldTextureName[slot];
+    }
+    palette = gNdsShieldPalettes[slot];
+    /* Same upload either way; only the format's palette width differs, and the
+     * generator emits the entry count that matches the texels it packed. */
+#if NDS_SHIELD_TEX_A3I5
+    if (ndsRendererHardwarePrepareIFCommonA3I5Atlas(
+            NDS_SHIELD_TEX_WIDTH, NDS_SHIELD_TEX_HEIGHT, palette,
+            ndsEFManagerShieldTexelFill, NULL,
+            &sNdsShieldTextureName[slot]) == FALSE)
+#else
+    if (ndsRendererHardwarePrepareIFCommonCloudAtlas(
+            NDS_SHIELD_TEX_WIDTH, NDS_SHIELD_TEX_HEIGHT, palette,
+            ndsEFManagerShieldTexelFill, NULL,
+            &sNdsShieldTextureName[slot]) == FALSE)
+#endif
+    {
+        sNdsShieldTextureName[slot] = 0u;
+    }
+    return sNdsShieldTextureName[slot];
+}
+
+/* THE ROOT DObj CARRIES NEITHER THE POSITION NOR THE SIZE, and reading them
+ * from it is why the owner saw the bubble at the world origin on the first
+ * candidate ROM. dEFManagerShieldEffectDesc's root uses matrix kind 0x4F
+ * (efmanager.c:462), whose callback func_ovl0_800C994C ignores the DObj's own
+ * translate/rotate/scale entirely and loads the joint stored in user_data.p --
+ * efManagerShieldMakeEffect puts fp->joints[nFTPartsJointYRotN] there
+ * (efmanager.c:4139). The root's own vectors are therefore never written:
+ * measured 2026-08-04, translate/rotate 0 and scale 1. Taking the tree draw
+ * away takes that matrix builder away with it, so this proc has to do what
+ * ndsRendererAdapterBuildJointAttachMtx (reloc_backend_renderer_dl.c:1242)
+ * does, and it is deliberately the same four lines:
+ *
+ *   - func_ovl2_800EDBA4 FIRST, not as a formality. mtx_translate is a
+ *     per-frame cache that ndsFTParamsInvalidateFighterParts clears, and the
+ *     fighter's own draw does not fill it, so reading it without the rebuild
+ *     returns all zeros -- the origin again, by a second route.
+ *   - Position is row 3. nds_r2_collision_mtx.h:639 pins the convention for
+ *     this engine: world[c] = sum_k local[k]*M[k][c] + M[3][c].
+ *   - Size is the LENGTH OF ROW 0, which for this joint is the shield size
+ *     itself: ftCommonGuardUpdateShieldCollision writes
+ *     ((0.65 * shield_health/55) + 0.35) * attr->shield_size / 30 into that
+ *     joint's scale (ftcommonguard1.c:125). The local scale field holds the
+ *     same number today, but the world row is what the source billboard
+ *     actually multiplies by, so take it from the matrix and stay correct if a
+ *     parent joint is ever scaled.
+ *
+ * Guard set is that builder's, for that builder's reason: func_ovl2_800EDBA4
+ * dereferences ftGetStruct and ftGetParts without checking either. */
 static void ndsEFManagerShieldQuadProcDisplay(GObj *effect_gobj)
 {
     EFStruct *ep = efGetStruct(effect_gobj);
     DObj *dobj = DObjGetStruct(effect_gobj);
+    DObj *attach;
+    FTParts *parts;
 
     if ((ep == NULL) || (dobj == NULL))
     {
         return;
     }
-    if (ndsParticleDrawSourceAssetQuad(
-            NDS_PARTICLE_QUAD_SHIELD_TEXTURE, &dobj->translate.vec.f,
-            dobj->scale.vec.f.x * NDS_R2_SHIELD_QUAD_SIZE,
-            ndsEFManagerShieldQuadColor(ep->effect_vars.shield.player),
-            NDS_R2_SHIELD_QUAD_ALPHA) != FALSE)
+    attach = (DObj *)dobj->user_data.p;
+    if ((attach != NULL) && (attach != DOBJ_PARENT_NULL) &&
+        (attach->parent_gobj != NULL) &&
+        ((parts = ftGetParts(attach)) != NULL))
     {
-        gNdsShieldQuadDrawCount++;
-        return;
+        Vec3f world_pos;
+        f32 guard_scale;
+
+        func_ovl2_800EDBA4(attach);
+        world_pos.x = parts->mtx_translate[3][0];
+        world_pos.y = parts->mtx_translate[3][1];
+        world_pos.z = parts->mtx_translate[3][2];
+        guard_scale =
+            sqrtf((parts->mtx_translate[0][0] * parts->mtx_translate[0][0]) +
+                  (parts->mtx_translate[0][1] * parts->mtx_translate[0][1]) +
+                  (parts->mtx_translate[0][2] * parts->mtx_translate[0][2]));
+        /* WHITE vertex colour on purpose: the palette carries the player's
+         * colour now, and the polygon stays in modulation mode, so anything
+         * other than white would tint the ramp a second time. */
+        u32 texture_name =
+            ndsEFManagerShieldTexture(ep->effect_vars.shield.player);
+
+        if ((texture_name != 0u) &&
+            (ndsParticleDrawOwnTextureQuad(
+                 texture_name, NDS_SHIELD_TEX_WIDTH, NDS_SHIELD_TEX_HEIGHT,
+                 &world_pos, guard_scale * NDS_R2_SHIELD_QUAD_SIZE,
+                 NDS_R2_BGR555(0xff, 0xff, 0xff),
+                 NDS_R2_SHIELD_QUAD_ALPHA,
+                 NDS_R2_SHIELD_QUAD_DEPTH_BIAS) != FALSE))
+        {
+            gNdsShieldQuadDrawCount++;
+            return;
+        }
     }
     gNdsShieldQuadFallbackCount++;
     gcDrawDObjTreeForGObj(effect_gobj);
@@ -1255,6 +1392,22 @@ void efManagerInitEffects(void)
      * desc here reaches every shield made this match without touching the maker
      * or decomp. Descs are already patched in place by the resolver above, so
      * writing one more field is the same kind of write. */
+    {
+        /* Give last match's names back before this one allocates. START at the
+         * results screen restarts the match, so holding them would grow the
+         * texture cache by one name per player per restart. */
+        u32 slot;
+
+        for (slot = 0u; slot < ARRAY_COUNT(sNdsShieldTextureName); slot++)
+        {
+            if (sNdsShieldTextureName[slot] != 0u)
+            {
+                ndsRendererHardwareReleaseIFCommonCloudAtlas(
+                    &sNdsShieldTextureName[slot]);
+                sNdsShieldTextureName[slot] = 0u;
+            }
+        }
+    }
     gNdsShieldQuadDrawCount = 0u;
     gNdsShieldQuadFallbackCount = 0u;
     dEFManagerShieldEffectDesc.proc_display = ndsEFManagerShieldQuadProcDisplay;

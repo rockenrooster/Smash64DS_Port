@@ -66,8 +66,8 @@
  *
  * ATLAS SHEETS, NOT ONE TEXTURE PER FRAME. GL names are a binding constraint
  * too: the cache holds 48 and the battle's static set pins 24, while the
- * admitted set is 32 individual frames. 4 sheets keep
- * every particle in 4 binds instead of 32.
+ * admitted set is 31 individual frames. 4 sheets keep
+ * every particle in 4 binds instead of 31.
  *
  * 8,192 BYTES IS THE MEASURED-SAFE ALLOCATION, and it is the ALLOCATION that is
  * fixed here, not the texel count -- so coverage grows by asking for more of
@@ -92,13 +92,39 @@
 #define NDS_PARTICLE_QUAD_ATLAS_SHEETS 4u
 #define NDS_PARTICLE_QUAD_SHEET_BYTES 8192u
 #define NDS_PARTICLE_QUAD_CELL_CAP 64u
+
+/* THE SHIELD IS NOT A QUAD-SHEET CELL. Its combiner is
+ * `(PRIM - ENV) * TEXEL0 + ENV` with PRIM white and ENV the player's colour,
+ * so the IA8 intensity nibble is a per-texel LERP TOWARD WHITE -- measured
+ * against radius: 0.53 at the rim, 0.74 at r=5..7, 0.60 at the core. A sheet
+ * cell cannot carry that: every cell is white and takes its colour from the
+ * quad's one vertex colour, so no single tint can be both ends of the ramp.
+ * This texture is the shield's own, and the runtime builds its palette per
+ * shielding player at match load.
+ *
+ * NDS_SHIELD_TEX_A3I5 picks which half of the byte gets the bits: 1 is
+ * GL_RGB32_A3, 32 palette entries and 3 alpha bits; 0 is GL_RGB8_A5, 8 entries
+ * and 5 alpha bits. A3I5 is the better trade with the feather off, because the
+ * coverage is then very nearly binary -- 0 or full, with the source's own
+ * two-texel margin -- so the finer alpha buys nothing while the wider palette
+ * gives the intensity ramp the source's full 16 levels instead of 8. */
+#define NDS_SHIELD_TEX_A3I5 1
+#define NDS_SHIELD_TEX_WIDTH 32u
+#define NDS_SHIELD_TEX_HEIGHT 32u
+#define NDS_SHIELD_TEX_BYTES 1024u
+#define NDS_SHIELD_TEX_PALETTE_ENTRIES 32u
+#define NDS_SHIELD_PALETTE_COUNT 5u
+extern const u8 gNdsShieldTexels[NDS_SHIELD_TEX_BYTES];
+/* Indexed by dEFManagerShieldColors entry -- player 0..3 then shield-damage. */
+extern const u16 gNdsShieldPalettes[NDS_SHIELD_PALETTE_COUNT]
+                                   [NDS_SHIELD_TEX_PALETTE_ENTRIES];
 #define NDS_PARTICLE_QUAD_ASSET_BYTES 32832u
 #define NDS_PARTICLE_QUAD_TEXEL_ASSET_BYTES 32768u
 #define NDS_PARTICLE_QUAD_PALETTE_OFFSET 32768u
 #define NDS_PARTICLE_QUAD_PALETTE_ENTRIES 32u
-#define NDS_PARTICLE_QUAD_TEXEL_BYTES 28032u
-#define NDS_PARTICLE_QUAD_COUNT 32u
-#define NDS_PARTICLE_QUAD_FRAME_COUNT 32u
+#define NDS_PARTICLE_QUAD_TEXEL_BYTES 27520u
+#define NDS_PARTICLE_QUAD_COUNT 31u
+#define NDS_PARTICLE_QUAD_FRAME_COUNT 31u
 
 /* One row per (SOURCE texture id, frame). Sorted by both, so a lookup is a
  * scan; the runtime holds pc->texture_id and pc->frame_id and needs nothing
@@ -179,8 +205,7 @@ extern const u8 gNdsParticleTextureFrames[NDS_PARTICLE_TEXTURE_COUNT];
  * small texture in an ordinary reloc file, and the quad sheet is the port's
  * only textured alpha-blended camera-facing draw -- which is what both effects
  * are. Addressed by these keys, not by a bank id, because there is no bank. */
-#define NDS_PARTICLE_QUAD_SHIELD_TEXTURE 128u  /* dFTManagerCommon_Tex_0x0008, IA8 16x32 */
-#define NDS_PARTICLE_QUAD_REBIRTH_TEXTURE 129u  /* dEFCommonEffects3_RebirthHalo_glow, I4 32x16 */
+#define NDS_PARTICLE_QUAD_REBIRTH_TEXTURE 128u  /* dEFCommonEffects3_RebirthHalo_glow, I4 32x16 */
 
 typedef struct NDSPupupuTexture
 {

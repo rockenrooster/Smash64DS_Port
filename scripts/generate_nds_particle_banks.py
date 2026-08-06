@@ -25,6 +25,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 import struct
 import sys
 from collections import Counter
@@ -113,20 +114,73 @@ PUPUPU_MEASURED_LIVE_TEXTURES = frozenset((0, 1, 2))
 # is naming non-live common textures to drop, not raising the 8,192-byte bound.
 RELOC_ASSET_DIR = Path("decomp/BattleShip-main/decomp/assets/us/relocData")
 SOURCE_QUAD_TEXTURE_STRIDE = 128
+
+# THE SHIELD LEFT THE SHARED SHEET, and the reason is a limit rather than a
+# preference. Its combiner is `(PRIM - ENV) * TEXEL0 + ENV` with PRIM white and
+# ENV the player's colour, so the intensity nibble is a PER-TEXEL LERP TOWARD
+# WHITE. Measured against radius on 2026-08-06, masked to covered texels, that
+# lerp runs 0.53 at the rim, 0.74 at r=5..7 and 0.60 at the core -- the glassy
+# rim/ring/core the owner pointed at in the interpreter screenshot.
+#
+# A sheet cell cannot carry it. Every cell on the quad sheet is WHITE and takes
+# its colour from the quad's single vertex colour, which is what lets one sheet
+# serve every effect; one vertex colour cannot be #FF8686 at the rim and #FFBCBC
+# at the ring. The sheet is also A3I5, three alpha bits, so even the exact
+# two-quad decomposition of that lerp quantises the whole 0.53..0.74 swing into
+# about two levels and bands straight back to the flat disc the owner rejected.
+#
+# GL_RGB8_A5 inverts the split -- THREE index bits and FIVE alpha bits -- which
+# is the shape this asset actually needs: eight palette entries are enough for
+# an eight-step ramp from the player's colour to white, and 32 alpha levels are
+# more than the source's own coverage uses. The palette is per-player and built
+# at match load, so the texels below are player-independent.
+#
+# SHIELD_TEX_A3I5 SWAPS WHICH HALF GETS THE BITS. True selects GL_RGB32_A3 --
+# 32 palette entries and three alpha bits -- which is the better trade once the
+# feather is off: coverage is then very nearly binary (0 or full, with the
+# source's own two-texel margin), so 32 alpha levels go unused, while the
+# intensity ramp gets the source's full 16 levels instead of being halved into
+# eight. False keeps GL_RGB8_A5. Only this constant changes; the packing and the
+# runtime both key off it.
+SHIELD_TEX_A3I5 = True
+SHIELD_A5I3_ASSET = {
+    "name": "SHIELD",
+    "file": "163.vpk0.bin",
+    "offset": 0x0008,
+    "format": "ia8",
+    "width": 16,
+    "height": 32,
+    "symbol": "dFTManagerCommon_Tex_0x0008",
+    # THE STORED ASSET IS HALF A BUBBLE. Decoded from the file's own DL on
+    # 2026-08-06 (163_FTManagerCommon.c: Tex @0x0008, Vtx[4] @0x0208,
+    # Gfx[21] @0x0248 -- the 21 matches the command count the c53 submit probe
+    # measured):
+    #
+    #   Gfx[3]  SETCOMBINE   FC309661 552EFF7F
+    #   Gfx[7]  SETTILE      cms=3 (CLAMP|MIRROR) masks=4 | cmt=2 (CLAMP)
+    #   Gfx[9]  SETTILESIZE  lrs=31 lrt=31
+    #   Vtx     pos +-30, s 0..32, t 0..32
+    #
+    # masks=4 is 16 texels, the tile spans S 0..31, and cms MIRROR makes 16..31
+    # the reflection of 0..15 -- a 16-wide half read as a 32-wide full circle.
+    # Baked rather than asked of the hardware: GL_TEXTURE_FLIP_S exists, but it
+    # applies to the whole texture unit with wrapping on, and the runtime binds
+    # this beside atlas sheets whose cells would wrap with it.
+    "mirror_s": True,
+    # cmt is plain CLAMP, so T is NOT mirrored -- but the quad puts t=0 at
+    # y=-30, its BOTTOM, so texture row 0 belongs at the bottom of the quad and
+    # a flat blit puts it at the top.
+    "flip_t": True,
+    # OFF at the owner's call, 2026-08-06. The mechanism is real -- the DS has
+    # no bilinear filter to soften the coverage boundary the way the N64's does,
+    # and at five alpha bits a feather resolves properly instead of quantising
+    # away as it did on the A3I5 sheet -- but the source's own two-texel margin
+    # turned out to carry enough of the edge on its own. Set this back to 2 to
+    # restore it; nothing else has to change.
+    "feather": 0,
+}
+
 SOURCE_QUAD_ASSETS = (
-    {
-        # dFTManagerCommon_Tex_0x0008, relocData/163_FTManagerCommon.c:18.
-        # The shield's whole asset is one 4-vertex DL over this texture, so a
-        # camera-facing quad IS the source construction, not an approximation
-        # of it.
-        "name": "SHIELD",
-        "file": "163.vpk0.bin",
-        "offset": 0x0008,
-        "format": "ia8",
-        "width": 16,
-        "height": 32,
-        "symbol": "dFTManagerCommon_Tex_0x0008",
-    },
     {
         # THE NAME IS WRONG AND IS KEPT ONLY BECAUSE IT IS ALREADY THE SYMBOL.
         # relocData/85_EFCommonEffects3.c calls 0x2BA8 "Halo glow texture ...
@@ -1841,10 +1895,22 @@ def decode_source_asset_texels(payload: bytes, asset: dict
             raise SystemExit(
                 f"{asset['name']}: wanted {count} IA8 bytes at "
                 f"0x{asset['offset']:x}, file holds {len(raw)}")
+        # WHICH NIBBLE IS COVERAGE IS THE ASSET'S COMBINER'S BUSINESS, not a
+        # property of IA8. The default multiplies both, which is right when
+        # intensity really is brightness-as-coverage. It is WRONG when the DL
+        # spends intensity on something else -- see SHIELD, whose combiner reads
+        # `(PRIM - ENV) * TEXEL0 + ENV`, making intensity a LERP FACTOR between
+        # two colours and leaving the alpha nibble as the only coverage. Folding
+        # them there did two kinds of damage at once: a flat, fully opaque disc
+        # became a soft gradient blob, and the lerp that makes the bubble pastel
+        # was discarded. The owner saw both ("looks worse", 2026-08-06).
+        alpha_from_coverage_only = (asset.get("ia8_alpha") == "coverage")
         for byte in raw:
             intensity = (byte >> 4) * 17
             coverage = (byte & 0xF) * 17
-            pixels.append((255, 255, 255, (intensity * coverage) // 255))
+            alpha = (coverage if alpha_from_coverage_only
+                     else ((intensity * coverage) // 255))
+            pixels.append((255, 255, 255, alpha))
     elif asset["format"] == "i4":
         raw = payload[asset["offset"]:asset["offset"] + (count // 2)]
         if len(raw) != (count // 2):
@@ -1858,6 +1924,182 @@ def decode_source_asset_texels(payload: bytes, asset: dict
         raise SystemExit(f"{asset['name']}: unhandled format "
                          f"{asset['format']!r}")
     return pixels
+
+
+def apply_source_quad_wrap(asset: dict,
+                           pixels: list) -> tuple[list, int, int]:
+    """Bake the DL's texture wrap mode into the cell.
+
+    A source quad's art is only half the picture when its DL mirrors a tile --
+    see the SHIELD entry for the decode. The atlas has no per-cell wrap mode to
+    hand the hardware, so whatever the tile does is resolved here, once, at
+    build time. Returns the possibly-resized image with its new dimensions.
+    """
+    width = asset["width"]
+    height = asset["height"]
+
+    if asset.get("flip_t"):
+        pixels = [pixels[(height - 1 - y) * width + x]
+                  for y in range(height) for x in range(width)]
+
+    if asset.get("mirror_s"):
+        mirrored: list = []
+        for y in range(height):
+            row = pixels[y * width:(y + 1) * width]
+            # row + reversed(row) puts the two copies of the last column
+            # adjacent, which is exactly where G_TX_MIRROR folds: the bubble's
+            # centre axis lands in the middle and its rim on both outer edges.
+            mirrored.extend(row + row[::-1])
+        pixels = mirrored
+        width *= 2
+
+    # THE FILTER THE DS DOES NOT HAVE. The N64 samples this disc bilinearly at
+    # roughly two screen pixels per texel, which is what turns its hard 0/15
+    # coverage boundary into the soft rim the owner sees on hardware. The DS 3D
+    # engine has no bilinear texture filtering at all, so the identical cell
+    # arrives nearest-neighbour and the same boundary reads as a blocky step --
+    # the owner's *"somehow looks worse"* against an otherwise faithful disc.
+    #
+    # Baking a feather here is the cheap half of that trade: it costs nothing at
+    # runtime and it is the only place the softness can come from. A 1-2-1 pass
+    # per axis, run AFTER the mirror so the result stays symmetric, and with
+    # outside-the-cell treated as fully transparent so the outer rim actually
+    # falls off instead of smearing the edge column outward.
+    for _ in range(int(asset.get("feather", 0))):
+        pixels = feather_alpha_121(pixels, width, height)
+
+    return pixels, width, height
+
+
+def feather_alpha_121(pixels: list, width: int, height: int) -> list:
+    """One separable 1-2-1 blur over the ALPHA channel only.
+
+    Colour is untouched: these cells are white by construction and the tint is
+    the quad's. Only coverage should soften.
+    """
+    def at(x: int, y: int) -> int:
+        if (x < 0) or (y < 0) or (x >= width) or (y >= height):
+            return 0
+        return pixels[y * width + x][3]
+
+    horizontal = []
+    for y in range(height):
+        for x in range(width):
+            horizontal.append((at(x - 1, y) + (2 * at(x, y)) + at(x + 1, y)) // 4)
+
+    def hat(x: int, y: int) -> int:
+        if (x < 0) or (y < 0) or (x >= width) or (y >= height):
+            return 0
+        return horizontal[y * width + x]
+
+    out = []
+    for y in range(height):
+        for x in range(width):
+            r, g, b, _ = pixels[y * width + x]
+            out.append((r, g, b,
+                        (hat(x, y - 1) + (2 * hat(x, y)) + hat(x, y + 1)) // 4))
+    return out
+
+
+def shield_tex_geometry() -> tuple[int, int, int]:
+    """(palette_entries, index_bits, alpha_bits) for the selected format."""
+    return (32, 5, 3) if SHIELD_TEX_A3I5 else (8, 3, 5)
+
+
+def build_shield_a5i3(repo_root: Path) -> tuple[bytes, int, int]:
+    """The shield as its own standalone paletted texture.
+
+    One byte a texel either way, with the index/alpha split chosen by
+    SHIELD_TEX_A3I5. The index is the IA8 intensity nibble spread across the
+    palette, which the runtime fills with a ramp from the shielding player's
+    colour to white; the alpha is the coverage nibble. That reproduces the
+    combiner exactly:
+
+        colour = (PRIM - ENV) * TEXEL0 + ENV   -> the per-entry ramp
+        alpha  = TEXEL0_alpha * PRIM_alpha     -> texel alpha x POLY_ALPHA
+
+    Texels are player-independent; only the palette is not, which is why this
+    is one static block rather than one per player.
+    """
+    asset = SHIELD_A5I3_ASSET
+    path = repo_root / RELOC_ASSET_DIR / asset["file"]
+    if not path.is_file():
+        raise SystemExit(f"{path}: missing reloc payload for the shield "
+                         f"({asset['symbol']})")
+    count = asset["width"] * asset["height"]
+    raw = path.read_bytes()[asset["offset"]:asset["offset"] + count]
+    if len(raw) != count:
+        raise SystemExit(f"SHIELD: wanted {count} IA8 bytes at "
+                         f"0x{asset['offset']:x}, file holds {len(raw)}")
+
+    # Intensity rides in slot 0 and coverage in slot 3, so the existing mirror,
+    # flip and feather helpers apply unchanged -- they move whole tuples and
+    # only feather touches the last element.
+    pixels = [((byte >> 4) & 0xF, 0, 0, (byte & 0xF) * 17) for byte in raw]
+    pixels, width, height = apply_source_quad_wrap(asset, pixels)
+
+    entries, index_bits, alpha_bits = shield_tex_geometry()
+    index_max = entries - 1
+    alpha_max = (1 << alpha_bits) - 1
+    texels = bytearray()
+    for (intensity, _g, _b, coverage) in pixels:
+        # Index low, alpha high, for both formats -- the packing this
+        # generator's own atlas dump confirms for A3I5 and which A5I3 mirrors.
+        # The intensity is spread across the whole palette rather than
+        # truncated, so a wider palette buys real ramp steps: at 32 entries the
+        # source's 16 intensity levels each land on their own exact colour.
+        index = (intensity * index_max) // 15
+        alpha = (coverage * alpha_max) // 255
+        texels.append(((alpha & alpha_max) << index_bits) | (index & index_max))
+    return bytes(texels), width, height
+
+
+def parse_shield_colors(repo_root: Path) -> list[tuple[tuple, tuple]]:
+    """dEFManagerShieldColors, READ FROM SOURCE rather than retyped here.
+
+    Returns (prim, env) per entry. The runtime used to carry its own copy of
+    the env column and assume prim was white; parsing both columns keeps the
+    lerp's two endpoints tied to the file that defines them, and makes a source
+    edit a regeneration rather than a silent divergence. Fails loudly: a shape
+    this regex cannot read is a build error, not a default.
+    """
+    text = (repo_root / EFMANAGER).read_text(encoding="utf-8", errors="replace")
+    block = re.search(
+        r"dEFManagerShieldColors\s*\[[^\]]*\]\s*=\s*\{(.*?)\n\};", text, re.S)
+    if block is None:
+        raise SystemExit(f"{EFMANAGER}: dEFManagerShieldColors is absent")
+    pairs = []
+    for prim_text, env_text in re.findall(
+            r"\{\s*\{([^}]*)\}\s*,\s*\{([^}]*)\}\s*\}", block.group(1)):
+        prim = tuple(int(v, 0) for v in prim_text.split(","))
+        env = tuple(int(v, 0) for v in env_text.split(","))
+        if (len(prim) != 3) or (len(env) != 3):
+            raise SystemExit(f"{EFMANAGER}: malformed dEFManagerShieldColors "
+                             f"entry {prim_text!r} / {env_text!r}")
+        pairs.append((prim, env))
+    if not pairs:
+        raise SystemExit(f"{EFMANAGER}: parsed no dEFManagerShieldColors rows")
+    return pairs
+
+
+def build_shield_palettes(repo_root: Path) -> list[list[int]]:
+    """The combiner's ramp, one palette per shield colour entry.
+
+    Entry i is `(PRIM - ENV) * (i / (N - 1)) + ENV` -- cycle 0 of the shield's
+    SETCOMBINE evaluated at the intensity that texel index i stands for. Baked
+    so the DS computes NOTHING for this texture: the texels are already in the
+    hardware's own A3I5 layout and now the palette is too.
+    """
+    entries = shield_tex_geometry()[0]
+    palettes = []
+    for prim, env in parse_shield_colors(repo_root):
+        ramp = []
+        for i in range(entries):
+            ramp.append(to_bgr555(tuple(
+                int(round(env[c] + (((prim[c] - env[c]) * i) / (entries - 1))))
+                for c in range(3))))
+        palettes.append(ramp)
+    return palettes
 
 
 def build_source_asset_quads(repo_root: Path,
@@ -1878,15 +2120,16 @@ def build_source_asset_quads(repo_root: Path,
                              f"{asset['name']} ({asset['symbol']})")
         payload = path.read_bytes()
         pixels = decode_source_asset_texels(payload, asset)
+        pixels, src_w, src_h = apply_source_quad_wrap(asset, pixels)
         key = SOURCE_QUAD_TEXTURE_STRIDE + index
         frames_by_texture[key] = [pixels]
-        cell_w, cell_h = quad_cell_dims(asset["width"], asset["height"])
+        cell_w, cell_h = quad_cell_dims(src_w, src_h)
         candidates.append({
             "texture": key,
             "width": cell_w,
             "height": cell_h,
-            "source_width": asset["width"],
-            "source_height": asset["height"],
+            "source_width": src_w,
+            "source_height": src_h,
             "frames": 1,
             "frame_list": [0],
             "packed_frames": 1,
@@ -2043,10 +2286,14 @@ def build_pack(repo_root: Path) -> dict:
     source_quads = build_source_asset_quads(repo_root, frames_by_texture)
     quads = build_quad_sheet(textures, report_rows, frames_by_texture,
                              pupupu["quad_candidates"] + source_quads)
+    shield_texels, shield_w, shield_h = build_shield_a5i3(repo_root)
     return {
         "pupupu": pupupu,
         "source_quads": source_quads,
         "quads": quads,
+        "shield": {"texels": shield_texels,
+                   "width": shield_w, "height": shield_h,
+                   "palettes": build_shield_palettes(repo_root)},
         "scripts": scripts, "textures": textures, "reach": reach,
         "script_payload": script_payload, "rows": rows,
         "texture_data": bytes(texture_data), "palette_data": palette_data,
@@ -2179,6 +2426,32 @@ def render_header(pack: dict) -> str:
 #define NDS_PARTICLE_QUAD_ATLAS_SHEETS {pack["quads"]["sheets"]}u
 #define NDS_PARTICLE_QUAD_SHEET_BYTES {pack["quads"]["sheet_bytes"]}u
 #define NDS_PARTICLE_QUAD_CELL_CAP {pack["quads"]["cell_cap"]}u
+
+/* THE SHIELD IS NOT A QUAD-SHEET CELL. Its combiner is
+ * `(PRIM - ENV) * TEXEL0 + ENV` with PRIM white and ENV the player's colour,
+ * so the IA8 intensity nibble is a per-texel LERP TOWARD WHITE -- measured
+ * against radius: 0.53 at the rim, 0.74 at r=5..7, 0.60 at the core. A sheet
+ * cell cannot carry that: every cell is white and takes its colour from the
+ * quad's one vertex colour, so no single tint can be both ends of the ramp.
+ * This texture is the shield's own, and the runtime builds its palette per
+ * shielding player at match load.
+ *
+ * NDS_SHIELD_TEX_A3I5 picks which half of the byte gets the bits: 1 is
+ * GL_RGB32_A3, 32 palette entries and 3 alpha bits; 0 is GL_RGB8_A5, 8 entries
+ * and 5 alpha bits. A3I5 is the better trade with the feather off, because the
+ * coverage is then very nearly binary -- 0 or full, with the source's own
+ * two-texel margin -- so the finer alpha buys nothing while the wider palette
+ * gives the intensity ramp the source's full 16 levels instead of 8. */
+#define NDS_SHIELD_TEX_A3I5 {1 if SHIELD_TEX_A3I5 else 0}
+#define NDS_SHIELD_TEX_WIDTH {pack["shield"]["width"]}u
+#define NDS_SHIELD_TEX_HEIGHT {pack["shield"]["height"]}u
+#define NDS_SHIELD_TEX_BYTES {len(pack["shield"]["texels"])}u
+#define NDS_SHIELD_TEX_PALETTE_ENTRIES {shield_tex_geometry()[0]}u
+#define NDS_SHIELD_PALETTE_COUNT {len(pack["shield"]["palettes"])}u
+extern const u8 gNdsShieldTexels[NDS_SHIELD_TEX_BYTES];
+/* Indexed by dEFManagerShieldColors entry -- player 0..3 then shield-damage. */
+extern const u16 gNdsShieldPalettes[NDS_SHIELD_PALETTE_COUNT]
+                                   [NDS_SHIELD_TEX_PALETTE_ENTRIES];
 #define NDS_PARTICLE_QUAD_ASSET_BYTES {len(pack["quads"]["payload"])}u
 #define NDS_PARTICLE_QUAD_TEXEL_ASSET_BYTES {pack["quads"]["atlas_bytes"]}u
 #define NDS_PARTICLE_QUAD_PALETTE_OFFSET {pack["quads"]["palette_offset"]}u
@@ -2314,6 +2587,20 @@ def render_inc(pack: dict) -> str:
         f"    {{ {row[0]:3d}, {row[1]:3d}, {row[2]:3d} }}, /* texture {index} */"
         for index, row in enumerate(pack["pupupu"]["texture_rows"])
     )
+    shield = pack["shield"]["texels"]
+    shield_rows = "\n".join(
+        "    " + ", ".join(f"0x{value:02x}u" for value in shield[index:index + 12]) + ","
+        for index in range(0, len(shield), 12)
+    )
+    shield_palette_rows = "\n".join(
+        "    {\n"
+        + "\n".join(
+            "        " + ", ".join(f"0x{entry:04x}u"
+                                   for entry in ramp[index:index + 8]) + ","
+            for index in range(0, len(ramp), 8))
+        + "\n    },"
+        for ramp in pack["shield"]["palettes"]
+    )
     return f"""/* Generated by scripts/generate_nds_particle_banks.py. */
 /* efcommon source SHA256-lo 0x{pack["source_checksum"]:08x}, table 0x{pack["table_checksum"]:08x}. */
 
@@ -2339,6 +2626,23 @@ const u8 gNdsParticleTextureFrames[NDS_PARTICLE_TEXTURE_COUNT] = {{
 const NDSParticleQuadFrame
     gNdsParticleQuadFrames[NDS_PARTICLE_QUAD_FRAME_COUNT] = {{
 {quad_rows}
+}};
+
+/* Paletted texels for the shield, alpha in the high bits and palette index in
+ * the low ones; NDS_SHIELD_TEX_A3I5 says how the byte splits. NOT on the quad
+ * sheet: the shield's combiner needs a per-texel colour ramp and the sheet
+ * stores one shared white. The palette is per-player and built at match load,
+ * so these texels are player-independent. */
+const u8 gNdsShieldTexels[NDS_SHIELD_TEX_BYTES] = {{
+{shield_rows}
+}};
+
+/* One BGR555 ramp per dEFManagerShieldColors entry, `(PRIM - ENV) * i/(N-1) +
+ * ENV` -- the shield combiner's cycle 0 evaluated at every intensity a texel
+ * index can name. Baked so the DS computes nothing at all for this texture. */
+const u16 gNdsShieldPalettes[NDS_SHIELD_PALETTE_COUNT]
+                            [NDS_SHIELD_TEX_PALETTE_ENTRIES] = {{
+{shield_palette_rows}
 }};
 
 u8 gNdsParticleScriptBank[NDS_PARTICLE_SCRIPT_BANK_BYTES]
