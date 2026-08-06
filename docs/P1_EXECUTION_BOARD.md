@@ -1869,6 +1869,46 @@ row 1's execution plan.
    owner play/listen pass, reserve gate, Results transition, and teardown
    proof on the exact candidate ROM.
 
+## The eight decomp patches migrate port-side over time (owner, 2026-08-06)
+
+The owner tightened `AGENTS.md` mid-session to **"Treat `decomp/` as read-only
+reference source. Our Source of Truth. Never edit it."**, deleting the
+sanctioned-exception paragraph that used to permit tracked patches. Asked
+whether the eight existing patches should be grandfathered, migrated, or kept as
+an acknowledged exception, the owner chose **migrated port-side over time**.
+
+Until that finishes the rule text and the tree disagree: `fetch-battleship-reference.ps1`
+still applies all eight on every fetch and they are load-bearing, so **do not
+delete one without its port-side replacement landing in the same change.**
+
+**Migrate opportunistically** — when you are already working in that file's area,
+not as a sweep. Nothing here is on the gate lane.
+
+| patch | added | shape | difficulty |
+|---|---:|---|---|
+| `src_sys_objman` | 124 | 19 `while (TRUE);` panics -> recorded NULL allocation failures, mid-function at 19 allocator sites | **hard** — needs port-side allocators; a wrapper cannot reach a mid-function panic |
+| `src_mv_..._mvopeningroom` | 653 | "NDS entry slice": port code inside the decomp file, original body `#if !defined`'d out | **medium** — already port code, but interleaved, so it is a whole-file fork not a lift |
+| `src_sys_objanim` | 105 | animation-script parsers: event bound + recorded fault on unknown opcode | medium; **pinned by `generate_nds_native_stage.py` TEXT_INPUTS — re-pin in the same change** |
+| `src_ft_ftanim` | 36 | guarded inserts, 1 line replaced | case-by-case |
+| `src_sys_taskman` | 32 | guarded inserts, 1 line replaced | case-by-case |
+| `src_mn_..._mnstartup` | 18 | guarded inserts | case-by-case |
+| `src_sc_scmanager` | 6 | framebuffer end address + two whole functions disabled | mid-function constant; needs reimplementation |
+| `src_sys_objhelper` | 6 | guarded inserts | case-by-case |
+
+Across all eight, only **4 source lines are actually replaced**; the rest are
+additions under `#if defined(SSB64_TARGET_NDS)`.
+
+**The one worked example is `2b693142`** (damage-spark scale). It migrated
+cleanly *only* because the value being changed was reachable from the source
+maker's return value (`pc->xf`), so the port wrapper could adjust it on the way
+out. Look for that shape first; most of the rows above do not have it.
+
+**Worth separating when prioritising:** most of the added lines convert an
+infinite-loop panic into a recorded failure. Those do not change what SSB64
+does — they change what happens when a pool the N64 never exhausts is exhausted
+on DS. That is closer to "physically cannot work on DS" than to a behavioural
+divergence, and it is the weakest case for urgency.
+
 ## Parked — open items with owners' notes, promote deliberately
 
 - **SRC sub-owner instrument: LANDED, cycle 85.** Three cycles of "does not
