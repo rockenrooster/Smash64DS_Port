@@ -1659,6 +1659,73 @@ unverified commit is the worst available outcome. **The next cycle inherits a
 named seam with a number, an instrument already in the tree to verify against,
 and two seams it must not re-brief.**
 
+### The baked draw plan is BUILT AND PROVEN EQUIVALENT, and blocked on a bss clobber (cycle 99)
+
+**Nothing landed. Tree reverted to `b2575f12`; the patch is not in the tree.**
+Three results the next cycle must not re-derive.
+
+**1. The material-prep bake is REFUTED at the design step, from source.** The
+cycle-97/98 reading that "damage-flash modulate is the only varying material
+input" is wrong twice. `ndsRendererAdapterFighterColorModulate`
+(`reloc_backend_renderer_dl.c:131`) is **not an input to
+`BuildNativeMaterialSnapshot` at all** — it is a separate `color_modulate`
+passed to the production-inputs builder. And
+`decomp/BattleShip-main/decomp/src/sys/objanim.c:1390-1495`, imported live as
+`src/import/battleship_sys_objanim.c:944-956`, writes **every** input the
+snapshot reads: `scau scav trau trav scrollu scrollv lfrac primcolor envcolor
+blendcolor light1color light2color`. Fighter texture parts additionally write
+`texture_id_curr` (`reloc_backend_compat_shims.c:1392/1448`, mirroring
+`decomp/.../ft/ftparam.c:1082-1183`). **There is no small enumerable
+"varying words" set to patch unconditionally** — the varying set is the whole
+snapshot, so an unconditional patch is the build. The 99.948% byte-identical
+rate is a property of *this match's animation data*, not of the code, and
+freezing on it is a fidelity change, i.e. the owner's call. Do not re-brief
+"bake the material snapshot, patch what varies" without solving this first.
+
+**2. What was built instead, and it works: the structural draw plan.** Bake the
+collection, the resolved `NDSRelocLoadedFile`, root offsets, material counts,
+matrix bindings and material DObjs once per (slot, owner-asset identity);
+replay them; delete the per-frame walk, the whole eligibility pass, and
+`ndsRendererAdapterValidateNativeOwnerCached`. Keyed on the validator's own
+identity fields and additionally cleared from
+`ndsRendererAdapterResetSceneCaches` (§3.12).
+
+**Equivalence by construction, whole match, gate arm, frames 442–2041, DLDI ON,
+`slips=0`, build `builds/build-c99-plan-bothcpu`:** a `#if NDS_TICK_HUD` mode
+derived the plan live on every baked draw and memcmp'd it against the baked one
+— **`gNdsFtrPlanVerifyMismatch` 0 over `gNdsFtrPlanVerifyRuns` 3,958**, covering
+`material_dobj`, `matrix_dobj`, the resolved file and the root offsets, none of
+which any cycle-98 counter covered. Engagement is an identity: hits 3,958 +
+misses 5 (`gNdsFtrPreValidateReuse` 3 + `Build` 2) = **3,963 =
+`gNdsFighterMarioFoxDLAllDrawCount`**, i.e. the validate ran **5 times in a
+match instead of 3,963**. Fighter triangles 636,480 / 604,044 reproduce cycle 98
+exactly. Cost: text **+1,008**, data 0, bss **+2,816**; headroom 108,480 →
+**104,640** (`check-boot-headroom.ps1` OK); arena `ChosenSize` 1,351,680 →
+1,347,584 with `AllocFailCount` 6 → **7**, exactly the one 0x1000 step the G2
+model predicts for +3,840. `NDS_TICK_HUD=0` links and carries only
+`gNdsFtrPlanRoute` (4 B) and `sNdsFighterDrawPlan` (1,864 B) — no instrument.
+
+**3. THE BLOCKER, and it is not this row's code: something zeroes a fixed `.bss`
+address.** `gNdsFtrPlanRoute` linked at **`0x0226c564`** and the poke engaged;
+after an unrelated relink moved it to **`0x0226c560`** the identical poke stops
+sticking — `set var gNdsFtrPlanRoute=7` reports no gdb error and the variable
+reads **0** at end of run, while `gNdsFtrPlanVerify=5` poked in the *same* gdb
+batch, four bytes lower, survives. **No source anywhere writes
+`gNdsFtrPlanRoute`** (whole-tree grep: 2 reads, 1 definition, 1 extern). So a
+4-byte store lands on `0x0226c560` and silently destroys whatever global the
+linker puts there. That is a live memory defect, it is older than this row, and
+**it makes `-SetGlobals` unreliable as a function of link address** — which is
+the mechanism standing rule 7 depends on. Find the writer before the next
+dual-route arm is trusted.
+
+**4. Same-binary run-to-run noise is ~9,800 on `WORK-H` P95.** Two whole-match
+runs of one binary in one route read **1,689,984** and **1,699,776**
+(`artifacts/performance/2026-08-05_c99-plan-route0-bothcpu.json` and
+`...-routefailed-armB-bothcpu.json` — both are route 0, the second is
+mislabelled by intent and renamed to say so). That is **above** the ±5,376
+cross-build floor the board quotes, so a single-run A/B inside ~10,000 is not
+resolvable. Neither is a baseline; **1,624,064 still stands.**
+
 ### G3 (original row, Boundary-derived) — the effect packet path
 
 Build the GX packet per unique effect display list **at match load**, reserve
