@@ -3,6 +3,9 @@
 #include <string.h>
 
 #include <nds/battle_playable_static_textures.h>
+#if NDS_R2_IMPACT_WAVE_NATIVE
+#include <nds/nds_effects.h>
+#endif
 #include <nds/nds_gbi_decode.h>
 #include <nds/nds_ifcommon_oam.h>
 #include <nds/nds_reloc_assets.h>
@@ -2999,6 +3002,86 @@ static u32 sNdsRendererHardwarePrimRgbTexel0AlphaExtent;
 static u32 sNdsRendererHardwarePrimRgbTexel0AlphaPrim;
 volatile u32 gNdsRendererPrimRgbTexel0AlphaPrepareCount;
 volatile u32 gNdsRendererPrimRgbTexel0AlphaBindCount;
+#if NDS_R2_IMPACT_WAVE_NATIVE
+#define NDS_RENDERER_IMPACT_WAVE_VARIANT_COUNT 5u
+#define NDS_RENDERER_IMPACT_WAVE_TEX_WIDTH 16u
+#define NDS_RENDERER_IMPACT_WAVE_TEX_HEIGHT 32u
+#define NDS_RENDERER_IMPACT_WAVE_TEX_BYTES 256u
+/* Source file 83, DL_0x7C28: CI4 texels @ 0x7980 and RGBA5551 TLUT @
+ * 0x7958. The live sampler is 16x32: SETTILE uses CI4 line=1, S mask=4 and
+ * T mask=5. That live state is authoritative over the reloc-data annotation
+ * that describes the same 256 bytes as 32x16. Effect assets use the port's O2R
+ * word-swapped layout, so logical CI4 bytes are physical byte[index ^ 3] and
+ * logical TLUT halfwords are physical halfword[index ^ 1]. After undoing that
+ * storage layout, N64's first/high nibble is packed into DS PAL16's first/low
+ * nibble. Logical palette index 0 is already the sole transparent source entry,
+ * so GL_TEXTURE_COLOR0_TRANSPARENT is lossless and no runtime N64 texture/TLUT
+ * conversion remains. */
+static const u8 sNdsRendererImpactWaveTexels[NDS_RENDERER_IMPACT_WAVE_TEX_BYTES] = {
+    0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u,
+    0xfcu, 0xfdu, 0xffu, 0xffu, 0xffu, 0xffu, 0xcfu, 0x99u,
+    0xebu, 0xfcu, 0xffu, 0xffu, 0xffu, 0xffu, 0xbfu, 0x98u,
+    0xdau, 0xfbu, 0xffu, 0xffu, 0xffu, 0xffu, 0xafu, 0x97u,
+    0xc9u, 0xeau, 0xffu, 0xffu, 0xffu, 0xffu, 0x9fu, 0x86u,
+    0xb9u, 0xd9u, 0xffu, 0xffu, 0xfeu, 0xffu, 0x9eu, 0x75u,
+    0xa9u, 0xc9u, 0xffu, 0xffu, 0xedu, 0xffu, 0x9du, 0x64u,
+    0x98u, 0xb9u, 0xffu, 0xefu, 0xdcu, 0xffu, 0x8cu, 0x53u,
+    0x97u, 0xa9u, 0xfeu, 0xdfu, 0xcbu, 0xeeu, 0x7bu, 0x42u,
+    0x96u, 0x97u, 0xfdu, 0xcfu, 0xbau, 0xddu, 0x6au, 0x30u,
+    0x85u, 0x97u, 0xfcu, 0xbeu, 0xa9u, 0xccu, 0x59u, 0x20u,
+    0x74u, 0x96u, 0xebu, 0xadu, 0x99u, 0xbbu, 0x49u, 0x20u,
+    0x63u, 0x05u, 0xdau, 0x9cu, 0x99u, 0xaau, 0x39u, 0x10u,
+    0x52u, 0x04u, 0xc9u, 0x9bu, 0x98u, 0x99u, 0x08u, 0x10u,
+    0x42u, 0x03u, 0xb9u, 0x9au, 0x87u, 0x99u, 0x07u, 0x10u,
+    0x31u, 0x02u, 0xa9u, 0x89u, 0x76u, 0x99u, 0x06u, 0x10u,
+    0x21u, 0x02u, 0x99u, 0x79u, 0x65u, 0x98u, 0x05u, 0x10u,
+    0x21u, 0x01u, 0x98u, 0x69u, 0x04u, 0x87u, 0x04u, 0x10u,
+    0x11u, 0x01u, 0x97u, 0x58u, 0x03u, 0x76u, 0x00u, 0x00u,
+    0x11u, 0x01u, 0x80u, 0x47u, 0x02u, 0x65u, 0x00u, 0x00u,
+    0x11u, 0x01u, 0x70u, 0x36u, 0x02u, 0x54u, 0x00u, 0x00u,
+    0x11u, 0x00u, 0x60u, 0x25u, 0x00u, 0x43u, 0x00u, 0x00u,
+    0x11u, 0x00u, 0x50u, 0x24u, 0x00u, 0x30u, 0x00u, 0x00u,
+    0x11u, 0x00u, 0x40u, 0x13u, 0x00u, 0x20u, 0x00u, 0x00u,
+    0x10u, 0x00u, 0x30u, 0x12u, 0x00u, 0x20u, 0x00u, 0x00u,
+    0x10u, 0x00u, 0x20u, 0x02u, 0x00u, 0x00u, 0x00u, 0x00u,
+    0x10u, 0x00u, 0x20u, 0x01u, 0x00u, 0x00u, 0x00u, 0x00u,
+    0x10u, 0x00u, 0x00u, 0x01u, 0x00u, 0x00u, 0x00u, 0x00u,
+    0x10u, 0x00u, 0x00u, 0x01u, 0x00u, 0x00u, 0x00u, 0x00u,
+    0x00u, 0x00u, 0x00u, 0x01u, 0x00u, 0x00u, 0x00u, 0x00u,
+    0x00u, 0x00u, 0x00u, 0x01u, 0x00u, 0x00u, 0x00u, 0x00u,
+    0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u,
+};
+
+/* DL_0x7C28 combines (PRIM-ENV)*TEXEL0+ENV; ImpactWave ENV is black.
+ * These five RGB555 palettes are the exact 5-bit result of that combine for
+ * the source variants (red, green, blue, yellow, white), generated from the
+ * real 0x7958 TLUT after undoing its O2R halfword swap. Logical source index 0
+ * is transparent, so GL_TEXTURE_COLOR0_TRANSPARENT supplies the source A1
+ * coverage and polygon alpha supplies the live PRIMITIVE alpha. */
+static const u16 sNdsRendererImpactWavePalettes[NDS_RENDERER_IMPACT_WAVE_VARIANT_COUNT][16] = {
+    {
+        0x0007u, 0x0008u, 0x000bu, 0x000eu, 0x0011u, 0x0013u, 0x0016u, 0x0019u,
+        0x001bu, 0x001eu, 0x001eu, 0x001eu, 0x001eu, 0x001eu, 0x001eu, 0x001eu,
+    },
+    {
+        0x02c0u, 0x0300u, 0x0320u, 0x0340u, 0x0340u, 0x0360u, 0x0380u, 0x03a0u,
+        0x03a0u, 0x03c0u, 0x03c0u, 0x03c0u, 0x03c0u, 0x03c0u, 0x03c0u, 0x03c0u,
+    },
+    {
+        0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u,
+        0x0000u, 0x0000u, 0x1000u, 0x2800u, 0x4000u, 0x5400u, 0x6c00u, 0x7800u,
+    },
+    {
+        0x02c7u, 0x0308u, 0x032bu, 0x034eu, 0x0351u, 0x0373u, 0x0396u, 0x03b9u,
+        0x03bbu, 0x03deu, 0x03deu, 0x03deu, 0x03deu, 0x03deu, 0x03deu, 0x03deu,
+    },
+    {
+        0x02c7u, 0x0308u, 0x032bu, 0x034eu, 0x0351u, 0x0373u, 0x0396u, 0x03b9u,
+        0x03bbu, 0x03deu, 0x13deu, 0x2bdeu, 0x43deu, 0x57deu, 0x6fdeu, 0x7bdeu,
+    },
+};
+static u32 sNdsRendererImpactWaveTextureName[NDS_RENDERER_IMPACT_WAVE_VARIANT_COUNT];
+#endif
 static s32 sNdsRendererHardwareProjectedDepth =
     NDS_RENDERER_HW_PROJECTED_DEPTH_BACKGROUND_START;
 static u32 sNdsRendererHardwareProjectedBackground = TRUE;
@@ -10707,6 +10790,14 @@ void ndsRendererHardwareDiscardTextureCache(void)
     sNdsRendererHardwarePrimRgbTexel0AlphaImage = 0u;
     sNdsRendererHardwarePrimRgbTexel0AlphaExtent = 0u;
     sNdsRendererHardwarePrimRgbTexel0AlphaPrim = 0u;
+#if NDS_R2_IMPACT_WAVE_NATIVE
+    for (i = 0u; i < NDS_RENDERER_IMPACT_WAVE_VARIANT_COUNT; i++)
+    {
+        ndsRendererHardwareReleaseIFCommonCloudAtlas(
+            &sNdsRendererImpactWaveTextureName[i]);
+        sNdsRendererImpactWaveTextureName[i] = 0u;
+    }
+#endif
     sNdsRendererHardwareTextureCacheNext = 0u;
     sNdsRendererHardwareBoundTextureName = 0u;
     sNdsRendererHardwareActiveTextureEntry = NULL;
@@ -11087,6 +11178,51 @@ s32 ndsRendererHardwarePrepareIFCommonPal16Atlas(
     return ndsRendererHardwarePrepareIFCommonAtlas(
         width, height, GL_RGB16, palette, 16u,
         fill, user_data, texture_name);
+}
+
+#if NDS_R2_IMPACT_WAVE_NATIVE
+static s32 ndsRendererImpactWaveTexelFill(u8 *pixels, u32 bytes,
+                                          void *user_data)
+{
+    (void)user_data;
+    if ((pixels == NULL) || (bytes < NDS_RENDERER_IMPACT_WAVE_TEX_BYTES))
+    {
+        return FALSE;
+    }
+    memcpy(pixels, sNdsRendererImpactWaveTexels,
+           NDS_RENDERER_IMPACT_WAVE_TEX_BYTES);
+    return TRUE;
+}
+#endif
+
+s32 ndsRendererHardwarePrepareImpactWaveTextures(void)
+{
+#if NDS_R2_IMPACT_WAVE_NATIVE && NDS_RENDERER_HW_TRIANGLES && \
+    (NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE)
+    u32 variant;
+
+    for (variant = 0u; variant < NDS_RENDERER_IMPACT_WAVE_VARIANT_COUNT;
+         variant++)
+    {
+        if (sNdsRendererImpactWaveTextureName[variant] != 0u)
+        {
+            continue;
+        }
+        if (ndsRendererHardwarePrepareIFCommonPal16Atlas(
+                NDS_RENDERER_IMPACT_WAVE_TEX_WIDTH,
+                NDS_RENDERER_IMPACT_WAVE_TEX_HEIGHT,
+                sNdsRendererImpactWavePalettes[variant],
+                ndsRendererImpactWaveTexelFill, NULL,
+                &sNdsRendererImpactWaveTextureName[variant]) == FALSE)
+        {
+            return FALSE;
+        }
+        gNdsImpactWaveNativeTexturePrepareCount++;
+    }
+    return TRUE;
+#else
+    return FALSE;
+#endif
 }
 
 void ndsRendererHardwareReleaseIFCommonCloudAtlas(u32 *texture_name)
@@ -19730,6 +19866,400 @@ static void ndsRendererNativeApplyMaterialPreflight(
     sNdsRendererHardwareTriangleBatchOpen = FALSE;
     ndsRendererNativeApplyMaterial(material, stats, state);
     sNdsRendererHardwareTriangleBatchOpen = batch_open;
+}
+
+#if NDS_R2_IMPACT_WAVE_NATIVE
+static s32 ndsRendererHardwareBindImpactWaveTexture(
+    NDSRendererStats *stats, const NDSRendererTileState *render_tile,
+    u32 variant)
+{
+#if NDS_RENDERER_HW_TRIANGLES
+    u32 name;
+    u32 params;
+
+    if ((stats == NULL) || (render_tile == NULL) ||
+        (variant >= NDS_RENDERER_IMPACT_WAVE_VARIANT_COUNT))
+    {
+        return FALSE;
+    }
+    name = sNdsRendererImpactWaveTextureName[variant];
+    if (name == 0u)
+    {
+        return FALSE;
+    }
+
+    params = ndsRendererHardwareTextureParams(
+        stats, render_tile, NDS_RENDERER_IMPACT_WAVE_TEX_WIDTH,
+        NDS_RENDERER_IMPACT_WAVE_TEX_HEIGHT);
+    ndsRendererHardwareBindTextureName(stats, name);
+    ndsRendererHardwareApplyTextureParams(
+        ndsRendererHardwareMergeTextureParams(params));
+    /* This owner never occupies a generic cache entry. The texel index stream
+     * and all five colour palettes are ROM constants uploaded at scene entry. */
+    sNdsRendererHardwareActiveTextureEntry = NULL;
+    stats->hardware_texture_ready_count++;
+    stats->hardware_texture_format = NDS_RENDERER_HW_TEXTURE_FMT_CI;
+    stats->hardware_texture_width = NDS_RENDERER_IMPACT_WAVE_TEX_WIDTH;
+    stats->hardware_texture_height = NDS_RENDERER_IMPACT_WAVE_TEX_HEIGHT;
+    gNdsImpactWaveNativeTextureBindCount++;
+    return TRUE;
+#else
+    (void)stats;
+    (void)render_tile;
+    (void)variant;
+    return FALSE;
+#endif
+}
+#endif
+
+s32 ndsRendererSubmitNativeImpactWave(
+    const NDSRendererInputVertex *vertices, u32 vertex_count,
+    const u8 *triangle_indices, u32 triangle_count,
+    const Gfx *source_setup,
+    const NDSRendererNativeMaterial *material,
+    u32 variant,
+    const NDSRendererConfig *config,
+    NDSRendererStats *stats)
+{
+#if NDS_RENDERER_HW_TRIANGLES && NDS_R2_IMPACT_WAVE_NATIVE
+    NDSRendererTraversalVertexStorage vertex_storage;
+    NDSRendererTraversalState state;
+    const NDSRendererTileState *render_tile;
+    u32 required_mask;
+    u32 material_color;
+    u32 poly_alpha;
+    u32 texture_scale_s;
+    u32 texture_scale_t;
+    u32 use_material_color;
+    u32 use_vertex_color;
+    u32 implicit_texture_on;
+    u32 use_texture;
+    s32 texture_offset;
+    v16 projected_x[18];
+    v16 projected_y[18];
+    u32 i;
+
+    /* This is deliberately a closed owner, not a general mesh API. Keeping the
+     * exact source cardinalities here means a bad AOT table falls back to the
+     * interpreter rather than emitting a partly-valid cosmetic. */
+    if ((vertices == NULL) || (vertex_count != 18u) ||
+        (triangle_indices == NULL) || (triangle_count != 16u) ||
+        (source_setup == NULL) || (material == NULL) ||
+        (variant >= NDS_RENDERER_IMPACT_WAVE_VARIANT_COUNT) ||
+        (sNdsRendererImpactWaveTextureName[variant] == 0u) ||
+        (config == NULL) || (stats == NULL))
+    {
+        return FALSE;
+    }
+    required_mask = (1u << vertex_count) - 1u;
+    for (i = 0u; i < (triangle_count * 3u); i++)
+    {
+        if ((u32)triangle_indices[i] >= vertex_count)
+        {
+            return FALSE;
+        }
+    }
+
+    ndsRendererInitTraversalState(
+        &state, config, stats, &vertex_storage, NULL, 0u);
+    if (state.matrix_valid == 0u)
+    {
+        return FALSE;
+    }
+
+    /* Transform the immutable source ring once. The generic path loads the
+     * same 18 vertices at command 19 and transforms them before its eight TRI2
+     * commands. Reject before touching GX if any corner needs near clipping;
+     * the generic fallback already owns the uncommon clipped case. */
+    for (i = 0u; i < vertex_count; i++)
+    {
+        u32 mask = 1u << i;
+        NDSRendererClipVertex20p12 *out = &state.vertices[i];
+
+        state.input_vertices[i] = vertices[i];
+        state.input_vertex_valid_mask |= mask;
+        state.current_transform_vertex_mask |= mask;
+        ndsRendererTransformVertex20p12(&state.matrix, &vertices[i], out);
+        if (ndsRendererHardwareClipZWInsideNearPlane(out->z, out->w) == FALSE)
+        {
+            return FALSE;
+        }
+        /* ImpactWave reuses the same 18 ring vertices across 48 triangle
+         * corners. The generic projected path perspective-divides X/Y for
+         * every corner, even when that vertex was already emitted by the
+         * previous TRI2. Do the invariant divide once per unique source vertex
+         * here; painter Z remains per-triangle below. This cuts the ring's
+         * X/Y perspective divides from 96 to 36 per draw without changing a
+         * coordinate or the source's submission order. */
+        projected_x[i] = ndsRendererHardwareProjectToV16(
+            (s64)out->x * NDS_RENDERER_HW_PROJECTED_VERTEX, out->w);
+        projected_y[i] = ndsRendererHardwareProjectToV16(
+            (s64)out->y * NDS_RENDERER_HW_PROJECTED_VERTEX, out->w);
+        state.vertex_valid_mask |= mask;
+        stats->matrix_transform_count++;
+        stats->transformed_vertex_count++;
+        if (stats->transformed_vertex_count == 1u)
+        {
+            stats->first_transformed_x = out->x;
+            stats->first_transformed_y = out->y;
+            stats->first_transformed_z = out->z;
+            stats->first_transformed_w = out->w;
+        }
+        ndsRendererProfileRecordCPUTransform();
+        ndsRendererProfileRecordSourceVertexLoad();
+    }
+    if (stats->vertex_count < vertex_count)
+    {
+        stats->vertex_count = vertex_count;
+    }
+
+    /* Only now cross the side-effect boundary. The 35-command source list is
+     * fixed; replay its state mutations directly and let the existing typed
+     * MObj material owner supply the dynamic segment-E body. This preserves the
+     * source command order without scanning opcodes/branches/reloc ownership. */
+    ndsRendererHardwareEndBatch();
+    if (stats->first_opcode == 0u)
+    {
+        stats->first_opcode = source_setup[0].words.w0 >> 24;
+    }
+    stats->command_count += 35u;
+    stats->sync_command_count += 8u;
+
+#define NDS_IMPACT_HASH(index_) \
+    ndsRendererTextureSourceHashCommand( \
+        stats, source_setup[(index_)].words.w0, source_setup[(index_)].words.w1)
+#define NDS_IMPACT_INVALIDATE() NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(&state)
+
+    NDS_IMPACT_INVALIDATE();
+    NDS_IMPACT_HASH(1u);
+    ndsRendererRecordOtherMode(
+        stats, source_setup[1].words.w0 >> 24,
+        source_setup[1].words.w0, source_setup[1].words.w1);
+    NDS_IMPACT_INVALIDATE();
+    NDS_IMPACT_HASH(2u);
+    ndsRendererRecordOtherMode(
+        stats, source_setup[2].words.w0 >> 24,
+        source_setup[2].words.w0, source_setup[2].words.w1);
+    NDS_IMPACT_INVALIDATE();
+    NDS_IMPACT_HASH(3u);
+    ndsRendererRecordSetCombine(
+        stats, source_setup[3].words.w0, source_setup[3].words.w1);
+    stats->blend_color = source_setup[4].words.w1;
+    stats->color_command_count++;
+    NDS_IMPACT_INVALIDATE();
+    NDS_IMPACT_HASH(6u);
+    ndsRendererRecordSetTile(
+        stats, source_setup[6].words.w0, source_setup[6].words.w1);
+    NDS_IMPACT_INVALIDATE();
+    NDS_IMPACT_HASH(7u);
+    ndsRendererRecordSetTile(
+        stats, source_setup[7].words.w0, source_setup[7].words.w1);
+    NDS_IMPACT_INVALIDATE();
+    NDS_IMPACT_HASH(8u);
+    ndsRendererRecordSetTileSize(
+        stats, source_setup[8].words.w0, source_setup[8].words.w1);
+    NDS_IMPACT_INVALIDATE();
+    NDS_IMPACT_HASH(9u);
+    ndsRendererRecordSetImage(
+        stats, source_setup[9].words.w0, source_setup[9].words.w1);
+    NDS_IMPACT_INVALIDATE();
+    NDS_IMPACT_HASH(11u);
+    ndsRendererRecordLoadTlut(stats, source_setup[11].words.w1);
+    NDS_IMPACT_INVALIDATE();
+    NDS_IMPACT_HASH(13u);
+    ndsRendererRecordSetImage(
+        stats, source_setup[13].words.w0, source_setup[13].words.w1);
+
+    ndsRendererNativeApplyMaterial(material, stats, &state);
+
+    NDS_IMPACT_INVALIDATE();
+    NDS_IMPACT_HASH(16u);
+    ndsRendererRecordLoadBlock(
+        stats, source_setup[16].words.w0, source_setup[16].words.w1);
+    NDS_IMPACT_INVALIDATE();
+    NDS_IMPACT_HASH(18u);
+    stats->geometry_mode =
+        (stats->geometry_mode & source_setup[18].words.w0) |
+        source_setup[18].words.w1;
+    stats->geometry_clear_mask = source_setup[18].words.w0;
+    stats->geometry_set_mask = source_setup[18].words.w1;
+    stats->geometry_command_count++;
+
+    /* VTX command 19 observes lighting already cleared, so its shade result is
+     * simply the source's white RGBA. Compute through the shared helper anyway
+     * rather than baking a renderer-specific packed-colour convention. */
+    for (i = 0u; i < vertex_count; i++)
+    {
+        state.vertex_colors[i] = ndsRendererHardwareLitShadeColorPrepared(
+            stats, &state.input_vertices[i], NULL);
+    }
+    state.vertex_color_valid_mask = required_mask;
+
+    material_color = ndsRendererHardwareColorSource(stats);
+    use_material_color =
+        (ndsRendererHardwareUseMaterialColor(stats) != FALSE) ? TRUE : FALSE;
+    use_vertex_color =
+        (ndsRendererHardwareUseVertexColor(stats) != FALSE) ? TRUE : FALSE;
+    state.texture_prepare_material_color = material_color;
+    state.texture_prepare_vertex_flags =
+        ((use_material_color != FALSE) ?
+             NDS_RENDERER_VERTEX_CONTEXT_USE_MATERIAL : 0u) |
+        ((use_vertex_color != FALSE) ?
+             NDS_RENDERER_VERTEX_CONTEXT_USE_VERTEX : 0u);
+
+    poly_alpha = ndsRendererHardwareAlpha(stats, &state.input_vertices[0]);
+    state.texture_prepare_alpha_constant =
+        (ndsRendererHardwareAlphaUsesVertex(stats) == FALSE) ? TRUE : FALSE;
+    state.texture_prepare_poly_alpha = poly_alpha;
+    state.texture_prepare_poly_fmt = ndsRendererHardwarePolyFmt(stats, poly_alpha);
+    render_tile = &stats->texture_tiles[ndsRendererActiveTextureTile(stats)];
+    implicit_texture_on =
+        ndsRendererHardwareTextureImplicitStateOn(stats) ? TRUE : FALSE;
+    /* The source state above remains the oracle for UV/filter/alpha semantics,
+     * but PIXELS are no longer resolved from it. DL_0x7C28's 16x32 sampled CI4 indices and
+     * PRIM/ENV colour combine were compiled AOT into DS PAL16. A valid native
+     * ImpactWave therefore reaches a resident-name bind here and never enters
+     * ndsRendererHardwareBindTexture / the generic N64 conversion cache. */
+    use_texture =
+        (ndsRendererHardwareUseTexture(stats) != FALSE) &&
+        (ndsRendererHardwareBindImpactWaveTexture(
+             stats, render_tile, variant) != FALSE) ? TRUE : FALSE;
+    if (use_texture == FALSE)
+    {
+        return FALSE;
+    }
+    state.texture_prepare_valid = TRUE;
+    state.texture_prepare_enabled = use_texture;
+    state.texture_prepare_name =
+        (use_texture != FALSE) ? sNdsRendererHardwareBoundTextureName : 0u;
+    ndsRendererProfileRecordTexturePrepare();
+
+    texture_scale_s = stats->texture_scale_s;
+    texture_scale_t = stats->texture_scale_t;
+    if ((use_texture != FALSE) && (implicit_texture_on != FALSE))
+    {
+        if ((stats->texture_state_flags &
+             NDS_RENDERER_TEXTURE_STATE_SCALE_S) == 0u)
+        {
+            texture_scale_s = NDS_RENDERER_HW_IMPLICIT_TEXTURE_SCALE;
+        }
+        if ((stats->texture_state_flags &
+             NDS_RENDERER_TEXTURE_STATE_SCALE_T) == 0u)
+        {
+            texture_scale_t = NDS_RENDERER_HW_IMPLICIT_TEXTURE_SCALE;
+        }
+    }
+    texture_offset = ndsRendererHardwareTextureFilterOffset(stats);
+    state.texture_prepare_scale_s = texture_scale_s;
+    state.texture_prepare_scale_t = texture_scale_t;
+    state.texture_prepare_origin_s = render_tile->uls;
+    state.texture_prepare_origin_t = render_tile->ult;
+    state.texture_prepare_offset = texture_offset;
+    if (use_texture != FALSE)
+    {
+        state.texture_prepare_vertex_flags |=
+            NDS_RENDERER_VERTEX_CONTEXT_USE_TEXTURE;
+    }
+#if NDS_RENDERER_HW_DEBUG_TEXTURE_ONLY
+    if (use_texture != FALSE)
+    {
+        state.texture_prepare_vertex_flags &=
+            ~(NDS_RENDERER_VERTEX_CONTEXT_USE_MATERIAL |
+              NDS_RENDERER_VERTEX_CONTEXT_USE_VERTEX);
+    }
+#endif
+    /* Deliberately omit SOURCE_CLIP_DEPTH/ZBUFFERED: this is source non-Z
+     * geometry and must retain the port's per-triangle painter-depth emulation. */
+    ndsRendererFastPrepareRawSlots(
+        stats, &state, required_mask, use_texture);
+
+    if (poly_alpha != 0u)
+    {
+        ndsRendererLoadHardwareMatrices(NULL, FALSE);
+        ndsRendererHardwareBeginTriangleBatch(
+            stats, use_texture, state.texture_prepare_name,
+            state.texture_prepare_poly_fmt,
+            sNdsRendererHardwareMatrixMode,
+            sNdsRendererHardwareMatrixGeneration);
+
+        for (i = 0u; i < triangle_count; i++)
+        {
+            const u8 *tri = &triangle_indices[i * 3u];
+            s32 depth = ndsRendererHardwareNextProjectedDepth();
+            u32 corner;
+
+            for (corner = 0u; corner < 3u; corner++)
+            {
+                u32 index = (u32)tri[corner];
+                v16 out_z = ndsRendererHardwareClampS64ToV16(depth);
+
+                glColor(state.prepared_vertex_colors[index]);
+                if (use_texture != FALSE)
+                {
+                    glTexCoord2t16(state.prepared_texcoord_s[index],
+                                  state.prepared_texcoord_t[index]);
+                }
+                ndsRendererProfileHWVertexRange(
+                    projected_x[index], projected_y[index], out_z);
+                glVertex3v16(projected_x[index], projected_y[index], out_z);
+            }
+            sNdsRendererHardwareSubmitted = TRUE;
+#if NDS_RENDERER_BENCHMARK_MODE != NDS_RENDERER_BENCHMARK_NONE
+            sNdsRendererBenchmarkTriangleCount++;
+#endif
+            stats->triangle_count++;
+            stats->transformed_triangle_count++;
+            stats->hardware_triangle_count++;
+            stats->hardware_vertex_count += 3u;
+            stats->hardware_projected_depth_triangle_count++;
+            ndsRendererProfileRecordProjectedSubmit();
+            ndsRendererProfileRecordHardwareTriangle();
+        }
+    }
+    ndsRendererHardwareEndBatch();
+
+    /* Source commands 28..34 restore the sticky state inherited by the next
+     * effect list. Preserve them even though they draw no geometry. */
+    NDS_IMPACT_INVALIDATE();
+    NDS_IMPACT_HASH(30u);
+    stats->geometry_mode =
+        (stats->geometry_mode & source_setup[30].words.w0) |
+        source_setup[30].words.w1;
+    stats->geometry_clear_mask = source_setup[30].words.w0;
+    stats->geometry_set_mask = source_setup[30].words.w1;
+    stats->geometry_command_count++;
+    NDS_IMPACT_INVALIDATE();
+    NDS_IMPACT_HASH(31u);
+    ndsRendererRecordOtherMode(
+        stats, source_setup[31].words.w0 >> 24,
+        source_setup[31].words.w0, source_setup[31].words.w1);
+    NDS_IMPACT_INVALIDATE();
+    NDS_IMPACT_HASH(32u);
+    ndsRendererRecordOtherMode(
+        stats, source_setup[32].words.w0 >> 24,
+        source_setup[32].words.w0, source_setup[32].words.w1);
+    NDS_IMPACT_INVALIDATE();
+    NDS_IMPACT_HASH(33u);
+    ndsRendererRecordOtherMode(
+        stats, source_setup[33].words.w0 >> 24,
+        source_setup[33].words.w0, source_setup[33].words.w1);
+    stats->end_command_count++;
+
+#undef NDS_IMPACT_INVALIDATE
+#undef NDS_IMPACT_HASH
+    return TRUE;
+#else
+    (void)vertices;
+    (void)vertex_count;
+    (void)triangle_indices;
+    (void)triangle_count;
+    (void)source_setup;
+    (void)material;
+    (void)variant;
+    (void)config;
+    (void)stats;
+    return FALSE;
+#endif
 }
 
 static s32 ndsRendererNativeVisitSourceCommand(

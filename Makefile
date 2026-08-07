@@ -802,6 +802,15 @@ NDS_R2_FIREBALL_MAP_COLL_SCALE ?= 1.5
 # visualization is built into wpdisplay.c -- this flag only sets the fireball's
 # display_mode at spawn so the existing path runs. For tuning the scale above.
 NDS_R2_FIREBALL_MAP_COLL_DEBUG ?= 0
+# ImpactWave native-mesh lab. The source effect remains the owner of spawn,
+# lifetime, AObj/MObj animation and colour/index semantics, but its hot draw
+# skips the generic N64 display-list/texture path: the 18 source vertices and 16
+# source triangles are compiled into the port, while DL_0x7C28's real CI4 16x32
+# image is stored directly in DS PAL16 nibble order with five AOT RGB555 palettes for
+# the five source PRIM colours. Scene entry uploads those tiny resident names;
+# impact frames do no N64 texel/TLUT conversion or texture allocation. OFF until
+# owner playtest, like the fireball fast paths were before acceptance.
+NDS_R2_IMPACT_WAVE_NATIVE ?= 0
 # SEEDS gNdsBattlePlayableFoxCpuEnabled FOR A ROM NOBODY DRIVES WITH GDB. 1 is
 # the published source-normal battle (3/2/1/GO, live match timer, level-3 Fox);
 # 0 skips the countdown, unlocks at GO, freezes the timer and leaves Fox
@@ -2707,6 +2716,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_R2_FIREGRIND_NATIVE $(NDS_R2_FIREGRIND_NATIVE)'; \
 		echo '#define NDS_R2_FIREBALL_MAP_COLL_SCALE $(NDS_R2_FIREBALL_MAP_COLL_SCALE)F'; \
 		echo '#define NDS_R2_FIREBALL_MAP_COLL_DEBUG $(NDS_R2_FIREBALL_MAP_COLL_DEBUG)'; \
+		echo '#define NDS_R2_IMPACT_WAVE_NATIVE $(NDS_R2_IMPACT_WAVE_NATIVE)'; \
 		echo '#define NDS_R2_FOX_CPU_DEFAULT $(NDS_R2_FOX_CPU_DEFAULT)'; \
 		echo '#define NDS_R2_COLLISION_L7_ORACLE $(NDS_R2_COLLISION_L7_ORACLE)'; \
 		echo '#define NDS_TASK39_FX_SPRITES $(NDS_TASK39_FX_SPRITES)'; \

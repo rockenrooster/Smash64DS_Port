@@ -1118,6 +1118,25 @@ typedef struct NDSRendererStats
     u32 texture_source_hash2;
 } NDSRendererStats;
 
+/* DS-native fixed-mesh effect submit. ImpactWave is the first owner: source
+ * animation and live MObj state are retained, while immutable geometry is AOT
+ * and the texture is a preconverted DS PAL16 asset selected by source variant.
+ * source_setup remains only as the fixed state oracle for non-texture commands;
+ * no N64 texture/TLUT decode is performed by the native draw. */
+s32 ndsRendererSubmitNativeImpactWave(
+    const NDSRendererInputVertex *vertices, u32 vertex_count,
+    const u8 *triangle_indices, u32 triangle_count,
+    const Gfx *source_setup,
+    const NDSRendererNativeMaterial *material,
+    u32 variant,
+    const NDSRendererConfig *config,
+    NDSRendererStats *stats);
+
+/* Scene-entry upload of the five 16x32 PAL16 ImpactWave colour variants. The
+ * texel indices and RGB555 palettes are already in DS format in ROM; this does
+ * allocation/upload only, never source conversion. */
+s32 ndsRendererHardwarePrepareImpactWaveTextures(void);
+
 s32 ndsRendererMtxCellS16p16(const Mtx *mtx, u32 row, u32 col);
 void ndsRendererMtxLoadN64ToDS20p12(const Mtx *src,
                                     NDSRendererMatrix20p12 *dst);

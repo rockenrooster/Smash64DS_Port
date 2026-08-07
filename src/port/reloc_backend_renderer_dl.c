@@ -1,5 +1,6 @@
 #include <sys/matrix.h>
 
+#include <nds/nds_effects.h>
 #include <nds/nds_fighter_matrix_index.h>
 #include <nds/nds_ifcommon_oam.h>
 
@@ -75,6 +76,48 @@
  * matrix IS the world matrix of the joint it is bound to. See
  * ndsRendererAdapterBuildJointAttachMtx. */
 #define NDS_RENDERER_ADAPTER_JOINT_ATTACH_MTX_KIND 0x4Fu
+
+#if NDS_R2_IMPACT_WAVE_NATIVE
+/* EFCommonEffects1 file 83, ImpactWave Vtx block @ 0x7B08 and TRI2 commands
+ * 20..27 of the display list @ 0x7C28. These are immutable source geometry,
+ * compiled AOT instead of decoded from N64 VTX/TRI2 commands every draw. Source
+ * Vtx alpha bytes are zero; ndsRendererDecodeInputVertex maps that legacy zero
+ * to 0xFF, so the typed native copy stores the post-decode value directly. */
+static const NDSRendererInputVertex sNdsImpactWaveVertices[18] = {
+    {  125, 62, -125, 14976, 1024, 255, 255, 255, 255 },
+    {   97,  0,  -97, 14976,    0, 255, 255, 255, 255 },
+    {  177, 62,    0, 13824, 1024, 255, 255, 255, 255 },
+    {  137,  0,    0, 13824,    0, 255, 255, 255, 255 },
+    {  125, 62,  125, 12672, 1024, 255, 255, 255, 255 },
+    {   97,  0,   97, 12672,    0, 255, 255, 255, 255 },
+    {    0,  0,  137, 11520,    0, 255, 255, 255, 255 },
+    {    0, 62,  177, 11520, 1024, 255, 255, 255, 255 },
+    { -125, 62,  125, 10368, 1024, 255, 255, 255, 255 },
+    {  125, 62, -125,  5760, 1024, 255, 255, 255, 255 },
+    {  -97,  0,   97, 10368,    0, 255, 255, 255, 255 },
+    {   97,  0,  -97,  5760,    0, 255, 255, 255, 255 },
+    { -177, 62,    0,  9216, 1024, 255, 255, 255, 255 },
+    {    0,  0, -137,  6912,    0, 255, 255, 255, 255 },
+    {    0, 62, -177,  6912, 1024, 255, 255, 255, 255 },
+    { -137,  0,    0,  9216,    0, 255, 255, 255, 255 },
+    {  -97,  0,  -97,  8064,    0, 255, 255, 255, 255 },
+    { -125, 62, -125,  8064, 1024, 255, 255, 255, 255 }
+};
+
+static const u8 sNdsImpactWaveTriangles[16 * 3] = {
+    17,16,15, 16,17,14,
+    13,16,14, 12,17,15,
+    11,13,14, 12,15,10,
+     9,11,14,  8,12,10,
+     7, 8,10,  6, 7,10,
+     7, 6, 5,  4, 7, 5,
+     4, 5, 3,  2, 4, 3,
+     2, 3, 1,  0, 2, 1
+};
+
+static sb32 sNdsRendererAdapterImpactWaveNativeActive;
+static u32 sNdsRendererAdapterImpactWaveVariant;
+#endif
 /* Kind 0x50 is 0x4F's NEIGHBOUR IN THE TABLE AND A DIFFERENT CALLBACK.
  * sGCMatrixFuncList entries are {proc_diff, proc_same} PAIRS (objdisplay.h:20),
  * so kind - 66 selects pair 14 of dLBCommonFuncMatrixList = func_ovl0_800C99CC
@@ -9328,6 +9371,11 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
     NDSRendererMatrix20p12 initial_modelview;
     const NDSRendererMatrix20p12 *initial_projection_ptr;
     const NDSRendererMatrix20p12 *initial_modelview_ptr;
+#if NDS_R2_IMPACT_WAVE_NATIVE
+    NDSRendererNativeMaterial impact_wave_material;
+    sb32 impact_wave_native_candidate = FALSE;
+    sb32 impact_wave_native_handled = FALSE;
+#endif
     u32 effect_seed_before = 0u;
     u32 effect_matrix_cmd_before = 0u;
     u32 effect_xform_before = 0u;
@@ -9471,7 +9519,19 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
         phase_mark = cpuGetTiming();
     }
 #endif
-    ndsRendererAdapterPrepareMaterialSegment(dobj, &state);
+#if NDS_R2_IMPACT_WAVE_NATIVE
+    if ((sNdsRendererAdapterImpactWaveNativeActive != FALSE) &&
+        (dobj->mobj != NULL) &&
+        (ndsRendererAdapterBuildNativeMaterial(
+             dobj->mobj, &impact_wave_material) != FALSE))
+    {
+        impact_wave_native_candidate = TRUE;
+    }
+    else
+#endif
+    {
+        ndsRendererAdapterPrepareMaterialSegment(dobj, &state);
+    }
 #if NDS_TICK_HUD
     if (phase_effect != FALSE)
     {
@@ -9608,6 +9668,45 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
         phase_mark = cpuGetTiming();
     }
 #endif
+#if NDS_R2_IMPACT_WAVE_NATIVE
+    if (impact_wave_native_candidate != FALSE)
+    {
+        impact_wave_native_handled = ndsRendererSubmitNativeImpactWave(
+            sNdsImpactWaveVertices,
+            (u32)(sizeof(sNdsImpactWaveVertices) /
+                  sizeof(sNdsImpactWaveVertices[0])),
+            sNdsImpactWaveTriangles,
+            (u32)(sizeof(sNdsImpactWaveTriangles) / 3u),
+            dl,
+            &impact_wave_material,
+            sNdsRendererAdapterImpactWaveVariant,
+            &config,
+            render_stats);
+    }
+    if (impact_wave_native_handled == FALSE)
+    {
+        if (impact_wave_native_candidate != FALSE)
+        {
+            /* Native rejection occurs before any mesh GX emit (near-plane or
+             * malformed-contract fallback). Rebuild the source segment-E table
+             * only on that rare path, then execute the untouched interpreter. */
+            ndsRendererAdapterPrepareMaterialSegment(dobj, &state);
+            gNdsImpactWaveNativeFallbackCount++;
+        }
+        ndsRendererExecuteDisplayListWithVertexCache(
+            dl,
+            &config,
+            callback,
+            callback_user,
+            render_stats,
+            (sNdsRendererAdapterStagePersistentActive != FALSE) ?
+                &sNdsRendererAdapterStageVertexCache : NULL);
+    }
+    else
+    {
+        gNdsImpactWaveNativeDrawCount++;
+    }
+#else
     ndsRendererExecuteDisplayListWithVertexCache(
         dl,
         &config,
@@ -9616,6 +9715,7 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
         render_stats,
         (sNdsRendererAdapterStagePersistentActive != FALSE) ?
             &sNdsRendererAdapterStageVertexCache : NULL);
+#endif
 #if NDS_TICK_HUD
     if (phase_effect != FALSE)
     {
@@ -9966,6 +10066,17 @@ void ndsRendererAdapterSubmitEffectDObjTree(void *dobj_ptr, u32 kind,
                                             void *camera_gobj_ptr,
                                             u32 initial_geometry_mode)
 {
+#if NDS_R2_IMPACT_WAVE_NATIVE
+    DObj *root = (DObj *)dobj_ptr;
+
+    sNdsRendererAdapterImpactWaveVariant = 0u;
+    sNdsRendererAdapterImpactWaveNativeActive =
+        ((root != NULL) && (root->parent_gobj != NULL) &&
+         (ndsEFManagerImpactWaveVariant(
+              root->parent_gobj,
+              &sNdsRendererAdapterImpactWaveVariant) != FALSE)) ?
+            TRUE : FALSE;
+#endif
     sNdsRendererAdapterEffectSubmitActive = TRUE;
 #if NDS_TICK_HUD
     gNdsEffectPhaseActive = 1u;
@@ -9976,6 +10087,10 @@ void ndsRendererAdapterSubmitEffectDObjTree(void *dobj_ptr, u32 kind,
     gNdsEffectPhaseActive = 0u;
 #endif
     sNdsRendererAdapterEffectSubmitActive = FALSE;
+#if NDS_R2_IMPACT_WAVE_NATIVE
+    sNdsRendererAdapterImpactWaveNativeActive = FALSE;
+    sNdsRendererAdapterImpactWaveVariant = 0u;
+#endif
 }
 
 void ndsRendererAdapterSubmitStageDObj(void *dobj_ptr, u32 kind,

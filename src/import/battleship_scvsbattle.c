@@ -189,6 +189,13 @@ static void ndsSCVSBattleBeginSceneTextures(void)
      * the countdown. Still after the static set, so it stays above that span. */
     (void)ndsRendererHardwarePrepareParticleAtlas();
 #endif
+#if NDS_R2_IMPACT_WAVE_NATIVE && NDS_RENDERER_HW_TRIANGLES
+    /* Tiny and last on purpose: five 16x32 PAL16 names cannot fragment the
+     * allocator ahead of the large interface/particle allocations above. The
+     * gameplay draw then performs a name bind only -- no N64 texel/TLUT decode,
+     * conversion, cache lookup or texture allocation on an impact frame. */
+    (void)ndsRendererHardwarePrepareImpactWaveTextures();
+#endif
 }
 
 /* GAME SET never appeared -- owner, 2026-07-31: "No 'Game set' after winning

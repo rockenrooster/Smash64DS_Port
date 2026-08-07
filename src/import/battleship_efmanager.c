@@ -259,6 +259,38 @@ GObj *efManagerRebirthHaloMakeEffect(GObj *fighter_gobj, f32 size)
     return ndsBaseEFManagerRebirthHaloMakeEffect(fighter_gobj, size);
 }
 
+#if NDS_R2_IMPACT_WAVE_NATIVE
+volatile u32 gNdsImpactWaveNativeDrawCount;
+volatile u32 gNdsImpactWaveNativeFallbackCount;
+volatile u32 gNdsImpactWaveNativeTexturePrepareCount;
+volatile u32 gNdsImpactWaveNativeTextureBindCount;
+
+s32 ndsEFManagerImpactWaveVariant(GObj *effect_gobj, u32 *variant_out)
+{
+    EFStruct *ep;
+
+    if ((effect_gobj == NULL) || (variant_out == NULL))
+    {
+        return FALSE;
+    }
+    ep = efGetStruct(effect_gobj);
+    if ((ep == NULL) || (ep->proc_update != efManagerImpactWaveProcUpdate) ||
+        ((u32)ep->effect_vars.impact_wave.index >= 5u))
+    {
+        return FALSE;
+    }
+    *variant_out = (u32)ep->effect_vars.impact_wave.index;
+    return TRUE;
+}
+
+s32 ndsEFManagerIsImpactWaveGObj(GObj *effect_gobj)
+{
+    u32 variant;
+
+    return ndsEFManagerImpactWaveVariant(effect_gobj, &variant);
+}
+#endif
+
 /* Seven, down from fourteen. The shield's five disc templates, the reflector's
  * and the respawn pad's went with the procedural stand-ins on 2026-08-04; what
  * remains serves the effect kinds the source path does NOT replace -- hit
@@ -1387,6 +1419,12 @@ void efManagerInitEffects(void)
     gNdsVisualEffectKindMask = 0u;
     gNdsVisualEffectTemplateBytes = 0u;
     ndsBaseEFManagerInitEffects();
+#if NDS_R2_IMPACT_WAVE_NATIVE
+    gNdsImpactWaveNativeDrawCount = 0u;
+    gNdsImpactWaveNativeFallbackCount = 0u;
+    gNdsImpactWaveNativeTexturePrepareCount = 0u;
+    gNdsImpactWaveNativeTextureBindCount = 0u;
+#endif
     ndsEFManagerResolveAllDescOffsets();
 #if NDS_R2_SHIELD_QUAD
     /* AFTER the resolver and BEFORE any shield exists. The source maker copies

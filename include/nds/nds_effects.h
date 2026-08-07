@@ -72,6 +72,16 @@ GObj *ndsEFManagerMakeVisualEffect(NDSVisualEffectKind kind,
                                     const Vec3f *pos, f32 scale, s32 lr,
                                     GObj *fighter_gobj);
 s32 ndsEFManagerIsVisualEffectGObj(GObj *effect_gobj);
+#if NDS_R2_IMPACT_WAVE_NATIVE
+/* Identity only; the source maker/update still own the GObj. The renderer uses
+ * this to replace only ImpactWave's hot display-list execution. */
+s32 ndsEFManagerIsImpactWaveGObj(GObj *effect_gobj);
+s32 ndsEFManagerImpactWaveVariant(GObj *effect_gobj, u32 *variant_out);
+extern volatile u32 gNdsImpactWaveNativeDrawCount;
+extern volatile u32 gNdsImpactWaveNativeFallbackCount;
+extern volatile u32 gNdsImpactWaveNativeTexturePrepareCount;
+extern volatile u32 gNdsImpactWaveNativeTextureBindCount;
+#endif
 /* Named for what it does: it stops EVERY effect attached to the fighter, source
  * models included, exactly as source's ftParamProcStopEffect does. The old name
  * said "VisualEffects" and the body matched the name rather than the contract,
