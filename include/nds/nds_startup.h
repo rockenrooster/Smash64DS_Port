@@ -3977,6 +3977,18 @@ extern volatile u32 gNdsFighterReflectorProofFireballDamage;
 extern volatile u32 gNdsFighterReflectorProofFireballSizeMilli;
 extern volatile s32 gNdsFighterReflectorProofFireballDXMilli;
 extern volatile s32 gNdsFighterReflectorProofFireballDYMilli;
+#if NDS_R2_FIREBALL_NATIVE_MAP_COLL
+extern volatile u32 gNdsFireballNativeMapCallCount;
+extern volatile u32 gNdsFireballNativeMapHandledCount;
+extern volatile u32 gNdsFireballNativeMapFallbackCount;
+extern volatile u32 gNdsFireballNativeMapCollisionCount;
+extern volatile u32 gNdsFireballNativeMapFloorHitCount;
+extern volatile u32 gNdsFireballNativeMapCeilHitCount;
+extern volatile u32 gNdsFireballNativeMapLWallHitCount;
+extern volatile u32 gNdsFireballNativeMapRWallHitCount;
+extern volatile u32 gNdsFireballNativeMapLastMask;
+extern volatile s32 gNdsFireballNativeMapLastLineID;
+#endif
 extern volatile u32 gNdsFighterReflectorProofSpecialSizeMilli;
 extern volatile u32 gNdsFighterReflectorProofSpecialResist;
 extern volatile u32 gNdsFighterSpecialsProofMask;

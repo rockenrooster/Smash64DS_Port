@@ -12803,6 +12803,61 @@ void ndsRendererEndParticleQuads(void)
         sNdsRendererHardwareActiveTextureEntry = NULL;
     }
 }
+
+/* DEBUG-ONLY world-space collision-diamond, for tuning the fireball's
+ * stage-collision box. The DS geometry engine has no line primitive, so the
+ * diamond is drawn as two filled translucent triangles (a flat diamond shape)
+ * through the same particle camera matrix and scale the quad batch uses, so it
+ * lands exactly where the collision probes reach. Must be called while a
+ * particle quad batch is OPEN -- glBegin(GL_TRIANGLE) closes the preceding quad
+ * group on this hardware (no glEnd needed) and the caller's
+ * ndsRendererEndParticleQuads flushes everything. The diamond is axis-aligned
+ * in world space: cx/cy/cz is the fireball translate; top/center/bottom/width
+ * are the MPObjectColl offsets. */
+void ndsRendererSubmitDebugDiamond(f32 cx, f32 cy, f32 cz,
+                                   f32 top, f32 center,
+                                   f32 bottom, f32 width)
+{
+    if (sNdsRendererParticleQuadOpen == 0u)
+    {
+        return;
+    }
+    /* Translucent green, unlit, both faces: a visible overlay that does not
+     * fully occlude the fireball sprite beneath it. Disable the texture so the
+     * triangles draw as flat colour. */
+    glDisable(GL_TEXTURE_2D);
+    ndsRendererHardwareSetPolyFmt(POLY_ALPHA(10) | POLY_CULL_NONE |
+                                  POLY_ID(0));
+    glColor(RGB15(0, 31, 0));
+    glBegin(GL_TRIANGLE);
+    /* The batch pushed a matrix scaled by the current shift; emit vertices in
+     * the same world-fixed / shift units the quad submitter uses so they land
+     * in the same place. */
+    {
+        s32 sx = ndsRendererParticleWorldToV16(cx, sNdsRendererParticleScaleShift);
+        s32 sc = ndsRendererParticleWorldToV16(cy + center,
+                                               sNdsRendererParticleScaleShift);
+        s32 st = ndsRendererParticleWorldToV16(cy + top,
+                                               sNdsRendererParticleScaleShift);
+        s32 sb = ndsRendererParticleWorldToV16(cy + bottom,
+                                               sNdsRendererParticleScaleShift);
+        s32 sw = ndsRendererParticleWorldToV16(width,
+                                               sNdsRendererParticleScaleShift);
+        s32 sz = ndsRendererParticleWorldToV16(cz,
+                                               sNdsRendererParticleScaleShift);
+        /* Two triangles: top/right/center, center/bottom/left -- a flat diamond
+         * spanning top..bottom and -width..+width. */
+        glVertex3v16(sx, st, sz);
+        glVertex3v16(sx + sw, sc, sz);
+        glVertex3v16(sx - sw, sc, sz);
+
+        glVertex3v16(sx - sw, sc, sz);
+        glVertex3v16(sx + sw, sc, sz);
+        glVertex3v16(sx, sb, sz);
+    }
+    /* Leave the triangle group open; ndsRendererEndParticleQuads flushes it. Do
+     * NOT re-enable GL_TEXTURE_2D here -- the batch is about to close. */
+}
 #endif /* NDS_R2_PARTICLE_RUNTIME */
 
 void ndsRendererHardwareArmBattleStaticTextures(void)

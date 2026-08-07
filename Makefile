@@ -757,8 +757,8 @@ NDS_R2_PARTICLE_DRAW ?= 1
 # came off a 128-frame window.
 NDS_R2_SHIELD_QUAD ?= 0
 # Draw Mario's fireball as one camera-facing quad instead of interpreting its
-# source model's display list. EXPERIMENT, OFF BY DEFAULT, same terms as the
-# shield above -- see the block comment in reloc_backend_movement.c.
+# source model's display list. Owner-playtested and accepted 2026-08-07; ON BY
+# DEFAULT. See the block comment in reloc_backend_movement.c.
 #
 # The asset is why this is worth trying: relocData 297's Vtx[0..3] is a single
 # flat 300x300 quad and its texture is CI4 16x16 whose palette entry 0 is
@@ -771,7 +771,37 @@ NDS_R2_SHIELD_QUAD ?= 0
 # addresses that half. The other half is SRC 26,752 -- wpMapTestAll running
 # full stage collision for the projectile every frame -- and is a separate
 # seam that this does not touch.
-NDS_R2_FIREBALL_QUAD ?= 0
+NDS_R2_FIREBALL_QUAD ?= 1
+# Dream Land fireball map collision without the generic BattleShip
+# mpProcessUpdateMain/wpMapProcAll path. The fast path uses a compact AOT copy of
+# Pupupu's seven source collision lines, sweeps the fireball diamond directly,
+# and publishes the same MPCollData mask/normal/line fields consumed by
+# wpMapCheckAllRebound. Other stages fall back to wpMapTestAll. Owner-playtested
+# and accepted 2026-08-07; ON BY DEFAULT. Engagement/fallback counters make an
+# accidental generic route visible.
+NDS_R2_FIREBALL_NATIVE_MAP_COLL ?= 1
+# FireGrind as a tiny DS-native effect: replaces the BattleShip root particle +
+# three generators + six interpreter sparks with a fixed pool of three source-
+# derived quads per fireball bounce, drawn inside the existing particle GX batch.
+# No root LBParticle, no generators, no LBTransform, no bytecode, no runtime trig
+# or texture conversion. 3 quads/bounce instead of 6, reusing texture 5's already-
+# resident atlas row. Owner-playtested and accepted 2026-08-07; ON BY DEFAULT.
+# See include/nds/nds_firegrind.h.
+NDS_R2_FIREGRIND_NATIVE ?= 1
+# Multiplies the Mario/Luigi fireball's stage (map) collision diamond -- the
+# top/center/bottom/width fields from the weapon attributes reloc data -- by a
+# port-side factor at spawn. The source values load straight from ROM reloc
+# data and the port has no port-side entry to retune them, so this applies the
+# scale after wpManagerMakeWeapon sets them, before the first per-frame stage
+# collision pass reads them. 1.0 is source-exact; >1 enlarges the rebound feel.
+# Owner playtest 2026-08-07: the source fireball felt slightly too small.
+NDS_R2_FIREBALL_MAP_COLL_SCALE ?= 1.5
+# Forces the Mario/Luigi fireball into the source's map-collision debug display
+# (wpDisplayMapCollisions, gated on display_mode == nDBDisplayModeMapCollision),
+# which draws the fireball's stage-collision diamond as two scaled boxes. The
+# visualization is built into wpdisplay.c -- this flag only sets the fireball's
+# display_mode at spawn so the existing path runs. For tuning the scale above.
+NDS_R2_FIREBALL_MAP_COLL_DEBUG ?= 0
 # SEEDS gNdsBattlePlayableFoxCpuEnabled FOR A ROM NOBODY DRIVES WITH GDB. 1 is
 # the published source-normal battle (3/2/1/GO, live match timer, level-3 Fox);
 # 0 skips the countdown, unlocks at GO, freezes the timer and leaves Fox
@@ -1900,6 +1930,11 @@ CFILES += nds_particle_banks.c
 # defines it, so it is scoped to the flag that needs it.
 CFILES += battleship_libultra_gu_mtxutil.c
 CFILES += battleship_lbparticle.c
+# DS-native FireGrind. The accepted path is on by default; setting
+# NDS_R2_FIREGRIND_NATIVE=0 retains no-op stubs for control/fallback builds.
+# Lives with the particle runtime because its draw integration is inside
+# lbParticleDrawTextures.
+CFILES += nds_firegrind.c
 endif
 ifeq ($(NDS_IMPORT_BATTLESHIP_FOX_REFLECTOR),1)
 CFILES += battleship_fox_reflector.c
@@ -2668,6 +2703,10 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_R2_PARTICLE_DRAW $(NDS_R2_PARTICLE_DRAW)'; \
 		echo '#define NDS_R2_SHIELD_QUAD $(NDS_R2_SHIELD_QUAD)'; \
 		echo '#define NDS_R2_FIREBALL_QUAD $(NDS_R2_FIREBALL_QUAD)'; \
+		echo '#define NDS_R2_FIREBALL_NATIVE_MAP_COLL $(NDS_R2_FIREBALL_NATIVE_MAP_COLL)'; \
+		echo '#define NDS_R2_FIREGRIND_NATIVE $(NDS_R2_FIREGRIND_NATIVE)'; \
+		echo '#define NDS_R2_FIREBALL_MAP_COLL_SCALE $(NDS_R2_FIREBALL_MAP_COLL_SCALE)F'; \
+		echo '#define NDS_R2_FIREBALL_MAP_COLL_DEBUG $(NDS_R2_FIREBALL_MAP_COLL_DEBUG)'; \
 		echo '#define NDS_R2_FOX_CPU_DEFAULT $(NDS_R2_FOX_CPU_DEFAULT)'; \
 		echo '#define NDS_R2_COLLISION_L7_ORACLE $(NDS_R2_COLLISION_L7_ORACLE)'; \
 		echo '#define NDS_TASK39_FX_SPRITES $(NDS_TASK39_FX_SPRITES)'; \

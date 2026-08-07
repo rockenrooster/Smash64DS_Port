@@ -1251,6 +1251,12 @@ s32 ndsRendererSubmitParticleQuad(u32 atlas_name, const Vec3f *pos, f32 size,
                                   u32 atlas_x, u32 atlas_y,
                                   u32 atlas_w, u32 atlas_h);
 void ndsRendererEndParticleQuads(void);
+/* DEBUG-ONLY. Draws a world-space collision-diamond outline inside an open
+ * particle quad batch (see src/nds/nds_renderer.c). For tuning the fireball's
+ * stage-collision box; no-op if no batch is open. */
+void ndsRendererSubmitDebugDiamond(f32 cx, f32 cy, f32 cz,
+                                   f32 top, f32 center,
+                                   f32 bottom, f32 width);
 extern volatile u32 gNdsRendererParticleAtlasPrepareCount;
 extern volatile u32 gNdsRendererParticleAtlasFailCount;
 extern volatile u32 gNdsRendererParticleAtlasBytes;

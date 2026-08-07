@@ -69,6 +69,7 @@
 #include <lb/library.h>
 
 #include <nds/nds_particle_runtime.h>
+#include <nds/nds_firegrind.h>
 #include <nds/nds_startup.h>
 #include <nds/generated/nds_particle_banks.generated.h>
 #include <nds/nds_renderer.h>
@@ -279,6 +280,12 @@ void efParticleInitAll(void)
      * one reset share a slot. That is how efcommon and Dream Land both reported
      * bank 0 on 2026-08-01. Counted rather than assumed. */
     gNdsParticleInitAllCount++;
+#if NDS_R2_FIREGRIND_NATIVE
+    /* The DS-native FireGrind pool is scene/match-lifetime like the particle
+     * pools above; drop every live spark on the same reset so a restart does not
+     * inherit sparks from the previous match. */
+    ndsFireGrindReset();
+#endif
 }
 
 /* efdisplay.c passes the address of this marker as the efcommon script bank.
@@ -1817,6 +1824,33 @@ sb32 ndsParticleDrawSourceAssetQuad(u32 texture_id, const Vec3f *pos, f32 size,
 #endif
 }
 
+#if NDS_R2_FIREGRIND_NATIVE
+/* THE NATIVE FIREGRIND DRAW, folded into this pass's open GX batch.
+ *
+ * Texture 5 is admitted to the DS atlas at exactly one row -- frame 0 (frames
+ * 1/2 decimate to it via the nearest-earlier-frame rule), so the source's
+ * random per-tick frame pick already drew frame 0 every time. Cache that ONE
+ * row's sheet/coords once; a FireGrind spark draw is then a direct pointer
+ * dereference, not another 31-row atlas scan.
+ *
+ * sNdsFireGrindFrameRow is NULL until the first frame the atlas is live;
+ * resolved lazily so a build before the atlas is loaded never dereferences a
+ * stale pointer. It points into the const gNdsParticleQuadFrames table, which
+ * is program-lifetime, so it survives efParticleInitAll/scene resets unaided.
+ * The sparks are drawn only from the GENLINK(0) camera pass (see the gate in
+ * lbParticleDrawTextures). */
+static const NDSParticleQuadFrame *sNdsFireGrindFrameRow;
+/* SIMULATE ONCE PER FRAME, FROM THE LINK-0 PASS. The source simulates particles
+ * in lbParticleStructFuncRun (a once-per-frame GObj proc), separate from the
+ * draw. This port can't inject into that GObj proc cleanly (lbparticle.c is
+ * included verbatim and its proc registration is not interposable without a GObj
+ * proc-swap), so the sim runs here instead -- but OUTSIDE the GX batch, before
+ * the camera/batch setup, and only from the GENLINK(0) pass, gated on
+ * gNdsFrameCounter so multi-camera-link calls within one frame advance the pool
+ * exactly once. A paused/skipped frame never reaches here, so sparks freeze. */
+static u32 sNdsFireGrindLastUpdateFrame;
+#endif
+
 void lbParticleDrawTextures(GObj *gobj)
 {
     Vec3f right;
@@ -1841,6 +1875,25 @@ void lbParticleDrawTextures(GObj *gobj)
 #endif
 
     gNdsParticleDrawSeamCount++;
+#if NDS_R2_FIREGRIND_NATIVE
+    /* SIMULATE FIREGRIND ONCE PER FRAME, from the GENLINK(0) pass. Source
+     * FireGrind lives on link 0; this pass runs on multiple particle-camera
+     * links per frame, so the GENLINK(0) gate plus the frame-stamp together
+     * advance the pool exactly one physics step per frame. Done before the
+     * camera/batch setup so the GX submit path only renders, never simulates.
+     * gNdsFrameCounter is forward-declared here for the same include-order
+     * reason cpuGetTiming is above. */
+    if ((gobj->camera_mask & (1u << 0u)) != 0u)
+    {
+        extern volatile u32 gNdsFrameCounter;
+
+        if (gNdsFrameCounter != sNdsFireGrindLastUpdateFrame)
+        {
+            sNdsFireGrindLastUpdateFrame = gNdsFrameCounter;
+            ndsFireGrindUpdate();
+        }
+    }
+#endif
 #if NDS_R2_PARTICLE_DRAW
     atlas_name = ndsRendererHardwareParticleAtlasName();
     if ((atlas_name != 0u) &&
@@ -2009,6 +2062,82 @@ void lbParticleDrawTextures(GObj *gobj)
     }
     if (atlas_name != 0u)
     {
+#if NDS_R2_FIREGRIND_NATIVE
+        /* Draw the native FireGrind pool into the SAME open batch. Source
+         * FireGrind is created on particle GENLINK(0), so only submit from the
+         * camera pass that owns link 0 -- otherwise a second particle-camera
+         * pass draws the sparks again from a different camera, which reads as a
+         * stray copy away from the bounce. The sim itself is NOT advanced here;
+         * lbParticleStructFuncRun owns that, once per frame. */
+        if ((gobj->camera_mask & (1u << 0u)) != 0u)
+        {
+            /* Texture 5's single admitted atlas row (frame 0; frames 1/2
+             * decimate to it) is cached so a spark is one pointer dereference,
+             * not another 31-row scan. */
+            if (sNdsFireGrindFrameRow == NULL)
+            {
+                sNdsFireGrindFrameRow = ndsParticleQuadFrameFor(5u, 0u);
+            }
+            if (sNdsFireGrindFrameRow != NULL)
+            {
+                u32 fg_count;
+                const NDSFireGrindParticle *fg =
+                    ndsFireGrindPool(&fg_count);
+                u32 fg_i;
+                u32 fg_texture_name =
+                    ndsRendererHardwareParticleAtlasNameForSheet(
+                        sNdsFireGrindFrameRow->sheet);
+
+                for (fg_i = 0u; fg_i < fg_count; fg_i++)
+                {
+                    if (ndsRendererSubmitParticleQuad(
+                            fg_texture_name,
+                            &fg[fg_i].pos,
+                            ndsFireGrindSize(fg[fg_i].variant),
+                            ndsFireGrindColor(fg[fg_i].variant,
+                                              fg[fg_i].age),
+                            255u,
+                            &right, &up,
+                            sNdsFireGrindFrameRow->x,
+                            sNdsFireGrindFrameRow->y,
+                            sNdsFireGrindFrameRow->width,
+                            sNdsFireGrindFrameRow->height) != FALSE)
+                    {
+                        emitted++;
+                    }
+                }
+            }
+#if NDS_R2_FIREBALL_MAP_COLL_DEBUG
+            /* Draw the captured fireball collision diamond as a world-space
+             * outline inside this open batch, for tuning
+             * NDS_R2_FIREBALL_MAP_COLL_SCALE. The globals are captured every
+             * frame by the fireball's update proc
+             * (src/import/battleship_mario_fireball.c). */
+            {
+                extern u32 gNdsFireballDebugCollActive;
+                extern f32 gNdsFireballDebugCollX;
+                extern f32 gNdsFireballDebugCollY;
+                extern f32 gNdsFireballDebugCollZ;
+                extern f32 gNdsFireballDebugCollTop;
+                extern f32 gNdsFireballDebugCollCenter;
+                extern f32 gNdsFireballDebugCollBottom;
+                extern f32 gNdsFireballDebugCollWidth;
+
+                if (gNdsFireballDebugCollActive != 0u)
+                {
+                    ndsRendererSubmitDebugDiamond(
+                        gNdsFireballDebugCollX,
+                        gNdsFireballDebugCollY,
+                        gNdsFireballDebugCollZ,
+                        gNdsFireballDebugCollTop,
+                        gNdsFireballDebugCollCenter,
+                        gNdsFireballDebugCollBottom,
+                        gNdsFireballDebugCollWidth);
+                }
+            }
+#endif
+        }
+#endif
         ndsRendererEndParticleQuads();
     }
     gNdsParticleDrawVisibleCount += visible;

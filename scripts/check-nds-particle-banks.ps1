@@ -128,7 +128,7 @@ if ($cameraHelper -notmatch
 if (([regex]::Matches($cameraHelper,
         'guMtxCatF\(look_at_f, projection_f, projection_f\)').Count -ne 1) -or
     ([regex]::Matches($runtime,
-        'ndsParticleSetCurrentCamera\(&right, &up\)').Count -ne 2)) {
+        'ndsParticleSetCurrentCamera\(&right, &up\)').Count -ne 3)) {
     throw 'Particle camera is no longer composed once per draw callback.'
 }
 if ($cameraHelper.Contains('gGMCameraMatrix') -or
@@ -397,6 +397,12 @@ if (([int64]$report.bytes.linked_bytes + [int64]$report.bytes.asset_bytes) -ne
 # The sheet SIZE is the invariant here, not the total. A change that grows
 # atlas_bytes by raising sheet_bytes is re-running a measured failure; a change
 # that grows it by adding sheets is not.
+#
+# 2026-08-07: the accepted native fireball quad moved its CI4 16x16 texture out
+# of the shared A3I5 quad sheet and into its bit-exact GL_RGB16 own-texture path.
+# That deliberately removes one admitted frame and 512 bytes from this report;
+# the four 8,192-byte sheet allocations and every measured particle texture stay
+# unchanged.
 if (([int64]$report.quads.atlas_width -ne 128) -or
     ([int64]$report.quads.atlas_height -ne 64) -or
     ([int64]$report.quads.sheet_bytes -ne 8192) -or
@@ -404,9 +410,9 @@ if (([int64]$report.quads.atlas_width -ne 128) -or
     ([int64]$report.quads.atlas_bytes -ne
         ([int64]$report.quads.sheets * [int64]$report.quads.sheet_bytes)) -or
     ([int64]$report.quads.cell_cap -ne 64) -or
-    ([int64]$report.quads.bytes -ne 28032) -or
-    ([int64]$report.quads.frame_count -ne 32) -or
-    (@($report.quads.admitted).Count -ne 32) -or
+    ([int64]$report.quads.bytes -ne 27520) -or
+    ([int64]$report.quads.frame_count -ne 31) -or
+    (@($report.quads.admitted).Count -ne 31) -or
     (@($report.quads.excluded).Count -ne 6)) {
     throw ('Particle quad sheet changed: ' +
         "$([int64]$report.quads.sheets)x$([int64]$report.quads.sheet_bytes) B, " +

@@ -9,6 +9,7 @@
 #include <reloc_data_ftdata_symbols.h>
 #include <nds/generated/nds_particle_banks.generated.h>
 #include <nds/nds_effects.h>
+#include <nds/nds_firegrind.h>
 #include <nds/nds_ifcommon_oam.h>
 #include <nds/nds_renderer.h>
 #include <nds/nds_task39_effect_census.h>
@@ -1787,7 +1788,16 @@ LBParticle *efManagerDustExpandSmallMakeEffect(Vec3f *pos, f32 f_index)
 }
 LBParticle *efManagerFireGrindMakeEffect(Vec3f *pos)
 {
+#if NDS_R2_FIREGRIND_NATIVE
+    /* DS-native FireGrind: three fixed-pool quads at the rebound point instead
+     * of the source root particle + three generators + six sparks. The Mario
+     * fireball caller ignores the returned LBParticle*, so NULL is safe. See
+     * include/nds/nds_firegrind.h. */
+    ndsFireGrindSpawn(pos);
+    return NULL;
+#else
     return ndsBaseEFManagerFireGrindMakeEffect(pos);
+#endif
 }
 LBParticle *efManagerSparkleWhiteMakeEffect(Vec3f *pos)
 {
