@@ -118,6 +118,9 @@ static const u8 sNdsImpactWaveTriangles[16 * 3] = {
 static sb32 sNdsRendererAdapterImpactWaveNativeActive;
 static u32 sNdsRendererAdapterImpactWaveVariant;
 #endif
+#if NDS_R2_REBIRTH_HALO_NATIVE
+static sb32 sNdsRendererAdapterRebirthHaloNativeActive;
+#endif
 /* Kind 0x50 is 0x4F's NEIGHBOUR IN THE TABLE AND A DIFFERENT CALLBACK.
  * sGCMatrixFuncList entries are {proc_diff, proc_same} PAIRS (objdisplay.h:20),
  * so kind - 66 selects pair 14 of dLBCommonFuncMatrixList = func_ovl0_800C99CC
@@ -9376,6 +9379,11 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
     sb32 impact_wave_native_candidate = FALSE;
     sb32 impact_wave_native_handled = FALSE;
 #endif
+#if NDS_R2_REBIRTH_HALO_NATIVE
+    u32 rebirth_halo_root_offset = 0u;
+    sb32 rebirth_halo_native_candidate = FALSE;
+    sb32 rebirth_halo_native_handled = FALSE;
+#endif
     u32 effect_seed_before = 0u;
     u32 effect_matrix_cmd_before = 0u;
     u32 effect_xform_before = 0u;
@@ -9439,6 +9447,22 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
 #endif
         return;
     }
+#if NDS_R2_REBIRTH_HALO_NATIVE
+    if ((sNdsRendererAdapterRebirthHaloNativeActive != FALSE) &&
+        (gEFManagerFiles[2] != NULL) &&
+        ((const u8 *)dl >= (const u8 *)gEFManagerFiles[2]))
+    {
+        uintptr_t offset = (uintptr_t)((const u8 *)dl -
+                                       (const u8 *)gEFManagerFiles[2]);
+
+        if ((offset == 0x2378u) || (offset == 0x2a88u) ||
+            (offset == 0x27e8u))
+        {
+            rebirth_halo_root_offset = (u32)offset;
+            rebirth_halo_native_candidate = TRUE;
+        }
+    }
+#endif
 #if NDS_TICK_HUD
     if (phase_effect != FALSE)
     {
@@ -9668,8 +9692,27 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
         phase_mark = cpuGetTiming();
     }
 #endif
+#if NDS_R2_REBIRTH_HALO_NATIVE
+    if (rebirth_halo_native_candidate != FALSE)
+    {
+        rebirth_halo_native_handled = ndsRendererSubmitNativeRebirthHalo(
+            rebirth_halo_root_offset, &config, render_stats);
+        if (rebirth_halo_native_handled != FALSE)
+        {
+            gNdsRebirthHaloNativeDrawCount++;
+        }
+        else
+        {
+            gNdsRebirthHaloNativeFallbackCount++;
+        }
+    }
+#endif
 #if NDS_R2_IMPACT_WAVE_NATIVE
-    if (impact_wave_native_candidate != FALSE)
+    if (
+#if NDS_R2_REBIRTH_HALO_NATIVE
+        (rebirth_halo_native_handled == FALSE) &&
+#endif
+        (impact_wave_native_candidate != FALSE))
     {
         impact_wave_native_handled = ndsRendererSubmitNativeImpactWave(
             sNdsImpactWaveVertices,
@@ -9683,7 +9726,11 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
             &config,
             render_stats);
     }
-    if (impact_wave_native_handled == FALSE)
+    if (
+#if NDS_R2_REBIRTH_HALO_NATIVE
+        (rebirth_halo_native_handled == FALSE) &&
+#endif
+        (impact_wave_native_handled == FALSE))
     {
         if (impact_wave_native_candidate != FALSE)
         {
@@ -9707,14 +9754,19 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
         gNdsImpactWaveNativeDrawCount++;
     }
 #else
-    ndsRendererExecuteDisplayListWithVertexCache(
-        dl,
-        &config,
-        callback,
-        callback_user,
-        render_stats,
-        (sNdsRendererAdapterStagePersistentActive != FALSE) ?
-            &sNdsRendererAdapterStageVertexCache : NULL);
+#if NDS_R2_REBIRTH_HALO_NATIVE
+    if (rebirth_halo_native_handled == FALSE)
+#endif
+    {
+        ndsRendererExecuteDisplayListWithVertexCache(
+            dl,
+            &config,
+            callback,
+            callback_user,
+            render_stats,
+            (sNdsRendererAdapterStagePersistentActive != FALSE) ?
+                &sNdsRendererAdapterStageVertexCache : NULL);
+    }
 #endif
 #if NDS_TICK_HUD
     if (phase_effect != FALSE)
@@ -10066,8 +10118,10 @@ void ndsRendererAdapterSubmitEffectDObjTree(void *dobj_ptr, u32 kind,
                                             void *camera_gobj_ptr,
                                             u32 initial_geometry_mode)
 {
-#if NDS_R2_IMPACT_WAVE_NATIVE
+#if NDS_R2_IMPACT_WAVE_NATIVE || NDS_R2_REBIRTH_HALO_NATIVE
     DObj *root = (DObj *)dobj_ptr;
+#endif
+#if NDS_R2_IMPACT_WAVE_NATIVE
 
     sNdsRendererAdapterImpactWaveVariant = 0u;
     sNdsRendererAdapterImpactWaveNativeActive =
@@ -10075,6 +10129,16 @@ void ndsRendererAdapterSubmitEffectDObjTree(void *dobj_ptr, u32 kind,
          (ndsEFManagerImpactWaveVariant(
               root->parent_gobj,
               &sNdsRendererAdapterImpactWaveVariant) != FALSE)) ?
+            TRUE : FALSE;
+#endif
+#if NDS_R2_REBIRTH_HALO_NATIVE
+    sNdsRendererAdapterRebirthHaloNativeActive =
+        ((root != NULL) && (root->xobjs_num != 0) &&
+         (root->xobjs[0] != NULL) &&
+         (root->xobjs[0]->kind == NDS_RENDERER_ADAPTER_JOINT_ATTACH_TRA_MTX_KIND) &&
+         (root->child != NULL) && (gEFManagerFiles[2] != NULL) &&
+         (root->child->dl_link ==
+              (DObjDLLink *)((u8 *)gEFManagerFiles[2] + 0x2a98u))) ?
             TRUE : FALSE;
 #endif
     sNdsRendererAdapterEffectSubmitActive = TRUE;
@@ -10090,6 +10154,9 @@ void ndsRendererAdapterSubmitEffectDObjTree(void *dobj_ptr, u32 kind,
 #if NDS_R2_IMPACT_WAVE_NATIVE
     sNdsRendererAdapterImpactWaveNativeActive = FALSE;
     sNdsRendererAdapterImpactWaveVariant = 0u;
+#endif
+#if NDS_R2_REBIRTH_HALO_NATIVE
+    sNdsRendererAdapterRebirthHaloNativeActive = FALSE;
 #endif
 }
 

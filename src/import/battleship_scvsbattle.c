@@ -196,6 +196,11 @@ static void ndsSCVSBattleBeginSceneTextures(void)
      * conversion, cache lookup or texture allocation on an impact frame. */
     (void)ndsRendererHardwarePrepareImpactWaveTextures();
 #endif
+#if NDS_R2_REBIRTH_HALO_NATIVE && NDS_RENDERER_HW_TRIANGLES
+    /* Five tiny AOT-native names (four PAL16, one A5I3) after every large
+     * scene allocation. Rebirth frames therefore bind only resident DS data. */
+    (void)ndsRendererHardwarePrepareRebirthHaloTextures();
+#endif
 }
 
 /* GAME SET never appeared -- owner, 2026-07-31: "No 'Game set' after winning

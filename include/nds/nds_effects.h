@@ -82,6 +82,12 @@ extern volatile u32 gNdsImpactWaveNativeFallbackCount;
 extern volatile u32 gNdsImpactWaveNativeTexturePrepareCount;
 extern volatile u32 gNdsImpactWaveNativeTextureBindCount;
 #endif
+#if NDS_R2_REBIRTH_HALO_NATIVE
+extern volatile u32 gNdsRebirthHaloNativeDrawCount;
+extern volatile u32 gNdsRebirthHaloNativeFallbackCount;
+extern volatile u32 gNdsRebirthHaloNativeTexturePrepareCount;
+extern volatile u32 gNdsRebirthHaloNativeTextureBindCount;
+#endif
 /* Named for what it does: it stops EVERY effect attached to the fighter, source
  * models included, exactly as source's ftParamProcStopEffect does. The old name
  * said "VisualEffects" and the body matched the name rather than the contract,

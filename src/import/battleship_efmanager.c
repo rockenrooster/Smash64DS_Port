@@ -291,6 +291,13 @@ s32 ndsEFManagerIsImpactWaveGObj(GObj *effect_gobj)
 }
 #endif
 
+#if NDS_R2_REBIRTH_HALO_NATIVE
+volatile u32 gNdsRebirthHaloNativeDrawCount;
+volatile u32 gNdsRebirthHaloNativeFallbackCount;
+volatile u32 gNdsRebirthHaloNativeTexturePrepareCount;
+volatile u32 gNdsRebirthHaloNativeTextureBindCount;
+#endif
+
 /* Seven, down from fourteen. The shield's five disc templates, the reflector's
  * and the respawn pad's went with the procedural stand-ins on 2026-08-04; what
  * remains serves the effect kinds the source path does NOT replace -- hit

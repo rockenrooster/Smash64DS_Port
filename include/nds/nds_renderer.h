@@ -1137,6 +1137,15 @@ s32 ndsRendererSubmitNativeImpactWave(
  * allocation/upload only, never source conversion. */
 s32 ndsRendererHardwarePrepareImpactWaveTextures(void);
 
+/* AOT EFCommonEffects3 RebirthHalo owner. root_offset is one of the three
+ * immutable source wrapper offsets (main, beam, leaves); live DObj matrices
+ * still come from BattleShip's source attachment/animation owner. */
+s32 ndsRendererSubmitNativeRebirthHalo(
+    u32 root_offset,
+    const NDSRendererConfig *config,
+    NDSRendererStats *stats);
+s32 ndsRendererHardwarePrepareRebirthHaloTextures(void);
+
 s32 ndsRendererMtxCellS16p16(const Mtx *mtx, u32 row, u32 col);
 void ndsRendererMtxLoadN64ToDS20p12(const Mtx *src,
                                     NDSRendererMatrix20p12 *dst);

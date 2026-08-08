@@ -808,9 +808,17 @@ NDS_R2_FIREBALL_MAP_COLL_DEBUG ?= 0
 # source triangles are compiled into the port, while DL_0x7C28's real CI4 16x32
 # image is stored directly in DS PAL16 nibble order with five AOT RGB555 palettes for
 # the five source PRIM colours. Scene entry uploads those tiny resident names;
-# impact frames do no N64 texel/TLUT conversion or texture allocation. OFF until
-# owner playtest, like the fireball fast paths were before acceptance.
-NDS_R2_IMPACT_WAVE_NATIVE ?= 0
+# impact frames do no N64 texel/TLUT conversion or texture allocation. The
+# pixel-identical presented-frame A/B is owner-approved, so keep this on by
+# default; setting it to 0 remains the source/interpreted control arm.
+NDS_R2_IMPACT_WAVE_NATIVE ?= 1
+# Source RebirthHalo model (EFCommonEffects3) compiled into DS-native triangle
+# and texture tables. Runtime keeps the source GObj attachment/scale/rotation
+# owner but does no N64 DL/Vtx/CI4/TLUT/I4 conversion for the three halo lists.
+# The visible post-KO +60-frame A/B is pixel-identical and the native path cuts
+# roughly 259K effect-draw ticks per active presented frame, so ship it on by
+# default; setting it to 0 remains the source/interpreted control arm.
+NDS_R2_REBIRTH_HALO_NATIVE ?= 1
 # SEEDS gNdsBattlePlayableFoxCpuEnabled FOR A ROM NOBODY DRIVES WITH GDB. 1 is
 # the published source-normal battle (3/2/1/GO, live match timer, level-3 Fox);
 # 0 skips the countdown, unlocks at GO, freezes the timer and leaves Fox
@@ -2717,6 +2725,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_R2_FIREBALL_MAP_COLL_SCALE $(NDS_R2_FIREBALL_MAP_COLL_SCALE)F'; \
 		echo '#define NDS_R2_FIREBALL_MAP_COLL_DEBUG $(NDS_R2_FIREBALL_MAP_COLL_DEBUG)'; \
 		echo '#define NDS_R2_IMPACT_WAVE_NATIVE $(NDS_R2_IMPACT_WAVE_NATIVE)'; \
+		echo '#define NDS_R2_REBIRTH_HALO_NATIVE $(NDS_R2_REBIRTH_HALO_NATIVE)'; \
 		echo '#define NDS_R2_FOX_CPU_DEFAULT $(NDS_R2_FOX_CPU_DEFAULT)'; \
 		echo '#define NDS_R2_COLLISION_L7_ORACLE $(NDS_R2_COLLISION_L7_ORACLE)'; \
 		echo '#define NDS_TASK39_FX_SPRITES $(NDS_TASK39_FX_SPRITES)'; \
