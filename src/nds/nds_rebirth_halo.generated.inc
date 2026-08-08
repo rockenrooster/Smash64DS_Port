@@ -180,6 +180,15 @@ static const NDSRebirthHaloGroup sNdsRebirthHaloGroups[NDS_REBIRTH_HALO_GROUP_CO
     { 135u, 8u, 0u },
 };
 
+static const NDSRebirthHaloBounds sNdsRebirthHaloBounds[NDS_REBIRTH_HALO_GROUP_COUNT] = {
+    { -138, -90, -120, 138, -60, 120 },
+    { -173, -60, -148, 173, 0, 148 },
+    { -276, 0, -239, 276, 60, 239 },
+    { -240, 60, -208, 240, 60, 208 },
+    { -242, 60, -209, 242, 240, 209 },
+    { -310, -59, -310, 310, 0, 310 },
+};
+
 #define NDS_REBIRTH_HALO_A40_WIDTH 64u
 #define NDS_REBIRTH_HALO_A40_HEIGHT 16u
 static const u8 sNdsRebirthHaloTexelsA40[512] = {

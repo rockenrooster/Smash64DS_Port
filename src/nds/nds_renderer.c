@@ -3093,9 +3093,24 @@ typedef struct NDSRebirthHaloGroup
     u8 reserved;
 } NDSRebirthHaloGroup;
 
+typedef struct NDSRebirthHaloBounds
+{
+    s16 min_x;
+    s16 min_y;
+    s16 min_z;
+    s16 max_x;
+    s16 max_y;
+    s16 max_z;
+} NDSRebirthHaloBounds;
+
 #include "nds_rebirth_halo.generated.inc"
 
 static u32 sNdsRendererRebirthHaloTextureName[NDS_REBIRTH_HALO_TEXTURE_COUNT];
+#if NDS_R2_REBIRTH_HALO_FULL_OFFLOAD
+volatile u32 gNdsRebirthHaloFullOffloadRootCount;
+volatile u32 gNdsRebirthHaloFullOffloadBoundCornerCount;
+volatile u32 gNdsRebirthHaloFullOffloadBoundRejectCount;
+#endif
 #endif
 static s32 sNdsRendererHardwareProjectedDepth =
     NDS_RENDERER_HW_PROJECTED_DEPTH_BACKGROUND_START;
@@ -20373,6 +20388,13 @@ s32 ndsRendererSubmitNativeImpactWave(
 }
 
 #if NDS_R2_REBIRTH_HALO_NATIVE
+#if NDS_R2_REBIRTH_HALO_PHASE_PROFILE
+volatile u32 gNdsRebirthHaloPhaseTicks[8];
+#define NDS_REBIRTH_PHASE_MARK(slot, before) \
+    do { gNdsRebirthHaloPhaseTicks[(slot)] += cpuGetTiming() - (before); } while (0)
+#else
+#define NDS_REBIRTH_PHASE_MARK(slot, before) do { (void)(before); } while (0)
+#endif
 static s32 ndsRendererHardwareBindRebirthHaloTexture(
     NDSRendererStats *stats, const NDSRendererTileState *render_tile,
     u32 texture_slot, u32 upload_width, u32 upload_height, u32 format)
@@ -20648,6 +20670,517 @@ static void ndsRendererRebirthHaloFinishRoot(
     }
     NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(state);
 }
+
+#if NDS_R2_REBIRTH_HALO_FULL_OFFLOAD
+static s32 ndsRendererRebirthHaloBoundsInsideNearPlane(
+    const NDSRendererMatrix20p12 *matrix,
+    const NDSRebirthHaloBounds *bounds)
+{
+    u32 corner;
+
+    for (corner = 0u; corner < 8u; corner++)
+    {
+        NDSRendererInputVertex input;
+        NDSRendererClipVertex20p12 clip;
+
+        /* The transform reads only XYZ. Avoid clearing the texture/normal tail
+         * of this temporary eight times per admission test. */
+        input.x = ((corner & 1u) != 0u) ? bounds->max_x : bounds->min_x;
+        input.y = ((corner & 2u) != 0u) ? bounds->max_y : bounds->min_y;
+        input.z = ((corner & 4u) != 0u) ? bounds->max_z : bounds->min_z;
+        ndsRendererTransformVertex20p12(matrix, &input, &clip);
+        gNdsRebirthHaloFullOffloadBoundCornerCount++;
+        if (ndsRendererHardwareClipZWInsideNearPlane(clip.z, clip.w) == FALSE)
+        {
+            gNdsRebirthHaloFullOffloadBoundRejectCount++;
+            return FALSE;
+        }
+    }
+    return TRUE;
+}
+
+/* Conservative union per native RebirthHalo root.  Groups 0..3 share the
+ * 0x2378 child transform, so their four AABBs do not need four separate
+ * eight-corner clip tests.  The other two roots each own one generated group. */
+static const NDSRebirthHaloBounds sNdsRebirthHaloRootBounds[3] = {
+    { -276, -90, -239, 276, 60, 239 },
+    { -242, 60, -209, 242, 240, 209 },
+    { -310, -59, -310, 310, 0, 310 },
+};
+
+static void ndsRendererRebirthHaloLoadNoZMatrix(
+    const NDSRendererMatrix20p12 *raw_matrix,
+    s16 projected_z)
+{
+    NDSRendererMatrix20p12 matrix = *raw_matrix;
+    m4x4 hardware;
+    u32 row;
+
+    /* Same source-no-Z contract used by the native Dream Land owner: retain
+     * GX-owned X/Y/W transform and replace only clip Z with painter_z * W.
+     * This is why the vertex can stay in model space without changing overlap
+     * against fighters or the stage. */
+    for (row = 0u; row < 4u; row++)
+    {
+        matrix.m[row][2] = (s32)ndsRendererRoundShiftS64(
+            (s64)matrix.m[row][3] * projected_z, 12u);
+    }
+    ndsRendererCopyMtx20p12ToM4x4(&matrix, &hardware);
+    glLoadMatrix4x4(&hardware);
+    ndsRendererProfileRecordMatrixLoad();
+    sNdsRendererHardwareMatrixLoaded = FALSE;
+}
+
+#if NDS_R2_REBIRTH_HALO_SPLIT_MTX && NDS_R2_REBIRTH_HALO_SPLIT_NOZ
+static void ndsRendererRebirthHaloLoadSplitNoZProjection(
+    const NDSRendererMatrix20p12 *projection,
+    s16 projected_z)
+{
+    NDSRendererMatrix20p12 matrix = *projection;
+    m4x4 hardware;
+    u32 row;
+
+    /* Row-vector convention: clip.z is the dot against projection column 2,
+     * clip.w against column 3.  Setting Zcol = painter_z * Wcol therefore gives
+     * clip.z = painter_z * clip.w for every vertex while leaving X/Y/W and the
+     * modelview/vector matrix untouched. */
+    for (row = 0u; row < 4u; row++)
+    {
+        matrix.m[row][2] = (s32)ndsRendererRoundShiftS64(
+            (s64)matrix.m[row][3] * projected_z, 12u);
+    }
+    ndsRendererCopyMtx20p12ToM4x4(&matrix, &hardware);
+    ndsRendererHardwareSetMatrixMode(GL_PROJECTION);
+    glLoadMatrix4x4(&hardware);
+    ndsRendererHardwareSetMatrixMode(GL_MODELVIEW);
+    ndsRendererProfileRecordMatrixLoad();
+    sNdsRendererHardwareMatrixLoaded = FALSE;
+}
+#endif
+
+#if NDS_R2_REBIRTH_HALO_HW_LIGHT
+#define NDS_REBIRTH_HALO_NORMAL_PACK(x, y, z) \
+    ((((u32)(x)) & 0x3ffu) | \
+     (((((u32)(y)) & 0x3ffu)) << 10) | \
+     (((((u32)(z)) & 0x3ffu)) << 20))
+
+static s32 ndsRendererRebirthHaloNormalComponent(s32 source)
+{
+    s32 scaled = (source * 0x1ff) / 127;
+
+    if (scaled > 511) { scaled = 511; }
+    if (scaled < -512) { scaled = -512; }
+    return scaled;
+}
+
+static u16 ndsRendererRebirthHaloMaterialColor15(
+    u32 light_color, u32 material_color, u32 use_material,
+    u32 color_modulate)
+{
+    u32 r = (use_material != 0u) ?
+        ndsRendererHardwareScaleMaterialChannel5(
+            (light_color >> 24) & 0xffu,
+            (material_color >> 24) & 0xffu) :
+        ((light_color >> 27) & 0x1fu);
+    u32 g = (use_material != 0u) ?
+        ndsRendererHardwareScaleMaterialChannel5(
+            (light_color >> 16) & 0xffu,
+            (material_color >> 16) & 0xffu) :
+        ((light_color >> 19) & 0x1fu);
+    u32 b = (use_material != 0u) ?
+        ndsRendererHardwareScaleMaterialChannel5(
+            (light_color >> 8) & 0xffu,
+            (material_color >> 8) & 0xffu) :
+        ((light_color >> 11) & 0x1fu);
+
+    return ndsRendererHardwareModulatePackedColor(
+        RGB15(r, g, b), color_modulate);
+}
+#endif
+
+#if NDS_R2_REBIRTH_HALO_PACKED_FIFO
+#define NDS_REBIRTH_HALO_PACKET_WORDS 256u
+typedef struct NDSRebirthHaloPacket
+{
+    u32 words[NDS_REBIRTH_HALO_PACKET_WORDS];
+    u16 word_count;
+    u8 valid;
+    u8 pending_count;
+    u8 pending_opcode[4];
+    u8 pending_param_count[4];
+    u8 pending_dynamic_color[4];
+    u8 dynamic_color_count;
+    u16 dynamic_color_word_offset[36];
+    u32 pending_param[4][2];
+} NDSRebirthHaloPacket;
+
+static NDSRebirthHaloPacket
+    sNdsRebirthHaloPackets[NDS_REBIRTH_HALO_GROUP_COUNT]
+    __attribute__((aligned(32)));
+volatile u32 gNdsRebirthHaloPackedBuildCount;
+volatile u32 gNdsRebirthHaloPackedSubmitCount;
+volatile u32 gNdsRebirthHaloPackedWordCount;
+
+static s32 ndsRendererRebirthHaloPacketPushWord(
+    NDSRebirthHaloPacket *packet, u32 word)
+{
+    if ((packet == NULL) ||
+        ((u32)packet->word_count >= NDS_REBIRTH_HALO_PACKET_WORDS))
+    {
+        return FALSE;
+    }
+    packet->words[packet->word_count++] = word;
+    return TRUE;
+}
+
+static s32 ndsRendererRebirthHaloPacketFlush(NDSRebirthHaloPacket *packet)
+{
+    u32 command_word = 0u;
+    u32 command;
+
+    if ((packet == NULL) || (packet->pending_count == 0u))
+    {
+        return TRUE;
+    }
+    for (command = 0u; command < (u32)packet->pending_count; command++)
+    {
+        command_word |=
+            (u32)packet->pending_opcode[command] << (command * 8u);
+    }
+    if (ndsRendererRebirthHaloPacketPushWord(packet, command_word) == FALSE)
+    {
+        return FALSE;
+    }
+    for (command = 0u; command < (u32)packet->pending_count; command++)
+    {
+        u32 parameter;
+        for (parameter = 0u;
+             parameter < (u32)packet->pending_param_count[command];
+             parameter++)
+        {
+            if ((parameter == 0u) &&
+                (packet->pending_dynamic_color[command] != 0u))
+            {
+                if ((u32)packet->dynamic_color_count >= 36u)
+                {
+                    return FALSE;
+                }
+                packet->dynamic_color_word_offset[packet->dynamic_color_count++] =
+                    packet->word_count;
+            }
+            if (ndsRendererRebirthHaloPacketPushWord(
+                    packet, packet->pending_param[command][parameter]) == FALSE)
+            {
+                return FALSE;
+            }
+        }
+    }
+    packet->pending_count = 0u;
+    return TRUE;
+}
+
+static s32 ndsRendererRebirthHaloPacketCommand(
+    NDSRebirthHaloPacket *packet, u8 opcode,
+    u32 parameter_count, u32 parameter0, u32 parameter1,
+    u32 dynamic_color)
+{
+    u32 slot;
+
+    if ((packet == NULL) || (parameter_count > 2u))
+    {
+        return FALSE;
+    }
+    slot = packet->pending_count;
+    if (slot >= 4u)
+    {
+        if (ndsRendererRebirthHaloPacketFlush(packet) == FALSE)
+        {
+            return FALSE;
+        }
+        slot = 0u;
+    }
+    packet->pending_opcode[slot] = opcode;
+    packet->pending_param_count[slot] = (u8)parameter_count;
+    packet->pending_dynamic_color[slot] =
+        (dynamic_color != FALSE) ? 1u : 0u;
+    packet->pending_param[slot][0] = parameter0;
+    packet->pending_param[slot][1] = parameter1;
+    packet->pending_count = (u8)(slot + 1u);
+    if (packet->pending_count == 4u)
+    {
+        return ndsRendererRebirthHaloPacketFlush(packet);
+    }
+    return TRUE;
+}
+
+static s32 ndsRendererRebirthHaloBuildPackedGroup(
+    u32 group_index, const NDSRebirthHaloGroup *group,
+    NDSRendererStats *stats, NDSRendererTraversalState *state,
+    const NDSRendererHardwareLightDirection *prepared_direction,
+    u32 use_texture, u32 use_hw_light)
+{
+    NDSRebirthHaloPacket *packet;
+    u32 context_flags;
+    u32 corner_count;
+    u32 corner;
+
+    if ((group_index >= NDS_REBIRTH_HALO_GROUP_COUNT) ||
+        (group == NULL) || (stats == NULL) || (state == NULL))
+    {
+        return FALSE;
+    }
+    packet = &sNdsRebirthHaloPackets[group_index];
+    if (packet->valid != 0u)
+    {
+        return TRUE;
+    }
+    packet->word_count = 0u;
+    packet->pending_count = 0u;
+    packet->dynamic_color_count = 0u;
+    context_flags = state->texture_prepare_vertex_flags;
+    corner_count = (u32)group->triangle_count * 3u;
+
+    for (corner = 0u; corner < corner_count; corner++)
+    {
+        u32 source_index = (u32)group->first_vertex + corner;
+        const NDSRendererInputVertex *vtx =
+            &sNdsRebirthHaloVertices[source_index];
+        v16 x = ndsRendererHardwareVertexCoord(vtx->x, TRUE);
+        v16 y = ndsRendererHardwareVertexCoord(vtx->y, TRUE);
+        v16 z = ndsRendererHardwareVertexCoord(vtx->z, TRUE);
+
+#if NDS_R2_REBIRTH_HALO_HW_LIGHT
+        if (use_hw_light != FALSE)
+        {
+            u32 normal = NDS_REBIRTH_HALO_NORMAL_PACK(
+                ndsRendererRebirthHaloNormalComponent((s32)(s8)vtx->r),
+                ndsRendererRebirthHaloNormalComponent((s32)(s8)vtx->g),
+                ndsRendererRebirthHaloNormalComponent((s32)(s8)vtx->b));
+            if (ndsRendererRebirthHaloPacketCommand(
+                    packet, FIFO_NORMAL, 1u, normal, 0u, FALSE) == FALSE)
+            {
+                return FALSE;
+            }
+        }
+        else
+#endif
+        {
+            u32 shade = ndsRendererHardwareLitShadeColorPrepared(
+                stats, vtx, prepared_direction);
+            u16 packed_color = ndsRendererHardwarePackedVertexColor(
+                stats, vtx, state->texture_prepare_material_color,
+                (s32)(context_flags & NDS_RENDERER_VERTEX_CONTEXT_USE_MATERIAL),
+                (s32)(context_flags & NDS_RENDERER_VERTEX_CONTEXT_USE_VERTEX),
+                shade, TRUE, state->color_modulate);
+            if (ndsRendererRebirthHaloPacketCommand(
+                    packet, FIFO_COLOR, 1u, (u32)packed_color, 0u,
+                    (prepared_direction != NULL) ? TRUE : FALSE) == FALSE)
+            {
+                return FALSE;
+            }
+        }
+        if (use_texture != FALSE)
+        {
+            t16 s = ndsRendererHardwareTexCoord(
+                vtx->s, state->texture_prepare_scale_s,
+                state->texture_prepare_origin_s,
+                state->texture_prepare_offset);
+            t16 t = ndsRendererHardwareTexCoord(
+                vtx->t, state->texture_prepare_scale_t,
+                state->texture_prepare_origin_t,
+                state->texture_prepare_offset);
+            if (ndsRendererRebirthHaloPacketCommand(
+                    packet, FIFO_TEX_COORD, 1u,
+                    (u32)TEXTURE_PACK(s, t), 0u, FALSE) == FALSE)
+            {
+                return FALSE;
+            }
+        }
+        if (ndsRendererRebirthHaloPacketCommand(
+                packet, FIFO_VERTEX16, 2u,
+                ((u32)(u16)x) | ((u32)(u16)y << 16),
+                (u32)(s32)z, FALSE) == FALSE)
+        {
+            return FALSE;
+        }
+    }
+    if (ndsRendererRebirthHaloPacketFlush(packet) == FALSE)
+    {
+        return FALSE;
+    }
+    DC_FlushRange(packet->words, (u32)packet->word_count * sizeof(u32));
+    packet->valid = 1u;
+    gNdsRebirthHaloPackedBuildCount++;
+    gNdsRebirthHaloPackedWordCount += packet->word_count;
+    return TRUE;
+}
+
+static s32 ndsRendererRebirthHaloPatchPackedColors(
+    u32 group_index, const NDSRebirthHaloGroup *group,
+    NDSRendererStats *stats, NDSRendererTraversalState *state,
+    const NDSRendererHardwareLightDirection *prepared_direction)
+{
+    NDSRebirthHaloPacket *packet;
+    u32 context_flags;
+    u32 corner_count;
+    u32 corner;
+
+    if ((group_index >= NDS_REBIRTH_HALO_GROUP_COUNT) ||
+        (group == NULL) || (stats == NULL) || (state == NULL))
+    {
+        return FALSE;
+    }
+    packet = &sNdsRebirthHaloPackets[group_index];
+    corner_count = (u32)group->triangle_count * 3u;
+    if (packet->dynamic_color_count == 0u)
+    {
+        return TRUE;
+    }
+    if ((prepared_direction == NULL) ||
+        ((u32)packet->dynamic_color_count != corner_count))
+    {
+        return FALSE;
+    }
+    context_flags = state->texture_prepare_vertex_flags;
+    for (corner = 0u; corner < corner_count; corner++)
+    {
+        u32 source_index = (u32)group->first_vertex + corner;
+        const NDSRendererInputVertex *vtx =
+            &sNdsRebirthHaloVertices[source_index];
+        u32 shade = ndsRendererHardwareLitShadeColorPrepared(
+            stats, vtx, prepared_direction);
+        u16 packed_color = ndsRendererHardwarePackedVertexColor(
+            stats, vtx, state->texture_prepare_material_color,
+            (s32)(context_flags & NDS_RENDERER_VERTEX_CONTEXT_USE_MATERIAL),
+            (s32)(context_flags & NDS_RENDERER_VERTEX_CONTEXT_USE_VERTEX),
+            shade, TRUE, state->color_modulate);
+        packet->words[packet->dynamic_color_word_offset[corner]] =
+            (u32)packed_color;
+    }
+    DC_FlushRange(packet->words, (u32)packet->word_count * sizeof(u32));
+    return TRUE;
+}
+
+#if NDS_R2_REBIRTH_HALO_PACKED_PROJECTED
+static s32 ndsRendererRebirthHaloBuildPackedProjectedGroup(
+    u32 group_index, const NDSRebirthHaloGroup *group,
+    NDSRendererStats *stats, NDSRendererTraversalState *state,
+    const NDSRendererHardwareLightDirection *prepared_direction,
+    u32 use_texture)
+{
+    NDSRebirthHaloPacket *packet;
+    u32 context_flags;
+    u32 triangle;
+
+    if ((group_index >= NDS_REBIRTH_HALO_GROUP_COUNT) ||
+        (group == NULL) || (stats == NULL) || (state == NULL))
+    {
+        return FALSE;
+    }
+    packet = &sNdsRebirthHaloPackets[group_index];
+    packet->valid = 0u;
+    packet->word_count = 0u;
+    packet->pending_count = 0u;
+    packet->dynamic_color_count = 0u;
+    context_flags = state->texture_prepare_vertex_flags;
+
+    for (triangle = 0u; triangle < (u32)group->triangle_count; triangle++)
+    {
+        s32 depth = ndsRendererHardwareNextProjectedDepth();
+        u32 corner;
+
+        for (corner = 0u; corner < 3u; corner++)
+        {
+            u32 source_index =
+                (u32)group->first_vertex + triangle * 3u + corner;
+            const NDSRendererInputVertex *vtx =
+                &sNdsRebirthHaloVertices[source_index];
+            NDSRendererClipVertex20p12 clip;
+            u32 shade = ndsRendererHardwareLitShadeColorPrepared(
+                stats, vtx, prepared_direction);
+            u16 packed_color = ndsRendererHardwarePackedVertexColor(
+                stats, vtx, state->texture_prepare_material_color,
+                (s32)(context_flags & NDS_RENDERER_VERTEX_CONTEXT_USE_MATERIAL),
+                (s32)(context_flags & NDS_RENDERER_VERTEX_CONTEXT_USE_VERTEX),
+                shade, TRUE, state->color_modulate);
+            v16 projected_x;
+            v16 projected_y;
+            v16 out_z = ndsRendererHardwareClampS64ToV16(depth);
+
+            if (ndsRendererRebirthHaloPacketCommand(
+                    packet, FIFO_COLOR, 1u, (u32)packed_color, 0u, FALSE) == FALSE)
+            {
+                return FALSE;
+            }
+            if (use_texture != FALSE)
+            {
+                t16 s = ndsRendererHardwareTexCoord(
+                    vtx->s, state->texture_prepare_scale_s,
+                    state->texture_prepare_origin_s,
+                    state->texture_prepare_offset);
+                t16 t = ndsRendererHardwareTexCoord(
+                    vtx->t, state->texture_prepare_scale_t,
+                    state->texture_prepare_origin_t,
+                    state->texture_prepare_offset);
+                if (ndsRendererRebirthHaloPacketCommand(
+                        packet, FIFO_TEX_COORD, 1u,
+                        (u32)TEXTURE_PACK(s, t), 0u, FALSE) == FALSE)
+                {
+                    return FALSE;
+                }
+            }
+            ndsRendererTransformVertex20p12(&state->matrix, vtx, &clip);
+            projected_x = ndsRendererHardwareProjectToV16(
+                (s64)clip.x * NDS_RENDERER_HW_PROJECTED_VERTEX, clip.w);
+            projected_y = ndsRendererHardwareProjectToV16(
+                (s64)clip.y * NDS_RENDERER_HW_PROJECTED_VERTEX, clip.w);
+            stats->matrix_transform_count++;
+            stats->transformed_vertex_count++;
+            ndsRendererProfileRecordCPUTransform();
+            ndsRendererProfileRecordSourceVertexLoad();
+            ndsRendererProfileHWVertexRange(projected_x, projected_y, out_z);
+            if (ndsRendererRebirthHaloPacketCommand(
+                    packet, FIFO_VERTEX16, 2u,
+                    ((u32)(u16)projected_x) |
+                        ((u32)(u16)projected_y << 16),
+                    (u32)(s32)out_z, FALSE) == FALSE)
+            {
+                return FALSE;
+            }
+        }
+    }
+    if (ndsRendererRebirthHaloPacketFlush(packet) == FALSE)
+    {
+        return FALSE;
+    }
+    DC_FlushRange(packet->words, (u32)packet->word_count * sizeof(u32));
+    packet->valid = 1u;
+    gNdsRebirthHaloPackedBuildCount++;
+    gNdsRebirthHaloPackedWordCount += packet->word_count;
+    return TRUE;
+}
+#endif
+
+static void ndsRendererRebirthHaloSubmitPackedGroup(u32 group_index)
+{
+    const NDSRebirthHaloPacket *packet = &sNdsRebirthHaloPackets[group_index];
+#if NDS_R2_REBIRTH_HALO_PACKED_FIFO == 2
+    while ((DMA_CR(0) & DMA_BUSY) != 0u) { }
+    DMA_SRC(0) = (u32)packet->words;
+    DMA_DEST(0) = (u32)&GFX_FIFO;
+    DMA_CR(0) = DMA_FIFO | packet->word_count;
+    while ((DMA_CR(0) & DMA_BUSY) != 0u) { }
+#else
+    u32 word;
+    for (word = 0u; word < (u32)packet->word_count; word++)
+    {
+        GFX_FIFO = packet->words[word];
+    }
+#endif
+    gNdsRebirthHaloPackedSubmitCount++;
+}
+#endif
+#endif
 #endif
 
 s32 ndsRendererSubmitNativeRebirthHalo(
@@ -20658,9 +21191,20 @@ s32 ndsRendererSubmitNativeRebirthHalo(
 #if NDS_RENDERER_HW_TRIANGLES && NDS_R2_REBIRTH_HALO_NATIVE
     NDSRendererTraversalVertexStorage vertex_storage;
     NDSRendererTraversalState state;
+#if NDS_R2_REBIRTH_HALO_FULL_OFFLOAD
+#if !NDS_R2_REBIRTH_HALO_SPLIT_MTX
+    NDSRendererMatrix20p12 rebirth_raw_matrix;
+#endif
+#endif
     u32 first_group;
     u32 last_group;
     u32 group_index;
+#if NDS_R2_REBIRTH_HALO_FULL_OFFLOAD
+    u32 root_bounds_index;
+#endif
+#if NDS_R2_REBIRTH_HALO_PHASE_PROFILE
+    u32 rebirth_phase_t0 = cpuGetTiming();
+#endif
 
     if ((config == NULL) || (stats == NULL))
     {
@@ -20670,16 +21214,25 @@ s32 ndsRendererSubmitNativeRebirthHalo(
     {
         first_group = 0u;
         last_group = 4u;
+#if NDS_R2_REBIRTH_HALO_FULL_OFFLOAD
+        root_bounds_index = 0u;
+#endif
     }
     else if (root_offset == 0x2a88u)
     {
         first_group = 4u;
         last_group = 5u;
+#if NDS_R2_REBIRTH_HALO_FULL_OFFLOAD
+        root_bounds_index = 1u;
+#endif
     }
     else if (root_offset == 0x27e8u)
     {
         first_group = 5u;
         last_group = 6u;
+#if NDS_R2_REBIRTH_HALO_FULL_OFFLOAD
+        root_bounds_index = 2u;
+#endif
     }
     else
     {
@@ -20707,8 +21260,19 @@ s32 ndsRendererSubmitNativeRebirthHalo(
         return FALSE;
     }
 
-    /* Preflight every source corner before the first GX side effect. The
-     * ordinary interpreter remains the exact near-plane fallback. */
+    /* Preflight before the first GX side effect.  The accepted native path
+     * tested every triangle corner here, then transformed every corner a
+     * second time to draw it.  The full-offload path proves a conservative
+     * immutable AABB instead: the near predicate is linear in clip space, so
+     * all eight AABB corners inside implies every enclosed source vertex is
+     * inside.  Anything touching the danger band still falls back before GX. */
+#if NDS_R2_REBIRTH_HALO_FULL_OFFLOAD
+    if (ndsRendererRebirthHaloBoundsInsideNearPlane(
+            &state.matrix, &sNdsRebirthHaloRootBounds[root_bounds_index]) == FALSE)
+    {
+        return FALSE;
+    }
+#else
     for (group_index = first_group; group_index < last_group; group_index++)
     {
         const NDSRebirthHaloGroup *group = &sNdsRebirthHaloGroups[group_index];
@@ -20727,8 +21291,37 @@ s32 ndsRendererSubmitNativeRebirthHalo(
             }
         }
     }
+#endif
+
+#if NDS_R2_REBIRTH_HALO_PHASE_PROFILE
+    NDS_REBIRTH_PHASE_MARK(0u, rebirth_phase_t0);
+    rebirth_phase_t0 = cpuGetTiming();
+#endif
 
     ndsRendererHardwareEndBatch();
+#if NDS_R2_REBIRTH_HALO_FULL_OFFLOAD
+    /* Two lab routes are deliberately kept side by side.  The composed route
+     * preserves the accepted owner's CPU multiply and synthetic no-Z contract.
+     * SPLIT_MTX retries the earlier experiment whose screenshot was externally
+     * contaminated: the DS receives source projection and modelview separately
+     * and owns their multiply, projection, divide, clipping, and natural Z. */
+#if NDS_R2_REBIRTH_HALO_SPLIT_MTX
+    if ((state.projection_valid == 0u) || (state.modelview_valid == 0u))
+    {
+        return FALSE;
+    }
+    ndsRendererLoadHardwareSplitMatrices(
+        &state.projection, &state.modelview, state.matrix_generation);
+#else
+    ndsRendererLoadHardwareRawComposedMatrix(
+        &state.matrix, state.matrix_generation);
+    ndsRendererBuildRawHardwareMatrix(&state.matrix, &rebirth_raw_matrix);
+#endif
+    gNdsRebirthHaloFullOffloadRootCount++;
+#endif
+#if NDS_R2_REBIRTH_HALO_PHASE_PROFILE
+    NDS_REBIRTH_PHASE_MARK(1u, rebirth_phase_t0);
+#endif
     for (group_index = first_group; group_index < last_group; group_index++)
     {
         const NDSRebirthHaloGroup *group = &sNdsRebirthHaloGroups[group_index];
@@ -20736,15 +21329,31 @@ s32 ndsRendererSubmitNativeRebirthHalo(
         NDSRendererHardwareLightDirection direction;
         u32 use_texture;
         u32 triangle;
+#if NDS_R2_REBIRTH_HALO_FULL_OFFLOAD
+        u32 use_gx_group =
+            ((NDS_R2_REBIRTH_HALO_GX_GROUP_MASK & (1u << group_index)) != 0u) ?
+                TRUE : FALSE;
+#endif
+#if NDS_R2_REBIRTH_HALO_FULL_OFFLOAD && \
+    (NDS_R2_REBIRTH_HALO_HW_LIGHT || NDS_R2_REBIRTH_HALO_PACKED_FIFO)
+        u32 use_hw_light = FALSE;
+#endif
 
         /* Seed slot 0 before deriving the group's alpha/material preparation. */
         state.input_vertices[0] =
             sNdsRebirthHaloVertices[(u32)group->first_vertex];
+#if NDS_R2_REBIRTH_HALO_PHASE_PROFILE
+        rebirth_phase_t0 = cpuGetTiming();
+#endif
         if (ndsRendererRebirthHaloPrepareGroup(
                 group_index, stats, &state, &use_texture) == FALSE)
         {
             return FALSE;
         }
+#if NDS_R2_REBIRTH_HALO_PHASE_PROFILE
+        NDS_REBIRTH_PHASE_MARK(2u, rebirth_phase_t0);
+        rebirth_phase_t0 = cpuGetTiming();
+#endif
         if (((stats->geometry_mode & NDS_RENDERER_GEOM_LIGHTING) != 0u) &&
             ((stats->light_dir_mask & NDS_RENDERER_LIGHT_DIR_1_MASK) != 0u))
         {
@@ -20754,37 +21363,245 @@ s32 ndsRendererSubmitNativeRebirthHalo(
                 &direction);
             prepared_direction = &direction;
         }
+#if NDS_R2_REBIRTH_HALO_FULL_OFFLOAD
+        if (use_gx_group == FALSE)
+        {
+            ndsRendererLoadHardwareMatrices(NULL, FALSE);
+        }
+#else
         ndsRendererLoadHardwareMatrices(NULL, FALSE);
+#endif
+#if NDS_R2_REBIRTH_HALO_FULL_OFFLOAD && NDS_R2_REBIRTH_HALO_HW_LIGHT
+        {
+            use_hw_light = ((group_index <= 1u) &&
+                            (prepared_direction != NULL)) ? TRUE : FALSE;
+            if (use_hw_light != FALSE)
+            {
+                s32 lx = ndsRendererRebirthHaloNormalComponent(-prepared_direction->x);
+                s32 ly = ndsRendererRebirthHaloNormalComponent(-prepared_direction->y);
+                s32 lz = ndsRendererRebirthHaloNormalComponent(-prepared_direction->z);
+                u32 use_material =
+                    (state.texture_prepare_vertex_flags &
+                     NDS_RENDERER_VERTEX_CONTEXT_USE_MATERIAL) != 0u;
+                u32 diffuse = ndsRendererRebirthHaloMaterialColor15(
+                    stats->light_color_1, state.texture_prepare_material_color,
+                    use_material, state.color_modulate);
+                u32 ambient = ndsRendererRebirthHaloMaterialColor15(
+                    stats->light_color_2, state.texture_prepare_material_color,
+                    use_material, state.color_modulate);
+
+                /* prepared_direction is already transformed/normalised exactly
+                 * like the accepted software shade.  GFX_LIGHT_VECTOR itself is
+                 * transformed by the current vector matrix when written, so
+                 * bracket the write with identity and restore the split
+                 * modelview before any NORMAL command is submitted. */
+                ndsRendererHardwareSetMatrixMode(GL_MODELVIEW);
+                glPushMatrix();
+                glLoadIdentity();
+                GFX_LIGHT_VECTOR = NDS_REBIRTH_HALO_NORMAL_PACK(lx, ly, lz);
+                glPopMatrix(1);
+                ndsRendererHardwareWriteDiffuseAmbient(
+                    diffuse | (ambient << 16));
+                state.texture_prepare_poly_fmt |= POLY_FORMAT_LIGHT0;
+            }
+        }
+#endif
+#if NDS_R2_REBIRTH_HALO_PHASE_PROFILE
+        NDS_REBIRTH_PHASE_MARK(3u, rebirth_phase_t0);
+        rebirth_phase_t0 = cpuGetTiming();
+#endif
         ndsRendererHardwareBeginTriangleBatch(
             stats, use_texture, state.texture_prepare_name,
             state.texture_prepare_poly_fmt,
             sNdsRendererHardwareMatrixMode,
             sNdsRendererHardwareMatrixGeneration);
+#if NDS_R2_REBIRTH_HALO_PHASE_PROFILE
+        NDS_REBIRTH_PHASE_MARK(4u, rebirth_phase_t0);
+        rebirth_phase_t0 = cpuGetTiming();
+#endif
+
+#if NDS_R2_REBIRTH_HALO_FULL_OFFLOAD && NDS_R2_REBIRTH_HALO_PACKED_FIFO
+        /* Packet topology/geometry/texcoords are immutable. Software-lit groups
+         * record the COLOR parameter offsets once, then patch only those live
+         * words before DMA; hardware-lit packets need no per-frame patching. */
+        if ((use_gx_group != FALSE) &&
+            ndsRendererRebirthHaloBuildPackedGroup(
+                group_index, group, stats, &state, prepared_direction,
+                use_texture, use_hw_light) != FALSE &&
+            ndsRendererRebirthHaloPatchPackedColors(
+                group_index, group, stats, &state, prepared_direction) != FALSE)
+        {
+#if NDS_R2_REBIRTH_HALO_PHASE_PROFILE
+            NDS_REBIRTH_PHASE_MARK(5u, rebirth_phase_t0);
+            rebirth_phase_t0 = cpuGetTiming();
+#endif
+            ndsRendererRebirthHaloSubmitPackedGroup(group_index);
+#if NDS_R2_REBIRTH_HALO_PHASE_PROFILE
+            NDS_REBIRTH_PHASE_MARK(6u, rebirth_phase_t0);
+            rebirth_phase_t0 = cpuGetTiming();
+#endif
+            sNdsRendererHardwareSubmitted = TRUE;
+            stats->triangle_count += group->triangle_count;
+            stats->transformed_triangle_count += group->triangle_count;
+            stats->hardware_triangle_count += group->triangle_count;
+            stats->hardware_vertex_count += (u32)group->triangle_count * 3u;
+            ndsRendererHardwareEndBatch();
+#if NDS_R2_REBIRTH_HALO_PHASE_PROFILE
+            NDS_REBIRTH_PHASE_MARK(7u, rebirth_phase_t0);
+#endif
+            continue;
+        }
+#if NDS_R2_REBIRTH_HALO_PACKED_PROJECTED
+        if ((use_gx_group == FALSE) &&
+            ndsRendererRebirthHaloBuildPackedProjectedGroup(
+                group_index, group, stats, &state, prepared_direction,
+                use_texture) != FALSE)
+        {
+            u32 profile_triangle;
+            ndsRendererRebirthHaloSubmitPackedGroup(group_index);
+            sNdsRendererHardwareSubmitted = TRUE;
+            stats->triangle_count += group->triangle_count;
+            stats->transformed_triangle_count += group->triangle_count;
+            stats->hardware_triangle_count += group->triangle_count;
+            stats->hardware_vertex_count += (u32)group->triangle_count * 3u;
+            stats->hardware_projected_depth_triangle_count +=
+                group->triangle_count;
+            for (profile_triangle = 0u;
+                 profile_triangle < (u32)group->triangle_count;
+                 profile_triangle++)
+            {
+                ndsRendererProfileRecordProjectedSubmit();
+                ndsRendererProfileRecordHardwareTriangle();
+            }
+            ndsRendererHardwareEndBatch();
+            continue;
+        }
+#endif
+#endif
 
         for (triangle = 0u; triangle < (u32)group->triangle_count; triangle++)
         {
+#if NDS_R2_REBIRTH_HALO_FULL_OFFLOAD
+            if (use_gx_group != FALSE)
+            {
+                u32 context_flags = state.texture_prepare_vertex_flags;
+                u32 corner;
+#if NDS_R2_REBIRTH_HALO_SPLIT_MTX
+#if NDS_R2_REBIRTH_HALO_SPLIT_NOZ
+                s16 depth = (s16)ndsRendererHardwareNextProjectedDepth();
+
+                ndsRendererRebirthHaloLoadSplitNoZProjection(
+                    &state.projection, depth);
+#endif
+#else
+                s16 depth = (s16)ndsRendererHardwareNextProjectedDepth();
+
+                ndsRendererRebirthHaloLoadNoZMatrix(&rebirth_raw_matrix, depth);
+#endif
+
+                /* Every source corner is already immutable/AOT and the group
+                 * state above is constant for the whole run.  Bypass the
+                 * generic three-slot cache/mask machinery completely. */
+                for (corner = 0u; corner < 3u; corner++)
+                {
+                    u32 source_index =
+                        (u32)group->first_vertex + triangle * 3u + corner;
+                    const NDSRendererInputVertex *vtx =
+                        &sNdsRebirthHaloVertices[source_index];
+#if NDS_R2_REBIRTH_HALO_HW_LIGHT
+                    if (use_hw_light != FALSE)
+                    {
+                        glNormal(NDS_REBIRTH_HALO_NORMAL_PACK(
+                            ndsRendererRebirthHaloNormalComponent((s32)(s8)vtx->r),
+                            ndsRendererRebirthHaloNormalComponent((s32)(s8)vtx->g),
+                            ndsRendererRebirthHaloNormalComponent((s32)(s8)vtx->b)));
+                    }
+                    else
+                    {
+#endif
+                    u32 shade = ndsRendererHardwareLitShadeColorPrepared(
+                        stats, vtx, prepared_direction);
+                    u16 packed_color = ndsRendererHardwarePackedVertexColor(
+                        stats, vtx, state.texture_prepare_material_color,
+                        (s32)(context_flags &
+                              NDS_RENDERER_VERTEX_CONTEXT_USE_MATERIAL),
+                        (s32)(context_flags &
+                              NDS_RENDERER_VERTEX_CONTEXT_USE_VERTEX),
+                        shade, TRUE, state.color_modulate);
+
+                    glColor(packed_color);
+#if NDS_R2_REBIRTH_HALO_HW_LIGHT
+                    }
+#endif
+                    if (use_texture != FALSE)
+                    {
+                        glTexCoord2t16(
+                            ndsRendererHardwareTexCoord(
+                                vtx->s, state.texture_prepare_scale_s,
+                                state.texture_prepare_origin_s,
+                                state.texture_prepare_offset),
+                            ndsRendererHardwareTexCoord(
+                                vtx->t, state.texture_prepare_scale_t,
+                                state.texture_prepare_origin_t,
+                                state.texture_prepare_offset));
+                    }
+                    glVertex3v16(
+                        ndsRendererHardwareVertexCoord(vtx->x, TRUE),
+                        ndsRendererHardwareVertexCoord(vtx->y, TRUE),
+                        ndsRendererHardwareVertexCoord(vtx->z, TRUE));
+                }
+            }
+            else
+#endif
+            {
             v16 projected_x[3];
             v16 projected_y[3];
+            u16 packed_color[3];
+#if NDS_R2_REBIRTH_HALO_FULL_OFFLOAD && NDS_R2_REBIRTH_HALO_HW_LIGHT
+            u32 packed_normal[3];
+#endif
+            t16 prepared_s[3];
+            t16 prepared_t[3];
+            u32 context_flags = state.texture_prepare_vertex_flags;
             u32 corner;
             s32 depth = ndsRendererHardwareNextProjectedDepth();
 
-            state.input_vertex_valid_mask = 0u;
-            state.vertex_color_valid_mask = 0u;
-            state.prepared_vertex_color_valid_mask = 0u;
-            state.prepared_texcoord_valid_mask = 0u;
             for (corner = 0u; corner < 3u; corner++)
             {
                 u32 source_index = (u32)group->first_vertex + triangle * 3u + corner;
                 const NDSRendererInputVertex *vtx =
                     &sNdsRebirthHaloVertices[source_index];
                 NDSRendererClipVertex20p12 clip;
+                u32 shade = ndsRendererHardwareLitShadeColorPrepared(
+                    stats, vtx, prepared_direction);
 
-                state.input_vertices[corner] = *vtx;
-                state.input_vertex_valid_mask |= 1u << corner;
-                state.vertex_colors[corner] =
-                    ndsRendererHardwareLitShadeColorPrepared(
-                        stats, vtx, prepared_direction);
-                state.vertex_color_valid_mask |= 1u << corner;
+                packed_color[corner] = ndsRendererHardwarePackedVertexColor(
+                    stats, vtx, state.texture_prepare_material_color,
+                    (s32)(context_flags &
+                          NDS_RENDERER_VERTEX_CONTEXT_USE_MATERIAL),
+                    (s32)(context_flags &
+                          NDS_RENDERER_VERTEX_CONTEXT_USE_VERTEX),
+                    shade, TRUE, state.color_modulate);
+#if NDS_R2_REBIRTH_HALO_FULL_OFFLOAD && NDS_R2_REBIRTH_HALO_HW_LIGHT
+                if (use_hw_light != FALSE)
+                {
+                    packed_normal[corner] = NDS_REBIRTH_HALO_NORMAL_PACK(
+                        ndsRendererRebirthHaloNormalComponent((s32)(s8)vtx->r),
+                        ndsRendererRebirthHaloNormalComponent((s32)(s8)vtx->g),
+                        ndsRendererRebirthHaloNormalComponent((s32)(s8)vtx->b));
+                }
+#endif
+                if (use_texture != FALSE)
+                {
+                    prepared_s[corner] = ndsRendererHardwareTexCoord(
+                        vtx->s, state.texture_prepare_scale_s,
+                        state.texture_prepare_origin_s,
+                        state.texture_prepare_offset);
+                    prepared_t[corner] = ndsRendererHardwareTexCoord(
+                        vtx->t, state.texture_prepare_scale_t,
+                        state.texture_prepare_origin_t,
+                        state.texture_prepare_offset);
+                }
                 ndsRendererTransformVertex20p12(&state.matrix, vtx, &clip);
                 projected_x[corner] = ndsRendererHardwareProjectToV16(
                     (s64)clip.x * NDS_RENDERER_HW_PROJECTED_VERTEX, clip.w);
@@ -20795,28 +21612,44 @@ s32 ndsRendererSubmitNativeRebirthHalo(
                 ndsRendererProfileRecordCPUTransform();
                 ndsRendererProfileRecordSourceVertexLoad();
             }
-            ndsRendererFastPrepareRawSlots(stats, &state, 0x7u, use_texture);
             for (corner = 0u; corner < 3u; corner++)
             {
                 v16 out_z = ndsRendererHardwareClampS64ToV16(depth);
 
-                glColor(state.prepared_vertex_colors[corner]);
+#if NDS_R2_REBIRTH_HALO_FULL_OFFLOAD && NDS_R2_REBIRTH_HALO_HW_LIGHT
+                if (use_hw_light != FALSE)
+                {
+                    glNormal(packed_normal[corner]);
+                }
+                else
+#endif
+                {
+                    glColor(packed_color[corner]);
+                }
                 if (use_texture != FALSE)
                 {
-                    glTexCoord2t16(state.prepared_texcoord_s[corner],
-                                  state.prepared_texcoord_t[corner]);
+                    glTexCoord2t16(prepared_s[corner], prepared_t[corner]);
                 }
                 ndsRendererProfileHWVertexRange(
                     projected_x[corner], projected_y[corner], out_z);
                 glVertex3v16(projected_x[corner], projected_y[corner], out_z);
+            }
             }
             sNdsRendererHardwareSubmitted = TRUE;
             stats->triangle_count++;
             stats->transformed_triangle_count++;
             stats->hardware_triangle_count++;
             stats->hardware_vertex_count += 3u;
+#if NDS_R2_REBIRTH_HALO_FULL_OFFLOAD
+            if (use_gx_group == FALSE)
+            {
+                stats->hardware_projected_depth_triangle_count++;
+                ndsRendererProfileRecordProjectedSubmit();
+            }
+#else
             stats->hardware_projected_depth_triangle_count++;
             ndsRendererProfileRecordProjectedSubmit();
+#endif
             ndsRendererProfileRecordHardwareTriangle();
         }
         ndsRendererHardwareEndBatch();
@@ -20831,6 +21664,7 @@ s32 ndsRendererSubmitNativeRebirthHalo(
     return FALSE;
 #endif
 }
+#undef NDS_REBIRTH_PHASE_MARK
 
 static s32 ndsRendererNativeVisitSourceCommand(
     const u8 *root_base,

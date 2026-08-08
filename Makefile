@@ -819,6 +819,48 @@ NDS_R2_IMPACT_WAVE_NATIVE ?= 1
 # roughly 259K effect-draw ticks per active presented frame, so ship it on by
 # default; setting it to 0 remains the source/interpreted control arm.
 NDS_R2_REBIRTH_HALO_NATIVE ?= 1
+# Accepted second RebirthHalo pass (2026-08-08): immutable AABB admission,
+# exact AOT RotY, split source projection/modelview on GX, and packed DMA vertex
+# submission. At the deterministic normal-+90 equivalent it differs from source
+# in 374/120000 pixels (0.312%), all on the platform's subpixel raster edges,
+# while effect-draw P50 falls 230240 -> 112224 ticks (-51.3%).
+NDS_R2_REBIRTH_HALO_FULL_OFFLOAD ?= 1
+# Bit per generated RebirthHalo group eligible for model-space GX submission.
+# 0x3f is the all-GX experiment; final acceptance may narrow this if the DS
+# transformer's subpixel rounding changes source coverage for a specific group.
+NDS_R2_REBIRTH_HALO_GX_GROUP_MASK ?= 0x3f
+# Accepted GX route: keep source projection/modelview split on the DS and use
+# natural GX Z. A previous blue-screen rejection was invalid external capture
+# interference; the clean rerun is visually correct and measured above.
+NDS_R2_REBIRTH_HALO_SPLIT_MTX ?= 1
+# Optional companion to SPLIT_MTX: preserve the accepted renderer's synthetic
+# per-triangle painter Z by replacing only projection column Z with depth*W.
+# X/Y/W still use the true split modelview/projection hardware path.
+NDS_R2_REBIRTH_HALO_SPLIT_NOZ ?= 0
+# Packed vertex-stream mode. Software-lit COLOR words are the only live words;
+# packet topology/model-space geometry/texcoords are cached once and those live
+# colors are patched before the DMA submission.
+# 0 = ordinary GX MMIO writes, 1 = cached packed GXFIFO CPU push,
+# 2 = cached packed GXFIFO DMA0 push. Mode 2 is accepted: the packet transport
+# itself is pixel-identical to the split renderer and saves another ~37.5K P50.
+NDS_R2_REBIRTH_HALO_PACKED_FIFO ?= 2
+# Rebuild a packed packet from the accepted CPU-projected X/Y each draw instead
+# of requiring model-space GX submission. Lab-only: this prices FIFO/DMA savings
+# while retaining the exact software projection/raster contract.
+NDS_R2_REBIRTH_HALO_PACKED_PROJECTED ?= 0
+# DS lighting for the two source-lit RebirthHalo groups. Owner-approved after
+# visual inspection of the all-optimization lab ROM; keep it enabled by default.
+NDS_R2_REBIRTH_HALO_HW_LIGHT ?= 1
+# Lab-only cycle census for the native RebirthHalo hot path.  The counters are
+# cumulative and intentionally compiled out of production builds.
+NDS_R2_REBIRTH_HALO_PHASE_PROFILE ?= 0
+# RebirthHalo is positively identified by the effect-tree owner before its
+# immutable generated lists reach the generic DL adapter. Bypass loaded-file
+# discovery, segment-E material preparation, callbacks and interpreter setup;
+# the two lists on the same child also share one matrix/setup. Deterministic
+# post-KO A/B: 112,224 -> 82,304 effect ticks P50 with 0 changed DS pixels
+# versus the previously accepted software-light native route.
+NDS_R2_REBIRTH_HALO_FAST_ADAPTER ?= 1
 # SEEDS gNdsBattlePlayableFoxCpuEnabled FOR A ROM NOBODY DRIVES WITH GDB. 1 is
 # the published source-normal battle (3/2/1/GO, live match timer, level-3 Fox);
 # 0 skips the countdown, unlocks at GO, freezes the timer and leaves Fox
@@ -2726,6 +2768,15 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_R2_FIREBALL_MAP_COLL_DEBUG $(NDS_R2_FIREBALL_MAP_COLL_DEBUG)'; \
 		echo '#define NDS_R2_IMPACT_WAVE_NATIVE $(NDS_R2_IMPACT_WAVE_NATIVE)'; \
 		echo '#define NDS_R2_REBIRTH_HALO_NATIVE $(NDS_R2_REBIRTH_HALO_NATIVE)'; \
+		echo '#define NDS_R2_REBIRTH_HALO_FULL_OFFLOAD $(NDS_R2_REBIRTH_HALO_FULL_OFFLOAD)'; \
+		echo '#define NDS_R2_REBIRTH_HALO_GX_GROUP_MASK $(NDS_R2_REBIRTH_HALO_GX_GROUP_MASK)'; \
+		echo '#define NDS_R2_REBIRTH_HALO_SPLIT_MTX $(NDS_R2_REBIRTH_HALO_SPLIT_MTX)'; \
+		echo '#define NDS_R2_REBIRTH_HALO_SPLIT_NOZ $(NDS_R2_REBIRTH_HALO_SPLIT_NOZ)'; \
+		echo '#define NDS_R2_REBIRTH_HALO_PACKED_FIFO $(NDS_R2_REBIRTH_HALO_PACKED_FIFO)'; \
+		echo '#define NDS_R2_REBIRTH_HALO_PACKED_PROJECTED $(NDS_R2_REBIRTH_HALO_PACKED_PROJECTED)'; \
+		echo '#define NDS_R2_REBIRTH_HALO_HW_LIGHT $(NDS_R2_REBIRTH_HALO_HW_LIGHT)'; \
+		echo '#define NDS_R2_REBIRTH_HALO_PHASE_PROFILE $(NDS_R2_REBIRTH_HALO_PHASE_PROFILE)'; \
+		echo '#define NDS_R2_REBIRTH_HALO_FAST_ADAPTER $(NDS_R2_REBIRTH_HALO_FAST_ADAPTER)'; \
 		echo '#define NDS_R2_FOX_CPU_DEFAULT $(NDS_R2_FOX_CPU_DEFAULT)'; \
 		echo '#define NDS_R2_COLLISION_L7_ORACLE $(NDS_R2_COLLISION_L7_ORACLE)'; \
 		echo '#define NDS_TASK39_FX_SPRITES $(NDS_TASK39_FX_SPRITES)'; \

@@ -259,6 +259,16 @@ def c_bytes(name: str, values: bytes, per_line: int = 16) -> list[str]:
     return lines
 
 
+def group_bounds(vertices: list[tuple[int, ...]]) -> tuple[int, int, int, int, int, int]:
+    """Return the immutable integer-space AABB for one native draw group."""
+    if not vertices:
+        raise SystemExit("cannot bound an empty RebirthHalo group")
+    xs = [vertex[0] for vertex in vertices]
+    ys = [vertex[1] for vertex in vertices]
+    zs = [vertex[2] for vertex in vertices]
+    return min(xs), min(ys), min(zs), max(xs), max(ys), max(zs)
+
+
 def main() -> None:
     data = SOURCE.read_bytes()
     groups = split_groups(data)
@@ -296,6 +306,15 @@ def main() -> None:
     out.append("static const NDSRebirthHaloGroup sNdsRebirthHaloGroups[NDS_REBIRTH_HALO_GROUP_COUNT] = {")
     for first, count in descriptors:
         out.append(f"    {{ {first}u, {count}u, 0u }},")
+    out.append("};")
+    out.append("")
+
+    out.append("static const NDSRebirthHaloBounds sNdsRebirthHaloBounds[NDS_REBIRTH_HALO_GROUP_COUNT] = {")
+    for group in range(6):
+        lo_x, lo_y, lo_z, hi_x, hi_y, hi_z = group_bounds(groups[group])
+        out.append(
+            f"    {{ {lo_x}, {lo_y}, {lo_z}, {hi_x}, {hi_y}, {hi_z} }},"
+        )
     out.append("};")
     out.append("")
 

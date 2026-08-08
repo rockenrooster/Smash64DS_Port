@@ -254,9 +254,93 @@ GObj *efManagerShieldMakeEffect(GObj *fighter_gobj)
     return ndsBaseEFManagerShieldMakeEffect(fighter_gobj);
 }
 
+#if NDS_R2_REBIRTH_HALO_NATIVE && NDS_R2_REBIRTH_HALO_FULL_OFFLOAD
+/* EFCommonEffects3:0x2B7C is only a looping RotY track.  A live source trace
+ * proves the visible states are exactly 0, k*(2pi/30) for k=1..29, then 0;
+ * the script's setup gives the loop 31 update calls, not 30 visible values.
+ * Store the IEEE-754 bits so ARM9 does no animation-script decode, float divide,
+ * interpolation, or trig at runtime and still lands bit-for-bit on the source. */
+static const u32 sNdsRebirthHaloRotYBits[31] = {
+    0x00000000u,
+    0x3e567750u, 0x3ed67750u, 0x3f20d97cu, 0x3f567750u,
+    0x3f860a92u, 0x3fa0d97cu, 0x3fbba866u, 0x3fd67750u,
+    0x3ff1463au, 0x40060a92u, 0x40137207u, 0x4020d97cu,
+    0x402e40f1u, 0x403ba866u, 0x40490fdbu, 0x40567750u,
+    0x4063dec5u, 0x4071463au, 0x407eadafu, 0x40860a92u,
+    0x408cbe4cu, 0x40937207u, 0x409a25c2u, 0x40a0d97cu,
+    0x40a78d36u, 0x40ae40f1u, 0x40b4f4acu, 0x40bba866u,
+    0x40c25c20u,
+    0x00000000u,
+};
+
+volatile u32 gNdsRebirthHaloAotUpdateCount;
+
+static void ndsEFManagerRebirthHaloProcUpdateAOT(GObj *effect_gobj)
+{
+    EFStruct *ep = efGetStruct(effect_gobj);
+    DObj *root = DObjGetStruct(effect_gobj);
+    DObj *rotating;
+    s32 phase;
+    union
+    {
+        u32 bits;
+        f32 value;
+    } rot_y;
+
+    if ((ep == NULL) || (root == NULL) || (root->child == NULL) ||
+        (root->child->child == NULL))
+    {
+        return;
+    }
+    rotating = root->child->child;
+    phase = ep->effect_vars.common.size;
+    if ((u32)phase >= (sizeof(sNdsRebirthHaloRotYBits) /
+                       sizeof(sNdsRebirthHaloRotYBits[0])))
+    {
+        phase = 0;
+    }
+    rot_y.bits = sNdsRebirthHaloRotYBits[phase];
+    rotating->rotate.vec.f.y = rot_y.value;
+    phase++;
+    if ((u32)phase >= (sizeof(sNdsRebirthHaloRotYBits) /
+                       sizeof(sNdsRebirthHaloRotYBits[0])))
+    {
+        phase = 0;
+    }
+    ep->effect_vars.common.size = phase;
+    gNdsRebirthHaloAotUpdateCount++;
+}
+#endif
+
 GObj *efManagerRebirthHaloMakeEffect(GObj *fighter_gobj, f32 size)
 {
+#if NDS_R2_REBIRTH_HALO_NATIVE && NDS_R2_REBIRTH_HALO_FULL_OFFLOAD
+    void (*source_update)(GObj *) = dEFManagerRebirthHaloEffectDesc.proc_update;
+    intptr_t source_anim_joint = dEFManagerRebirthHaloEffectDesc.o_anim_joint;
+    GObj *effect_gobj;
+    EFStruct *ep;
+
+    /* efManagerMakeEffect installs the descriptor's update function into the
+     * GObj process while constructing it.  Temporarily point the descriptor at
+     * the closed AOT updater and suppress creation of AObj interpreter state;
+     * restore the source descriptor immediately so every non-native route stays
+     * source-exact.  The scheduler is single-threaded here. */
+    dEFManagerRebirthHaloEffectDesc.proc_update =
+        ndsEFManagerRebirthHaloProcUpdateAOT;
+    dEFManagerRebirthHaloEffectDesc.o_anim_joint = 0;
+    effect_gobj = ndsBaseEFManagerRebirthHaloMakeEffect(fighter_gobj, size);
+    dEFManagerRebirthHaloEffectDesc.proc_update = source_update;
+    dEFManagerRebirthHaloEffectDesc.o_anim_joint = source_anim_joint;
+
+    ep = (effect_gobj != NULL) ? efGetStruct(effect_gobj) : NULL;
+    if (ep != NULL)
+    {
+        ep->effect_vars.common.size = 0;
+    }
+    return effect_gobj;
+#else
     return ndsBaseEFManagerRebirthHaloMakeEffect(fighter_gobj, size);
+#endif
 }
 
 #if NDS_R2_IMPACT_WAVE_NATIVE

@@ -120,6 +120,9 @@ static u32 sNdsRendererAdapterImpactWaveVariant;
 #endif
 #if NDS_R2_REBIRTH_HALO_NATIVE
 static sb32 sNdsRendererAdapterRebirthHaloNativeActive;
+#if NDS_R2_REBIRTH_HALO_FAST_ADAPTER
+static sb32 sNdsRendererAdapterRebirthHaloSkipSecondChildList;
+#endif
 #endif
 /* Kind 0x50 is 0x4F's NEIGHBOUR IN THE TABLE AND A DIFFERENT CALLBACK.
  * sGCMatrixFuncList entries are {proc_diff, proc_same} PAIRS (objdisplay.h:20),
@@ -9421,6 +9424,149 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
         return;
     }
 
+#if NDS_R2_REBIRTH_HALO_NATIVE && NDS_R2_REBIRTH_HALO_FAST_ADAPTER
+    /* RebirthHalo is already identified by the effect-tree owner before any
+     * child list reaches here. Its six generated groups contain every source
+     * state/texture/vertex dependency, so do not pay the generic adapter's
+     * loaded-file scan, segment-E material preparation, callback context and
+     * command-interpreter setup merely to arrive at the native submitter.
+     *
+     * Keep this per-DObj for the experiment: it preserves the exact world
+     * matrix of the child and rotating grandchild while isolating the cost of
+     * generic adapter ceremony. A later all-tree owner can merge the duplicate
+     * child matrix/load once this gate has a visual/tick verdict. */
+    if ((sNdsRendererAdapterRebirthHaloNativeActive != FALSE) &&
+        (gEFManagerFiles[2] != NULL) &&
+        ((const u8 *)dl >= (const u8 *)gEFManagerFiles[2]))
+    {
+        uintptr_t rebirth_offset = (uintptr_t)((const u8 *)dl -
+                                               (const u8 *)gEFManagerFiles[2]);
+
+        if ((rebirth_offset == 0x2378u) || (rebirth_offset == 0x2a88u) ||
+            (rebirth_offset == 0x27e8u))
+        {
+            NDSRendererConfig rebirth_config = {0};
+            NDSRendererStats rebirth_stats;
+            NDSRendererStats *rebirth_render_stats;
+            NDSRendererMatrix20p12 rebirth_projection;
+            NDSRendererMatrix20p12 rebirth_modelview;
+            const NDSRendererMatrix20p12 *rebirth_projection_ptr;
+            const NDSRendererMatrix20p12 *rebirth_modelview_ptr;
+#if NDS_RENDERER_HW_TRIANGLES
+            void *rebirth_saved_graphics_heap_ptr = gSYTaskmanGraphicsHeap.ptr;
+#endif
+
+            /* 0x2378 and 0x2a88 are the two DL links on the SAME child DObj.
+             * Once the first one has emitted both native roots with one matrix
+             * setup, the tree walker will immediately offer 0x2a88 again. */
+            if ((rebirth_offset == 0x2a88u) &&
+                (sNdsRendererAdapterRebirthHaloSkipSecondChildList != FALSE))
+            {
+                sNdsRendererAdapterRebirthHaloSkipSecondChildList = FALSE;
+                return;
+            }
+
+            ndsRendererAdapterPrepareInitialMatrices(
+                dobj,
+                (camera_gobj != NULL) ? CObjGetStruct(camera_gobj) :
+                    ((gGCCurrentCamera != NULL) ? CObjGetStruct(gGCCurrentCamera) : NULL),
+                TRUE,
+                &rebirth_projection,
+                &rebirth_projection_ptr,
+                &rebirth_modelview,
+                &rebirth_modelview_ptr);
+
+#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+            if (sNdsRendererAdapterStagePersistentActive != FALSE)
+            {
+                rebirth_render_stats = &sNdsRendererAdapterStagePersistentStats;
+                ndsFighterDLDrawResetRuntimeRendererStats(rebirth_render_stats);
+            }
+            else
+#endif
+            {
+                rebirth_render_stats = &rebirth_stats;
+                ndsRendererInitStats(rebirth_render_stats);
+#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL >= 2)
+                if (sNdsRendererAdapterStagePersistentActive != FALSE)
+                {
+                    ndsFighterDLDrawCopyPersistentRendererState(
+                        rebirth_render_stats, &sNdsRendererAdapterStagePersistentStats);
+                }
+#endif
+            }
+            if ((sNdsRendererAdapterEffectColorMask & 1u) != 0u)
+            {
+                rebirth_render_stats->prim_color = sNdsRendererAdapterEffectPrimColor;
+            }
+            if ((sNdsRendererAdapterEffectColorMask & 2u) != 0u)
+            {
+                rebirth_render_stats->env_color = sNdsRendererAdapterEffectEnvColor;
+            }
+            if (sNdsRendererAdapterEffectOtherModeValid != 0u)
+            {
+                rebirth_render_stats->othermode_l = sNdsRendererAdapterEffectOtherModeL;
+            }
+
+            rebirth_config.max_depth = 8u;
+            rebirth_config.max_commands = 8192u;
+            rebirth_config.max_list_commands = 512u;
+            rebirth_config.initial_projection = rebirth_projection_ptr;
+            rebirth_config.initial_modelview = rebirth_modelview_ptr;
+            rebirth_config.initial_geometry_mode = initial_geometry_mode;
+            rebirth_config.texture_data_layout = NDS_RENDERER_TEXTURE_DATA_O2R_WORD_SWAPPED;
+
+            if (ndsRendererSubmitNativeRebirthHalo(
+                    (u32)rebirth_offset, &rebirth_config,
+                    rebirth_render_stats) != FALSE)
+            {
+                gNdsRebirthHaloNativeDrawCount++;
+                if (rebirth_offset == 0x2378u)
+                {
+                    /* Same DObj, same source matrix, adjacent source order.
+                     * Keep the live renderer state produced by 0x2378 and emit
+                     * its second linked list without rebuilding the adapter. */
+                    if (ndsRendererSubmitNativeRebirthHalo(
+                            0x2a88u, &rebirth_config,
+                            rebirth_render_stats) != FALSE)
+                    {
+                        gNdsRebirthHaloNativeDrawCount++;
+                        sNdsRendererAdapterRebirthHaloSkipSecondChildList = TRUE;
+                    }
+                    else
+                    {
+                        gNdsRebirthHaloNativeFallbackCount++;
+                    }
+                }
+                gNdsStageGCDrawAllLoopHardwareTriangleCount +=
+                    rebirth_render_stats->hardware_triangle_count;
+                gNdsStageGCDrawAllLoopHardwareZBufferTriangleCount +=
+                    rebirth_render_stats->hardware_zbuffer_triangle_count;
+                gNdsStageGCDrawAllLoopHardwareProjectedDepthTriangleCount +=
+                    rebirth_render_stats->hardware_projected_depth_triangle_count;
+                gNdsStageGCDrawAllLoopHardwareDecalDepthTriangleCount +=
+                    rebirth_render_stats->hardware_decal_depth_triangle_count;
+                gNdsStageGCDrawAllLoopHardwareTextureBindCount +=
+                    rebirth_render_stats->hardware_texture_bind_count;
+                gNdsStageGCDrawAllLoopHardwareTextureUploadCount +=
+                    rebirth_render_stats->hardware_texture_upload_count;
+                gNdsStageGCDrawAllLoopHardwareTextureReadyCount +=
+                    rebirth_render_stats->hardware_texture_ready_count;
+                gNdsStageGCDrawAllLoopHardwareTextureRejectCount +=
+                    rebirth_render_stats->hardware_texture_reject_count;
+#if NDS_RENDERER_HW_TRIANGLES
+                gSYTaskmanGraphicsHeap.ptr = rebirth_saved_graphics_heap_ptr;
+#endif
+                return;
+            }
+            gNdsRebirthHaloNativeFallbackCount++;
+#if NDS_RENDERER_HW_TRIANGLES
+            gSYTaskmanGraphicsHeap.ptr = rebirth_saved_graphics_heap_ptr;
+#endif
+        }
+    }
+#endif
+
 #if NDS_TICK_HUD
     phase_effect =
         (sNdsRendererAdapterEffectSubmitActive != FALSE) ? TRUE : FALSE;
@@ -10140,6 +10286,9 @@ void ndsRendererAdapterSubmitEffectDObjTree(void *dobj_ptr, u32 kind,
          (root->child->dl_link ==
               (DObjDLLink *)((u8 *)gEFManagerFiles[2] + 0x2a98u))) ?
             TRUE : FALSE;
+#if NDS_R2_REBIRTH_HALO_FAST_ADAPTER
+    sNdsRendererAdapterRebirthHaloSkipSecondChildList = FALSE;
+#endif
 #endif
     sNdsRendererAdapterEffectSubmitActive = TRUE;
 #if NDS_TICK_HUD
@@ -10157,6 +10306,9 @@ void ndsRendererAdapterSubmitEffectDObjTree(void *dobj_ptr, u32 kind,
 #endif
 #if NDS_R2_REBIRTH_HALO_NATIVE
     sNdsRendererAdapterRebirthHaloNativeActive = FALSE;
+#if NDS_R2_REBIRTH_HALO_FAST_ADAPTER
+    sNdsRendererAdapterRebirthHaloSkipSecondChildList = FALSE;
+#endif
 #endif
 }
 
