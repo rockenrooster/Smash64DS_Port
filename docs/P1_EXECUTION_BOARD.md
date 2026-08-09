@@ -1791,6 +1791,116 @@ unchanged.
 **Not done:** no new gate baseline (1,624,064 still stands), and the plan was
 not extended past the fighter draw.
 
+### The tail was CARTRIDGE I/O, and the animation arena was full — LANDED, cycle 105. **New gate baseline 1,447,318.**
+
+`f082b3c8`. Whole match, both-CPU, 1,600 samples, frames 441/442–2041, DLDI ON,
+exclusion OFF, `slips=0` both arms, `-AllowRepeatedFrames` (3/1600 control,
+0/1600 candidate). Builds `builds/build-c105-anim-{ctl,cand}`; artifacts
+`artifacts/performance/2026-08-09_c105-anim-{ctl,cand}{,-rows.csv}.json`.
+
+| | control | candidate | delta |
+|---|---:|---:|---:|
+| `WORK-H` P50 | 1,102,720 | 1,112,576 | +9,856 |
+| **`WORK-H` P95** | **1,639,299** | **1,447,318** | **−191,981** |
+| `WORK-H` P99 | 2,043,946 | 1,671,012 | −372,934 |
+| `SRC` P95 | 848,861 | 661,706 | −187,155 |
+| `SINT` P95 | 477,286 | 380,515 | −96,771 |
+| `SINT` frames > 400,000 | 113 | 67 | −46 |
+
+**The diagnosis cost no build at all.** `-ExtraGlobals` on the existing tick-HUD
+ROM at frames 478 and 2007: `gNdsRelocAssetPayloadReadCount` **+111** against
+**113** frames whose `SINT` exceeded 400,000 (median 169,248). The arena read
+`ReservedBytes 92,160 / UsedBytes 92,160 / Overflows 142 / Rejects 142` with
+`OverflowLastSize` **912** — it was refusing a 912-byte animation with its cursor
+at the ceiling, and a refused asset re-reads off the card on **every later use**.
+`AUD` and `HUD`, whose work cannot vary with the match, read 4.9× and 2.5× on
+those frames: the card stalls the machine, not just the caller.
+
+**The 41-asset warm list was measured on the WRONG ARM.** It came off a Boundary
+match; `NDS_R2_BOTH_CPU` puts a level-3 CPU on Mario too, and `gNdsR204AnimSeen`
+dumped at presented frame 2038 holds **85** IDs of which the old list covered
+**27**. Fixed by replacing the list with the measured 85 (union of both lists is
+99 = 229,024 bytes and does not fit), sizing the arena to their 197,184 bytes
+(`NDS_R2_ANIM_CACHE_ARENA_BYTES` 92,160 → **200,704**) and raising
+`NDS_R2_ANIM_CACHE_ENTRIES` 64 → **128**, since 64 is below 85 and the entry
+count is a hard refusal in both store paths.
+
+Engagement exact: hits/misses/rejects **206/147/142 → 351/2/0**, overflows
+142 → 0, `WarmLoaded` 39 → 83 (`WarmFailed` 0 both), `ArenaUsedBytes` 191,024 of
+200,704. `gNdsR204AnimForceLoadTotal` **353** and `ForceLoadDistinct` **85** on
+BOTH arms — identical, so the two runs played the same match and the delta is the
+cache rather than a different trajectory. Pixel-identical at the
+`time_remain=3000` lock over the whole 400×298 top screen at both captured tics,
+max channel delta 0, against an **83.03%** same-build adjacent-tic floor on the
+same crop. Boundary verifier passed; root ROMs unchanged.
+
+**The cost is heap, and it is the last helping.** `gNdsTaskmanGeneralHeapFreeMin`
+154,776 → **42,136** against the cache's own 32,768 `KEEP_FREE`, so the margin is
+**9,368 bytes**. Boot headroom 34,816 proven; taskman arena 1,282,048 →
+1,277,952 (one 0x1000 step, exactly the G2 model for +1,888 bytes). A soak
+covering the full match, Sudden Death and Results read
+`gNdsSyMallocOverflowCount` **0**, `ArenaReserveCount` 3 / `ReserveFailCount` 0,
+`GenerationMismatches` 2 / `RangeFaults` 0. **Any future heap taker must free
+something first** — and freeing `.bss` is the way, because that lowers
+`fake_heap_start` and enlarges the heap the arena callocs from.
+
+P50 rises with the +1,888 bytes, which is what puts 63 more frames over the line
+(691 → 754) while P95 falls. The gate is P95.
+
+### The residual tail is the FORCE-LOAD HIT PATH, not I/O — MEASURED, cycle 105
+
+Per-frame probe, `-PerFrameGlobals`, candidate ROM, frames 1100–1129
+(`artifacts/performance/2026-08-09_c105-spikeprobe{,-rows.csv}.json`). **Every
+`SINT` spike is a frame with `gNdsR204AnimForceLoadTotal` +1 and every other
+frame is +0 — 5 of 30, no exceptions in either direction**, with
+`gNdsRelocAssetPayloadReadCount` and `…HeaderReadCount` both **+0** on all thirty.
+
+| frame | ΔForceLoad | `SINT` | excess over the ~170,000 baseline |
+|---:|---:|---:|---:|
+| 1110 | 1 | 739,904 | **+570,000** |
+| 1119 | 1 | 286,976 | +117,000 |
+| 1120 | 1 | 335,104 | +165,000 |
+| 1125 | 1 | 335,488 | +165,000 |
+| 1126 | 1 | 295,936 | +126,000 |
+
+So a **cache HIT costs 117,000–570,000 ticks** (~228,600 mean over these five).
+That is not the memcpy. The Makefile already names the owner and already carries
+its instrument: `NDS_R2_RELOC_FIXUP_TIMING` (`Makefile:307`, R2-06 E8) prices
+`ndsRelocFinalizeLoadedFile`'s **five passes** separately, and E8 had already
+traced 8 of 9 over-gate frames to the 16 frames that function runs on.
+
+**Worth 121,331 at P95** — capping `SINT` at its own median takes the candidate
+1,447,318 → 1,325,987 (over-gate 754 → 517), leaving a gap of 205,607. The
+fixups are a pure function of the asset image and the cached image is
+byte-identical every time, so the shapes to price are a precomputed fixup offset
+list built once at warm time, or a (asset_id, destination) keyed cache of the
+*post*-fixup image — the "position-dependent" objection in
+`reloc_backend_assets.c` is about replaying into a DIFFERENT heap, and R2-04 E0
+already recorded that the destination is caller-owned and reused.
+
+### The dormant-flag seam is EXHAUSTED — audited, cycle 105, no build
+
+Prompted by the "audit the 0 flags" rule. **The Makefile's `?= 0` defaults are
+not the shipped configuration** and reading them as such is how this audit almost
+spent two builds. Compared `builds/build-c105-anim-cand/nds_build_config.h`
+against every `^[A-Z0-9_]+ \?= 0` in the Makefile: **41 flags are overridden**,
+and every large measured lever is already ON — `NDS_R2_CUBIC_FIXED` (60,509
+ticks/frame), `NDS_R2_STAGE_DIRECT`, `NDS_R2_STAGE_VIEWPROJ` (54,901),
+`NDS_R2_STAGE_PREFLIGHT`, `NDS_R2_FIGHTER_HW_MTX` (−17,600),
+`NDS_R2_FIGHTER_HW_LIGHT` (ceiling 53,760), `NDS_R2_FIGHTER_RUN_MEMO` (~45,900),
+`NDS_R2_FIGHTER_MTX_DIRECT`, `NDS_R2_FIGHTER_SHUFFLE_FOLD`, the Task 16 float
+set. A `build-c106-cubic` arm was built before this was checked and is a **null
+build** — same `nds_build_config.h`, same `fake_heap_start 0x0228c004`; it was
+caught before its measuring run, not after.
+
+Of the 71 still off, all but a handful are censuses, probes, falsifiers or
+lab-only suppressors. The real remainder, each already carrying its own gate:
+`NDS_TASK51_STAGE_NATIVE` (42 baked world matrices via `MTX_MULT4x3`; needs the
+differ at Tier 1 = 0), `NDS_DREAMLAND_DS_MESH` (needs the owner's visual A/B),
+`NDS_R2_SHIELD_QUAD` (**the Makefile itself asks for this re-price**: the owner
+bought the model route at "36k p95" and that figure came off a 128-frame window,
+which the whole-match rule says is unusable). **Do not re-audit the flag list.**
+
 ### G3 (original row, Boundary-derived) — the effect packet path
 
 Build the GX packet per unique effect display list **at match load**, reserve

@@ -15,6 +15,7 @@ historical detail stays in `PORTING.md` and `PERF_LEDGER.md`.
 | `BACKLOG.md` | Minor deferred bugs the owner parked for after P1-critical work |
 | `BUG_FIXING_PROCESS.md` | Intake, diagnosis, proof, and closure process for `BUGS.md` |
 | `Smash64DS_Runtime2_SwitchPlan.md` | Runtime 2 charter, budgets, phase plan, and the definition of the switch |
+| `OPTIMIZE_LIST.md` | Owner's standing wish-list of subsystems to specialize, bake or offload |
 | `optimization/OPTIMIZATION_IDEAS.md` | Dated optimization reviews and idea bin for the P95 gate (corrections at top govern) |
 | `optimization/archive/TASK_STANDING_RULES.md` | Archived 2026-08-05 with the closed campaign docs; measurement law now lives in `VERIFYING.md` + the board |
 | `PERF_LEDGER.md` | Reproducible measurements and rejected experiments |
