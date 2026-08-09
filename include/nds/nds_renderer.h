@@ -1263,6 +1263,7 @@ s32 ndsRendererHardwarePrepareParticleAtlas(void);
  * exists for the callers that predate the split. */
 u32 ndsRendererHardwareParticleAtlasNameForSheet(u32 sheet);
 u32 ndsRendererHardwareParticleAtlasName(void);
+u32 ndsRendererHardwareWhispyNativeName(u32 texture_id);
 void ndsRendererHardwareDiscardParticleAtlas(void);
 /* One camera-facing quad in world space. The caller supplies the camera basis
  * because it reads the CObj the source's own draw reads, and because deriving
@@ -1278,6 +1279,24 @@ s32 ndsRendererSubmitParticleQuad(u32 atlas_name, const Vec3f *pos, f32 size,
                                   const Vec3f *right, const Vec3f *up,
                                   u32 atlas_x, u32 atlas_y,
                                   u32 atlas_w, u32 atlas_h);
+/* Exact-script Whispy native seam. The camera basis is quantized once per pass;
+ * each native full-texture quad then reaches GX as fixed coordinates without
+ * rebuilding four float corners. Submit returns -1 when the closed fixed-point
+ * contract is absent so the caller can use the generic source draw. */
+void ndsRendererSetWhispyNativeBasis(const Vec3f *right, const Vec3f *up);
+/* Convert one rigid Whispy root + local particle position to the renderer's
+ * Q12 center without ARM9 software-float matrix arithmetic. `affine == NULL`
+ * is the identity transform. The optional oracle executes the source float
+ * expression and records its Q12 delta; it is for the route-3 lab arm only. */
+s32 ndsRendererSubmitWhispyNativeQuad(u32 texture_name,
+                                      u32 texture_slot,
+                                      const Vec3f *pos, f32 size,
+                                      const s32 fixed_center_q12[3],
+                                      s32 fixed_size_q8,
+                                      u32 color, u8 alpha,
+                                      u32 mirror_mask,
+                                      u32 texture_w, u32 texture_h,
+                                      u32 submit_route);
 void ndsRendererEndParticleQuads(void);
 /* DEBUG-ONLY. Draws a world-space collision-diamond outline inside an open
  * particle quad batch (see src/nds/nds_renderer.c). For tuning the fireball's
@@ -1288,6 +1307,9 @@ void ndsRendererSubmitDebugDiamond(f32 cx, f32 cy, f32 cz,
 extern volatile u32 gNdsRendererParticleAtlasPrepareCount;
 extern volatile u32 gNdsRendererParticleAtlasFailCount;
 extern volatile u32 gNdsRendererParticleAtlasBytes;
+extern volatile u32 gNdsRendererWhispyNativePrepareCount;
+extern volatile u32 gNdsRendererWhispyNativeFailCount;
+extern volatile u32 gNdsRendererWhispyNativeBytes;
 /* The v16 rail, counted where it happens. Clamp must be 0: a quad that reaches
  * it is drawn flattened onto the rail instead of where it belongs, which is
  * BUGS.md's "VFX get x flattened around stage edges". ScaleEscalations and

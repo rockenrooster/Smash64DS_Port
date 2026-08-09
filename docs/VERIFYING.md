@@ -40,6 +40,12 @@ harnesses still build for themselves; the aliases use their exact TARGET/BUILD
 pairs, so alias and harness builds stay incremental with each other. One build
 at a time, never `-j`, never touch `MAKEFLAGS`.
 
+The realtime profile's GDB arm builds an isolated proof target; it does not
+refresh the root P1 ROM before the later visual check. For a promotion or
+release, run `make p1` explicitly before treating that root visual check as
+evidence, then confirm the canonical `nds_build_config.h` contains the promoted
+flags. Otherwise a green profile can have inspected an older root ROM.
+
 ## Fast Iteration
 
 1. Run the checker/build that directly covers the edited surface.

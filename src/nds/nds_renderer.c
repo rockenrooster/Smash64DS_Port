@@ -4312,6 +4312,31 @@ static const NDSRendererHardwareTextureCacheEntry
 _Static_assert(NDS_PARTICLE_QUAD_ATLAS_SHEETS <= 8u,
                "particle atlas sheets would crowd the texture cache");
 static int sNdsRendererParticleAtlasName[NDS_PARTICLE_QUAD_ATLAS_SHEETS];
+#if NDS_R2_WHISPY_NATIVE_TEXTURES
+_Static_assert(NDS_PARTICLE_QUAD_ATLAS_SHEETS +
+                   NDS_WHISPY_NATIVE_TEXTURE_COUNT <= 8u,
+               "particle native textures would crowd the texture cache");
+static int sNdsRendererWhispyNativeName[NDS_WHISPY_NATIVE_TEXTURE_COUNT];
+#if NDS_R2_WHISPY_NATIVE_AOT
+/* glBindTexture looks each GL name up through libnds's DynamicArray before it
+ * writes TEXIMAGE_PARAM and PLTT_BASE.  These three textures are immutable and
+ * pinned for the whole scene, so capture the exact two hardware words and the
+ * matching libnds active-name state once at upload.  The route-3 lab arm can
+ * then perform the identical register transition without a per-particle name
+ * lookup; route 4 uses the same words in a packed GXFIFO stream. */
+typedef struct NDSRendererWhispyNativeBinding
+{
+    u32 texture_name;
+    u32 texture_format;
+    u32 palette_format;
+    s32 palette_name;
+    u32 valid;
+} NDSRendererWhispyNativeBinding;
+
+static NDSRendererWhispyNativeBinding
+    sNdsRendererWhispyNativeBinding[NDS_WHISPY_NATIVE_TEXTURE_COUNT];
+#endif
+#endif
 static u32 sNdsRendererParticleAtlasPrepared;
 static u16 sNdsRendererParticleAtlasPalette[NDS_PARTICLE_QUAD_PALETTE_ENTRIES];
 
@@ -4326,6 +4351,15 @@ static s32 ndsRendererParticleAtlasOwnsName(int name)
             return TRUE;
         }
     }
+#if NDS_R2_WHISPY_NATIVE_TEXTURES
+    for (sheet = 0u; sheet < NDS_WHISPY_NATIVE_TEXTURE_COUNT; sheet++)
+    {
+        if (sNdsRendererWhispyNativeName[sheet] == name)
+        {
+            return TRUE;
+        }
+    }
+#endif
     return FALSE;
 }
 #endif
@@ -12439,6 +12473,9 @@ fail:
 volatile u32 gNdsRendererParticleAtlasPrepareCount;
 volatile u32 gNdsRendererParticleAtlasFailCount;
 volatile u32 gNdsRendererParticleAtlasBytes;
+volatile u32 gNdsRendererWhispyNativePrepareCount;
+volatile u32 gNdsRendererWhispyNativeFailCount;
+volatile u32 gNdsRendererWhispyNativeBytes;
 
 /* Sheets already uploaded when a later one fails. They are PINNED, so nothing
  * else can reclaim them, and the prepare has just declared the atlas absent --
@@ -12461,6 +12498,183 @@ static void ndsRendererParticleAtlasReleaseSheets(void)
         }
     }
 }
+
+#if NDS_R2_WHISPY_NATIVE_TEXTURES
+/* Three source textures, three hardware-native encodings selected AOT by the
+ * generator: A5I3 for IA16 dust, A3I5 for I8 air, and lossless PAL16 for leaf
+ * frame zero. Upload happens once at scene prepare; the hot path receives only
+ * GL names and full-texture UVs. */
+static s32 ndsRendererHardwarePrepareWhispyNativeTextures(void)
+{
+    FILE *file = NULL;
+    u32 texture;
+
+    gNdsRendererWhispyNativePrepareCount++;
+    file = ndsRendererHardwareFencedTextureFopen(
+        NDS_WHISPY_NATIVE_ASSET_PATH, "rb");
+    if (file == NULL)
+    {
+        goto fail;
+    }
+    for (texture = 0u; texture < NDS_WHISPY_NATIVE_TEXTURE_COUNT; texture++)
+    {
+        NDSRendererHardwareTextureCacheEntry *entry;
+        u32 format;
+        u32 width;
+        u32 height;
+        u32 texel_offset;
+        u32 texel_bytes;
+        u32 palette_offset;
+        u32 palette_entries;
+        int gl_format;
+        int params = TEXGEN_TEXCOORD;
+        int size_x;
+        int size_y;
+#if NDS_R2_WHISPY_NATIVE_AOT
+        int palette_format = -1;
+#endif
+
+        switch (texture)
+        {
+        case 0u:
+            format = NDS_WHISPY_NATIVE_TEXTURE_0_FORMAT;
+            width = NDS_WHISPY_NATIVE_TEXTURE_0_WIDTH;
+            height = NDS_WHISPY_NATIVE_TEXTURE_0_HEIGHT;
+            texel_offset = NDS_WHISPY_NATIVE_TEXTURE_0_TEXEL_OFFSET;
+            texel_bytes = NDS_WHISPY_NATIVE_TEXTURE_0_TEXEL_BYTES;
+            palette_offset = NDS_WHISPY_NATIVE_TEXTURE_0_PALETTE_OFFSET;
+            palette_entries = NDS_WHISPY_NATIVE_TEXTURE_0_PALETTE_ENTRIES;
+            break;
+        case 1u:
+            format = NDS_WHISPY_NATIVE_TEXTURE_1_FORMAT;
+            width = NDS_WHISPY_NATIVE_TEXTURE_1_WIDTH;
+            height = NDS_WHISPY_NATIVE_TEXTURE_1_HEIGHT;
+            texel_offset = NDS_WHISPY_NATIVE_TEXTURE_1_TEXEL_OFFSET;
+            texel_bytes = NDS_WHISPY_NATIVE_TEXTURE_1_TEXEL_BYTES;
+            palette_offset = NDS_WHISPY_NATIVE_TEXTURE_1_PALETTE_OFFSET;
+            palette_entries = NDS_WHISPY_NATIVE_TEXTURE_1_PALETTE_ENTRIES;
+            break;
+        default:
+            format = NDS_WHISPY_NATIVE_TEXTURE_2_FORMAT;
+            width = NDS_WHISPY_NATIVE_TEXTURE_2_WIDTH;
+            height = NDS_WHISPY_NATIVE_TEXTURE_2_HEIGHT;
+            texel_offset = NDS_WHISPY_NATIVE_TEXTURE_2_TEXEL_OFFSET;
+            texel_bytes = NDS_WHISPY_NATIVE_TEXTURE_2_TEXEL_BYTES;
+            palette_offset = NDS_WHISPY_NATIVE_TEXTURE_2_PALETTE_OFFSET;
+            palette_entries = NDS_WHISPY_NATIVE_TEXTURE_2_PALETTE_ENTRIES;
+            break;
+        }
+        if ((texel_bytes > sizeof(sNdsRendererHardwareTextureScratch)) ||
+            (palette_entries > NDS_PARTICLE_QUAD_PALETTE_ENTRIES) ||
+            (ndsRendererHardwareTextureSizeEnum(width, &size_x) == FALSE) ||
+            (ndsRendererHardwareTextureSizeEnum(height, &size_y) == FALSE) ||
+            (ndsRendererHardwareFencedTextureFseek(
+                 file, (long)texel_offset, SEEK_SET) != 0) ||
+            (ndsRendererHardwareFencedTextureFread(
+                 sNdsRendererHardwareTextureScratch, 1, texel_bytes, file) !=
+             texel_bytes) ||
+            (ndsRendererHardwareFencedTextureFseek(
+                 file, (long)palette_offset, SEEK_SET) != 0) ||
+            (ndsRendererHardwareFencedTextureFread(
+                 sNdsRendererParticleAtlasPalette, sizeof(u16),
+                 palette_entries, file) != palette_entries))
+        {
+            goto fail;
+        }
+        if (format == NDS_PARTICLE_FORMAT_A5I3)
+        {
+            gl_format = GL_RGB8_A5;
+        }
+        else if (format == NDS_PARTICLE_FORMAT_A3I5)
+        {
+            gl_format = GL_RGB32_A3;
+        }
+        else if (format == NDS_PARTICLE_FORMAT_PAL16)
+        {
+            gl_format = GL_RGB16;
+            params |= GL_TEXTURE_COLOR0_TRANSPARENT;
+        }
+        else
+        {
+            goto fail;
+        }
+
+        entry = ndsRendererHardwareAllocTexture();
+        if (entry == NULL)
+        {
+            goto fail;
+        }
+        if ((entry->name == 0) &&
+            (ndsRendererHardwareFencedGlGenTextures(1, &entry->name) == 0))
+        {
+            goto fail;
+        }
+        ndsRendererHardwareBindTextureName(NULL, (u32)entry->name);
+        if (ndsRendererHardwareFencedGlTexImage2D(
+                GL_TEXTURE_2D, 0, gl_format, size_x, size_y, 0, params,
+                sNdsRendererHardwareTextureScratch) == 0)
+        {
+            (void)ndsRendererHardwareReleaseTexture(entry);
+            goto fail;
+        }
+        glColorTableEXT(GL_TEXTURE_2D, 0, (int)palette_entries, 0, 0,
+                        sNdsRendererParticleAtlasPalette);
+#if NDS_R2_WHISPY_NATIVE_AOT
+        /* GFX_PAL_FORMAT is a write-only GX command port, not readable state.
+         * Ask libnds for the palette object's encoded PLTT_BASE word so the
+         * direct binder and packet stream reproduce glBindTexture exactly. */
+        glGetColorTableParameterEXT(
+            GL_TEXTURE_2D, GL_COLOR_TABLE_FORMAT_EXT, &palette_format);
+        if (palette_format < 0)
+        {
+            (void)ndsRendererHardwareReleaseTexture(entry);
+            goto fail;
+        }
+#endif
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+        ndsRendererHardwareTextureLookupRemove(entry);
+#endif
+        ndsRendererHardwareEntryClearKey(entry);
+        entry->key_generation = 0u;
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+        entry->key_hash = 0u;
+#endif
+        entry->static_record_plus1 = 0u;
+        entry->static_owner_mask = 0u;
+        entry->params = (u32)glGetTexParameter();
+        entry->last_used_frame = 0u;
+        entry->pinned = TRUE;
+        entry->ready = TRUE;
+        sNdsRendererWhispyNativeName[texture] = entry->name;
+#if NDS_R2_WHISPY_NATIVE_AOT
+        sNdsRendererWhispyNativeBinding[texture].texture_name =
+            (u32)entry->name;
+        sNdsRendererWhispyNativeBinding[texture].texture_format =
+            entry->params;
+        sNdsRendererWhispyNativeBinding[texture].palette_format =
+            (u32)palette_format;
+        sNdsRendererWhispyNativeBinding[texture].palette_name =
+            (s32)glGlob->activePalette;
+        sNdsRendererWhispyNativeBinding[texture].valid = TRUE;
+#endif
+    }
+    if (ndsRendererHardwareFencedTextureFclose(file) != 0)
+    {
+        file = NULL;
+        goto fail;
+    }
+    gNdsRendererWhispyNativeBytes = NDS_WHISPY_NATIVE_ASSET_BYTES;
+    return TRUE;
+
+fail:
+    if (file != NULL)
+    {
+        (void)ndsRendererHardwareFencedTextureFclose(file);
+    }
+    gNdsRendererWhispyNativeFailCount++;
+    return FALSE;
+}
+#endif
 
 s32 ndsRendererHardwarePrepareParticleAtlas(void)
 {
@@ -12589,6 +12803,12 @@ s32 ndsRendererHardwarePrepareParticleAtlas(void)
         goto fail;
     }
     file = NULL;
+#if NDS_R2_WHISPY_NATIVE_TEXTURES
+    if (ndsRendererHardwarePrepareWhispyNativeTextures() == FALSE)
+    {
+        goto fail;
+    }
+#endif
     sNdsRendererParticleAtlasPrepared = TRUE;
     gNdsRendererParticleAtlasBytes = NDS_PARTICLE_QUAD_ASSET_BYTES;
     sNdsRendererHardwareActiveTextureEntry = NULL;
@@ -12622,6 +12842,20 @@ u32 ndsRendererHardwareParticleAtlasName(void)
     return ndsRendererHardwareParticleAtlasNameForSheet(0u);
 }
 
+u32 ndsRendererHardwareWhispyNativeName(u32 texture_id)
+{
+#if NDS_R2_WHISPY_NATIVE_TEXTURES
+    if ((sNdsRendererParticleAtlasPrepared != 0u) &&
+        (texture_id < NDS_WHISPY_NATIVE_TEXTURE_COUNT))
+    {
+        return (u32)sNdsRendererWhispyNativeName[texture_id];
+    }
+#else
+    (void)texture_id;
+#endif
+    return 0u;
+}
+
 void ndsRendererHardwareDiscardParticleAtlas(void)
 {
     u32 sheet;
@@ -12630,8 +12864,22 @@ void ndsRendererHardwareDiscardParticleAtlas(void)
     {
         sNdsRendererParticleAtlasName[sheet] = 0;
     }
+#if NDS_R2_WHISPY_NATIVE_TEXTURES
+    for (sheet = 0u; sheet < NDS_WHISPY_NATIVE_TEXTURE_COUNT; sheet++)
+    {
+        sNdsRendererWhispyNativeName[sheet] = 0;
+#if NDS_R2_WHISPY_NATIVE_AOT
+        sNdsRendererWhispyNativeBinding[sheet].texture_name = 0u;
+        sNdsRendererWhispyNativeBinding[sheet].texture_format = 0u;
+        sNdsRendererWhispyNativeBinding[sheet].palette_format = 0u;
+        sNdsRendererWhispyNativeBinding[sheet].palette_name = 0;
+        sNdsRendererWhispyNativeBinding[sheet].valid = FALSE;
+#endif
+    }
+#endif
     sNdsRendererParticleAtlasPrepared = FALSE;
     gNdsRendererParticleAtlasBytes = 0u;
+    gNdsRendererWhispyNativeBytes = 0u;
 }
 
 /* BUGS.md "VFX get x flattened around stage edges ... why is there a limit
@@ -12807,6 +13055,13 @@ void ndsRendererSetParticleCamera(const NDSRendererMatrix20p12 *projection,
     sNdsRendererParticleCameraValid = TRUE;
 }
 
+#if NDS_R2_WHISPY_NATIVE_AOT
+static NDS_RENDERER_FAST_RUN_CODE void
+ndsRendererPrepareWhispyQuadState(u32 texture_name, u32 poly_alpha,
+                                  u32 texture_slot, u32 submit_route);
+static void ndsRendererFlushWhispyNativePacket(void);
+#endif
+
 /* One quad, camera-facing, in world space. `right` and `up` are the camera
  * basis the caller derived from the CObj -- computed there because that is
  * where the source's own draw reads the camera, and because it is per-frame
@@ -12830,6 +13085,11 @@ s32 ndsRendererSubmitParticleQuad(u32 atlas_name, const Vec3f *pos, f32 size,
     u32 corner;
     u32 poly_alpha;
 
+#if NDS_R2_WHISPY_NATIVE_AOT
+    /* A generic particle is an ordering fence for route 4: all earlier Whispy
+     * commands must reach GX before this source-list entry is submitted. */
+    ndsRendererFlushWhispyNativePacket();
+#endif
     if ((atlas_name == 0u) || (pos == NULL) || (right == NULL) || (up == NULL))
     {
         return FALSE;
@@ -12864,6 +13124,9 @@ s32 ndsRendererSubmitParticleQuad(u32 atlas_name, const Vec3f *pos, f32 size,
     {
         poly_alpha = 1u;
     }
+#if NDS_R2_WHISPY_NATIVE_AOT
+    ndsRendererPrepareWhispyQuadState(atlas_name, poly_alpha, 0u, 2u);
+#else
     if ((sNdsRendererParticleQuadOpen != 0u) &&
         ((poly_alpha != sNdsRendererParticleQuadAlpha) ||
          (atlas_name != sNdsRendererParticleQuadTexture)))
@@ -12964,6 +13227,7 @@ s32 ndsRendererSubmitParticleQuad(u32 atlas_name, const Vec3f *pos, f32 size,
         glBegin(GL_QUAD);
         sNdsRendererParticleQuadOpen = TRUE;
     }
+#endif
 
     rx = right->x * size;
     ry = right->y * size;
@@ -13030,8 +13294,968 @@ s32 ndsRendererSubmitParticleQuad(u32 atlas_name, const Vec3f *pos, f32 size,
     return TRUE;
 }
 
+#if NDS_R2_WHISPY_NATIVE_AOT
+#define NDS_RENDERER_WHISPY_BASIS_SHIFT 14u
+#define NDS_RENDERER_WHISPY_SIZE_SHIFT 8u
+#define NDS_RENDERER_WHISPY_COORD_SHIFT 12u
+#define NDS_RENDERER_WHISPY_LEG_SHIFT \
+    (NDS_RENDERER_WHISPY_BASIS_SHIFT + NDS_RENDERER_WHISPY_SIZE_SHIFT - \
+     NDS_RENDERER_WHISPY_COORD_SHIFT)
+
+static s32 sNdsRendererWhispyRight[3];
+static s32 sNdsRendererWhispyUp[3];
+static u32 sNdsRendererWhispyBasisValid;
+static u32 sNdsRendererWhispyLeanBindingMask;
+static u32 sNdsRendererWhispyLegCacheValid;
+static s32 sNdsRendererWhispyLegCacheSizeQ8;
+static u32 sNdsRendererWhispyLegCacheMirrorMask;
+static s32 sNdsRendererWhispyLegCacheRight[3];
+static s32 sNdsRendererWhispyLegCacheUp[3];
+
+/* Same-order command offload.  Forty-eight is the source particle-pool cap;
+ * 1,024 words covers its worst case (16 words per quad plus every possible
+ * texture/alpha transition) with room to spare.  Overflow still has an
+ * intentional policy: publish the current packet, then continue in the empty
+ * buffer.  No source list pointer or particle lifetime is ever rewritten. */
+#define NDS_RENDERER_WHISPY_PACKET_WORDS 1024u
+typedef struct NDSRendererWhispyPacket
+{
+    u32 words[NDS_RENDERER_WHISPY_PACKET_WORDS];
+    u32 word_count;
+    u32 final_texture_slot;
+    u32 final_poly_alpha;
+    u32 lean_counters;
+    u32 lean_quads;
+    u32 lean_state_groups;
+    u32 lean_sheet_breaks;
+    u32 lean_alpha_breaks;
+} NDSRendererWhispyPacket;
+
+static NDSRendererWhispyPacket sNdsRendererWhispyPacket
+    __attribute__((aligned(32)));
+volatile u32 gNdsWhispyAOTTier3FastBinds;
+volatile u32 gNdsWhispyAOTTier3BindFallbacks;
+volatile u32 gNdsWhispyAOTTier4PacketQuads;
+volatile u32 gNdsWhispyAOTTier4PacketStateGroups;
+volatile u32 gNdsWhispyAOTTier4PacketFlushes;
+volatile u32 gNdsWhispyAOTTier4PacketWords;
+volatile u32 gNdsWhispyAOTTier4PacketFallbacks;
+
+static const NDSRendererWhispyNativeBinding *
+ndsRendererWhispyNativeBindingFor(u32 texture_name, u32 texture_slot)
+{
+    const NDSRendererWhispyNativeBinding *binding;
+
+    if (texture_slot >= NDS_WHISPY_NATIVE_TEXTURE_COUNT)
+    {
+        return NULL;
+    }
+    binding = &sNdsRendererWhispyNativeBinding[texture_slot];
+    if ((binding->valid == FALSE) ||
+        (binding->texture_name == 0u) ||
+        (binding->texture_name != texture_name))
+    {
+        return NULL;
+    }
+    return binding;
+}
+
+/* Exact glBindTexture state without libnds's DynamicArray lookup.  The cached
+ * words and active palette/name were captured while this same immutable GL
+ * object was bound at scene preparation, so both libnds's software state and
+ * the DS registers advance together. */
+static NDS_RENDERER_FAST_RUN_CODE sb32
+ndsRendererBindWhispyNativeTextureFast(u32 texture_name, u32 texture_slot)
+{
+    const NDSRendererWhispyNativeBinding *binding =
+        ndsRendererWhispyNativeBindingFor(texture_name, texture_slot);
+
+    if (binding == NULL)
+    {
+        gNdsWhispyAOTTier3BindFallbacks++;
+        ndsRendererHardwareBindTextureName(NULL, texture_name);
+        return FALSE;
+    }
+    if (sNdsRendererHardwareBoundTextureName != texture_name)
+    {
+        ndsRendererHardwareEndBatch();
+        GFX_TEX_FORMAT = binding->texture_format;
+        GFX_PAL_FORMAT = binding->palette_format;
+        glGlob->activeTexture = (int)texture_name;
+        glGlob->activePalette = (int)binding->palette_name;
+        sNdsRendererHardwareBoundTextureName = texture_name;
+        ndsRendererHardwareInvalidateGXState(
+            NDS_RENDERER_GX_STATE_TEXTURE_PARAMS);
+        ndsRendererProfileRecordTextureBind();
+        gNdsWhispyAOTTier3FastBinds++;
+    }
+    sNdsRendererHardwareActiveTextureEntry = NULL;
+    return TRUE;
+}
+
+static NDS_RENDERER_FAST_RUN_CODE void
+ndsRendererFlushWhispyNativePacket(void)
+{
+    NDSRendererWhispyPacket *packet = &sNdsRendererWhispyPacket;
+    const NDSRendererWhispyNativeBinding *binding;
+    u32 word_count = packet->word_count;
+
+    if (word_count == 0u)
+    {
+        return;
+    }
+    DC_FlushRange(packet->words, word_count * sizeof(u32));
+    while ((DMA_CR(0) & DMA_BUSY) != 0u) { }
+    DMA_SRC(0) = (u32)packet->words;
+    DMA_DEST(0) = (u32)&GFX_FIFO;
+    DMA_CR(0) = DMA_FIFO | word_count;
+    while ((DMA_CR(0) & DMA_BUSY) != 0u) { }
+
+    binding = ndsRendererWhispyNativeBindingFor(
+        sNdsRendererParticleQuadTexture, packet->final_texture_slot);
+    if (binding != NULL)
+    {
+        glGlob->activeTexture = (int)binding->texture_name;
+        glGlob->activePalette = (int)binding->palette_name;
+        sNdsRendererHardwareBoundTextureName = binding->texture_name;
+    }
+    else
+    {
+        /* This cannot occur after admission, but invalidating both software
+         * trackers makes a later ordinary bind re-establish real hardware
+         * state instead of inheriting a packet whose identity was lost. */
+        glGlob->activeTexture = 0;
+        glGlob->activePalette = 0;
+        sNdsRendererHardwareBoundTextureName = 0u;
+        gNdsWhispyAOTTier4PacketFallbacks++;
+    }
+    ndsRendererHardwareInvalidateGXState(
+        NDS_RENDERER_GX_STATE_TEXTURE_PARAMS);
+    sNdsRendererGXStateShadow.poly_fmt =
+        POLY_ALPHA(packet->final_poly_alpha) |
+        POLY_CULL_NONE | POLY_ID(0);
+    sNdsRendererGXStateShadow.valid_mask |= NDS_RENDERER_GX_STATE_POLY_FMT;
+    sNdsRendererHardwareActiveTextureEntry = NULL;
+    if (packet->lean_counters != FALSE)
+    {
+        gNdsWhispyAOTTier4PacketQuads += packet->lean_quads;
+        gNdsWhispyAOTTier4PacketStateGroups += packet->lean_state_groups;
+        gNdsParticleQuadSheetBreaks += packet->lean_sheet_breaks;
+        gNdsParticleQuadAlphaBreaks += packet->lean_alpha_breaks;
+    }
+    gNdsWhispyAOTTier4PacketFlushes++;
+    gNdsWhispyAOTTier4PacketWords += word_count;
+    packet->word_count = 0u;
+    packet->lean_quads = 0u;
+    packet->lean_state_groups = 0u;
+    packet->lean_sheet_breaks = 0u;
+    packet->lean_alpha_breaks = 0u;
+}
+
+static u32 *ndsRendererWhispyPacketReserve(u32 words)
+{
+    NDSRendererWhispyPacket *packet = &sNdsRendererWhispyPacket;
+    u32 *out;
+
+    if (words > NDS_RENDERER_WHISPY_PACKET_WORDS)
+    {
+        gNdsWhispyAOTTier4PacketFallbacks++;
+        return NULL;
+    }
+    if (packet->word_count + words > NDS_RENDERER_WHISPY_PACKET_WORDS)
+    {
+        ndsRendererFlushWhispyNativePacket();
+    }
+    out = &packet->words[packet->word_count];
+    packet->word_count += words;
+    return out;
+}
+
+/* Append only the state that actually changed, followed by the glBegin that
+ * latches it.  The source particle order is untouched: this is the same
+ * command sequence the immediate path emits, merely packed in cached RAM. */
+static inline __attribute__((always_inline)) sb32
+ndsRendererAppendWhispyPacketState(u32 texture_name, u32 texture_slot,
+                                   u32 poly_alpha, u32 submit_route)
+{
+    const NDSRendererWhispyNativeBinding *binding =
+        (submit_route >= 7u) ?
+        &sNdsRendererWhispyNativeBinding[texture_slot] :
+        ndsRendererWhispyNativeBindingFor(texture_name, texture_slot);
+    u32 texture_changed =
+        (texture_name != sNdsRendererParticleQuadTexture) ? TRUE : FALSE;
+    u32 alpha_changed =
+        (poly_alpha != sNdsRendererParticleQuadAlpha) ? TRUE : FALSE;
+    u32 *out;
+
+    if (binding == NULL)
+    {
+        gNdsWhispyAOTTier4PacketFallbacks++;
+        return FALSE;
+    }
+    if ((texture_changed == FALSE) && (alpha_changed == FALSE))
+    {
+        return TRUE;
+    }
+    if ((texture_changed != FALSE) && (alpha_changed != FALSE))
+    {
+        out = ndsRendererWhispyPacketReserve(5u);
+        if (out == NULL) { return FALSE; }
+        out[0] = FIFO_COMMAND_PACK(
+            FIFO_TEX_FORMAT, FIFO_PAL_FORMAT,
+            FIFO_POLY_FORMAT, FIFO_BEGIN);
+        out[1] = binding->texture_format;
+        out[2] = binding->palette_format;
+        out[3] = POLY_ALPHA(poly_alpha) | POLY_CULL_NONE | POLY_ID(0);
+        out[4] = GL_QUAD;
+    }
+    else if (texture_changed != FALSE)
+    {
+        out = ndsRendererWhispyPacketReserve(4u);
+        if (out == NULL) { return FALSE; }
+        out[0] = FIFO_COMMAND_PACK(
+            FIFO_TEX_FORMAT, FIFO_PAL_FORMAT, FIFO_BEGIN, FIFO_NOP);
+        out[1] = binding->texture_format;
+        out[2] = binding->palette_format;
+        out[3] = GL_QUAD;
+    }
+    else
+    {
+        out = ndsRendererWhispyPacketReserve(3u);
+        if (out == NULL) { return FALSE; }
+        out[0] = FIFO_COMMAND_PACK(
+            FIFO_POLY_FORMAT, FIFO_BEGIN, FIFO_NOP, FIFO_NOP);
+        out[1] = POLY_ALPHA(poly_alpha) | POLY_CULL_NONE | POLY_ID(0);
+        out[2] = GL_QUAD;
+    }
+
+    if (texture_changed != FALSE)
+    {
+        sNdsRendererParticleQuadTexture = texture_name;
+        if (sNdsRendererWhispyPacket.lean_counters != FALSE)
+        {
+            sNdsRendererWhispyPacket.lean_sheet_breaks++;
+        }
+        else
+        {
+            gNdsParticleQuadSheetBreaks++;
+        }
+        ndsRendererProfileRecordTextureBind();
+    }
+    if (alpha_changed != FALSE)
+    {
+        sNdsRendererParticleQuadAlpha = poly_alpha;
+        if (sNdsRendererWhispyPacket.lean_counters != FALSE)
+        {
+            sNdsRendererWhispyPacket.lean_alpha_breaks++;
+        }
+        else
+        {
+            gNdsParticleQuadAlphaBreaks++;
+        }
+    }
+    sNdsRendererWhispyPacket.final_texture_slot = texture_slot;
+    sNdsRendererWhispyPacket.final_poly_alpha = poly_alpha;
+    if (sNdsRendererWhispyPacket.lean_counters != FALSE)
+    {
+        sNdsRendererWhispyPacket.lean_state_groups++;
+    }
+    else
+    {
+        gNdsWhispyAOTTier4PacketStateGroups++;
+    }
+    return TRUE;
+}
+
+/* COLOR + four (TEXCOORD, VERTEX16) pairs.  There are nine commands and
+ * thirteen parameter words, packed into exactly sixteen FIFO words. */
+static inline __attribute__((always_inline)) sb32
+ndsRendererAppendWhispyPacketQuad(u32 color,
+                                  const v16 vertex[4][3],
+                                  u32 texture_w, u32 texture_h,
+                                  u32 texture_slot, u32 poly_alpha)
+{
+    u32 *out = ndsRendererWhispyPacketReserve(16u);
+
+    if (out == NULL)
+    {
+        return FALSE;
+    }
+    out[0] = FIFO_COMMAND_PACK(
+        FIFO_COLOR, FIFO_TEX_COORD, FIFO_VERTEX16, FIFO_TEX_COORD);
+    out[1] = color;
+    out[2] = TEXTURE_PACK((t16)0, (t16)(texture_h << 4));
+    out[3] = (u32)(u16)vertex[0][0] |
+             ((u32)(u16)vertex[0][1] << 16);
+    out[4] = (u32)(s32)vertex[0][2];
+    out[5] = TEXTURE_PACK((t16)(texture_w << 4),
+                          (t16)(texture_h << 4));
+
+    out[6] = FIFO_COMMAND_PACK(
+        FIFO_VERTEX16, FIFO_TEX_COORD, FIFO_VERTEX16, FIFO_TEX_COORD);
+    out[7] = (u32)(u16)vertex[1][0] |
+             ((u32)(u16)vertex[1][1] << 16);
+    out[8] = (u32)(s32)vertex[1][2];
+    out[9] = TEXTURE_PACK((t16)(texture_w << 4), (t16)0);
+    out[10] = (u32)(u16)vertex[2][0] |
+              ((u32)(u16)vertex[2][1] << 16);
+    out[11] = (u32)(s32)vertex[2][2];
+    out[12] = TEXTURE_PACK((t16)0, (t16)0);
+
+    out[13] = FIFO_COMMAND_PACK(
+        FIFO_VERTEX16, FIFO_NOP, FIFO_NOP, FIFO_NOP);
+    out[14] = (u32)(u16)vertex[3][0] |
+              ((u32)(u16)vertex[3][1] << 16);
+    out[15] = (u32)(s32)vertex[3][2];
+
+    sNdsRendererWhispyPacket.final_texture_slot = texture_slot;
+    sNdsRendererWhispyPacket.final_poly_alpha = poly_alpha;
+    if (sNdsRendererWhispyPacket.lean_counters != FALSE)
+    {
+        sNdsRendererWhispyPacket.lean_quads++;
+    }
+    else
+    {
+        gNdsWhispyAOTTier4PacketQuads++;
+    }
+    return TRUE;
+}
+
+/* Keep a scale escalation in the same ordered FIFO stream as the vertices it
+ * separates.  Flushing before every escalation made route 4 wait on DMA 32
+ * extra times in the focused Whispy window even though GX can consume the
+ * pop/push/scale commands in-order itself. */
+static NDS_RENDERER_FAST_RUN_CODE sb32
+ndsRendererAppendWhispyPacketScale(u32 scale_shift)
+{
+    u32 *out = ndsRendererWhispyPacketReserve(5u);
+    s32 factor;
+
+    if (out == NULL)
+    {
+        return FALSE;
+    }
+    factor = inttof32(1 << scale_shift);
+    out[0] = FIFO_COMMAND_PACK(
+        REG2ID(MATRIX_POP), REG2ID(MATRIX_PUSH),
+        REG2ID(MATRIX_SCALE), FIFO_NOP);
+    out[1] = 1u;
+    out[2] = (u32)factor;
+    out[3] = (u32)factor;
+    out[4] = (u32)factor;
+    return TRUE;
+}
+
+/* When the last commands in the pass are packeted Whispy quads, put the
+ * balancing matrix pop behind those vertices in that same stream.  Returning
+ * FALSE tells the ordinary end path that an immediate/generic draw followed
+ * the packet and therefore still owns the pop. */
+static NDS_RENDERER_FAST_RUN_CODE sb32
+ndsRendererFinishWhispyNativePacket(void)
+{
+    u32 *out;
+
+    if (sNdsRendererWhispyPacket.word_count == 0u)
+    {
+        return FALSE;
+    }
+    out = ndsRendererWhispyPacketReserve(2u);
+    if (out == NULL)
+    {
+        return FALSE;
+    }
+    out[0] = FIFO_COMMAND_PACK(
+        REG2ID(MATRIX_POP), FIFO_NOP, FIFO_NOP, FIFO_NOP);
+    out[1] = 1u;
+    ndsRendererFlushWhispyNativePacket();
+    return TRUE;
+}
+
+/* ARM946E-S has no FPU. GCC lowers even `value * 4096.0F` followed by an int
+ * cast to two libgcc calls, so the first fixed submit still paid eight soft-
+ * float calls per quad. Decode the finite IEEE-754 value directly and shift
+ * its mantissa into the requested binary fixed domain. The result is the same
+ * truncation toward zero as a C cast; failure is the generic-fallback seam. */
+static sb32 ndsRendererWhispyFloatToFixed(f32 value,
+                                          u32 fraction_bits,
+                                          s32 *fixed)
+{
+    union
+    {
+        f32 f;
+        u32 u;
+    } bits;
+    u32 exponent;
+    u32 mantissa;
+    u32 magnitude;
+    u32 limit;
+    u32 sign;
+    s32 shift;
+
+    bits.f = value;
+    sign = bits.u >> 31;
+    exponent = (bits.u >> 23) & 0xFFu;
+    mantissa = bits.u & 0x7FFFFFu;
+    if ((fixed == NULL) || (exponent == 0xFFu))
+    {
+        return FALSE;
+    }
+    if (exponent == 0u)
+    {
+        if (mantissa == 0u)
+        {
+            *fixed = 0;
+            return TRUE;
+        }
+        shift = -126 - 23 + (s32)fraction_bits;
+    }
+    else
+    {
+        mantissa |= 0x800000u;
+        shift = (s32)exponent - 127 - 23 + (s32)fraction_bits;
+    }
+    limit = (sign != 0u) ? 0x80000000u : 0x7FFFFFFFu;
+    if (shift >= 0)
+    {
+        if ((shift >= 32) ||
+            (mantissa > (limit >> (u32)shift)))
+        {
+            return FALSE;
+        }
+        magnitude = mantissa << (u32)shift;
+    }
+    else if (shift <= -32)
+    {
+        magnitude = 0u;
+    }
+    else
+    {
+        magnitude = mantissa >> (u32)-shift;
+    }
+    if (sign != 0u)
+    {
+        *fixed = (magnitude == 0x80000000u) ? INT_MIN : -(s32)magnitude;
+    }
+    else
+    {
+        *fixed = (s32)magnitude;
+    }
+    return TRUE;
+}
+
+static sb32 ndsRendererWhispyBasisComponent(f32 value, s32 *fixed)
+{
+    if ((ndsRendererWhispyFloatToFixed(
+             value, NDS_RENDERER_WHISPY_BASIS_SHIFT, fixed) == FALSE) ||
+        (*fixed < -(s32)(1u << NDS_RENDERER_WHISPY_BASIS_SHIFT)) ||
+        (*fixed > (s32)(1u << NDS_RENDERER_WHISPY_BASIS_SHIFT)))
+    {
+        return FALSE;
+    }
+    return TRUE;
+}
+
+void ndsRendererSetWhispyNativeBasis(const Vec3f *right, const Vec3f *up)
+{
+    sNdsRendererWhispyBasisValid = FALSE;
+    sNdsRendererWhispyLeanBindingMask = 0u;
+    sNdsRendererWhispyLegCacheValid = FALSE;
+    if ((right == NULL) || (up == NULL) ||
+        (ndsRendererWhispyBasisComponent(
+             right->x, &sNdsRendererWhispyRight[0]) == FALSE) ||
+        (ndsRendererWhispyBasisComponent(
+             right->y, &sNdsRendererWhispyRight[1]) == FALSE) ||
+        (ndsRendererWhispyBasisComponent(
+             right->z, &sNdsRendererWhispyRight[2]) == FALSE) ||
+        (ndsRendererWhispyBasisComponent(
+             up->x, &sNdsRendererWhispyUp[0]) == FALSE) ||
+        (ndsRendererWhispyBasisComponent(
+             up->y, &sNdsRendererWhispyUp[1]) == FALSE) ||
+        (ndsRendererWhispyBasisComponent(
+             up->z, &sNdsRendererWhispyUp[2]) == FALSE))
+    {
+        return;
+    }
+    sNdsRendererWhispyBasisValid = TRUE;
+}
+
+/* Mirror ndsRendererSubmitParticleQuad's state transitions without entering
+ * its float corner builder. Keeping these exact transitions preserves source
+ * draw order, per-particle alpha, texture changes, matrix ownership, and the
+ * no-glEnd FIFO contract. */
+static NDS_RENDERER_FAST_RUN_CODE void
+ndsRendererPrepareWhispyQuadState(u32 texture_name, u32 poly_alpha,
+                                  u32 texture_slot, u32 submit_route)
+{
+    if ((sNdsRendererParticleQuadOpen != 0u) &&
+        ((poly_alpha != sNdsRendererParticleQuadAlpha) ||
+         (texture_name != sNdsRendererParticleQuadTexture)))
+    {
+        if (texture_name != sNdsRendererParticleQuadTexture)
+        {
+            if (submit_route >= 3u)
+            {
+                (void)ndsRendererBindWhispyNativeTextureFast(
+                    texture_name, texture_slot);
+            }
+            else
+            {
+                ndsRendererHardwareBindTextureName(NULL, texture_name);
+            }
+            sNdsRendererParticleQuadTexture = texture_name;
+            gNdsParticleQuadSheetBreaks++;
+        }
+        ndsRendererHardwareSetPolyFmt(
+            POLY_ALPHA(poly_alpha) | POLY_CULL_NONE | POLY_ID(0));
+        if (poly_alpha != sNdsRendererParticleQuadAlpha)
+        {
+            gNdsParticleQuadAlphaBreaks++;
+        }
+        sNdsRendererParticleQuadAlpha = poly_alpha;
+        glBegin(GL_QUAD);
+    }
+    if (sNdsRendererParticleQuadOpen == 0u)
+    {
+        gNdsParticleMatrixModeSeen |=
+            1u << (sNdsRendererHardwareMatrixMode & 7u);
+        gNdsParticleMatrixLoadedSeen = sNdsRendererHardwareMatrixLoaded;
+        gNdsParticleBatchOpens++;
+        ndsRendererHardwareEndBatch();
+        if (sNdsRendererParticleCameraValid != FALSE)
+        {
+            NDSRendererMatrix20p12 scaled_modelview;
+            m4x4 projection_hw;
+            m4x4 modelview_hw;
+            u32 col;
+
+            ndsRendererMatrixCopy20p12(
+                &scaled_modelview, &sNdsRendererParticleModelview);
+            for (col = 0u; col < 4u; col++)
+            {
+                scaled_modelview.m[3][col] =
+                    ndsRendererRoundShiftS32Signed(
+                        scaled_modelview.m[3][col],
+                        NDS_RENDERER_HW_WORLD_UNIT_SHIFT);
+            }
+            ndsRendererCopyMtx20p12ToM4x4(
+                &sNdsRendererParticleProjection, &projection_hw);
+            ndsRendererHardwareSetMatrixMode(GL_PROJECTION);
+            glLoadMatrix4x4(&projection_hw);
+            ndsRendererCopyMtx20p12ToM4x4(
+                &scaled_modelview, &modelview_hw);
+            ndsRendererHardwareSetMatrixMode(GL_MODELVIEW);
+            glLoadMatrix4x4(&modelview_hw);
+            sNdsRendererHardwareMatrixLoaded = FALSE;
+            sNdsRendererHardwareMatrixMode = NDS_RENDERER_HW_MATRIX_MODE_NONE;
+            gNdsParticleCameraLoads++;
+            gNdsParticleCamTx = scaled_modelview.m[3][0];
+            gNdsParticleCamTy = scaled_modelview.m[3][1];
+            gNdsParticleCamTz = scaled_modelview.m[3][2];
+        }
+        sNdsRendererParticleScaleShift = 0u;
+        glPushMatrix();
+        glEnable(GL_TEXTURE_2D);
+        if (submit_route >= 3u)
+        {
+            (void)ndsRendererBindWhispyNativeTextureFast(
+                texture_name, texture_slot);
+        }
+        else
+        {
+            ndsRendererHardwareBindTextureName(NULL, texture_name);
+        }
+        sNdsRendererParticleQuadTexture = texture_name;
+        ndsRendererHardwareSetPolyFmt(
+            POLY_ALPHA(poly_alpha) | POLY_CULL_NONE | POLY_ID(0));
+        sNdsRendererParticleQuadAlpha = poly_alpha;
+        glBegin(GL_QUAD);
+        sNdsRendererParticleQuadOpen = TRUE;
+    }
+}
+
+static s32 ndsRendererWhispyAbsS32(s32 value)
+{
+    return (value < 0) ? -value : value;
+}
+
+static s32 ndsRendererWhispyTruncShiftS32(s32 value, u32 shift)
+{
+    if (value < 0)
+    {
+        return -(s32)(((u32)-value) >> shift);
+    }
+    return (s32)((u32)value >> shift);
+}
+
+static v16 ndsRendererWhispyCoordToV16(s32 coord_q12, u32 scale_shift)
+{
+    s32 value = ndsRendererWhispyTruncShiftS32(
+        coord_q12,
+        (NDS_RENDERER_WHISPY_COORD_SHIFT - 4u) + scale_shift);
+
+    if (value > 32767)
+    {
+        gNdsParticleWorldClampCount++;
+        return (v16)32767;
+    }
+    if (value < -32768)
+    {
+        gNdsParticleWorldClampCount++;
+        return (v16)-32768;
+    }
+    return (v16)value;
+}
+
+static inline __attribute__((always_inline)) v16
+ndsRendererWhispyCoordToV16Unchecked(s32 coord_q12, u32 scale_shift)
+{
+    return (v16)ndsRendererWhispyTruncShiftS32(
+        coord_q12,
+        (NDS_RENDERER_WHISPY_COORD_SHIFT - 4u) + scale_shift);
+}
+
+NDS_RENDERER_FAST_RUN_CODE
+s32 ndsRendererSubmitWhispyNativeQuad(u32 texture_name,
+                                      u32 texture_slot,
+                                      const Vec3f *pos, f32 size,
+                                      const s32 fixed_center_q12[3],
+                                      s32 fixed_size_q8,
+                                      u32 color, u8 alpha,
+                                      u32 mirror_mask,
+                                      u32 texture_w, u32 texture_h,
+                                      u32 submit_route)
+{
+    s32 center[3];
+    s32 right[3];
+    s32 up[3];
+    v16 packed_vertex[4][3];
+    s32 extent;
+    s32 size_q8;
+    u32 axis;
+    u32 corner;
+    u32 needed = 0u;
+    u32 coordinates_safe = FALSE;
+    u32 poly_alpha;
+
+    /* These bounds make every 32-bit basis product total. Whispy's source
+     * sizes top out at 350; an altered script or camera uses the generic submit
+     * instead of wrapping this closed representation. */
+    if ((sNdsRendererWhispyBasisValid == FALSE) ||
+        (texture_name == 0u) ||
+        ((fixed_center_q12 == NULL) && (pos == NULL)))
+    {
+        return -1;
+    }
+    if (alpha == 0u)
+    {
+        return 0;
+    }
+    poly_alpha = ((u32)alpha >> 3) & 31u;
+    if (poly_alpha == 0u) { poly_alpha = 1u; }
+    if (submit_route >= 7u)
+    {
+        u32 binding_bit;
+
+        if (texture_slot >= NDS_WHISPY_NATIVE_TEXTURE_COUNT)
+        {
+            gNdsWhispyAOTTier4PacketFallbacks++;
+            return -1;
+        }
+        binding_bit = 1u << texture_slot;
+        if (((sNdsRendererWhispyLeanBindingMask & binding_bit) == 0u) &&
+            (ndsRendererWhispyNativeBindingFor(
+                 texture_name, texture_slot) == NULL))
+        {
+            gNdsWhispyAOTTier4PacketFallbacks++;
+            return -1;
+        }
+        sNdsRendererWhispyLeanBindingMask |= binding_bit;
+    }
+    else if ((submit_route >= 3u) &&
+             (ndsRendererWhispyNativeBindingFor(
+                  texture_name, texture_slot) == NULL))
+    {
+        if (submit_route >= 4u)
+        {
+            gNdsWhispyAOTTier4PacketFallbacks++;
+        }
+        return -1;
+    }
+    if (submit_route < 4u)
+    {
+        /* Supports debugger route changes without allowing an older packet to
+         * cross the first immediate-mode quad. Normal runs never take this
+         * branch with a non-empty packet. */
+        ndsRendererFlushWhispyNativePacket();
+    }
+    else if (sNdsRendererWhispyPacket.word_count == 0u)
+    {
+        sNdsRendererWhispyPacket.lean_counters =
+            (submit_route >= 6u) ? TRUE : FALSE;
+    }
+
+    if (fixed_center_q12 != NULL)
+    {
+        center[0] = fixed_center_q12[0];
+        center[1] = fixed_center_q12[1];
+        center[2] = fixed_center_q12[2];
+        size_q8 = fixed_size_q8;
+    }
+    else if ((ndsRendererWhispyFloatToFixed(
+                  pos->x, NDS_RENDERER_WHISPY_COORD_SHIFT,
+                  &center[0]) == FALSE) ||
+             (ndsRendererWhispyFloatToFixed(
+                  pos->y, NDS_RENDERER_WHISPY_COORD_SHIFT,
+                  &center[1]) == FALSE) ||
+             (ndsRendererWhispyFloatToFixed(
+                  pos->z, NDS_RENDERER_WHISPY_COORD_SHIFT,
+                  &center[2]) == FALSE) ||
+             (ndsRendererWhispyFloatToFixed(
+                  size, NDS_RENDERER_WHISPY_SIZE_SHIFT,
+                  &size_q8) == FALSE))
+    {
+        return -1;
+    }
+    if ((size_q8 <= 0) ||
+        (size_q8 >= (s32)(512u << NDS_RENDERER_WHISPY_SIZE_SHIFT)) ||
+        (center[0] < -(s32)(131072u << NDS_RENDERER_WHISPY_COORD_SHIFT)) ||
+        (center[0] >  (s32)(131072u << NDS_RENDERER_WHISPY_COORD_SHIFT)) ||
+        (center[1] < -(s32)(131072u << NDS_RENDERER_WHISPY_COORD_SHIFT)) ||
+        (center[1] >  (s32)(131072u << NDS_RENDERER_WHISPY_COORD_SHIFT)) ||
+        (center[2] < -(s32)(131072u << NDS_RENDERER_WHISPY_COORD_SHIFT)) ||
+        (center[2] >  (s32)(131072u << NDS_RENDERER_WHISPY_COORD_SHIFT)))
+    {
+        return -1;
+    }
+    if ((submit_route >= 7u) &&
+        (sNdsRendererWhispyLegCacheValid != FALSE) &&
+        (sNdsRendererWhispyLegCacheSizeQ8 == size_q8) &&
+        (sNdsRendererWhispyLegCacheMirrorMask == (mirror_mask & 3u)))
+    {
+        for (axis = 0u; axis < 3u; axis++)
+        {
+            right[axis] = sNdsRendererWhispyLegCacheRight[axis];
+            up[axis] = sNdsRendererWhispyLegCacheUp[axis];
+        }
+    }
+    else
+    {
+        s32 leg_size_q8 = size_q8;
+
+        if ((mirror_mask & 1u) != 0u) { leg_size_q8 = -leg_size_q8; }
+        for (axis = 0u; axis < 3u; axis++)
+        {
+            right[axis] = (sNdsRendererWhispyRight[axis] * leg_size_q8) /
+                          (s32)(1u << NDS_RENDERER_WHISPY_LEG_SHIFT);
+        }
+        if ((mirror_mask & 1u) != 0u) { leg_size_q8 = -leg_size_q8; }
+        if ((mirror_mask & 2u) != 0u) { leg_size_q8 = -leg_size_q8; }
+        for (axis = 0u; axis < 3u; axis++)
+        {
+            up[axis] = (sNdsRendererWhispyUp[axis] * leg_size_q8) /
+                       (s32)(1u << NDS_RENDERER_WHISPY_LEG_SHIFT);
+        }
+        if (submit_route >= 7u)
+        {
+            sNdsRendererWhispyLegCacheSizeQ8 = size_q8;
+            sNdsRendererWhispyLegCacheMirrorMask = mirror_mask & 3u;
+            for (axis = 0u; axis < 3u; axis++)
+            {
+                sNdsRendererWhispyLegCacheRight[axis] = right[axis];
+                sNdsRendererWhispyLegCacheUp[axis] = up[axis];
+            }
+            sNdsRendererWhispyLegCacheValid = TRUE;
+        }
+    }
+
+    extent = ndsRendererWhispyAbsS32(center[0]) +
+             ndsRendererWhispyAbsS32(right[0]) +
+             ndsRendererWhispyAbsS32(up[0]);
+    for (axis = 1u; axis < 3u; axis++)
+    {
+        s32 candidate = ndsRendererWhispyAbsS32(center[axis]) +
+                        ndsRendererWhispyAbsS32(right[axis]) +
+                        ndsRendererWhispyAbsS32(up[axis]);
+        if (candidate > extent) { extent = candidate; }
+    }
+    if (submit_route >= 7u)
+    {
+        needed = sNdsRendererParticleScaleShift;
+    }
+    while ((needed < NDS_RENDERER_PARTICLE_MAX_SCALE_SHIFT) &&
+           ((extent / (s32)(1u <<
+               ((NDS_RENDERER_WHISPY_COORD_SHIFT - 4u) + needed))) > 32767))
+    {
+        needed++;
+    }
+    if (submit_route >= 7u)
+    {
+        coordinates_safe =
+            ((extent / (s32)(1u <<
+                ((NDS_RENDERER_WHISPY_COORD_SHIFT - 4u) + needed))) <=
+             32767) ? TRUE : FALSE;
+    }
+
+    if (submit_route >= 4u)
+    {
+        if (sNdsRendererParticleQuadOpen == 0u)
+        {
+            /* Establish the camera/matrix stack once. The first material bind
+             * uses route 3's exact direct-register transition; every later
+             * state/quad command in this contiguous run goes through DMA. */
+            ndsRendererPrepareWhispyQuadState(
+                texture_name, poly_alpha, texture_slot, 3u);
+        }
+    }
+    else
+    {
+        ndsRendererPrepareWhispyQuadState(
+            texture_name, poly_alpha, texture_slot, submit_route);
+    }
+    if (needed > sNdsRendererParticleScaleShift)
+    {
+        if (submit_route >= 4u)
+        {
+            if (ndsRendererAppendWhispyPacketScale(needed) == FALSE)
+            {
+                return -1;
+            }
+        }
+        else
+        {
+            s32 factor = inttof32(1 << needed);
+
+            glPopMatrix(1);
+            glPushMatrix();
+            glScalef32(factor, factor, factor);
+        }
+        sNdsRendererParticleScaleShift = needed;
+        gNdsParticleScaleEscalations++;
+        if (needed > gNdsParticleScaleShiftMax)
+        {
+            gNdsParticleScaleShiftMax = needed;
+        }
+    }
+    if (submit_route >= 4u)
+    {
+        if (ndsRendererAppendWhispyPacketState(
+                texture_name, texture_slot, poly_alpha,
+                submit_route) == FALSE)
+        {
+            return -1;
+        }
+        if ((submit_route >= 7u) && (coordinates_safe != FALSE))
+        {
+            for (corner = 0u; corner < 4u; corner++)
+            {
+                s32 right_sign =
+                    ((corner == 0u) || (corner == 3u)) ? -1 : 1;
+                s32 up_sign = (corner < 2u) ? -1 : 1;
+                u32 whispy_shift = sNdsRendererParticleScaleShift;
+                u32 component;
+
+                for (component = 0u; component < 3u; component++)
+                {
+                    packed_vertex[corner][component] =
+                        ndsRendererWhispyCoordToV16Unchecked(
+                            center[component] +
+                            (right_sign * right[component]) +
+                            (up_sign * up[component]), whispy_shift);
+                }
+            }
+        }
+        else
+        {
+            for (corner = 0u; corner < 4u; corner++)
+            {
+                s32 right_sign =
+                    ((corner == 0u) || (corner == 3u)) ? -1 : 1;
+                s32 up_sign = (corner < 2u) ? -1 : 1;
+                u32 whispy_shift = sNdsRendererParticleScaleShift;
+                u32 component;
+
+                for (component = 0u; component < 3u; component++)
+                {
+                    packed_vertex[corner][component] =
+                        ndsRendererWhispyCoordToV16(
+                            center[component] +
+                            (right_sign * right[component]) +
+                            (up_sign * up[component]), whispy_shift);
+                }
+            }
+        }
+        if (ndsRendererAppendWhispyPacketQuad(
+                color, packed_vertex, texture_w, texture_h,
+                texture_slot, poly_alpha) == FALSE)
+        {
+            return -1;
+        }
+    }
+    else
+    {
+        glColor((rgb)color);
+
+        /* Four fixed corners, still in source draw order. A small integer loop
+         * is materially cheaper in ARM9 code/RAM than cloning the diagnostic-
+         * aware GX wrappers four times. */
+        for (corner = 0u; corner < 4u; corner++)
+        {
+            s32 right_sign =
+                ((corner == 0u) || (corner == 3u)) ? -1 : 1;
+            s32 up_sign = (corner < 2u) ? -1 : 1;
+            u32 texel_s =
+                ((corner == 0u) || (corner == 3u)) ? 0u : texture_w;
+            u32 texel_t = (corner < 2u) ? texture_h : 0u;
+            u32 whispy_shift = sNdsRendererParticleScaleShift;
+
+            glTexCoord2t16((t16)(texel_s << 4), (t16)(texel_t << 4));
+            glVertex3v16(
+                ndsRendererWhispyCoordToV16(
+                    center[0] + (right_sign * right[0]) +
+                        (up_sign * up[0]), whispy_shift),
+                ndsRendererWhispyCoordToV16(
+                    center[1] + (right_sign * right[1]) +
+                        (up_sign * up[1]), whispy_shift),
+                ndsRendererWhispyCoordToV16(
+                    center[2] + (right_sign * right[2]) +
+                        (up_sign * up[2]), whispy_shift));
+        }
+    }
+    return 1;
+}
+#else
+void ndsRendererSetWhispyNativeBasis(const Vec3f *right, const Vec3f *up)
+{
+    (void)right; (void)up;
+}
+
+s32 ndsRendererSubmitWhispyNativeQuad(u32 texture_name,
+                                      u32 texture_slot,
+                                      const Vec3f *pos, f32 size,
+                                      const s32 fixed_center_q12[3],
+                                      s32 fixed_size_q8,
+                                      u32 color, u8 alpha,
+                                      u32 mirror_mask,
+                                      u32 texture_w, u32 texture_h,
+                                      u32 submit_route)
+{
+    (void)texture_name; (void)pos; (void)size; (void)color; (void)alpha;
+    (void)fixed_center_q12; (void)fixed_size_q8;
+    (void)texture_slot; (void)mirror_mask; (void)texture_w; (void)texture_h;
+    (void)submit_route;
+    return -1;
+}
+#endif
+
 void ndsRendererEndParticleQuads(void)
 {
+    u32 whispy_packet_popped = FALSE;
+
+#if NDS_R2_WHISPY_NATIVE_AOT
+    /* Route 4 leaves the final source-ordered packet in cached RAM until this
+     * natural pass boundary. The balancing pop rides after its last vertex. */
+    whispy_packet_popped = ndsRendererFinishWhispyNativePacket();
+#endif
     if (sNdsRendererParticleQuadOpen != 0u)
     {
         /* NO glEnd(). Task 29 removed libnds's dummy glEnd FIFO writes from
@@ -13054,7 +14278,10 @@ void ndsRendererEndParticleQuads(void)
          * matrix before the batch is flushed would retroactively move vertices
          * already queued against it. Pairs with the unconditional push at batch
          * open, at whatever shift the pass escalated to. */
-        glPopMatrix(1);
+        if (whispy_packet_popped == FALSE)
+        {
+            glPopMatrix(1);
+        }
         sNdsRendererParticleScaleShift = 0u;
         /* The bound-texture name is LEFT ALONE. Clearing it here forced the
          * next binder to re-issue every frame, and the stage's prepared-run
@@ -13063,6 +14290,9 @@ void ndsRendererEndParticleQuads(void)
          * the next real bind compares against it correctly. */
         sNdsRendererHardwareActiveTextureEntry = NULL;
     }
+#if NDS_R2_WHISPY_NATIVE_AOT
+    sNdsRendererWhispyBasisValid = FALSE;
+#endif
 }
 
 /* DEBUG-ONLY world-space collision-diamond, for tuning the fireball's
@@ -13079,6 +14309,9 @@ void ndsRendererSubmitDebugDiamond(f32 cx, f32 cy, f32 cz,
                                    f32 top, f32 center,
                                    f32 bottom, f32 width)
 {
+#if NDS_R2_WHISPY_NATIVE_AOT
+    ndsRendererFlushWhispyNativePacket();
+#endif
     if (sNdsRendererParticleQuadOpen == 0u)
     {
         return;
@@ -18405,6 +19638,9 @@ s32 ndsRendererHardwarePrepareBattleStaticTextures(void)
 volatile u32 gNdsRendererParticleAtlasPrepareCount;
 volatile u32 gNdsRendererParticleAtlasFailCount;
 volatile u32 gNdsRendererParticleAtlasBytes;
+volatile u32 gNdsRendererWhispyNativePrepareCount;
+volatile u32 gNdsRendererWhispyNativeFailCount;
+volatile u32 gNdsRendererWhispyNativeBytes;
 /* The v16 rail counters' software-renderer twins. `battleship_lbparticle.c`
  * reads the clamp count under NDS_R2_PARTICLE_DRAW, which defaults ON while
  * NDS_RENDERER_HW_TRIANGLES defaults OFF -- so without these three the DEFAULT
@@ -18436,6 +19672,12 @@ u32 ndsRendererHardwareParticleAtlasName(void)
     return 0u;
 }
 
+u32 ndsRendererHardwareWhispyNativeName(u32 texture_id)
+{
+    (void)texture_id;
+    return 0u;
+}
+
 void ndsRendererHardwareDiscardParticleAtlas(void)
 {
 }
@@ -18463,6 +19705,28 @@ s32 ndsRendererSubmitParticleQuad(u32 atlas_name, const Vec3f *pos, f32 size,
     (void)right; (void)up;
     (void)atlas_x; (void)atlas_y; (void)atlas_w; (void)atlas_h;
     return FALSE;
+}
+
+void ndsRendererSetWhispyNativeBasis(const Vec3f *right, const Vec3f *up)
+{
+    (void)right; (void)up;
+}
+
+s32 ndsRendererSubmitWhispyNativeQuad(u32 texture_name,
+                                      u32 texture_slot,
+                                      const Vec3f *pos, f32 size,
+                                      const s32 fixed_center_q12[3],
+                                      s32 fixed_size_q8,
+                                      u32 color, u8 alpha,
+                                      u32 mirror_mask,
+                                      u32 texture_w, u32 texture_h,
+                                      u32 submit_route)
+{
+    (void)texture_name; (void)pos; (void)size; (void)color; (void)alpha;
+    (void)fixed_center_q12; (void)fixed_size_q8;
+    (void)texture_slot; (void)mirror_mask; (void)texture_w; (void)texture_h;
+    (void)submit_route;
+    return -1;
 }
 
 void ndsRendererEndParticleQuads(void)

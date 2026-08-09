@@ -12,6 +12,9 @@ $objmanPath = Join-Path $root 'decomp/BattleShip-main/decomp/src/sys/objman.c'
 $resultsPath = Join-Path $root 'decomp/BattleShip-main/decomp/src/mn/mnvsmode/mnvsresults.c'
 $incPath = Join-Path $root 'src/nds/generated/nds_particle_banks.generated.inc'
 $assetPath = Join-Path $root 'assets/particles/efcommon_particle_textures.ds.bin'
+$whispyAssetPath = Join-Path $root 'assets/particles/grpupupu_whispy_native.ds.bin'
+$stagePath = Join-Path $root 'src/import/battleship_grpupupu_ground.c'
+$makefilePath = Join-Path $root 'Makefile'
 
 if ($null -eq (Get-Command $Python -ErrorAction SilentlyContinue)) {
     throw "Python command not found: $Python"
@@ -611,6 +614,153 @@ if ((-not $foundAsset.Success) -or ($foundAsset.Groups[1].Value -ne $wantAsset))
     throw "NDS_PARTICLE_QUAD_ASSET_BYTES is not $wantAsset (texels + palette)."
 }
 
+# Whispy's three source textures have different alpha/colour needs, so they are
+# a dedicated generated payload instead of being forced through the shared
+# atlas. Derive every assertion from the generated report: the report, header,
+# bytes on disk, and runtime uploader must all move together.
+$whispy = $report.whispy_native
+$whispyTextures = @($whispy.textures)
+if (($whispyTextures.Count -ne 3) -or
+    (($whispyTextures.ds_format_name -join ',') -ne 'A5I3,A3I5,PAL16') -or
+    ([int]$whispyTextures[2].source_frames -ne 4) -or
+    ([int]$whispyTextures[2].frames -ne 1) -or
+    ([double]$whispyTextures[2].mean_error -ne 0.0) -or
+    ([double]$whispyTextures[2].max_error -ne 0.0)) {
+    throw 'Whispy native formats/leaf-frame fidelity changed.'
+}
+foreach ($pair in @(
+    @{ Name = 'NDS_WHISPY_NATIVE_ASSET_BYTES'; Want = $whispy.asset_bytes },
+    @{ Name = 'NDS_WHISPY_NATIVE_TEXTURE_COUNT'; Want = $whispyTextures.Count },
+    @{ Name = 'NDS_WHISPY_NATIVE_TEXTURE_0_FORMAT'; Want = $whispyTextures[0].ds_format },
+    @{ Name = 'NDS_WHISPY_NATIVE_TEXTURE_1_FORMAT'; Want = $whispyTextures[1].ds_format },
+    @{ Name = 'NDS_WHISPY_NATIVE_TEXTURE_2_FORMAT'; Want = $whispyTextures[2].ds_format },
+    @{ Name = 'NDS_WHISPY_NATIVE_TEXTURE_2_FRAMES'; Want = $whispyTextures[2].frames })) {
+    $want = "$([int64]$pair.Want)u"
+    $found = [regex]::Match($header, "#define $($pair.Name)\s+(\S+)")
+    if ((-not $found.Success) -or ($found.Groups[1].Value -ne $want)) {
+        throw "$($pair.Name) is not the generated value $want."
+    }
+}
+if (-not $header.Contains(
+        '#define NDS_WHISPY_NATIVE_ASSET_PATH "nitro:/particles/grpupupu_whispy_native.ds.bin"')) {
+    throw 'Whispy native NitroFS path changed.'
+}
+if (-not (Test-Path -LiteralPath $whispyAssetPath -PathType Leaf)) {
+    throw "Generated Whispy native payload is missing: $whispyAssetPath"
+}
+$whispyAsset = Get-Item -LiteralPath $whispyAssetPath
+$whispySha = (Get-FileHash -LiteralPath $whispyAssetPath -Algorithm SHA256).Hash.ToLowerInvariant()
+if (($whispyAsset.Length -ne [int64]$whispy.asset_bytes) -or
+    ($whispySha -ne [string]$whispy.payload_sha256)) {
+    throw ("Whispy native payload differs from its report: {0} B sha256 {1}." -f
+        $whispyAsset.Length, $whispySha)
+}
+
+# The first lab changes only the final draw texture. The AOT lab keeps every
+# root, allocation pool, transform and child constructor in BattleShip's real
+# objects. Route 5 additionally compiles the three exact emitted scripts'
+# post-construction waits/loops/blends and copies the source lifetime-zero
+# unlink/eject branch at that owning seam; route 6 keeps that ownership while
+# collapsing its hot proof writes and unchanged blend channels; route 7 removes
+# repeat validation and bounded coordinate work from the renderer packet. Route
+# 6 remains the same-ROM control for the final cut.
+# Pin exact Pupupu identity, all-or-source generator fallback, reversible source
+# cursors, source-owned pools/transforms, and both promoted build defaults. The
+# routed implementation itself defaults to the verified full-AOT/GXFIFO path.
+foreach ($token in @(
+    '(uintptr_t)&lGRPupupuParticleScriptBankLo',
+    'ndsRendererHardwareWhispyNativeName(pc->texture_id)',
+    'gNdsWhispyNativeSourceFrameMask |= 1u << pc->frame_id;',
+    'gNdsWhispyNativeTextureDrawCount++;',
+    'gNdsWhispyNativeTextureMask |=',
+    'NDS_WHISPY_NATIVE_TEXTURE_2_WIDTH',
+    'draws the one generated DS-native source-frame-0 leaf')) {
+    if (-not $runtime.Contains($token)) {
+        throw "Whispy native texture runtime guard lost: $token"
+    }
+}
+foreach ($banned in @(
+    'ndsPupupuParticle',
+    'NDS_WHISPY_NATIVE_POOL_COUNT')) {
+    if ($runtime.Contains($banned)) {
+        throw "Rejected Whispy native owner returned: $banned"
+    }
+}
+foreach ($token in @(
+    'ndsWhispyAOTDescForBytecode(',
+    'gn->bank_id, (u8)gn->texture_id, gn->bytecode',
+    'gNdsWhispyAOTRoute == 0u',
+    'gNdsWhispyAOTRoute = 7u;',
+    'lbParticleGeneratorFuncRun(gobj);',
+    'lbParticleStructFuncRun(gobj);',
+    'lbParticleMakeParam(',
+    'all-or-source preflight',
+    'pc->bytecode_timer <= 1u',
+    'LBPARTICLE_FLAG_VORTEX |',
+    'gNdsWhispyAOTRoute >= 5u',
+    'gNdsWhispyAOTRoute >= 6u',
+    'ndsWhispyAOTAdvanceBytecode(',
+    'ndsWhispyAOTEjectStruct(',
+    'ndsWhispyAOTApplyBlendsLean(',
+    'ndsWhispyAOTStructFuncRunLean(',
+    'lbParticleEjectTransform(pc->xf);',
+    'gNdsWhispyAOTTier2DirectUpdates++;',
+    'ndsWhispyAOTTier2TransformForDraw(',
+    'gNdsWhispyAOTTier2FixedFallbacks++;',
+    'gNdsWhispyAOTRigidDrawFallbacks++')) {
+    if (-not $runtime.Contains($token)) {
+        throw "Whispy AOT ownership/fallback guard lost: $token"
+    }
+}
+if (-not $source.Contains(
+        '6d7b7769be48e778e1e48db2869a0a8388a7a9fd9795c6c0018429674e125166')) {
+    throw 'Whispy AOT source-script identity hash changed.'
+}
+foreach ($token in @(
+    'ndsRendererSetWhispyNativeBasis(',
+    'ndsRendererSubmitWhispyNativeQuad(',
+    'ndsRendererPrepareWhispyQuadState(',
+    'ndsRendererWhispyFloatToFixed(',
+    'NDS_RENDERER_WHISPY_PACKET_WORDS',
+    'DC_FlushRange(packet->words, word_count * sizeof(u32));',
+    'DMA_FIFO',
+    'ARM946E-S has no FPU.',
+    'NDS_RENDERER_WHISPY_COORD_SHIFT',
+    'submit_route >= 7u',
+    'sNdsRendererWhispyLeanBindingMask',
+    'sNdsRendererWhispyLegCacheValid',
+    'ndsRendererWhispyCoordToV16Unchecked(',
+    'for (corner = 0u; corner < 4u; corner++)',
+    'return -1;')) {
+    if (-not $renderer.Contains($token)) {
+        throw "Whispy fixed GX submit/fallback guard lost: $token"
+    }
+}
+if ($renderer.Contains('center[0] = (s32)(pos->x *')) {
+    throw 'Whispy fixed submit regressed to libgcc float conversion.'
+}
+$stage = Get-Content -LiteralPath $stagePath -Raw
+foreach ($banned in @(
+    '#define lbParticleMakeScriptID',
+    '#define lbParticleEjectStructID',
+    'ndsPupupuParticle')) {
+    if ($stage.Contains($banned)) {
+        throw "Whispy stage ownership alias returned: $banned"
+    }
+}
+$makefile = Get-Content -LiteralPath $makefilePath -Raw
+foreach ($token in @(
+    'NDS_R2_WHISPY_NATIVE_TEXTURES ?= 1',
+    'NDS_R2_WHISPY_NATIVE_AOT ?= 1',
+    'NDS_R2_WHISPY_NATIVE_AOT=1 requires NDS_R2_WHISPY_NATIVE_TEXTURES=1',
+    "echo '#define NDS_R2_WHISPY_NATIVE_AOT `$(NDS_R2_WHISPY_NATIVE_AOT)'",
+    'ifeq ($(NDS_R2_WHISPY_NATIVE_TEXTURES),1)',
+    '$(NITROFS_DIR)/particles/grpupupu_whispy_native.ds.bin')) {
+    if (-not $makefile.Contains($token)) {
+        throw "Whispy promoted build guard lost: $token"
+    }
+}
+
 # The texels must not come back into the image under any name. A declaration is
 # how that regression would start.
 foreach ($banned in @('gNdsParticleTextureData', 'gNdsParticlePaletteData')) {
@@ -706,4 +856,5 @@ Write-Output (('Particle bank pack passed: 92/119 reachable efcommon scripts, ' 
      "$(@($report.quads.admitted).Count + @($report.quads.excluded).Count) " +
      "textures in $([int64]$report.quads.frame_count) frames " +
      "(frame cap $($report.quads.frame_cap), cell cap " +
-     "$($report.quads.cell_cap)) $quadState.")))
+     "$($report.quads.cell_cap)) $quadState; Whispy native " +
+     "$($whispy.asset_bytes) B A5I3/A3I5/PAL16 (one lossless static leaf frame).")))

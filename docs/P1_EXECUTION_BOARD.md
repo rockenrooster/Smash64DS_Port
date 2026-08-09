@@ -2117,7 +2117,7 @@ As last graded (cycle 76); a row changes state only when its gate runs.
 | Original Wait -> countdown -> GO, timer, scoring, Time Up, Results | Focused gates pass | Final exact-ROM CPU-on owner run remains red |
 | Mario and Fox complete source-equivalent gameplay behavior | Red | Battle-reachable weak callbacks remain |
 | Dream Land collision, platforms, blast zones, wind, camera | Pass for current P1 stage | Dynamic presentation debt remains red separately |
-| Recognizable Dream Land presentation and required animation | Red | Whispy material/animation debt; Task 62 candidate rejected |
+| Recognizable Dream Land presentation and required animation | Red | Whispy Route 7 owner-approved and promoted 2026-08-08; remaining stage presentation not regraded |
 | Complete overlapping BGM, FGM, voices, announcer, crowd | Red | Exact pitch/composite/voice coverage and listen gates remain |
 | Stable 30 FPS, representative P95 <= 1.12M ticks | Red | Gap **503,684 on the both-CPU gate arm**, 60 s match at 86.7% coverage (356,292 is the Boundary figure and is not the gate); lane G1–G4 |
 | Stable reserve, no corruption, clean teardown | Focused gates pass | Requalify after the final content/performance candidate |
@@ -2133,15 +2133,15 @@ smash64ds-battle-playable-hwtri.nds
 SHA-256 4D795B4E83B335598B20A3B5953FDB1821797CC5E0A825FA96A0643ABBA4A090
 ```
 
-Current shipping pair (cycle 75), re-verified on disk 2026-08-05:
+Current shipping pair after Whispy Route 7 promotion, verified 2026-08-08:
 
 ```text
-smash64ds-battle-playable-hwtri.nds   12,129,280 bytes
-SHA-256 D16815BEA6A1BA2592B679CA84F747F0A9B9682FF4AE20B9D0A1E22657D47825
-smash64ds.nds                         11,790,336 bytes
-SHA-256 369FA9993823605A377C0FAC269711A61E7E4773E8066ECB8EAD2F445BD61EF3
-tick-HUD sibling (builds/build-c75-tickhud-publish)   12,131,328 bytes
-SHA-256 15FD0F8E1467878CC1D65C41ADC895F1102E51DAEE21634937958E1123CCE2CC
+smash64ds-battle-playable-hwtri.nds   12,196,864 bytes
+SHA-256 C045544B15C3001E03664092392FA85D345344387CB96ECD629A50F2C42341E8
+smash64ds.nds                         11,914,240 bytes
+SHA-256 AB9DE9E3C945ABBA532EA7224E31C12B4EFD1F1B667C03CF8416CD5F1563A223
+tick-HUD sibling (builds/build-tick-hud-buckets)   12,211,200 bytes
+SHA-256 574F6F409B5B00E24CEF3B719124110275DC4E4009871BB1F2202AA44D445B3F
 ```
 
 ROM hashes are not reproducible across rebuilds of identical source; compare

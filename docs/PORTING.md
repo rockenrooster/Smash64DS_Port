@@ -22675,3 +22675,189 @@ was typed next to.* Adjacency in a file is not a statement about configuration.
 Not yet owner-verified: `verify-current.ps1 -Build` passing proves these build,
 link and hold their runtime contracts. It does not prove they look right, and
 under the render-fidelity doctrine the owner is the visual oracle for both.
+
+## 2026-08-08 — Whispy native AOT lab removes hot math without taking ownership
+
+The optimized lab is deliberately narrower than the rejected native-owner
+experiment. BattleShip's Pupupu bank still owns both roots, scripts 0/1, emitted
+scripts 2/3/4, the shared particle/generator/transform pools, bytecode updates,
+lifetimes, child construction, and ejection. The lab recognizes the exact
+registered Pupupu-bank pointer plus exact script bytecode; if every queued
+generator is not eligible, the entire generator frame falls back to the source
+runner so list order and shared RNG order cannot diverge.
+
+The AOT route hoists the three scripts' invariant generator orientation, uses
+the resident source sine table instead of ARM9 libm for random emission angles,
+replaces steady-state size/color divides with exact reciprocal tables, and
+skips two square roots for source-proven rigid unit-scale Whispy transforms.
+Projection, texturing, blending, and rasterization remain GX work. ARM7 remains
+dedicated to audio/services; moving particle ownership there would add IPC and
+cache-coherency risk to the same systems the rejected build corrupted.
+
+The source-derived visible approximation remains the accepted native-texture
+lab: A5I3 32x32, A3I5 16x16, and one lossless PAL16 16x16 leaf using source
+animation frame 0. The AOT step introduced no observed visible delta:
+`artifacts/visibility/2026-08-08_whispy-native-optimized.png` and the late-match
+`artifacts/visibility/2026-08-08_whispy-native-optimized-late.png` retain the
+same 581/1400 successful draws and exact 17/9/2 peak pool populations as the
+safe native-texture route, with zero texture misses, panic/runaway, audio, or
+CPU counters and all pools at zero after frame 600.
+
+A synchronized 64-frame same-ROM route A/B kept code placement and cache layout
+identical. Candidate versus an exactly reproducible source-route control cut
+SRC P50/P95 by 1,792/4,800 ticks, MISC by 1,600/5,888, and WORK-H by
+1,600/13,952 (mean by 4,664). Evidence is in
+`artifacts/performance/2026-08-08_whispy-native-optimized-same-rom-control-64.json`,
+the `-control-rerun-64.json` repeat, and `-candidate-64.json`. Both build flags
+remain default-off; this is a no-CPU lab result, not a published-ROM promotion.
+
+## 2026-08-08 — Whispy tier 2 closes steady updates and submits fixed GX quads
+
+The conservative AOT route proved ownership safety, but still called the
+4,088-byte generic particle interpreter on most steady frames and rebuilt four
+float billboard corners per quad. Tier 2 keeps the exact same source pools,
+bytecode transitions, RNG order, lifetimes, and ejection seams while closing
+only frames whose timer is above one, lifetime is above one, and motion flags
+still match exact Pupupu scripts 2/3/4. Every edge goes back to BattleShip. The
+generator's relaxed hot preflight is backed by the generator's pinned
+`6d7b...5166` source-bank hash and exact runtime bank/bytecode identity.
+
+The draw half validates each source rigid Y transform once per pass, evaluates
+its four useful products, quantizes the camera basis once, and submits fixed
+Q12 corners to GX. A bounded IEEE-754 mantissa decoder replaces GCC's soft-float
+power-of-two conversions; emitted `ndsRendererSubmitWhispyNativeQuad` contains
+zero soft-float and zero integer-divide helper calls. Alpha buckets, texture
+bind order, polygon state, GX camera ownership, source frame advancement, and
+the accepted static leaf texture remain unchanged. ARM7 remains untouched.
+
+The synchronized same-ROM route-1/route-2 window drew the same 106 quads on
+frames 93-100. MISC particle-draw work fell from 689,984 to 500,352 ticks,
+**27.48%**, and won all eight frames. At frame 103, 900 direct updates and 581
+fixed submits engaged with zero fallbacks; by frame 603, 2,082/1,400 had engaged,
+all 1,400 draws succeeded, all three pools returned to zero (peaks 17/9/2), and
+texture miss, clamp, panic, animation-runaway, audio-fault, and CPU counters
+remained zero. Evidence:
+`artifacts/performance/2026-08-08_whispy-native-tier2-same-rom-sync8.json` and
+`artifacts/visibility/2026-08-08_whispy-native-tier2-final.png`.
+
+Both Whispy flags remain default-off and the only output is the no-CPU lab ROM;
+no published hardware-triangle ROM was rebuilt or replaced.
+
+## 2026-08-08 — Whispy tier 4 packets source-ordered GX work through DMA
+
+Tier 2 still paid ARM9 register-write overhead for every polygon, vertex, and
+texture-state transition.  The retained route pins the three immutable native
+texture bindings, assembles the exact source-ordered GX command stream into a
+bounded 1,024-word buffer, and submits that stream through DMA0.  Texture,
+palette, polygon-alpha, begin/end, scale-matrix, vertex, and final matrix-pop
+commands all keep their original ordering; batch flushing happens only at the
+same texture/state boundaries or when the bounded packet is full.  The packet
+append helpers are force-inlined after measurement showed that their call
+overhead was material on ARM9.
+
+The tempting next step was not retained.  A persistent fixed-point particle
+transform reproduced all 16,800 final GX components at frame 603, including
+the source float-to-fixed rounding boundary, but ran slower than the source
+float center transform.  Exactness alone is not an optimization, so the lab
+keeps the faster transform and offloads only work the GX FIFO and DMA can do
+more cheaply.  DMA waits remain explicit on both sides of packet ownership;
+attempting to overlap the wait lost against its same-ROM control and was
+reverted.
+
+In the synchronized eight-frame window (frames 93-100, 106 draws), route 4
+used 499,712 MISC ticks versus route 2's 510,336: **10,624 ticks / 2.08%** less,
+winning all eight frames.  Against the original native route it used 499,712
+versus 689,344 ticks: **189,632 ticks / 27.51%** less, again winning all eight.
+At frame 603 all 1,400 draws succeeded, all pools returned to zero with exact
+17/9/2 peaks, 132 DMA packet flushes carried 27,443 words, and texture-miss,
+packet-fallback, clamp, panic, animation-runaway, audio-fault, and CPU counters
+were all zero.  Evidence is in
+`artifacts/performance/2026-08-08_whispy-native-best-same-rom-sync8.json` and
+`artifacts/visibility/2026-08-08_whispy-whispy-best-final-visual.png`.
+
+Route 4 is the default only inside the default-off Whispy AOT build flag.  The
+result remains a no-CPU lab build; no published ROM was rebuilt or replaced.
+
+## 2026-08-08 — Whispy routes 5–7 close the interpreter and trim the bounded packet
+
+Route 5 compiles every post-construction wait, loop, frame, terminal-alpha,
+lifetime, and retirement transition for exact Pupupu scripts 2/3/4. It keeps
+BattleShip's real particle/generator/transform pools and copies the source
+lifetime-zero unlink, transform-user, eject, and free-list ownership at that
+seam. Route 6 caches exact bytecode identity after the first full bank proof,
+runs the closed updater as an ARM/O3 kernel, skips unchanged RGB work during
+alpha-only fades, and publishes hot proof counters once per runner/draw pass
+instead of once per particle. Route 7 validates each immutable texture binding
+once per pass, reuses identical billboard legs, and uses unchecked Q12-to-v16
+packing only after the existing extent proof establishes that every corner is
+inside the hardware range. Source order, alpha buckets, packet words, and GX
+output are unchanged.
+
+The final-ROM synchronized frames 93–100 compare 106 identical draws on routes
+4/5/6/7. Route 7 versus the previous route-4 best saves 29,312 draw ticks
+(5.29%), 25,792 owning update ticks (20.90%), and 55,872 ticks across draw +
+update + generator (7.33%). Route 7 versus route 6 wins every draw frame and
+saves 18,368 draw ticks (3.38%) and 19,456 combined ticks (2.68%). A proposed
+generator-tally aggregation measured 64 ticks worse and was removed.
+
+At frame 603, route 7 has 2,808/2,808 direct post-construction updates with zero
+source updates, 1,400/1,400 successful native draws, exact 17/9/2 peak pools and
+0/0/0 live pools, 132 DMA flushes carrying 27,443 words, and zero texture miss,
+packet fallback, clamp, panic, animation-runaway, audio-fault, or CPU counters.
+Its 400x300 top-screen crop is pixel-identical (0/120,000 changed) to the green
+route-5 reference and retains the one lossless static PAL16 leaf frame.
+Evidence: `artifacts/performance/2026-08-08_whispy-native-full-aot-route7-sync8.json`,
+`artifacts/visibility/2026-08-08_whispy-honest-final-full-aot-r7-visual-rerun.png`,
+and `artifacts/verification/whispy-honest-final-full-aot-r7-lifecycle.txt`.
+
+Route 7 is the default only inside the two default-off Whispy lab flags. The
+only rebuilt output is the no-CPU tick-HUD lab ROM under `builds/`; neither
+published ROM was rebuilt or replaced.
+
+## 2026-08-08 — Whispy route 7 passes the approved-window promotion A/B
+
+The exact eight-second window approved on video maps to presented frames
+401–640. A same-ROM, no-fighter-CPU comparison kept the natural Whispy wind
+schedule and changed only the writable route selector: route 0 is the native-
+texture source/interpreted control and route 7 is the full native AOT candidate.
+Both arms produced the identical 1,440-draw sequence, alpha/sheet breaks,
+texture/source-frame masks, and 17/9/2 pool peaks with zero native, audio, AOT,
+bind, fixed-submit, or packet fallback faults.
+
+Route 7 saved 3,329,664 Whispy-owned ticks over the window (17.40%): draw fell
+16.95%, generator 34.17%, and update 1.33%. Uncorrected whole-frame WORK-H P50
+fell 0.64% and P95 fell 2.63%. One repeated route-7 trace row contained an
+exact `0x00400000` `cpuGetTiming` epoch discontinuity in STG and violated
+`WORK <= ALL`; the no-debugger MP4 had no corresponding long frozen-frame run.
+Removing that one measurement quantum gives a 1.30% whole-frame mean saving
+and a lower maximum. The raw robust percentiles already decide KEEP without
+the correction. Evidence is in
+`artifacts/performance/2026-08-08_whispy-route7-approved-window-ab.json`.
+
+This is promotion evidence only. Route 7 remains behind the default-off lab
+flags, and no published ROM was rebuilt or replaced in this measurement cycle.
+
+## 2026-08-08 — Whispy route 7 promoted to the published defaults
+
+The owner accepted the final green Route 7 visual and requested promotion.
+`NDS_R2_WHISPY_NATIVE_TEXTURES` and `NDS_R2_WHISPY_NATIVE_AOT` now both default
+to 1; the generated-config guard pins those defaults and still rejects AOT
+without the DS-native texture payload. The initialized runtime route remains 7.
+
+The full Latest profile passed after the promotion. Both exact published build
+configs then reported the two Whispy flags as 1, and `make p1` rebuilt the root
+P1 ROM plus its flag-identical tick-HUD sibling. A focused probe of the exact
+published P1 ROM with Fox CPU enabled reached frame 303 with 667/667 native
+draws, 1,308/1,308 direct post-construction AOT updates, Route 7 active, all
+three distinct palette bindings valid, and zero texture miss, bind fallback,
+fixed-submit fallback, packet fallback, panic, runaway, or audio fault. The
+release-capable probe now requests tick counters only for a tick-HUD trace, so
+the non-HUD published ELF is directly checkable instead of being inferred from
+its lab sibling.
+
+The published-ROM contract passed. The rebuilt identities are
+`smash64ds.nds` 11,914,240 bytes / `AB9DE9E3...A223` and
+`smash64ds-battle-playable-hwtri.nds` 12,196,864 bytes /
+`C045544B...41E8`; the P1 build retains 82,720 bytes of proven static headroom
+and the tick-HUD sibling retains 45,344 bytes. The DS-native asset checker still
+pins the 1,520-byte A5I3/A3I5/PAL16 pack and the lossless static green leaf.

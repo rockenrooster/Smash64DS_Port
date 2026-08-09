@@ -100,6 +100,11 @@
 #include <stddef.h>
 #include <string.h>
 
+/* Keep the load-bearing include order above. libnds nds/timers.h:255 is the
+ * authority for this signature; a local prototype avoids pulling another
+ * header web into the BattleShip translation unit. */
+extern u32 cpuGetTiming(void);
+
 /* The two functions the decomp leaves to assembly (lbParticleUpdateStruct and
  * lbParticleGeneratorFuncRun) have complete C bodies behind this switch. The
  * port has no MIPS to link, so the C bodies are the implementation. */
@@ -262,6 +267,11 @@ volatile u32 gNdsParticlePoolStructsWanted;
 volatile u32 gNdsParticlePoolGeneratorsWanted;
 volatile u32 gNdsParticlePoolTransformsWanted;
 
+#if NDS_R2_WHISPY_NATIVE_AOT
+static void ndsWhispyAOTStructFuncRun(GObj *gobj);
+static void ndsWhispyAOTGeneratorFuncRun(GObj *gobj);
+#endif
+
 void efParticleInitAll(void)
 {
     u32 structs = (gNdsParticlePoolStructsWanted != 0u) ?
@@ -273,6 +283,20 @@ void efParticleInitAll(void)
 
     gEFParticleStructsGObj = lbParticleAllocStructs((s32)structs);
     gEFParticleGeneratorsGObj = lbParticleAllocGenerators((s32)generators);
+#if NDS_R2_WHISPY_NATIVE_AOT
+    /* Swap only the two once-per-frame runners. The GObjs, source free lists,
+     * source allocation records, constructors, transforms and ejectors remain
+     * BattleShip's. Both wrappers fail back to the original function whenever
+     * exact Dream Land script identity or the closed AOT contract is absent. */
+    if (gEFParticleStructsGObj != NULL)
+    {
+        gEFParticleStructsGObj->func_run = ndsWhispyAOTStructFuncRun;
+    }
+    if (gEFParticleGeneratorsGObj != NULL)
+    {
+        gEFParticleGeneratorsGObj->func_run = ndsWhispyAOTGeneratorFuncRun;
+    }
+#endif
 
     lbParticleAllocTransforms((s32)transforms, sizeof(LBTransform));
     sEFParticleBanksNum = 0;
@@ -296,6 +320,1046 @@ extern uintptr_t lEFCommonParticleScriptBankLo;
 /* Dream Land's own bank marker. Declared in include/reloc_data.h and defined in
  * src/port/diagnostics.c as intptr_t; only its address is ever used. */
 extern intptr_t lGRPupupuParticleScriptBankLo;
+
+#if NDS_R2_WHISPY_NATIVE_AOT
+#if defined(__arm__)
+#define NDS_WHISPY_AOT_FAST_CODE \
+    __attribute__((hot, optimize("O3"), target("arm")))
+#define NDS_WHISPY_AOT_INLINE_CODE \
+    __attribute__((always_inline, hot, optimize("O3"), target("arm")))
+#else
+#define NDS_WHISPY_AOT_FAST_CODE __attribute__((hot, optimize("O3")))
+#define NDS_WHISPY_AOT_INLINE_CODE \
+    __attribute__((always_inline, hot, optimize("O3")))
+#endif
+
+/* Dream Land's three emitted scripts, compiled into the ARM9 image.
+ *
+ * Scripts 0/1 remain the source bytecode roots: they create the source
+ * LBGenerator objects and attach the source LBTransform exactly as before.
+ * Only generator scripts 2/3/4 are closed here. Their source headers are
+ * immutable and tiny (416 bytes for the whole bank), so exact bytecode-pointer
+ * identity is a stronger selector than a bank number, which can be reused
+ * across efParticleInitAll resets.
+ *
+ * The five orientation values are the source generator's invariant
+ * atan2/sin/cos/sqrt result for each header velocity. Hoisting them is the AOT
+ * half of this cut. The per-emission random angles use gSYSinTable, the DS-
+ * resident source sine table, instead of four ARM9 libm calls. The small table
+ * error affects presentation only; RNG call count/order and spawn construction
+ * remain source-owned. Route 5 compiles the closed post-construction control
+ * states while retaining these same source objects and ownership lists. */
+typedef struct NDSWhispyAOTGeneratorDesc
+{
+    u8 script_id;
+    u8 texture_id;
+    u16 particle_flags;
+    f32 vel_x;
+    f32 vel_y;
+    f32 vel_z;
+    f32 radius;
+    f32 angle_span;
+    f32 update_rate;
+    f32 sin_angle1;
+    f32 cos_angle1;
+    f32 sin_angle2;
+    f32 cos_angle2;
+    f32 magnitude;
+} NDSWhispyAOTGeneratorDesc;
+
+static const NDSWhispyAOTGeneratorDesc sNdsWhispyAOTGenerators[] = {
+    { 2u, 2u, LBPARTICLE_FLAG_GRAVITY,
+       60.0F, -5.0F, 0.0F,  5.0F, 0.1745329201F, -0.02F,
+      -1.0F, -4.37113883e-8F, 0.9965457916F, 0.0830454156F,
+      60.20797348F },
+    { 3u, 0u, LBPARTICLE_FLAG_GRAVITY | LBPARTICLE_FLAG_FRICTION,
+       60.0F,  0.0F, 0.0F,  0.0F, 0.0F,          -0.10F,
+       0.0F,  1.0F,           1.0F,          -4.37113883e-8F,
+      60.0F },
+    { 4u, 1u, LBPARTICLE_FLAG_FRICTION,
+      100.0F,  3.0F, 0.0F, 20.0F, 0.1745329201F, -0.25F,
+       1.0F, -4.37113883e-8F, 0.9995502830F, 0.0299864914F,
+      100.0449905F },
+};
+
+volatile u32 gNdsWhispyAOTGeneratorFastRuns;
+volatile u32 gNdsWhispyAOTGeneratorFallbackRuns;
+volatile u32 gNdsWhispyAOTGeneratorVisits;
+volatile u32 gNdsWhispyAOTGeneratorEmits;
+volatile u32 gNdsWhispyAOTTableTrigPairs;
+#if NDS_TICK_HUD
+volatile u32 gNdsWhispyAOTGeneratorTicks;
+#endif
+volatile u32 gNdsWhispyAOTStructVisits;
+volatile u32 gNdsWhispyAOTStructFastUpdates;
+volatile u32 gNdsWhispyAOTStructSourceUpdates;
+#if NDS_TICK_HUD
+volatile u32 gNdsWhispyAOTStructTicks;
+#endif
+volatile u32 gNdsWhispyAOTDividesAvoided;
+volatile u32 gNdsWhispyAOTRigidDraws;
+volatile u32 gNdsWhispyAOTRigidDrawFallbacks;
+volatile u32 gNdsWhispyAOTTier2GeneratorMatches;
+volatile u32 gNdsWhispyAOTTier2DirectUpdates;
+volatile u32 gNdsWhispyAOTTier2FixedTransforms;
+volatile u32 gNdsWhispyAOTTier2FixedSubmits;
+volatile u32 gNdsWhispyAOTTier2FixedFallbacks;
+/* Runtime A/B selector for the lab ROM. All arms keep the identical linked
+ * image and cache placement: 0 is source, 1 is the conservative divide/trig
+ * cut, 2 is the closed direct-update/fixed-submit kernel, 3 adds pinned binds,
+ * 4 sends those same source-ordered fixed vertices/state through one bounded
+ * GXFIFO DMA packet per run, 5 also compiles the three closed scripts'
+ * wait/loop/blend/end transitions plus source-identical pool retirement, and 6
+ * runs that closed update/draw path as one ARM/O3 kernel with pass-local proof
+ * tallies and cached exact-script identity. Route 7 additionally removes
+ * repeat validation/leg/clamp work from the already-bounded GX packet path.
+ * Route 7 is the owner-approved promoted default; build-time overrides retain
+ * the source route for controlled A/B and fallback verification. */
+volatile u32 gNdsWhispyAOTRoute = 7u;
+
+/* Exact bytecode identity remains the selector, but after one full bank/table
+ * proof there is no reason to chase the same three script tables for every
+ * particle on every frame. A slot reuse cannot false-positive: the candidate
+ * still has to carry the exact immutable source bytecode pointer cached here. */
+static u32 sNdsWhispyAOTScriptCacheSlot = ~0u;
+static const u8 *sNdsWhispyAOTScriptCache[3];
+
+static sb32 ndsParticleBankIsPupupu(u8 bank_id)
+{
+    u32 slot = (u32)bank_id & 7u;
+
+    return ((slot < ARRAY_COUNT(sEFParticleScriptBanks)) &&
+            (sEFParticleScriptBanks[slot] ==
+             (uintptr_t)&lGRPupupuParticleScriptBankLo)) ? TRUE : FALSE;
+}
+
+static const NDSWhispyAOTGeneratorDesc *
+ndsWhispyAOTDescForBytecode(u8 bank_id, u8 texture_id, const u8 *bytecode)
+{
+    u32 slot = (u32)bank_id & 7u;
+    u32 index;
+    u32 script_id;
+    LBScript *script;
+
+    /* The exact bank maps emitted scripts 2/3/4 to textures 2/0/1. Use that
+     * closed mapping instead of scanning three descriptors for every live
+     * particle and every generator pass. The final bytecode-pointer equality
+     * remains the runtime proof that this is the pinned source script. */
+    switch (texture_id)
+    {
+    case 2u: index = 0u; break;
+    case 0u: index = 1u; break;
+    case 1u: index = 2u; break;
+    default: return NULL;
+    }
+    if ((gNdsWhispyAOTRoute >= 6u) &&
+        (sNdsWhispyAOTScriptCacheSlot == slot) &&
+        (sNdsWhispyAOTScriptCache[index] != NULL) &&
+        (sNdsWhispyAOTScriptCache[index] == bytecode))
+    {
+        return &sNdsWhispyAOTGenerators[index];
+    }
+    if ((ndsParticleBankIsPupupu(bank_id) == FALSE) ||
+        (slot >= ARRAY_COUNT(sLBParticleScriptBanks)))
+    {
+        return NULL;
+    }
+    script_id = sNdsWhispyAOTGenerators[index].script_id;
+    if (script_id >= (u32)sLBParticleScriptBanksNum[slot])
+    {
+        return NULL;
+    }
+    script = sLBParticleScriptBanks[slot][script_id];
+    if ((script == NULL) || (script->bytecode != bytecode))
+    {
+        return NULL;
+    }
+    if (gNdsWhispyAOTRoute >= 6u)
+    {
+        if (sNdsWhispyAOTScriptCacheSlot != slot)
+        {
+            sNdsWhispyAOTScriptCacheSlot = slot;
+            memset(sNdsWhispyAOTScriptCache, 0,
+                   sizeof(sNdsWhispyAOTScriptCache));
+        }
+        sNdsWhispyAOTScriptCache[index] = bytecode;
+    }
+    return &sNdsWhispyAOTGenerators[index];
+}
+
+static void ndsWhispyAOTSinCos(f32 angle, f32 *sin_out, f32 *cos_out)
+{
+    s32 angle_id = SINTABLE_RAD_TO_ID(angle) & 0xFFF;
+    s32 sin_value = (s32)gSYSinTable[angle_id & 0x7FF];
+    s32 cos_value;
+
+    if ((angle_id & 0x800) != 0)
+    {
+        sin_value = -sin_value;
+    }
+    angle_id = (angle_id + 0x400) & 0xFFF;
+    cos_value = (s32)gSYSinTable[angle_id & 0x7FF];
+    if ((angle_id & 0x800) != 0)
+    {
+        cos_value = -cos_value;
+    }
+    *sin_out = (f32)sin_value * (1.0F / 32768.0F);
+    *cos_out = (f32)cos_value * (1.0F / 32768.0F);
+}
+
+static sb32 ndsWhispyAOTGeneratorMatches(
+    const LBGenerator *gn, const NDSWhispyAOTGeneratorDesc *desc)
+{
+    if ((gn == NULL) || (desc == NULL) ||
+        (gn->kind != 0u) || (gn->dobj != NULL))
+    {
+        return FALSE;
+    }
+    if (gNdsWhispyAOTRoute >= 2u)
+    {
+        /* Exact bank + exact bytecode already prove these immutable header
+         * fields. Re-comparing eight floats through __aeabi_fcmpeq for every
+         * generator on every frame was validation in the hottest possible
+         * place. The generated-bank checker pins the source hash instead. */
+        gNdsWhispyAOTTier2GeneratorMatches++;
+        return TRUE;
+    }
+    return ((gn->texture_id == desc->texture_id) &&
+            (gn->vel.x == desc->vel_x) &&
+            (gn->vel.y == desc->vel_y) &&
+            (gn->vel.z == desc->vel_z) &&
+            (gn->unk_gn_0x38 == desc->radius) &&
+            (gn->unk_gn_0x3C == desc->angle_span) &&
+            (gn->update_rate == desc->update_rate) &&
+            (gn->generator_vars.rotate.base == 0.0F) &&
+            (gn->generator_vars.rotate.target == F_CST_DTOR32(360.0F))) ?
+        TRUE : FALSE;
+}
+
+/* Fast only when EVERY queued generator is one of the three exact Whispy
+ * scripts. That all-or-source preflight is what preserves shared RNG ordering:
+ * a common hit/KO generator overlapping the wind makes this entire frame call
+ * BattleShip's original loop, rather than processing the two lists in a new
+ * order and perturbing later gameplay randomness. */
+static void ndsWhispyAOTGeneratorFuncRun(GObj *gobj)
+{
+    LBGenerator *gn;
+    LBGenerator *next_gn;
+#if NDS_TICK_HUD
+    u32 tick_start = cpuGetTiming();
+#endif
+
+    if (gNdsWhispyAOTRoute == 0u)
+    {
+        lbParticleGeneratorFuncRun(gobj);
+#if NDS_TICK_HUD
+        gNdsWhispyAOTGeneratorTicks += cpuGetTiming() - tick_start;
+#endif
+        return;
+    }
+    if (sLBParticleGeneratorsQueued == NULL)
+    {
+        lbParticleGeneratorFuncRun(gobj);
+#if NDS_TICK_HUD
+        gNdsWhispyAOTGeneratorTicks += cpuGetTiming() - tick_start;
+#endif
+        return;
+    }
+    for (gn = sLBParticleGeneratorsQueued; gn != NULL; gn = gn->next)
+    {
+        const NDSWhispyAOTGeneratorDesc *desc =
+            ndsWhispyAOTDescForBytecode(
+                gn->bank_id, (u8)gn->texture_id, gn->bytecode);
+
+        if (ndsWhispyAOTGeneratorMatches(gn, desc) == FALSE)
+        {
+            gNdsWhispyAOTGeneratorFallbackRuns++;
+            lbParticleGeneratorFuncRun(gobj);
+#if NDS_TICK_HUD
+            gNdsWhispyAOTGeneratorTicks += cpuGetTiming() - tick_start;
+#endif
+            return;
+        }
+    }
+
+    gNdsWhispyAOTGeneratorFastRuns++;
+    gn = sLBParticleGeneratorsQueued;
+    sLBParticleGeneratorsLastProcessed = NULL;
+
+    while (gn != NULL)
+    {
+        const NDSWhispyAOTGeneratorDesc *desc =
+            ndsWhispyAOTDescForBytecode(
+                gn->bank_id, (u8)gn->texture_id, gn->bytecode);
+
+        gNdsWhispyAOTGeneratorVisits++;
+        if ((gobj->flags & (1u << ((gn->bank_id >> 3) + 0x10))) ||
+            (gn->flags & LBPARTICLE_FLAG_PAUSE))
+        {
+            sLBParticleGeneratorsLastProcessed = gn;
+            gn = gn->next;
+            continue;
+        }
+
+        /* Eligibility proved update_rate is negative, so this is the source's
+         * deterministic arm and consumes no RNG until an emission matures. */
+        gn->frame -= gn->update_rate;
+        if (gn->frame >= 1.0F)
+        {
+            /* Source computes a first random azimuth and an angular step here.
+             * All three Whispy scripts have a nonnegative angle span, so every
+             * emission overwrites that azimuth and never reads the step. Keep
+             * the RNG advance; delete the dead float and divide. */
+            (void)syUtilsRandFloat();
+        }
+        while (gn->frame >= 1.0F)
+        {
+            f32 radial_random = syUtilsRandFloat();
+            f32 radial = gn->unk_gn_0x38 * radial_random;
+            f32 azimuth = gn->generator_vars.rotate.base +
+                (syUtilsRandFloat() *
+                 (gn->generator_vars.rotate.target -
+                  gn->generator_vars.rotate.base));
+            f32 spread = radial_random * gn->unk_gn_0x3C;
+            f32 sin_azimuth;
+            f32 cos_azimuth;
+            f32 sin_spread;
+            f32 cos_spread;
+            f32 radial_x;
+            f32 radial_y;
+            f32 cone_x;
+            f32 cone_y;
+            f32 cone_z;
+            f32 pos_x;
+            f32 pos_y;
+            f32 pos_z;
+            f32 vel_x;
+            f32 vel_y;
+            f32 vel_z;
+
+            ndsWhispyAOTSinCos(azimuth, &sin_azimuth, &cos_azimuth);
+            ndsWhispyAOTSinCos(spread, &sin_spread, &cos_spread);
+            gNdsWhispyAOTTableTrigPairs += 2u;
+
+            radial_x = cos_azimuth * radial;
+            radial_y = sin_azimuth * radial;
+            cone_x = cos_azimuth * (sin_spread * desc->magnitude);
+            cone_y = sin_azimuth * (sin_spread * desc->magnitude);
+            cone_z = cos_spread * desc->magnitude;
+
+            pos_x = (radial_x * desc->cos_angle2) + gn->pos.x;
+            pos_y = (-radial_x * desc->sin_angle1 * desc->sin_angle2) +
+                    (radial_y * desc->cos_angle1) + gn->pos.y;
+            pos_z = (-radial_x * desc->cos_angle1 * desc->sin_angle2) -
+                    (radial_y * desc->sin_angle1) + gn->pos.z;
+
+            vel_x = (cone_x * desc->cos_angle2) +
+                    (cone_z * desc->sin_angle2);
+            vel_y = (-cone_x * desc->sin_angle1 * desc->sin_angle2) +
+                    (cone_y * desc->cos_angle1) +
+                    (cone_z * desc->sin_angle1 * desc->cos_angle2);
+            vel_z = (-cone_x * desc->cos_angle1 * desc->sin_angle2) -
+                    (cone_y * desc->sin_angle1) +
+                    (cone_z * desc->cos_angle1 * desc->cos_angle2);
+
+            /* The source constructor immediately runs the source bytecode once
+             * and links the real LBParticle into the real pool. Keeping that
+             * call is deliberate: this optimization owns math, not spawns. */
+            lbParticleMakeParam(
+                gn->bank_id, gn->flags, gn->texture_id, gn->bytecode,
+                gn->particle_lifetime, pos_x, pos_y, pos_z,
+                vel_x, vel_y, vel_z, gn->size, gn->gravity, gn->friction,
+                0u, gn);
+            gNdsWhispyAOTGeneratorEmits++;
+            gn->frame -= 1.0F;
+        }
+
+        if (gn->generator_lifetime != 0u)
+        {
+            gn->generator_lifetime--;
+            if (gn->generator_lifetime == 0u)
+            {
+                /* Vortex is excluded by the preflight, so this is the source's
+                 * ordinary ejection arm verbatim. */
+                if (sLBParticleGeneratorsLastProcessed == NULL)
+                {
+                    sLBParticleGeneratorsQueued = gn->next;
+                }
+                else
+                {
+                    sLBParticleGeneratorsLastProcessed->next = gn->next;
+                }
+                next_gn = gn->next;
+                if (gn->xf != NULL)
+                {
+                    gn->xf->users_num--;
+                    if (gn->xf->users_num == 0u)
+                    {
+                        lbParticleEjectTransform(gn->xf);
+                    }
+                }
+                gn->next = sLBParticleGeneratorsAllocFree;
+                sLBParticleGeneratorsAllocFree = gn;
+                gn = next_gn;
+                gLBParticleGeneratorsUsedNum--;
+                continue;
+            }
+        }
+        sLBParticleGeneratorsLastProcessed = gn;
+        gn = gn->next;
+    }
+#if NDS_TICK_HUD
+    gNdsWhispyAOTGeneratorTicks += cpuGetTiming() - tick_start;
+#endif
+}
+
+/* Exact floor(65536 / n), generated once into ARM immediates/rodata. Script 2
+ * starts its terminal alpha blend with source length 17; construction already
+ * consumes the only other length-17 blend before the AOT runner sees it. */
+static const s32 sNdsWhispyBlendReciprocalQ16[18] = {
+    0, 65536, 32768, 21845, 16384, 13107, 10922, 9362, 8192,
+    7281, 6553, 5957, 5461, 5041, 4681, 4369, 4096, 3855
+};
+static const f32 sNdsWhispySizeReciprocal[18] = {
+    0.0F, 1.0F, 0.5F, 0.3333333333F, 0.25F, 0.2F,
+    0.1666666667F, 0.1428571429F, 0.125F, 0.1111111111F,
+    0.1F, 0.0909090909F, 0.0833333333F, 0.0769230769F,
+    0.0714285714F, 0.0666666667F, 0.0625F, 0.0588235294F
+};
+
+static u8 ndsWhispyAOTBlendChannel(u8 current, u8 target, u16 length)
+{
+    s32 value = ((s32)current << 16) +
+        (((s32)target - (s32)current) *
+         sNdsWhispyBlendReciprocalQ16[length]);
+
+    return (u8)(value >> 16);
+}
+
+static void ndsWhispyAOTApplyBlends(LBParticle *pc,
+                                    u16 size_length,
+                                    u16 prim_length,
+                                    u16 env_length)
+{
+    if (size_length != 0u)
+    {
+        pc->size += (pc->size_target - pc->size) *
+                    sNdsWhispySizeReciprocal[size_length];
+        pc->size_target_length = size_length - 1u;
+        gNdsWhispyAOTDividesAvoided++;
+    }
+    if (prim_length != 0u)
+    {
+        pc->primcolor.r = ndsWhispyAOTBlendChannel(
+            pc->primcolor.r, pc->target_primcolor.r, prim_length);
+        pc->primcolor.g = ndsWhispyAOTBlendChannel(
+            pc->primcolor.g, pc->target_primcolor.g, prim_length);
+        pc->primcolor.b = ndsWhispyAOTBlendChannel(
+            pc->primcolor.b, pc->target_primcolor.b, prim_length);
+        pc->primcolor.a = ndsWhispyAOTBlendChannel(
+            pc->primcolor.a, pc->target_primcolor.a, prim_length);
+        pc->primcolor_target_length = prim_length - 1u;
+        gNdsWhispyAOTDividesAvoided += 4u;
+    }
+    if (env_length != 0u)
+    {
+        pc->envcolor.r = ndsWhispyAOTBlendChannel(
+            pc->envcolor.r, pc->target_envcolor.r, env_length);
+        pc->envcolor.g = ndsWhispyAOTBlendChannel(
+            pc->envcolor.g, pc->target_envcolor.g, env_length);
+        pc->envcolor.b = ndsWhispyAOTBlendChannel(
+            pc->envcolor.b, pc->target_envcolor.b, env_length);
+        pc->envcolor.a = ndsWhispyAOTBlendChannel(
+            pc->envcolor.a, pc->target_envcolor.a, env_length);
+        pc->envcolor_target_length = env_length - 1u;
+        gNdsWhispyAOTDividesAvoided += 4u;
+    }
+}
+
+/* Route 6's source-equivalent blend kernel. A colour channel already at its
+ * target is mathematically unchanged by BattleShip's blend expression; avoid
+ * its multiply/shift/store while retaining the proof counter's source-operation
+ * meaning. Whispy's terminal fades change alpha only, so three of four channel
+ * operations disappear for the busiest portion of each particle lifetime. */
+static inline NDS_WHISPY_AOT_INLINE_CODE u32
+ndsWhispyAOTApplyBlendsLean(LBParticle *pc,
+                            u16 size_length,
+                            u16 prim_length,
+                            u16 env_length)
+{
+    u32 avoided = 0u;
+
+    if (size_length != 0u)
+    {
+        pc->size += (pc->size_target - pc->size) *
+                    sNdsWhispySizeReciprocal[size_length];
+        pc->size_target_length = size_length - 1u;
+        avoided++;
+    }
+    if (prim_length != 0u)
+    {
+#define NDS_WHISPY_BLEND_IF_CHANGED(channel) \
+        do { \
+            if (pc->primcolor.channel != pc->target_primcolor.channel) \
+            { \
+                pc->primcolor.channel = ndsWhispyAOTBlendChannel( \
+                    pc->primcolor.channel, pc->target_primcolor.channel, \
+                    prim_length); \
+            } \
+        } while (0)
+        NDS_WHISPY_BLEND_IF_CHANGED(r);
+        NDS_WHISPY_BLEND_IF_CHANGED(g);
+        NDS_WHISPY_BLEND_IF_CHANGED(b);
+        NDS_WHISPY_BLEND_IF_CHANGED(a);
+#undef NDS_WHISPY_BLEND_IF_CHANGED
+        pc->primcolor_target_length = prim_length - 1u;
+        avoided += 4u;
+    }
+    if (env_length != 0u)
+    {
+#define NDS_WHISPY_ENV_BLEND_IF_CHANGED(channel) \
+        do { \
+            if (pc->envcolor.channel != pc->target_envcolor.channel) \
+            { \
+                pc->envcolor.channel = ndsWhispyAOTBlendChannel( \
+                    pc->envcolor.channel, pc->target_envcolor.channel, \
+                    env_length); \
+            } \
+        } while (0)
+        NDS_WHISPY_ENV_BLEND_IF_CHANGED(r);
+        NDS_WHISPY_ENV_BLEND_IF_CHANGED(g);
+        NDS_WHISPY_ENV_BLEND_IF_CHANGED(b);
+        NDS_WHISPY_ENV_BLEND_IF_CHANGED(a);
+#undef NDS_WHISPY_ENV_BLEND_IF_CHANGED
+        pc->envcolor_target_length = env_length - 1u;
+        avoided += 4u;
+    }
+    return avoided;
+}
+
+static void ndsWhispyAOTSetPrimAlphaBlend(LBParticle *pc,
+                                         u16 length, u8 alpha)
+{
+    pc->target_primcolor = pc->primcolor;
+    pc->target_primcolor.a = alpha;
+    pc->primcolor_target_length = length;
+}
+
+/* AOT control states are bytecode cursor offsets after the source constructor's
+ * immediate first update. The generated-bank hash pins every command byte.
+ * Keeping the source cursor/timer/loop fields current makes the route reversible
+ * at any frame and gives route 4 an exact same-ROM control. */
+static sb32 ndsWhispyAOTAdvanceScript2(LBParticle *pc)
+{
+    switch (pc->bytecode_csr)
+    {
+    case 22u:
+        pc->frame_id = 1u;
+        pc->bytecode_csr = 24u;
+        pc->bytecode_timer = 2u;
+        return TRUE;
+    case 24u:
+        pc->frame_id = 2u;
+        pc->bytecode_csr = 26u;
+        pc->bytecode_timer = 2u;
+        return TRUE;
+    case 26u:
+        pc->frame_id = 3u;
+        pc->bytecode_csr = 28u;
+        pc->bytecode_timer = 2u;
+        return TRUE;
+    case 28u:
+        if (pc->loop_count == 0u)
+        {
+            return FALSE;
+        }
+        pc->loop_count--;
+        pc->frame_id = 0u;
+        pc->bytecode_timer = 2u;
+        if (pc->loop_count != 0u)
+        {
+            pc->bytecode_csr = 22u;
+        }
+        else
+        {
+            ndsWhispyAOTSetPrimAlphaBlend(pc, 17u, 0u);
+            pc->loop_count = 2u;
+            pc->loop_ptr = 34u;
+            pc->bytecode_csr = 36u;
+        }
+        return TRUE;
+    case 36u:
+        pc->frame_id = 1u;
+        pc->bytecode_csr = 38u;
+        pc->bytecode_timer = 2u;
+        return TRUE;
+    case 38u:
+        pc->frame_id = 2u;
+        pc->bytecode_csr = 40u;
+        pc->bytecode_timer = 2u;
+        return TRUE;
+    case 40u:
+        pc->frame_id = 3u;
+        pc->bytecode_csr = 42u;
+        pc->bytecode_timer = 2u;
+        return TRUE;
+    case 42u:
+        if (pc->loop_count == 0u)
+        {
+            return FALSE;
+        }
+        pc->loop_count--;
+        if (pc->loop_count != 0u)
+        {
+            pc->frame_id = 0u;
+            pc->bytecode_csr = 36u;
+            pc->bytecode_timer = 2u;
+        }
+        else
+        {
+            pc->lifetime = 1u;
+            pc->bytecode_csr = 44u;
+            pc->bytecode_timer = 0u;
+        }
+        return TRUE;
+    default:
+        return FALSE;
+    }
+}
+
+static sb32 ndsWhispyAOTAdvanceBytecode(
+    LBParticle *pc, const NDSWhispyAOTGeneratorDesc *desc)
+{
+    switch (desc->script_id)
+    {
+    case 2u:
+        return ndsWhispyAOTAdvanceScript2(pc);
+    case 3u:
+        if (pc->bytecode_csr == 40u)
+        {
+            ndsWhispyAOTSetPrimAlphaBlend(pc, 11u, 0u);
+            pc->frame_id = 0u;
+            pc->bytecode_csr = 45u;
+            pc->bytecode_timer = 10u;
+            return TRUE;
+        }
+        if (pc->bytecode_csr == 45u)
+        {
+            pc->lifetime = 1u;
+            pc->bytecode_csr = 46u;
+            pc->bytecode_timer = 0u;
+            return TRUE;
+        }
+        return FALSE;
+    case 4u:
+        if (pc->bytecode_csr == 28u)
+        {
+            ndsWhispyAOTSetPrimAlphaBlend(pc, 9u, 0u);
+            pc->frame_id = 0u;
+            pc->bytecode_csr = 33u;
+            pc->bytecode_timer = 8u;
+            return TRUE;
+        }
+        if (pc->bytecode_csr == 33u)
+        {
+            pc->lifetime = 1u;
+            pc->bytecode_csr = 34u;
+            pc->bytecode_timer = 0u;
+            return TRUE;
+        }
+        return FALSE;
+    default:
+        return FALSE;
+    }
+}
+
+/* This is the source lbParticleUpdateStruct lifetime-zero branch with the same
+ * list, transform-user, free-list and live-count ownership. Whispy's closed
+ * scripts cannot carry VORTEX, but retaining that clause makes the copied seam
+ * fail safely if its selector is ever widened. */
+static LBParticle *ndsWhispyAOTEjectStruct(
+    LBParticle *pc, LBParticle *previous, s32 link)
+{
+    LBParticle *next = pc->next;
+
+    if (previous == NULL)
+    {
+        sLBParticleStructsAllocLinks[link] = next;
+    }
+    else
+    {
+        previous->next = next;
+    }
+    if ((pc->gn != NULL) &&
+        ((pc->flags & LBPARTICLE_FLAG_VORTEX) != 0u) &&
+        (pc->gn->kind == nLBParticleKindVortex))
+    {
+        pc->gn->generator_vars.vortex.lifetime--;
+    }
+    if (pc->xf != NULL)
+    {
+        pc->xf->users_num--;
+        if (pc->xf->users_num == 0u)
+        {
+            lbParticleEjectTransform(pc->xf);
+            if ((previous == NULL) &&
+                (next != sLBParticleStructsAllocLinks[link]))
+            {
+                next = sLBParticleStructsAllocLinks[link];
+            }
+        }
+    }
+    pc->next = sLBParticleStructsAllocFree;
+    sLBParticleStructsAllocFree = pc;
+    gLBParticleStructsUsedNum--;
+    return next;
+}
+
+typedef struct NDSWhispyAOTLeanStats
+{
+    u32 visits;
+    u32 fast_updates;
+    u32 source_updates;
+    u32 divides_avoided;
+    u32 direct_updates;
+} NDSWhispyAOTLeanStats;
+
+/* Identical closed ownership as route 5, but its proof values live in the ARM
+ * runner's locals until the end of the once-per-frame pass. This removes three
+ * to four volatile global read/modify/writes from every live particle update. */
+static inline NDS_WHISPY_AOT_INLINE_CODE LBParticle *
+ndsWhispyAOTUpdateStructLean(LBParticle *pc, LBParticle *previous,
+                             s32 link, NDSWhispyAOTLeanStats *stats)
+{
+    const NDSWhispyAOTGeneratorDesc *desc =
+        ndsWhispyAOTDescForBytecode(
+            pc->bank_id, pc->texture_id, pc->bytecode);
+    u16 size_length;
+    u16 prim_length;
+    u16 env_length;
+
+    if (desc == NULL)
+    {
+        return lbParticleUpdateStruct(pc, previous, link);
+    }
+    stats->visits++;
+    if ((pc->flags & LBPARTICLE_FLAG_PAUSE) != 0u)
+    {
+        stats->fast_updates++;
+        return pc->next;
+    }
+
+    size_length = pc->size_target_length;
+    prim_length = pc->primcolor_target_length;
+    env_length = pc->envcolor_target_length;
+    {
+        const u16 motion_mask = LBPARTICLE_FLAG_GRAVITY |
+                                LBPARTICLE_FLAG_FRICTION |
+                                LBPARTICLE_FLAG_VORTEX |
+                                LBPARTICLE_FLAG_ATTACH;
+
+        if ((pc->lifetime == 0u) || (pc->bytecode_timer == 0u) ||
+            (size_length > 17u) || (prim_length > 17u) ||
+            (env_length > 17u) ||
+            ((pc->flags & motion_mask) != desc->particle_flags))
+        {
+            stats->source_updates++;
+            return lbParticleUpdateStruct(pc, previous, link);
+        }
+    }
+    if (pc->bytecode_timer == 1u)
+    {
+        if (ndsWhispyAOTAdvanceBytecode(pc, desc) == FALSE)
+        {
+            stats->source_updates++;
+            return lbParticleUpdateStruct(pc, previous, link);
+        }
+    }
+    else
+    {
+        pc->bytecode_timer--;
+    }
+
+    size_length = pc->size_target_length;
+    prim_length = pc->primcolor_target_length;
+    env_length = pc->envcolor_target_length;
+    stats->divides_avoided += ndsWhispyAOTApplyBlendsLean(
+        pc, size_length, prim_length, env_length);
+    pc->lifetime--;
+    stats->direct_updates++;
+    stats->fast_updates++;
+    if (pc->lifetime == 0u)
+    {
+        return ndsWhispyAOTEjectStruct(pc, previous, link);
+    }
+
+    if ((pc->flags & LBPARTICLE_FLAG_GRAVITY) != 0u)
+    {
+        pc->vel.y -= pc->gravity;
+    }
+    if (((pc->flags & LBPARTICLE_FLAG_FRICTION) != 0u) &&
+        (desc->script_id != 4u))
+    {
+        pc->vel.x *= pc->friction;
+        pc->vel.y *= pc->friction;
+        pc->vel.z *= pc->friction;
+    }
+    pc->pos.x += pc->vel.x;
+    pc->pos.y += pc->vel.y;
+    pc->pos.z += pc->vel.z;
+    return pc->next;
+}
+
+/* Route 5 owns every post-construction update for exact Whispy scripts 2/3/4:
+ * fixed control transitions, reciprocal blends, lifetime, pool retirement and
+ * their closed gravity/friction motion. Routes 1-4 remain unchanged below as
+ * synchronized controls. */
+static LBParticle *ndsWhispyAOTUpdateStruct(
+    LBParticle *pc, LBParticle *previous, s32 link)
+{
+    const NDSWhispyAOTGeneratorDesc *desc =
+        ndsWhispyAOTDescForBytecode(
+            pc->bank_id, pc->texture_id, pc->bytecode);
+    u16 size_length = pc->size_target_length;
+    u16 prim_length = pc->primcolor_target_length;
+    u16 env_length = pc->envcolor_target_length;
+    LBParticle *next;
+
+    if (desc == NULL)
+    {
+        return lbParticleUpdateStruct(pc, previous, link);
+    }
+    gNdsWhispyAOTStructVisits++;
+    if (gNdsWhispyAOTRoute >= 5u)
+    {
+        const u16 motion_mask = LBPARTICLE_FLAG_GRAVITY |
+                                LBPARTICLE_FLAG_FRICTION |
+                                LBPARTICLE_FLAG_VORTEX |
+                                LBPARTICLE_FLAG_ATTACH;
+
+        if ((pc->flags & LBPARTICLE_FLAG_PAUSE) != 0u)
+        {
+            gNdsWhispyAOTStructFastUpdates++;
+            return pc->next;
+        }
+        if ((pc->lifetime == 0u) || (pc->bytecode_timer == 0u) ||
+            (size_length > 17u) || (prim_length > 17u) ||
+            (env_length > 17u) ||
+            ((pc->flags & motion_mask) != desc->particle_flags))
+        {
+            gNdsWhispyAOTStructSourceUpdates++;
+            return lbParticleUpdateStruct(pc, previous, link);
+        }
+        if (pc->bytecode_timer == 1u)
+        {
+            if (ndsWhispyAOTAdvanceBytecode(pc, desc) == FALSE)
+            {
+                gNdsWhispyAOTStructSourceUpdates++;
+                return lbParticleUpdateStruct(pc, previous, link);
+            }
+        }
+        else
+        {
+            pc->bytecode_timer--;
+        }
+
+        size_length = pc->size_target_length;
+        prim_length = pc->primcolor_target_length;
+        env_length = pc->envcolor_target_length;
+        ndsWhispyAOTApplyBlends(
+            pc, size_length, prim_length, env_length);
+        pc->lifetime--;
+        gNdsWhispyAOTTier2DirectUpdates++;
+        gNdsWhispyAOTStructFastUpdates++;
+        if (pc->lifetime == 0u)
+        {
+            return ndsWhispyAOTEjectStruct(pc, previous, link);
+        }
+
+        if ((pc->flags & LBPARTICLE_FLAG_GRAVITY) != 0u)
+        {
+            pc->vel.y -= pc->gravity;
+        }
+        if (((pc->flags & LBPARTICLE_FLAG_FRICTION) != 0u) &&
+            (desc->script_id != 4u))
+        {
+            pc->vel.x *= pc->friction;
+            pc->vel.y *= pc->friction;
+            pc->vel.z *= pc->friction;
+        }
+        pc->pos.x += pc->vel.x;
+        pc->pos.y += pc->vel.y;
+        pc->pos.z += pc->vel.z;
+        return pc->next;
+    }
+    if ((pc->flags & LBPARTICLE_FLAG_PAUSE) || (pc->lifetime <= 1u) ||
+        (pc->bytecode_timer <= 1u) ||
+        (size_length > 16u) || (prim_length > 16u) ||
+        (env_length > 16u))
+    {
+        gNdsWhispyAOTStructSourceUpdates++;
+        return lbParticleUpdateStruct(pc, previous, link);
+    }
+
+    if (gNdsWhispyAOTRoute >= 2u)
+    {
+        const u16 motion_mask = LBPARTICLE_FLAG_GRAVITY |
+                                LBPARTICLE_FLAG_FRICTION |
+                                LBPARTICLE_FLAG_VORTEX |
+                                LBPARTICLE_FLAG_ATTACH;
+
+        /* A timer above one cannot enter the bytecode interpreter, and a
+         * lifetime above one cannot eject. Exact bank/texture/bytecode identity
+         * plus the motion-bit check therefore closes this frame to the small
+         * kernel below. Presentation flags (ENV colour, alpha blend, masks)
+         * deliberately remain source-owned and may coexist with these bits. */
+        if ((pc->flags & motion_mask) == desc->particle_flags)
+        {
+            pc->bytecode_timer--;
+            ndsWhispyAOTApplyBlends(
+                pc, size_length, prim_length, env_length);
+            pc->lifetime--;
+
+            if ((pc->flags & LBPARTICLE_FLAG_GRAVITY) != 0u)
+            {
+                pc->vel.y -= pc->gravity;
+            }
+            if (((pc->flags & LBPARTICLE_FLAG_FRICTION) != 0u) &&
+                (desc->script_id != 4u))
+            {
+                pc->vel.x *= pc->friction;
+                pc->vel.y *= pc->friction;
+                pc->vel.z *= pc->friction;
+            }
+            /* Script 4's source friction is exactly 1.0F. Omitting its three
+             * identity multiplies is bit-exact for finite source velocities. */
+            pc->pos.x += pc->vel.x;
+            pc->pos.y += pc->vel.y;
+            pc->pos.z += pc->vel.z;
+            gNdsWhispyAOTTier2DirectUpdates++;
+            gNdsWhispyAOTStructFastUpdates++;
+            return pc->next;
+        }
+        gNdsWhispyAOTStructSourceUpdates++;
+        return lbParticleUpdateStruct(pc, previous, link);
+    }
+
+    if ((size_length | prim_length | env_length) == 0u)
+    {
+        gNdsWhispyAOTStructSourceUpdates++;
+        return lbParticleUpdateStruct(pc, previous, link);
+    }
+
+    pc->size_target_length = 0u;
+    pc->primcolor_target_length = 0u;
+    pc->envcolor_target_length = 0u;
+    next = lbParticleUpdateStruct(pc, previous, link);
+
+    ndsWhispyAOTApplyBlends(pc, size_length, prim_length, env_length);
+    gNdsWhispyAOTStructFastUpdates++;
+    return next;
+}
+
+static NDS_WHISPY_AOT_FAST_CODE void
+ndsWhispyAOTStructFuncRunLean(GObj *gobj)
+{
+    NDSWhispyAOTLeanStats stats = { 0u, 0u, 0u, 0u, 0u };
+    u32 flags = gobj->flags;
+    s32 link;
+
+    for (link = 0; link < ARRAY_COUNT(sLBParticleStructsAllocLinks);
+         link++, flags >>= 1)
+    {
+        LBParticle *previous;
+        LBParticle *current;
+
+        if ((flags & 0x10000u) != 0u)
+        {
+            continue;
+        }
+        previous = NULL;
+        current = sLBParticleStructsAllocLinks[link];
+        while (current != NULL)
+        {
+            LBParticle *next = ndsWhispyAOTUpdateStructLean(
+                current, previous, link, &stats);
+
+            if (current->next == next)
+            {
+                previous = current;
+                current = next;
+            }
+            else
+            {
+                current = next;
+            }
+        }
+    }
+
+    gNdsWhispyAOTStructVisits += stats.visits;
+    gNdsWhispyAOTStructFastUpdates += stats.fast_updates;
+    gNdsWhispyAOTStructSourceUpdates += stats.source_updates;
+    gNdsWhispyAOTDividesAvoided += stats.divides_avoided;
+    gNdsWhispyAOTTier2DirectUpdates += stats.direct_updates;
+}
+
+static void ndsWhispyAOTStructFuncRun(GObj *gobj)
+{
+    u32 flags = gobj->flags;
+    s32 link;
+#if NDS_TICK_HUD
+    u32 tick_start = cpuGetTiming();
+#endif
+
+    if (gNdsWhispyAOTRoute >= 6u)
+    {
+        ndsWhispyAOTStructFuncRunLean(gobj);
+#if NDS_TICK_HUD
+        gNdsWhispyAOTStructTicks += cpuGetTiming() - tick_start;
+#endif
+        return;
+    }
+    if (gNdsWhispyAOTRoute == 0u)
+    {
+        lbParticleStructFuncRun(gobj);
+#if NDS_TICK_HUD
+        gNdsWhispyAOTStructTicks += cpuGetTiming() - tick_start;
+#endif
+        return;
+    }
+    for (link = 0; link < ARRAY_COUNT(sLBParticleStructsAllocLinks);
+         link++, flags >>= 1)
+    {
+        LBParticle *previous;
+        LBParticle *current;
+
+        if ((flags & 0x10000u) != 0u)
+        {
+            continue;
+        }
+        previous = NULL;
+        current = sLBParticleStructsAllocLinks[link];
+        while (current != NULL)
+        {
+            LBParticle *next =
+                ndsWhispyAOTUpdateStruct(current, previous, link);
+
+            if (current->next == next)
+            {
+                previous = current;
+                current = next;
+            }
+            else
+            {
+                current = next;
+            }
+        }
+    }
+#if NDS_TICK_HUD
+    gNdsWhispyAOTStructTicks += cpuGetTiming() - tick_start;
+#endif
+}
+#endif /* NDS_R2_WHISPY_NATIVE_AOT */
 
 /* efcommon's texture ids run 0..46 (PARTICLE_BANK_DISCOVERIES.md). */
 #define NDS_PARTICLE_TEXTURE_IDS 47
@@ -1299,6 +2363,10 @@ volatile u32 gNdsParticleBankRegisterCount;
 volatile u32 gNdsParticleQuadMissMask[2];
 volatile u32 gNdsParticleQuadMissFrameMask;
 volatile u32 gNdsParticleQuadStrideCount;
+volatile u32 gNdsWhispyNativeTextureDrawCount;
+volatile u32 gNdsWhispyNativeTextureMissCount;
+volatile u32 gNdsWhispyNativeTextureMask;
+volatile u32 gNdsWhispyNativeSourceFrameMask;
 
 /* Atlas row for (texture, frame), or NULL. A linear scan of 31 rows: the table
  * is sorted by (texture, frame) and a frame is looked up once per particle, so
@@ -1550,7 +2618,11 @@ static void ndsParticleTransformForDraw(LBParticle *pc,
                                         const Vec3f *camera_up,
                                         Vec3f *world_pos,
                                         Vec3f *quad_right,
-                                        Vec3f *quad_up)
+                                        Vec3f *quad_up
+#if NDS_R2_WHISPY_NATIVE_AOT
+                                        , sb32 rigid_whispy
+#endif
+                                        )
 {
     LBTransform *xf = pc->xf;
 
@@ -1586,6 +2658,34 @@ static void ndsParticleTransformForDraw(LBParticle *pc,
     world_pos->z = (xf->affine[0][2] * pc->pos.x) +
                    (xf->affine[1][2] * pc->pos.y) +
                    (xf->affine[2][2] * pc->pos.z) + xf->affine[3][2];
+#if NDS_R2_WHISPY_NATIVE_AOT
+    /* Both Pupupu roots attach a rigid translate + Y rotation with unit scale.
+     * The generic path takes two square roots per particle just to recover
+     * magnitudes 1 and 1 from that matrix. Preserve its diagonal-sign mirror
+     * rule, but let the GX camera matrix own the rest of the transform. */
+    if ((rigid_whispy != FALSE) && (gNdsWhispyAOTRoute != 0u))
+    {
+        if ((xf->scale.x == 1.0F) && (xf->scale.y == 1.0F) &&
+            (xf->scale.z == 1.0F))
+        {
+            if (xf->affine[0][0] < 0.0F)
+            {
+                quad_right->x = -quad_right->x;
+                quad_right->y = -quad_right->y;
+                quad_right->z = -quad_right->z;
+            }
+            if (xf->affine[1][1] < 0.0F)
+            {
+                quad_up->x = -quad_up->x;
+                quad_up->y = -quad_up->y;
+                quad_up->z = -quad_up->z;
+            }
+            gNdsWhispyAOTRigidDraws++;
+            return;
+        }
+        gNdsWhispyAOTRigidDrawFallbacks++;
+    }
+#endif
     {
         f32 scale_x = sqrtf(SQUARE(xf->affine[0][0]) +
                             SQUARE(xf->affine[0][1]) +
@@ -1604,6 +2704,102 @@ static void ndsParticleTransformForDraw(LBParticle *pc,
         quad_up->z *= scale_y;
     }
 }
+
+#if NDS_R2_WHISPY_NATIVE_AOT
+#define NDS_WHISPY_AOT_XF_CACHE_COUNT 4u
+static LBTransform *sNdsWhispyAOTXfCache[NDS_WHISPY_AOT_XF_CACHE_COUNT];
+static u8 sNdsWhispyAOTXfMirror[NDS_WHISPY_AOT_XF_CACHE_COUNT];
+static u32 sNdsWhispyAOTXfCacheCount;
+static u32 sNdsWhispyAOTXfCacheTransformID;
+
+/* The two Whispy roots use only translate + Y rotation + unit scale. Validate
+ * that shape once per transform/pass, then evaluate its three useful rows: four
+ * multiplies instead of the generic nine, with no per-particle sqrt or camera-
+ * basis copies. `mirror_mask` is consumed by the fixed GX submitter. */
+static sb32 ndsWhispyAOTTier2TransformForDraw(LBParticle *pc,
+                                              Vec3f *world_pos,
+                                              u32 *mirror_mask)
+{
+    LBTransform *xf = pc->xf;
+    u32 index;
+    u32 mirror = 0u;
+
+    if (xf == NULL)
+    {
+        *world_pos = pc->pos;
+        *mirror_mask = 0u;
+        if (gNdsWhispyAOTRoute < 6u)
+        {
+            gNdsWhispyAOTTier2FixedTransforms++;
+        }
+        return TRUE;
+    }
+    if (xf->transform_id != dLBParticleCurrentTransformID)
+    {
+        if (xf->transform_status != nLBTransformStatusFinished)
+        {
+            syMatrixTraRotRpyRScaF(
+                &xf->affine,
+                xf->translate.x, xf->translate.y, xf->translate.z,
+                xf->rotate.x, xf->rotate.y, xf->rotate.z,
+                xf->scale.x, xf->scale.y, xf->scale.z);
+        }
+        if (xf->transform_status == nLBTransformStatusReady)
+        {
+            xf->transform_status = nLBTransformStatusFinished;
+        }
+        xf->transform_id = dLBParticleCurrentTransformID;
+    }
+
+    if (sNdsWhispyAOTXfCacheTransformID != dLBParticleCurrentTransformID)
+    {
+        sNdsWhispyAOTXfCacheTransformID = dLBParticleCurrentTransformID;
+        sNdsWhispyAOTXfCacheCount = 0u;
+    }
+    for (index = 0u; index < sNdsWhispyAOTXfCacheCount; index++)
+    {
+        if (sNdsWhispyAOTXfCache[index] == xf)
+        {
+            mirror = sNdsWhispyAOTXfMirror[index];
+            break;
+        }
+    }
+    if (index == sNdsWhispyAOTXfCacheCount)
+    {
+        if ((xf->scale.x != 1.0F) || (xf->scale.y != 1.0F) ||
+            (xf->scale.z != 1.0F) ||
+            (xf->affine[0][1] != 0.0F) ||
+            (xf->affine[1][0] != 0.0F) ||
+            (xf->affine[1][1] != 1.0F) ||
+            (xf->affine[1][2] != 0.0F) ||
+            (xf->affine[2][1] != 0.0F))
+        {
+            return FALSE;
+        }
+        if (xf->affine[0][0] < 0.0F) { mirror |= 1u; }
+        if (xf->affine[1][1] < 0.0F) { mirror |= 2u; }
+        if (sNdsWhispyAOTXfCacheCount < NDS_WHISPY_AOT_XF_CACHE_COUNT)
+        {
+            sNdsWhispyAOTXfCache[sNdsWhispyAOTXfCacheCount] = xf;
+            sNdsWhispyAOTXfMirror[sNdsWhispyAOTXfCacheCount] = (u8)mirror;
+            sNdsWhispyAOTXfCacheCount++;
+        }
+    }
+
+    world_pos->x = (xf->affine[0][0] * pc->pos.x) +
+                   (xf->affine[2][0] * pc->pos.z) + xf->affine[3][0];
+    world_pos->y = pc->pos.y + xf->affine[3][1];
+    world_pos->z = (xf->affine[0][2] * pc->pos.x) +
+                   (xf->affine[2][2] * pc->pos.z) + xf->affine[3][2];
+    *mirror_mask = mirror;
+    if (gNdsWhispyAOTRoute < 6u)
+    {
+        gNdsWhispyAOTTier2FixedTransforms++;
+    }
+    return TRUE;
+}
+
+#endif
 #endif
 
 volatile u32 gNdsSourceAssetQuadAttempts;
@@ -1859,18 +3055,29 @@ void lbParticleDrawTextures(GObj *gobj)
     u32 emitted = 0u;
     u32 atlas_name;
     u32 link;
+#if NDS_R2_WHISPY_NATIVE_AOT
+    u32 whispy_native_names[3] = { 0u, 0u, 0u };
+    u32 whispy_lean_source_frames = 0u;
+    u32 whispy_lean_use_mask = 0u;
+    u32 whispy_lean_texture_mask = 0u;
+    u32 whispy_lean_stride_count = 0u;
+    u32 whispy_lean_fixed_transforms = 0u;
+    u32 whispy_lean_fixed_submits = 0u;
+    u32 whispy_lean_fixed_fallbacks = 0u;
+    u32 whispy_lean_draws = 0u;
+    u32 whispy_lean_submit_ok = 0u;
+    u32 whispy_lean_submit_fail = 0u;
+    u8 whispy_lean_frame_max[3] = { 0u, 0u, 0u };
+#endif
 #if NDS_TICK_HUD
     /* R2-07 MISC split: the whole lbParticle quad pass, ticks not quads. The
      * emit COUNT already exists (gNdsParticleQuadEmitCount) and is exactly the
      * kind of number that got particles blamed once before at 0.21 quads a
      * frame; this is what it costs.
      *
-     * cpuGetTiming is forward-declared here rather than reached by including
-     * nds/timers.h. This translation unit's include order is load bearing --
-     * the header block above documents 826 errors from getting it wrong -- and
-     * one prototype is a smaller change than another header in that chain.
-     * libnds nds/timers.h:255 is the authority for the signature. */
-    extern u32 cpuGetTiming(void);
+     * cpuGetTiming is forward-declared at file scope rather than reached by
+     * including nds/timers.h; the include-order constraint is documented
+     * above. */
     u32 misc_particle_mark = cpuGetTiming();
 #endif
 
@@ -1901,6 +3108,20 @@ void lbParticleDrawTextures(GObj *gobj)
     {
         atlas_name = 0u;
     }
+#if NDS_R2_WHISPY_NATIVE_AOT
+    if ((atlas_name != 0u) && (gNdsWhispyAOTRoute >= 2u))
+    {
+        u32 texture;
+
+        ndsRendererSetWhispyNativeBasis(&right, &up);
+        for (texture = 0u; texture < ARRAY_COUNT(whispy_native_names);
+             texture++)
+        {
+            whispy_native_names[texture] =
+                ndsRendererHardwareWhispyNativeName(texture);
+        }
+    }
+#endif
 #else
     /* The census half only. The emit wedged the geometry engine on its first
      * build and is behind NDS_R2_PARTICLE_DRAW until that is understood; the
@@ -1922,12 +3143,20 @@ void lbParticleDrawTextures(GObj *gobj)
         }
         for (pc = sLBParticleStructsAllocLinks[link]; pc != NULL; pc = pc->next)
         {
-            const NDSParticleQuadFrame *row;
+            const NDSParticleQuadFrame *row = NULL;
 #if NDS_R2_PARTICLE_DRAW
             Vec3f world_pos;
             Vec3f quad_right;
             Vec3f quad_up;
             u32 color;
+            u32 texture_name;
+            u32 texture_x;
+            u32 texture_y;
+            u32 texture_width;
+            u32 texture_height;
+#endif
+#if NDS_R2_WHISPY_NATIVE_TEXTURES
+            sb32 whispy_native = FALSE;
 #endif
             u32 id;
 
@@ -1941,11 +3170,18 @@ void lbParticleDrawTextures(GObj *gobj)
             {
                 continue;
             }
-            gNdsParticleTextureUseMask[id >> 5] |= 1u << (id & 31u);
-            /* frame_id + 1, so "never drawn" and "drew frame 0" differ. */
-            if ((u32)pc->frame_id + 1u > gNdsParticleTextureFrameMax[id])
+#if NDS_R2_WHISPY_NATIVE_AOT
+            if (gNdsWhispyAOTRoute < 6u)
+#endif
             {
-                gNdsParticleTextureFrameMax[id] = (u8)(pc->frame_id + 1u);
+                gNdsParticleTextureUseMask[id >> 5] |= 1u << (id & 31u);
+                /* frame_id + 1, so "never drawn" and "drew frame 0" differ. */
+                if ((u32)pc->frame_id + 1u >
+                    gNdsParticleTextureFrameMax[id])
+                {
+                    gNdsParticleTextureFrameMax[id] =
+                        (u8)(pc->frame_id + 1u);
+                }
             }
             if (atlas_name == 0u)
             {
@@ -1973,12 +3209,114 @@ void lbParticleDrawTextures(GObj *gobj)
                     (sEFParticleScriptBanks[slot] ==
                      (uintptr_t)&lGRPupupuParticleScriptBankLo))
                 {
+#if NDS_R2_WHISPY_NATIVE_TEXTURES
+                    whispy_native = TRUE;
+#else
                     id += NDS_PARTICLE_QUAD_PUPUPU_STRIDE;
-                    gNdsParticleQuadStrideCount++;
+#endif
+#if NDS_R2_WHISPY_NATIVE_AOT
+                    if (gNdsWhispyAOTRoute >= 6u)
+                    {
+                        whispy_lean_stride_count++;
+                    }
+                    else
+#endif
+                    {
+                        gNdsParticleQuadStrideCount++;
+                    }
                 }
             }
-            row = ndsParticleQuadFrameFor(id, pc->frame_id);
+#if NDS_R2_WHISPY_NATIVE_TEXTURES
+            if (whispy_native != FALSE)
+            {
+#if NDS_R2_WHISPY_NATIVE_AOT
+                if ((gNdsWhispyAOTRoute >= 6u) &&
+                    ((u32)pc->texture_id < 3u))
+                {
+                    u32 frame_max = (u32)pc->frame_id + 1u;
+
+                    whispy_lean_use_mask |= 1u << pc->texture_id;
+                    if (frame_max >
+                        whispy_lean_frame_max[pc->texture_id])
+                    {
+                        whispy_lean_frame_max[pc->texture_id] = (u8)frame_max;
+                    }
+                }
+#endif
+                if ((u32)pc->frame_id < 32u)
+                {
+#if NDS_R2_WHISPY_NATIVE_AOT
+                    if (gNdsWhispyAOTRoute >= 6u)
+                    {
+                        whispy_lean_source_frames |= 1u << pc->frame_id;
+                    }
+                    else
+#endif
+                    {
+                        gNdsWhispyNativeSourceFrameMask |= 1u << pc->frame_id;
+                    }
+                }
+#if NDS_R2_WHISPY_NATIVE_AOT
+                texture_name = ((gNdsWhispyAOTRoute >= 2u) &&
+                                ((u32)pc->texture_id <
+                                 ARRAY_COUNT(whispy_native_names))) ?
+                    whispy_native_names[pc->texture_id] :
+                    ndsRendererHardwareWhispyNativeName(pc->texture_id);
+#else
+                texture_name =
+                    ndsRendererHardwareWhispyNativeName(pc->texture_id);
+#endif
+                if (texture_name == 0u)
+                {
+                    gNdsWhispyNativeTextureMissCount++;
+                    continue;
+                }
+                texture_x = 0u;
+                texture_y = 0u;
+                switch (pc->texture_id)
+                {
+                case 0u:
+                    texture_width = NDS_WHISPY_NATIVE_TEXTURE_0_WIDTH;
+                    texture_height = NDS_WHISPY_NATIVE_TEXTURE_0_HEIGHT;
+                    break;
+                case 1u:
+                    texture_width = NDS_WHISPY_NATIVE_TEXTURE_1_WIDTH;
+                    texture_height = NDS_WHISPY_NATIVE_TEXTURE_1_HEIGHT;
+                    break;
+                case 2u:
+                    /* The source still advances frame_id; this deliberately
+                     * draws the one generated DS-native source-frame-0 leaf. */
+                    texture_width = NDS_WHISPY_NATIVE_TEXTURE_2_WIDTH;
+                    texture_height = NDS_WHISPY_NATIVE_TEXTURE_2_HEIGHT;
+                    break;
+                default:
+                    gNdsWhispyNativeTextureMissCount++;
+                    continue;
+                }
+            }
+            else
+#endif
+            {
+#if NDS_R2_WHISPY_NATIVE_AOT && NDS_R2_WHISPY_NATIVE_TEXTURES
+                if (gNdsWhispyAOTRoute >= 6u)
+                {
+                    gNdsParticleTextureUseMask[id >> 5] |=
+                        1u << (id & 31u);
+                    if ((u32)pc->frame_id + 1u >
+                        gNdsParticleTextureFrameMax[id])
+                    {
+                        gNdsParticleTextureFrameMax[id] =
+                            (u8)(pc->frame_id + 1u);
+                    }
+                }
+#endif
+                row = ndsParticleQuadFrameFor(id, pc->frame_id);
+            }
+#if NDS_R2_WHISPY_NATIVE_TEXTURES
+            if ((row == NULL) && (whispy_native == FALSE))
+#else
             if (row == NULL)
+#endif
             {
                 /* Admitted set does not carry this one. Draw nothing rather
                  * than the neighbouring atlas cell.
@@ -1999,8 +3337,15 @@ void lbParticleDrawTextures(GObj *gobj)
                 continue;
             }
 #if NDS_R2_PARTICLE_DRAW
-            ndsParticleTransformForDraw(pc, &right, &up, &world_pos,
-                                        &quad_right, &quad_up);
+            if (row != NULL)
+            {
+                texture_name =
+                    ndsRendererHardwareParticleAtlasNameForSheet(row->sheet);
+                texture_x = row->x;
+                texture_y = row->y;
+                texture_width = row->width;
+                texture_height = row->height;
+            }
             color = ((u32)(pc->primcolor.r >> 3) & 31u) |
                     (((u32)(pc->primcolor.g >> 3) & 31u) << 5) |
                     (((u32)(pc->primcolor.b >> 3) & 31u) << 10);
@@ -2011,27 +3356,131 @@ void lbParticleDrawTextures(GObj *gobj)
              * life. The owner saw that as "emitted objects turn flat at end of
              * lifetime". BGR555 has no alpha channel on this hardware; it goes
              * through POLYGON_ATTR instead. */
-            /* The cell's own sheet, not the pass's. The atlas is four separate
-             * 8,192-byte allocations because that is the block size the DS
-             * texture allocator has never refused, so which one a quad binds is
-             * a property of the cell and travels in the frame row. */
-            if (ndsRendererSubmitParticleQuad(
-                    ndsRendererHardwareParticleAtlasNameForSheet(row->sheet),
-                    &world_pos, pc->size,
-                                              color, pc->primcolor.a,
-                                              &quad_right, &quad_up,
-                                              row->x, row->y,
-                                              row->width, row->height) != FALSE)
+            /* Generic particles bind the cell's sheet. Whispy binds one of
+             * three dedicated hardware-native textures prepared with the
+             * atlas, and always submits full-texture UVs. */
+            {
+                s32 submit_result = -1;
+#if NDS_R2_WHISPY_NATIVE_AOT
+                if ((whispy_native != FALSE) &&
+                    (gNdsWhispyAOTRoute >= 2u))
+                {
+                    u32 mirror_mask;
+                    sb32 transform_ok;
+
+                    transform_ok = ndsWhispyAOTTier2TransformForDraw(
+                        pc, &world_pos, &mirror_mask);
+                    if (transform_ok != FALSE)
+                    {
+                        if (gNdsWhispyAOTRoute >= 6u)
+                        {
+                            whispy_lean_fixed_transforms++;
+                        }
+                        submit_result = ndsRendererSubmitWhispyNativeQuad(
+                            texture_name, (u32)pc->texture_id,
+                            &world_pos, pc->size, NULL, 0,
+                            color, pc->primcolor.a, mirror_mask,
+                            texture_width, texture_height,
+                            gNdsWhispyAOTRoute);
+                        if (submit_result > 0)
+                        {
+                            if (gNdsWhispyAOTRoute >= 6u)
+                            {
+                                whispy_lean_fixed_submits++;
+                            }
+                            else
+                            {
+                                gNdsWhispyAOTTier2FixedSubmits++;
+                            }
+                        }
+                        else if (submit_result < 0)
+                        {
+                            if (gNdsWhispyAOTRoute >= 6u)
+                            {
+                                whispy_lean_fixed_fallbacks++;
+                            }
+                            else
+                            {
+                                gNdsWhispyAOTTier2FixedFallbacks++;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        if (gNdsWhispyAOTRoute >= 6u)
+                        {
+                            whispy_lean_fixed_fallbacks++;
+                        }
+                        else
+                        {
+                            gNdsWhispyAOTTier2FixedFallbacks++;
+                        }
+                    }
+                }
+#endif
+                if (submit_result < 0)
+                {
+                    ndsParticleTransformForDraw(
+                        pc, &right, &up, &world_pos, &quad_right, &quad_up
+#if NDS_R2_WHISPY_NATIVE_AOT
+                        , ((whispy_native != FALSE) &&
+                           (gNdsWhispyAOTRoute == 1u))
+#endif
+                    );
+                    submit_result = ndsRendererSubmitParticleQuad(
+                        texture_name, &world_pos, pc->size,
+                        color, pc->primcolor.a, &quad_right, &quad_up,
+                        texture_x, texture_y,
+                        texture_width, texture_height);
+                }
+            if (submit_result != FALSE)
             {
                 emitted++;
+#if NDS_R2_WHISPY_NATIVE_TEXTURES
+                if (whispy_native != FALSE)
+                {
+#if NDS_R2_WHISPY_NATIVE_AOT
+                    if (gNdsWhispyAOTRoute >= 6u)
+                    {
+                        whispy_lean_draws++;
+                        whispy_lean_texture_mask |= 1u << pc->texture_id;
+                    }
+                    else
+#endif
+                    {
+                        gNdsWhispyNativeTextureDrawCount++;
+                        gNdsWhispyNativeTextureMask |=
+                            1u << pc->texture_id;
+                    }
+                }
+#endif
                 if (link == 1u)
                 {
-                    gNdsWhispySubmitOk++;
+#if NDS_R2_WHISPY_NATIVE_AOT
+                    if (gNdsWhispyAOTRoute >= 6u)
+                    {
+                        whispy_lean_submit_ok++;
+                    }
+                    else
+#endif
+                    {
+                        gNdsWhispySubmitOk++;
+                    }
                 }
             }
             else if (link == 1u)
             {
-                gNdsWhispySubmitFail++;
+#if NDS_R2_WHISPY_NATIVE_AOT
+                if (gNdsWhispyAOTRoute >= 6u)
+                {
+                    whispy_lean_submit_fail++;
+                }
+                else
+#endif
+                {
+                    gNdsWhispySubmitFail++;
+                }
+            }
             }
             /* TEMPORARY DIAGNOSTIC, BUGS.md row 1. Remove with that row.
              *
@@ -2044,7 +3493,11 @@ void lbParticleDrawTextures(GObj *gobj)
              * Also latches the v16 clamp: nds_renderer.c scales world by 16 and
              * saturates at +/-32767, so |world| > 2047.9 is drawn on the rail
              * rather than where it belongs. */
-            if (link == 1u)
+            if ((link == 1u)
+#if NDS_R2_WHISPY_NATIVE_AOT
+                && (gNdsWhispyAOTRoute < 6u)
+#endif
+               )
             {
                 gNdsWhispyDrawX = world_pos.x;
                 gNdsWhispyDrawY = world_pos.y;
@@ -2140,6 +3593,48 @@ void lbParticleDrawTextures(GObj *gobj)
 #endif
         ndsRendererEndParticleQuads();
     }
+#if NDS_R2_WHISPY_NATIVE_AOT
+    if (gNdsWhispyAOTRoute >= 6u)
+    {
+        u32 texture;
+
+        if (whispy_lean_use_mask != 0u)
+        {
+            gNdsParticleTextureUseMask[0] |= whispy_lean_use_mask;
+        }
+        for (texture = 0u; texture < 3u; texture++)
+        {
+            if (whispy_lean_frame_max[texture] >
+                gNdsParticleTextureFrameMax[texture])
+            {
+                gNdsParticleTextureFrameMax[texture] =
+                    whispy_lean_frame_max[texture];
+            }
+        }
+        if (whispy_lean_source_frames != 0u)
+        {
+            gNdsWhispyNativeSourceFrameMask |= whispy_lean_source_frames;
+        }
+        if (whispy_lean_texture_mask != 0u)
+        {
+            gNdsWhispyNativeTextureMask |= whispy_lean_texture_mask;
+        }
+        gNdsParticleQuadStrideCount += whispy_lean_stride_count;
+        gNdsWhispyAOTTier2FixedTransforms += whispy_lean_fixed_transforms;
+        gNdsWhispyAOTTier2FixedSubmits += whispy_lean_fixed_submits;
+        gNdsWhispyNativeTextureDrawCount += whispy_lean_draws;
+        gNdsWhispySubmitOk += whispy_lean_submit_ok;
+        if (whispy_lean_fixed_fallbacks != 0u)
+        {
+            gNdsWhispyAOTTier2FixedFallbacks +=
+                whispy_lean_fixed_fallbacks;
+        }
+        if (whispy_lean_submit_fail != 0u)
+        {
+            gNdsWhispySubmitFail += whispy_lean_submit_fail;
+        }
+    }
+#endif
     gNdsParticleDrawVisibleCount += visible;
     if (visible > gNdsParticleDrawVisibleMax)
     {

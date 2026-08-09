@@ -179,7 +179,11 @@ $SetGlobals = @($SetGlobals |
     ForEach-Object { $_.Trim() } |
     Where-Object { $_ -ne '' })
 foreach ($pair in $SetGlobals) {
-    if ($pair -notmatch '^[A-Za-z_][A-Za-z0-9_]*\s*=\s*-?[0-9]+$') {
+    # GDB accepts aggregate field paths in `set var`, and a focused stage lab
+    # needs to shorten a source countdown without adding a permanent mirror
+    # global solely for the harness. Keep array/pointer expressions excluded;
+    # dotted C field names are the only added grammar.
+    if ($pair -notmatch '^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)*\s*=\s*-?[0-9]+$') {
         throw "-SetGlobals expects name=value pairs; got '$pair'."
     }
 }

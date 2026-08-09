@@ -250,6 +250,8 @@ DEFAULT_HEADER = Path("include/nds/generated/nds_particle_banks.generated.h")
 DEFAULT_INC = Path("src/nds/generated/nds_particle_banks.generated.inc")
 DEFAULT_REPORT = Path("docs/optimization/NDS_PARTICLE_BANKS.generated.json")
 DEFAULT_TEXTURE_ASSET = Path("assets/particles/efcommon_particle_textures.ds.bin")
+DEFAULT_WHISPY_NATIVE_ASSET = Path(
+    "assets/particles/grpupupu_whispy_native.ds.bin")
 
 # Texels and palettes ship as a NitroFS payload rather than as linked .rodata.
 # This is not a size preference; it is the only place they fit. Linked const
@@ -269,6 +271,8 @@ DEFAULT_TEXTURE_ASSET = Path("assets/particles/efcommon_particle_textures.ds.bin
 # offsets already in gNdsParticleTextures: data_offset is a byte offset from 0
 # and palette_offset is a u16 ENTRY index from NDS_PARTICLE_PALETTE_ASSET_OFFSET.
 TEXTURE_ASSET_NITRO_PATH = "nitro:/particles/efcommon_particle_textures.ds.bin"
+WHISPY_NATIVE_ASSET_NITRO_PATH = \
+    "nitro:/particles/grpupupu_whispy_native.ds.bin"
 
 # The DS draw path's own payload: ONE RGB555+A1 atlas. See build_quad_sheet for
 # why the texels are encoded twice.
@@ -1896,6 +1900,130 @@ def build_pupupu_bank(repo_root: Path,
     }
 
 
+def build_whispy_native_asset(repo_root: Path) -> dict:
+    """Final DS texture representations for Dream Land's three live effects.
+
+    The shared quad sheet is deliberately a lowest-common-denominator A3I5
+    atlas.  It currently admits one cell per source texture, which freezes the
+    four-frame RGBA16 leaf animation on frame zero, and its one shared palette
+    adds colour error to all three Dream Land textures.
+
+    The lab AOT route instead gives each source texture the DS format selected
+    by the generator's decode-back error model: IA16 -> A5I3, I8 -> A3I5, and
+    RGBA16 -> PAL16.  The lab deliberately holds the leaf on source frame zero:
+    one 16x16 PAL16 image is enough for the effect and is lossless after the
+    DS's native RGB555 conversion.  There is no runtime frame selection and no
+    upload or texel conversion in the hot path.
+
+    Everything stays in one NitroFS payload.  No texel or palette byte is linked
+    into ARM9 RAM, where this project's measured boot headroom is only bytes.
+    """
+    texture_payload = load_o2r_blob(repo_root, *PUPUPU_TEXTURE_BANK)
+    textures = parse_texture_bank(texture_payload)
+    expected_formats = (DS_A5I3, DS_A3I5, DS_PAL16)
+    required_palette_entries = {
+        DS_A5I3: 8,
+        DS_A3I5: 32,
+        DS_PAL16: 16,
+    }
+    payload = bytearray()
+    rows = []
+
+    if len(textures) != len(expected_formats):
+        raise SystemExit(
+            f"Whispy native pack expected {len(expected_formats)} textures, "
+            f"source carries {len(textures)}")
+
+    for texture, expected_format in zip(textures, expected_formats):
+        source_frames = [decode_texture_frame(texture_payload, texture, frame)
+                         for frame in range(texture["frames"])]
+        if texture["id"] == 2:
+            if (texture["frames"], texture["width"], texture["height"]) != \
+                    (4, 16, 16):
+                raise SystemExit(
+                    "Whispy RGBA16 animation is no longer four 16x16 frames")
+            frames = source_frames[:1]
+        else:
+            if texture["frames"] != 1:
+                raise SystemExit(
+                    f"Whispy texture {texture['id']} unexpectedly animates")
+            frames = source_frames
+        runtime_texture = dict(texture)
+        runtime_texture["frames"] = len(frames)
+        _bits, ds_format, palette, model_mean, model_max, _image_bytes = \
+            choose_ds_format(runtime_texture, frames)
+        if ds_format != expected_format:
+            raise SystemExit(
+                f"Whispy texture {texture['id']} best DS format changed from "
+                f"{DS_FORMAT_NAMES[expected_format]} to "
+                f"{DS_FORMAT_NAMES[ds_format]}")
+
+        upload_width = texture["width"]
+        upload_height = texture["height"]
+        frame_width = texture["width"]
+        frame_height = texture["height"]
+        upload_pixels = frames[0]
+
+        texels = encode_frame(upload_pixels, ds_format, palette, upload_width)
+        packed_palette = ([0] if ds_format in DS_PALETTE_FORMATS else []) + \
+            [to_bgr555(colour) for colour in palette]
+        palette_entries = required_palette_entries[ds_format]
+        if len(packed_palette) > palette_entries:
+            raise SystemExit(
+                f"Whispy texture {texture['id']} palette needs "
+                f"{len(packed_palette)} entries, format owns {palette_entries}")
+        packed_palette += [0] * (palette_entries - len(packed_palette))
+
+        decoded_upload = decode_ds_frame(
+            texels, ds_format, packed_palette, upload_width * upload_height)
+        decoded_frames = [decoded_upload]
+        mean_error, max_error = measure_error(frames, decoded_frames)
+        if (abs(mean_error - model_mean) > 1e-6 or
+                abs(max_error - model_max) > 1e-6):
+            raise SystemExit(
+                f"Whispy texture {texture['id']} atlas decode-back error "
+                f"{mean_error:.4f}/{max_error:.4f} != modelled "
+                f"{model_mean:.4f}/{model_max:.4f}")
+        if texture["id"] == 2 and (mean_error != 0.0 or max_error != 0.0):
+            raise SystemExit("Whispy PAL16 frame zero is no longer lossless")
+
+        while len(payload) % DS_TEXTURE_DATA_ALIGN:
+            payload.append(0)
+        texel_offset = len(payload)
+        payload += texels
+        while len(payload) & 1:
+            payload.append(0)
+        palette_offset = len(payload)
+        payload += b"".join(struct.pack("<H", entry)
+                            for entry in packed_palette)
+        rows.append({
+            "texture": texture["id"],
+            "source_format":
+                f"{SOURCE_FORMAT_NAMES[texture['fmt']]}{texture['bits']}",
+            "ds_format": ds_format,
+            "ds_format_name": DS_FORMAT_NAMES[ds_format],
+            "upload_width": upload_width,
+            "upload_height": upload_height,
+            "frame_width": frame_width,
+            "frame_height": frame_height,
+            "frames": len(frames),
+            "source_frames": texture["frames"],
+            "texel_offset": texel_offset,
+            "texel_bytes": len(texels),
+            "palette_offset": palette_offset,
+            "palette_entries": palette_entries,
+            "mean_error": round(mean_error, 4),
+            "max_error": round(max_error, 4),
+        })
+
+    return {
+        "payload": bytes(payload),
+        "textures": rows,
+        "source_sha256": hashlib.sha256(texture_payload).hexdigest(),
+        "payload_sha256": hashlib.sha256(payload).hexdigest(),
+    }
+
+
 def decode_source_asset_texels(payload: bytes, asset: dict
                                ) -> list[tuple[int, int, int, int]]:
     """One N64 texture out of a reloc file, as RGBA the sheet encoder accepts.
@@ -2375,6 +2503,7 @@ def build_pack(repo_root: Path) -> dict:
                             + 8)                      # exported scalars
     linked = len(script_payload) + table_bytes_resident
     pupupu = build_pupupu_bank(repo_root, frames_by_texture)
+    whispy_native = build_whispy_native_asset(repo_root)
     source_quads = build_source_asset_quads(repo_root, frames_by_texture)
     quads = build_quad_sheet(textures, report_rows, frames_by_texture,
                              pupupu["quad_candidates"] + source_quads)
@@ -2382,6 +2511,7 @@ def build_pack(repo_root: Path) -> dict:
     fireball_texels, fireball_w, fireball_h = build_fireball_pal16(repo_root)
     return {
         "pupupu": pupupu,
+        "whispy_native": whispy_native,
         "source_quads": source_quads,
         "quads": quads,
         "shield": {"texels": shield_texels,
@@ -2427,6 +2557,31 @@ def render_header(pack: dict) -> str:
         f"{asset['width']}x{asset['height']}"
         f"{'' if (SOURCE_QUAD_TEXTURE_STRIDE + index) in admitted_keys else ', NOT SEATED'} */"
         for index, asset in enumerate(SOURCE_QUAD_ASSETS)
+    )
+    whispy_texture_defines = "\n".join(
+        "\n".join((
+            f"#define NDS_WHISPY_NATIVE_TEXTURE_{row['texture']}_FORMAT "
+            f"{row['ds_format']}u",
+            f"#define NDS_WHISPY_NATIVE_TEXTURE_{row['texture']}_WIDTH "
+            f"{row['upload_width']}u",
+            f"#define NDS_WHISPY_NATIVE_TEXTURE_{row['texture']}_HEIGHT "
+            f"{row['upload_height']}u",
+            f"#define NDS_WHISPY_NATIVE_TEXTURE_{row['texture']}_FRAME_WIDTH "
+            f"{row['frame_width']}u",
+            f"#define NDS_WHISPY_NATIVE_TEXTURE_{row['texture']}_FRAME_HEIGHT "
+            f"{row['frame_height']}u",
+            f"#define NDS_WHISPY_NATIVE_TEXTURE_{row['texture']}_FRAMES "
+            f"{row['frames']}u",
+            f"#define NDS_WHISPY_NATIVE_TEXTURE_{row['texture']}_TEXEL_OFFSET "
+            f"{row['texel_offset']}u",
+            f"#define NDS_WHISPY_NATIVE_TEXTURE_{row['texture']}_TEXEL_BYTES "
+            f"{row['texel_bytes']}u",
+            f"#define NDS_WHISPY_NATIVE_TEXTURE_{row['texture']}_PALETTE_OFFSET "
+            f"{row['palette_offset']}u",
+            f"#define NDS_WHISPY_NATIVE_TEXTURE_{row['texture']}_PALETTE_ENTRIES "
+            f"{row['palette_entries']}u",
+        ))
+        for row in pack["whispy_native"]["textures"]
     )
     return f"""/* Generated by scripts/generate_nds_particle_banks.py. */
 #ifndef SSB64_NDS_PARTICLE_BANKS_GENERATED_H
@@ -2673,6 +2828,17 @@ extern const u32 gNdsPupupuScriptBankBytes;
 extern const u32 gNdsPupupuScriptOffsets[NDS_PUPUPU_SCRIPT_COUNT];
 extern const NDSPupupuTexture gNdsPupupuTextures[NDS_PUPUPU_TEXTURE_COUNT];
 
+/* Promoted Whispy native payload. Unlike the shared A3I5 quad sheet, this
+ * stores each of Dream Land's three live textures in its best DS hardware
+ * format. Texture 2 is one lossless PAL16 16x16 image from source frame zero;
+ * the final draw deliberately holds that image while the source particle keeps
+ * its own frame state. No runtime image conversion or frame-table scan. Texels
+ * and palettes stay in NitroFS. */
+#define NDS_WHISPY_NATIVE_ASSET_PATH "{WHISPY_NATIVE_ASSET_NITRO_PATH}"
+#define NDS_WHISPY_NATIVE_ASSET_BYTES {len(pack["whispy_native"]["payload"])}u
+#define NDS_WHISPY_NATIVE_TEXTURE_COUNT {len(pack["whispy_native"]["textures"])}u
+{whispy_texture_defines}
+
 #endif
 """
 
@@ -2911,6 +3077,12 @@ def render_report(pack: dict) -> dict:
                           "frames": row["frames"]}
                          for row in pack["quads"]["excluded"]],
         },
+        "whispy_native": {
+            "asset_bytes": len(pack["whispy_native"]["payload"]),
+            "source_sha256": pack["whispy_native"]["source_sha256"],
+            "payload_sha256": pack["whispy_native"]["payload_sha256"],
+            "textures": pack["whispy_native"]["textures"],
+        },
         "checksums": {
             "source_sha256_lo": f"0x{pack['source_checksum']:08x}",
             "table_sha256_lo": f"0x{pack['table_checksum']:08x}",
@@ -2930,15 +3102,18 @@ def main() -> int:
                         default=DEFAULT_TEXTURE_ASSET)
     parser.add_argument("--out-quad-asset", type=Path,
                         default=DEFAULT_QUAD_ASSET)
+    parser.add_argument("--out-whispy-native-asset", type=Path,
+                        default=DEFAULT_WHISPY_NATIVE_ASSET)
     parser.add_argument("--check", action="store_true",
                         help="rebuild in memory and compare existing outputs")
     args = parser.parse_args()
     repo_root = args.repo_root.resolve()
     outputs = []
     for path in (args.out_header, args.out_inc, args.out_json,
-                 args.out_texture_asset, args.out_quad_asset):
+                 args.out_texture_asset, args.out_quad_asset,
+                 args.out_whispy_native_asset):
         outputs.append(path if path.is_absolute() else repo_root / path)
-    header_path, inc_path, json_path, asset_path, quad_path = outputs
+    header_path, inc_path, json_path, asset_path, quad_path, whispy_path = outputs
 
     pack = build_pack(repo_root)
     header = render_header(pack).encode("ascii")
@@ -2956,7 +3131,9 @@ def main() -> int:
                  if not path.is_file() or path.read_bytes() != wanted]
         for path, wanted in ((inc_path, inc),
                              (asset_path, pack["texture_asset"]),
-                             (quad_path, pack["quads"]["payload"])):
+                             (quad_path, pack["quads"]["payload"]),
+                             (whispy_path,
+                              pack["whispy_native"]["payload"])):
             if path.is_file() and path.read_bytes() != wanted:
                 stale.append(str(path))
         if stale:
@@ -2967,7 +3144,9 @@ def main() -> int:
         for path, wanted in ((header_path, header), (inc_path, inc),
                              (json_path, report),
                              (asset_path, pack["texture_asset"]),
-                             (quad_path, pack["quads"]["payload"])):
+                             (quad_path, pack["quads"]["payload"]),
+                             (whispy_path,
+                              pack["whispy_native"]["payload"])):
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_bytes(wanted)
 
@@ -2986,6 +3165,7 @@ def main() -> int:
           f" {len(pack['quads']['frames'])}frames "
           f"cap={pack['quads']['frame_cap']} "
           f"cell={pack['quads']['cell_cap']} "
+          f"whispy_native={len(pack['whispy_native']['payload'])} "
           f"headroom={ESTIMATE['arena_headroom_bytes']} "
           f"spare={ESTIMATE['arena_headroom_bytes'] - pack['linked_bytes']} "
           f"source=0x{pack['source_checksum']:08x} "

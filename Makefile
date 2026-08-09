@@ -788,6 +788,21 @@ NDS_R2_FIREBALL_NATIVE_MAP_COLL ?= 1
 # resident atlas row. Owner-playtested and accepted 2026-08-07; ON BY DEFAULT.
 # See include/nds/nds_firegrind.h.
 NDS_R2_FIREGRIND_NATIVE ?= 1
+# Dream Land Whispy native path. BattleShip still owns every root, generator,
+# transform, child particle, update, and ejection; only the final draw selects
+# three preconverted DS-native textures. Owner-playtested and accepted
+# 2026-08-08; ON BY DEFAULT.
+NDS_R2_WHISPY_NATIVE_TEXTURES ?= 1
+# This keeps the source pools and source constructors, but AOT-specializes the
+# three exact Dream Land generator/update scripts and submits their rigid
+# billboards through the fixed-point GX quad path. Route 7 is the measured
+# fastest path. Owner-playtested and accepted 2026-08-08; ON BY DEFAULT.
+NDS_R2_WHISPY_NATIVE_AOT ?= 1
+ifeq ($(NDS_R2_WHISPY_NATIVE_AOT),1)
+ifneq ($(NDS_R2_WHISPY_NATIVE_TEXTURES),1)
+$(error NDS_R2_WHISPY_NATIVE_AOT=1 requires NDS_R2_WHISPY_NATIVE_TEXTURES=1)
+endif
+endif
 # Multiplies the Mario/Luigi fireball's stage (map) collision diamond -- the
 # top/center/bottom/width fields from the weapon attributes reloc data -- by a
 # port-side factor at spawn. The source values load straight from ROM reloc
@@ -1759,6 +1774,7 @@ NDS_TASK39_HIT_SPARKS_ASSET := $(PROJECT_ROOT)/assets/effects/task39_hit_sparks.
 NDS_PARTICLE_BANKS_INC := $(PROJECT_ROOT)/src/nds/generated/nds_particle_banks.generated.inc
 NDS_PARTICLE_BANKS_HEADER := $(PROJECT_ROOT)/include/nds/generated/nds_particle_banks.generated.h
 NDS_PARTICLE_TEXTURE_ASSET := $(PROJECT_ROOT)/assets/particles/efcommon_particle_textures.ds.bin
+NDS_WHISPY_NATIVE_ASSET := $(PROJECT_ROOT)/assets/particles/grpupupu_whispy_native.ds.bin
 # The draw path's own payload: the admitted textures as RGB555+A1, which is the
 # format the renderer's texture cache uploads. Separate from the file above
 # because that one is per-texture DS formats with palettes and the cache has no
@@ -2564,6 +2580,10 @@ ifeq ($(NDS_R2_PARTICLE_RUNTIME),1)
 NDS_NITROFS_PARTICLE_FILES := \
 	$(NITROFS_DIR)/particles/efcommon_particle_textures.ds.bin \
 	$(NITROFS_DIR)/particles/efcommon_particle_quads.a5i3.bin
+ifeq ($(NDS_R2_WHISPY_NATIVE_TEXTURES),1)
+NDS_NITROFS_PARTICLE_FILES += \
+	$(NITROFS_DIR)/particles/grpupupu_whispy_native.ds.bin
+endif
 endif
 
 # The Task 39 hit-spark sheet. Unlike the payload above this one has a live
@@ -2764,6 +2784,8 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_R2_FIREBALL_QUAD $(NDS_R2_FIREBALL_QUAD)'; \
 		echo '#define NDS_R2_FIREBALL_NATIVE_MAP_COLL $(NDS_R2_FIREBALL_NATIVE_MAP_COLL)'; \
 		echo '#define NDS_R2_FIREGRIND_NATIVE $(NDS_R2_FIREGRIND_NATIVE)'; \
+		echo '#define NDS_R2_WHISPY_NATIVE_TEXTURES $(NDS_R2_WHISPY_NATIVE_TEXTURES)'; \
+		echo '#define NDS_R2_WHISPY_NATIVE_AOT $(NDS_R2_WHISPY_NATIVE_AOT)'; \
 		echo '#define NDS_R2_FIREBALL_MAP_COLL_SCALE $(NDS_R2_FIREBALL_MAP_COLL_SCALE)F'; \
 		echo '#define NDS_R2_FIREBALL_MAP_COLL_DEBUG $(NDS_R2_FIREBALL_MAP_COLL_DEBUG)'; \
 		echo '#define NDS_R2_IMPACT_WAVE_NATIVE $(NDS_R2_IMPACT_WAVE_NATIVE)'; \
@@ -2872,11 +2894,13 @@ $(NITROFS_DIR)/effects/task39_hit_sparks.rgb5a1.bin: $(NDS_TASK39_HIT_SPARKS_ASS
 # The payload is not linked -- see the header comment: .rodata is taken out of
 # the boot-time taskman arena one-for-one and this pack is big enough to push
 # that search past its floor.
-$(NDS_PARTICLE_BANKS_INC) $(NDS_PARTICLE_TEXTURE_ASSET) $(NDS_PARTICLE_QUAD_ASSET) &: \
+$(NDS_PARTICLE_BANKS_INC) $(NDS_PARTICLE_TEXTURE_ASSET) $(NDS_PARTICLE_QUAD_ASSET) $(NDS_WHISPY_NATIVE_ASSET) &: \
 		$(PROJECT_ROOT)/scripts/generate_nds_particle_banks.py \
 		$(PROJECT_ROOT)/scripts/2d_vfx/generate_task39_effect_census.py \
 		$(BATTLESHIP_O2R)/particles/efcommon_particle_scb \
 		$(BATTLESHIP_O2R)/particles/efcommon_particle_txb \
+		$(BATTLESHIP_O2R)/particles/grpupupu_particle_scb \
+		$(BATTLESHIP_O2R)/particles/grpupupu_particle_txb \
 		$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/ef/efmanager.c
 	python "$(PROJECT_ROOT)/scripts/generate_nds_particle_banks.py"
 
@@ -2887,6 +2911,10 @@ $(NITROFS_DIR)/particles/efcommon_particle_textures.ds.bin: $(NDS_PARTICLE_TEXTU
 	@cp $< $@
 
 $(NITROFS_DIR)/particles/efcommon_particle_quads.a5i3.bin: $(NDS_PARTICLE_QUAD_ASSET)
+	@mkdir -p $(dir $@)
+	@cp $< $@
+
+$(NITROFS_DIR)/particles/grpupupu_whispy_native.ds.bin: $(NDS_WHISPY_NATIVE_ASSET)
 	@mkdir -p $(dir $@)
 	@cp $< $@
 

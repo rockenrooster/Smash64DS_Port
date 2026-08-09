@@ -1,10 +1,10 @@
 # Handoff
 
-Updated: 2026-08-05 (cycle 80). **The campaign is on R2-07's performance gate;
-the queue is the board's gate lane G1→G2→G3→G4.**
-Nothing is published from this work; the shipping pair is still cycle 75
-(`smash64ds-battle-playable-hwtri.nds` `D16815BE…`, `smash64ds.nds` `369FA999…`,
-tick-HUD sibling `builds/build-c75-tickhud-publish` `15FD0F8E…`).
+Updated: 2026-08-08. **Whispy Route 7 is promoted; the campaign remains on
+R2-07's performance gate and the board's gate lane G1→G2→G3→G4.**
+Published pair: `smash64ds-battle-playable-hwtri.nds` `C045544B…`,
+`smash64ds.nds` `AB9DE9E3…`; flag-identical tick-HUD sibling
+`builds/build-tick-hud-buckets` `574F6F40…`.
 
 ## Read this first: every 128-frame measurement in the archive is unusable
 
