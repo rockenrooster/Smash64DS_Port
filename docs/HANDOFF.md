@@ -2,7 +2,8 @@
 
 Updated: 2026-08-09. **The gate arm's tail was cartridge I/O: the animation
 cache arena had been full and refusing loads all match. Fixed at `f082b3c8` —
-`WORK-H` P95 1,639,299 → 1,447,318, gap 326,938.** The campaign remains on
+`WORK-H` P95 1,639,299 → 1,447,318, gap 326,938; cycle 108's AObj16 warm-time
+prebake takes ~23,000 more.** The campaign remains on
 R2-07's performance gate. Published pair:
 `smash64ds-battle-playable-hwtri.nds` `AFD28273…`, `smash64ds.nds`
 `54C07FAC…`.
@@ -97,26 +98,31 @@ profile CSV via `--split-by-symbol ndsRelocFinalizeLoadedFile` (74 load frames v
 RAM; animation re-evaluation is **158,393/frame (24.3%)** and is **real gameplay
 work** — do not brief it as waste. `armWaitForIrq` takes 21.1% and is idle.
 
-**`ndsRelocAssetIDForToken` is CLOSED as a caching target.** It is provably pure
-and 100% of its cycles are on load frames, but three measured configurations
-(64/512 evicting, 512 no-evict) topped out at a 50.1% hit rate with 10,405
-evictions, and no-eviction filled all 512 slots with keys that never repeat.
-E11's data composes with that: the 74.3% of calls resolving inside the chain are
-the *cheap* ones, and the cost is the 14.3% that miss and walk both 143+158-entry
-scans — exactly the unstable keys. Board has the table. Still open, unmeasured:
-bound the two scans by an init-time `[min,max]` instead of caching them.
+**`ndsRelocAssetIDForToken` is CLOSED as a caching target.** Provably pure, 100%
+of its cycles on load frames, but three configurations topped out at a 50.1% hit
+rate with 10,405 evictions — the expensive 14.3% of calls are exactly the
+unstable keys. Board has the table. Still open, unmeasured: bound the two
+143/158-entry scans by an init-time `[min,max]` instead of caching them.
 
-**Do not bring a micro-fix.** R2-06 E11's rule, re-proved twice this cycle:
-*a load-frame-only saving of ~8,000 ticks cannot be banked through P95, because
-relinking moves the tail by more than the saving.* Either clear ~16,000 of tail
-movement in one change, or **move the work off the gameplay frame** — which is
-what cycle 105's arena fix did for the I/O half. The shape: pre-finalize each
-warmed animation once, so the force load returns a pointer instead of memcpy +
-fixups + swap + normalize. Blockers to answer first: fixups write absolute
-pointers from `loaded->data`; normalization writes `command->u` **in place**;
-the destination is caller-owned via `lbRelocGetForceExternHeapFile(file_id,
-heap)`. It must REPLACE the per-load destination copy — 197,184 more bytes do
-not exist.
+**Do not bring a micro-fix.** R2-06 E11's rule: *a load-frame-only saving of
+~8,000 ticks cannot be banked through P95, because relinking moves the tail by
+more than the saving.* Either clear ~16,000 of tail movement in one change, or
+**move the work off the gameplay frame** — which is what cycle 105's arena fix
+did for the I/O half and cycle 108's prebake did for the AObj16 pass (~−23,000,
+351/351 hits, pixel-identical, board has it). What is still on the load frame:
+fixups write absolute pointers from `loaded->data`, so they cannot be prebaked
+the same way, and the destination is caller-owned via
+`lbRelocGetForceExternHeapFile(file_id, heap)`. Pre-finalizing the *whole* file
+must REPLACE the per-load destination copy — 197,184 more bytes do not exist.
+
+**Measure a placement-sensitive seam on ONE binary with a runtime route.** Two
+separately-linked arms of cycle 108's prebake differed only by 3,584 bytes of
+scratch and read P50 25,760 apart — 4.5× the cross-build floor — with the
+*better* arm reading worse. Their P95 said −39,702 and −22,806 for the same
+change. `sample-tick-hud-buckets.ps1 -SetGlobals name=value` pokes a `.data`
+global at the first frame-complete marker; that is what standing rule 7 means
+and its header says so. Check the engagement counters in the OFF arm — the poke
+lands after ~3 warm steps, so an OFF arm is partial and the delta must be scaled.
 
 **Do not re-derive these; each is already documented where it lives.** The
 Makefile's `?= 0` defaults are not the shipped config (41 overridden, every large
@@ -130,10 +136,6 @@ re-learn.
 **Latent cliff, unowned:** `sNdsAObjEvent32NormalizedCount` reads **973 of 1,024**
 after one minute. Overflow makes `ndsAObjEvent32NormalizeScript` return FALSE and
 the caller then **skips the animation attach entirely**. 8 bytes an entry.
-
-**The heap is spent.** `gNdsTaskmanGeneralHeapFreeMin` is 42,136 against the
-anim cache's 32,768 `KEEP_FREE` — 9,368 of margin. Free `.bss` before taking
-more; that lowers `fake_heap_start` and enlarges the heap the arena callocs from.
 
 ## Standing: the load-frame exclusion is REFUTED — do not apply it
 

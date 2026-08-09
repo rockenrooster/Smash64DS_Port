@@ -46,6 +46,11 @@ of the match (P95 understated ~306,000, over-gate rate 5×).
 | **both-CPU** `NDS_R2_BOTH_CPU=1` | **THE GATE** | **86.7%** of 60 s | 1,094,464 | **1,624,064** | 704/1600 (44.0%) | **503,684** |
 | **Boundary** mode 163 | shipped configuration | **86.7%** of 60 s | 1,082,112 | 1,476,672 | 673/1600 (42.1%) | 356,292 |
 
+**Superseded twice since.** Cycle 105's arena fix moved the gate arm to
+**1,447,318** (gap 326,938) and cycle 108's AObj16 prebake takes a further
+**~23,000**. The cycle-108 row carries why that figure is quoted as a range and
+not as a single cross-build P95.
+
 VBI 2/3/4/5+ (max): both-CPU 1127/808/91/14 (20); Boundary 1194/784/51/11 (20).
 
 **The corrected gap is 503,684, not 485,060** — the early-match window was
@@ -2029,6 +2034,73 @@ unmeasured and it must clear E11's ~16,000 tail-movement bar to be bankable.
 misses are nearly all evictions is undersized or mis-keyed, and its hit rate says
 nothing about which. Both numbers were in the instrument from the first build,
 which is why this cost three builds instead of shipping a 4.6 KB regression.
+
+### The AObj16 pass is PREBAKED at warm time — LANDED, cycle 108. ~−23,000 P95.
+
+The first thing cycle 107's attribution said to move rather than speed up.
+`ndsRelocNormalizeFighterAObj16File` (table-bytes discovery, u16 lane swap over
+the script region, O(n²) successor scan, per-script normalize) ran on every
+force load. It is **position-independent** — it never touches the pointer table
+and every quantity it writes is an offset — so the transformed image survives
+the per-destination copy and the pass can run **once per warmed animation**
+instead of once per load.
+
+The obstacle was the internal fixup list, which is *intrusive*: each raw slot
+word is `(next_slot_index << 16) | target_word_index`, so applying the fixups
+consumes the list, and the pass needs them applied. `ndsR2AnimPrebakeAObj16`
+therefore records every `(offset, raw word)` while walking the list, applies,
+transforms, then writes the raw words back. The restore is exact by
+construction and independent of where the slots sit — deliberately stronger
+than restoring a table region and assuming no slot lives past it. Every failure
+path restores and declines with `aobj16_ready` 0, so a decline is a performance
+outcome and never a correctness one.
+
+**Engagement, whole match, both-CPU:** `PrebakeReady` 85 of 85 distinct,
+`Skips` 351 of 351 cache hits, `SlotsMax` 21, all four decline counters 0,
+`ExternalFixupFailCount` 0, `RelocPointerFixupFailCount` 0,
+`NormalizeFailCount` 0. Trajectory unchanged: `ForceLoadTotal` 353, `Distinct`
+85, `Hits` 351, `Misses` 2. `gNdsTaskmanGeneralHeapFreeMin` 42,136 — unchanged,
+because the scratch is 64 slots against a measured max of 21.
+
+**This row exists because the first two arms disagreed, and that is the lesson.**
+Two separately-linked builds of the *same* change, differing only by 3,584 bytes
+of scratch, read `WORK-H` P50 1,093,152 and 1,119,136 — **25,760 apart, 4.5× the
+cross-build P50 floor** — while the second did strictly *more* work (351 skips
+against 259) and used *less* RAM. Their P95 read −39,702 and −22,806 against the
+c105 control. Relinking moved the body further than the change did, exactly as
+R2-06 E11 says it will.
+
+Settled on **one binary** with the runtime route `gNdsR2AObj16PrebakeRoute`
+(`.data`, default 1, poked by `-SetGlobals` at the first frame-complete marker),
+which is what standing rule 7 and the sampler's own header ask for:
+
+| `build-c108-route`, one ROM | P50 | P95 | mean | over gate | SINT P95 | SRC P95 |
+|---|---:|---:|---:|---:|---:|---:|
+| route 0 | 1,110,400 | 1,431,696 | 1,136,266 | 741 | 360,195 | 653,632 |
+| route 1 | 1,110,144 | **1,416,003** | 1,141,129 | 739 | 346,352 | 642,515 |
+| delta | −256 | **−15,693** | +4,863 | −2 | −13,843 | −11,117 |
+
+The route-0 arm is a *partial* control, and its counters say so: three entries
+warm before the poke lands (warm stepping runs one asset per scene update) and
+they are the hottest, so 111 of 351 hits already skip. The delta therefore
+covers **68.4%** of the change → **~−23,000 whole**, which is what the
+separately-linked arm read (−22,806). **The −39,702 was placement, not work.**
+P50 −256 and mean +4,863 are the confirmation that the change touches only load
+frames, as designed.
+
+**Pixel-identical**, and with the floor beside it as `capture-cut-g-exact-frames`
+requires: control `2026-08-09_c105-anim-cand-t3000-a.png` vs
+`2026-08-09_c108-prebake-t3000-a.png` at the same tic differ on **0 of 119,200
+pixels, max channel delta 0**, against a same-build adjacent-tic floor of
+**83.03%** (98,968 pixels, identical in both builds). Boundary verification
+profile passed. Promoted to both Makefile config blocks.
+
+**Keep the route flag.** It is four bytes in `.data` and it makes the next A/B on
+this seam free. Every future arm on a placement-sensitive seam should be one
+binary with a route before it is two builds — this cycle spent four measuring
+runs re-learning that.
+
+**Worth ~7% of the 326,938 gap.** Banked and moved past; do not polish it.
 
 ### The dormant-flag seam is EXHAUSTED — audited, cycle 105, no build
 

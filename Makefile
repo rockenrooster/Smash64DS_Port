@@ -261,6 +261,16 @@ NDS_R2_DELTA_PATH_ITCM ?= 0
 # repeating an asset already loaded, over a working set of 29 distinct
 # animations. Every failure path degrades to the uncached load.
 NDS_R2_ANIM_CACHE ?= 0
+# R2-06 E13. Apply ndsRelocNormalizeFighterAObj16File to each warmed animation
+# ONCE, at warm time, so the force-load path can skip it. Cycle 107 priced that
+# pass at 10,236,800 ticks a match -- 16.2% of the SINT excursion, ~29,000 per
+# force-load frame -- and E11's rule is that a load-frame cost can only be banked
+# by moving it off the frame, not by making it faster. The transform is
+# position-independent (it reads offsets and never touches the pointer table),
+# and nothing runs between the internal fixups and it, so warm time and load time
+# see identical bytes. Requires NDS_R2_ANIM_CACHE. Declines are per asset and
+# fall back to today's path; see the block comment in reloc_backend_assets.c.
+NDS_R2_AOBJ16_PREBAKE ?= 0
 # R2-03 E47. The native fighter owner derives its material colour and its
 # use-material predicate from `stats` per epoch, the way the generic path does,
 # instead of reading a baked policy flag and always taking prim_color. The
@@ -1274,8 +1284,19 @@ override NDS_R2_DELTA_PATH_ITCM := 1
 # warm list makes the match's 41 measured animations (91,104 bytes) resident one
 # per scene update across the countdown; loading all 41 in one call at
 # scVSBattleStartBattle misses a BGM buffer seam and kills the music for the
-# match. Misses 29 -> 2, WORK-H P95 1,364,992 -> 1,232,640.
+# match. Misses 29 -> 2, WORK-H P95 1,364,992 -> 1,232,640. Cycle 105 re-measured
+# the list at 85 animations / 197,184 bytes and resized the arena to match; the
+# 41 above is the Boundary-derived figure it replaced.
 override NDS_R2_ANIM_CACHE := 1
+# Cycle 108: run the AObj16 lane swap + successor scan ONCE per warmed animation,
+# at warm time, instead of on every force load. The pass is position-independent,
+# so the transformed image survives the per-destination copy; the intrusive fixup
+# list is recorded and restored around it because applying fixups consumes it.
+# Measured on ONE binary with the runtime route (standing rule 7): WORK-H P95
+# -15,693 over 68.4% of the change, so ~-23,000 whole -- which the separately
+# linked arm reads as -22,806. Coverage 351/351 hits, 85/85 prebaked, all four
+# decline counters 0, heap free-min unchanged at 42,136.
+override NDS_R2_AOBJ16_PREBAKE := 1
 # Task 53: re-activate Task 36 rigid-stage replay. Relaxes the arena admission
 # guard (nds_renderer.c:4195/:4247) from the legacy exact-0x150000 check to
 # "admit any usable arena >= 0x130000" -- the robust downward-stepping allocator
@@ -1425,6 +1446,8 @@ override NDS_R2_DELTA_PATH_ITCM := 1
 # scVSBattleStartBattle misses a BGM buffer seam and kills the music for the
 # match. Misses 29 -> 2, WORK-H P95 1,364,992 -> 1,232,640.
 override NDS_R2_ANIM_CACHE := 1
+# Cycle 108: matches the published block. See its comment for the measurement.
+override NDS_R2_AOBJ16_PREBAKE := 1
 # Task 53: matches the published block -- replay must be active here too or
 # every tick-HUD STG bucket reads a different binary than the shipping ROM.
 override NDS_TASK53_REPLAY_ARENA_FIX := 1
@@ -2836,6 +2859,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_R2_SPAN_LEAN_TIMING $(NDS_R2_SPAN_LEAN_TIMING)'; \
 		echo '#define NDS_R2_DELTA_PATH_ITCM $(NDS_R2_DELTA_PATH_ITCM)'; \
 		echo '#define NDS_R2_ANIM_CACHE $(NDS_R2_ANIM_CACHE)'; \
+		echo '#define NDS_R2_AOBJ16_PREBAKE $(NDS_R2_AOBJ16_PREBAKE)'; \
 		echo '#define NDS_R2_MATERIAL_DYNAMIC $(NDS_R2_MATERIAL_DYNAMIC)'; \
 		echo '#define NDS_R2_FLASH_PROBE $(NDS_R2_FLASH_PROBE)'; \
 		echo '#define NDS_R2_ANIM_CENSUS $(NDS_R2_ANIM_CENSUS)'; \

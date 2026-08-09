@@ -6241,7 +6241,17 @@ typedef struct NDSR2AnimCacheEntry {
     u32 size;
     void *payload;
     NDSRelocAssetHeader header;
+    /* R2-06 E13. TRUE when this payload's script region already carries the
+     * ndsRelocNormalizeFighterAObj16File transform, so the load path can set
+     * format_fixups_applied and skip it. Zero for anything the prebake declined,
+     * which is why the load path reads the flag rather than assuming. */
+    u32 aobj16_ready;
 } NDSR2AnimCacheEntry;
+
+#if NDS_R2_AOBJ16_PREBAKE
+static sb32 ndsR2AnimPrebakeAObj16(u32 asset_id, void *payload, u32 size,
+                                   const NDSRelocAssetHeader *header);
+#endif
 
 static NDSR2AnimCacheEntry sNdsR2AnimCache[NDS_R2_ANIM_CACHE_ENTRIES];
 static u32 sNdsR2AnimCacheCount;
@@ -6509,6 +6519,17 @@ static void ndsR2AnimCacheStore(u32 asset_id, const void *data, u32 size,
     entry->size = size;
     entry->payload = payload;
     entry->header = *header;
+    /* Written unconditionally, and that is not defensive tidiness: entries are
+     * reused across a scene rewind, so leaving this field alone would let a slot
+     * keep a stale TRUE from a previous match's asset and skip a transform that
+     * had never been applied to these bytes. */
+#if NDS_R2_AOBJ16_PREBAKE
+    entry->aobj16_ready =
+        (ndsR2AnimPrebakeAObj16(asset_id, payload, size, header) != FALSE)
+            ? 1u : 0u;
+#else
+    entry->aobj16_ready = 0u;
+#endif
     gNdsR2AnimCacheFills++;
     gNdsR2AnimCacheBytes += size;
 }
@@ -6517,6 +6538,160 @@ volatile u32 gNdsR2AnimWarmLoaded;
 volatile u32 gNdsR2AnimWarmBytes;
 volatile u32 gNdsR2AnimWarmFailed;
 static u32 sNdsR204AnimWarmCursor;
+
+#if NDS_R2_AOBJ16_PREBAKE
+/* R2-06 E13. Move ndsRelocNormalizeFighterAObj16File off the gameplay frame.
+ *
+ * WHY THIS ONE. Cycle 107 attributed the load frame exactly
+ * (task37_census.py --split-by-symbol ndsRelocFinalizeLoadedFile, 74 load frames
+ * against 326 control, premium 650,610 cycles/frame): the reloc + copy family is
+ * 23.6% of it and ndsRelocFinalizeLoadedFile alone is 10.0%, of which the AObj16
+ * pass is the bulk -- 10,236,800 ticks a match against a 63,115,584 SINT
+ * excursion, i.e. 16.2%, or ~29,000 per force-load frame. R2-06 E11's standing
+ * rule is that a load-frame saving cannot be banked by making the work faster,
+ * only by moving it off the frame, which is what cycle 105's arena fix did for
+ * the cartridge read. This does it for the transform.
+ *
+ * WHY IT IS SOUND, and the two facts that make it so:
+ *
+ *   1. The transform is position-INDEPENDENT. The swap loop runs from
+ *      `table_bytes` to the end, and the normalize walks each script; neither
+ *      touches the pointer table, and every quantity either derives from is an
+ *      OFFSET (`value - base`). Running it at warm time against the arena base
+ *      therefore produces byte-identical script bytes to running it at load time
+ *      against the caller's heap.
+ *   2. Nothing runs between. ndsRelocFinalizeLoadedFile's order is internal
+ *      fixups, then AObj16, then attributes/weapon/sprites/external -- so the
+ *      only pass that can change the input is the internal fixup, and that is
+ *      what this reproduces.
+ *
+ * The internal fixups have to run first because the AObj16 pass reads the table
+ * as ABSOLUTE pointers, which only exist once they are written. They are an
+ * intrusive linked list threaded through the slots themselves -- each raw word
+ * is (next_slot_index << 16 | target_word_index) -- so applying them CONSUMES
+ * the list. This therefore records every (offset, raw word) pair while walking
+ * the list, applies, transforms, and writes the raw words back. The restore is
+ * exact by construction and independent of where the slots sit, which is
+ * deliberately stronger than restoring a table region and assuming no slot lives
+ * past it.
+ *
+ * Every failure declines the asset with `aobj16_ready` 0 and leaves the payload
+ * as it was, so a decline is a performance outcome and never a correctness one --
+ * the load path then runs the pass exactly as it does today.
+ *
+ * Sized by measurement, not by fear: the first arm ran a 512-slot scratch and
+ * gNdsR2AObj16PrebakeSlotsMax read 21 over the whole match, so 64 keeps a 3x
+ * margin and hands 3,584 bytes back to a heap whose free-min sits 9,368 above
+ * the anim cache's own KEEP_FREE reserve. A longer list declines the asset. */
+#define NDS_R2_AOBJ16_PREBAKE_SLOTS_MAX 64u
+
+typedef struct NDSR2AObj16PrebakeSlot {
+    u32 offset;
+    u32 word;
+} NDSR2AObj16PrebakeSlot;
+
+static NDSR2AObj16PrebakeSlot
+    sNdsR2AObj16PrebakeSlots[NDS_R2_AOBJ16_PREBAKE_SLOTS_MAX];
+
+/* Same-binary A/B route. Two builds of this change differing only by 3,584
+ * bytes of scratch read WORK-H P50 1,093,152 and 1,119,136 -- 25,760 apart,
+ * 4.5x the cross-build P50 floor -- while the second one did strictly LESS
+ * work (351 skips against 259). Relinking moved the body further than the
+ * change did, exactly as R2-06 E11 says it will, so the two arms have to be
+ * the SAME bytes. Poked to 0 by the harness at the first frame-complete
+ * marker; warm stepping runs one asset per scene update, so at most one entry
+ * can be prebaked before the poke lands and gNdsR2AObj16PrebakeReady reports
+ * it. Route 0 is a decline, which is a performance outcome only. */
+volatile u32 gNdsR2AObj16PrebakeRoute = 1u;
+
+volatile u32 gNdsR2AObj16PrebakeReady;
+volatile u32 gNdsR2AObj16PrebakeSlotsMax;
+volatile u32 gNdsR2AObj16PrebakeDeclineKind;
+volatile u32 gNdsR2AObj16PrebakeDeclineList;
+volatile u32 gNdsR2AObj16PrebakeDeclineFixup;
+volatile u32 gNdsR2AObj16PrebakeDeclineFormat;
+volatile u32 gNdsR2AObj16PrebakeSkips;
+
+static void ndsR2AObj16PrebakeRestore(void *payload, u32 count)
+{
+    u32 i;
+
+    for (i = 0u; i < count; i++)
+    {
+        ndsRelocWriteNative32((u8 *)payload + sNdsR2AObj16PrebakeSlots[i].offset,
+                              sNdsR2AObj16PrebakeSlots[i].word);
+    }
+}
+
+static sb32 ndsR2AnimPrebakeAObj16(u32 asset_id, void *payload, u32 size,
+                                   const NDSRelocAssetHeader *header)
+{
+    NDSRelocLoadedFile view;
+    u32 count = 0u;
+    u32 guard;
+    u16 slot_index;
+
+    if (gNdsR2AObj16PrebakeRoute == 0u)
+    {
+        return FALSE;
+    }
+
+    if ((payload == NULL) || (size == 0u) || (header == NULL) ||
+        (ndsRelocIsFighterAObj16Asset(asset_id) == FALSE))
+    {
+        gNdsR2AObj16PrebakeDeclineKind++;
+        return FALSE;
+    }
+
+    slot_index = header->reloc_intern_offset;
+    guard = (size / sizeof(u32)) + 1u;
+    while (slot_index != 0xffffu)
+    {
+        u32 offset = (u32)slot_index * sizeof(u32);
+
+        if ((guard == 0u) || ((offset + sizeof(u32)) > size) ||
+            (count >= NDS_R2_AOBJ16_PREBAKE_SLOTS_MAX))
+        {
+            gNdsR2AObj16PrebakeDeclineList++;
+            return FALSE;
+        }
+        guard--;
+        sNdsR2AObj16PrebakeSlots[count].offset = offset;
+        sNdsR2AObj16PrebakeSlots[count].word =
+            (u32)ndsRelocReadNative32((u8 *)payload + offset);
+        slot_index = (u16)(sNdsR2AObj16PrebakeSlots[count].word >> 16);
+        count++;
+    }
+    if (count > gNdsR2AObj16PrebakeSlotsMax)
+    {
+        gNdsR2AObj16PrebakeSlotsMax = count;
+    }
+
+    memset(&view, 0, sizeof(view));
+    view.asset_id = asset_id;
+    view.data = payload;
+    view.data_size = size;
+    view.reloc_intern_offset = header->reloc_intern_offset;
+    view.reloc_extern_offset = header->reloc_extern_offset;
+
+    if (ndsRelocApplyInternalPointerFixups(&view) == FALSE)
+    {
+        ndsR2AObj16PrebakeRestore(payload, count);
+        gNdsR2AObj16PrebakeDeclineFixup++;
+        return FALSE;
+    }
+    if (ndsRelocNormalizeFighterAObj16File(&view) == FALSE)
+    {
+        ndsR2AObj16PrebakeRestore(payload, count);
+        gNdsR2AObj16PrebakeDeclineFormat++;
+        return FALSE;
+    }
+
+    ndsR2AObj16PrebakeRestore(payload, count);
+    gNdsR2AObj16PrebakeReady++;
+    return TRUE;
+}
+#endif
 
 /* R2-04 E4. Task 75's absorption proper: make the match's animation streams
  * resident so no gameplay frame pays a NitroFS walk and a cartridge read for a
@@ -6582,6 +6757,16 @@ static void ndsR2AnimWarmLoadOne(u32 asset_id)
         entry->size = (u32)loaded_size;
         entry->payload = payload;
         entry->header = header;
+#if NDS_R2_AOBJ16_PREBAKE
+        /* AFTER the word swap above and BEFORE anyone can copy this out: the
+         * transform's input is the swapped, pre-fixup image, which is exactly
+         * what the miss path snapshots too. */
+        entry->aobj16_ready =
+            (ndsR2AnimPrebakeAObj16(asset_id, payload, (u32)loaded_size,
+                                    &header) != FALSE) ? 1u : 0u;
+#else
+        entry->aobj16_ready = 0u;
+#endif
     }
     gNdsR2AnimWarmLoaded++;
     gNdsR2AnimWarmBytes += (u32)loaded_size;
@@ -6728,6 +6913,19 @@ static void *ndsRelocForceLoadFighterAObj16File(u32 token, u32 asset_id,
             header = cached->header;
             ndsRelocRemoveFighterAObj16LoadedAliases(asset_id, heap);
             loaded = ndsRelocRegisterLoadedFile(asset_id, 0, heap, &header);
+#if NDS_R2_AOBJ16_PREBAKE
+            /* R2-06 E13. The script region of this copy already carries the
+             * transform, applied once at warm time against the arena base --
+             * position-independent, so byte-identical to what the pass would
+             * write here. Claiming it is what removes the pass from the frame.
+             * The flag is per entry: anything the prebake declined still runs
+             * the pass below, unchanged. */
+            if ((loaded != NULL) && (cached->aobj16_ready != 0u))
+            {
+                loaded->format_fixups_applied = TRUE;
+                gNdsR2AObj16PrebakeSkips++;
+            }
+#endif
             if ((loaded == NULL) ||
                 (ndsRelocFinalizeLoadedFile(loaded) == FALSE))
             {
