@@ -2102,6 +2102,60 @@ runs re-learning that.
 
 **Worth ~7% of the 326,938 gap.** Banked and moved past; do not polish it.
 
+### The force-load seam is CLOSED — zero-copy is structurally impossible, cycle 108
+
+The obvious next move after the prebake was to stop copying altogether: the
+arena already holds every warmed animation, so finalize each image once and hand
+back the pointer. **It cannot be done at this seam, and the reason is one line of
+the caller.** `decomp/BattleShip-main/decomp/src/ft/ftmain.c:4623-4624`:
+
+```c
+lbRelocGetForceExternHeapFile(motion_desc->anim_file_id, (void*) fp->figatree_heap);
+fp->figatree = fp->figatree_heap;
+```
+
+**The return value is discarded.** The fighter always animates from its own
+`figatree_heap`, so the data must physically be there and the destination copy
+is mandatory. The port already knew this and nobody noticed: the generic arm of
+`lbRelocGetForceExternHeapFile` (`reloc_backend_assets.c:7396-7407`) copies the
+result back into `heap` and returns `heap` whenever the pointer differs. That
+guard is the same fact, written down years earlier.
+
+Built and measured anyway, because the counters name the failure precisely.
+Handing back the arena pointer does not read as a performance regression — it
+reads as a **different match**: `ForceLoadTotal` 353 → **3,210**, `Distinct`
+85 → **94**, `CacheHits` 351 → 3,146, `WORK-H` P95 **2,275,200**. Fighters
+animating from a stale slot thrash their state machines. Reverted; no flag, no
+dead code, nothing in the tree.
+
+**Three facts from the attempt are permanent and cost real runs — do not
+re-derive them:**
+
+1. **Nothing writes into a finalized animation file during its residency.**
+   Checksummed each file across its whole residency in the caller's slot:
+   **351 checked, 351 stable, 0 mutated**, over exactly **2 slots** (one per
+   fighter). This retires the older caveat above the R2-04 E0 counters — "the
+   renderer does mutate loaded fighter data" is true of fighter data at large
+   and false of an AObj16 animation script. Any future sharing design at a seam
+   that *does* let the destination move is licensed by this.
+2. **All 301 Mario+Fox animation assets have no external references** —
+   `reloc_extern_offset` 0xffff and `extern_file_ids_num` 0, scanned statically
+   off the built NitroFS tree with no build and no emulator run. So
+   `ndsRelocApplyExternalPointerFixups` takes its early-out for every one of
+   them, and there is no cross-file pointer here that could go stale.
+3. **The internal fixup list is at most 21 entries** (`PrebakeSlotsMax` 21 over
+   the whole match). Twenty-one pointer writes is not a cost, so baking the
+   internal fixups per destination — the obvious fallback once zero-copy died —
+   is worth approximately nothing and must not be briefed as a lever.
+
+**Taken together this CLOSES `ndsRelocForceLoadFighterAObj16File` as a cost
+centre.** After cycle 108's prebake, a cache hit is a mandatory ~2.3 KB memcpy
+plus ~21 pointer writes plus bookkeeping. The remaining load-frame premium is
+what cycle 107 already attributed and named correctly: **animation
+re-evaluation, 158,393/frame (24.3%), which is real gameplay work, not port
+overhead.** That is where the next attempt on the `SINT` tail belongs — as
+specialization or a lower update rate, not as another caching layer.
+
 ### The dormant-flag seam is EXHAUSTED — audited, cycle 105, no build
 
 Prompted by the "audit the 0 flags" rule. **The Makefile's `?= 0` defaults are

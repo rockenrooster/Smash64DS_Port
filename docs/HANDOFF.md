@@ -10,18 +10,15 @@ R2-07's performance gate. Published pair:
 
 ## Read this first: every 128-frame measurement in the archive is unusable
 
-**The 128-frame window reads the cheapest 6% of the match** — Boundary frames
-441–568 read `WORK-H` P95 1,156,992 (8.7% over gate) against 1,463,104 and 44.6%
-whole-match, i.e. P95 understated ~306,000 and the over-gate rate five times.
-`sample-tick-hud-buckets.ps1` takes repeated ring dumps (`-Samples` to 4096,
-`-RingStopStride` 96, ROM byte-identical). Never take a gate reading on 128
-frames again.
+**The 128-frame window reads the cheapest 6% of the match** — P95 understated
+~306,000 and the over-gate rate five times. `sample-tick-hud-buckets.ps1` takes
+repeated ring dumps (`-Samples` to 4096, `-RingStopStride` 96, ROM
+byte-identical). Never take a gate reading on 128 frames again.
 
 ## The two baselines — label every figure with its arm AND its coverage
 
-Re-banked cycle 80 on the corrected seed; both arms now run the **same 60-second
-match** (coverage 86.7%, clock 52 s → 0 s, logic:presented 2.000), and both
-windows end 43 frames past the buzzer in GAME SET.
+Re-banked cycle 80 on the corrected seed; both arms run the **same 60-second
+match** (coverage 86.7%), both windows ending 43 frames past the buzzer.
 
 | arm | role | coverage | `WORK-H` P50 | P95 | over gate |
 |---|---|---|---:|---:|---:|
@@ -29,74 +26,81 @@ windows end 43 frames past the buzzer in GAME SET.
 | both-CPU, pre-`f082b3c8` | superseded cycle 105 | 86.7% | 1,102,720 | 1,639,299 | 691/1600 |
 | **Boundary** mode 163 | shipped configuration | 86.7% | 1,082,112 | 1,476,672 | 673/1600 (42.1%) |
 
-**Gate baseline is 1,447,318 as of `f082b3c8`, gap 326,938.** The animation arena
-was full all match and the tail was cartridge I/O; board carries cycle 105.
-Boundary inherits the same fix and is not re-banked, so its 1,476,672 is
-stale-high. Slips 0 in every row. The soak's long match is
+**Gate baseline is 1,447,318 as of `f082b3c8`, gap 326,938**, less cycle 108's
+~23,000. Boundary inherits the same fixes and is not re-banked, so its 1,476,672
+is stale-high. Slips 0 in every row. The soak's long match is
 `NDS_R2_SOAK_MATCH_MINUTES` and `probe-match-window.ps1` reads the match timer
 out of the guest, so a window can no longer claim coverage it did not have.
 
 The owner's bar: the whole match under the P95 budget on the both-CPU config,
 loading states excluded; the shipped ROM stays the Boundary hwtri pair.
 `Makefile:305-308` still forbids reporting a both-CPU P95 as the Boundary
-figure. Both-CPU is only ~10% worse at P95 — harder, not a different animal.
-**Re-pin `EXPECTED_CENSUS_SHA256` in the commit that changes what it covers** —
-a stale pin aborted the Boundary profile in pre-flight and kept the verifier red
-for 35 commits.
+figure. **Re-pin `EXPECTED_CENSUS_SHA256` in the commit that changes what it
+covers** — a stale pin kept the verifier red for 35 commits.
 
 ## Effect DObj submits are a BOUNDARY-arm diagnosis — do not re-brief it as the gate
 
 `MISC` is 99.3% effect-submit excursion **on Boundary** but only **~12.1% of the
-`WORK-H` excursion on the gate arm** (recoverable 33,699–75,264, not ~315,000),
-and G3's packet path was refuted on mechanism in cycles 88–91: effect geometry is
-the per-instance payload, and the integer painter-depth slot exists *only*
-because the CPU owns the vertex. Every list already stops at its own `G_ENDDL`
-(1,360 of 1,360, none at the 8192 cap) at 626 ticks per command, so there is no
+`WORK-H` excursion on the gate arm** (recoverable 33,699–75,264, not ~315,000).
+G3's packet path was refuted on mechanism in cycles 88–91, and every list already
+stops at its own `G_ENDDL` (1,360 of 1,360, none at the 8192 cap), so there is no
 overrun to fix either. Board carries all of it.
 
 ## What is dead, so nobody re-derives it
 
 - **Projectiles** — weapon DObj submit medians **44 ticks/frame**; not the tail.
 - **Particles** — flat ~47,000/frame, hot–cold delta 4,838. A P50 lever only,
-  which retires SwitchPlan §7 option 2 (15 Hz round-robin) as a *gate* answer.
-- **Texture thrash** (1 upload per ~1,408 frames, 0 evictions — `Tex` is entirely
-  cache-**hit** cost), **`Find`** (0.44%), **`Material`** (0.25%, and it clears
-  §3.11), and **`FTR` as the gate** (anti-correlated with the tail).
-- **Task 56 strips** — REVERT: **the ROM hangs the present loop** (no presented
-  frame 12 in 900 s against 10–13 in 30 s). The `PERF_LEDGER` KILL row citing
-  `FTR` +5,824 has no completed run behind it.
+  retiring SwitchPlan §7 option 2 (15 Hz round-robin) as a *gate* answer.
+- **The force-load seam** — closed cycle 108; see the next-step section.
+- **Texture thrash** (1 upload per ~1,408 frames, 0 evictions), **`Find`**
+  (0.44%), **`Material`** (0.25%), **`FTR` as the gate** (anti-correlated).
+- **Task 56 strips** — REVERT: **the ROM hangs the present loop**. The
+  `PERF_LEDGER` KILL row citing `FTR` +5,824 has no completed run behind it.
 - **L7 fixed-point collision** — +534 won against 6,481 lost to its own text.
 
 ## RAM: both budgets are near their floor — price a change before writing it
 
-Two separate shortages, both real, both nearly spent:
-
 - **Static/boot.** `scripts/check-boot-headroom.ps1 -Build <dir>` after every lab
   build (OK / UNPROVEN / OVER CLIFF, exit 1). Highest `fake_heap_start` proven to
-  boot **`0x02294804`**, lowest proven to fail **`0x02294b24`**; the current gate
-  arm links at `0x0228c004` for **34,816** proven. **Text counts as much as bss.**
-  A failing arm never reaches presented frame 1 and the harness reports a timeout
-  that looks exactly like a hung emulator.
+  boot **`0x02294804`**, lowest proven to fail **`0x02294b24`**; the gate arm
+  links at `0x0228c004` for **34,816** proven. **Text counts as much as bss.** A
+  failing arm never reaches presented frame 1 and reads as a hung emulator.
 - **`gSYTaskmanGeneralHeap`.** `gNdsTaskmanGeneralHeapFreeMin` is **42,136**
-  against the anim cache's 32,768 `KEEP_FREE` (cycle 105). The two are coupled:
-  freeing `.bss` lowers `fake_heap_start`, which enlarges the heap.
+  against the anim cache's 32,768 `KEEP_FREE`. The two are coupled: freeing
+  `.bss` lowers `fake_heap_start`, which enlarges the heap.
 
-**The `Tex` (dl-pointer, bind-ordinal) memo is REFUTED** — built as approved and
-reverted: 10,336 consults, **471 hits (4.56%)**, 7,517 evictions of 7,525 fills,
-`Tex` ticks *up*; working set ~175 keys ≈ 6.3 KB.
+**The `Tex` (dl-pointer, bind-ordinal) memo is REFUTED** — 10,336 consults,
+**471 hits (4.56%)**, 7,517 evictions of 7,525 fills, `Tex` ticks *up*.
 
-## Next single step — one PRE-FINALIZED resident copy per warmed animation
+## Next single step — animation RE-EVALUATION, not another caching layer
 
-**Cycle 105 removed the cartridge I/O; 106–107 priced what is left.** Every
+**The force-load seam is closed (cycle 108).** Pre-finalizing and handing back
+the arena pointer is structurally impossible: `ftmain.c:4623-4624` **discards
+the return value** and animates from `fp->figatree_heap`, so the destination
+copy is mandatory — and `reloc_backend_assets.c:7396-7407` already encoded that
+fact. Violating it does not read as slow, it reads as a different match
+(`ForceLoadTotal` 353 → 3,210, P95 2,275,200). After the prebake a cache hit is
+a mandatory ~2.3 KB memcpy plus ~21 pointer writes; the internal fixup list is
+**at most 21 entries**, so baking it per destination is worth nothing. Board has
+the two other facts the attempt paid for: nothing mutates a finalized animation
+file during its residency (351/351 stable, 2 slots), and all 301 animation
+assets have zero external references.
+
+What is left on the load frame is **animation re-evaluation, 158,393/frame
+(24.3%)** — real gameplay work. Attack it as specialization or a lower update
+rate. Do not add another caching layer to the loader.
+
+## How the load frame is priced, and what is already closed
+
+**Cycle 105 removed the cartridge I/O; 106–108 priced what is left.** Every
 remaining `SINT` spike is a force-load frame (per-frame probe, 5 of 30, no
-exceptions either way) with payload and header reads **+0**, so a cache *hit*
-costs 117,000–570,000 ticks. Worth **121,331 at P95** (capping `SINT` at its
-median gives 1,325,987). Fully attributed in cycle 107, free from the existing
-profile CSV via `--split-by-symbol ndsRelocFinalizeLoadedFile` (74 load frames vs
-326 control, premium 650,610/frame): the reloc + copy family is
-**153,252/frame (23.6%)** and is port-side overhead delivering bytes already in
-RAM; animation re-evaluation is **158,393/frame (24.3%)** and is **real gameplay
-work** — do not brief it as waste. `armWaitForIrq` takes 21.1% and is idle.
+exceptions either way) with payload and header reads **+0**. Worth **121,331 at
+P95** in total (capping `SINT` at its median gives 1,325,987); the prebake took
+~23,000 of it. Attributed in cycle 107 free from the existing profile CSV via
+`--split-by-symbol ndsRelocFinalizeLoadedFile` (74 load frames vs 326 control,
+premium 650,610/frame): reloc + copy **153,252/frame (23.6%)**, animation
+re-evaluation **158,393/frame (24.3%)** and **real gameplay work** — do not
+brief it as waste — and `armWaitForIrq` 21.1%, idle.
 
 **`ndsRelocAssetIDForToken` is CLOSED as a caching target.** Provably pure, 100%
 of its cycles on load frames, but three configurations topped out at a 50.1% hit
@@ -107,13 +111,8 @@ unstable keys. Board has the table. Still open, unmeasured: bound the two
 **Do not bring a micro-fix.** R2-06 E11's rule: *a load-frame-only saving of
 ~8,000 ticks cannot be banked through P95, because relinking moves the tail by
 more than the saving.* Either clear ~16,000 of tail movement in one change, or
-**move the work off the gameplay frame** — which is what cycle 105's arena fix
-did for the I/O half and cycle 108's prebake did for the AObj16 pass (~−23,000,
-351/351 hits, pixel-identical, board has it). What is still on the load frame:
-fixups write absolute pointers from `loaded->data`, so they cannot be prebaked
-the same way, and the destination is caller-owned via
-`lbRelocGetForceExternHeapFile(file_id, heap)`. Pre-finalizing the *whole* file
-must REPLACE the per-load destination copy — 197,184 more bytes do not exist.
+**move the work off the gameplay frame** — cycle 105's arena fix for the I/O
+half, cycle 108's prebake for the AObj16 pass.
 
 **Measure a placement-sensitive seam on ONE binary with a runtime route.** Two
 separately-linked arms of cycle 108's prebake differed only by 3,584 bytes of
@@ -124,14 +123,12 @@ global at the first frame-complete marker; that is what standing rule 7 means
 and its header says so. Check the engagement counters in the OFF arm — the poke
 lands after ~3 warm steps, so an OFF arm is partial and the delta must be scaled.
 
-**Do not re-derive these; each is already documented where it lives.** The
-Makefile's `?= 0` defaults are not the shipped config (41 overridden, every large
-lever already on). `.text.hot` is closed in both directions
+**Do not re-derive these.** The Makefile's `?= 0` defaults are not the shipped
+config (41 overridden). `.text.hot` is closed in both directions
 (`linker/nds_hot_text.ld:179-201`) and the Task 37 census sections C/D are a cost
 ranking, never a placement prediction. Hoisting the animation range check in
 `ndsRelocAssetIDForToken` was done by R2-06 E11 and lost
-(`reloc_backend_assets.c:1840-1895`). Between them these cost one null build to
-re-learn.
+(`reloc_backend_assets.c:1840-1895`). These cost one null build to re-learn.
 
 **Latent cliff, unowned:** `sNdsAObjEvent32NormalizedCount` reads **973 of 1,024**
 after one minute. Overflow makes `ndsAObjEvent32NormalizeScript` return FALSE and
@@ -141,14 +138,13 @@ the caller then **skips the animation attach entirely**. 8 bytes an entry.
 
 The owner's "loading states excluded" bar must not go through the
 `SRC > 2x median` rule: it is circular for SRC, swings the gap **3.08x** across
-plausible thresholds, drops frames that are not loads (100 of 122 isolated
-singletons), and moves the gate arm 3.08x against Boundary's 1.09x — no loading
-filter could do that. Audit: `scripts/analyze-load-frame-exclusion.ps1`.
+thresholds, and drops frames that are not loads (100 of 122 isolated
+singletons). Audit: `scripts/analyze-load-frame-exclusion.ps1`.
 
-**Boundary for all of it.** Same geometry, same textures, same materials — the
-effect models are a closed `BUGS.md` row the owner confirmed by eye and paid for
-deliberately. Cheaper, never worse. A change that alters a visible pixel of the
-shield, revival platform, impact wave or reflector needs the owner.
+**Boundary for all of it.** Same geometry, textures and materials; the effect
+models are a closed `BUGS.md` row the owner confirmed by eye. A change that
+alters a visible pixel of the shield, revival platform, impact wave or reflector
+needs the owner.
 
 ## Measurement rules this cycle established or re-proved
 
@@ -160,17 +156,20 @@ shield, revival platform, impact wave or reflector needs the owner.
 - **Verify a counter is live in the shipped configuration BEFORE the measuring
   run**, and **eliminate candidates with a liveness probe on an already-built
   ROM** before spending one. Six per-stop counters read 0 all match because they
-  were proof-scoped; the GX flush and the OAM path came off the list for free.
+  were proof-scoped.
 - **`ALL` is VBlank-quantized** and hid a +52,928 that came straight out of the
   wait. Read `WORK-H`.
-- **Do not multiply a number back by what you divided it by.** The "8192 × 12.54
-  = 102,727 against 102,730" agreement was circular and was not evidence.
+- **Do not multiply a number back by what you divided it by** — that agreement
+  is circular and is not evidence.
 - **Read a memo's Evicts, not its Hits** (cycle 107). Misses that are nearly all
   evictions mean undersized *or* mis-keyed, and the hit rate cannot tell you
   which — 8× the table moved one 41.8% → 50.1% while evictions stayed.
 - **`--split-by-symbol` on an existing profile CSV is free** and partitions
   frames by whether they ran that symbol. It fully attributed the load frame
-  with no build and no emulator run, after an over-gate split had failed to.
+  with no build and no emulator run.
+- **Read the caller before designing around a return value.** Cycle 108 built a
+  zero-copy loader that `ftmain.c` could never use, because the caller discards
+  the pointer. One `rg` on the call site would have cost nothing.
 
 ## Restart surface
 
