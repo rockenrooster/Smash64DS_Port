@@ -2133,15 +2133,15 @@ smash64ds-battle-playable-hwtri.nds
 SHA-256 4D795B4E83B335598B20A3B5953FDB1821797CC5E0A825FA96A0643ABBA4A090
 ```
 
-Current shipping pair after Whispy Route 7 promotion, verified 2026-08-08:
+Current shipping pair after Fox blaster native promotion, verified 2026-08-09:
 
 ```text
-smash64ds-battle-playable-hwtri.nds   12,196,864 bytes
-SHA-256 C045544B15C3001E03664092392FA85D345344387CB96ECD629A50F2C42341E8
-smash64ds.nds                         11,914,240 bytes
-SHA-256 AB9DE9E3C945ABBA532EA7224E31C12B4EFD1F1B667C03CF8416CD5F1563A223
-tick-HUD sibling (builds/build-tick-hud-buckets)   12,211,200 bytes
-SHA-256 574F6F409B5B00E24CEF3B719124110275DC4E4009871BB1F2202AA44D445B3F
+smash64ds-battle-playable-hwtri.nds   12,211,200 bytes
+SHA-256 C49F2C528F9EA13BA9F05985248C1BA2CCD5681EAA7A2B0C5023F5557F2D7EA4
+smash64ds.nds                         11,915,264 bytes
+SHA-256 54C07FAC80C50418949908701F7C2BDBF27512C5F96AC09086FABBB0DF6AC68A
+tick-HUD sibling (builds/build-tick-hud-buckets)   12,218,368 bytes
+SHA-256 B7800E4921E1F2BCC89EB7A4BBECDA279F44111D226BEA32D05EF7FA319C1A4F
 ```
 
 ROM hashes are not reproducible across rebuilds of identical source; compare

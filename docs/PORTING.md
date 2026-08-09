@@ -22861,3 +22861,36 @@ The published-ROM contract passed. The rebuilt identities are
 `C045544B...41E8`; the P1 build retains 82,720 bytes of proven static headroom
 and the tick-HUD sibling retains 45,344 bytes. The DS-native asset checker still
 pins the 1,520-byte A5I3/A3I5/PAL16 pack and the lossless static green leaf.
+
+## 2026-08-09 — Fox blaster native beam and muzzle flash promoted
+
+The owner accepted the final A/B visual and requested promotion. The beam now
+submits relocData 316's four baked untextured vertices directly instead of
+interpreting its nine-command display list. The muzzle flash AOT-specializes
+EFCommon script `0x62`'s closed nine-visible-tick program and uploads the
+source-equivalent PAL16 16x8 half-disc; DS texture-unit T mirroring reproduces
+the source 16x16 flash without duplicated texels or a second quad. Both routes
+now default to 1 through `NDS_R2_FOX_BLASTER_QUAD` and
+`NDS_R2_FOX_BLASTER_GLOW_AOT`.
+
+On synchronized frames 312–319, weapon cost fell from 34,816 to 6,656 ticks
+(80.88%) and effect cost from 192 to 128 ticks. `WORK-H` P50/P95 fell from
+1,029,376/1,451,904 to 1,022,016/1,441,088. The interpreted and native beams
+both normalize to RGB `(223, 0, 134)` across the same 95 pixels; the remaining
+whole-screen delta is 0.047%, localized to the source-derived muzzle flash.
+Evidence: `artifacts/performance/2026-08-09_fox-blaster-native-colorfix-ab.txt`.
+
+The registered Boundary profile passed with the flags enabled only by their
+new defaults. The focused proof observed two source shots, two native beam
+draws, zero beam fallback, three glow spawns, eleven glow draws, zero glow
+fallback/miss, and all safety counters zero. The canonical P1 build retains
+76,064 bytes of proven static headroom; P2 retains 43,936 bytes. The published
+identities are `smash64ds-battle-playable-hwtri.nds` 12,211,200 bytes /
+`C49F2C52...D7EA4`, `smash64ds.nds` 11,915,264 bytes / `54C07FAC...C68A`,
+and the tick-HUD sibling 12,218,368 bytes / `B7800E49...1A4F`.
+
+The clean publishing wrapper was also attempted with a validated NTSC-U v1.0
+ROM, but stopped before generation/build because the existing read-only
+BattleShip reference's `decomp/src/sys/taskman.c` does not match its pinned
+patched hash. The reference tree was left untouched; the canonical public
+targets and registered Boundary profile completed successfully.

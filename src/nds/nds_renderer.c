@@ -4314,9 +4314,13 @@ _Static_assert(NDS_PARTICLE_QUAD_ATLAS_SHEETS <= 8u,
 static int sNdsRendererParticleAtlasName[NDS_PARTICLE_QUAD_ATLAS_SHEETS];
 #if NDS_R2_WHISPY_NATIVE_TEXTURES
 _Static_assert(NDS_PARTICLE_QUAD_ATLAS_SHEETS +
-                   NDS_WHISPY_NATIVE_TEXTURE_COUNT <= 8u,
+                   NDS_WHISPY_NATIVE_TEXTURE_COUNT +
+                   NDS_R2_FOX_BLASTER_GLOW_AOT <= 8u,
                "particle native textures would crowd the texture cache");
 static int sNdsRendererWhispyNativeName[NDS_WHISPY_NATIVE_TEXTURE_COUNT];
+#if NDS_R2_FOX_BLASTER_GLOW_AOT
+static int sNdsRendererFoxBlasterGlowName;
+#endif
 #if NDS_R2_WHISPY_NATIVE_AOT
 /* glBindTexture looks each GL name up through libnds's DynamicArray before it
  * writes TEXIMAGE_PARAM and PLTT_BASE.  These three textures are immutable and
@@ -4334,7 +4338,8 @@ typedef struct NDSRendererWhispyNativeBinding
 } NDSRendererWhispyNativeBinding;
 
 static NDSRendererWhispyNativeBinding
-    sNdsRendererWhispyNativeBinding[NDS_WHISPY_NATIVE_TEXTURE_COUNT];
+    sNdsRendererWhispyNativeBinding[
+        NDS_WHISPY_NATIVE_TEXTURE_COUNT + NDS_R2_FOX_BLASTER_GLOW_AOT];
 #endif
 #endif
 static u32 sNdsRendererParticleAtlasPrepared;
@@ -4359,6 +4364,12 @@ static s32 ndsRendererParticleAtlasOwnsName(int name)
             return TRUE;
         }
     }
+#if NDS_R2_FOX_BLASTER_GLOW_AOT
+    if (sNdsRendererFoxBlasterGlowName == name)
+    {
+        return TRUE;
+    }
+#endif
 #endif
     return FALSE;
 }
@@ -12476,6 +12487,11 @@ volatile u32 gNdsRendererParticleAtlasBytes;
 volatile u32 gNdsRendererWhispyNativePrepareCount;
 volatile u32 gNdsRendererWhispyNativeFailCount;
 volatile u32 gNdsRendererWhispyNativeBytes;
+#if NDS_R2_FOX_BLASTER_GLOW_AOT
+volatile u32 gNdsRendererFoxBlasterGlowPrepareCount;
+volatile u32 gNdsRendererFoxBlasterGlowFailCount;
+volatile u32 gNdsRendererFoxBlasterGlowBytes;
+#endif
 
 /* Sheets already uploaded when a later one fails. They are PINNED, so nothing
  * else can reclaim them, and the prepare has just declared the atlas absent --
@@ -12676,6 +12692,143 @@ fail:
 }
 #endif
 
+#if NDS_R2_FOX_BLASTER_GLOW_AOT
+/* EFCommon texture 27 is already an exact DS PAL16 payload in the generated
+ * particle asset: 16x8 CI4 + fourteen RGBA5551 colours becomes 64 texel bytes
+ * plus 28 palette bytes with zero model error. Script 0x62 immediately issues
+ * MASKT, making that stored image the TOP HALF of a 16x16 disc. Give it its
+ * own immutable GL name so the DS can do the same reflection in TEXIMAGE_PARAM
+ * (WRAP_T|FLIP_T); an atlas cell cannot wrap without sampling its neighbours.
+ */
+static s32 ndsRendererHardwarePrepareFoxBlasterGlowTexture(void)
+{
+    const NDSParticleTexture *texture =
+        &gNdsParticleTextures[27u];
+    NDSRendererHardwareTextureCacheEntry *entry = NULL;
+    FILE *file = NULL;
+    u32 texel_bytes;
+    int palette_format = -1;
+    int size_x;
+    int size_y;
+    int params = TEXGEN_TEXCOORD | GL_TEXTURE_COLOR0_TRANSPARENT |
+                 GL_TEXTURE_WRAP_T | GL_TEXTURE_FLIP_T;
+
+    gNdsRendererFoxBlasterGlowPrepareCount++;
+    texel_bytes = ((u32)texture->width * (u32)texture->height) >> 1;
+    if ((texture->width != 16u) || (texture->height != 8u) ||
+        (texture->ds_format != NDS_PARTICLE_FORMAT_PAL16) ||
+        (texture->palette_entries != 14u) ||
+        (texture->data_offset == NDS_PARTICLE_TEXTURE_UNPACKED) ||
+        (texture->palette_offset == NDS_PARTICLE_TEXTURE_UNPACKED) ||
+        (texel_bytes != 64u) ||
+        (texel_bytes > sizeof(sNdsRendererHardwareTextureScratch)) ||
+        ((u32)texture->palette_entries >
+         NDS_PARTICLE_QUAD_PALETTE_ENTRIES) ||
+        (ndsRendererHardwareTextureSizeEnum(texture->width, &size_x) ==
+         FALSE) ||
+        (ndsRendererHardwareTextureSizeEnum(texture->height, &size_y) ==
+         FALSE))
+    {
+        goto fail;
+    }
+    file = ndsRendererHardwareFencedTextureFopen(
+        NDS_PARTICLE_TEXTURE_ASSET_PATH, "rb");
+    if ((file == NULL) ||
+        (ndsRendererHardwareFencedTextureFseek(
+             file, (long)texture->data_offset, SEEK_SET) != 0) ||
+        (ndsRendererHardwareFencedTextureFread(
+             sNdsRendererHardwareTextureScratch, 1, texel_bytes, file) !=
+         texel_bytes) ||
+        (ndsRendererHardwareFencedTextureFseek(
+             file,
+             (long)(NDS_PARTICLE_PALETTE_ASSET_OFFSET +
+                    ((u32)texture->palette_offset * sizeof(u16))),
+             SEEK_SET) != 0) ||
+        (ndsRendererHardwareFencedTextureFread(
+             sNdsRendererParticleAtlasPalette, sizeof(u16),
+             texture->palette_entries, file) != texture->palette_entries))
+    {
+        goto fail;
+    }
+    entry = ndsRendererHardwareAllocTexture();
+    if ((entry == NULL) ||
+        ((entry->name == 0) &&
+         (ndsRendererHardwareFencedGlGenTextures(1, &entry->name) == 0)))
+    {
+        goto fail;
+    }
+    ndsRendererHardwareBindTextureName(NULL, (u32)entry->name);
+    if (ndsRendererHardwareFencedGlTexImage2D(
+            GL_TEXTURE_2D, 0, GL_RGB16, size_x, size_y, 0, params,
+            sNdsRendererHardwareTextureScratch) == 0)
+    {
+        goto fail;
+    }
+    glColorTableEXT(GL_TEXTURE_2D, 0, texture->palette_entries, 0, 0,
+                    sNdsRendererParticleAtlasPalette);
+    glGetColorTableParameterEXT(
+        GL_TEXTURE_2D, GL_COLOR_TABLE_FORMAT_EXT, &palette_format);
+    if (palette_format < 0)
+    {
+        goto fail;
+    }
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    ndsRendererHardwareTextureLookupRemove(entry);
+#endif
+    ndsRendererHardwareEntryClearKey(entry);
+    entry->key_generation = 0u;
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    entry->key_hash = 0u;
+#endif
+    entry->static_record_plus1 = 0u;
+    entry->static_owner_mask = 0u;
+    entry->params = (u32)glGetTexParameter();
+    entry->last_used_frame = 0u;
+    entry->pinned = TRUE;
+    entry->ready = TRUE;
+    sNdsRendererFoxBlasterGlowName = entry->name;
+    sNdsRendererWhispyNativeBinding[
+        NDS_WHISPY_NATIVE_TEXTURE_COUNT].texture_name = (u32)entry->name;
+    sNdsRendererWhispyNativeBinding[
+        NDS_WHISPY_NATIVE_TEXTURE_COUNT].texture_format = entry->params;
+    sNdsRendererWhispyNativeBinding[
+        NDS_WHISPY_NATIVE_TEXTURE_COUNT].palette_format =
+        (u32)palette_format;
+    sNdsRendererWhispyNativeBinding[
+        NDS_WHISPY_NATIVE_TEXTURE_COUNT].palette_name =
+        (s32)glGlob->activePalette;
+    sNdsRendererWhispyNativeBinding[
+        NDS_WHISPY_NATIVE_TEXTURE_COUNT].valid = TRUE;
+    if (ndsRendererHardwareFencedTextureFclose(file) != 0)
+    {
+        file = NULL;
+        goto fail;
+    }
+    file = NULL;
+    gNdsRendererFoxBlasterGlowBytes =
+        texel_bytes + ((u32)texture->palette_entries * sizeof(u16));
+    return TRUE;
+
+fail:
+    if (file != NULL)
+    {
+        (void)ndsRendererHardwareFencedTextureFclose(file);
+    }
+    if (entry != NULL)
+    {
+        entry->pinned = FALSE;
+        (void)ndsRendererHardwareReleaseTexture(entry);
+    }
+    sNdsRendererFoxBlasterGlowName = 0;
+    memset(&sNdsRendererWhispyNativeBinding[
+               NDS_WHISPY_NATIVE_TEXTURE_COUNT], 0,
+           sizeof(sNdsRendererWhispyNativeBinding[0]));
+    gNdsRendererFoxBlasterGlowBytes = 0u;
+    gNdsRendererFoxBlasterGlowFailCount++;
+    return FALSE;
+}
+#endif
+
 s32 ndsRendererHardwarePrepareParticleAtlas(void)
 {
     FILE *file = NULL;
@@ -12809,6 +12962,12 @@ s32 ndsRendererHardwarePrepareParticleAtlas(void)
         goto fail;
     }
 #endif
+#if NDS_R2_FOX_BLASTER_GLOW_AOT
+    if (ndsRendererHardwarePrepareFoxBlasterGlowTexture() == FALSE)
+    {
+        goto fail;
+    }
+#endif
     sNdsRendererParticleAtlasPrepared = TRUE;
     gNdsRendererParticleAtlasBytes = NDS_PARTICLE_QUAD_ASSET_BYTES;
     sNdsRendererHardwareActiveTextureEntry = NULL;
@@ -12840,6 +12999,17 @@ u32 ndsRendererHardwareParticleAtlasNameForSheet(u32 sheet)
 u32 ndsRendererHardwareParticleAtlasName(void)
 {
     return ndsRendererHardwareParticleAtlasNameForSheet(0u);
+}
+
+u32 ndsRendererHardwareFoxBlasterGlowName(void)
+{
+#if NDS_R2_FOX_BLASTER_GLOW_AOT
+    if (sNdsRendererParticleAtlasPrepared != 0u)
+    {
+        return (u32)sNdsRendererFoxBlasterGlowName;
+    }
+#endif
+    return 0u;
 }
 
 u32 ndsRendererHardwareWhispyNativeName(u32 texture_id)
@@ -12877,9 +13047,18 @@ void ndsRendererHardwareDiscardParticleAtlas(void)
 #endif
     }
 #endif
+#if NDS_R2_FOX_BLASTER_GLOW_AOT
+    sNdsRendererFoxBlasterGlowName = 0;
+    memset(&sNdsRendererWhispyNativeBinding[
+               NDS_WHISPY_NATIVE_TEXTURE_COUNT], 0,
+           sizeof(sNdsRendererWhispyNativeBinding[0]));
+#endif
     sNdsRendererParticleAtlasPrepared = FALSE;
     gNdsRendererParticleAtlasBytes = 0u;
     gNdsRendererWhispyNativeBytes = 0u;
+#if NDS_R2_FOX_BLASTER_GLOW_AOT
+    gNdsRendererFoxBlasterGlowBytes = 0u;
+#endif
 }
 
 /* BUGS.md "VFX get x flattened around stage edges ... why is there a limit
@@ -13055,6 +13234,96 @@ void ndsRendererSetParticleCamera(const NDSRendererMatrix20p12 *projection,
     sNdsRendererParticleCameraValid = TRUE;
 }
 
+/* Load the already-normalized world camera into GX. The generic particle
+ * opener uses this directly; the Fox blaster's projected no-Z variant below
+ * mirrors its modelview normalization while replacing only clip Z. */
+static s32 ndsRendererLoadParticleCameraMatrices(void)
+{
+    NDSRendererMatrix20p12 scaled_modelview;
+    m4x4 projection_hw;
+    m4x4 modelview_hw;
+    u32 col;
+
+    if (sNdsRendererParticleCameraValid == FALSE)
+    {
+        return FALSE;
+    }
+    ndsRendererMatrixCopy20p12(&scaled_modelview,
+                               &sNdsRendererParticleModelview);
+    for (col = 0u; col < 4u; col++)
+    {
+        scaled_modelview.m[3][col] = ndsRendererRoundShiftS32Signed(
+            scaled_modelview.m[3][col],
+            NDS_RENDERER_HW_WORLD_UNIT_SHIFT);
+    }
+    ndsRendererCopyMtx20p12ToM4x4(&sNdsRendererParticleProjection,
+                                  &projection_hw);
+    ndsRendererHardwareSetMatrixMode(GL_PROJECTION);
+    glLoadMatrix4x4(&projection_hw);
+    ndsRendererCopyMtx20p12ToM4x4(&scaled_modelview, &modelview_hw);
+    ndsRendererHardwareSetMatrixMode(GL_MODELVIEW);
+    glLoadMatrix4x4(&modelview_hw);
+    sNdsRendererHardwareMatrixLoaded = FALSE;
+    sNdsRendererHardwareMatrixMode = NDS_RENDERER_HW_MATRIX_MODE_NONE;
+    gNdsParticleCameraLoads++;
+    gNdsParticleCamTx = scaled_modelview.m[3][0];
+    gNdsParticleCamTy = scaled_modelview.m[3][1];
+    gNdsParticleCamTz = scaled_modelview.m[3][2];
+    return TRUE;
+}
+
+#if NDS_R2_FOX_BLASTER_QUAD
+static s32 ndsRendererHardwareNextProjectedDepth(void);
+static void ndsRendererHardwareBindNoTexture(NDSRendererStats *stats);
+
+/* Fox's source list is a projected no-Z weapon. Preserve the cached camera's
+ * X/Y/W transform and replace only clip Z with the renderer's painter depth,
+ * exactly like the promoted split-matrix Rebirth Halo path. Loading the raw
+ * world camera instead leaves the translucent muzzle glow in front of the
+ * beam even though the source renderer submits the beam over it. */
+static s32 ndsRendererLoadFoxBlasterNoZCameraMatrices(void)
+{
+    NDSRendererMatrix20p12 projection = sNdsRendererParticleProjection;
+    NDSRendererMatrix20p12 scaled_modelview;
+    m4x4 projection_hw;
+    m4x4 modelview_hw;
+    s16 projected_z;
+    u32 row;
+
+    if (sNdsRendererParticleCameraValid == FALSE)
+    {
+        return FALSE;
+    }
+    projected_z = (s16)ndsRendererHardwareNextProjectedDepth();
+    for (row = 0u; row < 4u; row++)
+    {
+        projection.m[row][2] = (s32)ndsRendererRoundShiftS64(
+            (s64)projection.m[row][3] * projected_z, 12u);
+    }
+    ndsRendererMatrixCopy20p12(&scaled_modelview,
+                               &sNdsRendererParticleModelview);
+    for (row = 0u; row < 4u; row++)
+    {
+        scaled_modelview.m[3][row] = ndsRendererRoundShiftS32Signed(
+            scaled_modelview.m[3][row],
+            NDS_RENDERER_HW_WORLD_UNIT_SHIFT);
+    }
+    ndsRendererCopyMtx20p12ToM4x4(&projection, &projection_hw);
+    ndsRendererHardwareSetMatrixMode(GL_PROJECTION);
+    glLoadMatrix4x4(&projection_hw);
+    ndsRendererCopyMtx20p12ToM4x4(&scaled_modelview, &modelview_hw);
+    ndsRendererHardwareSetMatrixMode(GL_MODELVIEW);
+    glLoadMatrix4x4(&modelview_hw);
+    sNdsRendererHardwareMatrixLoaded = FALSE;
+    sNdsRendererHardwareMatrixMode = NDS_RENDERER_HW_MATRIX_MODE_NONE;
+    gNdsParticleCameraLoads++;
+    gNdsParticleCamTx = scaled_modelview.m[3][0];
+    gNdsParticleCamTy = scaled_modelview.m[3][1];
+    gNdsParticleCamTz = scaled_modelview.m[3][2];
+    return TRUE;
+}
+#endif
+
 #if NDS_R2_WHISPY_NATIVE_AOT
 static NDS_RENDERER_FAST_RUN_CODE void
 ndsRendererPrepareWhispyQuadState(u32 texture_name, u32 poly_alpha,
@@ -13171,42 +13440,12 @@ s32 ndsRendererSubmitParticleQuad(u32 atlas_name, const Vec3f *pos, f32 size,
         gNdsParticleMatrixLoadedSeen = sNdsRendererHardwareMatrixLoaded;
         gNdsParticleBatchOpens++;
         ndsRendererHardwareEndBatch();
-        if (sNdsRendererParticleCameraValid != FALSE)
-        {
-            NDSRendererMatrix20p12 scaled_modelview;
-            m4x4 projection_hw;
-            m4x4 modelview_hw;
-            u32 col;
-
-            /* Same translation shift every other root load applies
-             * (ndsRendererLoadHardwareSplitMatrices): vertices arrive at
-             * world x 16 from ndsRendererParticleWorldToV16, so the matrix
-             * translation has to come down by WORLD_UNIT_SHIFT to match. */
-            ndsRendererMatrixCopy20p12(&scaled_modelview,
-                                       &sNdsRendererParticleModelview);
-            for (col = 0u; col < 4u; col++)
-            {
-                scaled_modelview.m[3][col] = ndsRendererRoundShiftS32Signed(
-                    scaled_modelview.m[3][col],
-                    NDS_RENDERER_HW_WORLD_UNIT_SHIFT);
-            }
-            ndsRendererCopyMtx20p12ToM4x4(&sNdsRendererParticleProjection,
-                                          &projection_hw);
-            ndsRendererHardwareSetMatrixMode(GL_PROJECTION);
-            glLoadMatrix4x4(&projection_hw);
-            ndsRendererCopyMtx20p12ToM4x4(&scaled_modelview, &modelview_hw);
-            ndsRendererHardwareSetMatrixMode(GL_MODELVIEW);
-            glLoadMatrix4x4(&modelview_hw);
-            /* The pass owns the hardware matrix now, and it is nobody else's
-             * mode -- so the next object load must not elide itself against
-             * a generation that no longer describes what is loaded. */
-            sNdsRendererHardwareMatrixLoaded = FALSE;
-            sNdsRendererHardwareMatrixMode = NDS_RENDERER_HW_MATRIX_MODE_NONE;
-            gNdsParticleCameraLoads++;
-            gNdsParticleCamTx = scaled_modelview.m[3][0];
-            gNdsParticleCamTy = scaled_modelview.m[3][1];
-            gNdsParticleCamTz = scaled_modelview.m[3][2];
-        }
+        /* Same translation shift every other root load applies
+         * (ndsRendererLoadHardwareSplitMatrices): vertices arrive at world
+         * x16, so the shared loader brings the camera translation down by the
+         * matching WORLD_UNIT_SHIFT. A missing camera preserves the old
+         * behavior of proceeding without a camera reload. */
+        (void)ndsRendererLoadParticleCameraMatrices();
         /* The scale that compensates the vertex factor, so quads land where
          * they always did and only their representable RANGE changes. Pushed
          * unconditionally even at shift 0 (scale 1) so the pop in
@@ -13346,7 +13585,8 @@ ndsRendererWhispyNativeBindingFor(u32 texture_name, u32 texture_slot)
 {
     const NDSRendererWhispyNativeBinding *binding;
 
-    if (texture_slot >= NDS_WHISPY_NATIVE_TEXTURE_COUNT)
+    if (texture_slot >=
+        (NDS_WHISPY_NATIVE_TEXTURE_COUNT + NDS_R2_FOX_BLASTER_GLOW_AOT))
     {
         return NULL;
     }
@@ -13739,6 +13979,25 @@ static sb32 ndsRendererWhispyFloatToFixed(f32 value,
     else
     {
         *fixed = (s32)magnitude;
+    }
+    return TRUE;
+}
+
+s32 ndsRendererParticlePositionToQ12(const Vec3f *pos,
+                                     s32 fixed_center_q12[3])
+{
+    if ((pos == NULL) || (fixed_center_q12 == NULL) ||
+        (ndsRendererWhispyFloatToFixed(
+             pos->x, NDS_RENDERER_WHISPY_COORD_SHIFT,
+             &fixed_center_q12[0]) == FALSE) ||
+        (ndsRendererWhispyFloatToFixed(
+             pos->y, NDS_RENDERER_WHISPY_COORD_SHIFT,
+             &fixed_center_q12[1]) == FALSE) ||
+        (ndsRendererWhispyFloatToFixed(
+             pos->z, NDS_RENDERER_WHISPY_COORD_SHIFT,
+             &fixed_center_q12[2]) == FALSE))
+    {
+        return FALSE;
     }
     return TRUE;
 }
@@ -14294,6 +14553,233 @@ void ndsRendererEndParticleQuads(void)
     sNdsRendererWhispyBasisValid = FALSE;
 #endif
 }
+
+#if NDS_R2_FOX_BLASTER_QUAD
+/* ARM946E-S has no FPU. The beam's source DObj is already a closed four-vertex
+ * contract, so paying __aeabi_fmul/__aeabi_f2iz for every coordinate would
+ * throw away most of the native-submit gain. Decode finite IEEE-754 directly
+ * into Q12, with the same truncation toward zero as a C cast. */
+static sb32 ndsRendererFoxBlasterFloatToQ12(f32 value, s32 *fixed)
+{
+    union { f32 f; u32 u; } bits;
+    u32 exponent;
+    u32 mantissa;
+    u32 magnitude;
+    u32 limit;
+    u32 sign;
+    s32 shift;
+
+    bits.f = value;
+    sign = bits.u >> 31;
+    exponent = (bits.u >> 23) & 0xffu;
+    mantissa = bits.u & 0x7fffffu;
+    if ((fixed == NULL) || (exponent == 0xffu))
+    {
+        return FALSE;
+    }
+    if (exponent == 0u)
+    {
+        if (mantissa == 0u)
+        {
+            *fixed = 0;
+            return TRUE;
+        }
+        shift = -126 - 23 + 12;
+    }
+    else
+    {
+        mantissa |= 0x800000u;
+        shift = (s32)exponent - 127 - 23 + 12;
+    }
+    limit = (sign != 0u) ? 0x80000000u : 0x7fffffffu;
+    if (shift >= 0)
+    {
+        if ((shift >= 32) || (mantissa > (limit >> (u32)shift)))
+        {
+            return FALSE;
+        }
+        magnitude = mantissa << (u32)shift;
+    }
+    else if (shift <= -32)
+    {
+        magnitude = 0u;
+    }
+    else
+    {
+        magnitude = mantissa >> (u32)-shift;
+    }
+    *fixed = (sign != 0u) ?
+        ((magnitude == 0x80000000u) ? INT_MIN : -(s32)magnitude) :
+        (s32)magnitude;
+    return TRUE;
+}
+
+static u32 ndsRendererFoxBlasterAbsQ12(s32 value)
+{
+    return (value < 0) ? (u32)(-(s64)value) : (u32)value;
+}
+
+static v16 ndsRendererFoxBlasterQ12ToV16(s32 value, u32 scale_shift)
+{
+    u32 shift = 8u + scale_shift;
+
+    if (value < 0)
+    {
+        return (v16)-(s32)((u32)(-(s64)value) >> shift);
+    }
+    return (v16)((u32)value >> shift);
+}
+
+/* relocData 316, decoded from the source bytes:
+ *
+ *   (  0,  24, 0), (  0, -26, 0),
+ *   (-30, -26, 0), (-30,  24, 0), RGBA (219,0,134,0)
+ *
+ * Its combine mode uses shade RGB with full combiner alpha, texture disabled.
+ * The DObj owns TraRotRpyRSca; the admitted path is exactly rotate.z 0 or pi,
+ * selected from the source velocity by the caller. No texture, DL decode,
+ * Vtx staging, matrix build, trig, or software-float multiply remains here. */
+NDS_RENDERER_FAST_RUN_CODE
+s32 ndsRendererSubmitFoxBlasterQuad(const Vec3f *translate,
+                                    f32 scale_x, f32 scale_y,
+                                    s32 facing)
+{
+    s32 tx;
+    s32 ty;
+    s32 tz;
+    s32 sx;
+    s32 sy;
+    s32 x0;
+    s32 x1;
+    s32 y0;
+    s32 y1;
+    s32 span_x;
+    s32 span_y0;
+    s32 span_y1;
+    v16 vx0;
+    v16 vx1;
+    v16 vy0;
+    v16 vy1;
+    v16 vz;
+    u32 max_q12;
+    u32 scale_shift = 0u;
+
+    if ((translate == NULL) || ((facing != 1) && (facing != -1)) ||
+        (ndsRendererFoxBlasterFloatToQ12(translate->x, &tx) == FALSE) ||
+        (ndsRendererFoxBlasterFloatToQ12(translate->y, &ty) == FALSE) ||
+        (ndsRendererFoxBlasterFloatToQ12(translate->z, &tz) == FALSE) ||
+        (ndsRendererFoxBlasterFloatToQ12(scale_x, &sx) == FALSE) ||
+        (ndsRendererFoxBlasterFloatToQ12(scale_y, &sy) == FALSE) ||
+        (sx <= 0) || (sy <= 0) || (sx > (INT_MAX / 30)) ||
+        (sy > (INT_MAX / 26)))
+    {
+        return FALSE;
+    }
+    span_x = 30 * sx;
+    span_y0 = 24 * sy;
+    span_y1 = 26 * sy;
+    if (facing > 0)
+    {
+        if ((tx < (INT_MIN + span_x)) ||
+            (ty > (INT_MAX - span_y0)) ||
+            (ty < (INT_MIN + span_y1)))
+        {
+            return FALSE;
+        }
+        x0 = tx;
+        x1 = tx - span_x;
+        y0 = ty + span_y0;
+        y1 = ty - span_y1;
+    }
+    else
+    {
+        /* Rz(pi): local -X becomes world +X and local Y changes sign. */
+        if ((tx > (INT_MAX - span_x)) ||
+            (ty < (INT_MIN + span_y0)) ||
+            (ty > (INT_MAX - span_y1)))
+        {
+            return FALSE;
+        }
+        x0 = tx;
+        x1 = tx + span_x;
+        y0 = ty - span_y0;
+        y1 = ty + span_y1;
+    }
+    max_q12 = ndsRendererFoxBlasterAbsQ12(x0);
+#define NDS_FOX_BLASTER_MAX_Q12(value) do { \
+    u32 magnitude__ = ndsRendererFoxBlasterAbsQ12((value)); \
+    if (magnitude__ > max_q12) { max_q12 = magnitude__; } \
+} while (0)
+    NDS_FOX_BLASTER_MAX_Q12(x1);
+    NDS_FOX_BLASTER_MAX_Q12(y0);
+    NDS_FOX_BLASTER_MAX_Q12(y1);
+    NDS_FOX_BLASTER_MAX_Q12(tz);
+#undef NDS_FOX_BLASTER_MAX_Q12
+    while ((scale_shift < NDS_RENDERER_PARTICLE_MAX_SCALE_SHIFT) &&
+           ((max_q12 >> (8u + scale_shift)) > 32767u))
+    {
+        scale_shift++;
+    }
+    if ((max_q12 >> (8u + scale_shift)) > 32767u)
+    {
+        return FALSE;
+    }
+
+#if NDS_R2_WHISPY_NATIVE_AOT
+    ndsRendererFlushWhispyNativePacket();
+#endif
+    /* A direct weapon display cannot borrow an open particle primitive. Flush
+     * it first if ordering ever places one here, then own one balanced matrix
+     * push for this source quad. */
+    ndsRendererEndParticleQuads();
+    ndsRendererHardwareEndBatch();
+    if (ndsRendererLoadFoxBlasterNoZCameraMatrices() == FALSE)
+    {
+        return FALSE;
+    }
+    glPushMatrix();
+    if (scale_shift != 0u)
+    {
+        s32 factor = inttof32(1 << scale_shift);
+        glScalef32(factor, factor, factor);
+    }
+    /* Match the interpreted renderer's GL_NOTEXTURE TEXIMAGE_PARAM contract.
+     * Clearing DISP3DCNT's global texture bit is not the same GX material
+     * state and visibly shifts this thin saturated beam on DS. The shared
+     * no-texture name carries no texel payload and is normally already hot. */
+    glEnable(GL_TEXTURE_2D);
+    ndsRendererHardwareBindNoTexture(NULL);
+    /* The generic source renderer derives ID 1 from this list's single
+     * combine command. Keep that exact ID: the spawn glow uses particle ID 0,
+     * and collapsing both to 0 changes their DS translucent-overlap result. */
+    ndsRendererHardwareSetPolyFmt(
+        POLY_ALPHA(31) | POLY_CULL_NONE | POLY_ID(1));
+    vx0 = ndsRendererFoxBlasterQ12ToV16(x0, scale_shift);
+    vx1 = ndsRendererFoxBlasterQ12ToV16(x1, scale_shift);
+    vy0 = ndsRendererFoxBlasterQ12ToV16(y0, scale_shift);
+    vy1 = ndsRendererFoxBlasterQ12ToV16(y1, scale_shift);
+    vz = ndsRendererFoxBlasterQ12ToV16(tz, scale_shift);
+    /* The source quadrangle decodes to triangles 0/1/2 and 0/2/3. A DS
+     * GL_QUAD covers the same mathematical area but rasterizes this five-pixel
+     * beam differently, so retain the source triangle split exactly. */
+    glBegin(GL_TRIANGLES);
+    /* GX BEGIN establishes the primitive's vertex state. Match the generic
+     * path and write COLOR after it; writing COLOR first inherits the prior
+     * primitive's latched color on hardware. */
+    glColor(RGB15(27, 0, 16));
+    glVertex3v16(vx0, vy0, vz);
+    glVertex3v16(vx0, vy1, vz);
+    glVertex3v16(vx1, vy1, vz);
+    glVertex3v16(vx0, vy0, vz);
+    glVertex3v16(vx1, vy1, vz);
+    glVertex3v16(vx1, vy0, vz);
+    ndsRendererHardwareEndBatch();
+    glPopMatrix(1);
+    sNdsRendererHardwareMatrixLoaded = FALSE;
+    sNdsRendererHardwareMatrixMode = NDS_RENDERER_HW_MATRIX_MODE_NONE;
+    return TRUE;
+}
+#endif /* NDS_R2_FOX_BLASTER_QUAD */
 
 /* DEBUG-ONLY world-space collision-diamond, for tuning the fireball's
  * stage-collision box. The DS geometry engine has no line primitive, so the
@@ -19641,6 +20127,11 @@ volatile u32 gNdsRendererParticleAtlasBytes;
 volatile u32 gNdsRendererWhispyNativePrepareCount;
 volatile u32 gNdsRendererWhispyNativeFailCount;
 volatile u32 gNdsRendererWhispyNativeBytes;
+#if NDS_R2_FOX_BLASTER_GLOW_AOT
+volatile u32 gNdsRendererFoxBlasterGlowPrepareCount;
+volatile u32 gNdsRendererFoxBlasterGlowFailCount;
+volatile u32 gNdsRendererFoxBlasterGlowBytes;
+#endif
 /* The v16 rail counters' software-renderer twins. `battleship_lbparticle.c`
  * reads the clamp count under NDS_R2_PARTICLE_DRAW, which defaults ON while
  * NDS_RENDERER_HW_TRIANGLES defaults OFF -- so without these three the DEFAULT
@@ -19668,6 +20159,11 @@ u32 ndsRendererHardwareParticleAtlasNameForSheet(u32 sheet)
 }
 
 u32 ndsRendererHardwareParticleAtlasName(void)
+{
+    return 0u;
+}
+
+u32 ndsRendererHardwareFoxBlasterGlowName(void)
 {
     return 0u;
 }
@@ -19710,6 +20206,14 @@ s32 ndsRendererSubmitParticleQuad(u32 atlas_name, const Vec3f *pos, f32 size,
 void ndsRendererSetWhispyNativeBasis(const Vec3f *right, const Vec3f *up)
 {
     (void)right; (void)up;
+}
+
+s32 ndsRendererParticlePositionToQ12(const Vec3f *pos,
+                                     s32 fixed_center_q12[3])
+{
+    (void)pos;
+    (void)fixed_center_q12;
+    return FALSE;
 }
 
 s32 ndsRendererSubmitWhispyNativeQuad(u32 texture_name,

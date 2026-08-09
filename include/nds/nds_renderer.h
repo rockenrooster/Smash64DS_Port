@@ -1263,6 +1263,9 @@ s32 ndsRendererHardwarePrepareParticleAtlas(void);
  * exists for the callers that predate the split. */
 u32 ndsRendererHardwareParticleAtlasNameForSheet(u32 sheet);
 u32 ndsRendererHardwareParticleAtlasName(void);
+/* Exact EFCommon texture 27: PAL16 16x8 with hardware T mirror, so UV T 0..16
+ * reconstructs the source MASKT 16x16 flash without duplicated texels. */
+u32 ndsRendererHardwareFoxBlasterGlowName(void);
 u32 ndsRendererHardwareWhispyNativeName(u32 texture_id);
 void ndsRendererHardwareDiscardParticleAtlas(void);
 /* One camera-facing quad in world space. The caller supplies the camera basis
@@ -1284,6 +1287,10 @@ s32 ndsRendererSubmitParticleQuad(u32 atlas_name, const Vec3f *pos, f32 size,
  * rebuilding four float corners. Submit returns -1 when the closed fixed-point
  * contract is absent so the caller can use the generic source draw. */
 void ndsRendererSetWhispyNativeBasis(const Vec3f *right, const Vec3f *up);
+/* One-time spawn conversion for the Fox glow AOT pool. Keeping the centre in
+ * Q12 lets every visible source state avoid soft-float conversion. */
+s32 ndsRendererParticlePositionToQ12(const Vec3f *pos,
+                                     s32 fixed_center_q12[3]);
 /* Convert one rigid Whispy root + local particle position to the renderer's
  * Q12 center without ARM9 software-float matrix arithmetic. `affine == NULL`
  * is the identity transform. The optional oracle executes the source float
@@ -1297,6 +1304,14 @@ s32 ndsRendererSubmitWhispyNativeQuad(u32 texture_name,
                                       u32 mirror_mask,
                                       u32 texture_w, u32 texture_h,
                                       u32 submit_route);
+/* Fox's source blaster display is an untextured four-vertex quad from
+ * relocData 316. This lab submit converts the live source translation/scale
+ * directly to fixed GX coordinates; facing is +1 or -1. It returns FALSE
+ * outside the exact horizontal source contract so the display-list path can
+ * remain the correctness fallback. */
+s32 ndsRendererSubmitFoxBlasterQuad(const Vec3f *translate,
+                                    f32 scale_x, f32 scale_y,
+                                    s32 facing);
 void ndsRendererEndParticleQuads(void);
 /* DEBUG-ONLY. Draws a world-space collision-diamond outline inside an open
  * particle quad batch (see src/nds/nds_renderer.c). For tuning the fireball's
@@ -1310,6 +1325,9 @@ extern volatile u32 gNdsRendererParticleAtlasBytes;
 extern volatile u32 gNdsRendererWhispyNativePrepareCount;
 extern volatile u32 gNdsRendererWhispyNativeFailCount;
 extern volatile u32 gNdsRendererWhispyNativeBytes;
+extern volatile u32 gNdsRendererFoxBlasterGlowPrepareCount;
+extern volatile u32 gNdsRendererFoxBlasterGlowFailCount;
+extern volatile u32 gNdsRendererFoxBlasterGlowBytes;
 /* The v16 rail, counted where it happens. Clamp must be 0: a quad that reaches
  * it is drawn flattened onto the rail instead of where it belongs, which is
  * BUGS.md's "VFX get x flattened around stage edges". ScaleEscalations and

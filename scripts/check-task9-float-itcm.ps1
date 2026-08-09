@@ -470,12 +470,29 @@ try {
 
     $symbols = @(& $Objdump -t $resolvedElf)
     if ($LASTEXITCODE -ne 0) { throw 'Could not read candidate ELF symbols.' }
+    $omittedHelpers = @()
     foreach ($helper in $helpers) {
-        $matches = @($symbols | Where-Object {
+        $definitions = @($symbols | Where-Object {
+            $_ -match ("\sF\s+\S+\s+[0-9a-fA-F]+.*\s" +
+                [regex]::Escape($helper) + '$')
+        })
+        $itcmDefinitions = @($definitions | Where-Object {
             $_ -match ("\sF\s+\.itcm\s+[0-9a-fA-F]+.*\s" +
                 [regex]::Escape($helper) + '$')
         })
-        if ($matches.Count -ne 1) {
+        # __aeabi_fcmpun lives in its own archive member. A candidate with no
+        # unordered float comparisons legitimately leaves that member
+        # unreferenced, and --gc-sections omits the helper entirely. Absence is
+        # cheaper and safe; a retained definition must still be unique and in
+        # ITCM. The other helpers share live relocated members and remain
+        # mandatory under the current contract.
+        if (($helper -eq '__aeabi_fcmpun') -and
+            ($definitions.Count -eq 0)) {
+            $omittedHelpers += $helper
+            continue
+        }
+        if (($definitions.Count -ne 1) -or
+            ($itcmDefinitions.Count -ne 1)) {
             throw "Expected exactly one $helper definition in ELF .itcm."
         }
     }
@@ -490,6 +507,7 @@ try {
         '__aeabi_fcmpun' = if ($Task16CompareMode -eq 1) { 0x1c } else { 0x38 }
     }
     foreach ($entry in $finalSizes.GetEnumerator()) {
+        if ($omittedHelpers -contains $entry.Key) { continue }
         $size = '{0:x8}' -f $entry.Value
         if (@($symbols | Where-Object {
                 $_ -match ("\sF\s+\.itcm\s+$size.*\s" +
@@ -612,11 +630,12 @@ try {
         $expectedArchiveHash) {
         throw 'Installed Thumb libgcc archive changed during verification.'
     }
-    Write-Output ("Task 9 float ITCM passed: phase2={0} task16Compare/I2f/AddSub={1}/{2}/{3} stockBytes={4} phase2Bytes={5} task16RawBytes={6} fillBytes={7} itcm={8}/32768 free={9} libgcc={10} sha256={11} code=[{12}]" -f
+    Write-Output ("Task 9 float ITCM passed: phase2={0} task16Compare/I2f/AddSub={1}/{2}/{3} stockBytes={4} phase2Bytes={5} task16RawBytes={6} fillBytes={7} itcm={8}/32768 free={9} omitted=[{10}] libgcc={11} sha256={12} code=[{13}]" -f
         $Phase2Mode, $Task16CompareMode, $Task16I2fMode,
         $Task16AddSubMode, $stockBytes, $phase2Bytes, $task16Bytes,
-        $candidateFillBytes, $itcmBytes, (32768 - $itcmBytes), $libgcc,
-        $archiveHash, ($codeRows -join ', '))
+        $candidateFillBytes, $itcmBytes, (32768 - $itcmBytes),
+        ($omittedHelpers -join ', '), $libgcc, $archiveHash,
+        ($codeRows -join ', '))
 } finally {
     Remove-Item -LiteralPath $temp -Recurse -Force
 }

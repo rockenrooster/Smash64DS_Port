@@ -5,6 +5,8 @@
 /* The baked fireball texels/palettes and the GL_RGB16 upload they need. Only
  * this flag's path uses either, so neither is pulled in unconditionally. */
 #include <nds/generated/nds_particle_banks.generated.h>
+#endif
+#if NDS_R2_FIREBALL_QUAD || NDS_R2_FOX_BLASTER_QUAD
 #include <nds/nds_renderer.h>
 #endif
 
@@ -13067,6 +13069,52 @@ static sb32 ndsStageGCDrawAllLoopDrawFireballQuad(DObj *root, WPStruct *wp)
 }
 #endif /* NDS_R2_FIREBALL_QUAD */
 
+#if NDS_R2_FOX_BLASTER_QUAD
+/* Engagement/fallback pair for the lab arm. A rising draw count with zero
+ * fallback proves the exact horizontal source contract reached direct GX;
+ * fallback preserves the restored source display after a hop or reflection. */
+volatile u32 gNdsFoxBlasterQuadDrawCount;
+volatile u32 gNdsFoxBlasterQuadFallbackCount;
+
+static sb32 ndsStageGCDrawAllLoopDrawFoxBlasterQuad(DObj *root, WPStruct *wp)
+{
+    s32 facing;
+
+    if ((root == NULL) || (wp == NULL) ||
+        (root->rotate.vec.f.x != 0.0F) ||
+        (root->rotate.vec.f.y != 0.0F) ||
+        (root->scale.vec.f.y != 1.0F) ||
+        (root->scale.vec.f.z != 1.0F) ||
+        (wp->physics.vel_air.y != 0.0F))
+    {
+        return FALSE;
+    }
+    /* Source spawn writes exactly +/-160 and zero Y. A hop rotates that vector
+     * and a reflector can redirect it, so admitting only these two bit-exact
+     * values makes the fast path the natural Fox shot and nothing broader. */
+    if (wp->physics.vel_air.x == 160.0F)
+    {
+        facing = 1;
+    }
+    else if (wp->physics.vel_air.x == -160.0F)
+    {
+        facing = -1;
+    }
+    else
+    {
+        return FALSE;
+    }
+    if (ndsRendererAdapterSetWorldQuadCamera(
+            sNdsStageGCDrawAllLoopCurrentCameraGObj) == FALSE)
+    {
+        return FALSE;
+    }
+    return ndsRendererSubmitFoxBlasterQuad(
+        &root->translate.vec.f, root->scale.vec.f.x,
+        root->scale.vec.f.y, facing);
+}
+#endif /* NDS_R2_FOX_BLASTER_QUAD */
+
 static void ndsStageGCDrawAllLoopSubmitWeaponDObj(GObj *weapon_gobj,
                                                   u32 callback_kind)
 {
@@ -13128,6 +13176,29 @@ static void ndsStageGCDrawAllLoopSubmitWeaponDObj(GObj *weapon_gobj,
         gNdsRendererAdapterCustom47RejectCount;
     custom47_translation_mismatch_before =
         gNdsRendererAdapterCustom47TranslationMismatchCount;
+#if NDS_R2_FOX_BLASTER_QUAD
+    {
+        WPStruct *blaster_wp = weapon_gobj->user_data.p;
+
+        if ((blaster_wp != NULL) && (blaster_wp->kind == nWPKindBlaster))
+        {
+            if (ndsStageGCDrawAllLoopDrawFoxBlasterQuad(root, blaster_wp) !=
+                FALSE)
+            {
+                gNdsFoxBlasterQuadDrawCount++;
+                gNdsWeaponRendererSubmitCount++;
+                gNdsWeaponRendererVisibleDrawCount++;
+                gNdsWeaponRendererTriangleCount += 2u;
+                gNdsStageGCDrawAllLoopHardwareTriangleCount += 2u;
+                sNdsStageGCDrawAllLoopHardwareSubmitCount++;
+                gNdsStageGCDrawAllLoopHardwareSubmitCount =
+                    sNdsStageGCDrawAllLoopHardwareSubmitCount;
+                return;
+            }
+            gNdsFoxBlasterQuadFallbackCount++;
+        }
+    }
+#endif
 #if NDS_R2_FIREBALL_QUAD
     /* Before the tree walk, not inside it: the whole point is to spend neither
      * the walk nor the display list. Falls through to the generic route on any
@@ -13216,6 +13287,15 @@ static void ndsStageGCDrawAllLoopSubmitWeaponDObj(GObj *weapon_gobj,
         if ((texture_ready_delta != 0u) && (texture_reject_delta == 0u))
         {
             gNdsWeaponRendererFireballVisibleDrawCount++;
+        }
+    }
+    else if ((wp != NULL) && (wp->kind == nWPKindBlaster))
+    {
+        gNdsWeaponRendererBlasterSubmitCount++;
+        gNdsWeaponRendererBlasterTriangleCount += triangle_delta;
+        if (texture_reject_delta == 0u)
+        {
+            gNdsWeaponRendererBlasterVisibleDrawCount++;
         }
     }
     sNdsStageGCDrawAllLoopHardwareSubmitCount++;

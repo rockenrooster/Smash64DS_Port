@@ -170,6 +170,10 @@ uintptr_t lEFCommonParticleTextureBankHi;
 #define efManagerBattleScoreMakeEffect ndsBaseEFManagerBattleScoreMakeEffect
 #define efManagerEggBreakMakeEffect ndsBaseEFManagerEggBreakMakeEffect
 #define efManagerFoxReflectorMakeEffect ndsBaseEFManagerFoxReflectorMakeEffect
+#if NDS_R2_FOX_BLASTER_GLOW_AOT
+#define efManagerFoxBlasterGlowMakeEffect \
+    ndsBaseEFManagerFoxBlasterGlowMakeEffect
+#endif
 
 /* Shrink the effect-instance pool AT ITS ALLOCATION rather than truncating the
  * free list afterwards. efManagerInitEffects does one
@@ -220,6 +224,26 @@ uintptr_t lEFCommonParticleTextureBankHi;
 #undef efManagerBattleScoreMakeEffect
 #undef efManagerEggBreakMakeEffect
 #undef efManagerFoxReflectorMakeEffect
+#if NDS_R2_FOX_BLASTER_GLOW_AOT
+#undef efManagerFoxBlasterGlowMakeEffect
+#endif
+
+#if NDS_R2_FOX_BLASTER_GLOW_AOT
+/* EFCommon script 0x62 is a closed ten-tick flash. Its only four source
+ * callers are wpfoxblaster.c's spawn/map/hit/hop sites, and all four discard
+ * the return value. That makes this the owning seam for replacing the
+ * LBParticle allocation + bytecode interpreter with the fixed native pool.
+ * Any admission failure calls the renamed source body, preserving a real
+ * LBParticle and the original renderer as the correctness fallback. */
+LBParticle *efManagerFoxBlasterGlowMakeEffect(Vec3f *pos)
+{
+    if (ndsParticleSpawnFoxBlasterGlowAOT(pos) != FALSE)
+    {
+        return NULL;
+    }
+    return ndsBaseEFManagerFoxBlasterGlowMakeEffect(pos);
+}
+#endif
 
 /* ROUTE THE THREE MODEL EFFECTS AT THEIR SOURCE MAKERS, WHICH IS THE HALF THE
  * FLAG NEVER DID.

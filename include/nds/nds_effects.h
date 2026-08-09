@@ -67,6 +67,16 @@ extern volatile u32 gNdsSourceAssetQuadMissMask;
 void ndsWeaponReleaseBakedTextures(void);
 extern volatile u32 gNdsFireballQuadDrawCount;
 extern volatile u32 gNdsFireballQuadFallbackCount;
+extern volatile u32 gNdsFoxBlasterQuadDrawCount;
+extern volatile u32 gNdsFoxBlasterQuadFallbackCount;
+/* EFCommon script 0x62's closed Fox muzzle/impact flash. The native path keeps
+ * the source position and nine visible sizes, but owns no LBParticle: its
+ * 16x8 PAL16 half-disc is mirrored by the DS texture unit into one quad. */
+sb32 ndsParticleSpawnFoxBlasterGlowAOT(const Vec3f *pos);
+extern volatile u32 gNdsFoxBlasterGlowAOTSpawnCount;
+extern volatile u32 gNdsFoxBlasterGlowAOTDrawCount;
+extern volatile u32 gNdsFoxBlasterGlowAOTFallbackCount;
+extern volatile u32 gNdsFoxBlasterGlowAOTMissCount;
 
 GObj *ndsEFManagerMakeVisualEffect(NDSVisualEffectKind kind,
                                     const Vec3f *pos, f32 scale, s32 lr,

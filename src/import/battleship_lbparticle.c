@@ -104,6 +104,7 @@
  * authority for this signature; a local prototype avoids pulling another
  * header web into the BattleShip translation unit. */
 extern u32 cpuGetTiming(void);
+extern u32 sySchedulerGetTicCount(void);
 
 /* The two functions the decomp leaves to assembly (lbParticleUpdateStruct and
  * lbParticleGeneratorFuncRun) have complete C bodies behind this switch. The
@@ -253,6 +254,111 @@ LBGenerator *ndsBaseLbParticleMakeGenerator(s32 bank_id, s32 script_id);
 #define NDS_R2_PARTICLE_POOL_GENERATORS 24
 #define NDS_R2_PARTICLE_POOL_TRANSFORMS 24
 
+#if NDS_R2_FOX_BLASTER_GLOW_AOT
+/* EFCommon script 0x62, decoded from the pinned bank:
+ *
+ *   MASKT; size 0->150/3; 150->165/1; 165->150/2;
+ *   current->45/2; 45->0/3; END
+ *
+ * lbParticleMakeCommon performs the first update before the caller writes the
+ * position, leaving exactly these nine visible half-extents. Store them in Q8
+ * so the fixed renderer never executes the interpreter's float divides. The
+ * tenth source tick is size zero and is retired here as visually dead. */
+#define NDS_FOX_BLASTER_GLOW_POOL_COUNT 4u
+#define NDS_FOX_BLASTER_GLOW_VISIBLE_TICKS 9u
+#define NDS_FOX_BLASTER_GLOW_TEXTURE_ID 27u
+#define NDS_FOX_BLASTER_GLOW_BINDING_SLOT NDS_WHISPY_NATIVE_TEXTURE_COUNT
+
+typedef struct NDSFoxBlasterGlowAOT
+{
+    Vec3f pos;
+    s32 center_q12[3];
+    u32 spawn_tick;
+} NDSFoxBlasterGlowAOT;
+
+static NDSFoxBlasterGlowAOT
+    sNdsFoxBlasterGlowAOT[NDS_FOX_BLASTER_GLOW_POOL_COUNT];
+static u32 sNdsFoxBlasterGlowAOTCount;
+static const s32 sNdsFoxBlasterGlowSizeQ8[
+    NDS_FOX_BLASTER_GLOW_VISIBLE_TICKS] = {
+    12800, 25600, 38400, 42240, 40320, 25920, 11520, 7680, 3840
+};
+static const f32 sNdsFoxBlasterGlowSize[
+    NDS_FOX_BLASTER_GLOW_VISIBLE_TICKS] = {
+    50.0F, 100.0F, 150.0F, 165.0F, 157.5F,
+    101.25F, 45.0F, 30.0F, 15.0F
+};
+
+volatile u32 gNdsFoxBlasterGlowAOTSpawnCount;
+volatile u32 gNdsFoxBlasterGlowAOTDrawCount;
+volatile u32 gNdsFoxBlasterGlowAOTFallbackCount;
+volatile u32 gNdsFoxBlasterGlowAOTMissCount;
+
+static void ndsParticleResetFoxBlasterGlowAOT(void)
+{
+    memset(sNdsFoxBlasterGlowAOT, 0, sizeof(sNdsFoxBlasterGlowAOT));
+    sNdsFoxBlasterGlowAOTCount = 0u;
+    gNdsFoxBlasterGlowAOTSpawnCount = 0u;
+    gNdsFoxBlasterGlowAOTDrawCount = 0u;
+    gNdsFoxBlasterGlowAOTFallbackCount = 0u;
+    gNdsFoxBlasterGlowAOTMissCount = 0u;
+}
+
+sb32 ndsParticleSpawnFoxBlasterGlowAOT(const Vec3f *pos)
+{
+    s32 center_q12[3];
+    u32 now = sySchedulerGetTicCount();
+    u32 live = 0u;
+    u32 index;
+
+    if ((pos == NULL) ||
+        (ndsRendererHardwareFoxBlasterGlowName() == 0u) ||
+        (ndsRendererParticlePositionToQ12(pos, center_q12) == FALSE))
+    {
+        gNdsFoxBlasterGlowAOTFallbackCount++;
+        return FALSE;
+    }
+    /* Compact only at a rare spawn, not every frame. Slot zero is newest,
+     * matching lbParticleMakeStruct's head insertion and therefore the source
+     * translucent order when two flashes overlap. */
+    for (index = 0u; index < sNdsFoxBlasterGlowAOTCount; index++)
+    {
+        if ((u32)(now - sNdsFoxBlasterGlowAOT[index].spawn_tick) <
+            NDS_FOX_BLASTER_GLOW_VISIBLE_TICKS)
+        {
+            if (live != index)
+            {
+                sNdsFoxBlasterGlowAOT[live] =
+                    sNdsFoxBlasterGlowAOT[index];
+            }
+            live++;
+        }
+    }
+    if (live >= NDS_FOX_BLASTER_GLOW_POOL_COUNT)
+    {
+        gNdsFoxBlasterGlowAOTFallbackCount++;
+        return FALSE;
+    }
+    for (index = live; index > 0u; index--)
+    {
+        sNdsFoxBlasterGlowAOT[index] =
+            sNdsFoxBlasterGlowAOT[index - 1u];
+    }
+    sNdsFoxBlasterGlowAOT[0].pos = *pos;
+    sNdsFoxBlasterGlowAOT[0].center_q12[0] = center_q12[0];
+    sNdsFoxBlasterGlowAOT[0].center_q12[1] = center_q12[1];
+    sNdsFoxBlasterGlowAOT[0].center_q12[2] = center_q12[2];
+    sNdsFoxBlasterGlowAOT[0].spawn_tick = now;
+    sNdsFoxBlasterGlowAOTCount = live + 1u;
+    /* Preserve the source constructor's externally visible tallies/serial even
+     * though no 96-byte LBParticle is consumed. */
+    dLBParticleCurrentGeneratorID++;
+    gNdsParticleScriptStartCount++;
+    gNdsFoxBlasterGlowAOTSpawnCount++;
+    return TRUE;
+}
+#endif
+
 /* The pool the NEXT efParticleInitAll should use, or 0 for the battle sizing
  * above. Only the Results scene sets it, because only that scene both needs a
  * bigger pool and has the room: the battle's general-heap low water is 24,404
@@ -300,6 +406,9 @@ void efParticleInitAll(void)
 
     lbParticleAllocTransforms((s32)transforms, sizeof(LBTransform));
     sEFParticleBanksNum = 0;
+#if NDS_R2_FOX_BLASTER_GLOW_AOT
+    ndsParticleResetFoxBlasterGlowAOT();
+#endif
     /* Every call here restarts bank numbering, so two loads on either side of
      * one reset share a slot. That is how efcommon and Dream Land both reported
      * bank 0 on 2026-08-01. Counted rather than assumed. */
@@ -2418,6 +2527,74 @@ static const NDSParticleQuadFrame *ndsParticleQuadFrameFor(u32 texture_id,
     return earlier;
 }
 
+#if NDS_R2_FOX_BLASTER_GLOW_AOT
+/* Draw the closed script-0x62 pool in the same link-0 position the source
+ * LBParticles occupied. The fast submit receives Q12/Q8 directly. Its full
+ * 0..16 T coordinates intentionally exceed the physical 8-row texture: the
+ * standalone TEXIMAGE_PARAM has WRAP_T|FLIP_T, so GX reflects rows 0..7 back
+ * across the lower half exactly like the N64 script's MASKT command. */
+static void ndsParticleDrawFoxBlasterGlowAOT(
+    u32 texture_name, const Vec3f *right, const Vec3f *up,
+    u32 *visible, u32 *emitted)
+{
+    u32 now = sySchedulerGetTicCount();
+    u32 live = 0u;
+    u32 index;
+
+    for (index = 0u; index < sNdsFoxBlasterGlowAOTCount; index++)
+    {
+        NDSFoxBlasterGlowAOT glow = sNdsFoxBlasterGlowAOT[index];
+        u32 age = (u32)(now - glow.spawn_tick);
+        s32 submit_result;
+
+        if (age >= NDS_FOX_BLASTER_GLOW_VISIBLE_TICKS)
+        {
+            continue;
+        }
+        if (live != index)
+        {
+            sNdsFoxBlasterGlowAOT[live] = glow;
+        }
+        live++;
+        (*visible)++;
+        gNdsParticleTextureUseMask[
+            NDS_FOX_BLASTER_GLOW_TEXTURE_ID >> 5] |=
+            1u << (NDS_FOX_BLASTER_GLOW_TEXTURE_ID & 31u);
+        if (gNdsParticleTextureFrameMax[
+                NDS_FOX_BLASTER_GLOW_TEXTURE_ID] == 0u)
+        {
+            gNdsParticleTextureFrameMax[
+                NDS_FOX_BLASTER_GLOW_TEXTURE_ID] = 1u;
+        }
+        submit_result = ndsRendererSubmitWhispyNativeQuad(
+            texture_name, NDS_FOX_BLASTER_GLOW_BINDING_SLOT,
+            NULL, 0.0F, glow.center_q12,
+            sNdsFoxBlasterGlowSizeQ8[age],
+            0x7fffu, 255u, 0u, 16u, 16u, 3u);
+        if (submit_result < 0)
+        {
+            /* The exact binding/fixed contract should make this unreachable.
+             * Keep the same native PAL16+mirror texture through the generic
+             * corner builder rather than losing the flash. */
+            gNdsFoxBlasterGlowAOTFallbackCount++;
+            submit_result = ndsRendererSubmitParticleQuad(
+                texture_name, &glow.pos, sNdsFoxBlasterGlowSize[age],
+                0x7fffu, 255u, right, up, 0u, 0u, 16u, 16u);
+        }
+        if (submit_result > 0)
+        {
+            (*emitted)++;
+            gNdsFoxBlasterGlowAOTDrawCount++;
+        }
+        else
+        {
+            gNdsFoxBlasterGlowAOTMissCount++;
+        }
+    }
+    sNdsFoxBlasterGlowAOTCount = live;
+}
+#endif
+
 #if NDS_R2_PARTICLE_DRAW
 /* Build both billboard axes and the DS camera load from one current CObj. The
  * source particle draw does this once before iterating its pieces
@@ -3055,6 +3232,9 @@ void lbParticleDrawTextures(GObj *gobj)
     u32 emitted = 0u;
     u32 atlas_name;
     u32 link;
+#if NDS_R2_FOX_BLASTER_GLOW_AOT
+    u32 fox_blaster_glow_name = 0u;
+#endif
 #if NDS_R2_WHISPY_NATIVE_AOT
     u32 whispy_native_names[3] = { 0u, 0u, 0u };
     u32 whispy_lean_source_frames = 0u;
@@ -3122,6 +3302,17 @@ void lbParticleDrawTextures(GObj *gobj)
         }
     }
 #endif
+#if NDS_R2_FOX_BLASTER_GLOW_AOT
+    if (atlas_name != 0u)
+    {
+        fox_blaster_glow_name =
+            ndsRendererHardwareFoxBlasterGlowName();
+        if (gNdsWhispyAOTRoute < 2u)
+        {
+            ndsRendererSetWhispyNativeBasis(&right, &up);
+        }
+    }
+#endif
 #else
     /* The census half only. The emit wedged the geometry engine on its first
      * build and is behind NDS_R2_PARTICLE_DRAW until that is understood; the
@@ -3141,6 +3332,13 @@ void lbParticleDrawTextures(GObj *gobj)
         {
             continue;
         }
+#if NDS_R2_FOX_BLASTER_GLOW_AOT
+        if ((link == 0u) && (fox_blaster_glow_name != 0u))
+        {
+            ndsParticleDrawFoxBlasterGlowAOT(
+                fox_blaster_glow_name, &right, &up, &visible, &emitted);
+        }
+#endif
         for (pc = sLBParticleStructsAllocLinks[link]; pc != NULL; pc = pc->next)
         {
             const NDSParticleQuadFrame *row = NULL;

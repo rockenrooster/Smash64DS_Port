@@ -1,10 +1,11 @@
 # Handoff
 
-Updated: 2026-08-08. **Whispy Route 7 is promoted; the campaign remains on
-R2-07's performance gate and the board's gate lane G1→G2→G3→G4.**
-Published pair: `smash64ds-battle-playable-hwtri.nds` `C045544B…`,
-`smash64ds.nds` `AB9DE9E3…`; flag-identical tick-HUD sibling
-`builds/build-tick-hud-buckets` `574F6F40…`.
+Updated: 2026-08-09. **Fox's DS-native blaster beam and muzzle flash are
+promoted; the campaign remains on R2-07's performance gate and the board's gate
+lane G1→G2→G3→G4.** Published pair:
+`smash64ds-battle-playable-hwtri.nds` `C49F2C52…`, `smash64ds.nds`
+`54C07FAC…`; flag-identical tick-HUD sibling `builds/build-tick-hud-buckets`
+`B7800E49…`.
 
 ## Read this first: every 128-frame measurement in the archive is unusable
 

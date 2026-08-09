@@ -3146,6 +3146,41 @@ static void ndsRendererAdapterGetFrameCameraMatrices(
 #endif
     }
 }
+
+s32 ndsRendererAdapterSetWorldQuadCamera(void *camera_gobj)
+{
+    GObj *gobj = camera_gobj;
+    CObj *cobj = (gobj != NULL) ? CObjGetStruct(gobj) : NULL;
+    NDSRendererMatrix20p12 projection;
+    NDSRendererMatrix20p12 modelview;
+    u32 projection_valid = FALSE;
+    u32 modelview_valid = FALSE;
+
+    if (cobj == NULL)
+    {
+        return FALSE;
+    }
+    ndsRendererAdapterGetFrameCameraMatrices(
+        cobj, &projection, &projection_valid, &modelview, &modelview_valid);
+    if ((projection_valid == FALSE) && (modelview_valid == FALSE))
+    {
+        return FALSE;
+    }
+    /* The battle camera's 0x4C XObj stores look-at * perspective in the
+     * projection result. Other camera shapes can retain split projection and
+     * modelview matrices. Identity-fill only the absent side, preserving both
+     * contracts without composing another matrix on ARM9. */
+    if (projection_valid == FALSE)
+    {
+        ndsRendererAdapterMtxIdentity20p12(&projection);
+    }
+    if (modelview_valid == FALSE)
+    {
+        ndsRendererAdapterMtxIdentity20p12(&modelview);
+    }
+    ndsRendererSetParticleCamera(&projection, &modelview);
+    return TRUE;
+}
 #endif
 
 /* Defined with the other stage statics further down; declared here because

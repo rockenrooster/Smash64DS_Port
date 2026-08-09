@@ -34,6 +34,9 @@
 uintptr_t llFoxSpecial1BlasterWeaponAttributes;
 
 extern f32 syUtilsArcTan2(f32 y, f32 x);
+extern void gcDrawDObjDLHead1(GObj *gobj);
+extern void wpDisplayMain(GObj *weapon_gobj,
+                          void (*proc_display)(GObj *));
 sb32 wpMapTestAllCheckCollEnd(GObj *weapon_gobj);
 sb32 wpFoxBlasterProcUpdate(GObj *weapon_gobj);
 sb32 wpFoxBlasterProcMap(GObj *weapon_gobj);
@@ -55,6 +58,21 @@ __attribute__((weak)) LBParticle *efManagerFoxBlasterGlowMakeEffect(Vec3f *pos)
 #include "../../decomp/BattleShip-main/decomp/src/wp/wpfox/wpfoxblaster.c"
 #undef wpFoxBlasterMakeWeapon
 
+/* wpManager selects func_ovl3_80167618 for this descriptor, whose source
+ * callback eventually reaches lbCommonDObjScaleXProcDisplay. The port's
+ * shared compatibility definition of that function is deliberately a no-op:
+ * effect descriptors also reference it, so making it globally draw would
+ * revive unrelated source models and can double-submit their DS replacements.
+ *
+ * Own the seam here instead. wpDisplayMain retains the source weapon's
+ * translucent/no-Z render state, while gcDrawDObjDLHead1 hands this one DObj
+ * to the DS renderer. This is also the valid interpreted control for the
+ * native-quad lab; the old zero-draw callback is not a performance baseline. */
+static void ndsFoxBlasterProcDisplay(GObj *weapon_gobj)
+{
+    wpDisplayMain(weapon_gobj, gcDrawDObjDLHead1);
+}
+
 GObj *wpFoxBlasterMakeWeapon(GObj *fighter_gobj, Vec3f *pos)
 {
     GObj *weapon_gobj;
@@ -63,6 +81,7 @@ GObj *wpFoxBlasterMakeWeapon(GObj *fighter_gobj, Vec3f *pos)
     weapon_gobj = battleship_wpFoxBlasterMakeWeapon(fighter_gobj, pos);
     if (weapon_gobj != NULL)
     {
+        weapon_gobj->proc_display = ndsFoxBlasterProcDisplay;
         gNdsFighterProjectileProofSpawnSuccessCount++;
     }
     return weapon_gobj;

@@ -135,14 +135,18 @@ if (($width -le 0) -or ($height -le 0)) {
 }
 if (($width -ne $script:MelonDSCanonicalWindowWidth) -or
     ($height -ne $script:MelonDSCanonicalWindowHeight)) {
-    $message = (
-        'melonDS evidence window did not use the canonical {0}x{1} bounds: ' +
-        '{2}x{3}.') -f
+    # Windows/Qt constrains the outer window when the active desktop is smaller
+    # than the canonical profile (for example the 640x480 automation desktop).
+    # The owning screenshot helper aspect-fits and locates the stacked DS pair
+    # from the captured bounds, so a fixed-size rejection only discards valid
+    # evidence. Keep the departure visible while accepting the derived crop.
+    Write-Warning ((
+        'melonDS evidence window was constrained from {0}x{1} to {2}x{3}; ' +
+        'the DS viewport will be derived from the captured bounds.') -f
         $script:MelonDSCanonicalWindowWidth,
         $script:MelonDSCanonicalWindowHeight,
         $width,
-        $height
-    throw $message
+        $height)
 }
 
 New-Item -ItemType Directory -Force -Path (Split-Path -Parent $outputPath) |

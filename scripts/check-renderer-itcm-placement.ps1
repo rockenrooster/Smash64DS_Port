@@ -40,8 +40,23 @@ if (-not (Test-Path -LiteralPath $Objdump -PathType Leaf)) {
 
 foreach ($elfPath in $Elf) {
     $resolvedElf = (Resolve-Path -LiteralPath $elfPath).Path
-    $requiresNativeFighter = (Split-Path -Leaf $resolvedElf) -match
+    $elfName = Split-Path -Leaf $resolvedElf
+    $requiresNativeFighter = $elfName -match
         '^smash64ds-battle-playable-(?:hwtri|coarse-hwtri)\.elf$'
+    # The one-minute lifecycle target deliberately omits the native
+    # stage/fighter routes. At O3 that leaves one caller chain, and GCC folds
+    # SubmitVertex -> SubmitHardwareTriangle completely into the ITCM-resident
+    # ScanList. No out-of-line symbol is the optimized result, not a placement
+    # escape. Published/native targets retain the stricter emitted-symbol gate.
+    $allowsInlineCollapsedSubmitChain =
+        $elfName -eq 'smash64ds-battle-playable-one-minute-match-hwtri.elf'
+    $requiredForElf = @($requiredEmittedFunctions)
+    if ($allowsInlineCollapsedSubmitChain) {
+        $requiredForElf = @($requiredForElf | Where-Object {
+            $_ -notin @('ndsRendererHardwareSubmitVertex',
+                        'ndsRendererSubmitHardwareTriangle')
+        })
+    }
     $sectionLines = @(& $Objdump -h $resolvedElf)
     if ($LASTEXITCODE -ne 0) {
         throw "objdump section listing failed for '$resolvedElf'."
@@ -77,6 +92,7 @@ foreach ($elfPath in $Elf) {
 
     [uint32]$rendererItcmBytes = 0
     $emittedNames = [System.Collections.Generic.List[string]]::new()
+    $inlineCollapsedNames = [System.Collections.Generic.List[string]]::new()
     $functionsToCheck = @($hotFunctions)
     if ($requiresNativeFighter) {
         $functionsToCheck += $nativeFighterFunctions
@@ -85,11 +101,17 @@ foreach ($elfPath in $Elf) {
         $matches = @($functionSymbols | Where-Object {
             ($_.Name -eq $baseName) -or $_.Name.StartsWith("$baseName.")
         })
-        if ((($requiredEmittedFunctions -contains $baseName) -or
+        if ((($requiredForElf -contains $baseName) -or
             ($requiresNativeFighter -and
                 ($nativeFighterFunctions -contains $baseName))) -and
             ($matches.Count -eq 0)) {
             throw "Required hot renderer function '$baseName' was not emitted in '$resolvedElf'."
+        }
+        if ($allowsInlineCollapsedSubmitChain -and
+            ($matches.Count -eq 0) -and
+            ($baseName -in @('ndsRendererHardwareSubmitVertex',
+                             'ndsRendererSubmitHardwareTriangle'))) {
+            $inlineCollapsedNames.Add($baseName) | Out-Null
         }
         foreach ($symbol in $matches) {
             if ($symbol.Section -ne '.itcm') {
@@ -100,7 +122,7 @@ foreach ($elfPath in $Elf) {
         }
     }
 
-    Write-Output ("Renderer ITCM placement passed: elf={0} itcm={1}/{2} renderer={3} symbols=[{4}]" -f
-        (Split-Path -Leaf $resolvedElf), $itcmBytes, $MaxItcmBytes,
-        $rendererItcmBytes, ($emittedNames -join ', '))
+    Write-Output ("Renderer ITCM placement passed: elf={0} itcm={1}/{2} renderer={3} symbols=[{4}] inlineCollapsed=[{5}]" -f
+        $elfName, $itcmBytes, $MaxItcmBytes, $rendererItcmBytes,
+        ($emittedNames -join ', '), ($inlineCollapsedNames -join ', '))
 }

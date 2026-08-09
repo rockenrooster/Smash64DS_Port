@@ -5128,6 +5128,18 @@ extern volatile u32 gNdsWeaponRendererFireballFirstXBits;
 extern volatile u32 gNdsWeaponRendererFireballFirstYBits;
 extern volatile u32 gNdsWeaponRendererFireballLastXBits;
 extern volatile u32 gNdsWeaponRendererFireballLastYBits;
+extern volatile u32 gNdsWeaponRendererBlasterSubmitCount;
+extern volatile u32 gNdsWeaponRendererBlasterTriangleCount;
+extern volatile u32 gNdsWeaponRendererBlasterVisibleDrawCount;
+extern volatile u32 gNdsFoxBlasterQuadDrawCount;
+extern volatile u32 gNdsFoxBlasterQuadFallbackCount;
+extern volatile u32 gNdsFoxBlasterGlowAOTSpawnCount;
+extern volatile u32 gNdsFoxBlasterGlowAOTDrawCount;
+extern volatile u32 gNdsFoxBlasterGlowAOTFallbackCount;
+extern volatile u32 gNdsFoxBlasterGlowAOTMissCount;
+extern volatile u32 gNdsRendererFoxBlasterGlowPrepareCount;
+extern volatile u32 gNdsRendererFoxBlasterGlowFailCount;
+extern volatile u32 gNdsRendererFoxBlasterGlowBytes;
 /* ndsRendererAdapterPrepareInitialMatrices' verdict for an EFFECT submit.
  * Mask bits: 1 camera projection valid, 2 camera modelview valid, 4 DObj world
  * valid, 8/16 projection/modelview pointer non-NULL before the 0x47 rewrite,
@@ -5190,6 +5202,10 @@ void ndsRendererAdapterEndStageTraversal(void);
 void ndsRendererAdapterSubmitStageDObj(void *dobj, u32 kind,
                                        void *camera_gobj,
                                        u32 initial_geometry_mode);
+/* Seat the current camera's cached world->clip matrices for a direct
+ * world-space quad. Used by the Fox blaster lab to avoid rebuilding the
+ * BattleShip CObj matrices once per laser. */
+s32 ndsRendererAdapterSetWorldQuadCamera(void *camera_gobj);
 /* Same submit, but it walks the DObj tree (child + sibling chain) the way
  * objdisplay.c's gcDrawDObjTree does. Effect-only on purpose: doing it on the
  * stage entry above cost a whole VBlank on measured frames. */

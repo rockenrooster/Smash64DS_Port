@@ -772,6 +772,23 @@ NDS_R2_SHIELD_QUAD ?= 0
 # full stage collision for the projectile every frame -- and is a separate
 # seam that this does not touch.
 NDS_R2_FIREBALL_QUAD ?= 1
+# Draw Fox's source blaster model as its four baked, untextured vertices instead
+# of walking and decoding relocData 316's nine-command display list every
+# frame. Owner-playtested and accepted 2026-08-09; ON BY DEFAULT. The source
+# beam is a solid magenta quad;
+# there is no texture to approximate or upload. The native arm admits only the
+# exact horizontal spawn trajectory used by Fox in the P1 boundary and falls
+# through to the restored source display route after a hop/reflection changes
+# that contract. See reloc_backend_movement.c.
+NDS_R2_FOX_BLASTER_QUAD ?= 1
+# Replace EFCommon script 0x62 with its closed nine-visible-tick size program
+# and upload texture 27 as the source's exact PAL16 16x8 half-disc. The DS
+# texture unit mirrors T in hardware, reproducing the N64 MASKT tile as one
+# 16x16 flash without a second quad or duplicated texels. Defaults with the
+# beam quad so the Fox-native lab arm covers the complete shot presentation;
+# it remains independently switchable for attribution A/Bs. Owner-playtested
+# and accepted 2026-08-09; ON BY DEFAULT through the beam route.
+NDS_R2_FOX_BLASTER_GLOW_AOT ?= $(NDS_R2_FOX_BLASTER_QUAD)
 # Dream Land fireball map collision without the generic BattleShip
 # mpProcessUpdateMain/wpMapProcAll path. The fast path uses a compact AOT copy of
 # Pupupu's seven source collision lines, sweeps the fireball diamond directly,
@@ -801,6 +818,11 @@ NDS_R2_WHISPY_NATIVE_AOT ?= 1
 ifeq ($(NDS_R2_WHISPY_NATIVE_AOT),1)
 ifneq ($(NDS_R2_WHISPY_NATIVE_TEXTURES),1)
 $(error NDS_R2_WHISPY_NATIVE_AOT=1 requires NDS_R2_WHISPY_NATIVE_TEXTURES=1)
+endif
+endif
+ifeq ($(NDS_R2_FOX_BLASTER_GLOW_AOT),1)
+ifneq ($(NDS_R2_WHISPY_NATIVE_AOT),1)
+$(error NDS_R2_FOX_BLASTER_GLOW_AOT=1 requires NDS_R2_WHISPY_NATIVE_AOT=1)
 endif
 endif
 # Multiplies the Mario/Luigi fireball's stage (map) collision diamond -- the
@@ -2782,6 +2804,8 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_R2_PARTICLE_DRAW $(NDS_R2_PARTICLE_DRAW)'; \
 		echo '#define NDS_R2_SHIELD_QUAD $(NDS_R2_SHIELD_QUAD)'; \
 		echo '#define NDS_R2_FIREBALL_QUAD $(NDS_R2_FIREBALL_QUAD)'; \
+		echo '#define NDS_R2_FOX_BLASTER_QUAD $(NDS_R2_FOX_BLASTER_QUAD)'; \
+		echo '#define NDS_R2_FOX_BLASTER_GLOW_AOT $(NDS_R2_FOX_BLASTER_GLOW_AOT)'; \
 		echo '#define NDS_R2_FIREBALL_NATIVE_MAP_COLL $(NDS_R2_FIREBALL_NATIVE_MAP_COLL)'; \
 		echo '#define NDS_R2_FIREGRIND_NATIVE $(NDS_R2_FIREGRIND_NATIVE)'; \
 		echo '#define NDS_R2_WHISPY_NATIVE_TEXTURES $(NDS_R2_WHISPY_NATIVE_TEXTURES)'; \
