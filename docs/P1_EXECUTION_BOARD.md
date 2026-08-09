@@ -2102,6 +2102,72 @@ runs re-learning that.
 
 **Worth ~7% of the 326,938 gap.** Banked and moved past; do not polish it.
 
+### The soft-float bill is MAPPED — 8.9% of non-idle work, and it is spread (cycle 108)
+
+First full attribution of the ARM9 soft-float helpers to the functions that
+**call** them. Free: no build and no emulator run, off the cycle-106 profile that
+already existed. Tool is `scripts/analyze-leaf-helper-attribution.py`; output is
+`artifacts/performance/2026-08-09_c106-profile/softfloat-attribution.json`.
+
+**`__aeabi_fadd` is the largest non-idle symbol in the entire profile** —
+33,839,425 cycles, ahead of every renderer function — and "optimize
+`__aeabi_fadd`" is not a task anyone can do. Self time is the wrong view for a
+leaf helper (the standing `self-time-is-not-a-subsystem-budget` rule), and a
+*static* call-site ranking is worse: `ndsOpeningRoomRenderDLPreview` has 277
+static soft-float calls and **zero** cycles in a battle profile. The profile is
+per-PC, so the instruction count at a `bl <helper>` **is** that site's exact
+dynamic call count — the same trick as `entry-pc-gives-exact-call-counts`,
+applied to call sites instead of entries.
+
+**Two traps, both of which gave wrong numbers by hand first.** `__aeabi_fsub` is
+a two-instruction thunk that falls through into `__aeabi_fadd`, so its self time
+is ~1 cycle per call and all its real cost is charged to fadd. Charging fsub's
+370,065 calls at fadd's rate *and* into fadd's divisor moves fadd from a
+nonsensical **60.6 to 36.4 cycles/call**, and the campaign total from 11.24% to
+**8.9%**. A helper reached by a tail `b` is still a call site. The script handles
+both; do not redo this by hand.
+
+| subsystem | soft-float cycles | % non-idle | fns |
+|---|---:|---:|---:|
+| **animation evaluation** | 25,112,349 | **2.57%** | 10 |
+| collision / stage MP | 17,471,376 | 1.79% | 17 |
+| matrices / transform | 12,998,043 | 1.33% | 12 |
+| other | 12,861,181 | 1.31% | 106 |
+| gameplay (other decomp) | 11,176,042 | 1.14% | 90 |
+| renderer, particles, CPU AI | 7,912,649 | 0.81% | 24 |
+
+Per-call cost, measured: `fdiv` **109.4**, `fadd` **36.4**, `l2f` 28.6, `fmul`
+25.2, `i2f` 16.8, the compares 10–15. The helpers themselves are libgcc's
+hand-written ARM assembly and **already resident in ITCM**, so there is no
+placement or implementation win here — only call volume.
+
+**Top callers:** `battleship_ftAnimParseDObjFigatree` 7,931,155 (0.81%, self
+16,192,916), `gcPlayDObjAnimJoint` 6,706,718 (0.69%, self 16,595,669),
+`ndsMPFCSegmentCrossesKernel` 4,958,252, `ndsBaseGcPlayMObjMatAnim` 4,463,648,
+`syMatrixLookAtReflectF` 3,807,640. **The two animation functions together are
+5.34% of non-idle work counting their self time — roughly 75,600 ticks at the
+current P95.**
+
+**Read this as a base-cost lane, not a tail lane.** A load frame is base +
+premium, so anything that lowers the base lowers P50 *and* P95 together; this is
+the first lane in cycles that does both. `ndsR2CubicValueFixed` is **already
+converted** and its one remaining `fmul` is documented as unavoidable at
+`battleship_sys_objanim.c:211` — do not re-open it.
+
+**Two constraints on any conversion, both already paid for.** L7's fixed-point
+collision won +534 and lost 6,481 **to its own text**, and the standing rate is
+**1.85 cycles of `FTR` mean per byte of added ARM text** — so a conversion must
+replace float code with *equal or less* text, not sit beside it. And on
+`-mthumb` there is no SMULL, so a `(s64)a*b` becomes a library call; the cubic
+kernel carries a `target("arm")` attribute for exactly this and a new kernel
+needs one too.
+
+**Adjacent, same method, not soft float:** `memset` 20,471,352 (2.09%) and
+`memcpy` 17,862,751 (1.83%) at ~260 cycles a call.
+`ndsFighterMarioFoxDLAllDrawForSlot` alone drives 25,617 memsets and 17,833
+memcpys — 30% of all memset calls — on top of 25,885,593 self cycles.
+`ndsMPCollisionEnsureLineGroups` re-zeroes 10,050 times.
+
 ### The force-load seam is CLOSED — zero-copy is structurally impossible, cycle 108
 
 The obvious next move after the prebake was to stop copying altogether: the

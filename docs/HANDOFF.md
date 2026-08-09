@@ -78,35 +78,38 @@ overrun to fix either. Board carries all of it.
 the arena pointer is structurally impossible: `ftmain.c:4623-4624` **discards
 the return value** and animates from `fp->figatree_heap`, so the destination
 copy is mandatory — and `reloc_backend_assets.c:7396-7407` already encoded that
-fact. Violating it does not read as slow, it reads as a different match
-(`ForceLoadTotal` 353 → 3,210, P95 2,275,200). After the prebake a cache hit is
-a mandatory ~2.3 KB memcpy plus ~21 pointer writes; the internal fixup list is
-**at most 21 entries**, so baking it per destination is worth nothing. Board has
-the two other facts the attempt paid for: nothing mutates a finalized animation
-file during its residency (351/351 stable, 2 slots), and all 301 animation
-assets have zero external references.
+fact. Violating it reads as a different match, not as slow (`ForceLoadTotal`
+353 → 3,210). A hit is now a mandatory ~2.3 KB memcpy plus ~21 pointer writes.
+Board has the three facts the attempt paid for.
 
 What is left on the load frame is **animation re-evaluation, 158,393/frame
 (24.3%)** — real gameplay work. Attack it as specialization or a lower update
 rate. Do not add another caching layer to the loader.
 
+**The soft-float bill is now mapped, and it is a BASE-cost lane — it lowers P50
+and P95 together.** `scripts/analyze-leaf-helper-attribution.py` attributes a
+leaf helper's cycles to its callers off an existing profile (no build, no run):
+**8.9% of non-idle work**, led by animation evaluation 2.57%, collision 1.79%,
+matrices 1.33%. `battleship_ftAnimParseDObjFigatree` and `gcPlayDObjAnimJoint`
+are **5.34% of non-idle counting self time, ~75,600 ticks at P95**. Helpers are
+already libgcc ARM assembly in ITCM, so only call volume is available. Board has
+the table, the two measurement traps, and the two constraints any conversion
+must clear (L7 lost on **text size**, and `-mthumb` has no SMULL).
+
 ## How the load frame is priced, and what is already closed
 
 **Cycle 105 removed the cartridge I/O; 106–108 priced what is left.** Every
-remaining `SINT` spike is a force-load frame (per-frame probe, 5 of 30, no
-exceptions either way) with payload and header reads **+0**. Worth **121,331 at
-P95** in total (capping `SINT` at its median gives 1,325,987); the prebake took
-~23,000 of it. Attributed in cycle 107 free from the existing profile CSV via
-`--split-by-symbol ndsRelocFinalizeLoadedFile` (74 load frames vs 326 control,
-premium 650,610/frame): reloc + copy **153,252/frame (23.6%)**, animation
-re-evaluation **158,393/frame (24.3%)** and **real gameplay work** — do not
-brief it as waste — and `armWaitForIrq` 21.1%, idle.
+remaining `SINT` spike is a force-load frame with payload and header reads **+0**.
+Worth **121,331 at P95** in total; the prebake took ~23,000. Attributed free from
+the existing profile CSV via `--split-by-symbol ndsRelocFinalizeLoadedFile` (74
+load frames vs 326 control, premium 650,610/frame): reloc + copy **153,252/frame
+(23.6%)**, animation re-evaluation **158,393/frame (24.3%)** and **real gameplay
+work**, `armWaitForIrq` 21.1% idle.
 
-**`ndsRelocAssetIDForToken` is CLOSED as a caching target.** Provably pure, 100%
-of its cycles on load frames, but three configurations topped out at a 50.1% hit
-rate with 10,405 evictions — the expensive 14.3% of calls are exactly the
-unstable keys. Board has the table. Still open, unmeasured: bound the two
-143/158-entry scans by an init-time `[min,max]` instead of caching them.
+**`ndsRelocAssetIDForToken` is CLOSED as a caching target.** Provably pure, but
+three configurations topped out at a 50.1% hit rate with 10,405 evictions — the
+expensive 14.3% of calls are exactly the unstable keys. Still open, unmeasured:
+bound the two 143/158-entry scans by an init-time `[min,max]`.
 
 **Do not bring a micro-fix.** R2-06 E11's rule: *a load-frame-only saving of
 ~8,000 ticks cannot be banked through P95, because relinking moves the tail by
@@ -117,11 +120,10 @@ half, cycle 108's prebake for the AObj16 pass.
 **Measure a placement-sensitive seam on ONE binary with a runtime route.** Two
 separately-linked arms of cycle 108's prebake differed only by 3,584 bytes of
 scratch and read P50 25,760 apart — 4.5× the cross-build floor — with the
-*better* arm reading worse. Their P95 said −39,702 and −22,806 for the same
-change. `sample-tick-hud-buckets.ps1 -SetGlobals name=value` pokes a `.data`
-global at the first frame-complete marker; that is what standing rule 7 means
-and its header says so. Check the engagement counters in the OFF arm — the poke
-lands after ~3 warm steps, so an OFF arm is partial and the delta must be scaled.
+*better* arm reading worse. `sample-tick-hud-buckets.ps1 -SetGlobals name=value`
+pokes a `.data` global at the first frame-complete marker; that is standing rule
+7. Check the OFF arm's engagement counters — the poke lands after ~3 warm steps,
+so an OFF arm is partial and the delta must be scaled.
 
 **Do not re-derive these.** The Makefile's `?= 0` defaults are not the shipped
 config (41 overridden). `.text.hot` is closed in both directions
@@ -131,8 +133,7 @@ ranking, never a placement prediction. Hoisting the animation range check in
 (`reloc_backend_assets.c:1840-1895`). These cost one null build to re-learn.
 
 **Latent cliff, unowned:** `sNdsAObjEvent32NormalizedCount` reads **973 of 1,024**
-after one minute. Overflow makes `ndsAObjEvent32NormalizeScript` return FALSE and
-the caller then **skips the animation attach entirely**. 8 bytes an entry.
+after one minute; overflow silently **skips the animation attach**. 8 bytes/entry.
 
 ## Standing: the load-frame exclusion is REFUTED — do not apply it
 
@@ -148,9 +149,8 @@ needs the owner.
 
 ## Measurement rules this cycle established or re-proved
 
-- **Per-bucket placement floor is ≥8,544**, not the ±5,376 that applies to
-  `WORK-H` P95 — calibrated by an arm that only *removed* code and moved `FTR`
-  +8,544. Judge on `WORK-H`; buckets locate, they never decide.
+- **Per-bucket placement floor is ≥8,544**, not the ±5,376 for `WORK-H` P95.
+  Judge on `WORK-H`; buckets locate, they never decide.
 - **1.85 cycles of `FTR` mean per byte of added ARM text.** A change that adds
   text must beat its own footprint.
 - **Verify a counter is live in the shipped configuration BEFORE the measuring
