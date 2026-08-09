@@ -810,6 +810,42 @@ NDS_R2_FIREBALL_QUAD ?= 1
 # never calls, and 15x what the board's 1.85-cycles-per-added-byte rule entitles
 # 672 bytes to. That placement artifact INVERTED the sign of a real -16,768 win.
 NDS_R2_PARTICLE_CAMERA_CACHE ?= 1
+# Drop the two pieces of gmCameraLookAtFuncMatrix that are dead or redundant.
+# Both are BIT-EXACT; see battleship_gmcamera.c.
+#
+#   W1  the max > 32000 rescale branch re-runs syMatrixLookAtReflectF with
+#       byte-identical arguments, and guMtxCatF writes gGMCameraMatrix rather
+#       than the look-at, so the first result is still live. Three sqrtf and
+#       ~30 mul/add for a value already held.
+#   W2  the closing syMatrixF2L writes through the caller's out-pointer, and
+#       the fighter display-contract caller (reloc_backend_renderer_dl.c:12607)
+#       discards it -- once per fighter per frame. Skipped for a NULL mtx;
+#       decomp's kind-0x4C caller still gets its matrix.
+#
+# MEASURED 2026-08-09, cycle 103, both-CPU tick-HUD ROM, whole 1,600-frame
+# match, ONE binary with the route poked at the first frame marker (so the two
+# arms are the same bytes and there is no cross-build placement floor at all --
+# the ROMs differ in exactly one .data byte, verified by byte-diff):
+#   WORK-H  P50 -1,728   P95 -1,152
+#   FTR     P50 -1,152   P95 -1,216   <- the bucket the work actually lives in
+# The FTR figure matches the mechanism to within noise: syMatrixF2L is 16
+# FTOFIX32 (an __aeabi_fmul plus an __aeabi_f2iz each), twice a frame, and
+# gNdsCameraMatrixLeanSkippedF2LCount confirmed exactly 2 skips per presented
+# frame for the whole match.
+#
+# W1 NEVER FIRES in this milestone: gNdsCameraMatrixLeanRescaleCount stayed 0
+# across all 1,600 frames, so none of the win above is W1's. It is kept because
+# it is correct and free, not because it was measured to pay.
+#
+# Pixel bar ZERO and met: at the time_remain=3000 lock both arms are
+# PIXEL-IDENTICAL over the whole 400x298 top screen, at both captured tics,
+# while two ADJACENT tics of the same build differ on 83.0% of it. That floor is
+# what makes the identity mean something.
+#
+# This is the bit-exact half of the camera-matrix work. The fixed-point rebuild
+# of the same chain is a separate arm with an error budget, kept separate so a
+# pixel delta stays attributable.
+NDS_R2_CAMERA_MATRIX_LEAN ?= 1
 # Draw Fox's source blaster model as its four baked, untextured vertices instead
 # of walking and decoding relocData 316's nine-command display list every
 # frame. Owner-playtested and accepted 2026-08-09; ON BY DEFAULT. The source
@@ -2843,6 +2879,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_R2_SHIELD_QUAD $(NDS_R2_SHIELD_QUAD)'; \
 		echo '#define NDS_R2_FIREBALL_QUAD $(NDS_R2_FIREBALL_QUAD)'; \
 		echo '#define NDS_R2_PARTICLE_CAMERA_CACHE $(NDS_R2_PARTICLE_CAMERA_CACHE)'; \
+		echo '#define NDS_R2_CAMERA_MATRIX_LEAN $(NDS_R2_CAMERA_MATRIX_LEAN)'; \
 		echo '#define NDS_R2_FOX_BLASTER_QUAD $(NDS_R2_FOX_BLASTER_QUAD)'; \
 		echo '#define NDS_R2_FOX_BLASTER_GLOW_AOT $(NDS_R2_FOX_BLASTER_GLOW_AOT)'; \
 		echo '#define NDS_R2_FIREBALL_NATIVE_MAP_COLL $(NDS_R2_FIREBALL_NATIVE_MAP_COLL)'; \

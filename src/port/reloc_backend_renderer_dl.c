@@ -12560,7 +12560,6 @@ static void ndsFighterDisplayContractCapture(GObj *fighter_gobj)
     extern void ndsBaseFTDisplayMainProcDisplay(GObj *fighter_gobj);
     extern sb32 gmCameraLookAtFuncMatrix(Mtx *mtx, CObj *cobj, Gfx **dls);
     FTStruct *fp = ftGetStruct(fighter_gobj);
-    Mtx camera_mtx;
     u32 i;
 
     /* Every consumed event field and scratch command is overwritten before
@@ -12603,8 +12602,16 @@ static void ndsFighterDisplayContractCapture(GObj *fighter_gobj)
         (gGMCameraGObj != NULL) &&
         (CObjGetStruct(gGMCameraGObj) != NULL))
     {
-        /* BattleShip gmcamera.c:985-1015 prepares the visibility matrix. */
-        gmCameraLookAtFuncMatrix(&camera_mtx,
+        /* BattleShip gmcamera.c:985-1015 prepares the visibility matrix.
+         * NULL, not a local Mtx: this call site wants only the side effects on
+         * gGCMatrixPerspF / sGCMatrixProjectL / gGMCameraMatrix that
+         * ftdisplaymain.c:1093-1129 reads. It passed `&camera_mtx` until
+         * 2026-08-09 and never read it back, so the function's closing
+         * syMatrixF2L -- a 4x4 float-to-fixed conversion, once per fighter per
+         * frame -- wrote into a dead local. The port wrapper in
+         * battleship_gmcamera.c skips that conversion for a NULL out-pointer
+         * and still gives decomp's kind-0x4C caller its matrix. */
+        gmCameraLookAtFuncMatrix(NULL,
                                  CObjGetStruct(gGMCameraGObj),
                                  gSYTaskmanDLHeads);
     }
