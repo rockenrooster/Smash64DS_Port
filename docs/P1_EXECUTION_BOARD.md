@@ -2102,6 +2102,64 @@ runs re-learning that.
 
 **Worth ~7% of the 326,938 gap.** Banked and moved past; do not polish it.
 
+### What is actually left: the over-gate frames, decomposed (cycle 108)
+
+Taken on `build-c111-fcmp`, the current head configuration, whole match both-CPU.
+**This corrects a working assumption that has been steering the campaign.**
+
+**44.2% of frames are over gate — 707 of 1600 — not the ~5% that "P95 is the
+load-frame boundary" implies.** `WORK-H` P50 is **1,107,008** against a gate of
+1,120,380, so the median frame clears it by only 13,372 and nearly half the match
+does not. The excess summed over every over-gate frame is **91,928,908 ticks**,
+and the 80 frames above P95 average 1,559,629, i.e. **439,249 over gate each**.
+
+Splitting every bucket by over-gate vs under-gate names the discriminators
+exactly, and they are not where the last three experiments looked:
+
+| bucket | under-gate | over-gate | delta |
+|---|---:|---:|---:|
+| **`SRC`** | 303,813 | 475,196 | **+171,383** |
+| ↳ `GCRA` | 298,699 | 470,129 | **+171,430** |
+| ↳ ↳ `SINT` | 140,411 | 228,493 | **+88,082** |
+| ↳ ↳ `SPHD` | 67,785 | 96,726 | +28,941 |
+| ↳ ↳ `SHDT` | 4,235 | 31,424 | +27,190 |
+| ↳ ↳ `SCPU` | 37,605 | 61,135 | +23,531 |
+| `MISC` | 112,351 | 129,263 | +16,911 |
+| `FTR` | 390,903 | 404,671 | +13,768 |
+| `AUD` | 3,425 | 16,302 | +12,877 |
+| `STG` | 200,013 | 201,512 | +1,499 |
+
+**`GCRA` is `gcRunAll`** — `battleship_sys_objman.c:80` calls it "the SOLE
+gateway to the whole simulation", so it is fighters, stage, camera, effects,
+items, weapons and interface together, and it is ~33% of every frame. Its
+over-gate excess is **almost entirely its named children**: 88,082 + 28,941 +
+27,190 + 23,531 = 167,744 of 171,430, leaving the `SOBJ` residual at ~3,700.
+There is no unattributed mass hiding in the simulation.
+
+**Consequences, in order:**
+
+1. **`FTR` is confirmed dead as a gate lever** — it separates the two
+   populations by only **13,768** against `SRC`'s 171,383. Anything that only
+   moves fighter draw (the `memset`/`memcpy` concentration in
+   `ndsFighterMarioFoxDLAllDrawForSlot`, 30% of all memset calls) buys P50, which
+   is already inside the gate, and buys almost nothing where the gate is decided.
+2. **`SINT` is still the single largest discriminator at +88,082**, after cycle
+   105's arena fix and cycle 108's prebake. The loader's *copy* is closed, but
+   whatever else `SINT` brackets is not.
+3. `SPHD`, `SHDT` and `SCPU` are the next three and together are **79,662** —
+   comparable to `SINT` and never yet split. `SCPU` is CPU-player AI and is
+   structurally doubled on the gate arm.
+4. **Stop pricing levers against P95 alone.** With 44.2% over gate, a change that
+   lowers the *body* moves 707 frames across the line; the same change judged
+   only at P95 looks like noise. That is why the compare conversion read
+   sub-floor while being real.
+
+**Do not spend another cycle on `memset`/`memcpy`.** Priced by the same method
+and refuted: the concentrated caller is fighter draw (see 1 above), and
+`ndsMPCollisionEnsureLineGroups`'s 10,050 calls are **two 16-byte** zeroings
+(`movs r2, #16` at `0205c7b8`/`0205c7c2`) worth ~0.04% of non-idle, not the
+267-cycle global average. The 267 average belongs to large copies elsewhere.
+
 ### The COMPARE lane is priced and it is too small — 0.5% fully converted (cycle 108)
 
 First slice attempted off the soft-float map, and the useful result is its size.

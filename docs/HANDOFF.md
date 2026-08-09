@@ -17,19 +17,19 @@ byte-identical). Never take a gate reading on 128 frames again.
 
 ## The two baselines — label every figure with its arm AND its coverage
 
-Re-banked cycle 80 on the corrected seed; both arms run the **same 60-second
-match** (coverage 86.7%), both windows ending 43 frames past the buzzer.
+Both arms run the **same 60-second match** (coverage 86.7%), both windows ending
+43 frames past the buzzer. Slips 0 in every row.
 
 | arm | role | `WORK-H` P50 | P95 | over gate |
 |---|---|---:|---:|---:|
 | **both-CPU** | **THE GATE (owner, 2026-08-05)** | 1,112,576 | **1,447,318** | 754/1600 |
 | **Boundary** mode 163 | shipped configuration | 1,082,112 | 1,476,672 | 673/1600 |
 
-**Gate baseline is 1,447,318 as of `f082b3c8`, gap 326,938**, less cycle 108's
-~23,000. Boundary inherits the same fixes and is not re-banked, so its 1,476,672
-is stale-high. Slips 0 in every row. The soak's long match is
-`NDS_R2_SOAK_MATCH_MINUTES` and `probe-match-window.ps1` reads the match timer
-out of the guest, so a window can no longer claim coverage it did not have.
+**Gate baseline is 1,447,318 as of `f082b3c8`**, less cycle 108's ~23,000; head
+reads P50 1,107,008 / P95 1,411,283 / 707 over gate. Boundary is not re-banked,
+so its 1,476,672 is stale-high. The soak's long match is
+`NDS_R2_SOAK_MATCH_MINUTES`, and `probe-match-window.ps1` reads the match timer
+out of the guest so a window cannot claim coverage it did not have.
 
 The owner's bar: the whole match under the P95 budget on the both-CPU config,
 loading states excluded; the shipped ROM stays the Boundary hwtri pair.
@@ -37,14 +37,11 @@ loading states excluded; the shipped ROM stays the Boundary hwtri pair.
 figure. **Re-pin `EXPECTED_CENSUS_SHA256` in the commit that changes what it
 covers** — a stale pin kept the verifier red for 35 commits.
 
-## Effect DObj submits are a BOUNDARY-arm diagnosis — do not re-brief it as the gate
-
-`MISC` is 99.3% effect-submit excursion **on Boundary** but only **~12.1% of the
-gate arm's `WORK-H` excursion**. G3's packet path was refuted on mechanism in
-cycles 88–91; board carries it.
-
 ## What is dead, so nobody re-derives it
 
+- **Effect DObj submits** — a BOUNDARY-arm diagnosis, never the gate: `MISC` is
+  99.3% of the Boundary excursion but **~12.1%** of the gate arm's. G3's packet
+  path was refuted on mechanism in cycles 88–91.
 - **Projectiles** — weapon DObj submit medians **44 ticks/frame**; not the tail.
 - **Particles** — flat ~47,000/frame, hot–cold delta 4,838. A P50 lever only,
   retiring SwitchPlan §7 option 2 (15 Hz round-robin) as a *gate* answer.
@@ -68,19 +65,29 @@ cycles 88–91; board carries it.
 **The `Tex` (dl-pointer, bind-ordinal) memo is REFUTED** — 471 hits of 10,336
 consults, 7,517 evictions of 7,525 fills, `Tex` ticks *up*.
 
-## Next single step — animation RE-EVALUATION, not another caching layer
+## Next single step — split `SINT`, `SPHD`, `SHDT`, `SCPU` on the over-gate frames
+
+**44.2% of frames are over gate (707/1600), not ~5%.** `WORK-H` P50 1,107,008
+clears the 1,120,380 gate by only 13,372, so the median frame barely passes and
+the excess summed over every over-gate frame is **91,928,908 ticks**. Splitting
+every bucket by over-gate vs under-gate names the discriminators: `SRC`
+**+171,383**, essentially all of it `GCRA` (`gcRunAll`, the whole simulation),
+which decomposes into `SINT` **+88,082**, `SPHD` +28,941, `SHDT` +27,190,
+`SCPU` +23,531 — 167,744 of 171,430, so nothing is hiding. `FTR` separates the
+populations by only **+13,768**, which retires fighter draw (and its
+`memset`/`memcpy` concentration) as a gate lever for good. Board has the table.
+
+`SPHD`/`SHDT`/`SCPU` are **79,662 together and have never been split**; `SINT`
+is still the largest single discriminator after the arena fix and the prebake.
+Split those four before writing any more code. And price levers against the
+**body**, not P95 alone — with 44.2% over gate a body-wide saving moves 707
+frames across the line while reading as noise at P95.
 
 **The force-load seam is closed (cycle 108).** Pre-finalizing and handing back
-the arena pointer is structurally impossible: `ftmain.c:4623-4624` **discards
-the return value** and animates from `fp->figatree_heap`, so the destination
-copy is mandatory — and `reloc_backend_assets.c:7396-7407` already encoded that
-fact. Violating it reads as a different match, not as slow (`ForceLoadTotal`
-353 → 3,210). A hit is now a mandatory ~2.3 KB memcpy plus ~21 pointer writes.
-Board has the three facts the attempt paid for.
-
-What is left on the load frame is **animation re-evaluation, 158,393/frame
-(24.3%)** — real gameplay work. Attack it as specialization or a lower update
-rate. Do not add another caching layer to the loader.
+the arena pointer is structurally impossible: `ftmain.c:4623` **discards the
+return value** and animates from `fp->figatree_heap`, so the destination copy is
+mandatory. Violating it reads as a different match, not as slow. Do not add
+another caching layer to the loader; board has the three facts it paid for.
 
 **The soft-float bill is mapped, and it is a BASE-cost lane — it lowers P50 and
 P95 together.** `scripts/analyze-leaf-helper-attribution.py` attributes a leaf
@@ -92,26 +99,21 @@ libgcc ARM assembly in ITCM, so only call volume is available.
 
 **Go after the ARITHMETIC, not the comparisons.** `fadd`+`fsub` 3.46%, `fmul`
 2.24%, `fdiv` 1.04% — **6.74% against the compares' 1.32%**. The compare lane is
-priced and closed: `include/nds/nds_fcmp.h` is bit-exact (proven over all 2^32
-patterns by `scripts/check_fcmp_exact.py`) and applied at the largest caller for
-a real but **sub-floor** −3,136 P50 / −4,739 P95, and the port-editable ceiling
-for the *whole* lane is only ~0.5%. `-ffinite-math-only` does not remove these
-calls — checked compile-only. Any conversion must also clear two paid-for
-constraints: L7 lost on **text size** (1.85 cycles of `FTR` per added byte), and
-`-mthumb` has no SMULL.
+closed: `include/nds/nds_fcmp.h` is bit-exact (all 2^32 patterns, via
+`scripts/check_fcmp_exact.py`) and bought a real but **sub-floor** −3,136 P50;
+the port-editable ceiling for the whole lane is ~0.5%. `-ffinite-math-only` does
+not remove these calls. Any conversion must clear two paid-for constraints: L7
+lost on **text size** (1.85 cycles of `FTR` per byte), and `-mthumb` has no
+SMULL.
 
 ## How the load frame is priced, and what is already closed
 
-**Cycle 105 removed the cartridge I/O; 106–108 priced what is left.** Every
-remaining `SINT` spike is a force-load frame with payload/header reads **+0**;
-worth **121,331 at P95**, of which the prebake took ~23,000. Attributed free via
-`--split-by-symbol ndsRelocFinalizeLoadedFile` (74 load frames vs 326 control,
-premium 650,610/frame): reloc + copy **23.6%**, animation re-evaluation
-**24.3%** and **real gameplay work**, `armWaitForIrq` 21.1% idle.
-
-**`ndsRelocAssetIDForToken` is CLOSED as a caching target** (board has the
-table). Still open, unmeasured: bound its two 143/158-entry scans by an
-init-time `[min,max]` rather than caching them.
+**106–108 priced the load frame** via `--split-by-symbol
+ndsRelocFinalizeLoadedFile` (74 load frames vs 326 control, premium
+650,610/frame): reloc + copy **23.6%**, animation re-evaluation **24.3%** and
+**real gameplay work**, `armWaitForIrq` 21.1% idle.
+**`ndsRelocAssetIDForToken` is CLOSED as a caching target**; still open is
+bounding its two 143/158-entry scans by an init-time `[min,max]`.
 
 **Do not bring a micro-fix.** R2-06 E11's rule: *a load-frame-only saving of
 ~8,000 ticks cannot be banked through P95, because relinking moves the tail by
@@ -135,12 +137,10 @@ ranking, never a placement prediction. Hoisting the animation range check in
 **Latent cliff, unowned:** `sNdsAObjEvent32NormalizedCount` reads **973 of 1,024**
 after one minute; overflow silently **skips the animation attach**. 8 bytes/entry.
 
-## Standing: the load-frame exclusion is REFUTED — do not apply it
-
-The owner's "loading states excluded" bar must not go through the
-`SRC > 2x median` rule: it is circular for SRC, swings the gap **3.08x** across
-thresholds, and drops frames that are not loads (100 of 122 isolated
-singletons). Audit: `scripts/analyze-load-frame-exclusion.ps1`.
+**The load-frame exclusion is REFUTED — do not apply it.** The owner's "loading
+states excluded" bar must not go through the `SRC > 2x median` rule: it is
+circular for SRC, swings the gap **3.08x**, and drops frames that are not loads.
+Audit: `scripts/analyze-load-frame-exclusion.ps1`.
 
 **Boundary for all of it.** Same geometry, textures and materials; the effect
 models are a closed `BUGS.md` row the owner confirmed by eye. A change that
