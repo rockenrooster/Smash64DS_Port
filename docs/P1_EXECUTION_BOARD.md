@@ -1960,6 +1960,76 @@ caller-owned through `lbRelocGetForceExternHeapFile(file_id, heap)`.
 (heap free-min 42,136), so this has to REPLACE the per-load destination copy, not
 sit beside it.
 
+### The load frame is FULLY ATTRIBUTED, from the CSV that already existed (cycle 107)
+
+`task37_census.py --split-by-symbol ndsRelocFinalizeLoadedFile` over the cycle-106
+profile — **no build and no emulator run**, because `--split-by-symbol` partitions
+the existing per-frame regions by whether a frame executed that symbol, and that
+symbol executes on exactly the load frames. **74 marked frames vs 326 control,
+premium 650,610 cycles/frame.** This supersedes the cycle-106 over-gate split,
+whose threshold marked 307 of 400 frames and therefore mostly measured idle.
+
+| symbol | +cyc/frame | %prem | |
+|---|---:|---:|---|
+| `armWaitForIrq` | 137,472 | 21.1 | quantised idle, not work |
+| **`ndsRelocFinalizeLoadedFile`** | 65,335 | 10.0 | fixups |
+| **`battleship_ftAnimParseDObjFigatree`** | 50,923 | 7.8 | real: new animation evaluated |
+| **`ndsRelocAssetIDForToken.part.0`** | 43,875 | 6.7 | pure function, 110-branch chain |
+| `ndsR2CubicValueFixed` | 22,112 | 3.4 | real |
+| `memcpy` | 21,168 | 3.3 | payload copy |
+| `gcPlayDObjAnimJoint` / `__aeabi_fadd` / `__aeabi_fmul` | 17,839 / 18,657 / 15,855 | 8.0 | real |
+| `battleship_ftMainSetStatus` | 13,737 | 2.1 | real |
+| `gcAddDObjAnimJoint` / `ndsFTParamsInvalidateFighterParts` / `armCopyMem32` | 9,757 / 9,513 / 9,263 | 4.4 | |
+| alias churn (`Remove…StatusAliases`, `FindLoadedFileContaining`, `Remove…LoadedAliases`) | 5,395 / 4,688 / 3,528 | 2.0 | |
+
+**Two blocks of almost equal size, and only one of them is recoverable.** The
+reloc + copy family is **153,252/frame (23.6%)** and is pure port-side overhead
+delivering bytes that are already in RAM; the animation re-evaluation is
+**158,393/frame (24.3%)** and is real gameplay work — the fighter genuinely
+changed animation and the new one is being evaluated. Do not brief the second as
+waste.
+
+### The token memo is REFUTED — the function is pure, the KEY is not stable (cycle 107)
+
+`ndsRelocAssetIDForToken` looked like the ideal target: 6.7% of the load-frame
+premium, **3,246,729 of its 3,246,729 cycles on load frames**, and a provably
+pure function — every branch compares against an `ll*FileID` link-time address or
+an integer literal, the two tail scans walk `static const * const` arrays of the
+same addresses, and `ndsRelocIsMarioFoxAnimID` is range arithmetic. A memo needs
+no invalidation at any scene boundary. **It still does not work.** Three builds,
+each verified with a route-2 arm that consults the memo and then runs the chain
+anyway and compares:
+
+| config | hits | misses | evicted / declined | occupancy | hit rate | `VerifyFail` |
+|---|---:|---:|---:|---:|---:|---:|
+| 64 entries, evicting | 9,144 | 12,746 | 12,682 | — | 41.8% | **0** |
+| 512 entries, evicting | 10,973 | 10,917 | 10,405 | — | 50.1% | **0** |
+| 512 entries, **no-evict** | 4,257 | 17,633 | 17,121 | **512 of 512** | 19.4% | **0** |
+
+`VerifyFail` 0 in all three over 24,374 verified hits, so purity is confirmed
+dynamically and is not the problem. **Eight times the table moved the hit rate
+41.8% → 50.1%, and no-eviction made it worse by filling every one of 512 slots
+with keys that never repeat** — the population is large and mostly non-repeating,
+which is the refuted `(dl-pointer, bind-ordinal)` `Tex` memo shape exactly.
+
+**And R2-06 E11's own data already said why, which is the part worth keeping:
+the 74.3% of calls that resolve inside the compare chain are the CHEAP ones, and
+the cost is the 14.3% that miss and walk both 143 + 158-entry scans.** Those are
+precisely the unstable-key calls a memo cannot hold. So the two facts compose:
+the calls worth caching are the ones that cannot be cached.
+
+Reverted; the patch is not in the tree. **Do not re-attempt a token-keyed cache
+here.** What is still open is narrowing the *scan*, not caching its result — the
+two arrays' contents are link-time constants, so an `[min,max]` bound computed
+once at init would reject an out-of-range token in two compares instead of 301
+iterations, and it would bite on exactly the 14.3% that are expensive. That is
+unmeasured and it must clear E11's ~16,000 tail-movement bar to be bankable.
+
+**Method note worth more than the result: read Evicts, not Hits.** A memo whose
+misses are nearly all evictions is undersized or mis-keyed, and its hit rate says
+nothing about which. Both numbers were in the instrument from the first build,
+which is why this cost three builds instead of shipping a 4.6 KB regression.
+
 ### The dormant-flag seam is EXHAUSTED — audited, cycle 105, no build
 
 Prompted by the "audit the 0 flags" rule. **The Makefile's `?= 0` defaults are

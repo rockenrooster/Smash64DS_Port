@@ -31,53 +31,40 @@ windows end 43 frames past the buzzer in GAME SET.
 **Gate baseline is 1,447,318 as of `f082b3c8`, gap 326,938.** The animation arena
 was full all match and the tail was cartridge I/O; board carries cycle 105.
 Boundary inherits the same fix and is not re-banked, so its 1,476,672 is
-stale-high. Slips 0 in every row.
-The old 485,060 came off a 12.6% window: the gate arm seeded `time_limit = 7`.
-Fixed — the soak's long match is now `NDS_R2_SOAK_MATCH_MINUTES` and
-`probe-match-window.ps1` reads the match timer out of the guest.
+stale-high. Slips 0 in every row. The soak's long match is
+`NDS_R2_SOAK_MATCH_MINUTES` and `probe-match-window.ps1` reads the match timer
+out of the guest, so a window can no longer claim coverage it did not have.
+
 The owner's bar: the whole match under the P95 budget on the both-CPU config,
 loading states excluded; the shipped ROM stays the Boundary hwtri pair.
 `Makefile:305-308` still forbids reporting a both-CPU P95 as the Boundary
 figure. Both-CPU is only ~10% worse at P95 — harder, not a different animal.
-
-**The Boundary verifier is GREEN again** (cycle 80). It had been red since
-`fcf93d00` — **35 commits, including the whole cycle-79 gate lane** — on a stale
-`EXPECTED_CENSUS_SHA256` that aborted the profile in pre-flight. Bisected to six
-`renderer_key_contract` constants; no texture corpus moved. Board carries the
-detail and the retraction. **Re-pin in the commit that changes what it covers.**
+**Re-pin `EXPECTED_CENSUS_SHA256` in the commit that changes what it covers** —
+a stale pin aborted the Boundary profile in pre-flight and kept the verifier red
+for 35 commits.
 
 ## Effect DObj submits are a BOUNDARY-arm diagnosis — do not re-brief it as the gate
 
-`MISC` is 99.3% effect-submit excursion **on Boundary**, phase-split exactly into
-a generic DL interpreter (65.57%), texture resolve (21.41%) and Matrix (6.93%) at
-~102,730 ticks per list over 1,360 lists. **On the both-CPU gate arm it is ~12.1%
-of the `WORK-H` excursion, recoverable 33,699–75,264, not ~315,000**, and G3's
-packet path was refuted on mechanism (cycles 88–91): effect geometry is the
-per-instance payload, and the integer painter-depth slot exists *only* because
-the CPU owns the vertex. Board carries all of it.
+`MISC` is 99.3% effect-submit excursion **on Boundary** but only **~12.1% of the
+`WORK-H` excursion on the gate arm** (recoverable 33,699–75,264, not ~315,000),
+and G3's packet path was refuted on mechanism in cycles 88–91: effect geometry is
+the per-instance payload, and the integer painter-depth slot exists *only*
+because the CPU owns the vertex. Every list already stops at its own `G_ENDDL`
+(1,360 of 1,360, none at the 8192 cap) at 626 ticks per command, so there is no
+overrun to fix either. Board carries all of it.
 
 ## What is dead, so nobody re-derives it
 
 - **Projectiles** — weapon DObj submit medians **44 ticks/frame**; not the tail.
 - **Particles** — flat ~47,000/frame, hot–cold delta 4,838. A P50 lever only,
   which retires SwitchPlan §7 option 2 (15 Hz round-robin) as a *gate* answer.
-- **Texture thrash** — 1 upload per ~1,408 frames, 0 evictions. `Tex` is
-  entirely cache-**hit** key-build/hash/lookup.
-- **`Find`** (0.44%) and **`Material`** (0.25%) — both refuted; `Material` also
-  clears §3.11 (bump-allocates with the caller bounds-checking).
-- **`FTR` as the gate** — anti-correlated with the tail across the match.
+- **Texture thrash** (1 upload per ~1,408 frames, 0 evictions — `Tex` is entirely
+  cache-**hit** cost), **`Find`** (0.44%), **`Material`** (0.25%, and it clears
+  §3.11), and **`FTR` as the gate** (anti-correlated with the tail).
 - **Task 56 strips** — REVERT: **the ROM hangs the present loop** (no presented
   frame 12 in 900 s against 10–13 in 30 s). The `PERF_LEDGER` KILL row citing
   `FTR` +5,824 has no completed run behind it.
 - **L7 fixed-point collision** — +534 won against 6,481 lost to its own text.
-
-## The interpreter is honestly generic — ANSWERED, there is no overrun to fix
-
-**Every effect list stops at its own terminator**: 1,360 of 1,360 at `G_ENDDL`,
-**0** at the 8192 cap, 0 other blockers, 160.1 commands per list. The honest
-per-command cost is **626 ticks** (136,334,848 exec over 217,686 commands) — the
-circular 12.54 was 50× too low. Nothing here is a defect; the cost is generic
-interpretation, and G3's answer to it was refuted separately (above).
 
 ## RAM: both budgets are near their floor — price a change before writing it
 
@@ -99,13 +86,25 @@ reverted: 10,336 consults, **471 hits (4.56%)**, 7,517 evictions of 7,525 fills,
 
 ## Next single step — one PRE-FINALIZED resident copy per warmed animation
 
-**Cycle 105 removed the cartridge I/O; cycle 106 priced what is left.** Every
+**Cycle 105 removed the cartridge I/O; 106–107 priced what is left.** Every
 remaining `SINT` spike is a force-load frame (per-frame probe, 5 of 30, no
 exceptions either way) with payload and header reads **+0**, so a cache *hit*
 costs 117,000–570,000 ticks. Worth **121,331 at P95** (capping `SINT` at its
-median gives 1,325,987). Attribution is **25.1%**: `ndsRelocFinalizeLoadedFile`'s
-AObj16 pass 16.2%, `gcAddDObjAnimJoint` 5.4%, the rest of the fixups 1.8%,
-`gcAddAnimJointAll` 1.7%. The other 74.9% is unattributed.
+median gives 1,325,987). Fully attributed in cycle 107, free from the existing
+profile CSV via `--split-by-symbol ndsRelocFinalizeLoadedFile` (74 load frames vs
+326 control, premium 650,610/frame): the reloc + copy family is
+**153,252/frame (23.6%)** and is port-side overhead delivering bytes already in
+RAM; animation re-evaluation is **158,393/frame (24.3%)** and is **real gameplay
+work** — do not brief it as waste. `armWaitForIrq` takes 21.1% and is idle.
+
+**`ndsRelocAssetIDForToken` is CLOSED as a caching target.** It is provably pure
+and 100% of its cycles are on load frames, but three measured configurations
+(64/512 evicting, 512 no-evict) topped out at a 50.1% hit rate with 10,405
+evictions, and no-eviction filled all 512 slots with keys that never repeat.
+E11's data composes with that: the 74.3% of calls resolving inside the chain are
+the *cheap* ones, and the cost is the 14.3% that miss and walk both 143+158-entry
+scans — exactly the unstable keys. Board has the table. Still open, unmeasured:
+bound the two scans by an init-time `[min,max]` instead of caching them.
 
 **Do not bring a micro-fix.** R2-06 E11's rule, re-proved twice this cycle:
 *a load-frame-only saving of ~8,000 ticks cannot be banked through P95, because
@@ -139,12 +138,10 @@ more; that lowers `fake_heap_start` and enlarges the heap the arena callocs from
 ## Standing: the load-frame exclusion is REFUTED — do not apply it
 
 The owner's "loading states excluded" bar must not go through the
-`SRC > 2x median` rule: it thresholds on the bucket being attributed (circular
-for SRC), swings the gap **3.08x** across plausible thresholds, drops frames that
-are not loads (100 of 122 isolated singletons, only `SRC` elevated), and moves the
-gate arm 3.08x against Boundary's 1.09x — no loading filter could do that. Audit:
-`scripts/analyze-load-frame-exclusion.ps1`. Cycle 105 supersedes the SBAS split
-as the next row; the board keeps its findings.
+`SRC > 2x median` rule: it is circular for SRC, swings the gap **3.08x** across
+plausible thresholds, drops frames that are not loads (100 of 122 isolated
+singletons), and moves the gate arm 3.08x against Boundary's 1.09x — no loading
+filter could do that. Audit: `scripts/analyze-load-frame-exclusion.ps1`.
 
 **Boundary for all of it.** Same geometry, same textures, same materials — the
 effect models are a closed `BUGS.md` row the owner confirmed by eye and paid for
@@ -159,21 +156,23 @@ shield, revival platform, impact wave or reflector needs the owner.
 - **1.85 cycles of `FTR` mean per byte of added ARM text.** A change that adds
   text must beat its own footprint.
 - **Verify a counter is live in the shipped configuration BEFORE the measuring
-  run.** Six per-stop counters read 0 all match because they were proof-scoped;
-  a zero is only reportable once the counter has been shown able to be non-zero.
-- **Eliminate candidates with a liveness probe on an already-built ROM** before
-  spending a measuring run. The GX flush (64–128 ticks) and the OAM path (0)
-  came off the list that way.
+  run**, and **eliminate candidates with a liveness probe on an already-built
+  ROM** before spending one. Six per-stop counters read 0 all match because they
+  were proof-scoped; the GX flush and the OAM path came off the list for free.
 - **`ALL` is VBlank-quantized** and hid a +52,928 that came straight out of the
   wait. Read `WORK-H`.
 - **Do not multiply a number back by what you divided it by.** The "8192 × 12.54
   = 102,727 against 102,730" agreement was circular and was not evidence.
-
-## Open and unowned
-
-All parked items live on the board's **Parked** list (one place, not two).
+- **Read a memo's Evicts, not its Hits** (cycle 107). Misses that are nearly all
+  evictions mean undersized *or* mis-keyed, and the hit rate cannot tell you
+  which — 8× the table moved one 41.8% → 50.1% while evictions stayed.
+- **`--split-by-symbol` on an existing profile CSV is free** and partitions
+  frames by whether they ran that symbol. It fully attributed the load frame
+  with no build and no emulator run, after an over-gate split had failed to.
 
 ## Restart surface
+
+All parked items live on the board's **Parked** list (one place, not two).
 
 ```powershell
 .\scripts\verify-all.ps1 -Profile Boundary -List
