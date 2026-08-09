@@ -772,6 +772,44 @@ NDS_R2_SHIELD_QUAD ?= 0
 # full stage collision for the projectile every frame -- and is a separate
 # seam that this does not touch.
 NDS_R2_FIREBALL_QUAD ?= 1
+# Cache ndsParticleSetCurrentCamera's answer for as long as its inputs hold.
+# DEFAULT ON, cycle 102 -- measured, pixel-identical. See the block comment in
+# battleship_lbparticle.c for the mechanism.
+#
+# That function is called once per quad by all three quad entry points, and each
+# call rebuilds a perspective matrix, a look-at basis (three sqrtf) and a full
+# 4x4 float guMtxCatF for a camera that cannot move within a frame. Measured
+# 2026-08-09 on ROM 3B1159ED (artifacts/performance/2026-08-09_mtxcat-callers
+# .json): it is 81.8% of the guMtxCatF + syMatrixLookAtF class, and that class
+# is 24.2% of all __aeabi_fadd + __aeabi_fmul -- so with its own direct share it
+# is about 23% of the frame's float and the largest single float consumer.
+#
+# THE RESULT, both-CPU arm, whole match, 1,600 samples, frames 442-2041, DLDI
+# ON, slips=0, no repeated frames on either arm (artifacts/performance/
+# 2026-08-09_c102-camcache-{ctl,cand}{,-rows.csv}.json):
+#
+#   WORK-H P50  1,129,664 -> 1,112,896   -16,768
+#   WORK-H P95  1,665,856 -> 1,649,088   -16,768
+#   MISC   P50    119,872 ->   102,848   -17,024   (owns the whole win)
+#   FTR    P50    418,560 ->   418,432      -128   (flat -- the falsifier)
+#
+# Cache ran 3,054 hits / 1,458 misses. That is the CEILING, not a thrash: the
+# camera moves every frame, so the frame's first cacheable call must rebuild and
+# the other two hit.
+#
+# BIT-EXACT, AND MEASURED AS SUCH rather than argued: a hit replays the identical
+# float result. Four matched-tic frames (900/901/1200/1201, software renderer)
+# compare PIXEL-IDENTICAL on the game screen, max channel delta 0. Crop the top
+# screen at 400x298, NOT 400x300 -- melonDS puts the screen boundary at row 298,
+# and a 300-row crop catches two rows of tick-HUD text whose numbers differ
+# between arms by construction. That cost one false "regression" reading.
+#
+# THE A/B PAIRING IS WHY THIS READS AT ALL. Gated at RUNTIME on a .data word,
+# not on this flag, so both arms link byte-identical. The first attempt used a
+# #if: 672 bytes moved `.main` and cost FTR +19,712 P50 -- a bucket the change
+# never calls, and 15x what the board's 1.85-cycles-per-added-byte rule entitles
+# 672 bytes to. That placement artifact INVERTED the sign of a real -16,768 win.
+NDS_R2_PARTICLE_CAMERA_CACHE ?= 1
 # Draw Fox's source blaster model as its four baked, untextured vertices instead
 # of walking and decoding relocData 316's nine-command display list every
 # frame. Owner-playtested and accepted 2026-08-09; ON BY DEFAULT. The source
@@ -2804,6 +2842,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_R2_PARTICLE_DRAW $(NDS_R2_PARTICLE_DRAW)'; \
 		echo '#define NDS_R2_SHIELD_QUAD $(NDS_R2_SHIELD_QUAD)'; \
 		echo '#define NDS_R2_FIREBALL_QUAD $(NDS_R2_FIREBALL_QUAD)'; \
+		echo '#define NDS_R2_PARTICLE_CAMERA_CACHE $(NDS_R2_PARTICLE_CAMERA_CACHE)'; \
 		echo '#define NDS_R2_FOX_BLASTER_QUAD $(NDS_R2_FOX_BLASTER_QUAD)'; \
 		echo '#define NDS_R2_FOX_BLASTER_GLOW_AOT $(NDS_R2_FOX_BLASTER_GLOW_AOT)'; \
 		echo '#define NDS_R2_FIREBALL_NATIVE_MAP_COLL $(NDS_R2_FIREBALL_NATIVE_MAP_COLL)'; \

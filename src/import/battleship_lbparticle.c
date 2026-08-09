@@ -2596,6 +2596,103 @@ static void ndsParticleDrawFoxBlasterGlowAOT(
 #endif
 
 #if NDS_R2_PARTICLE_DRAW
+/* Every input ndsParticleSetCurrentCamera reads on its xobjs_num != 0 path.
+ * `persp_near`/`persp_far` rather than near/far because those two are macros on
+ * some toolchains and this struct is not worth the surprise. */
+typedef struct NDSParticleCameraKey
+{
+    const void *cobj;
+    s32 xobjs_num;
+    /* The XObj loop below branches on each entry's `kind`, so the count alone
+     * is not the input -- two cameras with the same xobjs_num and different
+     * kinds produce different matrices. Folded rather than stored as an array
+     * because the fold is a handful of shifts against the 4x4 float concat it
+     * is protecting, and the list is short. */
+    u32 kind_fold;
+    Vec3f eye;
+    Vec3f at;
+    Vec3f up;
+    f32 fovy;
+    f32 aspect;
+    f32 persp_near;
+    f32 persp_far;
+    f32 scale;
+} NDSParticleCameraKey;
+
+static u32 ndsParticleCameraKindFold(const CObj *cobj)
+{
+    u32 fold = 2166136261u;
+    u32 i;
+
+    for (i = 0u; i < (u32)cobj->xobjs_num; i++)
+    {
+        u32 kind = (cobj->xobjs[i] != NULL) ?
+            (u32)cobj->xobjs[i]->kind : (u32)nGCMatrixKindNull;
+
+        fold = (fold ^ kind) * 16777619u;
+    }
+    return fold;
+}
+
+/* TWO WAYS, BECAUSE ONE MEASURED A 50% HIT RATE. The c101 single-entry cache
+ * read Hit delta == Miss delta == 192 at every one of sixteen ring stops --
+ * four calls a frame alternating hit, miss, hit, miss. That is not a cold
+ * cache, it is two live cameras evicting each other every call. Round-robin
+ * replacement over two ways makes an alternating pair hit after the first two
+ * calls; if a third camera ever appears the counters go back to thrashing and
+ * say so, which is why they stay. */
+#define NDS_PARTICLE_CAMERA_CACHE_WAYS 2
+
+static NDSParticleCameraKey sNdsParticleCameraKey[NDS_PARTICLE_CAMERA_CACHE_WAYS];
+static Vec3f sNdsParticleCameraRight[NDS_PARTICLE_CAMERA_CACHE_WAYS];
+static Vec3f sNdsParticleCameraUp[NDS_PARTICLE_CAMERA_CACHE_WAYS];
+static NDSRendererMatrix20p12
+    sNdsParticleCameraProjection[NDS_PARTICLE_CAMERA_CACHE_WAYS];
+static NDSRendererMatrix20p12
+    sNdsParticleCameraModelview[NDS_PARTICLE_CAMERA_CACHE_WAYS];
+static u8 sNdsParticleCameraValid[NDS_PARTICLE_CAMERA_CACHE_WAYS];
+static u32 sNdsParticleCameraNextWay;
+
+/* THE ROUTE IS A .data WORD, NOT A #if, and that is a measurement decision
+ * rather than a style one. c101's first arm gated this on the preprocessor,
+ * which moved 672 bytes of `.main` and cost `FTR` +19,712 P50 -- a bucket this
+ * code never calls, and 15x the growth the board's 1.85-cycles-per-added-byte
+ * rule entitles 672 bytes to. The delta measured was placement, not mechanism.
+ * With the route in `.data` both arms link with byte-identical text and bss and
+ * differ in one initialised word, which is the pairing cycle 100 proved out.
+ * The section attribute is required: an initialiser of 0 would otherwise land
+ * the control arm's copy in `.bss` and reintroduce the very skew it removes. */
+volatile u32 gNdsParticleCameraCacheEnabled
+    __attribute__((section(".data"))) = NDS_R2_PARTICLE_CAMERA_CACHE;
+
+/* Engagement pair, same contract as the shield's and the fireball's: Hit
+ * climbing with Miss near the quad-draw count is the cache working; Miss
+ * tracking Hit means the key never matches and the rebuild is still running
+ * behind an extra 16 compares, which is SLOWER than the control. A measurement
+ * taken without reading these would not know which of those it measured. */
+volatile u32 gNdsParticleCameraCacheHitCount;
+volatile u32 gNdsParticleCameraCacheMissCount;
+
+/* Bitwise-equal is deliberate. These are copied scalars, not computed ones --
+ * a hit requires the identical camera, and NaN cannot appear in an eye vector
+ * that already passed the zero-length forward check below. */
+static sb32 ndsParticleCameraKeyEqual(const NDSParticleCameraKey *a,
+                                      const NDSParticleCameraKey *b)
+{
+    return ((a->cobj == b->cobj) && (a->xobjs_num == b->xobjs_num) &&
+            (a->kind_fold == b->kind_fold) &&
+            (a->eye.x == b->eye.x) && (a->eye.y == b->eye.y) &&
+            (a->eye.z == b->eye.z) &&
+            (a->at.x == b->at.x) && (a->at.y == b->at.y) &&
+            (a->at.z == b->at.z) &&
+            (a->up.x == b->up.x) && (a->up.y == b->up.y) &&
+            (a->up.z == b->up.z) &&
+            (a->fovy == b->fovy) && (a->aspect == b->aspect) &&
+            (a->persp_near == b->persp_near) &&
+            (a->persp_far == b->persp_far) && (a->scale == b->scale))
+        ? TRUE : FALSE;
+}
+
 /* Build both billboard axes and the DS camera load from one current CObj. The
  * source particle draw does this once before iterating its pieces
  * (lbparticle.c:1486-1649): look-at first, projection second, then one 20.12
@@ -2613,10 +2710,76 @@ static sb32 ndsParticleSetCurrentCamera(Vec3f *right, Vec3f *up)
     u32 i;
     u32 row;
     u32 col;
+    NDSParticleCameraKey key;
 
     if (cobj == NULL)
     {
         return FALSE;
+    }
+    /* THIS FUNCTION IS CALLED ONCE PER QUAD AND ITS ANSWER IS FRAME-INVARIANT.
+     * All three quad entry points call it, and each call rebuilds a
+     * perspective matrix, a look-at basis (three sqrtf), re-runs both per XObj,
+     * and finishes with a full 4x4 float guMtxCatF -- 64 multiplies and 48 adds
+     * -- for a camera that cannot move between two quads of the same frame.
+     *
+     * MEASURED, not assumed (2026-08-09, ROM 3B1159ED,
+     * artifacts/performance/2026-08-09_mtxcat-callers.json): this function is
+     * 81.8% of the guMtxCatF + syMatrixLookAtF class, in three rows of 27.3%
+     * that are exactly its three internal call sites, and that class is 24.2%
+     * of all __aeabi_fadd + __aeabi_fmul. With its own 2.9% direct share it is
+     * about 23% of every float operation in the frame -- the largest single
+     * float consumer, and it is port-side code, not decomp's.
+     *
+     * KEYED ON THE INPUTS, NOT ON A FRAME COUNTER. The obvious key is
+     * gNdsHardwareRendererSubmittedFrameCount, but nds_platform.c:3128 only
+     * increments it when a frame is actually submitted, so two draw passes can
+     * share a value and a moved camera would serve stale. Comparing the inputs
+     * that determine the output is correct by construction and still trades ~16
+     * scalar compares against three sqrtf and a 4x4 float concat.
+     *
+     * BIT-EXACT BY CONSTRUCTION: the same float arithmetic produces the cached
+     * value; a hit replays it rather than approximating it. The A/B for this
+     * change therefore predicts ZERO differing pixels, which is a falsifiable
+     * claim rather than a fidelity budget.
+     *
+     * The xobjs_num == 0 branch is deliberately NOT cached. It has no sqrtf and
+     * no concat, it keys on viewport fields this key does not carry, and
+     * caching it would buy nothing while widening what the key has to prove. */
+    key.cobj = cobj;
+    key.xobjs_num = cobj->xobjs_num;
+    key.kind_fold = ndsParticleCameraKindFold(cobj);
+    key.eye = cobj->vec.eye;
+    key.at = cobj->vec.at;
+    key.up = cobj->vec.up;
+    key.fovy = cobj->projection.persp.fovy;
+    key.aspect = cobj->projection.persp.aspect;
+    key.persp_near = cobj->projection.persp.near;
+    key.persp_far = cobj->projection.persp.far;
+    key.scale = cobj->projection.persp.scale;
+    if ((gNdsParticleCameraCacheEnabled != 0u) && (cobj->xobjs_num != 0))
+    {
+        u32 way;
+
+        for (way = 0u; way < NDS_PARTICLE_CAMERA_CACHE_WAYS; way++)
+        {
+            if ((sNdsParticleCameraValid[way] != 0u) &&
+                (ndsParticleCameraKeyEqual(&key, &sNdsParticleCameraKey[way]) !=
+                    FALSE))
+            {
+                *right = sNdsParticleCameraRight[way];
+                *up = sNdsParticleCameraUp[way];
+                /* Re-issued rather than skipped: the renderer's particle camera
+                 * is shared state and something between two quads may have
+                 * replaced it. Two 64-byte stores against the rebuild this is
+                 * replacing. */
+                ndsRendererSetParticleCamera(
+                    &sNdsParticleCameraProjection[way],
+                    &sNdsParticleCameraModelview[way]);
+                gNdsParticleCameraCacheHitCount++;
+                return TRUE;
+            }
+        }
+        gNdsParticleCameraCacheMissCount++;
     }
     if (cobj->xobjs_num == 0)
     {
@@ -2781,6 +2944,22 @@ static sb32 ndsParticleSetCurrentCamera(Vec3f *right, Vec3f *up)
         }
     }
     ndsRendererSetParticleCamera(&projection, &modelview);
+    /* Stored only for the branch the key describes. Every FALSE return above
+     * leaves sNdsParticleCameraValid untouched, so a rejected camera can never
+     * be served from the cache. */
+    if ((gNdsParticleCameraCacheEnabled != 0u) && (cobj->xobjs_num != 0))
+    {
+        u32 way = sNdsParticleCameraNextWay;
+
+        sNdsParticleCameraKey[way] = key;
+        sNdsParticleCameraRight[way] = *right;
+        sNdsParticleCameraUp[way] = *up;
+        sNdsParticleCameraProjection[way] = projection;
+        sNdsParticleCameraModelview[way] = modelview;
+        sNdsParticleCameraValid[way] = 1u;
+        sNdsParticleCameraNextWay =
+            (way + 1u) % NDS_PARTICLE_CAMERA_CACHE_WAYS;
+    }
     return TRUE;
 }
 
