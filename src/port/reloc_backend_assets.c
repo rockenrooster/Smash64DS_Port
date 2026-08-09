@@ -6076,7 +6076,13 @@ volatile u32 gNdsR204AnimSeen[(NDS_R204_ANIM_ID_SPAN + 31u) / 32u];
  * Every failure path degrades to the uncached load, so a full cache, a failed
  * allocation or an unexpected size is a performance outcome and never a
  * correctness one. */
-#define NDS_R2_ANIM_CACHE_ENTRIES 64u
+/* 128, not 64. Cycle 105 read gNdsR204AnimForceLoadDistinct on the BOTH-CPU gate
+ * arm over a whole 60-second match: the working set is 85 distinct animations,
+ * not the 29 the E1 comment above was written against. 64 is below that, and the
+ * entry count is a HARD refusal in both store paths -- ndsR2AnimWarmLoadOne
+ * counts it as a warm failure and the miss path never fills -- so at 64 the last
+ * 21 animations of the match could not be cached whatever the arena had left. */
+#define NDS_R2_ANIM_CACHE_ENTRIES 128u
 
 /* THIS CACHE MUST NEVER CALL syTaskmanMalloc, AND THAT IS NOT A STYLE RULE.
  *
@@ -6159,8 +6165,35 @@ volatile u32 gNdsR204AnimSeen[(NDS_R204_ANIM_ID_SPAN + 31u) / 32u];
  *
  * Two general lessons, in TASK_STANDING_RULES: never call an allocator that
  * cannot fail from a code path that is allowed to fail, and never fix a heap
- * problem with a static buffer without pricing it against the heap. */
-#define NDS_R2_ANIM_CACHE_ARENA_BYTES 92160u
+ * problem with a static buffer without pricing it against the heap.
+ *
+ * CYCLE 105 RE-SIZED IT, AND THE OLD VALUE WAS THE GATE ARM'S TAIL. 92,160 was
+ * sized against a 41-asset list measured on the Boundary arm. Read on the
+ * both-CPU gate arm over a whole match, that arena is 100% FULL and has been
+ * refusing loads all match:
+ *
+ *   ArenaReservedBytes 92,160   ArenaUsedBytes 92,160   Overflows 142
+ *   Rejects 142   OverflowLastSize 912   OverflowLastUsed 92,160
+ *   ForceLoadTotal 353 = Hits 206 + Misses 147   ForceLoadDistinct 85
+ *
+ * A refused asset is not merely uncached: every later use of it re-runs
+ * ndsRelocAssetLoadHeaderAndData, which is a real fopen/fread/fclose through
+ * NitroFS -- on DLDI, SD I/O inside a gameplay frame. Frames 478 -> 2007 did
+ * gNdsRelocAssetPayloadReadCount +111 against 113 frames whose SINT bucket
+ * exceeded 400,000 ticks, and the median SINT is 169,248. That is the whole-match
+ * P95 tail: capping SINT at its own median takes WORK-H P95 1,638,582 ->
+ * 1,333,093. The reads are also why AUD and HUD -- buckets whose WORK cannot vary
+ * with the match -- read 4.9x and 2.5x on those frames: the cartridge stalls
+ * everything, not just the caller.
+ *
+ * Sized to the MEASURED 85-asset working set below: aligned data totals 197,184
+ * bytes, so 200,704 covers it with 3,520 spare. The budget it spends from is
+ * gSYTaskmanGeneralHeap, whose low-water free read 154,776 with the old 92,160
+ * already taken -- i.e. a pool of ~246,936 -- so the reserve's request plus
+ * NDS_R2_ANIM_CACHE_ARENA_KEEP_FREE (233,472) still fits, and the run's own
+ * gNdsTaskmanGeneralHeapFreeMin is the check on that arithmetic rather than this
+ * comment. Overflow still degrades to the uncached load. */
+#define NDS_R2_ANIM_CACHE_ARENA_BYTES 200704u
 
 /* R2-04 E4. The match's animation working set, measured rather than guessed:
  * gNdsR204AnimSeen dumped at frame 1928 (roughly two thirds through the 3,600
@@ -6171,14 +6204,36 @@ volatile u32 gNdsR204AnimSeen[(NDS_R204_ANIM_ID_SPAN + 31u) / 32u];
  * An asset missing from this list is a performance outcome, never a correctness
  * one: it simply takes the on-demand path it takes today. The list is derived
  * from observed play, so gNdsR204AnimForceLoadRepeat/Total is its regression
- * check -- if that ratio falls, the list has drifted from what the match uses. */
+ * check -- if that ratio falls, the list has drifted from what the match uses.
+ *
+ * CYCLE 105 REPLACED THE LIST, BECAUSE IT WAS MEASURED ON THE WRONG ARM. The 41
+ * above came off a Boundary match (Mario human vs one level-3 Fox). The gate arm
+ * is NDS_R2_BOTH_CPU, where Mario is also a level-3 CPU, and two CPUs playing
+ * their whole movesets touch a substantially wider set: gNdsR204AnimSeen dumped
+ * at presented frame 2038 of the 1,600-sample window holds 85 IDs, and the old
+ * list covered only 27 of them. The 14 it warmed that this match never asks for
+ * were spending arena on assets nobody used.
+ *
+ * That is why the list moved rather than merely growing. The union of the two
+ * lists is 99 assets = 229,024 bytes, which does NOT fit the heap budget (see
+ * NDS_R2_ANIM_CACHE_ARENA_BYTES); the 85 measured here do, at 197,184. A Boundary
+ * asset dropped from this list is a performance outcome and never a correctness
+ * one -- it takes the on-demand path, and with the arena no longer full it is
+ * then cached on that first use, which the old arena could not do.
+ *
+ * gNdsR204AnimForceLoadRepeat/Total remains the regression check on the list. */
 static const u16 sNdsR204AnimWarmList[] = {
-    0x1f3u, 0x201u, 0x206u, 0x20bu, 0x20fu, 0x216u, 0x218u, 0x219u,
-    0x21au, 0x21cu, 0x21fu, 0x220u, 0x221u, 0x222u,
-    0x282u, 0x283u, 0x284u, 0x28au, 0x28cu, 0x28du, 0x28eu, 0x28fu,
-    0x290u, 0x291u, 0x292u, 0x293u, 0x294u, 0x295u, 0x296u,
-    0x2fau, 0x2fbu, 0x2fcu, 0x2fdu, 0x2feu, 0x301u, 0x302u,
-    0x30bu, 0x30cu, 0x316u, 0x317u, 0x319u
+    0x1f3u, 0x1f5u, 0x1f6u, 0x1fbu, 0x1ffu, 0x201u, 0x202u, 0x203u,
+    0x204u, 0x205u, 0x206u, 0x207u, 0x20bu, 0x20cu, 0x20du, 0x218u,
+    0x219u, 0x21au, 0x21cu, 0x21du, 0x21eu, 0x21fu, 0x220u, 0x221u,
+    0x22au, 0x22du, 0x22eu, 0x230u, 0x265u, 0x266u, 0x26du, 0x26fu,
+    0x271u, 0x272u, 0x275u, 0x27bu, 0x27du, 0x27eu, 0x27fu, 0x282u,
+    0x283u, 0x284u, 0x285u, 0x28au, 0x28cu, 0x28eu, 0x290u, 0x291u,
+    0x292u, 0x295u, 0x296u, 0x29du, 0x29eu, 0x2a6u, 0x2a7u, 0x2a8u,
+    0x2a9u, 0x2abu, 0x2acu, 0x2aeu, 0x2afu, 0x2b0u, 0x2b1u, 0x2b7u,
+    0x2b8u, 0x2b9u, 0x2bbu, 0x2bcu, 0x2bdu, 0x2bfu, 0x2c0u, 0x2cdu,
+    0x2ceu, 0x2fcu, 0x2fdu, 0x302u, 0x30bu, 0x30cu, 0x30du, 0x30eu,
+    0x311u, 0x312u, 0x313u, 0x314u, 0x315u
 };
 
 typedef struct NDSR2AnimCacheEntry {
