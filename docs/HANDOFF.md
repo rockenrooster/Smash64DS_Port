@@ -20,11 +20,10 @@ byte-identical). Never take a gate reading on 128 frames again.
 Re-banked cycle 80 on the corrected seed; both arms run the **same 60-second
 match** (coverage 86.7%), both windows ending 43 frames past the buzzer.
 
-| arm | role | coverage | `WORK-H` P50 | P95 | over gate |
-|---|---|---|---:|---:|---:|
-| **both-CPU** | **THE GATE (owner, 2026-08-05)** | 86.7% | 1,112,576 | **1,447,318** | 754/1600 |
-| both-CPU, pre-`f082b3c8` | superseded cycle 105 | 86.7% | 1,102,720 | 1,639,299 | 691/1600 |
-| **Boundary** mode 163 | shipped configuration | 86.7% | 1,082,112 | 1,476,672 | 673/1600 (42.1%) |
+| arm | role | `WORK-H` P50 | P95 | over gate |
+|---|---|---:|---:|---:|
+| **both-CPU** | **THE GATE (owner, 2026-08-05)** | 1,112,576 | **1,447,318** | 754/1600 |
+| **Boundary** mode 163 | shipped configuration | 1,082,112 | 1,476,672 | 673/1600 |
 
 **Gate baseline is 1,447,318 as of `f082b3c8`, gap 326,938**, less cycle 108's
 ~23,000. Boundary inherits the same fixes and is not re-banked, so its 1,476,672
@@ -41,10 +40,8 @@ covers** — a stale pin kept the verifier red for 35 commits.
 ## Effect DObj submits are a BOUNDARY-arm diagnosis — do not re-brief it as the gate
 
 `MISC` is 99.3% effect-submit excursion **on Boundary** but only **~12.1% of the
-`WORK-H` excursion on the gate arm** (recoverable 33,699–75,264, not ~315,000).
-G3's packet path was refuted on mechanism in cycles 88–91, and every list already
-stops at its own `G_ENDDL` (1,360 of 1,360, none at the 8192 cap), so there is no
-overrun to fix either. Board carries all of it.
+gate arm's `WORK-H` excursion**. G3's packet path was refuted on mechanism in
+cycles 88–91; board carries it.
 
 ## What is dead, so nobody re-derives it
 
@@ -52,8 +49,7 @@ overrun to fix either. Board carries all of it.
 - **Particles** — flat ~47,000/frame, hot–cold delta 4,838. A P50 lever only,
   retiring SwitchPlan §7 option 2 (15 Hz round-robin) as a *gate* answer.
 - **The force-load seam** — closed cycle 108; see the next-step section.
-- **Texture thrash** (1 upload per ~1,408 frames, 0 evictions), **`Find`**
-  (0.44%), **`Material`** (0.25%), **`FTR` as the gate** (anti-correlated).
+- **Texture thrash**, **`Find`**, **`Material`**, **`FTR` as the gate**.
 - **Task 56 strips** — REVERT: **the ROM hangs the present loop**. The
   `PERF_LEDGER` KILL row citing `FTR` +5,824 has no completed run behind it.
 - **L7 fixed-point collision** — +534 won against 6,481 lost to its own text.
@@ -69,8 +65,8 @@ overrun to fix either. Board carries all of it.
   against the anim cache's 32,768 `KEEP_FREE`. The two are coupled: freeing
   `.bss` lowers `fake_heap_start`, which enlarges the heap.
 
-**The `Tex` (dl-pointer, bind-ordinal) memo is REFUTED** — 10,336 consults,
-**471 hits (4.56%)**, 7,517 evictions of 7,525 fills, `Tex` ticks *up*.
+**The `Tex` (dl-pointer, bind-ordinal) memo is REFUTED** — 471 hits of 10,336
+consults, 7,517 evictions of 7,525 fills, `Tex` ticks *up*.
 
 ## Next single step — animation RE-EVALUATION, not another caching layer
 
@@ -86,44 +82,48 @@ What is left on the load frame is **animation re-evaluation, 158,393/frame
 (24.3%)** — real gameplay work. Attack it as specialization or a lower update
 rate. Do not add another caching layer to the loader.
 
-**The soft-float bill is now mapped, and it is a BASE-cost lane — it lowers P50
-and P95 together.** `scripts/analyze-leaf-helper-attribution.py` attributes a
-leaf helper's cycles to its callers off an existing profile (no build, no run):
-**8.9% of non-idle work**, led by animation evaluation 2.57%, collision 1.79%,
-matrices 1.33%. `battleship_ftAnimParseDObjFigatree` and `gcPlayDObjAnimJoint`
-are **5.34% of non-idle counting self time, ~75,600 ticks at P95**. Helpers are
-already libgcc ARM assembly in ITCM, so only call volume is available. Board has
-the table, the two measurement traps, and the two constraints any conversion
-must clear (L7 lost on **text size**, and `-mthumb` has no SMULL).
+**The soft-float bill is mapped, and it is a BASE-cost lane — it lowers P50 and
+P95 together.** `scripts/analyze-leaf-helper-attribution.py` attributes a leaf
+helper to its callers off an existing profile (no build, no run): **8.9% of
+non-idle work**, led by animation evaluation 2.57%, collision 1.79%, matrices
+1.33%. `battleship_ftAnimParseDObjFigatree` and `gcPlayDObjAnimJoint` are
+**5.34% counting self time, ~75,600 ticks at P95**. The helpers are already
+libgcc ARM assembly in ITCM, so only call volume is available.
+
+**Go after the ARITHMETIC, not the comparisons.** `fadd`+`fsub` 3.46%, `fmul`
+2.24%, `fdiv` 1.04% — **6.74% against the compares' 1.32%**. The compare lane is
+priced and closed: `include/nds/nds_fcmp.h` is bit-exact (proven over all 2^32
+patterns by `scripts/check_fcmp_exact.py`) and applied at the largest caller for
+a real but **sub-floor** −3,136 P50 / −4,739 P95, and the port-editable ceiling
+for the *whole* lane is only ~0.5%. `-ffinite-math-only` does not remove these
+calls — checked compile-only. Any conversion must also clear two paid-for
+constraints: L7 lost on **text size** (1.85 cycles of `FTR` per added byte), and
+`-mthumb` has no SMULL.
 
 ## How the load frame is priced, and what is already closed
 
 **Cycle 105 removed the cartridge I/O; 106–108 priced what is left.** Every
-remaining `SINT` spike is a force-load frame with payload and header reads **+0**.
-Worth **121,331 at P95** in total; the prebake took ~23,000. Attributed free from
-the existing profile CSV via `--split-by-symbol ndsRelocFinalizeLoadedFile` (74
-load frames vs 326 control, premium 650,610/frame): reloc + copy **153,252/frame
-(23.6%)**, animation re-evaluation **158,393/frame (24.3%)** and **real gameplay
-work**, `armWaitForIrq` 21.1% idle.
+remaining `SINT` spike is a force-load frame with payload/header reads **+0**;
+worth **121,331 at P95**, of which the prebake took ~23,000. Attributed free via
+`--split-by-symbol ndsRelocFinalizeLoadedFile` (74 load frames vs 326 control,
+premium 650,610/frame): reloc + copy **23.6%**, animation re-evaluation
+**24.3%** and **real gameplay work**, `armWaitForIrq` 21.1% idle.
 
-**`ndsRelocAssetIDForToken` is CLOSED as a caching target.** Provably pure, but
-three configurations topped out at a 50.1% hit rate with 10,405 evictions — the
-expensive 14.3% of calls are exactly the unstable keys. Still open, unmeasured:
-bound the two 143/158-entry scans by an init-time `[min,max]`.
+**`ndsRelocAssetIDForToken` is CLOSED as a caching target** (board has the
+table). Still open, unmeasured: bound its two 143/158-entry scans by an
+init-time `[min,max]` rather than caching them.
 
 **Do not bring a micro-fix.** R2-06 E11's rule: *a load-frame-only saving of
 ~8,000 ticks cannot be banked through P95, because relinking moves the tail by
-more than the saving.* Either clear ~16,000 of tail movement in one change, or
-**move the work off the gameplay frame** — cycle 105's arena fix for the I/O
-half, cycle 108's prebake for the AObj16 pass.
+more than the saving.* Clear ~16,000 in one change, or **move the work off the
+gameplay frame** — cycle 105's arena fix, cycle 108's prebake.
 
 **Measure a placement-sensitive seam on ONE binary with a runtime route.** Two
 separately-linked arms of cycle 108's prebake differed only by 3,584 bytes of
 scratch and read P50 25,760 apart — 4.5× the cross-build floor — with the
 *better* arm reading worse. `sample-tick-hud-buckets.ps1 -SetGlobals name=value`
-pokes a `.data` global at the first frame-complete marker; that is standing rule
-7. Check the OFF arm's engagement counters — the poke lands after ~3 warm steps,
-so an OFF arm is partial and the delta must be scaled.
+pokes a `.data` global at the first frame-complete marker (standing rule 7); the
+poke lands after ~3 warm steps, so an OFF arm is partial and must be scaled.
 
 **Do not re-derive these.** The Makefile's `?= 0` defaults are not the shipped
 config (41 overridden). `.text.hot` is closed in both directions

@@ -1,6 +1,7 @@
 /* Compile the original BattleShip object-animation/setup translation unit.
  * Its public add entrypoints normalize O2R AObjEvent32 command words before
  * the unchanged original parser sees them. */
+#include <nds/nds_fcmp.h>
 #include <nds/nds_reloc_assets.h>
 
 #define gcAddDObjAnimJoint ndsBaseGcAddDObjAnimJoint
@@ -253,7 +254,16 @@ void gcPlayDObjAnimJoint(DObj *dobj)
     f32 value = 0.0f;
     AObj *aobj;
 
-    if (dobj->anim_wait != AOBJ_ANIM_NULL)
+    /* R2-06 E15. `anim_wait` is an f32 and both sentinels are compile-time
+     * constants, so these were `bl __aeabi_fcmpeq` -- and the two outer ones run
+     * per DObj while the `!= AOBJ_ANIM_END` runs per AObj node. This function is
+     * the single largest caller of the comparison helpers in the whole profile:
+     * 227,040 calls, 2,582,802 cycles. Both sentinels are F32_MIN-derived and so
+     * non-zero, which makes a bit-pattern compare exact -- IEEE-754 gives every
+     * value except zero a unique representation. Proven over all 2^32 patterns
+     * by scripts/check_fcmp_exact.py, not argued from here. The Step arm's
+     * `length_invert <= length` is two RUNTIME floats and stays a call. */
+    if (NDS_FCMP_NE_C(dobj->anim_wait, AOBJ_ANIM_NULL))
     {
         aobj = dobj->aobj;
 
@@ -261,7 +271,7 @@ void gcPlayDObjAnimJoint(DObj *dobj)
         {
             if (aobj->kind != nGCAnimKindNone)
             {
-                if (dobj->anim_wait != AOBJ_ANIM_END)
+                if (NDS_FCMP_NE_C(dobj->anim_wait, AOBJ_ANIM_END))
                 {
                     aobj->length += dobj->anim_speed;
                 }
@@ -293,11 +303,15 @@ void gcPlayDObjAnimJoint(DObj *dobj)
                     case nGCAnimTrackRotZ: dobj->rotate.vec.f.z = value; break;
 
                     case nGCAnimTrackTraI:
-                        if (value < 0.0F)
+                        /* Clamp to [0,1]. LT0 is `> 0x80000000u` rather than
+                         * `>=` so that -0.0f does not count as negative, which
+                         * is what IEEE says and what the exhaustive check
+                         * enforces. */
+                        if (NDS_FCMP_LT0(value))
                         {
                             value = 0.0F;
                         }
-                        else if (value > 1.0F)
+                        else if (NDS_FCMP_GT_C(value, 1.0F))
                         {
                             value = 1.0F;
                         }
@@ -317,7 +331,7 @@ void gcPlayDObjAnimJoint(DObj *dobj)
             }
             aobj = aobj->next;
         }
-        if (dobj->anim_wait == AOBJ_ANIM_END)
+        if (NDS_FCMP_EQ_C(dobj->anim_wait, AOBJ_ANIM_END))
         {
             dobj->anim_wait = AOBJ_ANIM_NULL;
         }

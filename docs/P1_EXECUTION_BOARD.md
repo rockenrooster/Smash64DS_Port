@@ -2102,6 +2102,56 @@ runs re-learning that.
 
 **Worth ~7% of the 326,938 gap.** Banked and moved past; do not polish it.
 
+### The COMPARE lane is priced and it is too small — 0.5% fully converted (cycle 108)
+
+First slice attempted off the soft-float map, and the useful result is its size.
+`include/nds/nds_fcmp.h` replaces the soft-float comparison helpers with integer
+tests on the bit pattern. **Exact, not approximate**, and proven that way:
+`scripts/check_fcmp_exact.py` sweeps **all 4,294,967,296 bit patterns** against
+12 predicates and every one matches IEEE-754, including both signed zeros and
+all 16,777,214 denormals. NaN is the one documented exclusion (67,108,856
+disagreements, reported rather than hidden). Not sampled, and not argued from a
+comment — the failure mode is a single pattern class that a random sample never
+draws: `-0.0f == +0.0f` is TRUE in IEEE while the patterns differ, so a naive
+`bits(x) == bits(0.0f)` is wrong for exactly one input in 2^32, and
+`if (payload != 0.0F) { 1.0f / payload; }` would then divide by zero.
+
+**`-ffinite-math-only` does not remove these calls.** Checked compile-only in
+seconds before writing anything: GCC emits the same `bl __aeabi_fcmp*` with and
+without it, in both ARM and Thumb. There is no build-flag shortcut, so the calls
+have to go at the call sites.
+
+Applied to `gcPlayDObjAnimJoint`, the single largest caller in the profile
+(227,040 calls, 2,582,802 cycles). Mechanism confirmed in the object file
+without the emulator: **81 → 76 static `__aeabi_fcmp*` sites**, ROM `.text`
++92 bytes.
+
+| vs the route-on arm | P50 | P95 | mean |
+|---|---:|---:|---:|
+| `build-c111-fcmp` | 1,107,008 | 1,411,264 | 1,129,509 |
+| delta | **−3,136** | **−4,739** | **−11,620** |
+
+All three negative and all **below the cross-build floors** (P50 5,700, P95
+14,080) — exactly the ~2,600 predicted from the attribution. Kept under the
+board's accumulate rule because it is bit-exact and provably less work, but
+**it is not independently bankable and must not be cited as a win.**
+
+**The number that matters is the lane's ceiling.** The five comparison helpers
+are 12,909,690 cycles (1.32% of non-idle) in total, and the port-editable share
+— everything not inside `decomp/` — is only **~5.0M, about 0.5%, ~7,300 ticks at
+P95 even if every site were converted**. `ndsBaseGcPlayMObjMatAnim` and
+`ndsBaseGcPlayDObjAnimJoint` look port-side in the profile but are the *decomp*
+originals renamed by `battleship_sys_objanim.c`'s `#define` block, so their
+compares are not editable. `include/nds/nds_mp_floor_crossing.h` is compiled on
+the host too, so a DS header cannot simply be added to it, and its constants are
+negative (`-epsilon`) which the `_C` forms do not accept.
+
+**Do not spend another cycle on comparisons.** The arithmetic is where the lane
+actually is: `fadd`+`fsub` 33.8M (3.46%), `fmul` 21.9M (2.24%), `fdiv` 10.1M
+(1.04%) — **6.74% against the compares' 1.32%** — and that needs a genuine
+fixed-point conversion of a whole subsystem, not a predicate swap. The header
+and the exhaustive checker stay because they make every future site free.
+
 ### The soft-float bill is MAPPED — 8.9% of non-idle work, and it is spread (cycle 108)
 
 First full attribution of the ARM9 soft-float helpers to the functions that
