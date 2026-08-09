@@ -810,42 +810,69 @@ NDS_R2_FIREBALL_QUAD ?= 1
 # never calls, and 15x what the board's 1.85-cycles-per-added-byte rule entitles
 # 672 bytes to. That placement artifact INVERTED the sign of a real -16,768 win.
 NDS_R2_PARTICLE_CAMERA_CACHE ?= 1
-# Drop the two pieces of gmCameraLookAtFuncMatrix that are dead or redundant.
-# Both are BIT-EXACT; see battleship_gmcamera.c.
+# Drop the four pieces of gmCameraLookAtFuncMatrix that are dead or redundant.
+# All BIT-EXACT; the derivations are in battleship_gmcamera.c.
 #
-#   W1  the max > 32000 rescale branch re-runs syMatrixLookAtReflectF with
-#       byte-identical arguments, and guMtxCatF writes gGMCameraMatrix rather
-#       than the look-at, so the first result is still live. Three sqrtf and
-#       ~30 mul/add for a value already held.
-#   W2  the closing syMatrixF2L writes through the caller's out-pointer, and
-#       the fighter display-contract caller (reloc_backend_renderer_dl.c:12607)
-#       discards it -- once per fighter per frame. Skipped for a NULL mtx;
-#       decomp's kind-0x4C caller still gets its matrix.
+#   W1   the max > 32000 rescale branch re-runs syMatrixLookAtReflectF with
+#        byte-identical arguments, and guMtxCatF writes gGMCameraMatrix rather
+#        than the look-at, so the first result is still live.
+#   W2   the closing syMatrixF2L writes through the caller's out-pointer, and
+#        the fighter display-contract caller (reloc_backend_renderer_dl.c:12614)
+#        discards it -- once per fighter per frame.
+#   W2b  the projection Mtx is WRITE-ONLY on this port. decomp publishes it as
+#        sGCMatrixProjectL for objdisplay.c, which this port does not compile;
+#        its renderer builds its own 20.12 projection from the same CObj. A
+#        literal-pool scan of the linked image finds exactly two references and
+#        both are those stores. A second 16-element conversion plus a 64-byte
+#        graphics-heap Mtx, twice a frame, feeding nothing.
+#   W3s  the concat is 69% zeros. syMatrixPerspFastF writes five non-zero
+#        elements; guMtxCatF still does 64 multiplies and 48 adds, 44+44 of them
+#        against a literal zero. Specialised to 20 multiplies and 4 adds with
+#        the left-to-right association preserved.
 #
-# MEASURED 2026-08-09, cycle 103, both-CPU tick-HUD ROM, whole 1,600-frame
-# match, ONE binary with the route poked at the first frame marker (so the two
-# arms are the same bytes and there is no cross-build placement floor at all --
-# the ROMs differ in exactly one .data byte, verified by byte-diff):
-#   WORK-H  P50 -1,728   P95 -1,152
-#   FTR     P50 -1,152   P95 -1,216   <- the bucket the work actually lives in
-# The FTR figure matches the mechanism to within noise: syMatrixF2L is 16
-# FTOFIX32 (an __aeabi_fmul plus an __aeabi_f2iz each), twice a frame, and
-# gNdsCameraMatrixLeanSkippedF2LCount confirmed exactly 2 skips per presented
-# frame for the whole match.
+# MEASURED 2026-08-09 on the both-CPU tick-HUD ROM, whole 1,600-frame match,
+# ONE binary with the route poked at the first frame marker -- so every arm is
+# the same bytes and there is no cross-build placement floor at all:
+#
+#   level 1 vs 0    W1+W2       WORK-H P50 -1,728  FTR P50 -1,152 P95 -1,216
+#   level 2 vs 1    +W3s        WORK-H P50 -1,664  FTR P50 -3,584 P95 -3,776
+#   level 3 vs 1    +W3s+W2b    WORK-H P50 -3,200  FTR P50 -5,248 P95 -5,312
+#
+# FTR is the bucket the work lives in and the only one that reads consistently
+# across P50, P95 and the repeat-free sub-window; WORK-H P95 spans 34K between
+# readings and is not resolvable at this magnitude, as the board's cycle-100 row
+# already established. Shipped cumulative FTR P50 -4,736 (levels 1 and 2).
+#
+# LEVEL 3 IS MEASURED AND HELD, and splitting it out is the only reason that was
+# discoverable. The first pass shipped 2 and 3 together on the argument that
+# "both are strictly less work at identical placement, so no decision depends on
+# the split" -- which was wrong, and cost a red Boundary plus four profile runs
+# to unpick. W2b does not merely remove work: dropping syMatrixAdvanceW stops
+# consuming 64 bytes of gSYTaskmanGraphicsHeap per call and MOVES EVERY LATER
+# ALLOCATION IN THE FRAME. Route 3 fails the Boundary realtime verifier's
+# locked-30 phase accounting (phaseLag=-1) deterministically; route 2 and route 0
+# pass; all three are the same ROM. See battleship_gmcamera.c and
+# docs/KNOWN_ISSUES.md. A change that moves an allocator is not a placement-free
+# change, whatever the .data route pairing says about its bytes.
 #
 # W1 NEVER FIRES in this milestone: gNdsCameraMatrixLeanRescaleCount stayed 0
-# across all 1,600 frames, so none of the win above is W1's. It is kept because
-# it is correct and free, not because it was measured to pay.
+# across all 1,600 frames in every arm, so none of the win is W1's. It is kept
+# because it is correct and free, not because it was measured to pay.
 #
-# Pixel bar ZERO and met: at the time_remain=3000 lock both arms are
-# PIXEL-IDENTICAL over the whole 400x298 top screen, at both captured tics,
-# while two ADJACENT tics of the same build differ on 83.0% of it. That floor is
-# what makes the identity mean something.
+# Pixel bar ZERO and met: at the time_remain=3000 lock the arms are
+# PIXEL-IDENTICAL over the whole 400x298 top screen at both captured tics, while
+# two ADJACENT tics of the same build differ on 83.0% of it -- that floor is what
+# makes the identity mean something. Captured for levels 1 and 3; level 2 is
+# level 3 minus a dead store, so it is bracketed by the pair, and the Boundary
+# profile's own visible-capture gates pass on the shipped level-2 build.
 #
-# This is the bit-exact half of the camera-matrix work. The fixed-point rebuild
-# of the same chain is a separate arm with an error budget, kept separate so a
-# pixel delta stays attributable.
-NDS_R2_CAMERA_MATRIX_LEAN ?= 1
+# This is the bit-exact work. A fixed-point rebuild of what remains -- one
+# look-at, one perspective, one 20-multiply concat -- is a separate arm with an
+# error budget, kept separate so a pixel delta stays attributable. Note before
+# briefing it that nds_task9_state_hash.c hashes gGMCameraStruct, which
+# syMatrixLookAtReflectF writes, so an approximated look-at moves the Task 9
+# hash and is not a free fidelity trade.
+NDS_R2_CAMERA_MATRIX_LEAN ?= 2
 # Draw Fox's source blaster model as its four baked, untextured vertices instead
 # of walking and decoding relocData 316's nine-command display list every
 # frame. Owner-playtested and accepted 2026-08-09; ON BY DEFAULT. The source

@@ -170,6 +170,30 @@ durable unresolved gaps.
   that evidence, 2026-07-22. Do not "fix" it by relaxing the canonicalizer.
 - **`verify-dev-fast.ps1` is red on the `battle_playable` locked-30 pacing
   contract.** Pre-existing emulator-fork artefact; see `PERF_LEDGER.md:14-22`.
+- **Freeing a per-frame graphics-heap allocation can turn the Boundary
+  locked-30 phase accounting red (`phaseLag=-1`), 2026-08-09.**
+  `NDS_R2_CAMERA_MATRIX_LEAN=3` drops a 64-byte `syMatrixAdvanceW` from
+  `gmCameraLookAtFuncMatrix`, which moves every later `gSYTaskmanGraphicsHeap`
+  allocation in the frame. Boundary then fails with
+  `gNdsBattlePlayablePacingPhasePresentCount` summing **one ahead of**
+  `gNdsBattlePlayablePacingPresentedFrames`; routes 0 and 2 of the *same ROM*
+  pass. That tuple is not one the harness's four reachable stop phases allow
+  (`verify-battle-mariofox-gcrunall-loop-harness.ps1:770-815`), and it should be
+  unreachable: each counter has exactly one write site, `taskman_seam.c:4918`
+  then `:5054`, ordered presented-then-phase with no early return between them,
+  and both reset sites zero them together. So either the pacing accounting has a
+  real off-by-one that only some allocation layouts expose, or the stop-phase
+  model is incomplete. **Level 3 is held off by default pending that answer** --
+  the reproduction is one `-SetGlobals` poke.
+- **A `.data` route pairing does NOT make an arm placement-free if the arm
+  changes an allocator.** The pairing guarantees identical *text*; it says
+  nothing about where the frame's heap objects land. Split any candidate that
+  both removes work and removes an allocation into two levels and measure them
+  separately -- the row above is what conflating them costs.
+- **The `battle_playable_realtime` verifier run STANDALONE fails `phaseLag=-1`
+  on every arm, including commits the full profile passes.** It is only a valid
+  gate inside `verify-all.ps1 -Profile Boundary`. Do not bisect with it alone;
+  that reading exonerated a change the profile then convicted.
 - **`Select-Object -First N` terminates the upstream pipeline.** It has killed a
   build and a census mid-flight and left directories that looked like ordinary
   failures. Redirect harness output to a log and filter with `Select-String`.

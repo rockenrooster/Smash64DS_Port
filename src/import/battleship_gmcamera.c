@@ -67,9 +67,21 @@ void mpCollisionGetPlayerMapObjPosition(s32 player, Vec3f *pos);
 
 #undef gmCameraLookAtFuncMatrix
 
-/* TWO PIECES OF THIS FUNCTION ARE DEAD OR REDUNDANT, both bit-exact to remove.
- * Neither is a fixed-point change; they are here because they shrink what the
- * fixed-point conversion has to convert and they cost nothing to prove.
+/* FOUR PIECES OF THIS FUNCTION ARE DEAD OR REDUNDANT, all bit-exact to remove.
+ * None is a fixed-point change; they are here because they shrink what a
+ * fixed-point conversion would have to convert and they cost nothing to prove.
+ * The route word is a LEVEL so one binary can be poked through every
+ * combination with byte-identical placement:
+ *
+ *   0  decomp original
+ *   1  W1 + W2      shipped 2026-08-09 (cycle 103), WORK-H P50 -1,728
+ *   2  + W3s        sparse concat -- SHIPPED DEFAULT
+ *   3  + W2b        drop the dead projection F2L, its heap Mtx and its publish
+ *                   -- MEASURED AND NOT SHIPPED, see ndsCameraPublishPersp
+ *
+ * The levels stay because level 3 is an open question, not a spent scaffold:
+ * deleting them would delete the reproduction. Collapse them when W2b is
+ * resolved either way.
  *
  * W1 -- THE SECOND LOOK-AT IS REDUNDANT. gmcamera.c:985 runs the whole chain
  * twice when gmCameraGetMatrixMax() exceeds 32000: perspective, F2L, look-at,
@@ -89,6 +101,11 @@ void mpCollisionGetPlayerMapObjPosition(s32 player, Vec3f *pos);
  * from the graphics heap), so skipping the conversion when the caller passes
  * NULL is exact. decomp's own kind-0x4C caller keeps it and still gets it.
  *
+ * W2b -- THE PROJECTION MATRIX IS WRITE-ONLY ON THIS PORT. See
+ * ndsCameraBuildPersp below.
+ *
+ * W3s -- THE CONCAT IS 69% ZEROS. See ndsCameraCatLookAtPersp below.
+ *
  * Gated at RUNTIME on a .data word, not a #if, for the reason cycle 101 paid
  * for: a compile-time gate moved 672 bytes of `.main` and inverted the sign of
  * a real win through FTR placement alone. Both A/B arms must link identical. */
@@ -97,14 +114,119 @@ volatile u32 gNdsCameraMatrixLeanEnabled
 
 volatile u32 gNdsCameraMatrixLeanRescaleCount;
 volatile u32 gNdsCameraMatrixLeanSkippedF2LCount;
+volatile u32 gNdsCameraMatrixLeanSkippedProjectCount;
+
+/* W2b -- THE PROJECTION MATRIX IS WRITE-ONLY ON THIS PORT. decomp converts
+ * gGCMatrixPerspF into a graphics-heap Mtx and publishes it as
+ * sGCMatrixProjectL for objdisplay.c:804-833 and :2887-2917, which emit it as
+ * G_MW_MATRIX move-words. This port does not compile objdisplay.c -- the
+ * renderer is reloc_backend_renderer_dl.c, and for this very camera it builds
+ * its OWN 20.12 projection from the same CObj (:2891-2905, kind 0x4C). A scan
+ * of the linked image finds exactly TWO references to sGCMatrixProjectL and
+ * both are the stores here. So the syMatrixF2L, the 64-byte graphics-heap
+ * allocation and the store are all dead: a second sixteen-element
+ * float-to-fixed conversion, twice a frame, feeding nothing.
+ *
+ * The pointer would be NULLed rather than left stale, so that if objdisplay.c
+ * is ever imported it faults on the first read instead of quietly rendering
+ * through a matrix left in an earlier frame's graphics heap.
+ *
+ * IT IS NOT SHIPPED, AND THE REASON IS NOT THIS FUNCTION. Dropping the
+ * syMatrixAdvanceW also stops consuming 64 bytes of gSYTaskmanGraphicsHeap per
+ * call, which MOVES EVERY LATER ALLOCATION IN THE FRAME. With it on, the
+ * Boundary realtime verifier fails its locked-30 phase accounting
+ * (phaseLag=-1: gNdsBattlePlayablePacingPhasePresentCount sums one ahead of
+ * gNdsBattlePlayablePacingPresentedFrames), deterministically, on a
+ * byte-identical binary -- route 3 red, route 0 green, same ROM. Neither
+ * counter has a second write site and the present path is presented-then-phase
+ * with no early return between them, so that skew is unexplained, and an
+ * unexplained state difference is a failure. Left at level 3, off by default,
+ * with the reproduction recorded, rather than shipped or deleted.
+ *
+ * project_mtx == NULL is the "skip it" request; the Mtx is allocated ONCE by
+ * the caller, exactly as decomp does, so the rescale pass reuses it rather than
+ * advancing the heap a second time. */
+static void ndsCameraPublishPersp(CObj *cobj, f32 scale, Mtx *project_mtx)
+{
+    syMatrixPerspFastF(gGCMatrixPerspF, &cobj->projection.persp.norm,
+                       cobj->projection.persp.fovy,
+                       cobj->projection.persp.aspect,
+                       cobj->projection.persp.near,
+                       cobj->projection.persp.far,
+                       scale);
+    if (project_mtx == NULL)
+    {
+        gNdsCameraMatrixLeanSkippedProjectCount++;
+    }
+    else
+    {
+        syMatrixF2L(&gGCMatrixPerspF, project_mtx);
+        sGCMatrixProjectL = project_mtx;
+    }
+}
+
+/* W3s -- THE CONCAT IS 69% ZEROS. syMatrixPerspFastF (matrix.c:575) writes only
+ * FIVE non-zero elements -- [0][0], [1][1], [2][2], [2][3] and [3][2] -- and
+ * explicitly stores 0 into the other eleven, [3][3] included. guMtxCatF
+ * (libultra/gu/mtxcatf.c) is a general 4x4 product: 64 multiplies, 48 adds and
+ * a sixteen-element temp copy, of which 44 multiplies and 44 adds are against a
+ * literal zero. What is left is 20 multiplies and 4 adds.
+ *
+ * BIT-EXACT, and the association is preserved rather than merely equivalent.
+ * guMtxCatF accumulates left to right, so for column 2 it forms
+ * (((l0*0 + l1*0) + l2*P22) + l3*P32); a zero of either sign is the additive
+ * identity for every finite value, so that reduces to exactly
+ * (l2*P22) + l3*P32 -- the same two products and the same single add, in the
+ * same order. The only representable difference is the SIGN of a zero result,
+ * which no consumer of gGMCameraMatrix can observe: func_ovl2_800EB924
+ * (ftparam.c:2421) reciprocates a value already clamped away from zero by
+ * |scale| < 0.1, and gmCameraGetMatrixMax takes ABSF.
+ *
+ * Each row is read whole before it is written, so `out` may alias either input
+ * -- which is the only thing guMtxCatF's temp[4][4] was buying. */
+static void ndsCameraCatLookAtPersp(Mtx44f look_at, Mtx44f persp, Mtx44f out)
+{
+    const f32 p00 = persp[0][0];
+    const f32 p11 = persp[1][1];
+    const f32 p22 = persp[2][2];
+    const f32 p23 = persp[2][3];
+    const f32 p32 = persp[3][2];
+    u32 i;
+
+    for (i = 0u; i < 4u; i++)
+    {
+        const f32 l0 = look_at[i][0];
+        const f32 l1 = look_at[i][1];
+        const f32 l2 = look_at[i][2];
+        const f32 l3 = look_at[i][3];
+
+        out[i][0] = l0 * p00;
+        out[i][1] = l1 * p11;
+        out[i][2] = (l2 * p22) + (l3 * p32);
+        out[i][3] = l2 * p23;
+    }
+}
+
+static void ndsCameraCatCamera(u32 level, Mtx44f look_at)
+{
+    if (level >= 2u)
+    {
+        ndsCameraCatLookAtPersp(look_at, gGCMatrixPerspF, gGMCameraMatrix);
+    }
+    else
+    {
+        guMtxCatF(look_at, gGCMatrixPerspF, gGMCameraMatrix);
+    }
+}
 
 sb32 gmCameraLookAtFuncMatrix(Mtx *mtx, CObj *cobj, Gfx **dls)
 {
-    Mtx *temp_mtx;
+    const u32 level = gNdsCameraMatrixLeanEnabled;
+    Mtx *temp_mtx = NULL;
     Mtx44f look_at_f;
     f32 max;
 
-    if (gNdsCameraMatrixLeanEnabled == 0u)
+    if (level == 0u)
     {
         /* NULL must be safe on BOTH paths, or the control arm would fault the
          * moment the caller below starts passing it. decomp's version writes
@@ -116,39 +238,31 @@ sb32 gmCameraLookAtFuncMatrix(Mtx *mtx, CObj *cobj, Gfx **dls)
         return battleship_gmCameraLookAtFuncMatrix(
             (mtx != NULL) ? mtx : &discarded, cobj, dls);
     }
-    syMatrixAdvanceW(temp_mtx, gSYTaskmanGraphicsHeap);
-
-    syMatrixPerspFastF(gGCMatrixPerspF, &cobj->projection.persp.norm,
-                       cobj->projection.persp.fovy,
-                       cobj->projection.persp.aspect,
-                       cobj->projection.persp.near,
-                       cobj->projection.persp.far,
-                       cobj->projection.persp.scale);
-    syMatrixF2L(&gGCMatrixPerspF, temp_mtx);
-    sGCMatrixProjectL = temp_mtx;
+    if (level < 3u)
+    {
+        syMatrixAdvanceW(temp_mtx, gSYTaskmanGraphicsHeap);
+    }
+    else
+    {
+        sGCMatrixProjectL = NULL;
+    }
+    ndsCameraPublishPersp(cobj, cobj->projection.persp.scale, temp_mtx);
 
     syMatrixLookAtReflectF(&look_at_f, &gGMCameraStruct.look_at,
                            cobj->vec.eye.x, cobj->vec.eye.y, cobj->vec.eye.z,
                            cobj->vec.at.x, cobj->vec.at.y, cobj->vec.at.z,
                            cobj->vec.up.x, cobj->vec.up.y, cobj->vec.up.z);
-    guMtxCatF(look_at_f, gGCMatrixPerspF, gGMCameraMatrix);
+    ndsCameraCatCamera(level, look_at_f);
 
     max = gmCameraGetMatrixMax();
 
     if (max > 32000.0F)
     {
         gNdsCameraMatrixLeanRescaleCount++;
-        syMatrixPerspFastF(gGCMatrixPerspF, &cobj->projection.persp.norm,
-                           cobj->projection.persp.fovy,
-                           cobj->projection.persp.aspect,
-                           cobj->projection.persp.near,
-                           cobj->projection.persp.far,
-                           32000.0F / max);
-        syMatrixF2L(&gGCMatrixPerspF, temp_mtx);
-        sGCMatrixProjectL = temp_mtx;
+        ndsCameraPublishPersp(cobj, 32000.0F / max, temp_mtx);
         /* W1: look_at_f still holds the first call's result, and the arguments
          * have not changed. The source recomputes it here; we reuse it. */
-        guMtxCatF(look_at_f, gGCMatrixPerspF, gGMCameraMatrix);
+        ndsCameraCatCamera(level, look_at_f);
     }
     /* W2 */
     if (mtx != NULL)
