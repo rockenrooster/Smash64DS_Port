@@ -58,27 +58,18 @@ the CPU owns the vertex. Board carries all of it.
 
 ## What is dead, so nobody re-derives it
 
-- **Projectiles** — weapon DObj submit medians **44 ticks/frame**. Fox's laser
-  and Mario's fireball are not the tail. Native projectile owners are
-  architecture work, not gate work.
-- **Particles** — flat ~47,000/frame, hot–cold delta 4,838, inside the floor.
-  A P50 lever, never a gate lever. This retires SwitchPlan §7 option 2 (15 Hz
-  round-robin) as a *gate* answer.
-- **Texture thrash** — 1 upload per ~1,408 frames, 0 evictions, 0.0071% of the
-  effect cost. `Tex` is entirely cache-**hit** key-build/hash/lookup.
-- **`Find`** (0.44%) and **`Material`** (0.25%) — both named prime suspects,
-  both refuted. `Material` also clears §3.11: it bump-allocates from
-  `gSYTaskmanGraphicsHeap` with its caller saving/restoring the pointer and
-  bounds-checking, so it cannot block the way `syMallocSet` can.
-- **`FTR` as the gate** — flat only inside the bad window; across the match it
-  drops −161,024 on `MISC`-hot frames and is **anti-correlated** with the tail.
-- **Task 56 strips** — REVERT, and not for the recorded reason: 1,878 → 1,012
-  vertices links in, but **the ROM hangs the present loop** (cannot reach
-  presented frame 12 in 900 s; control does frames 10–13 in 30 s). Three
-  attempts, two builds, three days. The `PERF_LEDGER` KILL row citing `FTR`
-  +5,824 has no completed run behind it.
-- **L7 fixed-point collision** — wired, priced at +534 won against 6,481 lost to
-  its own text, removed. Collision is 2.9% of the over-gate premium.
+- **Projectiles** — weapon DObj submit medians **44 ticks/frame**; not the tail.
+- **Particles** — flat ~47,000/frame, hot–cold delta 4,838. A P50 lever only,
+  which retires SwitchPlan §7 option 2 (15 Hz round-robin) as a *gate* answer.
+- **Texture thrash** — 1 upload per ~1,408 frames, 0 evictions. `Tex` is
+  entirely cache-**hit** key-build/hash/lookup.
+- **`Find`** (0.44%) and **`Material`** (0.25%) — both refuted; `Material` also
+  clears §3.11 (bump-allocates with the caller bounds-checking).
+- **`FTR` as the gate** — anti-correlated with the tail across the match.
+- **Task 56 strips** — REVERT: **the ROM hangs the present loop** (no presented
+  frame 12 in 900 s against 10–13 in 30 s). The `PERF_LEDGER` KILL row citing
+  `FTR` +5,824 has no completed run behind it.
+- **L7 fixed-point collision** — +534 won against 6,481 lost to its own text.
 
 ## The interpreter is honestly generic — ANSWERED, there is no overrun to fix
 
@@ -106,24 +97,40 @@ Two separate shortages, both real, both nearly spent:
 reverted: 10,336 consults, **471 hits (4.56%)**, 7,517 evictions of 7,525 fills,
 `Tex` ticks *up*; working set ~175 keys ≈ 6.3 KB.
 
-## Next single step — the force-load hit path, worth 121,331 at P95
+## Next single step — one PRE-FINALIZED resident copy per warmed animation
 
-**Cycle 105 removed the cartridge I/O; what is left on those frames is the work
-around it.** Per-frame probe over frames 1100–1129: *every* `SINT` spike is a
-frame with `gNdsR204AnimForceLoadTotal` +1 and every other frame is +0 (5 of 30,
-no exceptions), with payload and header reads **+0 on all thirty**. So a cache
-**hit** costs 117,000–570,000 ticks. `Makefile:307`'s
-`NDS_R2_RELOC_FIXUP_TIMING` already exists to price
-`ndsRelocFinalizeLoadedFile`'s five passes, and R2-06 E8 had already traced 8 of
-9 over-gate frames to the frames it runs on. Capping `SINT` at its median takes
-P95 1,447,318 → 1,325,987. The fixups are a pure function of a byte-identical
-cached image: price a warm-time fixup offset list, or an (asset_id, destination)
-keyed post-fixup cache — the "position-dependent" objection is about a
-*different* heap, and the destination is caller-owned and reused (R2-04 E0).
+**Cycle 105 removed the cartridge I/O; cycle 106 priced what is left.** Every
+remaining `SINT` spike is a force-load frame (per-frame probe, 5 of 30, no
+exceptions either way) with payload and header reads **+0**, so a cache *hit*
+costs 117,000–570,000 ticks. Worth **121,331 at P95** (capping `SINT` at its
+median gives 1,325,987). Attribution is **25.1%**: `ndsRelocFinalizeLoadedFile`'s
+AObj16 pass 16.2%, `gcAddDObjAnimJoint` 5.4%, the rest of the fixups 1.8%,
+`gcAddAnimJointAll` 1.7%. The other 74.9% is unattributed.
 
-**Do not re-audit the Makefile's `?= 0` flags.** Cycle 105 diffed them against
-the shipped `nds_build_config.h`: 41 are overridden and every large measured
-lever is already on. It cost one null build. Board carries the survivors.
+**Do not bring a micro-fix.** R2-06 E11's rule, re-proved twice this cycle:
+*a load-frame-only saving of ~8,000 ticks cannot be banked through P95, because
+relinking moves the tail by more than the saving.* Either clear ~16,000 of tail
+movement in one change, or **move the work off the gameplay frame** — which is
+what cycle 105's arena fix did for the I/O half. The shape: pre-finalize each
+warmed animation once, so the force load returns a pointer instead of memcpy +
+fixups + swap + normalize. Blockers to answer first: fixups write absolute
+pointers from `loaded->data`; normalization writes `command->u` **in place**;
+the destination is caller-owned via `lbRelocGetForceExternHeapFile(file_id,
+heap)`. It must REPLACE the per-load destination copy — 197,184 more bytes do
+not exist.
+
+**Do not re-derive these; each is already documented where it lives.** The
+Makefile's `?= 0` defaults are not the shipped config (41 overridden, every large
+lever already on). `.text.hot` is closed in both directions
+(`linker/nds_hot_text.ld:179-201`) and the Task 37 census sections C/D are a cost
+ranking, never a placement prediction. Hoisting the animation range check in
+`ndsRelocAssetIDForToken` was done by R2-06 E11 and lost
+(`reloc_backend_assets.c:1840-1895`). Between them these cost one null build to
+re-learn.
+
+**Latent cliff, unowned:** `sNdsAObjEvent32NormalizedCount` reads **973 of 1,024**
+after one minute. Overflow makes `ndsAObjEvent32NormalizeScript` return FALSE and
+the caller then **skips the animation attach entirely**. 8 bytes an entry.
 
 **The heap is spent.** `gNdsTaskmanGeneralHeapFreeMin` is 42,136 against the
 anim cache's 32,768 `KEEP_FREE` — 9,368 of margin. Free `.bss` before taking

@@ -1878,6 +1878,88 @@ list built once at warm time, or a (asset_id, destination) keyed cache of the
 `reloc_backend_assets.c` is about replaying into a DIFFERENT heap, and R2-04 E0
 already recorded that the destination is caller-owned and reused.
 
+### The force-load frame is PARTLY ATTRIBUTED (25.1%), and the rest needs a design not a micro-fix (cycle 106)
+
+Two instrument builds, both flags the Makefile already carried for this exact
+question. `builds/build-c106-loadsplit`
+(`NDS_R2_LOADFRAME_TIMING=1 NDS_R2_RELOC_FIXUP_TIMING=1`), whole match, gate arm,
+frames 443–2042; artifact `artifacts/performance/2026-08-09_c106-loadsplit.json`.
+Denominator: total `SINT` above its own median across the 1,600 frames =
+**63,115,584**.
+
+| owner | ticks/match | % of the `SINT` excess |
+|---|---:|---:|
+| `ndsRelocFinalizeLoadedFile` **AObj16 pass** | 10,236,800 | **16.2%** |
+| — of which Normalize / Swap / Successor | 4,168,960 / 3,250,752 / 1,704,320 | 6.6 / 5.2 / 2.7 |
+| `gcAddDObjAnimJoint` (6,459 calls) | 3,422,272 | 5.4% |
+| Fixup Internal + External + Attributes | 1,122,176 | 1.8% |
+| `gcAddAnimJointAll` (55 calls) | 1,075,008 | 1.7% |
+| **accounted** | **15,856,256** | **25.1%** |
+
+E8's split reproduces: relocation 18.0% here against its 21.5%. **But the add
+wrappers capture only 7.1%, so "the action change is ~78%" is true and
+`gcAdd*AnimJoint*` is NOT where it lives** — 74.9% (47.3M ticks, ~134,000 per
+force load) is still unattributed. `FixupSpritesTicks` 22,448,768 against
+`FinalizeMaxTicks` 21,776,704 is ONE call at scene load, outside the window;
+exclude it from any in-match figure.
+
+**The whole-frame profile, gate arm, is banked** —
+`artifacts/performance/2026-08-09_c106-profile/` (`census.{txt,json}`,
+`arm9-profile.csv`), 400 frames from 441, per-frame regions, 1.21G cycles,
+14.4M PCs, 1,205 of 3,545 FUNC symbols hit. Read section A (total cycles) as the
+current cost ranking; **read section E's over-gate split with care on this ROM**
+— the profiler build is slow enough that the 2-VBlank threshold marks 307 of 400
+frames, so `armWaitForIrq` takes 58.9% of the "premium" and that is quantised
+idle, not work. Instrument rows to discount in E: `ndsPlatformRenderDebugHud`
++40,955 plus the printf family (`_svfiprintf_r`, `_vfiprintf_r`,
+`__ssvfiscanf_r`, `consolePrintChar`, `__utf8_mbtowc`) ≈ 72,700/frame together —
+that is the tick HUD's own text and the shipped ROM pays none of it.
+
+**Three levers this profile pointed at were ALREADY TRIED AND DOCUMENTED. Read
+the owning file before building any of them again.**
+
+- **`.text.hot` placement.** Section C ranks `ndsR2CubicValueFixed` (2,032 B) the
+  #1 unplaced candidate for the 3,936 free bytes, exactly as it did for R2-03
+  E66 — which admitted it and measured **`WORK-H` P95 +24,448**, P90 +8,000,
+  over-gate 7 → 8. `linker/nds_hot_text.ld:179-201` carries that and the Task 94
+  regression on the same list. **`.text.hot` is closed in both directions, and
+  census sections C/D are a cost ranking, never a placement prediction.**
+- **Hoisting the animation range check in `ndsRelocAssetIDForToken`.** R2-06 E11
+  did it, with negative bytes added: the function fell 39,475 → 31,808 per load
+  frame and **still lost** — `WORK-H` P95 +15,744, P99 +59,200, over-gate 9 → 11.
+  `reloc_backend_assets.c:1840-1895` carries the full reasoning.
+- **The `ndsAObjEvent32Normalized` linear scan.** Looks O(n²) — a 1,024-entry
+  scan called from inside the command loop — but measured, the whole match makes
+  **448** `NormalizeScript` calls (125 new + 323 reuse) over **973** commands, so
+  it is ~1,375 ticks/frame and cannot be the spike.
+
+**But that scan has a LATENT CORRECTNESS CLIFF worth its own row.**
+`sNdsAObjEvent32NormalizedCount` reads **973 of `NDS_AOBJ_EVENT32_NORMALIZED_MAX`
+1,024** at the end of a one-minute match, with `NormalizeFailCount` 0 — a
+**51-entry margin**. Overflow takes the `ndsAObjEvent32Reject(12u, …)` path,
+which returns FALSE, and the caller then **skips `ndsBaseGcAddDObjAnimJoint`
+entirely** — i.e. the animation silently does not attach. A longer match, a
+rematch, or a wider moveset would hit it. It is a table bound, not a heap bound,
+so raising it costs 8 bytes an entry in `.bss`.
+
+**What the next row must be, and the size it has to clear.** E11's own conclusion
+is the standing rule now: *"a load-frame-only saving of ~8,000 ticks cannot be
+banked through P95 here, because relinking moves the tail by more than the
+saving. Either remove this work in one change large enough to clear ~16,000 of
+tail movement, or move it off the gameplay frame entirely."* Cycle 105's arena
+fix is what that looks like when it works — it moved the I/O off the frame rather
+than making it faster. The equivalent for the remaining half is the **second**
+repair E8 named: one **pre-finalized, resident** copy per warmed animation, so
+the force load returns a pointer instead of memcpy + fixups + swap + normalize.
+Design blockers to answer first, in order: the fixups write absolute pointers
+derived from `loaded->data` (so a shared copy pins the destination), normalization
+writes `command->u` **in place** (so the resident image is mutated — establish
+whether anything writes the script after that), and the destination is
+caller-owned through `lbRelocGetForceExternHeapFile(file_id, heap)`.
+**RAM is the hard constraint: 85 × ~2,319 = 197,184 more bytes do not exist**
+(heap free-min 42,136), so this has to REPLACE the per-load destination copy, not
+sit beside it.
+
 ### The dormant-flag seam is EXHAUSTED — audited, cycle 105, no build
 
 Prompted by the "audit the 0 flags" rule. **The Makefile's `?= 0` defaults are
