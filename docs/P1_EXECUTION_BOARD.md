@@ -2470,6 +2470,63 @@ fails on performance first. `NDS_DREAMLAND_DS_MESH` is untested and is a
 transfer to it — but price its per-frame cost against the same 99.9% cache
 before building an A/B.
 
+### NEXT TARGET, fully specified: the port-side collision lane (5.46% of non-idle)
+
+`SINT`'s second child, `ftComputerProcessAll` (+24,386 over-gate), is **not AI
+logic** — it is map collision, and unlike the animation lane **every hot symbol
+is ours**, with no decomp-include problem blocking an edit.
+
+| symbol | self | soft float | sf calls |
+|---|---:|---:|---:|
+| `mpCollisionGetFCCommonFloor` | 7,533,938 | 3,389,278 | 144,408 |
+| `ndsStageMPSweepFloorLoopSweep` | 6,447,004 | 1,596,312 | 98,126 |
+| `ndsMPFindLineEndpoints` | 5,366,814 | 434,355 | 25,856 |
+| `ndsStageMPAdjustFloorLoopWallSweep` | 4,078,548 | 3,301,075 | 98,857 |
+| `ndsStageCollisionLoopGeometryReady` | 4,075,073 | — | — |
+| `ndsMPFCSegmentCrossesKernel` | 3,460,265 | 4,958,252 | 224,280 |
+| +4 more | 8,683,678 | 91,305 | 5,431 |
+| **total** | **39,645,320** | **13,770,577** | |
+
+**53,415,897 cycles = 5.46% of non-idle, ~60,400 ticks/frame at P50.**
+
+**The diagnosis, per helper per function** (`__aeabi_i2f` 16.80 cyc/call,
+`fsub` 36.43, `fdiv` 109.38):
+
+- **`__aeabi_i2f`: 149,821 calls, 2,516,993 cycles.** 73,530 of them in
+  `ndsStageMPSweepFloorLoopSweep` alone — **77% of that function's soft float**.
+  They exist because `ndsMPVertexX/Y` return `s32` decoded from **s16** stage
+  data (`reloc_backend_mp_collision.c:288-296`) while
+  `ndsMPFCSegmentCrossesKernel` takes `float`. **Dream Land's collision geometry
+  is static** — the stage does not move — so every one of these conversions
+  recomputes a constant.
+- **`__aeabi_fsub`: 68,164 in the kernel + 47,991 in the wall sweep =
+  4,231,527 cycles.** The kernel's first act is `sx = v2_x - v1_x; sy = v2_y -
+  v1_y` — **per-line constants**, recomputed on every one of 224,280 calls,
+  along with the four `min_x/max_x/min_y/max_y` comparisons right after them.
+- **`__aeabi_fdiv`: 11,684 calls, 1,278,000 cycles** at 109 cycles each.
+
+**The fix is precomputation, and it is small.** E51 already established that
+**Dream Land has 7 collision lines total**
+(`reloc_backend_mp_collision.c:350-354`). A per-line record of
+`v1x, v1y, v2x, v2y, sx, sy, min_x, max_x, min_y, max_y` as `f32` is **7 x 40 =
+280 bytes**, built once when the stage geometry is bound, and it deletes the
+i2f conversions, the sx/sy subtractions and the min/max comparisons from the
+per-query path.
+
+**This is NOT the thing E51 refuted.** E51 killed a `line_id -> (group, kind)`
+lookup table on the grounds that the `yakumono_count` loop has a trip count of
+one, i.e. there was no O(n) to remove. This removes *conversions and repeated
+arithmetic on static data*, not loop iterations. Different mechanism, and the
+7-line count E51 measured is what makes this cheap rather than what makes it
+pointless.
+
+**Risk note for whoever takes it:** this is gameplay collision — the subsystem
+behind "fighters floating under the stage" in `BUGS.md`, and the kernel's own
+header warns that proximity alone must never report a hit. The cache must be
+invalidated on stage bind, and Boundary is mandatory, not optional. It is the
+highest-value remaining target and it deserves a fresh session, not the tail of
+one.
+
 ### The soft-float-free kernel is NOT a measured win — placement ate it
 
 Both cuts are in, exact and Boundary-verified, and together they delete
