@@ -3457,6 +3457,46 @@ and routes "fixed pose -> fixed local matrix" to stage 2 **gated on profiling
 justifying it**. The 62-site count is the beginning of that justification, not the
 end of it — the counter is.
 
+### The counter answered it: the local-matrix fallback is DEAD, 0 of 101,569
+
+Counted the arms of `ndsRendererAdapterBuildDObjLocalMatrix` before editing it,
+and the answer refutes the hypothesis in the row above.
+
+| arm | count | verdict |
+|---|---:|---|
+| xobj matrices (`valid != FALSE`) | **101,528** | the live path, ~50 calls/frame |
+| **fallback** (`BuildDObjFallbackMtx` + `MtxFromN64`) | **0** | **never executes on the gate arm** |
+| mvp-recalc identity | 41 | negligible |
+
+**My guess was wrong, and cheaply.** I predicted the 36 `fmul` were
+`ndsRendererAdapterMtxFromN64` converting a float `Mtx` to 20.12 — the classic
+fixed-pose boundary. That arm runs **zero** times in a 60-second both-CPU match,
+so whatever float it contributes to the symbol's 62 `bl __aeabi_*` is dead code
+the linker kept. **62 static sites overstates the executed cost by an unknown
+margin, and that is exactly what a static count cannot tell you.** Fourth time
+this cycle that counting beat inferring; the cost was one build instead of a
+rewrite of a matrix path that feeds every fighter's world transform.
+
+**What executes is the xobj path** — `ndsRendererAdapterBuildDObjXObjMatrix` and
+`ndsRendererAdapterMulInto`, both inlined into the one symbol, so they cannot be
+attributed by symbol. `BuildDObjFallbackMtx` is the only callee that survived
+separately, at 26 instructions and **0** soft-float calls.
+
+**The next step is FREE and needs no build or run.** Per-PC attribution restricted
+to this symbol off the existing profile CSV (`--split-by-symbol` plus a per-PC
+join) will say which of the 62 sites execute and at what cyc/ex, the same way the
+33.1-cyc/ex load in the parser was found. Do that before writing anything: if the
+executed float is a handful of runtime-float multiplies in the xobj compose, the
+exact-converter technique the parser slice proved applies directly; if it is
+dominated by dead-but-linked `MtxFromN64`, the FTR half is closed and the
+remaining pre-submission cost is the material snapshot's own derivation.
+
+**Calls per frame is the number to size any fix against:** 101,569 / 2,038 ≈
+**49.8 builder calls per presented frame**, consistent with ~25 joints x 2
+fighters. A cut of one soft-float call per call is worth ~50 helper invocations a
+frame — about 1,250 cycles at fmul's 25.17 — so a fix here needs to delete
+several per call to clear the placement term.
+
 ### FTR pre-submission: the asset lookup is NOT the seam — my premise was 6x wrong
 
 `FTR_STG_OPTIMIZATION.md` asks for traversal and policy work to be deleted from

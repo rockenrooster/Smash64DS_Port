@@ -1747,6 +1747,12 @@ static sb32 ndsRendererAdapterIsMvpRecalcKind(u32 kind)
         TRUE : FALSE;
 }
 
+/* Which arm of the local-matrix builder actually runs. See the block comment at
+ * the fallback arm below for why this is a counter and not yet a fix. */
+volatile u32 gNdsFtrLocalMtxXObj;
+volatile u32 gNdsFtrLocalMtxFallback;
+volatile u32 gNdsFtrLocalMtxRecalc;
+
 static sb32 ndsRendererAdapterBuildDObjLocalMatrix(
     DObj *dobj, NDSRendererMatrix20p12 *out)
 {
@@ -1785,13 +1791,37 @@ static sb32 ndsRendererAdapterBuildDObjLocalMatrix(
         {
             /* The source special callback can legally follow the current
              * parent/camera matrix without another local affine transform. */
+            gNdsFtrLocalMtxRecalc++;
             ndsRendererAdapterMtxIdentity20p12(out);
         }
         else
         {
+            /* Cycle 109 counter, and it is deliberately a counter and not a fix.
+             *
+             * This function disassembles to 62 `bl __aeabi_*` -- 36 fmul, 10
+             * fadd, 7 fcmpeq, 6 fdiv, 3 fsub -- which is MORE soft-float sites
+             * than the figatree parser carried, and it runs per joint per frame.
+             * But its own body is already fixed point (s32 translate/scale,
+             * rotations read through ndsFloatBits, sin/cos table), so all of that
+             * float lives in its INLINED callees, and this arm is the candidate:
+             * ndsRendererAdapterMtxFromN64 converts a float Mtx to 20.12, which
+             * is the shape 36 fmul would take.
+             *
+             * 62 static call sites is not 62 executions, and that mistake has
+             * cost this campaign three times -- a 6x error on the material
+             * lookup seam this same cycle, and the animation lever killed at
+             * 1.64x its target before that. So: count which arm runs before
+             * touching either. Fallback hot => the exact-converter technique the
+             * parser slice proved applies here next. Fallback cold => the xobj
+             * matrices own the float and this arm is not the lever. */
+            gNdsFtrLocalMtxFallback++;
             ndsRendererAdapterBuildDObjFallbackMtx(dobj, &mtx);
             ndsRendererAdapterMtxFromN64(&mtx, out);
         }
+    }
+    else
+    {
+        gNdsFtrLocalMtxXObj++;
     }
 #if NDS_TASK91_DRAW_PHASE_CENSUS
     ndsRendererAdapterTask91LocalMemoProbe(dobj, out);
