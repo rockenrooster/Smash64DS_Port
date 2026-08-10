@@ -3372,7 +3372,130 @@ static void ndsRendererAdapterSetShuffleOffset(const FTStruct *fp)
 }
 #endif
 
+#if NDS_RENDERER_HW_TRIANGLES
+/* ---------------------------------------------------------------------------
+ * The flat baked world compose.
+ *
+ * The shipped path asks `ndsRendererAdapterBuildDObjWorldMatrix` for each of the
+ * 14/18 selected bindings independently. Because that entry point knows nothing
+ * about the order it is being called in, it pays for the ignorance every time: a
+ * linear-probed hash lookup on the binding, a walk all the way to the root, one
+ * hash probe per ancestor looking for a prefix somebody already built, and a
+ * hash store per composed step. The census prices the machinery at
+ * `BuildDObjWorldMatrix` self 13,947 + `FindDObjWorldMatrix` 4,385 = 18,332
+ * ticks/frame -- against ~50 local builds a frame whose arithmetic this does not
+ * touch. That ratio is the whole point: the cost is the traversal and the cache
+ * around the arithmetic, not the arithmetic.
+ *
+ * The order is not unknown, it is baked. `BindingParents` gives each binding's
+ * nearest BOUND ancestor and the generator derives it from a preorder joint
+ * list, so `binding_parents[i] < i` always -- one forward pass composes every
+ * world with no cache at all, each binding starting from its parent binding's
+ * finished world and walking only the one to three joints between them.
+ *
+ * Two things this deliberately does NOT do. It does not use `BindingParents` as
+ * if it were the DObj parent -- the table skips unbound joints, so the live
+ * chain between two bindings still has to be walked and composed, and treating
+ * the table as a direct parent would silently drop those transforms. And it does
+ * not stop storing prefixes: the generic display-list path shares this hash for
+ * effects parented under fighter joints, so every joint it composes is still
+ * published. What is deleted is the probing, not the publishing.
+ *
+ * Fail-closed: any disagreement between the baked table and the live tree
+ * returns FALSE and the caller falls back to the per-binding path. */
+u32 gNdsR2FtrFlatCompose = 1u;
+u32 gNdsR2FtrFlatComposeCalls;
+u32 gNdsR2FtrFlatComposeRejects;
+
+static sb32 ndsRendererAdapterComposeOwnerWorldsFlat(
+    u32 slot,
+    DObj *const *bindings,
+    u32 binding_count,
+    NDSRendererMatrix20p12 *worlds)
+{
+    const u8 *binding_parents;
+    u32 parent_count = 0u;
+    u32 binding_index;
+
+    binding_parents = ndsRendererNativeFighterBindingParents(slot,
+                                                             &parent_count);
+    if ((binding_parents == NULL) || (parent_count != binding_count) ||
+        (bindings == NULL) || (worlds == NULL))
+    {
+        return FALSE;
+    }
+    for (binding_index = 0u; binding_index < binding_count; binding_index++)
+    {
+        DObj *chain[NDS_RENDERER_ADAPTER_DOBJ_PARENT_MAX];
+        NDSRendererMatrix20p12 *out = &worlds[binding_index];
+        DObj *cursor = bindings[binding_index];
+        DObj *stop = DOBJ_PARENT_NULL;
+        u32 parent = binding_parents[binding_index];
+        u32 depth = 0u;
+        u32 i;
+
+        if (cursor == NULL)
+        {
+            return FALSE;
+        }
+        if (parent != 0xffu)
+        {
+            /* Strictly lower index, so its world is already composed. */
+            if ((parent >= binding_index) || (bindings[parent] == NULL))
+            {
+                return FALSE;
+            }
+            stop = bindings[parent];
+        }
+        while ((cursor != NULL) && (cursor != DOBJ_PARENT_NULL) &&
+               (cursor != stop))
+        {
+            if (depth >= NDS_RENDERER_ADAPTER_DOBJ_PARENT_MAX)
+            {
+                return FALSE;
+            }
+            chain[depth++] = cursor;
+            cursor = cursor->parent;
+        }
+        if (parent != 0xffu)
+        {
+            if (cursor != stop)
+            {
+                return FALSE;
+            }
+            ndsRendererMatrixCopy20p12(out, &worlds[parent]);
+        }
+        else
+        {
+            /* The root walk ends on either spelling of "no parent", exactly as
+             * ndsRendererAdapterBuildDObjWorldMatrix accepts both. */
+            if ((cursor != NULL) && (cursor != DOBJ_PARENT_NULL))
+            {
+                return FALSE;
+            }
+            ndsRendererAdapterMtxIdentity20p12(out);
+        }
+        for (i = depth; i != 0u; i--)
+        {
+            NDSRendererMatrix20p12 local;
+
+            /* objdisplay.c:1183-1191 left-multiplies each child local matrix,
+             * and a joint whose local build fails contributes nothing -- both
+             * exactly as the per-binding path does. */
+            if (ndsRendererAdapterBuildDObjLocalMatrix(chain[i - 1u],
+                                                       &local) != FALSE)
+            {
+                ndsRendererMtxMulAffine20p12(&local, out, out);
+                ndsRendererAdapterStoreDObjWorldMatrix(chain[i - 1u], out);
+            }
+        }
+    }
+    return TRUE;
+}
+#endif
+
 static sb32 ndsRendererAdapterPrepareNativeOwnerMatrices(
+    u32 slot,
     DObj *root,
     DObj *const *bindings,
     u32 binding_count,
@@ -3391,6 +3514,9 @@ static sb32 ndsRendererAdapterPrepareNativeOwnerMatrices(
     u32 camera_projection_valid = FALSE;
     u32 camera_modelview_valid = FALSE;
     u32 binding_index;
+#if NDS_RENDERER_HW_TRIANGLES
+    u32 flat_worlds = FALSE;
+#endif
 #if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
     NDS_RENDERER_M2_DETAILED_LEDGER
     u32 m2_phase_start;
@@ -3443,6 +3569,23 @@ static sb32 ndsRendererAdapterPrepareNativeOwnerMatrices(
     }
 
     (void)root;
+#if NDS_RENDERER_HW_TRIANGLES
+    /* One forward pass over the baked binding order, composing straight into the
+     * modelview array so the worlds need no second home. On success the loop
+     * below applies the shuffle and the camera in place; on failure nothing has
+     * been consumed yet and the per-binding path runs unchanged. */
+    if (gNdsR2FtrFlatCompose != 0u)
+    {
+        gNdsR2FtrFlatComposeCalls++;
+        flat_worlds = ndsRendererAdapterComposeOwnerWorldsFlat(
+            slot, bindings, binding_count,
+            sNdsRendererAdapterNativeOwnerModelviews);
+        if (flat_worlds == FALSE)
+        {
+            gNdsR2FtrFlatComposeRejects++;
+        }
+    }
+#endif
     /* The ordinary per-frame DObj world cache already records every prefix
      * built for a binding.  Walking each selected binding through that cache
      * visits the fighter hierarchy once without the old per-node linear scan
@@ -3456,6 +3599,36 @@ static sb32 ndsRendererAdapterPrepareNativeOwnerMatrices(
 #if NDS_TASK91_DRAW_PHASE_CENSUS
             task91_mtx_mark = cpuGetTiming();
             gNdsTask91MtxBindings++;
+#endif
+#if NDS_RENDERER_HW_TRIANGLES
+            if (flat_worlds != FALSE)
+            {
+                NDSRendererMatrix20p12 *dst =
+                    &sNdsRendererAdapterNativeOwnerModelviews[binding_index];
+
+#if NDS_R2_FIGHTER_SHUFFLE_FOLD
+                dst->m[3][0] += sNdsR2ShuffleWorldX;
+                dst->m[3][1] += sNdsR2ShuffleWorldY;
+#endif
+#if NDS_TASK91_DRAW_PHASE_CENSUS
+                {
+                    u32 task91_flat_end = cpuGetTiming();
+
+                    gNdsTask91MtxWorldTicks +=
+                        task91_flat_end - task91_mtx_mark;
+                    task91_mtx_mark = task91_flat_end;
+                }
+#endif
+                if (camera_modelview_valid != FALSE)
+                {
+                    ndsRendererMtxMulAffine20p12(dst, &camera_modelview, dst);
+                }
+#if NDS_TASK91_DRAW_PHASE_CENSUS
+                gNdsTask91MtxMulTicks += cpuGetTiming() - task91_mtx_mark;
+#endif
+                modelview_ptrs[binding_index] = dst;
+                continue;
+            }
 #endif
 #if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
     NDS_RENDERER_M2_DETAILED_LEDGER
@@ -14654,7 +14827,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
                     ) == FALSE)) ||
                 ((native_owner_hierarchy_mode == FALSE) &&
                  (ndsRendererAdapterPrepareNativeOwnerMatrices(
-                    root, native_owner_matrix_bindings,
+                    slot, root, native_owner_matrix_bindings,
                     collection.selected_count,
                     (gGCCurrentCamera != NULL) ?
                         CObjGetStruct(gGCCurrentCamera) : NULL,

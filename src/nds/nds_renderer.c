@@ -1614,6 +1614,80 @@ static inline void ndsRendererHardwareWriteVertex16Words(u32 xy, u32 z)
 #endif
 }
 
+/* ---------------------------------------------------------------------------
+ * Fighter-owned GX writers: the same stores, without the two capture hooks that
+ * can never fire on this path.
+ *
+ * The Task 36 replay capture window is opened by
+ * ndsRendererTask36ReplayCaptureBeginRun and closed by ...EndRun, and both calls
+ * sit inside ndsRendererCommitNativeStageSegment bracketing ONE STAGE run --
+ * BeginRun even faults on `run_index >= NDS_NATIVE_STAGE_RUN_COUNT`. The fighter
+ * production owner is a separate draw call and can never be nested inside that
+ * window, so `sNdsRendererTask36CaptureActive` is FALSE at every fighter corner.
+ * The effect packet capture is armed the same way, around an effect display list
+ * (`phase_effect`) in reloc_backend_renderer_dl.c, never around a fighter.
+ *
+ * Testing both per corner was not free. In the c106 profile the untextured emit
+ * runs 537,780 corners for 27,484,418 cycles (51.1 a corner) and the capture
+ * scaffolding -- the main-RAM flag load, the compare, the branch, and the two
+ * register spills the maybe-call forces -- is 6,591,047 of them for Task 36
+ * alone, 24.0%, ~7,600 ticks/frame. The textured emit pays it twice a corner.
+ *
+ * Every other GX diagnostic is kept: the Task 29 census, the Task 34 stage
+ * stream and the Task 49 differ all want the fighter's stream, and their builds
+ * are not performance builds. Only the two capture recorders are dropped, and
+ * both were provably no-ops here. */
+#define NDS_RENDERER_GX_RECORD_FIGHTER \
+    (NDS_TASK29_GX_CENSUS || NDS_TASK34_STAGE_STREAM_CENSUS || \
+     NDS_TASK49_GX_DIFFER)
+
+static inline void ndsRendererHardwareWriteFighterColorWord(u32 value)
+{
+#if !NDS_RENDERER_HW_TRIANGLES
+    (void)value;
+#elif NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
+    ndsRendererBenchmarkSinkWord(value);
+#else
+#if NDS_RENDERER_GX_RECORD_FIGHTER
+    ndsRendererTask29GXRecord(NDS_TASK29_GX_COLOR, &value, 1u);
+#endif
+    GFX_COLOR = value;
+#endif
+}
+
+static inline void ndsRendererHardwareWriteFighterTexCoordWord(u32 value)
+{
+#if !NDS_RENDERER_HW_TRIANGLES
+    (void)value;
+#elif NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
+    ndsRendererBenchmarkSinkWord(value);
+#else
+#if NDS_RENDERER_GX_RECORD_FIGHTER
+    ndsRendererTask29GXRecord(NDS_TASK29_GX_TEX_COORD, &value, 1u);
+#endif
+    GFX_TEX_COORD = value;
+#endif
+}
+
+static inline void ndsRendererHardwareWriteFighterVertex16Words(u32 xy, u32 z)
+{
+#if !NDS_RENDERER_HW_TRIANGLES
+    (void)xy;
+    (void)z;
+#elif NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
+    ndsRendererBenchmarkSinkWord(xy);
+    ndsRendererBenchmarkSinkWord(z);
+#else
+#if NDS_RENDERER_GX_RECORD_FIGHTER
+    u32 words[2] = {xy, z};
+
+    ndsRendererTask29GXRecord(NDS_TASK29_GX_VERTEX16, words, 2u);
+#endif
+    GFX_VERTEX16 = xy;
+    GFX_VERTEX16 = z;
+#endif
+}
+
 #if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
 void ndsRendererBenchmarkSinkEndOwner(NDSRendererProfileOwner owner)
 {
@@ -25557,7 +25631,7 @@ ndsRendererNativeEmitProductionRawTexturedRun(
         #if NDS_R2_UNLIT_VERTEX_EPOCH
         if (sNdsR2EpochUnlitVertexColor != 0u)
         {
-            ndsRendererHardwareWriteColorWord(
+            ndsRendererHardwareWriteFighterColorWord(
                 ndsRendererR2DenseVertexColor15(dense_id));
         }
         else
@@ -25565,12 +25639,12 @@ ndsRendererNativeEmitProductionRawTexturedRun(
         ndsRendererHardwareWriteNormalWord(
             sNdsNativeFighterDenseNormals[dense_id]);
 #else
-        ndsRendererHardwareWriteColorWord(prepared->packed_color);
+        ndsRendererHardwareWriteFighterColorWord(prepared->packed_color);
 #endif
-        ndsRendererHardwareWriteTexCoordWord(
+        ndsRendererHardwareWriteFighterTexCoordWord(
             (u32)(u16)prepared->s |
             ((u32)(u16)prepared->t << 16));
-        ndsRendererHardwareWriteVertex16Words(
+        ndsRendererHardwareWriteFighterVertex16Words(
             prepared->gx_xy, prepared->gx_z);
     }
 }
@@ -25592,13 +25666,13 @@ ndsRendererNativeEmitProductionRawUntexturedRun(
             &sNdsNativeFighterPreparedDense[dense_id];
 
 #if NDS_LAB_CULL_PROBE
-        ndsRendererHardwareWriteColorWord(
+        ndsRendererHardwareWriteFighterColorWord(
             ndsRendererNativeLabRunTint(run_index));
 #elif NDS_R2_FIGHTER_HW_LIGHT
 #if NDS_R2_UNLIT_VERTEX_EPOCH
         if (sNdsR2EpochUnlitVertexColor != 0u)
         {
-            ndsRendererHardwareWriteColorWord(
+            ndsRendererHardwareWriteFighterColorWord(
                 ndsRendererR2DenseVertexColor15(dense_id));
         }
         else
@@ -25606,9 +25680,9 @@ ndsRendererNativeEmitProductionRawUntexturedRun(
         ndsRendererHardwareWriteNormalWord(
             sNdsNativeFighterDenseNormals[dense_id]);
 #else
-        ndsRendererHardwareWriteColorWord(prepared->packed_color);
+        ndsRendererHardwareWriteFighterColorWord(prepared->packed_color);
 #endif
-        ndsRendererHardwareWriteVertex16Words(
+        ndsRendererHardwareWriteFighterVertex16Words(
             prepared->gx_xy, prepared->gx_z);
     }
 }
@@ -25657,7 +25731,7 @@ ndsRendererNativeEmitProductionPrimitiveGroups(
             #if NDS_R2_UNLIT_VERTEX_EPOCH
             if (sNdsR2EpochUnlitVertexColor != 0u)
             {
-                ndsRendererHardwareWriteColorWord(
+                ndsRendererHardwareWriteFighterColorWord(
                     ndsRendererR2DenseVertexColor15(dense_id));
             }
             else
@@ -25665,15 +25739,15 @@ ndsRendererNativeEmitProductionPrimitiveGroups(
             ndsRendererHardwareWriteNormalWord(
                 sNdsNativeFighterDenseNormals[dense_id]);
 #else
-            ndsRendererHardwareWriteColorWord(prepared->packed_color);
+            ndsRendererHardwareWriteFighterColorWord(prepared->packed_color);
 #endif
             if (textured != 0u)
             {
-                ndsRendererHardwareWriteTexCoordWord(
+                ndsRendererHardwareWriteFighterTexCoordWord(
                     (u32)(u16)prepared->s |
                     ((u32)(u16)prepared->t << 16));
             }
-            ndsRendererHardwareWriteVertex16Words(
+            ndsRendererHardwareWriteFighterVertex16Words(
                 prepared->gx_xy, prepared->gx_z);
         }
     }
@@ -25726,7 +25800,7 @@ ndsRendererNativeEmitProductionCrossRun(
         #if NDS_R2_UNLIT_VERTEX_EPOCH
         if (sNdsR2EpochUnlitVertexColor != 0u)
         {
-            ndsRendererHardwareWriteColorWord(
+            ndsRendererHardwareWriteFighterColorWord(
                 ndsRendererR2DenseVertexColor15(dense_id));
         }
         else
@@ -25734,15 +25808,15 @@ ndsRendererNativeEmitProductionCrossRun(
         ndsRendererHardwareWriteNormalWord(
             sNdsNativeFighterDenseNormals[dense_id]);
 #else
-        ndsRendererHardwareWriteColorWord(prepared->packed_color);
+        ndsRendererHardwareWriteFighterColorWord(prepared->packed_color);
 #endif
         if (textured != 0u)
         {
-            ndsRendererHardwareWriteTexCoordWord(
+            ndsRendererHardwareWriteFighterTexCoordWord(
                 (u32)(u16)prepared->s |
                 ((u32)(u16)prepared->t << 16));
         }
-        ndsRendererHardwareWriteVertex16Words(
+        ndsRendererHardwareWriteFighterVertex16Words(
             prepared->gx_xy, prepared->gx_z);
     }
     if (active_palette_slot != current_palette_slot)
@@ -26010,12 +26084,12 @@ ndsRendererNativeEmitDenseRawRun(
                 &sNdsNativeFighterPreparedDense[dense_id];
             u32 slot = vertex->cache_slot;
 
-            ndsRendererHardwareWriteColorWord(
+            ndsRendererHardwareWriteFighterColorWord(
                 state->prepared_vertex_colors[slot]);
-            ndsRendererHardwareWriteTexCoordWord(
+            ndsRendererHardwareWriteFighterTexCoordWord(
                 (u32)(u16)state->prepared_texcoord_s[slot] |
                 ((u32)(u16)state->prepared_texcoord_t[slot] << 16));
-            ndsRendererHardwareWriteVertex16Words(
+            ndsRendererHardwareWriteFighterVertex16Words(
                 prepared->gx_xy, prepared->gx_z);
         }
     }
@@ -26030,9 +26104,9 @@ ndsRendererNativeEmitDenseRawRun(
                 &sNdsNativeFighterPreparedDense[dense_id];
             u32 slot = vertex->cache_slot;
 
-            ndsRendererHardwareWriteColorWord(
+            ndsRendererHardwareWriteFighterColorWord(
                 state->prepared_vertex_colors[slot]);
-            ndsRendererHardwareWriteVertex16Words(
+            ndsRendererHardwareWriteFighterVertex16Words(
                 prepared->gx_xy, prepared->gx_z);
         }
     }
@@ -26677,6 +26751,33 @@ static s32 ndsRendererNativeGetHierarchyTables(
             sizeof(sNdsNativeFoxJointSchedule[0]);
     }
     return TRUE;
+}
+
+/* The baked nearest-BOUND-ancestor index for each matrix binding, so the owner
+ * adapter can compose world matrices in one forward pass instead of walking each
+ * binding to the root through a linear-probed hash. The generator guarantees
+ * `binding_parents[i] < i` (it derives them from a preorder joint list), which
+ * is what makes a single forward pass correct.
+ *
+ * Note the table skips UNBOUND joints: entry i is the nearest ancestor that is
+ * itself a binding, not the DObj parent. A consumer therefore still walks the
+ * live chain from binding i up to `bindings[binding_parents[i]]` -- that walk is
+ * one to three joints instead of the full root depth, and needs no cache. */
+const u8 *ndsRendererNativeFighterBindingParents(u32 slot, u32 *count)
+{
+    if ((slot > 1u) || (count == NULL))
+    {
+        return NULL;
+    }
+    if (slot == 0u)
+    {
+        *count = (u32)(sizeof(sNdsNativeMarioBindingParents) /
+                       sizeof(sNdsNativeMarioBindingParents[0]));
+        return sNdsNativeMarioBindingParents;
+    }
+    *count = (u32)(sizeof(sNdsNativeFoxBindingParents) /
+                   sizeof(sNdsNativeFoxBindingParents[0]));
+    return sNdsNativeFoxBindingParents;
 }
 
 static void ndsRendererNativeMatrix3From20p12(

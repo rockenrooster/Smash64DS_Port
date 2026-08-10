@@ -1216,6 +1216,10 @@ s32 ndsRendererExecuteNativeFighterOwnerHierarchy(
     void *callback_user,
     NDSRendererStats *stats,
     u32 *out_hardware_started);
+/* Baked nearest-bound-ancestor index per matrix binding; NULL for an unknown
+ * slot. Lets the owner adapter compose world matrices in one forward pass
+ * instead of walking every binding to the root through the DObj world hash. */
+const u8 *ndsRendererNativeFighterBindingParents(u32 slot, u32 *count);
 s32 ndsRendererPrepareNativeStageOwner(
     const NDSRendererNativeStageFrame *frame,
     NDSRendererStats *stats);
