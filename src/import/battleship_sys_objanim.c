@@ -172,6 +172,70 @@ static inline s32 ndsR2F32ToFixed(f32 v, s32 bits)
     return ((bits_in & 0x80000000u) != 0u) ? -mant : mant;
 }
 
+/* (a * b) -> Q`bits` in one integer multiply, without `__aeabi_fmul`.
+ *
+ * `t = length * length_invert` is the kernel's last soft-float call: 60,582
+ * executions, 1,524,849 cycles, and it exists only to build an f32 that the
+ * next line immediately quantises to Q16. Multiplying the two 24-bit
+ * significands directly produces that number without the intermediate float.
+ *
+ * NOT bit-identical to the old path, and more accurate rather than less: the
+ * old path rounded twice (once when `fmul` packed the product into an f32
+ * significand, once in `ndsR2F32ToFixed`), this rounds once.
+ * `check_r2_cubic_error_bound.py` measures the whole kernel against the decomp
+ * float reference, so an accuracy gain shows up as a smaller deviation.
+ *
+ * Saturation matches `ndsR2F32ToFixed`: clamp, never wrap, because a wrapped
+ * `t` is a visible joint teleport where a clamped one is a held pose.
+ *
+ * A first attempt at this was reverted as a "hang". That verdict was retracted
+ * -- the harness had a 30-second marker budget that had gone marginal, and the
+ * unchanged control failed too. See the board. */
+static inline s32 ndsR2F32MulToFixed(f32 a, f32 b, s32 bits)
+{
+    u32 ba = ndsR2FloatBits(a);
+    u32 bb = ndsR2FloatBits(b);
+    s32 ea = (s32)((ba >> 23) & 0xffu);
+    s32 eb = (s32)((bb >> 23) & 0xffu);
+    u32 sign = (ba ^ bb) & 0x80000000u;
+    s64 p;      /* non-negative: the sign is carried separately, and the host
+                 * error-bound harness has no u64 typedef */
+    s32 shift;
+
+    if ((ea == 0) || (eb == 0))
+    {
+        return 0;       /* zero or subnormal operand: below resolution anyway */
+    }
+    if ((ea == 0xff) || (eb == 0xff))
+    {
+        gNdsR2CubicSaturations++;
+        return (sign != 0u) ? -0x7fffffff : 0x7fffffff;
+    }
+    /* Two 1.23 significands multiply to a 2.46 product in [2^46, 2^48).
+     * value = p * 2^(ea-127-23) * 2^(eb-127-23) = p * 2^(ea+eb-300);
+     * the caller wants that scaled by 2^bits. */
+    p = (s64)((ba & 0x7fffffu) | 0x800000u) *
+        (s64)((bb & 0x7fffffu) | 0x800000u);
+    shift = ((ea + eb) - 300) + bits;
+    if (shift >= 0)
+    {
+        /* p is already ~2^47, so any non-negative shift is far out of range. */
+        gNdsR2CubicSaturations++;
+        return (sign != 0u) ? -0x7fffffff : 0x7fffffff;
+    }
+    if (shift < -63)
+    {
+        return 0;       /* everything, including the leading one, falls off */
+    }
+    p = (p + ((s64)1 << (-shift - 1))) >> (-shift);   /* round to nearest */
+    if (p > (s64)0x7fffffff)
+    {
+        gNdsR2CubicSaturations++;
+        p = (s64)0x7fffffff;
+    }
+    return (sign != 0u) ? -(s32)p : (s32)p;
+}
+
 /* s32 -> f32 bit pattern, without `__aeabi_i2f`.
  *
  * The call was 60,582 executions and 1,017,778 cycles in the cycle-106
@@ -262,7 +326,8 @@ static NDS_R2_CUBIC_ATTR f32 ndsR2CubicValueFixed(const AObj *aobj)
 {
     /* The one unavoidable real multiply: `length` advances every tick, so `t`
      * cannot be carried across evaluations. */
-    s32 t = ndsR2F32ToFixed(aobj->length * aobj->length_invert, NDS_R2_CUBIC_BF);
+    s32 t = ndsR2F32MulToFixed(aobj->length, aobj->length_invert,
+                               NDS_R2_CUBIC_BF);
     s32 length_q = ndsR2F32ToFixed(aobj->length, NDS_R2_CUBIC_VF);
     /* t is Q16 and normally in [0,1], so t*t reaches 2^32 and needs the 64-bit
      * product. Every requantising shift rounds rather than truncates. */
