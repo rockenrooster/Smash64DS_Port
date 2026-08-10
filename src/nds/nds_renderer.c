@@ -24991,6 +24991,7 @@ static u32 sNdsR2RunMemoHash[NDS_R2_RUN_MEMO_MAX];
 static u8 sNdsR2RunMemoValid[NDS_R2_RUN_MEMO_MAX];
 
 
+
 /* The facts being constant is not on its own a licence to skip the UV loop.
  * 28 of the 541 dense vertices belong to more than one run (13..18 overlap), so
  * each sharing run rewrites them and the emit between two prepares reads
@@ -25378,6 +25379,50 @@ static void __attribute__((noinline)) ndsRendererR2RunTextureMemoVerify(
 #endif
 #endif
 
+/* Cycle 110, Requirement 3: the prepared dense UVs are IMMUTABLE fighter state,
+ * not per-frame work.
+ *
+ * Whole-match proof at NDS_R2_FIGHTER_RUN_PROOF=2: the UV loop performed
+ * **246,736 writes** and produced **106 distinct dense vertices**, with
+ * `gNdsR2UvChangeCount == 0` — not one of those writes ever changed a value —
+ * and `gNdsR2UvOutOfRange == 0`, so the proof array covered every id. 154 writes
+ * a frame to re-derive a constant.
+ *
+ * `dense->s/t` is baked asset data and these five are the entire remaining
+ * dependency, so recording the ones that produced a run's current contents says
+ * exactly when the loop would rewrite what is already there. Compared, not
+ * hashed: five compares are cheaper than five multiplies and leave no collision
+ * to argue about. 1,340 bytes of bss for 67 runs, and nothing new is cached —
+ * `sNdsNativeFighterPreparedDense` already existed and already held this answer.
+ *
+ * What a per-run key cannot see is two runs sharing a dense id with different
+ * inputs. That is a property of the BAKED `sNdsNativeFighterRunUniqueDense`
+ * table, not of the frame, and `gNdsR2UvChangeCount` is its detector. */
+typedef struct NDSNativeFighterRunUvInputs
+{
+    u32 scale_s;
+    u32 scale_t;
+    u32 origin_s;
+    u32 origin_t;
+    s32 offset;
+    /* The arena fence, same key the fighter material block uses. A restart
+     * rewinds the taskman heap and could reload a different dense table behind
+     * the same run index with the same texture metrics; without this the stamp
+     * would skip on the strength of metrics that no longer describe the
+     * vertices. One compare, and the P1 milestone restarts from Results. */
+    u32 heap_generation;
+} NDSNativeFighterRunUvInputs;
+
+static NDSNativeFighterRunUvInputs
+    sNdsNativeFighterRunUvInputs[NDS_R2_RUN_MEMO_MAX];
+static u8 sNdsNativeFighterRunUvValid[NDS_R2_RUN_MEMO_MAX];
+#if NDS_TICK_HUD
+/* Engagement proof. Skip should be ~99.96% of calls; a Build rate above the
+ * 106 first-fills means the invariant above stopped holding. */
+volatile u32 gNdsR2RunUvSkip;
+volatile u32 gNdsR2RunUvBuild;
+#endif
+
 static s32 NDS_RENDERER_NATIVE_FIGHTER_CODE
 ndsRendererNativePrepareProductionRun(
     u32 run_index,
@@ -25656,6 +25701,28 @@ ndsRendererNativePrepareProductionRun(
      * the live dense UVs once.  Mode-8 keeps its original immediate path. */
     if ((policy->textured != 0u) && (hierarchy_run == NULL))
     {
+        /* See sNdsNativeFighterRunUvInputs: these five plus baked vertex data
+         * are the whole dependency, so equal inputs mean the loop below would
+         * write back exactly what is already there. */
+        NDSNativeFighterRunUvInputs *uv =
+            (run_index < NDS_R2_RUN_MEMO_MAX) ?
+                &sNdsNativeFighterRunUvInputs[run_index] : NULL;
+
+        if ((uv != NULL) &&
+            (sNdsNativeFighterRunUvValid[run_index] != 0u) &&
+            (uv->scale_s == state->texture_prepare_scale_s) &&
+            (uv->scale_t == state->texture_prepare_scale_t) &&
+            (uv->origin_s == state->texture_prepare_origin_s) &&
+            (uv->origin_t == state->texture_prepare_origin_t) &&
+            (uv->offset == state->texture_prepare_offset) &&
+            (uv->heap_generation == gNdsTaskmanHeapGeneration))
+        {
+#if NDS_TICK_HUD
+            gNdsR2RunUvSkip++;
+#endif
+        }
+        else
+        {
         for (unique_offset = 0u;
              unique_offset < unique_count;
              unique_offset++)
@@ -25684,6 +25751,20 @@ ndsRendererNativePrepareProductionRun(
 #if NDS_R2_FIGHTER_RUN_PROOF
             ndsRendererR2FighterUvProofWrite(dense_id, prepared->s,
                                              prepared->t);
+#endif
+        }
+        if (uv != NULL)
+        {
+            uv->scale_s = state->texture_prepare_scale_s;
+            uv->scale_t = state->texture_prepare_scale_t;
+            uv->origin_s = state->texture_prepare_origin_s;
+            uv->origin_t = state->texture_prepare_origin_t;
+            uv->offset = state->texture_prepare_offset;
+            uv->heap_generation = gNdsTaskmanHeapGeneration;
+            sNdsNativeFighterRunUvValid[run_index] = 1u;
+        }
+#if NDS_TICK_HUD
+        gNdsR2RunUvBuild++;
 #endif
         }
     }
