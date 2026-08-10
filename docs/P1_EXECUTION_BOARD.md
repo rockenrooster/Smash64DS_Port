@@ -4209,14 +4209,19 @@ rather than on deletions.
 | `ndsBaseGcPlayMObjMatAnim` | 7,201 | 4,955 | 2.91 |
 | others | 5,473 | | |
 
-**`ndsR2CubicValueFixed` executes 38,956 instructions a frame over ~234
-evaluations -- 166 instructions per cubic.** A Hermite evaluation is about a
-dozen multiply-accumulates. The rest is the float boundary the kernel was never
-allowed to cross: **six inlined `ndsR2F32ToFixed`, one float multiply, one
-`ndsR2FixedToF32`**, every evaluation, on values that started life as `s16` with
-power-of-two scales in the figatree. Its 1.63 cyc/insn says this is not a stall
-problem -- it is *instruction count*, and the instructions are format
-conversion.
+**`ndsR2CubicValueFixed` runs 176.4 times a frame at 220 instructions a call**
+(entry-PC count 220,505 over 1,250 frames; 38,956 insns/frame). A Hermite
+evaluation is about a dozen multiply-accumulates. The other ~200 instructions
+are the float boundary the kernel was never allowed to cross: **six inlined
+`ndsR2F32ToFixed`, one `ndsR2F32MulToFixed`, one `ndsR2FixedToF32`**, each a
+hand-written 20-30 instruction bit-manipulation routine with its own rounding
+and saturation branches -- and the per-PC detail shows exactly that shape, with
+`bmi`/`b` rounding branches and `umull`s filling the top of the ranking under a
+nine-register `push`/`pop` pair that alone costs **2,109 tk/fr**. All of it on
+values that started life as `s16` with power-of-two scales in the figatree. Its
+1.63 cyc/insn says this is not a stall problem -- it is *instruction count*,
+and the instructions are format conversion. **292 of the function's ~580
+instructions execute**, the rest being saturation and subnormal handling.
 
 Independent confirmation, already in the tree and read for the first time this
 cycle: `artifacts/performance/2026-08-09_c106-profile/softfloat-attribution.json`
