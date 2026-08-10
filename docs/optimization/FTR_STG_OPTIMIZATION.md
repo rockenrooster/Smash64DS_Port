@@ -78,6 +78,26 @@ The CPU should know practically nothing about the original Dream Land rendering 
 There are even two existing candidates pointing in this direction:
 NDS_TASK51_STAGE_NATIVE — 42 baked world matrices, currently gated on visual equivalence.
 NDS_DREAMLAND_DS_MESH — further DS-native stage geometry specialization, also awaiting visual qualification.
+
+> **Correction, cycle 109 (2026-08-10).** Both candidates named above are
+> CLOSED, and this section was written from stale status.
+>
+> - `NDS_TASK51_STAGE_NATIVE` is **refuted on performance**: measured P50
+>   +13,376, `STG` +2,368, and **88 frames lost from 30 FPS**. Its 42 baked
+>   matrices replace a compose that is already 99.9% cache-reused, so the
+>   replacement has to be free rather than merely cheaper per invocation.
+> - `NDS_DREAMLAND_DS_MESH` was **not awaiting qualification — it failed it.**
+>   Task 62, REVERTED at the owner visual gate 2026-07-25
+>   (`docs/optimization/archive/Task62_AB_Results.md`): the mesh drew as opaque
+>   white alpha-card rectangles because the compiler discarded UV, colour/alpha,
+>   material-epoch and depth metadata. Its `-29.6%` is rejected-experiment
+>   evidence only, and `check-published-roms.ps1` fails any published ROM
+>   carrying the payload. A retry means a new compiler that preserves that
+>   metadata, not a flag flip.
+>
+> So "finish the transition to a native stage asset" has no remaining one-flag
+> step. That does not refute the STG target; it means the cheap route to it is
+> gone and what remains is the compiler work.
 So for STG I would say finish the transition to a native stage asset, rather than write a brand-new general stage renderer.
 A realistic first target is probably getting it from ~200K toward or below the existing 180K budget. If a truly static Dream Land path can go substantially below that, great, but I wouldn't currently assume there's another 100K hiding there.
 Where I'd ultimately like them

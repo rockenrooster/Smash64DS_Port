@@ -2465,10 +2465,19 @@ is not a cost, and beating it requires the replacement to be free, not merely
 cheaper per invocation.
 
 Leave `NDS_TASK51_STAGE_NATIVE ?= 0`. No visual qualification is needed; it
-fails on performance first. `NDS_DREAMLAND_DS_MESH` is untested and is a
-*geometry* specialisation rather than a matrix-path one, so this result does not
-transfer to it — but price its per-frame cost against the same 99.9% cache
-before building an A/B.
+fails on performance first.
+
+**Correction (cycle 109): `NDS_DREAMLAND_DS_MESH` is NOT untested.** This section
+said it was, and that was wrong. It is **Task 62, REVERTED at the owner's visual
+gate on 2026-07-25** — `docs/optimization/archive/Task62_AB_Results.md` has the
+verdict and `artifacts/visibility/task62_v7.png` the evidence: the mesh drew as
+opaque white alpha-card rectangles, because the compiler discarded the UV,
+colour/alpha, material-epoch and depth metadata, and the host silhouette oracle
+ignored the same semantics. Its `−29.6%` stage-work figure survives **as
+rejected-experiment evidence only**. `check-published-roms.ps1:36` and
+`check-harness-registry.ps1:95` both enforce `=0`, so a published ROM carrying it
+fails the verifier. Do not schedule an A/B for it; a future attempt has to keep
+that metadata, which is a new compiler, not a flag flip.
 
 ### Vertex memo LANDED, engagement perfect, ticks below the floor
 
@@ -3287,9 +3296,10 @@ caught before its measuring run, not after.
 
 Of the 71 still off, all but a handful are censuses, probes, falsifiers or
 lab-only suppressors. The real remainder, each already carrying its own gate:
-`NDS_TASK51_STAGE_NATIVE` (42 baked world matrices via `MTX_MULT4x3`; needs the
-differ at Tier 1 = 0), `NDS_DREAMLAND_DS_MESH` (needs the owner's visual A/B),
-`NDS_R2_SHIELD_QUAD` (**the Makefile itself asks for this re-price**: the owner
+`NDS_TASK51_STAGE_NATIVE` (**now refuted on performance**, cycle 109: P50
++13,376, `STG` +2,368, 88 frames lost from 30 FPS), `NDS_DREAMLAND_DS_MESH`
+(**not "needs the owner's visual A/B" — it HAD one and failed it**, Task 62,
+reverted 2026-07-25, and two checkers enforce `=0`), `NDS_R2_SHIELD_QUAD` (**the Makefile itself asks for this re-price**: the owner
 bought the model route at "36k p95" and that figure came off a 128-frame window,
 which the whole-match rule says is unusable). **Do not re-audit the flag list.**
 
