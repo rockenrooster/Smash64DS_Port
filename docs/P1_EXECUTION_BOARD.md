@@ -2346,6 +2346,83 @@ integer bit assembly, exact for the six power-of-two tracks and needing
 `analyze-dcache-stalls.py`, not with ticks — the mechanism check is immune to
 the placement floor.
 
+### SINT decomposed: it IS the animation lane (cycle 109)
+
+`SRC_CPI_OPTIMIZATION.md` called this "the big one" — *which child of
+`ftMainProcUpdateInterrupt` causes the +88,082?* Answered with
+`scripts/analyze-subtree-attribution.py` (new, no build, no run: static call
+graph from the disassembly, subtree per direct child, cycles and over-gate delta
+from `census.json`). **Two children carry all of it:**
+
+| direct child (exclusive subtree) | cycles | % non-idle | over-gate | syms |
+|---|---:|---:|---:|---:|
+| **`ftMainPlayAnim`** | **73,169,415** | **7.48%** | **+60,559** | 8 |
+| `ftComputerProcessAll` | 49,550,399 | 5.06% | +24,386 | 71 |
+| everything else | 2,432,810 | 0.25% | +2,131 | 29 |
+
+**+84,945 of the +88,082.** And `ftMainPlayAnim`'s eight exclusive symbols are
+exactly the animation lane — `ndsR2CubicValueFixed` 19.4M ·
+`gcPlayDObjAnimJoint` 16.6M · `ftAnimParseDObjFigatree` 16.2M ·
+`ndsFTParamsInvalidateFighterParts` 13.7M · `ftParamUpdateAnimKeys` 5.3M ·
+`gcPlayMObjMatAnim` 1.1M · `ftMainPlayAnim` 0.5M ·
+`ftParamsUpdateFighterPartsTransform` 0.4M.
+
+**So the plan's steps 1, 2 and 3 collapse into one target.** Step 1 (the FTParts
+pool) is refuted above *and* is only 6,563 of the child's 60,559. Step 2 says go
+to step 3. `ftComputerProcessAll`, the other child, is **not AI logic** — it is
+map collision: `mpCollisionGetFCCommonFloor` 7.5M,
+`ndsStageMPSweepFloorLoopSweep` 6.4M, `ndsMPFindLineEndpoints` 5.4M,
+`ndsStageMPAdjustFloorLoopWallSweep` 4.1M. A separate lever, correctly ranked
+second.
+
+**Do not quote a subtree number for `SPHD` or `SHDT`.** Their roots each have one
+child that statically reaches 511 and 186 symbols, so the tool's own
+"reachability is not execution" limit dominates and the percentages are
+meaningless there. SINT's exclusive sets are small (8 and 71) and clean.
+
+### Animation lane: what each remaining cut is actually worth
+
+Priced per call site from the profile, with the corrected per-helper costs
+(`fadd` 36.43, `fmul` 25.17, `i2f` 16.80, `fdiv` **109.38**, `fcmpeq` 10.59):
+
+| cut | cycles | ticks/frame | status |
+|---|---:|---:|---|
+| `aobj->length += anim_speed` — 111,168 `fadd` | **4,049,850** | ~4,600 | **needs the representation change** |
+| parser `fsub`+`fadd` clock arithmetic | 3,207,930 | ~3,640 | same |
+| parser `fdiv` on `1.0F/payload` | 1,494,619 | ~1,700 | reciprocal table, payload is a u16 |
+| cubic `length * length_invert` `fmul` | 1,524,849 | ~1,730 | fuse into the fixed conversion |
+| parser `ftAnimGetTargetValue` i2f+fmul | 1,534,213 | ~1,740 | CLZ bit assembly, needs `target("arm")` |
+| AObj list scatter (both functions) | ~6,200,000 | ~2,800 | **DONE** — pool, cycle 109 |
+| evaluator `fcmpeq` ×180,454 | 1,911,008 | ~2,170 | **DONE** — `nds_fcmp.h` |
+| cubic `(f32)q` i2f | 1,017,778 | ~1,160 | **DONE** — cycle 109 |
+
+**No single remaining cut clears the 14,080 cross-build P95 floor**, which is why
+they ship as one bundle and get measured once. The largest, at 4.6K, is one
+line: `aobj->length += dobj->anim_speed`, executed for every active node every
+frame.
+
+**That line is why the representation change is unavoidable.** `length` is
+consumed only as `length * length_invert` (cubic), `length * rate_base`
+(linear), and `length_invert <= length` (step) — every consumer immediately
+converts it or multiplies it. As Q16 it would make all three cheaper *and* turn
+the `+=` into an integer add. But `AObj` is shared with material, camera and
+stage animation, its layout is decomp-mirrored
+(`check-decomp-header-mirror.py`), and `length` has consumers in
+`gcParseDObjAnimJoint`, `gcGetDObjTempAnimTimeMax`,
+`gcGetAObjTrackAnimTimeMax` and `gcCheckGetDObjNoAxisTrack`. **This confirms
+`FIXEDPOINT_ANIMATION.md`'s own sequencing: the compact per-fighter track array
+that replaces `AObj` is the change, and it cannot be a quick edit.**
+
+**Landed this cycle in the kernel:** `ndsR2S32ToF32Bits` replaces the last
+`__aeabi_i2f` in `ndsR2CubicValueFixed` with CLZ bit assembly. Bit-exact to
+`__aeabi_i2f` including round-to-nearest-even above 2^24, **proven over all
+4,294,967,296 inputs** by `scripts/check_s32tof32_exact.py` (no NaN exclusion to
+make — every s32 maps to a finite float). `check_r2_cubic_error_bound.py` is
+unchanged and green at 0.002842 rotation / 0.006702 translation, which is what a
+bit-exact change must do. Disassembly confirms the call is gone and one ARM
+`clz` replaced it; the two `__clzsi2` references in the ELF are inside libgcc's
+`__clzdi2` and are present in the pre-change build too. Boot headroom 32,992.
+
 ### The DMA spin is GEOMETRY SUBMISSION, not a free win (cycle 108)
 
 Followed up the census's largest site and it is **not** the clean win it looked

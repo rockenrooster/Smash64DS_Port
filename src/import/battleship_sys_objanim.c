@@ -172,13 +172,64 @@ static inline s32 ndsR2F32ToFixed(f32 v, s32 bits)
     return ((bits_in & 0x80000000u) != 0u) ? -mant : mant;
 }
 
-/* Q`bits` -> f32. One `__aeabi_i2f` plus an exact exponent adjust; subtracting
- * `bits` biased exponents is an exact divide by 2^bits, so no second multiply
- * and no extra rounding. */
+/* s32 -> f32 bit pattern, without `__aeabi_i2f`.
+ *
+ * The call was 60,582 executions and 1,017,778 cycles in the cycle-106
+ * whole-match profile -- one per cubic evaluation, and after the comparison
+ * helpers went it was the last soft-float call left in this kernel apart from
+ * the `length * length_invert` multiply. There is nothing to win inside libgcc's
+ * routine; the win is not making the call.
+ *
+ * This is EXACT, not an approximation: it reproduces `__aeabi_i2f` bit for bit
+ * including round-to-nearest-even for the |q| >= 2^24 inputs where an s32 does
+ * not fit a 24-bit significand. `scripts/check_s32tof32_exact.py` proves it over
+ * all 2^32 inputs; it is not argued from this comment.
+ *
+ * `__builtin_clz` is only free because the sole caller is the `target("arm")`
+ * kernel below -- Thumb-1 has no `CLZ` and would turn this into a `__clzsi2`
+ * call, which is the trap `thumb-hides-64bit-cost` records. Do not inline this
+ * into a Thumb function. */
+static inline u32 ndsR2S32ToF32Bits(s32 q)
+{
+    u32 sign;
+    u32 m;
+    u32 lz;
+    u32 exp;
+    u32 mant;
+    u32 rem;
+
+    if (q == 0)
+    {
+        return 0u;
+    }
+    sign = (q < 0) ? 0x80000000u : 0u;
+    /* Negating INT_MIN in u32 gives 0x80000000, which is the magnitude wanted;
+     * doing it in s32 would be undefined. */
+    m = (q < 0) ? (0u - (u32)q) : (u32)q;
+    lz = (u32)__builtin_clz(m);
+    exp = 31u - lz;
+    m <<= lz;                       /* leading one now at bit 31 */
+    mant = m >> 8;                  /* 24 significant bits, implicit one at 23 */
+    rem = m & 0xffu;                /* the bits that fall off */
+    if ((rem > 0x80u) || ((rem == 0x80u) && ((mant & 1u) != 0u)))
+    {
+        mant++;                     /* round to nearest, ties to even */
+        if ((mant & 0x1000000u) != 0u)
+        {
+            mant >>= 1;             /* rounding carried out of the significand */
+            exp++;
+        }
+    }
+    return sign | ((exp + 127u) << 23) | (mant & 0x7fffffu);
+}
+
+/* Q`bits` -> f32. The integer conversion above plus an exact exponent adjust;
+ * subtracting `bits` biased exponents is an exact divide by 2^bits, so no
+ * second multiply and no extra rounding. */
 static inline f32 ndsR2FixedToF32(s32 q, s32 bits)
 {
-    f32 f = (f32)q;
-    u32 raw = ndsR2FloatBits(f);
+    f32 f;
+    u32 raw = ndsR2S32ToF32Bits(q);
 
     if ((raw & 0x7f800000u) != 0u)
     {
