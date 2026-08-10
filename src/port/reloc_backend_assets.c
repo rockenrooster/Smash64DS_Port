@@ -2600,31 +2600,108 @@ static s32 ndsRelocPointerRangeInLoadedFile(const NDSRelocLoadedFile *loaded,
     return ndsRelocRangeInLoadedFile(loaded, addr - base, size);
 }
 
+/* R2-07 cycle 109. The memo is four-way move-to-front, not one-deep.
+ *
+ * This is 1 of the 30 callers' shared lookup and it sits under the fighter draw
+ * path: `ndsRendererAdapterValidateNativeOwnerMaterials` asks it for
+ * `palette_image`, `block_image` and `current_image` -- THREE DIFFERENT pointers
+ * per material, per fighter, per frame -- and `ndsFighterDrawPlanResolve`,
+ * `ndsFighterDLDraw*`, `ndsFighterDLScan*` and `ndsFighterDLExec*` interleave
+ * their own streams on top, so a one-entry memo is being asked to serve several
+ * interleaved streams.
+ *
+ * MEASURED, and it corrects the premise this was written on. Over a 60-second
+ * both-CPU match: 30,385 calls, way 0 alone **25,434 (83.7%)**, ways 1-3
+ * **4,385 more (14.4%)**, only 1,014 reaching the linear scan. So the one-entry
+ * memo was already catching most of it, and the total volume is ~15 calls per
+ * frame rather than the ~178,000 per match the material seam's call count
+ * suggested -- because `ValidateNativeOwnerMaterials` sits behind the owner
+ * validate cache, which cycle 98 measured at 3,961/2, so its three searches per
+ * material are already elided ~999 times in 1,000.
+ *
+ * The 4,385 deleted scans are worth on the order of 500 ticks/frame: real,
+ * repeatable, free in footprint (binary byte-identical, 160 bytes of headroom),
+ * and far below anything this instrument can resolve. Banked under "keep every
+ * repeatable correctness-preserving gain", not headlined. Do not brief this as a
+ * lever; the counters are kept so the seam never has to be guessed at again.
+ *
+ * Four ways, checked most-recently-used first, so K=1 behaviour is the w==0 case
+ * and nothing about the search ORDER changes for a single stream.
+ *
+ * Return-value equivalence rests on at most ONE entry being able to match a
+ * given pointer, and the non-obvious half of that is the boundary:
+ * `ndsRelocPointerRangeInLoadedFile` accepts `addr == base + data_size` (it
+ * tests `>`, not `>=`), so two adjacent allocations would both appear to contain
+ * a pointer sitting exactly on the seam. They do not, because the inner
+ * `ndsRelocRangeInLoadedFile` then rejects `size > data_size - offset`, and at
+ * that boundary the remainder is 0 while every caller passes size >= 1. So
+ * "first match in scan order" and "the matching way" name the same file. Where
+ * the previous code already preferred its one memo over scan order, this prefers
+ * one of four the same way -- the hazard class is unchanged, not widened.
+ *
+ * `ndsRelocPointerRangeInLoadedFile` is two compares and a range check, so a way
+ * that misses costs almost nothing; the win is deleting whole scans. */
+#define NDS_RELOC_FIND_MEMO_WAYS 4u
+
+volatile u32 gNdsRelocFindMemoHits;
+volatile u32 gNdsRelocFindMemoWay0;
+volatile u32 gNdsRelocFindMemoScans;
+volatile u32 gNdsRelocFindMemoAbsent;
+
 static NDSRelocLoadedFile *ndsRelocFindLoadedFileContaining(const void *ptr,
                                                              size_t size)
 {
-    static u32 last_loaded_file_index = 0xffffffffu;
+    static u32 memo[NDS_RELOC_FIND_MEMO_WAYS] = {
+        0xffffffffu, 0xffffffffu, 0xffffffffu, 0xffffffffu
+    };
+    u32 w;
     u32 i;
 
-    if ((last_loaded_file_index < sNdsRelocLoadedFileCount) &&
-        (ndsRelocPointerRangeInLoadedFile(
-             &sNdsRelocLoadedFiles[last_loaded_file_index],
-             ptr,
-             size) != FALSE))
+    for (w = 0u; w < NDS_RELOC_FIND_MEMO_WAYS; w++)
     {
-        return &sNdsRelocLoadedFiles[last_loaded_file_index];
+        u32 idx = memo[w];
+
+        if ((idx < sNdsRelocLoadedFileCount) &&
+            (ndsRelocPointerRangeInLoadedFile(&sNdsRelocLoadedFiles[idx],
+                                              ptr,
+                                              size) != FALSE))
+        {
+            gNdsRelocFindMemoHits++;
+            if (w == 0u)
+            {
+                gNdsRelocFindMemoWay0++;
+            }
+            else
+            {
+                /* Move to front, so a stream that keeps hitting way 3 does not
+                 * keep paying for three probes. */
+                while (w > 0u)
+                {
+                    memo[w] = memo[w - 1u];
+                    w--;
+                }
+                memo[0] = idx;
+            }
+            return &sNdsRelocLoadedFiles[idx];
+        }
     }
 
+    gNdsRelocFindMemoScans++;
     for (i = 0; i < sNdsRelocLoadedFileCount; i++)
     {
         if (ndsRelocPointerRangeInLoadedFile(&sNdsRelocLoadedFiles[i],
                                              ptr,
                                              size) != FALSE)
         {
-            last_loaded_file_index = i;
+            for (w = NDS_RELOC_FIND_MEMO_WAYS - 1u; w > 0u; w--)
+            {
+                memo[w] = memo[w - 1u];
+            }
+            memo[0] = i;
             return &sNdsRelocLoadedFiles[i];
         }
     }
+    gNdsRelocFindMemoAbsent++;
     return NULL;
 }
 

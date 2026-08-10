@@ -3399,6 +3399,65 @@ placement term that was hiding it.** That vindicates the route and retroactively
 explains why the 7-cut batch's −32,128 P95 was uninterpretable. Any future cut in
 the 1,000–5,000 tick class must be measured this way; there is no other method.
 
+### FTR pre-submission: the asset lookup is NOT the seam — my premise was 6x wrong
+
+`FTR_STG_OPTIMIZATION.md` asks for traversal and policy work to be deleted from
+the ~172K pre-submission half. Cycle 98 had already refuted validate and reset
+and named **material prep** (99.948% byte-identical re-derivation). Its stated
+mechanism was `ndsRendererAdapterValidateNativeOwnerMaterials` doing **three
+`ndsRelocFindLoadedFileContaining` searches per material per fighter per frame**,
+and that function's memo is **one entry deep** (`last_loaded_file_index`) while
+the three pointers it is asked for — `palette_image`, `block_image`,
+`current_image` — are three interleaved streams. That predicts near-total memo
+thrash. Widened it to four-way move-to-front and counted.
+
+**The counters refuted the premise.** Whole match, both-CPU, gate arm:
+
+| counter | value | reading |
+|---|---:|---|
+| total calls | **30,385** | **~15 per frame**, not the ~178,000/match the material call count implied |
+| `Way0` | 25,434 | **83.7% — the one-entry memo was already catching most of it** |
+| ways 1–3 | **4,385** | 14.4%: the scans this change actually deletes |
+| reached the linear scan | 1,014 | 3.3% |
+
+**Why the estimate was 6x off:** `ValidateNativeOwnerMaterials` sits *behind* the
+owner validate cache, which cycle 98 measured at **3,961 reuse / 2 build**. Its
+three searches per material are therefore already elided ~999 times in 1,000, so
+they never became per-frame volume. Reading a per-call cost off an inner
+function's call count without checking the cache in front of it is what produced
+a 6x error — the same shape as the self-time lesson.
+
+**Verdict: KEEP, banked, not a lever.** 4,385 deleted scans ≈ **500
+ticks/frame** — real and repeatable but far under this instrument's resolution.
+It is free in footprint (**binary byte-identical**, 160 bytes of headroom, the
+function stayed out-of-line at 276 bytes rather than inlining into all 30
+callers), and the standing rule is to keep every repeatable
+correctness-preserving gain and accumulate it. The counters stay so the seam
+never has to be guessed at again.
+
+**Equivalence was verified, not assumed,** and the non-obvious half is the
+boundary: `ndsRelocPointerRangeInLoadedFile` accepts `addr == base + data_size`
+(it tests `>`, not `>=`), so two adjacent allocations would both appear to hold a
+pointer on the seam — except the inner `ndsRelocRangeInLoadedFile` rejects
+`size > data_size - offset`, and there the remainder is 0 while every caller
+passes size >= 1. At most one file can match, so "first match in scan order" and
+"the matching way" name the same file.
+
+**Do not read this run's WORK-H against the parser ROM's.** It is a different
+binary (mean 1,121,957 vs 1,133,754, VBI-2 1136 vs 1086), so placement dominates
+and none of that difference is attributable to this change.
+
+**What is left of the plan's FTR half is architectural.** With validate, reset and
+now the lookup underneath material prep all refuted, the remaining
+pre-submission cost is `PrepareNativeOwnerHierarchy`/`…Matrices` — which the
+cycle-97 table already classed as *genuinely varying*, not deletable — plus the
+material snapshot's own derivation, whose 25 real variants are frac texture
+animation. That is the native fighter draw program the plan describes, and the
+plan's own warning applies: the previous attempt at the FIFO-template mechanism
+regressed **+124K**. It is a multi-cycle project with no one-flag step, and `FTR`
+separates the over/under-gate populations by only **+13,768**, so it is headroom
+work rather than gate work — which the plan itself says in its closing lines.
+
 ### Parser slice LANDED and measured: WORK-H mean −6,805, 20 frames to 30 FPS
 
 `ftAnimParseDObjFigatree` is replaced port-side (`src/import/battleship_ftanim.c`,
