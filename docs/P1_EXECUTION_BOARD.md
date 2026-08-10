@@ -3341,6 +3341,91 @@ regression bisect (largest known flat cost), `Tex` residue on non-effect
 paths, then the charter §7 contingency ladder (rate reduction → fidelity →
 owner-approved 30 Hz) — never widen the gate.
 
+### The `.data` route WORKS — first attributable animation measurement (cycle 109)
+
+Built the standing-rule-7 route the determinism finding demanded.
+`gNdsR2AnimCutRoute` (`src/import/battleship_sys_objanim.c`, `.data`,
+`aligned(32)` so no neighbouring counter's write-back can stamp the poke): bit 0
+the loop-invariant hoist, bit 1 the fused `length * length_invert`. Default 3 is
+shipped behaviour, so an unpoked ROM is unaffected. ROM
+`builds/build-c109-route2`, `NDS_R2_BOTH_CPU=1`, DLDI on, 1600 samples/arm.
+
+**Provenance — every control holds.** `romSha256` **identical across both arms**
+(`5CE68200B1831473…`), same melonDS hash, same sample count. The route read `3`
+and `0` respectively in `-ExtraGlobals` at *end of run*, so the poke landed and
+was never stamped back. `gNdsR2CubicEvals` was **292,857 in both arms** — the
+route changes how a value is computed, never how often, so identical eval counts
+are a semantic-equivalence control, not a coincidence.
+
+| bucket | cuts on | pre-cut | delta |
+|---|---:|---:|---:|
+| **WORK-H mean** | 1,128,367 | 1,132,109 | **−3,742** |
+| WORK-H P50 | 1,101,824 | 1,102,528 | −704 |
+| WORK-H P95 | 1,550,400 | 1,572,352 | −21,952 |
+| **SRC mean** | 387,316 | 391,204 | **−3,888** |
+| SRC P50 | 368,768 | 369,728 | −960 |
+| OTHR P50 | 203,712 | 197,888 | **+5,824** |
+
+**The two cuts are worth ≈3,700–3,900 ticks/frame of mean `WORK-H`.** The
+attribution is what makes this the result: `SRC` is the bucket the changed code
+lives in, and its mean moved −3,888 against `WORK-H`'s −3,742. Those agree.
+Rough corroboration from the cycles model — the hoist's 1,955,955 predicted
+cycles plus ~8 cycles saved on each of 292,857 cubic evals — lands inside 1.4x of
+the measured figure, which for a cycles estimate is agreement, not precision.
+
+**Read the mean, not the percentiles, and here is why.** P50 −704 is real but
+near the instrument's 64-tick quantum. **P95 −21,952 is NOT attributable to these
+cuts** — P95 sits at 1.55M, far over the gate, and the whole-match tail is effect
+DObj submits, not animation; two arithmetic cuts in the joint loop cannot move it
+by 22K. `OTHR` P50 moved **the wrong way** (+5,824) and nothing in these cuts can
+touch `OTHR`. Both are the honest residue: **a one-binary route removes the
+*placement* term because addresses are identical, but not the *cache-occupancy*
+term, because the two arms still execute different instruction bytes.** The mean
+is the statistic to read — it uses all 1,599 rows rather than one order
+statistic.
+
+**What this settles.** The cut is **3.8x smaller than the 14,080 cross-build
+placement term that was hiding it.** That vindicates the route and retroactively
+explains why the 7-cut batch's −32,128 P95 was uninterpretable. Any future cut in
+the 1,000–5,000 tick class must be measured this way; there is no other method.
+
+### Parser slice: the mechanism is a PORT REWRITE, not a patch extension
+
+Sized the parser's remaining soft float from the cycle-106 profile: `fdiv`
+**1,494,619** at 109.4 cycles a call (the most expensive helper in the build by
+3x) on `1.0F / payload` at exactly **two sites**, `ftanim.c:170` and `:244`;
+`fsub` 1,753,743; `fadd` 1,454,187; `fcmpeq` 921,383; `fmul` 920,213; `i2f`
+796,253; `fcmpgt` 385,779; `fcmple` 204,854. **≈7.9M cycles ≈ 9,000
+ticks/frame** — the densest remaining block in the animation lane.
+
+Two facts make the `fdiv` free of numerical risk: `relocdata_types.h` documents
+the payload as **a u16 following the command word**, so a reciprocal table is
+indexed by a small integer and hits every time; and this build passes **no
+`-ffast-math`**, so a compile-time `1.0f/n` initializer is correctly rounded and
+therefore **bit-identical** to the runtime divide. The six `payload` assignments'
+u16→f32 conversions are exact through the already-proven `ndsR2S32ToF32Bits`
+(a u16 has ≤16 significant bits, so no rounding occurs at all) — reuse, not a
+second converter.
+
+**But the mechanism I reached for is closed.** `src/import/battleship_ftanim.c`
+`#define`s the parser's name, which renames its **definition and its call sites
+together**, so no macro can redirect only the calls. The obvious next seam —
+extending `scripts/decomp-patches/battleship/src_ft_ftanim.patch`, which already
+carries DS-guarded inserts to this exact file — **runs against a standing owner
+decision**: 2026-08-06, the eight patches **migrate port-side over time**, and
+that table lists this very patch. Adding to it moves the wrong way.
+
+**So the slice is a port-side replacement of `ftAnimParseDObjFigatree` in
+`src/port/reloc_backend_compat_shims.c:1545`**, which already defines that symbol
+and today merely forwards to `battleship_ftAnimParseDObjFigatree`. That satisfies
+"replace, don't coexist", and it *retires* a decomp-patch dependency instead of
+deepening one. It is ~300 lines of gameplay-critical transcription and has not
+been written — the mechanism question is what closed here, not the code.
+
+**Correction to a recorded blocker:** the note that "the parser has no textual
+override hook" was wrong. The shim at `:1545` is the hook; what the macro blocks
+is redirecting the *helper* `ftAnimGetTargetValue`, not the parser itself.
+
 ## Red Queue
 
 The P1 acceptance-level rows, highest impact first. The gate lane above is

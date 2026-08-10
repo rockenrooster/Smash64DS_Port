@@ -271,6 +271,18 @@ NDS_R2_ANIM_CACHE ?= 0
 # see identical bytes. Requires NDS_R2_ANIM_CACHE. Declines are per asset and
 # fall back to today's path; see the block comment in reloc_backend_assets.c.
 NDS_R2_AOBJ16_PREBAKE ?= 0
+# Cycle 109. Builds BOTH arms of the two animation cuts into one binary, selected
+# at runtime by gNdsR2AnimCutRoute, so they can be priced without a second link.
+# This is standing rule 7's route, and after the determinism finding it is the
+# ONLY method that can separate a cut in the 1,000-5,000 tick class from the
+# 14,080-tick placement term.
+#
+# Default 0 and it must STAY 0 for anything published: at 1 the joint loop pays a
+# register test per AObj node plus a spill, and "replace, don't coexist" is a
+# board rule with a measured price (1.85 cycles of FTR mean per byte of added ARM
+# text). At 0 every route test folds to a constant and the pre-cut arms are
+# dead-coded away, so the shipped ROM is byte-for-byte the no-route program.
+NDS_R2_ANIM_CUT_ROUTE ?= 0
 # R2-03 E47. The native fighter owner derives its material colour and its
 # use-material predicate from `stats` per epoch, the way the generic path does,
 # instead of reading a baked policy flag and always taking prim_color. The
@@ -2929,6 +2941,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_R2_DELTA_PATH_ITCM $(NDS_R2_DELTA_PATH_ITCM)'; \
 		echo '#define NDS_R2_ANIM_CACHE $(NDS_R2_ANIM_CACHE)'; \
 		echo '#define NDS_R2_AOBJ16_PREBAKE $(NDS_R2_AOBJ16_PREBAKE)'; \
+		echo '#define NDS_R2_ANIM_CUT_ROUTE $(NDS_R2_ANIM_CUT_ROUTE)'; \
 		echo '#define NDS_R2_MATERIAL_DYNAMIC $(NDS_R2_MATERIAL_DYNAMIC)'; \
 		echo '#define NDS_R2_FLASH_PROBE $(NDS_R2_FLASH_PROBE)'; \
 		echo '#define NDS_R2_ANIM_CENSUS $(NDS_R2_ANIM_CENSUS)'; \

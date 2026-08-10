@@ -106,6 +106,12 @@ typedef struct AObj {
 static unsigned int gNdsR2CubicEvals;
 static unsigned int gNdsR2CubicSaturations;
 
+/* The standing-rule-7 A/B route gate the kernel now reads. Defined the way a
+ * PUBLISHED build defines it -- constant 1 -- so the bound is measured on the
+ * FUSED path, the only arm whose error needs bounding: route 0 is the decomp's
+ * own float expression, whose deviation from itself is zero by construction. */
+#define NDS_R2_ANIM_CUT_ON(bit) (1)
+
 /* ---- reference, verbatim from the decomp ---- */
 __REFERENCE__
 

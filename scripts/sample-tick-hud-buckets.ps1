@@ -947,8 +947,44 @@ try {
     # profile-0 ROM would have, since it carries no tick HUD at all.
     $workIndex = [array]::IndexOf($bucketNames, 'WORK') + 1
     $hudIndex = [array]::IndexOf($bucketNames, 'HUD') + 1
-    $workNoHud = @($rows | ForEach-Object {
-        [uint64]$_[$workIndex] - [uint64]$_[$hudIndex] })
+    # HUD is normally a part of WORK, so the difference is normally positive.
+    # It is NOT positive on a torn row: when a presented frame runs a second
+    # logic iteration, a sample can catch WORK already reset for the new
+    # iteration while HUD still carries the previous redraw, and HUD's redraws
+    # are worth a few hundred thousand ticks each. `[uint64]a - [uint64]b` then
+    # throws "Arithmetic operation resulted in an overflow" from inside
+    # Measure-Object, roughly twenty minutes into a run, naming a number
+    # ("-1047808") that appears nowhere in the instrument -- so the failure
+    # reads as a corrupt ROM rather than as the duplicate-sample warning printed
+    # further up. It cost a full 1600-sample run on a ROM whose only sin was
+    # being a one-CPU build, where cheap logic makes second iterations common
+    # (237 of 1600 rather than the usual 2 to 4).
+    #
+    # Drop those rows and say how many. They are not pacing-comparable anyway,
+    # which is exactly what the -AllowRepeatedFrames warning already says.
+    # A plain foreach, not ForEach-Object: the pipeline form runs its block in a
+    # child scope, so the torn counter would have to be $script:-qualified and
+    # would silently read 0 if this block ever moves inside a function.
+    $workNoHudTorn = 0
+    $workNoHudList = New-Object 'System.Collections.Generic.List[uint64]'
+    foreach ($r in $rows) {
+        $w = [uint64]$r[$workIndex]
+        $h = [uint64]$r[$hudIndex]
+        if ($h -gt $w) { $workNoHudTorn++ } else { $workNoHudList.Add($w - $h) }
+    }
+    $workNoHud = @($workNoHudList)
+    if ($workNoHud.Count -eq 0) {
+        throw ("Every one of $($rows.Count) sampled rows had HUD > WORK, so " +
+            'WORK-H has no valid sample. That is a torn-read symptom, not a ' +
+            'measurement: re-run with a build whose pacing gives one logic ' +
+            'iteration per presented frame (the both-CPU arm).')
+    }
+    if ($workNoHudTorn -ne 0) {
+        Write-Warning ("WORK-H dropped $workNoHudTorn of $($rows.Count) rows " +
+            'where HUD exceeded WORK (a second logic iteration sampled ' +
+            'mid-update). The remaining ' + $workNoHud.Count + ' rows are the ' +
+            'WORK-H series below.')
+    }
     $sortedWorkNoHud = @($workNoHud | Sort-Object)
     $stats += [PSCustomObject]@{
         bucket = 'WORK-H'

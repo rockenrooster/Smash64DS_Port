@@ -93,6 +93,48 @@
 volatile u32 gNdsR2CubicEvals;
 volatile u32 gNdsR2CubicSaturations;
 
+/* Cycle 109 standing-rule-7 route for the two animation cuts in this file.
+ *
+ * Why a runtime route rather than two builds: this cycle PROVED the sampler is
+ * bit-deterministic -- the same ROM sampled twice returns byte-identical
+ * buckets, variance 0 on every percentile. The 14,080-tick "cross-build floor"
+ * is therefore not noise but deterministic *placement* sensitivity, and the
+ * distinction decides the method. Noise averages down over runs; placement does
+ * not, ever. No number of repeats can separate a 3,000-tick code win from a
+ * 6,000-tick re-addressing shift across two binaries. Measuring ONE binary two
+ * ways is the only method that can, which is what this global is for.
+ *
+ *   bit 0 (1) -- the loop-invariant hoist in gcPlayDObjAnimJoint
+ *   bit 1 (2) -- the fused length*length_invert multiply in the cubic kernel
+ *
+ * Default 3 is the shipped behaviour, so an unpoked ROM is unaffected.
+ * `-SetGlobals gNdsR2AnimCutRoute=0` is the pre-cut arm.
+ *
+ * .data, not .bss, and aligned(32) so it OWNS its cache line. Both are load
+ * bearing: an uninitialised route would place differently between arms, and
+ * gNdsFtrPlanVerify's comment in diagnostics.c records a poke being stamped
+ * back to 0 by a neighbouring counter's write-back -- gNdsR2CubicEvals here
+ * increments on every single cubic node, so that hazard is a certainty rather
+ * than a possibility.
+ *
+ * Compile-time gated because the route is an INSTRUMENT, not a feature. At
+ * NDS_R2_ANIM_CUT_ROUTE=0 (the default, and what every published ROM builds)
+ * NDS_R2_ANIM_CUT_ON folds to a constant 1, GCC dead-codes both pre-cut arms,
+ * and the shipped program is exactly the no-route one -- no per-node test, no
+ * spill, no footprint. "Replace, don't coexist" is a board rule with a price
+ * attached, and a permanent runtime selector would pay it forever to answer a
+ * question that is already answered. */
+#ifndef NDS_R2_ANIM_CUT_ROUTE
+#define NDS_R2_ANIM_CUT_ROUTE 0
+#endif
+#if NDS_R2_ANIM_CUT_ROUTE
+volatile u32 gNdsR2AnimCutRoute
+    __attribute__((section(".data"), aligned(32))) = 3u;
+#define NDS_R2_ANIM_CUT_ON(bit) ((gNdsR2AnimCutRoute & (bit)) != 0u)
+#else
+#define NDS_R2_ANIM_CUT_ON(bit) (1)
+#endif
+
 /* NDS_R2_CUBIC_FIXED_KERNEL_BEGIN — `scripts/check_r2_cubic_error_bound.py`
  * extracts everything between this marker and the matching END and compiles it
  * on the host against the decomp's own `gcGetInterpValueCubic`. Extraction
@@ -325,9 +367,17 @@ static inline f32 ndsR2FixedToF32(s32 q, s32 bits)
 static NDS_R2_CUBIC_ATTR f32 ndsR2CubicValueFixed(const AObj *aobj)
 {
     /* The one unavoidable real multiply: `length` advances every tick, so `t`
-     * cannot be carried across evaluations. */
-    s32 t = ndsR2F32MulToFixed(aobj->length, aobj->length_invert,
-                               NDS_R2_CUBIC_BF);
+     * cannot be carried across evaluations.
+     *
+     * Route bit 1 selects the pre-cut form -- a soft-float multiply followed by
+     * a separate convert -- so the fused version can be priced on this same
+     * binary. The route test is a register `tst` present in both arms, so it
+     * cancels out of the difference; it does mean the lab ROM's fused arm is
+     * marginally slower than the shipped one, which is the accepted cost. */
+    s32 t = NDS_R2_ANIM_CUT_ON(2u) ?
+        ndsR2F32MulToFixed(aobj->length, aobj->length_invert,
+                           NDS_R2_CUBIC_BF) :
+        ndsR2F32ToFixed(aobj->length * aobj->length_invert, NDS_R2_CUBIC_BF);
     s32 length_q = ndsR2F32ToFixed(aobj->length, NDS_R2_CUBIC_VF);
     /* t is Q16 and normally in [0,1], so t*t reaches 2^32 and needs the 64-bit
      * product. Every requantising shift rounds rather than truncates. */
@@ -404,10 +454,18 @@ void gcPlayDObjAnimJoint(DObj *dobj)
          * delete. Folding both into a single computed word makes
          * rematerialising strictly more expensive than keeping it, because it
          * would have to redo the load AND the mask. */
-        const u32 play =
+        const u32 play_hoisted =
             (NDS_FCMP_NE_C(dobj->anim_wait, AOBJ_ANIM_END) ? 1u : 0u) |
             (((dobj->parent_gobj->flags & GOBJ_FLAG_NOANIM) == 0) ? 2u : 0u);
-        const f32 speed = dobj->anim_speed;
+        const f32 speed_hoisted = dobj->anim_speed;
+        /* Route bit 0. Read once per DObj -- reading it per node would put a
+         * volatile load in the very loop being measured. The pre-cut arm
+         * re-derives both from `dobj` per node, which is the decomp's own shape
+         * (objanim.c reads anim_wait, anim_speed and parent_gobj->flags inside
+         * the loop); it keeps NDS_FCMP_NE_C rather than restoring the
+         * __aeabi_fcmpeq call, because the fcmp->bit-compare change is a
+         * separate landed cut and conflating the two would price neither. */
+        const u32 hoist = NDS_R2_ANIM_CUT_ON(1u) ? 1u : 0u;
 
         aobj = dobj->aobj;
 
@@ -415,6 +473,23 @@ void gcPlayDObjAnimJoint(DObj *dobj)
         {
             if (aobj->kind != nGCAnimKindNone)
             {
+                u32 play;
+                f32 speed;
+
+                if (hoist != 0u)
+                {
+                    play = play_hoisted;
+                    speed = speed_hoisted;
+                }
+                else
+                {
+                    play =
+                        (NDS_FCMP_NE_C(dobj->anim_wait, AOBJ_ANIM_END) ?
+                            1u : 0u) |
+                        (((dobj->parent_gobj->flags & GOBJ_FLAG_NOANIM) == 0) ?
+                            2u : 0u);
+                    speed = dobj->anim_speed;
+                }
                 if ((play & 1u) != 0u)
                 {
                     aobj->length += speed;
