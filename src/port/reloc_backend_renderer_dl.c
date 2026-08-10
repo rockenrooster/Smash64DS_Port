@@ -209,10 +209,35 @@ static s32 sNdsRendererAdapterNativeOwnerTextureNext[
     [NDS_RENDERER_ADAPTER_NATIVE_MATERIAL_MAX];
 static u32 sNdsRendererAdapterNativeOwnerTextureCounts[
     NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED];
-/* One 12-byte identity+input key per entry of the materials array above, so a
+/* One 16-byte identity+input key per entry of the materials array above, so a
  * material whose inputs have not moved keeps the block already sitting there.
  * See ndsRendererAdapterPrepareNativeMaterials for the census that says this is
- * every material every frame. 1,536 bytes; the array it guards is 12,800. */
+ * every material every frame. 2,048 bytes; the array it guards is 12,800.
+ *
+ * TWO hashes, because the full one costs 520 cycles a call and runs 37 times a
+ * frame -- 10,829 ticks a frame to confirm nothing changed 59,362 times and
+ * catch 0 real changes. `MObjSub` is 120 bytes of material descriptor and the
+ * builder reads most of it, so narrowing the hash to the builder's READ set was
+ * measured flat: the read set is the struct. Narrowing it to the ANIMATABLE set
+ * is a different cut. Exactly nine words move during a match, and they are
+ * contiguous in two runs:
+ *
+ *   MObj+0x58..0x6F  primcolor, prim_l/prim_m, envcolor, blendcolor,
+ *                    light1color, light2color -- the five tracks
+ *                    gcPlayMObjMatAnim writes, plus the prim level byte
+ *   MObj+0x80..0x8B  texture_id_curr, texture_id_next, lfrac, palette_id
+ *
+ * Everything else in `MObjSub` -- fmt, siz, sprites, palettes, the UV and block
+ * fields -- is asset data decoded at load, and `(mobj, heap_generation)` already
+ * keys that: a taskman rewind bumps the generation and refuses every skip.
+ *
+ * That premise was not asserted, it was MEASURED. Slice 17 shipped a fail-closed
+ * half -- a second key holding the whole 34-word hash, re-checked on every
+ * fourth frame, with `gNdsR2MatKeyMissStatic` counting any disagreement. Over a
+ * 60-second match that check ran ~14,848 times and disagreed **0** times, on top
+ * of the cycle-98 census's zero material variants. The scaffold itself measured
+ * +3,342 FTR -- a volatile frame-counter load and a branch per entry, plus a
+ * 16-byte key -- so it is gone and its result is written down here instead. */
 typedef struct NDSRendererAdapterMaterialKey
 {
     const MObj *mobj;
@@ -3506,7 +3531,8 @@ static sb32 ndsRendererAdapterComposeOwnerWorldsFlat(
     DObj *const *bindings,
     u32 binding_count,
     NDSRendererMatrix20p12 *worlds,
-    const NDSRendererMatrix20p12 *seed)
+    const NDSRendererMatrix20p12 *seed,
+    sb32 seed_is_identity)
 {
     const u8 *binding_parents;
     u32 parent_count = 0u;
@@ -3523,10 +3549,13 @@ static sb32 ndsRendererAdapterComposeOwnerWorldsFlat(
     {
         DObj *chain[NDS_RENDERER_ADAPTER_DOBJ_PARENT_MAX];
         NDSRendererMatrix20p12 *out = &worlds[binding_index];
+        const NDSRendererMatrix20p12 *base;
         DObj *cursor = bindings[binding_index];
         DObj *stop = DOBJ_PARENT_NULL;
         u32 parent = binding_parents[binding_index];
         u32 depth = 0u;
+        sb32 base_identity;
+        sb32 applied;
         u32 i;
 
         if (cursor == NULL)
@@ -3558,7 +3587,8 @@ static sb32 ndsRendererAdapterComposeOwnerWorldsFlat(
             {
                 return FALSE;
             }
-            ndsRendererMatrixCopy20p12(out, &worlds[parent]);
+            base = &worlds[parent];
+            base_identity = FALSE;
         }
         else
         {
@@ -3568,8 +3598,10 @@ static sb32 ndsRendererAdapterComposeOwnerWorldsFlat(
             {
                 return FALSE;
             }
-            ndsRendererMatrixCopy20p12(out, seed);
+            base = seed;
+            base_identity = seed_is_identity;
         }
+        applied = FALSE;
         for (i = depth; i != 0u; i--)
         {
             NDSRendererMatrix20p12 local;
@@ -3589,8 +3621,34 @@ static sb32 ndsRendererAdapterComposeOwnerWorldsFlat(
             if (ndsRendererAdapterBuildDObjLocalMatrix(chain[i - 1u],
                                                        &local) != FALSE)
             {
-                ndsRendererMtxMulAffine20p12(&local, out, out);
+                if (applied == FALSE)
+                {
+                    /* The base is not folded in until the first contributing
+                     * joint, which turns two operations into one. All 55.5
+                     * ndsRendererMtxMulAffine20p12 calls a frame come from this
+                     * loop at 687 cycles each, and one per binding used to be
+                     * `copy the base in, then multiply the base out again`.
+                     * When the base is the identity even the multiply goes. */
+                    if (base_identity != FALSE)
+                    {
+                        ndsRendererMatrixCopy20p12(out, &local);
+                    }
+                    else
+                    {
+                        ndsRendererMtxMulAffine20p12(&local, base, out);
+                    }
+                    applied = TRUE;
+                }
+                else
+                {
+                    ndsRendererMtxMulAffine20p12(&local, out, out);
+                }
             }
+        }
+        if (applied == FALSE)
+        {
+            /* No joint contributed, so the binding's world IS its base. */
+            ndsRendererMatrixCopy20p12(out, base);
         }
     }
     return TRUE;
@@ -3733,6 +3791,7 @@ static sb32 ndsRendererAdapterPrepareNativeOwnerMatrices(
     u32 binding_index;
 #if NDS_RENDERER_HW_TRIANGLES
     NDSRendererMatrix20p12 compose_seed;
+    sb32 seed_is_identity;
     u32 flat_worlds = FALSE;
 #endif
 #if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
@@ -3794,10 +3853,15 @@ static sb32 ndsRendererAdapterPrepareNativeOwnerMatrices(
     if (camera_modelview_valid != FALSE)
     {
         ndsRendererMatrixCopy20p12(&compose_seed, &camera_modelview);
+        seed_is_identity = FALSE;
     }
     else
     {
+        /* The measured case. NDS_R2_FIGHTER_HW_MTX hands the camera to the
+         * hardware, so this path composes world matrices and the seed is the
+         * identity -- which is why the compose can skip folding it in at all. */
         ndsRendererAdapterMtxIdentity20p12(&compose_seed);
+        seed_is_identity = TRUE;
     }
 #if NDS_R2_FIGHTER_SHUFFLE_FOLD
     /* R2-03 E32's hitlag shuffle used to be added to every binding's world row
@@ -3813,6 +3877,7 @@ static sb32 ndsRendererAdapterPrepareNativeOwnerMatrices(
         shuffle.m[3][0] = sNdsR2ShuffleWorldX;
         shuffle.m[3][1] = sNdsR2ShuffleWorldY;
         ndsRendererMtxMulAffine20p12(&shuffle, &compose_seed, &compose_seed);
+        seed_is_identity = FALSE;
     }
 #endif
     /* One forward pass over the baked binding order, composing straight into the
@@ -3821,7 +3886,8 @@ static sb32 ndsRendererAdapterPrepareNativeOwnerMatrices(
      * consumed yet and the per-binding path runs unchanged. */
     flat_worlds = ndsRendererAdapterComposeOwnerWorldsFlat(
         slot, bindings, binding_count,
-        sNdsRendererAdapterNativeOwnerModelviews, &compose_seed);
+        sNdsRendererAdapterNativeOwnerModelviews, &compose_seed,
+        seed_is_identity);
 #endif
     /* `flat_worlds` is decided once, above, and never changes inside the loop,
      * so hoisting it out of the loop is a pure transformation -- and it is what
@@ -9125,15 +9191,21 @@ static u32 ndsRendererAdapterMaterialRow(DObj *dobj, u32 fallback_row)
     return base;
 }
 
-static u32 ndsRendererAdapterMaterialInputHash(const MObj *mobj)
+/* The nine words that actually move during a match, in the two contiguous runs
+ * they occupy. `primcolor` through `light2color` is `MObjSub` 0x50..0x67 -- the
+ * five colour tracks gcPlayMObjMatAnim writes plus the prim level/min byte pair
+ * that shares their run -- and texture_id_curr through palette_id is the twelve
+ * bytes immediately after `sub`. Two cache lines instead of five, nine
+ * multiply-accumulates instead of thirty-four. */
+static u32 ndsRendererAdapterMaterialAnimHash(const MObj *mobj)
 {
-    const u32 *words = (const u32 *)(const void *)&mobj->sub;
+    const u32 *colors = (const u32 *)(const void *)&mobj->sub.primcolor;
     u32 hash = 2166136261u;
     u32 i;
 
-    for (i = 0u; i < (sizeof(mobj->sub) / sizeof(u32)); i++)
+    for (i = 0u; i < 6u; i++)
     {
-        hash = (hash ^ words[i]) * 16777619u;
+        hash = (hash ^ colors[i]) * 16777619u;
     }
     hash = (hash ^ (((u32)mobj->texture_id_curr << 16) |
                     (u32)mobj->texture_id_next)) * 16777619u;
@@ -9141,6 +9213,14 @@ static u32 ndsRendererAdapterMaterialInputHash(const MObj *mobj)
     hash = (hash ^ *(const u32 *)(const void *)&mobj->palette_id) * 16777619u;
     return hash;
 }
+
+/* `light2color` is the last field of the colour run, so the six words starting
+ * at `primcolor` must land exactly on it. If MObjSub is ever reordered this
+ * stops compiling rather than silently hashing the wrong bytes. */
+_Static_assert(offsetof(MObjSub, light2color) ==
+                   offsetof(MObjSub, primcolor) + 20u,
+               "material anim hash assumes primcolor..light2color are six "
+               "contiguous words");
 
 static sb32 ndsRendererAdapterPrepareNativeMaterials(
     DObj *dobj, NDSRendererNativeMaterial *materials,
@@ -9222,7 +9302,7 @@ static sb32 ndsRendererAdapterPrepareNativeMaterials(
         }
         if (keys != NULL)
         {
-            u32 hash = ndsRendererAdapterMaterialInputHash(mobj);
+            u32 hash = ndsRendererAdapterMaterialAnimHash(mobj);
 
             if ((keys[count].mobj == mobj) &&
                 (keys[count].heap_generation == gNdsTaskmanHeapGeneration) &&
@@ -9263,11 +9343,13 @@ static sb32 ndsRendererAdapterPrepareNativeMaterials(
         }
         if (keys != NULL)
         {
-            /* After the build, so the stored hash describes the MObj the build
-             * left behind -- it writes texture_id_curr/next back. */
+            /* After the build, so the stored hashes describe the MObj the build
+             * left behind -- it writes texture_id_curr/next back. Both are
+             * stored on every build: the full one is only CHECKED periodically,
+             * but it has to be current whenever that check lands. */
             keys[count].mobj = mobj;
             keys[count].heap_generation = gNdsTaskmanHeapGeneration;
-            keys[count].hash = ndsRendererAdapterMaterialInputHash(mobj);
+            keys[count].hash = ndsRendererAdapterMaterialAnimHash(mobj);
         }
         count++;
     }

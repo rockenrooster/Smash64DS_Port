@@ -3871,6 +3871,54 @@ plus a guaranteed I-cache miss, ~69 times a frame.
 the body is.** A cold run that starts mid-function is an early return, not dead
 code.
 
+### Slice 17: REFUTED — and it CORRECTS slice 13's stated mechanism
+
+Two things, one build.
+
+**The material key narrowed correctly and measured worse.** `MObjSub` is 120
+bytes and the builder reads most of it, so the cycle-109 "narrow to the read
+set" refutation stands — the read set IS the struct. But only **nine** words
+*animate*, and they are contiguous: `MObj+0x58..0x6F` (the five colour tracks
+`gcPlayMObjMatAnim` writes plus the prim level pair) and `MObj+0x80..0x8B`
+(`texture_id_curr/next`, `lfrac`, `palette_id`). Nine words, two cache lines,
+against thirty-four words and five. Shipped with a fail-closed half: the whole
+34-word hash re-checked every fourth frame, `gNdsR2MatKeyMissStatic` counting
+disagreements. **FTR +3,342** — a volatile frame-counter load and a branch per
+entry, plus a 16-byte key. Reverted to the narrow hash alone (slice 18), and
+that scaffold's result is now a comment: **~14,848 full checks, 0
+disagreements.**
+
+**And the entry PC refuted slice 13's story.** `ndsRendererMtxMulAffine20p12`
+executed its prologue **88,758** times in c112 and **88,825** in c115 — slice 13
+deleted no multiplies at all. The per-binding `world * camera` it "removed" was
+never running, because `NDS_R2_FIGHTER_HW_MTX` hands the camera to the hardware
+and `camera_modelview_valid` is FALSE on this path. (The visual gate agrees: had
+the seed really changed from identity to camera, the image would not have been
+pixel-stable.) Slice 13's −1,019 is the dead world-cache stores, full stop; its
+seed rework is behaviour-preserving scaffolding that slice 18 then made pay.
+
+**`docs/optimization/` memory says "Entry PC gives exact call counts" and I did
+not use it before spending the build.** A symbol total divided by a guessed
+per-call cost is not a call count.
+
+### Slice 18: don't fold the base in until a joint contributes — −10,804
+
+**FTR 313,421 → 302,617, −10,804.** `WORK` −11,014, `WORK-H` −10,909,
+`ALL` −4,206. Boundary passes, fighter pixels stable.
+
+All **55.5** `ndsRendererMtxMulAffine20p12` calls a frame come from
+`ndsRendererAdapterComposeOwnerWorldsFlat`, at **687 cycles** each. The loop used
+to seed `out` from its base — the parent binding's world, or the identity for a
+root — and then multiply every joint into it. So one call per binding was
+*copy the base in, then multiply the base straight back out*.
+
+Now the base is not folded in until the first joint that actually contributes:
+that joint multiplies against the base directly instead of against a copy of it,
+and when the base is the identity the multiply disappears entirely. A binding
+whose joints all decline still gets `out = base`, as before.
+
+Carries slice 17's narrowed material key too, without its scaffold.
+
 ### The `.data` route WORKS — first attributable animation measurement (cycle 109)
 
 Built the standing-rule-7 route the determinism finding demanded.
