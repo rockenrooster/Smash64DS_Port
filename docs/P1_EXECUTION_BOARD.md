@@ -2498,6 +2498,46 @@ applied there is the obvious next increment, and it is also sub-floor alone.
 Kept: it removes real work, is bit-identical, is proven to engage, and Boundary
 passes. Not claimed as a tick win.
 
+### THE SAMPLER IS BIT-DETERMINISTIC — the "noise floor" is placement, not noise
+
+Ran the **identical ROM twice** (`c109-batch.json` vs `c109-batch-rerun.json`,
+three minutes apart). The only differing field in either file is `capturedUtc`.
+**`buckets` compares equal**: every bucket, every percentile, `named=1,145,659`
+and the VBlank histogram all reproduce exactly.
+
+| WORK-H | run 1 | run 2 | variance |
+|---|---:|---:|---:|
+| mean | 1,164,005 | 1,164,005 | **0** |
+| P50 | 1,111,808 | 1,111,808 | **0** |
+| P95 | 1,548,288 | 1,548,288 | **0** |
+
+Per-bucket variance is 0 for `SRC`, `GCRA`, `SINT`, `SPHD`, `SCPU`, `SHDT`,
+`FTR`, `STG`, `MISC`, `OTHR`. Not "small" — zero.
+
+**Three consequences, and they overturn standing practice.**
+
+1. **Never repeat a sampler run.** It cannot disagree with itself. The board's
+   "run a third A when the A/B is noisy" rule is meaningless for this instrument
+   and every confirmation run ever spent on it bought nothing. That is ~25
+   minutes recoverable per would-be repeat.
+2. **The 14,080 cross-build figure is NOT a noise floor. It is deterministic
+   placement sensitivity.** This matters enormously: noise can be averaged down,
+   placement cannot. No number of runs will ever separate a 3,000-tick code win
+   from a 6,000-tick re-addressing shift. **Only measuring ONE binary two ways
+   can** — standing rule 7's `.data` route is not a convenience, it is the sole
+   available method.
+3. **It reconciles the Boundary flake.** Guest execution is deterministic; the
+   *host-side* 30-second gdb marker budget was what varied. Both observations
+   were true and they are not in tension.
+
+**Applied to this cycle's seven-cut batch** (control = AObj pool + cubic `i2f`
+only): `WORK-H` P95 **−32,128**, P50 +3,712, 2-VBlank frames −19. The P95 figure
+is **real and repeatable for that binary** — it is not noise. It is also **not
+attributable**: `FTR` moved **−7,808** and `SCPU` **+9,024**, and neither can be
+produced by animation or collision cuts, so placement moved at least as much as
+the code did. **Banked as "this binary is 32,128 better at P95", NOT as "these
+cuts are worth 32,128."** The distinction is the whole lesson.
+
 ### THE STRUCTURAL FINDING: this campaign cannot measure itself cut-by-cut
 
 Four exact, verified, work-removing cuts landed this cycle. **Not one is
