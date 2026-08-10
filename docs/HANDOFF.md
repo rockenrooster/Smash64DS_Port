@@ -50,7 +50,7 @@ changes what it covers.**
   fail **`0x02294b24`**. **Text counts as much as bss**; a failing arm reads as
   a hung emulator. **`gSYTaskmanGeneralHeap`** free-min **42,136** against the
   anim cache's 32,768 `KEEP_FREE`; coupled, since freeing `.bss` enlarges it.
-- **The `Tex` (dl-pointer, bind-ordinal) memo is REFUTED** — 471 hits of 10,336
+  **The `Tex` (dl-pointer, bind-ordinal) memo is REFUTED** — 471 hits of 10,336
   consults, 7,517 of 7,525 fills evicted, `Tex` ticks *up*.
 
 ## FTR is re-opened and moving: −82,602 landed, 78% named (cycle 110)
@@ -80,7 +80,7 @@ early. And **once the function is under 8 KB the lever is spent** — two more
 never-entered bodies then cost **+4,959**.
 
 Fourteen landed slices, all deletions or tier moves, none a new abstraction; the
-board carries each one's evidence. The ones whose *findings* generalise:
+board carries each one's evidence. The findings that generalise:
 
 - **The DObj world cache has ZERO readers** — `Find` and `BuildDObjWorldMatrix`
   both execute 0 cycles over a match while `Store` burned 4,744,740 and ~4 KB a
@@ -96,10 +96,9 @@ board carries each one's evidence. The ones whose *findings* generalise:
 
 **Compiling the frame-summary counters out is refuted**: worth FTR −7,378 /
 STG −2,776 and it **breaks the gate**, because `verify-all.ps1 -Profile Boundary`
-runs more than its `-List` row and
-`verify-battle-mariofox-gcrunall-loop-harness.ps1` asserts exact batch and
-texture-prepare accounting off those globals. **A census row is not an FTR
-row** either: `FTR` brackets `ndsFighterDisplayContractSubmit` only, so the
+runs more than its `-List` row and `…gcrunall-loop-harness.ps1` asserts exact
+batch and texture-prepare accounting off those globals. **A census row is not an
+FTR row** either: the bracket is `ndsFighterDisplayContractSubmit` only, so the
 flattened parts-invalidation walk is a real −24,215 `WORK` and **−201 `FTR`**.
 
 **Reconciliation, re-run on c115 with an INDEPENDENT tick factor** (0.4993
@@ -126,19 +125,17 @@ lever, not an `FTR` one — `__aeabi_fadd` alone is 31,245 tk/fr whole-frame.
 `ftMainPlayAnim` **+60,559** (the animation lane) + `ftComputerProcessAll`
 +24,386 (map collision, not AI). `SPHD`/`SHDT`/`SCPU` are not distinct symbol
 classes, so `SRC_CPI_OPTIMIZATION.md`'s items 4-6 are retired. **The force-load
-seam is closed:** `ftmain.c:4623` **discards the return value**, so zero-copy is
-structurally impossible. **The D-cache census is run**
-(`analyze-dcache-stalls.py`, no build): loads average 7.07 cyc/ex, excess
-17.83%; its largest site is a DMA0CNT spin, not a miss.
+seam is closed:** `ftmain.c:4623` **discards the return value**. **The D-cache
+census is run** (`analyze-dcache-stalls.py`, no build): loads average 7.07
+cyc/ex, excess 17.83%; its largest site is a DMA0CNT spin, not a miss.
 
 **The animation lane is the top `SRC` target: 8.85% of non-idle, ~98,000
 ticks/frame at P50**, worth ≈38,700 (~60,000 through to matrices).
 `ftAnimParseDObjFigatree` and `gcPlayDObjAnimJoint` are the #1 and #2 soft-float
 callers; `AObj` is 36 B × ~360 live = **12,960 B against a 4 KB D-cache**, which
 is why `ldrb aobj->kind` costs 24.1 cyc/ex. Constraints on the board: arena not
-linked arrays, replace don't coexist, and **derive phase as `frame * step`,
-never accumulate** — animation drives hitboxes. Bank it as a `WORK` lever: only
-~3,085 of it sits inside the `FTR` bracket.
+linked arrays, replace don't coexist, **derive phase as `frame * step`, never
+accumulate** (it drives hitboxes). A `WORK` lever: ~3,085 is inside `FTR`.
 
 **Do not bring a micro-fix** — R2-06 E11's rule: a load-frame-only ~8,000 cannot
 be banked, because relinking moves the tail by more than the saving. Clear
@@ -156,9 +153,9 @@ config (41 overridden). `.text.hot` is closed in both directions
 1,024** after one minute; overflow silently **skips the animation attach**.
 **The load-frame exclusion is REFUTED — do not apply it.** The owner's "loading
 states excluded" bar must not go through `SRC > 2x median`: circular for SRC,
-swings the gap **3.08x**, drops non-loads (`analyze-load-frame-exclusion.ps1`).
-**Boundary for all of it** — a change that alters a visible pixel of the shield,
-revival platform, impact wave or reflector needs the owner (`BUGS.md`, by eye).
+swings the gap **3.08x**, drops non-loads. **Boundary for all of it** — a change
+altering a visible pixel of the shield, revival platform, impact wave or
+reflector needs the owner (`BUGS.md`, by eye).
 
 ## Measurement rules that change your FIRST action — board owns the rest
 
@@ -180,8 +177,7 @@ revival platform, impact wave or reflector needs the owner (`BUGS.md`, by eye).
   mechanism for a slice by dividing a symbol total by a guessed per-call cost
   instead of reading the prologue's execution count. Free (`--pc-detail`).
 - **Resolve line numbers against the build's own commit** — the profile ELF's
-  `NDS_TASK10_GIT_SHORT`, not HEAD. `analyze-symbol-line-profile.py` does it;
-  reading c106 against HEAD was ~85 lines adrift, top row on a blank line.
+  `NDS_TASK10_GIT_SHORT`, not HEAD; c106 against HEAD was ~85 lines adrift.
 
 ## Restart surface — parked items live on the board's **Parked** list
 
@@ -193,7 +189,7 @@ git status --short
 `docs/P1_EXECUTION_BOARD.md` is the only dynamic queue (history in
 `docs/optimization/archive/P1_EXECUTION_BOARD_pre-cycle79.md`);
 `Smash64DS_Runtime2_SwitchPlan.md` is the charter; `docs/BUGS.md` carries the
-owner's verdicts — they edit it directly, so preserve their wording.
+owner's verdicts — preserve their wording.
 A clean checkout must build through `build.ps1`, not bare `make`: four of six
 generated `.inc` files are gitignored. `make p1-tick` builds the measuring ROM,
 `make p1` the published battle pair; bare `make` builds the P2 ROM P1 does not
