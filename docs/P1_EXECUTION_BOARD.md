@@ -3457,6 +3457,58 @@ and routes "fixed pose -> fixed local matrix" to stage 2 **gated on profiling
 justifying it**. The 62-site count is the beginning of that justification, not the
 end of it — the counter is.
 
+### The matrix group is 20x machinery, not redundancy — the replacement is a one-pass baked compose
+
+**The deduction that sets the design.** `ndsRendererAdapterBuildDObjWorldMatrixUncached`
+walks each joint to the root and rebuilds **every ancestor's** local matrix, which
+is O(n*d). That looks like the lever, and it is not: the local builder runs
+**101,569 times a match = ~50 a frame**, and there are ~50 bound joints a frame
+(25 x 2 fighters). **Each joint's local matrix is therefore built exactly once** —
+the linear-probed world cache already collapses the ancestor rebuild. Do not
+re-attack the walk.
+
+So the 84,051 ticks/frame is not redundant work. At ~50 joints it is **~1,680
+ticks per joint**, against a 4x3 fixed-point compose whose arithmetic is ~36
+multiplies, on the order of **80 cycles**. That is a **20x machinery-to-math
+ratio**, and it is the quantified form of the plan's thesis: the expensive part is
+the architecture around the arithmetic, not the arithmetic.
+
+**Where the 1,680 goes** (six symbols, per frame): `BuildDObjLocalMatrix` 18,290 ·
+`LoadHardwareSplitMatrices` 15,218 · `MtxMulAffine20p12` 14,939 ·
+`BuildDObjWorldMatrix` 13,962 · `BuildFighterTraRotRpyDirect20p12` 11,868 ·
+`MtxMul20p12` 9,773. Per joint that is a cache probe, a chain walk, a `DObj` field
+gather, two out-of-line matrix calls and a copy — to produce 12 words.
+
+**The replacement, and it needs no new generator.** The IR already carries
+`sNdsNativeMarioBindingParents[14]` / `sNdsNativeFoxBindingParents[18]`,
+`BindingJoints`, and `JointSchedule`. Because `BindingParents` is a parent INDEX
+into the same binding array, a single pass in baked topological order can compose
+every world matrix into one contiguous `NDSRendererMatrix20p12[18]`:
+
+    for i in 0..count-1:                      # baked topological order
+        local  = pose_to_local_20p12(i)       # from the fixed pose
+        parent = BindingParents[i]
+        world[i] = (parent == ROOT) ? local : mul_affine(local, world[parent])
+
+That deletes, per joint: the cache probe, the chain walk, the ancestor loop, and
+one level of call indirection — keeping exactly one `mul_affine` and one local
+build, which is the irreducible arithmetic. It is **not** a patch table and **not**
+per-frame patching, so it does not repeat the +124K FIFO-template mistake; it
+deletes traversal and policy, which is what the plan asks for.
+
+**Why this is where the two plans meet.** `pose_to_local_20p12` is the seam
+`FIXEDPOINT_ANIMATION.md` stage 2 feeds: today the pose arrives as `DObj` f32
+rotate/translate/scale and the local build converts it, so an AOT fixed track
+writing a Q12 pose removes the conversion *inside* the same loop this design
+introduces. Land the compose first (pure algorithm, same inputs, verifiable by
+comparing matrices against the existing path), then swap the pose source.
+
+**Verification available before any measurement:** the new pass must produce
+matrices bit-identical to `BuildDObjWorldMatrix` for every bound joint. That is a
+direct A/B inside one build — compute both, compare 12 words, count mismatches —
+and it is fail-closed: any mismatch falls back to the existing path. The
+`gNdsR2AnimCutRoute` pattern already in the tree is the shape for it.
+
 ### Both architectures, quantified: 307K against a ~290K gap
 
 With the conversion fixed (`%tot x 1.2378 -> x frame budget`, idle removed first),
