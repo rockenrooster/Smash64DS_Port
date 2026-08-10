@@ -3700,6 +3700,62 @@ build, the second was right only because a five-line counter answered it in one
 run. **Split the miss counter by reason whenever a skip rate is below what the
 invariance census predicts.**
 
+### Slice 10: the display-contract event had two halves with opposite lifetimes
+
+**FTR 329,034 → 323,871, −5,163**, `WORK` −7,400. Boundary passes. Cumulative
+for cycle 110: **FTR 385,508 → 323,871, −61,637**; `ALL` −76,630.
+
+`NDSFighterDisplayContractEvent` carried its four DObj/Gfx pointers — read by
+three tight per-root loops in the same pass that walks the collection — next to
+its render preamble, read once per root by
+`ndsRendererAdapterBuildNativeProductionInputs` a pass later, after the matrix
+and material work has evicted it. 56 bytes together, so the halves landed on
+different lines and 32 events spanned 1,792 of a 4 KB D-cache.
+
+c106 priced the eviction exactly: **2,966** ticks/frame on
+`root->preamble.geometry_mode = event->geometry_mode` and **1,759** on
+`if (event->light_valid)` — about 110 cycles an event of pure miss for what
+reads like six field copies.
+
+The preamble now lives in its own array **in the consumer's own
+`NDSRendererNativeFighterPreamble` layout, written by the producer** in
+`ndsFighterDisplayContractSelectDL` — including the flags word both build sites
+used to derive, identical arithmetic one pass earlier, into a line that is hot
+because the event was just written. The event is 16 bytes; 512 of pointers plus
+768 of preamble instead of 1,792 interleaved. Each of the readers becomes a
+24-byte struct copy or one field out of a dense array. **Five readers, not the
+four static analysis found** — the fifth seeds `persistent_stats` from
+`light_valid`, which is now the preamble's `LIGHT_VALID` bit. The build caught
+it; a grep for `event->` had not.
+
+### Slice 11: FLAT. The 3,429-tick row was not 3,429 ticks of removable work
+
+**FTR 323,871 → 324,013, +142. Nothing was bought.** Boundary passes; kept only
+because it is strictly less code (one function and one chain traversal gone).
+
+Two changes, and the counters refuted both premises before the ticks did.
+
+`ndsRendererAdapterSaveNativeMaterialTextureIds` was a second walk of the same
+MObj chain the prepare walk already traverses, reading the same two fields, and
+the c110 profile charged it **3,429** ticks/frame. It is now folded into
+`ndsRendererAdapterPrepareNativeMaterials` as two `s32 *` out-parameters, with
+`*out_count` set on every `return FALSE` so a partial walk still rolls back
+exactly what it mutated. **The recovered cost was ~0**, and the arithmetic says
+why: `gNdsR2MatKeySkip + gNdsR2MatKeyBuild` is 59,392 over 1,600 frames, i.e.
+**~37 chain nodes a frame**. Folding removed the call and the pointer chase, not
+the four loads and stores — perhaps 15 cycles × 37 ≈ 550, under the floor.
+**A profiler row for a leaf that is one line of a loop prices the loop iteration,
+not the work you can delete by inlining it.** Price the delta, not the row.
+
+Second: the material-row hash moved from `(ptr >> 4) & 31` to multiplicative
+`(ptr * 2654435761u) >> 27`, because slice 8 measured that shift hash at a 48%
+miss rate (28,786 skip / 30,606 build) and it read like row collisions. **The
+slice-10 baseline already ran 59,362 skip / 30 build on the shift hash** — the
+counters are bit-identical across the two ROMs, so the collisions slices 9 and
+10 removed were never the hash's. Kept anyway at equal cost: the 48% miss proved
+the shift hash is fragile to whatever the allocator does next, and the multiply
+is one instruction either way.
+
 ### The `.data` route WORKS — first attributable animation measurement (cycle 109)
 
 Built the standing-rule-7 route the determinism finding demanded.

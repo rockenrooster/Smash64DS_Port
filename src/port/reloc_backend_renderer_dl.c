@@ -236,6 +236,11 @@ static NDSRendererAdapterMaterialKey sNdsRendererAdapterNativeOwnerMaterialKeys[
  * which is right. Cleared on a taskman-heap rewind because these are arena
  * pointers -- the key's own heap_generation would already refuse a stale skip,
  * so this is about not leaking rows to dead DObjs. 36 bytes. */
+#define NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED_LOG2 5u
+_Static_assert((1u << NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED_LOG2) ==
+                   NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED,
+               "material row hash assumes a power-of-two row count");
+
 static DObj *sNdsRendererAdapterMaterialRowOwner[
     NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED];
 static u32 sNdsRendererAdapterMaterialRowGeneration;
@@ -9000,8 +9005,12 @@ static u32 ndsRendererAdapterMaterialRow(DObj *dobj, u32 fallback_row)
         }
         sNdsRendererAdapterMaterialRowGeneration = gNdsTaskmanHeapGeneration;
     }
-    base = (u32)(((uintptr_t)dobj >> 4) &
-                 (NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED - 1u));
+    /* Multiplicative, not `>> 4`: DObjs are allocated contiguously and a shift
+     * hash strided them onto a handful of rows, so the probe loop ran several
+     * iterations and the whole lookup measured 106 cycles a call (2,024
+     * ticks/frame) on a 128-byte table that is always in cache. */
+    base = ((u32)(uintptr_t)dobj * 2654435761u) >>
+        (32u - NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED_LOG2);
     for (probe = 0u; probe < NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED; probe++)
     {
         u32 row = (base + probe) & (NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED - 1u);
@@ -9041,7 +9050,8 @@ static u32 ndsRendererAdapterMaterialInputHash(const MObj *mobj)
 static sb32 ndsRendererAdapterPrepareNativeMaterials(
     DObj *dobj, NDSRendererNativeMaterial *materials,
     u32 capacity, u32 *out_count,
-    NDSRendererAdapterMaterialKey *keys)
+    NDSRendererAdapterMaterialKey *keys,
+    s32 *save_curr, s32 *save_next)
 {
     MObj *mobj;
     u32 count = 0u;
@@ -9100,7 +9110,20 @@ static sb32 ndsRendererAdapterPrepareNativeMaterials(
              * that is freeze-free with this still at zero proves the guard was
              * not the cure and the real cause is still live. */
             gNdsR2MaterialWalkBoundHits++;
+            /* Report what the snapshot holds so the caller rolls back exactly
+             * the entries this walk mutated, no more and no fewer. */
+            *out_count = count;
             return FALSE;
+        }
+        if (save_curr != NULL)
+        {
+            /* The rollback snapshot, taken here rather than in a walk of its
+             * own. ndsRendererAdapterSaveNativeMaterialTextureIds was a second
+             * pass over the same chain reading the same two fields -- 3,429
+             * ticks/frame in the c110 profile -- and the hash below loads them
+             * anyway, so this costs two stores into a line the caller owns. */
+            save_curr[count] = mobj->texture_id_curr;
+            save_next[count] = mobj->texture_id_next;
         }
         if (keys != NULL)
         {
@@ -9135,6 +9158,12 @@ static sb32 ndsRendererAdapterPrepareNativeMaterials(
             {
                 keys[count].mobj = NULL;
             }
+            /* count + 1: entry `count` was snapshotted above and the builder is
+             * the advance_texture_ids=TRUE wrapper, so it may have written this
+             * MObj's ids before failing. Restoring an untouched entry writes
+             * back what is already there, so over-reporting by one is safe and
+             * under-reporting is not. */
+            *out_count = count + 1u;
             return FALSE;
         }
         if (keys != NULL)
@@ -9149,30 +9178,6 @@ static sb32 ndsRendererAdapterPrepareNativeMaterials(
     }
     *out_count = count;
     return TRUE;
-}
-
-static u32 ndsRendererAdapterSaveNativeMaterialTextureIds(
-    DObj *dobj,
-    s32 *curr,
-    s32 *next,
-    u32 capacity)
-{
-    MObj *mobj;
-    u32 count = 0u;
-
-    if ((dobj == NULL) || (curr == NULL) || (next == NULL))
-    {
-        return 0u;
-    }
-    for (mobj = dobj->mobj;
-         (mobj != NULL) && (count < capacity);
-         mobj = mobj->next)
-    {
-        curr[count] = mobj->texture_id_curr;
-        next[count] = mobj->texture_id_next;
-        count++;
-    }
-    return count;
 }
 
 static void ndsRendererAdapterRestoreNativeMaterialTextureIds(
@@ -15178,23 +15183,23 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
 
                 sNdsRendererAdapterNativeOwnerMaterialRows[i] =
                     (u8)material_row;
+                /* The snapshot now rides the prepare walk, which fills the
+                 * arrays in chain order exactly as the separate save pass did
+                 * and reports how many it filled even when it fails, so a
+                 * partial walk still rolls back exactly what it mutated. */
+                sb32 prepared = ndsRendererAdapterPrepareNativeMaterials(
+                    native_owner_material_dobjs[i],
+                    sNdsRendererAdapterNativeOwnerMaterials[material_row],
+                    NDS_RENDERER_ADAPTER_NATIVE_MATERIAL_MAX,
+                    &prepared_material_count,
+                    sNdsRendererAdapterNativeOwnerMaterialKeys[material_row],
+                    sNdsRendererAdapterNativeOwnerTextureCurr[i],
+                    sNdsRendererAdapterNativeOwnerTextureNext[i]);
+
                 sNdsRendererAdapterNativeOwnerTextureCounts[i] =
-                    ndsRendererAdapterSaveNativeMaterialTextureIds(
-                        native_owner_material_dobjs[i],
-                        sNdsRendererAdapterNativeOwnerTextureCurr[i],
-                        sNdsRendererAdapterNativeOwnerTextureNext[i],
-                        NDS_RENDERER_ADAPTER_NATIVE_MATERIAL_MAX);
+                    prepared_material_count;
                 native_owner_material_saved_root_count = i + 1u;
-                if ((sNdsRendererAdapterNativeOwnerTextureCounts[i] !=
-                     native_owner_material_counts[i]) ||
-                    (ndsRendererAdapterPrepareNativeMaterials(
-                         native_owner_material_dobjs[i],
-                         sNdsRendererAdapterNativeOwnerMaterials[material_row],
-                         NDS_RENDERER_ADAPTER_NATIVE_MATERIAL_MAX,
-                         &prepared_material_count,
-                         sNdsRendererAdapterNativeOwnerMaterialKeys[
-                             material_row])
-                         == FALSE) ||
+                if ((prepared == FALSE) ||
                     (prepared_material_count !=
                      native_owner_material_counts[i]) ||
                     (ndsRendererAdapterValidateNativeOwnerMaterials(
@@ -15550,18 +15555,21 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
                 (material_dobj != NULL) &&
                 (material_dobj->mobj != NULL))
             {
-                native_saved_texture_count =
-                    ndsRendererAdapterSaveNativeMaterialTextureIds(
-                        material_dobj,
-                        native_saved_texture_curr,
-                        native_saved_texture_next,
-                        NDS_RENDERER_ADAPTER_NATIVE_MATERIAL_MAX);
-                if (ndsRendererAdapterPrepareNativeMaterials(
+                /* The snapshot rides the prepare walk: it fills these two in
+                 * chain order exactly as the separate save pass did, and
+                 * reports how many entries it touched even when it fails. */
+                sb32 native_prepared =
+                    ndsRendererAdapterPrepareNativeMaterials(
                         material_dobj, native_materials,
                         NDS_RENDERER_ADAPTER_NATIVE_MATERIAL_MAX,
                         &native_prepared_material_count,
                         /* Caller local, gone by next frame -- always build. */
-                        NULL) != FALSE)
+                        NULL,
+                        native_saved_texture_curr,
+                        native_saved_texture_next);
+
+                native_saved_texture_count = native_prepared_material_count;
+                if (native_prepared != FALSE)
                 {
                     native_material_count =
                         native_prepared_material_count;
