@@ -1,17 +1,16 @@
 # Handoff
 
-Updated: 2026-08-09. **The gate arm's tail was cartridge I/O: the animation
+Updated: 2026-08-10. **The gate arm's tail was cartridge I/O: the animation
 cache arena had been full and refusing loads all match. Fixed at `f082b3c8` —
-`WORK-H` P95 1,639,299 → 1,447,318, gap 326,938; cycle 108's AObj16 warm-time
-prebake takes ~23,000 more.** Campaign remains on R2-07's gate. Published pair:
+`WORK-H` P95 1,639,299 → 1,447,318, gap 326,938.** Published pair:
 `smash64ds-battle-playable-hwtri.nds` `AFD28273…`, `smash64ds.nds` `54C07FAC…`.
 
 ## Read this first: every 128-frame measurement in the archive is unusable
 
 **The 128-frame window reads the cheapest 6% of the match** — P95 understated
 ~306,000 and the over-gate rate five times. Use `sample-tick-hud-buckets.ps1`
-(repeated ring dumps, `-Samples` to 4096, `-RingStopStride` 96, ROM
-byte-identical). Never take a gate reading on 128 frames again.
+with **`-Samples 1600`** (4096 overruns the match and dies at ring stop 15 of
+43). Never take a gate reading on 128 frames again.
 
 ## The two baselines — label every figure with its arm AND its coverage
 
@@ -31,89 +30,99 @@ out of the guest so a window cannot claim coverage it did not have.
 
 The owner's bar: the whole match under the P95 budget on the both-CPU config,
 loading states excluded; the shipped ROM stays the Boundary hwtri pair.
-`Makefile:305-308` still forbids reporting a both-CPU P95 as the Boundary
-figure. **Re-pin `EXPECTED_CENSUS_SHA256` in the commit that changes what it
-covers** — a stale pin kept the verifier red for 35 commits.
+`Makefile:305-308` forbids reporting a both-CPU P95 as the Boundary figure.
+**Re-pin `EXPECTED_CENSUS_SHA256` in the commit that changes what it covers** —
+a stale pin kept the verifier red for 35 commits.
 
 ## What is dead, so nobody re-derives it
 
-- **Effect DObj submits** — Boundary-only: `MISC` is 99.3% of the Boundary
-  excursion but **~12.1%** of the gate arm's; G3 refuted in cycles 88–91.
-- **Projectiles** — weapon DObj submit medians **44 ticks/frame**; not the tail.
-- **Particles** — flat ~47,000/frame; a P50 lever only, retiring SwitchPlan §7
-  option 2 (15 Hz round-robin) as a *gate* answer.
-- **The force-load seam** — closed cycle 108; see the next-step section.
-- **Texture thrash**, **`Find`**, **`Material`**, **`FTR` as the gate**.
+- **Effect DObj submits** — Boundary-only: 99.3% of the Boundary excursion but
+  **~12.1%** of the gate arm's; G3 refuted cycles 88–91.
+- **Projectiles** (44 ticks/frame) · **Particles** (flat ~47,000, a P50 lever only,
+  retiring SwitchPlan §7 option 2 as a *gate* answer) · **texture thrash** ·
+  **`Find`** · **`Material`** · **`FTR` as the gate** · **the force-load seam**.
 - **Task 56 strips** — REVERT: **the ROM hangs the present loop**; its
   `PERF_LEDGER` KILL row has no completed run behind it.
 
 ## RAM: both budgets are near their floor — price a change before writing it
 
-- **Static/boot.** `scripts/check-boot-headroom.ps1 -Build <dir>` after every lab
-  build (OK / UNPROVEN / OVER CLIFF, exit 1). Highest `fake_heap_start` proven to
-  boot **`0x02294804`**, lowest proven to fail **`0x02294b24`**; the gate arm
-  links at `0x0228c004` for **34,816** proven. **Text counts as much as bss.** A
-  failing arm never reaches presented frame 1 and reads as a hung emulator.
-- **`gSYTaskmanGeneralHeap`.** `gNdsTaskmanGeneralHeapFreeMin` is **42,136**
-  against the anim cache's 32,768 `KEEP_FREE`. The two are coupled: freeing
-  `.bss` lowers `fake_heap_start`, which enlarges the heap.
+- **Static/boot.** `check-boot-headroom.ps1 -Build <dir>` after every lab build.
+  Highest `fake_heap_start` proven to boot **`0x02294804`**, lowest proven to fail
+  **`0x02294b24`**; the gate arm links at `0x0228c004` for **34,816** proven.
+  **Text counts as much as bss**, and a failing arm reads as a hung emulator.
+- **`gSYTaskmanGeneralHeap`.** Free-min **42,136** against the anim cache's
+  32,768 `KEEP_FREE`; coupled, since freeing `.bss` enlarges the heap.
+- **The `Tex` (dl-pointer, bind-ordinal) memo is REFUTED** — 471 hits of 10,336
+  consults, 7,517 of 7,525 fills evicted, `Tex` ticks *up*.
 
-**The `Tex` (dl-pointer, bind-ordinal) memo is REFUTED** — 471 hits of 10,336
-consults, 7,517 evictions of 7,525 fills, `Tex` ticks *up*.
+## Next single step — port-side rewrite of the figatree parser
 
-## Next single step — split `SINT`, `SPHD`, `SHDT`, `SCPU` on the over-gate frames
+**Measure it with the `.data` route. There is no other method.** Build with
+`NDS_R2_ANIM_CUT_ROUTE=1` (default 0, and it must stay 0 for anything published
+— the disassembly shows a gated-off build folds all the way back), then poke
+`-SetGlobals gNdsR2AnimCutRoute=0` for the pre-cut arm. Cycle 109 proved this
+works: identical `romSha256` in both arms, poke read back at end of run,
+`gNdsR2CubicEvals` **identical at 292,857** in both arms as a
+semantic-equivalence control. It priced two animation cuts at **−3,742 mean
+`WORK-H`, with `SRC` agreeing at −3,888** — a cut **3.8x smaller than the
+14,080-tick placement term that was hiding it.**
 
-**44.2% of frames are over gate (707/1600), not ~5%.** `WORK-H` P50 1,107,008
-clears the 1,120,380 gate by only 13,372, so the median frame barely passes and
-the excess summed over every over-gate frame is **91,928,908 ticks**. Splitting
-every bucket by over-gate vs under-gate names the discriminators: `SRC`
-**+171,383**, essentially all of it `GCRA` (`gcRunAll`, the whole simulation),
-which decomposes into `SINT` **+88,082**, `SPHD` +28,941, `SHDT` +27,190,
-`SCPU` +23,531 — 167,744 of 171,430, so nothing is hiding. `FTR` separates the
-populations by only **+13,768**, which retires fighter draw (and its
-`memset`/`memcpy` concentration) as a gate lever for good. Board has the table.
+**The slice:** the parser's remaining soft float is **≈7.9M cycles ≈ 9,000
+ticks/frame** — `fdiv` **1,494,619** at 109.4 cycles a call (most expensive
+helper in the build by 3x) on `1.0F / payload` at exactly two sites,
+`ftanim.c:170` and `:244`, plus `fsub` 1,753,743, `fadd` 1,454,187, `fcmpeq`
+921,383, `fmul` 920,213, `i2f` 796,253. Two facts make it numerically free:
+the payload is **a u16** (`relocdata_types.h`), so a reciprocal table hits every
+time, and there is **no `-ffast-math`**, so a compile-time `1.0f/n` initializer
+is **bit-identical** to the runtime divide. The u16→f32 conversions go through
+the already-proven `ndsR2S32ToF32Bits` — a u16 has ≤16 significant bits, so no
+rounding occurs at all.
+
+**Do it as a port rewrite of `ftAnimParseDObjFigatree` in
+`src/port/reloc_backend_compat_shims.c:1545`**, which already defines that
+symbol and today merely forwards. **Not** by extending
+`decomp-patches/battleship/src_ft_ftanim.patch`: the owner's 2026-08-06 decision
+migrates those eight patches out and lists this one. `battleship_ftanim.c`'s
+`#define` renames the parser's definition and call sites **together**, so no
+macro can redirect only the calls — that is why the seam has to be the shim.
+~300 lines of gameplay-critical transcription; it is unwritten.
+
+**The `SINT` split is DONE and it reordered the queue.** `SINT` +88,082 =
+`ftMainPlayAnim` **+60,559** (the animation lane) + `ftComputerProcessAll`
++24,386 (map collision, not AI) = 84,945 of 88,082. `SPHD`/`SHDT`/`SCPU`
+**do not appear as distinct symbol classes** — their deltas spread across
+collision and soft float, neither competitive — so `SRC_CPI_OPTIMIZATION.md`'s
+items 4-6 are retired. Animation is the largest real discriminator at
+**72,638 cycles/region, 19.9%**. `FTR` separates the populations by only
++13,768, retiring fighter draw as a gate lever for good.
 
 **The force-load seam is closed (cycle 108).** `ftmain.c:4623` **discards the
-return value** and animates from `fp->figatree_heap`, so the destination copy is
-mandatory and zero-copy is structurally impossible. Do not add another caching
-layer to the loader.
+return value** and animates from `fp->figatree_heap`, so zero-copy is
+structurally impossible. Do not add another caching layer to the loader.
 
-**The D-cache census is run** (`scripts/analyze-dcache-stalls.py`, no build, no
-run): data loads average **7.07 cyc/ex**, excess **174,495,113 = 17.83% of
-non-idle**. Its largest site is **not a miss** —
-`ndsRendererTask36ReplayRun`'s `ldr r3,[r1,#184]` at 507 cyc/ex reads DMA0CNT
-and spins on the busy bit (6,654,860 cycles, 58% of that function); a load right
-after a `memset` is charged that memset's drain, so the two must not be added.
+**The D-cache census is run** (`analyze-dcache-stalls.py`, no build): loads
+average 7.07 cyc/ex, excess 17.83% of non-idle. Its largest site is **not a
+miss** — `ndsRendererTask36ReplayRun` spins on DMA0CNT — and a load after a
+`memset` is charged that memset's drain, so the two never add.
 
-**`ndsFTParamsInvalidateFighterParts` is retired as the top target (cycle 109).**
-Both premises failed. The root-joint precondition is **false** — `TopN` is 0, so
-`joints[4]` (damage, Fox up-B) and `joints[XRotN]`/`[YRotN]` (shielding) are
-sub-joints, and `ftparam.c:2637` invalidates IK children by pointer. And the two
-expensive loads are **`DObj` fields** (`->child` 37.1 cyc/ex, `->user_data.p`
-30.8), so the dead `FTParts` pool cannot reach them: DObj traversal is 6.30M,
-everything `FTParts` 2.44M. The whole function is **1.40% of non-idle** — a
-preorder-flattened subtree sweep (which also makes the precondition moot) is
-worth ~6,560 ticks/frame. Board has the per-PC table. **The dead pool is now
-ordinary cleanup, not the intended fix.**
+**`ndsFTParamsInvalidateFighterParts` is retired (cycle 109), both premises
+failed.** The root-joint precondition is false (`TopN` is 0), and its two
+expensive loads are **`DObj` fields**, so the dead `FTParts` pool cannot reach
+them; 1.40% of non-idle. **The pool is ordinary cleanup, not the fix.**
 
-**The new top target is the fighter animation lane: 86,636,950 cycles = 8.85% of
-non-idle, ~98,000 ticks/frame at P50.** `ftAnimParseDObjFigatree` and
-`gcPlayDObjAnimJoint` are the **#1 and #2 soft-float callers in the build**. Three
-facts set the design: the fixed cubic is already the *efficient* part (CPI 1.74,
-but 184 insns and 320 cycles per call, 8.8% of it just `push`/`pop`); `AObj` is
-36 bytes and ~360 live = **12,960 B against a 4KB D-cache, 3.2x**, which is why
-`ldrb aobj->kind` costs **24.1 cyc/ex and 20.9% of `gcPlayDObjAnimJoint`**; and
-the parser re-interprets a stream that never changes. AOT-compiling to compact
-fixed tracks is worth ≈**38,700 ticks/frame**, up to ~60,000 carried through to
-matrices. It must ship **through the anim-cache arena, not as linked arrays**
-(34,816 B of static headroom), must **replace** rather than coexist (1.85 cyc of
-`FTR` per byte of text), and must **derive phase as `frame * step`, never
-accumulate** — animation drives hitboxes. Board has the table and constraints.
+**The animation lane is the top target: 86,636,950 cycles = 8.85% of non-idle,
+~98,000 ticks/frame at P50.** `ftAnimParseDObjFigatree` and `gcPlayDObjAnimJoint`
+are the **#1 and #2 soft-float callers in the build**. `AObj` is 36 bytes and
+~360 live = **12,960 B against a 4KB D-cache, 3.2x**, which is why `ldrb
+aobj->kind` costs **24.1 cyc/ex, 20.9% of `gcPlayDObjAnimJoint`**. Worth
+≈38,700 ticks/frame, ~60,000 through to matrices. Constraints on the board:
+arena not linked arrays (34,816 B headroom), replace don't coexist, and
+**derive phase as `frame * step`, never accumulate** — animation drives hitboxes.
 
 Also on the board: the sensitivity curve that sizes any proposal (median clears
-the gate by only **13,372**; a body-wide 50,000 moves 238 frames from 20 FPS to
-30 FPS) and the CPI table behind "memory-bound" — non-idle **2.85**, `fadd`
-1.19, `ftMainProcUpdateInterrupt` **11.53**. Instruction count is not the lever.
+the gate by only **13,372**; a body-wide 50,000 moves 238 frames from 20 to 30
+FPS) and the CPI table behind "memory-bound" — non-idle **2.85**,
+`ftMainProcUpdateInterrupt` **11.53**. Instruction count is not the lever.
 
 **Do not bring a micro-fix** — R2-06 E11's rule: a load-frame-only ~8,000 cannot
 be banked, because relinking moves the tail by more than the saving. Clear
@@ -150,51 +159,42 @@ needs the owner (closed `BUGS.md` row, confirmed by eye).
 
 ## Measurement rules this cycle established or re-proved
 
-- **Per-bucket placement floor is ≥8,544**, not `WORK-H` P95's ±5,376. Judge on
-  `WORK-H`; buckets locate, they never decide.
-- **1.85 cycles of `FTR` mean per byte of added ARM text.** A change that adds
-  text must beat its own footprint.
-- **Verify a counter is live in the shipped configuration BEFORE the measuring
-  run**, and eliminate candidates with a liveness probe on an already-built ROM.
-  Six per-stop counters read 0 all match because they were proof-scoped.
-- **`ALL` is VBlank-quantized** and hid a +52,928 out of the wait. Read `WORK-H`.
-- **Do not multiply a number back by what you divided it by** — circular.
-- **Read a memo's Evicts, not its Hits** (cycle 107): 8× the table moved one
-  41.8% → 50.1% while evictions stayed, so hit rate cannot tell undersized from
-  mis-keyed.
-- **`--split-by-symbol` and per-PC joins on an existing profile CSV are free**
-  and need no build or emulator run.
-- **Read the caller before designing around a return value.** Cycle 108 built a
-  zero-copy loader `ftmain.c` could never use; one `rg` would have cost nothing.
-- **Disassemble a hot load before believing its diagnosis** (cycle 109). "6.53M
-  of excess in two instructions" was true and still the wrong target: both were
-  `DObj` fields, so the `FTParts` fix aimed at them could not work, and the
-  function was 1.40% of non-idle. **Name the struct and offset, and take the
-  function's share of non-idle, before designing anything.**
+The board's standing-rules section owns the measurement law. The four that
+change your FIRST action:
+
+- **The sampler is bit-deterministic — never repeat a run.** Same ROM twice gives
+  byte-identical buckets, variance 0. So the 14,080 cross-build figure is
+  **placement, not noise**, and no number of runs can average it away. Anything
+  under it needs the `.data` route above. Use `-Samples 1600` (4096 overruns the
+  match), `-AllowRepeatedFrames`, `-NoBuild`.
+- **Judge on `WORK-H`**; buckets locate, they never decide (per-bucket floor
+  ≥8,544). **`ALL` is VBlank-quantized** and once hid a +52,928.
+- **1.85 cycles of `FTR` mean per byte of added ARM text** — beat your footprint.
+- **Disassemble a hot load, and read the caller, before designing around it.**
+  Cycle 108 built a loader `ftmain.c` discards; cycle 109 aimed a `FTParts` fix
+  at two loads that turned out to be `DObj` fields. Both were free to check.
 
 ## Restart surface
 
-Parked items live on the board's **Parked** list (one place, not two). Boundary
-contains only `battle_playable_realtime`, mode 163.
+Parked items live on the board's **Parked** list, one place not two.
 
 ```powershell
 .\scripts\verify-all.ps1 -Profile Boundary -List
 git status --short
 ```
 
-`docs/P1_EXECUTION_BOARD.md` is the only dynamic queue — rewritten cycle 79 from
-a 10,207-line log; history in
-`docs/optimization/archive/P1_EXECUTION_BOARD_pre-cycle79.md`.
-`docs/Smash64DS_Runtime2_SwitchPlan.md` is the charter; `docs/BUGS.md` carries
-the owner's verdicts — they edit it directly, so preserve their wording.
+`docs/P1_EXECUTION_BOARD.md` is the only dynamic queue (history in
+`docs/optimization/archive/P1_EXECUTION_BOARD_pre-cycle79.md`);
+`Smash64DS_Runtime2_SwitchPlan.md` is the charter; `docs/BUGS.md` carries the
+owner's verdicts — they edit it directly, so preserve their wording.
 
 A clean checkout must build through `build.ps1`, not bare `make`: four of six
-generated `.inc` files are gitignored. For iteration, `make p1-tick` builds the
-measuring ROM and `make p1` the published battle pair — bare `make` builds the
-P2 ROM P1 does not ship. Never pass `-j`, never override `MAKEFLAGS`, one build
-at a time. Never build a published target name for lab work — those hardcode
-output to the project root whatever `BUILD=` says.
+generated `.inc` files are gitignored. `make p1-tick` builds the measuring ROM,
+`make p1` the published battle pair; bare `make` builds the P2 ROM P1 does not
+ship. Never pass `-j`, never override `MAKEFLAGS`, one build at a time, and
+never build a published target name for lab work — those hardcode output to the
+project root whatever `BUILD=` says.
 Preserve canonical mode 163, renderer mode 9, mip 0, static textures, source
-countdown, Dream Land water at frame 0, Task 16 `1/1/1`. Do not edit `decomp/`.
+countdown, Dream Land water frame 0, Task 16 `1/1/1`. Never edit `decomp/`.
 
 Run `New-Smash64DSSnapshot.ps1` last, and nothing after it.
