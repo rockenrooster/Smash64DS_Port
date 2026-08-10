@@ -2423,6 +2423,53 @@ bit-exact change must do. Disassembly confirms the call is gone and one ARM
 `clz` replaced it; the two `__clzsi2` references in the ELF are inside libgcc's
 `__clzdi2` and are present in the pre-change build too. Boot headroom 32,992.
 
+### `NDS_TASK51_STAGE_NATIVE` is REFUTED — it costs 88 frames of 30 FPS
+
+`FTR_STG_OPTIMIZATION.md` lists Task 51 as a candidate "gated on visual
+equivalence". It never gets that far: **the STG budget does not clear, and the
+bucket Task 51 exists to shrink gets bigger.** Measured whole-match, both-CPU,
+DLDI on, 1600 samples, frames 439→2038, distinct ROMs (`70DB81A6…` vs
+`25F8B43E…`) from one tree (`2674756a8c`) differing by exactly one `#define`.
+
+| | OFF | ON | delta |
+|---|---:|---:|---:|
+| **`WORK-H` P50** | 1,108,096 | 1,121,472 | **+13,376** |
+| `WORK-H` mean | 1,165,492 | 1,177,915 | +12,423 |
+| `WORK-H` P95 | 1,580,416 | 1,581,824 | +1,408 |
+| **`STG` P50** | 195,776 | 198,144 | **+2,368** |
+| `STG` mean | 200,294 | 202,379 | +2,085 |
+
+**The VBlank histogram settles it**, and it is immune to bucket placement
+because it is wall-clock quantization:
+
+| interval | OFF | ON |
+|---|---:|---:|
+| **2 VBlanks (30 FPS)** | **1,119** | **1,031** |
+| **3 VBlanks (20 FPS)** | **836** | **921** |
+| 5+ | 21 | 26 |
+
+**88 frames moved from 30 FPS to 20 FPS.** `ALL` P50 flips 1,118,592 →
+1,678,016 — the median frame crossing from two VBlanks to three, exactly the
+quantisation `all-is-a-quantized-gate` describes, here reporting a real event
+rather than an artifact.
+
+**Why it loses, and the lesson that generalises.** Task 51 replaces a per-frame
+CPU compose of projection × view × model with 42 baked `MTX_MULT4x3` emissions.
+But `FTR_STG_OPTIMIZATION.md` records in its own STG section that the **stage
+prepare cache already runs at 99.9% reuse** — so the CPU compose it replaces was
+already amortised to nearly nothing, while the 42 matrix commands are paid to
+the geometry engine *every frame, unconditionally*. It trades a cached no-op for
+real recurring GX work. **Before replacing CPU work with hardware commands,
+check the cache hit rate on the work being replaced** — a 99.9%-reused compose
+is not a cost, and beating it requires the replacement to be free, not merely
+cheaper per invocation.
+
+Leave `NDS_TASK51_STAGE_NATIVE ?= 0`. No visual qualification is needed; it
+fails on performance first. `NDS_DREAMLAND_DS_MESH` is untested and is a
+*geometry* specialisation rather than a matrix-path one, so this result does not
+transfer to it — but price its per-frame cost against the same 99.9% cache
+before building an A/B.
+
 ### Whole-match sampler invocation, exactly (cycle 109 — cost three runs)
 
 The HANDOFF line "`-Samples` to 4096" is the parameter's *ceiling*, not the
