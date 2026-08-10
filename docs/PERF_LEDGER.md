@@ -6817,6 +6817,12 @@ on single-frame byte-equivalence.
 
 ## Task 56 — Fighter stripify (2026-07-24): KILL
 
+> **SUPERSEDED 2026-08-10 — see "Task 56 REOPENED" at the end of this file.**
+> The candidate this row measured was drawing **35.6% of the fighter
+> backfacing** (a generator winding bug, since fixed), over a 128-frame window
+> the whole-match instrument later invalidated, judged on `ALL`. The verdict
+> stands against that binary and nothing else. Mode 2 now ships.
+
 | tag | date | subject |
 |-----|------|---------|
 | T56 | 2026-07-24 | DS-native fighter primitive strips (mode 1: 9.9%; mode 2: 47% vertex reduction) |
@@ -7230,3 +7236,48 @@ gap gate 5 recorded. This row's pairing was computed from the two JSONs directly
 Evidence: `artifacts/performance/2026-08-04_c64ab-{A-flag0,B-flag1}-128.json`.
 Correctness side (census, soak, retirement inventory): `docs/BUGS.md` "GATE 6
 CLOSED"; `artifacts/verification/2026-08-04_c64-effect-census-default.txt`.
+
+---
+
+## Task 56 REOPENED — Fighter stripify graduates (2026-08-10): KEEP
+
+| tag | date | subject |
+|-----|------|---------|
+| T56R | 2026-08-10 | Winding bug fixed, emitter moved to ITCM, mode 2 becomes the default |
+
+**Verdict: KEEP.** `NDS_TASK56_FIGHTER_PRIMITIVES` defaults to **2**. One-binary
+A/B on `gNdsR2FighterStripRoute` (`NDS_R2_STRIP_ROUTE=1`, build
+`build-c116-t56route`), identical `romSha256` across arms, melonDS
+`DE80E46BDCF1FD98`, 1600 samples an arm, DLDI on, route read back 0 and 1.
+
+| bucket | A: raw corners | B: strips | delta |
+|--------|---------------:|----------:|------:|
+| **FTR P50** | 313,856 | **302,272** | **-11,584** |
+| **FTR P95** | 316,672 | **305,408** | **-11,264** |
+| **WORK-H P50** | 952,512 | **941,312** | **-11,200** |
+| WORK P50 | 958,016 | 946,560 | -11,456 |
+| STG P50 | 189,184 | 189,184 | 0 |
+| ALL P50 | 1,118,336 | 1,118,336 | 0 |
+| WAIT P50 | 181,760 | 192,000 | +10,240 |
+
+`ALL` P50 identical to the tick with the saving reappearing as `WAIT` is the
+2026-07 trap reproduced exactly: `ALL` is VBlank-quantised wall time and cannot
+price a lever of this size. `STG` unchanged to the tick is the control.
+
+**Why the original row was wrong.** The generated mode-2 stream drew **223 of
+626 triangles (35.6%) with reversed winding** -- `_stripify_run` tried
+`(t0[0], t0[2])` as an initial active edge, which is not a directed edge of the
+source triangle, and every triangle in a strip inherits its first triangle's
+winding. A third of the fighter was culled away on hardware with no assert.
+`scripts/fighters/check_fighter_primitive_streams.py` now expands every group
+back into oriented triangles and is the standing proof. The runtime emitter was
+also `cold`/`optimize("Os")` in `.main` and branched on `textured` once per
+vertex, against raw siblings in ITCM at eleven instructions a corner.
+
+**Why it is a lever at all** (c115 `--pc-detail`, no build): a fighter corner
+costs 40.5 cycles untextured, and ~28 of those are the GX write; the textured
+path pays the same ~28 for a fourth word, so the stall is **per vertex**. 2,148
+raw corners a frame become ~1,160 strip corners. Measured -11,584 is ~57% of the
+~20,000 that vertex count alone predicts, which suggests part of the stall is
+**per polygon** -- strips leave all 626 triangles standing. Price the next
+geometry lever accordingly.

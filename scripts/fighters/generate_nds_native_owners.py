@@ -82,9 +82,16 @@ SOURCE_CLOSURE_POLICIES = (
     {
         "path": "src/nds/nds_renderer.c",
         "closure": "ndsRendererNativePreflightFighterHierarchy",
+        # `preamble` is tracked in its own right because the root now holds the
+        # contract preamble BY REFERENCE: the read spells `input->preamble->
+        # flags`, so the arrow scanner sees `input.preamble` and, separately,
+        # `preamble.flags`. Without the base here the flags read would vanish
+        # from the manifest and the falsifier would report a consumed field as
+        # no longer read, which is the opposite of what happened.
         "tracked_bases": (
             "epoch", "execution", "hierarchy", "input", "m2_owner",
-            "prepared_epoch", "root", "scratch", "state", "stats", "tables",
+            "preamble", "prepared_epoch", "root", "scratch", "state", "stats",
+            "tables",
         ),
         "fields": {
             **_classified(
@@ -114,7 +121,7 @@ SOURCE_CLOSURE_POLICIES = (
                 execution.hierarchy_epochs execution.hierarchy_runs execution.preflight_stats
                 execution.traversal hierarchy.config hierarchy.roots input.composed_matrix
                 input.config input.material_count input.materials input.modelview_matrix
-                input.preamble input.preamble.flags prepared_epoch.light_direction_valid
+                input.preamble preamble.flags prepared_epoch.light_direction_valid
                 scratch.blocker scratch.geometry_mode scratch.light_color_1
                 scratch.light_color_2 scratch.light_color_mask scratch.light_dir_mask
                 state.current_transform_vertex_mask state.input_vertex_valid_mask
@@ -2067,9 +2074,27 @@ def _stripify_run(tris, mode):
         best_verts = []  # matching emit-order vertex sequence
         for start in sorted(remaining):
             t0 = tris[start]
-            # the initial active edge determines the first triangle's emit
+            # The initial active edge determines the first triangle's emit
             # order; try all 3 orientations and keep the longest strip.
-            for ae in ((t0[1], t0[2]), (t0[0], t0[2]), (t0[0], t0[1])):
+            #
+            # These MUST be the three DIRECTED edges of t0, traversed the way
+            # t0 traverses them, so that [apex, ae0, ae1] is a rotation of t0
+            # and therefore carries t0's winding. Every later triangle inherits
+            # that winding automatically -- the DS flips alternate triangles,
+            # and a consistently wound mesh traverses a shared edge in opposite
+            # directions from its two sides -- so the whole strip's facing is
+            # decided here and nowhere else.
+            #
+            # (t0[0], t0[2]) is NOT one of those edges: it is t0[2] -> t0[0]
+            # reversed, and it emits [t0[1], t0[0], t0[2]], the mirror of t0.
+            # The longest-strip heuristic picked it whenever it won on length,
+            # and every triangle in such a strip came out backfacing --
+            # **35.6% of the fighter's 626 triangles**, culled away on
+            # hardware with no assert and no counter to say so. That is what
+            # made mode 2 unusable, not its runtime submission cost.
+            # scripts/fighters/check_fighter_primitive_streams.py is the
+            # standing proof; run it after touching this function.
+            for ae in ((t0[1], t0[2]), (t0[2], t0[0]), (t0[0], t0[1])):
                 apex = next(v for v in t0 if v not in ae)
                 verts = [apex, ae[0], ae[1]]
                 chain = [start]

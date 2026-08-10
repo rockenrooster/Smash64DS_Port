@@ -24004,7 +24004,7 @@ static void ndsRendererNativeBindProductionRoot(
     const NDSRendererNativeFighterRoot *input,
     NDSRendererStats *stats)
 {
-    ndsRendererNativeApplyProductionPreamble(&input->preamble, stats);
+    ndsRendererNativeApplyProductionPreamble(input->preamble, stats);
     state->modelview_stack_depth = 0u;
     state->vertex_valid_mask = 0u;
     state->input_vertex_valid_mask = 0u;
@@ -24100,7 +24100,8 @@ static s32 ndsRendererNativePreflightProductionOwner(
 #endif
             (input->modelview_matrix == NULL) ||
             (input->config == NULL) ||
-            ((input->preamble.flags &
+            (input->preamble == NULL) ||
+            ((input->preamble->flags &
               NDS_RENDERER_NATIVE_PREAMBLE_VALID) == 0u))
         {
             return FALSE;
@@ -25906,67 +25907,131 @@ ndsRendererNativeEmitProductionRawUntexturedRun(
 
 #if (NDS_TASK56_FIGHTER_PRIMITIVES >= 1) && \
     (NDS_RENDERER_PROFILE_LEVEL < 2) && NDS_RENDERER_HW_TRIANGLES
+/* The one-binary A/B for the strips, same instrument as gNdsR2AnimCutRoute.
+ * .data and aligned(32) so it owns its cache line and no neighbouring
+ * counter's write-back can stamp the poke. Default 1 = strips, so an unpoked
+ * ROM is the candidate; `-SetGlobals gNdsR2FighterStripRoute=0` is the raw
+ * control, in the SAME binary at the SAME placement. Compile-time gated
+ * because the route is an instrument, not a feature: at NDS_R2_STRIP_ROUTE=0
+ * the test folds to a constant and the unselected emitter is dead-coded. */
+#if NDS_R2_STRIP_ROUTE
+volatile u32 gNdsR2FighterStripRoute
+    __attribute__((section(".data"), aligned(32))) = 1u;
+#define NDS_R2_STRIP_ROUTE_ON() (gNdsR2FighterStripRoute != 0u)
+#else
+#define NDS_R2_STRIP_ROUTE_ON() (1)
+#endif
+
 /* Task 56: emit a RAW run's triangles as DS-native primitive groups
  * (GL_TRIANGLE_STRIP + residual GL_TRIANGLES) compiled host-side by the
- * generator. The batch is already open from PrepareProductionRun
- * (glBegin(GL_TRIANGLE)). Per group, switches glBegin type only when the
- * group type differs; never restarts the batch between groups, so state
- * (textures, poly format, matrix) stays set. Zero ITCM footprint. */
-static void __attribute__((noinline, cold, optimize("Os")))
+ * generator. 626 triangles submitted as 1,878 individual GL_TRIANGLES corners
+ * become 1,014 strip corners in 163 groups -- **46.0% fewer vertex
+ * submissions**, and the c115 per-PC census says a fighter corner costs ~40
+ * cycles of which ~28 is the GX write itself, so the vertices ARE the cost.
+ *
+ * Two things about this path were wrong when it was first killed:
+ *
+ *  - the generator emitted 35.6% of the triangles with reversed winding, so a
+ *    third of the fighter was culled away with no assert to say so. Fixed in
+ *    `_stripify_run`; `check_fighter_primitive_streams.py` is the standing
+ *    proof and expands every group back into oriented triangles.
+ *  - this function was `cold` and `optimize("Os")` in `.main` while its raw
+ *    siblings sat in ITCM at eleven instructions a corner, and it branched on
+ *    `textured` once per VERTEX. A 46% vertex cut cannot survive being paid
+ *    for at twice the per-vertex rate. It now has the same placement and the
+ *    same inner-loop shape as the raw emitters, with the type branch hoisted
+ *    to the group.
+ *
+ * The batch is open from PrepareProductionRun with GL_TRIANGLE, and every
+ * other emitter -- the cross-matrix run, the raw runs, the next run reusing
+ * this batch -- assumes the primitive type is still GL_TRIANGLE, because
+ * batches are REUSED without re-issuing glBegin. So this restores GL_TRIANGLE
+ * before returning rather than tracking the type globally: one FIFO word per
+ * run against 53 run emissions a frame, and no invariant left for a future
+ * caller to violate. */
+static void NDS_RENDERER_NATIVE_FIGHTER_CODE
 ndsRendererNativeEmitProductionPrimitiveGroups(
     u32 run_index,
-    u32 textured,
-    const NDSRendererStats *stats,
-    const NDSRendererTraversalState *state)
+    u32 textured)
 {
-    u32 group_first = sNdsNativeFighterPrimitiveGroupFirst[run_index];
-    u32 group_count = sNdsNativeFighterPrimitiveGroupCount[run_index];
-    u32 group_index;
+    u32 g = sNdsNativeFighterPrimitiveGroupFirst[run_index];
+    u32 remaining_groups = sNdsNativeFighterPrimitiveGroupCount[run_index];
     u32 current_type = (u32)GL_TRIANGLE;
 
-    for (group_index = 0u; group_index < group_count; group_index++)
+    while (remaining_groups-- != 0u)
     {
-        u32 g = group_first + group_index;
         u32 gtype = sNdsNativeFighterPrimitiveGroupType[g];
-        u32 vfirst = sNdsNativeFighterPrimitiveGroupFirstVertex[g];
-        u32 vcount = sNdsNativeFighterPrimitiveGroupVertexCount[g];
-        const u16 *vref = &sNdsNativeFighterPrimitiveVertices[vfirst];
-        u32 remaining = vcount;
+        const u16 *vref = &sNdsNativeFighterPrimitiveVertices[
+            sNdsNativeFighterPrimitiveGroupFirstVertex[g]];
+        u32 remaining = sNdsNativeFighterPrimitiveGroupVertexCount[g];
 
+        g++;
         if (gtype != current_type)
         {
             glBegin((GL_GLBEGIN_ENUM)gtype);
             current_type = gtype;
         }
-        while (remaining-- != 0u)
+        if (textured != 0u)
         {
-            u32 dense_id = (*vref++) & 0x3FFu;
-            const NDSNativePreparedDenseVertex *prepared =
-                &sNdsNativeFighterPreparedDense[dense_id];
+            while (remaining-- != 0u)
+            {
+                u32 dense_id = *vref++;
+                const NDSNativePreparedDenseVertex *prepared =
+                    &sNdsNativeFighterPreparedDense[dense_id];
 
 #if NDS_R2_FIGHTER_HW_LIGHT
-            #if NDS_R2_UNLIT_VERTEX_EPOCH
-            if (sNdsR2EpochUnlitVertexColor != 0u)
-            {
-                ndsRendererHardwareWriteFighterColorWord(
-                    ndsRendererR2DenseVertexColor15(dense_id));
-            }
-            else
-            #endif
-            ndsRendererHardwareWriteNormalWord(
-                sNdsNativeFighterDenseNormals[dense_id]);
+                #if NDS_R2_UNLIT_VERTEX_EPOCH
+                if (sNdsR2EpochUnlitVertexColor != 0u)
+                {
+                    ndsRendererHardwareWriteFighterColorWord(
+                        ndsRendererR2DenseVertexColor15(dense_id));
+                }
+                else
+                #endif
+                ndsRendererHardwareWriteNormalWord(
+                    sNdsNativeFighterDenseNormals[dense_id]);
 #else
-            ndsRendererHardwareWriteFighterColorWord(prepared->packed_color);
+                ndsRendererHardwareWriteFighterColorWord(
+                    prepared->packed_color);
 #endif
-            if (textured != 0u)
-            {
                 ndsRendererHardwareWriteFighterTexCoordWord(
                     (u32)(u16)prepared->s |
                     ((u32)(u16)prepared->t << 16));
+                ndsRendererHardwareWriteFighterVertex16Words(
+                    prepared->gx_xy, prepared->gx_z);
             }
-            ndsRendererHardwareWriteFighterVertex16Words(
-                prepared->gx_xy, prepared->gx_z);
         }
+        else
+        {
+            while (remaining-- != 0u)
+            {
+                u32 dense_id = *vref++;
+                const NDSNativePreparedDenseVertex *prepared =
+                    &sNdsNativeFighterPreparedDense[dense_id];
+
+#if NDS_R2_FIGHTER_HW_LIGHT
+                #if NDS_R2_UNLIT_VERTEX_EPOCH
+                if (sNdsR2EpochUnlitVertexColor != 0u)
+                {
+                    ndsRendererHardwareWriteFighterColorWord(
+                        ndsRendererR2DenseVertexColor15(dense_id));
+                }
+                else
+                #endif
+                ndsRendererHardwareWriteNormalWord(
+                    sNdsNativeFighterDenseNormals[dense_id]);
+#else
+                ndsRendererHardwareWriteFighterColorWord(
+                    prepared->packed_color);
+#endif
+                ndsRendererHardwareWriteFighterVertex16Words(
+                    prepared->gx_xy, prepared->gx_z);
+            }
+        }
+    }
+    if (current_type != (u32)GL_TRIANGLE)
+    {
+        glBegin(GL_TRIANGLE);
     }
 }
 #endif
@@ -26209,11 +26274,18 @@ static s32 ndsRendererNativeSubmitProductionRun(
     (NDS_RENDERER_PROFILE_LEVEL < 2) && NDS_RENDERER_HW_TRIANGLES
         /* Task 56: RAW runs emit DS-native primitive groups (strips + residual
          * triangles) compiled host-side. The first group's begin-batch already
-         * ran in PrepareProductionRun; this walk re-begins only on type change.
-         */
-        ndsRendererNativeEmitProductionPrimitiveGroups(
-            run_index, state->texture_prepare_enabled, stats, state);
-#else
+         * ran in PrepareProductionRun; this walk re-begins only on type change
+         * and leaves GL_TRIANGLE selected for whoever reuses the batch. Only
+         * RAW runs come here -- the cross-matrix branch above owns its own
+         * emitter -- which is why the group vertex refs are bare dense ids,
+         * exactly as the raw emitters read the packed corners unmasked. */
+        if (NDS_R2_STRIP_ROUTE_ON())
+        {
+            ndsRendererNativeEmitProductionPrimitiveGroups(
+                run_index, state->texture_prepare_enabled);
+        }
+        else
+#endif
         if (state->texture_prepare_enabled != 0u)
         {
             ndsRendererNativeEmitProductionRawTexturedRun(
@@ -26224,7 +26296,6 @@ static s32 ndsRendererNativeSubmitProductionRun(
             ndsRendererNativeEmitProductionRawUntexturedRun(
                 run_index, (u32)run->triangle_count * 3u);
         }
-#endif
 #if NDS_TASK91_DRAW_PHASE_CENSUS
         gNdsR2SubmitRawEmitTicks += cpuGetTiming() - e15_mark;
         gNdsR2SubmitRawCalls++;
@@ -27181,6 +27252,11 @@ static s32 ndsRendererNativePreflightFighterHierarchy(
         const NDSNativeRoot *root = &tables->roots[root_index];
         const NDSRendererNativeFighterRoot *input =
             &hierarchy->roots[root_index];
+        /* Hoisted so the consumed-fields manifest can still see the flags
+         * read: its arrow scanner attributes `input->preamble->flags` to
+         * `input.preamble` and then loses the second hop entirely, so a
+         * chained read would silently drop a classified field. */
+        const NDSRendererNativeFighterPreamble *preamble = input->preamble;
         NDSRendererMatrix20p12 light_modelview;
         u32 epoch_offset;
 
@@ -27188,7 +27264,8 @@ static s32 ndsRendererNativePreflightFighterHierarchy(
             (input->composed_matrix != NULL) ||
             (input->modelview_matrix != NULL) ||
             (input->config != hierarchy->config) ||
-            ((input->preamble.flags &
+            (preamble == NULL) ||
+            ((preamble->flags &
               NDS_RENDERER_NATIVE_PREAMBLE_VALID) == 0u))
         {
             return FALSE;
@@ -27197,7 +27274,7 @@ static s32 ndsRendererNativePreflightFighterHierarchy(
             &execution->hierarchy_world[
                 tables->binding_joints[root_index]],
             &light_modelview);
-        ndsRendererNativeApplyProductionPreamble(&input->preamble, scratch);
+        ndsRendererNativeApplyProductionPreamble(preamble, scratch);
         ndsRendererNativeApplyRootLightPreamble(root, scratch);
         state->vertex_valid_mask = 0u;
         state->input_vertex_valid_mask = 0u;
@@ -27497,7 +27574,7 @@ static void ndsRendererNativeCommitHierarchyRoot(
 
     ndsRendererNativeMatrix3To20p12(
         &execution->hierarchy_world[binding_joint], &light_modelview);
-    ndsRendererNativeApplyProductionPreamble(&input->preamble, stats);
+    ndsRendererNativeApplyProductionPreamble(input->preamble, stats);
     state->vertex_valid_mask = 0u;
     state->input_vertex_valid_mask = 0u;
     state->vertex_color_valid_mask = 0u;

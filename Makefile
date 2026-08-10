@@ -167,19 +167,27 @@ NDS_TASK55_STAGE_GEOM ?= 0
 #   0 = current native-fighter GL_TRIANGLES emission (control)
 #   1 = exact source-order strips (E0: 9.9%)
 #   2 = within-run opaque-run topology reorder strips (E0: 47.0%)
-# Topology is compiled host-side (no runtime strip finding). Default 0 keeps the
-# published ROM byte-identical; the published/tick-HUD blocks do NOT override it.
+# Topology is compiled host-side (no runtime strip finding). The published and
+# tick-HUD blocks do NOT override it, so this default is what both ship.
 #
-# NOT A GATE LEVER, and this is a structural statement rather than another
-# measurement. 2026-08-01 ranked the over-gate population per frame: on the
-# frames that miss the gate `FTR` is FLAT -- 1,536 ticks BELOW its clean median
-# on the worst frame of the run -- while `SRC` runs +250K to +440K and `MISC`
-# +77K to +120K. A lever that touches only `FTR` therefore cannot change the
-# over-gate COUNT by more than a couple of frames whatever its sign, and its
-# sign was already measured negative once (PERF_LEDGER, "Task 56 ... KILL":
-# FTR +5,824, +1.0%, against a 47% vertex-submission cut). A 2026-08-01 re-test
-# was started and abandoned for that reason, not because it failed.
-NDS_TASK56_FIGHTER_PRIMITIVES ?= 0
+# GRADUATED TO 2 in cycle 116. The KILL that kept this at 0 rested on a defect,
+# not on strips: the generator emitted 35.6% of the fighter's 626 triangles with
+# REVERSED WINDING, so a third of the model was culled away on hardware with no
+# assert to say so, and the runtime emitter was `cold`/`Os` in .main branching on
+# `textured` once per vertex while its raw siblings sat in ITCM. Both fixed;
+# scripts/fighters/check_fighter_primitive_streams.py is the standing proof that
+# every source triangle is drawn exactly once with the source winding.
+#
+# The old note here read "NOT A GATE LEVER ... a lever that touches only FTR
+# cannot change the over-gate COUNT". That is still true of the COUNT and still
+# irrelevant to the BUDGET: the gate is P95 ticks, FTR is on nearly every frame,
+# and Requirement 7 of the 2026-08-10 goal is explicit that flat savings count.
+# One-binary A/B on gNdsR2FighterStripRoute (NDS_R2_STRIP_ROUTE=1, same ROM sha,
+# 1600 samples an arm): FTR P50 313,856 -> 302,272, WORK-H P50 952,512 ->
+# 941,312. The c115 per-PC census is why: ~28 of a corner's 40.5 cycles are the
+# GX write and the stall is per VERTEX, so 2,148 raw corners a frame becoming
+# ~1,160 strip corners is the only lever the emit has.
+NDS_TASK56_FIGHTER_PRIMITIVES ?= 2
 # Task 51 native stage path. When on, the STAGE owner emits the 42 baked
 # constant world matrices via MTX_MULT4x3 under a once-loaded view (instead of
 # CPU-composing projection x view x model per binding per frame). Generalizes
@@ -283,6 +291,15 @@ NDS_R2_AOBJ16_PREBAKE ?= 0
 # text). At 0 every route test folds to a constant and the pre-cut arms are
 # dead-coded away, so the shipped ROM is byte-for-byte the no-route program.
 NDS_R2_ANIM_CUT_ROUTE ?= 0
+# Cycle 116. Same instrument, applied to the Task 56 fighter strips: at 1 the
+# raw-corner emitters and the primitive-group emitter are BOTH compiled and
+# `gNdsR2FighterStripRoute` selects between them at run time, so the strip A/B
+# runs on ONE binary. Task 56 was killed in 2026-07 against a control built
+# three days earlier and ~31 KB smaller, which is not a control at all on a ROM
+# whose pacing is placement-sensitive. Needs NDS_TASK56_FIGHTER_PRIMITIVES >= 1
+# for the strip arm to exist; at 0 the route folds away and the selected
+# emitter is whatever that flag chose.
+NDS_R2_STRIP_ROUTE ?= 0
 # R2-03 E47. The native fighter owner derives its material colour and its
 # use-material predicate from `stats` per epoch, the way the generic path does,
 # instead of reading a baked policy flag and always taking prim_color. The
@@ -2942,6 +2959,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_R2_ANIM_CACHE $(NDS_R2_ANIM_CACHE)'; \
 		echo '#define NDS_R2_AOBJ16_PREBAKE $(NDS_R2_AOBJ16_PREBAKE)'; \
 		echo '#define NDS_R2_ANIM_CUT_ROUTE $(NDS_R2_ANIM_CUT_ROUTE)'; \
+		echo '#define NDS_R2_STRIP_ROUTE $(NDS_R2_STRIP_ROUTE)'; \
 		echo '#define NDS_R2_MATERIAL_DYNAMIC $(NDS_R2_MATERIAL_DYNAMIC)'; \
 		echo '#define NDS_R2_FLASH_PROBE $(NDS_R2_FLASH_PROBE)'; \
 		echo '#define NDS_R2_ANIM_CENSUS $(NDS_R2_ANIM_CENSUS)'; \

@@ -3997,6 +3997,192 @@ redundancy census that would size it (`NDS_R2_DELTA_CENSUS`, already written,
 bytes`.** Evict a resident for the diagnostic arm before designing the bake —
 the c115 census lists 28 ITCM residents that never execute, 2,354 B idle.
 
+### Slice 23: two redundant passes deleted, and why the mean did not move
+
+**FTR 301,162 -> 302,217, +1,055.** Two real deletions, both unconditional, both
+measured *up*. Kept anyway -- less work and less code -- but the number is the
+finding, not the win.
+
+- **The root's render preamble is held by reference, not copied.** The 24-byte
+  `NDSRendererNativeFighterPreamble` was copied out of the immutable contract
+  table into every selected root every frame: 39.5 `ldmia`/`stmia` pairs a frame
+  at **144 cycles each**, which the c115 per-PC census prices at 3,250 tk/fr on
+  one source line.
+- **The MObj counting pre-pass in `PrepareNativeMaterials` is gone.** It chased
+  `mobj->next` over every material chain a second time (1,215 tk/fr on that one
+  line) purely to reject an over-capacity chain before writing. The write walk
+  already carries the same bound and already reports `*out_count` for rollback.
+
+**The lesson, and it is general: a per-PC census attributes a cache miss to the
+instruction that TAKES it, not to the work that could be deleted.** Both cuts
+removed a *first reader*, not a *reader*. The preamble's 24 bytes are still
+consumed by `ApplyProductionPreamble`, so the two line fills simply moved to it;
+all the copy actually saved was the write-allocate and write-back of the
+destination. The counting walk was paying the misses the write walk then rode
+warm. Deleting a redundant pass over data that is still consumed saves the
+**instructions**, not the **fills** -- and at this scale the instructions are
+under the placement floor. Price a deletion by asking what stops being *touched*,
+not by summing the cycles the profile parks on it.
+
+### `build.ps1` was BROKEN on this branch and nothing noticed
+
+`generate_nds_native_owners.py` -- which `build.ps1` runs and `make` does not --
+died on `M3_STAGE_FALSIFIER: named source closure is absent:
+ndsRendererAdapterPrepareNativeOwnerHierarchy`. **A clean checkout could not
+generate the fighter IR**, and four of six generated `.inc` files are gitignored,
+so a clean checkout could not build.
+
+Root cause: `named_c_closure`'s regex demanded `^ident...\bname(`, so a
+definition whose name starts its own line could never match -- and the cycle-110
+cold-outlining slices gave **six** functions in `reloc_backend_renderer_dl.c`
+exactly that shape:
+
+```c
+static sb32 __attribute__((noinline, cold, optimize("Os")))
+ndsRendererAdapterPrepareNativeOwnerHierarchy(
+```
+
+Fixed at the root in `scripts/stages/generate_nds_native_stage.py`: the leading
+return type is now optional. Admitting a bare `name(` at line start is safe
+because the existing loop already rejects any match whose next `;` precedes its
+next `{`, which is every call site. **A generator that only `build.ps1` runs is
+invisible to every measurement cycle -- run it after touching a signature in a
+manifest-named closure.**
+
+The same run then caught slice 23 honestly: the manifest classifies
+`input.preamble.flags`, and the by-reference root spells it
+`input->preamble->flags`, which the arrow scanner attributes to `input.preamble`
+and then loses. The preflight now hoists `const NDSRendererNativeFighterPreamble
+*preamble = input->preamble;` so the field stays visible as `preamble.flags`.
+**That falsifier is worth its keep** -- it found a consumed field going dark in
+the same change that made it happen.
+
+### The fighter emit is bound by VERTICES, not by words and not by data layout
+
+`--pc-detail` on all three emitters, whole match, no build. Exact loop-iteration
+counts, so these are corner counts, not estimates:
+
+| emitter | corners/frame | entries/frame | cyc/corner | tk/fr |
+|---|---:|---:|---:|---:|
+| raw untextured | **1,711** | 53.2 | 40.5 | **34,606** |
+| raw textured | **437** | 13.8 | 50.7 | **11,085** |
+| cross-matrix | **127** | 15.7 | 84.2 | **5,350** |
+| **total** | **2,275** | 82.7 | | **51,041** |
+
+The untextured loop is eleven ARM instructions in ITCM reading DTCM, and it still
+runs at **3.55 cycles per instruction**. The per-PC rows say exactly where:
+
+```
+str r3,[ip,#1164]    8.00   GFX_VERTEX16 word 2
+bne <loop top>       7.94   stalled behind that store draining
+add r1,r0,r3,lsl#2   6.00   stalled behind the GFX_NORMAL store
+ldr lr,[r5,r3,lsl#2] 5.16   DenseNormals[dense_id]
+str lr,[ip,#1164]    3.00   GFX_VERTEX16 word 1
+str lr,[ip,#1156]    2.93   GFX_NORMAL
+```
+
+**~28 of the 40.5 cycles are the GX writes**, and the textured loop pays the same
+~28 for FOUR words rather than three -- so the stall is **per vertex**, not per
+word. Three consequences, all now settled:
+
+- **A baked/DMA'd GX stream is refuted as a lever here.** Packed FIFO format
+  costs *more* words for the same vertices, and words are not what stalls.
+  HANDOFF's "the emit half is near its floor" was right; its reason (eleven
+  instructions a corner) was not the reason.
+- **A smaller vertex format (`VTX_10`) is refuted for the same reason** -- fewer
+  words per vertex, identical vertex count.
+- **Fewer vertices is the only lever, and that is exactly what strips are.**
+
+### Task 56 mode 2 drew 35.6% of the fighter BACKFACING -- a generator bug, fixed
+
+Found statically, no build, before spending a measurement.
+`scripts/fighters/check_fighter_primitive_streams.py` expands every generated
+group back into oriented triangles under the DS strip rule (triangle *k* is
+`(v_k, v_k+1, v_k+2)` for even *k* and `(v_k+1, v_k, v_k+2)` for odd *k*) and
+compares them with the run's source triangles:
+
+```
+mode 1: 1,714 vertex submissions in 513 groups, 626 triangles ... OK
+mode 2: 1,012 vertex submissions in 162 groups, 626 triangles
+  REVERSED WINDING: 223 triangles (35.6%) -- these are culled away on hardware
+```
+
+`_stripify_run`'s mode-2 heuristic tried three initial active edges:
+`(t0[1],t0[2])`, `(t0[0],t0[2])`, `(t0[0],t0[1])`. The middle one is not a
+directed edge of `t0` -- it emits `[t0[1], t0[0], t0[2]]`, the mirror of the
+source triangle -- and **every triangle in a strip inherits its first triangle's
+winding**, so a strip that started there came out entirely backfacing. The
+longest-strip search picked it whenever it won on length. Corrected to
+`(t0[2],t0[0])`; mode 2 is now **1,014 vertices in 163 groups, every source
+triangle drawn exactly once with the source winding**.
+
+**That is what made Task 56 unusable, and it is not what it was killed for.** The
+2026-07-24 KILL row reads "does not move ALL" over a **128-frame window at frame
+600** -- the window class the whole-match instrument later invalidated -- against
+a control built three days earlier and ~31 KB smaller, and its "ROM hangs the
+present loop" symptom has separate address evidence pointing at the boot cliff.
+Nobody checked whether the geometry it drew was the fighter's geometry.
+
+The runtime half was wrong too. `EmitProductionPrimitiveGroups` was
+`noinline, cold, optimize("Os")` in `.main` while its raw siblings sat in ITCM at
+eleven instructions a corner, and it branched on `textured` once per **vertex**.
+A 46% vertex cut cannot survive being paid for at twice the per-vertex rate. It
+now has the same placement, the same inner-loop shape, and the type test hoisted
+to the group.
+
+**One invariant the original missed:** batches are REUSED across runs without
+re-issuing `glBegin`, so every other emitter -- cross-matrix, raw, the next run
+sharing the batch -- assumes the primitive type is still `GL_TRIANGLE`. The strip
+emitter now restores it before returning: one FIFO word against 53 run emissions
+a frame, and no invariant left for a future caller to violate.
+
+**`NDS_R2_STRIP_ROUTE=1` is the one-binary A/B**, same instrument as
+`gNdsR2AnimCutRoute`: both emitters compiled, `gNdsR2FighterStripRoute` in
+`.data`, `aligned(32)`, default 1. Task 56 was killed against a control that was
+a different binary; this one is not. At `NDS_R2_STRIP_ROUTE=0` the test folds to
+a constant and the unselected emitter is dead-coded, so the shipped ROM pays
+nothing for the instrument.
+
+### Slice 24 (ARCHITECTURAL): Task 56 strips GRADUATE -- FTR P50 -11,584
+
+**One binary, `build-c116-t56route`, `romSha256` identical across both arms,
+same melonDS `DE80E46BDCF1FD98`, 1600 samples an arm, DLDI on.
+`gNdsR2FighterStripRoute` read back **0** and **1** at end of run, so the poke
+landed and was never stamped.**
+
+| bucket | A: raw corners | B: strips | delta |
+|---|---:|---:|---:|
+| **FTR P50** | 313,856 | **302,272** | **-11,584** |
+| **FTR P95** | 316,672 | **305,408** | **-11,264** |
+| **WORK-H P50** | 952,512 | **941,312** | **-11,200** |
+| WORK P50 | 958,016 | 946,560 | -11,456 |
+| STG P50 | 189,184 | 189,184 | 0 |
+| ALL P50 | 1,118,336 | 1,118,336 | 0 |
+| OTHR P50 | 201,024 | 211,648 | +10,624 |
+| WAIT P50 | 181,760 | 192,000 | +10,240 |
+
+Read the last three rows together: **`ALL` P50 is identical to the tick and the
+saved work reappears as `WAIT`.** That is `ALL` being VBlank-quantised wall time,
+exactly the trap that killed this lever in 2026-07 -- and exactly why the
+standing rule judges on `WORK-H`, not on `ALL`. `STG` unchanged to the tick is
+the control that the route touched only the fighter path.
+
+Predicted ~20,000 from 2,148 raw corners a frame becoming ~1,160 at 40.5
+cycles; measured **-11,584**, about 57% of that. The likely remainder is that
+part of the ~28-cycle GX stall is **per polygon**, not per vertex, and strips
+cut vertices while leaving all 626 triangles. Worth knowing before the next
+geometry lever is priced off the vertex count alone.
+
+Arm B carries one artefact frame -- `FTR` max 4,496,896 against arm A's 322,112,
+with `SRC`, `GCRA` and `SINT` all maxing at ~4.5M in the same sample. They cannot
+all be true at once (their sum exceeds that frame's `ALL`), so it is a perturbed
+ring sample, not a hitch; it inflates arm B's *mean* by ~2,600 and is why the
+means move less than the medians. Judge this one on P50/P95.
+
+`NDS_TASK56_FIGHTER_PRIMITIVES` now defaults to **2**, so `make p1` and the
+tick-HUD ROM both ship strips. `NDS_R2_STRIP_ROUTE` stays 0 by default: the
+route is an instrument, and at 0 the unselected emitter is dead-coded away.
+
 ### The `.data` route WORKS — first attributable animation measurement (cycle 109)
 
 Built the standing-rule-7 route the determinism finding demanded.

@@ -941,7 +941,17 @@ typedef struct NDSRendererNativeFighterRoot
 #if NDS_RENDERER_M2_DETAILED_LEDGER
     u32 owner_generation;
 #endif
-    NDSRendererNativeFighterPreamble preamble;
+    /* By reference, not by value. The preamble is built once per contract event
+     * during the record pass and is immutable for the whole playback pass, so
+     * copying its 24 bytes into every root every frame was re-materialising data
+     * that had not moved: a 39.5-per-frame ldmia/stmia pair the c115 per-PC
+     * census prices at 144 cycles a copy, 3,250 ticks/frame, because the source
+     * index is random and the destination line is write-allocated. Every
+     * consumer already took its address or read one field, so the pointer costs
+     * nothing to read. Never NULL -- the no-event paths point at the adapter's
+     * shared zero row rather than leaving it unset, which keeps the reads
+     * branch-free. */
+    const NDSRendererNativeFighterPreamble *preamble;
 } NDSRendererNativeFighterRoot;
 
 /* Mode-7 laboratory candidate.  The adapter supplies exact BattleShip local

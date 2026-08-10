@@ -9246,22 +9246,20 @@ static sb32 ndsRendererAdapterPrepareNativeMaterials(
     }
 #if NDS_R2_SECOND_ENTRY_DIAG
     ndsR2ChainProbe(dobj, &gNdsR2ChainProbePass1, 1u);
-#endif
-    for (mobj = dobj->mobj; mobj != NULL; mobj = mobj->next)
-    {
-        count++;
-        if (count > capacity)
-        {
-            return FALSE;
-        }
-    }
-#if NDS_R2_SECOND_ENTRY_DIAG
-    /* Immediately before the write walk, so the pair brackets exactly the
-     * counting pass. If pass 1 is clean and pass 2 is not, the counting pass is
-     * where the list dies. */
     ndsR2ChainProbe(dobj, &gNdsR2ChainProbePass2, 2u);
 #endif
-    count = 0u;
+    /* There is no counting pre-pass any more. It walked the whole MObj chain a
+     * second time -- a dependent pointer chase, 37 chains a frame, 1,215
+     * ticks/frame on its `mobj = mobj->next` alone in the c115 per-PC census --
+     * purely so an over-capacity chain could be rejected before anything was
+     * written. The write walk below already carries that bound of its own, and
+     * since the rollback slice it also reports `*out_count` on rejection, so the
+     * caller undoes exactly the entries this walk touched. Two passes proved one
+     * fact; one pass proves it at the point of use.
+     *
+     * The chain validator measured 13,938 chains of ONE node against a capacity
+     * of four, so the difference between rejecting before and rejecting during
+     * is a path that has never been taken. */
     for (mobj = dobj->mobj; mobj != NULL; mobj = mobj->next)
     {
         /* Bound the WRITE walk too, not just the counting one above. The count
@@ -12910,6 +12908,11 @@ static NDSFighterDisplayContract sNdsFighterDisplayContract;
 /* Parallel to sNdsFighterDisplayContract.events, in the consumer's layout. */
 static NDSRendererNativeFighterPreamble sNdsFighterDisplayContractPreambles[
     NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED];
+/* What a root points at when there is no contract event behind it. The roots
+ * hold the preamble by reference, so the no-event case needs somewhere real to
+ * point rather than a zeroed inline copy; its cleared VALID bit is what the
+ * backend's preflight rejects, exactly as before. */
+static const NDSRendererNativeFighterPreamble sNdsRendererAdapterZeroPreamble;
 static sb32 sNdsFighterDisplayContractPlayback;
 static u32 sNdsFighterDisplayContractLastFrame[2] = {
     0xffffffffu, 0xffffffffu
@@ -13554,6 +13557,7 @@ ndsRendererAdapterPrimeProductionInputs(
         config->resolve_data = ndsFighterDLDrawResolveRendererData;
 
         root->composed_matrix = &workspace->composed_matrices[i];
+        root->preamble = &sNdsRendererAdapterZeroPreamble;
         /* `materials` is NOT primed here any more: the materials row is now
          * owned by the material DObj rather than by this slot index, so which
          * row root i points at is a per-frame fact. BuildNativeProductionInputs
@@ -13672,15 +13676,9 @@ static sb32 ndsRendererAdapterBuildNativeProductionInputs(
         root->owner_generation = owner_file->owner_generation;
 #endif
 
-        if (event != NULL)
-        {
-            root->preamble =
-                sNdsFighterDisplayContractPreambles[collection->indices[i]];
-        }
-        else
-        {
-            root->preamble = (NDSRendererNativeFighterPreamble){0};
-        }
+        root->preamble = (event != NULL) ?
+            &sNdsFighterDisplayContractPreambles[collection->indices[i]] :
+            &sNdsRendererAdapterZeroPreamble;
     }
     return TRUE;
 }
@@ -13747,11 +13745,9 @@ static sb32 ndsRendererAdapterBuildNativeHierarchyInputs(
         root->material_count = workspace->material_counts[i];
         root->materials = sNdsRendererAdapterNativeOwnerMaterials[i];
         root->config = config;
-        if (event != NULL)
-        {
-            root->preamble =
-                sNdsFighterDisplayContractPreambles[collection->indices[i]];
-        }
+        root->preamble = (event != NULL) ?
+            &sNdsFighterDisplayContractPreambles[collection->indices[i]] :
+            &sNdsRendererAdapterZeroPreamble;
     }
     workspace->hierarchy.roots = workspace->production_roots;
     workspace->hierarchy.config = config;

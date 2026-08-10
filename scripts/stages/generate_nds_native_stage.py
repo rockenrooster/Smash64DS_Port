@@ -3911,11 +3911,27 @@ def strip_c_non_code(source: str) -> str:
 
 
 def named_c_closure(source: str, name: str) -> str:
-    """Return one top-level named C function with brace-balanced bounds."""
+    """Return one top-level named C function with brace-balanced bounds.
+
+    The leading return type and attributes are OPTIONAL on the definition's
+    line. A definition written as
+
+        static sb32 __attribute__((noinline, cold, optimize("Os")))
+        ndsRendererAdapterPrepareNativeOwnerHierarchy(
+
+    puts the name at column 0 on its own line, which the original
+    `^ident...name(` pattern could not match -- it demanded a word boundary
+    before the name and there is none inside an identifier that starts the
+    line. Six functions took that shape during the cycle-110 cold-outlining
+    work and `build.ps1` then failed closed on the one the manifest names,
+    so a clean checkout could not generate the fighter IR at all. A bare
+    `name(` at line start is safe to admit: the loop below already rejects any
+    match whose next `;` precedes its next `{`, which is every call site.
+    """
 
     code = strip_c_non_code(source)
     pattern = re.compile(
-        rf"(?m)^[A-Za-z_][^\n;{{}}]*\b{re.escape(name)}\s*\("
+        rf"(?m)^(?:[A-Za-z_][^\n;{{}}]*\b)?{re.escape(name)}\s*\("
     )
     for match in pattern.finditer(code):
         open_brace = code.find("{", match.end())

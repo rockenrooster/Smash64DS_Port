@@ -1897,10 +1897,6 @@
           "classification": "live_camera_independent"
         },
         {
-          "access": "input.preamble.flags",
-          "classification": "live_camera_independent"
-        },
-        {
           "access": "input.root_offset",
           "classification": "immutable_generation"
         },
@@ -1911,6 +1907,10 @@
         {
           "access": "m2_owner.m2_run_prepare_ticks",
           "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "preamble.flags",
+          "classification": "live_camera_independent"
         },
         {
           "access": "prepared_epoch.light_direction",
