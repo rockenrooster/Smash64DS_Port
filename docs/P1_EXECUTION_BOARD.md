@@ -2102,6 +2102,63 @@ runs re-learning that.
 
 **Worth ~7% of the 326,938 gap.** Banked and moved past; do not polish it.
 
+### THE MACHINE IS MEMORY-BOUND — 65% of non-idle cycles are stall (cycle 108)
+
+**Read this before proposing any instruction-count optimization.** The profile
+reports instructions as well as cycles, and nobody had divided them.
+
+**Whole profile: 1,211,130,791 cycles / 342,792,094 instructions = CPI 3.53.**
+Non-idle: 978,488,987 / 342,785,681 = **CPI 2.85**, so **635,703,306 cycles —
+65.0% of all non-idle work — are stall**, not issue. ARM9's ideal is ~1.0.
+
+**This retires the fixed-point conversion campaign as briefed, and it is the
+reason every arithmetic experiment this cycle measured sub-floor:**
+
+| symbol | cycles | instructions | CPI |
+|---|---:|---:|---:|
+| `__aeabi_fadd` | 33,839,425 | 28,429,032 | **1.19** |
+| `__aeabi_fmul` | 21,887,296 | 19,160,867 | **1.14** |
+| `ndsR2CubicValueFixed` | 19,420,815 | 11,143,118 | 1.74 |
+| `battleship_ftMainProcUpdateInterrupt` | 5,656,799 | 490,727 | **11.53** |
+| `ftMainProcPhysicsMap` | 3,643,426 | 414,209 | **8.80** |
+| `ndsFTParamsInvalidateFighterParts` | 13,718,726 | — | 7.08 |
+| `ndsRendererTask36ReplayRun` | 11,463,652 | — | 7.18 |
+
+**The soft-float helpers are the most efficient code in the build.** They are
+libgcc ARM assembly in ITCM and issue at CPI ~1.15 — near ideal. The 8.9% they
+cost is honest instruction count, and deleting it is a real 8.9%, but it is
+being taken out of the *efficient* 35% of the machine. Meanwhile
+`ftMainProcUpdateInterrupt` and `ftMainProcPhysicsMap` — which are exactly the
+`SINT` (+88,082) and `SPHD` (+28,941) over-gate discriminators — run at **11.53
+and 8.80 CPI and are almost pure stall.** At CPI 2 the interrupt proc would cost
+981,454 instead of 5,656,799.
+
+**Named the mechanism in the animation evaluator, per instruction.** The hottest
+instruction in `gcPlayDObjAnimJoint` is `ldrb r5, [r4, #5]` — `aobj->kind` — at
+**24.1 cycles per execution**, 143,916 executions, **3,465,773 cycles, 23% of the
+function**. That is one D-cache miss per AObj node per frame: ~360 live AObj
+nodes against a **4 KB** ARM9 data cache means the list cannot stay resident, so
+every node is a miss every frame. `aobj->next` (offset 0, same line) then costs
+only 7.0. Converting this function's arithmetic to fixed point would not touch
+the 24.1.
+
+**Rank by STALL, not by cycles — it is a different top ten:**
+`ndsFighterMarioFoxDLAllDrawForSlot` 21,261,766 stall at CPI 5.60,
+`ndsRendererExecuteNativeFighterOwnerProduction` 20,320,720 at 4.27,
+`ndsRendererNativeEmitProductionRawUntexturedRun` 16,411,238 at 2.48, `memset`
+14,979,168 at 3.73, `ndsRendererCommitNativeStageSegment` 14,425,717 at 2.61,
+`ndsFTParamsInvalidateFighterParts` 11,779,708 at 7.08.
+
+**What this means for the lane order.** Data layout, working-set size and
+placement are the lever; instruction count is not. Cycle 105's arena fix
+(−191,981, the largest win of the campaign) was a memory-system fix, and that is
+not a coincidence. The next measurement should be a **D-cache working-set
+census** of the simulation's hot structures — AObj/DObj/MObj lists and
+`FTParams` — not another conversion. `scripts/analyze-leaf-helper-attribution.py`
+and the per-PC `average_cycles` column already do this for free: a load above
+~10 cycles/execution is a miss, and they can be ranked exactly the way the stall
+table above was built.
+
 ### How big a win has to be — the sensitivity curve (cycle 108)
 
 Computed free from the head configuration's rows. **This is the number to size

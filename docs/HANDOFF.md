@@ -42,13 +42,12 @@ covers** — a stale pin kept the verifier red for 35 commits.
 - **Effect DObj submits** — Boundary-only: `MISC` is 99.3% of the Boundary
   excursion but **~12.1%** of the gate arm's; G3 refuted in cycles 88–91.
 - **Projectiles** — weapon DObj submit medians **44 ticks/frame**; not the tail.
-- **Particles** — flat ~47,000/frame, hot–cold delta 4,838. A P50 lever only,
-  retiring SwitchPlan §7 option 2 (15 Hz round-robin) as a *gate* answer.
+- **Particles** — flat ~47,000/frame; a P50 lever only, retiring SwitchPlan §7
+  option 2 (15 Hz round-robin) as a *gate* answer.
 - **The force-load seam** — closed cycle 108; see the next-step section.
 - **Texture thrash**, **`Find`**, **`Material`**, **`FTR` as the gate**.
-- **Task 56 strips** — REVERT: **the ROM hangs the present loop**. The
-  `PERF_LEDGER` KILL row citing `FTR` +5,824 has no completed run behind it.
-- **L7 fixed-point collision** — +534 won against 6,481 lost to its own text.
+- **Task 56 strips** — REVERT: **the ROM hangs the present loop**; its
+  `PERF_LEDGER` KILL row has no completed run behind it.
 
 ## RAM: both budgets are near their floor — price a change before writing it
 
@@ -91,20 +90,21 @@ return value** and animates from `fp->figatree_heap`, so the destination copy is
 mandatory. Violating it reads as a different match, not as slow. Do not add
 another caching layer to the loader; board has the three facts it paid for.
 
-**The soft-float bill is mapped, and it is a BASE-cost lane — it lowers P50 and
-P95 together.** `scripts/analyze-leaf-helper-attribution.py` attributes a leaf
-helper to its callers off an existing profile (no build, no run): **8.9% of
-non-idle work**, led by animation evaluation 2.57%, collision 1.79%, matrices
-1.33%. `battleship_ftAnimParseDObjFigatree` and `gcPlayDObjAnimJoint` are
-**5.34% counting self time, ~75,600 ticks at P95**. The helpers are already
-libgcc ARM assembly in ITCM, so only call volume is available.
+**The soft-float bill is mapped** by
+`scripts/analyze-leaf-helper-attribution.py`, off an existing profile with no
+build and no run: **8.9% of non-idle work**, led by animation evaluation 2.57%,
+collision 1.79%, matrices 1.33%.
 
-**Go after the ARITHMETIC, not the comparisons.** `fadd`+`fsub` 3.46%, `fmul`
-2.24%, `fdiv` 1.04% — **6.74% against the compares' 1.32%**. The compare lane is
-closed: `include/nds/nds_fcmp.h` is bit-exact (all 2^32 patterns, via
-`scripts/check_fcmp_exact.py`) and bought a real but **sub-floor** −3,136 P50;
-its port-editable ceiling is ~0.5%. Any conversion must clear one paid-for
-constraint: L7 lost on **text size** (1.85 cycles of `FTR` per byte).
+**But the machine is MEMORY-BOUND, so do not open a conversion campaign.**
+Non-idle **CPI 2.85 — 65% of non-idle cycles are stall, not issue**. The
+soft-float helpers are the *most efficient* code in the build (`fadd` CPI 1.19,
+`fmul` 1.14, ITCM-resident), while `ftMainProcUpdateInterrupt` runs at **11.53**
+and `ftMainProcPhysicsMap` at **8.80** — and those two are exactly the `SINT`
+and `SPHD` over-gate discriminators. `gcPlayDObjAnimJoint`'s hottest instruction
+is `ldrb aobj->kind` at **24.1 cycles/execution** × 143,916: one D-cache miss per
+AObj node per frame, ~360 live nodes against a **4 KB** cache. **Data layout and
+working-set size are the lever; instruction count is not.** Rank by stall
+(cycles − instructions), not by cycles — board has the table and the method.
 
 ## How the load frame is priced, and what is already closed
 
