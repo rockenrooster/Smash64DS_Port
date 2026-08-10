@@ -2498,14 +2498,30 @@ targets are directional and every repeatable correctness-preserving gain is kept
 and accumulated. These delete real work, are exact, and are verified. What is
 *not* claimed is a win: **do not cite this bundle as a tick improvement.**
 
-**The follow-up this exposes.** `ndsR2CubicValueFixed` was placed in `.text.hot`
-when it was a soft-float-heavy function. It now contains no `bl __aeabi_*` at
-all -- ten `umull`, one `clz` -- so both its size and its call behaviour have
-changed, and the curated list has not been revisited. **Re-curate `.text.hot`
-against the current profile before measuring any further animation cut**, or
-every one of them will keep being judged through a ~6,000-tick placement lottery
-that is larger than the cut itself. That is the real blocker on this lane now,
-not the arithmetic.
+**RETRACTED follow-up: do NOT re-curate `.text.hot`.** The first version of this
+entry proposed exactly that. It is a documented dead end, recorded in the very
+file the edit would have touched. `linker/nds_hot_text.ld:174-200` closes the
+list **in both directions**: Task 94 moved `gcPlayDObjAnimJoint` *out* (top-ranked
+candidate, zero eviction) and regressed `WORK-H` P50 **6,144** on 122 of 128
+frames, with `STG` rising 3,712 despite never calling it; R2-03 E66 admitted
+`ndsR2CubicValueFixed` *in* -- ranked #1 unplaced at 1,815,752 recoverable stall
+cycles -- and regressed `WORK-H` P95 **+24,448**. **Two independent estimators
+got the sign wrong.** HANDOFF carries the same closure. Re-deriving it costs a
+build.
+
+**The correct answer is standing rule 7, which these cuts can actually use.**
+Placement noise is a property of comparing two binaries, not something to
+optimise away. The AObj pool could not take a runtime route because it runs at
+scene setup, before the poke lands -- but the hoist and the fused multiply are
+**per-frame code paths**, so both arms fit in ONE binary behind a `.data` global
+driven by `sample-tick-hud-buckets.ps1 -SetGlobals`. That removes the ~6,000
+placement term entirely and is the only way this lane's ~3,950-tick cuts can be
+judged on their merit. Note the rule's own caveat: the poke lands after ~3 warm
+steps, so the OFF arm is partial and must be scaled.
+
+**Until that route exists, stop measuring animation cuts by building two arms.**
+Every cut in the priced table is smaller than the placement term, so a two-arm
+A/B on any of them returns noise with a confident-looking sign.
 
 ### Whole-match sampler invocation, exactly (cycle 109 — cost three runs)
 
