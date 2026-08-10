@@ -106,9 +106,12 @@ volatile u32 gNdsR2CubicSaturations;
  *
  *   bit 0 (1) -- the loop-invariant hoist in gcPlayDObjAnimJoint
  *   bit 1 (2) -- the fused length*length_invert multiply in the cubic kernel
+ *   bit 2 (4) -- the port-side figatree parser (reloc_backend_compat_shims.c
+ *                selects it; the body is in battleship_ftanim.c)
  *
- * Default 3 is the shipped behaviour, so an unpoked ROM is unaffected.
- * `-SetGlobals gNdsR2AnimCutRoute=0` is the pre-cut arm.
+ * Default 7 is the shipped behaviour, so an unpoked ROM is unaffected.
+ * `-SetGlobals gNdsR2AnimCutRoute=0` is the all-pre-cut arm; bit-wise values
+ * price one cut at a time (3 = parser off only, 5 = fused multiply off only).
  *
  * .data, not .bss, and aligned(32) so it OWNS its cache line. Both are load
  * bearing: an uninitialised route would place differently between arms, and
@@ -129,7 +132,7 @@ volatile u32 gNdsR2CubicSaturations;
 #endif
 #if NDS_R2_ANIM_CUT_ROUTE
 volatile u32 gNdsR2AnimCutRoute
-    __attribute__((section(".data"), aligned(32))) = 3u;
+    __attribute__((section(".data"), aligned(32))) = 7u;
 #define NDS_R2_ANIM_CUT_ON(bit) ((gNdsR2AnimCutRoute & (bit)) != 0u)
 #else
 #define NDS_R2_ANIM_CUT_ON(bit) (1)

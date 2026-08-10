@@ -1542,10 +1542,51 @@ void battleship_ftAnimEndSetFall(GObj *fighter_gobj);
 sb32 battleship_ftAnimEndCheckSetStatus(GObj *fighter_gobj,
                                         void (*proc_status)(GObj*));
 
+/* R2-07 cycle 109. The port parser replaces the decomp one on the fighter path.
+ *
+ * This shim is the interposition point, and it is the ONLY one available: the
+ * `#define` in `src/import/battleship_ftanim.c` renames the decomp parser's
+ * definition and its internal call sites together, so no macro can redirect
+ * just the calls. `ftParamUpdateAnimKeys` (below in this file) calls the
+ * unrenamed name, which is this function, so selecting here reaches every
+ * fighter joint without touching `decomp/`.
+ *
+ * Bit-exact except where the body says otherwise: the s16 conversion is proven
+ * over all 65,536 x 8 inputs by `scripts/check_ftanim_target_exact.py`, the
+ * reciprocal table is compile-time-folded and therefore bit-identical to the
+ * runtime divide, and the one divide that would have changed rounding was left
+ * a divide on purpose.
+ *
+ * NDS_R2_ANIM_PARSER defaults to 1 because the replacement is strictly cheaper
+ * at equal output. The route arm exists only under NDS_R2_ANIM_CUT_ROUTE, which
+ * a published build never sets. */
+#ifndef NDS_R2_ANIM_PARSER
+#define NDS_R2_ANIM_PARSER 1
+#endif
+#if NDS_IMPORT_BATTLESHIP_FTMANAGER
+void ndsR2FtAnimParseDObjFigatree(DObj *root_dobj);
+#if NDS_R2_ANIM_CUT_ROUTE
+extern volatile u32 gNdsR2AnimCutRoute;
+#endif
+#endif
+
 void ftAnimParseDObjFigatree(DObj *root_dobj)
 {
 #if NDS_IMPORT_BATTLESHIP_FTMANAGER
+#if NDS_R2_ANIM_CUT_ROUTE
+    if ((gNdsR2AnimCutRoute & 4u) != 0u)
+    {
+        ndsR2FtAnimParseDObjFigatree(root_dobj);
+    }
+    else
+    {
+        battleship_ftAnimParseDObjFigatree(root_dobj);
+    }
+#elif NDS_R2_ANIM_PARSER
+    ndsR2FtAnimParseDObjFigatree(root_dobj);
+#else
     battleship_ftAnimParseDObjFigatree(root_dobj);
+#endif
 #else
     (void)root_dobj;
 #endif
