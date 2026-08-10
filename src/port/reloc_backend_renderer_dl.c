@@ -209,6 +209,20 @@ static s32 sNdsRendererAdapterNativeOwnerTextureNext[
     [NDS_RENDERER_ADAPTER_NATIVE_MATERIAL_MAX];
 static u32 sNdsRendererAdapterNativeOwnerTextureCounts[
     NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED];
+/* One 12-byte identity+input key per entry of the materials array above, so a
+ * material whose inputs have not moved keeps the block already sitting there.
+ * See ndsRendererAdapterPrepareNativeMaterials for the census that says this is
+ * every material every frame. 1,536 bytes; the array it guards is 12,800. */
+typedef struct NDSRendererAdapterMaterialKey
+{
+    const MObj *mobj;
+    u32 heap_generation;
+    u32 hash;
+} NDSRendererAdapterMaterialKey;
+
+static NDSRendererAdapterMaterialKey sNdsRendererAdapterNativeOwnerMaterialKeys[
+    NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED]
+    [NDS_RENDERER_ADAPTER_NATIVE_MATERIAL_MAX];
 static NDSRendererMatrix20p12
     sNdsRendererAdapterNativeOwnerProjection;
 static NDSRendererMatrix20p12
@@ -8894,9 +8908,75 @@ static void ndsR2ChainProbe(DObj *dobj, volatile NDSR2ChainProbe *out, u32 pass)
 }
 #endif
 
+/* Cycle 110. The fighter material snapshot is a pure function of `mobj->sub`
+ * plus texture_id_curr/next, lfrac and palette_id -- and it never varies. The
+ * NDS_TICK_HUD census that has sat in this file since cycle 98 answered it on a
+ * 60-second match: 20,100 builds, 20,069 of them byte-identical to the previous
+ * snapshot for the same MObj, 31 first-sights, and **zero** variants. So ~761
+ * cycles a build, about twelve times a frame, reconstruct a constant --
+ * 13,176 ticks/frame of it, 2,124 of which is the single `mobj->sub.flags`
+ * load missing cache at 139 cycles an execution.
+ *
+ * The key hashes the COMPLETE input set rather than the fields I believe can
+ * animate. That is the difference between a skip that is correct by
+ * construction and one that is correct until someone adds a texture-scroll
+ * track: the builder reads nothing outside that set, so equal inputs means
+ * equal output with only a 2^-32 collision to argue about. The heap generation
+ * is in the key because MObj pointers are taskman-arena addresses and a scene
+ * rewind reuses them.
+ *
+ * The build's side effect -- writing texture_id_curr/next back into the MObj --
+ * is safe to skip for the same reason: the stored hash is taken AFTER the
+ * write-back, so a match means the write would store what is already there.
+ *
+ * Only the production path passes keys. The hierarchy path's materials array is
+ * a caller local that does not survive the frame, so it passes NULL and always
+ * builds. After this the census counts REBUILDS, which makes gNdsFtrPreMatCalls
+ * engagement proof: it should read tens, not tens of thousands. */
+#if NDS_TICK_HUD
+/* Engagement proof. gNdsFtrPreMatCalls cannot answer this: it counts calls that
+ * reach the census inside the build wrapper, and the hierarchy call site passes
+ * no keys, so a skipping production path and a never-skipping one can produce
+ * the same census. These two count the decision itself. */
+volatile u32 gNdsR2MatKeySkip;
+volatile u32 gNdsR2MatKeyBuild;
+#endif
+
+/* Hashes all 30 words of MObjSub, including the six the builder never reads
+ * (sub.unk48, sub.unk4C, sub.unk68..unk74). Narrowing it to the builder's exact
+ * read set was tried and is REFUTED: the engagement counters came back
+ * bit-identical -- 28,786 skips and 30,606 builds either way -- and FTR rose
+ * 1,155. The rebuilds are not caused by those words at all. They are
+ * `keys[count].mobj != mobj`: the materials array is indexed by (selected-root
+ * slot, chain position), and which DObj lands in slot i rotates between frames,
+ * so about half the lookups find the right block under the wrong index.
+ *
+ * Recovering that half needs a per-MObj store -- 33 live MObjs x 100 bytes plus
+ * keys, about 7 KB of bss against an arena whose low-water is already under the
+ * GObj-cap threshold -- or a stable slot assignment. Neither is this slice.
+ * Since the narrow hash bought nothing, keep the one that needs no field audit
+ * to stay correct. */
+static u32 ndsRendererAdapterMaterialInputHash(const MObj *mobj)
+{
+    const u32 *words = (const u32 *)(const void *)&mobj->sub;
+    u32 hash = 2166136261u;
+    u32 i;
+
+    for (i = 0u; i < (sizeof(mobj->sub) / sizeof(u32)); i++)
+    {
+        hash = (hash ^ words[i]) * 16777619u;
+    }
+    hash = (hash ^ (((u32)mobj->texture_id_curr << 16) |
+                    (u32)mobj->texture_id_next)) * 16777619u;
+    hash = (hash ^ *(const u32 *)(const void *)&mobj->lfrac) * 16777619u;
+    hash = (hash ^ *(const u32 *)(const void *)&mobj->palette_id) * 16777619u;
+    return hash;
+}
+
 static sb32 ndsRendererAdapterPrepareNativeMaterials(
     DObj *dobj, NDSRendererNativeMaterial *materials,
-    u32 capacity, u32 *out_count)
+    u32 capacity, u32 *out_count,
+    NDSRendererAdapterMaterialKey *keys)
 {
     MObj *mobj;
     u32 count = 0u;
@@ -8957,10 +9037,40 @@ static sb32 ndsRendererAdapterPrepareNativeMaterials(
             gNdsR2MaterialWalkBoundHits++;
             return FALSE;
         }
+        if (keys != NULL)
+        {
+            u32 hash = ndsRendererAdapterMaterialInputHash(mobj);
+
+            if ((keys[count].mobj == mobj) &&
+                (keys[count].heap_generation == gNdsTaskmanHeapGeneration) &&
+                (keys[count].hash == hash))
+            {
+#if NDS_TICK_HUD
+                gNdsR2MatKeySkip++;
+#endif
+                count++;
+                continue;
+            }
+#if NDS_TICK_HUD
+            gNdsR2MatKeyBuild++;
+#endif
+        }
         if (ndsRendererAdapterBuildNativeMaterial(
                 mobj, &materials[count]) == FALSE)
         {
+            if (keys != NULL)
+            {
+                keys[count].mobj = NULL;
+            }
             return FALSE;
+        }
+        if (keys != NULL)
+        {
+            /* After the build, so the stored hash describes the MObj the build
+             * left behind -- it writes texture_id_curr/next back. */
+            keys[count].mobj = mobj;
+            keys[count].heap_generation = gNdsTaskmanHeapGeneration;
+            keys[count].hash = ndsRendererAdapterMaterialInputHash(mobj);
         }
         count++;
     }
@@ -14992,7 +15102,9 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
                          native_owner_material_dobjs[i],
                          sNdsRendererAdapterNativeOwnerMaterials[i],
                          NDS_RENDERER_ADAPTER_NATIVE_MATERIAL_MAX,
-                         &prepared_material_count) == FALSE) ||
+                         &prepared_material_count,
+                         sNdsRendererAdapterNativeOwnerMaterialKeys[i])
+                         == FALSE) ||
                     (prepared_material_count !=
                      native_owner_material_counts[i]) ||
                     (ndsRendererAdapterValidateNativeOwnerMaterials(
@@ -15353,7 +15465,9 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
                 if (ndsRendererAdapterPrepareNativeMaterials(
                         material_dobj, native_materials,
                         NDS_RENDERER_ADAPTER_NATIVE_MATERIAL_MAX,
-                        &native_prepared_material_count) != FALSE)
+                        &native_prepared_material_count,
+                        /* Caller local, gone by next frame -- always build. */
+                        NULL) != FALSE)
                 {
                     native_material_count =
                         native_prepared_material_count;

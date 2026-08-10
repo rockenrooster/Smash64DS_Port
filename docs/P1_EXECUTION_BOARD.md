@@ -3608,6 +3608,64 @@ because the 60 Hz loop now fits two iterations inside one presented frame more
 often. Ring dumps saw 5, all payload-DIFFERS (never a stale read). Use
 `-RingDump -AllowRepeatedFrames` from here.
 
+### Slice 8: the fighter material block is a constant, and a census already knew
+
+**FTR 347,868 → 333,322, −14,546.** `WORK` −14,066, `ALL` −6,509. Boundary
+passes. Cumulative for cycle 110: **FTR 385,508 → 333,322, −52,186**;
+`ALL` −74,227.
+
+`ndsRendererAdapterBuildNativeMaterialSnapshot` reconstructs a 100-byte N64
+display-list material command block out of a pointer-chased `MObj` — ~761 cycles
+a call, about twelve times a frame, 13,176 ticks/frame, of which **2,124 is the
+single `mobj->sub.flags` load missing cache at 139 cycles an execution**. It is
+a pure function of `mobj->sub` plus `texture_id_curr/next`, `lfrac` and
+`palette_id`.
+
+**The measurement that decided it needed no build and no new code.** Cycle 98
+left an invariance census in the tree (`ndsFtrPreMaterialCensus`, hashes the
+snapshot and compares against the previous one for the same MObj) and nobody had
+read it. Off the shipped tick-HUD ROM with `-ExtraGlobals`:
+
+```
+gNdsFtrPreMatCalls=20,100  Same=20,069  Variant=0  New=31  Evict=0
+```
+
+**Zero variants.** Thirty-one distinct materials, each built once and then
+rebuilt identically twenty thousand times. That is not a cache question, it is a
+constant being recomputed — so the skip is a 12-byte `(MObj, heap generation,
+FNV-1a of the complete input set)` key per materials-array slot. Complete
+coverage rather than the fields I believed could animate: the builder reads
+nothing else, so equal inputs is equal output by construction, with only a 2^-32
+collision to argue about. The heap generation is in the key because MObj
+pointers are taskman-arena addresses that a scene rewind reuses. Skipping the
+build's write-back of `texture_id_curr/next` is safe because the stored hash is
+taken *after* it — a match means the write would store what is already there.
+
+**Two things this slice got wrong first, both worth keeping.**
+
+*The engagement counter was not optional.* The first arm measured FTR −13,587
+while `gNdsFtrPreMatCalls` did not move, which is consistent with both "the skip
+fires and the census counts a different call site" and "the skip never fires and
+this is placement noise". Only a purpose-built `gNdsR2MatKeySkip`/`KeyBuild`
+pair settled it: **28,786 skips against 30,606 builds**, and the second arm then
+reproduced the win with `WORK` moving too (−14,066, where the first arm's `WORK`
+was −6,470 with buckets shuffling). A change whose engagement you cannot read is
+not measured, it is guessed at.
+
+*Narrowing the hash is REFUTED.* Six of `MObjSub`'s thirty words are read by
+nothing in the builder (`unk48`, `unk4C`, `unk68..unk74`), so hashing them looked
+like the reason only 48.5% of calls skip. Restricting the hash to the read set
+returned **bit-identical counters — 28,786 and 30,606 again** — for +1,155. The
+rebuilds are `keys[count].mobj != mobj`: the materials array is indexed by
+(selected-root slot, chain position) and **which DObj lands in slot *i* rotates
+between frames**, so about half the lookups find the right block under the wrong
+index. Reverted to the complete hash, which measures the same and needs no field
+audit to stay correct.
+
+**Recovering the other half** needs either a per-MObj store — 33 live MObjs ×
+100 bytes plus keys, ~7 KB of bss against an arena whose low-water is already
+under the GObj-cap threshold — or a stable slot assignment. Priced, not taken.
+
 ### The `.data` route WORKS — first attributable animation measurement (cycle 109)
 
 Built the standing-rule-7 route the determinism finding demanded.
