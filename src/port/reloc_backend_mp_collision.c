@@ -357,7 +357,12 @@ static void ndsMPVertexF32Bind(MPGeometryData *geometry)
     }
 }
 
-static void ndsMPVertexF32Get(MPVertexPosContainer *verts, u32 vertex_id,
+/* MUST inline. Left out-of-line, the memo cost a `bl` plus two pointer stores
+ * and two reloads per vertex, which is worse than the two `__aeabi_i2f` calls it
+ * replaced -- the cycle-109 measurement read neutral for exactly this reason,
+ * and the disassembly showed `bl ndsMPVertexF32Get` rather than an inlined
+ * body. Verify with objdump after touching this, not with ticks. */
+static inline void ndsMPVertexF32Get(MPVertexPosContainer *verts, u32 vertex_id,
                               f32 *out_x, f32 *out_y)
 {
     if (vertex_id >= NDS_MP_VERTEX_F32_MAX)
@@ -1087,6 +1092,12 @@ sb32 mpCollisionGetFCCommonFloor(s32 line_id, Vec3f *object_pos,
         return FALSE;
     }
     segment_count = vertex_count - 1u;
+    /* Cycle 109: same memo as the floor sweep. The gate below converted x1 and
+     * x2 to f32 twice each per segment -- part of this function's 56,567
+     * `__aeabi_i2f` calls (950,326 cycles) -- on static stage vertices. The s32
+     * values are still read for `x1 == x2`, `ndsMPLineDistanceFC` and
+     * `ndsMPGetFCAngle`, which want integers anyway. */
+    ndsMPVertexF32Bind(geometry);
     for (j = 0u; j < segment_count; j++)
     {
         u32 v1_index = vertex_first + j;
@@ -1097,10 +1108,15 @@ sb32 mpCollisionGetFCCommonFloor(s32 line_id, Vec3f *object_pos,
         s32 y1 = ndsMPVertexY(verts, v1_id);
         s32 x2 = ndsMPVertexX(verts, v2_id);
         s32 y2 = ndsMPVertexY(verts, v2_id);
+        f32 fx1;
+        f32 fx2;
+        f32 unused_y;
         f32 floor_y;
 
-        if (!(((f32)x1 <= object_x && (f32)x2 >= object_x) ||
-              ((f32)x2 <= object_x && (f32)x1 >= object_x)))
+        ndsMPVertexF32Get(verts, v1_id, &fx1, &unused_y);
+        ndsMPVertexF32Get(verts, v2_id, &fx2, &unused_y);
+        if (!(((fx1 <= object_x) && (fx2 >= object_x)) ||
+              ((fx2 <= object_x) && (fx1 >= object_x))))
         {
             continue;
         }
