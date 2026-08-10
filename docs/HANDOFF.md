@@ -39,9 +39,8 @@ covers** — a stale pin kept the verifier red for 35 commits.
 
 ## What is dead, so nobody re-derives it
 
-- **Effect DObj submits** — a BOUNDARY-arm diagnosis, never the gate: `MISC` is
-  99.3% of the Boundary excursion but **~12.1%** of the gate arm's. G3's packet
-  path was refuted on mechanism in cycles 88–91.
+- **Effect DObj submits** — Boundary-only: `MISC` is 99.3% of the Boundary
+  excursion but **~12.1%** of the gate arm's; G3 refuted in cycles 88–91.
 - **Projectiles** — weapon DObj submit medians **44 ticks/frame**; not the tail.
 - **Particles** — flat ~47,000/frame, hot–cold delta 4,838. A P50 lever only,
   retiring SwitchPlan §7 option 2 (15 Hz round-robin) as a *gate* answer.
@@ -77,11 +76,14 @@ which decomposes into `SINT` **+88,082**, `SPHD` +28,941, `SHDT` +27,190,
 populations by only **+13,768**, which retires fighter draw (and its
 `memset`/`memcpy` concentration) as a gate lever for good. Board has the table.
 
-`SPHD`/`SHDT`/`SCPU` are **79,662 together and have never been split**; `SINT`
-is still the largest single discriminator after the arena fix and the prebake.
-Split those four before writing any more code. And price levers against the
-**body**, not P95 alone — with 44.2% over gate a body-wide saving moves 707
-frames across the line while reading as noise at P95.
+**Size every proposal against the board's sensitivity curve.** The median clears
+the gate by only **13,372** and **238 frames sit within 50,000 of it from
+above**, so a body-wide 50,000 moves 238 frames from 20 FPS to 30 FPS
+(707 → 469 over gate) while reading as an ordinary P95 delta. **Only soft float
+is the right size** — ~98,500 ticks/frame, i.e. the 100,000 row, 707 → 295.
+Everything else on the map is 500–5,000 ticks against a 291,000 gap. Recompiling
+is refuted (`Makefile:3165-3179`), so the arithmetic must actually not happen;
+at that scale it becomes a `PROJECT_GOAL` sacrifice-order call needing the owner.
 
 **The force-load seam is closed (cycle 108).** Pre-finalizing and handing back
 the arena pointer is structurally impossible: `ftmain.c:4623` **discards the
@@ -101,19 +103,17 @@ libgcc ARM assembly in ITCM, so only call volume is available.
 2.24%, `fdiv` 1.04% — **6.74% against the compares' 1.32%**. The compare lane is
 closed: `include/nds/nds_fcmp.h` is bit-exact (all 2^32 patterns, via
 `scripts/check_fcmp_exact.py`) and bought a real but **sub-floor** −3,136 P50;
-the port-editable ceiling for the whole lane is ~0.5%. `-ffinite-math-only` does
-not remove these calls. Any conversion must clear two paid-for constraints: L7
-lost on **text size** (1.85 cycles of `FTR` per byte), and `-mthumb` has no
-SMULL.
+its port-editable ceiling is ~0.5%. Any conversion must clear one paid-for
+constraint: L7 lost on **text size** (1.85 cycles of `FTR` per byte).
 
 ## How the load frame is priced, and what is already closed
 
 **106–108 priced the load frame** via `--split-by-symbol
 ndsRelocFinalizeLoadedFile` (74 load frames vs 326 control, premium
-650,610/frame): reloc + copy **23.6%**, animation re-evaluation **24.3%** and
-**real gameplay work**, `armWaitForIrq` 21.1% idle.
-**`ndsRelocAssetIDForToken` is CLOSED as a caching target**; still open is
-bounding its two 143/158-entry scans by an init-time `[min,max]`.
+650,610/frame): reloc + copy 23.6%, animation re-evaluation 24.3% and **real
+gameplay work**, `armWaitForIrq` 21.1% idle. **`ndsRelocAssetIDForToken` is
+CLOSED as a caching target**; still open is bounding its two scans by an
+init-time `[min,max]`.
 
 **Do not bring a micro-fix.** R2-06 E11's rule: *a load-frame-only saving of
 ~8,000 ticks cannot be banked through P95, because relinking moves the tail by

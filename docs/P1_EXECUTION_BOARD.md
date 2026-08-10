@@ -2102,6 +2102,52 @@ runs re-learning that.
 
 **Worth ~7% of the 326,938 gap.** Banked and moved past; do not polish it.
 
+### How big a win has to be — the sensitivity curve (cycle 108)
+
+Computed free from the head configuration's rows. **This is the number to size
+any future proposal against**, and it ends the practice of judging a lever by
+whether its P95 delta clears a floor.
+
+| uniform body-wide saving | over gate | % over | new P50 | new P95 |
+|---:|---:|---:|---:|---:|
+| 0 | 707 | 44.2% | 1,107,008 | 1,411,283 |
+| 25,000 | 599 | 37.4% | 1,082,008 | 1,386,283 |
+| **50,000** | **469** | **29.3%** | 1,057,008 | 1,361,283 |
+| **100,000** | **295** | **18.4%** | 1,007,008 | 1,311,283 |
+| 200,000 | 149 | 9.3% | 907,008 | 1,211,283 |
+| 291,000 | 80 | 5.0% | 816,008 | 1,120,283 |
+
+**The distribution is packed against the line.** The median clears the gate by
+only **13,372**, **238 frames sit within 50,000 of it from above**, and 412
+within 100,000. So a body-wide saving is worth far more than its P95 delta
+suggests: 50,000 moves **238 frames** from 20 FPS to 30 FPS while moving P95 by
+exactly 50,000, which at P95 alone would read as a modest win. The VBlank
+histogram says the same thing in presentation terms — **2:1062, 3:895** — the
+match is already 30 FPS on two thirds of frames and the job is the other 895.
+
+**Only one lane on the map is the right size.** Soft float is ~**98,500 ticks
+per frame** (8.9% of non-idle), i.e. converting it lands on the 100,000 row:
+707 → 295 over gate, 412 frames crossing. Nothing else measured this cycle is
+within an order of magnitude — the compare sub-lane is 0.5%, `memset`/`memcpy`
+is 3.92% but concentrated in fighter draw which `FTR` proves is not where the
+gate is decided, and every remaining local edit is worth 500–5,000 ticks against
+a 291,000 gap.
+
+**Two mechanisms are refuted, so the arithmetic must actually not happen:**
+recompiling is out (`Makefile:3165-3179`, `battleship_gmcollision.o -marm` read
+−2,304, inside the floor, because `-marm` only buys the call sites and cannot
+change libgcc's own mode), and `-ffinite-math-only` does not lower a single
+compare. Every float call from Thumb is a `blx` — a real interworking switch
+each way, which is why `fadd` measures 36.4 cycles against a ~15–20 cycle ARM
+body — but that cost is unreachable without removing the call.
+
+**Anything at or beyond the 100,000 row is a `PROJECT_GOAL` sacrifice-order
+decision and needs the owner.** Reduced animation update rates and independent
+update rates are explicitly listed as allowed (visual fidelity is sacrifice #2),
+and the contract says to test them only after cheaper equivalents are exhausted
+— which cycles 105–108 have now largely done at this seam, each refutation
+recorded above.
+
 ### What is actually left: the over-gate frames, decomposed (cycle 108)
 
 Taken on `build-c111-fcmp`, the current head configuration, whole match both-CPU.
