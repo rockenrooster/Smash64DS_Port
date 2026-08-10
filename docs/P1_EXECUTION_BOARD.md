@@ -2470,6 +2470,43 @@ fails on performance first. `NDS_DREAMLAND_DS_MESH` is untested and is a
 transfer to it — but price its per-frame cost against the same 99.9% cache
 before building an A/B.
 
+### The soft-float-free kernel is NOT a measured win — placement ate it
+
+Both cuts are in, exact and Boundary-verified, and together they delete
+**3,480,804 cycles** of proven work (hoist 1,955,955 + fused multiply
+1,524,849) -- about **3,950 ticks/frame**. The arm does not measure faster.
+Whole-match, both-CPU, 1600 samples, against tonight's control:
+
+| | control | bundle | delta |
+|---|---:|---:|---:|
+| `WORK-H` P50 | 1,108,096 | 1,113,536 | **+5,440** |
+| `WORK-H` mean | 1,165,492 | 1,169,961 | +4,469 |
+| `WORK-H` P95 | 1,580,416 | 1,565,760 | −14,656 |
+| 2 VBlanks (30 FPS) | 1,119 | 1,093 | **−26** |
+| 3 VBlanks (20 FPS) | 836 | 875 | +39 |
+
+**The confound is identified, not guessed: `FTR` P50 moved +4,736.** Animation
+changes cannot affect fighter draw, so that number is pure placement. Text grew
+**220 bytes**, worth only ~407 cycles by the 1.85-cycles-per-byte rule, so this
+is not footprint — it is `.text.hot` re-addressing, which
+`linker/nds_hot_text.ld:179-201` already measures at **6,144 `WORK-H` P50 on 122
+of 128 frames** when one member of the curated 8 KiB list is perturbed. The work
+removed (~3,950) is smaller than the perturbation removing it causes (~6,000).
+
+**Kept anyway, and deliberately.** The board's standing rule is that milestone
+targets are directional and every repeatable correctness-preserving gain is kept
+and accumulated. These delete real work, are exact, and are verified. What is
+*not* claimed is a win: **do not cite this bundle as a tick improvement.**
+
+**The follow-up this exposes.** `ndsR2CubicValueFixed` was placed in `.text.hot`
+when it was a soft-float-heavy function. It now contains no `bl __aeabi_*` at
+all -- ten `umull`, one `clz` -- so both its size and its call behaviour have
+changed, and the curated list has not been revisited. **Re-curate `.text.hot`
+against the current profile before measuring any further animation cut**, or
+every one of them will keep being judged through a ~6,000-tick placement lottery
+that is larger than the cut itself. That is the real blocker on this lane now,
+not the arithmetic.
+
 ### Whole-match sampler invocation, exactly (cycle 109 — cost three runs)
 
 The HANDOFF line "`-Samples` to 4096" is the parameter's *ceiling*, not the
