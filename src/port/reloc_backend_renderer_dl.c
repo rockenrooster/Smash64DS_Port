@@ -3618,25 +3618,29 @@ static sb32 ndsRendererAdapterComposeOwnerWorldsFlat(
              * traffic streamed through a 4 KB D-cache. The cache still exists
              * and the fallback path still fills it for itself; nothing populates
              * it speculatively any more. */
+            /* The base is not folded in until the first contributing joint,
+             * which turns two operations into one. All 55.5
+             * ndsRendererMtxMulAffine20p12 calls a frame come from this loop at
+             * 687 cycles each, and one per binding used to be `copy the base
+             * in, then multiply the base straight back out`. When the base is
+             * the identity the joint's local matrix IS the world, so it is
+             * built directly into `out` and neither the multiply nor the
+             * 64-byte temporary happens. */
+            if ((applied == FALSE) && (base_identity != FALSE))
+            {
+                if (ndsRendererAdapterBuildDObjLocalMatrix(chain[i - 1u],
+                                                           out) != FALSE)
+                {
+                    applied = TRUE;
+                }
+                continue;
+            }
             if (ndsRendererAdapterBuildDObjLocalMatrix(chain[i - 1u],
                                                        &local) != FALSE)
             {
                 if (applied == FALSE)
                 {
-                    /* The base is not folded in until the first contributing
-                     * joint, which turns two operations into one. All 55.5
-                     * ndsRendererMtxMulAffine20p12 calls a frame come from this
-                     * loop at 687 cycles each, and one per binding used to be
-                     * `copy the base in, then multiply the base out again`.
-                     * When the base is the identity even the multiply goes. */
-                    if (base_identity != FALSE)
-                    {
-                        ndsRendererMatrixCopy20p12(out, &local);
-                    }
-                    else
-                    {
-                        ndsRendererMtxMulAffine20p12(&local, base, out);
-                    }
+                    ndsRendererMtxMulAffine20p12(&local, base, out);
                     applied = TRUE;
                 }
                 else

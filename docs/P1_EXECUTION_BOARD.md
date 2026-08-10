@@ -3919,6 +3919,32 @@ whose joints all decline still gets `out = base`, as before.
 
 Carries slice 17's narrowed material key too, without its scaffold.
 
+### Slices 19–21: three refutations that bound where cycle 110 stops
+
+**Slice 19/19b — the cold recipe is SPENT.** `BuildNativeHierarchyInputs` (598 B)
+and `ndsFighterDrawPlanVerify` are both never-entered, exactly the pattern that
+won slices 12 and 15, and marking them cold measured **FTR +4,959** on its own
+(19b). The driver was already **7,516 bytes, under the 8 KB I-cache**; once it
+fits, further shrinking buys nothing and the outlining still costs. **Slices 12
+and 15 were not "shrink the function" wins, they were "get it under the cache"
+wins**, and that is a threshold, not a gradient.
+
+**Slice 20 — build the first joint straight into the output. KEPT.**
+`FTR +289` (flat) but **`WORK-H` P95 −10,688, `WORK` P95 −12,288, `SRC` P95
+−4,160**. One fewer 64-byte temporary and one fewer multiply per binding; the
+mean is at the noise floor and the tail is not.
+
+**Slice 21 — the E23 projection skip stays refuted.** Only the modelview half of
+the fighter split load is per-root; E22 measured 29 of 30 loads re-pushing a
+byte-identical projection, and E23's −3,008 was discarded as under the placement
+floor. Re-testing it looked justified by the standing rule that repeatable gains
+are kept and accumulated — but a content-keyed skip measures **FTR +4,566**. A
+64-byte `memcmp` costs more than the eighteen FIFO writes it saves; E23's revert
+was right and its −3,008 was probably placement. **The rule "keep every gain" does
+not license re-running a refuted experiment without new evidence.**
+
+**Cycle 110 total: FTR 385,508 → 302,906, −82,602 (21.4%).**
+
 ### The `.data` route WORKS — first attributable animation measurement (cycle 109)
 
 Built the standing-rule-7 route the determinism finding demanded.
