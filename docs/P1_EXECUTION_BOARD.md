@@ -2495,6 +2495,75 @@ Cut G's GO-text state, not on arbitrary battle frames. For an ordinary visual
 A/B use the delay-based capture, or qualify through the Boundary verifier, which
 produces `artifacts/visibility/latest.png` plus its regional analysis.
 
+### RESOLVED: Boundary's 30s marker budget, three wrong verdicts, and the fix
+
+Three Boundary failures in one night all read *"GDB marker capture timed out
+after 30 seconds"*, each with a **different** stall PC
+(`__syscall_lock_acquire`, then `memcpy`), and the last had already printed most
+of the marker dump before expiring. That is a capture finishing late, not a ROM
+hanging.
+
+**Root cause.** The Boundary path (no `-OneMinuteMatchProof`) borrowed
+`$RendererBenchmarkTimeoutSeconds` for the marker capture — default **30** —
+while the one-minute proof path gets 300. Thirty seconds has to cover the gdb
+attach, four breakpoints and the whole dump, and that dump has grown to dozens
+of `printf` lines as counters were added across the campaign. Nobody moved the
+budget with it. Fixed in
+`verify-battle-mariofox-gcrunall-loop-harness.ps1:1346` — floored at **120s**
+via `Max()`, so an explicit larger value still wins and the renderer benchmark's
+own budget is untouched. A timeout is a ceiling, not a sleep; a passing run pays
+nothing.
+
+**It cost a wrong answer, not just time.** The fused multiply was bisected to a
+"hang" and reverted on *red with it, green without it* — then the identical
+reverted tree failed too. **`NDS_TASK10_GIT_SHORT` is compiled in, so every
+commit changes the ROM image**: the passes were at `189cd20680`, the failing
+re-test at `5b6cb20aa3`, same source, different binaries, on a ROM whose pacing
+is placement-sensitive. Standing rule 7 was applied to the sampler and not to
+the verifier. **"Re-run the same tree" is not "re-run the same binary" in this
+repo.**
+
+**Both changes are now in and verified** on the repaired harness, each with
+zero marker timeouts:
+
+- the loop-invariant hoist in `gcPlayDObjAnimJoint` (~1,955,955 cycles: the
+  1,069,318-cycle `AOBJ_ANIM_END` literal reload plus the 886,637-cycle
+  `parent_gobj->flags` chain, both re-run once per node for a value that never
+  changes);
+- `ndsR2F32MulToFixed`, the fused `f32 x f32 -> Q16` (1,524,849 cycles).
+
+**`ndsR2CubicValueFixed` now contains no `bl __aeabi_*` at all** — ten `umull`,
+one `clz`. The kernel is free of the soft-float library.
+
+**Standing rule, added:** judge nothing on a verifier whose flake rate on one
+*unchanged binary* has never been measured. If Boundary fails, re-run before
+bisecting.
+
+### Whole-match sampler invocation, exactly (cycle 109 — cost three runs)
+
+The HANDOFF line "`-Samples` to 4096" is the parameter's *ceiling*, not the
+window to use, and reading it as the window wasted a 30-minute run.
+
+- **`-Samples 1600`.** That is the match. It is where every banked figure's
+  denominator comes from (`754/1600`, `707/1600`). **4096 runs past the end**
+  and dies at `TimeoutSeconds` having reached ring stop 15 of 43.
+- **`-AllowRepeatedFrames` is required on the gate arm.** Without it the run
+  completes and is then *thrown away*: about 4 presented-frame numbers per 1600
+  repeat. They are not double-reads — the harness itself annotates each one
+  `payload DIFFERS (real second iteration)`, so the samples are distinct
+  iterations that reported the same frame counter.
+- **`-NoBuild`** or the sampler rebuilds with no `MakeFlags` and silently wipes
+  the arm's configuration.
+- **`-JsonOut`**, not `-OutName`.
+
+**`capture-melonds.ps1 -ExactFirstFrame` does not work on this ROM.** It demands
+`-ExactSecondFrame` as well *and* `-SoftwareRenderer`, and then delegates to
+`capture-cut-g-exact-frames.ps1`, which fails with *"Exact frame 439 lost
+native-OAM GO recognition or drawing state"* — the exact-frame path is gated on
+Cut G's GO-text state, not on arbitrary battle frames. For an ordinary visual
+A/B use the delay-based capture, or qualify through the Boundary verifier, which
+produces `artifacts/visibility/latest.png` plus its regional analysis.
+
 ### RETRACTED: the fused-multiply "hang" bisect was not controlled
 
 The section below concludes the fused multiply hangs the ROM, on the strength of
