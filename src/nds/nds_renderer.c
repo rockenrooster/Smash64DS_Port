@@ -25966,7 +25966,20 @@ ndsRendererNativeEmitProductionPrimitiveGroups(
         u32 remaining = sNdsNativeFighterPrimitiveGroupVertexCount[g];
 
         g++;
-        if (gtype != current_type)
+        /* A new group needs its own BEGIN unless it is a GL_TRIANGLE group
+         * following a GL_TRIANGLE group -- separate triangles concatenate
+         * harmlessly, strips do NOT.
+         *
+         * The inherited condition was `gtype != current_type`, which skipped
+         * the BEGIN between ADJACENT STRIPS and silently welded them into one
+         * list: two bogus bridging triangles, and every triangle after the join
+         * carrying the wrong parity, so it was culled. The tables have six
+         * consecutive strip groups in the first run alone, and the owner saw it
+         * immediately as missing geometry on both fighters. It cost a shipped
+         * regression because `check_fighter_primitive_streams.py` expanded each
+         * group INDEPENDENTLY -- it proved the data and assumed this policy.
+         * The checker now models the policy; keep the two in step. */
+        if ((gtype != current_type) || (gtype != (u32)GL_TRIANGLE))
         {
             glBegin((GL_GLBEGIN_ENUM)gtype);
             current_type = gtype;
@@ -25979,7 +25992,13 @@ ndsRendererNativeEmitProductionPrimitiveGroups(
                 const NDSNativePreparedDenseVertex *prepared =
                     &sNdsNativeFighterPreparedDense[dense_id];
 
-#if NDS_R2_FIGHTER_HW_LIGHT
+#if NDS_LAB_CULL_PROBE
+                /* BUGS.md #10 probe, same arm the raw emitters carry. It was
+                 * missing here, which would have made a probe build silently
+                 * useless for the one path that needs localising. */
+                ndsRendererHardwareWriteFighterColorWord(
+                    ndsRendererNativeLabRunTint(run_index));
+#elif NDS_R2_FIGHTER_HW_LIGHT
                 #if NDS_R2_UNLIT_VERTEX_EPOCH
                 if (sNdsR2EpochUnlitVertexColor != 0u)
                 {
@@ -26009,7 +26028,13 @@ ndsRendererNativeEmitProductionPrimitiveGroups(
                 const NDSNativePreparedDenseVertex *prepared =
                     &sNdsNativeFighterPreparedDense[dense_id];
 
-#if NDS_R2_FIGHTER_HW_LIGHT
+#if NDS_LAB_CULL_PROBE
+                /* BUGS.md #10 probe, same arm the raw emitters carry. It was
+                 * missing here, which would have made a probe build silently
+                 * useless for the one path that needs localising. */
+                ndsRendererHardwareWriteFighterColorWord(
+                    ndsRendererNativeLabRunTint(run_index));
+#elif NDS_R2_FIGHTER_HW_LIGHT
                 #if NDS_R2_UNLIT_VERTEX_EPOCH
                 if (sNdsR2EpochUnlitVertexColor != 0u)
                 {

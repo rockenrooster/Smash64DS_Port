@@ -45,7 +45,7 @@ def rotations(tri):
 
 
 def expand(gtype, verts):
-    """Oriented triangles a DS group actually draws."""
+    """Oriented triangles one DS vertex list draws."""
     out = []
     if gtype == GL_TRIANGLES:
         for i in range(0, len(verts) - 2, 3):
@@ -56,6 +56,35 @@ def expand(gtype, verts):
             out.append((verts[k], verts[k + 1], verts[k + 2]))
         else:
             out.append((verts[k + 1], verts[k], verts[k + 2]))
+    return out
+
+
+def expand_run(groups):
+    """Oriented triangles the RUNTIME draws for a whole run.
+
+    This models `ndsRendererNativeEmitProductionPrimitiveGroups`, which does not
+    issue a BEGIN_VTXS per group: consecutive GL_TRIANGLE groups share one
+    vertex list, because separate triangles concatenate harmlessly. Everything
+    else opens its own list.
+
+    Expanding each group independently instead is what let a shipped regression
+    through: the emitter's original condition skipped the BEGIN between ADJACENT
+    STRIPS too, welding them into one list, and this checker could not see it
+    because it was validating the DATA under a policy the runtime did not
+    follow. `groups` is [(type, [dense ids])] in emit order.
+    """
+    out = []
+    pending_type = None
+    pending = []
+    for gtype, verts in groups:
+        if (pending_type == GL_TRIANGLES) and (gtype == GL_TRIANGLES):
+            pending.extend(verts)
+            continue
+        if pending_type is not None:
+            out.extend(expand(pending_type, pending))
+        pending_type, pending = gtype, list(verts)
+    if pending_type is not None:
+        out.extend(expand(pending_type, pending))
     return out
 
 
@@ -76,14 +105,15 @@ def check_mode(mode, runs, packed_corners, run_first_corner):
         src = [tuple(v & 0x3FF for v in t)
                for t in _run_triangles(runs, run_index, packed_corners,
                                        run_first_corner)]
-        emitted = []
+        run_groups = []
         g0 = group_first[run_index]
         for g in range(g0, g0 + group_count[run_index]):
             v0 = group_first_vertex[g]
             verts = [v & 0x3FF for v in
                      primitive_vertices[v0:v0 + group_vertex_count[g]]]
             total_verts += len(verts)
-            emitted.extend(expand(group_type[g], verts))
+            run_groups.append((group_type[g], verts))
+        emitted = expand_run(run_groups)
 
         total_src += len(src)
         total_emit += len(emitted)

@@ -187,6 +187,17 @@ NDS_TASK55_STAGE_GEOM ?= 0
 # 941,312. The c115 per-PC census is why: ~28 of a corner's 40.5 cycles are the
 # GX write and the stall is per VERTEX, so 2,148 raw corners a frame becoming
 # ~1,160 strip corners is the only lever the emit has.
+#
+# It shipped broken once, on 2026-08-10, and the owner saw missing geometry on
+# both fighters immediately. Cause: the emitter issued BEGIN_VTXS only when the
+# group TYPE changed, so ADJACENT STRIP GROUPS were welded into one vertex list
+# -- two bogus bridging triangles per join and the wrong parity for everything
+# after it, hence culled. The first run alone has six consecutive strip groups.
+# The static checker could not see it because it expanded each group
+# independently, i.e. it validated the data under a BEGIN policy the runtime
+# did not follow. Both are fixed and the checker now models the policy: under
+# the old one it reports mode 2 drawing 744 triangles against 626 source across
+# 29 runs. Run it after touching either side.
 NDS_TASK56_FIGHTER_PRIMITIVES ?= 2
 # Task 51 native stage path. When on, the STAGE owner emits the 42 baked
 # constant world matrices via MTX_MULT4x3 under a once-loaded view (instead of
