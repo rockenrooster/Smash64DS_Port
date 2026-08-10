@@ -3945,6 +3945,58 @@ not license re-running a refuted experiment without new evidence.**
 
 **Cycle 110 total: FTR 385,508 → 302,906, −82,602 (21.4%).**
 
+### Slice 22 (ARCHITECTURAL): the prepared dense UVs are immutable state
+
+**FTR 302,906 → 301,162, −1,744.** Boundary passes. Engagement: **Skip 30,189,
+Build 15** — the loop runs fifteen times in a match instead of 30,204.
+
+First step of Requirement 3 proper: not a faster interpreter, a piece of
+per-frame runtime work replaced by immutable data. In the Requirement 5 format:
+
+| | |
+|---|---|
+| **runtime work deleted** | the per-run UV preparation loop, 30,204 executions/match → 15 |
+| **immutable replacement** | `sNdsNativeFighterPreparedDense` itself — it already existed in DTCM and already held the answer |
+| **remaining dynamic state** | the resolved texture's scale/origin/offset; the loop re-runs when they move |
+| **RAM/text** | 67 × 24 B stamps + 67 valid bytes ≈ 1.7 KB bss; compare is five words against a hot traversal state |
+| **working set** | −154 DTCM writes and −3 baked-table loads per textured run, every frame |
+| **verification** | Boundary; `segment0_prepared_dense_checksum` **byte-identical 0xf1c6fadc** across slices 13/15/20/22 |
+| **removable next** | move the fill to load time and `RunFirstUnique`/`UniqueCount`/`UniqueDense` leave the hot path's cache footprint |
+
+**The proof came from instrumentation that was already in the tree.** Building
+`NDS_R2_FIGHTER_RUN_PROOF=2` and reading four counters over a whole match:
+**246,736 UV writes producing 106 distinct dense vertices, `gNdsR2UvChangeCount`
+= 0, `gNdsR2UvOutOfRange` = 0.** Not one write in a match ever changed a value,
+and the proof array covered every id. 154 writes a frame to re-derive a
+constant. **Read the counters a previous cycle left before designing anything.**
+
+The stamp carries `gNdsTaskmanHeapGeneration`. A P1 restart rewinds the taskman
+heap and could put a different dense table behind the same run index with the
+same texture metrics; without the fence the stamp would skip on metrics that no
+longer describe the vertices.
+
+### The run preparer, split — whole-pipeline attribution for Requirement 6
+
+`NDS_R2_FIGHTER_RUN_PROOF=2`, whole match, **83.1 run preparations a frame**
+(instrumented totals; the timing calls roughly double the function, so read the
+*shares*, not the absolutes):
+
+| phase | tk/frame | share | verdict |
+|---|---:|---:|---|
+| Validate | 9,119 | 15.0% | never rejects (`rej=0`); a stamp would trade compares for compares |
+| TexPrep | 15,626 | 25.7% | memo covers it — Hit 17,976 / Miss 9 / **Stale 0** |
+| TexReuse | 1,584 | 2.6% | the memo path, 38 cyc/call against 376 |
+| **Uv** | **16,162** | **26.6%** | **DELETED, slice 22** |
+| Tail | 18,224 | 30.0% | publishes `texture_prepare_*` the emit reads in the same call |
+
+**Next architectural slice, named and blocked:** collapse the state-delta spans
+at bake time (`Task36ReplayRun` 17,796 + `ApplyStateDelta` 9,010 tk/fr, ~500
+applications a frame over a static 70-entry table and 196-entry sequence). The
+redundancy census that would size it (`NDS_R2_DELTA_CENSUS`, already written,
+`gNdsR2SpanDeltaRepeats`) **does not build: `region 'itcm' overflowed by 64
+bytes`.** Evict a resident for the diagnostic arm before designing the bake —
+the c115 census lists 28 ITCM residents that never execute, 2,354 B idle.
+
 ### The `.data` route WORKS — first attributable animation measurement (cycle 109)
 
 Built the standing-rule-7 route the determinism finding demanded.
