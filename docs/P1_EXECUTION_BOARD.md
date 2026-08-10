@@ -3756,6 +3756,74 @@ counters are bit-identical across the two ROMs, so the collisions slices 9 and
 the shift hash is fragile to whatever the allocator does next, and the multiply
 is one instruction either way.
 
+### Slice 12: the I-cache, not the arithmetic — 73.6% of the driver never runs
+
+**FTR 324,013 → 318,266, −5,747**, `ALL` −5,797, `WORK` −5,061, `WORK-H` P95
+−11,584. Boundary passes. **No logic changed at all** — this moves code.
+
+`ndsFighterMarioFoxDLAllDrawForSlot.constprop.0` is the largest non-idle symbol
+in the ROM (112.5M cycles, 2.91%) at **4.21 cycles per instruction** — a
+function waiting on memory. Its 10,708 bytes retired only **1,414 distinct
+PCs**. Diffing the executed PC set against `objdump` says **7,880 bytes (73.6%)
+never execute**, in 69 runs. The ARM946E-S I-cache is **8 KB**.
+
+Two inlined blocks held most of it: `ndsRendererAdapterPrimeProductionInputs`
+(~1,640 B, runs **once per match**) and the per-binding world build inside
+`ndsRendererAdapterPrepareNativeOwnerMatrices` (~3,150 B with
+`ndsRendererAdapterBuildDObjWorldMatrix` inlined into it, and it declined **0
+times in 49,422 binding visits**). Both are now `noinline, cold, Os`.
+`flat_worlds` is decided once before the loop, so hoisting the test out is a
+pure transformation — and it is what lets the fallback leave the function.
+
+`SRC` −3,011 and `GCRA` −2,906 came along, which is the tell that the lever was
+the shared I-cache and not anything local to the draw.
+
+**The tooling for this is now a two-command recipe** — `task37_census.py
+--pc-detail SYMBOL` for the executed PC set, then the cold-run diff against
+`objdump`, then `addr2line` on each run's first address. Run it on any hot
+symbol over ~4 KB before optimizing its arithmetic.
+
+### Slice 13: the DObj world cache had ZERO readers
+
+**FTR 318,266 → 317,247, −1,019.** Boundary passes; fighter pixel counts
+identical. Small, but it deletes work that was provably dead.
+
+The c112 census settles what grep could not:
+`ndsRendererAdapterFindDObjWorldMatrix` **0 cycles** and
+`ndsRendererAdapterBuildDObjWorldMatrix` **0 cycles** over a whole match, while
+`ndsRendererAdapterStoreDObjWorldMatrix.part.0` burns **4,744,740**. Every one
+of those stores fed a cache with no reader, and streamed ~4 KB a frame of write
+traffic through a **4 KB** D-cache. The store is gone from the flat compose; the
+cache and its fail-closed filler are untouched.
+
+With no reader, the composed matrices no longer have to be world-space, so the
+flat compose now seeds from the **camera** instead of the identity. That deletes
+the `world * camera` that ran once per binding (~31 a frame of the 55.5
+`ndsRendererMtxMulAffine20p12` calls a frame, 695 cycles each) and costs
+nothing: the first multiply of a root chain used to be against the identity.
+The hitlag shuffle folds the same way — `world * T * camera` reassociates to
+`world * (T * camera)`, one 4x4 a frame instead of a row-3 add per binding.
+Fixed-point reassociation is not bit-exact; these matrices reach GX and nothing
+else.
+
+**Why only −1,019 when ~12,000 of multiplies left?** The seed setup added **116
+bytes** to a function already over the I-cache. Slice 12's lesson, charged
+again at the till.
+
+### Slice 14: REFUTED — outlining code that RUNS is a different lever
+
+`noinline` on `ndsRendererAdapterPrepareNativeOwnerMatrices` and
+`ndsRendererAdapterBuildNativeProductionInputs`, on the theory that shrinking
+the driver toward 8 KB is good regardless of what moves. The driver did shrink
+**10,528 → 9,612 bytes** and **FTR rose 2,192**. Reverted; the revert rebuilt
+the slice-13 ROM **bit-identically** (`sha B7F2493F0C13`, every bucket to the
+tick), which is also the cleanest proof yet that this sampler is deterministic.
+
+**Slice 12 won by removing bytes with ZERO executions. Slice 14 lost by removing
+bytes with many.** Size is not the metric; executed-vs-resident is. Both
+functions now carry a comment saying so, because the next reader will otherwise
+try it again.
+
 ### The `.data` route WORKS — first attributable animation measurement (cycle 109)
 
 Built the standing-rule-7 route the determinism finding demanded.

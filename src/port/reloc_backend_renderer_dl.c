@@ -3493,11 +3493,20 @@ static void ndsRendererAdapterSetShuffleOffset(const FTStruct *fp)
  * with `WORK-H` to 87 ticks, so the whole delta lands in the bucket that owns
  * the change. Engagement was 3,951 calls and 0 rejects, so the route and its two
  * counters are deleted rather than left behind as proof-only machinery. */
+/* `seed` is what the chain starts from, and it is the camera, not the identity.
+ * Left-multiplying the whole chain into camera space costs nothing -- the first
+ * multiply of a root chain used to be against the identity, which is a full
+ * 4x4 that produces its own input -- and it deletes the per-binding
+ * `world * camera` that ran once for every one of the ~31 bindings a frame.
+ * Reassociating a fixed-point product is not bit-exact; these matrices reach
+ * GX and nothing else, so that is a render-side difference by the doctrine in
+ * PROJECT_GOAL.md, and the Boundary visual gate is what checks it. */
 static sb32 ndsRendererAdapterComposeOwnerWorldsFlat(
     u32 slot,
     DObj *const *bindings,
     u32 binding_count,
-    NDSRendererMatrix20p12 *worlds)
+    NDSRendererMatrix20p12 *worlds,
+    const NDSRendererMatrix20p12 *seed)
 {
     const u8 *binding_parents;
     u32 parent_count = 0u;
@@ -3506,7 +3515,7 @@ static sb32 ndsRendererAdapterComposeOwnerWorldsFlat(
     binding_parents = ndsRendererNativeFighterBindingParents(slot,
                                                              &parent_count);
     if ((binding_parents == NULL) || (parent_count != binding_count) ||
-        (bindings == NULL) || (worlds == NULL))
+        (bindings == NULL) || (worlds == NULL) || (seed == NULL))
     {
         return FALSE;
     }
@@ -3559,7 +3568,7 @@ static sb32 ndsRendererAdapterComposeOwnerWorldsFlat(
             {
                 return FALSE;
             }
-            ndsRendererAdapterMtxIdentity20p12(out);
+            ndsRendererMatrixCopy20p12(out, seed);
         }
         for (i = depth; i != 0u; i--)
         {
@@ -3567,12 +3576,20 @@ static sb32 ndsRendererAdapterComposeOwnerWorldsFlat(
 
             /* objdisplay.c:1183-1191 left-multiplies each child local matrix,
              * and a joint whose local build fails contributes nothing -- both
-             * exactly as the per-binding path does. */
+             * exactly as the per-binding path does.
+             *
+             * The per-DObj world cache used to be written here. The c112 census
+             * says ndsRendererAdapterFindDObjWorldMatrix and
+             * ndsRendererAdapterBuildDObjWorldMatrix both execute ZERO cycles
+             * over a whole match, so every one of those stores fed a cache with
+             * no reader -- 4,744,740 cycles of them, and ~4 KB a frame of write
+             * traffic streamed through a 4 KB D-cache. The cache still exists
+             * and the fallback path still fills it for itself; nothing populates
+             * it speculatively any more. */
             if (ndsRendererAdapterBuildDObjLocalMatrix(chain[i - 1u],
                                                        &local) != FALSE)
             {
                 ndsRendererMtxMulAffine20p12(&local, out, out);
-                ndsRendererAdapterStoreDObjWorldMatrix(chain[i - 1u], out);
             }
         }
     }
@@ -3689,6 +3706,12 @@ ndsRendererAdapterPrepareOwnerMatricesPerBinding(
     return TRUE;
 }
 
+/* Do NOT add `noinline` here. It was tried (slice 14) on the theory that shrinking
+ * the 10.5 KB driver toward the 8 KB I-cache is good regardless of what moves:
+ * the driver did lose 916 bytes and FTR rose 2,192. Outlining code that RUNS is
+ * not the same lever as outlining code that never runs -- slice 12 won 5,747 by
+ * moving out bytes with zero executions, and this loses by moving out bytes with
+ * many. */
 static sb32 ndsRendererAdapterPrepareNativeOwnerMatrices(
     u32 slot,
     DObj *root,
@@ -3709,6 +3732,7 @@ static sb32 ndsRendererAdapterPrepareNativeOwnerMatrices(
     u32 camera_modelview_valid = FALSE;
     u32 binding_index;
 #if NDS_RENDERER_HW_TRIANGLES
+    NDSRendererMatrix20p12 compose_seed;
     u32 flat_worlds = FALSE;
 #endif
 #if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
@@ -3764,13 +3788,40 @@ static sb32 ndsRendererAdapterPrepareNativeOwnerMatrices(
 
     (void)root;
 #if NDS_RENDERER_HW_TRIANGLES
+    /* The seed the whole binding forest hangs off. Camera when there is one, so
+     * the compose lands in camera space directly; identity when there is not,
+     * which is the old world-space result unchanged. */
+    if (camera_modelview_valid != FALSE)
+    {
+        ndsRendererMatrixCopy20p12(&compose_seed, &camera_modelview);
+    }
+    else
+    {
+        ndsRendererAdapterMtxIdentity20p12(&compose_seed);
+    }
+#if NDS_R2_FIGHTER_SHUFFLE_FOLD
+    /* R2-03 E32's hitlag shuffle used to be added to every binding's world row
+     * 3 before the camera multiply. `world * T * camera` reassociates to
+     * `world * (T * camera)` and T is the same for every binding, so one 4x4 a
+     * frame replaces one row-3 add per binding -- and it keeps the shuffle out
+     * of the compose entirely. Zero whenever the fighter is not in hitlag. */
+    if ((sNdsR2ShuffleWorldX != 0) || (sNdsR2ShuffleWorldY != 0))
+    {
+        NDSRendererMatrix20p12 shuffle;
+
+        ndsRendererAdapterMtxIdentity20p12(&shuffle);
+        shuffle.m[3][0] = sNdsR2ShuffleWorldX;
+        shuffle.m[3][1] = sNdsR2ShuffleWorldY;
+        ndsRendererMtxMulAffine20p12(&shuffle, &compose_seed, &compose_seed);
+    }
+#endif
     /* One forward pass over the baked binding order, composing straight into the
-     * modelview array so the worlds need no second home. On success the loop
-     * below applies the shuffle and the camera in place; on failure nothing has
-     * been consumed yet and the per-binding path runs unchanged. */
+     * modelview array so the worlds need no second home -- and, since the seed
+     * carries the camera, no second pass either. On failure nothing has been
+     * consumed yet and the per-binding path runs unchanged. */
     flat_worlds = ndsRendererAdapterComposeOwnerWorldsFlat(
         slot, bindings, binding_count,
-        sNdsRendererAdapterNativeOwnerModelviews);
+        sNdsRendererAdapterNativeOwnerModelviews, &compose_seed);
 #endif
     /* `flat_worlds` is decided once, above, and never changes inside the loop,
      * so hoisting it out of the loop is a pure transformation -- and it is what
@@ -3778,48 +3829,18 @@ static sb32 ndsRendererAdapterPrepareNativeOwnerMatrices(
 #if NDS_RENDERER_HW_TRIANGLES
     if (flat_worlds != FALSE)
     {
+        /* Nothing left to do per binding but publish the pointer: the compose
+         * already wrote camera-space modelviews in place. A NULL binding makes
+         * the compose decline, so inside this arm every binding is non-NULL. */
         for (binding_index = 0u;
              binding_index < binding_count;
              binding_index++)
         {
-            if (bindings[binding_index] != NULL)
-            {
-                NDSRendererMatrix20p12 *dst =
-                    &sNdsRendererAdapterNativeOwnerModelviews[binding_index];
-
 #if NDS_TASK91_DRAW_PHASE_CENSUS
-                task91_mtx_mark = cpuGetTiming();
-                gNdsTask91MtxBindings++;
+            gNdsTask91MtxBindings++;
 #endif
-#if NDS_R2_FIGHTER_SHUFFLE_FOLD
-                dst->m[3][0] += sNdsR2ShuffleWorldX;
-                dst->m[3][1] += sNdsR2ShuffleWorldY;
-#endif
-#if NDS_TASK91_DRAW_PHASE_CENSUS
-                {
-                    u32 task91_flat_end = cpuGetTiming();
-
-                    gNdsTask91MtxWorldTicks +=
-                        task91_flat_end - task91_mtx_mark;
-                    task91_mtx_mark = task91_flat_end;
-                }
-#endif
-                if (camera_modelview_valid != FALSE)
-                {
-                    ndsRendererMtxMulAffine20p12(dst, &camera_modelview, dst);
-                }
-#if NDS_TASK91_DRAW_PHASE_CENSUS
-                gNdsTask91MtxMulTicks += cpuGetTiming() - task91_mtx_mark;
-#endif
-                modelview_ptrs[binding_index] = dst;
-            }
-            else if (camera_modelview_valid != FALSE)
-            {
-                sNdsRendererAdapterNativeOwnerModelviews[binding_index] =
-                    camera_modelview;
-                modelview_ptrs[binding_index] =
-                    &sNdsRendererAdapterNativeOwnerModelviews[binding_index];
-            }
+            modelview_ptrs[binding_index] =
+                &sNdsRendererAdapterNativeOwnerModelviews[binding_index];
         }
     }
     else
@@ -13441,6 +13462,8 @@ ndsRendererAdapterPrimeProductionInputs(
     sNdsRendererAdapterProductionInputsPrimed = TRUE;
 }
 
+/* No `noinline` here either, and for the same measured reason as
+ * ndsRendererAdapterPrepareNativeOwnerMatrices above. */
 static sb32 ndsRendererAdapterBuildNativeProductionInputs(
     u32 slot,
     u32 color_modulate,
