@@ -3848,6 +3848,29 @@ renting I-cache lines from the code that runs.
 **The driver is 7,516 bytes: under the ARM946E-S 8 KB I-cache for the first
 time.** Cumulative for cycle 110: **FTR 385,508 → 313,421, −72,087**.
 
+### Slice 16: REFUTED — cold BYTES are not a never-entered BODY
+
+`ndsRendererAdapterBuildDObjXObjMatrix` is **72% never-executed** (1,758 of
+2,440 bytes), so its four alternate matrix kinds —
+`GetDObjVectorTracks`, `BuildFighterPartsMtx`, `BuildBillboardMtx`,
+`BuildRecalcLocalMtx` — went `noinline, cold, Os`. The function shrank
+**2,440 → 964 bytes** and **FTR rose 14,963**, `WORK` +14,901. Reverted.
+
+`ndsRendererAdapterBuildFighterTraRotRpyDirect20p12`, checked in the same pass,
+is **97.9% hot** — nothing to outline there at all.
+
+**The discriminator is entry count, not cold-byte count.** Slices 12 and 15 won
+because their bodies are never *entered*: a flag that is never set
+(`detailed_output`), a mode that is never selected (`FAST_RUN_NATIVE_FIGHTERS`),
+a branch that never fires (`flat_worlds == FALSE`), a once-per-match primer.
+Slice 16's helpers ARE entered — every joint calls `GetDObjVectorTracks`, which
+then returns early. Outlining that turns a predicted fall-through into a call
+plus a guaranteed I-cache miss, ~69 times a frame.
+
+**Before applying the cold recipe, ask whether the ENTRY is cold, not whether
+the body is.** A cold run that starts mid-function is an early return, not dead
+code.
+
 ### The `.data` route WORKS — first attributable animation measurement (cycle 109)
 
 Built the standing-rule-7 route the determinism finding demanded.
