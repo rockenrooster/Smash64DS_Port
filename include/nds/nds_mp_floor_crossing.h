@@ -1,6 +1,8 @@
 #ifndef SSB64_NDS_MP_FLOOR_CROSSING_H
 #define SSB64_NDS_MP_FLOOR_CROSSING_H
 
+#include <nds/nds_fcmp.h>
+
 /*
  * O2R-safe scalar adapter for BattleShip's mpCollisionCheckFCSurfaceFlat plus
  * mpCollisionCheckFloorSurfaceTilt / mpCollisionCheckCeilSurfaceTilt policies.
@@ -16,6 +18,20 @@
  * motion through the surface: proximity alone must never report a hit, or the
  * caller's `translate->y += dist` clamp re-fires every frame and pins the object
  * to the line (BUGS.md: fighters floating under the stage).
+ *
+ * Cycle 109: the comparisons against zero and against positive compile-time
+ * constants go through `nds_fcmp.h` rather than `__aeabi_fcmp*`. This kernel
+ * runs 224,280 times a match and spends 1,401,629 cycles in the comparison
+ * helpers alone (fcmpeq 39,448 calls, fcmplt 27,024, fcmple 21,260,
+ * fcmpgt 19,834), and the helpers are libgcc's hand-written ARM already resident
+ * in ITCM -- there is nothing to win inside them, only in not making the call.
+ * The predicates are integer bit tests proven equivalent over all 2^32 patterns
+ * by `scripts/check_fcmp_exact.py`.
+ *
+ * The `< -epsilon` tests deliberately KEEP their calls: `nds_fcmp.h`'s ordered
+ * `_C` forms are only exact for a POSITIVE constant, because the signed-integer
+ * ordering of bit patterns inverts below zero. Same for the runtime-float
+ * comparisons against `extent_epsilon` and the min/max pairs.
  */
 static inline int ndsMPFCSegmentCrossesKernel(
     float position_x, float position_y,
@@ -39,7 +55,7 @@ static inline int ndsMPFCSegmentCrossesKernel(
     }
     sx = v2_x - v1_x;
     sy = v2_y - v1_y;
-    if (sx == 0.0F)
+    if (NDS_FCMP_EQ0(sx))
     {
         return 0;
     }
@@ -48,14 +64,14 @@ static inline int ndsMPFCSegmentCrossesKernel(
     min_y = (v1_y < v2_y) ? v1_y : v2_y;
     max_y = (v1_y > v2_y) ? v1_y : v2_y;
 
-    if (sy == 0.0F)
+    if (NDS_FCMP_EQ0(sy))
     {
         float delta_y;
         float x;
 
-        if (((side * (position_y - translate_y)) <= 0.0F) ||
+        if (NDS_FCMP_LE0(side * (position_y - translate_y)) ||
             ((side * (position_y - v1_y)) < -epsilon) ||
-            ((side * (v1_y - translate_y)) <= 0.0F))
+            NDS_FCMP_LE0(side * (v1_y - translate_y)))
         {
             return 0;
         }
@@ -82,7 +98,7 @@ static inline int ndsMPFCSegmentCrossesKernel(
         float curr_height_scaled;
         float surface_prev;
 
-        if (motion_dy > 0.0F)
+        if (NDS_FCMP_GT0(motion_dy))
         {
             if (((max_y + epsilon) < translate_y) ||
                 (position_y < (min_y - epsilon)))
@@ -95,7 +111,7 @@ static inline int ndsMPFCSegmentCrossesKernel(
         {
             return 0;
         }
-        if (motion_dx > 0.0F)
+        if (NDS_FCMP_GT0(motion_dx))
         {
             if ((max_x < translate_x) || (position_x < min_x))
             {
@@ -111,7 +127,7 @@ static inline int ndsMPFCSegmentCrossesKernel(
             (sy * (position_x - v1_x));
         raw_curr = (sx * (translate_y - v1_y)) -
             (sy * (translate_x - v1_x));
-        orient = (sx > 0.0F) ? 1.0F : -1.0F;
+        orient = NDS_FCMP_GT0(sx) ? 1.0F : -1.0F;
         extent_epsilon = epsilon * (orient * sx);
         prev_height_scaled = side * (orient * raw_prev);
         curr_height_scaled = side * (orient * raw_curr);
@@ -138,7 +154,7 @@ static inline int ndsMPFCSegmentCrossesKernel(
             float t;
             float u;
 
-            if (denominator == 0.0F)
+            if (NDS_FCMP_EQ0(denominator))
             {
                 return 0;
             }
@@ -148,16 +164,16 @@ static inline int ndsMPFCSegmentCrossesKernel(
                 ((v1_y - position_y) *
                     (translate_x - position_x));
             u = numerator / denominator;
-            if ((t < -epsilon) || (t > (1.0F + epsilon)) ||
-                (u < -epsilon) || (u > (1.0F + epsilon)))
+            if ((t < -epsilon) || NDS_FCMP_GT_C(t, 1.0F + epsilon) ||
+                (u < -epsilon) || NDS_FCMP_GT_C(u, 1.0F + epsilon))
             {
                 return 0;
             }
-            if (u < 0.0F)
+            if (NDS_FCMP_LT0(u))
             {
                 u = 0.0F;
             }
-            else if (u > 1.0F)
+            else if (NDS_FCMP_GT_C(u, 1.0F))
             {
                 u = 1.0F;
             }
