@@ -18,6 +18,7 @@ _Static_assert(sizeof(MPLineInfo) == 18u,
                "BattleShip MPLineInfo ABI must remain 18 bytes");
 
 static sb32 ndsMPBuildTopologyCache(void);
+static void ndsMPVertexF32Reset(void);
 
 static sb32 ndsStageCollisionLoopGeometryReady(void)
 {
@@ -153,6 +154,7 @@ void ndsMPCollisionInvalidateTopology(void)
     gMPCollisionVertexInfo = NULL;
     gMPCollisionLinesNum = 0;
     ndsMPCollisionClearTopologySnapshot();
+    ndsMPVertexF32Reset();
     for (kind = 0u; kind < nMPLineKindEnumCount; kind++)
     {
         gMPCollisionLineGroups[kind].line_count = 0u;
@@ -298,6 +300,86 @@ static s32 ndsMPVertexY(MPVertexPosContainer *verts, u32 vertex_id)
 static u32 ndsMPVertexFlags(MPVertexPosContainer *verts, u32 vertex_id)
 {
     return ndsMPO2RReadU16(verts, (vertex_id * 3u) + 2u);
+}
+
+/* Cycle 109: memoise the s16 -> f32 vertex conversion. Stage collision geometry
+ * does not move, and the sweep was re-converting it on every query.
+ *
+ * `__aeabi_i2f` is **149,821 calls and 2,516,993 cycles** across the collision
+ * lane in the cycle-106 whole-match profile -- 73,530 of them inside
+ * `ndsStageMPSweepFloorLoopSweep` alone, where they are **77% of that
+ * function's soft float**. They come from one expression, the
+ * `(f32)ndsMPVertexX/Y` pairs that build `v1`/`v2` per segment per call, on
+ * vertices decoded from static s16 stage data. `PROJECT_GOAL.md`'s
+ * compute-once rule applies exactly.
+ *
+ * This is NOT what R2-03 E51 refuted. That entry killed a
+ * `line_id -> (group, kind)` table because the yakumono loop has a trip count
+ * of one, i.e. there was no O(n) to remove. This removes repeated CONVERSION of
+ * static data, not loop iterations -- and E51's own measurement (Dream Land: 1
+ * yakumono, 7 lines) is what makes the table small enough to be free.
+ *
+ * Fail-closed in three ways, because this is the subsystem behind BUGS.md's
+ * "fighters floating under the stage": an id at or past the cap falls back to
+ * the live conversion, a geometry pointer change drops every entry, and an
+ * un-populated entry is computed from the same accessors the old code used. The
+ * cached value is bit-identical -- it is the same `(f32)` conversion of the same
+ * s16, just performed once. */
+#define NDS_MP_VERTEX_F32_MAX 128u
+
+static f32 sNdsMPVertexF32X[NDS_MP_VERTEX_F32_MAX];
+static f32 sNdsMPVertexF32Y[NDS_MP_VERTEX_F32_MAX];
+static u8 sNdsMPVertexF32Valid[NDS_MP_VERTEX_F32_MAX];
+static MPGeometryData *sNdsMPVertexF32Geometry;
+
+u32 gNdsMPVertexF32Hits;
+u32 gNdsMPVertexF32Fills;
+u32 gNdsMPVertexF32Overflow;
+
+static void ndsMPVertexF32Reset(void)
+{
+    u32 i;
+
+    for (i = 0u; i < NDS_MP_VERTEX_F32_MAX; i++)
+    {
+        sNdsMPVertexF32Valid[i] = 0u;
+    }
+    sNdsMPVertexF32Geometry = NULL;
+}
+
+/* Call once per query, not per vertex: rebinding drops the whole table. */
+static void ndsMPVertexF32Bind(MPGeometryData *geometry)
+{
+    if (sNdsMPVertexF32Geometry != geometry)
+    {
+        ndsMPVertexF32Reset();
+        sNdsMPVertexF32Geometry = geometry;
+    }
+}
+
+static void ndsMPVertexF32Get(MPVertexPosContainer *verts, u32 vertex_id,
+                              f32 *out_x, f32 *out_y)
+{
+    if (vertex_id >= NDS_MP_VERTEX_F32_MAX)
+    {
+        gNdsMPVertexF32Overflow++;
+        *out_x = (f32)ndsMPVertexX(verts, vertex_id);
+        *out_y = (f32)ndsMPVertexY(verts, vertex_id);
+        return;
+    }
+    if (sNdsMPVertexF32Valid[vertex_id] == 0u)
+    {
+        sNdsMPVertexF32X[vertex_id] = (f32)ndsMPVertexX(verts, vertex_id);
+        sNdsMPVertexF32Y[vertex_id] = (f32)ndsMPVertexY(verts, vertex_id);
+        sNdsMPVertexF32Valid[vertex_id] = 1u;
+        gNdsMPVertexF32Fills++;
+    }
+    else
+    {
+        gNdsMPVertexF32Hits++;
+    }
+    *out_x = sNdsMPVertexF32X[vertex_id];
+    *out_y = sNdsMPVertexF32Y[vertex_id];
 }
 
 static f32 ndsMPLineDistanceFC(f32 opx, s32 v1x, s32 v1y, s32 v2x,
@@ -776,6 +858,7 @@ static sb32 ndsStageCollisionLoopGetFloorSample(u32 slot, Vec3f *pos)
         return FALSE;
     }
     line_info = geometry->line_info;
+    ndsMPVertexF32Bind(geometry);
     yakumono_count = ndsMPGeometryYakumonoCount(geometry);
     if (yakumono_count > 64u)
     {
@@ -4210,14 +4293,15 @@ static sb32 ndsStageMPSweepFloorLoopSweep(Vec3f *position,
             {
                 u32 v1_id = ndsMPVertexID(ids, vertex_first + j);
                 u32 v2_id = ndsMPVertexID(ids, vertex_first + j + 1u);
-                Vec3f v1 = { (f32)ndsMPVertexX(verts, v1_id),
-                             (f32)ndsMPVertexY(verts, v1_id), 0.0F };
-                Vec3f v2 = { (f32)ndsMPVertexX(verts, v2_id),
-                             (f32)ndsMPVertexY(verts, v2_id), 0.0F };
+                Vec3f v1 = { 0.0F, 0.0F, 0.0F };
+                Vec3f v2 = { 0.0F, 0.0F, 0.0F };
                 f32 hit_x;
                 f32 hit_y;
                 f32 hit_dist;
                 sb32 is_flat_ascending = FALSE;
+
+                ndsMPVertexF32Get(verts, v1_id, &v1.x, &v1.y);
+                ndsMPVertexF32Get(verts, v2_id, &v2.x, &v2.y);
 
                 if ((v1.y == v2.y) &&
                     (sweep_translate.y > sweep_position.y) &&
