@@ -316,17 +316,45 @@ void gcPlayDObjAnimJoint(DObj *dobj)
      * `length_invert <= length` is two RUNTIME floats and stays a call. */
     if (NDS_FCMP_NE_C(dobj->anim_wait, AOBJ_ANIM_NULL))
     {
+        /* Cycle 109: hoist the two loop-invariant conditions and the speed.
+         *
+         * Neither test depends on `aobj`, yet the cycle-106 profile shows both
+         * running once per NODE, 110,110 times: `ldr r1,[pc,#224]` -- reloading
+         * the `AOBJ_ANIM_END` literal -- costs **9.7 cyc/ex and 1,069,318
+         * cycles, 6.4% of this function**, and the `parent_gobj->flags` chain
+         * (`ldr r3,[r3,#124]` then `ldr r3,[r2,r3]`) adds 886,637 more.
+         *
+         * GCC cannot hoist them itself: the loop body calls `syInterpCubic` and
+         * the `noinline` cubic kernel, and a call may clobber memory, so every
+         * `dobj` field has to be re-read after it. Doing it by hand is safe
+         * because nothing reachable from this loop writes `anim_wait`,
+         * `anim_speed` or the GObj flags -- the body only writes `aobj->length`
+         * and `dobj`'s own rotate/translate/scale vectors.
+         *
+         * Pure loop-invariant code motion: no struct, format or arithmetic
+         * change, so the pose is bit-identical. */
+        /* One mask, not two booleans. With them separate, GCC kept the flags
+         * test in a register but rematerialised the wait test inside the loop
+         * as `ldr r3,[pc,#296]` + `cmp` -- the literal reload this exists to
+         * delete. Folding both into a single computed word makes
+         * rematerialising strictly more expensive than keeping it, because it
+         * would have to redo the load AND the mask. */
+        const u32 play =
+            (NDS_FCMP_NE_C(dobj->anim_wait, AOBJ_ANIM_END) ? 1u : 0u) |
+            (((dobj->parent_gobj->flags & GOBJ_FLAG_NOANIM) == 0) ? 2u : 0u);
+        const f32 speed = dobj->anim_speed;
+
         aobj = dobj->aobj;
 
         while (aobj != NULL)
         {
             if (aobj->kind != nGCAnimKindNone)
             {
-                if (NDS_FCMP_NE_C(dobj->anim_wait, AOBJ_ANIM_END))
+                if ((play & 1u) != 0u)
                 {
-                    aobj->length += dobj->anim_speed;
+                    aobj->length += speed;
                 }
-                if (!(dobj->parent_gobj->flags & GOBJ_FLAG_NOANIM))
+                if ((play & 2u) != 0u)
                 {
                     switch (aobj->kind)
                     {
