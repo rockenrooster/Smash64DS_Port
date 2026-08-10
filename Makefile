@@ -1632,6 +1632,74 @@ ifeq ($(TARGET),smash64ds-battle-playable-freeze-diagnostics-off-hwtri)
 # The off build is the canonical release payload in an isolated build tree.
 override NDS_OUTPUT_BASENAME := smash64ds-battle-playable-hwtri
 endif
+NDS_BUG9_FLOOR_TARGETS := \
+	smash64ds-bug9-rigidon-hwtri \
+	smash64ds-bug9-rigidoff-hwtri
+ifneq ($(filter $(TARGET),$(NDS_BUG9_FLOOR_TARGETS)),)
+# BUGS.md #9 -- pause-orbit floor seam. Nonpublishing manual-test A/B pair,
+# release-equivalent except that the OFF arm zeroes the Task 36 rigid binding
+# mask, which routes every stage binding through the CPU-composed submit path
+# that binding 29 (the middle slab, the one piece the bug does not move) already
+# uses. If the seam survives the OFF arm the rigid hardware-compose path is
+# exonerated and the defect is in the shared no-Z path; if it disappears the
+# defect is in the rigid path. Distinct target names keep either ROM from
+# overwriting the other or the published one.
+#
+# Both arms drop to NDS_TASK36_HW_COMPOSE=1, i.e. hardware compose WITHOUT the
+# baked replay, because the replay segment set is fixed at 0/5/7 on the contract
+# that every binding in those segments is rigid; replaying a dynamic binding's
+# per-triangle LOAD4x4 stream would pin that geometry to the capture frame's
+# camera and produce a far louder artifact than the one under test. The ON arm
+# carries the same drop so the pair differs in exactly one variable -- it is the
+# control for this A/B, NOT a stand-in for the published ROM.
+# NDS_TASK53_REPLAY_ARENA_FIX follows to 0 because its guard below requires
+# replay mode 2.
+override NDS_DEV_SCENE_HARNESS := battle_playable_realtime
+override NDS_DEV_LIVE_INPUT_PREVIEW := 1
+override NDS_HARNESS_FAST_LOGIC := 0
+override NDS_RENDERER_HW_TRIANGLES := 1
+override NDS_DEBUG_HUD := 0
+override NDS_RENDERER_PROFILE_LEVEL := 0
+override NDS_SHIP_TELEMETRY := 0
+override NDS_TICK_HUD := 0
+override NDS_RENDERER_FAST_RUN_DEFAULT := 9
+override NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE := 1
+override NDS_TASK36_HW_COMPOSE := 1
+override NDS_TASK36_RIGID_BINDING_MASK := \
+	$(if $(filter %-rigidoff-hwtri,$(TARGET)),0ULL,)
+override NDS_R2_FIGHTER_HW_MTX := 1
+override NDS_R2_FIGHTER_HW_LIGHT := 1
+override NDS_R2_FIGHTER_SHUFFLE_FOLD := 1
+override NDS_R2_CUBIC_FIXED := 1
+override NDS_R2_DELTA_PATH_ITCM := 1
+override NDS_R2_ANIM_CACHE := 1
+override NDS_R2_AOBJ16_PREBAKE := 1
+override NDS_TASK53_REPLAY_ARENA_FIX := 0
+override NDS_BATTLE_PROFILE := 1
+override NDS_TASK44_STAGE_STEADY := 1
+override NDS_R2_STAGE_DIRECT := 1
+override NDS_R2_STAGE_DMA := 1
+override NDS_R2_STAGE_VIEWPROJ := 1
+override NDS_R2_STAGE_PREFLIGHT := 1
+override NDS_R2_FIGHTER_MTX_DIRECT := 1
+override NDS_R2_FIGHTER_RUN_MEMO := 1
+override NDS_TASK37_ITCM_LEAVES := 7
+override NDS_SCENE_MIP_CACHE_LAB := 0
+override NDS_FAST_WALLPAPER_AFFINE := 1
+override NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT := 1
+override NDS_IFCOMMON_HYBRID_OAM := 0
+override NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS := 0
+override NDS_TASK16_FLOAT_COMPARE := 1
+override NDS_TASK16_FLOAT_I2F := 1
+override NDS_TASK16_FLOAT_ADDSUB := 1
+# Off in both arms, unlike the published ROM. The 8 KiB .text.hot.draw ceiling
+# is sized for replay mode 2, where ndsRendererTask36ReplayRun stands in for the
+# whole commit path; at mode 1 the live path lands in the section and the link
+# fails. This costs speed, not pixels, and it costs both arms equally.
+override NDS_TASK32_DRAW_HOT_TEXT := 0
+override NDS_TASK39_FX_SPRITES := 1
+override NDS_TASK39_FX_FLASH := 1
+endif
 ifeq ($(TARGET),smash64ds-battle-playable-coarse-hwtri)
 # This is the user-testable fast-iteration ROM, not a generic build alias.
 # Keep its complete realtime/live-input configuration intrinsic to the target
@@ -2820,6 +2888,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_TASK34_STAGE_STREAM_CENSUS $(NDS_TASK34_STAGE_STREAM_CENSUS)'; \
 		echo '#define NDS_TASK49_GX_DIFFER $(NDS_TASK49_GX_DIFFER)'; \
 		echo '#define NDS_TASK36_HW_COMPOSE $(NDS_TASK36_HW_COMPOSE)'; \
+		$(if $(NDS_TASK36_RIGID_BINDING_MASK),echo '#define NDS_RENDERER_TASK36_RIGID_BINDING_MASK $(NDS_TASK36_RIGID_BINDING_MASK)'; ,) \
 		echo '#define NDS_R2_STAGE_ROUTE_PROBE $(NDS_R2_STAGE_ROUTE_PROBE)'; \
 		echo '#define NDS_TASK51_STAGE_NATIVE $(NDS_TASK51_STAGE_NATIVE)'; \
 		echo '#define NDS_DREAMLAND_DS_MESH $(NDS_DREAMLAND_DS_MESH)'; \

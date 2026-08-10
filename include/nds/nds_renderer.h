@@ -117,8 +117,20 @@
  * each foreign corner into the run's binding space at build time), gate that on
  * the Task 49 Tier-2 differ, and crop the changed segments against the control
  * arm. See docs/optimization/ClaudeOpus5_R202_E4_ActorSegmentsRefuted_20260728.md
- * section 8. */
+ * section 8.
+ *
+ * Overridable from nds_build_config.h for BUGS.md #9 only. A zero mask routes
+ * every binding through the CPU-composed submit path -- the one binding 29
+ * already uses -- which is the A/B that decides whether the pause-orbit floor
+ * seam belongs to the rigid path or to the shared no-Z path. It must be paired
+ * with NDS_TASK36_HW_COMPOSE=1, never 2: the replay segment set below is fixed
+ * at 0/5/7 on the contract that every binding in them is rigid, and replaying a
+ * dynamic binding's per-triangle LOAD4x4 stream pins that geometry to the
+ * capture frame's camera. The default value is unchanged, so a build that does
+ * not set this is byte-identical to one compiled before the guard existed. */
+#ifndef NDS_RENDERER_TASK36_RIGID_BINDING_MASK
 #define NDS_RENDERER_TASK36_RIGID_BINDING_MASK 0x00000381c00fffffULL
+#endif
 #endif
 
 /* Task 53: default-off re-activation guard for the Task 36 replay arena
@@ -1489,6 +1501,7 @@ extern volatile u32 gNdsRendererTask36ReplayWordCount;
 extern volatile u32 gNdsRendererTask36ReplayFallbackCount;
 extern volatile u32 gNdsRendererTask36ReplayArenaRejectCount;
 extern volatile u32 gNdsRendererTask36ReplayMaterialRejectCount;
+extern volatile u32 gNdsRendererTask36ReplayProjectionRejectCount;
 extern volatile u32 gNdsRendererTask36ReplayCaptureWordCount;
 #endif
 #endif

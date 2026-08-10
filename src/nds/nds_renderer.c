@@ -2627,6 +2627,10 @@ volatile u32 gNdsRendererTask36ReplayWordCount;
 volatile u32 gNdsRendererTask36ReplayFallbackCount;
 volatile u32 gNdsRendererTask36ReplayArenaRejectCount;
 volatile u32 gNdsRendererTask36ReplayMaterialRejectCount;
+/* BUGS.md #9. Nonzero exactly while the live projection differs from the one
+ * the stream was baked against -- so it should read 0 for a whole match and
+ * start counting the moment the paused player-zoom camera moves the FOV. */
+volatile u32 gNdsRendererTask36ReplayProjectionRejectCount;
 volatile u32 gNdsRendererTask36ReplayCaptureWordCount;
 #endif
 #endif
@@ -5423,6 +5427,29 @@ typedef struct NDSRendererTask36ReplayOwner
     s32 capture_push_balance;
     u32 frame_capture;
     u32 frame_replay;
+    /* BUGS.md #9. The capture bracket is per RUN
+     * (ndsRendererTask36ReplayCaptureBeginRun/EndRun), and every rigid
+     * PROJECTED_NO_Z run calls ndsRendererNativeStageTask36LoadNoZProjection
+     * inside it -- so the capture frame's PROJECTION matrix is baked into the
+     * word stream. Only the camera modelview is reloaded live, by
+     * Task36BeginSegment, which sits outside the bracket. That is invisible
+     * during a match because fovy is pinned at 38.0, but the paused
+     * player-zoom camera calls gmCameraAdjustFOV(pzoom_fov)
+     * (decomp gm/gmcamera.c:713 -> :614), so the live projection moves while
+     * the replayed rigid slabs keep the stale one and the middle slab --
+     * binding 29, which is not in a replayed segment -- keeps the live one.
+     * The floor then reads as the front and rear slabs sitting at a different
+     * height from the middle path.
+     *
+     * The existing staleness guards cover materials, textures and topology;
+     * this adds the projection to that set. On a mismatch replay is declined
+     * for the frame and the live path runs, which is what the whole ROM does
+     * at NDS_TASK36_HW_COMPOSE=1 -- both arms of the 2026-08-09 A/B pair were
+     * clean there. Declining rather than re-capturing is deliberate: an orbit
+     * moves the FOV every frame, and re-capturing each time would thrash the
+     * arena for a screen that is already paused. Gameplay is unaffected --
+     * a constant fovy means this compare never fires during a match. */
+    NDSRendererMatrix20p12 projection;
     NDSRendererTask36ReplayState state;
 #if NDS_TASK55_STAGE_GEOM
     /* Task 55: redundant state-write elision. GFX_COLOR/GFX_TEX_COORD are
@@ -5751,6 +5778,17 @@ static void ndsRendererTask36ReplayBeginFrame(
 #endif
         return;
     }
+    /* BUGS.md #9 -- see the projection field on the owner. */
+    if ((frame->projection == NULL) ||
+        (memcmp(&owner->projection, frame->projection,
+                sizeof(owner->projection)) != 0))
+    {
+#if NDS_RENDERER_PROFILE_LEVEL == 1
+        gNdsRendererTask36ReplayProjectionRejectCount++;
+        gNdsRendererTask36ReplayFallbackCount++;
+#endif
+        return;
+    }
     owner->frame_replay = TRUE;
 #if NDS_RENDERER_PROFILE_LEVEL == 1
     gNdsRendererTask36ReplayFrameCount++;
@@ -5766,6 +5804,7 @@ static void ndsRendererTask36ReplayStartCapture(
     if ((owner->state != NDS_TASK36_REPLAY_UNSEEDED) ||
         (frame->rigid_binding_mask !=
          NDS_RENDERER_TASK36_RIGID_BINDING_MASK) ||
+        (frame->projection == NULL) ||
         NDS_TASK36_REPLAY_ARENA_BLOCKED())
     {
         return;
@@ -5776,6 +5815,9 @@ static void ndsRendererTask36ReplayStartCapture(
     owner->captured_segment_mask = 0u;
     owner->capture_fault = FALSE;
     owner->config = *frame->config;
+    /* BUGS.md #9. Record the projection this stream is being baked against, so
+     * BeginFrame can decline the stream once the live one moves. */
+    owner->projection = *frame->projection;
 #if NDS_TASK55_STAGE_GEOM
     owner->task55_state_valid = 0u;
     owner->task55_last_color = 0u;
