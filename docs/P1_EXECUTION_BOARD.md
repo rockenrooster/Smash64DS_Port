@@ -2423,6 +2423,31 @@ bit-exact change must do. Disassembly confirms the call is gone and one ARM
 `clz` replaced it; the two `__clzsi2` references in the ELF are inside libgcc's
 `__clzdi2` and are present in the pre-change build too. Boot headroom 32,992.
 
+### Whole-match sampler invocation, exactly (cycle 109 — cost three runs)
+
+The HANDOFF line "`-Samples` to 4096" is the parameter's *ceiling*, not the
+window to use, and reading it as the window wasted a 30-minute run.
+
+- **`-Samples 1600`.** That is the match. It is where every banked figure's
+  denominator comes from (`754/1600`, `707/1600`). **4096 runs past the end**
+  and dies at `TimeoutSeconds` having reached ring stop 15 of 43.
+- **`-AllowRepeatedFrames` is required on the gate arm.** Without it the run
+  completes and is then *thrown away*: about 4 presented-frame numbers per 1600
+  repeat. They are not double-reads — the harness itself annotates each one
+  `payload DIFFERS (real second iteration)`, so the samples are distinct
+  iterations that reported the same frame counter.
+- **`-NoBuild`** or the sampler rebuilds with no `MakeFlags` and silently wipes
+  the arm's configuration.
+- **`-JsonOut`**, not `-OutName`.
+
+**`capture-melonds.ps1 -ExactFirstFrame` does not work on this ROM.** It demands
+`-ExactSecondFrame` as well *and* `-SoftwareRenderer`, and then delegates to
+`capture-cut-g-exact-frames.ps1`, which fails with *"Exact frame 439 lost
+native-OAM GO recognition or drawing state"* — the exact-frame path is gated on
+Cut G's GO-text state, not on arbitrary battle frames. For an ordinary visual
+A/B use the delay-based capture, or qualify through the Boundary verifier, which
+produces `artifacts/visibility/latest.png` plus its regional analysis.
+
 ### REVERTED: the fused `f32 x f32 -> Q16` hangs the ROM, and the host bound missed it
 
 Attempted the last cut that does not need the representation change — replacing
