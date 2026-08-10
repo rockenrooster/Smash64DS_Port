@@ -3662,9 +3662,43 @@ between frames**, so about half the lookups find the right block under the wrong
 index. Reverted to the complete hash, which measures the same and needs no field
 audit to stay correct.
 
-**Recovering the other half** needs either a per-MObj store — 33 live MObjs ×
-100 bytes plus keys, ~7 KB of bss against an arena whose low-water is already
-under the GObj-cap threshold — or a stable slot assignment. Priced, not taken.
+### Slice 9: the other half was free, and the counter said which half it was
+
+**FTR 340,916 → 329,034, −11,882**, `WORK` −10,958. Boundary passes. Cumulative
+for cycle 110: **FTR 385,508 → 329,034, −56,474**.
+
+Slice 8 left 51.5% of material lookups rebuilding and I had two candidate
+explanations. Rather than guess again — the narrow-hash guess had just cost a
+build — I split the miss counter by reason and ran it. The answer was not close:
+
+```
+gNdsR2MatKeySkip=28,786  gNdsR2MatKeyBuild=30,606
+gNdsR2MatKeyMissIdentity=30,606  gNdsR2MatKeyMissInputs=0
+```
+
+**Every rebuild was an identity miss. Not one was an input change.** The block
+was always correct and always filed under the wrong row, because the materials
+array was indexed by the selected-root index `i`, which rotates between frames,
+while the material `DObj` is stable for the fighter's life. So hash the DObj to
+a row and keep it there (linear probing; distinct DObjs get distinct rows; two
+roots that genuinely share a material DObj share its row and its block, which is
+right; cleared on a taskman-heap rewind because these are arena pointers). 36
+bytes, and `root->materials` moves out of the once-primed invariants into the
+per-frame build, since which row a root points at is now a per-frame fact.
+
+**After:** `Skip=59,362  Build=30  MissIdentity=30  MissInputs=0`. The fighter
+material command block is now constructed **thirty times in a sixty-second
+match** — once per distinct material — against 30,606 before and 59,392 with no
+key at all. That is the whole of `ndsRendererAdapterBuildNativeMaterialSnapshot`
+deleted from the frame, and it is deleted rather than cached: the block that
+survives is the one the builder would have produced, proven by a key over its
+complete input set.
+
+The lesson is the counter, not the fix. Two consecutive slices were sized by
+reasoning about *why* a skip missed; the first reasoning was wrong and cost a
+build, the second was right only because a five-line counter answered it in one
+run. **Split the miss counter by reason whenever a skip rate is below what the
+invariance census predicts.**
 
 ### The `.data` route WORKS — first attributable animation measurement (cycle 109)
 

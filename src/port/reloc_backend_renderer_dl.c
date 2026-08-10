@@ -223,6 +223,24 @@ typedef struct NDSRendererAdapterMaterialKey
 static NDSRendererAdapterMaterialKey sNdsRendererAdapterNativeOwnerMaterialKeys[
     NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED]
     [NDS_RENDERER_ADAPTER_NATIVE_MATERIAL_MAX];
+
+/* ...and which ROW of those two arrays a given material DObj owns.
+ *
+ * The row used to be the selected-root index `i`, which rotates between frames.
+ * With the input key in place the engagement counters said so exactly: of
+ * 30,606 rebuilds, **30,606 were `keys[count].mobj != mobj` and not one was an
+ * input change**. The block was always correct and always filed under the wrong
+ * row. A material DObj is stable for the fighter's life, so hash it to a row
+ * and keep it there; distinct DObjs get distinct rows by linear probing, and
+ * two roots that genuinely share a material DObj share its row and its block,
+ * which is right. Cleared on a taskman-heap rewind because these are arena
+ * pointers -- the key's own heap_generation would already refuse a stale skip,
+ * so this is about not leaking rows to dead DObjs. 36 bytes. */
+static DObj *sNdsRendererAdapterMaterialRowOwner[
+    NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED];
+static u32 sNdsRendererAdapterMaterialRowGeneration;
+static u8 sNdsRendererAdapterNativeOwnerMaterialRows[
+    NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED];
 static NDSRendererMatrix20p12
     sNdsRendererAdapterNativeOwnerProjection;
 static NDSRendererMatrix20p12
@@ -8940,6 +8958,13 @@ static void ndsR2ChainProbe(DObj *dobj, volatile NDSR2ChainProbe *out, u32 pass)
  * the same census. These two count the decision itself. */
 volatile u32 gNdsR2MatKeySkip;
 volatile u32 gNdsR2MatKeyBuild;
+/* And WHY a build happened, because the two answers point at different fixes.
+ * Identity: the row holds a different MObj than last frame, so the block for
+ * this one is sitting in some other row -- fix is a stable row assignment.
+ * Inputs: same MObj, hash moved -- fix would be a narrower key, which is
+ * already refuted. Guessing between them once cost a build. */
+volatile u32 gNdsR2MatKeyMissIdentity;
+volatile u32 gNdsR2MatKeyMissInputs;
 #endif
 
 /* Hashes all 30 words of MObjSub, including the six the builder never reads
@@ -8956,6 +8981,46 @@ volatile u32 gNdsR2MatKeyBuild;
  * GObj-cap threshold -- or a stable slot assignment. Neither is this slice.
  * Since the narrow hash bought nothing, keep the one that needs no field audit
  * to stay correct. */
+static u32 ndsRendererAdapterMaterialRow(DObj *dobj, u32 fallback_row)
+{
+    u32 base;
+    u32 probe;
+
+    if (dobj == NULL)
+    {
+        return fallback_row;
+    }
+    if (sNdsRendererAdapterMaterialRowGeneration != gNdsTaskmanHeapGeneration)
+    {
+        u32 j;
+
+        for (j = 0u; j < NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED; j++)
+        {
+            sNdsRendererAdapterMaterialRowOwner[j] = NULL;
+        }
+        sNdsRendererAdapterMaterialRowGeneration = gNdsTaskmanHeapGeneration;
+    }
+    base = (u32)(((uintptr_t)dobj >> 4) &
+                 (NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED - 1u));
+    for (probe = 0u; probe < NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED; probe++)
+    {
+        u32 row = (base + probe) & (NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED - 1u);
+
+        if (sNdsRendererAdapterMaterialRowOwner[row] == dobj)
+        {
+            return row;
+        }
+        if (sNdsRendererAdapterMaterialRowOwner[row] == NULL)
+        {
+            sNdsRendererAdapterMaterialRowOwner[row] = dobj;
+            return row;
+        }
+    }
+    /* Every row owned by a different live DObj. Take the hashed one and let the
+     * input key catch the mismatch, which is exactly the old behaviour. */
+    return base;
+}
+
 static u32 ndsRendererAdapterMaterialInputHash(const MObj *mobj)
 {
     const u32 *words = (const u32 *)(const void *)&mobj->sub;
@@ -9053,6 +9118,14 @@ static sb32 ndsRendererAdapterPrepareNativeMaterials(
             }
 #if NDS_TICK_HUD
             gNdsR2MatKeyBuild++;
+            if (keys[count].mobj != mobj)
+            {
+                gNdsR2MatKeyMissIdentity++;
+            }
+            else
+            {
+                gNdsR2MatKeyMissInputs++;
+            }
 #endif
         }
         if (ndsRendererAdapterBuildNativeMaterial(
@@ -13244,7 +13317,10 @@ static void ndsRendererAdapterPrimeProductionInputs(
         config->resolve_data = ndsFighterDLDrawResolveRendererData;
 
         root->composed_matrix = &workspace->composed_matrices[i];
-        root->materials = sNdsRendererAdapterNativeOwnerMaterials[i];
+        /* `materials` is NOT primed here any more: the materials row is now
+         * owned by the material DObj rather than by this slot index, so which
+         * row root i points at is a per-frame fact. BuildNativeProductionInputs
+         * sets it. */
         root->config = config;
     }
     sNdsRendererAdapterProductionInputsPrimed = TRUE;
@@ -13346,6 +13422,8 @@ static sb32 ndsRendererAdapterBuildNativeProductionInputs(
 
         root->root_offset = workspace->root_offsets[i];
         root->material_count = workspace->material_counts[i];
+        root->materials = sNdsRendererAdapterNativeOwnerMaterials[
+            sNdsRendererAdapterNativeOwnerMaterialRows[i]];
         root->modelview_matrix = modelviews[i];
 #if NDS_R2_FIGHTER_HW_MTX
         root->projection_matrix = projection;
@@ -15088,7 +15166,11 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
             for (i = 0u; i < collection.selected_count; i++)
             {
                 u32 prepared_material_count = 0u;
+                u32 material_row = ndsRendererAdapterMaterialRow(
+                    native_owner_material_dobjs[i], i);
 
+                sNdsRendererAdapterNativeOwnerMaterialRows[i] =
+                    (u8)material_row;
                 sNdsRendererAdapterNativeOwnerTextureCounts[i] =
                     ndsRendererAdapterSaveNativeMaterialTextureIds(
                         native_owner_material_dobjs[i],
@@ -15100,15 +15182,16 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
                      native_owner_material_counts[i]) ||
                     (ndsRendererAdapterPrepareNativeMaterials(
                          native_owner_material_dobjs[i],
-                         sNdsRendererAdapterNativeOwnerMaterials[i],
+                         sNdsRendererAdapterNativeOwnerMaterials[material_row],
                          NDS_RENDERER_ADAPTER_NATIVE_MATERIAL_MAX,
                          &prepared_material_count,
-                         sNdsRendererAdapterNativeOwnerMaterialKeys[i])
+                         sNdsRendererAdapterNativeOwnerMaterialKeys[
+                             material_row])
                          == FALSE) ||
                     (prepared_material_count !=
                      native_owner_material_counts[i]) ||
                     (ndsRendererAdapterValidateNativeOwnerMaterials(
-                         sNdsRendererAdapterNativeOwnerMaterials[i],
+                         sNdsRendererAdapterNativeOwnerMaterials[material_row],
                          prepared_material_count) == FALSE))
                 {
                     native_owner_enabled = FALSE;

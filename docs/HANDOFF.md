@@ -52,36 +52,36 @@ changes what it covers.**
 - **The `Tex` (dl-pointer, bind-ordinal) memo is REFUTED** — 471 hits of 10,336
   consults, 7,517 of 7,525 fills evicted, `Tex` ticks *up*.
 
-## FTR is re-opened and moving: −52,186 landed, ~314,555 reconciled (cycle 110)
+## FTR is re-opened and moving: −56,474 landed, ~314,555 reconciled (cycle 110)
 
-**Banked `FTR` mean is 333,322** against a pre-slice baseline of **385,508**
+**Banked `FTR` mean is 329,034** against a pre-slice baseline of **385,508**
 built and measured for the purpose — that baseline equals the owner's stated
-~385–390K, so the reference is right. `ALL` 1,285,825 → 1,211,598 (−74,227),
-`WORK` −52,706. Boundary passes; `scripts/compare-tick-hud-arms.py` prints every
-arm. Eight slices, all deletions or tier moves, none a new abstraction:
+~385–390K, so the reference is right. `ALL` −74,227, `WORK` −52,706. Boundary
+passes; `scripts/compare-tick-hud-arms.py` prints every arm. Nine slices, all
+deletions or tier moves, none a new abstraction:
 
-- **Task 36 capture hook, out of all five fighter emit loops** (−11,176 measured,
-  **~7,300 shipped**) — the capture window only brackets a **stage** run. And
-  **the flat baked world compose** (−7,735, exact, same `romSha256` both arms);
+- **Task 36 capture hook, out of all five fighter emit loops** (−11,176, **~7,300
+  shipped**) — its window only brackets a **stage** run. And **the flat baked
+  world compose** (−7,735, exact, same `romSha256` both arms);
   **`BindingParents` is the nearest *bound* ancestor, not the DObj parent.**
 - **The `m4x4` intermediates in both per-root matrix loaders** (−3,778) and the
   production root's two 64-byte copies (−11,683): same 64-byte row-major layout,
   so every one of them was copying element i to element i, or copying a copy.
-- **Material blocks are no longer rebuilt every frame** (−14,546) — the cycle-98
-  census settles it: 20,100 builds, 20,069 byte-identical, **zero variants**; a
-  12-byte (MObj, heap gen, input hash) key per materials slot skips it. And
-  **`sNdsRendererRuntimeFrameSummary` into `.dtcm.fighter`**, recovering the
-  10,154 that deleting those counters was worth, evidence intact.
+- **The material block is now built 30 times a match, not 59,392** (−14,546 then
+  −11,882) — the cycle-98 census found **zero variants** over 20,100 builds. A
+  12-byte (MObj, heap gen, complete-input hash) key skips the rebuild, in a row
+  owned by the material **DObj**: indexing by selected-root slot rotated between
+  frames and was the whole remaining miss. And **the frame summary into
+  `.dtcm.fighter`**, recovering the 10,154 that deleting it was worth.
 
 **Two arms are refuted, do not retry them.** Compiling the frame-summary
 counters out is worth FTR −7,378 / STG −2,776 and **breaks the gate**:
 `verify-all.ps1 -Profile Boundary` runs more than its `-List` row, and
 `verify-battle-mariofox-gcrunall-loop-harness.ps1` asserts exact batch and
 texture-prepare accounting off those globals. And narrowing the material hash to
-the builder's read set returns **bit-identical** engagement counters (28,786
-skips / 30,606 builds) for +1,155 — the rebuilds are `keys[count].mobj != mobj`,
-because which DObj lands in selected-root slot *i* rotates between frames.
-Recovering that half needs a per-MObj store (~7 KB) or a stable slot assignment.
+the builder's read set returns **bit-identical** counters for +1,155. **Split a
+miss counter by reason before theorising about it** — that guess cost a build;
+the counter (`MissIdentity=30,606`, `MissInputs=0`) named the fix in one run.
 
 **A census row is not an FTR row.** `FTR` brackets
 `ndsFighterDisplayContractSubmit` only, so the flattened parts-invalidation walk
@@ -91,22 +91,21 @@ bracket before sizing a slice off the reconciliation, which is done and
 re-runnable with no build: `analyze-fighter-draw-reconciliation.py` resolves
 314,555 of the ~331K — matrix 96,207, production driver 54,043, emit 48,115,
 adapter driver 44,680, material 35,568, fighter parts 18,711, display contract
-17,231 — with 28,049 of census-only instrumentation excluded. The two largest
-groups spread over 709 and 384 PCs, none above 5.1%: whole-body architecture.
+17,231 — 28,049 of census-only instrumentation excluded. The two largest groups
+spread over 709 and 384 PCs, none above 5.1%: whole-body architecture.
 
 **Next, priced, in FTR:** (1) the display-contract event gather —
 `root->preamble.geometry_mode = event->geometry_mode` **2,966** and
 `if (event->light_valid)` **1,759**, ~110 cycles an event of pure cache miss
 because a 56-byte event straddles two lines and is written a pass earlier; have
 the capture pass write the consumer's `NDSRendererNativeFighterPreamble` layout
-into its own contiguous array. (2) the state-delta replay (`ApplyStateSpan`
-5,345 + `ApplyStateDelta` 8,277, ~500 applications a frame over a **static**
-70-entry table and 196-entry sequence) — collapse spans at bake time.
-**The emit half is near its floor** (11 instructions, 3 GX words a corner);
-lower needs a DMA'd packed stream at ~19–26 KB against ~9,368 B of heap slack —
-**RAM is the blocker.** **Do not cold-split
-`ndsFighterMarioFoxDLAllDrawForSlot`** — 1,848 of its 7,108 cold bytes are
-`NDS_TICK_HUD`-only and absent from the shipped ROM.
+into its own dense array. (2) the state-delta replay (`ApplyStateSpan` 5,345 +
+`ApplyStateDelta` 8,277, ~500 applications a frame over a **static** 70-entry
+table and 196-entry sequence) — collapse spans at bake time. **The emit half is
+near its floor** (11 instructions, 3 GX words a corner); lower needs a DMA'd
+packed stream at ~19–26 KB against ~9,368 B of heap slack, so **RAM is the
+blocker**. **Do not cold-split `ndsFighterMarioFoxDLAllDrawForSlot`** — 1,848 of
+its 7,108 cold bytes are `NDS_TICK_HUD`-only, absent from the shipped ROM.
 
 **The `SINT` split is DONE and it reordered the queue.** `SINT` +88,082 =
 `ftMainPlayAnim` **+60,559** (the animation lane) + `ftComputerProcessAll`
