@@ -3877,7 +3877,11 @@ static sb32 ndsRendererAdapterMatrixIsAffine20p12(
  * 0x4C look-at/projection matrix.  The hierarchy candidate needs the same
  * product split at its natural affine boundary so source-unit translation can
  * be scaled once in GX without CPU-composing every fighter root. */
-static sb32 ndsRendererAdapterGetHierarchyCameraMatrices(
+/* Cold with the hierarchy mode it serves: only
+ * NDS_RENDERER_FAST_RUN_NATIVE_FIGHTERS reaches it, and the live mode is
+ * NATIVE_FIGHTER_OWNER_PRODUCTION. */
+static sb32 __attribute__((noinline, cold, optimize("Os")))
+ndsRendererAdapterGetHierarchyCameraMatrices(
     CObj *cobj,
     NDSRendererMatrix20p12 *projection,
     NDSRendererMatrix20p12 *modelview)
@@ -3938,7 +3942,14 @@ static sb32 ndsRendererAdapterGetHierarchyCameraMatrices(
             (modelview_valid != FALSE)) ? TRUE : FALSE;
 }
 
-static sb32 ndsRendererAdapterPrepareNativeOwnerHierarchy(
+/* The alternate matrix mode, selected only by
+ * NDS_RENDERER_FAST_RUN_NATIVE_FIGHTERS. The c112 cold map found it and its
+ * camera helper inlined into ndsFighterMarioFoxDLAllDrawForSlot across two cold
+ * runs totalling ~1,100 bytes, none of which executes in a whole match. It is
+ * still a live mode and still correct; it just stops renting I-cache lines from
+ * the mode that does run. */
+static sb32 __attribute__((noinline, cold, optimize("Os")))
+ndsRendererAdapterPrepareNativeOwnerHierarchy(
     u32 slot,
     FTStruct *fp,
     DObj *root,
@@ -9352,7 +9363,11 @@ static void ndsRendererAdapterRestoreNativeOwnerMaterialTextureIds(
 #endif
 
 #if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
-static sb32 ndsRendererAdapterValidateNativeOwnerCached(
+/* A plan hit skips this outright (see "THE DELETION" at the plan-hit branch), and
+ * the plan hits every frame -- the c112 cold map found its body inside the
+ * driver's third-largest never-executed run. */
+static sb32 __attribute__((noinline, cold, optimize("Os")))
+ndsRendererAdapterValidateNativeOwnerCached(
     u32 slot,
     const NDSRelocLoadedFile *owner_file,
     u32 root_count,
@@ -14168,7 +14183,13 @@ static void ndsFighterDLAllDrawRecordFirstFailure(
     }
 }
 
-static void ndsFighterDLAllDrawAccumulateStats(
+/* Runs only under `detailed_output`, which the shipped configuration never sets:
+ * the c112 cold map found its body spread across two of the driver's largest
+ * never-executed runs. Cold, so it stops interleaving with the code that does
+ * run. The `#else` arm below still calls it unconditionally, but that arm is the
+ * forensic and no-HW builds, which are not performance configurations. */
+static void __attribute__((noinline, cold, optimize("Os")))
+ndsFighterDLAllDrawAccumulateStats(
     u32 slot, u32 selected_index, u32 tree_index, const DObj *dobj,
     const Gfx *dl, const NDSFighterDLDrawState *state,
     const NDSRendererStats *stats, u8 *clean)

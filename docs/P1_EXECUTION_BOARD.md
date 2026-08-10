@@ -3824,6 +3824,30 @@ bytes with many.** Size is not the metric; executed-vs-resident is. Both
 functions now carry a comment saying so, because the next reader will otherwise
 try it again.
 
+### Slice 15: the driver fits the I-cache — 10,528 → 7,516 bytes
+
+**FTR 317,247 → 313,421, −3,826.** `WORK` −11,561, **`WORK-H` P95 −21,248**,
+`ALL` −7,308. Boundary passes. Again: no logic changed.
+
+Same recipe as slice 12, run again on the post-slice-12 build, with the cold-run
+attribution improved to sample **four points inside each run** instead of only
+its first address — one run had been credited entirely to `ndsFtrPreWalkCensus`
+when three quarters of it was `ndsFighterDLAllDrawAccumulateStats`.
+
+Three more never-executed bodies, all inlined into the driver:
+
+| body | why it never runs |
+|---|---|
+| `ndsFighterDLAllDrawAccumulateStats` | needs `detailed_output`, never set |
+| `ndsRendererAdapterPrepareNativeOwnerHierarchy` + `…GetHierarchyCameraMatrices` | only `FAST_RUN_NATIVE_FIGHTERS`; live mode is `…OWNER_PRODUCTION` |
+| `ndsRendererAdapterValidateNativeOwnerCached` | a plan hit skips it, and the plan hits every frame |
+
+All three are `noinline, cold, Os` — still live, still correct, just no longer
+renting I-cache lines from the code that runs.
+
+**The driver is 7,516 bytes: under the ARM946E-S 8 KB I-cache for the first
+time.** Cumulative for cycle 110: **FTR 385,508 → 313,421, −72,087**.
+
 ### The `.data` route WORKS — first attributable animation measurement (cycle 109)
 
 Built the standing-rule-7 route the determinism finding demanded.
