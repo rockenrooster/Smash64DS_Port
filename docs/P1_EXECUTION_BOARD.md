@@ -4183,16 +4183,80 @@ means move less than the medians. Judge this one on P50/P95.
 tick-HUD ROM both ship strips. `NDS_R2_STRIP_ROUTE` stays 0 by default: the
 route is an instrument, and at 0 the unselected emitter is dead-coded away.
 
-**Banked on the graduated default build (route compiled out): `FTR` mean
-302,217 -> 290,842, P50 312,640 -> 300,736, P95 315,456 -> 303,680, `WORK-H`
-P50 952,960 -> 941,760.** Boundary **passes**, and
-`artifacts/visibility/latest.png` shows both fighters complete -- hat, gloves,
-overalls and shoes on Mario, ears, jacket and tail on Fox -- which is the check
-the 2026-07 attempt never made.
+**Banked on the graduated default build, re-measured after the BEGIN-policy fix
+(route compiled out): `FTR` mean 302,217 -> 291,896, P50 312,640 -> 301,760, P95
+315,456 -> 304,768, `WORK-H` P50 952,960 -> 942,976.** Boundary **passes**. The
+figures first published here (290,842 / 300,736 / 303,680, -94,666) came off the
+build that was silently losing geometry and are **withdrawn** -- a build that
+culls a third of the fighter is cheaper for a reason.
 
-**Cycle 116 total: `FTR` 385,508 -> 290,842, -94,666 (-24.6%).** The owner's
-"next: <300K" target is met, and it is met on a DS-native AOT primitive stream
-rather than on deletions.
+**Cycle 116 total: `FTR` 385,508 -> 291,896, -93,612 (-24.3%).** The owner's
+"next: <300K" target is met on the *mean* and missed by 1,760 on the P50, and it
+is met on a DS-native AOT primitive stream rather than on deletions.
+
+### The strips SHIPPED BROKEN, and the checker is why -- read this before adding a guard
+
+**Regression, 2026-08-10.** Strips went out as the default and the owner
+reported **missing geometry on both Mario and Fox** within minutes, plus
+animations that would not play (Mario's grab spin on Fox). Reverted to the raw
+path inside the hour, root-caused, fixed, re-shipped.
+
+**Cause.** `EmitProductionPrimitiveGroups` issued `BEGIN_VTXS` only when the
+group TYPE changed. Separate triangles concatenate harmlessly, so the condition
+looks right -- but two ADJACENT `GL_TRIANGLE_STRIP` groups then shared one
+vertex list. Each join produced two bogus bridging triangles and flipped the
+parity of every triangle after it, so the remainder of that strip was culled.
+The very first run has **six consecutive strip groups**. The condition is now
+"always begin unless a `GL_TRIANGLE` group follows a `GL_TRIANGLE` group".
+
+**The worse defect is the checker, and it is the transferable one.**
+`check_fighter_primitive_streams.py` expanded every group **independently** --
+that is, it proved the DATA under a BEGIN policy the runtime did not follow. It
+was green on a build that was losing a large fraction of both fighters. It now
+models the runtime's policy, and the model is demonstrably load-bearing: re-run
+under the OLD policy it reports **mode 2 drawing 744 triangles against 626
+source across 29 runs**, and mode 1 **642 against 626 across 7**. Prove a guard
+fails on the defect it is meant to catch, or it is decoration.
+
+**A passing verifier is not visual verification.** Boundary passed on the broken
+build and `artifacts/visibility/latest.png` showed both fighters looking
+complete, because that canonical frame does not show the affected joints. The
+owner caught it in play. **Hand the owner a ROM before calling a rendering
+change good** -- the Boundary screenshot answers "did anything catastrophic
+happen", not "is the geometry right".
+
+**What the diff of the regenerated IR proved, and it is worth keeping.** The
+fighter `.inc` is gitignored, so regenerating it is an unbounded change in
+principle. Extracting the pre-session copy from the owner's 15:02 snapshot and
+diffing showed **only the 8 Task-56 strip blocks changed**; the other 47 blocks
+are byte-identical to the 2026-07-29 generation. **The desktop snapshots are a
+usable baseline for gitignored generated files** -- `7z e <zip> <path>` -- which
+is the only way to bisect one.
+
+**Re-measured on the FIXED code, one binary, `romSha256` `3C701590...`
+identical across arms, route read back 0 and 1, 1600 samples each:**
+
+| bucket | A: raw corners | B: strips | delta |
+|---|---:|---:|---:|
+| **FTR P50** | 313,856 | **303,424** | **-10,432** |
+| **FTR P95** | 316,800 | **306,432** | **-10,368** |
+| **WORK-H P50** | 952,640 | **942,528** | **-10,112** |
+| **WORK-H P95** | 1,148,992 | **1,134,848** | **-14,144** |
+| STG P50 | 189,120 | 189,184 | +64 |
+| ALL P50 / P95 | 1,118,336 / 1,678,912 | identical | 0 |
+| WAIT P50 | 181,824 | 190,336 | +8,512 |
+
+The extra BEGIN per strip group costs about **1,150** of the broken build's
+-11,584, which is the honest price of correctness and still an order of
+magnitude above the placement floor -- and this arm pair has no placement term
+at all. `STG` +64 and `ALL` identical to the tick are the controls.
+
+**The glBegin audit is clean.** Every other `glBegin` in `nds_renderer.c` passes
+a literal type unconditionally; the conditional-on-type-change shape existed
+only in the strip emitter. The codebase already understood the semantics --
+`nds_renderer.c:14938` notes that `glBegin(GL_TRIANGLE)` closes the preceding
+quad batch -- the gap was that a strip following a strip has no type change to
+trigger it.
 
 ### Requirement 4 is sized and designed: the cubic evaluator is 80% float boundary
 

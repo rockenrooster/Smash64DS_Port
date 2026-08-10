@@ -559,6 +559,15 @@ function Main {
     Invoke-Python $python 'generate-native-fighters' `
         @((Join-Path $RepoRoot 'scripts\fighters\generate_nds_native_owners.py'),
           '--source-root', $RepoRoot) $RepoRoot
+    # Task 56 shipped broken on 2026-08-10 and the owner saw missing geometry on
+    # both fighters. This expands every generated primitive group back into
+    # oriented triangles, under the emitter's real BEGIN_VTXS policy, and fails
+    # closed unless each of the 626 source triangles is drawn exactly once with
+    # the source winding. It runs here because it checks the file the step above
+    # just wrote, and because nothing else would ever run it.
+    Invoke-Python $python 'check-fighter-primitive-streams' `
+        @((Join-Path $RepoRoot 'scripts\fighters\check_fighter_primitive_streams.py')) `
+        $RepoRoot
     $generatedOutputs = @(
         'assets\audio\bgm_pupupu_pcm16.raw', 'assets\audio\bgm_pupupu_pcm16.json',
         'assets\audio\bgm_win_mario_pcm16.raw', 'assets\audio\bgm_win_mario_pcm16.json',

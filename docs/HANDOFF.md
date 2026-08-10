@@ -44,58 +44,57 @@ forbids reporting a both-CPU P95 as the Boundary figure. **Re-pin
   Highest `fake_heap_start` proven to boot **`0x02294804`**, lowest proven to
   fail **`0x02294b24`**. **Text counts as much as bss**; a failing arm reads as a
   hung emulator. **`gSYTaskmanGeneralHeap`** free-min **42,136** against the anim
-  cache's 32,768 `KEEP_FREE`; coupled, since freeing `.bss` enlarges it. **The
-  `Tex` (dl-pointer, bind-ordinal) memo is REFUTED** — `Tex` ticks *up*.
+  cache's 32,768 `KEEP_FREE`, coupled since freeing `.bss` enlarges it.
 
-## FTR is re-opened and UNDER 300K: −94,666 landed (cycle 116)
+## FTR is re-opened and moving: −93,612 landed (cycle 116)
 
-**Banked `FTR` mean is 290,842** (P50 300,736, P95 303,680) against a pre-slice
+**Banked `FTR` mean is 291,896** (P50 301,760, P95 304,768) against a pre-slice
 baseline of **385,508** built for the purpose, which equals the owner's stated
-~385–390K. **−94,666, 24.6%.** Boundary passes on every landed slice.
+~385–390K. **−93,612, 24.3%** — the *mean* is under the owner's 300K target, the
+P50 is 1,760 over it. Measured on the SHIPPED (fixed) strips; the −94,666 quoted
+earlier came off the build that was losing geometry, so it is withdrawn.
+Boundary passes on every landed slice.
 
 **The big one is DS-native AOT geometry: Task 56 fighter strips now SHIP**
 (`NDS_TASK56_FIGHTER_PRIMITIVES ?= 2`). 626 triangles submitted as 1,878
-individual `GL_TRIANGLES` corners are now **1,014 strip corners in 163 groups**,
-compiled host-side. One-binary A/B on `gNdsR2FighterStripRoute`
-(`NDS_R2_STRIP_ROUTE=1`, identical `romSha256`): **`FTR` P50 −11,584, P95
-−11,264, `WORK-H` P50 −11,200**, `STG` unchanged to the tick.
+`GL_TRIANGLES` corners are now **1,014 strip corners in 163 groups**, compiled
+host-side. One-binary A/B on `gNdsR2FighterStripRoute` (identical `romSha256`,
+route read back 0 and 1): **`FTR` P50 −10,432, P95 −10,368, `WORK-H` P50
+−10,112, P95 −14,144**; `STG` +64 and `ALL` identical to the tick are controls.
 
-**Its 2026-07 KILL was a defect, not a verdict: the generator drew 35.6% of the
-fighter BACKFACING** — `_stripify_run` used `(t0[0], t0[2])`, not a directed edge
-of the source triangle, and a strip inherits its first triangle's winding. A
-third of the model was culled with no assert.
-`scripts/fighters/check_fighter_primitive_streams.py` expands every group back
-into oriented triangles and is the standing proof; **run it after touching the
-stripifier**. The emitter was also `cold`/`Os` in `.main` and branched on
-`textured` per VERTEX; it is now ITCM with the branch hoisted, and it restores
-`GL_TRIANGLE` on exit because **batches are REUSED across runs without
-re-issuing `glBegin`**.
+**It SHIPPED BROKEN once and the owner caught it in minutes — read the board
+before touching this.** Two defects, invisible to every gate that passed:
+`_stripify_run` used `(t0[0], t0[2])`, not a directed edge, so **35.6% of the
+fighter came out BACKFACING**; and the emitter issued `BEGIN_VTXS` only on a
+group TYPE change, **welding adjacent strip groups into one vertex list** (the
+first run has six consecutive strips). `check_fighter_primitive_streams.py` now
+**models the runtime's BEGIN policy instead of assuming one per group** — that
+assumption is what let the second ship green; under the old policy it reports
+mode 2 drawing **744 triangles against 626 source**. Run it after touching
+either. **A passing verifier is not visual verification**: Boundary passed on
+the broken build and `latest.png` showed both fighters complete, because that
+canonical frame does not show the affected joints. **Hand the owner a ROM.**
 
 **The emit stalls per VERTEX, not per word** (c115 `--pc-detail`, no build): a
 corner is 40.5 cycles untextured, **~28 of it the GX write**, and the textured
 path pays the same ~28 for a fourth word. That is why strips work, and it
-**refutes a baked/DMA'd packed GX stream and `VTX_10`** here — both trade words,
-not vertices. −11,584 is ~57% of the vertex-count prediction, so part of the
-stall is likely **per polygon**. **The prepared dense UVs are immutable state
-too** (−1,744; the loop runs 15 times a match, not 30,204) — proven from
-`NDS_R2_FIGHTER_RUN_PROOF=2`, which was already in-tree.
+**refutes a baked/DMA'd packed GX stream and `VTX_10`** — both trade words, not
+vertices; the win is ~50% of the vertex prediction, so part is **per polygon**.
+**The prepared dense UVs are immutable state too** (−1,744; 15 runs a match).
 
-**The other big lever was the I-cache, not arithmetic.**
-`ndsFighterMarioFoxDLAllDrawForSlot` was the ROM's largest non-idle symbol at
-**4.21 cyc/insn**, 10,708 bytes against an **8 KB** I-cache, **73.6% never
-executed**; outlining the never-*entered* bodies took it to **7,516**/**7,236**
-(instrument/published). Recipe, no build: `task37_census.py --pc-detail SYM`,
-diff `objdump`, `addr2line` four points per cold run. Any symbol over ~4 KB.
-**Entry count is the discriminator, not cold bytes** — cold bytes inside an
-*entered* body cost **+14,963**, and under 8 KB the lever is spent (**+4,959**).
+**The other big lever was the I-cache, not arithmetic.** `…DLAllDrawForSlot`
+was the ROM's largest non-idle symbol at **4.21 cyc/insn**, 10,708 bytes against
+an **8 KB** I-cache, **73.6% never executed**; outlining the never-*entered*
+bodies took it to **7,516**/**7,236**. Recipe, no build: `--pc-detail SYM`, diff
+`objdump`, `addr2line` four points per cold run. **Entry count discriminates, not
+cold bytes** — cold bytes in an *entered* body cost **+14,963**; under 8 KB, spent.
 
 Sixteen landed slices; the board carries each one's evidence. What generalises:
 
 - **The DObj world cache had ZERO readers** while `Store` burned 4,744,740
   cycles and ~4 KB a frame through a 4 KB D-cache. **Ask what reads a cache
   before optimising what fills it**, and **read the counters a previous cycle
-  left before designing anything** — both the UV slice's proof and Requirement
-  4's sizing were already in-tree.
+  left** — the UV proof and Requirement 4's sizing were both already in-tree.
 - **The compose does not fold its base in until a joint contributes** (−10,804):
   one call per binding was *copy the base in, multiply it straight back out*.
 - **The material block is built 30 times a match, not 59,392** — a (MObj, heap
