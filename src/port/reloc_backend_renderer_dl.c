@@ -3580,6 +3580,115 @@ static sb32 ndsRendererAdapterComposeOwnerWorldsFlat(
 }
 #endif
 
+/* The per-binding world build, outlined. It is the fail-closed path for when
+ * the flat compose declines, and in a whole-match census it declined zero times
+ * in 49,422 binding visits -- yet it was inlined into
+ * ndsFighterMarioFoxDLAllDrawForSlot and held ~3,150 of that function's 10,708
+ * bytes, `ndsRendererAdapterBuildDObjWorldMatrix` and all. The 64-byte `world`
+ * matrix moves out of the hot frame with it. Outlined, never deleted: the flat
+ * compose is allowed to decline, and when it does this must still be correct. */
+static sb32 __attribute__((noinline, cold, optimize("Os")))
+ndsRendererAdapterPrepareOwnerMatricesPerBinding(
+    DObj *const *bindings,
+    u32 binding_count,
+    const NDSRendererMatrix20p12 *camera_modelview,
+    u32 camera_modelview_valid,
+    const NDSRendererMatrix20p12 **modelview_ptrs
+#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
+    NDS_RENDERER_M2_DETAILED_LEDGER
+    , volatile NDSRendererOwnerProfile *m2_owner
+#endif
+    )
+{
+    NDSRendererMatrix20p12 world;
+    u32 binding_index;
+#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
+    NDS_RENDERER_M2_DETAILED_LEDGER
+    u32 m2_phase_start;
+#endif
+#if NDS_TASK91_DRAW_PHASE_CENSUS
+    u32 task91_mtx_mark = cpuGetTiming();
+#endif
+
+    for (binding_index = 0u;
+         binding_index < binding_count;
+         binding_index++)
+    {
+        if (bindings[binding_index] != NULL)
+        {
+#if NDS_TASK91_DRAW_PHASE_CENSUS
+            task91_mtx_mark = cpuGetTiming();
+            gNdsTask91MtxBindings++;
+#endif
+#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
+    NDS_RENDERER_M2_DETAILED_LEDGER
+            if (ndsRendererAdapterBuildDObjWorldMatrixM2Profile(
+                    bindings[binding_index], &world,
+                    m2_owner) == FALSE)
+#else
+            if (ndsRendererAdapterBuildDObjWorldMatrix(
+                    bindings[binding_index], &world) == FALSE)
+#endif
+            {
+                return FALSE;
+            }
+#if NDS_R2_FIGHTER_SHUFFLE_FOLD
+            /* R2-03 E32, and this is the whole cut: lbcommon.c:1627's
+             * `f[3][0] += x; f[3][1] += y;` on the world matrix, before the
+             * camera multiply below. Zero when the fighter is not in hitlag. */
+            world.m[3][0] += sNdsR2ShuffleWorldX;
+            world.m[3][1] += sNdsR2ShuffleWorldY;
+#endif
+#if NDS_TASK91_DRAW_PHASE_CENSUS
+            {
+                u32 task91_world_end = cpuGetTiming();
+
+                gNdsTask91MtxWorldTicks += task91_world_end - task91_mtx_mark;
+                task91_mtx_mark = task91_world_end;
+            }
+#endif
+            if (camera_modelview_valid != FALSE)
+            {
+#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
+    NDS_RENDERER_M2_DETAILED_LEDGER
+                m2_phase_start = cpuGetTiming();
+#endif
+                ndsRendererMtxMulAffine20p12(
+                    &world, camera_modelview,
+                    &sNdsRendererAdapterNativeOwnerModelviews[
+                        binding_index]);
+#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
+    NDS_RENDERER_M2_DETAILED_LEDGER
+                if (m2_owner != NULL)
+                {
+                    m2_owner->m2_world_camera_ticks +=
+                        cpuGetTiming() - m2_phase_start;
+                    m2_owner->m2_world_camera_count++;
+                }
+#endif
+            }
+            else
+            {
+                sNdsRendererAdapterNativeOwnerModelviews[binding_index] =
+                    world;
+            }
+#if NDS_TASK91_DRAW_PHASE_CENSUS
+            gNdsTask91MtxMulTicks += cpuGetTiming() - task91_mtx_mark;
+#endif
+            modelview_ptrs[binding_index] =
+                &sNdsRendererAdapterNativeOwnerModelviews[binding_index];
+        }
+        else if (camera_modelview_valid != FALSE)
+        {
+            sNdsRendererAdapterNativeOwnerModelviews[binding_index] =
+                *camera_modelview;
+            modelview_ptrs[binding_index] =
+                &sNdsRendererAdapterNativeOwnerModelviews[binding_index];
+        }
+    }
+    return TRUE;
+}
+
 static sb32 ndsRendererAdapterPrepareNativeOwnerMatrices(
     u32 slot,
     DObj *root,
@@ -3596,7 +3705,6 @@ static sb32 ndsRendererAdapterPrepareNativeOwnerMatrices(
 {
     NDSRendererMatrix20p12 camera_projection;
     NDSRendererMatrix20p12 camera_modelview;
-    NDSRendererMatrix20p12 world;
     u32 camera_projection_valid = FALSE;
     u32 camera_modelview_valid = FALSE;
     u32 binding_index;
@@ -3664,26 +3772,25 @@ static sb32 ndsRendererAdapterPrepareNativeOwnerMatrices(
         slot, bindings, binding_count,
         sNdsRendererAdapterNativeOwnerModelviews);
 #endif
-    /* The ordinary per-frame DObj world cache already records every prefix
-     * built for a binding.  Walking each selected binding through that cache
-     * visits the fighter hierarchy once without the old per-node linear scan
-     * over all 14/18 selected roots. */
-    for (binding_index = 0u;
-         binding_index < binding_count;
-         binding_index++)
-    {
-        if (bindings[binding_index] != NULL)
-        {
-#if NDS_TASK91_DRAW_PHASE_CENSUS
-            task91_mtx_mark = cpuGetTiming();
-            gNdsTask91MtxBindings++;
-#endif
+    /* `flat_worlds` is decided once, above, and never changes inside the loop,
+     * so hoisting it out of the loop is a pure transformation -- and it is what
+     * lets the fallback leave the hot function entirely. */
 #if NDS_RENDERER_HW_TRIANGLES
-            if (flat_worlds != FALSE)
+    if (flat_worlds != FALSE)
+    {
+        for (binding_index = 0u;
+             binding_index < binding_count;
+             binding_index++)
+        {
+            if (bindings[binding_index] != NULL)
             {
                 NDSRendererMatrix20p12 *dst =
                     &sNdsRendererAdapterNativeOwnerModelviews[binding_index];
 
+#if NDS_TASK91_DRAW_PHASE_CENSUS
+                task91_mtx_mark = cpuGetTiming();
+                gNdsTask91MtxBindings++;
+#endif
 #if NDS_R2_FIGHTER_SHUFFLE_FOLD
                 dst->m[3][0] += sNdsR2ShuffleWorldX;
                 dst->m[3][1] += sNdsR2ShuffleWorldY;
@@ -3705,73 +3812,29 @@ static sb32 ndsRendererAdapterPrepareNativeOwnerMatrices(
                 gNdsTask91MtxMulTicks += cpuGetTiming() - task91_mtx_mark;
 #endif
                 modelview_ptrs[binding_index] = dst;
-                continue;
             }
-#endif
-#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
-    NDS_RENDERER_M2_DETAILED_LEDGER
-            if (ndsRendererAdapterBuildDObjWorldMatrixM2Profile(
-                    bindings[binding_index], &world,
-                    m2_owner) == FALSE)
-#else
-            if (ndsRendererAdapterBuildDObjWorldMatrix(
-                    bindings[binding_index], &world) == FALSE)
-#endif
-            {
-                return FALSE;
-            }
-#if NDS_R2_FIGHTER_SHUFFLE_FOLD
-            /* R2-03 E32, and this is the whole cut: lbcommon.c:1627's
-             * `f[3][0] += x; f[3][1] += y;` on the world matrix, before the
-             * camera multiply below. Zero when the fighter is not in hitlag. */
-            world.m[3][0] += sNdsR2ShuffleWorldX;
-            world.m[3][1] += sNdsR2ShuffleWorldY;
-#endif
-#if NDS_TASK91_DRAW_PHASE_CENSUS
-            {
-                u32 task91_world_end = cpuGetTiming();
-
-                gNdsTask91MtxWorldTicks += task91_world_end - task91_mtx_mark;
-                task91_mtx_mark = task91_world_end;
-            }
-#endif
-            if (camera_modelview_valid != FALSE)
-            {
-#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
-    NDS_RENDERER_M2_DETAILED_LEDGER
-                m2_phase_start = cpuGetTiming();
-#endif
-                ndsRendererMtxMulAffine20p12(
-                    &world, &camera_modelview,
-                    &sNdsRendererAdapterNativeOwnerModelviews[
-                        binding_index]);
-#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
-    NDS_RENDERER_M2_DETAILED_LEDGER
-                if (m2_owner != NULL)
-                {
-                    m2_owner->m2_world_camera_ticks +=
-                        cpuGetTiming() - m2_phase_start;
-                    m2_owner->m2_world_camera_count++;
-                }
-#endif
-            }
-            else
+            else if (camera_modelview_valid != FALSE)
             {
                 sNdsRendererAdapterNativeOwnerModelviews[binding_index] =
-                    world;
+                    camera_modelview;
+                modelview_ptrs[binding_index] =
+                    &sNdsRendererAdapterNativeOwnerModelviews[binding_index];
             }
-#if NDS_TASK91_DRAW_PHASE_CENSUS
-            gNdsTask91MtxMulTicks += cpuGetTiming() - task91_mtx_mark;
-#endif
-            modelview_ptrs[binding_index] =
-                &sNdsRendererAdapterNativeOwnerModelviews[binding_index];
         }
-        else if (camera_modelview_valid != FALSE)
+    }
+    else
+#endif
+    {
+        if (ndsRendererAdapterPrepareOwnerMatricesPerBinding(
+                bindings, binding_count, &camera_modelview,
+                camera_modelview_valid, modelview_ptrs
+#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
+    NDS_RENDERER_M2_DETAILED_LEDGER
+                , m2_owner
+#endif
+                ) == FALSE)
         {
-            sNdsRendererAdapterNativeOwnerModelviews[binding_index] =
-                camera_modelview;
-            modelview_ptrs[binding_index] =
-                &sNdsRendererAdapterNativeOwnerModelviews[binding_index];
+            return FALSE;
         }
     }
     return ((*projection_ptr != NULL) ||
@@ -13336,7 +13399,14 @@ static const Gfx *ndsFighterDLAllDrawResolveBranch(const Gfx *dl,
  * the per-frame zeroing that used to clear it is gone. */
 static u32 sNdsRendererAdapterProductionInputsPrimed;
 
-static void ndsRendererAdapterPrimeProductionInputs(
+/* Runs ONCE per match and was inlined into ndsFighterMarioFoxDLAllDrawForSlot,
+ * where the census found it occupying ~1,640 of that function's 10,708 bytes
+ * without ever executing. The ARM946E-S I-cache is 8 KB: a 10.7 KB hot driver
+ * evicts itself every frame, which is why the whole function measures 4.21
+ * cycles per instruction. Cold code inlined into a hot path is not free even
+ * when it never runs -- it lands on the same 32-byte lines. */
+static void __attribute__((noinline, cold, optimize("Os")))
+ndsRendererAdapterPrimeProductionInputs(
     NDSRendererAdapterNativeOwnerWorkspace *workspace)
 {
     u32 i;
