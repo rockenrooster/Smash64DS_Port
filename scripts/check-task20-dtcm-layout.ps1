@@ -144,9 +144,36 @@ foreach ($elfPath in $Elf) {
         $fighterOwners.Count -ne $fighterOwnerSizes.Count) {
         throw "Fighter DTCM owners must be present all-or-none in '$resolvedElf'."
     }
+    # Cycle 110 puts the renderer's per-frame counter block in the same section
+    # on the same terms. 108 bytes of u32 counters read-modify-written on every
+    # hardware batch, every matrix load and every texture prepare; compiling
+    # them out measured FTR -7,378 and STG -2,776, and they cannot be compiled
+    # out because verify-battle-mariofox-gcrunall-loop-harness.ps1 asserts exact
+    # batch and texture-prepare accounting off them. DTCM keeps the evidence and
+    # stops paying main-RAM latency and a cache line for it. Same audit as the
+    # two tables above: ARM9 renderer code only, never a DMA source or
+    # destination, never visible to the ARM7 or IPC.
+    #
+    # OPTIONAL, unlike the pair above, because it only exists at
+    # NDS_RENDERER_PROFILE_LEVEL < 2 -- an all-or-none rule would reject a
+    # level-2 ELF for a reason that has nothing to do with the layout. Its size
+    # is still pinned when it is there.
+    $rendererOwnerSizes = [ordered]@{
+        'sNdsRendererRuntimeFrameSummary' = 108
+    }
+
     $fighterBytes = 0
     if ($fighterOwners.Count -ne 0) {
         foreach ($size in $fighterOwnerSizes.Values) { $fighterBytes += $size }
+        foreach ($name in $rendererOwnerSizes.Keys) {
+            $owner = @($owners | Where-Object { $_.Name -eq $name })
+            if ($owner.Count -eq 0) { continue }
+            if ($owner[0].Bytes -ne $rendererOwnerSizes[$name]) {
+                throw ("DTCM owner '$name' is $($owner[0].Bytes) bytes, " +
+                    "expected $($rendererOwnerSizes[$name]), in '$resolvedElf'.")
+            }
+            $fighterBytes += $rendererOwnerSizes[$name]
+        }
         # The linker realigns to 32 after .dtcm.fighter so that Calico's
         # __irq_table keeps its 32-byte boundary no matter how the data-driven
         # fighter table sizes come out.
@@ -186,6 +213,19 @@ foreach ($elfPath in $Elf) {
     if ($fighterBytes -ne 0) {
         $fighterAddress = $expectedBase
         foreach ($entry in $fighterOwnerSizes.GetEnumerator()) {
+            $expectedOwners[$entry.Key] = [PSCustomObject]@{
+                Address = $fighterAddress
+                Section = '.dtcm'
+                Bytes = $entry.Value
+                Alignment = 4
+            }
+            $fighterAddress += $entry.Value
+        }
+        # Optional renderer owners follow the pinned pair, in declaration order.
+        foreach ($entry in $rendererOwnerSizes.GetEnumerator()) {
+            if (@($owners | Where-Object { $_.Name -eq $entry.Key }).Count -eq 0) {
+                continue
+            }
             $expectedOwners[$entry.Key] = [PSCustomObject]@{
                 Address = $fighterAddress
                 Section = '.dtcm'

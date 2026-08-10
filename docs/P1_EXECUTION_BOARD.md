@@ -3534,6 +3534,80 @@ the flat compose unconditional, and `artifacts/visibility/latest.png` shows both
 fighters fully articulated on Dream Land — a wrong world matrix is exactly what
 destroys that, so the screenshot is the check that matters here.
 
+### Cycle 110 slices 4–7: FTR −37,640, ALL −67,718, and one refuted arm
+
+Continuing the same lane. Every arm 1600 samples, `NDS_R2_BOTH_CPU` off, DLDI on.
+
+| arm | FTR mean | ALL mean | WORK mean | what changed |
+|---|---:|---:|---:|---|
+| c110 baseline | 385,508 | 1,285,825 | 1,075,918 | pre-slice |
+| slice 3 | 362,819 | 1,252,041 | 1,075,918 | slices 1–3 (committed) |
+| slice 5 | 349,955 | 1,238,289 | 1,063,906 | +4, +5 |
+| slice 6 | 340,691 | 1,225,916 | 1,048,038 | **counter gate — REFUTED** |
+| slice 6b | 348,069 | 1,237,683 | 1,061,493 | counters restored |
+| slice 7 | **347,868** | **1,218,107** | 1,037,278 | DTCM summary + flat parts |
+
+**Slice 5 — MEASURED −11,683**, against a 5,958 prediction.
+`ndsRendererNativeBindProductionRoot` copied the caller's projection and
+modelview into the traversal state: two 64-byte struct copies, 12,422
+executions, 416 cycles a call. With `NDS_R2_SHADE_SKIP_SOFT_LIGHT` the
+production path has no reader of either field, so both were dead stores. The
+split loader now takes the caller's matrices directly, which removed the copy it
+was making of the copy — that second-order copy is the extra 5,725.
+
+**Slice 4 — kept, honestly inconclusive at −1,181** against a −6,500 prediction,
+under the placement floor. It was **mis-sized off the wrong revision**: the c106
+profile ELF was built at `1b467da` and I resolved its line numbers against HEAD,
+~85 lines adrift, so the biggest row landed on a blank line and the field I
+targeted was free. `scripts/analyze-symbol-line-profile.py` now reads
+`NDS_TASK10_GIT_SHORT` out of the build's own `nds_build_config.h` and quotes
+every line from that commit, so the mistake cannot recur.
+
+**Slice 6 — the counter gate is REFUTED by the gate itself.** Compiling out the
+`sNdsRendererRuntimeFrameSummary` per-call counters (matrix load, batch
+begin/reuse/end, texture prepare/reuse) was worth **FTR −7,378 and STG −2,776**,
+an order of magnitude past the ~1,300 the per-line profile showed — the profile
+only sees the two symbols the lines live in, and *every* hardware batch on every
+path pays them. It is not available: `verify-all.ps1 -Profile Boundary` also
+runs `verify-battle-mariofox-gcrunall-loop-harness.ps1`, which asserts exact
+batch and texture-prepare accounting off those globals, and it failed with
+*"Canonical realtime HW build drifted from exact source-weapon-aware batch and
+texture-prepare accounting"*. **`-Profile Boundary -List` prints one row and the
+run executes about six checks** — grepping `scripts/` is not how you find out
+who depends on a global.
+
+**Slice 7 — the same 10,154 recovered without touching the evidence.**
+`sNdsRendererRuntimeFrameSummary` is 108 bytes; it now lives in `.dtcm.bss` at
+`0x02ff21e0`. DTCM is single-cycle and outside the 4 KB D-cache, so the counters
+keep counting and stop paying main-memory latency *and* stop evicting fighter
+data. Nothing DMAs it (DMA cannot read DTCM).
+
+**Slice 7 also flattened the parts-invalidation walk — and it is NOT an FTR
+lever.** `ndsFTParamsInvalidateFighterParts` is 15,815 census ticks/frame over
+159,748 joint visits: 86 cycles a joint for two word writes, because
+`user_data.p`, `transform_update_mode`, `unk_dobjtrans_word`, `child` and
+`sib_next` are five separate cache lines. The subtree is now preordered once
+into a flat `FTParts*` array keyed on `(root, gNdsTaskmanHeapGeneration)` —
+sound because that generation is bumped at the two taskman-heap rewind
+primitives, the only way a live fighter tree can be rebuilt. **But the tick HUD
+charges that walk to `SRC`/`SINT`, not `FTR`.** Slice 7's arm is FTR −201 and
+WORK −24,215; the win is real and it is in the gameplay buckets.
+
+> **Read this before sizing the next FTR slice.** The census→bucket mapping in
+> the reconciliation below is *not* the tick-HUD bucket mapping. "fighter parts
+> / params 18,711" is outside `FTR`. Only the emit, production-driver, matrix,
+> material and display-contract groups are inside it. A census row is not an
+> FTR row until the arm proves it.
+
+Two instrument facts banked from this cycle. First, **`-RingDump` and per-frame
+stops agree to the tick**: `c110-slice6b` and `c110-slice6b-ring` are the same
+`romSha256` and report FTR 348,069 both ways, STG within 2. Every arm in this
+lane is comparable regardless of mode. Second, **a faster ROM breaks per-frame
+sampling**: slice 7 tripped the repeated-presented-frame guard 315 times in 1600
+because the 60 Hz loop now fits two iterations inside one presented frame more
+often. Ring dumps saw 5, all payload-DIFFERS (never a stale read). Use
+`-RingDump -AllowRepeatedFrames` from here.
+
 ### The `.data` route WORKS — first attributable animation measurement (cycle 109)
 
 Built the standing-rule-7 route the determinism finding demanded.

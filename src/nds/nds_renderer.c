@@ -3375,7 +3375,30 @@ typedef struct NDSRendererRuntimeFrameSummary
     u32 raw_cross_matrix_count;
 } NDSRendererRuntimeFrameSummary;
 
-static NDSRendererRuntimeFrameSummary sNdsRendererRuntimeFrameSummary;
+/* 108 bytes in DTCM, which is the cheapest place on this machine to do a
+ * read-modify-write. Cycle 110 priced these counters by compiling them out:
+ * FTR fell 7,378 and STG 2,776, an order of magnitude past the ~1,300 the
+ * per-line profile showed, because the profile only sees the two symbols the
+ * lines live in and every hardware batch on every path pays them. They are not
+ * removable -- verify-battle-mariofox-gcrunall-loop-harness.ps1 asserts exact
+ * batch and texture-prepare accounting off them, and the Boundary profile runs
+ * it -- so the fix is to stop paying main-memory latency and a cache line for
+ * evidence.
+ *
+ * `.dtcm.fighter`, not `.dtcm.bss`: check-task20-dtcm-layout.ps1 pins
+ * `.dtcm.bss` at Calico's own 152 bytes (__irq_table + __sched_state) and
+ * throws on anything else landing there. The fighter group is the modelled
+ * home for audited renderer DTCM data and the checker rounds it to 32, which
+ * keeps __irq_table's alignment. Adding an owner here means adding its size to
+ * that script's $fighterOwnerSizes -- the layout is pinned on purpose.
+ *
+ * Audited against that gate's DMA/IPC/ARM7 requirement, same as the two vertex
+ * tables above it: written and read only by ARM9 renderer code, never a DMA
+ * source or destination, never visible to the ARM7 or IPC. DMA cannot read
+ * DTCM at all. Zero-initialised at every frame begin by memset, so nothing
+ * depends on the crt's copy of its (zero) image. */
+static NDSRendererRuntimeFrameSummary sNdsRendererRuntimeFrameSummary
+    __attribute__((section(".dtcm.fighter")));
 static u32 sNdsRendererRuntimeTexel1FractionRefreshCount;
 static u32 sNdsRendererRuntimeTextureCacheEvictCount;
 static u32 sNdsRendererRuntimeTextureCi4DirectPixels;
@@ -3689,11 +3712,17 @@ static inline void ndsRendererProfileRecordTexel1Refresh(void)
 #endif
 }
 
+/* NDS_RENDERER_FRAME_SUMMARY_COUNTERS gates the PROFILE_LEVEL 0 arm of the
+ * six per-call recorders below. They are pure diagnostics -- nothing in the
+ * Latest or Boundary registry reads them -- and at level 0 each was still a
+ * read-modify-write on a global struct on every matrix load, every hardware
+ * batch, and every texture prepare. See the flag's comment in
+ * include/nds/nds_renderer.h for who has to build with it at 1. */
 static inline void ndsRendererProfileRecordMatrixLoad(void)
 {
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
     gNdsRendererProfileMatrixLoadCount++;
-#else
+#elif NDS_RENDERER_FRAME_SUMMARY_COUNTERS
     sNdsRendererRuntimeFrameSummary.matrix_load_count++;
 #endif
 }
@@ -3702,7 +3731,7 @@ static inline void ndsRendererProfileRecordBatchBegin(void)
 {
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
     gNdsRendererProfileHardwareBatchBeginCount++;
-#else
+#elif NDS_RENDERER_FRAME_SUMMARY_COUNTERS
     sNdsRendererRuntimeFrameSummary.hardware_batch_begin_count++;
 #endif
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
@@ -3722,7 +3751,7 @@ static inline void ndsRendererProfileRecordBatchReuse(void)
 {
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
     gNdsRendererProfileHardwareBatchReuseCount++;
-#else
+#elif NDS_RENDERER_FRAME_SUMMARY_COUNTERS
     sNdsRendererRuntimeFrameSummary.hardware_batch_reuse_count++;
 #endif
 }
@@ -3731,7 +3760,7 @@ static inline void ndsRendererProfileRecordBatchEnd(void)
 {
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
     gNdsRendererProfileHardwareBatchEndCount++;
-#else
+#elif NDS_RENDERER_FRAME_SUMMARY_COUNTERS
     sNdsRendererRuntimeFrameSummary.hardware_batch_end_count++;
 #endif
 }
@@ -3740,7 +3769,7 @@ static inline void ndsRendererProfileRecordTexturePrepare(void)
 {
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
     gNdsRendererProfileTexturePrepareCount++;
-#else
+#elif NDS_RENDERER_FRAME_SUMMARY_COUNTERS
     sNdsRendererRuntimeFrameSummary.texture_prepare_count++;
 #endif
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
@@ -3760,7 +3789,7 @@ static inline void ndsRendererProfileRecordTexturePrepareReuse(void)
 {
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
     gNdsRendererProfileTexturePrepareReuseCount++;
-#else
+#elif NDS_RENDERER_FRAME_SUMMARY_COUNTERS
     sNdsRendererRuntimeFrameSummary.texture_prepare_reuse_count++;
 #endif
 }
@@ -18371,14 +18400,72 @@ static NDSRendererMatrix20p12 sNdsR2MtxLastModelview;
 static u8 sNdsR2MtxLastValid;
 #endif
 
+/* Capture-free matrix registers for the fighter-exclusive split loader.
+ *
+ * glMatrixMode and glLoadMatrix4x4 are #defined in this TU to the Task 29
+ * wrappers, which funnel every write through ndsRendererTask29GXRecord. At the
+ * shipped config that funnel still carries the NDS_TASK36_HW_COMPOSE == 2
+ * replay recorder, and under the tick HUD an sNdsEffectPacketArmed test as
+ * well: 791 + 454 ticks/frame over 161,603 executions in the c106 profile, for
+ * a path neither recorder can ever observe. Task 36 capture is armed only
+ * around a stage run (ndsRendererCommitNativeStageSegment); both callers of the
+ * split loader are fighter-side. Same argument as the fighter emit writers in
+ * slice 1 -- see the pointer above ndsRendererHardwareWriteColorWord.
+ *
+ * The modelview variant also folds the world-unit scaling into the FIFO write.
+ * Scaling touches row 3 only, so copying the whole 64-byte matrix to change
+ * four words was 1,794 ticks/frame over 124,310 executions, plus the 364 the
+ * scaling loop spent reading the copy back. */
+static inline void ndsRendererHardwareFighterSetMatrixMode(u32 mode)
+{
+#if NDS_RENDERER_M3_PHASE0_PROFILE
+    /* Leave the M3 state shadow authoritative when that profile is built; its
+     * own bookkeeping dwarfs the census hook there. */
+    ndsRendererHardwareSetMatrixMode((int)mode);
+#else
+    MATRIX_CONTROL = mode;
+#endif
+}
+
+static inline void ndsRendererHardwareFighterLoadMatrix4x4(
+    const NDSRendererMatrix20p12 *matrix)
+{
+    u32 row;
+
+    for (row = 0u; row < 4u; row++)
+    {
+        MATRIX_LOAD4x4 = matrix->m[row][0];
+        MATRIX_LOAD4x4 = matrix->m[row][1];
+        MATRIX_LOAD4x4 = matrix->m[row][2];
+        MATRIX_LOAD4x4 = matrix->m[row][3];
+    }
+}
+
+static inline void ndsRendererHardwareFighterLoadModelviewWorldScaled(
+    const NDSRendererMatrix20p12 *matrix)
+{
+    u32 row;
+    u32 col;
+
+    for (row = 0u; row < 3u; row++)
+    {
+        MATRIX_LOAD4x4 = matrix->m[row][0];
+        MATRIX_LOAD4x4 = matrix->m[row][1];
+        MATRIX_LOAD4x4 = matrix->m[row][2];
+        MATRIX_LOAD4x4 = matrix->m[row][3];
+    }
+    for (col = 0u; col < 4u; col++)
+    {
+        MATRIX_LOAD4x4 = ndsRendererRoundShiftS32Signed(
+            matrix->m[3][col], NDS_RENDERER_HW_WORLD_UNIT_SHIFT);
+    }
+}
+
 static void __attribute__((noinline)) ndsRendererLoadHardwareSplitMatrices(
     const NDSRendererMatrix20p12 *projection,
     const NDSRendererMatrix20p12 *modelview,
     u32 generation)
 {
-    NDSRendererMatrix20p12 scaled_modelview;
-    u32 col;
-
     if ((projection == NULL) || (modelview == NULL))
     {
         return;
@@ -18406,6 +18493,14 @@ static void __attribute__((noinline)) ndsRendererLoadHardwareSplitMatrices(
         return;
     }
 
+#if NDS_TASK91_DRAW_PHASE_CENSUS
+    {
+    NDSRendererMatrix20p12 scaled_modelview;
+    u32 col;
+
+    /* The census memo compares the matrix the hardware actually receives, so it
+     * has to materialise what the FIFO writer scales on the fly. It is a
+     * diagnostic and pays for its own copy. */
     scaled_modelview = *modelview;
     for (col = 0u; col < 4u; col++)
     {
@@ -18413,7 +18508,6 @@ static void __attribute__((noinline)) ndsRendererLoadHardwareSplitMatrices(
             scaled_modelview.m[3][col], NDS_RENDERER_HW_WORLD_UNIT_SHIFT);
     }
 
-#if NDS_TASK91_DRAW_PHASE_CENSUS
     gNdsR2MtxLoadPerformed++;
     if (sNdsR2MtxLastValid != 0u)
     {
@@ -18431,6 +18525,7 @@ static void __attribute__((noinline)) ndsRendererLoadHardwareSplitMatrices(
     sNdsR2MtxLastProjection = *projection;
     sNdsR2MtxLastModelview = scaled_modelview;
     sNdsR2MtxLastValid = 1u;
+    }
 #endif
 
     ndsRendererHardwareEndBatch();
@@ -18438,10 +18533,10 @@ static void __attribute__((noinline)) ndsRendererLoadHardwareSplitMatrices(
      * the 30 per-root loads a frame re-push an identical projection. Engaged on
      * 93.8% of loads and worth -3,008 FTR P50, under the placement floor. The
      * FIFO writes are simply cheap; see the E22/E23 write-up. Reverted. */
-    ndsRendererHardwareSetMatrixMode(GL_PROJECTION);
-    glLoadMatrix4x4(ndsRendererMtx20p12AsM4x4(projection));
-    ndsRendererHardwareSetMatrixMode(GL_MODELVIEW);
-    glLoadMatrix4x4(ndsRendererMtx20p12AsM4x4(&scaled_modelview));
+    ndsRendererHardwareFighterSetMatrixMode(GL_PROJECTION);
+    ndsRendererHardwareFighterLoadMatrix4x4(projection);
+    ndsRendererHardwareFighterSetMatrixMode(GL_MODELVIEW);
+    ndsRendererHardwareFighterLoadModelviewWorldScaled(modelview);
 
     ndsRendererProfileRecordMatrixLoad();
     sNdsRendererHardwareMatrixMode = NDS_RENDERER_HW_MATRIX_MODE_RAW_COMPOSED;

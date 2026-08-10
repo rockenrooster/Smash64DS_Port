@@ -559,15 +559,25 @@ static inline sb32 ndsRendererAdapterFloatPow2ToS32(
  * so unlike E6's fixed-point angle lever this needs no fidelity budget. Level 2
  * runs both and compares anyway, because "by construction" is exactly the kind
  * of claim E8 proved I get wrong by reading. */
+#if NDS_R2_FIGHTER_MTX_DIRECT >= 2
+/* E10 counts the TraRotRpy branch separately: the two paths reach 20.12 by
+ * different arithmetic and a shared counter would hide one refuting while the
+ * other passed.
+ *
+ * These six live only at the verify level now. At the shipped level 1 they were
+ * six `volatile u32` increments -- a forced load-modify-store the compiler may
+ * not sink or fold -- on the hottest local-matrix path in the fighter draw.
+ * gNdsR2MtxDirectRpyCalls alone measured 481 ticks/frame over 84,308 executions
+ * in the c106 profile. Both experiments have long since published: the direct
+ * path is bit-exact by construction, and the fallback ran 0 times in 101,569
+ * builder calls. Nothing in scripts/ or docs/ reads any of them. */
 volatile u32 gNdsR2MtxDirectCalls;
 volatile u32 gNdsR2MtxDirectFallback;
 volatile u32 gNdsR2MtxDirectVerifyFail;
-/* E10 counts the TraRotRpy branch separately: the two paths reach 20.12 by
- * different arithmetic and a shared counter would hide one refuting while the
- * other passed. */
 volatile u32 gNdsR2MtxDirectRpyCalls;
 volatile u32 gNdsR2MtxDirectRpyFallback;
 volatile u32 gNdsR2MtxDirectRpyVerifyFail;
+#endif
 
 static s32 ndsRendererAdapterRoundShift20p12(s32 value)
 {
@@ -1105,8 +1115,8 @@ static sb32 ndsRendererAdapterBuildFighterPartsMtx(
             if (ndsRendererAdapterF2LDirect20p12(
                     &parts->unk_dobjtrans_0x10, &direct) != FALSE)
             {
-                gNdsR2MtxDirectCalls++;
 #if NDS_R2_FIGHTER_MTX_DIRECT >= 2
+                gNdsR2MtxDirectCalls++;
                 if (ndsRendererAdapterF2LFixedWExact(
                         &parts->unk_dobjtrans_0x10, &mtx) == FALSE)
                 {
@@ -1123,7 +1133,9 @@ static sb32 ndsRendererAdapterBuildFighterPartsMtx(
                 return TRUE;
 #endif
             }
+#if NDS_R2_FIGHTER_MTX_DIRECT >= 2
             gNdsR2MtxDirectFallback++;
+#endif
         }
 #endif
         /* BattleShip lbCommonFighterPartsFuncMatrix quantizes the complete
@@ -1169,8 +1181,8 @@ static sb32 ndsRendererAdapterBuildFighterPartsMtx(
                     dobj->rotate.vec.f.y,
                     dobj->rotate.vec.f.z) != FALSE)
             {
-                gNdsR2MtxDirectRpyCalls++;
 #if NDS_R2_FIGHTER_MTX_DIRECT >= 2
+                gNdsR2MtxDirectRpyCalls++;
                 if (ndsRendererAdapterBuildFighterTraRotRpyExact(
                         &mtx,
                         dobj->translate.vec.f.x,
@@ -1199,7 +1211,9 @@ static sb32 ndsRendererAdapterBuildFighterPartsMtx(
                 return TRUE;
 #endif
             }
+#if NDS_R2_FIGHTER_MTX_DIRECT >= 2
             gNdsR2MtxDirectRpyFallback++;
+#endif
         }
 #endif
         if (ndsRendererAdapterBuildFighterTraRotRpyExact(
@@ -1412,16 +1426,27 @@ static sb32 ndsRendererAdapterBuildDObjXObjMatrix(
     DObj *dobj, XObj *xobj, NDSRendererMatrix20p12 *out)
 {
     Mtx mtx;
-    GCTranslate *translate;
-    GCRotate *rotate;
-    GCScale *scale;
+    GCTranslate *translate = NULL;
+    GCRotate *rotate = NULL;
+    GCScale *scale = NULL;
 
     if ((dobj == NULL) || (xobj == NULL) || (out == NULL))
     {
         return FALSE;
     }
 
-    ndsRendererAdapterGetDObjVectorTracks(dobj, &translate, &rotate, &scale);
+    /* Only the nGCMatrixKindVec* family reads these tracks; every other kind
+     * takes its values straight off the DObj. The gather was unconditional and
+     * walked the DObj's GCDrawVector list on every builder call -- 996
+     * ticks/frame over 340,237 executions in the c106 profile. The family is
+     * contiguous (nGCMatrixKindVecTra = 56 .. nGCMatrixKindVecTraRotRpyRSca =
+     * 63), so the gate is a subtract and a compare. */
+    if (((u32)xobj->kind - (u32)nGCMatrixKindVecTra) <=
+        ((u32)nGCMatrixKindVecTraRotRpyRSca - (u32)nGCMatrixKindVecTra))
+    {
+        ndsRendererAdapterGetDObjVectorTracks(
+            dobj, &translate, &rotate, &scale);
+    }
 
     switch (xobj->kind)
     {
@@ -1769,9 +1794,28 @@ static sb32 ndsRendererAdapterBuildDObjLocalMatrix(
             has_mvp_recalc_rpy_0x47 = TRUE;
             continue;
         }
-        if ((dobj->xobjs[i] != NULL) &&
-            (ndsRendererAdapterBuildDObjXObjMatrix(
-                 dobj, dobj->xobjs[i], &incoming) != FALSE))
+        if (dobj->xobjs[i] == NULL)
+        {
+            continue;
+        }
+        if (valid == FALSE)
+        {
+            /* The first contributing xobj is built straight into `out`. It used
+             * to land in `incoming` and then be copied, and with a mean of one
+             * xobj per DObj that copy was the whole of MulInto's work: 2,266
+             * ticks/frame of ndsRendererMatrixCopy20p12 over 1,060,479
+             * executions in the c106 profile, plus 64 bytes of stack traffic
+             * per call. A FALSE return may leave `out` partly written, which is
+             * harmless -- `valid` stays FALSE and the block below overwrites it
+             * with the identity or the fallback matrix. */
+            if (ndsRendererAdapterBuildDObjXObjMatrix(
+                    dobj, dobj->xobjs[i], out) != FALSE)
+            {
+                valid = TRUE;
+            }
+        }
+        else if (ndsRendererAdapterBuildDObjXObjMatrix(
+                     dobj, dobj->xobjs[i], &incoming) != FALSE)
         {
             ndsRendererAdapterMulInto(out, &incoming, &valid);
         }

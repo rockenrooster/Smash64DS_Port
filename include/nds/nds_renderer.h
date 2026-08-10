@@ -25,6 +25,29 @@
 #error "NDS_SHIP_TELEMETRY and NDS_TICK_HUD must be 0 or 1"
 #endif
 
+/* Per-call frame-summary counters (matrix loads, batch begin/reuse/end,
+ * texture prepare/reuse). At PROFILE_LEVEL 0 each is a read-modify-write on
+ * sNdsRendererRuntimeFrameSummary on every hardware batch and every matrix
+ * load, published once a frame into the gNdsRendererProfile* globals. In the
+ * fighter path alone: matrix load 564, texture prepare 583 + 92 reuse, batch
+ * begin 68 ticks/frame.
+ *
+ * DEFAULT 1, and it must stay 1 unless the gate moves with it. Cycle 110 tried
+ * 0 on the reading that "nothing in the Latest or Boundary registry reads
+ * them" -- verify-all.ps1 -Profile Boundary runs more than its registry rows,
+ * and verify-battle-mariofox-gcrunall-loop-harness.ps1 asserts exact batch and
+ * texture-prepare accounting off precisely these globals. It failed with
+ * "Canonical realtime HW build drifted from exact source-weapon-aware batch
+ * and texture-prepare accounting", which is the assertion doing its job: these
+ * are verification evidence, not leftover instrumentation. ~1,300 ticks/frame
+ * is what that evidence costs. probe-task56-fighter-path.ps1 reads them too.
+ *
+ * The behaviour-bearing counters (hardware_triangles, hardware_vertices,
+ * hardware_over_limit) are NOT gated by this and never should be. */
+#ifndef NDS_RENDERER_FRAME_SUMMARY_COUNTERS
+#define NDS_RENDERER_FRAME_SUMMARY_COUNTERS 1
+#endif
+
 #ifndef NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_RENDERER_M2_DETAILED_LEDGER 0
 #endif

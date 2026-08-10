@@ -1496,31 +1496,206 @@ static void NDS_TASK37_ITCM_CODE ndsFTParamsInvalidateFighterParts(
     }
 }
 
-void ftParamsUpdateFighterPartsTransform(DObj *joint)
-{
-    ndsFTParamsInvalidateFighterParts(joint, TRUE);
-}
+/* ...and c106 measured what ITCM could not fix. 15,815 ticks/frame over
+ * 159,748 joint visits is 86 cycles a joint for two word writes, because every
+ * step is its own cache line: joint->user_data.p, transform_update_mode,
+ * unk_dobjtrans_word, joint->child, child->sib_next. The walk is the cost, not
+ * the writes -- and the topology it walks is immutable. A fighter's DObj tree
+ * is built when the fighter is built; animation moves rotations, not joints.
+ *
+ * So flatten it: preorder the subtree once into an array of FTParts pointers
+ * and replay that array. Same joints, same order, three of the five loads gone
+ * and the recursion with them.
+ *
+ * Validity is (root, gNdsTaskmanHeapGeneration). The generation is bumped at
+ * the two primitives that rewind the taskman heap cursor
+ * (battleship_sys_malloc.c), which is the only way a live fighter tree can be
+ * freed and rebuilt, so a stale list cannot survive a scene rewind or a
+ * START-rematch. Anything the table cannot hold -- a third root thrashing the
+ * two slots, or a subtree deeper than the array -- falls back to the recursive
+ * walk above. Fail-closed: never a partial invalidate.
+ *
+ * Two slots because P1 has two fighters. A third live root costs one rebuild
+ * per call, which is the old walk plus a cheap array pass, not double. */
+#define NDS_FTPARTS_FLAT_SLOTS 2u
+#define NDS_FTPARTS_FLAT_MAX 96u
 
-void ftParamsUpdateFighterPartsTransformAll(DObj *joint)
+typedef struct NDSFtPartsFlatWalk
 {
-    FTParts *parts;
-    DObj *child;
+    const DObj *root;
+    u32 heap_generation;
+    u32 count;
+    FTParts *parts[NDS_FTPARTS_FLAT_MAX];
+} NDSFtPartsFlatWalk;
 
-    if (joint != NULL)
+static NDSFtPartsFlatWalk sNdsFtPartsFlat[NDS_FTPARTS_FLAT_SLOTS];
+
+/* Preorder every joint BELOW `root`. The root is excluded because the two
+ * callers treat it differently -- ...TransformAll resets the root's update mode
+ * and only clears the word on the descendants. Returns capacity + 1 on
+ * overflow so the caller falls back rather than invalidating part of a tree.
+ *
+ * The walk carries its own continuation stack and reads only `child` and
+ * `sib_next`, which is exactly the field set the recursion above uses. An
+ * earlier draft climbed `joint->parent` to find the next sibling and was wrong
+ * for this tree: fighter_model.c sets the top joint's parent to
+ * DOBJ_PARENT_NULL, a non-NULL sentinel, so a climb that ran past `root` would
+ * dereference it. Depth is bounded for the same reason `count` is -- overflow
+ * falls back to the recursion rather than truncating. */
+#define NDS_FTPARTS_FLAT_DEPTH 24u
+
+static u32 ndsFTParamsFlattenDescendants(
+    DObj *root, FTParts **out, u32 capacity)
+{
+    DObj *pending[NDS_FTPARTS_FLAT_DEPTH];
+    u32 depth = 0u;
+    DObj *joint;
+    u32 count = 0u;
+
+    if ((root == NULL) || (root->child == NULL))
     {
-        parts = joint->user_data.p;
+        return 0u;
+    }
+    joint = root->child;
+    for (;;)
+    {
+        FTParts *parts = joint->user_data.p;
+
         if (parts != NULL)
         {
+            if (count >= capacity)
+            {
+                return capacity + 1u;
+            }
+            out[count] = parts;
+            count++;
+        }
+        if (joint->child != NULL)
+        {
+            if (joint->sib_next != NULL)
+            {
+                if (depth >= NDS_FTPARTS_FLAT_DEPTH)
+                {
+                    return capacity + 1u;
+                }
+                pending[depth] = joint->sib_next;
+                depth++;
+            }
+            joint = joint->child;
+            continue;
+        }
+        if (joint->sib_next != NULL)
+        {
+            joint = joint->sib_next;
+            continue;
+        }
+        if (depth == 0u)
+        {
+            return count;
+        }
+        depth--;
+        joint = pending[depth];
+    }
+}
+
+static const NDSFtPartsFlatWalk *ndsFTParamsFlatWalkFor(DObj *root)
+{
+    NDSFtPartsFlatWalk *flat =
+        &sNdsFtPartsFlat[((u32)(uintptr_t)root >> 4) &
+                         (NDS_FTPARTS_FLAT_SLOTS - 1u)];
+    u32 count;
+
+    if ((flat->root == root) &&
+        (flat->heap_generation == gNdsTaskmanHeapGeneration))
+    {
+        return flat;
+    }
+    count = ndsFTParamsFlattenDescendants(
+        root, flat->parts, NDS_FTPARTS_FLAT_MAX);
+    if (count > NDS_FTPARTS_FLAT_MAX)
+    {
+        flat->root = NULL;
+        return NULL;
+    }
+    flat->root = root;
+    flat->heap_generation = gNdsTaskmanHeapGeneration;
+    flat->count = count;
+    return flat;
+}
+
+static void NDS_TASK37_ITCM_CODE ndsFTParamsInvalidateRootParts(
+    DObj *root, sb32 reset_mode)
+{
+    FTParts *parts = (root != NULL) ? root->user_data.p : NULL;
+
+    if (parts != NULL)
+    {
+        if ((reset_mode != FALSE) && (parts->transform_update_mode == 1))
+        {
+            parts->transform_update_mode = 0;
+        }
+        parts->unk_dobjtrans_word = 0;
+    }
+}
+
+static void NDS_TASK37_ITCM_CODE ndsFTParamsInvalidateFlatParts(
+    const NDSFtPartsFlatWalk *flat, sb32 reset_mode)
+{
+    u32 i;
+
+    if (reset_mode != FALSE)
+    {
+        for (i = 0u; i < flat->count; i++)
+        {
+            FTParts *parts = flat->parts[i];
+
             if (parts->transform_update_mode == 1)
             {
                 parts->transform_update_mode = 0;
             }
             parts->unk_dobjtrans_word = 0;
         }
-        for (child = joint->child; child != NULL; child = child->sib_next)
-        {
-            ndsFTParamsInvalidateFighterParts(child, FALSE);
-        }
+        return;
+    }
+    for (i = 0u; i < flat->count; i++)
+    {
+        flat->parts[i]->unk_dobjtrans_word = 0;
+    }
+}
+
+static void ndsFTParamsInvalidateSubtree(DObj *root, sb32 reset_mode)
+{
+    const NDSFtPartsFlatWalk *flat;
+    DObj *child;
+
+    flat = ndsFTParamsFlatWalkFor(root);
+    if (flat != NULL)
+    {
+        ndsFTParamsInvalidateFlatParts(flat, reset_mode);
+        return;
+    }
+    for (child = root->child; child != NULL; child = child->sib_next)
+    {
+        ndsFTParamsInvalidateFighterParts(child, reset_mode);
+    }
+}
+
+void ftParamsUpdateFighterPartsTransform(DObj *joint)
+{
+    if (joint == NULL)
+    {
+        return;
+    }
+    ndsFTParamsInvalidateRootParts(joint, TRUE);
+    ndsFTParamsInvalidateSubtree(joint, TRUE);
+}
+
+void ftParamsUpdateFighterPartsTransformAll(DObj *joint)
+{
+    if (joint != NULL)
+    {
+        ndsFTParamsInvalidateRootParts(joint, TRUE);
+        ndsFTParamsInvalidateSubtree(joint, FALSE);
     }
     if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
         (sNdsFighterDashRunGuardOnActive != FALSE))
