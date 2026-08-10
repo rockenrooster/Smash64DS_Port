@@ -53,6 +53,53 @@ extern void ndsBaseGcSetupObjman(GCSetup *setup);
  * walking it at the raised one would run off the end. Every shipped setup
  * passes `gobjthreadstacks_num == 0` already, which makes gcGetGObjStackOfSize
  * grow the pool from the arena on demand -- the path this keeps. */
+/* Cycle 109: give the AObj free list the contiguous block BattleShip already
+ * asks for, and that nothing has ever supplied.
+ *
+ * `gcSetupObjman` threads `setup->aobjs[0 .. aobjs_num-1]` into `sGCAnimHead`
+ * in ascending address order (objman.c:2462-2475) -- the same pooling the
+ * comment above describes for GObj thread stacks. `aobjs_num` is **zero in
+ * every scene**: an `rg` over `src/`, `sc/` and `vs/` finds no writer at all.
+ * So `sGCAnimHead` starts NULL and `gcGetAObjSetNextAlloc` takes its
+ * one-AObj-at-a-time fallback (objman.c:640-645), meaning every AObj in the
+ * game is an individual 36-byte `syTaskmanMalloc` interleaved with everything
+ * else the scene allocates.
+ *
+ * That scatter is the measured top cost in BOTH hot animation functions. Per
+ * the cycle-106 whole-match profile, walking the resulting linked list costs
+ * `aobj->kind` **24.1 cyc/ex over 143,916 executions = 20.9% of
+ * `gcPlayDObjAnimJoint`**, and `aobj->track` **29.6 cyc/ex = 6.7% of
+ * `ftAnimParseDObjFigatree`** -- about 6.2M cycles of pointer chasing between
+ * them, on a machine whose non-idle CPI is 2.85. 143,916 visits over ~400
+ * census regions is ~360 live AObj; at 36 bytes that is 12,960 bytes against a
+ * 4 KB D-cache, so the set can never be resident and each scattered node is a
+ * fresh miss. Contiguity cannot make it resident either, but 36-byte nodes in
+ * ascending order share 32-byte lines, so a sequential walk stops paying two
+ * lines per node.
+ *
+ * This changes no struct, no data format and no arithmetic -- allocation
+ * locality only, so behavior is bit-identical.
+ *
+ * Heap cost is roughly neutral by construction: it replaces ~360 individual
+ * 36-byte allocations (each carrying allocator overhead) with one block of the
+ * same count. Undersizing is safe and degrades exactly to today's behavior --
+ * `gcGetAObjSetNextAlloc` still mallocs a single AObj when the list runs dry --
+ * so the count below is sized from a real run rather than from this estimate.
+ * `ndsR2AObjLiveCount()` returns decomp's own `sGCAnimsActiveNum`, so sampling
+ * it at ring stops gives the live peak with no hot-path code and no new bytes
+ * on the traversal itself -- 512 is the starting guess against ~360 observed,
+ * and it should be trimmed to the measured peak plus margin. */
+#define NDS_R2_AOBJ_POOL_COUNT 512
+
+u32 gNdsR2AObjPoolCount;
+u32 gNdsR2AObjPoolBytes;
+u32 gNdsR2AObjPoolDeclines;
+
+u32 ndsR2AObjLiveCount(void)
+{
+    return sGCAnimsActiveNum;
+}
+
 void gcSetupObjman(GCSetup *setup)
 {
     GCSetup ds_setup = *setup;
@@ -63,6 +110,29 @@ void gcSetupObjman(GCSetup *setup)
         ds_setup.gobjthreadstack_size = (needed + 7u) & ~(size_t)7u;
         ds_setup.gobjthreadstacks = NULL;
         ds_setup.gobjthreadstacks_num = 0;
+    }
+    if (ds_setup.aobjs_num == 0)
+    {
+        /* Re-carved every setup, deliberately. The arena is reset between
+         * scenes, so a block cached across one would dangle -- this mirrors how
+         * the stack pool is handled rather than holding a static pointer. */
+        AObj *block = syTaskmanMalloc(
+            sizeof(AObj) * (size_t)NDS_R2_AOBJ_POOL_COUNT, 0x4);
+
+        if (block != NULL)
+        {
+            ds_setup.aobjs = block;
+            ds_setup.aobjs_num = NDS_R2_AOBJ_POOL_COUNT;
+            gNdsR2AObjPoolCount = NDS_R2_AOBJ_POOL_COUNT;
+            gNdsR2AObjPoolBytes =
+                (u32)(sizeof(AObj) * (size_t)NDS_R2_AOBJ_POOL_COUNT);
+        }
+        else
+        {
+            /* Arena too tight for the block: leave the scene exactly as it was
+             * and let the per-AObj fallback run. Never a boot failure. */
+            gNdsR2AObjPoolDeclines++;
+        }
     }
     ndsBaseGcSetupObjman(&ds_setup);
 }

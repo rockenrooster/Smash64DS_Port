@@ -2270,6 +2270,82 @@ every noise floor.**
 **Do the free `SINT`/`SPHD`/`SHDT`/`SCPU` split first** — it costs no build and
 those three are ~79.7K of over-gate discriminator, which can reorder this queue.
 
+### Over-gate split: animation is the largest REAL discriminator (cycle 109)
+
+Ran the free over-gate split off the existing census. **The raw ranking's #1 row
+is the measuring instrument** — `ndsPlatformRenderDebugHud` 40,955 plus
+`_svfiprintf_r`, `_vfiprintf_r`, `__ssvfiscanf_r`, `consolePrintChar`,
+`__utf8_mbtowc` = **72,733 of 437,886, i.e. 16.6%**. `WORK-H` already subtracts
+it, but anyone reading the census split directly will rank the tick HUD first.
+Real discrimination is **365,153 cycles/region**:
+
+| class | delta/region | % real |
+|---|---:|---:|
+| **animation lane** (incl. soft-float share) | **72,638** | **19.9%** |
+| asset load | 51,789 | 14.2% |
+| effects/renderer | 21,489 | 5.9% |
+| `ndsFTParamsInvalidateFighterParts` | 6,563 | 1.8% |
+| collision | 5,134 | 1.4% |
+
+Animation is the largest class; asset load is second and partly taken already by
+cycle 108's prebake, which postdates this profile. `SPHD`/`SHDT`/`SCPU` do not
+appear as distinct symbol classes — their bucket deltas spread across collision
+and soft float, neither competitive. **The split confirms the queue rather than
+reordering it.** Independent agreement worth noting, not proof: the invalidate
+walk reads 6,563 here against the 6,560/frame derived from its cycle share.
+
+### Parser AOT slice: the format is compilable, but the win is not where it looked
+
+Traced the whole `event16` stream. It is a u16 word stream —
+`opcode:5, flags:10, toggle:1`, then an optional u16 duration, then one s16 per
+set flag bit (`AObjAnimAdvance` is `p++`). Two things follow.
+
+**The stream is already the compact fixed-point representation.**
+`ftAnimGetTargetValue` just multiplies the s16 by a power-of-two frac
+(`1/512` rotation, `1/4` translation, `1/4096` scale, and two non-power-of-two
+`1/16384 - 3e-12` entries for `TraI`). Compiling to f32 records would make the
+stream **2x bigger** — 20 bytes against 10 for a 3-track command — which on a
+memory-bound ARM9 is a likely net loss. **The win is the conversion boundary and
+the AObj layout, not a new file format.** Priced from the profile, the parser's
+7,931,031 cycles of soft float are: `fcmpeq` 921,383 · `fsub` 1,753,743 ·
+`i2f` 796,253 · `fadd` 1,454,187 · `fmul` 920,213 · `fcmpgt` 385,779 ·
+`fcmple` 204,854 · `fdiv` **1,494,619 at 109.4 cycles a call**, the most
+expensive helper in the build by 3x, on `1.0F / payload` where **payload is a
+u16 frame count** — i.e. a reciprocal table hits every time.
+
+**The parser's #2 hot load is the same AObj walk as the evaluator's #1.**
+`ldrb r2,[r2,#4]` is `aobj->track` in the `track_aobjs[]` gather (29.6 cyc/ex),
+mirroring `ldrb r4,[r4,#5]` = `aobj->kind` (24.1). **~6.2M of pointer chasing
+across the two functions, one root cause.**
+
+**Root cause found and first piece landed.** `gcSetupObjman` threads
+`setup->aobjs[0..n-1]` into `sGCAnimHead` in ascending address order
+(`objman.c:2462-2475`) — and **`aobjs_num` is zero in every scene**; `rg` over
+`src/`, `sc/` and `vs/` finds no writer anywhere. So `sGCAnimHead` starts NULL
+and every AObj in the game is an individual 36-byte `syTaskmanMalloc`
+(`objman.c:640-645`) interleaved with everything else the scene allocates.
+`battleship_sys_objman.c` now fills that seam with one contiguous block —
+the same pooling the file already documents for GObj thread stacks, re-carved
+per setup because the arena resets between scenes, declining safely to today's
+behavior if the arena is tight. **No struct, format or arithmetic changes:
+allocation locality only, so behavior is bit-identical.** Built green,
+`check-boot-headroom` 33,216 proven.
+
+**It cannot be measured alone, and neither can any other single piece.**
+Estimated ~2,800 ticks/frame against a cross-build P95 floor of 14,080; and
+**standing rule 7's runtime route does not apply here** — the seam runs at scene
+setup, before the first frame-complete marker where `-SetGlobals` pokes, so
+there is no one-binary A/B for it. Every piece of this lane is 1,500–7,800
+individually. **Bundle them and measure once**, per the "clear ~16,000 in one
+change" rule: AObj pool (~2,800) · comparisons through the proven
+`nds_fcmp.h` (~1,500 parser + evaluator share) · `ftAnimGetTargetValue` by
+integer bit assembly, exact for the six power-of-two tracks and needing
+`target("arm")` because Thumb-1 has no `CLZ` (~1,240) · reciprocal table for
+`1.0F/payload` (~1,430) · the evaluator's conversion boundary and inlining its
+10-register `push`/`pop` (~2,000–7,800). Verify the AObj sites with
+`analyze-dcache-stalls.py`, not with ticks — the mechanism check is immune to
+the placement floor.
+
 ### The DMA spin is GEOMETRY SUBMISSION, not a free win (cycle 108)
 
 Followed up the census's largest site and it is **not** the clean win it looked
