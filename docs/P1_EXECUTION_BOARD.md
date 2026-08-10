@@ -4194,6 +4194,65 @@ the 2026-07 attempt never made.
 "next: <300K" target is met, and it is met on a DS-native AOT primitive stream
 rather than on deletions.
 
+### Requirement 4 is sized and designed: the cubic evaluator is 80% float boundary
+
+**The animation lane is 107,870 tk/fr named by symbol** (c115 census, tick factor
+0.4993, 1,250 frames) -- larger than the whole fighter emit was before strips:
+
+| symbol | tk/fr | insns/frame | cyc/insn |
+|---|---:|---:|---:|
+| `ndsR2CubicValueFixed` | **31,708** | **38,956** | 1.63 |
+| `gcPlayDObjAnimJoint` | 24,788 | 17,651 | 2.81 |
+| `ndsR2FtAnimParseDObjFigatree` | 19,230 | 10,810 | 3.56 |
+| `gcPlayAnimAll` | 10,589 | 5,333 | 3.98 |
+| `ftParamUpdateAnimKeys` | 8,881 | 4,944 | 3.60 |
+| `ndsBaseGcPlayMObjMatAnim` | 7,201 | 4,955 | 2.91 |
+| others | 5,473 | | |
+
+**`ndsR2CubicValueFixed` executes 38,956 instructions a frame over ~234
+evaluations -- 166 instructions per cubic.** A Hermite evaluation is about a
+dozen multiply-accumulates. The rest is the float boundary the kernel was never
+allowed to cross: **six inlined `ndsR2F32ToFixed`, one float multiply, one
+`ndsR2FixedToF32`**, every evaluation, on values that started life as `s16` with
+power-of-two scales in the figatree. Its 1.63 cyc/insn says this is not a stall
+problem -- it is *instruction count*, and the instructions are format
+conversion.
+
+Independent confirmation, already in the tree and read for the first time this
+cycle: `artifacts/performance/2026-08-09_c106-profile/softfloat-attribution.json`
+attributes **25.1M of 87.5M soft-float cycles to animation evaluation** --
+`ftAnimParseDObjFigatree` 7.9M, `gcPlayDObjAnimJoint` 6.7M, `gcPlayMObjMatAnim`
+4.5M, `ndsR2CubicValueFixed` 2.5M, `ndsBaseGcPlayDObjAnimJoint` 1.9M.
+
+**The design that does not add a cache and does not fork the struct.**
+`FIXEDPOINT_ANIMATION.md` is right that `AObj` is the problem and right that the
+fighter path must not drag material, camera, stage and effect animation with it.
+The cheap way to get both: **discriminate on the `kind` field the evaluator
+already switches on.** Add Q-format kinds (`nGCAnimKindCubicQ` and friends); the
+fighter parser emits them with Q12/Q16 values written straight from the source
+`s16` by shift; the evaluator gains fixed Step/Linear/Cubic arms. Non-fighter
+AObjs keep the float kinds and the decomp's own expressions, bit-identical.
+
+That is zero new state, zero new struct, zero parallel array, and one more case
+in a switch that already exists -- "replace, don't coexist", scoped to fighters,
+exactly as the requirement words it. What it deletes per node per frame:
+
+| today | after |
+|---|---|
+| `aobj->length += speed` (`__aeabi_fadd`) | integer add on a Q16 clock |
+| `length * length_invert` + convert | integer multiply, or a precomputed phase step |
+| six `ndsR2F32ToFixed` | nothing -- the fields are already Q12 |
+| one `ndsR2FixedToF32` | **stays**, the temporary boundary for `DObj`'s float pose |
+| Linear's `fmul` + `fadd` | integer multiply-add |
+| Step's `__aeabi_fcmple` | integer compare |
+
+**Constraints that must survive the rewrite**, from earlier cycles: the phase is
+`frame * step`, never accumulated (it drives hitboxes); the arena is contiguous,
+not linked; `check_r2_cubic_error_bound.py` bounds the result (0.0028 rad /
+0.0067 world units today) and must be re-run against the new kernel; and
+`ndsR2CubicValueFixed` must stay `target("arm")` for SMULL --
+[[thumb-hides-64bit-cost]] cost +36,032 P95 once already.
+
 ### The `.data` route WORKS — first attributable animation measurement (cycle 109)
 
 Built the standing-rule-7 route the determinism finding demanded.
