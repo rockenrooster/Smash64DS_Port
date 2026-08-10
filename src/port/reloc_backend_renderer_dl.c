@@ -12666,18 +12666,28 @@ static void ndsFighterCollectAllDObjsWithDLRecursive(
     }
 }
 
+/* Four pointers, 16 bytes, and nothing else.
+ *
+ * This used to carry the render preamble too -- geometry mode, cycle type,
+ * render mode, prim and env colour, the Light and its valid flag -- which made
+ * it 56 bytes and put its two halves on different cache lines. The halves have
+ * opposite access patterns: the pointers are read by three tight per-root loops
+ * in the same pass that walks the collection, while the preamble is read once
+ * per root by ndsRendererAdapterBuildNativeProductionInputs, a pass later,
+ * after the matrix and material work has evicted it. c106 priced that eviction
+ * at 2,966 ticks/frame on `root->preamble.geometry_mode = event->geometry_mode`
+ * and 1,759 on `if (event->light_valid)`: ~110 cycles an event of pure miss.
+ *
+ * So the preamble moved to its own array, in the consumer's own struct layout,
+ * written by the producer. 32 events is 512 bytes of pointers plus 768 of
+ * preamble instead of 1,792 bytes interleaved, and the consumer's read is one
+ * 24-byte struct copy out of a dense array rather than a field-by-field gather
+ * across two cold lines. */
 typedef struct NDSFighterDisplayContractEvent {
     DObj *dobj;
     DObj *matrix_dobj;
     DObj *material_dobj;
     const Gfx *dl;
-    u32 geometry_mode;
-    u32 cycle_type;
-    u32 render_mode;
-    u32 prim_color;
-    u32 env_color;
-    Light light;
-    u32 light_valid;
 } NDSFighterDisplayContractEvent;
 
 #define NDS_FIGHTER_DISPLAY_CYCLETYPE_MASK (3u << 20)
@@ -12707,6 +12717,9 @@ typedef struct NDSFighterDisplayContract {
 } NDSFighterDisplayContract;
 
 static NDSFighterDisplayContract sNdsFighterDisplayContract;
+/* Parallel to sNdsFighterDisplayContract.events, in the consumer's layout. */
+static NDSRendererNativeFighterPreamble sNdsFighterDisplayContractPreambles[
+    NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED];
 static sb32 sNdsFighterDisplayContractPlayback;
 static u32 sNdsFighterDisplayContractLastFrame[2] = {
     0xffffffffu, 0xffffffffu
@@ -12897,18 +12910,45 @@ void ndsFighterDisplayContractSelectDL(const Gfx *dl)
     event->material_dobj =
         (sNdsFighterDisplayContract.material_ready != 0u) ?
             sNdsFighterDisplayContract.material_dobj : NULL;
-    event->geometry_mode = sNdsFighterDisplayContract.geometry_mode;
-    event->cycle_type = sNdsFighterDisplayContract.cycle_type;
-    event->render_mode = sNdsFighterDisplayContract.render_mode;
-    event->prim_color = sNdsFighterDisplayContract.prim_color;
-    event->env_color = sNdsFighterDisplayContract.env_color;
-    event->light = sNdsFighterDisplayContract.light;
-    event->light_valid = sNdsFighterDisplayContract.light_valid;
-    if (gNdsFighterDisplayContractSelectedCount == 0u)
     {
-        /* ftdisplaymain.c:1176-1178 establishes the normal fighter preamble. */
-        gNdsFighterDisplayContractCycleType = event->cycle_type;
-        gNdsFighterDisplayContractRenderMode = event->render_mode;
+        /* Built here in the consumer's layout, including the flags word the
+         * two build sites used to derive. Identical arithmetic, one pass
+         * earlier, into a line that is hot because we just wrote the event. */
+        NDSRendererNativeFighterPreamble *preamble =
+            &sNdsFighterDisplayContractPreambles[
+                sNdsFighterDisplayContract.event_count - 1u];
+        u32 flags = NDS_RENDERER_NATIVE_PREAMBLE_VALID;
+
+        preamble->geometry_mode = sNdsFighterDisplayContract.geometry_mode;
+        preamble->cycle_type = sNdsFighterDisplayContract.cycle_type;
+        preamble->render_mode = sNdsFighterDisplayContract.render_mode;
+        preamble->prim_color = sNdsFighterDisplayContract.prim_color;
+        preamble->env_color = sNdsFighterDisplayContract.env_color;
+        if (sNdsFighterDisplayContract.light_valid != 0u)
+        {
+            preamble->light_dir_x =
+                sNdsFighterDisplayContract.light.l.dir[0];
+            preamble->light_dir_y =
+                sNdsFighterDisplayContract.light.l.dir[1];
+            preamble->light_dir_z =
+                sNdsFighterDisplayContract.light.l.dir[2];
+            flags |= NDS_RENDERER_NATIVE_PREAMBLE_LIGHT_VALID;
+        }
+        else
+        {
+            /* An invalid light has to clear these itself or a previous
+             * frame's direction survives behind a cleared valid bit. */
+            preamble->light_dir_x = 0;
+            preamble->light_dir_y = 0;
+            preamble->light_dir_z = 0;
+        }
+        preamble->flags = (u8)flags;
+        if (gNdsFighterDisplayContractSelectedCount == 0u)
+        {
+            /* ftdisplaymain.c:1176-1178 establishes the normal preamble. */
+            gNdsFighterDisplayContractCycleType = preamble->cycle_type;
+            gNdsFighterDisplayContractRenderMode = preamble->render_mode;
+        }
     }
     if (event->dobj == NULL)
     {
@@ -13375,8 +13415,9 @@ static sb32 ndsRendererAdapterBuildNativeProductionInputs(
 
         config->initial_projection = projection;
         config->initial_modelview = modelviews[i];
-        config->initial_geometry_mode =
-            (event != NULL) ? event->geometry_mode : 0u;
+        config->initial_geometry_mode = (event != NULL) ?
+            sNdsFighterDisplayContractPreambles[
+                collection->indices[i]].geometry_mode : 0u;
         config->color_modulate = color_modulate;
         config->user = resolver;
 
@@ -13434,30 +13475,8 @@ static sb32 ndsRendererAdapterBuildNativeProductionInputs(
 
         if (event != NULL)
         {
-            u32 flags = NDS_RENDERER_NATIVE_PREAMBLE_VALID;
-
-            root->preamble.geometry_mode = event->geometry_mode;
-            root->preamble.cycle_type = event->cycle_type;
-            root->preamble.render_mode = event->render_mode;
-            root->preamble.prim_color = event->prim_color;
-            root->preamble.env_color = event->env_color;
-            if (event->light_valid != 0u)
-            {
-                root->preamble.light_dir_x = event->light.l.dir[0];
-                root->preamble.light_dir_y = event->light.l.dir[1];
-                root->preamble.light_dir_z = event->light.l.dir[2];
-                flags |= NDS_RENDERER_NATIVE_PREAMBLE_LIGHT_VALID;
-            }
-            else
-            {
-                /* The per-frame zeroing that used to leave these at 0 is gone,
-                 * so an invalid light has to clear them itself or a previous
-                 * frame's direction survives behind a cleared valid bit. */
-                root->preamble.light_dir_x = 0;
-                root->preamble.light_dir_y = 0;
-                root->preamble.light_dir_z = 0;
-            }
-            root->preamble.flags = (u8)flags;
+            root->preamble =
+                sNdsFighterDisplayContractPreambles[collection->indices[i]];
         }
         else
         {
@@ -13531,20 +13550,8 @@ static sb32 ndsRendererAdapterBuildNativeHierarchyInputs(
         root->config = config;
         if (event != NULL)
         {
-            root->preamble.geometry_mode = event->geometry_mode;
-            root->preamble.cycle_type = event->cycle_type;
-            root->preamble.render_mode = event->render_mode;
-            root->preamble.prim_color = event->prim_color;
-            root->preamble.env_color = event->env_color;
-            root->preamble.flags = NDS_RENDERER_NATIVE_PREAMBLE_VALID;
-            if (event->light_valid != 0u)
-            {
-                root->preamble.light_dir_x = event->light.l.dir[0];
-                root->preamble.light_dir_y = event->light.l.dir[1];
-                root->preamble.light_dir_z = event->light.l.dir[2];
-                root->preamble.flags |=
-                    NDS_RENDERER_NATIVE_PREAMBLE_LIGHT_VALID;
-            }
+            root->preamble =
+                sNdsFighterDisplayContractPreambles[collection->indices[i]];
         }
     }
     workspace->hierarchy.roots = workspace->production_roots;
@@ -15491,25 +15498,29 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
         current_state->slot = slot;
         if (contract_event != NULL)
         {
+            const NDSRendererNativeFighterPreamble *contract_preamble =
+                &sNdsFighterDisplayContractPreambles[collection.indices[i]];
+
             persistent_stats.geometry_mode =
 #if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
                 (native_root_enabled != FALSE) ?
                     ndsRendererAdapterNormalizeNativeGeometryMode(
-                        contract_event->geometry_mode) :
+                        contract_preamble->geometry_mode) :
 #endif
-                    contract_event->geometry_mode;
+                    contract_preamble->geometry_mode;
             persistent_stats.othermode_h =
                 (persistent_stats.othermode_h &
                  ~NDS_FIGHTER_DISPLAY_CYCLETYPE_MASK) |
-                contract_event->cycle_type;
-            persistent_stats.othermode_l = contract_event->render_mode;
-            persistent_stats.prim_color = contract_event->prim_color;
-            persistent_stats.env_color = contract_event->env_color;
-            if (contract_event->light_valid != 0u)
+                contract_preamble->cycle_type;
+            persistent_stats.othermode_l = contract_preamble->render_mode;
+            persistent_stats.prim_color = contract_preamble->prim_color;
+            persistent_stats.env_color = contract_preamble->env_color;
+            if ((contract_preamble->flags &
+                 NDS_RENDERER_NATIVE_PREAMBLE_LIGHT_VALID) != 0u)
             {
-                persistent_stats.light_dir_x = contract_event->light.l.dir[0];
-                persistent_stats.light_dir_y = contract_event->light.l.dir[1];
-                persistent_stats.light_dir_z = contract_event->light.l.dir[2];
+                persistent_stats.light_dir_x = contract_preamble->light_dir_x;
+                persistent_stats.light_dir_y = contract_preamble->light_dir_y;
+                persistent_stats.light_dir_z = contract_preamble->light_dir_z;
                 persistent_stats.light_dir_mask = 1u;
             }
         }
@@ -15625,7 +15636,8 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
         config.initial_modelview = initial_modelview_ptr;
         config.initial_geometry_mode =
             (sNdsFighterDisplayContractPlayback != FALSE) ?
-                contract_event->geometry_mode : 0u;
+                sNdsFighterDisplayContractPreambles[
+                    collection.indices[i]].geometry_mode : 0u;
         config.color_modulate = color_modulate;
 #if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
         if (native_root_enabled != FALSE)
