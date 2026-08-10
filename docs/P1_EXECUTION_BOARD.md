@@ -3457,6 +3457,55 @@ and routes "fixed pose -> fixed local matrix" to stage 2 **gated on profiling
 justifying it**. The 62-site count is the beginning of that justification, not the
 end of it — the counter is.
 
+### Both architectures, quantified: 307K against a ~290K gap
+
+With the conversion fixed (`%tot x 1.2378 -> x frame budget`, idle removed first),
+the two re-opened architectures size up as follows. This is the accounting that
+was missing every time I called a lane closed.
+
+| lane | ticks/frame | composition |
+|---|---:|---|
+| **FTR fighter draw** | **230,930** | matrix 84,051 · prepare 61,432 · emit 43,282 · replay 30,577 · material 11,588 |
+| **animation** | **75,953** | cubic 22,339 · play 19,128 · parse 18,709 · invalidate 15,777 |
+| **combined** | **~307,000** | vs a ~290,000 gap from `WORK-H` P95 to the gate |
+
+**Independent agreement, worth more than either number alone:** the animation
+figure derived from census percentages is **75,953**, and the board's over-gate
+split derived **72,638 cycles/region** for the animation class by a completely
+different route. Within 5%. That cross-check is what makes the corrected
+conversion trustworthy rather than merely arithmetic.
+
+**So the two plans are right and my refutations were sizing errors.** Together
+these lanes are the whole gap. Neither is a micro-optimisation lane; both are
+architecture, exactly as `FTR_STG_OPTIMIZATION.md` and `FIXEDPOINT_ANIMATION.md`
+say.
+
+**One more retraction rides on this.** `ndsFTParamsInvalidateFighterParts` was
+retired at "~6,560 ticks/frame"; corrected it is **15,777**. The *mechanism*
+refutation stands — the dead `FTParts` pool cannot reach loads that are `DObj`
+fields — but the size was under-read like everything else on this lane, and at
+15,777 a preorder-flattened subtree sweep is worth revisiting on its own.
+
+**The AOT half of FTR already exists and is not the problem.**
+`src/nds/nds_native_fighter_owner.generated.inc` is **408 KB** of build-time IR:
+`sNdsNativeFighterDenseVertices[541]`, `PackedCorners[1878]`,
+`RunFirstCorner[67]`, `sNdsNativeMarioJointSchedule[25]`,
+`sNdsNativeMarioBindingParents/Joints[14]`, and `sNdsNativeMarioFifoWords[4034]`,
+emitted by `scripts/fighters/generate_nds_native_owners.py` (3,187 lines) through
+`build.ps1`'s `generate-native-fighters`. **So "fighter asset at build time" is
+done.** The 230,930 is what the runtime still does *on top of* that IR — which
+means the replacement target is the runtime owner path, not a new generator.
+
+**Where the 84,051 matrix group actually goes** (six symbols, ~50 builder calls a
+frame): `BuildDObjLocalMatrix` 18,290 · `LoadHardwareSplitMatrices` 15,218 ·
+`MtxMulAffine20p12` 14,939 · `BuildDObjWorldMatrix` 13,962 ·
+`BuildFighterTraRotRpyDirect20p12` 11,868 · `MtxMul20p12` 9,773. That is a
+per-joint local-build then compose-to-world then load-to-hardware chain walked off
+the live `DObj` tree every frame — while `BindingParents` and `JointSchedule` are
+already baked in the IR above. **This is the single largest addressable group in
+the milestone and it is where the two plans meet:** a fixed-point pose feeding a
+baked parent-chain compose deletes both the float boundary and the tree walk.
+
 ### RETRACTION: FTR is NOT closed. I mixed two instruments and under-read it 2.36x
 
 The owner re-opened FTR as an architectural replacement and told me to stop trying
