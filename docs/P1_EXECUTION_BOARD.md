@@ -2495,7 +2495,41 @@ Cut G's GO-text state, not on arbitrary battle frames. For an ordinary visual
 A/B use the delay-based capture, or qualify through the Boundary verifier, which
 produces `artifacts/visibility/latest.png` plus its regional analysis.
 
-### REVERTED: the fused `f32 x f32 -> Q16` hangs the ROM, and the host bound missed it
+### RETRACTED: the fused-multiply "hang" bisect was not controlled
+
+The section below concludes the fused multiply hangs the ROM, on the strength of
+*red with it, green without it*. **That inference is withdrawn.** Later the same
+night the **identical reverted tree failed too** — same `GDB marker capture
+timed out after 30 seconds`, stalled in `memcpy()` instead of
+`__syscall_lock_acquire`. A tree that passed twice and then failed cannot be the
+control in a bisect.
+
+**Why the "same tree" was not the same binary.** `NDS_TASK10_GIT_SHORT` is
+compiled in (`nds_build_config.h`), so **every commit changes the ROM image**.
+The passing runs were at `189cd20680`, the failing re-test at `5b6cb20aa3`; the
+sources matched but the binaries did not, and this ROM's pacing is
+placement-sensitive — which is the whole reason standing rule 7 exists. Four
+Boundary runs spanning three commits are four different binaries.
+
+**The failure signature says timeout, not hang.** The budget is a fixed 30 s,
+the stall PC differs every time (`__syscall_lock_acquire`, then `memcpy`), and
+the last failure had already printed the full marker dump before expiring. That
+is a run finishing late, not a lock-up. No leaked `melonDS`/`gdb` processes and
+1% CPU at the time, so idle-machine load does not explain it either.
+
+**Consequences.** The fused multiply (1,524,849 cycles) is **unproven, not
+disproven** — it may be perfectly correct. The loop-invariant hoist below is
+equally unverified. **Neither is in the tree**; HEAD is the last state with a
+recorded pass, and the hoist is parked in the session scratchpad as
+`objanim.hoist.c`.
+
+**Before either is retried, Boundary needs to be trustworthy again.** Establish
+how often it passes on one *unchanged binary* (not one unchanged tree), and
+raise the 30 s marker budget or find what made it marginal. Judging a
+performance change on a harness with an unmeasured flake rate is how tonight
+produced a confident, wrong verdict.
+
+### The fused `f32 x f32 -> Q16` attempt (verdict retracted above)
 
 Attempted the last cut that does not need the representation change — replacing
 `ndsR2F32ToFixed(length * length_invert, BF)` with one integer multiply of the
