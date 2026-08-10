@@ -3457,6 +3457,49 @@ and routes "fixed pose -> fixed local matrix" to stage 2 **gated on profiling
 justifying it**. The 62-site count is the beginning of that justification, not the
 end of it — the counter is.
 
+### The free step is taken: the last live FTR seam is 7,766 ticks/frame, not a lever
+
+Took the per-PC/census attribution (no build, no run) on
+`ndsRendererAdapterBuildDObjLocalMatrix`, joined against the 101,569 calls the arm
+counter measured. That closes the FTR pre-submission half with a number.
+
+| quantity | value |
+|---|---:|
+| inclusive cycles, whole match | **15,826,891 (1.31% of non-idle)** |
+| calls (runtime counter) | 101,569 |
+| **cycles per call** | **155.8** |
+| self cycles | 3,067,306 (30.2/call) |
+| **inclusive per presented frame** | **7,766** |
+| **self per presented frame** | **1,505** |
+| cyc/insn | 2.65 (non-idle is 2.85 — NOT a stall outlier) |
+| text | 2,980 bytes |
+
+**Verdict: not a lever.** Deleting this function's entire self time buys ~1,505
+ticks/frame, under the placement term; even its whole inclusive cost is 7,766
+against a ~290,000 gap. The 62 static soft-float sites that made it look like the
+parser's twin resolve to **155.8 cycles a call**, and its fallback arm — which is
+where the 36 `fmul` looked like they lived — executes **zero** times.
+
+**So the FTR half of `FTR_STG_OPTIMIZATION.md` is closed, seam by seam, each with a
+number:** walk baked, validate 99.95% cached, reset dead, resolve elided, material
+lookups 30,385/match, local matrix 7,766/frame inclusive. That is consistent with
+`FTR` separating the over/under-gate populations by only **+13,768** and with the
+plan's own closing lines, which scope FTR/STG as permanent headroom rather than
+the P95 lever. The plan's architecture (build-time draw program → immutable
+topology → fixed pose → patch dynamic → direct GX) is not refuted; what is
+refuted is that any *remaining individual seam* in it pays measurably. It is a
+multi-cycle rewrite whose payoff is the sum, and the plan warns the last attempt
+at that shape regressed **+124K**.
+
+**METHOD CAUTION, and I nearly shipped it wrong.** The census's third numeric
+column is **bytes**, not call count. Reading it as calls made this symbol look
+like 2,980 invocations against the counter's 101,569 — a fake 34x discrepancy that
+would have "invalidated" the census for sizing. Read `census.txt`'s own header
+(`pack nonmem-stall cycles bytes cyc/insn stall/byte symbol`) before quoting any
+column from it. The two instruments agree perfectly once the column is right, and
+their agreement is what makes 155.8 cycles/call trustworthy: an inclusive cycle
+total from the profiler divided by a call count from a counter in the executed arm.
+
 ### The counter answered it: the local-matrix fallback is DEAD, 0 of 101,569
 
 Counted the arms of `ndsRendererAdapterBuildDObjLocalMatrix` before editing it,
