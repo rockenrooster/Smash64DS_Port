@@ -3,16 +3,14 @@
 Updated: 2026-08-09. **The gate arm's tail was cartridge I/O: the animation
 cache arena had been full and refusing loads all match. Fixed at `f082b3c8` —
 `WORK-H` P95 1,639,299 → 1,447,318, gap 326,938; cycle 108's AObj16 warm-time
-prebake takes ~23,000 more.** The campaign remains on
-R2-07's performance gate. Published pair:
-`smash64ds-battle-playable-hwtri.nds` `AFD28273…`, `smash64ds.nds`
-`54C07FAC…`.
+prebake takes ~23,000 more.** Campaign remains on R2-07's gate. Published pair:
+`smash64ds-battle-playable-hwtri.nds` `AFD28273…`, `smash64ds.nds` `54C07FAC…`.
 
 ## Read this first: every 128-frame measurement in the archive is unusable
 
 **The 128-frame window reads the cheapest 6% of the match** — P95 understated
-~306,000 and the over-gate rate five times. `sample-tick-hud-buckets.ps1` takes
-repeated ring dumps (`-Samples` to 4096, `-RingStopStride` 96, ROM
+~306,000 and the over-gate rate five times. Use `sample-tick-hud-buckets.ps1`
+(repeated ring dumps, `-Samples` to 4096, `-RingStopStride` 96, ROM
 byte-identical). Never take a gate reading on 128 frames again.
 
 ## The two baselines — label every figure with its arm AND its coverage
@@ -75,46 +73,54 @@ which decomposes into `SINT` **+88,082**, `SPHD` +28,941, `SHDT` +27,190,
 populations by only **+13,768**, which retires fighter draw (and its
 `memset`/`memcpy` concentration) as a gate lever for good. Board has the table.
 
-**The force-load seam is closed (cycle 108).** Pre-finalizing and handing back
-the arena pointer is structurally impossible: `ftmain.c:4623` **discards the
+**The force-load seam is closed (cycle 108).** `ftmain.c:4623` **discards the
 return value** and animates from `fp->figatree_heap`, so the destination copy is
-mandatory. Violating it reads as a different match, not as slow. Do not add
-another caching layer to the loader; board has the three facts it paid for.
+mandatory and zero-copy is structurally impossible. Do not add another caching
+layer to the loader.
 
 **The D-cache census is run** (`scripts/analyze-dcache-stalls.py`, no build, no
-run): data loads average **7.07 cyc/ex** and their excess over a cached access is
-**174,495,113 cycles = 17.83% of non-idle**. Two results change what to build.
-The largest single site is **not a miss** — `ndsRendererTask36ReplayRun`'s
-`ldr r3,[r1,#184]` at **507 cyc/ex** reads **DMA0CNT (0x040000B8)** and spins on
-the busy bit: **6,654,860 cycles, 58% of that function**, the CPU idle-waiting on
-hardware. And a load right after a `memset` is charged that memset's
-write-buffer drain, so those two costs must not be added. Best-shaped real
-target: **`ndsFTParamsInvalidateFighterParts`** — CPI 7.08, 6.53M of load excess
-in **two instructions**, inside the simulation where `SRC` decides the gate. It
-is a recursive joint-tree walk writing one zero per part, and **the fix is
-already written and dead**: `reloc_backend_compat_shims.c:494-496` declares a
-contiguous `FTParts sNdsFTManagerPartsAllocPool[64]` plus its free-list init
-that the compiler reports **"defined but not used" on every build**. Wire it up,
-confirm both entrypoints only ever get a ROOT joint, replace the recursion with
-a linear sweep; do not delete the pool as cleanup. Board has the census, plus the sensitivity curve that sizes any
-proposal (median clears the gate by only **13,372**; a body-wide 50,000
-moves 238 frames from 20 FPS to 30 FPS) and the CPI table behind
-"memory-bound": non-idle **CPI 2.85**, `fadd` 1.19, `ftMainProcUpdateInterrupt`
-**11.53**. Instruction count is not the lever; working set is.
+run): data loads average **7.07 cyc/ex**, excess **174,495,113 = 17.83% of
+non-idle**. Its largest site is **not a miss** —
+`ndsRendererTask36ReplayRun`'s `ldr r3,[r1,#184]` at 507 cyc/ex reads DMA0CNT
+and spins on the busy bit (6,654,860 cycles, 58% of that function); a load right
+after a `memset` is charged that memset's drain, so the two must not be added.
 
-## How the load frame is priced, and what is already closed
+**`ndsFTParamsInvalidateFighterParts` is retired as the top target (cycle 109).**
+Both premises failed. The root-joint precondition is **false** — `TopN` is 0, so
+`joints[4]` (damage, Fox up-B) and `joints[XRotN]`/`[YRotN]` (shielding) are
+sub-joints, and `ftparam.c:2637` invalidates IK children by pointer. And the two
+expensive loads are **`DObj` fields** (`->child` 37.1 cyc/ex, `->user_data.p`
+30.8), so the dead `FTParts` pool cannot reach them: DObj traversal is 6.30M,
+everything `FTParts` 2.44M. The whole function is **1.40% of non-idle** — a
+preorder-flattened subtree sweep (which also makes the precondition moot) is
+worth ~6,560 ticks/frame. Board has the per-PC table. **The dead pool is now
+ordinary cleanup, not the intended fix.**
 
-**106–108 priced the load frame** via `--split-by-symbol
-ndsRelocFinalizeLoadedFile` (74 load frames vs 326 control, premium
-650,610/frame): reloc + copy 23.6%, animation re-evaluation 24.3% and **real
-gameplay work**, `armWaitForIrq` 21.1% idle. **`ndsRelocAssetIDForToken` is
-CLOSED as a caching target**; still open is bounding its two scans by an
-init-time `[min,max]`.
+**The new top target is the fighter animation lane: 86,636,950 cycles = 8.85% of
+non-idle, ~98,000 ticks/frame at P50.** `ftAnimParseDObjFigatree` and
+`gcPlayDObjAnimJoint` are the **#1 and #2 soft-float callers in the build**. Three
+facts set the design: the fixed cubic is already the *efficient* part (CPI 1.74,
+but 184 insns and 320 cycles per call, 8.8% of it just `push`/`pop`); `AObj` is
+36 bytes and ~360 live = **12,960 B against a 4KB D-cache, 3.2x**, which is why
+`ldrb aobj->kind` costs **24.1 cyc/ex and 20.9% of `gcPlayDObjAnimJoint`**; and
+the parser re-interprets a stream that never changes. AOT-compiling to compact
+fixed tracks is worth ≈**38,700 ticks/frame**, up to ~60,000 carried through to
+matrices. It must ship **through the anim-cache arena, not as linked arrays**
+(34,816 B of static headroom), must **replace** rather than coexist (1.85 cyc of
+`FTR` per byte of text), and must **derive phase as `frame * step`, never
+accumulate** — animation drives hitboxes. Board has the table and constraints.
 
-**Do not bring a micro-fix.** R2-06 E11's rule: *a load-frame-only saving of
-~8,000 ticks cannot be banked through P95, because relinking moves the tail by
-more than the saving.* Clear ~16,000 in one change, or **move the work off the
-gameplay frame** — cycle 105's arena fix, cycle 108's prebake.
+Also on the board: the sensitivity curve that sizes any proposal (median clears
+the gate by only **13,372**; a body-wide 50,000 moves 238 frames from 20 FPS to
+30 FPS) and the CPI table behind "memory-bound" — non-idle **2.85**, `fadd`
+1.19, `ftMainProcUpdateInterrupt` **11.53**. Instruction count is not the lever.
+
+**Do not bring a micro-fix** — R2-06 E11's rule: a load-frame-only ~8,000 cannot
+be banked, because relinking moves the tail by more than the saving. Clear
+~16,000 in one change, or **move the work off the gameplay frame** (cycle 105's
+arena fix, cycle 108's prebake). The load frame itself is priced on the board
+(premium 650,610/frame; `ndsRelocAssetIDForToken` **CLOSED** as a caching
+target, its two scans still unbounded).
 
 **Measure a placement-sensitive seam on ONE binary with a runtime route.** Two
 separately-linked arms of cycle 108's prebake differed only by 3,584 bytes of
@@ -134,62 +140,60 @@ ranking, never a placement prediction. Hoisting the animation range check in
 after one minute; overflow silently **skips the animation attach**. 8 bytes/entry.
 
 **The load-frame exclusion is REFUTED — do not apply it.** The owner's "loading
-states excluded" bar must not go through the `SRC > 2x median` rule: it is
-circular for SRC, swings the gap **3.08x**, and drops frames that are not loads.
-Audit: `scripts/analyze-load-frame-exclusion.ps1`.
+states excluded" bar must not go through `SRC > 2x median`: circular for SRC,
+swings the gap **3.08x**, drops frames that are not loads
+(`scripts/analyze-load-frame-exclusion.ps1`).
 
-**Boundary for all of it.** Same geometry, textures and materials; the effect
-models are a closed `BUGS.md` row the owner confirmed by eye. A change that
+**Boundary for all of it.** Same geometry, textures and materials. A change that
 alters a visible pixel of the shield, revival platform, impact wave or reflector
-needs the owner.
+needs the owner (closed `BUGS.md` row, confirmed by eye).
 
 ## Measurement rules this cycle established or re-proved
 
-- **Per-bucket placement floor is ≥8,544**, not the ±5,376 for `WORK-H` P95.
-  Judge on `WORK-H`; buckets locate, they never decide.
+- **Per-bucket placement floor is ≥8,544**, not `WORK-H` P95's ±5,376. Judge on
+  `WORK-H`; buckets locate, they never decide.
 - **1.85 cycles of `FTR` mean per byte of added ARM text.** A change that adds
   text must beat its own footprint.
 - **Verify a counter is live in the shipped configuration BEFORE the measuring
-  run**, and **eliminate candidates with a liveness probe on an already-built
-  ROM** before spending one. Six per-stop counters read 0 all match because they
-  were proof-scoped.
-- **`ALL` is VBlank-quantized** and hid a +52,928 that came straight out of the
-  wait. Read `WORK-H`.
-- **Do not multiply a number back by what you divided it by** — that agreement
-  is circular and is not evidence.
-- **Read a memo's Evicts, not its Hits** (cycle 107). Misses that are nearly all
-  evictions mean undersized *or* mis-keyed, and the hit rate cannot tell you
-  which — 8× the table moved one 41.8% → 50.1% while evictions stayed.
-- **`--split-by-symbol` on an existing profile CSV is free** and partitions
-  frames by whether they ran that symbol. It fully attributed the load frame
-  with no build and no emulator run.
+  run**, and eliminate candidates with a liveness probe on an already-built ROM.
+  Six per-stop counters read 0 all match because they were proof-scoped.
+- **`ALL` is VBlank-quantized** and hid a +52,928 out of the wait. Read `WORK-H`.
+- **Do not multiply a number back by what you divided it by** — circular.
+- **Read a memo's Evicts, not its Hits** (cycle 107): 8× the table moved one
+  41.8% → 50.1% while evictions stayed, so hit rate cannot tell undersized from
+  mis-keyed.
+- **`--split-by-symbol` and per-PC joins on an existing profile CSV are free**
+  and need no build or emulator run.
 - **Read the caller before designing around a return value.** Cycle 108 built a
-  zero-copy loader that `ftmain.c` could never use, because the caller discards
-  the pointer. One `rg` on the call site would have cost nothing.
+  zero-copy loader `ftmain.c` could never use; one `rg` would have cost nothing.
+- **Disassemble a hot load before believing its diagnosis** (cycle 109). "6.53M
+  of excess in two instructions" was true and still the wrong target: both were
+  `DObj` fields, so the `FTParts` fix aimed at them could not work, and the
+  function was 1.40% of non-idle. **Name the struct and offset, and take the
+  function's share of non-idle, before designing anything.**
 
 ## Restart surface
 
-All parked items live on the board's **Parked** list (one place, not two).
+Parked items live on the board's **Parked** list (one place, not two). Boundary
+contains only `battle_playable_realtime`, mode 163.
 
 ```powershell
 .\scripts\verify-all.ps1 -Profile Boundary -List
 git status --short
 ```
 
-Boundary contains only `battle_playable_realtime`, mode 163.
-
-`docs/P1_EXECUTION_BOARD.md` is the only dynamic queue — rewritten cycle 79
-from a 10,207-line log; history in
+`docs/P1_EXECUTION_BOARD.md` is the only dynamic queue — rewritten cycle 79 from
+a 10,207-line log; history in
 `docs/optimization/archive/P1_EXECUTION_BOARD_pre-cycle79.md`.
-`docs/Smash64DS_Runtime2_SwitchPlan.md` is the charter. `docs/BUGS.md` carries
+`docs/Smash64DS_Runtime2_SwitchPlan.md` is the charter; `docs/BUGS.md` carries
 the owner's verdicts — they edit it directly, so preserve their wording.
 
 A clean checkout must build through `build.ps1`, not bare `make`: four of six
 generated `.inc` files are gitignored. For iteration, `make p1-tick` builds the
 measuring ROM and `make p1` the published battle pair — bare `make` builds the
-P2 ROM P1 does not ship. Never pass `-j`, never override
-`MAKEFLAGS`, one build at a time. Never build a published target name for lab
-work — those hardcode output to the project root whatever `BUILD=` says.
+P2 ROM P1 does not ship. Never pass `-j`, never override `MAKEFLAGS`, one build
+at a time. Never build a published target name for lab work — those hardcode
+output to the project root whatever `BUILD=` says.
 Preserve canonical mode 163, renderer mode 9, mip 0, static textures, source
 countdown, Dream Land water at frame 0, Task 16 `1/1/1`. Do not edit `decomp/`.
 

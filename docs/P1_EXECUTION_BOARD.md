@@ -2138,18 +2138,137 @@ compiler reports all three as "defined but not used" on every build.** The pool
 allocator is unreachable, so `FTParts` come from scattered heap allocations
 instead, which is exactly why the walk misses on every node.
 
-**The shape of the fix, in order:** confirm both entrypoints
-(`ftParamsUpdateFighterPartsTransform` / `...TransformAll`) are only ever passed
-a fighter's ROOT joint — if a caller passes a sub-joint, a flat sweep would
-invalidate too much and the tree walk has to stay. If they are roots, wire the
-pool up and replace the recursion with a linear sweep of the contiguous block:
-sequential, prefetch-friendly, no DObj traversal at all, and it shrinks the
-`FTParts` working set from scattered heap into one array. Verify with the census
-(`scripts/analyze-dcache-stalls.py`) that the two 37.1/30.8 sites drop, not just
-with ticks.
+#### Both premises above are REFUTED (cycle 109) — the pool is NOT the fix
 
-**Do not simply delete the dead pool as cleanup** — it is the intended fix,
-sitting one wiring change away from the board's best-shaped target.
+**1. The root-joint precondition fails, on paths that run every match.**
+`nFTPartsJointTopN` is `0` (`ftdef.h:1071-1078`; `TransN` 1, `XRotN` 2, `YRotN`
+3, `CommonStart` 4), so every `joints[4]` caller is passing a sub-joint:
+`ftcommondamage.c:210` (damage), `ftfoxspecialhi.c:143` (Fox up-B),
+`ftnessspecialhi.c:519`, `ftpikachuspecialhi.c:159`. `ftcommonguard1.c:256`
+passes `joints[YRotN]` and `:358` `joints[XRotN]` — shielding, both fighters,
+constantly. And `ftparam.c:2637-2638` invalidates two IK children by pointer
+inside `func_ovl2_800EBD08`. A flat whole-fighter sweep would invalidate strictly
+more than the original, so **the subtree structure is load-bearing** and cannot
+be dropped.
+
+**2. The two expensive loads are `DObj` fields, so a contiguous `FTParts` pool
+cannot touch them.** Disassembling the ITCM copy and joining per-PC:
+
+| pc | instruction | field | execs | cycles | cyc/ex |
+|---|---|---|---:|---:|---:|
+| `1fff274` | `ldr r4,[r0,#16]` | `joint->child` | 79,874 | 2,964,305 | **37.1** |
+| `1fff266` | `ldr r3,[r0,#132]` | `joint->user_data.p` | 79,874 | 2,461,519 | **30.8** |
+| `1fff282` | `ldr r4,[r4,#8]` | `child->sib_next` | 76,430 | 878,273 | 11.5 |
+| `1fff272` | `str r2,[r3,#4]` | `parts->unk_dobjtrans_word` | 79,874 | 1,365,294 | 17.1 |
+| `1fff28a` | `ldr r2,[r3,#0]` | `parts->transform_update_mode` | 41,135 | 1,056,909 | 25.7 |
+
+**DObj traversal is 6,304,097 cycles; everything `FTParts` is 2,444,875.** The
+pool addresses only the smaller half, and offsets 16 and 132 are 116 bytes apart
+— two cache lines *per node*, in a struct whose layout is mirrored from decomp
+and therefore not ours to repack (`check-decomp-header-mirror.py`).
+
+**3. The whole function is too small to matter.** 13,718,726 cycles = **1.40% of
+non-idle**. Deleting it entirely is worth ~15,500 ticks/frame at P50; the real
+fix is worth ~6,560. Recursion accounts for 76,430 of the 79,874 entries, so
+there are only **3,444 external calls walking ~23 joints each** (~11.2 calls per
+frame, two fighters).
+
+**The fix that would work, if it is ever worth a build:** flatten the joint tree
+into a DFS-preorder `FTParts*` array once at build time, and give each joint its
+subtree's `[start, count)` — a subtree is contiguous in preorder, so *any* joint
+(not just a root) invalidates as a linear sweep, and precondition 1 stops
+mattering. That removes both DObj loads and the `sib_next` chase: ≈5.8M, **0.59%
+of non-idle ≈ 6,560 ticks/frame at P50**. Above the P50 floor (~5,700), below
+the P95 floor (14,080), and **1/6 of the animation lane below**. Queue it behind
+that; do not spend a build on it alone.
+
+**The dead pool may now be deleted as ordinary cleanup** — the earlier "do not
+delete, it is the intended fix" note is withdrawn. It addresses 2.4M of the 8.7M
+and needs a flattening pass to be reachable at all.
+
+### The fighter animation lane is 8.85% of non-idle — the largest lever found
+
+Priced off the cycle-106 whole-match profile (no build, no emulator run), self
+cycles from `census.json` and soft-float charged back with
+`analyze-leaf-helper-attribution.py`:
+
+| symbol | self | soft float | total | % non-idle |
+|---|---:|---:|---:|---:|
+| `battleship_ftAnimParseDObjFigatree` | 16,192,916 | 7,931,155 | **24,124,071** | 2.47% |
+| `gcPlayDObjAnimJoint` | 16,595,669 | 6,706,718 | **23,302,387** | 2.38% |
+| `ndsR2CubicValueFixed` | 19,420,815 | 2,542,351 | **21,963,166** | 2.24% |
+| `gcPlayAnimAll` | 7,085,886 | 130,690 | 7,216,576 | 0.74% |
+| `ftParamUpdateAnimKeys` | 5,291,274 | — | 5,291,274 | 0.54% |
+| `ndsBaseGcPlayDObjAnimJoint` | 2,827,175 | 1,912,301 | 4,739,476 | 0.48% |
+| **lane** | 67,413,735 | 19,223,215 | **86,636,950** | **8.85%** |
+
+At `WORK-H` P50 1,107,008 that is **~98,000 ticks/frame**. The parser and the
+joint evaluator are **the #1 and #2 soft-float callers in the entire build**,
+ahead of collision, matrices and particles.
+
+**Three findings decide what to build.**
+
+**(a) The fixed cubic is not the problem — it is the most efficient thing in the
+lane.** `ndsR2CubicValueFixed` runs at **CPI 1.74** against a build average of
+2.85: compute-bound, already good. But it costs **320 cycles and 184
+instructions per call** over 60,582 calls, of which the 10-register
+`push`/`pop` pair alone is **1,707,080 cycles (8.8% of the function)**. It has no
+hot site — the cost is flat, i.e. the *conversions and the call*, not the
+Hermite. Making it "more fixed-point" is finished work.
+
+**(b) `AObj` is 3.2x the D-cache, and the profile shows it missing on every
+node.** The struct is 36 bytes (`objtypes.h:124-136`: `next`, `track` @4, `kind`
+@5, six `f32`, `interpolate` @32). The hottest instruction in
+`gcPlayDObjAnimJoint` is `ldrb r5,[r4,#5]` — `aobj->kind` — at **24.1 cyc/ex
+over 143,916 executions = 3,465,773 cycles, 20.9% of the function**; with
+`ldr r4,[r4,#0]` (`aobj->next`, 7.0 cyc/ex) the bare list walk is **4,470,121
+cycles, 26.9%**. 143,916 visits over 42,210 calls = **3.41 AObj per joint**. At
+~360 live nodes the working set is **12,960 bytes against a 4KB D-cache — 3.2x,
+so it can never stay resident.** A 12-byte track brings it to 1.05x; **8 bytes
+fits.** This is the strongest single argument in the lane and it is a layout
+argument, not an arithmetic one.
+
+**(c) The parser is the biggest item and the only one AOT deletes outright.**
+`ftAnimParseDObjFigatree`'s top three loads are `ldr r4,[r0,#116]` at **33.1
+cyc/ex**, `ldrb r3,[r2,#4]` at **29.6** (the bytecode stream, byte at a time) and
+`ldr r3,[r3,#4]` at **25.6** — 3,125,707 cycles, 19.3% of the function. It is
+re-interpreting a stream that never changes, which is the textbook
+compute-once case in `PROJECT_GOAL.md`.
+
+**Sizing.** Removing the parser interpretation (~60% of 24.1M), the AObj chase
+(~3.5M), the conversion boundary in the evaluator (~2.2M soft float + ~7.8M
+self) lands ≈**34M = 3.5% of non-idle ≈ 38,700 ticks/frame at P50**; carrying
+fixed point through to the matrices reaches ≈60,000. Against the ~304,000 gap
+that is 13–20% in one campaign — **6x the flattened-invalidate fix, and above
+every noise floor.**
+
+**Constraints any implementation must respect.**
+
+- **It must not grow RAM.** Static headroom proven is **34,816 bytes** and
+  +14KB of `.bss` once stopped the ROM booting. AOT tables must ship as **files
+  through the existing anim cache arena** (`NDS_R2_ANIM_CACHE_ARENA_BYTES`
+  200,704, `KEEP_FREE` 32,768) in the slot the figatrees already occupy — not as
+  linked-in arrays. Same bytes, better content.
+- **It must replace, not coexist.** 1.85 cycles of `FTR` mean per byte of added
+  ARM text; a runtime selector between old and new evaluator pays for itself
+  twice and wins nothing.
+- **Derive the phase, do not accumulate it.** `t = length * length_invert`
+  recomputes from scratch each frame, so its error is bounded per frame; a
+  `phase += phase_step` accumulator **drifts over a long animation**, and
+  animation drives hitbox positions and therefore knockback. Keep an integer
+  frame counter and compute `phase = (frame * step) >> k`. This is the one part
+  of the sketched design that is not equivalent-by-construction.
+- **`length_invert` has readers outside the evaluator** —
+  `reloc_backend_mp_collision.c:11918` writes it, and
+  `battleship_sys_objanim.c` reads it at `:214`, `:292`, `:921`, `:942`
+  (including two `length_invert <= length` runtime-float compares). Deleting the
+  field is a wider change than deleting its use in the cubic.
+- **Fighter path only.** `ndsBaseGcPlayMObjMatAnim` is a separate 4,463,648-cycle
+  soft-float caller on the same `AObj` infrastructure; material, camera and
+  stage animation must keep working unchanged.
+
+**Do the free `SINT`/`SPHD`/`SHDT`/`SCPU` split first** — it costs no build and
+those three are ~79.7K of over-gate discriminator, which can reorder this queue.
 
 ### The DMA spin is GEOMETRY SUBMISSION, not a free win (cycle 108)
 
