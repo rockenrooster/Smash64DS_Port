@@ -2102,6 +2102,63 @@ runs re-learning that.
 
 **Worth ~7% of the 326,938 gap.** Banked and moved past; do not polish it.
 
+### The D-cache census — 17.83% of non-idle is data-load excess (cycle 108)
+
+`scripts/analyze-dcache-stalls.py`, run on the cycle-106 profile. No build, no
+emulator run. Ranks every memory access by its measured `average_cycles` and
+joins it to the disassembly, so the output names the *instruction* — base
+register and offset — not just the function.
+
+| class | cycles | executions | cyc/ex |
+|---|---:|---:|---:|
+| **load (data)** | 252,353,053 | 35,715,768 | **7.07** |
+| load (literal pool) | 57,122,935 | 8,760,593 | 6.52 |
+| load (stack) | 66,067,255 | 12,628,225 | 5.23 |
+| store | 116,346,526 | 31,178,647 | 3.73 |
+| other | 676,279,870 | 249,102,962 | 2.71 |
+
+A cached ARM9 `ldr` retires in ~1–3. Excess over a 3-cycle baseline, data loads
+only, is **174,495,113 cycles = 17.83% of non-idle work**.
+
+**The single largest site is not a cache miss at all.**
+`ndsRendererTask36ReplayRun`, `ldr r3, [r1, #184]` at **507.2 cycles per
+execution**, 13,200 executions, **6,654,860 excess — 58% of that function.** Six
+instructions earlier `r1` is loaded with `#67108864` (**0x04000000**, the I/O
+base), so this reads **0x040000B8 = DMA0CNT**, and `cmp r3,#0 / blt` back to
+itself is a **spin on the DMA busy bit**. The CPU is idle-waiting on hardware.
+There is a second such loop immediately above it. This is real recoverable time
+and it is nothing to do with layout: overlap the transfer with CPU work, or
+resize it.
+
+**Some extreme sites are the write buffer being charged to the next load.**
+`ndsRendererAdapterBuildNativeMaterialSnapshot`'s `ldrh r6, [r5, #56]` reads
+138.8 cyc/ex and sits **immediately after `bl memset`** — the memset's stores
+drain, and the stall lands on the following load. So "memset is 2.09%" and "this
+load is expensive" are largely the same cost, counted once, at the load. **Do
+not add them.**
+
+**Genuine structure misses, which is where a layout change pays:**
+
+| cyc/ex | execs | excess | site |
+|---:|---:|---:|---|
+| 37.1 | 79,874 | 2,724,683 | `ndsFTParamsInvalidateFighterParts` `ldr r4,[r0,#16]` |
+| 30.8 | 79,874 | 2,221,897 | `ndsFTParamsInvalidateFighterParts` `ldr r3,[r0,r3]` |
+| 45.4 | 37,834 | 1,602,763 | `ndsBaseGcRunAll` `ldr r3,[r0,#20]` |
+| 24.1 | 143,916 | 3,034,025 | `gcPlayDObjAnimJoint` `ldrb r5,[r4,#5]` (`aobj->kind`) |
+| 33.1 | 41,047 | 1,237,303 | `battleship_ftAnimParseDObjFigatree` `ldr r4,[r0,#116]` |
+
+Top functions by data-load excess: `ndsFighterMarioFoxDLAllDrawForSlot`
+9,071,206; `ndsRendererExecuteNativeFighterOwnerProduction` 8,824,490;
+`ndsRendererTask36ReplayRun` 7,648,881; `ndsFTParamsInvalidateFighterParts`
+6,529,067; `ndsBaseGcRunAll` 4,583,792; `gcPlayDObjAnimJoint` 3,990,670.
+
+**`ndsFTParamsInvalidateFighterParts` is the best-shaped candidate on this
+board.** CPI **7.08**, 6.53M of load excess concentrated in **two instructions**
+on the same base register, and it sits inside the simulation — where `SRC`
+(+171,383) decides the gate — rather than in fighter draw, which `FTR` (+13,768)
+proves does not. Two loads at 37.1 and 30.8 cyc/ex off `r0` is a structure
+walked once per part per frame that never stays resident.
+
 ### THE MACHINE IS MEMORY-BOUND — 65% of non-idle cycles are stall (cycle 108)
 
 **Read this before proposing any instruction-count optimization.** The profile

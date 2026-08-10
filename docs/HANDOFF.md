@@ -75,36 +75,27 @@ which decomposes into `SINT` **+88,082**, `SPHD` +28,941, `SHDT` +27,190,
 populations by only **+13,768**, which retires fighter draw (and its
 `memset`/`memcpy` concentration) as a gate lever for good. Board has the table.
 
-**Size every proposal against the board's sensitivity curve.** The median clears
-the gate by only **13,372** and **238 frames sit within 50,000 of it from
-above**, so a body-wide 50,000 moves 238 frames from 20 FPS to 30 FPS
-(707 → 469 over gate) while reading as an ordinary P95 delta. **Only soft float
-is the right size** — ~98,500 ticks/frame, i.e. the 100,000 row, 707 → 295.
-Everything else on the map is 500–5,000 ticks against a 291,000 gap. Recompiling
-is refuted (`Makefile:3165-3179`), so the arithmetic must actually not happen;
-at that scale it becomes a `PROJECT_GOAL` sacrifice-order call needing the owner.
-
 **The force-load seam is closed (cycle 108).** Pre-finalizing and handing back
 the arena pointer is structurally impossible: `ftmain.c:4623` **discards the
 return value** and animates from `fp->figatree_heap`, so the destination copy is
 mandatory. Violating it reads as a different match, not as slow. Do not add
 another caching layer to the loader; board has the three facts it paid for.
 
-**The soft-float bill is mapped** by
-`scripts/analyze-leaf-helper-attribution.py`, off an existing profile with no
-build and no run: **8.9% of non-idle work**, led by animation evaluation 2.57%,
-collision 1.79%, matrices 1.33%.
-
-**But the machine is MEMORY-BOUND, so do not open a conversion campaign.**
-Non-idle **CPI 2.85 — 65% of non-idle cycles are stall, not issue**. The
-soft-float helpers are the *most efficient* code in the build (`fadd` CPI 1.19,
-`fmul` 1.14, ITCM-resident), while `ftMainProcUpdateInterrupt` runs at **11.53**
-and `ftMainProcPhysicsMap` at **8.80** — and those two are exactly the `SINT`
-and `SPHD` over-gate discriminators. `gcPlayDObjAnimJoint`'s hottest instruction
-is `ldrb aobj->kind` at **24.1 cycles/execution** × 143,916: one D-cache miss per
-AObj node per frame, ~360 live nodes against a **4 KB** cache. **Data layout and
-working-set size are the lever; instruction count is not.** Rank by stall
-(cycles − instructions), not by cycles — board has the table and the method.
+**The D-cache census is run** (`scripts/analyze-dcache-stalls.py`, no build, no
+run): data loads average **7.07 cyc/ex** and their excess over a cached access is
+**174,495,113 cycles = 17.83% of non-idle**. Two results change what to build.
+The largest single site is **not a miss** — `ndsRendererTask36ReplayRun`'s
+`ldr r3,[r1,#184]` at **507 cyc/ex** reads **DMA0CNT (0x040000B8)** and spins on
+the busy bit: **6,654,860 cycles, 58% of that function**, the CPU idle-waiting on
+hardware. And a load right after a `memset` is charged that memset's
+write-buffer drain, so those two costs must not be added. Best-shaped real
+target: **`ndsFTParamsInvalidateFighterParts`** — CPI 7.08, 6.53M of load excess
+in **two instructions** off one base register, and inside the simulation where
+`SRC` decides the gate rather than in fighter draw. Board has the full census, plus the sensitivity curve that sizes any
+proposal (median clears the gate by only **13,372**; a body-wide 50,000
+moves 238 frames from 20 FPS to 30 FPS) and the CPI table behind
+"memory-bound": non-idle **CPI 2.85**, `fadd` 1.19, `ftMainProcUpdateInterrupt`
+**11.53**. Instruction count is not the lever; working set is.
 
 ## How the load frame is priced, and what is already closed
 
