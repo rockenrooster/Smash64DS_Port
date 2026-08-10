@@ -49,9 +49,9 @@ loading states excluded; the shipped ROM stays the Boundary hwtri pair.
 ## RAM: both budgets are near their floor — price a change before writing it
 
 - **Static/boot.** `check-boot-headroom.ps1 -Build <dir>` after every lab build.
-  Highest `fake_heap_start` proven to boot **`0x02294804`**, lowest proven to fail
-  **`0x02294b24`**. **Text counts as much as bss**, and a failing arm reads as a
-  hung emulator.
+  Highest `fake_heap_start` proven to boot **`0x02294804`**, lowest proven to
+  fail **`0x02294b24`**. **Text counts as much as bss**; a failing arm reads as
+  a hung emulator.
 - **`gSYTaskmanGeneralHeap`.** Free-min **42,136** against the anim cache's
   32,768 `KEEP_FREE`; coupled, since freeing `.bss` enlarges the heap.
 - **The `Tex` (dl-pointer, bind-ordinal) memo is REFUTED** — 471 hits of 10,336
@@ -61,10 +61,10 @@ loading states excluded; the shipped ROM stays the Boundary hwtri pair.
 
 **Banked `FTR` mean is now 362,819** against a pre-slice baseline of **385,508**
 built and measured for the purpose — that baseline equals the owner's stated
-~385–390K, so the reference is right. `WORK-H` mean −22,844. Boundary passes and
-the visibility screenshot shows both fighters correctly articulated. Every
+~385–390K, so the reference is right. `WORK-H` mean −22,844. Boundary passes, the
+visibility screenshot shows both fighters correctly articulated, and every
 control bucket drifts under ±950 and non-monotonically across the four arms while
-`FTR` falls monotonically; `scripts/compare-tick-hud-arms.py` prints the table.
+`FTR` falls monotonically (`scripts/compare-tick-hud-arms.py` prints the table).
 Three deletions, all abstractions that did not belong on the fighter path:
 
 - **Task 36 capture hook, out of all five fighter emit loops** (−11,176 measured,
@@ -83,14 +83,19 @@ Three deletions, all abstractions that did not belong on the fighter path:
 `scripts/analyze-fighter-draw-reconciliation.py` resolves 314,555 of the ~331K to
 named symbols — matrix 96,207, production driver 54,043, emit 48,115, adapter
 driver 44,680, material 35,568, fighter parts 18,711, display contract 17,231 —
-with 28,049 of census-only instrumentation excluded, not counted. The two largest
-groups spread over 709 and 384 PCs with no site above 5.1%: whole-body
-architecture cost, not leaf arithmetic. **Next three, priced, on the board:** the
-two 64-byte matrix copies in `ndsRendererNativeBindProductionRoot` (5,958/frame,
-half of it data read either way — price at ~3,000 first); the rest of
-`LoadHardwareSplitMatrices` (1,064 cycles a call, 185 flat PCs, memory stall not
-placement); and `ndsFighterMarioFoxDLAllDrawForSlot`, 9,844 bytes at cyc/insn
-5.60 with **51% of its instructions never executed**.
+with 28,049 of census-only instrumentation excluded. The two largest groups
+spread over 709 and 384 PCs, none above 5.1%: whole-body architecture cost.
+
+**The next architecture is the per-run descriptor: 89,611 ticks/frame** over
+~30–37 runs a frame (production driver 54,043 + material 35,568 ≈ 2,400 a run),
+re-deriving texture params, poly format and UV scale every frame for runs whose
+descriptors are immutable. It needs no new RAM. **The emit half is near its
+floor** (11 instructions, 3 GX words a corner); lower needs a DMA'd packed
+stream at ~19–26 KB against ~9,368 B of heap slack — **RAM is the blocker, not
+the mechanism.** Also priced: the two 64-byte copies in
+`ndsRendererNativeBindProductionRoot` (5,958, half read either way). **Do not
+cold-split `ndsFighterMarioFoxDLAllDrawForSlot`** — 1,848 of its 7,108 cold bytes
+are `NDS_TICK_HUD`-only and absent from the shipped ROM.
 
 **The `SINT` split is DONE and it reordered the queue.** `SINT` +88,082 =
 `ftMainPlayAnim` **+60,559** (the animation lane) + `ftComputerProcessAll`
@@ -121,8 +126,8 @@ never accumulate** — animation drives hitboxes.
 
 Also on the board: the sensitivity curve that sizes any proposal (median clears
 the gate by only **13,372**; a body-wide 50,000 moves 238 frames from 20 to 30
-FPS) and the CPI table behind "memory-bound" — non-idle **2.85**,
-`ftMainProcUpdateInterrupt` **11.53**. Instruction count is not the lever.
+FPS) and the CPI table behind "memory-bound" — non-idle **2.85**. Instruction
+count is not the lever.
 
 **Do not bring a micro-fix** — R2-06 E11's rule: a load-frame-only ~8,000 cannot
 be banked, because relinking moves the tail by more than the saving. Clear
@@ -133,11 +138,10 @@ target, its two scans still unbounded).
 
 **Measure a placement-sensitive seam on ONE binary with a runtime route.** Two
 separately-linked arms of cycle 108's prebake read P50 25,760 apart — 4.5× the
-cross-build floor — with the *better* arm reading worse.
-`sample-tick-hud-buckets.ps1 -SetGlobals name=value` pokes a `.data` global at
-the first frame-complete marker (standing rule 7); the poke lands after ~3 warm
-steps, so an OFF arm is partial and must be scaled. Delete the route once the
-verdict is in — cycle 110 graduated one the same cycle it measured it.
+cross-build floor — with the *better* arm reading worse. `-SetGlobals name=value`
+pokes a `.data` global at the first frame-complete marker (standing rule 7); the
+poke lands after ~3 warm steps, so an OFF arm is partial and must be scaled.
+Delete the route once the verdict is in — cycle 110 graduated one immediately.
 
 **Do not re-derive these.** The Makefile's `?= 0` defaults are not the shipped
 config (41 overridden). `.text.hot` is closed in both directions
@@ -147,7 +151,6 @@ ranking, never a placement prediction. Hoisting the animation range check in
 
 **Latent cliff, unowned:** `sNdsAObjEvent32NormalizedCount` reads **973 of 1,024**
 after one minute; overflow silently **skips the animation attach**. 8 bytes/entry.
-
 **The load-frame exclusion is REFUTED — do not apply it.** The owner's "loading
 states excluded" bar must not go through `SRC > 2x median`: circular for SRC,
 swings the gap **3.08x**, drops non-loads (`analyze-load-frame-exclusion.ps1`).
@@ -156,15 +159,13 @@ swings the gap **3.08x**, drops non-loads (`analyze-load-frame-exclusion.ps1`).
 alters a visible pixel of the shield, revival platform, impact wave or reflector
 needs the owner (closed `BUGS.md` row, confirmed by eye).
 
-## Measurement rules that change your FIRST action
-
-The board's standing-rules section owns the rest of the measurement law.
+## Measurement rules that change your FIRST action — board owns the rest
 
 - **The sampler is bit-deterministic — never repeat a run.** Same ROM twice gives
   byte-identical buckets, variance 0. So the 14,080 cross-build figure is
-  **placement, not noise**, and no number of runs can average it away. Anything
-  under it needs the `.data` route above. Use `-Samples 1600` (4096 overruns the
-  match), `-AllowRepeatedFrames`, `-NoBuild`.
+  **placement, not noise**, and no number of runs averages it away. Anything
+  under it needs the `.data` route. Use `-Samples 1600`, `-AllowRepeatedFrames`,
+  `-NoBuild`.
 - **Judge on `WORK-H`**; buckets locate, they never decide (per-bucket floor
   ≥8,544). **`ALL` is VBlank-quantized** and once hid a +52,928.
 - **1.85 cycles of `FTR` mean per byte of added ARM text** — beat your footprint.

@@ -3477,10 +3477,44 @@ refutation cannot see.
    writing `MTX_LOAD_4x4`'s 16 words as 12 unscaled plus 4 rescaled.
 3. **`ndsFighterMarioFoxDLAllDrawForSlot` is 9,844 bytes with cyc/insn 5.60**,
    the 3rd largest non-mem stall in the build (4,655,284), and **51% of its
-   instructions never execute** — 5,012 bytes of cold code interleaved through
-   the hot path of a function called 13,195 times. It is too big for
-   `.text.hot`'s 3,936 free bytes as it stands; splitting the cold arms out is
-   what would make it fit.
+   instructions never execute** — 7,108 bytes sit in cold runs of ≥64 bytes.
+
+**But do not cold-split it on that number — most of it is the instrument.** The
+largest cold run is 1,848 bytes of `ndsFighterDrawPlanVerify`, which is inside
+`#if NDS_TICK_HUD` behind `gNdsFtrPlanVerify != 0`, so it **does not exist in the
+shipped ROM** — `smash64ds-battle-playable-hwtri.elf` has the same function at
+9,680 bytes, 164 short of the profiled build's 9,844.
+`RestoreNativeOwnerMaterialTextureIds` is already outlined there as
+`.part.0.constprop.0` (156 B). What is left to win by marking arms `cold` is
+several hundred bytes, not 7,108. **This is the addr2line trap in a new place:
+the names were right and the shipped relevance was not.** Check the shipped ELF
+before costing any placement work off a profiled-build census.
+
+### The next architecture is the per-run descriptor, and it is 89,611 ticks/frame
+
+With matrix preparation now the smaller half of what it was, the largest
+untouched block is **production driver 54,043 + material/shading state 35,568 =
+89,611 ticks/frame**, spent over ~30–37 runs a frame — roughly **2,400 ticks per
+run of setup**. `ndsRendererNativePrepareProductionRun` alone is 18.4M cycles
+over **384 distinct PCs with no site above 3.7%**, which is what per-run policy
+re-derivation looks like: texture params, poly format, UV scale and vertex flags
+resolved from live state every frame for a run whose descriptor is immutable.
+
+That is exactly the plan's "AOT compact GX-facing run descriptors", and unlike
+the emit stream it needs **no new RAM**: the run's immutable fields already exist
+in `sNdsNativeFighter*` tables, and what the runtime recomputes is the *binding*
+of those fields to the current texture/material state — which changes only when
+the material does. The shape is a per-run descriptor validated once per material
+epoch instead of once per run per frame, with the epoch counter as the key.
+
+**Sizing note for whoever takes it:** the emit half is close to its floor.
+Untextured emit is now 11 instructions and 3 GX FIFO words a corner over 537,780
+corners a match (51.1 cycles a corner before slice 1). Going below that needs a
+pre-packed command stream DMA'd to `GFX_FIFO` — the stage path already runs at
+DMA's ~2 cycles/word floor against the fighter's ~17 — but at 3.5 words a corner
+that stream is ~19–26 KB of main RAM, against `gSYTaskmanGeneralHeap`'s ~9,368 B
+of slack over the anim cache's `KEEP_FREE`. **RAM is the blocker there, not the
+mechanism**, so it needs something freed first.
 
 **Slice 3 — MEASURED −3,778.** `NDSRendererMatrix20p12` is `s32 m[4][4]` and
 libnds' `m4x4` is `int m[16]`, both row-major and both 64 bytes:
