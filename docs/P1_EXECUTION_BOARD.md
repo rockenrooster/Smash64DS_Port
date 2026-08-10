@@ -2102,6 +2102,49 @@ runs re-learning that.
 
 **Worth ~7% of the 326,938 gap.** Banked and moved past; do not polish it.
 
+### The DMA spin is GEOMETRY SUBMISSION, not a free win (cycle 108)
+
+Followed up the census's largest site and it is **not** the clean win it looked
+like. All three sites share one shape (`nds_renderer.c:13647`, `:22936`, and
+inside `ndsRendererTask36ReplayRun`):
+
+```c
+DC_FlushRange(packet->words, word_count * sizeof(u32));
+while ((DMA_CR(0) & DMA_BUSY) != 0u) { }   /* leading wait */
+DMA_SRC(0) = (u32)packet->words;
+DMA_DEST(0) = (u32)&GFX_FIFO;
+DMA_CR(0) = DMA_FIFO | word_count;
+while ((DMA_CR(0) & DMA_BUSY) != 0u) { }   /* trailing wait -- the 507 cyc/ex */
+```
+
+The destination is **`&GFX_FIFO`**, so this is geometry going to the 3D engine.
+**Deleting the trailing wait does not recover 6,654,860 cycles**, for two
+independent reasons:
+
+1. **NDS DMA steals the bus.** The ARM9 does not run freely during the transfer;
+   it stalls on any bus access. Overlap only exists for work running entirely
+   out of ITCM/DTCM, so the recoverable share is bounded by how much
+   cache-resident work follows the submit, not by the whole wait.
+2. **`DMA_FIFO` interleaves with CPU FIFO writes.** Removing the trailing wait
+   is only safe if nothing touches `GFX_FIFO` or a GX command register before
+   the next submit's leading wait. This file writes `GFX_TEX_FORMAT` and
+   `GFX_PAL_FORMAT` directly, so it needs a deferred-sync guard plus an audit of
+   every GX write site — not a two-line deletion. A mistake here corrupts the
+   command stream, which is the failure mode the verifier is weakest at
+   catching.
+
+**And the transfer itself is already efficient.** ~504 cycles for ~13,200
+executions works out near DMA's ~2-cycles-per-word floor at roughly 250 words a
+transfer, ~33 transfers a frame. That is the **cost of the geometry volume**,
+not per-transfer overhead, so batching buys nothing either. Reducing it means
+submitting less geometry, which is a `PROJECT_GOAL` fidelity decision.
+
+**What is still open here, in order of cheapness:** count words per transfer
+from `gNdsRebirthHaloPackedWordCount / SubmitCount` (a counter that already
+exists) to confirm the 250-word estimate; then, if a deferred-sync guard is
+wanted, do the GX-write audit first and put the change behind a runtime route so
+it can be A/B'd on one binary.
+
 ### The D-cache census — 17.83% of non-idle is data-load excess (cycle 108)
 
 `scripts/analyze-dcache-stalls.py`, run on the cycle-106 profile. No build, no
