@@ -3389,7 +3389,69 @@ placement term that was hiding it.** That vindicates the route and retroactively
 explains why the 7-cut batch's −32,128 P95 was uninterpretable. Any future cut in
 the 1,000–5,000 tick class must be measured this way; there is no other method.
 
-### Parser slice: the mechanism is a PORT REWRITE, not a patch extension
+### Parser slice LANDED and measured: WORK-H mean −6,805, 20 frames to 30 FPS
+
+`ftAnimParseDObjFigatree` is replaced port-side (`src/import/battleship_ftanim.c`,
+selected by `reloc_backend_compat_shims.c`). **45 `bl __aeabi_*` in one function
+became 21**, and 4 of those 21 are out-of-range fallback arms that measured zero
+executions. Gone entirely: all 12 `i2f`, all 6 `fmul`, all 5 `fcmpeq`, both
+ordered compares. `battleship_ftAnimParseDObjFigatree` and
+`battleship_ftAnimGetTargetValue` are **absent from the linked ELF** — the linker
+drops them, so this replaces rather than coexists and the ROM grew **1,024 bytes,
+exactly the reciprocal table**. Boot headroom re-checked: 29,952 proven, green.
+
+**Measured on ONE binary (route bit 2), identical `romSha256` both arms:**
+
+| | parser ON | parser OFF | delta |
+|---|---:|---:|---:|
+| **WORK-H mean** | 1,133,754 | 1,140,559 | **−6,805** |
+| **WORK-H P50** | 1,099,008 | 1,104,704 | **−5,696** |
+| SRC mean | 387,487 | 391,970 | −4,483 |
+| WORK-H P95 | 1,568,896 | 1,568,896 | 0 |
+
+**Pacing, from the VBlank histogram — the honest statement:** 2-VBI 1066 → 1086,
+3-VBI 896 → 868. **20 frames moved from 20 FPS to 30 FPS**, and the tail got
+slightly worse (4-VBI 53 → 61, 5+ 22 → 23). Net +1 frame total, which reconciles.
+
+**Do not quote `ALL` P50 from this run.** It reads **−559,040**, which is one
+VBlank period (560,190) almost exactly: the median sampled row straddles the
+quantisation boundary, landing at 2 VBI in one arm and 3 in the other. `ALL` is
+VBlank-quantised and this is the trap it is known for. The histogram above is
+what the pacing claim rests on.
+
+**Correctness checked four ways, not asserted.** `check_ftanim_target_exact.py`
+proves the s16 conversion **bit-identical over all 65,536 × 8 inputs** (six of
+the eight fracs are powers of two and an s16 always fits f32's mantissa, so it is
+an exponent subtraction with no rounding step). `check_ftanim_transcribe.py`
+inverse-substitutes the port body and compares token streams — **1964 tokens,
+identical** — which is the check that mattered, because `AObjAnimAdvance` is
+`p++`, used more than once per expression and advancing **conditionally** on a
+toggle bit, so a miscount desynchronises the stream and moves hitboxes. It is
+**mutation-tested 3 for 3**, including a dropped advance. The reciprocal table is
+compile-time-folded and verified bit-identical to a runtime `1.0f/n` against a
+`volatile` divide. And at runtime `gNdsR2CubicEvals` is **292,857 with either
+parser**, in both arms of both A/Bs: the same commands set the same kinds the same
+number of times.
+
+**A checker that only says GREEN is a rubber stamp.** The transcribe checker's
+first draft whitelisted a bare `break ;` token pair to excuse a dead `#else` arm
+— which would have deleted **all fourteen of the parser's real breaks** and
+passed anything. It evaluates the preprocessor instead. Mutation-test any
+equivalence checker before believing its GREEN.
+
+**Engagement:** 210,948 parser calls, 56,148 reciprocal hits, **0 misses** —
+every payload in a 60-second both-CPU match is under 256, so the 256-entry table
+is empirically right and no fallback divide ever ran. The off arm reads 156 calls
+rather than 0 because `-SetGlobals` pokes at the first frame-complete marker, so
+0.07% of the match runs the default route before the poke lands. Expect that
+floor on every route arm; it is not leakage.
+
+**One divide is deliberately KEPT** at `ftanim.c:205`,
+`(value_target - value_base) / payload`. `x/n` and `x*(1/n)` round differently and
+that feeds a `rate_base` the cubic amplifies by `length`; Linear is 1.7% of nodes,
+so the trade would have been fidelity for nothing measurable.
+
+### Parser slice: the mechanism was a PORT REWRITE, not a patch extension
 
 Sized the parser's remaining soft float from the cycle-106 profile: `fdiv`
 **1,494,619** at 109.4 cycles a call (the most expensive helper in the build by
@@ -3415,12 +3477,11 @@ carries DS-guarded inserts to this exact file — **runs against a standing owne
 decision**: 2026-08-06, the eight patches **migrate port-side over time**, and
 that table lists this very patch. Adding to it moves the wrong way.
 
-**So the slice is a port-side replacement of `ftAnimParseDObjFigatree` in
-`src/port/reloc_backend_compat_shims.c:1545`**, which already defines that symbol
-and today merely forwards to `battleship_ftAnimParseDObjFigatree`. That satisfies
-"replace, don't coexist", and it *retires* a decomp-patch dependency instead of
-deepening one. It is ~300 lines of gameplay-critical transcription and has not
-been written — the mechanism question is what closed here, not the code.
+**The slice was a port-side replacement of `ftAnimParseDObjFigatree`**, selected
+by `src/port/reloc_backend_compat_shims.c:1545`, which already defined that symbol
+and merely forwarded. That satisfies "replace, don't coexist" and *retires* a
+decomp-patch dependency instead of deepening one. **Written, measured and landed —
+see the section above.**
 
 **Correction to a recorded blocker:** the note that "the parser has no textual
 override hook" was wrong. The shim at `:1545` is the hook; what the macro blocks
