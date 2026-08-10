@@ -2102,6 +2102,55 @@ runs re-learning that.
 
 **Worth ~7% of the 326,938 gap.** Banked and moved past; do not polish it.
 
+### `ndsFTParamsInvalidateFighterParts` — the shaped target, and a dead pool (cycle 108)
+
+The census's best-shaped candidate, traced to its mechanism.
+`reloc_backend_compat_shims.c:1474` is a **recursive walk of the joint tree whose
+entire job is invalidation**:
+
+```c
+parts = joint->user_data.p;                     /* 37.1 cyc/ex -- miss */
+if (parts != NULL) { ...; parts->unk_dobjtrans_word = 0; }
+for (child = joint->child; child != NULL; child = child->sib_next)
+    ndsFTParamsInvalidateFighterParts(child, reset_mode);
+```
+
+It writes **one zero per part** and pays a pointer chase to reach each one:
+79,874 executions of each of its two hot loads, at **37.1 and 30.8 cycles**, for
+**4,946,580 of its 6,529,067 load excess**, at CPI **7.08**. The comment already
+above it says the diagnosis was known — *"a recursive walk down the joint tree
+whose every hot PC is a pointer-chasing load. The loads keep their cost wherever
+this lives; what ITCM buys is the fetch of the loop around them"* — so the ITCM
+pin it already carries was applied knowing it could not fix the loads. **Only a
+layout change can.**
+
+**And the layout change was already written, then left dead.**
+`reloc_backend_compat_shims.c:494-496` declares
+
+```c
+static FTParts sNdsFTManagerPartsAllocPool[64];
+static FTParts *sNdsFTManagerPartsAllocFree;
+static sb32 sNdsFTManagerPartsAllocInit;
+```
+
+with an initialiser at `:499` that threads them into a free list — and **the
+compiler reports all three as "defined but not used" on every build.** The pool
+allocator is unreachable, so `FTParts` come from scattered heap allocations
+instead, which is exactly why the walk misses on every node.
+
+**The shape of the fix, in order:** confirm both entrypoints
+(`ftParamsUpdateFighterPartsTransform` / `...TransformAll`) are only ever passed
+a fighter's ROOT joint — if a caller passes a sub-joint, a flat sweep would
+invalidate too much and the tree walk has to stay. If they are roots, wire the
+pool up and replace the recursion with a linear sweep of the contiguous block:
+sequential, prefetch-friendly, no DObj traversal at all, and it shrinks the
+`FTParts` working set from scattered heap into one array. Verify with the census
+(`scripts/analyze-dcache-stalls.py`) that the two 37.1/30.8 sites drop, not just
+with ticks.
+
+**Do not simply delete the dead pool as cleanup** — it is the intended fix,
+sitting one wiring change away from the board's best-shaped target.
+
 ### The DMA spin is GEOMETRY SUBMISSION, not a free win (cycle 108)
 
 Followed up the census's largest site and it is **not** the clean win it looked

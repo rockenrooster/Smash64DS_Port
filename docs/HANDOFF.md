@@ -90,8 +90,13 @@ the busy bit: **6,654,860 cycles, 58% of that function**, the CPU idle-waiting o
 hardware. And a load right after a `memset` is charged that memset's
 write-buffer drain, so those two costs must not be added. Best-shaped real
 target: **`ndsFTParamsInvalidateFighterParts`** — CPI 7.08, 6.53M of load excess
-in **two instructions** off one base register, and inside the simulation where
-`SRC` decides the gate rather than in fighter draw. Board has the full census, plus the sensitivity curve that sizes any
+in **two instructions**, inside the simulation where `SRC` decides the gate. It
+is a recursive joint-tree walk writing one zero per part, and **the fix is
+already written and dead**: `reloc_backend_compat_shims.c:494-496` declares a
+contiguous `FTParts sNdsFTManagerPartsAllocPool[64]` plus its free-list init
+that the compiler reports **"defined but not used" on every build**. Wire it up,
+confirm both entrypoints only ever get a ROOT joint, replace the recursion with
+a linear sweep; do not delete the pool as cleanup. Board has the census, plus the sensitivity curve that sizes any
 proposal (median clears the gate by only **13,372**; a body-wide 50,000
 moves 238 frames from 20 FPS to 30 FPS) and the CPI table behind
 "memory-bound": non-idle **CPI 2.85**, `fadd` 1.19, `ftMainProcUpdateInterrupt`
