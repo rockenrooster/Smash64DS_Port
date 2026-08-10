@@ -3399,6 +3399,64 @@ placement term that was hiding it.** That vindicates the route and retroactively
 explains why the 7-cut batch's −32,128 P95 was uninterpretable. Any future cut in
 the 1,000–5,000 tick class must be measured this way; there is no other method.
 
+### The FTR pre-submission half is enumerated: four of five seams already elided
+
+Walked `FTR_STG_OPTIMIZATION.md`'s FTR ask seam by seam. Every one now has a
+number, and the plan's "delete working-set traversal and policy work" is
+**already done** — which is why its own note says the baked plan "only saved
+roughly 6-9K".
+
+| seam | status | evidence |
+|---|---|---|
+| walk | **baked plan landed** | `native_owner_plan_hit` takes `ndsFighterDrawPlanApply`; 0 hash variants over 3,961 comparisons |
+| validate | **99.95% cached** | 3,961 reuse / 2 build (cycle 98) |
+| reset | **dead at shipped profile** | both call sites are in the `detailed_output` arm |
+| resolve + its lookups | **already elided** | it is the `else` of the plan-hit branch, keyed on the 99.95% validator |
+| matrix prep | **the only live seam** | see below |
+
+**The resolve check is worth keeping as a method note.** I was about to memoise
+`ndsFighterDrawPlanResolve` on the walk hash. Two things stopped it: the hash does
+**not** cover four inputs the resolve reads (`expected_asset_id`, the display
+contract's `event->dl`/`material_dobj`/`matrix_dobj`, the MObj chain length, and
+the loaded file's own fields), so that key would have been unsound; and the memo
+measurement independently proved the resolve is not hot — 30,385
+`ndsRelocFindLoadedFileContaining` calls for the WHOLE match across all 30
+callers, when resolve alone at ~10 selected DObjs per fighter per frame would
+exceed 40,000. **A memo whose key is narrower than its function's inputs bakes a
+stale plan silently**; that is the Task 36 lesson in a new place.
+
+### The one live FTR seam is named: `ndsRendererAdapterBuildDObjLocalMatrix`
+
+**62 `bl __aeabi_*` sites in one per-joint-per-frame function** — 36 `fmul`, 10
+`fadd`, 7 `fcmpeq`, **6 `fdiv`**, 3 `fsub` — against 1,362 instructions. That is
+more soft-float sites than the figatree parser carried, and this is the plan's
+"compact matrix preparation" box.
+
+**But its interior is already fixed point, so do not brief this as a rewrite.**
+It declares `s32 translate[4]`, `s32 scale_x/scale_y`, reads rotations through
+`ndsFloatBits` (a bit read, not a conversion), and its own comment says it works
+in fixed point off the sin/cos table. The soft float is concentrated at its
+**f32 boundary**, specifically the MVP-recalc scale path
+(`sNdsRendererAdapterMvpRecalcScaleX * dobj->scale.vec.f.x` and `.y`, plus
+`cobj->projection.persp.scale`) — and that path is gated on
+`has_mvp_recalc_rpy_0x47`.
+
+**So the next step is ONE COUNTER, not an edit,** and this is the third time this
+cycle that rule has paid: **62 static call sites is not 62 executions.** Count how
+often `has_mvp_recalc_rpy_0x47` is true and how many of the 6 `fdiv` are on it
+before touching anything. Tonight the same shortcut produced a 6x error on the
+material-lookup seam and, earlier in the campaign, killed the animation lever at
+1.64x its target. If the recalc path is cold, this function is not a lever
+either and the FTR half is fully closed; if it is hot, the fix is the same exact
+converter technique the parser slice just proved, not a representation change.
+
+**This is also where the two plans converge.** `FTR_STG_OPTIMIZATION.md` line 49
+says the fixed-point animation representation feeds directly into this box, and
+`FIXEDPOINT_ANIMATION.md` deliberately kept one float boundary at DObj in stage 1
+and routes "fixed pose -> fixed local matrix" to stage 2 **gated on profiling
+justifying it**. The 62-site count is the beginning of that justification, not the
+end of it — the counter is.
+
 ### FTR pre-submission: the asset lookup is NOT the seam — my premise was 6x wrong
 
 `FTR_STG_OPTIMIZATION.md` asks for traversal and policy work to be deleted from
