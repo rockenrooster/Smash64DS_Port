@@ -3351,6 +3351,155 @@ regression bisect (largest known flat cost), `Tex` residue on non-effect
 paths, then the charter §7 contingency ladder (rate reduction → fidelity →
 owner-approved 30 Hz) — never widen the gate.
 
+### FTR LANDED −22,689: three abstractions leave the hot fighter path (cycle 110)
+
+**Four arms, one pre-slice baseline built and measured for the purpose.** The
+baseline reads `FTR` mean **385,508**, which is the owner's stated ~385–390K to
+the ticket — so the reference is right and the deltas below are real progress,
+not a re-anchoring.
+
+| arm | `FTR` mean | Δ | `WORK-H` mean | Δ |
+|---|---:|---:|---:|---:|
+| pre-slice baseline (`4fc9d79d14~`) | 385,508 | — | 1,062,929 | — |
+| + slice 1, emit capture hook | 374,332 | −11,176 | 1,052,509 | −10,420 |
+| + slice 2, flat baked compose | 366,597 | −18,911 | 1,044,687 | −18,242 |
+| **+ slice 3, `m4x4` intermediates** | **362,819** | **−22,689** | **1,040,085** | **−22,844** |
+
+`FTR` P50 396,032 → 379,328 and P95 399,040 → 382,464 across arms 1–3.
+**Every control drifts under ±950 and non-monotonically** across all four arms
+(`STG` −538, `SRC` +919, `SINT` −167, `SCPU` +572, `MISC` −264) while `FTR` falls
+monotonically by 22,689 — so this is mechanism, not relinking.
+`scripts/compare-tick-hud-arms.py` prints this table and states, from
+`romSha256`, whether a given pair carries a placement term at all.
+
+Slice 2's arm is exact — **identical `romSha256` in both arms**
+(`13B8DF73…`), the `.data` route poked and read back at end of run, 3,951 calls
+and **0 rejects**, and every unrelated bucket flat within ±40 (`STG` −20, `SRC`
+−25, `SINT` +6, `SCPU` −8). `FTR` and `WORK-H` agree to 87 ticks, so the whole
+delta lands in the bucket that owns the change. Slice 1's arm is cross-build, but
+−11,176 with the disassembly showing the instructions gone is not a placement
+artifact, and the combined −18,911 clears the 14,080 placement term outright.
+
+**Slice 1 — the Task 36 stage-capture hook, deleted from all five fighter emit
+loops.** `ndsRendererHardwareWriteVertex16Words`/`…TexCoordWord`/`…ColorWord`
+carry a record hook compiled in whenever `NDS_TASK36_HW_COMPOSE == 2`, which the
+shipped ROM sets. On the fighter path it can **never fire**: the capture window
+is opened by `ndsRendererTask36ReplayCaptureBeginRun` and closed by `…EndRun`,
+both inside `ndsRendererCommitNativeStageSegment` bracketing one **stage** run,
+and BeginRun faults outright on a non-stage index. The effect-packet capture is
+armed the same way around an effect display list. So a stage-capture abstraction
+and a diagnostic capture were being tested **once per fighter corner**.
+
+The proof is the disassembly, not the clock: the untextured loop goes **19 → 11
+instructions a corner** and the textured **25 → 14**, every stack spill gone
+(the maybe-call was forcing the vertex words to memory and then reloading the
+loop-end pointer). Per-PC profile data prices exactly the deleted instructions at
+**10,892 + 3,231 = 14,123 ticks/frame** on the tick-HUD ROM against a measured
+11,176 — 1.26x, which for a cycles estimate is agreement.
+
+**Report the shipped number separately: ~7,300, not 11,176.** The effect-packet
+half is `NDS_TICK_HUD`-only, so the instrument carries a hook the published ROM
+does not (`sNdsEffectPacketArmed` is absent from
+`smash64ds-battle-playable-hwtri.elf`; `sNdsRendererTask36CaptureActive` is
+present at the address the hot loop loads). The Task-36-only share is 7,598 +
+~1,600 of the 14,123, so scale the measurement by 0.651.
+
+**Slice 2 — the flat baked world compose, and the recorded design was wrong.**
+`PrepareNativeOwnerMatrices` asked `BuildDObjWorldMatrix` for each of the 14/18
+bindings independently, and because that entry point knows nothing about the
+order it is called in it paid for the ignorance every time: a linear-probed hash
+lookup on the binding, a walk all the way to the root, one hash probe per
+ancestor hunting a prefix somebody already built, and a store per composed step —
+`BuildDObjWorldMatrix` self 13,947 + `FindDObjWorldMatrix` 4,385 = **18,332
+ticks/frame of machinery** around ~50 local builds a frame whose arithmetic none
+of this touches.
+
+The order is not unknown, it is baked. One forward pass over `BindingParents`
+composes every world starting from its parent binding's finished matrix, straight
+into `sNdsRendererAdapterNativeOwnerModelviews` so the worlds need no second
+home — **no new RAM, no duplicate representation**.
+
+**The correction, caught statically before the build: `BindingParents` is the
+nearest *bound* ancestor, not the DObj parent.** This board's own recorded
+pseudocode said `world[i] = local_i × world[BindingParents[i]]`, and
+`generate_nds_native_owners.py:1169-1177` walks `parents[]` past every UNBOUND
+joint to build that table. Mario binding 1 is joint 5 whose real parent is the
+unbound joint 4; the recorded form would have silently dropped joint 4's local
+matrix. The live chain is still walked — just to the parent binding instead of to
+the root, one to three joints instead of full depth. Prefix publishing is also
+kept, because the generic display-list path shares that hash for effects parented
+under fighter joints: **what is deleted is the probing, not the publishing**, and
+that is why the win is 7,735 rather than the full 18,332.
+
+**Graduated, not left behind.** With 0 rejects over 3,951 calls the route and its
+two counters are deleted and the compose is unconditional, fail-closed to the
+per-binding path on any disagreement between the baked table and the live tree.
+
+### The ~331K fighter draw is reconciled: 314,555 ticks/frame in named symbols
+
+`scripts/analyze-fighter-draw-reconciliation.py` (no build, no run — it reads the
+c106 census plus the soft-float caller attribution). Idle removed first,
+`%non-idle × 1,128,000`, soft float re-attributed to callers, and census-only
+instrumentation excluded rather than counted:
+
+| group | ticks/frame | what it is |
+|---|---:|---|
+| **matrix preparation** | **96,207** | local build 18,245 · split load 15,248 · mul_affine 14,902 · world 13,947 · TraRotRpy 11,916 · mul 9,842 · pair load 7,167 · find 4,385 |
+| **production driver** | **54,043** | `ExecuteNativeFighterOwnerProduction` 30,582 · `PrepareProductionRun` 21,205 |
+| **emit / GX submission** | **48,115** | untextured 31,684 · textured 11,587 · cross 4,772 |
+| **adapter driver** | **44,680** | `DLAllDrawForSlot` 29,841 · `ftDisplayMainDrawDefault` 10,269 |
+| **material / shading state** | **35,568** | snapshot 11,656 · shade 8,512 · state delta 8,277 · material 5,603 |
+| **fighter parts / params** | **18,711** | `ndsFTParamsInvalidateFighterParts` 15,815 |
+| **display contract / plan** | **17,231** | spread over 17 symbols, none above 3,754 |
+| **total** | **314,555** | 95% of the owner's ~331K |
+| *(excluded: instrumentation)* | *28,049* | debug HUD 15,181 · `ndsFtrPreMaterialCensus` 9,061 · `cpuGetTiming` 3,807 |
+
+**This answers the "is it exhausted" question with a shape, not a verdict.** The
+two largest groups are not leaf arithmetic. `ExecuteNativeFighterOwnerProduction`
+spreads 26.5M cycles over **709 distinct PCs** with no site above 5.1%, and
+`PrepareProductionRun` over 384 with none above 3.7% — that is the signature of
+whole-body architecture cost, exactly what the plan claims and what a per-helper
+refutation cannot see.
+
+**Three targets are now named with numbers, in order:**
+
+1. **`ndsRendererNativeBindProductionRoot` copies two 64-byte matrices per root**
+   (`nds_renderer.c:23897,23905`), 12,422 times a match at **416 cycles a call**
+   = **5,958 ticks/frame**, and its own comment says the value is read only by
+   the split loader and a flag test. The stage owner already holds
+   `sNdsNativeStageOwnerExecution.projection` **as a pointer** — the fighter is
+   the one that copies. Half of this is data that has to be read either way, so
+   price it at ~3,000 before committing to it.
+2. **`ndsRendererLoadHardwareSplitMatrices` is 1,064 cycles a call** over 12,431
+   calls, flat across 185 PCs, and **absent from the census's non-mem stall
+   ranking** — so it is memory stall, not placement. Slice 3 (below) removes the
+   `m4x4` intermediates; the `scaled_modelview` copy that remains can go too by
+   writing `MTX_LOAD_4x4`'s 16 words as 12 unscaled plus 4 rescaled.
+3. **`ndsFighterMarioFoxDLAllDrawForSlot` is 9,844 bytes with cyc/insn 5.60**,
+   the 3rd largest non-mem stall in the build (4,655,284), and **51% of its
+   instructions never execute** — 5,012 bytes of cold code interleaved through
+   the hot path of a function called 13,195 times. It is too big for
+   `.text.hot`'s 3,936 free bytes as it stands; splitting the cold arms out is
+   what would make it fit.
+
+**Slice 3 — MEASURED −3,778.** `NDSRendererMatrix20p12` is `s32 m[4][4]` and
+libnds' `m4x4` is `int m[16]`, both row-major and both 64 bytes:
+`ndsRendererCopyMtx20p12ToM4x4` was writing element i to element i. Both per-root
+loaders now hand `glLoadMatrix4x4` the matrix directly through a
+`_Static_assert`-guarded accessor, deleting three of the four 64-byte
+intermediates and 128 bytes of stack traffic a call. On its own it is under the
+placement term, which is exactly why it shipped **with** the other two rather
+than as its own arm — the cumulative −22,689 is what clears the floor.
+The fourth intermediate is `scaled_modelview`, still needed because the bottom
+row is rescaled; writing `MTX_LOAD_4x4`'s 16 words as 12 unscaled plus 4 rescaled
+removes it, but that bypasses the `glLoadMatrix4x4` wrapper the Task 29/34/49
+census records through, so it needs the wrapper preserved by hand.
+
+**Verified, not just measured.** `verify-all.ps1 -Profile Boundary` passes with
+the flat compose unconditional, and `artifacts/visibility/latest.png` shows both
+fighters fully articulated on Dream Land — a wrong world matrix is exactly what
+destroys that, so the screenshot is the check that matters here.
+
 ### The `.data` route WORKS — first attributable animation measurement (cycle 109)
 
 Built the standing-rule-7 route the determinism finding demanded.

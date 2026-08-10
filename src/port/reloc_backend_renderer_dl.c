@@ -3402,11 +3402,16 @@ static void ndsRendererAdapterSetShuffleOffset(const FTStruct *fp)
  * published. What is deleted is the probing, not the publishing.
  *
  * Fail-closed: any disagreement between the baked table and the live tree
- * returns FALSE and the caller falls back to the per-binding path. */
-u32 gNdsR2FtrFlatCompose = 1u;
-u32 gNdsR2FtrFlatComposeCalls;
-u32 gNdsR2FtrFlatComposeRejects;
-
+ * returns FALSE and the caller falls back to the per-binding path.
+ *
+ * MEASURED and graduated, cycle 110. Priced on ONE binary through a `.data`
+ * route (identical `romSha256` in both arms, poke read back at end of run):
+ * `FTR` mean 374,332 -> 366,597, P50 387,072 -> 379,328, P95 390,400 ->
+ * 382,464, `WORK-H` mean 1,052,509 -> 1,044,687. Every unrelated bucket flat
+ * within +/-40 -- `STG` -20, `SRC` -25, `SINT` +6, `SCPU` -8 -- and `FTR` agrees
+ * with `WORK-H` to 87 ticks, so the whole delta lands in the bucket that owns
+ * the change. Engagement was 3,951 calls and 0 rejects, so the route and its two
+ * counters are deleted rather than left behind as proof-only machinery. */
 static sb32 ndsRendererAdapterComposeOwnerWorldsFlat(
     u32 slot,
     DObj *const *bindings,
@@ -3574,17 +3579,9 @@ static sb32 ndsRendererAdapterPrepareNativeOwnerMatrices(
      * modelview array so the worlds need no second home. On success the loop
      * below applies the shuffle and the camera in place; on failure nothing has
      * been consumed yet and the per-binding path runs unchanged. */
-    if (gNdsR2FtrFlatCompose != 0u)
-    {
-        gNdsR2FtrFlatComposeCalls++;
-        flat_worlds = ndsRendererAdapterComposeOwnerWorldsFlat(
-            slot, bindings, binding_count,
-            sNdsRendererAdapterNativeOwnerModelviews);
-        if (flat_worlds == FALSE)
-        {
-            gNdsR2FtrFlatComposeRejects++;
-        }
-    }
+    flat_worlds = ndsRendererAdapterComposeOwnerWorldsFlat(
+        slot, bindings, binding_count,
+        sNdsRendererAdapterNativeOwnerModelviews);
 #endif
     /* The ordinary per-frame DObj world cache already records every prefix
      * built for a binding.  Walking each selected binding through that cache

@@ -1542,6 +1542,10 @@ static inline void ndsRendererTask29GlVertex3v16(v16 x, v16 y, v16 z)
 #define NDS_EFFECT_PHASE_TRI(call) do { call; } while (0)
 #endif
 
+/* These three carry the GX record hook. A fighter emit path must NOT use them --
+ * see ndsRendererHardwareWriteFighter*Word below, and the measurement that made
+ * the split: the hook's two capture flags can never be set on the fighter path
+ * and testing them once per corner cost 24% of the untextured emit. */
 static inline void ndsRendererHardwareWriteColorWord(u32 value)
 {
 #if !NDS_RENDERER_HW_TRIANGLES
@@ -18180,6 +18184,30 @@ static void ndsRendererCopyMtx20p12ToM4x4(
     }
 }
 
+/* The copy above writes element i to element i: `NDSRendererMatrix20p12` is
+ * `s32 m[4][4]` and libnds' `m4x4` is `int m[16]`, both row-major, both 64
+ * bytes. A loader that only wants to hand the matrix to `glLoadMatrix4x4` does
+ * not need the intermediate at all -- and the two per-root loaders were paying
+ * for two of them, 128 bytes of stack traffic a call, on a function the census
+ * prices at 1,064 cycles a call across 12,431 calls with no hot spot above 3.9%
+ * and almost all of it MEMORY stall (it is absent from the census's non-mem
+ * stall ranking entirely). Deleting the intermediate deletes the traffic.
+ *
+ * The access is through `int` lvalues on an object whose elements are `int`, so
+ * this is not a type-punned read; the static assertions below are what keep the
+ * two layouts from drifting apart silently. */
+_Static_assert(sizeof(m4x4) == sizeof(NDSRendererMatrix20p12),
+               "m4x4 and NDSRendererMatrix20p12 must be the same size");
+_Static_assert(sizeof(((m4x4 *)0)->m[0]) ==
+                   sizeof(((NDSRendererMatrix20p12 *)0)->m[0][0]),
+               "m4x4 and NDSRendererMatrix20p12 elements must match");
+
+static inline const m4x4 *ndsRendererMtx20p12AsM4x4(
+    const NDSRendererMatrix20p12 *src)
+{
+    return (const m4x4 *)src;
+}
+
 static void ndsRendererBuildRawHardwareMatrix(
     const NDSRendererMatrix20p12 *composed,
     NDSRendererMatrix20p12 *hardware)
@@ -18242,9 +18270,6 @@ static void ndsRendererLoadHardwareMatrixPair(
     const NDSRendererMatrix20p12 *modelview,
     u32 mode, u32 generation, u32 scale_world)
 {
-    m4x4 projection_hw;
-    m4x4 modelview_hw;
-
     (void)scale_world;
 
     if ((sNdsRendererHardwareMatrixLoaded != 0u) &&
@@ -18255,13 +18280,10 @@ static void ndsRendererLoadHardwareMatrixPair(
     }
 
     ndsRendererHardwareEndBatch();
-    ndsRendererCopyMtx20p12ToM4x4(projection, &projection_hw);
-    ndsRendererCopyMtx20p12ToM4x4(modelview, &modelview_hw);
-
     ndsRendererHardwareSetMatrixMode(GL_PROJECTION);
-    glLoadMatrix4x4(&projection_hw);
+    glLoadMatrix4x4(ndsRendererMtx20p12AsM4x4(projection));
     ndsRendererHardwareSetMatrixMode(GL_MODELVIEW);
-    glLoadMatrix4x4(&modelview_hw);
+    glLoadMatrix4x4(ndsRendererMtx20p12AsM4x4(modelview));
 
     ndsRendererProfileRecordMatrixLoad();
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
@@ -18355,8 +18377,6 @@ static void __attribute__((noinline)) ndsRendererLoadHardwareSplitMatrices(
     u32 generation)
 {
     NDSRendererMatrix20p12 scaled_modelview;
-    m4x4 projection_hw;
-    m4x4 modelview_hw;
     u32 col;
 
     if ((projection == NULL) || (modelview == NULL))
@@ -18418,12 +18438,10 @@ static void __attribute__((noinline)) ndsRendererLoadHardwareSplitMatrices(
      * the 30 per-root loads a frame re-push an identical projection. Engaged on
      * 93.8% of loads and worth -3,008 FTR P50, under the placement floor. The
      * FIFO writes are simply cheap; see the E22/E23 write-up. Reverted. */
-    ndsRendererCopyMtx20p12ToM4x4(projection, &projection_hw);
     ndsRendererHardwareSetMatrixMode(GL_PROJECTION);
-    glLoadMatrix4x4(&projection_hw);
-    ndsRendererCopyMtx20p12ToM4x4(&scaled_modelview, &modelview_hw);
+    glLoadMatrix4x4(ndsRendererMtx20p12AsM4x4(projection));
     ndsRendererHardwareSetMatrixMode(GL_MODELVIEW);
-    glLoadMatrix4x4(&modelview_hw);
+    glLoadMatrix4x4(ndsRendererMtx20p12AsM4x4(&scaled_modelview));
 
     ndsRendererProfileRecordMatrixLoad();
     sNdsRendererHardwareMatrixMode = NDS_RENDERER_HW_MATRIX_MODE_RAW_COMPOSED;
