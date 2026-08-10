@@ -2470,6 +2470,67 @@ fails on performance first. `NDS_DREAMLAND_DS_MESH` is untested and is a
 transfer to it — but price its per-frame cost against the same 99.9% cache
 before building an A/B.
 
+### Vertex memo LANDED, engagement perfect, ticks below the floor
+
+`gNdsMPVertexF32Hits=155,515`, `Fills=11`, `Overflow=0`. **Dream Land's floor
+sweep touches exactly ELEVEN distinct vertices, and the same eleven `(f32)`
+conversions were being redone 155,515 times.** A 99.993% hit rate, no overflow
+against the 128 cap. The premise is confirmed as strongly as a counter can
+confirm anything.
+
+The ticks are not:
+
+| | bundle | +vertex memo | delta |
+|---|---:|---:|---:|
+| `WORK-H` P50 | 1,113,536 | 1,113,792 | +256 |
+| `WORK-H` mean | 1,169,961 | 1,165,628 | −4,333 |
+| `WORK-H` P95 | 1,565,760 | 1,568,960 | +3,200 |
+| 2 VBlanks (30 FPS) | 1,093 | 1,083 | −10 |
+
+Every number is inside its floor. **And the sizing on the board above was
+optimistic — correct it before reusing.** The lane's `__aeabi_i2f` total is
+2,516,993 cycles, but this change only removed
+`ndsStageMPSweepFloorLoopSweep`'s **73,530 calls = 1,235,304 cycles ≈ 1,400
+ticks/frame**. `mpCollisionGetFCCommonFloor`'s own 56,567 calls (950,326
+cycles) are in a different function and are **still there** — the same memo
+applied there is the obvious next increment, and it is also sub-floor alone.
+
+Kept: it removes real work, is bit-identical, is proven to engage, and Boundary
+passes. Not claimed as a tick win.
+
+### THE STRUCTURAL FINDING: this campaign cannot measure itself cut-by-cut
+
+Four exact, verified, work-removing cuts landed this cycle. **Not one is
+measurable on its own**, and that is not a property of the cuts:
+
+| cut | work removed | ticks/frame | measured |
+|---|---:|---:|---|
+| AObj pool | ~6,200,000 shared | ~2,800 | not measurable |
+| cubic `i2f` | 1,017,778 | ~1,160 | not measurable |
+| loop-invariant hoist | 1,955,955 | ~2,220 | not measurable |
+| fused multiply | 1,524,849 | ~1,730 | not measurable |
+| vertex memo | 1,235,304 | ~1,400 | not measurable |
+
+Floors: `WORK-H` P95 **14,080** cross-build, P50 **~5,700**, per-bucket
+**8,544**, and `.text.hot` re-addressing alone moves P50 **~6,144**. **Every
+individual cut in the remaining priced tables is 1,100–4,600 ticks/frame.** The
+gap is ~290,000. So the campaign needs on the order of **seventy such cuts**,
+and no single one of them can ever be shown to work.
+
+**Two consequences, both actionable.**
+
+1. **Stop A/B-ing individual cuts.** It burns ~25 minutes per arm to return
+   noise with a confident-looking sign, which is how Task 51's *real* regression
+   and the fused multiply's *false* one both got their apparent evidence.
+   Accumulate exact, mechanism-verified cuts and measure in batches large enough
+   to clear 14,080 — roughly **ten cuts at a time**.
+2. **Mechanism verification is the per-cut gate, not ticks.** What made every
+   cut above trustworthy was *not* a tick delta: it was disassembly (`bl`
+   removed, literal hoisted out of the loop), exhaustive proof
+   (`check_s32tof32_exact.py` over 2^32 inputs), engagement counters
+   (155,515 hits / 11 fills) and Boundary. That combination is cheap, fast, and
+   does not lie. Require it per cut; require ticks per batch.
+
 ### NEXT TARGET, fully specified: the port-side collision lane (5.46% of non-idle)
 
 `SINT`'s second child, `ftComputerProcessAll` (+24,386 over-gate), is **not AI
