@@ -3457,6 +3457,76 @@ and routes "fixed pose -> fixed local matrix" to stage 2 **gated on profiling
 justifying it**. The 62-site count is the beginning of that justification, not the
 end of it — the counter is.
 
+### RETRACTION: FTR is NOT closed. I mixed two instruments and under-read it 2.36x
+
+The owner re-opened FTR as an architectural replacement and told me to stop trying
+to prove it closed by measuring individual helpers. That was right, and the reason
+is a defect in my own arithmetic, not a difference of judgement.
+
+**The error.** I converted census cycles to ticks/frame by dividing by the
+tick-HUD's 2,038 presented frames. Those are **different instruments on different
+builds**. The census's own section E prints control frames at **2,240,292
+cycles/frame** and over-gate frames at 3,266,336 — roughly 2x the shipped
+`WORK-H` of ~1,128,000 — because the profiled build carries profiling overhead.
+Census absolute cycles per frame are therefore NOT the shipped frame cost, and
+dividing them by a tick-HUD frame count is meaningless.
+
+**The sound bridge is percentage.** `armWaitForIrq` is **19.21%** of the census
+total, so non-idle is **978,488,987** of 1,211,130,791 and
+`%non-idle = %tot x 1.2378`. Applied to a 1,128,000-tick frame:
+
+| symbol | %tot | %non-idle | **ticks/frame** | group |
+|---|---:|---:|---:|---|
+| `ndsRendererNativeEmitProductionRawUntexturedRun` | 2.27 | 2.81 | **31,693** | emit |
+| `ndsRendererExecuteNativeFighterOwnerProduction` | 2.19 | 2.71 | **30,577** | replay |
+| `ndsFighterMarioFoxDLAllDrawForSlot.constprop.0` | 2.14 | 2.65 | **29,878** | prepare |
+| `ndsRendererNativePrepareProductionRun` | 1.52 | 1.88 | **21,222** | prepare |
+| `ndsRendererAdapterBuildDObjLocalMatrix` | 1.31 | 1.62 | **18,290** | matrix |
+| `ndsRendererLoadHardwareSplitMatrices` | 1.09 | 1.35 | 15,218 | matrix |
+| `ndsRendererMtxMulAffine20p12` | 1.07 | 1.32 | 14,939 | matrix |
+| `ndsRendererAdapterBuildDObjWorldMatrix` | 1.00 | 1.24 | 13,962 | matrix |
+| `ndsRendererAdapterBuildFighterTraRotRpyDirect20p12` | 0.85 | 1.05 | 11,868 | matrix |
+| `ndsRendererNativeEmitProductionRawTexturedRun` | 0.83 | 1.03 | 11,588 | emit |
+| `ndsRendererAdapterBuildNativeMaterialSnapshot` | 0.83 | 1.03 | 11,588 | material |
+| `ftDisplayMainDrawDefault` | 0.74 | 0.92 | 10,332 | prepare |
+| `ndsRendererMtxMul20p12` | 0.70 | 0.87 | 9,773 | matrix |
+
+**Total 230,930 ticks/frame = 59% of the ~390K `FTR` bucket**, before any share of
+the leaf helpers (`__aeabi_fadd` 2.79%, `fmul` 1.81%, `memset` 1.69%, `memcpy`
+1.47%, `fdiv` 0.84%) is attributed to fighter draw. The remaining ~100K to reach
+331K is those leaves plus the long tail — the bucket and the symbols now
+reconcile, which they did not when I claimed closure.
+
+By group: **matrix 84,051** (six symbols) · prepare 61,432 · emit 43,282 ·
+replay 30,577 · material 11,588.
+
+**What this retracts, specifically.** Every "not a lever" verdict I wrote on this
+lane was computed the wrong way and is **2.36x low**:
+
+| I said | actually |
+|---|---:|
+| local matrix 7,766/frame inclusive | **18,290** |
+| material snapshot ~4,960/frame | **11,588** |
+| "combined addressable seam ~12,700" | **230,930** |
+
+So `matrix` alone is **84,051 ticks/frame**, six times the placement term, and the
+individual symbols are 10K-32K each rather than the sub-noise figures I reported.
+The plan's "tens of thousands to >100K" projection is supported by the census; my
+refutation of it was an artifact.
+
+**The method rule this establishes, because it cost a whole cycle's conclusions:**
+**never divide a census cycle count by a tick-HUD frame count.** Convert through
+`%tot -> %non-idle -> x frame budget`, and take the idle share out first
+(`armWaitForIrq` is a fifth of the profile). The census's own per-frame numbers
+describe the PROFILED build, which runs at roughly half the shipped build's speed.
+This sits alongside `whole-match-instrument-only` as an instrument-boundary rule.
+
+**Consequence for the work:** matrix + prepare is **145,483 ticks/frame** of
+preparation, which is what an owner-path replacement targets, and `replay`
+(`ndsRendererExecuteNativeFighterOwnerProduction`, 30,577) plus `emit` (43,282)
+are the machinery behind it. FTR is re-opened as an architectural task with a
+quantified target, not a closed lane.
+
 ### The free step is taken: the last live FTR seam is 7,766 ticks/frame, not a lever
 
 Took the per-PC/census attribution (no build, no run) on
