@@ -2,8 +2,7 @@
 
 Updated: 2026-08-10. **The gate arm's tail was cartridge I/O: the animation
 cache arena had been full and refusing loads all match. Fixed at `f082b3c8` —
-`WORK-H` P95 1,639,299 → 1,447,318, gap 326,938.** Published pair:
-`smash64ds-battle-playable-hwtri.nds` `AFD28273…`, `smash64ds.nds` `54C07FAC…`.
+`WORK-H` P95 1,639,299 → 1,447,318, gap 326,938.**
 **Every 128-frame measurement in the archive is unusable** — that window reads
 the cheapest 6% of the match, understating P95 ~306,000 and the over-gate rate
 five times. Use `sample-tick-hud-buckets.ps1 -Samples 1600`.
@@ -18,9 +17,9 @@ frames past the buzzer. Slips 0 in every row.
 | **both-CPU** | **THE GATE (owner, 2026-08-05)** | 1,112,576 | **1,447,318** | 754/1600 |
 | **Boundary** mode 163 | shipped configuration | 1,082,112 | 1,476,672 | 673/1600 |
 
-**Gate baseline is 1,447,318 as of `f082b3c8`**, less cycle 108's ~23,000 and
-cycle 110's `WORK` −21,388 mid-cycle plus a further −11,014 on slice 18.
-Boundary is not re-banked, so 1,476,672 is stale-high. The soak's long match is
+**Gate baseline is 1,447,318 as of `f082b3c8`**, less cycle 108's ~23,000,
+cycle 110's `WORK` −21,388 and −11,014, and cycle 116's `WORK-H` P50 −11,200.
+Neither arm is re-banked, so both rows are stale-high. The soak's long match is
 `NDS_R2_SOAK_MATCH_MINUTES`; `probe-match-window.ps1` reads the match timer out
 of the guest so a window cannot claim coverage it did not have. The owner's bar:
 the whole match under the P95 budget on the both-CPU config, loading states
@@ -31,154 +30,154 @@ forbids reporting a both-CPU P95 as the Boundary figure. **Re-pin
 ## What is dead, so nobody re-derives it
 
 - **Effect DObj submits** — Boundary-only: 99.3% of the Boundary excursion but
-  **~12.1%** of the gate arm's; G3 refuted cycles 88–91.
-- **Projectiles** (44 tk/fr) · **Particles** (flat ~47,000, a P50 lever only,
-  retiring SwitchPlan §7 option 2 as a *gate* answer) · **texture thrash** ·
-  **`Find`** · **`Material`** · **the force-load seam**.
-- **`FTR` as the *P95 discriminator*** (+13,768 between the populations). NOT
-  "FTR is exhausted" — reading it that way is what the owner re-opened on
-  2026-08-10, and cycle 110 then took 21.4% off it. `FTR` is **flat**, on nearly
-  every frame, which is exactly why it is worth cutting.
-- **Task 56 strips** — REVERT: **the ROM hangs the present loop**; its
-  `PERF_LEDGER` KILL row has no completed run behind it.
+  **~12.1%** of the gate arm's; G3 refuted cycles 88–91. **Projectiles**
+  (44 tk/fr) · **Particles** (flat ~47,000, a P50 lever only, retiring SwitchPlan
+  §7 option 2 as a *gate* answer) · **texture thrash** · **`Find`** ·
+  **`Material`** · **the force-load seam**.
+- **`FTR` as the *P95 discriminator*** (+13,768). NOT "FTR is exhausted" —
+  reading it that way is what the owner re-opened 2026-08-10; cycles 110–116 then
+  took 24.6% off it. `FTR` is **flat**, on nearly every frame, which is why.
 
 ## RAM: both budgets are near their floor — price a change before writing it
 
 - **Static/boot.** `check-boot-headroom.ps1 -Build <dir>` after every lab build.
   Highest `fake_heap_start` proven to boot **`0x02294804`**, lowest proven to
-  fail **`0x02294b24`**. **Text counts as much as bss**; a failing arm reads as
-  a hung emulator. **`gSYTaskmanGeneralHeap`** free-min **42,136** against the
-  anim cache's 32,768 `KEEP_FREE`; coupled, since freeing `.bss` enlarges it.
-  **The `Tex` (dl-pointer, bind-ordinal) memo is REFUTED** — 471 hits of 10,336
-  consults, 7,517 of 7,525 fills evicted, `Tex` ticks *up*.
+  fail **`0x02294b24`**. **Text counts as much as bss**; a failing arm reads as a
+  hung emulator. **`gSYTaskmanGeneralHeap`** free-min **42,136** against the anim
+  cache's 32,768 `KEEP_FREE`; coupled, since freeing `.bss` enlarges it. **The
+  `Tex` (dl-pointer, bind-ordinal) memo is REFUTED** — `Tex` ticks *up*.
 
-## FTR is re-opened and moving: −84,346 landed, 78% named (cycle 110)
+## FTR is re-opened and UNDER 300K: −94,666 landed (cycle 116)
 
-**Banked `FTR` mean is 301,162** against a pre-slice baseline of **385,508**
-built and measured for the purpose — that baseline equals the owner's stated
-~385–390K, so the reference is right. **−84,346, 21.9%.** `WORK-H` P95 −21,248
-on slice 15 alone. Boundary passes on every landed slice.
+**Banked `FTR` mean is 290,842** (P50 300,736, P95 303,680) against a pre-slice
+baseline of **385,508** built for the purpose, which equals the owner's stated
+~385–390K. **−94,666, 24.6%.** Boundary passes on every landed slice.
 
-**The first Requirement-3 slice landed: the prepared dense UVs are immutable
-state, not per-frame work** (−1,744; the loop runs 15 times a match instead of
-30,204). Its proof came from instrumentation already in-tree —
-`NDS_R2_FIGHTER_RUN_PROOF=2` reports **246,736 UV writes producing 106 distinct
-vertices, `gNdsR2UvChangeCount` = 0**. Board carries the preparer's five-phase
-split and the Requirement 5 record. **Next: collapse the state-delta spans at
-bake time — its census hits `region 'itcm' overflowed by 64 bytes`, so evict a
-dead ITCM resident first (28 residents never execute, 2,354 B idle).**
+**The big one is DS-native AOT geometry: Task 56 fighter strips now SHIP**
+(`NDS_TASK56_FIGHTER_PRIMITIVES ?= 2`). 626 triangles submitted as 1,878
+individual `GL_TRIANGLES` corners are now **1,014 strip corners in 163 groups**,
+compiled host-side. One-binary A/B on `gNdsR2FighterStripRoute`
+(`NDS_R2_STRIP_ROUTE=1`, identical `romSha256`): **`FTR` P50 −11,584, P95
+−11,264, `WORK-H` P50 −11,200**, `STG` unchanged to the tick.
 
-**The biggest single lever was the I-cache, not arithmetic.**
-`ndsFighterMarioFoxDLAllDrawForSlot` was the largest non-idle symbol in the ROM
-at **4.21 cycles per instruction**, 10,708 bytes against an **8 KB** I-cache,
-**73.6% of it never executed**. Outlining the never-*entered* bodies took it to
-**7,516**/**7,236** (instrument/published) from ~9,680. Recipe, no build:
-`task37_census.py --pc-detail SYM` for the executed PC set, diff `objdump`,
-`addr2line` four points inside each cold run. Any symbol over ~4 KB.
+**Its 2026-07 KILL was a defect, not a verdict: the generator drew 35.6% of the
+fighter BACKFACING** — `_stripify_run` used `(t0[0], t0[2])`, not a directed edge
+of the source triangle, and a strip inherits its first triangle's winding. A
+third of the model was culled with no assert.
+`scripts/fighters/check_fighter_primitive_streams.py` expands every group back
+into oriented triangles and is the standing proof; **run it after touching the
+stripifier**. The emitter was also `cold`/`Os` in `.main` and branched on
+`textured` per VERTEX; it is now ITCM with the branch hoisted, and it restores
+`GL_TRIANGLE` on exit because **batches are REUSED across runs without
+re-issuing `glBegin`**.
 
-**Entry count is the discriminator, not cold-byte count.** Bodies never
-*entered* win. Cold bytes inside a body that IS entered lose:
-`BuildDObjXObjMatrix` is 72% cold and outlining its four alternate matrix kinds
-cost **+14,963**, because every joint enters `GetDObjVectorTracks` and returns
-early. **Under 8 KB the lever is spent** — two more then cost **+4,959**.
+**The emit stalls per VERTEX, not per word** (c115 `--pc-detail`, no build): a
+corner is 40.5 cycles untextured, **~28 of it the GX write**, and the textured
+path pays the same ~28 for a fourth word. That is why strips work, and it
+**refutes a baked/DMA'd packed GX stream and `VTX_10`** here — both trade words,
+not vertices. −11,584 is ~57% of the vertex-count prediction, so part of the
+stall is likely **per polygon**. **The prepared dense UVs are immutable state
+too** (−1,744; the loop runs 15 times a match, not 30,204) — proven from
+`NDS_R2_FIGHTER_RUN_PROOF=2`, which was already in-tree.
 
-Fifteen landed slices; the board carries each one's evidence. What generalises:
+**The other big lever was the I-cache, not arithmetic.**
+`ndsFighterMarioFoxDLAllDrawForSlot` was the ROM's largest non-idle symbol at
+**4.21 cyc/insn**, 10,708 bytes against an **8 KB** I-cache, **73.6% never
+executed**; outlining the never-*entered* bodies took it to **7,516**/**7,236**
+(instrument/published). Recipe, no build: `task37_census.py --pc-detail SYM`,
+diff `objdump`, `addr2line` four points per cold run. Any symbol over ~4 KB.
+**Entry count is the discriminator, not cold bytes** — cold bytes inside an
+*entered* body cost **+14,963**, and under 8 KB the lever is spent (**+4,959**).
 
-- **The DObj world cache has ZERO readers** — `Find` and `BuildDObjWorldMatrix`
-  both execute 0 cycles over a match while `Store` burned 4,744,740 and ~4 KB a
-  frame of writes through a 4 KB D-cache. **Ask what reads a cache before
-  optimising what fills it**, and **read the counters a previous cycle left
-  before designing anything** — the UV slice's whole proof was already in-tree.
+Sixteen landed slices; the board carries each one's evidence. What generalises:
+
+- **The DObj world cache had ZERO readers** while `Store` burned 4,744,740
+  cycles and ~4 KB a frame through a 4 KB D-cache. **Ask what reads a cache
+  before optimising what fills it**, and **read the counters a previous cycle
+  left before designing anything** — both the UV slice's proof and Requirement
+  4's sizing were already in-tree.
 - **The compose does not fold its base in until a joint contributes** (−10,804):
   one call per binding was *copy the base in, multiply it straight back out*.
 - **The material block is built 30 times a match, not 59,392** — a (MObj, heap
-  gen, animatable-input hash) key, in a row owned by the material **DObj**, since
-  indexing by selected-root slot rotated between frames. `BindingParents` is the
-  nearest *bound* ancestor, not the DObj parent. **Same 64-byte row-major layout
-  everywhere**, so the `m4x4` intermediates were copying element i to element i.
+  gen, animatable-input hash) key in a row owned by the material **DObj**.
+  `BindingParents` is the nearest *bound* ancestor, not the DObj parent.
+- **A per-PC census charges a miss to the instruction that TAKES it**, not to the
+  work you can delete: two redundant first-reader passes came out for **+1,055**,
+  because the data was still consumed and the fills only moved.
 
-**Compiling the frame-summary counters out is refuted**: worth FTR −7,378 /
-STG −2,776 and it **breaks the gate**, because `verify-all.ps1 -Profile Boundary`
-runs more than its `-List` row and `…gcrunall-loop-harness.ps1` asserts exact
+**Compiling the frame-summary counters out is refuted** (FTR −7,378 / STG
+−2,776): it **breaks the gate**, since `…gcrunall-loop-harness.ps1` asserts exact
 batch and texture-prepare accounting off those globals. **A census row is not an
-FTR row** either: the bracket is `ndsFighterDisplayContractSubmit` only, so the
-flattened parts-invalidation walk is a real −24,215 `WORK` and **−201 `FTR`**.
+FTR row** either — the bracket is `ndsFighterDisplayContractSubmit` only.
 
-**Reconciliation, re-run on c115 with an INDEPENDENT tick factor** (0.4993
-ticks/cycle, from `ALL` against total cycles — deriving it from the FTR sum is
-circular and overstated coverage by 22%): **35 named symbols = 244,774 tk/fr,
-78.1% of `FTR`**; the 68,647 residual is bounded by shared leaves straddling FTR
-and STG/SRC — float lib 66,750, `memcpy`/`memset` 29,895, binds 22,596 (whole-frame).
+**Reconciliation on c115 with an INDEPENDENT tick factor** (0.4993 tk/cyc, from
+`ALL` vs total cycles — deriving it from the FTR sum is circular and overstated
+coverage 22%): **35 named symbols = 244,774 tk/fr, 78.1% of `FTR`**; the 68,647
+residual is bounded by shared leaves (float lib 66,750, `memcpy`/`memset`
+29,895, binds 22,596, whole-frame).
 
-**Next, priced, in FTR** (c115, ticks/frame): `ExecuteNativeFighterOwnerProduction`
-**26,307** + `NativePrepareProductionRun` **25,286** (five-phase split on the
-board; its Uv quarter is now deleted); `Task36ReplayRun` **17,796** +
-`ApplyStateDelta` **9,010**; `BuildFighterTraRotRpyDirect` **17,704** (97.9% hot,
-nothing to place); `LoadHardwareSplitMatrices` **13,126**, whose E23
-projection-skip stays refuted (content-keyed skip costs **+4,566**; a 64-byte
-`memcmp` beats eighteen FIFO writes). **The emit half is near its floor** (11
-instructions, 3 GX words a corner); lower needs a DMA'd packed stream at ~19–26 KB
-against ~9,368 B of heap slack, so **RAM is the blocker**.
-**`FIXEDPOINT_ANIMATION.md` is still unimplemented**, a `WORK`/`SRC` lever, not
-`FTR` — `__aeabi_fadd` alone is 31,245 tk/fr whole-frame.
+**Next, priced** (c115 census, tk/fr). **`Task36ReplayRun` 17,796 is STAGE, not
+FTR** — it takes `NDSNativeStageRun`; the board's old "next slice" row was
+mis-attributed. In FTR: `ExecuteNativeFighterOwnerProduction` **26,307** +
+`NativePrepareProductionRun` **25,277** (five-phase split on the board, Uv
+quarter deleted); `BuildFighterTraRotRpyDirect` **17,698** (already all
+fixed-point inside — its only float boundary is six conversions a joint);
+`BuildDObjXObjMatrix` 14,244; `LoadHardwareSplitMatrices` **13,122**, E23
+projection-skip still refuted. **The biggest untouched lever is Requirement 4**:
+`softfloat-attribution.json` (c106, in-tree) puts **animation evaluation at
+25.1M of 87.5M soft-float cycles ≈ 25,700 tk/fr**.
 
-**The `SINT` split is DONE and it reordered the queue.** `SINT` +88,082 =
-`ftMainPlayAnim` **+60,559** (the animation lane) + `ftComputerProcessAll`
-+24,386 (map collision, not AI). `SPHD`/`SHDT`/`SCPU` are not distinct symbol
-classes, so `SRC_CPI_OPTIMIZATION.md`'s items 4-6 are retired. **The force-load
-seam is closed:** `ftmain.c:4623` **discards the return value**. **The D-cache
-census is run** (`analyze-dcache-stalls.py`, no build): loads average 7.07
-cyc/ex, excess 17.83%; its largest site is a DMA0CNT spin, not a miss.
+**The `SINT` split is DONE.** `SINT` +88,082 = `ftMainPlayAnim` **+60,559**
+(animation) + `ftComputerProcessAll` +24,386 (map collision, not AI), retiring
+`SRC_CPI_OPTIMIZATION.md` items 4-6. **Force-load seam closed:** `ftmain.c:4623`
+**discards the return value**. **D-cache census run** (no build): loads average
+7.07 cyc/ex, excess 17.83%, largest site a DMA0CNT spin rather than a miss.
 
-**The animation lane is the top `SRC` target: 8.85% of non-idle, ~98,000
-ticks/frame at P50**, worth ≈38,700 (~60,000 through to matrices).
-`ftAnimParseDObjFigatree`/`gcPlayDObjAnimJoint` are the #1/#2 soft-float callers;
+**The animation lane is the top `SRC` target: 8.85% of non-idle, ~98,000 tk/fr
+at P50**, worth ≈38,700 (~60,000 through to matrices), ~25,700 of it soft-float.
 `AObj` is 36 B × ~360 live = **12,960 B against a 4 KB D-cache**, so `ldrb
 aobj->kind` costs 24.1 cyc/ex. Constraints on the board: arena not linked arrays,
 replace don't coexist, **derive phase as `frame * step`, never accumulate** (it
 drives hitboxes). A `WORK` lever: ~3,085 is inside `FTR`.
 
-**Do not bring a micro-fix** — R2-06 E11's rule: a load-frame-only ~8,000 cannot
-be banked, because relinking moves the tail by more than the saving. Clear
-~16,000 in one change, or stack proven deletions into one arm — cycle 110 banked
-fourteen. The load frame is priced on the board (premium 650,610/frame;
-`ndsRelocAssetIDForToken` **CLOSED** as a caching target). **Every change needs
-an engagement counter** — cycle 110 read FTR −13,587 off a skip it could not
-prove fired.
+**Do not bring a micro-fix** — R2-06 E11: a load-frame-only ~8,000 cannot be
+banked, because relinking moves the tail more than the saving. Clear ~16,000 in
+one change, stack proven deletions into one arm, or **use the `.data` route and
+measure on ONE binary** — that is how the strips landed. Load frame priced on
+the board (premium 650,610/frame; `ndsRelocAssetIDForToken` **CLOSED**).
+**Every change needs an engagement counter** — cycle 110 read FTR −13,587 off a
+skip it could not prove fired.
 
 **Do not re-derive these.** The Makefile's `?= 0` defaults are not the shipped
 config (41 overridden). `.text.hot` is closed both directions
 (`linker/nds_hot_text.ld:179-201`), **3.30 cyc/insn, worse than `.main`**;
 census sections C/D are a cost ranking, never a placement prediction.
 **Latent cliff, unowned:** `sNdsAObjEvent32NormalizedCount` reads **973 of
-1,024** after one minute; overflow silently **skips the animation attach**.
-**The load-frame exclusion is REFUTED — do not apply it.** The owner's "loading
-states excluded" bar must not go through `SRC > 2x median`: circular for SRC,
-swings the gap **3.08x**, drops non-loads. **Boundary for all of it** — a change
-altering a visible pixel of the shield, revival platform, impact wave or
-reflector needs the owner (`BUGS.md`, by eye).
+1,024** after a minute; overflow silently **skips the animation attach**.
+**The load-frame exclusion is REFUTED — do not apply it** (`SRC > 2x median` is
+circular for SRC, swings the gap **3.08x**, drops non-loads). **Boundary for all
+of it** — a change altering a visible pixel of the shield, revival platform,
+impact wave or reflector needs the owner (`BUGS.md`, by eye).
 
 ## Measurement rules that change your FIRST action — board owns the rest
 
 - **The sampler is bit-deterministic — never repeat a run.** Same ROM twice gives
-  byte-identical buckets, variance 0 — re-proven cycle 110 when a reverted slice
-  rebuilt its predecessor's ROM sha and every bucket to the tick. So the 14,080
-  cross-build figure is **placement, not noise**; anything under it needs the
-  `.data` route. Use `-Samples 1600 -RingDump -AllowRepeatedFrames`; a *faster*
-  ROM trips the repeated-presented-frame guard on per-frame stops (the 60 Hz loop
-  fits two iterations in a presented frame). Payload IDENTICAL is a stale read
-  and always fatal; DIFFERS is a real second iteration.
-- **Judge on `WORK-H`**; buckets locate, they never decide (per-bucket floor
-  ≥8,544). **`ALL` is VBlank-quantized** and once hid a +52,928. And **1.85
-  cycles of `FTR` mean per byte of added ARM text** — beat your footprint; a
-  116-byte seed setup ate a slice's entire win.
-- **Disassemble the loop, read the caller, and TAKE THE ENTRY-PC COUNT, before
-  designing around it.** Cycle 108 built a loader `ftmain.c` discards; cycle 109
-  aimed a `FTParts` fix at two `DObj` fields; cycle 110 published a wrong
-  mechanism for a slice by dividing a symbol total by a guessed per-call cost
-  instead of reading the prologue's execution count. Free (`--pc-detail`).
-- **Resolve line numbers against the build's own commit** — the profile ELF's
-  `NDS_TASK10_GIT_SHORT`, not HEAD; c106 against HEAD was ~85 lines adrift.
+  byte-identical buckets, variance 0. So the 14,080 cross-build figure is
+  **placement, not noise**; anything under it needs the `.data` route. Use
+  `-Samples 1600 -RingDump -AllowRepeatedFrames`; a *faster* ROM trips the
+  repeated-presented-frame guard on per-frame stops. Payload IDENTICAL is a
+  stale read and always fatal; DIFFERS is a real second iteration.
+- **Judge on `WORK-H`**; buckets locate, they never decide (floor ≥8,544).
+  **`ALL` is VBlank-quantized** — it hid a +52,928 once and it hid the strips
+  entirely (P50 identical, the saving reappearing as `WAIT`). And **1.85 cycles
+  of `FTR` mean per byte of added ARM text** — beat your footprint.
+- **Disassemble the loop, read the caller, TAKE THE ENTRY-PC COUNT, and check
+  WHICH bucket the symbol is in, before designing around it.** Cycle 108 built a
+  loader `ftmain.c` discards; c109 aimed a `FTParts` fix at two `DObj` fields;
+  c110 divided a symbol total by a guessed per-call cost; c116 found the board's
+  named next slice was a STAGE symbol. All free (`--pc-detail`). **Resolve line
+  numbers against the build's own `NDS_TASK10_GIT_SHORT`**, not HEAD — c106
+  against HEAD was ~85 lines adrift.
 
 ## Restart surface — parked items live on the board's **Parked** list
 
@@ -189,12 +188,13 @@ git status --short
 
 `docs/P1_EXECUTION_BOARD.md` is the only dynamic queue (history in
 `docs/optimization/archive/P1_EXECUTION_BOARD_pre-cycle79.md`);
-`Smash64DS_Runtime2_SwitchPlan.md` is the charter; `docs/BUGS.md` carries the owner's verdicts — preserve their wording.
-A clean checkout must build through `build.ps1`, not bare `make`: four of six
-generated `.inc` files are gitignored. `make p1-tick` builds the measuring ROM,
-`make p1` the published battle pair; bare `make` builds the P2 ROM P1 does not
-ship. Never pass `-j`, never override `MAKEFLAGS`, one build at a time, never
-build a published target name for lab work.
-Preserve canonical mode 163, renderer mode 9, mip 0, static textures, source
-countdown, Dream Land water frame 0, Task 16 `1/1/1`. Never edit `decomp/`.
-Run `New-Smash64DSSnapshot.ps1` last, and nothing after it.
+`Smash64DS_Runtime2_SwitchPlan.md` is the charter; `docs/BUGS.md` carries the
+owner's verdicts — preserve their wording. A clean checkout must build through
+`build.ps1`, not bare `make`: four of six generated `.inc` files are gitignored,
+and **`build.ps1`'s generator is not run by `make`, so it can rot unnoticed —
+it had, until c116**. `make p1-tick` builds the measuring ROM, `make p1` the
+published battle pair; bare `make` builds the P2 ROM P1 does not ship. Never
+pass `-j`, never override `MAKEFLAGS`, one build at a time, never build a
+published target name for lab work. Preserve canonical mode 163, renderer mode
+9, mip 0, static textures, source countdown, Dream Land water frame 0, Task 16
+`1/1/1`. Never edit `decomp/`. Run `New-Smash64DSSnapshot.ps1` last.

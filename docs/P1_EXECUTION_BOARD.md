@@ -4183,6 +4183,17 @@ means move less than the medians. Judge this one on P50/P95.
 tick-HUD ROM both ship strips. `NDS_R2_STRIP_ROUTE` stays 0 by default: the
 route is an instrument, and at 0 the unselected emitter is dead-coded away.
 
+**Banked on the graduated default build (route compiled out): `FTR` mean
+302,217 -> 290,842, P50 312,640 -> 300,736, P95 315,456 -> 303,680, `WORK-H`
+P50 952,960 -> 941,760.** Boundary **passes**, and
+`artifacts/visibility/latest.png` shows both fighters complete -- hat, gloves,
+overalls and shoes on Mario, ears, jacket and tail on Fox -- which is the check
+the 2026-07 attempt never made.
+
+**Cycle 116 total: `FTR` 385,508 -> 290,842, -94,666 (-24.6%).** The owner's
+"next: <300K" target is met, and it is met on a DS-native AOT primitive stream
+rather than on deletions.
+
 ### The `.data` route WORKS — first attributable animation measurement (cycle 109)
 
 Built the standing-rule-7 route the determinism finding demanded.
