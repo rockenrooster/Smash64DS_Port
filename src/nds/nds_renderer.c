@@ -23894,6 +23894,16 @@ static void ndsRendererNativeApplyProductionPreamble(
     }
 }
 
+/* Hoisted from the shade block below so BindProductionRoot can test it: with the
+ * skip active the fighter path never prepares a software light direction, which
+ * is what removes the last reader of the traversal state's own modelview. */
+#if NDS_R2_FIGHTER_HW_LIGHT && !NDS_RENDERER_M2_DETAILED_LEDGER && \
+    !NDS_R2_FIGHTER_SOFT_LIGHT_KEEP
+#define NDS_R2_SHADE_SKIP_SOFT_LIGHT 1
+#else
+#define NDS_R2_SHADE_SKIP_SOFT_LIGHT 0
+#endif
+
 static void ndsRendererNativeBindProductionRoot(
     NDSRendererTraversalState *state,
     const NDSRendererNativeFighterRoot *input,
@@ -23912,17 +23922,33 @@ static void ndsRendererNativeBindProductionRoot(
     state->prepared_light_direction_valid = 0u;
     state->texture_prepare_valid = 0u;
     state->projection_valid = 0u;
+#if NDS_R2_FIGHTER_HW_MTX && NDS_R2_SHADE_SKIP_SOFT_LIGHT
+    /* E16b traced every consumer of the composed matrix and found only the
+     * hardware load, which the split loader replaces. Finishing that trace for
+     * the two halves: on this path the split loader takes them from `input`
+     * directly (its call site is the next statement after this one, with
+     * `input` in scope), and the only other readers of the traversal state's
+     * modelview are the software light preparation -- compiled out whenever
+     * NDS_R2_SHADE_SKIP_SOFT_LIGHT -- plus the generic command executor's
+     * matrix stack and ComposeMatrix, none of which the production owner
+     * enters. So these were two 64-byte struct copies per root with nothing
+     * downstream to read them: 12,422 executions at 416 cycles a call, 5,958
+     * ticks/frame, 79% of BindProductionRoot's whole cost.
+     *
+     * The valid flags go FALSE rather than TRUE because that is now the honest
+     * answer: a reader that appears later gets "no matrix here" instead of
+     * whichever owner's matrix was copied in last. `matrix_valid` below is a
+     * different flag and is still what PrepareProductionRun tests. */
+    state->modelview_valid = FALSE;
+    state->projection_valid = FALSE;
+#elif NDS_R2_FIGHTER_HW_MTX
     state->modelview = *input->modelview_matrix;
     state->modelview_valid = TRUE;
-#if NDS_R2_FIGHTER_HW_MTX
-    /* E16b traced every consumer: under mode 9 the composed matrix is read only
-     * by the hardware load, which the split loader replaces, and by a
-     * matrix_valid flag test in ndsRendererNativePrepareProductionRun. The
-     * value is therefore not needed here -- but the flag is, so it is still
-     * set. */
     state->projection = *input->projection_matrix;
     state->projection_valid = TRUE;
 #else
+    state->modelview = *input->modelview_matrix;
+    state->modelview_valid = TRUE;
     state->matrix = *input->composed_matrix;
 #endif
     state->matrix_valid = TRUE;
@@ -24462,13 +24488,10 @@ ndsRendererR2EpochStateProof(u32 epoch_index, const NDSRendererStats *stats)
  *
  * NDS_R2_FIGHTER_SHADE_PROOF hashes `prepared_direction`; with the skip active
  * that field is NULL, so the proof is only comparable against another skipped
- * build. It is a lab flag and never ships with this one. */
-#if NDS_R2_FIGHTER_HW_LIGHT && !NDS_RENDERER_M2_DETAILED_LEDGER && \
-    !NDS_R2_FIGHTER_SOFT_LIGHT_KEEP
-#define NDS_R2_SHADE_SKIP_SOFT_LIGHT 1
-#else
-#define NDS_R2_SHADE_SKIP_SOFT_LIGHT 0
-#endif
+ * build. It is a lab flag and never ships with this one.
+ *
+ * The #define itself now lives above ndsRendererNativeBindProductionRoot,
+ * because that function's matrix copies are gated on it. */
 
 static s32 NDS_RENDERER_NATIVE_FIGHTER_CODE
 ndsRendererNativeShadeProductionActions(
@@ -31737,8 +31760,10 @@ ndsRendererExecuteNativeFighterOwnerProduction(
 #endif
         *out_hardware_started = TRUE;
 #if NDS_R2_FIGHTER_HW_MTX
+        /* Straight from the root, which BindProductionRoot no longer copies
+         * into the traversal state -- see the trace there. */
         ndsRendererLoadHardwareSplitMatrices(
-            &state->projection, &state->modelview,
+            input->projection_matrix, input->modelview_matrix,
             state->matrix_generation);
 #else
         ndsRendererLoadHardwareRawComposedMatrix(

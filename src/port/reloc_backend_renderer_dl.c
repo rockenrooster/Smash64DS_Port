@@ -13040,6 +13040,62 @@ static const Gfx *ndsFighterDLAllDrawResolveBranch(const Gfx *dl,
 }
 
 #if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+/* ---------------------------------------------------------------------------
+ * The invariant half of the production inputs, primed once.
+ *
+ * `BuildNativeProductionInputs` rebuilt both structs from scratch for every
+ * selected root on every frame -- **13,175 ticks/frame, 44% of the whole adapter
+ * driver** by the c106 line census -- and almost none of what it wrote had
+ * changed. Nine of the config's thirteen fields are compile-time constants or
+ * function pointers; three of the root's are the addresses of fixed workspace
+ * slots. On top of that it zeroed both structs first, which is ~30 word stores a
+ * root before a single useful field is written.
+ *
+ * None of it depends on WHICH fighter is drawing, because the workspace is a
+ * single shared static and slot 0 and slot 1 write the same addresses into the
+ * same slots. So this primes all `NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED` entries
+ * once and is never keyed on anything -- no stamp, no generation, no compare.
+ *
+ * What genuinely changes per frame, and is all the loop below now writes: the
+ * two camera pointers, the geometry mode, the damage/hurt colour modulate, the
+ * resolver (a stack local in the caller, so its address is not guaranteed
+ * stable), the plan's root offsets and material counts, and the display
+ * contract's preamble. The preamble is assigned rather than OR-ed now, because
+ * the per-frame zeroing that used to clear it is gone. */
+static u32 sNdsRendererAdapterProductionInputsPrimed;
+
+static void ndsRendererAdapterPrimeProductionInputs(
+    NDSRendererAdapterNativeOwnerWorkspace *workspace)
+{
+    u32 i;
+
+    for (i = 0u; i < NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED; i++)
+    {
+        NDSRendererConfig *config = &workspace->production_configs[i];
+        NDSRendererNativeFighterRoot *root =
+            &workspace->production_roots[i];
+
+        *config = (NDSRendererConfig){0};
+        *root = (NDSRendererNativeFighterRoot){0};
+
+        config->max_depth = 8u;
+        config->max_commands = 2048u;
+        config->max_list_commands = 512u;
+        config->texture_data_layout =
+            NDS_RENDERER_TEXTURE_DATA_O2R_WORD_SWAPPED;
+        config->validate_range = ndsFighterDLAllDrawValidateRange;
+        config->immutable_command_span =
+            ndsRendererAdapterImmutableCommandSpan;
+        config->resolve_branch = ndsFighterDLAllDrawResolveBranch;
+        config->resolve_data = ndsFighterDLDrawResolveRendererData;
+
+        root->composed_matrix = &workspace->composed_matrices[i];
+        root->materials = sNdsRendererAdapterNativeOwnerMaterials[i];
+        root->config = config;
+    }
+    sNdsRendererAdapterProductionInputsPrimed = TRUE;
+}
+
 static sb32 ndsRendererAdapterBuildNativeProductionInputs(
     u32 slot,
     u32 color_modulate,
@@ -13072,6 +13128,11 @@ static sb32 ndsRendererAdapterBuildNativeProductionInputs(
     resolver->segment_e_base = NULL;
     resolver->segment_e_end = NULL;
 
+    if (sNdsRendererAdapterProductionInputsPrimed == FALSE)
+    {
+        ndsRendererAdapterPrimeProductionInputs(workspace);
+    }
+
     for (i = 0u; i < collection->selected_count; i++)
     {
         NDSRendererConfig *config = &workspace->production_configs[i];
@@ -13082,24 +13143,11 @@ static sb32 ndsRendererAdapterBuildNativeProductionInputs(
                 &sNdsFighterDisplayContract.events[
                     collection->indices[i]] : NULL;
 
-        *config = (NDSRendererConfig){0};
-        *root = (NDSRendererNativeFighterRoot){0};
-
-        config->max_depth = 8u;
-        config->max_commands = 2048u;
-        config->max_list_commands = 512u;
         config->initial_projection = projection;
         config->initial_modelview = modelviews[i];
         config->initial_geometry_mode =
             (event != NULL) ? event->geometry_mode : 0u;
         config->color_modulate = color_modulate;
-        config->texture_data_layout =
-            NDS_RENDERER_TEXTURE_DATA_O2R_WORD_SWAPPED;
-        config->validate_range = ndsFighterDLAllDrawValidateRange;
-        config->immutable_command_span =
-            ndsRendererAdapterImmutableCommandSpan;
-        config->resolve_branch = ndsFighterDLAllDrawResolveBranch;
-        config->resolve_data = ndsFighterDLDrawResolveRendererData;
         config->user = resolver;
 
 #if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
@@ -13144,33 +13192,44 @@ static sb32 ndsRendererAdapterBuildNativeProductionInputs(
 
         root->root_offset = workspace->root_offsets[i];
         root->material_count = workspace->material_counts[i];
-        root->composed_matrix = &workspace->composed_matrices[i];
         root->modelview_matrix = modelviews[i];
 #if NDS_R2_FIGHTER_HW_MTX
         root->projection_matrix = projection;
 #endif
-        root->materials = sNdsRendererAdapterNativeOwnerMaterials[i];
-        root->config = config;
 #if NDS_RENDERER_M2_DETAILED_LEDGER
         root->owner_generation = owner_file->owner_generation;
 #endif
 
         if (event != NULL)
         {
+            u32 flags = NDS_RENDERER_NATIVE_PREAMBLE_VALID;
+
             root->preamble.geometry_mode = event->geometry_mode;
             root->preamble.cycle_type = event->cycle_type;
             root->preamble.render_mode = event->render_mode;
             root->preamble.prim_color = event->prim_color;
             root->preamble.env_color = event->env_color;
-            root->preamble.flags = NDS_RENDERER_NATIVE_PREAMBLE_VALID;
             if (event->light_valid != 0u)
             {
                 root->preamble.light_dir_x = event->light.l.dir[0];
                 root->preamble.light_dir_y = event->light.l.dir[1];
                 root->preamble.light_dir_z = event->light.l.dir[2];
-                root->preamble.flags |=
-                    NDS_RENDERER_NATIVE_PREAMBLE_LIGHT_VALID;
+                flags |= NDS_RENDERER_NATIVE_PREAMBLE_LIGHT_VALID;
             }
+            else
+            {
+                /* The per-frame zeroing that used to leave these at 0 is gone,
+                 * so an invalid light has to clear them itself or a previous
+                 * frame's direction survives behind a cleared valid bit. */
+                root->preamble.light_dir_x = 0;
+                root->preamble.light_dir_y = 0;
+                root->preamble.light_dir_z = 0;
+            }
+            root->preamble.flags = (u8)flags;
+        }
+        else
+        {
+            root->preamble = (NDSRendererNativeFighterPreamble){0};
         }
     }
     return TRUE;
@@ -13200,6 +13259,13 @@ static sb32 ndsRendererAdapterBuildNativeHierarchyInputs(
     resolver->slot = slot;
     resolver->segment_e_base = NULL;
     resolver->segment_e_end = NULL;
+
+    /* This path shares `production_roots` and re-points every `root->config` at
+     * the hierarchy config, so the production primer's invariants are gone once
+     * it has run. Mode 7 and mode 9 are different builds' runtime modes rather
+     * than alternating states, but a stale invariant is a silent wrong pointer,
+     * so make the production path re-prime rather than assume. */
+    sNdsRendererAdapterProductionInputsPrimed = FALSE;
 
     config = &workspace->hierarchy_config;
     *config = (NDSRendererConfig){0};
