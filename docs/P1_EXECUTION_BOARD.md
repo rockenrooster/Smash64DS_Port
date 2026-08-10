@@ -2423,6 +2423,36 @@ bit-exact change must do. Disassembly confirms the call is gone and one ARM
 `clz` replaced it; the two `__clzsi2` references in the ELF are inside libgcc's
 `__clzdi2` and are present in the pre-change build too. Boot headroom 32,992.
 
+### REVERTED: the fused `f32 x f32 -> Q16` hangs the ROM, and the host bound missed it
+
+Attempted the last cut that does not need the representation change — replacing
+`ndsR2F32ToFixed(length * length_invert, BF)` with one integer multiply of the
+two significands (`ndsR2F32MulToFixed`), worth **1,524,849 cycles**. It built,
+it removed the last soft-float call from the kernel (disassembly showed **zero
+`bl __aeabi_*`, 10 `umull`, 1 `clz`**), boot headroom held at 32,800, and
+`check_r2_cubic_error_bound.py` passed **green and numerically unchanged**
+(0.002842 / 0.006702).
+
+**And the ROM hangs.** Boundary failed twice with a GDB marker-capture timeout,
+stalled in `__syscall_lock_acquire` with the frame-complete marker never
+reached. Reverting only that change and re-running gave **`Boundary
+verification profile passed`** on the same tree. Two red with, one green
+without: the fused multiply is the cause. Backed out uncommitted; HEAD is the
+verified-green state.
+
+**The lesson is about the checker, not the arithmetic.** The error bound samples
+a *gameplay-plausible domain* of `(length, length_invert, values, rates)` and
+compares against the decomp float; it never executes the parser, so an input the
+parser really produces — `length_invert` is **overloaded**, holding `1.0F/payload`
+for the cubic arms but a raw `payload` for `SetValAfter` and `1.0F` from
+`gcAddAObjForDObj` — can sit outside every sampled domain and still reach the
+kernel. **A host bound that passes is not a substitute for Boundary on a change
+that alters saturation or range behavior.** The next attempt needs the real
+input distribution instrumented out of a run first, not more host sampling.
+
+Do not re-attempt this cut without that. It is 1,524,849 cycles — worth having,
+not worth a second unexplained hang.
+
 ### The DMA spin is GEOMETRY SUBMISSION, not a free win (cycle 108)
 
 Followed up the census's largest site and it is **not** the clean win it looked
