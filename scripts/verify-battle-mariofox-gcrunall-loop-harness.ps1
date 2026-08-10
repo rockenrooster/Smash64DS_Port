@@ -1343,10 +1343,31 @@ try {
         Start-Sleep -Seconds $effectiveDelaySeconds
     }
     $gdbRemoteTimeoutSeconds = if ($OneMinuteMatchProof) { 300 } else { 5 }
+    # Cycle 109: floor the MARKER-capture budget at 120s, independently of the
+    # renderer benchmark's own budget.
+    #
+    # The Boundary path (no -OneMinuteMatchProof) was borrowing
+    # $RendererBenchmarkTimeoutSeconds, which defaults to 30. That 30s has to
+    # cover the gdb attach, four breakpoints and the whole marker dump below --
+    # and that dump is now dozens of printf lines, having grown steadily as
+    # counters were added. It went marginal: Boundary failed three times in one
+    # night with "GDB marker capture timed out after 30 seconds", each with a
+    # DIFFERENT stall PC (__syscall_lock_acquire, then memcpy) and the last
+    # having already printed most of the dump before expiring. That is a
+    # capture finishing late, not a ROM hanging.
+    #
+    # It cost a wrong answer, not just time: a fused-multiply change was
+    # bisected to a "hang" and reverted on the strength of red-with/green-
+    # without, and then the identical reverted tree failed too. A verifier with
+    # an unmeasured flake rate produces confident wrong verdicts.
+    #
+    # A timeout is a ceiling, not a sleep, so raising it costs a passing run
+    # nothing. Max() rather than a literal so an explicit larger value still
+    # wins, and the benchmark's own budget is left alone.
     $gdbCaptureTimeoutSeconds = if ($OneMinuteMatchProof) {
         300
     } else {
-        $RendererBenchmarkTimeoutSeconds
+        [Math]::Max($RendererBenchmarkTimeoutSeconds, 120)
     }
     $gdbCommands = @(
         'set pagination off',
