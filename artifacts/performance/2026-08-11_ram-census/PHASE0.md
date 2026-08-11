@@ -369,3 +369,80 @@ capped at 200,704. There are now **100,860 bytes above the safety floor** to
 fund residency, against a demand that must still be measured per arm
 (`ANIM_REQUIRED_BYTES`, Phase 0.3, deliberately not carried over from the stale
 82 KiB estimate).
+
+---
+
+# Phase 8 — final acceptance
+
+## RAM acceptance table
+
+| metric | baseline | final | delta |
+|---|---:|---:|---:|
+| `.main.bss` | 1,599,280 | 1,430,480 | **−168,800** |
+| `.main` | 903,336 | 902,984 | −352 |
+| total static | 2,639,612 | 2,470,460 | **−169,152** |
+| `__heap_start_ntr` | 0x02288010 | 0x02282a10 | −22,016 |
+| taskman chosen arena | 1,257,472 | **1,376,256** (0x150000) | +118,784 |
+| taskman probe failures | 29 | **0** | −29 |
+| general-heap low-water | 15,120 | **72,188** | +57,068 |
+| anim cache reserved | 200,704 | 262,144 | +61,440 |
+| anim cache used high-water | 200,384 | 218,720 (Boundary) / 257,200 (both-CPU) | — |
+| **anim rejects** | 15 / 38 | **0 / 0** | eliminated |
+| `WORK-H` P50 (gate) | 961,152 | 958,592 | −2,560 |
+| **`WORK-H` P95 (gate)** | 1,294,144 | **1,258,112** | **−36,032** |
+
+Boundary green at every kept checkpoint.
+
+## Success criteria
+
+- [x] ≥96 KiB recovered — **169,152 (172%)**
+- [x] ≥128 KiB stretch — **169,152 (132%)**
+- [x] arena growth observed in the real ROM, not inferred
+- [x] heap low-water ≥32 KiB — **72,188**, from 17,648 BELOW at baseline
+- [x] residency re-sized from measured demand — 262,144 from a measured 218,720
+- [x] animation cache rejects **0** on both arms
+- [x] no new resource exhaustion — probe failures 29 → 0
+- [x] P95 re-banked — 1,258,112
+- [x] next CPU target selected — below
+- [~] **gameplay-time ROM reads = 0: PARTIAL.** Animation streaming is gone
+      (rejects 0), but FAT/ROM reads are still 9.6% of the tail premium. Those
+      are non-animation assets — textures and stage data — which this campaign
+      never addressed. Claiming "zero ROM reads" would be false.
+
+## CORRECTION to an earlier figure in this campaign
+
+I reported "all game logic + the entire renderer is 11.6% of the tail". That was
+computed from a `--top 40` census covering only 75% of the premium, so it counted
+just the handful of game symbols visible in that window. At full depth
+(`--top 400`) the correct figure is **44.9%** — game+renderer was always the
+LARGEST tail bucket, with asset streaming second at 40.8%. The RAM verdict is
+unaffected (streaming was real, and removing it moved P95 −36,032), but the
+relative sizing was wrong and anything built on that 11.6% should be re-derived.
+
+## Tail composition, before → after
+
+| class (excl. instrument) | c118 | c119 |
+|---|---:|---:|
+| game logic + renderer | 45.0% | **44.9%** |
+| **asset streaming complex** | **40.8%** | **36.0%** |
+| — FAT/ROM reads | 12.9% | 9.6% |
+| — asset attach | 9.5% | 6.7% |
+| — lock/thread | 8.0% | 6.6% |
+| — generic movers | 10.4% | 13.0% |
+| idle spin | 9.2% | 14.0% |
+
+Idle rising and movers rising are both expected: frames finish sooner and wait
+longer, and a larger cache does more `memcpy` on fill.
+
+## Next CPU target
+
+**game+renderer, 449,129 cyc/frame (44.9%), and it is FLAT** — the top 16
+symbols cover only 39% of it, the largest being `__aeabi_fadd` at 5.6%. There is
+no single big lever; expect [[flat-function-only-lever-is-not-entering-it]] to
+apply, i.e. cut call counts rather than instructions.
+
+Two entries are worth noting because they are also **Phase 3's skipped RAM
+target**: `ndsDrawSObjIntoPreview` 13,335 and
+`ndsPlatformCommitOriginalSpritePreviewLayer` 12,196 — together 5.7% of the
+bucket. The 307,200 B sprite-preview pair therefore costs both RAM and tail CPU,
+which makes Phase 3 a better candidate than its RAM figure alone suggested.
