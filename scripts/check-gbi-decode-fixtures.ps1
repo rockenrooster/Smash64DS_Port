@@ -38,6 +38,20 @@ $mpFloorCrossingChecker = Join-Path $PSScriptRoot 'check_mp_floor_crossing_exact
 if ($LASTEXITCODE -ne 0) {
     throw "MP floor-crossing exactness failed with exit code $LASTEXITCODE."
 }
+
+# Cycle 117, the same lane one level up: the whole-line rejects that let the
+# floor/ceiling queries and the two sweeps skip a line's entire segment loop.
+# The saving is structural -- an object is over at most one floor line and the
+# loops visit them all -- and so is the risk, because a wrong reject is
+# BUGS.md's fighters floating under the stage. The checker replays every reject
+# it fires segment by segment through the real kernel and asserts nothing was
+# hidden, and FAILS if a reject never fires so that it cannot pass vacuously.
+# Host-only, ~2 s.
+$mpLineExtentChecker = Join-Path $PSScriptRoot 'check_mp_line_extent_reject_exact.py'
+& python -B $mpLineExtentChecker
+if ($LASTEXITCODE -ne 0) {
+    throw "MP line-extent reject exactness failed with exit code $LASTEXITCODE."
+}
 function Assert-Equal {
     param(
         [object]$Actual,

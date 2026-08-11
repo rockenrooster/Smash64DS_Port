@@ -4420,6 +4420,65 @@ the stack frame to 12 bytes. **Check the disassembly of this kernel for hoisted
 `asr #31` and stack spills after touching it** -- the host error bound cannot
 see code shape, and it reported byte-identical numbers across the fix.
 
+### Slice 28: the whole-line reject the SOURCE has and this port lost
+
+**The first collision lever this cycle to clear the placement floor.**
+
+`mpCollisionGetFCCommon` in `decomp/.../mp/mpcollision.c` reads a line's x span
+and returns FALSE **before walking any segment**. This port went straight into
+the per-segment loop and read four vertex coordinates through
+`ndsMPO2RReadU16` plus two memoised f32s per segment *before* testing whether
+the object was over that segment at all -- and `func_ovl2_800F8FFC` and the
+floor loops call it once per floor line, while an object is over at most one.
+Nearly all of that work was spent proving a line irrelevant.
+
+Four sites now reject a whole line in O(1) from a per-line span cache filled
+once from static geometry: both `mpCollisionGetFCCommon*` point queries (x
+span) and both sweeps (y span). The four s32 vertex reads also sank below the
+segment gate, where the values are actually used. The ceiling query, which had
+never bound the cycle-109 vertex memo, stopped paying four live `__aeabi_i2f`
+per segment.
+
+**Exact, and proven as an implication rather than a verdict.**
+`scripts/check_mp_line_extent_reject_exact.py` runs 400,000 cases and, for
+every reject that FIRES, replays the skipped loop segment by segment through
+the real kernel: **111,961 point rejects and 68,993 sweep rejects covering
+295,114 replayed segments, 0 missed hits, 0 missed `saw_flat_ascending_sweep`
+flags.** It fails if a reject never fires, so it cannot pass vacuously. X is
+deliberately excluded from the sweep reject -- the kernel's flat branch
+extrapolates a hit x that can leave the sweep's x span by an amount bounded by
+the sweep's aspect ratio, not by epsilon -- and the y half alone is exact for
+both the tilt branch's gate and the flat branch's ordering constraint.
+
+**Measured, gate arm, against slice 27:** `WORK-H` P50 972,736 -> 969,088
+(**-3,648**), P95 1,317,120 -> 1,302,016 (**-15,104**). The attribution is the
+point, not the total: **`SPHD` -9,088 P50 / -13,632 P95** -- the physics bucket,
+which is exactly what was cut -- with `SRC` -9,408/-10,432 and `GCRA`
+-9,344/-10,624 moving with it, while untouched `STG` (+512), `BG` (-64),
+`SPRM` (0) and `SWRM` (0) stayed flat. That flat control is what slices 26 and
+27 never had. WORK-H *mean* rose 3,380 on a worse extreme tail (`HUD` P95
++7,744); percentiles are the gate and the mean is the least robust statistic
+here.
+
+**Engagement, from the same run:** the sweep reject skips **91.9%** of line
+visits (59,207 rejected / 5,234 admitted) and the point query **60.3%**
+(33,003 / 21,751). `gNdsMPLineExtentOverflow` 0, so the fail-closed cap never
+fired, and `gNdsR2CubicEvals` 299,148 -- identical to the control.
+
+**It found a latent cycle-109 defect, and the harness nearly hid it.** The
+first two gate runs threw `sample-tick-hud-buckets.ps1`'s "repeated a presented
+frame (4 of 1600)" guard, which that script itself classes as pacing and offers
+`-AllowRepeatedFrames` for. Both runs named **the same four frames** (727, 918,
+1302, 1494). Deterministic means the change altered the match, not the pacing:
+`ndsStageMPSweepFloorLoopSweep` and `ndsStageMPCeilFloorLoopSweep` read the
+cycle-109 vertex memo **without ever calling `ndsMPVertexF32Bind`**. Only the
+three point queries did. The vertex-keyed memo tolerated that because
+`gMPCollisionGeometry` is saved and restored around the alternate-geometry
+queries; a LINE-keyed cache turns the same staleness into a wrong whole-line
+reject. Both sweeps now bind, the duplicates are gone, and the eval-count
+control matches. **Standing rule: re-run before using a harness override, and
+diff which items tripped it -- the same set means your change.**
+
 ### Slice 27: an EXACT ordered compare for two runtime floats -- the durable part
 
 **The ticks did not clear the floor; the primitive is the deliverable.**

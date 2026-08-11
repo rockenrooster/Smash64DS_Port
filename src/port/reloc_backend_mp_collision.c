@@ -336,6 +336,46 @@ u32 gNdsMPVertexF32Hits;
 u32 gNdsMPVertexF32Fills;
 u32 gNdsMPVertexF32Overflow;
 
+/* Cycle 117: the O(1) whole-line reject that the SOURCE has and this port lost.
+ *
+ * `mpCollisionGetFCCommon` in `decomp/.../mp/mpcollision.c` reads the first and
+ * last vertex x of a line, forms a span, and returns FALSE immediately when the
+ * object is outside it -- BEFORE walking any segment. This port went straight
+ * into the per-segment loop, and that loop reads four vertex coordinates through
+ * `ndsMPO2RReadU16` and two memoised f32s per segment before it even tests
+ * whether the object is over the segment. `func_ovl2_800F8FFC` and the floor
+ * loops call it once per floor line, and an object is over at most one of them,
+ * so nearly all of that work is spent proving a line irrelevant.
+ *
+ * This is not the source's test. Taking the span from the first and last vertex
+ * assumes the line is monotonic in x; taking it from ALL of them is correct for
+ * any line and is what makes the reject EXACTLY equivalent to running the loop:
+ * the loop's gate is "object_x lies between this segment's two x", so an
+ * object_x outside the whole line's [min, max] fails that gate for every
+ * segment, and the loop body -- including the `x1 == x2` guard counter, which
+ * sits after the gate -- never runs. Same answer, same side effects, no
+ * epsilon, no approximation.
+ *
+ * The span is static per line in LOCAL space, which is the space both callers
+ * compare in (the floor path subtracts the yakumono translate from object_x;
+ * the ceiling path goes through `ndsMPLinePositionWorldToLocal`), so a moving
+ * platform does not invalidate it. It is filled on first use and dropped with
+ * the vertex memo whenever the geometry pointer changes, and a line id at or
+ * past the cap falls through to the loop. */
+#define NDS_MP_LINE_EXTENT_MAX 64u
+
+static f32 sNdsMPLineExtentMinX[NDS_MP_LINE_EXTENT_MAX];
+static f32 sNdsMPLineExtentMaxX[NDS_MP_LINE_EXTENT_MAX];
+static f32 sNdsMPLineExtentMinY[NDS_MP_LINE_EXTENT_MAX];
+static f32 sNdsMPLineExtentMaxY[NDS_MP_LINE_EXTENT_MAX];
+static u8 sNdsMPLineExtentValid[NDS_MP_LINE_EXTENT_MAX];
+
+u32 gNdsMPLineExtentRejects;
+u32 gNdsMPLineExtentAdmits;
+u32 gNdsMPLineExtentOverflow;
+u32 gNdsMPLineSweepRejects;
+u32 gNdsMPLineSweepAdmits;
+
 static void ndsMPVertexF32Reset(void)
 {
     u32 i;
@@ -343,6 +383,10 @@ static void ndsMPVertexF32Reset(void)
     for (i = 0u; i < NDS_MP_VERTEX_F32_MAX; i++)
     {
         sNdsMPVertexF32Valid[i] = 0u;
+    }
+    for (i = 0u; i < NDS_MP_LINE_EXTENT_MAX; i++)
+    {
+        sNdsMPLineExtentValid[i] = 0u;
     }
     sNdsMPVertexF32Geometry = NULL;
 }
@@ -385,6 +429,156 @@ static inline void ndsMPVertexF32Get(MPVertexPosContainer *verts, u32 vertex_id,
     }
     *out_x = sNdsMPVertexF32X[vertex_id];
     *out_y = sNdsMPVertexF32Y[vertex_id];
+}
+
+/* Returns non-zero when no segment of `line_id` can contain `object_x`, so the
+ * caller may skip its whole segment loop. Every uncertain case returns 0 and
+ * runs the loop, because a wrong reject here is a fighter falling through the
+ * stage. `ndsMPVertexF32Bind` must have been called for the geometry. */
+static void ndsMPLineExtentFillSlow(MPVertexArray *ids,
+                                    MPVertexPosContainer *verts, u32 line_id,
+                                    u32 vertex_first, u32 vertex_count)
+{
+    f32 min_x;
+    f32 max_x;
+    f32 min_y;
+    f32 max_y;
+    u32 k;
+
+    ndsMPVertexF32Get(verts, ndsMPVertexID(ids, vertex_first), &min_x, &min_y);
+    max_x = min_x;
+    max_y = min_y;
+    for (k = 1u; k < vertex_count; k++)
+    {
+        f32 vx;
+        f32 vy;
+
+        ndsMPVertexF32Get(verts, ndsMPVertexID(ids, vertex_first + k),
+                          &vx, &vy);
+        if (NDS_FCMP_LT(vx, min_x))
+        {
+            min_x = vx;
+        }
+        if (NDS_FCMP_GT(vx, max_x))
+        {
+            max_x = vx;
+        }
+        if (NDS_FCMP_LT(vy, min_y))
+        {
+            min_y = vy;
+        }
+        if (NDS_FCMP_GT(vy, max_y))
+        {
+            max_y = vy;
+        }
+    }
+    sNdsMPLineExtentMinX[line_id] = min_x;
+    sNdsMPLineExtentMaxX[line_id] = max_x;
+    sNdsMPLineExtentMinY[line_id] = min_y;
+    sNdsMPLineExtentMaxY[line_id] = max_y;
+    sNdsMPLineExtentValid[line_id] = 1u;
+}
+
+/* MUST stay inline: the steady state is one byte load and a branch, and both
+ * rejects run once per line per query. Left as one out-of-line function, GCC
+ * emitted an UNCONDITIONAL `bl` to the fill on every call -- the whole cold
+ * loop hoisted above the test that makes it cold -- which is the same mistake
+ * `ndsMPVertexF32Get` documents one screen up. Check with objdump. */
+static inline int ndsMPLineExtentReady(MPVertexArray *ids,
+                                       MPVertexPosContainer *verts, u32 line_id,
+                                       u32 vertex_first, u32 vertex_count)
+{
+    if (line_id >= NDS_MP_LINE_EXTENT_MAX)
+    {
+        gNdsMPLineExtentOverflow++;
+        return 0;
+    }
+    if (sNdsMPLineExtentValid[line_id] == 0u)
+    {
+        ndsMPLineExtentFillSlow(ids, verts, line_id, vertex_first,
+                                vertex_count);
+    }
+    return 1;
+}
+
+static int ndsMPLineExtentRejects(MPVertexArray *ids,
+                                  MPVertexPosContainer *verts, u32 line_id,
+                                  u32 vertex_first, u32 vertex_count,
+                                  f32 object_x)
+{
+    if (ndsMPLineExtentReady(ids, verts, line_id, vertex_first,
+                             vertex_count) == 0)
+    {
+        return 0;
+    }
+    if (NDS_FCMP_LT(object_x, sNdsMPLineExtentMinX[line_id]) ||
+        NDS_FCMP_GT(object_x, sNdsMPLineExtentMaxX[line_id]))
+    {
+        gNdsMPLineExtentRejects++;
+        return 1;
+    }
+    gNdsMPLineExtentAdmits++;
+    return 0;
+}
+
+/* The sweep's whole-line reject: `ndsMPFCSegmentCrossesKernel`'s own y
+ * bounding-box gate, hoisted from the segment to the line.
+ *
+ * Both of the kernel's gate branches are symmetric in position/translate --
+ * with `motion_dy > 0` the translate is the lower y and with it <= 0 the
+ * position is -- so both say "the sweep's y span misses the segment's, allowing
+ * 0.001 of slack". A line whose y span misses the sweep's therefore has every
+ * one of its segments rejected by that gate.
+ *
+ * The kernel's FLAT branch (`sy == 0`) does not run that gate, so it is checked
+ * separately rather than assumed: for a floor it requires
+ * `translate_y < v1_y <= position_y + 0.001`, which places the segment's y
+ * inside the sweep's span with the same slack, so this reject cannot fire on a
+ * case it would accept. The `saw_flat_ascending_sweep` side effect above the
+ * call is stricter still -- it wants v1.y inside the span with no slack at all.
+ *
+ * X is deliberately NOT part of this test even though the kernel gates on it
+ * too. The flat branch's hit x is an extrapolation that can land marginally
+ * outside the sweep's x span when the sweep is nearly vertical, by an amount
+ * bounded by the sweep's aspect ratio rather than by epsilon, so an x reject
+ * would be *nearly* exact -- and this subsystem is the one behind BUGS.md's
+ * fighters floating under the stage. The y half is provably exact and, on Dream
+ * Land, is the discriminating axis anyway: the main floor and the three
+ * pass-through platforms sit at four distinct heights. */
+static int ndsMPLineExtentSweepRejects(MPVertexArray *ids,
+                                       MPVertexPosContainer *verts,
+                                       u32 line_id, u32 vertex_first,
+                                       u32 vertex_count,
+                                       const Vec3f *sweep_position,
+                                       const Vec3f *sweep_translate)
+{
+    const f32 epsilon = 0.001F;
+    f32 sweep_min_y;
+    f32 sweep_max_y;
+
+    if (ndsMPLineExtentReady(ids, verts, line_id, vertex_first,
+                             vertex_count) == 0)
+    {
+        return 0;
+    }
+    if (NDS_FCMP_LT(sweep_position->y, sweep_translate->y))
+    {
+        sweep_min_y = sweep_position->y;
+        sweep_max_y = sweep_translate->y;
+    }
+    else
+    {
+        sweep_min_y = sweep_translate->y;
+        sweep_max_y = sweep_position->y;
+    }
+    if (NDS_FCMP_LT(sNdsMPLineExtentMaxY[line_id] + epsilon, sweep_min_y) ||
+        NDS_FCMP_LT(sweep_max_y, sNdsMPLineExtentMinY[line_id] - epsilon))
+    {
+        gNdsMPLineSweepRejects++;
+        return 1;
+    }
+    gNdsMPLineSweepAdmits++;
+    return 0;
 }
 
 static f32 ndsMPLineDistanceFC(f32 opx, s32 v1x, s32 v1y, s32 v2x,
@@ -1098,16 +1292,21 @@ sb32 mpCollisionGetFCCommonFloor(s32 line_id, Vec3f *object_pos,
      * values are still read for `x1 == x2`, `ndsMPLineDistanceFC` and
      * `ndsMPGetFCAngle`, which want integers anyway. */
     ndsMPVertexF32Bind(geometry);
+    if (ndsMPLineExtentRejects(ids, verts, (u32)line_id, vertex_first,
+                               vertex_count, object_x) != 0)
+    {
+        return FALSE;
+    }
     for (j = 0u; j < segment_count; j++)
     {
         u32 v1_index = vertex_first + j;
         u32 v2_index = v1_index + 1u;
         u32 v1_id = ndsMPVertexID(ids, v1_index);
         u32 v2_id = ndsMPVertexID(ids, v2_index);
-        s32 x1 = ndsMPVertexX(verts, v1_id);
-        s32 y1 = ndsMPVertexY(verts, v1_id);
-        s32 x2 = ndsMPVertexX(verts, v2_id);
-        s32 y2 = ndsMPVertexY(verts, v2_id);
+        s32 x1;
+        s32 y1;
+        s32 x2;
+        s32 y2;
         f32 fx1;
         f32 fx2;
         f32 unused_y;
@@ -1115,11 +1314,18 @@ sb32 mpCollisionGetFCCommonFloor(s32 line_id, Vec3f *object_pos,
 
         ndsMPVertexF32Get(verts, v1_id, &fx1, &unused_y);
         ndsMPVertexF32Get(verts, v2_id, &fx2, &unused_y);
-        if (!(((fx1 <= object_x) && (fx2 >= object_x)) ||
-              ((fx2 <= object_x) && (fx1 >= object_x))))
+        /* The four s32 reads used to sit above this gate, where every rejected
+         * segment paid four bounds-checked `ndsMPO2RReadU16` calls for values
+         * only the accepted segment reads. Pure code motion. */
+        if (!((NDS_FCMP_LE(fx1, object_x) && NDS_FCMP_GE(fx2, object_x)) ||
+              (NDS_FCMP_LE(fx2, object_x) && NDS_FCMP_GE(fx1, object_x))))
         {
             continue;
         }
+        x1 = ndsMPVertexX(verts, v1_id);
+        y1 = ndsMPVertexY(verts, v1_id);
+        x2 = ndsMPVertexX(verts, v2_id);
+        y2 = ndsMPVertexY(verts, v2_id);
         if (x1 == x2)
         {
             gNdsStageCollisionLoopDivisionGuardCount++;
@@ -1250,25 +1456,48 @@ sb32 mpCollisionGetFCCommonCeil(s32 line_id, Vec3f *object_pos,
         return FALSE;
     }
     segment_count = vertex_count - 1u;
+    /* The ceiling path never bound the vertex memo, so it was still paying four
+     * live `__aeabi_i2f` conversions a segment for the gate on static stage
+     * data -- the exact cost cycle 109 removed from the floor path. The memo
+     * stores the same `(f32)` of the same s16, so the gate is bit-identical. */
+    ndsMPVertexF32Bind(geometry);
+    if (ndsMPLineExtentRejects(ids, verts, (u32)line_id, vertex_first,
+                               vertex_count, object_local.x) != 0)
+    {
+        if (ndsFighterMarioFoxStageMPCeilFloorLoopProofEnabled() != FALSE)
+        {
+            gNdsStageMPCeilFloorLoopFCCommonMissCount++;
+        }
+        return FALSE;
+    }
     for (j = 0u; j < segment_count; j++)
     {
         u32 v1_index = vertex_first + j;
         u32 v2_index = v1_index + 1u;
         u32 v1_id = ndsMPVertexID(ids, v1_index);
         u32 v2_id = ndsMPVertexID(ids, v2_index);
-        s32 x1 = ndsMPVertexX(verts, v1_id);
-        s32 y1 = ndsMPVertexY(verts, v1_id);
-        s32 x2 = ndsMPVertexX(verts, v2_id);
-        s32 y2 = ndsMPVertexY(verts, v2_id);
+        s32 x1;
+        s32 y1;
+        s32 x2;
+        s32 y2;
+        f32 fx1;
+        f32 fx2;
+        f32 unused_y;
         f32 ceil_y;
 
-        if (!(((f32)x1 <= object_local.x &&
-               (f32)x2 >= object_local.x) ||
-              ((f32)x2 <= object_local.x &&
-               (f32)x1 >= object_local.x)))
+        ndsMPVertexF32Get(verts, v1_id, &fx1, &unused_y);
+        ndsMPVertexF32Get(verts, v2_id, &fx2, &unused_y);
+        if (!((NDS_FCMP_LE(fx1, object_local.x) &&
+               NDS_FCMP_GE(fx2, object_local.x)) ||
+              (NDS_FCMP_LE(fx2, object_local.x) &&
+               NDS_FCMP_GE(fx1, object_local.x))))
         {
             continue;
         }
+        x1 = ndsMPVertexX(verts, v1_id);
+        y1 = ndsMPVertexY(verts, v1_id);
+        x2 = ndsMPVertexX(verts, v2_id);
+        y2 = ndsMPVertexY(verts, v2_id);
         if (x1 == x2)
         {
             gNdsStageCollisionLoopDivisionGuardCount++;
@@ -4223,6 +4452,17 @@ static sb32 ndsStageMPSweepFloorLoopSweep(Vec3f *position,
     links = geometry->vertex_links;
     ids = geometry->vertex_id;
     verts = geometry->vertex_data;
+    /* Both sweeps read the cycle-109 vertex memo -- the floor one directly, the
+     * ceiling one through the cycle-117 extent cache -- and NEITHER of them
+     * bound it. Only the three point queries did. The memo survived that
+     * because `gMPCollisionGeometry` is saved and restored around the
+     * alternate-geometry queries and a point query almost always rebound it
+     * first, so a stale read needed a specific ordering. The extent cache is
+     * keyed by LINE ID rather than vertex id, so the same staleness becomes a
+     * WRONG whole-line reject -- which is how this was found: four presented
+     * frames of a 1600-frame gate run diverged, deterministically and in the
+     * same four places on two consecutive runs. */
+    ndsMPVertexF32Bind(geometry);
     yakumono_count = ndsMPGeometryYakumonoCount(geometry);
     if (yakumono_count > 64u)
     {
@@ -4304,6 +4544,13 @@ static sb32 ndsStageMPSweepFloorLoopSweep(Vec3f *position,
                 sweep_position.y = (position->y - vedge_y) + speed_y;
                 sweep_translate.x = translate->x - vedge_x;
                 sweep_translate.y = translate->y - vedge_y;
+            }
+            if (ndsMPLineExtentSweepRejects(ids, verts, (u32)line_id,
+                                            vertex_first, vertex_count,
+                                            &sweep_position,
+                                            &sweep_translate) != 0)
+            {
+                continue;
             }
             for (j = 0u; j + 1u < vertex_count; j++)
             {
@@ -4599,6 +4846,17 @@ static sb32 ndsStageMPCeilFloorLoopSweep(Vec3f *position,
     links = geometry->vertex_links;
     ids = geometry->vertex_id;
     verts = geometry->vertex_data;
+    /* Both sweeps read the cycle-109 vertex memo -- the floor one directly, the
+     * ceiling one through the cycle-117 extent cache -- and NEITHER of them
+     * bound it. Only the three point queries did. The memo survived that
+     * because `gMPCollisionGeometry` is saved and restored around the
+     * alternate-geometry queries and a point query almost always rebound it
+     * first, so a stale read needed a specific ordering. The extent cache is
+     * keyed by LINE ID rather than vertex id, so the same staleness becomes a
+     * WRONG whole-line reject -- which is how this was found: four presented
+     * frames of a 1600-frame gate run diverged, deterministically and in the
+     * same four places on two consecutive runs. */
+    ndsMPVertexF32Bind(geometry);
     yakumono_count = ndsMPGeometryYakumonoCount(geometry);
     if (yakumono_count > 64u)
     {
@@ -4670,6 +4928,13 @@ static sb32 ndsStageMPCeilFloorLoopSweep(Vec3f *position,
                 sweep_position.y = (position->y - vedge_y) + speed_y;
                 sweep_translate.x = translate->x - vedge_x;
                 sweep_translate.y = translate->y - vedge_y;
+            }
+            if (ndsMPLineExtentSweepRejects(ids, verts, (u32)line_id,
+                                            vertex_first, vertex_count,
+                                            &sweep_position,
+                                            &sweep_translate) != 0)
+            {
+                continue;
             }
             for (j = 0u; j + 1u < vertex_count; j++)
             {
