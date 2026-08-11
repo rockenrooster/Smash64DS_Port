@@ -109,8 +109,84 @@ def check() -> int:
     return 0
 
 
+def fcmp_key(bits: "np.ndarray") -> "np.ndarray":
+    """`ndsFcmpKey` from `include/nds/nds_fcmp.h`, vectorised."""
+    z = np.where((bits << np.uint32(1)) == 0, np.uint32(0), bits)
+    fold = np.where((z & np.uint32(0x80000000)) != 0,
+                    np.uint32(0xFFFFFFFF), np.uint32(0x80000000))
+    return (z ^ fold).astype(np.uint32)
+
+
+def check_key() -> int:
+    """Prove the runtime-vs-runtime order key exhaustively.
+
+    A key that is order-preserving on every ADJACENT pair of the float order,
+    and that ties exactly where the floats are equal, is order-preserving
+    everywhere -- so a linear 2^32 walk settles it without ever enumerating
+    2^64 pairs. Adjacent in float order is adjacent in bit pattern within each
+    sign, and the one non-adjacent tie (the two zeroes) is checked explicitly.
+
+    Cycle 117 added `NDS_FCMP_LT`/`GT`/`LE`/`GE` for the map-collision lane.
+    They are the first predicates here that compare two runtime values, so they
+    are the first that need this shape of proof rather than a per-pattern one.
+    """
+    failures = 0
+    nan_skipped = 0
+    total = 0
+
+    for base in range(0, 1 << 32, CHUNK):
+        lo = np.arange(base, base + CHUNK, dtype=np.uint64)
+        a_bits = lo.astype(np.uint32)
+        b_bits = (lo + 1).astype(np.uint32)
+        a_val = bits_to_f32(a_bits)
+        b_val = bits_to_f32(b_bits)
+        live = ~(np.isnan(a_val) | np.isnan(b_val))
+        nan_skipped += int((~live).sum())
+        total += int(live.sum())
+
+        a_key = fcmp_key(a_bits)
+        b_key = fcmp_key(b_bits)
+        for name, ieee, integer in (
+            ("LT", a_val < b_val, a_key < b_key),
+            ("GT", a_val > b_val, a_key > b_key),
+            ("LE", a_val <= b_val, a_key <= b_key),
+            ("GE", a_val >= b_val, a_key >= b_key),
+        ):
+            bad = (ieee != integer) & live
+            if bad.any():
+                idx = int(np.argmax(bad))
+                failures += 1
+                print("FAIL key {}: 0x{:08x} vs 0x{:08x} "
+                      "({!r} vs {!r}) IEEE={} key={}".format(
+                          name, int(a_bits[idx]), int(b_bits[idx]),
+                          float(a_val[idx]), float(b_val[idx]),
+                          bool(ieee[idx]), bool(integer[idx])))
+                if failures >= 8:
+                    return 1
+
+    zeros = np.array([0x00000000, 0x80000000], dtype=np.uint32)
+    zkey = fcmp_key(zeros)
+    if zkey[0] != zkey[1]:
+        print("FAIL key: -0.0f and +0.0f key differently "
+              "(0x{:08x} vs 0x{:08x})".format(int(zkey[0]), int(zkey[1])))
+        return 1
+
+    print("checked {:,} adjacent float-order pairs against 4 ordered "
+          "predicates".format(total))
+    print("pairs skipped for NaN (documented exclusion): {:,}".format(
+        nan_skipped))
+    if failures:
+        return 1
+    print("FCMP_KEY_EXACT=PASS  the runtime-vs-runtime key is order-preserving "
+          "on every adjacent pair and ties exactly on the zero pair")
+    return 0
+
+
 def main() -> int:
-    return check()
+    rc = check()
+    if rc != 0:
+        return rc
+    return check_key()
 
 
 if __name__ == "__main__":

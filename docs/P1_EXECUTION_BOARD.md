@@ -4420,6 +4420,52 @@ the stack frame to 12 bytes. **Check the disassembly of this kernel for hoisted
 `asr #31` and stack spills after touching it** -- the host error bound cannot
 see code shape, and it reported byte-identical numbers across the fix.
 
+### Slice 27: an EXACT ordered compare for two runtime floats -- the durable part
+
+**The ticks did not clear the floor; the primitive is the deliverable.**
+
+`nds_fcmp.h` said, since cycle 109, that there was no predicate for two runtime
+floats because the key "is more work than it saves at the sites this exists
+for". That was a judgement about the sites of the day. The collision lane runs
+sixteen runtime-float comparisons per `ndsMPFCSegmentCrossesKernel` call at 54.7
+calls a frame, and more in the three symbols beside it, so the sites changed.
+
+`NDS_FCMP_LT`/`GT`/`LE`/`GE` map the IEEE order onto unsigned integer order:
+flip the sign bit on non-negatives, invert all bits on negatives, and fold both
+zeroes to one key first -- **five register instructions an operand, branchless,
+against a 14.2-14.6 cycle `bl` plus call overhead.** Unlike the `_C` forms it is
+exact for a NEGATIVE constant and for two runtime values, which is what the
+`< -epsilon` tests needed.
+
+**Proven, not argued.** `check_fcmp_exact.py` gained a second pass: a key that
+is order-preserving on every ADJACENT pair of the float order, and that ties
+exactly where the floats are equal, is order-preserving everywhere -- so one
+linear 2^32 walk settles it without enumerating 2^64 pairs. **4,278,190,080
+adjacent pairs, four predicates, zero disagreements**, plus an explicit check
+that the two zeroes key identically. `check_mp_floor_crossing_exact.py` still
+reports 2,332,800 cases with 0 verdict and 0 bit-pattern mismatches after the
+conversion.
+
+**Measured, gate arm, against the c117 re-bank:** `WORK-H` P50 973,568 ->
+972,736 (**-832**), P95 1,317,440 -> 1,317,120 (**-320**), mean 1,016,526 ->
+1,008,694 (**-7,832**). `gNdsR2CubicEvals` 299,148 in both.
+
+**Read the untouched buckets before believing any of that.** `STG` moved
+**-5,568** P50 and `FTR` **+1,920** on a change that touches neither. That is
+placement, and it is larger than the effect being measured -- so the honest
+statement is that slices 26 and 27 together are **not attributable** at the
+bucket level, exactly as slice 26 predicted they would not be.
+
+**What this settles for the lane.** The soft-float class is 58,358 ticks/frame
+spread over twenty-plus callers; slices 26 and 27 removed roughly a fifth of
+ONE caller's share. Deleting float operations one caller at a time cannot move
+this frame. The collision lane needs the same treatment animation got in
+Requirement 4 -- **the segment arithmetic itself in fixed point, all four hot
+symbols at once** (`ndsMPFCSegmentCrossesKernel`, `ndsStageMPAdjustFloorLoopWallSweep`,
+`mpCollisionGetFCCommonFloor`, `ndsMPFindLineEndpoints` = 55,320 cyc/frame of
+self time plus ~21,300 ticks of float) -- and the new ordered compare is a
+prerequisite for that, not a substitute.
+
 ### Slice 26: the floor-crossing kernel loses five float multiplies and a divide
 
 **Bit-identical, proven, and BELOW the instrument''s floor. Kept anyway, because

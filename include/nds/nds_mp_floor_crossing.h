@@ -28,10 +28,14 @@
  * The predicates are integer bit tests proven equivalent over all 2^32 patterns
  * by `scripts/check_fcmp_exact.py`.
  *
- * The `< -epsilon` tests deliberately KEEP their calls: `nds_fcmp.h`'s ordered
- * `_C` forms are only exact for a POSITIVE constant, because the signed-integer
- * ordering of bit patterns inverts below zero. Same for the runtime-float
- * comparisons against `extent_epsilon` and the min/max pairs.
+ * Cycle 117 finished that job. The `< -epsilon` tests and every runtime-float
+ * comparison here -- the min/max pairs, the bounding-box gates, the
+ * `extent_epsilon` tests and the t/u range checks -- now go through
+ * `NDS_FCMP_LT`/`GT`/`LE`/`GE`, the sign-magnitude order key. That key is
+ * proven order-preserving over **all 4,278,190,080 adjacent float-order pairs**
+ * by `check_fcmp_exact.py`, so it is exact for a NEGATIVE constant and for two
+ * runtime values alike, which the `_C` forms are not. Sixteen `bl` sites at
+ * 14.2-14.6 cycles each become five register instructions an operand.
  *
  * Cycle 117: `side` and `orient` are BOTH +-1, so five of the six float
  * multiplies in the tilt block were sign flips written as `__aeabi_fmul`.
@@ -90,10 +94,10 @@ static inline int ndsMPFCSegmentCrossesKernel(
     {
         return 0;
     }
-    min_x = (v1_x < v2_x) ? v1_x : v2_x;
-    max_x = (v1_x > v2_x) ? v1_x : v2_x;
-    min_y = (v1_y < v2_y) ? v1_y : v2_y;
-    max_y = (v1_y > v2_y) ? v1_y : v2_y;
+    min_x = NDS_FCMP_LT(v1_x, v2_x) ? v1_x : v2_x;
+    max_x = NDS_FCMP_GT(v1_x, v2_x) ? v1_x : v2_x;
+    min_y = NDS_FCMP_LT(v1_y, v2_y) ? v1_y : v2_y;
+    max_y = NDS_FCMP_GT(v1_y, v2_y) ? v1_y : v2_y;
 
     if (NDS_FCMP_EQ0(sy))
     {
@@ -107,7 +111,7 @@ static inline int ndsMPFCSegmentCrossesKernel(
         if (side_positive)
         {
             if (NDS_FCMP_LE0(position_y - translate_y) ||
-                ((position_y - v1_y) < -epsilon) ||
+                NDS_FCMP_LT(position_y - v1_y, -epsilon) ||
                 NDS_FCMP_LE0(v1_y - translate_y))
             {
                 return 0;
@@ -122,7 +126,7 @@ static inline int ndsMPFCSegmentCrossesKernel(
         delta_y = position_y - translate_y;
         x = (((v1_y - position_y) / delta_y) *
             (position_x - translate_x)) + position_x;
-        if ((x < min_x) || (x > max_x))
+        if (NDS_FCMP_LT(x, min_x) || NDS_FCMP_GT(x, max_x))
         {
             return 0;
         }
@@ -146,25 +150,27 @@ static inline int ndsMPFCSegmentCrossesKernel(
 
         if (NDS_FCMP_GT0(motion_dy))
         {
-            if (((max_y + epsilon) < translate_y) ||
-                (position_y < (min_y - epsilon)))
+            if (NDS_FCMP_LT(max_y + epsilon, translate_y) ||
+                NDS_FCMP_LT(position_y, min_y - epsilon))
             {
                 return 0;
             }
         }
-        else if (((max_y + epsilon) < position_y) ||
-                 (translate_y < (min_y - epsilon)))
+        else if (NDS_FCMP_LT(max_y + epsilon, position_y) ||
+                 NDS_FCMP_LT(translate_y, min_y - epsilon))
         {
             return 0;
         }
         if (NDS_FCMP_GT0(motion_dx))
         {
-            if ((max_x < translate_x) || (position_x < min_x))
+            if (NDS_FCMP_LT(max_x, translate_x) ||
+                NDS_FCMP_LT(position_x, min_x))
             {
                 return 0;
             }
         }
-        else if ((max_x < position_x) || (translate_x < min_x))
+        else if (NDS_FCMP_LT(max_x, position_x) ||
+                 NDS_FCMP_LT(translate_x, min_x))
         {
             return 0;
         }
@@ -176,14 +182,15 @@ static inline int ndsMPFCSegmentCrossesKernel(
         extent_epsilon = epsilon * __builtin_fabsf(sx);
         prev_height_scaled = flip ? -raw_prev : raw_prev;
         curr_height_scaled = flip ? -raw_curr : raw_curr;
-        if (curr_height_scaled > -extent_epsilon)
+        if (NDS_FCMP_GT(curr_height_scaled, -extent_epsilon))
         {
             return 0;
         }
-        if (prev_height_scaled < extent_epsilon)
+        if (NDS_FCMP_LT(prev_height_scaled, extent_epsilon))
         {
-            if ((prev_height_scaled > -extent_epsilon) &&
-                (position_x >= min_x) && (position_x <= max_x))
+            if (NDS_FCMP_GT(prev_height_scaled, -extent_epsilon) &&
+                NDS_FCMP_GE(position_x, min_x) &&
+                NDS_FCMP_LE(position_x, max_x))
             {
                 /* The one site that reads it, so the divide lives here. */
                 *hit_x = position_x;
@@ -209,8 +216,10 @@ static inline int ndsMPFCSegmentCrossesKernel(
                 ((v1_y - position_y) *
                     (translate_x - position_x));
             u = numerator / denominator;
-            if ((t < -epsilon) || NDS_FCMP_GT_C(t, 1.0F + epsilon) ||
-                (u < -epsilon) || NDS_FCMP_GT_C(u, 1.0F + epsilon))
+            if (NDS_FCMP_LT(t, -epsilon) ||
+                NDS_FCMP_GT_C(t, 1.0F + epsilon) ||
+                NDS_FCMP_LT(u, -epsilon) ||
+                NDS_FCMP_GT_C(u, 1.0F + epsilon))
             {
                 return 0;
             }

@@ -33,10 +33,12 @@
  * that would be visible long before it reached a comparison -- and the checker
  * reports NaN separately rather than hiding it.
  *
- * Only use the `_C` forms with a POSITIVE compile-time constant. There is no
- * predicate for comparing two arbitrary runtime floats: that needs the full
- * sign-magnitude-to-two's-complement key, which is more work than it saves at
- * the sites this exists for. Those calls stay as they are.
+ * Only use the `_C` forms with a POSITIVE compile-time constant. For two
+ * arbitrary runtime floats use the `NDS_FCMP_LT`/`GT`/`LE`/`GE` forms at the
+ * bottom, which pay for the full sign-magnitude-to-unsigned key. Cycle 117
+ * added those after measuring a lane that makes them worth it; before that
+ * this comment said no such predicate existed, which was a judgement about the
+ * sites of the day rather than about the technique.
  */
 
 #include <PR/ultratypes.h>
@@ -105,6 +107,47 @@ static inline s32 ndsFcmpNeC(f32 x, f32 c)
 {
     return ndsFcmpBits(x) != ndsFcmpBits(c);
 }
+
+/* Two arbitrary RUNTIME floats, ordered.
+ *
+ * The comment at the head of this file used to say there was no such predicate
+ * because the full key "is more work than it saves at the sites this exists
+ * for". Cycle 117 measured different sites: map collision runs roughly ten
+ * runtime-float comparisons per `ndsMPFCSegmentCrossesKernel` call at 54.7
+ * calls a frame, and more in `ndsStageMPAdjustFloorLoopWallSweep`,
+ * `mpCollisionGetFCCommonFloor` and `ndsMPFindLineEndpoints` -- a lane of
+ * ~143,000 cyc/frame in which the ordered helpers cost 14.2-14.6 cycles plus
+ * the call. The key is five register instructions an operand and branchless.
+ *
+ * How it works: for non-negative floats the bit pattern already orders
+ * correctly, and for negative ones it orders BACKWARDS, so flipping the sign
+ * bit on the first and inverting all bits on the second maps the whole
+ * non-NaN range onto plain unsigned order. The `-0.0f` fold is what makes it
+ * exact rather than nearly exact: IEEE says `-0.0f == +0.0f`, but their
+ * patterns differ and would key on opposite sides of the boundary.
+ *
+ * `scripts/check_fcmp_exact.py` walks all 2^32 patterns IN FLOAT ORDER and
+ * asserts the key never decreases, and ties exactly on the zero pair -- which
+ * is the property, proven rather than argued. NaN is ordered rather than
+ * excluded, the same documented exclusion as every predicate above. */
+static inline u32 ndsFcmpKey(f32 x)
+{
+    u32 b = ndsFcmpBits(x);
+    /* Both zeroes collapse to the same key before the sign fold. */
+    u32 z = ((b << 1) == 0u) ? 0u : b;
+
+    return z ^ (((z & 0x80000000u) != 0u) ? 0xffffffffu : 0x80000000u);
+}
+
+static inline s32 ndsFcmpLt(f32 a, f32 b) { return ndsFcmpKey(a) < ndsFcmpKey(b); }
+static inline s32 ndsFcmpGt(f32 a, f32 b) { return ndsFcmpKey(a) > ndsFcmpKey(b); }
+static inline s32 ndsFcmpLe(f32 a, f32 b) { return ndsFcmpKey(a) <= ndsFcmpKey(b); }
+static inline s32 ndsFcmpGe(f32 a, f32 b) { return ndsFcmpKey(a) >= ndsFcmpKey(b); }
+
+#define NDS_FCMP_LT(a, b) ndsFcmpLt((a), (b))
+#define NDS_FCMP_GT(a, b) ndsFcmpGt((a), (b))
+#define NDS_FCMP_LE(a, b) ndsFcmpLe((a), (b))
+#define NDS_FCMP_GE(a, b) ndsFcmpGe((a), (b))
 
 #define NDS_FCMP_NE0(x) ndsFcmpNe0(x)
 #define NDS_FCMP_EQ0(x) ndsFcmpEq0(x)
