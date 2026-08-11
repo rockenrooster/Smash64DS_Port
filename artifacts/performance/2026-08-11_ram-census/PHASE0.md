@@ -446,3 +446,13 @@ target**: `ndsDrawSObjIntoPreview` 13,335 and
 `ndsPlatformCommitOriginalSpritePreviewLayer` 12,196 — together 5.7% of the
 bucket. The 307,200 B sprite-preview pair therefore costs both RAM and tail CPU,
 which makes Phase 3 a better candidate than its RAM figure alone suggested.
+
+## Owner playtest — PASSED (2026-08-11)
+
+Owner played `smash64ds-battle-playable-hwtri.nds` and reported "looks good".
+This closes the plan's final success criterion, the one automated evidence
+cannot cover. Specifically it clears the Phase 2 risk: the Results photo wipe
+reads `gSYFramebufferSets`, and that array was cut from 3 buffers to 2.
+
+**The RAM recovery campaign is CLOSED.** 169,152 B recovered, taskman arena at
+0x150000, animation rejects 0 on both arms, `WORK-H` P95 1,294,144 → 1,258,112.
