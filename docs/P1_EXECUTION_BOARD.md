@@ -4420,6 +4420,42 @@ the stack frame to 12 bytes. **Check the disassembly of this kernel for hoisted
 `asr #31` and stack spills after touching it** -- the host error bound cannot
 see code shape, and it reported byte-identical numbers across the fix.
 
+### The lane question, answered: animation is NOT where the P95 lives
+
+Grouped the cycle-117 whole-match census by subsystem, against **3,325,582,559
+non-idle cycles** (4,028,886,502 total minus `armWaitForIrq`):
+
+| subsystem | cycles | % of non-idle |
+| --- | ---: | ---: |
+| **RENDERER** -- `ndsRenderer*` + `ndsFighterMarioFoxDLAllDrawForSlot` | **875,140,091** | **26.32%** |
+| ANIMATION -- `gcPlayDObjAnimJoint` + `ndsR2AnimValueQ` + `ndsR2FtAnimParseDObjFigatree` | 195,628,633 | 5.88% |
+| SOFT FLOAT -- `__aeabi_fadd` alone | 112,198,280 | 3.37% |
+| COLLISION -- `mpCollisionGetFCCommonFloor` + `ndsStageMPSweepFloorLoopSweep` | 67,617,177 | 2.03% |
+
+**The renderer is 4.5x animation and 13x collision.** Cycle 117 spent six slices
+between animation and collision -- together **7.9%** of non-idle -- while a
+26.32% subsystem went untouched. Slice 31 is the honest illustration: it proved
+a real deletion on a same-binary route (`WORK-H` P95 -7,104, controls flat,
+`ALL` exactly 0) and the cross-build re-bank still read **+576**, because the
+whole lane it came from is smaller than the placement noise floor is wide
+relative to it.
+
+**So the animation AOT rewrite (slice 32) should NOT be the next thing built.**
+It is specified, its target is characterised, and it will still be worth doing --
+but a rewrite spanning build tooling and the hottest gameplay path, to chase at
+most 5.88%, is the wrong order of work while 26.32% sits in the renderer.
+`PROJECT_GOAL.md`'s sacrifice order puts visual fidelity ABOVE gameplay fidelity
+and 60 Hz simulation, so the renderer is also where the cheap approximations are
+allowed to live -- reduced update rates, sprite substitutes, fewer transformed
+parts, stage-specific tricks. None of those are available in the animation lane
+without touching gameplay.
+
+**Next action: re-profile the renderer cluster by symbol and pick its largest
+deletable unit**, the same way `ndsR2FtAnimParseDObjFigatree` was reduced to "the
+walk IS the call". The three biggest single symbols are already visible:
+`ndsFighterMarioFoxDLAllDrawForSlot` 93,854,253, `ndsRendererCommitNativeStageSegment`
+93,101,009, `ndsRendererNativeEmitProductionPrimitiveGroups` 81,420,680.
+
 ### Slice 31: the animation parser stops rebuilding its track table
 
 **KEEP on a same-binary A/B: `WORK-H` P95 -7,104, `GCRA` P95 -10,368.**
