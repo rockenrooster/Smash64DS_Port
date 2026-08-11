@@ -5185,9 +5185,50 @@ Two honest exceptions to carry into the emitter:
   it keeps the float expression. It is one track of ten, written exactly once
   per script.
 
-**Nothing about this slice is blocked.** What remains: the emitter and blob
-through the `cp` rule at `Makefile:3295`, `EXPECTED_CENSUS_SHA256` re-pinning,
-`interpolate` relocation, and the runtime player.
+#### The emitter runs — and the record is 20 bytes, not 14
+
+`scripts/generate_ftanim_dense_bank.py --verify`, registered in the fixture
+suite: **145,873 records, 2.78 MB, 0 mismatches** decoding back. Both widenings
+past the predicted 14 bytes were forced by the round-trip, not chosen:
+
+- **`rate_base`** is authored for the cubic families but `SetVal{,Block}`
+  computes it; 753 records are fractional over −614.25..1064.80, and s16 Q4 —
+  the only Q that fits that magnitude — carries **81% relative error** on the
+  small values. Now s32 Q16, which is what `NDS_R2_AQ_RF` already is.
+- **`length_invert`** was sized s16 Q8 from its 0..64 range and rejected on the
+  first run: for a Cubic it is `1.0 / payload`, a **reciprocal**, and 1/17 at Q8
+  is off by 0.4%. Range was the wrong question for a rate. Now s32 Q30, read per
+  kind because Step keeps a frame count in the same field — `NDS_R2_AQ_IF`.
+
+The encoding is **not** lossless overall and the emitter prints what it costs
+rather than letting the comparison absorb it: value fields and `length` exact,
+`rate_base` 7.3e-06 (0.0011%), `length_invert` 4.6e-10 (0.000006%) — both
+inherited from the widths the runtime already stores, not newly introduced.
+
+#### The runtime change is RAM-NEGATIVE — the constraint that killed step 9 is gone
+
+Step 9's load-time bake died on RAM: 25,600 B of records against a 24,404 B heap
+low-water. The **live** dense state is the opposite. A live record is
+`rate_base` s32 + `length_invert` s32 + `value_base`/`value_target`/
+`rate_target`/`length` s16 + a `kind|track` byte = 17 bytes at a 20-byte stride
+(dropping the baked record's `cmd_index` buys nothing — the two s32 fields set
+the alignment).
+
+| | AObj today | dense live | |
+|---|---:|---:|---|
+| pool as carved (512 nodes) | 18,432 | 10,240 | **frees 8,192 B** |
+| live at peak (~360 nodes) | 12,960 | 7,200 | frees 5,760 B |
+| **per-frame working set** | **12,060 B (2.94×)** | **6,700 B (1.64×)** | against a 4 KB D-cache |
+
+So the change that attacks the 25.3% walk also **returns 8,192 bytes** to the
+arena. Nothing here trades RAM for speed.
+
+**Nothing about this slice is blocked.** What remains is runtime work: a dense
+per-DObj track array for fighter joints only (stage and item DObjs keep the
+shared `AObj` list — `gcPlayDObjAnimJoint` serves them too), the parser writing
+into it, the player reading it, all behind a route bit so one binary carries
+both arms; then the blob through the `cp` rule at `Makefile:3295`,
+`EXPECTED_CENSUS_SHA256` re-pinning, and `interpolate` relocation.
 
 #### Original specification, still the target
 
