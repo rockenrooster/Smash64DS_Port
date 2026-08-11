@@ -5028,12 +5028,62 @@ That plumbing already exists:
 | **the surface guard** | `scripts/check_ftanim_opcode_surface.py` — 15 opcodes both directions, plus the escape-point assertion that `func_anim` fires only from Loop/End. |
 | **the justification** | the 2026-08-11 whole-match profile above: **25.3% of `gcPlayDObjAnimJoint` is the AObj walk**, memory-bound at 3× the D-cache, and no instruction deletion reaches it. |
 
-The files are reloc-format (`"RELO"` magic at +4), so the generator needs the
-reloc header reader before it needs the opcode walker.
+#### The format is SOLVED, and the bank is measured
 
-**Nothing about this slice is blocked any more.** What remains is work: the
-emitter, the blob, `EXPECTED_CENSUS_SHA256` re-pinning, the `interpolate` offset
-relocation, and the runtime player — in that order.
+`scripts/ftanim_reloc_probe.py` reproduces the ROM's load pipeline host-side and
+walks **5,629 of 5,629 scripts in all 297 AObj16 files**. Registered in
+`check-gbi-decode-fixtures.ps1`, because the generator is built on this reading.
+
+The pipeline, from `reloc_backend_assets.c`: 0x50 header → u32 big-endian swap
+→ threaded internal fixup chain (`reloc_intern_offset` is a WORD index, the word
+packs `next = w >> 16` / `target_words = w & 0xffff`) →
+`ndsRelocNormalizeFighterAObj16File`, which **derives** the entry table's length
+(it runs until the first script starts), unswaps the u16 lanes across the script
+region, and re-encodes each command word's bit order.
+
+**The one thing that cannot be guessed, and the reason eight readings failed at
+38–43%: disk command bits are MSB-first.** `opcode = (w >> 11) & 0x1f`, not
+`w & 0x1f` — a big-endian compiler allocated `opcode:5, flags:10, toggle:1` from
+the top, the native one allocates from the bottom. The per-opcode advance was
+right from the first attempt; only the bit order was wrong. The falsified
+readings are listed in the probe so they are not retried.
+
+The four non-participating files are `FTMarioAnim134/135` and
+`FTFoxAnim135/136`, ids 0x279/0x27a/0x309/0x30a — exactly the four
+`ndsRelocIsFighterAObj32Asset` names, which is independent confirmation.
+
+**What is actually in the bank** (the sizing step 13 needed and could not get):
+
+| | |
+|---|---:|
+| scripts | 5,629 |
+| commands | 77,129 (mean 13.7, max 142) |
+| **per-track writes — the record count a bake must emit** | **184,629** |
+| scripts ending in a Loop rather than End | 830 (4,799 + 830 = 5,629 exactly) |
+
+| opcode | share |
+|---|---:|
+| **`SetValRateBlock` + `SetValRate`** | **69.6%** |
+| `Block` | 8.0% |
+| `End` | 6.2% |
+| `SetVal0Rate{,Block}` | 7.8% |
+| everything else | 8.4% |
+| `SetTranslateInterp`, `SetFlags` | **0 — unused by Mario/Fox** |
+
+Two consequences. **The bake is sized**: 184,629 records at step 13's 32 bytes is
+5.9 MB of ROM, which `PROJECT_GOAL.md` explicitly permits ("tens or even
+hundreds of megabytes"), and a compact per-track record should land near 1.5 MB
+— it is a ROM question, not the RAM wall that closed the load-time bake.
+**And the format is dominated by one command pair**: seven commands in ten are
+`SetValRate{,Block}`, writing `value_target` and `rate_target` with a cubic kind,
+so the dense format and any interim fast path should be designed around that
+pair first. Flag popcount is 1 on 41,840 of the writing commands, so most
+commands touch a single track.
+
+**Nothing about this slice is blocked.** What remains is work: wire the reader to
+`ftanim_script_model.py` (which needs per-track target values, not the single
+payload its synthetic scripts use), bake, emit the blob, re-pin
+`EXPECTED_CENSUS_SHA256`, relocate `interpolate`, and write the runtime player.
 
 #### Original specification, still the target
 
