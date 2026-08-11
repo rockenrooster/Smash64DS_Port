@@ -6270,7 +6270,34 @@ volatile u32 gNdsR204AnimSeen[(NDS_R204_ANIM_ID_SPAN + 31u) / 32u];
  * NDS_R2_ANIM_CACHE_ARENA_KEEP_FREE (233,472) still fits, and the run's own
  * gNdsTaskmanGeneralHeapFreeMin is the check on that arithmetic rather than this
  * comment. Overflow still degrades to the uncached load. */
-#define NDS_R2_ANIM_CACHE_ARENA_BYTES 200704u
+/* RESIZED 2026-08-11 from 200,704 to 262,144 (docs/RAM_RECOVERY_PLAN.md Phase
+ * 6). The 200,704 above was correct for the 85-asset set it was measured
+ * against, but the match outgrew it: the arena ran 200,384/200,704 = 99.85% full
+ * and refused live assets, and because this is a bump allocator with no
+ * eviction every refusal re-read that asset from the ROM for the rest of the
+ * match. That streaming was the largest single owner of the P95 tail.
+ *
+ * The new size is measured, not estimated. gNdsR2AnimCacheRejectedUniqueBytes
+ * (added for this) counts the DISTINCT assets refused, because the reject COUNT
+ * cannot size anything -- a refused asset is re-requested every time it is
+ * needed, so Boundary's 15 rejects were only 9 distinct assets:
+ *
+ *   used high-water            200,384   (bump allocator: used IS the high-water)
+ *   + unique refused, aligned   18,336   (9 assets, track overflow 0)
+ *   = ANIM_REQUIRED_BYTES      218,720
+ *   chosen                     262,144   -> 43,424 spare (19.9%)
+ *
+ * The old campaign estimate was ~82 KiB; the real shortfall is 18,016, so that
+ * figure was 4.5x too large and sizing from it would have wasted ~64 KiB.
+ *
+ * Affordable because Phases 1-2 recovered 169,152 bytes of static main RAM,
+ * which the taskman probe converted into arena: gNdsTaskmanGeneralHeapFreeMin
+ * went 15,120 -> 133,628, i.e. from 17,648 BELOW the 32,768 safety floor to
+ * 100,860 above it. Spending 61,440 of that leaves the floor with ~39 KiB of
+ * margin, and the run's own gNdsTaskmanGeneralHeapFreeMin is the check on this
+ * arithmetic rather than this comment. Overflow still degrades to the uncached
+ * load. */
+#define NDS_R2_ANIM_CACHE_ARENA_BYTES 262144u
 
 /* R2-04 E4. The match's animation working set, measured rather than guessed:
  * gNdsR204AnimSeen dumped at frame 1928 (roughly two thirds through the 3,600
@@ -6361,6 +6388,47 @@ volatile u32 gNdsR2AnimCacheArenaReservedBytes;
 volatile u32 gNdsR2AnimCacheArenaReserveCount;
 volatile u32 gNdsR2AnimCacheArenaReserveFailCount;
 volatile u32 gNdsR2AnimCacheArenaInvalidations;
+/* ANIM_REQUIRED_BYTES, measured. The plan (docs/RAM_RECOVERY_PLAN.md 0.3/6.1)
+ * forbids sizing the arena from the old ~82 KiB estimate, and the reject COUNT
+ * cannot size it either: a refused asset is re-requested every time it is
+ * needed, so 15 rejects is 15 attempts over an unknown number of distinct
+ * assets. Summing every refusal would therefore overcount badly.
+ *
+ * These track the DISTINCT assets that were refused and their bytes. The arena
+ * is a bump allocator that never frees, so gNdsR2AnimCacheArenaUsedBytes is
+ * already its high-water; the requirement is
+ *     UsedBytes + RejectedUniqueBytes + per-entry 16-byte alignment slack.
+ * 64 ids is far above the 15 refusals seen on Boundary and the 38 on the
+ * both-CPU arm; Overflow is the tell if that assumption ever breaks. */
+#define NDS_R2_ANIM_REJECT_TRACK_MAX 64u
+static u32 sNdsR2AnimRejectedIds[NDS_R2_ANIM_REJECT_TRACK_MAX];
+static u32 sNdsR2AnimRejectedCount;
+volatile u32 gNdsR2AnimCacheRejectedUniqueBytes;
+volatile u32 gNdsR2AnimCacheRejectedUniqueCount;
+volatile u32 gNdsR2AnimCacheRejectedTrackOverflow;
+
+/* Record a refusal once per distinct asset. Linear scan: the set is tiny and
+ * this only runs on the failure path, which is by definition rare. */
+static void ndsR2AnimNoteRejected(u32 asset_id, u32 size)
+{
+    u32 i;
+
+    for (i = 0u; i < sNdsR2AnimRejectedCount; i++)
+    {
+        if (sNdsR2AnimRejectedIds[i] == asset_id)
+        {
+            return;
+        }
+    }
+    if (sNdsR2AnimRejectedCount >= NDS_R2_ANIM_REJECT_TRACK_MAX)
+    {
+        gNdsR2AnimCacheRejectedTrackOverflow++;
+        return;
+    }
+    sNdsR2AnimRejectedIds[sNdsR2AnimRejectedCount++] = asset_id;
+    gNdsR2AnimCacheRejectedUniqueCount = sNdsR2AnimRejectedCount;
+    gNdsR2AnimCacheRejectedUniqueBytes += (size + 15u) & ~15u;
+}
 /* WHY the last overflow overflowed. Overflows 126 beside UsedBytes 3,728 and
  * ReservedBytes 92,160 is not self-consistent -- a 92 KiB arena holding 3.7 KiB
  * cannot refuse an animation of a few KiB -- and on 2026-08-02 that ambiguity
@@ -6587,6 +6655,7 @@ static void ndsR2AnimCacheStore(u32 asset_id, const void *data, u32 size,
     payload = ndsR2AnimCacheArenaAlloc(size);
     if (payload == NULL)
     {
+        ndsR2AnimNoteRejected(asset_id, size);
         gNdsR2AnimCacheRejects++;
         return;
     }
@@ -6807,6 +6876,7 @@ static void ndsR2AnimWarmLoadOne(u32 asset_id)
     payload = ndsR2AnimCacheArenaAlloc((u32)alloc_size);
     if (payload == NULL)
     {
+        ndsR2AnimNoteRejected(asset_id, (u32)alloc_size);
         gNdsR2AnimWarmFailed++;
         return;
     }
