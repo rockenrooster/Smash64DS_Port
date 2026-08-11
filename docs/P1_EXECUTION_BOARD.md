@@ -5159,14 +5159,50 @@ since shrunk from E6's 1,061 tk/build to **302 tk/call** because
 is ~4,100 tk, under the floor before the key costs anything. Do not revive it,
 cheap write-site generation key or not.
 
-**Open: compose the fighter joint worlds on the GX matrix stack.** The 52 composes
-and 32 `LoadHardwareSplitMatrices` exist only to hand a matrix to GX — the loader
-is `SetMatrixMode(GL_MODELVIEW); LoadMatrix4x4()` and nothing else, and fighter
-vertices are submitted in MODEL space, so no CPU consumer reads a composed world.
-`binding_parents[i] < i` is already preorder, and DS `MTX_MULT` is
-`current = M × current`, the same convention as `MtxMulAffine20p12(&local, out, out)`.
-~59,510 cyc → ~4,000. **Predicted ~27,000 tk/frame**, 3× the ±8,544 floor.
-Render-side only, same doctrine `ComposeOwnerWorldsFlat` already relies on.
+**Open — slice 43: compose the fighter joint worlds on the GX matrix palette.**
+The 52 composes and 32 `LoadHardwareSplitMatrices` exist only to hand a matrix to
+GX — the loader is `SetMatrixMode(GL_MODELVIEW); LoadMatrix4x4()` and nothing
+else, and fighter vertices are submitted in MODEL space
+(`nds_renderer.c:13593`), so **no CPU consumer reads a composed fighter world.**
+
+The shape that fits the existing loop, and it needs no reordering: the production
+root loop **already calls `glStoreMatrix(palette_slot)`** (`nds_renderer.c:32052`)
+with a baked per-root slot. `binding_parents[i] < i` is preorder, so per root
+
+> `glRestoreMatrix(palette[binding_parents[i]])` · `MTX_MULT_4x3` × chain ·
+> `glStoreMatrix(palette[i])`
+
+reconstructs the tree with the palette as the parent store — no DFS stack, same
+iteration order. DS `MTX_MULT` is `current = M × current`, exactly the
+`MtxMulAffine20p12(&local, out, out)` convention already in the loop, so nothing
+is reassociated.
+
+**Cost model, and it is what decides the slice** — derived from R2-03 E23, which
+measured skipping 29 identical 17-word projection pushes/frame at −3,008 tk, i.e.
+**~12.2 cycles per FIFO word**:
+
+| per frame | now | palette |
+|---|---:|---:|
+| CPU affine composes | 52.5 × 708 = 37,170 cyc | 0 |
+| FIFO words | 32 roots × 34 = 1,088 | 32 × (1+1) + 52 × 13 = 740 |
+| FIFO cycles @12.2 | 13,274 | 9,028 |
+| **total** | **50,444 cyc** | **9,028 cyc** |
+
+**≈ −20,700 tk/frame**, flat (80/80, `tk prem` ~1,900), 2.4× the ±8,544 floor.
+Sensitive to the word cost: at 12.2 it wins by 20,700, and the variant that
+re-multiplies each binding's FULL chain instead of the segment above its
+binding-parent (~160 mults) falls to ~−12,000 and **loses**. Use the palette.
+
+Work: matrix prep must hand the root loop each binding's chain of LOCALS instead
+of one composed world (`ComposeOwnerWorldsFlat` already builds that `chain[]`),
+`NDSRendererNativeFighterRoot::modelview_matrix` becomes a (count, locals) pair,
+and `NDS_RENDERER_HW_WORLD_UNIT_SHIFT` moves from the loader onto every local's
+translation row — scaling `m[3][*]` of every matrix in a chain scales the composed
+translation by the same factor and leaves the linear part alone. Preconditions to
+check first: every root's `palette_slot <= NDS_NATIVE_GX_MATRIX_SLOT_MAX` (line
+32050 guards it, so some may not have one), and STORE/RESTORE covering the vector
+matrix as well, which `NDS_R2_FIGHTER_HW_LIGHT` depends on. Render-side only,
+same doctrine `ComposeOwnerWorldsFlat` already relies on.
 
 **Still the larger lever, unchanged:** the cycle-118 asset-streaming complex at
 **184,414 tk of tail premium**. It is 5× this lane and it is blocked on the RAM
