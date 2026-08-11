@@ -173,3 +173,60 @@ memory, and Phase 6 removes it by resizing the cache. Re-check there.
 | `gNdsOriginalDLPreviewCommitCount` | 0 | 0 | unchanged |
 
 Campaign progress: **21,952 of the 98,304 B (96 KiB) target — 22.3%.**
+
+---
+
+# Phase 2 — `gSYFramebufferSets` (441,600 B): consumer contract traced
+
+Not yet implemented. Four structural questions answered; recorded so the slice
+can be built without re-deriving them.
+
+**1. Nothing writes meaningful pixels.** Cycle 84 measured it on DS:
+`gSYFramebufferSets[0][0][0]`, `[1][115][160]` and `[2][0][0]` all held only the
+clear value `GPACK_RGBA5551(0,0,0,1)` deep into a match, with the same probe
+demonstrably seeing 0→1 transitions nearby. BattleShip's own PC port documents
+the identical situation for any hardware rasteriser
+(`decomp/.../port/bridge/framebuffer_capture.h`): *"the RDP is replaced by a GPU
+rasterizer and gSYFramebufferSets[] never receives any pixels — the wallpaper
+copy reads zeros, hence the all-black background"* (their issues #57, #81). The
+DS presents from its own `sFramebuffers[]` in `nds_platform.c`, unrelated to
+this array.
+
+**2. The clear is bounded by `sizeof`, so shrinking is self-adjusting.**
+`decomp/.../sc/scmanager.c:855-859` already carries an NDS branch:
+```c
+framebuffer = (u16*) gSYFramebufferSets;
+#if defined(SSB64_TARGET_NDS)
+end = (uintptr_t)gSYFramebufferSets + sizeof(gSYFramebufferSets);
+#else
+end = 0x80400000;
+#endif
+```
+This was the main heap-corruption hazard and it is already handled. Note the
+contrast with `gSYZBuffer`, whose reduction was safe *because* nothing takes its
+`sizeof`; here it is safe *because* something does.
+
+**3. The N64 arena-sizing coupling does NOT bind on DS.** Nine imported scenes
+compute `scene_setup.arena_size = (uintptr_t)&gSYFramebufferSets -
+(uintptr_t)&ovl4_BSS_END`, i.e. the array's ADDRESS is the arena's upper bound
+on N64. On DS the layout is inverted — `gSYFramebufferSets` 0x021b24b0 sits
+BELOW `ovl4_BSS_END` 0x02271bf4 — so that expression is negative and, as a
+`size_t`, absurd. The DS therefore already overrides it with its probe loop.
+**This also confirms Phase 1's reported mechanism**: the arena grew because the
+probe settled one rung higher (`AllocFailCount` 29 → 24), not because an address
+gap widened. `gSYFramebufferSets` did move down by exactly 21,952, so the
+alternative explanation had to be excluded rather than assumed.
+
+**4. The remaining real constraint is the Z-buffer alias.**
+`SYVIDEO_ZBUFFER_START` resolves to `gSYZBuffer - 6400`, and the last 6,400
+bytes of `gSYFramebufferSets[2]` are what that backs into. ~17 scene-start
+functions hold `base+435,200` = exactly `441,600 - 6,400`, which is that
+pointer — they are storing the Z-buffer start into their `SYVideoSetup`, not
+touching pixels. Cycle 84 proved nothing writes through it, so this is an
+addressing contract only: any shrink must keep that address inside valid memory.
+
+**Assessment:** Candidate D (remove a dummy compatibility surface) is the live
+option and the blockers that would normally kill it are already handled. The
+open work is the Results photo-wipe read path — whether the DS wipe samples this
+array at all, and what it looks like today — plus `artifacts/visibility`
+evidence of the transition before any change, per the plan's 2.2/2.4.
