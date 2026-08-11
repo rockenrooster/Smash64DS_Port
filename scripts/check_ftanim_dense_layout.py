@@ -114,7 +114,28 @@ def main() -> int:
                 problems.append("member %d (%s): header %s, emitter %s"
                                 % (i, name, ctype, pytype))
 
-    # 4. The Q constants must match the emitter's.
+    # 4. The control entry and the terminator tags must match too. The write
+    #    records carry no timing, so a disagreement here desynchronises every
+    #    baked animation by whatever the stride error is -- the same class of
+    #    silent failure as a field-width mismatch, in the other stream.
+    ctrl = re.search(r"typedef\s+(u16|u32|u8)\s+NDSAnimDenseControl\s*;", text)
+    if not ctrl:
+        problems.append("NDSAnimDenseControl not declared in the header")
+    else:
+        want = {"u8": 1, "u16": 2, "u32": 4}[ctrl.group(1)]
+        if gen.CONTROL.size != want:
+            problems.append("control entry is %s (%d B) in the header, %d B in "
+                            "the emitter" % (ctrl.group(1), want,
+                                             gen.CONTROL.size))
+    for cname, pyname in (("NDS_ANIM_DENSE_TERM_END", "TERM_END"),
+                          ("NDS_ANIM_DENSE_TERM_LOOP", "TERM_LOOP")):
+        m = re.search(r"#define\s+%s\s+(\d+)" % cname, text)
+        if not m or int(m.group(1)) != getattr(gen, pyname):
+            problems.append("%s is %s in the header, %s in the emitter"
+                            % (cname, m.group(1) if m else None,
+                               getattr(gen, pyname)))
+
+    # 5. The Q constants must match the emitter's.
     for cname, pyname in (("NDS_ANIM_DENSE_LENGTH_Q", "LENGTH_Q"),
                           ("NDS_ANIM_DENSE_RATE_BASE_Q", "RATE_BASE_Q"),
                           ("NDS_ANIM_DENSE_LENGTH_INVERT_Q",

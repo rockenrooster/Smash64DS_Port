@@ -89,6 +89,29 @@ VERSION = 1
 RECORD = struct.Struct("<iihhhhBBH")
 assert RECORD.size == 20
 
+# One control entry per command: `anim_wait` AFTER that command. Two bytes,
+# because the whole bank's waits are INTEGERS in 0..185 -- measured, all 71,500
+# of them, zero fractional. This is the timing the write records cannot carry:
+# a baked script that reproduces every field and cannot say which frame to apply
+# it on is not runnable, which is how this stream came to exist.
+CONTROL = struct.Struct("<H")
+assert CONTROL.size == 2
+CONTROL_WAIT_MAX = 0xFFFF
+
+# Every script in the bank ends with exactly one callback and it is always after
+# the last state -- 5,629 of 5,629, verified, never two and never mid-script. So
+# the terminator is a property of the SCRIPT, not a per-command field, and it
+# goes in the index entry. -1 is nGCAnimEvent16End, -2 is Loop.
+TERM_END, TERM_LOOP = 1, 2
+
+# The Mario/Fox bank contains ZERO SetFlags and ZERO SetTranslateInterp commands
+# -- the two opcodes that escape per-track AObj state, one writing root_dobj
+# ->flags and the other binding an interpolate pointer. The emitter therefore
+# does not encode them, and ASSERTS their absence rather than assuming it: a
+# future bank carrying one would otherwise have that effect silently dropped,
+# which is exactly the hole check_ftanim_opcode_surface.py exists to keep shut.
+OP_SETFLAGS, OP_INTERP = 14, 12
+
 LENGTH_Q = 7
 LENGTH_INVERT_Q = 30             # NDS_R2_AQ_IF, for Cubic/Linear reciprocals
 RATE_BASE_Q = 16                 # NDS_R2_AQ_RF
@@ -161,8 +184,11 @@ def encode_write(cmd_index, track, snap, where):
 def build(probe, model, bake, on_script=None):
     """Emit every script in the bank. Returns (blob, index, stats)."""
     blob = bytearray()
-    index = []                 # (file_id, script_ordinal, offset, count)
-    stats = {"files": 0, "scripts": 0, "records": 0, "linear_rate_base": 0}
+    control = bytearray()
+    # (file_id, ordinal, write_off, write_count, ctrl_off, ctrl_count, term)
+    index = []
+    stats = {"files": 0, "scripts": 0, "records": 0, "linear_rate_base": 0,
+             "commands": 0}
 
     for path in sorted(probe.BANK.iterdir()):
         if not path.name.startswith(("FTMarioAnim", "FTFoxAnim")):
@@ -176,18 +202,37 @@ def build(probe, model, bake, on_script=None):
             run = model.run_commands(cmds)
             baked = bake.bake_run(run)
             where = "%s script %d" % (path.name, ordinal)
+            for cmd in cmds:
+                if cmd["op"] == OP_SETFLAGS or cmd["op"] == OP_INTERP:
+                    raise FieldOverflow(
+                        "%s uses opcode %d, which this emitter does not encode "
+                        "because the shipped bank contains none. Its effect "
+                        "(a root_dobj->flags write, or an interpolate binding) "
+                        "would be silently dropped -- add it to the format "
+                        "rather than to the bank" % (where, cmd["op"]))
             start = len(blob)
             for cmd_index, track, snap in baked["writes"]:
                 if not float(snap[3]).is_integer():
                     stats["linear_rate_base"] += 1
                 blob += encode_write(cmd_index, track, snap, where)
-            index.append((f["file_id"], ordinal, start,
-                          len(baked["writes"])))
+            ctrl_start = len(control)
+            for w in run.waits:
+                if float(w) != int(w) or not (0 <= int(w) <= CONTROL_WAIT_MAX):
+                    raise FieldOverflow(
+                        "anim_wait %r in %s is not an integer in 0..%d -- the "
+                        "measured range this stream was sized from no longer "
+                        "holds" % (w, where, CONTROL_WAIT_MAX))
+                control += CONTROL.pack(int(w))
+            term = TERM_LOOP if (run.callbacks and
+                                 run.callbacks[-1][1] == -2) else TERM_END
+            index.append((f["file_id"], ordinal, start, len(baked["writes"]),
+                          ctrl_start, len(run.waits), term))
             stats["scripts"] += 1
             stats["records"] += len(baked["writes"])
+            stats["commands"] += len(run.waits)
             if on_script is not None:
-                on_script(where, baked, start)
-    return bytes(blob), index, stats
+                on_script(where, baked, start, run, ctrl_start)
+    return bytes(blob), bytes(control), index, stats
 
 
 def decode_write(blob, offset):
@@ -219,9 +264,18 @@ def main() -> int:
              "length": (0.0, 0, 0, ""),
              "length_invert": (0.0, 0, 0, "")}
 
-    def check(where, baked, start):
+    def check(where, baked, start, run, ctrl_start):
         if not args.verify:
             return
+        # The control stream, decoded back the way a runtime bind would read it.
+        # Checked as strictly as the state: a baked script that reproduces every
+        # field and applies it a frame late is a gameplay bug no field-by-field
+        # comparison can see.
+        for i, w in enumerate(run.waits):
+            got_w = CONTROL.unpack_from(ctrl_ref[0],
+                                        ctrl_start + i * CONTROL.size)[0]
+            if got_w != int(w) and len(mismatches) < 5:
+                mismatches.append((where, i, ("wait", int(w)), ("wait", got_w)))
         for i, (cmd_index, track, snap) in enumerate(baked["writes"]):
             got = decode_write(blob_ref[0], start + i * RECORD.size)
             is_step = int(snap[0]) in (KIND_STEP_Q, KIND_STEP_F)
@@ -245,12 +299,14 @@ def main() -> int:
                     worst[name] = (err, float(exact), float(coded), where)
 
     blob_ref = [b""]
+    ctrl_ref = [b""]
     try:
-        blob, index, stats = build(probe, model, bake)
+        blob, control, index, stats = build(probe, model, bake)
     except FieldOverflow as exc:
         print("FAIL: %s" % exc)
         return 1
     blob_ref[0] = blob
+    ctrl_ref[0] = control
     if args.verify:
         build(probe, model, bake, on_script=check)
 
@@ -263,6 +319,9 @@ def main() -> int:
     print("same as 36-byte AObj records would be : %d bytes (%.2f MB), so %.1f%% "
           "smaller" % (aobj_bytes, aobj_bytes / (1024 * 1024),
                        100 * (1 - len(blob) / aobj_bytes)))
+    print("commands         : %d" % stats["commands"])
+    print("control stream   : %d bytes (%.2f MB)"
+          % (len(control), len(control) / (1024 * 1024)))
     print("index entries    : %d" % len(index))
     print("non-integer rate_base (Linear, computed not authored) : %d"
           % stats["linear_rate_base"])
@@ -285,12 +344,12 @@ def main() -> int:
 
     if args.out:
         args.out.parent.mkdir(parents=True, exist_ok=True)
-        header = struct.pack("<4sIII", MAGIC, VERSION, len(index),
-                             stats["records"])
-        table = b"".join(struct.pack("<IHII", *e) for e in index)
-        args.out.write_bytes(header + table + blob)
-        print("wrote %s (%d bytes with header and index)"
-              % (args.out, len(header) + len(table) + len(blob)))
+        header = struct.pack("<4sIIII", MAGIC, VERSION, len(index),
+                             stats["records"], stats["commands"])
+        table = b"".join(struct.pack("<IHIIIIB3x", *e) for e in index)
+        args.out.write_bytes(header + table + blob + control)
+        print("wrote %s (%d bytes with header, index and control)"
+              % (args.out, len(header) + len(table) + len(blob) + len(control)))
 
     print("\nFTANIM_DENSE_BANK=OK  every record fits its declared encoding, the "
           "value fields carry the authored s16 words exactly, and the two "

@@ -103,6 +103,29 @@ typedef struct NDSAnimDenseTrack
     u16 pad;
 } NDSAnimDenseTrack;
 
+/* The control stream: `anim_wait` after each command, one u16 per command.
+ *
+ * This is the timing, and it exists because the write records alone are not
+ * runnable -- they say what each command sets and not which frame to set it on.
+ * Two bytes is enough because every wait in the bank is an INTEGER in 0..185,
+ * measured over all 71,500 of them, none fractional.
+ *
+ * There is no per-command callback field and no flags field, both for measured
+ * reasons rather than convenience:
+ *
+ *   * Every script in the bank ends with exactly ONE callback and it is always
+ *     after the last state -- 5,629 of 5,629, never two, never mid-script. So
+ *     the terminator is a property of the script and lives in the index entry.
+ *   * The bank contains ZERO `SetFlags` and ZERO `SetTranslateInterp` commands,
+ *     the only two opcodes that escape per-track AObj state. The emitter
+ *     ASSERTS their absence and refuses to encode a bank containing one, rather
+ *     than dropping a `root_dobj->flags` write or an interpolate binding
+ *     silently. */
+typedef u16 NDSAnimDenseControl;
+
+#define NDS_ANIM_DENSE_TERM_END 1u  /* the script ends at nGCAnimEvent16End */
+#define NDS_ANIM_DENSE_TERM_LOOP 2u /* the script ends by looping */
+
 /* The two s32 fields set the stride; dropping a byte elsewhere buys nothing. */
 _Static_assert(sizeof(NDSAnimDenseTrack) == 20,
                "dense track stride changed -- re-run "
