@@ -30,11 +30,11 @@ P95 as Boundary's; **re-pin `EXPECTED_CENSUS_SHA256` when coverage changes.**
 linked binaries. All owners are **FLAT** — no PC over 3.6% — so the lever is
 calls: `…GetFCCommonFloor` 45,372 x 818 cyc, `…FindLineEndpoints` 38,890 x 543,
 `…SweepFloorLoopSweep` 11,544 x 2,643. **But collision was never a P95 owner** —
-it is ABSENT from the over-gate top 40 (slice 39). **NEXT: the animation ATTACH
-path**, 21,793 cyc/frame of premium and untouched by every prior slice —
-`ndsRelocAssetIDForToken` 7,634, `…NormalizeScript` 5,107, `…BuildTrackTable`
-1,967, `…NormalizeFighterAObj16File` 1,929, `…AnimTargetValue` 1,760,
-`…AnimAObjToQ` 1,754, `gcAddDObjAnimJoint` 1,642. **SIZE IS NOT PERMISSION**:
+nor was animation. **THE TAIL IS ASSET STREAMING** (`--split-top-frames 80`, the
+first partition that ever matched the gate): FAT reads + movers + attach + locks
+= **29.3–39.7% of a published-ROM tail frame = 184,414 tk** vs a **174,144 gap**;
+game logic AND renderer together are 11.6%. **NEXT: preload the match's assets;
+stop touching the filesystem in gameplay.** SIZE IS NOT PERMISSION:
 float in `gmcollision`/`mp*`/`ftMain*`/`ftComputer` is FROZEN by the Task 9 hash
 (`census-softfloat-callers.ps1`) — exact moves only, which is why 35–37 are memos.
 
@@ -50,15 +50,15 @@ float in `gmcollision`/`mp*`/`ftMain*`/`ftComputer` is FROZEN by the Task 9 hash
 - **The AOT animation bake at 20 B/record** (slice 32). Reader, bake, emitter,
   layout guard and wiring are PROVEN and gated off; the SIZE is dead — 10,304 B
   an animation against the source's 2,310, ×85 cached needs +679,490 B, and
-  dropping every init record leaves 3.27×. But its VALUE model was priced off the
-  MEAN, and the gate says attach is 7.4% of the non-idle premium (slice 39).
+  dropping every init record leaves 3.27×. Attach IS on the tail, but as 8.4% of
+  it — the FAT read that feeds it costs more than the parse.
 - **The animation PLAYBACK path, on MEAN cost (slice 34).** Its two largest
   self-time symbols are already Requirement 4's fixed point at 1.67–1.69
   cyc/insn; the rest is **8,772 tk/fr** of soft float, all under the floor — as
   are idle-joint skip (33), lazy track table (31), AObj walk and track dispatch.
-  **NOT the lane: over-gate puts animation at 14.7% of the non-idle premium,
-  HALF of it the ATTACH path** (slice 39). **`ndsBaseGcPlayMObjMatAnim` must not
-  be blanket-converted** — five tracks carry packed 0xRRGGBBAA in f32.
+  At the tail too: animation+collision+renderer = **11.6%**. **Slice 39's table is
+  VOID** — threshold ON the quantum, 616 frames sorted by 0.154% jitter. **Don't
+  blanket-convert `ndsBaseGcPlayMObjMatAnim`** — 5 tracks pack 0xRRGGBBAA in f32.
 
 ## RAM: both budgets are near their floor — price a change before writing it
 

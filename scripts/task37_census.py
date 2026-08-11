@@ -248,11 +248,21 @@ def disassemble_range(
 
 
 # PROJECT_GOAL.md budgets 1.12M ARM9 *ticks* per presented frame. The profiler
-# counts ARM9 *cycles*, which run at twice the tick clock, so the gate is
-# 2,240,760 cycles -- and because presentation is VBlank-quantized, a frame lands
-# either on 2 VBlanks (2,240,760, inside) or on 3 (3,361,140, over). Nothing
-# lands between, so this threshold is a definition rather than a tuned knob.
-GATE_CYCLES = 2_240_760
+# counts ARM9 *cycles*, which run at twice the tick clock, so two VBlanks is
+# 2,240,760 cycles and three is 3,361,140. Presentation is VBlank-quantized, so
+# frames cluster on those values and nothing lands between them.
+#
+# THE THRESHOLD MUST NOT BE THE QUANTUM ITSELF. It was 2_240_760 until
+# 2026-08-11, on the reasoning that an exact quantum "is a definition rather
+# than a tuned knob". The quantum is not exact: on the c118 profile the
+# 2-VBlank cluster spans 2,239,036 .. 2,242,486, a 3,450-cycle spread straddling
+# 2,240,760, so **616 of its 1262 frames were classified over-gate on +-1,700
+# cycles of jitter** -- 0.154% of the threshold. That made `--split-over-gate`
+# mark 954 of 1600 frames (60%) when only 338 (21%) genuinely miss the cadence,
+# and every ranking it produced was computed on a population that was 65% noise.
+# Sit the threshold BETWEEN the clusters instead, where the jitter cannot reach
+# it. Anything from ~2.3M to ~3.3M gives the same answer.
+GATE_CYCLES = 2_800_950  # 2.5 VBlanks: above every 2-VBlank frame, below every 3
 
 
 def split_regions_over_gate(detail: dict) -> tuple[list[int], list[int]]:
@@ -269,6 +279,42 @@ def split_regions_over_gate(detail: dict) -> tuple[list[int], list[int]]:
         total = sum(v[0] for v in per_symbol.values())
         (over if total > GATE_CYCLES else clean).append(region)
     return sorted(over), sorted(clean)
+
+
+def split_regions_top(
+    detail: dict, symbols: list[Symbol], idle: set[str], count: int
+) -> tuple[list[int], list[int]]:
+    """Partition regions into (the `count` most expensive, everything else).
+
+    This is the partition the gate is actually defined on and the one this tool
+    was missing. `--split-over-gate` thresholds on 2 VBlanks, which on the c118
+    profile marks 895 of 1600 frames -- 56%, not a tail -- and `ALL` is
+    VBlank-quantized besides, so a frame that finishes early simply waits longer
+    and lands in the same bucket. `P95 <= 1.12M` is a statement about the 80th
+    most expensive frame of 1600, so ranking is the only partition that reaches
+    it.
+
+    Frames rank on NON-IDLE cycles. Ranking on the total would rank them by how
+    long they waited, which is backwards: the busiest frame spins in
+    `armWaitForIrq` the least.
+    """
+    drop = {
+        index for index, symbol in enumerate(symbols)
+        if symbol.name in idle or any(a in idle for a in symbol.aliases)
+    }
+    busy = []
+    for region, per_symbol in detail.items():
+        if region == 0:
+            continue
+        busy.append((
+            sum(v[0] for i, v in per_symbol.items() if i not in drop), region))
+    if count >= len(busy):
+        raise RuntimeError(
+            f"--split-top-frames {count} covers every one of {len(busy)} census "
+            "regions, leaving no control population")
+    busy.sort(reverse=True)
+    return (sorted(r for _, r in busy[:count]),
+            sorted(r for _, r in busy[count:]))
 
 
 def split_regions(
@@ -415,10 +461,24 @@ def main() -> int:
         "known to name the expensive class -- which is the usual case, because "
         "naming one is what the table is for.",
     )
+    parser.add_argument(
+        "--split-top-frames",
+        type=int,
+        metavar="N",
+        help="needs NDS_TASK37_PROFILE_PER_FRAME_REGION=1. Same table again, but "
+        "the partition is the tail itself: the N most expensive frames by "
+        "NON-IDLE cycles against all the rest. This is the one that matches the "
+        "gate -- P95 of 1600 frames is --split-top-frames 80. Prefer it over "
+        "--split-over-gate, whose 2-VBlank threshold is both quantized and far "
+        "too wide to be a tail.",
+    )
     args = parser.parse_args()
-    if args.split_over_gate and args.split_by_symbol:
-        parser.error("--split-over-gate and --split-by-symbol are two partitions "
-                     "of the same frames; pass one")
+    chosen = [n for n, v in (("--split-over-gate", args.split_over_gate),
+                             ("--split-by-symbol", args.split_by_symbol),
+                             ("--split-top-frames", args.split_top_frames)) if v]
+    if len(chosen) > 1:
+        parser.error(f"{' and '.join(chosen)} are partitions of the same frames; "
+                     "pass one")
 
     try:
         sections = parse_sections(run_tool(args.readelf, "-SW", str(args.elf)))
@@ -427,7 +487,8 @@ def main() -> int:
             raise RuntimeError("no FUNC symbols found in the ELF")
 
         detail: dict | None = (
-            {} if (args.split_by_symbol or args.split_over_gate) else None)
+            {} if (args.split_by_symbol or args.split_over_gate
+                   or args.split_top_frames) else None)
         total_cycles, unmapped_cycles, rows = attribute(symbols, args.profile, detail)
         if not rows:
             raise RuntimeError(f"{args.profile} contained no rows")
@@ -610,6 +671,10 @@ def main() -> int:
             if args.split_over_gate:
                 label = f"over the gate ({GATE_CYCLES:,} cycles)"
                 hot, control = split_regions_over_gate(detail)
+            elif args.split_top_frames:
+                label = f"the {args.split_top_frames} costliest frames (non-idle)"
+                hot, control = split_regions_top(
+                    detail, symbols, idle_spin, args.split_top_frames)
             else:
                 label = args.split_by_symbol
                 hot, control = split_regions(detail, symbols, args.split_by_symbol)

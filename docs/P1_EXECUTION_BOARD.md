@@ -4847,6 +4847,160 @@ walk IS the call". The three biggest single symbols are already visible:
 `ndsFighterMarioFoxDLAllDrawForSlot` 93,854,253, `ndsRendererCommitNativeStageSegment`
 93,101,009, `ndsRendererNativeEmitProductionPrimitiveGroups` 81,420,680.
 
+### ★ THE P95 TAIL, MEASURED PROPERLY FOR THE FIRST TIME — it is ASSET STREAMING
+
+`--split-top-frames 80` (added 2026-08-11 because no instrument could ask this),
+c118 whole-match profile, frames ranked by NON-IDLE cycles:
+
+| | frames | cyc/frame |
+|---|---:|---:|
+| the 80 costliest | 80 | 3,739,514 |
+| control | 1520 | 2,430,868 |
+| **premium** | | **1,308,645** (653,306 tk) |
+
+Who owns that premium (top 40 rows cover 980,760 of it, 75%; the rest is spread
+thin and unclassified). The tick HUD is **not in the published ROM**, so the
+right-hand column is what a shipping tail looks like:
+
+| owner | +cyc/frame | % raw | % excl. instrument |
+|---|---:|---:|---:|
+| measuring instrument (HUD/printf/scanf/console/locale) | 378,934 | 29.0% | — |
+| **FAT/ROM reads** (`get_fat` `f_lseek` `f_read` `_read_r` `_nitroromFdRead` `_FAT_read_r` `validate` `strncasecmp`) | 120,264 | 9.2% | **12.9%** |
+| **generic movers** (`memcpy` `armCopyMem32` `memset` `memmove`) | 96,699 | 7.4% | **10.4%** |
+| **asset attach/normalize** | 78,229 | 6.0% | **8.4%** |
+| **locks/threads** (`mutexLock/Unlock` `threadRemoveWaiter` `__libc_lock_acquire` `__getreent`) | 74,153 | 5.7% | **8.0%** |
+| idle spin (a 3-VBlank frame waits longer — expected) | 85,735 | 6.6% | 9.2% |
+| division helpers (mostly printf formatting) | 38,754 | 3.0% | 4.2% |
+| **game logic + renderer, everything this cycle optimized** | **107,992** | **8.3%** | **11.6%** |
+
+**The asset-streaming complex is 29.3%–39.7% of a published-ROM tail frame.**
+The range is honest: the low end counts only symbols that are unambiguously the
+FAT/attach path; the high end adds the generic movers, which are *probably* the
+copy half of the same path but are shared helpers and were not proven to belong
+to it. Either way it is the largest owner by a wide margin, and:
+
+> **369,345 cyc/frame = 184,414 ticks on each of the 80 costliest frames.**
+> **The gap to the gate is ~174,144.** This one class, removed, closes it.
+
+**Animation and collision are inside the 11.6% row.** Cycles 110–118 ground on
+the two lanes that together own about a ninth of the tail, because every
+instrument available ranked by mean or by a threshold that turned out to sort
+noise. That is the cycle's real lesson, and it is now fixed in the tooling.
+
+**This is exactly the architecture `PROJECT_GOAL.md` already prescribes** —
+*"Loading time is cheap. Gameplay CPU time is precious… A match may spend several
+seconds preparing… if doing so substantially reduces active-match CPU cost."*
+The milestone is ONE stage and TWO fighters; there is no streaming requirement
+here at all. It also matches the prior art already in the tree:
+`src/port/reloc_backend_assets.c:1850-1895` closes with *"move it off the
+gameplay frame entirely, which changes WHEN the work happens instead of shuffling
+where the code sits"* — written after E11, and correct.
+
+**Next lever: preload the match's assets before the match, and stop touching the
+filesystem during gameplay.** Before designing it, price the RAM — the heap
+low-water is already 24,404 against the 25,600 GObj-cap threshold
+([[ram-is-not-free-gobj-cap]]), so "load everything" may not fit and the slice
+may have to be "load everything this match actually touches". The 80 frame ids
+are in `artifacts/performance/2026-08-11_c118-lane/split-top80.txt`; the assets
+they pull are the work-list.
+
+**Still unmeasured:** the published ROM's own tail. Subtracting the instrument
+from this table is arithmetic, not a measurement — removing 29% of the work also
+changes which frames ARE the top 80.
+
+
+### Slice 40: the attach path — NOT BUILT. The measurement killed it before the build.
+
+The attach path was declared the next architectural slice and was one step from
+being built as a pre-normalized asset bake. **Its frame distribution says it is
+not a gate lever**, and the number that says so was already in hand.
+
+`--split-by-symbol ndsAObjEvent32NormalizeScript`, whole match, 1600 frames:
+
+| | frames | cyc/frame |
+|---|---:|---:|
+| attach-marked | 110 (6.9%) | 2,780,558 |
+| control | 1490 | 2,475,315 |
+| **premium** | | **305,243** (152,408 tk) |
+
+E11's concentration therefore SURVIVES the whole match, and the frames are
+scattered (125, 131, 136, 162 … 1554) rather than a load burst. That was the
+question this run was for and it came back the encouraging way. **It does not
+matter, because of where those frames sit in the distribution:**
+
+- **P50 is a control frame.** 6.9% of frames attach, so the median frame does no
+  attach work at all and deleting it moves P50 by **exactly 0**.
+- **P95 is above them.** A typical attach frame is P50 + 152,408 = **~1,113,560**
+  `WORK-H`. P95 is **1,294,144**, a further 180,584 up. The 80th-most-expensive
+  frame is not a typical attach frame — something costlier owns the tail.
+- Its real worth is **mean**: 110/1600 × 152,408 ≈ **10,478 tk/fr**, banked at
+  neither percentile this project measures.
+
+This is [[mean-self-time-predicts-p50-not-p95]] running backwards. That memory
+says a mean row *understates* a clustered lever. The converse is just as true and
+is what nearly cost a build here: **a lever clustering on frames that are not the
+tail is worth its mean at P95 and nothing at P50.** Concentration only amplifies
+if it concentrates *where the percentile lives*. "Does it cluster?" is the wrong
+question. **"Does it cluster where the percentile lives?"** is the question.
+
+Nothing here retires the work — pre-normalizing the AObj16 files is still
+byte-count neutral, still costs no RAM, and is still the right shape. It is a
+**mean/cadence** change, so it must be proposed and judged as one, and it queues
+behind anything that moves the tail.
+
+### The question none of this cycle's measurements answered
+
+**No run has ever partitioned frames by `WORK-H` percentile.** Slice 39 split on
+`ALL` > 2 VBlanks — 56% of frames, and quantized on top
+([[all-is-a-quantized-gate]]: `ALL` P95 lands on exactly 3 VBlanks, so its
+percentiles carry no sub-VBlank information). Slice 40 split on one symbol's
+presence. **Who owns the top 80 frames is unmeasured**, and every lever ranked
+this cycle — including both of these — was ranked against a proxy for it.
+
+The instrument for it exists and needs no build:
+`sample-tick-hud-buckets.ps1 -PerFrameGlobals` returns per-frame `WORK-H`
+alongside per-frame counters, which is exactly the joint distribution
+(is this symbol's work ON the tail frames?) that both splits above only
+approximated. Run that before ranking another candidate.
+
+
+### ⚠ THE OVER-GATE SPLIT BELOW IS INVALID — its partition was 65% noise
+
+Everything in the following section was computed with `--split-over-gate`'s
+threshold set to **exactly 2,240,760 cycles**, the 2-VBlank quantum. The tool's
+comment defended that as "a definition rather than a tuned knob" because frames
+land on 2 VBlanks or 3 and never between. The clusters are real; **the quantum is
+not exact.** On this very profile:
+
+| | |
+|---|---:|
+| 2-VBlank cluster spans | 2,239,036 .. 2,242,486 |
+| spread | 3,450 cycles = **0.154%** of the threshold |
+| threshold sat | **inside that span** |
+| 2-VBlank frames pushed over by jitter alone | **616 of 1262** |
+| frames it marked | 954 of 1600 (60%) |
+| frames that genuinely miss cadence (>2.8M) | **338 (21%)** |
+
+So the "over-gate" population was **65% jitter-sorted 2-VBlank frames**, and the
+ranking it produced is a ranking of what those frames happen to differ by. Fixed
+2026-08-11: `GATE_CYCLES = 2,800,950` (2.5 VBlanks), sitting BETWEEN the clusters
+where jitter cannot reach it. Anything from ~2.3M to ~3.3M is equivalent.
+
+**What this retracts.** The section below is why this cycle withdrew the
+animation closure and went looking for an attach path — "animation is 14.7% of
+the non-idle premium, the largest game-side family, and collision is absent from
+the top 40". **None of those three claims is supported any more.** They are not
+disproved either; they were computed on a partition that cannot support them, so
+they revert to unmeasured. Re-run with the corrected threshold, or better with
+`--split-top-frames`, before citing any row of it.
+
+**The general rule, worth more than the fix:** a threshold placed ON a quantized
+value bisects that value's cluster and sorts it by measurement jitter. Place a
+threshold BETWEEN clusters. "The value is exact so the threshold needs no tuning"
+is precisely the reasoning that produces this bug — see
+[[a-threshold-on-the-quantum-sorts-noise]].
+
+
 ### The over-gate split — and it REFUTES this cycle's own "animation is closed"
 
 `artifacts/performance/2026-08-11_c118-lane`, whole match on the banked build
@@ -4856,8 +5010,15 @@ costing more than two VBlanks against 705 costing two, premium 457,608
 cycles/frame.** The fresh window totals 3,994,154,280 cycles against c117's
 4,028,886,502 — **−34.7M**, which independently corroborates the banked −10,752.
 
-**This is the table the gate is actually defined on, and no mean-ranked census
-can produce it.** Slice 37 proved why: mean self time predicts P50 and not P95.
+**CORRECTION, made before this propagated: this is NOT the P95 partition.** An
+earlier revision of this entry called it "the table the gate is actually defined
+on". It is not. The gate is **P95 of `WORK-H`**; this split is **`ALL` > 2
+VBlanks**, and it marks **895 of 1600 frames — 56%**, not the top 5%. So it
+describes what separates a 3-VBlank frame from a 2-VBlank one — the *presented
+cadence*, which `PROJECT_GOAL.md` cares about directly — and NOT what puts a
+frame in the P95 tail. Both matter; they are different questions and the tables
+for them are different. Slice 37 still stands: a mean-ranked census answers
+neither.
 
 | class | +cyc/frame | share of NON-IDLE premium |
 |---|---:|---:|
