@@ -472,6 +472,18 @@ def main() -> int:
         "--split-over-gate, whose 2-VBlank threshold is both quantized and far "
         "too wide to be a tail.",
     )
+    parser.add_argument(
+        "--exclude-regions",
+        default="",
+        metavar="IDS",
+        help="comma-separated region ids to drop from BOTH populations before "
+        "splitting. For one-off transition or load frames whose cost is real but "
+        "whose CAUSE is not what the percentile is made of: on the c119 profile "
+        "region 1558 is the battle->Results composite, a single 6-VBlank frame "
+        "that contributes 4.2M cycles to exactly one frame. Leaving it in makes "
+        "its one-off work look like a tail owner. This does NOT change the gate "
+        "-- it changes causal attribution only.",
+    )
     args = parser.parse_args()
     chosen = [n for n, v in (("--split-over-gate", args.split_over_gate),
                              ("--split-by-symbol", args.split_by_symbol),
@@ -668,6 +680,10 @@ def main() -> int:
         # ---- Table E: per-frame split, when a marker symbol names the class ----
         split_summary = None
         if detail is not None:
+            dropped = [int(x) for x in args.exclude_regions.split(",") if x.strip()]
+            for region in dropped:
+                if detail.pop(region, None) is not None:
+                    print(f"   excluding region {region} from attribution")
             if args.split_over_gate:
                 label = f"over the gate ({GATE_CYCLES:,} cycles)"
                 hot, control = split_regions_over_gate(detail)
@@ -728,16 +744,24 @@ def main() -> int:
                 delta = a[0] / len(hot) - b[0] / len(control)
                 mem_delta = a[2] / len(hot) - b[2] / len(control)
                 insn_delta = a[1] / len(hot) - b[1] / len(control)
-                deltas.append((delta, mem_delta, insn_delta, symbols[index]))
+                # PRESENCE: on how many of the marked frames does this symbol
+                # run at all? A flat bucket's real question is not "what costs
+                # most on average" but "what runs on nearly every expensive
+                # frame". A symbol worth 4.2M cycles on ONE of 80 frames tops the
+                # mean-delta ranking while being unable to move the percentile,
+                # because P95 is decided by the 80th frame and not the 1st.
+                seen = sum(1 for r in hot if index in detail[r])
+                deltas.append((delta, mem_delta, insn_delta, symbols[index], seen))
             deltas.sort(key=lambda d: -d[0])
             table = []
-            for delta, mem_delta, insn_delta, symbol in deltas[: args.top]:
+            for delta, mem_delta, insn_delta, symbol, seen in deltas[: args.top]:
                 if abs(delta) < 1.0:
                     continue
                 table.append(
                     [
                         f"{delta:,.0f}",
                         f"{100.0 * delta / premium:.1f}" if premium else "-",
+                        f"{seen}/{len(hot)}",
                         f"{mem_delta:,.0f}",
                         f"{insn_delta:,.0f}",
                         f"{delta / insn_delta:,.1f}" if insn_delta else "-",
@@ -749,9 +773,9 @@ def main() -> int:
             print(
                 format_table(
                     table,
-                    ["+cyc/frame", "%prem", "of it mem", "+insn", "cyc/insn",
-                     "tier", "symbol"],
-                    "rrrrrll",
+                    ["+cyc/frame", "%prem", "frames", "of it mem", "+insn",
+                     "cyc/insn", "tier", "symbol"],
+                    "rrrrrrll",
                 )
             )
             named = sum(d[0] for d in deltas if d[0] > 0)
