@@ -5011,6 +5011,30 @@ the bare `make` build.
 
 ### Slice 32 (NEXT): the AOT dense-track rewrite
 
+#### UNBLOCKED 2026-08-11 — the input is on disk and the seam is one Makefile rule
+
+Step 13 closed the load-time bake on RAM (records are 32 B; a modest case needs
+25,600 B against a 24,404 B heap low-water) and concluded the bake must go to
+**ROM at build time**, which put it behind asset plumbing nobody had looked at.
+That plumbing already exists:
+
+| piece | where it is |
+|---|---|
+| **the input** | `decomp/BattleShip-main/BattleShip_o2r/reloc_animations/` — 1,633 files, 7.4 MB, of which **143 `FTMarioAnim*` + 158 `FTFoxAnim*` = the 301 P1 files** listed explicitly in `NDS_MARIOFOX_FIGHTER_RELOC_FILES` (Makefile:2418+). Read-only reference, which is what a generator wants. |
+| **the seam** | `Makefile:3295`, `$(NITROFS_DIR)/reloc/%: $(BATTLESHIP_O2R)/%`, whose recipe today is a bare `cp`. One rule to intercept; the staged bank is 1.3 MB. |
+| **the precedent** | `scripts/generate_nds_particle_banks.py` is already a build-time generator that reads BattleShip reloc assets and emits banks. Copy its shape, not its content. |
+| **the semantics** | `scripts/ftanim_script_model.py` — all 15 opcodes, both timelines, no ROM dependency. |
+| **the proof** | `scripts/ftanim_bake.py` — 20,000 scripts round-tripped, 0 mismatches, compared as bit patterns so `0.0 → -0.0` cannot pass. |
+| **the surface guard** | `scripts/check_ftanim_opcode_surface.py` — 15 opcodes both directions, plus the escape-point assertion that `func_anim` fires only from Loop/End. |
+| **the justification** | the 2026-08-11 whole-match profile above: **25.3% of `gcPlayDObjAnimJoint` is the AObj walk**, memory-bound at 3× the D-cache, and no instruction deletion reaches it. |
+
+The files are reloc-format (`"RELO"` magic at +4), so the generator needs the
+reloc header reader before it needs the opcode walker.
+
+**Nothing about this slice is blocked any more.** What remains is work: the
+emitter, the blob, `EXPECTED_CENSUS_SHA256` re-pinning, the `interpolate` offset
+relocation, and the runtime player — in that order.
+
 #### Original specification, still the target
 
 Re-profiled after the collision work. **Post-Requirement-4 animation is three
