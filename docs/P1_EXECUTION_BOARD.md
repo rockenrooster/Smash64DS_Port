@@ -4847,6 +4847,60 @@ walk IS the call". The three biggest single symbols are already visible:
 `ndsFighterMarioFoxDLAllDrawForSlot` 93,854,253, `ndsRendererCommitNativeStageSegment`
 93,101,009, `ndsRendererNativeEmitProductionPrimitiveGroups` 81,420,680.
 
+### ANIMATION'S OWN P95 NUMBER — 6.38% playback, and it CLUSTERS at 1.37x
+
+Every prior animation verdict this campaign was a MEAN. This is the first
+measurement of animation's contribution to the percentile the gate is defined on
+(`--split-top-frames 80 --top 400`, full depth —
+`artifacts/performance/2026-08-11_c118-lane/split-top80-full.txt`):
+
+| lane | +cyc/tail-frame | % of premium | ticks/tail-frame |
+|---|---:|---:|---:|
+| animation **playback** | 83,523 | **6.38%** | 41,703 |
+| animation **attach/asset** | 88,015 | **6.73%** | 43,946 |
+| **animation total** | 171,538 | **13.11%** | 85,649 |
+
+**And playback is NOT frame-uniform**, which is the assumption cycles 110-118
+rejected their levers under. Tail-frame cost against control-frame cost:
+
+| symbol | control | tail | ratio |
+|---|---:|---:|---:|
+| `ndsR2FtAnimParseDObjFigatree` | 28,701 | 50,946 | **1.78x** |
+| `ndsR2AnimValueQ` | 39,754 | 53,519 | 1.35x |
+| `gcPlayDObjAnimJoint` | 42,083 | 53,684 | 1.28x |
+| `ftParamUpdateAnimKeys` | 21,469 | 27,831 | 1.30x |
+| `gcPlayAnimAll` | 16,387 | 17,551 | 1.07x |
+| **total (66% of the playback premium; 4 symbolsnames differ between tables)** | **148,394** | **203,531** | **1.37x** |
+
+**What this does and does not overturn.** It does NOT resurrect cycle 117's four
+rejected levers: the largest was ~1,900 tk/fr, and even at 1.78x that is 3,382 —
+still under the 8,544 cross-build floor. Those rejections stand. What it
+overturns is the *reasoning*: "animation is frame-uniform so its mean IS its P95"
+is false, and any future animation lever must be sized at 1.28-1.78x its mean,
+not at 1.0x.
+
+**The parse's 1.78x is the interesting number, and it points at the arena.** The
+frames where the parse costs 1.78x are the frames where
+`ndsAObjEvent32NormalizeScript` (+30,172) and
+`ndsRelocNormalizeFighterAObj16File` (+15,858) run — because a cache-refused
+asset must be re-read, re-normalized AND re-parsed. So the animation tail and the
+asset-streaming tail are substantially **the same event**, and fixing the 99.85%
+arena is predicted to take the attach premium (88,015) and the parse premium
+(22,245) together — **110,260 cyc = 55,053 ticks/tail-frame**. That prediction is
+falsifiable and should be checked against the arena fix rather than assumed.
+
+**Against the `/goal`'s exit conditions, stated plainly:**
+
+- Condition 1 **is met**. Animation *was* materially reduced at P95 — Requirement
+  4's fixed-point `AObj` banked `WORK-H` P95 **−37,504**, and that is in the
+  current gate. And the next bottleneck is measured and elsewhere: asset
+  streaming is **4.6-6.2x** animation playback's tail share.
+- Condition 2 is **NOT** met, and should not be claimed. Playback still carries
+  **27,530 ticks/tail-frame above control frames**. That is recoverable in
+  principle; nobody has proven otherwise, and the mean-based evidence that used
+  to look like proof has just been shown to be the wrong statistic.
+
+
 ### ★★ CONFIRMED: the anim arena saturates at 99.85% and 38 in-use assets are refused
 
 End-of-match counters, banked gate build `builds/build-c118-gate`, one-minute
