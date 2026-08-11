@@ -1,8 +1,9 @@
 # Handoff
 
-Updated: 2026-08-10. **The gate arm's tail was cartridge I/O: the animation
-cache arena had been full and refusing loads all match. Fixed at `f082b3c8` —
-`WORK-H` P95 1,639,299 → 1,447,318, gap 326,938.**
+Updated: 2026-08-10. **Requirement 4 shipped: the fighter `AObj` is fixed point,
+`WORK-H` P50 −23,360 / P95 −37,504 on one binary.** Before it, the gate arm's
+tail was cartridge I/O — the animation cache arena was full and refusing loads
+all match, fixed at `f082b3c8`: `WORK-H` P95 1,639,299 → 1,447,318.
 **Every 128-frame measurement in the archive is unusable** — that window reads
 the cheapest 6% of the match, understating P95 ~306,000 and the over-gate rate
 five times. Use `sample-tick-hud-buckets.ps1 -Samples 1600`.
@@ -36,7 +37,7 @@ forbids reporting a both-CPU P95 as the Boundary figure. **Re-pin
   **`Material`** · **the force-load seam**.
 - **`FTR` as the *P95 discriminator*** (+13,768). NOT "FTR is exhausted" —
   reading it that way is what the owner re-opened 2026-08-10; cycles 110–116 then
-  took 24.6% off it. `FTR` is **flat**, on nearly every frame, which is why.
+  took 24.3% off it. `FTR` is **flat**, on nearly every frame, which is why.
 
 ## RAM: both budgets are near their floor — price a change before writing it
 
@@ -122,9 +123,7 @@ mis-attributed. In FTR: `ExecuteNativeFighterOwnerProduction` **26,307** +
 quarter deleted); `BuildFighterTraRotRpyDirect` **17,698** (already all
 fixed-point inside — its only float boundary is six conversions a joint);
 `BuildDObjXObjMatrix` 14,244; `LoadHardwareSplitMatrices` **13,122**, E23
-projection-skip still refuted. **The biggest untouched lever is Requirement 4**:
-`softfloat-attribution.json` (c106, in-tree) puts **animation evaluation at
-25.1M of 87.5M soft-float cycles ≈ 25,700 tk/fr**.
+projection-skip still refuted. The animation lane above them is spent.
 
 **The `SINT` split is DONE.** `SINT` +88,082 = `ftMainPlayAnim` **+60,559**
 (animation) + `ftComputerProcessAll` +24,386 (map collision, not AI), retiring
@@ -132,12 +131,14 @@ projection-skip still refuted. **The biggest untouched lever is Requirement 4**:
 **discards the return value**. **D-cache census run** (no build): loads average
 7.07 cyc/ex, excess 17.83%, largest site a DMA0CNT spin rather than a miss.
 
-**The animation lane is the top `SRC` target: 8.85% of non-idle, ~98,000 tk/fr
-at P50**, worth ≈38,700 (~60,000 through to matrices), ~25,700 of it soft-float.
-`AObj` is 36 B × ~360 live = **12,960 B against a 4 KB D-cache**, so `ldrb
-aobj->kind` costs 24.1 cyc/ex. Constraints on the board: arena not linked arrays,
-replace don't coexist, **derive phase as `frame * step`, never accumulate** (it
-drives hitboxes). A `WORK` lever: ~3,085 is inside `FTR`.
+**The animation lane is DONE — Requirement 4 shipped** (slice 25, board): the
+fighter `AObj`'s six `f32` slots carry Q values, discriminated by three new
+`kind` bytes on the field the evaluator already switched on. One binary,
+`gNdsR2AnimCutRoute` 7 vs 15: **`SINT` P50 −24,896, `WORK-H` P50 −23,360, P95
+−37,504**; `FTR` ±64, `STG` ∓64 and `gNdsR2CubicEvals` **285,210 in both arms**
+are the controls. **It does not move `FTR`** — only ~3,085 of that lane was ever
+in the bracket. `check_r2_cubic_error_bound.py` proves the parser half EXACT over
+393,216 inputs. **Do not re-add a float cache beside it.**
 
 **Do not bring a micro-fix** — R2-06 E11: a load-frame-only ~8,000 cannot be
 banked, because relinking moves the tail more than the saving. Clear ~16,000 in

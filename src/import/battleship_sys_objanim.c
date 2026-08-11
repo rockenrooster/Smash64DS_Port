@@ -3,6 +3,13 @@
  * the unchanged original parser sees them. */
 #include <nds/nds_fcmp.h>
 #include <nds/nds_reloc_assets.h>
+#include <nds/nds_anim_fixed.h>
+
+/* Outside every configuration gate on purpose: `nds_anim_fixed.h` declares it
+ * and `battleship_ftanim.c` includes that header whether or not this file's
+ * fixed-point player is compiled in. Four bytes against a link error that only
+ * appears in the P2 configuration nobody measures. */
+volatile u32 gNdsR2CubicSaturations;
 
 #define gcAddDObjAnimJoint ndsBaseGcAddDObjAnimJoint
 #define gcAddMObjMatAnimJoint ndsBaseGcAddMObjMatAnimJoint
@@ -91,7 +98,6 @@
  * two soft-float calls where this is a dozen integer ops. */
 
 volatile u32 gNdsR2CubicEvals;
-volatile u32 gNdsR2CubicSaturations;
 
 /* Cycle 109 standing-rule-7 route for the two animation cuts in this file.
  *
@@ -108,10 +114,17 @@ volatile u32 gNdsR2CubicSaturations;
  *   bit 1 (2) -- the fused length*length_invert multiply in the cubic kernel
  *   bit 2 (4) -- the port-side figatree parser (reloc_backend_compat_shims.c
  *                selects it; the body is in battleship_ftanim.c)
+ *   bit 3 (8) -- Requirement 4: the fighter AObj stored in fixed point. Reads
+ *                in BOTH files at once, because the parser writes the Q form
+ *                and the player reads it; poke it before the first parse, not
+ *                mid-match, or a list ends up half converted. It is safe if you
+ *                do -- every node carries its own format in `kind` -- but the
+ *                arm you measure is then a mixture and prices nothing.
  *
- * Default 7 is the shipped behaviour, so an unpoked ROM is unaffected.
+ * Default 15 is the shipped behaviour, so an unpoked ROM is unaffected.
  * `-SetGlobals gNdsR2AnimCutRoute=0` is the all-pre-cut arm; bit-wise values
- * price one cut at a time (3 = parser off only, 5 = fused multiply off only).
+ * price one cut at a time (7 = fixed-point AObj off only, 3 = that plus the
+ * parser, 13 = fused multiply off only).
  *
  * .data, not .bss, and aligned(32) so it OWNS its cache line. Both are load
  * bearing: an uninitialised route would place differently between arms, and
@@ -132,24 +145,18 @@ volatile u32 gNdsR2CubicSaturations;
 #endif
 #if NDS_R2_ANIM_CUT_ROUTE
 volatile u32 gNdsR2AnimCutRoute
-    __attribute__((section(".data"), aligned(32))) = 7u;
+    __attribute__((section(".data"), aligned(32))) = 15u;
 #define NDS_R2_ANIM_CUT_ON(bit) ((gNdsR2AnimCutRoute & (bit)) != 0u)
 #else
 #define NDS_R2_ANIM_CUT_ON(bit) (1)
 #endif
 
 /* NDS_R2_CUBIC_FIXED_KERNEL_BEGIN — `scripts/check_r2_cubic_error_bound.py`
- * extracts everything between this marker and the matching END and compiles it
- * on the host against the decomp's own `gcGetInterpValueCubic`. Extraction
- * rather than a copy so the bound can never be measured against stale code.
- * Do not put anything between the markers that needs a DS header. */
-static inline u32 ndsR2FloatBits(f32 v)
-{
-    u32 bits;
-
-    __builtin_memcpy(&bits, &v, sizeof(bits));
-    return bits;
-}
+ * extracts everything between this marker and the matching END, prepends
+ * `include/nds/nds_anim_fixed.h`, and compiles both on the host against the
+ * decomp's own `gcGetInterpValueCubic`. Extraction rather than a copy so the
+ * bound can never be measured against stale code. Do not put anything between
+ * the markers that needs a DS header. */
 
 /* Two fixed-point scales, and the split is what makes the bound affordable.
  *
@@ -162,60 +169,13 @@ static inline u32 ndsR2FloatBits(f32 v)
  * L*|rate| -- the curve's steepness in value units per t. At Q12 that amplifier
  * put a 60-unit translation crossed in 13 frames 0.107 units off the float
  * original, measured by `check_r2_cubic_error_bound.py`. Four more bits divide
- * that by 16 and cost two 32x32->64 multiplies (SMULL, one instruction each). */
-#define NDS_R2_CUBIC_VF 12
-#define NDS_R2_CUBIC_BF 16
-#define NDS_R2_CUBIC_BONE (1 << NDS_R2_CUBIC_BF)
-
-/* f32 -> Q`bits`, rounding to nearest. Hand-rolled rather than
- * `(s32)(v * 4096.0f)` because that is two soft-float calls (~50 ticks) where
- * this is a dozen integer ops. Saturates instead of wrapping: a wrapped joint
- * angle would be a visible teleport, a saturated one is a clamp. `bits` is
- * always a literal at the call sites, so the shifts fold. */
-static inline s32 ndsR2F32ToFixed(f32 v, s32 bits)
-{
-    u32 bits_in = ndsR2FloatBits(v);
-    s32 exp = (s32)((bits_in >> 23) & 0xffu);
-    s32 mant;
-    s32 shift;
-
-    if (exp == 0)
-    {
-        return 0;   /* zero or subnormal: below the resolution either way */
-    }
-    if (exp == 0xff)
-    {
-        gNdsR2CubicSaturations++;
-        return ((bits_in & 0x80000000u) != 0u) ? -0x7fffffff : 0x7fffffff;
-    }
-    mant = (s32)((bits_in & 0x7fffffu) | 0x800000u);   /* 1.23 fixed */
-    /* value = mant * 2^(exp-127-23); the result wants that scaled by 2^bits. */
-    shift = (exp - 127) - 23 + bits;
-    if (shift >= 0)
-    {
-        if (shift > 7)
-        {
-            gNdsR2CubicSaturations++;
-            mant = 0x7fffffff;
-        }
-        else
-        {
-            mant <<= shift;
-        }
-    }
-    else if (shift < -24)
-    {
-        mant = 0;   /* rounds to zero: even the leading 1 bit falls off */
-    }
-    else
-    {
-        /* Round to nearest rather than toward zero. Truncation here is a
-         * systematic pull toward zero on every one of the six conversions, and
-         * the bound measured its mean signed error at -9.1e-5 before this. */
-        mant = (mant + (1 << (-shift - 1))) >> -shift;
-    }
-    return ((bits_in & 0x80000000u) != 0u) ? -mant : mant;
-}
+ * that by 16 and cost two 32x32->64 multiplies (SMULL, one instruction each).
+ *
+ * They are the Q-form scales under their original names: the whole point of
+ * Requirement 4 is that the AObj now STORES what this kernel used to convert. */
+#define NDS_R2_CUBIC_VF NDS_R2_AQ_VF
+#define NDS_R2_CUBIC_BF NDS_R2_AQ_BF
+#define NDS_R2_CUBIC_BONE NDS_R2_AQ_BONE
 
 /* (a * b) -> Q`bits` in one integer multiply, without `__aeabi_fmul`.
  *
@@ -367,6 +327,56 @@ static inline f32 ndsR2FixedToF32(s32 q, s32 bits)
 #define NDS_R2_CUBIC_ATTR
 #endif
 
+/* Both kernels square `t` and then cube it, and t^3 wraps an s32 well before
+ * `t` itself does. Inside a block `t` is in [0,1]; outside it the Hermite is
+ * extrapolating nonsense either way, so the only question is whether the
+ * nonsense is bounded or a wrap -- and a wrapped joint is a visible teleport.
+ *
+ * This is not theoretical and it is not new. `gNdsR2CubicSaturations` read
+ * **337 a match** on the float arm of the cycle-116 A/B: `length_invert` still
+ * holding a Step FRAME COUNT when a Cubic event arrives with a zero payload
+ * (the parser only overwrites it when the payload is non-zero) makes
+ * `t = length * length_invert` enormous, the conversion clamps it to
+ * 0x7fffffff, and `t*t` then wraps anyway. Clamping `t` instead of its inputs
+ * is what actually bounds the chain, and it costs two compares.
+ *
+ * With |t| <= 2 and |length| <= 1024 frames (17 seconds -- longer than any
+ * block) every intermediate fits an s32 with room: t2 <= 2^18, t3 <= 2^19,
+ * omt2 <= 2^19, length*omt2 >> 12 <= 2^29, and the s64 accumulator reaches
+ * 2^54 against its 2^63. The result is clamped once on the way out. */
+#define NDS_R2_AQ_T_MAX  (2 * NDS_R2_AQ_BONE)
+#define NDS_R2_AQ_LEN_MAX (1024 << NDS_R2_AQ_LF)
+
+static inline s32 ndsR2AnimClamp(s32 v, s32 limit)
+{
+    if (v > limit)
+    {
+        gNdsR2CubicSaturations++;
+        return limit;
+    }
+    if (v < -limit)
+    {
+        gNdsR2CubicSaturations++;
+        return -limit;
+    }
+    return v;
+}
+
+static inline s32 ndsR2AnimClamp64(s64 v)
+{
+    if (v > (s64)0x7fffffff)
+    {
+        gNdsR2CubicSaturations++;
+        return 0x7fffffff;
+    }
+    if (v < -(s64)0x7fffffff)
+    {
+        gNdsR2CubicSaturations++;
+        return -0x7fffffff;
+    }
+    return (s32)v;
+}
+
 static NDS_R2_CUBIC_ATTR f32 ndsR2CubicValueFixed(const AObj *aobj)
 {
     /* The one unavoidable real multiply: `length` advances every tick, so `t`
@@ -377,11 +387,13 @@ static NDS_R2_CUBIC_ATTR f32 ndsR2CubicValueFixed(const AObj *aobj)
      * binary. The route test is a register `tst` present in both arms, so it
      * cancels out of the difference; it does mean the lab ROM's fused arm is
      * marginally slower than the shipped one, which is the accepted cost. */
-    s32 t = NDS_R2_ANIM_CUT_ON(2u) ?
+    s32 t = ndsR2AnimClamp(NDS_R2_ANIM_CUT_ON(2u) ?
         ndsR2F32MulToFixed(aobj->length, aobj->length_invert,
                            NDS_R2_CUBIC_BF) :
-        ndsR2F32ToFixed(aobj->length * aobj->length_invert, NDS_R2_CUBIC_BF);
-    s32 length_q = ndsR2F32ToFixed(aobj->length, NDS_R2_CUBIC_VF);
+        ndsR2F32ToFixed(aobj->length * aobj->length_invert, NDS_R2_CUBIC_BF),
+        NDS_R2_AQ_T_MAX);
+    s32 length_q = ndsR2AnimClamp(
+        ndsR2F32ToFixed(aobj->length, NDS_R2_CUBIC_VF), NDS_R2_AQ_LEN_MAX);
     /* t is Q16 and normally in [0,1], so t*t reaches 2^32 and needs the 64-bit
      * product. Every requantising shift rounds rather than truncates. */
     s32 t2 = (s32)((((s64)t * t) + (NDS_R2_CUBIC_BONE / 2)) >> NDS_R2_CUBIC_BF);
@@ -413,11 +425,83 @@ static NDS_R2_CUBIC_ATTR f32 ndsR2CubicValueFixed(const AObj *aobj)
         (s32)((acc + (NDS_R2_CUBIC_BONE / 2)) >> NDS_R2_CUBIC_BF),
         NDS_R2_CUBIC_VF);
 }
+
+/* Requirement 4. The same three curves over an AObj that is ALREADY fixed point.
+ *
+ * Every conversion above is gone -- not moved, not cached, not memoised. The
+ * four value inputs are loads, `length` is a load, and `t` is one SMULL against
+ * the Q30 reciprocal the parser wrote instead of an f32 one it has to unpack.
+ * The single `ndsR2FixedToF32` at the bottom stays: `DObj`'s pose vectors are
+ * decomp fields that collision, camera and the matrix builder all read, so the
+ * float boundary moves here rather than disappearing.
+ *
+ * All three kinds share ONE function, and that is a saving in itself: today
+ * Cubic pays a `bl` to this kernel, Linear pays two to `__aeabi_fmul`/`fadd`,
+ * and Step pays one to `__aeabi_fcmple`. After, each pays exactly one `bl`
+ * here. Step's compare is Q12 against Q12 -- `length_invert` carries a frame
+ * count for Step and a reciprocal for Cubic, which is the original's own
+ * double meaning for that field, kept rather than tidied.
+ *
+ * ARM, not Thumb, for the same reason `ndsR2CubicValueFixed` is: SMULL and CLZ.
+ * See `thumb-hides-64bit-cost` -- a pure-precision change cost +36,032 P95
+ * until one `target("arm")` attribute won -71,616 back. */
+static NDS_R2_CUBIC_ATTR f32 ndsR2AnimValueQ(const AObj *aobj)
+{
+    s32 len = ndsR2AQLoad(aobj->length);            /* Q12 frames */
+    s32 inv = ndsR2AQLoad(aobj->length_invert);     /* Q30 recip, or Q12 frames */
+    s32 vb = ndsR2AQLoad(aobj->value_base);         /* Q12 */
+    s64 acc;
+
+    if (aobj->kind == NDS_R2_AQ_KIND_STEP)
+    {
+        /* `len` unclamped on purpose: Step is a compare and a select, and
+         * clamping it would change which of the two values a block longer than
+         * the clamp selects. */
+        acc = (inv <= len) ? ndsR2AQLoad(aobj->value_target) : vb;
+    }
+    else if (aobj->kind == NDS_R2_AQ_KIND_LINEAR)
+    {
+        /* Q16 rate, not Q12 -- see NDS_R2_AQ_RF. */
+        acc = (s64)vb + ((((s64)len * ndsR2AQLoad(aobj->rate_base)) +
+            (1 << (NDS_R2_AQ_RF - 1))) >> NDS_R2_AQ_RF);
+    }
+    else
+    {
+        /* Q12 length x Q30 reciprocal, requantised to the Q16 basis scale.
+         * The 64-bit product cannot overflow, so the clamp goes on `t` rather
+         * than on its inputs -- see NDS_R2_AQ_T_MAX. */
+        s32 lenc = ndsR2AnimClamp(len, NDS_R2_AQ_LEN_MAX);
+        s32 t = ndsR2AnimClamp(
+            (s32)((((s64)len * inv) + ((s64)1 << (NDS_R2_AQ_TSH - 1))) >>
+                NDS_R2_AQ_TSH), NDS_R2_AQ_T_MAX);
+        s32 t2 = (s32)((((s64)t * t) + (NDS_R2_AQ_BONE / 2)) >> NDS_R2_AQ_BF);
+        s32 t3 = (s32)((((s64)t2 * t) + (NDS_R2_AQ_BONE / 2)) >> NDS_R2_AQ_BF);
+        s32 omt2 = (t2 - (2 * t)) + NDS_R2_AQ_BONE;
+        s32 h_vb = ((2 * t3) - (3 * t2)) + NDS_R2_AQ_BONE;
+        s32 h_vt = (3 * t2) - (2 * t3);
+        s32 h_rb = (s32)((((s64)lenc * omt2) + (1 << (NDS_R2_AQ_VF - 1))) >>
+            NDS_R2_AQ_VF);
+        s32 h_rt = (s32)((((s64)lenc * (t2 - t)) + (1 << (NDS_R2_AQ_VF - 1))) >>
+            NDS_R2_AQ_VF);
+
+        acc = (s64)vb * h_vb;
+        acc += (s64)ndsR2AQLoad(aobj->value_target) * h_vt;
+        acc += (s64)ndsR2AQLoad(aobj->rate_base) * h_rb;
+        acc += (s64)ndsR2AQLoad(aobj->rate_target) * h_rt;
+        acc = (acc + (NDS_R2_AQ_BONE / 2)) >> NDS_R2_AQ_BF;
+        gNdsR2CubicEvals++;
+    }
+    /* One clamp for all three arms. The float kernel saturated at each of its
+     * six conversions and so could not reach here out of range; with the
+     * conversions gone this is the only place left that can. */
+    return ndsR2FixedToF32(ndsR2AnimClamp64(acc), NDS_R2_AQ_VF);
+}
 /* NDS_R2_CUBIC_FIXED_KERNEL_END */
 
-/* The original body, with the cubic branch replaced. Step and Linear are the
- * decomp's own expressions verbatim, so the 43.6% + 1.7% of nodes that take
- * them are bit-identical to before this change. */
+/* The original body with the arithmetic replaced twice over: E64's fixed cubic
+ * for float AObjs, and Requirement 4's Q dispatch for the fighter ones. The
+ * float arms below are still the decomp's own expressions verbatim and still
+ * run for every non-fighter DObj this player is called for. */
 void gcPlayDObjAnimJoint(DObj *dobj)
 {
     f32 value = 0.0f;
@@ -461,6 +545,11 @@ void gcPlayDObjAnimJoint(DObj *dobj)
             (NDS_FCMP_NE_C(dobj->anim_wait, AOBJ_ANIM_END) ? 1u : 0u) |
             (((dobj->parent_gobj->flags & GOBJ_FLAG_NOANIM) == 0) ? 2u : 0u);
         const f32 speed_hoisted = dobj->anim_speed;
+        /* Requirement 4: the per-node `aobj->length += speed` was an
+         * `__aeabi_fadd` on EVERY node of every frame, Q or not. Converting the
+         * speed once per DObj turns it into an integer add on the Q nodes. */
+        const s32 speed_q_hoisted =
+            ndsR2F32ToFixed(speed_hoisted, NDS_R2_AQ_LF);
         /* Route bit 0. Read once per DObj -- reading it per node would put a
          * volatile load in the very loop being measured. The pre-cut arm
          * re-derives both from `dobj` per node, which is the decomp's own shape
@@ -476,13 +565,21 @@ void gcPlayDObjAnimJoint(DObj *dobj)
         {
             if (aobj->kind != nGCAnimKindNone)
             {
+                /* One byte load, two compares against a constant. This is the
+                 * whole cost of letting fixed-point and float AObjs coexist in
+                 * the same list -- which they must, because this player runs
+                 * for stage and item DObjs too and only the fighter parser
+                 * writes Q. */
+                const u32 kind = aobj->kind;
                 u32 play;
                 f32 speed;
+                s32 speed_q;
 
                 if (hoist != 0u)
                 {
                     play = play_hoisted;
                     speed = speed_hoisted;
+                    speed_q = speed_q_hoisted;
                 }
                 else
                 {
@@ -492,31 +589,47 @@ void gcPlayDObjAnimJoint(DObj *dobj)
                         (((dobj->parent_gobj->flags & GOBJ_FLAG_NOANIM) == 0) ?
                             2u : 0u);
                     speed = dobj->anim_speed;
+                    speed_q = ndsR2F32ToFixed(speed, NDS_R2_AQ_LF);
                 }
                 if ((play & 1u) != 0u)
                 {
-                    aobj->length += speed;
+                    if (kind >= NDS_R2_AQ_KIND_BASE)
+                    {
+                        aobj->length =
+                            ndsR2AQStore(ndsR2AQLoad(aobj->length) + speed_q);
+                    }
+                    else
+                    {
+                        aobj->length += speed;
+                    }
                 }
                 if ((play & 2u) != 0u)
                 {
-                    switch (aobj->kind)
+                    if (kind >= NDS_R2_AQ_KIND_BASE)
                     {
-                    case nGCAnimKindLinear:
-                        value = aobj->value_base +
-                            (aobj->length * aobj->rate_base);
-                        break;
+                        value = ndsR2AnimValueQ(aobj);
+                    }
+                    else
+                    {
+                        switch (kind)
+                        {
+                        case nGCAnimKindLinear:
+                            value = aobj->value_base +
+                                (aobj->length * aobj->rate_base);
+                            break;
 
-                    case nGCAnimKindCubic:
-                        value = ndsR2CubicValueFixed(aobj);
-                        break;
+                        case nGCAnimKindCubic:
+                            value = ndsR2CubicValueFixed(aobj);
+                            break;
 
-                    case nGCAnimKindStep:
-                        value = (aobj->length_invert <= aobj->length) ?
-                            aobj->value_target : aobj->value_base;
-                        break;
+                        case nGCAnimKindStep:
+                            value = (aobj->length_invert <= aobj->length) ?
+                                aobj->value_target : aobj->value_base;
+                            break;
 
-                    default:
-                        break;
+                        default:
+                            break;
+                        }
                     }
                     switch (aobj->track)
                     {

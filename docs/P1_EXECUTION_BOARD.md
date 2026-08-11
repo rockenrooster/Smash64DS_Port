@@ -4322,6 +4322,95 @@ not linked; `check_r2_cubic_error_bound.py` bounds the result (0.0028 rad /
 `ndsR2CubicValueFixed` must stay `target("arm")` for SMULL --
 [[thumb-hides-64bit-cost]] cost +36,032 P95 once already.
 
+### Slice 25 (ARCHITECTURAL): Requirement 4 SHIPS -- the fighter AObj is fixed point
+
+**`WORK-H` P50 -23,360, P95 -37,504; `SINT` P50 -24,896; one binary.**
+`build-c116-req4` (`NDS_R2_ANIM_CUT_ROUTE=1`), `gNdsR2AnimCutRoute` poked to
+**7** (float AObj) and **15** (Q AObj), same ROM, same melonDS
+`DE80E46BDCF1FD98`, 1600 samples an arm, DLDI on, 0 repeated frames on either
+arm, route read back 7 and 15 at end of run.
+
+| bucket | A: float AObj | B: Q AObj | delta |
+|---|---:|---:|---:|
+| **WORK-H P50** | 939,456 | **916,096** | **-23,360** |
+| **WORK-H P95** | 1,146,944 | **1,109,440** | **-37,504** |
+| WORK-H mean | 949,312 | 923,402 | -25,910 |
+| **SINT P50** | 147,776 | **122,880** | **-24,896** |
+| SINT P95 | 271,808 | 239,552 | -32,256 |
+| SRC P50 | 317,120 | 292,288 | -24,832 |
+| GCRA P50 | 312,064 | 287,232 | -24,832 |
+| FTR P50 | 301,568 | 301,632 | +64 |
+| STG P50 | 188,544 | 188,480 | -64 |
+| ALL P50 | 1,118,400 | 1,118,400 | 0 |
+| WAIT P50 | 189,056 | 209,408 | +20,352 |
+
+**`SINT` is the attribution.** It is the animation bucket, it moved -24,896, and
+`WORK-H` moved -23,360; those agree. `FTR` +64 and `STG` -64 are both the
+instrument's 64-tick quantum, so the change is confined to where the code is --
+**this does NOT move `FTR`**, exactly as the c115 census predicted (only ~3,085
+of the 107,870-tick animation lane is inside the `FTR` bracket). `ALL` P50 is
+identical and the saving reappears as `WAIT`, which is `ALL` being
+VBlank-quantised, as always.
+
+**Two counters make it a semantic-equivalence control, not just a timing
+result.** `gNdsR2CubicEvals` read **285,210 in BOTH arms** and
+`gNdsR2FtAnimParseCalls` **200,231 in both**: the route changes how a value is
+computed, never how often it is computed or how often the script is parsed.
+
+**What actually changed.** `AObj`'s six `f32` slots now carry Q values for
+fighter joints, discriminated by three new `kind` values (5/6/7) on the `u8`
+field the evaluator already switches on. No new struct, no parallel array, no
+cache: `include/nds/nds_anim_fixed.h` states the formats,
+`ndsR2FtAnimParseDObjFigatree` writes them, and `ndsR2AnimValueQ` reads them.
+Non-fighter AObjs (material, camera, stage, `mp_collision`'s own Linear writer)
+keep the float kinds and the decomp's own expressions bit-identical, which they
+must -- `gcPlayDObjAnimJoint` runs for stage and item DObjs too.
+
+Deleted per node per frame: **six inlined `ndsR2F32ToFixed`, one
+`ndsR2F32MulToFixed`**, the `__aeabi_fadd` in `aobj->length += speed`, Linear's
+`__aeabi_fmul` + `__aeabi_fadd`, and Step's `__aeabi_fcmple`. Deleted per parse
+event: 12 `__aeabi_i2f`, the `__aeabi_fdiv` on the Linear rate (109.4 cycles a
+call, the most expensive helper in the build), and two `__aeabi_fsub` per
+touched track for `-anim_wait - anim_speed` -- which is now hoisted out of the
+flag scan as well. **All three kinds now share ONE `bl`** into a single
+`target("arm")` kernel, where before Cubic paid one, Linear two and Step one.
+
+**The numerical claim is PROVEN, not argued.**
+`scripts/check_r2_cubic_error_bound.py` now drives the parser's arithmetic end
+to end and adds three rows:
+
+| row | samples | result |
+|---|---:|---|
+| `parser-Q-exact` | 393,216 | **0 mismatches** -- `arg << (12-k)` equals `ndsR2F32ToFixed(arg * 2^-k, 12)` for every s16 on all six power-of-two tracks |
+| `step-Q-exact` | 66,836 | **0 mismatches** |
+| `linear-Q` | 63,896 | max 0.000796 |
+| `rotation-Q` / `translation-Q` | 3,990,240 | **0.002842 / 0.006702 -- identical to the float-fed kernel in every printed digit** |
+
+`parser-Q-exact` is the load-bearing one: it says the cubic's four value inputs
+did not move **at all**, so the sweeps are bounding `t` and `length` alone --
+and those come out the same as before. The frac tables are read out of
+`decomp/.../ftanim.c` and `battleship_ftanim.c` by the checker rather than
+retyped, so the shipped table cannot drift away from the one proven against.
+
+**A latent wrap was found and closed on the way, in BOTH kernels.**
+`gNdsR2CubicSaturations` read **337 a match** on the float arm. Mechanism: the
+parser only overwrites `length_invert` when the payload is non-zero, so a Cubic
+event with a zero payload can inherit a **Step frame count** in that field;
+`t = length * length_invert` is then enormous, the conversion clamps it to
+`0x7fffffff`, and `t*t` wraps an s32 anyway -- a joint teleport, and pre-existing
+since E64. `ndsR2AnimClamp` bounds `t` to +-2 and `length` to 1024 frames, which
+is what actually bounds the chain; the shipped build now reports **44** clamps a
+match, so it fires, and the host bound is **unchanged in every domain**, so it
+never fires inside the realistic one.
+
+**Banked on the shipped build** (route compiled out, `make p1`): `WORK-H` P50
+**920,192**, P95 **1,113,408**, mean 928,548; `SINT` P50 127,424; `FTR` P50
+299,008. Against the previous banking (942,976 / 1,147,072) that is **-22,784
+P50 and -33,664 P95**, consistent with the one-binary delta. Boundary passes.
+1 of 1600 samples repeated a presented frame, which the sampler flags as not
+pacing-comparable -- the A/B arms had none, which is why the A/B is the headline
+and this is the bank.
+
 ### The `.data` route WORKS — first attributable animation measurement (cycle 109)
 
 Built the standing-rule-7 route the determinism finding demanded.

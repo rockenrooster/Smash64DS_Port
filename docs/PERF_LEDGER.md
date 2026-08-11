@@ -7281,3 +7281,33 @@ raw corners a frame become ~1,160 strip corners. Measured -11,584 is ~57% of the
 ~20,000 that vertex count alone predicts, which suggests part of the stall is
 **per polygon** -- strips leave all 626 triangles standing. Price the next
 geometry lever accordingly.
+
+## Requirement 4 — the fighter AObj becomes fixed point (2026-08-10, cycle 116): KEEP
+
+One binary, `builds/build-c116-req4` (`NDS_R2_ANIM_CUT_ROUTE=1`),
+`gNdsR2AnimCutRoute` poked to 7 (float `AObj`) and 15 (Q `AObj`), same melonDS
+`DE80E46BDCF1FD98`, 1600 samples an arm, DLDI on, zero repeated frames.
+
+| bucket | A: float | B: Q | delta |
+|---|---:|---:|---:|
+| WORK-H P50 | 939,456 | 916,096 | **-23,360** |
+| WORK-H P95 | 1,146,944 | 1,109,440 | **-37,504** |
+| SINT P50 | 147,776 | 122,880 | -24,896 |
+| SRC P50 | 317,120 | 292,288 | -24,832 |
+| FTR P50 | 301,568 | 301,632 | +64 (control) |
+| STG P50 | 188,544 | 188,480 | -64 (control) |
+
+`gNdsR2CubicEvals` 285,210 and `gNdsR2FtAnimParseCalls` 200,231 in BOTH arms:
+the route changes how a value is computed, never how often. `SINT` is the
+animation bucket and its -24,896 agrees with `WORK-H`'s -23,360, which is the
+attribution. This does **not** move `FTR` — only ~3,085 of the 107,870-tick
+animation lane was ever inside that bracket.
+
+Banked on the shipped build (route compiled out): `WORK-H` P50 920,192, P95
+1,113,408. Numerics proven by `scripts/check_r2_cubic_error_bound.py`:
+`parser-Q-exact` 0 mismatches over 393,216 inputs, `step-Q-exact` 0 over 66,836,
+`rotation-Q`/`translation-Q` identical to the float-fed kernel in every printed
+digit, `linear-Q` max 0.000796 against a 0.02 bound. A latent s32 wrap in `t*t`
+— pre-existing since E64, 337 conversion clamps a match — was closed in both
+kernels; the shipped build reports 44 clamps a match and the bound is unchanged.
+Board: slice 25.
