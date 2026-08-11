@@ -105,6 +105,19 @@ $ftanimRealBake = Join-Path $PSScriptRoot 'check_ftanim_real_bake.py'
 if ($LASTEXITCODE -ne 0) {
     throw "Figatree real-content bake round-trip failed with exit code $LASTEXITCODE."
 }
+
+# Cycle 117, slice 32's emitter, run in verify mode. It encodes all 145,873
+# records, range-checks every field against its declared width as it goes, and
+# decodes the blob back to compare. It must stay green because its failure mode
+# is a silently saturated field in one joint of one animation -- invisible in a
+# screenshot and in every geometry counter. It also prints the quantisation the
+# encoding accepts, so that number stays visible rather than drifting. Skips
+# cleanly when decomp/ is absent. Host-only, ~30 s.
+$ftanimDenseBank = Join-Path $PSScriptRoot 'generate_ftanim_dense_bank.py'
+& python -B $ftanimDenseBank --verify
+if ($LASTEXITCODE -ne 0) {
+    throw "Figatree dense-bank emitter failed with exit code $LASTEXITCODE."
+}
 function Assert-Equal {
     param(
         [object]$Actual,
