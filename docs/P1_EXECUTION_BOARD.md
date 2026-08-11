@@ -5198,15 +5198,29 @@ of one composed world (`ComposeOwnerWorldsFlat` already builds that `chain[]`),
 `NDSRendererNativeFighterRoot::modelview_matrix` becomes a (count, locals) pair,
 and `NDS_RENDERER_HW_WORLD_UNIT_SHIFT` moves from the loader onto every local's
 translation row — scaling `m[3][*]` of every matrix in a chain scales the composed
-translation by the same factor and leaves the linear part alone. Preconditions to
-check first: every root's `palette_slot <= NDS_NATIVE_GX_MATRIX_SLOT_MAX` (line
-32050 guards it, so some may not have one), and STORE/RESTORE covering the vector
-matrix as well, which `NDS_R2_FIGHTER_HW_LIGHT` depends on. Render-side only,
+translation by the same factor and leaves the linear part alone. Render-side only,
 same doctrine `ComposeOwnerWorldsFlat` already relies on.
 
-**Still the larger lever, unchanged:** the cycle-118 asset-streaming complex at
-**184,414 tk of tail premium**. It is 5× this lane and it is blocked on the RAM
-question the board already flags, not on evidence.
+**Both preconditions checked, both hold — but one of them costs a generator
+change.** The palette today is *sparse*: `sNdsNativeMarioCrossPaletteSlots` gives
+real slots to 8 of 14 bindings and `sNdsNativeFoxCrossPaletteSlots` to 2 of 18;
+the rest carry the `31u` sentinel, above the `NDS_NATIVE_GX_MATRIX_SLOT_MAX = 30`
+guard, because it exists for cross-root vertex binding rather than for parent
+storage. The slice needs a slot for every binding that is some other binding's
+parent. Counted from the baked tables — Mario parents `{0,1,2,5,6,8,9,11,12}`,
+Fox `{0,1,2,3,5,7,8,10,11,13,14,16}` — that is **9 and 12**, union with the
+existing cross-root owners **9 and 14**, against 31 slots, and the two fighters
+never share an execute so the slots are reusable. It fits with room. The
+generator must emit a dense per-binding slot table beside the cross-root one.
+Second precondition is free: `GL_MODELVIEW` is DS matrix mode 2, so `MTX_MULT`,
+`MTX_STORE` and `MTX_RESTORE` all act on the position **and** vector matrices
+together, which is what `NDS_R2_FIGHTER_HW_LIGHT` needs.
+
+**This lane is inside the 44.9% that the tail actually is.** The cycle-118 table
+above it — asset streaming 29.3–39.7%, "game logic + renderer 11.6%" — is the
+`--top 40` reading at 75% coverage that `docs/HANDOFF.md` already marks *do not
+re-derive*; at full depth (`--split-top-frames 80`) it is **game+renderer 44.9%,
+FAT/ROM reads 9.6%**. Slice 43 is in the right lane.
 
 ### Do NOT retry: the flower rigid-mask, and why its own report's prediction is stale
 
