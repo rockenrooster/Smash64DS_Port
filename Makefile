@@ -2027,6 +2027,21 @@ NDS_TASK39_HIT_SPARKS_INC := $(PROJECT_ROOT)/src/nds/generated/task39_hit_sparks
 NDS_TASK39_HIT_SPARKS_ASSET := $(PROJECT_ROOT)/assets/effects/task39_hit_sparks.rgb5a1.bin
 NDS_PARTICLE_BANKS_INC := $(PROJECT_ROOT)/src/nds/generated/nds_particle_banks.generated.inc
 NDS_PARTICLE_BANKS_HEADER := $(PROJECT_ROOT)/include/nds/generated/nds_particle_banks.generated.h
+# Slice 32. The baked fighter-animation bank: 145,873 20-byte write records plus
+# 71,500 u16 control entries, replacing the figatree interpretation at runtime.
+# Generated from the 297 AObj16 files in $(BATTLESHIP_O2R)/reloc_animations,
+# which the build otherwise copies into nitrofs verbatim.
+#
+# DEFAULT OFF, and it must stay that way until a reader exists. The blob is
+# ~3.1 MB and the particle comment below records what that costs when nothing
+# opens it. Turning this on without the runtime bind adds ROM and changes
+# nothing else.
+NDS_R2_FTANIM_DENSE ?= 0
+NDS_FTANIM_DENSE_ASSET := $(PROJECT_ROOT)/assets/animation/ftanim_dense_bank.bin
+NDS_FTANIM_DENSE_SOURCES := \
+	$(wildcard $(BATTLESHIP_O2R)/reloc_animations/FTMarioAnim*) \
+	$(wildcard $(BATTLESHIP_O2R)/reloc_animations/FTFoxAnim*)
+
 NDS_PARTICLE_TEXTURE_ASSET := $(PROJECT_ROOT)/assets/particles/efcommon_particle_textures.ds.bin
 NDS_WHISPY_NATIVE_ASSET := $(PROJECT_ROOT)/assets/particles/grpupupu_whispy_native.ds.bin
 # The draw path's own payload: the admitted textures as RGB555+A1, which is the
@@ -2829,6 +2844,14 @@ endif
 # encodings of the same texels: the .ds.bin is per-texture DS formats with
 # palettes (the pack), the .rgb5a1.bin is the 22 admitted textures as RGB555+A1
 # (the draw path, which uploads through a texture cache with no palette slot).
+# Slice 32's baked animation bank ships only when a reader is compiled in. Empty
+# by default, so the published ROM is byte-identical until the runtime bind
+# lands -- see NDS_R2_FTANIM_DENSE above.
+export NDS_NITROFS_FTANIM_FILES :=
+ifeq ($(NDS_R2_FTANIM_DENSE),1)
+NDS_NITROFS_FTANIM_FILES := $(NITROFS_DIR)/animation/ftanim_dense_bank.bin
+endif
+
 export NDS_NITROFS_PARTICLE_FILES :=
 ifeq ($(NDS_R2_PARTICLE_RUNTIME),1)
 NDS_NITROFS_PARTICLE_FILES := \
@@ -3168,6 +3191,27 @@ $(NDS_PARTICLE_BANKS_INC) $(NDS_PARTICLE_TEXTURE_ASSET) $(NDS_PARTICLE_QUAD_ASSE
 
 $(NDS_PARTICLE_BANKS_HEADER): $(NDS_PARTICLE_BANKS_INC)
 
+# Slice 32's baked animation bank. `--verify` is not optional here: the emitter
+# range-checks every field as it encodes and then decodes the whole blob back
+# against the bake, and its failure mode without that is a silently saturated
+# field in one joint of one animation -- no crash, no counter, nothing a
+# screenshot shows. It costs about thirty seconds against a build that takes
+# minutes, and it is the only thing standing between a bank drift and wrong
+# animation data shipping.
+$(NDS_FTANIM_DENSE_ASSET): \
+		$(PROJECT_ROOT)/scripts/generate_ftanim_dense_bank.py \
+		$(PROJECT_ROOT)/scripts/ftanim_reloc_probe.py \
+		$(PROJECT_ROOT)/scripts/ftanim_script_model.py \
+		$(PROJECT_ROOT)/scripts/ftanim_bake.py \
+		$(NDS_FTANIM_DENSE_SOURCES)
+	@mkdir -p $(dir $@)
+	python "$(PROJECT_ROOT)/scripts/generate_ftanim_dense_bank.py" \
+		--verify --out "$@"
+
+$(NITROFS_DIR)/animation/ftanim_dense_bank.bin: $(NDS_FTANIM_DENSE_ASSET)
+	@mkdir -p $(dir $@)
+	@cp $< $@
+
 $(NITROFS_DIR)/particles/efcommon_particle_textures.ds.bin: $(NDS_PARTICLE_TEXTURE_ASSET)
 	@mkdir -p $(dir $@)
 	@cp $< $@
@@ -3183,7 +3227,7 @@ $(NITROFS_DIR)/particles/grpupupu_whispy_native.ds.bin: $(NDS_WHISPY_NATIVE_ASSE
 prune-obsolete-audio:
 	@rm -f $(foreach file,$(NDS_AUDIO_OBSOLETE_DERIVED_FILES),$(NITROFS_DIR)/$(file))
 
-$(OUTPUT).nds: prune-obsolete-audio $(OUTPUT).elf $(NDS_NITROFS_RELOC_FILES) $(NDS_NITROFS_RELOCDATA_FILES) $(NDS_NITROFS_AUDIO_FILES) $(NDS_NITROFS_BATTLE_STATIC_TEXTURE_FILES) $(NDS_NITROFS_PARTICLE_FILES) $(NDS_NITROFS_EFFECT_FILES)
+$(OUTPUT).nds: prune-obsolete-audio $(OUTPUT).elf $(NDS_NITROFS_RELOC_FILES) $(NDS_NITROFS_RELOCDATA_FILES) $(NDS_NITROFS_AUDIO_FILES) $(NDS_NITROFS_BATTLE_STATIC_TEXTURE_FILES) $(NDS_NITROFS_PARTICLE_FILES) $(NDS_NITROFS_EFFECT_FILES) $(NDS_NITROFS_FTANIM_FILES)
 $(OUTPUT).elf: $(OFILES) $(NDS_PRIVATE_CHECK_OFILES) \
 	$(NDS_HOT_TEXT_SPECS) $(NDS_HOT_TEXT_LINKER_SCRIPT) \
 	$(NDS_TASK32_DRAW_HOT_FRAGMENT) $(NDS_PARTICLE_BANKS_INC) \
