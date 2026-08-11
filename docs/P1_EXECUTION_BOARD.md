@@ -4462,6 +4462,22 @@ parser (all 15 cases accounted for):
    representation before writing the emitter; everything else follows the
    table above mechanically.
 
+**Step 3: `SetTranslateInterp` is NOT a blocker after all.** Traced its
+consumer rather than assuming. `interpolate` is handed to
+`syInterpCubic(&dobj->translate.vec.f, aobj->interpolate, value)` -- it is a
+spline CONTROL-POINT ARRAY for the translate vector, indexed by a value the
+parser clamps to [0,1]. And it is assigned
+`root_dobj->anim_joint.event16 + (event16->s / 2)`, which is a **constant offset
+into the static figatree asset**, not a pointer computed from runtime state.
+(The decomp writes the same thing as `anim_joint.event32->p`.)
+
+So it bakes: store the offset, resolve it once against the asset base at load.
+That is `PROJECT_GOAL.md`'s "heavy loading-time preparation", and it removes the
+last thing standing between the opcode table above and a mechanical emitter.
+**The dense format therefore needs three parts:** a control stream (`Block`,
+`Loop`, `End`, `SetFlags`), per-track fixed-point segment arrays (the six
+state-writing opcodes), and a relocation list for the one offset field.
+
 **Method note.** The table above was extracted wrong TWICE before it was right:
 the first pass ended each case at the inner flags-loop `break;` and the second
 tracked brace depth from the function rather than from the `switch`, and both
