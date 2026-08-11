@@ -66,6 +66,99 @@ def decomp_defined() -> set[str]:
     return found
 
 
+CASE_RE = re.compile(r"case\s+(nGCAnimEvent16\w+)\s*:")
+
+
+def parser_cases() -> "list[tuple[list[str], str]]":
+    """Every case group in the parser's switch, with its body.
+
+    Depth is tracked from the SWITCH's own brace, not the function's, and a case
+    ends only at a `break;`/`return` at that depth -- the flags loops inside
+    several cases contain their own `break`, and an earlier version of this
+    extraction ended each case there and reported "(none)" for opcodes that
+    write seven fields.
+    """
+    text = PARSER.read_text(encoding="utf-8", errors="replace")
+    start = text.find("void ndsR2FtAnimParseDObjFigatree")
+    lines = text[start:text.find("\n}\n", start)].split("\n")
+    sw = next(i for i, l in enumerate(lines) if "switch (command_kind)" in l)
+    groups: list = []
+    cur = None
+    depth = 0
+    for line in lines[sw + 1:]:
+        s = line.strip()
+        if depth == 1:
+            m = CASE_RE.match(s)
+            if m:
+                if cur is None or cur[1]:
+                    cur = ([], [])
+                    groups.append(cur)
+                cur[0].append(m.group(1))
+                depth += line.count("{") - line.count("}")
+                continue
+        if cur is not None:
+            cur[1].append(s)
+            if depth == 1 and (s == "break;" or s.startswith("return")):
+                cur = None
+        depth += line.count("{") - line.count("}")
+        if depth <= 0:
+            break
+    return [(labels, "\n".join(body)) for labels, body in groups]
+
+
+def check_effect_surface() -> int:
+    """Assert WHERE the parser escapes its own AObj state.
+
+    The cycle-117 dense-track design has four parts precisely because the script
+    does two things beyond writing AObj fields, and both were found by reading
+    all fifteen bodies rather than by assumption:
+
+      * `Loop` and `End` call `parent_gobj->func_anim` -- a GObj callback into
+        GAMEPLAY code. A baked track must fire those at the same times, which is
+        what makes this bake a gameplay change rather than a presentation one.
+      * `SetFlags` writes `root_dobj->flags`, a DObj field rather than an AObj
+        one.
+
+    If a new callback site or DObj write appears in any other case, the baked
+    format is silently incomplete -- it would reproduce every AObj value
+    correctly and still diverge. That failure is invisible in field-by-field
+    comparison, so it is guarded here instead.
+    """
+    expected_callback = {"nGCAnimEvent16Loop", "nGCAnimEvent16End"}
+    expected_dobj_write = {"nGCAnimEvent16SetFlags"}
+    callback: set = set()
+    dobj_write: set = set()
+
+    for labels, body in parser_cases():
+        if "func_anim(" in body:
+            callback |= set(labels)
+        if re.search(r"root_dobj->flags\s*=[^=]", body):
+            dobj_write |= set(labels)
+
+    ok = True
+    if callback != expected_callback:
+        ok = False
+        print("FAIL: gameplay-callback sites changed.")
+        print("   expected:", sorted(expected_callback))
+        print("   found   :", sorted(callback))
+    if dobj_write != expected_dobj_write:
+        ok = False
+        print("FAIL: DObj-flag write sites changed.")
+        print("   expected:", sorted(expected_dobj_write))
+        print("   found   :", sorted(dobj_write))
+    if not ok:
+        print("The AOT dense-track format assumes exactly these escape points. "
+              "A new one makes the baked control stream incomplete in a way "
+              "field-by-field comparison cannot see -- update the format and "
+              "this list together.")
+        return 1
+    print("FTANIM_EFFECT_SURFACE=STABLE  func_anim called only from {}, "
+          "root_dobj->flags written only by {}".format(
+              "+".join(sorted(expected_callback)),
+              "+".join(sorted(expected_dobj_write))))
+    return 0
+
+
 def main() -> int:
     if not DECOMP.is_dir():
         print("SKIP: %s absent -- run scripts/fetch-battleship-reference.ps1"
@@ -102,7 +195,7 @@ def main() -> int:
           "reference are handled by the runtime parser, and the parser invents "
           "none -- an AOT generator has a finite, known surface to cover"
           % len(defined))
-    return 0
+    return check_effect_surface()
 
 
 if __name__ == "__main__":
