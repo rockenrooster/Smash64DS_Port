@@ -129,6 +129,19 @@ static const f32 sNdsR2Recip[NDS_R2_RECIP_COUNT] = {
 volatile u32 gNdsR2FtAnimRecipHits;
 volatile u32 gNdsR2FtAnimRecipMisses;
 volatile u32 gNdsR2FtAnimParseCalls;
+/* Slice 32 step 11. The parse RESUMES a script rather than re-parsing it, and
+ * returns before the table walk whenever the animation has not advanced to a
+ * new command. So its cost splits in two, and only one half is reducible:
+ *
+ *   EarlyOut -- `anim_wait -= anim_speed; anim_frame += anim_speed;` plus a
+ *     GObj store and two sentinel compares. This IS the animation clock. No
+ *     baked track, dense or otherwise, can remove it.
+ *   Stepped  -- the table walk and the event loop. This is what AOT deletes.
+ *
+ * The ratio decides whether slice 32 is worth building at all, so it is
+ * measured before the player is written rather than after. */
+volatile u32 gNdsR2FtAnimParseEarlyOut;
+volatile u32 gNdsR2FtAnimParseStepped;
 
 static inline f32 ndsR2BitsToF32(u32 bits)
 {
@@ -506,9 +519,11 @@ void ndsR2FtAnimParseDObjFigatree(DObj *root_dobj)
 
             if (NDS_FCMP_GT0(root_dobj->anim_wait))
             {
+                gNdsR2FtAnimParseEarlyOut++;
                 return;
             }
         }
+        gNdsR2FtAnimParseStepped++;
         /* Migrate the ones this parser owns, not the whole list: an AObj
          * outside the joint range belongs to another writer and its float kind
          * is the right one for it. Route bit 16 moves this to first use. */

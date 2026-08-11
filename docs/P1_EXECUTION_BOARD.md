@@ -4599,6 +4599,35 @@ mostly irreducible per-frame clock work. **Measure the early-return share before
 building the player** -- one counter split on the early return answers it, and
 if it is the majority, slice 32 should be abandoned rather than built.
 
+**Step 11: the split, measured -- and it REFUTES step 10.** Counters on the two
+paths, whole-match gate arm:
+
+    calls 212,516   early-out 108,186 (50.9%)   stepped 37,363 (17.6%)
+                    no-anim   66,967 (31.5%)
+
+Step 10 concluded the parse is "dominated by the early-return path" and
+downgraded slice 32 accordingly. **That was wrong**, and wrong in a way this
+project has a memo about: it reasoned from CALL COUNT and never weighted by
+cost. Weighting it against the profile's 19,155,412 instructions in this
+function -- early-out is roughly 20 instructions a call (~2.16M), no-anim about
+8 (~0.54M) -- leaves **~16.5M over 37,363 stepped calls, ~440 instructions
+each: about 86% of the function's instructions in 17.6% of its calls.**
+
+So the reducible half is the DOMINANT half after all. Slice 32's target is
+~86% of the parse's 16,806 ticks/frame, about **14,400 ticks/frame or 7.8% of
+the 185,472 gap** -- essentially the ceiling step's original 9.1%, not the
+"materially below" of step 10. **Step 10's downgrade is withdrawn.**
+
+The 31.5% no-anim calls are their own small finding: a third of all calls are
+for DObjs with `anim_wait == AOBJ_ANIM_NULL`, which do a compare and return.
+Cheap individually, but it is a call per DObj per frame that a caller-side
+predicate could skip entirely -- worth a look independently of slice 32.
+
+**The standing lesson, third recurrence this cycle:** a share of CALLS is not a
+share of COST. Slice 31's "the walk IS the call" over-read an average, step 10
+over-read a count, and both needed the other number to be honest. Get both
+before concluding.
+
 **Method note.** The table above was extracted wrong TWICE before it was right:
 the first pass ended each case at the inner flags-loop `break;` and the second
 tracked brace depth from the function rather than from the `switch`, and both
