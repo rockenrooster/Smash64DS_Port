@@ -230,3 +230,52 @@ option and the blockers that would normally kill it are already handled. The
 open work is the Results photo-wipe read path — whether the DS wipe samples this
 array at all, and what it looks like today — plus `artifacts/visibility`
 evidence of the transition before any change, per the plan's 2.2/2.4.
+
+## Phase 2 BLOCKED — Candidates A and B cannot ship without patching decomp
+
+Implemented, then **reverted before building**. Recording the reason once, per
+the plan's rule for failed architectural candidates, so nobody repeats it.
+
+The shape looked right and three of four hazards were clear: nothing writes real
+pixels, the NDS clear self-adjusts via `sizeof`, and the arena-address coupling
+does not bind on DS. The wipe's read is also satisfiable by one buffer — it
+copies a 300x220 window from whichever single buffer the scheduler selected, and
+all three only ever hold the same clear value.
+
+**What kills it: the `[3]` extent is load-bearing across decomp TUs that are
+linked into the P1 ROM.**
+
+- `decomp/.../mv/mvopening/mvopeningroom.c:1907-1911` compares
+  `gSYSchedulerCurrentFramebuffer == gSYFramebufferSets[1]` and `== [2]`.
+- `decomp/.../mn/mncommon/mntitle.c:126-127` takes `&gSYFramebufferSets[1]`
+  and `[2]`.
+- `SYVIDEO_SETUP_DEFAULT` in **decomp's own** `sys/video.h:40-42` expands to
+  `[0], [1], [2]` and a dozen scene TUs instantiate it.
+
+Those TUs include decomp's header, which declares `[3][230][320]`. Shrinking the
+definition port-side does not change their view: `sizeof(gSYFramebufferSets)`
+stays 441,600 inside `scmanager.c`, so **the scene-manager clear would write
+294,400 bytes past the end of the shortened array.** That is heap corruption,
+not a visual regression — and it is invisible to
+`check-decomp-header-mirror.py`, which compares constants and not array extents.
+
+Note the asymmetry with `gSYZBuffer`, whose identical-looking reduction WAS
+safe: nothing takes its `sizeof` and nothing indexes it. Here both are false.
+"The zbuffer precedent worked" is not transferable evidence.
+
+**Consequently `gSYFramebufferSets` is NOT a port-side-only change.** The routes
+that remain, in increasing cost:
+
+1. **Patch decomp** under `scripts/decomp-patches/battleship/` — the sanctioned
+   mechanism (AGENTS.md) and how `scmanager.c` already got its
+   `SSB64_TARGET_NDS` branch. Needs decomp's `sys/video.h` extent + macro,
+   `mvopeningroom.c` and `mntitle.c`. Unblocks the full 294,400 B.
+2. **Candidate D at the seam** — give the wipe a DS-native capture so the array
+   stops being a pixel source at all, then shrink under route 1 anyway.
+3. Leave it and take Phases 3-5 first.
+
+Route 1 is the cheap one and should be the next slice; nothing about it is
+speculative now that the three offending sites are named.
+
+**Campaign status: 21,952 of 98,304 B (22.3%). Tree is clean — the reverted
+attempt left no residue.**
