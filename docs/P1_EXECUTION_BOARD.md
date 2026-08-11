@@ -4411,6 +4411,73 @@ sized targets, and the numbers say which:
    instructions, most of which return at `anim_wait > 0` having done two
    soft-float operations.
 
+**Status of the three, checked 2026-08-11 before proposing any of them again:**
+
+| target | state |
+|---|---|
+| 1 — AObj working set | **DONE, cycle 109.** `battleship_sys_objman.c` already carves a contiguous 512-node pool in `gcSetupObjman`; `NDS_R2_AOBJ_POOL_COUNT`, `gNdsR2AObjPoolDeclines`. Its own open item is trimming 512 to the measured peak, which is RAM, not ticks. |
+| 2 — the per-node call | **CLOSED. Do not propose it.** See below. |
+| 3 — parser early-out | **DONE, slice 33** — and it was worth 1.6% of `SINT` P95, not the share its 31.5% of calls suggested. |
+
+**Whole-match per-PC profile of the player, 2026-08-11** (`2026-08-10_c117-lane`,
+4,028,886,502 cycles; `gcPlayDObjAnimJoint` 67,974,137 = 1.69%, 604 bytes, 185
+distinct PCs). This supersedes every 128-frame figure above per the whole-match
+rule, and it changes which target is largest:
+
+| PC | instruction | cycles | %fn | executions | cyc/insn |
+|---|---|---:|---:|---:|---:|
+| `0x02001484` | `ldrb r5,[r4,#5]` — `aobj->kind` | **14,616,804** | **21.5** | 570,065 | **25.64** |
+| `0x0200143a`+`0x020015a4` | `ldr r4,[r4,#0]` — `aobj->next` | 2,604,679 | 3.8 | 233,229 | 11.2 |
+| `0x020014b2`…`0x020014bc` | the `switch (aobj->track)` jump table | 6,465,297 | 9.5 | ~448,000 | 4.3 |
+| `0x020013c0`…`0x02001458` | prologue + epilogue | 4,069,183 | 6.0 | 171,016 | 5.9 |
+
+**The bare AObj list walk is 17,221,483 cycles — 25.3% of the player — and it is
+still the #1 cost after cycle 109's contiguous pool.** That is not a failure of
+the pool; the cycle-109 comment predicted it in writing ("contiguity cannot make
+it resident either"). 570,065 visits over ~1,700 presented frames is **335 nodes
+a frame × 36 bytes = 12,060 bytes streamed through a 4 KB D-cache, 3× over**, so
+`aobj->kind` misses whatever order the nodes are in. Contiguity bought the
+second line per node; it cannot buy residency.
+
+**Only shrinking the per-node working set changes this**, which is precisely the
+AOT dense-track format of slice 32 — a baked array of the fields actually read,
+streamed sequentially, instead of a 36-byte decomp-shaped node reached by
+pointer. This profile is the strongest evidence the rewrite has: **25.3% of the
+largest animation symbol is memory traffic that no amount of instruction
+deletion can reach.**
+
+The `switch (aobj->track)` at 9.5% is a real second-order target — a 10-way
+jump table re-deciding per node, per frame, a value fixed when the AObj was
+created, with `mov pc,r3` alone costing 2,399,196 — but it is ~1,900 ticks/frame
+and it edits a `.text.hot` member, which the note below says is exactly where
+two estimators got the sign wrong. Do not spend it as a standalone slice; fold
+it into the dense-track format, where the dispatch disappears by construction.
+
+**Target 2 is closed by the linker script, and the reason is not obvious from
+the cost.** Deleting the 6,683 cyc/frame of `push {r4-r9,sl,fp,lr}`/`pop`
+requires inlining `ndsR2AnimValueQ` into its **single** call site
+(`0x20014aa`, the only `blx` to it in the image), which requires
+`gcPlayDObjAnimJoint` to become `target("arm")` — the callee is ARM for SMULL.
+That grows a `.text.hot` member from 604 bytes to roughly 2,000.
+`linker/nds_hot_text.ld:180-200` records two measured attempts at moving mass
+in and out of that curated 8 KiB list, **both of which regressed and both of
+which two independent estimators had predicted would win**:
+
+- Task 94 moved `gcPlayDObjAnimJoint` out to `.itcm` with zero eviction and
+  measured `WORK-H` P50 **+6,144**, with `STG` up 3,712 despite never calling
+  it — members re-address each other.
+- R2-03 E66 is nearly this exact experiment in reverse: it admitted the ARM
+  evaluator to `.text.hot` immediately after its only caller, sized at ~7,093
+  ticks/frame recoverable, and measured `WORK-H` P95 **+24,448**.
+
+The script's standing instruction is to treat `.text.hot` as **closed in both
+directions**. Both magnitudes are 128-frame-era and so unusable per the
+whole-match rule, but the *sign* is what was wrong twice, and the mechanism is
+structural rather than windowed. Re-opening this is an owner-visible decision
+with a whole-match instrument, not a mid-campaign slice. **The 6,683 cyc/frame
+is the standing price of that closure — record it as known and paid, not as an
+unclaimed win.**
+
 **A regression found by disassembly, not by measurement.** Requirement 4's first
 cut folded all three arms into one shared `s64 acc`. GCC therefore sign-extended
 `length`, `value_base` and `rate_target` to 64 bits **before the kind branch**,
