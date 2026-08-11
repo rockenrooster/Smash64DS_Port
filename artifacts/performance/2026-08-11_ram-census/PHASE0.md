@@ -279,3 +279,34 @@ speculative now that the three offending sites are named.
 
 **Campaign status: 21,952 of 98,304 B (22.3%). Tree is clean — the reverted
 attempt left no residue.**
+
+### CORRECTION to the blocker list — one of the three was already handled
+
+I listed three blocking sites. Checking each one's actual preprocessor context
+rather than its source text cuts that to two:
+
+| site | context | blocks? |
+|---|---|---|
+| `mvopeningroom.c:1907-1911` | `#else` of `#if defined(SSB64_TARGET_NDS)` | **NO — already excluded on NDS** |
+| `mntitle.c:126-127` | top level | **yes** |
+| decomp `sys/video.h:40-42` | top level | **yes, conditionally** |
+
+`mvopeningroom.c` is already one of the eight patched files, and its framebuffer
+comparisons live in the non-NDS arm. Citing it as a blocker was reading source
+text where the compiled configuration was what mattered — the same mistake the
+seven-call-sites-vs-one finding warned about earlier in this campaign.
+
+**The blocker reduces to one question:** which `sys/video.h` does each decomp TU
+see? The corruption risk is entirely `sizeof(gSYFramebufferSets)` inside
+`scmanager.c`'s clear. If decomp TUs take decomp's header (`extern [3]`), the
+clear overruns a shortened array and the candidate is dead without patching that
+header. If the build makes them take `include/sys/video.h`, then the port-side
+change is sufficient and `mntitle.c`'s address-taking is inert UB — those
+addresses are never dereferenced in P1 because the title scene never runs.
+
+That question is answerable without a build (include-path order for the
+`src/import` wrappers) and is the first thing the next slice should settle. The
+patch mechanism itself is ready: `scripts/decomp-patches/battleship/` with an
+ordered map in `fetch-battleship-reference.ps1`, and **note its warning** — a
+file pinned by `scripts/stages/generate_nds_native_stage.py` aborts Boundary
+with a SHA mismatch, so check the pin list before patching.
