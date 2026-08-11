@@ -7340,4 +7340,31 @@ Engagement, same run: the sweep reject skips **91.9%** of line visits
 `gNdsMPLineExtentOverflow` 0, `gNdsR2CubicEvals` 299,148 identical to control.
 Exactness by `scripts/check_mp_line_extent_reject_exact.py`: every fired reject
 replayed segment by segment through the real kernel, 295,114 segments, 0 missed
-hits. Board: slice 28.
+hits. Board: slice 28.
+
+## Cycle 117 slice 31 -- the animation parser's track table (2026-08-10)
+
+**Same-binary A/B**, `builds/build-c117-anim-ab` (`NDS_R2_ANIM_CUT_ROUTE=1`),
+route 15 (eager) vs 31 (lazy), both set explicitly. Boundary green.
+
+| bucket | P50 | P95 |
+| --- | ---: | ---: |
+| WORK-H | +768 | **-7,104** |
+| SRC | -128 | **-10,496** |
+| GCRA | +64 | **-10,368** |
+| SINT | +320 | -1,024 |
+| FTR | -64 | +128 (control) |
+| STG | +64 | -64 (control) |
+| ALL | +0 | **+0** (control) |
+
+`gNdsR2FtAnimParseCalls` 212,516 and `gNdsR2CubicEvals` 299,148 in BOTH arms --
+identical work, only the route differs.
+
+**Read the controls: `ALL` moved exactly 0 and the other untouched buckets
++-128.** That is the whole argument for a same-binary route. There is no
+cross-build placement floor here, so a -7,104 P95 is attributable, where cycle
+117's collision slices could not attribute bucket wins twice this size. Use the
+route for anything that can be routed.
+
+**The saving is in `GCRA`, not `SINT`** -- the `gc*` animation runner and its
+parser live there. Board: slice 31.
