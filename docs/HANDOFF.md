@@ -1,12 +1,10 @@
 # Handoff
 
-Updated: 2026-08-10. **Requirement 4 shipped: the fighter `AObj` is fixed point,
-`WORK-H` P50 −23,360 / P95 −37,504 on one binary.** Before it, the gate arm's
-tail was cartridge I/O — the animation cache arena was full and refusing loads
-all match, fixed at `f082b3c8`: `WORK-H` P95 1,639,299 → 1,447,318.
-**Every 128-frame measurement in the archive is unusable** — that window reads
-the cheapest 6% of the match, understating P95 ~306,000 and the over-gate rate
-five times. Use `sample-tick-hud-buckets.ps1 -Samples 1600`.
+Updated: 2026-08-11. **Requirement 4 shipped: the fighter `AObj` is fixed point,
+`WORK-H` P50 −23,360 / P95 −37,504 on one binary.** Before it the gate arm's tail
+was cartridge I/O, fixed at `f082b3c8`: P95 1,639,299 → 1,447,318.
+**Every 128-frame figure in the archive is unusable** — it reads the cheapest
+6% of the match. Use `-Samples 1600`.
 
 ## The two baselines — label every figure with its arm AND its coverage
 
@@ -18,10 +16,10 @@ frames past the buzzer. Slips 0 in every row.
 | **both-CPU** | **THE GATE** | 970,112 | **1,310,528** | slice 28; +31 route |
 | **Boundary** mode 163 | shipped configuration | 920,192 | 1,113,408 | re-banked c116 |
 
-**Gate 1,305,472**, re-banked after slice 31. Every c117 slice is UNDER the
-±8,544 floor cross-build; 1,317,440 → 1,305,472 is drift, not banked wins.
-**Gap ~185,472.** Both rows are
-current; re-bank before judging a new slice. The soak's long match is
+**Gate 1,305,472**, re-banked after slice 31; slice 33's control arm read
+1,304,896, i.e. flat. Every c117 slice is UNDER the ±8,544 cross-build floor —
+1,317,440 → 1,305,472 is drift, not banked wins. **Gap ~185,472**; re-bank
+before judging a new slice. The soak's long match is
 `NDS_R2_SOAK_MATCH_MINUTES`; `probe-match-window.ps1` reads the match timer from
 the guest, so a window cannot claim coverage it lacked. Owner's bar: the whole
 match under P95 on the both-CPU config, loading excluded; the shipped ROM stays
@@ -42,6 +40,14 @@ FTR −3,328). Both true: the work is gone, the win is under the floor.
 - **`FTR` as the *P95 discriminator*** (+13,768). NOT "FTR is exhausted" —
   reading it that way is what the owner re-opened 2026-08-10; cycles 110–116 then
   took 24.3% off it. `FTR` is **flat**, on nearly every frame, which is why.
+- **The AOT animation bake at 20 B/record** (slice 32). Reader, bake, emitter,
+  layout guard and wiring are PROVEN and gated off; the SIZE is dead — 10,304 B
+  an animation against the source's 2,310, ×85 cached needs +679,490 B, and
+  dropping every init record still leaves 3.27×. Commands are parsed ONCE per
+  playback, so a bake only wins on the 64.6% of loads that repeat.
+- **Animation slices under the floor**: idle-joint skip (33, `SRC` −5,632 /
+  `WORK-H` flat), lazy track table (31, −7,104 routed / +576 re-banked), AObj
+  walk (~1,050), track dispatch (~1,900). `.text.hot` is closed BOTH ways.
 
 ## RAM: both budgets are near their floor — price a change before writing it
 
@@ -54,11 +60,10 @@ FTR −3,328). Both true: the work is gone, the win is under the floor.
 ## FTR is re-opened and moving: −93,612 landed (cycle 116)
 
 **Banked `FTR` mean is 291,896** (P50 301,760, P95 304,768) against a pre-slice
-baseline of **385,508** built for the purpose, which equals the owner's stated
-~385–390K. **−93,612, 24.3%** — the *mean* is under the owner's 300K target, the
-P50 is 1,760 over it. Measured on the SHIPPED (fixed) strips; the −94,666 quoted
-earlier came off the build that was losing geometry, so it is withdrawn.
-Boundary passes on every landed slice.
+baseline of **385,508** built for the purpose, matching the owner's ~385–390K.
+**−93,612, 24.3%** — the *mean* beats the owner's 300K target, the P50 is 1,760
+over. Measured on the SHIPPED (fixed) strips; the −94,666 quoted earlier came off
+the build that was losing geometry, so it is withdrawn. Boundary passes on each.
 
 **The big one is DS-native AOT geometry: Task 56 fighter strips now SHIP**
 (`NDS_TASK56_FIGHTER_PRIMITIVES ?= 2`). 626 triangles submitted as 1,878
@@ -81,11 +86,10 @@ the broken build and `latest.png` showed both fighters complete, because that
 canonical frame does not show the affected joints. **Hand the owner a ROM.**
 
 **The emit stalls per VERTEX, not per word** (c115 `--pc-detail`, no build): a
-corner is 40.5 cycles untextured, **~28 of it the GX write**, and the textured
-path pays the same ~28 for a fourth word. That is why strips work, and it
-**refutes a baked/DMA'd packed GX stream and `VTX_10`** — both trade words, not
-vertices; the win is ~50% of the vertex prediction, so part is **per polygon**.
-**The prepared dense UVs are immutable state too** (−1,744; 15 runs a match).
+corner is 40.5 cycles untextured, **~28 of it the GX write**, and textured pays
+the same ~28 for a fourth word. That is why strips work, and it **refutes a
+baked/DMA'd GX stream and `VTX_10`** — both trade words, not vertices; the win is
+~50% of prediction, so part is **per polygon**. **Dense UVs are immutable too.**
 
 **The other big lever was the I-cache, not arithmetic.** `…DLAllDrawForSlot`
 was the ROM's largest non-idle symbol at **4.21 cyc/insn**, 10,708 bytes against
@@ -117,8 +121,7 @@ FTR row** either — the bracket is `ndsFighterDisplayContractSubmit` only.
 **Reconciliation on c115 with an INDEPENDENT tick factor** (0.4993 tk/cyc, from
 `ALL` vs total cycles — deriving it from the FTR sum is circular and overstated
 coverage 22%): **35 named symbols = 244,774 tk/fr, 78.1% of `FTR`**; the 68,647
-residual is bounded by shared leaves (float lib 66,750, `memcpy`/`memset`
-29,895, binds 22,596, whole-frame).
+residual is bounded by shared leaves (float lib 66,750, `memcpy`/`memset` 29,895).
 
 **Next, priced** (c115 census, tk/fr). **`Task36ReplayRun` 17,796 is STAGE, not
 FTR** — it takes `NDSNativeStageRun`; the board's old "next slice" row was
@@ -176,25 +179,19 @@ impact wave or reflector needs the owner (`BUGS.md`, by eye).
   loader `ftmain.c` discards; c109 aimed a `FTParts` fix at two `DObj` fields;
   c110 divided a symbol total by a guessed per-call cost; c116 found the board's
   named next slice was a STAGE symbol. All free (`--pc-detail`). **Resolve line
-  numbers against the build's own `NDS_TASK10_GIT_SHORT`**, not HEAD — c106
-  against HEAD was ~85 lines adrift.
+  numbers against the build's own `NDS_TASK10_GIT_SHORT`** — c106 was ~85 adrift.
 
 ## Restart surface — parked items live on the board's **Parked** list
 
-```powershell
-.\scripts\verify-all.ps1 -Profile Boundary -List
-git status --short
-```
-
+`AGENTS.md` owns the start-of-cycle commands; do not duplicate them here.
 `docs/P1_EXECUTION_BOARD.md` is the only dynamic queue (history in
-`docs/optimization/archive/P1_EXECUTION_BOARD_pre-cycle79.md`);
-`Smash64DS_Runtime2_SwitchPlan.md` is the charter; `docs/BUGS.md` carries the
-owner's verdicts — preserve their wording. A clean checkout must build through
-`build.ps1`, not bare `make`: four of six generated `.inc` files are gitignored,
-and **`build.ps1`'s generator is not run by `make`, so it can rot unnoticed —
-it had, until c116**. `make p1-tick` builds the measuring ROM, `make p1` the
-published battle pair; bare `make` builds the P2 ROM P1 does not ship. Never
-pass `-j`, never override `MAKEFLAGS`, one build at a time, never build a
-published target name for lab work. Preserve canonical mode 163, renderer mode
-9, mip 0, static textures, source countdown, Dream Land water frame 0, Task 16
+`docs/optimization/archive/`); `Smash64DS_Runtime2_SwitchPlan.md` is the
+charter; `docs/BUGS.md` carries the owner's verdicts — preserve their wording. A
+clean checkout builds through `build.ps1`, not bare `make`: four of six `.inc` are
+gitignored, and **`build.ps1`'s generator is not run by `make`, so it can rot
+unnoticed — it had, until c116**. `make p1-tick` builds the measuring ROM, `make
+p1` the published battle pair; bare `make` builds the P2 ROM P1 does not ship.
+Never pass `-j`, never override `MAKEFLAGS`, one build at a time, never build a
+published target name for lab work. Preserve canonical mode 163, renderer mode 9,
+mip 0, static textures, source countdown, Dream Land water frame 0, Task 16
 `1/1/1`. Never edit `decomp/`. Run `New-Smash64DSSnapshot.ps1` last.
