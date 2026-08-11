@@ -4539,6 +4539,36 @@ whole reason `nds_fcmp.h`'s zero predicates shift the sign out), so the
 round-trip proof must compare BIT PATTERNS, not float equality, or it will call
 `0.0` and `-0.0` the same and miss a real divergence.
 
+**Step 8: the bake round-trips.** `scripts/ftanim_bake.py`, 20,000 randomised
+scripts, **0 mismatches**, both timelines compared as BIT PATTERNS. Replay sees
+no opcode and no flags mask -- it walks resolved records only -- so this is not
+a tautology: if mask expansion or the `value_base = value_target` chaining could
+not be resolved ahead of time, replay would not reproduce the timeline. It does.
+**The per-frame work of decoding a script and expanding a mask is provably
+precomputable.** It does NOT prove the runtime player is faster; that is the
+measured step.
+
+**Step 9, the design decision that shrinks this slice: bake at LOAD, not at
+BUILD.** Everything above assumed a build-time emitter, which drags in the asset
+pipeline -- locating figatree data, a generator, a ROM blob, `EXPECTED_CENSUS`
+re-pinning. None of that is required for the win. The records can be produced by
+running the EXISTING parser once when an animation starts, then replayed on
+every subsequent frame. That is `PROJECT_GOAL.md`'s compute-once rule applied
+without any build tooling, it keeps the parser as the single source of truth so
+the bake cannot drift from it, and it makes the whole slice a runtime change
+that a route can A/B.
+
+Two things it must get right, both already known from this cycle:
+
+- **Invalidation.** The records are valid until the animation changes. Cycle 117
+  lost slices 29 and 29b to cross-call caches in the collision code, and slice
+  30 fixed that class by invalidating at the ASSIGNMENT rather than at readers.
+  Apply the same shape here: drop the records where `anim_wait` is set to
+  `AOBJ_ANIM_CHANGED`, not wherever they happen to be read.
+- **RAM.** Records cost memory per active animation, and the heap low-water mark
+  is already inside the GObj-cap margin (see `ram-is-not-free`). Size the record
+  pool against a measured worst case before writing the player, not after.
+
 **Method note.** The table above was extracted wrong TWICE before it was right:
 the first pass ended each case at the inner flags-loop `break;` and the second
 tracked brace depth from the function rather than from the `switch`, and both
