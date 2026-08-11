@@ -5091,12 +5091,63 @@ That is a design input, not trivia: the 32-byte record step 13 priced assumed
 seven s32 Q fields, but the source values are already 16-bit, so the dense record
 can be far tighter — 184,629 targets is only 369 KB of raw target data.
 
-**Nothing about this slice is blocked.** What remains: extend
-`ftanim_script_model.py` to take per-track targets (its synthetic scripts
-approximate them with the single payload, so the change must keep the existing
-20,000-script round-trip passing), run the bake on real content, emit the blob,
-re-pin `EXPECTED_CENSUS_SHA256`, relocate `interpolate`, and write the runtime
-player.
+#### The bake runs on real content — 5,629 scripts, 0 mismatches
+
+`scripts/check_ftanim_real_bake.py`, registered in the fixture suite. 77,959
+commands resolve to **145,873 write records** that replay the per-track state
+timeline and the callback timeline from records alone — no opcode, no flags
+mask — compared as bit patterns.
+
+`run_commands` is a second entry point beside `run_script` rather than a
+rewrite of it, because the 20,000-script synthetic proof is what keeps the
+resolver honest; `bake_run` is shared so the bake cannot depend on which driver
+produced the timeline.
+
+**Real content caught a bug the synthetic scripts structurally could not.** The
+decoder returns s16 ints and they were stored straight into fields modelling
+`f32`. Python calls `0 == 0.0` true, so the resolver emitted no write record
+while the bit comparison distinguishes them — five files failed. The synthetic
+driver only ever supplies floats, so it could never have surfaced it.
+
+#### Field ranges over all 145,873 real records — the format sizing
+
+| field | min | max | fits s16 at |
+|---|---:|---:|---|
+| `value_base` | −10,455 | 24,945 | Q0 |
+| `value_target` | −10,455 | 28,952 | Q0 |
+| `rate_base` | −4,681 | 13,107 | Q1 |
+| `rate_target` | −30,707 | 13,107 | Q0 |
+| **`length`** | **−185** | **0** | **Q7** |
+| **`length_invert`** | **0** | **64** | **Q8** |
+| `kind` | 0 | 7 | 3 bits |
+
+**Read the caveat before using these.** The value/rate rows are the *authored*
+s16 disk words, and they fit s16 trivially because they came from s16 — that row
+proves nothing on its own. What the runtime actually stores is
+`ndsR2AnimTargetValue`'s output, the disk word scaled by a per-track power of two
+(`sNdsR2AnimFracShift`), which the model does not apply. Sizing the value fields
+needs that scaling folded in first.
+
+`length` and `length_invert` are different and are genuine findings: they are
+computed, not authored, and they occupy **−185..0** and **0..64**. Both are s32
+today and both fit s16 with fraction to spare — 4 bytes off every record before
+touching the value fields at all.
+
+Two more structural facts from the same pass:
+
+- **Track use is heavily skewed.** Tracks 0/1/2 carry 97,391 of 145,873 records
+  (67%); tracks 3–9 carry 5,629–8,325 each. Track 3 is exactly 5,629 — one per
+  script, i.e. written once and never again.
+- **41,000 of the records are initialisation, not animation.** By kind: 90,958
+  Cubic, 11,017 Linear, 2,954 Step, and **40,944 with kind None** — first-touch
+  snapshots of a track still at its defaults. Those compress to a single
+  per-DObj reset, so the real payload is **~105K records**, 28% below the
+  145,873 headline and 43% below the 184,629 raw target words.
+
+**Nothing about this slice is blocked.** What remains: fold the per-track frac
+shift into the value sizing, choose the record layout, emit the blob through the
+`cp` rule at `Makefile:3295`, re-pin `EXPECTED_CENSUS_SHA256`, relocate
+`interpolate`, and write the runtime player.
 
 #### Original specification, still the target
 
