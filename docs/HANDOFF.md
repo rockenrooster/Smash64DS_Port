@@ -47,8 +47,7 @@ than the ~138,112 gap. SIZE IS NOT PERMISSION: float in
   P50 only) · **texture thrash** · **`Find`** · **`Material`** · force-load seam.
 - **`FTR` as the *P95 discriminator*** (+13,768). NOT "FTR is exhausted" — the
   owner re-opened that 2026-08-10; c110–116 took 24.3% off it. `FTR` is **flat**.
-- **The AOT animation bake at 20 B/record** (slice 32). Proven and gated off; the
-  SIZE is dead — 10,304 B an animation against 2,310, ×85 needs +679,490 B.
+- **The AOT animation bake at 20 B/record** (slice 32): proven, gated off, SIZE dead — 10,304 B/animation vs 2,310, ×85 = +679,490 B.
 - **The whole animation lane, and now permanently** (slices 34, 41). Playback's
   two largest symbols are already Requirement 4's fixed point at 1.67–1.69
   cyc/insn; idle-joint skip (33), lazy track table (31), AObj walk and track
@@ -114,8 +113,8 @@ bodies took it to **7,516**. Recipe, no build: `--pc-detail SYM[,SYM…]`, diff
 - **The material block is built 30 times a match, not 59,392** — a (MObj, heap
   gen, animatable-input hash) key owned by the material **DObj**; `BindingParents`
   is the nearest *bound* ancestor, not the DObj parent.
-- **A per-PC census charges a miss to the instruction that TAKES it**, not to the
-  work you can delete: two redundant first-reader passes came out for **+1,055**.
+- **A per-PC census charges a miss to the instruction that TAKES it**: two
+  redundant first-reader passes came out for **+1,055**.
 
 **Compiling the frame-summary counters out is refuted** (FTR −7,378 / STG
 −2,776): it **breaks the gate** — `…gcrunall-loop-harness.ps1` asserts exact
