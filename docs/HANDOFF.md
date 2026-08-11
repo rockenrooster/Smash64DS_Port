@@ -18,19 +18,19 @@ frames past the buzzer. Slips 0 in every row.
 | **both-CPU** | **THE GATE** | 970,112 | **1,310,528** | slice 28; +31 route |
 | **Boundary** mode 163 | shipped configuration | 920,192 | 1,113,408 | re-banked c116 |
 
-**Gate 1,310,528** (re-banked 2026-08-10 as 1,317,440; that −6,592 is under the
-±8,544 floor). Slice 31's −7,104 is route-measured, not re-banked. **Gap ~190,528.** Both rows are
+**Gate 1,305,472**, re-banked after slice 31. Every c117 slice is UNDER the
+±8,544 floor cross-build; 1,317,440 → 1,305,472 is drift, not banked wins.
+**Gap ~185,472.** Both rows are
 current; re-bank before judging a new slice. The soak's long match is
 `NDS_R2_SOAK_MATCH_MINUTES`; `probe-match-window.ps1` reads the match timer from
 the guest, so a window cannot claim coverage it lacked. Owner's bar: the whole
 match under P95 on the both-CPU config, loading excluded; the shipped ROM stays
 the Boundary hwtri pair. `Makefile:305-308` forbids reporting a both-CPU P95 as
 the Boundary figure; **re-pin `EXPECTED_CENSUS_SHA256` when its coverage changes.**
-**Use a same-binary ROUTE, not a rebuild.** Slice 31 read `WORK-H` P95 **−7,104**
-with `ALL` exactly 0 and untouched buckets ±128 — no placement floor; collision
-slices 26–28 could not attribute wins twice that size across builds.
-**Collision: cut VISITS, not operations** — slice 28 skips 91.9% of sweep visits
-(`SPHD` P95 −15,744); `ndsMPFindLineEndpoints` 13,205 cyc/frame has no reject.
+**Route to ATTRIBUTE, re-bank to BANK — never swap them.** Slice 31 read P95
+**−7,104** on one binary (`ALL` exactly 0) and **+576** across builds (untouched
+FTR −3,328). Both true: the work is gone, the win is under the floor.
+**Collision: cut VISITS, not ops** — slice 28 skips 91.9% of sweep visits (`SPHD` P95 −15,744); `ndsMPFindLineEndpoints` 13,205 cyc/frame has no reject.
 
 ## What is dead, so nobody re-derives it
 

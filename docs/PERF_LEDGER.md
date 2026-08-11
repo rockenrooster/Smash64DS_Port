@@ -7340,7 +7340,8 @@ Engagement, same run: the sweep reject skips **91.9%** of line visits
 `gNdsMPLineExtentOverflow` 0, `gNdsR2CubicEvals` 299,148 identical to control.
 Exactness by `scripts/check_mp_line_extent_reject_exact.py`: every fired reject
 replayed segment by segment through the real kernel, 295,114 segments, 0 missed
-hits. Board: slice 28.
+hits. Board: slice 28.
+
 
 ## Cycle 117 slice 31 -- the animation parser's track table (2026-08-10)
 
@@ -7367,4 +7368,16 @@ cross-build placement floor here, so a -7,104 P95 is attributable, where cycle
 route for anything that can be routed.
 
 **The saving is in `GCRA`, not `SINT`** -- the `gc*` animation runner and its
-parser live there. Board: slice 31.
+parser live there.
+
+**Cross-build re-bank, same change, and it does NOT agree:** `WORK-H` P50
+-2,176 / **P95 +576**, with untouched `FTR` -3,328 and `STG` +1,280 P95. So the
+banked gate goes 1,304,896 -> **1,305,472** and does not move.
+
+Both numbers are right, and holding them together is the point of cycle 117.
+The route A/B proves the WORK IS GONE -- identical parse and eval counts, no
+rebuild, controls flat to +-128, `ALL` exactly 0. The cross-build run proves
+the win is **smaller than the placement floor**, which is +-8,544 and here shows
++-3,600 on buckets nobody touched. A deletion can be simultaneously real and
+invisible at the frame. Route to attribute; re-bank to bank; never let one
+stand in for the other. Board: slice 31.
