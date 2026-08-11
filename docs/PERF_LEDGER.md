@@ -7343,6 +7343,51 @@ replayed segment by segment through the real kernel, 295,114 segments, 0 missed
 hits. Board: slice 28.
 
 
+
+## Cycle 117 slice 33 -- the idle joint stops paying two calls (2026-08-10)
+
+**Same-binary A/B**, `builds/build-c117-anim-ab`
+(`NDS_R2_ANIM_CUT_ROUTE=1 NDS_R2_BOTH_CPU=1`), 1600 frames from 438, DLDI ON,
+route 31 (call) vs 63 (skip), both set explicitly. Boundary green.
+
+| bucket | P50 | P95 |
+| --- | ---: | ---: |
+| WORK-H | +0 | **+320 (flat)** |
+| SRC | -1,408 | **-5,632** |
+| GCRA | -1,408 | **-5,504** |
+| SINT | -768 | **-5,568** |
+| FTR | +0 | -192 (control) |
+| STG | +0 | +64 (control) |
+| ALL | +0 | **+0** (control) |
+
+`ftParamUpdateAnimKeys` runs one parse and one play per joint per frame; both are
+total no-ops when that joint's `anim_wait` is `AOBJ_ANIM_NULL`, and 31.5% of
+joints are. Priced off the shipped Thumb: 45 instructions and **40 stack word
+accesses** to discover it, against three to ask in the caller.
+
+**Engagement reconciles to the call.** `gNdsR2FtAnimParseEarlyOut` 108,186 and
+`gNdsR2FtAnimParseStepped` 37,363 are byte-identical in both arms -- only no-op
+calls were removed. `gNdsR2FtAnimParseCalls` 212,516 -> 145,600, exactly 66,916;
+the surviving 51 idle entries come from `func_ovl2_800ECCA4`, the other caller.
+`gNdsR2FtAnimNullSkips` 72,260 exceeds that by 5,344 because the
+`is_anim_joint` arm is skipped too and `gcParseDObjAnimJoint` has no counter.
+
+Equivalence is held by `scripts/check_anim_null_guard.py` (registered in
+`check-gbi-decode-fixtures.ps1`), which asserts all five reachable bodies stay
+TOTAL no-ops in that state -- it failed on three real statements above the port
+parser's guard before route reads were allowed by name, so it is not vacuous.
+
+**KEEP, and it does not move the gate.** The idle path is 31.5% of the parse
+calls and 1.6% of `SINT` P95 -- a third instance this cycle of a call share not
+being a cost share. `SINT` itself is **27.0% of `WORK-H` P95** (352,832 of
+1,304,896), so the animation lane is a real P95 owner and the expensive path is
+the stepped parse at ~440 instructions per call, not the idle one.
+
+`OTHR` P95 524,352 is NOT an unattributed owner, though it reads like one:
+`taskman_seam.c:5172` records it as the `swiWaitForVBlank` park, Task 65
+measured, and it tracks `WAIT` to ~20,000 at both percentiles here. Board:
+slice 33.
+
 ## Cycle 117 slice 31 -- the animation parser's track table (2026-08-10)
 
 **Same-binary A/B**, `builds/build-c117-anim-ab` (`NDS_R2_ANIM_CUT_ROUTE=1`),

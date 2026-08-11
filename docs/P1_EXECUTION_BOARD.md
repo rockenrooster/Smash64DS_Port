@@ -4769,6 +4769,120 @@ walk IS the call". The three biggest single symbols are already visible:
 `ndsFighterMarioFoxDLAllDrawForSlot` 93,854,253, `ndsRendererCommitNativeStageSegment`
 93,101,009, `ndsRendererNativeEmitProductionPrimitiveGroups` 81,420,680.
 
+### Slice 33: the idle joint stops paying two calls to say nothing
+
+**The shape.** `ftParamUpdateAnimKeys` runs one parse call and one play call per
+joint per frame. Both are total no-ops when that joint's `anim_wait` is
+`AOBJ_ANIM_NULL`, and **31.5% of joints are in that state on any given frame**
+(66,967 of 212,600 parse calls a match, from `gNdsR2FtAnimParseCalls` minus the
+early-out and stepped counters). The caller can ask in three instructions what
+the callees were spending two full calls to discover.
+
+**Priced off the shipped Thumb, not estimated.** The `AOBJ_ANIM_NULL` path
+through `ndsR2FtAnimParseDObjFigatree` is 16 instructions in and 7 out, and
+`gcPlayDObjAnimJoint` is 13 and 7 — 45 instructions with the two `bl`s, of which
+**40 are stack word accesses**: each function pushes nine registers and reserves
+a frame (68 bytes and 12 bytes) before comparing one word and leaving. That is
+the working-set traffic the goal names, not merely instruction count.
+
+**Why it is a deletion and not an approximation.** All five reachable bodies
+wrap their ENTIRE contents in the same guard — `gcParseDObjAnimJoint`,
+`ftAnimParseDObjFigatree`, `ndsR2FtAnimParseDObjFigatree`,
+`gcPlayDObjAnimJoint`, `lbCommonPlayTranslateScaledDObjAnim`. That premise is
+held by `scripts/check_anim_null_guard.py`, registered in
+`check-gbi-decode-fixtures.ps1`, **not by this paragraph**: a counter or a cache
+poke added above one of those guards later would make the skip drop real work,
+and the symptom — one joint's bookkeeping stopping on the frames it is idle — is
+invisible to a screenshot and to every geometry counter. The checker earned its
+place immediately, failing on three real statements above the port parser's
+guard before route reads were allowed by name.
+
+**Two things deliberately stay outside the skip**, and both would be silent
+corruption if they moved:
+
+- the **MObj loop**, because an MObj carries its own `anim_wait` and animates
+  while its joint is idle;
+- **`translate_scales`**, which indexes the joint array — a pointer that stopped
+  advancing on idle joints would mis-scale every later joint in the fighter.
+  Verified in the disassembly: the skip path branches to the same `adds r6,#12`.
+
+**The second loop is deliberately untouched.** `ftParamUpdateAnimKeys`'s
+`motion_id == -2` arm forces `anim_wait = AOBJ_ANIM_END` around its play call and
+restores it after, so the guard there always passes; a predicate would be dead
+code, and skipping on the *restored* value would change behaviour.
+
+**Route bit 32**, for attribution only — the cut is provably equivalent, so it
+ships ON like every other bit in this file (see the default-0 trap under slice
+31).
+
+#### Measured: KEEP on engagement, **flat at the gate**
+
+One binary, `builds/build-c117-anim-ab`
+(`NDS_R2_ANIM_CUT_ROUTE=1 NDS_R2_BOTH_CPU=1`), 1600 frames from 438, DLDI ON,
+route **31 versus 63**, both set explicitly:
+
+| bucket | A P50 | B P50 | ΔP50 | A P95 | B P95 | ΔP95 |
+|---|---:|---:|---:|---:|---:|---:|
+| **`WORK-H`** | 969,472 | 969,472 | **0** | 1,304,896 | 1,305,216 | **+320** |
+| `SRC` | 340,480 | 339,072 | −1,408 | 660,416 | 654,784 | **−5,632** |
+| `GCRA` | 335,744 | 334,336 | −1,408 | 655,360 | 649,856 | **−5,504** |
+| `SINT` | 157,248 | 156,480 | −768 | 352,832 | 347,264 | **−5,568** |
+| `FTR` / `STG` | 299,968 / 188,992 | same / same | 0 / 0 | 303,872 / 195,648 | 303,680 / 195,712 | −192 / +64 |
+| `ALL` | 1,118,272 | 1,118,272 | **0** | 1,678,720 | 1,678,720 | **0** |
+
+**The engagement proof reconciles to the call, not to a percentage.**
+`gNdsR2FtAnimParseEarlyOut` 108,186 and `gNdsR2FtAnimParseStepped` 37,363 are
+**byte-identical in both arms** — the skip removed no-op calls and nothing else.
+`gNdsR2FtAnimParseCalls` fell 212,516 → 145,600, exactly 66,916; the 51 idle
+entries that survive arrive from `func_ovl2_800ECCA4`, the parser's other
+caller, which has no predicate. `gNdsR2FtAnimNullSkips` 72,260 exceeds 66,916 by
+5,344 because joints on the `is_anim_joint` arm are skipped too and
+`gcParseDObjAnimJoint` has no counter.
+
+**Verdict: KEEP, and it does not move the gate.** The saving is real, signed the
+same way in all three buckets that own the work, at both percentiles, with the
+untouched buckets flat to ±192 and `ALL` byte-identical. `WORK-H` +320 is inside
+the pair's own noise — arm A carried three duplicate rows and one 5.31M outlier
+frame, arm B none and 3.36M — so this reads **flat**, not as a regression.
+AGENTS.md's measurement law is explicit that tick targets are directional and
+not per-cut discard gates, so a proven, correctness-preserving deletion banks
+toward the target whether or not it clears a floor on its own.
+
+#### What this measured that changes the plan
+
+The first reading of this table was wrong and is recorded here so it is not
+re-derived. `OTHR` P95 524,352 looked like the largest unattributed owner —
+`named` is only 81.7% of `ALL`. It is not an owner at all:
+`taskman_seam.c:5172` states that **`OTHR` is what the loop spends parked in
+`swiWaitForVBlank`**, measured by Task 65 at 17.50% of wall against an `OTHR` of
+16.4%. The arm-A numbers agree to about 20,000 at both percentiles (`OTHR`
+196,736/524,352 versus `WAIT` 176,896/504,768). `OTHR` is idle. Do not spend a
+slice attributing it.
+
+What the table does say, read correctly:
+
+| bucket | P50 | P95 | share of `WORK-H` P95 |
+|---|---:|---:|---:|
+| `SRC` ≈ `GCRA` | 340,480 | 660,416 | 50.6% |
+| **`SINT`** | 157,248 | **352,832** | **27.0%** |
+| `SHDT` | 4,288 | 172,800 | 13.2% |
+| `SPHD` | 69,888 | 118,976 | 9.1% |
+
+`GCRA` is 99% of `SRC` because `gcRunAll` is the sole gateway to the whole
+simulation, so neither is a subsystem. **`SINT` is, and it is 27% of the
+judging bucket at P95.** The fighter-animation lane is therefore a genuine P95
+owner and goal condition (2) is decisively false — the cost is recoverable, and
+the board's own sizing of the full AOT rebuild (≈38,700 ticks/frame, ≈60,000
+carrying fixed point to the matrices) is 21–32% of the remaining gap.
+
+What slice 33 actually establishes is narrower and still useful: **the idle path
+was not where the money was.** It is 31.5% of the calls and 1.6% of `SINT` P95,
+which is the third instance this cycle of a call share not being a cost share.
+The expensive path is the one already measured at ~440 instructions per call —
+the *stepped* parse and the player it feeds. That is where the next slice goes,
+and it is the AOT dense-track rewrite already specified as slice 32, not another
+predicate.
+
 ### Slice 31: the animation parser stops rebuilding its track table
 
 **KEEP on a same-binary A/B: `WORK-H` P95 -7,104, `GCRA` P95 -10,368.**

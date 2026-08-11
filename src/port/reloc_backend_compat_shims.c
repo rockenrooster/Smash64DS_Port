@@ -1785,6 +1785,24 @@ static s32 ndsFTStructJointLoopLimit(const FTStruct *fp)
     return (s32)limit;
 }
 
+/* Slice 33. Route bit 32 selects the caller-side idle-joint skip below. The
+ * route word is the same one the parser and player arms use; this TU only reads
+ * it, and only once per joint on the arm being measured. With the route
+ * compiled out (every published ROM) `NDS_R2_ANIM_CUT_ON` folds to 1 and the
+ * pre-cut arm dead-codes away -- the skip is not optional, it is the shipped
+ * path, because it is provably equivalent rather than an approximation. */
+#if NDS_R2_ANIM_CUT_ROUTE
+extern volatile u32 gNdsR2AnimCutRoute;
+#define NDS_R2_ANIM_CUT_ON(bit) ((gNdsR2AnimCutRoute & (bit)) != 0u)
+#else
+#define NDS_R2_ANIM_CUT_ON(bit) (1)
+#endif
+
+/* Joints skipped whole. The parser's own `gNdsR2FtAnimParseCalls` stops seeing
+ * these, so calls + skips is the figure that stays comparable across the cut --
+ * without this the parser would appear to lose a third of its callers. */
+volatile u32 gNdsR2FtAnimNullSkips;
+
 void ftParamUpdateAnimKeys(GObj *fighter_gobj)
 {
     FTStruct *fp = (fighter_gobj != NULL) ? ftGetStruct(fighter_gobj) : NULL;
@@ -1823,23 +1841,57 @@ void ftParamUpdateAnimKeys(GObj *fighter_gobj)
                 continue;
             }
 
-            if (fp->anim_desc.flags.is_anim_joint)
+            /* Slice 33 -- ask once instead of calling twice to find out.
+             *
+             * Every function reachable from the two calls below wraps its
+             * ENTIRE body in `anim_wait != AOBJ_ANIM_NULL`: both parse arms,
+             * both play arms, five bodies across the port and the reference.
+             * That is asserted by `scripts/check_anim_null_guard.py`, not read
+             * off the page -- a counter or a cache poke added above one of
+             * those guards later would make this skip drop real work, and the
+             * symptom (one joint's bookkeeping stops on the frames it is idle)
+             * is not something a screenshot would show.
+             *
+             * 31.5% of joints are idle on any given frame and each was paying
+             * two full calls to discover it: 45 Thumb instructions and 40 stack
+             * word accesses, measured off the shipped disassembly, against
+             * three instructions to ask here.
+             *
+             * Two things deliberately stay outside the skip. The MObj loop
+             * below runs regardless -- an MObj carries its own `anim_wait` and
+             * animates while its joint is idle. And `translate_scales` advances
+             * on both paths: it indexes the joint array, so a pointer that
+             * stopped advancing on idle joints would mis-scale every later
+             * joint in the fighter. */
+            if (!NDS_R2_ANIM_CUT_ON(32u) ||
+                NDS_FCMP_NE_C(joint->anim_wait, AOBJ_ANIM_NULL))
             {
-                gcParseDObjAnimJoint(joint);
+                if (fp->anim_desc.flags.is_anim_joint)
+                {
+                    gcParseDObjAnimJoint(joint);
+                }
+                else
+                {
+                    ftAnimParseDObjFigatree(joint);
+                }
+
+                if (translate_scales != NULL)
+                {
+                    lbCommonPlayTranslateScaledDObjAnim(joint,
+                                                        translate_scales);
+                }
+                else
+                {
+                    gcPlayDObjAnimJoint(joint);
+                }
             }
             else
             {
-                ftAnimParseDObjFigatree(joint);
+                gNdsR2FtAnimNullSkips++;
             }
-
             if (translate_scales != NULL)
             {
-                lbCommonPlayTranslateScaledDObjAnim(joint, translate_scales);
                 translate_scales++;
-            }
-            else
-            {
-                gcPlayDObjAnimJoint(joint);
             }
 
             mobj = joint->mobj;

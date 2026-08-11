@@ -65,6 +65,19 @@ $ftanimOpcodeChecker = Join-Path $PSScriptRoot 'check_ftanim_opcode_surface.py'
 if ($LASTEXITCODE -ne 0) {
     throw "Figatree opcode surface check failed with exit code $LASTEXITCODE."
 }
+
+# Cycle 117, slice 33. ftParamUpdateAnimKeys skips the parse and the play
+# together on a joint whose anim_wait is AOBJ_ANIM_NULL. That is only equivalent
+# while all five reachable bodies stay TOTAL no-ops in that state; if someone
+# adds a counter or an invalidation above one of those guards, the skip starts
+# dropping real work and the symptom is one joint quietly missing its
+# bookkeeping on idle frames -- invisible in a screenshot and in every
+# geometry counter. Host-only, <1 s.
+$animNullGuardChecker = Join-Path $PSScriptRoot 'check_anim_null_guard.py'
+& python -B $animNullGuardChecker
+if ($LASTEXITCODE -ne 0) {
+    throw "AOBJ_ANIM_NULL guard totality check failed with exit code $LASTEXITCODE."
+}
 function Assert-Equal {
     param(
         [object]$Actual,
