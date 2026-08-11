@@ -13,9 +13,27 @@
  * 4 KB D-cache. Cycle 109 already made the pool contiguous and the cost did not
  * move, exactly as that change's own comment predicted -- contiguity buys the
  * second cache line per node and cannot buy residency. Only a smaller node can.
- * At 20 bytes the same frame streams 6,700 bytes: 1.64x the D-cache instead of
- * 2.94x. It also FREES 8,192 bytes of pool, so unlike step 9's load-time bake
- * this trades no RAM at all.
+ * At 20 bytes a converted node streams 44% fewer bytes -- but only the FIGHTER
+ * share converts, and that share is measured: two fighters hold ~156 of the
+ * ~360 live nodes (one fighter is median 78, max 99 across all 301 animations).
+ * So the frame goes 12,060 -> 9,564 bytes, 2.94x the D-cache to 2.33x, not the
+ * 1.64x an earlier version of this comment claimed by pricing every node.
+ *
+ * Which means the working set alone does NOT pay for this: ~47% of visits at a
+ * 44% byte cut caps the walk's 17.2M cycles at ~3.6M, about 1,050 ticks/frame,
+ * under the cross-build floor. The slice is justified by DELETING THE PARSE --
+ * the stepped path at ~440 instructions a call, which baked records remove
+ * outright -- with the smaller node as the thing that makes binding them cheap.
+ * Do not re-derive the value from the 25.3% headline alone.
+ *
+ * RAM: a converted node saves 16 bytes, but the AObj pool does NOT shrink --
+ * stage and item DObjs keep using it (see below), so only the fighter share
+ * converts and that share has not been measured. An earlier note here claimed
+ * the change frees 8,192 bytes by pricing the whole 512-node pool; that was
+ * wrong and is withdrawn. Size any allocation from a measured fighter-node
+ * count, not from the per-frame streaming figure -- reserving ten slots for
+ * every joint would be 12,800 bytes of new allocation against a 24,404-byte
+ * heap low-water, which is the shape that stopped the ROM booting once already.
  *
  * FIGHTER JOINTS ONLY. `gcPlayDObjAnimJoint` also serves stage and item DObjs,
  * whose AObjs are shared with other writers; those keep the list. This is the

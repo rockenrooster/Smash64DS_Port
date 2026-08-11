@@ -5214,14 +5214,65 @@ low-water. The **live** dense state is the opposite. A live record is
 (dropping the baked record's `cmd_index` buys nothing — the two s32 fields set
 the alignment).
 
-| | AObj today | dense live | |
-|---|---:|---:|---|
-| pool as carved (512 nodes) | 18,432 | 10,240 | **frees 8,192 B** |
-| live at peak (~360 nodes) | 12,960 | 7,200 | frees 5,760 B |
-| **per-frame working set** | **12,060 B (2.94×)** | **6,700 B (1.64×)** | against a 4 KB D-cache |
+#### The fighter share is measured — and it halves this slice's expected value
 
-So the change that attacks the 25.3% walk also **returns 8,192 bytes** to the
-arena. Nothing here trades RAM for speed.
+Counted exactly from the bank, with no build: a joint's live `AObj` count is the
+number of distinct tracks its script writes, so summing over a file's scripts
+gives one fighter's live node count for that animation.
+
+| one fighter, live nodes | min | median | p95 | max |
+|---|---:|---:|---:|---:|
+| across all 301 animations | 0 | **78** | 90 | 99 |
+
+Mean tracks per joint is 4.08, max 9. **Two fighters therefore hold ~156 live
+nodes of the ~360 in the scene — about 47%.** The rest belong to stage and item
+DObjs, which `gcPlayDObjAnimJoint` also serves and which keep the shared list.
+
+That is the number that resizes the whole slice, and it is worse than the
+headline:
+
+| | today | fighter-only dense | |
+|---|---:|---:|---|
+| fighter nodes streamed | 5,616 B | 3,120 B | −44% |
+| stage/item nodes streamed | 6,444 B | 6,444 B | unchanged |
+| **per-frame working set** | **12,060 B (2.94×)** | **9,564 B (2.33×)** | against a 4 KB D-cache |
+| RAM for the converted nodes | 5,616 B | 3,120 B | saves 2,496 B (3,168 at max) |
+
+**So the earlier 6,700 B / 1.64× figure is withdrawn too** — like the RAM claim
+it priced every node converting, and only the fighter share can. At 47% of
+visits and a 44% byte reduction, the optimistic ceiling on the walk's 17.2M
+cycles is ≈3.6M — roughly **1,050 ticks/frame, below the ±8,544 cross-build
+floor** and in the same band as slices 31 and 33.
+
+**What this means for the slice.** The dense track is still the right structure
+and the offline half is proven, but *the working-set argument alone does not
+justify it.* For slice 32 to be worth its remaining cost the win has to come
+from **deleting the parse interpretation** — the stepped path at ~440
+instructions a call, which the baked records remove outright — with the walk
+reduction as a secondary gain. That reframes the runtime work: bind baked
+records first, and treat the dense live layout as the thing that makes the bind
+cheap rather than as the win itself.
+
+**Correction — the "frees 8,192 B" figure published one step earlier is wrong.**
+It priced the whole 512-node pool converting to 20 bytes, which cannot happen:
+this specialization is fighter joints only, and `gcPlayDObjAnimJoint` also
+serves stage and item DObjs whose AObjs stay on the shared pool. The pool does
+not shrink. What converts is the **fighter share** of the live nodes, at 36→20
+bytes each, and **that share has not been measured** — the ~360 live figure is
+every DObj AObj in the scene, not the fighters'.
+
+So the RAM claim is downgraded to what is actually known: converting N fighter
+nodes saves 16N bytes, and N is unknown. It is bounded above by ~360 (saving
+≤5,760 B) and the sign is favourable, but "RAM-negative" was over-claimed and is
+withdrawn until a counter splits fighter nodes from the rest. **Do not size the
+allocation from the retracted number** — a per-joint array of ten reserved
+slots would be 2 fighters × 32 joints × 10 × 20 = 12,800 B of new allocation
+against a 24,404 B heap low-water, which is the shape that stopped the ROM
+booting once already.
+
+The per-frame working-set row is unaffected: it is about bytes *streamed* per
+frame, which the 36→20 conversion halves regardless of how the memory is
+allocated.
 
 **Nothing about this slice is blocked.** What remains is runtime work: a dense
 per-DObj track array for fighter joints only (stage and item DObjs keep the
