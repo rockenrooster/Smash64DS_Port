@@ -112,9 +112,13 @@ try {
         -GdbPort $context.GdbPort -Persistent -MuteAudio
     Remove-Item -LiteralPath $stdout, $stderr, $shot, $artifact -Force `
         -ErrorAction SilentlyContinue
-    # The capture helper needs a real top-level window handle. A hidden
-    # melonDS process still runs the proof but makes the requested visual
-    # evidence impossible to collect on some Windows desktop sessions.
+    # The reason below was already written; it just did not carry the token
+    # `check-melonds-policy.ps1` looks for, so that checker was RED and
+    # therefore protecting every other harness from nothing.
+    # WindowStyle: visible-by-design
+    # The capture helper needs a real top-level window handle. Hidden, melonDS
+    # still runs the proof but MainWindowHandle stays IntPtr.Zero and the
+    # screenshot silently dies -- a black PNG, not an error.
     $emulator = Start-Process `
         -FilePath $context.MelonDSPath `
         -ArgumentList $rom `

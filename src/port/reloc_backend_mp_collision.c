@@ -376,6 +376,70 @@ u32 gNdsMPLineExtentOverflow;
 u32 gNdsMPLineSweepRejects;
 u32 gNdsMPLineSweepAdmits;
 
+/* Cycle 118: the endpoint memo slice 29's post-mortem asked for, which slice 30
+ * unblocked.
+ *
+ * `ndsMPFindLineEndpoints` is 21,127,734 cycles in the c117 whole-match profile
+ * -- **38,890 calls at 543 cycles each, 5,861 tk/fr** -- and its per-PC detail
+ * says there is nothing inside it to delete: 270 distinct PCs, the hottest one
+ * only **3.6%** of the function, and the top rows are `ldr r3,[sp,#64]` and
+ * `ldr r2,[sp,#4]` at **19.5 and 19.3 cyc/insn**. That is a cold frame reload on
+ * entry, not a loop. The only lever a flat function offers is not entering it.
+ *
+ * Its answer is a pure function of the line id and the current geometry: it
+ * reads `line_info`, `vertex_links`, `vertex_id` and `vertex_data`, all static
+ * stage data, and nothing else. So it memoises outright rather than
+ * incrementally, which is what makes this cheap enough to be worth doing.
+ *
+ * Three restrictions, each one a failure this subsystem has already had:
+ *
+ *   - **HITS ONLY.** The two FALSE exits increment
+ *     `gNdsStageCollisionLoopBadVertexCount` and `…OutOfRangeLineCount`, so
+ *     serving a miss from a memo would silently stop counting them. The hit path
+ *     increments nothing, which is exactly why memoising only the hit is
+ *     observationally identical rather than merely close.
+ *   - **No bind, ever.** Cycle 117 added `ndsMPVertexF32Bind` to THIS function
+ *     and the match diverged reproducibly at frames 1015/1495/1686: a bind
+ *     labels the cache from the caller's pointer, and this function is reachable
+ *     from 28 sites. The memo is dropped by `ndsMPVertexF32Reset`, which slice
+ *     30's setter calls at the moment the geometry stops being current. That is
+ *     what makes this safe now and unsafe then; do not add a bind here.
+ *   - **A line id at or past the cap falls through** to the live search, like
+ *     every other table in this file.
+ *
+ * This is NOT the refuted table. R2-03 E51 killed a `line_id -> (group, kind)`
+ * table because the yakumono loop's trip count is one on Dream Land (1 yakumono,
+ * 7 lines) -- there was no O(n) to remove, and this profile agrees at 2.83 inner
+ * iterations a call. What this removes is the ~60 instructions of link, vertex
+ * id, coordinate and `(f32)` conversion work that follow the search. */
+#define NDS_MP_LINE_ENDPOINT_MAX 64u
+
+static f32 sNdsMPLineEndpointLeftX[NDS_MP_LINE_ENDPOINT_MAX];
+static f32 sNdsMPLineEndpointLeftY[NDS_MP_LINE_ENDPOINT_MAX];
+static f32 sNdsMPLineEndpointRightX[NDS_MP_LINE_ENDPOINT_MAX];
+static f32 sNdsMPLineEndpointRightY[NDS_MP_LINE_ENDPOINT_MAX];
+static u16 sNdsMPLineEndpointFlags[NDS_MP_LINE_ENDPOINT_MAX];
+static u8 sNdsMPLineEndpointCount[NDS_MP_LINE_ENDPOINT_MAX];
+static u8 sNdsMPLineEndpointValid[NDS_MP_LINE_ENDPOINT_MAX];
+
+u32 gNdsMPLineEndpointHits;
+u32 gNdsMPLineEndpointFills;
+u32 gNdsMPLineEndpointOverflow;
+
+/* One-binary A/B, same instrument as `gNdsR2FighterStripRoute`. `.data` and
+ * aligned(32) so the poke owns its cache line. Default 1 = memo, so an unpoked
+ * ROM is the candidate and `-SetGlobals gNdsR2MPRoute=0` is the control at the
+ * SAME placement -- the only way to read a cut of this size against the
+ * +-8,544 cross-build floor. At NDS_R2_MP_ROUTE=0 the test folds to a constant
+ * and the shipped ROM carries no route check at all. */
+#if NDS_R2_MP_ROUTE
+volatile u32 gNdsR2MPRoute
+    __attribute__((section(".data"), aligned(32))) = 1u;
+#define NDS_R2_MP_ROUTE_ON() (gNdsR2MPRoute != 0u)
+#else
+#define NDS_R2_MP_ROUTE_ON() (1)
+#endif
+
 static void ndsMPVertexF32Reset(void)
 {
     u32 i;
@@ -387,6 +451,10 @@ static void ndsMPVertexF32Reset(void)
     for (i = 0u; i < NDS_MP_LINE_EXTENT_MAX; i++)
     {
         sNdsMPLineExtentValid[i] = 0u;
+    }
+    for (i = 0u; i < NDS_MP_LINE_ENDPOINT_MAX; i++)
+    {
+        sNdsMPLineEndpointValid[i] = 0u;
     }
     sNdsMPVertexF32Geometry = NULL;
 }
@@ -827,6 +895,37 @@ static sb32 ndsMPFindLineEndpoints(s32 line_id, Vec3f *left, Vec3f *right,
     {
         return FALSE;
     }
+    /* The geometry-ready guard stays ABOVE this: a memo entry says what the
+     * geometry held, never that it is still current to read. */
+    if (NDS_R2_MP_ROUTE_ON() &&
+        ((u32)line_id < NDS_MP_LINE_ENDPOINT_MAX) &&
+        (sNdsMPLineEndpointValid[(u32)line_id] != 0u))
+    {
+        u32 memo = (u32)line_id;
+
+        gNdsMPLineEndpointHits++;
+        if (vertex_count != NULL)
+        {
+            *vertex_count = (s32)sNdsMPLineEndpointCount[memo];
+        }
+        if (flags != NULL)
+        {
+            *flags = sNdsMPLineEndpointFlags[memo];
+        }
+        if (left != NULL)
+        {
+            left->x = sNdsMPLineEndpointLeftX[memo];
+            left->y = sNdsMPLineEndpointLeftY[memo];
+            left->z = 0.0F;
+        }
+        if (right != NULL)
+        {
+            right->x = sNdsMPLineEndpointRightX[memo];
+            right->y = sNdsMPLineEndpointRightY[memo];
+            right->z = 0.0F;
+        }
+        return TRUE;
+    }
     line_info = geometry->line_info;
     links = geometry->vertex_links;
     ids = geometry->vertex_id;
@@ -856,6 +955,11 @@ static sb32 ndsMPFindLineEndpoints(s32 line_id, Vec3f *left, Vec3f *right,
                 s32 v_first_y;
                 s32 v_last_x;
                 s32 v_last_y;
+                s32 left_x;
+                s32 left_y;
+                s32 right_x;
+                s32 right_y;
+                u32 line_flags;
 
                 if ((count < 2u) || (count > 128u))
                 {
@@ -869,47 +973,68 @@ static sb32 ndsMPFindLineEndpoints(s32 line_id, Vec3f *left, Vec3f *right,
                 v_first_y = ndsMPVertexY(verts, v_first_id);
                 v_last_x = ndsMPVertexX(verts, v_last_id);
                 v_last_y = ndsMPVertexY(verts, v_last_id);
+                /* Resolved into locals rather than straight into the caller's
+                 * `Vec3f`s so the memo can be filled even on the calls that ask
+                 * for only `flags`, or for nothing at all
+                 * (`mpCollisionCheckExistLineID` passes five NULLs). Those are
+                 * the calls the memo has to serve, so they are the ones that
+                 * have to fill it. Same expression, same order, same values --
+                 * `(f32)` of an s32 is exact, so a served entry is bit-identical
+                 * to a recomputed one. */
+                left_x = (v_first_x <= v_last_x) ? v_first_x : v_last_x;
+                left_y = (v_first_x <= v_last_x) ? v_first_y : v_last_y;
+                right_x = (v_first_x <= v_last_x) ? v_last_x : v_first_x;
+                right_y = (v_first_x <= v_last_x) ? v_last_y : v_first_y;
+                line_flags = ndsMPVertexFlags(verts, v_first_id);
+
+                /* The fill is not route-gated, but do NOT read that as "both
+                 * arms pay the same fill" -- the measurement says otherwise and
+                 * an earlier version of this comment claimed it. The candidate
+                 * returns from the fast path ABOVE, so it fills 10 times a
+                 * match; the control never reads the memo, so it re-fills on
+                 * every call, 48,060 times. The control is therefore slightly
+                 * SLOWER than the true pre-slice baseline, and the measured
+                 * -7,232 P95 overstates the win by roughly the cost of those
+                 * fills (~200 tk/fr). Left un-gated anyway because gating it
+                 * would put a second route test on the hot path to make an
+                 * already-decisive number 3% prettier. */
+                if ((u32)line_id < NDS_MP_LINE_ENDPOINT_MAX)
+                {
+                    u32 memo = (u32)line_id;
+
+                    sNdsMPLineEndpointLeftX[memo] = (f32)left_x;
+                    sNdsMPLineEndpointLeftY[memo] = (f32)left_y;
+                    sNdsMPLineEndpointRightX[memo] = (f32)right_x;
+                    sNdsMPLineEndpointRightY[memo] = (f32)right_y;
+                    sNdsMPLineEndpointFlags[memo] = (u16)line_flags;
+                    sNdsMPLineEndpointCount[memo] = (u8)count;
+                    sNdsMPLineEndpointValid[memo] = 1u;
+                    gNdsMPLineEndpointFills++;
+                }
+                else
+                {
+                    gNdsMPLineEndpointOverflow++;
+                }
+
                 if (vertex_count != NULL)
                 {
                     *vertex_count = (s32)count;
                 }
                 if (flags != NULL)
                 {
-                    *flags = ndsMPVertexFlags(verts, v_first_id);
+                    *flags = line_flags;
                 }
                 if (left != NULL)
                 {
+                    left->x = (f32)left_x;
+                    left->y = (f32)left_y;
                     left->z = 0.0F;
                 }
                 if (right != NULL)
                 {
+                    right->x = (f32)right_x;
+                    right->y = (f32)right_y;
                     right->z = 0.0F;
-                }
-                if (v_first_x <= v_last_x)
-                {
-                    if (left != NULL)
-                    {
-                        left->x = (f32)v_first_x;
-                        left->y = (f32)v_first_y;
-                    }
-                    if (right != NULL)
-                    {
-                        right->x = (f32)v_last_x;
-                        right->y = (f32)v_last_y;
-                    }
-                }
-                else
-                {
-                    if (left != NULL)
-                    {
-                        left->x = (f32)v_last_x;
-                        left->y = (f32)v_last_y;
-                    }
-                    if (right != NULL)
-                    {
-                        right->x = (f32)v_first_x;
-                        right->y = (f32)v_first_y;
-                    }
                 }
                 return TRUE;
             }

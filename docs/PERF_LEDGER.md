@@ -7426,3 +7426,47 @@ the win is **smaller than the placement floor**, which is +-8,544 and here shows
 +-3,600 on buckets nobody touched. A deletion can be simultaneously real and
 invisible at the frame. Route to attribute; re-bank to bank; never let one
 stand in for the other. Board: slice 31.
+
+## Cycle 118 — the endpoint memo: `WORK-H` P95 −7,232, and the fill counter that qualified it
+
+**Same-binary A/B**, `builds/build-c118-mp-ab`
+(`NDS_R2_MP_ROUTE=1 NDS_R2_BOTH_CPU=1`), 1600 frames from 438, DLDI ON,
+`gNdsR2MPRoute` 1 versus 0.
+
+| bucket | ΔP50 | ΔP95 |
+|---|---:|---:|
+| **`WORK-H`** | **−6,528** | **−7,232** |
+| `SRC` / `GCRA` | −7,744 / −7,680 | −9,152 / −8,960 |
+| **`SPHD`** | −3,712 | **−7,488** |
+| `SINT` / `SCPU` | −1,088 / −1,152 | −2,752 / −1,216 |
+| `FTR` / `STG` / `ALL` | +64 / **0** / **0** | +128 / **0** / −64 |
+
+`gNdsR2FtAnimParseCalls` **145,549 in both arms** — identical simulation work, so
+no collision answer changed. `slips=0` both. The VBlank histogram agrees with the
+buckets independently: 2:**1602**/3:378/4:39 with the memo, 2:**1587**/3:389/4:45
+without.
+
+**What the profile said before a line was written.** `ndsMPFindLineEndpoints`
+was 5,861 tk/fr over **270 distinct PCs with the hottest at 3.6%** — flat, with
+its top rows (`ldr [sp,#64]`, `ldr [sp,#4]` at 19.5/19.3 cyc/insn) a cold frame
+reload on entry rather than a loop. All three collision owners profile that way.
+**A flat function has one lever: not entering it.** Do not go looking for an
+instruction to delete in one; check the PC distribution first and read the shape.
+
+**The engagement counter did two jobs and the second was the surprise.**
+`gNdsMPLineEndpointFills` = **10** in the candidate against 48,082 hits, which is
+what proved the memo does not thrash on `gMPCollisionGeometry` reassignment — the
+one thing that could have made the slice worthless. But the control read **48,060
+fills**, because the candidate returns above the fill and the control never reads
+the memo, so it re-fills every call. **The control is therefore slightly slower
+than the true pre-slice baseline and the −7,232 overstates the win by ~200 tk/fr.**
+An earlier draft asserted the arms paid an identical fill; the counter refuted it.
+**Carry the counter that can embarrass the headline, and read it against both
+arms, not just the candidate's.**
+
+**Cheap because two earlier slices paid for it.** Slice 29 died adding a
+`ndsMPVertexF32Bind` to this exact function (match diverged, frames
+1015/1495/1686) and its post-mortem named this memo as safe *once invalidation
+moved to the assignment of `gMPCollisionGeometry`*; slice 30 moved it. The memo
+adds no bind, only hits are stored so the two FALSE paths keep incrementing their
+counters, and a line id past 64 falls through. Board: slice 35.

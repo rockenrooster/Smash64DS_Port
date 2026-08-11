@@ -311,6 +311,14 @@ NDS_R2_ANIM_CUT_ROUTE ?= 0
 # for the strip arm to exist; at 0 the route folds away and the selected
 # emitter is whatever that flag chose.
 NDS_R2_STRIP_ROUTE ?= 0
+# Cycle 118. The same instrument for the map-collision lane. At 1 the endpoint
+# memo in `ndsMPFindLineEndpoints` is selected by `gNdsR2MPRoute` at run time, so
+# its A/B runs on ONE binary -- which is the only way to read a cut of its size
+# (5,861 tk/fr of a flat 543-cycle function) against the +-8,544 cross-build
+# placement floor. At 0 the test folds to a constant, the memo ships, and the
+# ROM carries no route check. The memo is FILLED in both arms so the control
+# pays the identical fill and only the lookup differs.
+NDS_R2_MP_ROUTE ?= 0
 # R2-03 E47. The native fighter owner derives its material colour and its
 # use-material predicate from `stats` per epoch, the way the generic path does,
 # instead of reading a baked policy flag and always taking prim_color. The
@@ -2994,6 +3002,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_R2_AOBJ16_PREBAKE $(NDS_R2_AOBJ16_PREBAKE)'; \
 		echo '#define NDS_R2_ANIM_CUT_ROUTE $(NDS_R2_ANIM_CUT_ROUTE)'; \
 		echo '#define NDS_R2_STRIP_ROUTE $(NDS_R2_STRIP_ROUTE)'; \
+		echo '#define NDS_R2_MP_ROUTE $(NDS_R2_MP_ROUTE)'; \
 		echo '#define NDS_R2_MATERIAL_DYNAMIC $(NDS_R2_MATERIAL_DYNAMIC)'; \
 		echo '#define NDS_R2_FLASH_PROBE $(NDS_R2_FLASH_PROBE)'; \
 		echo '#define NDS_R2_ANIM_CENSUS $(NDS_R2_ANIM_CENSUS)'; \

@@ -463,59 +463,73 @@ def main() -> int:
 
         # ---- Optional: per-PC detail inside one function ----
         if args.pc_detail:
-            target = next(
-                (s for s in symbols
-                 if s.name == args.pc_detail or args.pc_detail in s.aliases),
-                None,
-            )
-            if target is None:
-                raise RuntimeError(
-                    f"--pc-detail {args.pc_detail!r} is not a FUNC symbol in "
-                    f"{args.elf}. The census only sees symbols the ELF defines."
+            # Comma-separated, because the scan below is the expensive part and
+            # it is the SAME scan for every symbol. Asking about a second
+            # function used to mean a second ten-minute pass over 54.7M rows,
+            # which is how cycle 117 ended up designing from one symbol's detail
+            # when it wanted three.
+            ranges = []
+            for name in [n.strip() for n in args.pc_detail.split(",") if n.strip()]:
+                target = next(
+                    (s for s in symbols
+                     if s.name == name or name in s.aliases),
+                    None,
                 )
-            end = target.address + (target.size or 4)
-            listing = disassemble_range(args.objdump, args.elf, target.address, end)
-            pcs: list[tuple[int, int, int, str]] = []
+                if target is None:
+                    raise RuntimeError(
+                        f"--pc-detail {name!r} is not a FUNC symbol in "
+                        f"{args.elf}. The census only sees symbols the ELF defines."
+                    )
+                ranges.append((target.address, target.address + (target.size or 4),
+                               target))
+            lowest = min(r[0] for r in ranges)
+            highest = max(r[1] for r in ranges)
+            folded: dict[int, list] = {}
             with args.profile.open(newline="", encoding="utf-8") as stream:
-                folded: dict[int, list] = {}
                 for row in csv.DictReader(stream):
                     pc = int(row["pc"], 16)
-                    if not (target.address <= pc < end):
+                    if not (lowest <= pc < highest):
+                        continue
+                    if not any(lo <= pc < hi for lo, hi, _t in ranges):
                         continue
                     # Fold the per-frame regions back together: this table is
                     # about WHERE in the function, not which frame.
                     slot = folded.setdefault(pc, [0, 0, row["mode"]])
                     slot[0] += int(row["total_cycles"])
                     slot[1] += int(row["instructions"])
-                pcs = [(pc, v[0], v[1], v[2]) for pc, v in folded.items()]
-            pcs.sort(key=lambda r: -r[1])
-            counted = sum(r[1] for r in pcs)
-            print()
-            print(f"per-PC detail: {target.name} "
-                  f"[{target.address:#010x}, {end:#010x}) {target.size:,} bytes")
-            print(f"  {counted:,} cycles over {len(pcs):,} distinct PCs, "
-                  f"{100.0 * counted / total_cycles if total_cycles else 0:.2f}% "
-                  "of the window")
-            table = []
-            for pc, cycles, insns, mode in pcs[: args.top]:
-                source, mnemonic = listing.get(pc, ("?", "?"))
-                table.append([
-                    f"{pc:#010x}",
-                    f"{cycles:,}",
-                    f"{100.0 * cycles / counted:.1f}" if counted else "-",
-                    f"{insns:,}",
-                    f"{cycles / insns:.2f}" if insns else "-",
-                    mode,
-                    source,
-                    mnemonic,
-                ])
-            print()
-            print(format_table(
-                table,
-                ["pc", "cycles", "%fn", "insns", "cyc/insn", "mode", "source",
-                 "instruction"],
-                "rrrrrlll",
-            ))
+
+            for lo, hi, target in ranges:
+                listing = disassemble_range(args.objdump, args.elf, lo, hi)
+                pcs = [(pc, v[0], v[1], v[2])
+                       for pc, v in folded.items() if lo <= pc < hi]
+                pcs.sort(key=lambda r: -r[1])
+                counted = sum(r[1] for r in pcs)
+                print()
+                print(f"per-PC detail: {target.name} "
+                      f"[{lo:#010x}, {hi:#010x}) {target.size:,} bytes")
+                print(f"  {counted:,} cycles over {len(pcs):,} distinct PCs, "
+                      f"{100.0 * counted / total_cycles if total_cycles else 0:.2f}% "
+                      "of the window")
+                table = []
+                for pc, cycles, insns, mode in pcs[: args.top]:
+                    source, mnemonic = listing.get(pc, ("?", "?"))
+                    table.append([
+                        f"{pc:#010x}",
+                        f"{cycles:,}",
+                        f"{100.0 * cycles / counted:.1f}" if counted else "-",
+                        f"{insns:,}",
+                        f"{cycles / insns:.2f}" if insns else "-",
+                        mode,
+                        source,
+                        mnemonic,
+                    ])
+                print()
+                print(format_table(
+                    table,
+                    ["pc", "cycles", "%fn", "insns", "cyc/insn", "mode", "source",
+                     "instruction"],
+                    "rrrrrlll",
+                ))
             print()
             print("cyc/insn is the whole point: a row near 1.0 is doing work, a "
                   "row far above it is waiting. Rank by cycles, then read the "

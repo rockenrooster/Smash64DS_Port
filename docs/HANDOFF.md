@@ -17,24 +17,26 @@ frames past the buzzer. Slips 0 in every row.
 | **Boundary** mode 163 | shipped configuration | 920,192 | 1,113,408 | re-banked c116 |
 
 **Gate 1,305,472**, re-banked after slice 31; slice 33's control arm read
-1,304,896, i.e. flat. Every c117 slice is UNDER the ±8,544 cross-build floor —
-1,317,440 → 1,305,472 is drift, not banked wins. **Gap ~185,472**; re-bank
-before judging a new slice. The soak's long match is
-`NDS_R2_SOAK_MATCH_MINUTES`; `probe-match-window.ps1` reads the match timer from
-the guest, so a window cannot claim coverage it lacked. Owner's bar: the whole
-match under P95 on the both-CPU config, loading excluded; the shipped ROM stays
-the Boundary hwtri pair. `Makefile:305-308` forbids reporting a both-CPU P95 as
-the Boundary figure; **re-pin `EXPECTED_CENSUS_SHA256` when its coverage changes.**
+1,304,896, i.e. flat, and it IS current — the sampler is deterministic and no
+source landed between. Every c117 slice is UNDER the ±8,544 cross-build floor;
+1,317,440 → 1,305,472 is drift, not banked wins. **Gap ~185,472.** The soak's
+long match is `NDS_R2_SOAK_MATCH_MINUTES`; `probe-match-window.ps1` reads the
+timer from the guest, so a window cannot claim coverage it lacked. Owner's bar:
+the whole match under P95 on the both-CPU config, loading excluded; the shipped
+ROM stays the Boundary hwtri pair. `Makefile:382` forbids reporting a both-CPU
+P95 as Boundary's; **re-pin `EXPECTED_CENSUS_SHA256` when coverage changes.**
 **Route to ATTRIBUTE, re-bank to BANK — never swap them.** Slice 31 read P95
-**−7,104** on one binary (`ALL` exactly 0) and **+576** across builds (untouched
-FTR −3,328). Both true: the work is gone, the win is under the floor.
-**Collision is the next owner, measured** (slice 34): its soft float is **16,649
-tk/fr**, 1.9x animation's largest remaining item, plus 33,077 self. **Cut
-VISITS, not ops** — slice 28 skipped 91.9% of sweep visits (`SPHD` P95 −15,744).
-A `line_id→(group,kind)` table is REFUTED (E51: Dream Land is 1 yakumono, 7
-lines). All three owners are **FLAT** — no PC over 3.6% of its function —
-so the only lever is calls: `…GetFCCommonFloor` 45,372 x 818 cyc,
-`ndsMPFindLineEndpoints` 38,890 x 543, `…SweepFloorLoopSweep` 11,544 x 2,643.
+**−7,104** routed and **+576** across builds: the work is gone AND under the floor.
+**Collision owns the row now** (slice 34: its soft float is **16,649 tk/fr**,
+1.9x animation's largest, plus 33,077 self). **Slice 35 landed the endpoint
+memo: `WORK-H` P95 −7,232 / P50 −6,528 routed, the saving in `SPHD` (−7,488),
+`STG` and `ALL` P50 exactly 0** — call it −7,000, the control re-fills where the
+candidate does not. **A re-bank is owed; the route attributes, it does not bank.**
+All three owners are **FLAT** — no PC over 3.6% — so the lever is calls, never an
+instruction: `…GetFCCommonFloor` 45,372 x 818 cyc, `…FindLineEndpoints` 38,890 x
+543, `…SweepFloorLoopSweep` 11,544 x 2,643. **Next: `ndsMPFindLineYakumonoID`**,
+same shape, called once per `…GetFCCommonFloor`. A `line_id→(group,kind)` table
+stays REFUTED (E51: 1 yakumono, 7 lines).
 
 ## What is dead, so nobody re-derives it
 
@@ -54,12 +56,10 @@ so the only lever is calls: `…GetFCCommonFloor` 45,372 x 818 cyc,
 - **The animation lane, closed on numbers (slice 34).** Its two largest SELF
   symbols are already Requirement 4's fixed point at 1.67–1.69 cyc/insn — no
   float to convert, no stall to place. All that remains is **8,772 tk/fr** of
-  soft float over three symbols, largest 4,631, every one under the floor: as
-  are idle-joint skip (33, `SRC` −5,632 / `WORK-H` flat), lazy track table
-  (31, −7,104 routed / +576 re-banked), AObj walk (~1,050), track dispatch
-  (~1,900). `.text.hot` is closed BOTH ways. **`ndsBaseGcPlayMObjMatAnim` must
-  not be blanket-converted** — five of its tracks carry packed 0xRRGGBBAA in the
-  f32 bit pattern.
+  soft float over three symbols, largest 4,631, all under the floor — as are
+  idle-joint skip (33), lazy track table (31), AObj walk (~1,050), track
+  dispatch (~1,900). `.text.hot` is closed BOTH ways. **`ndsBaseGcPlayMObjMatAnim`
+  must not be blanket-converted** — five tracks carry packed 0xRRGGBBAA in f32.
 
 ## RAM: both budgets are near their floor — price a change before writing it
 

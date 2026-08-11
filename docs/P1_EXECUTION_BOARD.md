@@ -4836,6 +4836,113 @@ walk IS the call". The three biggest single symbols are already visible:
 `ndsFighterMarioFoxDLAllDrawForSlot` 93,854,253, `ndsRendererCommitNativeStageSegment`
 93,101,009, `ndsRendererNativeEmitProductionPrimitiveGroups` 81,420,680.
 
+### Slice 35: the endpoint memo — `WORK-H` P95 −7,232 on one binary
+
+The slice **slice 29's own post-mortem asked for** ("the endpoint memo is cheap
+and safe once it lands") and **slice 30 unblocked** by moving invalidation to the
+assignment of `gMPCollisionGeometry`. One binary,
+`builds/build-c118-mp-ab` (`NDS_R2_MP_ROUTE=1 NDS_R2_BOTH_CPU=1`), 1600 frames
+from 438, DLDI ON, `gNdsR2MPRoute` **1 versus 0**, both set explicitly.
+
+#### Why this function and not an instruction inside it
+
+`ndsMPFindLineEndpoints` is 21,127,734 cycles in the c117 whole-match profile —
+**38,890 calls at 543 cycles each, 5,861 tk/fr** — and its per-PC detail says
+there is nothing in it to delete: **270 distinct PCs, the hottest 3.6% of the
+function**, and the top rows are `ldr r3,[sp,#64]` and `ldr r2,[sp,#4]` at
+**19.5 and 19.3 cyc/insn** — a cold frame reload on entry, not a loop. All three
+collision owners profile that way (`mpCollisionGetFCCommonFloor` 45,372 calls x
+818 cyc over 365 PCs, top 1.9%; `ndsStageMPSweepFloorLoopSweep` 11,544 x 2,643
+over 523 PCs, top 2.6%). **A flat function offers exactly one lever: not
+entering it.**
+
+Its answer is a pure function of the line id and the current geometry — it reads
+`line_info`, `vertex_links`, `vertex_id`, `vertex_data`, and nothing else — so it
+memoises outright rather than incrementally.
+
+**This is NOT the refuted table.** R2-03 E51 killed a `line_id -> (group, kind)`
+table because the yakumono loop's trip count is one on Dream Land (1 yakumono, 7
+lines). This profile agrees — **2.83 inner iterations a call** — and this slice
+does not touch the search. It removes the ~60 instructions of link, vertex-id,
+coordinate and `(f32)` conversion work that FOLLOW it.
+
+#### Measured
+
+| bucket | A P50 | B P50 | ΔP50 | A P95 | B P95 | ΔP95 |
+|---|---:|---:|---:|---:|---:|---:|
+| **`WORK-H`** | 963,776 | 970,304 | **−6,528** | 1,296,256 | 1,303,488 | **−7,232** |
+| `SRC` | 330,496 | 338,240 | −7,744 | 637,440 | 646,592 | **−9,152** |
+| `GCRA` | 325,504 | 333,184 | −7,680 | 632,448 | 641,408 | **−8,960** |
+| **`SPHD`** | 67,776 | 71,488 | −3,712 | 115,520 | 123,008 | **−7,488** |
+| `SINT` | 149,184 | 150,272 | −1,088 | 336,576 | 339,328 | −2,752 |
+| `SCPU` | 38,848 | 40,000 | −1,152 | 95,488 | 96,704 | −1,216 |
+| `FTR` / `STG` | 303,040 / 187,520 | 302,976 / 187,520 | +64 / **0** | 307,072 / 194,880 | 306,944 / 194,880 | +128 / **0** |
+| `ALL` | 1,118,272 | 1,118,272 | **0** | 1,678,784 | 1,678,848 | −64 |
+
+**The saving lands in `SPHD`** — the per-fighter map/physics arm — which is where
+map collision lives and the only place it could legitimately land.
+
+**Controls.** `STG` is **exactly 0** at both percentiles, `ALL` P50 exactly 0,
+`FTR` ±128. **`gNdsR2FtAnimParseCalls` is 145,549 in BOTH arms**: the simulation
+did identical work, so no collision answer changed — a divergence would move the
+fighters and that count with them. `slips=0` in both.
+
+**And the VBlank histogram moved the right way**, independently of the buckets:
+2:**1602**/3:378/4:39/5+:19 with the memo against 2:**1587**/3:389/4:45/5+:17
+without. Fifteen more frames presented at the fastest cadence, max 20 either way.
+
+#### Engagement, and the one place the number is generous
+
+`gNdsMPLineEndpointHits` **48,082** with `…Fills` **10** in the candidate;
+**32** and **48,060** in the control. The 32 are real and expected — `-SetGlobals`
+pokes at the first frame-complete marker and the ROM's default is 1, so 0.07% of
+calls ran memoised before the window opened. It is also positive proof the poke
+landed.
+
+**Ten fills a match is the finding behind the finding.** The memo does not
+thrash: `gMPCollisionGeometry` is reassigned rarely enough that the shared reset
+costs nothing, which is the thing that could have made this worthless and is why
+the counter was carried.
+
+**The fill is not route-gated, and an earlier draft of this entry claimed that
+made the arms symmetric. The counters say it does not.** The candidate returns
+from the fast path above the fill (10 fills); the control re-fills on every call
+(48,060). So the control is slightly slower than the true pre-slice baseline and
+**the −7,232 overstates the win by roughly those fills, ~200 tk/fr**. Call it
+**−7,000**. Gating the fill would have put a second route test on the hot path to
+make an already-decisive number 3% prettier.
+
+#### Exactness
+
+Structural, not statistical. The served entry is the same expression on the same
+inputs: `(f32)` of an s32 is exact, and the left/right choice is the same
+`v_first_x <= v_last_x` compare, resolved into locals so the calls that pass
+NULLs (`mpCollisionCheckExistLineID` passes five) still fill what they do not
+read. Three restrictions carry the risk:
+
+- **Hits only.** Both FALSE exits increment counters
+  (`gNdsStageCollisionLoopBadVertexCount`, `…OutOfRangeLineCount`); the hit path
+  increments none, so memoising the hit alone is observationally identical rather
+  than merely close.
+- **No bind, ever.** Cycle 117 added `ndsMPVertexF32Bind` to THIS function and
+  the match diverged reproducibly at frames 1015/1495/1686. The memo is dropped
+  by `ndsMPVertexF32Reset`, which slice 30's setter calls when the geometry stops
+  being current. That is what makes it safe now and was not then.
+- **Line id at or past 64 falls through**, counted by `…Overflow`.
+
+The vertex data is LOCAL-space and static — the same invariant slice 28's extent
+cache already ships on, where a moving platform is handled by the caller
+subtracting the yakumono translate rather than by the geometry moving.
+
+#### Next in this lane, ready to build
+
+`ndsMPFindLineYakumonoID` is the same shape — a pure `line_id -> yakumono_id`
+function over the same static geometry — and `mpCollisionGetFCCommonFloor` calls
+it once per call, 45,372 times, inside the largest remaining collision symbol
+(10,294 tk/fr self). One `u8` per line. Take it as route **bit 2**, generalising
+`NDS_R2_MP_ROUTE_ON()` to a bit test the way `gNdsR2AnimCutRoute` already is, so
+one binary attributes both.
+
 ### Slice 34: the soft-float bill, attributed exactly — and the lane hands over
 
 `scripts/task37_softfloat_callers.py`, whole-match c117 profile, 1,800 presented
