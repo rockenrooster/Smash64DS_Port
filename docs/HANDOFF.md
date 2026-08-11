@@ -15,22 +15,22 @@ frames past the buzzer. Slips 0 in every row.
 
 | arm | role | `WORK-H` P50 | P95 | over gate |
 |---|---|---:|---:|---:|
-| **both-CPU** | **THE GATE (owner, 2026-08-05)** | 973,568 | **1,317,440** | re-banked c117 |
+| **both-CPU** | **THE GATE (owner, 2026-08-05)** | 969,088 | **1,302,016** | slice 28, c117 |
 | **Boundary** mode 163 | shipped configuration | 920,192 | 1,113,408 | re-banked c116 |
 
-**Gate baseline is 1,317,440, re-banked 2026-08-10** at `29058a962fe` —
-**−129,878** off `f082b3c8`'s 1,447,318 over cycles 110–116. **Gap to the gate is
-197,440**, and `SRC` P95 653,696 is its largest named bucket. Both rows are
+**Gate baseline is 1,302,016 after slice 28** (re-banked 2026-08-10 at
+`29058a962fe` as 1,317,440, −15,104 since) — **−145,302** off `f082b3c8` over
+cycles 110–117. **Gap 182,016**; `SRC` P95 644,032 is its largest bucket. Both rows are
 current; re-bank before judging a new slice. The soak's long match is
-`NDS_R2_SOAK_MATCH_MINUTES`; `probe-match-window.ps1` reads the match timer out
-of the guest so a window cannot claim coverage it did not have. The owner's bar:
-the whole match under the P95 budget on the both-CPU config, loading states
-excluded; the shipped ROM stays the Boundary hwtri pair. `Makefile:305-308`
-forbids reporting a both-CPU P95 as the Boundary figure. **Re-pin
-`EXPECTED_CENSUS_SHA256` in the commit that changes what it covers.**
-**Next lane is map collision**: ~143,000 cyc/frame over ten symbols, 36.6% of
-the whole soft-float class. Slice 26 proved one kernel cannot clear the
-placement floor — stack its levers into one arm (board).
+`NDS_R2_SOAK_MATCH_MINUTES`; `probe-match-window.ps1` reads the match timer from
+the guest, so a window cannot claim coverage it lacked. Owner's bar: the whole
+match under P95 on the both-CPU config, loading excluded; the shipped ROM stays
+the Boundary hwtri pair. `Makefile:305-308` forbids reporting a both-CPU P95 as
+the Boundary figure; **re-pin `EXPECTED_CENSUS_SHA256` when its coverage changes.**
+**Map collision: cut VISITS, not operations.** Slices 26/27 deleted floats in
+one kernel, under the floor; slice 28 deleted whole LINES (O(1) span reject,
+91.9% of sweep visits skipped) for `SPHD` P95 −13,632. `ndsMPFindLineEndpoints`
+13,205 cyc/frame still has no early reject.
 
 ## What is dead, so nobody re-derives it
 
