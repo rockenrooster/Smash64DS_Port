@@ -18559,6 +18559,11 @@ u32 gNdsR2GxComposeRoots;
 u32 gNdsR2GxComposeMults;
 u32 gNdsR2GxComposeRestores;
 u32 gNdsR2GxComposeStores;
+u32 gNdsR2GxComposeProjectionSkips;
+
+/* Reset at the top of every execute, which is what makes pointer equality a
+ * sound test for "the hardware already holds this projection". */
+static const NDSRendererMatrix20p12 *sNdsR2GxLastProjection;
 
 static const NDSRendererMatrix20p12 sNdsR2GxIdentity20p12 =
 {
@@ -18631,8 +18636,25 @@ static void __attribute__((noinline)) ndsRendererLoadHardwareGxComposedMatrices(
     }
 
     ndsRendererHardwareEndBatch();
-    ndsRendererHardwareFighterSetMatrixMode(GL_PROJECTION);
-    ndsRendererHardwareFighterLoadMatrix4x4(input->projection_matrix);
+    /* R2-03 E22 measured 29 of the 30 per-root loads a frame re-pushing an
+     * IDENTICAL projection, and E23 measured skipping it at -3,008 -- under the
+     * floor on its own, so it was reverted. It is not on its own here: this
+     * slice's own gate put the FIFO word at ~24 cycles rather than the 12.2 E23
+     * implied, which makes 31 elided 17-word pushes worth about twice what E23
+     * priced. Pointer equality is sound because the cache is reset at the top of
+     * each execute and the adapter cannot rewrite the projection buffer inside
+     * one -- nothing between two roots changes GL_PROJECTION either, the light
+     * vector write brackets GL_MODELVIEW only. */
+    if (input->projection_matrix != sNdsR2GxLastProjection)
+    {
+        ndsRendererHardwareFighterSetMatrixMode(GL_PROJECTION);
+        ndsRendererHardwareFighterLoadMatrix4x4(input->projection_matrix);
+        sNdsR2GxLastProjection = input->projection_matrix;
+    }
+    else
+    {
+        gNdsR2GxComposeProjectionSkips++;
+    }
     ndsRendererHardwareFighterSetMatrixMode(GL_MODELVIEW);
 
     if (input->gx_parent_slot >= NDS_RENDERER_FIGHTER_GX_SLOT_NONE)
@@ -32181,6 +32203,11 @@ ndsRendererExecuteNativeFighterOwnerProduction(
      * one test from conflating "the colour never arrived" with "the dot product
      * is zero". */
     GFX_LIGHT_COLOR = (u32)RGB15(31, 31, 31);
+#endif
+#if NDS_R2_FIGHTER_GX_COMPOSE
+    /* Nothing outside this loop is known to leave GL_PROJECTION alone, so the
+     * projection elide only claims what one execute can prove. */
+    sNdsR2GxLastProjection = NULL;
 #endif
     for (root_index = 0u; root_index < root_count; root_index++)
     {
