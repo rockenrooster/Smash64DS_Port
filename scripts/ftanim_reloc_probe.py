@@ -1,40 +1,52 @@
 #!/usr/bin/env python3
-"""Read a figatree reloc file the way the ROM reads it, and prove it decodes.
+"""Read the figatree animation files the way the ROM reads them.
 
-Slice 32's generator has to read
-`decomp/BattleShip-main/BattleShip_o2r/reloc_animations/FT{Mario,Fox}Anim*` --
-301 files the Makefile stages into nitrofs with a bare `cp` (Makefile:3295).
-Nothing host-side parsed them before this.
+Slice 32's AOT generator needs the 301 o2r files in
+`decomp/BattleShip-main/BattleShip_o2r/reloc_animations/` that the Makefile
+stages into nitrofs with a bare `cp` (Makefile:3295). Nothing host-side parsed
+them before this. This module is the front door: it reproduces the ROM's load
+pipeline exactly and proves it by decoding every script in the bank.
 
-**The first version of this probe guessed the format and was wrong**, which is
-the whole reason it is written as a falsifier. The entry words look exactly like
-`(u16 joint_index, u16 byte_offset)` pairs -- monotonically rising, with
-plausible gaps -- and that reading survived on only 38.8% of streams. The gaps
-were the tell: they are words the chain SKIPS, not null joints.
+THE PIPELINE, from `src/port/reloc_backend_assets.c`:
 
-The real format is in `src/port/reloc_backend_assets.c:2956-3057`, which is the
-ROM's own loader, and it is a relocation list threaded through the data:
-
-  1. `ndsRelocApplyWordByteSwap` -- the payload is big-endian N64 data and every
-     32-bit word is swapped to native at load.
-  2. `ndsRelocApplyInternalPointerFixups` -- `reloc_intern_offset` is a WORD
-     index; the word at that slot packs `next = w >> 16` and
-     `target_words = w & 0xffff`; the slot is overwritten with
+  1. 0x50-byte header. Its last 16 bytes are `NDSRelocAssetHeader`: `file_id`
+     (+0x40), `reloc_intern_offset` (+0x44), `reloc_extern_offset` (+0x46),
+     `extern_file_ids_num` (+0x48), `data_size` (+0x4c). `0x50 + data_size` is
+     the file length exactly, on all 301.
+  2. `ndsRelocApplyWordByteSwap` (:2956) -- the payload is big-endian N64 data;
+     every 32-bit word is swapped to native.
+  3. `ndsRelocApplyInternalPointerFixups` (:2986) -- a relocation list threaded
+     through the data. `reloc_intern_offset` is a WORD index; the word there
+     packs `next = w >> 16` and `target_words = w & 0xffff`; the slot becomes
      `data + target_words * 4`; repeat until `next == 0xffff`.
+  4. `ndsRelocNormalizeFighterAObj16File` (:3310) -- the part that is impossible
+     to guess:
+       a. the entry table's length is *derived*, not stored: it is the smallest
+          resolved pointer, i.e. the table runs until the first script starts;
+       b. from there to the end, the two u16 lanes inside every 32-bit word are
+          swapped back -- step 2's u32 swap is right for pointers and floats and
+          exactly wrong for a stream of u16 commands;
+       c. each script is then walked and every COMMAND word (never a payload or
+          target word) is re-encoded from the disk bit order to the native one.
 
-`target_words * 4` is what the first version missed -- it read the low half as a
-byte offset, so every target was a quarter of the way to the right place.
+**Disk bit order is MSB-first and that is the whole trap.** On disk a command is
+`opcode:5, flags:10, toggle:1` from the top -- `opcode = (w >> 11) & 0x1f`,
+`flags = (w >> 1) & 0x3ff`, `toggle = w & 1` (:3278-3280). The native C bitfield
+`{opcode:5; flags:10; toggle:1}` allocates from the BOTTOM, so `opcode = w &
+0x1f`. Decoding disk bytes with the native layout is what eight successive
+readings of this format got wrong here, every one of them landing at 38-43%: the
+offset map, the word-scaled version of it, the lane swap alone, the exact
+per-opcode advance, four variants of that advance, and an AObjEvent32 reading.
+None of them moved the number, because none of them was the bug.
 
-Header, confirmed against `NDSRelocAssetHeader` (`include/nds/nds_reloc_assets.h`)
-and against the file: 0x50 bytes, whose last 16 are `file_id` (+0x40, 499 for
-FTMarioAnimWait, matching `llFTMarioAnimWaitFileID`), `reloc_intern_offset`
-(+0x44), `reloc_extern_offset` (+0x46), `extern_file_ids_num` (+0x48) and
-`data_size` (+0x4c, and 0x50 + data_size is the file length exactly).
+Getting the bit order right takes it to **100.0% of every script in all 297
+AObj16 files**. The four that remain are not failures: `FTMarioAnim134/135`
+(ids 633/634) and `FTFoxAnim135/136` (777/778) are precisely the four
+`ndsRelocIsFighterAObj32Asset` names (0x279, 0x27a, 0x309, 0x30a) -- they carry
+32-bit scripts and the generator must route them to the other decoder.
 
-The proof that the reading is right is that the fixed-up slots point at
-`AObjEvent16` streams: opcode is 5 bits with only 15 of 32 values defined, so a
-wrong target lands on an undefined opcode about 53% of the time. A near-100%
-decode rate across ~300 files is not something a wrong map produces.
+The advance rule below is transcribed from `ndsRelocAObj16CommandWords` (:3229)
+rather than re-derived, since the ROM already owns it.
 """
 
 from __future__ import annotations
@@ -46,13 +58,17 @@ import sys
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 BANK = ROOT / "decomp" / "BattleShip-main" / "BattleShip_o2r" / "reloc_animations"
 
-OPCODE_MAX = 14          # objdef.h:169-187, End == 0 and SetFlags == 14
 HDR_BYTES = 0x50
 RELOC_END = 0xFFFF
+OPCODE_MAX = 14                      # objdef.h:169-187; End == 0, SetFlags == 14
+OP_END, OP_INTERP, OP_LOOP = 0, 12, 13
+
+# reloc_backend_assets.c:3059-3074. These carry AObjEvent32 scripts.
+AOBJ32_IDS = {0x279, 0x27A, 0x309, 0x30A}
 
 
 def load(raw: bytes):
-    """Header + byte-swapped payload, or None if this is not a reloc file."""
+    """Header + payload with the u32 big-endian swap applied (pipeline 1-2)."""
     if len(raw) < HDR_BYTES or raw[4:8] != b"OLER":
         return None
     file_id, intern, extern, n_extern, size = struct.unpack_from(
@@ -60,105 +76,80 @@ def load(raw: bytes):
     if HDR_BYTES + size != len(raw):
         return None
     payload = bytearray(raw[HDR_BYTES:])
-    for i in range(0, (size // 4) * 4, 4):          # BE -> native, whole words
+    for i in range(0, (size // 4) * 4, 4):
         payload[i:i + 4] = payload[i:i + 4][::-1]
     return {"file_id": file_id, "intern": intern, "extern": extern,
-            "n_extern": n_extern, "size": size, "data": bytes(payload)}
+            "n_extern": n_extern, "size": size, "data": payload}
 
 
 def fixups(f):
-    """Walk the internal relocation chain; return [(slot_off, target_off)]."""
-    out, seen = [], set()
-    slot_w = f["intern"]
+    """Pipeline 3: walk the threaded chain, returning {slot_off: target_off}."""
+    out, slot_w = {}, f["intern"]
     guard = f["size"] // 4 + 1
     while slot_w != RELOC_END:
         if guard == 0:
             raise ValueError("relocation chain does not terminate")
         guard -= 1
         off = slot_w * 4
-        if off + 4 > f["size"] or off in seen:
+        if off + 4 > f["size"] or off in out:
             raise ValueError("relocation slot 0x%x out of range or looped" % off)
-        seen.add(off)
         word = struct.unpack_from("<I", f["data"], off)[0]
-        nxt, target_w = word >> 16, word & 0xFFFF
-        target = target_w * 4
+        nxt, target = word >> 16, (word & 0xFFFF) * 4
         if target >= f["size"]:
             raise ValueError("relocation target 0x%x past data" % target)
-        out.append((off, target))
+        out[off] = target
         slot_w = nxt
     return out
 
 
-# Halfwords each opcode consumes beyond the command word, transcribed from
-# `ndsR2FtAnimParseDObjFigatree` (battleship_ftanim.c:547-857). `AObjAnimAdvance`
-# is a POST-increment, so `PAYLOAD()` costs 1 (the command) + 1 when the
-# command's toggle bit is set, and each `TARGET()` costs 1 more.
-#
-#   per-set-flag-bit target words, by opcode:
-#     SetValRate{,Block} write TARGET(0) AND TARGET(1)          -> 2
-#     SetVal{,Block} / SetVal0Rate{,Block} / SetValAfter{,Block}
-#     / SetTargetRate                                            -> 1
-#     Event1611 uses the payload and reads no target             -> 0
-TARGETS_PER_FLAG = {
-    2: 1, 3: 1,      # SetValBlock, SetVal
-    4: 2, 5: 2,      # SetValRateBlock, SetValRate
-    6: 1,            # SetTargetRate
-    7: 1, 8: 1,      # SetVal0RateBlock, SetVal0Rate
-    9: 1, 10: 1,     # SetValAfterBlock, SetValAfter
-    11: 0,           # Event1611
-}
-OP_END, OP_BLOCK, OP_INTERP, OP_LOOP, OP_SETFLAGS = 0, 1, 12, 13, 14
+def normalize(f, fx):
+    """Pipeline 4a-4b: derive the table bound, then unswap the script lanes."""
+    table = min(fx.values())
+    d = f["data"]
+    for i in range(table, f["size"] - 3, 4):
+        d[i:i + 2], d[i + 2:i + 4] = d[i + 2:i + 4], d[i:i + 2]
+    return table
+
+
+def command_words(opcode, flags, toggle):
+    """ndsRelocAObj16CommandWords (:3229), verbatim."""
+    if opcode in (OP_LOOP, OP_INTERP):
+        return 2
+    words = 1 + (1 if toggle else 0)
+    flagged = bin(flags).count("1")
+    if opcode in (2, 3, 6, 7, 8, 9, 10):
+        words += flagged
+    elif opcode in (4, 5):
+        words += flagged * 2
+    return words
 
 
 def walk(data, size, off, limit=8192):
-    """Walk one stream exactly as the parser does.
-
-    Returns (status, halfwords_visited). Status is 'end' if it reached
-    nGCAnimEvent16End, 'loop' if a Loop jumped back to a word already visited
-    (a normal cyclic animation -- the parser relies on the frame budget, not on
-    the script, to leave it), or a failure string.
-
-    This is self-validating: a wrong advance lands on a payload halfword and
-    reads it as an opcode, and only 15 of the 32 five-bit values are defined.
-    """
-    pc = off
-    seen = set()
+    """Walk one script in DISK bit order. 'end' or 'loop' means well-formed."""
+    pc, seen = off, set()
     for _ in range(limit):
-        if pc + 2 > size or pc < 0:
-            return "out of range at 0x%x" % pc, len(seen)
+        if pc < 0 or pc + 2 > size:
+            return "out of range at 0x%x" % pc
         if pc in seen:
-            return "loop", len(seen)
-        seen.add(pc)
+            return "loop"                 # a cyclic animation; the parser's
+        seen.add(pc)                      # frame budget ends it, not the script
         w = struct.unpack_from("<H", data, pc)[0]
-        op, flags, toggle = w & 0x1F, (w >> 5) & 0x3FF, (w >> 15) & 1
-        if op > OPCODE_MAX:
-            return "undefined opcode %d at 0x%x" % (op, pc), len(seen)
-        if op == OP_END:
-            return "end", len(seen)
-        if op in (OP_LOOP, OP_INTERP):
-            # Both advance past the command, then read a signed halfword
-            # relative jump/offset measured in BYTES (`s / 2` elements).
+        opcode = (w >> 11) & 0x1F
+        flags = (w >> 1) & 0x3FF
+        toggle = w & 1
+        if opcode > OPCODE_MAX:
+            return "undefined opcode %d at 0x%x" % (opcode, pc)
+        if opcode == OP_END:
+            return "end"
+        if opcode == OP_LOOP:
             if pc + 4 > size:
-                return "truncated %s at 0x%x" % (
-                    "Loop" if op == OP_LOOP else "TranslateInterp", pc), len(seen)
+                return "truncated Loop at 0x%x" % pc
             s = struct.unpack_from("<h", data, pc + 2)[0]
-            if op == OP_LOOP:
-                pc = (pc + 2) + (s // 2) * 2
-                continue
-            pc += 4
+            half = -(abs(s) // 2) if s < 0 else (s // 2)   # C truncates to zero
+            pc = pc + 2 + half * 2
             continue
-        if op in (OP_BLOCK, OP_SETFLAGS):
-            pc += 2 + 2 * toggle
-            continue
-        per = TARGETS_PER_FLAG.get(op)
-        if per is None:
-            return "opcode %d has no advance rule" % op, len(seen)
-        pc += 2 + 2 * toggle + 2 * per * bin(flags).count("1")
-    return "no terminator in %d commands" % limit, len(seen)
-
-
-def stream_ok(data, size, off):
-    return walk(data, size, off)[0] in ("end", "loop")
+        pc += 2 * command_words(opcode, flags, toggle)
+    return "no terminator in %d commands" % limit
 
 
 def main() -> int:
@@ -173,87 +164,50 @@ def main() -> int:
         print("FAIL: no FTMarioAnim*/FTFoxAnim* under %s" % BANK)
         return 1
 
-    files = ok_files = 0
-    slots = decoded = 0
-    externs = 0
-    bad = []
+    scripts = clean = 0
+    aobj16 = aobj32 = 0
+    failures = []
     for path in paths:
         f = load(path.read_bytes())
         if f is None:
-            bad.append((path.name, "no RELO header / size mismatch"))
+            failures.append((path.name, "no RELO header / size mismatch"))
             continue
-        files += 1
-        if f["extern"] != RELOC_END or f["n_extern"]:
-            externs += 1
-        try:
-            chain = fixups(f)
-        except ValueError as exc:
-            bad.append((path.name, str(exc)))
+        if f["file_id"] in AOBJ32_IDS:
+            aobj32 += 1
             continue
-        good = 0
-        for _slot, target in chain:
-            slots += 1
-            if stream_ok(f["data"], f["size"], target):
-                decoded += 1
-                good += 1
-        if good == len(chain) and chain:
-            ok_files += 1
-        elif chain:
-            bad.append((path.name, "%d of %d targets decoded"
-                        % (good, len(chain))))
+        aobj16 += 1
+        fx = fixups(f)
+        if not fx:
+            failures.append((path.name, "no relocated entries"))
+            continue
+        normalize(f, fx)
+        for _slot, target in sorted(fx.items()):
+            scripts += 1
+            status = walk(f["data"], f["size"], target)
+            if status in ("end", "loop"):
+                clean += 1
+            elif len(failures) < 12:
+                failures.append((path.name, status))
 
-    rate = (decoded / slots) if slots else 0.0
-    print("files parsed            : %d of %d" % (files, len(paths)))
-    print("relocated slots         : %d" % slots)
-    print("files with extern fixups: %d  (0 means the generator needs only the "
-          "internal chain)" % externs)
-    print("slots whose target decodes with the NAIVE walker : %d (%.1f%%)"
-          % (decoded, 100 * rate))
+    rate = (clean / scripts) if scripts else 0.0
+    print("AObjEvent16 files : %d" % aobj16)
+    print("AObjEvent32 files : %d  (ids %s -- routed to the other decoder)"
+          % (aobj32, ", ".join("0x%x" % i for i in sorted(AOBJ32_IDS))))
+    print("scripts walked    : %d" % scripts)
+    print("scripts well-formed : %d (%.1f%%)" % (clean, 100 * rate))
+    if failures:
+        print("\nfailures (%d shown):" % len(failures))
+        for name, why in failures[:12]:
+            print("   %-20s %s" % (name, why))
 
-    if files != len(paths) or any("chain" in why or "range" in why
-                                  for _n, why in bad):
-        print("\nFAIL: the relocation layer itself did not read cleanly.")
-        for name, why in bad[:12]:
-            print("   %-22s %s" % (name, why))
+    if rate < 1.0:
+        print("\nFAIL: every AObj16 script in this bank decoded before. A "
+              "script that no longer does means the reader or the bank moved.")
         return 1
-
-    print("""
-FTANIM_RELOC_LAYER=CONFIRMED  All 301 files carry a valid RELO header whose
-0x50 + data_size is the file length exactly; every internal relocation chain
-terminates at 0xffff with every target in range; no file uses extern fixups;
-and every relocated slot lies in the contiguous entry-array prefix (24-28
-entries a file). That layer is settled; write the generator against it.
-
-FTANIM_STREAM_LAYER=NOT ESTABLISHED  %.1f%% of entry targets decode. Read that
-as an open question, not as a nearly-working reading -- and do NOT spend the
-next session re-testing the hypotheses already falsified here, each of which
-looked right:
-
-  * entry words as (u16 joint_index, u16 byte_offset)   38.8%%
-  * the same with the *4 word-index scaling corrected   38.9%%
-  * halfword lanes swapped inside each 32-bit word,
-    which the 32-bit BE->LE pass really does produce    42.5%%
-  * the exact per-opcode advance transcribed from the
-    parser (command + toggle payload + one target per
-    set flag bit, two for SetValRate)                   39.9%%
-  * four variants of it: C-truncating division for a
-    backward Loop, jump base at pc vs pc+2,
-    SetTargetRate per=0, Event1611 per=1, SetValRate
-    per=1                                          38.8-40.0%%
-
-That the advance rule barely moves the number is the finding. A wrong advance
-compounds and would separate cleanly from a right one; six readings landing
-within 1.2 points of each other say the failure is upstream of the walk -- most
-entry targets are not the start of an AObjEvent16 stream at all, whatever they
-are. Pass rate by entry index is scattered from 5.7%% to 90.7%% with no
-positional structure, so the array bounds are not the problem either.
-
-STOP GUESSING AT IT. The cheap ground truth is the running ROM:
-`gcAddDObjAnimJoint` (objanim.c:181) stores the entry verbatim into
-`dobj->anim_joint.event16`, so one gdb read of that pointer during a known
-animation, minus the loaded file's base, is the exact offset of one real stream.
-One observation anchors the whole format; another hypothesis costs another
-session.""" % (100 * rate))
+    print("\nFTANIM_RELOC_FORMAT=SOLVED  header, u32 big-endian swap, threaded "
+          "internal fixups, derived table bound, script-region lane unswap, and "
+          "MSB-first command bits -- every script in all %d AObj16 files walks "
+          "to End or a Loop. The generator can read the bank." % aobj16)
     return 0
 
 

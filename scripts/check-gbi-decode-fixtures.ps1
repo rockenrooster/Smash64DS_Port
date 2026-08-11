@@ -78,6 +78,19 @@ $animNullGuardChecker = Join-Path $PSScriptRoot 'check_anim_null_guard.py'
 if ($LASTEXITCODE -ne 0) {
     throw "AOBJ_ANIM_NULL guard totality check failed with exit code $LASTEXITCODE."
 }
+
+# Cycle 117, slice 32's reader. Reproduces the ROM's figatree load pipeline on
+# the host and walks every script in the Mario/Fox animation bank: 5,629 of
+# 5,629 in all 297 AObj16 files. It is registered because the AOT generator will
+# be built on this reading, and a silent drift -- a re-fetched bank, an edit to
+# the normalize passes in reloc_backend_assets.c -- would otherwise surface as
+# wrong baked animation rather than as a failure. Skips cleanly when decomp/ is
+# absent. Host-only, ~3 s.
+$ftanimRelocReader = Join-Path $PSScriptRoot 'ftanim_reloc_probe.py'
+& python -B $ftanimRelocReader
+if ($LASTEXITCODE -ne 0) {
+    throw "Figatree reloc reader failed with exit code $LASTEXITCODE."
+}
 function Assert-Equal {
     param(
         [object]$Actual,
