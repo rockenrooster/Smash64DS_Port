@@ -52,6 +52,19 @@ $mpLineExtentChecker = Join-Path $PSScriptRoot 'check_mp_line_extent_reject_exac
 if ($LASTEXITCODE -ne 0) {
     throw "MP line-extent reject exactness failed with exit code $LASTEXITCODE."
 }
+
+# Cycle 117, slice 32's prerequisite. The AOT dense-track animation generator
+# can only be correct if it covers every figatree opcode the runtime parser
+# covers, and can only be PROVEN correct if that set is finite and known. It is:
+# 15, all handled, none invented. This asserts it stays that way, because the
+# failure mode is a generator that bakes tracks for a format it has not fully
+# enumerated -- silent, and in generated data that looks fine. Skips cleanly
+# when decomp/ is absent. Host-only, ~2 s.
+$ftanimOpcodeChecker = Join-Path $PSScriptRoot 'check_ftanim_opcode_surface.py'
+& python -B $ftanimOpcodeChecker
+if ($LASTEXITCODE -ne 0) {
+    throw "Figatree opcode surface check failed with exit code $LASTEXITCODE."
+}
 function Assert-Equal {
     param(
         [object]$Actual,
