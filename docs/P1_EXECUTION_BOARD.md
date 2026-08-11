@@ -5104,6 +5104,51 @@ from this table is arithmetic, not a measurement — removing 29% of the work al
 changes which frames ARE the top 80.
 
 
+### Slice 41: 30 Hz poses REJECTED — and a route A/B cannot price a gameplay change
+
+Cycle 119, one binary (`builds/build-c119-pose-route`, `NDS_R2_BOTH_CPU=1`),
+1,600 frames from 438. `gNdsR2PoseRateRoute` 0 → 1 skipped pose EVALUATION on
+logic update 0 and kept it on update 1, leaving the `length` advance at 60 Hz so
+animation timing stayed bit-identical. Full evidence:
+`artifacts/performance/2026-08-11_pose-rate/FINDING.md`.
+
+**Engagement was total and the gate did not move.** 149,323 DObj passes and
+586,162 nodes skipped — exactly half, as E61's "`GOBJ_FLAG_NOANIM` skips are 0"
+predicts. `WORK-H` P50 959,360 → 966,144, P95 1,255,104 → **1,262,144**. Arm A
+reproduces the banked gate to within 3,008.
+
+**The delta is not a cost, because the arms stopped playing the same match.**
+End-of-match damage 130/51 versus **33/65** on one poked bit. `SCPU` — the CPU
+decision proc, which evaluates no poses — moved −8,256 (−20%). Per-frame
+correlation +0.062, windowed delta swinging −24,896 to **+95,455**.
+
+**Standing rule: a one-binary route A/B is valid only for a change that cannot
+alter gameplay state.** The route form exists to delete the ±8,544 cross-build
+placement floor, and it does — but it assumes both arms walk the same
+trajectory. A change collision reads breaks that, and the delta then prices two
+different matches. Such a candidate needs a fixed input replay, or must be
+priced by its own subsystem cost rather than by frame cost.
+
+Independently disqualifying: `PROJECT_GOAL.md` requires Fox to "use behavior
+equivalent to the original Level-3 CPU", and a 20% shift in the CPU proc is a
+changed CPU, not a changed picture. The route has been removed from the tree.
+
+**The animation lane is now out of fidelity-free levers.** Requirement 4 already
+made the kernel fixed-point; E61 fixed the mix at Cubic 54.8% / Step 43.6% /
+Linear 1.7% with zero discarded evaluations, so there is no memoization to take
+and no pass to delete. Band A's other 80/80 cluster (soft float, ~34,006 ticks)
+is the next candidate.
+
+**Harness defect fixed on the way.** `sample-tick-hud-buckets.ps1` labels ring
+rows by counting backward from the presented-frame counter while recording that
+ring slots need not equal presented frames; a stop with `skew == -1` therefore
+collides its first label with the previous stop's last **by construction**. Five
+such stops, five duplicates, exactly at those rows — it cost two whole-match runs
+before the pattern (all at multiples of `-RingStopStride`) was seen. The guard
+now classifies a skew-explained seam and continues without an override, and
+still fails unconditionally on an identical payload or a duplicate away from a
+seam — which is what caught the cycle-118 vertex-memo defect.
+
 ### Slice 40: the attach path — NOT BUILT. The measurement killed it before the build.
 
 The attach path was declared the next architectural slice and was one step from

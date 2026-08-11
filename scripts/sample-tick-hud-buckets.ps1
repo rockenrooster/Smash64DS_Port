@@ -678,6 +678,12 @@ try {
         } else { $null }
         $stitched = New-Object 'System.Collections.Generic.List[uint64[]]'
         $ringStopSkews = New-Object 'System.Collections.Generic.List[object]'
+        # Where each stop's rows begin in $stitched, and the skew that stop was
+        # read with. Together these let the duplicate-frame guard below tell a
+        # LABELLING collision at a stop seam from a bad read, which it could not
+        # do before and which cost two whole-match runs on 2026-08-11.
+        $stopRowStart = New-Object 'System.Collections.Generic.List[int]'
+        $stopSkew = New-Object 'System.Collections.Generic.List[int]'
         $ringStopReads = New-Object 'System.Collections.Generic.List[object]'
         $prevStopValues = @(0..([Math]::Max($PerStopGlobals.Count - 1, 0)) |
             ForEach-Object { [uint64]0 })
@@ -790,6 +796,13 @@ try {
                 })
                 $delta
             }
+            # Read the skew back out of the record rather than off $skew: that
+            # variable is not assigned on the k == 0 pass, and PowerShell's `if`
+            # does not open a scope, so it would silently carry the PREVIOUS
+            # stop's value into the first stop.
+            $stopRowStart.Add($stitched.Count)
+            $stopSkew.Add($(if ($k -eq 0) { 0 } else {
+                [int]$ringStopSkews[$ringStopSkews.Count - 1].skew }))
             # Oldest-first walk of just this stop's new slots, ending at $head.
             $start = (($head - $newCount) % $ringWindow)
             if ($start -lt 0) { $start += $ringWindow }
@@ -867,7 +880,43 @@ try {
         # rows in that case throws away the very data the run was for.
         $anyIdentical = @($dupIndex | Where-Object {
             ($rows[$_] -join ',') -eq ($rows[$_ - 1] -join ',') }).Count -gt 0
-        if ($AllowRepeatedFrames -and (-not $anyIdentical)) {
+        # WHICH DUPLICATES ARE ARITHMETIC RATHER THAN MEASUREMENT.
+        #
+        # The stitcher labels each row by counting BACKWARD from the
+        # presented-frame counter read at its stop, so the first row of stop k
+        # is labelled $frame - $delta + 1 where $delta is that stop's RING
+        # slots. The stop separately records skew = presentedFrames - ringSlots
+        # and this harness deliberately refuses to assert skew == 0 (see the
+        # comment where it is computed). Put those together: skew == -1 makes
+        # `$frame - $delta + 1` equal the previous stop's last label exactly,
+        # and in general a stop with skew < 0 collides on its first -skew rows.
+        # The collision is produced by the labelling arithmetic; the ring slots
+        # underneath it are distinct real iterations.
+        #
+        # This does NOT soften the guard. An identical payload still fails
+        # unconditionally, and so does any duplicate away from a seam -- which
+        # is what caught the cycle-118 vertex-memo defect, whose four duplicates
+        # included one that was not at a stop boundary. It only stops the
+        # harness from reporting its own labelling as a suspected match change,
+        # which on 2026-08-11 cost two whole-match runs before the pattern (all
+        # five duplicates at exact multiples of -RingStopStride) was noticed.
+        $seamIndex = @(if ($RingDump) {
+            for ($k = 1; $k -lt $stopRowStart.Count; $k++) {
+                for ($n = 0; $n -lt (-$stopSkew[$k]); $n++) {
+                    $stopRowStart[$k] + $n - $firstRow
+                }
+            }
+        })
+        $unexplained = @($dupIndex | Where-Object { $seamIndex -notcontains $_ })
+        if ((-not $anyIdentical) -and ($unexplained.Count -eq 0)) {
+            Write-Warning ("Tick-HUD samples repeated a presented frame " +
+                "($($dupIndex.Count) of $($rows.Count)). EVERY duplicate is a " +
+                'ring-stop seam whose recorded skew explains the label ' +
+                'collision, and no payload repeats, so these are distinct real ' +
+                'iterations that share a frame LABEL. Percentiles are over the ' +
+                'iterations and stand; the frame ids at those seams do not. ' +
+                "Seam rows: $($dupIndex -join ',').")
+        } elseif ($AllowRepeatedFrames -and (-not $anyIdentical)) {
             Write-Warning ("Tick-HUD samples repeated a presented frame " +
                 "($($dupIndex.Count) of $($rows.Count)), every duplicate a REAL " +
                 'second iteration. Continuing because -AllowRepeatedFrames was ' +
@@ -879,6 +928,13 @@ try {
                 "columns: frame,$($bucketNames -join ',')" +
                 "$(if ($fallbackFields) { ',fbTotal' })`n" +
                 ($detail -join "`n") +
+                "$(if ($unexplained.Count -ne 0) { "`n$($unexplained.Count) of " +
+                    "$($dupIndex.Count) duplicates are NOT at a ring-stop seam " +
+                    "(rows $($unexplained -join ',')); a seam collision is " +
+                    'explained by that stop`s recorded negative skew and these ' +
+                    'are not, so the change altered the match rather than the ' +
+                    'labelling. Diff this set against a re-run before reaching ' +
+                    'for -AllowRepeatedFrames.' })" +
                 "$(if ($anyIdentical) { "`nAt least one duplicate is IDENTICAL " +
                     '(stale read) -- -AllowRepeatedFrames will NOT suppress that.' })")
         }
