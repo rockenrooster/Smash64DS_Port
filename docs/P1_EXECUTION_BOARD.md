@@ -4463,6 +4463,41 @@ offline (the Requirement-4 pattern -- enumerate the enumerable half), then
 switch the runtime over behind `gNdsR2AnimCutRoute` so the old and new paths can
 be A/B'd on one binary.
 
+**The parse call IS the AObj list walk -- established by arithmetic, not
+theory.** Lines 442-464 of `battleship_ftanim.c` clear a 10-entry
+`track_aobjs[]` and then walk the DObj's whole `aobj` chain to rebuild it. Each
+iteration is roughly ten instructions (load `track`, two range compares, store,
+call `ndsR2AnimAObjToQ`, load `next`) over about ten nodes -- **~100
+instructions against the 95.7 the profile measures per call.** The walk is the
+call. `ndsR2AnimAObjToQ` is NOT the cost: once a node is migrated it early-outs
+on `kind >= NDS_R2_AQ_KIND_BASE` in about five instructions.
+
+The nodes are 36 bytes each and reached by pointer, so ~360 scattered bytes a
+call against a 4 KB D-cache, 200,231 times a match. That is the working-set
+traffic to delete, and `track_aobjs[]` is invariant while the AObj list is
+unchanged -- it is rebuilt from scratch every call.
+
+**Two traps for whoever cuts it, both already paid for:**
+
+1. **`NDS_R2_FTANIM_ENSURE()` ALLOCATES on NULL** -- `if (track_aobjs[i] ==
+   NULL) track_aobjs[i] = gcAddAObjForDObj(...)`. So a lazy or cached table that
+   misses a site does not crash and does not read garbage; it **silently
+   allocates a duplicate AObj**. Any lazy build must live INSIDE `ENSURE`,
+   before that NULL test, so no site can bypass it. There are **41
+   `track_aobjs[i]` reads against only 7 `ENSURE()` calls** -- ENSURE gates a
+   case, not a read -- so confirm every read sits in a case that called ENSURE
+   before relying on that.
+2. **The `event16 == NULL` exit never reads the table.** It calls
+   `ndsR2AnimAdvanceTail` and returns, so on that path the entire clear-and-walk
+   is dead work. Hoisting that one check above the walk is a pure, provable
+   deletion -- but measure how often the path is taken before spending a build
+   on it, because a mid-script animation never reaches it.
+
+Do NOT reach for a cross-call cache of `track_aobjs[]`. Cycle 117 lost two
+slices to caches in the neighbouring collision code, and the second failure
+(29b) is still unexplained. A per-call lazy build inside `ENSURE` has no
+cross-call state and therefore none of that risk.
+
 **Judge it against SINT, not WORK-H alone.** Cycle 117 spent three collision
 slices proving that a 15,744-tick cut to one bucket does not clear the
 +-8,544 WORK-H placement floor on its own. SINT is the animation bucket; its
