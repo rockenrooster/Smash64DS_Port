@@ -4322,6 +4322,104 @@ not linked; `check_r2_cubic_error_bound.py` bounds the result (0.0028 rad /
 `ndsR2CubicValueFixed` must stay `target("arm")` for SMULL --
 [[thumb-hides-64bit-cost]] cost +36,032 P95 once already.
 
+### Cycle 117: the gate is RE-BANKED and the animation lane is fully anatomised
+
+**`WORK-H` P95 1,317,440 on the both-CPU gate arm** (P50 973,568, mean
+1,016,526; 1600 samples, DLDI on, `NDS_R2_BOTH_CPU=1`, 5 of 1600 frames
+repeated). The 1,447,318 in `HANDOFF.md` was `f082b3c8`; cycles 110-116 took
+**-129,878** off it. **Gap to the 1.12M gate is 197,440.** `SRC` P95 653,696 is
+its largest named bucket, `SINT` P95 336,960.
+
+**Whole-match profile census, both-CPU arm, 1600 frames**
+(`artifacts/performance/2026-08-10_c117-lane/`, 2.6 GB CSV, 4,028,886,502
+cycles). Aggregated by family, cycles/frame:
+
+| family | cyc/frame | ticks/frame | % of over-gate premium |
+|---|---:|---:|---:|
+| soft float (leaf) | 187,396 | 93,567 | 7.7% |
+| **anim playback** | **105,486** | **52,669** | 2.0% |
+| map collision | 90,132 | 45,003 | 0.7% |
+| bulk memory | 80,240 | 40,064 | 4.1% |
+| **anim parse** | **55,200** | **27,561** | 2.5% |
+| hud/printf (INSTRUMENT) | 47,785 | 23,858 | 16.3% |
+| anim material | 21,559 | 10,764 | 0.3% |
+| asset load/fat | 21,228 | 10,599 | 5.2% |
+| anim change | 13,496 | 6,738 | 2.2% |
+
+**Read the premium column with two subtractions.** `armWaitForIrq` is **41.6%**
+of it and is idle -- an over-gate frame spans more VBlanks, so it contains more
+idle, which is an artifact of the split and not work. The **hud/printf chain is
+16.3% and is the tick-HUD instrument**, which `WORK-H` already excludes (that is
+what the `-H` means). Net attributable premium is ~211,400 cyc/frame, and
+**animation is 7.0% of it while being 97,733 ticks/frame of FLAT body cost** --
+so animation is a P50-and-P95-together lever, not a tail lever.
+
+**Exact per-symbol anatomy** (one streaming pass over the CSV; entry-PC `insns`
+IS the call count):
+
+| symbol | cyc/frame | calls/frame | insns/call | cyc/insn |
+|---|---:|---:|---:|---:|
+| `gcPlayDObjAnimJoint` | 42,484 | 106.9 | 152 | 2.61 |
+| `ndsR2AnimValueQ` | 41,942 | **280.0** | 89.5 | **1.67** |
+| `ndsR2FtAnimParseDObjFigatree` | 37,842 | 103.5 | 115.7 | 3.16 |
+| `gcPlayAnimAll` | 16,567 | 10.4 | 398 | 4.00 |
+| `ftParamUpdateAnimKeys` | 13,588 | 4.1 | 971 | 3.41 |
+| `ndsBaseGcPlayMObjMatAnim` | 10,947 | 69.2 | 57 | 2.78 |
+| `BuildFighterTraRotRpyDirect20p12` | 27,204 | 38.4 | 296 | 2.40 |
+| `__aeabi_fadd` | 70,124 | **1,900.5** | 31 | 1.19 |
+| `__aeabi_fmul` | 46,756 | **1,840.9** | 22 | 1.14 |
+
+**Requirement 4 emptied the float out of fighter joint animation, and the
+soft-float caller census proves it.** 46,856 GDB samples on
+`__aeabi_fadd`+`__aeabi_fmul` entry (58,358 ticks/frame class):
+
+| caller | share | ticks/frame |
+|---|---:|---:|
+| `ndsMPFCSegmentCrossesKernel` | 16.2% | 9,476 |
+| `ndsStageMPAdjustFloorLoopWallSweep` | 13.8% | 8,056 |
+| `ndsBaseGcPlayMObjMatAnim` | 7.6% | 4,424 |
+| `syMatrixLookAtReflectF` | 6.2% | 3,617 |
+| `ndsR2FtAnimParseDObjFigatree` | 4.6% | 2,665 |
+| `ndsBaseMPProcessCheckTest{R,L}WallCollisionAdjNew` | 4.8% | 2,850 |
+
+**Map collision is 36.6% of the whole soft-float class (~21,300 ticks/frame)**
+and is the next lane after this one, exactly as the goal predicted.
+`gcPlayDObjAnimJoint`, `ndsR2AnimValueQ` and `ndsR2CubicValueFixed` **do not
+appear at all** -- fighter joint evaluation is out of the float class entirely.
+What animation float remains is **material** animation (4,424, deliberately left
+float because MObj AObjs are shared with stage and effects) and the parser's
+per-DObj `anim_wait -= anim_speed` / `anim_frame += anim_speed` (2,665; those
+are `DObj` f32 fields with `F32_MIN`-derived sentinels and readers everywhere,
+so they are not cheap to convert).
+
+**So what is left in animation is memory traffic and instruction count.** Three
+sized targets, and the numbers say which:
+
+1. **The AObj working set.** `gcPlayDObjAnimJoint` PC `0x02001484` costs
+   **9,136 cyc/frame at 25.64 cyc/insn over 356 executions -- 21.5% of the
+   function in ONE instruction.** 356 nodes x 36 B = **12.8 KB streamed every
+   frame through a 4 KB D-cache**, and the nodes are individually
+   `syTaskmanMalloc`'d 4-byte-aligned and recycled through a LIFO free list
+   (`gcGetAObjSetNextAlloc`, `objman.c:636`), so a DObj's list is scattered and
+   each 36-byte node straddles two 32-byte lines.
+2. **The per-node call.** `ndsR2AnimValueQ` is `noinline` + `target("arm")` and
+   is called **280 times a frame from one site**; its `push {r4-r9,sl,fp,lr}`
+   costs 2,529 cyc/frame at 9.03 cyc/insn and its `pop` 4,154 at 14.83 --
+   **6,683 cyc/frame, 16% of the evaluator, to save and restore registers.**
+   The stack is in DTCM so this is not a miss; it is nine registers.
+3. **The parser's per-DObj early-out.** 103.5 calls a frame at 115.7
+   instructions, most of which return at `anim_wait > 0` having done two
+   soft-float operations.
+
+**A regression found by disassembly, not by measurement.** Requirement 4's first
+cut folded all three arms into one shared `s64 acc`. GCC therefore sign-extended
+`length`, `value_base` and `rate_target` to 64 bits **before the kind branch**,
+expanded every `(s64)a * b` from one multiply into a `mul`/`mla`/`umull` triple,
+and spilled 20 bytes of stack. Narrowing each arm to its own `s32` result took
+the stack frame to 12 bytes. **Check the disassembly of this kernel for hoisted
+`asr #31` and stack spills after touching it** -- the host error bound cannot
+see code shape, and it reported byte-identical numbers across the fix.
+
 ### Slice 25 (ARCHITECTURAL): Requirement 4 SHIPS -- the fighter AObj is fixed point
 
 **`WORK-H` P50 -23,360, P95 -37,504; `SINT` P50 -24,896; one binary.**

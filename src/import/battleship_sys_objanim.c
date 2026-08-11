@@ -450,20 +450,36 @@ static NDS_R2_CUBIC_ATTR f32 ndsR2AnimValueQ(const AObj *aobj)
     s32 len = ndsR2AQLoad(aobj->length);            /* Q12 frames */
     s32 inv = ndsR2AQLoad(aobj->length_invert);     /* Q30 recip, or Q12 frames */
     s32 vb = ndsR2AQLoad(aobj->value_base);         /* Q12 */
-    s64 acc;
+    u32 kind = aobj->kind;
+    s32 out;
 
-    if (aobj->kind == NDS_R2_AQ_KIND_STEP)
+    /* Each arm keeps its OWN result in an s32 and its own `s64` local, and the
+     * cubic tests first so it is the fall-through.
+     *
+     * That shape is load-bearing, not style. Written with one `s64 acc` shared
+     * across the three arms (cycle 116's first cut, measured on the shipped
+     * ROM) GCC sign-extended `length`, `value_base` and `rate_target` to 64 bits
+     * BEFORE the branch, expanded every `(s64)a * b` from one SMLAL into a
+     * mul/mla/umull triple, and spilled 20 bytes to the stack to hold the
+     * doubled register pressure -- 241 ARM instructions where the float kernel
+     * it replaced needed far fewer for the same curve. Narrowing the arms is
+     * worth more than any arithmetic left in them. Check the disassembly for
+     * `umull`/`adc` pairs after touching this. */
+    if (kind == NDS_R2_AQ_KIND_STEP)
     {
         /* `len` unclamped on purpose: Step is a compare and a select, and
          * clamping it would change which of the two values a block longer than
-         * the clamp selects. */
-        acc = (inv <= len) ? ndsR2AQLoad(aobj->value_target) : vb;
+         * the clamp selects. Neither value can be out of range -- both were
+         * written by the parser from an s16 -- so no clamp on the way out. */
+        out = (inv <= len) ? ndsR2AQLoad(aobj->value_target) : vb;
     }
-    else if (aobj->kind == NDS_R2_AQ_KIND_LINEAR)
+    else if (kind == NDS_R2_AQ_KIND_LINEAR)
     {
         /* Q16 rate, not Q12 -- see NDS_R2_AQ_RF. */
-        acc = (s64)vb + ((((s64)len * ndsR2AQLoad(aobj->rate_base)) +
+        s64 lin = (s64)vb + ((((s64)len * ndsR2AQLoad(aobj->rate_base)) +
             (1 << (NDS_R2_AQ_RF - 1))) >> NDS_R2_AQ_RF);
+
+        out = ndsR2AnimClamp64(lin);
     }
     else
     {
@@ -483,18 +499,18 @@ static NDS_R2_CUBIC_ATTR f32 ndsR2AnimValueQ(const AObj *aobj)
             NDS_R2_AQ_VF);
         s32 h_rt = (s32)((((s64)lenc * (t2 - t)) + (1 << (NDS_R2_AQ_VF - 1))) >>
             NDS_R2_AQ_VF);
+        s64 acc = (s64)vb * h_vb;
 
-        acc = (s64)vb * h_vb;
         acc += (s64)ndsR2AQLoad(aobj->value_target) * h_vt;
         acc += (s64)ndsR2AQLoad(aobj->rate_base) * h_rb;
         acc += (s64)ndsR2AQLoad(aobj->rate_target) * h_rt;
-        acc = (acc + (NDS_R2_AQ_BONE / 2)) >> NDS_R2_AQ_BF;
+        /* The float kernel saturated at each of its six conversions and so
+         * could not reach here out of range; with the conversions gone this
+         * accumulator is the only place left that can. */
+        out = ndsR2AnimClamp64((acc + (NDS_R2_AQ_BONE / 2)) >> NDS_R2_AQ_BF);
         gNdsR2CubicEvals++;
     }
-    /* One clamp for all three arms. The float kernel saturated at each of its
-     * six conversions and so could not reach here out of range; with the
-     * conversions gone this is the only place left that can. */
-    return ndsR2FixedToF32(ndsR2AnimClamp64(acc), NDS_R2_AQ_VF);
+    return ndsR2FixedToF32(out, NDS_R2_AQ_VF);
 }
 /* NDS_R2_CUBIC_FIXED_KERNEL_END */
 
