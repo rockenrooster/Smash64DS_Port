@@ -4420,6 +4420,54 @@ the stack frame to 12 bytes. **Check the disassembly of this kernel for hoisted
 `asr #31` and stack spills after touching it** -- the host error bound cannot
 see code shape, and it reported byte-identical numbers across the fix.
 
+### Slice 31 (SPECIFIED, NOT STARTED): the animation lane's AOT rewrite
+
+Re-profiled after the collision work. **Post-Requirement-4 animation is three
+symbols and 195,628,633 cycles -- 4.86% of all cycles, 5.9% of non-idle:**
+
+| symbol | cycles | % | tier | bytes |
+| --- | ---: | ---: | --- | ---: |
+| `gcPlayDObjAnimJoint` | 67,974,137 | 1.69 | `.text.hot` | 604 |
+| `ndsR2AnimValueQ` | 67,107,587 | 1.67 | `.main` | 964 |
+| `ndsR2FtAnimParseDObjFigatree` | 60,546,909 | 1.50 | `.main` | 2,252 |
+
+**The parser, measured properly.** 200,231 calls a match (`gNdsR2FtAnimParseCalls`,
+the runtime counter -- see the warning below), 19,155,412 instructions, so **302
+cycles and 95.7 instructions per call at 3.16 cyc/insn**. `.main` runs 42.3%
+memory stall, and 3.16 cyc/insn on a 95-instruction body is stall, not
+arithmetic: this is pointer-chasing through decomp figatree data, which is
+exactly what `PROJECT_GOAL.md`'s compute-once rule and the goal's "delete
+runtime interpretation, pointer chasing, conversions and working-set traffic"
+both name.
+
+**Do not use entry-PC call counts on this function.** Its lowest address
+executed **50** times against 19.1M instructions in the body -- 383K
+instructions a call, which is impossible. It is not entered at its base PC, so
+the trick that has been reliable elsewhere silently undercounts by 4,000x here.
+Cross-check every entry-PC count against a runtime counter before believing it.
+
+**The slice.** Requirement 4 made the animation VALUES fixed point; it left the
+STRUCTURE as a decomp object graph -- a linked `AObj` walk with a
+`void *interpolate` per node, refilled by a runtime parse. Bake dense
+per-(fighter, motion) fixed-point track records at build time and all three
+symbols collapse together: no parse, no list walk, no per-node dispatch, and a
+sequential working set instead of >30 KB of pointer chasing against a 4 KB
+D-cache. That is the ~70,000 cyc/frame of stall the cycle-116 analysis said any
+animation rewrite has to beat, and it is the same ~4.86% these three symbols
+cost.
+
+**It has a build-tooling half and must not be started as a runtime-only edit.**
+Generic generator, specialized runtime, per `PROJECT_GOAL.md`. Expect it to span
+several slices: emit the tracks, prove the emitted data equals the parsed data
+offline (the Requirement-4 pattern -- enumerate the enumerable half), then
+switch the runtime over behind `gNdsR2AnimCutRoute` so the old and new paths can
+be A/B'd on one binary.
+
+**Judge it against SINT, not WORK-H alone.** Cycle 117 spent three collision
+slices proving that a 15,744-tick cut to one bucket does not clear the
++-8,544 WORK-H placement floor on its own. SINT is the animation bucket; its
+current gate figures are P50 148,928 / P95 335,552.
+
 ### Slice 30: invalidate where the invariant breaks, not where it is read
 
 The fix slice 29's failure asked for. Every write to `gMPCollisionGeometry` --
