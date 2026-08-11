@@ -4658,6 +4658,42 @@ path is the event-loop dispatch and the per-command field writes themselves, and
 those are what the dense-track player replaces wholesale -- there is no
 intermediate cut left between "leave it alone" and "build the player".
 
+**Step 13: RAM refutes step 9. The bake must go to ROM after all.**
+
+Step 9 moved the bake from build time to LOAD time to keep the asset pipeline
+off the critical path, and flagged that the record pool had to be sized against
+RAM before the player was written. Sized it. It does not fit.
+
+A write record is a track id, a kind and seven Q fields: **32 bytes** padded.
+Per animation that is (commands x tracks touched) records:
+
+| commands | tracks | x10 concurrent animations |
+| ---: | ---: | ---: |
+| 8 | 2 | 5,120 B |
+| 8 | 4 | 10,240 B |
+| 20 | 2 | 12,800 B |
+| **20** | **4** | **25,600 B -- OVER** |
+| 40 | 4 | 51,200 B |
+| 40 | 8 | 102,400 B |
+
+The heap low-water mark is **24,404 B and already inside the 25,600 GObj-cap
+threshold** (`ram-is-not-free`), and +14 KB of bss once stopped the ROM booting.
+So anything past the smallest bracket is infeasible, and fighter animations are
+not in the smallest bracket.
+
+**Step 9 is withdrawn: the bake goes to ROM, at build time.** `PROJECT_GOAL.md`
+explicitly trades ROM for speed -- tens or hundreds of megabytes are sanctioned
+-- and ROM is the only budget with room for this. That puts the asset pipeline
+back on the critical path: a generator, a blob, `EXPECTED_CENSUS_SHA256`
+re-pinning, and the load-time relocation of the `interpolate` offset.
+
+**What that does to the decision.** Slice 32 is now: build-tooling half plus
+runtime half plus asset re-pinning, for **~7.8% of the gate gap**, in the
+subsystem where a timing slip is a GAMEPLAY bug because the script calls
+`func_anim`. The renderer is 26.32% of non-idle with `PROJECT_GOAL.md`'s
+sacrifice order explicitly permitting cheap approximations there. **The ordering
+recommendation stands and is now quantified on both sides.**
+
 **Method note.** The table above was extracted wrong TWICE before it was right:
 the first pass ended each case at the inner flags-loop `break;` and the second
 tracked brace depth from the function rather than from the `switch`, and both
