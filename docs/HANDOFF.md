@@ -15,18 +15,22 @@ frames past the buzzer. Slips 0 in every row.
 
 | arm | role | `WORK-H` P50 | P95 | over gate |
 |---|---|---:|---:|---:|
-| **both-CPU** | **THE GATE (owner, 2026-08-05)** | 1,112,576 | **1,447,318** | 754/1600 |
-| **Boundary** mode 163 | shipped configuration | 1,082,112 | 1,476,672 | 673/1600 |
+| **both-CPU** | **THE GATE (owner, 2026-08-05)** | 973,568 | **1,317,440** | re-banked c117 |
+| **Boundary** mode 163 | shipped configuration | 920,192 | 1,113,408 | re-banked c116 |
 
-**Gate baseline is 1,447,318 as of `f082b3c8`**, less cycle 108's ~23,000,
-cycle 110's `WORK` −21,388 and −11,014, and cycle 116's `WORK-H` P50 −11,200.
-Neither arm is re-banked, so both rows are stale-high. The soak's long match is
+**Gate baseline is 1,317,440, re-banked 2026-08-10** at `29058a962fe` —
+**−129,878** off `f082b3c8`'s 1,447,318 over cycles 110–116. **Gap to the gate is
+197,440**, and `SRC` P95 653,696 is its largest named bucket. Both rows are
+current; re-bank before judging a new slice. The soak's long match is
 `NDS_R2_SOAK_MATCH_MINUTES`; `probe-match-window.ps1` reads the match timer out
 of the guest so a window cannot claim coverage it did not have. The owner's bar:
 the whole match under the P95 budget on the both-CPU config, loading states
 excluded; the shipped ROM stays the Boundary hwtri pair. `Makefile:305-308`
 forbids reporting a both-CPU P95 as the Boundary figure. **Re-pin
 `EXPECTED_CENSUS_SHA256` in the commit that changes what it covers.**
+**Next lane is map collision**: ~143,000 cyc/frame over ten symbols, 36.6% of
+the whole soft-float class. Slice 26 proved one kernel cannot clear the
+placement floor — stack its levers into one arm (board).
 
 ## What is dead, so nobody re-derives it
 
@@ -128,17 +132,13 @@ projection-skip still refuted. The animation lane above them is spent.
 **The `SINT` split is DONE.** `SINT` +88,082 = `ftMainPlayAnim` **+60,559**
 (animation) + `ftComputerProcessAll` +24,386 (map collision, not AI), retiring
 `SRC_CPI_OPTIMIZATION.md` items 4-6. **Force-load seam closed:** `ftmain.c:4623`
-**discards the return value**. **D-cache census run** (no build): loads average
-7.07 cyc/ex, excess 17.83%, largest site a DMA0CNT spin rather than a miss.
+**discards the return value**. D-cache census: loads 7.07 cyc/ex, excess 17.83%.
 
-**The animation lane is DONE — Requirement 4 shipped** (slice 25, board): the
-fighter `AObj`'s six `f32` slots carry Q values, discriminated by three new
-`kind` bytes on the field the evaluator already switched on. One binary,
-`gNdsR2AnimCutRoute` 7 vs 15: **`SINT` P50 −24,896, `WORK-H` P50 −23,360, P95
-−37,504**; `FTR` ±64, `STG` ∓64 and `gNdsR2CubicEvals` **285,210 in both arms**
-are the controls. **It does not move `FTR`** — only ~3,085 of that lane was ever
-in the bracket. `check_r2_cubic_error_bound.py` proves the parser half EXACT over
-393,216 inputs. **Do not re-add a float cache beside it.**
+**Fighter animation is fixed point — Requirement 4 shipped** (slice 25). One
+binary, `gNdsR2AnimCutRoute` 7 vs 15: **`SINT` P50 −24,896, `WORK-H` P50
+−23,360, P95 −37,504**; `FTR` ±64 and `gNdsR2CubicEvals` 285,210 in both arms
+are the controls. **It does not move `FTR`.** What is LEFT is ~70,000 cyc/frame
+of memory stall, not arithmetic — board prices it. **No float cache beside it.**
 
 **Do not bring a micro-fix** — R2-06 E11: a load-frame-only ~8,000 cannot be
 banked, because relinking moves the tail more than the saving. Clear ~16,000 in
