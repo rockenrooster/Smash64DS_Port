@@ -4420,6 +4420,56 @@ the stack frame to 12 bytes. **Check the disassembly of this kernel for hoisted
 `asr #31` and stack spills after touching it** -- the host error bound cannot
 see code shape, and it reported byte-identical numbers across the fix.
 
+### Slice 32, steps 1-2: the AOT generator's surface and its spec
+
+Both offline. No runtime change, no ROM, no divergence risk -- the board's own
+staging is generator, then offline proof, then the runtime switch, and
+everything before the switch is safe to do in pieces.
+
+**Step 1: the opcode surface is CLOSED.** 15 opcodes defined in the reference,
+all 15 handled by `ndsR2FtAnimParseDObjFigatree`, none invented by the port.
+`scripts/check_ftanim_opcode_surface.py` asserts both directions and is
+registered in `check-gbi-decode-fixtures.ps1`. A generator can only be proven
+correct against a finite known surface, and now that premise is checked rather
+than assumed.
+
+**Step 2: what each opcode actually writes**, extracted mechanically from the
+parser (all 15 cases accounted for):
+
+| opcode(s) | payload | ensure | segstart | AObj fields written |
+| --- | --- | --- | --- | --- |
+| `SetVal0RateBlock`+`SetVal0Rate` | yes | yes | **yes** | value_base, value_target, rate_base, rate_target, length_invert, length, kind |
+| `SetValBlock`+`SetVal` | yes | yes | - | value_base, value_target, rate_base, rate_target, length, kind |
+| `SetValRateBlock`+`SetValRate` | yes | yes | - | as above **+ length_invert** |
+| `SetTargetRate` | yes | yes | - | **rate_target only** |
+| `SetValAfterBlock`+`SetValAfter` | yes | yes | - | as above **minus rate_base** |
+| `Event1611` | yes | yes | - | (none) |
+| `SetTranslateInterp` | - | - | - | **interpolate** |
+| `Block`, `Loop`, `End`, `SetFlags` | - | - | - | (none) |
+
+**Two findings that decide the dense format:**
+
+1. **Only 6 of 15 opcodes write track state.** `Block`, `Loop`, `End` and
+   `SetFlags` write nothing, and `Event1611` consumes a payload while writing
+   nothing. So a baked track must encode CONTROL FLOW separately from TRACK
+   DATA -- a small control stream plus per-track segment arrays, not one flat
+   list of segments.
+2. **`SetTranslateInterp` writes `interpolate`, a POINTER INTO THE EVENT
+   STREAM**, not a value. It cannot be baked into a position-independent track
+   without resolving it at load time or changing its representation. **It is
+   the one opcode that blocks a fully static bake** -- and it is the same
+   opcode that was the sole exception in slice 31's `ENSURE` audit. Decide its
+   representation before writing the emitter; everything else follows the
+   table above mechanically.
+
+**Method note.** The table above was extracted wrong TWICE before it was right:
+the first pass ended each case at the inner flags-loop `break;` and the second
+tracked brace depth from the function rather than from the `switch`, and both
+produced a map claiming "(none)" for opcodes that write seven fields. It was
+caught by checking the output against the source read by eye. **A generator
+spec derived by script needs the same adversarial check as any other
+measurement.**
+
 ### The animation lane's CEILING, computed -- slice 32 cannot close the gate
 
 The goal asks for animation to be materially reduced or its remaining cost
