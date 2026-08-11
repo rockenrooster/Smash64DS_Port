@@ -4847,6 +4847,59 @@ walk IS the call". The three biggest single symbols are already visible:
 `ndsFighterMarioFoxDLAllDrawForSlot` 93,854,253, `ndsRendererCommitNativeStageSegment`
 93,101,009, `ndsRendererNativeEmitProductionPrimitiveGroups` 81,420,680.
 
+## RAM CENSUS (2026-08-11) — measured on the PUBLISHED P1 ROM, with reader proof
+
+Owner set the new target: free main RAM so animation residency can grow and
+gameplay-time asset streaming disappears. Census re-run against
+`smash64ds-battle-playable-hwtri.elf` — the ROM that ships
+([[smash64ds-nds-not-p1]]) — not the tickhud build, which carries ~26 KB more
+`.bss`. Artifact: `artifacts/performance/2026-08-11_ram-census/census.txt`.
+
+`.main.bss` **1,597,744** · `.main.rw` 136,996 · `.main` code/rodata 902,816.
+All `.bss`/`.data` symbols **1,743,144 B**. (`__sp_usr` is a linker-absolute
+symbol, not an object — excluding it is required or it reads as 184 MB.)
+
+| bytes | share | symbol | reader verdict |
+|---:|---:|---|---|
+| 441,600 | 25.3% | `gSYFramebufferSets` | **base touched by only 3 fns** |
+| 204,800 | 11.7% | `sNdsAudioFgmCache` | live |
+| 185,696 | 10.7% | `sNdsRelocSceneFileBuffer` | live |
+| 153,600 | 8.8% | `sOriginalSpritePreview` | **LIVE IN BATTLE** |
+| 153,600 | 8.8% | `sOriginalSpriteDisplayPreview` | **LIVE IN BATTLE** |
+| 32,768 | 1.9% | `…HardwareTextureScratch` | lifetime-overlay candidate |
+| 30,944 | 1.8% | `…Task36ReplayOwner` | audit lifetime |
+| 16,384 | 0.9% | `…HardwareTextureRefreshLarge` | lifetime-overlay candidate |
+| 13,824 | 0.8% | `sOriginalDLPreview` | **OPENING-ONLY — PROVEN** |
+| 7,776 | 0.4% | `sOriginalDLDisplayPreview` | **OPENING-ONLY — PROVEN** |
+
+Top 5 = 1,139,296 B = **65.4%**. Concentrated, not a thousand small globals.
+
+**Three reader findings, all from the linked ELF and none from grepping source
+([[linked-elf-is-the-reader-oracle]]):**
+
+1. **The DL preview pair (21,600 B) is proven opening-only.** Its entire API —
+   `ndsPlatformBeginOriginalDLPreview` / `Commit` / `Clear` — has exactly ONE
+   caller in the shipped ROM: `ndsOpeningRoomRenderDLPreview`. The opening is
+   explicitly out of scope for P1. This upgrades the prior "appears unused,
+   needs configuration proof" to proven-by-attribution. **Take this first.**
+2. **The sprite preview pair (307,200 B) is proven battle-LIVE.** Deletion is
+   refuted: `ndsBattlePlayablePacingStart` executes `movs r0,#1` then
+   `bl ndsPlatformSetOriginalSpriteOverlayEnabled` — battle turns the overlay
+   ON. The open question is not "is it dead" but "why two 150 KB main-RAM
+   images at once", which is an aliasing/lifetime question, not a deletion one.
+3. **`gSYFramebufferSets` is more tractable than 20 readers suggested.** Only
+   **three** functions hold its base address — `ndsBaseSCVSBattleStartScene`,
+   `ndsBaseSCManagerRunLoop`, `lbTransitionSetupTransition`. The ~17 scene-start
+   functions all hold `base+435,200`, a tail field, NOT the pixel buffers. So
+   the 441 KB of pixel storage has a very small real user set and the
+   architectural replacement is bounded work, not a 20-site refactor.
+
+**Method caveat:** the literal-pool scan matches any constant landing in the
+symbol's address range, so it produces false positives — `_svfiprintf_r` showed
+up holding `0x02200172`. Attribute a hit to a plausible caller before believing
+it; the three framebuffer-base holders were checked this way.
+
+
 ### ANIMATION'S OWN P95 NUMBER — 6.38% playback, and it CLUSTERS at 1.37x
 
 Every prior animation verdict this campaign was a MEAN. This is the first

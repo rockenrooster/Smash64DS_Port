@@ -1,0 +1,36 @@
+RAM CENSUS -- published P1 ROM smash64ds-battle-playable-hwtri.elf
+.main.bss 1,597,744 B  |  .main.rw 136,996 B  |  .main (code/rodata) 902,816 B
+all .bss/.data symbols: 1,743,144 B
+
+     bytes  share    cum  symbol
+----------------------------------------------------------------------------------------------------
+   441,600  25.3%  25.3%  gSYFramebufferSets
+                         3x 320x230 SW framebuffers. Base touched by only 3 fns: ndsBaseSCVSBattleStartScene, ndsBaseSCManagerRunLoop, lbTransitionSetupTransition. ~17 scene-starts touch +435,200 only (a tail field, NOT pixels).
+   204,800  11.7%  37.1%  sNdsAudioFgmCache
+                         live audio cache -- do not touch first
+   185,696  10.7%  47.7%  sNdsRelocSceneFileBuffer
+                         live asset staging -- do not touch first
+   153,600   8.8%  56.5%  sOriginalSpritePreview
+                         LIVE IN BATTLE: ndsBattlePlayablePacingStart does movs r0,#1 -> SetOriginalSpriteOverlayEnabled(1)
+   153,600   8.8%  65.4%  sOriginalSpriteDisplayPreview
+                         LIVE IN BATTLE (same overlay enable)
+    32,768   1.9%  67.2%  sNdsRendererHardwareTextureScratch
+                         scratch -- lifetime-overlay candidate
+    30,944   1.8%  69.0%  sNdsRendererTask36ReplayOwner
+                         replay storage -- audit lifetime
+    29,184   1.7%  70.7%  sNdsRelocLoadedFiles
+    27,136   1.6%  72.2%  sNdsFighterDLAllDrawStates
+    16,392   0.9%  73.2%  sNdsAudioBgmBuffers
+    16,384   0.9%  74.1%  sNdsRendererHardwareTextureRefreshLarge
+                         scratch -- lifetime-overlay candidate
+    13,824   0.8%  74.9%  sOriginalDLPreview
+                         ** OPENING-ONLY: sole caller chain is ndsOpeningRoomRenderDLPreview (Begin/Commit/Clear). Opening is OUT OF SCOPE for P1. **
+    13,312   0.8%  75.7%  sSYMainThread5Stack
+    12,800   0.7%  76.4%  sNdsRendererAdapterNativeOwnerMaterials
+    12,048   0.7%  77.1%  sNdsFighterStructPool
+    11,680   0.7%  77.8%  sNdsRendererAdapterNativeStageWorkspace
+----------------------------------------------------------------------------------------------------
+top 5 = 1,139,296 B = 65.4% -- concentrated, not death by a thousand globals
+
+PROVEN RECOVERABLE NOW: sOriginalDLPreview + sOriginalDLDisplayPreview = 21,600 B
+  evidence: linked-ELF caller attribution, one caller, opening-only, P1 out of scope
