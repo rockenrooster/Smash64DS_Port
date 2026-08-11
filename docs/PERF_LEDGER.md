@@ -7310,7 +7310,8 @@ Banked on the shipped build (route compiled out): `WORK-H` P50 920,192, P95
 digit, `linear-Q` max 0.000796 against a 0.02 bound. A latent s32 wrap in `t*t`
 — pre-existing since E64, 337 conversion clamps a match — was closed in both
 kernels; the shipped build reports 44 clamps a match and the bound is unchanged.
-Board: slice 25.
+Board: slice 25.
+
 
 ## Cycle 117 slice 28 -- the whole-line collision reject (2026-08-10)
 
@@ -7318,20 +7319,21 @@ Both-CPU 1600-frame gate arm, `builds/build-c117-gate`, against slice 27.
 
 | bucket | before | after | delta |
 | --- | --- | --- | --- |
-| WORK-H P50 | 972,736 | 969,088 | **-3,648** |
-| WORK-H P95 | 1,317,120 | 1,302,016 | **-15,104** |
-| SPHD P50 | 80,832 | 71,744 | **-9,088** |
-| SPHD P95 | 135,232 | 121,600 | **-13,632** |
-| SRC P95 | 654,464 | 644,032 | -10,432 |
-| GCRA P95 | 649,664 | 639,040 | -10,624 |
-| STG P50 | 187,456 | 187,968 | +512 (control) |
-| SPRM P50 | 1,984 | 1,984 | +0 (control) |
-| SWRM P50 | 640 | 640 | +0 (control) |
+| WORK-H P50 | 972,736 | 970,112 | -2,624 (under floor) |
+| WORK-H P95 | 1,317,120 | 1,310,528 | -6,592 (under floor) |
+| SPHD P50 | 80,832 | 70,080 | **-10,752** |
+| SPHD P95 | 135,232 | 119,488 | **-15,744** |
+| SRC P95 | 654,464 | 642,304 | -12,160 |
+| GCRA P95 | 649,664 | 637,376 | -12,288 |
+| STG P50 | 187,456 | 186,560 | -896 (control) |
+| FTR P95 | 305,664 | 311,872 | +6,208 (control, placement) |
 
 `SPHD` is the physics bucket and carries the whole effect, which is the
-attribution; the flat untouched controls are what cycle 117's two earlier
-collision slices never produced. WORK-H *mean* rose 3,380 on a worse extreme
-tail (`HUD` P95 +7,744) -- percentiles are the gate.
+attribution. **WORK-H itself stays inside the +-8,544 placement floor**, and
+untouched `FTR` moving +6,208 the other way is why. An earlier revision of this
+row claimed -15,104 WORK-H P95; that came from reading the run's JSON while it
+was still being written, because the check polled for the file's EXISTENCE
+instead of waiting for the process to exit. Wait on the writer, not the file.
 
 Engagement, same run: the sweep reject skips **91.9%** of line visits
 (59,207/5,234), the point query **60.3%** (33,003/21,751),

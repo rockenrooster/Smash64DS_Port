@@ -4465,7 +4465,10 @@ Prefer invalidating where the invariant is broken over binding where it is read.
 
 ### Slice 28: the whole-line reject the SOURCE has and this port lost
 
-**The first collision lever this cycle to clear the placement floor.**
+**Mechanism proven, frame-level win NOT proven.** An earlier revision of this
+entry claimed it cleared the placement floor. That was read from an artifact
+mid-write -- the run's JSON was polled for EXISTENCE rather than waited on --
+and the authoritative file says otherwise. Corrected below.
 
 `mpCollisionGetFCCommon` in `decomp/.../mp/mpcollision.c` reads a line's x span
 and returns FALSE **before walking any segment**. This port went straight into
@@ -4493,15 +4496,19 @@ extrapolates a hit x that can leave the sweep's x span by an amount bounded by
 the sweep's aspect ratio, not by epsilon -- and the y half alone is exact for
 both the tilt branch's gate and the flat branch's ordering constraint.
 
-**Measured, gate arm, against slice 27:** `WORK-H` P50 972,736 -> 969,088
-(**-3,648**), P95 1,317,120 -> 1,302,016 (**-15,104**). The attribution is the
-point, not the total: **`SPHD` -9,088 P50 / -13,632 P95** -- the physics bucket,
-which is exactly what was cut -- with `SRC` -9,408/-10,432 and `GCRA`
--9,344/-10,624 moving with it, while untouched `STG` (+512), `BG` (-64),
-`SPRM` (0) and `SWRM` (0) stayed flat. That flat control is what slices 26 and
-27 never had. WORK-H *mean* rose 3,380 on a worse extreme tail (`HUD` P95
-+7,744); percentiles are the gate and the mean is the least robust statistic
-here.
+**Measured, gate arm, against slice 27:** `WORK-H` P50 972,736 -> 970,112
+(**-2,624**), P95 1,317,120 -> 1,310,528 (**-6,592**). **Both are inside the
++-8,544 cross-build placement floor, so the frame-level win is NOT
+attributable**, and untouched `FTR` moving +5,952/+6,208 the other way says
+placement is what is eating it.
+
+The SUBSYSTEM result is decisive and is the real finding: **`SPHD` -10,752 P50 /
+-15,744 P95** -- the physics bucket, exactly what was cut -- with `SRC`
+-10,560/-12,160 and `GCRA` -10,368/-12,288 moving with it and `STG` (-896)
+flat. So the mechanism works and is worth far more than the frame shows; what
+this does not yet demonstrate is that a ~15,700-tick cut to one bucket survives
+into WORK-H against a floor almost as large. Stacking the lane's remaining
+levers is what would settle that.
 
 **Engagement, from the same run:** the sweep reject skips **91.9%** of line
 visits (59,207 rejected / 5,234 admitted) and the point query **60.3%**
