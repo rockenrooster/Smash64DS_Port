@@ -1,0 +1,55 @@
+exact calls/frame from entry-PC executions, 80 top-80 frames vs 1519 control
+
+function                           calls/hot calls/ctl   frames
+---------------------------------------------------------------
+gmCameraGetMatrixMax              (no symbol)
+lbCommonSin                            41.65     23.64    80/80
+lbCommonCos                            41.64     23.64    80/80
+syVectorAdd3D                          14.38     13.91    80/80
+syVectorDiff3D                         12.59     12.16    80/80
+syMatrixPerspFastF                      6.20      6.03    80/80
+syMatrixF2L                             6.20      6.08    80/80
+syVectorNorm3D                          5.65      5.61    80/80
+syMatrixLookAtReflectF                  4.00      4.00    80/80
+syMatrixTraRotRpyRSca                   3.80      3.43    71/80
+syMatrixLookAtF                         2.00      1.95    80/80
+ndsCameraCatCamera                      2.00      2.00    80/80
+gmCameraUpdateInterests                 2.00      1.95    80/80
+gmCameraLookAtFuncMatrix                2.00      2.00    80/80
+gmCameraGetClampDimensionsMax           2.00      1.95    80/80
+guMtxCatF                               1.00      0.97    80/80
+syUtilsArcTan                           0.00      0.00     0/80
+syMatrixOrthoF                          0.00      0.00     0/80
+syMatrixF2LFixedW                       0.00      0.00     0/80
+
+=== every camera/matrix entry PC that executed, calls per top-80 frame ===
+     11.01  gcCaptureCameraGObj
+      6.20  syMatrixPerspFastF
+      6.20  syMatrixF2L
+      4.21  ndsRendererSetParticleCamera
+      4.20  ndsParticleSetCurrentCamera
+      4.00  syMatrixLookAtReflectF
+      4.00  gmCameraSetBoundsPosition
+      2.35  ndsRendererAdapterGetFrameCameraMatrices.part.0.constprop.0
+      2.20  syMatrixPerspFast
+      2.20  gmCameraCheckTargetInBounds
+      2.00  syMatrixLookAtReflect
+      2.00  syMatrixLookAtF
+      2.00  ndsCameraPublishPersp
+      2.00  ndsCameraCatCamera
+      2.00  grWallpaperCalcPersp
+      2.00  gmCameraUpdateInterests
+      2.00  gmCameraRunFuncCamera
+      2.00  gmCameraLookAtFuncMatrix
+      2.00  gmCameraGetClampDimensionsMax
+      2.00  gmCameraGetAdjustAtAngle
+      2.00  gmCameraDefaultFuncCamera
+      2.00  gcSetCameraMatrixMode
+      2.00  efDisplayZPerspCLDProcDisplay
+      1.00  ndsRendererAdapterBuildCameraMatrices.constprop.0.isra.0
+      1.00  guMtxCatF
+      1.00  gmCameraScreenFlashProcDisplay
+      1.00  gmCameraPlayerMagnifyProcDisplay
+      1.00  gmCameraPlayerArrowsProcDisplay
+      1.00  gmCameraEffectProcDisplay
+      1.00  gmCameraDefaultProcDisplay

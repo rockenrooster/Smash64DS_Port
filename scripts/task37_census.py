@@ -215,6 +215,97 @@ def attribute(
     return total_cycles, unmapped_cycles, rows
 
 
+# ARM condition suffixes. Needed because `blt`/`ble`/`bls` are BRANCHES (b + lt,
+# b + le, b + ls) while `bllt`/`blle`/`blls` are CALLS (bl + lt, ...). Splitting
+# on the string "bl" alone silently turns every `blt` in the binary into a call
+# site, which would attribute a leaf's cost to whichever function happened to
+# contain a less-than branch.
+_ARM_CONDITIONS = {
+    "eq", "ne", "cs", "hs", "cc", "lo", "mi", "pl", "vs", "vc",
+    "hi", "ls", "ge", "lt", "gt", "le", "al",
+}
+
+
+def _is_call_mnemonic(mnemonic: str) -> bool:
+    if mnemonic.startswith("blx"):
+        return len(mnemonic) == 3 or mnemonic[3:] in _ARM_CONDITIONS
+    if not mnemonic.startswith("bl"):
+        return False
+    return len(mnemonic) == 2 or mnemonic[2:] in _ARM_CONDITIONS
+
+
+_CALL_RE = re.compile(
+    r"^\s*([0-9a-f]{6,8}):\s+(?:[0-9a-f]{2,8}\s+)+([a-z]+)\s+([0-9a-f]{6,8})\s+<"
+)
+
+
+def scan_call_sites(
+    objdump: str, elf: Path, targets: dict[int, str]
+) -> tuple[dict[int, tuple[int, str]], dict[int, str]]:
+    """Find every `bl` to one of `targets`. Returns (site pc -> (pc, leaf), tails).
+
+    Matched on the TARGET ADDRESS rather than on the name objdump prints, so an
+    alias or a linker veneer resolves to the same leaf without a name list to
+    maintain. Streams the disassembly: a full `objdump -d` of this ELF is tens of
+    megabytes and there is no reason to hold it.
+
+    Tail branches (`b <leaf>`) are collected separately rather than counted as
+    calls. A tail call's cost belongs to whoever called the FUNCTION, not to the
+    branch, so folding them in would attribute a leaf to a frame that merely
+    passed through -- and the reconciliation against the leaf's own entry-PC
+    count below is what makes their absence visible instead of silent.
+    """
+    sites: dict[int, tuple[int, str]] = {}
+    tails: dict[int, str] = {}
+    process = subprocess.Popen(
+        [objdump, "-d", str(elf)],
+        stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+        text=True, encoding="utf-8", errors="replace",
+    )
+    assert process.stdout is not None
+    for line in process.stdout:
+        if "<" not in line:
+            continue
+        match = _CALL_RE.match(line)
+        if not match:
+            continue
+        target = int(match.group(3), 16)
+        leaf = targets.get(target)
+        if leaf is None:
+            continue
+        pc = int(match.group(1), 16)
+        mnemonic = match.group(2)
+        if _is_call_mnemonic(mnemonic):
+            sites[pc] = (pc, leaf)
+        elif mnemonic.startswith("b"):
+            tails[pc] = leaf
+    process.stdout.close()
+    process.wait()
+    return sites, tails
+
+
+def count_site_executions(
+    profile: Path, wanted: set[int]
+) -> dict[int, dict[int, int]]:
+    """region -> pc -> executions, for `wanted` PCs only.
+
+    The profiler emits an exact instruction count per (region, pc), so the count
+    at a `bl` IS the number of calls that site made on that frame -- no sampling,
+    no estimate, and per frame rather than per window. That is what makes a
+    top-80-only caller attribution possible without a second run.
+    """
+    out: dict[int, dict[int, int]] = {}
+    with profile.open(newline="", encoding="utf-8") as stream:
+        for row in csv.DictReader(stream):
+            pc = int(row["pc"], 16)
+            if pc not in wanted:
+                continue
+            region = int(row["region"])
+            slot = out.setdefault(region, {})
+            slot[pc] = slot.get(pc, 0) + int(row["instructions"])
+    return out
+
+
 def disassemble_range(
     objdump: str, elf: Path, start: int, end: int
 ) -> dict[int, tuple[str, str]]:
@@ -441,7 +532,7 @@ def main() -> int:
     parser.add_argument(
         "--objdump",
         default="arm-none-eabi-objdump",
-        help="only used by --pc-detail",
+        help="used by --pc-detail and --attribute-leaves",
     )
     parser.add_argument(
         "--split-by-symbol",
@@ -483,6 +574,31 @@ def main() -> int:
         "that contributes 4.2M cycles to exactly one frame. Leaving it in makes "
         "its one-off work look like a tail owner. This does NOT change the gate "
         "-- it changes causal attribution only.",
+    )
+    parser.add_argument(
+        "--attribute-leaves",
+        default="",
+        metavar="SYM[,SYM...]",
+        help="attribute these leaf symbols back to their CALLERS on the current "
+        "split, exactly. A per-PC profiler charges a leaf helper to itself and "
+        "never to whoever ran it, which is why the soft-float class has resisted "
+        "ranking: __aeabi_fadd is one row worth tens of thousands of ticks and "
+        "the row names nobody. Every `bl` to the leaf is found in the linked "
+        "ELF, and the profiler's own per-(region, pc) instruction count at that "
+        "`bl` is the number of calls it made ON THAT FRAME -- so this needs no "
+        "extra run, no GDB breakpoints, and no sampling assumption, and it is "
+        "restricted to the marked frames rather than to a contiguous window. "
+        "Reconciles against the leaf's entry-PC count and prints the shortfall.",
+    )
+    parser.add_argument(
+        "--leaf-presence",
+        type=int,
+        default=40,
+        metavar="N",
+        help="--attribute-leaves only lists callers that ran on at least N of "
+        "the marked frames. Defaults to half, because a percentile is decided "
+        "by its LAST frame: a caller that is enormous on three of eighty tops a "
+        "mean ranking and cannot move P95.",
     )
     args = parser.parse_args()
     chosen = [n for n, v in (("--split-over-gate", args.split_over_gate),
@@ -800,11 +916,165 @@ def main() -> int:
                         "delta_cycles_per_frame": d,
                         "delta_mem_cycles_per_frame": m,
                         "delta_instructions_per_frame": i,
+                        # Carried into the JSON as well as the table: a consumer
+                        # ranking these rows by delta alone repeats the mistake
+                        # the presence column exists to prevent.
+                        "marked_frames_present": seen,
                     }
-                    for d, m, i, s in deltas
+                    for d, m, i, s, seen in deltas
                     if abs(d) >= 1.0
                 ],
             }
+
+        # ---- Table F: exact caller attribution for arithmetic leaves ----
+        if detail is not None and args.attribute_leaves:
+            # `A+B` folds entry point B into leaf A. Needed because libgcc's
+            # float add has TWO entry points four bytes apart: `__aeabi_fsub`
+            # flips the operand's sign and falls straight through into
+            # `__aeabi_fadd`. A call to fsub therefore EXECUTES fadd's entry PC
+            # -- so it is in the ground-truth count -- while its `bl` targets an
+            # address the scan never looks at. Left unfolded that reads as
+            # "36.8% of float adds come from nowhere".
+            groups = [g.strip() for g in args.attribute_leaves.split(",")
+                      if g.strip()]
+            wanted_names = []
+            leaves: dict[int, str] = {}
+            leaf_index: dict[str, int] = {}
+            for group in groups:
+                members = [m for m in group.split("+") if m]
+                primary = members[0]
+                wanted_names.append(primary)
+                for name in members:
+                    hit = next(
+                        (i for i, s in enumerate(symbols)
+                         if s.name == name or name in s.aliases), None)
+                    if hit is None:
+                        raise RuntimeError(
+                            f"--attribute-leaves names {name!r}, which is not a "
+                            "FUNC symbol in this ELF. A leaf that was inlined or "
+                            "renamed would otherwise attribute zero and read as "
+                            "'nobody calls it'.")
+                    leaves[symbols[hit].address] = primary
+                    if name == primary:
+                        leaf_index[primary] = hit
+
+            sites, tails = scan_call_sites(args.objdump, args.elf, leaves)
+            if not sites:
+                raise RuntimeError(
+                    "found no `bl` to any named leaf -- check --objdump")
+            addresses = [s.address for s in symbols]
+            site_owner: dict[int, int] = {}
+            for pc in sites:
+                owner = bisect.bisect_right(addresses, pc) - 1
+                site_owner[pc] = owner
+
+            executions = count_site_executions(
+                args.profile, set(sites) | set(leaves))
+
+            def per_frame(regions: list[int]) -> tuple[dict, dict, dict]:
+                """(caller,leaf) -> calls, leaf -> calls, (caller,leaf) -> frames."""
+                calls: dict[tuple[int, str], int] = {}
+                leaf_calls: dict[str, int] = {}
+                seen: dict[tuple[int, str], int] = {}
+                for region in regions:
+                    counts = executions.get(region, {})
+                    hit_this_frame = set()
+                    for pc, count in counts.items():
+                        if pc in leaves:
+                            # PRIMARY ENTRY ONLY. A secondary entry point folded
+                            # in with `+` falls THROUGH into the primary, so it
+                            # executes both PCs; counting both would inflate the
+                            # ground truth by exactly the number of calls that
+                            # used the secondary entry and report complete
+                            # attribution as a shortfall.
+                            if pc == symbols[leaf_index[leaves[pc]]].address:
+                                leaf_calls[leaves[pc]] = (
+                                    leaf_calls.get(leaves[pc], 0) + count)
+                            continue
+                        key = (site_owner[pc], sites[pc][1])
+                        calls[key] = calls.get(key, 0) + count
+                        hit_this_frame.add(key)
+                    for key in hit_this_frame:
+                        seen[key] = seen.get(key, 0) + 1
+                return calls, leaf_calls, seen
+
+            hot_calls, hot_leaf, hot_seen = per_frame(hot)
+            ctl_calls, ctl_leaf, _ = per_frame(control)
+
+            print()
+            print(f"== F. arithmetic leaves attributed to their callers, on {label} ==")
+            # RECONCILIATION FIRST. The entry PC of the leaf executes exactly
+            # once per call, so its count is the ground truth this attribution
+            # has to match. A shortfall means calls arrived from somewhere the
+            # disassembly scan did not see -- a veneer, a tail branch, an
+            # indirect call through a function pointer -- and quoting a caller
+            # ranking without saying so would be quoting an unknown fraction.
+            recon = []
+            for name in wanted_names:
+                found = sum(v for (_, leaf), v in hot_calls.items() if leaf == name)
+                truth = hot_leaf.get(name, 0)
+                idx = leaf_index[name]
+                cycles = sum(detail[r].get(idx, [0])[0] for r in hot)
+                recon.append([
+                    name,
+                    f"{truth / len(hot):,.1f}",
+                    f"{found / len(hot):,.1f}",
+                    f"{100.0 * found / truth:.1f}%" if truth else "-",
+                    f"{cycles / truth:,.1f}" if truth else "-",
+                    f"{cycles / len(hot):,.0f}",
+                    f"{0.4993 * cycles / len(hot):,.0f}",
+                ])
+            print(format_table(
+                recon,
+                ["leaf", "calls/frame", "attributed", "coverage", "cyc/call",
+                 "cyc/frame", "tk/frame"],
+                "lrrrrrr"))
+            if tails:
+                print(f"   {len(tails)} tail branch(es) to a leaf are excluded "
+                      "from the caller table by design; they are part of the "
+                      "shortfall above.")
+
+            rows_f = []
+            for (owner, leaf), calls in hot_calls.items():
+                hot_rate = calls / len(hot)
+                ctl_rate = ctl_calls.get((owner, leaf), 0) / len(control)
+                truth = hot_leaf.get(leaf, 0)
+                idx = leaf_index[leaf]
+                cyc_per_call = (
+                    sum(detail[r].get(idx, [0])[0] for r in hot) / truth
+                    if truth else 0.0)
+                seen = hot_seen.get((owner, leaf), 0)
+                rows_f.append((
+                    hot_rate * cyc_per_call, hot_rate, ctl_rate, seen,
+                    symbols[owner], leaf, cyc_per_call))
+            # Rank by the cost this caller puts on a TAIL frame, and print
+            # presence beside it: a caller worth a great deal on 3 of 80 frames
+            # cannot move a percentile decided by the 80th.
+            rows_f.sort(key=lambda r: -r[0])
+            table = []
+            for cyc, hot_rate, ctl_rate, seen, owner, leaf, per_call in rows_f[: args.top]:
+                if seen < args.leaf_presence:
+                    continue
+                table.append([
+                    f"{cyc:,.0f}",
+                    f"{0.4993 * cyc:,.0f}",
+                    f"{0.4993 * (hot_rate - ctl_rate) * per_call:,.0f}",
+                    f"{hot_rate:,.1f}",
+                    f"{ctl_rate:,.1f}",
+                    f"{seen}/{len(hot)}",
+                    leaf,
+                    tier_of(owner),
+                    owner.name,
+                ])
+            print()
+            print(format_table(
+                table,
+                ["cyc/frame", "tk/frame", "tk prem", "calls/hot", "calls/ctl",
+                 "frames", "leaf", "tier", "caller"],
+                "rrrrrrlll"))
+            print(f"   rows shown: callers present on >= {args.leaf_presence} of "
+                  f"{len(hot)} marked frames. `tk/frame` is what the caller costs "
+                  "ON a tail frame; `tk prem` is only the part the tail adds.")
 
         # ---- Table B: ITCM rent ----
         residents = [s for s in symbols if s.section == ".itcm"]

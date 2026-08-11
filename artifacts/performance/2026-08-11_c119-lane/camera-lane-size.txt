@@ -1,0 +1,57 @@
+SELF ticks per tail frame, legacy N64 camera/matrix lane (80 frames)
+
+      4,264  syMatrixLookAtReflectF
+      3,340  gmCameraUpdateInterests
+      2,143  syMatrixPerspFastF
+      2,136  syMatrixF2L
+      1,975  syMatrixTraRotRpyRSca
+      1,659  lbCommonCos
+      1,587  gmCameraLookAtFuncMatrix
+      1,558  lbCommonSin
+      1,114  gmCameraDefaultProcDisplay
+      1,079  syMatrixLookAtF
+      1,031  gmCameraDefaultFuncCamera
+        994  grWallpaperCalcPersp
+        840  guMtxCatF
+        772  syVectorDiff3D
+        650  syUtilsArcTan.part.0
+        586  ndsCameraCatCamera
+        586  gmCameraSetBoundsPosition
+        539  syVectorNorm3D
+        460  gmCameraGetClampDimensionsMax
+        440  syVectorAdd3D
+        431  syVectorMag3D
+        408  syMatrixRotRpyRF
+        339  gmCameraGetAdjustAtAngle
+        333  gmCameraCheckTargetInBounds
+        331  ndsCameraPublishPersp
+        319  syUtilsRandFloat
+
+  ----------------------------------------
+     32,065  SELF TOTAL (45 symbols)
+     23,800  soft-float leaves attributed to this lane (table F)
+     55,865  INCLUSIVE lane cost per tail frame
+
+  gate gap = 138,112 tk  ->  this lane is 40% of it
+
+conversion + sqrt helpers, per tail frame (80 frames)
+
+symbol                                                       calls   self tk  tk/call
+ndsRendererAdapterMtxFromN64                                  0.00         0        0
+ndsRendererMtxMul20p12                                       18.55    10,757      580
+sqrtf                                                        57.23     8,897      155
+__ieee754_sqrtf                                               0.11         3       27
+ndsRendererAdapterBuildCameraMatrices.constprop.0.isra.0      1.00       539      539
+ndsRendererAdapterGetFrameCameraMatrices.part.0.constprop.0    2.35     1,629      693
+ndsRendererAdapterPrepareInitialMatrices                      0.35       791    2,261
+ndsRendererAdapterPrepareNativeStageOwner                     1.00     6,216    6,216
+ndsRendererAdapterGetHierarchyCameraMatrices.constprop.0      0.00         0        0
+
+=== 20.12 matrix kernels, per tail frame (80 frames) ===
+symbol                                                  calls   self tk  tk/call
+ndsRendererMtxMulAffine20p12                            54.21    19,175      354
+ndsRendererMtxMul20p12                                  18.55    10,757      580
+ndsRendererAdapterBuildPersistentStageWorldMatrix       16.35     9,555      584
+ndsRendererAdapterBuildDObjXObjMatrix                   57.50    12,233      213
+ndsRendererLoadHardwareSplitMatrices                    31.82    11,172      351
+                                                                 62,891  TOTAL SELF
