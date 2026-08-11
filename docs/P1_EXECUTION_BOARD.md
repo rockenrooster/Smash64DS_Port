@@ -5253,6 +5253,26 @@ reduction as a secondary gain. That reframes the runtime work: bind baked
 records first, and treat the dense live layout as the thing that makes the bind
 cheap rather than as the win itself.
 
+#### And the parse deletion does clear the floor — unlike the walk
+
+`ndsR2FtAnimParseDObjFigatree` is **60,546,909 cycles** whole-match, of which the
+stepped path is ~86% (17.6% of calls carrying ~86% of instructions):
+**52,070,342 cycles ≈ 15,293 ticks/frame.** A baked bind replaces opcode
+dispatch, the flags loop, the payload and target reads, and the Q conversions
+with a control read and a 20-byte copy per track.
+
+| residual after the bake | cycles saved | ticks/frame | vs the ±8,544 floor |
+|---|---:|---:|---|
+| 10% — just copy the records | 46,863,308 | **13,764** | **above** |
+| 25% | 39,052,756 | **11,470** | **above** |
+| 40% — pessimistic | 31,242,205 | **9,176** | **above** |
+
+**Every case clears the floor**, and the 10% case is **7.4% of the 185,472-tick
+gap** on its own. This is the first animation lever this cycle whose sizing
+survives contact with the floor, and it is why the slice stays alive after the
+working-set argument was downgraded. Bind the records; the smaller node comes
+along for free.
+
 **Correction — the "frees 8,192 B" figure published one step earlier is wrong.**
 It priced the whole 512-node pool converting to 20 bytes, which cannot happen:
 this specialization is fighter joints only, and `gcPlayDObjAnimJoint` also
