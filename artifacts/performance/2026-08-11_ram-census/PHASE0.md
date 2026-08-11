@@ -310,3 +310,62 @@ patch mechanism itself is ready: `scripts/decomp-patches/battleship/` with an
 ordered map in `fetch-battleship-reference.ps1`, and **note its warning** — a
 file pinned by `scripts/stages/generate_nds_native_stage.py` aborts Boundary
 with a SHA mismatch, so check the pin list before patching.
+
+---
+
+# Phase 2 SHIPPED — `gSYFramebufferSets[3]` → `[2]`, and the arena reaches 0x150000
+
+The earlier BLOCKED entry stands as history but **its stated reason was wrong**,
+and the correction is the useful part.
+
+**The header question was a red herring.** Preprocessing
+`src/import/battleship_scmanager.c` shows it resolves `<sys/video.h>` to
+`include/sys/video.h` — `INCLUDES` puts `include` ahead of
+`$(BATTLESHIP_DECOMP)/src`, so every decomp TU sees the PORT header. The clear's
+`sizeof(gSYFramebufferSets)` therefore shrinks with the port-side extent and
+never overruns. No decomp patch was needed at all.
+
+**The real reason `[1]` was unsafe is the wipe's own arithmetic.**
+`lbtransition.c:226-241` starts at `base + 6,400 + 140,800 + 20 = base+147,220`
+— already 20 bytes past buffer 0 — and walks **backward** 640 bytes per row for
+220 rows, touching `base+7,060 .. base+147,819`. So:
+
+| extent | bytes | highest touched 147,819 |
+|---|---:|---|
+| `[1]` | 147,200 | **OUT by 620** |
+| `[2]` | 294,400 | in bounds |
+| `[3]` | 441,600 | in bounds |
+
+`[2]` is the smallest correct size. All three `SYVideoSetup` slots alias buffer
+0 so the wipe always reads the in-range span; the scheduler only assigns those
+pointers and never compares them, and `mvopeningroom.c`'s comparisons are in the
+non-NDS arm.
+
+### Result — Boundary green
+
+| metric | Phase-0 baseline | final | delta |
+|---|---:|---:|---:|
+| `.main.bss` | 1,599,280 | 1,430,480 | **−168,800** |
+| total static | 2,639,612 | 2,470,460 | **−169,152** |
+| `gNdsTaskmanArenaChosenSize` | 1,257,472 | **1,376,256** | **+118,784** |
+| `gNdsTaskmanArenaAllocFailCount` | 29 | **0** | −29 |
+| `gNdsTaskmanGeneralHeapFreeMin` | 15,120 | **133,628** | **+118,508** |
+| heap floor (32,768) | FAIL −17,648 | **PASS +100,860** | — |
+
+**1,376,256 is exactly `0x150000`** — the arena size the port has always
+requested. The plan opened by recording that the runtime was "128 KiB short of
+the desired taskman arena"; that shortfall is now **zero**, and the allocator no
+longer probes down at all (`AllocFailCount` 29 → 0).
+
+**Plan targets met: 169,152 B recovered = 172% of the 96 KiB requirement and
+132% of the 128 KiB stretch.**
+
+**Owner playtest note:** this resizes the buffer the Results photo wipe samples.
+Behaviour should be identical — same buffer, same clear value, same 300x220
+window — but Results is the screen to look at.
+
+**Remaining (Phases 6-8):** rejects are still 15 and the anim cache is still
+capped at 200,704. There are now **100,860 bytes above the safety floor** to
+fund residency, against a demand that must still be measured per arm
+(`ANIM_REQUIRED_BYTES`, Phase 0.3, deliberately not carried over from the stale
+82 KiB estimate).

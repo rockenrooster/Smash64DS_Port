@@ -12,9 +12,10 @@ static void ndsVideoBootstrapThread(void *arg)
 {
     SYVideoSetup setup = {
         {
+            /* All three alias buffer 0 -- see include/sys/video.h. */
             &gSYFramebufferSets[0],
-            &gSYFramebufferSets[1],
-            &gSYFramebufferSets[2]
+            &gSYFramebufferSets[0],
+            &gSYFramebufferSets[0]
         },
         gSYZBuffer,
         320,

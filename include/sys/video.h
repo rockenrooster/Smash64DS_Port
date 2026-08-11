@@ -35,7 +35,7 @@ typedef struct SYVideoSetup {
 } SYVideoSetup;
 
 #define SYVIDEO_SETUP_DEFAULT() { \
-    { &gSYFramebufferSets[0], &gSYFramebufferSets[1], &gSYFramebufferSets[2] }, \
+    { &gSYFramebufferSets[0], &gSYFramebufferSets[0], &gSYFramebufferSets[0] }, \
     NULL, \
     320, \
     240, \
@@ -59,7 +59,36 @@ typedef struct SYVideoSetup {
  * src/import/battleship_sys_zbuffer.c carries the full proof and MUST be kept
  * in step with this extent. Nothing takes sizeof(gSYZBuffer). */
 extern u16 gSYZBuffer[320 * 10];
-extern u16 gSYFramebufferSets[3][230][320];
+/* Reduced from [3] to [2]: 441,600 -> 294,400 bytes, freeing 147,200.
+ *
+ * The DS never rasterises into these (GX renders to VRAM; we present from
+ * sFramebuffers[] in nds_platform.c), but the array is NOT dead -- the VS
+ * Results photo wipe reads it. Sizing it is therefore arithmetic on that read,
+ * not a judgement call. lbtransition.c:226-241 starts at
+ *   base + BORDER(320,10) + BORDER(320,220) + BORDER(1,10) = base + 147,220
+ * -- already 20 bytes past buffer 0 -- and walks BACKWARD 640 bytes per row for
+ * 220 rows, so it touches base+7,060 .. base+147,819. That is 620 bytes into
+ * buffer 1, which is why [1] is NOT sufficient and [2] is.
+ *
+ * All three SYVIDEO_SETUP_DEFAULT slots alias buffer 0 so the wipe always reads
+ * from the one buffer whose 147,820-byte span is in range. Safe because
+ * sys/scheduler.c only ASSIGNS gSYSchedulerCurrentFramebuffer (709/712/724/730/
+ * 1204) and never compares the buffers against each other -- its only pointer
+ * test is the SYSCHEDULER_BUFFER_NULL sentinel, which a non-NULL alias passes.
+ * mvopeningroom.c does compare them, but those lines are in the non-NDS arm.
+ *
+ * Every decomp TU sees THIS header, not decomp's: INCLUDES puts `include`
+ * before $(BATTLESHIP_DECOMP)/src, verified by preprocessing
+ * src/import/battleship_scmanager.c. That matters because scmanager.c's clear
+ * bounds itself with sizeof(gSYFramebufferSets), so the clear shrinks with this
+ * extent instead of overrunning it.
+ *
+ * KNOWN GAP, out of P1 scope: mntitle.c:126-127 hardcodes &gSYFramebufferSets[1]
+ * and [2]. [1] stays valid and [2] becomes a one-past-the-end pointer, legal to
+ * form and never dereferenced in P1 because the title scene never runs. If the
+ * title scene is ever brought into a shipping configuration, patch it under
+ * scripts/decomp-patches/battleship/ first. */
+extern u16 gSYFramebufferSets[2][230][320];
 extern u16 *gSYVideoZBuffer;
 extern u32 gSYVideoColorDepth;
 extern s32 gSYVideoResWidth;
