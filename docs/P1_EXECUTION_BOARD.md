@@ -4420,6 +4420,72 @@ the stack frame to 12 bytes. **Check the disassembly of this kernel for hoisted
 `asr #31` and stack spills after touching it** -- the host error bound cannot
 see code shape, and it reported byte-identical numbers across the fix.
 
+### The animation lane's ARITHMETIC is spent; what is left is working set
+
+Stated with numbers so nobody re-derives it, and stated as a *boundary*, not a
+closure: the cheap arithmetic and format levers are gone, the structural one is
+a campaign item, and it is sized below.
+
+**Three levers were checked and three answers came back:**
+
+1. **Float: gone.** The 46,856-sample caller census finds `gcPlayDObjAnimJoint`,
+   `ndsR2AnimValueQ` and `ndsR2CubicValueFixed` **nowhere** in the
+   `__aeabi_fadd`+`__aeabi_fmul` class. What is left is *material* animation
+   (4,424 tk/fr) and the parser's per-DObj `anim_wait -= anim_speed` /
+   `anim_frame += anim_speed` (2,665) -- and those two are `DObj` `f32` fields
+   with `F32_MIN`-derived sentinels read across the whole fighter tree.
+2. **Contiguity: ALREADY SPENT, cycle 109.** `battleship_sys_objman.c:92` gives
+   `gcSetupObjman` a 512-node contiguous AObj pool through `setup->aobjs`,
+   because `aobjs_num` is zero in every scene and the decomp otherwise
+   `syTaskmanMalloc`s each 36-byte node individually. The 25.64 cyc/insn on
+   `gcPlayDObjAnimJoint`'s `0x02001484` is what remains **after** that pooling,
+   so it is **capacity, not scatter** -- and that file's own comment predicted
+   it: "Contiguity cannot make it resident either." Do not rebuild this.
+3. **The remaining cost is MEMORY STALL, and it is most of the lane.** At an
+   ideal ~1.1 cyc/insn the four hot symbols carry roughly **70,000 cyc/frame of
+   stall out of 163,370**:
+
+| symbol | cyc/insn | implied stall cyc/frame |
+|---|---:|---:|
+| `gcPlayAnimAll` | 4.00 | ~12,000 |
+| `ftParamUpdateAnimKeys` | 3.41 | ~9,200 |
+| `ndsR2FtAnimParseDObjFigatree` | 3.16 | ~24,600 |
+| `gcPlayDObjAnimJoint` | 2.61 | ~24,600 |
+
+   The parser's top five PCs alone are **10,559 cyc/frame at 15-35 cyc/insn**,
+   about one execution per call each: first-touch misses on the `DObj`, not
+   arithmetic. `ftParamUpdateAnimKeys` sweeps ~26 joints per fighter and each
+   joint pulls in its `DObj`, its ~3.3 `AObj` nodes and its `MObj` list --
+   **well over 30 KB of decomp object graph touched every frame against a 4 KB
+   D-cache.**
+
+**So the next animation win is not an arithmetic slice, it is the AOT dense
+track rewrite** `FIXEDPOINT_ANIMATION.md` describes: stop touching `DObj`/`AObj`
+per frame at all and evaluate a compact per-fighter track array into a dense
+pose array. That is a campaign item with a build-tooling half, not a slice, and
+it should be scheduled as one. **What it must beat: ~70,000 cyc/frame of stall
+(~35,000 ticks).**
+
+**What is NOT worth doing, priced so it is not re-proposed:**
+
+- **ARM-ising `gcPlayDObjAnimJoint` to inline the evaluator.** The evaluator's
+  nine-register `push`/`pop` is 6,683 cyc/frame over 280 calls; inlining moves it
+  to 106.9 calls and saves ~5,800 cyc/frame (~2,900 ticks) for ~+700 bytes of
+  ARM text on a function already at 2.61 cyc/insn. Under the board's own
+  "clear ~16,000 in one change" bar, and it risks the I-cache to get there.
+- **Shrinking `AObj` from 36 to 24 bytes.** 12.8 KB -> 8.5 KB is still far over
+  a 4 KB D-cache; ~3,000 cyc/frame for a decomp struct change with readers in
+  `objman`, `mp_collision` and the MObj colour path.
+
+**And the next lane is named, with its own numbers: map collision.**
+`ndsMPFCSegmentCrossesKernel` 16.2% and `ndsStageMPAdjustFloorLoopWallSweep`
+13.8% of the soft-float class, plus the two `WallCollisionAdjNew` at 4.8% and
+`ndsBaseMPProcessUpdateMain` at 1.6% -- **36.6% of `__aeabi_fadd`+`__aeabi_fmul`,
+~21,300 ticks/frame** -- on top of **90,132 cyc/frame** of self time. That is
+~133,000 cyc/frame (~66,400 ticks), the largest non-renderer lane in the frame,
+and it is a FLOAT lane, which is exactly where Requirement 4's technique already
+has a proven answer.
+
 ### Slice 25 (ARCHITECTURAL): Requirement 4 SHIPS -- the fighter AObj is fixed point
 
 **`WORK-H` P50 -23,360, P95 -37,504; `SINT` P50 -24,896; one binary.**
