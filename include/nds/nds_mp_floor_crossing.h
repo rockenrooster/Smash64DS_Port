@@ -32,6 +32,32 @@
  * `_C` forms are only exact for a POSITIVE constant, because the signed-integer
  * ordering of bit patterns inverts below zero. Same for the runtime-float
  * comparisons against `extent_epsilon` and the min/max pairs.
+ *
+ * Cycle 117: `side` and `orient` are BOTH +-1, so five of the six float
+ * multiplies in the tilt block were sign flips written as `__aeabi_fmul`.
+ *
+ * This kernel is the #1 caller of the whole `__aeabi_fadd`+`__aeabi_fmul`
+ * class -- 16.2% of it, 9,476 ticks/frame -- measured by a 46,856-sample GDB
+ * attribution on the both-CPU gate arm, on top of 8,415 cyc/frame of self time
+ * at 1.98 cyc/insn, which says instruction count rather than stall. So:
+ *
+ *   - `side * X` compared against zero becomes the OPPOSITE zero predicate when
+ *     `ud` is negative. No multiply, no negation, no call.
+ *   - `orient * sx` IS `fabsf(sx)`: `orient` is the sign of `sx` and `sx == 0`
+ *     already returned above. `fabsf` is a bit clear, not a call.
+ *   - `side * (orient * raw)` is `raw` or `-raw` by the XOR of two known signs,
+ *     and unary `-` on a float is one `eor` in GCC, never a helper.
+ *
+ * All three are exact for every finite input by construction -- multiplying by
+ * +-1.0f IS the sign flip, for zeroes and infinities too -- so gameplay is
+ * bit-identical and no error bound is needed or claimed.
+ *
+ * `surface_prev` moved inside the branch that reads it. It costs an
+ * `__aeabi_fdiv` (109.4 cycles a call, the most expensive helper in the build)
+ * and was computed on every call that reached it, including the crossing path
+ * that never looks at it. Pure code motion; the divide's operand `sx` is
+ * non-zero on every path that reaches it, so sinking it cannot introduce or
+ * remove a fault.
  */
 static inline int ndsMPFCSegmentCrossesKernel(
     float position_x, float position_y,
@@ -41,7 +67,12 @@ static inline int ndsMPFCSegmentCrossesKernel(
     float *hit_x, float *hit_y)
 {
     const float epsilon = 0.001F;
-    const float side = (float)ud;
+    /* `ud` is +1 or -1 at every caller. Zero would have made `side` 0.0f, and
+     * every use of it below is a comparison against zero or a term that decides
+     * a return -- with `side` zero the kernel returns 0 on both branches, so
+     * folding that case here preserves the answer and keeps `side_positive`
+     * meaningful. */
+    const int side_positive = (ud > 0);
     float sx;
     float sy;
     float min_x;
@@ -49,7 +80,7 @@ static inline int ndsMPFCSegmentCrossesKernel(
     float min_y;
     float max_y;
 
-    if ((hit_x == 0) || (hit_y == 0))
+    if ((hit_x == 0) || (hit_y == 0) || (ud == 0))
     {
         return 0;
     }
@@ -69,9 +100,22 @@ static inline int ndsMPFCSegmentCrossesKernel(
         float delta_y;
         float x;
 
-        if (NDS_FCMP_LE0(side * (position_y - translate_y)) ||
-            ((side * (position_y - v1_y)) < -epsilon) ||
-            NDS_FCMP_LE0(side * (v1_y - translate_y)))
+        /* `side * X <= 0` is `X <= 0` for a positive side and `X >= 0` for a
+         * negative one, and `side * X < -epsilon` is `X < -epsilon` or
+         * `-X < -epsilon` i.e. `X > epsilon`. Three multiplies deleted, and the
+         * two zero tests stay integer predicates. */
+        if (side_positive)
+        {
+            if (NDS_FCMP_LE0(position_y - translate_y) ||
+                ((position_y - v1_y) < -epsilon) ||
+                NDS_FCMP_LE0(v1_y - translate_y))
+            {
+                return 0;
+            }
+        }
+        else if (NDS_FCMP_GE0(position_y - translate_y) ||
+                 NDS_FCMP_GT_C(position_y - v1_y, epsilon) ||
+                 NDS_FCMP_GE0(v1_y - translate_y))
         {
             return 0;
         }
@@ -90,13 +134,15 @@ static inline int ndsMPFCSegmentCrossesKernel(
     {
         float motion_dx = position_x - translate_x;
         float motion_dy = position_y - translate_y;
+        /* `orient` is the sign of `sx`, so `orient * sx` is `fabsf(sx)` and
+         * `side * orient` is the XOR of two known signs -- a negation, not a
+         * multiply. `sx != 0` was established above, so `orient` is never 0. */
+        const int flip = (side_positive == 0) != (NDS_FCMP_GT0(sx) == 0);
         float raw_prev;
         float raw_curr;
-        float orient;
         float extent_epsilon;
         float prev_height_scaled;
         float curr_height_scaled;
-        float surface_prev;
 
         if (NDS_FCMP_GT0(motion_dy))
         {
@@ -127,22 +173,21 @@ static inline int ndsMPFCSegmentCrossesKernel(
             (sy * (position_x - v1_x));
         raw_curr = (sx * (translate_y - v1_y)) -
             (sy * (translate_x - v1_x));
-        orient = NDS_FCMP_GT0(sx) ? 1.0F : -1.0F;
-        extent_epsilon = epsilon * (orient * sx);
-        prev_height_scaled = side * (orient * raw_prev);
-        curr_height_scaled = side * (orient * raw_curr);
+        extent_epsilon = epsilon * __builtin_fabsf(sx);
+        prev_height_scaled = flip ? -raw_prev : raw_prev;
+        curr_height_scaled = flip ? -raw_curr : raw_curr;
         if (curr_height_scaled > -extent_epsilon)
         {
             return 0;
         }
-        surface_prev = v1_y + (((position_x - v1_x) / sx) * sy);
         if (prev_height_scaled < extent_epsilon)
         {
             if ((prev_height_scaled > -extent_epsilon) &&
                 (position_x >= min_x) && (position_x <= max_x))
             {
+                /* The one site that reads it, so the divide lives here. */
                 *hit_x = position_x;
-                *hit_y = surface_prev;
+                *hit_y = v1_y + (((position_x - v1_x) / sx) * sy);
                 return 1;
             }
             return 0;

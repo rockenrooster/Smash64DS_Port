@@ -1,4 +1,4 @@
-﻿param()
+param()
 $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $nativeStageChecker = Join-Path $PSScriptRoot 'stages\check_nds_native_stage.py'
@@ -26,6 +26,17 @@ $spriteLerpChecker = Join-Path $PSScriptRoot 'check_sprite_lerp_exact.py'
 & python -B $spriteLerpChecker
 if ($LASTEXITCODE -ne 0) {
     throw "Sprite blitter division exactness failed with exit code $LASTEXITCODE."
+}
+# Cycle 117. The floor-crossing kernel's `side`/`orient` multiplies became sign
+# flips and its `surface_prev` divide sank into the one branch that reads it.
+# This is COLLISION, so unlike the render-side work it gets no error budget at
+# all -- the claim is equality and this asserts equality, over 2.3M cases
+# including both signed zeroes, zero-length motion and exactly-on-line
+# positions. Wired in for the same reason as the two above. Host-only, ~2 s.
+$mpFloorCrossingChecker = Join-Path $PSScriptRoot 'check_mp_floor_crossing_exact.py'
+& python -B $mpFloorCrossingChecker
+if ($LASTEXITCODE -ne 0) {
+    throw "MP floor-crossing exactness failed with exit code $LASTEXITCODE."
 }
 function Assert-Equal {
     param(

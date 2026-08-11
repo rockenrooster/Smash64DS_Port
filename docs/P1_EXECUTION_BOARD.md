@@ -4420,6 +4420,56 @@ the stack frame to 12 bytes. **Check the disassembly of this kernel for hoisted
 `asr #31` and stack spills after touching it** -- the host error bound cannot
 see code shape, and it reported byte-identical numbers across the fix.
 
+### Slice 26: the floor-crossing kernel loses five float multiplies and a divide
+
+**Bit-identical, proven, and BELOW the instrument''s floor. Kept anyway, because
+the campaign rule is to bank every repeatable correctness-preserving gain.**
+
+`ndsMPFCSegmentCrossesKernel` is the #1 caller of the `__aeabi_fadd`+`__aeabi_fmul`
+class -- 16.2%, 9,476 ticks/frame -- plus 8,415 cyc/frame of self time at
+**1.98 cyc/insn**, which says instruction count, not stall. Three deletions, all
+exact by construction:
+
+- `side` and `orient` are both exactly +-1.0f. `side * X <= 0` is the OPPOSITE
+  zero predicate for a negative side; `orient * sx` IS `fabsf(sx)` (`orient` is
+  the sign of `sx`, and `sx == 0` already returned); `side * (orient * raw)` is
+  a negation, which GCC emits as one `eor`. **Five of the six float multiplies
+  in the tilt block, and three in the flat block, were sign flips written as
+  `__aeabi_fmul`.**
+- `surface_prev` sank into the single branch that reads it. It costs an
+  `__aeabi_fdiv` -- **109.4 cycles a call, the most expensive helper in the
+  build** -- and was computed on every call that reached it, including the
+  crossing path that never looks at it.
+
+**`scripts/check_mp_floor_crossing_exact.py` compiles the shipped header and the
+pre-change float body side by side and sweeps 2,332,800 cases**: 40,417 hits,
+**0 verdict mismatches and 0 hit-coordinate BIT-PATTERN mismatches**. Both signed
+zeroes, zero-length motion, vertical/horizontal segments and exactly-on-line
+positions are in the domain deliberately -- those are where a sign-flip rewrite
+would differ if it differed anywhere. This is collision, so it gets no error
+budget: the claim is equality and the instrument asserts equality. Wired into
+`check-gbi-decode-fixtures.ps1` beside the cubic bound and the sprite-lerp
+check, because a checker nothing runs reads like a pass.
+
+**Measured, gate arm, 1600 samples, same build config as the re-bank:**
+`WORK-H` P50 973,568 -> 972,032 (**-1,536**), P95 1,317,440 -> 1,316,416
+(**-1,024**), mean 1,016,526 -> 1,012,401 (**-4,125**). `gNdsR2CubicEvals`
+299,148 in both, so nothing about the simulation moved.
+
+**That is under the +-8,544 `WORK-H` floor and is therefore NOT an attributable
+win** -- say so rather than banking -4,125. What the run does settle is a
+control worth having: `gNdsR2AObjPoolDeclines` reads **0** with
+`gNdsR2AObjPoolCount` **512**, so cycle 109''s contiguous AObj pool is live and
+the 25.64 cyc/insn measured on the walk really is capacity.
+
+**The lesson for the next collision slice: one kernel is not enough.** The lane
+is ~143,000 cyc/frame across ten symbols; deleting ~10 float ops from the
+hottest of them moves the frame by less than the cross-build placement noise.
+The remaining collision levers -- an exact integer ordered compare for two
+RUNTIME floats (~7 instructions against an 18-cycle `bl`, priced at ~3,300
+cyc/frame here and reusable across `ndsStageMPAdjustFloorLoopWallSweep`,
+`mpCollisionGetFCCommonFloor` and `ndsMPFindLineEndpoints`), and fixed-point
+segment arithmetic -- have to be stacked into ONE arm to clear the floor.
 ### The animation lane's ARITHMETIC is spent; what is left is working set
 
 Stated with numbers so nobody re-derives it, and stated as a *boundary*, not a
