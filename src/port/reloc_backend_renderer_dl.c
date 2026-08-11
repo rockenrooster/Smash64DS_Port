@@ -305,17 +305,19 @@ typedef struct NDSRendererAdapterNativeOwnerWorkspace
     NDSRendererMatrix20p12 hierarchy_locals[
         NDS_RENDERER_NATIVE_FIGHTER_JOINT_MAX];
 #if NDS_R2_FIGHTER_GX_COMPOSE
-    /* Slice 43. Per-binding descriptors for the GX compose. The chain matrices
-     * themselves live in `hierarchy_locals` above, which mode 9 does not use --
-     * every joint is on exactly one binding's chain, so JOINT_MAX is the exact
-     * bound and no second 1,728-byte array is allocated
-     * ([[ram-is-not-free-gobj-cap]]). */
+    /* Slice 43. Per-binding descriptors for the GX compose, plus the chains
+     * themselves. This does NOT reuse `hierarchy_locals`: that array is sized at
+     * the joint count, and a binding whose baked parent is 0xff walks to the
+     * DObj root, so Mario's three root-parented bindings re-capture their shared
+     * ancestors and overrun it. */
     u8 gx_local_first[NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED];
     u8 gx_local_count[NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED];
     u8 gx_parent_slot[NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED];
     u8 gx_store_slot[NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED];
+    NDSRendererMatrix20p12 gx_locals[NDS_RENDERER_FIGHTER_GX_LOCAL_MAX];
     NDSRendererMatrix20p12 gx_seed;
     u8 gx_seed_is_identity;
+    u8 gx_valid;
 #endif
     NDSRendererMatrix20p12 hierarchy_projection;
     NDSRendererMatrix20p12 hierarchy_camera_modelview;
@@ -3728,7 +3730,7 @@ static sb32 ndsRendererAdapterCaptureOwnerChainsGx(
         workspace->gx_local_first[binding_index] = (u8)next_local;
         for (i = depth; i != 0u; i--)
         {
-            if (next_local >= NDS_RENDERER_NATIVE_FIGHTER_JOINT_MAX)
+            if (next_local >= NDS_RENDERER_FIGHTER_GX_LOCAL_MAX)
             {
                 return FALSE;
             }
@@ -3736,7 +3738,7 @@ static sb32 ndsRendererAdapterCaptureOwnerChainsGx(
              * the compose pass treats it. */
             if (ndsRendererAdapterBuildDObjLocalMatrix(
                     chain[i - 1u],
-                    &workspace->hierarchy_locals[next_local]) != FALSE)
+                    &workspace->gx_locals[next_local]) != FALSE)
             {
                 next_local++;
                 count++;
@@ -4120,10 +4122,12 @@ static sb32 ndsRendererAdapterPrepareNativeOwnerMatrices(
      * and let the geometry engine compose it in the root loop. Declining leaves
      * nothing consumed, exactly as the compose does, so the CPU pass below is
      * still the fail-closed answer. */
+    sNdsRendererAdapterNativeOwnerWorkspace.gx_valid = 0u;
     if (ndsRendererAdapterCaptureOwnerChainsGx(
             slot, bindings, binding_count,
             &sNdsRendererAdapterNativeOwnerWorkspace) != FALSE)
     {
+        sNdsRendererAdapterNativeOwnerWorkspace.gx_valid = 1u;
         ndsRendererMatrixCopy20p12(
             &sNdsRendererAdapterNativeOwnerWorkspace.gx_seed, &compose_seed);
         sNdsRendererAdapterNativeOwnerWorkspace.gx_seed_is_identity =
@@ -13931,13 +13935,29 @@ static sb32 ndsRendererAdapterBuildNativeProductionInputs(
         root->projection_matrix = projection;
 #endif
 #if NDS_R2_FIGHTER_GX_COMPOSE
-        root->gx_locals = &workspace->hierarchy_locals[
-            workspace->gx_local_first[i]];
-        root->gx_seed = &workspace->gx_seed;
-        root->gx_local_count = workspace->gx_local_count[i];
-        root->gx_parent_slot = workspace->gx_parent_slot[i];
-        root->gx_store_slot = workspace->gx_store_slot[i];
-        root->gx_seed_is_identity = workspace->gx_seed_is_identity;
+        root->gx_valid = workspace->gx_valid;
+        if (workspace->gx_valid != 0u)
+        {
+            root->gx_locals = &workspace->gx_locals[
+                workspace->gx_local_first[i]];
+            root->gx_seed = &workspace->gx_seed;
+            root->gx_local_count = workspace->gx_local_count[i];
+            root->gx_parent_slot = workspace->gx_parent_slot[i];
+            root->gx_store_slot = workspace->gx_store_slot[i];
+            root->gx_seed_is_identity = workspace->gx_seed_is_identity;
+        }
+        else
+        {
+            /* Leave nothing stale behind: a declining owner that inherited the
+             * previous owner's chains would draw the wrong fighter's skeleton
+             * and still report full engagement. */
+            root->gx_locals = NULL;
+            root->gx_seed = NULL;
+            root->gx_local_count = 0u;
+            root->gx_parent_slot = (u8)NDS_RENDERER_FIGHTER_GX_SLOT_NONE;
+            root->gx_store_slot = (u8)NDS_RENDERER_FIGHTER_GX_SLOT_NONE;
+            root->gx_seed_is_identity = 0u;
+        }
 #endif
 #if NDS_RENDERER_M2_DETAILED_LEDGER
         root->owner_generation = owner_file->owner_generation;

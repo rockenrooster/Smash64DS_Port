@@ -32201,8 +32201,20 @@ ndsRendererExecuteNativeFighterOwnerProduction(
 #endif
         *out_hardware_started = TRUE;
 #if NDS_R2_FIGHTER_GX_COMPOSE
-        ndsRendererLoadHardwareGxComposedMatrices(
-            input, state->matrix_generation);
+        /* The capture is allowed to decline, and when it does the adapter has
+         * composed on the CPU exactly as before, so the split loader is still
+         * the fail-closed answer for this owner. */
+        if (input->gx_valid != 0u)
+        {
+            ndsRendererLoadHardwareGxComposedMatrices(
+                input, state->matrix_generation);
+        }
+        else
+        {
+            ndsRendererLoadHardwareSplitMatrices(
+                input->projection_matrix, input->modelview_matrix,
+                state->matrix_generation);
+        }
 #elif NDS_R2_FIGHTER_HW_MTX
         /* Straight from the root, which BindProductionRoot no longer copies
          * into the traversal state -- see the trace there. */

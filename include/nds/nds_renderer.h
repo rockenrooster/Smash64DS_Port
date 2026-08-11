@@ -365,6 +365,11 @@ extern volatile u32 gNdsG1SiteOccupancy;
  * real slots and 31 is the same "no slot" sentinel the generated cross-slot
  * tables already use. */
 #define NDS_RENDERER_FIGHTER_GX_SLOT_NONE 31u
+/* Slice 43. NOT the joint count: a binding whose baked parent is 0xff walks all
+ * the way to the DObj root, and Mario has THREE such bindings, so their shared
+ * ancestors are captured once per root chain. Sized at JOINT_MAX 27 the capture
+ * declined on every Mario owner -- 535 of 535 -- after reaching 26. */
+#define NDS_RENDERER_FIGHTER_GX_LOCAL_MAX 48u
 #define NDS_RENDERER_TILE_COUNT 8u
 #define NDS_RENDERER_TEXTURE_LOAD_HISTORY_COUNT 2u
 #define NDS_RENDERER_SEMANTIC_TRACE_CAPACITY 832u
@@ -956,6 +961,12 @@ typedef struct NDSRendererNativeFighterRoot
     u8 gx_parent_slot;
     u8 gx_store_slot;
     u8 gx_seed_is_identity;
+    /* The capture is all-or-nothing per owner and it is allowed to decline, so
+     * the descriptors above are only meaningful when this is set. Without it a
+     * declining owner emits the PREVIOUS owner's chains: the first run of this
+     * slice had Mario declining every frame and drawing Fox's joint chains,
+     * with 32.06 roots/frame and only 18 of them described. */
+    u8 gx_valid;
 #endif
     const NDSRendererNativeMaterial *materials;
     const NDSRendererConfig *config;
