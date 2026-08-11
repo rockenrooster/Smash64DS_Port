@@ -5137,6 +5137,62 @@ cross-build**, where ~30K of stacked change clears the floor decisively. Slice
 42's non-additivity says the batching must be one compile-time build, NOT a
 multi-bit route.
 
+### Slice 43 KEPT — the geometry engine composes the fighter joints. Gate 1,244,480
+
+Evidence: `artifacts/performance/2026-08-11_c119-lane/SLICE43_GATE.md` and
+`SLICE43_ENGAGEMENT.md`; captures in `artifacts/visibility/2026-08-11_gx-compose`.
+Two ROMs from one tree, 1,600 frames both-CPU from 438, stride 96, DLDI ON.
+**The matched control reproduced the banked gate TO THE TICK** (958,592 /
+1,258,112), so the delta belongs to the flag and not to placement.
+
+| bucket | control | slice 43 | + projection elide | Δ total |
+|---|---:|---:|---:|---:|
+| `FTR` P50 | 302,848 | 296,832 | **294,592** | **−8,256** |
+| `FTR` P95 | 306,368 | 300,288 | **297,856** | **−8,512** |
+| `WORK-H` P50 | 958,592 | 953,856 | **947,968** | **−10,624** |
+| `WORK-H` P95 | **1,258,112** | 1,249,088 | **1,244,480** | **−13,632** |
+
+Both `WORK-H` arms clear the ±8,544 floor. `NDS_R2_FIGHTER_GX_COMPOSE` is
+graduated at all three published override sites.
+
+**What it does.** `ndsRendererAdapterComposeOwnerWorldsFlat` stops multiplying:
+the capture copies each binding's chain out in the order that pass would have
+multiplied it, and the production root loop issues
+`RESTORE(parent)` / `MTX_MULT_4x3(chain)` / `STORE` / scale off the GX matrix
+palette. DS `MTX_MULT` is `current = M × current`, the same convention as
+`MtxMulAffine20p12(&local, out, out)`, so nothing is reassociated. Stacked on it:
+31 of 32 per-root projection pushes re-load an identical matrix, elided behind
+pointer equality reset per execute — R2-03 E23's own reverted cut, free here.
+
+**Controls.** `Captures/Roots` **63,218/63,218 = 1.000**, `Declines` 0 over 2,038
+frames, `ProjectionSkips` 59,285 = **93.79%** (E23 independently measured 93.8%).
+Both arms end at damage **130/51**, so this is a cost delta, not two matches
+([[route-ab-cannot-price-gameplay-change]]). Frame-locked captures at match tic
+3000 are pixel-identical, so no fidelity budget is spent.
+
+**Two defects the counters caught, and one counter would not have.** `Roots` read
+32.06/frame — full engagement by itself — while `Captures` was exactly 18 × 535:
+Mario declined every owner (the chain store was sized at the joint count, but
+Mario has THREE bindings with no bound ancestor and each walks to the DObj root,
+so their shared ancestors are captured once per root chain) and its 14 roots were
+emitting **Fox's** joint chains. **Instrument the producer and the consumer and
+check their ratio** ([[count-both-sides-of-an-engagement]]).
+
+**The prediction was 3.4× too big, and the reason is reusable.** −20,700 was
+computed at E23's 12.2 cycles per FIFO word. The chain commands measured **~30**;
+the projection elide in the same function measured **~8.5**. A `LOAD4x4` at the
+top of a root sits just after `EndBatch` with the queue drained; the chain's
+`MULT`/`RESTORE`/`STORE` interleave with vertex submission. **Never carry a
+cycles-per-word constant between command sites** ([[fifo-word-price-depends-on-queue]]).
+
+**The 17-word `diag(1,1,1,s)` scale cannot be made cheaper** — 544 words/frame
+and the largest new cost. `MTX_SCALE` is 4 words but scales rows 0..2, and
+`GL_MODELVIEW` is DS matrix mode 2, so it would scale the vector matrix and break
+`NDS_R2_FIGHTER_HW_LIGHT`; the uniform-scale-cancels-in-the-divide form has the
+same problem. Row-vector algebra blocks folding it into the factors (`L·V` scales
+column 3, `V·L` scales row 3) or into the seed (rightmost factor, so right
+multiplication scales a column).
+
 ### Cycle 119 re-attribution: the 20.12 matrix lane is the FIGHTERS, not the stage
 
 Full evidence: `artifacts/performance/2026-08-11_c119-lane/FIGHTER_MATRIX_LANE.md`.

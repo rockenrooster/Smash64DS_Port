@@ -1274,6 +1274,14 @@ override NDS_TASK36_HW_COMPOSE := 2
 # both flag states, geometry proven identical (136,640 P0 triangles either way
 # over the same 480-frame window), owner-approved 2026-07-28.
 override NDS_R2_FIGHTER_HW_MTX := 1
+# Slice 43: E17 one level deeper -- the geometry engine composes the JOINT chain
+# too, off the matrix palette, so the CPU does no fighter matrix multiply at all.
+# Matched-control gate, 1,600 frames both-CPU: FTR P50 -8,256 / P95 -8,512,
+# WORK-H P50 -10,624 / P95 -13,632, both arms over the +/-8,544 floor. Engagement
+# Captures/Roots 1.000 and Declines 0 over 2,038 frames; both arms end at damage
+# 130/51, so the arms played the same match. Frame-locked captures at match tic
+# 3000 are pixel-identical, so this is not a fidelity trade.
+override NDS_R2_FIGHTER_GX_COMPOSE := 1
 # R2-03 E16: the fighter's per-vertex lighting runs on the geometry engine
 # instead of the CPU. -35,072 FTR P50, VBlank histogram 2:381->2:418, geometry
 # bit-identical (181,440 P0 triangles either way). Requires HW_MTX above for the
@@ -1483,6 +1491,7 @@ override NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE := 1
 override NDS_TASK36_HW_COMPOSE := 2
 # R2-03 E17/E16: match the published block. Any flag there is on this one too.
 override NDS_R2_FIGHTER_HW_MTX := 1
+override NDS_R2_FIGHTER_GX_COMPOSE := 1
 override NDS_R2_FIGHTER_HW_LIGHT := 1
 # R2-03 E32. See the published block for the accepted visual residual.
 override NDS_R2_FIGHTER_SHUFFLE_FOLD := 1
@@ -1732,6 +1741,7 @@ override NDS_TASK36_HW_COMPOSE := 1
 override NDS_TASK36_RIGID_BINDING_MASK := \
 	$(if $(filter %-rigidoff-hwtri,$(TARGET)),0ULL,)
 override NDS_R2_FIGHTER_HW_MTX := 1
+override NDS_R2_FIGHTER_GX_COMPOSE := 1
 override NDS_R2_FIGHTER_HW_LIGHT := 1
 override NDS_R2_FIGHTER_SHUFFLE_FOLD := 1
 override NDS_R2_CUBIC_FIXED := 1

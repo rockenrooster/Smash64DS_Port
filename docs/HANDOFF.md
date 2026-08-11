@@ -1,7 +1,7 @@
 # Handoff
 
-Updated: 2026-08-11. **The gate is re-banked at 1,258,112** (RAM recovery, −36,032
-cross-build). Requirement 4 shipped before it: the fighter `AObj` is fixed point,
+Updated: 2026-08-11. **The gate is re-banked at 1,244,480** (slice 43, −13,632
+cross-build against a control that reproduced the old gate to the tick). Requirement 4 shipped before it: the fighter `AObj` is fixed point,
 `WORK-H` P50 −23,360 / P95 −37,504 routed. **Every 128-frame figure in the archive
 is unusable** — it reads the cheapest 6% of the match. Use `-Samples 1600`.
 
@@ -12,12 +12,12 @@ frames past the buzzer. Slips 0 in every row.
 
 | arm | role | `WORK-H` P50 | P95 | over gate |
 |---|---|---:|---:|---:|
-| **both-CPU** | **THE GATE** | **958,592** | **1,258,112** | re-banked c119 |
+| **both-CPU** | **THE GATE** | **947,968** | **1,244,480** | re-banked c119 s43 |
 | **Boundary** mode 163 | shipped configuration | 920,192 | 1,113,408 | re-banked c116 |
 
-**Gate 1,258,112, re-banked after the RAM campaign — P95 −36,032 / P50 −2,560,
-4.2x the ±8,544 floor and the campaign's largest single P95 move; it came from
-RAM, not CPU work. Gap ~138,112.** The soak's long match is
+**Gate 1,244,480, re-banked on slice 43 — P95 −13,632 / P50 −10,624, both over
+the ±8,544 floor. The RAM campaign's −36,032 before it is still the campaign's
+largest single P95 move. Gap ~124,100.** The soak's long match is
 `NDS_R2_SOAK_MATCH_MINUTES`; `probe-match-window.ps1` reads the timer from the
 guest, so a window cannot claim coverage it lacked. Owner's bar: the whole match
 under P95 on the both-CPU config, loading excluded; the shipped ROM stays the
@@ -36,7 +36,7 @@ tail / game+renderer are 11.6%" reading was `--top 40` at 75% coverage — do no
 re-derive it. The animation half of that streaming is GONE: the RAM campaign
 took the arena to 262,144 and anim rejects to **0/0**. Banding the 80 tail
 frames, **Band A (a symbol on ≥40 of 80) = 154,496 tk over 213 symbols** — more
-than the ~138,112 gap. SIZE IS NOT PERMISSION: float in
+than the ~124,100 gap. SIZE IS NOT PERMISSION: float in
 `gmcollision`/`mp*`/`ftMain*`/`ftComputer` is FROZEN by the Task 9 hash
 (`census-softfloat-callers.ps1`) — exact moves only, which is why 35–37 are memos.
 
@@ -60,12 +60,13 @@ than the ~138,112 gap. SIZE IS NOT PERMISSION: float in
   nothing left to memoize either. **Slice 39's table is VOID** — threshold ON
   the quantum. **Don't blanket-convert `ndsBaseGcPlayMObjMatAnim`** — 5 tracks
   pack 0xRRGGBBAA in f32.
-- **A single >=16K lever (slice 42).** c119 attributed every arithmetic leaf on
-  the true top-80 exactly; the soft-float owners ARE the camera/matrix lane. The
-  two 20.12 multiplies measured **sub-floor** and were reverted, and nothing left
-  is over 12,233 tk. The LANES are (20.12 kernels 62,891, float camera 55,865) —
-  **batch bit-exact deletions into ONE compile-time build and measure
-  cross-build**; slice 42 proved a multi-bit route over hot code is not additive.
+- **The 20.12 kernels' ARITHMETIC (slice 42)** — row-blocking is sub-floor and
+  non-additive; a multi-bit route over hot code cannot be summed. **Slice 43 took
+  the lane structurally instead** (KEPT): the fighters owned 35,752 tk and the GX
+  composes their joints now. **The local-matrix memo is dead twice** — E8's
+  +16,301 key cost, and its payload is 302 tk/call since `MTX_DIRECT` graduated.
+  **The flower rigid-mask prices out at +3,200, wrong sign** — E4 §8 was never
+  re-derived against §8a's own number; board has the arithmetic.
 
 ## RAM: both budgets are near their floor — price a change before writing it
 
@@ -114,18 +115,18 @@ bodies took it to **7,516**. Recipe, no build: `--pc-detail SYM[,SYM…]`, diff
 
 **Compiling the frame-summary counters out is refuted** (FTR −7,378 / STG −2,776): it **breaks the gate** — `…gcrunall-loop-harness.ps1` asserts exact batch and texture-prepare accounting off those globals. **Tick factor 0.4993 tk/cyc** comes from `ALL` vs total cycles; deriving it from the FTR sum is circular.
 
-**NEXT SLICE — 43, designed and precondition-checked, not yet built.** The 20.12
-matrix lane is the **FIGHTERS**: 35,752 tk/fr on 80/80 under one caller,
-`…DLAllDrawForSlot` — 52.5 `MtxMulAffine20p12` (18,560) + 57.5
-`BuildDObjXObjMatrix` (12,233) + 55.8 `BuildDObjLocalMatrix` (4,959); only 1.5 of
-54.2 affine mults are the stage's. FLAT (`tk prem` ~1,900), so a cut moves P50 and
-P95 together. Arithmetic died in slice 42, instructions died in `--pc-detail` (324
-PCs, top 6.8%, 21% D-cache miss), the local-matrix memo is dead twice. **Left:
-compose on the GX matrix palette** — the root loop already calls
-`glStoreMatrix`, `binding_parents` is preorder, so RESTORE(parent)/`MTX_MULT_4x3`
-/STORE(i) rebuilds the tree in the loop's own order. **~−20,700 tk** at ~12.2
-cyc/FIFO-word (from E23). Both preconditions hold; the generator must emit a
-dense per-binding slot table. Board + `2026-08-11_c119-lane/FIGHTER_MATRIX_LANE.md`.
+**SLICE 43 KEPT — gate re-banked 1,258,112 → 1,244,480.** The 20.12 matrix lane
+was the **FIGHTERS**, not the stage: 35,752 tk/fr on 80/80 under one caller,
+`…DLAllDrawForSlot`. `NDS_R2_FIGHTER_GX_COMPOSE` graduated — the geometry engine
+composes the joint chain off the matrix palette
+(`RESTORE(parent)`/`MTX_MULT_4x3`/`STORE`/scale), plus E23's reverted projection
+elide stacked free. Matched control reproduced the banked gate TO THE TICK.
+**`FTR` −8,256 P50 / −8,512 P95, `WORK-H` −10,624 / −13,632**, both over the
+floor; `Captures/Roots` 1.000, `Declines` 0, damage 130/51 both arms,
+pixel-identical frame-locked captures. **Gap now ~124,100.**
+**Never carry a cycles-per-word constant between GX command sites** — the chain
+commands cost ~30, the projection elide in the same function ~8.5, and predicting
+one from the other made this slice look 3.4x bigger than it is.
 
 **The `SINT` split is DONE.** `SINT` +88,082 = `ftMainPlayAnim` **+60,559**
 (animation) + `ftComputerProcessAll` +24,386 (map collision, not AI). **`SINT`
