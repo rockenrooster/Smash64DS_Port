@@ -4447,12 +4447,27 @@ presented frames -- the signal that killed slice 29 twice -- and `WORK-H` P50
 +4,096 / P95 -5,632 against slice 28, both inside the +-8,544 floor, which is
 what a pure correctness refactor should measure. Boundary green.
 
-**This unblocks the endpoint memo.** `ndsMPFindLineEndpoints` is still 13,205
-cyc/frame over 28 callers and still a pure function of `line_id` and static
-geometry; the reverted patch is at
-`artifacts/performance/2026-08-10_c117-lane/slice29-endpoint-memo-REVERTED.patch`
-and can now be re-applied WITHOUT its `ndsMPVertexF32Bind` call, which was the
-part that broke it.
+**It does NOT unblock the endpoint memo, and that was tested rather than
+assumed.** The patch was re-applied on top of this slice with the bind removed
+(slice 29b) and **still diverged the match, reproducibly: frames 535, 822, 1110,
+1590 on two consecutive runs.** Reverted again. So the bind was NOT the cause --
+it is exonerated by experiment -- and the earlier claim in this board and in the
+slice-30 commit message that it was is wrong. The two variants even diverge at
+DIFFERENT frames (1015/1495/1686 with the bind, 535/822/1110/1590 without),
+which says the memo itself is the common cause and the bind merely changed how
+the divergence expressed.
+
+**What is still unexplained, for whoever picks this up.** The memo's output
+looked provably identical on review: same resolved group, same first/last vertex
+ids, `flags` always from the FIRST vertex regardless of ordering, `vertex_count`
+unchanged, and the s32 `v_first_x <= v_last_x` ordering replaced by
+`NDS_FCMP_GT` on the f32s, which is exact because every s16 is exactly
+representable. One of those four claims is false, or the function has a caller
+whose behaviour depends on something other than its outputs. **Find which before
+writing any more code** -- three of the day's four failures came from acting on a
+plausible mechanism instead of a measured one. The reproducible frame set is a
+cheap oracle: bisect the memo by disabling parts of it and watch which frames
+move.
 
 ### Slice 29: REVERTED -- and it found the real defect in the cycle-109 memo
 
