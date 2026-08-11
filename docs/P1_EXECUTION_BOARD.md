@@ -5137,6 +5137,56 @@ cross-build**, where ~30K of stacked change clears the floor decisively. Slice
 42's non-additivity says the batching must be one compile-time build, NOT a
 multi-bit route.
 
+### Cycle 119 re-attribution: the 20.12 matrix lane is the FIGHTERS, not the stage
+
+Full evidence: `artifacts/performance/2026-08-11_c119-lane/FIGHTER_MATRIX_LANE.md`.
+Same CSV, no extra run, the builders themselves as leaves, 100.0% reconciliation
+on every one. **35,752 tk/frame of the 62,891 "20.12 kernels" group has a single
+caller, `ndsFighterMarioFoxDLAllDrawForSlot`** — 52.5 `MtxMulAffine20p12` (18,560),
+57.5 `BuildDObjXObjMatrix` (12,233), 55.8 `BuildDObjLocalMatrix` (4,959), all
+80/80. Mario 25 joints + Fox 27 = the whole of it. Only **1.5** of 54.2 affine
+multiplies are the stage's. `tk prem` ≈ 1,900, so this is FLAT work — a cut moves
+P50 and P95 one for one.
+
+**Everything but hardware is closed on this lane, and one closure is new.** The
+arithmetic died in slice 42. The instructions died in `--pc-detail`: 324 PCs, top
+PC 6.8%, and the four costliest rows are loads at 28.7/29.2/16.8/13.3 cyc/insn —
+21% of the function is D-cache misses on `DObj`/`FTParts` fields
+([[flat-function-only-lever-is-not-entering-it]]). And **the local-matrix memo is
+now dead twice**: R2-03 E8 refuted it at +16,301 on key cost, and its payload has
+since shrunk from E6's 1,061 tk/build to **302 tk/call** because
+`NDS_R2_FIGHTER_MTX_DIRECT` graduated — at E8's 13.6 hits/frame the gross saving
+is ~4,100 tk, under the floor before the key costs anything. Do not revive it,
+cheap write-site generation key or not.
+
+**Open: compose the fighter joint worlds on the GX matrix stack.** The 52 composes
+and 32 `LoadHardwareSplitMatrices` exist only to hand a matrix to GX — the loader
+is `SetMatrixMode(GL_MODELVIEW); LoadMatrix4x4()` and nothing else, and fighter
+vertices are submitted in MODEL space, so no CPU consumer reads a composed world.
+`binding_parents[i] < i` is already preorder, and DS `MTX_MULT` is
+`current = M × current`, the same convention as `MtxMulAffine20p12(&local, out, out)`.
+~59,510 cyc → ~4,000. **Predicted ~27,000 tk/frame**, 3× the ±8,544 floor.
+Render-side only, same doctrine `ComposeOwnerWorldsFlat` already relies on.
+
+**Still the larger lever, unchanged:** the cycle-118 asset-streaming complex at
+**184,414 tk of tail premium**. It is 5× this lane and it is blocked on the RAM
+question the board already flags, not on evidence.
+
+### Do NOT retry: the flower rigid-mask, and why its own report's prediction is stale
+
+R2-02 E4 §8 predicted de-crossing + widening the rigid mask would "recover the
+bulk" of arm C's −51,200. §8a then measured de-crossing alone at −4,224 and
+concluded the other ~47,000 "was never work — it was the 15 triangles not being
+drawn" — but nobody re-derived §8's prediction against §8a's own number.
+Doing that: arm C = (dynamic chain for 10 bindings) + (35 matrix loads) +
+(15 triangles undrawn) − (rigid+replay cost). §8a fixes the loads at ~7,400 and
+the undrawn geometry at ~47,000, and this cycle's attribution fixes the dynamic
+chain at 10 × (584 + 580) ≈ 11,640. That leaves the rigid+replay path costing
+about **+3,200 more** than what it replaces — the wrong sign. Consistent with arm
+B, where widening the mask doubled `STG`. The generator de-crossing, the checker's
+pinned `(32, 34, 45, 47, 49)`, and the Tier-2 differ gating are real work for a
+lever that prices out at zero. Leave it.
+
 ### Slice 41: 30 Hz poses REJECTED — and a route A/B cannot price a gameplay change
 
 Cycle 119, one binary (`builds/build-c119-pose-route`, `NDS_R2_BOTH_CPU=1`),
