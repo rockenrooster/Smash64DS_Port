@@ -5273,6 +5273,46 @@ survives contact with the floor, and it is why the slice stays alive after the
 working-set argument was downgraded. Bind the records; the smaller node comes
 along for free.
 
+#### STOP — the baked form does not fit in RAM, and the value model was wrong too
+
+Checked before writing the loader, and both halves fail.
+
+**Memory.** The animation cache keeps each animation's payload resident so a
+move does not re-walk NitroFS mid-frame; cycle 105 measured the match's working
+set at **85 distinct animations** on the both-CPU arm, and the arena must keep
+`NDS_R2_ANIM_CACHE_ARENA_KEEP_FREE` = 32,768 B free.
+
+| | total | per animation | × 85 working set |
+|---|---:|---:|---:|
+| figatree source (cached today) | 686,192 | 2,310 | **196,350** |
+| baked records + control | 3,060,460 | 10,304 | **875,840** |
+
+**The baked form is 4.46× the source it would replace** — the cache would need
+**+679,490 B**. Dropping all 40,944 `kind == None` initialisation records (28.1%
+of the blob) only reaches 3.27× and +445 KB. Against a 32 KB keep-free floor and
+a 24,404 B heap low-water, neither fits. This is not a tuning problem.
+
+**And the 9,176–13,764 ticks/frame above is an over-estimate**, for a reason
+independent of memory: **every command is parsed exactly once per playback.**
+The parser runs incrementally as each command's `anim_wait` expires, so over an
+animation's run it does the same total work a load-time bake would do. Baking
+therefore wins **only where records survive to be reused** — i.e. on repeated
+animations, which is 64.6% of force-loads (53 of 82). That is precisely what the
+cache is for, and precisely what 4.46× cannot afford.
+
+**What survives.** The offline half is correct and stays — the reader, the bake,
+the emitter, the layout guard and the Makefile wiring are all proven and gated
+off, and they are the input to any future encoding. What is refuted is *this
+encoding at this size*: 20 bytes × 145,873 records cannot be resident.
+
+A future attempt needs the record materially smaller (the two s32 fields are 8
+of the 20, and both resisted s16 for measured reasons), or a partial cache of
+the most-repeated animations sized to the ~196 KB the source already costs, or
+the win taken somewhere other than the parse. **Do not write the loader against
+the current format** — it cannot fit, and the arena's failure mode is
+`syTaskmanMalloc` spinning forever in `malloc.c:30`, which is the freeze class
+the cache comment already documents.
+
 **Correction — the "frees 8,192 B" figure published one step earlier is wrong.**
 It priced the whole 512-node pool converting to 20 bytes, which cannot happen:
 this specialization is fighter joints only, and `gcPlayDObjAnimJoint` also

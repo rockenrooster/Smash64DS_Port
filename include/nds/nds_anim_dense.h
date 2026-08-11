@@ -3,8 +3,31 @@
 
 #include <PR/ultratypes.h>
 
-/* Slice 32. The dense fighter-animation track: what replaces walking a list of
- * 36-byte `AObj` nodes by pointer.
+/* Slice 32. The dense fighter-animation track.
+ *
+ * READ THIS FIRST: the format below is PROVEN CORRECT AND DOES NOT FIT.
+ * Baked records plus control are 10,304 bytes an animation against the 2,310
+ * the figatree source costs -- 4.46x -- and the match's cached working set is
+ * 85 animations, so making them resident needs +679,490 bytes against a
+ * 32,768-byte keep-free floor. Dropping all 40,944 initialisation records only
+ * reaches 3.27x. The arena's failure mode is `syTaskmanMalloc` spinning forever
+ * at malloc.c:30, which is a documented freeze class, so this is not a thing to
+ * try and measure.
+ *
+ * The value model was also optimistic: every command is parsed exactly ONCE per
+ * playback, so a bake does not delete work an incremental parser was repeating
+ * -- it only wins where records survive to be REUSED, on the 64.6% of loads
+ * that repeat an animation. That reuse is exactly what the cache provides and
+ * exactly what 4.46x cannot afford.
+ *
+ * The header stays because the emitter, the reader and the layout guard behind
+ * it are all correct and are the input to any future encoding. A future attempt
+ * needs a materially smaller record -- the two s32 fields are 8 of the 20 and
+ * both resisted s16 for measured reasons recorded below -- or a partial cache
+ * sized to the ~196 KB the source already costs. See the board's slice 32
+ * section. Everything from here down describes the format as built.
+ *
+ * What it replaces: walking a list of 36-byte `AObj` nodes by pointer.
  *
  * WHY, in one measurement. `ldrb r5,[r4,#5]` -- `aobj->kind` -- is 14,616,804
  * cycles, 21.5% of `gcPlayDObjAnimJoint`, at 25.64 cyc/insn over 570,065
