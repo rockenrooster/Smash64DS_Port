@@ -434,7 +434,15 @@ static void ndsR2AnimBuildTrackTable(DObj *root_dobj, AObj **track_aobjs,
     }
 }
 
-#define NDS_R2_FTANIM_TRACKS()                                                   do {                                                                             if (tracks_built == 0u)                                                      {                                                                                ndsR2AnimBuildTrackTable(root_dobj, track_aobjs,                                                      (s32)ARRAY_COUNT(track_aobjs), q);                  tracks_built = 1u;                                                       }                                                                        } while (0)
+#define NDS_R2_FTANIM_TRACKS()                                               \
+    do {                                                                     \
+        if (tracks_built == 0u)                                                  \
+        {                                                                    \
+            ndsR2AnimBuildTrackTable(root_dobj, track_aobjs,                 \
+                                     (s32)ARRAY_COUNT(track_aobjs), q);      \
+            tracks_built = 1u;                                                   \
+        }                                                                    \
+    } while (0)
 
 #define NDS_R2_FTANIM_ENSURE()                                               \
     do {                                                                     \

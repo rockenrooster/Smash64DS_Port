@@ -4569,6 +4569,36 @@ Two things it must get right, both already known from this cycle:
   is already inside the GObj-cap margin (see `ram-is-not-free`). Size the record
   pool against a measured worst case before writing the player, not after.
 
+**Step 10, a correction to my own cost model, and it lowers slice 32's value.**
+`ndsR2FtAnimParseDObjFigatree` does NOT re-parse the script each frame. It
+RESUMES one, and it returns early:
+
+    anim_wait -= anim_speed; anim_frame += anim_speed;
+    if (anim_wait > 0) { return; }        <-- BEFORE the table walk
+
+So the walk -- and the whole event loop -- runs only on the frames where an
+animation advances to a NEW script command. Every other call is the four lines
+above and nothing else. **"The walk IS the call" was wrong**: the 95.7
+instructions/call the profile reports is an AVERAGE over many cheap
+early-return calls and a few expensive stepping calls, not a description of a
+typical call. Slice 31's -7,104 is still real and still route-proven, but its
+mechanism is narrower than stated -- it saved the walk on the subset of calls
+that pass the early return and then find no table read.
+
+**What that does to the AOT case.** The parse's 16,806 ticks/frame is dominated
+by the early-return path: two float compares against sentinels, two adds, and a
+GObj store, executed for every animating DObj every frame. **A baked track
+cannot remove any of it** -- advancing `anim_wait`/`anim_frame` per frame IS the
+animation clock, not interpretation overhead. What AOT can remove is the script
+stepping, which happens on a minority of frames.
+
+So the realistic recovery from slice 32 is **materially below the 9.1% of the
+gap estimated at the ceiling step**, and the honest statement about this lane
+is stronger than "capped": the largest single remaining animation symbol is
+mostly irreducible per-frame clock work. **Measure the early-return share before
+building the player** -- one counter split on the early return answers it, and
+if it is the majority, slice 32 should be abandoned rather than built.
+
 **Method note.** The table above was extracted wrong TWICE before it was right:
 the first pass ended each case at the inner flags-loop `break;` and the second
 tracked brace depth from the function rather than from the `switch`, and both
