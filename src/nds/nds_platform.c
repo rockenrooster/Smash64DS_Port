@@ -240,6 +240,20 @@ volatile u32 gNdsOriginalSpriteBg2FinalWriteBytes;
 volatile u32 gNdsOriginalSpriteBg3ClearBytes;
 volatile u32 gNdsOriginalSpriteBg3CopyBytes;
 volatile u32 gNdsOriginalSpriteBg3FinalWriteBytes;
+/* KEEP these five even when the DL preview compiles out. On a hardware-triangle
+ * build nothing writes them any more, so `--gc-sections` drops them and every
+ * harness that reads them fails to resolve the symbol -- which is how the
+ * Boundary verifier went RED on "Missing ELF symbol gNdsOriginalDLPreviewReady"
+ * rather than on any behaviour change. Five readers depend on them:
+ * verify-runtime.ps1 (OPENING_ROOM_DL_PREVIEW_PRESENT, PERF_CONTENT),
+ * verify-battle-mariofox-gcrunall-loop-harness.ps1 (PLATFORM_DL_PREVIEW) and
+ * sample-runtime-speed.ps1.
+ *
+ * Reading a permanent 0 here is the correct measurement, not a stub: it is the
+ * verifier's existing assertion that the preview never engages, and on hwtri
+ * that is now guaranteed structurally because the code which could set it does
+ * not exist. Non-hwtri builds are unaffected and still drive these normally.
+ * 20 bytes total. */
 volatile u32 gNdsOriginalDLPreviewReady;
 volatile u32 gNdsOriginalDLPreviewWidth;
 volatile u32 gNdsOriginalDLPreviewHeight;
@@ -1810,6 +1824,31 @@ u16 *ndsPlatformBeginOriginalDLPreview(u32 width, u32 height, u32 *out_pitch)
     (void)width;
     (void)height;
     (void)out_pitch;
+    /* These five stores exist to keep the diagnostic globals LINKED, and they
+     * are the reason this is a store rather than an attribute. `used` only
+     * stops the compiler discarding them -- the object file still emitted each
+     * one into its own `.bss.gNds...` section -- and `retain` was accepted
+     * silently without setting SHF_GNU_RETAIN, so `--gc-sections` dropped all
+     * five either way. A real reference from a still-linked function is what
+     * the linker actually honours.
+     *
+     * Five harnesses resolve these by name and fail hard when they are absent:
+     * that is how Boundary went RED on "Missing ELF symbol
+     * gNdsOriginalDLPreviewReady" with nothing behaviourally wrong. See
+     * verify-runtime.ps1 (OPENING_ROOM_DL_PREVIEW_PRESENT, PERF_CONTENT),
+     * verify-battle-mariofox-gcrunall-loop-harness.ps1 (PLATFORM_DL_PREVIEW)
+     * and sample-runtime-speed.ps1.
+     *
+     * Zero runtime cost: nothing calls this on a hwtri build -- the opening
+     * room is the only caller and it never runs, which is exactly what
+     * gNdsOriginalDLPreviewCommitCount == 0 measured before the change. The
+     * harnesses therefore read the .bss zeroes, which is the correct answer and
+     * now guaranteed structurally rather than by luck. */
+    gNdsOriginalDLPreviewReady = 0u;
+    gNdsOriginalDLPreviewWidth = 0u;
+    gNdsOriginalDLPreviewHeight = 0u;
+    gNdsOriginalDLPreviewCommitCount = 0u;
+    gNdsOriginalDLPreviewDrawCount = 0u;
     return NULL;
 #else
     if ((width == 0) || (height == 0) ||

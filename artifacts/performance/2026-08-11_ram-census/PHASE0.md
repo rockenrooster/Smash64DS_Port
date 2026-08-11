@@ -135,3 +135,41 @@ removed path never executed at runtime in this ROM. That leaves binary layout or
 harness run-to-run variance. Being decided by re-running the IDENTICAL binary
 (`phase1-repeat.json`); a differing repeat means the counter is not stable enough
 to gate on, an identical repeat means +4 is real and needs a cause.
+
+## Phase 1 CLOSED — `Boundary verification profile passed.`
+
+Two follow-ups were needed after the first measurement, both recorded because
+each cost a build:
+
+**1. `--gc-sections` ate the diagnostic globals.** Removing the last writers of
+`gNdsOriginalDLPreviewReady/Width/Height/CommitCount/DrawCount` dropped all five
+from the link, and Boundary went RED on `Missing ELF symbol
+gNdsOriginalDLPreviewReady` — a verifier failure with no behavioural cause. Five
+harnesses resolve them by name. `__attribute__((used))` did NOT fix it (the
+object file already emitted each into its own `.bss.gNds…` section; the linker
+is what drops them) and `((retain))` was accepted silently without setting
+SHF_GNU_RETAIN. **A real store from a still-linked function is what the linker
+honours** — five zero-stores in the hwtri branch of
+`ndsPlatformBeginOriginalDLPreview`, which is linked but never executes on P1.
+
+**2. The rejects delta is deterministic, not noise.** An identical-binary repeat
+returned bit-identical values on all five counters, so 11 → 15 is real. It
+cannot be behavioural — `CommitCount` was 0 before the change, so the removed
+path never ran. Leading explanation: the taskman arena grew +20,480, so
+allocations that previously failed now succeed, more content is live, and more
+distinct animations get requested. That is the game *using* the recovered
+memory, and Phase 6 removes it by resizing the cache. Re-check there.
+
+### Final, verified on the Boundary-green binary
+
+| metric | baseline | final | delta |
+|---|---:|---:|---:|
+| `.main.bss` | 1,599,280 | 1,577,680 | **−21,600** |
+| `.main` | 903,336 | 902,984 | −352 |
+| total static | 2,639,612 | 2,617,660 | **−21,952** |
+| `gNdsTaskmanArenaChosenSize` | 1,257,472 | 1,277,952 | **+20,480** |
+| `gNdsTaskmanGeneralHeapFreeMin` | 15,120 | **35,324** | **+20,204** |
+| heap floor (32,768) | **FAIL −17,648** | **PASS +2,556** | invariant restored |
+| `gNdsOriginalDLPreviewCommitCount` | 0 | 0 | unchanged |
+
+Campaign progress: **21,952 of the 98,304 B (96 KiB) target — 22.3%.**
