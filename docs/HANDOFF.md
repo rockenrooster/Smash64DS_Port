@@ -45,9 +45,8 @@ than the ~138,112 gap. SIZE IS NOT PERMISSION: float in
 - **Effect DObj submits** — Boundary-only: 99.3% of the Boundary excursion but
   **~12.1%** of the gate arm's. **Projectiles** · **Particles** (flat ~47,000,
   P50 only) · **texture thrash** · **`Find`** · **`Material`** · force-load seam.
-- **`FTR` as the *P95 discriminator*** (+13,768). NOT "FTR is exhausted" — that
-  reading is what the owner re-opened 2026-08-10; cycles 110–116 took 24.3% off
-  it. `FTR` is **flat**, on nearly every frame, which is why.
+- **`FTR` as the *P95 discriminator*** (+13,768). NOT "FTR is exhausted" — the
+  owner re-opened that 2026-08-10; c110–116 took 24.3% off it. `FTR` is **flat**.
 - **The AOT animation bake at 20 B/record** (slice 32). Proven and gated off; the
   SIZE is dead — 10,304 B an animation against 2,310, ×85 needs +679,490 B.
 - **The whole animation lane, and now permanently** (slices 34, 41). Playback's
@@ -120,10 +119,9 @@ bodies took it to **7,516**. Recipe, no build: `--pc-detail SYM[,SYM…]`, diff
 
 **Compiling the frame-summary counters out is refuted** (FTR −7,378 / STG
 −2,776): it **breaks the gate** — `…gcrunall-loop-harness.ps1` asserts exact
-batch and texture-prepare accounting off those globals. **A census row is not an
-FTR row**: the bracket is `ndsFighterDisplayContractSubmit` only. **Tick factor
-0.4993 tk/cyc** comes from `ALL` vs total cycles; deriving it from the FTR sum is
-circular and overstated coverage 22%.
+batch and texture-prepare accounting off those globals. **Tick factor 0.4993
+tk/cyc** comes from `ALL` vs total cycles; deriving it from the FTR sum is
+circular.
 
 **Next, priced** (c115 census, tk/fr). **`Task36ReplayRun` 17,796 is STAGE, not
 FTR**. In FTR: `ExecuteNativeFighterOwnerProduction` **26,307** +
