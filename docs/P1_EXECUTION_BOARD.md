@@ -4836,6 +4836,98 @@ walk IS the call". The three biggest single symbols are already visible:
 `ndsFighterMarioFoxDLAllDrawForSlot` 93,854,253, `ndsRendererCommitNativeStageSegment`
 93,101,009, `ndsRendererNativeEmitProductionPrimitiveGroups` 81,420,680.
 
+### Slice 34: the soft-float bill, attributed exactly — and the lane hands over
+
+`scripts/task37_softfloat_callers.py`, whole-match c117 profile, 1,800 presented
+frames. **No build spent.**
+
+#### Why this measurement had to exist
+
+The ARM946E-S has no FPU, so the libgcc float routines are the largest
+addressable class in the build — **277,647,083 cycles, 10,267,766 calls,
+77,016 tk/fr, 8.35% of all non-idle cycles** — and a PC sampler charges every
+one of them to `__aeabi_fadd`, which names no code to change. Cycle 117 kept
+guessing at callers from static grep and loop bounds.
+
+It is now exact, not estimated. **A `bl __aeabi_fadd` is an instruction with its
+own PC**, so the profiler's execution count at that PC is that call site's exact
+call count. 8,208 static sites, 3,399 executed, 316 callers, **100% attributed**.
+Per-call cost is measured too (callee cycles ÷ callee calls), so ITCM residency
+and operand-dependent early-outs are already inside the number: **fadd 37.3,
+fmul 25.4, fdiv 117.9, fcmpeq 10.6, fcmplt/gt 14.6, i2f 16.7, f2iz 12.7**.
+
+**libgcc FALLS THROUGH and the first run of this got it wrong.** `__aeabi_fsub`
+is four bytes — flip the second operand's sign — and then execution runs off its
+end into `__aeabi_fadd` with no branch. Its own range measures **1.0 cycles a
+call** while its work is charged to fadd. That misfiled **1,392,725 calls** and
+reordered the table: the collision kernels are fsub-heavy, the matrix kernels
+fmul-heavy, and the uncorrected run put a matrix function on top. The tool now
+detects fallthrough from address adjacency plus an under-4-cycle per-call cost
+and prints the pooling. **Do not read a soft-float table that does not say
+`pooled`.**
+
+#### Who pays it — tk/fr, by family
+
+| family | float tk/fr | largest single |
+|---|---:|---|
+| **map collision** | **16,649** | `ndsMPFCSegmentCrossesKernel` 5,518 (752,325 calls, 20 sites) |
+| **matrix / camera** | **14,810** | `syMatrixLookAtReflectF` 4,325 (515,062 calls, 81 sites) |
+| **animation** | **8,772** | `ndsBaseGcPlayMObjMatAnim` 4,631 (651,431 calls, 34 sites) |
+| particles | 4,609 | `ndsRendererSubmitParticleQuad` 2,217 |
+
+`__aeabi_fdiv` alone is **10,084 tk/fr** on only 308,426 calls — the most
+expensive helper per call in the build by 3.2x. Its owners are
+`syMatrixPerspFastF` x44,799, `syUtilsArcTan` x44,325,
+`gmCollisionTestRectangle` x13,053, `…BuildNativeMaterialSnapshot` x13,016.
+
+#### The animation lane hands over, and here is the arithmetic
+
+Animation SELF time is **80,802 tk/fr** across seven symbols, but its two
+largest — `gcPlayDObjAnimJoint` 18,856 and `ndsR2AnimValueQ` 18,616 — are
+**already the Requirement 4 fixed-point path, running at 1.69 and 1.67
+cyc/insn**. There is no float left in them to convert and no stall to place.
+What remains recoverable in animation is the **8,772 tk/fr** above, spread over
+three symbols whose largest is 4,631 — **every one under the ±8,544 cross-build
+floor**, on top of four levers cycle 117 already measured under it (idle-joint
+skip −5,632 `SRC` / `WORK-H` flat, lazy track table −7,104 routed / +576
+re-banked, AObj walk ~1,050, track dispatch ~1,900) and one refuted outright
+(the AOT bake, on residency).
+
+**Collision float is 1.9x animation's largest remaining item**, and that is
+before its self time: `mpCollisionGetFCCommonFloor` 10,294,
+`ndsStageMPSweepFloorLoopSweep` 8,462, `ndsMPFindLineEndpoints` 5,861,
+`ndsStageMPAdjustFloorLoopWallSweep` 4,725, `ndsMPFCSegmentCrossesKernel` 3,735.
+The goal block predicted map collision as the next P95 owner; **the re-profile
+confirms it quantitatively.**
+
+#### Two traps for whoever takes the animation float anyway
+
+- **`ndsBaseGcPlayMObjMatAnim` cannot be blanket-converted to Q.** Five of its
+  tracks — `PrimColor`, `EnvColor`, `BlendColor`, `Light1Color`, `Light2Color` —
+  carry **packed 0xRRGGBBAA in the f32's bit pattern**, which is why
+  `ndsAObjEvent32CorrectMObjColors` reads them through a union. A Q conversion
+  of those AObjs destroys the payload and looks like a palette bug. Only the
+  scalar tracks may convert.
+- **The saving would land in `GCRA`, not `SINT`** (slice 31's finding), and
+  `gcPlayAnimAll` reaches this player through `ndsBaseGcPlayAnimAll`, not
+  through the port's `gcPlayDObjAnimJoint`. The `gcPlayAnimAll` half of the
+  animation system is the half Requirement 4 never touched.
+
+#### The parser, per-PC — what 365.6 cycles a call actually buys
+
+Free from the same profile (`--pc-detail`, pre-slice-33 ROM, so the guard it
+deleted is still visible): **165,639 calls, 365.6 cycles each, 31.5% of them
+returning immediately** at the `anim_wait == AOBJ_ANIM_NULL` test — exactly the
+population slice 33 then removed at the caller.
+
+The cost is memory, not interpretation. **The top five load/store PCs are 27.9%
+of the whole function**: `ldr r0,[r0,#116]` — the `anim_wait` read itself — is
+**34.96 cyc/insn over 165,639 executions, 1,606 tk/fr in one instruction**, and
+the AObj walk's `ldrb r3,[r4,#4]` is 27.36. Prologue and epilogue are 8.9%
+(32.7 cycles a call) and `gNdsR2FtAnimParseCalls++` is **1,105 tk/fr** on its
+own. A smaller *encoding* does not touch any of this; only a smaller working set
+would, and slice 32 priced that at 4.46x too large.
+
 ### Slice 33: the idle joint stops paying two calls to say nothing
 
 **The shape.** `ftParamUpdateAnimKeys` runs one parse call and one play call per
