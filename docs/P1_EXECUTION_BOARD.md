@@ -4420,6 +4420,49 @@ the stack frame to 12 bytes. **Check the disassembly of this kernel for hoisted
 `asr #31` and stack spills after touching it** -- the host error bound cannot
 see code shape, and it reported byte-identical numbers across the fix.
 
+### Slice 29: REVERTED -- and it found the real defect in the cycle-109 memo
+
+`ndsMPFindLineEndpoints` is 13,205 cyc/frame across 28 callers and is a PURE
+function of `line_id` and static geometry. Most of its cost is not the answer
+but the SEARCH for it: a nested walk over yakumono x line-kind doing O2R
+halfword reads to discover which group owns the id. Memoising the resolved
+lookup (two vertex indices, count, flags -- 8 bytes a line, success path only so
+neither failure counter is affected) is obviously correct on paper.
+
+**It diverged the match, reproducibly: frames 1015, 1495, 1686 on two
+consecutive gate runs.** Reverted; the patch is not lost, but do not re-apply it
+as written.
+
+**Why, and this is the part worth keeping.** The memo itself is fine. What broke
+it was the `ndsMPVertexF32Bind(geometry)` the function needed in order to read
+coordinates through the cycle-109 f32 memo -- and that exposed a **design flaw in
+that memo which slice 28 only half-diagnosed.**
+
+The vertex memo is LABELLED by `sNdsMPVertexF32Geometry` at bind time but FILLED
+from whatever `verts` pointer each caller passes. Those are not the same thing.
+`gMPCollisionGeometry` is saved, swapped and restored around the
+alternate-geometry queries, so a bind can label the cache "geometry B" while a
+caller still holding A's `verts` fills it with A's vertices. A later reader that
+binds B then finds the label already equal to B, skips the reset, and reads A's
+coordinates. Adding a bind inside a function reachable from 28 call sites is
+what made that interleaving reachable.
+
+**So the fix is not another bind.** Slice 28 added binds to two sweeps and this
+slice would have added a third; three sites in two slices is the signal that the
+handshake is in the wrong place. **The invalidation belongs at the ASSIGNMENT of
+`gMPCollisionGeometry`, not at its readers** -- roughly six sites
+(`reloc_backend_mp_collision.c` 9594/9607, 10252/10360, 13527/13564, plus
+`reloc_backend_compat_shims.c`), behind a setter that assigns and resets
+together. Then no reader can forget, the label can never disagree with the fill
+because the reset happens exactly when the invariant breaks, and the per-query
+bind check leaves the hot paths entirely. Do that FIRST; the endpoint memo is
+cheap and safe once it lands, and so is anything else that wants the vertex
+cache.
+
+**Standing rule earned here:** a cache labelled at bind time but filled from a
+caller-supplied pointer is only as correct as the discipline of every caller.
+Prefer invalidating where the invariant is broken over binding where it is read.
+
 ### Slice 28: the whole-line reject the SOURCE has and this port lost
 
 **The first collision lever this cycle to clear the placement floor.**
