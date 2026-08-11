@@ -1,0 +1,13 @@
+PHASE 0.1 BASELINE -- shipping P1 ROM, rebuilt at HEAD 1ce4c5f4dee
+section               addr       bytes
+.itcm         0x01ff8020      29,800
+.dtcm         0x02ff0000       8,800
+.dtcm.bss     0x02ff2260         152
+.main         0x020038e8     903,336
+.main.rw      0x020e0190     136,996
+.main.tls     0x021018d0           0
+.main.bss     0x021018e0   1,599,280
+main total                   2,639,612
+  __end__                0x00000000
+  __heap_start_ntr       0x02288010
+  fake_heap_start        0x02288004

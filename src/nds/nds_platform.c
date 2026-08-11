@@ -199,6 +199,18 @@ static u16 sOriginalSpriteDisplayPreview[
 static u32 sOriginalSpriteDecodeCacheEpoch = 1u;
 static u32 sOriginalSpriteDisplayPreviewWidth;
 static u32 sOriginalSpriteDisplayPreviewHeight;
+/* The DL preview's only consumer is ndsPlatformDrawOriginalSpritePreview's
+ * companion blit below, and that whole block is `#if !NDS_RENDERER_HW_TRIANGLES`.
+ * On a hardware-triangle build -- which is what P1 ships -- nothing ever reads
+ * either array, so the producer was filling 21,600 bytes of main RAM that no
+ * path displays. Storage follows its reader's condition exactly; that is what
+ * makes this safe rather than a guess about who might use it.
+ *
+ * Proven on the linked ROM, not by grepping source: of the seven call sites the
+ * source has for ndsPlatformBeginOriginalDLPreview, exactly one survives into
+ * the shipped battle ELF (ndsOpeningRoomRenderDLPreview), and the only functions
+ * holding an address inside either array are the three API entry points here. */
+#if !NDS_RENDERER_HW_TRIANGLES
 static u16 sOriginalDLPreview[
     NDS_ORIGINAL_DL_PREVIEW_MAX_WIDTH *
     NDS_ORIGINAL_DL_PREVIEW_MAX_HEIGHT];
@@ -210,6 +222,7 @@ static u32 sOriginalDLPreviewHeight;
 static u32 sOriginalDLDisplayPreviewWidth;
 static u32 sOriginalDLDisplayPreviewHeight;
 static u32 sOriginalDLPreviewReady;
+#endif
 #if NDS_DEBUG_HUD
 static u32 sDebugTextFingerprint = 0xffffffffu;
 static u32 sDebugTextReady;
@@ -1788,6 +1801,17 @@ void ndsPlatformClearOriginalSpritePreview(void)
 
 u16 *ndsPlatformBeginOriginalDLPreview(u32 width, u32 height, u32 *out_pitch)
 {
+#if NDS_RENDERER_HW_TRIANGLES
+    /* No consumer exists in this configuration, so there is no buffer to hand
+     * back. NULL is the caller's already-supported answer, not a new failure
+     * mode: ndsOpeningRoomRenderDLPreview sets
+     * NDS_OPENING_ROOM_DL_PREVIEW_BLOCKER_NO_PIXELS and returns. Refusing here
+     * also drops the opening room's rasterisation into a buffer nobody reads. */
+    (void)width;
+    (void)height;
+    (void)out_pitch;
+    return NULL;
+#else
     if ((width == 0) || (height == 0) ||
         (width > NDS_ORIGINAL_DL_PREVIEW_MAX_WIDTH) ||
         (height > NDS_ORIGINAL_DL_PREVIEW_MAX_HEIGHT))
@@ -1810,8 +1834,10 @@ u16 *ndsPlatformBeginOriginalDLPreview(u32 width, u32 height, u32 *out_pitch)
         *out_pitch = NDS_ORIGINAL_DL_PREVIEW_MAX_WIDTH;
     }
     return sOriginalDLPreview;
+#endif
 }
 
+#if !NDS_RENDERER_HW_TRIANGLES
 static void ndsPlatformBuildOriginalDLDisplayPreview(void)
 {
     u32 dst_w = sOriginalDLPreviewWidth;
@@ -1849,9 +1875,11 @@ static void ndsPlatformBuildOriginalDLDisplayPreview(void)
     sOriginalDLDisplayPreviewWidth = dst_w;
     sOriginalDLDisplayPreviewHeight = dst_h;
 }
+#endif
 
 void ndsPlatformCommitOriginalDLPreview(void)
 {
+#if !NDS_RENDERER_HW_TRIANGLES
     if ((sOriginalDLPreviewWidth != 0) && (sOriginalDLPreviewHeight != 0))
     {
         ndsPlatformBuildOriginalDLDisplayPreview();
@@ -1859,10 +1887,12 @@ void ndsPlatformCommitOriginalDLPreview(void)
         gNdsOriginalDLPreviewReady = 1;
         gNdsOriginalDLPreviewCommitCount++;
     }
+#endif
 }
 
 void ndsPlatformClearOriginalDLPreview(void)
 {
+#if !NDS_RENDERER_HW_TRIANGLES
     sOriginalDLPreviewWidth = 0;
     sOriginalDLPreviewHeight = 0;
     sOriginalDLDisplayPreviewWidth = 0;
@@ -1872,6 +1902,7 @@ void ndsPlatformClearOriginalDLPreview(void)
     gNdsOriginalDLPreviewWidth = 0;
     gNdsOriginalDLPreviewHeight = 0;
     memset(sOriginalDLPreview, 0, sizeof(sOriginalDLPreview));
+#endif
 }
 
 #if !NDS_RENDERER_HW_TRIANGLES
