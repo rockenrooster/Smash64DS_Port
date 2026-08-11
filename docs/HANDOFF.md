@@ -1,6 +1,6 @@
 # Handoff
 
-Updated: 2026-08-11. **The gate is re-banked at 1,294,144** (slices 35–37, −10,752
+Updated: 2026-08-11. **The gate is re-banked at 1,258,112** (RAM recovery, −36,032
 cross-build). Requirement 4 shipped before it: the fighter `AObj` is fixed point,
 `WORK-H` P50 −23,360 / P95 −37,504 routed. **Every 128-frame figure in the archive
 is unusable** — it reads the cheapest 6% of the match. Use `-Samples 1600`.
@@ -12,12 +12,12 @@ frames past the buzzer. Slips 0 in every row.
 
 | arm | role | `WORK-H` P50 | P95 | over gate |
 |---|---|---:|---:|---:|
-| **both-CPU** | **THE GATE** | **961,152** | **1,294,144** | re-banked c118 |
+| **both-CPU** | **THE GATE** | **958,592** | **1,258,112** | re-banked c119 |
 | **Boundary** mode 163 | shipped configuration | 920,192 | 1,113,408 | re-banked c116 |
 
-**Gate 1,294,144, re-banked after slices 35–37 — P95 −10,752 / P50 −8,960, the
-first move to CLEAR the ±8,544 floor since Requirement 4**; it reconciles with the
-route arms (routed −14,400, gap inside the floor). **Gap ~174,144.** The
+**Gate 1,258,112, re-banked after the RAM campaign — P95 −36,032 / P50 −2,560,
+4.2x the ±8,544 floor and the campaign's largest single P95 move; it came from
+RAM, not CPU work.** **Gap ~138,112.** The
 soak's long match is `NDS_R2_SOAK_MATCH_MINUTES`; `probe-match-window.ps1` reads
 the timer from the guest, so a window cannot claim coverage it lacked. Owner's bar:
 the whole match under P95 on the both-CPU config, loading excluded; the shipped
