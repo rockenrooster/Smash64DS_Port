@@ -108,25 +108,24 @@ bodies took it to **7,516**. Recipe, no build: `--pc-detail SYM[,SYM…]`, diff
 `objdump`, `addr2line`. **Entry count discriminates**: cold bytes in an
 *entered* body cost **+14,963**.
 
-- **The DObj world cache had ZERO readers** while `Store` burned 4,744,740 cycles
-  a frame. **Ask what reads a cache before optimising what fills it.**
-- **The material block is built 30 times a match, not 59,392** — a (MObj, heap
-  gen, animatable-input hash) key owned by the material **DObj**; `BindingParents`
-  is the nearest *bound* ancestor, not the DObj parent.
-- **A per-PC census charges a miss to the instruction that TAKES it**: two
-  redundant first-reader passes came out for **+1,055**.
+- **The DObj world cache had ZERO readers** while `Store` burned 4,744,740 cycles a frame. **Ask what reads a cache before optimising what fills it.**
+- **The material block is built 30 times a match, not 59,392** — a (MObj, heap gen, animatable-input hash) key owned by the material **DObj**; `BindingParents` is the nearest *bound* ancestor, not the DObj parent.
+- **A per-PC census charges a miss to the instruction that TAKES it**: two redundant first-reader passes came out for **+1,055**.
 
-**Compiling the frame-summary counters out is refuted** (FTR −7,378 / STG
-−2,776): it **breaks the gate** — `…gcrunall-loop-harness.ps1` asserts exact
-batch and texture-prepare accounting off those globals. **Tick factor 0.4993
-tk/cyc** comes from `ALL` vs total cycles; deriving it from the FTR sum is
-circular.
+**Compiling the frame-summary counters out is refuted** (FTR −7,378 / STG −2,776): it **breaks the gate** — `…gcrunall-loop-harness.ps1` asserts exact batch and texture-prepare accounting off those globals. **Tick factor 0.4993 tk/cyc** comes from `ALL` vs total cycles; deriving it from the FTR sum is circular.
 
-**Next, priced** (c115 census, tk/fr). **`Task36ReplayRun` 17,796 is STAGE, not
-FTR**. In FTR: `ExecuteNativeFighterOwnerProduction` **26,307** +
-`NativePrepareProductionRun` **25,277** (five-phase split on the board);
-`BuildFighterTraRotRpyDirect` **17,698** (fixed-point inside; six conversions a
-joint is its only float boundary); `LoadHardwareSplitMatrices` **13,122**.
+**NEXT SLICE — 43, designed and precondition-checked, not yet built.** The 20.12
+matrix lane is the **FIGHTERS**: 35,752 tk/fr on 80/80 under one caller,
+`…DLAllDrawForSlot` — 52.5 `MtxMulAffine20p12` (18,560) + 57.5
+`BuildDObjXObjMatrix` (12,233) + 55.8 `BuildDObjLocalMatrix` (4,959); only 1.5 of
+54.2 affine mults are the stage's. FLAT (`tk prem` ~1,900), so a cut moves P50 and
+P95 together. Arithmetic died in slice 42, instructions died in `--pc-detail` (324
+PCs, top 6.8%, 21% D-cache miss), the local-matrix memo is dead twice. **Left:
+compose on the GX matrix palette** — the root loop already calls
+`glStoreMatrix`, `binding_parents` is preorder, so RESTORE(parent)/`MTX_MULT_4x3`
+/STORE(i) rebuilds the tree in the loop's own order. **~−20,700 tk** at ~12.2
+cyc/FIFO-word (from E23). Both preconditions hold; the generator must emit a
+dense per-binding slot table. Board + `2026-08-11_c119-lane/FIGHTER_MATRIX_LANE.md`.
 
 **The `SINT` split is DONE.** `SINT` +88,082 = `ftMainPlayAnim` **+60,559**
 (animation) + `ftComputerProcessAll` +24,386 (map collision, not AI). **`SINT`
