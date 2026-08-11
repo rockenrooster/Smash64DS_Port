@@ -5137,6 +5137,48 @@ cross-build**, where ~30K of stacked change clears the floor decisively. Slice
 42's non-additivity says the batching must be one compile-time build, NOT a
 multi-bit route.
 
+### Cycle 120 re-attribution: ownership moved to the STAGE preflight
+
+Full evidence: `artifacts/performance/2026-08-11_c120-lane/REATTRIBUTION.md`.
+Post-slice-43 profile, same method, 100.0% reconciliation on every leaf.
+
+`ndsRendererMtxMulAffine20p12` fell **54.2 calls/frame → 1.9** and both symbols
+slice 43 targeted are **absent from the c120 census entirely**; `.text.hot.draw`
+fell 113.8M → 55.7M cycles. Net named: 91.9M removed, ~60.9M added back — **the
+FIFO writes and the capture cost 66% of what was deleted.**
+
+**`ndsRendererAdapterPrepareNativeStageOwner` is now the largest legal candidate
+at 18,912 tk/frame** — `MtxMul20p12` 9,769 and `BuildPersistentStageWorldMatrix`
+9,143, both `tk prem` **0** and both 80/80, so perfectly flat. The compose half
+cannot be deleted (the camera moves), but **the 9,143 is validation, not
+building**: R2-02 arm C proved the 16 dynamic bindings' source keys match all
+match long, so every one of those 16 calls a frame re-hashes and re-compares
+transforms that never change. The fix is the shipped
+[[bind-where-broken-not-where-read]] pattern — a generation bumped at the writer
+instead of a key compared at the reader.
+
+**Correction, and do not plan against the old number: the "legacy float camera
+55,865 tk" lane is really ~13,700.** Attributing the actual camera symbols gives
+`syMatrixLookAtReflectF` 4,174 + its `fmul` 2,325 / `fadd` 1,541 / `sqrtf` 1,798,
+`syMatrixPerspFastF` `fdiv` 1,710, `syUtilsArcTan` `fdiv` 1,655, `syMatrixF2L`
+`fmul` 1,279, `guMtxCatF` `fadd` 1,174, `syMatrixLookAtF` `fmul` 1,008. The c119
+grouping swept in soft float belonging to other callers.
+
+**Premium is a different question and the two must not be conflated.** Premium
+(marked − control) is 1,375,838/frame, owned by the INSTRUMENT
+(`ndsPlatformRenderDebugHud` 232,929 = 16.9%, plus printf/console ~170,000) and
+asset streaming (~115,000). Table F's `tk/frame` is what a caller costs ON a tail
+frame. P95 = P50 + premium, so a `tk prem` 0 cut lowers both equally.
+
+**Slice 44, to be bundled to clear the bar:** (a) stage world revalidation
+~9,143; (b) the 26-binding rigid-constancy guard ~3,700; (c) `noinline, cold` on
+`ndsRendererAdapterCaptureOwnerChainsGx` — slice 43 inlined it and
+`…DLAllDrawForSlot` grew **7,396 → 8,556 bytes, back over the 8 KB I-cache**,
+which the handoff prices at up to +14,963 for cold bytes in an entered body;
+(d) fold the scale into the last local for the 11 bindings that are nobody's
+parent, ~2,100; (e) evict the now-dead `MtxMulAffine20p12` (616 B) from
+`.text.hot.draw`.
+
 ### Slice 43 KEPT — the geometry engine composes the fighter joints. Gate 1,244,480
 
 Evidence: `artifacts/performance/2026-08-11_c119-lane/SLICE43_GATE.md` and
