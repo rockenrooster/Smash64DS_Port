@@ -4513,6 +4513,32 @@ tagged -1/-2**; per-track fixed-point segment arrays; the relocation list for
 `interpolate`; and the `is_anim_root` predicate preserved, since the callbacks
 are conditional on it.
 
+**Step 6-7: an executable model, and the loop-convergence question it
+settled.** `scripts/ftanim_script_model.py` executes all fifteen opcodes and
+records BOTH timelines -- per-track AObj state after every command, and the
+gameplay callbacks. Semantics come from the PORT parser, not decomp, and the
+flags loop reproduces the parser's early exit at the first zero mask rather than
+scanning ten tracks, because that is observable.
+
+**The question a static bake lives or dies on: do looping animations reach a
+fixed point?** Segment values CHAIN -- every writing opcode does
+`value_base = value_target` -- so if a `Loop` produced different values on each
+pass, no static bake could exist for a looping animation, and most fighter
+animations loop. Ran it: **track state converges after ONE iteration.** Iteration
+0 differs from iterations 1..n, which are identical to each other.
+
+So the baked form is a **prologue plus a steady-state loop body**, not one flat
+segment list -- and the emitter must VERIFY convergence per script rather than
+assume it, since a script whose state never settles has to fall back to the
+interpreter. That is a structural requirement no amount of profiling would have
+surfaced; it comes only from executing the semantics.
+
+One detail worth carrying: `length` moved `0.0 -> -0.0` between iteration 0 and
+steady state in the model. Signed zero has bitten this project before (it is the
+whole reason `nds_fcmp.h`'s zero predicates shift the sign out), so the
+round-trip proof must compare BIT PATTERNS, not float equality, or it will call
+`0.0` and `-0.0` the same and miss a real divergence.
+
 **Method note.** The table above was extracted wrong TWICE before it was right:
 the first pass ended each case at the inner flags-loop `break;` and the second
 tracked brace depth from the function rather than from the `switch`, and both
