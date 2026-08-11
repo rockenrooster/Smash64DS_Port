@@ -15,27 +15,27 @@ frames past the buzzer. Slips 0 in every row.
 | **both-CPU** | **THE GATE** | **961,152** | **1,294,144** | re-banked c118 |
 | **Boundary** mode 163 | shipped configuration | 920,192 | 1,113,408 | re-banked c116 |
 
-**Gate 1,294,144, re-banked after slices 35–37 — P95 −10,752 / P50 −8,960 against
-1,304,896, the first movement to CLEAR the ±8,544 floor since Requirement 4.** It
-reconciles with the route arms (routed −14,400, built −10,752, difference inside
-the floor); every c117 slice by contrast was under it. **Gap ~174,144.** The
+**Gate 1,294,144, re-banked after slices 35–37 — P95 −10,752 / P50 −8,960, the
+first move to CLEAR the ±8,544 floor since Requirement 4**, and it reconciles
+with the route arms (routed −14,400; the 3,648 gap is inside the floor). **Gap
+~174,144.** The
 soak's long match is `NDS_R2_SOAK_MATCH_MINUTES`; `probe-match-window.ps1` reads
 the timer from the guest, so a window cannot claim coverage it lacked. Owner's bar:
 the whole match under P95 on the both-CPU config, loading excluded; the shipped
 ROM stays the Boundary hwtri pair. `Makefile:382` forbids reporting a both-CPU
 P95 as Boundary's; **re-pin `EXPECTED_CENSUS_SHA256` when coverage changes.**
-**Route to ATTRIBUTE, re-bank to BANK — never swap them.** Slice 31 read P95
-**−7,104** routed and **+576** across builds: the work is gone AND under the floor.
-**Collision paid, and it is BANKED** (slice 34 sized it: soft float 16,649 tk/fr,
-1.9x animation's largest, plus 33,077 self). **Slices 35/36/37 memoise the three
+**Route to ATTRIBUTE, re-bank to BANK.** Slice 31: −7,104 routed, +576 built — real AND under the floor.
+**Collision paid, and it is BANKED.** **Slices 35/36/37 memoise the three
 `line_id` scans over static geometry — routed −7,552 / −4,864 / −1,984, banked
-−10,752.** Slice 35 read −7,232 and −7,552 on two separately-linked binaries.
-Boundary green. All owners are **FLAT** — no PC over 3.6% — so the lever is
+−10,752**, Boundary green; slice 35 read −7,232 and −7,552 on two separately-
+linked binaries. All owners are **FLAT** — no PC over 3.6% — so the lever is
 calls: `…GetFCCommonFloor` 45,372 x 818 cyc, `…FindLineEndpoints` 38,890 x 543,
-`…SweepFloorLoopSweep` 11,544 x 2,643. **Next: the matrix/camera float family,
-14,810 tk/fr** (`syMatrixLookAtReflectF` 4,325 over 81 sites, `syMatrixPerspFastF`
-2,337, `syUtilsArcTan` 2,066, `guMtxCatF` 1,733 in TWO sites, `syMatrixF2L`
-1,636); `__aeabi_fdiv` alone is 10,084 tk/fr on 308,426 calls.
+`…SweepFloorLoopSweep` 11,544 x 2,643. **SIZE IS NOT PERMISSION**
+(`census-softfloat-callers.ps1`): float in `gmcollision`/`mp*`/`ftMain*`/
+`ftComputer` is FROZEN by the Task 9 hash — exact moves only, which is why 35–37
+are memos. Matrix/camera (**14,810 tk/fr**; `__aeabi_fdiv` alone 10,084 over
+308,426 calls at 117.9 each) is renderer-side, so converting it is the **OWNER'S
+CALL**. Frozen work still open: 45,372 `…GetFCCommonFloor` calls, one per floor line, for an object over at most one.
 
 ## What is dead, so nobody re-derives it
 
@@ -50,15 +50,15 @@ calls: `…GetFCCommonFloor` 45,372 x 818 cyc, `…FindLineEndpoints` 38,890 x 5
 - **The AOT animation bake at 20 B/record** (slice 32). Reader, bake, emitter,
   layout guard and wiring are PROVEN and gated off; the SIZE is dead — 10,304 B
   an animation against the source's 2,310, ×85 cached needs +679,490 B, and
-  dropping every init record still leaves 3.27×. Commands are parsed ONCE a
-  playback, so a bake only wins on the 64.6% of loads that repeat.
+  dropping every init record leaves 3.27×. Commands are parsed ONCE a playback,
+  so a bake only wins on the 64.6% of loads that repeat.
 - **The animation lane, closed on numbers (slice 34).** Its two largest SELF
   symbols are already Requirement 4's fixed point at 1.67–1.69 cyc/insn — no
   float to convert, no stall to place. All that remains is **8,772 tk/fr** of
-  soft float over three symbols, largest 4,631, all under the floor — as are
-  idle-joint skip (33), lazy track table (31), AObj walk (~1,050), track
-  dispatch (~1,900). `.text.hot` is closed BOTH ways. **`ndsBaseGcPlayMObjMatAnim`
-  must not be blanket-converted** — five tracks carry packed 0xRRGGBBAA in f32.
+  soft float, largest 4,631, all under the floor — as are idle-joint skip (33),
+  lazy track table (31), AObj walk (~1,050), track dispatch (~1,900).
+  `.text.hot` closed BOTH ways. **`ndsBaseGcPlayMObjMatAnim` must not be
+  blanket-converted** — five tracks carry packed 0xRRGGBBAA in f32.
 
 ## RAM: both budgets are near their floor — price a change before writing it
 
@@ -72,9 +72,9 @@ calls: `…GetFCCommonFloor` 45,372 x 818 cyc, `…FindLineEndpoints` 38,890 x 5
 
 **Banked `FTR` mean is 291,896** (P50 301,760, P95 304,768) against a pre-slice
 baseline of **385,508** built for the purpose, matching the owner's ~385–390K.
-**−93,612, 24.3%** — the *mean* beats the owner's 300K target, the P50 is 1,760
-over. Measured on the SHIPPED (fixed) strips; the −94,666 quoted earlier came off
-the build that was losing geometry, so it is withdrawn. Boundary passes on each.
+**−93,612, 24.3%** — the *mean* beats the owner's 300K target, P50 is 1,760 over.
+Measured on the SHIPPED strips; the −94,666 quoted earlier came off the build that
+was losing geometry, withdrawn. Boundary passes on each.
 
 **The big one is DS-native AOT geometry: Task 56 fighter strips now SHIP**
 (`NDS_TASK56_FIGHTER_PRIMITIVES ?= 2`). 626 triangles submitted as 1,878

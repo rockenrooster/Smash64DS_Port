@@ -25,6 +25,32 @@ Two things this deliberately does NOT do:
     total call count, so ITCM residency, operand-dependent early-outs and
     denormal paths are all already in the number.
 
+**`scripts/census-softfloat-callers.ps1` asks the same question a different way,
+and both are worth keeping.** That one (Task 92 E0) sets a GDB breakpoint on each
+helper's exact entry address and reads `lr` for the caller, over a live 90-second
+sample. It is the only method that can attribute an INDIRECT call, and it needs
+no prior profile. This one is exact rather than sampled -- it counts every
+executed call site rather than the ones a sample happened to catch -- covers all
+eighteen helpers instead of the two that script defaults to, perturbs nothing,
+and needs no emulator run at all, just a profile CSV that already exists. Prefer
+this for ranking; reach for the PS1 when there is no profile for the build in
+hand, or when a caller is reached through a function pointer.
+
+They agree across a change, which is the useful check: the PS1's cycle-92 reading
+had `gcPlayDObjAnimJoint` at **58% of the whole soft-float class**; Requirement 4
+converted that function to fixed point, and this attribution no longer finds it
+among the float callers at all.
+
+**Read the result against the conversion freeze before proposing anything.**
+`census-softfloat-callers.ps1` records it: float in `gmcollision`, `mp*`,
+`ftMain*` and `ftComputer` is frozen by the Task 9 state hash and by
+`PROJECT_GOAL.md`'s mechanical-equivalence contract, so it **cannot be converted
+to fixed point whatever it costs**. Renderer-side float gates on the fidelity
+budget instead, which is the owner's call. A high row in this table is therefore
+not automatically a lever -- for frozen code the only moves are exact ones
+(memoise the answer, cut the call count, delete redundant work), which is what
+slices 35-37 did for map collision to bank -10,752 without touching a numeric.
+
 Usage (needs devkitARM on PATH for objdump/nm):
 
     python scripts/task37_softfloat_callers.py <profile.csv> --elf <elf>

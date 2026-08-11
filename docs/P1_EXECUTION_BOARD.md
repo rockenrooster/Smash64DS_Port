@@ -4847,6 +4847,51 @@ walk IS the call". The three biggest single symbols are already visible:
 `ndsFighterMarioFoxDLAllDrawForSlot` 93,854,253, `ndsRendererCommitNativeStageSegment`
 93,101,009, `ndsRendererNativeEmitProductionPrimitiveGroups` 81,420,680.
 
+### The next owner is gated, not open — read this before proposing a conversion
+
+Slice 34's attribution ranks the remaining soft-float by size. **Size is not
+permission.** `scripts/census-softfloat-callers.ps1` records the constraint and
+this lane must be read through it:
+
+> Float in `gmcollision`, `mp*`, `ftMain*` and `ftComputer` is frozen by the
+> Task 9 state hash and by `PROJECT_GOAL.md`'s mechanical-equivalence contract,
+> so it cannot be converted to fixed point whatever it costs. Float in the
+> renderer gates on the fidelity budget instead, where a fixed-point equivalent
+> is the owner's call.
+
+Applying that to the measured table:
+
+| family | float tk/fr | conversion status |
+|---|---:|---|
+| map collision (`mp*`, `gmCollision*`) | 16,649 | **FROZEN** — exact moves only |
+| matrix / camera (`syMatrix*`, `guMtxCatF`, `syVector*`, `syUtilsArcTan`) | 14,810 | renderer-side — **owner's call** |
+| animation | 8,772 | mixed; and every item is under the floor (slice 34) |
+| particles | 4,609 | renderer-side — owner's call |
+
+**Slices 35–37 are what the frozen half looks like when it is done right.** They
+banked **−10,752** against map collision without touching a single numeric: three
+memos of answers that are pure functions of static stage geometry, each one
+bit-identical by construction, `gNdsR2FtAnimParseCalls` unchanged in every arm.
+That is the whole playbook for frozen code — **memoise the answer, cut the call
+count, delete redundant work** — and it is still open there: `…GetFCCommonFloor`
+is 818 cycles a call over 45,372 calls and 365 flat PCs, and `func_ovl2_800F8FFC`
+still calls it once per floor line while an object is over at most one.
+
+**What needs the owner, stated once so it can be decided rather than rediscovered:**
+converting the matrix/camera family to fixed point. It is 14,810 tk/fr of soft
+float plus its self time, `__aeabi_fdiv` alone is **10,084 tk/fr over 308,426
+calls** (117.9 cycles each, the most expensive helper in the build by 3.2x), and
+the DS has an idle hardware divider. `PROJECT_GOAL.md` puts visual fidelity above
+gameplay fidelity in the sacrifice order and explicitly allows fixed-point
+replacement, so this is inside the contract — but it is a renderer-fidelity call,
+and the standing rule is that permanent implementation of a fidelity trade
+requires owner approval. **Do not start it on the strength of the tick count.**
+
+**And size it correctly when it is approved.** Slice 37 proved mean self time
+predicts P50 and not P95: two functions of near-identical mean cost gave P95 wins
+2.45x apart. The matrix family's 14,810 is a mean. Before promising a gate
+number, get the per-frame distribution of its calls.
+
 ### Slice 37: the line-kind memo — `WORK-H` P95 −1,984, and mean self time does NOT predict P95
 
 Third of the three `line_id` scans. One binary, `builds/build-c118-mp-ab3`
