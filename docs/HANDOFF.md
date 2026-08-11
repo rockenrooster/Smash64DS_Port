@@ -30,11 +30,11 @@ P95 as Boundary's; **re-pin `EXPECTED_CENSUS_SHA256` when coverage changes.**
 linked binaries. All owners are **FLAT** — no PC over 3.6% — so the lever is
 calls: `…GetFCCommonFloor` 45,372 x 818 cyc, `…FindLineEndpoints` 38,890 x 543,
 `…SweepFloorLoopSweep` 11,544 x 2,643. **But collision was never a P95 owner** —
-nor was animation. **THE TAIL IS ASSET STREAMING** (`--split-top-frames 80`, the
-first partition that ever matched the gate): FAT reads + movers + attach + locks
-= **29.3–39.7% of a published-ROM tail frame = 184,414 tk** vs a **174,144 gap**;
-game logic AND renderer together are 11.6%. **NEXT: preload the match's assets;
-stop touching the filesystem in gameplay.** SIZE IS NOT PERMISSION:
+nor was animation. **THE TAIL IS ASSET STREAMING** (`--split-top-frames 80`, 1st
+partition matching the gate): FAT+movers+attach+locks = **29.3–39.7% of a tail
+frame = 184,414 tk** vs the **174,144 gap**; game+renderer are 11.6%. **CAUSE:
+anim arena 200,400/200,704 = 99.85% FULL**, 38 overflows = 38 rejects, 91/128
+entries so BYTES bind, NO eviction → those 38 re-read from ROM all match; ~82 KB short. SIZE IS NOT PERMISSION:
 float in `gmcollision`/`mp*`/`ftMain*`/`ftComputer` is FROZEN by the Task 9 hash
 (`census-softfloat-callers.ps1`) — exact moves only, which is why 35–37 are memos.
 

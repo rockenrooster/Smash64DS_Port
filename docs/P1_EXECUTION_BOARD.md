@@ -4847,6 +4847,94 @@ walk IS the call". The three biggest single symbols are already visible:
 `ndsFighterMarioFoxDLAllDrawForSlot` 93,854,253, `ndsRendererCommitNativeStageSegment`
 93,101,009, `ndsRendererNativeEmitProductionPrimitiveGroups` 81,420,680.
 
+### ★★ CONFIRMED: the anim arena saturates at 99.85% and 38 in-use assets are refused
+
+End-of-match counters, banked gate build `builds/build-c118-gate`, one-minute
+both-CPU match, `-ExtraGlobals` (no rebuild —
+`artifacts/performance/2026-08-11_c118-lane/anim-cache-counters.json`):
+
+| counter | value | reads as |
+|---|---:|---|
+| `gNdsR2AnimCacheArenaUsedBytes` | **200,400** / 200,704 | **99.85% full, 304 B free** |
+| `gNdsR2AnimCacheArenaOverflows` | **38** | 38 allocations refused |
+| `gNdsR2AnimCacheRejects` | **38** | …and every one dropped the entry |
+| `gNdsR2AnimCacheArenaOverflowLastSize` | **1,920** | it failed on a 2 KB request |
+| `gNdsR2AnimWarmLoaded` / `…WarmFailed` | 83 / **0** | preload itself is healthy |
+| `gNdsR2AnimCacheFills` | 8 | 91 entries of 128 — **bytes bind, not entries** |
+| `…ReserveFailCount` / `…ArenaInvalidations` | 0 / 0 | arena stable, never rewound |
+
+This is genuine saturation and not [[equal-counters-are-not-saturation]]: the
+overflow counter is an event count, not a high-water mark compared to itself.
+
+**Why this is the tail.** A rejected asset is one gameplay ASKED for. With no
+eviction the rejection is permanent, so each of those 38 pays a FAT walk, a read,
+a byte-swap and a normalize on *every subsequent use for the rest of the match*.
+That is the FAT-reads + movers + attach + locks cluster, on scattered frames,
+getting worse as the match runs — exactly the measured tail.
+
+**Size of the gap.** 200,400 B over 91 entries is ~2,202 B/entry, so the 38
+refused want roughly **~82 KB** more. Estimate only — the one observed refusal
+was 1,920 B, below average — and the exact figure needs a summed rejected-bytes
+counter, which is one `+=` and the obvious next instrument.
+
+**~82 KB is NOT simply available.** The arena comes from
+`gSYTaskmanGeneralHeap`, whose low-water is 24,404 against the 25,600 GObj-cap
+threshold ([[ram-is-not-free-gobj-cap]]), and `…KEEP_FREE` already reserves
+32,768. So the constant cannot just be raised. Real options, cheapest first:
+
+1. **Trim the warm list.** It loads 83 assets and fills the arena; the 38
+   refused are *proven in use* while some warm entries may never be touched.
+   Needs per-entry hit counts — a small instrumented build, no design risk.
+2. **Store one representation.** If both raw and prebaked forms are resident,
+   dropping one is free capacity.
+3. **Move the arena off the taskman heap.** `PROJECT_GOAL.md` explicitly wants
+   RAM spent on speed (*"nearly all available RAM at 900K ticks is preferable to
+   little RAM at 1.15M"*), so this is sanctioned if free RAM exists — unproven.
+4. **Evict (LRU).** Last resort: it converts permanent misses into occasional
+   ones, but a miss is the expensive event, so it only helps if capacity is
+   genuinely unreachable.
+
+**Caveat:** measured on the tickhud lab ROM, whose extra code and bss shrink the
+same heap. The published ROM may have slightly more headroom — it has not been
+measured, and it changes the size of the fix, not its existence.
+
+
+### The mechanism that would produce that tail: the anim cache cannot evict
+
+Read, not measured — `src/port/reloc_backend_assets.c`. The match already
+preloads: `scVSBattleStartBattle` and `scVSBattleStartSuddenDeath` both call
+`ndsR2AnimCachePreloadMatch`, which walks `sNdsR204AnimWarmList` through
+`ndsR2AnimWarmLoadOne`. So "add a preload" is NOT the slice — one exists.
+
+The cache is a **bump allocator with no eviction**:
+
+- `NDS_R2_ANIM_CACHE_ARENA_BYTES` **200,704** (196 KB), `…ENTRIES` **128**.
+- `ndsR2AnimCacheArenaAlloc` returns NULL once the bump cursor runs out
+  (`gNdsR2AnimCacheArenaOverflows++`), and `ndsR2AnimCacheStore` then simply
+  **rejects** the entry (`gNdsR2AnimCacheRejects++`).
+- Nothing ever frees an entry. `ndsR2AnimCacheArenaRelease` only un-bumps the
+  *immediately preceding* allocation on a failed load.
+
+**So the failure mode is permanent, not transient.** The moment the arena or the
+128 entries fill, every asset that missed is re-read from the ROM filesystem on
+**every subsequent use for the rest of the match** — and each such use pays the
+FAT walk, the read, the byte-swap and the normalize. That is exactly the shape
+the tail shows: FAT reads + movers + attach + locks clustered on scattered
+frames, growing as the match goes on.
+
+It also means the fix may be a **constant**, not an architecture — if the arena
+is merely undersized. That is settled by counters that already ship
+(`gNdsR2AnimCacheArenaOverflows`, `…Rejects`, `…ArenaUsedBytes`,
+`gNdsR2AnimWarmFailed`), read at end of match with `-ExtraGlobals`. No build.
+
+**The fork:** overflows > 0 means the arena binds, and the lever is capacity
+(bounded by [[ram-is-not-free-gobj-cap]] — heap low-water 24,404 against a
+25,600 threshold, and `…KEEP_FREE` is already 32,768). Overflows == 0 means the
+FAT traffic is NOT the anim cache and the loader that owns it is still unnamed —
+do not assume, go find it. Either way, read the counter before writing code
+([[answer-the-existence-questions-first]]).
+
+
 ### ★ THE P95 TAIL, MEASURED PROPERLY FOR THE FIRST TIME — it is ASSET STREAMING
 
 `--split-top-frames 80` (added 2026-08-11 because no instrument could ask this),
