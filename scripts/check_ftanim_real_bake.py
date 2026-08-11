@@ -72,12 +72,19 @@ def main() -> int:
             baked = bake.bake_run(run)
             records += len(baked["writes"])
 
-            rep_states, rep_cb, rep_wait, rep_flags = bake.replay(baked)
+            (rep_states, rep_cb, rep_wait, rep_flags,
+             rep_waits) = bake.replay(baked)
             want = [tuple(tuple(bake._bits(f) for f in snap) for snap in st)
                     for _pc, _op, st in run.states]
             got = [tuple(tuple(bake._bits(f) for f in (snap or ()))
                          for snap in st) for st in rep_states]
+            # The timing is checked as strictly as the state. A baked script
+            # that reproduces every AObj field and applies it a frame late is a
+            # gameplay bug, and field-by-field comparison cannot see it.
+            want_waits = [bake._bits(w) for w in run.waits]
+            got_waits = [bake._bits(w) for w in rep_waits]
             if (got != want or rep_cb != list(run.callbacks)
+                    or got_waits != want_waits
                     or bake._bits(rep_wait) != bake._bits(run.anim_wait)
                     or rep_flags != run.flags):
                 mismatches.append(path.name)

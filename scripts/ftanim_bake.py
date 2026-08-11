@@ -66,15 +66,22 @@ def bake_run(run):
     """
     control, writes = [], []
     prev = [None] * TRACKS
+    waits = getattr(run, "waits", [])
     for idx, (pc, op, snaps) in enumerate(run.states):
         _w, _c, is_block = OPCODES[op]
-        control.append((pc, op == "SetFlags", None))
+        # The fourth slot is the timing: `anim_wait` after this command. It is
+        # None for the synthetic driver, which has no notion of it. `replay`
+        # rebuilds the wait timeline from HERE, not from the run -- otherwise
+        # the check compares the bake's copy of the model against the model and
+        # passes vacuously, which is what it did when this was first added.
+        control.append((pc, op == "SetFlags", None,
+                        waits[idx] if idx < len(waits) else None))
         for t in range(TRACKS):
             if prev[t] != snaps[t]:
                 writes.append((idx, t, snaps[t]))
                 prev[t] = snaps[t]
     for pc, tag in run.callbacks:
-        control.append((pc, False, tag))
+        control.append((pc, False, tag, None))
     return {"control": control, "writes": writes,
             "final_wait": run.anim_wait, "flags": run.flags,
             "callbacks": list(run.callbacks), "n": len(run.states)}
@@ -91,7 +98,11 @@ def replay(baked):
         for t, snap in by_idx.get(idx, ()):
             tracks[t] = snap
         states.append(tuple(tracks))
-    return states, baked["callbacks"], baked["final_wait"], baked["flags"]
+    # The timing comes out of the control stream, which is what a runtime bind
+    # would read -- not out of the run that produced it.
+    waits = [c[3] for c in baked["control"][:baked["n"]]]
+    return (states, baked["callbacks"], baked["final_wait"], baked["flags"],
+            waits)
 
 
 def _rand_script(rng):
@@ -111,7 +122,7 @@ def main() -> int:
         run = run_script(script)
         model_states, model_cb, model_wait, model_flags = _key(run)
         b = bake(script)
-        rep_states, rep_cb, rep_wait, rep_flags = replay(b)
+        rep_states, rep_cb, rep_wait, rep_flags, _w = replay(b)
 
         rep_norm = [tuple(tuple(_bits(f) for f in (snap or ()))
                           for snap in st) for st in rep_states]

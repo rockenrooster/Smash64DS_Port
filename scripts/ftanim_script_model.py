@@ -233,6 +233,15 @@ def run_commands(cmds, is_anim_root=True, anim_speed=1.0, anim_wait=0.0):
     tracks = [Track() for _ in range(TRACKS)]
     run = Run()
     run.anim_wait = anim_wait
+    # Per-command `anim_wait` AFTER the command, parallel to `run.states`.
+    #
+    # Without this the bake is not runnable. `states` carries what each command
+    # writes and `callbacks` carries what it signals, but the *timing* -- the
+    # `anim_wait += payload` that decides which frame the next command lands on
+    # -- lived only in the running total, so a baked script reproduced every
+    # AObj field and had no idea when to apply them. The runtime bind consumes
+    # this as its control stream.
+    run.waits = []
 
     for cmd in cmds:
         op = cmd["op"]
@@ -265,6 +274,7 @@ def run_commands(cmds, is_anim_root=True, anim_speed=1.0, anim_wait=0.0):
             if op in BLOCK_OPS:
                 run.anim_wait += payload
         run.states.append((cmd["pc"], OP[op], [t.snapshot() for t in tracks]))
+        run.waits.append(run.anim_wait)
 
     return run
 
