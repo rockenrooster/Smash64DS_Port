@@ -13546,7 +13546,7 @@ void mpCollisionInitGroundData(void)
 {
     ndsMPCollisionInvalidateTopology();
     gMPCollisionGroundData = NULL;
-    gMPCollisionGeometry = NULL;
+    ndsMPCollisionSetGeometry(NULL);
     gMPCollisionMapObjs = NULL;
     if (gMPCollisionYakumonoDObjs != NULL)
     {
@@ -13574,7 +13574,7 @@ void mpCollisionInitGroundData(void)
         if (ground_data != NULL)
         {
             gMPCollisionGroundData = ground_data;
-            gMPCollisionGeometry = ground_data->map_geometry;
+            ndsMPCollisionSetGeometry(ground_data->map_geometry);
             gMPCollisionMapObjs = (gMPCollisionGeometry != NULL) ?
                 gMPCollisionGeometry->mapobjs : NULL;
             gMPCollisionLightAngleX = ground_data->light_angle.x;

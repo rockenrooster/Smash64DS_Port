@@ -401,6 +401,37 @@ static void ndsMPVertexF32Bind(MPGeometryData *geometry)
     }
 }
 
+/* Cycle 117: invalidate where the invariant BREAKS, not where it is read.
+ *
+ * `ndsMPVertexF32Bind` above labels the cache with a geometry pointer, but every
+ * entry is filled from the `verts` pointer its CALLER passes -- and those are
+ * not the same thing. `gMPCollisionGeometry` is saved, swapped and restored
+ * around the alternate-geometry queries below, so a bind can label the cache
+ * "geometry B" while a caller still holding A's `verts` fills it with A's
+ * vertices; the next reader to bind B then finds the label already equal to B,
+ * skips the reset, and reads A's coordinates as if they were B's.
+ *
+ * That is not a missing bind, it is a misplaced one. Cycle 117 found THREE
+ * readers with no bind at all (`ndsStageMPSweepFloorLoopSweep`,
+ * `ndsStageMPCeilFloorLoopSweep`, `ndsMPFindLineEndpoints`) and adding binds to
+ * the first two landed while adding one to the third diverged the match --
+ * reproducibly, frames 1015/1495/1686 -- because it made the mislabelling
+ * interleaving reachable from 28 call sites.
+ *
+ * Assigning through this setter resets the cache at the exact moment the data
+ * it describes stops being current, so no reader can forget and the label can
+ * never disagree with the fill. Use it for EVERY write to
+ * `gMPCollisionGeometry`, including the restores -- a restore changes which
+ * geometry is current just as much as the swap did. */
+static void ndsMPCollisionSetGeometry(MPGeometryData *geometry)
+{
+    if (gMPCollisionGeometry != geometry)
+    {
+        ndsMPVertexF32Reset();
+        gMPCollisionGeometry = geometry;
+    }
+}
+
 /* MUST inline. Left out-of-line, the memo cost a `bl` plus two pointer stores
  * and two reloads per vertex, which is worse than the two `__aeabi_i2f` calls it
  * replaced -- the cycle-109 measurement read neutral for exactly this reason,
@@ -9613,7 +9644,7 @@ static void ndsStageMPWallHitScoutRunHyruleMap(void)
     ndsStageMPWallHitScoutClearRuntimeGlobals();
 
     gMPCollisionGroundData = ground_data;
-    gMPCollisionGeometry = ground_data->map_geometry;
+    ndsMPCollisionSetGeometry(ground_data->map_geometry);
     gMPCollisionMapObjs = (gMPCollisionGeometry != NULL) ?
         gMPCollisionGeometry->mapobjs : NULL;
     gMPCollisionLightAngleX = ground_data->light_angle.x;
@@ -9626,7 +9657,7 @@ static void ndsStageMPWallHitScoutRunHyruleMap(void)
     ndsStageMPWallHitScoutRestoreRuntimeGlobals(&pupupu_result);
 
     gMPCollisionGroundData = saved_ground_data;
-    gMPCollisionGeometry = saved_geometry;
+    ndsMPCollisionSetGeometry(saved_geometry);
     gMPCollisionMapObjs = saved_mapobjs;
     gMPCollisionLightAngleX = saved_light_angle_x;
     gMPCollisionLightAngleY = saved_light_angle_y;
@@ -10271,7 +10302,7 @@ static void ndsStageMPWallCopyFloorLoopGObjProc(GObj *fighter_gobj)
     }
 
     gMPCollisionGroundData = ground_data;
-    gMPCollisionGeometry = ground_data->map_geometry;
+    ndsMPCollisionSetGeometry(ground_data->map_geometry);
     gMPCollisionMapObjs = (gMPCollisionGeometry != NULL) ?
         gMPCollisionGeometry->mapobjs : NULL;
     gMPCollisionLightAngleX = ground_data->light_angle.x;
@@ -10379,7 +10410,7 @@ restore_collision_globals:
             ndsFloatToMilliSigned(p1_root->translate.vec.f.y);
     }
     gMPCollisionGroundData = saved_ground_data;
-    gMPCollisionGeometry = saved_geometry;
+    ndsMPCollisionSetGeometry(saved_geometry);
     gMPCollisionMapObjs = saved_mapobjs;
     gMPCollisionLightAngleX = saved_light_angle_x;
     gMPCollisionLightAngleY = saved_light_angle_y;
@@ -13546,7 +13577,7 @@ static void ndsStageInishieScaleLoopRunProof(void)
     {
         gMPCollisionGroundData = sNdsStageInishieGroundData;
         gNdsStageInishieScaleLoopSourceSetupStep = 331u;
-        gMPCollisionGeometry = NULL;
+        ndsMPCollisionSetGeometry(NULL);
         gNdsStageInishieScaleLoopSourceSetupStep = 332u;
         gMPCollisionMapObjs = NULL;
         gNdsStageInishieScaleLoopSourceSetupStep = 333u;
@@ -13583,7 +13614,7 @@ static void ndsStageInishieScaleLoopRunProof(void)
     sNdsStageInishieScaleSourceSetupActive = FALSE;
 #endif
     gMPCollisionGroundData = saved_ground_data;
-    gMPCollisionGeometry = saved_geometry;
+    ndsMPCollisionSetGeometry(saved_geometry);
     gMPCollisionMapObjs = saved_mapobjs;
     gNdsStageInishieScaleLoopShellMakeCount++;
 

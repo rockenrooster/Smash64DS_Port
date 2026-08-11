@@ -870,6 +870,12 @@ static void ndsRelocNormalizeMObjSubWordSwapped(MObjSub *mobjsub);
 static void ndsRendererAdapterResetSceneCaches(void);
 #endif
 
+/* Every write to `gMPCollisionGeometry` goes through this so the vertex/extent
+ * caches keyed on it are dropped at the moment the data they describe stops
+ * being current. Defined with those caches in `reloc_backend_mp_collision.c`,
+ * declared here because the shims below are included first. */
+static void ndsMPCollisionSetGeometry(MPGeometryData *geometry);
+
 /* Compatibility/proof shims. */
 #include "reloc_backend_compat_shims.c"
 

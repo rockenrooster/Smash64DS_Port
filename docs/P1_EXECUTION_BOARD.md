@@ -4420,6 +4420,40 @@ the stack frame to 12 bytes. **Check the disassembly of this kernel for hoisted
 `asr #31` and stack spills after touching it** -- the host error bound cannot
 see code shape, and it reported byte-identical numbers across the fix.
 
+### Slice 30: invalidate where the invariant breaks, not where it is read
+
+The fix slice 29's failure asked for. Every write to `gMPCollisionGeometry` --
+all seven, in `reloc_backend_mp_collision.c` and `reloc_backend_compat_shims.c`,
+**including the restores**, because a restore changes which geometry is current
+just as much as the swap did -- now goes through `ndsMPCollisionSetGeometry`,
+which assigns and resets the caches together.
+
+That removes the whole class of defect rather than its instances. The vertex
+memo could previously be LABELLED "geometry B" by a bind while a caller holding
+A's `verts` filled it with A's vertices; now the reset happens at the moment the
+data stops being current, so the label cannot disagree with the fill and no
+reader can forget the handshake. Slice 28 added two missing binds and slice 29
+died adding a third; three sites in two slices was the signal that the
+handshake was in the wrong place.
+
+Both files are `#include`d into `reloc_backend.c`, so this needed only a static
+setter plus one forward declaration -- no header surface, no cross-TU exposure.
+The existing `ndsMPVertexF32Bind` calls were deliberately KEPT: they are
+redundant now, but they are free, and deleting them is a second change with its
+own failure mode. The point is that correctness no longer depends on them.
+
+**Evidence is the clean run, not the ticks.** 1600-frame gate arm, no repeated
+presented frames -- the signal that killed slice 29 twice -- and `WORK-H` P50
++4,096 / P95 -5,632 against slice 28, both inside the +-8,544 floor, which is
+what a pure correctness refactor should measure. Boundary green.
+
+**This unblocks the endpoint memo.** `ndsMPFindLineEndpoints` is still 13,205
+cyc/frame over 28 callers and still a pure function of `line_id` and static
+geometry; the reverted patch is at
+`artifacts/performance/2026-08-10_c117-lane/slice29-endpoint-memo-REVERTED.patch`
+and can now be re-applied WITHOUT its `ndsMPVertexF32Bind` call, which was the
+part that broke it.
+
 ### Slice 29: REVERTED -- and it found the real defect in the cycle-109 memo
 
 `ndsMPFindLineEndpoints` is 13,205 cyc/frame across 28 callers and is a PURE
