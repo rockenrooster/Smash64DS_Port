@@ -4628,6 +4628,36 @@ share of COST. Slice 31's "the walk IS the call" over-read an average, step 10
 over-read a count, and both needed the other number to be honest. Get both
 before concluding.
 
+**Step 12: the ctz mask walk, PRICED AND REJECTED before building it.**
+
+The obvious next cut on the stepped path is the flags-mask loop -- every
+state-writing opcode scans from bit 0 to the highest set bit, so a
+count-trailing-zeros walk (`m &= 0x3FF; while (m) { i = ctz(m); m &= m - 1; }`)
+would iterate only the set bits. Mechanically identical, ascending order
+preserved, needs `target("arm")` for CLZ.
+
+Priced against the step-11 split (37,363 stepped calls, 3.16 cyc/insn, 1,799
+frames, 185,472-tick gap), at ~5 instructions per skipped iteration:
+
+| commands per stepped call | iterations saved | ticks/frame | share of gap |
+| ---: | ---: | ---: | ---: |
+| 1 | 3 | 492 | 0.27% |
+| 2 | 3 | 983 | 0.53% |
+| 2 | 9 (absolute max) | 2,949 | 1.59% |
+| 3 | 9 (absolute max) | 4,424 | 2.39% |
+
+**The realistic case is ~500-1,000 ticks/frame, and even the physically
+impossible best case is 2.4%.** All of it is far under the +-8,544 cross-build
+placement floor, and the same-binary route that could attribute it would be
+measuring a change worth a fraction of one percent of the gap. **Do not build
+it.** I named it as the next step one turn before pricing it, which was the
+wrong order -- the arithmetic takes one minute and it retracts the suggestion.
+
+This closes the small-lever question for the parse. What remains in the stepped
+path is the event-loop dispatch and the per-command field writes themselves, and
+those are what the dense-track player replaces wholesale -- there is no
+intermediate cut left between "leave it alone" and "build the player".
+
 **Method note.** The table above was extracted wrong TWICE before it was right:
 the first pass ended each case at the inner flags-loop `break;` and the second
 tracked brace depth from the function rather than from the `switch`, and both
