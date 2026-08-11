@@ -48,13 +48,18 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 MAGIC = b"FTAD"
 VERSION = 1
 
-# One write record, 20 bytes, 4-byte aligned.
+# One write record, 20 bytes, 4-byte aligned. Field order and widths are
+# `NDSAnimDenseTrack` in `include/nds/nds_anim_dense.h`, and
+# `scripts/check_ftanim_dense_layout.py` asserts the two agree -- they are two
+# halves of one binary format in two languages, and a silent disagreement boots
+# fine and animates one joint wrongly.
+#
 #   s32 rate_base      Q16 -- see below
 #   s32 length_invert  Q30 for Cubic/Linear, plain integer for Step -- see below
-#   u8  cmd_index      which command of the script applies this write
-#   u8  track_kind     track in the low nibble, AObj kind in the high nibble
 #   s16 value_base, value_target, rate_target   authored disk words, exact
 #   s16 length         Q7   (measured -185..0 across the whole bank)
+#   u8  kind_track     kind in the high nibble, track in the low nibble
+#   u8  cmd_index      which command of the script applies this write
 #   u16 pad            keeps the two s32 fields 4-byte aligned at every stride
 #
 # `length_invert` was sized at s16 Q8 from its measured range of 0..64, and the
@@ -81,7 +86,7 @@ VERSION = 1
 # both widenings were forced by the round-trip, not chosen. It is still 44.4%
 # smaller than a 36-byte `AObj`, taking 335 nodes a frame from 12,060 bytes to
 # 6,700 against a 4 KB D-cache: 1.64x over rather than 3.0x.
-RECORD = struct.Struct("<iiBBhhhhH")
+RECORD = struct.Struct("<iihhhhBBH")
 assert RECORD.size == 20
 
 LENGTH_Q = 7
@@ -146,10 +151,11 @@ def encode_write(cmd_index, track, snap, where):
         raise FieldOverflow("length_invert = %r does not fit s32 in %s"
                             % (linv, where))
     return RECORD.pack(
-        rate_base, linv_raw, cmd_index, (int(kind) << 4) | track,
+        rate_base, linv_raw,
         _word(vb, "value_base", where), _word(vt, "value_target", where),
         _word(rt, "rate_target", where),
-        _fixed(length, LENGTH_Q, "length", where), 0)
+        _fixed(length, LENGTH_Q, "length", where),
+        (int(kind) << 4) | track, cmd_index, 0)
 
 
 def build(probe, model, bake, on_script=None):
@@ -185,7 +191,7 @@ def build(probe, model, bake, on_script=None):
 
 
 def decode_write(blob, offset):
-    (rb, linv, cmd, tk, vb, vt, rt, length,
+    (rb, linv, vb, vt, rt, length, tk, cmd,
      _pad) = RECORD.unpack_from(blob, offset)
     kind = tk >> 4
     linv_v = float(linv) if kind in (KIND_STEP_Q, KIND_STEP_F)         else linv / (1 << LENGTH_INVERT_Q)

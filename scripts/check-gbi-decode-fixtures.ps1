@@ -118,6 +118,17 @@ $ftanimDenseBank = Join-Path $PSScriptRoot 'generate_ftanim_dense_bank.py'
 if ($LASTEXITCODE -ne 0) {
     throw "Figatree dense-bank emitter failed with exit code $LASTEXITCODE."
 }
+
+# Cycle 117, slice 32. The emitter writes the dense bank in Python and
+# include/nds/nds_anim_dense.h reads it in C; nothing else makes them agree. A
+# disagreement compiles, links, boots, and animates one joint of one animation
+# subtly wrongly -- no crash, no counter, nothing a screenshot shows. This runs
+# with no decomp/ and no build, so it is cheap enough to never skip.
+$ftanimDenseLayout = Join-Path $PSScriptRoot 'check_ftanim_dense_layout.py'
+& python -B $ftanimDenseLayout
+if ($LASTEXITCODE -ne 0) {
+    throw "Dense animation track layout check failed with exit code $LASTEXITCODE."
+}
 function Assert-Equal {
     param(
         [object]$Actual,
