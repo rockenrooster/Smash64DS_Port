@@ -4420,7 +4420,68 @@ the stack frame to 12 bytes. **Check the disassembly of this kernel for hoisted
 `asr #31` and stack spills after touching it** -- the host error bound cannot
 see code shape, and it reported byte-identical numbers across the fix.
 
-### Slice 31 (SPECIFIED, NOT STARTED): the animation lane's AOT rewrite
+### Slice 31: the animation parser stops rebuilding its track table
+
+**KEEP on a same-binary A/B: `WORK-H` P95 -7,104, `GCRA` P95 -10,368.**
+
+`ndsR2FtAnimParseDObjFigatree` cleared a 10-entry `track_aobjs[]` and walked the
+DObj's whole `aobj` chain before the event loop -- ~10 instructions over ~10
+36-byte pointer-reached nodes, so **~100 instructions against the 95.7 the
+profile measures for the entire call.** The walk WAS the call, 200,231 times a
+match, rebuilding a table that is invariant while the list is unchanged.
+`ndsR2AnimAObjToQ` is not the cost: once migrated it early-outs in ~5
+instructions.
+
+It now builds on first use, at most once per call, and only on calls that read
+it -- the `anim_joint.event16 == NULL` exit never does.
+
+**The audit came before the code, because the failure mode is silent.**
+`NDS_R2_FTANIM_ENSURE()` ALLOCATES on NULL, so a build that misses a read site
+does not crash and does not read garbage -- it creates a **duplicate AObj**. All
+41 `track_aobjs[i]` reads were checked against the 7 `ENSURE()` sites: exactly
+one block reads without it, `nGCAnimEvent16SetTranslateInterp`, which the source
+already flagged as "the only creation site outside NDS_R2_FTANIM_ENSURE". Both
+trigger the build. `ndsR2AnimAdvanceTail` was checked too and needs nothing: it
+dispatches per node on `kind >= NDS_R2_AQ_KIND_BASE`, so deferred migration
+leaves it correct.
+
+**No cross-call state, deliberately.** A cached table is the obvious move and
+cycle 117 lost two collision slices to exactly that, one still unexplained.
+
+**Measured on ONE binary** (`builds/build-c117-anim-ab`, built with
+`NDS_R2_ANIM_CUT_ROUTE=1`), route 15 versus 31, both set explicitly:
+
+| bucket | P50 | P95 |
+| --- | ---: | ---: |
+| `WORK-H` | +768 | **-7,104** |
+| `SRC` | -128 | **-10,496** |
+| `GCRA` | +64 | **-10,368** |
+| `SINT` | +320 | -1,024 |
+| `FTR` / `STG` / `ALL` | -64 / +64 / 0 | +128 / -64 / **0** |
+
+`gNdsR2FtAnimParseCalls` 212,516 and `gNdsR2CubicEvals` 299,148 in BOTH arms:
+identical work, only the route differs. **The untouched buckets are flat to
++-128 and `ALL` is exactly 0** -- that is why the route matters. A same-binary
+A/B has no cross-build placement floor, so a -7,104 P95 is readable here where
+the collision slices' larger bucket wins were not.
+
+**The saving lands in `GCRA`, not `SINT`** -- the `gc*` animation runner and its
+parser live there. Do not look for animation wins in `SINT` alone.
+
+**Route bits in this file are ON by default -- read this before adding one.**
+`NDS_R2_ANIM_CUT_ROUTE` defaults to 0, which makes `NDS_R2_ANIM_CUT_ON(bit)`
+fold to a constant **1**. So a new bit ships ENABLED in every published ROM and
+is only switchable in a lab build compiled with `NDS_R2_ANIM_CUT_ROUTE=1`. The
+A/B and the shipping default are therefore separate decisions: passing the A/B
+does not by itself justify what ships, and a losing candidate has to be
+DELETED, not switched off. This is the second instance of the pattern in this
+file -- the other is the `#if NDS_R2_CUBIC_FIXED` guard, where writing a Q kind
+without the Q player compiled in would silently stop every joint animating in
+the bare `make` build.
+
+### Slice 32 (NEXT): the AOT dense-track rewrite
+
+#### Original specification, still the target
 
 Re-profiled after the collision work. **Post-Requirement-4 animation is three
 symbols and 195,628,633 cycles -- 4.86% of all cycles, 5.9% of non-idle:**

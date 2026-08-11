@@ -379,8 +379,66 @@ static void ndsR2AnimAdvanceTail(DObj *root_dobj, u32 q)
 /* Every arm that writes a kind calls this first, so migrating here covers every
  * promotion into Q form -- including the AObj this call has just created, whose
  * `length_invert` the constructor set to 1.0F. */
+/* Requirement 4, next slice: build `track_aobjs[]` ON FIRST USE.
+ *
+ * The eager version cleared the table and walked the DObj's whole `aobj` chain
+ * before the event loop -- about ten instructions over about ten 36-byte nodes,
+ * reached by pointer. That is ~100 instructions against the 95.7 the profile
+ * measures for the whole call, at 3.16 cyc/insn in a tier running 42.3% memory
+ * stall: the walk IS the call, 200,231 times a match, rebuilding a table that
+ * is invariant while the list is unchanged.
+ *
+ * A cross-call cache is the obvious move and the wrong one -- cycle 117 lost
+ * two slices to caches in the neighbouring collision code and one failure is
+ * still unexplained. This has NO cross-call state: the table is built at most
+ * once per call, and only on calls that actually read it. The
+ * `anim_joint.event16 == NULL` exit never does.
+ *
+ * Every read is covered. An audit of the 41 `track_aobjs[i]` reads against the
+ * 7 `NDS_R2_FTANIM_ENSURE()` sites found exactly one block reading without it,
+ * `nGCAnimEvent16SetTranslateInterp`, which the source already flags as "the
+ * only creation site outside NDS_R2_FTANIM_ENSURE". Both trigger the build.
+ * Missing a site would NOT crash -- ENSURE allocates on NULL -- it would
+ * silently create a duplicate AObj, which is why the audit came first.
+ *
+ * Behind route bit 16 because it is not bit-identical: the walk also MIGRATES
+ * each joint node to Q form, so a node the script never writes migrates later
+ * (or not at all) and is played by the float arm meanwhile. Both arms are
+ * correct -- `gcPlayDObjAnimJoint` and `ndsR2AnimAdvanceTail` each dispatch on
+ * `kind >= NDS_R2_AQ_KIND_BASE` -- and the difference is inside the Q bound
+ * already proven for Requirement 4, but it is a difference, so it gets an A/B
+ * on one binary rather than an assertion. */
+static void ndsR2AnimBuildTrackTable(DObj *root_dobj, AObj **track_aobjs,
+                                     s32 count, u32 q)
+{
+    AObj *current_aobj = root_dobj->aobj;
+    s32 k;
+
+    for (k = 0; k < count; k++)
+    {
+        track_aobjs[k] = NULL;
+    }
+    while (current_aobj != NULL)
+    {
+        if ((current_aobj->track >= nGCAnimTrackJointStart) &&
+            (current_aobj->track <= count))
+        {
+            track_aobjs[current_aobj->track - nGCAnimTrackJointStart] =
+                current_aobj;
+            if (q != 0u)
+            {
+                ndsR2AnimAObjToQ(current_aobj);
+            }
+        }
+        current_aobj = current_aobj->next;
+    }
+}
+
+#define NDS_R2_FTANIM_TRACKS()                                                   do {                                                                             if (tracks_built == 0u)                                                      {                                                                                ndsR2AnimBuildTrackTable(root_dobj, track_aobjs,                                                      (s32)ARRAY_COUNT(track_aobjs), q);                  tracks_built = 1u;                                                       }                                                                        } while (0)
+
 #define NDS_R2_FTANIM_ENSURE()                                               \
     do {                                                                     \
+        NDS_R2_FTANIM_TRACKS();                                      \
         if (track_aobjs[i] == NULL)                                          \
         {                                                                    \
             track_aobjs[i] =                                                 \
@@ -419,6 +477,10 @@ void ndsR2FtAnimParseDObjFigatree(DObj *root_dobj)
     const u8 kind_linear = (u8)(q ? NDS_R2_AQ_KIND_LINEAR : nGCAnimKindLinear);
     const u8 kind_cubic = (u8)(q ? NDS_R2_AQ_KIND_CUBIC : nGCAnimKindCubic);
     f32 len_new = 0.0F;
+    /* Route bit 16 defers the table build to first use; 0 keeps the eager walk,
+     * so both arms live in one binary and `-SetGlobals` picks between them. */
+    const u32 lazy_tracks = NDS_R2_ANIM_CUT_ON(16u) ? 1u : 0u;
+    u32 tracks_built = 0u;
 
     gNdsR2FtAnimParseCalls++;
 
@@ -439,28 +501,12 @@ void ndsR2FtAnimParseDObjFigatree(DObj *root_dobj)
                 return;
             }
         }
-        for (i = 0; i < (s32)ARRAY_COUNT(track_aobjs); i++)
+        /* Migrate the ones this parser owns, not the whole list: an AObj
+         * outside the joint range belongs to another writer and its float kind
+         * is the right one for it. Route bit 16 moves this to first use. */
+        if (lazy_tracks == 0u)
         {
-            track_aobjs[i] = NULL;
-        }
-        current_aobj = root_dobj->aobj;
-
-        while (current_aobj != NULL)
-        {
-            if ((current_aobj->track >= nGCAnimTrackJointStart) &&
-                (current_aobj->track <= ARRAY_COUNT(track_aobjs)))
-            {
-                track_aobjs[current_aobj->track - nGCAnimTrackJointStart] =
-                    current_aobj;
-                /* Migrate the ones this parser owns, not the whole list: an
-                 * AObj outside the joint range belongs to another writer and
-                 * its float kind is the right one for it. */
-                if (q != 0u)
-                {
-                    ndsR2AnimAObjToQ(current_aobj);
-                }
-            }
-            current_aobj = current_aobj->next;
+            NDS_R2_FTANIM_TRACKS();
         }
         do
         {
@@ -721,6 +767,9 @@ void ndsR2FtAnimParseDObjFigatree(DObj *root_dobj)
                 break;
 
             case nGCAnimEvent16SetTranslateInterp:
+                /* The one block that reads the table without ENSURE, per the
+                 * audit and per the comment further down. */
+                NDS_R2_FTANIM_TRACKS();
                 AObjAnimAdvance(root_dobj->anim_joint.event16);
 
                 if (track_aobjs[nGCAnimTrackTraI - nGCAnimTrackJointStart] ==
