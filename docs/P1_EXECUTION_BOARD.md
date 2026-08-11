@@ -4478,6 +4478,41 @@ last thing standing between the opcode table above and a mechanical emitter.
 `Loop`, `End`, `SetFlags`), per-track fixed-point segment arrays (the six
 state-writing opcodes), and a relocation list for the one offset field.
 
+**Step 4: all 15 case bodies read. The control stream is NOT pure data.**
+
+`nGCAnimEvent16Loop` and `nGCAnimEvent16End` both call
+**`root_dobj->parent_gobj->func_anim(root_dobj, -2, 0)`** and
+**`(root_dobj, -1, 0)`** respectively, guarded by `is_anim_root`. The animation
+script invokes a **GObj callback into gameplay code** at its loop and end
+points. A baked track that replaces the script must fire those callbacks at
+exactly the same times -- so **this bake touches GAMEPLAY, not just
+presentation**, and a timing slip is a gameplay bug rather than a visual one.
+That single fact outranks every performance argument for slice 32 and is why the
+replay proof has to compare callback timing, not only AObj field values.
+
+The rest of the control-stream semantics, now complete:
+
+- `Block` -- if the next command's toggle is set, `anim_wait += payload`.
+- `SetFlags` -- writes **`root_dobj->flags`** (a DObj field, not an AObj one),
+  then the same conditional `anim_wait += payload`.
+- `Loop` -- `event16 += event16->s / 2`, a RELATIVE JUMP, then sets
+  `anim_frame = -anim_wait` on both the DObj and its GObj, then the callback.
+- `End` -- `ndsR2AnimAdvanceTail`, `anim_frame = anim_wait` on both, then
+  `anim_wait = AOBJ_ANIM_END`, then the callback, then **`return`** (not
+  `break`).
+- `SetTargetRate` -- `rate_target` only, from `NDS_R2_FTANIM_TARGET(1)`.
+- `SetValAfter*` -- `value_base = value_target`, new `value_target`,
+  `kind = STEP`, `length_invert = frames`, `length = len_new`,
+  `rate_target = 0`; the `Block` variant also does `anim_wait += payload`.
+- `Event1611` -- `ndsR2AnimAddLength` per flagged track, writes no field
+  directly.
+
+**So the dense format needs four parts, not three:** a control stream carrying
+wait accumulation, DObj flag writes, relative jump targets and **callback events
+tagged -1/-2**; per-track fixed-point segment arrays; the relocation list for
+`interpolate`; and the `is_anim_root` predicate preserved, since the callbacks
+are conditional on it.
+
 **Method note.** The table above was extracted wrong TWICE before it was right:
 the first pass ended each case at the inner flags-loop `break;` and the second
 tracked brace depth from the function rather than from the `switch`, and both
