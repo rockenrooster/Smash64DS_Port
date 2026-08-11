@@ -28,7 +28,13 @@ the Boundary figure; **re-pin `EXPECTED_CENSUS_SHA256` when its coverage changes
 **Route to ATTRIBUTE, re-bank to BANK — never swap them.** Slice 31 read P95
 **−7,104** on one binary (`ALL` exactly 0) and **+576** across builds (untouched
 FTR −3,328). Both true: the work is gone, the win is under the floor.
-**Collision: cut VISITS, not ops** — slice 28 skips 91.9% of sweep visits (`SPHD` P95 −15,744); `ndsMPFindLineEndpoints` 13,205 cyc/frame has no reject.
+**Collision is the next owner, measured** (slice 34): its soft float is **16,649
+tk/fr**, 1.9x animation's largest remaining item, plus 33,077 self. **Cut
+VISITS, not ops** — slice 28 skipped 91.9% of sweep visits (`SPHD` P95 −15,744).
+A `line_id→(group,kind)` table is REFUTED (E51: Dream Land is 1 yakumono, 7
+lines). All three owners are **FLAT** — no PC over 3.6% of its function —
+so the only lever is calls: `…GetFCCommonFloor` 45,372 x 818 cyc,
+`ndsMPFindLineEndpoints` 38,890 x 543, `…SweepFloorLoopSweep` 11,544 x 2,643.
 
 ## What is dead, so nobody re-derives it
 
@@ -45,9 +51,15 @@ FTR −3,328). Both true: the work is gone, the win is under the floor.
   an animation against the source's 2,310, ×85 cached needs +679,490 B, and
   dropping every init record still leaves 3.27×. Commands are parsed ONCE per
   playback, so a bake only wins on the 64.6% of loads that repeat.
-- **Animation slices under the floor**: idle-joint skip (33, `SRC` −5,632 /
-  `WORK-H` flat), lazy track table (31, −7,104 routed / +576 re-banked), AObj
-  walk (~1,050), track dispatch (~1,900). `.text.hot` is closed BOTH ways.
+- **The animation lane, closed on numbers (slice 34).** Its two largest SELF
+  symbols are already Requirement 4's fixed point at 1.67–1.69 cyc/insn — no
+  float to convert, no stall to place. All that remains is **8,772 tk/fr** of
+  soft float over three symbols, largest 4,631, every one under the floor: as
+  are idle-joint skip (33, `SRC` −5,632 / `WORK-H` flat), lazy track table
+  (31, −7,104 routed / +576 re-banked), AObj walk (~1,050), track dispatch
+  (~1,900). `.text.hot` is closed BOTH ways. **`ndsBaseGcPlayMObjMatAnim` must
+  not be blanket-converted** — five of its tracks carry packed 0xRRGGBBAA in the
+  f32 bit pattern.
 
 ## RAM: both budgets are near their floor — price a change before writing it
 
@@ -74,16 +86,12 @@ route read back 0 and 1): **`FTR` P50 −10,432, P95 −10,368, `WORK-H` P50
 
 **It SHIPPED BROKEN once and the owner caught it in minutes — read the board
 before touching this.** Two defects, invisible to every gate that passed:
-`_stripify_run` used `(t0[0], t0[2])`, not a directed edge, so **35.6% of the
-fighter came out BACKFACING**; and the emitter issued `BEGIN_VTXS` only on a
-group TYPE change, **welding adjacent strip groups into one vertex list** (the
-first run has six consecutive strips). `check_fighter_primitive_streams.py` now
-**models the runtime's BEGIN policy instead of assuming one per group** — that
-assumption is what let the second ship green; under the old policy it reports
-mode 2 drawing **744 triangles against 626 source**. Run it after touching
-either. **A passing verifier is not visual verification**: Boundary passed on
-the broken build and `latest.png` showed both fighters complete, because that
-canonical frame does not show the affected joints. **Hand the owner a ROM.**
+an undirected edge made **35.6% of the fighter BACKFACING**, and `BEGIN_VTXS` on
+group TYPE change alone **welded adjacent strips into one vertex list**.
+`check_fighter_primitive_streams.py` now **models the runtime's BEGIN policy
+rather than assuming one per group** — run it after touching either. **A passing
+verifier is not visual verification**: Boundary passed on the broken build and
+`latest.png` showed both fighters whole. **Hand the owner a ROM.**
 
 **The emit stalls per VERTEX, not per word** (c115 `--pc-detail`, no build): a
 corner is 40.5 cycles untextured, **~28 of it the GX write**, and textured pays
@@ -94,9 +102,9 @@ baked/DMA'd GX stream and `VTX_10`** — both trade words, not vertices; the win
 **The other big lever was the I-cache, not arithmetic.** `…DLAllDrawForSlot`
 was the ROM's largest non-idle symbol at **4.21 cyc/insn**, 10,708 bytes against
 an **8 KB** I-cache, **73.6% never executed**; outlining the never-*entered*
-bodies took it to **7,516**/**7,236**. Recipe, no build: `--pc-detail SYM`, diff
-`objdump`, `addr2line` four points per cold run. **Entry count discriminates, not
-cold bytes** — cold bytes in an *entered* body cost **+14,963**; under 8 KB, spent.
+bodies took it to **7,516**/**7,236**. Recipe, no build: `--pc-detail SYM[,SYM…]`
+(one CSV pass serves N), diff `objdump`, `addr2line` four points per cold run.
+**Entry count discriminates**: cold bytes in an *entered* body cost **+14,963**.
 
 Sixteen landed slices; the board carries each one's evidence. What generalises:
 
@@ -114,23 +122,19 @@ Sixteen landed slices; the board carries each one's evidence. What generalises:
   because the data was still consumed and the fills only moved.
 
 **Compiling the frame-summary counters out is refuted** (FTR −7,378 / STG
-−2,776): it **breaks the gate**, since `…gcrunall-loop-harness.ps1` asserts exact
+−2,776): it **breaks the gate** — `…gcrunall-loop-harness.ps1` asserts exact
 batch and texture-prepare accounting off those globals. **A census row is not an
-FTR row** either — the bracket is `ndsFighterDisplayContractSubmit` only.
-
-**Reconciliation on c115 with an INDEPENDENT tick factor** (0.4993 tk/cyc, from
-`ALL` vs total cycles — deriving it from the FTR sum is circular and overstated
-coverage 22%): **35 named symbols = 244,774 tk/fr, 78.1% of `FTR`**; the 68,647
-residual is bounded by shared leaves (float lib 66,750, `memcpy`/`memset` 29,895).
+FTR row**: the bracket is `ndsFighterDisplayContractSubmit` only. **Tick factor
+0.4993 tk/cyc** comes from `ALL` vs total cycles; deriving it from the FTR sum is
+circular and overstated coverage 22%. On c115 that reconciled **35 named symbols
+= 244,774 tk/fr, 78.1% of `FTR`**, residual bounded by shared leaves.
 
 **Next, priced** (c115 census, tk/fr). **`Task36ReplayRun` 17,796 is STAGE, not
-FTR** — it takes `NDSNativeStageRun`; the board's old "next slice" row was
-mis-attributed. In FTR: `ExecuteNativeFighterOwnerProduction` **26,307** +
-`NativePrepareProductionRun` **25,277** (five-phase split on the board, Uv
-quarter deleted); `BuildFighterTraRotRpyDirect` **17,698** (already all
-fixed-point inside — its only float boundary is six conversions a joint);
-`BuildDObjXObjMatrix` 14,244; `LoadHardwareSplitMatrices` **13,122**, E23
-projection-skip still refuted. The animation lane above them is spent.
+FTR** — it takes `NDSNativeStageRun`. In FTR:
+`ExecuteNativeFighterOwnerProduction` **26,307** + `NativePrepareProductionRun`
+**25,277** (five-phase split on the board); `BuildFighterTraRotRpyDirect`
+**17,698** (fixed-point inside; six conversions a joint is its only float
+boundary); `LoadHardwareSplitMatrices` **13,122**, E23 projection-skip refuted.
 
 **The `SINT` split is DONE.** `SINT` +88,082 = `ftMainPlayAnim` **+60,559**
 (animation) + `ftComputerProcessAll` +24,386 (map collision, not AI), retiring
@@ -193,5 +197,4 @@ unnoticed — it had, until c116**. `make p1-tick` builds the measuring ROM, `ma
 p1` the published battle pair; bare `make` builds the P2 ROM P1 does not ship.
 Never pass `-j`, never override `MAKEFLAGS`, one build at a time, never build a
 published target name for lab work. Preserve canonical mode 163, renderer mode 9,
-mip 0, static textures, source countdown, Dream Land water frame 0, Task 16
-`1/1/1`. Never edit `decomp/`. Run `New-Smash64DSSnapshot.ps1` last.
+mip 0, static textures, source countdown, Dream Land water frame 0, Task 16 `1/1/1`. Never edit `decomp/`. Run `New-Smash64DSSnapshot.ps1` last.
