@@ -152,6 +152,79 @@ def walk(data, size, off, limit=8192):
     return "no terminator in %d commands" % limit
 
 
+def decode_script(data, size, off, limit=8192):
+    """Decode one script into structured commands.
+
+    Yields dicts with the fields the semantic model needs, which is strictly
+    more than `walk` needs: the payload word when `toggle` is set, and the
+    per-track TARGET words. Those targets are the part `ftanim_script_model.py`
+    originally approximated with the payload -- real commands carry a separate
+    value per selected track, and `SetValRate{,Block}` carries two.
+
+    Raises on a malformed script rather than returning a partial decode; the
+    bank is proven well-formed, so a raise here means the reader broke.
+    """
+    out, pc, seen = [], off, set()
+    for _ in range(limit):
+        if pc < 0 or pc + 2 > size:
+            raise ValueError("script ran off the end at 0x%x" % pc)
+        if pc in seen:
+            out.append({"pc": pc, "op": OP_LOOP, "flags": 0, "payload": None,
+                        "targets": [], "jump": pc, "cyclic": True})
+            return out
+        seen.add(pc)
+        w = struct.unpack_from("<H", data, pc)[0]
+        op, flags, toggle = (w >> 11) & 0x1F, (w >> 1) & 0x3FF, w & 1
+        if op > OPCODE_MAX:
+            raise ValueError("undefined opcode %d at 0x%x" % (op, pc))
+
+        cmd = {"pc": pc, "op": op, "flags": flags, "payload": None,
+               "targets": [], "jump": None, "cyclic": False}
+        if op == OP_END:
+            out.append(cmd)
+            return out
+        if op in (OP_LOOP, OP_INTERP):
+            s = struct.unpack_from("<h", data, pc + 2)[0]
+            half = -(abs(s) // 2) if s < 0 else (s // 2)
+            cmd["jump"] = pc + 2 + half * 2
+            out.append(cmd)
+            if op == OP_INTERP:
+                pc += 4
+                continue
+            pc = cmd["jump"]
+            continue
+
+        p = pc + 2
+        if toggle:
+            cmd["payload"] = struct.unpack_from("<H", data, p)[0]
+            p += 2
+        per = 2 if op in (4, 5) else (1 if op in (2, 3, 6, 7, 8, 9, 10) else 0)
+        if per:
+            for bit in range(10):
+                if not (flags >> bit):
+                    break
+                if (flags >> bit) & 1:
+                    vals = struct.unpack_from("<%dh" % per, data, p)
+                    cmd["targets"].append((bit, vals))
+                    p += 2 * per
+        out.append(cmd)
+        pc = p
+    raise ValueError("no terminator in %d commands" % limit)
+
+
+def scripts_in(path):
+    """Every decoded script in one bank file, or [] for an AObj32 file."""
+    f = load(path.read_bytes())
+    if f is None or f["file_id"] in AOBJ32_IDS:
+        return []
+    fx = fixups(f)
+    if not fx:
+        return []
+    normalize(f, fx)
+    return [decode_script(f["data"], f["size"], t)
+            for t in sorted(set(fx.values()))]
+
+
 def main() -> int:
     if not BANK.is_dir():
         print("SKIP: %s absent -- run scripts/fetch-battleship-reference.ps1"

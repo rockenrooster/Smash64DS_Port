@@ -5080,10 +5080,23 @@ so the dense format and any interim fast path should be designed around that
 pair first. Flag popcount is 1 on 41,840 of the writing commands, so most
 commands touch a single track.
 
-**Nothing about this slice is blocked.** What remains is work: wire the reader to
-`ftanim_script_model.py` (which needs per-track target values, not the single
-payload its synthetic scripts use), bake, emit the blob, re-pin
-`EXPECTED_CENSUS_SHA256`, relocate `interpolate`, and write the runtime player.
+`ftanim_reloc_probe.decode_script()` now returns structured commands — opcode,
+flags, the payload word when `toggle` is set, and the per-track TARGET words —
+over the whole bank with **zero errors**: 5,629 scripts, 77,959 commands,
+**184,629 target words**, which matches the walker's independent per-track write
+count exactly. `scripts_in(path)` is the generator's front door.
+
+**Targets are s16 on disk**, spanning −30,707..28,952 across the entire bank.
+That is a design input, not trivia: the 32-byte record step 13 priced assumed
+seven s32 Q fields, but the source values are already 16-bit, so the dense record
+can be far tighter — 184,629 targets is only 369 KB of raw target data.
+
+**Nothing about this slice is blocked.** What remains: extend
+`ftanim_script_model.py` to take per-track targets (its synthetic scripts
+approximate them with the single payload, so the change must keep the existing
+20,000-script round-trip passing), run the bake on real content, emit the blob,
+re-pin `EXPECTED_CENSUS_SHA256`, relocate `interpolate`, and write the runtime
+player.
 
 #### Original specification, still the target
 
