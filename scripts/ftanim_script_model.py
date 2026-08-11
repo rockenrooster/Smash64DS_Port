@@ -199,6 +199,120 @@ def _apply(t: Track, op: str, payload: float, run: Run) -> None:
             t.length_invert = 1.0 / payload
 
 
+# --------------------------------------------------------------------------
+# Real content.
+#
+# `run_script` above is driven by synthetic tuples in which one `payload` stands
+# in for every per-track value, which is what the 20,000-script round-trip in
+# `ftanim_bake.py` proves against. Real figatree commands do not work that way:
+# a command carries an optional payload AND a separate TARGET word for each
+# selected track, two of them for `SetValRate{,Block}`. `run_commands` consumes
+# the structured commands `ftanim_reloc_probe.decode_script()` produces, so the
+# generator runs the same semantics over the shipped bank.
+#
+# It is a second entry point rather than a change to `run_script` on purpose:
+# the synthetic proof is the only thing keeping the bake honest right now, and
+# rewriting the function it validates would invalidate it.
+#
+# Opcode numbers are the AObjEvent16Kind ordinals (objdef.h:169-187).
+OP = {0: "End", 1: "Block", 2: "SetValBlock", 3: "SetVal",
+      4: "SetValRateBlock", 5: "SetValRate", 6: "SetTargetRate",
+      7: "SetVal0RateBlock", 8: "SetVal0Rate", 9: "SetValAfterBlock",
+      10: "SetValAfter", 11: "Event1611", 12: "SetTranslateInterp",
+      13: "Loop", 14: "SetFlags"}
+BLOCK_OPS = {2, 4, 7, 9}            # the *Block halves advance anim_wait
+
+
+def run_commands(cmds, is_anim_root=True, anim_speed=1.0, anim_wait=0.0):
+    """Execute decoded real commands, recording the same two timelines.
+
+    `anim_speed` is a DObj field rather than script data, so it is a parameter;
+    `length` is written as `-anim_wait - anim_speed`, the segment start the
+    parser computes in `ndsR2AnimSegmentStart`.
+    """
+    tracks = [Track() for _ in range(TRACKS)]
+    run = Run()
+    run.anim_wait = anim_wait
+
+    for cmd in cmds:
+        op = cmd["op"]
+        if cmd.get("cyclic"):
+            break                    # the script loops; the frame budget ends it
+        payload = cmd["payload"] or 0
+        if op == 0:                                             # End
+            run.anim_frame = run.anim_wait
+            run.anim_wait = ANIM_END
+            if is_anim_root:
+                run.callbacks.append((cmd["pc"], -1))
+            run.stopped = True
+            break
+        if op == 13:                                            # Loop
+            run.anim_frame = -run.anim_wait
+            if is_anim_root:
+                run.callbacks.append((cmd["pc"], -2))
+            continue
+        if op == 12:                                            # TranslateInterp
+            tracks[TRACKS - 1].interpolate = ("offset", cmd["jump"])
+        elif op == 14:                                          # SetFlags
+            run.flags = cmd["flags"]
+            run.anim_wait += payload
+        elif op == 1:                                           # Block
+            run.anim_wait += payload
+        else:
+            seg = -run.anim_wait - anim_speed
+            for bit, vals in cmd["targets"]:
+                _apply_real(tracks[bit], op, payload, vals, seg)
+            if op in BLOCK_OPS:
+                run.anim_wait += payload
+        run.states.append((cmd["pc"], OP[op], [t.snapshot() for t in tracks]))
+
+    return run
+
+
+def _apply_real(t, op, payload, vals, seg):
+    """Apply one command to one track.
+
+    Every value is coerced to float because these are the `f32` fields of an
+    AObj. The decoder hands back s16 ints, and leaving them as ints made the
+    real-content bake report false mismatches: Python calls `0 == 0.0` true, so
+    the resolver emitted no write record, while the bit-pattern comparison the
+    proof runs on distinguishes an int `0` from a float `0.0`. Storing the wrong
+    Python type in a model of an f32 field is simply a bug -- found by running
+    the bake on the shipped bank, which the synthetic scripts could not surface
+    because they only ever supply floats.
+    """
+    payload = float(payload)
+    if op == 6:                                     # SetTargetRate
+        t.rate_target = float(vals[0])
+        return
+    if op == 11:                                    # Event1611
+        t.length += payload
+        return
+    if op in (9, 10):                               # SetValAfter{,Block}
+        t.value_base = t.value_target
+        t.value_target = float(vals[0])
+        t.kind = KIND_STEP
+        t.length_invert = payload                   # a FRAME COUNT here
+        t.length = seg
+        t.rate_target = 0.0
+        return
+    t.value_base = t.value_target
+    t.value_target = float(vals[0])
+    if op in (2, 3):                                # SetVal{,Block} -> Linear
+        t.kind = KIND_LINEAR
+        if payload:
+            t.rate_base = (t.value_target - t.value_base) / payload
+        t.length = seg
+        t.rate_target = 0.0
+        return
+    t.rate_base = t.rate_target                     # the cubic families
+    t.rate_target = float(vals[1]) if op in (4, 5) else 0.0
+    t.kind = KIND_CUBIC
+    if payload:
+        t.length_invert = 1.0 / payload
+    t.length = seg
+
+
 if __name__ == "__main__":
     demo = [
         ("SetVal0Rate", 0b101, 4.0, 0),

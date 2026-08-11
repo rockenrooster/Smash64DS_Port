@@ -53,8 +53,17 @@ def _key(run):
 
 def bake(script, is_anim_root=True):
     """Resolve a script to control + write records, or reject it."""
-    run = run_script(script, is_anim_root=is_anim_root)
+    return bake_run(run_script(script, is_anim_root=is_anim_root))
 
+
+def bake_run(run):
+    """The bake proper, over an already-executed run.
+
+    Split out so the same resolver serves both drivers: the synthetic tuples
+    `run_script` executes, and the real decoded commands `run_commands`
+    executes. The bake must not care which produced the timeline -- if it did,
+    the synthetic proof would not transfer to the shipped bank.
+    """
     control, writes = [], []
     prev = [None] * TRACKS
     for idx, (pc, op, snaps) in enumerate(run.states):

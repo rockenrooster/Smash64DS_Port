@@ -91,6 +91,20 @@ $ftanimRelocReader = Join-Path $PSScriptRoot 'ftanim_reloc_probe.py'
 if ($LASTEXITCODE -ne 0) {
     throw "Figatree reloc reader failed with exit code $LASTEXITCODE."
 }
+
+# Cycle 117, slice 32. ftanim_bake.py proves the resolver on 20,000 SYNTHETIC
+# scripts, whose driver collapses every per-track value into one payload. Real
+# commands carry a separate target word per selected track -- two for
+# SetValRate{,Block}, which is 69.6% of the bank -- so the synthetic proof says
+# nothing about the shipped content on its own. This bakes all 5,629 real
+# Mario/Fox scripts and replays them from records alone. It caught a real bug
+# the synthetic scripts structurally could not. Skips cleanly when decomp/ is
+# absent. Host-only, ~10 s.
+$ftanimRealBake = Join-Path $PSScriptRoot 'check_ftanim_real_bake.py'
+& python -B $ftanimRealBake
+if ($LASTEXITCODE -ne 0) {
+    throw "Figatree real-content bake round-trip failed with exit code $LASTEXITCODE."
+}
 function Assert-Equal {
     param(
         [object]$Actual,
