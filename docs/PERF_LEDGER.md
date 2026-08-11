@@ -7470,3 +7470,59 @@ arms, not just the candidate's.**
 moved to the assignment of `gMPCollisionGeometry`*; slice 30 moved it. The memo
 adds no bind, only hits are stored so the two FALSE paths keep incrementing their
 counters, and a line id past 64 falls through. Board: slice 35.
+
+## Cycle 118 — slice 36, and the three-point attribution that made slice 35 reproducible
+
+**One binary**, `builds/build-c118-mp-ab2` (`NDS_R2_MP_ROUTE=1 NDS_R2_BOTH_CPU=1`),
+1600 frames from 438, DLDI ON, three arms of `gNdsR2MPRoute`:
+
+| route | memos | `WORK-H` P50 | `WORK-H` P95 |
+|---|---|---:|---:|
+| **0** | neither | 968,896 | 1,307,392 |
+| **1** | endpoint (35) | 962,048 | 1,299,840 |
+| **3** | both (35+36) | 960,064 | **1,294,976** |
+
+| step | slice | ΔP50 | ΔP95 |
+|---|---|---:|---:|
+| 0 → 1 | 35 | −6,848 | **−7,552** |
+| 1 → 3 | 36 | −1,984 | **−4,864** |
+| **0 → 3** | **combined** | **−8,832** | **−12,416** |
+
+**Slice 35 measured −7,232 on one binary and −7,552 on a second, separately
+linked one.** Two builds, 320 ticks apart, on a cut the ±8,544 cross-build floor
+could never have resolved. That is the strongest evidence this campaign has that
+the `.data` route reads real work rather than placement — and the combined
+−12,416 clears the floor, so this pair is bankable where every c117 animation
+slice was not.
+
+`gNdsR2FtAnimParseCalls` is **145,549 in all three arms**; `ALL` P95 is identical
+to the tick in all three; `STG` P95 moves 64 across the whole span. The VBlank
+histogram is monotone from an independent counter — 2-VBlank frames **1578 →
+1603 → 1604**.
+
+**Reconcile a percentile win against the function's own self time, at P50.**
+`--pc-detail` prices pre-slice `ndsMPFindLineYakumonoID` at 9,610,869 cycles over
+57,851 calls — 166 cyc/call, **2,666 tk/fr mean**. The measured P50 −1,984 is
+**74% of that**, which is the right shape for a memo that still pays a `bl`, a
+prologue, a bounds test and a state load. The P95 −4,864 **exceeds** the mean self
+cost and that is not a contradiction: the frames at `WORK-H`'s 95th percentile
+are the collision-heavy ones. Check the reconciliation at P50; do not "correct" a
+P95 for exceeding a mean.
+
+**A structural argument does not survive a per-PC profile.** An earlier revision
+of the slice 36 board entry retired slice 37 (`ndsMPGetLineKindForLineID`) on
+R2-03 E51's authority — the scan's trip count is one, so there is no O(n) to
+remove. The profile run taken to confirm that refuted it: **47,980 calls at 194
+cycles, 9,329,165 cycles, 2,588 tk/fr** — a HIGHER per-call cost than slice 36's
+target and 97% of its total. E51 is right about the LOOP and silent about the
+FUNCTION, whose cost is the `bl`, a nine-register prologue,
+`ndsStageCollisionLoopGeometryReady`, the per-kind O2R halfword reads and the
+epilogue. Claim withdrawn on the board; slice 37 built as route bit 4.
+
+**Process failure worth one line.** The first Boundary run on slice 36 went RED,
+and the cause was that I edited the collision TU *while that verifier was
+building from it* — it compiled an intermediate where the new memo existed and
+the line clearing it on geometry change did not, and the shipped route flag folds
+the bit test to constant 1, so an un-invalidated memo reached the ROM. Clean
+re-run: **Boundary verification profile passed.** Never edit a file a build is
+reading; when it happens, re-run before debugging the diff. Board: slice 36.

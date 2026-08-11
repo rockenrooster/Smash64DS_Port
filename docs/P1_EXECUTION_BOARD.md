@@ -4836,6 +4836,128 @@ walk IS the call". The three biggest single symbols are already visible:
 `ndsFighterMarioFoxDLAllDrawForSlot` 93,854,253, `ndsRendererCommitNativeStageSegment`
 93,101,009, `ndsRendererNativeEmitProductionPrimitiveGroups` 81,420,680.
 
+### Slice 36: the yakumono-id memo — `WORK-H` P95 −4,864, isolated on one binary
+
+The companion to slice 35, and the reason the route went bitwise: one binary,
+`builds/build-c118-mp-ab2` (`NDS_R2_MP_ROUTE=1 NDS_R2_BOTH_CPU=1`),
+`gNdsR2MPRoute` **3 versus 1** — both memos against the endpoint memo alone, so
+this row is slice 36 and nothing else.
+
+#### The shape, and why it is bigger than one caller
+
+`ndsMPFindLineYakumonoID` is `line_id -> yakumono_id` over the same static
+geometry as slice 35. It is **out-of-line (232 bytes) with TEN call sites**, not
+the one I first sized it from — `mpCollisionGetFCCommonFloor` calls it once per
+call (45,372 a match), and the measured total is **71,353**.
+
+**It memoises MISSES as well as hits**, which slice 35 could not. Neither of its
+exits touches a counter, so there is no observable a served answer could stop
+incrementing — and the miss is the expensive half: a line with no yakumono walks
+every yakumono and every kind before returning FALSE, where a hit stops at the
+match. Caching only hits would have left the costly outcome alone.
+
+#### Measured
+
+| bucket | route 3 P50 | route 1 P50 | ΔP50 | route 3 P95 | route 1 P95 | ΔP95 |
+|---|---:|---:|---:|---:|---:|---:|
+| **`WORK-H`** | 960,064 | 962,048 | **−1,984** | 1,294,976 | 1,299,840 | **−4,864** |
+| `SRC` | 329,728 | 331,392 | −1,664 | 640,960 | 641,728 | −768 |
+| `GCRA` | 324,608 | 326,336 | −1,728 | 635,840 | 636,736 | −896 |
+| `SCPU` | 37,248 | 38,656 | −1,408 | 90,944 | 94,656 | −3,712 |
+| `SINT` | 148,096 | 149,312 | −1,216 | 338,176 | 334,976 | +3,200 |
+| `SPHD` | 68,928 | 69,056 | −128 | 117,376 | 116,736 | +640 |
+| `FTR` / `STG` | 302,336 / 188,032 | 302,400 / 188,032 | −64 / **0** | 306,112 / 194,240 | 306,240 / 194,240 | −128 / **0** |
+| `ALL` | 1,118,336 | 1,118,336 | **0** | 1,678,848 | 1,678,848 | **0** |
+
+**Read the sub-buckets at P50, not P95, on a cut this size.** The P50 column is
+coherent — `SRC` −1,664, `GCRA` −1,728, `SCPU` −1,408, `SINT` −1,216 — while at
+P95 `SINT` reads **+3,200** and `SPHD` **+640** against a `WORK-H` of −4,864.
+Those are different frames occupying each bucket's 95th position, not a
+regression; the controls settle it. **`STG` and `ALL` are exactly 0 at BOTH
+percentiles** and `FTR` is ±128.
+
+**Engagement.** `gNdsMPLineYakumonoHits` **71,340** / `Fills` **13** with the
+memo; **45** / **71,308** without. Thirteen fills a match — like slice 35's ten,
+the memo does not thrash on geometry reassignment. `gNdsR2FtAnimParseCalls` is
+**145,549 in both arms**: identical simulation, so no collision answer moved.
+
+#### Three points on ONE binary — and slice 35 reproduces on a second
+
+| route | memos | `WORK-H` P50 | `WORK-H` P95 |
+|---|---|---:|---:|
+| **0** | neither | 968,896 | 1,307,392 |
+| **1** | endpoint only | 962,048 | 1,299,840 |
+| **3** | both | 960,064 | **1,294,976** |
+
+| step | slice | ΔP50 | ΔP95 |
+|---|---|---:|---:|
+| 0 → 1 | 35 | −6,848 | **−7,552** |
+| 1 → 3 | 36 | −1,984 | **−4,864** |
+| **0 → 3** | **both** | **−8,832** | **−12,416** |
+
+**Slice 35 measured −7,232 on `build-c118-mp-ab` and −7,552 here on
+`build-c118-mp-ab2` — two separately-linked binaries agreeing within 320 ticks**
+on a cut the ±8,544 cross-build floor could never have shown. That is the
+strongest evidence in this lane that the route instrument is reading real work
+and not placement.
+
+**The combined −12,416 clears the floor**, so unlike every c117 animation slice
+this one is bankable across builds. `gNdsR2FtAnimParseCalls` is **145,549 in all
+three arms**; `ALL` P95 is **identical to the tick** in all three (1,678,848);
+`STG` P95 moves 64 across the whole span. The VBlank histogram is monotone —
+2-VBlank frames **1578 → 1603 → 1604** — which is the same ordering the buckets
+give, from an independent counter.
+
+#### The floor does not apply here, and that matters for how to read −4,864
+
+A same-binary route A/B has **no cross-build placement floor** — that is the
+whole reason standing rule 7 exists. −4,864 would be invisible across builds and
+is attributable here. It is a smaller win than slice 35's −7,232 for a reason
+worth carrying: **slice 35 memoised a function whose SEARCH was the cheap part**
+(the link reads, vertex-id reads, four coordinate reads and `(f32)` conversions
+after it were the cost), while this function is search plus a single halfword
+read. What is left to remove is mostly call overhead and the scan itself.
+
+#### It reconciles against the function's own self time, which is the check worth copying
+
+`--pc-detail` on the c117 whole-match profile prices the pre-slice function
+exactly: **9,610,869 cycles over 57,851 calls — 166 cycles a call, 2,666 tk/fr
+mean.** Against that:
+
+- **P50 −1,984 is 74% of the mean self cost.** That is the right shape: the memo
+  removes most of the body but still pays the `bl`, the prologue, the bounds test
+  and a state load. A P50 saving at or above 100% would have meant the number was
+  measuring something else.
+- **P95 −4,864 EXCEEDS the mean self cost, and that is not a contradiction.**
+  2,666 tk/fr is the average over all frames; the frames sitting at `WORK-H`'s
+  95th percentile are the collision-heavy ones, where this function runs more
+  than averagely often. Percentile savings are not bounded by mean self time.
+  Do not "correct" a figure for this — check it reconciles at P50 instead.
+
+#### And this is where I was wrong about slice 37 — E51 does not retire it
+
+An earlier revision of this entry said the third scan function,
+`ndsMPGetLineKindForLineID` (reached from `ndsMPLineIDIsFloor` on every one of
+`mpCollisionGetFCCommonFloor`'s 45,372 calls), was **search and nothing else** and
+therefore exactly what R2-03 E51 refuted — so "do not build it". **The profile
+run to settle that question says the opposite and the claim is withdrawn:**
+
+| function | calls | cyc/call | cycles | tk/fr |
+|---|---:|---:|---:|---:|
+| `ndsMPFindLineYakumonoID` (slice 36) | 57,851 | 166 | 9,610,869 | 2,666 |
+| `ndsMPGetLineKindForLineID` | 47,980 | **194** | 9,329,165 | **2,588** |
+
+Its per-call cost is **higher** than slice 36's target and its total is **97% as
+large**, so it is worth roughly the same, not less. **E51 explains why the LOOP is
+not the cost — trip count 1 — it does not say the function is cheap.** What costs
+194 cycles is a `bl`, a nine-register prologue, `ndsStageCollisionLoopGeometryReady`,
+the O2R halfword reads per kind, and the epilogue; its hottest PC is the epilogue
+itself at 7.0%, i.e. flat like the others. Take it as route **bit 4**.
+
+The lesson is the one this lane keeps re-teaching: **a structural argument about
+where cost "should" be does not survive contact with a per-PC profile.** The
+argument was sound about the loop and wrong about the function.
+
 ### Slice 35: the endpoint memo — `WORK-H` P95 −7,232 on one binary
 
 The slice **slice 29's own post-mortem asked for** ("the endpoint memo is cheap

@@ -426,18 +426,79 @@ u32 gNdsMPLineEndpointHits;
 u32 gNdsMPLineEndpointFills;
 u32 gNdsMPLineEndpointOverflow;
 
-/* One-binary A/B, same instrument as `gNdsR2FighterStripRoute`. `.data` and
- * aligned(32) so the poke owns its cache line. Default 1 = memo, so an unpoked
- * ROM is the candidate and `-SetGlobals gNdsR2MPRoute=0` is the control at the
- * SAME placement -- the only way to read a cut of this size against the
- * +-8,544 cross-build floor. At NDS_R2_MP_ROUTE=0 the test folds to a constant
- * and the shipped ROM carries no route check at all. */
+/* Slice 36, the companion. `ndsMPFindLineYakumonoID` is the same shape --
+ * `line_id -> yakumono_id` over the same static geometry -- and
+ * `mpCollisionGetFCCommonFloor` calls it ONCE PER CALL, 45,372 times a match,
+ * inside the largest remaining collision symbol (818 cycles a call, 10,294
+ * tk/fr self, 365 distinct PCs with the hottest at 1.9%: flat, same as slice 35).
+ *
+ * Unlike the endpoint memo this one caches MISSES too, and it may: neither of
+ * its exits touches a counter, so there is no observable the memo could stop
+ * incrementing. That matters because a miss is the whole cost -- a missing line
+ * walks every yakumono and every kind before returning FALSE, where a hit stops
+ * at the match. Caching only hits would leave the expensive half alone. */
+#define NDS_MP_LINE_YAKUMONO_UNKNOWN 0u
+#define NDS_MP_LINE_YAKUMONO_HIT 1u
+#define NDS_MP_LINE_YAKUMONO_MISS 2u
+
+static u8 sNdsMPLineYakumonoState[NDS_MP_LINE_ENDPOINT_MAX];
+static u8 sNdsMPLineYakumonoValue[NDS_MP_LINE_ENDPOINT_MAX];
+
+u32 gNdsMPLineYakumonoHits;
+u32 gNdsMPLineYakumonoFills;
+
+/* Slice 37, the third scan. `ndsMPGetLineKindForLineID` runs the SAME nested
+ * walk over the same static geometry, and `ndsMPLineIDIsFloor` / `…IsCeil` put
+ * it on every `mpCollisionGetFCCommonFloor` and `…Ceil` call.
+ *
+ * Slice 36's entry originally retired this on R2-03 E51's grounds -- the loop's
+ * trip count is one, so there is no O(n) to remove -- and the `--pc-detail` run
+ * taken to confirm that said the opposite: **47,980 calls at 194 cycles each,
+ * 9,329,165 cycles, 2,588 tk/fr**, a HIGHER per-call cost than slice 36's target
+ * and 97% of its total. E51 is right about the loop and says nothing about the
+ * function: what costs 194 cycles is the `bl`, a nine-register prologue,
+ * `ndsStageCollisionLoopGeometryReady`, the per-kind O2R halfword reads and the
+ * epilogue. Its hottest PC is the epilogue at 7.0% -- flat, like every other
+ * owner in this lane.
+ *
+ * The kind is a small enum, so state and value share ONE byte rather than the
+ * two slice 36 needed: 0 = not yet resolved, 1 = the function's `-1` answer, and
+ * anything else is `kind + 2`. That lets the negative answer be cached as a
+ * value instead of costing a separate state array, and the whole table is 64
+ * bytes -- two cache lines for every line on the stage. */
+#define NDS_MP_LINE_KIND_UNKNOWN 0u
+#define NDS_MP_LINE_KIND_NONE 1u /* the -1 return, memoised */
+#define NDS_MP_LINE_KIND_BIAS 2u /* stored value is kind + BIAS */
+
+static u8 sNdsMPLineKindPlus1[NDS_MP_LINE_ENDPOINT_MAX];
+
+u32 gNdsMPLineKindHits;
+u32 gNdsMPLineKindFills;
+
+/* One-binary A/B, same instrument as `gNdsR2FighterStripRoute`, and BITWISE the
+ * way `gNdsR2AnimCutRoute` is so one binary can attribute several cuts:
+ *
+ *   bit 1  the endpoint memo         (slice 35, -7,232 and -7,552 P95 on two
+ *                                    separately-linked binaries)
+ *   bit 2  the yakumono-id memo      (slice 36, -4,864 P95 isolated)
+ *   bit 4  the line-kind memo        (slice 37)
+ *
+ * `.data` and aligned(32) so the poke owns its cache line. Default is ALL BITS,
+ * so an unpoked ROM is the full candidate and `-SetGlobals gNdsR2MPRoute=N`
+ * selects a subset at the SAME placement -- the only way to read cuts of this
+ * size against the +-8,544 cross-build floor.
+ *
+ * **The default-0 trap, which this file inherits.** At NDS_R2_MP_ROUTE=0 the
+ * test folds to a constant `1`, so a NEW BIT SHIPS ON in every published ROM the
+ * moment it is written. That is intended here -- both memos are exact -- but it
+ * means a bit is never a way to keep something out of the shipped ROM. Use a
+ * compile flag for that. */
 #if NDS_R2_MP_ROUTE
 volatile u32 gNdsR2MPRoute
-    __attribute__((section(".data"), aligned(32))) = 1u;
-#define NDS_R2_MP_ROUTE_ON() (gNdsR2MPRoute != 0u)
+    __attribute__((section(".data"), aligned(32))) = 7u;
+#define NDS_R2_MP_ROUTE_ON(bit) ((gNdsR2MPRoute & (bit)) != 0u)
 #else
-#define NDS_R2_MP_ROUTE_ON() (1)
+#define NDS_R2_MP_ROUTE_ON(bit) (1)
 #endif
 
 static void ndsMPVertexF32Reset(void)
@@ -455,6 +516,8 @@ static void ndsMPVertexF32Reset(void)
     for (i = 0u; i < NDS_MP_LINE_ENDPOINT_MAX; i++)
     {
         sNdsMPLineEndpointValid[i] = 0u;
+        sNdsMPLineYakumonoState[i] = (u8)NDS_MP_LINE_YAKUMONO_UNKNOWN;
+        sNdsMPLineKindPlus1[i] = (u8)NDS_MP_LINE_KIND_UNKNOWN;
     }
     sNdsMPVertexF32Geometry = NULL;
 }
@@ -731,7 +794,15 @@ static void ndsMPGetFCAngle(Vec3f *angle, s32 v1x, s32 v1y, s32 v2x,
  * Land reports gNdsStageCollisionLoopYakumonoCount = 1 and 7 lines total, so the
  * `i < yakumono_count` loop below has a trip count of ONE. Do not re-propose a
  * precomputed line_id -> (group, kind) table; there is no O(n) here to remove.
- * Board entry: docs/P1_EXECUTION_BOARD.md, R2-03 E51. */
+ * Board entry: docs/P1_EXECUTION_BOARD.md, R2-03 E51.
+ *
+ * Slice 37 is NOT that table, and the distinction is the whole point. E51 is
+ * about the LOOP, and it is still right: there is no O(n) here. The memo below
+ * removes what the profile actually charges -- 194 cycles a call over 47,980
+ * calls, of which the loop is a small part and the `bl`, the nine-register
+ * prologue, `ndsStageCollisionLoopGeometryReady`, the per-kind O2R halfword
+ * reads and the epilogue are the rest. Slice 36's board entry retired this on
+ * E51's authority before measuring it, and had to withdraw that. */
 static s32 ndsMPGetLineKindForLineID(s32 line_id)
 {
     MPGeometryData *geometry = gMPCollisionGeometry;
@@ -743,6 +814,20 @@ static s32 ndsMPGetLineKindForLineID(s32 line_id)
     if ((line_id < 0) || (ndsStageCollisionLoopGeometryReady() == FALSE))
     {
         return -1;
+    }
+    /* Both outcomes memoised. Neither exit touches a counter, so a served answer
+     * is observationally identical, and the -1 is the expensive one: it walks
+     * every yakumono and every kind before returning. */
+    if (NDS_R2_MP_ROUTE_ON(4u) && ((u32)line_id < NDS_MP_LINE_ENDPOINT_MAX))
+    {
+        u32 cached = sNdsMPLineKindPlus1[(u32)line_id];
+
+        if (cached != NDS_MP_LINE_KIND_UNKNOWN)
+        {
+            gNdsMPLineKindHits++;
+            return (cached == NDS_MP_LINE_KIND_NONE) ?
+                -1 : ((s32)cached - (s32)NDS_MP_LINE_KIND_BIAS);
+        }
     }
     line_info = geometry->line_info;
     yakumono_count = ndsMPGeometryYakumonoCount(geometry);
@@ -771,9 +856,21 @@ static s32 ndsMPGetLineKindForLineID(s32 line_id)
             last = first + count;
             if ((line_id >= first) && (line_id < last))
             {
+                if (((u32)line_id < NDS_MP_LINE_ENDPOINT_MAX) &&
+                    ((kind + NDS_MP_LINE_KIND_BIAS) <= 0xffu))
+                {
+                    sNdsMPLineKindPlus1[(u32)line_id] =
+                        (u8)(kind + NDS_MP_LINE_KIND_BIAS);
+                    gNdsMPLineKindFills++;
+                }
                 return (s32)kind;
             }
         }
+    }
+    if ((u32)line_id < NDS_MP_LINE_ENDPOINT_MAX)
+    {
+        sNdsMPLineKindPlus1[(u32)line_id] = (u8)NDS_MP_LINE_KIND_NONE;
+        gNdsMPLineKindFills++;
     }
     return -1;
 }
@@ -897,7 +994,7 @@ static sb32 ndsMPFindLineEndpoints(s32 line_id, Vec3f *left, Vec3f *right,
     }
     /* The geometry-ready guard stays ABOVE this: a memo entry says what the
      * geometry held, never that it is still current to read. */
-    if (NDS_R2_MP_ROUTE_ON() &&
+    if (NDS_R2_MP_ROUTE_ON(1u) &&
         ((u32)line_id < NDS_MP_LINE_ENDPOINT_MAX) &&
         (sNdsMPLineEndpointValid[(u32)line_id] != 0u))
     {
@@ -1068,6 +1165,25 @@ static sb32 ndsMPFindLineYakumonoID(s32 line_id, u32 *yakumono_id)
         return FALSE;
     }
 
+    /* Slice 36. Both outcomes are memoised -- see the table's comment: neither
+     * exit of this function touches a counter, so a served answer is
+     * observationally identical, and the MISS is the expensive one to serve. */
+    if (NDS_R2_MP_ROUTE_ON(2u) && ((u32)line_id < NDS_MP_LINE_ENDPOINT_MAX))
+    {
+        u32 state = sNdsMPLineYakumonoState[(u32)line_id];
+
+        if (state != NDS_MP_LINE_YAKUMONO_UNKNOWN)
+        {
+            gNdsMPLineYakumonoHits++;
+            if (state == NDS_MP_LINE_YAKUMONO_MISS)
+            {
+                return FALSE;
+            }
+            *yakumono_id = sNdsMPLineYakumonoValue[(u32)line_id];
+            return TRUE;
+        }
+    }
+
     line_info = geometry->line_info;
     yakumono_count = ndsMPGeometryYakumonoCount(geometry);
     if (yakumono_count > 64u)
@@ -1095,10 +1211,30 @@ static sb32 ndsMPFindLineYakumonoID(s32 line_id, u32 *yakumono_id)
             last = first + count;
             if ((line_id >= first) && (line_id < last))
             {
-                *yakumono_id = ndsMPLineInfoYakumonoID(info);
+                u32 found = ndsMPLineInfoYakumonoID(info);
+
+                *yakumono_id = found;
+                /* Only ids that fit the u8 slot are stored. A yakumono id past
+                 * 255 falls through to the search forever rather than being
+                 * truncated into a DIFFERENT platform's dobj -- which is the
+                 * shape of a fighter standing on the wrong thing, and is not a
+                 * failure worth saving 543 cycles for. */
+                if (((u32)line_id < NDS_MP_LINE_ENDPOINT_MAX) &&
+                    (found <= 0xffu))
+                {
+                    sNdsMPLineYakumonoValue[(u32)line_id] = (u8)found;
+                    sNdsMPLineYakumonoState[(u32)line_id] =
+                        (u8)NDS_MP_LINE_YAKUMONO_HIT;
+                    gNdsMPLineYakumonoFills++;
+                }
                 return TRUE;
             }
         }
+    }
+    if ((u32)line_id < NDS_MP_LINE_ENDPOINT_MAX)
+    {
+        sNdsMPLineYakumonoState[(u32)line_id] = (u8)NDS_MP_LINE_YAKUMONO_MISS;
+        gNdsMPLineYakumonoFills++;
     }
     return FALSE;
 }

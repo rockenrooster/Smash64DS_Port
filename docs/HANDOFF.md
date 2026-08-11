@@ -28,15 +28,15 @@ P95 as Boundary's; **re-pin `EXPECTED_CENSUS_SHA256` when coverage changes.**
 **Route to ATTRIBUTE, re-bank to BANK — never swap them.** Slice 31 read P95
 **−7,104** routed and **+576** across builds: the work is gone AND under the floor.
 **Collision owns the row now** (slice 34: its soft float is **16,649 tk/fr**,
-1.9x animation's largest, plus 33,077 self). **Slice 35 landed the endpoint
-memo: `WORK-H` P95 −7,232 / P50 −6,528 routed, the saving in `SPHD` (−7,488),
-`STG` and `ALL` P50 exactly 0** — call it −7,000, the control re-fills where the
-candidate does not. **A re-bank is owed; the route attributes, it does not bank.**
-All three owners are **FLAT** — no PC over 3.6% — so the lever is calls, never an
-instruction: `…GetFCCommonFloor` 45,372 x 818 cyc, `…FindLineEndpoints` 38,890 x
-543, `…SweepFloorLoopSweep` 11,544 x 2,643. **Next: `ndsMPFindLineYakumonoID`**,
-same shape, called once per `…GetFCCommonFloor`. A `line_id→(group,kind)` table
-stays REFUTED (E51: 1 yakumono, 7 lines).
+1.9x animation's largest, plus 33,077 self). **Slices 35+36 land the line memos:
+route 0/1/3 on ONE binary reads `WORK-H` P95 1,307,392 → 1,299,840 → 1,294,976,
+so −7,552 and −4,864, combined −12,416 — which CLEARS the floor.** Slice 35 also
+read −7,232 on a second binary: 320 ticks apart, the route is reading work, not
+placement. Boundary green; **a cross-build re-bank is still owed.** All owners are
+**FLAT** — no PC over 3.6% — so the lever is calls, never an instruction:
+`…GetFCCommonFloor` 45,372 x 818 cyc, `…FindLineEndpoints` 38,890 x 543,
+`…SweepFloorLoopSweep` 11,544 x 2,643. Slice 37 (`…GetLineKindForLineID`, 47,980
+x 194) is bit 4, unmeasured. E51 refutes that scan's LOOP, not these memos.
 
 ## What is dead, so nobody re-derives it
 
