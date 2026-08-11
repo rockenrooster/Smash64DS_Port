@@ -7526,3 +7526,75 @@ the line clearing it on geometry change did not, and the shipped route flag fold
 the bit test to constant 1, so an un-invalidated memo reached the ROM. Clean
 re-run: **Boundary verification profile passed.** Never edit a file a build is
 reading; when it happens, re-run before debugging the diff. Board: slice 36.
+
+## Cycle 118 — slice 37, and the reason a P95 campaign cannot rank levers by mean self time
+
+**One binary**, `builds/build-c118-mp-ab3`, `gNdsR2MPRoute` **7 versus 3** (slices
+35 and 36 held ON in both arms), 1600 frames from 438, DLDI ON.
+
+**`WORK-H` P50 −2,176 / P95 −1,984.** `STG` P95 exactly 0, `ALL` P95 −64, `FTR`
+−192. `gNdsMPLineKindHits` **57,909 / 14 fills** with the memo, **115 / 57,808**
+without; `gNdsMPLineYakumonoHits` **71,340 in both arms**, so bit 2 really is
+constant and this is slice 37 alone; `gNdsR2FtAnimParseCalls` 145,549 in both.
+
+**The finding is not the tick count.** Two functions, memoised the same way, with
+nearly the same mean self cost, gave P95 savings **2.45x apart**:
+
+| slice | function | mean self | ΔP50 | ΔP95 | P95 / mean |
+|---|---|---:|---:|---:|---:|
+| 36 | `ndsMPFindLineYakumonoID` | 2,666 tk/fr | −1,984 (74%) | **−4,864** | **1.82x** |
+| 37 | `ndsMPGetLineKindForLineID` | 2,588 tk/fr | −2,176 (84%) | **−1,984** | **0.77x** |
+
+Mean self time predicted both P50s to within 74–84% and **neither P95**. The
+discriminator is whether the calls land on the frames at `WORK-H`'s 95th
+percentile: slice 36's do, slice 37's are frame-uniform. **A census row in tk/fr
+is a P50 lever's size.** To predict a P95 win you need the per-frame distribution
+of the calls — `-PerFrameGlobals` gives it, the whole-match census cannot. This
+also explains cycle 117 in retrospect: animation work is spread evenly across
+frames, so every animation lever bought its mean and no multiple.
+
+**Three positions, each wrong differently, in the order they were held.** R2-03
+E51 said do not build a `line_id -> (group, kind)` table because the loop's trip
+count is one — right about the loop, and its "not worth building" landed nearer
+the truth than what replaced it, for a reason that is not the operative one. This
+board then retired slice 37 on E51's authority without measuring. Then it
+withdrew that, because a `--pc-detail` run gave the function a HIGHER per-call
+cost than slice 36's target (194 vs 166) and 97% of its total — and predicted
+slice 37 was worth about what slice 36 was. **The profile was right and the
+inference was wrong: it reported a MEAN, and the prediction converted that mean
+into a P95 by analogy with a function whose calls have a different frame
+distribution.** Measured: −1,984, 41% of slice 36. Kept — real work, proven
+engaged, free at the gate. Board: slice 37.
+
+## Cycle 118 — RE-BANKED: `WORK-H` P95 1,294,144, the first cross-build move since Requirement 4
+
+`builds/build-c118-gate` (shipped flags + `NDS_R2_BOTH_CPU=1`, so the route folds
+to a constant and `gNdsR2MPRoute` is absent from the ELF entirely), 1600 frames
+from 438, DLDI ON, `slips=0`.
+
+| | banked (slice 33) | re-banked (c118) | Δ |
+|---|---:|---:|---:|
+| `WORK-H` P50 | 970,112 | **961,152** | **−8,960** |
+| `WORK-H` P95 | 1,304,896 | **1,294,144** | **−10,752** |
+
+**−10,752 exceeds the ±8,544 cross-build placement floor**, which nothing in
+cycle 117 managed. And it reconciles with the route attribution rather than
+merely agreeing in sign: the three same-binary arms predicted −7,552 + −4,864 +
+−1,984 = **−14,400**, the build reads −10,752, and the 3,648 difference sits
+inside the floor. Route to attribute, re-bank to bank — this is what it looks
+like when both halves are taken and they agree.
+
+**The shipped ROM is doing the work.** Its counters match the candidate arms to
+the call: endpoint **48,082**, yakumono **71,340**, kind **57,909**, with
+`gNdsR2FtAnimParseCalls` **145,549** — the same value every A/B arm produced, so
+the banked configuration runs all three memos and performs identical simulation.
+`gNdsR2MPRoute` is absent from the linked ELF, confirming the instrument compiles
+out of the published program.
+
+**Gap to the 1.12M target: ~174,144.** Next owner by the slice-34 attribution is
+the matrix/camera float family at **14,810 tk/fr** — `syMatrixLookAtReflectF`
+4,325 over 81 sites, `syMatrixPerspFastF` 2,337, `syUtilsArcTan` 2,066,
+`guMtxCatF` 1,733 in TWO sites, `syMatrixF2L` 1,636, `syVectorNorm3D` 875 — with
+`__aeabi_fdiv` alone at 10,084 tk/fr over 308,426 calls, the most expensive
+helper per call in the build by 3.2x. **Size those against per-frame call
+distribution, not mean self time** (slice 37).

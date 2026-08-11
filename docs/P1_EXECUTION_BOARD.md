@@ -46,10 +46,21 @@ of the match (P95 understated ~306,000, over-gate rate 5×).
 | **both-CPU** `NDS_R2_BOTH_CPU=1` | **THE GATE** | **86.7%** of 60 s | 1,094,464 | **1,624,064** | 704/1600 (44.0%) | **503,684** |
 | **Boundary** mode 163 | shipped configuration | **86.7%** of 60 s | 1,082,112 | 1,476,672 | 673/1600 (42.1%) | 356,292 |
 
-**Superseded twice since.** Cycle 105's arena fix moved the gate arm to
+**Superseded repeatedly since.** Cycle 105's arena fix moved the gate arm to
 **1,447,318** (gap 326,938) and cycle 108's AObj16 prebake takes a further
 **~23,000**. The cycle-108 row carries why that figure is quoted as a range and
 not as a single cross-build P95.
+
+**CURRENT BANKED GATE — `WORK-H` P50 961,152 / P95 1,294,144** (cycle 118,
+`builds/build-c118-gate`, `NDS_R2_BOTH_CPU=1`, 1600 frames from 438, DLDI ON,
+`slips=0`). Re-banked after slices 35–37: **P95 −10,752 and P50 −8,960 against
+1,304,896 — the first cross-build movement to CLEAR the ±8,544 placement floor
+since Requirement 4.** It reconciles with the route arms, which predicted
+−14,400; the 3,648 difference is inside the floor. **Gap to the 1.12M target:
+~174,144.** Engagement in the SHIPPED configuration matches the candidate arms to
+the call — endpoint 48,082, yakumono 71,340, kind 57,909 — and
+`gNdsR2FtAnimParseCalls` is 145,549, the same as every A/B arm, so the banked ROM
+is running all three memos and doing identical simulation work.
 
 VBI 2/3/4/5+ (max): both-CPU 1127/808/91/14 (20); Boundary 1194/784/51/11 (20).
 
@@ -4835,6 +4846,77 @@ deletable unit**, the same way `ndsR2FtAnimParseDObjFigatree` was reduced to "th
 walk IS the call". The three biggest single symbols are already visible:
 `ndsFighterMarioFoxDLAllDrawForSlot` 93,854,253, `ndsRendererCommitNativeStageSegment`
 93,101,009, `ndsRendererNativeEmitProductionPrimitiveGroups` 81,420,680.
+
+### Slice 37: the line-kind memo — `WORK-H` P95 −1,984, and mean self time does NOT predict P95
+
+Third of the three `line_id` scans. One binary, `builds/build-c118-mp-ab3`
+(`NDS_R2_MP_ROUTE=1 NDS_R2_BOTH_CPU=1`), `gNdsR2MPRoute` **7 versus 3**, so this
+row is slice 37 with slices 35 and 36 held on in both arms.
+
+`ndsMPGetLineKindForLineID` is memoised into one byte per line: 0 unresolved,
+1 the function's `-1` answer, otherwise `kind + 2`. Sixty-four bytes total, both
+outcomes cached (neither exit touches a counter), dropped by the same
+`ndsMPVertexF32Reset` slice 30's setter calls.
+
+| bucket | route 7 P50 | route 3 P50 | ΔP50 | route 7 P95 | route 3 P95 | ΔP95 |
+|---|---:|---:|---:|---:|---:|---:|
+| **`WORK-H`** | 961,920 | 964,096 | **−2,176** | 1,293,504 | 1,295,488 | **−1,984** |
+| `SRC` | 333,312 | 335,232 | −1,920 | 645,376 | 648,832 | −3,456 |
+| `GCRA` | 328,320 | 330,112 | −1,792 | 640,320 | 643,584 | −3,264 |
+| `SCPU` | 38,528 | 39,872 | −1,344 | 93,312 | 97,280 | −3,968 |
+| `SINT` | 151,104 | 152,640 | −1,536 | 337,216 | 337,280 | −64 |
+| `SPHD` | 68,736 | 69,376 | −640 | 117,248 | 118,272 | −1,024 |
+| `FTR` / `STG` | 302,080 / 186,304 | 302,016 / 186,240 | +64 / +64 | 305,664 / 193,600 | 305,856 / 193,600 | −192 / **0** |
+| `ALL` | 1,118,208 | 1,118,208 | **0** | 1,678,656 | 1,678,720 | −64 |
+
+**Engagement.** `gNdsMPLineKindHits` **57,909** / `Fills` **14** with the memo;
+**115** / **57,808** without. `gNdsMPLineYakumonoHits` is **71,340 in both arms**
+— bit 2 is genuinely held constant, so this really is slice 37 alone.
+`gNdsR2FtAnimParseCalls` **145,549** in both.
+
+#### The finding: two functions of the SAME mean self cost, P95 wins 2.45x apart
+
+| slice | function | mean self | ΔP50 | ΔP95 | P95 / mean |
+|---|---|---:|---:|---:|---:|
+| 36 | `ndsMPFindLineYakumonoID` | 2,666 tk/fr | −1,984 (74%) | **−4,864** | **1.82x** |
+| 37 | `ndsMPGetLineKindForLineID` | 2,588 tk/fr | −2,176 (84%) | **−1,984** | **0.77x** |
+
+**Mean self time predicted the P50 of both, within 74–84%, and predicted the P95
+of neither.** These two functions cost the same on average and their P95 savings
+differ by 2.45x. The discriminator is not size, it is **whether the calls
+concentrate on the frames that sit at `WORK-H`'s 95th percentile**: slice 36's do
+(collision-heavy frames call it more), slice 37's are frame-uniform, so its P95
+saving is its mean saving and no more.
+
+**This campaign optimises a P95 gate, so it cannot rank candidates by mean self
+time — and it has been doing exactly that.** A census row in tk/fr is a P50
+lever's size. To size a P95 lever you need the per-frame distribution of its
+calls, which the ring's per-frame columns can give (`-PerFrameGlobals`) and the
+whole-match census cannot. This also retroactively explains cycle 117: animation
+work is spread evenly over frames, so its levers kept measuring at their mean and
+never bought a P95 multiple.
+
+#### And it corrects my correction, not just E51
+
+Three positions, in order, each wrong in a different way:
+
+1. **R2-03 E51:** do not build a `line_id -> (group, kind)` table — the yakumono
+   loop's trip count is one, so there is no O(n) to remove. *Right about the
+   loop; the conclusion "not worth building" was closer to the truth than what
+   replaced it, but for a reason that is not the operative one.*
+2. **This board, slice 36's first revision:** retired slice 37 on E51's
+   authority, without measuring. *Deferring to a prior refutation instead of
+   spending a free profile run.*
+3. **This board, slice 36's second revision:** withdrew that, and predicted slice
+   37 was worth roughly what slice 36 was, because the profile gave it a HIGHER
+   per-call cost (194 vs 166) and 97% of the total. *The profile was right and
+   the inference was wrong: it gave a MEAN, and I converted a mean into a P95
+   prediction by analogy with a function whose calls have a different frame
+   distribution.*
+
+The measurement: **−1,984, which is 41% of slice 36.** Keep it — it is real work
+deleted, proven engaged, and free at the gate — but the durable output of this
+slice is the row above it, not the tick count.
 
 ### Slice 36: the yakumono-id memo — `WORK-H` P95 −4,864, isolated on one binary
 

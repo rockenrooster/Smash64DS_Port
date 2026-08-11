@@ -1,10 +1,9 @@
 # Handoff
 
-Updated: 2026-08-11. **Requirement 4 shipped: the fighter `AObj` is fixed point,
-`WORK-H` P50 −23,360 / P95 −37,504 on one binary.** Before it the gate arm's tail
-was cartridge I/O, fixed at `f082b3c8`: P95 1,639,299 → 1,447,318.
-**Every 128-frame figure in the archive is unusable** — it reads the cheapest
-6% of the match. Use `-Samples 1600`.
+Updated: 2026-08-11. **The gate is re-banked at 1,294,144** (slices 35–37, −10,752
+cross-build). Requirement 4 shipped before it: the fighter `AObj` is fixed point,
+`WORK-H` P50 −23,360 / P95 −37,504 routed. **Every 128-frame figure in the archive
+is unusable** — it reads the cheapest 6% of the match. Use `-Samples 1600`.
 
 ## The two baselines — label every figure with its arm AND its coverage
 
@@ -13,30 +12,30 @@ frames past the buzzer. Slips 0 in every row.
 
 | arm | role | `WORK-H` P50 | P95 | over gate |
 |---|---|---:|---:|---:|
-| **both-CPU** | **THE GATE** | 970,112 | **1,310,528** | slice 28; +31 route |
+| **both-CPU** | **THE GATE** | **961,152** | **1,294,144** | re-banked c118 |
 | **Boundary** mode 163 | shipped configuration | 920,192 | 1,113,408 | re-banked c116 |
 
-**Gate 1,305,472**, re-banked after slice 31; slice 33's control arm read
-1,304,896, i.e. flat, and it IS current — the sampler is deterministic and no
-source landed between. Every c117 slice is UNDER the ±8,544 cross-build floor;
-1,317,440 → 1,305,472 is drift, not banked wins. **Gap ~185,472.** The soak's
-long match is `NDS_R2_SOAK_MATCH_MINUTES`; `probe-match-window.ps1` reads the
-timer from the guest, so a window cannot claim coverage it lacked. Owner's bar:
+**Gate 1,294,144, re-banked after slices 35–37 — P95 −10,752 / P50 −8,960 against
+1,304,896, the first movement to CLEAR the ±8,544 floor since Requirement 4.** It
+reconciles with the route arms (routed −14,400, built −10,752, difference inside
+the floor); every c117 slice by contrast was under it. **Gap ~174,144.** The
+soak's long match is `NDS_R2_SOAK_MATCH_MINUTES`; `probe-match-window.ps1` reads
+the timer from the guest, so a window cannot claim coverage it lacked. Owner's bar:
 the whole match under P95 on the both-CPU config, loading excluded; the shipped
 ROM stays the Boundary hwtri pair. `Makefile:382` forbids reporting a both-CPU
 P95 as Boundary's; **re-pin `EXPECTED_CENSUS_SHA256` when coverage changes.**
 **Route to ATTRIBUTE, re-bank to BANK — never swap them.** Slice 31 read P95
 **−7,104** routed and **+576** across builds: the work is gone AND under the floor.
-**Collision owns the row now** (slice 34: its soft float is **16,649 tk/fr**,
-1.9x animation's largest, plus 33,077 self). **Slices 35+36 land the line memos:
-route 0/1/3 on ONE binary reads `WORK-H` P95 1,307,392 → 1,299,840 → 1,294,976,
-so −7,552 and −4,864, combined −12,416 — which CLEARS the floor.** Slice 35 also
-read −7,232 on a second binary: 320 ticks apart, the route is reading work, not
-placement. Boundary green; **a cross-build re-bank is still owed.** All owners are
-**FLAT** — no PC over 3.6% — so the lever is calls, never an instruction:
-`…GetFCCommonFloor` 45,372 x 818 cyc, `…FindLineEndpoints` 38,890 x 543,
-`…SweepFloorLoopSweep` 11,544 x 2,643. Slice 37 (`…GetLineKindForLineID`, 47,980
-x 194) is bit 4, unmeasured. E51 refutes that scan's LOOP, not these memos.
+**Collision paid, and it is BANKED** (slice 34 sized it: soft float 16,649 tk/fr,
+1.9x animation's largest, plus 33,077 self). **Slices 35/36/37 memoise the three
+`line_id` scans over static geometry — routed −7,552 / −4,864 / −1,984, banked
+−10,752.** Slice 35 read −7,232 and −7,552 on two separately-linked binaries.
+Boundary green. All owners are **FLAT** — no PC over 3.6% — so the lever is
+calls: `…GetFCCommonFloor` 45,372 x 818 cyc, `…FindLineEndpoints` 38,890 x 543,
+`…SweepFloorLoopSweep` 11,544 x 2,643. **Next: the matrix/camera float family,
+14,810 tk/fr** (`syMatrixLookAtReflectF` 4,325 over 81 sites, `syMatrixPerspFastF`
+2,337, `syUtilsArcTan` 2,066, `guMtxCatF` 1,733 in TWO sites, `syMatrixF2L`
+1,636); `__aeabi_fdiv` alone is 10,084 tk/fr on 308,426 calls.
 
 ## What is dead, so nobody re-derives it
 
@@ -51,7 +50,7 @@ x 194) is bit 4, unmeasured. E51 refutes that scan's LOOP, not these memos.
 - **The AOT animation bake at 20 B/record** (slice 32). Reader, bake, emitter,
   layout guard and wiring are PROVEN and gated off; the SIZE is dead — 10,304 B
   an animation against the source's 2,310, ×85 cached needs +679,490 B, and
-  dropping every init record still leaves 3.27×. Commands are parsed ONCE per
+  dropping every init record still leaves 3.27×. Commands are parsed ONCE a
   playback, so a bake only wins on the 64.6% of loads that repeat.
 - **The animation lane, closed on numbers (slice 34).** Its two largest SELF
   symbols are already Requirement 4's fixed point at 1.67–1.69 cyc/insn — no
@@ -85,13 +84,12 @@ route read back 0 and 1): **`FTR` P50 −10,432, P95 −10,368, `WORK-H` P50
 −10,112, P95 −14,144**; `STG` +64 and `ALL` identical to the tick are controls.
 
 **It SHIPPED BROKEN once and the owner caught it in minutes — read the board
-before touching this.** Two defects, invisible to every gate that passed:
-an undirected edge made **35.6% of the fighter BACKFACING**, and `BEGIN_VTXS` on
-group TYPE change alone **welded adjacent strips into one vertex list**.
-`check_fighter_primitive_streams.py` now **models the runtime's BEGIN policy
-rather than assuming one per group** — run it after touching either. **A passing
-verifier is not visual verification**: Boundary passed on the broken build and
-`latest.png` showed both fighters whole. **Hand the owner a ROM.**
+before touching this.** An undirected edge made **35.6% of the fighter
+BACKFACING**, and `BEGIN_VTXS` on group TYPE change alone **welded adjacent
+strips into one vertex list**. `check_fighter_primitive_streams.py` now **models
+the runtime's BEGIN policy rather than assuming one per group** — run it after
+touching either. **A passing verifier is not visual verification**: Boundary
+passed on the broken build. **Hand the owner a ROM.**
 
 **The emit stalls per VERTEX, not per word** (c115 `--pc-detail`, no build): a
 corner is 40.5 cycles untextured, **~28 of it the GX write**, and textured pays
@@ -106,17 +104,14 @@ bodies took it to **7,516**/**7,236**. Recipe, no build: `--pc-detail SYM[,SYM�
 (one CSV pass serves N), diff `objdump`, `addr2line` four points per cold run.
 **Entry count discriminates**: cold bytes in an *entered* body cost **+14,963**.
 
-Sixteen landed slices; the board carries each one's evidence. What generalises:
-
 - **The DObj world cache had ZERO readers** while `Store` burned 4,744,740
   cycles and ~4 KB a frame through a 4 KB D-cache. **Ask what reads a cache
-  before optimising what fills it**, and **read the counters a previous cycle
-  left** — the UV proof and Requirement 4's sizing were both already in-tree.
+  before optimising what fills it**, and **read the counters a prior cycle left**.
 - **The compose does not fold its base in until a joint contributes** (−10,804):
   one call per binding was *copy the base in, multiply it straight back out*.
 - **The material block is built 30 times a match, not 59,392** — a (MObj, heap
-  gen, animatable-input hash) key in a row owned by the material **DObj**.
-  `BindingParents` is the nearest *bound* ancestor, not the DObj parent.
+  gen, animatable-input hash) key owned by the material **DObj**; `BindingParents`
+  is the nearest *bound* ancestor, not the DObj parent.
 - **A per-PC census charges a miss to the instruction that TAKES it**, not to the
   work you can delete: two redundant first-reader passes came out for **+1,055**,
   because the data was still consumed and the fills only moved.
@@ -175,9 +170,14 @@ impact wave or reflector needs the owner (`BUGS.md`, by eye).
   repeated-presented-frame guard on per-frame stops. Payload IDENTICAL is a
   stale read and always fatal; DIFFERS is a real second iteration.
 - **Judge on `WORK-H`**; buckets locate, they never decide (floor ≥8,544).
-  **`ALL` is VBlank-quantized** — it hid a +52,928 once and it hid the strips
-  entirely (P50 identical, the saving reappearing as `WAIT`). And **1.85 cycles
-  of `FTR` mean per byte of added ARM text** — beat your footprint.
+  **`ALL` is VBlank-quantized** — it hid a +52,928 once and the strips entirely.
+  **1.85 cycles of `FTR` mean per byte of added ARM text** — beat your footprint.
+- **A census row in tk/fr sizes a P50 lever, NOT a P95 one.** Slices 36 and 37
+  had the same mean self cost (2,666 / 2,588) and P95 wins **2.45x apart**
+  (−4,864 / −1,984): the tail pays for work that CLUSTERS on heavy frames. Mean
+  predicted both P50s to 74–84% and neither P95. Get the per-frame distribution
+  (`-PerFrameGlobals`) before predicting a gate win. This is why every c117
+  animation lever landed at its mean — animation work is frame-uniform.
 - **Disassemble the loop, read the caller, TAKE THE ENTRY-PC COUNT, and check
   WHICH bucket the symbol is in, before designing around it.** Cycle 108 built a
   loader `ftmain.c` discards; c109 aimed a `FTParts` fix at two `DObj` fields;
