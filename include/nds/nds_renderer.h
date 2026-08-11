@@ -361,6 +361,10 @@ extern volatile u32 gNdsG1SiteOccupancy;
 #define NDS_RENDERER_VERTEX_CACHE_SIZE 32u
 #define NDS_RENDERER_MATRIX_SNAPSHOT_CAPACITY 64u
 #define NDS_RENDERER_NATIVE_FIGHTER_JOINT_MAX 27u
+/* Slice 43. Not a palette index: the DS position stack is 31 deep, so 0..30 are
+ * real slots and 31 is the same "no slot" sentinel the generated cross-slot
+ * tables already use. */
+#define NDS_RENDERER_FIGHTER_GX_SLOT_NONE 31u
 #define NDS_RENDERER_TILE_COUNT 8u
 #define NDS_RENDERER_TEXTURE_LOAD_HISTORY_COUNT 2u
 #define NDS_RENDERER_SEMANTIC_TRACE_CAPACITY 832u
@@ -936,6 +940,23 @@ typedef struct NDSRendererNativeFighterRoot
      * backend instead of being folded in by the adapter. */
     const NDSRendererMatrix20p12 *projection_matrix;
 #endif
+#if NDS_R2_FIGHTER_GX_COMPOSE
+    /* Slice 43. E17 gave the geometry engine the modelview x projection
+     * multiply; this gives it the joint chain as well, so `modelview_matrix`
+     * above is not composed at all. `gx_locals` is this binding's chain from its
+     * baked binding-parent down to itself, ALREADY in multiply order and already
+     * carrying the WORLD_UNIT_SHIFT on row 3, so the backend only issues
+     * MTX_MULT_4x4 in order. `gx_parent_slot` is the palette slot holding the
+     * parent's finished world, or NDS_RENDERER_FIGHTER_GX_SLOT_NONE for a root
+     * binding, which seeds from `gx_seed` instead. `gx_store_slot` is where this
+     * binding's world must be left for a later binding or a cross-run corner. */
+    const NDSRendererMatrix20p12 *gx_locals;
+    const NDSRendererMatrix20p12 *gx_seed;
+    u8 gx_local_count;
+    u8 gx_parent_slot;
+    u8 gx_store_slot;
+    u8 gx_seed_is_identity;
+#endif
     const NDSRendererNativeMaterial *materials;
     const NDSRendererConfig *config;
 #if NDS_RENDERER_M2_DETAILED_LEDGER
@@ -1253,6 +1274,9 @@ s32 ndsRendererExecuteNativeFighterOwnerHierarchy(
  * slot. Lets the owner adapter compose world matrices in one forward pass
  * instead of walking every binding to the root through the DObj world hash. */
 const u8 *ndsRendererNativeFighterBindingParents(u32 slot, u32 *count);
+#if NDS_R2_FIGHTER_GX_COMPOSE
+const u8 *ndsRendererNativeFighterCrossPaletteSlots(u32 slot, u32 *count);
+#endif
 s32 ndsRendererPrepareNativeStageOwner(
     const NDSRendererNativeStageFrame *frame,
     NDSRendererStats *stats);

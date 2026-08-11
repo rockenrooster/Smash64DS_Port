@@ -304,6 +304,19 @@ typedef struct NDSRendererAdapterNativeOwnerWorkspace
     u8 hierarchy_bindings[NDS_RENDERER_NATIVE_FIGHTER_JOINT_MAX];
     NDSRendererMatrix20p12 hierarchy_locals[
         NDS_RENDERER_NATIVE_FIGHTER_JOINT_MAX];
+#if NDS_R2_FIGHTER_GX_COMPOSE
+    /* Slice 43. Per-binding descriptors for the GX compose. The chain matrices
+     * themselves live in `hierarchy_locals` above, which mode 9 does not use --
+     * every joint is on exactly one binding's chain, so JOINT_MAX is the exact
+     * bound and no second 1,728-byte array is allocated
+     * ([[ram-is-not-free-gobj-cap]]). */
+    u8 gx_local_first[NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED];
+    u8 gx_local_count[NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED];
+    u8 gx_parent_slot[NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED];
+    u8 gx_store_slot[NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED];
+    NDSRendererMatrix20p12 gx_seed;
+    u8 gx_seed_is_identity;
+#endif
     NDSRendererMatrix20p12 hierarchy_projection;
     NDSRendererMatrix20p12 hierarchy_camera_modelview;
     NDSRendererConfig hierarchy_config;
@@ -3526,6 +3539,220 @@ static void ndsRendererAdapterSetShuffleOffset(const FTStruct *fp)
  * Reassociating a fixed-point product is not bit-exact; these matrices reach
  * GX and nothing else, so that is a render-side difference by the doctrine in
  * PROJECT_GOAL.md, and the Boundary visual gate is what checks it. */
+#if NDS_R2_FIGHTER_GX_COMPOSE
+/* Slice 43 engagement. `Captures` counts bindings described, `Locals` the
+ * MTX_MULT the backend will issue, `Declines` a fall-back to the CPU compose.
+ * A cut with no counter is how cycle 110 read FTR -13,587 off a skip it could
+ * not prove fired. */
+u32 gNdsR2GxComposeCaptures;
+u32 gNdsR2GxComposeLocals;
+u32 gNdsR2GxComposeDeclines;
+
+/* One palette slot per binding that is some other binding's baked parent, so the
+ * backend can RESTORE it instead of the adapter composing into it. A binding that
+ * already owns a cross-run slot reuses it -- the root loop stores there anyway --
+ * and the rest are allocated DOWNWARD from 30. Downward on purpose: the cross-run
+ * range is 16..23, and MTX_STORE/MTX_RESTORE address ABSOLUTE stack levels while
+ * glPushMatrix writes whatever level the stack pointer is at, so the low levels
+ * belong to anyone who pushes inside the execute (ndsRendererR2WriteLightVector
+ * does, once). Mario needs one new slot and Fox eleven. */
+static u8 sNdsR2GxSlotTable[2][NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED];
+static u8 sNdsR2GxSlotTableValid[2];
+
+static sb32 ndsRendererAdapterGxSlotTaken(
+    const u8 *table, u32 count, u32 candidate)
+{
+    u32 i;
+
+    for (i = 0u; i < count; i++)
+    {
+        if (table[i] == (u8)candidate)
+        {
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+
+static sb32 ndsRendererAdapterBuildGxSlotTable(u32 slot, u32 binding_count)
+{
+    const u8 *parents;
+    const u8 *cross;
+    u32 parent_count = 0u;
+    u32 cross_count = 0u;
+    u32 next_free = NDS_RENDERER_FIGHTER_GX_SLOT_NONE - 1u;
+    u8 *table;
+    u32 i;
+
+    if ((slot > 1u) ||
+        (binding_count > NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED))
+    {
+        return FALSE;
+    }
+    table = sNdsR2GxSlotTable[slot];
+    if (sNdsR2GxSlotTableValid[slot] != 0u)
+    {
+        return TRUE;
+    }
+    parents = ndsRendererNativeFighterBindingParents(slot, &parent_count);
+    cross = ndsRendererNativeFighterCrossPaletteSlots(slot, &cross_count);
+    if ((parents == NULL) || (cross == NULL) ||
+        (parent_count != binding_count) || (cross_count != binding_count))
+    {
+        return FALSE;
+    }
+
+    /* A parent slot may NOT reuse the binding's cross-run slot. The cross-run
+     * emitter restores a foreign binding's slot and then submits model-space
+     * vertices, so what it needs there is the world with the world-unit scale
+     * already applied -- and what a CHILD needs is the same world without it.
+     * Two different matrices, so two different slots; the root loop's existing
+     * glStoreMatrix keeps writing the scaled one. */
+    for (i = 0u; i < binding_count; i++)
+    {
+        table[i] = (u8)NDS_RENDERER_FIGHTER_GX_SLOT_NONE;
+    }
+    for (i = 0u; i < binding_count; i++)
+    {
+        u32 parent = parents[i];
+
+        if (parent == 0xffu)
+        {
+            continue;
+        }
+        /* The generator's contract, and what makes one forward pass correct. */
+        if (parent >= i)
+        {
+            return FALSE;
+        }
+        if (table[parent] != (u8)NDS_RENDERER_FIGHTER_GX_SLOT_NONE)
+        {
+            continue;
+        }
+        while (ndsRendererAdapterGxSlotTaken(
+                   cross, binding_count, next_free) != FALSE)
+        {
+            if (next_free == 0u)
+            {
+                return FALSE;
+            }
+            next_free--;
+        }
+        table[parent] = (u8)next_free;
+        if (next_free == 0u)
+        {
+            return FALSE;
+        }
+        next_free--;
+    }
+    sNdsR2GxSlotTableValid[slot] = 1u;
+    return TRUE;
+}
+
+/* The same forward pass as ndsRendererAdapterComposeOwnerWorldsFlat, with the
+ * multiplies removed. Each binding's chain is copied out in the order that pass
+ * would have multiplied it -- nearest ancestor first, the binding itself last --
+ * because DS MTX_MULT is `current = M x current`, which is exactly the
+ * `MtxMulAffine20p12(&local, out, out)` convention. Nothing is reassociated.
+ *
+ * The locals land in `hierarchy_locals`, which mode 9 owns and mode 10 does not
+ * use: every joint sits on exactly one binding's chain, so JOINT_MAX is the
+ * exact bound. */
+static sb32 ndsRendererAdapterCaptureOwnerChainsGx(
+    u32 slot,
+    DObj *const *bindings,
+    u32 binding_count,
+    NDSRendererAdapterNativeOwnerWorkspace *workspace)
+{
+    const u8 *binding_parents;
+    const u8 *slots;
+    u32 parent_count = 0u;
+    u32 next_local = 0u;
+    u32 binding_index;
+
+    binding_parents = ndsRendererNativeFighterBindingParents(slot,
+                                                             &parent_count);
+    if ((binding_parents == NULL) || (parent_count != binding_count) ||
+        (bindings == NULL) || (workspace == NULL) ||
+        (ndsRendererAdapterBuildGxSlotTable(slot, binding_count) == FALSE))
+    {
+        return FALSE;
+    }
+    slots = sNdsR2GxSlotTable[slot];
+
+    for (binding_index = 0u; binding_index < binding_count; binding_index++)
+    {
+        DObj *chain[NDS_RENDERER_ADAPTER_DOBJ_PARENT_MAX];
+        DObj *cursor = bindings[binding_index];
+        DObj *stop = DOBJ_PARENT_NULL;
+        u32 parent = binding_parents[binding_index];
+        u32 depth = 0u;
+        u32 count = 0u;
+        u32 i;
+
+        if (cursor == NULL)
+        {
+            return FALSE;
+        }
+        if (parent != 0xffu)
+        {
+            if ((parent >= binding_index) || (bindings[parent] == NULL) ||
+                (slots[parent] >= NDS_RENDERER_FIGHTER_GX_SLOT_NONE))
+            {
+                return FALSE;
+            }
+            stop = bindings[parent];
+        }
+        while ((cursor != NULL) && (cursor != DOBJ_PARENT_NULL) &&
+               (cursor != stop))
+        {
+            if (depth >= NDS_RENDERER_ADAPTER_DOBJ_PARENT_MAX)
+            {
+                return FALSE;
+            }
+            chain[depth++] = cursor;
+            cursor = cursor->parent;
+        }
+        if (parent != 0xffu)
+        {
+            if (cursor != stop)
+            {
+                return FALSE;
+            }
+        }
+        else if ((cursor != NULL) && (cursor != DOBJ_PARENT_NULL))
+        {
+            return FALSE;
+        }
+
+        workspace->gx_local_first[binding_index] = (u8)next_local;
+        for (i = depth; i != 0u; i--)
+        {
+            if (next_local >= NDS_RENDERER_NATIVE_FIGHTER_JOINT_MAX)
+            {
+                return FALSE;
+            }
+            /* A joint whose local build fails contributes nothing, exactly as
+             * the compose pass treats it. */
+            if (ndsRendererAdapterBuildDObjLocalMatrix(
+                    chain[i - 1u],
+                    &workspace->hierarchy_locals[next_local]) != FALSE)
+            {
+                next_local++;
+                count++;
+            }
+        }
+        workspace->gx_local_count[binding_index] = (u8)count;
+        workspace->gx_parent_slot[binding_index] = (parent == 0xffu) ?
+            (u8)NDS_RENDERER_FIGHTER_GX_SLOT_NONE : slots[parent];
+        workspace->gx_store_slot[binding_index] = slots[binding_index];
+        gNdsR2GxComposeLocals += count;
+    }
+    gNdsR2GxComposeCaptures += binding_count;
+    return TRUE;
+}
+#endif
+
 static sb32 ndsRendererAdapterComposeOwnerWorldsFlat(
     u32 slot,
     DObj *const *bindings,
@@ -3888,6 +4115,37 @@ static sb32 ndsRendererAdapterPrepareNativeOwnerMatrices(
      * modelview array so the worlds need no second home -- and, since the seed
      * carries the camera, no second pass either. On failure nothing has been
      * consumed yet and the per-binding path runs unchanged. */
+#if NDS_R2_FIGHTER_GX_COMPOSE
+    /* Slice 43. Same forward pass, no multiplies: describe each binding's chain
+     * and let the geometry engine compose it in the root loop. Declining leaves
+     * nothing consumed, exactly as the compose does, so the CPU pass below is
+     * still the fail-closed answer. */
+    if (ndsRendererAdapterCaptureOwnerChainsGx(
+            slot, bindings, binding_count,
+            &sNdsRendererAdapterNativeOwnerWorkspace) != FALSE)
+    {
+        ndsRendererMatrixCopy20p12(
+            &sNdsRendererAdapterNativeOwnerWorkspace.gx_seed, &compose_seed);
+        sNdsRendererAdapterNativeOwnerWorkspace.gx_seed_is_identity =
+            (u8)((seed_is_identity != FALSE) ? 1u : 0u);
+        for (binding_index = 0u;
+             binding_index < binding_count;
+             binding_index++)
+        {
+#if NDS_TASK91_DRAW_PHASE_CENSUS
+            gNdsTask91MtxBindings++;
+#endif
+            /* Never loaded under this flag, but every preflight NULL-checks it
+             * and the seed is the honest answer for "what did the CPU leave". */
+            modelview_ptrs[binding_index] =
+                &sNdsRendererAdapterNativeOwnerWorkspace.gx_seed;
+        }
+        /* `*projection_ptr` was already published above, or deliberately left
+         * NULL when the camera had no projection; do not second-guess it. */
+        return TRUE;
+    }
+    gNdsR2GxComposeDeclines++;
+#endif
     flat_worlds = ndsRendererAdapterComposeOwnerWorldsFlat(
         slot, bindings, binding_count,
         sNdsRendererAdapterNativeOwnerModelviews, &compose_seed,
@@ -13671,6 +13929,15 @@ static sb32 ndsRendererAdapterBuildNativeProductionInputs(
         root->modelview_matrix = modelviews[i];
 #if NDS_R2_FIGHTER_HW_MTX
         root->projection_matrix = projection;
+#endif
+#if NDS_R2_FIGHTER_GX_COMPOSE
+        root->gx_locals = &workspace->hierarchy_locals[
+            workspace->gx_local_first[i]];
+        root->gx_seed = &workspace->gx_seed;
+        root->gx_local_count = workspace->gx_local_count[i];
+        root->gx_parent_slot = workspace->gx_parent_slot[i];
+        root->gx_store_slot = workspace->gx_store_slot[i];
+        root->gx_seed_is_identity = workspace->gx_seed_is_identity;
 #endif
 #if NDS_RENDERER_M2_DETAILED_LEDGER
         root->owner_generation = owner_file->owner_generation;

@@ -18543,6 +18543,137 @@ static void __attribute__((noinline)) ndsRendererLoadHardwareSplitMatrices(
     sNdsRendererHardwareMatrixGeneration = generation;
     sNdsRendererHardwareMatrixLoaded = TRUE;
 }
+
+#if NDS_R2_FIGHTER_GX_COMPOSE
+/* The adapter stops composing at all under this flag, so `modelview_matrix` is
+ * the seed rather than a world. BindProductionRoot only leaves it unread when
+ * HW_MTX and SHADE_SKIP_SOFT_LIGHT both hold; without them the software light
+ * preparation would take a root's transform from a matrix that is no longer
+ * one. The SHADE_SKIP half cannot be tested here -- it is #defined 4,000 lines
+ * further down, next to the code it guards -- so it is asserted there. */
+#if !NDS_R2_FIGHTER_HW_MTX
+#error "NDS_R2_FIGHTER_GX_COMPOSE requires NDS_R2_FIGHTER_HW_MTX"
+#endif
+
+u32 gNdsR2GxComposeRoots;
+u32 gNdsR2GxComposeMults;
+u32 gNdsR2GxComposeRestores;
+u32 gNdsR2GxComposeStores;
+
+static const NDSRendererMatrix20p12 sNdsR2GxIdentity20p12 =
+{
+    {
+        { 1 << NDS_RENDERER_DS_MTX_FRAC_BITS, 0, 0, 0 },
+        { 0, 1 << NDS_RENDERER_DS_MTX_FRAC_BITS, 0, 0 },
+        { 0, 0, 1 << NDS_RENDERER_DS_MTX_FRAC_BITS, 0 },
+        { 0, 0, 0, 1 << NDS_RENDERER_DS_MTX_FRAC_BITS },
+    }
+};
+
+static inline void ndsRendererHardwareFighterMultMatrix4x3(
+    const NDSRendererMatrix20p12 *matrix)
+{
+    u32 row;
+
+    for (row = 0u; row < 4u; row++)
+    {
+        MATRIX_MULT4x3 = matrix->m[row][0];
+        MATRIX_MULT4x3 = matrix->m[row][1];
+        MATRIX_MULT4x3 = matrix->m[row][2];
+    }
+}
+
+/* diag(1, 1, 1, s) x current, s being the world-unit shift. MTX_MULT is a LEFT
+ * multiply, so this scales row 3 -- translation and w together -- of whatever
+ * chain has been composed, which is precisely what
+ * ndsRendererHardwareFighterLoadModelviewWorldScaled writes today. It has to be
+ * a separate final multiply rather than folded into the factors: scaling row 3
+ * of every matrix in a chain does NOT compose to scaling the product's row 3,
+ * because each factor's own m[3][3] then multiplies the next one's scaled row. */
+static inline void ndsRendererHardwareFighterMultMatrixWorldScaled(
+    const NDSRendererMatrix20p12 *matrix)
+{
+    u32 row;
+    u32 col;
+
+    for (row = 0u; row < 3u; row++)
+    {
+        MATRIX_MULT4x4 = matrix->m[row][0];
+        MATRIX_MULT4x4 = matrix->m[row][1];
+        MATRIX_MULT4x4 = matrix->m[row][2];
+        MATRIX_MULT4x4 = matrix->m[row][3];
+    }
+    for (col = 0u; col < 4u; col++)
+    {
+        MATRIX_MULT4x4 = ndsRendererRoundShiftS32Signed(
+            matrix->m[3][col], NDS_RENDERER_HW_WORLD_UNIT_SHIFT);
+    }
+}
+
+/* Slice 43. The geometry engine composes the joint chain: restore the parent
+ * binding's finished world from the palette (or seed a root binding), multiply
+ * this binding's chain in the order the CPU pass used, leave the UNSCALED world
+ * where a child or a cross-run corner can find it, then apply the world-unit
+ * scale for the draw. GL_MODELVIEW is DS matrix mode 2, so every one of these
+ * commands acts on the position and vector matrices together -- which is what
+ * NDS_R2_FIGHTER_HW_LIGHT needs, and the scale is a no-op on the 3x3 vector
+ * matrix because it only touches row 3. */
+static void __attribute__((noinline)) ndsRendererLoadHardwareGxComposedMatrices(
+    const NDSRendererNativeFighterRoot *input, u32 generation)
+{
+    u32 i;
+
+    if ((input == NULL) || (input->projection_matrix == NULL) ||
+        (input->gx_seed == NULL) ||
+        ((input->gx_local_count != 0u) && (input->gx_locals == NULL)))
+    {
+        return;
+    }
+
+    ndsRendererHardwareEndBatch();
+    ndsRendererHardwareFighterSetMatrixMode(GL_PROJECTION);
+    ndsRendererHardwareFighterLoadMatrix4x4(input->projection_matrix);
+    ndsRendererHardwareFighterSetMatrixMode(GL_MODELVIEW);
+
+    if (input->gx_parent_slot >= NDS_RENDERER_FIGHTER_GX_SLOT_NONE)
+    {
+        if (input->gx_seed_is_identity != 0u)
+        {
+            MATRIX_IDENTITY = 0;
+        }
+        else
+        {
+            ndsRendererHardwareFighterLoadMatrix4x4(input->gx_seed);
+        }
+    }
+    else
+    {
+        MATRIX_RESTORE = input->gx_parent_slot;
+        gNdsR2GxComposeRestores++;
+    }
+    for (i = 0u; i < (u32)input->gx_local_count; i++)
+    {
+        ndsRendererHardwareFighterMultMatrix4x3(&input->gx_locals[i]);
+    }
+    gNdsR2GxComposeMults += (u32)input->gx_local_count;
+    if (input->gx_store_slot < NDS_RENDERER_FIGHTER_GX_SLOT_NONE)
+    {
+        MATRIX_STORE = input->gx_store_slot;
+        gNdsR2GxComposeStores++;
+    }
+    ndsRendererHardwareFighterMultMatrixWorldScaled(&sNdsR2GxIdentity20p12);
+    gNdsR2GxComposeRoots++;
+
+    ndsRendererProfileRecordMatrixLoad();
+    /* The generation memo cannot elide anything here: every binding leaves a
+     * different matrix, and the restore/store pair is state the memo does not
+     * model. Report "not loaded" so no later reader believes it knows what the
+     * hardware holds. */
+    sNdsRendererHardwareMatrixMode = NDS_RENDERER_HW_MATRIX_MODE_RAW_COMPOSED;
+    sNdsRendererHardwareMatrixGeneration = generation;
+    sNdsRendererHardwareMatrixLoaded = FALSE;
+}
+#endif
 #endif
 
 static void ndsRendererLoadHardwareMatrices(
@@ -23999,6 +24130,14 @@ static void ndsRendererNativeApplyProductionPreamble(
 #define NDS_R2_SHADE_SKIP_SOFT_LIGHT 0
 #endif
 
+#if NDS_R2_FIGHTER_GX_COMPOSE && !NDS_R2_SHADE_SKIP_SOFT_LIGHT
+/* Slice 43's other half of the assertion at the GX compose loader. Without the
+ * skip, BindProductionRoot below copies `input->modelview_matrix` into the
+ * traversal state for the software light -- and under GX compose that pointer is
+ * the seed, not this root's world. */
+#error "NDS_R2_FIGHTER_GX_COMPOSE requires NDS_R2_SHADE_SKIP_SOFT_LIGHT"
+#endif
+
 static void ndsRendererNativeBindProductionRoot(
     NDSRendererTraversalState *state,
     const NDSRendererNativeFighterRoot *input,
@@ -27092,6 +27231,30 @@ const u8 *ndsRendererNativeFighterBindingParents(u32 slot, u32 *count)
                    sizeof(sNdsNativeFoxBindingParents[0]));
     return sNdsNativeFoxBindingParents;
 }
+
+#if NDS_R2_FIGHTER_GX_COMPOSE
+/* Slice 43. The same baked table the cross-run emitter reads through
+ * `binding_palette_slots`, exported so the adapter can reuse a binding's
+ * existing slot as its parent-store instead of allocating a second one. Most
+ * entries are the 31 sentinel: the table exists for cross-matrix corners, not
+ * for every binding. */
+const u8 *ndsRendererNativeFighterCrossPaletteSlots(u32 slot, u32 *count)
+{
+    if ((slot > 1u) || (count == NULL))
+    {
+        return NULL;
+    }
+    if (slot == 0u)
+    {
+        *count = (u32)(sizeof(sNdsNativeMarioCrossPaletteSlots) /
+                       sizeof(sNdsNativeMarioCrossPaletteSlots[0]));
+        return sNdsNativeMarioCrossPaletteSlots;
+    }
+    *count = (u32)(sizeof(sNdsNativeFoxCrossPaletteSlots) /
+                   sizeof(sNdsNativeFoxCrossPaletteSlots[0]));
+    return sNdsNativeFoxCrossPaletteSlots;
+}
+#endif
 
 static void ndsRendererNativeMatrix3From20p12(
     const NDSRendererMatrix20p12 *source,
@@ -32037,7 +32200,10 @@ ndsRendererExecuteNativeFighterOwnerProduction(
             u32 m2_root_gx_start = cpuGetTiming();
 #endif
         *out_hardware_started = TRUE;
-#if NDS_R2_FIGHTER_HW_MTX
+#if NDS_R2_FIGHTER_GX_COMPOSE
+        ndsRendererLoadHardwareGxComposedMatrices(
+            input, state->matrix_generation);
+#elif NDS_R2_FIGHTER_HW_MTX
         /* Straight from the root, which BindProductionRoot no longer copies
          * into the traversal state -- see the trace there. */
         ndsRendererLoadHardwareSplitMatrices(

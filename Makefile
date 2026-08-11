@@ -620,6 +620,22 @@ NDS_R2_FIGHTER_RUN_MEMO ?= 0
 # what hardware lighting needs. Rendering-side -- positions now round in hardware
 # -- so it gates on a screenshot pair plus the owner's approval.
 NDS_R2_FIGHTER_HW_MTX ?= 0
+# Slice 43. E17 moved the modelview x projection multiply onto the geometry
+# engine; this moves the JOINT chain there too. The c119 attribution puts 52.5
+# ndsRendererMtxMulAffine20p12 calls a frame, 18,560 ticks on 80/80 tail frames,
+# in one loop -- ndsRendererAdapterComposeOwnerWorldsFlat -- and the composed
+# world has exactly one consumer, the GL_MODELVIEW load. The production root loop
+# already stores per-root matrices to the GX palette and binding_parents[i] < i
+# is preorder, so RESTORE(parent) / MTX_MULT_4x4(chain) / STORE(i) rebuilds the
+# tree in the loop's own order with the palette as the parent store.
+# Requires NDS_R2_FIGHTER_HW_MTX.
+#   0 = CPU compose (shipped).
+#   1 = GX compose.
+#   2 = GX compose AND keep the CPU compose, comparing the two per binding.
+#       Costs more than either arm; it exists because "same order, same operands"
+#       is exactly the claim E8 proved gets read wrong.
+# Promote 2 -> 1 only on a zero gNdsR2GxComposeVerifyFail run.
+NDS_R2_FIGHTER_GX_COMPOSE ?= 0
 # R2-03 E16. Requires NDS_R2_FIGHTER_HW_MTX (E17), which is what puts the
 # modelview rather than the composed MVP into the vector matrix. Moves the
 # fighter's per-vertex lighting onto the DS geometry engine: a load-time
@@ -3031,6 +3047,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_R2_FIGHTER_RUN_PROOF $(NDS_R2_FIGHTER_RUN_PROOF)'; \
 		echo '#define NDS_R2_FIGHTER_MTX_DIRECT $(NDS_R2_FIGHTER_MTX_DIRECT)'; \
 		echo '#define NDS_R2_FIGHTER_HW_MTX $(NDS_R2_FIGHTER_HW_MTX)'; \
+		echo '#define NDS_R2_FIGHTER_GX_COMPOSE $(NDS_R2_FIGHTER_GX_COMPOSE)'; \
 		echo '#define NDS_R2_FIGHTER_HW_LIGHT $(NDS_R2_FIGHTER_HW_LIGHT)'; \
 		echo '#define NDS_R2_FIGHTER_SOFT_LIGHT_KEEP $(NDS_R2_FIGHTER_SOFT_LIGHT_KEEP)'; \
 		echo '#define NDS_TICK_HUD_DRAW $(NDS_TICK_HUD_DRAW)'; \
