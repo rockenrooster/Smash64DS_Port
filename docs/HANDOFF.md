@@ -48,10 +48,8 @@ than the ~138,112 gap. SIZE IS NOT PERMISSION: float in
 - **`FTR` as the *P95 discriminator*** (+13,768). NOT "FTR is exhausted" — that
   reading is what the owner re-opened 2026-08-10; cycles 110–116 took 24.3% off
   it. `FTR` is **flat**, on nearly every frame, which is why.
-- **The AOT animation bake at 20 B/record** (slice 32). Reader, bake, emitter,
-  layout guard and wiring are PROVEN and gated off; the SIZE is dead — 10,304 B
-  an animation against the source's 2,310, ×85 cached needs +679,490 B. Attach
-  IS on the tail, but the FAT read that feeds it costs more than the parse.
+- **The AOT animation bake at 20 B/record** (slice 32). Proven and gated off; the
+  SIZE is dead — 10,304 B an animation against 2,310, ×85 needs +679,490 B.
 - **The whole animation lane, and now permanently** (slices 34, 41). Playback's
   two largest symbols are already Requirement 4's fixed point at 1.67–1.69
   cyc/insn; idle-joint skip (33), lazy track table (31), AObj walk and track
@@ -63,8 +61,13 @@ than the ~138,112 gap. SIZE IS NOT PERMISSION: float in
   E61's mix (Cubic 54.8% / Step 43.6%, **zero** discarded evaluations) there is
   nothing left to memoize either. **Slice 39's table is VOID** — threshold ON
   the quantum. **Don't blanket-convert `ndsBaseGcPlayMObjMatAnim`** — 5 tracks
-  pack 0xRRGGBBAA in f32. Next candidate: Band A's other 80/80 cluster, soft
-  float (~34,006 tk).
+  pack 0xRRGGBBAA in f32.
+- **A single >=16K lever (slice 42).** c119 attributed every arithmetic leaf on
+  the true top-80 exactly; the soft-float owners ARE the camera/matrix lane. The
+  two 20.12 multiplies measured **sub-floor** and were reverted, and nothing left
+  is over 12,233 tk. The LANES are (20.12 kernels 62,891, float camera 55,865) —
+  **batch bit-exact deletions into ONE compile-time build and measure
+  cross-build**; slice 42 proved a multi-bit route over hot code is not additive.
 
 ## RAM: both budgets are near their floor — price a change before writing it
 
@@ -103,9 +106,9 @@ GX stream and `VTX_10` are **refuted**: both trade words, not vertices.
 **The other big lever was the I-cache, not arithmetic.** `…DLAllDrawForSlot`
 was the ROM's largest non-idle symbol at **4.21 cyc/insn**, 10,708 bytes against
 an **8 KB** I-cache, **73.6% never executed**; outlining the never-*entered*
-bodies took it to **7,516**/**7,236**. Recipe, no build: `--pc-detail SYM[,SYM…]`
-(one CSV pass serves N), diff `objdump`, `addr2line` four points per cold run.
-**Entry count discriminates**: cold bytes in an *entered* body cost **+14,963**.
+bodies took it to **7,516**. Recipe, no build: `--pc-detail SYM[,SYM…]`, diff
+`objdump`, `addr2line`. **Entry count discriminates**: cold bytes in an
+*entered* body cost **+14,963**.
 
 - **The DObj world cache had ZERO readers** while `Store` burned 4,744,740 cycles
   a frame. **Ask what reads a cache before optimising what fills it.**

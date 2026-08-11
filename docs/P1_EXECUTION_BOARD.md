@@ -5104,6 +5104,39 @@ from this table is arithmetic, not a measurement — removing 29% of the work al
 changes which frames ARE the top 80.
 
 
+### Slice 42 REVERTED — and the tail no longer has a single >=16K lever
+
+Full evidence: `artifacts/performance/2026-08-11_mtx-route/FINDING.md`. Row-blocked
+20.12 multiplies, bit-exact, one binary, four route values, engagement and
+sameness of match proven in every arm: route 1 **−2,368**, route 2 **−5,184**,
+route 3 **+6,912**. Not additive, P50 and P95 opposite-signed on route 2, nothing
+near the ±8,544 floor. Reverted. Two mechanisms recorded there: an A/B route
+inside an ITCM function must fit BOTH arms (the `s64 acc[4]` that bought 76 bytes
+of `.itcm` put the accumulators in memory, 76→124 byte frame), and a multi-bit
+route over hot code cannot be summed because the lab ROM pays I-cache for bodies
+a shipped build would not contain.
+
+**THE STRATEGIC RESULT, and it changes what the next cycle should do.** Cycle
+119 attributed every arithmetic leaf on the true top-80 exactly and then worked
+the ranking down. **No single remaining candidate is >=16K ticks:**
+
+| candidate | tk/tail frame | status |
+|---|---:|---|
+| `ndsRendererMtxMulAffine20p12` | 19,175 | MEASURED sub-floor (slice 42) |
+| `ndsRendererAdapterBuildDObjXObjMatrix` | 12,233 | open, 213 tk/call |
+| `ndsRendererLoadHardwareSplitMatrices` | 11,172 | CLOSED — R2-03 E23, −3,008 |
+| `ndsRendererMtxMul20p12` | 10,757 | MEASURED sub-floor (slice 42) |
+| `…BuildPersistentStageWorldMatrix` | 9,555 | already per-frame + persistent memoized; the 584 tk/call IS the validation |
+| `syMatrixLookAtReflectF` | 8,842 | fidelity-gated; `gGMCameraStruct` is Task 9 hashed, but the renderer's 2 of 4 calls pass a DISCARDED stack local and are not |
+| `ndsRendererAdapterPrepareNativeStageOwner` self | 6,216 | open |
+
+The two lane aggregates ARE over the gap — 20.12 kernels **62,891**, legacy float
+camera **55,865** — but only as stacks. **So the next cycle should stop hunting a
+single lever and batch several bit-exact deletions into ONE arm measured
+cross-build**, where ~30K of stacked change clears the floor decisively. Slice
+42's non-additivity says the batching must be one compile-time build, NOT a
+multi-bit route.
+
 ### Slice 41: 30 Hz poses REJECTED — and a route A/B cannot price a gameplay change
 
 Cycle 119, one binary (`builds/build-c119-pose-route`, `NDS_R2_BOTH_CPU=1`),
