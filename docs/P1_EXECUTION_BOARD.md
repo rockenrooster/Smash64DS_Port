@@ -4847,6 +4847,76 @@ walk IS the call". The three biggest single symbols are already visible:
 `ndsFighterMarioFoxDLAllDrawForSlot` 93,854,253, `ndsRendererCommitNativeStageSegment`
 93,101,009, `ndsRendererNativeEmitProductionPrimitiveGroups` 81,420,680.
 
+### The over-gate split — and it REFUTES this cycle's own "animation is closed"
+
+`artifacts/performance/2026-08-11_c118-lane`, whole match on the banked build
+(`build-c118-profile-gate`, `NDS_R2_BOTH_CPU=1`, 1600 frames from 438,
+`NDS_TASK37_PROFILE_PER_FRAME_REGION=1`), `--split-over-gate`: **895 frames
+costing more than two VBlanks against 705 costing two, premium 457,608
+cycles/frame.** The fresh window totals 3,994,154,280 cycles against c117's
+4,028,886,502 — **−34.7M**, which independently corroborates the banked −10,752.
+
+**This is the table the gate is actually defined on, and no mean-ranked census
+can produce it.** Slice 37 proved why: mean self time predicts P50 and not P95.
+
+| class | +cyc/frame | share of NON-IDLE premium |
+|---|---:|---:|
+| `armWaitForIrq` (idle — excluded) | 161,737 | — |
+| **NON-IDLE premium** | **295,871** | **100%** |
+| instrument + console (`…RenderDebugHud`, `printf`/`scanf`, `consolePrintChar`, locale, mutex) | 95,790 | **32.4%** |
+| **animation, total** | **43,428** | **14.7%** |
+|   — of which ATTACH | 21,793 | 7.4% |
+|   — of which playback | 21,635 | 7.3% |
+| file I/O (`get_fat`, `f_read`, `f_lseek`) | 10,677 | 3.6% |
+| **map collision** | **0** | **absent from the top 40** |
+
+#### Three findings, in order of how much they change the plan
+
+**1. Collision was never a P95 owner.** It does not appear anywhere in the top 40
+of the over-gate premium. It was the largest MEAN owner (16,649 tk/fr of soft
+float, slice 34) and slices 35–37 banked −10,752 of real deleted work against it
+— but they were aimed by a P50 statistic at a P95 gate. The win is real and kept;
+the aim was luck, not method.
+
+**2. Animation is the largest GAME-SIDE contributor to the premium — 14.7%,
+21,684 ticks/frame — so "the animation lane is closed" is WITHDRAWN as a
+statement about the gate.** What was measured and remains true is narrower: the
+*playback* path's remaining soft float is 8,772 tk/fr spread over three symbols,
+all under the cross-build floor, and its two largest symbols are already fixed
+point at 1.67–1.69 cyc/insn. That is a statement about mean cost. Against the
+gate, animation is still the thing to beat.
+
+**3. Half the animation premium is the ATTACH path, which no slice has ever
+touched.** Every animation slice in this campaign — Requirement 4, 31, 32, 33 —
+optimised playback. The attach path is 21,793 cyc/frame of premium:
+`ndsRelocAssetIDForToken` 7,634, `ndsAObjEvent32NormalizeScript` 5,107,
+`ndsR2AnimBuildTrackTable` 1,967, `ndsRelocNormalizeFighterAObj16File` 1,929,
+`ndsR2AnimTargetValue` 1,760, `ndsR2AnimAObjToQ` 1,754, `gcAddDObjAnimJoint`
+1,642. **That is the next slice, and it is an architectural one.**
+
+It also re-opens *half* of slice 32. The AOT bake's **size** refutation stands
+untouched — 4.46x the source, +679,490 B against a 32,768 B keep-free floor. But
+its **value** model was "commands are parsed once per playback, so a bake only
+wins on the 64.6% of loads that repeat", and that was reasoned from mean cost.
+The gate says the attach path it would delete is 7.4% of the non-idle premium.
+A cheaper attach is worth more than that model priced it — just not at 4.46x.
+
+#### The caveat that has to travel with this table
+
+**32.4% of the non-idle premium is the measuring apparatus.**
+`ndsPlatformRenderDebugHud` alone is 45,381 cyc/frame, and `NDS_TICK_HUD := 1` is
+set only for `smash64ds-battle-playable-tickhud-hwtri` and
+`smash64ds-results-lab-hwtri` (`Makefile:1458-1463`) — the published
+`smash64ds-battle-playable-hwtri` has none of it, nor the `printf`/`scanf`/
+console/locale machinery it drives. The partition is therefore partly selected by
+the instrument's own cost.
+
+This does not invalidate the gate figure — every historical number carries the
+same instrument, so they remain comparable — but **it does mean lever selection
+from this table must exclude those rows**, which is what the class breakdown
+above does. It also means the published ROM's over-gate composition is not this
+one, and nobody has measured that. Worth the owner knowing.
+
 ### The next owner is gated, not open — read this before proposing a conversion
 
 Slice 34's attribution ranks the remaining soft-float by size. **Size is not

@@ -16,9 +16,8 @@ frames past the buzzer. Slips 0 in every row.
 | **Boundary** mode 163 | shipped configuration | 920,192 | 1,113,408 | re-banked c116 |
 
 **Gate 1,294,144, re-banked after slices 35–37 — P95 −10,752 / P50 −8,960, the
-first move to CLEAR the ±8,544 floor since Requirement 4**, and it reconciles
-with the route arms (routed −14,400; the 3,648 gap is inside the floor). **Gap
-~174,144.** The
+first move to CLEAR the ±8,544 floor since Requirement 4**; it reconciles with the
+route arms (routed −14,400, gap inside the floor). **Gap ~174,144.** The
 soak's long match is `NDS_R2_SOAK_MATCH_MINUTES`; `probe-match-window.ps1` reads
 the timer from the guest, so a window cannot claim coverage it lacked. Owner's bar:
 the whole match under P95 on the both-CPU config, loading excluded; the shipped
@@ -30,35 +29,36 @@ P95 as Boundary's; **re-pin `EXPECTED_CENSUS_SHA256` when coverage changes.**
 −10,752**, Boundary green; slice 35 read −7,232 and −7,552 on two separately-
 linked binaries. All owners are **FLAT** — no PC over 3.6% — so the lever is
 calls: `…GetFCCommonFloor` 45,372 x 818 cyc, `…FindLineEndpoints` 38,890 x 543,
-`…SweepFloorLoopSweep` 11,544 x 2,643. **SIZE IS NOT PERMISSION**
-(`census-softfloat-callers.ps1`): float in `gmcollision`/`mp*`/`ftMain*`/
-`ftComputer` is FROZEN by the Task 9 hash — exact moves only, which is why 35–37
-are memos. Matrix/camera (**14,810 tk/fr**; `__aeabi_fdiv` alone 10,084 over
-308,426 calls at 117.9 each) is renderer-side, so converting it is the **OWNER'S
-CALL**. Frozen work still open: 45,372 `…GetFCCommonFloor` calls, one per floor line, for an object over at most one.
+`…SweepFloorLoopSweep` 11,544 x 2,643. **But collision was never a P95 owner** —
+it is ABSENT from the over-gate top 40 (slice 39). **NEXT: the animation ATTACH
+path**, 21,793 cyc/frame of premium and untouched by every prior slice —
+`ndsRelocAssetIDForToken` 7,634, `…NormalizeScript` 5,107, `…BuildTrackTable`
+1,967, `…NormalizeFighterAObj16File` 1,929, `…AnimTargetValue` 1,760,
+`…AnimAObjToQ` 1,754, `gcAddDObjAnimJoint` 1,642. **SIZE IS NOT PERMISSION**:
+float in `gmcollision`/`mp*`/`ftMain*`/`ftComputer` is FROZEN by the Task 9 hash
+(`census-softfloat-callers.ps1`) — exact moves only, which is why 35–37 are memos.
 
 ## What is dead, so nobody re-derives it
 
 - **Effect DObj submits** — Boundary-only: 99.3% of the Boundary excursion but
-  **~12.1%** of the gate arm's; G3 refuted cycles 88–91. **Projectiles**
-  (44 tk/fr) · **Particles** (flat ~47,000, a P50 lever only, retiring SwitchPlan
-  §7 option 2 as a *gate* answer) · **texture thrash** · **`Find`** ·
-  **`Material`** · **the force-load seam**.
-- **`FTR` as the *P95 discriminator*** (+13,768). NOT "FTR is exhausted" —
-  reading it that way is what the owner re-opened 2026-08-10; cycles 110–116 then
-  took 24.3% off it. `FTR` is **flat**, on nearly every frame, which is why.
+  **~12.1%** of the gate arm's; G3 refuted cycles 88–91. **Projectiles** (44
+  tk/fr) · **Particles** (flat ~47,000, P50 only) · **texture thrash** ·
+  **`Find`** · **`Material`** · **the force-load seam**.
+- **`FTR` as the *P95 discriminator*** (+13,768). NOT "FTR is exhausted" — that
+  reading is what the owner re-opened 2026-08-10; cycles 110–116 took 24.3% off
+  it. `FTR` is **flat**, on nearly every frame, which is why.
 - **The AOT animation bake at 20 B/record** (slice 32). Reader, bake, emitter,
   layout guard and wiring are PROVEN and gated off; the SIZE is dead — 10,304 B
   an animation against the source's 2,310, ×85 cached needs +679,490 B, and
-  dropping every init record leaves 3.27×. Commands are parsed ONCE a playback,
-  so a bake only wins on the 64.6% of loads that repeat.
-- **The animation lane, closed on numbers (slice 34).** Its two largest SELF
-  symbols are already Requirement 4's fixed point at 1.67–1.69 cyc/insn — no
-  float to convert, no stall to place. All that remains is **8,772 tk/fr** of
-  soft float, largest 4,631, all under the floor — as are idle-joint skip (33),
-  lazy track table (31), AObj walk (~1,050), track dispatch (~1,900).
-  `.text.hot` closed BOTH ways. **`ndsBaseGcPlayMObjMatAnim` must not be
-  blanket-converted** — five tracks carry packed 0xRRGGBBAA in f32.
+  dropping every init record leaves 3.27×. But its VALUE model was priced off the
+  MEAN, and the gate says attach is 7.4% of the non-idle premium (slice 39).
+- **The animation PLAYBACK path, on MEAN cost (slice 34).** Its two largest
+  self-time symbols are already Requirement 4's fixed point at 1.67–1.69
+  cyc/insn; the rest is **8,772 tk/fr** of soft float, all under the floor — as
+  are idle-joint skip (33), lazy track table (31), AObj walk and track dispatch.
+  **NOT the lane: over-gate puts animation at 14.7% of the non-idle premium,
+  HALF of it the ATTACH path** (slice 39). **`ndsBaseGcPlayMObjMatAnim` must not
+  be blanket-converted** — five tracks carry packed 0xRRGGBBAA in f32.
 
 ## RAM: both budgets are near their floor — price a change before writing it
 
