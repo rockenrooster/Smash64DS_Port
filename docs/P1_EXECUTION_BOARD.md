@@ -4420,6 +4420,37 @@ the stack frame to 12 bytes. **Check the disassembly of this kernel for hoisted
 `asr #31` and stack spills after touching it** -- the host error bound cannot
 see code shape, and it reported byte-identical numbers across the fix.
 
+### The animation lane's CEILING, computed -- slice 32 cannot close the gate
+
+The goal asks for animation to be materially reduced or its remaining cost
+proven unrecoverable. Neither is quite true, and the useful answer is the
+number in between: **what is the most this lane can ever return?**
+
+Profile window is **1,799 presented frames** (4,028,886,502 cycles x 0.4993
+ticks/cycle / 1,118,272 `ALL` P50 ticks per frame). Gate gap at P95 is
+1,305,472 - 1,120,000 = **185,472 ticks**.
+
+| item | ticks/frame | share of the 185,472 gap |
+| --- | ---: | ---: |
+| **animation, ALL THREE symbols** | **54,299** | **29.3%** |
+| `ndsR2FtAnimParseDObjFigatree` | 16,806 | 9.1% |
+| `gcPlayDObjAnimJoint` walk | 18,867 | 10.2% |
+| `ndsR2AnimValueQ` | 18,627 | 10.0% |
+
+**Deleting one hundred percent of fighter animation -- parse, walk, evaluation,
+everything -- closes 29% of the gate gap.** No rewrite does that: the pose still
+has to be computed, so `ndsR2AnimValueQ`'s 10.0% is largely irreducible work
+rather than overhead. What the AOT dense-track rewrite actually removes outright
+is the parse, **9.1%**, plus some fraction of the walk.
+
+So slice 32 is worth roughly **9-15% of the gap** for a change spanning build
+tooling and the hottest gameplay path. That is not nothing and the lane is not
+"closed" -- but it is quantitatively incapable of reaching the gate, and it is
+the wrong thing to build before the renderer's 26.32%. **This table is the
+answer to "is animation recoverable": bounded at 29.3% best case, ~9.1%
+realistically, and measured deletions in it disappear under a placement floor
+(slice 31: -7,104 routed, +576 re-banked).**
+
 ### The lane question, answered: animation is NOT where the P95 lives
 
 Grouped the cycle-117 whole-match census by subsystem, against **3,325,582,559
