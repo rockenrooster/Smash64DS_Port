@@ -41,7 +41,14 @@ param(
     # match and costing seconds. It rides the same Makefile block as the
     # tick-HUD ROM and differs only in the scene it boots, so numbers from the
     # two remain comparable.
-    [string]$Target = 'smash64ds-battle-playable-tickhud-hwtri'
+    [string]$Target = 'smash64ds-battle-playable-tickhud-hwtri',
+    # Extra `make` variables for the build, e.g. -MakeFlags NDS_R2_BOTH_CPU=1.
+    # Without this the harness could only build the Boundary configuration, so a
+    # census of THE GATE arm had to be hand-built and then driven with -NoBuild --
+    # two failed invocations on 2026-08-11 before that was obvious, because the
+    # window guard's error names the census flags and says nothing about the ones
+    # it cannot set. Mirrors -MakeFlags on sample-tick-hud-buckets.ps1.
+    [string[]]$MakeFlags = @()
 )
 
 # Task 37 census driver.
@@ -163,11 +170,14 @@ try {
     if (-not $NoBuild) {
         if (-not $env:DEVKITPRO) { $env:DEVKITPRO = 'C:/devkitPro' }
         if (-not $env:DEVKITARM) { $env:DEVKITARM = 'C:/devkitPro/devkitARM' }
-        make -C $root "TARGET=$target" "BUILD=$Build" `
-            'NDS_TASK37_PROFILE=1' "NDS_TASK37_PROFILE_START=$StartFrame" `
-            "NDS_TASK37_PROFILE_FRAMES=$Frames" `
-            "NDS_TASK37_PROFILE_PER_FRAME_REGION=$([int]$PerFrameRegion)" `
+        $makeArgs = @(
+            "TARGET=$target", "BUILD=$Build",
+            'NDS_TASK37_PROFILE=1', "NDS_TASK37_PROFILE_START=$StartFrame",
+            "NDS_TASK37_PROFILE_FRAMES=$Frames",
+            "NDS_TASK37_PROFILE_PER_FRAME_REGION=$([int]$PerFrameRegion)",
             "NDS_TASK37_PROFILE_RESULTS=$([int]$isResults)"
+        ) + $MakeFlags
+        make -C $root @makeArgs
         if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     }
     foreach ($path in @($rom, $elf)) {
