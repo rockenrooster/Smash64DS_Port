@@ -5144,10 +5144,50 @@ Two more structural facts from the same pass:
   per-DObj reset, so the real payload is **~105K records**, 28% below the
   145,873 headline and 43% below the 184,629 raw target words.
 
-**Nothing about this slice is blocked.** What remains: fold the per-track frac
-shift into the value sizing, choose the record layout, emit the blob through the
-`cp` rule at `Makefile:3295`, re-pin `EXPECTED_CENSUS_SHA256`, relocate
-`interpolate`, and write the runtime player.
+#### The frac shift, folded in — and the record can be LOSSLESS at 16 bits
+
+`ndsR2AnimTargetValue` scales each disk word by a per-track power of two:
+`sNdsR2AnimFracShift[8] = {9,2,12,0,9,5,13,0}`, indexed by Rot/Tra/Sca/TraI with
+`+4` for rates. Applying it to every real target gives the *stored* Q12 ranges:
+
+| field | Q12 min | Q12 max | bits+sign | fits s16 at Q12 |
+|---|---:|---:|---:|---|
+| value Rot | −83,640 | 231,616 | 19 | no |
+| value Tra | −4,915,200 | 6,484,992 | 24 | no |
+| value Sca | 1,720 | 24,576 | 16 | yes |
+| rate Rot | −245,656 | 11,976 | 19 | no |
+| rate Tra | −534,656 | 821,120 | 21 | no |
+| rate Sca | −2,340.5 | 6,553.5 | 14 | yes |
+
+So a uniform Q12 s16 is impossible — Tra values need 24 bits. **The right
+conclusion is not to pick a coarser Q.** The authored value *is* `arg * 2^-k`
+with `arg` an s16 and `k` a compile-time constant per track group, so **storing
+`arg` itself is exact.** A dense record holding the raw disk word plus the
+group's shift loses nothing at all, where re-quantising to Q4 for translation
+would have thrown away three fractional bits of every authored value.
+
+That makes the record: kind (3 bits) + track (4) + `value_base`,
+`value_target`, `rate_base`, `rate_target` (16 each, authored) + `length` (s16
+Q7, measured −185..0) + `length_invert` (s16 Q8, measured 0..64) ≈ **14 bytes
+against the AObj's 36**.
+
+**Which is the change that reaches the 25.3%.** 335 nodes a frame at 14 bytes is
+4,690 bytes against a 4 KB D-cache — 1.15×, where 36-byte AObjs are 12,060 bytes
+and 3.0×. Contiguity alone could never do this; cycle 109 said so and was right.
+
+Two honest exceptions to carry into the emitter:
+
+- **`rate_base` is authored only for the cubic families.** `SetVal{,Block}`
+  computes it as `(value_target - value_base) / payload`, so it is not a disk
+  word there. That is 11,017 of 104,929 real writes (10.5%) and needs its own
+  encoding or a wider field.
+- **TraI (track 3) is not a power of two** — its scale is `1/16384 - 3e-12`, so
+  it keeps the float expression. It is one track of ten, written exactly once
+  per script.
+
+**Nothing about this slice is blocked.** What remains: the emitter and blob
+through the `cp` rule at `Makefile:3295`, `EXPECTED_CENSUS_SHA256` re-pinning,
+`interpolate` relocation, and the runtime player.
 
 #### Original specification, still the target
 
