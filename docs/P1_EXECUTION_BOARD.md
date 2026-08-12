@@ -51,7 +51,20 @@ of the match (P95 understated ~306,000, over-gate rate 5×).
 **~23,000**. The cycle-108 row carries why that figure is quoted as a range and
 not as a single cross-build P95.
 
-**CURRENT BANKED GATE — `WORK-H` P50 961,152 / P95 1,294,144** (cycle 118,
+**CURRENT BANKED GATE — `WORK-H` P50 931,648 / P95 1,210,560** (cycle 121,
+`builds/build-c121-stride`, `NDS_R2_BOTH_CPU=1`, 1600 frames from 438, DLDI ON,
+`slips=0`). Slice 44 re-banked it from 1,244,480: **P95 −35,904 / P50 −17,088**
+against a matched control from the same tree, 4.2× and 2.0× the ±8,544 floor,
+and the largest single P95 move of the campaign. **Gap to the 1.12M target:
+~90,180.** Evidence:
+`artifacts/performance/2026-08-11_c121-slice44/SLICE44_GATE.md`. VBI 2/3/4/5+
+(max): 1644/343/35/16 (20), better than the control's 1621/361/38/18 in every
+bucket. Boundary's row below is **pre-slice-44** — re-measure before quoting it.
+
+The paragraph that follows is the cycle-118 bank it replaced, kept for the
+reconciliation it records.
+
+**SUPERSEDED BANKED GATE — `WORK-H` P50 961,152 / P95 1,294,144** (cycle 118,
 `builds/build-c118-gate`, `NDS_R2_BOTH_CPU=1`, 1600 frames from 438, DLDI ON,
 `slips=0`). Re-banked after slices 35–37: **P95 −10,752 and P50 −8,960 against
 1,304,896 — the first cross-build movement to CLEAR the ±8,544 placement floor
@@ -5170,16 +5183,130 @@ grouping swept in soft float belonging to other callers.
 asset streaming (~115,000). Table F's `tk/frame` is what a caller costs ON a tail
 frame. P95 = P50 + premium, so a `tk prem` 0 cut lowers both equally.
 
-**Slice 44, to be bundled to clear the bar:** (a) stage world revalidation
-~9,143; (b) the 26-binding rigid-constancy guard ~3,700; (c) `noinline, cold` on
-`ndsRendererAdapterCaptureOwnerChainsGx` — slice 43 inlined it and
-`…DLAllDrawForSlot` grew **7,396 → 8,556 bytes, back over the 8 KB I-cache**,
-which the handoff prices at up to +14,963 for cold bytes in an entered body;
-(d) fold the scale into the last local for the 11 bindings that are nobody's
-parent, ~2,100; (e) evict the now-dead `MtxMulAffine20p12` (616 B) from
-`.text.hot.draw`.
+**Slice 44 was planned as a five-part bundle; it shipped as one lever, and two
+of the four leftovers were wrong.** (a) stage world revalidation ~9,143 and
+(b) the 26-binding rigid guard ~3,700 became the stride and landed **−35,904 P95
+on their own**, three times the bundle's whole prediction, because the pc-detail
+showed the cost was D-cache traffic rather than the arithmetic the estimate
+priced. (c) `noinline, cold` on `ndsRendererAdapterCaptureOwnerChainsGx` is
+**VOID: its premise is false.** That function is not inlined into
+`…DLAllDrawForSlot` — it is called from `PrepareNativeOwnerMatrices`, a different
+TU with no LTO. `…DLAllDrawForSlot` did grow 7,396 → 8,556 bytes across slice 43,
+but for some other reason; find it before spending a build. (d) the leaf-binding
+scale fold (~2,100) and (e) evicting the dead 616-byte `MtxMulAffine20p12` from
+`.text.hot.draw` remain open and are both sub-floor on their own — `.text.hot`
+already has 3,604 free bytes, so (e) unlocks nothing that is not already
+unlocked.
 
-### Slice 43 KEPT — the geometry engine composes the fighter joints. Gate 1,244,480
+### Cycle-121 re-attribution — the stage lane is halved, and the new #1 is memory-bound
+
+Whole-match census on `build-c121-profile` (`--split-top-frames 80
+--attribute-leaves`, `timestamp_discontinuities=0`). Total cycles
+3,981,830,319 → **3,947,099,258** (−34.7M = −10,838 tk on the *mean*, against
+−17,088 at P50 and −35,904 at P95: the tail paid more than the mean, which is
+what cutting work that clusters on heavy frames looks like).
+
+`StageWorldSourceKeyMatches` 54.0 → **9.9 calls/frame**, 7,719 → **1,640 tk**;
+`BuildPersistentStageWorldMatrix` 1,806 → **652 cyc/call**, 9,017 → **5,329 tk**.
+`PrepareNativeStageOwner` now owns **14,801 tk/frame** (was 18,912), and the
+`MtxMul20p12` 9,590 half of that is `world × view_projection` for the 16 dynamic
+bindings — **the stride cannot touch it, the camera moves every frame**.
+
+| tk/frame | tk prem | frames | caller | lane |
+|---:|---:|---|---|---|
+| **11,874** | 530 | 80/80 | `BuildDObjXObjMatrix` ← `BuildDObjLocalMatrix` | **fighter local build** |
+| 9,590 | 0 | 80/80 | `MtxMul20p12` ← `PrepareNativeStageOwner` | stage compose |
+| **7,187** | 288 | 80/80 | `memcpy` ← `BuildDObjXObjMatrix` | **fighter local build** |
+| 5,253 | 198 | 80/80 | `BuildDObjLocalMatrix` ← `DLAllDrawForSlot` | fighter local build |
+| 5,211 | 0 | 80/80 | `BuildPersistentStageWorldMatrix` ← `PrepareNativeStageOwner` | stage |
+| 4,358 | 4,046 | 80/80 | `__udivsi3` ← `ndsPlatformRenderDebugHud` | instrument, excluded |
+
+**The fighter LOCAL matrix build is now the largest legal lane at ~24,314
+tk/frame**, 53.7 calls, 80/80, `tk prem` ≤530 — nearly flat. **But `--pc-detail`
+says it is memory-bound, and that closes the obvious approaches.** 35,366,808
+cycles over **324 distinct PCs**; top PC is **6.7%** (`ldr r2,[r3,#0]` at 27.55
+cyc/insn) with no peak after it, and the expensive rows are all `ldr` at 11–28
+cyc/insn on `[r4, #28/#32/#36/#64]`, i.e. DObj fields. The one hot loop
+(`lsrs r3,r1,#23` — `MtxFromN64`'s exponent extraction, inlined) runs at 2.0–3.4.
+
+So extending `BuildFighterTraRotRpyDirect20p12` to more kinds would delete the
+float intermediate and the conversion but **still read the same DObj fields**,
+which are 60%+ of the cost. Price that before building it. And the lever the
+shape points at — a local-matrix memo — is **DO-NOT-RETRY, built and killed
+twice**; the Task 91 comment at `reloc_backend_renderer_dl.c:1790` argues for it
+anyway and is not an invitation.
+
+**Do not plan a slice against `memcpy`'s 49,671 tail-frame ticks.** Only three
+callers clear the 40/80 presence bar (7,187 + 1,883 + 1,838 = 10,908); the other
+~38,700 is spread across callers each below it. Its mean self-time is 16,912.
+
+### Slice 44 KEPT — the stage stops re-proving itself constant. Gate 1,210,560
+
+Evidence: `artifacts/performance/2026-08-11_c121-slice44/SLICE44_GATE.md`,
+`REATTRIBUTION.md`, `pcdetail-dobjxobj.txt`; the per-PC probe that started it is
+`artifacts/performance/2026-08-11_c120-lane/pcdetail-sourcekeymatches.txt`;
+captures in `artifacts/visibility/2026-08-11_slice44-stride/`.
+
+`NDS_R2_STAGE_VALIDATE_STRIDE = 8`, graduated onto
+`smash64ds-battle-playable-hwtri` and the tickhud/proof/results-lab block.
+**Not** the BUGS.md #9 floor arms — those compare the rigid path against the CPU
+path and a stride would confound them.
+
+**The measurement that chose the lever, and it cost no build.** The stage ran
+`StageWorldSourceKeyMatches` **54.0×/frame for 7,719 tk**, plus 9,017 in
+`BuildPersistentStageWorldMatrix`, and neither builds anything: the 26 rigid
+bindings are re-proved constant every frame and the 16 dynamic ones re-walk a
+parent chain whose cached answer they then reuse. `--pc-detail` says **9.7M of
+the 24.7M cycles are four cold loads** — `ldrb r1,[r1,#4]` (`xobj->kind`) at
+**27.55 cyc/insn**, `ldrb r3,[r1,r3]` 22.72, `ldrb r2,[r0,r3]` 22.34,
+`ldr r3,[r0,#76]` (`dobj->vec`) 17.27 — while the inlined byte-compares of
+translate/rotate/scale sit at 1.0–7.6. **The compare was never the cost, so a
+cheaper compare was never the lever.** It is 42 DObjs and their XObjs pulled
+into a 4 KB D-cache every frame; the only lever is not touching them.
+
+**Round-robin, not "full sweep every 8th frame".** The second shape makes 12.5%
+of frames expensive and P95 lands on one of them and reads flat. Spreading 42/8
+checks across every frame is what moves P50 and P95 together.
+
+| bucket | control (STRIDE=0) | stride | Δ |
+|---|---:|---:|---:|
+| **WORK-H P50** | 948,736 | **931,648** | **−17,088** |
+| **WORK-H P95** | 1,246,464 | **1,210,560** | **−35,904** |
+| STG P50 / P95 | 188,736 / 196,864 | 168,832 / 172,672 | −19,904 / −24,192 |
+| FTR P50 | 294,592 | 296,704 | +2,112 |
+
+Both arms `slips=0`, DLDI ON, one tree, 1600 samples from 438. The control
+reproduces the banked gate to within 1,984. **The win is in the bucket it was
+aimed at.**
+
+**Engagement, both sides** — `RigidChecks` 6,627 / (6,627 + 46,387) = exactly
+**0.12500**, and 53,014 = **26 × 2,039** means the sweep ran on every frame,
+which is also the proof the rigid mask never demoted (a demotion early-returns
+and freezes both counters). `StaleReuse` 28,518 against 28,546 predicted.
+`gNdsRendererTask36RigidConstancyMismatchCount` is `PROFILE_LEVEL == 1` only, so
+it does not exist in a tick-HUD ROM — the ratio is the available proof and a
+stronger one.
+
+**Fidelity.** Game viewport (8,55)–(408,350) is **pixel-identical on both
+frame-locked tics** (118,000 px, max channel delta 0); only the tick-HUD text
+differs. Both arms read damage 130/51 stock ×1 at the lock. Boundary green.
+
+**Two seams closed with it.** Demotion is now **one-way within a topology** — the
+old code re-armed the mask from the constant every frame and let the sweep clear
+it again, equivalent only because the sweep was complete; a partial sweep must
+not re-arm a binding it did not look at. And the once-per-scene topology rebuild
+now drops the stage world cache, because entries are keyed on DObj address and a
+recycled heap address would make a stale entry **match** — harmless while
+`validated_frame == frame` forced a rebuild, a previous topology's matrix under
+the stride.
+
+**Boundary caught the checker debt, as designed.** `M3_STAGE_FALSIFIER`
+enumerates every workspace field each stage closure may read and failed on
+`workspace.slice44_validate_cursor` being unclassified; it is now
+`FIELD_CLASS_LIVE` in both affected closures and the consumed-field manifest is
+regenerated. Do not add a workspace field without it.
+
+### Slice 43 KEPT — the geometry engine composes the fighter joints
 
 Evidence: `artifacts/performance/2026-08-11_c119-lane/SLICE43_GATE.md` and
 `SLICE43_ENGAGEMENT.md`; captures in `artifacts/visibility/2026-08-11_gx-compose`.
