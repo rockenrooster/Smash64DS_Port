@@ -3911,6 +3911,7 @@ extern volatile u32 gNdsFighterProjectileProofSpecialMotion;
 extern volatile u32 gNdsFighterProjectileProofAccessoryFrames;
 extern volatile u32 gNdsFighterProjectileProofFlag0Frames;
 extern volatile u32 gNdsFighterProjectileProofSpawnCallCount;
+extern volatile u32 gNdsFighterDamageFireCallCount;
 extern volatile u32 gNdsFighterEffectKindMask0;
 extern volatile u32 gNdsFighterEffectKindMask1;
 extern volatile u32 gNdsFighterEffectKindMask2;

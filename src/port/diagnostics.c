@@ -2775,6 +2775,9 @@ volatile u32 gNdsFighterProjectileProofFlag0Frames;
  * ftParamSetModelPartID, which used to discard it. OnCount rising on the gate
  * arm is what proves the gun is being REQUESTED; it is the precondition for
  * the texture ever being asked for, and therefore for capturing its key. */
+/* Fire hits that reached the element dispatch at ftmain.c:2713/2771/2808.
+ * The nEFKind path is dead in P1, so this is the only way fire is requested. */
+volatile u32 gNdsFighterDamageFireCallCount;
 volatile u32 gNdsFighterEffectKindMask0;
 volatile u32 gNdsFighterEffectKindMask1;
 volatile u32 gNdsFighterEffectKindMask2;

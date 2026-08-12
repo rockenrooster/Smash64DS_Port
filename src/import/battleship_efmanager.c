@@ -12,6 +12,7 @@
 #include <nds/nds_firegrind.h>
 #include <nds/nds_ifcommon_oam.h>
 #include <nds/nds_renderer.h>
+#include <nds/nds_startup.h>
 #include <nds/nds_task39_effect_census.h>
 #include <nds/timers.h>
 #include <sys/audio.h>
@@ -1925,6 +1926,11 @@ LBParticle *efManagerDamageNormalHeavyMakeEffect(Vec3f *pos, s32 player,
 }
 LBParticle *efManagerDamageFireMakeEffect(Vec3f *pos, s32 size)
 {
+    /* BUGS.md fire-burn row: the only live fire request in P1. Called only
+     * from the nGMHitElementFire arms of ftmain.c (2713/2771/2808) and the
+     * item equivalents, which are off, so this counts fire hits that
+     * dispatched. */
+    gNdsFighterDamageFireCallCount++;
     return ndsBaseEFManagerDamageFireMakeEffect(pos, size);
 }
 LBParticle *efManagerDamageElectricMakeEffect(Vec3f *pos, s32 size)
