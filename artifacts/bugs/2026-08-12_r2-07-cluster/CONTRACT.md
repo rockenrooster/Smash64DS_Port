@@ -201,6 +201,36 @@ already resident, so the only new bytes are one script in a 10,912-byte,
 119-script bank — and frames 1/2 of texture 5, which is the shared
 texture-variant capability above.
 
+#### First measurement, and why it does NOT settle reachability
+
+`flame-engage.log`, whole match, same instrument as row 3a:
+
+```
+gNdsFighterFlameEffectRequestCount = 0
+gNdsFighterFireSparkRequestCount   = 0
+gNdsFighterModelPartOnCount        = 18   <- control
+gNdsFighterProjectileProofSpawnSuccessCount = 17
+```
+
+The control proves the run was real and the counter mechanism works, so the
+zeros are trustworthy *as readings*. They are **not** evidence that the Flame
+family is unreachable in P1, and reporting them that way would have killed the
+row for the wrong reason.
+
+> This arm is **Mario as an idle human** versus a level-3 Fox CPU. Mario never
+> attacks, and **Mario's fireball is the fire source** — Fox's moveset is not
+> fire-based. Zero fire damage occurred, so zero flame requests is the expected
+> reading whether or not the seam is reachable.
+
+The arm that can answer it is `NDS_R2_BOTH_CPU=1`, where Mario is also a
+level-3 CPU and actually throws fireballs. Re-measure there before touching
+`P1_PARTICLE_SEAMS`.
+
+Note also that `gNdsFighterProjectileProofSpawnSuccessCount` is incremented by
+**both** `battleship_mario_fireball.c:791` and `battleship_fox_blaster.c:80`, so
+on the both-CPU arm it stops being a Fox-only control and becomes a combined
+count — which is itself the check that Mario started acting.
+
 **Fix seam:** two seams, in order — (a) link the real flame makers and stop
 aliasing them in `reloc_backend_compat_shims.c:8088`; (b) pack the 3 flame
 frames as texture variants. `.text` and VRAM cost must be counted against the
