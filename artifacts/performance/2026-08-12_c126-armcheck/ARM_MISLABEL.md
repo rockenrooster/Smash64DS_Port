@@ -41,6 +41,24 @@ not the explanation here: placement does not sort three builds perfectly by a
 build flag while leaving two builds five commits apart within 1,024 of each
 other.
 
+## The board already warned about exactly this — it is a RECURRENCE
+
+`docs/P1_EXECUTION_BOARD.md:154` (2026-08-05):
+
+> **Every figure in this section is a Boundary-arm figure.** It was banked
+> without an arm label, and cycle 79 measured it on **the both-CPU arm the
+> owner's gate actually reads** (G2a, commit `62fe823d`): the prize is 4–9x
+> smaller there. Do not quote these numbers as gate-arm numbers.
+
+That settles the arm question from the repo rather than from inference: **the
+gate arm is the both-CPU arm.** It also names the failure mode — *banked without
+an arm label* — and the c124-slice48 bank repeated it, this time labelling a
+`BOTH_CPU 0` build "the canonical both-CPU gate" in both `EXHAUSTION.md` and
+`HANDOFF.md`.
+
+The lesson the board drew then applies unchanged now: the Boundary arm flatters
+every lane, because one of its two fighters is a human receiving no input.
+
 ## Why this is the gate and not a footnote
 
 `Smash64DS_Runtime2_SwitchPlan.md` R2-07 names the arm in the gate text itself:
