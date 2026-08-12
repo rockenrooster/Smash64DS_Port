@@ -97,9 +97,8 @@ float in `gmcollision`/`mp*`/`ftMain*`/`ftComputer` is FROZEN by the Task 9 hash
 **SLICE 43 WITHDRAWN 2026-08-11.** All targets force
 `NDS_R2_FIGHTER_GX_COMPOSE=0`; do not re-enable without owner proof. Lead at
 `nds_platform.c:3197`: the matrix stack leaks ~3 pushes/frame, wrapping mod 32.
-**That line's `|| NDS_TICK_HUD` is pinned by
-`check-gbi-decode-fixtures.ps1:2247`** — Boundary went RED for a cycle because
-the guard moved and the assertion did not.
+That line's `|| NDS_TICK_HUD` is pinned by `check-gbi-decode-fixtures.ps1:2247`
+— Boundary went RED for a cycle because the guard moved, not the assertion.
 **SLICE 46 KEPT — 1,213,440 → 1,196,224.** The anim warm preload never finished
 (`gNdsR2AnimWarmLoaded` 83 of 85) AND warmed the wrong assets: `gNdsR204AnimSeen`
 gives 87 used ids of which the 85-entry list covered only **57** — 30 used ids
@@ -113,8 +112,8 @@ load at >4.5 ms against ~186 ms. `…/2026-08-12_c123-rebank/SLICE46.md`.
 **SLICE 45 KEPT — 1,225,280 → 1,213,440.** Same-binary A/B:
 `ndsRelocRemoveFighterAObj16StatusAliases` resolved `ndsRelocAssetIDForToken` for
 EVERY status node when `addr == data` rejects almost all in one compare.
-Resolves 16,002 → 1,143, **P95 −12,160**. Exact — the resolver is a pure
-function of a link-time ADDRESS.
+Resolves 16,002 → 1,143, **−12,160**. Exact — a pure function of a link-time
+ADDRESS.
 
 **The fighter LOCAL matrix build is NOT a P95 lane — refuted c122.** Real size
 (~24,314 tk/frame, 80/80) and memory-bound, but `FTR` is 0/80 on the tail: it is
@@ -128,20 +127,33 @@ animation bucket** — reading it as one mis-attributed an A/B in c119. Now
 `ftmain.c:4623` **discards the return value** and sets
 `fp->figatree = fp->figatree_heap`.
 
-**NEXT: the `SHDT` reach bound, sized on the post-slice-46 profile.** Collision
-soft float is **36,462 tk/frame of tail premium** (`func_ovl2_800ED490` 15,464,
-`gmCollisionGetWorldPosition` 9,288, `SetInvertMatrix` 5,510, `TestRectangle`
-fdiv 3,159, `TransformMatrixAll` 3,041), ~48,000 with the functions' own
-instructions — **47% of `SHDT`**, and the calls cluster 13–18x on hot frames.
-`TestRectangle` does 3 divides a call, so 56.5 fdiv/hot frame decodes to **~19
-rectangle tests**. Rejecting half is ~24,000. Design: AOT `maxreach` per hurtbox
-joint (Σ|rest translate| up the chain), a **fail-closed** runtime assert that
-each joint's local translate equals its rest value, and skip the world-transform
-build when `dist(attack, victim root) > attack_r + hurt_r + maxreach`. Sound
-because cycle 106 recorded that fighter animation moves ROTATIONS, not joints
-(`reloc_backend_compat_shims.c:1504`) — the assert is what stops that being
-faith. Needs a `battleship_` interpose on
-`gmCollisionCheckFighterAttackDamageCollide`; no `decomp/` edit.
+**SLICE 47 REVERTED — the `SHDT` reach bound is DEAD, and the reason is
+geometric, not a tuning miss.** Interposed
+`gmCollisionCheckFighterAttackDamageCollide` (the `battleship_` rename; the two
+expensive calls `func_ovl2_800EDE00`/`…DE5C` run BEFORE the test, so a reject at
+the top skips exactly what the profile prices) and shipped it MEASURE-ONLY —
+the bound computed and counted, the decomp test still decided, so the run could
+not change gameplay. Whole match:
+
+```
+ReachTests 2,373   WouldSkip 0   Declines 0   Unsound 0
+```
+
+**It never rejects once.** The bound sums |translate| up the parent chain, which
+for a hand or foot is most of the fighter's extent, so it says "this joint could
+be anywhere within arm's reach of the root" — and once
+`gmCollisionCheckFighterInFighterRange` has passed, the attacker is ALREADY
+inside that radius. Even at scale 1.0 rather than the 4x inflation used,
+`near_dist` (~50–200) never exceeds `limit` (~150–500). Tightening it needs the
+joint's actual position, which is the transform being skipped: circular.
+
+Carry two things. The call count is **~19 per HOT frame** (2,373 over the ~124
+`SHDT`-high frames), so the pair test IS the hot path — but
+`gmCollisionTestRectangle` also has item, weapon and ground callers, so **never
+attribute a shared leaf's volume to one caller**. And a bound parameter belongs
+in a POKEABLE global, not a `#define`, or a sweep costs a rebuild per value.
+`SHDT` is still +102,816 on 57/80, ceiling −38,912; what is dead is the
+root-relative per-joint bound.
 
 **Do not bring a micro-fix** — R2-06 E11: a load-frame-only ~8,000 cannot be
 banked. Clear ~16,000 in one change, or **use the `.data` route on ONE binary**
