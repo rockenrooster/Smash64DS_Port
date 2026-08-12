@@ -9,36 +9,36 @@ built **`NDS_R2_BOTH_CPU 0`** — a Boundary-arm figure. On the arm R2-07's gate
 `EXHAUSTION.md` was computed on `BOTH_CPU 0` rows and must be redone. **Owner's order
 is bugs first, then P95** — so this is context, not the next task.
 
-## R2-07 `BUGS.md`: the owner playtested rows 2 and 3 and BOTH ARE STILL OPEN
+## R2-07 `BUGS.md`: rows 2 and 3 are FIXED AND MEASURED, awaiting the owner's playtest
 
 Contracts + evidence: `artifacts/bugs/2026-08-12_r2-07-cluster/CONTRACT.md`. **The old
 "all three rows converge on ONE texture-residency capability" framing was WRONG for
-ALL THREE** — do not reinstate any part of it. **Both "FIXED" acceptances were
-ENGAGEMENT proofs and are withdrawn**; every row of this cluster now owes screen-space
-pixel evidence. Candidate: `build-c129-foxfire`.
+ALL THREE** — do not reinstate any part of it. The first two "FIXED" acceptances were
+ENGAGEMENT proofs and were withdrawn; **both rows now carry screen-space pixel proof
+stacked against a matched control**, so do not re-litigate them — playtest them.
+Candidates: `build-c129-foxfire` (Boundary arm, Fox pixels) and `build-c130-fire-bothcpu`
+(same source on `BOTH_CPU 1`, flame pixels + gate). Neither is marked FIXED — owner's call.
 
-- **Row 3 (Fox gun) — the overlay drew at 0.036 PX.** The submit hand-loaded its
-  composed MVP and so skipped BOTH halves of `ndsRendererLoadHardwareRawComposedMatrix`:
-  the world-unit pair (vertices go in `x16`, the matrix's complete homogeneous row 3
-  must be `>> NDS_RENDERER_HW_WORLD_UNIT_SHIFT`) and the identity GL_PROJECTION — and
-  this target is `NDS_R2_FIGHTER_HW_MTX := 1`, so the fighter leaves a real projection
-  loaded. Captured on c128 with NO rebuild and replayed by
-  `scripts/fox_gun_screen_bounds.py`: right place (143.97, 47.90), 44/44 in viewport,
-  0 behind camera, span **0.036 px**; with the shift, **9.245 px**. Also from the source
-  DL: the texture is **16x32, not 32x16** (CI4 makes both 256 B, so the byte count could
-  never catch it), the combiner is TEXEL0 x SHADE and nothing latched a colour, and
-  cmS/cmT are CLAMP. **The old acceptance shot's "blaster in his hand" is the
-  `NDS_R2_FOX_BLASTER_QUAD` magenta debug quad, and its "control" is a different
-  camera and pose.**
-- **Row 2 (fire burn) — FlameLR's quad cell was not in the atlas.** The colanim/maker
-  work below is real and stays. One level down: `efManagerFlameLRMakeEffect` takes
-  script `0x12` -> **texture 12**, which was PACKED but sat in `quads.excluded`, so
-  `ndsParticleQuadFrameFor` returned NULL and `battleship_lbparticle.c:3698` drew
-  NOTHING. Confirmed on c127, no rebuild: `QuadMissMask` **bit 12 = 1**, and bit 15
-  (FlameRandom, script `0x55`) clear — so the burn was exactly half-drawn.
-  **The grader could not have known**: `QUAD_MEASURED_LIVE` is regraded from a soak's
-  own use mask, and until this cycle the burn was unreachable. **After restoring a dead
-  effect, re-grade the atlas before trusting the next soak.**
+**Perf:** `…/2026-08-12_c130-fire-gate/GATE.md`. `WORK-H` P95 **1,217,472** vs the
+both-CPU bank 1,207,616 — **+9,856, under this arm's own 9,664 repeat spread**, and the
+counted mechanism (18 extra quads over ~12 frames) is ~10x too small to be it.
+
+- **Row 3 (Fox gun) — the overlay drew at 0.036 PX**, in the right place, at the right
+  depth, 44/44 corners in the viewport. The submit hand-loaded its composed MVP and so
+  skipped BOTH halves of `ndsRendererLoadHardwareRawComposedMatrix`: the world-unit pair
+  (vertices go in `x16`, the matrix's complete homogeneous row 3 must be
+  `>> NDS_RENDERER_HW_WORLD_UNIT_SHIFT`) and the identity GL_PROJECTION, which a
+  `NDS_R2_FIGHTER_HW_MTX := 1` target needs because the fighter leaves a real one loaded.
+  The source DL also gave **16x32, not 32x16** (CI4 makes both 256 B, so no byte count
+  could catch it), TEXEL0 x SHADE, and CLAMP. **A magenta bar beside Fox is
+  `NDS_R2_FOX_BLASTER_QUAD`'s debug quad, not the gun.**
+- **Row 2 (fire burn) — FlameLR's quad cell was not in the atlas.** Script `0x12` ->
+  texture 12, PACKED but sitting in `quads.excluded`, so `ndsParticleQuadFrameFor`
+  returned NULL and `battleship_lbparticle.c:3698` drew NOTHING — the burn was exactly
+  half-drawn, FlameRandom only. **`QUAD_MEASURED_LIVE` is regraded from a soak's own use
+  mask, so after restoring a dead effect, re-grade the atlas before trusting the soak.**
+  **The build arm is part of the trigger**: at `BOTH_CPU 0` Mario never burns, so the
+  flame probe now reads `nds_build_config.h` and refuses that arm instead of timing out.
 - **Row 1 (Whispy face) — the blink animation lasts ONE frame.** `map_gobj[0]->anim_frame`
   hits 1.0 for one sample and is 0 the next; everything around it measured GREEN, and
   **there IS no blink texture** — that entry of `dGRPupupuWhispyEyesAnims` carries a NULL
