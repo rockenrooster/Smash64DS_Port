@@ -79,31 +79,36 @@ FLAMEARG f=3 pos  -22.107510  109.954025   -92.605942
 FLAMEARG f=4 pos 1207.044189    0.000000     0.000000
 ```
 
-**The override is live**: `f=2` and `f=3` carry joint 20's and joint 25's world Y
-digit for digit (172.549408, 109.954025) against the joint table above. Before
-the fix that column was 0.
+**RETRACTED — that table was not the maker's argument.** An earlier revision of
+this section read `maker.x = −joint.z`, `maker.z = joint.x − root.x` off it and
+concluded a basis change sat below the override. **`break efManagerFlameLRMakeEffect`
+does not stop in the maker.** Both Flame makers are thin wrappers and GDB's line
+table folds a plain symbol breakpoint into **`efManagerGetNextStructAlloc`**
+(`efmanager.c:1766`) — a shared allocator whose signature is `(sb32
+is_force_return)` and which **has no `pos` parameter at all**. `printf pos->x`
+there printed some unrelated in-scope symbol. The "frame swap" does not exist as
+evidence.
 
-**But the vector reaching the maker is not the world position the override
-wrote.** Against joint 20 = (931.534180, 172.549408, −97.665802) and joint 25 =
-(946.438232, 109.954025, 22.107510):
+**The retry failed differently and is also not evidence.** `break
+*efManagerFlameLRMakeEffect` does stop in the right function, but at the **entry
+instruction** the argument is still in `r0` and its stack slot is uninitialised,
+so `pos->x` read `0.000000 0.000000 0.000000` on all four samples. That is the
+standing "gdb stack locals read 0.0 on this remote" trap, not a measurement.
 
-| component | relation, exact on both samples |
-|---|---|
-| `maker.x` | **= −joint.z** (97.665802 and −22.107510) |
-| `maker.y` | = joint.y — correct |
-| `maker.z` | **= joint.x − 1039.044189**, and 1039.044189 is the fighter's root X |
+**The technique that will work** is the one the Fox matrix probe already uses:
+break at the entry address and deref the ABI register — `printf "%f",
+((Vec3f *)$r0)->x` — or break a few instructions in, past the prologue.
 
-X and Z are swapped, X is negated, and Z is relative to the fighter root. That
-is a basis change plus a translation sitting between `ftParamMakeEffect` and the
-maker's `pos`, and **it is not accounted for**. Two emissions (`f=1`, `f=4`) also
-still arrive with Y = 0.
+**Status of the row: the override is landed and its inputs are proven; what the
+maker receives is UNMEASURED.** What is solid is that `ftParamMakeEffect` now
+writes the source-selected joint's world position into `pos` (the ring's joint
+columns, five distinct healthy joints), and `ndsFTParamMakeSourceEffect`
+forwards `&pos` unchanged on a direct unconditional path. What is missing is the
+independent confirmation at the far end, and after two failed attempts it is
+worth taking rather than assuming.
 
-**So the row is not fixed and must not be reported as fixed.** The next question
-is exactly one: *what converts the frame between `ftParamMakeEffect` writing
-`pos` and `efManagerFlame*MakeEffect` reading it* — the port's particle spawn
-path, or something inside the imported `efmanager.c`. Answer that before
-touching the override again, and do not "correct" the axes at the override,
-which would be compensating for one wrong transform with another.
+Do not "correct" any axis at the override on the strength of the retracted
+table.
 
 ### Order, resolved
 

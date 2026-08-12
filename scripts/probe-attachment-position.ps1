@@ -152,8 +152,16 @@ try {
         # strength -- the FlameLR-only version of this waited out a whole run.
         'delete breakpoints',
         'set $f = 0',
-        'break efManagerFlameLRMakeEffect',
-        'break efManagerFlameRandomMakeEffect',
+        # `break *symbol`, NOT `break symbol`. Both Flame makers are thin
+        # wrappers and GDB's line table folds a plain symbol breakpoint into
+        # efManagerGetNextStructAlloc at efmanager.c:1766 -- a shared allocator
+        # that has no `pos` parameter at all. Printing pos->x there reads
+        # whatever unrelated symbol named `pos` is in scope, which is exactly how
+        # this probe published a bogus "X and Z are swapped and negated"
+        # conclusion that had to be retracted. The entry address cannot be
+        # folded.
+        'break *efManagerFlameLRMakeEffect',
+        'break *efManagerFlameRandomMakeEffect',
         'commands 1-2',
         'silent',
         'set $f = $f + 1',
