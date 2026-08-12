@@ -54,14 +54,13 @@ under this arm's own 9,664 repeat spread**; the mechanism (18 quads, ~12 frames)
 | Boundary arm (`BOTH_CPU 0`) | shipped config, **PASSES** | 899,136 | 1,087,616 |
 | **both-CPU (`BOTH_CPU 1`)** | **R2-07 GATE, FAILS** | 938,368 | **1,207,616** |
 
-**RE-BANKED ON `BOTH_CPU 1` — `…/2026-08-12_c130-fire-gate/LANES_BOTHCPU.md`** (no build,
-no new run; `analyze-tick-hud-excursion.ps1 -Ceilings` emits both tables now). `SRC` owns
-**84.4%** of the 395,863 excursion and its ceiling **207,104 is 2.07x the 100,100 gap —
-the gate is reachable inside `SRC` alone**. `SITR` 83,712 (excursion 156,723) is the
-largest leaf lane, `SHDT` 51,584 the sharpest presence (13.17x on a 4,416 median).
-**`SCPU` +252%, `SPRM` +274%, `SPHD` +158% vs the Boundary table — the wrong arm ran ONE
-CPU; `FTR` is 8,512, not 0.** `MISC`/`AUD` shrank; c125's ceilings are dead. `GCRA` ==
-`SRC` to the tick, so everything spendable is inside `gcRunAll`.
+**RE-BANKED ON `BOTH_CPU 1` — `…/2026-08-12_c130-fire-gate/LANES_BOTHCPU.md`** (no build;
+`analyze-tick-hud-excursion.ps1 -Ceilings` emits both tables now). `SRC` owns **84.4%** of
+the 395,863 excursion and its ceiling **207,104 is 2.07x the 100,100 gap — the gate is
+reachable inside `SRC` alone**. `SITR` 83,712 is the largest leaf lane, `SHDT` 51,584 the
+sharpest presence (13.17x on a 4,416 median). **`SCPU` +252%, `SPRM` +274%, `SPHD` +158%
+vs the Boundary table — the wrong arm ran ONE CPU; `FTR` is 8,512, not 0.** `MISC`/`AUD`
+shrank and c125's ceilings are dead. **NEXT CUT IS SPECIFIED — `…/SITR_NEXT_CUT.md`.**
 
 **THE BIGGEST LEVER IS PLACEMENT.** Memory stall is **1,236,685,107 cycles,
 33.8% of the match** ≈ 386,000 tk/frame — an order of magnitude past `SINT` or
