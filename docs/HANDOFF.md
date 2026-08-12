@@ -34,13 +34,22 @@ Top non-idle rows: `__aeabi_fadd` 41,633 and `__aeabi_fmul` 36,658 (80/80),
 on **35/80, down from 49/80** — slice 48 moved it off 14 tail frames.
 `mutexLock`+`mutexUnlock` 15,084 on 59/80 is the worker's synchronisation.
 
-**THE BIGGEST LEVER IS PLACEMENT, and the census now sizes it.** Memory stall is
+**THE BIGGEST LEVER IS PLACEMENT, and the census sizes it.** Memory stall is
 **1,236,685,107 cycles, 33.8% of the match** (`.main` alone 903,205,474 = 45.6% of
-its tier) ≈ 386,000 tk/frame — an order of magnitude past `SINT` (−56,512) or
-`SHDT` (−38,912). And `.itcm` is NOT full: **30 of its 82 residents never execute
-(2,594 B idle)**, which retires the board's standing "ITCM is 99.1% full".
-Evicting them puts **87,033,153 non-mem stall cycles in reach** vs 26,349,489 for
-the 584 B already free. Census sections B/C/D rank the moves; see task 16.
+its tier) ≈ 386,000 tk/frame — an order of magnitude past `SINT` (−56,512) or `SHDT`
+(−38,912). It is also why slice 48's behaviourally-identical pair differed 94,976.
+
+**SLICE 49 (reclaim dead ITCM) is REFUTED without a build — do not re-open it until
+the Task 37 port group is understood.** True: `.itcm` is NOT full, 30 of its 82
+residents never execute (2,594 B idle), which retires the board's "ITCM is 99.1%
+full". But the census's **87,033,153 non-mem stall cycles in reach** assumes
+admitting ~3,118 B of mostly PORT functions, and `nds_task37_itcm.h` records that
+`NDS_TASK37_ITCM_PORT` is 0 because *"the owner confirmed the enabled lab build
+misbehaves"* — a CORRECTNESS refutation, not a performance one. `sqrtf` is ours
+too (`src/nds/r2/nds_r2_sqrtf.c`, hardware sqrt), so it is in that same group.
+**Eviction alone pays nothing**: ITCM is a fixed 32 KB region and code in it that
+never executes costs no fetches. What is left is `__aeabi_lmul` via the PROVEN
+library-member list (86 B, 3,216,578 cycles ≈ 1,005 tk/frame) — far under the bar.
 
 **Two lane-sizing traps.** Medians do not add (subtracting nested medians from
 `GCRA`'s invented a 110,336 lane that is +9,472/row); `OTHR` CONTAINS `WAIT`, so
@@ -57,6 +66,11 @@ calls not instructions. SIZE IS NOT PERMISSION: float in `gmcollision`/`mp*`/
 
 ## What is dead, so nobody re-derives it
 
+- **`FTR` — −93,612 landed (c116), mean 291,896 vs 385,508, and it is 0/80 on the
+  tail: NOT a P95 lever.** DS-native AOT geometry ships (`NDS_TASK56_FIGHTER_PRIMITIVES ?= 2`)
+  and **it SHIPPED BROKEN** — 35.6% of the fighter backfacing, `BEGIN_VTXS` on
+  group TYPE change welding strips. Boundary passed on it: **a passing verifier is
+  not visual verification. Hand over a ROM.**
 - **Effect DObj submits** — Boundary-only. **Projectiles** · **texture thrash** ·
   **`Find`** · **`Material`** · force-load seam. **`FTR` as the P95 discriminator**
   — flat, 0/80. **`MISC` is PARTICLES and particles are FLAT.** **The AOT animation
@@ -87,14 +101,6 @@ calls not instructions. SIZE IS NOT PERMISSION: float in `gmcollision`/`mp*`/
 **Text counts as much as bss**; a failing arm reads as a hung emulator.
 **`gSYTaskmanGeneralHeap`** free-min **72,188**, above the 32,768 floor.
 
-## FTR: −93,612 landed (c116); now 0/80 presence and NOT a P95 lever
-
-**Banked `FTR` mean 291,896** vs 385,508 (−24.3%). **DS-native AOT geometry ships**
-(`NDS_TASK56_FIGHTER_PRIMITIVES ?= 2`), P50 −10,112 / P95 −14,144 — and **it SHIPPED
-BROKEN**: an undirected edge made 35.6% of the fighter BACKFACING, and `BEGIN_VTXS`
-on group TYPE change welded strips into one list. Boundary passed on it: **a passing
-verifier is not visual verification. Hand over a ROM.**
-
 ## Landed slices and the lanes they leave
 
 **SLICE 43 WITHDRAWN 2026-08-11.** All targets force `NDS_R2_FIGHTER_GX_COMPOSE=0`;
@@ -103,9 +109,9 @@ stack leaks ~3 pushes/frame, wrapping mod 32. That line's `|| NDS_TICK_HUD` is
 pinned by `check-gbi-decode-fixtures.ps1:2247` — Boundary went RED for a cycle
 because the guard moved, not the assertion.
 **SLICE 46 KEPT — 1,213,440 → 1,196,224** (`…/SLICE46.md`). The warm preload never
-finished (83 of 85) and covered only 57 of the 87 used ids. Replaced with the
+finished (83 of 85) and covered only 57 of the 87 used ids; replaced with the
 measured 87, 4 per scene update: **misses 32 → 2**, arena 257,200 → 192,240 (it
-SHRINKS), Rejects 0. **Stepping is bounded by the BGM packet seam**, not load time.
+SHRINKS). **Stepping is bounded by the BGM packet seam**, not load time.
 
 **SLICE 48 KEPT — read its SIZE, not its bank (`…/SLICE48.md`).** The FAT lane is
 **BGM**: `RefillCount` 104 == `WorkerWakeCount` 104, and the anim cache cannot own
@@ -130,20 +136,18 @@ bucket** — reading it as one mis-attributed an A/B in c119. Ceiling −56,512.
 **Zero-copy force-load is closed:** `ftmain.c:4623` DISCARDS the return value.
 
 **SLICE 47 REVERTED — the `SHDT` reach bound is DEAD, geometrically.** Shipped
-MEASURE-ONLY: **`ReachTests 2,373  WouldSkip 0  Unsound 0`** — it never rejects.
-The bound sums |translate| up the parent chain, so for a hand it is most of the
+MEASURE-ONLY: **`ReachTests 2,373  WouldSkip 0  Unsound 0`** — it never rejects. The
+bound sums |translate| up the parent chain, so for a hand it is most of the
 fighter's extent, and `gmCollisionCheckFighterInFighterRange` has already put the
-attacker inside that radius. Tightening it needs the joint's position, which is
-the transform being skipped: circular. Carry: `gmCollisionTestRectangle` also
-serves item/weapon/ground — **never attribute a shared leaf's volume to one
-caller**; and a bound belongs in a POKEABLE global, not a `#define`.
+attacker inside that radius; tightening it needs the joint's position, which is the
+transform being skipped. Carry: `gmCollisionTestRectangle` also serves
+item/weapon/ground — **never attribute a shared leaf's volume to one caller**.
 
 **The collision transform chain is honest work, not redundancy (c123).** Latches
 clear once per fighter per frame in `ftParamsUpdateFighterPartsTransformAll`
-(`ftmain.c:1847`, after physics), then hit detection rebuilds lazily and shares
-ancestors. `func_ovl2_800ED490` runs 17.1 composes on a tail frame vs 1.34 on
-control, `gmCollisionSetInvertMatrix` 15.1 vs 1.14 — a 13–18x **call-count** ratio.
-No extra pass to delete; the lever is touching fewer parts.
+(`ftmain.c:1847`), then hit detection rebuilds lazily and shares ancestors.
+`func_ovl2_800ED490` runs 17.1 composes on a tail frame vs 1.34 on control — a
+13–18x **call-count** ratio. No pass to delete; the lever is touching fewer parts.
 
 **Do not bring a micro-fix** — R2-06 E11: a load-frame-only ~8,000 cannot be
 banked. Clear ~16,000 in one change, or **use the `.data` route on ONE binary**
