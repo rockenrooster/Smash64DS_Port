@@ -2736,6 +2736,10 @@
           "classification": "live_camera_dependent"
         },
         {
+          "access": "workspace.slice44_validate_cursor",
+          "classification": "live_camera_independent"
+        },
+        {
           "access": "workspace.task36_runtime_rigid_mask",
           "classification": "live_camera_independent"
         },
@@ -2947,6 +2951,10 @@
         },
         {
           "access": "workspace.resolver.primary_file",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "workspace.slice44_validate_cursor",
           "classification": "live_camera_independent"
         },
         {

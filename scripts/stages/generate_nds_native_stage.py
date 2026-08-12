@@ -982,6 +982,7 @@ SOURCE_CLOSURE_POLICIES = (
                 workspace.task44_binding_lists_valid
                 workspace.task44_dynamic_binding_count
                 workspace.task44_dynamic_bindings
+                workspace.slice44_validate_cursor
                 """,
             ),
         },
@@ -1058,6 +1059,7 @@ SOURCE_CLOSURE_POLICIES = (
                 workspace.resolver.primary_file workspace.stats
                 workspace.task36_runtime_rigid_mask
                 workspace.task44_admission_generation
+                workspace.slice44_validate_cursor
                 """,
             ),
             **_classified(

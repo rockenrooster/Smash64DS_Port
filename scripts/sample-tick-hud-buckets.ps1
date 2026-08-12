@@ -973,6 +973,15 @@ try {
             }
             $csv += ($cells -join ',')
         }
+        # Same two lines -JsonOut has carried since it was added, and they
+        # belong here for a stronger reason: this write happens BEFORE the
+        # percentiles are computed at all, so a missing parent directory does
+        # not lose a file -- it throws away the whole run, after the emulator
+        # has already spent its ~7 minutes, and prints a path error rather than
+        # a measurement. -JsonOut's own guard runs 370 lines later and cannot
+        # save it.
+        $rowsDir = Split-Path -Parent $RowsCsv
+        if ($rowsDir) { New-Item -ItemType Directory -Force -Path $rowsDir | Out-Null }
         Set-Content -LiteralPath $RowsCsv -Value $csv -Encoding ascii
         Write-Host "Wrote $RowsCsv"
     }

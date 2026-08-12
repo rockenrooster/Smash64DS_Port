@@ -636,6 +636,38 @@ NDS_R2_FIGHTER_HW_MTX ?= 0
 #       is exactly the claim E8 proved gets read wrong.
 # Promote 2 -> 1 only on a zero gNdsR2GxComposeVerifyFail run.
 NDS_R2_FIGHTER_GX_COMPOSE ?= 0
+# Slice 44. Round-robins the stage's per-frame transform revalidation over N
+# frames instead of running the whole sweep every frame. Requires
+# NDS_TASK36_HW_COMPOSE and NDS_TASK44_STAGE_STEADY.
+#
+# What it deletes, measured on the c120 profile (1600-frame both-CPU gate):
+# ndsRendererAdapterStageWorldSourceKeyMatches runs 54.0x a frame for 7,719
+# ticks, and ndsRendererAdapterBuildPersistentStageWorldMatrix another 9,017.
+# Neither builds anything. The 26 rigid bindings are re-proved constant every
+# frame and the 16 dynamic ones re-walk a parent chain whose cached answer they
+# then reuse. --pc-detail says the cost is not the compare: the four hottest
+# instructions are `ldrb r1,[r1,#4]` (xobj->kind, 27.6 cyc/insn),
+# `ldrb r3,[r1,r3]` (22.7), `ldrb r2,[r0,r3]` (22.3) and `ldr r3,[r0,#76]`
+# (dobj->vec, 17.3) -- 9.7M cycles of cold pointer chase into 42 DObjs and
+# their XObjs, every frame, against a 4 KB D-cache. Making the compare cheaper
+# buys nothing; the only lever is not touching the objects.
+#
+# Why a stride and not a deletion: the guard is what demotes a binding that
+# stops being rigid, and cycles 52 and the 0x4F/0x50 kinds each cost a build
+# proving that a frozen matrix is a real fidelity bug. A stride keeps every
+# binding checked -- just not all of them on the same frame -- so a binding
+# that does move is still caught, within N frames, and the mask still drops.
+# On Dream Land it never fires: gNdsRendererTask36RigidConstancyMismatchCount
+# is 0 over 1600 frames and R2-02 arm C found all 16 dynamic source keys
+# matching for the whole match.
+#
+# Why round-robin and not "full sweep every Nth frame": at N=8 the second shape
+# makes 12.5% of frames expensive, and P95 would land on one of them and read
+# flat. Spreading 42/N checks across every frame is what moves P50 and P95
+# together. See memory cluster-where-the-percentile-lives.
+#   0 = validate everything every frame (shipped before slice 44).
+#   N = each binding is revalidated once every N frames.
+NDS_R2_STAGE_VALIDATE_STRIDE ?= 0
 # R2-03 E16. Requires NDS_R2_FIGHTER_HW_MTX (E17), which is what puts the
 # modelview rather than the composed MVP into the vector matrix. Moves the
 # fighter's per-vertex lighting onto the DS geometry engine: a load-time
@@ -1282,6 +1314,20 @@ override NDS_R2_FIGHTER_HW_MTX := 1
 # 130/51, so the arms played the same match. Frame-locked captures at match tic
 # 3000 are pixel-identical, so this is not a fidelity trade.
 override NDS_R2_FIGHTER_GX_COMPOSE := 1
+# Slice 44: the stage's per-frame transform revalidation round-robins over 8
+# frames instead of re-proving all 42 bindings constant every frame. Matched
+# control from the same tree, 1,600-frame both-CPU gate: WORK-H P50 -17,088 /
+# P95 -35,904, i.e. 2.0x and 4.2x the +/-8,544 floor, and it lands where it was
+# aimed -- STG P50 -19,904 / P95 -24,192 with FTR flat. VBlank histogram
+# 2:1621->2:1644 with 3/4/5+ all down. Engagement on both sides: RigidChecks
+# 6,627 of 53,014 sweep slots is exactly 1/8, and 53,014 = 26 x 2,039 means
+# every frame swept, so the rigid mask never once demoted. StaleReuse 28,518
+# against 28,546 predicted. The game viewport is pixel-identical at two
+# frame-locked tics (118,000 px, max channel delta 0) and both arms read
+# damage 130/51 stock x1 at the lock, so neither presentation nor simulation
+# moved. Not graduated onto the BUGS.md #9 floor arms below: those exist to
+# compare the rigid path against the CPU path and a stride would confound them.
+override NDS_R2_STAGE_VALIDATE_STRIDE := 8
 # R2-03 E16: the fighter's per-vertex lighting runs on the geometry engine
 # instead of the CPU. -35,072 FTR P50, VBlank histogram 2:381->2:418, geometry
 # bit-identical (181,440 P0 triangles either way). Requires HW_MTX above for the
@@ -1492,6 +1538,11 @@ override NDS_TASK36_HW_COMPOSE := 2
 # R2-03 E17/E16: match the published block. Any flag there is on this one too.
 override NDS_R2_FIGHTER_HW_MTX := 1
 override NDS_R2_FIGHTER_GX_COMPOSE := 1
+# Slice 44. This is the instrument every measurement runs on, so it has to stay
+# flag-identical to the published block -- a stride on one and not the other
+# would put ~35,900 of WORK-H P95 between the ROM being judged and the ROM
+# doing the judging.
+override NDS_R2_STAGE_VALIDATE_STRIDE := 8
 override NDS_R2_FIGHTER_HW_LIGHT := 1
 # R2-03 E32. See the published block for the accepted visual residual.
 override NDS_R2_FIGHTER_SHUFFLE_FOLD := 1
@@ -3058,6 +3109,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_R2_FIGHTER_MTX_DIRECT $(NDS_R2_FIGHTER_MTX_DIRECT)'; \
 		echo '#define NDS_R2_FIGHTER_HW_MTX $(NDS_R2_FIGHTER_HW_MTX)'; \
 		echo '#define NDS_R2_FIGHTER_GX_COMPOSE $(NDS_R2_FIGHTER_GX_COMPOSE)'; \
+		echo '#define NDS_R2_STAGE_VALIDATE_STRIDE $(NDS_R2_STAGE_VALIDATE_STRIDE)'; \
 		echo '#define NDS_R2_FIGHTER_HW_LIGHT $(NDS_R2_FIGHTER_HW_LIGHT)'; \
 		echo '#define NDS_R2_FIGHTER_SOFT_LIGHT_KEEP $(NDS_R2_FIGHTER_SOFT_LIGHT_KEEP)'; \
 		echo '#define NDS_TICK_HUD_DRAW $(NDS_TICK_HUD_DRAW)'; \

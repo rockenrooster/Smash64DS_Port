@@ -381,6 +381,15 @@ typedef struct NDSRendererAdapterNativeStageWorkspace
     u8 task44_rigid_binding_count;
     u8 task44_dynamic_binding_count;
     u8 task44_binding_lists_valid;
+#if NDS_R2_STAGE_VALIDATE_STRIDE
+    /* Slice 44. Which residue class of the stride is revalidated this frame.
+     * Advanced once per PrepareNativeStageOwner, which is once per frame --
+     * the c120 profile pins that at 26 rigid checks per frame against a
+     * 26-entry list. Both the rigid sweep and the dynamic chain walk read it,
+     * so a binding's rigid proof and its world rebuild land on the same frame
+     * and the per-frame cost stays flat instead of spiking every Nth frame. */
+    u8 slice44_validate_cursor;
+#endif
 #endif
 #endif
     NDSRendererNativeMaterial materials[
@@ -476,6 +485,21 @@ static NDSRendererAdapterCameraCacheEntry
     sNdsRendererAdapterCameraCache[NDS_RENDERER_ADAPTER_CAMERA_CACHE_COUNT];
 static u32 sNdsRendererAdapterCameraCacheFrame;
 static u32 sNdsRendererAdapterCameraCacheCount;
+#if NDS_R2_STAGE_VALIDATE_STRIDE
+#if !NDS_TASK36_HW_COMPOSE || !NDS_TASK44_STAGE_STEADY
+#error "NDS_R2_STAGE_VALIDATE_STRIDE needs NDS_TASK36_HW_COMPOSE and NDS_TASK44_STAGE_STEADY: the cursor lives in the Task 44 dense-list workspace and the sweep it strides is the Task 36 rigid guard."
+#endif
+/* Slice 44 engagement, both sides. `StaleReuse` counts world matrices returned
+ * from an earlier frame, `RigidChecks` the rigid source keys actually compared,
+ * `RigidSkips` the ones the stride deferred. Producer and consumer both, because
+ * slice 43 read 32.06 roots a frame as full engagement while the producer was
+ * declining every owner -- one counter would have said the same thing there.
+ * __attribute__((used)): these are write-only from C, so -ffunction-sections
+ * plus --gc-sections drops them and Boundary fails on a missing ELF symbol. */
+__attribute__((used)) u32 gNdsR2Slice44StaleReuse;
+__attribute__((used)) u32 gNdsR2Slice44RigidChecks;
+__attribute__((used)) u32 gNdsR2Slice44RigidSkips;
+#endif
 static NDSRendererAdapterDObjWorldCacheEntry
     *sNdsRendererAdapterDObjWorldCache;
 static u32 sNdsRendererAdapterDObjWorldCacheFrame;
@@ -2816,8 +2840,15 @@ static sb32 ndsRendererAdapterBuildDObjWorldMatrixM2Profile(
 #endif
 
 #if NDS_RENDERER_HW_TRIANGLES
+/* allow_stale: slice 44. TRUE means "this DObj's chain is not in this frame's
+ * stride class, so a world matrix built on an earlier frame is accepted as-is".
+ * Only the stage's own dynamic bindings may pass TRUE. The general caller at
+ * the effect/fighter seam must not: kinds 0x4F and 0x50 are on the source-key
+ * reject list precisely because their locals read live FTParts state, and a
+ * matrix held over even one frame there is the frozen-attachment bug cycle 52
+ * already paid for. */
 static sb32 ndsRendererAdapterBuildPersistentStageWorldMatrix(
-    DObj *dobj, NDSRendererMatrix20p12 *out)
+    DObj *dobj, NDSRendererMatrix20p12 *out, sb32 allow_stale)
 {
     DObj *chain[NDS_RENDERER_ADAPTER_DOBJ_PARENT_MAX];
     DObj *cursor = dobj;
@@ -2833,15 +2864,32 @@ static sb32 ndsRendererAdapterBuildPersistentStageWorldMatrix(
 #endif
     u32 i;
 
+#if !NDS_R2_STAGE_VALIDATE_STRIDE
+    (void)allow_stale;
+#endif
     if ((dobj == NULL) || (out == NULL))
     {
         return FALSE;
     }
     entry = ndsRendererAdapterFindStageWorldEntry(dobj);
-    if ((entry != NULL) && (entry->validated_frame == frame))
+    if ((entry != NULL) &&
+        ((entry->validated_frame == frame)
+#if NDS_R2_STAGE_VALIDATE_STRIDE
+         /* generation, not validated_frame, is the "has a world matrix at all"
+          * test: ndsRendererAdapterNextStageWorldGeneration never returns 0,
+          * and frame 0 is a real frame. */
+         || ((allow_stale != FALSE) && (entry->generation != 0u))
+#endif
+         ))
     {
         ndsRendererMatrixCopy20p12(
             out, ndsRendererAdapterStageWorldEntryMatrix(entry));
+#if NDS_R2_STAGE_VALIDATE_STRIDE
+        if (entry->validated_frame != frame)
+        {
+            gNdsR2Slice44StaleReuse++;
+        }
+#endif
         return TRUE;
     }
     while ((cursor != NULL) && (cursor != DOBJ_PARENT_NULL) &&
@@ -2956,6 +3004,14 @@ static sb32 ndsRendererAdapterBuildPersistentStageWorldMatrix(
                 {
                     target->source_key_valid = FALSE;
                     target->validated_frame = 0u;
+                    /* Slice 44 reads `generation != 0` as "this entry holds a
+                     * world matrix a later frame may reuse", so the oracle's
+                     * rebuild-forcing invalidation has to clear that too or the
+                     * stride would hand back the matrix the oracle just
+                     * rejected. The two are never compiled together today --
+                     * this branch is PROFILE_LEVEL >= 2 -- but a one-word
+                     * omission here is exactly how a lab arm reads clean. */
+                    target->generation = 0u;
                 }
             }
         }
@@ -3364,7 +3420,7 @@ static void ndsRendererAdapterPrepareInitialMatrices(
         {
             dobj_world_valid =
                 ndsRendererAdapterBuildPersistentStageWorldMatrix(
-                    dobj, &dobj_world);
+                    dobj, &dobj_world, FALSE);
         }
         else
 #endif
@@ -8571,7 +8627,17 @@ static sb32 ndsRendererAdapterPrepareNativeStageMatrices(
             if ((vp_dobj == NULL) ||
                 (ndsRendererAdapterDirectMvpRecalcKind(vp_dobj) != 0u) ||
                 (ndsRendererAdapterBuildPersistentStageWorldMatrix(
-                     vp_dobj, &vp_world) == FALSE))
+                     vp_dobj, &vp_world,
+#if NDS_R2_STAGE_VALIDATE_STRIDE
+                     /* Slice 44: revalidate this binding's chain only on its
+                      * own frame of the stride. view_projection still multiplies
+                      * in every frame -- the camera moves, the world does not. */
+                     ((dynamic_slot % NDS_R2_STAGE_VALIDATE_STRIDE) ==
+                      workspace->slice44_validate_cursor) ? FALSE : TRUE
+#else
+                     FALSE
+#endif
+                     ) == FALSE))
             {
                 if (ndsRendererAdapterPrepareNativeStageBindingMatrix(
                         cobj, workspace, vp_binding) == FALSE)
@@ -8681,6 +8747,19 @@ static void ndsRendererAdapterValidateTask36StageWorld(
     u32 rigid_slot;
 #endif
 
+#if NDS_R2_STAGE_VALIDATE_STRIDE
+    /* Slice 44. Demotion is one-way within a topology: a binding that stopped
+     * being rigid does not become rigid again until capture re-arms the mask at
+     * ndsRendererAdapterCaptureTask36StageWorld. Before the stride the mask was
+     * rebuilt from the constant here every frame and cleared again by the sweep,
+     * which was equivalent only because the sweep was complete. With a partial
+     * sweep, re-arming would resurrect a binding this frame's slice did not
+     * look at. */
+    if (workspace->task36_runtime_rigid_mask == 0u)
+    {
+        return;
+    }
+#endif
     workspace->task36_runtime_rigid_mask =
         NDS_RENDERER_TASK36_RIGID_BINDING_MASK;
 #if NDS_TASK44_STAGE_STEADY
@@ -8693,6 +8772,15 @@ static void ndsRendererAdapterValidateTask36StageWorld(
              rigid_slot < workspace->task44_rigid_binding_count;
              rigid_slot++)
         {
+#if NDS_R2_STAGE_VALIDATE_STRIDE
+            if ((rigid_slot % NDS_R2_STAGE_VALIDATE_STRIDE) !=
+                workspace->slice44_validate_cursor)
+            {
+                gNdsR2Slice44RigidSkips++;
+                continue;
+            }
+            gNdsR2Slice44RigidChecks++;
+#endif
             binding_index = workspace->task44_rigid_bindings[rigid_slot];
             if (ndsRendererAdapterStageWorldSourceKeyMatches(
                     workspace->binding_dobjs[binding_index],
@@ -8957,6 +9045,18 @@ s32 ndsRendererAdapterPrepareNativeStageOwner(void *camera_gobj_ptr)
         gNdsR2StageTopologyRebuildCount++;
 #endif
         bzero(workspace, sizeof(*workspace));
+#if NDS_R2_STAGE_VALIDATE_STRIDE
+        /* Slice 44. binding_dobjs[] is about to be re-collected from the live
+         * tree, so every stage world entry keyed on an old DObj address is now
+         * meaningless -- and a recycled heap address makes one of them *match*.
+         * That was harmless while `validated_frame == frame` forced a rebuild
+         * every frame; under the stride a collision would hand back the
+         * previous topology's matrix. Free at runtime: this branch is the
+         * once-per-scene rebuild that already bzeroes the whole workspace. */
+        sNdsRendererAdapterStageWorldCacheCount = 0u;
+        memset(sNdsRendererAdapterStageWorldIndex, 0,
+               sizeof(sNdsRendererAdapterStageWorldIndex));
+#endif
         for (i = 0u; i < NDS_RENDERER_ADAPTER_STAGE_ASSET_COUNT; i++)
         {
             workspace->loaded[i] = loaded[i];
@@ -8996,6 +9096,16 @@ s32 ndsRendererAdapterPrepareNativeStageOwner(void *camera_gobj_ptr)
     gNdsTask103PrepAdmitTicks += task103_prep_mark - task103_prep_entry;
 #endif
 #if NDS_TASK36_HW_COMPOSE
+#if NDS_R2_STAGE_VALIDATE_STRIDE
+    /* Slice 44: one advance per frame, here, because this is the only site the
+     * c120 profile shows running exactly once -- 26 rigid checks a frame against
+     * a 26-entry list. Both the rigid sweep below and the dynamic chain walk in
+     * ndsRendererAdapterPrepareNativeStageMatrices read the cursor, so they stay
+     * in phase and every frame does the same amount of work. */
+    workspace->slice44_validate_cursor =
+        (u8)((workspace->slice44_validate_cursor + 1u) %
+             NDS_R2_STAGE_VALIDATE_STRIDE);
+#endif
     ndsRendererAdapterValidateTask36StageWorld(workspace);
 #endif
 #if NDS_TASK103_STAGE_RUN_PHASE
