@@ -172,18 +172,32 @@ The same DL at the same offset is referenced by **`KirbyMain`**
 confirms this asset is the gun. The decomp's "FoxUnknown" is an unresolved
 label, not an unknown asset.
 
-**Port state — three breaks, any one of which is sufficient:**
+**Port state — exactly two breaks.**
 
 1. `ftParamSetModelPartID` is a **no-op stub** that discards all three
    arguments — `src/port/reloc_backend_compat_shims.c:6399`.
    `ftParamSetModelPartDefaultID` (`:13386`) forwards into that stub.
-2. **No dispatch exists** for `nFTMotionEventSetModelPartID`,
-   `nFTMotionEventResetModelPartAll`, or `nFTMotionEventHideModelPartAll`
-   anywhere in `src/` — the enum is declared in `include/ft/fighter.h:1722`
-   and never handled, so the stub is not even reached from the motion script.
-3. The DS fighter geometry pipeline emits **no model-part geometry at all**:
+   Source behaviour to mirror (`ftparam.c:768-785`): set
+   `modelpart_status->modelpart_id_curr`, then `joint->dl = modelpart->dl`.
+   The N64 mechanism is a **display-list pointer swap on the joint DObj**; the
+   DS equivalent is to submit the gun's baked stream at joint 17's matrix,
+   because the DS fighter has no per-joint DL to swap.
+2. The DS fighter geometry pipeline emits **no model-part geometry at all**:
    `scripts/fighters/generate_nds_native_owners.py` has no model-part concept,
    so the gun is absent from the baked owner plan.
+
+**Dispatch is NOT a break — it already works.** An earlier draft of this
+contract claimed no dispatch existed because `nFTMotionEvent*` appears nowhere
+in `src/`. That inference was wrong: the port `#include`s the original
+`ftmain.c` verbatim (`src/import/battleship_ftmain.c:81`), and the source
+decoder handles the event at `ftmain.c:575`, calling
+`ftParamSetModelPartID(fp, ftParamGetJointID(...), modelpart_id)`. The motion
+script's request is live today and is being swallowed by the stub in break 1.
+`nFTMotionEventResetModelPartAll` / `HideModelPartAll` (`:585` / `:591`) are
+dispatched the same way, and their shims (`:1346` / `:1454`) already exist.
+
+> Absence from `src/` proves nothing in this repo — imported source is compiled
+> through `#include`, so grep for the caller before concluding a seam is dead.
 
 | Quantity | Expected (source) | Tol | Probe |
 |---|---|---|---|
@@ -213,13 +227,51 @@ extracted asset directories (`MarioModel`, `StageCastleFile2`,
 `reloc_extern_data` is a naming artifact, not a missing asset. Do not re-derive
 this: search O2R by id, never by name.
 
-**Fix seam.** The DS owner plan is a **statically baked FIFO command stream**, so
-a conditional sub-DL inside it is the wrong shape. The correct DS-specialized
-form — and the one `PROJECT_GOAL.md` asks for — is to bake the gun as its own
-tiny owner (44 verts) drawn after Fox using joint 17's already-computed matrix,
-gated by one visibility flag. That needs a real `ftParamSetModelPartID` (setting
-`modelpart_status`) and event dispatch, but **not** a general model-part
-interpreter: P1 has exactly one model part that matters.
+**Fix seam — two candidate shapes; pick by a code read, not a build.**
+
+The port keeps **live** `fp->joints[]` DObjs with MObj chains: the sibling
+`ftParamSetTexturePartID` (`shims.c:1351-1396`) walks `joint->mobj` and writes
+`mobj->texture_id_curr`, and its neighbour carries a `BUGS.md #7` comment about
+a previous fix in exactly this class. Fighter part state is live, not frozen.
+
+A general F3D executor also already exists — `ndsRendererExecuteDisplayList`
+(`reloc_backend_mp_collision.c:13665`) and `ndsRendererAdapterSubmitStageDL`
+(`renderer_dl.c:11351`), both driven from `dobj->dl`.
+
+1. **Mirror the source**: set `joint->dl = <gun DL>` and let the existing
+   executor draw it — exactly what `ftparam.c:781` does. Cheapest, *if* the
+   fighter draw path routes joints through that executor.
+2. **Bake a tiny owner**: 44 verts submitted after Fox at joint 17's matrix,
+   gated by one visibility flag. Correct regardless of how fighters draw, and
+   the right shape if the Task 56 native primitive stream ignores `dobj->dl`.
+
+**Resolved by code read — shape 1 is dead, and a third, cheaper shape wins.**
+The fighter body draws from a baked primitive stream,
+`src/nds/nds_native_fighter_owner.generated.inc` gated on
+`NDS_TASK56_FIGHTER_PRIMITIVES` (`nds_renderer.c:26069`, `:26459`). It never
+reads `dobj->dl`, so setting `joint->dl` the way the source does would write a
+pointer nothing draws.
+
+3. **Draw the gun the way the beam is already drawn.** `gcDrawDObjDLHead1`
+   (`opening_movie_backend.c:4555`) is a live, working DL draw used by the
+   blaster beam itself (`battleship_fox_blaster.c:73`,
+   `wpDisplayMain(weapon_gobj, gcDrawDObjDLHead1)`), by the spotlight and by
+   the boss shadow (`taskman_seam.c:6162`, `:6903`). Give the gun a small DObj
+   parented to joint 17 with `proc_display = gcDrawDObjDLHead1` and the gun's
+   DL, and it renders through a path this ROM already exercises every time Fox
+   shoots — without touching the baked fighter pipeline at all.
+
+   The per-frame cost is DL interpretation for 44 verts, and only during the
+   SpecialN window, which is short and rare. Against `PROJECT_GOAL.md`'s
+   "fastest correct" rule that is the right trade for P1: shape 2 (baking a
+   dedicated owner) is faster still and remains the fallback if the interpreted
+   cost measures badly, but it should not be paid for before it is shown to be
+   needed.
+
+Either shape needs a real `ftParamSetModelPartID` writing `modelpart_status`,
+but **not** a general model-part interpreter: P1 has exactly one model part that
+matters. All three model-part shims are no-ops today and nothing in `src/` reads
+`modelpart_status`, so the state half is unowned as well as the geometry half.
 
 ### 3b — the muzzle Y (answered, no build required)
 
