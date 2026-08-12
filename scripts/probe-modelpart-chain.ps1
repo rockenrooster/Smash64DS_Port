@@ -60,6 +60,11 @@ $melon_dir = Split-Path -Parent $context.MelonDSPath
 $log_dir = Get-MelonDSVerifierLogDir -Root $root -RunnerSlot $RunnerSlot
 $stdout = Join-Path $log_dir 'melonds.modelpart-chain-probe.stdout.log'
 $stderr = Join-Path $log_dir 'melonds.modelpart-chain-probe.stderr.log'
+$log_temp = if (-not [string]::IsNullOrWhiteSpace($env:SMASH64DS_VERIFY_TEMP_DIR)) {
+    $env:SMASH64DS_VERIFY_TEMP_DIR
+} else {
+    Join-Path $root 'artifacts\verifier-temp\default'
+}
 $config_state = $null
 $emulator = $null
 
@@ -181,18 +186,27 @@ try {
         'quit'
     )
 
-    $capture = Invoke-GdbMarkerScript `
+    Invoke-GdbMarkerScript `
         -Gdb $gdb -Elf $elf -Root $root -Commands $commands `
         -ScriptName 'modelpart_chain_probe.gdb' `
-        -TimeoutSeconds $TimeoutSeconds
-    New-Item -ItemType Directory -Force -Path (Split-Path -Parent $Artifact) | Out-Null
-    Set-Content -LiteralPath $Artifact -Value $capture.Stdout
-    $capture.Stdout -split "`n" |
-        Where-Object { $_ -match '^MP' } |
-        ForEach-Object { Write-Output $_ }
-    Write-Output "probe capture: $Artifact"
+        -TimeoutSeconds $TimeoutSeconds | Out-Null
 }
 finally {
+    # Persist and report from the helper's own capture file, NOT from its return
+    # value. A run that reaches its hit target and one that times out waiting for
+    # the last hit produce the SAME evidence; only the second throws, and the
+    # throw discards the return value, so reading it would have thrown away a
+    # complete chain because hit 8 never came. The file is written either way.
+    $captured = Join-Path $log_temp 'modelpart_chain_probe.gdb.out'
+    if (Test-Path -LiteralPath $captured) {
+        New-Item -ItemType Directory -Force -Path (Split-Path -Parent $Artifact) |
+            Out-Null
+        Copy-Item -LiteralPath $captured -Destination $Artifact -Force
+        Get-Content -LiteralPath $Artifact |
+            Where-Object { $_ -match '^MP' } |
+            ForEach-Object { Write-Output $_ }
+        Write-Output "probe capture: $Artifact"
+    }
     if ($null -ne $emulator) {
         Stop-Process -Id $emulator.Id -Force -ErrorAction SilentlyContinue
     }
