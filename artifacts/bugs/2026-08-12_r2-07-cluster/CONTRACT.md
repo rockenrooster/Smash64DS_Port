@@ -313,6 +313,53 @@ distinct `effect_id` values reaching `ftParamMakeEffect` over a both-CPU match**
 rather than counting one hypothesis at a time. That converts "which effect does
 the owner mean" from guesswork into an enumeration, and it is one build.
 
+#### Enumeration result — the whole `nEFKind` fire space is dead in P1
+
+`effectkind-mask.log`, both-CPU, whole match. **Three** distinct kinds requested
+in the entire match:
+
+```
+  0  nEFKindDamageNormal
+  1  (adjacent DamageNormal variant)
+ 33  nEFKindQuakeMag1
+```
+
+FlameLR (6), FlameRandom (7), FlameStatic (8) and FireSpark (37) are **all
+absent**, confirming the earlier per-kind counters and going further:
+
+> **The four-way fire alias at `shims.c:8180` is dead code in P1** — none of the
+> kinds it collapses is ever requested. Removing it would change nothing on
+> screen, and "fixing" it could never have fixed this row.
+
+**The instrument was on the wrong seam, and that is the finding.**
+`ftParamMakeEffect` is the *fighter motion-script* effect path, and Mario's and
+Fox's scripts only ask for normal-element hits and quake. Fire never enters
+there.
+
+#### The real seam: hit ELEMENT, not motion script
+
+`ftmain.c:2713` dispatches on `ft_attack_coll->element`:
+
+```c
+case nGMHitElementFire:
+    efManagerDamageFireMakeEffect(&pos, ft_attack_coll->damage);
+```
+
+with two more sites at `:2771` and `:2808`. The port `#include`s `ftmain.c`
+verbatim, so this dispatch is live, and `efManagerDamageFireMakeEffect` resolves
+to the real source maker (script 77, packed).
+
+**Next measurement — one counter, at the seam this time:** count calls to
+`efManagerDamageFireMakeEffect`, and alongside it the count of attack collisions
+carrying `nGMHitElementFire`. The pair separates the three remaining
+possibilities without another guess:
+
+| DamageFire calls | Fire-element hits | reading |
+|---:|---:|---|
+| 0 | 0 | Mario's fireball is not tagged fire, or never connects — defect upstream of effects |
+| 0 | > 0 | the dispatch is not reaching the maker |
+| > 0 | > 0 | the effect IS made; the defect is in how it draws |
+
 Note also that `gNdsFighterProjectileProofSpawnSuccessCount` is incremented by
 **both** `battleship_mario_fireball.c:791` and `battleship_fox_blaster.c:80`, so
 on the both-CPU arm it stops being a Fox-only control and becomes a combined
