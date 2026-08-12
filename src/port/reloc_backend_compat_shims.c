@@ -8127,6 +8127,19 @@ void *ftParamMakeEffect(GObj *fighter_gobj, s32 effect_id, s32 joint_id,
      * substitute, and only FireSpark is currently a listed seam, so a single
      * combined counter could not tell "the burn is requested and substituted"
      * from "only FireSpark ever arrives". Count them apart. */
+    /* Enumerate WHICH effect kinds the fire path actually requests, instead of
+     * testing one hypothesis per build. 128 bits as four readable scalars. */
+    if (((u32)effect_id) < 128u)
+    {
+        u32 bit = 1u << (((u32)effect_id) & 31u);
+        switch (((u32)effect_id) >> 5)
+        {
+        case 0u: gNdsFighterEffectKindMask0 |= bit; break;
+        case 1u: gNdsFighterEffectKindMask1 |= bit; break;
+        case 2u: gNdsFighterEffectKindMask2 |= bit; break;
+        default: gNdsFighterEffectKindMask3 |= bit; break;
+        }
+    }
     if ((effect_id == nEFKindFlameLR) ||
         (effect_id == nEFKindFlameRandom) ||
         (effect_id == nEFKindFlameStatic))
