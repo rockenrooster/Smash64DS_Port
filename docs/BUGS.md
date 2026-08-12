@@ -12,7 +12,7 @@ These bugs should be fixed for P1 delivery:
 
 -Fighter burn flames spawn at the wrong places on the damaged fighter.
 
-> LOCALIZED 2026-08-12: port never calls source `ftParamGetEffectJointPosition`, so flames use the generic effect position.
+> MEASURED 2026-08-12: flames spawned at the victim's feet (Y=Z=0); source joint rotation restored, but a frame swap remains below it.
 
 -Fox's pistol model is missing. Also is the pistol beam emitted at correct y location of muzzle?
 

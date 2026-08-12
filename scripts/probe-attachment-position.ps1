@@ -157,6 +157,16 @@ try {
         'commands 1-2',
         'silent',
         'set $f = $f + 1',
+        # THE ARM-DISTINGUISHING READING, and the reason it exists: the ring
+        # columns below CANNOT tell the two arms apart. `generic` is the position
+        # the override replaced and `joint` is the source-selected joint, and
+        # both are identical with the fix in or out -- the first run of this
+        # probe printed byte-identical tables for build-c131-position (no
+        # override) and build-c132-flamejoint (override), which is "one run
+        # relabelled", not agreement. What the MAKER receives is the only value
+        # that moves: feet (Y == 0) without the fix, a body joint (Y != 0) with
+        # it.
+        'printf "FLAMEARG f=%d pos %f %f %f\n", $f, pos->x, pos->y, pos->z',
         ('if $f < ' + $FlameHits),
         'continue',
         'end',
@@ -185,7 +195,7 @@ finally {
             Out-Null
         Copy-Item -LiteralPath $captured -Destination $Artifact -Force
         Get-Content -LiteralPath $Artifact |
-            Where-Object { $_ -match '^(FOXPOS|FLAMEPOS)' } |
+            Where-Object { $_ -match '^(FOXPOS|FLAMEPOS|FLAMEARG)' } |
             ForEach-Object { Write-Output $_ }
         Write-Output "probe capture: $Artifact"
     }

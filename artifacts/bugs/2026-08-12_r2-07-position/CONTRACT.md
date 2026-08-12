@@ -60,6 +60,51 @@ rotation alone.
 stores are plain globals the compiler may reorder, and GDB halted mid-sequence.
 It does not affect any figure above.)
 
+### The candidate is NOT accepted — a frame conversion sits below the override
+
+**The first verification run was worthless and the probe was the reason.** Its
+ring columns printed byte-identical tables for `build-c131-position` (no
+override) and `build-c132-flamejoint` (override), because `generic` is the value
+the override *replaces* and `joint` is the source-selected joint — both are the
+same with the fix in or out. That is "one run relabelled", not agreement. The
+probe now also prints what the **maker** receives, which is the only value that
+moves.
+
+On `build-c132-flamejoint`:
+
+```
+FLAMEARG f=1 pos    0.000000    0.000000     0.000000
+FLAMEARG f=2 pos   97.665802  172.549408  -107.509979
+FLAMEARG f=3 pos  -22.107510  109.954025   -92.605942
+FLAMEARG f=4 pos 1207.044189    0.000000     0.000000
+```
+
+**The override is live**: `f=2` and `f=3` carry joint 20's and joint 25's world Y
+digit for digit (172.549408, 109.954025) against the joint table above. Before
+the fix that column was 0.
+
+**But the vector reaching the maker is not the world position the override
+wrote.** Against joint 20 = (931.534180, 172.549408, −97.665802) and joint 25 =
+(946.438232, 109.954025, 22.107510):
+
+| component | relation, exact on both samples |
+|---|---|
+| `maker.x` | **= −joint.z** (97.665802 and −22.107510) |
+| `maker.y` | = joint.y — correct |
+| `maker.z` | **= joint.x − 1039.044189**, and 1039.044189 is the fighter's root X |
+
+X and Z are swapped, X is negated, and Z is relative to the fighter root. That
+is a basis change plus a translation sitting between `ftParamMakeEffect` and the
+maker's `pos`, and **it is not accounted for**. Two emissions (`f=1`, `f=4`) also
+still arrive with Y = 0.
+
+**So the row is not fixed and must not be reported as fixed.** The next question
+is exactly one: *what converts the frame between `ftParamMakeEffect` writing
+`pos` and `efManagerFlame*MakeEffect` reading it* — the port's particle spawn
+path, or something inside the imported `efmanager.c`. Answer that before
+touching the override again, and do not "correct" the axes at the override,
+which would be compensating for one wrong transform with another.
+
 ### Order, resolved
 
 The shared seam is measured sound, so the Flame fix is safe to land on its own
