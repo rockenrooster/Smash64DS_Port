@@ -8140,16 +8140,6 @@ void *ftParamMakeEffect(GObj *fighter_gobj, s32 effect_id, s32 joint_id,
         default: gNdsFighterEffectKindMask3 |= bit; break;
         }
     }
-    if ((effect_id == nEFKindFlameLR) ||
-        (effect_id == nEFKindFlameRandom) ||
-        (effect_id == nEFKindFlameStatic))
-    {
-        gNdsFighterFlameEffectRequestCount++;
-    }
-    else if (effect_id == nEFKindFireSpark)
-    {
-        gNdsFighterFireSparkRequestCount++;
-    }
     if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
         ((sNdsFighterDashRunDamageStatusSetupActive != FALSE) ||
          (sNdsFighterDashRunDamageExpiryActive != FALSE)) &&

@@ -3916,8 +3916,6 @@ extern volatile u32 gNdsFighterEffectKindMask0;
 extern volatile u32 gNdsFighterEffectKindMask1;
 extern volatile u32 gNdsFighterEffectKindMask2;
 extern volatile u32 gNdsFighterEffectKindMask3;
-extern volatile u32 gNdsFighterFlameEffectRequestCount;
-extern volatile u32 gNdsFighterFireSparkRequestCount;
 extern volatile u32 gNdsFighterModelPartSetCount;
 extern volatile u32 gNdsFighterModelPartOnCount;
 extern volatile u32 gNdsFighterModelPartResetCount;

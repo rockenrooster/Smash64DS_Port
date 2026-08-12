@@ -2782,8 +2782,6 @@ volatile u32 gNdsFighterEffectKindMask0;
 volatile u32 gNdsFighterEffectKindMask1;
 volatile u32 gNdsFighterEffectKindMask2;
 volatile u32 gNdsFighterEffectKindMask3;
-volatile u32 gNdsFighterFlameEffectRequestCount;
-volatile u32 gNdsFighterFireSparkRequestCount;
 volatile u32 gNdsFighterModelPartSetCount;
 volatile u32 gNdsFighterModelPartOnCount;
 volatile u32 gNdsFighterModelPartResetCount;

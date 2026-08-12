@@ -558,8 +558,6 @@ void ndsResetStartupDiagnostics(void)
     gNdsFighterEffectKindMask1 = 0;
     gNdsFighterEffectKindMask2 = 0;
     gNdsFighterEffectKindMask3 = 0;
-    gNdsFighterFlameEffectRequestCount = 0;
-    gNdsFighterFireSparkRequestCount = 0;
     gNdsFighterModelPartSetCount = 0;
     gNdsFighterModelPartOnCount = 0;
     gNdsFighterModelPartResetCount = 0;
