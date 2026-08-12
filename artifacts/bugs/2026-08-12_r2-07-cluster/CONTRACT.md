@@ -23,11 +23,34 @@ palette and texture, and the reloc confirms it (`intern dn_DL+0x5C dn_palette`,
 > the three flame frames; row 3 needs it for the gun. Three thin consumers, one
 > pipeline capability — not three separate fixes.
 
-This is the right unit of work and it should be built once. It also concentrates
-the risk in one place: **VRAM/RAM headroom**, which is the constraint that got
-this deferred to P2 originally. Size that budget first — it is the one thing
-that could come back as "will not fit", and it is cheaper to learn now than
-after three consumers are written.
+This is the right unit of work and it should be built once.
+
+**The "will not fit" risk is refuted, and the capability already exists.**
+`scripts/generate_battle_playable_static_textures.py` already contains
+`build_runtime_qualified_whispy_record` (`:901`) and
+`build_runtime_qualified_fox_record` (`:994`): each takes a 59-word runtime key
+captured at a named profile frame, runs it through the normal conversion and
+the slow oracle, and pins it to its source texture/palette. Whispy's **mouth**
+is already resident by exactly this route. Adding the blink eye frame, the
+three flame frames and the gun texture is *more of a thing this generator
+already does* — not a new dynamic-variant subsystem.
+
+Budget, and it is not close:
+
+| need | format | bytes |
+|---|---|---:|
+| gun texture (row 3) | CI4 32×16 + 16-entry palette | 256 + 32 |
+| flame frames 1–2 (row 2) | I4 16×16 each | 256 |
+| Whispy blink frame(s) (row 1) | CI4, mouth-sized | few hundred |
+
+Against `EXPECTED_RESIDENCY_BYTES 61696` — and the 2026-08-03 `repack_paletted`
+change **returned 74,496 bytes of texture VRAM** (`:62-67`). The additions are
+~1 KB against tens of KB of headroom.
+
+> So the P2 deferral was about the cost of a **general** dynamic-variant system,
+> not about bytes. The specialized fix — pin these specific keys the way the
+> mouth and the late Fox key are already pinned — is cheap, and is exactly the
+> "specialize and precompute" doctrine `PROJECT_GOAL.md` asks for.
 
 Row 3's *state* half is already shipped (`ftParamSetModelPartID` /
 `ftParamResetModelPartAll`, commit `6c2e309b03d`), so row 3 reduces to the
