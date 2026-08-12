@@ -3636,8 +3636,10 @@ static sb32 ndsRendererAdapterBuildGxSlotTable(u32 slot, u32 binding_count)
 {
     const u8 *parents;
     const u8 *cross;
+    const u8 *cross_other;
     u32 parent_count = 0u;
     u32 cross_count = 0u;
+    u32 cross_other_count = 0u;
     u32 next_free = NDS_RENDERER_FIGHTER_GX_SLOT_NONE - 1u;
     u8 *table;
     u32 i;
@@ -3654,7 +3656,16 @@ static sb32 ndsRendererAdapterBuildGxSlotTable(u32 slot, u32 binding_count)
     }
     parents = ndsRendererNativeFighterBindingParents(slot, &parent_count);
     cross = ndsRendererNativeFighterCrossPaletteSlots(slot, &cross_count);
-    if ((parents == NULL) || (cross == NULL) ||
+    /* There is one hardware position/vector palette, shared by both fighters.
+     * Parent slots are allocated per fighter, so they must reserve the UNION of
+     * both generated cross-run slot tables. Reserving only this owner's table
+     * let Fox allocate parent worlds into Mario's cross slots 19..23; Mario then
+     * restored Fox matrices from those slots and periodically clipped the whole
+     * fighter for a frame. Parent-vs-parent overlap is safe because every parent
+     * slot is stored before a child restores it within the same owner execute. */
+    cross_other = ndsRendererNativeFighterCrossPaletteSlots(
+        slot ^ 1u, &cross_other_count);
+    if ((parents == NULL) || (cross == NULL) || (cross_other == NULL) ||
         (parent_count != binding_count) || (cross_count != binding_count))
     {
         return FALSE;
@@ -3687,8 +3698,11 @@ static sb32 ndsRendererAdapterBuildGxSlotTable(u32 slot, u32 binding_count)
         {
             continue;
         }
-        while (ndsRendererAdapterGxSlotTaken(
-                   cross, binding_count, next_free) != FALSE)
+        while ((ndsRendererAdapterGxSlotTaken(
+                    cross, binding_count, next_free) != FALSE)
+               || (ndsRendererAdapterGxSlotTaken(
+                       cross_other, cross_other_count, next_free) != FALSE)
+              )
         {
             if (next_free == 0u)
             {

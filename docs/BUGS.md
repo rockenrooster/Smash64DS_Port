@@ -2,6 +2,26 @@
 AI Agent should mark fixed items with **FIXED** prefix or a 20 word summary if not fixed yet.
 These bugs should be fixed for P1 delivery:
 
+## OPEN — periodic one-frame fighter blink (2026-08-11)
+
+- Symptom: Mario/Fox periodically disappeared for one presented frame and came
+  back on the next. Owner bisect: `build-c119-gxctl` clean;
+  `build-c119-gxcompose`, `build-c119-gxcompose2`, and `build-c121-stride`
+  blinked, isolating the base Slice 43 GX joint-compose path.
+- Submission was never missing. A 96-frame census on the bad GX-compose ROM
+  submitted exactly 320 Mario and 306 Fox hardware triangles every frame.
+- The first root-cause claim was incomplete. Slice 43 really did let Fox parent
+  allocation overlap Mario cross slots 19..23 (bad control `0x00F80000`), and
+  reserving both fighters' cross-slot union removes that collision with zero GX
+  compose declines. **Owner retest still blinked**, so that collision was not the
+  whole defect and must not be called the fix.
+- Correctness mitigation: Slice 43 `NDS_R2_FIGHTER_GX_COMPOSE` is withdrawn from
+  published, tick-HUD/proof, Results, and Bug-9 targets. The renderer returns to
+  the CPU joint-compose path from `build-c119-gxctl`, which the owner bisect
+  established as clean. `NDS_R2_FIGHTER_HW_MTX` remains enabled; it predates the
+  regression. The dormant union reservation stays as a necessary condition if GX
+  joint compose is investigated again.
+
 ## Hit-effect presentation (owner, 2026-08-05, with N64/RetroArch reference shots)
 
 - Some VFX textures are rendering half or 1/4 of the full texture. (like ledge grab effect and fox laser muzzle flash)
@@ -64,4 +84,3 @@ These bugs should be fixed for P1 delivery:
   Neither A/B arm is publishable: both drop to replay mode 1 and
   `NDS_TASK32_DRAW_HOT_TEXT=0`, so both are slower than the shipping ROM. The
   pre-fix reference ROM is kept at `builds/bug9-reference/`.
-

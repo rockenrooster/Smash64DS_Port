@@ -103,12 +103,12 @@ discriminates**: cold bytes in an *entered* body cost **+14,963**.
 - **A per-PC census charges a miss to the instruction that TAKES it**: two redundant first-reader passes came out for **+1,055**.
 - **Compiling the frame-summary counters out is refuted** (FTR −7,378 / STG −2,776): it **breaks the gate** — `…gcrunall-loop-harness.ps1` asserts exact batch and texture-prepare accounting off those globals. **Tick factor 0.4993 tk/cyc** comes from `ALL` vs total cycles; deriving it from the FTR sum is circular.
 
-**SLICE 43 KEPT** (`WORK-H` −10,624/−13,632). `NDS_R2_FIGHTER_GX_COMPOSE`
-graduated: the geometry engine composes the fighter joint chain off the matrix
-palette. **Never carry a cycles-per-word constant between GX command sites** —
-chain `MTX_MULT` ~30, the projection elide in the same function ~8.5, and
-predicting one from the other made it look 3.4x bigger.
-
+**SLICE 43 WITHDRAWN 2026-08-11.** Owner retest still blinked after the parent-slot
+union repair, so the earlier "fixed" claim was false. The overlap `0x00F80000`
+was real but incomplete. Published + measurement/proof targets now force
+`NDS_R2_FIGHTER_GX_COMPOSE=0`, returning to the owner-bisected clean CPU-compose
+path. Historical Slice-43 gain was `WORK-H` −10,624/−13,632; re-bank the gate
+before quoting the current gap. Do not re-enable GX compose without owner proof.
 **SLICE 44 KEPT — gate re-banked 1,244,480 → 1,210,560, P50 → 931,648. Gap now
 ~90,180.** `NDS_R2_STAGE_VALIDATE_STRIDE=8`: the stage re-proved all 42 bindings
 constant **every frame** and then used the cached answer. **WORK-H −17,088 P50 /

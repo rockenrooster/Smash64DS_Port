@@ -3197,7 +3197,36 @@ void ndsPlatformEndFrame(void)
         {
             gNdsHardwareRendererSubmittedFrameCount++;
         }
-#if NDS_SHIP_TELEMETRY || (NDS_RENDERER_PROFILE_LEVEL >= 1)
+/* NDS_TICK_HUD joined this condition for the slice 43 blink (2026-08-11). The
+ * fighters kept submitting a CONSTANT 320/306 triangles a frame while they
+ * visibly vanished for one frame, so submission counters could not see the bug
+ * at all -- what changes on a blink frame is how much of that survives to
+ * POLYGON RAM. These four registers are the difference between "submitted" and
+ * "accepted", and every measurement in this campaign runs on the tick-HUD ROM,
+ * which was the one build that could not read them.
+ *
+ * GFX_STATUS is GXSTAT, so this also carries the position/vector matrix stack
+ * LEVEL (bits 8..12) and its sticky over/underflow bit (15), and that is the
+ * standing lead on the OPEN blink row. Measured over 128 presented frames on a
+ * ROM that still blinked: the error bit was set on EVERY frame, the level
+ * advanced +3 per frame wrapping mod 32, and every frame where it wrapped to 0
+ * was a low-polygon frame -- 449/481/482/513/545 at 145/165/165/106/306 against
+ * a 378 median, no exceptions. That is the stack leaking ~3 unbalanced pushes a
+ * frame, and its 32-frame wrap is the blink's period.
+ *
+ * A leaking stack pointer is harmless while nothing keeps live data in the
+ * stack, which is why the CPU joint compose is clean and why GX joint compose --
+ * which parks parent worlds in absolute MATRIX_STORE levels the pointer walks
+ * over -- is not. So the leak most likely PREDATES slice 43, which only made it
+ * visible; confirming that needs one instrumented build at GX_COMPOSE=0. Note a
+ * glPushMatrix grep cannot balance the books here: the Whispy native path emits
+ * raw MATRIX_PUSH/MATRIX_POP words straight into the FIFO, and
+ * ndsRendererEndParticleQuads' pop is conditional on two separate flags.
+ *
+ * Four volatile register reads on the frame the renderer already flushes. It is
+ * NOT in the published block on purpose: the cost is negligible but not zero,
+ * and the instrument may carry a diagnostic the shipped ROM does not. */
+#if NDS_SHIP_TELEMETRY || (NDS_RENDERER_PROFILE_LEVEL >= 1) || NDS_TICK_HUD
         gNdsHardwareRendererPolyRamCount = GFX_POLYGON_RAM_USAGE;
         gNdsHardwareRendererVertexRamCount = GFX_VERTEX_RAM_USAGE;
         gNdsHardwareRendererStatus = GFX_STATUS;

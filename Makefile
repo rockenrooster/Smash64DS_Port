@@ -1306,14 +1306,13 @@ override NDS_TASK36_HW_COMPOSE := 2
 # both flag states, geometry proven identical (136,640 P0 triangles either way
 # over the same 480-frame window), owner-approved 2026-07-28.
 override NDS_R2_FIGHTER_HW_MTX := 1
-# Slice 43: E17 one level deeper -- the geometry engine composes the JOINT chain
-# too, off the matrix palette, so the CPU does no fighter matrix multiply at all.
-# Matched-control gate, 1,600 frames both-CPU: FTR P50 -8,256 / P95 -8,512,
-# WORK-H P50 -10,624 / P95 -13,632, both arms over the +/-8,544 floor. Engagement
-# Captures/Roots 1.000 and Declines 0 over 2,038 frames; both arms end at damage
-# 130/51, so the arms played the same match. Frame-locked captures at match tic
-# 3000 are pixel-identical, so this is not a fidelity trade.
-override NDS_R2_FIGHTER_GX_COMPOSE := 1
+# Slice 43 WITHDRAWN 2026-08-11. It saved WORK-H P50/P95 10,624/13,632, but the
+# owner bisect found the periodic one-frame fighter disappearance only when this
+# GX joint-compose path is enabled. Reserving the union of Mario/Fox parent/cross
+# palette slots removed one real collision and still did NOT remove the blink on
+# the owner's ROM. Ship the known-clean CPU joint compose until the remaining GX
+# state defect is isolated; keep HW_MTX above, which predates Slice 43 and is clean.
+override NDS_R2_FIGHTER_GX_COMPOSE := 0
 # Slice 44: the stage's per-frame transform revalidation round-robins over 8
 # frames instead of re-proving all 42 bindings constant every frame. Matched
 # control from the same tree, 1,600-frame both-CPU gate: WORK-H P50 -17,088 /
@@ -1537,7 +1536,9 @@ override NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE := 1
 override NDS_TASK36_HW_COMPOSE := 2
 # R2-03 E17/E16: match the published block. Any flag there is on this one too.
 override NDS_R2_FIGHTER_HW_MTX := 1
-override NDS_R2_FIGHTER_GX_COMPOSE := 1
+# Slice 43 is withdrawn in the published block; measurement/proof siblings must
+# match it exactly or they measure a renderer the user is not running.
+override NDS_R2_FIGHTER_GX_COMPOSE := 0
 # Slice 44. This is the instrument every measurement runs on, so it has to stay
 # flag-identical to the published block -- a stride on one and not the other
 # would put ~35,900 of WORK-H P95 between the ROM being judged and the ROM
@@ -1792,7 +1793,9 @@ override NDS_TASK36_HW_COMPOSE := 1
 override NDS_TASK36_RIGID_BINDING_MASK := \
 	$(if $(filter %-rigidoff-hwtri,$(TARGET)),0ULL,)
 override NDS_R2_FIGHTER_HW_MTX := 1
-override NDS_R2_FIGHTER_GX_COMPOSE := 1
+# Match the published fighter path. The stage-floor A/B must not carry the
+# withdrawn Slice 43 fighter regression as an unrelated variable.
+override NDS_R2_FIGHTER_GX_COMPOSE := 0
 override NDS_R2_FIGHTER_HW_LIGHT := 1
 override NDS_R2_FIGHTER_SHUFFLE_FOLD := 1
 override NDS_R2_CUBIC_FIXED := 1

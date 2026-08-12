@@ -7824,6 +7824,23 @@ divergence, and it is the weakest case for urgency.
 
 ## Standing measurement rules (the ones that gate evidence)
 
+### 2026-08-11 — Slice 43 fighter blink reopened; optimization withdrawn
+
+- Owner ROM bisect isolated the regression to base GX compose: `c119-gxctl`
+  clean; `c119-gxcompose`, `gxcompose2`, and `c121-stride` blinked.
+- Bad-ROM 96-frame census proved this was not draw admission: Mario submitted
+  320 and Fox 306 hardware triangles on every sampled frame.
+- Parent/cross palette overlap was real but **not sufficient**: the deliberate
+  bad control measured `0x00F80000`; the union-reservation arm measured zero for
+  both fighters with 0 GX-compose declines, yet the owner's playtest still
+  blinked. Retract the prior "root cause / closed" wording.
+- Correctness wins over the 13,632-tick optimization. Published, tick-HUD/proof,
+  Results, and Bug-9 targets now force `NDS_R2_FIGHTER_GX_COMPOSE=0`, returning
+  to the owner-bisected clean `c119-gxctl` CPU-compose path. Keep HW_MTX on.
+- The 1,210,560 gate was banked with Slice 43 enabled. Its historical delta was
+  `WORK-H` P50/P95 -10,624/-13,632, but do **not** arithmetically re-bank; run the
+  next 1,600-frame gate before quoting the new current gap.
+
 1. Whole-match `-RingDump` sampling is the only gate instrument; label every
    figure with its arm **and its coverage**; DLDI-on only. **Coverage is part
    of a baseline's identity, not a footnote** — a window is "whole match" only
