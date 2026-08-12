@@ -5,6 +5,11 @@ These bugs should be fixed for P1 delivery:
 -Whispys face looks like it plays at low FPS (sub 15 FPS), so we miss the blinks that the eyes do.
 
 > LOCALIZED: Whispy blink timing is source-rate; post-GO eye texture variants reuse the resident frame, hiding the blink.
+> MEASURED 2026-08-12 (`build-c128-foxgun`, whole match): texture lookup misses 0, conversion calls 0,
+> conversion ticks 0, pinned static hits 70,072. The blink texture is not ABSENT — a key is being formed
+> and it MATCHES a resident entry. So the fix is two halves in order: (1) make the renderer key
+> discriminate the differing word, (2) then make all six `dGRPupupuWhispyEyesTextures[2][3]` variants
+> DS-native and resident before GO. Six entries behind a non-discriminating key change nothing on screen.
 
 **FIXED** -Missing fire burn effects. the explosion effect is there but not the flame burn 
 
