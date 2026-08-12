@@ -1,12 +1,14 @@
 # Handoff
 
-Updated: 2026-08-12. **`build-c124-slice48` measures `WORK-H` P95 1,087,296 —
-UNDER the 1,120,380 gate — and that is NOT 108,928 of engineering.**
-`build-c124-bgmprio-create27` restores the c123 bank's exact behaviour and already
-measures **1,101,248**, so **~94,976 is PLACEMENT**. **The gate is met, not stably
-met.** **Every 128-frame figure is unusable** — use `-Samples 1600`. **The cross-build
-floor is NOT ±5,376 once you ADD AN OBJECT: size every change with a same-binary
-route; re-bank reports what the ROM measures, never what the change was worth.**
+Updated: 2026-08-12. **THE GATE ARM WAS MISLABELLED — read
+`artifacts/performance/2026-08-12_c126-armcheck/ARM_MISLABEL.md` FIRST.**
+`build-c124-slice48`, the ROM behind the banked “canonical both-CPU” 1,087,296,
+was built **`NDS_R2_BOTH_CPU 0`** — a Boundary-arm figure. On the arm R2-07's gate
+names (Mario CPU vs Fox CPU, `BOTH_CPU 1`) HEAD measures **1,207,616 — +87,236
+OVER**. **Boundary PASSES (~1,087,600); the R2-07 stress gate FAILS.** Every lane
+ceiling in `EXHAUSTION.md` was computed on `BOTH_CPU 0` rows and must be redone.
+**Every 128-frame figure is unusable** — use `-Samples 1600`. **Size every change
+with a same-binary route; re-bank reports what the ROM measures.**
 
 ## R2-07 is the ACTIVE front, not performance — all three `BUGS.md` rows
 
@@ -40,21 +42,18 @@ dynamic-variant system, not about space.
 
 **R2-08 cannot be finished by an agent**: SwitchPlan `:391` needs the owner's recorded retail play test, `:385` their visual approval.
 
-## The two baselines — same 60-second match (coverage 86.7%), slips 0 every row
+## The two arms — same 60 s match; ONLY `BOTH_CPU 1` is R2-07's gate
 
 | arm | role | `WORK-H` P50 | P95 |
 |---|---|---:|---:|
-| **both-CPU** | **THE GATE** | 900,736 | **1,087,296** (c124-slice48, ~95K placement) |
-| **both-CPU** | prior bank | 938,752 | 1,196,224 (c123-warm) |
-| **Boundary** 163 | shipped config | 920,192 | 1,113,408 (c116 — stale) |
+| Boundary arm (`BOTH_CPU 0`) | shipped config, **PASSES** | 899,136 | 1,087,616 |
+| **both-CPU (`BOTH_CPU 1`)** | **R2-07 GATE, FAILS** | 938,368 | **1,207,616** |
 
-**RE-ATTRIBUTION and LANE CEILINGS live in `…/2026-08-12_c125-slice48/` —
-`split-top80.txt` and `EXHAUSTION.md`.** Headlines only: tail frame 1,161,717 →
-864,735; the largest non-idle, non-softfloat row is
-**`ndsAObjEvent32NormalizeScript` 24,299 on 19/80** (the latent cliff below);
-ceilings `SRC`/`GCRA` **133,056**, `SINT` 57,280, `SHDT` 38,912, **`FTR` 0** for the
-fourth straight measurement. **`GCRA` == `SRC` to the tick**, so everything
-spendable is inside `gcRunAll`.
+**RE-ATTRIBUTION and LANE CEILINGS live in `…/2026-08-12_c125-slice48/` — but they
+are BOUNDARY-arm and must be recomputed on `BOTH_CPU 1`.** Headlines, still useful
+for direction: `ndsAObjEvent32NormalizeScript` 24,299 on 19/80 is the largest
+non-idle non-softfloat row and the latent cliff below; `GCRA` == `SRC` to the tick,
+so everything spendable is inside `gcRunAll`.
 
 **THE BIGGEST LEVER IS PLACEMENT.** Memory stall is **1,236,685,107 cycles,
 33.8% of the match** ≈ 386,000 tk/frame — an order of magnitude past `SINT` or

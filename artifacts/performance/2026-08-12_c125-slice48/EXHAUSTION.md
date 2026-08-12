@@ -1,5 +1,14 @@
 # c125 — where the tail stands after slice 48, and what each lane can still pay
 
+> **ARM CORRECTION (2026-08-12): every number in this file is a BOUNDARY-arm
+> figure, not a both-CPU one.** `build-c124-slice48` was built
+> `NDS_R2_BOTH_CPU 0`; the flag is build-time, so this ROM cannot run the
+> both-CPU arm the R2-07 gate names. On that arm HEAD measures **1,207,616,
+> +87,236 OVER gate**. **Every lane ceiling below is therefore computed on the
+> wrong distribution and must be recomputed before any lane is trusted as
+> dead.** See `../2026-08-12_c126-armcheck/ARM_MISLABEL.md`. The board warned
+> about exactly this failure mode at `P1_EXECUTION_BOARD.md:154`.
+
 Canonical both-CPU gate on `build-c124-slice48` (1600 samples from frame 438,
 `-RingDump`, DLDI ON, `NDS_R2_BOTH_CPU=1`, Boundary GREEN, 0 exceptions):
 
