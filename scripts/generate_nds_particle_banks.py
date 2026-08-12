@@ -648,6 +648,16 @@ P1_PARTICLE_SEAMS = frozenset((
     "efManagerImpactAirWaveMakeEffect",
     "efManagerSetOffMakeEffect",
     "efManagerFireSparkMakeEffect",
+    # Fire burn (BUGS.md). These were absent, so bank script 0x12 was never
+    # packed. They ARE reachable in P1: the fire-damage colour-animation scripts
+    # (colanim ids 12-15, restored 2026-08-12) issue nEFKindFlameLR and
+    # nEFKindFlameRandom themselves, and a both-CPU match now measures both bits
+    # set in gNdsFighterEffectKindMask0. FlameStatic is listed for the same
+    # reason the substitutes are: it costs nothing and keeps the pack correct if
+    # a script ever routes to it.
+    "efManagerFlameLRMakeEffect",
+    "efManagerFlameRandomMakeEffect",
+    "efManagerFlameStaticMakeEffect",
     # sparkles and flashes
     "efManagerSparkleWhiteMultiMakeEffect",
     "efManagerSparkleWhiteMultiExplodeMakeEffect",

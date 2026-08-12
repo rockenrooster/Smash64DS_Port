@@ -34,6 +34,13 @@ _Static_assert(NDS_PARTICLE_BANKS_SOURCE_CHECKSUM == 0xa2a1e85fu,
  * ndsFTParamMakeSourceEffect started routing the motion-script kinds, and their
  * scripts had never been packed. 87 -> 92 scripts, 31 -> 33 textures. The
  * tripwire did its job: it is the only thing that would have stopped a
- * regenerated pack from shipping unexamined. */
-_Static_assert(NDS_PARTICLE_BANKS_TABLE_CHECKSUM == 0x179aea12u,
+ * regenerated pack from shipping unexamined.
+ *
+ * 0x179aea12 -> 0xd22b30b6 on 2026-08-12, deliberately, and again with the
+ * SOURCE checksum unchanged. The fighter fire-damage colanim scripts (ids
+ * 12..15) were restored, so their nEFKindFlameLR / nEFKindFlameRandom /
+ * nEFKindFlameStatic requests now reach real makers instead of a substitute,
+ * and the three Flame seams had never been packed. 92 -> 93 scripts,
+ * 33 -> 34 textures. */
+_Static_assert(NDS_PARTICLE_BANKS_TABLE_CHECKSUM == 0xd22b30b6u,
                "efcommon packed table checksum changed");

@@ -6,9 +6,18 @@ These bugs should be fixed for P1 delivery:
 
 > LOCALIZED: Whispy blink timing is source-rate; post-GO eye texture variants reuse the resident frame, hiding the blink.
 
--Missing fire burn effects. the explosion effect is there but not the flame burn 
+**FIXED** -Missing fire burn effects. the explosion effect is there but not the flame burn 
 
-> LOCALIZED: fire damage reaches DamageFire, but fire colanim scripts 12–15 are absent, so FlameLR/FlameRandom never dispatch.
+> Root cause: fire colanim scripts 12-15 had no port entry, so `ftParamCheckSetColAnimID`
+> rejected the burn before a single Flame command ran; and even once they ran,
+> `ndsFTParamMakeSourceEffect` had no Flame case, so the requests fell to the generic
+> HitFire substitute -- the real makers were not even linked (`--gc-sections` dropped them).
+> Fix: scripts + descriptors restored (`shims.c`), the three Flame seams packed into the
+> particle bank, and FlameLR/FlameRandom/FlameStatic routed to `efManagerFlame*MakeEffect`.
+> Accepted on `build-c127-fire` (both-CPU, 1600 samples, DLDI on): effect-kind mask bits 6
+> and 7 set (FlameLR, FlameRandom dispatched), `gNdsVisualEffectKindMask=0` (no HitFire
+> substitute was made), all three makers present in the linked ELF.
+> Evidence: `artifacts/bugs/2026-08-12_r2-07-cluster/flame-real-makers.log`.
 
 -Fox's pistol model is missing. Also is the pistol beam emitted at correct y location of muzzle?
 

@@ -8138,11 +8138,35 @@ efManagerFlashMiddleMakeEffect(Vec3f *pos);
  * Position is already resolved by ndsFTParamGetVisualPosition, which is the
  * source's own scatter / inverse-size / gmCollisionGetFighterPartsWorldPosition
  * arithmetic, so these cases are the source's right-hand sides verbatim. */
+/* BUGS.md fire burn, second half. These live only inside the imported
+ * efmanager.c (2512/2579/2643) and are declared in no port header, so they are
+ * declared here at their single point of use. Until now nothing referenced
+ * them and --gc-sections dropped them entirely -- the linked ELF carried no
+ * Flame symbol at all -- which is why routing to them is what makes them
+ * exist, not merely what makes them run. */
+extern LBParticle *efManagerFlameLRMakeEffect(Vec3f *pos, s32 lr);
+extern LBParticle *efManagerFlameRandomMakeEffect(Vec3f *pos);
+extern LBParticle *efManagerFlameStaticMakeEffect(Vec3f *pos);
+
 static sb32 ndsFTParamMakeSourceEffect(s32 effect_id, s32 lr, Vec3f *pos,
                                        void **effect)
 {
     switch (effect_id)
     {
+    /* The fighter fire burn. The colanim scripts restored above issue FlameLR
+     * and FlameRandom; taking the real makers here is what stops them
+     * collapsing onto the generic HitFire burst in the substitute switch
+     * below. Bank script 0x12 (FlameLR) and 0x55 (FlameRandom/Static) are
+     * packed for exactly this. */
+    case nEFKindFlameLR:
+        *effect = efManagerFlameLRMakeEffect(pos, lr);
+        return TRUE;
+    case nEFKindFlameRandom:
+        *effect = efManagerFlameRandomMakeEffect(pos);
+        return TRUE;
+    case nEFKindFlameStatic:
+        *effect = efManagerFlameStaticMakeEffect(pos);
+        return TRUE;
     case nEFKindDustLight:
         *effect = efManagerDustLightMakeEffect(pos, lr, 1.0F);
         return TRUE;
@@ -8277,6 +8301,11 @@ void *ftParamMakeEffect(GObj *fighter_gobj, s32 effect_id, s32 joint_id,
         effect_gobj = ndsEFManagerMakeVisualEffect(
             nNDSVisualEffectHitNormal, &pos, 0.8F, lr, NULL);
         break;
+    /* The three Flame kinds now take their real makers above and never reach
+     * here at NDS_R2_SOURCE_EFFECTS_PARTICLE=1. They are NOT dead: the flag is
+     * switchable to 0 for attribution A/Bs, and that arm has no other route to
+     * a fire burn. Deleting them would silently drop the burn from the arm
+     * least likely to be looked at. */
     case nEFKindFlameLR:
     case nEFKindFlameRandom:
     case nEFKindFlameStatic:

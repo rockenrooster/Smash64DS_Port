@@ -1,24 +1,24 @@
 {
   "bytes": {
     "arena_headroom_bytes": 210320,
-    "asset_bytes": 168992,
-    "ds_palette_bytes": 992,
-    "ds_texture_bytes": 168870,
-    "ds_texture_data_bytes": 168000,
+    "asset_bytes": 175264,
+    "ds_palette_bytes": 1120,
+    "ds_texture_bytes": 175140,
+    "ds_texture_data_bytes": 174144,
     "estimate_2026_07_27_bytes": 129768,
     "estimate_2026_07_27_scripts": 26,
     "estimate_2026_07_27_textures": 18,
     "index_table_bytes": 1283,
     "linked_bytes": 12195,
-    "pack_bytes": 181187,
-    "payload_bytes": 179904,
+    "pack_bytes": 187459,
+    "payload_bytes": 186176,
     "script_bank_bytes": 10912,
-    "source_texture_bytes": 250656,
+    "source_texture_bytes": 262992,
     "spare_bytes": 198125
   },
   "checksums": {
     "source_sha256_lo": "0xa2a1e85f",
-    "table_sha256_lo": "0x179aea12"
+    "table_sha256_lo": "0xd22b30b6"
   },
   "quads": {
     "admitted": [
@@ -303,6 +303,13 @@
       },
       {
         "bytes": 1024,
+        "frames": 6,
+        "height": 32,
+        "texture": 12,
+        "width": 32
+      },
+      {
+        "bytes": 1024,
         "frames": 8,
         "height": 32,
         "texture": 35,
@@ -357,6 +364,9 @@
       "efManagerDustLightMakeEffect",
       "efManagerFireGrindMakeEffect",
       "efManagerFireSparkMakeEffect",
+      "efManagerFlameLRMakeEffect",
+      "efManagerFlameRandomMakeEffect",
+      "efManagerFlameStaticMakeEffect",
       "efManagerFlashLargeMakeEffect",
       "efManagerFlashMiddleMakeEffect",
       "efManagerFlashSmallMakeEffect",
@@ -408,6 +418,7 @@
       9,
       10,
       11,
+      12,
       13,
       14,
       15,
@@ -448,6 +459,7 @@
       11,
       16,
       17,
+      18,
       19,
       20,
       21,
@@ -660,6 +672,27 @@
         "efManagerMakeEffectNoForce",
         "efManagerSetPrevStructAlloc"
       ],
+      "efManagerFlameLRMakeEffect": [
+        "efGetStruct",
+        "efManagerDestroyParticleGObj",
+        "efManagerGetEffectNoForce",
+        "efManagerGetNextStructAlloc",
+        "efManagerSetPrevStructAlloc"
+      ],
+      "efManagerFlameRandomMakeEffect": [
+        "efGetStruct",
+        "efManagerDestroyParticleGObj",
+        "efManagerGetEffectNoForce",
+        "efManagerGetNextStructAlloc",
+        "efManagerSetPrevStructAlloc"
+      ],
+      "efManagerFlameStaticMakeEffect": [
+        "efGetStruct",
+        "efManagerDestroyParticleGObj",
+        "efManagerGetEffectNoForce",
+        "efManagerGetNextStructAlloc",
+        "efManagerSetPrevStructAlloc"
+      ],
       "efManagerFoxEntryArwingMakeEffect": [
         "efManagerGetNextStructAlloc",
         "efManagerMakeEffect",
@@ -748,6 +781,9 @@
       "17": [
         "efManagerStarSplashMakeEffect"
       ],
+      "18": [
+        "efManagerFlameLRMakeEffect"
+      ],
       "26": [
         "efManagerSparkleWhiteMultiMakeEffect"
       ],
@@ -819,7 +855,9 @@
       ],
       "85": [
         "efManagerDustExpandSmallMakeEffect",
-        "efManagerDustLightMakeEffect"
+        "efManagerDustLightMakeEffect",
+        "efManagerFlameRandomMakeEffect",
+        "efManagerFlameStaticMakeEffect"
       ],
       "86": [
         "efManagerDustExpandSmallMakeEffect",
@@ -1162,14 +1200,17 @@
       "width": 32
     },
     {
-      "ds_bytes": 0,
-      "ds_format": "NONE",
+      "ds_bytes": 6270,
+      "ds_format": "PAL256",
+      "ds_palette_entries": 63,
       "frames": 6,
       "height": 32,
-      "packed": false,
-      "reason": "not reachable from a P1 effect seam",
+      "max_error": 0.0,
+      "mean_error": 0.0,
+      "packed": true,
       "source_bytes": 12336,
       "source_format": "RGBA16",
+      "source_graded_alpha": false,
       "texture": 12,
       "width": 32
     },
