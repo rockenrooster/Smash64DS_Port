@@ -6402,19 +6402,46 @@ volatile u32 gNdsR204AnimSeen[(NDS_R204_ANIM_ID_SPAN + 31u) / 32u];
  * one -- it takes the on-demand path, and with the arena no longer full it is
  * then cached on that first use, which the old arena could not do.
  *
- * gNdsR204AnimForceLoadRepeat/Total remains the regression check on the list. */
+ * gNdsR204AnimForceLoadRepeat/Total remains the regression check on the list.
+ *
+ * SLICE 46 REPLACED IT AGAIN, FOR THE SAME REASON ONE LAYER DOWN. Cycle 105
+ * fixed the ARM the list was measured on; it did not fix the fact that a list
+ * measured once drifts. Dumped from the c123 gate ROM, `gNdsR204AnimSeen` holds
+ * **87** ids and the 85-entry list above overlapped only **57** of them:
+ *
+ *   used AND warmed   57      warmed but NEVER used   28   (arena spent on nothing)
+ *   used but NOT warm 30      <- these streamed from ROM inside the match
+ *
+ * The 30 are the misses. `gNdsR2AnimCacheMisses` reads 32 on the same run, and
+ * they are not spread: the miss-only symbols `strncasecmp` and
+ * `ndsRelocApplyWordByteSwap` sit on 22 of the 80 costliest frames, and capping
+ * `SINT` on the 32 highest-`SINT` frames is worth **-32,512 WORK-H P95**.
+ *
+ * This SHRINKS the arena rather than growing it, which is why it needs no RAM
+ * budget at all: the old list cached 83 warm entries and then filled 32 more on
+ * demand -- 115 residents, 257,200 bytes, 98.1% of the arena -- where the
+ * measured set is 87 at roughly 194,500. The 28 never-used warms were paying
+ * for themselves twice, in arena bytes and in the countdown steps they consumed
+ * while the assets the match actually wanted went unwarmed.
+ *
+ * An asset missing from this list is still a performance outcome and never a
+ * correctness one, so tailoring it to the measured match is safe in the way a
+ * gameplay change would not be: a miss simply takes the on-demand path.
+ * `gNdsR204AnimForceLoadRepeat/Total` remains the drift check -- re-dump
+ * `gNdsR204AnimSeen` and re-diff rather than assuming this list is still true.
+ */
 static const u16 sNdsR204AnimWarmList[] = {
-    0x1f3u, 0x1f5u, 0x1f6u, 0x1fbu, 0x1ffu, 0x201u, 0x202u, 0x203u,
-    0x204u, 0x205u, 0x206u, 0x207u, 0x20bu, 0x20cu, 0x20du, 0x218u,
-    0x219u, 0x21au, 0x21cu, 0x21du, 0x21eu, 0x21fu, 0x220u, 0x221u,
-    0x22au, 0x22du, 0x22eu, 0x230u, 0x265u, 0x266u, 0x26du, 0x26fu,
-    0x271u, 0x272u, 0x275u, 0x27bu, 0x27du, 0x27eu, 0x27fu, 0x282u,
-    0x283u, 0x284u, 0x285u, 0x28au, 0x28cu, 0x28eu, 0x290u, 0x291u,
-    0x292u, 0x295u, 0x296u, 0x29du, 0x29eu, 0x2a6u, 0x2a7u, 0x2a8u,
-    0x2a9u, 0x2abu, 0x2acu, 0x2aeu, 0x2afu, 0x2b0u, 0x2b1u, 0x2b7u,
-    0x2b8u, 0x2b9u, 0x2bbu, 0x2bcu, 0x2bdu, 0x2bfu, 0x2c0u, 0x2cdu,
-    0x2ceu, 0x2fcu, 0x2fdu, 0x302u, 0x30bu, 0x30cu, 0x30du, 0x30eu,
-    0x311u, 0x312u, 0x313u, 0x314u, 0x315u
+    0x1f3u, 0x1f4u, 0x1f5u, 0x1fbu, 0x1fdu, 0x1feu, 0x1ffu, 0x200u,
+    0x201u, 0x202u, 0x203u, 0x204u, 0x205u, 0x206u, 0x207u, 0x209u,
+    0x20eu, 0x212u, 0x216u, 0x218u, 0x21au, 0x21cu, 0x21du, 0x21fu,
+    0x220u, 0x223u, 0x228u, 0x229u, 0x22au, 0x22du, 0x22eu, 0x22fu,
+    0x230u, 0x26cu, 0x26du, 0x270u, 0x271u, 0x272u, 0x27bu, 0x27cu,
+    0x27du, 0x27eu, 0x27fu, 0x280u, 0x282u, 0x284u, 0x285u, 0x28au,
+    0x28cu, 0x28du, 0x28eu, 0x28fu, 0x290u, 0x291u, 0x292u, 0x293u,
+    0x294u, 0x295u, 0x296u, 0x298u, 0x2a0u, 0x2a7u, 0x2a8u, 0x2a9u,
+    0x2abu, 0x2acu, 0x2afu, 0x2b5u, 0x2b9u, 0x2bcu, 0x2bdu, 0x2bfu,
+    0x2f7u, 0x2fau, 0x2fbu, 0x2fcu, 0x302u, 0x30bu, 0x30cu, 0x311u,
+    0x312u, 0x313u, 0x314u, 0x316u, 0x317u, 0x318u, 0x319u
 };
 
 typedef struct NDSR2AnimCacheEntry {
@@ -7025,7 +7052,34 @@ void ndsR2AnimCachePreloadMatch(void)
  * the 41 frames this needs, so the working set is resident before the first
  * scored frame, and a stepped frame costs exactly what the on-demand path
  * already costs when a fighter changes action -- which demonstrably does not
- * miss a seam. */
+ * miss a seam.
+ *
+ * SLICE 46: that stopped being true once the list grew to 85. Measured on the
+ * c123 gate arm, `gNdsR2AnimWarmLoaded` is **83 of 85** at the end of a whole
+ * match -- the walk never finishes -- and the match takes 32 anim-cache MISSES
+ * inside the sample window. They are not cheap and they are not spread: the
+ * miss-only symbols `strncasecmp` and `ndsRelocApplyWordByteSwap` sit on 22 of
+ * the 80 costliest frames, and capping `SINT` on just the 32 highest-`SINT`
+ * frames is worth **-32,512 WORK-H P95**.
+ *
+ * So step several per update. The bound is NOT loading-time generosity, it is
+ * the BGM packet seam: E4 loaded all 41 in ONE call here and Boundary refused
+ * the build on the ADPCM smoke (SeamMiss 0->1, gNdsAudioBgmPlaying 1->0),
+ * because the stream is double-buffered at 8,196 bytes against 44,100 a second
+ * and the main thread owns ~186 ms between seams. E4's failure puts a real
+ * number on one load: 41 did not fit 186 ms, so a load is >4.5 ms and a safe
+ * step is single digits, not tens. Four finishes the 85-entry list in 22
+ * updates and spends ~18 ms of a 186 ms budget.
+ *
+ * `.data` aligned(32) so `-SetGlobals gNdsR2AnimWarmStep=1` restores the old
+ * cadence at IDENTICAL placement -- and a route A/B is legitimate here in a way
+ * it is not for a gameplay change, because a hit and a miss load the same bytes
+ * and differ only in where they came from. The cache's own contract says so:
+ * every failure path degrades to the uncached load, a performance outcome and
+ * never a correctness one. */
+volatile u32 gNdsR2AnimWarmStep
+    __attribute__((section(".data"), aligned(32))) = 4u;
+
 void ndsR2AnimCachePreloadStep(void)
 {
     /* Cycle 85 SWRM. The one asset load inside SRC, and therefore the honest
@@ -7038,11 +7092,29 @@ void ndsR2AnimCachePreloadStep(void)
     u32 warm_start = cpuGetTiming();
 #endif
 
-    ndsR2AnimCacheValidateGeneration();
-    if (sNdsR204AnimWarmCursor < (sizeof(sNdsR204AnimWarmList) /
-                                  sizeof(sNdsR204AnimWarmList[0])))
     {
-        ndsR2AnimWarmLoadOne(sNdsR204AnimWarmList[sNdsR204AnimWarmCursor++]);
+        /* Read the route ONCE. Reading it per iteration would put a volatile
+         * load inside the loop being measured, the same reason
+         * gcPlayDObjAnimJoint hoists its own. Clamped so a poke of 0 cannot
+         * stall the walk forever and leave the match streaming silently. */
+        u32 step = gNdsR2AnimWarmStep;
+        u32 i;
+
+        if (step == 0u)
+        {
+            step = 1u;
+        }
+        ndsR2AnimCacheValidateGeneration();
+        for (i = 0u; i < step; i++)
+        {
+            if (sNdsR204AnimWarmCursor >= (sizeof(sNdsR204AnimWarmList) /
+                                           sizeof(sNdsR204AnimWarmList[0])))
+            {
+                break;
+            }
+            ndsR2AnimWarmLoadOne(
+                sNdsR204AnimWarmList[sNdsR204AnimWarmCursor++]);
+        }
     }
 #if NDS_TICK_HUD
     gNdsTickHudSrcAnimWarmTicks += cpuGetTiming() - warm_start;
