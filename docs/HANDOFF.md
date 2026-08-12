@@ -1,21 +1,19 @@
 # Handoff
 
-Updated: 2026-08-12. **`build-c124-slice48` measures `WORK-H` P95 1,087,296, and
-that is NOT 108,928 of engineering.** The c123 bank was 1,196,224
-(`build-c123-warm`, slices 45+46, Boundary GREEN); slice 48 then proved that a
-build restoring the bank's exact behaviour (`build-c124-bgmprio-create27`)
-already measures **1,101,248**, so **~94,976 of the gap is PLACEMENT** and will
-evaporate on the next unrelated edit. **The gate is not stably met.** Slice 48's
-own lever is ~−15,000. Slice 45 took −11,840, slice 46 −17,216.
-**Every 128-frame figure in the archive is unusable** — use `-Samples 1600`.
+Updated: 2026-08-12. **`build-c124-slice48` measures `WORK-H` P95 1,087,296 —
+UNDER the 1,120,380 gate — and that is NOT 108,928 of engineering.** The c123 bank
+was 1,196,224 (Boundary GREEN); `build-c124-bgmprio-create27` restores that bank's
+exact behaviour and already measures **1,101,248**, so **~94,976 is PLACEMENT** and
+moves again on any unrelated edit. **The gate is met, not stably met.** Slice 48's
+own lever is ~−15,000; slice 45 −11,840, slice 46 −17,216. **Every 128-frame figure
+in the archive is unusable** — use `-Samples 1600`.
 
 **THE CROSS-BUILD FLOOR IS NOT ±5,376 ONCE YOU ADD AN OBJECT.** That figure came
 from two near-identical HEAD controls. Slice 48's behaviourally-identical pair
-differs by **94,976** after adding ~50 bytes and one `aligned(32)` `.data` object
-— which shifts every later `.data` object's cache lines. Not a cache-state
-story: the FASTER build has more anim-cache misses (14 vs 2) and more payload
-reads (135 vs 123). **Size every change with a same-binary route; re-bank only
-reports what the ROM measures, never what the change was worth.**
+differs by **94,976** after adding ~50 bytes and one `aligned(32)` `.data` object.
+Not a cache-state story: the FASTER build has more anim-cache misses (14 vs 2) and
+more payload reads (135 vs 123). **Size every change with a same-binary route;
+re-bank reports what the ROM measures, never what the change was worth.**
 
 ## The two baselines — same 60-second match (coverage 86.7%), slips 0 every row
 
@@ -27,39 +25,37 @@ reports what the ROM measures, never what the change was worth.**
 
 **RE-ATTRIBUTED on the slice-48 ROM** (`…/2026-08-12_c125-slice48/split-top80.txt`,
 `NDS_TICK_HUD_DRAW=0`, 1600 frames). Premium/tail frame **1,161,717 → 864,735**.
-Top non-idle rows: `__aeabi_fadd` 41,633 and `__aeabi_fmul` 36,658 (80/80),
-`memcpy` 37,474 (80/80, 71% mem), **`ndsAObjEvent32NormalizeScript` 24,299 on
-19/80** — 3x its c123 cost and MORE clustered, and it is the latent cliff below.
-`ndsR2FtAnimParseDObjFigatree` 23,168 (80/80). FAT family survives at ~47,600 but
-on **35/80, down from 49/80** — slice 48 moved it off 14 tail frames.
+Top non-idle rows: `__aeabi_fadd` 41,633, `__aeabi_fmul` 36,658, `memcpy` 37,474
+(all 80/80), **`ndsAObjEvent32NormalizeScript` 24,299 on 19/80** — 3x its c123 cost,
+MORE clustered, and it is the latent cliff below. FAT family ~47,600 but on
+**35/80, down from 49/80** — slice 48 moved it off 14 tail frames.
 
 **LANE CEILINGS on that ROM** (`…/EXHAUSTION.md`; cap the lane at its own median
-PER ROW, re-take the 80th of 1,600 — baseline 1,089,152 under that convention):
-`SRC` **133,056**, `GCRA` **133,056**, `SINT` 57,280, `SHDT` 38,912, `MISC` 31,680,
-`SPHD` 17,152, `AUD` 13,312, `SCPU` 4,288, `STG` 2,048, **`FTR` 0**. **`GCRA` ==
-`SRC` to the tick**, so all spendable work is inside `gcRunAll`; `FTR` is 0 for the
-FOURTH consecutive measurement at a median of 303,232.
+PER ROW, re-take the 80th of 1,600 — baseline 1,089,152 that way): `SRC`/`GCRA`
+**133,056**, `SINT` 57,280, `SHDT` 38,912, `MISC` 31,680, `SPHD` 17,152, `AUD`
+13,312, `SCPU` 4,288, `STG` 2,048, **`FTR` 0**. **`GCRA` == `SRC` to the tick**, so
+all spendable work is inside `gcRunAll`; `FTR` is 0 for the FOURTH straight
+measurement at a median of 303,232.
 
 **THE BIGGEST LEVER IS PLACEMENT, and the census sizes it.** Memory stall is
-**1,236,685,107 cycles, 33.8% of the match** (`.main` alone 903,205,474 = 45.6% of
-its tier) ≈ 386,000 tk/frame — an order of magnitude past `SINT` (−56,512) or `SHDT`
-(−38,912). It is also why slice 48's behaviourally-identical pair differed 94,976.
+**1,236,685,107 cycles, 33.8% of the match** (`.main` alone 45.6% of its tier)
+≈ 386,000 tk/frame — an order of magnitude past `SINT` or `SHDT`, and why slice
+48's behaviourally-identical pair differed 94,976.
 
 **SLICE 49 (reclaim dead ITCM) is REFUTED without a build — do not re-open it until
 the Task 37 port group is understood.** True: `.itcm` is NOT full, 30 of its 82
-residents never execute (2,594 B idle), which retires the board's "ITCM is 99.1%
-full". But the census's **87,033,153 non-mem stall cycles in reach** assumes
-admitting ~3,118 B of mostly PORT functions, and `nds_task37_itcm.h` records that
+residents never execute (2,594 B idle), retiring the board's "ITCM is 99.1% full".
+But the census's **87,033,153 non-mem stall cycles in reach** assumes admitting
+~3,118 B of mostly PORT functions, and `nds_task37_itcm.h` records that
 `NDS_TASK37_ITCM_PORT` is 0 because *"the owner confirmed the enabled lab build
-misbehaves"* — a CORRECTNESS refutation, not a performance one. `sqrtf` is ours
-too (`src/nds/r2/nds_r2_sqrtf.c`, hardware sqrt), so it is in that same group.
-**Eviction alone pays nothing**: ITCM is a fixed 32 KB region and code in it that
-never executes costs no fetches. What is left is `__aeabi_lmul` via the PROVEN
-library-member list (86 B, 3,216,578 cycles ≈ 1,005 tk/frame) — far under the bar.
+misbehaves"* — a CORRECTNESS refutation, not a performance one; `sqrtf` is ours too
+(`src/nds/r2/nds_r2_sqrtf.c`) so it is in that group. **Eviction alone pays
+nothing** — ITCM is fixed 32 KB and code never fetched costs nothing. What is left
+is `__aeabi_lmul` via the PROVEN library-member list (86 B ≈ 1,005 tk/frame).
 
 **Two lane-sizing traps.** Medians do not add (subtracting nested medians from
-`GCRA`'s invented a 110,336 lane that is +9,472/row); `OTHR` CONTAINS `WAIT`, so
-its −116,800 ceiling is idle. Only `WORK-H` is spendable.
+`GCRA`'s invented a 110,336 lane worth +9,472/row); `OTHR` CONTAINS `WAIT`, so its
+−116,800 ceiling is idle time. Only `WORK-H` is spendable.
 
 **Profile with `NDS_TICK_HUD_DRAW=0` or you profile the instrument** — the HUD
 costs ~345,024 tk twice a second on exactly the frames P95 is decided on. The GATE
@@ -112,8 +108,8 @@ calls not instructions. SIZE IS NOT PERMISSION: float in `gmcollision`/`mp*`/
 **SLICE 43 WITHDRAWN 2026-08-11.** All targets force `NDS_R2_FIGHTER_GX_COMPOSE=0`;
 do not re-enable without owner proof. Lead at `nds_platform.c:3197`: the matrix
 stack leaks ~3 pushes/frame, wrapping mod 32. That line's `|| NDS_TICK_HUD` is
-pinned by `check-gbi-decode-fixtures.ps1:2247` — Boundary went RED for a cycle
-because the guard moved, not the assertion.
+pinned by `check-gbi-decode-fixtures.ps1:2247` — Boundary went RED because the
+guard moved, not the assertion.
 **SLICE 46 KEPT — 1,213,440 → 1,196,224** (`…/SLICE46.md`). The warm preload never
 finished (83 of 85) and covered only 57 of the 87 used ids; replaced with the
 measured 87, 4 per scene update: **misses 32 → 2**, arena 257,200 → 192,240 (it
@@ -185,10 +181,10 @@ the owner (`BUGS.md`).
   fires at the first frame-complete marker; record what was actually applied or
   the control is the candidate relabelled (slice 48 got 1,102,208 on both arms).
 - **`--pc-detail` BEFORE designing — no build, and it routinely names a different
-  lever than the source reads like.** Slice 44's guard looked like a compare;
-  four cold `ldr`s were 39%. It also killed the resolver if-chain: the chain runs
-  1,309 times a match, the two scans behind it 219,115. **Resolve lines against
-  `NDS_TASK10_GIT_SHORT`.**
+  lever than the source reads like.** Slice 44's guard looked like a compare, but
+  four cold `ldr`s were 39%; the resolver's if-chain runs 1,309 times a match to
+  its scans' 219,115; 85.5% of `ndsAObjEvent32NormalizeScript` is two pointer
+  scans, not its logic.
 
 ## Restart surface — parked items live on the board's **Parked** list
 
