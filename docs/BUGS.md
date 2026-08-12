@@ -8,11 +8,11 @@ These bugs should be fixed for P1 delivery:
 
 -Missing fire burn effects. the explosion effect is there but not the flame burn
 
-> LOCALIZED 2026-08-12: real Flame makers run, still no visible burn; owner playtest of `build-c127-fire` disproved closure.
+> OWNER-QUEUED 2026-08-12: FlameLR's texture had no atlas cell and drew nothing; admitted, flames captured on the candidate.
 
 -Fox's pistol model is missing. Also is the pistol beam emitted at correct y location of muzzle?
 
-> LOCALIZED 2026-08-12: 22 triangles submit per draw, no pistol on screen; owner playtest of `build-c128-foxgun` disproved closure.
+> OWNER-QUEUED 2026-08-12: submit skipped the renderer's world-unit shift and drew 0.036px wide; fixed, pixels captured on c129.
 > OPEN, measured separately: on N64 Mario can crouch under Fox's laser, in the port it still hits him.
 
 Contracts, evidence, and the per-row work packets:

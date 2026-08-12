@@ -83,6 +83,16 @@ active-frame work changed, the mechanism is plausibly hot, or pacing regressed;
 escalate to retail hardware only for conflicting evidence, intermittent
 failures, release qualification, or device-specific mechanisms.
 
+**The build arm is part of the trigger, and a probe must assert it.** Most of
+these events need somebody to *act* — land a fire attack, take a hit, be thrown
+— and a probe supplies no input. At `NDS_R2_BOTH_CPU=0` Mario stands still, so a
+whole class of triggers simply never occurs; at `=1` it never reaches a 0-0 tie.
+Copying a probe onto the next candidate silently changes the arm along with the
+ROM. Read `builds/<build>/nds_build_config.h` and fail on the wrong arm before
+the run rather than after the timeout — the directory name has already lied
+about this once, and an arm mismatch reads exactly like "the effect never
+happened", which is the conclusion the probe was written to test.
+
 ## Step 1 — Intake
 
 Record the observable facts before proposing a cause: exact candidate identity

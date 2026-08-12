@@ -1,0 +1,9 @@
+FLAME hit=1 tr=1558 miss=29 missmask=10000000 usemask=1b038007 emit=3324
+FLAME hit=2 tr=1556 miss=29 missmask=10000000 usemask=1b039007 emit=3326
+FLAME hit=3 tr=1554 miss=29 missmask=10000000 usemask=1b039007 emit=3329
+FLAME hit=4 tr=1552 miss=29 missmask=10000000 usemask=1b039007 emit=3333
+FLAME hit=5 tr=1550 miss=29 missmask=10000000 usemask=1b039007 emit=3338
+FLAME hit=6 tr=1546 miss=29 missmask=10000000 usemask=1b039007 emit=3350
+FLAMEDONE miss=29 missmask=10000000 missframes=00055aaf usemask=1b039007 emit=3372 max=20
+FLAMEBITS bit12_miss=0 bit12_use=1 bit15_miss=0 bit15_use=1
+probe capture: D:\Stuff\DevFolder\Smash64DS_Port\artifacts\verification\2026-08-12_flame-quad-miss-c130.txt

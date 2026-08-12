@@ -139,6 +139,39 @@ at source frame 0 like the other eighteen one-cell animations. That is
 `PROJECT_GOAL.md`'s explicitly allowed "reduced animation update rate", and it is
 a separate dimension from "the effect does not draw at all".
 
+#### Candidate proof — matched control, same match tick, and actual pixels
+
+`builds/build-c130-fire-bothcpu` (the candidate source, rebuilt on the both-CPU
+arm) against `builds/build-c127-fire` (the ROM the owner played). **The two runs
+are the same fight**: both reach `efManagerFlameLRMakeEffect` at
+`time_remain` 1558, 1556 and 1554, so the arms are frame-aligned rather than
+merely similar.
+
+| quantity | c127 control | c130 candidate | verdict |
+|---|---|---|---|
+| `QuadMissMask` bit 12 | **1** | **0** | fixed |
+| `TextureUseMask` bit 12 | 1 | 1 | still requested |
+| miss count across the burn | **29 -> 55** (26 refusals) | **29 -> 29** (none) | fixed |
+| bit 15 (FlameRandom) miss / use | 0 / 1 | 0 / 1 | unchanged |
+| flame sprites on the damaged fighter | — | **visible** | see below |
+
+`artifacts/verification/2026-08-12_flame-quad-miss-c130.txt` and
+`..._-c127-6hit.txt`. The pixel evidence is
+`artifacts/visibility/2026-08-12_flame-burn-c130-candidate.png` with its control
+`..._-c127-control.png`, cropped to the same rectangle in
+`flame-c130-fox-zoom.png` / `flame-c127-fox-zoom.png`: saturated red-orange
+sprites with yellow cores, several at once, low around the burning fighter, and
+absent from the control's identical flower bed.
+
+**The arm is part of the trigger, and this cost 25 minutes.** `build-c129-foxfire`
+was built `NDS_R2_BOTH_CPU=0` while c127 and c128 were `=1`. With Mario a
+motionless human, the level-3 Fox CPU beside him essentially never lands a fire
+attack, so the identical probe timed out having observed nothing — a result
+indistinguishable from "the burn does not happen". `probe-flame-quad-miss.ps1`
+now reads `builds/<build>/nds_build_config.h` and refuses the passive arm before
+spending the run, and `BUG_FIXING_PROCESS.md`'s standing rules carry the general
+form.
+
 ---
 
 

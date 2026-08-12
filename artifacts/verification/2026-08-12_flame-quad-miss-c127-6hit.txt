@@ -1,0 +1,24 @@
+0x01fff568 in memcpy ()
+Breakpoint 1 at 0x20a4264: file D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c, line 1766.
+Breakpoint 2 at 0x20a440c: file D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c, line 1766.
+FLAME hit=1 tr=1558 miss=29 missmask=10000000 usemask=1b038007 emit=3324
+FLAME hit=2 tr=1556 miss=30 missmask=10001000 usemask=1b039007 emit=3325
+FLAME hit=3 tr=1554 miss=32 missmask=10001000 usemask=1b039007 emit=3326
+FLAME hit=4 tr=1552 miss=35 missmask=10001000 usemask=1b039007 emit=3327
+FLAME hit=5 tr=1550 miss=39 missmask=10001000 usemask=1b039007 emit=3328
+FLAME hit=6 tr=1546 miss=47 missmask=10001000 usemask=1b039007 emit=3332
+Breakpoint 3 at 0x2050710: file D:/Stuff/DevFolder/Smash64DS_Port/src/port/taskman_seam.c, line 4636.
+
+Breakpoint 3, ndsBattlePlayableFrameCompleteMarker () at D:/Stuff/DevFolder/Smash64DS_Port/src/port/taskman_seam.c:4636
+4636	    __asm__ volatile("" ::: "memory");
+
+Breakpoint 3, ndsBattlePlayableFrameCompleteMarker () at D:/Stuff/DevFolder/Smash64DS_Port/src/port/taskman_seam.c:4636
+4636	    __asm__ volatile("" ::: "memory");
+Captured repo-local melonDS window: D:\Stuff\DevFolder\Smash64DS_Port\artifacts\visibility\2026-08-12_flame-burn-c127-control.png
+
+Breakpoint 3, ndsBattlePlayableFrameCompleteMarker () at D:/Stuff/DevFolder/Smash64DS_Port/src/port/taskman_seam.c:4636
+4636	    __asm__ volatile("" ::: "memory");
+FLAMEDONE miss=59 missmask=10001000 missframes=00055abf usemask=1b039007 emit=3342 max=20
+FLAMEBITS bit12_miss=1 bit12_use=1 bit15_miss=0 bit15_use=1
+[Inferior 1 (Remote target) detached]
+
