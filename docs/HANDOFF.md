@@ -17,9 +17,7 @@ story: the FASTER build has more anim-cache misses (14 vs 2) and more payload
 reads (135 vs 123). **Size every change with a same-binary route; re-bank only
 reports what the ROM measures, never what the change was worth.**
 
-## The two baselines — label every figure with its arm AND its coverage
-
-Both arms run the **same 60-second match** (coverage 86.7%). Slips 0 in every row.
+## The two baselines — same 60-second match (coverage 86.7%), slips 0 every row
 
 | arm | role | `WORK-H` P50 | P95 |
 |---|---|---:|---:|
@@ -27,44 +25,52 @@ Both arms run the **same 60-second match** (coverage 86.7%). Slips 0 in every ro
 | **both-CPU** | prior bank | 938,752 | 1,196,224 (c123-warm) |
 | **Boundary** mode 163 | shipped configuration | 920,192 | 1,113,408 (c116 — stale) |
 
-**Attribution below is the c123 bank's (1,196,224) — RE-ATTRIBUTE before using
-it.** Top-80 vs ranks 400–1200: **`SHDT` +102,816 on 57/80**, **`SINT` +108,384 on
-47/80**, `SPHD` +17,024, `MISC` +16,864; **`FTR` −736 / `STG` +608 at 0/80**, so
-the renderer is not the tail. Ceilings: `SINT` −56,512, `SHDT` −38,912, `MISC`
-−29,248 — **no single lane clears it; `SINT`+`SHDT` does.** Slice 46 moved 36,800
-out of `SINT` and `SHDT` took the lead: ownership moves, re-attribute after KEEP.
+**RE-ATTRIBUTED on the slice-48 ROM** (`…/2026-08-12_c125-slice48/split-top80.txt`,
+`NDS_TICK_HUD_DRAW=0`, 1600 frames). Premium/tail frame **1,161,717 → 864,735**.
+Top non-idle rows: `__aeabi_fadd` 41,633 and `__aeabi_fmul` 36,658 (80/80),
+`memcpy` 37,474 (80/80, 71% mem), **`ndsAObjEvent32NormalizeScript` 24,299 on
+19/80** — 3x its c123 cost and MORE clustered, and it is the latent cliff below.
+`ndsR2FtAnimParseDObjFigatree` 23,168 (80/80). FAT family survives at ~47,600 but
+on **35/80, down from 49/80** — slice 48 moved it off 14 tail frames.
+`mutexLock`+`mutexUnlock` 15,084 on 59/80 is the worker's synchronisation.
+
+**THE BIGGEST LEVER IS PLACEMENT, and the census now sizes it.** Memory stall is
+**1,236,685,107 cycles, 33.8% of the match** (`.main` alone 903,205,474 = 45.6% of
+its tier) ≈ 386,000 tk/frame — an order of magnitude past `SINT` (−56,512) or
+`SHDT` (−38,912). And `.itcm` is NOT full: **30 of its 82 residents never execute
+(2,594 B idle)**, which retires the board's standing "ITCM is 99.1% full".
+Evicting them puts **87,033,153 non-mem stall cycles in reach** vs 26,349,489 for
+the 584 B already free. Census sections B/C/D rank the moves; see task 16.
 
 **Two lane-sizing traps.** Medians do not add (subtracting nested medians from
-`GCRA`'s invented a 110,336 lane that is +9,472 per row), and `OTHR` CONTAINS
-`WAIT`, so its −116,800 ceiling is idle. Only `WORK-H` is spendable.
+`GCRA`'s invented a 110,336 lane that is +9,472/row); `OTHR` CONTAINS `WAIT`, so
+its −116,800 ceiling is idle. Only `WORK-H` is spendable.
 
 **Profile with `NDS_TICK_HUD_DRAW=0` or you profile the instrument** — the HUD
-costs ~345,024 tk twice a second on exactly the frames P95 is decided on, so
-`--split-top-frames` otherwise selects HUD-refresh frames. Neither harness sets it;
-the GATE keeps `DRAW=1`. Soak length is `NDS_R2_SOAK_MATCH_MINUTES`. `Makefile:382`
-forbids reporting a both-CPU P95 as Boundary's; **re-pin `EXPECTED_CENSUS_SHA256`
-when coverage changes.** **Route to ATTRIBUTE, re-bank to BANK.** **Collision paid
-and is BANKED** (slices 35/36/37, −10,752); their owners are FLAT, so the lever was
+costs ~345,024 tk twice a second on exactly the frames P95 is decided on. The GATE
+keeps `DRAW=1`. Soak length is `NDS_R2_SOAK_MATCH_MINUTES`. `Makefile:382` forbids
+reporting a both-CPU P95 as Boundary's; **re-pin `EXPECTED_CENSUS_SHA256` when
+coverage changes.** **Route to ATTRIBUTE, re-bank to BANK.** **Collision paid and
+is BANKED** (slices 35/36/37, −10,752); their owners are FLAT, so the lever was
 calls not instructions. SIZE IS NOT PERMISSION: float in `gmcollision`/`mp*`/
 `ftMain*`/`ftComputer` is FROZEN — exact memoization/hoisting/reuse/deletion only.
 
 ## What is dead, so nobody re-derives it
 
-- **Effect DObj submits** — Boundary-only (99.3% there, ~12.1% of the gate arm).
-  **Projectiles** · **texture thrash** · **`Find`** · **`Material`** · force-load
-  seam. **`FTR` as the P95 discriminator** — flat, 0/80. **`MISC` is PARTICLES and
-  particles are FLAT** — 53,982 tk/frame draw, 52% of `MISC`, against a premium of
-  +16,864 on 26/80. **The AOT animation bake** (slice 32): SIZE dead.
+- **Effect DObj submits** — Boundary-only. **Projectiles** · **texture thrash** ·
+  **`Find`** · **`Material`** · force-load seam. **`FTR` as the P95 discriminator**
+  — flat, 0/80. **`MISC` is PARTICLES and particles are FLAT.** **The AOT animation
+  bake** (slice 32): SIZE dead.
 - **Animation playback ARITHMETIC** (slices 34, 41): idle-joint skip (33), lazy
   track table (31), AObj walk and dispatch all under the floor. **Slice 41 spent
   the last lever**: 30 Hz poses cost **+7,040** *and* diverged the match (damage
   130/51 vs 33/65). **Slice 39's table is VOID.** **Don't blanket-convert
   `ndsBaseGcPlayMObjMatAnim`** — 5 tracks pack 0xRRGGBBAA in f32. STRUCTURAL cuts
-  here are NOT closed.
+  are NOT closed.
 - **The 20.12 kernels' ARITHMETIC (slice 42)** — sub-floor and non-additive. **The
   local-matrix memo is dead twice.** **The flower rigid-mask prices at +3,200,
   wrong sign.** **The token→asset_id MEMO is dead** (Task 74) — slice 45 deleted
-  the CALLS instead.
+  the CALLS; `--pc-detail` says the two pointer SCANS are 64% of it, not the chain.
 - **Six lanes closed by MEASUREMENT this cycle** — numbers in
   `artifacts/performance/2026-08-1{1_c122,2_c123}-rebank/SLICE4{5,6,8}.md`:
   `ndsRelocFinalizeLoadedFile` as the gate (refuted by R2-06 E8's OWN phase split
@@ -77,9 +83,9 @@ calls not instructions. SIZE IS NOT PERMISSION: float in `gmcollision`/`mp*`/
 ## RAM — price a change before writing it
 
 `check-boot-headroom.ps1 -Build <dir>` after every lab build. Highest
-`fake_heap_start` proven to boot **`0x02294804`**, lowest proven to fail
-**`0x02294b24`**. **Text counts as much as bss**; a failing arm reads as a hung
-emulator. **`gSYTaskmanGeneralHeap`** free-min **72,188**, above the 32,768 floor.
+`fake_heap_start` proven to boot **`0x02294804`**, lowest to fail **`0x02294b24`**.
+**Text counts as much as bss**; a failing arm reads as a hung emulator.
+**`gSYTaskmanGeneralHeap`** free-min **72,188**, above the 32,768 floor.
 
 ## FTR: −93,612 landed (c116); now 0/80 presence and NOT a P95 lever
 
@@ -101,16 +107,14 @@ finished (83 of 85) and covered only 57 of the 87 used ids. Replaced with the
 measured 87, 4 per scene update: **misses 32 → 2**, arena 257,200 → 192,240 (it
 SHRINKS), Rejects 0. **Stepping is bounded by the BGM packet seam**, not load time.
 
-**SLICE 48 KEPT — read its SIZE, not its bank (`…/SLICE48.md`).** The 49/80 FAT
-lane (~29,338 tk) **is BGM**: `RefillCount` 104 == `WorkerWakeCount` 104, and the
-anim cache cannot own it (2 misses since slice 46; 85 of 123 payload reads are the
-warm preload, before frame 438). **`AUD` at 0.2% does NOT clear BGM** — a bucket
-brackets only its own thread and the worker ran ABOVE main. Shipped: created at
-`MAIN_THREAD_PRIO + 1`, switched to `- 1` once playing (`gNdsAudioBgmWorkerPrio` /
-`…RunPrio` / `…PrioApplied`, `.data` pokeable). **Deprioritizing during the MATCH
-was REFUTED** — same-binary A/B, +8,064 wrong way; creating low is −13,952..−17,792
-(cross-build, weakly held). SeamMiss/Overrun/UnsafeWrite 0 everywhere; same bytes
-at the same rate, so no fidelity question.
+**SLICE 48 KEPT — read its SIZE, not its bank (`…/SLICE48.md`).** The FAT lane is
+**BGM**: `RefillCount` 104 == `WorkerWakeCount` 104, and the anim cache cannot own
+it (2 misses since slice 46; 85 of 123 payload reads precede frame 438). **`AUD` at
+0.2% does NOT clear BGM** — a bucket brackets only its own thread and the worker
+ran ABOVE main. Shipped: created at `MAIN_THREAD_PRIO + 1`, switched to `- 1` once
+playing (`gNdsAudioBgmWorkerPrio` / `…RunPrio` / `…PrioApplied`, `.data` pokeable).
+**Deprioritizing during the MATCH was REFUTED** — same-binary A/B, +8,064 wrong
+way; creating low is −13,952..−17,792 and moved the lane off 14 tail frames.
 
 **SLICE 45 KEPT — 1,225,280 → 1,213,440.** Same-binary A/B:
 `ndsRelocRemoveFighterAObj16StatusAliases` resolved `ndsRelocAssetIDForToken` for
@@ -130,18 +134,16 @@ MEASURE-ONLY: **`ReachTests 2,373  WouldSkip 0  Unsound 0`** — it never reject
 The bound sums |translate| up the parent chain, so for a hand it is most of the
 fighter's extent, and `gmCollisionCheckFighterInFighterRange` has already put the
 attacker inside that radius. Tightening it needs the joint's position, which is
-the transform being skipped: circular. Carry: ~19 pair tests per hot frame, but
-`gmCollisionTestRectangle` also serves item/weapon/ground — **never attribute a
-shared leaf's volume to one caller**; and a bound belongs in a POKEABLE global.
-`SHDT` ceiling −38,912 stands; only the root-relative per-joint bound is dead.
+the transform being skipped: circular. Carry: `gmCollisionTestRectangle` also
+serves item/weapon/ground — **never attribute a shared leaf's volume to one
+caller**; and a bound belongs in a POKEABLE global, not a `#define`.
 
 **The collision transform chain is honest work, not redundancy (c123).** Latches
-`unk_dobjtrans_0x5/6/7` clear once per fighter per frame in
-`ftParamsUpdateFighterPartsTransformAll` (`ftmain.c:1847`, after physics), then hit
-detection rebuilds lazily and shares ancestors. Leaf attribution: `func_ovl2_800ED490`
-17.1 composes on a tail frame vs 1.34 on control, `gmCollisionSetInvertMatrix` 15.1
-vs 1.14, `gmCollisionGetWorldPosition` 34.2 vs 1.9 — a 13–18x **call-count** ratio,
-~54,000 tk on 53–58/80. No extra pass to delete; the lever is touching fewer parts.
+clear once per fighter per frame in `ftParamsUpdateFighterPartsTransformAll`
+(`ftmain.c:1847`, after physics), then hit detection rebuilds lazily and shares
+ancestors. `func_ovl2_800ED490` runs 17.1 composes on a tail frame vs 1.34 on
+control, `gmCollisionSetInvertMatrix` 15.1 vs 1.14 — a 13–18x **call-count** ratio.
+No extra pass to delete; the lever is touching fewer parts.
 
 **Do not bring a micro-fix** — R2-06 E11: a load-frame-only ~8,000 cannot be
 banked. Clear ~16,000 in one change, or **use the `.data` route on ONE binary**
