@@ -180,8 +180,17 @@ quote these numbers as gate-arm numbers, and do not rebuild G3's case from them.
   0.25%; `FTR` as the gate (anti-correlated with the tail); the `Tex`
   (dl-pointer, bind-ordinal) memo (built as approved: 4.56% hit rate, `Tex`
   went *up* 20% — reverted, flag deleted); L7 fixed-point collision (+534 won
-  vs 6,481 lost to its own text); asset loads as the tail owner (refuted three
-  times); Task 56 strips (ROM hangs the present loop — never completed a run).
+  vs 6,481 lost to its own text); **the `SHDT` per-joint reach bound** (slice
+  47, 2026-08-12: interposed measure-only, `ReachTests` 2,373 / `WouldSkip`
+  **0** — the chain sum is arm's-reach-wide and
+  `gmCollisionCheckFighterInFighterRange` already put the attacker inside it,
+  so no inflation constant fixes it and a tighter bound needs the transform
+  being skipped); Task 56 strips (ROM hangs the present loop).
+- **"Asset loads as the tail owner" was refuted three times AND slice 46 still
+  won 17,216 there** — the LANE was correctly refuted, but a specific defect in
+  it (the warm list had drifted to cover only 57 of the 87 animations the match
+  uses, and the walk never finished) was real. A refuted lane is not a refuted
+  bug; re-read the lane's own counters on the current arm before believing it.
 - **The ROM has 96 BYTES of proven headroom — not 1.4 KB (corrected cycle 82).**
   The old "+1,408 boots, +2,208 does not" was a **delta over a datum build, and
   the datum moved every time the tree grew**: the tree had already spent 1,312
