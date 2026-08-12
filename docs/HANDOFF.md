@@ -32,7 +32,13 @@ Top non-idle rows: `__aeabi_fadd` 41,633 and `__aeabi_fmul` 36,658 (80/80),
 19/80** — 3x its c123 cost and MORE clustered, and it is the latent cliff below.
 `ndsR2FtAnimParseDObjFigatree` 23,168 (80/80). FAT family survives at ~47,600 but
 on **35/80, down from 49/80** — slice 48 moved it off 14 tail frames.
-`mutexLock`+`mutexUnlock` 15,084 on 59/80 is the worker's synchronisation.
+
+**LANE CEILINGS on that ROM** (`…/EXHAUSTION.md`; cap the lane at its own median
+PER ROW, re-take the 80th of 1,600 — baseline 1,089,152 under that convention):
+`SRC` **133,056**, `GCRA` **133,056**, `SINT` 57,280, `SHDT` 38,912, `MISC` 31,680,
+`SPHD` 17,152, `AUD` 13,312, `SCPU` 4,288, `STG` 2,048, **`FTR` 0**. **`GCRA` ==
+`SRC` to the tick**, so all spendable work is inside `gcRunAll`; `FTR` is 0 for the
+FOURTH consecutive measurement at a median of 303,232.
 
 **THE BIGGEST LEVER IS PLACEMENT, and the census sizes it.** Memory stall is
 **1,236,685,107 cycles, 33.8% of the match** (`.main` alone 903,205,474 = 45.6% of
