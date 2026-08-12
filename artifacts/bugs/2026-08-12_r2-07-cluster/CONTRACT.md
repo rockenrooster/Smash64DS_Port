@@ -128,6 +128,28 @@ so one key already collapses onto another output.
 The remaining probe rows measure the *live* blink cadence to confirm the
 animation side is healthy — not to find the defect, which is now located.
 
+**Row 1 is a KEY-DISCRIMINATION problem, not merely a missing texture.** Two
+facts have to be read together:
+
+- The corpus header states its scope outright: *"Other animated actors, fighter
+  variants, weapons, effects, and shadows remain outside this corpus"*
+  (`generate_battle_playable_static_textures.py:14`). The generator carries a
+  `WHISPY_MOUTH_OWNER_MASK` record and **no eye record at all**.
+- `KNOWN_ISSUES:102` says the unprepared image reuses the resident frame **"when
+  every other renderer-key word matches"** — and the corpus is
+  `KEY_COUNT 24 → OUTPUT_COUNT 23`, i.e. a collapse already happens once.
+
+> So the blink key **is** being formed at runtime and is matching the open-eye
+> entry. Adding a resident blink texture without making the key discriminate the
+> differing word would leave the match intact and change nothing on screen.
+
+That also predicts the "static key misses" counter — which
+`required_device_promotion_evidence.must_latch_zero` requires to be **zero** —
+stays zero today, because nothing is missing: it is matching the wrong thing.
+**Check that counter before writing the fix**; a zero there is consistent with
+this reading and inconsistent with "the texture is absent", which is the cheap
+discriminator between the two.
+
 **Fix seam:** dynamic actor texture variant preparation for the
 `whispy_eyes` / `whispy_mouth` segments (`scripts/stages/generate_nds_native_stage.py`,
 `segment_order` at :4161). Not the animation clock — do not add a rate divider or
