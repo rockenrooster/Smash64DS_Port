@@ -194,6 +194,25 @@ label, not an unknown asset.
 | Visible window | on for the SpecialN frames the script covers, off after | exact | per-frame counter |
 | Texture/palette | 32×16 CI4 + 16-colour palette from file 315 | exact | texture-ID log |
 
+**The gun asset is present and structurally verified — no ROM extraction needed.**
+It is *not* under a Fox name, which is why a name search says it is missing:
+
+```
+decomp/BattleShip-main/BattleShip_o2r/reloc_extern_data/MiscData315
+  file id 0x13b (315)   resource 1392 B   data_size 0x520 (1312 B, exactly as
+  315_FoxUnknown.c documents)   sha256 2bb01cdd7c846c63b0946cae9b83c2a0d4ddd532f42921fe6eaece5c61b72cc7
+  0x008 palette 16 x RGBA5551   0x030 CI4 32x16   0x130 Vtx[44] (first -54,36,9)
+  0x3F0 Gfx[38], opens 0xE7 G_RDPPIPESYNC
+```
+
+Found by scanning all 2,132 O2R resources by **file id**, after a name search
+returned nothing and the decomp build tree turned out to hold only three
+extracted asset directories (`MarioModel`, `StageCastleFile2`,
+`StageHyruleFile2`) — Fox geometry comes from O2R, not from `.inc.c`. Neighbours
+313/314/316 are `FoxModel`/`FoxShieldPose`/`FoxSpecial4`, so 315 landing in
+`reloc_extern_data` is a naming artifact, not a missing asset. Do not re-derive
+this: search O2R by id, never by name.
+
 **Fix seam.** The DS owner plan is a **statically baked FIFO command stream**, so
 a conditional sub-DL inside it is the wrong shape. The correct DS-specialized
 form — and the one `PROJECT_GOAL.md` asks for — is to bake the gun as its own
