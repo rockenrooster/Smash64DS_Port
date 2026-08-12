@@ -10,7 +10,30 @@ three rows are already localized to their owning seam from source alone.
 
 ---
 
-## Cluster finding: rows 1 and 2 share one root cause
+## Cluster finding 2 (supersedes the scope below): ALL THREE rows converge
+
+Row 3 was scoped as unrelated geometry work. It is not. The gun's display list
+**loads its own texture** — `315_FoxUnknown.c` documents the DL as loading the
+palette and texture, and the reloc confirms it (`intern dn_DL+0x5C dn_palette`,
+`+0x8C dn_Tex`). That CI4 32×16 plus its 16-entry palette is **not** among the
+24 resident static keys, because the model part has never been drawn.
+
+> **So the single capability blocking this cluster is: make additional source
+> textures resident on the DS.** Rows 1 and 2 need it for the blink frames and
+> the three flame frames; row 3 needs it for the gun. Three thin consumers, one
+> pipeline capability — not three separate fixes.
+
+This is the right unit of work and it should be built once. It also concentrates
+the risk in one place: **VRAM/RAM headroom**, which is the constraint that got
+this deferred to P2 originally. Size that budget first — it is the one thing
+that could come back as "will not fit", and it is cheaper to learn now than
+after three consumers are written.
+
+Row 3's *state* half is already shipped (`ftParamSetModelPartID` /
+`ftParamResetModelPartAll`, commit `6c2e309b03d`), so row 3 reduces to the
+shared texture capability plus a submit path.
+
+## Cluster finding 1: rows 1 and 2 share one root cause
 
 The DS asset pipeline **packs a single frame per animated source texture**.
 
