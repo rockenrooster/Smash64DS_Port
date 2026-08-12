@@ -1,10 +1,10 @@
 # Handoff
 
-Updated: 2026-08-11. **The gate is re-banked at 1,210,560** (slice 44, −35,904
-cross-build against a control that reproduced the old gate to within 1,984).
-Requirement 4 shipped before it: the fighter `AObj` is fixed point,
-`WORK-H` P50 −23,360 / P95 −37,504 routed. **Every 128-frame figure in the archive
-is unusable** — it reads the cheapest 6% of the match. Use `-Samples 1600`.
+Updated: 2026-08-11. **The gate is re-banked at 1,225,280** — measured on
+`build-c122-gate` after slice 43 was WITHDRAWN for the fighter blink, NOT derived
+from the 1,210,560 slice-44 bank, which had the GX joint compose on. The
+withdrawal cost P50 +4,864 / P95 +14,720 against slice 43's claimed −13,632.
+**Every 128-frame figure in the archive is unusable** — use `-Samples 1600`.
 
 ## The two baselines — label every figure with its arm AND its coverage
 
@@ -13,13 +13,20 @@ frames past the buzzer. Slips 0 in every row.
 
 | arm | role | `WORK-H` P50 | P95 | over gate |
 |---|---|---:|---:|---:|
-| **both-CPU** | **THE GATE** | **931,648** | **1,210,560** | re-banked c121 s44 |
-| **Boundary** mode 163 | shipped configuration | 920,192 | 1,113,408 | re-banked c116 |
+| **both-CPU** | **THE GATE** | **936,512** | **1,225,280** | re-banked c122, slice 43 out |
+| **Boundary** mode 163 | shipped configuration | 920,192 | 1,113,408 | re-banked c116, slice 43 IN — stale |
 
-**Gate 1,210,560, re-banked on slice 44 — P95 −35,904 / P50 −17,088, 4.2x and
-2.0x the ±8,544 floor, the campaign's largest single P95 move (treat it and the
-RAM campaign's −36,032 as equals). Gap ~90,180.** Boundary's row is
-pre-slice-44 and will fall too — re-measure before quoting it. The soak's long
+**Gate 1,225,280. Gap 104,900. The tail is no longer the renderer:** P95-setting
+band (gate ranks 60–100) vs baseline is `SRC`/`GCRA` +262,048 on 36/41 — `SHDT`
+hit detect +85,184 (4,544 → 89,728), `SINT` interrupt +77,856 — while **`FTR`
+−896 and `STG` +448, both 0/41 presence**, dead as P95 levers whatever their size.
+
+**Profile with `NDS_TICK_HUD_DRAW=0` or you profile the instrument** — the HUD
+costs ~345,024 tk twice a second on exactly the frames P95 is decided on
+(`nds_platform.c:68`), so `--split-top-frames` selects HUD-refresh frames: c122's
+first profile put `ndsPlatformRenderDebugHud` at 17.5% of premium on 80/80 and
+overlapped the real top-80 by ~20%. Neither harness sets it; the GATE keeps
+`DRAW=1`, which is how every bank back to slice 44 was measured. The soak's long
 match is `NDS_R2_SOAK_MATCH_MINUTES`; `probe-match-window.ps1` reads the timer
 from the guest, so a window cannot claim coverage it lacked. Owner's bar: the
 whole match under P95 on the both-CPU config, loading excluded; the shipped ROM
@@ -48,17 +55,15 @@ the Task 9 hash (`census-softfloat-callers.ps1`) — exact moves only.
   two largest symbols are already Requirement 4's fixed point at 1.67–1.69
   cyc/insn; idle-joint skip (33), lazy track table (31), AObj walk and track
   dispatch are all under the floor. **Slice 41 spent the last lever**: 30 Hz
-  poses, engagement proven, `WORK-H` P95 **+7,040** while the arms diverged into
-  different matches (damage 130/51 vs 33/65) — so a route A/B cannot price it and
-  level-3-CPU equivalence disqualifies it. E61's mix (Cubic 54.8% / Step 43.6%,
-  **zero** discarded evaluations) leaves nothing to memoize. **Slice 39's table
-  is VOID** — threshold ON the quantum. **Don't blanket-convert
+  poses, `WORK-H` P95 **+7,040** while the arms diverged into different matches
+  (damage 130/51 vs 33/65), so a route A/B cannot price it and level-3-CPU
+  equivalence disqualifies it. E61's mix leaves nothing to memoize. **Slice 39's
+  table is VOID** — threshold ON the quantum. **Don't blanket-convert
   `ndsBaseGcPlayMObjMatAnim`** — 5 tracks pack 0xRRGGBBAA in f32.
-- **The 20.12 kernels' ARITHMETIC (slice 42)** — sub-floor and non-additive;
-  slice 43 took the lane structurally instead. **The local-matrix memo is dead
-  twice** — E8's +16,301 key cost, payload 302 tk/call since `MTX_DIRECT`. **The
-  flower rigid-mask prices out at +3,200, wrong sign** — E4 §8 was never
-  re-derived against §8a's own number; board has the arithmetic.
+- **The 20.12 kernels' ARITHMETIC (slice 42)** — sub-floor and non-additive.
+  **The local-matrix memo is dead twice** — E8's +16,301 key cost, payload 302
+  tk/call since `MTX_DIRECT`. **The flower rigid-mask prices at +3,200, wrong
+  sign** — board has the arithmetic.
 
 ## RAM: both budgets are near their floor — price a change before writing it
 
@@ -104,31 +109,27 @@ discriminates**: cold bytes in an *entered* body cost **+14,963**.
 - **Compiling the frame-summary counters out is refuted** (FTR −7,378 / STG −2,776): it **breaks the gate** — `…gcrunall-loop-harness.ps1` asserts exact batch and texture-prepare accounting off those globals. **Tick factor 0.4993 tk/cyc** comes from `ALL` vs total cycles; deriving it from the FTR sum is circular.
 
 **SLICE 43 WITHDRAWN 2026-08-11.** Owner retest still blinked after the parent-slot
-union repair, so the earlier "fixed" claim was false. The overlap `0x00F80000`
-was real but incomplete. Published + measurement/proof targets now force
-`NDS_R2_FIGHTER_GX_COMPOSE=0`, returning to the owner-bisected clean CPU-compose
-path. Historical Slice-43 gain was `WORK-H` −10,624/−13,632; re-bank the gate
-before quoting the current gap. Do not re-enable GX compose without owner proof.
-**SLICE 44 KEPT — gate re-banked 1,244,480 → 1,210,560, P50 → 931,648. Gap now
-~90,180.** `NDS_R2_STAGE_VALIDATE_STRIDE=8`: the stage re-proved all 42 bindings
-constant **every frame** and then used the cached answer. **WORK-H −17,088 P50 /
-−35,904 P95, landing where aimed — STG −19,904 / −24,192, FTR flat.**
-Round-robin, not "sweep every 8th frame": the second shape makes 12.5% of frames
-expensive and P95 lands on one. Engagement both sides — `RigidChecks` 6,627 /
-53,014 = exactly 1/8, and 53,014 = 26 × 2,039 proves the sweep ran every frame,
-i.e. **the rigid mask never demoted**. Viewport pixel-identical at two
-frame-locked tics, damage 130/51. **The guard is strided, not deleted, and
-demotion is now one-way within a topology** — a partial sweep must not re-arm
-what it did not look at.
+union repair, so the earlier "fixed" claim was false — the `0x00F80000` overlap was
+real but incomplete. All published/measurement/proof targets force
+`NDS_R2_FIGHTER_GX_COMPOSE=0`. Re-banked at the top of this file; do not re-enable
+without owner proof. The standing lead is at `nds_platform.c:3197` — the matrix
+stack leaks ~3 pushes/frame and wraps mod 32, harmless until something parks live
+matrices in absolute slots the pointer walks over.
+**SLICE 44 KEPT — banked 1,244,480 → 1,210,560** (superseded by the c122 re-bank
+above; full evidence `artifacts/performance/2026-08-11_c121-slice44/`).
+`NDS_R2_STAGE_VALIDATE_STRIDE=8` strides the stage's 42-binding revalidation:
+**WORK-H −17,088 / −35,904, STG −19,904 / −24,192.** Round-robin, NOT "sweep
+every 8th frame" — the second shape makes 12.5% of frames expensive and P95
+lands on one. Demotion is one-way within a topology: a partial sweep must not
+re-arm what it did not look at.
 
-**Post-slice-44 the biggest legal lane is the fighter LOCAL matrix build**
-(`BuildDObjXObjMatrix` 11,874 + its `memcpy` 7,187 + `BuildDObjLocalMatrix`
-5,253 ≈ 24,314 tk/frame, 80/80, `tk prem` ≤530) — **but it is memory-bound, not
-arithmetic-bound**: top PC only 6.7%, expensive rows are `ldr` at 11–28 cyc/insn
-on DObj fields, 53.7 cold object touches a frame. Deleting the float
-intermediate does not recover those. The shape points at a local-matrix memo,
-**DO-NOT-RETRY: built and killed twice.** The Task 91 comment at
-`reloc_backend_renderer_dl.c:1790` argues for it anyway; not an invitation.
+**The fighter LOCAL matrix build is NOT a P95 lane — refuted c122.** It is real
+size (~24,314 tk/frame, 80/80) and memory-bound, not arithmetic-bound (top PC
+6.7%, `ldr` at 11–28 cyc/insn on cold DObj fields), so it was the post-slice-44
+plan — but `FTR` separates the P95 band from baseline by **−896 on 0/41 frames**.
+It is a P50 lane. Its only remaining shape is a local-matrix memo, **DO-NOT-RETRY:
+built and killed twice**; the Task 91 comment at `reloc_backend_renderer_dl.c:1790`
+argues for it anyway and is not an invitation.
 
 **The `SINT` split is DONE.** `SINT` +88,082 = `ftMainPlayAnim` **+60,559** +
 `ftComputerProcessAll` +24,386 (map collision, not AI). **`SINT` is the fighter
@@ -177,13 +178,12 @@ change altering a visible pixel needs the owner (`BUGS.md`, by eye).
   (slice 41). It deletes the ±8,544 floor by holding the binary fixed, but still
   assumes both arms walk the same trajectory. Read an end-of-match gameplay
   counter (damage, KO) from the SAME run first.
-- **`--pc-detail` BEFORE designing the fix, not after — it costs no build and it
-  routinely names a different lever than the source reads like.** Slice 44's
-  guard looked like a compare to make cheaper; the profile said four cold `ldr`s
-  were 39% of it and the compare rounded to nothing, so the lever was *not
-  touching the objects*. Same call answered c108 (a loader `ftmain.c` discards),
-  c110 (a guessed per-call cost) and c116 (a "fighter" symbol that was the
-  stage). **Resolve line numbers against the build's `NDS_TASK10_GIT_SHORT`.**
+- **`--pc-detail` BEFORE designing the fix — it costs no build and routinely
+  names a different lever than the source reads like.** Slice 44's guard looked
+  like a compare to make cheaper; four cold `ldr`s were 39% of it and the compare
+  rounded to nothing, so the lever was *not touching the objects*. Same call
+  answered c108, c110 and c116. **Resolve line numbers against the build's
+  `NDS_TASK10_GIT_SHORT`.**
 
 ## Restart surface — parked items live on the board's **Parked** list
 

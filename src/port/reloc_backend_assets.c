@@ -3093,6 +3093,38 @@ s32 ndsRelocPointerIsFighterAObj32(const void *ptr)
                TRUE : FALSE;
 }
 
+/* Slice 45. Same-binary A/B route for the alias-scan reorder below, and .data
+ * aligned(32) for the same reason gNdsR2MPRoute is: the poke has to own its
+ * cache line so `-SetGlobals` picks an arm at IDENTICAL placement. A relink
+ * moves WORK-H P95 by more than this cut is worth (R2-06 E11 measured +15,744
+ * from a change that added negative bytes), so a cross-build pair could not
+ * read it.
+ *
+ *   bit 1  order the alias scan's conjunction cheap-test-first
+ *
+ * Default is the candidate, so an unpoked ROM is the fast arm and
+ * `-SetGlobals gNdsR2RelocAliasRoute=0` restores the original order.
+ *
+ * BANKED, and the flag now defaults to 0 so the reorder ships with the test
+ * folded out. One binary, `builds/build-c122-alias`: Resolves 16,002 -> 1,143
+ * of the same 16,067 visits, WORK-H P95 1,227,456 -> 1,215,296 (-12,160), P50
+ * +256. The control arm reproduced the c122 bank to 2,176, which is what makes
+ * the -12,160 readable at all. */
+#if NDS_R2_RELOC_ALIAS_ROUTE
+volatile u32 gNdsR2RelocAliasRoute
+    __attribute__((section(".data"), aligned(32))) = 1u;
+#define NDS_R2_RELOC_ALIAS_ROUTE_ON(bit) ((gNdsR2RelocAliasRoute & (bit)) != 0u)
+#else
+#define NDS_R2_RELOC_ALIAS_ROUTE_ON(bit) (1)
+#endif
+
+/* Engagement proof, per the standing rule that an optimization which silently
+ * never fires is indistinguishable from one that fired and saved nothing.
+ * `Resolves` counts the calls to ndsRelocAssetIDForToken this scan actually
+ * makes; `Visits` counts the nodes it walks. The ratio IS the cut. */
+volatile u32 gNdsR2RelocAliasVisits;
+volatile u32 gNdsR2RelocAliasResolves;
+
 static void ndsRelocRemoveStatusNodeAt(LBFileNode *nodes, s32 *count, s32 index)
 {
     s32 remaining;
@@ -3125,13 +3157,58 @@ static void ndsRelocRemoveFighterAObj16StatusAliases(LBFileNode *nodes,
 
     while (i < *count)
     {
-        u32 node_asset_id = ndsRelocAssetIDForToken((u32)nodes[i].id);
-
-        if ((nodes[i].addr == data) && (node_asset_id != asset_id) &&
-            (ndsRelocIsFighterAObj16Asset(node_asset_id) != FALSE))
+        /* Slice 45. `ndsRelocAssetIDForToken` was resolved for EVERY node here
+         * even though `addr == data` rejects almost all of them, and that
+         * resolver is the single largest non-idle symbol in the whole-match
+         * tail: +41,731 cyc/frame on 71 of the 80 costliest frames, 11,721,422
+         * cycles a match, 28% of it concentrated in that tail. It is a ~550
+         * instruction if-chain plus, on a miss, two pointer scans over all
+         * 143 + 158 Mario/Fox animation ids (R2-06 E11) -- and a node whose
+         * `addr` does not match is always a miss for the purposes of this test,
+         * so every one of those walks was discarded.
+         *
+         * Reordering is exact, not an approximation. `&&` short-circuits, the
+         * two operands commute here because `ndsRelocAssetIDForToken` is a pure
+         * function of its argument -- `ndsRelocFileID` returns
+         * `(u32)(uintptr_t)file_id`, the ADDRESS of a link-time global rather
+         * than anything read from it, so the chain has no memory input and no
+         * side effect (its body contains no assignment or counter; the same
+         * property is what let Task 74 call a cache in front of it "provably
+         * safe"). The surviving predicate is unchanged, so the set of removed
+         * nodes is identical.
+         *
+         * This is deliberately NOT Task 74's memo, which is a dead lane: that
+         * put three lookup arrays in .main.bss and lost to a chain of
+         * branch-predictable link-time immediates that was already resident.
+         * Nothing is added here -- the call count goes down. */
+        if (NDS_R2_RELOC_ALIAS_ROUTE_ON(1u))
         {
-            ndsRelocRemoveStatusNodeAt(nodes, count, i);
-            continue;
+            gNdsR2RelocAliasVisits++;
+            if (nodes[i].addr == data)
+            {
+                u32 node_asset_id = ndsRelocAssetIDForToken((u32)nodes[i].id);
+
+                gNdsR2RelocAliasResolves++;
+                if ((node_asset_id != asset_id) &&
+                    (ndsRelocIsFighterAObj16Asset(node_asset_id) != FALSE))
+                {
+                    ndsRelocRemoveStatusNodeAt(nodes, count, i);
+                    continue;
+                }
+            }
+        }
+        else
+        {
+            u32 node_asset_id = ndsRelocAssetIDForToken((u32)nodes[i].id);
+
+            gNdsR2RelocAliasVisits++;
+            gNdsR2RelocAliasResolves++;
+            if ((nodes[i].addr == data) && (node_asset_id != asset_id) &&
+                (ndsRelocIsFighterAObj16Asset(node_asset_id) != FALSE))
+            {
+                ndsRelocRemoveStatusNodeAt(nodes, count, i);
+                continue;
+            }
         }
         i++;
     }

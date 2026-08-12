@@ -319,6 +319,17 @@ NDS_R2_STRIP_ROUTE ?= 0
 # ROM carries no route check. The memo is FILLED in both arms so the control
 # pays the identical fill and only the lookup differs.
 NDS_R2_MP_ROUTE ?= 0
+# Slice 45. Same-binary A/B for the fighter-AObj16 alias-scan reorder in
+# ndsRelocRemoveFighterAObj16StatusAliases. At 1 the ROM carries both arms and
+# `-SetGlobals gNdsR2RelocAliasRoute=0` selects the original operand order at
+# identical placement; at 0 the test folds to a constant and the reorder ships
+# with no route check.
+#
+# BANKED at 0. One binary, builds/build-c122-alias, 1600 frames from 438,
+# NDS_R2_BOTH_CPU=1, DLDI ON: Resolves 16,002 -> 1,143 of the same 16,067 node
+# visits (-92.9%), WORK-H P95 1,227,456 -> 1,215,296 (-12,160), P50 936,448 ->
+# 936,704 (+256, noise). Set to 1 only to re-measure it.
+NDS_R2_RELOC_ALIAS_ROUTE ?= 0
 # R2-03 E47. The native fighter owner derives its material colour and its
 # use-material predicate from `stats` per epoch, the way the generic path does,
 # instead of reading a baked policy flag and always taking prim_color. The
@@ -3083,6 +3094,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_R2_ANIM_CUT_ROUTE $(NDS_R2_ANIM_CUT_ROUTE)'; \
 		echo '#define NDS_R2_STRIP_ROUTE $(NDS_R2_STRIP_ROUTE)'; \
 		echo '#define NDS_R2_MP_ROUTE $(NDS_R2_MP_ROUTE)'; \
+		echo '#define NDS_R2_RELOC_ALIAS_ROUTE $(NDS_R2_RELOC_ALIAS_ROUTE)'; \
 		echo '#define NDS_R2_MATERIAL_DYNAMIC $(NDS_R2_MATERIAL_DYNAMIC)'; \
 		echo '#define NDS_R2_FLASH_PROBE $(NDS_R2_FLASH_PROBE)'; \
 		echo '#define NDS_R2_ANIM_CENSUS $(NDS_R2_ANIM_CENSUS)'; \
