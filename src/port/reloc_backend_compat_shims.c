@@ -8234,6 +8234,92 @@ static sb32 ndsFTParamMakeSourceEffect(s32 effect_id, s32 lr, Vec3f *pos,
 }
 #endif /* NDS_R2_SOURCE_EFFECTS_PARTICLE */
 
+/* BUGS.md "Fighter burn flames spawn at the wrong places on the damaged
+ * fighter." ftparam.c:1899-1912 has all three Flame kinds DISCARD the generic
+ * effect position and call ftParamGetEffectJointPosition (ftparam.c:1783),
+ * which advances fp->effect_joint_array_id, wraps at
+ * ARRAY_COUNT(attr->effect_joint_ids), and resolves local {0,0,0} at the
+ * selected joint. The burn is MEANT to walk the body; flames sharing one origin
+ * is the defect, not the fix.
+ *
+ * This port had no such call, and the measurement (c131, 2026-08-12) found the
+ * damage worse than a missing rotation. The position the shipped code actually
+ * used read (1039.04, 0.000000, 0.000000) on every emission of a burn -- Y and Z
+ * EXACTLY zero -- because ndsFTParamGetVisualPosition takes its early return
+ * when the colanim's joint_id does not resolve and hands back the fighter's
+ * root translate. Every flame spawned on the stage plane at the victim's feet.
+ * The five source joints measured healthy over the same burn: ids 15, 20, 25, 9
+ * and 12, Y from 110 to 338 and Z from -104 to +128.
+ *
+ * Source-exact, and deliberately placed in ftParamMakeEffect rather than in the
+ * maker switch: ftParamMakeEffect already holds fighter_gobj, so no signature
+ * widens and no global is needed, and the override then also covers the
+ * NDS_R2_SOURCE_EFFECTS_PARTICLE=0 substitute arm -- which the source's single
+ * path implies and which a fix inside ndsFTParamMakeSourceEffect would miss. */
+static void ndsFTParamGetEffectJointPosition(FTStruct *fp, Vec3f *pos)
+{
+    FTAttributes *attr = fp->attr;
+    s32 joint_id;
+
+    fp->effect_joint_array_id++;
+
+    if (fp->effect_joint_array_id == ARRAY_COUNT(attr->effect_joint_ids))
+    {
+        fp->effect_joint_array_id = 0;
+    }
+    pos->x = pos->y = pos->z = 0.0F;
+
+    /* The source indexes fp->joints[] unguarded. This port keeps the range
+     * check because an attribute table that has not been relocated yet reads as
+     * a wild id here, and the failure that produces is a wild pointer inside
+     * gmCollisionGetFighterPartsWorldPosition rather than a visible one. On a
+     * relocated fighter the check never fires and the behaviour is the
+     * source's. */
+    joint_id = attr->effect_joint_ids[fp->effect_joint_array_id];
+    if ((joint_id < 0) || (joint_id >= (s32)ARRAY_COUNT(fp->joints)) ||
+        (fp->joints[joint_id] == NULL))
+    {
+        return;
+    }
+    gmCollisionGetFighterPartsWorldPosition(fp->joints[joint_id], pos);
+}
+
+#if NDS_R2_POSITION_PROBE
+/* Records what the override replaced beside what it produced, so the row's
+ * acceptance reads the shipped path rather than a shadow of it. */
+/* `used` because GDB is the only consumer and --gc-sections collects a global
+ * with no in-ROM reader -- which has already taken Boundary RED once. */
+#define NDS_FLAME_PROBE_GLOBAL __attribute__((used))
+NDS_FLAME_PROBE_GLOBAL u32 gNdsFlameProbeCount;
+NDS_FLAME_PROBE_GLOBAL u32 gNdsFlameProbeKind[8];
+NDS_FLAME_PROBE_GLOBAL u32 gNdsFlameProbeSelIndex[8];
+NDS_FLAME_PROBE_GLOBAL s32 gNdsFlameProbeJointID[8];
+NDS_FLAME_PROBE_GLOBAL f32 gNdsFlameProbeJointX[8];
+NDS_FLAME_PROBE_GLOBAL f32 gNdsFlameProbeJointY[8];
+NDS_FLAME_PROBE_GLOBAL f32 gNdsFlameProbeJointZ[8];
+NDS_FLAME_PROBE_GLOBAL f32 gNdsFlameProbeGenericX[8];
+NDS_FLAME_PROBE_GLOBAL f32 gNdsFlameProbeGenericY[8];
+NDS_FLAME_PROBE_GLOBAL f32 gNdsFlameProbeGenericZ[8];
+static void ndsFTParamProbeFlamePosition(FTStruct *fp, s32 effect_id,
+                                         const Vec3f *generic,
+                                         const Vec3f *at)
+{
+    u32 slot = gNdsFlameProbeCount & 7u;
+
+    gNdsFlameProbeKind[slot] = (u32)effect_id;
+    gNdsFlameProbeSelIndex[slot] = (u32)fp->effect_joint_array_id;
+    gNdsFlameProbeJointID[slot] =
+        fp->attr->effect_joint_ids[fp->effect_joint_array_id];
+    gNdsFlameProbeJointX[slot] = at->x;
+    gNdsFlameProbeJointY[slot] = at->y;
+    gNdsFlameProbeJointZ[slot] = at->z;
+    gNdsFlameProbeGenericX[slot] = generic->x;
+    gNdsFlameProbeGenericY[slot] = generic->y;
+    gNdsFlameProbeGenericZ[slot] = generic->z;
+    gNdsFlameProbeCount++;
+}
+#endif /* NDS_R2_POSITION_PROBE */
+
 void *ftParamMakeEffect(GObj *fighter_gobj, s32 effect_id, s32 joint_id,
                         Vec3f *effect_pos, Vec3f *effect_scatter, s32 lr,
                         sb32 is_scale_pos, u32 arg7)
@@ -8284,6 +8370,26 @@ void *ftParamMakeEffect(GObj *fighter_gobj, s32 effect_id, s32 joint_id,
 #endif
     ndsFTParamGetVisualPosition(fighter_gobj, joint_id, effect_pos,
                                 effect_scatter, is_scale_pos, &pos);
+    /* The source's Flame override, ahead of BOTH dispatch arms. See
+     * ndsFTParamGetEffectJointPosition for why it lives here and what the
+     * generic position it replaces was measured to be. */
+    if ((effect_id == nEFKindFlameLR) || (effect_id == nEFKindFlameRandom) ||
+        (effect_id == nEFKindFlameStatic))
+    {
+        FTStruct *flame_fp =
+            (fighter_gobj != NULL) ? ftGetStruct(fighter_gobj) : NULL;
+
+        if ((flame_fp != NULL) && (flame_fp->attr != NULL))
+        {
+#if NDS_R2_POSITION_PROBE
+            Vec3f generic = pos;
+#endif
+            ndsFTParamGetEffectJointPosition(flame_fp, &pos);
+#if NDS_R2_POSITION_PROBE
+            ndsFTParamProbeFlamePosition(flame_fp, effect_id, &generic, &pos);
+#endif
+        }
+    }
 #if NDS_R2_SOURCE_EFFECTS_PARTICLE
     {
         void *source_effect = NULL;

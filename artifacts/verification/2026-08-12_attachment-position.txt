@@ -1,0 +1,34 @@
+0x020b8b5c in f_lseek (fp=0x227a08c, ofs=<optimized out>, ofs@entry=34293264) at /home/davem/projects/devkitpro/pacman-packages/libfat/src/libdvm-2.1.0/fatfs/source/ff.c:4411
+Breakpoint 1 at 0x20a2d48: file D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/wp/wpfox/wpfoxblaster.c, line 109.
+
+Breakpoint 1, battleship_wpFoxBlasterMakeWeapon (fighter_gobj=fighter_gobj@entry=0x23c2420, pos=pos@entry=0x2282ae4) at D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/wp/wpfox/wpfoxblaster.c:109
+109	    GObj *weapon_gobj = wpManagerMakeWeapon(fighter_gobj, &dWPFoxBlasterWeaponDesc, pos, (WEAPON_FLAG_COLLPROJECT | WEAPON_FLAG_PARENT_FIGHTER));
+FOXPOS n=0 tr=3113 animlocks=0 mode=1 trans5=0
+FOXPOS A -963.692871 2189.746826 51.119053
+FOXPOS B -963.692871 2189.746582 51.119061
+FOXPOS D 0.000000 0.000244 -0.000008
+
+Breakpoint 1, battleship_wpFoxBlasterMakeWeapon (fighter_gobj=fighter_gobj@entry=0x23c2420, pos=pos@entry=0x2282ae4) at D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/wp/wpfox/wpfoxblaster.c:109
+109	    GObj *weapon_gobj = wpManagerMakeWeapon(fighter_gobj, &dWPFoxBlasterWeaponDesc, pos, (WEAPON_FLAG_COLLPROJECT | WEAPON_FLAG_PARENT_FIGHTER));
+FOXPOS n=2 tr=2075 animlocks=0 mode=1 trans5=0
+FOXPOS A -552.316528 223.398254 88.820457
+FOXPOS B -552.316589 223.398254 88.820457
+FOXPOS D 0.000061 0.000000 0.000000
+Breakpoint 2 at 0x20a4b2c: file D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c, line 1766.
+Breakpoint 3 at 0x20a4cd4: file D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c, line 1766.
+No breakpoint number 1.
+
+Breakpoint 3, efManagerFlameRandomMakeEffect (pos=pos@entry=0x2282a48) at D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1766
+1766	    if ((is_force_return == FALSE) && (sEFManagerStructsFreeNum < 5))
+FLAMEPOS count=4
+FLAMEPOS ring kind selidx jointid  jointXYZ  genericXYZ
+FLAMEPOS 0 kind=6 sel=1 joint=15  1012.334534 334.599945 128.176010  1039.044189 0.000000 0.000000
+FLAMEPOS 1 kind=6 sel=2 joint=20  931.534180 172.549408 -97.665802  1039.044189 0.000000 0.000000
+FLAMEPOS 2 kind=6 sel=3 joint=25  946.438232 109.954025 22.107510  1039.044189 0.000000 0.000000
+FLAMEPOS 3 kind=6 sel=4 joint=9  1167.461182 326.459320 -104.209099  1207.044189 0.000000 0.000000
+FLAMEPOS 4 kind=0 sel=0 joint=12  1188.305420 338.309204 -5.477638  1190.291748 0.000000 0.000000
+FLAMEPOS 5 kind=0 sel=0 joint=0  0.000000 0.000000 0.000000  0.000000 0.000000 0.000000
+FLAMEPOS 6 kind=0 sel=0 joint=0  0.000000 0.000000 0.000000  0.000000 0.000000 0.000000
+FLAMEPOS 7 kind=0 sel=0 joint=0  0.000000 0.000000 0.000000  0.000000 0.000000 0.000000
+[Inferior 1 (Remote target) detached]
+

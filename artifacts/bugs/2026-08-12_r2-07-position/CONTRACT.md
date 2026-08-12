@@ -1,5 +1,75 @@
 # Attachment-position cluster — Fox blaster spawn, fighter burn joints
 
+---
+
+## MEASURED 2026-08-12 — one build, one run, and the two rows split apart
+
+`builds/build-c131-position` (`NDS_R2_BOTH_CPU=1`, `NDS_R2_POSITION_PROBE=1`),
+`scripts/probe-attachment-position.ps1`, capture
+`artifacts/verification/2026-08-12_attachment-position.txt`. The probe only
+records, so this ROM still behaves like the one the owner played.
+
+### Fox — **A == B. The shared helper is sound and Fox is not a cache bug.**
+
+| shot | A (`gmCollisionGetFighterPartsWorldPosition`) | B (`func_ovl2_800EDBA4` + `mtx_translate`) | A − B |
+|---|---|---|---|
+| `tr=3113` | (−963.692871, **2189.746826**, 51.119053) | (−963.692871, **2189.746582**, 51.119061) | (0, **+0.000244**, −0.000008) |
+| `tr=2075` | (−552.316528, **223.398254**, 88.820457) | (−552.316589, **223.398254**, 88.820457) | (+0.000061, **0**, 0) |
+
+Both deltas are float epsilon against magnitudes of 10²–10³, i.e. ~1e-7
+relative. `animlocks=0 mode=1 trans5=0` on both shots, so **A took the
+parent-chain walking arm and never rebuilt a world matrix, and still agreed with
+the rebuilt arm exactly.** The invalidation asymmetry this contract flagged
+(`ftParamsUpdateFighterPartsTransformAll` passing `reset_mode = FALSE` to
+descendants, unlike source `ftparam.c:2283`) is real in the code but **does not
+produce a stale pose here** — it is not the defect and must not be "fixed" on
+suspicion.
+
+**Two consequences, and the second matters more than the first.**
+
+1. Per the owner's own branch, the comparison moves off gameplay and onto the
+   gun overlay: the beam and flash originate at the source-correct joint-17
+   world position, so any remaining Fox error is the **drawn gun's muzzle vertex
+   versus local `{60,0,0}`** — a mesh question, not a transform one.
+2. **The crouch-under-laser divergence cannot be explained by a wrong spawn Y.**
+   The spawn Y is source-correct to seven digits. That row keeps its own
+   evidence and its own investigation — hurtbox or weapon collision — and must
+   not be closed as a side effect of this cluster.
+
+### Fire — **worse than a missing rotation: Y and Z were exactly zero**
+
+| # | kind | sel | joint | source joint world XYZ | position the ROM actually used |
+|---|---|---|---|---|---|
+| 0 | 6 | 1 | 15 | (1012.33, **334.60**, **128.18**) | (1039.04, **0.000000**, **0.000000**) |
+| 1 | 6 | 2 | 20 | (931.53, **172.55**, **−97.67**) | (1039.04, **0.000000**, **0.000000**) |
+| 2 | 6 | 3 | 25 | (946.44, **109.95**, **22.11**) | (1039.04, **0.000000**, **0.000000**) |
+| 3 | 6 | 4 | 9 | (1167.46, **326.46**, **−104.21**) | (1207.04, **0.000000**, **0.000000**) |
+| 4 | — | 0 | 12 | (1188.31, **338.31**, **−5.48**) | (1190.29, **0.000000**, **0.000000**) |
+
+The shadowed source rotation advanced 1→2→3→4→0 and wrapped at 5 exactly as
+`ftparam.c:1783` prescribes, over five distinct joints with healthy varied world
+positions — **the same helper Fox just proved sound**. Meanwhile the position the
+shipped code passed to the Flame makers had **Y and Z exactly 0 on every
+emission**: `ndsFTParamGetVisualPosition` takes its early return when the
+colanim's `joint_id` does not resolve and returns the fighter's root translate,
+so every flame of every burn spawned on the stage plane at the victim's feet.
+That is the owner's symptom, and it is a stronger defect than the missing
+rotation alone.
+
+(Row 4's `kind` reads 0 while its position fields are populated: the probe's
+stores are plain globals the compiler may reorder, and GDB halted mid-sequence.
+It does not affect any figure above.)
+
+### Order, resolved
+
+The shared seam is measured sound, so the Flame fix is safe to land on its own
+and does **not** risk scattering flames across five systematically displaced
+joints. Fix landed in `ndsFTParamGetEffectJointPosition` +
+`ftParamMakeEffect`; verification run on `builds/build-c132-flamejoint`.
+
+---
+
+
 Opened 2026-08-12 after the owner playtested the visibility fixes and confirmed
 **both effects are now visible**. The visibility rows are closed; these two are
 about **where** the effects appear. Do not reopen the visibility work.

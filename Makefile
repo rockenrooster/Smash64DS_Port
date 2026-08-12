@@ -1961,6 +1961,15 @@ NDS_IMPORT_BATTLESHIP_FT_PUBLIC ?= 1
 # already treats all eleven as P1 seams and has packed their scripts and
 # textures (docs/optimization/NDS_PARTICLE_BANKS.generated.json, reach.p1_seams).
 NDS_R2_SOURCE_EFFECTS_PARTICLE ?= 1
+# The attachment-position diagnostic for the two 2026-08-12 BUGS.md rows: Fox's
+# muzzle flash/beam Y, and where the burn flames land
+# (artifacts/bugs/2026-08-12_r2-07-position/CONTRACT.md). READ-ONLY -- it records
+# what the shipped code already computes and, beside it, what the source route
+# would have produced, and it changes no gameplay value. That is deliberate:
+# both rows consume gmCollisionGetFighterPartsWorldPosition, so the A-vs-B
+# reading has to be taken on code that still behaves like the ROM the owner
+# played, or the measurement describes the fix instead of the defect.
+NDS_R2_POSITION_PROBE ?= 0
 # NDS_R2_SOURCE_EFFECTS_FULL is GONE (2026-08-04). It gated the six DObj-tree
 # makers -- damage slash, impact wave, catch swirl and the three random spawn
 # showers -- plus the shield, rebirth halo and Fox reflector, and the reason it
@@ -3225,6 +3234,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_IMPORT_BATTLESHIP_FOX_REFLECTOR $(NDS_IMPORT_BATTLESHIP_FOX_REFLECTOR)'; \
 		echo '#define NDS_IMPORT_BATTLESHIP_FT_PUBLIC $(NDS_IMPORT_BATTLESHIP_FT_PUBLIC)'; \
 		echo '#define NDS_R2_SOURCE_EFFECTS_PARTICLE $(NDS_R2_SOURCE_EFFECTS_PARTICLE)'; \
+		echo '#define NDS_R2_POSITION_PROBE $(NDS_R2_POSITION_PROBE)'; \
 		echo '#define NDS_R2_EFFECT_POOL $(NDS_R2_EFFECT_POOL)'; \
 		echo '#define NDS_R2_KO_STRESS $(NDS_R2_KO_STRESS)'; \
 		echo '#define NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_HI $(NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_HI)'; \

@@ -73,11 +73,85 @@ static void ndsFoxBlasterProcDisplay(GObj *weapon_gobj)
     wpDisplayMain(weapon_gobj, gcDrawDObjDLHead1);
 }
 
+#if NDS_R2_POSITION_PROBE
+/* BUGS.md "Fox's muzzle flash and laser spawn at the wrong Y", the A-vs-B
+ * invariant. This wrapper is the one port seam that runs at the exact spawn
+ * instant: ftfoxspecialn.c has just resolved local {60,0,0} through
+ * gmCollisionGetFighterPartsWorldPosition and is handing the result here, and
+ * wpFoxBlasterMakeWeapon passes that same vector on to
+ * efManagerFoxBlasterGlowMakeEffect -- so `*pos` IS both the beam origin and
+ * the flash position, and there is no second offset anywhere to measure.
+ *
+ * A is that value. B rebuilds joint 17 through func_ovl2_800EDBA4 and
+ * transforms the same local {60,0,0} by parts->mtx_translate, which is the arm
+ * the newly visible gun overlay uses. Source-equivalent routes; if they differ,
+ * the defect is the shared fighter-parts cache and Fox must not be touched.
+ *
+ * ORDERING CAVEAT, stated because it changes how the flags read: A has ALREADY
+ * run by the time this executes, so the three state words below are captured
+ * AFTER it, not before. is_use_animlocks is unaffected either way. The other
+ * two are still the reading that matters: in the animlocks-FALSE arm A walks
+ * parents and only ever sets transform_update_mode, never unk_dobjtrans_0x5, so
+ * unk_dobjtrans_0x5 == 0 here means A took the walking arm and never rebuilt a
+ * world matrix at all. */
+/* `used` on every one: their only consumer is GDB, and --gc-sections collects a
+ * global with no in-ROM reader. That is not hypothetical here -- it took
+ * Boundary RED on "Missing ELF symbol" once already. */
+#define NDS_POSITION_PROBE_GLOBAL __attribute__((used))
+NDS_POSITION_PROBE_GLOBAL f32 gNdsFoxSpawnAX, gNdsFoxSpawnAY, gNdsFoxSpawnAZ;
+NDS_POSITION_PROBE_GLOBAL f32 gNdsFoxSpawnBX, gNdsFoxSpawnBY, gNdsFoxSpawnBZ;
+NDS_POSITION_PROBE_GLOBAL f32 gNdsFoxSpawnDX, gNdsFoxSpawnDY, gNdsFoxSpawnDZ;
+NDS_POSITION_PROBE_GLOBAL u32 gNdsFoxSpawnAnimLocks;
+NDS_POSITION_PROBE_GLOBAL s32 gNdsFoxSpawnUpdateMode;
+NDS_POSITION_PROBE_GLOBAL u32 gNdsFoxSpawnTrans5;
+NDS_POSITION_PROBE_GLOBAL u32 gNdsFoxSpawnProbeCount;
+
+static void ndsFoxBlasterProbeSpawn(GObj *fighter_gobj, Vec3f *pos)
+{
+    FTStruct *fp = (fighter_gobj != NULL) ? ftGetStruct(fighter_gobj) : NULL;
+    DObj *joint = (fp != NULL) ? fp->joints[FTFOX_BLASTER_HOLD_JOINT] : NULL;
+    FTParts *parts = (joint != NULL) ? ftGetParts(joint) : NULL;
+    Vec3f b;
+
+    gNdsFoxSpawnProbeCount++;
+    gNdsFoxSpawnAX = pos->x;
+    gNdsFoxSpawnAY = pos->y;
+    gNdsFoxSpawnAZ = pos->z;
+    if (parts == NULL)
+    {
+        gNdsFoxSpawnUpdateMode = -1;
+        return;
+    }
+    gNdsFoxSpawnAnimLocks = (u32)fp->is_use_animlocks;
+    gNdsFoxSpawnUpdateMode = parts->transform_update_mode;
+    gNdsFoxSpawnTrans5 = (u32)parts->unk_dobjtrans_0x5;
+
+    b.x = FTFOX_BLASTER_SPAWN_OFF_X;
+    b.y = 0.0F;
+    b.z = 0.0F;
+    if (parts->unk_dobjtrans_0x5 == 0)
+    {
+        func_ovl2_800EDBA4(joint);
+    }
+    gmCollisionGetWorldPosition(parts->mtx_translate, &b);
+
+    gNdsFoxSpawnBX = b.x;
+    gNdsFoxSpawnBY = b.y;
+    gNdsFoxSpawnBZ = b.z;
+    gNdsFoxSpawnDX = pos->x - b.x;
+    gNdsFoxSpawnDY = pos->y - b.y;
+    gNdsFoxSpawnDZ = pos->z - b.z;
+}
+#endif /* NDS_R2_POSITION_PROBE */
+
 GObj *wpFoxBlasterMakeWeapon(GObj *fighter_gobj, Vec3f *pos)
 {
     GObj *weapon_gobj;
 
     gNdsFighterProjectileProofSpawnCallCount++;
+#if NDS_R2_POSITION_PROBE
+    ndsFoxBlasterProbeSpawn(fighter_gobj, pos);
+#endif
     weapon_gobj = battleship_wpFoxBlasterMakeWeapon(fighter_gobj, pos);
     if (weapon_gobj != NULL)
     {
