@@ -393,6 +393,36 @@ but **not** a general model-part interpreter: P1 has exactly one model part that
 matters. All three model-part shims are no-ops today and nothing in `src/` reads
 `modelpart_status`, so the state half is unowned as well as the geometry half.
 
+### 3a status: MEASURED — the state half is proven, the defect is downstream
+
+Whole match on `build-c126-modelpart`, 1,600 samples from frame 438, `-RingDump`,
+DLDI ON (`modelpart-engage.log`, ROM sha `DE80E46BDCF1FD98`, `slips=0`):
+
+```
+gNdsFighterModelPartSetCount   = 18
+gNdsFighterModelPartOnCount    = 18
+gNdsFighterModelPartResetCount = 18
+gNdsFighterProjectileProofSpawnSuccessCount = 17   <- control
+```
+
+| contract row | expected | measured | verdict |
+|---|---|---|---|
+| model-part event dispatched | > 0 on a match where Fox shoots | 18 | **GREEN** |
+| part id applied | every set is an "on" (id ≥ 0) | `Set == On == 18` | **GREEN** |
+| visible window closes | reset must match set, or the gun latches | `Reset == 18` | **GREEN** |
+
+The control is what makes this readable rather than a bare count: Fox actually
+fired 17 times, so 18 gun-on events is the ~1:1 relationship SpecialN implies —
+the one extra is consistent with a SpecialN that raised the gun without its
+spawn frame landing inside the sampled window. Had the event not been reaching
+the setter, this would have read `spawns 17 / On 0`.
+
+`Reset == Set` is the specific thing worth having measured: it is the
+`BUGS.md #7` latch failure not happening.
+
+**So row 3's remaining defect is entirely in the draw**, and that is now a
+measured statement rather than an inference from reading the renderer.
+
 ### 3b — the muzzle Y (answered, no build required)
 
 The port **`#include`s the original `ftfoxspecialn.c` verbatim** at
