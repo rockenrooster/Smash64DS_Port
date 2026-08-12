@@ -395,28 +395,34 @@ copies. Both are read under `#if NDS_RENDERER_HW_TRIANGLES` (line 730; the
 getter at 538). **Removing either is refuted; the ~150 KiB target is not
 available.**
 
-What IS available is reduction #4, with the extent measured rather than
-guessed. Read on the gate arm, no build:
+What IS available is reduction #4, and it is **21,600 bytes, not 150 KiB**.
+Both arrays are 320x240x2 = 153,600 B. Trace each one's real extent:
 
-```
-gNdsOriginalSpritePreviewDisplayWidth  256
-gNdsOriginalSpritePreviewDisplayHeight 192
-gNdsOriginalSpritePreviewCommitCount     2   (a WHOLE match)
-```
+- **Staging (`sOriginalSpritePreview`) CANNOT shrink.** Two call sites request
+  it at full size explicitly — `sprite_preview_backend.c:3264` and
+  `title_backend.c:66` both call
+  `ndsPlatformBeginOriginalSpritePreview(320u, 240u, ...)`. It is written at
+  SOURCE (N64) resolution, before the commit clamp.
+- **Decode cache (`sOriginalSpriteDisplayPreview`) can shrink to 300x220.** Its
+  consumer, `ndsSObjGetOpaqueWallpaperCache`
+  (`sprite_preview_backend.c:814`), declines unless
+  `sprite->width == 300 && sprite->height == 220`, so the cache never holds
+  more than 300x220x2 = 132,000 B. **Saving: 21,600 B.**
 
-Both arrays are `NDS_ORIGINAL_SPRITE_PREVIEW_MAX_WIDTH * ..._MAX_HEIGHT` =
-320x240x2 = 153,600 B, and `ndsPlatformCommitOriginalSpritePreviewLayer`
-**clamps `dst_w`/`dst_h` to `SCREEN_WIDTH`/`SCREEN_HEIGHT` before writing**, so
-the destination can never exceed 256x192 = 98,304 B. That is **55,296 B of dead
-space per buffer**.
+**CORRECTION, recorded so it is not re-derived.** A first pass here read the
+gate-arm counters `gNdsOriginalSpritePreviewDisplayWidth/Height` as 256x192 and
+concluded 55,296 B per buffer. Those counters describe the **staging commit**,
+which clamps to `SCREEN_WIDTH`/`SCREEN_HEIGHT` — they say nothing about the
+decode cache, whose extent is fixed by its consumer's 300x220 shape contract.
+The same pass also attributed the cache to
+`ndsPlatformGetOriginalSpriteOverlayLayer`, which in fact returns
+`bgGetGfxPtr(bg)` — VRAM, not this array at all. **Two arrays, three getters
+(`…BeginOriginalSpritePreview`, `…GetOriginalSpriteDecodeCache`,
+`…GetOriginalSpriteOverlayLayer`); match the consumer to the right one before
+quoting a number.**
 
-**The gate before editing:** `ndsPlatformGetOriginalSpriteOverlayLayer` hands
-the decode cache out advertising `*out_pitch = 320` and `*out_height = 240`, so
-its consumer may legitimately write the full extent. Trace that consumer first;
-shrinking the array without shrinking what the getter promises is a buffer
-overrun, not a saving. Staging may genuinely need 320 wide — it is written at
-SOURCE (N64) resolution before the clamp — so the decode cache is the honest
-candidate, worth 55,296 B alone.
+`CommitCount` is **2 over a whole match**, so neither buffer is a per-frame
+cost — this phase buys RAM, never ticks.
 
 Incidental proof the software path really is compiled out: the harness rejected
 `gNdsOriginalSpritePreviewDrawCount` as absent from the hwtri ELF, i.e.
