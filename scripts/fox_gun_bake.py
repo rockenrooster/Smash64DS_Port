@@ -49,14 +49,14 @@ OFF_VERTICES = 0x130
 OFF_DISPLAY_LIST = 0x3F0
 
 PALETTE_ENTRIES = 16
-TEXTURE_WIDTH = 32
-TEXTURE_HEIGHT = 16
 VERTEX_COUNT = 44
 COMMAND_COUNT = 38
 TRIANGLE_COUNT = 22
 
 G_VTX = 0x01
 G_TRI2 = 0x06
+G_SETTILESIZE = 0xF2
+G_SETTILE = 0xF5
 G_ENDDL = 0xDF
 
 
@@ -141,6 +141,83 @@ def decode_triangles(data: bytes) -> tuple[list[tuple[int, int, int]], list[int]
     return triangles, batch_sizes
 
 
+def decode_texture_size(data: bytes) -> tuple[int, int]:
+    """Read the CI4 extent out of the display list's own tile setup.
+
+    CI4 makes 16x32 and 32x16 the same 256 bytes, so the payload length cannot
+    tell them apart -- an earlier bake asserted 32x16 as a constant and got the
+    transpose. Two independent commands carry the answer and both are required
+    to agree here:
+
+      G_SETTILE     maskS/maskT are log2 of the extent, and `line` is the row
+                    stride in 64-bit words, which for CI4 is width/16.
+      G_SETTILESIZE lrs/lrt are the inclusive lower-right corner in 10.2, so
+                    the extent is (lrs >> 2) + 1.
+
+    The tile that matters is the RENDER tile (tile 0), not the load tile 7 that
+    G_LOADBLOCK uses to move bytes as 16-bit words.
+    """
+    tile_size: tuple[int, int] | None = None
+    settile: tuple[int, int, int] | None = None
+
+    for index in range(COMMAND_COUNT):
+        offset = OFF_DISPLAY_LIST + index * 8
+        w0, w1 = struct.unpack(">II", data[offset:offset + 8])
+        opcode = w0 >> 24
+        if opcode == G_SETTILE and ((w1 >> 24) & 0x7) == 0:
+            settile = (
+                (w1 >> 4) & 0xF,     # maskS
+                (w1 >> 14) & 0xF,    # maskT
+                (w0 >> 9) & 0x1FF,   # line, 64-bit words per row
+            )
+        elif opcode == G_SETTILESIZE and ((w1 >> 24) & 0x7) == 0:
+            tile_size = (((w1 >> 12) & 0xFFF) >> 2) + 1, (w1 & 0xFFF) >> 2
+            tile_size = (tile_size[0], tile_size[1] + 1)
+        elif opcode == G_ENDDL:
+            break
+
+    if settile is None or tile_size is None:
+        raise BakeError(
+            "display list has no G_SETTILE/G_SETTILESIZE for render tile 0; "
+            "the texture extent cannot be derived from source."
+        )
+    mask_s, mask_t, line = settile
+    width, height = 1 << mask_s, 1 << mask_t
+    if (width, height) != tile_size:
+        raise BakeError(
+            f"G_SETTILE says {width}x{height} but G_SETTILESIZE says "
+            f"{tile_size[0]}x{tile_size[1]}"
+        )
+    if line * 16 != width:
+        raise BakeError(
+            f"G_SETTILE line {line} implies {line * 16} CI4 texels per row, "
+            f"not {width}; the texture may not be 4bpp."
+        )
+    if (width * height) // 2 != 256:
+        raise BakeError(
+            f"{width}x{height} CI4 is {(width * height) // 2} bytes, not the "
+            "256 the asset carries"
+        )
+    return width, height
+
+
+def check_texcoords(vertices: list[tuple[int, ...]], width: int,
+                    height: int) -> None:
+    """Third, independent confirmation, from the geometry rather than the tile.
+
+    Source Vtx texcoords are S10.5 over the texel grid, so the largest S is
+    width * 32 and the largest T is height * 32. If the extent were transposed
+    these two would swap, which is precisely the failure this guards.
+    """
+    max_s = max(v[3] for v in vertices)
+    max_t = max(v[4] for v in vertices)
+    if max_s > width * 32 or max_t > height * 32:
+        raise BakeError(
+            f"texcoords reach s={max_s} t={max_t}, past {width}x{height} "
+            f"(s<={width * 32}, t<={height * 32}); the extent is transposed."
+        )
+
+
 def decode_vertices(data: bytes) -> list[tuple[int, ...]]:
     vertices = []
     for index in range(VERTEX_COUNT):
@@ -157,8 +234,10 @@ def decode_vertices(data: bytes) -> list[tuple[int, ...]]:
 def emit(data: bytes) -> str:
     triangles, batch_sizes = decode_triangles(data)
     vertices = decode_vertices(data)
+    width, height = decode_texture_size(data)
+    check_texcoords(vertices, width, height)
     palette = struct.unpack(">16H", data[OFF_PALETTE:OFF_PALETTE + PALETTE_ENTRIES * 2])
-    texels = data[OFF_TEXTURE:OFF_TEXTURE + (TEXTURE_WIDTH * TEXTURE_HEIGHT) // 2]
+    texels = data[OFF_TEXTURE:OFF_TEXTURE + (width * height) // 2]
 
     out: list[str] = []
     out.append(f"/* batches {batch_sizes}, {len(triangles)} triangles */")
@@ -192,7 +271,7 @@ def emit(data: bytes) -> str:
         out.append("    " + ", ".join(row) + ",")
     out.append("};")
     out.append("")
-    out.append(f"/* CI4 {TEXTURE_WIDTH}x{TEXTURE_HEIGHT}, source order preserved. */")
+    out.append(f"/* CI4 {width}x{height}, source order preserved. */")
     out.append("static const u8 sNdsFoxGunTexels[] = {")
     for start in range(0, len(texels), 16):
         chunk = texels[start:start + 16]

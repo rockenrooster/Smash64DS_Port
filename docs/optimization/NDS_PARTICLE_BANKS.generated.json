@@ -25,10 +25,10 @@
       0,
       2,
       3,
-      4,
       5,
       9,
       10,
+      12,
       13,
       15,
       16,
@@ -77,13 +77,6 @@
         "width": 16
       },
       {
-        "bytes": 1024,
-        "frames": 1,
-        "height": 32,
-        "texture": 4,
-        "width": 32
-      },
-      {
         "bytes": 256,
         "frames": 3,
         "height": 16,
@@ -102,6 +95,13 @@
         "frames": 3,
         "height": 32,
         "texture": 10,
+        "width": 32
+      },
+      {
+        "bytes": 1024,
+        "frames": 6,
+        "height": 32,
+        "texture": 12,
         "width": 32
       },
       {
@@ -284,6 +284,13 @@
         "bytes": 1024,
         "frames": 1,
         "height": 32,
+        "texture": 4,
+        "width": 32
+      },
+      {
+        "bytes": 1024,
+        "frames": 1,
+        "height": 32,
         "texture": 11,
         "width": 32
       },
@@ -299,13 +306,6 @@
         "frames": 3,
         "height": 32,
         "texture": 31,
-        "width": 32
-      },
-      {
-        "bytes": 1024,
-        "frames": 6,
-        "height": 32,
-        "texture": 12,
         "width": 32
       },
       {

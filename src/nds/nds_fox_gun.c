@@ -114,7 +114,10 @@ static const u16 sNdsFoxGunPalette[] = {
     0x850e, 0x9199, 0x8043, 0x95ee, 0xfbde, 0x94c5, 0x99de, 0x896b,
 };
 
-/* CI4 32x16, source order preserved. */
+/* CI4 16x32, source order preserved. The extent is derived from the display
+ * list's own G_SETTILE/G_SETTILESIZE, not from the byte count -- CI4 makes
+ * 16x32 and 32x16 both 256 bytes, and the first bake of this table asserted the
+ * transpose. */
 static const u8 sNdsFoxGunTexels[] = {
     0x60, 0xdd, 0xd0, 0x66, 0x60, 0x00, 0x00, 0x06, 0x00, 0x11, 0x10, 0x00, 0x06, 0x11, 0x11, 0x66,
     0x00, 0x00, 0x00, 0x00, 0x06, 0x11, 0x11, 0x66, 0x11, 0x11, 0x11, 0x11, 0x06, 0x11, 0x11, 0x66,
@@ -182,7 +185,9 @@ _Static_assert(sizeof(sNdsFoxGunTriangles) /
 _Static_assert(sizeof(sNdsFoxGunPalette) /
                    sizeof(sNdsFoxGunPalette[0]) == 16u,
                "Fox gun palette is not the source's 16 entries");
-_Static_assert(sizeof(sNdsFoxGunTexels) == 256u,
-               "Fox gun texels are not a CI4 32x16 payload");
+_Static_assert(sizeof(sNdsFoxGunTexels) ==
+                   (NDS_FOX_GUN_TEXTURE_WIDTH *
+                    NDS_FOX_GUN_TEXTURE_HEIGHT) / 2u,
+               "Fox gun texels do not match the declared CI4 extent");
 
 #endif /* NDS_R2_FOX_GUN_OVERLAY */

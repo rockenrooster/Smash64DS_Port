@@ -9,42 +9,42 @@ built **`NDS_R2_BOTH_CPU 0`** — a Boundary-arm figure. On the arm R2-07's gate
 `EXHAUSTION.md` was computed on `BOTH_CPU 0` rows and must be redone. **Owner's order
 is bugs first, then P95** — so this is context, not the next task.
 
-## R2-07 `BUGS.md`: rows 2 and 3 are FIXED; row 1 is the only one open
+## R2-07 `BUGS.md`: the owner playtested rows 2 and 3 and BOTH ARE STILL OPEN
 
 Contracts + evidence: `artifacts/bugs/2026-08-12_r2-07-cluster/CONTRACT.md`. **The old
 "all three rows converge on ONE texture-residency capability" framing was WRONG for
-ALL THREE** — do not reinstate any part of it.
+ALL THREE** — do not reinstate any part of it. **Both "FIXED" acceptances were
+ENGAGEMENT proofs and are withdrawn**; every row of this cluster now owes screen-space
+pixel evidence. Candidate: `build-c129-foxfire`.
 
-- **Row 2 (fire burn) — FIXED.** Two defects in series. Fire colanim scripts 12–15 had
-  no port entry, so `ftParamCheckSetColAnimID` rejected the burn before a Flame
-  command ran; and `ndsFTParamMakeSourceEffect` had no Flame case, so the requests
-  fell to the generic HitFire substitute — the real makers were not even LINKED,
-  `--gc-sections` having dropped them. **The old "the Flame lane is DEAD, do NOT touch
-  `P1_PARTICLE_SEAMS`" note was the exact inverse of the truth**: the seams were the
-  fix (92→93 scripts, 33→34 textures). Accepted on `build-c127-fire`: kind-mask bits
-  6+7 set, `gNdsVisualEffectKindMask=0`.
-- **Row 3 (Fox gun) — FIXED.** `NDS_R2_FOX_GUN_OVERLAY`. The state half was always
-  fine; nothing read it. **Source's `joint->dl = modelpart->dl` is unavailable here** —
-  that dl is in reloc asset `0x13b`, not Fox's model `0x139`, and
-  `ndsFighterDrawPlanResolve` rejects the whole collection on an asset_id mismatch, so
-  copying source would push the ENTIRE fighter off the native path for 22 triangles.
-  It is an overlay at joint 17's world matrix, mesh baked offline by
-  `scripts/fox_gun_bake.py`. Accepted: `tris = 22 × draws`, `fail=0`, `bytes=288`,
-  `prepare=1`, plus `2026-08-12_fox-gun-overlay-shot.png` against the pre-fix
-  `2026-08-09_fox-blaster-native-promoted.png`. **+2,432 WORK-H P95, inside the
-  ±5,376 floor.** Culling is NONE pending an owner playtest.
-- **Row 1 (Whispy face) — OPEN, ROOT CAUSE: the blink animation lasts ONE frame.**
-  `map_gobj[0]->anim_frame` hits 1.0 for exactly one sample and is 0 the next; at 30 Hz
-  presented that is often never shown. **Everything around it is GREEN** — countdown,
-  blink #1 at `wait==0`, no reseed on the `0` arm, blink #2 at `-10` with reseed, wind
-  eye-texture cycling 0/1/2. **The texture-residency framing was wrong twice over**: the
-  BLINK entry of `dGRPupupuWhispyEyesAnims` carries a NULL material anim
-  (`grpupupu.c:76`) so there IS no blink texture, and the six
-  `dGRPupupuWhispyEyesTextures` belong to the WIND cycle on `map_gobj[3]`. **Next
-  question is only: why does `llGRPupupuMapWhispyEyes{Left,Right}BlinkAnimJoint` resolve
-  to a 1-frame anim?** First suspect: `ndsAObjEvent32NormalizeScript`'s 1,024-entry
-  table below, 973/1,024, overflow silently skipping the attach. Reproduce with
-  `probe-whispy-eye-texture.ps1`, no rebuild; read `pupupu.whispy_blink_wait` live.
+- **Row 3 (Fox gun) — the overlay drew at 0.036 PX.** The submit hand-loaded its
+  composed MVP and so skipped BOTH halves of `ndsRendererLoadHardwareRawComposedMatrix`:
+  the world-unit pair (vertices go in `x16`, the matrix's complete homogeneous row 3
+  must be `>> NDS_RENDERER_HW_WORLD_UNIT_SHIFT`) and the identity GL_PROJECTION — and
+  this target is `NDS_R2_FIGHTER_HW_MTX := 1`, so the fighter leaves a real projection
+  loaded. Captured on c128 with NO rebuild and replayed by
+  `scripts/fox_gun_screen_bounds.py`: right place (143.97, 47.90), 44/44 in viewport,
+  0 behind camera, span **0.036 px**; with the shift, **9.245 px**. Also from the source
+  DL: the texture is **16x32, not 32x16** (CI4 makes both 256 B, so the byte count could
+  never catch it), the combiner is TEXEL0 x SHADE and nothing latched a colour, and
+  cmS/cmT are CLAMP. **The old acceptance shot's "blaster in his hand" is the
+  `NDS_R2_FOX_BLASTER_QUAD` magenta debug quad, and its "control" is a different
+  camera and pose.**
+- **Row 2 (fire burn) — FlameLR's quad cell was not in the atlas.** The colanim/maker
+  work below is real and stays. One level down: `efManagerFlameLRMakeEffect` takes
+  script `0x12` -> **texture 12**, which was PACKED but sat in `quads.excluded`, so
+  `ndsParticleQuadFrameFor` returned NULL and `battleship_lbparticle.c:3698` drew
+  NOTHING. Confirmed on c127, no rebuild: `QuadMissMask` **bit 12 = 1**, and bit 15
+  (FlameRandom, script `0x55`) clear — so the burn was exactly half-drawn.
+  **The grader could not have known**: `QUAD_MEASURED_LIVE` is regraded from a soak's
+  own use mask, and until this cycle the burn was unreachable. **After restoring a dead
+  effect, re-grade the atlas before trusting the next soak.**
+- **Row 1 (Whispy face) — the blink animation lasts ONE frame.** `map_gobj[0]->anim_frame`
+  hits 1.0 for one sample and is 0 the next; everything around it measured GREEN, and
+  **there IS no blink texture** — that entry of `dGRPupupuWhispyEyesAnims` carries a NULL
+  material anim (`grpupupu.c:76`) and the six `dGRPupupuWhispyEyesTextures` are the WIND
+  cycle on `map_gobj[3]`. Only question left: why does the joint script resolve to one
+  frame? Probes: `probe-whispy-eye-texture.ps1`, `probe-whispy-blink-script.ps1`.
 
 **R2-08 cannot be finished by an agent**: SwitchPlan `:391` needs the owner's recorded retail play test, `:385` their visual approval.
 

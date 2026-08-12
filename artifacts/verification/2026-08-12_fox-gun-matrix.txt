@@ -1,0 +1,41 @@
+0x020b5d8c in get_fat (clst=63233, obj=<optimized out>) at /home/davem/projects/devkitpro/pacman-packages/libfat/src/libdvm-2.1.0/fatfs/source/ff.c:1169
+Breakpoint 1 at 0x20a2e20: file D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/wp/wpfox/wpfoxblaster.c, line 109.
+
+Breakpoint 1, battleship_wpFoxBlasterMakeWeapon (fighter_gobj=fighter_gobj@entry=0x23c2280, pos=pos@entry=0x2282944) at D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/wp/wpfox/wpfoxblaster.c:109
+109	    GObj *weapon_gobj = wpManagerMakeWeapon(fighter_gobj, &dWPFoxBlasterWeaponDesc, pos, (WEAPON_FLAG_COLLPROJECT | WEAPON_FLAG_PARENT_FIGHTER));
+FOXSHOT tr=3113 draws=7
+Breakpoint 2 at 0x2025200: file D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_renderer.c, line 15063.
+
+Breakpoint 2, ndsRendererSubmitFoxGun (composed=composed@entry=0x2281d14) at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_renderer.c:15063
+15063	    u32 vertex_count = 0u;
+FOXMTX n=1 composed=0x2281d14 tr=3112
+0x2281d14:	8358	1910	907	-111
+0x2281d24:	1166	-11440	932	920
+0x2281d34:	-18	2690	4024	3519
+0x2281d44:	1927305	7740840	13538824	15450092
+
+Breakpoint 2, ndsRendererSubmitFoxGun (composed=composed@entry=0x2281d14) at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_renderer.c:15063
+15063	    u32 vertex_count = 0u;
+FOXMTX n=2 composed=0x2281d14 tr=3110
+0x2281d14:	8610	1557	-113	-817
+0x2281d24:	3468	-9751	1675	1654
+0x2281d34:	220	5354	3685	3972
+0x2281d44:	1568015	7588606	13523110	15434083
+
+Breakpoint 2, ndsRendererSubmitFoxGun (composed=composed@entry=0x2281d14) at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_renderer.c:15063
+15063	    u32 vertex_count = 0u;
+FOXMTX n=3 composed=0x2281d14 tr=3108
+0x2281d14:	7965	4100	-827	-2312
+0x2281d24:	7361	-2231	2040	2014
+0x2281d34:	-1933	8526	2714	3638
+0x2281d44:	1948538	7660896	13447495	15359007
+
+Breakpoint 2, ndsRendererSubmitFoxGun (composed=composed@entry=0x2281d14) at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_renderer.c:15063
+15063	    u32 vertex_count = 0u;
+
+Breakpoint 2, ndsRendererSubmitFoxGun (composed=composed@entry=0x2281d14) at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_renderer.c:15063
+15063	    u32 vertex_count = 0u;
+Captured repo-local melonDS window: D:\Stuff\DevFolder\Smash64DS_Port\artifacts\visibility\2026-08-12_fox-gun-matrix.png
+FOXGUNDONE draws=11 tris=242 fail=0 bytes=288 prepare=1
+[Inferior 1 (Remote target) detached]
+

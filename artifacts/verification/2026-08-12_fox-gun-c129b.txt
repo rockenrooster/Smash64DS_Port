@@ -1,0 +1,57 @@
+0x020c06e4 in __aeabi_uldivmod () at /home/davem/projects/devkitpro/tool-packages/devkitarm/gcc/src/gcc-15.2.0/libgcc/config/arm/bpabi.S:259
+Breakpoint 1 at 0x202520c: file D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_renderer.c, line 15089.
+
+Breakpoint 1, ndsRendererSubmitFoxGun (composed=composed@entry=0x2281b74) at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_renderer.c:15089
+15089	    u32 vertex_count = 0u;
+FOXMTX n=1 composed=0x2281b74 tr=3392
+0x2281b74:	0	0	0	-226
+0x2281b84:	-1727	-11322	-911	-900
+0x2281b94:	111	-2694	4025	0
+0x2281ba4:	0	0	0	0
+FOXBODY composed_matrices[0]
+0x2211bf0 <sNdsRendererAdapterNativeOwnerWorkspace+512>:	0	0	0	0
+0x2211c00 <sNdsRendererAdapterNativeOwnerWorkspace+528>:	0	0	0	0
+0x2211c10 <sNdsRendererAdapterNativeOwnerWorkspace+544>:	0	0	0	0
+0x2211c20 <sNdsRendererAdapterNativeOwnerWorkspace+560>:	0	0	0	0
+FOXCAM count=1 projection then modelview
+0x220e7f4 <sNdsRendererAdapterCameraCache+4>:	8727	-15	-54	-53
+0x220e804 <sNdsRendererAdapterCameraCache+20>:	0	11857	-360	-355
+0x220e814 <sNdsRendererAdapterCameraCache+36>:	-115	-1031	-4133	-4080
+0x220e824 <sNdsRendererAdapterCameraCache+52>:	1210731	-2869402	9132274	11099337
+0x220e834 <sNdsRendererAdapterCameraCache+68>:	0	0	0	0
+0x220e844 <sNdsRendererAdapterCameraCache+84>:	0	0	35956352	0
+0x220e854 <sNdsRendererAdapterCameraCache+100>:	0	0	0	0
+0x220e864 <sNdsRendererAdapterCameraCache+116>:	0	0	0	0
+
+Breakpoint 1, ndsRendererSubmitFoxGun (composed=composed@entry=0x2281b74) at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_renderer.c:15089
+15089	    u32 vertex_count = 0u;
+FOXMTX n=2 composed=0x2281b74 tr=3390
+0x2281b74:	8509	-2267	-229	-1809
+0x2281b84:	8480	-1282	-774	-763
+0x2281b94:	1883	5105	3626	3974
+0x2281ba4:	-2362341	2544	8696946	10669561
+FOXBODY composed_matrices[0]
+0x2211bf0 <sNdsRendererAdapterNativeOwnerWorkspace+512>:	0	0	0	0
+0x2211c00 <sNdsRendererAdapterNativeOwnerWorkspace+528>:	0	0	0	0
+0x2211c10 <sNdsRendererAdapterNativeOwnerWorkspace+544>:	0	0	0	0
+0x2211c20 <sNdsRendererAdapterNativeOwnerWorkspace+560>:	0	0	0	0
+
+Breakpoint 1, ndsRendererSubmitFoxGun (composed=composed@entry=0x2281b74) at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_renderer.c:15089
+15089	    u32 vertex_count = 0u;
+FOXMTX n=3 composed=0x2281b74 tr=3388
+0x2281b74:	124	10630	-1833	-1379
+0x2281b84:	4904	-9788	156	154
+0x2281b94:	2259	2616	3890	3580
+0x2281ba4:	-3132939	1887704	8424441	10400605
+Breakpoint 2 at 0x2050d6c: file D:/Stuff/DevFolder/Smash64DS_Port/src/port/taskman_seam.c, line 4636.
+
+Breakpoint 2, ndsBattlePlayableFrameCompleteMarker () at D:/Stuff/DevFolder/Smash64DS_Port/src/port/taskman_seam.c:4636
+4636	    __asm__ volatile("" ::: "memory");
+Captured repo-local melonDS window: D:\Stuff\DevFolder\Smash64DS_Port\artifacts\visibility\2026-08-12_fox-gun-c129b-a.png
+
+Breakpoint 2, ndsBattlePlayableFrameCompleteMarker () at D:/Stuff/DevFolder/Smash64DS_Port/src/port/taskman_seam.c:4636
+4636	    __asm__ volatile("" ::: "memory");
+Captured repo-local melonDS window: D:\Stuff\DevFolder\Smash64DS_Port\artifacts\visibility\2026-08-12_fox-gun-c129b.png
+FOXGUNDONE draws=4 tris=88 fail=0 bytes=288 prepare=1
+[Inferior 1 (Remote target) detached]
+

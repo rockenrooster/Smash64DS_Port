@@ -34,15 +34,30 @@ typedef struct NDSFoxGunVertex {
 #define NDS_FOX_GUN_TEXCOORD_SHIFT 1
 
 /* Source model units to DS v16 (4.12): one unit is 16. This is not a choice --
- * it is the same scale the native stage/fighter emit uses
- * (ndsRendererNativeStageEmitNoZVertex writes `x * 16`), and the gun rides the
- * same joint space, so any other scale would put it at the right place in the
- * wrong size. The mesh spans x -72..60, y -42..54, z -12..12, so scaled it
- * peaks at 1,152 and needs none of the overflow down-shift that path carries. */
+ * it is `1 << (12 - NDS_RENDERER_HW_WORLD_UNIT_SHIFT)`, exactly what
+ * ndsRendererHardwareCoordToV16 computes for every other vertex in this
+ * renderer, and the gun rides the same joint space. The mesh spans x -72..60,
+ * y -42..54, z -12..12, so scaled it peaks at 1,152 and needs none of the
+ * overflow down-shift that path carries.
+ *
+ * IT IS HALF OF A PAIR. The other half is dividing the composed matrix's
+ * homogeneous row by the same 256 (ndsRendererBuildRawHardwareMatrix), and the
+ * submit MUST go through ndsRendererLoadHardwareRawComposedMatrix to get it.
+ * Applying only this half drew the gun at 0.036 px -- right place, right
+ * orientation, invisible, every counter green. */
 #define NDS_FOX_GUN_VERTEX_SCALE 16
 
-#define NDS_FOX_GUN_TEXTURE_WIDTH 32u
-#define NDS_FOX_GUN_TEXTURE_HEIGHT 16u
+/* 16 wide x 32 tall, from the source display list and nothing else. CI4 makes
+ * 16x32 and 32x16 both exactly 256 bytes, so the byte count cannot tell them
+ * apart and an earlier bake guessed the transpose. MiscData315's list settles
+ * it three independent ways: G_SETTILE (command 10) carries maskS=4 -> 16 and
+ * maskT=5 -> 32 with line=1, which is one 64-bit word per row and therefore 16
+ * CI4 texels; G_SETTILESIZE (command 16) carries lrs=60 and lrt=124 in 10.2,
+ * i.e. 15+1 by 31+1; and the baked Vtx texcoords run s 0..512 and t 0..1024 in
+ * S10.5, which is 16 texels by 32. scripts/fox_gun_bake.py now parses those
+ * commands and fails closed rather than asserting a constant. */
+#define NDS_FOX_GUN_TEXTURE_WIDTH 16u
+#define NDS_FOX_GUN_TEXTURE_HEIGHT 32u
 
 const NDSFoxGunVertex *ndsFoxGunVertices(u32 *count_out);
 const u8 (*ndsFoxGunTriangles(u32 *count_out))[3];

@@ -1,5 +1,147 @@
 # R2-07 BUGS cluster — observable contracts
 
+---
+
+## RE-OPENED 2026-08-12 — the owner playtested both "FIXED" rows and neither is
+
+The owner ran `builds/build-c127-fire` and `builds/build-c128-foxgun` and
+reported the fire burn still invisible and the pistol still missing. **Both
+acceptances were engagement proofs, and both are withdrawn.** Everything below
+these two sections is history; these two are current.
+
+### Row 3 (Fox pistol) — MEASURED, root cause is the world-unit shift
+
+`ndsRendererSubmitFoxGun` loaded the composed MVP with `glLoadMatrix4x4`
+instead of going through `ndsRendererLoadHardwareRawComposedMatrix`, and so
+skipped both halves of what that helper does.
+
+**1. The world-unit pair.** This renderer encodes a vertex as
+`world << (12 - NDS_RENDERER_HW_WORLD_UNIT_SHIFT)` = `x16`
+(`ndsRendererHardwareCoordToV16`, `nds_renderer.c:8265`) **and** divides the
+composed matrix's complete homogeneous row 3 by the same `1 << 8`
+(`ndsRendererBuildRawHardwareMatrix`, `nds_renderer.c:18436`, whose own comment
+states the contract). The gun applied the vertex half only.
+
+**2. `GL_PROJECTION`.** A composed MVP in `GL_MODELVIEW` is correct only under an
+identity projection. This target builds `NDS_R2_FIGHTER_HW_MTX := 1`
+(`Makefile:1568`), so the fighter drawn immediately before leaves the camera
+projection loaded. The pair loader forces identity; the hand-rolled load did not.
+
+Measured on `build-c128-foxgun`, **no rebuild**: the live MVP captured at
+`ndsRendererSubmitFoxGun` on a Neutral-B frame, replayed through the DS geometry
+engine's own arithmetic by `scripts/fox_gun_screen_bounds.py`.
+
+| quantity | expected | measured (c128) | verdict |
+|---|---|---|---|
+| joint-17 screen position | on Fox's hand | **(143.97, 47.90)** | GREEN |
+| corners inside 256x192 | 44/44 | **44/44** | GREEN |
+| corners behind camera (w<=0) | 0/44 | **0/44** | GREEN |
+| ndc z | inside [-1,1] | **+0.8763** | GREEN |
+| **screen span** | ~9 px on a ~30 px Fox | **0.036 x 0.032 px** | **RED** |
+| same matrix, shift applied | — | **9.245 x 8.191 px** | — |
+
+Evidence: `artifacts/verification/2026-08-12_fox-gun-matrix.txt` and
+`..._fox-gun-matrix-compare.txt`. The gun was placed, oriented, depth-sorted and
+admitted correctly the whole time, at 1/256 of its size. Every counter the
+previous acceptance read (`draws`, `tris = 22 x draws`, `fail=0`, `bytes=288`,
+`prepare=1`) was true and none of them could see this.
+
+**The previous acceptance capture proves the process failure, not the fix.** In
+`artifacts/visibility/2026-08-12_fox-gun-overlay-shot.png` the bright magenta bar
+beside Fox is `NDS_R2_FOX_BLASTER_QUAD`'s debug quad (`glColor(RGB15(27, 0, 16))`),
+not the gun; and its cited "pre-fix control",
+`2026-08-09_fox-blaster-native-promoted.png`, is a different camera and pose
+entirely — Fox is not in that region of the frame. Crops: `foxgun-shot-zoom.png`,
+`foxgun-control-zoom.png`.
+
+**Three further divergences found in the source display list**, all real, none of
+them the cause of invisibility:
+
+| quantity | source (MiscData315 DL) | port before | fix |
+|---|---|---|---|
+| texture extent | **16 x 32** — `G_SETTILE` cmd 10 `maskS=4`/`maskT=5`/`line=1`; `G_SETTILESIZE` cmd 16 `lrs=60`/`lrt=124` (10.2); Vtx texcoords `s<=512`, `t<=1024` (S10.5) | 32 x 16 | header + `fox_gun_bake.py` now parses the DL and fails closed |
+| vertex colour | combiner `TEXEL0 x SHADE` (`G_SETCOMBINE` cmd 6) | none latched — inherits the fighter's last GX colour | explicit `glColor` |
+| wrap mode | `G_TX_CLAMP` (cmS/cmT = 2) | `GL_TEXTURE_WRAP_S\|_T` | clamp |
+
+CI4 makes 16x32 and 32x16 both exactly 256 bytes, which is why the byte count
+never caught the transpose.
+
+**Not reproduced:** the source's directional shade (light `0xb3b3b3` over ambient
+`0x808080`, `G_MOVEWORD` cmds 1–4). Hardware lighting would have to rotate the
+gun's normals by the vector matrix, and this path deliberately loads a composed
+MVP there — R2-03 E16b's rule that normals must never be rotated by the
+projection. Recorded as a fidelity delta, not papered over with an invented tint.
+
+**Beam Y / Mario crouching under Fox's laser stays OPEN and unmeasured.** Local
+offset `0.0F` only proves the beam starts at the runtime joint-17 world position;
+it says nothing about whether that Y is source-correct or whether Mario's crouch
+hurtbox lowers correctly. No Y offset was added.
+
+### Row 2 (fire burn) — MEASURED, the FlameLR quad cell is not in the atlas
+
+The row-2 plumbing fixed earlier this cycle is real and stays: fire colanim
+scripts 12–15 are transcribed exactly (verified line-for-line against
+`gmcolscripts.c:134-210`, including the asymmetric Fly counts 24 then 20) and the
+three Flame makers are linked and dispatched. The burn still draws nothing, one
+level further down.
+
+The source chain, read rather than assumed:
+
+| stage | source | value |
+|---|---|---|
+| burn script | `dGMColScriptsFighterDamageFire{Weak,Mid,Strong,Fly}` | `LOOP(n) FlameLR + Sub1` then `LOOP(m) FlameRandom + Sub2`; n/m = 4/4, 8/8, 16/16, 24/20 |
+| emission cadence | Sub1 = two `WAIT(1)`; Sub2 = `LOOP(2)` of two `WAIT(1)` | FlameLR every 2 frames, FlameRandom every 4 |
+| FlameLR particle | `efmanager.c:2538` | `lbParticleMakeScriptID(bank, 0x12)` |
+| FlameRandom / FlameStatic | `efmanager.c:2605`, `:2669` | `lbParticleMakeScriptID(bank, 0x55)` |
+| script 0x12 -> texture | packed bank entry | **texture 12** |
+| script 0x55 -> texture | packed bank entry | texture 15 |
+
+**Texture 12 is packed into the bank and had no cell in the quad atlas.** It sat
+in `quads.excluded` of `docs/optimization/NDS_PARTICLE_BANKS.generated.json`, so
+`ndsParticleQuadFrameFor` returns NULL and `battleship_lbparticle.c:3698` takes
+the `continue` that deliberately draws **nothing** rather than a neighbouring
+cell. A FlameLR particle is created, positioned, scaled, updated and killed on
+schedule while emitting zero pixels — and that is the first half of every burn,
+4 to 24 emissions of it.
+
+Confirmed on `build-c127-fire`, **no rebuild**, breaking at
+`efManagerFlameLRMakeEffect` (`scripts/probe-flame-quad-miss.ps1`, capture
+`artifacts/verification/2026-08-12_flame-quad-miss.txt`). Predictions were
+written before the run and all four held:
+
+| quantity | predicted | measured | verdict |
+|---|---|---|---|
+| `gNdsParticleQuadMissMask` bit 12 | set | **1** (mask `0x10000000` -> `0x10001000` on the second FlameLR) | RED, as predicted |
+| `gNdsParticleTextureUseMask` bit 12 | requested | **1** | — |
+| bit 15 miss (FlameRandom) | clear | **0** | GREEN |
+| bit 15 use | set | **1** | GREEN |
+
+So the burn is exactly half-drawn: **FlameLR refused 100% of the time it is
+asked for**, FlameRandom drawing. Bits, not hex digits.
+
+**Why the grader never saw it, and the lesson.** `QUAD_MEASURED_LIVE` is regraded
+from a soak's own `TextureUseMask`. Until this cycle the fire colanim scripts had
+no port entry, so the burn was unreachable and texture 12 could not appear in any
+use mask; it was demoted as "drew nothing in this match" — correct for a match in
+which the effect could not happen. **A use-mask regrade is only as good as the
+effects the run could produce. After restoring a dead effect, re-grade the atlas
+before trusting the next soak.**
+
+Fix: texture 12 added to `QUAD_MEASURED_LIVE`. Regenerated — `quads=31/38`,
+texture 12 admitted at 32x32 / 1,024 B, **no previously-live texture evicted**
+(only texture 4, itself already demoted, lost its opportunistic seat). The
+packed-table checksum is unchanged at `0xd22b30b6`, because the texture was
+always packed; only the atlas layout moved.
+
+**Carried, not fixed:** texture 12 packs six source frames and the atlas holds
+one (`QUAD_FRAME_CAP` search settles at cap 1), so the FlameLR sprite is frozen
+at source frame 0 like the other eighteen one-cell animations. That is
+`PROJECT_GOAL.md`'s explicitly allowed "reduced animation update rate", and it is
+a separate dimension from "the effect does not draw at all".
+
+---
+
+
 Three rows from `docs/BUGS.md`, all class 3 (missing/wrong presentation), so
 `BUG_FIXING_PROCESS.md` treats them as **one cluster**: contracts first, one
 batched probe build, one owner acceptance batch.

@@ -13380,6 +13380,15 @@ volatile s32 gNdsParticleCamTz;
  * the one caller that sits above it in the file. */
 static void ndsRendererCopyMtx20p12ToM4x4(
     const NDSRendererMatrix20p12 *src, m4x4 *dst);
+#if NDS_R2_FOX_GUN_OVERLAY
+/* Declared here for ndsRendererSubmitFoxGun, which sits above the definition.
+ * It is the ONLY correct way to hand this renderer a CPU-composed MVP: it
+ * forces GL_PROJECTION to identity and divides the composed homogeneous row by
+ * NDS_RENDERER_HW_WORLD_UNIT_SHIFT, which is the other half of the x16 vertex
+ * encoding. A submit that loads the MVP itself gets neither. */
+static void ndsRendererLoadHardwareRawComposedMatrix(
+    const NDSRendererMatrix20p12 *composed, u32 generation);
+#endif
 
 static NDSRendererMatrix20p12 sNdsRendererParticleProjection;
 static NDSRendererMatrix20p12 sNdsRendererParticleModelview;
@@ -14964,7 +14973,11 @@ static s32 ndsRendererHardwarePrepareFoxGunTexture(void)
     u32 palette_entries = 0u;
     int size_x;
     int size_y;
-    int params = TEXGEN_TEXCOORD | GL_TEXTURE_WRAP_S | GL_TEXTURE_WRAP_T;
+    /* No WRAP_S/WRAP_T: MiscData315's G_SETTILE (command 10) sets cmS and cmT
+     * to G_TX_CLAMP, and libnds spells clamp as the absence of those bits. It
+     * matters at the seam -- the baked texcoords touch the exact far edge
+     * (s=512 of 512, t=1024 of 1024), which repeat wraps back to texel 0. */
+    int params = TEXGEN_TEXCOORD;
 
     if (sNdsRendererFoxGunName != 0)
     {
@@ -15042,19 +15055,32 @@ fail:
  *
  * `composed` is the FINAL matrix, built by the caller exactly the way a fighter
  * root's is: joint 17's world matrix, times the frame camera modelview, times
- * the projection. It is not the bare world matrix, and the difference is not
- * cosmetic -- NDS_R2_FIGHTER_HW_MTX defaults to 0, so this build composes the
- * whole MVP on the CPU and loads the product, and a world matrix loaded here
- * would draw the gun in camera space at the world origin.
+ * the projection.
  *
- * The caller owns the compose because both terms it needs are the port
- * adapter's: the joint refresh is source-side, and the camera matrices come
- * from the adapter's per-frame cache.
+ * THE MATRIX GOES THROUGH ndsRendererLoadHardwareRawComposedMatrix, NOT
+ * glLoadMatrix4x4. Loading it by hand is what made this row look fixed while the
+ * gun was invisible, and it got two separate things wrong:
+ *
+ *   * The world-unit half of the encoding. Vertices are submitted as
+ *     `source << (12 - NDS_RENDERER_HW_WORLD_UNIT_SHIFT)` -- the x16 below --
+ *     and the composed matrix's complete homogeneous row 3 must be divided by
+ *     the same 256 (ndsRendererBuildRawHardwareMatrix). Applying one half and
+ *     not the other renders the mesh at 1/256 scale, correctly placed and
+ *     correctly oriented and far too small to rasterize. MEASURED on
+ *     build-c128-foxgun with no rebuild: the 44 corners spanned 0.036 x 0.032
+ *     px around (143.97, 47.90), 44/44 inside the viewport, 0 behind the
+ *     camera. The same captured matrix with the shift gives 9.245 x 8.191 px.
+ *     Evidence: artifacts/verification/2026-08-12_fox-gun-matrix.txt, replayed
+ *     by scripts/fox_gun_screen_bounds.py.
+ *   * GL_PROJECTION. A composed MVP in GL_MODELVIEW is only right when the
+ *     projection is identity, and it is NOT identity here -- this target builds
+ *     NDS_R2_FIGHTER_HW_MTX=1, so the fighter that draws immediately before
+ *     leaves the camera projection loaded. The pair loader sets identity.
  *
  * This runs immediately after the fighter's own production run, so it inherits
- * a live GX context and owns only what it changes: one matrix load, one texture
- * bind, one poly format, one batch. It never touches the fighter's baked
- * stream, which is the whole point of an overlay.
+ * a live GX context and owns only what it changes: one matrix pair, one texture
+ * bind, one poly format, one colour, one batch. It never touches the fighter's
+ * baked stream, which is the whole point of an overlay.
  */
 s32 ndsRendererSubmitFoxGun(const NDSRendererMatrix20p12 *composed)
 {
@@ -15063,7 +15089,6 @@ s32 ndsRendererSubmitFoxGun(const NDSRendererMatrix20p12 *composed)
     u32 vertex_count = 0u;
     u32 triangle_count = 0u;
     u32 index;
-    m4x4 hardware;
 
     if (composed == NULL)
     {
@@ -15082,11 +15107,8 @@ s32 ndsRendererSubmitFoxGun(const NDSRendererMatrix20p12 *composed)
     }
 
     ndsRendererHardwareEndBatch();
-    ndsRendererCopyMtx20p12ToM4x4(composed, &hardware);
-    glMatrixMode(GL_MODELVIEW);
-    glPushMatrix();
-    glLoadMatrix4x4(&hardware);
-    ndsRendererProfileRecordMatrixLoad();
+    ndsRendererLoadHardwareRawComposedMatrix(
+        composed, ndsRendererNextMatrixGeneration());
 
     glEnable(GL_TEXTURE_2D);
     ndsRendererHardwareBindTextureName(NULL, (u32)sNdsRendererFoxGunName);
@@ -15098,6 +15120,17 @@ s32 ndsRendererSubmitFoxGun(const NDSRendererMatrix20p12 *composed)
     ndsRendererHardwareSetPolyFmt(
         POLY_ALPHA(31) | POLY_CULL_NONE | POLY_ID(0));
     glBegin(GL_TRIANGLES);
+    /* AFTER glBegin, and never omitted. The source combiner for this display
+     * list is TEXEL0 x SHADE (G_SETCOMBINE at command 6 of MiscData315's list),
+     * so the DS's MODULATE needs a latched colour; with none the gun inherits
+     * whatever the fighter's last vertex left in GX and can come out black.
+     * White is the honest stand-in: it shows the source palette unmodulated.
+     * The source's directional term (light 0xb3b3b3 over ambient 0x808080,
+     * G_MOVEWORD commands 1..4) is NOT reproduced, because hardware lighting
+     * would have to rotate these normals by the vector matrix and this path
+     * deliberately loads a composed MVP there -- R2-03 E16b's rule that normals
+     * must never be rotated by the projection. Recorded as a fidelity delta. */
+    glColor(RGB15(31, 31, 31));
     for (index = 0u; index < triangle_count; index++)
     {
         u32 corner;
@@ -15117,7 +15150,6 @@ s32 ndsRendererSubmitFoxGun(const NDSRendererMatrix20p12 *composed)
         }
     }
     ndsRendererHardwareEndBatch();
-    glPopMatrix(1);
     sNdsRendererHardwareMatrixLoaded = FALSE;
     sNdsRendererHardwareMatrixMode = NDS_RENDERER_HW_MATRIX_MODE_NONE;
     gNdsRendererFoxGunDrawCount++;

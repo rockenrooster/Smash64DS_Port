@@ -407,10 +407,31 @@ QUAD_ATLAS_SHEETS_MAX = 4
 # lose their places to the nine that did.
 # Bits, not hex digits: 0x08400000 is 22 and 27, and reading it as 22/23/26 sent
 # one whole round of this at textures the pack does not even carry.
+#
+# TEXTURE 12 ADDED 2026-08-12, and it is the exact failure mode the paragraph
+# above warns about. It is the FIGHTER FIRE BURN: efManagerFlameLRMakeEffect
+# calls lbParticleMakeScriptID(bank, 0x12) (efmanager.c:2538) and script 0x12's
+# bank entry names texture 12. Its cell was in `quads.excluded` while the
+# texture itself was packed, so every FlameLR particle reached
+# ndsParticleQuadFrameFor, got NULL, and took the `continue` that draws nothing
+# -- a live, correctly-positioned, correctly-scaled particle emitting zero
+# pixels. That is BUGS.md's "Missing fire burn effects" after the colanim and
+# maker plumbing was already restored, and it is why the owner's playtest of
+# build-c127-fire still showed no burn while every counter read healthy.
+#
+# WHY THE GRADER NEVER SAW IT: this list is regraded from a soak's own
+# TextureUseMask, and until 2026-08-12 fire colanim scripts 12..15 had no port
+# entry, so ftParamCheckSetColAnimID rejected the burn before a Flame command
+# ever ran. No soak could observe texture 12 being drawn, so it was demoted as
+# "drew nothing in this match" -- correctly, for a match in which the effect was
+# unreachable. A use-mask regrade is only as good as the effects the run could
+# produce; after restoring a dead effect, re-check this list before the soak.
+# FlameRandom and FlameStatic both take script 0x55 -> texture 15, which was
+# already live, which is why the burn was partly present and wholly wrong.
 QUAD_KO_LIVE = frozenset((10, 13, 18, 19, 20, 21, 24))
 QUAD_MEASURED_LIVE = frozenset(
-    (0, 1, 2, 10, 13, 15, 16, 17, 18, 19, 20, 21, 22, 24, 25, 27, 29, 33, 34,
-     37, 38, 40, 41, 45))
+    (0, 1, 2, 10, 12, 13, 15, 16, 17, 18, 19, 20, 21, 22, 24, 25, 27, 29, 33,
+     34, 37, 38, 40, 41, 45))
 # A5I3: one byte per texel, 5-bit alpha, 3-bit index into a shared palette.
 # Two reasons, and the second is the one that shows on screen.
 #
