@@ -1343,9 +1343,37 @@ void ftParamSetHitStatusPartID(GObj *fighter_gobj, s32 joint_id,
     }
 }
 
+/* Pairs with ftParamSetModelPartID. ftMainSetStatus calls this on every status
+ * change that does not carry FTSTATUS_PRESERVE_MODELPART, so without it Fox's
+ * gun would latch on for the rest of the match after one Neutral-B. That is
+ * exactly the failure BUGS.md #7 hit on the texture-part side (see
+ * ftParamResetTexturePartAll below), so the two land together.
+ *
+ * State half only, mirroring ftparam.c:856. joint->dl is deliberately left
+ * alone for the reason given on ftParamSetModelPartID. */
 void ftParamResetModelPartAll(GObj *fighter_gobj)
 {
-    (void)fighter_gobj;
+    FTStruct *fp = (fighter_gobj != NULL) ? ftGetStruct(fighter_gobj) : NULL;
+    u32 i;
+
+    if (fp == NULL)
+    {
+        return;
+    }
+    for (i = 0u; i < ARRAY_COUNT(fp->modelpart_status); i++)
+    {
+        FTModelPartStatus *status = &fp->modelpart_status[i];
+
+        if (fp->joints[i + nFTPartsJointCommonStart] == NULL)
+        {
+            continue;
+        }
+        if (status->modelpart_id_curr != status->modelpart_id_base)
+        {
+            status->modelpart_id_curr = status->modelpart_id_base;
+            fp->is_modelpart_modify = TRUE;
+        }
+    }
 }
 
 void ftParamSetTexturePartID(GObj *fighter_gobj, s32 texturepart_id,
@@ -1451,6 +1479,12 @@ void ftParamResetTexturePartAll(GObj *fighter_gobj)
     fp->is_texturepart_modify = FALSE;
 }
 
+/* Stays a no-op ON PURPOSE, and the name is why it looks wrong. The source
+ * (ftparam.c:995-1020) does not clear modelpart_id_curr: it removes and re-adds
+ * each joint's MObj chain for the CURRENT part, which is costume/material work,
+ * not hiding. There is no state change to mirror, and the DS fighter has no
+ * source MObj chain to rebuild, so implementing something here would be
+ * inventing behaviour rather than porting it. */
 void ftParamHideModelPartAll(GObj *fighter_gobj)
 {
     (void)fighter_gobj;
@@ -6396,12 +6430,48 @@ void func_ovl0_800C9A38(Mtx44f mtx, DObj *dobj)
     }
 }
 
+/* BUGS.md "Fox's pistol model is missing": Fox's gun is not an object or an
+ * effect, it is model part 13 on joint 17 (FTFOX_BLASTER_HOLD_JOINT), and its
+ * geometry is file 315 at 0x3F0 -- already shipped (Makefile
+ * reloc_extern_data/MiscData315) and already resolved through
+ * dFoxMain_modelparts_container, whose desc[13] points at it.
+ *
+ * The request has been live all along: the port #includes ftmain.c verbatim
+ * (battleship_ftmain.c:81) and its decoder dispatches
+ * nFTMotionEventSetModelPartID at ftmain.c:575 straight into this function.
+ * Discarding the arguments here is why no gun appears.
+ *
+ * This owns the STATE half only, mirroring ftparam.c:768-785. It deliberately
+ * does NOT write joint->dl the way the source does. The DS fighter body draws
+ * from the baked Task 56 primitive stream and never reads dobj->dl, so the
+ * assignment would buy nothing -- while dobj->dl IS read elsewhere
+ * (ndsRendererScanDisplayList at reloc_backend_mp_collision.c:13273), so
+ * writing it, and especially clearing it to NULL on hide, would reach
+ * subsystems this row has no business touching. The draw half reads
+ * modelpart_status and takes the DL from the container directly. */
 void ftParamSetModelPartID(GObj *fighter_gobj, s32 joint_id,
                            s32 modelpart_id)
 {
-    (void)fighter_gobj;
-    (void)joint_id;
-    (void)modelpart_id;
+    FTStruct *fp = (fighter_gobj != NULL) ? ftGetStruct(fighter_gobj) : NULL;
+    s32 slot;
+
+    if ((fp == NULL) || (joint_id < nFTPartsJointCommonStart) ||
+        ((u32)joint_id >= ARRAY_COUNT(fp->joints)))
+    {
+        return;
+    }
+    slot = joint_id - nFTPartsJointCommonStart;
+    if (((u32)slot >= ARRAY_COUNT(fp->modelpart_status)) ||
+        (fp->joints[joint_id] == NULL))
+    {
+        return;
+    }
+    if (fp->modelpart_status[slot].modelpart_id_curr == (s8)modelpart_id)
+    {
+        return;
+    }
+    fp->modelpart_status[slot].modelpart_id_curr = (s8)modelpart_id;
+    fp->is_modelpart_modify = TRUE;
 }
 
 void ftParamSetModelPartDetailAll(GObj *fighter_gobj, u8 detail)
