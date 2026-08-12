@@ -173,10 +173,33 @@ because P1 cannot request them, while linking their maker would still cost
 | Attachment | follows the burning fighter | ±4 world units | position read vs owner |
 | Spawn frame vs hit | source offset | ±1 frame | frame-step capture |
 
-**Earliest divergence (predicted):** row 1 — all four kinds collapse to one, so
-the burn is never requested as a distinct effect. Row 3 fails independently even
-after row 1 is fixed, because the atlas packs frame 0 only; that is the shared
-row-1/row-2 seam above.
+**Earliest divergence — confirmed from the generated bank, no build.** The burn
+is a **particle script**: `efManagerFlameLRMakeEffect` calls
+`lbParticleMakeScriptID(gEFManagerParticleBankID, 0x12)` (`efmanager.c:2540`).
+`docs/optimization/NDS_PARTICLE_BANKS.generated.json` settles its fate:
+
+| fact | value |
+|---|---|
+| script `0x12` (18) in `reachable_scripts` | **NO** (the set runs …17, 19…) |
+| Flame seams in `p1_seams` | **absent entirely** |
+| `efManagerFireSparkMakeEffect` | in `p1_seams`, but listed `p1_seams_without_bank_scripts` |
+| `efManagerDamageFireMakeEffect` | seed script **77**, reachable ✓ |
+| `efManagerFireGrindMakeEffect` | seed script **11**, reachable ✓ |
+| source texture 5 (the flame texture) | **already packed** |
+
+> That is the owner's sentence, exactly. **"The explosion effect is there"** —
+> scripts 11 and 77 are packed and reachable. **"but not the flame burn"** —
+> script `0x12` was never reachable, because the Flame seams were never in the
+> P1 reachability set, so the packer had no reason to include it.
+
+So the alias at `shims.c:8088` is a consequence, not the cause: there was no
+bank script to call even if the makers had been linked.
+
+**Fix, in order:** add the Flame seams to the P1 reachability set so script
+`0x12` is packed, then link the real makers and drop the alias. The texture is
+already resident, so the only new bytes are one script in a 10,912-byte,
+119-script bank — and frames 1/2 of texture 5, which is the shared
+texture-variant capability above.
 
 **Fix seam:** two seams, in order — (a) link the real flame makers and stop
 aliasing them in `reloc_backend_compat_shims.c:8088`; (b) pack the 3 flame
