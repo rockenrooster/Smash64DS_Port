@@ -315,17 +315,28 @@ the owner mean" from guesswork into an enumeration, and it is one build.
 
 #### Enumeration result — the whole `nEFKind` fire space is dead in P1
 
-`effectkind-mask.log`, both-CPU, whole match. **Three** distinct kinds requested
-in the entire match:
+`effectkind-mask.log` / `damagefire.log`, both-CPU, whole match. **14** distinct
+kinds, identical across two independent runs (mask0 `0xb84ba800`, mask1 `2051`):
 
 ```
-  0  nEFKindDamageNormal
-  1  (adjacent DamageNormal variant)
- 33  nEFKindQuakeMag1
+ 11 DustLight        13 DustHeavyDouble    15 DustHeavy
+ 16 DustHeavyReverse 17 DustExpandLarge    19 DustDashSmall
+ 22 ImpactWave       27 DamageFlyMDustReverse
+ 28 SparkleWhite     29 SparkleWhiteMultiExplode  31 SparkleWhiteScale
+ 32 QuakeMag0        33 QuakeMag1          43 FlashMiddle
 ```
+
+**Correction — an earlier revision of this file reported "three kinds: 0, 1,
+33". That was a DECODER BUG, not a reading.** The harness prints thousands
+separators, and the decoder's `(\d+)` truncated `3,091,965,952` to `3`, so the
+"kinds" were the leading digits of three numbers. The raw words were identical
+in both runs all along; only the decode was wrong. Ids are read with
+`([\d,]+)` and comma-stripped now.
 
 FlameLR (6), FlameRandom (7), FlameStatic (8) and FireSpark (37) are **all
-absent**, confirming the earlier per-kind counters and going further:
+absent** under the corrected decode too — the conclusion survives its own
+correction, and it now rests on 14 positively-identified kinds rather than on
+three digits:
 
 > **The four-way fire alias at `shims.c:8180` is dead code in P1** — none of the
 > kinds it collapses is ever requested. Removing it would change nothing on
@@ -354,11 +365,26 @@ to the real source maker (script 77, packed).
 carrying `nGMHitElementFire`. The pair separates the three remaining
 possibilities without another guess:
 
-| DamageFire calls | Fire-element hits | reading |
-|---:|---:|---|
-| 0 | 0 | Mario's fireball is not tagged fire, or never connects — defect upstream of effects |
-| 0 | > 0 | the dispatch is not reaching the maker |
-| > 0 | > 0 | the effect IS made; the defect is in how it draws |
+| DamageFire calls | reading |
+|---:|---|
+| 0 | Mario's fireball is not tagged fire, or never connects — defect upstream of effects |
+| > 0 | the dispatch reaches the maker; the effect IS made |
+
+#### Measured: `gNdsFighterDamageFireCallCount = 1`
+
+`damagefire.log`, both-CPU, whole match, alongside `SpawnSuccess 10` /
+`ModelPartOn 5`. So **the fire path is live and the real source maker did run** —
+the element dispatch at `ftmain.c:2713` works, and script 77 was requested.
+
+**But once per match makes this arm a poor instrument for a visual defect.** Two
+level-3 CPUs land exactly one fire hit in sixty seconds; the owner, playing,
+lands far more. So the remaining question for row 2 — *does the effect that is
+made look right* — cannot be settled by this harness at this rate.
+
+That is the point at which the process says to stop instrumenting and hand over
+a ROM: row 2's remaining dimension is appearance, and the owner is the oracle for
+it. What the counters have bought is that the handover is now specific — "watch a
+fire hit; the effect IS being created" — rather than "is the burn missing?".
 
 Note also that `gNdsFighterProjectileProofSpawnSuccessCount` is incremented by
 **both** `battleship_mario_fireball.c:791` and `battleship_fox_blaster.c:80`, so
