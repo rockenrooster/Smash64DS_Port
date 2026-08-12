@@ -1,0 +1,29 @@
+WARNING: Tick-HUD samples repeated a presented frame (2 of 1600). EVERY duplicate is a ring-stop seam whose recorded skew explains the label collision, and no payload repeats, so these are distinct real iterations that share a frame LABEL. Percentiles are over the iterations and stand; the frame ids at those seams do not. Seam rows: 95,672.
+Tick-HUD buckets: target=smash64ds-battle-playable-tickhud-hwtri samples=1600 frames=440..2038 melonDS=1.0 sha=DE80E46BDCF1FD98 git=c2cf4731921+dirty(4) dldi=ON
+
+bucket p50        p95        spread mean       min        max        %ALLp50
+------ ---        ---        ------ ----       ---        ---        -------
+ALL     1,118,272  1,678,720   1.50  1,237,054  1,117,312  5,873,088   100.0
+FTR       300,672    304,128   1.01    289,470    172,288    310,016    26.9
+STG       169,472    173,248   1.02    169,674    165,632    177,152    15.2
+BG          4,032      4,096   1.02      4,036      3,840      4,288     0.4
+AUD         2,816      7,360   2.61      8,792      1,024    148,544     0.3
+HUD         1,024    426,176 416.19     38,657        896  4,616,320     0.1
+SRC       332,544    549,952   1.65    353,079     10,816  1,298,112    29.7
+MISC      105,408    257,088   2.44    126,415     81,408    439,616     9.4
+OTHR      225,728    532,288   2.36    246,931     20,672    579,712    20.2
+WAIT      205,888    513,856   2.50    227,255        896    560,320    18.4
+WORK      957,120  1,403,008   1.47  1,009,799    601,792  5,512,384    85.6
+SHDT        4,672    168,704  36.11     17,700          0    467,008     0.4
+SWRM          896      1,024   1.14        917        640      1,088     0.1
+GCRA      327,232    544,512   1.66    347,740      6,720  1,292,672    29.3
+SCPU       41,856    109,248   2.61     44,982          0    145,152     3.7
+SCAT        1,280      1,472   1.15      1,247          0      4,672     0.1
+SPRM        2,048      2,240   1.09      4,803          0    619,328     0.2
+SINT      151,296    317,952   2.10    164,288          0    607,104    13.5
+SPHD       57,984     95,616   1.65     67,486          0    750,912     5.2
+SPHC          576        704   1.22        582          0        768     0.1
+WORK-H    944,320  1,224,768   1.30    971,143    593,792  2,015,680    84.4
+
+named=990,123 (80.0% of ALL)  VBI 2:1665 3:344 4:17 5+:12 max:26 total:2038  slips=0
+extras: gNdsFighterEffectKindMask0=3,091,966,144  gNdsFighterEffectKindMask1=2,051  gNdsFighterDamageFireCallCount=1  gNdsFighterProjectileProofSpawnSuccessCount=10

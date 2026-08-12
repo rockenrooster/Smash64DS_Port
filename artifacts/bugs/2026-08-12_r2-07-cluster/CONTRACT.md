@@ -158,6 +158,31 @@ stays zero today, because nothing is missing: it is matching the wrong thing.
 this reading and inconsistent with "the texture is absent", which is the cheap
 discriminator between the two.
 
+**The exact assets row 1 needs — six, not one.** `grpupupu.c:108`:
+
+```c
+intptr_t dGRPupupuWhispyEyesTextures[2][nGRPupupuWhispyEyesTextureEnumCount] = {
+    { &llGRPupupuMapWhispyEyesLeft0Texture,  ...Left1Texture,  ...Left2Texture  },
+    { &llGRPupupuMapWhispyEyesRight0Texture, ...Right1Texture, ...Right2Texture }
+};
+```
+
+**Three eye states per facing direction**, indexed
+`[lr_players][whispy_eyes_texture]`. The consumer (`grpupupu.c:612-624`) is not a
+plain texture swap — when `whispy_eyes_texture != -1` it attaches the selected
+entry as a JOINT ANIM to `map_gobj[3]`:
+
+```c
+gcAddAnimJointAll(map_gobj[3], (AObjEvent32**)(table[lr][state] + map_head), 0.0F);
+gcPlayAnimAll(map_gobj[3]);
+```
+
+So the residency work is "all six eye anims/images prepared and resident before
+GO", and the owner's constraint applies: **DS-native and resident, no runtime
+conversion, and no blink-rate hack.** The mouth table immediately above it
+(`:104`, Open/Blow/Close per facing) is the same shape and is the one already
+pinned — which is exactly why the mouth reads correctly and the eyes do not.
+
 **Fix seam:** dynamic actor texture variant preparation for the
 `whispy_eyes` / `whispy_mouth` segments (`scripts/stages/generate_nds_native_stage.py`,
 `segment_order` at :4161). Not the animation clock — do not add a rate divider or
