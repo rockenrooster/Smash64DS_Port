@@ -67,7 +67,6 @@ foreach ($mf in $MakeFlags) {
         throw ("-MakeFlags element '$mf' is not a single NAME=value assignment.")
     }
 }
-}
 
 # Task 37 census driver.
 #

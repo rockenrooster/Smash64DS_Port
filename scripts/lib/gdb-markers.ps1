@@ -97,6 +97,24 @@ function Invoke-GdbMarkerScript {
         $patchedCommands = @('set mi-async on') + $patchedCommands
     }
 
+    # `set $fp = ...` does not create a convenience variable on ARM: $fp IS the
+    # frame-pointer register, and assigning it fails with "Left operand of
+    # assignment is not an lvalue" the moment no frame is selected. gdb reports
+    # that against whatever top-level command was running -- typically a bare
+    # `continue` -- naming neither the offending line nor the register, so the
+    # probe reads as "the breakpoint never fired". Cost one probe run on
+    # 2026-08-12. The same holds for $sp/$pc/$lr/$rN/$cpsr.
+    $reservedAssign = @(
+        $patchedCommands | Where-Object {
+            $_ -match '^\s*set\s+\$(fp|sp|pc|lr|cpsr|r[0-9]+)\s*='
+        }
+    )
+    if ($reservedAssign.Count -gt 0) {
+        throw ("GDB script assigns an ARM register as if it were a convenience " +
+               "variable; rename it (e.g. `$fp -> `$fst): " +
+               ($reservedAssign -join '; '))
+    }
+
     $gdbScriptPath = Join-Path $tempDir $ScriptName
     $gdbStdoutPath = Join-Path $tempDir ($ScriptName + '.out')
     $gdbStderrPath = Join-Path $tempDir ($ScriptName + '.err')

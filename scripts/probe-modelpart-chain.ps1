@@ -1,0 +1,202 @@
+[CmdletBinding()]
+param(
+    [string]$Build = 'build-c127-fire',
+    [string]$Target = 'smash64ds-battle-playable-tickhud-hwtri',
+    [ValidateRange(1, 8)][int]$RunnerSlot = 7,
+    [ValidateRange(30, 1800)][int]$TimeoutSeconds = 600,
+    [ValidateRange(1, 64)][int]$Hits = 8,
+    [string]$Artifact = ''
+)
+
+# BUGS.md "Fox's pistol model is missing", DRAW half.
+#
+# The state half already ships: ftParamSetModelPartID records
+# modelpart_status[joint - nFTPartsJointCommonStart].modelpart_id_curr and
+# gNdsFighterModelPartOnCount rises 5x on the gate arm. Nothing reads it back,
+# so no geometry is ever submitted.
+#
+# Before writing a submitter, walk the chain the submitter would have to walk
+# and prove each link EXISTS -- created -> container -> desc -> part -> dl ->
+# owning reloc file. Four Whispy theories died to cheap counters for want of
+# exactly this, and every link here is a pointer that may simply be NULL in the
+# port because its cross-file fixup never ran.
+#
+# NO REBUILD. Every expression is rooted at a global (sNdsFighterStructPool) or
+# at an ARM argument register captured at the function's FIRST instruction,
+# where the ABI guarantees r0/r1/r2 are the arguments. Reading the C local `fp`
+# is what this deliberately avoids: on this remote, stack locals read as zero
+# and have already shipped one false root cause.
+#
+# The convenience variable is $fst, NOT $fp: on ARM, `$fp` IS the frame-pointer
+# register, so `set $fp = ...` assigns r11 and fails with "Left operand of
+# assignment is not an lvalue" the moment no frame is selected -- reported
+# against the top-level `continue`, naming neither the line nor the register.
+# Avoid $fp/$sp/$pc/$lr/$rN as convenience-variable names in any gdb probe.
+#
+# The last link -- "which loaded reloc file owns that dl" -- is what decides the
+# implementation. If the dl lives in MiscData315 rather than FoxModel, then
+# assigning joint->dl the way source does would push the WHOLE fighter off the
+# native draw path (ndsFighterDrawPlanResolve rejects the collection when any
+# selected dl resolves to a file whose asset_id != the expected one), which is
+# the real reason the DS port must overlay instead of assign.
+
+$ErrorActionPreference = 'Stop'
+$root = Split-Path -Parent $PSScriptRoot
+. (Join-Path $PSScriptRoot 'lib\melonds.ps1')
+. (Join-Path $PSScriptRoot 'lib\gdb-markers.ps1')
+. (Join-Path $PSScriptRoot 'lib\build-output.ps1')
+
+$gdb = 'C:\devkitPro\devkitARM\bin\arm-none-eabi-gdb.exe'
+$nm = 'C:\devkitPro\devkitARM\bin\arm-none-eabi-nm.exe'
+$rom = Resolve-Smash64DSBuildOutput -Root $root -Target $Target -Build $Build -Extension '.nds'
+$elf = Resolve-Smash64DSBuildOutput -Root $root -Target $Target -Build $Build -Extension '.elf'
+if ([string]::IsNullOrWhiteSpace($Artifact)) {
+    $Artifact = Join-Path $root ('artifacts\verification\' +
+        (Get-Date -Format 'yyyy-MM-dd') + '_modelpart-chain-probe.txt')
+}
+$context = Initialize-MelonDSVerifierContext `
+    -Root $root -MelonDS '' -RunnerSlot $RunnerSlot -NoBuild
+$melon_dir = Split-Path -Parent $context.MelonDSPath
+$log_dir = Get-MelonDSVerifierLogDir -Root $root -RunnerSlot $RunnerSlot
+$stdout = Join-Path $log_dir 'melonds.modelpart-chain-probe.stdout.log'
+$stderr = Join-Path $log_dir 'melonds.modelpart-chain-probe.stderr.log'
+$config_state = $null
+$emulator = $null
+
+# gdb abandons a command file after its first error, so an absent symbol costs
+# the whole run silently.
+$required = @(
+    'ftParamSetModelPartID',
+    'sNdsFighterStructPool',
+    'gNdsFighterMarioFoxRelocDependencyMask',
+    'gNdsFighterModelPartOnCount',
+    'sNdsRelocLoadedFiles',
+    'sNdsRelocLoadedFileCount'
+)
+$symbols = & $nm $elf | ForEach-Object { ($_ -split '\s+')[-1] }
+$missing = $required | Where-Object { $symbols -notcontains $_ }
+if ($missing.Count -gt 0) {
+    throw ("Model-part chain probe symbols absent from {0}: {1}" -f $elf, ($missing -join ', '))
+}
+
+try {
+    $config_state = Enable-MelonDSGdbConfig `
+        -MelonDSPath $context.MelonDSPath `
+        -GdbPort $context.GdbPort -Persistent -MuteAudio
+    Remove-Item -LiteralPath $stdout, $stderr -Force -ErrorAction SilentlyContinue
+    $emulator = Start-Process `
+        -FilePath $context.MelonDSPath `
+        -ArgumentList $rom `
+        -WorkingDirectory $melon_dir `
+        -RedirectStandardOutput $stdout `
+        -RedirectStandardError $stderr `
+        -WindowStyle Hidden `
+        -PassThru
+    Wait-MelonDSGdbListener -Process $emulator -Port $context.GdbPort | Out-Null
+
+    $commands = @(
+        'set pagination off',
+        'set confirm off',
+        'set remotetimeout 20',
+        ("target remote 127.0.0.1:{0}" -f $context.GdbPort),
+
+        'set $hits = 0',
+        'break *ftParamSetModelPartID',
+        'commands',
+        'silent',
+        'set $hits = $hits + 1',
+        'set $g = (GObj *)$r0',
+        'set $joint = (int)$r1',
+        'set $mpid = (int)$r2',
+        # Find the struct by identity against the pool, not by reading a local.
+        'set $fst = (FTStruct *)0',
+        'if sNdsFighterStructPool[0].fighter_gobj == $g',
+        'set $fst = &sNdsFighterStructPool[0]',
+        'end',
+        'if sNdsFighterStructPool[1].fighter_gobj == $g',
+        'set $fst = &sNdsFighterStructPool[1]',
+        'end',
+        'printf "MPCHAIN hit=%d joint=%d id=%d gobj=%p fp=%p depmask=0x%x on=%u\n", $hits, $joint, $mpid, $g, $fst, gNdsFighterMarioFoxRelocDependencyMask, gNdsFighterModelPartOnCount',
+        'if $fst != 0',
+        'printf "MPWHO fkind=%d player=%d costume=%d detail_curr=%d detail_base=%d attr=%p\n", $fst->fkind, $fst->player, $fst->costume, $fst->detail_curr, $fst->detail_base, $fst->attr',
+        'if $fst->attr != 0',
+        'set $mc = $fst->attr->modelparts_container',
+        'set $ap = $fst->attr->accesspart',
+        'printf "MPCONT container=%p accesspart=%p\n", $mc, $ap',
+        'if $ap != 0',
+        'printf "MPACC acc_joint=%d acc_dl=%p\n", $ap->joint_id, $ap->dl',
+        'end',
+        'if $mc != 0',
+        'set $slot = $joint - 4',
+        'set $desc = $mc->modelparts_desc[$slot]',
+        'printf "MPDESC slot=%d desc=%p\n", $slot, $desc',
+        'if ($desc != 0) && ($mpid >= 0)',
+        'set $part = &$desc->modelparts[$mpid][$fst->detail_curr - 1]',
+        'printf "MPPART part=%p dl=%p mobjsubs=%p flags=0x%x\n", $part, $part->dl, $part->mobjsubs, $part->flags',
+        'if $part->dl != 0',
+        # Which loaded reloc file owns the dl. ndsRelocFindLoadedFileContaining
+        # is static and calling it would need a call frame on the remote, so
+        # walk the same table it walks -- pure memory reads.
+        'set $i = 0',
+        'set $found = 0',
+        'while ($i < sNdsRelocLoadedFileCount) && ($found == 0)',
+        'set $lf = &sNdsRelocLoadedFiles[$i]',
+        'if ($lf->data != 0) && ((char *)$part->dl >= (char *)$lf->data) && ((char *)$part->dl < ((char *)$lf->data + $lf->data_size))',
+        'set $found = 1',
+        'printf "MPOWNER asset=0x%x data=%p size=%u off=%u\n", $lf->asset_id, $lf->data, $lf->data_size, (unsigned int)((char *)$part->dl - (char *)$lf->data)',
+        'end',
+        'set $i = $i + 1',
+        'end',
+        'if $found == 0',
+        'printf "MPOWNER none files=%u\n", sNdsRelocLoadedFileCount',
+        'end',
+        'printf "MPWORD w0=0x%x w1=0x%x\n", *(unsigned int *)$part->dl, *((unsigned int *)$part->dl + 1)',
+        'end',
+        'end',
+        'end',
+        'end',
+        'end',
+        # The joint the geometry would hang off. Its FTParts carries the world
+        # matrix an overlay submit needs; a NULL joint means there is nothing to
+        # attach to and the row is a different bug.
+        'if $fst != 0',
+        'set $jd = $fst->joints[$joint]',
+        'printf "MPJOINT joint_dobj=%p\n", $jd',
+        'if $jd != 0',
+        'set $jp = (FTParts *)$jd->user_data.p',
+        'printf "MPJPARTS parts=%p dl=%p flags=0x%x\n", $jp, $jd->dl, $jd->flags',
+        'if $jp != 0',
+        'printf "MPJW w=%f,%f,%f\n", $jp->mtx_translate[3][0], $jp->mtx_translate[3][1], $jp->mtx_translate[3][2]',
+        'end',
+        'end',
+        'end',
+        ('if $hits < ' + $Hits),
+        'continue',
+        'end',
+        'end',
+
+        'continue',
+        'printf "MPCHAINDONE hits=%d\n", $hits',
+        'detach',
+        'quit'
+    )
+
+    $capture = Invoke-GdbMarkerScript `
+        -Gdb $gdb -Elf $elf -Root $root -Commands $commands `
+        -ScriptName 'modelpart_chain_probe.gdb' `
+        -TimeoutSeconds $TimeoutSeconds
+    New-Item -ItemType Directory -Force -Path (Split-Path -Parent $Artifact) | Out-Null
+    Set-Content -LiteralPath $Artifact -Value $capture.Stdout
+    $capture.Stdout -split "`n" |
+        Where-Object { $_ -match '^MP' } |
+        ForEach-Object { Write-Output $_ }
+    Write-Output "probe capture: $Artifact"
+}
+finally {
+    if ($null -ne $emulator) {
+        Stop-Process -Id $emulator.Id -Force -ErrorAction SilentlyContinue
+    }
+    if ($null -ne $config_state) {
+        Restore-MelonDSGdbConfig -State $config_state
+    }
+}
