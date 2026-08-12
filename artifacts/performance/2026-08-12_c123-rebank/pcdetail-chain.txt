@@ -1,0 +1,292 @@
+profile      artifacts\performance\2026-08-12_c123-rebank\profile\arm9-profile.csv
+elf          builds\build-c123-profile\smash64ds-battle-playable-tickhud-hwtri.elf
+pc rows      54,235,589
+cycles       3,816,014,261
+unattributed 65,044 (0.00% -- BIOS, ITCM stubs, data)
+symbols hit  1,379 of 3,568 FUNC symbols
+
+section sizes
+  .itcm               32,152
+  .text.hot            4,588  free 3,604 of cap 8,192
+  .text.hot.draw       5,256  free 2,936 of cap 8,192
+  .main.bss        1,454,832
+
+per-PC detail: func_ovl2_800EDBA4 [0x0207d014, 0x0207d1b2) 414 bytes
+  976,281 cycles over 112 distinct PCs, 0.03% of the window
+
+        pc  cycles   %fn  insns  cyc/insn  mode   source  instruction
+----------  ------  ----  -----  --------  -----  ------  ---------------------------------------
+0x0207d040  97,471  10.0  3,405     28.63  thumb  ?       ldr	r4, [r5, r1]
+0x0207d04e  72,855   7.5  3,731     19.53  thumb  ?       ldr	r5, [r5, #20]
+0x0207d01e  69,657   7.1  2,232     31.21  thumb  ?       ldr	r0, [r0, #4]
+0x0207d044  66,989   6.9  3,405     19.67  thumb  ?       ldrb	r2, [r4, #5]
+0x0207d07c  44,767   4.6    326    137.32  thumb  ?       movs	r3, r4
+0x0207d042  40,994   4.2  3,405     12.04  thumb  ?       stmia	r3!, {r0}
+0x0207d09c  28,981   3.0  2,147     13.50  thumb  ?       add	r3, sp
+0x0207d0e8  28,556   2.9  2,232     12.79  thumb  ?       pop	{r4, r5, r6, r7, pc}
+0x0207d0dc  27,473   2.8  2,604     10.55  thumb  ?       b.n	207d0a2 <func_ovl2_800EDBA4+0x8e>
+0x0207d02c  24,570   2.5  2,232     11.01  thumb  ?       ldrb	r3, [r0, r3]
+0x0207d05e  24,186   2.5    326     74.19  thumb  ?       ldr	r2, [r4, #64]
+0x0207d05c  19,869   2.0    326     60.95  thumb  ?       ldr	r3, [r4, #16]
+0x0207d050  19,567   2.0  3,731      5.24  thumb  ?       cmp	r5, #1
+0x0207d046  19,335   2.0  3,405      5.68  thumb  ?       cmp	r2, #0
+0x0207d0e4  18,694   1.9  2,232      8.38  thumb  ?       pop	{r7}
+0x0207d0ae  18,335   1.9  3,405      5.38  thumb  ?       ?
+0x0207d02e  17,747   1.8  2,232      7.95  thumb  ?       ldrb	r2, [r4, #5]
+0x0207d01c  14,701   1.5  2,232      6.59  thumb  ?       sub	sp, #72
+0x0207d03e  13,594   1.4  2,219      6.13  thumb  ?       b.n	207d04c <func_ovl2_800EDBA4+0x38>
+0x0207d020  12,955   1.3  2,232      5.80  thumb  ?       f8ae 	bl	2054180 <ftGetStruct>
+0x0207d022  12,930   1.3  2,232      5.79  thumb  ?       ?
+0x0207d014  12,186   1.2  2,232      5.46  thumb  ?       push	{r4, r5, r6, r7, lr}
+0x0207d0a0  11,152   1.1  2,147      5.19  thumb  ?       b.n	207d0bc <func_ovl2_800EDBA4+0xa8>
+0x0207d0c4  11,018   1.1  3,405      3.24  thumb  ?       ldr	r4, [r0, r3]
+0x0207d1ac  10,004   1.0    308     32.48  thumb  ?       ?
+0x0207d098   9,036   0.9    326     27.72  thumb  ?       bcc.n	207d0e2 <func_ovl2_800EDBA4+0xce>
+0x0207d026   8,944   0.9  2,232      4.01  thumb  ?       ldr	r4, [r5, r3]
+0x0207d03c   8,771   0.9  2,219      3.95  thumb  ?       movs	r1, #132
+0x0207d0c8   8,537   0.9  3,405      2.51  thumb  ?       ldr	r3, [r4, #0]
+0x0207d0ba   7,773   0.8  3,405      2.28  thumb  ?       bcc.n	207d0e2 <func_ovl2_800EDBA4+0xce>
+0x0207d0c6   7,760   0.8  3,405      2.28  thumb  ?       movs	r5, r4
+0x0207d0bc   7,706   0.8  3,405      2.26  thumb  ?       mov	r3, r8
+0x0207d05a   7,497   0.8    308     24.34  thumb  ?       b.n	207d1a4 <func_ovl2_800EDBA4+0x190>
+0x0207d048   7,327   0.8  3,405      2.15  thumb  ?       bne.n	207d09a <func_ovl2_800EDBA4+0x86>
+0x0207d052   7,136   0.7  3,731      1.91  thumb  ?       bne.n	207d040 <func_ovl2_800EDBA4+0x2c>
+0x0207d0d6   6,779   0.7  2,604      2.60  thumb  ?       ?
+0x0207d060   6,194   0.6    326     19.00  thumb  ?       str	r3, [r4, #80]
+0x0207d0be   5,454   0.6  3,405      1.60  thumb  ?       ldr	r0, [r3, #0]
+0x0207d0ce   5,031   0.5  3,405      1.48  thumb  ?       bne.n	207d0a2 <func_ovl2_800EDBA4+0x8e>
+0x0207d030   4,553   0.5  2,232      2.04  thumb  ?       lsls	r3, r3, #28
+
+cyc/insn is the whole point: a row near 1.0 is doing work, a row far above it is waiting. Rank by cycles, then read the column that says which.
+
+== 0. stall accounting by tier (placement can only touch non-mem stall) ==
+   excluding idle spin: armWaitForIrq
+tier                   cycles        insns  cyc/insn  nonmem stall     %    mem stall     %
+--------------  -------------  -----------  --------  ------------  ----  -----------  ----
+.itcm             730,215,789  381,310,057      1.92   104,459,574  14.3  244,446,158  33.5
+.text.hot         133,050,214   32,476,386      4.10    40,146,326  30.2   60,427,502  45.4
+.text.hot.draw    110,385,695   49,679,493      2.22    23,087,139  20.9   37,619,063  34.1
+.main           2,120,849,748  548,166,782      3.87   621,548,310  29.3  951,134,656  44.8
+
+== A. top 40 symbols by measured cycles ==
+     cycles   %tot   bytes      cyc/byte  tier            symbol
+-----------  -----  ------  ------------  --------------  --------------------------------------------------
+721,447,771  18.91       8  90,180,971.4  .itcm           armWaitForIrq
+ 99,354,841   2.60     400     248,387.1  .itcm           __aeabi_fadd
+ 92,006,571   2.41   7,396      12,440.0  .main           ndsFighterMarioFoxDLAllDrawForSlot.constprop.0
+ 88,696,234   2.32   2,820      31,452.6  .main           ndsRendererCommitNativeStageSegment
+ 80,278,748   2.10     548     146,494.1  .itcm           ndsRendererNativeEmitProductionPrimitiveGroups
+ 68,722,700   1.80     408     168,438.0  .itcm           __aeabi_fmul (+1 alias)
+ 67,693,940   1.77     604     112,076.1  .text.hot       gcPlayDObjAnimJoint
+ 67,327,121   1.76   3,472      19,391.5  .itcm           ndsRendererExecuteNativeFighterOwnerProduction
+ 61,868,677   1.62   1,028      60,183.5  .main           ndsR2AnimValueQ
+ 56,324,365   1.48   3,720      15,141.0  .itcm           ndsRendererNativePrepareProductionRun
+ 55,527,644   1.46     616      90,142.3  .text.hot.draw  ndsRendererMtxMulAffine20p12
+ 45,604,018   1.20     140     325,743.0  .itcm           memset
+ 44,034,138   1.15     608      72,424.6  .itcm           ndsRendererTask36ReplayRun
+ 43,702,839   1.15   1,836      23,803.3  .main           ndsRendererNativeStageBeginRun.part.0
+ 43,162,372   1.13   2,396      18,014.3  .main           ndsR2FtAnimParseDObjFigatree
+ 42,982,419   1.13     170     252,837.8  .itcm           memcpy
+ 42,619,210   1.12   2,056      20,729.2  .main           ndsRendererAdapterBuildFighterTraRotRpyDirect20p12
+ 37,244,784   0.98     512      72,743.7  .text.hot.draw  ndsRendererNativeStageLoadNoZMatrix
+ 35,538,355   0.93     352     100,961.2  .itcm           __aeabi_fdiv (+1 alias)
+ 35,350,908   0.93     716      49,372.8  .main           ftParamUpdateAnimKeys
+ 35,316,958   0.93   2,440      14,474.2  .main           ndsRendererAdapterBuildDObjXObjMatrix
+ 34,402,431   0.90     392      87,761.3  .main           ndsRendererLoadHardwareSplitMatrices
+ 33,964,464   0.89   1,532      22,170.0  .main           mpCollisionGetFCCommonFloor
+ 32,842,057   0.86     312     105,263.0  .itcm           ndsRendererMtxMul20p12
+ 32,521,572   0.85      92     353,495.3  .main           tickGetCount
+ 31,007,004   0.81     388      79,915.0  .main           ftDisplayMainDrawDefault
+ 30,501,948   0.80     252     121,039.5  .main           ftGetStruct
+ 30,095,070   0.79     120     250,792.2  .main           ndsBaseGcRunAll
+ 29,484,123   0.77   3,736       7,891.9  .main           lbParticleDrawTextures
+ 28,987,741   0.76     328      88,377.3  .main           gcCaptureCameraGObj
+ 27,662,750   0.72     464      59,618.0  .main           ndsStageGCDrawAllLoopRecordCapturedDisplay
+ 26,556,280   0.70     432      61,472.9  .main           gcPlayAnimAll
+ 24,538,342   0.64   2,176      11,276.8  .text.hot       battleship_ftMainProcUpdateInterrupt
+ 23,941,765   0.63     492      48,662.1  .itcm           ndsRendererNativeApplyStateDelta
+ 23,076,246   0.60     212     108,850.2  .itcm           ndsRendererSyncTextureTile
+ 22,812,236   0.60  10,972       2,079.1  .main           ndsRendererPrepareNativeStageOwner
+ 22,301,635   0.58     220     101,371.1  .main           sqrtf
+ 22,013,866   0.58     376      58,547.5  .main           ndsFTParamsInvalidateSubtree
+ 20,739,190   0.54     268      77,385.0  .main           ndsRendererHardwareBindTextureName
+ 20,728,442   0.54     120     172,737.0  .main           ndsRendererNativeStagePreparedTextureValid
+
+== B. .itcm rent: 82 residents covering 32,090 of 32,152 section bytes (62 unnamed); 30 never executed (2,594 B idle) ==
+    cyc/byte       cycles  bytes       insns  symbol
+------------  -----------  -----  ----------  ----------------------------------------------------------
+90,180,971.4  721,447,771      8       8,672  armWaitForIrq
+   325,743.0   45,604,018    140  10,969,553  memset
+   307,885.8   11,083,887     36   9,441,363  __aeabi_fcmpeq
+   270,534.0    1,082,136      4   1,082,132  __aeabi_fsub
+   252,837.8   42,982,419    170  15,962,799  memcpy
+   248,387.1   99,354,841    400  83,382,649  __aeabi_fadd
+   168,438.0   68,722,700    408  60,457,646  __aeabi_fmul (+1 alias)
+   151,526.1    7,879,356     52   7,028,883  __aeabi_fcmplt
+   146,494.1   80,278,748    548  26,276,646  ndsRendererNativeEmitProductionPrimitiveGroups
+   108,850.2   23,076,246    212   5,956,438  ndsRendererSyncTextureTile
+   105,263.0   32,842,057    312  23,213,853  ndsRendererMtxMul20p12
+   100,961.2   35,538,355    352  32,236,693  __aeabi_fdiv (+1 alias)
+    77,884.1    5,919,189     76     290,011  armCopyMem32
+    76,452.1    5,351,644     70   2,521,004  memcmp
+    72,675.5    3,779,124     52   3,327,558  __aeabi_fcmpgt
+    72,424.6   44,034,138    608   6,388,833  ndsRendererTask36ReplayRun
+    67,213.5    6,183,643     92   4,787,470  __aeabi_f2iz (+1 alias)
+    57,241.3    5,266,201     92   3,969,795  __aeabi_i2f
+    48,662.1   23,941,765    492   6,241,761  ndsRendererNativeApplyStateDelta
+    35,603.2   20,649,838    580   6,683,087  ndsRendererNativeShadeProductionActions.constprop.0.isra.0
+    30,618.3      979,786     32     727,850  __floatsisf (+1 alias)
+    24,550.2   14,140,888    576   5,544,205  ndsRendererNativeEmitProductionCrossRun.constprop.0
+    24,371.0      682,387     28     249,059  armDCacheInvalidate
+    24,336.7    6,230,200    256   4,293,328  ndsRendererMtxLoadN64ToDS20p12
+    21,308.3      596,633     28     218,573  armDCacheFlush
+    21,139.9    1,099,273     52     986,323  __aeabi_fcmple
+    19,668.5    3,382,976    172   2,847,963  __aeabi_l2f (+1 alias)
+    19,494.4    2,963,152    152   2,224,750  ndsRendererRecordTextureState
+    19,391.5   67,327,121  3,472  22,522,803  ndsRendererExecuteNativeFighterOwnerProduction
+    15,141.0   56,324,365  3,720  24,897,771  ndsRendererNativePrepareProductionRun
+    13,761.2    3,632,969    264   2,556,129  ndsRendererRecordSetTile
+    12,659.5      506,380     40     253,190  __aeabi_ui2f (+1 alias)
+    10,339.4      537,650     52     492,076  __aeabi_fcmpge
+     8,351.8      835,178    100     336,744  ndsRendererRecordLoadBlock
+     4,378.8      683,088    156     540,778  ndsRendererRecordSetTileSize
+     3,497.9      797,528    228     256,558  __arm_excpt_irq
+     3,495.4      293,612     84     235,505  __aeabi_f2uiz (+1 alias)
+     3,398.2      720,411    212     130,067  threadBlock
+     1,784.3       78,510     44      27,804  armContextSave
+     1,340.1      166,178    124      76,447  threadSwitchTo
+       832.2      199,721    240      86,401  threadUnblockAllByMask
+       705.5        8,466     12       2,541  armDrainWriteBuffer
+       677.9    1,822,158  2,688     799,627  ndsRendererHardwareSubmitVertex
+       371.5       78,754    212      31,447  threadUnblockOneByValue
+       217.2        6,951     32       2,317  armContextLoad
+       170.8      564,270  3,304     204,974  ndsRendererSubmitHardwareTriangle
+       154.5    1,193,743  7,728     485,160  ndsRendererScanList
+       112.2       51,614    460      17,820  ndsRendererHardwareLitShadeColorPrepared
+        57.2        9,156    160       7,225  ndsRendererHardwarePolyFmt
+        54.8        7,238    132       2,810  ndsRendererHardwareTextureSourceBytes
+        27.9        6,585    236       1,207  __ieee754_sqrtf
+         0.0      718,543      0      32,431  armContextLoadFromSvc
+         0.0            0    444           0  __addsf3 (+1 alias)
+         0.0            0     24           0  __aeabi_cfcmpeq (+1 alias)
+         0.0            0     40           0  __aeabi_cfrcmple
+         0.0            0     28           0  __aeabi_fcmpun
+         0.0            0    456           0  __aeabi_frsub
+         0.0            0    188           0  __aeabi_ul2f (+1 alias)
+         0.0            0     12           0  __arm_excpt_dabt
+         0.0            0      4           0  __arm_excpt_pabt
+         0.0            0      4           0  __arm_excpt_rst
+         0.0            0     12           0  __arm_excpt_und
+         0.0            0    100           0  __cmpsf2 (+2 alias)
+         0.0            0     48           0  __excpt_entry
+         0.0            0    116           0  __gesf2 (+1 alias)
+         0.0            0    108           0  __lesf2 (+1 alias)
+         0.0            0     24           0  __nds_task16_libgcc_fcmpge_golden
+         0.0            0     24           0  __nds_task16_libgcc_fcmpgt_golden
+         0.0            0     24           0  __nds_task16_libgcc_fcmple_golden
+         0.0            0     24           0  __nds_task16_libgcc_fcmplt_golden
+         0.0            0     56           0  __nds_task16_libgcc_fcmpun_golden (+1 alias)
+         0.0            0    448           0  __nds_task16_libgcc_fsub_golden (+1 alias)
+         0.0            0     24           0  __nds_task9_libgcc_fcmpeq_golden
+         0.0            0     40           0  armDCacheFlushAll
+         0.0            0     12           0  armICacheInvalidateAll
+         0.0            0     54           0  ndsFTParamsInvalidateFighterParts
+         0.0            0    404           0  ndsRendererHardwareGetLightShadeLut
+         0.0            0    192           0  ndsRendererNativeApplyStateSpan
+         0.0            0    256           0  ndsRendererNativeEmitDenseRawRun
+         0.0            0    128           0  ndsRendererNativeEmitProductionRawTexturedRun
+         0.0            0    112           0  ndsRendererNativeEmitProductionRawUntexturedRun
+         0.0            0    312           0  threadUnblockAllByValue
+
+== C. unplaced candidates for 3,604 free .text.hot bytes, ranked by recoverable (non-mem) stall ==
+pack  nonmem stall      cycles   bytes  cyc/insn  stall/byte  symbol
+----  ------------  ----------  ------  --------  ----------  --------------------------------------------------
+fit     23,657,388  88,696,234   2,820      2.48     8,389.1  ndsRendererCommitNativeStageSegment
+-       22,648,146  92,006,571   7,396      4.27     3,062.2  ndsFighterMarioFoxDLAllDrawForSlot.constprop.0
+-       13,730,097  42,619,210   2,056      2.39     6,678.1  ndsRendererAdapterBuildFighterTraRotRpyDirect20p12
+-       13,725,207  33,964,464   1,532      2.93     8,959.0  mpCollisionGetFCCommonFloor
+-       11,742,677  61,868,677   1,028      1.65    11,422.8  ndsR2AnimValueQ
+-       11,560,732  43,702,839   1,836      3.77     6,296.7  ndsRendererNativeStageBeginRun.part.0
+-       11,422,326  29,484,123   3,736      5.09     3,057.4  lbParticleDrawTextures
+-       11,325,107  43,162,372   2,396      2.77     4,726.7  ndsR2FtAnimParseDObjFigatree
+fit      9,069,653  22,301,635     220      3.01    41,225.7  sqrtf
+fit      8,946,326  27,662,750     464      5.05    19,280.9  ndsStageGCDrawAllLoopRecordCapturedDisplay
+-        8,642,762  13,328,670     988      4.43     8,747.7  syMatrixLookAtReflectF
+-        8,441,351  35,350,908     716      5.50    11,789.6  ftParamUpdateAnimKeys
+-        8,205,762  17,112,885     896      3.02     9,158.2  ndsStageMPAdjustFloorLoopWallSweep
+-        7,852,050  26,556,280     432      3.94    18,176.0  gcPlayAnimAll
+-        7,632,453  35,316,958   2,440      2.28     3,128.1  ndsRendererAdapterBuildDObjXObjMatrix
+-        6,798,173  30,095,070     120     10.02    56,651.4  ndsBaseGcRunAll
+-        6,785,467  16,014,535   1,816      3.84     3,736.5  ndsStageMPSweepFloorLoopSweep
+-        6,653,904  34,402,431     392      4.08    16,974.2  ndsRendererLoadHardwareSplitMatrices
+-        6,526,836  28,987,741     328      5.60    19,898.9  gcCaptureCameraGObj
+-        6,012,020  17,814,516   1,696      6.35     3,544.8  ndsParticleSetCurrentCamera
+-        5,702,969  18,892,930     732      2.98     7,790.9  ndsBaseGcPlayMObjMatAnim
+-        5,336,930  22,812,236  10,972      6.91       486.4  ndsRendererPrepareNativeStageOwner
+-        5,173,735  10,791,325   2,276     12.93     2,273.2  ndsBaseFTDisplayMainProcDisplay
+fit      5,027,191  17,177,635      68      2.25    73,929.3  ndsStageCollisionLoopGeometryReady
+-        4,897,069  31,007,004     388      4.80    12,621.3  ftDisplayMainDrawDefault
+-        4,820,871  14,927,054   5,192     12.06       928.5  syTaskmanRunTask
+-        4,815,438  22,013,866     376      7.42    12,807.0  ndsFTParamsInvalidateSubtree
+-        4,582,601  19,093,840   2,560      6.31     1,790.1  ndsRendererAdapterPrepareNativeStageOwner
+-        4,509,418  32,521,572      92      5.51    49,015.4  tickGetCount
+-        4,502,355   9,171,307   2,388      3.95     1,885.4  ndsRendererAdapterBuildNativeMaterialSnapshot
+-        4,415,730  17,218,084     468      2.53     9,435.3  ndsRendererNativeStageEmitNoZVertex.isra.0
+-        4,391,333  30,501,948     252      3.46    17,425.9  ftGetStruct
+-        4,360,840  10,118,618   1,416      5.56     3,079.7  gmCameraUpdateInterests
+-        4,206,620  20,739,190     268      4.49    15,696.3  ndsRendererHardwareBindTextureName
+-        4,045,187   8,792,753      86      2.80    47,037.1  __aeabi_lmul (+1 alias)
+-        3,942,013  17,420,300   1,656      4.32     2,380.4  ndsRendererNativeApplyMaterial.part.0
+-        3,788,132  13,542,731     812      5.76     4,665.2  ndsMPFindLineEndpoints
+-        3,748,198   7,645,884   2,012      3.03     1,862.9  ndsRendererSubmitParticleQuad
+-        3,738,107  15,557,128   2,252      2.02     1,659.9  ndsRelocGetFileData
+-        3,703,986   6,698,155     408      3.37     9,078.4  syMatrixF2L
+
+greedy pack claims 3,572 of 3,604 free bytes and reaches 46,700,558 non-mem stall cycles (1.22% of measured)
+
+== D. ITCM admissions by non-mem stall per byte (584 B free now, +2,594 B recoverable by eviction) ==
+slot   stall/byte  nonmem stall  bytes  cyc/insn  tier            symbol
+-----  ----------  ------------  -----  --------  --------------  --------------------------------------------
+free      143,895     3,453,470     24      5.17  .main           cpuGetTiming
+free       74,651     1,642,332     22      2.66  .main           DynamicArrayGet
+free       73,929     5,027,191     68      2.25  .main           ndsStageCollisionLoopGeometryReady
+free       56,651     6,798,173    120     10.02  .main           ndsBaseGcRunAll
+free       49,015     4,509,418     92      5.51  .main           tickGetCount
+free       47,037     4,045,187     86      2.80  .main           __aeabi_lmul (+1 alias)
+free       45,969        91,938      2      8.43  .main           lbCommonPrepSObjDraw
+free       42,630     1,364,158     32      2.82  .main           glGetTexParameter
+evict      41,226     9,069,653    220      3.01  .main           sqrtf
+free       37,724        75,448      2     48.16  .main           ndsPlatformBeginFrame
+free       36,506       146,025      4     23.82  .main           ndsFighterMarioFoxLivePreviewUpdateEnabled
+free       31,969     2,557,510     80      2.52  .main           ndsBaseGcPlayAnimAll
+evict      31,509     1,764,477     56      8.80  .main           ndsFighterDisplayContractCountFlags
+free       31,131       249,049      8     20.70  .main           mpProcessUpdateMain
+free       28,877       231,018      8     24.08  .main           mpProcessCheckTestFloorCollisionNew
+evict      28,114     1,911,762     68      4.26  .main           ndsR2AnimBuildTrackTable.constprop.0.isra.0
+free       27,884       223,074      8     11.64  .main           ftCommonDeadCheckInterruptCommon
+evict      27,646     3,317,499    120      4.95  .main           ndsRendererNativeStagePreparedTextureValid
+free       23,362        93,448      4      5.35  .main           __syscall_lock_acquire
+evict      22,828     3,652,554    160      4.67  .text.hot       gcRunGObjProcess
+evict      22,816       730,125     32      6.17  .main           __aeabi_idivmod
+free       22,454       224,544     10     26.62  .main           grWallpaperCommonProcUpdate
+evict      22,390    13,523,381    604      2.78  .text.hot       gcPlayDObjAnimJoint
+evict      22,365     2,057,564     92      7.71  .main           glBindTexture
+evict      21,896    13,487,740    616      1.80  .text.hot.draw  ndsRendererMtxMulAffine20p12
+free       21,799        87,197      4     14.99  .main           gcParseGObjScript
+evict      21,676       433,528     20     16.43  .main           grPupupuProcUpdate
+free       21,227       212,266     10     14.99  .main           mpCollisionGetEdgeUnderLLineID
+evict      19,899     6,526,836    328      5.60  .main           gcCaptureCameraGObj
+evict      19,856       158,848      8     13.17  .main           mpProcessRunFloorEdgeAdjust
+evict      19,758        79,034      4     13.35  .main           ndsFighterMarioFoxNaturalMotionUpdateEnabled
+evict      19,615     3,530,728    180      4.75  .main           ndsRendererAdapterCommitNativeStageDisplay
+evict      19,417     1,009,691     52      3.73  .main           glTexParameter
+-          19,281     8,946,326    464      5.05  .main           ndsStageGCDrawAllLoopRecordCapturedDisplay
+-          18,176     7,852,050    432      3.94  .main           gcPlayAnimAll
+-          18,083     3,255,022    180      3.70  .main           ndsRendererHardwareApplyTextureParams
+-          17,927     1,936,150    108      3.18  .main           ndsRendererAdapterMarkDisplayProcHeads
+-          17,790       996,244     56      2.61  .main           gcPlayMObjMatAnim
+evict      17,600        35,200      2     23.00  .main           ndsBattlePlayableFrameCompleteMarker
+-          17,426     4,391,333    252      3.46  .main           ftGetStruct
+
+zero-eviction pack: 584 B, 31,031,446 non-mem stall cycles in reach
+with eviction:      3,146 B, 92,320,066 non-mem stall cycles in reach

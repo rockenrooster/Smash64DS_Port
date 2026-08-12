@@ -1,0 +1,29 @@
+Tick-HUD buckets: target=smash64ds-battle-playable-tickhud-hwtri samples=1600 frames=439..2038 melonDS=1.0 sha=DE80E46BDCF1FD98 git=214059c8c3e+dirty(6) dldi=ON
+
+bucket p50        p95        spread mean       min        max        %ALLp50
+------ ---        ---        ------ ----       ---        ---        -------
+ALL     1,118,272  1,678,784   1.50  1,223,241  1,117,312  5,312,832   100.0
+FTR       301,760    305,280   1.01    290,463    171,136    310,016    27.0
+STG       170,112    174,144   1.02    170,394    166,464    178,176    15.2
+BG          4,160      4,224   1.02      4,148      3,904      4,352     0.4
+AUD         2,496      6,976   2.79      8,453        960    147,776     0.2
+HUD           960    419,328 436.80     35,299        832  2,078,592     0.1
+SRC       331,776    555,392   1.67    357,091     10,560  4,510,528    29.7
+MISC      104,064    191,232   1.84    114,559     81,920    324,800     9.3
+OTHR      225,024    527,680   2.34    242,834     20,800    579,520    20.1
+WAIT      205,632    509,056   2.48    223,292      1,408    559,808    18.4
+WORK      947,968  1,374,272   1.45    999,950    604,352  5,095,616    84.8
+SHDT        4,544    168,128  37.00     17,509          0    467,712     0.4
+SWRM          768        896   1.17        799        640        896     0.1
+GCRA      326,592    550,400   1.69    351,939      6,528  4,505,472    29.2
+SCPU       42,112    113,216   2.69     45,652          0    150,016     3.8
+SCAT        1,344      1,472   1.10      1,288          0      1,664     0.1
+SPRM        1,984      2,176   1.10      4,773          0    644,736     0.2
+SINT      150,784    318,912   2.12    169,297          0  4,366,976    13.5
+SPHD       57,280     95,872   1.67     67,046          0    723,456     5.1
+SPHC          704        832   1.18        659          0        896     0.1
+WORK-H    938,048  1,204,992   1.28    964,650    596,224  5,094,720    83.9
+
+named=980,407 (80.1% of ALL)  VBI 2:1675 3:325 4:19 5+:20 max:27 total:2039  slips=0
+extras: gNdsR2AnimWarmLoaded=85  gNdsR2AnimCacheMisses=2  gNdsR2AnimCacheHits=381  gNdsR2AnimCacheRejects=0  gNdsR2AnimCacheArenaUsedBytes=192,240  gNdsR204AnimForceLoadDistinct=87  gNdsTaskmanGeneralHeapFreeMin=70,776  gNdsAudioBgmPlaying=1
+Wrote artifacts/performance/2026-08-12_c123-rebank/warm-step1.json
