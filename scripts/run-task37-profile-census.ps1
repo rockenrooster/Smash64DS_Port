@@ -51,6 +51,20 @@ param(
     [string[]]$MakeFlags = @()
 )
 
+# Each -MakeFlags element must be ONE `NAME=value` assignment. Passing
+# "A=1 B=0" as a single string silently becomes one make variable whose value
+# is "1 B=0", which the generated nds_build_config.h emits verbatim as
+# `#define A 1 B=0` -- and the build then dies deep inside an unrelated `#if`
+# with "missing binary operator before token", naming the config header rather
+# than the invocation. That cost a full gate-arm profile build on 2026-08-12.
+# Comma-separate instead: -MakeFlags A=1,B=0
+foreach ($mf in $MakeFlags) {
+    if ($mf -notmatch '^[A-Za-z_][A-Za-z0-9_]*=\S*$') {
+        throw ("-MakeFlags element '$mf' is not a single NAME=value assignment. " +
+               'Comma-separate multiple variables: -MakeFlags A=1,B=0')
+    }
+}
+
 # Task 37 census driver.
 #
 # Runs the NDS_TASK37_PROFILE=1 ROM under the repo-owned melonDS build with the
