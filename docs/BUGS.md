@@ -8,12 +8,19 @@ These bugs should be fixed for P1 delivery:
 
 -Missing fire burn effects. the explosion effect is there but not the flame burn
 
-> OWNER-QUEUED 2026-08-12: FlameLR's texture had no atlas cell and drew nothing; admitted, flames captured on the candidate.
+> **FIXED** (2026-08-12) visibility: FlameLR's texture had no atlas cell and drew nothing; admitted, flames visible, owner confirmed.
+
+-Fighter burn flames spawn at the wrong places on the damaged fighter.
+
+> LOCALIZED 2026-08-12: port never calls source `ftParamGetEffectJointPosition`, so flames use the generic effect position.
 
 -Fox's pistol model is missing. Also is the pistol beam emitted at correct y location of muzzle?
 
-> OWNER-QUEUED 2026-08-12: submit skipped the renderer's world-unit shift and drew 0.036px wide; fixed, pixels captured on c129.
-> OPEN, measured separately: on N64 Mario can crouch under Fox's laser, in the port it still hits him.
+> **FIXED** (2026-08-12) visibility: submit skipped the renderer's world-unit shift and drew 0.036px wide; owner confirmed the pistol.
+
+-Fox's muzzle flash and laser spawn at the wrong Y. Also: on N64 Mario can crouch under the laser, in the port it hits him.
+
+> CONTRACT 2026-08-12: source spawns both from joint 17 local {60,0,0}; A-vs-B world-position invariant not yet measured.
 
 Contracts, evidence, and the per-row work packets:
 `artifacts/bugs/2026-08-12_r2-07-cluster/CONTRACT.md` (one cluster, one batched
