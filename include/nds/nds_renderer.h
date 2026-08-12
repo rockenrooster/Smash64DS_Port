@@ -1396,6 +1396,20 @@ s32 ndsRendererSubmitWhispyNativeQuad(u32 texture_name,
 s32 ndsRendererSubmitFoxBlasterQuad(const Vec3f *translate,
                                     f32 scale_x, f32 scale_y,
                                     s32 facing);
+#if NDS_R2_FOX_GUN_OVERLAY
+/* BUGS.md "Fox's pistol model is missing". Submits the blaster's 22 baked
+ * triangles at joint 17's WORLD matrix, immediately after the fighter's own
+ * production run, so it inherits that draw's camera and projection. `world` is
+ * the joint's world matrix -- the caller owns building it, because the refresh
+ * it needs (func_ovl2_800EDBA4 then parts->mtx_translate) is source-side and
+ * lives in the port adapter, not here.
+ *
+ * The fighter body is not touched. Source swaps the joint's own display list;
+ * the DS cannot, because that list belongs to reloc asset 0x13b and
+ * ndsFighterDrawPlanResolve would reject the whole collection and push the
+ * entire fighter off the native path for one small part. */
+s32 ndsRendererSubmitFoxGun(const NDSRendererMatrix20p12 *composed);
+#endif
 void ndsRendererEndParticleQuads(void);
 /* DEBUG-ONLY. Draws a world-space collision-diamond outline inside an open
  * particle quad batch (see src/nds/nds_renderer.c). For tuning the fireball's

@@ -6,6 +6,9 @@
 #if NDS_R2_IMPACT_WAVE_NATIVE
 #include <nds/nds_effects.h>
 #endif
+#if NDS_R2_FOX_GUN_OVERLAY
+#include <nds/nds_fox_gun.h>
+#endif
 #include <nds/nds_gbi_decode.h>
 #include <nds/nds_ifcommon_oam.h>
 #include <nds/nds_reloc_assets.h>
@@ -12641,6 +12644,17 @@ volatile u32 gNdsRendererFoxBlasterGlowPrepareCount;
 volatile u32 gNdsRendererFoxBlasterGlowFailCount;
 volatile u32 gNdsRendererFoxBlasterGlowBytes;
 #endif
+#if NDS_R2_FOX_GUN_OVERLAY
+/* BUGS.md "Fox's pistol model is missing". DrawCount is the engagement proof:
+ * the model-part STATE half already rises (gNdsFighterModelPartOnCount), so a
+ * zero here means the overlay was skipped, not that the gun was never asked
+ * for -- exactly the distinction this row took three cycles to make. */
+volatile u32 gNdsRendererFoxGunPrepareCount;
+volatile u32 gNdsRendererFoxGunFailCount;
+volatile u32 gNdsRendererFoxGunBytes;
+volatile u32 gNdsRendererFoxGunDrawCount;
+volatile u32 gNdsRendererFoxGunTriangleCount;
+#endif
 
 /* Sheets already uploaded when a later one fails. They are PINNED, so nothing
  * else can reclaim them, and the prepare has just declared the atlas absent --
@@ -12977,6 +12991,7 @@ fail:
     return FALSE;
 }
 #endif
+
 
 s32 ndsRendererHardwarePrepareParticleAtlas(void)
 {
@@ -14929,6 +14944,187 @@ s32 ndsRendererSubmitFoxBlasterQuad(const Vec3f *translate,
     return TRUE;
 }
 #endif /* NDS_R2_FOX_BLASTER_QUAD */
+
+#if NDS_R2_FOX_GUN_OVERLAY
+/* Fox's blaster geometry, uploaded once. Unlike the glow this reads no asset
+ * file: nds_fox_gun.c carries the source's own CI4 32x16 and its 16 RGBA5551
+ * colours in the DS channel order, so the "conversion" is a memcpy into VRAM.
+ * Its own immutable GL name, pinned, because a 22-triangle part that appears
+ * and disappears with a motion script must not be competing for a dynamic
+ * cache slot against the fighter's own materials. */
+static int sNdsRendererFoxGunName;
+static int sNdsRendererFoxGunPaletteFormat = -1;
+
+static s32 ndsRendererHardwarePrepareFoxGunTexture(void)
+{
+    NDSRendererHardwareTextureCacheEntry *entry = NULL;
+    const u8 *texels;
+    const u16 *palette;
+    u32 texel_bytes = 0u;
+    u32 palette_entries = 0u;
+    int size_x;
+    int size_y;
+    int params = TEXGEN_TEXCOORD | GL_TEXTURE_WRAP_S | GL_TEXTURE_WRAP_T;
+
+    if (sNdsRendererFoxGunName != 0)
+    {
+        return TRUE;
+    }
+    gNdsRendererFoxGunPrepareCount++;
+    texels = ndsFoxGunTexels(&texel_bytes);
+    palette = ndsFoxGunPalette(&palette_entries);
+    if ((texels == NULL) || (palette == NULL) ||
+        (texel_bytes != ((NDS_FOX_GUN_TEXTURE_WIDTH *
+                          NDS_FOX_GUN_TEXTURE_HEIGHT) >> 1)) ||
+        (palette_entries != 16u) ||
+        (ndsRendererHardwareTextureSizeEnum(
+             NDS_FOX_GUN_TEXTURE_WIDTH, &size_x) == FALSE) ||
+        (ndsRendererHardwareTextureSizeEnum(
+             NDS_FOX_GUN_TEXTURE_HEIGHT, &size_y) == FALSE))
+    {
+        goto fail;
+    }
+    entry = ndsRendererHardwareAllocTexture();
+    if ((entry == NULL) ||
+        ((entry->name == 0) &&
+         (ndsRendererHardwareFencedGlGenTextures(1, &entry->name) == 0)))
+    {
+        goto fail;
+    }
+    ndsRendererHardwareBindTextureName(NULL, (u32)entry->name);
+    if (ndsRendererHardwareFencedGlTexImage2D(
+            GL_TEXTURE_2D, 0, GL_RGB16, size_x, size_y, 0, params,
+            texels) == 0)
+    {
+        goto fail;
+    }
+    glColorTableEXT(GL_TEXTURE_2D, 0, (int)palette_entries, 0, 0, palette);
+    glGetColorTableParameterEXT(
+        GL_TEXTURE_2D, GL_COLOR_TABLE_FORMAT_EXT,
+        &sNdsRendererFoxGunPaletteFormat);
+    if (sNdsRendererFoxGunPaletteFormat < 0)
+    {
+        goto fail;
+    }
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    ndsRendererHardwareTextureLookupRemove(entry);
+#endif
+    ndsRendererHardwareEntryClearKey(entry);
+    entry->key_generation = 0u;
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    entry->key_hash = 0u;
+#endif
+    entry->static_record_plus1 = 0u;
+    entry->static_owner_mask = 0u;
+    entry->params = (u32)glGetTexParameter();
+    entry->last_used_frame = 0u;
+    entry->pinned = TRUE;
+    entry->ready = TRUE;
+    sNdsRendererFoxGunName = entry->name;
+    gNdsRendererFoxGunBytes =
+        texel_bytes + (palette_entries * sizeof(u16));
+    return TRUE;
+
+fail:
+    if (entry != NULL)
+    {
+        entry->pinned = FALSE;
+        (void)ndsRendererHardwareReleaseTexture(entry);
+    }
+    sNdsRendererFoxGunName = 0;
+    sNdsRendererFoxGunPaletteFormat = -1;
+    gNdsRendererFoxGunBytes = 0u;
+    gNdsRendererFoxGunFailCount++;
+    return FALSE;
+}
+
+/* Submit the blaster.
+ *
+ * `composed` is the FINAL matrix, built by the caller exactly the way a fighter
+ * root's is: joint 17's world matrix, times the frame camera modelview, times
+ * the projection. It is not the bare world matrix, and the difference is not
+ * cosmetic -- NDS_R2_FIGHTER_HW_MTX defaults to 0, so this build composes the
+ * whole MVP on the CPU and loads the product, and a world matrix loaded here
+ * would draw the gun in camera space at the world origin.
+ *
+ * The caller owns the compose because both terms it needs are the port
+ * adapter's: the joint refresh is source-side, and the camera matrices come
+ * from the adapter's per-frame cache.
+ *
+ * This runs immediately after the fighter's own production run, so it inherits
+ * a live GX context and owns only what it changes: one matrix load, one texture
+ * bind, one poly format, one batch. It never touches the fighter's baked
+ * stream, which is the whole point of an overlay.
+ */
+s32 ndsRendererSubmitFoxGun(const NDSRendererMatrix20p12 *composed)
+{
+    const NDSFoxGunVertex *vertices;
+    const u8 (*triangles)[3];
+    u32 vertex_count = 0u;
+    u32 triangle_count = 0u;
+    u32 index;
+    m4x4 hardware;
+
+    if (composed == NULL)
+    {
+        return FALSE;
+    }
+    if (ndsRendererHardwarePrepareFoxGunTexture() == FALSE)
+    {
+        return FALSE;
+    }
+    vertices = ndsFoxGunVertices(&vertex_count);
+    triangles = ndsFoxGunTriangles(&triangle_count);
+    if ((vertices == NULL) || (triangles == NULL) ||
+        (vertex_count == 0u) || (triangle_count == 0u))
+    {
+        return FALSE;
+    }
+
+    ndsRendererHardwareEndBatch();
+    ndsRendererCopyMtx20p12ToM4x4(composed, &hardware);
+    glMatrixMode(GL_MODELVIEW);
+    glPushMatrix();
+    glLoadMatrix4x4(&hardware);
+    ndsRendererProfileRecordMatrixLoad();
+
+    glEnable(GL_TEXTURE_2D);
+    ndsRendererHardwareBindTextureName(NULL, (u32)sNdsRendererFoxGunName);
+    /* CULL_NONE, not CULL_BACK. The source triangles wind for the N64's
+     * front-face convention, and the DS's is the other one, so culling here
+     * would show the gun's inside faces or nothing at all. Twenty-two triangles
+     * do not pay for getting that wrong; tighten it only against a screenshot
+     * pair that proves which faces the DS keeps. */
+    ndsRendererHardwareSetPolyFmt(
+        POLY_ALPHA(31) | POLY_CULL_NONE | POLY_ID(0));
+    glBegin(GL_TRIANGLES);
+    for (index = 0u; index < triangle_count; index++)
+    {
+        u32 corner;
+
+        for (corner = 0u; corner < 3u; corner++)
+        {
+            const NDSFoxGunVertex *vertex =
+                &vertices[triangles[index][corner]];
+
+            glTexCoord2t16(
+                (t16)(vertex->st[0] >> NDS_FOX_GUN_TEXCOORD_SHIFT),
+                (t16)(vertex->st[1] >> NDS_FOX_GUN_TEXCOORD_SHIFT));
+            glVertex3v16(
+                (v16)(vertex->pos[0] * NDS_FOX_GUN_VERTEX_SCALE),
+                (v16)(vertex->pos[1] * NDS_FOX_GUN_VERTEX_SCALE),
+                (v16)(vertex->pos[2] * NDS_FOX_GUN_VERTEX_SCALE));
+        }
+    }
+    ndsRendererHardwareEndBatch();
+    glPopMatrix(1);
+    sNdsRendererHardwareMatrixLoaded = FALSE;
+    sNdsRendererHardwareMatrixMode = NDS_RENDERER_HW_MATRIX_MODE_NONE;
+    gNdsRendererFoxGunDrawCount++;
+    gNdsRendererFoxGunTriangleCount += triangle_count;
+    return TRUE;
+}
+#endif /* NDS_R2_FOX_GUN_OVERLAY */
 
 /* DEBUG-ONLY world-space collision-diamond, for tuning the fireball's
  * stage-collision box. The DS geometry engine has no line primitive, so the

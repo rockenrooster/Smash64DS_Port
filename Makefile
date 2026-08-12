@@ -1007,6 +1007,16 @@ NDS_R2_FOX_BLASTER_QUAD ?= 1
 # it remains independently switchable for attribution A/Bs. Owner-playtested
 # and accepted 2026-08-09; ON BY DEFAULT through the beam route.
 NDS_R2_FOX_BLASTER_GLOW_AOT ?= $(NDS_R2_FOX_BLASTER_QUAD)
+# BUGS.md "Fox's pistol model is missing". Fox's gun is model part 13 on joint
+# 17; source draws it by pointing the joint DObj's own `dl` at a display list in
+# reloc asset 0x13b. The DS cannot copy that: ndsFighterDrawPlanResolve rejects
+# the whole selected collection when any dl resolves outside the fighter's model
+# asset, so the assignment would push the ENTIRE fighter off the native draw
+# path for one 22-triangle part. This instead submits the part's baked mesh at
+# joint 17's world matrix right after the fighter's own run, leaving the baked
+# body untouched. Geometry, texture and palette are resolved offline by
+# scripts/fox_gun_bake.py; nothing is walked or converted at runtime.
+NDS_R2_FOX_GUN_OVERLAY ?= 1
 # Dream Land fireball map collision without the generic BattleShip
 # mpProcessUpdateMain/wpMapProcAll path. The fast path uses a compact AOT copy of
 # Pupupu's seven source collision lines, sweeps the fireball diamond directly,
@@ -2382,6 +2392,11 @@ endif
 ifeq ($(NDS_IMPORT_BATTLESHIP_FOX_REFLECTOR),1)
 CFILES += battleship_fox_reflector.c
 endif
+# Fox's blaster model part, as data. Unconditional because the module's whole
+# body is inside #if NDS_R2_FOX_GUN_OVERLAY -- at 0 it compiles to nothing and
+# costs no ROM, which is cheaper to reason about than a second flag in the file
+# list that has to stay in step with the one in the sources.
+CFILES += nds_fox_gun.c
 ifeq ($(NDS_IMPORT_BATTLESHIP_FT_PUBLIC),1)
 CFILES += battleship_ftpublic.c
 endif
@@ -3170,6 +3185,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_R2_CAMERA_MATRIX_LEAN $(NDS_R2_CAMERA_MATRIX_LEAN)'; \
 		echo '#define NDS_R2_FOX_BLASTER_QUAD $(NDS_R2_FOX_BLASTER_QUAD)'; \
 		echo '#define NDS_R2_FOX_BLASTER_GLOW_AOT $(NDS_R2_FOX_BLASTER_GLOW_AOT)'; \
+		echo '#define NDS_R2_FOX_GUN_OVERLAY $(NDS_R2_FOX_GUN_OVERLAY)'; \
 		echo '#define NDS_R2_FIREBALL_NATIVE_MAP_COLL $(NDS_R2_FIREBALL_NATIVE_MAP_COLL)'; \
 		echo '#define NDS_R2_FIREGRIND_NATIVE $(NDS_R2_FIREGRIND_NATIVE)'; \
 		echo '#define NDS_R2_WHISPY_NATIVE_TEXTURES $(NDS_R2_WHISPY_NATIVE_TEXTURES)'; \

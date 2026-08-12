@@ -2,6 +2,9 @@
 
 #include <nds/nds_effects.h>
 #include <nds/nds_fighter_matrix_index.h>
+#if NDS_R2_FOX_GUN_OVERLAY
+#include <nds/nds_fox_gun.h>
+#endif
 #include <nds/nds_ifcommon_oam.h>
 
 #ifndef NDS_RENDERER_HW_TRIANGLES
@@ -3507,6 +3510,87 @@ static sb32 ndsRendererAdapterComposeNativeRootMatrix(
     }
     return FALSE;
 }
+
+#if NDS_R2_FOX_GUN_OVERLAY
+/* BUGS.md "Fox's pistol model is missing": joint 17's world matrix, for the
+ * blaster overlay.
+ *
+ * This is the 0x4F builder's arithmetic without its DObj indirection -- the gun
+ * has no attachment DObj because it has no GObj, which is the whole reason it
+ * costs nothing but a matrix. func_ovl2_800EDBA4 FIRST, for the same reason the
+ * shield needs it: mtx_translate is a per-frame cache that
+ * ndsFTParamsInvalidateFighterParts clears, and the fighter's own draw does not
+ * fill it. The chain probe read it as exactly zero at the setter
+ * (artifacts/bugs/2026-08-12_r2-07-cluster/modelpart-chain.log, `MPJW w=0,0,0`),
+ * so copying it without the rebuild would park the gun at the world origin.
+ *
+ * It deliberately does NOT write sNdsRendererAdapterMvpRecalcScaleX. That
+ * global is the shield's billboard size, consumed by a recalc later in the same
+ * call; the gun is not a billboard and must not move it. */
+static sb32 ndsRendererAdapterBuildFoxGunJointMtx(
+    FTStruct *fp, CObj *cobj, NDSRendererMatrix20p12 *out)
+{
+    DObj *joint;
+    FTParts *parts;
+    Mtx mtx;
+    NDSRendererMatrix20p12 world;
+    NDSRendererMatrix20p12 camera_projection;
+    NDSRendererMatrix20p12 camera_modelview;
+    u32 camera_projection_valid = FALSE;
+    u32 camera_modelview_valid = FALSE;
+
+    if ((fp == NULL) || (out == NULL) ||
+        (fp->fkind != nFTKindFox) ||
+        ((u32)NDS_FOX_GUN_HOLD_JOINT >= ARRAY_COUNT(fp->joints)))
+    {
+        return FALSE;
+    }
+    if (fp->modelpart_status[NDS_FOX_GUN_HOLD_JOINT -
+                             nFTPartsJointCommonStart].modelpart_id_curr < 0)
+    {
+        return FALSE;
+    }
+    joint = fp->joints[NDS_FOX_GUN_HOLD_JOINT];
+    if ((joint == NULL) || (joint == DOBJ_PARENT_NULL) ||
+        (joint->parent_gobj == NULL))
+    {
+        return FALSE;
+    }
+    parts = ftGetParts(joint);
+    if (parts == NULL)
+    {
+        return FALSE;
+    }
+    func_ovl2_800EDBA4(joint);
+    if (ndsRendererAdapterF2LFixedWExact(&parts->mtx_translate, &mtx) == FALSE)
+    {
+        syMatrixF2LFixedW(&parts->mtx_translate, &mtx);
+    }
+    ndsRendererAdapterMtxFromN64(&mtx, &world);
+
+    /* The same two multiplies a fighter root gets, in the same order. The
+     * binding pass seeds its forward compose with the camera modelview and then
+     * hands the product to ndsRendererAdapterComposeNativeRootMatrix, so
+     * `world x camera x projection` IS a root's matrix; the gun is simply a
+     * root the baked plan does not know about. Both terms come from the per-
+     * frame cache the fighter's own prepare already filled this frame, so this
+     * costs two 4x4s and no camera work. */
+    ndsRendererAdapterGetFrameCameraMatrices(
+        cobj, &camera_projection, &camera_projection_valid,
+        &camera_modelview, &camera_modelview_valid);
+    if (camera_modelview_valid != FALSE)
+    {
+        ndsRendererMtxMulAffine20p12(&world, &camera_modelview, &world);
+    }
+    if (camera_projection_valid == FALSE)
+    {
+        return FALSE;
+    }
+    return ndsRendererAdapterComposeNativeRootMatrix(
+        &world, &camera_projection, out);
+}
+#endif
+
 
 #if NDS_R2_FIGHTER_SHUFFLE_FOLD
 /* R2-03 E32. The hitlag shuffle used to switch the whole native fighter owner
@@ -15927,6 +16011,27 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
                  * matching the generic path. A successful owner consumes that
                  * advancement and must not restore it. */
                 native_owner_material_saved_root_count = 0u;
+#if NDS_R2_FOX_GUN_OVERLAY
+                /* BUGS.md "Fox's pistol model is missing". HERE, and only on a
+                 * successful production run, because the overlay depends on the
+                 * camera and projection that run just established. On the
+                 * fallback path the generic renderer owns its own matrices and
+                 * would have to be joined differently; that arm has never been
+                 * the shipped one, so it stays without a gun rather than with a
+                 * gun in the wrong place. */
+                {
+                    NDSRendererMatrix20p12 gun_world;
+
+                    if (ndsRendererAdapterBuildFoxGunJointMtx(
+                            fp,
+                            (gGCCurrentCamera != NULL) ?
+                                CObjGetStruct(gGCCurrentCamera) : NULL,
+                            &gun_world) != FALSE)
+                    {
+                        (void)ndsRendererSubmitFoxGun(&gun_world);
+                    }
+                }
+#endif
             }
             else if (production_hardware_started == FALSE)
             {

@@ -19,9 +19,22 @@ These bugs should be fixed for P1 delivery:
 > substitute was made), all three makers present in the linked ELF.
 > Evidence: `artifacts/bugs/2026-08-12_r2-07-cluster/flame-real-makers.log`.
 
--Fox's pistol model is missing. Also is the pistol beam emitted at correct y location of muzzle?
+**FIXED** -Fox's pistol model is missing. Also is the pistol beam emitted at correct y location of muzzle?
 
-> MEASURED: Fox model-part state toggles correctly; fighter draw never consumes it, so pistol geometry is never submitted.
+> Root cause: the model-part STATE was already correct; nothing consumed it. Source draws
+> the gun by pointing joint 17's own `dl` at a display list in reloc asset 0x13b, which the
+> DS cannot copy -- `ndsFighterDrawPlanResolve` rejects the whole selected collection when
+> any dl resolves outside the fighter's model asset, so the assignment would push the
+> ENTIRE fighter off the native draw path for one 22-triangle part.
+> Fix: `NDS_R2_FOX_GUN_OVERLAY`. The part's mesh is resolved offline by
+> `scripts/fox_gun_bake.py` (44 vertices, 22 triangles, CI4 32x16 + 16-entry palette, both
+> already DS formats) and submitted at joint 17's world matrix straight after the fighter's
+> own production run. The baked body is untouched.
+> Accepted on `build-c128-foxgun`: `tris = 22 x draws`, `fail=0`, `bytes=288`, `prepare=1`,
+> and the blaster is visible in Fox's hand at the muzzle in
+> `artifacts/visibility/2026-08-12_fox-gun-overlay-shot.png` -- the same firing pose whose
+> pre-fix control (`2026-08-09_fox-blaster-native-promoted.png`) shows an empty glove.
+> Culling is deliberately NONE pending an owner playtest; the source winding is the N64's.
 > Beam Y: no defect — source local offset is 0.0F and the port retains the formula. Do not add a Y offset.
 
 Contracts for all three: `artifacts/bugs/2026-08-12_r2-07-cluster/CONTRACT.md`

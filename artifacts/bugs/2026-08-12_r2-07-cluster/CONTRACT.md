@@ -691,6 +691,67 @@ the setter, this would have read `spawns 17 / On 0`.
 **So row 3's remaining defect is entirely in the draw**, and that is now a
 measured statement rather than an inference from reading the renderer.
 
+### 3a status 2: the draw chain resolves, and the implementation follows from it
+
+`scripts/probe-modelpart-chain.ps1` on `build-c127-fire`, **no rebuild** — every
+expression rooted at a global or at r0/r1/r2 captured at
+`ftParamSetModelPartID`'s first instruction
+(`artifacts/bugs/2026-08-12_r2-07-cluster/modelpart-chain.log`):
+
+```
+MPCHAIN  hit=1 joint=17 id=0 player=1 depmask=0xfffff
+MPWHO    fkind=1 costume=0 detail_curr=1 attr=0x23a3f1c
+MPCONT   container=0x23a3bd8 accesspart=(nil)
+MPDESC   slot=13 desc=0x23a3bb0
+MPPART   part=0x23a3bb0 dl=0x23bd5e0 mobjsubs=(nil) flags=0x0
+MPOWNER  asset=0x13b data=0x23bd1f0 size=1312 off=1008
+MPWORD   w0=0xe7000000
+MPJOINT  joint_dobj=0x23c2858
+MPJPARTS parts=0x2333850 dl=(nil)
+MPJW     w=0.000000,0.000000,0.000000
+```
+
+| link | expected | measured | verdict |
+|---|---|---|---|
+| MiscData315 cross-file fixup | bit 18 of the dependency mask | `depmask=0xfffff` | **GREEN** |
+| `attr->modelparts_container` | non-NULL | `0x23a3bd8` | **GREEN** |
+| `modelparts_desc[13]` | non-NULL | `0x23a3bb0` | **GREEN** |
+| `modelparts[id][detail-1].dl` | non-NULL | `0x23bd5e0` | **GREEN** |
+| owning asset | file 315 at 0x3F0 | `asset=0x13b off=1008` | **GREEN** |
+| first DL word | `0xE7` G_RDPPIPESYNC | `0xe7000000` | **GREEN** |
+
+**Nothing upstream of the draw is broken.** Three things this settles that were
+assumptions before it ran:
+
+1. **The dl lives in asset `0x13b`, not in Fox's model file `0x139`.** So the
+   source move — `joint->dl = modelpart->dl` — is not merely unhelpful on DS, it
+   is actively destructive: `ndsFighterDrawPlanResolve` rejects the entire
+   selected collection when any dl resolves to a file whose `asset_id` is not
+   the expected one, so the assignment would push the **whole fighter** off the
+   native draw path to make one 22-triangle part appear. The overlay is forced,
+   not preferred.
+2. **`modelpart_id` is 0 and `detail_curr` is 1**, so the part is
+   `modelparts[0][0]` — `part == desc` in the pointers, which confirms it.
+3. **`MPJW` is zero at the setter.** `mtx_translate` is a per-frame cache; the
+   submit has to build the matrix in the display pass (`func_ovl2_800EDBA4`
+   first), not cache it here. Copying it at the setter would park the gun at the
+   world origin — the same trap the shield's 0x4F builder documents.
+
+**Geometry, decoded offline** (`scripts/fox_gun_bake.py`, asset sha256 pinned):
+44 vertices and 22 triangles from two `G_VTX` batches (32 + 12) and eleven
+`G_TRI2`, one CI4 32x16 texture, one 16-entry RGBA5551 palette. Both the texel
+format and the palette format are already DS formats, so there is no conversion
+to get wrong — only a channel reorder in the palette and two fixed-point shifts.
+
+**Implementation, as landed:** `NDS_R2_FOX_GUN_OVERLAY`.
+`src/nds/nds_fox_gun.c` owns the baked mesh and nothing else (the
+`nds_firegrind.c` split); `ndsRendererSubmitFoxGun` in `nds_renderer.c` owns the
+matrix load, the pinned texture and the batch;
+`ndsRendererAdapterBuildFoxGunJointMtx` in the port adapter owns the
+source-side refresh. It is called immediately after a **successful** fighter
+production run, where the camera and projection that run established are still
+live, and it touches nothing the baked body owns.
+
 ### 3b — the muzzle Y (answered, no build required)
 
 The port **`#include`s the original `ftfoxspecialn.c` verbatim** at
