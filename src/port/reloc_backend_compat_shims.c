@@ -417,6 +417,37 @@ FTOpeningDesc *D_ovl1_80390D20[] = {
     (NDS_GM_COL_FIELD(nGMColEventSetLight, 0, 6) | \
      NDS_GM_COL_FIELD(angle1, 6, 13) | \
      NDS_GM_COL_FIELD(angle2, 19, 13))
+/* Loop/subroutine/effect, needed by the fire-damage scripts below. Layouts are
+ * the port's own GMColEvent structs (fighter.h:583+), i.e. LSB-first as the
+ * comment above records -- NOT the source's MSB-first GC_FIELDSET shifts. */
+#define NDS_GM_COL_COMMAND_LOOP_BEGIN(count) \
+    (NDS_GM_COL_FIELD(nGMColEventLoopBegin, 0, 6) | \
+     NDS_GM_COL_FIELD(count, 6, 26))
+#define NDS_GM_COL_COMMAND_LOOP_END() \
+    NDS_GM_COL_FIELD(nGMColEventLoopEnd, 0, 6)
+#define NDS_GM_COL_COMMAND_SUBROUTINE(addr) \
+    NDS_GM_COL_FIELD(nGMColEventSubroutine, 0, 6), ((u32)(uintptr_t)(addr))
+#define NDS_GM_COL_COMMAND_RETURN() \
+    NDS_GM_COL_FIELD(nGMColEventReturn, 0, 6)
+/* GMColEventMakeEffect1 is opcode:6, joint_id:7 (SIGNED), effect_id:9, flag:10;
+ * 2/3/4 are two s16 halves each, low half first. */
+#define NDS_GM_COL_COMMAND_EFFECT_S1(joint, effect_id, flag) \
+    (NDS_GM_COL_FIELD(nGMColEventEffect, 0, 6) | \
+     NDS_GM_COL_FIELD(joint, 6, 7) | \
+     NDS_GM_COL_FIELD(effect_id, 13, 9) | \
+     NDS_GM_COL_FIELD(flag, 22, 10))
+#define NDS_GM_COL_COMMAND_EFFECT_S2(off_x, off_y) \
+    (NDS_GM_COL_FIELD(off_x, 0, 16) | NDS_GM_COL_FIELD(off_y, 16, 16))
+#define NDS_GM_COL_COMMAND_EFFECT_S3(off_z, rng_x) \
+    (NDS_GM_COL_FIELD(off_z, 0, 16) | NDS_GM_COL_FIELD(rng_x, 16, 16))
+#define NDS_GM_COL_COMMAND_EFFECT_S4(rng_y, rng_z) \
+    (NDS_GM_COL_FIELD(rng_y, 0, 16) | NDS_GM_COL_FIELD(rng_z, 16, 16))
+#define NDS_GM_COL_COMMAND_EFFECT(joint, effect_id, flag, off_x, off_y, off_z, \
+                                  rng_x, rng_y, rng_z) \
+    NDS_GM_COL_COMMAND_EFFECT_S1(joint, effect_id, flag), \
+        NDS_GM_COL_COMMAND_EFFECT_S2(off_x, off_y), \
+        NDS_GM_COL_COMMAND_EFFECT_S3(off_z, rng_x), \
+        NDS_GM_COL_COMMAND_EFFECT_S4(rng_y, rng_z)
 
 #if NDS_TASK39_FX_FLASH
 /* Exact decomp gmcolscripts.c dGMColScriptsFighterDamageCommon commands. */
@@ -471,7 +502,73 @@ static u32 sNdsGMColScriptsScreenFlashDamageIce[] = {
     NDS_GM_COL_COMMAND_END()
 };
 
+/* BUGS.md "Missing fire burn effects" -- the root cause, and the first
+ * divergence for that row.
+ *
+ * BattleShip does not draw the fighter fire burn from an effect maker. It draws
+ * it from these COLOUR-ANIMATION scripts, which flash the fighter orange/red
+ * AND issue nEFKindFlameLR / nEFKindFlameRandom themselves (gmcolscripts.c:134-
+ * 210). ftCommonDamageCheckElementSetColAnim already asks for the right ids --
+ * nGMColAnimFighterDamageFireStart = 12 through 15 -- but this table had no
+ * entries for them, so their p_script was NULL and ftParamCheckSetColAnimID
+ * rejected the request below. The flame commands therefore never executed,
+ * which is why every Flame counter measured exactly zero: the request was being
+ * killed one level UPSTREAM of the effect system, not falling through it.
+ *
+ * Transcribed exactly, including the asymmetric Fly loop counts (24 then 20).
+ * Priorities are the source's: all four are 100/FALSE, the same priority as
+ * FighterDamageCommon (gmcolscripts.c:1179-1182). */
+static u32 sNdsGMColScriptsFighterDamageFireSub1[] = {
+    NDS_GM_COL_COMMAND_SET_COLOR1(0xFF, 0xF0, 0x78, 0xAA),
+    NDS_GM_COL_COMMAND_WAIT(1),
+    NDS_GM_COL_COMMAND_SET_COLOR1(0xDC, 0x6E, 0x1E, 0x96),
+    NDS_GM_COL_COMMAND_WAIT(1),
+    NDS_GM_COL_COMMAND_RETURN()
+};
+
+static u32 sNdsGMColScriptsFighterDamageFireSub2[] = {
+    NDS_GM_COL_COMMAND_LOOP_BEGIN(2),
+    NDS_GM_COL_COMMAND_SET_COLOR1(0xB4, 0x64, 0x00, 0x64),
+    NDS_GM_COL_COMMAND_WAIT(1),
+    NDS_GM_COL_COMMAND_SET_COLOR1(0x3C, 0x00, 0x00, 0xD2),
+    NDS_GM_COL_COMMAND_WAIT(1),
+    NDS_GM_COL_COMMAND_LOOP_END(),
+    NDS_GM_COL_COMMAND_RETURN()
+};
+
+#define NDS_GM_COL_FIRE_BODY(lr_count, random_count) \
+    NDS_GM_COL_COMMAND_LOOP_BEGIN(lr_count), \
+    NDS_GM_COL_COMMAND_EFFECT(-1, nEFKindFlameLR, 0, 0, 0, 0, 0, 0, 0), \
+    NDS_GM_COL_COMMAND_SUBROUTINE(sNdsGMColScriptsFighterDamageFireSub1), \
+    NDS_GM_COL_COMMAND_LOOP_END(), \
+    NDS_GM_COL_COMMAND_LOOP_BEGIN(random_count), \
+    NDS_GM_COL_COMMAND_EFFECT(-1, nEFKindFlameRandom, 0, 0, 0, 0, 0, 0, 0), \
+    NDS_GM_COL_COMMAND_SUBROUTINE(sNdsGMColScriptsFighterDamageFireSub2), \
+    NDS_GM_COL_COMMAND_LOOP_END(), \
+    NDS_GM_COL_COMMAND_END()
+
+static u32 sNdsGMColScriptsFighterDamageFireWeak[] = {
+    NDS_GM_COL_FIRE_BODY(4, 4)
+};
+static u32 sNdsGMColScriptsFighterDamageFireMid[] = {
+    NDS_GM_COL_FIRE_BODY(8, 8)
+};
+static u32 sNdsGMColScriptsFighterDamageFireStrong[] = {
+    NDS_GM_COL_FIRE_BODY(16, 16)
+};
+static u32 sNdsGMColScriptsFighterDamageFireFly[] = {
+    NDS_GM_COL_FIRE_BODY(24, 20)
+};
+
 GMColDesc dGMColScriptsDescs[nGMColAnimEnumCount] = {
+    [nGMColAnimFighterDamageFireStart + 0] =
+        { sNdsGMColScriptsFighterDamageFireWeak, 100, FALSE },
+    [nGMColAnimFighterDamageFireStart + 1] =
+        { sNdsGMColScriptsFighterDamageFireMid, 100, FALSE },
+    [nGMColAnimFighterDamageFireStart + 2] =
+        { sNdsGMColScriptsFighterDamageFireStrong, 100, FALSE },
+    [nGMColAnimFighterDamageFireStart + 3] =
+        { sNdsGMColScriptsFighterDamageFireFly, 100, FALSE },
 #if NDS_TASK39_FX_FLASH
     [nGMColAnimFighterDamageCommon] =
         { sNdsGMColScriptsFighterDamageCommon, 100, FALSE },
