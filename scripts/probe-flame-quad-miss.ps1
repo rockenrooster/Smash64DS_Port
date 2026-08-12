@@ -104,8 +104,14 @@ try {
         ("target remote 127.0.0.1:{0}" -f $context.GdbPort),
 
         'set $n = 0',
+        # BOTH makers, because which one fires first depends on the burn's
+        # strength and on the CPU fight. A FlameLR-only breakpoint waited out a
+        # 900-second run on build-c129-foxfire without ever hitting, and a probe
+        # that can only observe half of an effect is a probe that reports
+        # "nothing happened" for the wrong reason.
         'break efManagerFlameLRMakeEffect',
-        'commands',
+        'break efManagerFlameRandomMakeEffect',
+        'commands 1-2',
         'silent',
         'set $n = $n + 1',
         'printf "FLAME hit=%d tr=%d miss=%u missmask=%08x usemask=%08x emit=%u\n", $n, gSCManagerBattleState->time_remain, gNdsParticleQuadMissCount, gNdsParticleQuadMissMask[0], gNdsParticleTextureUseMask[0], gNdsParticleQuadEmitCount',
@@ -115,12 +121,14 @@ try {
         'end',
         'continue',
         # The masks that matter are stamped on the DRAW pass, so read them a few
-        # frames after the last creation rather than at it.
+        # frames after the last creation rather than at it -- and halt on a frame
+        # BOUNDARY so the screenshot is a whole presented frame rather than a
+        # half-drawn one.
         'delete breakpoints',
-        'break efManagerFlameRandomMakeEffect',
+        'break ndsBattlePlayableFrameCompleteMarker',
         'continue',
-        'printf "FLAMERND tr=%d miss=%u missmask=%08x usemask=%08x emit=%u\n", gSCManagerBattleState->time_remain, gNdsParticleQuadMissCount, gNdsParticleQuadMissMask[0], gNdsParticleTextureUseMask[0], gNdsParticleQuadEmitCount',
         'continue',
+        $captureCommand,
         'continue',
         'printf "FLAMEDONE miss=%u missmask=%08x missframes=%08x usemask=%08x emit=%u max=%u\n", gNdsParticleQuadMissCount, gNdsParticleQuadMissMask[0], gNdsParticleQuadMissFrameMask, gNdsParticleTextureUseMask[0], gNdsParticleQuadEmitCount, gNdsParticleQuadEmitMax',
         'printf "FLAMEBITS bit12_miss=%d bit12_use=%d bit15_miss=%d bit15_use=%d\n", (gNdsParticleQuadMissMask[0] >> 12) & 1, (gNdsParticleTextureUseMask[0] >> 12) & 1, (gNdsParticleQuadMissMask[0] >> 15) & 1, (gNdsParticleTextureUseMask[0] >> 15) & 1',

@@ -183,11 +183,18 @@ $report = Get-Content -LiteralPath $reportPath -Raw | ConvertFrom-Json
 # took the reject count to 0 and raised script starts 137 -> 226 with root
 # spawns 251 -> 340, the same +89 on both, which is what a rejected start
 # turning into a real one looks like.
+# 2026-08-12: 45 -> 48 seams, 92 -> 93 scripts, 33 -> 34 textures, from
+# BUGS.md "Missing fire burn effects". nEFKindFlameLR / FlameRandom /
+# FlameStatic began routing to their real makers instead of the generic HitFire
+# substitute, so the three Flame seams became live and pulled in script 0x12 and
+# its texture 12. THIS CHECK WAS RED FROM THAT MOMENT and nothing noticed until
+# the row was re-opened -- the acceptance that closed it never ran Boundary.
+# A moved count is a finding to explain, never a number to edit into place.
 if (([int]$report.source.script_count -ne 119) -or
     ([int]$report.source.texture_count -ne 47) -or
-    (@($report.reach.reachable_scripts).Count -ne 92) -or
-    (@($report.reach.packed_textures).Count -ne 33) -or
-    (@($report.reach.p1_seams).Count -ne 45)) {
+    (@($report.reach.reachable_scripts).Count -ne 93) -or
+    (@($report.reach.packed_textures).Count -ne 34) -or
+    (@($report.reach.p1_seams).Count -ne 48)) {
     throw ('Particle bank enumeration changed: ' +
         "$(@($report.reach.reachable_scripts).Count)/$([int]$report.source.script_count) scripts, " +
         "$(@($report.reach.packed_textures).Count)/$([int]$report.source.texture_count) textures, " +
@@ -233,15 +240,22 @@ if (($actualDisplayListSeams -join ',') -ne ($expectedDisplayListSeams -join ','
 # at 1283 for the same reason -- one entry per SOURCE script id, not per packed
 # one. Only the two byte counts that cost arena are allowed to be constants
 # here in spirit; the rest are pinned so a payload change has to be noticed.
+#
+# 2026-08-12 does it a third time, and the prediction holds exactly: the three
+# Flame seams took textures 33 -> 34, so every texture-payload number moved and
+# script_bank_bytes, index_table_bytes and linked_bytes did not. The whole
+# +6,272 is NitroFS asset, which by the note below does NOT compete with the
+# boot-time arena search -- arena_headroom_bytes and spare_bytes are unchanged.
+# Same red-since-the-fire-fix story as the enumeration above.
 if (([int64]$report.bytes.script_bank_bytes -ne 10912) -or
-    ([int64]$report.bytes.source_texture_bytes -ne 250656) -or
-    ([int64]$report.bytes.ds_texture_bytes -ne 168870) -or
-    ([int64]$report.bytes.ds_texture_data_bytes -ne 168000) -or
-    ([int64]$report.bytes.ds_palette_bytes -ne 992) -or
-    ([int64]$report.bytes.payload_bytes -ne 179904) -or
+    ([int64]$report.bytes.source_texture_bytes -ne 262992) -or
+    ([int64]$report.bytes.ds_texture_bytes -ne 175140) -or
+    ([int64]$report.bytes.ds_texture_data_bytes -ne 174144) -or
+    ([int64]$report.bytes.ds_palette_bytes -ne 1120) -or
+    ([int64]$report.bytes.payload_bytes -ne 186176) -or
     ([int64]$report.bytes.index_table_bytes -ne 1283) -or
-    ([int64]$report.bytes.pack_bytes -ne 181187) -or
-    ([int64]$report.bytes.asset_bytes -ne 168992) -or
+    ([int64]$report.bytes.pack_bytes -ne 187459) -or
+    ([int64]$report.bytes.asset_bytes -ne 175264) -or
     ([int64]$report.bytes.linked_bytes -ne 12195) -or
     ([int64]$report.bytes.arena_headroom_bytes -ne 210320) -or
     ([int64]$report.bytes.spare_bytes -ne 198125)) {
@@ -416,7 +430,12 @@ if (([int64]$report.quads.atlas_width -ne 128) -or
     ([int64]$report.quads.bytes -ne 27520) -or
     ([int64]$report.quads.frame_count -ne 31) -or
     (@($report.quads.admitted).Count -ne 31) -or
-    (@($report.quads.excluded).Count -ne 6)) {
+    # 6 -> 7 on 2026-08-12. The Flame seams made texture 12 reachable, so it
+    # became a candidate for the sheet: one more cell competing, and the sheet
+    # still seats 31. It is texture 4 -- never on the measured-live list, only
+    # ever an opportunistic seat -- that gave up its place, and 12 is on that
+    # list now because it is the fighter fire burn.
+    (@($report.quads.excluded).Count -ne 7)) {
     throw ('Particle quad sheet changed: ' +
         "$([int64]$report.quads.sheets)x$([int64]$report.quads.sheet_bytes) B, " +
         "cell cap $([int64]$report.quads.cell_cap), " +
@@ -440,8 +459,16 @@ if ([int64]$report.quads.bytes -gt [int64]$report.quads.atlas_bytes) {
 # 0.19% of draws and hides that, because a texture nobody can draw is
 # binary-absent rather than thinned. This list is the guard that makes the next
 # regrade fail loudly instead of quietly.
-foreach ($id in @(0, 2, 10, 13, 15, 16, 17, 18, 19, 20, 21, 22, 24, 25, 27, 29,
-                  33, 34, 37, 38, 40, 41, 45, 64, 65, 66)) {
+#
+# 12 joined on 2026-08-12 and it is the sharpest instance of that argument yet.
+# It is efManagerFlameLRMakeEffect's texture -- script 0x12, the fighter fire
+# burn -- and it was excluded while packed, so every FlameLR particle in every
+# burn drew nothing at all. Measured on build-c127-fire: QuadMissMask bit 12
+# set, bit 15 (FlameRandom) clear, i.e. the burn was exactly half-drawn. No soak
+# could have caught it earlier, because until the same cycle the burn could not
+# happen at all; a use-mask regrade only sees the effects the run can produce.
+foreach ($id in @(0, 2, 10, 12, 13, 15, 16, 17, 18, 19, 20, 21, 22, 24, 25, 27,
+                  29, 33, 34, 37, 38, 40, 41, 45, 64, 65, 66)) {
     if (@($report.quads.admitted) -notcontains $id) {
         throw "Particle quad sheet dropped measured texture $id."
     }
@@ -472,7 +499,16 @@ if ($report.checksums.source_sha256_lo -ne '0xa2a1e85f') {
 # the two deliberate reasons recorded above: the A5I3 sheet and four more P1
 # seams. src/nds/nds_particle_banks.c carries the same pin as a _Static_assert,
 # so the value lives in exactly two places and both have to be argued for.
-if ($report.checksums.table_sha256_lo -ne '0x179aea12') {
+#
+# 0x179aea12 -> 0xd22b30b6 on 2026-08-12, for BUGS.md "Missing fire burn
+# effects": the three Flame seams were packed, taking 92 -> 93 scripts and
+# 33 -> 34 textures. The SOURCE checksum above did not move, which is the pair
+# that says "same assets, different selection". src/nds/nds_particle_banks.c
+# carries the same pin as a _Static_assert -- it was updated when the seams
+# landed and THIS ONE WAS NOT, so the two places the comment above insists on
+# disagreed and Boundary was red until the row was re-opened. If you change one,
+# grep for the other.
+if ($report.checksums.table_sha256_lo -ne '0xd22b30b6') {
     throw "Packed particle table changed: $($report.checksums.table_sha256_lo)"
 }
 
@@ -483,8 +519,9 @@ if ($report.checksums.table_sha256_lo -ne '0x179aea12') {
 $gradedFormats = @('A3I5', 'A5I3')
 $paletteFormats = @('PAL4', 'PAL16', 'PAL256')
 $packed = @($report.textures | Where-Object { $_.packed })
-if ($packed.Count -ne 33) {
-    throw "Expected 33 packed textures, found $($packed.Count)."
+# 33 -> 34 on 2026-08-12: texture 12, the FlameLR burn sprite.
+if ($packed.Count -ne 34) {
+    throw "Expected 34 packed textures, found $($packed.Count)."
 }
 foreach ($texture in $packed) {
     if ($texture.source_graded_alpha) {
@@ -534,23 +571,29 @@ foreach ($texture in $packed) {
     }
 }
 $exact = @($packed | Where-Object { [double]$_.max_error -eq 0.0 }).Count
-if ($exact -ne 8) {
-    throw "Expected 8 bit-exact packed textures, found $exact."
+# 8 -> 9 on 2026-08-12. The ninth is texture 12, the FlameLR burn sprite: a
+# 32x32 RGBA16 source that lands in PAL256 with 63 entries at zero error, so it
+# joins this set rather than costing it anything.
+if ($exact -ne 9) {
+    throw "Expected 9 bit-exact packed textures, found $exact."
 }
 
 $header = Get-Content -LiteralPath $headerPath -Raw
 foreach ($token in @(
     '#define NDS_PARTICLE_SCRIPT_COUNT 119u',
-    '#define NDS_PARTICLE_SCRIPT_REACHABLE_COUNT 92u',
+        # Every count below moved on 2026-08-12 with the three Flame seams
+    # (92 -> 93 scripts, 33 -> 34 textures) and NONE of them was updated when
+    # that landed, so Boundary was red from then until the row re-opened.
+    '#define NDS_PARTICLE_SCRIPT_REACHABLE_COUNT 93u',
     '#define NDS_PARTICLE_SCRIPT_UNREACHABLE 0xffffffffu',
     '#define NDS_PARTICLE_SCRIPT_BANK_BYTES 10912u',
     '#define NDS_PARTICLE_TEXTURE_COUNT 47u',
-    '#define NDS_PARTICLE_TEXTURE_PACKED_COUNT 33u',
-    '#define NDS_PARTICLE_TEXTURE_DATA_BYTES 168000u',
-    '#define NDS_PARTICLE_PALETTE_ENTRIES 496u',
+    '#define NDS_PARTICLE_TEXTURE_PACKED_COUNT 34u',
+    '#define NDS_PARTICLE_TEXTURE_DATA_BYTES 174144u',
+    '#define NDS_PARTICLE_PALETTE_ENTRIES 560u',
     '#define NDS_PARTICLE_TEXTURE_ASSET_PATH "nitro:/particles/efcommon_particle_textures.ds.bin"',
-    '#define NDS_PARTICLE_TEXTURE_ASSET_BYTES 168992u',
-    '#define NDS_PARTICLE_PALETTE_ASSET_OFFSET 168000u',
+    '#define NDS_PARTICLE_TEXTURE_ASSET_BYTES 175264u',
+    '#define NDS_PARTICLE_PALETTE_ASSET_OFFSET 174144u',
     '#define NDS_PARTICLE_LINKED_BYTES 12195u',
     # The quad sheet is A5I3, so the asset carries an 8-entry palette after the
     # texels and the two byte counts differ: 8,192 texels + 16 palette bytes.
@@ -567,7 +610,7 @@ foreach ($token in @(
     # every consumer for no behavioural gain.)
     '#define NDS_PARTICLE_QUAD_PALETTE_ENTRIES 32u',
     '#define NDS_PARTICLE_BANKS_SOURCE_CHECKSUM 0xa2a1e85fu',
-    '#define NDS_PARTICLE_BANKS_TABLE_CHECKSUM 0x179aea12u',
+    '#define NDS_PARTICLE_BANKS_TABLE_CHECKSUM 0xd22b30b6u',
     # NOT const, deliberately: the loader byte-swaps the bank in place instead
     # of spending 10,912 bytes of taskman arena on a writable copy.
     'extern u8 gNdsParticleScriptBank[NDS_PARTICLE_SCRIPT_BANK_BYTES];',
@@ -787,9 +830,9 @@ if (Test-Path -LiteralPath $incPath) {
         throw "Script offset table holds $($entries.Count) entries, expected 119."
     }
     $sentinels = @($entries | Where-Object { $_ -eq '0xffffffffu' }).Count
-    if ($sentinels -ne (119 - 92)) {
+    if ($sentinels -ne (119 - 93)) {
         throw ("Script offset table holds $sentinels unreachable sentinels, " +
-            "expected $(119 - 92).")
+            "expected $(119 - 93).")
     }
     $textureBlock = [regex]::Match(
         $inc, 'gNdsParticleTextures\[[^\]]*\]\s*=\s*\{(?<body>.*?)\n\};',
@@ -799,15 +842,15 @@ if (Test-Path -LiteralPath $incPath) {
     }
     $unpacked = @([regex]::Matches($textureBlock.Groups['body'].Value,
         '\{\s*0,\s*0,\s*0,\s*0,\s*0xffffffffu,\s*0xffffffffu\s*\}')).Count
-    if ($unpacked -ne (47 - 33)) {
+    if ($unpacked -ne (47 - 34)) {
         throw ("Texture table holds $unpacked sentinel rows, expected " +
-            "$(47 - 33).")
+            "$(47 - 34).")
     }
     foreach ($banned in @('gNdsParticleTextureData', 'gNdsParticlePaletteData')) {
         if ($inc.Contains("$banned[")) {
             throw ("Generated particle bank .inc defines $banned; the texel " +
                 'and palette blocks ship as NitroFS payload, and linking them ' +
-                'takes their 168992 bytes straight out of the taskman arena.')
+                'takes their 175264 bytes straight out of the taskman arena.')
         }
     }
     $incState = 'built'
@@ -818,8 +861,8 @@ if (Test-Path -LiteralPath $incPath) {
 $assetState = 'not built'
 if (Test-Path -LiteralPath $assetPath) {
     $assetBytes = (Get-Item -LiteralPath $assetPath).Length
-    if ($assetBytes -ne 168992) {
-        throw "Particle texture payload is $assetBytes bytes, expected 168992."
+    if ($assetBytes -ne 175264) {
+        throw "Particle texture payload is $assetBytes bytes, expected 175264."
     }
     $assetState = 'built'
 }
@@ -841,10 +884,10 @@ if (Test-Path -LiteralPath $quadPath) {
     $quadState = 'built'
 }
 
-Write-Output (('Particle bank pack passed: 92/119 reachable efcommon scripts, ' +
-    '33/47 textures, 250656 B N64 texture -> 168870 B DS, 12195 B linked ' +
+Write-Output (('Particle bank pack passed: 93/119 reachable efcommon scripts, ' +
+    '34/47 textures, 262992 B N64 texture -> 175140 B DS, 12195 B linked ' +
     '(10912 script bank + 1283 index) of 210320 B arena headroom (198125 B ' +
-    'spare) plus 168992 B NitroFS payload, 8 bit-exact CI4 textures, linear ' +
+    'spare) plus 175264 B NitroFS payload, 9 bit-exact CI4 textures, linear ' +
     "texel order pinned, .inc $incState, payload $assetState, " +
     # Derived, not typed. This line read "23/36 textures in 53 frames" while the
     # assertions above had already been updated to 33 and 54, so the success
