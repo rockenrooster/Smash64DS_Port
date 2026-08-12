@@ -257,9 +257,39 @@ missing burn rather than a missing effect. **It also returns row 2 to the
 cluster's shared capability** — packing frames 1/2 — instead of a seam-list
 change.
 
-**Next measurement:** count `efManagerFireGrindMakeEffect` /
-`efManagerDamageFireMakeEffect` requests on the both-CPU arm. If FireGrind fires,
-row 2 is a texture-variant fix and nothing else.
+**…and that candidate is wrong too. Both packed fire effects are accounted for.**
+
+- **`FireGrind` is an owner-approved presentation delta, not a defect.**
+  `NDS_R2_FIREGRIND_NATIVE ?= 1` (`Makefile:1025`) replaces the source hierarchy
+  (root particle + 3 generators + 6 sparks) with three source-derived quads, and
+  `nds_firegrind.h:20` records it **"owner-playtested and accepted 2026-08-07"**.
+  `BUG_FIXING_PROCESS.md` Step 2 is explicit: cite a recorded approval, do not
+  "fix" it. Its frozen-at-frame-0 texture is called out there as **the same
+  presentation the generic path already drew**, so that is not a regression
+  either.
+- **`DamageFire` runs the REAL source implementation.**
+  `battleship_efmanager.c:144` renames the imported source maker to
+  `ndsBaseEFManagerDamageFireMakeEffect` and `:1926` forwards to it. The
+  substitute at `shims.c:8399` is `__attribute__((weak))` — the import-off
+  fallback only.
+
+> So all three fire candidates examined so far are closed: the Flame family is
+> unreachable (measured, both arms), FireGrind is approved, DamageFire is real.
+> **Row 2's missing content has not been identified yet**, and no change should
+> be made until it is.
+
+**Remaining candidates, cheapest first — none requires a speculative edit:**
+
+1. The **Mario fireball projectile's own visual** (`battleship_mario_fireball.c`)
+   — the flame that travels, distinct from anything counted above.
+2. A **burn that rides the victim** after a fire hit, which would be a fighter
+   motion-script effect and therefore visible as a different `nEFKind` at
+   `ftParamMakeEffect`.
+
+Both are answered by the same cheap instrument already in the ROM: **log the
+distinct `effect_id` values reaching `ftParamMakeEffect` over a both-CPU match**,
+rather than counting one hypothesis at a time. That converts "which effect does
+the owner mean" from guesswork into an enumeration, and it is one build.
 
 Note also that `gNdsFighterProjectileProofSpawnSuccessCount` is incremented by
 **both** `battleship_mario_fireball.c:791` and `battleship_fox_blaster.c:80`, so
