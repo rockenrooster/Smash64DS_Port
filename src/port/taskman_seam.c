@@ -553,6 +553,9 @@ void ndsResetStartupDiagnostics(void)
     gNdsFighterProjectileProofSpecialMotion = 0;
     gNdsFighterProjectileProofAccessoryFrames = 0;
     gNdsFighterProjectileProofFlag0Frames = 0;
+    gNdsFighterModelPartSetCount = 0;
+    gNdsFighterModelPartOnCount = 0;
+    gNdsFighterModelPartResetCount = 0;
     gNdsFighterProjectileProofSpawnCallCount = 0;
     gNdsFighterProjectileProofSpawnSuccessCount = 0;
     gNdsFighterProjectileProofUpdateDestroyCount = 0;

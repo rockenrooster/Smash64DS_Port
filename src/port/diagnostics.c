@@ -2770,6 +2770,14 @@ volatile u32 gNdsFighterProjectileProofSpecialStatusFrames;
 volatile u32 gNdsFighterProjectileProofSpecialMotion;
 volatile u32 gNdsFighterProjectileProofAccessoryFrames;
 volatile u32 gNdsFighterProjectileProofFlag0Frames;
+/* BUGS.md "Fox's pistol model is missing": engagement proof for the model-part
+ * state half. ftmain.c:575 dispatches nFTMotionEventSetModelPartID into
+ * ftParamSetModelPartID, which used to discard it. OnCount rising on the gate
+ * arm is what proves the gun is being REQUESTED; it is the precondition for
+ * the texture ever being asked for, and therefore for capturing its key. */
+volatile u32 gNdsFighterModelPartSetCount;
+volatile u32 gNdsFighterModelPartOnCount;
+volatile u32 gNdsFighterModelPartResetCount;
 volatile u32 gNdsFighterProjectileProofSpawnCallCount;
 volatile u32 gNdsFighterProjectileProofSpawnSuccessCount;
 volatile u32 gNdsFighterProjectileProofUpdateDestroyCount;

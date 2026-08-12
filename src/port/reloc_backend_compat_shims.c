@@ -1372,6 +1372,7 @@ void ftParamResetModelPartAll(GObj *fighter_gobj)
         {
             status->modelpart_id_curr = status->modelpart_id_base;
             fp->is_modelpart_modify = TRUE;
+            gNdsFighterModelPartResetCount++;
         }
     }
 }
@@ -6472,6 +6473,11 @@ void ftParamSetModelPartID(GObj *fighter_gobj, s32 joint_id,
     }
     fp->modelpart_status[slot].modelpart_id_curr = (s8)modelpart_id;
     fp->is_modelpart_modify = TRUE;
+    gNdsFighterModelPartSetCount++;
+    if (modelpart_id >= 0)
+    {
+        gNdsFighterModelPartOnCount++;
+    }
 }
 
 void ftParamSetModelPartDetailAll(GObj *fighter_gobj, u8 detail)
