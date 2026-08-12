@@ -20,7 +20,7 @@ These bugs should be fixed for P1 delivery:
 
 -Fox's muzzle flash and laser spawn at the wrong Y. Also: on N64 Mario can crouch under the laser, in the port it hits him.
 
-> CONTRACT 2026-08-12: source spawns both from joint 17 local {60,0,0}; A-vs-B world-position invariant not yet measured.
+> MEASURED 2026-08-12: joint-17 spawn is source-correct to float epsilon, so the crouch divergence is NOT a spawn-Y bug; gun muzzle mesh next.
 
 Contracts, evidence, and the per-row work packets:
 `artifacts/bugs/2026-08-12_r2-07-cluster/CONTRACT.md` (one cluster, one batched
