@@ -1,4 +1,4 @@
-param()
+﻿param()
 $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $nativeStageChecker = Join-Path $PSScriptRoot 'stages\check_nds_native_stage.py'
@@ -2236,7 +2236,15 @@ Assert-True ($cameraVerifier.Contains("if (`$Case.Name -eq 'pause_under20')") -a
     $cameraVerifier.Contains('ExpectedPitchDegrees = $expectedPauseUnderPitchDegrees') -and
     $cameraVerifier.Contains('pause_under20 was not an exact underneath-camera view.')) 'Mario underside jump capture or exact underneath-camera guard is missing.'
 Assert-True ($taskmanSeam -match '(?s)#if NDS_SHIP_TELEMETRY \|\| \(NDS_RENDERER_PROFILE_LEVEL >= 1\).*?ndsRendererProfileFrameBegin\(.*?#endif.*?#if NDS_SHIP_TELEMETRY \|\| \(NDS_RENDERER_PROFILE_LEVEL >= 1\)\s*ndsRendererProfileFramePublish\(\);\s*#endif') 'LEAN still calls renderer telemetry reset/publication or diagnostic builds lost it.'
-Assert-True ($platform -match '(?s)#if NDS_SHIP_TELEMETRY \|\| \(NDS_RENDERER_PROFILE_LEVEL >= 1\)\s*gNdsHardwareRendererPolyRamCount = GFX_POLYGON_RAM_USAGE;.*?gNdsHardwareRendererControl = GFX_CONTROL;\s*#endif' -and $platform.Contains('sBattleTickHudNames[nNDSTickHudBucketCount]') -and $platform.Contains('"ALL ", "FTR ", "STG ", "BG  ", "AUD ", "HUD ", "SRC ",') -and $platform.Contains('"MISC", "OTHR", "WAIT", "WORK"') -and $platform.Contains('gNdsTickHudVBlankWaitTicks += cpuGetTiming() - tickhud_wait_start;')) 'Task 41 GX-read gate, or the Task 66 WAIT/WORK tick-HUD buckets, are missing.'
+# 2026-08-12: NDS_TICK_HUD joined this guard, and the assertion moved with it
+# rather than being loosened. What it pins is that LEAN does not pay for the GX
+# register reads, and that still holds -- the published
+# smash64ds-battle-playable-hwtri target forces `override NDS_TICK_HUD := 0`, so
+# the new disjunct cannot fire there. It was added because GXSTAT is unreadable
+# in a tick-HUD build without it, which is how the slice-43 matrix-stack leak was
+# found (nds_platform.c:3197 carries that evidence). Pin the exact new form; do
+# not make the disjunct optional, or the next change to this guard goes unseen.
+Assert-True ($platform -match '(?s)#if NDS_SHIP_TELEMETRY \|\| \(NDS_RENDERER_PROFILE_LEVEL >= 1\) \|\| NDS_TICK_HUD\s*gNdsHardwareRendererPolyRamCount = GFX_POLYGON_RAM_USAGE;.*?gNdsHardwareRendererControl = GFX_CONTROL;\s*#endif' -and $platform.Contains('sBattleTickHudNames[nNDSTickHudBucketCount]') -and $platform.Contains('"ALL ", "FTR ", "STG ", "BG  ", "AUD ", "HUD ", "SRC ",') -and $platform.Contains('"MISC", "OTHR", "WAIT", "WORK"') -and $platform.Contains('gNdsTickHudVBlankWaitTicks += cpuGetTiming() - tickhud_wait_start;')) 'Task 41 GX-read gate, or the Task 66 WAIT/WORK tick-HUD buckets, are missing.'
 Assert-True ($audioBgm -match '(?s)#if NDS_SHIP_TELEMETRY\s*static void ndsAudioBgmUpdateRateMarkers.*?#endif' -and $nativeOam.Contains('NDS_IFCOMMON_TELEMETRY_TICK() 0u') -and $nativeOam -match '(?s)#if NDS_SHIP_TELEMETRY\s*static void ndsIFCommonRecordSemantic.*?#endif' -and $ftComputer -match '(?s)ndsBaseFTComputerProcessAll\(fighter_gobj\);\s*#if NDS_SHIP_TELEMETRY\s*gNdsFTComputerProcessCount\+\+;\s*ndsFTComputerRecord\(fp\);\s*#endif' -and $ftMainImport -match '(?s)battleship_ftMainPlayAnimEventsAll\(fighter_gobj\);\s*#if NDS_SHIP_TELEMETRY\s*ndsDiagnosticsRecordImportedFTMainAnimEvents') 'Task 41 observer gates regressed for BGM, OAM, Fox AI, or fighter animation.'
 Assert-True ($renderer -match '(?s)sNdsRendererHardwareProjectedDepth -=\s*\(s32\)run->triangle_count \*\s*NDS_RENDERER_HW_PROJECTED_DEPTH_STEP;\s*\}\s*else\s*\{\s*ndsRendererHardwareEnterProjectedForeground\(\);') 'Task 43 replay no longer uses constant-time painter advance.'
 Assert-True ($audioFgm -match '(?s)void ndsAudioFgmUpdate\(void\).*?if \(gNdsAudioFgmActiveHandles == 0u\)\s*\{\s*return;\s*\}\s*now = cpuGetTiming\(\);') 'Task 43 idle FGM service again reads the CPU timer or scans handles.'

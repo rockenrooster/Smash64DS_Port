@@ -1,10 +1,9 @@
 # Handoff
 
-Updated: 2026-08-12. **The gate is banked at 1,213,440** (`build-c123-gate`,
-slice 45 in). c122 re-banked it at 1,225,280 after slice 43 was WITHDRAWN for the
-fighter blink — measured, not derived from the 1,210,560 slice-44 bank, which had
-the GX joint compose on; the withdrawal cost P50 +4,864 / P95 +14,720 against
-slice 43's claimed −13,632. Slice 45 then took −11,840.
+Updated: 2026-08-12. **The gate is banked at 1,196,224** (`build-c123-warm`,
+slices 45+46 in, Boundary GREEN). c122 re-banked at 1,225,280 after slice 43 was
+WITHDRAWN for the fighter blink — measured, not derived from the 1,210,560
+slice-44 bank. Slice 45 took −11,840, slice 46 −17,216. **Gap 76,804.**
 **Every 128-frame figure in the archive is unusable** — use `-Samples 1600`.
 
 ## The two baselines — label every figure with its arm AND its coverage
@@ -14,17 +13,18 @@ frames past the buzzer. Slips 0 in every row.
 
 | arm | role | `WORK-H` P50 | P95 | over gate |
 |---|---|---:|---:|---:|
-| **both-CPU** | **THE GATE** | **938,944** | **1,213,440** | banked c123, slice 45 in |
+| **both-CPU** | **THE GATE** | **938,752** | **1,196,224** | banked c123-warm, slices 45+46 |
 | **Boundary** mode 163 | shipped configuration | 920,192 | 1,113,408 | re-banked c116, slice 43 IN — stale |
 
-**Gate 1,213,440. Gap 93,060.** Top-80 `WORK-H` frames vs ranks 400–1200, on the
-c123 gate rows: `GCRA` +356,544 on 76/80, of which **`SINT` +145,184 on 51/80**
-and **`SHDT` +88,416 on 49/80** (4,736 → 93,152, a 19.7x step); `MISC` +19,776,
-`SPHD` +10,816. **`FTR` −128 and `STG` +192 at 0/80 presence** — the renderer is
-not the tail whatever its size. Capping each lane at its own median (a perfect
-fix, so an upper bound): `SINT` −72,448, `SHDT` −37,760, `MISC` −36,352,
-`GCRA` remainder −13,376. **No single lane clears the gate; `SINT`+`SHDT` is
-−143,488 and does.**
+**Gate 1,196,224. Gap 76,804.** Top-80 `WORK-H` frames vs ranks 400–1200, on the
+post-slice-46 rows: **`SHDT` +102,816 on 57/80** (4,544 → 107,360, a 23.6x step)
+and **`SINT` +108,384 on 47/80**; `SPHD` +17,024 on 28/80, `MISC` +16,864,
+`GCRA` remainder +11,584 on 9/80. **`FTR` −736 and `STG` +608 at 0/80
+presence** — the renderer is not the tail whatever its size. Capping each lane
+at its own median (a perfect fix, so an upper bound): `SINT` −56,512, `SHDT`
+−38,912, `MISC` −29,248. **No single lane clears it; `SINT`+`SHDT` is −127,776
+and does.** Slice 46 moved 36,800 out of `SINT` and `SHDT` took the lead —
+re-attribute after every KEEP, ownership really does move.
 
 **Two lane-sizing traps, both hit this cycle.** Medians do not add: subtracting
 nested buckets' medians from `GCRA`'s median invented a 110,336 "unbucketed"
@@ -56,9 +56,8 @@ memoization/hoisting/reuse/call deletion only.
 - **Effect DObj submits** — Boundary-only: 99.3% of the Boundary excursion, ~12.1%
   of the gate arm's. **Projectiles** · **Particles** · **texture thrash** ·
   **`Find`** · **`Material`** · force-load seam. **`FTR` as the P95
-  discriminator** — flat, 0/80 on the c123 tail (NOT "FTR is exhausted"; c110–116
-  took 24.3% off it). **The AOT animation bake at 20 B/record** (slice 32): SIZE
-  dead, 10,304 B per animation vs 2,310, ×85 = +679,490 B.
+  discriminator** — flat, 0/80 (NOT "FTR is exhausted"). **The AOT animation bake
+  at 20 B/record** (slice 32): SIZE dead, ×85 = +679,490 B.
 - **Animation playback ARITHMETIC** (slices 34, 41): already Requirement 4's
   fixed point at 1.67–1.69 cyc/insn; idle-joint skip (33), lazy track table (31),
   AObj walk and track dispatch all under the floor. **Slice 41 spent the last
@@ -74,56 +73,65 @@ memoization/hoisting/reuse/call deletion only.
   resident chain of link-time immediates — slice 45 deleted the CALLS instead.
 - **`ndsRelocFinalizeLoadedFile` as the gate** (R2-06 E8's headline claim):
   refuted by E8's own `NDS_R2_RELOC_FIXUP_TIMING` split — one setup call is 88%
-  of the total, recurring finalize is ~4,604 tk/call. Neither repair it proposed
-  is worth building.
-- **Growing the anim-cache arena.** GATE arm: Rejects 0, Overflows 0, 262,144
-  reserved / 257,200 used, 351 of 383 hits, heap low-water 70,776. The
-  zero-reject invariant already holds; there is nothing to buy.
+  of the total, recurring finalize ~4,604 tk/call. Neither repair is worth it.
+- **Growing the anim-cache arena.** GATE arm reads Rejects 0 / Overflows 0, and
+  slice 46 dropped it to 192,240 of 262,144. Nothing to buy.
 
 ## RAM: both budgets are near their floor — price a change before writing it
 
 - **Static/boot.** `check-boot-headroom.ps1 -Build <dir>` after every lab build.
   Highest `fake_heap_start` proven to boot **`0x02294804`**, lowest proven to
   fail **`0x02294b24`**. **Text counts as much as bss**; a failing arm reads as a
-  hung emulator. **`gSYTaskmanGeneralHeap`** free-min is **70,776** on the c123
-  gate (−169,152 B static, arena at `0x150000`), i.e. 38,008 above the 32,768
-  floor. Coupled: freeing `.bss` enlarges it.
+  hung emulator. **`gSYTaskmanGeneralHeap`** free-min is **70,776**, i.e. 38,008
+  above the 32,768 floor. Coupled: freeing `.bss` enlarges it.
 
 ## FTR: −93,612 landed (c116); it is now 0/80 presence and NOT a P95 lever
 
 **Banked `FTR` mean 291,896** vs a 385,508 baseline (−24.3%), on the SHIPPED
-strips. Keep these three warnings; stop re-deriving the rest.
+strips. Keep these warnings; stop re-deriving the rest.
 
-- **DS-native AOT geometry ships** (`NDS_TASK56_FIGHTER_PRIMITIVES ?= 2`): 1,878
-  `GL_TRIANGLES` corners → 1,014 strip corners, P50 −10,112 / P95 −14,144. **It
-  SHIPPED BROKEN** — an undirected edge made 35.6% of the fighter BACKFACING and
-  `BEGIN_VTXS` on group TYPE change welded adjacent strips into one vertex list.
-  Boundary passed on the broken build: **a passing verifier is not visual
-  verification. Hand the owner a ROM.**
-- **The emit stalls per VERTEX, not per word** — 40.5 cycles a corner, ~28 of it
-  the GX write. A baked/DMA'd GX stream and `VTX_10` are **refuted**: they trade
-  words, not vertices. Cold bytes in an *entered* body cost **+14,963**.
-- **Compiling the frame-summary counters out is refuted** (FTR −7,378): it breaks
-  the gate — the loop harness asserts batch/texture accounting off those globals.
-  **Tick factor 0.4993 tk/cyc** from `ALL` vs total cycles, never from the FTR sum.
+- **DS-native AOT geometry ships** (`NDS_TASK56_FIGHTER_PRIMITIVES ?= 2`): P50
+  −10,112 / P95 −14,144. **It SHIPPED BROKEN** — an undirected edge made 35.6%
+  of the fighter BACKFACING and `BEGIN_VTXS` on group TYPE change welded strips
+  into one vertex list. Boundary passed on the broken build: **a passing
+  verifier is not visual verification. Hand the owner a ROM.**
+- **The emit stalls per VERTEX, not per word** (40.5 cyc a corner, ~28 the GX
+  write), so a baked/DMA'd GX stream and `VTX_10` are **refuted**. Cold bytes in
+  an *entered* body cost **+14,963**. **Compiling the frame-summary counters out
+  is refuted** — it breaks the gate. **Tick factor 0.4993 tk/cyc** from `ALL` vs
+  total cycles, never from the FTR sum.
 
 ## Landed slices and the lanes they leave
 
 **SLICE 43 WITHDRAWN 2026-08-11.** Owner retest still blinked after the
-parent-slot union repair, so the earlier "fixed" claim was false. All targets
-force `NDS_R2_FIGHTER_GX_COMPOSE=0`; do not re-enable without owner proof. Lead
-at `nds_platform.c:3197`: the matrix stack leaks ~3 pushes/frame, wrapping mod 32.
-**SLICE 45 KEPT — 1,225,280 → 1,213,440.** Same-binary A/B
-(`gNdsR2RelocAliasRoute`): `ndsRelocRemoveFighterAObj16StatusAliases` resolved
-`ndsRelocAssetIDForToken` for EVERY status node when `addr == data` rejects
-almost all in one compare. Resolves 16,002 → 1,143 of 16,067 visits, **P95
-−12,160, P50 +256**. Exact — the resolver is a pure function of a link-time
-ADDRESS. Evidence `artifacts/performance/2026-08-11_c122-rebank/SLICE45.md`.
+parent-slot union repair. All targets force `NDS_R2_FIGHTER_GX_COMPOSE=0`; do
+not re-enable without owner proof. Lead at `nds_platform.c:3197`: the matrix
+stack leaks ~3 pushes/frame, wrapping mod 32. **That line's `|| NDS_TICK_HUD` is
+pinned by `check-gbi-decode-fixtures.ps1:2247`** — it went RED for a cycle
+because the guard moved and the assertion did not.
+**SLICE 46 KEPT — 1,213,440 → 1,196,224.** The anim warm preload never finished
+(`gNdsR2AnimWarmLoaded` 83 of 85) AND warmed the wrong assets: dumping
+`gNdsR204AnimSeen` off the gate ROM gives 87 used ids, of which the 85-entry list
+covered only **57** — 30 used ids streamed from ROM mid-match while 28 warmed ids
+were never used. List replaced with the measured 87 and
+`gNdsR2AnimWarmStep` (4) walks four per scene update: **misses 32 → 2**, warm
+85/85, **arena 257,200 → 192,240** (it SHRINKS, so it costs no RAM budget),
+Rejects 0, heap 70,776, BGM playing, VBlank 4x 31→10. Split −8,448 list /
+−8,768 stepping, the latter same-binary. **The bound on stepping is the BGM
+packet seam, not load time** — R2-04 E4's failure prices one load at >4.5 ms
+against ~186 ms. Evidence `artifacts/performance/2026-08-12_c123-rebank/SLICE46.md`.
 
-**SLICE 44 KEPT — 1,244,480 → 1,210,560** (superseded above).
+**SLICE 45 KEPT — 1,225,280 → 1,213,440.** Same-binary A/B:
+`ndsRelocRemoveFighterAObj16StatusAliases` resolved `ndsRelocAssetIDForToken`
+for EVERY status node when `addr == data` rejects almost all in one compare.
+Resolves 16,002 → 1,143, **P95 −12,160, P50 +256**. Exact — the resolver is a
+pure function of a link-time ADDRESS.
+`artifacts/performance/2026-08-11_c122-rebank/SLICE45.md`.
+
+**SLICE 44 KEPT — 1,244,480 → 1,210,560** (superseded).
 `NDS_R2_STAGE_VALIDATE_STRIDE=8` strides the stage's 42-binding revalidation,
-**−17,088 / −35,904**. Round-robin, NOT "sweep every 8th frame" — that shape
-makes 12.5% of frames expensive and P95 lands on one. Demotion is one-way.
+**−35,904 P95**. Round-robin, NOT "sweep every 8th frame" — that shape makes
+12.5% of frames expensive and P95 lands on one.
 
 **The fighter LOCAL matrix build is NOT a P95 lane — refuted c122.** Real size
 (~24,314 tk/frame, 80/80) and memory-bound, but `FTR` is 0/80 on the tail: it is
@@ -132,22 +140,22 @@ killed twice**; the Task 91 comment at `reloc_backend_renderer_dl.c:1790` argues
 for it anyway and is not an invitation.
 
 **`SINT` is the fighter INTERRUPT proc with `SCPU` nested inside it, not an
-animation bucket** — reading it as one mis-attributed an A/B in c119. It is the
-**biggest remaining lane: +145,184 on 51/80, ceiling −72,448.** Its old split
-(`ftMainPlayAnim` +60,559, `ftComputerProcessAll` +24,386 = map collision, not
-AI) predates slices 44/45 — re-split before designing. **Zero-copy force-load is
-closed:** `ftmain.c:4623` **discards the return value** and sets
-`fp->figatree = fp->figatree_heap` itself.
+animation bucket** — reading it as one mis-attributed an A/B in c119. Now
++108,384 on 47/80, ceiling −56,512; its old split (`ftMainPlayAnim` +60,559,
+`ftComputerProcessAll` +24,386 = map collision) predates slices 44–46, so
+re-split before designing. **Zero-copy force-load is closed:** `ftmain.c:4623`
+**discards the return value** and sets `fp->figatree = fp->figatree_heap`.
 
 **Fighter animation is fixed point — Requirement 4 shipped** (slice 25), P50
 −23,360 / P95 −37,504; what is LEFT is ~70,000 cyc/frame of memory stall. All
 `gNdsR2AnimCutRoute` bits ship ON — no default-off win hides there.
 
 **Do not bring a micro-fix** — R2-06 E11: a load-frame-only ~8,000 cannot be
-banked, relinking moves the tail more than the saving. Clear ~16,000 in one
-change, or **use the `.data` route on ONE binary** (only if the change cannot
-alter gameplay state). **Every change needs an engagement counter on BOTH
-sides** — c110 read FTR −13,587 off a skip it could not prove fired.
+banked. Clear ~16,000 in one change, or **use the `.data` route on ONE binary**
+(only if the change cannot alter gameplay state). **Every change needs an
+engagement counter on BOTH sides** — c110 read FTR −13,587 off a skip it could
+not prove fired. **Slices 45 and 46 were both found by READING counters the code
+already kept, on the gate arm, for the first time.**
 
 **Do not re-derive these.** The Makefile's `?= 0` defaults are not the shipped
 config (41 overridden). `.text.hot` is closed both directions
