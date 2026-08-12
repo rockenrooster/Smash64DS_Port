@@ -8121,6 +8121,22 @@ void *ftParamMakeEffect(GObj *fighter_gobj, s32 effect_id, s32 joint_id,
     GObj *effect_gobj = NULL;
 
     (void)arg7;
+    /* BUGS.md "Missing fire burn effects": decide whether the Flame family is
+     * reachable in P1 before adding it to P1_PARTICLE_SEAMS. The alias below
+     * collapses FlameLR/FlameRandom/FlameStatic AND FireSpark onto one
+     * substitute, and only FireSpark is currently a listed seam, so a single
+     * combined counter could not tell "the burn is requested and substituted"
+     * from "only FireSpark ever arrives". Count them apart. */
+    if ((effect_id == nEFKindFlameLR) ||
+        (effect_id == nEFKindFlameRandom) ||
+        (effect_id == nEFKindFlameStatic))
+    {
+        gNdsFighterFlameEffectRequestCount++;
+    }
+    else if (effect_id == nEFKindFireSpark)
+    {
+        gNdsFighterFireSparkRequestCount++;
+    }
     if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
         ((sNdsFighterDashRunDamageStatusSetupActive != FALSE) ||
          (sNdsFighterDashRunDamageExpiryActive != FALSE)) &&

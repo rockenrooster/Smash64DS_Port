@@ -3911,6 +3911,8 @@ extern volatile u32 gNdsFighterProjectileProofSpecialMotion;
 extern volatile u32 gNdsFighterProjectileProofAccessoryFrames;
 extern volatile u32 gNdsFighterProjectileProofFlag0Frames;
 extern volatile u32 gNdsFighterProjectileProofSpawnCallCount;
+extern volatile u32 gNdsFighterFlameEffectRequestCount;
+extern volatile u32 gNdsFighterFireSparkRequestCount;
 extern volatile u32 gNdsFighterModelPartSetCount;
 extern volatile u32 gNdsFighterModelPartOnCount;
 extern volatile u32 gNdsFighterModelPartResetCount;

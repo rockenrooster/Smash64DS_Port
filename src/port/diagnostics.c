@@ -2775,6 +2775,8 @@ volatile u32 gNdsFighterProjectileProofFlag0Frames;
  * ftParamSetModelPartID, which used to discard it. OnCount rising on the gate
  * arm is what proves the gun is being REQUESTED; it is the precondition for
  * the texture ever being asked for, and therefore for capturing its key. */
+volatile u32 gNdsFighterFlameEffectRequestCount;
+volatile u32 gNdsFighterFireSparkRequestCount;
 volatile u32 gNdsFighterModelPartSetCount;
 volatile u32 gNdsFighterModelPartOnCount;
 volatile u32 gNdsFighterModelPartResetCount;
