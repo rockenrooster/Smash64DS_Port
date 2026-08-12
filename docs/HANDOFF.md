@@ -19,9 +19,8 @@ stacked against a matched control**, so do not re-litigate them — playtest the
 Candidates: `build-c129-foxfire` (Boundary arm, Fox pixels) and `build-c130-fire-bothcpu`
 (same source on `BOTH_CPU 1`, flame pixels + gate). Neither is marked FIXED — owner's call.
 
-**Perf:** `…/2026-08-12_c130-fire-gate/GATE.md`. `WORK-H` P95 **1,217,472** vs the
-both-CPU bank 1,207,616 — **+9,856, under this arm's own 9,664 repeat spread**, and the
-counted mechanism (18 extra quads over ~12 frames) is ~10x too small to be it.
+**Perf:** `…/GATE.md` — `WORK-H` P95 **1,217,472** vs the both-CPU bank 1,207,616, **+9,856,
+under this arm's own 9,664 repeat spread**; the mechanism (18 quads, ~12 frames) is ~10x small.
 
 - **Row 3 (Fox gun) — the overlay drew at 0.036 PX**, in the right place, at the right
   depth, 44/44 corners in the viewport. The submit hand-loaded its composed MVP and so
@@ -55,11 +54,14 @@ counted mechanism (18 extra quads over ~12 frames) is ~10x too small to be it.
 | Boundary arm (`BOTH_CPU 0`) | shipped config, **PASSES** | 899,136 | 1,087,616 |
 | **both-CPU (`BOTH_CPU 1`)** | **R2-07 GATE, FAILS** | 938,368 | **1,207,616** |
 
-**RE-ATTRIBUTION and LANE CEILINGS live in `…/2026-08-12_c125-slice48/` — but they
-are BOUNDARY-arm and must be recomputed on `BOTH_CPU 1`.** Headlines, still useful
-for direction: `ndsAObjEvent32NormalizeScript` 24,299 on 19/80 is the largest
-non-idle non-softfloat row and the latent cliff below; `GCRA` == `SRC` to the tick,
-so everything spendable is inside `gcRunAll`.
+**RE-BANKED ON `BOTH_CPU 1` — `…/2026-08-12_c130-fire-gate/LANES_BOTHCPU.md`** (no build,
+no new run; `analyze-tick-hud-excursion.ps1 -Ceilings` emits both tables now). `SRC` owns
+**84.4%** of the 395,863 excursion and its ceiling **207,104 is 2.07x the 100,100 gap —
+the gate is reachable inside `SRC` alone**. `SITR` 83,712 (excursion 156,723) is the
+largest leaf lane, `SHDT` 51,584 the sharpest presence (13.17x on a 4,416 median).
+**`SCPU` +252%, `SPRM` +274%, `SPHD` +158% vs the Boundary table — the wrong arm ran ONE
+CPU; `FTR` is 8,512, not 0.** `MISC`/`AUD` shrank; c125's ceilings are dead. `GCRA` ==
+`SRC` to the tick, so everything spendable is inside `gcRunAll`.
 
 **THE BIGGEST LEVER IS PLACEMENT.** Memory stall is **1,236,685,107 cycles,
 33.8% of the match** ≈ 386,000 tk/frame — an order of magnitude past `SINT` or
@@ -69,13 +71,12 @@ so everything spendable is inside `gcRunAll`.
 the Task 37 port group is understood.** `.itcm` is NOT full (30 of 82 residents
 never execute, 2,594 B idle), but the census's 87,033,153 stall cycles "in reach"
 assumes admitting ~3,118 B of mostly PORT functions, and `NDS_TASK37_ITCM_PORT` is
-0 because *"the owner confirmed the enabled lab build misbehaves"* — a CORRECTNESS
-refutation. **Eviction alone pays nothing.** What is left is `__aeabi_lmul` via the
-proven library-member list (86 B ≈ 1,005 tk/frame). Full detail in `EXHAUSTION.md`.
+0 because *"the owner confirmed the enabled lab build misbehaves"* — CORRECTNESS.
+**Eviction alone pays nothing**; what is left is `__aeabi_lmul` via the proven
+library-member list (86 B ≈ 1,005 tk/frame). ITCM detail in `EXHAUSTION.md`, ceilings dead.
 
-**Two lane-sizing traps.** Medians do not add (subtracting nested medians from
-`GCRA`'s invented a 110,336 lane worth +9,472/row); `OTHR` CONTAINS `WAIT`, so its
-−116,800 ceiling is idle time. Only `WORK-H` is spendable.
+**Lane-sizing traps, now encoded in `-Ceilings`:** medians do not add (that invented a
+110,336 lane worth +9,472/row in c122); `OTHR` CONTAINS `WAIT`. Only `WORK-H` is spendable.
 
 **Profile with `NDS_TICK_HUD_DRAW=0` or you profile the instrument** — the HUD
 costs ~345,024 tk twice a second on exactly the frames P95 is decided on; the GATE
@@ -87,10 +88,10 @@ memoization/hoisting/reuse/deletion only.
 
 ## What is dead, so nobody re-derives it
 
-- **`FTR` — −93,612 landed (c116), 0/80 on the tail: NOT a P95 lever.** DS-native
-  AOT geometry ships (`NDS_TASK56_FIGHTER_PRIMITIVES ?= 2`) and **it SHIPPED
-  BROKEN** — 35.6% of the fighter backfacing, with Boundary green: **a passing
-  verifier is not visual verification. Hand over a ROM.**
+- **`FTR` — −93,612 landed (c116); its "0/80, NOT a P95 lever" verdict is BOUNDARY-arm
+  and the gate arm prices it 8,512.** DS-native AOT geometry ships
+  (`NDS_TASK56_FIGHTER_PRIMITIVES ?= 2`) and **SHIPPED BROKEN** — 35.6% of the fighter
+  backfacing with Boundary green: **a passing verifier is not visual verification.**
 - **Effect DObj submits** — Boundary-only. **Projectiles** · **texture thrash** ·
   **`Find`** · **`Material`** · force-load seam. **`MISC` is PARTICLES and particles
   are FLAT.** **The AOT animation bake** (slice 32): SIZE dead.

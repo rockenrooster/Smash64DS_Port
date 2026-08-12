@@ -9,6 +9,13 @@ param(
     # drop frames whose SRC exceeds this multiple of the arm's OWN SRC median.
     # 0 disables the exclusion.
     [double]$LoadFrameSrcMultiple = 2.0,
+    # Also print the lane-ceiling table: the most each lane could ever pay if it
+    # were perfectly flattened to its own median. Off by default because the
+    # excursion table above answers "who owns the tail" and the ceiling answers
+    # the different question "how big is the prize" -- but the two belong in one
+    # place, because the c125 ceilings were computed by hand, in a doc, on the
+    # WRONG ARM, and nothing could re-derive them when that was discovered.
+    [switch]$Ceilings,
     [string]$JsonOut = ''
 )
 
@@ -390,9 +397,68 @@ if ($hasSrcSplit) {
     Write-Host ''
 }
 
+$ceilingTable = @()
+if ($Ceilings) {
+    # THE ONLY HONEST METHOD, and the reason it is written down: for each lane,
+    # subtract max(0, lane - median(lane)) from that row's WORK-H, then re-take
+    # the 80th largest of 1,600. Flattening a lane to its own median is the best
+    # any optimization of it could do without also cutting the frames that were
+    # already cheap.
+    #
+    # It is NOT computed by subtracting medians. Medians do not add, and doing it
+    # that way invented a 110,336-tick lane worth +9,472 a row in c122.
+    #
+    # The baseline uses the SAME rank statistic rather than the harness's
+    # percentile, so it sits a little above the banked P95 (1,856 in c125). Read
+    # the DELTAS as the result; the absolute column is only their arithmetic.
+    #
+    # OTHR and WAIT are absent on purpose: OTHR is an accounting remainder that
+    # CONTAINS WAIT, so its "ceiling" is mostly VBlank idle and is not spendable.
+    # HUD is excluded from WORK-H by construction, so its ceiling is zero by
+    # definition, not by measurement.
+    $laneNames = @()
+    foreach ($c in @('SRC', 'GCRA', 'SGCO', 'SITR', 'SINT', 'SHDT', 'MISC',
+                     'SPHD', 'SOBJ', 'SBAS', 'SPRM', 'AUD', 'SCPU', 'STG',
+                     'FTR', 'SCAT', 'SWRM', 'SPHC', 'SOUT', 'BG',
+                     'OTHR-WAIT')) {
+        if ($null -ne $all[0].PSObject.Properties[$c]) { $laneNames += $c }
+    }
+    $rank = [math]::Max(1, [int][math]::Ceiling($all.Count * 0.05))
+    $sortedWorkH = @($all.'WORK-H' | Sort-Object -Descending)
+    $baseline = $sortedWorkH[$rank - 1]
+    foreach ($lane in $laneNames) {
+        $laneMedian = Get-Pct -Values @($all.$lane) -Q 0.50
+        $adjusted = @(foreach ($r in $all) {
+            $over = $r.$lane - $laneMedian
+            if ($over -lt 0) { $over = 0 }
+            $r.'WORK-H' - $over
+        })
+        $flatP95 = @($adjusted | Sort-Object -Descending)[$rank - 1]
+        $ceilingTable += [pscustomobject]@{
+            lane = $lane
+            ceiling = $baseline - $flatP95
+            flatP95 = $flatP95
+            median = $laneMedian
+        }
+    }
+    Write-Host ("  LANE CEILINGS -- most each lane could pay, arm {0}" -f $Arm)
+    Write-Host ("    baseline (rank {0} of {1}) {2:N0}   gate {3:N0}" -f
+        $rank, $all.Count, $baseline, $Gate)
+    Write-Host ("    {0,-9} {1,10} {2,12} {3,12}" -f
+        'lane', 'ceiling', 'P95 if flat', 'median')
+    foreach ($t in ($ceilingTable | Sort-Object -Property ceiling -Descending)) {
+        Write-Host ("    {0,-9} {1,10:N0} {2,12:N0} {3,12:N0}" -f
+            $t.lane, $t.ceiling, $t.flatP95, $t.median)
+    }
+    Write-Host ('    Lanes NEST -- SRC contains GCRA contains SGCO contains ' +
+        'SITR/SPHD/SPHC/SOBJ. These ceilings do NOT add.')
+    Write-Host ''
+}
+
 if ($JsonOut) {
     $payload = [ordered]@{
         analysis = 'tick-hud excursion attribution'; arm = $Arm; rowsCsv = $RowsCsv
+        laneCeilings = $ceilingTable
         gate = $Gate; rows = $all.Count; loadFramesDropped = $dropped
         srcMedian = $srcMedian; loadFrameSrcMultiple = $LoadFrameSrcMultiple
         workHP50 = $p50; workHP95 = $p95; cleanFrameP95 = $cleanP95

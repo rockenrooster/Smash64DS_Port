@@ -1,0 +1,288 @@
+{
+  "analysis": "tick-hud excursion attribution",
+  "arm": "both-cpu",
+  "rowsCsv": "artifacts\\performance\\2026-08-12_c130-fire-gate\\c130-gate-rows.csv",
+  "laneCeilings": [
+    {
+      "lane": "SRC",
+      "ceiling": 207104,
+      "flatP95": 1013376,
+      "median": 323648
+    },
+    {
+      "lane": "GCRA",
+      "ceiling": 207104,
+      "flatP95": 1013376,
+      "median": 318464
+    },
+    {
+      "lane": "SGCO",
+      "ceiling": 135040,
+      "flatP95": 1085440,
+      "median": 259136
+    },
+    {
+      "lane": "SITR",
+      "ceiling": 83712,
+      "flatP95": 1136768,
+      "median": 105408
+    },
+    {
+      "lane": "SINT",
+      "ceiling": 104768,
+      "flatP95": 1115712,
+      "median": 152000
+    },
+    {
+      "lane": "SHDT",
+      "ceiling": 51584,
+      "flatP95": 1168896,
+      "median": 4416
+    },
+    {
+      "lane": "MISC",
+      "ceiling": 23552,
+      "flatP95": 1196928,
+      "median": 105024
+    },
+    {
+      "lane": "SPHD",
+      "ceiling": 44288,
+      "flatP95": 1176192,
+      "median": 57920
+    },
+    {
+      "lane": "SOBJ",
+      "ceiling": 17472,
+      "flatP95": 1203008,
+      "median": 83200
+    },
+    {
+      "lane": "SBAS",
+      "ceiling": 140992,
+      "flatP95": 1079488,
+      "median": 317440
+    },
+    {
+      "lane": "SPRM",
+      "ceiling": 11008,
+      "flatP95": 1209472,
+      "median": 2048
+    },
+    {
+      "lane": "AUD",
+      "ceiling": 11008,
+      "flatP95": 1209472,
+      "median": 2816
+    },
+    {
+      "lane": "SCPU",
+      "ceiling": 15104,
+      "flatP95": 1205376,
+      "median": 44608
+    },
+    {
+      "lane": "STG",
+      "ceiling": 3008,
+      "flatP95": 1217472,
+      "median": 174656
+    },
+    {
+      "lane": "FTR",
+      "ceiling": 8512,
+      "flatP95": 1211968,
+      "median": 303232
+    },
+    {
+      "lane": "SCAT",
+      "ceiling": 0,
+      "flatP95": 1220480,
+      "median": 1344
+    },
+    {
+      "lane": "SWRM",
+      "ceiling": 0,
+      "flatP95": 1220480,
+      "median": 832
+    },
+    {
+      "lane": "SPHC",
+      "ceiling": 128,
+      "flatP95": 1220352,
+      "median": 704
+    },
+    {
+      "lane": "SOUT",
+      "ceiling": 192,
+      "flatP95": 1220288,
+      "median": 4352
+    },
+    {
+      "lane": "BG",
+      "ceiling": 0,
+      "flatP95": 1220480,
+      "median": 4096
+    },
+    {
+      "lane": "OTHR-WAIT",
+      "ceiling": 576,
+      "flatP95": 1219904,
+      "median": 19520
+    }
+  ],
+  "gate": 1120380.0,
+  "rows": 1600,
+  "loadFramesDropped": 0,
+  "srcMedian": 323648,
+  "loadFrameSrcMultiple": 0.0,
+  "workHP50": 944256,
+  "workHP95": 1217472,
+  "cleanFrameP95": 1075904,
+  "overGate": 168,
+  "judged": 1600,
+  "workHHotMinusClean": 395862.7422186752,
+  "ownerExcursionSum": 395862.0,
+  "identityMaxErrorTicks": 0,
+  "closureErrorTicks": 0.742218675208278,
+  "owners": [
+    {
+      "owner": "FTR",
+      "excursion": 7132.0,
+      "share": 0.01801683220917066
+    },
+    {
+      "owner": "STG",
+      "excursion": 25677.0,
+      "share": 0.06486308296948216
+    },
+    {
+      "owner": "BG",
+      "excursion": 3.0,
+      "share": 8.010494026737277E-06
+    },
+    {
+      "owner": "AUD",
+      "excursion": 12748.0,
+      "share": 0.03220311068880217
+    },
+    {
+      "owner": "SRC",
+      "excursion": 334234.0,
+      "share": 0.8443185055003007
+    },
+    {
+      "owner": "MISC",
+      "excursion": 15936.0,
+      "share": 0.04025666784114487
+    },
+    {
+      "owner": "OTHR-WAIT",
+      "excursion": 132.0,
+      "share": 0.00033379029707245674
+    }
+  ],
+  "srcSplitPresent": true,
+  "srcSubOwners": [
+    {
+      "owner": "SHDT",
+      "excursion": 76023.0,
+      "shareOfSrc": 0.22745500615469844,
+      "shareOfWorkH": 0.19204447086509668,
+      "hotMean": 82268.0,
+      "cleanMean": 6245.0,
+      "hotOverClean": 13.17,
+      "p95": 88000
+    },
+    {
+      "owner": "SWRM",
+      "excursion": 10.0,
+      "shareOfSrc": 3.053200577837483E-05,
+      "shareOfWorkH": 2.5778737488723983E-05,
+      "hotMean": 845.0,
+      "cleanMean": 835.0,
+      "hotOverClean": 1.01,
+      "p95": 896
+    },
+    {
+      "owner": "SOUT",
+      "excursion": -67.0,
+      "shareOfSrc": -0.0002002632145434144,
+      "shareOfWorkH": -0.00016908593800998172,
+      "hotMean": 4341.0,
+      "cleanMean": 4408.0,
+      "hotOverClean": 0.98,
+      "p95": 4544
+    },
+    {
+      "owner": "SCPU",
+      "excursion": 12561.0,
+      "shareOfSrc": 0.03758256225267442,
+      "shareOfWorkH": 0.03173165279405008,
+      "hotMean": 58510.0,
+      "cleanMean": 45948.0,
+      "hotOverClean": 1.27,
+      "p95": 112192
+    },
+    {
+      "owner": "SCAT",
+      "excursion": 66.0,
+      "shareOfSrc": 0.0001964745714906211,
+      "shareOfWorkH": 0.0001658871165697732,
+      "hotMean": 1389.0,
+      "cleanMean": 1324.0,
+      "hotOverClean": 1.05,
+      "p95": 1536
+    },
+    {
+      "owner": "SPRM",
+      "excursion": 24681.0,
+      "shareOfSrc": 0.07384356939892758,
+      "shareOfWorkH": 0.062347492155710275,
+      "hotMean": 26800.0,
+      "cleanMean": 2119.0,
+      "hotOverClean": 12.65,
+      "p95": 2176
+    },
+    {
+      "owner": "SITR",
+      "excursion": 156723.0,
+      "shareOfSrc": 0.4689015602478966,
+      "shareOfWorkH": 0.3959022645752633,
+      "hotMean": 263674.0,
+      "cleanMean": 106951.0,
+      "hotOverClean": 2.47,
+      "p95": 282368
+    },
+    {
+      "owner": "SPHD",
+      "excursion": 40319.0,
+      "shareOfSrc": 0.12063086599344755,
+      "shareOfWorkH": 0.10185087249279468,
+      "hotMean": 102502.0,
+      "cleanMean": 62183.0,
+      "hotOverClean": 1.65,
+      "p95": 99840
+    },
+    {
+      "owner": "SPHC",
+      "excursion": 23.0,
+      "shareOfSrc": 6.925257452463051E-05,
+      "shareOfWorkH": 5.8471230224684236E-05,
+      "hotMean": 686.0,
+      "cleanMean": 663.0,
+      "hotOverClean": 1.03,
+      "p95": 768
+    },
+    {
+      "owner": "SOBJ",
+      "excursion": 23895.0,
+      "shareOfSrc": 0.0714904400151054,
+      "shareOfWorkH": 0.06036070147111269,
+      "hotMean": 112714.0,
+      "cleanMean": 88819.0,
+      "hotOverClean": 1.27,
+      "p95": 126720
+    }
+  ],
+  "capturedUtc": "2026-08-12T19:51:13.2478871Z"
+}
