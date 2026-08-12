@@ -2,85 +2,17 @@
 AI Agent should mark fixed items with **FIXED** prefix or a 20 word summary if not fixed yet.
 These bugs should be fixed for P1 delivery:
 
-## OPEN — periodic one-frame fighter blink (2026-08-11)
+-Whispys face looks like it plays at low FPS (sub 15 FPS), so we miss the blinks that the eyes do.
 
-- Symptom: Mario/Fox periodically disappeared for one presented frame and came
-  back on the next. Owner bisect: `build-c119-gxctl` clean;
-  `build-c119-gxcompose`, `build-c119-gxcompose2`, and `build-c121-stride`
-  blinked, isolating the base Slice 43 GX joint-compose path.
-- Submission was never missing. A 96-frame census on the bad GX-compose ROM
-  submitted exactly 320 Mario and 306 Fox hardware triangles every frame.
-- The first root-cause claim was incomplete. Slice 43 really did let Fox parent
-  allocation overlap Mario cross slots 19..23 (bad control `0x00F80000`), and
-  reserving both fighters' cross-slot union removes that collision with zero GX
-  compose declines. **Owner retest still blinked**, so that collision was not the
-  whole defect and must not be called the fix.
-- Correctness mitigation: Slice 43 `NDS_R2_FIGHTER_GX_COMPOSE` is withdrawn from
-  published, tick-HUD/proof, Results, and Bug-9 targets. The renderer returns to
-  the CPU joint-compose path from `build-c119-gxctl`, which the owner bisect
-  established as clean. `NDS_R2_FIGHTER_HW_MTX` remains enabled; it predates the
-  regression. The dormant union reservation stays as a necessary condition if GX
-  joint compose is investigated again.
+> Only one eye image is packed, so every blink resolves to the open frame. Not a rate problem.
 
-## Hit-effect presentation (owner, 2026-08-05, with N64/RetroArch reference shots)
+-Missing fire burn effects. the explosion effect is there but not the flame burn 
 
-- Some VFX textures are rendering half or 1/4 of the full texture. (like ledge grab effect and fox laser muzzle flash)
+> Source flame makers were never linked; four fire kinds all alias one substitute burst. Same texture-variant seam.
 
-- during close up shots in pause orbit camera mode, stage floor geometry around the main middle path increases world Y height from some reason. Y height should stay same as main middle path, fixed y height.
+-Fox's pistol model is missing. Also is the pistol beam emitted at correct y location of muzzle?
 
-  Owner 2026-08-09: the middle slab holds still, the front and rear slabs move.
-  Established from `src/nds/nds_native_stage_owner.generated.inc` and
-  `NDS_RENDERER_TASK36_RIGID_BINDING_MASK`, the moving set is exactly the rigid
-  set: bindings 1 (front floor top, y `0..0`, z `-1756..-249`), 19 (front
-  skirt), 30 (rear floor top, y `0..0`, z `418..1541`) and 41 (rear skirt), all
-  `PROJECTED_NO_Z`. Binding 29 -- the middle slab, y `-1073..1543`,
-  z `-252..444` -- is the one piece NOT in the mask, and it is the piece that
-  does not move. So "moves" and "on the Task 36 rigid path" are the same set.
-  The rigid branch of `ndsRendererNativeStageEmitNoZTriangle`
-  (`nds_renderer.c:29818`) hands GX the projection and the view separately and
-  lets the hardware compose, and it never consults `near_inside` nor calls
-  `EmitNearClippedTriangle`; the route binding 29 takes does both. A camera that
-  zooms in is when a 1500-unit-long slab starts crossing the near plane, and the
-  middle slab spans 700.
+> Gun is model part 13 on joint 17; setter is a no-op stub. Beam Y already source-exact.
 
-  NOT the cause, checked and dropped so it is not chased again: BattleShip's
-  `max > 32000` camera clamp (`gmcamera.c:1005`) is a uniform rescale of the
-  perspective, so it scales all four clip components equally and cancels in the
-  perspective divide -- it exists to fit the N64's +-32768 s15.16 `Mtx`, and the
-  DS path carries +-524288 in 20.12 with P and V loaded separately, so it cannot
-  overflow the same way. The half-coordinate machinery is also not the split:
-  the 10 `PROJECTED_RANGE_OR_MATRIX` triangles are asserted binding-29-only at
-  `nds_renderer.c:27984`.
-
-  ROOT CAUSE, owner-tested 2026-08-09: the Task 36 replay bakes the projection
-  matrix. The A/B pair `NDS_BUG9_FLOOR_TARGETS` (`smash64ds-bug9-rigidon-hwtri`
-  / `smash64ds-bug9-rigidoff-hwtri`, differing only in
-  `NDS_TASK36_RIGID_BINDING_MASK`) came back clean in BOTH arms, which refutes
-  the rigid-mask hypothesis above and moves the variable to the thing both arms
-  share and the published ROM does not: they build at
-  `NDS_TASK36_HW_COMPOSE=1`, replay off, and the published ROM is mode 2.
-
-  The capture bracket is per RUN
-  (`ndsRendererTask36ReplayCaptureBeginRun`/`EndRun`, `nds_renderer.c:31201`
-  and `:31298`), and every rigid `PROJECTED_NO_Z` run calls
-  `ndsRendererNativeStageTask36LoadNoZProjection` inside it -- so the capture
-  frame's PROJECTION lands in the word stream. Only the camera modelview is
-  reloaded live, by `Task36BeginSegment`, which sits outside the bracket. During
-  a match `fovy` is pinned at 38.0 so nothing moves; the paused player-zoom
-  camera calls `gmCameraAdjustFOV(pzoom_fov)` (decomp `gm/gmcamera.c:713` ->
-  `:614`), which changes `cobj->projection.persp.fovy`. The replayed rigid slabs
-  then render through the stale projection while binding 29, which is not in a
-  replayed segment, renders through the live one -- and the front and rear slabs
-  read as sitting at a different height from the middle path.
-
-  Fix: the replay staleness guard at `nds_renderer.c:5762` covered materials,
-  textures and topology but not the projection. Added it, so replay is declined
-  for any frame whose projection differs from the one the stream was baked
-  against. `gNdsRendererTask36ReplayProjectionRejectCount` should read 0 for a
-  whole match and start counting the moment the pause camera moves the FOV.
-  Gameplay cost is nil (constant fovy means the compare never fires); the pause
-  screen falls back to the live path, which is what both A/B arms ran.
-
-  Neither A/B arm is publishable: both drop to replay mode 1 and
-  `NDS_TASK32_DRAW_HOT_TEXT=0`, so both are slower than the shipping ROM. The
-  pre-fix reference ROM is kept at `builds/bug9-reference/`.
+Contracts for all three: `artifacts/bugs/2026-08-12_r2-07-cluster/CONTRACT.md`
+(one cluster, one batched probe build, one acceptance batch).
