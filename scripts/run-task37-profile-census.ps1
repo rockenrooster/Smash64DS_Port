@@ -51,18 +51,22 @@ param(
     [string[]]$MakeFlags = @()
 )
 
-# Each -MakeFlags element must be ONE `NAME=value` assignment. Passing
-# "A=1 B=0" as a single string silently becomes one make variable whose value
-# is "1 B=0", which the generated nds_build_config.h emits verbatim as
-# `#define A 1 B=0` -- and the build then dies deep inside an unrelated `#if`
-# with "missing binary operator before token", naming the config header rather
-# than the invocation. That cost a full gate-arm profile build on 2026-08-12.
-# Comma-separate instead: -MakeFlags A=1,B=0
+# `pwsh -File script.ps1 -MakeFlags A=1,B=0` hands the whole list over as ONE
+# string, because -File passes arguments verbatim instead of parsing them as
+# PowerShell. sample-tick-hud-buckets.ps1:153 already documents and splits for
+# exactly this; this harness did not, so the list became one make variable and
+# the generated nds_build_config.h emitted `#define NDS_R2_BOTH_CPU 1,B=0`.
+# The build then died inside an unrelated `#if` with "token '=' is not valid in
+# preprocessor expressions", naming the config header and never the invocation.
+# Two gate-arm profile builds were lost to it on 2026-08-12.
+$MakeFlags = @($MakeFlags |
+    ForEach-Object { $_ -split '[,\s]+' } |
+    Where-Object { $_ -ne '' })
 foreach ($mf in $MakeFlags) {
-    if ($mf -notmatch '^[A-Za-z_][A-Za-z0-9_]*=\S*$') {
-        throw ("-MakeFlags element '$mf' is not a single NAME=value assignment. " +
-               'Comma-separate multiple variables: -MakeFlags A=1,B=0')
+    if ($mf -notmatch '^[A-Za-z_][A-Za-z0-9_]*=[^,\s]*$') {
+        throw ("-MakeFlags element '$mf' is not a single NAME=value assignment.")
     }
+}
 }
 
 # Task 37 census driver.
