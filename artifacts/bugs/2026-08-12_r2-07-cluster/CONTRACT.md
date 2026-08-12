@@ -273,6 +273,57 @@ extracted asset directories (`MarioModel`, `StageCastleFile2`,
 `reloc_extern_data` is a naming artifact, not a missing asset. Do not re-derive
 this: search O2R by id, never by name.
 
+**The gun's texture key, derived offline from its own display list.** No probe
+run is needed: `build_runtime_qualified_whispy_record` *constructs* its
+`DisplayState` explicitly, and its "captured at profile frame 699" note is
+provenance, not a runtime dependency. Decoding the 38 `Gfx` at `0x3F0` gives
+the same thing directly.
+
+| field | value | from |
+|---|---|---|
+| format / size | `FMT_CI` / `SIZ_4B` | `SETTILE` cmd 10 `fmt=2 siz=0` |
+| dimensions | **16 wide × 32 tall** | `masks=4` → 16, `maskt=5` → 32 |
+| line / tmem / palette | `1` / `0` / `0` | `SETTILE` cmd 10 |
+| clamp | `cms=2`, `cmt=2` | `SETTILE` cmd 10 |
+| TLUT | 16 entries → tile 5, tmem 256 | `LOADTLUT` cmd 13, `SETTILE` cmd 8 |
+| texel bytes | 256 (`LOADBLOCK texels=128` × 16-bit) | cmd 19 |
+
+16×32 CI4 = 256 B, which matches `dFoxUnknown_Tex[0x100]` exactly. Note the
+decomp's header comment calls this "32×16"; the tile masks say 16 wide by 32
+tall, and the byte count agrees with the masks either way.
+
+The decode is confirmed against the reloc's own intern pointers rather than
+trusted: `dn_DL+0x5C`, `+0x8C`, `+0xAC`, `+0xF4` land exactly on the `w1` words
+of commands 11, 17, 21 and 30 — the palette, the texture, and the two vertex
+loads. The raw address words read as placeholders because the reloc backend
+patches them at load.
+
+**This table is a PREDICTION, not yet a pinnable key — and that is the correct
+sequencing.** The generator's contract is that entries are "qualified from
+complete runtime captures and their pinned source bytes" (`:13`), and both
+existing builders cite a real capture (Whispy at profile frame 699, Fox at
+frame 1111 / native run 43). **The gun's texture has never been requested at
+runtime**, because the model part was never applied — so no capture can exist
+yet, and inventing an `expected_key` would break the very invariant those
+`falsify()` guards protect.
+
+Order, therefore:
+
+1. **State half — shipped** (`6c2e309b03d`). The runtime now records that model
+   part 13 is on.
+2. **Probe build**: attempt the gun draw so the runtime genuinely requests the
+   texture, and capture the resulting 59-word key. The table above is the
+   written prediction that build confirms — which is exactly the one thing
+   `BUG_FIXING_PROCESS.md` permits a ROM build to be spent on.
+3. **Pin it**: add `MiscData315` as a census input and a
+   `build_runtime_qualified_fox_gun_record` beside the two that exist, then
+   update the deliberately hash-pinned `EXPECTED_KEY_COUNT` /
+   `EXPECTED_OUTPUT_COUNT` / `…_PAYLOAD_BYTES` / `…_PAYLOAD_SHA256`.
+
+The prediction is worth having before the build rather than after: if the
+captured key disagrees with this table, the disagreement localizes the defect
+instead of being absorbed as "whatever the runtime said".
+
 **Fix seam — two candidate shapes; pick by a code read, not a build.**
 
 The port keeps **live** `fp->joints[]` DObjs with MObj chains: the sibling
