@@ -532,18 +532,121 @@ static int ndsAudioBgmWorkerMain(void *arg)
     return 0;
 }
 
+/* Slice 48. Calico: "Higher numerical values correspond to lower thread
+ * priority", MAIN_THREAD_PRIO is 0x1c, and "higher priority threads are always
+ * guaranteed to preempt the current thread when they become runnable". So the
+ * original MAIN_THREAD_PRIO - 1 put the refill ABOVE the gameplay thread: every
+ * seam interrupted whatever frame was running to do an ~8 KB cartridge read.
+ *
+ * That is the 49-of-80 FAT lane in the c123 top-80 attribution -- armCopyMem32
+ * 27,331 + get_fat 16,418 + f_lseek 10,375 + _dvmDiscCacheReadWrite 4,552 =
+ * 58,676 cyc/frame, ~29,338 tk. It was invisible to the AUD bucket, which
+ * brackets only the main thread's ndsAudioBgmUpdate, and an earlier draft of
+ * docs/RAM_RECOVERY_PLAN.md read AUD's 0.2% as proof BGM was not the tail. A
+ * preempting thread's cycles land on whatever bucket the main thread was inside.
+ *
+ * The counters that identify it: gNdsAudioBgmRefillCount 104 ==
+ * gNdsAudioBgmWorkerWakeCount 104, so every read is on this thread, and 104
+ * reads over 1600 frames is the only file traffic large enough -- the anim cache
+ * is at 2 misses since slice 46 and 85 of its 123 payload reads happen in the
+ * warm preload before the window opens.
+ *
+ * +1 puts the worker BELOW main, so it runs when main blocks, which is the
+ * VBlank wait. The same bytes are read at the same rate; only the placement in
+ * the frame changes, so there is no audio fidelity question here. It is safe by
+ * two independent margins: WAIT P50 is 207,104 ticks of idle per frame, far more
+ * than one refill, and the seam budget is ~186 ms against a 16.7 ms frame, so
+ * the read has ~11 VBlank windows to finish. A failure would be loud and is
+ * already covered -- Boundary's ADPCM smoke watches gNdsAudioBgmPlaying and
+ * SeamMissCount, and gNdsAudioBgmOverrunCount catches a late buffer.
+ *
+ * `.data` aligned(32) so the A/B is ONE binary: -SetGlobals
+ * gNdsAudioBgmWorkerPrio=27 restores the preempting arm at identical placement.
+ * E11 lost a proven -7,667 cut to +15,744 of relink movement measuring this
+ * subsystem across two builds; a route bit removes that floor entirely. */
+volatile u32 gNdsAudioBgmWorkerPrio
+    __attribute__((section(".data"), aligned(32))) = MAIN_THREAD_PRIO + 1u;
+
+/* The priority the worker RUNS at, applied once BGM is updating. It is not the
+ * creation value and the split is measured, not aesthetic -- at byte-identical
+ * placement (the two ROMs differ in 41 bytes, the .data word plus build stamps):
+ *
+ *   creation 27, run 27  ->  WORK-H P95 1,101,248   (build-c124-bgmprio-create27)
+ *   creation 29, run 29  ->                1,091,520
+ *   creation 29, run 27  ->                1,083,456   <- ships
+ *
+ * So preempting during SCENE SETUP costs ~17,792 and preempting during the match
+ * saves ~8,064; the two pull opposite ways and the best combination is low at
+ * creation, high while playing. Setup is where the anim warm preload and the
+ * asset loads run, and a higher-priority cartridge reader interleaving with them
+ * is the only difference between those two arms.
+ *
+ * Do NOT read the c123 bank's 1,196,224 as this lever's size. create27 restores
+ * the bank's exact behaviour and still measures 1,101,248, so ~94,976 of that
+ * gap is PLACEMENT -- see SLICE48.md. */
+volatile u32 gNdsAudioBgmWorkerRunPrio
+    __attribute__((section(".data"), aligned(32))) = MAIN_THREAD_PRIO - 1u;
+
+/* Engagement proof, and it is not optional here. -SetGlobals pokes at the FIRST
+ * frame-complete marker, while the worker is created the moment BGM starts, so
+ * a poke can easily arrive after threadPrepare has already taken the value. If
+ * that happened the control arm would be the candidate wearing a different
+ * label -- the failure `prove-the-control-differs` records. This records what
+ * threadPrepare was ACTUALLY handed, so the two arms' readbacks either differ
+ * (the A/B is real) or they do not (the route needs re-applying, not a
+ * conclusion). */
+volatile u32 gNdsAudioBgmWorkerPrioApplied;
+
+/* Clamp to the documented range so a poke cannot hand the scheduler a priority
+ * it rejects and leave the match with no BGM worker at all -- the same reason
+ * gNdsR2AnimWarmStep clamps a poke of 0. */
+static u32 ndsAudioBgmClampPrio(u32 prio)
+{
+    return (prio > (u32)THREAD_MIN_PRIO) ? (u32)THREAD_MIN_PRIO : prio;
+}
+
+/* The route has to be re-appliable, and finding that out cost a run. The worker
+ * is created the moment BGM starts, which is BEFORE -SetGlobals fires at the
+ * first frame-complete marker, so the first attempt at this A/B poked 27 into
+ * gNdsAudioBgmWorkerPrio and measured a thread still running at 29: both arms
+ * returned WORK-H P95 1,102,208 to the byte. gNdsAudioBgmWorkerPrioApplied is
+ * what caught it. This is also HANDOFF's own slice-47 lesson -- a tunable
+ * belongs in a pokeable global or a sweep costs a rebuild per value.
+ *
+ * Called once per frame from ndsAudioBgmUpdate, which has already returned early
+ * unless BGM is playing. Two .data loads and a compare off one cache line when
+ * the route is untouched, which is every shipping frame. */
+static void ndsAudioBgmApplyWorkerPrio(void)
+{
+    u32 prio = ndsAudioBgmClampPrio(gNdsAudioBgmWorkerRunPrio);
+
+    if ((sNdsAudioBgmWorkerStarted == 0u) ||
+        (prio == gNdsAudioBgmWorkerPrioApplied))
+    {
+        return;
+    }
+    threadSetPrio(&sNdsAudioBgmWorker, (u8)prio);
+    gNdsAudioBgmWorkerPrioApplied = prio;
+}
+
 static void ndsAudioBgmEnsureWorker(void)
 {
+    u32 prio;
+
     if (sNdsAudioBgmWorkerStarted != 0u)
     {
         return;
     }
+
+    prio = ndsAudioBgmClampPrio(gNdsAudioBgmWorkerPrio);
+    gNdsAudioBgmWorkerPrioApplied = prio;
+
     mailboxPrepare(&sNdsAudioBgmMailbox, &sNdsAudioBgmMailboxSlot, 1u);
     threadPrepare(&sNdsAudioBgmWorker,
                   ndsAudioBgmWorkerMain,
                   NULL,
                   &sNdsAudioBgmWorkerStack[sizeof(sNdsAudioBgmWorkerStack)],
-                  MAIN_THREAD_PRIO - 1u);
+                  (u8)prio);
     threadStart(&sNdsAudioBgmWorker);
     sNdsAudioBgmWorkerStarted = 1u;
 }
@@ -912,6 +1015,7 @@ void ndsAudioBgmUpdate(void)
         return;
     }
     gNdsAudioBgmElapsedFrames++;
+    ndsAudioBgmApplyWorkerPrio();
 #if NDS_HARNESS_FAST_LOGIC
     delta = BUS_CLOCK / 60u;
 #else

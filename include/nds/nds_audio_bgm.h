@@ -88,6 +88,12 @@ extern volatile u32 gNdsAudioBgmRefillTicksLast;
 extern volatile u32 gNdsAudioBgmRefillTicksMax;
 #endif
 extern volatile u32 gNdsAudioBgmFalsifierOff;
+/* Slice 48 route. Scheduler priority of the refill worker; MAIN_THREAD_PRIO + 1
+ * (below main, refills in the VBlank idle) ships, 27 restores the preempting
+ * arm for a same-binary A/B. See nds_audio_bgm.c for why this is the tail. */
+extern volatile u32 gNdsAudioBgmWorkerPrio;
+extern volatile u32 gNdsAudioBgmWorkerRunPrio;
+extern volatile u32 gNdsAudioBgmWorkerPrioApplied;
 extern volatile u32 gNdsAudioBgmPlaybackPositionBytes;
 extern volatile u32 gNdsAudioBgmWritePositionBytes;
 extern volatile u32 gNdsAudioBgmPlaybackHalf;

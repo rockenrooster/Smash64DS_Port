@@ -820,50 +820,44 @@ reduction in the resource-exhaustion freeze class.
 
 ---
 
-## BGM streaming — investigated 2026-08-12, owner decision pending
+## BGM streaming — REFUTED 2026-08-12, no owner decision needed
 
-Not a RAM-recovery phase, but it is priced in RAM so it belongs here. On the
-post-slice-46 gate the FAT family carries **~27,547 tk of tail premium on 49 of
-the 80 costliest frames** (`armCopyMem32` 12,831, `get_fat` 7,708, `f_lseek`
-4,871, `_dvmDiscCacheReadWrite` 2,137). That is the music decoding from
-cartridge inside gameplay frames, and it is now the largest single addressable
-block left.
+**Do not reopen this without new evidence, and do not spend an audio-fidelity
+approval on it.** An earlier draft of this section proposed doubling
+`NDS_AUDIO_BGM_PACKET_BYTES` for ~25,024 P95 and asked the owner for a decision.
+Three of its four premises were wrong. Corrected, measured, on the gate arm
+(`build-c123-warm`, no build, `-ExtraGlobals`; the run reproduced `WORK-H` P95
+1,196,224 exactly, so these numbers sit on the banked ROM):
 
-Measured parameters:
+| the draft claimed | measured |
+|---|---|
+| ~145 reads in the window | `gNdsAudioBgmRefillCount` = **104** |
+| `PACKET_BYTES` sets the packet size and the loop is a packet index | packets are **variable-size ADPCM records** (8-byte header, `payload_bytes`); `PACKET_BYTES` is only the max buffer bound, and the loop is **already byte-addressed** (`fseek(..., track->loop_record, SEEK_SET)`, `ndsAudioBgmReadPacket`) |
+| doubling `PACKET_BYTES` halves the reads | it changes nothing — the constant does not determine how much is read, so it would add 16,392 B of RAM for no effect |
 
-```
-sample rate  22,050 Hz, 16-bit mono -> 44,100 B/s
-packet       NDS_AUDIO_BGM_PACKET_BYTES 8,196 = 186 ms
-buffers      NDS_AUDIO_BGM_BUFFER_COUNT 2      = 16,392 B RAM
-Dream Land   NDS_AUDIO_BGM_PUPUPU_PACKET_COUNT 89 = 729,444 B
-read rate    5.38/s -> ~145 reads in the 1600-frame window
-```
+The reads are real and they ARE on the FAT symbols the attribution found:
+`gNdsAudioBgmRefillCount` 104 == `gNdsAudioBgmWorkerWakeCount` 104, so every one
+is on the BGM worker, and the anim cache cannot account for them (2 misses since
+slice 46; 85 of its 123 payload reads happen in the warm preload before the
+window opens). What is refuted is the **proposed fix**, not the lane.
 
-**Full preload is out** at 729,444 B. The lever is read FREQUENCY, and it pays
-unusually well because the distribution is shallow past rank 80 — `WORK-H` runs
-1,197,184 at rank 80 down to 1,123,264 at rank 160, so evicting read-frames
-from the top 80 moves the percentile a long way:
+**Two mistakes worth keeping, and the second nearly replaced the first.**
 
-| option | reads | RAM | P95 | gain | fidelity |
-|---|---:|---:|---:|---:|---|
-| current | ~145 | 16,392 | 1,197,184 | — | — |
-| **2x packet** | ~72 | **+16,392** | **~1,172,160** | **~25,024** | **none** |
-| 4x packet | ~36 | +49,176 | ~1,159,424 | ~37,760 | none, but leaves 21,600 — **breaks the 32,768 floor** |
-| full preload | 0 | +729,444 | ~1,152,128 | ~45,056 | impossible |
+1. The original 27,547 tk figure summed BGM-named symbols in a PC attribution
+   over the top 80. `ndsAudioBgmUpdate` runs **every** frame, so it is *present*
+   on tail frames without *contributing* to the tail — presence is not tail value
+   (`mean-self-time-predicts-p50-not-p95`, `cluster-where-the-percentile-lives`).
+2. The first correction then argued the lane away with **`AUD` P50 2,496 / P95
+   6,976 / share 0.2%**, and that argument is INVALID. `AUD` brackets only the
+   main thread's `ndsAudioBgmUpdate`. The worker preempts from a higher priority,
+   so its cycles land in whatever bucket the main thread was inside — `SRC`,
+   `MISC`, anywhere but `AUD`. **A tick-HUD bucket only sees its own thread.**
 
-**The 2x option costs no audio fidelity at all** — same rate, same depth, same
-bytes, just fewer and larger reads — and lands the heap at 54,384 free. **The
-BGM seam budget is unaffected**: a 2x packet takes 2x longer to read but also
-lasts 2x longer (186 -> 372 ms), so the read-time-to-budget ratio is unchanged.
-That matters because R2-04 E4's failure (Boundary's ADPCM smoke) is what bounds
-prepare-time work at this seam.
+Slice 48 then tested the scheduling fix directly and it too failed: a clean
+same-binary A/B put the worker BELOW main during gameplay and `WORK-H` P95 went
+**1,083,456 → 1,091,520, i.e. 8,064 the wrong way**. Deprioritizing the refill
+inside the match does not pay. See `2026-08-12_c123-rebank/SLICE48.md`.
 
-**What makes it a slice rather than a constant edit.** The loop point is a
-PACKET INDEX (`NDS_AUDIO_BGM_PUPUPU_LOOP_PACKET 1`) and the read offset is
-`packet * NDS_AUDIO_BGM_PACKET_BYTES` (`nds_audio_bgm.c:506`). At 2x the loop
-lands on byte 8,196 — the MIDDLE of packet 0 — which no packet index can
-express. Doubling the constant alone would silently move the loop point by up
-to 186 ms, an audible artifact. The change is: re-express the loop as a BYTE
-offset, allow one partial read at the loop seam, regenerate the per-track
-packet counts (89 -> 45), and re-run Boundary's BGM smoke
-(`gNdsAudioBgmPlaying`, `SeamMissCount`) as the verifier.
+Healthy-playback counters from the same run, for whoever needs them:
+`SeamMissCount` 0, `UnsafeWriteCount` 0, `OverrunCount` 0, `LoopCount` 1,
+`ChunkBytes` 8,196, `Playing` 1.
