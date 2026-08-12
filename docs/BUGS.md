@@ -4,7 +4,19 @@ These bugs should be fixed for P1 delivery:
 
 -Whispys face looks like it plays at low FPS (sub 15 FPS), so we miss the blinks that the eyes do.
 
-> LOCALIZED: Whispy blink timing is source-rate; post-GO eye texture variants reuse the resident frame, hiding the blink.
+> ROOT CAUSE FOUND 2026-08-12 (`build-c128-foxgun`, no rebuild): **the blink animation lasts ONE frame.**
+> `map_gobj[0]->anim_frame` reaches 1.0 for exactly one sample and is back to 0 on the next; at a 30 Hz
+> presented cadence a one-frame animation is often not presented at all. Everything around it measured
+> GREEN -- the countdown runs, blink #1 fires at wait==0, the `0` arm correctly does not reseed, blink #2
+> fires at -10 and reseeds, and the wind-driven eye texture request cycles 0/1/2.
+> The earlier "texture residency" framing was wrong twice over: the BLINK entry of
+> `dGRPupupuWhispyEyesAnims` carries a NULL material anim (`grpupupu.c:76`), so the blink is a pure JOINT
+> animation and there is no blink texture; and the six `dGRPupupuWhispyEyesTextures` belong to the WIND
+> cycle on `map_gobj[3]`, not to the blink on `map_gobj[0]`.
+> Next: why does `llGRPupupuMapWhispyEyes{Left,Right}BlinkAnimJoint` resolve to a 1-frame animation?
+> First suspect is `ndsAObjEvent32NormalizeScript`'s 1,024-entry table, already flagged at 973/1,024 with
+> overflow silently skipping the animation attach. Evidence:
+> `artifacts/verification/2026-08-12_whispy-blink-window.txt`.
 > MEASURED 2026-08-12 (`build-c128-foxgun`, whole match): texture lookup misses 0, conversion calls 0,
 > conversion ticks 0, pinned static hits 70,072. The blink texture is not ABSENT — a key is being formed
 > and it MATCHES a resident entry. So the fix is two halves in order: (1) make the renderer key

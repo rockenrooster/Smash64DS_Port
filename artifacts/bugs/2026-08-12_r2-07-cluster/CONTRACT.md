@@ -193,6 +193,174 @@ per ten seconds, at the same cadence as the N64.
 
 ---
 
+### Row 1 ROOT CAUSE — the blink animation lasts ONE frame
+
+Measured on `build-c128-foxgun`, no rebuild, breaking at `grPupupuUpdateGObjAnims`
+and printing only inside the trigger window
+(`2026-08-12_whispy-blink-window.txt`):
+
+```
+n=10  status=-1  blinkwait=2    animframe=0.000000
+n=11  status=1   blinkwait=0    animframe=0.000000   <- blink REQUESTED
+n=12  status=-1  blinkwait=0    animframe=1.000000   <- anim attached and played
+n=13  status=-1  blinkwait=-1   animframe=0.000000   <- ALREADY OVER
+n=14..n=20       blinkwait=-2 .. -9
+n=21             blinkwait=12                        <- reseeded, counting again
+```
+
+> **`map_gobj[0]->anim_frame` reaches 1.0 for exactly ONE sample and is back to 0
+> on the next.** The blink joint animation completes in a single frame instead of
+> playing out. At a 30 Hz presented cadence a one-frame animation is frequently
+> not presented at all -- which is exactly "the face looks like it plays at sub 15
+> FPS, so we miss the blinks."
+
+Everything AROUND it is healthy, and that is what makes the finding sharp:
+
+| link | expected | measured | verdict |
+|---|---|---|---|
+| countdown runs | decrements each tick | 241 -> 179 -> ... -> 2 | **GREEN** |
+| blink #1 at `wait == 0` | status := Blink | `n=11 status=1 blinkwait=0` | **GREEN** |
+| no reseed on the `0` arm | keeps counting negative | `-1 .. -9` | **GREEN** |
+| blink #2 at `wait == -10` + reseed | pair 10 ticks apart | reseeded after `-9` | **GREEN** |
+| wind eye-texture request | cycles 0,1,2 | `req=0 -> 1 -> 2 -> 0` | **GREEN** |
+| **blink anim PLAYS** | multi-frame | **one frame** | **RED** |
+
+So the request path, the pair timing, the reseed and the material half are all
+correct. The defect is entirely in how long the attached joint animation lives.
+
+**Next step is that question and nothing else: why does
+`llGRPupupuMapWhispyEyes{Left,Right}BlinkAnimJoint` resolve to a 1-frame
+animation?** Candidates, cheapest first:
+
+1. **`ndsAObjEvent32NormalizeScript`'s 1,024-entry table.** `docs/HANDOFF.md`
+   already flags `sNdsAObjEvent32NormalizedCount` at **973 of 1,024** after a
+   minute, and records that overflow **silently skips the animation attach**. A
+   stage anim attached late in a match is exactly what that cliff would eat.
+   Read the counter at the blink frame before anything else.
+2. The script's wait values decoding to 1 (the `+ map_head` rebase landing on a
+   truncated or wrong script).
+3. `gcAddAnimAll` with a NULL material-anim argument (the Blink entry's `[1]` is
+   `0x0`) taking a different path from the Turn entry, which has both.
+
+Note (3) is directly testable against the TURN blink-sibling: Turn carries a
+material anim and Blink does not, so if Turn plays out and Blink does not, the
+NULL argument is the difference.
+
+---
+
+### Row 1 CORRECTION — the blink is a JOINT animation, not a texture at all
+
+**Everything below this heading about "the six eye texture variants" is the wrong
+asset for the reported bug.** Read this first.
+
+Whispy has TWO independent eye mechanisms and the contract conflated them:
+
+| driver | table | attach | consumer |
+|---|---|---|---|
+| `whispy_eyes_status` (Turn, **Blink**) | `dGRPupupuWhispyEyesAnims[lr][status][2]` | `gcAddAnimAll(map_gobj[0], joint, mat)` | `grpupupu.c:567-582` |
+| `whispy_eyes_texture` (0,1,2) | `dGRPupupuWhispyEyesTextures[lr][3]` | `gcAddAnimJointAll(map_gobj[3], ...)` | `grpupupu.c:612-624` |
+
+And the decisive line, `grpupupu.c:76-77`:
+
+```c
+dGRPupupuWhispyEyesAnims[][2][2] = {
+  { { ...LeftTurnAnimJoint,  ...LeftTurnMatAnimJoint  }, { ...LeftBlinkAnimJoint,  0x0 } },
+  { { ...RightTurnAnimJoint, ...RightTurnMatAnimJoint }, { ...RightBlinkAnimJoint, 0x0 } }
+};
+```
+
+> **The BLINK entry carries a NULL material anim.** The blink is a pure JOINT
+> animation (`llGRPupupuMapWhispyEyes{Left,Right}BlinkAnimJoint`, reloc `0x12b0` /
+> `0x1330`). Only the TURN has a material track. So "the blink frame was never made
+> a resident DS texture" cannot be the defect -- **there is no blink texture.**
+
+The six `dGRPupupuWhispyEyesTextures` are real, but they belong to the WIND cycle:
+`grPupupuFlowersFrontWindStart/LoopStart/LoopEnd` set `whispy_eyes_texture` to
+0/1/2 (`grpupupu.c:468/514/529`), and they attach to `map_gobj[3]`, which
+`grPupupuInitAll` (`:669`) builds from `llGRPupupuMapFlowersFrontTransformKindsDObjDesc`
+**with a NULL MObjSub**. `map_gobj[0]` is the one carrying the eyes material
+(`:666`, `llGRPupupuMapWhispyEyesTransformKindsMObjSub`).
+
+**MEASURED, whole match, no rebuild** (`build-c128-foxgun`,
+`2026-08-12_whispy-eye-texture-probe.txt`), breaking at `grPupupuUpdateGObjAnims`:
+
+```
+WEYE n=2  req=0 status=-1 blinkwait=146 lr=0   ...  mobj=(nil)
+WEYE n=4  req=1 status=-1 blinkwait=110 lr=0   ...  mobj=(nil)
+WEYE n=6  req=2 status=-1 blinkwait=291 lr=0   ...  mobj=(nil)
+WEYE n=8  req=0 status=-1 blinkwait=107 lr=1   ...  mobj=(nil)
+```
+
+- **The wind-driven texture request IS live and cycles 0 -> 1 -> 2**, so that half
+  is not broken either.
+- **`blinkwait` decrements and RESETS** (109 -> 291, 82 -> 229), and the source only
+  reseeds it on the `-10` arm of `grPupupuWhispyUpdateBlink`, so **blinks are firing
+  at the source cadence.** The owner's "sub 15 FPS" reading is confirmed as a
+  symptom description, not a rate.
+- `mobj=(nil)` is this probe reading `map_gobj[3]`, which has no MObjSub by
+  construction -- a probe bug, not a finding, and the reason the re-run targets
+  `map_gobj[0]` and walks its DObj tree.
+
+**So the open question is now: does the blink JOINT animation move the eye
+geometry, and is that geometry drawn from something that can move?** Dream Land
+draws through native stage runs; `nds_renderer.c:5506` records that the actor
+segments (`whispy_eyes`, `whispy_mouth`, `flowers_back`, `flowers_front`) take the
+generic emit rather than the Task 36 replay, so a joint transform SHOULD reach
+them. Read the joint before assuming it does.
+
+**Do not spend the residency work on this row until that is answered.** Six
+resident textures cannot make a joint animation visible.
+
+---
+
+### Row 1 status: MEASURED — the blink texture is not MISSING, it is COLLAPSING
+
+Whole match on `build-c128-foxgun` (both-CPU, 1,600 samples from frame 438,
+`-RingDump`, DLDI ON, `slips=0`), `whispy-key-discriminator.log`:
+
+```
+gNdsRendererProfileTexturePrepareCount        = 0
+gNdsRendererProfileTextureConvertTicks        = 0
+gNdsRendererProfileTextureLookupMissCount     = 0
+gNdsRendererBattleStaticTexturePinnedHitCount = 70,072
+gNdsRendererBattleStaticTextureSeenMask       = 0x3FFFFF   (22 keys seen)
+gNdsRendererBattleStaticTextureOwnerMask      = 7
+```
+
+This is the discriminator the contract asked for above, and it comes back on the
+"collapsing" side, decisively:
+
+| reading | if the blink texture were ABSENT | measured |
+|---|---|---|
+| lookup misses | > 0, once per blink | **0** |
+| conversion calls / ticks | > 0 | **0 / 0** |
+| pinned static hits | unchanged | **70,072** |
+
+> **A key is being formed for the blink and it is matching a resident static
+> entry.** Nothing is missing at the cache; the wrong image is being found. So
+> the fix is NOT "add six textures" on its own — six more resident entries behind
+> a key that still matches the open eye would change nothing on screen, and the
+> counters above would look identical before and after.
+
+**Row 1 therefore has two halves, in this order:**
+
+1. **Make the key discriminate.** Find the word that differs between the open-eye
+   and blink draws and get it into the renderer key. Until that lands, no residency
+   work is testable, because every variant collapses onto the same entry.
+2. **Then make the six variants resident**, DS-native and before GO, the way
+   `build_runtime_qualified_whispy_record` already does for the MOUTH.
+
+Doing them in the other order is the trap: it produces a change with a green
+residency count and no visible blink, which reads as "the blink is a rate problem"
+and sends the next cycle back to the animation clock the owner already ruled out.
+
+**Free control, same run:** `gNdsRendererFoxGunDrawCount = 104`,
+`gNdsRendererFoxGunTriangleCount = 2,288` — exactly 22 x 104 across a whole match —
+and `WORK-H` P95 `1,210,048` against `1,207,616` before the overlay, i.e. **+2,432,
+inside the +/-5,376 cross-build placement floor.** The gun costs nothing measurable.
+
+---
+
 ## Row 2 — missing fire burn  [ROOT CAUSE FOUND — owner, 2026-08-12]
 
 **The diagnosis below this banner is SUPERSEDED. Read this first.**

@@ -11,38 +11,40 @@ is bugs first, then P95** — so this is context, not the next task.
 
 ## R2-07 `BUGS.md`: rows 2 and 3 are FIXED; row 1 is the only one open
 
-Contracts + evidence: `artifacts/bugs/2026-08-12_r2-07-cluster/CONTRACT.md`.
-**The old "all three rows converge on ONE texture-residency capability" framing was
-WRONG for rows 2 and 3** — do not reinstate it. Only row 1 is a texture problem.
+Contracts + evidence: `artifacts/bugs/2026-08-12_r2-07-cluster/CONTRACT.md`. **The old
+"all three rows converge on ONE texture-residency capability" framing was WRONG for
+ALL THREE** — do not reinstate any part of it.
 
-- **Row 2 (fire burn) — FIXED.** Two defects in series. Fighter fire colanim scripts
-  12–15 had no port entry, so `ftParamCheckSetColAnimID` rejected the burn before a
-  Flame command ran; and `ndsFTParamMakeSourceEffect` had no Flame case, so the
-  requests fell to the generic HitFire substitute — the real makers were not even
-  LINKED, `--gc-sections` having dropped them. **The old "the Flame lane is DEAD, do
-  NOT touch `P1_PARTICLE_SEAMS`" note was the exact inverse of the truth**: the seams
-  were the fix (92→93 scripts, 33→34 textures). Accepted on `build-c127-fire`:
-  kind-mask bits 6+7 set, `gNdsVisualEffectKindMask=0`.
+- **Row 2 (fire burn) — FIXED.** Two defects in series. Fire colanim scripts 12–15 had
+  no port entry, so `ftParamCheckSetColAnimID` rejected the burn before a Flame
+  command ran; and `ndsFTParamMakeSourceEffect` had no Flame case, so the requests
+  fell to the generic HitFire substitute — the real makers were not even LINKED,
+  `--gc-sections` having dropped them. **The old "the Flame lane is DEAD, do NOT touch
+  `P1_PARTICLE_SEAMS`" note was the exact inverse of the truth**: the seams were the
+  fix (92→93 scripts, 33→34 textures). Accepted on `build-c127-fire`: kind-mask bits
+  6+7 set, `gNdsVisualEffectKindMask=0`.
 - **Row 3 (Fox gun) — FIXED.** `NDS_R2_FOX_GUN_OVERLAY`. The state half was always
-  fine; nothing read it. **Source's `joint->dl = modelpart->dl` is unavailable here**
-  — that dl is in reloc asset `0x13b`, not Fox's model `0x139`, and
-  `ndsFighterDrawPlanResolve` rejects the whole collection on an asset_id mismatch,
-  so copying source would push the ENTIRE fighter off the native path for 22
-  triangles. It is an overlay at joint 17's world matrix, mesh baked offline by
+  fine; nothing read it. **Source's `joint->dl = modelpart->dl` is unavailable here** —
+  that dl is in reloc asset `0x13b`, not Fox's model `0x139`, and
+  `ndsFighterDrawPlanResolve` rejects the whole collection on an asset_id mismatch, so
+  copying source would push the ENTIRE fighter off the native path for 22 triangles.
+  It is an overlay at joint 17's world matrix, mesh baked offline by
   `scripts/fox_gun_bake.py`. Accepted: `tris = 22 × draws`, `fail=0`, `bytes=288`,
   `prepare=1`, plus `2026-08-12_fox-gun-overlay-shot.png` against the pre-fix
-  `2026-08-09_fox-blaster-native-promoted.png`. Whole-match cost **+2,432 WORK-H P95,
-  inside the ±5,376 floor.** Culling is NONE pending an owner playtest.
-- **Row 1 (Whispy face) — OPEN. NOT a rate problem, and NOT a missing texture.**
-  MEASURED whole-match: lookup misses **0**, conversion calls **0**, ticks **0**,
-  pinned static hits **70,072**. A key IS being formed for the blink and it MATCHES a
-  resident entry. **Two halves, in this order: (1) make the renderer key discriminate
-  the differing word, (2) then make all six `dGRPupupuWhispyEyesTextures[2][3]`
-  variants resident before GO** (they attach as JOINT ANIMS to `map_gobj[3]`,
-  `grpupupu.c:612-624`). Residency first gives a green counter and no visible blink,
-  which reads as a rate problem and sends the next cycle back to the clock the owner
-  already ruled out. `gNdsPupupuUpdateBlinkWait*` are **probe** values — read
-  `gGRCommonStruct.pupupu.whispy_blink_wait` for the live path.
+  `2026-08-09_fox-blaster-native-promoted.png`. **+2,432 WORK-H P95, inside the
+  ±5,376 floor.** Culling is NONE pending an owner playtest.
+- **Row 1 (Whispy face) — OPEN, ROOT CAUSE: the blink animation lasts ONE frame.**
+  `map_gobj[0]->anim_frame` hits 1.0 for exactly one sample and is 0 the next; at 30 Hz
+  presented that is often never shown. **Everything around it is GREEN** — countdown,
+  blink #1 at `wait==0`, no reseed on the `0` arm, blink #2 at `-10` with reseed, wind
+  eye-texture cycling 0/1/2. **The texture-residency framing was wrong twice over**: the
+  BLINK entry of `dGRPupupuWhispyEyesAnims` carries a NULL material anim
+  (`grpupupu.c:76`) so there IS no blink texture, and the six
+  `dGRPupupuWhispyEyesTextures` belong to the WIND cycle on `map_gobj[3]`. **Next
+  question is only: why does `llGRPupupuMapWhispyEyes{Left,Right}BlinkAnimJoint` resolve
+  to a 1-frame anim?** First suspect: `ndsAObjEvent32NormalizeScript`'s 1,024-entry
+  table below, 973/1,024, overflow silently skipping the attach. Reproduce with
+  `probe-whispy-eye-texture.ps1`, no rebuild; read `pupupu.whispy_blink_wait` live.
 
 **R2-08 cannot be finished by an agent**: SwitchPlan `:391` needs the owner's recorded retail play test, `:385` their visual approval.
 
@@ -117,16 +119,15 @@ memoization/hoisting/reuse/deletion only.
 do not re-enable without owner proof. Lead at `nds_platform.c:3197`: the matrix
 stack leaks ~3 pushes/frame, wrapping mod 32. That line's `|| NDS_TICK_HUD` is
 pinned by `check-gbi-decode-fixtures.ps1:2247`.
-**SLICE 46 KEPT — 1,213,440 → 1,196,224** (`…/SLICE46.md`). Warm preload covered
-only 57 of the 87 used ids; replaced with the measured 87, 4 per scene update:
-**misses 32 → 2**, arena 257,200 → 192,240 (it SHRINKS).
+**SLICE 46 KEPT — 1,213,440 → 1,196,224** (`…/SLICE46.md`). Warm preload covered only
+57 of the 87 used ids; replaced with the measured 87, 4 per scene update: **misses
+32 → 2**, arena 257,200 → 192,240 (it SHRINKS).
 
 **SLICE 48 KEPT — read its SIZE, not its bank (`…/SLICE48.md`).** The FAT lane is
-**BGM**. **`AUD` at 0.2% does NOT clear BGM** — a bucket brackets only its own
-thread and the worker ran ABOVE main. Shipped: created at `MAIN_THREAD_PRIO + 1`,
-switched to `- 1` once playing (`.data` pokeable). **Deprioritizing during the
-MATCH was REFUTED** — same-binary A/B, +8,064 wrong way; creating low is
-−13,952..−17,792.
+**BGM**. **`AUD` at 0.2% does NOT clear BGM** — a bucket brackets only its own thread
+and the worker ran ABOVE main. Shipped: created at `MAIN_THREAD_PRIO + 1`, switched to
+`- 1` once playing (`.data` pokeable). **Deprioritizing during the MATCH was REFUTED**
+— same-binary A/B, +8,064 wrong way; creating low is −13,952..−17,792.
 
 **SLICE 45 KEPT — 1,225,280 → 1,213,440.** `ndsRelocRemoveFighterAObj16StatusAliases`
 resolved `ndsRelocAssetIDForToken` for EVERY status node when `addr == data` rejects
@@ -138,10 +139,9 @@ nested, not an animation bucket** — reading it as one mis-attributed an A/B in
 **Zero-copy force-load is closed:** `ftmain.c:4623` DISCARDS the return value.
 
 **SLICE 47 REVERTED — the `SHDT` reach bound is DEAD, geometrically.**
-**`ReachTests 2,373  WouldSkip 0`** — it never rejects; tightening it needs the
-joint position that is the transform being skipped. Carry:
-`gmCollisionTestRectangle` also serves item/weapon/ground — **never attribute a
-shared leaf's volume to one caller**.
+**`ReachTests 2,373  WouldSkip 0`** — it never rejects, and tightening it needs the
+joint position that IS the transform being skipped. Carry: `gmCollisionTestRectangle`
+also serves item/weapon/ground — **never attribute a shared leaf to one caller**.
 
 **The collision transform chain is honest work, not redundancy (c123).** Latches
 clear once per fighter per frame (`ftmain.c:1847`); hit detection rebuilds lazily and
