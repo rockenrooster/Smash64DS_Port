@@ -8,6 +8,39 @@ moves again on any unrelated edit. **The gate is met, not stably met.** Slice 48
 own lever is ~−15,000; slice 45 −11,840, slice 46 −17,216. **Every 128-frame figure
 in the archive is unusable** — use `-Samples 1600`.
 
+## R2-07 is the ACTIVE front, not performance — all three `BUGS.md` rows
+
+Contracts + evidence: `artifacts/bugs/2026-08-12_r2-07-cluster/CONTRACT.md`.
+**All three rows converge on ONE capability: make additional source textures
+resident.** Budget is a non-issue (~1 KB against the 74,496 B the 2026-08-03
+`repack_paletted` returned), and `build_runtime_qualified_whispy_record`
+(`generate_battle_playable_static_textures.py:901`) already does exactly this for
+Whispy's MOUTH — the P2 deferral in `KNOWN_ISSUES:102` was about a GENERAL
+dynamic-variant system, not about space.
+
+- **Row 3 (Fox gun) — state half SHIPPED and MEASURED.** The gun is model part 13
+  on joint 17; asset already ships (`reloc_extern_data/MiscData315`) and
+  `ftmain.c:575` already dispatched the event into a no-op stub. Now
+  `Set=On=Reset=18` against 17 blaster spawns. **Remaining is the DRAW only** — it
+  cannot ride `SubmitWeaponDObj` (gates on `IsWeaponDisplay`). **Row 3b needs no
+  work**: the port `#include`s `ftfoxspecialn.c` verbatim and the source local Y
+  offset is `0.0F`, so beam Y *is* joint 17's world Y.
+- **Row 2 (fire burn)** is particle script **`0x12`**, which is NOT in
+  `reachable_scripts` and whose Flame seams are absent from `p1_seams` — while
+  `DamageFire`(77)/`FireGrind`(11) ARE packed. That is exactly "the explosion is
+  there but not the burn". The alias at `shims.c:8180` is a consequence, not the
+  cause. **Measure on `NDS_R2_BOTH_CPU=1` before touching `P1_PARTICLE_SEAMS`**:
+  the normal arm has Mario as an IDLE HUMAN, so it produces no fire at all and
+  reads 0 whether or not the seam is reachable.
+- **Row 1 (Whispy face)** is NOT a rate problem. Source double-blinks 10 ticks
+  apart every 40–309 ticks; the blink image was simply never made resident. The
+  `gNdsPupupuUpdateBlinkWait*` globals are **probe** values
+  (`ndsGRPupupuRunSafeUpdateProbe` forces `game_status`), not the live path — read
+  `gGRCommonStruct.pupupu.whispy_blink_wait` for that.
+
+**R2-08 cannot be finished by an agent**: SwitchPlan `:391` needs the owner's
+recorded retail play test and `:385` their visual approval.
+
 **THE CROSS-BUILD FLOOR IS NOT ±5,376 ONCE YOU ADD AN OBJECT.** That figure came
 from two near-identical HEAD controls. Slice 48's behaviourally-identical pair
 differs by **94,976** after adding ~50 bytes and one `aligned(32)` `.data` object.
@@ -23,19 +56,13 @@ re-bank reports what the ROM measures, never what the change was worth.**
 | **both-CPU** | prior bank | 938,752 | 1,196,224 (c123-warm) |
 | **Boundary** mode 163 | shipped configuration | 920,192 | 1,113,408 (c116 — stale) |
 
-**RE-ATTRIBUTED on the slice-48 ROM** (`…/2026-08-12_c125-slice48/split-top80.txt`,
-`NDS_TICK_HUD_DRAW=0`, 1600 frames). Premium/tail frame **1,161,717 → 864,735**.
-Top non-idle rows: `__aeabi_fadd` 41,633, `__aeabi_fmul` 36,658, `memcpy` 37,474
-(all 80/80), **`ndsAObjEvent32NormalizeScript` 24,299 on 19/80** — 3x its c123 cost,
-MORE clustered, and it is the latent cliff below. FAT family ~47,600 but on
-**35/80, down from 49/80** — slice 48 moved it off 14 tail frames.
-
-**LANE CEILINGS on that ROM** (`…/EXHAUSTION.md`; cap the lane at its own median
-PER ROW, re-take the 80th of 1,600 — baseline 1,089,152 that way): `SRC`/`GCRA`
-**133,056**, `SINT` 57,280, `SHDT` 38,912, `MISC` 31,680, `SPHD` 17,152, `AUD`
-13,312, `SCPU` 4,288, `STG` 2,048, **`FTR` 0**. **`GCRA` == `SRC` to the tick**, so
-all spendable work is inside `gcRunAll`; `FTR` is 0 for the FOURTH straight
-measurement at a median of 303,232.
+**RE-ATTRIBUTION and LANE CEILINGS live in `…/2026-08-12_c125-slice48/` —
+`split-top80.txt` and `EXHAUSTION.md`.** Headlines only: tail frame 1,161,717 →
+864,735; the largest non-idle, non-softfloat row is
+**`ndsAObjEvent32NormalizeScript` 24,299 on 19/80** (the latent cliff below);
+ceilings `SRC`/`GCRA` **133,056**, `SINT` 57,280, `SHDT` 38,912, **`FTR` 0** for the
+fourth straight measurement. **`GCRA` == `SRC` to the tick**, so everything
+spendable is inside `gcRunAll`.
 
 **THE BIGGEST LEVER IS PLACEMENT, and the census sizes it.** Memory stall is
 **1,236,685,107 cycles, 33.8% of the match** (`.main` alone 45.6% of its tier)
@@ -43,15 +70,12 @@ measurement at a median of 303,232.
 48's behaviourally-identical pair differed 94,976.
 
 **SLICE 49 (reclaim dead ITCM) is REFUTED without a build — do not re-open it until
-the Task 37 port group is understood.** True: `.itcm` is NOT full, 30 of its 82
-residents never execute (2,594 B idle), retiring the board's "ITCM is 99.1% full".
-But the census's **87,033,153 non-mem stall cycles in reach** assumes admitting
-~3,118 B of mostly PORT functions, and `nds_task37_itcm.h` records that
-`NDS_TASK37_ITCM_PORT` is 0 because *"the owner confirmed the enabled lab build
-misbehaves"* — a CORRECTNESS refutation, not a performance one; `sqrtf` is ours too
-(`src/nds/r2/nds_r2_sqrtf.c`) so it is in that group. **Eviction alone pays
-nothing** — ITCM is fixed 32 KB and code never fetched costs nothing. What is left
-is `__aeabi_lmul` via the PROVEN library-member list (86 B ≈ 1,005 tk/frame).
+the Task 37 port group is understood.** `.itcm` is NOT full (30 of 82 residents
+never execute, 2,594 B idle), but the census's 87,033,153 stall cycles "in reach"
+assumes admitting ~3,118 B of mostly PORT functions, and `NDS_TASK37_ITCM_PORT` is
+0 because *"the owner confirmed the enabled lab build misbehaves"* — a CORRECTNESS
+refutation. **Eviction alone pays nothing.** What is left is `__aeabi_lmul` via the
+proven library-member list (86 B ≈ 1,005 tk/frame). Full detail in `EXHAUSTION.md`.
 
 **Two lane-sizing traps.** Medians do not add (subtracting nested medians from
 `GCRA`'s invented a 110,336 lane worth +9,472/row); `OTHR` CONTAINS `WAIT`, so its
@@ -110,19 +134,16 @@ do not re-enable without owner proof. Lead at `nds_platform.c:3197`: the matrix
 stack leaks ~3 pushes/frame, wrapping mod 32. That line's `|| NDS_TICK_HUD` is
 pinned by `check-gbi-decode-fixtures.ps1:2247` — Boundary went RED because the
 guard moved, not the assertion.
-**SLICE 46 KEPT — 1,213,440 → 1,196,224** (`…/SLICE46.md`). The warm preload never
-finished (83 of 85) and covered only 57 of the 87 used ids; replaced with the
-measured 87, 4 per scene update: **misses 32 → 2**, arena 257,200 → 192,240 (it
-SHRINKS). **Stepping is bounded by the BGM packet seam**, not load time.
+**SLICE 46 KEPT — 1,213,440 → 1,196,224** (`…/SLICE46.md`). Warm preload covered
+only 57 of the 87 used ids; replaced with the measured 87, 4 per scene update:
+**misses 32 → 2**, arena 257,200 → 192,240 (it SHRINKS).
 
 **SLICE 48 KEPT — read its SIZE, not its bank (`…/SLICE48.md`).** The FAT lane is
-**BGM**: `RefillCount` 104 == `WorkerWakeCount` 104, and the anim cache cannot own
-it (2 misses since slice 46; 85 of 123 payload reads precede frame 438). **`AUD` at
-0.2% does NOT clear BGM** — a bucket brackets only its own thread and the worker
-ran ABOVE main. Shipped: created at `MAIN_THREAD_PRIO + 1`, switched to `- 1` once
-playing (`gNdsAudioBgmWorkerPrio` / `…RunPrio` / `…PrioApplied`, `.data` pokeable).
-**Deprioritizing during the MATCH was REFUTED** — same-binary A/B, +8,064 wrong
-way; creating low is −13,952..−17,792 and moved the lane off 14 tail frames.
+**BGM**. **`AUD` at 0.2% does NOT clear BGM** — a bucket brackets only its own
+thread and the worker ran ABOVE main. Shipped: created at `MAIN_THREAD_PRIO + 1`,
+switched to `- 1` once playing (`.data` pokeable). **Deprioritizing during the
+MATCH was REFUTED** — same-binary A/B, +8,064 wrong way; creating low is
+−13,952..−17,792.
 
 **SLICE 45 KEPT — 1,225,280 → 1,213,440.** Same-binary A/B:
 `ndsRelocRemoveFighterAObj16StatusAliases` resolved `ndsRelocAssetIDForToken` for

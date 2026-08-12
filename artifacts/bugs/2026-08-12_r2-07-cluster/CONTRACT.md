@@ -226,6 +226,41 @@ The arm that can answer it is `NDS_R2_BOTH_CPU=1`, where Mario is also a
 level-3 CPU and actually throws fireballs. Re-measure there before touching
 `P1_PARTICLE_SEAMS`.
 
+#### Second measurement (`NDS_R2_BOTH_CPU=1`) — the Flame lane is DEAD
+
+```
+gNdsFighterFlameEffectRequestCount = 0
+gNdsFighterFireSparkRequestCount   = 0
+gNdsFighterModelPartOnCount        = 5    <- was 18: the arm really differs
+gNdsFighterProjectileProofSpawnSuccessCount = 10   <- was 17
+```
+
+`ModelPartOn = 5` accounts for Fox's five SpecialN raises, so of the ten spawns
+roughly **five are Mario's fireballs** — Mario threw fire on this arm. Still zero
+Flame requests.
+
+> **So `P1_PARTICLE_SEAMS` must NOT be touched: the Flame family is genuinely
+> unreachable for Mario and Fox, and packing script `0x12` would have added
+> bytes and fixed nothing.** The `nEFKindFlame*` ids come from a *fighter's own
+> motion-script effect events*, and neither of these two fighters emits them.
+
+**Corrected candidate for what the owner is seeing.** The burn that IS reachable
+is `efManagerFireGrindMakeEffect` — **seed script 11, reachable and packed** —
+alongside `efManagerDamageFireMakeEffect` (script 77). And `firegrind_bake.py:16`
+already records its defect: *"Texture 5 is 16x16 I4, three frames. The DS atlas
+packs only frame 0 (frames 1/2 decimate to it), so texture animation is frozen at
+frame 0 regardless."*
+
+That fits the report better than the Flame lane ever did: the effect is present
+(so the owner sees *something* fiery) but frozen on one frame, so it reads as a
+missing burn rather than a missing effect. **It also returns row 2 to the
+cluster's shared capability** — packing frames 1/2 — instead of a seam-list
+change.
+
+**Next measurement:** count `efManagerFireGrindMakeEffect` /
+`efManagerDamageFireMakeEffect` requests on the both-CPU arm. If FireGrind fires,
+row 2 is a texture-variant fix and nothing else.
+
 Note also that `gNdsFighterProjectileProofSpawnSuccessCount` is incremented by
 **both** `battleship_mario_fireball.c:791` and `battleship_fox_blaster.c:80`, so
 on the both-CPU arm it stops being a Fox-only control and becomes a combined
