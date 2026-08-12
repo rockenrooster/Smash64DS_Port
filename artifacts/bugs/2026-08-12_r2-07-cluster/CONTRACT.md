@@ -10,7 +10,15 @@ three rows are already localized to their owning seam from source alone.
 
 ---
 
-## Cluster finding 2 (supersedes the scope below): ALL THREE rows converge
+## SUPERSEDED CLUSTER FRAMING — read the row sections, not this
+
+**The "all three rows converge on one texture capability" claim below is wrong
+for row 2** (owner, 2026-08-12). Row 2's root cause is the absent fire colanim
+scripts 12–15, not texture residency; see the banner on Row 2. Rows 1 and 3 do
+still need texture work, but they are two consumers, not three, and they are not
+a single cluster with row 2.
+
+## Cluster finding 2 (WRONG for row 2; kept for the rows-1-and-3 argument)
 
 Row 3 was scoped as unrelated geometry work. It is not. The gun's display list
 **loads its own texture** — `315_FoxUnknown.c` documents the DL as loading the
@@ -157,6 +165,51 @@ discriminator between the two.
 
 **Prediction:** Whispy's eyes shut and reopen in a quick double-blink a few times
 per ten seconds, at the same cadence as the N64.
+
+---
+
+## Row 2 — missing fire burn  [ROOT CAUSE FOUND — owner, 2026-08-12]
+
+**The diagnosis below this banner is SUPERSEDED. Read this first.**
+
+The burn is not a texture-variant problem and never was. BattleShip encodes the
+fighter fire-burn presentation in **colour-animation scripts** —
+`dGMColScriptsFighterDamageFireWeak` / `Mid` / `Strong` / `Fly`
+(`gmcolscripts.c:157`+) — which flash the fighter orange/red **and issue
+`nEFKindFlameLR` / `nEFKindFlameRandom` themselves**. There are **9** such
+commands across those scripts.
+
+The port asks for the right thing: `ftCommonDamageCheckElementSetColAnim`
+requests the fire colanim ids, which are `nGMColAnimFighterDamageFireStart = 12`
+through 15 (`include/ft/fighter.h:4262`).
+
+**First divergence — verified.** The DS `dGMColScriptsDescs`
+(`reloc_backend_compat_shims.c:474`) contains **six** designated initialisers:
+`FighterDamageCommon` plus five `ScreenFlash*`. Ids 12–15 are never initialised,
+so their `p_script` is `NULL`, and `ftParamCheckSetColAnimID` rejects any id with
+a `NULL` script at **`:826`**.
+
+```
+fire hit -> colanim id 12..15 -> descriptor p_script == NULL -> REJECTED (:826)
+         -> the script's FlameLR/FlameRandom commands never execute
+```
+
+> **This is why every Flame counter in this document measured zero.** The zeros
+> were correct readings of a request that is killed one level upstream of the
+> effect system — not evidence that the Flame family is unreachable content.
+
+**Second defect, downstream of the first.** Even once the scripts are restored,
+`ndsFTParamMakeSourceEffect` has no source cases for `FlameLR` / `FlameRandom` /
+`FlameStatic`; they fall through and collapse to the generic
+`nNDSVisualEffectHitFire` burst at `shims.c:8193-8199`. So the row is **two**
+missing pieces: the fire colanim scripts/descriptors (root), then a real
+DS-native Flame effect implementation and dispatch.
+
+**Closed, do not re-open:** FireGrind is the already-approved DS-native fireball
+bounce effect and is unrelated to this row. Texture residency may become a
+*downstream* requirement once real flames are restored, but it is not why the
+burn is absent today — the claim earlier in this file that row 2 shares row 1's
+texture-variant seam is **wrong**.
 
 ---
 
