@@ -1816,9 +1816,30 @@ Assert-True ($renderer -match '(?s)ndsRendererHardwareTextureLookupRemove.*?leav
 Assert-True ($renderer -match '(?s)ndsRendererHardwareTextureLookupRemove\(entry\);\s*#endif\s*ndsRendererHardwareEntrySetKey\(entry, &key\);.*?entry->ready = TRUE;\s*#if NDS_RENDERER_PROFILE_LEVEL < 2\s*ndsRendererHardwareTextureLookupInsert\(entry\);') 'Texture refresh no longer removes the old hash mapping before publishing and indexing the exact replacement key.'
 # Cache slots and libnds GL names are both reused, so every long-lived stage or
 # fighter shortcut must retain the cache key generation as its identity fence.
-Assert-True ($renderer.Contains('u32 texture_generation;') -and $renderer.Contains('prepared->texture_generation = (resolved.entry != NULL) ?') -and $renderer.Contains('(entry->key_generation == prepared->texture_generation)') -and $renderer.Contains('(ndsRendererNativeStagePreparedTexturesValid() != FALSE)') -and $renderer.Contains('(ndsRendererNativeStagePreparedTextureValid(run) == FALSE)') -and ($renderer -match '(?s)ndsRendererTask36ReplayTexturesValid.*?ndsRendererNativeStagePreparedTextureValid\(\s*&run->prepared\)')) 'Native-stage prepared and replay paths no longer fence recycled texture slots by key generation.'
+#
+# R2-07 slice 50 made that fence EVENT-DRIVEN instead of per-call: the same
+# key-generation compare is taken once per texture epoch rather than ~195 times
+# a frame. The fence itself, the point-of-use fallback and the replay sweep are
+# all still pinned below -- only the reuse key's helper was renamed
+# (...TexturesValid -> ...TexturesProven). What the rename ADDS is a soundness
+# dependency, so the two clauses that carry it are pinned as their own
+# assertions rather than folded in: the epoch is worthless if a release stops
+# advancing it, and a rebuilt table must not inherit its predecessor's
+# certificate. Both failures would be silent -- stale native geometry drawn from
+# a recycled texture slot -- so they are checked, not assumed.
+Assert-True ($renderer.Contains('u32 texture_generation;') -and $renderer.Contains('prepared->texture_generation = (resolved.entry != NULL) ?') -and $renderer.Contains('(entry->key_generation == prepared->texture_generation)') -and $renderer.Contains('(ndsRendererNativeStagePreparedTexturesProven() != FALSE)') -and $renderer.Contains('(ndsRendererNativeStagePreparedTextureValid(run) == FALSE)') -and ($renderer -match '(?s)ndsRendererTask36ReplayTexturesValid.*?ndsRendererNativeStagePreparedTextureValid\(\s*&run->prepared\)')) 'Native-stage prepared and replay paths no longer fence recycled texture slots by key generation.'
+Assert-True ($renderer -match '(?s)ndsRendererHardwareReleaseTexture\(\s*NDSRendererHardwareTextureCacheEntry \*entry\).*?ndsRendererHardwareEntryClearKey\(entry\);.*?sNdsRendererHardwareTextureKeyGeneration\+\+;.*?memset\(entry, 0, sizeof\(\*entry\)\);') 'Texture release no longer advances the key generation, so the per-epoch prepared-texture proof cannot see a recycled slot.'
+Assert-True ($renderer -match '(?s)static s32 ndsRendererNativeStagePrepareRun\(.*?ndsRendererNativeStagePreparedTextureProofDrop\(\);') 'Prepared-run rebuild no longer drops the texture proof at its write seam, so a fresh run could inherit its predecessor certificate.'
 Assert-True ($renderer.Contains('u32 entry_generation;') -and $renderer.Contains('memo->entry_generation = entry->key_generation;') -and ([regex]::Matches($renderer, 'entry->key_generation != memo->entry_generation').Count -eq 2)) 'Fighter run memo no longer rejects recycled texture names by cache key generation in both live and verify paths.'
-Assert-True ($renderer -match '(?s)segment = &sNdsNativeStageSegments\[segment_index\];\s*/\* The prepared table.*?for \(run_offset = 0u; run_offset < segment->run_count; run_offset\+\+\).*?ndsRendererNativeStagePreparedTextureValid\(\s*&sNdsNativeStageOwnerExecution\.runs\[run_index\]\) == FALSE\).*?return FALSE;\s*\}\s*\}\s*#if NDS_DREAMLAND_DS_MESH') 'Native-stage commit no longer validates one complete segment before its first GX/state mutation and returns the unhandled polarity on stale texture state.'
+# R2-07 slice 50 widened this from a per-segment loop to the whole-table proof.
+# What the assertion protects is unchanged and is what is still pinned: the
+# validation sits immediately after the segment is resolved, BEFORE the first
+# GX/renderer-state write (the `#if NDS_DREAMLAND_DS_MESH` anchor is that first
+# write), and it returns the unhandled polarity so the segment falls back to
+# source as a whole rather than as a mixed native/source segment. The proof is
+# now a superset -- a stale run in any segment rejects every segment -- which is
+# the conservative direction for exactly the failure this guards.
+Assert-True ($renderer -match '(?s)segment = &sNdsNativeStageSegments\[segment_index\];\s*/\* The prepared table.*?if \(ndsRendererNativeStagePreparedTexturesProven\(\) == FALSE\)\s*\{\s*return FALSE;\s*\}\s*#if NDS_DREAMLAND_DS_MESH') 'Native-stage commit no longer validates the prepared table before its first GX/state mutation and returns the unhandled polarity on stale texture state.'
 Assert-True ([regex]::Matches($relocRendererDL, 'ndsRendererFinishNativeStageOwner\(\);\s*workspace->active = FALSE;\s*return FALSE;').Count -eq 2) 'Native-stage adapter no longer deactivates both profiled and normal commit paths before propagating an unhandled segment.'
 # R2-03 E12: the fighter memo removed the last warm-frame texture lookup, so
 # RENDER_TEXHASH now reads all zero and the coverage proof has two legs. Pin the

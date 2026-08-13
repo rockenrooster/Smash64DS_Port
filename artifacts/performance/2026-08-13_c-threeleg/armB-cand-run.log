@@ -1,0 +1,31 @@
+Tick-HUD samples repeated a presented frame (1 of 1600). EVERY duplicate is a ring-stop seam whose recorded skew explains the label collision, and no payload repeats, so these are distinct real iterations that share a frame LABEL. Percentiles are over the iterations and stand; the frame ids at those seams do not. Seam rows: 576.
+Wrote artifacts\performance\2026-08-13_c-threeleg\armB-cand-rows.csv
+Tick-HUD buckets: target=smash64ds-battle-playable-tickhud-hwtri samples=1600 frames=439..2038 melonDS=1.0 sha=DE80E46BDCF1FD98 git=2144d0cbc51+dirty(3) dldi=ON
+
+bucket p50        p95        spread mean       min        max        %ALLp50
+------ ---        ---        ------ ----       ---        ---        -------
+ALL     1,118,272  1,678,720   1.50  1,207,139  1,114,816  3,359,296   100.0
+FTR       298,048    324,032   1.09    292,049    170,240    334,976    26.7
+STG       161,600    165,888   1.03    161,991    157,312    170,304    14.5
+BG          4,032      4,096   1.02      4,014      3,776      4,224     0.4
+AUD         2,752      7,360   2.67      8,837      1,152    157,120     0.2
+HUD         1,024    418,368 408.56     34,921        896  2,077,632     0.1
+SRC       320,704    574,720   1.79    349,804     10,816  1,523,648    28.7
+MISC      103,296    179,072   1.73    111,030     81,280    273,920     9.2
+OTHR      230,464    513,600   2.23    244,493     20,480    577,728    20.6
+WAIT      211,136    493,568   2.34    224,913        832    557,888    18.9
+WORK      932,992  1,361,280   1.46    982,226    594,048  3,247,552    83.4
+SHDT        4,288     87,936  20.51     14,132          0    492,608     0.4
+SWRM          832        960   1.15        855        640      1,024     0.1
+GCRA      315,776    569,664   1.80    344,766      6,784  1,518,592    28.2
+SCPU       43,008    110,592   2.57     46,534          0    144,768     3.8
+SCAT        1,344      1,472   1.10      1,301          0      1,664     0.1
+SPRM        2,112      2,304   1.09      4,848          0    648,640     0.2
+SINT      150,016    333,568   2.22    167,095          0    910,976    13.4
+SPHD       57,408     98,816   1.72     65,854          0    715,328     5.1
+SPHC          640        768   1.20        632          0        896     0.1
+WORK-H    923,392  1,210,880   1.31    947,305    585,920  2,217,280    82.6
+
+named=962,646 (79.7% of ALL)  VBI 2:1743 3:267 4:15 5+:13 max:26 total:2038  slips=0
+extras: gNdsR2TexProofFastCount=20,370  gNdsR2TexProofSweepCount=8  gNdsR2TexProofSweepFailCount=0  gNdsR2TextureEpochBumpCount=0  gNdsR2StagePrepareReuseCount=2,037  gNdsR2StagePrepareBuildCount=2  gNdsBattleTextHudP0Damage=0  gNdsBattleTextHudP1Damage=58  gNdsBattleTextHudP0Stock=1  gNdsBattleTextHudP1Stock=1
+Wrote artifacts\performance\2026-08-13_c-threeleg\armB-cand.json

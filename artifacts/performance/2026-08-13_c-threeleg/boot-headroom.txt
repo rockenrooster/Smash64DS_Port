@@ -1,0 +1,31 @@
+scripts/check-boot-headroom.ps1, slice 50. Both arms, same tree, same target.
+
+PRICE OF THE CHANGE: text +564, data +0, bss +32, total +596 bytes.
+Proven headroom 176,736 -> 176,128 (-608), against a 0x02294804 cliff that is
+~176 KB away. The change deletes per-frame reads; the text is the two
+certificates, their four helpers and the four engagement counters.
+
+=== CONTROL (build-c131-ctl, HEAD) ===
+build            : build-c131-ctl
+fake_heap_start  : 0x022695a4
+static footprint : text 980,784  data 148,288  bss 1,455,528  total 2,584,600
+highest booting  : 0x02294804  (build-r209-memo1s)
+lowest failing   : 0x02294b24  (build-r209-memo2s)
+unproven band    : 800 bytes wide
+
+OK: 176,736 bytes of PROVEN headroom (to 0x02294804).
+    Proven means another build linked at or below that address booted. Anything
+    larger is unproven, not safe -- the cliff itself has never been bisected.
+
+=== CANDIDATE (build-c131-cand, slice 50) ===
+build            : build-c131-cand
+fake_heap_start  : 0x02269804
+static footprint : text 981,348  data 148,288  bss 1,455,560  total 2,585,196
+highest booting  : 0x02294804  (build-r209-memo1s)
+lowest failing   : 0x02294b24  (build-r209-memo2s)
+unproven band    : 800 bytes wide
+
+OK: 176,128 bytes of PROVEN headroom (to 0x02294804).
+    Proven means another build linked at or below that address booted. Anything
+    larger is unproven, not safe -- the cliff itself has never been bisected.
+

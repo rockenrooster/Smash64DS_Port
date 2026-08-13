@@ -37,22 +37,21 @@ beside Fox is the BEAM ITSELF**, relocData 316's own RGBA(219,0,134) — not a d
 | arm | role | `WORK-H` P50 | P95 |
 |---|---|---:|---:|
 | `battle_playable_realtime` (`BOTH_CPU 0`) | shipped, **PASSES** | 899,136 | 1,087,616 |
-| **both-CPU (`BOTH_CPU 1`)** | **R2-07 GATE, FAILS** | 938,368 | **1,207,616** |
+| **both-CPU (`BOTH_CPU 1`)** | **R2-07 GATE, FAILS** | **923,392** | **1,210,880** |
+
+**Re-banked by SLICE 50** (`…/2026-08-13_c-threeleg/SLICE50.md`); its control put HEAD at
+939,392 / **1,219,520** (+11,904 past c130). **Judge a cut this size at P50 and its owning
+lane** — one changed line moved P95 24,064 against 3,648 at P50.
 
 **RE-BANKED ON `BOTH_CPU 1` — `…/2026-08-12_c130-fire-gate/LANES_BOTHCPU.md`** (no build;
 `analyze-tick-hud-excursion.ps1 -Ceilings` emits both tables now). `SRC` owns **84.4%** of the
 395,863 excursion; `SITR` 83,712 is the largest leaf lane, `SHDT` 51,584 the sharpest presence
 (13.17x on a 4,416 median). `SCPU`/`SPRM`/`SPHD` are 2.5–3.7x the Boundary table — the wrong arm ran
-ONE CPU. c125's ceilings are dead. **`SITR_NEXT_CUT.md`'S CUT IS REFUTED, no build
-(`…/2026-08-13_sitr-aobj-layout/`)**: ONE line fill per visited `AObj` serves offsets 0–28, so a
-dense header array only MIGRATES it. **`RESIDUE.md` §0 corrects all sizing. THE NEXT CUT IS NAMED
-(`…/2026-08-13_c-flagsweep/FLAG_SWEEP.md` §4 = `RESIDUE.md` §4 row 0): three per-frame
-re-discoveries with NO census row BECAUSE THEY ARE INLINED — stage texture-identity proof 9,369
-(7.3–10.9 cyc/insn, so misses not compares), `glBindTexture` name lookup 5,544 (the cached-words
-replacement already ships for Whispy), Task 36 capture test on 8 unconverted fighter/effect GX
-sites 2,681. Ceiling 20,562, realistic 9,800–16,500, all exactness-preserving; leg A carries Task
-103 E7's 28% realisation.** **169 `?=` flags audited to exhaustion — ZERO unshipped wins, DO NOT
-RE-AUDIT. Apparatus is 24,947 not 18,675** (third lane `sNdsEffectPacketArmed`, `#if NDS_TICK_HUD`,
+ONE CPU. c125's ceilings are dead, and so is `SITR_NEXT_CUT.md`'s cut
+(`…/2026-08-13_sitr-aobj-layout/`, no build). **`RESIDUE.md` §0 corrects all sizing.
+SLICE 50 SPENT §4 row 0 — leg A landed (stage texture proof event-driven per slice 30: **195 calls/frame → 8 sweeps a match**, `STG` −11,328 flat at P50/P95/mean, viewport pixel-identical); legs B and C REFUTED, do not re-brief that row.**
+**B is blocked by RAM, not design**: 828 B against the texture-cache `_Static_assert`'s **72 B** of slack. **C does not exist** — slice 1 already converted every per-corner writer; the residue is the shared `gl*` → `ndsRendererTask29Gl*` wrappers, which have stage callers, not an `#if`.
+**Apparatus is 24,947 not 18,675** (third lane `sNdsEffectPacketArmed`, `#if NDS_TICK_HUD`,
 6,272 on EVERY GX command), so the product-side gap is ≈62,300. **Owner package:
 `…/2026-08-13_c-residue/OWNER_DECISIONS.md`.** **RUNG 2
 (quarter-rate particles) REFUTED, no build (`…/2026-08-13_c-particle-rate/`): `MISC` is a DRAW

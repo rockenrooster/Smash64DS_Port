@@ -51,9 +51,16 @@ of the match (P95 understated ~306,000, over-gate rate 5×).
 **~23,000**. The cycle-108 row carries why that figure is quoted as a range and
 not as a single cross-build P95.
 
-**CURRENT BANKED GATE — `WORK-H` P50 931,648 / P95 1,210,560** (cycle 121,
-`builds/build-c121-stride`, `NDS_R2_BOTH_CPU=1`, 1600 frames from 438, DLDI ON,
-`slips=0`). Slice 44 re-banked it from 1,244,480: **P95 −35,904 / P50 −17,088**
+**CURRENT BANKED GATE — `WORK-H` P50 923,392 / P95 1,210,880** (slice 50,
+`builds/build-c131-cand`, `NDS_R2_BOTH_CPU=1`, 1600 frames from 438, DLDI ON,
+`slips=0`; **gap to 1.12M ~90,500**). Slice 50's own control measured HEAD at
+939,392 / **1,219,520**, i.e. the tree had drifted **+8,960 P95** above the
+cycle-121 bank before this cut — quote a control from the same tree, never a
+bank, when sizing a candidate.
+
+**The previous bank, for the record — `WORK-H` P50 931,648 / P95 1,210,560**
+(cycle 121, `builds/build-c121-stride`, same configuration).
+Slice 44 re-banked it from 1,244,480: **P95 −35,904 / P50 −17,088**
 against a matched control from the same tree, 4.2× and 2.0× the ±8,544 floor,
 and the largest single P95 move of the campaign. **Gap to the 1.12M target:
 ~90,180.** Evidence:
@@ -5282,6 +5289,100 @@ anyway and is not an invitation.
 **Do not plan a slice against `memcpy`'s 49,671 tail-frame ticks.** Only three
 callers clear the 40/80 presence bar (7,187 + 1,883 + 1,838 = 10,908); the other
 ~38,700 is spread across callers each below it. Its mean self-time is 16,912.
+
+### Slice 50 KEPT — the stage stops re-proving its texture bindings. Gate 1,210,880
+
+Evidence: `artifacts/performance/2026-08-13_c-threeleg/SLICE50.md`, the three arm
+JSONs/rows beside it; captures in
+`artifacts/visibility/2026-08-13_c131-texproof/`.
+
+`ndsRendererNativeStagePreparedTextureValid` re-proved the prepared stage run
+table against the texture cache **194.88 times a frame** (entry-PC counts:
+Commit's 54-run sweep + the reuse key's 53.97 + the replay sweep + BeginRun's
+~33). Per-line attribution priced it at **9,369 tk/fr at 5.34 cycles per
+instruction** — not compares, but `runs[]` and then the cache entries it names
+dragged through a 4 KB D-cache every frame. **Slice 44's shape, and slice 30's
+fix**: the same key-generation fence is now taken **once per texture epoch**,
+with the epoch advanced at every writer that can break it.
+
+| bucket | control A | **A2, separate link** | candidate B | Δ |
+|---|---:|---:|---:|---:|
+| `WORK-H` P50 | 939,392 | **939,392** | 923,392 | **−16,000** |
+| `WORK-H` P95 | 1,219,520 | **1,219,520** | 1,210,880 | **−8,640** |
+| `STG` P50 / P95 / mean | 172,928 / 177,216 / 173,313 | same | 161,600 / 165,888 / 161,991 | **−11,328 / −11,328 / −11,322** |
+| `FTR` P50 / P95 | 303,232 / 330,048 | same | 298,048 / 324,032 | −5,184 / −6,016 |
+| `WAIT` P50 | 197,824 | 197,824 | 211,136 | **+13,312** |
+| VBI 2/3/4/5+ (max) | 1705/304/17/12 (26) | same | **1743/267/15/13 (26)** | 37 frames 3→2 |
+
+**A2 is the third arm and it returned to A EXACTLY** — every bucket, both
+percentiles, the whole histogram, delta 0 — on a separately-linked binary (the
+ELF hashes differ). So the instrument reproduces to **0** for unchanged code and
+the entire B delta is the change's. `compare-tick-hud-arms.py` warns of a
+~14,080 placement term for separately-linked arms; between A and A2 it measured
+**0**, so that term belongs to *changed code*, not to linking.
+
+**Judge this at `STG` and P50.** `STG` moved −11,328 at P50, P95 and mean
+simultaneously — a flat uniform shift of exactly the lane the work lived in,
+which placement noise cannot imitate. P95 is the noisy statistic here: two
+candidate binaries differing by **one line** measured P95 1,186,816 vs 1,210,880
+(**24,064**) against 3,648 at P50 and **512** in `STG`. The banked P95 is the
+conservative of the two. `WAIT` rising +13,312 as `WORK-H` falls 16,000 is the
+corroboration — on a VBlank-paced ROM the removed work reappears as idle time.
+
+**Engagement, both sides.** Control side is the c123 profile's 194.88 calls/frame.
+Candidate side, from the same run that produced the buckets:
+`gNdsR2TexProofFastCount` **20,370** (9.995/frame), `gNdsR2TexProofSweepCount`
+**8 for the whole match**, `SweepFailCount` **0**, `gNdsR2TextureEpochBumpCount`
+**0**. A per-frame sweep count would have meant the epoch was moving and the
+lever had regressed to the old shape. `EpochBump 0` confirms the design premise
+measured off the profile: the cache is static mid-match
+(`ndsRendererHardwareAllocTexture` runs **3 times** in the run, Release/Evict/
+Discard never appear). Negative control: `gNdsR2StagePrepareReuseCount` **2,037**
+/ `BuildCount` **2** identical on all three arms, so the win is not bought by
+reusing something the control rebuilt. End-of-match damage **0/58**, stock
+**1/1** on all three arms.
+
+**Fidelity.** Frame-locked on the simulation clock —
+`EXACT_LOCK=gSCManagerBattleState->time_remain,40,38` on both arms, which is the
+only valid cross-build lock (the presented-frame counter drifts with the speed
+change). Game viewport 400x296 = **118,400 px PIXEL-IDENTICAL** on both tics,
+max channel delta 0. The only top-screen drift is **12 px on scanlines 298-299**
+— the tick-HUD's own digit row, which must differ between arms.
+
+**Why the fence is sound now.** The proof reads four things and every writer of
+them signals: the three re-key sites already bumped
+`sNdsRendererHardwareTextureKeyGeneration`; `ndsRendererHardwareReleaseTexture`
+now bumps it too and is the **sole** destructive seam (Evict, Alloc's recycle,
+Discard and the static teardown all route through it, and its `memset` is what
+clears `ready` and `name`); every `ready = TRUE` is guarded by `name == 0` +
+`glGenTextures`, i.e. a slot no live certificate can reference; and the prepared
+table's certificate is dropped at its **write seam**,
+`ndsRendererNativeStagePrepareRun`, plus the instance beside
+`gNdsR2StagePrepareBuildCount`. Nothing keys on a pointer, so §3.12's arena
+rewind cannot make a stale certificate read current.
+
+**Boundary caught the checker debt, as designed** — twice, and both were shape
+pins rather than defects. `check-gbi-decode-fixtures.ps1` pinned the reuse key's
+old helper name and the Commit gate's per-segment loop. Both re-pinned in their
+new form and **strengthened**: the epoch bump in `ndsRendererHardwareReleaseTexture`
+and the drop at the write seam are now their own assertions, because either
+failing would be silent — stale native geometry drawn from a recycled slot.
+
+**Legs B and C of `RESIDUE.md` §4 row 0 are NOT deferred, they are refuted.**
+B needs 828 B against the texture-cache `_Static_assert`'s **72 B** of slack (the
+guard installed after +14 KB of bss stopped the ROM booting). C's "8 unconverted
+GX sites" do not exist: slice 1 already converted every per-corner fighter
+writer, `WriteNormalWord` carries no capture test, and the residual charge is the
+shared `gl*` → `ndsRendererTask29Gl*` macro block (`nds_renderer.c:1501-1523`),
+which has stage callers — a per-caller split at 1.85 cyc/byte, not an `#if`.
+
+**Residual for the stress/soak cycle.** Boundary proves ONE match. The
+certificate survives a Results→START restart by three independent guards, but the
+protection removed was self-healing against paths nobody enumerated, whereas a
+certificate is only as complete as its enumeration. **Exercise the second match
+deliberately** and read `gNdsR2TexProofSweepFailCount` (must stay 0) and
+`gNdsR2TextureEpochBumpCount` (must be NON-zero across a scene entry — it is
+correctly 0 *within* a match).
 
 ### Slice 44 KEPT — the stage stops re-proving itself constant. Gate 1,210,560
 

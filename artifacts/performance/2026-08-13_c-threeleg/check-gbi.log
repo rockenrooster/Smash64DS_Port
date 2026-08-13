@@ -1,0 +1,77 @@
+M3_NATIVE_STAGE_CHECK_OK callbacks=8 dobjs=57 bindings=42 runs=54 epochs=49 triangles=202 cross_matrix_runs=5 cross_matrix_triangles=10 cross_matrix_foreign_corners=15 state_deltas=148 state_events=423 replay_commands=886 fail_closed_perturbations=12 manifest_fields=619 task26_manifest_fields=120 segment0_program_runs=26 segment0_program_bytes=92 segment0_source_checksum=0x47c2c19d segment0_table_checksum=0xcea1ff03 segment0_hot_checksum=0x54327dfb segment0_prepared_dense_checksum=0xf1c6fadc slab_bytes=12663 total_const_max_bytes=12755 sha256=eda2dbd6ee323c3eb33a323be46b61676d2f63057e315e6f288537f76555942c
+R2-03 E64b/E65 fixed-point cubic -- host error bound vs the decomp float
+  gameplay bound 0.0200 world units / radians
+
+  domain          samples   max|err|        rms       bias steepness gate
+  rotation        1689984   0.002842   0.000507  +0.000001       3.0 green
+  translation     2300256   0.006702   0.000679  +0.000002     173.3 green
+  conservative    1597400   0.043198   0.003078  +0.000005    2293.3 (reported)
+  rotation-Q      1689984   0.002842   0.000507  +0.000001       3.0 green
+  translation-Q   2300256   0.006702   0.000679  +0.000002     173.3 green
+  conservative-Q   1597400   0.043198   0.003078  +0.000005    2293.3 (reported)
+  linear-Q          63896   0.000796   0.000160  +0.000013       0.5 green
+  step-Q-exact      66836   0.000000   0.000000  +0.000000       0.0 green
+  parser-Q-exact    393216   0.000000   0.000000  +0.000000       0.0 green
+
+  'steepness' is L*max|rate| at the worst case -- the amplifier on the
+  Q12 basis quantum, and the whole reason the domain is stated.
+GREEN: every gated domain stays inside 0.0200. Worst gated deviation 0.006702.
+ok    div255 exhaustive over [0, 65152]
+ok    div255 cliff is above the reachable range
+ok    lerp channel over all 16.7M reachable inputs
+ok    nibble*255/15 == nibble*17
+ok    R0e I4 pair loop reads the generic loop's nibbles
+
+SPRITE_LERP_EXACT=PASS  three library divisions per pixel removed and R0e's paired row proven equivalent, both bit-exact
+MP floor-crossing kernel -- shipped vs the pre-cycle-117 float body
+  cases 2332800 hits 40417 ret_mismatch 0 hit_mismatch 0
+GREEN: every case returns the same verdict and the same hit BIT PATTERNS.
+cases 400000
+extent_fired 111961 extent_missed_hits 0
+sweep_fired 68993 segments_replayed 295114 sweep_missed_hits 0 sweep_missed_flat 0
+MP_LINE_EXTENT_REJECT_EXACT=PASS  every fired reject was replayed segment by segment and produced no hit and no flat-ascending flag
+opcodes defined in decomp : 15
+opcodes handled by parser : 15
+FTANIM_OPCODE_SURFACE=CLOSED  all 15 opcodes defined in the reference are handled by the runtime parser, and the parser invents none -- an AOT generator has a finite, known surface to cover
+FTANIM_EFFECT_SURFACE=STABLE  func_anim called only from nGCAnimEvent16End+nGCAnimEvent16Loop, root_dobj->flags written only by nGCAnimEvent16SetFlags
+  ok  gcParseDObjAnimJoint               ftParamUpdateAnimKeys parse arm when is_anim_joint
+  ok  ftAnimParseDObjFigatree            ftParamUpdateAnimKeys parse arm otherwise (decomp body)
+  ok  ndsR2FtAnimParseDObjFigatree       the shipped port parser the shim selects
+  ok  gcPlayDObjAnimJoint                ftParamUpdateAnimKeys play arm
+  ok  lbCommonPlayTranslateScaledDObjAnim ftParamUpdateAnimKeys play arm when translate_scales is set
+ANIM_NULL_GUARD=TOTAL  all 5 per-joint animation entry points are no-ops when anim_wait == AOBJ_ANIM_NULL, so ftParamUpdateAnimKeys may skip the parse and the play together
+AObjEvent16 files : 297
+AObjEvent32 files : 4  (ids 0x279, 0x27a, 0x309, 0x30a -- routed to the other decoder)
+scripts walked    : 5629
+scripts well-formed : 5629 (100.0%)
+
+FTANIM_RELOC_FORMAT=SOLVED  header, u32 big-endian swap, threaded internal fixups, derived table bound, script-region lane unswap, and MSB-first command bits -- every script in all 297 AObj16 files walks to End or a Loop. The generator can read the bank.
+scripts baked   : 5629
+commands        : 77959
+write records   : 145873
+scripts with no state (pure Block/Loop) : 0
+mismatches      : 0
+
+FTANIM_REAL_BAKE=PASS  every script in the shipped Mario/Fox bank resolves to control + write records that reproduce its per-track state timeline and its callback timeline, compared as bit patterns, with no opcode and no flags mask at replay time
+files            : 297
+scripts          : 5629
+records          : 145873
+blob             : 2917460 bytes (2.78 MB)
+same as 36-byte AObj records would be : 5251428 bytes (5.01 MB), so 44.4% smaller
+commands         : 71500
+control stream   : 143000 bytes (0.14 MB)
+index entries    : 5629
+non-integer rate_base (Linear, computed not authored) : 753
+verify           : 0 mismatches
+quantisation against the model (the loss this encoding accepts):
+   rate_base      max abs 7.324e-06  rel 0.001077%  (0.68 -> 0.67999267578125, FTMarioAnim085 script 8)
+   length         max abs 0.000e+00  rel 0.000000%  (0 -> 0, none)
+   length_invert  max abs 4.585e-10  rel 0.000006%  (0.007692307692307693 -> 0.007692307233810425, FTMarioAnim017 script 3)
+
+FTANIM_DENSE_BANK=OK  every record fits its declared encoding, the value fields carry the authored s16 words exactly, and the two fixed-point fields inherit the widths the runtime already uses
+header members  : rate_base:s32, length_invert:s32, value_base:s16, value_target:s16, rate_target:s16, length:s16, kind_track:u8, cmd_index:u8, pad:u16
+emitter format  : <iihhhhBBH (20 bytes)
+Q constants     : {'NDS_ANIM_DENSE_LENGTH_Q': 7, 'NDS_ANIM_DENSE_RATE_BASE_Q': 16, 'NDS_ANIM_DENSE_LENGTH_INVERT_Q': 30}
+
+FTANIM_DENSE_LAYOUT=AGREED  nds_anim_dense.h and generate_ftanim_dense_bank.py describe the same 20-byte record, field for field, with the same Q constants
+GBI decode fixtures passed: F3DEX2 VTX/TRI/MTX/POPMTX packing, F3DEX MVP-recalc matrix move-word packing, transformed and hardware raw/material triangle readiness, N64 matrix to DS 20.12 modelview-projection/modelview-stack vertex transform, wallpaper inverse/overlap oracle, and source snippets verified.

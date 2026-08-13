@@ -1,0 +1,256 @@
+# Trimmed: the full run log was 19 MB of devkitARM warnings from the cold build.
+# Compiler diagnostic noise removed; every harness line, and every line that is not
+# a compiler warning/note/caret, is retained verbatim. Arms B and A2 used -NoBuild so
+# their logs are untrimmed.
+
+make: Entering directory '/d/Stuff/DevFolder/Smash64DS_Port'
+main.c
+nds_platform.c
+C:/devkitPro/devkitARM/bin/../lib/gcc/arm-none-eabi/15.2.0/thumb/libgcc.a: OK
+C:/devkitPro/devkitARM/bin/../lib/gcc/arm-none-eabi/15.2.0/../../../../arm-none-eabi/lib/thumb/libc.a: OK
+C:/devkitPro/devkitARM/bin/../lib/gcc/arm-none-eabi/15.2.0/../../../../arm-none-eabi/lib/thumb/libm.a: OK
+nds_ifcommon_oam.c
+                 from D:/Stuff/DevFolder/Smash64DS_Port/src/nds/main.c:1:
+nds_task39_effect_census.c
+                 from D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:1:
+nds_reloc_assets.c
+                 from C:/devkitPro/libnds/include/nds.h:251:
+D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c: At top level:
+nds_audio_assets.c
+                 from C:/devkitPro/libnds/include/nds/arm9/sprite.h:40,
+                 from D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_ifcommon_oam.c:6:
+D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_ifcommon_oam.c: At top level:
+                 from C:/devkitPro/libnds/include/filesystem.h:4,
+                 from D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_reloc_assets.c:1:
+                 from D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_reloc_assets.c:2:
+nds_audio_bgm.c
+nds_audio_fgm.c
+nds_renderer.c
+battle_playable_static_textures.c
+                 from D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_renderer.c:127:
+port_probe.c
+n64_stubs.c
+D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_renderer.c: At top level:
+D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_renderer.c: At top level:
+coroutine.c
+libultra_os.c
+                 from D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_audio_fgm.c:1:
+                 from D:/Stuff/DevFolder/Smash64DS_Port/src/port/port_probe.c:1:
+os_selftest.c
+                 from C:/devkitPro/libnds/include/nds/timers.h:51,
+                 from D:/Stuff/DevFolder/Smash64DS_Port/src/port/n64_stubs.c:5:
+boot_stubs.c
+battleship_sys_main.c
+scheduler_backend.c
+controller_backend.c
+battleship_sys_scheduler.c
+battleship_sys_controller.c
+                 from D:/Stuff/DevFolder/Smash64DS_Port/src/port/scheduler_backend.c:1:
+battleship_sys_maindevice.c
+                 from D:/Stuff/DevFolder/Smash64DS_Port/src/port/controller_backend.c:1:
+battleship_sys_video.c
+battleship_sys_malloc.c
+battleship_sys_framebuffer.c
+battleship_sys_zbuffer.c
+battleship_sys_sintable.c
+video_bootstrap.c
+battleship_sys_matrix.c
+battleship_libultra_gu_normalize.c
+battleship_libultra_gu_mtxcatf.c
+                 from D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/obj.h:4,
+                 from D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/lb/lbtypes.h:5,
+                 from D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/lb/library.h:4,
+                 from D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/matrix.c:1:
+battleship_scmanager.c
+battleship_mnstartup.c
+scene_backend.c
+scene_harness.c
+utils.c
+                 from C:/devkitPro/libnds/include/nds/arm9/cache.h:39,
+                 from D:/Stuff/DevFolder/Smash64DS_Port/src/port/scene_backend.c:6:
+vector.c
+                 from D:/Stuff/DevFolder/Smash64DS_Port/src/port/scene_backend.c:77:
+battleship_scsubsyscontroller.c
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c: At top level:
+battleship_sys_taskman.c
+battleship_sys_objman.c
+battleship_sys_objhelper.c
+battleship_sys_objanim.c
+battleship_ftdisplaylights.c
+battleship_ftdisplaymain.c
+battleship_sys_interp.c
+battleship_mvopeningroom.c
+battleship_mvopeningportraits.c
+battleship_mvopeningmario.c
+battleship_mvopeningdonkey.c
+battleship_mvopeninglink.c
+                 from D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_mvopeningportraits.c:9:
+battleship_mvopeningsamus.c
+                 from D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_mvopeningmario.c:10:
+battleship_mvopeningyoshi.c
+battleship_mvopeningkirby.c
+                 from D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_mvopeningdonkey.c:6:
+battleship_mvopeningfox.c
+                 from D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_mvopeninglink.c:6:
+                 from D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_mvopeningfox.c:6:
+                 from D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_mvopeningsamus.c:6:
+battleship_mvopeningpikachu.c
+                 from D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_mvopeningkirby.c:6:
+battleship_mntitlefiles.c
+                 from D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_mvopeningyoshi.c:6:
+battleship_mntitle.c
+battleship_mnvsmode.c
+battleship_mnplayersvs.c
+                 from D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_mvopeningpikachu.c:6:
+battleship_mnmaps.c
+                 from D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_mntitle.c:11:
+                 from D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_mnvsmode.c:10:
+battleship_gmcommon.c
+battleship_gmcollision.c
+                 from D:/Stuff/DevFolder/Smash64DS_Port/include/mn/menu.h:5:
+                 from D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_mnplayersvs.c:13:
+battleship_scvsbattle.c
+battleship_grpupupu_ground.c
+battleship_grinishie_scale.c
+                 from D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_mnmaps.c:13:
+battleship_ftcommon_wait.c
+battleship_ftcommon_walk.c
+                 from D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_scvsbattle.c:12:
+battleship_ftcommon_turn.c
+battleship_ftcommon_turnrun.c
+battleship_ftcommon_dash.c
+                 from D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_grpupupu_ground.c:18:
+battleship_ftcommon_attack1.c
+battleship_ftcommon_attack100.c
+battleship_ftcommon_attackdash.c
+battleship_ftcommon_attackair.c
+battleship_mariofox_mainmotion.c
+battleship_ftcommon_appeal.c
+battleship_ftcommon_catch.c
+battleship_ftcommon_guard.c
+battleship_ftcommon_escape.c
+battleship_ftcommon_run.c
+battleship_ftcommon_runbrake.c
+battleship_ftcommon_kneebend.c
+battleship_ftcommon_jump.c
+battleship_ftcommon_pass.c
+battleship_ftcommon_fall.c
+battleship_ftcommon_ottotto.c
+battleship_ftcommon_landing.c
+battleship_ftcommon_stopceil.c
+battleship_ftcommon_cliffcatchwait.c
+battleship_ftcommon_cliffclimb.c
+battleship_ftcommon_cliffattack.c
+battleship_ftcommon_cliffescape.c
+battleship_ftcommon_walldamage.c
+battleship_ftcommon_rebound.c
+battleship_ftcommon_twister.c
+battleship_ftcommon_furasleep.c
+battleship_ftcommon_damage.c
+battleship_ftcommon_passive.c
+battleship_ftcommon_damagefall.c
+battleship_ftcommon_passivestand.c
+battleship_ftcommon_downwaitbounce.c
+battleship_ftcommon_downattack.c
+battleship_ftcommon_downforwardback.c
+battleship_ftcommon_downstand.c
+nds_r2_sqrtf.c
+battleship_ftcommon_normal_moveset.c
+battleship_ftchar_data_slots.c
+battleship_scsubsysdata_ft.c
+                 from D:/Stuff/DevFolder/Smash64DS_Port/src/nds/r2/nds_r2_sqrtf.c:22:
+battleship_ftdata.c
+reloc_backend_ftdata_stubs.c
+reloc_backend_ftdata_symbols.c
+battleship_ftanim.c
+                 from D:/Stuff/DevFolder/Smash64DS_Port/include/ft/fttypes.h:4,
+                 from D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sc/scsubsys/scsubsysdataboss.c:1,
+                 from D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_scsubsysdata_ft.c:7:
+battleship_ftanimend.c
+battleship_ftkey.c
+battleship_ftmanager.c
+battleship_mpprocess_edge_support.c
+battleship_mpprocess.c
+battleship_mpprocess_live_bridge.c
+battleship_ftstatus_callback_aliases.c
+battleship_ftstatus_map_physics_shims.c
+battleship_ftstatus_inactive_stubs.c
+battleship_ftcomputer.c
+battleship_gmcamera.c
+battleship_ftcommon_dead.c
+battleship_ftcommon_rebirth.c
+battleship_grwallpaper.c
+battle_playable_compat_stubs.c
+battleship_lbtransition.c
+battleship_mnvsresults.c
+battleship_scsubsysfighter.c
+battleship_scsubsysdata.c
+battleship_ifscreenflash.c
+battleship_ifcommon.c
+                 from C:/devkitPro/libnds/include/nds/timers.h:51,
+                 from D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_mnvsresults.c:16:
+                 from D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_mnvsresults.c:11:
+battleship_wpmanager_core.c
+battleship_special_common.c
+battleship_mario_fireball.c
+battleship_fox_blaster.c
+battleship_efmanager.c
+nds_particle_banks.c
+battleship_libultra_gu_mtxutil.c
+battleship_lbparticle.c
+                 from C:/devkitPro/libnds/include/nds/timers.h:51,
+                 from D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_efmanager.c:17:
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c: At top level:
+nds_firegrind.c
+battleship_fox_reflector.c
+nds_fox_gun.c
+                 from D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_lbparticle.c:90:
+battleship_ftpublic.c
+battleship_ftcommon_fallspecial.c
+battleship_mario_special_hi.c
+battleship_mario_special_lw.c
+battleship_fox_special_hi.c
+battleship_ftmain.c
+coroutine_arm.s
+nds_task9_float_phase2.s
+nds_task16_float_compare.s
+nds_task16_float_i2f.s
+                 from D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:62,
+                 from D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_ftmain.c:81:
+nds_task16_float_addsub.s
+                 from D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:63:
+                 from D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:65:
+                 from D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_ftmain.c:14:
+linking smash64ds-battle-playable-tickhud-hwtri.elf
+Nintendo DS rom tool 2.3.1 - Jan  8 2024
+by Rafael Vuijk, Dave Murphy, Alexei Karpenko
+built ... smash64ds-battle-playable-tickhud-hwtri.nds
+make: Leaving directory '/d/Stuff/DevFolder/Smash64DS_Port'
+Wrote artifacts\performance\2026-08-13_c-threeleg\armA-ctl-rows.csv
+Tick-HUD buckets: target=smash64ds-battle-playable-tickhud-hwtri samples=1600 frames=439..2038 melonDS=1.0 sha=DE80E46BDCF1FD98 git=2144d0cbc51+dirty(2) dldi=ON
+bucket p50        p95        spread mean       min        max        %ALLp50
+------ ---        ---        ------ ----       ---        ---        -------
+ALL     1,118,208  1,678,720   1.50  1,220,592  1,117,184  5,872,704   100.0
+FTR       303,232    330,048   1.09    297,228    172,800    337,408    27.1
+STG       172,928    177,216   1.02    173,313    169,088    181,760    15.5
+BG          4,160      4,288   1.03      4,159      3,776      4,352     0.4
+AUD         2,752      7,552   2.74      8,876      1,216    148,544     0.2
+HUD         1,024    422,912 413.00     35,571        896  2,078,592     0.1
+SRC       321,280    573,952   1.79    351,992     10,816  4,482,112    28.7
+MISC      104,576    181,248   1.73    112,503     82,240    275,712     9.4
+OTHR      217,152    517,824   2.38    236,950     20,672    580,480    19.4
+WAIT      197,824    499,904   2.53    217,469      1,152    560,640    17.7
+WORK      948,672  1,393,280   1.47  1,003,123    614,464  5,545,664    84.8
+SHDT        4,416     88,320  20.00     14,288          0    497,216     0.4
+SWRM          896        960   1.07        886        704      1,024     0.1
+GCRA      316,160    568,832   1.80    346,813      6,784  4,476,992    28.3
+SCPU       43,200    105,792   2.45     45,745          0    138,688     3.9
+SCAT        1,344      1,536   1.14      1,297          0      1,728     0.1
+SPRM        1,984      2,176   1.10      4,687          0    644,800     0.2
+SINT      150,336    332,800   2.21    168,999          0  4,310,016    13.4
+SPHD       57,280     99,072   1.73     65,625          0    700,416     5.1
+SPHC          704        768   1.09        661          0        960     0.1
+WORK-H    939,392  1,219,520   1.30    967,552    606,272  5,123,712    84.0
+named=983,642 (80.6% of ALL)  VBI 2:1705 3:304 4:17 5+:12 max:26 total:2038  slips=0
+extras: gNdsR2StagePrepareReuseCount=2,037  gNdsR2StagePrepareBuildCount=2  gNdsBattleTextHudP0Damage=0  gNdsBattleTextHudP1Damage=58  gNdsBattleTextHudP0Stock=1  gNdsBattleTextHudP1Stock=1
+Wrote artifacts\performance\2026-08-13_c-threeleg\armA-ctl.json

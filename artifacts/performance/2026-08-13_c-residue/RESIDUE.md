@@ -199,7 +199,27 @@ fence or already spent.
 **Row 0 was added 2026-08-13 and is the only row that moved.** Everything below
 it is closed by measurement or reserved to the owner.
 
-### Row 0 — per-frame re-discovery in the renderer. **CEILING 20,562, the only open agent lane**
+### Row 0 — per-frame re-discovery in the renderer. **SPENT 2026-08-13 — leg A landed, B and C refuted**
+
+> **OUTCOME, `../2026-08-13_c-threeleg/SLICE50.md`.** This row was briefed as one
+> three-leg change. It shipped as **one leg**, and the other two are refuted
+> rather than deferred — do not re-brief the table below as written.
+>
+> | leg | outcome | measured |
+> |---|---|---|
+> | **A** | **KEPT** | gate `WORK-H` P95 **1,219,520 → 1,210,880**, P50 **939,392 → 923,392**, and **`STG` −11,328 flat at P50, P95 and mean** — the lane the work lived in. A/B/A: the third arm reproduced arm A **exactly** on every bucket, so the delta is the change's. Engagement **195 proof calls/frame → 8 full sweeps in a 2,038-frame match**; `EpochBump` 0 confirms the cache is static mid-match. Viewport pixel-identical, damage/stock identical on all three arms. |
+> | **B** | **BLOCKED, not designed away** | the cached bind words need **828 B**; `nds_renderer.c`'s `_Static_assert` allows **72 B** ("48x292 budget", 13,944 of 14,016 used). That guard exists because +14 KB of bss once stopped the ROM booting, so routing around it is not an agent call. The build failed on the assert — the guard working. Survivors for a later cycle: store in the prepared runs instead, or a bounded side table; either needs its own `check-boot-headroom` read, and the fast path must re-emit `NDS_TASK29_GX_TEXTURE_BIND` because a stage bind can sit inside a Task 36 capture window. |
+> | **C** | **REFUTED — the premise is false** | there is no unconverted per-corner writer. Slice 1 already converted colour/texcoord/vertex on the fighter path (`NDS_RENDERER_GX_RECORD_FIGHTER`); `WriteNormalWord` carries **no capture test at all**; `WriteColorWord`'s only fighter call is inside `#if NDS_LAB_CULL_PROBE` (0). The residual `:1281` charge is the **`gl*` → `ndsRendererTask29Gl*` macro block** (`nds_renderer.c:1501-1523`) — shared with stage and effect callers, i.e. §4.1's own "price separately" bucket, a per-caller split at 1.85 cyc/byte and not an `#if`. Converting the three **effect** sites would also elide the live `sNdsEffectPacketArmed` test and break the effect-packet instrument in every tick-HUD ROM. |
+>
+> **Sizing lesson for the next row.** The 9,369 prediction came off the c123
+> profile; `STG` actually moved **11,328**, 21% ABOVE the ceiling, and the excess
+> is unattributed. The Task 103 E7 28%-realisation risk did **not** materialise —
+> the opposite did: `FTR` also fell 5,184, consistent with no longer dragging 54
+> cache entries through the D-cache every frame. **Do not judge a cut this size at
+> P95**: two binaries differing by one line measured a 24,064 P95 spread against
+> 3,648 at P50 and 512 in `STG`.
+
+**Original row text, for the record:**
 
 `§3 cannot see it, and that is the finding.` §3 ranks **symbols**; these three
 are inlined or library-resident and have **no census row of their own**. Priced

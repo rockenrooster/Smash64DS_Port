@@ -5419,21 +5419,110 @@ typedef struct NDSNativeStageValidationCache
  * preflight must survive the two complete fighter-owner submissions. */
 static NDSNativeFighterOwnerExecution sNdsNativeFighterOwnerExecution;
 static NDSNativeStageOwnerExecution sNdsNativeStageOwnerExecution;
-#if NDS_R2_STAGE_DIRECT
-static s32 ndsRendererNativeStagePreparedTexturesValid(void)
+/* R2-07 leg A. The prepared run table was re-proved against the texture cache
+ * ~195 times a frame (54 runs x the reuse key, the commit gate and the replay
+ * gate, plus BeginRun's per-run last gate), and the c123 per-line attribution
+ * says that cost is not the compares: 5.34 cycles per instruction, i.e. two
+ * cold arrays -- runs[] and then the cache entries it names -- dragged through
+ * a 4 KB D-cache every frame. Slice 44's shape exactly, whose lever was "stop
+ * touching the objects".
+ *
+ * So prove it where the invariant breaks (slice 30) rather than where it is
+ * read. sNdsRendererHardwareTextureKeyGeneration is already stamped by every
+ * (re-)key, and ndsRendererHardwareReleaseTexture now stamps it as well -- that
+ * function is the ONE seam that destroys an entry's identity (Evict, Alloc's
+ * recycle, Discard and the static teardown all route through it, and its memset
+ * is what clears `ready` and `name`). Nothing else writes entry->ready,
+ * entry->name or entry->key_generation: names are only ever produced by
+ * glGenTextures into a slot whose name is already 0, and ready is only ever set
+ * TRUE beside a key stamp. The epoch is therefore a COMPLETE invalidation event
+ * for the (entry, ready, name, key_generation) quadruple the proof reads, and a
+ * table proved at epoch E is still proved for as long as the epoch reads E.
+ *
+ * Only the POSITIVE answer is cached. A failing table becomes valid again by
+ * being rebuilt, which is not an epoch event, so a miss re-sweeps every frame
+ * exactly as before; and the rebuild path clears the stamp so a fresh table is
+ * never covered by its predecessor's proof.
+ *
+ * Measured basis for the design, from the same profile: the cache is static
+ * across a match -- ndsRendererHardwareAllocTexture executes 3 times in the
+ * whole 1,600-frame run and Release/Evict/Discard do not appear at all -- so
+ * the epoch is expected to be motionless mid-match and the fast path is the
+ * path. A scene boundary is the opposite case and is covered: the battle
+ * prepare discards the whole cache, which releases every entry and therefore
+ * moves the epoch, and the topology generation/stamp key rebuilds the table
+ * independently (R2-07 E2). */
+static u32 sNdsNativeStagePreparedTextureProofEpoch;
+static u32 sNdsNativeStagePreparedTextureProofValid;
+/* The Task 36 replay owner keeps its OWN copy of each prepared run, so it needs
+ * its own certificate: proving the stage table says nothing about the replay
+ * table, and conflating them is how a proof covers a structure it never read. */
+static u32 sNdsTask36ReplayTextureProofEpoch;
+static u32 sNdsTask36ReplayTextureProofValid;
+
+/* Engagement, both sides, read with -ExtraGlobals from the same run that
+ * produces the buckets. Predicted on the gate arm: Fast ~= one per consult per
+ * frame, Sweep ~= 0 after the first, EpochBump ~= 0 mid-match. A per-frame
+ * Sweep count means the epoch is moving and this lever did not engage. */
+__attribute__((used)) volatile u32 gNdsR2TexProofFastCount;
+__attribute__((used)) volatile u32 gNdsR2TexProofSweepCount;
+__attribute__((used)) volatile u32 gNdsR2TexProofSweepFailCount;
+__attribute__((used)) volatile u32 gNdsR2TextureEpochBumpCount;
+
+static void ndsRendererNativeStagePreparedTextureProofDrop(void)
+{
+    sNdsNativeStagePreparedTextureProofValid = FALSE;
+}
+
+/* Pure reads of the two certificates -- "is the standing proof still current",
+ * with no sweep behind them. These are what let the point-of-use gate stop
+ * touching the objects: its caller has already proved the table this run
+ * belongs to, so re-reading prepared[] and the cache entry can only reach the
+ * same answer. When no certificate is current the original per-run proof runs
+ * unchanged, so the gate never weakens -- it is skipped only while something
+ * else has proved the whole table at the current epoch. */
+static s32 ndsRendererNativeStagePreparedTextureProofCurrent(void)
+{
+    return ((sNdsNativeStagePreparedTextureProofValid != FALSE) &&
+            (sNdsNativeStagePreparedTextureProofEpoch ==
+             sNdsRendererHardwareTextureKeyGeneration)) ? TRUE : FALSE;
+}
+
+static s32 ndsRendererTask36ReplayTextureProofCurrent(void)
+{
+    return ((sNdsTask36ReplayTextureProofValid != FALSE) &&
+            (sNdsTask36ReplayTextureProofEpoch ==
+             sNdsRendererHardwareTextureKeyGeneration)) ? TRUE : FALSE;
+}
+
+static s32 ndsRendererNativeStagePreparedTexturesProven(void)
 {
     u32 run_index;
 
+    if ((sNdsNativeStagePreparedTextureProofValid != FALSE) &&
+        (sNdsNativeStagePreparedTextureProofEpoch ==
+         sNdsRendererHardwareTextureKeyGeneration))
+    {
+        gNdsR2TexProofFastCount++;
+        return TRUE;
+    }
+    gNdsR2TexProofSweepCount++;
     for (run_index = 0u; run_index < NDS_NATIVE_STAGE_RUN_COUNT; run_index++)
     {
         if (ndsRendererNativeStagePreparedTextureValid(
                 &sNdsNativeStageOwnerExecution.runs[run_index]) == FALSE)
         {
+            sNdsNativeStagePreparedTextureProofValid = FALSE;
+            gNdsR2TexProofSweepFailCount++;
             return FALSE;
         }
     }
+    sNdsNativeStagePreparedTextureProofEpoch =
+        sNdsRendererHardwareTextureKeyGeneration;
+    sNdsNativeStagePreparedTextureProofValid = TRUE;
     return TRUE;
 }
+#if NDS_R2_STAGE_DIRECT
 /* R2-02 E1a engagement counters. Non-static so a GDB stop can read them and
  * prove the elision actually engaged -- a flag that silently never fires is
  * indistinguishable from a null result, and this campaign has shipped that
@@ -5779,6 +5868,8 @@ static void ndsRendererTask36ReplayReset(void)
            sizeof(sNdsRendererTask36ReplayOwner));
     /* Kept in step with the memset that used to clear the owner's copy. */
     sNdsRendererTask36CaptureActive = FALSE;
+    /* R2-07 leg A: the table this certificate describes has just been zeroed. */
+    sNdsTask36ReplayTextureProofValid = FALSE;
     sNdsRendererTask36ReplayOwner.current_run = UINT_MAX;
     sNdsRendererTask36ReplayOwner.command_word_index = UINT_MAX;
 #if NDS_RENDERER_PROFILE_LEVEL == 1
@@ -5790,6 +5881,18 @@ static s32 ndsRendererTask36ReplayTexturesValid(void)
 {
     u32 run_index;
 
+    /* R2-07 leg A, replay half. Same epoch, separate certificate -- see
+     * ndsRendererNativeStagePreparedTexturesProven. Dropped wherever this
+     * table is written: ndsRendererTask36ReplayReset and the per-run
+     * `run->prepared = ...` capture. */
+    if ((sNdsTask36ReplayTextureProofValid != FALSE) &&
+        (sNdsTask36ReplayTextureProofEpoch ==
+         sNdsRendererHardwareTextureKeyGeneration))
+    {
+        gNdsR2TexProofFastCount++;
+        return TRUE;
+    }
+    gNdsR2TexProofSweepCount++;
     for (run_index = 0u; run_index < NDS_NATIVE_STAGE_RUN_COUNT; run_index++)
     {
         const NDSRendererTask36ReplayRun *run =
@@ -5802,9 +5905,14 @@ static s32 ndsRendererTask36ReplayTexturesValid(void)
         if (ndsRendererNativeStagePreparedTextureValid(
                 &run->prepared) == FALSE)
         {
+            sNdsTask36ReplayTextureProofValid = FALSE;
+            gNdsR2TexProofSweepFailCount++;
             return FALSE;
         }
     }
+    sNdsTask36ReplayTextureProofEpoch =
+        sNdsRendererHardwareTextureKeyGeneration;
+    sNdsTask36ReplayTextureProofValid = TRUE;
     return TRUE;
 }
 
@@ -6014,6 +6122,9 @@ static void ndsRendererTask36ReplayCaptureBeginRun(u32 run_index)
     run = &owner->runs[run_index];
     memset(run, 0, sizeof(*run));
     run->prepared = sNdsNativeStageOwnerExecution.runs[run_index];
+    /* R2-07 leg A: this run's copy just changed, so the replay table's standing
+     * certificate no longer describes it. */
+    sNdsTask36ReplayTextureProofValid = FALSE;
     run->word_offset = (u16)owner->word_count;
     owner->current_run = run_index;
     owner->command_word_index = UINT_MAX;
@@ -10897,6 +11008,19 @@ ndsRendererHardwareReleaseTexture(
      * slot ready with a deliberately blank key, so a released slot must really
      * be blank rather than merely unreachable. */
     ndsRendererHardwareEntryClearKey(entry);
+    /* R2-07 leg A. This is the moment an entry stops being what a prepared run
+     * recorded, so it is where the invalidation is published -- see the note on
+     * ndsRendererNativeStagePreparedTexturesProven. Stamping the same counter a
+     * re-key stamps makes it a complete epoch rather than a partial one; every
+     * existing `entry->key_generation == recorded` compare keeps its meaning
+     * because entries carry their own stamped value and the counter is only
+     * ever advanced. */
+    sNdsRendererHardwareTextureKeyGeneration++;
+    if (sNdsRendererHardwareTextureKeyGeneration == 0u)
+    {
+        sNdsRendererHardwareTextureKeyGeneration++;
+    }
+    gNdsR2TextureEpochBumpCount++;
     memset(entry, 0, sizeof(*entry));
     return entry;
 }
@@ -29153,6 +29277,20 @@ static s32 ndsRendererNativeStagePrepareRun(
     u32 residual_near_count_start;
 #endif
 
+    /* R2-07 leg A. THE write seam for runs[]: this function is its only writer,
+     * so dropping the certificate here removes the class rather than an
+     * instance (slice 30). The drop beside gNdsR2StagePrepareBuildCount is the
+     * instance and is deliberately kept -- redundant but free, and deleting it
+     * would be a second change with its own failure mode, which is slice 30's
+     * own precedent for exactly this situation.
+     *
+     * The seam is the one that matters because the instance is not complete in
+     * every configuration: with NDS_R2_STAGE_ROUTE_PROBE on, a segment can be
+     * forced generic and re-prepared while r2_reuse is still 1, i.e. without
+     * the rebuild branch ever running. That path is `#define ... FALSE` in
+     * every shipping and gate target, so this line changes no measured
+     * behaviour -- it stops the guard depending on a probe flag being off. */
+    ndsRendererNativeStagePreparedTextureProofDrop();
 #if NDS_TASK103_STAGE_RUN_PHASE
     task103_run_entry = cpuGetTiming();
 #endif
@@ -30113,10 +30251,25 @@ static s32 ndsRendererNativeStageBeginRun(
 {
     u32 poly_fmt;
 
-    if ((native_run == NULL) || (stats == NULL) ||
-        (ndsRendererNativeStagePreparedTextureValid(run) == FALSE))
+    if ((native_run == NULL) || (stats == NULL) || (run == NULL))
     {
         return FALSE;
+    }
+    /* R2-07 leg A. This is the defensive last gate at the point of use, and it
+     * is kept -- but the caller has already proved the table this run belongs
+     * to (Commit proves the stage table, the replay entry proves the replay
+     * table), so while that certificate is current the per-run proof is a
+     * second reading of the same two cold arrays for an answer already known.
+     * `replay` picks the certificate because it picks the table `run` points
+     * into. No certificate current -> the original proof, unchanged. */
+    if (((replay == FALSE) ?
+             ndsRendererNativeStagePreparedTextureProofCurrent() :
+             ndsRendererTask36ReplayTextureProofCurrent()) == FALSE)
+    {
+        if (ndsRendererNativeStagePreparedTextureValid(run) == FALSE)
+        {
+            return FALSE;
+        }
     }
     poly_fmt = run->poly_fmt;
 
@@ -31156,7 +31309,7 @@ s32 ndsRendererPrepareNativeStageOwner(
      * it after the loop. */
     u32 r2_reuse =
         ((sNdsNativeStageOwnerExecution.r2_prepared_valid != 0u) &&
-         (ndsRendererNativeStagePreparedTexturesValid() != FALSE) &&
+         (ndsRendererNativeStagePreparedTexturesProven() != FALSE) &&
          (sNdsNativeStageOwnerExecution.r2_prepared_topology_generation ==
           frame->topology_generation) &&
          (sNdsNativeStageOwnerExecution.r2_prepared_topology_stamp ==
@@ -31175,6 +31328,11 @@ s32 ndsRendererPrepareNativeStageOwner(
     else
     {
         gNdsR2StagePrepareBuildCount++;
+        /* R2-07 leg A. The table about to be written is not the table the
+         * standing proof was taken on, and a rebuild is not an epoch event, so
+         * the proof must be dropped here or a fresh run would inherit its
+         * predecessor's certificate. The next consult re-sweeps and re-stamps. */
+        ndsRendererNativeStagePreparedTextureProofDrop();
 #if NDS_R2_STAGE_ROUTE_PROBE
         /* WHICH of the five key components missed. BuildCount alone cannot
          * separate "the previous frame's owner rejected and zeroed valid" from
@@ -31876,20 +32034,22 @@ s32 ndsRendererCommitNativeStageSegment(u32 segment_index)
         return TRUE;
     }
     segment = &sNdsNativeStageSegments[segment_index];
-    /* The prepared table outlives the cache entries it names. Validate the
-     * whole segment before its first GX or renderer-state write so a recycled
-     * slot falls back as one source-owned segment, never as a mixed native/
-     * source segment after earlier runs have already emitted. BeginRun repeats
-     * this check as the defensive last gate at the point of use. */
-    for (run_offset = 0u; run_offset < segment->run_count; run_offset++)
+    /* The prepared table outlives the cache entries it names. Validate before
+     * this segment's first GX or renderer-state write so a recycled slot falls
+     * back as one source-owned segment, never as a mixed native/source segment
+     * after earlier runs have already emitted. BeginRun repeats this check as
+     * the defensive last gate at the point of use.
+     *
+     * R2-07 leg A: the per-segment sweep is now the whole-table proof, which is
+     * one word compare while the epoch holds. It is deliberately WIDER than the
+     * loop it replaces -- a broken run in any segment now rejects every segment
+     * rather than only its own. That is the conservative direction (the whole
+     * stage falls back to source together, which is exactly the mixed-segment
+     * outcome the check exists to prevent), and on the measured arm it is
+     * unreachable: the cache does not move during a match. */
+    if (ndsRendererNativeStagePreparedTexturesProven() == FALSE)
     {
-        u32 run_index = (u32)segment->first_run + run_offset;
-
-        if (ndsRendererNativeStagePreparedTextureValid(
-                &sNdsNativeStageOwnerExecution.runs[run_index]) == FALSE)
-        {
-            return FALSE;
-        }
+        return FALSE;
     }
 #if NDS_DREAMLAND_DS_MESH
     /* Generator owner order is layer0,map0,map1,map2,layer1,layer2,map3,layer3.
