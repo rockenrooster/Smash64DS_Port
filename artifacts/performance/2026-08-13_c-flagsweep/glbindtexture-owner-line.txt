@@ -1,0 +1,33 @@
+elf     builds\build-c123-profile\smash64ds-battle-playable-tickhud-hwtri.elf
+profile artifacts\performance\2026-08-12_c123-rebank\profile\arm9-profile.csv
+commit  c77dc96   <-- line numbers describe THIS revision, not HEAD
+basis   ticks/frame = cycles / (2 x 1601 regions) = cycles / 3,202
+non-idle 3,094,566,490 cycles = 966,448 tk/frame
+
+glBindTexture: 17,751,576 cyc = 5,544 tk/fr, 2,302,868 insns, 7.71 cyc/insn
+
+-- by source line (a high tk/fr on few insns is a STALL) --
+  :714       1,681 tk/fr   /home/davem/projects/devkitpro/pacman-packages/libnds/src/libnds-2.0.2/arm9/../source/arm9/videoGL.c
+  :710       1,057 tk/fr   /home/davem/projects/devkitpro/pacman-packages/libnds/src/libnds-2.0.2/arm9/../source/arm9/videoGL.c
+  :719         793 tk/fr   /home/davem/projects/devkitpro/pacman-packages/libnds/src/libnds-2.0.2/arm9/../source/arm9/videoGL.c
+  :726         557 tk/fr   /home/davem/projects/devkitpro/pacman-packages/libnds/src/libnds-2.0.2/arm9/../source/arm9/videoGL.c
+  :713         468 tk/fr   /home/davem/projects/devkitpro/pacman-packages/libnds/src/libnds-2.0.2/arm9/../source/arm9/videoGL.c
+  :717         279 tk/fr   /home/davem/projects/devkitpro/pacman-packages/libnds/src/libnds-2.0.2/arm9/../source/arm9/videoGL.c
+  :706         194 tk/fr   /home/davem/projects/devkitpro/pacman-packages/libnds/src/libnds-2.0.2/arm9/../source/arm9/videoGL.c
+  :715         165 tk/fr   /home/davem/projects/devkitpro/pacman-packages/libnds/src/libnds-2.0.2/arm9/../source/arm9/videoGL.c
+  :722         164 tk/fr   /home/davem/projects/devkitpro/pacman-packages/libnds/src/libnds-2.0.2/arm9/../source/arm9/videoGL.c
+  :720         113 tk/fr   /home/davem/projects/devkitpro/pacman-packages/libnds/src/libnds-2.0.2/arm9/../source/arm9/videoGL.c
+  :718          73 tk/fr   /home/davem/projects/devkitpro/pacman-packages/libnds/src/libnds-2.0.2/arm9/../source/arm9/videoGL.c
+
+-- by (owning symbol, line): ask per owner whether it is dead --
+     1,681 tk/fr      263,614 insn  glBindTexture :714
+     1,057 tk/fr      351,482 insn  glBindTexture :710
+       793 tk/fr      120,793 insn  glBindTexture :719
+       557 tk/fr       87,871 insn  glBindTexture :726
+       468 tk/fr      527,220 insn  glBindTexture :713
+       279 tk/fr      263,611 insn  glBindTexture :717
+       194 tk/fr      175,742 insn  glBindTexture :706
+       165 tk/fr       87,871 insn  glBindTexture :715
+       164 tk/fr      142,821 insn  glBindTexture :722
+       113 tk/fr      120,790 insn  glBindTexture :720
+        73 tk/fr      161,053 insn  glBindTexture :718

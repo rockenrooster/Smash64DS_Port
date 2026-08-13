@@ -1,0 +1,110 @@
+elf     builds\build-c123-profile\smash64ds-battle-playable-tickhud-hwtri.elf
+profile artifacts\performance\2026-08-12_c123-rebank\profile\arm9-profile.csv
+commit  c77dc96   <-- line numbers describe THIS revision, not HEAD
+basis   ticks/frame = cycles / (2 x 1601 regions) = cycles / 3,202
+non-idle 3,094,566,490 cycles = 966,448 tk/frame
+
+ndsRendererTask29GXRecord: 46,676,077 cyc = 14,577 tk/fr, 21,839,689 insns, 2.14 cyc/insn
+
+-- by source line (a high tk/fr on few insns is a STALL) --
+  :1281      8,219 tk/fr   D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_renderer.c
+  :1284      6,272 tk/fr   D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_renderer.c
+  :1286         85 tk/fr   D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_renderer.c
+  :1276          1 tk/fr   D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_renderer.c
+
+-- by (owning symbol, line): ask per owner whether it is dead --
+     1,448 tk/fr    4,012,810 insn  ndsRendererCommitNativeStageSegment :1281
+     1,398 tk/fr    3,283,203 insn  ndsRendererCommitNativeStageSegment :1284
+     1,064 tk/fr    1,367,280 insn  ndsRendererNativePrepareProductionRun :1281
+       945 tk/fr      825,605 insn  ndsRendererNativeStageBeginRun.part.0 :1281
+       758 tk/fr      432,006 insn  ndsRendererHardwareEndBatch.part.0 :1281
+       751 tk/fr    1,215,696 insn  ndsRendererNativePrepareProductionRun :1284
+       728 tk/fr      917,063 insn  ndsRendererNativeEmitProductionPrimitiveGroups :1281
+       676 tk/fr      940,801 insn  ndsRendererNativeStageBeginRun.part.0 :1284
+       652 tk/fr    1,353,601 insn  ndsRendererNativeStageEmitNoZVertex.isra.0 :1281
+       607 tk/fr    1,224,001 insn  ndsRendererNativeStageEmitNoZVertex.isra.0 :1284
+       595 tk/fr      917,061 insn  ndsRendererNativeEmitProductionPrimitiveGroups :1284
+       427 tk/fr      355,889 insn  ndsRendererLoadHardwareMatrixPair.constprop.0 :1281
+       411 tk/fr      454,663 insn  ndsRendererNativeEmitProductionCrossRun.constprop.0 :1281
+       388 tk/fr      497,001 insn  ndsRendererNativeEmitProductionCrossRun.constprop.0 :1284
+       384 tk/fr      355,889 insn  ndsRendererLoadHardwareMatrixPair.constprop.0 :1284
+       338 tk/fr      439,346 insn  ndsRendererHardwareBindTextureName :1281
+       264 tk/fr      300,800 insn  ndsRendererNativeStageLoadNoZMatrix :1281
+       258 tk/fr      432,005 insn  ndsRendererHardwareEndBatch.part.0 :1284
+       247 tk/fr      211,202 insn  ndsRendererTask36ReplayRun :1281
+       236 tk/fr      280,656 insn  ndsRendererHardwareApplyTextureParams :1284
+       234 tk/fr      351,476 insn  ndsRendererHardwareBindTextureName :1284
+       183 tk/fr       62,401 insn  ndsRendererNativeStageTask36BeginSegment :1281
+       177 tk/fr      300,801 insn  ndsRendererNativeStageLoadNoZMatrix :1284
+       163 tk/fr       55,827 insn  ndsRendererPrepareWhispyQuadState :1281
+       146 tk/fr      280,657 insn  ndsRendererHardwareApplyTextureParams :1281
+       132 tk/fr      211,202 insn  ndsRendererTask36ReplayRun :1284
+       121 tk/fr       62,400 insn  ndsRendererNativeStageTask36BeginSegment :1284
+       115 tk/fr       39,716 insn  ndsRendererR2WriteLightVector :1281
+        89 tk/fr       80,965 insn  ndsRendererSubmitParticleQuad :1281
+        73 tk/fr       65,182 insn  ndsRendererExecuteNativeFighterOwnerProduction :1281
+        60 tk/fr       80,965 insn  ndsRendererSubmitParticleQuad :1284
+        50 tk/fr       65,180 insn  ndsRendererExecuteNativeFighterOwnerProduction :1284
+        50 tk/fr       37,034 insn  ndsRendererPrepareWhispyQuadState :1284
+        50 tk/fr       39,715 insn  ndsRendererR2WriteLightVector :1284
+        47 tk/fr       19,200 insn  ndsRendererNativeStageTask36EndSegment.part.0 :1281
+        38 tk/fr       38,016 insn  ndsRendererSubmitNativeImpactWave :1281
+        33 tk/fr       60,192 insn  ndsRendererSubmitNativeImpactWave :1286
+        26 tk/fr       38,016 insn  ndsRendererSubmitNativeImpactWave :1284
+        26 tk/fr        1,600 insn  ndsRendererHardwareConsumeSubmittedFrame :1281
+        23 tk/fr       19,200 insn  ndsRendererNativeStageTask36EndSegment.part.0 :1284
+        21 tk/fr       20,130 insn  ndsRendererHardwareSubmitVertex :1281
+        18 tk/fr        4,972 insn  ndsRendererEndParticleQuads :1284
+        17 tk/fr        4,972 insn  ndsRendererEndParticleQuads :1281
+        17 tk/fr       30,060 insn  ndsRendererHardwareSubmitVertex :1286
+        16 tk/fr       24,048 insn  ndsRendererHardwareSubmitVertex :1284
+        16 tk/fr        5,745 insn  ndsRendererHardwareBeginTriangleBatch :1286
+        15 tk/fr        3,025 insn  ndsRendererHardwareBeginTriangleBatch :1284
+         8 tk/fr        1,498 insn  ndsRendererHardwareBindTextureName :1286
+         7 tk/fr        3,240 insn  ndsRendererHardwareBeginTriangleBatch :1281
+         6 tk/fr        4,280 insn  ndsRendererLoadHardwareMatrixPair.constprop.0 :1286
+         6 tk/fr        1,776 insn  ndsRendererSubmitFoxBlasterQuad :1281
+         3 tk/fr          995 insn  ndsRendererHardwareApplyTextureParams :1286
+         2 tk/fr          740 insn  ndsRendererTask29GXRecord :1284
+         1 tk/fr          888 insn  ndsRendererTask29GlVertex3v16 :1284
+         1 tk/fr          888 insn  ndsRendererTask29GlVertex3v16 :1281
+         1 tk/fr          740 insn  ndsRendererSubmitFoxBlasterQuad :1284
+         1 tk/fr          330 insn  ndsRendererHardwareEndBatch.part.0 :1286
+         1 tk/fr          658 insn  ndsRendererSubmitWhispyNativeQuad :1281
+         1 tk/fr          740 insn  ndsRendererTask29GXRecord :1276
+         1 tk/fr          740 insn  ndsRendererTask29GXRecord :1281
+         1 tk/fr          658 insn  ndsRendererSubmitWhispyNativeQuad :1284
+         1 tk/fr          596 insn  ndsRendererScanList :1281
+         1 tk/fr        1,043 insn  ndsRendererScanList :1286
+         0 tk/fr          596 insn  ndsRendererScanList :1284
+         0 tk/fr            4 insn  ndsRendererHardwarePrepareIFCommonAtlas :1281
+         0 tk/fr            4 insn  ndsRendererHardwarePrepareIFCommonAtlas :1284
+elf     builds\build-c123-profile\smash64ds-battle-playable-tickhud-hwtri.elf
+profile artifacts\performance\2026-08-12_c123-rebank\profile\arm9-profile.csv
+commit  c77dc96   <-- line numbers describe THIS revision, not HEAD
+basis   ticks/frame = cycles / (2 x 1601 regions) = cycles / 3,202
+non-idle 3,094,566,490 cycles = 966,448 tk/frame
+
+ndsRendererNativeStagePreparedTextureValid: 29,999,742 cyc = 9,369 tk/fr, 5,619,220 insns, 5.34 cyc/insn
+
+-- by source line (a high tk/fr on few insns is a STALL) --
+  :5323      4,487 tk/fr   D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_renderer.c
+  :5318      2,009 tk/fr   D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_renderer.c
+  :5326      1,395 tk/fr   D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_renderer.c
+  :5317      1,332 tk/fr   D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_renderer.c
+  :5321        102 tk/fr   D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_renderer.c
+  :5320         45 tk/fr   D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_renderer.c
+
+-- by (owning symbol, line): ask per owner whether it is dead --
+     3,321 tk/fr    1,467,209 insn  ndsRendererNativeStagePreparedTextureValid :5323
+     1,305 tk/fr      676,802 insn  ndsRendererNativeStagePreparedTextureValid :5318
+     1,166 tk/fr      548,803 insn  ndsRendererPrepareNativeStageOwner :5323
+       978 tk/fr    1,676,800 insn  ndsRendererNativeStagePreparedTextureValid :5326
+       766 tk/fr      225,603 insn  ndsRendererNativeStagePreparedTextureValid :5317
+       704 tk/fr      259,202 insn  ndsRendererPrepareNativeStageOwner :5318
+       565 tk/fr       86,401 insn  ndsRendererPrepareNativeStageOwner :5317
+       416 tk/fr      470,400 insn  ndsRendererPrepareNativeStageOwner :5326
+        80 tk/fr       96,000 insn  ndsRendererNativeStagePreparedTextureValid :5321
+        24 tk/fr       48,000 insn  ndsRendererNativeStagePreparedTextureValid :5320
+        22 tk/fr       40,000 insn  ndsRendererPrepareNativeStageOwner :5321
+        21 tk/fr       24,000 insn  ndsRendererPrepareNativeStageOwner :5320
