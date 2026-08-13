@@ -4,20 +4,31 @@ Everything an agent could measure, refute or price without you has been done.
 This is the list of things that are now waiting on your call, in plain language,
 each with what it costs, what it risks, and what happens the moment you answer.
 
-**Where the gate stands.** The stress arm (`NDS_R2_BOTH_CPU=1`, both fighters
-level-3 CPU, 60-second Dream Land match) reads **1,207,616** ticks on the frame
-that decides the score. The budget is **1,120,380**. So it is **87,236 over**.
+**Where the gate stands — re-banked 2026-08-13 after the animation-joint fix.**
+The stress arm (`NDS_R2_BOTH_CPU=1`, both fighters level-3 CPU, 60-second Dream
+Land match) reads **raw 1,260,096** ticks on the frame that decides the score.
+The budget is **1,120,380**.
 
-**But roughly 25,000 of that is the stopwatch, not the game** — see decision 8.
-On the shipped ROM the real gap is closer to **62,000**.
+**STANDING, APPROVED BY YOU 2026-08-13 (decision 8, option A): every gate figure
+is reported RAW and NET-OF-APPARATUS from now on.** About **24,947** ticks a
+frame of the raw number is the measuring ROM's own stopwatch, which the ROM you
+play does not execute. So the current bank is **raw 1,260,096 / net ≈1,235,149**
+against the **1,120,380** gate — **139,716 over raw, ≈114,769 over net**.
 
 **Nothing below is urgent in the sense that the game is broken.** The
 one-fighter-CPU configuration you actually play (`Boundary`) **passes** at
-1,087,616. The 87,236 is the harder both-CPU arm.
+1,087,616. The gap above is the harder both-CPU arm.
 
 ---
 
 ## 1. Whispy — which motion looks wrong to you?
+
+> **DECIDED 2026-08-13 — you chose "re-check after fixes."** The row is parked
+> as awaiting-playtest rather than answered: the shield joint-freeze fix
+> (`607d3697455`, and the paragraph at the end of this section) visibly changes
+> fighter animation, so the honest next step is you looking again. If the tree
+> still looks wrong afterwards, the question below stands unchanged and still
+> needs your sentence.
 
 **What's being asked:** name the motion. Blink, eye turn, mouth, or the wind gust.
 
@@ -51,6 +62,16 @@ after that fix, the question above stands unchanged and still needs your sentenc
 ---
 
 ## 2. Fox — the laser really does sit below the barrel in the original
+
+> **DECIDED 2026-08-13 — you chose B, the cosmetic nudge. It is done.** The beam
+> and its flash now draw 24 world units higher, which is **3.000 screen pixels**;
+> the projectile, its hitbox and its collision are byte-identical to before,
+> proven by 17 stops × 6 gameplay counters at **0 mismatches** across a whole
+> 60-second both-CPU match. It ships in the next published ROM.
+> Evidence: `../2026-08-13_c-fox-bore/BORE_OFFSET.md`.
+> **What is left is your eye**: the muzzle flash is 3.4× the gun's height and
+> covers the barrel on exactly the frames where the beam's tail is at it, so no
+> screenshot can show you the final alignment — a playtest can.
 
 **What's being asked:** accept it, or approve a cosmetic nudge.
 
@@ -211,6 +232,12 @@ would cost a build to say so for certain.
 
 ## 8. Should the gate be scored net of the stopwatch?
 
+> **APPROVED 2026-08-13 — you took option A: the gate is scored RAW and
+> NET-OF-APPARATUS from here on.** Both numbers are quoted together, everywhere,
+> so nothing is hidden by the choice. Current bank: **raw 1,260,096 /
+> net ≈ 1,235,149** against **1,120,380**. The instrument itself is NOT being
+> slimmed (option B), so every banked figure stays comparable.
+
 **What's being asked:** a scoring question, and it is worth about **25,000**.
 
 The ROM we measure on is not the ROM you play. To report a per-frame tick count
@@ -227,9 +254,11 @@ Three separate pieces of it are now identified:
 
 **The published ROM executes none of it.**
 
-**Option A — score the gate net of the apparatus.** The gap becomes ≈62,000
-instead of 87,236 and every future number is compared the same way. Nothing
-about the game changes; the honest distance to done gets shorter.
+**Option A — score the gate net of the apparatus. ← TAKEN.** Every future number
+is compared the same way. Nothing about the game changes; the honest distance to
+done gets shorter. On the 2026-08-13 re-bank that reads **139,716 over raw,
+≈114,769 over net** — the ≈62,000 written here was against the older
+1,207,616 figure and is superseded.
 
 **Option B — slim the instrument instead.** An agent spends one cycle making the
 measuring ROM cheaper, so the reported number naturally drops toward the real

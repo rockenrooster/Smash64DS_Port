@@ -63,9 +63,18 @@ so length accumulates no cost; only the 3-VBlank share moves (16.6% against
 13.1%). The gate is still 85,760 over and its lane is unchanged. **Do not leave
 `NDS_R2_SOAK_MATCH_MINUTES` set anywhere** — that build is a lab directory only.
 
-**CURRENT BANKED GATE — `WORK-H` P50 923,392 / P95 1,210,880** (slice 50,
-`builds/build-c131-cand`, `NDS_R2_BOTH_CPU=1`, 1600 frames from 438, DLDI ON,
-`slips=0`; **gap to 1.12M ~90,500**). Slice 50's own control measured HEAD at
+**CURRENT BANKED GATE — `WORK-H` P50 924,928 / P95 raw 1,260,096, net ≈1,235,149**
+(`builds/build-c136-animjoint`, `NDS_R2_BOTH_CPU=1`, 1600 frames from 438, DLDI ON,
+`slips=0`; **gap 139,716 raw / 114,769 net** against 1,120,380). **STANDING, owner-approved
+2026-08-13 (`…/2026-08-13_c-residue/OWNER_DECISIONS.md` §8): quote BOTH figures from now on.**
+The net arm subtracts the **24,947 tk/frame** of tick-HUD-only apparatus that the published ROM
+does not execute (`RESIDUE.md` §5); the instrument is deliberately NOT being slimmed, so every
+banked figure stays comparable. It was re-confirmed on 2026-08-13 by the Fox bore-offset cycle's
+control run, which reproduced 924,928 / 1,260,096 and the identical VBlank histogram.
+
+**The previous bank — `WORK-H` P50 923,392 / P95 1,210,880** (slice 50,
+`builds/build-c131-cand`, same configuration), superseded by the anim-joint fix's +49,216.
+Slice 50's own control measured HEAD at
 939,392 / **1,219,520**, i.e. the tree had drifted **+8,960 P95** above the
 cycle-121 bank before this cut — quote a control from the same tree, never a
 bank, when sizing a candidate.
@@ -7856,6 +7865,27 @@ divergence, and it is the weakest case for urgency.
 
 ## Parked — open items with owners' notes, promote deliberately
 
+- **Fox blaster bore offset: LANDED 2026-08-13 (cycle 14), and it was the OWNER's call, not an
+  agent's.** He took option B of `artifacts/bugs/2026-08-12_fox-crouch/BEAM_QUAD_ANCHOR.md`: the
+  beam quad and the muzzle-flash quad draw joint-local `(0,-24,0)` higher, gameplay untouched.
+  Applied as a world **+24 Y = 98,304 Q12** on the DECODED translation — `nds_renderer.c:14979`,
+  before the source scale reaches the quad's own vertices, because `scale.x` runs 1.0 -> 53.33 and a
+  later fold would raise a grown beam 1,280 units — and a draw-local centre copy at
+  `battleship_lbparticle.c:2571`, where `pc->pos` and the AOT pool entry are deliberately NOT
+  written. The impact flashes move with it on purpose: all four source callers
+  (`wpfoxblaster.c:61/71/86/121`) pass the weapon's own translation, so they sit on the beam's
+  centre line. **Gameplay invariance measured, not asserted:** one 60 s both-CPU match per arm, six
+  gameplay counters read at every one of **17 ring stops — 0 mismatches**, and all fourteen
+  end-of-run globals equal (damage 0/58, stocks 1/1, 8 shots, 38 beam draws, 0 fallbacks).
+  **Pixel proof:** `EXACT_LOCK` on `gSCManagerBattleState->time_remain`; beam centroid
+  **205.000 -> 202.000 (-3.000 rows)**, flash centroid **-3.009**, same 707 px and same x span; on a
+  locked frame with no beam the battle screen is **0 of 120,000** different. Text **-184 B**, so
+  `WORK-H` P50 +256 / P95 -9,728 is placement and **this is NOT a re-bank**. Boundary green
+  (`Exception:` 0 in the full 18.9 MB log), root ROMs byte-identical. **It SHIPS in the next
+  published ROM** (`NDS_R2_FOX_BLASTER_QUAD ?= 1`). The owner's eye is the remaining acceptance:
+  the flash is 3.4x the gun's height and covers the barrel on exactly the frames the beam's tail is
+  at it, so no screenshot can settle the final alignment.
+  Evidence: `artifacts/performance/2026-08-13_c-fox-bore/BORE_OFFSET.md`.
 - **The DObj-parser runaway: FIXED 2026-08-13 (cycle 13).** The seam was not the flag and not
   the dispatch: `lbCommonAddDObjAnimJointAll` (decomp `lb/lbcommon.c:785`) **had no body in this
   port** — an empty stub at `reloc_backend_compat_shims.c:2140`, `bx lr` at `0x02052eac` in the

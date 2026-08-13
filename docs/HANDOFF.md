@@ -1,12 +1,13 @@
 # Handoff
 
-Updated: 2026-08-13. **THE GATE ARM WAS MISLABELLED** (`…/2026-08-12_c126-armcheck/
-ARM_MISLABEL.md`): the banked "canonical both-CPU" 1,087,296 was built `BOTH_CPU 0`. On
-R2-07's own gate names HEAD measures **1,260,096 — +139,716 OVER**. **Boundary PASSES
-(~1,087,600); the R2-07 stress gate FAILS**, every `EXHAUSTION.md` ceiling is dead, and
-**the owner's order is bugs first, then P95** — context, not the next task.
+Updated: 2026-08-13. **THE GATE IS NOW REPORTED RAW AND NET-OF-APPARATUS** — owner, §8 of
+`…/2026-08-13_c-residue/OWNER_DECISIONS.md`: bank **raw 1,260,096 / net ≈1,235,149** against
+1,120,380 = **+139,716 raw / +114,769 net**. Apparatus 24,947 (`RESIDUE.md` §5); the instrument is
+NOT being slimmed, so every banked figure stays comparable. The old 1,087,296 "canonical both-CPU"
+was `BOTH_CPU 0` (`…_c126-armcheck/ARM_MISLABEL.md`) and every `EXHAUSTION.md` ceiling is dead.
+**Boundary PASSES (~1,087,600); the stress gate FAILS; the owner's order is bugs first, then P95.**
 
-## R2-07 `BUGS.md` — the owner playtested; two rows are live and BOTH need HIM
+## R2-07 `BUGS.md` — the owner DECIDED both live rows on 2026-08-13; both await his eye
 
 `docs/BUGS.md` carries the owner's own wording and is the queue — do not reword it. The 2026-08-12
 playtest **closed old rows 2 and 3 by verdict** (fire burn, Fox gun); their contracts and pixel proof
@@ -15,20 +16,17 @@ stay in `artifacts/bugs/2026-08-12_r2-07-cluster/`. Candidates were `build-c129-
 9,664 repeat spread (`…/2026-08-12_c130-fire-gate/GATE.md`). The old "all three rows converge on ONE
 texture-residency capability" framing was wrong for all three — never reinstate it. **A magenta bar
 beside Fox is the BEAM ITSELF**, relocData 316's own RGBA(219,0,134) — not a debug quad, not the gun.
-**BOTH LIVE ROWS ARE §1 AND §2 OF `…/2026-08-13_c-residue/OWNER_DECISIONS.md`; restart facts only:**
+**BOTH ROWS ARE DECIDED IN §1/§2 OF `…/2026-08-13_c-residue/OWNER_DECISIONS.md`; restart facts only:**
 
-- **Whispy — ANSWERED, nothing agent-closable remains, do not re-open.** Armed, the blink runs **6
-  presented frames** (`anim_frame` 1,3,5,7,9,11); the eye's grandchild DObj squashes `scale.y` 0.948
-  -> 0.104 -> 1.0 through XObj **kind 28 = TraRotRpyRSca**; **there IS no blink texture and that is
-  source-correct.** Only the owner names the motion. `…/verification/2026-08-12_whispy-*.txt`.
-- **Fox — every geometric quantity is source-exact; `BLOCKED(decision:)`.** Spawn X/Y/Z, radius 20,
-  all 11 hurtbox descriptors, camera, composition (0.004 px), attachment, pose phase, baked gun
-  geometry, and the quad's anchor/scale (relocData 316 STRADDLES the projectile's Y; `scale.y`
-  never written, `wpfoxblaster.c:44-52`). Source specifies a **23.651-unit sag** — **63.8% of the
-  beam hangs below the barrel in BattleShip too**. Two priced options:
-  `artifacts/bugs/2026-08-12_fox-crouch/BEAM_QUAD_ANCHOR.md`. The withheld presentation latch stays
-  out of tree as `…_fox-crouch/wip-presentation-latch.patch`; its "hidden substep 0" premise is
-  refuted (both shots `sub=1`) and it needs a matched/not-matched counter first.
+- **Whispy — AWAITING OWNER PLAYTEST; the owner chose "re-check after fixes" (2026-08-13).** Blink
+  is 6 presented frames, `scale.y` 0.948 -> 0.104 -> 1.0 via XObj kind 28, no blink texture and that
+  is source-correct; the shield joint-freeze fix may have been the real symptom. Do not re-derive.
+- **Fox — DONE: the owner took the draw-only offset (2026-08-13). AWAITING PLAYTEST.** Beam and
+  flash draw **+24 world Y = 3.000 screen px** (`nds_renderer.c:14979`,
+  `battleship_lbparticle.c:2571`); gameplay byte-identical — 17 stops x 6 counters, 0 mismatches
+  (`…/2026-08-13_c-fox-bore/BORE_OFFSET.md`). It SHIPS in the next published ROM. Every geometric
+  quantity was already source-exact (`…_fox-crouch/BEAM_QUAD_ANCHOR.md`); the withheld presentation
+  latch stays out of tree (`…_fox-crouch/wip-presentation-latch.patch`), its premise refuted.
 - **R2-08 cannot be finished by an agent**: SwitchPlan `:391` needs the owner's recorded retail
   play test, `:385` their visual approval.
 
@@ -37,10 +35,11 @@ beside Fox is the BEAM ITSELF**, relocData 316's own RGBA(219,0,134) — not a d
 | arm | role | `WORK-H` P50 | P95 |
 |---|---|---:|---:|
 | `battle_playable_realtime` (`BOTH_CPU 0`) | shipped, **PASSES** | 899,136 | 1,087,616 |
-| **both-CPU (`BOTH_CPU 1`)** | **R2-07 GATE, FAILS** | **924,928** | **1,260,096** |
+| **both-CPU (`BOTH_CPU 1`)** | **R2-07 GATE, FAILS** | **924,928** | **1,260,096 raw / ≈1,235,149 net** |
 
 **RE-BANKED 2026-08-13 AFTER THE ANIM-JOINT FIX** (`…/2026-08-13_c-animjoint-fix/`,
-`build-c136-animjoint`, 1,600, DLDI ON): VBI **2:1697 3:310 4:18 5+:13 max 26**. **Gap 139,716.**
+`build-c136-animjoint`, 1,600, DLDI ON): VBI **2:1697 3:310 4:18 5+:13 max 26**. **Gap 139,716 raw /
+114,769 net.**
 The fix costs **+49,216 P95 / +1,536 P50** against the c132 bank (1,210,880 / 923,392) and it is
 work, not placement — the one-variable five-minute pair reads +44,544. It is owed: those joints
 were doing nothing. **Judge a cut at P50 and its owning lane** — P95 moves 15x further than P50.
