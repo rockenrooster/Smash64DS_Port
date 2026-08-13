@@ -23,6 +23,19 @@
 /decomp/BattleShip-main/BattleShip_o2r/
 /decomp/BattleShip-main/decomp/BattleShip_o2r/
 /decomp/BattleShip-main/decomp/assets/
+# Cargo build output inside the decomp reference tree. These blobs bake the
+# absolute `C:\Users\<user>\.cargo\...` and `...\.rustup\...` paths of whichever
+# machine ran `cargo build`, so they carry the owner's given name into tracked
+# files and CLAUDE.md forbids that. Untracked 2026-08-13 on the owner's decision
+# (`artifacts/performance/2026-08-13_c-residue/OWNER_DECISIONS.md` §9, option
+# "scrub the 16 files"); the remaining ~26,260 files under /decomp/ stay tracked
+# by that same decision. The blobs stay ON DISK -- /decomp/ is read-only
+# reference, vpk0cmd.exe is a usable tool there, and cargo regenerates the rest.
+/decomp/BattleShip-main/decomp/tools/vpk0cmd.exe
+/decomp/BattleShip-main/decomp/tools/vpk0_build/target/.rustc_info.json
+/decomp/BattleShip-main/decomp/tools/vpk0_build/target/release/deps/
+/decomp/BattleShip-main/decomp/tools/vpk0_build/target/release/vpk0cmd.exe
+/decomp/BattleShip-main/decomp/tools/vpk0_build/target/release/vpk0cmd.pdb
 /src/nds/generated/
 /src/nds/nds_native_fighter_owner.generated.inc
 /src/nds/nds_native_stage_owner.generated.inc
