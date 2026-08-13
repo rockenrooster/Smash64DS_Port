@@ -1,0 +1,29 @@
+Tick-HUD buckets: target=smash64ds-battle-playable-tickhud-hwtri samples=8448 frames=439..8887 melonDS=1.0 sha=DE80E46BDCF1FD98 git=bb3424c4d11+dirty(6) dldi=ON
+
+bucket p50        p95        spread mean       min        max        %ALLp50
+------ ---        ---        ------ ----       ---        ---        -------
+ALL     1,118,272  1,678,784   1.50  1,221,504  1,115,328  5,873,280   100.0
+FTR       298,752    325,952   1.09    291,483    148,544  4,495,552    26.7
+STG       162,368    166,464   1.03    162,660    158,208    173,120    14.5
+BG          4,032      4,096   1.02      4,025      3,520      7,232     0.4
+AUD         2,816      7,488   2.66      8,877      1,408    157,376     0.3
+HUD         1,024    421,760 411.88     34,081        896    492,352     0.1
+SRC       330,816    579,968   1.75    362,629    150,720  4,681,600    29.6
+MISC      105,600    185,792   1.76    118,582     81,344  4,491,200     9.4
+OTHR      225,984    501,504   2.22    239,168     20,736    580,480    20.2
+WAIT      206,080    481,408   2.34    219,328        832    560,192    18.4
+WORK      944,640  1,372,416   1.45  1,002,176    705,920  5,711,040    84.5
+SHDT        4,416    108,544  24.58     15,814      2,880    557,248     0.4
+SWRM          896        960   1.07        875        704      4,224     0.1
+GCRA      325,696    575,040   1.77    357,476    145,664  4,676,416    29.1
+SCPU       45,568    108,800   2.39     47,351        640    159,616     4.1
+SCAT        1,280      1,408   1.10      1,378        960    905,216     0.1
+SPRM        1,920      2,112   1.10      4,942      1,472    724,864     0.2
+SINT      155,840    325,952   2.09    171,632      6,592  4,384,832    13.9
+SPHD       61,952    104,448   1.69     71,071     30,080  4,259,968     5.5
+SPHC          640        768   1.20        699        384     32,704     0.1
+WORK-H    932,224  1,208,000   1.30    968,095    704,960  5,292,352    83.4
+
+named=982,337 (80.4% of ALL)  VBI 2:7412 3:1388 4:72 5+:15 max:26 total:8887  slips=0
+extras: gNdsAObjEvent32NormalizedHighWater=1,019  gNdsAObjEvent32NormalizeFailCount=0  gNdsAObjEvent32NormalizeCommandCount=1,019  gNdsAObjEvent32NormalizeLastFailReason=0  gNdsObjAnimRunawayCount=50  gNdsObjAnimRunawayScript=37,106,666  gNdsTaskmanGeneralHeapFreeMin=70,000  gNdsTaskmanArenaAllocFailCount=0  gNdsSyMallocOverflowCount=0
+Wrote artifacts\performance\2026-08-13_c-anim-anomalies\soak5-c133.json

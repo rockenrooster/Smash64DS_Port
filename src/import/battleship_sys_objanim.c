@@ -791,7 +791,44 @@ void gcPlayDObjAnimJoint(DObj *dobj)
 }
 #endif
 
-#define NDS_AOBJ_EVENT32_NORMALIZED_MAX 1024u
+/* THE NORMALIZED SET IS A LEDGER, NOT A CACHE, so its capacity has to cover
+ * the whole corpus a scene can reach -- it cannot be evicted from.
+ *
+ * The repack (source opcode[31:25] flags[24:15] payload[14:0] -> native
+ * opcode[6:0] flags[16:7] payload[31:17]) is a bit permutation with no spare
+ * bit, so a word cannot say which layout it is in. This table is the only
+ * record. Evicting an entry, or overflowing and re-normalizing later, applies
+ * the permutation TWICE to a live script, which is unrecoverable corruption --
+ * so no LRU, no reclaim, and reclaiming at file unload cannot help a long
+ * match, because a match unloads nothing. `ndsAObjEvent32ResetNormalizedScripts`
+ * is called from `ndsRelocResetLoadedFiles` (`reloc_backend_assets.c:2093`) and
+ * is the ONLY correct discard point.
+ *
+ * 1024 was too small, measured, not estimated
+ * (`artifacts/performance/2026-08-13_c-anim-anomalies/ANOMALIES.md`):
+ *
+ *   1-minute both-CPU gate arm  889 of 1024 commands (119 scripts, 294 reuses)
+ *   5-minute both-CPU match   1,019 of 1024 commands
+ *
+ * i.e. the SHIPPING match length already stands at 87% of capacity and the
+ * acceptance match at 99.5%, with `gNdsAObjEvent32NormalizeFailCount` 0 in both
+ * -- the cliff has never been fallen off, and there are five slots left when it
+ * would be. Growth is coverage of a finite corpus, not a leak: the per-stop
+ * trajectory has four consecutive zero-growth stops (frames 1302-1686) while
+ * the reuse path keeps firing 16-19 times per stop.
+ *
+ * Overflow is reason 12, and its consequence is NOT a dropped command: every
+ * `gcAdd*Anim*` wrapper below skips the whole `ndsBaseGcAdd*` on a FALSE, so
+ * one over-cap script silently cancels an entire animation attach -- and for
+ * `ndsAObjEvent32NormalizeDObjTable` it cancels every joint of the GObj, not
+ * just the failing one.
+ *
+ * 2048 is 2x the largest corpus ever measured, i.e. it leaves 1,029 spare slots
+ * -- more than the entire first minute's demand -- for 8,192 bytes of bss
+ * against 176,128 of proven boot headroom. The number is the measurement
+ * doubled; it is not a guess, and `gNdsAObjEvent32NormalizedHighWater` below
+ * exists so the next cycle can re-derive it instead of re-measuring. */
+#define NDS_AOBJ_EVENT32_NORMALIZED_MAX 2048u
 #define NDS_AOBJ_EVENT32_PLAN_MAX 128u
 #define NDS_AOBJ_EVENT32_BRANCH_DEPTH_MAX 16u
 
@@ -821,6 +858,12 @@ static NDSAObjEvent32Plan sNdsAObjEvent32Plan[NDS_AOBJ_EVENT32_PLAN_MAX];
 static u32 sNdsAObjEvent32NormalizedCount;
 static u32 sNdsAObjEvent32PlanCount;
 
+/* sNdsAObjEvent32NormalizedCount is reset on every scene teardown, so reading
+ * it at the end of a run reports the LAST scene only. That is how a five-entry
+ * chain reported 297 and got written up as "a chain cannot fill the table"
+ * while a single match was standing at 889 (2026-08-13 stress battery). This is
+ * the peak across resets, and it is what a soak should read. */
+volatile u32 gNdsAObjEvent32NormalizedHighWater;
 volatile u32 gNdsAObjEvent32NormalizeScriptCount;
 volatile u32 gNdsAObjEvent32NormalizeCommandCount;
 volatile u32 gNdsAObjEvent32NormalizeReuseCount;
@@ -1203,6 +1246,10 @@ static sb32 ndsAObjEvent32NormalizeScript(
         sNdsAObjEvent32NormalizedCount++;
     }
 
+    if (sNdsAObjEvent32NormalizedCount > gNdsAObjEvent32NormalizedHighWater)
+    {
+        gNdsAObjEvent32NormalizedHighWater = sNdsAObjEvent32NormalizedCount;
+    }
     gNdsAObjEvent32NormalizeScriptCount++;
     gNdsAObjEvent32NormalizeCommandCount += sNdsAObjEvent32PlanCount;
     return TRUE;

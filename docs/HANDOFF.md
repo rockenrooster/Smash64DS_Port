@@ -39,6 +39,8 @@ beside Fox is the BEAM ITSELF**, relocData 316's own RGBA(219,0,134) — not a d
 | `battle_playable_realtime` (`BOTH_CPU 0`) | shipped, **PASSES** | 899,136 | 1,087,616 |
 | **both-CPU (`BOTH_CPU 1`)** | **R2-07 GATE, FAILS** | **923,392** | **1,210,880** |
 
+**RE-MEASURED ON HEAD 2026-08-13, BYTE-IDENTICAL** (`…/2026-08-13_c-anim-anomalies/`,
+`build-c132-stress`, 1,600, DLDI ON): VBI **2:1743 3:267 4:15 5+:13 max 26**. **Gap 90,880.**
 **Re-banked by SLICE 50** (`…/2026-08-13_c-threeleg/SLICE50.md`); its control put HEAD at
 939,392 / **1,219,520** (+11,904 past c130). **Judge a cut this size at P50 and its owning
 lane** — one changed line moved P95 24,064 against 3,648 at P50.
@@ -141,22 +143,19 @@ in one change, or **use the `.data` route on ONE binary** (only if the change ca
 state). **Every change needs an engagement counter on BOTH sides**; slices 45, 46 and 48 were all
 found by READING counters the code already kept, on the gate arm, for the first time. `.text.hot`
 is closed both directions.
-**R2-07 STRESS GATE RAN — `…/2026-08-13_c-stress/STRESS_GATE.md`; ONE ANOMALY IS OPEN.** 3
-completed successive matches in one session, **5 battle entries**, **Sudden Death entered UNFORCED
-in both runs** (CPU tie at time-up) and played to a KO; `NO-FREEZE`, `TexProofSweepFailCount` **0**
-(slice 50's certificate survives re-entry), heap free-min 70,384, alloc/overflow/GObj-cap/objman
-clean, colour floor 1,305. **THE FIVE-MINUTE MATCH RAN — 98.7% coverage (17,772/18,000 logic
-frames), `WORK-H` 929,344 / P95 1,205,760, VBI 2:7415 3:1394 4:58 5+:19 max 26, slips=0: it costs
-what the one-minute match costs** (1,210,880, inside the cross-build floor) — **length does not
-accumulate cost**, and the gate is still 85,760 over. **The AObj cliff is per-SCENE** — a chain
-cannot fill it (297/1,024) — **but ONE five-minute match hits 1,019 of 1,024** and overflow SILENTLY
-skips the attach: a MATCH-LENGTH cliff. **OPEN: `gNdsObjAnimRunawayCount`** (`Mask` 1 = DObj parser,
-`Script` 0x023C138A, `Opcode` 100) reads **0** at three entries, **17** at five, **50** in the
-five-minute match, which drove **NO input** — stray presses are ruled out; it scales with
-time-in-scene and the bounded parser contained it.
-**START PAUSES THE
-MATCH** and the old whole-window freeze hash could not see it — the watch now hashes the TOP band
-and `-PressStartOnResults` presses only on a detected Results screen.
+**R2-07 STRESS GATE PASSED — `…/2026-08-13_c-stress/STRESS_GATE.md`.** 3 successive matches, 5
+entries, **Sudden Death UNFORCED** and played to a KO, `NO-FREEZE`, risk counters clean; the
+five-minute match ran at 98.7% coverage for `WORK-H` 929,344 / **1,205,760** — **length does not
+accumulate cost**. **BOTH ITS ANOMALIES ARE ATTRIBUTED, no build spent
+(`…/2026-08-13_c-anim-anomalies/ANOMALIES.md`):**
+- **Runaway = a FIGHTER, not Whispy; opcode 100 is an ARTEFACT and there is NO decoder gap** — the
+  32-bit parser reads a *good* `event16` pointer, so nothing produces a bad address and the two
+  producers `KNOWN_ISSUES.md` chased are moot (it owns the chain). Seam:
+  `fp->anim_desc.flags.is_anim_joint` true while joints hold figatrees; the dispatch is source-exact.
+  **The 1-minute gate arm reads 0**, so "≈1 per 6 s" is withdrawn. **Never loosen the bound or teach
+  it opcode 100.** Fix handed forward; `scripts/probe-objanim-runaway.ps1`.
+- **AObj cliff = CAPACITY, not a leak — FIXED.** Four zero-growth stops against reuse firing 16-19/stop kills the leak theory; the shipping 1-minute arm already stood at **889/1,024**, and a LEDGER cannot be evicted (the repack has no spare bit) so capacity is the lever: **`NDS_AOBJ_EVENT32_NORMALIZED_MAX` 1024 → 2048**, +8,192 B bss, headroom **167,936**; corpus proven **1,019** by `gNdsAObjEvent32NormalizedHighWater` on a re-run five-minute match.
+**START PAUSES THE MATCH** and the old whole-window freeze hash could not see it — the watch hashes the TOP band and `-PressStartOnResults` presses only on a detected Results screen.
 
 ## Measurement rules that change your FIRST action — board owns the rest
 

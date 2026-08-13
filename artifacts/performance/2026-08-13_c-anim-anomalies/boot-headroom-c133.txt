@@ -1,0 +1,10 @@
+build            : build-c133-aobjcap5
+fake_heap_start  : 0x0226b804
+static footprint : text 981,356  data 148,288  bss 1,463,752  total 2,593,396
+highest booting  : 0x02294804  (build-r209-memo1s)
+lowest failing   : 0x02294b24  (build-r209-memo2s)
+unproven band    : 800 bytes wide
+
+OK: 167,936 bytes of PROVEN headroom (to 0x02294804).
+    Proven means another build linked at or below that address booted. Anything
+    larger is unproven, not safe -- the cliff itself has never been bisected.

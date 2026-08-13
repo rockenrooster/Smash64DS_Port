@@ -7856,6 +7856,28 @@ divergence, and it is the weakest case for urgency.
 
 ## Parked — open items with owners' notes, promote deliberately
 
+- **The DObj-parser runaway: ATTRIBUTED 2026-08-13, FIX HANDED FORWARD.** Finding:
+  `gcParseDObjAnimJoint` (32-bit) is run on fighter joints holding a **16-bit figatree**;
+  `anim_joint` is a union `ftAnimParseDObjFigatree` advances in place, so the "corrupt" 2-mod-4
+  pointer is a perfectly good `event16` pointer and **opcode 100 is what a misaligned ARM9 `LDR`
+  returns** — predicted exactly on all six captured hits. Attribution: one GObj `link_id` 3 =
+  Fighter, six DObjs, asset **557 = `MARIO_ANIM_SHIELD_ON`**, caller **`ftParamUpdateAnimKeys`**
+  whose per-fighter dispatch on `fp->anim_desc.flags.is_anim_joint` is **source-exact**
+  (`ftparam.c:386`). Fix state: the seam is the FLAG, whose only writer in tree is
+  `ftcommonguard1.c:275` and whose clearing writer was **not found where I looked** — the next
+  cycle reads the figatree-install path and adds the broken-invariant counter named in
+  `KNOWN_ISSUES.md`, which owns this row now. **Never loosen the parser bound and never teach it
+  opcode 100.** Evidence: `artifacts/performance/2026-08-13_c-anim-anomalies/ANOMALIES.md`;
+  instrument: `scripts/probe-objanim-runaway.ps1` (no build, derives the fault block from the ELF).
+- **The AObj event-32 match-length cliff: ATTRIBUTED AND FIXED 2026-08-13.** Not a leak — the
+  per-stop trajectory has four consecutive zero-growth stops while the reuse path fires 16-19 times
+  each, so the key is stable and growth is corpus coverage. It is a **ledger, not a cache** (the
+  repack is a bit permutation with no spare bit, so eviction is corruption and a match unloads
+  nothing), which leaves capacity: `NDS_AOBJ_EVENT32_NORMALIZED_MAX` **1024 → 2048**, +8,192 B bss,
+  proven boot headroom 176,128 → **167,936**. The shipping **1-minute** arm already stood at
+  889/1,024; the corpus is now *proven* 1,019 by `gNdsAObjEvent32NormalizedHighWater` on a re-run
+  five-minute match, i.e. 1,029 spare slots against 5. `WORK-H` P50/P95 move +2,880/+2,240, inside
+  the ±14,080 cross-build floor. Evidence: `…/2026-08-13_c-anim-anomalies/QUALIFICATION.md`.
 - **`scripts/check-docs.ps1` is unowned and wired into no `verify-all` profile**,
   so it can only go red where nobody looks. It has done so twice in two cycles:
   the `RAM_RECOVERY_PLAN.md` index gap (fixed `560328b357f`) and then the missing
