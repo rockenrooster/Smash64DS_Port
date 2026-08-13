@@ -58,6 +58,7 @@ $root = Split-Path -Parent $PSScriptRoot
 
 $gdb = 'C:\devkitPro\devkitARM\bin\arm-none-eabi-gdb.exe'
 $nm = 'C:\devkitPro\devkitARM\bin\arm-none-eabi-nm.exe'
+$objdump = 'C:\devkitPro\devkitARM\bin\arm-none-eabi-objdump.exe'
 $rom = Resolve-Smash64DSBuildOutput -Root $root -Target $Target -Build $Build -Extension '.nds'
 $elf = Resolve-Smash64DSBuildOutput -Root $root -Target $Target -Build $Build -Extension '.elf'
 if ([string]::IsNullOrWhiteSpace($Artifact)) {
@@ -85,6 +86,16 @@ $required = @(
     'gNdsFoxSpawnProbeCount',
     'gNdsFlameProbeCount', 'gNdsFlameProbeJointID', 'gNdsFlameProbeJointX',
     'gNdsFlameProbeSelIndex', 'gNdsFlameProbeGenericX',
+    'gNdsFlameMakerProbeCount', 'gNdsFlameMakerProbeKind',
+    'gNdsFlameMakerProbeSubstep',
+    'gNdsFlameMakerProbeX', 'gNdsFlameMakerProbeY', 'gNdsFlameMakerProbeZ',
+    'gNdsFlameMakerProbeParticle', 'gNdsFlameDrawProbeSeenMask',
+    'gNdsFlameDrawProbeWorldX', 'gNdsFlameDrawProbeWorldY',
+    'gNdsFlameDrawProbeWorldZ', 'gNdsFlameDrawProbeLocalX',
+    'gNdsFlameDrawProbeLocalY', 'gNdsFlameDrawProbeLocalZ',
+    'gNdsFlameDrawProbeXfX', 'gNdsFlameDrawProbeXfY',
+    'gNdsFlameDrawProbeXfZ', 'gNdsFlameDrawProbeSize',
+    'gNdsFlameDrawProbeTexture', 'gNdsFlameDrawProbeFrame',
     'efManagerFlameLRMakeEffect', 'efManagerFlameRandomMakeEffect',
     'gSCManagerBattleState'
 )
@@ -95,6 +106,29 @@ if ($missing.Count -gt 0) {
         $elf, ($missing -join ', ')) +
         'NDS_R2_POSITION_PROBE=1; a missing probe global is usually --gc-sections.'
 }
+
+# Break on the CALL instructions inside ftParamMakeEffect, not in the makers.
+# That is the only place where both sides of the contract are unambiguous on an
+# optimized build: the override/probe has already run, r0 is the exact pointer
+# the next instruction will hand to the maker, and no unrelated Flame caller can
+# trigger the breakpoint. Derive the addresses from this ELF so the probe stays
+# valid when layout changes.
+$disassembly = & $objdump -d $elf
+if ($LASTEXITCODE -ne 0) {
+    throw "objdump failed for $elf"
+}
+function Find-FlameCallAddress([string]$Maker) {
+    $hit = $disassembly | Where-Object {
+        $_ -match (':\s+.*\bbl\b.*<' + [regex]::Escape($Maker) + '>$')
+    } | Select-Object -First 1
+    if ($null -eq $hit -or $hit -notmatch '^\s*([0-9a-fA-F]+):') {
+        throw "Could not locate ftParamMakeEffect call to $Maker in $elf"
+    }
+    return ('0x' + $Matches[1])
+}
+$flameLRCall = Find-FlameCallAddress 'efManagerFlameLRMakeEffect'
+$flameRandomCall = Find-FlameCallAddress 'efManagerFlameRandomMakeEffect'
+$flameStaticCall = Find-FlameCallAddress 'efManagerFlameStaticMakeEffect'
 
 # The arm is part of the trigger, same rule and same reason as
 # probe-flame-quad-miss.ps1: this probe needs Fox to fire Neutral-B AND Mario to
@@ -148,33 +182,26 @@ try {
         'printf "FOXPOS B %f %f %f\n", gNdsFoxSpawnBX, gNdsFoxSpawnBY, gNdsFoxSpawnBZ',
         'printf "FOXPOS D %f %f %f\n", gNdsFoxSpawnDX, gNdsFoxSpawnDY, gNdsFoxSpawnDZ',
 
-        # Both Flame makers, because which arrives first depends on the burn's
-        # strength -- the FlameLR-only version of this waited out a whole run.
+        # All three Flame call sites in *ftParamMakeEffect*. A breakpoint in the
+        # maker is too broad (other callers exist), and a source-level maker
+        # breakpoint is folded by -O2 into a shared allocator. At these BL
+        # instructions r0 is already the exact Vec3f* argument and the ring
+        # entry was written earlier in this same ftParamMakeEffect invocation.
         'delete breakpoints',
         'set $f = 0',
-        # `break *symbol`, NOT `break symbol`. Both Flame makers are thin
-        # wrappers and GDB's line table folds a plain symbol breakpoint into
-        # efManagerGetNextStructAlloc at efmanager.c:1766 -- a shared allocator
-        # that has no `pos` parameter at all. Printing pos->x there reads
-        # whatever unrelated symbol named `pos` is in scope, which is exactly how
-        # this probe published a bogus "X and Z are swapped and negated"
-        # conclusion that had to be retracted. The entry address cannot be
-        # folded.
-        'break *efManagerFlameLRMakeEffect',
-        'break *efManagerFlameRandomMakeEffect',
-        'commands 1-2',
+        ('break *' + $flameLRCall),
+        ('break *' + $flameRandomCall),
+        ('break *' + $flameStaticCall),
+        # Breakpoint 1 was the Fox maker above. GDB does not recycle numbers
+        # after `delete breakpoints`, so these three are 2, 3 and 4.
+        'commands 2-4',
         'silent',
         'set $f = $f + 1',
-        # THE ARM-DISTINGUISHING READING, and the reason it exists: the ring
-        # columns below CANNOT tell the two arms apart. `generic` is the position
-        # the override replaced and `joint` is the source-selected joint, and
-        # both are identical with the fix in or out -- the first run of this
-        # probe printed byte-identical tables for build-c131-position (no
-        # override) and build-c132-flamejoint (override), which is "one run
-        # relabelled", not agreement. What the MAKER receives is the only value
-        # that moves: feet (Y == 0) without the fix, a body joint (Y != 0) with
-        # it.
-        'printf "FLAMEARG f=%d pos %f %f %f\n", $f, pos->x, pos->y, pos->z',
+        # The callsite breakpoint is now ONLY an event counter. c132 proved that
+        # reading a just-written stack/global value from GDB can see incoherent
+        # ARM9 cache state. The definitive far-end values are recorded in-ROM by
+        # ndsFTParamProbeFlameMakerInput immediately before each real maker.
+        'printf "FLAMEEVENT f=%d pc=0x%x\n", $f, $pc',
         ('if $f < ' + $FlameHits),
         'continue',
         'end',
@@ -185,6 +212,18 @@ try {
         'set $i = 0',
         'while $i < 8',
         'printf "FLAMEPOS %d kind=%u sel=%u joint=%d  %f %f %f  %f %f %f\n", $i, gNdsFlameProbeKind[$i], gNdsFlameProbeSelIndex[$i], gNdsFlameProbeJointID[$i], gNdsFlameProbeJointX[$i], gNdsFlameProbeJointY[$i], gNdsFlameProbeJointZ[$i], gNdsFlameProbeGenericX[$i], gNdsFlameProbeGenericY[$i], gNdsFlameProbeGenericZ[$i]',
+        'set $i = $i + 1',
+        'end',
+        'printf "FLAMEMAKER count=%u\n", gNdsFlameMakerProbeCount',
+        'set $i = 0',
+        'while $i < 8',
+        'printf "FLAMEMAKER %d kind=%u sub=%u %f %f %f\n", $i, gNdsFlameMakerProbeKind[$i], gNdsFlameMakerProbeSubstep[$i], gNdsFlameMakerProbeX[$i], gNdsFlameMakerProbeY[$i], gNdsFlameMakerProbeZ[$i]',
+        'set $i = $i + 1',
+        'end',
+        'printf "FLAMEDRAW seen=0x%x\n", gNdsFlameDrawProbeSeenMask',
+        'set $i = 0',
+        'while $i < 8',
+        'printf "FLAMEDRAW %d pc=0x%x tex=%u frame=%u size=%f world=%f,%f,%f local=%f,%f,%f xf=%f,%f,%f\n", $i, gNdsFlameMakerProbeParticle[$i], gNdsFlameDrawProbeTexture[$i], gNdsFlameDrawProbeFrame[$i], gNdsFlameDrawProbeSize[$i], gNdsFlameDrawProbeWorldX[$i], gNdsFlameDrawProbeWorldY[$i], gNdsFlameDrawProbeWorldZ[$i], gNdsFlameDrawProbeLocalX[$i], gNdsFlameDrawProbeLocalY[$i], gNdsFlameDrawProbeLocalZ[$i], gNdsFlameDrawProbeXfX[$i], gNdsFlameDrawProbeXfY[$i], gNdsFlameDrawProbeXfZ[$i]',
         'set $i = $i + 1',
         'end',
         'detach',
@@ -203,7 +242,7 @@ finally {
             Out-Null
         Copy-Item -LiteralPath $captured -Destination $Artifact -Force
         Get-Content -LiteralPath $Artifact |
-            Where-Object { $_ -match '^(FOXPOS|FLAMEPOS|FLAMEARG)' } |
+            Where-Object { $_ -match '^(FOXPOS|FLAMEPOS|FLAMEMAKER|FLAMEDRAW|FLAMEEVENT)' } |
             ForEach-Object { Write-Output $_ }
         Write-Output "probe capture: $Artifact"
     }

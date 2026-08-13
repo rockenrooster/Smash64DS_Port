@@ -5,6 +5,8 @@ param(
     [ValidateRange(1, 8)][int]$RunnerSlot = 7,
     [ValidateRange(30, 1800)][int]$TimeoutSeconds = 600,
     [ValidateRange(1, 32)][int]$Events = 6,
+    [switch]$Cadence,
+    [ValidateRange(4, 400)][int]$Frames = 60,
     [string]$Artifact = ''
 )
 
@@ -129,7 +131,18 @@ try {
         # PREVIOUS hit built. Counter deltas here are the whole of test (a).
         'if $pending != 0',
         'set $pending = 0',
-        'printf "WPOST n=%d dfail=%u dscript=%u dreuse=%u lastreason=%u gframe=%f gspeed=%f dwait=%d dframe=%f djoint=%p droot=%d mouthframe=%f\n", $n, gNdsAObjEvent32NormalizeFailCount - $fail0, gNdsAObjEvent32NormalizeScriptCount - $scr0, gNdsAObjEvent32NormalizeReuseCount - $reu0, gNdsAObjEvent32NormalizeLastFailReason, ($g0 != 0) ? $g0->anim_frame : -1, ($g0 != 0) ? $g0->anim_speed : -1, ($d0 != 0) ? $d0->anim_wait : -999, ($d0 != 0) ? $d0->anim_frame : -1, ($d0 != 0) ? $d0->anim_joint.event32 : (void *)0, ($d0 != 0) ? $d0->is_anim_root : -1, ($g1 != 0) ? $g1->anim_frame : -1',
+        'printf "WPOST n=%d dfail=%u dscript=%u dreuse=%u lastreason=%u gframe=%f dspeed=%f dwait=%d dframe=%f djoint=%p droot=%d mouthframe=%f\n", $n, gNdsAObjEvent32NormalizeFailCount - $fail0, gNdsAObjEvent32NormalizeScriptCount - $scr0, gNdsAObjEvent32NormalizeReuseCount - $reu0, gNdsAObjEvent32NormalizeLastFailReason, ($g0 != 0) ? $g0->anim_frame : -1, ($d0 != 0) ? $d0->anim_speed : -1, ($d0 != 0) ? $d0->anim_wait : -999, ($d0 != 0) ? $d0->anim_frame : -1, ($d0 != 0) ? $d0->anim_joint.event32 : (void *)0, ($d0 != 0) ? $d0->is_anim_root : -1, ($g1 != 0) ? $g1->anim_frame : -1',
+        # The ROOT carries no script (WJ0 is nil): the table is indexed in
+        # DObj-tree order, so the `Wait 12` in WJ1 is counted down on a CHILD's
+        # anim_wait, not on $d0. Reading only the root is what made the root's
+        # zeroes look like a dead animation. anim_wait/anim_frame are f32 -- %f,
+        # never %d.
+        'set $c1 = ($d0 != 0) ? $d0->child : (DObj *)0',
+        'set $c2 = ($c1 != 0) ? $c1->sib_next : (DObj *)0',
+        'set $c3 = ($c1 != 0) ? $c1->child : (DObj *)0',
+        'printf "  WD1 %p wait=%f frame=%f joint=%p root=%d\n", $c1, ($c1 != 0) ? $c1->anim_wait : -1, ($c1 != 0) ? $c1->anim_frame : -1, ($c1 != 0) ? $c1->anim_joint.event32 : (void *)0, ($c1 != 0) ? $c1->is_anim_root : -1',
+        'printf "  WD2 %p wait=%f frame=%f joint=%p root=%d\n", $c2, ($c2 != 0) ? $c2->anim_wait : -1, ($c2 != 0) ? $c2->anim_frame : -1, ($c2 != 0) ? $c2->anim_joint.event32 : (void *)0, ($c2 != 0) ? $c2->is_anim_root : -1',
+        'printf "  WD3 %p wait=%f frame=%f joint=%p root=%d\n", $c3, ($c3 != 0) ? $c3->anim_wait : -1, ($c3 != 0) ? $c3->anim_frame : -1, ($c3 != 0) ? $c3->anim_joint.event32 : (void *)0, ($c3 != 0) ? $c3->is_anim_root : -1',
         'end',
         ('if ($sta != -1) && ($n < ' + $Events + ')'),
         'set $n = $n + 1',
@@ -142,16 +155,18 @@ try {
         'set $moff = (unsigned int)dGRPupupuWhispyEyesAnims[$side][$sta][1]',
         'set $tab = (unsigned int **)($joff + $head)',
         'printf "WPRE n=%d status=%d lr=%d head=%08x jointoff=%08x matoff=%08x table=%p gframe=%f mouthstatus=%d\n", $n, $sta, $side, $head, $joff, $moff, $tab, ($g0 != 0) ? $g0->anim_frame : -1, gGRCommonStruct.pupupu.whispy_mouth_status',
-        # Four entries is past the root and its first children, and the table
-        # is a plain array indexed by DObj-tree order, so a short read is safe
-        # even though the real length is the tree size.
+        # The table is a plain array indexed by DObj-tree order and is NOT
+        # NULL-terminated at 4, so a blind 4-entry read runs off the end: the
+        # 2026-08-12 capture printed WJ3 at 0x06010000 (VRAM) full of texture
+        # bytes, which reads exactly like a decodable script. Accept an entry
+        # only if it points into main RAM.
         'set $j = 0',
         'while $j < 4',
         'set $s = $tab[$j]',
-        'if $s != 0',
+        'if ($s != 0) && ((unsigned int)$s >= 0x02000000) && ((unsigned int)$s < 0x02400000)',
         'printf "  WJ%d %p : %08x %08x %08x %08x %08x %08x\n", $j, $s, $s[0], $s[1], $s[2], $s[3], $s[4], $s[5]',
         'else',
-        'printf "  WJ%d (nil)\n", $j',
+        'printf "  WJ%d (nil-or-out-of-range) %p\n", $j, $s',
         'end',
         'set $j = $j + 1',
         'end',
@@ -166,6 +181,66 @@ try {
         'detach',
         'quit'
     )
+
+    if ($Cadence) {
+        # The 2026-08-12 child read settled that the SOURCE animation is healthy
+        # (anim_wait counts the script's Wait 12 down, script attached,
+        # is_anim_root=1). The open question is therefore presentation: does the
+        # pose actually CHANGE between consecutive presented frames? Sample the
+        # eye and mouth child DObjs once per presented frame and let the caller
+        # diff the run. Two source ticks per present means anim_wait should fall
+        # by 2 each sample while a script is playing; a flat run is the tell.
+        $commands = @(
+            'set pagination off',
+            'set confirm off',
+            'set remotetimeout 20',
+            ("target remote 127.0.0.1:{0}" -f $context.GdbPort),
+            'set $n = 0',
+            'set $armed = 0',
+            'break ndsBattlePlayableFrameCompleteMarker',
+            'commands',
+            'silent',
+            'set $g0 = gGRCommonStruct.pupupu.map_gobj[0]',
+            'set $g1 = gGRCommonStruct.pupupu.map_gobj[1]',
+            'set $d0 = ($g0 != 0) ? (DObj *)$g0->obj : (DObj *)0',
+            'set $e1 = ($d0 != 0) ? $d0->child : (DObj *)0',
+            'set $m0 = ($g1 != 0) ? (DObj *)$g1->obj : (DObj *)0',
+            'set $m1 = ($m0 != 0) ? $m0->child : (DObj *)0',
+            # ARM on an actually-running animation. anim_wait holds -FLT_MAX
+            # when nothing is playing, and Whispy's blinks are sparse: a blind
+            # 26-frame sample on 2026-08-12 landed entirely between events and
+            # every row was identical, which reads exactly like a frozen face.
+            # A flat run only means something if the window contains motion.
+            'if ($armed == 0) && ($e1 != 0) && ($e1->anim_wait > -1000000)',
+            'set $armed = 1',
+            'end',
+            'if $armed != 0',
+            'set $n = $n + 1',
+            # ALL NINE channels plus the rotation angle, on BOTH animating
+            # DObjs. A 3-channel sample cannot distinguish "the applier never
+            # writes the transform" from "this script drives a channel I did
+            # not read", and that distinction is the whole question.
+            'printf "WCAD f=%d wait=%f frame=%f\n", $n, ($e1 != 0) ? $e1->anim_wait : -1, ($e1 != 0) ? $e1->anim_frame : -1',
+            'printf "  E1 t=%f,%f,%f r=%f,%f,%f a=%f s=%f,%f,%f\n", ($e1 != 0) ? $e1->translate.vec.f.x : -1, ($e1 != 0) ? $e1->translate.vec.f.y : -1, ($e1 != 0) ? $e1->translate.vec.f.z : -1, ($e1 != 0) ? $e1->rotate.vec.f.x : -1, ($e1 != 0) ? $e1->rotate.vec.f.y : -1, ($e1 != 0) ? $e1->rotate.vec.f.z : -1, ($e1 != 0) ? $e1->rotate.a : -1, ($e1 != 0) ? $e1->scale.vec.f.x : -1, ($e1 != 0) ? $e1->scale.vec.f.y : -1, ($e1 != 0) ? $e1->scale.vec.f.z : -1',
+            'set $e2 = ($e1 != 0) ? $e1->child : (DObj *)0',
+            # ndsRendererAdapterBuildDObjLocalMatrix builds from dobj->xobjs[],
+            # dispatched BY KIND -- so an animated scale.y only reaches the
+            # matrix if this DObj actually carries a scale XObj. If the blink
+            # writes scale.y on a node with no scale transform kind, the pose is
+            # computed and then discarded, which is the last unmeasured link.
+            'printf "  EX xobjs_num=%d k0=%d k1=%d k2=%d vec=%p vk=%d,%d,%d\n", ($e2 != 0) ? $e2->xobjs_num : -1, (($e2 != 0) && ($e2->xobjs_num > 0) && ($e2->xobjs[0] != 0)) ? $e2->xobjs[0]->kind : -1, (($e2 != 0) && ($e2->xobjs_num > 1) && ($e2->xobjs[1] != 0)) ? $e2->xobjs[1]->kind : -1, (($e2 != 0) && ($e2->xobjs_num > 2) && ($e2->xobjs[2] != 0)) ? $e2->xobjs[2]->kind : -1, ($e2 != 0) ? $e2->vec : (DObjVec *)0, (($e2 != 0) && ($e2->vec != 0)) ? $e2->vec->kinds[0] : -1, (($e2 != 0) && ($e2->vec != 0)) ? $e2->vec->kinds[1] : -1, (($e2 != 0) && ($e2->vec != 0)) ? $e2->vec->kinds[2] : -1',
+            'printf "  E2 t=%f,%f,%f r=%f,%f,%f a=%f s=%f,%f,%f wait=%f frame=%f\n", ($e2 != 0) ? $e2->translate.vec.f.x : -1, ($e2 != 0) ? $e2->translate.vec.f.y : -1, ($e2 != 0) ? $e2->translate.vec.f.z : -1, ($e2 != 0) ? $e2->rotate.vec.f.x : -1, ($e2 != 0) ? $e2->rotate.vec.f.y : -1, ($e2 != 0) ? $e2->rotate.vec.f.z : -1, ($e2 != 0) ? $e2->rotate.a : -1, ($e2 != 0) ? $e2->scale.vec.f.x : -1, ($e2 != 0) ? $e2->scale.vec.f.y : -1, ($e2 != 0) ? $e2->scale.vec.f.z : -1, ($e2 != 0) ? $e2->anim_wait : -1, ($e2 != 0) ? $e2->anim_frame : -1',
+            'end',
+            ('if $n < ' + $Frames),
+            'continue',
+            'end',
+            'end',
+            'continue',
+            'printf "WCADDONE n=%d\n", $n',
+            'detach',
+            'quit'
+        )
+    }
 
     Invoke-GdbMarkerScript `
         -Gdb $gdb -Elf $elf -Root $root -Commands $commands `

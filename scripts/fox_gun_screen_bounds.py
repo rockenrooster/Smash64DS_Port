@@ -8,15 +8,21 @@ gap on the host, with no ROM build: feed it the sixteen words
 clip, NDC and screen-space bounds of the exact 44 vertices the submit pushes.
 
 The arithmetic is the DS geometry engine's, not an approximation of it. A
-`MTX_LOAD_4x4` matrix is 20.12 and `VTX_16` is 1.12, and the engine evaluates
+`MTX_LOAD_4x4` matrix is 20.12 and `VTX_16` is 1.12. The production gun submit
+does NOT load the captured CPU-composed matrix verbatim: before GX sees it,
+`ndsRendererLoadHardwareRawComposedMatrix` calls
+`ndsRendererBuildRawHardwareMatrix`, which divides the complete homogeneous
+row 3 by `1 << NDS_RENDERER_HW_WORLD_UNIT_SHIFT` (256). This is the matching
+half of the source-unit -> DS-v16 encoding used by the vertices. The engine then
+evaluates
 
     clip[i] = (SUM_k  M[k][i] * v[k]) >> 12,     v = (x, y, z, 4096)
 
 so the translation row contributes `M[3][i] * 4096 >> 12 == M[3][i]` while a
-vertex contributes `M[0][i] * x >> 12`. That asymmetry is the whole point: a
-local coordinate encoded as `source * 16` is worth `source/256` against a
-translation expressed directly, so a matrix carrying no compensating scale
-draws a correctly-placed, correctly-oriented, mathematically invisible mesh.
+vertex contributes `M[0][i] * x >> 12`. Applying the row-3 normalization is
+therefore mandatory when replaying a matrix dumped at the C entry point. The
+old version of this script omitted it and kept reporting the already-fixed
+0.036-pixel c128 failure after the renderer had moved to the normalized loader.
 
 Pass --body with a second matrix (the fighter root's `composed_matrices[0]`,
 dumped on the same frame) to get the like-for-like comparison: same camera,
@@ -35,6 +41,7 @@ from pathlib import Path
 
 SOURCE = Path("src/nds/nds_fox_gun.c")
 VERTEX_SCALE = 16          # NDS_FOX_GUN_VERTEX_SCALE
+WORLD_UNIT_SHIFT = 8       # NDS_RENDERER_HW_WORLD_UNIT_SHIFT
 SCREEN_W = 256
 SCREEN_H = 192
 
@@ -58,6 +65,22 @@ def parse_matrix(words: list[int]) -> list[list[int]]:
     return [words[0:4], words[4:8], words[8:12], words[12:16]]
 
 
+def round_shift_signed(value: int, shift: int) -> int:
+    """Mirror ndsRendererRoundShiftS64: nearest, halves away from zero."""
+    if shift == 0:
+        return value
+    magnitude = -value if value < 0 else value
+    magnitude = (magnitude + (1 << (shift - 1))) >> shift
+    return -magnitude if value < 0 else magnitude
+
+
+def raw_hardware_matrix(cpu_composed: list[list[int]]) -> list[list[int]]:
+    """Mirror ndsRendererBuildRawHardwareMatrix for a captured gun MVP."""
+    out = [row[:] for row in cpu_composed]
+    out[3] = [round_shift_signed(v, WORLD_UNIT_SHIFT) for v in out[3]]
+    return out
+
+
 def transform(m: list[list[int]], v: tuple[int, int, int]) -> tuple[int, ...]:
     x, y, z = v
     out = []
@@ -70,6 +93,7 @@ def transform(m: list[list[int]], v: tuple[int, int, int]) -> tuple[int, ...]:
 
 def report(label: str, m: list[list[int]],
            vertices: list[tuple[int, int, int]]) -> None:
+    m = raw_hardware_matrix(m)
     scaled = [(x * VERTEX_SCALE, y * VERTEX_SCALE, z * VERTEX_SCALE)
               for x, y, z in vertices]
     clips = [transform(m, v) for v in scaled]
