@@ -183,10 +183,11 @@ accumulate cost**. **BOTH ITS ANOMALIES ARE ATTRIBUTED, no build spent
 
 ## Restart surface — parked items live on the board's **Parked** list
 
-**DO NOT PUSH (found 2026-08-12; owner said ignore for now; = `OWNER_DECISIONS.md` §9).** The
-owner-given-name scan is RED: 16 tracked `decomp/` Rust build artifacts embed the build machine's
-user directory — a doc/reality mismatch, since `AGENTS.md` says `/decomp/` is gitignored and it is
-NOT (`git ls-files decomp` reads 26,276). Local commits are safe; only the push is blocked.
+**PUSH IS UNBLOCKED — `a4100b7`, 2026-08-13**, the owner's "scrub the 16" (`OWNER_DECISIONS.md` §9):
+16 Cargo blobs under `decomp/BattleShip-main/decomp/tools/` baked the build machine's user directory.
+Untracked + gitignored, byte-identical on disk; they **stay in pushed HISTORY — the owner accepted.**
+Scan is `git grep -l -i -e <owner-given-name> HEAD`, now **17 → 1**: the survivor, sm64's IDO
+`usr/lib/copt`, is a FALSE POSITIVE. `AGENTS.md` still miscalls `/decomp/` gitignored — 26,260 tracked.
 
 `AGENTS.md` owns the start-of-cycle commands; `docs/P1_EXECUTION_BOARD.md` is the only dynamic
 queue; `docs/BUGS.md` carries the owner's verdicts — preserve their wording. A clean checkout builds
