@@ -1,0 +1,31 @@
+WARNING: Tick-HUD samples repeated a presented frame (3 of 1600). EVERY duplicate is a ring-stop seam whose recorded skew explains the label collision, and no payload repeats, so these are distinct real iterations that share a frame LABEL. Percentiles are over the iterations and stand; the frame ids at those seams do not. Seam rows: 575,767,1439.
+Wrote artifacts\performance\2026-08-13_c-animjoint-fix\ctl-c134-rows.csv
+Tick-HUD buckets: target=smash64ds-battle-playable-tickhud-hwtri samples=1600 frames=439..2038 melonDS=1.0 sha=DE80E46BDCF1FD98 git=335624c7c39+dirty(6) dldi=ON
+
+bucket p50        p95        spread mean       min        max        %ALLp50
+------ ---        ---        ------ ----       ---        ---        -------
+ALL     1,118,208  1,678,592   1.50  1,211,617  1,115,136  5,312,640   100.0
+FTR       294,272    320,768   1.09    288,383    166,976    332,800    26.3
+STG       162,560    166,592   1.02    162,844    158,144    171,136    14.5
+BG          4,032      4,096   1.02      4,006      3,776      4,160     0.4
+AUD         2,880      8,000   2.78      9,053      1,152    154,880     0.3
+HUD         1,024    421,760 411.88     35,138        896  2,081,152     0.1
+SRC       319,936    572,736   1.79    353,527     10,944  4,598,336    28.6
+MISC      103,680    179,392   1.73    111,313     81,280    272,256     9.3
+OTHR      235,584    528,576   2.24    247,353     20,864    579,712    21.1
+WAIT      216,064    508,800   2.35    227,635        896    559,360    19.3
+WORK      927,424  1,366,656   1.47    983,982    591,552  5,199,168    82.9
+SHDT        4,096     88,192  21.53     14,036          0    495,040     0.4
+SWRM          896        960   1.07        871        640      1,088     0.1
+GCRA      314,688    567,616   1.80    348,249      6,784  4,593,152    28.1
+SCPU       42,624    105,152   2.47     45,270          0    137,152     3.8
+SCAT        1,280      1,408   1.10      1,229          0      1,600     0.1
+SPRM        1,792      1,984   1.11      4,529          0    646,656     0.2
+SINT      148,672    329,728   2.22    167,728          0  4,334,400    13.3
+SPHD       57,088     98,432   1.72     65,395          0    717,696     5.1
+SPHC          640        768   1.20        650          0      1,024     0.1
+WORK-H    919,552  1,193,856   1.30    948,844    583,424  5,198,208    82.2
+
+named=964,264 (79.6% of ALL)  VBI 2:1750 3:259 4:16 5+:13 max:26 total:2038  slips=0
+extras: gNdsAnimJointDispatch32Count=0  gNdsAnimJointDispatchFigatreeCount=0  gNdsAnimJointDispatchMisalignCount=0  gNdsAnimJointDispatchFigatreeScript=0  gNdsShieldAnimJointInstallCalls=80  gNdsObjAnimRunawayCount=0  gNdsObjAnimRunawayMask=0  gNdsObjAnimRunawayScript=0  gNdsObjAnimRunawayOpcode=0
+Wrote artifacts\performance\2026-08-13_c-animjoint-fix\ctl-c134.json

@@ -1,0 +1,66 @@
+ter without a cast [-Wint-conversion]
+ 4759 |                     event_file_head = *fp->data->p_file_mainmotion;
+      |                                     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:4770:37: warning: comparison of integer expressions of different signedness: 'intptr_t' {aka 'int'} and 'unsigned int' [-Wsign-compare]
+ 4770 |             if (motion_desc->offset != 0x80000000)
+      |                                     ^~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:4383:9: warning: unused variable 'unused3' [-Wunused-variable]
+ 4383 |     s32 unused3;
+      |         ^~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:4379:9: warning: unused variable 'unused2' [-Wunused-variable]
+ 4379 |     s32 unused2;
+      |         ^~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:4376:9: warning: unused variable 'unused1' [-Wunused-variable]
+ 4376 |     s32 unused1;
+      |         ^~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c: In function 'battleship_ftMainProcessHitCollisionStatsMain':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:2845:12: warning: 'knockback_temp' may be used uninitialized [-Wmaybe-uninitialized]
+ 2845 |         if (knockback < knockback_temp)
+      |            ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:2675:9: note: 'knockback_temp' was declared here
+ 2675 |     f32 knockback_temp;
+      |         ^~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:2855:19: warning: 'j' may be used uninitialized [-Wmaybe-uninitialized]
+ 2855 |     switch (hitlog->attacker_object_class)
+      |             ~~~~~~^~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:2674:12: note: 'j' was declared here
+ 2674 |     s32 i, j;
+      |            ^
+linking smash64ds-battle-playable-tickhud-hwtri.elf
+C:/devkitPro/devkitARM/bin/../lib/gcc/arm-none-eabi/15.2.0/../../../../arm-none-eabi/bin/ld.exe: warning: C:/devkitPro/devkitARM/bin/../lib/gcc/arm-none-eabi/15.2.0/thumb/crtn.o: missing .note.GNU-stack section implies executable stack
+C:/devkitPro/devkitARM/bin/../lib/gcc/arm-none-eabi/15.2.0/../../../../arm-none-eabi/bin/ld.exe: NOTE: This behaviour is deprecated and will be removed in a future version of the linker
+Nintendo DS rom tool 2.3.1 - Jan  8 2024
+by Rafael Vuijk, Dave Murphy, Alexei Karpenko
+built ... smash64ds-battle-playable-tickhud-hwtri.nds
+make: Leaving directory '/d/Stuff/DevFolder/Smash64DS_Port'
+WARNING: Tick-HUD samples repeated a presented frame (18 of 8448). EVERY duplicate is a ring-stop seam whose recorded skew explains the label collision, and no payload repeats, so these are distinct real iterations that share a frame LABEL. Percentiles are over the iterations and stand; the frame ids at those seams do not. Seam rows: 383,575,864,1439,2111,2592,2975,3168,3359,3743,3935,4319,4607,5280,5664,7295,7584,8064.
+Wrote artifacts\performance\2026-08-13_c-animjoint-fix\cand5-c135-rows.csv
+Tick-HUD buckets: target=smash64ds-battle-playable-tickhud-hwtri samples=8448 frames=439..8886 melonDS=1.0 sha=DE80E46BDCF1FD98 git=335624c7c39+dirty(7) dldi=ON
+
+bucket p50        p95        spread mean       min        max        %ALLp50
+------ ---        ---        ------ ----       ---        ---        -------
+ALL     1,118,208  1,678,720   1.50  1,232,303  1,116,608  3,919,360   100.0
+FTR       295,040    322,048   1.09    287,405    147,904    332,992    26.4
+STG       163,136    167,168   1.02    163,404    158,848    171,968    14.6
+BG          4,032      4,096   1.02      4,034      3,648      7,296     0.4
+AUD         2,944      7,744   2.63      9,012      1,472    157,888     0.3
+HUD           960    422,848 440.47     34,390        896    492,608     0.1
+SRC       333,888    604,160   1.81    369,709    151,872  2,180,352    29.9
+MISC      105,216    184,512   1.75    117,098     81,536    924,864     9.4
+OTHR      233,728    515,840   2.21    247,250     20,544    581,056    20.9
+WAIT      214,016    495,936   2.32    227,410        832    560,192    19.1
+WORK      944,064  1,392,512   1.48  1,004,893    707,392  3,453,696    84.4
+SHDT        4,480    109,440  24.43     16,007      2,944    559,488     0.4
+SWRM          960      1,024   1.07        945        768      1,152     0.1
+GCRA      328,704    599,040   1.82    364,504    146,816  2,175,104    29.4
+SCPU       44,480    103,872   2.34     45,894        640    152,896     4.0
+SCAT        1,280      1,472   1.15      1,412        960    904,128     0.1
+SPRM        1,856      2,048   1.10      4,870      1,536    753,344     0.2
+SINT      156,992    361,216   2.30    178,853      6,848  1,742,272    14.0
+SPHD       62,720    104,960   1.67     71,028     30,976  1,942,528     5.6
+SPHC          704        832   1.18        737        384     33,856     0.1
+WORK-H    930,688  1,249,280   1.34    970,503    705,728  3,452,736    83.2
+
+named=985,052 (79.9% of ALL)  VBI 2:7208 3:1575 4:84 5+:19 max:26 total:8886  slips=0
+extras: gNdsAnimJointFlagFrames=1,067  gNdsAnimJointIdleSkip32Count=20,595  gNdsAnimJointDispatch32Count=9,154  gNdsAnimJointDispatchFigatreeCount=0  gNdsAnimJointDispatchMisalignCount=0  gNdsAnimJointDispatchFigatreeScript=0  gNdsShieldAnimJointInstallCalls=542  gNdsShieldAnimJointAttachCount=9,154  gNdsShieldAnimJointNullCount=5,420  gNdsObjAnimRunawayCount=0  gNdsObjAnimRunawayMask=0  gNdsObjAnimRunawayScript=0  gNdsObjAnimRunawayOpcode=0  gNdsAObjEvent32NormalizedHighWater=1,598  gNdsAObjEvent32NormalizeFailCount=0  gNdsTaskmanGeneralHeapFreeMin=70,000  gNdsTaskmanArenaAllocFailCount=0  gNdsRelocResolveMisalignCount=0
+Wrote artifacts\performance\2026-08-13_c-animjoint-fix\cand5-c135.json

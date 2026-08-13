@@ -359,7 +359,12 @@ try {
                     throw ("$($pair.n) names not defined in $([System.IO.Path]::GetFileName($elf)): " +
                         "$($missing -join ', '). A name that exists but is never written reads 0, " +
                         "which is a real measurement; a name that does not exist is a typo. " +
-                        'If the name lives behind a census flag, pass it with -MakeFlags.')
+                        'If the name lives behind a census flag, pass it with -MakeFlags. ' +
+                        'A brand-new diagnostic global with NO COMPILED WRITER on this arm is ' +
+                        'the third case and looks identical: --gc-sections drops it, and ' +
+                        '__attribute__((used)) does NOT save it -- devkitARM ignores the ' +
+                        '`retain` attribute that would (verified 2026-08-13), so the only ' +
+                        'fixes are a writer that is compiled on this arm or a linker KEEP.')
                 }
             }
         }

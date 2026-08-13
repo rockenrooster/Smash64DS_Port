@@ -7856,7 +7856,31 @@ divergence, and it is the weakest case for urgency.
 
 ## Parked — open items with owners' notes, promote deliberately
 
-- **The DObj-parser runaway: ATTRIBUTED 2026-08-13, FIX HANDED FORWARD.** Finding:
+- **The DObj-parser runaway: FIXED 2026-08-13 (cycle 13).** The seam was not the flag and not
+  the dispatch: `lbCommonAddDObjAnimJointAll` (decomp `lb/lbcommon.c:785`) **had no body in this
+  port** — an empty stub at `reloc_backend_compat_shims.c:2140`, `bx lr` at `0x02052eac` in the
+  shipped ELF, because `src/import/battleship_lb_common.c` is parked and out of `CFILES`.
+  `ftCommonGuardInitJoints` sets `is_anim_joint = TRUE` *and calls that function in the same
+  breath, because calling it is what makes the flag true*; with no body the flag was true while
+  every joint still held the GuardOn figatree. **There was no missing clear** — `ft/ftmain.c:4633`
+  re-derives the whole `anim_desc.word` from the motion descriptor on every install, invisible to a
+  field-name grep because `FTAnimDesc` is a union, and Mario's GuardOn row (`ft/ftdata.c:275`)
+  carries no `FTANIM_FLAG_ANIMJOINT`. Fox's entry Arwing (`ef/efmanager.c:5734/5736`) was the same
+  stub's second dead caller. Measured on the five-minute both-CPU arm, 8,448 samples:
+  `gNdsAnimJointDispatchFigatreeCount` **144 → 0** (it was **144 of 144** — every 32-bit dispatch
+  in the match was a misread), `gNdsObjAnimRunawayCount` **50 → 0**, `Dispatch32` 144 → **9,154**
+  so the counter is armed, `AttachCount` **9,154** = `Dispatch32` exactly. **The runaway counter
+  under-reported the class 2.9x**: 96 of 144 were 2 mod 4, the other **48 were 4-aligned and
+  decoded to a legal opcode — silent**. **PRICE: `WORK-H` P95 +49,216 on the gate arm**
+  (1,210,880 → **1,260,096**, P50 923,392 → 924,928), isolated to +44,544 by the one-variable
+  five-minute pair, so it is work and not placement; the ledger high-water moves 1,019 → **1,598 of
+  2,048**, which retires cycle 12's "capacity ≥ 2x the corpus" derivation. Boundary green, root ROMs
+  byte-identical. Evidence and the named recovery lever (memoise the two port-only per-joint
+  lookups by `(fighter, angle_i)`):
+  `artifacts/performance/2026-08-13_c-animjoint-fix/ANIMJOINT_FIX.md`. **Never loosen the parser
+  bound and never teach it opcode 100.**
+- **The DObj-parser runaway: ATTRIBUTED 2026-08-13, FIX HANDED FORWARD.** *(cycle 12, superseded by
+  the row above — kept because its arithmetic is still the reference for opcode 100.)* Finding:
   `gcParseDObjAnimJoint` (32-bit) is run on fighter joints holding a **16-bit figatree**;
   `anim_joint` is a union `ftAnimParseDObjFigatree` advances in place, so the "corrupt" 2-mod-4
   pointer is a perfectly good `event16` pointer and **opcode 100 is what a misaligned ARM9 `LDR`
@@ -8111,7 +8135,7 @@ As last graded (cycle 76); a row changes state only when its gate runs.
 | Recognizable Dream Land presentation and required animation | Red | Whispy Route 7 owner-approved and promoted 2026-08-08; remaining stage presentation not regraded |
 | Complete overlapping BGM, FGM, voices, announcer, crowd | Red | Exact pitch/composite/voice coverage and listen gates remain |
 | Stable 30 FPS, representative P95 <= 1.12M ticks | Red | Gap **503,684 on the both-CPU gate arm**, 60 s match at 86.7% coverage (356,292 is the Boundary figure and is not the gate); lane G1–G4 |
-| Stable reserve, no corruption, clean teardown | **Stress battery passes 2026-08-13, one anomaly open** | Both-CPU chains to 5 battle entries incl. Sudden Death, plus a 5-minute match: `NO-FREEZE`, heap free-min 67,652–70,384 (floor 32,768), GObj cap never latched, alloc-fail/overflow/objman-panic 0, texture-certificate `SweepFail` 0, picture colour floor 1,305. **OPEN: `gNdsObjAnimRunawayCount` 0/17/50 by scene time** and `sNdsAObjEvent32NormalizedCount` **1,019 of 1,024** in one five-minute match (`artifacts/performance/2026-08-13_c-stress/`) |
+| Stable reserve, no corruption, clean teardown | **Stress battery passes 2026-08-13; both anomalies now closed** | Both-CPU chains to 5 battle entries incl. Sudden Death, plus a 5-minute match: `NO-FREEZE`, heap free-min 67,652–70,384 (floor 32,768), GObj cap never latched, alloc-fail/overflow/objman-panic 0, texture-certificate `SweepFail` 0, picture colour floor 1,305. `gNdsObjAnimRunawayCount` **0** on the five-minute arm since the anim-joint install fix (was 50); ledger high-water **1,598 of 2,048**, `NormalizeFailCount` 0, heap free-min 70,000 (`artifacts/performance/2026-08-13_c-{stress,animjoint-fix}/`) |
 | Reproducible public artifact | Red | Current local root ROM differs from the pinned public identity |
 
 ## Artifact Identity

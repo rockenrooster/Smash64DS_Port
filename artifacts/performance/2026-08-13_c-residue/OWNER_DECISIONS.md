@@ -37,6 +37,15 @@ stays open, and nobody can work it.
 update cadence and either raises it to 30 Hz or explains in numbers why it is
 already there.
 
+**One thing changed since you last looked, and it is NOT Whispy:** a separate
+animation-freeze bug was found and fixed on 2026-08-13 — a **fighter's** joints
+(Mario's, during and after shielding) were being dropped and frozen in their last
+pose, 144 times in a five-minute match. That is the same *kind* of thing "looks
+low FPS" describes, on a different object. If what you were seeing was ever the
+fighters rather than the tree, it may now be gone; if the tree still looks wrong
+after that fix, the question above stands unchanged and still needs your sentence.
+`artifacts/performance/2026-08-13_c-animjoint-fix/ANIMJOINT_FIX.md`.
+
 **Evidence:** `artifacts/verification/2026-08-12_whispy-{cadence-armed,channels,xobj-kinds}.txt`
 
 ---

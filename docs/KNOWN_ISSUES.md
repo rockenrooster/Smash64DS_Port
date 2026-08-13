@@ -465,7 +465,31 @@ placeholder meaning "not wired" reads exactly like this — and guessing wrong
 silently changes which music plays. Owner's call: set it to 34 to match decomp,
 or drop the declaration so the checker stops guarding a value nothing uses.
 
-## The 32-bit joint parser is run on 16-bit figatree joints
+## The 32-bit joint parser is run on 16-bit figatree joints — **FIXED 2026-08-13**
+
+**FIXED at its owning seam**: `lbCommonAddDObjAnimJointAll`
+(decomp `lb/lbcommon.c:785`) had **no body in this port** — an empty stub at
+`src/port/reloc_backend_compat_shims.c:2140`, `bx lr` at `0x02052eac` in the
+shipped ELF, because `src/import/battleship_lb_common.c` is parked and not in
+`CFILES`. `ftCommonGuardInitJoints` sets `is_anim_joint = TRUE` and calls it in
+the same breath *because calling it is what makes the flag true*; with no body
+the flag was true while every joint still held the GuardOn figatree.
+**There was never a missing clear — there was a missing set.** The clear exists
+and always ran: `ft/ftmain.c:4633` copies the whole `anim_desc.word` out of the
+motion descriptor on every install, which a field-name grep cannot see because
+`FTAnimDesc` is a union, and Mario's GuardOn descriptor (`ft/ftdata.c:275`)
+carries no `FTANIM_FLAG_ANIMJOINT`.
+
+Measured, five-minute both-CPU arm, 8,448 samples:
+`gNdsAnimJointDispatchFigatreeCount` **144 → 0** (it was **144 of 144**, i.e.
+100% of all 32-bit dispatches), `gNdsObjAnimRunawayCount` **50 → 0**,
+`gNdsAnimJointDispatch32Count` 144 → **9,154** so the counter is armed. Price:
+`WORK-H` P95 **+49,216** on the gate arm (bank 1,210,880 → 1,260,096) — owed
+work, since those joints were doing none. Evidence and the named recovery lever:
+`artifacts/performance/2026-08-13_c-animjoint-fix/ANIMJOINT_FIX.md`.
+**The audit counters live behind `NDS_ANIM_JOINT_AUDIT` (default 0) and the
+one-minute arm reads 0 for all of them with 80 shields — only the five-minute
+arm can falsify this row.** The account of the mechanism below stands as written.
 
 **PRODUCER FOUND 2026-08-13** — full evidence and both GDB captures in
 `artifacts/performance/2026-08-13_c-anim-anomalies/ANOMALIES.md`. This section
@@ -506,30 +530,27 @@ the divergence is the FLAG, not the dispatch. `fttypes.h:59` states the
 invariant — *"whether current animation is type Figatree (0) or AnimJoint (1)"*
 — and the fault is that invariant broken.
 
-The remaining unknown is narrow. The only writer in this tree is
-`ftcommonguard1.c:275`, where the shield sets `is_anim_joint = TRUE` and
-installs event32 shield scripts in the same breath, which is self-consistent and
-correct. A grep over `decomp/src`, `src/` and `include/` finds **no writer that
-clears it** — but that is one grep, so the honest statement is "not found where
-I looked": the clear may live in a whole-struct assignment a field-name grep
-cannot see. Read BattleShip's figatree-install path
-(`lbCommonAddFighterPartsFigatree` and its `ftMain*`/`ftAnim*` callers) against
-the port shim (`reloc_backend_compat_shims.c:8990) and find who is supposed to
-clear it. If nothing does, the clear belongs at the install seam — **never a
-frame check, never a per-joint alignment test at the parser, and never a looser
-bound.** The negative control for any fix: a counter of "`is_anim_joint` true
-while the joint's pointer lies in an asset `ndsRelocPointerIsFighterAObj16`
-claims" must reach zero while the shield's own parse count stays non-zero.
+The remaining unknown was narrow, and the guess recorded here was wrong in a
+useful way: the only *flag* writer in this tree is `ftcommonguard1.c:275`, and a
+grep found no writer clearing it — but the clear is a **union-word assignment**
+(`ft/ftmain.c:4633`) that no field-name grep can see, and the real defect was the
+line *after* the set, not the missing clear. "Not found where I looked" was the
+right phrasing; the second modality that settled it was reading the SET's own
+call site.
 
-Cost today: `default:` sets `dobj->anim_wait = AOBJ_ANIM_NULL` and returns, so
-the joint's animation is dropped and slice 33's idle skip
+Cost while it was live: `default:` sets `dobj->anim_wait = AOBJ_ANIM_NULL` and
+returns, so the joint's animation is dropped and slice 33's idle skip
 (`compat_shims.c:1998`) then skips it — a fighter's joints freeze in their last
-pose, in bursts of about six, until the next action change re-arms them. The
-bound is containing it and is working as designed. **Rate: the 1-minute both-CPU
-gate arm reads 0** (1,600 samples); a five-minute match reads 50, i.e. roughly
-eight bursts. The 2026-08-13 "≈1 per 6 s of scene time" reading is withdrawn.
+pose until the next action change re-arms them. **Rate: the 1-minute both-CPU
+gate arm reads 0** (1,600 samples); a five-minute match read 50. The 2026-08-13
+"≈1 per 6 s of scene time" reading is withdrawn. And 50 was itself an
+undercount: of the 144 measured misreads, only the 96 that were 2 mod 4 could
+produce an out-of-range opcode — **the other 48 were 4-aligned, decoded to a
+legal DObj opcode, and were consumed silently.** `gNdsObjAnimRunawayCount` sees
+about a third of this class; do not read it as the class.
 `scripts/probe-objanim-runaway.ps1` re-derives the fault block from the ELF and
-captures the DObj, GObj, loaded-file owner and backtrace on each hit.
+captures the DObj, GObj, loaded-file owner and backtrace on each hit; the bound
+itself was never wrong and must not be loosened.
 
 ## The `gs`-form GBI static initializers are all `{ 0 }`
 

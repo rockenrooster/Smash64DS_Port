@@ -2,7 +2,7 @@
 
 Updated: 2026-08-13. **THE GATE ARM WAS MISLABELLED** (`…/2026-08-12_c126-armcheck/
 ARM_MISLABEL.md`): the banked "canonical both-CPU" 1,087,296 was built `BOTH_CPU 0`. On
-R2-07's own gate names HEAD measures **1,207,616 — +87,236 OVER**. **Boundary PASSES
+R2-07's own gate names HEAD measures **1,260,096 — +139,716 OVER**. **Boundary PASSES
 (~1,087,600); the R2-07 stress gate FAILS**, every `EXHAUSTION.md` ceiling is dead, and
 **the owner's order is bugs first, then P95** — context, not the next task.
 
@@ -37,13 +37,13 @@ beside Fox is the BEAM ITSELF**, relocData 316's own RGBA(219,0,134) — not a d
 | arm | role | `WORK-H` P50 | P95 |
 |---|---|---:|---:|
 | `battle_playable_realtime` (`BOTH_CPU 0`) | shipped, **PASSES** | 899,136 | 1,087,616 |
-| **both-CPU (`BOTH_CPU 1`)** | **R2-07 GATE, FAILS** | **923,392** | **1,210,880** |
+| **both-CPU (`BOTH_CPU 1`)** | **R2-07 GATE, FAILS** | **924,928** | **1,260,096** |
 
-**RE-MEASURED ON HEAD 2026-08-13, BYTE-IDENTICAL** (`…/2026-08-13_c-anim-anomalies/`,
-`build-c132-stress`, 1,600, DLDI ON): VBI **2:1743 3:267 4:15 5+:13 max 26**. **Gap 90,880.**
-**Re-banked by SLICE 50** (`…/2026-08-13_c-threeleg/SLICE50.md`); its control put HEAD at
-939,392 / **1,219,520** (+11,904 past c130). **Judge a cut this size at P50 and its owning
-lane** — one changed line moved P95 24,064 against 3,648 at P50.
+**RE-BANKED 2026-08-13 AFTER THE ANIM-JOINT FIX** (`…/2026-08-13_c-animjoint-fix/`,
+`build-c136-animjoint`, 1,600, DLDI ON): VBI **2:1697 3:310 4:18 5+:13 max 26**. **Gap 139,716.**
+The fix costs **+49,216 P95 / +1,536 P50** against the c132 bank (1,210,880 / 923,392) and it is
+work, not placement — the one-variable five-minute pair reads +44,544. It is owed: those joints
+were doing nothing. **Judge a cut at P50 and its owning lane** — P95 moves 15x further than P50.
 
 **RE-BANKED ON `BOTH_CPU 1` — `…/2026-08-12_c130-fire-gate/LANES_BOTHCPU.md`** (no build;
 `analyze-tick-hud-excursion.ps1 -Ceilings` emits both tables now). `SRC` owns **84.4%** of the
@@ -148,12 +148,12 @@ entries, **Sudden Death UNFORCED** and played to a KO, `NO-FREEZE`, risk counter
 five-minute match ran at 98.7% coverage for `WORK-H` 929,344 / **1,205,760** — **length does not
 accumulate cost**. **BOTH ITS ANOMALIES ARE ATTRIBUTED, no build spent
 (`…/2026-08-13_c-anim-anomalies/ANOMALIES.md`):**
-- **Runaway = a FIGHTER, not Whispy; opcode 100 is an ARTEFACT and there is NO decoder gap** — the
-  32-bit parser reads a *good* `event16` pointer, so nothing produces a bad address and the two
-  producers `KNOWN_ISSUES.md` chased are moot (it owns the chain). Seam:
-  `fp->anim_desc.flags.is_anim_joint` true while joints hold figatrees; the dispatch is source-exact.
-  **The 1-minute gate arm reads 0**, so "≈1 per 6 s" is withdrawn. **Never loosen the bound or teach
-  it opcode 100.** Fix handed forward; `scripts/probe-objanim-runaway.ps1`.
+- **Runaway — FIXED 2026-08-13 (`…/2026-08-13_c-animjoint-fix/ANIMJOINT_FIX.md`). There was no
+  missing CLEAR; there was a missing SET.** `lbCommonAddDObjAnimJointAll` (`lb/lbcommon.c:785`) was
+  an **empty stub** (`bx lr`), so `ftCommonGuardInitJoints` set `is_anim_joint` while every joint
+  still held the GuardOn figatree. Five-minute arm: Figatree misreads **144 → 0** (it was 144 of
+  144), runaway **50 → 0**; the runaway counter saw only 2/3 of the class — **48 of 144 decoded to
+  a legal opcode and were silent**. **PRICE +49,216 P95** (bank above). Never loosen the bound.
 - **AObj cliff = CAPACITY, not a leak — FIXED.** Four zero-growth stops against reuse firing 16-19/stop kills the leak theory; the shipping 1-minute arm already stood at **889/1,024**, and a LEDGER cannot be evicted (the repack has no spare bit) so capacity is the lever: **`NDS_AOBJ_EVENT32_NORMALIZED_MAX` 1024 → 2048**, +8,192 B bss, headroom **167,936**; corpus proven **1,019** by `gNdsAObjEvent32NormalizedHighWater` on a re-run five-minute match.
 **START PAUSES THE MATCH** and the old whole-window freeze hash could not see it — the watch hashes the TOP band and `-PressStartOnResults` presses only on a detected Results screen.
 
