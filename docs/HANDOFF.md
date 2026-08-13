@@ -38,12 +38,12 @@ under this arm's own 9,664 repeat spread**; the mechanism (18 quads, ~12 frames)
   mask, so after restoring a dead effect, re-grade the atlas before trusting the soak.**
   **The build arm is part of the trigger**: at `BOTH_CPU 0` Mario never burns, so the
   flame probe now reads `nds_build_config.h` and refuses that arm instead of timing out.
-- **Row 1 (Whispy face) — the blink animation lasts ONE frame.** `map_gobj[0]->anim_frame`
-  hits 1.0 for one sample and is 0 the next; everything around it measured GREEN, and
-  **there IS no blink texture** — that entry of `dGRPupupuWhispyEyesAnims` carries a NULL
-  material anim (`grpupupu.c:76`) and the six `dGRPupupuWhispyEyesTextures` are the WIND
-  cycle on `map_gobj[3]`. Only question left: why does the joint script resolve to one
-  frame? Probes: `probe-whispy-eye-texture.ps1`, `probe-whispy-blink-script.ps1`.
+- **Row 1 (Whispy) — "the blink lasts ONE frame" is REFUTED (2026-08-13); do not re-open
+  it.** The 1.0 `anim_frame` was sampled at the NEXT blink request. Armed, the blink runs
+  6 presented frames (`anim_frame` 1,3,5,7,9,11, `anim_wait` 11..1 — its script's
+  `Wait 12`) and the eye's grandchild DObj squashes `scale.y` to 0.104 and back through an
+  XObj **kind 28 = TraRotRpyRSca**. **There IS no blink texture and that is source-correct.**
+  Chain source-exact end to end; owner must name the motion. `…_fox-crouch/WHISPY.md`.
 
 **R2-08 cannot be finished by an agent**: SwitchPlan `:391` needs the owner's recorded retail play test, `:385` their visual approval.
 
