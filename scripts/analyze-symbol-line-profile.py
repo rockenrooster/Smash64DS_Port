@@ -28,6 +28,23 @@ Two further cautions the same cycle re-proved:
     `ndsFighterDrawPlanVerify` is 1,848 bytes of the profiled function and does
     not exist in `smash64ds-battle-playable-hwtri.elf` at all.
 
+THE PROFILE COUNTS ARM9 CYCLES, AND A TICK IS TWO OF THEM. The ARM9 runs at
+twice the frequency of the tick timer the HUD and the gate are expressed in, so
+`ticks/frame = cycles / (2 x regions)`. Proof from the artifacts, not the
+datasheet (`artifacts/performance/2026-08-13_c-residue/RESIDUE.md` §0):
+`arm9-profile.regions.csv` `total_cycles` P50 is 2,240,838 = 2.0001 x the
+1,120,380 ticks in two VBlanks, and the region histogram in `cycles/2` matches
+the gate arm's `ALL` VBlank histogram frame for frame. Read as cycles==ticks,
+the profile ROM -- which has the HUD draw compiled out -- would be presenting at
+half the frame rate of the heavier gate ROM.
+
+This script used to report each row as its share of a fixed 1,128,000-tick
+budget, which inflates every figure by `budget / measured non-idle` (1.167x on
+the c123 profile) and is a third, different unit again. It now reads `regions`
+out of `arm9-profile.meta.txt` and prints the conversion it used on a `basis`
+line. `--frame-budget`/`--non-idle` remain as the fallback when no meta file is
+present; that fallback is labelled in the output because it is not ticks.
+
 Usage:
   python scripts/analyze-symbol-line-profile.py <symbol> \
       [--build builds/<dir>] [--profile <run dir>] [--top 20] [--by-function]
@@ -49,6 +66,22 @@ NM = os.environ.get("NM", r"C:/devkitPro/devkitARM/bin/arm-none-eabi-nm.exe")
 ADDR2LINE = os.environ.get(
     "ADDR2LINE", r"C:/devkitPro/devkitARM/bin/arm-none-eabi-addr2line.exe")
 IDLE_SYMBOL = "armWaitForIrq"
+CYCLES_PER_TICK = 2
+
+
+def profile_regions(profile_dir: Path) -> int:
+    """-> the profile's presented-frame count, or 0 if the meta file is absent."""
+    meta = next(profile_dir.glob("*profile.meta.txt"), None)
+    if meta is None:
+        return 0
+    for line in meta.read_text(errors="ignore").splitlines():
+        key, _, value = line.partition("=")
+        if key.strip() == "regions":
+            try:
+                return int(value.strip())
+            except ValueError:
+                return 0
+    return 0
 
 
 def build_commit(build_dir: Path) -> str | None:
@@ -104,6 +137,7 @@ def main() -> int:
     csv_path = next(args.profile.glob("*profile.csv"), None)
     if csv_path is None:
         raise SystemExit(f"no profile csv in {args.profile}")
+    regions = profile_regions(args.profile)
 
     commit = build_commit(args.build)
     print(f"elf     {elf}")
@@ -148,6 +182,19 @@ def main() -> int:
                 total_all += int(row[5])
         non_idle = total_all - idle
 
+    # ticks/frame, measured -- see the module docstring. Falls back to the old
+    # share-of-budget normalisation only when the meta file is missing.
+    if regions:
+        divisor = float(CYCLES_PER_TICK * regions)
+        basis = (f"ticks/frame = cycles / ({CYCLES_PER_TICK} x {regions} "
+                 f"regions) = cycles / {CYCLES_PER_TICK * regions:,}")
+    else:
+        divisor = non_idle / float(args.frame_budget)
+        basis = (f"NO regions in meta -- falling back to share of a "
+                 f"{args.frame_budget:,}-tick budget; this OVERSTATES every row "
+                 f"when measured work is under budget")
+    print(f"basis   {basis}")
+
     pcs = sorted(counts)
     resolved = addr2line(elf, pcs)
     sources: dict[str, list[str] | None] = {}
@@ -161,10 +208,10 @@ def main() -> int:
 
     total = sum(v[1] for v in rows.values())
     print(f"\n{args.symbol}: {total:,} cycles = "
-          f"{total / non_idle * args.frame_budget:,.0f} ticks/frame, "
+          f"{total / divisor:,.0f} ticks/frame, "
           f"{len(pcs)} PCs\n")
     for key, value in sorted(rows.items(), key=lambda kv: -kv[1][1])[:args.top]:
-        ticks = value[1] / non_idle * args.frame_budget
+        ticks = value[1] / divisor
         head = f"  {value[1]:>10,} cyc {ticks:>7,.0f} tk/fr ex {value[0]:>9,}"
         if args.by_function:
             print(f"{head}  {key[0]}")
