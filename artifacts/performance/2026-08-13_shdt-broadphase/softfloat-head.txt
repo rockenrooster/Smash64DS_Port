@@ -1,0 +1,25 @@
+non-idle work 3,094,566,490 cycles (armWaitForIrq 721,447,771 excluded)
+attributed    244,314,171 cycles = 7.89% of non-idle
+
+helper                          calls       cycles  cyc/call
+__aeabi_fmul                2,698,528   68,722,700      25.5
+__aeabi_fadd                1,649,767   99,354,841      36.4
+__aeabi_fsub                1,082,132    1,082,136      36.4 (thunk -> __aeabi_fadd)
+__aeabi_fcmpeq              1,049,042   11,083,887      10.6
+__aeabi_fcmplt                540,683    7,879,356      14.6
+__aeabi_f2iz                  485,881    6,183,643      12.7
+__aeabi_i2f                   320,144    5,266,201      16.4
+__aeabi_fdiv                  301,391   35,538,355     117.9
+__aeabi_fcmpgt                255,967    3,779,124      14.8
+__aeabi_ui2f                  126,597      506,380       4.0
+__floatsisf                   126,595      979,786       7.7
+__aeabi_l2f                   118,665    3,382,976      28.5
+__aeabi_fcmple                 75,871    1,099,273      14.5
+__aeabi_fcmpge                 37,852      537,650      14.2
+
+caller                                                   calls   attributed   %work         self
+gmCollisionTestRectangle                                62,835    2,593,867   0.08%    1,272,007
+func_ovl2_800EDE5C                                      31,470      938,668   0.03%      413,622
+gmCollisionCheckWeaponInFighterRange                     5,146      142,960   0.00%      405,276
+gmCollisionCheckFighterInFighterRange                    3,492       96,800   0.00%      137,811
+gmCollisionTestSphere                                    1,300       62,023   0.00%       38,399

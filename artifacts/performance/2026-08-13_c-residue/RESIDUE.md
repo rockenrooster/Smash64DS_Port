@@ -191,7 +191,7 @@ fence or already spent.
 
 | rank | shape | cut needed | mean work | why it is not this cycle's change |
 |---|---|---|---:|---|
-| 1 | **`SHDT` — touch fewer parts in hit detection** | −26.6% | **3,779** | The lane's only designed lever is refuted geometrically (slice 47: `ReachTests 2,373 WouldSkip 0`), the transform chain is honest work with latches that clear once per fighter per frame (c123), and `gmCollisionTestRectangle` is shared with item/weapon/ground so no leaf can be charged to it. **A broad-phase that rejects a whole fighter pair before per-part tests is the only untried shape** — it must be exact (hit detection is gameplay), and its rejection rate has never been measured. That measurement, not a build, is the next step. |
+| 1 | ~~**`SHDT` — touch fewer parts in hit detection**~~ **REFUTED 2026-08-13** | −26.6% | **3,779** | **The broad phase is not untried, it is already there and the port runs it** (`../2026-08-13_shdt-broadphase/REFUTED_PAIR_REJECT.md`, exact call counts, no build): the source's `k == 0` early-out (`ftmain.c:3076`) rejects **≥94.68%** of the 6,232 pair evaluations a match and `gmCollisionCheckFighterInFighterRange` at most **2.41%** more, so **≥97.09% never reach a per-part test** — 331 range tests and 1,987 hurtbox tests in the whole match, 0 shield tests, 14 hits. The **entire** fighter-pair path is 2,666 tk/frame = **18.7%** of the lane against the 26.6% needed, so deleting fighter-vs-fighter hit detection outright pays ≈11,200. Slice 47's reach bound was already refuted geometrically. **The lane's cost is not its search:** 88 frames in 38 discrete runs hold **70.3%** of `SHDT`, moving it x41 with `SPRM` x26 while `FTR`/`STG`/`SCPU` stay flat, and **51.7%** of the lane mean is in-bracket and unattributed. Name that owner before designing for `SHDT` again. |
 | 2 | **`SPHD` — `ftMainProcPhysicsMapDefault`** | −11.9% | 7,912 | Never designed against. Largest identified component `mpCollisionGetFCCommonFloor` 10,607 is float-frozen; `ndsMPCollisionEnsureLineGroups` 6,558 is flat and pays 6,558, not 16,000. |
 | 3 | **`FTR` flat deletion** | −4.8% | 14,232 | Pays 1:1 with no rank discount — the safest lever in the table — but 14,232 ticks/frame is 4.8% of a lane whose largest deletable sub-block is 4,994. Needs three independent deletions or one structural change. |
 | 4 | **`STG` flat deletion** | −9.1% | 16,119 | Same shape, worse ratio. `STG` is 174,656 against SwitchPlan §4's 180K line — **already under its budget**, so §7 rung 1's "`STG` at ~195K against 180K" is stale by 20,344. |
@@ -292,7 +292,9 @@ judgement is `PROJECT_GOAL.md` sacrifice-order item 4 and belongs to the owner.
   root ROMs are untouched.
 - Did not measure the `SHDT` broad-phase rejection rate — that is the single
   cheapest next measurement in the residue and it needs a counter, not a build
-  of a candidate.
+  of a candidate. **DONE 2026-08-13 and it needed neither: the existing profile
+  already holds the exact call counts. See §4 row 1 and
+  `../2026-08-13_shdt-broadphase/`.**
 - Did not re-run `-Ceilings`; §2's statistic is deliberately a different and
   harder one, and the `-Ceilings` table in `LANES_BOTHCPU.md` still stands for
   what it measures (excursion above a lane's own median).

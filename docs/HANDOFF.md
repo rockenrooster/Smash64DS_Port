@@ -56,13 +56,12 @@ RESIDUE.md` — NO lever predicts ≥16,000, and its §0 corrects every future s
 
 **A PROFILE CYCLE IS HALF A TICK.** `ticks/frame = cycles / (2 × regions)`: regions P50
 2,240,838 cyc = 2.0001× two VBlanks, and `cycles/2` reproduces the gate arm's `ALL` histogram.
-Read as 1:1 the no-HUD profile ROM would present at HALF the heavier gate ROM's rate. So the
-AObj side array is **−3,379** not −6,758, any-layout ceilings **4,578/5,246**, the `AnimValueQ`
-prologue split **1,100–1,350** and `__aeabi_lmul` **~503** — all under the floor, crumbs gone.
-`analyze-symbol-line-profile.py` had a THIRD unit (share of a 1,128,000 budget, 1.167× high);
-it now reads `regions` and prints its `basis` line. Only `FTR`/`STG` are flat where P95 lives
+Read as 1:1 the no-HUD profile ROM would present at HALF the heavier gate ROM's rate. Every
+`SITR`/`AObj`/`AnimValueQ`/`__aeabi_lmul` crumb halves and is gone (`RESIDUE.md` §0);
+`analyze-symbol-line-profile.py`'s THIRD unit (1,128,000 budget, 1.167× high) now reads
+`regions` and prints its `basis` line. Only `FTR`/`STG` are flat where P95 lives
 (band min 296,320/171,520), so flat cuts there pay 1:1 and ADD: 8,000+8,000 = 16,000. `FTR`
-−4.8% (14,232 tk/fr) or `SHDT` −26.6% (**3,779**, best leverage 4.2×). **14,691 tk/fr of
+−4.8% (14,232 tk/fr) is the last sized flat lever. **14,691 tk/fr of
 `WORK-H` is `cpuGetTiming`+`tickGetCount`** — apparatus the published ROM never runs, so the
 product-side gap is ≈72,500, not 87,236.
 
@@ -139,14 +138,15 @@ local-matrix memo, **DO-NOT-RETRY, killed twice**. **`SINT` is the fighter INTER
 with `SCPU` nested, not an animation bucket** — reading it as one mis-attributed an A/B in
 c119. **Zero-copy force-load is closed:** `ftmain.c:4623` DISCARDS the return value.
 
-**SLICE 47 REVERTED — the `SHDT` reach bound is DEAD, geometrically. `ReachTests 2,373
-WouldSkip 0`** — it never rejects, and tightening it needs the joint position that IS the
-transform being skipped. Carry: `gmCollisionTestRectangle` also serves item/weapon/ground —
-**never attribute a shared leaf to one caller**. **The collision transform chain is honest
-work, not redundancy (c123)**: latches clear once per fighter per frame (`ftmain.c:1847`),
-hit detection rebuilds lazily and shares ancestors, and 13–18x is a **call-count** ratio —
-the lever is touching fewer parts. The LANE is still the best leverage in the table
-(`RESIDUE.md` §4): −26.6% = 16,000 P95 for 3,779 tk/fr, the cheapest in the residue.
+**`SHDT` IS CLOSED TO SEARCH-SIDE CUTS — both shapes refuted, no build spent.** Slice 47's
+reach bound never rejects (`ReachTests 2,373 WouldSkip 0`); the transform chain is honest
+work, latches clearing once per fighter per frame (`ftmain.c:1847`), 13–18x a **call-count**
+ratio. **Pair-level broad phase (`…/2026-08-13_shdt-broadphase/`):** the source's `k == 0`
+early-out (`ftmain.c:3076`) rejects **≥94.68%** of the 6,232 pair evaluations and its range
+test ≤2.41% more, so ≥97.09% never reach geometry, and the WHOLE fighter-pair path is 2,666
+tk/fr — **18.7%** of a lane needing 26.6%. **The excursion is elsewhere: 88 frames in 38
+discrete runs hold 70.3% of the lane, `SHDT` x41 with `SPRM` x26 while `FTR`/`STG`/`SCPU`
+stay flat; 51.7% of the mean is in-bracket, unattributed.** Name that owner first.
 
 **Do not bring a micro-fix** — R2-06 E11: a load-frame-only ~8,000 cannot be banked. Clear
 ~16,000 in one change, or **use the `.data` route on ONE binary** (only if the change cannot

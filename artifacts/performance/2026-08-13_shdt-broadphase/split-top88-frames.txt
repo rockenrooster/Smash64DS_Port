@@ -1,0 +1,49 @@
+== E. per-frame split on the 88 costliest frames (non-idle): 88 marked frames vs 1512 control ==
+   marked   318,191,540 cycles, 3,615,813/frame
+   control  3,497,757,653 cycles, 2,313,332/frame
+   premium  1,302,481/frame
+   marked frames (region ids, frame = START + id): 18, 78, 82, 131, 149, 150, 162, 181, 195, 223, 281, 324, 341, 353, 354, 359, 366, 370, 374, 396, 401, 407, 410, 431, 446, 452, 461, 468, 493, 499, 521, 536, 539, 561, 605, 628, 645, 658, 680, 708, 717, 760, 776, 778, 779, 795, 925, 991, 1012, 1013, 1016, 1017, 1018, 1022, 1058, 1059, 1060, 1065, 1068, 1069, 1094, 1096, 1097, 1099, 1106, 1107, 1108, 1113, 1151, 1154, 1157, 1166, 1225, 1227, 1383, 1401, 1402, 1408, 1420, 1478, 1500, 1518, 1519, 1520, 1521, 1522, 1523, 1558
+
++cyc/frame  %prem  frames  of it mem   +insn  cyc/insn  tier       symbol
+----------  -----  ------  ---------  ------  --------  ---------  -------------------------------------------
+   396,212   30.4   88/88          0      21  18,510.2  .itcm      armWaitForIrq
+    53,227    4.1   88/88          0  45,271       1.2  .itcm      __aeabi_fadd
+    48,353    3.7   88/88          0  43,188       1.1  .itcm      __aeabi_fmul (+1 alias)
+    48,218    3.7   88/88     34,835  15,907       3.0  .itcm      memcpy
+    31,537    2.4   61/88     30,073   1,549      20.4  .itcm      armCopyMem32
+    30,556    2.3   61/88     12,433  18,473       1.7  .main      get_fat.isra.0
+    27,385    2.1   88/88      9,699  14,278       1.9  .main      ndsR2FtAnimParseDObjFigatree
+    25,837    2.0   72/88      5,732  19,664       1.3  .main      ndsRelocNormalizeFighterAObj16File
+    19,407    1.5   60/88      4,334  13,967       1.4  .main      f_lseek
+    17,834    1.4   88/88     15,143   3,493       5.1  .itcm      memset
+    17,375    1.3   88/88      5,190  10,621       1.6  .main      ndsR2AnimValueQ
+    16,855    1.3   79/88      7,317   9,408       1.8  .main      mutexUnlock
+    16,075    1.2   88/88      6,905   7,537       2.1  .text.hot  gcPlayDObjAnimJoint
+    13,162    1.0   72/88      3,808   5,767       2.3  .main      ndsRelocAssetIDForToken
+    12,503    1.0   79/88      6,364   5,839       2.1  .main      mutexLock
+    12,120    0.9    1/88      2,408  10,052       1.2  .main      ndsDrawSObjIntoPreview
+    12,018    0.9   61/88      4,592   6,814       1.8  .main      f_read
+    11,055    0.8    1/88      4,602   6,220       1.8  .main      ndsPlatformCommitOriginalSpritePreviewLayer
+    10,529    0.8   72/88      6,994   1,152       9.1  .main      battleship_ftMainSetStatus
+    10,443    0.8   61/88      4,100   3,325       3.1  .main      _read_r
+     9,226    0.7   79/88      6,521   2,920       3.2  .main      threadRemoveWaiter
+     8,781    0.7   58/88      3,388   4,009       2.2  .main      func_ovl2_800ED490
+     8,643    0.7   77/88      2,065   2,773       3.1  .main      _svfiprintf_r
+     8,518    0.7   88/88      5,157   1,615       5.3  .main      ftParamUpdateAnimKeys
+     8,429    0.6   61/88      2,477   3,289       2.6  .main      validate
+     8,022    0.6   88/88          0   7,264       1.1  .itcm      __aeabi_fdiv (+1 alias)
+     7,976    0.6   22/88      2,394   4,847       1.6  .main      strncasecmp
+     7,965    0.6   72/88      6,707     727      11.0  .main      gcAddDObjAnimJoint
+     7,394    0.6   88/88      4,680   2,006       3.7  .main      ndsR2AnimBuildTrackTable.constprop.0.isra.0
+     7,213    0.6   88/88      2,281   2,973       2.4  .main      sqrtf
+     7,108    0.5   88/88      4,082   3,317       2.1  .main      ndsR2AnimAObjToQ
+     6,811    0.5   88/88      2,702   3,199       2.1  .main      ndsR2AnimTargetValue.constprop.0
+     6,715    0.5   61/88      1,094   3,904       1.7  .main      move_window
+     6,622    0.5   61/88      2,897   2,054       3.2  .main      _dvmDiscCacheReadWrite
+     6,595    0.5   52/88      2,229   3,028       2.2  .main      gmCollisionSetInvertMatrix
+     6,581    0.5   88/88      3,459   2,714       2.4  .main      ndsRelocFindLoadedFileContaining
+     6,562    0.5   22/88      2,096   4,420       1.5  .main      ndsRelocApplyWordByteSwap
+     6,414    0.5   61/88      2,032   2,577       2.5  .main      _nitroromFdRead
+     6,297    0.5   52/88      2,484   2,982       2.1  .main      gmCollisionTestRectangle
+     6,131    0.5   70/88      2,105   1,899       3.2  .main      __libc_lock_acquire
+     6,096    0.5   50/88      3,940     735       8.3  .main      ndsAudioFgmPlayAtPan

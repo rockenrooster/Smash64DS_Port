@@ -1,0 +1,36 @@
+non-idle work 3,094,566,490 cycles (armWaitForIrq 721,447,771 excluded)
+attributed    16,590,081 cycles = 0.54% of non-idle
+
+helper                          calls       cycles  cyc/call
+battleship_ftMainSearchHitItem        6,232      835,817     134.1
+battleship_ftMainSearchGroundHit        6,232    2,076,435     333.2
+battleship_ftMainSearchHitFighter        6,232    4,733,545     759.6
+battleship_ftMainSearchHitWeapon        6,232    1,548,357     248.5
+battleship_ftMainSearchHitHazard        6,232    1,502,331     241.1
+battleship_ftMainProcSearchHitAll        6,232    1,390,493     223.1
+ftParamGetBestHitStatusAll        6,232      514,764      82.6
+ftMainGetGroundHitObstacle        6,046    1,068,403     176.7
+func_ovl2_800EDE5C              3,210      413,622     128.9
+gmCollisionTestRectangle        3,185    1,272,007     399.4
+gmCollisionCheckFighterAttackDamageCollide        1,987      318,927     160.5
+gmCollisionCheckWeaponAttackFighterDamageCollide        1,198      284,355     237.4
+gmCollisionCheckWeaponInFighterRange          519      405,276     780.9
+gmCollisionCheckFighterInFighterRange          331      137,811     416.3
+gmCollisionTestSphere              25       38,399    1536.0
+battleship_ftMainProcessHitCollisionStatsMain           19       49,539    2607.3
+
+caller                                                   calls   attributed   %work         self
+battleship_ftMainProcSearchHitAll                       24,947    9,243,693   0.30%    1,390,493
+battleship_ftMainSearchGroundHit                        12,278    1,583,167   0.05%    2,076,435
+battleship_ftMainProcSearchCatch                         6,232    1,502,331   0.05%      397,841
+ftMainProcSearchHitAll                                   6,232    1,390,493   0.04%      770,436
+gmCollisionCheckFighterAttackDamageCollide               3,974    1,049,589   0.03%      318,927
+battleship_ftMainSearchHitWeapon                         1,717      689,631   0.02%    1,548,357
+gmCollisionCheckWeaponAttackFighterDamageCollide         2,396      632,817   0.02%      284,355
+battleship_ftMainSearchHitFighter                        2,318      456,738   0.01%    4,733,545
+gmCollisionCheckWeaponAttackSpecialCollide                  50       41,620   0.00%       16,659
+
+subsystem                         cycles   %work    fns
+other                         13,475,560   0.44%      5
+collision / stage MP           1,724,028   0.06%      3
+gameplay (other decomp)        1,390,493   0.04%      1

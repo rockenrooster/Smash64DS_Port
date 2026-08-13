@@ -185,7 +185,19 @@ quote these numbers as gate-arm numbers, and do not rebuild G3's case from them.
   **0** — the chain sum is arm's-reach-wide and
   `gmCollisionCheckFighterInFighterRange` already put the attacker inside it,
   so no inflation constant fixes it and a tighter bound needs the transform
-  being skipped); Task 56 strips (ROM hangs the present loop).
+  being skipped); **the `SHDT` pair-level broad-phase reject** (2026-08-13, no
+  build spent — `artifacts/performance/2026-08-13_shdt-broadphase/`: the
+  source's `k == 0` early-out at `ftmain.c:3076` already rejects **≥94.68%** of
+  the 6,232 pair evaluations a match and the range test ≤2.41% more, so
+  **≥97.09% never reach a per-part test** — 331 range tests, 1,987 hurtbox
+  tests, **0** shield tests, 14 hits in the whole match; the entire fighter-pair
+  path is 2,666 tk/frame = **18.7%** of a lane needing 26.6%, so deleting
+  fighter-vs-fighter hit detection outright pays ≈11,200. Carry:
+  `gmCollisionTestRectangle` serves item/weapon/ground too — **never attribute a
+  shared leaf to one caller** — and **`analyze-leaf-helper-attribution.py`
+  pointed at ordinary functions is an exact call-count funnel for any call
+  chain, off a profile that already exists**); Task 56 strips (ROM hangs the
+  present loop).
 - **"Asset loads as the tail owner" was refuted three times AND slice 46 still
   won 17,216 there** — the LANE was correctly refuted, but a specific defect in
   it (the warm list had drifted to cover only 57 of the 87 animations the match

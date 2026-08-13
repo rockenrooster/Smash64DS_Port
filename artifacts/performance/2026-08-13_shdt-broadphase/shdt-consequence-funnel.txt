@@ -1,0 +1,78 @@
+non-idle work 3,094,566,490 cycles (armWaitForIrq 721,447,771 excluded)
+attributed    3,891,069 cycles = 0.13% of non-idle
+
+helper                          calls       cycles  cyc/call
+ftMainSetStatus                   334       86,564     259.2
+battleship_ftMainSetStatus          334    3,513,785   10520.3
+ftParamMakeEffect                 143      155,055    1084.3
+efManagerMakeEffect                34       48,823    1436.0
+battleship_ftMainProcessHitCollisionStatsMain           19       49,539    2607.3
+battleship_ftMainUpdateDamageStatFighter           14       18,856    1346.9
+battleship_ftMainSetHitInteractStats           14       10,777     769.8
+battleship_ftMainPlayHitSFX           14        7,671     547.9
+
+caller                                                   calls   attributed   %work         self
+ftMainSetStatus                                            334    3,513,785   0.11%       86,564
+ftMainParseMotionEvent                                     116      125,778   0.00%      771,200
+battleship_ftMainProcSearchHitAll                           19       49,539   0.00%    1,390,493
+ftCommonWaitSetStatus                                       97       25,139   0.00%       41,085
+ndsBaseFTCommonDamageUpdateDustEffect                       19       20,601   0.00%      117,498
+battleship_ftMainSearchHitFighter                           14       18,856   0.00%    4,733,545
+battleship_ftMainUpdateDamageStatFighter                    28       18,448   0.00%       18,856
+efManagerImpactWaveMakeEffect                               11       15,795   0.00%        6,886
+ndsBaseEFManagerShieldMakeEffect                             9       12,923   0.00%        3,348
+ftCommonWalkSetStatusParam                                  44       11,403   0.00%       14,526
+efManagerFoxReflectorMakeEffect                              5        7,179   0.00%        2,147
+efManagerDamageSpawnOrbsProcUpdate                           4        5,743   0.00%        5,669
+ndsBaseFTCommonTurnSetStatus                                22        5,701   0.00%       13,829
+ndsBaseFTCommonDamageInitDamageVars                         19        4,924   0.00%       62,813
+ftMarioSpecialLwProcUpdate                                   4        4,337   0.00%       11,025
+ndsBaseFTCommonDownBounceUpdateEffects                       4        4,337   0.00%        2,303
+efManagerDamageSpawnSparksProcUpdate                         3        4,307   0.00%        4,340
+ndsBaseFTCommonLandingSetStatus                              9        2,332   0.00%        4,499
+ndsBaseFTCommonGuardOnSetStatus                              9        2,332   0.00%        6,464
+ndsBaseFTCommonAttackAirCheckInterruptCommon                 9        2,332   0.00%       66,933
+ndsBaseFTCommonFallSetStatus                                 9        2,332   0.00%        4,877
+ndsBaseFTCommonJumpSetStatus                                 8        2,073   0.00%        7,343
+ndsBaseFTCommonKneeBendCheckInterruptCommon                  7        1,814   0.00%      373,763
+ndsBaseFTCommonGuardOnProcUpdate                             7        1,814   0.00%       11,882
+ftMarioSpecialNSetStatus                                     7        1,814   0.00%        2,209
+efManagerDamageSpawnOrbsMakeEffect                           1        1,435   0.00%          297
+efManagerDamageSpawnSparksRandomMakeEffect                   1        1,435   0.00%          703
+ndsBaseFTCommonDamageFallSetStatusFromDamage                 5        1,295   0.00%        1,002
+ftFoxSpecialLwStartSetStatus                                 5        1,295   0.00%        2,093
+ftFoxSpecialLwStartProcUpdate                                5        1,295   0.00%        6,150
+ftFoxSpecialLwLoopProcUpdate                                 5        1,295   0.00%       35,313
+ndsBaseFTCommonGuardOffSetStatus                             4        1,036   0.00%        1,355
+ndsBaseFTCommonDownBounceSetStatus                           4        1,036   0.00%        3,614
+ndsBaseFTCommonEscapeCheckInterruptGuard                     3          777   0.00%       16,275
+ndsBaseFTCommonDownAttackCheckInterruptDownBounce            3          777   0.00%        1,147
+ndsBaseFTCommonLandingFallSpecialSetStatus                   3          777   0.00%        1,183
+ndsBaseFTCommonJumpAerialSetStatus                           3          777   0.00%        2,722
+ftFoxSpecialNSetStatus                                       3          777   0.00%          755
+ftFoxSpecialLwHitSetStatus                                   3          777   0.00%        1,530
+ftFoxSpecialLwHitDecideSetStatus                             3          777   0.00%        1,454
+ndsBaseFTCommonPassCheckInterruptCommon                      2          518   0.00%       87,163
+ndsBaseFTCommonOttottoSetStatus                              2          518   0.00%          759
+ndsBaseFTCommonSquatCheckGotoPass                            2          518   0.00%        7,098
+ndsBaseFTCommonLandingAirNullSetStatus                       2          518   0.00%          757
+ftCommonFallSpecialSetStatus                                 2          518   0.00%        1,933
+ndsBaseFTCommonSquatWaitSetStatus                            2          518   0.00%          648
+ndsBaseFTCommonSquatRvCheckInterruptSquatWait                2          518   0.00%        1,505
+ndsBaseFTCommonAttackS4SetStatus                             2          518   0.00%        1,251
+ndsBaseFTCommonAttackLw4CheckInterruptMain                   2          518   0.00%          958
+ftMarioSpecialAirLwSwitchStatusGround                        1          259   0.00%          449
+ndsBaseFTCommonDamageSetStatus                               1          259   0.00%        1,068
+ndsBaseFTCommonAttackLw3SetStatus                            1          259   0.00%          412
+ftFoxSpecialAirHiStartSetStatus                              1          259   0.00%          327
+ftFoxSpecialAirHiSetStatusFromGround                         1          259   0.00%          915
+ftFoxSpecialHiProcUpdate                                     1          259   0.00%        8,241
+ftFoxSpecialNProcInterrupt                                   1          259   0.00%       37,696
+ftMarioSpecialAirNSetStatus                                  1          259   0.00%          327
+ftMarioSpecialAirNSwitchStatusGround                         1          259   0.00%          308
+ndsBaseFTCommonGuardKneeBendCheckInterruptGuard              1          259   0.00%       10,582
+ftMarioSpecialHiSetStatus                                    1          259   0.00%          341
+
+subsystem                         cycles   %work    fns
+gameplay (other decomp)        3,727,747   0.12%     30
+other                            163,322   0.01%     39
