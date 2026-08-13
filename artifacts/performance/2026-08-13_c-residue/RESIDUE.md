@@ -5,6 +5,13 @@ P95 ticks/frame** as a single change. This document is the ranked table of
 everything priced, the arithmetic behind each rejection, and the contingency
 ladder with its measured sizes.
 
+> **FINAL, 2026-08-13.** §4 is closed; §5 is corrected upward by a third
+> apparatus lane. Two documents follow this one:
+> `OWNER_DECISIONS.md` (this directory) is the owner-facing decision package,
+> and `../2026-08-13_c-flagsweep/FLAG_SWEEP.md` carries the completed
+> default-off flag audit **and the one lane §3 could not see** — three inlined
+> helpers with no census row, ceiling **20,562**, §4 row 0 below.
+
 **No build, no emulator run, no source change was spent on the sizing.** All
 figures come off two artifacts already on disk:
 
@@ -189,6 +196,34 @@ fence or already spent.
 
 ## 4. What is still genuinely open, ranked by cost-to-close
 
+**Row 0 was added 2026-08-13 and is the only row that moved.** Everything below
+it is closed by measurement or reserved to the owner.
+
+### Row 0 — per-frame re-discovery in the renderer. **CEILING 20,562, the only open agent lane**
+
+`§3 cannot see it, and that is the finding.` §3 ranks **symbols**; these three
+are inlined or library-resident and have **no census row of their own**. Priced
+off the same c123 profile by innermost-inlined-function attribution
+(`../2026-08-13_c-flagsweep/FLAG_SWEEP.md` §4, and the cached
+`c123-pc-cycles.csv` that makes the question a 30-second read from now on):
+
+| leg | what it re-discovers every frame | lane | ceiling | realistic |
+|---|---|---|---:|---:|
+| A | `ndsRendererNativeStagePreparedTextureValid` — re-proves ~195×/frame at ~48 tk that a prepared stage run's texture cache entry still holds what it recorded. **7.3–10.9 cyc/insn: it is cache misses, not compares** (slice 44's shape, which paid −35,904). Replaceable by one `sNdsRendererHardwareTextureKeyGeneration` epoch compare per frame. | `STG` | **9,369** | 2,600–9,000 |
+| B | `glBindTexture` — 54.9 binds/frame × ~101 tk of libnds `DynamicArray` name lookup. The replacement already ships for three textures: `NDSRendererWhispyNativeBinding` (`nds_renderer.c:4439-4456`). | `STG`+`FTR` | **5,544** | 4,500–4,800 |
+| C | `ndsRendererTask29GXRecord` line 1281 — the Task 36 capture test on **8 fighter/effect GX sites slice 1 never converted**. Capture is armed only around a stage run, so the flag is FALSE at every fighter corner; the argument is already written at `nds_renderer.c:1624-1646`. | `FTR` | **2,681** (+1,669 in 4 shared helpers) | ~2,700 |
+
+`FTR` and `STG` are the only lanes flat at the percentile and flat deltas in them
+add exactly (§1), so the sum **is** the P95 delta. **It is still not ONE change**
+— it is three, its realistic band straddles 16,000, and leg A carries Task 103
+E7's documented **28% realisation** precedent (a removed access whose lines the
+next access still touches relocates the miss instead of deleting it). What it is:
+the first candidate that is ≥16,000 at ceiling, entirely exactness-preserving (no
+pixel, no gameplay value, no allocation, no frozen float), and on no
+DO-NOT-RETRY list. One commit, one A/B.
+
+### The rest, unchanged and closed
+
 | rank | shape | cut needed | mean work | why it is not this cycle's change |
 |---|---|---|---:|---|
 | 1 | ~~**`SHDT` — touch fewer parts in hit detection**~~ **REFUTED 2026-08-13; the band is now NAMED and still does not reach the bar** | −26.6% | **3,779** | **The broad phase is not untried, it is already there and the port runs it** (`../2026-08-13_shdt-broadphase/REFUTED_PAIR_REJECT.md`, exact call counts, no build): the source's `k == 0` early-out (`ftmain.c:3076`) rejects **≥94.68%** of the 6,232 pair evaluations a match and `gmCollisionCheckFighterInFighterRange` at most **2.41%** more, so **≥97.09% never reach a per-part test** — 331 range tests and 1,987 hurtbox tests in the whole match, 0 shield tests, 14 hits. The **entire** fighter-pair path is 2,666 tk/frame = **18.7%** of the lane against the 26.6% needed. **The 88-frame/38-run band's owner is the surviving 5.31%'s TRANSFORM CHAIN** (`../2026-08-13_shdt-band-owner/BAND_OWNER.md`, no build): `gmCollisionCheckFighterAttackDamageCollide` **x44** (16.28/frame vs 0.37) drives `func_ovl2_800ED490` x10.2, `gmCollisionSetInvertMatrix` x10.4, `gmCollisionGetWorldPosition` x12.2, `gmCollisionTestRectangle` x16.1, `func_ovl2_800EDE5C` x15.9 — **+67,230 tk/frame, 42.3%** of the band premium, and **65% of it is soft float** the per-PC profiler charges to `__aeabi_fmul`. That closes the 51.7% in-bracket residue. **The bar moved, not the answer:** a band-only cut saturates at **78,016** and needs **47,424 tk/frame** off those 88 frames for 16,000 — **35% of a chain whose four dirty flags already give exactly one computation per joint per frame**, so there is nothing to memoise and the only 35% is a fixed-point rewrite inside the frozen-float fence. **`SPRM`'s x26 co-fire is a different owner and it is now CLOSED BY MEASUREMENT** (`../2026-08-13_c-band-io/BAND_IO_OWNER.md`, no build): it is not the animation load — that attribution was read off a **pre-slice-46** profile and the animation path now prices **+0**. In-match file I/O partitions with no remainder into BGM packet reads (76 frames / 76 runs) and the **sound-effect pack read `ndsAudioFgmPlayAtPan` does synchronously when its 8-slot cache misses** (91 frames / 89 runs; 91 of 91 carry an FGM play, **0 exceptions**, against 25.1% for the status change). 76% of all file-I/O cost is one FatFs cluster walk — 184 `f_lseek` at 13,159 cyc driving **447 `get_fat` each** — and that lives in calico, not this tree. Deleting every SFX read prices **−12,736**, and **−13,580 under the worst frame placement the data allows**, so no alignment error rescues it; the whole lane including the payload copy saturates at −19,648 and the rank-80 frame carries **zero** file I/O. Residency is arithmetically impossible: **942,272 B of cue data against a 204,800 B cache**. |
@@ -206,7 +241,7 @@ against.
 
 ---
 
-## 5. The gate figure carries 14,691 tk/frame of measuring apparatus
+## 5. The gate figure carries ≈24,947 tk/frame of measuring apparatus
 
 `cpuGetTiming` + `tickGetCount` cost **47,041,843 cycles = 14,691 ticks/frame**
 over **280,841 calls a match (175.4/frame at 83.7 ticks per bracket read)**.
@@ -225,10 +260,23 @@ match) → `vsniprintf`/`iprintf` → `_vfiprintf_r` → `consolePrintChar`, plu
 DS console's own `siscanf` parse of each ANSI escape — nineteen newlib symbols
 totalling 12,749,945 cycles on the profile ROM, priced at **−9,194** P95
 (`../2026-08-13_c-band-io/io-series-warm.txt`). Same status as the row above:
-not product work, not a lever. Apparatus in `WORK-H` is now **≈18,675 tk/frame**.
+not product work, not a lever.
 
-**So the product-side gap is ≈72,500, not 87,236** — 1,207,616 − 1,120,380 −
-14,691, subject to placement, since a no-HUD binary cannot report `WORK-H` at
+**A THIRD apparatus lane, found 2026-08-13: 6,272 tk/frame inside the GX
+wrapper.** `ndsRendererTask29GXRecord` (`nds_renderer.c:1284`) tests
+`sNdsEffectPacketArmed` on **every GX command** — 3.28 M executions a match from
+`ndsRendererCommitNativeStageSegment` alone — and the whole test is inside
+`#if NDS_TICK_HUD`. The published ROM builds `NDS_TICK_HUD=0` and executes not
+one instruction of it. Exact per-owner split:
+`../2026-08-13_c-flagsweep/gxrecord-and-texvalid-owner-line.txt`.
+
+**Apparatus in `WORK-H` is therefore ≈24,947 tk/frame** — 14,691 + 3,984 +
+6,272. Note the units: all three are **mean ticks/frame**; the only
+rank-recomputed P95 figure among them is the debug text's −9,194, so **24,947 is
+not a P95 delta** and removing all three would not move P95 by that amount.
+
+**So the product-side gap is ≈62,300, not 87,236** — 1,207,616 − 1,120,380 −
+24,947, subject to placement, since a no-HUD binary cannot report `WORK-H` at
 all and would not lay out identically. This does not move the gate (the gate is
 defined on this ROM and every banked figure includes the same apparatus), and it
 is **not a lever** — optimising the instrument improves the number without
