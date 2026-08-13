@@ -1,0 +1,78 @@
+RNG STREAM OWNERSHIP -- one LCG, shared by the CPU AI and the particle/effect update
+
+=== the generator (decomp/BattleShip-main/decomp/src/sys/utils.c) ===
+// Linear Congruential Generator based on values from Microsoft Visual/Quick C/C++
+s32 sSYUtilsRandomSeed     = 1;
+s32 *sSYUtilsRandomSeedPtr = &sSYUtilsRandomSeed;
+
+    return 1.0F / syUtilsTan(x);
+}
+
+void syUtilsSetRandomSeed(s32 seed)
+{
+    *sSYUtilsRandomSeedPtr = seed;
+}
+
+s32 syUtilsRandSeed(void)
+{
+    return *sSYUtilsRandomSeedPtr;
+}
+
+/// An arg of NULL returns the seed ptr to the default seed
+void syUtilsSetRandomSeedPtr(s32 *seedptr)
+{
+    if (seedptr == NULL)
+    {
+        sSYUtilsRandomSeedPtr = &sSYUtilsRandomSeed;
+    }
+    else sSYUtilsRandomSeedPtr = seedptr;
+}
+
+
+// between 0..1
+f32 syUtilsRandFloat(void)
+{
+    s32 step = (*sSYUtilsRandomSeedPtr * 214013) + 2531011;
+    *sSYUtilsRandomSeedPtr = step;
+
+    return ((step >> 16) & 0xFFFF) / 65536.0F;
+}
+
+
+=== syUtilsRand* draw sites per source file (rg -c, decomp is gitignored so --no-ignore) ===
+    65  ft/ftcomputer.c
+     1  ft/ftmain.c
+    26  lb/lbparticle.c
+    44  ef/efmanager.c
+     6  ef/efground.c
+     3  it/itmain.c
+
+=== port sites that already exist ONLY to preserve the draw count ===
+722:            (void)syUtilsRandFloat();
+726:            f32 radial_random = syUtilsRandFloat();
+729:                (syUtilsRandFloat() *
+
+        if (gn->frame >= 1.0F)
+        {
+            /* Source computes a first random azimuth and an angular step here.
+             * All three Whispy scripts have a nonnegative angle span, so every
+             * emission overwrites that azimuth and never reads the step. Keep
+             * the RNG advance; delete the dead float and divide. */
+            (void)syUtilsRandFloat();
+        }
+        while (gn->frame >= 1.0F)
+        {
+            f32 radial_random = syUtilsRandFloat();
+            f32 radial = gn->unk_gn_0x38 * radial_random;
+            f32 azimuth = gn->generator_vars.rotate.base +
+                (syUtilsRandFloat() *
+                 (gn->generator_vars.rotate.target -
+                  gn->generator_vars.rotate.base));
+
+=== the seed pointer is never retargeted during a match ===
+src\port\port_probe.c:26:    syUtilsSetRandomSeedPtr(NULL);
+src\port\reloc_backend.c:13:extern void syUtilsSetRandomSeed(s32 seed);
+src\port\reloc_backend_diagnostic_recorders.c:9565:        syUtilsSetRandomSeed(1);
+src\port\reloc_backend_diagnostic_recorders.c:9601:        syUtilsSetRandomSeed(saved_rng_seed);
+src\port\reloc_backend_diagnostic_recorders.c:9636:        syUtilsSetRandomSeed(1);
+src\port\reloc_backend_diagnostic_recorders.c:9670:        syUtilsSetRandomSeed(saved_rng_seed);

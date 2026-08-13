@@ -181,11 +181,19 @@ the compiler bakes it.
 gameplay mechanics      60 Hz   (unchanged Runtime 1 code)
 rendering               30 Hz
 visual fighter pose     30 Hz
-particles               15-30 Hz
+particles               15-30 Hz   BLOCKED -- see the note under this table
 background              15 Hz where practical
 lighting                on change / low rate
 audio                   event-driven
 ```
+
+**The particle row is blocked on correctness, not on cost** (2026-08-13,
+`artifacts/performance/2026-08-13_c-particle-rate/REFUTED_QUARTER_RATE.md`): the
+particle and effect update draws from the **same single LCG** as the level-3 CPU
+AI, so changing its cadence shifts the AI's random stream and the match
+diverges. Any sub-rating proposal on this table must first check whether the
+subsystem consumes `syUtilsRandFloat`. It is under-priced as well — the whole
+rate-reducible update is 7,364 ticks/frame and quarter-rating it buys −7,493.
 
 Do not begin by compromising the simulation: 30 Hz gameplay creates
 correctness risk across one-frame hitboxes, collision crossings, landing,
@@ -578,11 +586,19 @@ The contingency ladder if the packet path lands short, in the order
 1. **Buy headroom flat.** The P95 frame pays every flat bucket in full: `FTR`
    at ~389K against its 250K line and `STG` at ~195K against 180K are the
    flat levers, and deletion is the preferred instrument.
-2. **Run cosmetic systems below simulation rate.** 15 Hz particles are
-   allowed — but round-robin a quarter of the generators per frame, never
-   "every fourth frame, update everything": batching quarter-rate work onto
-   one frame lowers the mean while **raising P95** (R2-03 E30: when the
-   median falls and the P95 does not, stop cutting the median).
+2. ~~**Run cosmetic systems below simulation rate.**~~ **REFUTED for particles
+   2026-08-13, no build spent**
+   (`artifacts/performance/2026-08-13_c-particle-rate/REFUTED_QUARTER_RATE.md`).
+   The round-robin shape is still the right *shape* — batching quarter-rate
+   work onto one frame lowers the mean while **raising P95** (R2-03 E30) — but
+   particles are not the subject: the rate-reducible update is **7,364
+   tk/frame** and quarter-rating it prices **−7,493 P95**, deleting it outright
+   **−8,987**. It is also **forbidden**: the particle/effect update draws from
+   the **same single LCG** as the level-3 CPU AI, so any cadence change shifts
+   the AI's stream and the match diverges. **Before sub-rating ANY subsystem
+   here, check whether it consumes `syUtilsRandFloat`** — one global seed serves
+   the AI, particles, effects and items. What is left on this rung is the
+   particle **draw** half (27,758 tk/frame, **−30,676**), which is rung 3.
 3. **Reduce visual fidelity** — a cheaper source-derived approximation with
    the visible delta recorded is the contract-compliant answer.
 4. **A COMPENSATED 30 Hz simulation — the OWNER'S CALL, in writing.**

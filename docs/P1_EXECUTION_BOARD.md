@@ -175,7 +175,20 @@ quote these numbers as gate-arm numbers, and do not rebuild G3's case from them.
   ticks/command**. No overrun to fix — **the precompiled-packet path is the
   answer, not a workaround.**
 - **Dead, do not re-derive**: projectiles (44 ticks/frame median); particles
-  (flat ~47K, a P50 lever, never the gate); texture thrash (1 upload/1,408
+  (flat ~47K, a P50 lever, never the gate — and **rate-reducing them is closed
+  twice over, 2026-08-13, no build spent**:
+  `artifacts/performance/2026-08-13_c-particle-rate/REFUTED_QUARTER_RATE.md`.
+  `MISC` is a **draw residual by construction** (`taskman_seam.c:5104`) so its
+  17,152 never priced the update half; that half lives in `SRC`, is **7,364
+  tk/frame**, and quarter-rating it prices **−7,493** — deleting it outright
+  −8,987, and deleting **every particle in the game, update and draw, −33,818**.
+  It is also **forbidden**: the particle/effect update draws from the **same
+  single LCG as the level-3 CPU AI** (`sSYUtilsRandomSeed`; `ftcomputer.c` 65
+  draw sites, `efmanager.c` 44, `lbparticle.c` 26), so any cadence change shifts
+  the AI's stream and diverges the match. **Check any sub-rating proposal for
+  `syUtilsRandFloat` before designing it.** What survives is the particle *draw*
+  half — 27,758 tk/frame, **−30,676** — and that is the owner's fidelity call);
+  texture thrash (1 upload/1,408
   frames — `Tex` is cache-*hit* key/hash/lookup cost); `Find` 0.44%; `Material`
   0.25%; `FTR` as the gate (anti-correlated with the tail); the `Tex`
   (dl-pointer, bind-ordinal) memo (built as approved: 4.56% hit rate, `Tex`

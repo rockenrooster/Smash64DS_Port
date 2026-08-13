@@ -8,14 +8,14 @@ R2-07's own gate names HEAD measures **1,207,616 — +87,236 OVER**. **Boundary 
 
 ## R2-07 `BUGS.md` — the owner playtested; two rows are live and BOTH need HIM
 
-`docs/BUGS.md` carries the owner's own wording and is the queue — do not reword it. The
-2026-08-12 playtest **closed old rows 2 and 3 by verdict** (fire burn, Fox gun); their
-contracts and pixel proof stay in `artifacts/bugs/2026-08-12_r2-07-cluster/`. Candidates were
-`build-c129-foxfire` / `build-c130-fire-bothcpu`; the fire mechanism cost **+9,856 `WORK-H`
-P95**, inside that arm's own 9,664 repeat spread (`…/2026-08-12_c130-fire-gate/GATE.md`). The
-old "all three rows converge on ONE texture-residency capability" framing was wrong for all
-three — never reinstate it. **A magenta bar beside Fox is the BEAM ITSELF**, relocData 316's
-own RGBA(219,0,134) — not a debug quad and not the gun.
+`docs/BUGS.md` carries the owner's own wording and is the queue — do not reword it. The 2026-08-12
+playtest **closed old rows 2 and 3 by verdict** (fire burn, Fox gun); their contracts and pixel
+proof stay in `artifacts/bugs/2026-08-12_r2-07-cluster/`. Candidates were `build-c129-foxfire` /
+`build-c130-fire-bothcpu`; the fire mechanism cost **+9,856 `WORK-H` P95**, inside that arm's own
+9,664 repeat spread (`…/2026-08-12_c130-fire-gate/GATE.md`). The old "all three rows converge on ONE
+texture-residency capability" framing was wrong for all three — never reinstate it. **A magenta bar
+beside Fox is the BEAM ITSELF**, relocData 316's own RGBA(219,0,134) — not a debug quad and not the
+gun.
 
 - **Whispy — ANSWERED; nothing agent-closable remains, do not re-open.** Armed, the blink
   runs **6 presented frames** (`anim_frame` 1,3,5,7,9,11) and the eye's grandchild DObj
@@ -48,22 +48,26 @@ own RGBA(219,0,134) — not a debug quad and not the gun.
 **RE-BANKED ON `BOTH_CPU 1` — `…/2026-08-12_c130-fire-gate/LANES_BOTHCPU.md`** (no build;
 `analyze-tick-hud-excursion.ps1 -Ceilings` emits both tables now). `SRC` owns **84.4%** of the
 395,863 excursion; `SITR` 83,712 is the largest leaf lane, `SHDT` 51,584 the sharpest presence
-(13.17x on a 4,416 median). `SCPU`/`SPRM`/`SPHD` are 2.5–3.7x the Boundary table — the wrong
-arm ran ONE CPU. c125's ceilings are dead. **`SITR_NEXT_CUT.md`'S CUT IS REFUTED, no build spent
+(13.17x on a 4,416 median). `SCPU`/`SPRM`/`SPHD` are 2.5–3.7x the Boundary table — the wrong arm ran
+ONE CPU. c125's ceilings are dead. **`SITR_NEXT_CUT.md`'S CUT IS REFUTED, no build
 (`…/2026-08-13_sitr-aobj-layout/`)**: ONE line fill per visited `AObj` serves offsets 0–28, so a
-dense header array only MIGRATES it. **NEXT CUT: `…/2026-08-13_c-residue/RESIDUE.md` — NO lever
-predicts ≥16,000; §0 corrects all sizing, §4 row 1 the named band, §5 the 18,675 of apparatus.**
+dense header array only MIGRATES it. **`…/2026-08-13_c-residue/RESIDUE.md` — NO lever predicts
+≥16,000; §0 corrects all sizing, §4 row 1 the named band, §5 the 18,675 of apparatus.** **RUNG 2
+(quarter-rate particles) REFUTED, no build (`…/2026-08-13_c-particle-rate/`): `MISC` is a DRAW
+residual** (`taskman_seam.c:5104`), so its 17,152 never priced the update half — which is `SRC`,
+7,364 tk/fr, and pays **−7,493** quarter-rate (ALL particles, both halves, −33,818). **And it shares
+ONE LCG with the level-3 AI**, so any cadence change diverges the match: **CHECK EVERY SUB-RATING
+FOR `syUtilsRandFloat`.**
 
-**A PROFILE CYCLE IS HALF A TICK.** `ticks/frame = cycles / (2 × regions)`: regions P50
-2,240,838 cyc = 2.0001× two VBlanks, and `cycles/2` reproduces the gate arm's `ALL` histogram.
-Read as 1:1 the no-HUD profile ROM would present at HALF the heavier gate ROM's rate. Every
-`SITR`/`AObj`/`AnimValueQ`/`__aeabi_lmul` crumb halves and is gone (`RESIDUE.md` §0);
-`analyze-symbol-line-profile.py`'s THIRD unit (1,128,000 budget, 1.167× high) now reads
-`regions` and prints its `basis` line. Only `FTR`/`STG` are flat where P95 lives
-(band min 296,320/171,520), so flat cuts there pay 1:1 and ADD: 8,000+8,000 = 16,000. `FTR`
-−4.8% (14,232 tk/fr) is the last sized flat lever. **14,691 tk/fr of
-`WORK-H` is `cpuGetTiming`+`tickGetCount`** — apparatus the published ROM never runs, so the
-product-side gap is ≈72,500, not 87,236.
+**A PROFILE CYCLE IS HALF A TICK.** `ticks/frame = cycles / (2 × regions)`, and ONE region is
+`cycles / 2`: regions P50 2,240,838 cyc = 2.0001× two VBlanks, and `cycles/2` reproduces the gate
+arm's `ALL` histogram. Read as 1:1 the no-HUD profile ROM would present at HALF the gate ROM's rate.
+Every `SITR`/`AObj`/`AnimValueQ`/`__aeabi_lmul` crumb halves and is gone (`RESIDUE.md` §0);
+`analyze-symbol-line-profile.py`'s THIRD unit (1,128,000 budget, 1.167× high) now reads `regions`
+and prints its `basis`. Only `FTR`/`STG` are flat where P95 lives (band min 296,320/171,520), so
+flat cuts there pay 1:1 and ADD: 8,000+8,000 = 16,000; `FTR` −4.8% (14,232 tk/fr) is the last sized
+flat lever. **14,691 tk/fr of `WORK-H` is `cpuGetTiming`+`tickGetCount`** — apparatus the published
+ROM never runs, so the product-side gap is ≈72,500, not 87,236.
 
 **THE BIGGEST LEVER IS PLACEMENT.** Memory stall is **1,236,685,107 cycles, 33.8% of the
 match** ≈ 386,000 tk/frame (this one WAS converted right) — an order of magnitude past `SINT`
@@ -75,14 +79,13 @@ execute, 2,594 B idle), but the census's 87,033,153 "in reach" stall cycles assu
 ~3,118 B of mostly PORT functions and `NDS_TASK37_ITCM_PORT` is 0 because *"the owner
 confirmed the enabled lab build misbehaves"* — CORRECTNESS. **Eviction alone pays nothing.**
 
-**Lane-sizing traps, now encoded in `-Ceilings`:** medians do not add (that invented a
-110,336 lane worth +9,472/row in c122); `OTHR` CONTAINS `WAIT`. Only `WORK-H` is spendable.
-A `-Ceilings` ceiling flattens a lane to its own MEDIAN, so it prices the EXCURSION only —
-it is not what deleting the lane pays (`FTR` 8,512 vs 311,744). `RESIDUE.md` §2 has both.
-**Profile with `NDS_TICK_HUD_DRAW=0` or you profile the instrument** — the HUD
-costs ~345,024 tk twice a second on exactly the frames P95 is decided on; the GATE
-keeps `DRAW=1`. Soak length is `NDS_R2_SOAK_MATCH_MINUTES`. `Makefile:382` forbids
-reporting a both-CPU P95 as Boundary's. **Route to ATTRIBUTE, re-bank to BANK.** **Collision
+**Lane-sizing traps, now encoded in `-Ceilings`:** medians do not add (that invented a 110,336 lane
+worth +9,472/row in c122); `OTHR` CONTAINS `WAIT`. Only `WORK-H` is spendable. A `-Ceilings` ceiling
+flattens a lane to its own MEDIAN, so it prices the EXCURSION only — it is not what deleting the
+lane pays (`FTR` 8,512 vs 311,744). `RESIDUE.md` §2 has both. **Profile with `NDS_TICK_HUD_DRAW=0`
+or you profile the instrument** — the HUD costs ~345,024 tk twice a second on exactly the frames P95
+is decided on; the GATE keeps `DRAW=1`. Soak length is `NDS_R2_SOAK_MATCH_MINUTES`. `Makefile:382`
+forbids reporting a both-CPU P95 as Boundary's. **Route to ATTRIBUTE, re-bank to BANK.** **Collision
 paid and is BANKED** (slices 35/36/37, −10,752). SIZE IS NOT PERMISSION: float in
 `gmcollision`/`mp*`/`ftMain*`/`ftComputer` is FROZEN — exact memo/hoist/reuse/deletion only.
 
@@ -96,8 +99,8 @@ paid and is BANKED** (slices 35/36/37, −10,752). SIZE IS NOT PERMISSION: float
   BROKEN** — 35.6% of the fighter backfacing with Boundary green: **a passing verifier is
   not visual verification.**
 - **Effect DObj submits** — Boundary-only. **Projectiles** · **texture thrash** ·
-  **`Find`** · **`Material`** · force-load seam. **`MISC` is PARTICLES and particles
-  are FLAT.** **The AOT animation bake** (slice 32): SIZE dead.
+  **`Find`** · **`Material`** · force-load seam. **`MISC` is the DRAW residual, not
+  "particles"** — and particles are FLAT. **The AOT animation bake** (slice 32): SIZE dead.
 - **Animation playback ARITHMETIC** (slices 34, 41): idle-joint skip (33), lazy track
   table (31), AObj walk and dispatch all under the floor. **Slice 41 spent the last
   lever**: 30 Hz poses cost **+7,040** *and* diverged the match (damage 130/51 vs
@@ -118,45 +121,42 @@ failing arm reads as a hung emulator. `gSYTaskmanGeneralHeap` free-min **72,188*
 
 ## Landed slices and the lanes they leave
 
-**SLICE 43 WITHDRAWN 2026-08-11.** All targets force `NDS_R2_FIGHTER_GX_COMPOSE=0`; do not
-re-enable without owner proof — it measured **−13,632 P95** but the matrix stack leaks ~3
-pushes/frame, wrapping mod 32 (`nds_platform.c:3197`, whose `|| NDS_TICK_HUD` is pinned by
-`check-gbi-decode-fixtures.ps1:2247`). **SLICE 46 KEPT — 1,213,440 → 1,196,224**
-(`…/SLICE46.md`): warm preload covered 57 of the 87 used ids; the measured 87, 4 per scene
-update, take **misses 32 → 2** and the arena 257,200 → 192,240 (it SHRINKS).
+**SLICE 43 WITHDRAWN 2026-08-11.** All targets force `NDS_R2_FIGHTER_GX_COMPOSE=0`; do not re-enable
+without owner proof — it measured **−13,632 P95** but the matrix stack leaks ~3 pushes/frame,
+wrapping mod 32 (`nds_platform.c:3197`, whose `|| NDS_TICK_HUD` is pinned by
+`check-gbi-decode-fixtures.ps1:2247`). **SLICE 46 KEPT — 1,213,440 → 1,196,224** (`…/SLICE46.md`):
+warm preload covered 57 of the 87 used ids; the measured 87, 4 per scene update, take **misses 32 →
+2** and the arena 257,200 → 192,240 (it SHRINKS).
 
-**SLICE 48 KEPT — read its SIZE, not its bank (`…/SLICE48.md`).** The FAT lane is **BGM**.
-**`AUD` at 0.2% does NOT clear BGM** — a bucket brackets only its own thread and the worker
-ran ABOVE main. Shipped: created at `MAIN_THREAD_PRIO + 1`, switched to `- 1` once playing
-(`.data` pokeable). **Deprioritizing during the MATCH was REFUTED** — same-binary A/B,
-+8,064 wrong way; creating low is −13,952..−17,792. **SLICE 45 KEPT — 1,225,280 →
-1,213,440**: `ndsRelocRemoveFighterAObj16StatusAliases` resolved `ndsRelocAssetIDForToken`
-for EVERY status node when `addr == data` rejects almost all in one compare. Resolves
-16,002 → 1,143, **−12,160**.
-**The fighter LOCAL matrix build is NOT a P95 lane — refuted c122.** Only shape left is a
-local-matrix memo, **DO-NOT-RETRY, killed twice**. **`SINT` is the fighter INTERRUPT proc
-with `SCPU` nested, not an animation bucket** — reading it as one mis-attributed an A/B in
-c119. **Zero-copy force-load is closed:** `ftmain.c:4623` DISCARDS the return value.
+**SLICE 48 KEPT — read its SIZE, not its bank (`…/SLICE48.md`).** The FAT lane is **BGM**. **`AUD`
+at 0.2% does NOT clear BGM** — a bucket brackets only its own thread and the worker ran ABOVE main.
+Shipped: created at `MAIN_THREAD_PRIO + 1`, switched to `- 1` once playing (`.data` pokeable).
+**Deprioritizing during the MATCH was REFUTED** — same-binary A/B, +8,064 wrong way; creating low is
+−13,952..−17,792. **SLICE 45 KEPT — 1,225,280 → 1,213,440**:
+`ndsRelocRemoveFighterAObj16StatusAliases` resolved `ndsRelocAssetIDForToken` for EVERY status node
+when `addr == data` rejects almost all in one compare. Resolves 16,002 → 1,143, **−12,160**. **The
+fighter LOCAL matrix build is NOT a P95 lane — refuted c122.** Only shape left is a local-matrix
+memo, **DO-NOT-RETRY, killed twice**. **`SINT` is the fighter INTERRUPT proc with `SCPU` nested, not
+an animation bucket** — reading it as one mis-attributed an A/B in c119. **Zero-copy force-load is
+closed:** `ftmain.c:4623` DISCARDS the return value.
 
-**`SHDT` IS CLOSED — bar 47,424 tk/fr, not −26.6%: the band is the transform chain, four dirty
-flags so nothing to memoise, band-only cuts saturate at 78,016, fixed point only**
+**`SHDT` IS CLOSED — bar 47,424 tk/fr, not −26.6%: the band is the transform chain, four dirty flags
+so nothing to memoise, band-only cuts saturate at 78,016, fixed point only**
 (`…/2026-08-13_shdt-{broadphase,band-owner}/`, RESIDUE §4 row 1). **Its file-I/O co-fire is closed
-too** (`…/2026-08-13_c-band-io/`): the **SOUND-EFFECT load, not the animation one** — that reading
-was **pre-slice-46**, anim now prices **+0** — 76 BGM-packet frames + 91 `ndsAudioFgmPlayAtPan`
-8-slot misses, **0 exceptions**, worth **−12,736** (**−13,580** worst case), lane saturates
-−19,648, rank-80 carries **zero** I/O, residency impossible (942,272 B of cues vs 204,800 B).
+too** (`…/2026-08-13_c-band-io/`): the **SOUND-EFFECT load, not the animation one** (that reading
+was pre-slice-46; anim now prices **+0**) — 91 `ndsAudioFgmPlayAtPan` 8-slot misses, **−12,736**
+(−13,580 worst case), lane saturates −19,648, rank-80 carries **zero** I/O, residency impossible.
 **A GATE LANE IS A MASK FOR THE PROFILE; a MECHANISM NEEDS NO MASK** — sum it over the region axis
 (`analyze-io-lane-series.py`) and read its alignment-free **worst-case-pairing** bound first.
 
-**Do not bring a micro-fix** — R2-06 E11: a load-frame-only ~8,000 cannot be banked. Clear
-~16,000 in one change, or **use the `.data` route on ONE binary** (only if the change cannot
-alter gameplay state). **Every change needs an engagement counter on BOTH sides**; slices
-45, 46 and 48 were all found by READING counters the code already kept, on the gate arm, for
-the first time. The Makefile's `?= 0` defaults are not the shipped config (41 overridden);
-`.text.hot` is closed both directions. **Latent cliff, unowned:**
-`sNdsAObjEvent32NormalizedCount` reads **973 of 1,024** after a minute and overflow silently
-**skips the animation attach**. **Boundary for all of it**; a visible-pixel change needs the
-owner (`BUGS.md`).
+**Do not bring a micro-fix** — R2-06 E11: a load-frame-only ~8,000 cannot be banked. Clear ~16,000
+in one change, or **use the `.data` route on ONE binary** (only if the change cannot alter gameplay
+state). **Every change needs an engagement counter on BOTH sides**; slices 45, 46 and 48 were all
+found by READING counters the code already kept, on the gate arm, for the first time. The Makefile's
+`?= 0` defaults are not the shipped config (41 overridden); `.text.hot` is closed both directions.
+**Latent cliff, unowned:** `sNdsAObjEvent32NormalizedCount` reads **973 of 1,024** after a minute
+and overflow silently **skips the animation attach**. **Boundary for all of it**; a visible-pixel
+change needs the owner (`BUGS.md`).
 
 ## Measurement rules that change your FIRST action — board owns the rest
 
@@ -190,11 +190,11 @@ a doc/reality mismatch, since `AGENTS.md` says `/decomp/` is gitignored and it i
 (`git ls-files decomp` reads 26,276). Local commits are safe; only the push is blocked.
 Owner's call: untrack `decomp/` or scrub those 16.
 
-`AGENTS.md` owns the start-of-cycle commands; `docs/P1_EXECUTION_BOARD.md` is the only
-dynamic queue; `docs/BUGS.md` carries the owner's verdicts — preserve their wording. A clean
-checkout builds through `build.ps1`, not bare `make`: four of six `.inc` are gitignored and
-**`build.ps1`'s generator is not run by `make`**. `make p1-tick` builds the measuring ROM,
-`make p1` the published pair. Never pass `-j`, never override `MAKEFLAGS`, one build at a
-time, never build a published target name for lab work. Preserve mode 163, renderer mode 9,
-mip 0, static textures, source countdown, Dream Land water frame 0, Task 16 `1/1/1`. Never
-edit `decomp/`. Run `New-Smash64DSSnapshot.ps1` last.
+`AGENTS.md` owns the start-of-cycle commands; `docs/P1_EXECUTION_BOARD.md` is the only dynamic
+queue; `docs/BUGS.md` carries the owner's verdicts — preserve their wording. A clean checkout builds
+through `build.ps1`, not bare `make`: four of six `.inc` are gitignored and **`build.ps1`'s
+generator is not run by `make`**. `make p1-tick` builds the measuring ROM, `make p1` the published
+pair. Never pass `-j`, never override `MAKEFLAGS`, one build at a time, never build a published
+target name for lab work. Preserve mode 163, renderer mode 9, mip 0, static textures, source
+countdown, Dream Land water frame 0, Task 16 `1/1/1`. Never edit `decomp/`. Run
+`New-Smash64DSSnapshot.ps1` last.

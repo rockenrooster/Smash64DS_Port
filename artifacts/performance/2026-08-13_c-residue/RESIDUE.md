@@ -196,7 +196,7 @@ fence or already spent.
 | 3 | **`FTR` flat deletion** | −4.8% | 14,232 | Pays 1:1 with no rank discount — the safest lever in the table — but 14,232 ticks/frame is 4.8% of a lane whose largest deletable sub-block is 4,994. Needs three independent deletions or one structural change. |
 | 4 | **`STG` flat deletion** | −9.1% | 16,119 | Same shape, worse ratio. `STG` is 174,656 against SwitchPlan §4's 180K line — **already under its budget**, so §7 rung 1's "`STG` at ~195K against 180K" is stale by 20,344. |
 | 5 | **`SITR`** | −6.9% | 8,536 | Its content is the fighter animation lane: arithmetic spent (34, 41), layout closed (2026-08-13), call count is all that is left. |
-| 6 | **`SOBJ` / `MISC`** | −15.5% / −15.2% | 14,120 / 17,152 | `MISC` is particles and particles are flat; sub-rating is rung 2, i.e. a fidelity decision. |
+| 6 | ~~**`SOBJ` / `MISC`**~~ **`MISC`'s rung-2 reading is REFUTED 2026-08-13, no build spent** | −15.5% / −15.2% | 14,120 / 17,152 | **`MISC` is a DRAW residual by construction** — `taskman_seam.c:5104-5111` computes it as `DrawTicks − (FTR+STG+BG+HUD) + glFlush` — so the 17,152 prices the particle **draw** half. The **update** half rung 2 wanted to sub-rate is in **`SRC`** (`ndsRunMarioFoxProofUpdate`, `taskman_seam.c:4453-4479`) and is **7,364 tk/frame**: quarter-rating it prices **−7,493**, deleting it outright **−8,987**, and deleting *every particle in the game, update and draw*, **−33,818** (`../2026-08-13_c-particle-rate/`, exact re-rank on the c130 gate rows). It is also **forbidden**: the particle/effect update draws from the **same single LCG** as the level-3 CPU AI (`sSYUtilsRandomSeed`; `ftcomputer.c` 65 sites, `lbparticle.c` 26, `efmanager.c` 44), so any cadence change shifts the AI's stream = mechanical divergence. `SOBJ` is untouched by this. |
 | — | `SCPU`, `SPRM`, `AUD`, `BG` | — | — | **Closed by arithmetic in §2.** |
 
 **Pairing that works:** flat cuts in `FTR` and `STG` add exactly. Two
@@ -261,15 +261,38 @@ trio 63,688 (`EmitProductionPrimitiveGroups` 25,071 +
 10,744), of which 6,538 is `memcpy`/`memset`. **Required: 14,232 ticks/frame in one change, or two
 independent ~8,000s split across `FTR` and `STG`.**
 
-### Rung 2 — cosmetic systems below simulation rate (round-robin, never batched)
+### Rung 2 — cosmetic systems below simulation rate — **REFUTED 2026-08-13, no build spent**
 
-`MISC` is particles and is 105,024 median / 112,794 mean. A −15.2% proportional
-reduction (17,152 ticks/frame) is worth 16,000 P95. **Round-robin a quarter of
-the generators per frame; do not batch quarter-rate work onto one frame** —
-R2-03 E30 and the band table in §1 agree that batching lowers the median and
-raises P95, and P95 is the gate. The *draw* half (`lbParticleDrawTextures`
-9,208, `ndsRendererSubmitParticleQuad` 4,992) cannot be sub-rated without
-visible strobing; only the update half is eligible.
+`../2026-08-13_c-particle-rate/REFUTED_QUARTER_RATE.md`. This paragraph used to
+read "`MISC` is particles and is 105,024 median / 112,794 mean, so a −15.2%
+proportional reduction (17,152 ticks/frame) is worth 16,000 P95". **Both halves
+of that sentence were wrong for this lever**, and it is recorded here rather
+than deleted so nobody re-derives it:
+
+- **Wrong lane.** `MISC` is a **draw-side residual by construction** —
+  `taskman_seam.c:5104-5111` computes it as `DrawTicks − (FTR+STG+BG+HUD)`
+  plus `glFlush`. No update work is in it. The particle/effect update runs in
+  `ndsRunMarioFoxProofUpdate` and is charged to **`SRC`**.
+- **Wrong size.** The rate-reducible update family is **7,364 tk/frame**, not
+  17,152. Exact re-rank on `c130-gate-rows.csv`: quarter rate **−7,493**,
+  half rate −5,998, **deleted outright −8,987**; the alignment-free worst-case
+  bound at quarter rate is −15,383. It is a per-frame tax present on 1,600 of
+  1,600 frames and reads only **3,784** on the rank-80 frame, so it pays ~1:1
+  and never inherits `SRC`'s proportional multiplier. The family would have to
+  be **3x** its measured size before quarter-rating it cleared 16,000.
+- **Forbidden anyway.** The particle and effect update draws from the **same
+  single LCG** the level-3 CPU AI draws from (`sSYUtilsRandomSeed`, one global,
+  never retargeted in-match; `ftcomputer.c` **65** draw sites, `lbparticle.c`
+  26, `efmanager.c` 44, `efground.c` 6). Any cadence change alters the number
+  of seed steps per frame, so the AI reads different values and the match
+  diverges — slice 41's failure class. Preserving the draw count exactly is not
+  cheap: the count is decided by walking the particle script, which is the work
+  being skipped.
+
+**What survives:** the *draw* half is **27,758 tk/frame** and prices **−30,676**
+deleted; the whole subsystem (both halves) **−33,818**. That is a fidelity
+question for the owner (sacrifice-order item 2), not rung 2's shape, and it is
+the only particle number with a size worth a decision.
 
 ### Rung 3 — reduce visual fidelity — **BLOCKED(decision: owner)**
 
@@ -279,7 +302,8 @@ Priced candidates, in size order, each with its visible delta:
 |---|---:|---|
 | Stage no-Z band (`LoadNoZMatrix` 11,632 + `EmitNoZTriangle` 5,501 + `EmitNoZVertex` 5,377) | **22,510** | the depth-disabled background/foreground bands; a rate or geometry reduction here is the largest single cosmetic item in `STG` |
 | `NDS_R2_FIGHTER_GX_COMPOSE` re-enable | **−13,632** (slice 43, measured) | none claimed — frame-locked captures were pixel-identical — but it is withdrawn on a **matrix-stack leak** (~3 pushes/frame, wrapping mod 32, `nds_platform.c:3197`). This is a **correctness** gate, not a fidelity one, and HANDOFF requires owner proof. |
-| particle round-robin (rung 2) | up to 16,000 | quarter-rate generator motion |
+| ~~particle round-robin (rung 2)~~ **REFUTED** | **−7,493**, and mechanically divergent | — |
+| particle **draw** half deleted (`lbParticleDrawTextures` + the quad/whispy submit chain, 27,758 tk/fr) | **−30,676**; whole subsystem incl. update **−33,818** | every particle and Whispy leaf in the game disappears — the largest cosmetic item anywhere in the ladder, and the only particle number with a size |
 
 ### Rung 4 — a COMPENSATED 30 Hz simulation — **BLOCKED(decision: owner, in writing)**
 

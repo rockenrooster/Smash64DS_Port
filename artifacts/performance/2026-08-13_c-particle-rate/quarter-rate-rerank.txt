@@ -1,0 +1,23 @@
+gate rank-80 baseline 1220480   gate line 1,120,380   gap 100100
+PUPD deleted outright              mean    7364 tk/fr  keep 0.00  -> P95   1211493 (-8987)   worst-case   1199970 (-20510)
+PUPD at quarter rate               mean    7364 tk/fr  keep 0.25  -> P95   1212987 (-7493)   worst-case   1205097 (-15383)
+PUPD at half rate                  mean    7364 tk/fr  keep 0.50  -> P95   1214482 (-5998)   worst-case   1210225 (-10255)
+PUPD+SPAWN deleted outright        mean    7567 tk/fr  keep 0.00  -> P95   1211493 (-8987)   worst-case   1199338 (-21142)
+PUPD+SPAWN at quarter rate         mean    7567 tk/fr  keep 0.25  -> P95   1212987 (-7493)   worst-case   1204623 (-15857)
+
+PUPD on the rank-56..115 band: mean 8731  median 6089  min 3446  max 23610
+PUPD whole match:            mean 7364  median 5393  min 1020  max 25987
+PUPD on the rank-80 frame:   3784   (that frame's WORK-H 1220480)
+
+=== sensitivity: how big would the family have to BE to clear 16,000? ===
+family scaled to                               arm               mean P95 delta   worst-case
+measured (x1.00)                               deleted           7364     -8987       -20510
+measured (x1.00)                               quarter-rate      7364     -7493       -15383
++ every particle soft-float tick (1,588)       deleted           8951    -10277       -24932
++ every particle soft-float tick (1,588)       quarter-rate      8951     -8460       -18699
+x1.50                                          deleted          11046    -11977       -30765
+x1.50                                          quarter-rate     11046     -9735       -23074
+x2.00                                          deleted          14728    -14966       -41019
+x2.00                                          quarter-rate     14728    -11977       -30765
+x3.00                                          deleted          22091    -21531       -61529
+x3.00                                          quarter-rate     22091    -16461       -46147

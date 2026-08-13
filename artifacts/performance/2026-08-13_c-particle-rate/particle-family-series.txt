@@ -1,0 +1,34 @@
+regions      1600
+basis        ticks = cycles / (2 x 1600) -- ARM9 is 2x the tick timer
+gate         artifacts/performance/2026-08-12_c130-fire-gate/c130-gate-rows.csv lane WORK-H, 1600 rows, rank-80 1,220,480
+
+=== PUPD ===  (26 symbols)
+  whole-match           23,564,062 cyc =     7,364 tk/frame mean
+  calls                     35,658 total =      22.3 /frame
+  present on       1,600 of 1600 regions in 1 runs
+  when present     mean     7,364 tk  median     5,393  max    25,987 tk
+  top regions (region:ticks(calls)):
+   1423:25,987(87)  1407:25,957(68)  1431:25,591(83)  1428:25,586(80)  1421:25,321(87)  378:24,923(74)  1419:24,862(85)  1433:24,765(79)  1408:24,303(62)  1453:24,226(73)  1412:24,044(80)  1411:23,918(84)
+  P95 if removed                1,211,493   delta    -8,987   (aligned, offset +1)
+  P95 worst-case pairing        1,199,970   delta   -20,510   (needs no alignment)
+
+=== PDRAW ===  (20 symbols)
+  whole-match           88,825,380 cyc =    27,758 tk/frame mean
+  calls                    121,399 total =      75.9 /frame
+  present on       1,600 of 1600 regions in 1 runs
+  when present     mean    27,758 tk  median    25,556  max    69,948 tk
+  top regions (region:ticks(calls)):
+   1419:69,947(124)  1421:68,324(121)  1425:68,043(122)  1420:67,333(123)  1423:66,208(120)  1418:66,005(118)  1426:65,809(119)  1408:65,438(116)  1422:65,420(122)  1424:64,994(120)  1411:64,700(117)  1409:64,575(116)
+  P95 if removed                1,189,804   delta   -30,676   (aligned, offset +1)
+  P95 worst-case pairing        1,171,946   delta   -48,534   (needs no alignment)
+
+=== PALL ===  (14 symbols)
+  whole-match          102,529,906 cyc =    32,041 tk/frame mean
+  calls                     94,595 total =      59.1 /frame
+  present on       1,600 of 1600 regions in 1 runs
+  when present     mean    32,041 tk  median    29,024  max    85,490 tk
+  top regions (region:ticks(calls)):
+   1419:85,490(106)  1421:84,677(106)  1423:82,672(106)  1425:81,463(104)  1408:81,462(99)  1426:80,150(102)  1428:80,078(101)  1420:79,766(105)  1411:79,651(99)  1418:79,363(100)  1409:79,336(98)  1422:78,718(103)
+  P95 if removed                1,186,662   delta   -33,818   (aligned, offset +1)
+  P95 worst-case pairing        1,159,154   delta   -61,326   (needs no alignment)
+

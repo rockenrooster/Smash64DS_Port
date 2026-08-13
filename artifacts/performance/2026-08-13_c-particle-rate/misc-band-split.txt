@@ -1,0 +1,91 @@
+cache        warm-cache.npz (reused)
+profile      artifacts\performance\2026-08-12_c123-rebank\profile-warm\arm9-profile.csv
+regions      1600 (region 0 dropped)
+basis        ticks = cycles / (2 x 1600) -- ARM9 is 2x the tick timer
+attributed   3,789,841,877 of 3,791,365,448 cycles (1,523,571 unmapped)
+non-idle     957,941 tk/frame mean
+
+alignment: profile non-idle vs the gate lane, by offset
+   offset  -3   r = +0.103
+   offset  -2   r = +0.111
+   offset  -1   r = +0.109
+   offset  +0   r = +0.129
+   offset  +1   r = +0.169   <- chosen
+   offset  +2   r = +0.103
+   offset  +3   r = +0.101
+   offset  +4   r = +0.098
+   offset  +5   r = +0.085
+
+=== gate MISC >= 140,000 ===
+    219 frames in 23 runs | control 440 frames
+    non-idle premium +55,956 tk/frame
+       +tk/fr    bandtk    ctltk    on    callsB   callsC  ratio  symbol
+        3,542    10,161    6,619   219      4.00     4.00    1.0  lbParticleDrawTextures
+        3,506     3,506        0    78      4.44     0.00    inf  ndsRendererSubmitWhispyNativeQuad
+        3,268    32,046   28,777   219   1755.32  1605.88    1.1  __aeabi_fadd
+        2,341     3,468    1,127   219      2.00     2.00    1.0  ndsWhispyAOTStructFuncRunLean.isra.0
+        1,957    15,649   13,692   219    101.07    98.57    1.0  memset
+        1,861     8,709    6,849   219      9.05     8.20    1.1  ndsFTParamsInvalidateSubtree
+        1,836     2,104      267    86      0.42     0.05    8.0  ndsRendererAdapterSubmitStageDL
+        1,802     4,175    2,373   219     62.04    60.70    1.0  ndsBaseGcPlayDObjAnimJoint
+        1,656     2,732    1,076    39      0.46     0.16    2.9  ndsAObjEvent32NormalizeScript
+        1,583     1,685      102    69      0.32     0.03    9.9  ndsRendererHardwareResolveOrBindTexture
+        1,542     1,729      188    23      0.11     0.01    9.2  ndsRendererSubmitNativeImpactWave
+        1,496     1,744      248    86     29.54     4.35    6.8  ndsEffectPacketRecord
+        1,285    21,445   20,160   219   1694.43  1577.55    1.1  __aeabi_fmul
+        1,143     3,855    2,711   219     62.14    60.70    1.0  gcParseDObjAnimJoint
+        1,034     2,125    1,091   121      1.73     0.83    2.1  ndsRendererSubmitParticleQuad
+        1,024     1,406      382   219      2.00     2.00    1.0  ndsWhispyAOTGeneratorFuncRun
+        1,007     1,314      307    69      2.99     0.74    4.1  ndsRendererHardwareSubmitVertex
+          973     1,437      464   154      3.84     1.18    3.3  lbParticleUpdateStruct.part.0
+          943     1,064      121    86      0.42     0.05    8.0  ndsRendererAdapterPrepareInitialMatrices
+          928     1,107      179    69      0.32     0.04    7.7  ndsRendererScanList
+          920     1,589      670    32     67.96    28.35    2.4  get_fat.isra.0
+          910     1,765      855   173      2.06     0.80    2.6  ndsRendererPrepareWhispyQuadState
+          792     5,878    5,086   219     16.58    13.07    1.3  ndsStageMPAdjustFloorLoopWallSweep
+          753    11,725   10,972   215      4.62     4.19    1.1  ftParamUpdateAnimKeys
+          616     8,756    8,139   219     11.56    10.40    1.1  gcPlayAnimAll
+          589     5,570    4,981   219     16.42    16.05    1.0  ndsRendererAdapterBuildPersistentStageWorldMatrix
+          583     1,004      421    30      0.16     0.07    2.3  f_lseek
+          568     1,693    1,125   109      1.16     0.86    1.3  mpCollisionCheckProjectFloor
+          539     2,198    1,659   219     17.45    14.63    1.2  ndsRelocFindLoadedFileContaining
+          529    10,560   10,031   219     18.74    18.08    1.0  ndsRendererMtxMul20p12
+          510     8,735    8,225   219    183.65   173.72    1.1  tickGetCount
+          491     3,499    3,008   219     29.47    23.04    1.3  ndsMPLineExtentSweepRejects
+          477       996      519   219     30.92    10.06    3.1  __divsi3
+          468       520       52   173      2.07     0.83    2.5  ndsRendererFlushWhispyNativePacket
+          468       663      195    96      0.47     0.15    3.0  ndsStageGCDrawAllLoopRecordDObjDraw
+          466       466        0    81     10.47     0.00 2302.5  ndsWhispyAOTDescForBytecode
+          447     9,495    9,047   219      2.00     2.00    1.0  ndsBaseGcRunAll
+          447    13,996   13,549   215     68.84    72.59    0.9  ndsR2FtAnimParseDObjFigatree
+          429     1,072      642   102      2.74     1.55    1.8  ndsStageMPCeilFloorLoopSweep
+          414       480       67    86      1.10     0.26    4.3  ndsRendererHardwareBeginTriangleBatch
+
+--- controls: does the ranking survive only on ITS OWN mask? ---
+    overlap band vs profile-top-cost: 37 of 219 (chance 30.0)
+
+=== random mask (negative control) ===
+    219 frames in 190 runs | control 1381 frames
+    non-idle premium -10,291 tk/frame
+       +tk/fr    bandtk    ctltk    on    callsB   callsC  ratio  symbol
+        1,077    31,978   30,901   219   1752.32  1695.24    1.0  __aeabi_fadd
+        1,048    22,381   21,332   219   1751.53  1676.28    1.0  __aeabi_fmul
+          646    11,159   10,514   210     38.53    34.79    1.1  mpCollisionGetFCCommonFloor
+          334    11,394   11,060   219    193.14   187.61    1.0  __aeabi_fdiv
+          282     1,491    1,209    54      0.42     0.37    1.2  ftComputerCheckDetectTarget
+          269       915      645    26      2.90     2.01    1.4  func_ovl2_800ED490
+          230     5,353    5,122   214    185.95   175.01    1.1  ndsStageCollisionLoopGeometryReady
+          210       682      471    24      1.83     1.23    1.5  gmCollisionSetInvertMatrix
+
+=== profile's own top-N by cost ===
+    219 frames in 121 runs | control 1381 frames
+    non-idle premium +280,595 tk/frame
+       +tk/fr    bandtk    ctltk    on    callsB   callsC  ratio  symbol
+      166,125   369,771  203,647   219      4.15     1.29    3.2  armWaitForIrq
+       23,664    51,473   27,809   219   2761.60  1535.19    1.8  __aeabi_fadd
+       21,273    39,837   18,564   219   3036.59  1472.50    2.1  __aeabi_fmul
+       11,078    22,711   11,632   219    160.56    89.23    1.8  memcpy
+       10,431    22,405   11,974   219     93.68    66.18    1.4  ndsR2FtAnimParseDObjFigatree
+        6,901    25,284   18,383   219    369.24   253.30    1.5  ndsR2AnimValueQ
+        6,831    26,461   19,629   219     93.76    66.19    1.4  gcPlayDObjAnimJoint
+        6,783     7,503      720    89      4.64     0.56    8.2  armCopyMem32
