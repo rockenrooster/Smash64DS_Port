@@ -1,0 +1,89 @@
+mutexUnlock (m=0x2269800 <__hndl_lock>) at /home/davem/projects/devkitpro/pacman-packages/calico/src/calico-1.2.0/source/system/mutex.c:138
+RWSITE addr=0x02068100
+   0x2068100 <gcParseDObjAnimJoint+136>:	movs	r1, #1
+   0x2068102 <gcParseDObjAnimJoint+138>:	ldr	r2, [pc, #652]	@ (0x2068390 <gcParseDObjAnimJoint+792>)
+   0x2068104 <gcParseDObjAnimJoint+140>:	ldr	r3, [r2, #0]
+   0x2068106 <gcParseDObjAnimJoint+142>:	adds	r3, #1
+   0x2068108 <gcParseDObjAnimJoint+144>:	str	r3, [r2, #0]
+   0x206810a <gcParseDObjAnimJoint+146>:	ldr	r2, [pc, #648]	@ (0x2068394 <gcParseDObjAnimJoint+796>)
+   0x206810c <gcParseDObjAnimJoint+148>:	ldr	r3, [r2, #0]
+   0x206810e <gcParseDObjAnimJoint+150>:	orrs	r3, r1
+   0x2068110 <gcParseDObjAnimJoint+152>:	str	r3, [r2, #0]
+   0x2068112 <gcParseDObjAnimJoint+154>:	ldr	r3, [pc, #644]	@ (0x2068398 <gcParseDObjAnimJoint+800>)
+   0x2068114 <gcParseDObjAnimJoint+156>:	str	r4, [r3, #0]
+   0x2068116 <gcParseDObjAnimJoint+158>:	ldr	r3, [pc, #644]	@ (0x206839c <gcParseDObjAnimJoint+804>)
+   0x2068118 <gcParseDObjAnimJoint+160>:	str	r6, [r3, #0]
+   0x206811a <gcParseDObjAnimJoint+162>:	ldr	r3, [pc, #616]	@ (0x2068384 <gcParseDObjAnimJoint+780>)
+Breakpoint 1 at 0x2068100: file D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/objanim.c, line 668.
+RW hit=1 count=0 script=0x023611da align=2 opcode=100 dobj=0x2362e90 r5ok=1 wait=1.000000 frame=2.000000 speed=1.000000 root=0
+  RWG gobj=0x2362950 id=1000 link=3 objkind=1 gframe=2.000000 flags=0x00000000
+(void (*)(GObj *)) 0x0 <ndsFighterMarioFoxRunImmediateProofChain>  <- RWRUN
+(void (*)(DObj *, s32, f32)) 0x0 <ndsFighterMarioFoxRunImmediateProofChain>  <- RWANIM
+  RWMEM aligned=0x23611d8 [-2]=fb830051 [-1]=f6df001e [0]=80e4ff78 [+1]=07f90001 [+2]=fb93004f [+3]=f66e000f
+  RWFILES count=38
+  RWF   0 asset=166 data=0x022c40b0 size=976 scene=22 gen=2 hit=0
+  RWF   1 asset=82 data=0x022c4480 size=152288 scene=22 gen=2 hit=0
+  RWF   2 asset=164 data=0x022e9760 size=5664 scene=22 gen=2 hit=0
+  RWF   3 asset=165 data=0x022ead80 size=4736 scene=22 gen=2 hit=0
+  RWF   4 asset=36 data=0x022ec000 size=2336 scene=22 gen=2 hit=0
+  RWF   5 asset=197 data=0x022ec920 size=6416 scene=22 gen=2 hit=0
+  RWF   6 asset=38 data=0x022ee230 size=3840 scene=22 gen=2 hit=0
+  RWF   7 asset=37 data=0x022ef130 size=32416 scene=22 gen=2 hit=0
+  RWF   8 asset=255 data=0x022f9ea0 size=192 scene=22 gen=2 hit=0
+  RWF   9 asset=104 data=0x022f9f60 size=17392 scene=22 gen=2 hit=0
+  RWF  10 asset=103 data=0x022fe350 size=12224 scene=22 gen=2 hit=0
+  RWF  11 asset=65624 data=0x02301310 size=158928 scene=22 gen=2 hit=0
+  RWF  12 asset=152 data=0x02327fe0 size=14080 scene=22 gen=2 hit=0
+  RWF  13 asset=163 data=0x0233a590 size=912 scene=22 gen=2 hit=0
+  RWF  14 asset=201 data=0x0233a920 size=2096 scene=22 gen=2 hit=0
+  RWF  15 asset=83 data=0x0233be80 size=52736 scene=22 gen=2 hit=0
+  RWF  16 asset=84 data=0x02348c80 size=28352 scene=22 gen=2 hit=0
+  RWF  17 asset=85 data=0x0234fb40 size=13616 scene=22 gen=2 hit=0
+  RWF  18 asset=203 data=0x02354610 size=1904 scene=22 gen=2 hit=0
+  RWF  19 asset=202 data=0x02354d80 size=6560 scene=22 gen=2 hit=0
+  RWF  20 asset=356 data=0x02356720 size=1856 scene=22 gen=2 hit=0
+  RWF  21 asset=204 data=0x02356e60 size=64 scene=22 gen=2 hit=0
+  RWF  22 asset=297 data=0x02356ea0 size=656 scene=22 gen=2 hit=0
+  RWF  23 asset=296 data=0x02357130 size=29968 scene=22 gen=2 hit=0
+  RWF  24 asset=299 data=0x0235e640 size=192 scene=22 gen=2 hit=0
+  RWF  25 asset=298 data=0x0235e700 size=10752 scene=22 gen=2 hit=0
+  RWF  26 asset=209 data=0x023a4890 size=1984 scene=22 gen=2 hit=0
+  RWF  27 asset=208 data=0x023a5050 size=6816 scene=22 gen=2 hit=0
+  RWF  28 asset=346 data=0x023a6af0 size=3632 scene=22 gen=2 hit=0
+  RWF  29 asset=161 data=0x023a7920 size=12160 scene=22 gen=2 hit=0
+  RWF  30 asset=109 data=0x023aa8a0 size=47120 scene=22 gen=2 hit=0
+  RWF  31 asset=210 data=0x023b60b0 size=64 scene=22 gen=2 hit=0
+  RWF  32 asset=316 data=0x023b60f0 size=144 scene=22 gen=2 hit=0
+  RWF  33 asset=313 data=0x023b6180 size=32336 scene=22 gen=2 hit=0
+  RWF  34 asset=315 data=0x023bdfd0 size=1312 scene=22 gen=2 hit=0
+  RWF  35 asset=314 data=0x023be4f0 size=11184 scene=22 gen=2 hit=0
+  RWF  36 asset=762 data=0x023c10a0 size=2912 scene=22 gen=2 hit=0
+  RWF  37 asset=557 data=0x02361100 size=768 scene=22 gen=2 hit=1
+RW hit=2 count=0 script=0x02361218 align=0 opcode=73 dobj=0x2363008 r5ok=0 wait=1.000000 frame=3.000000 speed=1.000000 root=0
+  RWG gobj=0x2362950 id=1000 link=3 objkind=1 gframe=2.000000 flags=0x00000000
+(void (*)(GObj *)) 0x0 <ndsFighterMarioFoxRunImmediateProofChain>  <- RWRUN
+(void (*)(DObj *, s32, f32)) 0x0 <ndsFighterMarioFoxRunImmediateProofChain>  <- RWANIM
+  RWMEM aligned=0x2361218 [-2]=00000000 [-1]=fd8f0028 [0]=00000ec9 [+1]=008f0000 [+2]=00000000 [+3]=00048024
+RW hit=3 count=2 script=0x0236128e align=2 opcode=100 dobj=0x23636b8 r5ok=1 wait=1.000000 frame=2.000000 speed=1.000000 root=0
+  RWG gobj=0x2362950 id=1000 link=3 objkind=1 gframe=2.000000 flags=0x00000000
+(void (*)(GObj *)) 0x0 <ndsFighterMarioFoxRunImmediateProofChain>  <- RWRUN
+(void (*)(DObj *, s32, f32)) 0x0 <ndsFighterMarioFoxRunImmediateProofChain>  <- RWANIM
+  RWMEM aligned=0x236128c [-2]=0033ff8d [-1]=fec3ff35 [0]=80e4ff67 [+1]=feab0001 [+2]=ff51ffd5 [+3]=fdf8ff1d
+RW hit=4 count=2 script=0x023612cc align=0 opcode=73 dobj=0x2363830 r5ok=0 wait=1.000000 frame=2.000000 speed=1.000000 root=0
+  RWG gobj=0x2362950 id=1000 link=3 objkind=1 gframe=2.000000 flags=0x00000000
+(void (*)(GObj *)) 0x0 <ndsFighterMarioFoxRunImmediateProofChain>  <- RWRUN
+(void (*)(DObj *, s32, f32)) 0x0 <ndsFighterMarioFoxRunImmediateProofChain>  <- RWANIM
+  RWMEM aligned=0x23612cc [-2]=00000000 [-1]=02710028 [0]=000000c9 [+1]=80240000 [+2]=02180004 [+3]=0000005a
+RW hit=5 count=2 script=0x0236130e align=2 opcode=100 dobj=0x2363c18 r5ok=1 wait=1.000000 frame=2.000000 speed=1.000000 root=0
+  RWG gobj=0x2362950 id=1000 link=3 objkind=1 gframe=2.000000 flags=0x00000000
+(void (*)(GObj *)) 0x0 <ndsFighterMarioFoxRunImmediateProofChain>  <- RWRUN
+(void (*)(DObj *, s32, f32)) 0x0 <ndsFighterMarioFoxRunImmediateProofChain>  <- RWANIM
+  RWMEM aligned=0x236130c [-2]=faf4ffdb [-1]=0583fff0 [0]=80e4ffc2 [+1]=04e80001 [+2]=fad9ffd5 [+3]=0543ffe5
+RW hit=6 count=2 script=0x02361344 align=0 opcode=41 dobj=0x2363d90 r5ok=0 wait=1.000000 frame=2.000000 speed=1.000000 root=0
+  RWG gobj=0x2362950 id=1000 link=3 objkind=1 gframe=2.000000 flags=0x00000000
+(void (*)(GObj *)) 0x0 <ndsFighterMarioFoxRunImmediateProofChain>  <- RWRUN
+(void (*)(DObj *, s32, f32)) 0x0 <ndsFighterMarioFoxRunImmediateProofChain>  <- RWANIM
+  RWMEM aligned=0x2361344 [-2]=00000000 [-1]=ff2c00e4 [0]=fff50029 [+1]=ff640086 [+2]=80a50021 [+3]=ff890003
+RWDONE n=6 count=2 mask=1 script=0x02361218 opcode=73
+[Inferior 1 (Remote target) detached]
+

@@ -465,33 +465,71 @@ placeholder meaning "not wired" reads exactly like this — and guessing wrong
 silently changes which music plays. Owner's call: set it to 34 to match decomp,
 or drop the declaration so the checker stops guarding a value nothing uses.
 
-## Something hands the joint parser a misaligned animation script
+## The 32-bit joint parser is run on 16-bit figatree joints
 
-`gcParseDObjAnimJoint` used to freeze the match on this (BUGS.md "Shield Freeze
-is back", closed 2026-08-03). It no longer can: the four animation parsers bound
-their event loops and record a fault instead of spinning. What has NOT been
-found is the producer.
+**PRODUCER FOUND 2026-08-13** — full evidence and both GDB captures in
+`artifacts/performance/2026-08-13_c-anim-anomalies/ANOMALIES.md`. This section
+used to say "what has NOT been found is the producer"; it has been, and the two
+candidates it excluded are irrelevant, because there is no misaligned *writer*
+to find. **The pointer is not corrupt. It is a perfectly good `event16`
+pointer being read by the `event32` parser.**
 
-The 7-minute both-CPU soak of 2026-08-03 reported `gNdsObjAnimRunawayCount=10`,
-`gNdsObjAnimRunawayMask=1` (bit 0, unrecognised opcode in the DObj event32
-parser), `gNdsObjAnimRunawayScript=0x238561A` and `gNdsObjAnimRunawayOpcode=100`.
-`0x238561A` is 2 mod 4, so it cannot be an `AObjEvent32*`; a misaligned `LDR` on
-ARM9 rotates the word it reads, which is where opcode 100 comes from. The three
-freeze captures show the same shape (`0x23842ea`, `r6=0x64`).
+`DObj.anim_joint` is a union of `event32` (4-byte commands) and `event16`
+(2-byte). `ftAnimParseDObjFigatree` advances `anim_joint.event16` **in place**,
+so a joint part-way through a figatree legitimately holds a **2 mod 4** pointer.
+Nothing produced a bad address; the wrong parser read a good one.
 
-Two candidate producers are already excluded by measurement, so do not re-run
-them: the shield table (`ftcommonguard1.c:238`, 49 installs probed on the live
-ROM, every one 4-aligned and in-file, `joint_num=27` against Fox's 28-entry
-`dFoxShieldPose_shield_anim_joint_*`), and `ndsRelocResolvePointerFromFileBase`
-(its offset fallback measured `gNdsRelocResolveOffsetCount=0`, i.e. it never ran).
+Opcode 100 follows arithmetically and is **not source vocabulary** — the legal
+DObj opcode space is 0..23, and there is no decoder gap to close:
 
-What is left: the parser rewriting its own pointer at `objanim.c:513/525`
-(`event32 = event32->p` on SetAnim/Jump reads a raw word out of the script with
-no validation), or `AObjAnimAdvance` walking off the end of a short script into
-neighbouring data. The counter now names the script address on every occurrence,
-so the next cycle can break on the writer instead of reproducing a freeze.
+| script | aligned word | how the parser read it | opcode |
+|---|---|---|---|
+| `0x023611da` (2 mod 4) | `0x80e4ff78` | `LDR` rotates ror 16, `& 0x7f` | **100** |
+| `0x0236128e` (2 mod 4) | `0x80e4ff67` | same | **100** |
+| `0x02361218` (0 mod 4) | halfword `0x0ec9` | low 7 bits of a 16-bit command | **73** |
+| `0x02361344` (0 mod 4) | halfword `0x0029` | same | **41** |
 
-Cost today: ten joints in seven minutes end their animation one pose early.
+Six hits, six opcodes, all predicted exactly. The owner is one GObj with
+`link_id` **3 = `nGCCommonLinkIDFighter`** and six DObjs of its tree; every
+faulting script is inside loaded file **asset 557 = `0x22d` =
+`NDS_RELOC_ASSET_MARIO_ANIM_SHIELD_ON`**. `bt` names the caller on every hit:
+**`ftParamUpdateAnimKeys`** (`reloc_backend_compat_shims.c:2017`), which chooses
+the parser **per fighter, not per joint**:
+
+```c
+if (fp->anim_desc.flags.is_anim_joint) gcParseDObjAnimJoint(joint);
+else                                   ftAnimParseDObjFigatree(joint);
+```
+
+**The port's dispatch is source-exact** (`decomp/.../ft/ftparam.c:386,412`), so
+the divergence is the FLAG, not the dispatch. `fttypes.h:59` states the
+invariant — *"whether current animation is type Figatree (0) or AnimJoint (1)"*
+— and the fault is that invariant broken.
+
+The remaining unknown is narrow. The only writer in this tree is
+`ftcommonguard1.c:275`, where the shield sets `is_anim_joint = TRUE` and
+installs event32 shield scripts in the same breath, which is self-consistent and
+correct. A grep over `decomp/src`, `src/` and `include/` finds **no writer that
+clears it** — but that is one grep, so the honest statement is "not found where
+I looked": the clear may live in a whole-struct assignment a field-name grep
+cannot see. Read BattleShip's figatree-install path
+(`lbCommonAddFighterPartsFigatree` and its `ftMain*`/`ftAnim*` callers) against
+the port shim (`reloc_backend_compat_shims.c:8990) and find who is supposed to
+clear it. If nothing does, the clear belongs at the install seam — **never a
+frame check, never a per-joint alignment test at the parser, and never a looser
+bound.** The negative control for any fix: a counter of "`is_anim_joint` true
+while the joint's pointer lies in an asset `ndsRelocPointerIsFighterAObj16`
+claims" must reach zero while the shield's own parse count stays non-zero.
+
+Cost today: `default:` sets `dobj->anim_wait = AOBJ_ANIM_NULL` and returns, so
+the joint's animation is dropped and slice 33's idle skip
+(`compat_shims.c:1998`) then skips it — a fighter's joints freeze in their last
+pose, in bursts of about six, until the next action change re-arms them. The
+bound is containing it and is working as designed. **Rate: the 1-minute both-CPU
+gate arm reads 0** (1,600 samples); a five-minute match reads 50, i.e. roughly
+eight bursts. The 2026-08-13 "≈1 per 6 s of scene time" reading is withdrawn.
+`scripts/probe-objanim-runaway.ps1` re-derives the fault block from the ELF and
+captures the DObj, GObj, loaded-file owner and backtrace on each hit.
 
 ## The `gs`-form GBI static initializers are all `{ 0 }`
 
