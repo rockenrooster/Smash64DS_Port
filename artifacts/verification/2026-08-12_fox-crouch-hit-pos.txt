@@ -1,0 +1,29 @@
+﻿0x01fffc00 in armWaitForIrq () at /home/davem/projects/devkitpro/pacman-packages/calico/src/calico-1.2.0/include/calico/arm/common.h:117
+Temporary breakpoint 1 at 0x2081910: file D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_scvsbattle.c, line 243.
+
+Temporary breakpoint 1, scVSBattleStartBattle () at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_scvsbattle.c:243
+243	    gNdsSCVSBattleOriginalFuncStartResult =
+Temporary breakpoint 2 at 0x2050dd4: file D:/Stuff/DevFolder/Smash64DS_Port/src/port/taskman_seam.c, line 4645.
+
+Temporary breakpoint 2, ndsBattlePlayableFrameCompleteMarker () at D:/Stuff/DevFolder/Smash64DS_Port/src/port/taskman_seam.c:4645
+4645	    __asm__ volatile("" ::: "memory");
+Breakpoint 3 at 0x2050dd4: file D:/Stuff/DevFolder/Smash64DS_Port/src/port/taskman_seam.c, line 4645.
+
+Breakpoint 3, ndsBattlePlayableFrameCompleteMarker () at D:/Stuff/DevFolder/Smash64DS_Port/src/port/taskman_seam.c:4645
+4645	    __asm__ volatile("" ::: "memory");
+CROUCH_READY status=29 floor=3 root=0.000000,0.000000,0.000000 anim=0.000000 inputy=-80
+Breakpoint 4 at 0x20a3220: file D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/wp/wpfox/wpfoxblaster.c, line 109.
+FOX_MUZZLE spawn=0.000000,223.398254,28.820457 expect=716.707153,223.398254,28.820471 d=-716.707153,0.000000,-0.000013 j17_t=659.097107,231.915787,42.173904 fox_lr=1 fox_status=225
+0x020a352e in wpFoxBlasterMakeWeapon (fighter_gobj=fighter_gobj@entry=0x23c4520, pos=pos@entry=0x2284c3c) at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_fox_blaster.c:324
+324	    weapon_gobj = battleship_wpFoxBlasterMakeWeapon(fighter_gobj, pos);
+Value returned is $1 = (GObj *) 0x23c8168
+FOX_SHOT_READY weapon=0x23c8168 attack=0x233d410 size=20.000000 mario_status=29 floor=3 flags=0x8000 inputy=-80 pad_y=-80 enabled=1
+FOX_SPAWNED root=-193697497804647170048.000000,-737887918084379901952.000000,-38685626227668133590597632.000000 attack0_curr=8876.707031,223.398254,28.820457 attack0_prev=8716.707031,223.398254,28.820457
+Breakpoint 5 at 0x2080324: file D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/gm/gmcollision.c, line 1520.
+
+Breakpoint 5, 0x02080324 in gmCollisionCheckWeaponAttackFighterDamageCollide (attack_coll=0x233d410, attack_id=0, damage_coll=0x2331ca8) at D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/gm/gmcollision.c:1520
+1520	}
+FOX_HIT_POS attack_id=0 curr=1516.707153,223.398254,28.820457 prev=1356.707153,223.398254,28.820457 mario_joint_x=1442.199951
+FOX_CROUCH_HIT mode=1 status=29 anim=0.000000 slot=1 joint=12 laser_y=223.398254 laser_prev_y=223.398254 radius=20.000000 center_y=184.528793 extent_y=122.887344 hurt_lo=61.641449 hurt_hi=307.416138 off=0.000000,68.000000,8.000000 size=74.000000,70.000000,69.000000 scale=1.114804,1.116145,1.114040 root=1485.626587,0.000000,0.000000
+HURT_MTX=-0.637291,-0.837134,-0.368587,0.000000;-0.593561,0.721591,-0.610551,0.000000;0.696278,-0.151132,-0.856411,0.000000;1442.199951,136.669678,0.995872,0.000000
+[Inferior 1 (Remote target) detached]

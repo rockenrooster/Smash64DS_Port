@@ -1,0 +1,41 @@
+mutexUnlock (m=0x2269ab0) at /home/davem/projects/devkitpro/pacman-packages/calico/src/calico-1.2.0/source/system/mutex.c:138
+Breakpoint 1 at 0x20827bc: file D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/gr/grcommon/grpupupu.c, line 567.
+WPRE n=1 status=1 lr=1 head=02327ea0 jointoff=00001330 matoff=00000000 table=0x23291d0 gframe=0.000000 mouthstatus=0
+  WJ0 (nil-or-out-of-range) (nil)
+  WJ1 0x23291dc : 06010000 3f1c61aa 0801014a 3f1c61aa 18010001 0400000c
+  WJ2 0x23291f8 : 12800000 3f800000 14400000 3f800000 0c800005 3dd480c1
+  WJ3 (nil-or-out-of-range) 0x6010000
+WPOST n=1 dfail=0 dscript=8 dreuse=0 lastreason=0 gframe=1.000000 dspeed=1.000000 dwait=0 dframe=0.000000 djoint=(nil) droot=0 mouthframe=1.000000
+WPRE n=2 status=1 lr=1 head=02327ea0 jointoff=00001330 matoff=00000000 table=0x23291d0 gframe=0.000000 mouthstatus=0
+  WJ0 (nil-or-out-of-range) (nil)
+  WJ1 0x23291dc : 00000103 3f1c61aa 02940104 3f1c61aa 0002010c 00180002
+  WJ2 0x23291f8 : 00008009 3f800000 0000400a 3f800000 000a8006 3dd480c1
+  WJ3 (nil-or-out-of-range) 0x103
+WPOST n=2 dfail=0 dscript=0 dreuse=8 lastreason=0 gframe=1.000000 dspeed=1.000000 dwait=0 dframe=0.000000 djoint=(nil) droot=0 mouthframe=1.000000
+WPRE n=3 status=1 lr=1 head=02327ea0 jointoff=00001330 matoff=00000000 table=0x23291d0 gframe=0.000000 mouthstatus=0
+  WJ0 (nil-or-out-of-range) (nil)
+  WJ1 0x23291dc : 00000103 3f1c61aa 02940104 3f1c61aa 0002010c 00180002
+  WJ2 0x23291f8 : 00008009 3f800000 0000400a 3f800000 000a8006 3dd480c1
+  WJ3 (nil-or-out-of-range) 0x103
+WPOST n=3 dfail=0 dscript=0 dreuse=8 lastreason=0 gframe=1.000000 dspeed=1.000000 dwait=0 dframe=0.000000 djoint=(nil) droot=0 mouthframe=1.000000
+WPRE n=4 status=1 lr=1 head=02327ea0 jointoff=00001330 matoff=00000000 table=0x23291d0 gframe=0.000000 mouthstatus=0
+  WJ0 (nil-or-out-of-range) (nil)
+  WJ1 0x23291dc : 00000103 3f1c61aa 02940104 3f1c61aa 0002010c 00180002
+  WJ2 0x23291f8 : 00008009 3f800000 0000400a 3f800000 000a8006 3dd480c1
+  WJ3 (nil-or-out-of-range) 0x103
+WPOST n=4 dfail=0 dscript=0 dreuse=8 lastreason=0 gframe=1.000000 dspeed=1.000000 dwait=0 dframe=0.000000 djoint=(nil) droot=0 mouthframe=1.000000
+WPRE n=5 status=1 lr=1 head=02327ea0 jointoff=00001330 matoff=00000000 table=0x23291d0 gframe=0.000000 mouthstatus=0
+  WJ0 (nil-or-out-of-range) (nil)
+  WJ1 0x23291dc : 00000103 3f1c61aa 02940104 3f1c61aa 0002010c 00180002
+  WJ2 0x23291f8 : 00008009 3f800000 0000400a 3f800000 000a8006 3dd480c1
+  WJ3 (nil-or-out-of-range) 0x103
+WPOST n=5 dfail=0 dscript=0 dreuse=8 lastreason=0 gframe=1.000000 dspeed=1.000000 dwait=0 dframe=0.000000 djoint=(nil) droot=0 mouthframe=1.000000
+WPRE n=6 status=1 lr=1 head=02327ea0 jointoff=00001330 matoff=00000000 table=0x23291d0 gframe=0.000000 mouthstatus=0
+  WJ0 (nil-or-out-of-range) (nil)
+  WJ1 0x23291dc : 00000103 3f1c61aa 02940104 3f1c61aa 0002010c 00180002
+  WJ2 0x23291f8 : 00008009 3f800000 0000400a 3f800000 000a8006 3dd480c1
+  WJ3 (nil-or-out-of-range) 0x103
+WPOST n=6 dfail=0 dscript=0 dreuse=8 lastreason=0 gframe=1.000000 dspeed=1.000000 dwait=0 dframe=0.000000 djoint=(nil) droot=0 mouthframe=1.000000
+WDONE n=6
+[Inferior 1 (Remote target) detached]
+

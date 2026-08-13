@@ -1,0 +1,53 @@
+﻿0x020c2a1e in _malloc_r ()
+Temporary breakpoint 1 at 0x2081910: file D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_scvsbattle.c, line 243.
+
+Temporary breakpoint 1, scVSBattleStartBattle () at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_scvsbattle.c:243
+243	    gNdsSCVSBattleOriginalFuncStartResult =
+Temporary breakpoint 2 at 0x2050dd4: file D:/Stuff/DevFolder/Smash64DS_Port/src/port/taskman_seam.c, line 4645.
+
+Temporary breakpoint 2, ndsBattlePlayableFrameCompleteMarker () at D:/Stuff/DevFolder/Smash64DS_Port/src/port/taskman_seam.c:4645
+4645	    __asm__ volatile("" ::: "memory");
+Breakpoint 3 at 0x2050dd4: file D:/Stuff/DevFolder/Smash64DS_Port/src/port/taskman_seam.c, line 4645.
+
+Breakpoint 3, ndsBattlePlayableFrameCompleteMarker () at D:/Stuff/DevFolder/Smash64DS_Port/src/port/taskman_seam.c:4645
+4645	    __asm__ volatile("" ::: "memory");
+CROUCH_READY status=29 floor=3 root=0.000000,0.000000,0.000000 anim=0.000000 inputy=-80
+Temporary breakpoint 4 at 0x2050dd4: file D:/Stuff/DevFolder/Smash64DS_Port/src/port/taskman_seam.c, line 4645.
+
+Temporary breakpoint 4, ndsBattlePlayableFrameCompleteMarker () at D:/Stuff/DevFolder/Smash64DS_Port/src/port/taskman_seam.c:4645
+4645	    __asm__ volatile("" ::: "memory");
+HURT_DUMP_READY mode=1 status=29 mask=0x3 floor=3 flags=0x8000 attr_size=1.120000 root_scale=1.120000,1.120000,1.120000 rootY_stand=0.000000 rootY_crouch=0.000000
+HURT_DESC slot=0 joint=6 hit=1 off=0.000000,10.000000,4.000000 half=51.500000,56.000000,47.500000
+HURT_BOX mode=0 slot=0 joint=6 center_y=162.480896 extent_y=65.194458 lo=97.286438 hi=227.675354 joint_t_y=151.429688
+HURT_BOX mode=1 slot=0 joint=6 center_y=66.264824 extent_y=83.187408 lo=-16.922585 hi=149.452240 joint_t_y=62.439999
+HURT_DESC slot=1 joint=12 hit=1 off=0.000000,68.000000,8.000000 half=74.000000,70.000000,69.000000
+HURT_BOX mode=0 slot=1 joint=12 center_y=322.301849 extent_y=88.917381 lo=233.384460 hi=411.219238 joint_t_y=246.535522
+HURT_BOX mode=1 slot=1 joint=12 center_y=140.806335 extent_y=101.411270 lo=39.395065 hi=242.217606 joint_t_y=123.978508
+HURT_DESC slot=2 joint=14 hit=1 off=15.000000,0.000000,0.000000 half=18.000000,25.000000,25.000000
+HURT_BOX mode=0 slot=2 joint=14 center_y=201.512238 extent_y=43.856293 lo=157.655945 hi=245.368530 joint_t_y=210.279297
+HURT_BOX mode=1 slot=2 joint=14 center_y=99.101860 extent_y=37.568439 lo=61.533421 hi=136.670303 joint_t_y=99.039734
+HURT_DESC slot=3 joint=8 hit=1 off=15.000000,0.000000,0.000000 half=18.000000,25.000000,25.000000
+HURT_BOX mode=0 slot=3 joint=8 center_y=200.487061 extent_y=40.480129 lo=160.006927 hi=240.967194 joint_t_y=212.665909
+HURT_BOX mode=1 slot=3 joint=8 center_y=104.601662 extent_y=38.737167 lo=65.864494 hi=143.338837 joint_t_y=103.549850
+HURT_DESC slot=4 joint=15 hit=1 off=30.000000,0.000000,0.000000 half=29.000000,27.000000,27.000000
+HURT_BOX mode=0 slot=4 joint=15 center_y=204.996933 extent_y=52.962822 lo=152.034119 hi=257.959747 joint_t_y=186.710541
+HURT_BOX mode=1 slot=4 joint=15 center_y=111.526337 extent_y=49.970383 lo=61.555954 hi=161.496719 joint_t_y=99.206772
+HURT_DESC slot=5 joint=9 hit=1 off=30.000000,0.000000,0.000000 half=29.000000,27.000000,27.000000
+HURT_BOX mode=0 slot=5 joint=9 center_y=162.375916 extent_y=53.162956 lo=109.212959 hi=215.538879 joint_t_y=179.911163
+HURT_BOX mode=1 slot=5 joint=9 center_y=120.430496 extent_y=50.920128 lo=69.510368 hi=171.350616 joint_t_y=106.378670
+HURT_DESC slot=6 joint=24 hit=1 off=22.000000,0.000000,0.000000 half=29.000000,33.500000,33.500000
+HURT_BOX mode=0 slot=6 joint=24 center_y=106.353210 extent_y=51.410480 lo=54.942730 hi=157.763687 joint_t_y=128.612488
+HURT_BOX mode=1 slot=6 joint=24 center_y=55.741188 extent_y=51.788952 lo=3.952236 hi=107.530136 joint_t_y=42.473251
+HURT_DESC slot=7 joint=19 hit=1 off=22.000000,0.000000,0.000000 half=29.000000,33.500000,33.500000
+HURT_BOX mode=0 slot=7 joint=19 center_y=106.670090 extent_y=53.822701 lo=52.847389 hi=160.492798 joint_t_y=128.257126
+HURT_BOX mode=1 slot=7 joint=19 center_y=56.866776 extent_y=58.275223 lo=-1.408447 hi=115.141998 joint_t_y=45.445869
+HURT_DESC slot=8 joint=25 hit=1 off=28.000000,0.000000,0.000000 half=33.000000,39.000000,38.000000
+HURT_BOX mode=0 slot=8 joint=25 center_y=45.222088 extent_y=61.010246 lo=-15.788158 hi=106.232330 joint_t_y=72.377686
+HURT_BOX mode=1 slot=8 joint=25 center_y=47.198479 extent_y=53.850861 lo=-6.652382 hi=101.049339 joint_t_y=75.992744
+HURT_DESC slot=9 joint=20 hit=1 off=28.000000,0.000000,0.000000 half=33.000000,39.000000,38.000000
+HURT_BOX mode=0 slot=9 joint=20 center_y=46.869453 extent_y=62.832802 lo=-15.963348 hi=109.702255 joint_t_y=73.721085
+HURT_BOX mode=1 slot=9 joint=20 center_y=47.119019 extent_y=61.943172 lo=-14.824154 hi=109.062195 joint_t_y=74.298882
+HURT_DESC slot=10 joint=0 hit=0 off=0.000000,0.000000,0.000000 half=0.000000,0.000000,0.000000
+HURT_BOX mode=0 slot=10 joint=-1 center_y=0.000000 extent_y=0.000000 lo=0.000000 hi=0.000000 joint_t_y=0.000000
+HURT_BOX mode=1 slot=10 joint=-1 center_y=0.000000 extent_y=0.000000 lo=0.000000 hi=0.000000 joint_t_y=0.000000
+[Inferior 1 (Remote target) detached]

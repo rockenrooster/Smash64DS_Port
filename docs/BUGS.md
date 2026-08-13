@@ -2,28 +2,10 @@
 AI Agent should mark fixed items with **FIXED** prefix or a 20 word summary if not fixed yet.
 These bugs should be fixed for P1 delivery:
 
--Whispys face looks like it plays at low FPS (sub 15 FPS), so we miss the blinks that the eyes do.
+-Whispys face and eyes still look low FPS, should have smooth 30 FPS animation.
+MEASURED: whole chain source-exact through matrix (kind 28 has Sca). No divergence. Needs owner: which motion?
 
-> LOCALIZED 2026-08-12: the blink joint animation plays out in one frame; why it resolves to one is open.
+-Fox's muzzle flash and laser still spawning at the wrong Y relative to pistol model. i cannot duck the beam as mario, also check pistol beam collision maybe have to make it thinner after adjusting height?
+MEASURED: spawn/radius/hurtboxes/camera/model all source-exact. No divergence found; needs owner detail on symptom.
 
--Missing fire burn effects. the explosion effect is there but not the flame burn
-
-> **FIXED** (2026-08-12) visibility: FlameLR's texture had no atlas cell and drew nothing; admitted, flames visible, owner confirmed.
-
--Fighter burn flames spawn at the wrong places on the damaged fighter.
-
-> MEASURED 2026-08-12: flames spawned at the victim's feet (Y=Z=0); source joint rotation restored, maker-side read still owed.
-
--Fox's pistol model is missing. Also is the pistol beam emitted at correct y location of muzzle?
-
-> **FIXED** (2026-08-12) visibility: submit skipped the renderer's world-unit shift and drew 0.036px wide; owner confirmed the pistol.
-
--Fox's muzzle flash and laser spawn at the wrong Y. Also: on N64 Mario can crouch under the laser, in the port it hits him.
-
-> MEASURED 2026-08-12: joint-17 spawn is source-correct to float epsilon, so the crouch divergence is NOT a spawn-Y bug; gun muzzle mesh next.
-
-Contracts, evidence, and the per-row work packets:
-`artifacts/bugs/2026-08-12_r2-07-cluster/CONTRACT.md` (one cluster, one batched
-probe build, one acceptance batch). **A counter, a maker call, or a submitted
-triangle is engagement, never closure — every row of this cluster now owes
-screen-space pixel evidence.**
+-

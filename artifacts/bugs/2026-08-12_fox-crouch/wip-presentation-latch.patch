@@ -1,0 +1,397 @@
+diff --git a/include/nds/nds_effects.h b/include/nds/nds_effects.h
+index 223b200bb39..c40d8de75d4 100644
+--- a/include/nds/nds_effects.h
++++ b/include/nds/nds_effects.h
+@@ -73,6 +73,18 @@ extern volatile u32 gNdsFoxBlasterQuadFallbackCount;
+  * the source position and nine visible sizes, but owns no LBParticle: its
+  * 16x8 PAL16 half-disc is mirrored by the DS texture unit into one quad. */
+ sb32 ndsParticleSpawnFoxBlasterGlowAOT(const Vec3f *pos);
++/* The battle runs two unchanged 60 Hz source ticks per 30 Hz present. Fox can
++ * fire on hidden substep 0, so his source-exact beam/glow origin belongs to the
++ * previous pose when the first DS frame is finally shown. These helpers own the
++ * PRESENTATION latch only: gameplay weapon/collision positions are untouched.
++ * The latch is source-derived from joint 17 local {60,0,0}; no visual offset is
++ * stored as data. */
++void ndsParticleSetFoxBlasterGlowSpawnOwner(GObj *fighter_gobj);
++sb32 ndsFoxBlasterGetCurrentMuzzle(GObj *fighter_gobj, Vec3f *pos);
++sb32 ndsFoxBlasterGetPresentationPosition(GObj *weapon_gobj,
++                                          const Vec3f *source_pos,
++                                          Vec3f *draw_pos);
++void ndsFoxBlasterResetPresentationLatches(void);
+ extern volatile u32 gNdsFoxBlasterGlowAOTSpawnCount;
+ extern volatile u32 gNdsFoxBlasterGlowAOTDrawCount;
+ extern volatile u32 gNdsFoxBlasterGlowAOTFallbackCount;
+diff --git a/src/import/battleship_fox_blaster.c b/src/import/battleship_fox_blaster.c
+index 55c395e0936..6f2701cd064 100644
+--- a/src/import/battleship_fox_blaster.c
++++ b/src/import/battleship_fox_blaster.c
+@@ -6,6 +6,7 @@
+ #include <nds/nds_startup.h>
+ #include <reloc_data.h>
+ #include <wp/weapon.h>
++#include <string.h>
+ 
+ #ifndef DObjGetStruct
+ #define DObjGetStruct(gobj) ((DObj *)((gobj)->obj))
+@@ -190,6 +191,127 @@ static void ndsFoxBlasterProbeSpawn(GObj *fighter_gobj, Vec3f *pos)
+ }
+ #endif /* NDS_R2_POSITION_PROBE */
+ 
++/* -------------------------------------------------------------------------
++ * 60 Hz source -> 30 Hz presentation attachment latch.
++ *
++ * The gameplay origin stays BattleShip's exact joint-17 {60,0,0} point. The
++ * fixed-two scheduler can, however, spawn it during hidden substep 0 and then
++ * advance Fox through substep 1 before the DS presents anything. On c138 the
++ * natural first shot did exactly that: spawn at sub=0, then the first visible
++ * gun/beam frame after logic had advanced by two ticks. The beam's Y/Z remained
++ * bit-for-bit at the source spawn while joint 17 had moved ~58 world Y, which is
++ * the owner's visible detached muzzle.
++ *
++ * Do NOT move the weapon or its attack collision. Instead, derive one constant
++ * presentation delta on the first visible draw from the CURRENT source joint-17
++ * muzzle minus the original source spawn. Applying that same delta to the
++ * rendered beam preserves its source velocity/shape and merely resamples the
++ * hidden 60 Hz attachment event onto the first 30 Hz frame. group_id makes GObj
++ * reuse safe; the fixed ring is larger than the P1 blaster live set and is reset
++ * with the other baked weapon presentation state each match. */
++#define NDS_FOX_BLASTER_PRESENTATION_LATCHES 16u
++typedef struct NDSFoxBlasterPresentationLatch
++{
++    GObj *weapon_gobj;
++    GObj *owner_gobj;
++    u32 group_id;
++    Vec3f source_spawn;
++    Vec3f delta;
++    sb32 delta_ready;
++} NDSFoxBlasterPresentationLatch;
++
++static NDSFoxBlasterPresentationLatch
++    sNdsFoxBlasterPresentation[NDS_FOX_BLASTER_PRESENTATION_LATCHES];
++static u32 sNdsFoxBlasterPresentationNext;
++
++void ndsFoxBlasterResetPresentationLatches(void)
++{
++    memset(sNdsFoxBlasterPresentation, 0, sizeof(sNdsFoxBlasterPresentation));
++    sNdsFoxBlasterPresentationNext = 0u;
++}
++
++sb32 ndsFoxBlasterGetCurrentMuzzle(GObj *fighter_gobj, Vec3f *pos)
++{
++    FTStruct *fp = (fighter_gobj != NULL) ? ftGetStruct(fighter_gobj) : NULL;
++
++    if ((pos == NULL) || (fp == NULL) ||
++        (fp->fkind != nFTKindFox) ||
++        (fp->joints[FTFOX_BLASTER_HOLD_JOINT] == NULL))
++    {
++        return FALSE;
++    }
++    pos->x = FTFOX_BLASTER_SPAWN_OFF_X;
++    pos->y = 0.0F;
++    pos->z = 0.0F;
++    gmCollisionGetFighterPartsWorldPosition(
++        fp->joints[FTFOX_BLASTER_HOLD_JOINT], pos);
++    return TRUE;
++}
++
++static void ndsFoxBlasterRegisterPresentationLatch(
++    GObj *weapon_gobj, GObj *owner_gobj, const Vec3f *source_spawn)
++{
++    WPStruct *wp = (weapon_gobj != NULL) ? wpGetStruct(weapon_gobj) : NULL;
++    NDSFoxBlasterPresentationLatch *latch;
++
++    if ((wp == NULL) || (owner_gobj == NULL) || (source_spawn == NULL))
++    {
++        return;
++    }
++    latch = &sNdsFoxBlasterPresentation[
++        sNdsFoxBlasterPresentationNext % NDS_FOX_BLASTER_PRESENTATION_LATCHES];
++    sNdsFoxBlasterPresentationNext++;
++    latch->weapon_gobj = weapon_gobj;
++    latch->owner_gobj = owner_gobj;
++    latch->group_id = wp->group_id;
++    latch->source_spawn = *source_spawn;
++    latch->delta.x = latch->delta.y = latch->delta.z = 0.0F;
++    latch->delta_ready = FALSE;
++}
++
++sb32 ndsFoxBlasterGetPresentationPosition(GObj *weapon_gobj,
++                                          const Vec3f *source_pos,
++                                          Vec3f *draw_pos)
++{
++    WPStruct *wp = (weapon_gobj != NULL) ? wpGetStruct(weapon_gobj) : NULL;
++    u32 index;
++
++    if ((wp == NULL) || (source_pos == NULL) || (draw_pos == NULL))
++    {
++        return FALSE;
++    }
++    for (index = 0u; index < NDS_FOX_BLASTER_PRESENTATION_LATCHES; index++)
++    {
++        NDSFoxBlasterPresentationLatch *latch =
++            &sNdsFoxBlasterPresentation[index];
++
++        if ((latch->weapon_gobj == weapon_gobj) &&
++            (latch->group_id == wp->group_id) &&
++            (latch->owner_gobj == wp->owner_gobj))
++        {
++            if (latch->delta_ready == FALSE)
++            {
++                Vec3f muzzle;
++
++                if (ndsFoxBlasterGetCurrentMuzzle(latch->owner_gobj,
++                                                  &muzzle) == FALSE)
++                {
++                    return FALSE;
++                }
++                latch->delta.x = muzzle.x - latch->source_spawn.x;
++                latch->delta.y = muzzle.y - latch->source_spawn.y;
++                latch->delta.z = muzzle.z - latch->source_spawn.z;
++                latch->delta_ready = TRUE;
++            }
++            draw_pos->x = source_pos->x + latch->delta.x;
++            draw_pos->y = source_pos->y + latch->delta.y;
++            draw_pos->z = source_pos->z + latch->delta.z;
++            return TRUE;
++        }
++    }
++    return FALSE;
++}
++
+ GObj *wpFoxBlasterMakeWeapon(GObj *fighter_gobj, Vec3f *pos)
+ {
+     GObj *weapon_gobj;
+@@ -198,10 +320,14 @@ GObj *wpFoxBlasterMakeWeapon(GObj *fighter_gobj, Vec3f *pos)
+ #if NDS_R2_POSITION_PROBE
+     ndsFoxBlasterProbeSpawn(fighter_gobj, pos);
+ #endif
++    ndsParticleSetFoxBlasterGlowSpawnOwner(fighter_gobj);
+     weapon_gobj = battleship_wpFoxBlasterMakeWeapon(fighter_gobj, pos);
++    ndsParticleSetFoxBlasterGlowSpawnOwner(NULL);
+     if (weapon_gobj != NULL)
+     {
+         weapon_gobj->proc_display = ndsFoxBlasterProcDisplay;
++        ndsFoxBlasterRegisterPresentationLatch(
++            weapon_gobj, fighter_gobj, pos);
+         gNdsFighterProjectileProofSpawnSuccessCount++;
+     }
+     return weapon_gobj;
+diff --git a/src/import/battleship_lbparticle.c b/src/import/battleship_lbparticle.c
+index 0eb6b315d7b..ff0718edd97 100644
+--- a/src/import/battleship_lbparticle.c
++++ b/src/import/battleship_lbparticle.c
+@@ -269,16 +269,32 @@ LBGenerator *ndsBaseLbParticleMakeGenerator(s32 bank_id, s32 script_id);
+ #define NDS_FOX_BLASTER_GLOW_TEXTURE_ID 27u
+ #define NDS_FOX_BLASTER_GLOW_BINDING_SLOT NDS_WHISPY_NATIVE_TEXTURE_COUNT
+ 
++/* Fox owns the source joint lookup; this TU owns only particle presentation. */
++extern sb32 ndsFoxBlasterGetCurrentMuzzle(GObj *fighter_gobj, Vec3f *pos);
++
+ typedef struct NDSFoxBlasterGlowAOT
+ {
+     Vec3f pos;
++    Vec3f display_delta;
++    GObj *spawn_owner;
+     s32 center_q12[3];
+     u32 spawn_tick;
++    sb32 display_delta_ready;
+ } NDSFoxBlasterGlowAOT;
+ 
+ static NDSFoxBlasterGlowAOT
+     sNdsFoxBlasterGlowAOT[NDS_FOX_BLASTER_GLOW_POOL_COUNT];
+ static u32 sNdsFoxBlasterGlowAOTCount;
++static GObj *sNdsFoxBlasterGlowSpawnOwner;
++#if NDS_R2_POSITION_PROBE
++__attribute__((used)) u32 gNdsFoxGlowPresentationProbeCount;
++__attribute__((used)) f32 gNdsFoxGlowPresentationSourceX[8];
++__attribute__((used)) f32 gNdsFoxGlowPresentationSourceY[8];
++__attribute__((used)) f32 gNdsFoxGlowPresentationSourceZ[8];
++__attribute__((used)) f32 gNdsFoxGlowPresentationDrawX[8];
++__attribute__((used)) f32 gNdsFoxGlowPresentationDrawY[8];
++__attribute__((used)) f32 gNdsFoxGlowPresentationDrawZ[8];
++#endif
+ static const s32 sNdsFoxBlasterGlowSizeQ8[
+     NDS_FOX_BLASTER_GLOW_VISIBLE_TICKS] = {
+     12800, 25600, 38400, 42240, 40320, 25920, 11520, 7680, 3840
+@@ -298,12 +314,18 @@ static void ndsParticleResetFoxBlasterGlowAOT(void)
+ {
+     memset(sNdsFoxBlasterGlowAOT, 0, sizeof(sNdsFoxBlasterGlowAOT));
+     sNdsFoxBlasterGlowAOTCount = 0u;
++    sNdsFoxBlasterGlowSpawnOwner = NULL;
+     gNdsFoxBlasterGlowAOTSpawnCount = 0u;
+     gNdsFoxBlasterGlowAOTDrawCount = 0u;
+     gNdsFoxBlasterGlowAOTFallbackCount = 0u;
+     gNdsFoxBlasterGlowAOTMissCount = 0u;
+ }
+ 
++void ndsParticleSetFoxBlasterGlowSpawnOwner(GObj *fighter_gobj)
++{
++    sNdsFoxBlasterGlowSpawnOwner = fighter_gobj;
++}
++
+ sb32 ndsParticleSpawnFoxBlasterGlowAOT(const Vec3f *pos)
+ {
+     s32 center_q12[3];
+@@ -345,10 +367,16 @@ sb32 ndsParticleSpawnFoxBlasterGlowAOT(const Vec3f *pos)
+             sNdsFoxBlasterGlowAOT[index - 1u];
+     }
+     sNdsFoxBlasterGlowAOT[0].pos = *pos;
++    sNdsFoxBlasterGlowAOT[0].display_delta.x = 0.0F;
++    sNdsFoxBlasterGlowAOT[0].display_delta.y = 0.0F;
++    sNdsFoxBlasterGlowAOT[0].display_delta.z = 0.0F;
++    sNdsFoxBlasterGlowAOT[0].spawn_owner =
++        sNdsFoxBlasterGlowSpawnOwner;
+     sNdsFoxBlasterGlowAOT[0].center_q12[0] = center_q12[0];
+     sNdsFoxBlasterGlowAOT[0].center_q12[1] = center_q12[1];
+     sNdsFoxBlasterGlowAOT[0].center_q12[2] = center_q12[2];
+     sNdsFoxBlasterGlowAOT[0].spawn_tick = now;
++    sNdsFoxBlasterGlowAOT[0].display_delta_ready = FALSE;
+     sNdsFoxBlasterGlowAOTCount = live + 1u;
+     /* Preserve the source constructor's externally visible tallies/serial even
+      * though no 96-byte LBParticle is consumed. */
+@@ -2544,6 +2572,10 @@ static void ndsParticleDrawFoxBlasterGlowAOT(
+     for (index = 0u; index < sNdsFoxBlasterGlowAOTCount; index++)
+     {
+         NDSFoxBlasterGlowAOT glow = sNdsFoxBlasterGlowAOT[index];
++        Vec3f draw_pos = glow.pos;
++        s32 draw_center_q12[3] = {
++            glow.center_q12[0], glow.center_q12[1], glow.center_q12[2]
++        };
+         u32 age = (u32)(now - glow.spawn_tick);
+         s32 submit_result;
+ 
+@@ -2551,10 +2583,56 @@ static void ndsParticleDrawFoxBlasterGlowAOT(
+         {
+             continue;
+         }
+-        if (live != index)
++        /* A source spawn on hidden 60 Hz substep 0 is first visible only after
++         * Fox has advanced through substep 1. Rebase the flash ONCE to the
++         * current source joint-17 muzzle and retain that one constant display
++         * translation for the remaining nine-tick source lifetime. This keeps
++         * the flash stationary after emission exactly as script 0x62 does; it
++         * merely chooses the visible 30 Hz sample as the presentation origin.
++         * Map/hit/hop glows have no spawn_owner and remain untouched. */
++        if ((glow.spawn_owner != NULL) &&
++            (glow.display_delta_ready == FALSE))
+         {
+-            sNdsFoxBlasterGlowAOT[live] = glow;
++            Vec3f muzzle;
++
++            if (ndsFoxBlasterGetCurrentMuzzle(glow.spawn_owner, &muzzle) !=
++                    FALSE)
++            {
++                glow.display_delta.x = muzzle.x - glow.pos.x;
++                glow.display_delta.y = muzzle.y - glow.pos.y;
++                glow.display_delta.z = muzzle.z - glow.pos.z;
++                glow.display_delta_ready = TRUE;
++            }
+         }
++        if (glow.display_delta_ready != FALSE)
++        {
++            draw_pos.x += glow.display_delta.x;
++            draw_pos.y += glow.display_delta.y;
++            draw_pos.z += glow.display_delta.z;
++            if (ndsRendererParticlePositionToQ12(&draw_pos, draw_center_q12) ==
++                    FALSE)
++            {
++                draw_pos = glow.pos;
++                draw_center_q12[0] = glow.center_q12[0];
++                draw_center_q12[1] = glow.center_q12[1];
++                draw_center_q12[2] = glow.center_q12[2];
++            }
++        }
++#if NDS_R2_POSITION_PROBE
++        if ((glow.spawn_owner != NULL) &&
++            (gNdsFoxGlowPresentationProbeCount < 8u))
++        {
++            u32 slot = gNdsFoxGlowPresentationProbeCount++;
++
++            gNdsFoxGlowPresentationSourceX[slot] = glow.pos.x;
++            gNdsFoxGlowPresentationSourceY[slot] = glow.pos.y;
++            gNdsFoxGlowPresentationSourceZ[slot] = glow.pos.z;
++            gNdsFoxGlowPresentationDrawX[slot] = draw_pos.x;
++            gNdsFoxGlowPresentationDrawY[slot] = draw_pos.y;
++            gNdsFoxGlowPresentationDrawZ[slot] = draw_pos.z;
++        }
++#endif
++        sNdsFoxBlasterGlowAOT[live] = glow;
+         live++;
+         (*visible)++;
+         gNdsParticleTextureUseMask[
+@@ -2568,7 +2646,7 @@ static void ndsParticleDrawFoxBlasterGlowAOT(
+         }
+         submit_result = ndsRendererSubmitWhispyNativeQuad(
+             texture_name, NDS_FOX_BLASTER_GLOW_BINDING_SLOT,
+-            NULL, 0.0F, glow.center_q12,
++            NULL, 0.0F, draw_center_q12,
+             sNdsFoxBlasterGlowSizeQ8[age],
+             0x7fffu, 255u, 0u, 16u, 16u, 3u);
+         if (submit_result < 0)
+@@ -2578,7 +2656,7 @@ static void ndsParticleDrawFoxBlasterGlowAOT(
+              * corner builder rather than losing the flash. */
+             gNdsFoxBlasterGlowAOTFallbackCount++;
+             submit_result = ndsRendererSubmitParticleQuad(
+-                texture_name, &glow.pos, sNdsFoxBlasterGlowSize[age],
++                texture_name, &draw_pos, sNdsFoxBlasterGlowSize[age],
+                 0x7fffu, 255u, right, up, 0u, 0u, 16u, 16u);
+         }
+         if (submit_result > 0)
+diff --git a/src/port/reloc_backend_movement.c b/src/port/reloc_backend_movement.c
+index e502006d055..810ea75f3e2 100644
+--- a/src/port/reloc_backend_movement.c
++++ b/src/port/reloc_backend_movement.c
+@@ -13025,6 +13025,7 @@ void ndsWeaponReleaseBakedTextures(void)
+     }
+     gNdsFireballQuadDrawCount = 0u;
+     gNdsFireballQuadFallbackCount = 0u;
++    ndsFoxBlasterResetPresentationLatches();
+ }
+ 
+ static sb32 ndsStageGCDrawAllLoopDrawFireballQuad(DObj *root, WPStruct *wp)
+@@ -13075,9 +13076,19 @@ static sb32 ndsStageGCDrawAllLoopDrawFireballQuad(DObj *root, WPStruct *wp)
+  * fallback preserves the restored source display after a hop or reflection. */
+ volatile u32 gNdsFoxBlasterQuadDrawCount;
+ volatile u32 gNdsFoxBlasterQuadFallbackCount;
++#if NDS_R2_POSITION_PROBE
++__attribute__((used)) u32 gNdsFoxBeamPresentationProbeCount;
++__attribute__((used)) f32 gNdsFoxBeamPresentationSourceX[8];
++__attribute__((used)) f32 gNdsFoxBeamPresentationSourceY[8];
++__attribute__((used)) f32 gNdsFoxBeamPresentationSourceZ[8];
++__attribute__((used)) f32 gNdsFoxBeamPresentationDrawX[8];
++__attribute__((used)) f32 gNdsFoxBeamPresentationDrawY[8];
++__attribute__((used)) f32 gNdsFoxBeamPresentationDrawZ[8];
++#endif
+ 
+ static sb32 ndsStageGCDrawAllLoopDrawFoxBlasterQuad(DObj *root, WPStruct *wp)
+ {
++    Vec3f draw_pos;
+     s32 facing;
+ 
+     if ((root == NULL) || (wp == NULL) ||
+@@ -13109,8 +13120,24 @@ static sb32 ndsStageGCDrawAllLoopDrawFoxBlasterQuad(DObj *root, WPStruct *wp)
+     {
+         return FALSE;
+     }
++    draw_pos = root->translate.vec.f;
++    (void)ndsFoxBlasterGetPresentationPosition(
++        wp->weapon_gobj, &root->translate.vec.f, &draw_pos);
++#if NDS_R2_POSITION_PROBE
++    if (gNdsFoxBeamPresentationProbeCount < 8u)
++    {
++        u32 slot = gNdsFoxBeamPresentationProbeCount++;
++
++        gNdsFoxBeamPresentationSourceX[slot] = root->translate.vec.f.x;
++        gNdsFoxBeamPresentationSourceY[slot] = root->translate.vec.f.y;
++        gNdsFoxBeamPresentationSourceZ[slot] = root->translate.vec.f.z;
++        gNdsFoxBeamPresentationDrawX[slot] = draw_pos.x;
++        gNdsFoxBeamPresentationDrawY[slot] = draw_pos.y;
++        gNdsFoxBeamPresentationDrawZ[slot] = draw_pos.z;
++    }
++#endif
+     return ndsRendererSubmitFoxBlasterQuad(
+-        &root->translate.vec.f, root->scale.vec.f.x,
++        &draw_pos, root->scale.vec.f.x,
+         root->scale.vec.f.y, facing);
+ }
+ #endif /* NDS_R2_FOX_BLASTER_QUAD */

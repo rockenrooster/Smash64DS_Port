@@ -96,3 +96,53 @@ its own.
 **And price it against the floor.** This arm's repeat spread is 9,664 and the
 cross-build placement floor is ±8,544 (`GATE.md`), so a candidate that measures
 under ~10,000 has not been shown to do anything.
+
+---
+
+## CORRECTION 2026-08-13 — shape 1's premise is arithmetically impossible
+
+**Do not spend a build on "make the walk contiguous" as written above.**
+
+`ptype /o AObj` on `build-c142-crouchprobe`'s ELF (authoritative, not inferred):
+
+```
+/*  0 | 4 */  AObj *next;
+/*  4 | 1 */  u8 track;
+/*  5 | 1 */  u8 kind;        <- the ldrb r5,[r4,#5] in the table above
+/* XXX 2-byte hole */
+/*  8 .. 35 */ 7 x 4 bytes (length_invert, length, value_base,
+                            value_target, rate_base, rate_target, interpolate)
+   total size (bytes): 36
+```
+
+The ARM9 D-cache line is **32 bytes** (`P1_EXECUTION_BOARD.md:1764`, and
+`:4437` already records "each 36-byte node straddles two 32-byte lines").
+
+Shape 1 claims "five nodes in one cache line would pay the miss once instead of
+five times". At a 36-byte stride the five walked headers sit at byte offsets
+0, 36, 72, 108, 144 — i.e. in **five different 32-byte lines even when the nodes
+are perfectly contiguous**. Five nodes cannot occupy one line; 5 x 36 = 180 B is
+5.6 lines. Contiguity would buy same-page locality and nothing else, and
+ARM946E-S has **no hardware data prefetcher** to turn the regular stride into
+prefetch hits. The AObj pool is *already* one contiguous
+`syTaskmanMalloc` block (`battleship_sys_objman.c:119`), so the only thing
+"make it contiguous" can still change is free-list ORDER within that block —
+which does not reduce the line count.
+
+**The shape that actually addresses the measured cost** is the plan's own
+§3.7 hot/cold split: the walk reads only `next` (offset 0) and `kind`
+(offset 5), 6 bytes of a 36-byte record. A dense per-`DObj` side array of kinds
+puts all five in ONE line, so the kind scan costs one miss instead of five, and
+the 36-byte payload is touched only for the 75% of nodes that survive the test
+(that part is real work and must stay).
+
+**Size it honestly before writing it.** From the same table at 1601 regions:
+kind load 15,200,176 cyc = **~9,494/frame**; the dependent `cmp` 3,745,360 =
+**~2,340/frame**; `aobj->next` 1,862,871 = **~1,164/frame**. Best case if the
+header scan became free: **~13,000/frame**. That is above this arm's ±8,544
+placement floor but **below `HANDOFF.md`'s ~16,000 "can actually be banked"
+bar**, so it is a pairing candidate, not a standalone gate-closer — and it ADDS
+data while the ROM sits 1.4–2.2 KB from the boot cliff (board G2), which must be
+priced first. Shape 2 (~9,500/frame, the kind load alone) is smaller still and
+the note above already rejects it as insufficient alone; the two overlap almost
+entirely and must not be added together as if independent.

@@ -1,0 +1,582 @@
+0x020b5620 in _FAT_read_r (r=0x2105260 <_impure_data>, fd=0x227c1ec, buf=0x2284c54 "\034�&\002\220L(\002s�\f\002\023W\025\002��\v\002\230\022)\002\034�&\002\210:\022", len=1) at /home/davem/projects/devkitpro/pacman-packages/libfat/src/libdvm-2.1.0/source/fat_driver.c:268
+Breakpoint 1 at 0x20a3220: file D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/wp/wpfox/wpfoxblaster.c, line 109.
+Breakpoint 2 at 0x202520c: file D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_renderer.c, line 15089.
+Breakpoint 3 at 0x20244a0: file D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_renderer.c, line 14840.
+FOXALIGN GUNMATRIX frame=305 logic=598 presented=299
+FOXALIGN GUNCAMERA frame=305 current=0x232dad0 loop=0x232dad0
+0x228400c:	0	0	35962160	0
+0x228401c:	0	-11322	-911	-900
+0x228402c:	111	-2694	4025	3974
+0x228403c:	-2362341	0	0	0
+FOXALIGN GUNMATRIX frame=306 logic=600 presented=300
+FOXALIGN GUNCAMERA frame=306 current=0x232dad0 loop=0x232dad0
+0x228400c:	8509	-2267	-229	-226
+0x228401c:	-1727	-1282	-774	-763
+0x228402c:	1883	5105	3626	3580
+0x228403c:	-3132939	2544	8696946	10669561
+FOXALIGN GUNMATRIX frame=307 logic=602 presented=301
+FOXALIGN GUNCAMERA frame=307 current=0x232dad0 loop=0x232dad0
+0x228400c:	124	10630	-1833	-1809
+0x228401c:	8480	-9788	156	154
+0x228402c:	2259	2616	3890	3840
+0x228403c:	-2176500	1887704	8424441	10400605
+FOXALIGN GUNMATRIX frame=308 logic=604 presented=302
+FOXALIGN GUNCAMERA frame=308 current=0x232dad0 loop=0x232dad0
+0x228400c:	6815	6179	-1397	-1379
+0x228401c:	4904	-3730	273	270
+0x228402c:	14	2457	4045	3993
+0x228403c:	-2813995	1290090	8480901	10456355
+FOXALIGN GUNMATRIX frame=309 logic=606 presented=303
+FOXALIGN GUNCAMERA frame=309 current=0x232dad0 loop=0x232dad0
+0x228400c:	2788	10975	-809	-798
+0x228401c:	8218	-8707	1524	1504
+0x228402c:	-1690	3738	3838	3789
+0x228403c:	-2472497	1456510	8610666	10584447
+FOXALIGN GUNMATRIX frame=310 logic=608 presented=304
+FOXALIGN GUNCAMERA frame=310 current=0x232dad0 loop=0x232dad0
+0x228400c:	6936	7106	-148	-145
+0x228401c:	4935	-10234	1611	1590
+0x228402c:	-2883	3369	3714	3667
+0x228403c:	-2469475	666373	8745962	10718005
+FOXALIGN GUNMATRIX frame=311 logic=610 presented=305
+FOXALIGN GUNCAMERA frame=311 current=0x232dad0 loop=0x232dad0
+0x228400c:	7710	4893	818	808
+0x228401c:	2736	-11775	361	356
+0x228402c:	-651	1047	4098	4046
+0x228403c:	-2390118	393668	8884794	10855052
+FOXALIGN GUNMATRIX frame=312 logic=612 presented=306
+FOXALIGN GUNCAMERA frame=312 current=0x232dad0 loop=0x232dad0
+0x228400c:	8641	-48	311	307
+0x228401c:	-94	-11780	328	323
+0x228402c:	-722	916	4100	4047
+0x228403c:	-2406655	274066	8908256	10878217
+FOXALIGN GUNMATRIX frame=313 logic=614 presented=307
+FOXALIGN GUNCAMERA frame=313 current=0x232dad0 loop=0x232dad0
+0x228400c:	8633	337	333	329
+0x228401c:	191	-11782	330	326
+0x228402c:	-600	934	4103	4051
+0x228403c:	-2402191	327137	8911486	10881412
+FOXALIGN GUNMATRIX frame=314 logic=616 presented=308
+FOXALIGN GUNCAMERA frame=314 current=0x232dad0 loop=0x232dad0
+0x228400c:	8642	271	278	274
+0x228401c:	151	-11779	343	338
+0x228402c:	-357	982	4108	4056
+0x228403c:	-2390622	318011	8902592	10872641
+FOXALIGN GUNMATRIX frame=315 logic=618 presented=309
+FOXALIGN GUNCAMERA frame=315 current=0x232dad0 loop=0x232dad0
+0x228400c:	8658	132	165	163
+0x228401c:	66	-11773	368	363
+0x228402c:	-101	1058	4110	4058
+0x228403c:	-2378342	299251	8884904	10855184
+FOXALIGN GUNMATRIX frame=316 logic=620 presented=310
+FOXALIGN GUNCAMERA frame=316 current=0x232dad0 loop=0x232dad0
+0x228400c:	8663	-21	48	48
+0x228401c:	-23	-11770	377	372
+0x228402c:	82	1087	4109	4056
+0x228403c:	-2371279	280593	8865722	10836247
+FOXALIGN SPAWN frame=317 logic=622 presented=311 sub=1 -333.292847 223.398254 28.820457
+FOXALIGN GUNMATRIX frame=317 logic=622 presented=311
+FOXALIGN GUNCAMERA frame=317 current=0x232dad0 loop=0x232dad0
+0x228400c:	8409	-1470	907	895
+0x228401c:	-1274	-11679	370	364
+0x228402c:	-1772	1408	4015	3964
+0x228403c:	-2258845	267073	8852346	10823048
+FOXALIGN BEAM frame=317 logic=622 presented=311 0.000000 0.000000 0.000000 sx=0x40caaaab sy=0x3f800000 facing=1
+FOXALIGN BEAMCAMERA frame=317 current=0x232dad0 loop=0x232dad0
+FOXALIGN BEAMCAM PROJECTION frame=317
+0x2191cd0 <sNdsRendererParticleProjection>:	8725	-17	-67	-66
+0x2191ce0 <sNdsRendererParticleProjection+16>:	0	11857	-357	-352
+0x2191cf0 <sNdsRendererParticleProjection+32>:	-141	-1023	-4133	-4080
+0x2191d00 <sNdsRendererParticleProjection+48>:	1157729	-2865372	9106065	11073462
+FOXALIGN BEAMCAM MODELVIEW frame=317
+0x2191c90 <sNdsRendererParticleModelview>:	4096	0	0	0
+0x2191ca0 <sNdsRendererParticleModelview+16>:	0	4096	0	0
+0x2191cb0 <sNdsRendererParticleModelview+32>:	0	0	4096	0
+0x2191cc0 <sNdsRendererParticleModelview+48>:	0	0	0	4096
+FOXALIGN GUNMATRIX frame=318 logic=624 presented=312
+FOXALIGN GUNCAMERA frame=318 current=0x232dad0 loop=0x232dad0
+0x228400c:	8409	-1470	907	895
+0x228401c:	-1274	-11372	644	635
+0x228402c:	-823	1616	4076	4024
+0x228403c:	-2908594	-152045	8875157	10845558
+FOXALIGN GUNMATRIX frame=319 logic=626 presented=313
+FOXALIGN GUNCAMERA frame=319 current=0x232dad0 loop=0x232dad0
+0x228400c:	8402	2968	244	241
+0x228401c:	2077	-5698	936	924
+0x228402c:	-565	3886	3895	3845
+0x228403c:	-3093067	577102	8769264	10741040
+FOXALIGN GUNMATRIX frame=320 logic=628 presented=314
+FOXALIGN GUNCAMERA frame=320 current=0x232dad0 loop=0x232dad0
+0x228400c:	4580	9624	-1014	-1000
+0x228401c:	7349	2304	-634	-625
+0x228402c:	421	5465	3663	3616
+0x228403c:	-3801887	1245162	8595364	10569392
+FOXALIGN GUNMATRIX frame=321 logic=630 presented=315
+FOXALIGN GUNCAMERA frame=321 current=0x232dad0 loop=0x232dad0
+0x228400c:	-2114	10264	-1808	-1784
+0x228401c:	8418	6791	-2374	-2344
+0x228402c:	1509	7156	3215	3174
+0x228403c:	-4318382	1138941	8509180	10484306
+FOXALIGN GUNMATRIX frame=322 logic=632 presented=316
+FOXALIGN GUNCAMERA frame=322 current=0x232dad0 loop=0x232dad0
+0x228400c:	-6888	6560	-1044	-1031
+0x228401c:	5063	9216	-2319	-2289
+0x228402c:	129	6895	3360	3318
+0x228403c:	-4465897	766470	8567841	10542193
+FOXALIGN GUNMATRIX frame=323 logic=634 presented=317
+FOXALIGN GUNCAMERA frame=323 current=0x232dad0 loop=0x232dad0
+0x228400c:	-8327	2802	-630	-622
+0x228401c:	2437	10559	-1689	-1667
+0x228402c:	-58	4963	3754	3706
+0x228403c:	-4472731	466456	8622046	10595666
+FOXALIGN GUNMATRIX frame=324 logic=636 presented=318
+FOXALIGN GUNCAMERA frame=324 current=0x232dad0 loop=0x232dad0
+0x228400c:	-8514	2076	-369	-365
+0x228401c:	1704	6523	-1608	-1587
+0x228402c:	581	6109	3532	3487
+0x228403c:	-4217588	475785	8686160	10658903
+FOXALIGN GUNMATRIX frame=325 logic=638 presented=319
+FOXALIGN GUNCAMERA frame=325 current=0x232dad0 loop=0x232dad0
+0x228400c:	-5827	7784	-1423	-1404
+0x228401c:	6411	-9711	2020	1994
+0x228402c:	1657	6563	3352	3309
+0x228403c:	-3723843	1234191	8579153	10553259
+FOXALIGN GUNMATRIX frame=326 logic=640 presented=320
+FOXALIGN GUNCAMERA frame=326 current=0x232dad0 loop=0x232dad0
+0x228400c:	8118	1790	-1332	-1314
+0x228401c:	2614	-4823	1193	1178
+0x228402c:	341	6199	3520	3475
+0x228403c:	-3897627	1368814	8565748	10540000
+FOXALIGN GUNMATRIX frame=327 logic=642 presented=321
+FOXALIGN GUNCAMERA frame=327 current=0x232dad0 loop=0x232dad0
+0x228400c:	4321	-8881	1810	1786
+0x228401c:	-7530	8857	-1415	-1397
+0x228402c:	1759	6298	3403	3360
+0x228403c:	-3919978	1400633	8641969	10615743
+FOXALIGN GUNMATRIX frame=328 logic=644 presented=322
+FOXALIGN GUNCAMERA frame=328 current=0x232dad0 loop=0x232dad0
+0x228400c:	-6918	-4746	1873	1849
+0x228401c:	-4956	-7902	411	405
+0x228402c:	2212	4879	3621	3574
+0x228403c:	-2703580	1422082	8715650	10688440
+FOXALIGN GUNMATRIX frame=329 logic=646 presented=323
+FOXALIGN GUNCAMERA frame=329 current=0x232dad0 loop=0x232dad0
+0x228400c:	5417	7377	-1955	-1930
+0x228401c:	6423	-10976	1572	1551
+0x228402c:	4171	3994	3353	3310
+0x228403c:	-2643320	924399	8758565	10730720
+FOXALIGN GUNMATRIX frame=330 logic=648 presented=324
+FOXALIGN GUNCAMERA frame=330 current=0x232dad0 loop=0x232dad0
+0x228400c:	7625	-2091	-1841	-1818
+0x228401c:	64	-8310	1917	1892
+0x228402c:	3778	2846	3594	3548
+0x228403c:	-2927569	-138817	8843955	10814961
+FOXALIGN GUNMATRIX frame=331 logic=650 presented=325
+FOXALIGN GUNCAMERA frame=331 current=0x232dad0 loop=0x232dad0
+0x228400c:	6251	-7967	-717	-709
+0x228401c:	-4701	-4913	583	576
+0x228402c:	2000	-2014	3964	3913
+0x228403c:	-3232478	-456309	8987737	10956896
+FOXALIGN GUNMATRIX frame=369 logic=726 presented=363
+FOXALIGN GUNCAMERA frame=369 current=0x232dad0 loop=0x232dad0
+0x228400c:	32	262143	262143	0
+0x228401c:	0	-11389	-978	-965
+0x228402c:	-1237	-2557	3993	3943
+0x228403c:	-2751460	35711472	35705688	36985960
+FOXALIGN GUNMATRIX frame=370 logic=728 presented=364
+FOXALIGN GUNCAMERA frame=370 current=0x232dad0 loop=0x232dad0
+0x228400c:	8497	-2085	440	434
+0x228401c:	-1275	-1133	-133	-131
+0x228402c:	634	5385	3675	3628
+0x228403c:	-3346171	-995311	9556543	11518048
+FOXALIGN GUNMATRIX frame=371 logic=730 presented=365
+FOXALIGN GUNCAMERA frame=371 current=0x232dad0 loop=0x232dad0
+0x228400c:	613	10508	-1894	-1870
+0x228401c:	8641	-9673	567	561
+0x228402c:	942	2812	3994	3943
+0x228403c:	-2499991	1322875	9175207	11142012
+FOXALIGN GUNMATRIX frame=372 logic=732 presented=366
+FOXALIGN GUNCAMERA frame=372 current=0x232dad0 loop=0x232dad0
+0x228400c:	7125	6271	-914	-902
+0x228401c:	4890	-3523	904	893
+0x228402c:	-1334	2689	3976	3926
+0x228403c:	-3261661	554854	9262477	11228030
+FOXALIGN GUNMATRIX frame=373 logic=734 presented=367
+FOXALIGN GUNCAMERA frame=373 current=0x232dad0 loop=0x232dad0
+0x228400c:	2909	10988	-680	-671
+0x228401c:	8063	-8541	1909	1885
+0x228402c:	-2930	3853	3651	3604
+0x228403c:	-2927792	1043677	9299169	11264468
+FOXALIGN GUNMATRIX frame=374 logic=736 presented=368
+FOXALIGN GUNCAMERA frame=374 current=0x232dad0 loop=0x232dad0
+0x228400c:	6834	7244	314	310
+0x228401c:	4475	-10107	1849	1826
+0x228402c:	-4086	3458	3439	3395
+0x228403c:	-3086782	158874	9433694	11396954
+FOXALIGN GUNMATRIX frame=375 logic=738 presented=369
+FOXALIGN GUNCAMERA frame=375 current=0x232dad0 loop=0x232dad0
+0x228400c:	7302	5090	1345	1328
+0x228401c:	2280	-11759	417	412
+0x228402c:	-1948	1200	3999	3948
+0x228403c:	-2955689	-5512	9536963	11498995
+FOXALIGN GUNMATRIX frame=376 logic=740 presented=370
+FOXALIGN GUNCAMERA frame=376 current=0x232dad0 loop=0x232dad0
+0x228400c:	8443	144	923	912
+0x228401c:	-94	-11763	393	388
+0x228402c:	-2025	1036	3996	3946
+0x228403c:	-3032845	-28089	9544960	11506749
+FOXALIGN GUNMATRIX frame=377 logic=742 presented=371
+FOXALIGN GUNCAMERA frame=377 current=0x232dad0 loop=0x232dad0
+0x228400c:	8424	523	947	935
+0x228401c:	198	-11763	399	394
+0x228402c:	-1890	1078	4009	3958
+0x228403c:	-3011449	16454	9520950	11483110
+FOXALIGN GUNMATRIX frame=378 logic=744 presented=372
+FOXALIGN GUNCAMERA frame=378 current=0x232dad0 loop=0x232dad0
+0x228400c:	8454	457	885	874
+0x228401c:	156	-11764	398	394
+0x228402c:	-1647	1107	4032	3981
+0x228403c:	-3007252	140880	9493218	11455638
+FOXALIGN GUNMATRIX frame=379 logic=746 presented=373
+FOXALIGN GUNCAMERA frame=379 current=0x232dad0 loop=0x232dad0
+0x228400c:	8506	310	775	765
+0x228401c:	69	-11762	410	405
+0x228402c:	-1393	1169	4053	4001
+0x228403c:	-3000532	151002	9458715	11421582
+FOXALIGN GUNMATRIX frame=380 logic=748 presented=374
+FOXALIGN GUNCAMERA frame=380 current=0x232dad0 loop=0x232dad0
+0x228400c:	8551	152	658	649
+0x228401c:	-27	-11760	408	403
+0x228402c:	-1206	1184	4065	4014
+0x228403c:	-2996906	155584	9424743	11388042
+FOXALIGN SPAWN frame=381 logic=750 presented=375 sub=1 716.707153 223.398254 28.820457
+FOXALIGN GUNMATRIX frame=381 logic=750 presented=375
+FOXALIGN GUNCAMERA frame=381 current=0x232dad0 loop=0x232dad0
+0x228400c:	8049	-1293	1491	1472
+0x228401c:	-1265	-11695	311	307
+0x228402c:	-3012	1450	3842	3793
+0x228403c:	-2896053	161024	9398672	11362311
+FOXALIGN BEAM frame=381 logic=750 presented=375 0.000000 223.398254 28.820471 sx=0x40caaaab sy=0x3f800000 facing=1
+FOXALIGN BEAMCAMERA frame=381 current=0x232dad0 loop=0x232dad0
+FOXALIGN BEAMCAM PROJECTION frame=381
+0x2191cd0 <sNdsRendererParticleProjection>:	8650	148	546	539
+0x2191ce0 <sNdsRendererParticleProjection+16>:	0	11849	-388	-383
+0x2191cf0 <sNdsRendererParticleProjection+32>:	1153	-1104	-4094	-4042
+0x2191d00 <sNdsRendererParticleProjection+48>:	-8645870	-3037992	9321428	11286074
+FOXALIGN BEAMCAM MODELVIEW frame=381
+0x2191c90 <sNdsRendererParticleModelview>:	4096	0	0	0
+0x2191ca0 <sNdsRendererParticleModelview+16>:	0	4096	0	0
+0x2191cb0 <sNdsRendererParticleModelview+32>:	0	0	4096	0
+0x2191cc0 <sNdsRendererParticleModelview+48>:	0	0	0	4096
+FOXALIGN GUNMATRIX frame=382 logic=752 presented=376
+FOXALIGN GUNCAMERA frame=382 current=0x232dad0 loop=0x232dad0
+0x228400c:	8049	-1293	1491	1472
+0x228401c:	-1265	-11321	811	801
+0x228402c:	-2090	1663	3969	3919
+0x228403c:	-3518905	-239036	9418652	11382037
+FOXALIGN BEAM frame=382 logic=752 presented=376 1196.707153 223.398254 28.820471 sx=0x41880000 sy=0x3f800000 facing=1
+FOXALIGN BEAMCAMERA frame=382 current=0x232dad0 loop=0x232dad0
+FOXALIGN BEAMCAM PROJECTION frame=382
+0x2191cd0 <sNdsRendererParticleProjection>:	8650	145	544	537
+0x2191ce0 <sNdsRendererParticleProjection+16>:	0	11849	-384	-379
+0x2191cf0 <sNdsRendererParticleProjection+32>:	1148	-1090	-4095	-4043
+0x2191d00 <sNdsRendererParticleProjection+48>:	-8652544	-3024150	9310736	11275519
+FOXALIGN BEAMCAM MODELVIEW frame=382
+0x2191c90 <sNdsRendererParticleModelview>:	4096	0	0	0
+0x2191ca0 <sNdsRendererParticleModelview+16>:	0	4096	0	0
+0x2191cb0 <sNdsRendererParticleModelview+32>:	0	0	4096	0
+0x2191cc0 <sNdsRendererParticleModelview+48>:	0	0	0	4096
+FOXALIGN GUNMATRIX frame=383 logic=754 presented=377
+FOXALIGN GUNCAMERA frame=383 current=0x232dad0 loop=0x232dad0
+0x228400c:	8206	3128	821	811
+0x228401c:	1961	-5551	1451	1433
+0x228402c:	-1800	3925	3804	3756
+0x228403c:	-3657610	488589	9256231	11221689
+FOXALIGN BEAM frame=383 logic=754 presented=377 1516.707153 223.398254 28.820471 sx=0x41dd5556 sy=0x3f800000 facing=1
+FOXALIGN BEAMCAMERA frame=383 current=0x232dad0 loop=0x232dad0
+FOXALIGN BEAMCAM PROJECTION frame=383
+0x2191cd0 <sNdsRendererParticleProjection>:	8652	142	542	535
+0x2191ce0 <sNdsRendererParticleProjection+16>:	0	11852	-380	-375
+0x2191cf0 <sNdsRendererParticleProjection+32>:	1146	-1078	-4096	-4044
+0x2191d00 <sNdsRendererParticleProjection+48>:	-8658028	-3012757	9301585	11266485
+FOXALIGN BEAMCAM MODELVIEW frame=383
+0x2191c90 <sNdsRendererParticleModelview>:	4096	0	0	0
+0x2191ca0 <sNdsRendererParticleModelview+16>:	0	4096	0	0
+0x2191cb0 <sNdsRendererParticleModelview+32>:	0	0	4096	0
+0x2191cc0 <sNdsRendererParticleModelview+48>:	0	0	0	4096
+FOXALIGN SPAWN_SAVED 716.707153 223.398254 28.820457
+FOXALIGN WORLDPROBE count=2
+FOXALIGN SPAWN_FLOAT_WORLD
+0x2269870 <gNdsFoxSpawnWorldMtx>:	0.960167766	-0.141958907	-0.222557232	0
+0x2269880 <gNdsFoxSpawnWorldMtx+16>:	-0.146019384	-0.985461652	-0.00206722319	0
+0x2269890 <gNdsFoxSpawnWorldMtx+32>:	-0.218805268	0.0346215703	-0.970864296	0
+0x22698a0 <gNdsFoxSpawnWorldMtx+48>:	659.097107	231.915787	42.1739044	0
+FOXALIGN GUN_FLOAT_WORLD
+0x220fca4 <gNdsFoxGunWorldProbeFloatMtx>:	0.960167766	-0.141958907	-0.222557232	0
+0x220fcb4 <gNdsFoxGunWorldProbeFloatMtx+16>:	-0.146019384	-0.985461652	-0.00206722319	0
+0x220fcc4 <gNdsFoxGunWorldProbeFloatMtx+32>:	-0.218805268	0.0346215703	-0.970864296	0
+0x220fcd4 <gNdsFoxGunWorldProbeFloatMtx+48>:	659.097107	231.915787	42.1739044	0
+FOXALIGN GUN_FIXED_WORLD
+0x220fc64 <gNdsFoxGunWorldProbeMtx>:	3933	-581	-912	0
+0x220fc74 <gNdsFoxGunWorldProbeMtx+16>:	-598	-4036	-8	0
+0x220fc84 <gNdsFoxGunWorldProbeMtx+32>:	-896	142	-3977	0
+0x220fc94 <gNdsFoxGunWorldProbeMtx+48>:	2699662	949927	172744	4096
+FOXALIGN WORLDPOINTQ12
+0x220fc54 <gNdsFoxGunWorldProbeShotQ12>:	2935642	915067	118024	4096
+FOXALIGN SPAWN_CHAIN depth=9
+0x2269824 <gNdsFoxSpawnChainDObj>:	37509016	37508808	37508600	37508224
+0x2269834 <gNdsFoxSpawnChainDObj+16>:	37508016	37505384	37504840	37504632
+0x2269844 <gNdsFoxSpawnChainDObj+32>:	37504424	0	0	0
+0x2269854 <gNdsFoxSpawnChainDObj+48>:	0	0	0	0
+0x2269864 <gNdsFoxSpawnChainDObj+64>:	0	0
+0x22697dc <gNdsFoxSpawnChainMode>:	1	1	1	1
+0x22697ec <gNdsFoxSpawnChainMode+16>:	3	1	1	1
+0x22697fc <gNdsFoxSpawnChainMode+32>:	1	0	0	0
+0x226980c <gNdsFoxSpawnChainMode+48>:	0	0	0	0
+0x226981c <gNdsFoxSpawnChainMode+64>:	0	0
+0x226935c <gNdsFoxSpawnChainLocal>:	1	0	-0	0
+0x226936c <gNdsFoxSpawnChainLocal+16>:	0	1	0	0
+0x226937c <gNdsFoxSpawnChainLocal+32>:	0	0	1	0
+0x226938c <gNdsFoxSpawnChainLocal+48>:	47.999939	-20.9906311	3.06577897	0
+0x226939c <gNdsFoxSpawnChainLocal+64>:	1	0	-0	0
+0x22693ac <gNdsFoxSpawnChainLocal+80>:	0	1	0	0
+0x22693bc <gNdsFoxSpawnChainLocal+96>:	0	0	1	0
+0x22693cc <gNdsFoxSpawnChainLocal+112>:	68	0	0	0
+0x22693dc <gNdsFoxSpawnChainLocal+128>:	0.99987793	-0.0107116699	-0	0
+0x22693ec <gNdsFoxSpawnChainLocal+144>:	0.0107116699	0.99987793	0	0
+0x22693fc <gNdsFoxSpawnChainLocal+160>:	0	-0	1	0
+0x226940c <gNdsFoxSpawnChainLocal+176>:	48.1245499	9.99999997e-07	-3.19999999e-05	0
+0x226941c <gNdsFoxSpawnChainLocal+192>:	0.189644441	-0.938084066	0.287322998	0
+0x226942c <gNdsFoxSpawnChainLocal+208>:	0.980498791	0.169056162	-0.0952750742	0
+0x226943c <gNdsFoxSpawnChainLocal+224>:	0.0408894867	0.29980588	0.95245856	0
+0x226944c <gNdsFoxSpawnChainLocal+240>:	0	0	0	0
+0x226945c <gNdsFoxSpawnChainLocal+256>:	0	-0.999969482	-0	0
+0x226946c <gNdsFoxSpawnChainLocal+272>:	0	0	-0.999969482	0
+0x226947c <gNdsFoxSpawnChainLocal+288>:	0.999938965	0	0	0
+0x226948c <gNdsFoxSpawnChainLocal+304>:	-88.8494186	62.6409836	6.85518312	0
+0x226949c <gNdsFoxSpawnChainLocal+320>:	0.855490446	0.434234411	-0.278503418	0
+0x22694ac <gNdsFoxSpawnChainLocal+336>:	-0.228643432	0.802207112	0.549135745	0
+0x22694bc <gNdsFoxSpawnChainLocal+352>:	0.462091535	-0.406536847	0.786555529	0
+0x22694cc <gNdsFoxSpawnChainLocal+368>:	0	0	0	0
+0x22694dc <gNdsFoxSpawnChainLocal+384>:	0.829176486	-0.150509059	0.534973145	0
+0x22694ec <gNdsFoxSpawnChainLocal+400>:	0.398677468	0.829977095	-0.384854406	0
+0x22694fc <gNdsFoxSpawnChainLocal+416>:	-0.385861933	0.533658028	0.74904567	0
+0x226950c <gNdsFoxSpawnChainLocal+432>:	0	0	0	0
+0x226951c <gNdsFoxSpawnChainLocal+448>:	1	0	-0	0
+0x226952c <gNdsFoxSpawnChainLocal+464>:	0	1	0	0
+0x226953c <gNdsFoxSpawnChainLocal+480>:	0	0	1	0
+0x226954c <gNdsFoxSpawnChainLocal+496>:	12	180	-90	0
+0x226955c <gNdsFoxSpawnChainLocal+512>:	-0	-0	-1	0
+0x226956c <gNdsFoxSpawnChainLocal+528>:	0	1	-0	0
+0x226957c <gNdsFoxSpawnChainLocal+544>:	1	0	-0	0
+0x226958c <gNdsFoxSpawnChainLocal+560>:	590.900146	0	0	0
+0x226959c <gNdsFoxSpawnChainLocal+576>:	0	0	0	0
+0x22695ac <gNdsFoxSpawnChainLocal+592>:	0	0	0	0
+0x22695bc <gNdsFoxSpawnChainLocal+608>:	0	0	0	0
+0x22695cc <gNdsFoxSpawnChainLocal+624>:	0	0	0	0
+0x22695dc <gNdsFoxSpawnChainLocal+640>:	0	0	0	0
+0x22695ec <gNdsFoxSpawnChainLocal+656>:	0	0	0	0
+0x22695fc <gNdsFoxSpawnChainLocal+672>:	0	0	0	0
+0x226960c <gNdsFoxSpawnChainLocal+688>:	0	0	0	0
+0x226961c <gNdsFoxSpawnChainLocal+704>:	0	0	0	0
+0x226962c <gNdsFoxSpawnChainLocal+720>:	0	0	0	0
+0x226963c <gNdsFoxSpawnChainLocal+736>:	0	0	0	0
+0x226964c <gNdsFoxSpawnChainLocal+752>:	0	0	0	0
+0x226965c <gNdsFoxSpawnChainLocal+768>:	0	0	0	0
+0x226966c <gNdsFoxSpawnChainLocal+784>:	0	0	0	0
+0x226967c <gNdsFoxSpawnChainLocal+800>:	0	0	0	0
+0x226968c <gNdsFoxSpawnChainLocal+816>:	0	0	0	0
+0x226969c <gNdsFoxSpawnChainLocal+832>:	0	0	0	0
+0x22696ac <gNdsFoxSpawnChainLocal+848>:	0	0	0	0
+0x22696bc <gNdsFoxSpawnChainLocal+864>:	0	0	0	0
+0x22696cc <gNdsFoxSpawnChainLocal+880>:	0	0	0	0
+0x22696dc <gNdsFoxSpawnChainLocal+896>:	0	0	0	0
+0x22696ec <gNdsFoxSpawnChainLocal+912>:	0	0	0	0
+0x22696fc <gNdsFoxSpawnChainLocal+928>:	0	0	0	0
+0x226970c <gNdsFoxSpawnChainLocal+944>:	0	0	0	0
+0x226971c <gNdsFoxSpawnChainLocal+960>:	0	0	0	0
+0x226972c <gNdsFoxSpawnChainLocal+976>:	0	0	0	0
+0x226973c <gNdsFoxSpawnChainLocal+992>:	0	0	0	0
+0x226974c <gNdsFoxSpawnChainLocal+1008>:	0	0	0	0
+0x226975c <gNdsFoxSpawnChainLocal+1024>:	0	0	0	0
+0x226976c <gNdsFoxSpawnChainLocal+1040>:	0	0	0	0
+0x226977c <gNdsFoxSpawnChainLocal+1056>:	0	0	0	0
+0x226978c <gNdsFoxSpawnChainLocal+1072>:	0	0	0	0
+0x226979c <gNdsFoxSpawnChainLocal+1088>:	0	0	0	0
+0x22697ac <gNdsFoxSpawnChainLocal+1104>:	0	0	0	0
+0x22697bc <gNdsFoxSpawnChainLocal+1120>:	0	0	0	0
+0x22697cc <gNdsFoxSpawnChainLocal+1136>:	0	0	0	0
+FOXALIGN GUN_CHAIN depth=9
+0x220fc08 <gNdsFoxGunChainDObj>:	37509016	37508808	37508600	37508224
+0x220fc18 <gNdsFoxGunChainDObj+16>:	37508016	37505384	37504840	37504632
+0x220fc28 <gNdsFoxGunChainDObj+32>:	37504424	0	0	0
+0x220fc38 <gNdsFoxGunChainDObj+48>:	0	0	0	0
+0x220fc48 <gNdsFoxGunChainDObj+64>:	0	0
+0x220fbc0 <gNdsFoxGunChainMode>:	1	1	1	1
+0x220fbd0 <gNdsFoxGunChainMode+16>:	3	1	1	1
+0x220fbe0 <gNdsFoxGunChainMode+32>:	1	0	0	0
+0x220fbf0 <gNdsFoxGunChainMode+48>:	0	0	0	0
+0x220fc00 <gNdsFoxGunChainMode+64>:	0	0
+0x220fb78 <gNdsFoxGunChainKind0>:	75	75	75	75
+0x220fb88 <gNdsFoxGunChainKind0+16>:	75	75	75	75
+0x220fb98 <gNdsFoxGunChainKind0+32>:	75	0	0	0
+0x220fba8 <gNdsFoxGunChainKind0+48>:	0	0	0	0
+0x220fbb8 <gNdsFoxGunChainKind0+64>:	0	0
+0x220f6f8 <gNdsFoxGunChainSourceLocal>:	1	0	-0	0
+0x220f708 <gNdsFoxGunChainSourceLocal+16>:	0	1	0	0
+0x220f718 <gNdsFoxGunChainSourceLocal+32>:	0	0	1	0
+0x220f728 <gNdsFoxGunChainSourceLocal+48>:	47.999939	-20.9906311	3.06577897	0
+0x220f738 <gNdsFoxGunChainSourceLocal+64>:	1	0	-0	0
+0x220f748 <gNdsFoxGunChainSourceLocal+80>:	0	1	0	0
+0x220f758 <gNdsFoxGunChainSourceLocal+96>:	0	0	1	0
+0x220f768 <gNdsFoxGunChainSourceLocal+112>:	68	0	0	0
+0x220f778 <gNdsFoxGunChainSourceLocal+128>:	0.99987793	-0.0107116699	-0	0
+0x220f788 <gNdsFoxGunChainSourceLocal+144>:	0.0107116699	0.99987793	0	0
+0x220f798 <gNdsFoxGunChainSourceLocal+160>:	0	-0	1	0
+0x220f7a8 <gNdsFoxGunChainSourceLocal+176>:	48.1245499	9.99999997e-07	-3.19999999e-05	0
+0x220f7b8 <gNdsFoxGunChainSourceLocal+192>:	0.189644441	-0.938084066	0.287322998	0
+0x220f7c8 <gNdsFoxGunChainSourceLocal+208>:	0.980498791	0.169056162	-0.0952750742	0
+0x220f7d8 <gNdsFoxGunChainSourceLocal+224>:	0.0408894867	0.29980588	0.95245856	0
+0x220f7e8 <gNdsFoxGunChainSourceLocal+240>:	0	0	0	0
+0x220f7f8 <gNdsFoxGunChainSourceLocal+256>:	0	-0.999969482	-0	0
+0x220f808 <gNdsFoxGunChainSourceLocal+272>:	0	0	-0.999969482	0
+0x220f818 <gNdsFoxGunChainSourceLocal+288>:	0.999938965	0	0	0
+0x220f828 <gNdsFoxGunChainSourceLocal+304>:	-88.8494186	62.6409836	6.85518312	0
+0x220f838 <gNdsFoxGunChainSourceLocal+320>:	0.855490446	0.434234411	-0.278503418	0
+0x220f848 <gNdsFoxGunChainSourceLocal+336>:	-0.228643432	0.802207112	0.549135745	0
+0x220f858 <gNdsFoxGunChainSourceLocal+352>:	0.462091535	-0.406536847	0.786555529	0
+0x220f868 <gNdsFoxGunChainSourceLocal+368>:	0	0	0	0
+0x220f878 <gNdsFoxGunChainSourceLocal+384>:	0.829176486	-0.150509059	0.534973145	0
+0x220f888 <gNdsFoxGunChainSourceLocal+400>:	0.398677468	0.829977095	-0.384854406	0
+0x220f898 <gNdsFoxGunChainSourceLocal+416>:	-0.385861933	0.533658028	0.74904567	0
+0x220f8a8 <gNdsFoxGunChainSourceLocal+432>:	0	0	0	0
+0x220f8b8 <gNdsFoxGunChainSourceLocal+448>:	1	0	-0	0
+0x220f8c8 <gNdsFoxGunChainSourceLocal+464>:	0	1	0	0
+0x220f8d8 <gNdsFoxGunChainSourceLocal+480>:	0	0	1	0
+0x220f8e8 <gNdsFoxGunChainSourceLocal+496>:	12	180	-90	0
+0x220f8f8 <gNdsFoxGunChainSourceLocal+512>:	-0	-0	-1	0
+0x220f908 <gNdsFoxGunChainSourceLocal+528>:	0	1	-0	0
+0x220f918 <gNdsFoxGunChainSourceLocal+544>:	1	0	-0	0
+0x220f928 <gNdsFoxGunChainSourceLocal+560>:	590.900146	0	0	0
+0x220f938 <gNdsFoxGunChainSourceLocal+576>:	0	0	0	0
+0x220f948 <gNdsFoxGunChainSourceLocal+592>:	0	0	0	0
+0x220f958 <gNdsFoxGunChainSourceLocal+608>:	0	0	0	0
+0x220f968 <gNdsFoxGunChainSourceLocal+624>:	0	0	0	0
+0x220f978 <gNdsFoxGunChainSourceLocal+640>:	0	0	0	0
+0x220f988 <gNdsFoxGunChainSourceLocal+656>:	0	0	0	0
+0x220f998 <gNdsFoxGunChainSourceLocal+672>:	0	0	0	0
+0x220f9a8 <gNdsFoxGunChainSourceLocal+688>:	0	0	0	0
+0x220f9b8 <gNdsFoxGunChainSourceLocal+704>:	0	0	0	0
+0x220f9c8 <gNdsFoxGunChainSourceLocal+720>:	0	0	0	0
+0x220f9d8 <gNdsFoxGunChainSourceLocal+736>:	0	0	0	0
+0x220f9e8 <gNdsFoxGunChainSourceLocal+752>:	0	0	0	0
+0x220f9f8 <gNdsFoxGunChainSourceLocal+768>:	0	0	0	0
+0x220fa08 <gNdsFoxGunChainSourceLocal+784>:	0	0	0	0
+0x220fa18 <gNdsFoxGunChainSourceLocal+800>:	0	0	0	0
+0x220fa28 <gNdsFoxGunChainSourceLocal+816>:	0	0	0	0
+0x220fa38 <gNdsFoxGunChainSourceLocal+832>:	0	0	0	0
+0x220fa48 <gNdsFoxGunChainSourceLocal+848>:	0	0	0	0
+0x220fa58 <gNdsFoxGunChainSourceLocal+864>:	0	0	0	0
+0x220fa68 <gNdsFoxGunChainSourceLocal+880>:	0	0	0	0
+0x220fa78 <gNdsFoxGunChainSourceLocal+896>:	0	0	0	0
+0x220fa88 <gNdsFoxGunChainSourceLocal+912>:	0	0	0	0
+0x220fa98 <gNdsFoxGunChainSourceLocal+928>:	0	0	0	0
+0x220faa8 <gNdsFoxGunChainSourceLocal+944>:	0	0	0	0
+0x220fab8 <gNdsFoxGunChainSourceLocal+960>:	0	0	0	0
+0x220fac8 <gNdsFoxGunChainSourceLocal+976>:	0	0	0	0
+0x220fad8 <gNdsFoxGunChainSourceLocal+992>:	0	0	0	0
+0x220fae8 <gNdsFoxGunChainSourceLocal+1008>:	0	0	0	0
+0x220faf8 <gNdsFoxGunChainSourceLocal+1024>:	0	0	0	0
+0x220fb08 <gNdsFoxGunChainSourceLocal+1040>:	0	0	0	0
+0x220fb18 <gNdsFoxGunChainSourceLocal+1056>:	0	0	0	0
+0x220fb28 <gNdsFoxGunChainSourceLocal+1072>:	0	0	0	0
+0x220fb38 <gNdsFoxGunChainSourceLocal+1088>:	0	0	0	0
+0x220fb48 <gNdsFoxGunChainSourceLocal+1104>:	0	0	0	0
+0x220fb58 <gNdsFoxGunChainSourceLocal+1120>:	0	0	0	0
+0x220fb68 <gNdsFoxGunChainSourceLocal+1136>:	0	0	0	0
+0x220f278 <gNdsFoxGunChainRendererLocal>:	4096	0	0	0
+0x220f288 <gNdsFoxGunChainRendererLocal+16>:	0	4096	0	0
+0x220f298 <gNdsFoxGunChainRendererLocal+32>:	0	0	4096	0
+0x220f2a8 <gNdsFoxGunChainRendererLocal+48>:	196608	-85978	12557	4096
+0x220f2b8 <gNdsFoxGunChainRendererLocal+64>:	4096	0	0	0
+0x220f2c8 <gNdsFoxGunChainRendererLocal+80>:	0	4096	0	0
+0x220f2d8 <gNdsFoxGunChainRendererLocal+96>:	0	0	4096	0
+0x220f2e8 <gNdsFoxGunChainRendererLocal+112>:	278528	0	0	4096
+0x220f2f8 <gNdsFoxGunChainRendererLocal+128>:	4096	-44	0	0
+0x220f308 <gNdsFoxGunChainRendererLocal+144>:	44	4096	0	0
+0x220f318 <gNdsFoxGunChainRendererLocal+160>:	0	0	4096	0
+0x220f328 <gNdsFoxGunChainRendererLocal+176>:	197118	0	0	4096
+0x220f338 <gNdsFoxGunChainRendererLocal+192>:	777	-3842	1177	0
+0x220f348 <gNdsFoxGunChainRendererLocal+208>:	4016	692	-390	0
+0x220f358 <gNdsFoxGunChainRendererLocal+224>:	167	1228	3901	0
+0x220f368 <gNdsFoxGunChainRendererLocal+240>:	0	0	0	4096
+0x220f378 <gNdsFoxGunChainRendererLocal+256>:	0	-4096	0	0
+0x220f388 <gNdsFoxGunChainRendererLocal+272>:	0	0	-4096	0
+0x220f398 <gNdsFoxGunChainRendererLocal+288>:	4096	0	0	0
+0x220f3a8 <gNdsFoxGunChainRendererLocal+304>:	-363927	256577	28079	4096
+0x220f3b8 <gNdsFoxGunChainRendererLocal+320>:	3504	1779	-1141	0
+0x220f3c8 <gNdsFoxGunChainRendererLocal+336>:	-937	3286	2249	0
+0x220f3d8 <gNdsFoxGunChainRendererLocal+352>:	1893	-1665	3222	0
+0x220f3e8 <gNdsFoxGunChainRendererLocal+368>:	0	0	0	4096
+0x220f3f8 <gNdsFoxGunChainRendererLocal+384>:	3396	-616	2191	0
+0x220f408 <gNdsFoxGunChainRendererLocal+400>:	1633	3400	-1576	0
+0x220f418 <gNdsFoxGunChainRendererLocal+416>:	-1580	2186	3068	0
+0x220f428 <gNdsFoxGunChainRendererLocal+432>:	0	0	0	4096
+0x220f438 <gNdsFoxGunChainRendererLocal+448>:	4096	0	0	0
+0x220f448 <gNdsFoxGunChainRendererLocal+464>:	0	4096	0	0
+0x220f458 <gNdsFoxGunChainRendererLocal+480>:	0	0	4096	0
+0x220f468 <gNdsFoxGunChainRendererLocal+496>:	49152	737280	-368640	4096
+0x220f478 <gNdsFoxGunChainRendererLocal+512>:	0	0	-4096	0
+0x220f488 <gNdsFoxGunChainRendererLocal+528>:	0	4096	0	0
+0x220f498 <gNdsFoxGunChainRendererLocal+544>:	4096	0	0	0
+0x220f4a8 <gNdsFoxGunChainRendererLocal+560>:	2420327	0	0	4096
+0x220f4b8 <gNdsFoxGunChainRendererLocal+576>:	0	0	0	0
+0x220f4c8 <gNdsFoxGunChainRendererLocal+592>:	0	0	0	0
+0x220f4d8 <gNdsFoxGunChainRendererLocal+608>:	0	0	0	0
+0x220f4e8 <gNdsFoxGunChainRendererLocal+624>:	0	0	0	0
+0x220f4f8 <gNdsFoxGunChainRendererLocal+640>:	0	0	0	0
+0x220f508 <gNdsFoxGunChainRendererLocal+656>:	0	0	0	0
+0x220f518 <gNdsFoxGunChainRendererLocal+672>:	0	0	0	0
+0x220f528 <gNdsFoxGunChainRendererLocal+688>:	0	0	0	0
+0x220f538 <gNdsFoxGunChainRendererLocal+704>:	0	0	0	0
+0x220f548 <gNdsFoxGunChainRendererLocal+720>:	0	0	0	0
+0x220f558 <gNdsFoxGunChainRendererLocal+736>:	0	0	0	0
+0x220f568 <gNdsFoxGunChainRendererLocal+752>:	0	0	0	0
+0x220f578 <gNdsFoxGunChainRendererLocal+768>:	0	0	0	0
+0x220f588 <gNdsFoxGunChainRendererLocal+784>:	0	0	0	0
+0x220f598 <gNdsFoxGunChainRendererLocal+800>:	0	0	0	0
+0x220f5a8 <gNdsFoxGunChainRendererLocal+816>:	0	0	0	0
+0x220f5b8 <gNdsFoxGunChainRendererLocal+832>:	0	0	0	0
+0x220f5c8 <gNdsFoxGunChainRendererLocal+848>:	0	0	0	0
+0x220f5d8 <gNdsFoxGunChainRendererLocal+864>:	0	0	0	0
+0x220f5e8 <gNdsFoxGunChainRendererLocal+880>:	0	0	0	0
+0x220f5f8 <gNdsFoxGunChainRendererLocal+896>:	0	0	0	0
+0x220f608 <gNdsFoxGunChainRendererLocal+912>:	0	0	0	0
+0x220f618 <gNdsFoxGunChainRendererLocal+928>:	0	0	0	0
+0x220f628 <gNdsFoxGunChainRendererLocal+944>:	0	0	0	0
+0x220f638 <gNdsFoxGunChainRendererLocal+960>:	0	0	0	0
+0x220f648 <gNdsFoxGunChainRendererLocal+976>:	0	0	0	0
+0x220f658 <gNdsFoxGunChainRendererLocal+992>:	0	0	0	0
+0x220f668 <gNdsFoxGunChainRendererLocal+1008>:	0	0	0	0
+0x220f678 <gNdsFoxGunChainRendererLocal+1024>:	0	0	0	0
+0x220f688 <gNdsFoxGunChainRendererLocal+1040>:	0	0	0	0
+0x220f698 <gNdsFoxGunChainRendererLocal+1056>:	0	0	0	0
+0x220f6a8 <gNdsFoxGunChainRendererLocal+1072>:	0	0	0	0
+0x220f6b8 <gNdsFoxGunChainRendererLocal+1088>:	0	0	0	0
+0x220f6c8 <gNdsFoxGunChainRendererLocal+1104>:	0	0	0	0
+0x220f6d8 <gNdsFoxGunChainRendererLocal+1120>:	0	0	0	0
+0x220f6e8 <gNdsFoxGunChainRendererLocal+1136>:	0	0	0	0
+FOXALIGN BEAM_PRESENT count=3
+FOXALIGN BEAM_PRESENT 0 source=-173.292847,223.398254,28.820457 draw=-173.292847,223.398254,28.820471
+FOXALIGN BEAM_PRESENT 1 source=876.707153,223.398254,28.820457 draw=876.707153,223.398254,28.820471
+FOXALIGN BEAM_PRESENT 2 source=1196.707153,223.398254,28.820457 draw=1196.707153,223.398254,28.820471
+FOXALIGN GLOW_PRESENT count=7
+FOXALIGN GLOW_PRESENT 0 source=-333.292847,223.398254,28.820457 draw=-333.292847,223.398254,28.820471
+FOXALIGN GLOW_PRESENT 1 source=-333.292847,223.398254,28.820457 draw=-333.292847,223.398254,28.820471
+FOXALIGN GLOW_PRESENT 2 source=-333.292847,223.398254,28.820457 draw=-333.292847,223.398254,28.820471
+FOXALIGN GLOW_PRESENT 3 source=-333.292847,223.398254,28.820457 draw=-333.292847,223.398254,28.820471
+FOXALIGN GLOW_PRESENT 4 source=-333.292847,223.398254,28.820457 draw=-333.292847,223.398254,28.820471
+FOXALIGN GLOW_PRESENT 5 source=716.707153,223.398254,28.820457 draw=716.707153,223.398254,28.820471
+FOXALIGN GLOW_PRESENT 6 source=716.707153,223.398254,28.820457 draw=716.707153,223.398254,28.820471
+[Inferior 1 (Remote target) detached]
+

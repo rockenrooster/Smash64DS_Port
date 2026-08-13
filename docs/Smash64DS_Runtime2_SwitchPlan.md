@@ -16,7 +16,28 @@ the charter and is not a status log.
 **The battle-frame P95 gate is NOT met, and the owner has set the bar at the
 both-CPU stress config (2026-08-05, confirming §7's stress gate): the whole
 match under P95 ≤ 1.12M, loading states excluded, while the shipped ROM stays
-the Boundary hwtri configuration. Gap to that gate: 485,060** — both-CPU
+the Boundary hwtri configuration.**
+
+**Current standing (2026-08-12, supersedes the 2026-08-04 figures below).**
+Slices 43–48 have since landed and the arm behind the banked "canonical
+both-CPU" figure was mislabelled — see
+`artifacts/performance/2026-08-12_c126-armcheck/ARM_MISLABEL.md`.
+`HANDOFF.md` carries the corrected pair:
+
+| arm | role | `WORK-H` P50 | P95 |
+|---|---|---:|---:|
+| Boundary (`BOTH_CPU 0`) | shipped config, **PASSES** | 899,136 | 1,087,616 |
+| **both-CPU (`BOTH_CPU 1`)** | **R2-07 gate, FAILS** | 938,368 | **1,207,616** |
+
+**Gap to the gate: +87,236**, not the 485,060 recorded below. `SRC` owns 84.4%
+of the excursion and its ceiling (207,104) is 2.07x the gap, so the gate is
+reachable inside `SRC` alone; the next cut is specified in
+`artifacts/performance/2026-08-12_c130-fire-gate/SITR_NEXT_CUT.md`
+(`gcPlayDObjAnimJoint`'s AObj pointer chase). Lane table:
+`…/2026-08-12_c130-fire-gate/LANES_BOTHCPU.md`.
+
+**Everything from here to the end of this paragraph is the 2026-08-04 era and
+is kept only so nobody re-derives it.** Gap to that gate: 485,060 — both-CPU
 whole-match `WORK-H` P95 1,605,440; the Boundary arm trails at 1,463,104
 (gap 343,104) (2026-08-04, git `f24f0cc1`, dldi=ON; tables on the board). The settled
 attribution: **effect DObj submits own the tail** — 99.3% of the `MISC`
@@ -506,6 +527,20 @@ wrong thing and would block a correct switch indefinitely.
   results flow. Cosmetic systems get explicit budgets so they cannot erase
   the headroom.
 - **All rows in `BUGS.md` fixed before optimization work.** this is a P1 Bugs list and are required to be fixed for P1.
+  **Status 2026-08-13 — both open rows are measured to exhaustion with NO
+  divergence from BattleShip found** (`artifacts/bugs/2026-08-12_fox-crouch/`).
+  Fox: spawn X/Y/Z, attack radius 20, all 11 hurtbox descriptors, camera
+  identity, composition (0.004 px), gun attachment, pose phase, baked model
+  geometry and quad anchor all source-exact; the beam is geometrically not
+  duckable ON SOURCE NUMBERS. Whispy: script decode, normalize, playback, the
+  60/30 Hz clock, transform application and matrix consumption (XObj kind 28 =
+  `TraRotRpyRSca`) all correct — six distinct `scale.y` values reach a
+  scale-bearing matrix over six consecutive presented frames. Per
+  `BUG_FIXING_PROCESS.md`, a candidate whose every contract row is source-exact
+  means the CONTRACT is under-specified: each row needs one symptom detail from
+  the owner (Fox: flash, beam, or both, and when; Whispy: which of blink / eye
+  turn / mouth / wind looks stepped) before any edit would be anything but an
+  invented offset.
 - Gate: full demo loop (Mario CPU vs Fox CPU, 1-minute and 5-minute match
   lengths) within total budget; battle P95 still ≤ 1.12M DLDI-on. The
   5-minute run is an **owner-instructed acceptance exception** to the
