@@ -1,0 +1,66 @@
+# Boundary verifier, 2026-08-13, ledger-index candidate tree (NDS_AOBJ_EVENT32_LEDGER_INDEX default 1).
+# scripts/verify-boundary.ps1 -DelaySeconds 3 -RunnerSlot 2   -> EXIT=0
+# FULL log was 316,148 lines; scanned in its entirety for 'Exception:', '=FAIL', 'FAILED', 'RED': ZERO hits.
+# Tail of that log follows verbatim.
+# ---
+kDamageProcParams(FTStruct *fp,
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:16915:13: warning: 'ndsFighterDashRunStepAttackDamageHitStats' defined but not used [-Wunused-function]
+16915 | static sb32 ndsFighterDashRunStepAttackDamageHitStats(FTStruct *fp,
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:16398:13: warning: 'ndsFighterDashRunStepAttackDamageHitLog' defined but not used [-Wunused-function]
+16398 | static sb32 ndsFighterDashRunStepAttackDamageHitLog(FTStruct *fp,
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:16330:13: warning: 'ndsFighterDashRunStepAttackDamageRecord' defined but not used [-Wunused-function]
+16330 | static sb32 ndsFighterDashRunStepAttackDamageRecord(FTStruct *fp,
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:16213:13: warning: 'ndsFighterDashRunStepAttackDamageCollide' defined but not used [-Wunused-function]
+16213 | static sb32 ndsFighterDashRunStepAttackDamageCollide(FTStruct *fp,
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:12861:13: warning: 'ndsGMCollisionCheckFighterAttackShieldCollideSelected' defined but not used [-Wunused-function]
+12861 | static sb32 ndsGMCollisionCheckFighterAttackShieldCollideSelected(
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:12838:13: warning: 'ndsGMCollisionCheckFighterAttacksCollideSelected' defined but not used [-Wunused-function]
+12838 | static sb32 ndsGMCollisionCheckFighterAttacksCollideSelected(
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:12739:13: warning: 'ndsFighterDashRunStepAttackDamageRectangle' defined but not used [-Wunused-function]
+12739 | static sb32 ndsFighterDashRunStepAttackDamageRectangle(FTStruct *fp,
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:12460:13: warning: 'ndsFighterDashRunStepAttackCollInterpolate' defined but not used [-Wunused-function]
+12460 | static sb32 ndsFighterDashRunStepAttackCollInterpolate(FTStruct *fp,
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:12381:13: warning: 'ndsFighterDashRunStepAttackCollPosition' defined but not used [-Wunused-function]
+12381 | static sb32 ndsFighterDashRunStepAttackCollPosition(FTStruct *fp,
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:12366:13: warning: 'ndsFighterDashRunShouldWriteBackAttackPosition' defined but not used [-Wunused-function]
+12366 | static sb32 ndsFighterDashRunShouldWriteBackAttackPosition(
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:12359:12: warning: 'ndsFTMotionSignExtend' defined but not used [-Wunused-function]
+12359 | static s32 ndsFTMotionSignExtend(u32 value, u32 bits)
+      |            ^~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_movement.c:11877:13: warning: 'ndsFighterNaturalSpecialsApplyInput' defined but not used [-Wunused-function]
+11877 | static sb32 ndsFighterNaturalSpecialsApplyInput(FTStruct *fp[2],
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_movement.c:11749:13: warning: 'ndsFighterNaturalMovesetApplyInput' defined but not used [-Wunused-function]
+11749 | static sb32 ndsFighterNaturalMovesetApplyInput(FTStruct *fp[2],
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In file included from D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend.c:887:
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_fighter_model.c:1766:13: warning: 'ndsFighterMarioFoxSetupManagerFiles' defined but not used [-Wunused-function]
+ 1766 | static void ndsFighterMarioFoxSetupManagerFiles(void)
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In file included from D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend.c:881:
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_compat_shims.c:608:13: warning: 'sNdsFTManagerPartsAllocInit' defined but not used [-Wunused-variable]
+  608 | static sb32 sNdsFTManagerPartsAllocInit;
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_compat_shims.c:607:17: warning: 'sNdsFTManagerPartsAllocFree' defined but not used [-Wunused-variable]
+  607 | static FTParts *sNdsFTManagerPartsAllocFree;
+      |                 ^~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_compat_shims.c:606:16: warning: 'sNdsFTManagerPartsAllocPool' defined but not used [-Wunused-variable]
+  606 | static FTParts sNdsFTManagerPartsAllocPool[64];
+      |                ^~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:/devkitPro/devkitARM/bin/../lib/gcc/arm-none-eabi/15.2.0/../../../../arm-none-eabi/bin/ld.exe: warning: C:/devkitPro/devkitARM/bin/../lib/gcc/arm-none-eabi/15.2.0/thumb/crtn.o: missing .note.GNU-stack section implies executable stack
+C:/devkitPro/devkitARM/bin/../lib/gcc/arm-none-eabi/15.2.0/../../../../arm-none-eabi/bin/ld.exe: NOTE: This behaviour is deprecated and will be removed in a future version of the linker
+Running verifier: battle_playable_realtime [verify-battle-playable-realtime-harness.ps1]
+Boundary verification profile passed.
+
+EXIT=0

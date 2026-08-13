@@ -1,8 +1,8 @@
 # Handoff
 
 Updated: 2026-08-13. **THE GATE IS NOW REPORTED RAW AND NET-OF-APPARATUS** — owner, §8 of
-`…/2026-08-13_c-residue/OWNER_DECISIONS.md`: bank **raw 1,260,096 / net ≈1,235,149** against
-1,120,380 = **+139,716 raw / +114,769 net**. Apparatus 24,947 (`RESIDUE.md` §5); the instrument is
+`…/2026-08-13_c-residue/OWNER_DECISIONS.md`: bank **raw 1,210,944 / net ≈1,185,997** against
+1,120,380 = **+90,564 raw / +65,617 net**. Apparatus 24,947 (`RESIDUE.md` §5); the instrument is
 NOT being slimmed, so every banked figure stays comparable. The old 1,087,296 "canonical both-CPU"
 was `BOTH_CPU 0` (`…_c126-armcheck/ARM_MISLABEL.md`) and every `EXHAUSTION.md` ceiling is dead.
 **Boundary PASSES (~1,087,600); the stress gate FAILS; the owner's order is bugs first, then P95.**
@@ -35,14 +35,15 @@ beside Fox is the BEAM ITSELF**, relocData 316's own RGBA(219,0,134) — not a d
 | arm | role | `WORK-H` P50 | P95 |
 |---|---|---:|---:|
 | `battle_playable_realtime` (`BOTH_CPU 0`) | shipped, **PASSES** | 899,136 | 1,087,616 |
-| **both-CPU (`BOTH_CPU 1`)** | **R2-07 GATE, FAILS** | **924,928** | **1,260,096 raw / ≈1,235,149 net** |
+| **both-CPU (`BOTH_CPU 1`)** | **R2-07 GATE, FAILS** | **924,864** | **1,210,944 raw / ≈1,185,997 net** |
 
-**RE-BANKED 2026-08-13 AFTER THE ANIM-JOINT FIX** (`…/2026-08-13_c-animjoint-fix/`,
-`build-c136-animjoint`, 1,600, DLDI ON): VBI **2:1697 3:310 4:18 5+:13 max 26**. **Gap 139,716 raw /
-114,769 net.**
-The fix costs **+49,216 P95 / +1,536 P50** against the c132 bank (1,210,880 / 923,392) and it is
-work, not placement — the one-variable five-minute pair reads +44,544. It is owed: those joints
-were doing nothing. **Judge a cut at P50 and its owning lane** — P95 moves 15x further than P50.
+**RE-BANKED 2026-08-13 AFTER THE LEDGER INDEX** (`…/2026-08-13_c-ledger-index/LEDGER_INDEX.md`,
+`build-c144-ledgeridx`, 1,600, DLDI ON): VBI **2:1740 3:272 4:13 5+:13 max 26**. **Gap 90,564 raw /
+65,617 net.** The anim-joint fix's **+49,216 came back −39,424**, now +9,792. **The shield attach path
+paid for a SEARCH, not work**: each attach hit `ndsAObjEvent32FindNormalized`, a linear scan of a
+1,177-entry ledger at 8.05 tk/iteration — **5,123 tk/attach, ~88% scan**. An O(1) index over that
+ledger (no new key/lifetime, §3.12-clean) took P95 1,250,368 → **1,210,944**, P50 flat, `SINT`
+−23,936, **40 frames 3→2**, 12,667 oracle lookups 0 mismatches, A2 falsifier brackets control 2,752.
 
 **RE-BANKED ON `BOTH_CPU 1` — `…/2026-08-12_c130-fire-gate/LANES_BOTHCPU.md`** (no build;
 `analyze-tick-hud-excursion.ps1 -Ceilings` emits both tables now). `SRC` owns **84.4%** of the

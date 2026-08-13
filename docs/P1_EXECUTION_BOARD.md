@@ -5311,6 +5311,61 @@ anyway and is not an invitation.
 callers clear the 40/80 presence bar (7,187 + 1,883 + 1,838 = 10,908); the other
 ~38,700 is spread across callers each below it. Its mean self-time is 16,912.
 
+### Slice 51 KEPT — the shield attach path was paying for a SEARCH. Gate 1,210,944
+
+Evidence: `artifacts/performance/2026-08-13_c-ledger-index/LEDGER_INDEX.md` and
+the three arm JSON/rows beside it, plus the five-minute oracle run.
+
+The 2026-08-13 anim-joint fix (`607d3697455`) cost **+49,216 P95**. Phase 0
+priced it with **no build**, off artifacts already on disk: summing `WORK-H` over
+the one-variable five-minute pair (`…_c-animjoint-fix/{ctl5-c134,cand5-c135}`)
+gives **+46,897,344 ticks over 9,154 attaches = 5,123 tk/attach**, and the c123
+per-PC profile shows **95.0% of `ndsAObjEvent32NormalizeScript` is two inlined
+pointer scans** at **16.09 cyc = 8.05 tk per iteration**. 5,123 / 8.05 ≈ **636
+scan iterations per attach** — the ledger reaches 1,177 entries in a minute and
+is scanned from index 0 every time. Predicted `−0.85 × 49,216 = −41,800`;
+measured **−39,424**.
+
+`ndsAObjEvent32FindNormalized` is now an open-addressed probe of a 4,096-slot
+**index over the same ledger** — not a second cache. No new key (the ledger is
+already keyed on the command pointer), no new lifetime, cleared in the same
+breath as the count it indexes, so **§3.12 is satisfied by construction rather
+than by a guard**. 8,192 B bss; headroom 167,936 → **159,488**.
+
+| arm | `WORK-H` P50 | P95 |
+|---|---:|---:|
+| A control (`build-c144-ctl`, HEAD) | 925,184 | 1,250,368 |
+| **B candidate (`build-c144-ledgeridx`)** | **924,864** | **1,210,944** |
+| A2 falsifier (`build-c145-noidx`) | 921,728 | 1,253,120 |
+
+**The A2 arm had to be a flag.** `build-c145-ctl2` is HEAD rebuilt into a fresh
+directory and its ROM is **byte-identical** to `build-c144-ctl`; with a
+bit-deterministic sampler a repeated control brackets nothing.
+`NDS_AOBJ_EVENT32_LEDGER_INDEX=0` builds the index and its bss and reverts only
+the lookup — the candidate's placement with the control's behaviour. It brackets
+the control to **2,752**, so the win is **14x the measured placement floor**.
+`SINT` −23,936 / `SRC` −19,648 / `GCRA` −19,584 with `FTR` −384 and `STG` +2,816:
+the saving lands in the lanes the fix's cost landed in. **40 frames move 3→2
+VBlanks.** Every gameplay and ledger counter is byte-identical on all three arms.
+
+Qualification (`build-c146-oracle5`, five-minute both-CPU, oracle on, 8,448
+samples): **12,667 paired lookups, `gNdsAObjEvent32HashOracleMismatch` 0**,
+overflow 0, runaway 0, `NormalizeFailCount` 0, heap free-min 70,000. That arm's
+P95 reads 1,246,336 — the oracle restores the whole scan, which is a third
+confirmation that the scan was the cost, and is **never a gate figure**.
+
+**Ledger margin re-read and UNCHANGED: 1,598 of 2,048, 1.28x.** The index cannot
+reduce fresh normalizes and the reason matters — the ledger already deduplicated
+them (`ReuseCount` was 1,574/minute *before* this change). The scripts were never
+being re-normalized, they were being re-**found**. Capacity is still cycle 13's
+open question, at exactly the number it left it.
+
+**Named, sized, not taken:** `ndsRelocResolvePointerFromFileBase` is 3.9% of the
+attach path (≈ −1,900 P95) and would need a genuinely new cache;
+`ndsAObjEvent32FindPlanned` is the other O(n²) scan (~665 tk/frame, flat P50) and
+the shield path never reaches it — every attach returns at the ledger hit before
+`PlanStream` runs.
+
 ### Slice 50 KEPT — the stage stops re-proving its texture bindings. Gate 1,210,880
 
 Evidence: `artifacts/performance/2026-08-13_c-threeleg/SLICE50.md`, the three arm

@@ -1,0 +1,29 @@
+Tick-HUD buckets: target=smash64ds-battle-playable-tickhud-hwtri samples=1600 frames=439..2038 melonDS=1.0 sha=DE80E46BDCF1FD98 git=e3944e4126e+dirty(4) dldi=ON
+
+bucket p50        p95        spread mean       min        max        %ALLp50
+------ ---        ---        ------ ----       ---        ---        -------
+ALL     1,118,144  1,678,720   1.50  1,210,738  1,114,944  5,312,576   100.0
+FTR       296,256    322,432   1.09    290,313    168,256    329,344    26.5
+STG       165,952    170,176   1.03    166,322    162,368    174,848    14.8
+BG          4,032      4,160   1.03      4,040      3,776      4,288     0.4
+AUD         2,944      7,808   2.65      9,072      1,152    157,248     0.3
+HUD         1,024    424,384 414.44     35,471        896  2,082,816     0.1
+SRC       323,008    571,904   1.77    351,463     10,688  4,407,040    28.9
+MISC      103,040    179,328   1.74    110,900     80,896    271,680     9.2
+OTHR      231,296    524,928   2.27    243,156     21,568    579,072    20.7
+WAIT      211,584    505,792   2.39    223,414      1,280    558,912    18.9
+WORK      934,016  1,382,784   1.48    987,324    597,312  5,021,312    83.5
+SHDT        4,544     88,768  19.54     14,397          0    494,080     0.4
+SWRM          768        832   1.08        773        512        960     0.1
+GCRA      317,888    566,720   1.78    346,233      6,656  4,401,856    28.4
+SCPU       42,752    110,720   2.59     46,122          0    144,256     3.8
+SCAT        1,216      1,344   1.11      1,178          0      4,672     0.1
+SPRM        1,984      2,176   1.10      4,669          0    650,688     0.2
+SINT      150,272    332,992   2.22    168,250          0    910,912    13.4
+SPHD       56,896     98,624   1.73     67,996          0  4,256,576     5.1
+SPHC          704        832   1.18        694          0      4,224     0.1
+WORK-H    924,864  1,210,944   1.31    951,852    589,056  5,020,288    82.7
+
+named=967,581 (79.9% of ALL)  VBI 2:1740 3:272 4:13 5+:13 max:26 total:2038  slips=0
+extras: gNdsShieldAnimJointInstallCalls=80  gNdsShieldAnimJointAttachCount=1,344  gNdsShieldAnimJointNullCount=800  gNdsAObjEvent32NormalizedHighWater=1,177  gNdsAObjEvent32NormalizeFailCount=0  gNdsAObjEvent32NormalizeReuseCount=1,574  gNdsAObjEvent32NormalizeScriptCount=183  gNdsAObjEvent32NormalizeCommandCount=1,177  gNdsObjAnimRunawayCount=0  gNdsTaskmanGeneralHeapFreeMin=70,592  gNdsTaskmanArenaAllocFailCount=0  gNdsRelocResolveMisalignCount=0  gNdsAObjEvent32HashHitCount=1,574  gNdsAObjEvent32HashMissCount=1,371  gNdsAObjEvent32HashProbeCount=3,613  gNdsAObjEvent32HashInsertProbeCount=2,052  gNdsAObjEvent32HashOverflowCount=0
+Wrote artifacts\performance\2026-08-13_c-ledger-index\cand-c144.json

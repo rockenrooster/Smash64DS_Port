@@ -1,0 +1,480 @@
+tile long unsigned int *'}
+   31 | void *   memcpy (void *__restrict, const void *__restrict, size_t);
+      |                                    ^
+D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c: At top level:
+D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:2813:13: warning: 'ndsPlatformUpdatePerfCounters' defined but not used [-Wunused-function]
+ 2813 | static void ndsPlatformUpdatePerfCounters(void)
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:2624:12: warning: 'ndsPlatformBattleTextHudStateFingerprint' defined but not used [-Wunused-function]
+ 2624 | static u32 ndsPlatformBattleTextHudStateFingerprint(void)
+      |            ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In file included from D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_audio_bgm.c:1:
+C:/devkitPro/calico/include/calico.h:6:6: warning: '__ASSEMBLER__' is not defined, evaluates to '0' [-Wundef]
+    6 | #if !__ASSEMBLER__
+      |      ^~~~~~~~~~~~~
+battle_playable_static_textures.c
+In file included from C:/devkitPro/calico/include/calico.h:7:
+C:/devkitPro/calico/include/calico/types.h:116:5: warning: '__cplusplus' is not defined, evaluates to '0' [-Wundef]
+  116 | #if __cplusplus >= 201402L
+      |     ^~~~~~~~~~~
+C:/devkitPro/calico/include/calico/types.h:127:5: warning: '__cplusplus' is not defined, evaluates to '0' [-Wundef]
+  127 | #if __cplusplus >= 201103L
+      |     ^~~~~~~~~~~
+C:/devkitPro/calico/include/calico.h:36:6: warning: '__ASSEMBLER__' is not defined, evaluates to '0' [-Wundef]
+   36 | #if !__ASSEMBLER__
+      |      ^~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_audio_bgm.c:228:12: warning: 'ndsAudioBgmMapPlaybackByte' defined but not used [-Wunused-function]
+  228 | static u32 ndsAudioBgmMapPlaybackByte(u64 playback_byte)
+      |            ^~~~~~~~~~~~~~~~~~~~~~~~~~
+n64_stubs.c
+port_probe.c
+coroutine.c
+libultra_os.c
+In file included from C:/devkitPro/libnds/include/nds.h:225,
+                 from D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_renderer.c:127:
+C:/devkitPro/calico/include/calico.h:6:6: warning: '__ASSEMBLER__' is not defined, evaluates to '0' [-Wundef]
+    6 | #if !__ASSEMBLER__
+      |      ^~~~~~~~~~~~~
+In file included from C:/devkitPro/calico/include/calico.h:7:
+C:/devkitPro/calico/include/calico/types.h:93:5: warning: '__thumb__' is not defined, evaluates to '0' [-Wundef]
+   93 | #if __thumb__
+      |     ^~~~~~~~~
+C:/devkitPro/calico/include/calico/types.h:104:5: warning: '__thumb__' is not defined, evaluates to '0' [-Wundef]
+  104 | #if __thumb__ && __ARM_ARCH < 5 && !__clang__
+      |     ^~~~~~~~~
+C:/devkitPro/calico/include/calico/types.h:116:5: warning: '__cplusplus' is not defined, evaluates to '0' [-Wundef]
+  116 | #if __cplusplus >= 201402L
+      |     ^~~~~~~~~~~
+C:/devkitPro/calico/include/calico/types.h:127:5: warning: '__cplusplus' is not defined, evaluates to '0' [-Wundef]
+  127 | #if __cplusplus >= 201103L
+      |     ^~~~~~~~~~~
+C:/devkitPro/calico/include/calico.h:36:6: warning: '__ASSEMBLER__' is not defined, evaluates to '0' [-Wundef]
+   36 | #if !__ASSEMBLER__
+      |      ^~~~~~~~~~~~~
+In file included from C:/devkitPro/calico/include/calico.h:38:
+C:/devkitPro/calico/include/calico/arm/common.h:48:6: warning: '__thumb__' is not defined, evaluates to '0' [-Wundef]
+   48 | #if !__thumb__
+      |      ^~~~~~~~~
+In file included from C:/devkitPro/calico/include/calico.h:41:
+C:/devkitPro/calico/include/calico/arm/mpu.h:36:6: warning: '__thumb__' is not defined, evaluates to '0' [-Wundef]
+   36 | #if !__thumb__
+      |      ^~~~~~~~~
+In file included from C:/devkitPro/libnds/include/nds.h:225,
+                 from D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_audio_fgm.c:1:
+C:/devkitPro/calico/include/calico.h:6:6: warning: '__ASSEMBLER__' is not defined, evaluates to '0' [-Wundef]
+    6 | #if !__ASSEMBLER__
+      |      ^~~~~~~~~~~~~
+In file included from C:/devkitPro/calico/include/calico.h:7:
+C:/devkitPro/calico/include/calico/types.h:116:5: warning: '__cplusplus' is not defined, evaluates to '0' [-Wundef]
+  116 | #if __cplusplus >= 201402L
+      |     ^~~~~~~~~~~
+C:/devkitPro/calico/include/calico/types.h:127:5: warning: '__cplusplus' is not defined, evaluates to '0' [-Wundef]
+  127 | #if __cplusplus >= 201103L
+      |     ^~~~~~~~~~~
+C:/devkitPro/calico/include/calico.h:36:6: warning: '__ASSEMBLER__' is not defined, evaluates to '0' [-Wundef]
+   36 | #if !__ASSEMBLER__
+      |      ^~~~~~~~~~~~~
+os_selftest.c
+boot_stubs.c
+D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_renderer.c: In function 'ndsRendererStageTextureSiteTryBind':
+D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_renderer.c:12099:30: warning: unused parameter 'config' [-Wunused-parameter]
+12099 |     const NDSRendererConfig *config)
+      |     ~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_renderer.c: In function 'ndsRendererNativeShadeProductionActions':
+D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_renderer.c:25131:16: warning: unused variable 'shade_lut' [-Wunused-variable]
+25131 |     const u32 *shade_lut = NULL;
+      |                ^~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_renderer.c:25130:46: warning: unused variable 'prepared_direction' [-Wunused-variable]
+25130 |     const NDSRendererHardwareLightDirection *prepared_direction = NULL;
+      |                                              ^~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_renderer.c: At top level:
+D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_renderer.c:25692:1: warning: 'retain' attribute ignored [-Wattributes]
+25692 | volatile u32 NDS_R2_TEXMEMO_COUNTER gNdsR2TexMemoHitCount;
+      | ^~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_renderer.c:25693:1: warning: 'retain' attribute ignored [-Wattributes]
+25693 | volatile u32 NDS_R2_TEXMEMO_COUNTER gNdsR2TexMemoMissCount;
+      | ^~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_renderer.c:25694:1: warning: 'retain' attribute ignored [-Wattributes]
+25694 | volatile u32 NDS_R2_TEXMEMO_COUNTER gNdsR2TexMemoFillCount;
+      | ^~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_renderer.c:25695:1: warning: 'retain' attribute ignored [-Wattributes]
+25695 | volatile u32 NDS_R2_TEXMEMO_COUNTER gNdsR2TexMemoStaleCount;
+      | ^~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_renderer.c:25696:1: warning: 'retain' attribute ignored [-Wattributes]
+25696 | volatile u32 NDS_R2_TEXMEMO_COUNTER gNdsR2TexMemoVerifyFail;
+      | ^~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_renderer.c: In function 'ndsRendererNativeStagePrepareRun':
+D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_renderer.c:29261:39: warning: variable 'epoch' set but not used [-Wunused-but-set-variable]
+29261 |     const NDSNativeStageTextureEpoch *epoch;
+      |                                       ^~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_renderer.c: In function 'ndsRendererNativeStagePrepareGeneratedSegment0':
+D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_renderer.c:29551:47: warning: unused variable 'certificate' [-Wunused-variable]
+29551 |     const NDSNativeStageGeneratedCertificate *certificate =
+      |                                               ^~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_renderer.c: At top level:
+D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_renderer.c:23227:13: warning: 'ndsRendererRebirthHaloLoadNoZMatrix' defined but not used [-Wunused-function]
+23227 | static void ndsRendererRebirthHaloLoadNoZMatrix(
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_renderer.c:13537:12: warning: 'ndsRendererLoadParticleCameraMatrices' defined but not used [-Wunused-function]
+13537 | static s32 ndsRendererLoadParticleCameraMatrices(void)
+      |            ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+battleship_sys_main.c
+In file included from C:/devkitPro/libnds/include/nds.h:225,
+                 from D:/Stuff/DevFolder/Smash64DS_Port/src/port/port_probe.c:1:
+C:/devkitPro/calico/include/calico.h:6:6: warning: '__ASSEMBLER__' is not defined, evaluates to '0' [-Wundef]
+    6 | #if !__ASSEMBLER__
+      |      ^~~~~~~~~~~~~
+In file included from C:/devkitPro/calico/include/calico.h:7:
+C:/devkitPro/calico/include/calico/types.h:116:5: warning: '__cplusplus' is not defined, evaluates to '0' [-Wundef]
+  116 | #if __cplusplus >= 201402L
+      |     ^~~~~~~~~~~
+C:/devkitPro/calico/include/calico/types.h:127:5: warning: '__cplusplus' is not defined, evaluates to '0' [-Wundef]
+  127 | #if __cplusplus >= 201103L
+      |     ^~~~~~~~~~~
+C:/devkitPro/calico/include/calico.h:36:6: warning: '__ASSEMBLER__' is not defined, evaluates to '0' [-Wundef]
+   36 | #if !__ASSEMBLER__
+      |      ^~~~~~~~~~~~~
+scheduler_backend.c
+In file included from C:/devkitPro/libnds/include/nds/ndstypes.h:36,
+                 from C:/devkitPro/libnds/include/nds/timers.h:51,
+                 from D:/Stuff/DevFolder/Smash64DS_Port/src/port/n64_stubs.c:5:
+C:/devkitPro/calico/include/calico/types.h:116:5: warning: '__cplusplus' is not defined, evaluates to '0' [-Wundef]
+  116 | #if __cplusplus >= 201402L
+      |     ^~~~~~~~~~~
+C:/devkitPro/calico/include/calico/types.h:127:5: warning: '__cplusplus' is not defined, evaluates to '0' [-Wundef]
+  127 | #if __cplusplus >= 201103L
+      |     ^~~~~~~~~~~
+controller_backend.c
+battleship_sys_scheduler.c
+battleship_sys_controller.c
+battleship_sys_maindevice.c
+battleship_sys_video.c
+battleship_sys_malloc.c
+battleship_sys_framebuffer.c
+battleship_sys_zbuffer.c
+In file included from D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_sys_main.c:6:
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/main.c: In function 'syMainSetDmemStatus':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/main.c:145:32: warning: comparison of integer expressions of different signedness: 'u32' {aka 'long unsigned int'} and 'int' [-Wsign-compare]
+  145 |     if (IO_READ(SP_DMEM_START) == -1)
+      |                                ^~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/main.c: In function 'syMainThread5':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/main.c:180:26: warning: unused parameter 'arg' [-Wunused-parameter]
+  180 | void syMainThread5(void *arg)
+      |                    ~~~~~~^~~
+In file included from C:/devkitPro/libnds/include/nds.h:225,
+                 from D:/Stuff/DevFolder/Smash64DS_Port/src/port/scheduler_backend.c:1:
+C:/devkitPro/calico/include/calico.h:6:6: warning: '__ASSEMBLER__' is not defined, evaluates to '0' [-Wundef]
+    6 | #if !__ASSEMBLER__
+      |      ^~~~~~~~~~~~~
+In file included from C:/devkitPro/libnds/include/nds.h:225,
+                 from D:/Stuff/DevFolder/Smash64DS_Port/src/port/controller_backend.c:1:
+C:/devkitPro/calico/include/calico.h:6:6: warning: '__ASSEMBLER__' is not defined, evaluates to '0' [-Wundef]
+    6 | #if !__ASSEMBLER__
+      |      ^~~~~~~~~~~~~
+In file included from C:/devkitPro/calico/include/calico.h:7:
+C:/devkitPro/calico/include/calico/types.h:116:5: warning: '__cplusplus' is not defined, evaluates to '0' [-Wundef]
+  116 | #if __cplusplus >= 201402L
+      |     ^~~~~~~~~~~
+C:/devkitPro/calico/include/calico/types.h:127:5: warning: '__cplusplus' is not defined, evaluates to '0' [-Wundef]
+  127 | #if __cplusplus >= 201103L
+      |     ^~~~~~~~~~~
+In file included from C:/devkitPro/calico/include/calico.h:7:
+C:/devkitPro/calico/include/calico/types.h:116:5: warning: '__cplusplus' is not defined, evaluates to '0' [-Wundef]
+  116 | #if __cplusplus >= 201402L
+      |     ^~~~~~~~~~~
+C:/devkitPro/calico/include/calico/types.h:127:5: warning: '__cplusplus' is not defined, evaluates to '0' [-Wundef]
+  127 | #if __cplusplus >= 201103L
+      |     ^~~~~~~~~~~
+C:/devkitPro/calico/include/calico.h:36:6: warning: '__ASSEMBLER__' is not defined, evaluates to '0' [-Wundef]
+   36 | #if !__ASSEMBLER__
+      |      ^~~~~~~~~~~~~
+C:/devkitPro/calico/include/calico.h:36:6: warning: '__ASSEMBLER__' is not defined, evaluates to '0' [-Wundef]
+   36 | #if !__ASSEMBLER__
+      |      ^~~~~~~~~~~~~
+In file included from D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_sys_scheduler.c:2:
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/scheduler.c: In function 'sySchedulerCheckReadyFramebuffer':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/scheduler.c:158:9: warning: unused variable 'unused' [-Wunused-variable]
+  158 |     s32 unused;
+      |         ^~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/scheduler.c: In function 'sySchedulerAddPausedQueue':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/scheduler.c:318:37: warning: assignment to 'SYTaskGfx *' from incompatible pointer type 'SYTaskInfo *' [-Wincompatible-pointer-types]
+  318 |         sSYSchedulerPausedQueueHead = this_info;
+      |                                     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/scheduler.c:326:38: warning: assignment to 'SYTaskGfx *' from incompatible pointer type 'SYTaskInfo *' [-Wincompatible-pointer-types]
+  326 |     else sSYSchedulerPausedQueueTail = this_info;
+      |                                      ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/scheduler.c: In function 'sySchedulerRemovePausedQueue':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/scheduler.c:336:38: warning: assignment to 'SYTaskGfx *' from incompatible pointer type 'struct SYTaskInfo *' [-Wincompatible-pointer-types]
+  336 |     else sSYSchedulerPausedQueueHead = this_info->next;
+      |                                      ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/scheduler.c:342:38: warning: assignment to 'SYTaskGfx *' from incompatible pointer type 'struct SYTaskInfo *' [-Wincompatible-pointer-types]
+  342 |     else sSYSchedulerPausedQueueTail = this_info->prev;
+      |                                      ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/scheduler.c: In function 'sySchedulerUpdateViMode':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/scheduler.c:601:15: warning: suggest braces around empty body in an 'if' statement [-Wempty-body]
+  601 |         if (1);
+      |               ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/scheduler.c:618:15: warning: suggest braces around empty body in an 'if' statement [-Wempty-body]
+  618 |         if (1);
+      |               ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/scheduler.c:642:15: warning: suggest braces around empty body in an 'if' statement [-Wempty-body]
+  642 |         if (1);
+      |               ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/scheduler.c: In function 'sySchedulerExecuteTaskGfx':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/scheduler.c:743:35: warning: passing argument 1 of 'sySchedulerAddPausedQueue' from incompatible pointer type [-Wincompatible-pointer-types]
+  743 |         sySchedulerAddPausedQueue(sSYSchedulerCurrentTaskGfx);
+      |                                   ^~~~~~~~~~~~~~~~~~~~~~~~~~
+      |                                   |
+      |                                   SYTaskGfx *
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/scheduler.c:300:44: note: expected 'SYTaskInfo *' but argument is of type 'SYTaskGfx *'
+  300 | void sySchedulerAddPausedQueue(SYTaskInfo *this_info)
+      |                                ~~~~~~~~~~~~^~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/scheduler.c: In function 'sySchedulerExecuteTask':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/scheduler.c:777:9: warning: unused variable 'unused' [-Wunused-variable]
+  777 |     s32 unused[4]; // required to match
+      |         ^~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/scheduler.c: In function 'sySchedulerExecuteTasksAll':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/scheduler.c:1011:42: warning: passing argument 1 of 'sySchedulerRemovePausedQueue' from incompatible pointer type [-Wincompatible-pointer-types]
+ 1011 |             sySchedulerRemovePausedQueue(sSYSchedulerPausedQueueHead);
+      |                                          ^~~~~~~~~~~~~~~~~~~~~~~~~~~
+      |                                          |
+      |                                          SYTaskGfx *
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/scheduler.c:330:47: note: expected 'SYTaskInfo *' but argument is of type 'SYTaskGfx *'
+  330 | void sySchedulerRemovePausedQueue(SYTaskInfo *this_info)
+      |                                   ~~~~~~~~~~~~^~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/scheduler.c: In function 'sySchedulerVRetrace':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/scheduler.c:1052:18: warning: suggest braces around empty body in an 'if' statement [-Wempty-body]
+ 1052 |         if (temp);
+      |                  ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/scheduler.c: In function 'sySchedulerSpTaskDone':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/scheduler.c:1075:43: warning: passing argument 1 of 'sySchedulerAddPausedQueue' from incompatible pointer type [-Wincompatible-pointer-types]
+ 1075 |                 sySchedulerAddPausedQueue(sSYSchedulerCurrentTaskGfx);
+      |                                           ^~~~~~~~~~~~~~~~~~~~~~~~~~
+      |                                           |
+      |                                           SYTaskGfx *
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/scheduler.c:300:44: note: expected 'SYTaskInfo *' but argument is of type 'SYTaskGfx *'
+  300 | void sySchedulerAddPausedQueue(SYTaskInfo *this_info)
+      |                                ~~~~~~~~~~~~^~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/scheduler.c:1092:51: warning: comparison of integer expressions of different signedness: 's32' {aka 'long int'} and 'u64' {aka 'long long unsigned int'} [-Wsign-compare]
+ 1092 |                 if (sSYSchedulerRdpOutputBufferID < sSYSchedulerRdpCache)
+      |                                                   ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/scheduler.c: In function 'sySchedulerDpFullSync':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/scheduler.c:1164:42: warning: passing argument 1 of 'sySchedulerRemovePausedQueue' from incompatible pointer type [-Wincompatible-pointer-types]
+ 1164 |             sySchedulerRemovePausedQueue(sSYSchedulerPausedQueueHead);
+      |                                          ^~~~~~~~~~~~~~~~~~~~~~~~~~~
+      |                                          |
+      |                                          SYTaskGfx *
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/scheduler.c:330:47: note: expected 'SYTaskInfo *' but argument is of type 'SYTaskGfx *'
+  330 | void sySchedulerRemovePausedQueue(SYTaskInfo *this_info)
+      |                                   ~~~~~~~~~~~~^~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/scheduler.c: In function 'sySchedulerThreadMain':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/scheduler.c:1198:34: warning: assignment to 'SYTaskAudio *' from incompatible pointer type 'SYTaskGfx *' [-Wincompatible-pointer-types]
+ 1198 |     sSYSchedulerCurrentTaskAudio =
+      |                                  ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/scheduler.c:1197:32: warning: assignment to 'SYTaskGfx *' from incompatible pointer type 'SYTaskAudio *' [-Wincompatible-pointer-types]
+ 1197 |     sSYSchedulerCurrentTaskGfx =
+      |                                ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/scheduler.c:1196:31: warning: assignment to 'SYTaskInfo *' from incompatible pointer type 'SYTaskGfx *' [-Wincompatible-pointer-types]
+ 1196 |     sSYSchedulerMainQueueTail =
+      |                               ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/scheduler.c:1291:37: warning: passing argument 1 of 'sySchedulerPrepTask' makes pointer from integer without a cast [-Wint-conversion]
+ 1291 |                 sySchedulerPrepTask(mesg);
+      |                                     ^~~~
+      |                                     |
+      |                                     s32 {aka long int}
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/scheduler.c:1170:38: note: expected 'SYTaskInfo *' but argument is of type 's32' {aka 'long int'}
+ 1170 | void sySchedulerPrepTask(SYTaskInfo *task)
+      |                          ~~~~~~~~~~~~^~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/scheduler.c:1188:34: warning: unused parameter 'arg' [-Wunused-parameter]
+ 1188 | void sySchedulerThreadMain(void *arg)
+      |                            ~~~~~~^~~
+In file included from D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_sys_controller.c:37:
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/controller.c: In function 'syControllerThreadMain':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/controller.c:451:35: warning: unused parameter 'unused' [-Wunused-parameter]
+  451 | void syControllerThreadMain(void *unused)
+      |                             ~~~~~~^~~~~~
+battleship_sys_sintable.c
+video_bootstrap.c
+battleship_libultra_gu_normalize.c
+battleship_sys_matrix.c
+battleship_libultra_gu_mtxcatf.c
+battleship_scmanager.c
+battleship_mnstartup.c
+scene_backend.c
+scene_harness.c
+In file included from D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_sys_matrix.c:3:
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/matrix.c: In function 'syMatrixPerspFastF':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/matrix.c:580:9: warning: unused variable 'unused' [-Wunused-variable]
+  580 |     s32 unused[4];
+      |         ^~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/matrix.c: In function 'syMatrixPerspF':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/matrix.c:660:9: warning: unused variable 'unused2' [-Wunused-variable]
+  660 |     s32 unused2;
+      |         ^~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/matrix.c:656:9: warning: unused variable 'unused1' [-Wunused-variable]
+  656 |     s32 unused1;
+      |         ^~~~~~~
+In file included from D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/objtypes.h:4,
+                 from D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/obj.h:4,
+                 from D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/lb/lbtypes.h:5,
+                 from D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/lb/library.h:4,
+                 from D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/matrix.c:1:
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/matrix.c: In function 'syMatrixTra':
+D:/Stuff/DevFolder/Smash64DS_Port/include/macros.h:89:40: warning: result of '65536 << 16' requires 34 bits to represent, but 'long int' only has 32 bits [-Wshift-overflow=]
+   89 | #define COMBINE_FRACTIONAL(a, b) (((a) << 16) | ((b) & 0xffff))
+      |                                   ~~~~~^~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/matrix.c:823:18: note: in expansion of macro 'COMBINE_FRACTIONAL'
+  823 |     m->m[2][0] = COMBINE_FRACTIONAL(FTOFIX32(1.0F), FTOFIX32(0.0F));
+      |                  ^~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/include/macros.h:89:40: warning: result of '65536 << 16' requires 34 bits to represent, but 'long int' only has 32 bits [-Wshift-overflow=]
+   89 | #define COMBINE_FRACTIONAL(a, b) (((a) << 16) | ((b) & 0xffff))
+      |                                   ~~~~~^~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/matrix.c:838:18: note: in expansion of macro 'COMBINE_FRACTIONAL'
+  838 |     m->m[3][1] = COMBINE_FRACTIONAL(FTOFIX32(1.0F), FTOFIX32(0.0F));
+      |                  ^~~~~~~~~~~~~~~~~~
+In file included from D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_scmanager.c:6:
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sc/scmanager.c: In function 'ndsBaseSCManagerRunLoop':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sc/scmanager.c:816:28: warning: unused parameter 'arg' [-Wunused-parameter]
+  816 | void scManagerRunLoop(sb32 arg)
+      |                       ~~~~~^~~
+In file included from C:/devkitPro/libnds/include/nds/ndstypes.h:36,
+                 from C:/devkitPro/libnds/include/nds/arm9/cache.h:39,
+                 from D:/Stuff/DevFolder/Smash64DS_Port/src/port/scene_backend.c:6:
+C:/devkitPro/calico/include/calico/types.h:116:5: warning: '__cplusplus' is not defined, evaluates to '0' [-Wundef]
+  116 | #if __cplusplus >= 201402L
+      |     ^~~~~~~~~~~
+C:/devkitPro/calico/include/calico/types.h:127:5: warning: '__cplusplus' is not defined, evaluates to '0' [-Wundef]
+  127 | #if __cplusplus >= 201103L
+      |     ^~~~~~~~~~~
+In file included from D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_mnstartup.c:2:
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mncommon/mnstartup.c:30:1: warning: missing braces around initializer [-Wmissing-braces]
+   30 | {
+      | ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mncommon/mnstartup.c: In function 'mnStartupActorFuncRun':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mncommon/mnstartup.c:158:34: warning: unused parameter 'gobj' [-Wunused-parameter]
+  158 | void mnStartupActorFuncRun(GObj *gobj)
+      |                            ~~~~~~^~~~
+In file included from D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend.c:890,
+                 from D:/Stuff/DevFolder/Smash64DS_Port/src/port/scene_backend.c:77:
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_renderer_dl.c: In function 'ndsRendererAdapterMaterialAnimHash':
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_renderer_dl.c:9778:21: warning: dereferencing type-punned pointer will break strict-aliasing rules [-Wstrict-aliasing]
+ 9778 |     hash = (hash ^ *(const u32 *)(const void *)&mobj->lfrac) * 16777619u;
+      |                     ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_renderer_dl.c:9779:21: warning: dereferencing type-punned pointer will break strict-aliasing rules [-Wstrict-aliasing]
+ 9779 |     hash = (hash ^ *(const u32 *)(const void *)&mobj->palette_id) * 16777619u;
+      |                     ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_renderer_dl.c: In function 'ndsFighterDisplayContractSubmit':
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_renderer_dl.c:16774:29: warning: variable 'owner_id' set but not used [-Wunused-but-set-variable]
+16774 |     NDSRendererProfileOwner owner_id;
+      |                             ^~~~~~~~
+In file included from D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend.c:893:
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_movement.c: In function 'ndsFighterJumpAttackAirProbeDirections':
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_movement.c:3095:35: warning: comparison of integer expressions of different signedness: 'u32' {aka 'long unsigned int'} and 'long int' [-Wsign-compare]
+ 3095 |             (fp->motion_attack_id ==
+      |                                   ^~
+In file included from D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend.c:902:
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c: In function 'ndsFighterDashRunProbeDamageInvincibleGate':
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:8384:26: warning: comparison of integer expressions of different signedness: 'u32' {aka 'long unsigned int'} and 's32' {aka 'long int'} [-Wsign-compare]
+ 8384 |     if ((fp->hitlag_tics == saved_hitlag_tics) &&
+      |                          ^~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c: In function 'ndsFighterMarioFoxStageMPLiveHitDamageLoopRunShieldStatProof':
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:12218:49: warning: comparison of integer expressions of different signedness: 'u32' {aka 'long unsigned int'} and 's32' {aka 'long int'} [-Wsign-compare]
+12218 |     if ((hitlag > 0) && (victim_fp->hitlag_tics == hitlag))
+      |                                                 ^~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:12305:33: warning: comparison of integer expressions of different signedness: 'u32' {aka 'long unsigned int'} and 's32' {aka 'long int'} [-Wsign-compare]
+12305 |         (victim_fp->hitlag_tics == shield_break_hitlag) &&
+      |                                 ^~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c: In function 'ndsFighterDashRunStepAttackDamageProcParams':
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:17115:49: warning: comparison of integer expressions of different signedness: 'u32' {aka 'long unsigned int'} and 's32' {aka 'long int'} [-Wsign-compare]
+17115 |         (attack_hitlag > 0) && (fp->hitlag_tics == attack_hitlag) &&
+      |                                                 ^~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:17155:26: warning: comparison of integer expressions of different signedness: 'u32' {aka 'long unsigned int'} and 's32' {aka 'long int'} [-Wsign-compare]
+17155 |         (fp->hitlag_tics == attack_shield_hitlag) &&
+      |                          ^~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:17218:50: warning: comparison of integer expressions of different signedness: 'u32' {aka 'long unsigned int'} and 's32' {aka 'long int'} [-Wsign-compare]
+17218 |     if ((rebound_hitlag > 0) && (fp->hitlag_tics == rebound_hitlag))
+      |                                                  ^~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:17292:33: warning: comparison of integer expressions of different signedness: 'u32' {aka 'long unsigned int'} and 's32' {aka 'long int'} [-Wsign-compare]
+17292 |         (target_fp->hitlag_tics == shield_damage_hitlag) &&
+      |                                 ^~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:17357:33: warning: comparison of integer expressions of different signedness: 'u32' {aka 'long unsigned int'} and 's32' {aka 'long int'} [-Wsign-compare]
+17357 |         (target_fp->hitlag_tics == shield_break_hitlag) &&
+      |                                 ^~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:17631:33: warning: comparison of integer expressions of different signedness: 'u32' {aka 'long unsigned int'} and 's32' {aka 'long int'} [-Wsign-compare]
+17631 |     if ((target_fp->hitlag_tics == hitlag) &&
+      |                                 ^~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c: At top level:
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:18635:13: warning: 'ndsFighterMarioFoxRecordStubFighter' defined but not used [-Wunused-function]
+18635 | static void ndsFighterMarioFoxRecordStubFighter(FTDesc *desc,
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:18462:14: warning: 'ndsFighterMarioFoxMakeFighter' defined but not used [-Wunused-function]
+18462 | static GObj *ndsFighterMarioFoxMakeFighter(FTDesc *desc)
+      |              ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:17738:13: warning: 'ndsFighterDashRunProbeAttackRecordCarry' defined but not used [-Wunused-function]
+17738 | static void ndsFighterDashRunProbeAttackRecordCarry(FTStruct *fp)
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:17668:13: warning: 'ndsFighterDashRunStepAttackCollFighterRange' defined but not used [-Wunused-function]
+17668 | static sb32 ndsFighterDashRunStepAttackCollFighterRange(FTStruct *fp,
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:17016:13: warning: 'ndsFighterDashRunStepAttackDamageProcParams' defined but not used [-Wunused-function]
+17016 | static sb32 ndsFighterDashRunStepAttackDamageProcParams(FTStruct *fp,
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:16915:13: warning: 'ndsFighterDashRunStepAttackDamageHitStats' defined but not used [-Wunused-function]
+16915 | static sb32 ndsFighterDashRunStepAttackDamageHitStats(FTStruct *fp,
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:16398:13: warning: 'ndsFighterDashRunStepAttackDamageHitLog' defined but not used [-Wunused-function]
+16398 | static sb32 ndsFighterDashRunStepAttackDamageHitLog(FTStruct *fp,
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:16330:13: warning: 'ndsFighterDashRunStepAttackDamageRecord' defined but not used [-Wunused-function]
+16330 | static sb32 ndsFighterDashRunStepAttackDamageRecord(FTStruct *fp,
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:16213:13: warning: 'ndsFighterDashRunStepAttackDamageCollide' defined but not used [-Wunused-function]
+16213 | static sb32 ndsFighterDashRunStepAttackDamageCollide(FTStruct *fp,
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:12861:13: warning: 'ndsGMCollisionCheckFighterAttackShieldCollideSelected' defined but not used [-Wunused-function]
+12861 | static sb32 ndsGMCollisionCheckFighterAttackShieldCollideSelected(
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:12838:13: warning: 'ndsGMCollisionCheckFighterAttacksCollideSelected' defined but not used [-Wunused-function]
+12838 | static sb32 ndsGMCollisionCheckFighterAttacksCollideSelected(
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:12739:13: warning: 'ndsFighterDashRunStepAttackDamageRectangle' defined but not used [-Wunused-function]
+12739 | static sb32 ndsFighterDashRunStepAttackDamageRectangle(FTStruct *fp,
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:12460:13: warning: 'ndsFighterDashRunStepAttackCollInterpolate' defined but not used [-Wunused-function]
+12460 | static sb32 ndsFighterDashRunStepAttackCollInterpolate(FTStruct *fp,
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:12381:13: warning: 'ndsFighterDashRunStepAttackCollPosition' defined but not used [-Wunused-function]
+12381 | static sb32 ndsFighterDashRunStepAttackCollPosition(FTStruct *fp,
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:12366:13: warning: 'ndsFighterDashRunShouldWriteBackAttackPosition' defined but not used [-Wunused-function]
+12366 | static sb32 ndsFighterDashRunShouldWriteBackAttackPosition(
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c:12359:12: warning: 'ndsFTMotionSignExtend' defined but not used [-Wunused-function]
+12359 | static s32 ndsFTMotionSignExtend(u32 value, u32 bits)
+      |            ^~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_movement.c:11877:13: warning: 'ndsFighterNaturalSpecialsApplyInput' defined but not used [-Wunused-function]
+11877 | static sb32 ndsFighterNaturalSpecialsApplyInput(FTStruct *fp[2],
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_movement.c:11749:13: warning: 'ndsFighterNaturalMovesetApplyInput' defined but not used [-Wunused-function]
+11749 | static sb32 ndsFighterNaturalMovesetApplyInput(FTStruct *fp[2],
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In file included from D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend.c:887:
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_fighter_model.c:1766:13: warning: 'ndsFighterMarioFoxSetupManagerFiles' defined but not used [-Wunused-function]
+ 1766 | static void ndsFighterMarioFoxSetupManagerFiles(void)
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In file included from D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend.c:881:
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_compat_shims.c:608:13: warning: 'sNdsFTManagerPartsAllocInit' defined but not used [-Wunused-variable]
+  608 | static sb32 sNdsFTManagerPartsAllocInit;
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_compat_shims.c:607:17: warning: 'sNdsFTManagerPartsAllocFree' defined but not used [-Wunused-variable]
+  607 | static FTParts *sNdsFTManagerPartsAllocFree;
+      |                 ^~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_compat_shims.c:606:16: warning: 'sNdsFTManagerPartsAllocPool' defined but not used [-Wunused-variable]
+  606 | static FTParts sNdsFTManagerPartsAllocPool[64];
+      |                ^~~~~~~~~~~~~~~~~~~~~~~~~~~
+linking smash64ds-battle-playable-tickhud-hwtri.elf
+C:/devkitPro/devkitARM/bin/../lib/gcc/arm-none-eabi/15.2.0/../../../../arm-none-eabi/bin/ld.exe: warning: C:/devkitPro/devkitARM/bin/../lib/gcc/arm-none-eabi/15.2.0/thumb/crtn.o: missing .note.GNU-stack section implies executable stack
+C:/devkitPro/devkitARM/bin/../lib/gcc/arm-none-eabi/15.2.0/../../../../arm-none-eabi/bin/ld.exe: NOTE: This behaviour is deprecated and will be removed in a future version of the linker
+Nintendo DS rom tool 2.3.1 - Jan  8 2024
+by Rafael Vuijk, Dave Murphy, Alexei Karpenko
+built ... smash64ds-battle-playable-tickhud-hwtri.nds
