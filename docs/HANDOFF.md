@@ -57,7 +57,10 @@ the 395,863 excursion and its ceiling **207,104 is 2.07x the 100,100 gap — the
 reachable inside `SRC` alone**. `SITR` 83,712 is the largest leaf lane, `SHDT` 51,584 the
 sharpest presence (13.17x on a 4,416 median). **`SCPU` +252%, `SPRM` +274%, `SPHD` +158%
 vs the Boundary table — the wrong arm ran ONE CPU; `FTR` is 8,512, not 0.** `MISC`/`AUD`
-shrank and c125's ceilings are dead. **NEXT CUT IS SPECIFIED — `…/SITR_NEXT_CUT.md`.**
+shrank and c125's ceilings are dead. **`SITR_NEXT_CUT.md`'S CUT IS REFUTED, no build spent —
+`…/2026-08-13_sitr-aobj-layout/`.** ONE line fill per visited `AObj` serves offsets 0–28
+(`ndsR2AnimValueQ` re-reads `kind` at **1.00 cyc/insn**), so a dense header array only MIGRATES
+it: best **−6,758/frame** vs the 8,544 floor. ANY layout ceiling, dense bank at PLAY: **10,491**.
 
 **THE BIGGEST LEVER IS PLACEMENT.** Memory stall is **1,236,685,107 cycles,
 33.8% of the match** ≈ 386,000 tk/frame — an order of magnitude past `SINT` or
@@ -95,7 +98,7 @@ memoization/hoisting/reuse/deletion only.
   table (31), AObj walk and dispatch all under the floor. **Slice 41 spent the last
   lever**: 30 Hz poses cost **+7,040** *and* diverged the match (damage 130/51 vs
   33/65). **Don't blanket-convert `ndsBaseGcPlayMObjMatAnim`** — 5 tracks pack
-  0xRRGGBBAA in f32. STRUCTURAL cuts are NOT closed.
+  0xRRGGBBAA in f32. STRUCTURAL LAYOUT cuts closed 2026-08-13; call count is the lever.
 - **The 20.12 kernels' ARITHMETIC (slice 42)** — sub-floor and non-additive. **The
   local-matrix memo is dead twice.** **The flower rigid-mask prices +3,200, wrong
   sign.** **The token→asset_id MEMO is dead** (Task 74). **Six more lanes closed by
