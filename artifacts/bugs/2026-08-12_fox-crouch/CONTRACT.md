@@ -4,8 +4,9 @@ Bug (verbatim): *"Fox's muzzle flash and laser still spawning at the wrong Y
 relative to pistol model. i cannot duck the beam as mario, also check pistol
 beam collision maybe have to make it thinner after adjusting height?"*
 
-Stage: **LOCALIZED (gameplay half: no divergence found)** — the visual half is
-not yet measured.
+Stage: **BLOCKED(decision: accept the source's 23.65-unit beam sag below the
+bore, or approve a presentation-only offset)**. Gameplay half: no divergence.
+Visual half: measured in world units, source-exact — `BEAM_QUAD_ANCHOR.md`.
 
 Candidate: `builds/build-c142-crouchprobe`,
 `smash64ds-battle-playable-tickhud-hwtri.nds`, branch `codex/r2-runtime2`,
@@ -226,21 +227,47 @@ refuted**: spawn position, attack radius, hurtboxes, camera, composition,
 attachment, pose phase, and model offset. No divergence from BattleShip
 remains to fix, so this row cannot be closed by an implementation.
 
-Unexamined, and the only candidates left — both about the QUAD rather than its
-position: `ndsRendererSubmitFoxBlasterQuad` receives `scale_x = 6.333`,
-`scale_y = 1.0` (`sx=0x40caaaab sy=0x3f800000`), and nothing here checked the
-quad's vertical ANCHOR (centre vs edge) or those scales against the source
-particle's own size. A half-height anchor error would read as "wrong Y" while
-every position above stays source-exact.
+## The QUAD lane — closed 2026-08-13, source-exact, see `BEAM_QUAD_ANCHOR.md`
+
+The last candidate was the quad rather than its position: `scale_x = 6.333`,
+`scale_y = 1.0` (`sx=0x40caaaab sy=0x3f800000`) with the vertical ANCHOR
+(centre vs edge) unchecked. **Both are now read from source and both match.**
+
+- relocData 316's four `Vtx` are `(0,+24,0) (0,−26,0) (−30,−26,0) (−30,+24,0)`,
+  so the quad **straddles** the projectile's Y (centre −1); it is not edge
+  anchored. Port `nds_renderer.c:14851-14880` builds exactly those.
+- `scale.y` is never written for this weapon — `wpfoxblaster.c:44-52` writes
+  only `scale.x` and creation leaves `dGCScaleDefault` (`objman.c:107`).
+  `scale.x` = 1.0 + 16/3 on the first update (`wpvars.h:9-10`), and
+  `30 × 16/3 = 160 = WPBLASTER_VEL_X` pins the tail at the muzzle.
+- The flash is centre-anchored in source too (`lbparticle.c:1769-1802`).
+
+What the source geometry *does* specify, from the published joint-17 matrix
+(`gNdsFoxSpawnWorldMtx` == `gNdsFoxGunWorldProbeFloatMtx`): the shot and the
+flash spawn at world y **223.398** while the gun's bore centre is at
+**247.049** — **23.651 units of sag**, with 63.8% of the 50-unit beam hanging
+below the 35.5-unit muzzle face. That relationship is BattleShip's own
+(spawn `(60,0,0)` from `ftfox.h:7`; gun Vtx unchanged; quad Vtx unchanged), and
+the pose multiplies both the gun and the shot, so it cannot separate them.
+
+**Row verdict: `BLOCKED(decision: …)`** — moving a source-exact telegraph is
+the owner's call, not an agent's. Alternatives and prices in
+`BEAM_QUAD_ANCHOR.md`.
 
 ## Not done / inherited
 
-- The **visual** half is unmeasured: whether the drawn gun, muzzle flash and
-  beam agree on screen with joint 17 (world y **231.915787**; muzzle
-  y **223.398254**). Instrument exists: `scripts/probe-fox-muzzle-alignment.ps1`
-  + `scripts/fox_muzzle_alignment.py`.
-- Whether Fox's **SquatWait/SpecialN joint-17 pose** matches source is the one
-  quantity above with no offline oracle yet.
+- The **visual** half is answered in world space (`BEAM_QUAD_ANCHOR.md`): gun,
+  flash and beam all hang off the same joint-17 matrix, and the only offset is
+  the source's own 23.651-unit sag. A screen-space pixel pair was NOT taken —
+  it would only re-measure a relationship already exact in world units.
+  Instruments if one is ever wanted: `scripts/probe-fox-muzzle-alignment.ps1`,
+  `scripts/fox_muzzle_alignment.py`, `scripts/fox_gun_screen_bounds.py`.
+- Whether Fox's **SquatWait/SpecialN joint-17 pose** matches source is still
+  the one quantity with no offline oracle. It is now known to be *unable* to
+  produce the reported symptom on its own: the pose multiplies the gun and the
+  shot alike.
+- Whether EFCommon script 0x62's `size` is a half-extent (the flash's peak
+  165) was not checked against a capture.
 - Mario's `anim_frame` reads **0.000000** in SquatWait at the hit; not yet
   checked against source SquatWait animation behavior.
 - Kirby's copied Fox blaster path (`230_KirbySpecial1.c` shares

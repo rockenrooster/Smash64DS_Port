@@ -6,6 +6,6 @@ These bugs should be fixed for P1 delivery:
 MEASURED: whole chain source-exact through matrix (kind 28 has Sca). No divergence. Needs owner: which motion?
 
 -Fox's muzzle flash and laser still spawning at the wrong Y relative to pistol model. i cannot duck the beam as mario, also check pistol beam collision maybe have to make it thinner after adjusting height?
-MEASURED: spawn/radius/hurtboxes/camera/model all source-exact. No divergence found; needs owner detail on symptom.
+BLOCKED(decision): beam quad source-exact; shot spawns 23.65 units below the bore in BattleShip too. Accept, or approve draw-only offset?
 
 -
