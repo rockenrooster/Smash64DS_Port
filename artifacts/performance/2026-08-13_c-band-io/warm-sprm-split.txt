@@ -1,0 +1,90 @@
+profile      artifacts\performance\2026-08-12_c123-rebank\profile-warm\arm9-profile.csv
+regions      1600 (region 0 dropped)
+basis        ticks = cycles / (2 x 1600) -- ARM9 is 2x the tick timer
+attributed   3,789,841,877 of 3,791,365,448 cycles (1,523,571 unmapped)
+non-idle     957,941 tk/frame mean
+
+alignment: profile non-idle vs the gate lane, by offset
+   offset  -3   r = -0.024
+   offset  -2   r = +0.060
+   offset  -1   r = -0.021
+   offset  +0   r = -0.010
+   offset  +1   r = +0.076   <- chosen
+   offset  +2   r = -0.045
+   offset  +3   r = -0.026
+   offset  +4   r = -0.008
+   offset  +5   r = +0.007
+
+=== gate SPRM >= 30,000 ===
+    20 frames in 20 runs | control 1580 frames
+    non-idle premium +220,210 tk/frame
+       +tk/fr    bandtk    ctltk    on    callsB   callsC  ratio  symbol
+       82,917   308,266  225,349    20      7.85     1.60    4.9  armWaitForIrq
+       14,981    16,442    1,461     9      8.10     1.03    7.8  armCopyMem32
+       12,086    33,410   21,325    20   2587.85  1675.17    1.5  __aeabi_fmul
+       11,992    42,890   30,899    20   2353.45  1694.82    1.4  __aeabi_fadd
+        8,258    21,304   13,045    20     98.30    99.00    1.0  memcpy
+        8,146    21,446   13,300    19     84.55    69.76    1.2  ndsR2FtAnimParseDObjFigatree
+        7,639     8,748    1,108     9    374.75    47.33    7.9  get_fat.isra.0
+        5,570     6,416      846    13      4.00     0.45    8.9  _svfiprintf_r
+        5,222     5,704      482    13      6.60     0.50   13.2  _vfiprintf_r
+        4,816     5,512      696     9      0.85     0.11    8.0  f_lseek
+        4,205     4,589      384    13      3.30     0.25   13.2  __ssvfiscanf_r
+        4,171    23,447   19,276    19    334.20   268.35    1.2  ndsR2AnimValueQ
+        3,952     4,283      331    13    102.30     7.75   13.2  consolePrintChar
+        3,655     4,191      536    13    101.75    12.95    7.9  __utf8_mbtowc
+        3,166     3,483      317    13      1.05     0.09   12.0  ndsAudioFgmPlayAtPan
+        2,955    23,482   20,527    19     84.55    69.78    1.2  gcPlayDObjAnimJoint
+        2,906     5,892    2,985    19     33.35    16.90    2.0  ndsR2AnimBuildTrackTable.constprop.0.isra.0
+        2,725     4,049    1,323    13      2.85     0.79    3.6  ndsRelocAssetIDForToken
+        2,619     3,695    1,076    13      0.70     0.20    3.5  battleship_ftMainSetStatus
+        2,447     4,453    2,006    19    289.95   122.60    2.4  ndsR2AnimAObjToQ
+        2,354     3,014      659    20     42.00     5.94    7.1  memmove
+        2,226     4,094    1,868    19    198.95    75.90    2.6  ndsR2AnimTargetValue.constprop.0
+        2,132     2,903      771    13     12.85     3.60    3.6  gcAddDObjAnimJoint
+        2,123     2,407      284     9      7.15     0.97    7.4  _dvmDiscCacheReadWrite
+        2,097     2,410      313    13    225.85    28.02    8.1  __getreent
+        1,917     3,475    1,557     2      0.45     0.21    2.1  ndsAObjEvent32NormalizeScript
+        1,911     2,569      658    13      7.70     2.06    3.7  func_ovl2_800ED490
+        1,871     2,542      671    15     10.95     2.85    3.8  gmCollisionTransformMatrixAll
+        1,781     1,940      159     9      2.75     0.22   12.3  armDCacheInvalidate
+        1,778     2,270      492    20     22.20     5.96    3.7  __udivsi3
+        1,706    12,791   11,084    20    213.95   188.05    1.1  __aeabi_fdiv
+        1,698     8,635    6,937    20     57.25    44.57    1.3  sqrtf
+        1,603    18,938   17,335    20     55.00    50.20    1.1  ndsRendererMtxMulAffine20p12
+        1,574     1,825      251    13     44.75     5.46    8.2  mutexLock
+        1,480     1,699      219     9    377.00    47.75    7.9  move_window
+        1,472     1,762      290    13     44.75     5.46    8.2  mutexUnlock
+        1,457     1,918      461    12      2.15     0.54    3.9  gmCollisionGetFighterPartsWorldPosition
+        1,432     1,599      168     9      0.95     0.52    1.8  armDCacheFlush
+        1,431    29,990   28,559    20      2.00     1.91    1.0  ndsFighterMarioFoxDLAllDrawForSlot.constprop.0
+        1,421     1,904      482    13      4.30     1.27    3.4  gmCollisionSetInvertMatrix
+
+--- controls: does the ranking survive only on ITS OWN mask? ---
+    overlap band vs profile-top-cost: 5 of 20 (chance 0.2)
+
+=== random mask (negative control) ===
+    20 frames in 20 runs | control 1580 frames
+    non-idle premium -39,798 tk/frame
+       +tk/fr    bandtk    ctltk    on    callsB   callsC  ratio  symbol
+        1,645    22,188   20,544    20     72.85    69.93    1.0  gcPlayDObjAnimJoint
+          790    20,107   19,318    20    280.25   269.03    1.0  ndsR2AnimValueQ
+          252    13,691   13,438    20     38.00    37.48    1.0  ndsRendererAdapterBuildFighterTraRotRpyDirect20p12
+          251     7,897    7,646    20      4.00     3.89    1.0  battleship_ftMainProcUpdateInterrupt
+          200       421      222     9      0.80     0.43    1.8  ftCommonGroundCheckInterrupt
+          198     4,756    4,558    20      4.00     3.89    1.0  ftMainProcPhysicsMap
+          180     8,457    8,277    20     11.10    10.89    1.0  gcPlayAnimAll
+          176    10,843   10,666    20      4.15     4.10    1.0  ftParamUpdateAnimKeys
+
+=== profile's own top-N by cost ===
+    20 frames in 19 runs | control 1580 frames
+    non-idle premium +584,091 tk/frame
+       +tk/fr    bandtk    ctltk    on    callsB   callsC  ratio  symbol
+      143,947   368,533  224,586    20     14.70     1.51    9.7  armWaitForIrq
+       50,085    62,608   12,523    20    739.95    90.88    8.1  memcpy
+       34,083    64,706   30,622    20   3457.05  1680.85    2.1  __aeabi_fadd
+       31,544    52,626   21,082    20   3993.35  1657.38    2.4  __aeabi_fmul
+       30,734    31,998    1,264    18     16.70     0.93   18.0  armCopyMem32
+       26,667    26,667        0     1      0.30     0.00    inf  ndsDrawSObjIntoPreview
+       24,333    24,333        0     1      0.05     0.00    inf  ndsPlatformCommitOriginalSpritePreviewLayer
+       21,216    35,077   13,861    20    153.20    93.90    1.6  memset

@@ -4990,6 +4990,15 @@ falsifiable and should be checked against the arena fix rather than assumed.
 
 ### ★★ CONFIRMED: the anim arena saturates at 99.85% and 38 in-use assets are refused
 
+> **SUPERSEDED 2026-08-13 — slice 46 fixed it; do not re-open.** The c123 bank reads
+> `ArenaUsedBytes` **192,240 of 262,144**, `Overflows` **0**, `Rejects` **0**, `Misses` **2**
+> (`artifacts/performance/2026-08-12_c123-rebank/SLICE46.md`): replacing the drifted warm list
+> with the measured 87 ids SHRANK the arena by 64,960 B and the refusals went away with it.
+> The 38 below is a dead counter on `build-c118-gate`, and it is **not** the `SHDT` band's 38
+> runs (38 engagements) — the resemblance is coincidence, checked and closed in
+> `artifacts/performance/2026-08-13_c-band-io/BAND_IO_OWNER.md` §4, which also shows the
+> in-match FAT traffic is BGM packets plus the SOUND-EFFECT pack read, not the anim cache.
+
 End-of-match counters, banked gate build `builds/build-c118-gate`, one-minute
 both-CPU match, `-ExtraGlobals` (no rebuild —
 `artifacts/performance/2026-08-11_c118-lane/anim-cache-counters.json`):

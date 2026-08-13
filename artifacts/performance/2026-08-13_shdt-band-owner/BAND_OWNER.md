@@ -202,6 +202,17 @@ today:
 
 ## 5. `SPRM`'s half of the co-fire is a DIFFERENT owner
 
+> **CORRECTED 2026-08-13 — this section names the wrong loader.** It splits
+> `build-c123-profile`, which is **before slice 46**, so its `f_read` ×20.9 /
+> `ndsRelocNormalizeFighterAObj16File` ×4.5 are the 30 unwarmed animations slice
+> 46 then eliminated (misses 32 → 2). Re-split on the post-slice-46 profile, the
+> file-I/O half of the band is the **sound-effect pack read**
+> `ndsAudioFgmPlayAtPan` does when its 8-slot cache misses — 91 of 91 non-BGM
+> I/O frames carry an FGM play, 0 exceptions, against 25.1% for the status
+> change — and the animation path prices **+0**. Numbers, partition and the
+> refutation as a lever (−12,736, worst-case bound −13,580, both under 16,000):
+> `../2026-08-13_c-band-io/BAND_IO_OWNER.md`. §1–§4 above are unaffected.
+
 Splitting the same profile on the gate's `SPRM` column instead
 (`sprm-split.txt`, 20 frames over 30,000) gives a completely different table:
 `f_read` x20.9 (leaf work **+11,284** tk/frame), `_read_r` x20.0, `f_lseek`

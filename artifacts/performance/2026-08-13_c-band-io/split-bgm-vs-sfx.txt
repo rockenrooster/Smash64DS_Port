@@ -1,0 +1,41 @@
+source   profile artifacts/performance/2026-08-12_c123-rebank/profile-warm/ (build-c124-profile,
+         BOTH_CPU 1, NDS_TICK_HUD_DRAW 0, regions=1601, POST-slice-46)
+         gate    artifacts/performance/2026-08-12_c130-fire-gate/c130-gate-rows.csv (current code)
+basis    ticks = cycles / (2 x 1600); profile region i+1 <-> gate row i
+
+== the whole in-match file-I/O population, partitioned ==
+                        frames  runs      fat cyc   tk/fr  seek%  armCopyMem32  get_fat  f_lseek  f_read
+BGM packet reads            76    76    5,153,422   1,610    77%     2,511,512   44,817       67     257
+FGM (SFX) loads             91    89    4,782,140   1,494    74%     2,762,206   37,467      117     300
+TOTAL                      167   156    9,935,562   3,105    76%     5,273,718   82,284      184     557
+
+get_fat per f_lseek, whole match: 447   f_lseek cost 13,159 cyc/call
+
+== the discriminator: which event owns the non-BGM half ==
+  ndsAudioFgmPlayAtPan                 on   128 frames |   91 carry SFX I/O ( 71.1%) | SFX-I/O frames WITHOUT it:   0
+  battleship_ftMainSetStatus           on   263 frames |   66 carry SFX I/O ( 25.1%) | SFX-I/O frames WITHOUT it:  25
+  lbCommonAddFighterPartsFigatree      on   257 frames |   66 carry SFX I/O ( 25.7%) | SFX-I/O frames WITHOUT it:  25
+  ndsRelocAssetIDForToken              on   257 frames |   66 carry SFX I/O ( 25.7%) | SFX-I/O frames WITHOUT it:  25
+  ndsR2AnimCacheFind                   on   257 frames |   66 carry SFX I/O ( 25.7%) | SFX-I/O frames WITHOUT it:  25
+  ndsRelocNormalizeFighterAObj16File   on   257 frames |   66 carry SFX I/O ( 25.7%) | SFX-I/O frames WITHOUT it:  25
+
+== gate placement: why the lane saturates ==
+  baseline rank-80 (P95) 1,220,480; the rank-80 frame carries 0 tk of file I/O
+  BGM: 76 frames, 4 inside the top 80, median gate rank 744; I/O+copy median 54,057 tk max 216,883
+  SFX: 91 frames, 33 inside the top 80, median gate rank 149; I/O+copy median 29,224 tk max 228,298
+  top-80 gate frames carrying ANY file I/O: 37 of 80
+  gate SHDT>=30,000 band = 88 frames in 38 runs; 18 carry SFX I/O, 6 carry BGM I/O
+
+== P95 arithmetic (subtract from the aligned gate frame, re-take rank 80) ==
+  FGM loads eliminated (preload/residency)           -12,736   worst-case pairing   -13,580
+  FGM loads, seek+read only (no payload copy)         -7,104   worst-case pairing    -9,350
+  FGM seek walk only                                  -3,648   worst-case pairing    -4,476
+  seek walk, both halves                              -5,843   worst-case pairing   -26,512
+  ALL file I/O, no payload copy                       -8,153   worst-case pairing   -37,666
+  ALL file I/O + payload copy  (LANE SATURATION)     -19,648   worst-case pairing   -51,899
+  FGM preload + BGM seek walk                        -19,264   worst-case pairing   -31,334
+
+== the pack, from assets/audio/fgm_phase_pack_ima.bin ==
+  88 entries, 938,996 bytes; sample data 942,272 B, mean 10,708, median 6,904
+  cache is 204,800 B in 8 fixed slots (53,248 / 3x28,672 / 4x16,384) -- 51 of 88 entries fit packed smallest-first
+  envelope region is only 256 B over 9 entries

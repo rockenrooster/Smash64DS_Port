@@ -49,10 +49,10 @@ own RGBA(219,0,134) — not a debug quad and not the gun.
 `analyze-tick-hud-excursion.ps1 -Ceilings` emits both tables now). `SRC` owns **84.4%** of the
 395,863 excursion; `SITR` 83,712 is the largest leaf lane, `SHDT` 51,584 the sharpest presence
 (13.17x on a 4,416 median). `SCPU`/`SPRM`/`SPHD` are 2.5–3.7x the Boundary table — the wrong
-arm ran ONE CPU. c125's ceilings are dead. **`SITR_NEXT_CUT.md`'S CUT IS REFUTED, no build
-spent (`…/2026-08-13_sitr-aobj-layout/`)**: ONE line fill per visited `AObj` serves offsets
-0–28, so a dense header array only MIGRATES it. **NEXT CUT: `…/2026-08-13_c-residue/
-RESIDUE.md` — NO lever predicts ≥16,000; §0 corrects all sizing, §4 row 1 the named band.**
+arm ran ONE CPU. c125's ceilings are dead. **`SITR_NEXT_CUT.md`'S CUT IS REFUTED, no build spent
+(`…/2026-08-13_sitr-aobj-layout/`)**: ONE line fill per visited `AObj` serves offsets 0–28, so a
+dense header array only MIGRATES it. **NEXT CUT: `…/2026-08-13_c-residue/RESIDUE.md` — NO lever
+predicts ≥16,000; §0 corrects all sizing, §4 row 1 the named band, §5 the 18,675 of apparatus.**
 
 **A PROFILE CYCLE IS HALF A TICK.** `ticks/frame = cycles / (2 × regions)`: regions P50
 2,240,838 cyc = 2.0001× two VBlanks, and `cycles/2` reproduces the gate arm's `ALL` histogram.
@@ -138,15 +138,15 @@ local-matrix memo, **DO-NOT-RETRY, killed twice**. **`SINT` is the fighter INTER
 with `SCPU` nested, not an animation bucket** — reading it as one mis-attributed an A/B in
 c119. **Zero-copy force-load is closed:** `ftmain.c:4623` DISCARDS the return value.
 
-**`SHDT` IS CLOSED — the band is NAMED, and its bar is 47,424 tk/fr, not −26.6%.** Search side:
-`ftmain.c:3076`'s `k == 0` rejects ≥94.68% of the 6,232 pair evaluations, ≥97.09% never reach
-geometry, whole path 2,666 tk/fr (`…/2026-08-13_shdt-broadphase/`). **A GATE LANE COLUMN IS A
-MASK FOR THE PROFILE** — `analyze-profile-region-split.py`, 26 s, no build, and it named the
-88-frame band as the surviving 5.31%'s TRANSFORM CHAIN (`…_shdt-band-owner/BAND_OWNER.md`):
-`gmCollisionCheckFighterAttackDamageCollide` **x44** drives `func_ovl2_800ED490` x10.2 and
-`SetInvertMatrix` x10.4 — **+67,230 tk/fr, 42.3% of the band, 65% soft float**. **Nothing to
-memoise** (4 dirty flags = one computation per joint per frame); a band-only cut saturates at
-**78,016**, so 16,000 needs 35% of the chain — fixed point only. **`SPRM`'s x26 is the LOAD.**
+**`SHDT` IS CLOSED — bar 47,424 tk/fr, not −26.6%: the band is the transform chain, four dirty
+flags so nothing to memoise, band-only cuts saturate at 78,016, fixed point only**
+(`…/2026-08-13_shdt-{broadphase,band-owner}/`, RESIDUE §4 row 1). **Its file-I/O co-fire is closed
+too** (`…/2026-08-13_c-band-io/`): the **SOUND-EFFECT load, not the animation one** — that reading
+was **pre-slice-46**, anim now prices **+0** — 76 BGM-packet frames + 91 `ndsAudioFgmPlayAtPan`
+8-slot misses, **0 exceptions**, worth **−12,736** (**−13,580** worst case), lane saturates
+−19,648, rank-80 carries **zero** I/O, residency impossible (942,272 B of cues vs 204,800 B).
+**A GATE LANE IS A MASK FOR THE PROFILE; a MECHANISM NEEDS NO MASK** — sum it over the region axis
+(`analyze-io-lane-series.py`) and read its alignment-free **worst-case-pairing** bound first.
 
 **Do not bring a micro-fix** — R2-06 E11: a load-frame-only ~8,000 cannot be banked. Clear
 ~16,000 in one change, or **use the `.data` route on ONE binary** (only if the change cannot

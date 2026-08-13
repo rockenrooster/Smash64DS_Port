@@ -1,0 +1,75 @@
+regions      1600
+basis        ticks = cycles / (2 x 1600) -- ARM9 is 2x the tick timer
+gate         artifacts/performance/2026-08-12_c130-fire-gate/c130-gate-rows.csv lane WORK-H, 1600 rows, rank-80 1,220,480
+
+=== FAT-IO ===  (19 symbols)
+  whole-match            9,935,562 cyc =     3,105 tk/frame mean
+  calls                    180,205 total =     112.6 /frame
+  present on         167 of 1600 regions in 156 runs
+  when present     mean    29,747 tk  median    36,706  max   121,029 tk
+  top regions (region:ticks(calls)):
+   1227:121,029(4244)  795:120,360(4273)  1402:100,889(3897)  446:88,152(3657)  281:87,389(3657)  396:86,872(3738)  539:86,835(3638)  11:82,397(3349)  561:75,330(2452)  605:72,709(2529)  1401:60,789(2343)  1556:60,122(2351)
+  P95 if removed                1,212,327   delta    -8,153   (aligned, offset +1)
+  P95 worst-case pairing        1,182,814   delta   -37,666   (needs no alignment)
+
+=== SEEK-WALK ===  (7 symbols)
+  whole-match            7,526,199 cyc =     2,352 tk/frame mean
+  calls                    166,870 total =     104.3 /frame
+  present on         167 of 1600 regions in 156 runs
+  when present     mean    22,534 tk  median    30,006  max    89,508 tk
+  top regions (region:ticks(calls)):
+   795:89,507(3936)  1227:87,576(3898)  1402:80,060(3664)  396:76,179(3614)  281:75,148(3504)  446:74,719(3500)  539:74,387(3497)  11:68,230(3184)  605:52,841(2306)  561:52,473(2210)  1556:48,887(2230)  1401:48,352(2196)
+  P95 if removed                1,214,637   delta    -5,843   (aligned, offset +1)
+  P95 worst-case pairing        1,193,968   delta   -26,512   (needs no alignment)
+
+=== PAYLOAD-COPY ===  (1 symbols)
+  whole-match            5,273,718 cyc =     1,648 tk/frame mean
+  calls                      1,796 total =       1.1 /frame
+  present on         167 of 1600 regions in 156 runs
+  when present     mean    15,790 tk  median    14,988  max   107,938 tk
+  top regions (region:ticks(calls)):
+   795:107,937(45)  1227:95,854(47)  1402:68,592(32)  605:68,019(30)  561:62,792(31)  521:50,258(20)  925:48,311(19)  779:45,003(18)  1113:44,752(18)  446:37,944(22)  281:33,613(21)  11:33,253(24)
+  P95 if removed                1,216,832   delta    -3,648   (aligned, offset +1)
+  P95 worst-case pairing        1,205,375   delta   -15,105   (needs no alignment)
+
+=== STDIO-apparatus ===  (19 symbols)
+  whole-match           12,749,945 cyc =     3,984 tk/frame mean
+  calls                    147,435 total =      92.1 /frame
+  present on         465 of 1600 regions in 333 runs
+  when present     mean    13,710 tk  median     6,294  max    61,906 tk
+  top regions (region:ticks(calls)):
+   645:61,905(1422)  868:58,827(1410)  628:58,421(1410)  446:57,235(1303)  1528:56,369(1211)  718:56,004(1197)  1558:55,571(1198)  779:53,892(1221)  268:53,622(1197)  1018:53,508(1196)  1227:53,275(1122)  1157:53,050(1209)
+  P95 if removed                1,211,286   delta    -9,194   (aligned, offset +1)
+  P95 worst-case pairing        1,201,796   delta   -18,684   (needs no alignment)
+
+=== anim-miss-path ===  (2 symbols)
+  whole-match              705,635 cyc =       221 tk/frame mean
+  calls                        654 total =       0.4 /frame
+  present on         257 of 1600 regions in 209 runs
+  when present     mean     1,373 tk  median     1,490  max     3,999 tk
+  top regions (region:ticks(calls)):
+   131:3,999(6)  341:3,920(8)  446:3,834(4)  1243:3,331(4)  18:3,033(4)  82:2,834(4)  1002:2,766(4)  1038:2,755(4)  1094:2,702(4)  1016:2,672(4)  991:2,649(4)  605:2,611(4)
+  P95 if removed                1,220,480   delta        +0   (aligned, offset +1)
+  P95 worst-case pairing        1,218,694   delta    -1,786   (needs no alignment)
+
+=== co-occurrence (presence, not cost) ===
+              fileIO on   167 frames;   100 also carry FGMplay ( 59.9%); fileIO frames WITHOUT FGMplay:   67
+              fileIO on   167 frames;    76 also carry BGMpacket ( 45.5%); fileIO frames WITHOUT BGMpacket:   91
+              fileIO on   167 frames;    82 also carry statusChange ( 49.1%); fileIO frames WITHOUT statusChange:   85
+              fileIO on   167 frames;    81 also carry animAttach ( 48.5%); fileIO frames WITHOUT animAttach:   86
+             FGMplay on   128 frames;   100 also carry fileIO ( 78.1%); FGMplay frames WITHOUT fileIO:   28
+             FGMplay on   128 frames;     9 also carry BGMpacket (  7.0%); FGMplay frames WITHOUT BGMpacket:  119
+             FGMplay on   128 frames;    81 also carry statusChange ( 63.3%); FGMplay frames WITHOUT statusChange:   47
+             FGMplay on   128 frames;    81 also carry animAttach ( 63.3%); FGMplay frames WITHOUT animAttach:   47
+           BGMpacket on    76 frames;    76 also carry fileIO (100.0%); BGMpacket frames WITHOUT fileIO:    0
+           BGMpacket on    76 frames;     9 also carry FGMplay ( 11.8%); BGMpacket frames WITHOUT FGMplay:   67
+           BGMpacket on    76 frames;    16 also carry statusChange ( 21.1%); BGMpacket frames WITHOUT statusChange:   60
+           BGMpacket on    76 frames;    15 also carry animAttach ( 19.7%); BGMpacket frames WITHOUT animAttach:   61
+        statusChange on   263 frames;    82 also carry fileIO ( 31.2%); statusChange frames WITHOUT fileIO:  181
+        statusChange on   263 frames;    81 also carry FGMplay ( 30.8%); statusChange frames WITHOUT FGMplay:  182
+        statusChange on   263 frames;    16 also carry BGMpacket (  6.1%); statusChange frames WITHOUT BGMpacket:  247
+        statusChange on   263 frames;   257 also carry animAttach ( 97.7%); statusChange frames WITHOUT animAttach:    6
+          animAttach on   257 frames;    81 also carry fileIO ( 31.5%); animAttach frames WITHOUT fileIO:  176
+          animAttach on   257 frames;    81 also carry FGMplay ( 31.5%); animAttach frames WITHOUT FGMplay:  176
+          animAttach on   257 frames;    15 also carry BGMpacket (  5.8%); animAttach frames WITHOUT BGMpacket:  242
+          animAttach on   257 frames;   257 also carry statusChange (100.0%); animAttach frames WITHOUT statusChange:    0
