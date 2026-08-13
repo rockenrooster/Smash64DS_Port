@@ -125,6 +125,20 @@ volatile u32 gNdsObjAnimRunawayCount;
 volatile u32 gNdsObjAnimRunawayMask;
 volatile u32 gNdsObjAnimRunawayScript;
 volatile u32 gNdsObjAnimRunawayOpcode;
+/* Shield anim-joint install engagement; legend in nds_startup.h. Never reset per
+ * scene -- anomaly 2 showed a per-scene reset makes an end-of-run read report
+ * the last scene only. */
+volatile u32 gNdsShieldAnimJointInstallCalls __attribute__((used));
+volatile u32 gNdsShieldAnimJointAttachCount __attribute__((used));
+volatile u32 gNdsShieldAnimJointNullCount __attribute__((used));
+#if NDS_ANIM_JOINT_AUDIT
+volatile u32 gNdsAnimJointFlagFrames __attribute__((used));
+volatile u32 gNdsAnimJointIdleSkip32Count __attribute__((used));
+volatile u32 gNdsAnimJointDispatch32Count __attribute__((used));
+volatile u32 gNdsAnimJointDispatchFigatreeCount __attribute__((used));
+volatile u32 gNdsAnimJointDispatchMisalignCount __attribute__((used));
+volatile u32 gNdsAnimJointDispatchFigatreeScript __attribute__((used));
+#endif
 volatile u32 gNdsStartupTaskmanMallocCount;
 volatile u32 gNdsTaskmanGeneralHeapUsed;
 volatile u32 gNdsTaskmanDLContextsValid;

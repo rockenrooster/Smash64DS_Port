@@ -408,6 +408,17 @@ NDS_R2_BOTH_CPU ?= 0
 # of hardcoding one, so the match can never again be shorter than the run that
 # watches it, and it verifies the value in-guest rather than trusting this flag.
 NDS_R2_SOAK_MATCH_MINUTES ?= 0
+# The negative control for the shield anim-joint fix. ftParamUpdateAnimKeys
+# picks the parser from fp->anim_desc.flags.is_anim_joint for the WHOLE fighter
+# (decomp ft/ftparam.c:386), so a joint still holding a figatree while that flag
+# is set is read by the 32-bit parser -- the misread class attributed in
+# artifacts/performance/2026-08-13_c-anim-anomalies/ANOMALIES.md. This counts
+# that dispatch directly, which is strictly stronger than gNdsObjAnimRunawayCount:
+# the runaway counter only fires when the misread word happens to decode to an
+# ILLEGAL opcode, while a misread that lands on 0..23 corrupts silently.
+# Lab only -- it walks the loaded-file table per shielding joint -- and it costs
+# nothing when no fighter is shielding.
+NDS_ANIM_JOINT_AUDIT ?= 0
 # R2-03 E49. Teaches the native fighter owner the precedence E48 measured: an
 # epoch whose vertices carry a valid vertex colour and no material is emitted
 # from that colour raw and is NOT lit. The generic path has always done this
@@ -3127,6 +3138,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_R2_LOADFRAME_TIMING $(NDS_R2_LOADFRAME_TIMING)'; \
 		echo '#define NDS_R2_BOTH_CPU $(NDS_R2_BOTH_CPU)'; \
 		echo '#define NDS_R2_SOAK_MATCH_MINUTES $(NDS_R2_SOAK_MATCH_MINUTES)'; \
+		echo '#define NDS_ANIM_JOINT_AUDIT $(NDS_ANIM_JOINT_AUDIT)'; \
 		echo '#define NDS_R2_UNLIT_VERTEX_EPOCH $(NDS_R2_UNLIT_VERTEX_EPOCH)'; \
 		echo '#define NDS_R204_FPSHUD_SHADOW $(NDS_R204_FPSHUD_SHADOW)'; \
 		echo '#define NDS_TASK103_STAGE_RUN_PHASE $(NDS_TASK103_STAGE_RUN_PHASE)'; \

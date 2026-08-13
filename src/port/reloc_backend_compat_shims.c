@@ -7,6 +7,21 @@
 #include <nds/nds_task37_itcm.h>
 #include <sys/vector.h>
 
+/* Shield anim-joint install engagement + the lab dispatch audit; legends in
+ * include/nds/nds_startup.h beside the declarations. */
+extern volatile u32 gNdsShieldAnimJointInstallCalls;
+extern volatile u32 gNdsShieldAnimJointAttachCount;
+extern volatile u32 gNdsShieldAnimJointNullCount;
+#if NDS_ANIM_JOINT_AUDIT
+extern volatile u32 gNdsAnimJointFlagFrames;
+extern volatile u32 gNdsAnimJointIdleSkip32Count;
+extern volatile u32 gNdsAnimJointDispatch32Count;
+extern volatile u32 gNdsAnimJointDispatchFigatreeCount;
+extern volatile u32 gNdsAnimJointDispatchMisalignCount;
+extern volatile u32 gNdsAnimJointDispatchFigatreeScript;
+extern s32 ndsRelocPointerIsFighterAObj16(const void *ptr);
+#endif
+
 static sb32 ndsMPReadMapObj(s32 index, u16 *kind, s16 *x, s16 *y);
 
 static sb32 ndsBattlePlayableRuntimeEnabled(void)
@@ -1951,6 +1966,15 @@ void ftParamUpdateAnimKeys(GObj *fighter_gobj)
     }
     p_joint = &fp->joints[nFTPartsJointTopN];
     joint_limit = ndsFTStructJointLoopLimit(fp);
+#if NDS_ANIM_JOINT_AUDIT
+    /* Once per call, OUTSIDE the idle-joint skip, so a Dispatch32 of zero can be
+     * read: FlagFrames 0 means the flag was never set here, FlagFrames high with
+     * Dispatch32 0 means every joint was already stopped. */
+    if (fp->anim_desc.flags.is_anim_joint)
+    {
+        gNdsAnimJointFlagFrames++;
+    }
+#endif
 
     if (fp->motion_id != -2)
     {
@@ -2000,6 +2024,22 @@ void ftParamUpdateAnimKeys(GObj *fighter_gobj)
             {
                 if (fp->anim_desc.flags.is_anim_joint)
                 {
+#if NDS_ANIM_JOINT_AUDIT
+                    /* The invariant fttypes.h:59 states, checked where it is
+                     * consumed. See nds_startup.h for the legend. */
+                    gNdsAnimJointDispatch32Count++;
+                    if (ndsRelocPointerIsFighterAObj16(
+                            joint->anim_joint.event32) != FALSE)
+                    {
+                        gNdsAnimJointDispatchFigatreeCount++;
+                        gNdsAnimJointDispatchFigatreeScript =
+                            (u32)(uintptr_t)joint->anim_joint.event32;
+                        if ((((uintptr_t)joint->anim_joint.event32) & 3u) != 0u)
+                        {
+                            gNdsAnimJointDispatchMisalignCount++;
+                        }
+                    }
+#endif
                     gcParseDObjAnimJoint(joint);
                 }
                 else
@@ -2020,6 +2060,12 @@ void ftParamUpdateAnimKeys(GObj *fighter_gobj)
             else
             {
                 gNdsR2FtAnimNullSkips++;
+#if NDS_ANIM_JOINT_AUDIT
+                if (fp->anim_desc.flags.is_anim_joint)
+                {
+                    gNdsAnimJointIdleSkip32Count++;
+                }
+#endif
             }
             if (translate_scales != NULL)
             {
@@ -2137,13 +2183,10 @@ __attribute__((weak)) LBParticle *efManagerEggBreakMakeEffect(Vec3f *pos)
     return NULL;
 }
 
+/* Defined beside lbCommonAddFighterPartsFigatree, which owns the shared tree
+ * walk and the same pointer resolve. */
 void lbCommonAddDObjAnimJointAll(DObj *dobj, AObjEvent32 **anim_joint,
-                                 f32 anim_frame)
-{
-    (void)dobj;
-    (void)anim_joint;
-    (void)anim_frame;
-}
+                                 f32 anim_frame);
 
 void lbCommonSetupTreeDObjs(DObj *root_dobj, DObjDesc *dobjdesc,
                             DObj **dobjs, u8 tk1, u8 tk2, u8 tk3)
@@ -8968,6 +9011,17 @@ static DObj *ndsLBCommonGetTreeDObjNextFromRoot(DObj *dobj, DObj *root_dobj)
     {
         return dobj->child;
     }
+    /* decomp lb/lbcommon.c:757 -- a CHILDLESS ROOT terminates the walk. Without
+     * this the walk leaves root_dobj's subtree through the root's own sibling
+     * (and then through its parent's), which is how a fighter's TransN, parked
+     * as XRotN's sibling by ftMainSetStatus' TransN reparent
+     * (ft/ftmain.c:4710-4721), could be handed another subtree's script. Every
+     * root used today has children, so this restores the guard rather than
+     * changing an observed behaviour. */
+    if (dobj == root_dobj)
+    {
+        return NULL;
+    }
     if (dobj->sib_next != NULL)
     {
         return dobj->sib_next;
@@ -9043,6 +9097,65 @@ void lbCommonAddFighterPartsFigatree(DObj *root_dobj, void *figatree,
         root_dobj->parent_gobj->anim_frame = anim_frame;
     }
 #endif
+}
+
+/* decomp lb/lbcommon.c:785, which this port has never had a body for -- it was
+ * an empty stub (`bx lr` at 0x02052eac in build-c132-stress) until 2026-08-13.
+ *
+ * ftCommonGuardInitJoints (ft/ftcommon/ftcommonguard1.c:275-282) sets
+ * fp->anim_desc.flags.is_anim_joint = TRUE and calls this in the same breath,
+ * because this is what makes the flag TRUE: it replaces every joint in
+ * root_dobj's subtree with an event32 shield anim joint, or stops the joint
+ * where the table entry is NULL. With no body the flag was set while every
+ * joint still held the GuardOn FIGATREE that ftMainSetStatus installed
+ * (ft/ftmain.c:4704), so ftParamUpdateAnimKeys' per-fighter dispatch
+ * (ft/ftparam.c:386) ran the 32-bit parser over 16-bit commands -- the misread
+ * attributed in artifacts/performance/2026-08-13_c-anim-anomalies/ANOMALIES.md,
+ * whose `default:` drops the joint's animation entirely. The flag's clear is
+ * source-exact and was never missing: ftMainSetStatus re-derives the WHOLE word
+ * from the motion descriptor at ft/ftmain.c:4633
+ * (`fp->anim_desc.word = motion_desc->anim_desc.word`), which a grep for the
+ * field name cannot see because FTAnimDesc is a union.
+ *
+ * The entries are resolved exactly as lbCommonAddFighterPartsFigatree resolves
+ * the figatree's: absolute pointers into a loaded file pass through, file-
+ * relative ones are rebased, and anything that resolves to nothing is treated
+ * as the NULL entry rather than handed to the parser. */
+void lbCommonAddDObjAnimJointAll(DObj *dobj, AObjEvent32 **anim_joint,
+                                 f32 anim_frame)
+{
+    const void *file_base = anim_joint;
+    DObj *current_dobj = dobj;
+
+    gNdsShieldAnimJointInstallCalls++;
+    if ((dobj == NULL) || (anim_joint == NULL))
+    {
+        return;
+    }
+    if (dobj->parent_gobj != NULL)
+    {
+        dobj->parent_gobj->anim_frame = anim_frame;
+    }
+    while (current_dobj != NULL)
+    {
+        AObjEvent32 *script =
+            ndsRelocResolvePointerFromFileBase(file_base, *anim_joint,
+                                               sizeof(AObjEvent32));
+
+        if (script != NULL)
+        {
+            gcAddDObjAnimJoint(current_dobj, script, anim_frame);
+            gNdsShieldAnimJointAttachCount++;
+        }
+        else
+        {
+            current_dobj->anim_wait = AOBJ_ANIM_NULL;
+            gNdsShieldAnimJointNullCount++;
+        }
+        anim_joint++;
+        current_dobj =
+            ndsLBCommonGetTreeDObjNextFromRoot(current_dobj, dobj);
+    }
 }
 
 void lbCommonInitDObj(DObj *dobj, u8 tk1, u8 tk2, u8 tk3, u8 arg4)

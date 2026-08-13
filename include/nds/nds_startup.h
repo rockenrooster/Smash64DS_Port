@@ -847,6 +847,32 @@ extern volatile u32 gNdsObjAnimRunawayCount;
 extern volatile u32 gNdsObjAnimRunawayMask;
 extern volatile u32 gNdsObjAnimRunawayScript;
 extern volatile u32 gNdsObjAnimRunawayOpcode;
+/* lbCommonAddDObjAnimJointAll (decomp lb/lbcommon.c:785). Two callers are live
+ * in P1: the shield, ft/ftcommon/ftcommonguard1.c:277, in the same breath as
+ * fp->anim_desc.flags.is_anim_joint = TRUE -- which is why the counters carry
+ * its name -- and Fox's entry Arwing, ef/efmanager.c:5734/5736. Engagement for
+ * both arms of the 2026-08-13 fix: the stub it replaced incremented Calls and
+ * nothing else, so a zero here means no caller ran rather than "the install did
+ * nothing". Attach + Null equals the joints walked. */
+extern volatile u32 gNdsShieldAnimJointInstallCalls;
+extern volatile u32 gNdsShieldAnimJointAttachCount;
+extern volatile u32 gNdsShieldAnimJointNullCount;
+#if NDS_ANIM_JOINT_AUDIT
+/* Lab-only broken-invariant counter, ftParamUpdateAnimKeys' dispatch. Dispatch32
+ * is the denominator (is_anim_joint true, so the 32-bit parser was chosen);
+ * Figatree is the fault -- that joint's script lies in an asset
+ * ndsRelocPointerIsFighterAObj16 claims, i.e. a 16-bit figatree read by the
+ * 32-bit parser. Misalign is the subclass gNdsObjAnimRunawayCount can see (2 mod
+ * 4, so the LDR rotates); Figatree - Misalign is the subclass it CANNOT, which
+ * decodes to a legal opcode and corrupts silently. Figatree must be 0 with
+ * Dispatch32 non-zero. */
+extern volatile u32 gNdsAnimJointFlagFrames;
+extern volatile u32 gNdsAnimJointIdleSkip32Count;
+extern volatile u32 gNdsAnimJointDispatch32Count;
+extern volatile u32 gNdsAnimJointDispatchFigatreeCount;
+extern volatile u32 gNdsAnimJointDispatchMisalignCount;
+extern volatile u32 gNdsAnimJointDispatchFigatreeScript;
+#endif
 extern volatile u32 gNdsStartupTaskmanMallocCount;
 extern volatile u32 gNdsTaskmanGeneralHeapUsed;
 extern volatile u32 gNdsTaskmanDLContextsValid;
