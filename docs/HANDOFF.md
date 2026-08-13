@@ -52,7 +52,7 @@ own RGBA(219,0,134) — not a debug quad and not the gun.
 arm ran ONE CPU. c125's ceilings are dead. **`SITR_NEXT_CUT.md`'S CUT IS REFUTED, no build
 spent (`…/2026-08-13_sitr-aobj-layout/`)**: ONE line fill per visited `AObj` serves offsets
 0–28, so a dense header array only MIGRATES it. **NEXT CUT: `…/2026-08-13_c-residue/
-RESIDUE.md` — NO lever predicts ≥16,000, and its §0 corrects every future sizing.**
+RESIDUE.md` — NO lever predicts ≥16,000; §0 corrects all sizing, §4 row 1 the named band.**
 
 **A PROFILE CYCLE IS HALF A TICK.** `ticks/frame = cycles / (2 × regions)`: regions P50
 2,240,838 cyc = 2.0001× two VBlanks, and `cycles/2` reproduces the gate arm's `ALL` histogram.
@@ -138,15 +138,15 @@ local-matrix memo, **DO-NOT-RETRY, killed twice**. **`SINT` is the fighter INTER
 with `SCPU` nested, not an animation bucket** — reading it as one mis-attributed an A/B in
 c119. **Zero-copy force-load is closed:** `ftmain.c:4623` DISCARDS the return value.
 
-**`SHDT` IS CLOSED TO SEARCH-SIDE CUTS — both shapes refuted, no build spent.** Slice 47's
-reach bound never rejects (`ReachTests 2,373 WouldSkip 0`); the transform chain is honest
-work, latches clearing once per fighter per frame (`ftmain.c:1847`), 13–18x a **call-count**
-ratio. **Pair-level broad phase (`…/2026-08-13_shdt-broadphase/`):** the source's `k == 0`
-early-out (`ftmain.c:3076`) rejects **≥94.68%** of the 6,232 pair evaluations and its range
-test ≤2.41% more, so ≥97.09% never reach geometry, and the WHOLE fighter-pair path is 2,666
-tk/fr — **18.7%** of a lane needing 26.6%. **The excursion is elsewhere: 88 frames in 38
-discrete runs hold 70.3% of the lane, `SHDT` x41 with `SPRM` x26 while `FTR`/`STG`/`SCPU`
-stay flat; 51.7% of the mean is in-bracket, unattributed.** Name that owner first.
+**`SHDT` IS CLOSED — the band is NAMED, and its bar is 47,424 tk/fr, not −26.6%.** Search side:
+`ftmain.c:3076`'s `k == 0` rejects ≥94.68% of the 6,232 pair evaluations, ≥97.09% never reach
+geometry, whole path 2,666 tk/fr (`…/2026-08-13_shdt-broadphase/`). **A GATE LANE COLUMN IS A
+MASK FOR THE PROFILE** — `analyze-profile-region-split.py`, 26 s, no build, and it named the
+88-frame band as the surviving 5.31%'s TRANSFORM CHAIN (`…_shdt-band-owner/BAND_OWNER.md`):
+`gmCollisionCheckFighterAttackDamageCollide` **x44** drives `func_ovl2_800ED490` x10.2 and
+`SetInvertMatrix` x10.4 — **+67,230 tk/fr, 42.3% of the band, 65% soft float**. **Nothing to
+memoise** (4 dirty flags = one computation per joint per frame); a band-only cut saturates at
+**78,016**, so 16,000 needs 35% of the chain — fixed point only. **`SPRM`'s x26 is the LOAD.**
 
 **Do not bring a micro-fix** — R2-06 E11: a load-frame-only ~8,000 cannot be banked. Clear
 ~16,000 in one change, or **use the `.data` route on ONE binary** (only if the change cannot

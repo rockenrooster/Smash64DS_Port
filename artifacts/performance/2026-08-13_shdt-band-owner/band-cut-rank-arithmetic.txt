@@ -1,0 +1,35 @@
+baseline WORK-H P95 (rank 80 of 1600) = 1,220,480   gate 1,120,380   gap 100,100
+band 88 frames  SHDT band mean 181,740  control mean 4,478
+rank-80 frame: WORK-H 1,220,480  its SHDT 189,312  SPRM 122,752
+
+A) flat cut applied ONLY to the 88 band frames (what a band-owner fix does)
+   -  8,000 on band -> P95  1,216,448  delta    -4,032
+   - 16,000 on band -> P95  1,213,376  delta    -7,104
+   - 24,000 on band -> P95  1,213,376  delta    -7,104
+   - 32,000 on band -> P95  1,211,456  delta    -9,024
+   - 48,000 on band -> P95  1,203,904  delta   -16,576
+   - 64,000 on band -> P95  1,201,088  delta   -19,392
+   - 96,000 on band -> P95  1,196,800  delta   -23,680
+   -128,000 on band -> P95  1,188,096  delta   -32,384
+   -177,330 on band -> P95  1,177,728  delta   -42,752
+
+B) SHDT lane scaled by (1-f) on EVERY frame (RESIDUE section 2 method)
+   - 10.0% of SHDT -> P95  1,215,418  delta    -5,062
+   - 25.0% of SHDT -> P95  1,206,656  delta   -13,824
+   - 26.6% of SHDT -> P95  1,204,403  delta   -16,077
+   - 50.0% of SHDT -> P95  1,191,104  delta   -29,376
+   - 70.3% of SHDT -> P95  1,186,396  delta   -34,084
+   -100.0% of SHDT -> P95  1,164,544  delta   -55,936
+
+C) how far do band frames have to fall before they stop setting P95?
+   band frames zeroed entirely -> P95 1,142,464 (delta -78,016)
+   80th largest among the 1512 NON-band frames = 1,142,464
+   -> a band-only cut saturates at 78,016 ticks of P95
+
+D) rank of the band frames in WORK-H
+   band frame ranks: min 3, median 89, max 530; 43 of 88 are inside the top 80
+   of the top-80 frames, 43 are band frames
+
+E) SPRM on band vs control
+   SPRM band 51,900  control 1,964  ratio 26.4x
+   SHDT+SPRM band premium = 227,200 tk/fr
