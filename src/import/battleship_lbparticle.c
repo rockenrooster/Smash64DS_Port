@@ -97,6 +97,7 @@
 #include <sys/dma.h>
 #include <sys/debug.h>
 #include <sys/taskman.h>
+#include <limits.h>
 #include <stddef.h>
 #include <string.h>
 
@@ -2546,6 +2547,7 @@ static void ndsParticleDrawFoxBlasterGlowAOT(
         NDSFoxBlasterGlowAOT glow = sNdsFoxBlasterGlowAOT[index];
         u32 age = (u32)(now - glow.spawn_tick);
         s32 submit_result;
+        s32 draw_center_q12[3];
 
         if (age >= NDS_FOX_BLASTER_GLOW_VISIBLE_TICKS)
         {
@@ -2566,19 +2568,41 @@ static void ndsParticleDrawFoxBlasterGlowAOT(
             gNdsParticleTextureFrameMax[
                 NDS_FOX_BLASTER_GLOW_TEXTURE_ID] = 1u;
         }
+        /* OWNER DECISION 2026-08-13 -- the approved draw-only bore offset. The
+         * pool entry itself is NOT touched: source writes this position through
+         * efManagerFoxBlasterGlowMakeEffect's `pc->pos` and the AOT pool is that
+         * position's cache, so the raise is applied to a draw-local copy only.
+         * Same world +Y constant as the beam, deliberately: every one of the
+         * four source callers passes the WEAPON's own translation
+         * (wpfoxblaster.c:61/71/86/121), so the muzzle flash and the impact
+         * flash both sit on the beam's centre line and have to move with it.
+         *
+         * Integer path, so this is one add on the shipping route. */
+        draw_center_q12[0] = glow.center_q12[0];
+        draw_center_q12[1] =
+            (glow.center_q12[1] >
+                 (INT_MAX - NDS_FOX_BLASTER_BORE_OFFSET_Y_Q12)) ?
+            glow.center_q12[1] :
+            (glow.center_q12[1] + NDS_FOX_BLASTER_BORE_OFFSET_Y_Q12);
+        draw_center_q12[2] = glow.center_q12[2];
         submit_result = ndsRendererSubmitWhispyNativeQuad(
             texture_name, NDS_FOX_BLASTER_GLOW_BINDING_SLOT,
-            NULL, 0.0F, glow.center_q12,
+            NULL, 0.0F, draw_center_q12,
             sNdsFoxBlasterGlowSizeQ8[age],
             0x7fffu, 255u, 0u, 16u, 16u, 3u);
         if (submit_result < 0)
         {
             /* The exact binding/fixed contract should make this unreachable.
              * Keep the same native PAL16+mirror texture through the generic
-             * corner builder rather than losing the flash. */
+             * corner builder rather than losing the flash. The float copy is
+             * built here rather than above so the shipping route pays no
+             * software-float add for a branch it never takes. */
+            Vec3f draw_pos = glow.pos;
+
+            draw_pos.y += (f32)NDS_FOX_BLASTER_BORE_OFFSET_Y;
             gNdsFoxBlasterGlowAOTFallbackCount++;
             submit_result = ndsRendererSubmitParticleQuad(
-                texture_name, &glow.pos, sNdsFoxBlasterGlowSize[age],
+                texture_name, &draw_pos, sNdsFoxBlasterGlowSize[age],
                 0x7fffu, 255u, right, up, 0u, 0u, 16u, 16u);
         }
         if (submit_result > 0)

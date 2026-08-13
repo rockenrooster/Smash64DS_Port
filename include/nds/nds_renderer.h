@@ -1388,6 +1388,34 @@ s32 ndsRendererSubmitWhispyNativeQuad(u32 texture_name,
                                       u32 mirror_mask,
                                       u32 texture_w, u32 texture_h,
                                       u32 submit_route);
+/* OWNER DECISION 2026-08-13 -- the approved draw-only bore offset.
+ *
+ * BattleShip spawns Fox's shot and its flash at gun joint-17 local (60,0,0)
+ * (`ftfox.h:7`) while the gun's bore centre is local (60,-24,0), so the beam
+ * hangs 23.651 world units below the barrel in the ORIGINAL GAME too
+ * (`artifacts/bugs/2026-08-12_fox-crouch/BEAM_QUAD_ANCHOR.md` section 4). The
+ * owner chose alignment over source-exactness and approved raising the BEAM
+ * and FLASH quads by joint-local (0,-24,0) at draw time only. Spawn position,
+ * `attack_pos`, hitbox and collision stay byte-identical to source.
+ *
+ * It is a WORLD +Y constant rather than a matrix multiply because the offset
+ * has to hold for the shot's whole flight and the shot leaves the gun the
+ * instant it is made: the admitted fast path is exactly rotate.z 0 or pi with
+ * velocity (+/-160, 0, 0), i.e. world-axis-aligned, and there is no joint
+ * frame travelling with it. At the measured fire pose joint-local (0,-24,0)
+ * images to world (+3.505, +23.651, +0.049) (same artifact, section 4 table),
+ * so the axis-aligned form differs from the exact image by 0.349 world Y and
+ * 3.505 world X -- 0.035 px and 0.35 px at this scale, against the 0.5 px
+ * composition tolerance already recorded for this row -- and, unlike the exact
+ * image, it does not wobble with Fox's arm while the beam is in flight.
+ *
+ * Q12 because both consumers are already fixed point: the beam adds it to its
+ * decoded translation (BEFORE the source scale is applied to the quad's own
+ * vertices, so a 53x stretched beam is raised 24 units, not 1,280), and the
+ * glow adds it to its Q12 centre. */
+#define NDS_FOX_BLASTER_BORE_OFFSET_Y 24
+#define NDS_FOX_BLASTER_BORE_OFFSET_Y_Q12 \
+    ((s32)NDS_FOX_BLASTER_BORE_OFFSET_Y << 12)
 /* Fox's source blaster display is an untextured four-vertex quad from
  * relocData 316. This lab submit converts the live source translation/scale
  * directly to fixed GX coordinates; facing is +1 or -1. It returns FALSE

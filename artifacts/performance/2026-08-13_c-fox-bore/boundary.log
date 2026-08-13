@@ -1,0 +1,44 @@
+# scripts/verify-boundary.ps1 -DelaySeconds 3 -RunnerSlot 2   (2026-08-13, Fox bore offset)
+# EXIT=0. Full 18,960,666-byte console log scanned: "Exception:" 0 hits, "=FAIL" 0 hits.
+# Verdict line and the last 40 lines of the run follow.
+
+      |                                     ~~~~~~~~~~~~^~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:4748:37: warning: comparison of integer expressions of different signedness: 'intptr_t' {aka 'int'} and 'unsigned int' [-Wsign-compare]
+ 4748 |             if (motion_desc->offset != 0x80000000)
+      |                                     ^~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:4753:37: warning: assignment to 'intptr_t' {aka 'int'} from 'void *' makes integer from pointer without a cast [-Wint-conversion]
+ 4753 |                     event_file_head = *fp->data->p_file_submotion;
+      |                                     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:4759:37: warning: assignment to 'intptr_t' {aka 'int'} from 'void *' makes integer from pointer without a cast [-Wint-conversion]
+ 4759 |                     event_file_head = *fp->data->p_file_mainmotion;
+      |                                     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:4770:37: warning: comparison of integer expressions of different signedness: 'intptr_t' {aka 'int'} and 'unsigned int' [-Wsign-compare]
+ 4770 |             if (motion_desc->offset != 0x80000000)
+      |                                     ^~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:4383:9: warning: unused variable 'unused3' [-Wunused-variable]
+ 4383 |     s32 unused3;
+      |         ^~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:4379:9: warning: unused variable 'unused2' [-Wunused-variable]
+ 4379 |     s32 unused2;
+      |         ^~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:4376:9: warning: unused variable 'unused1' [-Wunused-variable]
+ 4376 |     s32 unused1;
+      |         ^~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c: In function 'battleship_ftMainProcessHitCollisionStatsMain':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:2845:12: warning: 'knockback_temp' may be used uninitialized [-Wmaybe-uninitialized]
+ 2845 |         if (knockback < knockback_temp)
+      |            ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:2675:9: note: 'knockback_temp' was declared here
+ 2675 |     f32 knockback_temp;
+      |         ^~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:2855:19: warning: 'j' may be used uninitialized [-Wmaybe-uninitialized]
+ 2855 |     switch (hitlog->attacker_object_class)
+      |             ~~~~~~^~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:2674:12: note: 'j' was declared here
+ 2674 |     s32 i, j;
+      |            ^
+C:/devkitPro/devkitARM/bin/../lib/gcc/arm-none-eabi/15.2.0/../../../../arm-none-eabi/bin/ld.exe: warning: C:/devkitPro/devkitARM/bin/../lib/gcc/arm-none-eabi/15.2.0/thumb/crtn.o: missing .note.GNU-stack section implies executable stack
+C:/devkitPro/devkitARM/bin/../lib/gcc/arm-none-eabi/15.2.0/../../../../arm-none-eabi/bin/ld.exe: NOTE: This behaviour is deprecated and will be removed in a future version of the linker
+Running verifier: battle_playable_realtime [verify-battle-playable-realtime-harness.ps1]
+Boundary verification profile passed.
+EXIT=0 elapsed=00:04:56.7582296

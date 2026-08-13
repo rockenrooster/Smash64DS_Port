@@ -14972,6 +14972,20 @@ s32 ndsRendererSubmitFoxBlasterQuad(const Vec3f *translate,
     {
         return FALSE;
     }
+    /* OWNER DECISION 2026-08-13 -- the approved draw-only bore offset, and this
+     * is the whole of it for the beam. `translate` is const and is the weapon
+     * DObj's own world position: it is not written here, so spawn, attack_pos,
+     * hitbox and collision are untouched by construction.
+     *
+     * The raise lands on the DECODED translation, before span_x/span_y0/span_y1
+     * apply the source scale to the quad's four source vertices. scale.x runs
+     * 1.0 -> 53.33 over a shot's first ten ticks; folding the offset in later
+     * would stretch a 24-unit raise into a 1,280-unit one as the beam grew. */
+    if (ty > (INT_MAX - NDS_FOX_BLASTER_BORE_OFFSET_Y_Q12))
+    {
+        return FALSE;
+    }
+    ty += NDS_FOX_BLASTER_BORE_OFFSET_Y_Q12;
     span_x = 30 * sx;
     span_y0 = 24 * sy;
     span_y1 = 26 * sy;

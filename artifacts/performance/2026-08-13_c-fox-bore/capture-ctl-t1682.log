@@ -1,0 +1,2 @@
+EXACT_LOCK=gSCManagerBattleState->time_remain,1682,1680
+Captured exact Cut G tics 1682/1680 (requested 1682/1681, lock gSCManagerBattleState->time_remain): 'D:\Stuff\DevFolder\Smash64DS_Port\artifacts\visibility\2026-08-13_fox-bore_ctl_t1682.png', 'D:\Stuff\DevFolder\Smash64DS_Port\artifacts\visibility\2026-08-13_fox-bore_ctl_t1681.png'.

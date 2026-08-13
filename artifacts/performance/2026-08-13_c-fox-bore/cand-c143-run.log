@@ -1,0 +1,29 @@
+Tick-HUD buckets: target=smash64ds-battle-playable-tickhud-hwtri samples=1600 frames=440..2038 melonDS=1.0 sha=DE80E46BDCF1FD98 git=cffcea495a6+dirty(5) dldi=ON
+
+bucket p50        p95        spread mean       min        max        %ALLp50
+------ ---        ---        ------ ----       ---        ---        -------
+ALL     1,118,208  1,678,656   1.50  1,227,409  1,114,944  5,872,896   100.0
+FTR       297,280    322,816   1.09    291,161    170,112    330,176    26.6
+STG       163,072    167,360   1.03    166,056    159,552  4,360,192    14.6
+BG          4,032      4,160   1.03      4,058      3,648      4,352     0.4
+AUD         2,880      7,552   2.62      9,009      1,088    153,728     0.3
+HUD         1,024    420,480 410.62     35,401        896  2,490,560     0.1
+SRC       324,480    591,552   1.82    357,521     10,624  1,543,232    29.0
+MISC      102,976    179,776   1.75    113,259     80,960  4,278,080     9.2
+OTHR      236,672    533,568   2.25    250,945     20,672    579,200    21.2
+WAIT      217,024    513,920   2.37    231,378        832    559,808    19.4
+WORK      935,424  1,365,760   1.46    996,031    597,312  5,486,016    83.7
+SHDT        4,736     88,832  18.76     14,564          0    496,960     0.4
+SWRM          768        832   1.08        751        576        896     0.1
+GCRA      319,232    586,304   1.84    352,352      6,656  1,537,856    28.5
+SCPU       42,880    108,736   2.54     46,006          0    141,888     3.8
+SCAT        1,280      1,408   1.10      1,221          0      1,536     0.1
+SPRM        2,048      2,176   1.06      4,764          0    648,192     0.2
+SINT      151,424    356,928   2.36    173,970          0  1,004,992    13.5
+SPHD       56,576     98,432   1.74     64,946          0    739,840     5.1
+SPHC          640        768   1.20        652          0        896     0.1
+WORK-H    925,184  1,250,368   1.35    960,630    589,184  5,171,008    82.7
+
+named=976,465 (79.6% of ALL)  VBI 2:1700 3:310 4:15 5+:13 max:26 total:2038  slips=0
+extras: gNdsBattleTextHudP0Damage=0  gNdsBattleTextHudP1Damage=58  gNdsBattleTextHudP0Stock=1  gNdsBattleTextHudP1Stock=1  gNdsFighterProjectileProofSpawnCallCount=8  gNdsFighterProjectileProofSpawnSuccessCount=8  gNdsFoxBlasterQuadDrawCount=38  gNdsFoxBlasterQuadFallbackCount=0  gNdsFoxBlasterGlowAOTSpawnCount=7  gNdsFoxBlasterGlowAOTDrawCount=30  gNdsFoxBlasterGlowAOTFallbackCount=0  gNdsFoxBlasterGlowAOTMissCount=0  gNdsKOBurstAttemptCount=0  gNdsKOBurstCompleteCount=0
+Wrote D:\Stuff\DevFolder\Smash64DS_Port\artifacts\performance\2026-08-13_c-fox-bore\cand-c143.json

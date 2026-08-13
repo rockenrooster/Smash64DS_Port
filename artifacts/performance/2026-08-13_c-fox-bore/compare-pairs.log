@@ -1,0 +1,35 @@
+=== lock 1694 (no beam on screen) -- battle screen 0,0,400,300 ===
+compared 120,000 pixels (400x300 at window 8,56 -- guest viewport -- CROPPED to 400x300 at 0,0)
+  control   2026-08-13_fox-bore_ctl_t1694.png
+  candidate 2026-08-13_fox-bore_cand_t1694.png
+  differing 0 (0.0000%)
+  max channel delta 0
+
+PIXEL-IDENTICAL.
+
+=== lock 1688 (beam + flash) -- battle screen 0,0,400,300 ===
+compared 120,000 pixels (400x300 at window 8,56 -- guest viewport -- CROPPED to 400x300 at 0,0)
+  control   2026-08-13_fox-bore_ctl_t1688.png
+  candidate 2026-08-13_fox-bore_cand_t1688.png
+  differing 1,387 (1.1558%)
+  max channel delta 251
+
+Within the stated fidelity budget.
+
+=== lock 1688 -- full guest viewport (tick-HUD digits differ by construction) ===
+compared 240,000 pixels (400x600 at window 8,56 -- guest viewport)
+  control   2026-08-13_fox-bore_ctl_t1688.png
+  candidate 2026-08-13_fox-bore_cand_t1688.png
+  differing 4,889 (2.0371%)
+  max channel delta 251
+
+Within the stated fidelity budget.
+
+=== lock 1682 (flash expired) -- battle screen 0,0,400,300 ===
+compared 120,000 pixels (400x300 at window 8,56 -- guest viewport -- CROPPED to 400x300 at 0,0)
+  control   2026-08-13_fox-bore_ctl_t1682.png
+  candidate 2026-08-13_fox-bore_cand_t1682.png
+  differing 1,152 (0.9600%)
+  max channel delta 251
+
+Within the stated fidelity budget.
