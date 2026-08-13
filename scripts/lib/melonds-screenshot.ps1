@@ -201,14 +201,56 @@ function Get-MelonDSWindowBitmap {
 # and the attached GDB stack then invites a hunt for a hang at whatever PC a
 # running ROM happened to be interrupted at. It also wrote a photograph of the
 # owner's desktop into artifacts/. Read the window, never the screen.
+#
+# -Half NARROWS IT FURTHER, AND THAT IS THE SAME LESSON ONE LEVEL IN. The client
+# area holds BOTH DS screens, and on this project's measuring ROM the bottom one
+# is the tick HUD -- digits that change on every presented frame by construction.
+# So a client-area hash reports "moving" for any guest that is still PRESENTING,
+# including one whose gameplay has stopped dead. Measured 2026-08-13 on the R2-07
+# stress chain: two START presses landed mid-match and PAUSED it; the top screen
+# was pixel-identical for 132 seconds, twice, and the soak reported NO-FREEZE
+# throughout because the HUD kept counting. 264 of that run's 600 seconds were
+# spent paused and the instrument could not say so.
+#   Top    -- the game picture, which is what a player calls frozen.
+#   Bottom -- the HUD. Identical between two consecutive polls means the HUD is
+#             BLANKED, which on this ROM means the battle scene is not up:
+#             it is the cheapest Results-screen detector available without GDB.
+#   All    -- the legacy whole-client hash (default; unchanged behaviour).
+# The split is by client-area halves rather than by the letterboxed content rect
+# because the two screens are equal and stacked, so the boundary is exact no
+# matter how the window is sized; the menu bar rides with the top half and is
+# static, which only makes the top half more conservative.
 function Get-MelonDSWindowFrameHash {
-    param([Parameter(Mandatory=$true)][System.IntPtr]$WindowHandle)
+    param(
+        [Parameter(Mandatory=$true)][System.IntPtr]$WindowHandle,
+        [ValidateSet('All', 'Top', 'Bottom')][string]$Half = 'All'
+    )
 
     $bitmap = Get-MelonDSWindowBitmap -WindowHandle $WindowHandle -ClientOnly `
         -PreferPrintWindow
     try {
+        # NOT $half: PowerShell variable names are case-insensitive, so a local
+        # $half IS the $Half parameter and assigning to it fails the ValidateSet
+        # on the next call ("the value 312 is not a valid value").
+        #
+        # 45%, NOT 50%. The client area is the MENU BAR plus the two screens, so
+        # the screen boundary sits below the client midpoint by half the menu's
+        # height -- and the ~14 rows of TOP screen that a 50/50 split leaves in
+        # the bottom region are enough to make the animating Results screen look
+        # like a live HUD. Measured 2026-08-13: with a 50/50 split the Results
+        # detector never fired once in 152 s of Results. Discarding the middle
+        # 10% costs nothing (neither screen is uniform near its edge) and makes
+        # the split independent of the menu height and of DPI scaling.
+        $band = [int]($bitmap.Height * 45 / 100)
+        $region = switch ($Half) {
+            'Top'    { New-Object System.Drawing.Rectangle 0, 0, $bitmap.Width, $band }
+            'Bottom' { New-Object System.Drawing.Rectangle 0, ($bitmap.Height - $band),
+                       $bitmap.Width, $band }
+            default  { New-Object System.Drawing.Rectangle 0, 0, $bitmap.Width,
+                       $bitmap.Height }
+        }
         $data = $bitmap.LockBits(
-            (New-Object System.Drawing.Rectangle 0, 0, $bitmap.Width, $bitmap.Height),
+            $region,
             [System.Drawing.Imaging.ImageLockMode]::ReadOnly,
             [System.Drawing.Imaging.PixelFormat]::Format32bppRgb)
         try {

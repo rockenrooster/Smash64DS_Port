@@ -101,7 +101,16 @@ param(
     # it. A stride at 128 would make a full wrap indistinguishable from no
     # advance at all.
     [ValidateRange(8,120)][int]$RingStopStride = 96,
-    [ValidateRange(1,4096)][int]$Samples = 32,
+    # 4096 was the cap until 2026-08-13. It fits a whole 3600-tick match twice
+    # over (1,600 samples cover 86.7% of one) and is far too small for R2-07's
+    # FIVE-minute acceptance match, which presents ~9,000 frames: capped, that
+    # run reports the first 45% of the match and calls it a gate reading, which
+    # is precisely the coverage mistake the board's match-length rule exists to
+    # stop. Nothing else is sized by this number -- it only decides when the
+    # stitcher stops -- so the ceiling is raised rather than the run truncated.
+    # The five-minute configuration itself is an owner-instructed acceptance
+    # exception (SwitchPlan R2-07 gate); it is not for routine iteration.
+    [ValidateRange(1,16384)][int]$Samples = 32,
     [ValidateRange(1,1000000)][int]$StartFrame = 438,
     # 3600 used to be the cap, which a whole 3600-tick match cannot fit: the
     # match alone is ~60 s of guest time and this emulator runs it far slower

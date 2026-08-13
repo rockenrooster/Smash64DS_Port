@@ -51,6 +51,18 @@ of the match (P95 understated ~306,000, over-gate rate 5×).
 **~23,000**. The cycle-108 row carries why that figure is quoted as a range and
 not as a single cross-build P95.
 
+**THE FIVE-MINUTE ACCEPTANCE MATCH RAN, 2026-08-13** (`artifacts/performance/2026-08-13_c-stress/
+STRESS_GATE.md`), the SwitchPlan §7 owner-instructed exception, on
+`builds/build-c132-stress5` (`NDS_R2_SOAK_MATCH_MINUTES 5`, both-CPU, DLDI on,
+8,448 samples, frames 439–8887, `slips=0`): **`WORK-H` P50 929,344 / P95
+1,205,760**, VBI **2:7415 3:1394 4:58 5+:19 max 26**. **Coverage 98.7%** —
+`gNdsBattlePlayablePacingLogicFrames` 17,772 of 18,000 with the guest's own
+`time_limit` reading 5. **A five-minute match costs what a one-minute match
+costs** (1,210,880 on the one-minute arm, inside the ±14,080 cross-build floor),
+so length accumulates no cost; only the 3-VBlank share moves (16.6% against
+13.1%). The gate is still 85,760 over and its lane is unchanged. **Do not leave
+`NDS_R2_SOAK_MATCH_MINUTES` set anywhere** — that build is a lab directory only.
+
 **CURRENT BANKED GATE — `WORK-H` P50 923,392 / P95 1,210,880** (slice 50,
 `builds/build-c131-cand`, `NDS_R2_BOTH_CPU=1`, 1600 frames from 438, DLDI ON,
 `slips=0`; **gap to 1.12M ~90,500**). Slice 50's own control measured HEAD at
@@ -5376,13 +5388,14 @@ writer, `WriteNormalWord` carries no capture test, and the residual charge is th
 shared `gl*` → `ndsRendererTask29Gl*` macro block (`nds_renderer.c:1501-1523`),
 which has stage callers — a per-caller split at 1.85 cyc/byte, not an `#if`.
 
-**Residual for the stress/soak cycle.** Boundary proves ONE match. The
-certificate survives a Results→START restart by three independent guards, but the
-protection removed was self-healing against paths nobody enumerated, whereas a
-certificate is only as complete as its enumeration. **Exercise the second match
-deliberately** and read `gNdsR2TexProofSweepFailCount` (must stay 0) and
-`gNdsR2TextureEpochBumpCount` (must be NON-zero across a scene entry — it is
-correctly 0 *within* a match).
+**Residual for the stress/soak cycle: ANSWERED 2026-08-13, the certificate holds
+across re-entry** (`artifacts/performance/2026-08-13_c-stress/STRESS_GATE.md`).
+A both-CPU chain with **three battle-scene entries** — match, rematch, and a
+natural **Sudden Death** — read `gNdsR2TexProofSweepFailCount` **0** with
+`gNdsR2TextureEpochBumpCount` **168** and `TexProofFastCount` 132,566 against
+`SweepCount` 10,008, i.e. the enumeration is complete over every path a restart
+and an SD entry take, and the win is still being taken. Do not re-open this
+without a new invalidation source.
 
 ### Slice 44 KEPT — the stage stops re-proving itself constant. Gate 1,210,560
 
@@ -8076,7 +8089,7 @@ As last graded (cycle 76); a row changes state only when its gate runs.
 | Recognizable Dream Land presentation and required animation | Red | Whispy Route 7 owner-approved and promoted 2026-08-08; remaining stage presentation not regraded |
 | Complete overlapping BGM, FGM, voices, announcer, crowd | Red | Exact pitch/composite/voice coverage and listen gates remain |
 | Stable 30 FPS, representative P95 <= 1.12M ticks | Red | Gap **503,684 on the both-CPU gate arm**, 60 s match at 86.7% coverage (356,292 is the Boundary figure and is not the gate); lane G1–G4 |
-| Stable reserve, no corruption, clean teardown | Focused gates pass | Requalify after the final content/performance candidate |
+| Stable reserve, no corruption, clean teardown | **Stress battery passes 2026-08-13, one anomaly open** | Both-CPU chains to 5 battle entries incl. Sudden Death, plus a 5-minute match: `NO-FREEZE`, heap free-min 67,652–70,384 (floor 32,768), GObj cap never latched, alloc-fail/overflow/objman-panic 0, texture-certificate `SweepFail` 0, picture colour floor 1,305. **OPEN: `gNdsObjAnimRunawayCount` 0/17/50 by scene time** and `sNdsAObjEvent32NormalizedCount` **1,019 of 1,024** in one five-minute match (`artifacts/performance/2026-08-13_c-stress/`) |
 | Reproducible public artifact | Red | Current local root ROM differs from the pinned public identity |
 
 ## Artifact Identity

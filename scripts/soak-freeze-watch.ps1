@@ -36,7 +36,16 @@ param(
     # ended AT the moment under investigation, which is not evidence either way
     # (the owner reported a freeze there both times). Keep runs short by default;
     # spend the extra two minutes only when the question is past match two.
-    [ValidateRange(0.5, 7.0)][double]$MinutesToRun = 2.5,
+    # The 7.0 ceiling was raised to 12.0 on 2026-08-13 for the R2-07 stress-gate
+    # acceptance battery, which asks for THREE completed successive matches in
+    # one emulator session ("pressing start at results screen restarts the P1
+    # match, up to infinite successive matches", SwitchPlan 7). Match N ends
+    # around t+170+140*(N-1) s, so three matches need ~460 s and four ~600 s,
+    # and 7.0 cut the run off inside match three. The owner's "5 mins tops" is
+    # about FREEZE soaks and still governs those; the default stays 2.5. Do not
+    # spend more than the question needs -- this is the most expensive run in
+    # the project (docs/VERIFYING.md, Run Economics).
+    [ValidateRange(0.5, 12.0)][double]$MinutesToRun = 2.5,
     # THE MATCH TIMER, in game minutes, forwarded as NDS_R2_SOAK_MATCH_MINUTES.
     # -1 = auto (the default and the right answer almost always), 0 = leave the
     # harness seeding alone (the canonical one-minute Time match), 1..7 = force.
@@ -106,6 +115,27 @@ param(
     # single-window behaviour. ~150 for the one-minute config -- see the press
     # site for why this is a cadence rather than a Results detection.
     [ValidateRange(0, 600)][int]$PressStartEverySeconds = 0,
+    # PRESS ONLY WHEN THE PICTURE SAYS "Results", instead of on a wall clock.
+    # Replaces -PressStartCount/-PressStartEverySeconds when set.
+    #
+    # WHY. The cadence form cost the R2-07 stress chain half its run on
+    # 2026-08-13: every press that lands during a match PAUSES it (the port
+    # implements START as pause), so a 3-press burst leaves the match paused on
+    # odd parity, and the next burst is a match-length away. Measured: presses
+    # at t+174/180 and t+328/334 left the game paused for 132 s each time --
+    # 264 of 600 seconds -- and the run reached 2 matches instead of 4.
+    #
+    # THE DETECTOR is the bottom screen going STILL. On the tick-HUD ROM the HUD
+    # redraws its digits every presented battle frame, so two consecutive polls
+    # that hash the bottom half identically mean the battle scene is not up;
+    # combined with a cooldown longer than one poll, a press can then only ever
+    # land on Results. Measured signature on the same run: bottom-half
+    # inter-poll change was 1.0-4.2% during battle and EXACTLY 0.0% on both
+    # Results screens (`artifacts/performance/2026-08-13_c-stress/`).
+    #
+    # This is tick-HUD-specific by construction. On a ROM whose bottom screen is
+    # not the HUD, use the cadence form.
+    [switch]$PressStartOnResults,
     # Build with NDS_R2_SECOND_ENTRY_DIAG=1 so the per-caller allocation ledger
     # and the MObj chain probe exist. Required before the reported-globals list
     # below can name any gNdsAllocLedger* or gNdsR2ChainProbe* symbol: without
@@ -123,6 +153,18 @@ param(
     # nds_build_config.h below, so asking for a flag the build did not take is an
     # error rather than a null result.
     [string[]]$MakeFlags = @(),
+    # Keep every polled frame as a PNG in this directory, named by elapsed
+    # seconds. Off by default (a 10-minute run at -PollSeconds 5 is ~120 files).
+    #
+    # WHY THIS EXISTS: the watch hashed the window and threw the pixels away, so
+    # a FROZEN-PICTURE verdict could name neither the frame it froze on nor the
+    # transition it froze at -- and a NO-FREEZE verdict could not show what the
+    # rematch chain actually looked like. The R2-07 stress gate has to compare
+    # match two against match one at GAME SET, Results and first battle frames,
+    # and the capture is already being taken on every poll: this only writes it
+    # down. The bitmap comes from PrintWindow (window, never desktop), so an
+    # occluder cannot be photographed into the evidence.
+    [string]$SaveFramesTo = '',
     [string]$JsonOut = ''
 )
 
@@ -280,6 +322,10 @@ foreach ($path in @($rom, $elf)) {
 }
 $temp = Get-MelonDSVerifierTempDir -Root $root -RunnerSlot $RunnerSlot
 $logDir = Join-Path $root 'artifacts\verification\freeze-soak'
+if ($SaveFramesTo) {
+    [void](New-Item -ItemType Directory -Force -Path $SaveFramesTo)
+    $SaveFramesTo = (Resolve-Path -LiteralPath $SaveFramesTo).Path
+}
 
 # The one GDB attach this run gets, wherever it is spent. Both the freeze capture
 # and the clean-run counter read go through here.
@@ -412,8 +458,17 @@ try {
     $startPresses = 0
     $pressWindow = 1
     $lastPressAt = $started
+    $previousBottomHash = $null
     while ((Get-Date) -lt $deadline) {
         Start-Sleep -Seconds $PollSeconds
+        # The Results detector, when -PressStartOnResults is set. Hashed FIRST so
+        # the press below decides on this poll's picture rather than on a clock.
+        $bottomHash = if ($PressStartOnResults) {
+            Get-MelonDSWindowFrameHash -WindowHandle $window -Half Bottom
+        } else { $null }
+        $atResults = $PressStartOnResults -and ($null -ne $previousBottomHash) -and
+                     ($bottomHash -eq $previousBottomHash)
+        $previousBottomHash = $bottomHash
         # R2-07: the Results screen exits on a START tap and nothing else, so a
         # passive soak can never reach match two -- which is exactly the state the
         # rematch redirect has to be tested in. One timed press turns this into a
@@ -427,14 +482,25 @@ try {
         # detection: a press that lands mid-match is either swallowed or pauses,
         # so pick the interval from the measured match length (~150 s for the
         # one-minute config, match end to match end) rather than something small.
-        if (($PressStartEverySeconds -gt 0) -and
+        if ((-not $PressStartOnResults) -and ($PressStartEverySeconds -gt 0) -and
             ($startPresses -ge $PressStartCount) -and
             ((Get-Date) -ge $lastPressAt.AddSeconds($PressStartEverySeconds))) {
             $startPresses = 0
             $pressWindow++
         }
-        if (($PressStartSeconds -gt 0) -and ($startPresses -lt $PressStartCount) -and
-            ((Get-Date) -ge $started.AddSeconds($PressStartSeconds))) {
+        # DETECTED, NOT TIMED. One press per detected Results screen, with a
+        # cooldown longer than the poll so the second press of a burst cannot
+        # land in the match that press just started -- which is the whole defect
+        # this replaces. See -PressStartOnResults for the measurement.
+        $pressNow = if ($PressStartOnResults) {
+            $atResults -and ((Get-Date) -ge $lastPressAt.AddSeconds(
+                [Math]::Max(20, $PollSeconds * 3))) -and
+                ((Get-Date) -ge $started.AddSeconds($PressStartSeconds))
+        } else {
+            ($PressStartSeconds -gt 0) -and ($startPresses -lt $PressStartCount) -and
+                ((Get-Date) -ge $started.AddSeconds($PressStartSeconds))
+        }
+        if ($pressNow) {
             # HOLD the key, do not tap it. SendKeys presses and releases within
             # milliseconds; the Results screen renders at roughly 6 FPS, so a tap
             # that short almost never falls inside a guest input sample and
@@ -449,9 +515,19 @@ try {
             [Smash64DSWindowCapture]::keybd_event(0x0D, 0, 2, [UIntPtr]::Zero)
             $startPresses++
             $lastPressAt = Get-Date
-            Write-Host ("  t+{0,5}s  held START (ENTER) 500 ms  [{1}/{2}] window {3}" -f
-                [int]((Get-Date) - $started).TotalSeconds, $startPresses,
-                $PressStartCount, $pressWindow)
+            if ($PressStartOnResults) {
+                # Parenthesise the WHOLE concatenation before -f; without the
+                # outer parens the operator binds to the last literal only and
+                # the braces reach the log verbatim. Fourth recurrence of that
+                # precedence bug in this file.
+                Write-Host ((("  t+{0,5}s  held START (ENTER) 500 ms  [press " +
+                    "{1}] on a detected Results screen") -f
+                    [int]((Get-Date) - $started).TotalSeconds, $startPresses))
+            } else {
+                Write-Host ("  t+{0,5}s  held START (ENTER) 500 ms  [{1}/{2}] window {3}" -f
+                    [int]((Get-Date) - $started).TotalSeconds, $startPresses,
+                    $PressStartCount, $pressWindow)
+            }
         }
         $emulator.Refresh()
         if ($emulator.HasExited) {
@@ -459,8 +535,23 @@ try {
             $diagnosis = "melonDS exited with code $($emulator.ExitCode)"
             break
         }
-        $hash = Get-MelonDSWindowFrameHash -WindowHandle $window
+        # TOP HALF, i.e. the GAME picture. The whole-client hash cannot see a
+        # stopped game on the measuring ROM: its bottom screen is the tick HUD
+        # and those digits change every presented frame. Measured 2026-08-13 --
+        # 264 s of a 600 s chain run were spent PAUSED, top screen pixel-frozen
+        # for 132 s twice, and every poll still hashed "distinct". See the
+        # -Half comment in lib\melonds-screenshot.ps1.
+        $hash = Get-MelonDSWindowFrameHash -WindowHandle $window -Half Top
         $elapsed = [int]((Get-Date) - $started).TotalSeconds
+        if ($SaveFramesTo) {
+            # Named by elapsed seconds AND by the hash prefix the sample row
+            # carries, so a row in the JSON and a file on disk are the same
+            # frame without anyone counting entries.
+            $framePath = Join-Path $SaveFramesTo (
+                'f{0:d5}s-{1}.png' -f $elapsed, $hash.Substring(0, 8))
+            [void](Save-MelonDSWindowCapture -WindowHandle $window `
+                -Path $framePath -PreferPrintWindow)
+        }
         if ($hash -eq $previousHash) {
             $identical++
         } else {
@@ -1057,7 +1148,49 @@ try {
             # writer; zero rules the whole fighter-script family out.
             'gNdsFighterProcessLoopControllerBridgeCount',
             'gNdsFighterProcessLoopP0InputApplyCount',
-            'gNdsFighterSchedulerLoopP0InputApplyCount')
+            'gNdsFighterSchedulerLoopP0InputApplyCount',
+            # SLICE 50's texture-binding certificate, and the ONLY instrument
+            # that can answer its recorded residual risk: Boundary proves ONE
+            # match, and the per-frame re-proof it replaced was self-healing
+            # against invalidation paths nobody enumerated. SweepFail must be 0
+            # in every match -- non-zero after a restart means a certificate
+            # read current against a released texture slot, i.e. stale native
+            # geometry. EpochBump must be NON-zero here (it is 0 *within* a
+            # match by design, and the discard at every battle entry releases
+            # every entry), so a 0 across a rematch chain is the failure, not
+            # the success. Fast/Sweep are the positive control: Sweep staying
+            # tiny while Fast tracks ~10/frame is the win still being taken.
+            'gNdsR2TexProofFastCount',
+            'gNdsR2TexProofSweepCount',
+            'gNdsR2TexProofSweepFailCount',
+            'gNdsR2TextureEpochBumpCount',
+            # HANDOFF's latent cliff, made readable across a MULTI-match run.
+            # sNdsAObjEvent32NormalizedCount reached 973 of its 1,024 cap after
+            # one minute, and the overflow branch does not fail loudly: it
+            # rejects the script (reason 12) and SILENTLY SKIPS the animation
+            # attach. The table is cleared only by ndsRelocResetLoadedFiles
+            # (src/port/reloc_backend_assets.c:2093), so whether a rematch
+            # resets it or piles on top of it decides whether match three
+            # animates. FailCount rising beside a Count near 1,024 is the
+            # cliff; a Count that returns to its one-match value is the reset.
+            'sNdsAObjEvent32NormalizedCount',
+            'gNdsAObjEvent32NormalizeScriptCount',
+            'gNdsAObjEvent32NormalizeReuseCount',
+            'gNdsAObjEvent32NormalizeFailCount',
+            # The battle's own presented-cadence histogram, which AGENTS.md
+            # requires every device A/B report to carry (2/3/4/5+ plus the max
+            # interval). These are reset per battle ENTRY (taskman_seam.c:4552
+            # seeds VBlankStart in the same block), so an end-of-run read
+            # describes the LAST match of a rematch chain -- the only per-match
+            # cadence figure available for match two onwards, because the tick
+            # sampler cannot press START and so can never leave match one.
+            'gNdsBattlePlayablePacingPresentIntervalBucket[2]',
+            'gNdsBattlePlayablePacingPresentIntervalBucket[3]',
+            'gNdsBattlePlayablePacingPresentIntervalBucket[4]',
+            'gNdsBattlePlayablePacingPresentIntervalBucket[5]',
+            'gNdsBattlePlayablePacingPresentIntervalMax',
+            'gNdsBattlePlayablePacingCadenceViolationCount',
+            'gNdsBattlePlayablePacingVBlanks')
         # Second-entry allocation ledger, only when the build defines it. This is
         # the rematch arm of the item 3 question the Sudden Death lane already
         # answered: that lane measured 925,816 B for match one and 906,568 B for

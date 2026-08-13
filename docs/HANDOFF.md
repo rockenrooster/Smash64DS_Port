@@ -48,30 +48,24 @@ lane** — one changed line moved P95 24,064 against 3,648 at P50.
 395,863 excursion; `SITR` 83,712 is the largest leaf lane, `SHDT` 51,584 the sharpest presence
 (13.17x on a 4,416 median). `SCPU`/`SPRM`/`SPHD` are 2.5–3.7x the Boundary table — the wrong arm ran
 ONE CPU. c125's ceilings are dead, and so is `SITR_NEXT_CUT.md`'s cut
-(`…/2026-08-13_sitr-aobj-layout/`, no build). **`RESIDUE.md` §0 corrects all sizing.
-SLICE 50 SPENT §4 row 0 — leg A landed (stage texture proof event-driven per slice 30: **195 calls/frame → 8 sweeps a match**, `STG` −11,328 flat at P50/P95/mean, viewport pixel-identical); legs B and C REFUTED, do not re-brief that row.**
-**B is blocked by RAM, not design**: 828 B against the texture-cache `_Static_assert`'s **72 B** of slack. **C does not exist** — slice 1 already converted every per-corner writer; the residue is the shared `gl*` → `ndsRendererTask29Gl*` wrappers, which have stage callers, not an `#if`.
-**Apparatus is 24,947 not 18,675** (third lane `sNdsEffectPacketArmed`, `#if NDS_TICK_HUD`,
-6,272 on EVERY GX command), so the product-side gap is ≈62,300. **Owner package:
-`…/2026-08-13_c-residue/OWNER_DECISIONS.md`.** **RUNG 2
+(`…/2026-08-13_sitr-aobj-layout/`, no build). **`RESIDUE.md` §0 corrects all sizing. SLICE 50 SPENT §4 row 0 — leg A landed (**195 calls/frame → 8 sweeps a match**, `STG` −11,328 flat, viewport pixel-identical); legs B and C REFUTED, do not re-brief that row.** **B is blocked by RAM**: 828 B against the texture cache `_Static_assert`'s **72 B** of slack. **C does not exist** — slice 1 converted every per-corner writer; the residue is the shared `gl*` → `ndsRendererTask29Gl*` wrappers, which have stage callers, not an `#if`.
+**Apparatus is 24,947 not 18,675** (third lane `sNdsEffectPacketArmed`, `#if NDS_TICK_HUD`, 6,272 on EVERY GX command), so the product-side gap is ≈62,300. **Owner package: `…/2026-08-13_c-residue/OWNER_DECISIONS.md`.** **RUNG 2
 (quarter-rate particles) REFUTED, no build (`…/2026-08-13_c-particle-rate/`): `MISC` is a DRAW
 residual** (`taskman_seam.c:5104`), so its 17,152 never priced the update half — which is `SRC`,
 7,364 tk/fr, and pays **−7,493** quarter-rate (ALL particles, both halves, −33,818). **And it shares
 ONE LCG with the level-3 AI**, so any cadence change diverges the match: **CHECK EVERY SUB-RATING
 FOR `syUtilsRandFloat`.**
 
-**A PROFILE CYCLE IS HALF A TICK.** `ticks/frame = cycles / (2 × regions)`, and ONE region is
-`cycles / 2`: regions P50 2,240,838 cyc = 2.0001× two VBlanks, and `cycles/2` reproduces the gate
-arm's `ALL` histogram. Read as 1:1 the no-HUD profile ROM would present at HALF the gate ROM's rate.
-Every `SITR`/`AObj`/`AnimValueQ`/`__aeabi_lmul` crumb halves and is gone (`RESIDUE.md` §0);
-`analyze-symbol-line-profile.py` now reads `regions` and prints its `basis`. Only `FTR`/`STG` are
-flat where P95 lives (band min 296,320/171,520), so flat cuts there pay 1:1 and ADD.
+**A PROFILE CYCLE IS HALF A TICK.** `ticks/frame = cycles / (2 × regions)`; regions P50 2,240,838
+cyc = 2.0001× two VBlanks, so `cycles/2` reproduces the gate arm's `ALL` histogram and every
+`SITR`/`AObj`/`AnimValueQ`/`__aeabi_lmul` crumb halves and is gone (`RESIDUE.md` §0).
+`analyze-symbol-line-profile.py` reads `regions` and prints its `basis`. Only `FTR`/`STG` are flat
+where P95 lives (band min 296,320/171,520), so flat cuts there pay 1:1 and ADD.
 **`…/2026-08-13_c-flagsweep/c123-pc-cycles.csv` caches that profile as 98,346 rows — a 79-second
 one-pass replacement for the 2.6 GB scan. RANK THE INLINE ATTRIBUTION, NOT ONLY THE SYMBOL
 CENSUS: the whole of `RESIDUE.md` §4 row 0 is invisible to a symbol ranking.**
 
-**THE BIGGEST LEVER IS PLACEMENT.** Memory stall is **1,236,685,107 cycles, 33.8% of the match** ≈
-386,000 tk/frame — past `SINT`/`SHDT` by an order, and why slice 48's identical pair differed 94,976.
+**THE BIGGEST LEVER IS PLACEMENT.** Memory stall is **1,236,685,107 cycles, 33.8% of the match** ≈ 386,000 tk/frame — past `SINT`/`SHDT` by an order, and why slice 48's identical pair differed 94,976.
 
 **SLICE 49 (reclaim dead ITCM) is REFUTED without a build — do not re-open it until the Task 37
 port group is understood.** `.itcm` is NOT full (30 of 82 residents never execute, 2,594 B idle),
@@ -79,8 +73,7 @@ but the census's 87,033,153 "in reach" stall cycles assume admitting ~3,118 B of
 functions, and the PORT bit of `NDS_TASK37_ITCM_LEAVES` is held because *"the owner confirmed the
 enabled lab build misbehaves"* — CORRECTNESS. **Eviction alone pays nothing.**
 
-**Lane-sizing traps, now encoded in `-Ceilings`:** medians do not add (it invented a 110,336 lane in
-c122); `OTHR` CONTAINS `WAIT`; only `WORK-H` is spendable. A `-Ceilings` ceiling flattens a lane to
+**Lane-sizing traps, now encoded in `-Ceilings`:** medians do not add (it invented a 110,336 lane in c122); `OTHR` CONTAINS `WAIT`; only `WORK-H` is spendable. A `-Ceilings` ceiling flattens a lane to
 its own MEDIAN, so it prices the EXCURSION only — not what deleting the lane pays (`FTR` 8,512 vs
 311,744); `RESIDUE.md` §2 has both. **Profile with `NDS_TICK_HUD_DRAW=0` or you profile the
 instrument** — the HUD costs ~345,024 tk twice a second on exactly the frames P95 is decided on; the
@@ -91,9 +84,7 @@ both-CPU P95 as Boundary's. **Route to ATTRIBUTE, re-bank to BANK. Collision pai
 
 ## What is dead, so nobody re-derives it
 
-- **`SPRM` 13,056, `AUD` 13,824, `BG` 3,968 — CLOSED BY ARITHMETIC 2026-08-13**: each is under
-  16,000 **deleted entirely**. `SCPU` needs −32.1% and reads 896 on the rank-80 frame. **All 169
-  `?=` flags audited 2026-08-13 — ZERO unshipped wins (`…/2026-08-13_c-flagsweep/FLAG_SWEEP.md`).**
+- **`SPRM` 13,056, `AUD` 13,824, `BG` 3,968 — CLOSED BY ARITHMETIC 2026-08-13**: each is under 16,000 **deleted entirely**. `SCPU` needs −32.1% and reads 896 on the rank-80 frame. **All 169 `?=` flags audited — ZERO unshipped wins (`…/2026-08-13_c-flagsweep/FLAG_SWEEP.md`).**
 - **`FTR` — −93,612 landed (c116); its "0/80, NOT a P95 lever" verdict is BOUNDARY-arm and the
   gate arm's 8,512 is the EXCURSION ceiling, not what deletion pays (311,744).** DS-native AOT
   geometry ships (`NDS_TASK56_FIGHTER_PRIMITIVES ?= 2`) and **SHIPPED BROKEN** — 35.6% of the
@@ -127,16 +118,13 @@ wrapping mod 32 (`nds_platform.c:3197`, whose `|| NDS_TICK_HUD` is pinned by
 warm preload covered 57 of the 87 used ids; the measured 87, 4 per scene update, take **misses 32 →
 2** and the arena 257,200 → 192,240 (it SHRINKS).
 
-**SLICE 48 KEPT — read its SIZE, not its bank (`…/SLICE48.md`).** The FAT lane is **BGM**. **`AUD`
-at 0.2% does NOT clear BGM** — a bucket brackets only its own thread and the worker ran ABOVE main.
-Shipped: created at `MAIN_THREAD_PRIO + 1`, switched to `- 1` once playing (`.data` pokeable).
-**Deprioritizing during the MATCH was REFUTED** — same-binary A/B, +8,064 wrong way; creating low is
-−13,952..−17,792. **SLICE 45 KEPT — 1,225,280 → 1,213,440**:
-`ndsRelocRemoveFighterAObj16StatusAliases` resolved `ndsRelocAssetIDForToken` for EVERY status node
-when `addr == data` rejects almost all in one compare. Resolves 16,002 → 1,143, **−12,160**. **The
-fighter LOCAL matrix build is NOT a P95 lane — refuted c122.** Only shape left is a local-matrix
-memo, **DO-NOT-RETRY, killed twice**. **`SINT` is the fighter INTERRUPT proc with `SCPU` nested, not
-an animation bucket** — reading it as one mis-attributed an A/B in c119. **Zero-copy force-load is
+**SLICE 48 KEPT — read its SIZE, not its bank (`…/SLICE48.md`).** The FAT lane is **BGM**; **`AUD`
+at 0.2% does NOT clear it** (a bucket brackets only its own thread). Shipped: worker created at
+`MAIN_THREAD_PRIO + 1`, switched to `- 1` once playing; **deprioritizing during the MATCH was
+REFUTED** (+8,064 wrong way). **SLICE 45 KEPT — 1,225,280 → 1,213,440** (`…/SLICE45.md`): resolves
+16,002 → 1,143, **−12,160**. **The fighter LOCAL matrix build is NOT a P95 lane — refuted c122**;
+the local-matrix memo is **DO-NOT-RETRY, killed twice**. **`SINT` is the fighter INTERRUPT proc with
+`SCPU` nested, not an animation bucket** — mis-attributed an A/B in c119. **Zero-copy force-load is
 closed:** `ftmain.c:4623` DISCARDS the return value.
 
 **`SHDT` IS CLOSED — bar 47,424 tk/fr, not −26.6%: the band is the transform chain, four dirty flags
@@ -153,9 +141,22 @@ in one change, or **use the `.data` route on ONE binary** (only if the change ca
 state). **Every change needs an engagement counter on BOTH sides**; slices 45, 46 and 48 were all
 found by READING counters the code already kept, on the gate arm, for the first time. `.text.hot`
 is closed both directions.
-**Latent cliff, unowned:** `sNdsAObjEvent32NormalizedCount` reads **973 of 1,024** after a minute
-and overflow silently **skips the animation attach**. **Boundary for all of it**; a visible-pixel
-change needs the owner (`BUGS.md`).
+**R2-07 STRESS GATE RAN — `…/2026-08-13_c-stress/STRESS_GATE.md`; ONE ANOMALY IS OPEN.** 3
+completed successive matches in one session, **5 battle entries**, **Sudden Death entered UNFORCED
+in both runs** (CPU tie at time-up) and played to a KO; `NO-FREEZE`, `TexProofSweepFailCount` **0**
+(slice 50's certificate survives re-entry), heap free-min 70,384, alloc/overflow/GObj-cap/objman
+clean, colour floor 1,305. **THE FIVE-MINUTE MATCH RAN — 98.7% coverage (17,772/18,000 logic
+frames), `WORK-H` 929,344 / P95 1,205,760, VBI 2:7415 3:1394 4:58 5+:19 max 26, slips=0: it costs
+what the one-minute match costs** (1,210,880, inside the cross-build floor) — **length does not
+accumulate cost**, and the gate is still 85,760 over. **The AObj cliff is per-SCENE** — a chain
+cannot fill it (297/1,024) — **but ONE five-minute match hits 1,019 of 1,024** and overflow SILENTLY
+skips the attach: a MATCH-LENGTH cliff. **OPEN: `gNdsObjAnimRunawayCount`** (`Mask` 1 = DObj parser,
+`Script` 0x023C138A, `Opcode` 100) reads **0** at three entries, **17** at five, **50** in the
+five-minute match, which drove **NO input** — stray presses are ruled out; it scales with
+time-in-scene and the bounded parser contained it.
+**START PAUSES THE
+MATCH** and the old whole-window freeze hash could not see it — the watch now hashes the TOP band
+and `-PressStartOnResults` presses only on a detected Results screen.
 
 ## Measurement rules that change your FIRST action — board owns the rest
 

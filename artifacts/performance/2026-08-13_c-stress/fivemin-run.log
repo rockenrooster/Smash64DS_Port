@@ -1,0 +1,29 @@
+Tick-HUD buckets: target=smash64ds-battle-playable-tickhud-hwtri samples=8448 frames=439..8887 melonDS=1.0 sha=DE80E46BDCF1FD98 git=3cd70d9b745+dirty(24) dldi=ON
+
+bucket p50        p95        spread mean       min        max        %ALLp50
+------ ---        ---        ------ ----       ---        ---        -------
+ALL     1,118,272  1,678,720   1.50  1,221,216  1,114,560  5,873,344   100.0
+FTR       298,304    325,632   1.09    292,560    149,440  4,493,952    26.7
+STG       161,728    165,760   1.02    162,522    157,696  4,355,328    14.5
+BG          4,032      4,096   1.02      4,007      3,520      4,288     0.4
+AUD         2,752      7,360   2.67      8,784      1,408    157,824     0.2
+HUD         1,024    418,624 408.81     33,868        896    493,952     0.1
+SRC       329,856    579,008   1.76    360,263    151,552  4,551,616    29.5
+MISC      105,088    184,768   1.76    117,513     81,344  4,280,448     9.4
+OTHR      229,184    502,080   2.19    241,698     20,608  4,399,808    20.5
+WAIT      209,472    481,856   2.30    221,441        832    560,576    18.7
+WORK      941,696  1,373,696   1.46    999,775    705,344  5,649,728    84.2
+SHDT        4,224    107,648  25.48     15,544      2,752    560,128     0.4
+SWRM          832        960   1.15        862        704      1,088     0.1
+GCRA      324,736    573,760   1.77    355,097    146,496  4,546,432    29.0
+SCPU       45,248    108,672   2.40     47,099        640    159,488     4.0
+SCAT        1,280      1,408   1.10      1,385        960    932,672     0.1
+SPRM        2,048      2,304   1.12      5,088      1,664    727,040     0.2
+SINT      154,816    325,184   2.10    170,355      6,592  4,384,448    13.8
+SPHD       61,888    104,640   1.69     70,507     30,656  1,498,688     5.5
+SPHC          640        768   1.20        691        384     32,384     0.1
+WORK-H    929,344  1,205,760   1.30    965,908    704,320  5,224,960    83.1
+
+named=979,517 (80.2% of ALL)  VBI 2:7415 3:1394 4:58 5+:19 max:26 total:8886  slips=0
+extras: gNdsR2TexProofSweepFailCount=0  gNdsR2TextureEpochBumpCount=0  sNdsAObjEvent32NormalizedCount=1,019  gNdsAObjEvent32NormalizeFailCount=0  gNdsObjAnimRunawayCount=50  gNdsTaskmanGeneralHeapFreeMin=70,000  gNdsTaskmanArenaAllocFailCount=0  gNdsSyMallocOverflowCount=0  gNdsBattlePlayablePacingLogicFrames=17,772  gSCManagerTransferBattleState.time_limit=5  gNdsBattleTextHudP0Damage=46  gNdsBattleTextHudP1Damage=34
+Wrote artifacts\performance\2026-08-13_c-stress\fivemin.json

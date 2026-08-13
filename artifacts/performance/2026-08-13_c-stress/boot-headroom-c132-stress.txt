@@ -1,0 +1,11 @@
+build            : build-c132-stress
+fake_heap_start  : 0x02269804
+static footprint : text 981,348  data 148,288  bss 1,455,560  total 2,585,196
+highest booting  : 0x02294804  (build-r209-memo1s)
+lowest failing   : 0x02294b24  (build-r209-memo2s)
+unproven band    : 800 bytes wide
+
+OK: 176,128 bytes of PROVEN headroom (to 0x02294804).
+    Proven means another build linked at or below that address booted. Anything
+    larger is unproven, not safe -- the cliff itself has never been bisected.
+
