@@ -858,6 +858,113 @@ static NDSAObjEvent32Plan sNdsAObjEvent32Plan[NDS_AOBJ_EVENT32_PLAN_MAX];
 static u32 sNdsAObjEvent32NormalizedCount;
 static u32 sNdsAObjEvent32PlanCount;
 
+/* AN INDEX OVER THE LEDGER ABOVE -- not a second cache, and the distinction is
+ * the whole of its safety argument.
+ *
+ * ndsAObjEvent32FindNormalized was a linear scan of sNdsAObjEvent32Normalized,
+ * and after the 2026-08-13 shield anim-joint fix (607d3697455) the shield's
+ * install path calls it once per attached joint: 1,344 times a minute on the
+ * gate arm, 9,154 in a five-minute match, each one a hit near the far end of a
+ * table that reaches 1,177 entries in a minute and 1,598 in five. That scan is
+ * ~88% of the 5,123 ticks each attach costs (the fix's whole price, isolated by
+ * the one-variable five-minute pair in
+ * artifacts/performance/2026-08-13_c-animjoint-fix/, re-derived per attach in
+ * ../2026-08-13_c-ledger-index/LEDGER_INDEX.md).
+ *
+ * SwitchPlan 3.12 bans keying anything on a pointer that survives a scene
+ * boundary. This does not introduce such a key: the LEDGER is already keyed on
+ * the command pointer, and this array holds nothing but positions inside it.
+ * Same array, same contents, same single reset seam
+ * (ndsAObjEvent32ResetNormalizedScripts, from ndsRelocResetLoadedFiles). There
+ * is no new lifetime to get wrong, no invalidation to forget, and no state that
+ * can disagree with the ledger -- which is exactly what the five 3.12 incidents
+ * did have. The ledger's own `script->u == native_word` re-check is untouched.
+ *
+ * Exactness: the ledger's keys are unique. ndsAObjEvent32PlanStream returns as
+ * soon as it reaches an already-normalized command and ndsAObjEvent32FindPlanned
+ * blocks duplicates inside one plan, so no command is ever appended twice. With
+ * unique keys an open-addressed probe returns the same index the scan returned,
+ * bit for bit. NDS_AOBJ_EVENT32_HASH_ORACLE proves that rather than asserting it.
+ *
+ * Slots hold index+1 so that a zeroed .bss reads as EMPTY. That is not a style
+ * choice: the first normalize can precede the first ndsRelocResetLoadedFiles,
+ * and with a 0xffff sentinel an unreset table would be 4,096 occupied slots that
+ * match nothing, i.e. a probe that never terminates -- 3.11's freeze class, in
+ * the one subsystem whose failure mode is already a freeze. */
+#define NDS_AOBJ_EVENT32_NORMALIZED_HASH_SLOTS 4096u
+
+_Static_assert((NDS_AOBJ_EVENT32_NORMALIZED_HASH_SLOTS &
+                (NDS_AOBJ_EVENT32_NORMALIZED_HASH_SLOTS - 1u)) == 0u,
+               "AObj event-32 ledger index must be a power of two");
+_Static_assert(NDS_AOBJ_EVENT32_NORMALIZED_HASH_SLOTS >
+               NDS_AOBJ_EVENT32_NORMALIZED_MAX,
+               "AObj event-32 ledger index must keep a free slot per entry");
+_Static_assert(NDS_AOBJ_EVENT32_NORMALIZED_MAX < 0xffffu,
+               "AObj event-32 ledger index stores index+1 in a u16");
+
+static u16
+    sNdsAObjEvent32NormalizedHash[NDS_AOBJ_EVENT32_NORMALIZED_HASH_SLOTS];
+
+/* Engagement, both directions. Probes/Lookups is the load-factor readout that
+ * says whether the index is behaving; Overflow must stay 0 and its non-zero
+ * meaning is "the fallback below ran", never "a lookup was wrong". */
+volatile u32 gNdsAObjEvent32HashHitCount;
+volatile u32 gNdsAObjEvent32HashMissCount;
+volatile u32 gNdsAObjEvent32HashProbeCount;
+volatile u32 gNdsAObjEvent32HashInsertProbeCount;
+volatile u32 gNdsAObjEvent32HashOverflowCount;
+volatile u32 gNdsAObjEvent32HashOracleRuns;
+volatile u32 gNdsAObjEvent32HashOracleMismatch;
+
+/* Commands are 4-byte objects inside one loaded file, so the interesting bits
+ * are low and adjacent; the two folds spread them over the whole slot range
+ * without a multiply. */
+static u32 ndsAObjEvent32HashSlot(const AObjEvent32 *command)
+{
+    u32 h = (u32)(uintptr_t)command >> 2;
+
+    h ^= h >> 7;
+    h ^= h >> 13;
+    return h & (NDS_AOBJ_EVENT32_NORMALIZED_HASH_SLOTS - 1u);
+}
+
+static s32 ndsAObjEvent32ScanNormalized(const AObjEvent32 *command)
+{
+    u32 i;
+
+    for (i = 0u; i < sNdsAObjEvent32NormalizedCount; i++)
+    {
+        if (sNdsAObjEvent32Normalized[i].command == command)
+        {
+            return (s32)i;
+        }
+    }
+    return -1;
+}
+
+static void ndsAObjEvent32IndexNormalized(u32 index)
+{
+    u32 slot = ndsAObjEvent32HashSlot(sNdsAObjEvent32Normalized[index].command);
+    u32 probes;
+
+    for (probes = 0u; probes < NDS_AOBJ_EVENT32_NORMALIZED_HASH_SLOTS;
+         probes++)
+    {
+        if (sNdsAObjEvent32NormalizedHash[slot] == 0u)
+        {
+            sNdsAObjEvent32NormalizedHash[slot] = (u16)(index + 1u);
+            gNdsAObjEvent32HashInsertProbeCount += probes + 1u;
+            return;
+        }
+        slot = (slot + 1u) & (NDS_AOBJ_EVENT32_NORMALIZED_HASH_SLOTS - 1u);
+    }
+    /* Unreachable while the static assert above holds: the ledger cannot hold
+     * more entries than the index has slots. Counted rather than asserted so
+     * that if it ever does happen the lookup below degrades to the scan it
+     * replaced instead of dropping an entry. */
+    gNdsAObjEvent32HashOverflowCount++;
+}
+
 /* sNdsAObjEvent32NormalizedCount is reset on every scene teardown, so reading
  * it at the end of a run reports the LAST scene only. That is how a five-entry
  * chain reported 297 and got written up as "a chain cannot fill the table"
@@ -963,16 +1070,55 @@ static u32 ndsAObjEvent32CountFlags(u32 flags)
 
 static s32 ndsAObjEvent32FindNormalized(AObjEvent32 *command)
 {
-    u32 i;
+#if !NDS_AOBJ_EVENT32_LEDGER_INDEX
+    /* Falsifier arm: the index is still built and still occupies its bss, so
+     * every section places as it does in the shipping arm; only the lookup
+     * reverts. See the Makefile flag for why a rebuilt control cannot do this. */
+    return ndsAObjEvent32ScanNormalized(command);
+#else
+    u32 slot = ndsAObjEvent32HashSlot(command);
+    s32 found = -1;
+    u32 probes;
 
-    for (i = 0u; i < sNdsAObjEvent32NormalizedCount; i++)
+    for (probes = 0u; probes < NDS_AOBJ_EVENT32_NORMALIZED_HASH_SLOTS;
+         probes++)
     {
-        if (sNdsAObjEvent32Normalized[i].command == command)
+        u32 entry = sNdsAObjEvent32NormalizedHash[slot];
+
+        if (entry == 0u)
         {
-            return (s32)i;
+            gNdsAObjEvent32HashMissCount++;
+            break;
+        }
+        if (sNdsAObjEvent32Normalized[entry - 1u].command == command)
+        {
+            gNdsAObjEvent32HashHitCount++;
+            found = (s32)(entry - 1u);
+            break;
+        }
+        slot = (slot + 1u) & (NDS_AOBJ_EVENT32_NORMALIZED_HASH_SLOTS - 1u);
+    }
+    gNdsAObjEvent32HashProbeCount += probes + 1u;
+    if (probes == NDS_AOBJ_EVENT32_NORMALIZED_HASH_SLOTS)
+    {
+        gNdsAObjEvent32HashOverflowCount++;
+        return ndsAObjEvent32ScanNormalized(command);
+    }
+#if NDS_AOBJ_EVENT32_HASH_ORACLE
+    {
+        s32 scanned = ndsAObjEvent32ScanNormalized(command);
+
+        gNdsAObjEvent32HashOracleRuns++;
+        if (scanned != found)
+        {
+            gNdsAObjEvent32HashOracleMismatch++;
+            gNdsAObjEvent32NormalizeLastFailAddress = (u32)(uintptr_t)command;
+            found = scanned;
         }
     }
-    return -1;
+#endif
+    return found;
+#endif
 }
 
 static s32 ndsAObjEvent32FindPlanned(AObjEvent32 *command)
@@ -1243,6 +1389,7 @@ static sb32 ndsAObjEvent32NormalizeScript(
             sNdsAObjEvent32Plan[i].command;
         sNdsAObjEvent32Normalized[sNdsAObjEvent32NormalizedCount].native_word =
             sNdsAObjEvent32Plan[i].native_word;
+        ndsAObjEvent32IndexNormalized(sNdsAObjEvent32NormalizedCount);
         sNdsAObjEvent32NormalizedCount++;
     }
 
@@ -1257,6 +1404,16 @@ static sb32 ndsAObjEvent32NormalizeScript(
 
 void ndsAObjEvent32ResetNormalizedScripts(void)
 {
+    u32 slot;
+
+    /* The index is discarded with the ledger it indexes, at the ledger's one
+     * correct discard point, in the same breath. Nothing else may clear either
+     * one: SwitchPlan 3.12's whole lesson is that a cache with its own
+     * invalidation schedule eventually disagrees with the thing it caches. */
+    for (slot = 0u; slot < NDS_AOBJ_EVENT32_NORMALIZED_HASH_SLOTS; slot++)
+    {
+        sNdsAObjEvent32NormalizedHash[slot] = 0u;
+    }
     sNdsAObjEvent32NormalizedCount = 0u;
     sNdsAObjEvent32PlanCount = 0u;
 }

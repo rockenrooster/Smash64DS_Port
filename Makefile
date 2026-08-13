@@ -419,6 +419,23 @@ NDS_R2_SOAK_MATCH_MINUTES ?= 0
 # Lab only -- it walks the loaded-file table per shielding joint -- and it costs
 # nothing when no fighter is shielding.
 NDS_ANIM_JOINT_AUDIT ?= 0
+# Qualification oracle for the normalized-ledger index (battleship_sys_objanim.c).
+# On EVERY index lookup it also runs the linear scan the index replaced and
+# compares the two answers, counting any disagreement. The index is only correct
+# because the ledger's keys are unique, and that is a property of the insert path
+# rather than of the lookup, so it is proven by running both and not by argument.
+# Lab only: it restores the whole cost the index removes, so a run carrying this
+# flag is a correctness run and can never be a gate figure.
+NDS_AOBJ_EVENT32_HASH_ORACLE ?= 0
+# The A/B/A third arm for that index, and it has to be a flag rather than a
+# rebuild: this build is byte-reproducible (build-c144-ctl and build-c145-ctl2,
+# same source, different directory, identical ROM SHA-256) and the tick-HUD
+# sampler is bit-deterministic, so re-running the control cannot bracket
+# anything. At 0 the lookup falls back to the linear scan it replaced while the
+# 8,192-byte index, its counters, and every section after them stay exactly
+# where the shipping arm puts them -- i.e. the candidate's PLACEMENT with the
+# control's BEHAVIOUR, which is the only arm that can tell the two apart.
+NDS_AOBJ_EVENT32_LEDGER_INDEX ?= 1
 # R2-03 E49. Teaches the native fighter owner the precedence E48 measured: an
 # epoch whose vertices carry a valid vertex colour and no material is emitted
 # from that colour raw and is NOT lit. The generic path has always done this
@@ -3139,6 +3156,8 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_R2_BOTH_CPU $(NDS_R2_BOTH_CPU)'; \
 		echo '#define NDS_R2_SOAK_MATCH_MINUTES $(NDS_R2_SOAK_MATCH_MINUTES)'; \
 		echo '#define NDS_ANIM_JOINT_AUDIT $(NDS_ANIM_JOINT_AUDIT)'; \
+		echo '#define NDS_AOBJ_EVENT32_HASH_ORACLE $(NDS_AOBJ_EVENT32_HASH_ORACLE)'; \
+		echo '#define NDS_AOBJ_EVENT32_LEDGER_INDEX $(NDS_AOBJ_EVENT32_LEDGER_INDEX)'; \
 		echo '#define NDS_R2_UNLIT_VERTEX_EPOCH $(NDS_R2_UNLIT_VERTEX_EPOCH)'; \
 		echo '#define NDS_R204_FPSHUD_SHADOW $(NDS_R204_FPSHUD_SHADOW)'; \
 		echo '#define NDS_TASK103_STAGE_RUN_PHASE $(NDS_TASK103_STAGE_RUN_PHASE)'; \
