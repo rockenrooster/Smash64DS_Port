@@ -3061,6 +3061,62 @@ static void ndsParticleTransformForDraw(LBParticle *pc,
     }
 }
 
+#if NDS_R2_POSITION_PROBE
+/* Far-end of the fire-burn position contract. The maker-side probe stores the
+ * exact LBParticle pointers returned by the three source Flame makers. Record
+ * the first world-space quad centre produced for each pointer after the normal
+ * source LBTransform has been applied but before any DS camera/fixed-point
+ * conversion. That separates "source maker intentionally offset/moved it" from
+ * "the DS renderer moved it" without inferring either from pixels. */
+extern uintptr_t gNdsFlameMakerProbeParticle[8];
+__attribute__((used)) u32 gNdsFlameDrawProbeSeenMask;
+__attribute__((used)) f32 gNdsFlameDrawProbeWorldX[8];
+__attribute__((used)) f32 gNdsFlameDrawProbeWorldY[8];
+__attribute__((used)) f32 gNdsFlameDrawProbeWorldZ[8];
+__attribute__((used)) f32 gNdsFlameDrawProbeLocalX[8];
+__attribute__((used)) f32 gNdsFlameDrawProbeLocalY[8];
+__attribute__((used)) f32 gNdsFlameDrawProbeLocalZ[8];
+__attribute__((used)) f32 gNdsFlameDrawProbeXfX[8];
+__attribute__((used)) f32 gNdsFlameDrawProbeXfY[8];
+__attribute__((used)) f32 gNdsFlameDrawProbeXfZ[8];
+__attribute__((used)) f32 gNdsFlameDrawProbeSize[8];
+__attribute__((used)) u32 gNdsFlameDrawProbeTexture[8];
+__attribute__((used)) u32 gNdsFlameDrawProbeFrame[8];
+
+static void ndsParticleProbeFlameFirstDraw(LBParticle *pc,
+                                           const Vec3f *world_pos)
+{
+    u32 slot;
+
+    for (slot = 0u; slot < 8u; slot++)
+    {
+        u32 bit = 1u << slot;
+
+        if ((gNdsFlameMakerProbeParticle[slot] == (uintptr_t)pc) &&
+            ((gNdsFlameDrawProbeSeenMask & bit) == 0u))
+        {
+            gNdsFlameDrawProbeSeenMask |= bit;
+            gNdsFlameDrawProbeWorldX[slot] = world_pos->x;
+            gNdsFlameDrawProbeWorldY[slot] = world_pos->y;
+            gNdsFlameDrawProbeWorldZ[slot] = world_pos->z;
+            gNdsFlameDrawProbeLocalX[slot] = pc->pos.x;
+            gNdsFlameDrawProbeLocalY[slot] = pc->pos.y;
+            gNdsFlameDrawProbeLocalZ[slot] = pc->pos.z;
+            if (pc->xf != NULL)
+            {
+                gNdsFlameDrawProbeXfX[slot] = pc->xf->translate.x;
+                gNdsFlameDrawProbeXfY[slot] = pc->xf->translate.y;
+                gNdsFlameDrawProbeXfZ[slot] = pc->xf->translate.z;
+            }
+            gNdsFlameDrawProbeSize[slot] = pc->size;
+            gNdsFlameDrawProbeTexture[slot] = (u32)pc->texture_id;
+            gNdsFlameDrawProbeFrame[slot] = (u32)pc->frame_id;
+            return;
+        }
+    }
+}
+#endif
+
 #if NDS_R2_WHISPY_NATIVE_AOT
 #define NDS_WHISPY_AOT_XF_CACHE_COUNT 4u
 static LBTransform *sNdsWhispyAOTXfCache[NDS_WHISPY_AOT_XF_CACHE_COUNT];
@@ -3804,6 +3860,9 @@ void lbParticleDrawTextures(GObj *gobj)
                            (gNdsWhispyAOTRoute == 1u))
 #endif
                     );
+#if NDS_R2_POSITION_PROBE
+                    ndsParticleProbeFlameFirstDraw(pc, &world_pos);
+#endif
                     submit_result = ndsRendererSubmitParticleQuad(
                         texture_name, &world_pos, pc->size,
                         color, pc->primcolor.a, &quad_right, &quad_up,

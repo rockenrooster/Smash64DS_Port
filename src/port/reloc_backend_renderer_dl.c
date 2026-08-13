@@ -3512,6 +3512,31 @@ static sb32 ndsRendererAdapterComposeNativeRootMatrix(
 }
 
 #if NDS_R2_FOX_GUN_OVERLAY
+#if NDS_R2_POSITION_PROBE
+/* One-shot fixed-point proof for the post-visibility Fox attachment row. The
+ * gameplay probe in battleship_fox_blaster.c records the source helper's world
+ * point. This records the exact 20.12 joint-17 world matrix the visible gun
+ * consumes on the first gun draw after that source spawn, plus that matrix's
+ * local {60,0,0} result. If the two world points disagree, the defect is before
+ * the camera; if they agree, the remaining Y error is strictly draw-space.
+ * Probe build only; GDB is the sole consumer. */
+extern u32 gNdsFoxSpawnProbeCount;
+__attribute__((used)) u32 gNdsFoxGunWorldProbeCount;
+__attribute__((used)) f32 gNdsFoxGunWorldProbeFloatMtx[16];
+__attribute__((used)) s32 gNdsFoxGunWorldProbeMtx[16];
+__attribute__((used)) s32 gNdsFoxGunWorldProbeShotQ12[4];
+#define NDS_FOX_GUN_POSITION_CHAIN_MAX 18u
+__attribute__((used)) u32 gNdsFoxGunChainDepth;
+__attribute__((used)) u32 gNdsFoxGunChainDObj[NDS_FOX_GUN_POSITION_CHAIN_MAX];
+__attribute__((used)) u32 gNdsFoxGunChainMode[NDS_FOX_GUN_POSITION_CHAIN_MAX];
+__attribute__((used)) u32 gNdsFoxGunChainKind0[NDS_FOX_GUN_POSITION_CHAIN_MAX];
+__attribute__((used)) f32 gNdsFoxGunChainSourceLocal[
+    NDS_FOX_GUN_POSITION_CHAIN_MAX * 16u];
+__attribute__((used)) s32 gNdsFoxGunChainRendererLocal[
+    NDS_FOX_GUN_POSITION_CHAIN_MAX * 16u];
+static u32 sNdsFoxGunWorldProbeSpawnCount;
+#endif
+
 /* BUGS.md "Fox's pistol model is missing": joint 17's world matrix, for the
  * blaster overlay.
  *
@@ -3567,6 +3592,73 @@ static sb32 ndsRendererAdapterBuildFoxGunJointMtx(
         syMatrixF2LFixedW(&parts->mtx_translate, &mtx);
     }
     ndsRendererAdapterMtxFromN64(&mtx, &world);
+#if NDS_R2_POSITION_PROBE
+    if (gNdsFoxSpawnProbeCount != sNdsFoxGunWorldProbeSpawnCount)
+    {
+        u32 row;
+        u32 col;
+        DObj *cursor = joint;
+        u32 depth = 0u;
+
+        sNdsFoxGunWorldProbeSpawnCount = gNdsFoxSpawnProbeCount;
+        while ((cursor != NULL) && (cursor != DOBJ_PARENT_NULL) &&
+               (depth < NDS_FOX_GUN_POSITION_CHAIN_MAX))
+        {
+            FTParts *cursor_parts = ftGetParts(cursor);
+            NDSRendererMatrix20p12 renderer_local;
+
+            gNdsFoxGunChainDObj[depth] = (u32)(uintptr_t)cursor;
+            gNdsFoxGunChainKind0[depth] =
+                ((cursor->xobjs_num != 0u) && (cursor->xobjs[0] != NULL)) ?
+                    cursor->xobjs[0]->kind : 0xffffffffu;
+            gNdsFoxGunChainMode[depth] = (cursor_parts != NULL) ?
+                (u32)cursor_parts->transform_update_mode : 0xffffffffu;
+            if (cursor_parts != NULL)
+            {
+                for (row = 0u; row < 4u; row++)
+                {
+                    for (col = 0u; col < 4u; col++)
+                    {
+                        gNdsFoxGunChainSourceLocal[(depth * 16u) +
+                            (row * 4u) + col] =
+                            cursor_parts->unk_dobjtrans_0x10[row][col];
+                    }
+                }
+            }
+            if (ndsRendererAdapterBuildDObjLocalMatrix(
+                    cursor, &renderer_local) != FALSE)
+            {
+                for (row = 0u; row < 4u; row++)
+                {
+                    for (col = 0u; col < 4u; col++)
+                    {
+                        gNdsFoxGunChainRendererLocal[(depth * 16u) +
+                            (row * 4u) + col] = renderer_local.m[row][col];
+                    }
+                }
+            }
+            depth++;
+            cursor = cursor->parent;
+        }
+        gNdsFoxGunChainDepth = depth;
+        for (row = 0u; row < 4u; row++)
+        {
+            for (col = 0u; col < 4u; col++)
+            {
+                gNdsFoxGunWorldProbeFloatMtx[(row * 4u) + col] =
+                    parts->mtx_translate[row][col];
+                gNdsFoxGunWorldProbeMtx[(row * 4u) + col] = world.m[row][col];
+            }
+        }
+        for (col = 0u; col < 4u; col++)
+        {
+            gNdsFoxGunWorldProbeShotQ12[col] =
+                (world.m[0][col] * 60) +
+                world.m[3][col];
+        }
+        gNdsFoxGunWorldProbeCount++;
+    }
+#endif
 
     /* The same two multiplies a fighter root gets, in the same order. The
      * binding pass seeds its forward compose with the camera modelview and then

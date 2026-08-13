@@ -105,6 +105,13 @@ NDS_POSITION_PROBE_GLOBAL u32 gNdsFoxSpawnAnimLocks;
 NDS_POSITION_PROBE_GLOBAL s32 gNdsFoxSpawnUpdateMode;
 NDS_POSITION_PROBE_GLOBAL u32 gNdsFoxSpawnTrans5;
 NDS_POSITION_PROBE_GLOBAL u32 gNdsFoxSpawnProbeCount;
+NDS_POSITION_PROBE_GLOBAL f32 gNdsFoxSpawnWorldMtx[16];
+#define NDS_FOX_POSITION_CHAIN_MAX 18u
+NDS_POSITION_PROBE_GLOBAL u32 gNdsFoxSpawnChainDepth;
+NDS_POSITION_PROBE_GLOBAL u32 gNdsFoxSpawnChainDObj[NDS_FOX_POSITION_CHAIN_MAX];
+NDS_POSITION_PROBE_GLOBAL u32 gNdsFoxSpawnChainMode[NDS_FOX_POSITION_CHAIN_MAX];
+NDS_POSITION_PROBE_GLOBAL f32 gNdsFoxSpawnChainLocal[
+    NDS_FOX_POSITION_CHAIN_MAX * 16u];
 
 static void ndsFoxBlasterProbeSpawn(GObj *fighter_gobj, Vec3f *pos)
 {
@@ -132,6 +139,45 @@ static void ndsFoxBlasterProbeSpawn(GObj *fighter_gobj, Vec3f *pos)
     if (parts->unk_dobjtrans_0x5 == 0)
     {
         func_ovl2_800EDBA4(joint);
+    }
+    {
+        s32 row;
+        s32 col;
+        DObj *cursor = joint;
+        u32 depth = 0u;
+
+        for (row = 0; row < 4; row++)
+        {
+            for (col = 0; col < 4; col++)
+            {
+                gNdsFoxSpawnWorldMtx[(row * 4) + col] =
+                    parts->mtx_translate[row][col];
+            }
+        }
+        while ((cursor != NULL) && (cursor != DOBJ_PARENT_NULL) &&
+               (depth < NDS_FOX_POSITION_CHAIN_MAX))
+        {
+            FTParts *cursor_parts = ftGetParts(cursor);
+
+            gNdsFoxSpawnChainDObj[depth] = (u32)(uintptr_t)cursor;
+            if (cursor_parts != NULL)
+            {
+                gNdsFoxSpawnChainMode[depth] =
+                    (u32)cursor_parts->transform_update_mode;
+                for (row = 0; row < 4; row++)
+                {
+                    for (col = 0; col < 4; col++)
+                    {
+                        gNdsFoxSpawnChainLocal[(depth * 16u) +
+                            ((u32)row * 4u) + (u32)col] =
+                            cursor_parts->unk_dobjtrans_0x10[row][col];
+                    }
+                }
+            }
+            depth++;
+            cursor = cursor->parent;
+        }
+        gNdsFoxSpawnChainDepth = depth;
     }
     gmCollisionGetWorldPosition(parts->mtx_translate, &b);
 

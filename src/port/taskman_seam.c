@@ -24,6 +24,15 @@
 extern u32 sySchedulerGetTicCount(void);
 extern void sySchedulerSetTicCount(u32 tics);
 
+#if NDS_R2_POSITION_PROBE
+/* Probe-only: which of the two unchanged 60 Hz source ticks inside the current
+ * 30 Hz present is executing. Attachment effects sampled in tick 0 but drawn
+ * after tick 1 can otherwise look like a transform bug even when both source
+ * computations are individually exact. */
+__attribute__((used)) volatile u32 gNdsPositionProbeUpdateInPresent;
+extern void ndsPositionProbeCaptureMarioHurtboxes(GObj *fighter_gobj);
+#endif
+
 #if NDS_IMPORT_BATTLESHIP_VS_RESULTS
 extern void ndsMNVSResultsRecordFrame(void);
 extern void ndsSObjPreviewBeginFrame(void);
@@ -5329,6 +5338,14 @@ u32 ndsR2HostBattleUpdateOnce(u32 update_index)
     sNdsR2ProfileInputTicks += cpuGetTiming() - input_start;
 #endif
     ndsRunMarioFoxProofUpdate(&gNdsFighterGCRunAllLoopTaskmanUpdateCount);
+#if NDS_R2_POSITION_PROBE
+    if ((gSCManagerBattleState != NULL) &&
+        (gSCManagerBattleState->players[0].fighter_gobj != NULL))
+    {
+        ndsPositionProbeCaptureMarioHurtboxes(
+            gSCManagerBattleState->players[0].fighter_gobj);
+    }
+#endif
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
     sNdsR2ProfileUpdateTicks += gNdsRendererProfileUpdateTicks;
     if (update_index < 2u)
@@ -8031,6 +8048,9 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
                      update_in_iteration < updates_this_iteration;
                      update_in_iteration++)
                 {
+#if NDS_R2_POSITION_PROBE
+                    gNdsPositionProbeUpdateInPresent = update_in_iteration;
+#endif
                     u32 battle_status_before =
                         ((is_battle_playable != 0u) &&
                          (gSCManagerBattleState != NULL)) ?
@@ -8056,6 +8076,14 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
 #endif
                     ndsRunMarioFoxProofUpdate(
                         &gNdsFighterGCRunAllLoopTaskmanUpdateCount);
+#if NDS_R2_POSITION_PROBE
+                    if ((gSCManagerBattleState != NULL) &&
+                        (gSCManagerBattleState->players[0].fighter_gobj != NULL))
+                    {
+                        ndsPositionProbeCaptureMarioHurtboxes(
+                            gSCManagerBattleState->players[0].fighter_gobj);
+                    }
+#endif
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
                     profile_update_ticks +=
                         gNdsRendererProfileUpdateTicks;

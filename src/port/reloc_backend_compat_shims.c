@@ -6494,6 +6494,107 @@ void ftParamSetHitStatusAll(GObj *fighter_gobj, s32 hitstatus)
 
 extern void gmCollisionCopyMatrix(Mtx44f dst, Mtx44f src);
 
+#if NDS_R2_POSITION_PROBE
+/* BUGS.md Fox crouch-under-Blaster diagnostic.
+ *
+ * This is probe-only observation of the SAME source matrices the gameplay
+ * collision path consumes. gmCollisionCheckWeaponAttackFighterDamageCollide
+ * calls func_ovl2_800EDBA4 through func_ovl2_800EDE00 before testing each
+ * FTDamageColl; calling the builder here merely fills that cache a little
+ * earlier in a diagnostic ROM. No status, animation, collision descriptor,
+ * weapon coordinate, or fighter coordinate is changed.
+ *
+ * Capture the first source Wait pose and first source SquatWait pose in one ROM
+ * so standing-vs-crouching hurtbox geometry cannot be confused by a rebuild,
+ * RNG seed, or a later respawn. Slots [0..10] are Wait; [11..21] are
+ * SquatWait. `used` keeps the arrays readable by GDB with no in-ROM consumer. */
+#define NDS_MARIO_HURT_PROBE_SLOTS (FTDAMAGECOLL_NUM_MAX * 2)
+__attribute__((used)) volatile u32 gNdsMarioHurtProbeCaptureMask;
+__attribute__((used)) s32 gNdsMarioHurtProbeJoint[NDS_MARIO_HURT_PROBE_SLOTS];
+__attribute__((used)) f32 gNdsMarioHurtProbeCenterY[NDS_MARIO_HURT_PROBE_SLOTS];
+__attribute__((used)) f32 gNdsMarioHurtProbeExtentY[NDS_MARIO_HURT_PROBE_SLOTS];
+__attribute__((used)) f32 gNdsMarioHurtProbeJointY[NDS_MARIO_HURT_PROBE_SLOTS];
+__attribute__((used)) f32 gNdsMarioHurtProbeRootY[2];
+
+void ndsPositionProbeCaptureMarioHurtboxes(GObj *fighter_gobj)
+{
+    FTStruct *fp = (fighter_gobj != NULL) ? ftGetStruct(fighter_gobj) : NULL;
+    DObj *root = (fighter_gobj != NULL) ? DObjGetStruct(fighter_gobj) : NULL;
+    u32 mode;
+    u32 base;
+    u32 i;
+
+    if ((fp == NULL) || (root == NULL) || (fp->attr == NULL))
+    {
+        return;
+    }
+    if (fp->status_id == nFTCommonStatusWait)
+    {
+        mode = 0u;
+    }
+    else if (fp->status_id == nFTCommonStatusSquatWait)
+    {
+        mode = 1u;
+    }
+    else
+    {
+        return;
+    }
+    if ((gNdsMarioHurtProbeCaptureMask & (1u << mode)) != 0u)
+    {
+        return;
+    }
+
+    base = mode * FTDAMAGECOLL_NUM_MAX;
+    gNdsMarioHurtProbeRootY[mode] = root->translate.vec.f.y;
+    for (i = 0u; i < FTDAMAGECOLL_NUM_MAX; i++)
+    {
+        FTDamageColl *dc = &fp->damage_colls[i];
+        FTParts *parts;
+        f32 b0;
+        f32 b1;
+        f32 b2;
+        f32 center_y;
+        f32 extent_y;
+
+        gNdsMarioHurtProbeJoint[base + i] = -1;
+        gNdsMarioHurtProbeCenterY[base + i] = 0.0F;
+        gNdsMarioHurtProbeExtentY[base + i] = 0.0F;
+        gNdsMarioHurtProbeJointY[base + i] = 0.0F;
+        if ((dc->joint_id < 0) || (dc->joint == NULL))
+        {
+            continue;
+        }
+
+        func_ovl2_800EDBA4(dc->joint);
+        parts = ftGetParts(dc->joint);
+        if (parts == NULL)
+        {
+            continue;
+        }
+        center_y =
+            (parts->mtx_translate[0][1] * dc->offset.x) +
+            (parts->mtx_translate[1][1] * dc->offset.y) +
+            (parts->mtx_translate[2][1] * dc->offset.z) +
+            parts->mtx_translate[3][1];
+        b0 = parts->mtx_translate[0][1];
+        b1 = parts->mtx_translate[1][1];
+        b2 = parts->mtx_translate[2][1];
+        if (b0 < 0.0F) b0 = -b0;
+        if (b1 < 0.0F) b1 = -b1;
+        if (b2 < 0.0F) b2 = -b2;
+        extent_y = (b0 * dc->size.x) + (b1 * dc->size.y) +
+                   (b2 * dc->size.z);
+
+        gNdsMarioHurtProbeJoint[base + i] = dc->joint_id;
+        gNdsMarioHurtProbeCenterY[base + i] = center_y;
+        gNdsMarioHurtProbeExtentY[base + i] = extent_y;
+        gNdsMarioHurtProbeJointY[base + i] = parts->mtx_translate[3][1];
+    }
+    gNdsMarioHurtProbeCaptureMask |= 1u << mode;
+}
+#endif /* NDS_R2_POSITION_PROBE */
+
 /* BUGS.md #2: this returned identity plus the joint's *local* translate, so a
  * grab placed the victim at the capturer's hand offset measured from the world
  * origin instead of from the hand -- the snap the owner sees. The contract is
@@ -8148,6 +8249,47 @@ extern LBParticle *efManagerFlameLRMakeEffect(Vec3f *pos, s32 lr);
 extern LBParticle *efManagerFlameRandomMakeEffect(Vec3f *pos);
 extern LBParticle *efManagerFlameStaticMakeEffect(Vec3f *pos);
 
+#if NDS_R2_POSITION_PROBE
+/* Far-end proof for the fire-position row. GDB cannot safely correlate a
+ * just-written cached stack/global value with a breakpoint in optimized code;
+ * c132 demonstrated that by observing gNdsFlameProbeCount==0 at an instruction
+ * which is statically after its increment. Record the pointer's VALUE here,
+ * inside the dispatch helper and immediately before the real Flame maker. This
+ * is the exact argument the maker receives and can be read later after the
+ * cache has naturally drained. Probe builds only. */
+__attribute__((used)) u32 gNdsFlameMakerProbeCount;
+__attribute__((used)) u32 gNdsFlameMakerProbeKind[8];
+__attribute__((used)) u32 gNdsFlameMakerProbeSubstep[8];
+__attribute__((used)) f32 gNdsFlameMakerProbeX[8];
+__attribute__((used)) f32 gNdsFlameMakerProbeY[8];
+__attribute__((used)) f32 gNdsFlameMakerProbeZ[8];
+__attribute__((used)) uintptr_t gNdsFlameMakerProbeParticle[8];
+extern volatile u32 gNdsPositionProbeUpdateInPresent;
+static u32 ndsFTParamProbeFlameMakerInput(s32 effect_id, const Vec3f *pos)
+{
+    u32 slot;
+
+    /* Keep a stable first-eight correspondence between maker inputs and the
+     * LBParticle pointers filled after each maker returns. The old modulo ring
+     * could overwrite an input before its first draw and manufacture a bogus
+     * position delta in the diagnostic itself. */
+    if (gNdsFlameMakerProbeCount >= 8u)
+    {
+        return 8u;
+    }
+    slot = gNdsFlameMakerProbeCount;
+
+    gNdsFlameMakerProbeKind[slot] = (u32)effect_id;
+    gNdsFlameMakerProbeSubstep[slot] = gNdsPositionProbeUpdateInPresent;
+    gNdsFlameMakerProbeX[slot] = pos->x;
+    gNdsFlameMakerProbeY[slot] = pos->y;
+    gNdsFlameMakerProbeZ[slot] = pos->z;
+    gNdsFlameMakerProbeParticle[slot] = 0u;
+    gNdsFlameMakerProbeCount++;
+    return slot;
+}
+#endif
+
 static sb32 ndsFTParamMakeSourceEffect(s32 effect_id, s32 lr, Vec3f *pos,
                                        void **effect)
 {
@@ -8157,15 +8299,54 @@ static sb32 ndsFTParamMakeSourceEffect(s32 effect_id, s32 lr, Vec3f *pos,
      * and FlameRandom; taking the real makers here is what stops them
      * collapsing onto the generic HitFire burst in the substitute switch
      * below. Bank script 0x12 (FlameLR) and 0x55 (FlameRandom/Static) are
-     * packed for exactly this. */
+    * packed for exactly this. */
     case nEFKindFlameLR:
+#if NDS_R2_POSITION_PROBE
+        {
+            u32 probe_slot = ndsFTParamProbeFlameMakerInput(effect_id, pos);
+
+            *effect = efManagerFlameLRMakeEffect(pos, lr);
+            if (probe_slot < 8u)
+            {
+                gNdsFlameMakerProbeParticle[probe_slot] =
+                    (uintptr_t)*effect;
+            }
+        }
+#else
         *effect = efManagerFlameLRMakeEffect(pos, lr);
+#endif
         return TRUE;
     case nEFKindFlameRandom:
+#if NDS_R2_POSITION_PROBE
+        {
+            u32 probe_slot = ndsFTParamProbeFlameMakerInput(effect_id, pos);
+
+            *effect = efManagerFlameRandomMakeEffect(pos);
+            if (probe_slot < 8u)
+            {
+                gNdsFlameMakerProbeParticle[probe_slot] =
+                    (uintptr_t)*effect;
+            }
+        }
+#else
         *effect = efManagerFlameRandomMakeEffect(pos);
+#endif
         return TRUE;
     case nEFKindFlameStatic:
+#if NDS_R2_POSITION_PROBE
+        {
+            u32 probe_slot = ndsFTParamProbeFlameMakerInput(effect_id, pos);
+
+            *effect = efManagerFlameStaticMakeEffect(pos);
+            if (probe_slot < 8u)
+            {
+                gNdsFlameMakerProbeParticle[probe_slot] =
+                    (uintptr_t)*effect;
+            }
+        }
+#else
         *effect = efManagerFlameStaticMakeEffect(pos);
+#endif
         return TRUE;
     case nEFKindDustLight:
         *effect = efManagerDustLightMakeEffect(pos, lr, 1.0F);
