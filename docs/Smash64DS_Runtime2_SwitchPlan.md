@@ -531,8 +531,12 @@ wrong thing and would block a correct switch indefinitely.
   divergence from BattleShip found** (`artifacts/bugs/2026-08-12_fox-crouch/`).
   Fox: spawn X/Y/Z, attack radius 20, all 11 hurtbox descriptors, camera
   identity, composition (0.004 px), gun attachment, pose phase, baked model
-  geometry and quad anchor all source-exact; the beam is geometrically not
-  duckable ON SOURCE NUMBERS. Whispy: script decode, normalize, playback, the
+  geometry all source-exact, and the blaster quad's anchor and scale measured
+  source-exact 2026-08-13 (relocData 316 straddles the projectile's Y at
+  −26…+24; `scale.y` is never written) — leaving the source's own 23.651-unit
+  sag of the shot below the bore as the whole visible delta, so the row is
+  `BLOCKED(decision:)`; the beam is geometrically not duckable ON SOURCE
+  NUMBERS. Whispy: script decode, normalize, playback, the
   60/30 Hz clock, transform application and matrix consumption (XObj kind 28 =
   `TraRotRpyRSca`) all correct — six distinct `scale.y` values reach a
   scale-bearing matrix over six consecutive presented frames. Per

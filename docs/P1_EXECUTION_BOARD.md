@@ -7708,6 +7708,13 @@ divergence, and it is the weakest case for urgency.
 
 ## Parked — open items with owners' notes, promote deliberately
 
+- **`scripts/check-docs.ps1` is unowned and wired into no `verify-all` profile**,
+  so it can only go red where nobody looks. It has done so twice in two cycles:
+  the `RAM_RECOVERY_PLAN.md` index gap (fixed `560328b357f`) and then the missing
+  Boundary-entry token in `HANDOFF.md`, whose arms table now names
+  `battle_playable_realtime`. **GREEN again 2026-08-13** (`docs=23,
+  registryEntries=4`). Decide deliberately: re-grade its pins, or wire it into a
+  profile so a red doc gate is visible without a hand run.
 - **SRC sub-owner instrument: LANDED, cycle 85.** Three cycles of "does not
   boot" were the boot cliff, exactly as cycle 82 concluded; G2 freed the room and
   the same design booted first try. **Cost +1,152 bytes** (text +80, bss +1,056)

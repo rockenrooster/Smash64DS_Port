@@ -9,41 +9,38 @@ built **`NDS_R2_BOTH_CPU 0`** — a Boundary-arm figure. On the arm R2-07's gate
 `EXHAUSTION.md` was computed on `BOTH_CPU 0` rows and must be redone. **Owner's order
 is bugs first, then P95** — so this is context, not the next task.
 
-## R2-07 `BUGS.md`: rows 2 and 3 are FIXED AND MEASURED, awaiting the owner's playtest
+## R2-07 `BUGS.md` — the owner playtested; two rows are live and BOTH need HIM
 
-Contracts + evidence: `artifacts/bugs/2026-08-12_r2-07-cluster/CONTRACT.md`. **The old
-"all three rows converge on ONE texture-residency capability" framing was WRONG for
-ALL THREE** — do not reinstate any part of it. The first two "FIXED" acceptances were
-ENGAGEMENT proofs and were withdrawn; **both rows now carry screen-space pixel proof
-stacked against a matched control**, so do not re-litigate them — playtest them.
-Candidates: `build-c129-foxfire` (Boundary arm, Fox pixels) and `build-c130-fire-bothcpu`
-(same source on `BOTH_CPU 1`, flame pixels + gate). Neither is marked FIXED — owner's call.
+`docs/BUGS.md` carries the owner's own wording and is the queue — do not reword it.
+The 2026-08-12 playtest **closed old rows 2 and 3 by verdict** (fire burn, Fox gun);
+their contracts and pixel proof stay in `artifacts/bugs/2026-08-12_r2-07-cluster/`.
+Candidates were `build-c129-foxfire` / `build-c130-fire-bothcpu`; the fire mechanism
+cost **+9,856 `WORK-H` P95**, inside that arm's own 9,664 repeat spread
+(`…/2026-08-12_c130-fire-gate/GATE.md`). The old "all three rows converge on ONE
+texture-residency capability" framing was wrong for all three — never reinstate it.
+**A magenta bar beside Fox is the BEAM ITSELF**, relocData 316's own
+RGBA(219,0,134) — not a debug quad and not the gun.
 
-**Perf:** `…/GATE.md` — `WORK-H` P95 **1,217,472** vs the both-CPU bank 1,207,616, **+9,856,
-under this arm's own 9,664 repeat spread**; the mechanism (18 quads, ~12 frames) is ~10x small.
-
-- **Row 3 (Fox gun) — the overlay drew at 0.036 PX**, in the right place, at the right
-  depth, 44/44 corners in the viewport. The submit hand-loaded its composed MVP and so
-  skipped BOTH halves of `ndsRendererLoadHardwareRawComposedMatrix`: the world-unit pair
-  (vertices go in `x16`, the matrix's complete homogeneous row 3 must be
-  `>> NDS_RENDERER_HW_WORLD_UNIT_SHIFT`) and the identity GL_PROJECTION, which a
-  `NDS_R2_FIGHTER_HW_MTX := 1` target needs because the fighter leaves a real one loaded.
-  The source DL also gave **16x32, not 32x16** (CI4 makes both 256 B, so no byte count
-  could catch it), TEXEL0 x SHADE, and CLAMP. **A magenta bar beside Fox is
-  `NDS_R2_FOX_BLASTER_QUAD`'s debug quad, not the gun.**
-- **Row 2 (fire burn) — FlameLR's quad cell was not in the atlas.** Script `0x12` ->
-  texture 12, PACKED but sitting in `quads.excluded`, so `ndsParticleQuadFrameFor`
-  returned NULL and `battleship_lbparticle.c:3698` drew NOTHING — the burn was exactly
-  half-drawn, FlameRandom only. **`QUAD_MEASURED_LIVE` is regraded from a soak's own use
-  mask, so after restoring a dead effect, re-grade the atlas before trusting the soak.**
-  **The build arm is part of the trigger**: at `BOTH_CPU 0` Mario never burns, so the
-  flame probe now reads `nds_build_config.h` and refuses that arm instead of timing out.
-- **Row 1 (Whispy) — "the blink lasts ONE frame" is REFUTED (2026-08-13); do not re-open
-  it.** The 1.0 `anim_frame` was sampled at the NEXT blink request. Armed, the blink runs
-  6 presented frames (`anim_frame` 1,3,5,7,9,11, `anim_wait` 11..1 — its script's
-  `Wait 12`) and the eye's grandchild DObj squashes `scale.y` to 0.104 and back through an
-  XObj **kind 28 = TraRotRpyRSca**. **There IS no blink texture and that is source-correct.**
-  Chain source-exact end to end; owner must name the motion. `…_fox-crouch/WHISPY.md`.
+- **Whispy — ANSWERED; nothing agent-closable remains, do not re-open.** Armed, the
+  blink runs **6 presented frames** (`anim_frame` 1,3,5,7,9,11) and the eye's
+  grandchild DObj squashes `scale.y` 0.948 -> 0.104 -> 1.0 through XObj **kind 28 =
+  TraRotRpyRSca**. **There IS no blink texture and that is source-correct.**
+  `artifacts/verification/2026-08-12_whispy-{cadence-armed,channels,xobj-kinds}.txt`,
+  probe `scripts/probe-whispy-blink-script.ps1 -Cadence`. Only the owner can name
+  which motion he means.
+- **Fox — every geometric quantity is source-exact; the row is `BLOCKED(decision:)`.**
+  Spawn X/Y/Z, radius 20, all 11 hurtbox descriptors, camera, composition (0.004 px),
+  attachment, pose phase, baked gun geometry — and, closed 2026-08-13, **the quad's
+  anchor and scale**: relocData 316 is `(0,+24,0) (0,-26,0) (-30,-26,0) (-30,+24,0)`,
+  so it STRADDLES the projectile's Y, and `scale.y` is never written
+  (`wpfoxblaster.c:44-52`). What source *does* specify is a **23.651-unit sag** —
+  shot and flash at world y 223.398, bore centre 247.049, so 63.8% of the beam hangs
+  below the barrel **in BattleShip too**. Numbers and two priced options:
+  `artifacts/bugs/2026-08-12_fox-crouch/BEAM_QUAD_ANCHOR.md`. Moving a source-exact
+  telegraph is the owner's call, never an agent's. The withheld presentation latch
+  stays out of tree as `…_fox-crouch/wip-presentation-latch.patch`; its "spawns on
+  hidden substep 0" premise is refuted (both shots `sub=1`) and it needs a
+  matched/not-matched counter before anyone trusts it.
 
 **R2-08 cannot be finished by an agent**: SwitchPlan `:391` needs the owner's recorded retail play test, `:385` their visual approval.
 
@@ -51,7 +48,7 @@ under this arm's own 9,664 repeat spread**; the mechanism (18 quads, ~12 frames)
 
 | arm | role | `WORK-H` P50 | P95 |
 |---|---|---:|---:|
-| Boundary arm (`BOTH_CPU 0`) | shipped config, **PASSES** | 899,136 | 1,087,616 |
+| `battle_playable_realtime` (`BOTH_CPU 0`) | shipped, **PASSES** | 899,136 | 1,087,616 |
 | **both-CPU (`BOTH_CPU 1`)** | **R2-07 GATE, FAILS** | 938,368 | **1,207,616** |
 
 **RE-BANKED ON `BOTH_CPU 1` — `…/2026-08-12_c130-fire-gate/LANES_BOTHCPU.md`** (no build;
