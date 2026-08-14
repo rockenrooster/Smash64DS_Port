@@ -247,7 +247,17 @@ if (-not $NoBuild) {
 }
 # Prove the ROM is the configuration that was asked for, rather than trusting the
 # build directory's name. The generated header is the only thing that knows.
-$configHeader = Join-Path $root "$Build\nds_build_config.h"
+#
+# RESOLVE THE BUILD DIRECTORY THE SAME WAY THE ROM PATH ABOVE DOES (2026-08-13).
+# This was `Join-Path $root "$Build\nds_build_config.h"`, i.e. <root>\build-x,
+# while every build directory in this repo lives under <root>\builds\ -- so the
+# path never existed, `Test-Path` was always false, and EVERY guard in this block
+# (both-CPU, match timer, second-entry diag, -MakeFlags) was skipped in silence
+# on every soak ever run. That is the exact failure the block was written to
+# prevent, one level up: a check that cannot fire reads identically to a check
+# that passed.
+$configHeader = Join-Path `
+    (Resolve-Smash64DSBuildPath -Root $root -Build $Build) 'nds_build_config.h'
 if (Test-Path -LiteralPath $configHeader -PathType Leaf) {
     $wantBothCpu = [int][bool]$BothCpu
     $seen = [regex]::Match(

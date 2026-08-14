@@ -27,8 +27,10 @@ beside Fox is the BEAM ITSELF**, relocData 316's own RGBA(219,0,134) — not a d
   (`…/2026-08-13_c-fox-bore/BORE_OFFSET.md`). It SHIPS in the next published ROM. Every geometric
   quantity was already source-exact (`…_fox-crouch/BEAM_QUAD_ANCHOR.md`); the withheld presentation
   latch stays out of tree (`…_fox-crouch/wip-presentation-latch.patch`), its premise refuted.
-- **R2-08 cannot be finished by an agent**: SwitchPlan `:391` needs the owner's recorded retail
-  play test, `:385` their visual approval.
+- **R2-08 IS ONE MAKEFILE LINE, STAGED NOT LANDED — §6 items 1 and 4 RE-MEASURED ON THIS TREE 2026-08-13**
+  (`…/2026-08-13_c-r2path-recheck/SWITCH_READY.md`): Boundary green through `NDS_R2_PATH=1`; soak `NO-FREEZE`, 2 START rematches;
+  gate arm 929,344/**1,204,352** vs control 924,864/1,210,944 — inside the floors, opposite in sign, invariants identical,
+  **+80 B text**. Owner-only: `:391` retail test and `:385` the eye — take the eye AFTER the flip, Boundary shoots `PATH 0`.
 
 ## The two arms — same 60 s match; ONLY `BOTH_CPU 1` is R2-07's gate
 
@@ -41,9 +43,7 @@ beside Fox is the BEAM ITSELF**, relocData 316's own RGBA(219,0,134) — not a d
 `build-c144-ledgeridx`, 1,600, DLDI ON): VBI **2:1740 3:272 4:13 5+:13 max 26**. **Gap 90,564 raw /
 65,617 net.** The anim-joint fix's **+49,216 came back −39,424**, now +9,792. **The shield attach path
 paid for a SEARCH, not work**: each attach hit `ndsAObjEvent32FindNormalized`, a linear scan of a
-1,177-entry ledger at 8.05 tk/iteration — **5,123 tk/attach, ~88% scan**. An O(1) index over that
-ledger (no new key/lifetime, §3.12-clean) took P95 1,250,368 → **1,210,944**, P50 flat, `SINT`
-−23,936, **40 frames 3→2**, 12,667 oracle lookups 0 mismatches, A2 falsifier brackets control 2,752.
+1,177-entry ledger at 8.05 tk/iteration — **5,123 tk/attach, ~88% scan**. An O(1) index over that ledger (no new key/lifetime, §3.12-clean) took P95 1,250,368 → **1,210,944**, P50 flat, `SINT` −23,936, **40 frames 3→2**, 12,667 oracle lookups 0 mismatches, A2 falsifier brackets control 2,752. **RE-CONFIRMED on current HEAD (`build-c147-ctl`, different ROM SHA, same 924,864 / 1,210,944 / same VBI): the bank is measured on this tree, not inherited.**
 
 **RE-BANKED ON `BOTH_CPU 1` — `…/2026-08-12_c130-fire-gate/LANES_BOTHCPU.md`** (no build;
 `analyze-tick-hud-excursion.ps1 -Ceilings` emits both tables now). `SRC` owns **84.4%** of the
@@ -69,16 +69,16 @@ CENSUS: the whole of `RESIDUE.md` §4 row 0 is invisible to a symbol ranking.**
 
 **THE BIGGEST LEVER IS PLACEMENT.** Memory stall is **1,236,685,107 cycles, 33.8% of the match** ≈ 386,000 tk/frame — past `SINT`/`SHDT` by an order, and why slice 48's identical pair differed 94,976.
 
-**SLICE 49 (reclaim dead ITCM) is REFUTED without a build — do not re-open it until the Task 37
-port group is understood.** `.itcm` is NOT full (30 of 82 residents never execute, 2,594 B idle),
-but the census's 87,033,153 "in reach" stall cycles assume admitting ~3,118 B of mostly PORT
-functions, and the PORT bit of `NDS_TASK37_ITCM_LEAVES` is held because *"the owner confirmed the
-enabled lab build misbehaves"* — CORRECTNESS. **Eviction alone pays nothing.**
+**SLICE 49 (reclaim dead ITCM) is REFUTED without a build — do not re-open it until the Task 37 port
+group is understood.** `.itcm` is NOT full (30 of 82 residents never execute, 2,594 B idle), but the
+census's 87,033,153 "in reach" stall cycles assume admitting ~3,118 B of mostly PORT functions, and
+`NDS_TASK37_ITCM_LEAVES`' PORT bit is held on CORRECTNESS (*"the owner confirmed the enabled lab
+build misbehaves"*). **Eviction alone pays nothing.**
 
 **Lane-sizing traps, now encoded in `-Ceilings`:** medians do not add (it invented a 110,336 lane in c122); `OTHR` CONTAINS `WAIT`; only `WORK-H` is spendable. A `-Ceilings` ceiling flattens a lane to
 its own MEDIAN, so it prices the EXCURSION only — not what deleting the lane pays (`FTR` 8,512 vs
 311,744); `RESIDUE.md` §2 has both. **Profile with `NDS_TICK_HUD_DRAW=0` or you profile the
-instrument** — the HUD costs ~345,024 tk twice a second on exactly the frames P95 is decided on; the
+instrument** — the HUD costs ~345,024 tk twice a second on the frames P95 is decided on; the
 GATE keeps `DRAW=1`. Soak length is `NDS_R2_SOAK_MATCH_MINUTES`; `Makefile:382` forbids reporting a
 both-CPU P95 as Boundary's. **Route to ATTRIBUTE, re-bank to BANK. Collision paid and is BANKED**
 (slices 35/36/37, −10,752). Float in `mp*`/`ftMain*`/`ftComputer` is FROZEN; `gmcollision` was UNFROZEN
@@ -87,21 +87,22 @@ both-CPU P95 as Boundary's. **Route to ATTRIBUTE, re-bank to BANK. Collision pai
 ## What is dead, so nobody re-derives it
 
 - **`SPRM` 13,056, `AUD` 13,824, `BG` 3,968 — CLOSED BY ARITHMETIC 2026-08-13**: each is under 16,000 **deleted entirely**. `SCPU` needs −32.1% and reads 896 on the rank-80 frame. **All 169 `?=` flags audited — ZERO unshipped wins (`…/2026-08-13_c-flagsweep/FLAG_SWEEP.md`).**
-- **`FTR` — −93,612 landed (c116); its "0/80, NOT a P95 lever" verdict is BOUNDARY-arm and the
-  gate arm's 8,512 is the EXCURSION ceiling, not what deletion pays (311,744).** DS-native AOT
-  geometry ships (`NDS_TASK56_FIGHTER_PRIMITIVES ?= 2`) and **SHIPPED BROKEN** — 35.6% of the
-  fighter backfacing with Boundary green: **a passing verifier is not visual verification.**
+- **`FTR` — −93,612 landed (c116); its "0/80, NOT a P95 lever" verdict is BOUNDARY-arm and the gate
+  arm's 8,512 is the EXCURSION ceiling, not what deletion pays (311,744).** DS-native AOT geometry
+  ships (`NDS_TASK56_FIGHTER_PRIMITIVES ?= 2`) and **SHIPPED BROKEN** — 35.6% of the fighter
+  backfacing with Boundary green: **a passing verifier is not visual verification.**
 - **Effect DObj submits** — Boundary-only. **Projectiles** · **texture thrash** · **`Find`** ·
-  **`Material`** · force-load seam. **`MISC` is the DRAW residual, not "particles"** — and
-  particles are FLAT. **The AOT animation bake** (slice 32): SIZE dead.
+  **`Material`** · force-load seam. **`MISC` is the DRAW residual, not "particles"** — and particles
+  are FLAT. **The AOT animation bake** (slice 32): SIZE dead. **In-match FGM I/O and
+  `FindPlanned`** — both counted and closed 2026-08-13, see the `SHDT` block above.
 - **Animation playback ARITHMETIC** (slices 34, 41): idle-joint skip (33), lazy track table (31),
   AObj walk and dispatch all under the floor. **Slice 41 spent the last lever**: 30 Hz poses cost
   **+7,040** *and* diverged the match (damage 130/51 vs 33/65). **Don't blanket-convert
   `ndsBaseGcPlayMObjMatAnim`** — 5 tracks pack 0xRRGGBBAA in f32. STRUCTURAL LAYOUT cuts closed
   2026-08-13; call count is the lever.
-- **The 20.12 kernels' ARITHMETIC (slice 42)** — sub-floor and non-additive. **The local-matrix
-  memo is dead twice.** **The flower rigid-mask prices +3,200, wrong sign.** **The token→asset_id
-  MEMO is dead** (Task 74). **Six more lanes closed by MEASUREMENT** — numbers in
+- **The 20.12 kernels' ARITHMETIC (slice 42)** — sub-floor and non-additive. **The local-matrix memo
+  is dead twice.** **The flower rigid-mask prices +3,200, wrong sign.** **The token→asset_id MEMO is
+  dead** (Task 74). **Six more lanes closed by MEASUREMENT** — numbers in
   `…/2026-08-1{1_c122,2_c123}-rebank/SLICE4{5,6,8}.md`: `ndsRelocFinalizeLoadedFile` as the gate;
   anim-cache arena growth (Rejects 0); the `OTHR` ceiling; **BGM sizing**; **every memo is healthy**.
 
@@ -132,11 +133,10 @@ closed:** `ftmain.c:4623` DISCARDS the return value.
 **`SHDT` IS CLOSED — bar 47,424 tk/fr, not −26.6%: the band is the transform chain, four dirty flags
 so nothing to memoise, band-only cuts saturate at 78,016, fixed point only**
 (`…/2026-08-13_shdt-{broadphase,band-owner}/`, RESIDUE §4 row 1). **Its file-I/O co-fire is closed
-too** (`…/2026-08-13_c-band-io/`): the **SOUND-EFFECT load, not the animation one** (anim now prices
-**+0**) — 91 `ndsAudioFgmPlayAtPan` 8-slot misses, **−12,736** (−13,580 worst case), lane saturates
-−19,648, rank-80 carries **zero** I/O, residency impossible.
-**A GATE LANE IS A MASK FOR THE PROFILE; a MECHANISM NEEDS NO MASK** — sum it over the region axis
-(`analyze-io-lane-series.py`) and read its alignment-free **worst-case-pairing** bound first.
+too** (`…/2026-08-13_c-band-io/`): the **SOUND-EFFECT load, not the animation one** (anim prices **+0**).
+**FGM IS CLOSED BY COUNTED MISSES, not inference (`…/2026-08-13_c-collision-stack/STACK.md`): 188 plays, 38 hits, 150 misses, 143 evicting resident data, ≤5 of 8 slots ever pinned. The victim rule's strict `<` made it a ONE-slot cache per size class; fixing that bought +9 hits = −764 P95-equivalent and REVERTED on its own falsifier. Working set 59 cues / 575,760 B vs 204,800, so a repartition extrapolates to ~−2,300 and TRADES class eligibility (dropped sounds). `FindPlanned` is REFUTED too — 1,188 entries a match, 13 tk/fr not 665; that profile PC range is `FindNormalized` inlined at a second site.**
+A GATE LANE IS A MASK FOR THE PROFILE; a MECHANISM NEEDS NO MASK — sum over the region axis
+(`analyze-io-lane-series.py`), worst-case-pairing first.
 
 **Do not bring a micro-fix** — R2-06 E11: a load-frame-only ~8,000 cannot be banked. Clear ~16,000
 in one change, or **use the `.data` route on ONE binary** (only if the change cannot alter gameplay
@@ -154,7 +154,7 @@ accumulate cost**. **BOTH ITS ANOMALIES ARE ATTRIBUTED, no build spent
   still held the GuardOn figatree. Five-minute arm: Figatree misreads **144 → 0** (it was 144 of
   144), runaway **50 → 0**; the runaway counter saw only 2/3 of the class — **48 of 144 decoded to
   a legal opcode and were silent**. **PRICE +49,216 P95** (bank above). Never loosen the bound.
-- **AObj cliff = CAPACITY, not a leak — FIXED.** Four zero-growth stops against reuse firing 16-19/stop kills the leak theory; the shipping 1-minute arm already stood at **889/1,024**, and a LEDGER cannot be evicted (the repack has no spare bit) so capacity is the lever: **`NDS_AOBJ_EVENT32_NORMALIZED_MAX` 1024 → 2048**, +8,192 B bss, headroom **167,936**; corpus proven **1,019** by `gNdsAObjEvent32NormalizedHighWater` on a re-run five-minute match.
+- **AObj cliff = CAPACITY, not a leak — FIXED.** Four zero-growth stops against reuse firing 16-19/stop kills the leak theory; the shipping 1-minute arm already stood at **889/1,024**, and a LEDGER cannot be evicted (the repack has no spare bit) so capacity is the lever: **`NDS_AOBJ_EVENT32_NORMALIZED_MAX` 1024 → 2048**, +8,192 B bss, headroom **167,936**. **Corpus is 1,598 of 2,048 post-fix — 450 spare, 1.28x, NOT the 1,029/2x the source comment claimed (corrected 2026-08-13).**
 **START PAUSES THE MATCH** and the old whole-window freeze hash could not see it — the watch hashes the TOP band and `-PressStartOnResults` presses only on a detected Results screen.
 
 ## Measurement rules that change your FIRST action — board owns the rest
@@ -162,7 +162,7 @@ accumulate cost**. **BOTH ITS ANOMALIES ARE ATTRIBUTED, no build spent
 - **The sampler is bit-deterministic — never repeat a run.** Same ROM twice gives byte-identical
   buckets, so ANY cross-build delta is placement. `-Samples 1600 -RingDump`. A duplicate frame
   LABEL at a ring seam is warned; IDENTICAL payload is a stale read and always fatal, as is one
-  away from a seam.
+  away from a seam. **THE PLACEMENT FLOOR IS ~17,000 P95, NOT ±5,376** — 2026-08-13, three near-identical arms (`…_c-collision-stack`): the falsifier, carrying the candidate's bss and 16 fewer bytes of text, beat the control by **16,832**. Under ~17,000 a two-build comparison measures the linker; only a flag falsifier means anything. **Compare ELF SECTIONS, not the `.nds`** — NitroFS packs directory entries nondeterministically, so identical source can give 14 differing ROM bytes with `.text`/`.data`/`.rodata` identical.
 - **Judge on `WORK-H`**; buckets locate, they never decide (floor ≥8,544). **`ALL` is
   VBlank-quantized** — it hid a +52,928 once. **1.85 cycles of `FTR` mean per byte of added ARM
   text.** **A bucket only sees its OWN thread** (slice 48).

@@ -5311,6 +5311,99 @@ anyway and is not an invitation.
 callers clear the 40/80 presence bar (7,187 + 1,883 + 1,838 = 10,908); the other
 ~38,700 is spread across callers each below it. Its mean self-time is 16,912.
 
+### Slice 53 — FGM cache REVERTED on its own falsifier; `FindPlanned` REFUTED; slice 52 re-briefed. Gate unchanged at 1,210,944
+
+Evidence: `artifacts/performance/2026-08-13_c-collision-stack/STACK.md` and the
+four arm JSON/rows beside it. **Nothing was kept**; the committed tree's
+`.text`/`.data`/`.rodata` are byte-identical to the control's, so the gate stays
+at **1,210,944 raw / ≈1,185,997 net, gap +90,564 / +65,617**. Both root ROMs
+untouched. The control on current HEAD (`build-c147-ctl`) reproduced the banked
+figure to the tick on a *different* ROM SHA, so the bank is now measured on this
+tree rather than inherited.
+
+**`ndsAObjEvent32FindPlanned` does not have the cost slice 51 attributed to it.**
+Instrumented, whole one-minute both-CPU match: **1,188 entries** — 1,177 misses
+(exactly `NormalizeCommandCount`) and 11 hits — over 183 scripts, into a table
+that is reset per script and capped at 128. Real cost **13 tk/frame**, ~302 at
+the most concentrated distribution the data allows, against the inherited
+**665**. The c123 PC range `0x02065cb6`–`0x02065cc2` at 161,203 iterations is the
+**`FindNormalized`** scan, which `PlanStream` also inlines once per command over
+a 1,177-entry ledger. **New instance of a known trap: two inlined copies of one
+loop can be attributed to two different functions.** Index built, measured,
+reverted; refutation is in the source so it is not re-proposed.
+
+**The FGM slot cache is a ONE-slot cache per size class, and fixing that is not
+worth 16,000.** The hit/miss pair `…_c-band-io/BAND_IO_OWNER.md` §5 asked for:
+**188 plays, 38 hits, 150 misses (79.8%), 143 of those misses evicting still-
+resident data, and at most 5 of 8 slots ever pinned** (so pinning is *not* the
+ceiling the inherited analysis assumed). Cause: the victim rule's
+`slot->capacity < best->capacity` is strict, and the partition is
+`53,248 / 3 × 28,672 / 4 × 16,384`, so `best` can never move between equal
+capacities. Working set decoded from request masks: **59 cues, 575,760 B against
+204,800** — residency impossible, measured rather than inferred.
+
+A recency tie-break took hits 38 → **47**, misses 150 → **141**, evictions
+143 → 133, `NoSlotCount` 0. At BAND_IO_OWNER's −12,736 for eliminating all 150,
+that is **−764 P95-equivalent**. Three arms:
+
+```text
+A  control    build-c147-ctl     924,864 /  1,210,944
+B  candidate  build-c149-fgmlru  927,424 /  1,206,656
+A2 falsifier  build-c150-nolru   926,144 /  1,194,368   <- fastest of the three
+B - A  = -5,056 P95   B - A2 = +11,776 P95   A2 - A = -16,832 P95
+```
+
+**REVERT.** The candidate loses to its own layout; every gameplay invariant was
+byte-identical on all three arms; A2 reproduced the control's cache counters
+exactly (38/150/143), so the falsifier reverts what it claims to.
+
+**Two consequences for every future row.**
+1. **The placement floor on this ROM is ~17,000 `WORK-H` P95, not ±5,376.** A2
+   carries the candidate's bss and 16 *fewer* bytes of text and beat the control
+   by 16,832; the diagnostic arm beat it by 17,920. Below ~17,000 a two-build
+   comparison measures the linker. Only a flag falsifier means anything.
+2. **The in-match FGM I/O lane is CLOSED by arithmetic.** Depth 1 → 38 hits,
+   depth 4 → 47, so returns are already flat; an implausible depth-16
+   repartition extrapolates to ~−2,300, and any repartition of a fixed 204,800 B
+   budget buys slots for one size class by taking eligibility from another —
+   with 8 handles able to pin, that is a path to a silently dropped sound. The
+   only thing that could reopen it is the **unit price**: the 447-step FAT walk
+   per seek tracks the ROM image, so a much larger ROM re-prices every miss.
+   `gNdsAudioFgmCacheNoSlotCount` went out with the revert — a repartition cycle
+   must re-add it first, because today a dropped cue is invisible inside
+   `gNdsAudioFgmReadFailCount`.
+
+**Slice 52 re-briefed — three corrections, no build spent** (STACK.md §5):
+- **`gmCollisionTestSphere` returns an ANGLE, not a boolean.** Its swept branch
+  writes `*p_angle` (`syVectorAngleDiff3D`) and `argA` (`syVectorNormCross3D`)
+  for `sphit_kind` 0 and 1 — the shield knockback angle and its normal, both
+  continuous gameplay values. A flip budget cannot express a continuous
+  perturbation, so a full fixed-point sphere kernel is **unbounded** under the
+  standing invariant law. It is a seam *dependency*, not a saving (it is absent
+  from slice 52's own sizing table): convert its **transform only** — the proven
+  `ndsR2CfxWorldToLocal`, then back to f32 — and leave the angle math alone.
+  That also deletes what slice 52 called "the only genuinely new arithmetic
+  left".
+- **The `ftGetStruct` stub hazard is narrower than recorded.**
+  `ndsR2CfxTestRectangle` already takes `inv_scale` as a **separate argument**
+  and the decomp caller passes `&parts->vec_scale`, which the stub sets to 1.0 —
+  not the inverse matrix. A ring that takes `inv_scale` from `vec_scale`, where
+  the float path takes it from, reproduces the stub exactly. **No identity fill
+  and no reachability proof needed.**
+- **Do NOT fuse `func_ovl2_800EDE5C` into the frame prepare.** `0x6` and `0x7`
+  are independent latches and `EDE5C` reads `mtx_translate`, which stays float,
+  so a prepare gated on `0x7` would skip the `vec_scale` write whenever a joint
+  arrives with `0x7` already set. `EDE5C` needs no frame at all — its 6,498 tk/fr
+  is **separable from the seam** and can be taken without the ring.
+- Slot-reader premise **re-verified on `build-c147-ctl`**, not inherited:
+  `sNdsFighterPartsPool` / `…SyncDObj` / `…SetIdentity` absent, the
+  diagnostic-recorder wrapper `ndsGMCollisionTestRectangle` absent,
+  `battleship_gmcollision.c:258` inside the L7 oracle block. **And a search
+  trap**: `grep -rn --no-ignore 'unk_dobjtrans_0x9C' . --include=*.c` returns
+  nothing in this tree while the same pattern against explicit paths returns
+  twenty hits including a writer in `reloc_backend_fighter_model.c`. Name the
+  paths.
+
 ### Slice 52 (collision in fixed point) — SEAM CORRECTED, NOT WIRED. Re-brief before spending a build
 
 Evidence: `artifacts/performance/2026-08-13_c-collision-seam/SEAM_CORRECTION.md`
@@ -8001,6 +8094,27 @@ divergence, and it is the weakest case for urgency.
 
 ## Parked — open items with owners' notes, promote deliberately
 
+- **R2-08 (the switch) is ONE MAKEFILE LINE, and SwitchPlan §6 items 1 and 4 are green on THIS
+  tree — re-measured 2026-08-13 (cycle 15), nothing landed.** Runbook and evidence:
+  `artifacts/performance/2026-08-13_c-r2path-recheck/SWITCH_READY.md`. Every green this week ran
+  the `NDS_R2_PATH=0` arm and R2-06 E0's equivalence was from 2026-07-29, so it was re-run.
+  **Item 1:** `Boundary verification profile passed.` through `$env:NDS_R2_PATH='1'`, `Exception:`
+  0 in the full 18.9 MB log, engagement both directions (`ndsR2BattleRun` at `0x020875c4` in the
+  proof ELF, 0 hits in the control). **Item 4:** `NO-FREEZE`, in-guest match timer confirmed 1
+  minute, 3 battle entries / 2 completed matches / 2 START rematches, runaway 0, misalign 0,
+  ledger fail 0, alloc-fail 0, panic 0, `SweepFail` 0, heap free-min **70,392**, `slips` 0,
+  Results P95 2 VBlanks. **Item 3 is R2-07's, not the switch's:** the R2 arm reads `WORK-H` P50
+  **929,344** / P95 **1,204,352** against the `PATH 0` control's 924,864 / 1,210,944 — **+4,480
+  and −6,592, both inside their floors and opposite in sign**, with damage 0/58, stocks 1/1,
+  ledger 1,177/183/1,574/1,371, shield joints 80/1,344/800 and heap free-min 70,592 all identical.
+  R2-06 E0's "the switch neither costs nor saves anything" therefore still holds after slices
+  43–52. The switch's whole static footprint is **+80 B text, 0 data, 0 bss**. Remaining: §6 item
+  2 (owner's eye, and it should be taken on the published ROM *after* the flip — Boundary's
+  screenshot arm reads the root ROM, so it is not R2 coverage before it) and item 5 (owner's
+  retail play test). **One divergence found and NOT fixed:** `666e99a2148` gave the Runtime 1
+  loop `gNdsPositionProbeUpdateInPresent = update_in_iteration` (`taskman_seam.c:8051`) and did
+  not mirror it into `ndsR2HostBattleUpdateOnce`; `NDS_R2_POSITION_PROBE ?= 0` so no shipped ROM
+  is affected, but a probe build on the R2 path would read that index as 0 on every capture.
 - **Fox blaster bore offset: LANDED 2026-08-13 (cycle 14), and it was the OWNER's call, not an
   agent's.** He took option B of `artifacts/bugs/2026-08-12_fox-crouch/BEAM_QUAD_ANCHOR.md`: the
   beam quad and the muzzle-flash quad draw joint-local `(0,-24,0)` higher, gameplay untouched.
@@ -8327,6 +8441,13 @@ SHA-256 B7800E4921E1F2BCC89EB7A4BBECDA279F44111D226BEA32D05EF7FA319C1A4F
 
 ROM hashes are not reproducible across rebuilds of identical source; compare
 sizes and the build log, not hashes, when attributing a ROM to a tree.
+**The mechanism was identified 2026-08-13 (slice 53): NitroFS packs its
+directory entries in a nondeterministic ORDER.** Two builds of identical source
+into different directories differed by **14 bytes** of that table while
+`.text`, `.data` and `.rodata` were byte-identical. So the executable *is*
+reproducible, and the right comparison is
+`arm-none-eabi-objcopy -O binary --only-section=.text` (and `.data`, `.rodata`)
+on the two ELFs — not the `.nds`, and not sizes alone.
 
 ## Lane Ownership
 
