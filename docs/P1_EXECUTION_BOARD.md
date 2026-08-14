@@ -5044,6 +5044,48 @@ walk IS the call". The three biggest single symbols are already visible:
 `ndsFighterMarioFoxDLAllDrawForSlot` 93,854,253, `ndsRendererCommitNativeStageSegment`
 93,101,009, `ndsRendererNativeEmitProductionPrimitiveGroups` 81,420,680.
 
+## CODE PLACEMENT (2026-08-14) — LANE CLOSED. The hot set is 33.6x the I-cache.
+
+`artifacts/performance/2026-08-14_pgo-code-placement/PGO_CODE_PLACEMENT.md`,
+`scripts/census-icache-placement.py`. **No linker order was changed, no ROM
+built.**
+
+ARM946E-S I-cache: 8 KB, 32 B lines (the line size is the one value confirmed
+in-toolchain — `libnds/include/nds/arm9/cache.h:74`), 4-way, **64 sets, set
+period 2048 B**. Measured against the whole-match profile, ITCM excluded:
+
+```
+executed non-ITCM footprint     404,608 B = 49.4x the I-cache
+distinct lines actually fetched   8,596  = 275,072 B = 33.6x cache
+hottest 2,000 lines over 64/64 sets; per-set max 40, median 32, min 20
+sets with >4 hot lines (guaranteed conflict): 64/64
+perfectly even spread would be 31.2
+```
+
+**There is no conflict pathology to fix — the distribution is already within
+2.5% of optimal, against a 7.8x overflow of line capacity.** The two hottest
+functions alone are 321 lines = 10.3 KB = 1.25x the whole cache and cannot be
+co-resident in any order. Verdict is insensitive to the unverified geometry:
+at 4/8/16/32 KB the overflow is 67.2x/33.6x/16.8x/8.4x — capacity-bound
+throughout. Pettis-Hansen and set-conflict ordering both target a regime this
+binary is not in, so Phases 3 and 5 were deliberately not built.
+
+**Two durable consequences, both worth more than a shuffle:**
+
+1. **Instruction fetch IS large and real** — the v3 attributor measured
+   `icache_fill` 1,525,043 against `issue` 1,522,083, i.e. fetching the code
+   costs about what running it does. The lever that reaches it is **shrinking the
+   hot footprint, not rearranging it**: 404,608 bytes of executed text against an
+   8 KB cache. That is a CODE SIZE problem wearing a cache costume, and it is the
+   **named next architectural owner**.
+2. **Adopt the v3 stall attributor before any further memory-lane work.** The
+   shipped `melonDS.exe` emits `profile-v2` — nine columns, no stall partition
+   (`strings` confirms; no v3 column names present). The attributor lives on
+   `melonDS-Accurate` branch `r2-stall-attributor` commit `4a1abf61` and was never
+   adopted. **Three lanes this week — D-cache layout, call-frame, placement —
+   each ended needing a stall class the shipped profile does not carry.** One
+   adoption unblocks all three.
+
 ## CALL-FRAME CENSUS (2026-08-14) — the largest lane nothing had measured
 
 Full evidence: `artifacts/performance/2026-08-14_call-frame-census/CENSUS.md`.

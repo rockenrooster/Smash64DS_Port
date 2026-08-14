@@ -12,6 +12,35 @@ tick.** Halve before comparing against any floor, gate or ticks/frame budget.
 (Corrected 2026-08-14 — the first revision compared cycle figures directly
 against tick floors and overstated every candidate by 2x.)
 
+---
+
+## RETRACTION 2026-08-14 — "88.9% cacheable" was the classifier failing open
+
+The classifier mapped a load whose base register the backward walk could not
+resolve to **`cacheable`**. That is the one class a layout change may act on, and
+its size is the number that decides whether the lane is worth opening, so every
+unresolvable site was inflating the case for opening it. Re-run fail-closed
+(`unknown` counted in neither direction), the classification inverts:
+
+| class | as published (fail-open) | corrected (fail-closed) |
+|---|---:|---:|
+| cacheable | 276,984 cyc/fr — **88.9%** | **239 cyc/fr — 0.1%** |
+| mmio | 19,928 cyc/fr | 19,928 cyc/fr — 6.4% |
+| timer | 5,603 cyc/fr | 5,603 cyc/fr — 1.8% |
+| unknown | — | **285,853 cyc/fr — 91.7%** |
+
+**The headline claim "the ARM9 is memory-bound — 88.9% of data-load excess is
+cacheable traffic" was never measured.** Only 0.1% of the excess is *proven*
+cacheable; 91.7% is unattributed, because this walk resolves only immediate-MOV
+and ORR bases and most hot loads take their base from an argument or a pointer
+chain. Much of that `unknown` is very probably cacheable in reality — but
+"probably" is not the basis on which a lane gets opened, and the original figure
+asserted proof it did not have.
+
+The census's **conclusion** is unaffected and in fact strengthened: no layout
+candidate reached the gate then, and now the cacheable pool cannot even be shown
+to be large. What is retracted is the stated basis, not the STOP.
+
 **Verdict: STOP. No single data-layout/locality candidate reaches the 8–16K
 ticks/frame gate.** The addressable pool is large (276,984 cyc/frame =
 138,492 ticks/frame) but flat across ten families and ~400 sites, the three
