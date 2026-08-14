@@ -1,32 +1,31 @@
 # Handoff
 
-Updated: 2026-08-13. **THE GATE IS NOW REPORTED RAW AND NET-OF-APPARATUS** — owner, §8 of
+Updated: 2026-08-14. **THE GATE IS NOW REPORTED RAW AND NET-OF-APPARATUS** — owner, §8 of
 `…/2026-08-13_c-residue/OWNER_DECISIONS.md`: bank **raw 1,210,944 / net ≈1,185,997** against
 1,120,380 = **+90,564 raw / +65,617 net**. Apparatus 24,947 (`RESIDUE.md` §5); the instrument is
 NOT being slimmed, so every banked figure stays comparable. The old 1,087,296 "canonical both-CPU"
 was `BOTH_CPU 0` (`…_c126-armcheck/ARM_MISLABEL.md`) and every `EXHAUSTION.md` ceiling is dead.
 **Boundary PASSES (~1,087,600); the stress gate FAILS; the owner's order is bugs first, then P95.**
 
-## R2-07 `BUGS.md` — the owner DECIDED both live rows on 2026-08-13; both await his eye
+## R2-07 `BUGS.md` — symmetry FIXED / OWNER-CONFIRMED; three P1 atlas-coverage cells remain open
 
-`docs/BUGS.md` carries the owner's own wording and is the queue — do not reword it. The 2026-08-12
-playtest **closed old rows 2 and 3 by verdict** (fire burn, Fox gun); their contracts and pixel proof
-stay in `artifacts/bugs/2026-08-12_r2-07-cluster/`. Candidates were `build-c129-foxfire` /
-`build-c130-fire-bothcpu`; the fire mechanism cost **+9,856 `WORK-H` P95**, inside that arm's own
-9,664 repeat spread (`…/2026-08-12_c130-fire-gate/GATE.md`). The old "all three rows converge on ONE
-texture-residency capability" framing was wrong for all three — never reinstate it. **A magenta bar
-beside Fox is the BEAM ITSELF**, relocData 316's own RGBA(219,0,134) — not a debug quad, not the gun.
-**BOTH ROWS ARE DECIDED IN §1/§2 OF `…/2026-08-13_c-residue/OWNER_DECISIONS.md`; restart facts only:**
+`docs/BUGS.md` carries the owner's own wording and is the queue — do not reword it. The 2026-08-12 playtest
+closed old rows 2/3, fire burn and Fox gun (`artifacts/bugs/2026-08-12_r2-07-cluster/`,
+`…/2026-08-12_c130-fire-gate/GATE.md`), and the "all three rows converge on ONE texture-residency capability"
+framing was wrong — never reinstate it. **A magenta bar beside Fox is the BEAM ITSELF**, relocData 316's
+RGBA(219,0,134), not a debug quad. Rows 1/2 DECIDED in `…_c-residue/OWNER_DECISIONS.md` §1/§2.
 
-- **Whispy — AWAITING OWNER PLAYTEST; the owner chose "re-check after fixes" (2026-08-13).** Blink
-  is 6 presented frames, `scale.y` 0.948 -> 0.104 -> 1.0 via XObj kind 28, no blink texture and that
-  is source-correct; the shield joint-freeze fix may have been the real symptom. Do not re-derive.
-- **Fox — DONE: the owner took the draw-only offset (2026-08-13). AWAITING PLAYTEST.** Beam and
-  flash draw **+24 world Y = 3.000 screen px** (`nds_renderer.c:14979`,
-  `battleship_lbparticle.c:2571`); gameplay byte-identical — 17 stops x 6 counters, 0 mismatches
-  (`…/2026-08-13_c-fox-bore/BORE_OFFSET.md`). It SHIPS in the next published ROM. Every geometric
-  quantity was already source-exact (`…_fox-crouch/BEAM_QUAD_ANCHOR.md`); the withheld presentation
-  latch stays out of tree (`…_fox-crouch/wip-presentation-latch.patch`), its premise refuted.
+- **Whispy — FIXED, OWNER-CONFIRMED 2026-08-14.** Dynamic stage matrices now validate every frame; direct A/B + owner eye closed it.
+- **Fox — FIXED, OWNER-CONFIRMED 2026-08-14** ("perfect"). Shared beam+flash+collision bore **84**, radius **20**; crouch
+  clears by **45.181**, standing overlaps; both facings/reflection stay world +84. ROM **3EBB8033…**; `…/2026-08-14_fox-bore84-collision/FOX_BORE_COLLISION_V5.md`.
+- **Dream Land BG edges — FIXED, OWNER-CONFIRMED 2026-08-14.** DS-only centered **K=9/8** covers far-floor overscan;
+  affine q16 scale metadata stays bit-exact. `artifacts/verification/2026-08-14_dreamland-bgstretch/`.
+- **P1 VFX symmetry — FIXED, OWNER-CONFIRMED 2026-08-14.** MASKS/MASKT was missing from the common-atlas submit; **19**
+  masked scripts reconstruct 2/4 pieces over the same rect; ledge FlashMiddle is script5/texture2/**MASKST**. ROM **8C7507F0…**; `…/2026-08-14_p1-vfx-texture-audit/`.
+- **P1 coverage 4/11/14 — IMPLEMENTED 2026-08-14, NEEDS THE OWNER'S EYE ON A SHIELD BREAK AND A SIDE KO.** Source **32x32**, cell cap **64**, frame cap **1**, **same four 8 KiB sheets**. It was **packer waste, not VRAM** — 27,520 of 32,768 held, and the shelf packer's 5,248 free texels were 16-tall tails no 32x32 cell can use, so the **64 -> 32 cell-cap shortcut was never necessary**.
+  Palettes went **one per sheet** (zero VRAM; `glColorTableEXT` already ran per sheet), which stops the extra cells pulling the shared k-means: **24 of 31 decode BETTER, 2 worse by <=0.002, none dropped**. 28/31/35/36 stay out **by name** (`QUAD_P1_DEFERRED`) — admitting 31+35 cost texture 33 **+39%**. ROM **2015FBD1…**; `…/2026-08-14_p1-texture-4-11-14/EVIDENCE.md`.
+- **TWO VERIFIERS ARE RED HERE, NEITHER FROM THE ATLAS WORK — attribute before chasing.** The realtime harness times out in `Invoke-GdbMarkerCapture` (120 s to `scVSBattleStartBattle`, always in `memset`) — **identical on `builds/build-c156-vfxsymmetry`**, the pre-change proof ROM.
+  Boundary stops earlier in `check-gbi-decode-fixtures.ps1` on the tree's own uncommitted `reloc_backend_renderer_dl.c` edit, which deleted the only read of `workspace->slice44_validate_cursor`. Until that is repaired `gNdsParticleQuadMissCount`/`Mask` cannot be read.
 - **R2-08 IS ONE MAKEFILE LINE, STAGED NOT LANDED — §6 items 1 and 4 RE-MEASURED ON THIS TREE 2026-08-13**
   (`…/2026-08-13_c-r2path-recheck/SWITCH_READY.md`): Boundary green through `NDS_R2_PATH=1`; soak `NO-FREEZE`, 2 START rematches;
   gate arm 929,344/**1,204,352** vs control 924,864/1,210,944 — inside the floors, opposite in sign, invariants identical,
@@ -89,29 +88,26 @@ both-CPU P95 as Boundary's. **Route to ATTRIBUTE, re-bank to BANK. Collision pai
 - **`SPRM` 13,056, `AUD` 13,824, `BG` 3,968 — CLOSED BY ARITHMETIC 2026-08-13**: each is under 16,000 **deleted entirely**. `SCPU` needs −32.1% and reads 896 on the rank-80 frame. **All 169 `?=` flags audited — ZERO unshipped wins (`…/2026-08-13_c-flagsweep/FLAG_SWEEP.md`).**
 - **`FTR` — −93,612 landed (c116); its "0/80, NOT a P95 lever" verdict is BOUNDARY-arm and the gate
   arm's 8,512 is the EXCURSION ceiling, not what deletion pays (311,744).** DS-native AOT geometry
-  ships (`NDS_TASK56_FIGHTER_PRIMITIVES ?= 2`) and **SHIPPED BROKEN** — 35.6% of the fighter
-  backfacing with Boundary green: **a passing verifier is not visual verification.**
+  ships (`NDS_TASK56_FIGHTER_PRIMITIVES ?= 2`) **SHIPPED BROKEN** — 35.6% of the fighter backfacing
+  with Boundary green: **a passing verifier is not visual verification.**
 - **Effect DObj submits** — Boundary-only. **Projectiles** · **texture thrash** · **`Find`** ·
-  **`Material`** · force-load seam. **`MISC` is the DRAW residual, not "particles"** — and particles
-  are FLAT. **The AOT animation bake** (slice 32): SIZE dead. **In-match FGM I/O and
-  `FindPlanned`** — both counted and closed 2026-08-13, see the `SHDT` block above.
+  **`Material`** · force-load seam. **`MISC` is the DRAW residual, not "particles"**; particles are
+  FLAT. **AOT animation bake** (32): SIZE dead. **In-match FGM I/O + `FindPlanned`**: closed
+  2026-08-13, `SHDT` block above.
 - **Animation playback ARITHMETIC** (slices 34, 41): idle-joint skip (33), lazy track table (31),
   AObj walk and dispatch all under the floor. **Slice 41 spent the last lever**: 30 Hz poses cost
   **+7,040** *and* diverged the match (damage 130/51 vs 33/65). **Don't blanket-convert
   `ndsBaseGcPlayMObjMatAnim`** — 5 tracks pack 0xRRGGBBAA in f32. STRUCTURAL LAYOUT cuts closed
   2026-08-13; call count is the lever.
-- **The 20.12 kernels' ARITHMETIC (slice 42)** — sub-floor and non-additive. **The local-matrix memo
-  is dead twice.** **The flower rigid-mask prices +3,200, wrong sign.** **The token→asset_id MEMO is
-  dead** (Task 74). **Six more lanes closed by MEASUREMENT** — numbers in
-  `…/2026-08-1{1_c122,2_c123}-rebank/SLICE4{5,6,8}.md`: `ndsRelocFinalizeLoadedFile` as the gate;
-  anim-cache arena growth (Rejects 0); the `OTHR` ceiling; **BGM sizing**; **every memo is healthy**.
+- **THE CALL FRAME IS OPEN AND IS THE BIGGEST LANE: 64,863 ticks/frame, 5.89%, 1,169 functions, saving/restoring registers** (`…/2026-08-14_call-frame-census/CENSUS.md`, `scripts/census-call-frames.py`, no build). Hot early-out paying a cold body's registers; Thumb-1 has no predication so `-fshrink-wrap` can't sink it — split the tail `noinline`. `ftGetStruct` 38.9% + `ndsR2AnimAObjToQ` 59.1% shipped, text −2,184, −4,800 predicted = SUB-FLOOR, no A/B claim. **Next five as ONE slice.** `ndsFighterDisplayContractCountFlags` = 7,849 cyc/frame DIAGNOSTIC-ONLY walk in the shipped ROM; gate it, keep the globals `used`.
+- **The 20.12 kernels' ARITHMETIC (slice 42)** — sub-floor, non-additive. **Local-matrix memo dead twice.** **Flower rigid-mask +3,200, wrong sign.** **token→asset_id MEMO dead** (Task 74). **Six more lanes closed by MEASUREMENT**, numbers in `…/2026-08-1{1_c122,2_c123}-rebank/SLICE4{5,6,8}.md`: `ndsRelocFinalizeLoadedFile` as gate; anim-cache arena growth (Rejects 0); `OTHR` ceiling; **BGM sizing**; **every memo is healthy**.
 
 ## RAM — price a change before writing it
 
 `check-boot-headroom.ps1 -Build <dir>` after every lab build. Highest `fake_heap_start` proven to
 boot **`0x02294804`**, lowest to fail **`0x02294b24`**. **Text counts as much as bss**; a failing
 arm reads as a hung emulator. `gSYTaskmanGeneralHeap` free-min **72,188**, floor 32,768.
-
+**2026-08-14 RAM:** HW wallpaper decode cache **153,600 -> 135,000 B**; `.main.bss -18,592 B`; proof `fake_heap_start 0x02260c24` = **211,936 B proven headroom** (`…_ram-decode-cache/RAM_DECODE_CACHE.md`).
 ## Landed slices and the lanes they leave
 
 **SLICE 43 WITHDRAWN 2026-08-11.** All targets force `NDS_R2_FIGHTER_GX_COMPOSE=0`; do not re-enable
@@ -156,7 +152,7 @@ accumulate cost**. **BOTH ITS ANOMALIES ARE ATTRIBUTED, no build spent
   a legal opcode and were silent**. **PRICE +49,216 P95** (bank above). Never loosen the bound.
 - **AObj cliff = CAPACITY, not a leak — FIXED.** Four zero-growth stops against reuse firing 16-19/stop kills the leak theory; the shipping 1-minute arm already stood at **889/1,024**, and a LEDGER cannot be evicted (the repack has no spare bit) so capacity is the lever: **`NDS_AOBJ_EVENT32_NORMALIZED_MAX` 1024 → 2048**, +8,192 B bss, headroom **167,936**. **Corpus is 1,598 of 2,048 post-fix — 450 spare, 1.28x, NOT the 1,029/2x the source comment claimed (corrected 2026-08-13).**
 **START PAUSES THE MATCH** and the old whole-window freeze hash could not see it — the watch hashes the TOP band and `-PressStartOnResults` presses only on a detected Results screen.
-
+**WHISPY LOW-FPS FACE FIXED / OWNER-CONFIRMED 2026-08-14:** Slice 44 passed `allow_stale=TRUE` to dynamic stage bindings, freezing Whispy's world matrix for up to 8 presented frames despite 30 Hz DObj motion. Dynamic bindings now validate every frame while unchanged source keys still reuse. Control `m11` stayed **3872** through live scale 0.948/0.605/0.104/0.104/0.606/0.948/1.0; candidate tracks **3872/2464/416/416/2480/3872/4096**. Evidence: `artifacts/verification/2026-08-13_whispy-slice44-fix/WHISPY_FIX_EVIDENCE.md`.
 ## Measurement rules that change your FIRST action — board owns the rest
 
 - **The sampler is bit-deterministic — never repeat a run.** Same ROM twice gives byte-identical

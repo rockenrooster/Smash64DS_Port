@@ -13798,12 +13798,29 @@ void mpCollisionGetSpeedLineID(s32 line_id, Vec3f *vel)
     }
 }
 
+/* The stub builder lives out of line so that `ftGetStruct` does not carry its
+ * register frame.
+ *
+ * Decomp resolves this in one load -- `ftGetStruct` is a macro there
+ * (`ftparam.c` callers dereference `user_data.p` directly). The port needs a
+ * real function because three pointer provenances have to be distinguished, but
+ * the profile says the distinguishing costs far less than the *frame*: over
+ * 246.3 calls a frame, `push {r3-r7,lr}` costs 1,957 cyc/frame and
+ * `pop {r3-r7,pc}` 5,184 -- 7,141 of the function's 18,336 cyc/frame, 38.9%,
+ * spent saving five registers that only this cold tail ever needs. GCC cannot
+ * shrink-wrap it away: ARMv5TE Thumb-1 has no conditional execution, so the
+ * early returns cannot skip a prologue that the tail requires.
+ *
+ * Splitting the tail leaves the hot path a leaf that needs two registers, and
+ * costs nothing -- the code is the same code, one branch further away, on a path
+ * that the whole-match profile never executed once.
+ *
+ * The statics move with it because they are the stub's storage and nothing else
+ * reads them. Callers still receive the same pointer on every path. */
+static FTStruct *__attribute__((noinline)) ftGetStructBuildStub(GObj *fighter_gobj);
+
 FTStruct *ftGetStruct(GObj *fighter_gobj)
 {
-    static FTStruct stub;
-    static DObj top_joint;
-    static FTParts top_parts;
-
     if ((fighter_gobj != NULL) &&
         (sNdsFTCommonCliffCommon2BridgeStruct != NULL) &&
         (fighter_gobj->user_data.p == sNdsFTCommonCliffCommon2BridgeStruct))
@@ -13822,6 +13839,15 @@ FTStruct *ftGetStruct(GObj *fighter_gobj)
     {
         return fighter_gobj->user_data.p;
     }
+
+    return ftGetStructBuildStub(fighter_gobj);
+}
+
+static FTStruct *__attribute__((noinline)) ftGetStructBuildStub(GObj *fighter_gobj)
+{
+    static FTStruct stub;
+    static DObj top_joint;
+    static FTParts top_parts;
 
     if (fighter_gobj != NULL)
     {

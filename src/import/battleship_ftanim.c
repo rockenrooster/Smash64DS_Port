@@ -311,8 +311,20 @@ static inline void ndsR2AnimAddLength(AObj *a, u32 n, f32 as_float, u32 q)
  * skipped this would copy an f32 bit pattern into a Q slot.
  *
  * Cost in the steady state is one byte compare -- after the first event on a
- * DObj every one of its AObjs is already Q. */
-static void ndsR2AnimAObjToQ(AObj *a)
+ * DObj every one of its AObjs is already Q.
+ *
+ * That compare is why the conversion is out of line. The one-byte test was true
+ * for 90.3 calls a frame and the whole function cost 32 cycles a call, of which
+ * the profile charges **19 to `push`/`pop` alone -- 59.1% of its 2,869
+ * cyc/frame**, saving registers only the conversion below ever touches.
+ * ARMv5TE Thumb-1 has no conditional execution, so GCC cannot shrink-wrap a
+ * prologue the tail needs past an early return; splitting the tail is the only
+ * way to stop paying for it. The steady-state path is now three instructions at
+ * the call site and the conversion is unchanged. */
+static void __attribute__((noinline))
+ndsR2AnimAObjToQConvert(AObj *a, s32 kind);
+
+static inline void ndsR2AnimAObjToQ(AObj *a)
 {
     s32 kind = (s32)a->kind;
 
@@ -320,6 +332,12 @@ static void ndsR2AnimAObjToQ(AObj *a)
     {
         return;
     }
+    ndsR2AnimAObjToQConvert(a, kind);
+}
+
+static void __attribute__((noinline))
+ndsR2AnimAObjToQConvert(AObj *a, s32 kind)
+{
     if (kind == nGCAnimKindNone)
     {
         /* `gcAddAObjForDObj` leaves every value at 0.0F -- the same word in both

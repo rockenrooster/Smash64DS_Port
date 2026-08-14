@@ -4075,13 +4075,135 @@ longer describe the vertices.
 | **Uv** | **16,162** | **26.6%** | **DELETED, slice 22** |
 | Tail | 18,224 | 30.0% | publishes `texture_prepare_*` the emit reads in the same call |
 
-**Next architectural slice, named and blocked:** collapse the state-delta spans
-at bake time (`Task36ReplayRun` 17,796 + `ApplyStateDelta` 9,010 tk/fr, ~500
-applications a frame over a static 70-entry table and 196-entry sequence). The
-redundancy census that would size it (`NDS_R2_DELTA_CENSUS`, already written,
-`gNdsR2SpanDeltaRepeats`) **does not build: `region 'itcm' overflowed by 64
-bytes`.** Evict a resident for the diagnostic arm before designing the bake —
-the c115 census lists 28 ITCM residents that never execute, 2,354 B idle.
+**~~Next architectural slice, named and blocked:~~ UNBLOCKED, MEASURED AND
+REFUTED 2026-08-14 — DO NOT BUILD THE STATE-SPAN BAKE.**
+`artifacts/performance/2026-08-14_fighter-state-delta-census/FINDINGS.md`.
+
+The census builds now. It overflowed ITCM by **616** bytes on this tree, not 64,
+and `NDS_R2_CENSUS_EVICTED_CODE` evicts `ndsRendererScanList` (7,728 B, the
+generic interpreter the native path exists to replace) **for the census arm
+only** — the shipped ROM rebuilt bit-identical at `2015FBD1…`. Read COUNTS from
+that arm, never ticks: the eviction changes instruction fetch.
+
+**The 63.9% repeat figure is not redundancy, and the two counters say so
+together.** Whole match, 500-frame steady window: 189.43 delta applications a
+frame, `gNdsR2SpanDeltaRepeats` **63.9%** — but `gNdsR2SpanIdenticalOperands`
+only **7.2%**. The fighter is not re-writing the same values; it genuinely
+cycles distinct render states, so a "repeat" is a revisit, not elidable work.
+Grading this lane on the repeat counter alone would have bought a bake, a
+generator, a checker and an ABI for nothing.
+
+A host model (`scripts/fighters/analyze_fighter_state_epochs.py` — no build, no
+ROM) reproduces the frame from the static tables: 196 applications vs 189.43
+measured, 49 epochs vs 47.09, and **repeat share 64.3% vs 63.9%, derived
+independently**. So the static walk IS the frame — every root drawn once, in
+order. On that model only **34 of 196 applications (17.3%) write what is already
+there**: TEXTURE 65.8%, COMBINE 20.5%, **every other effect 0%**, because a
+material lands between almost every pair of tile-state movers and poisons the
+slot. At 47.6 tk an application that is **~1,560 tk/frame**, inside the ±5,376
+cross-build floor.
+
+**By-product:** the fighter occupies only **21 distinct resolved states** at a
+run boundary across 49 epochs and 32 roots (Mario 8, Fox 15), and epoch ranges
+are disjoint so a per-epoch `u8` state id is exact by construction.
+
+### The per-run AOT descriptor is REFUTED TOO — 2026-08-14, on soundness
+
+`artifacts/performance/2026-08-14_fighter-run-descriptor/FINDINGS.md`. **Do not
+build it. Do not re-open it without reading §1.**
+
+**The per-run predicate is validating the SCENE's contract, not the fighter's,
+so a fighter generator cannot certify it.** Of 70 state deltas, exactly two
+touch OTHERMODE and **both are `SETOTHERMODE_H`** — `ndsRendererRecordOtherMode`
+writes `othermode_l` only for `SETOTHERMODE_L`/`RDPSETOTHERMODE`, so **no
+fighter delta writes `othermode_l` anywhere**. Exactly two touch GEOMETRY and
+**neither is a full replacement** (`0xd9fffbff`/`0xd9ffffff` masks preserve
+ZBUFFER, LIGHTING, FOG and both TEXTURE_GEN bits). So six of the predicate's ten
+conditions — ZBUFFER\|LIGHTING, FOG/TEXGEN, cull, alpha-compare, z-mode, z-source
+— read state established **outside the fighter draw**. `rej=0` because the scene
+always sets it up right; "always has" is not a proof a generator can emit, and
+asserting it would be exactly the deleted-safety the brief forbade.
+
+Certifiable: the **combine pair only**, and it certifies cleanly — resolved
+combine equals its policy family's combine at **all 49** run-bearing epochs, 0
+mismatches. But the predicate-relevant distinct-value count is then **4, one per
+family**, so the "compact AOT descriptor with a per-epoch `state_id`" the brief
+asks for **already exists** as `sNdsNativeFighterEpochDirectPolicy[49]` ->
+`sNdsNativeFighterDirectPolicies[4]`. Retiring 2 of 10 conditions is
+**~640 tk/frame**.
+
+**BOUNDARY CORRECTION, and it invalidated a mismatch this lane nearly chased:**
+runs execute after the **after**-span (before-span -> material -> after-span ->
+runs; the E34 hook's comment says so). Sampling between the spans reported a
+combine mismatch at fox root 1 epoch 22 whose COMBINE delta sits in its
+after-span. With the boundary right there are none.
+
+**~~If anyone re-opens this, brief it as a CACHE experiment~~ — MEASURED
+2026-08-14 AND IT IS 4,193 tk/frame.** The D-cache census below read
+`PrepareProductionRun`'s own data loads directly: 6,713,721 excess cycles =
+**4,193/frame**, half the floor. The cold-`stats` hypothesis was right in
+mechanism and wrong in size. Lane closed on both arms.
+
+Conditions 1-6 cannot change while a fighter draws, so they can be hoisted to
+once per draw (2/frame instead of 83.1) with nothing certified and nothing
+deleted — worth ~2,000 tk/frame of arithmetic, which is under the floor. The
+only reason to build it was the mechanism: `stats` is large and the emit walks
+1,878 corners and 6,492 bytes of dense table against a 4 KB dcache between runs,
+so the predicate's ~6 `stats` loads are plausibly cold every time. That is the
+shape that paid **-35,904 P95** in slice 22, where the compare was never the
+cost. Measure at P50 on a same-binary A/B.
+
+### D-CACHE WORKING-SET CENSUS — no layout lever remains, 2026-08-14
+
+`artifacts/performance/2026-08-14_dcache-working-set/CENSUS.md`, off the c125
+whole-match profile. No build, no ROM. `scripts/census-dcache-working-set.py`.
+
+**Read this before briefing any further locality work.**
+
+**1. RESOLVE THE BASE REGISTER BEFORE RANKING A LOAD.** The #1 site in the build
+by cycles/execution — `ndsRendererTask36ReplayRun` `ldr r3,[r1,#184]`, **507
+cyc/ex, 16,629 cyc/frame**, twice the next entry — is **not a cache miss**. `r1`
+is `0x04000000` and `+184` is `DMA0CNT`; it is a `cmp/blt` busy-wait for a
+synchronous DMA to the GX FIFO, i.e. the ARM9 held off the bus. Any ranking that
+skips this check sends the next layout task straight at a scheduling problem.
+`analyze-dcache-stalls.py` excludes literal-pool and stack loads but NOT MMIO;
+the new census script classifies mmio/timer/cacheable and is the one to use.
+
+**2. The addressable pool is huge and uniformly flat.** Data-load excess is
+311,623 cyc/frame, of which **cacheable 276,984 (88.9%)**, mmio 19,928, timer
+(the instrument) 5,603. Grouped by working set, cyc/frame: Z-other 43,001 over
+**80 functions** · GObj walks 22,262 · stage renderer 21,750 · AObj 20,766 ·
+FTStruct/FTParams 16,319 · renderer stats 14,458 · matrix 12,575 · fighter dense
+11,497 · memcpy 6,835 · MObj 4,590. **Largest single site in the whole pool is
+7,743** and it belongs to the already-closed AObj lane.
+
+**3. Every hot family's footprint already exceeds the whole 4 KiB cache**, and
+three of four are pointer-chased: GObj ~183 lines/frame (5,856 B), AObj ~358
+(11,456 B), prepared dense 203 (6,492 B). Nothing stays resident, which is
+exactly why the cost is spread evenly instead of concentrating somewhere fixable.
+
+**4. The one clean structural defect is unfixable here.** `gcRunAll` reads
+`GObj->link_next`(4), `func_run`(20) and a byte at 21 on **line 0**, and
+`flags`(**124**) on **line 3** — two fills a node where one would do. It answers
+the delete-a-line rule cleanly and is worth only **~3,000 cyc/frame**, and
+`GObj` is `decomp/.../objtypes.h` with `battleship_sys_objman.c:23` including
+decomp's `objman.c` in place. Read-only. Do not propose it again.
+
+**5. The durable conclusion.** Against floors of ±8,544 placement / 9,664 repeat
+spread / ~16,000 bankable, the best layout candidate is 3,000 and blocked.
+**Locality work has no remaining single-structure lever** — the cost sits in
+BattleShip's pointer-linked data model, and the three largest addressable
+families (GObj + AObj + FTStruct = 59,347 cyc/frame) are all decomp-owned.
+Anything further must change how much data is **visited** (node counts, call
+counts, visit rates), not how it is arranged. That extends `HANDOFF.md`'s
+existing AObj verdict from one family to all ten.
+
+**Open, and NOT this task's scope:** the 16,629 cyc/frame DMA wait is the only
+single site at the bankable bar. Before designing anything, answer *"is the
+geometry engine saturated during that DMA, or is the CPU merely choosing to
+wait?"* — a GXSTAT FIFO-depth sample at the poll answers it with no ROM change.
+If the FIFO is full it is the CRITICAL-RULE trap and removing the spin only
+moves the wait.
 
 ### Slice 23: two redundant passes deleted, and why the mean did not move
 
@@ -4921,6 +5043,60 @@ deletable unit**, the same way `ndsR2FtAnimParseDObjFigatree` was reduced to "th
 walk IS the call". The three biggest single symbols are already visible:
 `ndsFighterMarioFoxDLAllDrawForSlot` 93,854,253, `ndsRendererCommitNativeStageSegment`
 93,101,009, `ndsRendererNativeEmitProductionPrimitiveGroups` 81,420,680.
+
+## CALL-FRAME CENSUS (2026-08-14) — the largest lane nothing had measured
+
+Full evidence: `artifacts/performance/2026-08-14_call-frame-census/CENSUS.md`.
+Instrument: `scripts/census-call-frames.py` (no build; attributes every
+`push`/`pop`/`stm`/`ldm` with a register list, plus `sp` adjustments, to its
+enclosing function off the existing c125 profile).
+
+**129,727 cyc/frame = 64,863 ticks/frame = 5.89% of the attributed frame, across
+1,169 functions, is spent saving and restoring registers.** This board already
+found it once, for `ndsR2AnimValueQ` ("6,683 cyc/frame, 16% of the evaluator, to
+save and restore registers") and treated it as that function's property. It is a
+property of the program.
+
+The worst *ratios* share one shape: a hot early-out guarding a cold body, where
+the body's register needs set the frame the early-out pays. `ftGetStruct` 38.9%
+(7,141 cyc/frame — decomp resolves this in a one-load macro; the port pays a
+six-register frame 246.3 times a frame for a stub builder the whole-match profile
+executed **zero** times), `ndsR2AnimAObjToQ` 59.1%, `ndsRendererAdapterMaterialAnimHash`
+34.3%, `gcParseDObjAnimJoint` 27.8%, `gcParseMObjMatAnimJoint` 27.0%,
+`ndsBaseGcPlayDObjAnimJoint` 27.1%, `gcRunGObjProcess` 22.6%.
+
+**`-fshrink-wrap` is on at `-O2` and cannot do this here.** ARMv5TE Thumb-1 has
+no conditional execution, so an early exit cannot be predicated and the prologue
+cannot be sunk past it. The fix is structural and free: move the cold tail into
+its own `noinline` function. Same code, one branch further away, on a path the
+profile never took.
+
+**Shipped 2026-08-14** — the two whose equivalence is provable by inspection:
+`ftGetStruct`'s stub split to `ftGetStructBuildStub`
+(`push {r3,r4,r5,r6,r7,lr}` → `push {r4, lr}` in the shipped disassembly), and
+`ndsR2AnimAObjToQ` inlined with `ndsR2AnimAObjToQConvert` out of line. Text
+−2,184 bytes, so no arena cost. Predicted **−9,600 cyc/frame ≈ −4,800 ticks**,
+which is **below the ±8,544 cross-build floor** — banked for correctness and
+static evidence, NOT claimable as an A/B win. `check_anim_null_guard.py` green.
+
+**Next action: take the remaining five splits as ONE slice** so a single A/B
+measures the class rather than any member —
+`ndsRendererAdapterMaterialAnimHash`, `gcRunGObjProcess`, `gcParseDObjAnimJoint`,
+`gcParseMObjMatAnimJoint`, `ndsBaseGcPlayDObjAnimJoint`, worth roughly a further
+9,600 cyc/frame. `ndsR2AnimValueQ` (6,919, the largest single entry) needs its
+`noinline` + `target("arm")` attribute justified before it moves, not assumed
+stale.
+
+**Separate finding, larger than either cut, and NOT a codegen problem:**
+`ndsFighterDisplayContractCountFlags` recursively walks the whole fighter DObj
+tree twice per presented frame for **7,849 cyc/frame (3,925 ticks)** and computes
+nothing the renderer reads — `gNdsFighterDisplayContractHiddenCount` and
+`…NoTextureCount` are reset in `taskman_seam.c:3147` and read only by
+`probe-ko-vfx.ps1` and `verify-battle-mariofox-gcrunall-loop-harness.ps1`. Gating
+it out of the shipped configuration is worth more than both cuts above, but the
+globals must stay `__attribute__((used))` and the harness build must keep
+computing them: `--gc-sections` dropping a diagnostic global is what turned
+Boundary RED on 2026-08-11.
 
 ## RAM CENSUS (2026-08-11) — measured on the PUBLISHED P1 ROM, with reader proof
 
@@ -8448,6 +8624,51 @@ into different directories differed by **14 bytes** of that table while
 reproducible, and the right comparison is
 `arm-none-eabi-objcopy -O binary --only-section=.text` (and `.data`, `.rodata`)
 on the two ELFs — not the `.nds`, and not sizes alone.
+
+### BUGS row — Fox bore offset v2 LANDED, Dream Land BG LOCALIZED (cycle 151)
+
+Owner playtest 2026-08-13 gave three verdicts. This cycle executed two of them.
+
+**Fox — `NDS_FOX_BLASTER_BORE_OFFSET_Y` 24 -> 36, landed and measured.** Owner:
+*"Pistol beam and muzzle flash are a little better, could use more height."*
+Prediction written before the run (+12 world units at the measured 8 units/row =
+−1.500 rows); **measured −1.500 rows exactly**, centroid 146.000 -> 144.500 at
+`EXACT_LOCK` tic 1688. Beam width unchanged (x 122–222, **101 px per row in both
+arms** — 707/7 = 606/6, so the 7->6 row count is centre-sampling phase on a
+6.25-row band, not clipping). Flash moved with it: moved-pixel region spans rows
+128–164 and x 55–222 in mirrored pairs. **Negative control: beam-free tic 1694 is
+0 of 120,000 battle-screen pixels different**, which also retires the cross-build
+floor by proving every commit since `cffcea495a6` visually inert on that frame.
+Control was the *reused* `build-c143-bore`; only the candidate was built.
+Evidence `artifacts/performance/2026-08-13_c-bore36-bgstretch/BORE_OFFSET_V2.md`.
+**Row stays OWNER-QUEUED — the eye is the gate, and §2 of that file offers 30 and
+24 as prepared alternatives if 36 reads too high.**
+
+**Dream Land BG edges — LOCALIZED, deliberately NOT implemented.** The row is N64
+overscan surfacing on a display that has none: `grWallpaperMakeCommon` (Dream
+Land takes the `default:` arm of `grWallpaperMakeDecideKind`) drives a 300x220
+sprite whose scale floor is **1.004**, so at maximum camera pull it draws
+**301.2 x 220.88 into a 320x240 preview** and both position clamps cap at **+10**.
+Predicted exposure 5.87% horizontal against the owner's *"about %5"*, and the
+port's own measured comment for the sibling static wallpaper
+(`sprite_preview_backend.c:1578-1584`, "an 8-pixel backdrop frame on all four
+sides") independently pins both the 300x220 and the mechanism. The shipping
+`NDS_FAST_WALLPAPER_AFFINE` path makes it sharper: the seed is captured at
+`seed_dist 14000`, which clamps to the same 1.004, so **the seed raster IS the
+max-pull frame** and live frames only ever sample inside it — full-bleeding the
+seed closes the row, and `K` cancels in the affine ratio so `hdx`/`vdy` and the
+cadence do not move. Derived **K = 1.12** about the preview centre (K_min =
+1.090909, set by the top edge). Three consumers must move together; the ready-made
+proof counter is `gNdsFastWallpaperSeedOpaquePixelCount`, 42,650 -> 49,152.
+**Blocking hazard for the implementing cycle, and it is free to check first:** the
+correction drives `origin` negative, and `ndsSObjDrawOpaqueWallpaperFinal`'s
+destination-range derivation was not read. The `(u32)(dst - origin)` form at
+`:734`/`:742` is safe; the O3 mapper's range is not yet known to be. Full
+derivation, seam table and proof plan in `…_c-bore36-bgstretch/BG_COVERAGE.md`.
+
+**Whispy — owner playtested and saw NO change ("still isn't smooth").** Not worked
+this cycle; the next step is a pixel-cadence probe of the FACE, not another
+derivation of the blink, which is already source-correct.
 
 ## Lane Ownership
 
