@@ -1,0 +1,29 @@
+Tick-HUD buckets: target=smash64ds-battle-playable-tickhud-hwtri samples=1600 frames=439..2039 melonDS=1.0 sha=DE80E46BDCF1FD98 git=bf22a37eec3+dirty(5) dldi=ON
+
+bucket p50        p95        spread mean       min        max        %ALLp50
+------ ---        ---        ------ ----       ---        ---        -------
+ALL     1,118,144  1,678,528   1.50  1,210,171  1,114,880  3,358,656   100.0
+FTR       300,480    326,208   1.09    294,510    172,864    332,800    26.9
+STG       162,240    166,592   1.03    162,616    158,976    173,568    14.5
+BG          4,032      4,096   1.02      4,033      3,776      4,160     0.4
+AUD         2,880      6,848   2.38      8,918      1,088    152,000     0.3
+HUD           960    420,160 437.67     34,967        832  2,077,440     0.1
+SRC       322,944    566,784   1.76    348,449     10,816  1,646,016    28.9
+MISC      103,360    179,136   1.73    111,193     81,792    274,048     9.2
+OTHR      230,336    529,984   2.30    245,485     25,280    579,776    20.6
+WAIT      210,816    511,552   2.43    225,776      5,376    559,232    18.9
+WORK      933,504  1,364,288   1.46    984,395    599,872  3,243,264    83.5
+SHDT        4,416     87,680  19.86     14,232          0    550,400     0.4
+SWRM          896        960   1.07        902        704      1,024     0.1
+GCRA      317,760    561,664   1.77    343,171      6,720  1,640,832    28.4
+SCPU       43,584    105,792   2.43     46,010          0    139,008     3.9
+SCAT        1,152      1,344   1.17      1,155          0      1,472     0.1
+SPRM        2,048      2,240   1.09      4,782          0    658,048     0.2
+SINT      151,168    334,784   2.21    168,268          0    908,736    13.5
+SPHD       56,960     98,176   1.72     64,965          0    723,072     5.1
+SPHC          640        768   1.20        631          0        896     0.1
+WORK-H    923,840  1,193,024   1.29    949,429    591,616  2,259,968    82.6
+
+named=964,686 (79.7% of ALL)  VBI 2:1732 3:279 4:13 5+:14 max:26 total:2038  slips=0
+extras: gNdsAudioFgmCacheHitCount=38  gNdsAudioFgmCacheMissCount=150  gNdsAudioFgmCacheNoSlotCount=0  gNdsAudioFgmCacheEvictCount=143  gNdsAudioFgmCacheMaxPinned=5  gNdsAudioFgmCacheReqMask0=4,148,116,479  gNdsAudioFgmCacheReqMask1=1,637,809,911  gNdsAudioFgmCacheReqMask2=654,612  gNdsAudioFgmCacheMissMask0=4,148,116,479  gNdsAudioFgmCacheMissMask1=1,637,809,911  gNdsAudioFgmCacheMissMask2=654,612  gNdsAudioFgmPlayCalls=188  gNdsAudioFgmPlayFailCount=0  gNdsAudioFgmReadFailCount=0  gNdsAudioFgmMaxActiveHandles=6  gNdsAObjEvent32PlanHashLookupCount=1,188  gNdsAObjEvent32PlanHashHitCount=11  gNdsAObjEvent32PlanHashMissCount=1,177  gNdsAObjEvent32PlanHashProbeCount=1,188  gNdsAObjEvent32PlanHashInsertProbeCount=1,177  gNdsAObjEvent32PlanHashOverflowCount=0  gNdsAObjEvent32NormalizedHighWater=1,177  gNdsAObjEvent32NormalizeFailCount=0  gNdsAObjEvent32NormalizeCommandCount=1,177  gNdsBattleTextHudP0Damage=0  gNdsBattleTextHudP1Damage=58  gNdsBattleTextHudP0Stock=1  gNdsBattleTextHudP1Stock=1  gNdsDamageSparkScaleCount=14  gNdsObjAnimRunawayCount=0  gNdsTaskmanGeneralHeapFreeMin=70,592  gNdsRelocResolveMisalignCount=0
+Wrote D:\Stuff\DevFolder\Smash64DS_Port\artifacts\performance\2026-08-13_c-collision-stack\diag-c148.json

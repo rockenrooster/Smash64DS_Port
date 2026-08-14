@@ -823,11 +823,17 @@ void gcPlayDObjAnimJoint(DObj *dobj)
  * `ndsAObjEvent32NormalizeDObjTable` it cancels every joint of the GObj, not
  * just the failing one.
  *
- * 2048 is 2x the largest corpus ever measured, i.e. it leaves 1,029 spare slots
- * -- more than the entire first minute's demand -- for 8,192 bytes of bss
- * against 176,128 of proven boot headroom. The number is the measurement
- * doubled; it is not a guess, and `gNdsAObjEvent32NormalizedHighWater` below
- * exists so the next cycle can re-derive it instead of re-measuring. */
+ * 2048 was chosen as 2x the largest corpus known WHEN IT WAS CHOSEN (1,019, the
+ * pre-anim-joint-fix five-minute figure), and that arithmetic is stale: the
+ * anim-joint fix gave the shield's joint installer a body, and the five-minute
+ * corpus re-measured at 1,598 (`gNdsAObjEvent32NormalizedHighWater`,
+ * `../2026-08-13_c-ledger-index/LEDGER_INDEX.md` section 4). The real margin is
+ * therefore 450 spare slots, 1.28x, NOT 1,029 spare and 2x -- for 8,192 bytes of
+ * bss against 176,128 of proven boot headroom. `NormalizeFailCount` is still 0
+ * on both lengths and the ledger index did not move this number (it removed
+ * repeated FINDING, not repeated normalizing), so capacity remains the open
+ * question at exactly 1,598 of 2,048. Re-derive it from the high-water counter
+ * rather than from this comment. */
 #define NDS_AOBJ_EVENT32_NORMALIZED_MAX 2048u
 #define NDS_AOBJ_EVENT32_PLAN_MAX 128u
 #define NDS_AOBJ_EVENT32_BRANCH_DEPTH_MAX 16u
@@ -904,6 +910,28 @@ _Static_assert(NDS_AOBJ_EVENT32_NORMALIZED_MAX < 0xffffu,
 
 static u16
     sNdsAObjEvent32NormalizedHash[NDS_AOBJ_EVENT32_NORMALIZED_HASH_SLOTS];
+
+/* NO SECOND INDEX OVER sNdsAObjEvent32Plan -- MEASURED, 2026-08-13, and this
+ * note exists so the next cycle does not build the one that was briefed.
+ *
+ * `../2026-08-13_c-ledger-index/LEDGER_INDEX.md` section 1 named
+ * ndsAObjEvent32FindPlanned as "a second O(n^2) scan, 1,064,828 tk/match, ~665
+ * tk/frame", from the c123 per-PC profile's PC range 0x02065cb6-0x02065cc2 at
+ * 161,203 iterations. That attribution is WRONG, and the same index was built
+ * here and instrumented to find out: over a whole one-minute both-CPU match the
+ * function is entered 1,188 times -- 1,177 misses (one per appended command,
+ * which is exactly gNdsAObjEvent32NormalizeCommandCount) and 11 hits -- against
+ * 183 scripts. The plan table is reset per script and capped at 128, so the
+ * scan it replaces is a few entries deep, not a thousand: 13 tk/frame at the
+ * uniform 6.4 commands per script this run measured, and ~302 tk/frame even at
+ * the most concentrated distribution 183 scripts and 1,177 commands allow.
+ * 161,203 iterations cannot happen in 1,188 calls over a 128-entry table; that
+ * profile PC range is the FindNormalized scan, which PlanStream also inlines,
+ * once per command, over a ledger that reaches 1,177 entries.
+ *
+ * So the index was reverted rather than shipped: 256 bytes of bss and its text
+ * for at most a P50 crumb on the normalize frames, which sit at low gate ranks.
+ * Numbers in ../../artifacts/performance/2026-08-13_c-collision-stack/. */
 
 /* Engagement, both directions. Probes/Lookups is the load-factor readout that
  * says whether the index is behaving; Overflow must stay 0 and its non-zero
