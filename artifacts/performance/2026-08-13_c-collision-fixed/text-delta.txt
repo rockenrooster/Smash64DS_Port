@@ -1,0 +1,29 @@
+Text delta of the whole-cluster fixed-point narrow phase, measured 2026-08-13.
+
+A. FLOAT BODIES THE REPLACEMENT DELETES -- Thumb, from the SHIPPED battle ROM
+   (arm-none-eabi-nm --print-size smash64ds-battle-playable-hwtri.elf)
+     func_ovl2_800ED490                    580
+     func_ovl2_800EDE5C                    198
+     gmCollisionGetWorldPosition           196
+     gmCollisionSetInvertMatrix            716
+     gmCollisionTestRectangle             1680
+     gmCollisionTransformMatrixAll         430
+     TOTAL deleted (Thumb)                3800
+
+B. STAYS FLOAT this design -- not in the delta, listed so nobody double-counts
+     func_ovl2_800EDBA4                    414
+     gmCollisionCopyMatrix                  50
+     gmCollisionSetMatrixNcs               776
+     gmCollisionTestSphere                1196
+     lbCommonCos                            64
+     lbCommonSin                            56
+
+C. FIXED KERNELS THE REPLACEMENT ADDS -- ARM, -march=armv5te -marm -O2
+   (builds/build-c-collfixed/nds_r2_collision_fixed.o, NDS_R2_COLLISION_FIXED=1)
+     ndsR2CollisionFixedBuildLocal        1180
+     ndsR2CollisionFixedCompose            344
+     ndsR2CollisionFixedMakeFrame         1212
+     ndsR2CollisionFixedTestRectangle     1504
+     ndsR2CollisionFixedTransformPoint     100
+     ndsR2CollisionFixedWorldToLocal       108
+     TOTAL added (ARM)                    4448

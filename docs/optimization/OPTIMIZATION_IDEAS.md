@@ -874,6 +874,23 @@ Do not wrap them; ensure the original float bodies disappear from the map.
 Use the measured row-scaled near-orthogonal domain:
 R^-1[c][r] = M[r][c] / s_r²
 with three reciprocals, nine multiplies, and an orthogonality/domain guard.
+
+> **CORRECTED 2026-08-13 — the row-scaled inverse above is REFUTED. Do not
+> re-propose it.** It was implemented and measured at **0.1035 world units**
+> against the 0.0200 bound, 5.2x over, while its orthogonality guard declined
+> 92% of live cases. The cause is SSB64's own sine table, not fixed point:
+> `gSYSinTable` spans 0..PI *inclusive* over 2048 samples, so sin²+cos² is not 1
+> and the joint rows come out of a chain up to **1.05% out of square** (measured
+> in double off the source, max relative skew 0.00157 at one local matrix,
+> 0.00882 after six composes). The identity is exact only for orthonormal rows,
+> so it would have failed in float too. The **cofactor** inverse at Q26 ships in
+> its place and measures **0.0012** — and at long reach is more accurate than the
+> f32 original. The whole-cluster kernel set, its proof, and the seam plan are in
+> `artifacts/performance/2026-08-13_c-collision-fixed/DESIGN.md`; the falsifier is
+> `scripts/check-r2-collision-fixed.ps1`, in dev-fast. The rest of this Phase 4
+> entry — replace rather than wrap, ensure the float bodies leave the map,
+> differential-test the decisions, reject an additive implementation — stands and
+> was followed.
 Preserve source hit-test ordering and decisions.
 Differentially test attacks, shields, grabs, ledges and boundary cases against the float oracle.
 Reject before running if mapdiff shows an additive implementation comparable to L7.

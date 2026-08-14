@@ -1198,6 +1198,23 @@ NDS_R2_FOX_CPU_DEFAULT ?= 1
 # shipping tree has roughly five kilobytes of arena margin, and a measurement
 # has to be sized against it like any other code.
 NDS_R2_COLLISION_L7_ORACLE ?= 0
+# R2-07, the whole-cluster fixed-point fighter hurtbox narrow phase. Compiles
+# src/port/nds_r2_collision_fixed.c, the out-of-line ARM entry points for the
+# kernels in include/nds/nds_r2_collision_fixed.h.
+#
+# DEFAULT 0 EVEN THOUGH NOTHING CALLS IT AND --gc-sections DROPS EVERY BYTE.
+# The reason is the paragraph above CFILES: an object entering the link changes
+# the link INPUT SET, and this project has measured re-addressing collateral
+# from less than that (Tasks 87-89/94/95), against a cross-build P95 floor of
+# +/-5,376. A cycle that lands proven-but-unwired kernels must not move the
+# published ROM's placement to do it.
+#
+# The kernels are proven at this flag's 1 by scripts/check-r2-collision-fixed.ps1,
+# which compiles them for the real target independently of the flag, so 0 costs
+# no coverage. Turning it on is step one of wiring, and it doubles as the slice
+# 51 falsifier arm: flag on with the call sites reverted is the candidate's
+# placement carrying the control's behaviour.
+NDS_R2_COLLISION_FIXED ?= 0
 # Task 44 stage steady-state excision: generation-based admission, dense
 # rigid/dynamic binding lists, and the hoisted GX capture-active test. Requires
 # the Task 36 hardware-compose stage owner; meaningless without it.
@@ -2351,6 +2368,9 @@ endif
 ifeq ($(NDS_R2_FIXED_SQRT),1)
 CFILES += nds_r2_sqrtf.c
 endif
+ifeq ($(NDS_R2_COLLISION_FIXED),1)
+CFILES += nds_r2_collision_fixed.c
+endif
 ifeq ($(NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET),1)
 CFILES += battleship_ftcommon_normal_moveset.c
 endif
@@ -3492,6 +3512,23 @@ endif
 # there is not enough there to clear the floor. The soft-float cost L6 measured
 # has to be removed by not doing the float arithmetic (L7), not by recompiling
 # it.
+#
+# nds_r2_collision_fixed.o IS that change -- the whole-cluster fixed-point
+# narrow phase -- and it is the case where the flag is load-bearing rather than
+# marginal. Its arithmetic is 64-bit integer products (60 SMULL/SMLAL measured),
+# ARMv5TE Thumb has no SMULL, and -mthumb would turn every one of them into
+# `bl __aeabi_lmul`; the renderer's rule just above exists for exactly that
+# reason and was worth -511,174 ticks per Results tic. L7a's refutation does not
+# transfer, and its own paragraph says why: it was measuring FLOAT code, whose
+# helpers are libgcc and do not change mode with the caller.
+# scripts/check-r2-collision-fixed.ps1 fails on any __aeabi_lmul in this object,
+# so losing this line is a red verifier rather than a silent regression.
+#
+# Nothing calls it yet; --gc-sections drops the object entirely, so today this
+# line costs zero bytes and exists so that wiring the cluster is one edit in
+# gmcollision.c rather than two in two files.
+nds_r2_collision_fixed.o: CFLAGS += -marm
+
 scene_backend.o: $(SCENE_BACKEND_SLICES) $(NDS_SCENE_HARNESS_CONFIG)
 scene_harness.o battleship_grinishie_scale.o: $(NDS_SCENE_HARNESS_CONFIG)
 nds_ifcommon_oam.o: $(NDS_TASK39_HIT_SPARKS_INC)

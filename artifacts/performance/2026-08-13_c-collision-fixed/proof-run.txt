@@ -1,0 +1,67 @@
+R2-07 whole-cluster fixed-point collision kernels
+  Error is WORLD UNITS on a transformed point. Bound 0.0200, the
+  E64b/E65 figure R2-07 L7 already carries.
+  Live joint scale 1.1138-1.1199, measured on a natural mode-163
+  match (NDS_R2_COLLISION_L7_ORACLE, 460 samples, 2026-07-31).
+
+ENUMERATED
+  kernel / domain                                       cases    max error     bound
+  T1a sine table, all 4096 indices (exact)               4096    0.0000000    0.0000  green
+  T1b sin/cos index arithmetic (mismatches)            800001    0.0000000    0.0000  green
+  T2a isqrt64 exhaustive 0..2^20 (failures)           1048577    0.0000000    0.0000  green
+  T2b isqrt64 over every live s^2 raw value (failures)       914399    0.0000000    0.0000  green
+  T2c isqrt64 guard corners (failures)                     10    0.0000000    0.0000  green
+
+BOUNDED -- forward chain (build + compose), probe +/-20
+  The gated column is fixed-vs-float, because the game's f32 result
+  is the behaviour to be equivalent to. The other two attribute it:
+  where fixed-vs-float is large and float-vs-exact is large with it,
+  the REFERENCE is what moved.
+  domain                                          cases    vs float float vs ex    vs exact
+  T3 live 1.1138-1.1199, depth 6, |t|<=400       200000   0.0014219   0.0000984   0.0014088  green
+  T3 live, depth 12, |t|<=400                    100000   0.0018318   0.0001309   0.0018206  green
+  T3 live, depth 6, |t|<=32767 (blast zone)      100000   0.0072490   0.0070889   0.0012726  green
+  T3 wide 0.90-1.10, depth 6                     100000   0.0011957   0.0000843   0.0012049  (reported)
+  T3 wide 0.50-1.50, depth 6                     100000   0.0013026   0.0000884   0.0012833  (reported)
+  T3 wide 0.25-2.00, depth 6                     100000   0.0015201   0.0000828   0.0015510  (reported)
+
+ROW ORTHOGONALITY of the game's own joint matrices
+  T4 live, depth 1 (one local matrix)            150000  max rel skew 0.00156806  mean 0.00027208
+  T4 live, depth 6                               150000  max rel skew 0.00881748  mean 0.00146061
+  T4 live, depth 12                              150000  max rel skew 0.01049263  mean 0.00174154
+
+BOUNDED -- the world->local frame, both forms
+  T5 live, depth 6, reach +/-64                  200000  row-scaled  0.1035117  cofactor  0.0012375
+                                                         cofactor-vs-exact 0.0012414  float-vs-exact 0.0001472
+                                                         declined: chain 0  row 183929  cofactor 0;  vec_scale max err 0.0001223
+  T5 live, depth 6, reach +/-4096                100000  row-scaled  7.1178451  cofactor  0.0027041
+                                                         cofactor-vs-exact 0.0011551  float-vs-exact 0.0021447
+                                                         declined: chain 0  row 91927  cofactor 0;  vec_scale max err 0.0001223
+  T5 live, depth 12, reach +/-64                 100000  row-scaled  0.1041852  cofactor  0.0016533
+                                                         cofactor-vs-exact 0.0016443  float-vs-exact 0.0001389
+                                                         declined: chain 0  row 95391  cofactor 0;  vec_scale max err 0.0001224
+  T5 wide 0.90-1.10, depth 6, reach +/-64        100000  row-scaled  0.0749505  cofactor  0.0012031
+                                                         cofactor-vs-exact 0.0012161  float-vs-exact 0.0001310
+                                                         declined: chain 0  row 99985  cofactor 0;  vec_scale max err 0.0001223
+  T5 wide 0.50-1.50, depth 6, reach +/-64        100000  row-scaled  0.0131483  cofactor  0.0016537
+                                                         cofactor-vs-exact 0.0015925  float-vs-exact 0.0001959
+                                                         declined: chain 0  row 99999  cofactor 0;  vec_scale max err 0.0001223
+  T5 wide 0.25-2.00, depth 6, reach +/-64         99973  row-scaled  0.0000000  cofactor  0.0025826
+                                                         cofactor-vs-exact 0.0025569  float-vs-exact 0.0003417
+                                                         declined: chain 0  row 100000  cofactor 27;  vec_scale max err 0.0001225
+
+DIFFERENTIAL -- gmCollisionTestRectangle decisions
+  T6 live, depth 6                                     200000 cases, 0 mismatches (0.000000%), 0 declined
+                                                 margin < 0.0200: 185 (0.092500%);  smallest margin 0.0001001;  largest margin at a mismatch 0.0000000
+                                                 margin histogram  <0.001 14 | <0.01 87 | <0.1 840 | <1 8542 | <10 81521 | >=10 108996
+  T6 live, depth 12                                    100000 cases, 1 mismatches (0.001000%), 0 declined
+                                                 margin < 0.0200: 97 (0.097000%);  smallest margin 0.0001745;  largest margin at a mismatch 0.0005693
+                                                 margin histogram  <0.001 7 | <0.01 42 | <0.1 432 | <1 4310 | <10 40252 | >=10 54957
+
+ADVERSARIAL CORNERS
+  case                                                  cases     failures     bound
+  T7a blast-zone extremes +/-32767 (declines)           20000    0.0000000    0.0000  green
+  T7b degenerate scales accepted out of bound           20000    0.0000000    0.0000  green
+  T7c zero / identity / singular corners (failures)            5    0.0000000    0.0000  green
+
+GREEN on every gated row.
