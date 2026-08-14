@@ -1,4 +1,47 @@
-# Profile-guided code placement — STOP at Phase 4. The hot set is 33.6x the I-cache.
+# Profile-guided code placement — CONCLUSION WITHDRAWN 2026-08-14
+
+> **This document's verdict ("lane closed") was wrong, and is withdrawn. The
+> corrected status is: PLACEMENT UNRESOLVED — the whole-match footprint is
+> capacity-heavy, but temporal locality was never measured.**
+>
+> Review found a methodological hole that invalidates the reasoning, not just the
+> confidence:
+>
+> 1. **33.6x is the UNION of lines touched across the whole match.** Cache
+>    behaviour is governed by temporal reuse distance, not whole-match union
+>    size. A union that overflows the cache 33x is consistent with either a
+>    thrashing working set or a sequence of small phases that each fit.
+> 2. **"The hottest 2,000 lines are evenly spread over 64 sets" is not a
+>    statement about the simultaneously-live set.** Evenness of a whole-match
+>    aggregate says nothing about evenness at any instant.
+> 3. **§4 claims callee lines are "evicted between calls regardless" — the
+>    interval between those calls was never measured.** That is the load-bearing
+>    claim of the whole document and it has no evidence behind it.
+> 4. **Phase 3 (the weighted call-transition graph) was skipped**, so nothing in
+>    the report could have supported claim 3.
+> 5. **"Stage, fighter and animation all execute every frame" does not prove they
+>    are temporally inseparable.** They may run as distinct sequential phases
+>    within a frame, each with a small live set.
+> 6. The 8 KB / 4-way geometry was admittedly not verified from the required
+>    authoritative source. *(Now resolved — see §2, corrected.)*
+> 7. **`icache_fill ≈ issue` is far too large a cost to close with a static
+>    whole-match footprint argument.**
+>
+> A second factual error: this document stated the v3 stall attributor "was never
+> adopted into the repo" and that only binaries were available. The repo's
+> `emulators/` directory does hold only binaries — but the **source tree and a
+> built v3 binary are present on disk** at `D:\Stuff\DevFolder\melonDS-Accurate`
+> (branch `r2-stall-attributor`, HEAD `4a1abf61`, `build/melonDS.exe` emitting
+> `format=melonDS-arm9-retail-profile-v3`). The instrument was available the
+> whole time; it was not looked for outside the repo.
+>
+> Sections 1 and 2 below stand (the Phase 0 retraction, and the geometry — now
+> verified). Sections 3–8 are retained as the record of what was measured, with
+> §4's inferences marked unsupported. The successor analysis carries the verdict.
+
+---
+
+# (original) STOP at Phase 4. The hot set is 33.6x the I-cache.
 
 **Date:** 2026-08-14
 **Target:** ≥17,000 WORK-H P95 ticks from link-order change alone.
@@ -40,24 +83,44 @@ retraction.
 
 ## 2. Phase 1 — I-cache geometry, and an honest note on its provenance
 
-| property | value | source |
+**CORRECTED 2026-08-14 — now verified against the project's own reference
+emulator**, which `PROJECT_GOAL.md` names the primary performance reference:
+`D:\Stuff\DevFolder\melonDS-Accurate\src\CP15_Constants.h:28-35` and
+`src/CP15.cpp:455-467`.
+
+```c
+constexpr u32 ICACHE_SIZE_LOG2   = 13;                  // 8192 bytes
+constexpr u32 ICACHE_SETS_LOG2   = 2;                   // 4  <- melonDS names WAYS "sets"
+constexpr u32 ICACHE_LINELENGTH_ENCODED = 2;
+constexpr u32 ICACHE_LINELENGTH  = 8 * (1 << 2);        // 32 bytes
+constexpr u32 ICACHE_LINESPERSET = 8192 / (4 * 32);     // 64  <- the true set count
+```
+
+and the index computation, verbatim from the fill path:
+
+```c
+const u32 tag = (addr & ~(ICACHE_LINELENGTH - 1));
+const u32 id  = ((addr >> ICACHE_LINELENGTH_LOG2) & (ICACHE_LINESPERSET-1)) << ICACHE_SETS_LOG2;
+//            = ((addr >> 5) & 63) << 2
+```
+
+| property | value | status |
 |---|---|---|
-| line size | **32 bytes** | **Verified in-toolchain.** `devkitPro/libnds/include/nds/arm9/cache.h:74` — `DC_InvalidateRange` warns "Base address and size must be cache line size (32-byte) aligned" |
-| I-cache size | 8192 bytes | ARM946E-S TRM / DS hardware configuration — **not present in this project or toolchain** |
-| associativity | 4-way | same |
-| sets | 8192 / 32 / 4 = **64** | derived |
-| index | `set = (addr >> 5) & 63` | derived |
-| **set period** | **2048 bytes** | derived — two addresses collide iff congruent mod 2048 |
+| I-cache size | **8192 B** | verified, `CP15_Constants.h:29` |
+| line size | **32 B** | verified twice — emulator, and `libnds .../cache.h:74` |
+| associativity | **4-way** | verified, `CP15_Constants.h:31` |
+| sets | **64** | verified, `ICACHE_LINESPERSET` |
+| index | **`set = (addr >> 5) & 63`** | verified, `CP15.cpp:456` |
+| set period | **2048 B** | derived — two addresses collide iff congruent mod 2048 |
+| replacement | **round-robin** (`CP15_CACHE_CR_ROUNDROBIN`, marked `[[likely]]`); `RandomLineIndex()` otherwise | verified, `CP15.cpp:460-467` |
 
-**Stated plainly: only the 32-byte line is confirmed from a source inside the
-project.** The size and associativity are standard ARM946E-S/DS values that I
-could not cite to an in-tree document, and the task said not to work from memory.
-Rather than build a CP15 `c0,c0,1` (Cache Type Register) read to settle it, §4
-shows the **conclusion is insensitive to the uncertain parameter** — which is the
-cheaper and stronger answer. If the lane is ever reopened, one CP15 read
-settles it exactly.
+The set indexing used by `scripts/census-icache-placement.py` matches the
+reference model exactly. **Round-robin replacement is new information and matters
+for any simulator**: it is neither LRU nor random, so a 5th hot line in a set
+evicts in fill order, not by recency.
 
-D-cache geometry (4 KB) was deliberately not reused here; the two differ.
+D-cache is **4096 B**, 4-way, 32 B lines (`CP15_Constants.h:37-44`) — confirmed
+different from the I-cache, so D-cache geometry must not be reused here.
 
 ## 3. Phase 2 — the hot code map
 

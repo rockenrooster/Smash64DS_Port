@@ -5044,7 +5044,71 @@ walk IS the call". The three biggest single symbols are already visible:
 `ndsFighterMarioFoxDLAllDrawForSlot` 93,854,253, `ndsRendererCommitNativeStageSegment`
 93,101,009, `ndsRendererNativeEmitProductionPrimitiveGroups` 81,420,680.
 
-## CODE PLACEMENT (2026-08-14) — LANE CLOSED. The hot set is 33.6x the I-cache.
+## CODE PLACEMENT — CLOSED ON MEASURED TEMPORAL EVIDENCE (2026-08-14, v3)
+
+`artifacts/performance/2026-08-14_icache-temporal/ICACHE_TEMPORAL.md`.
+**This supersedes the block below, whose verdict was WITHDRAWN under review**: it
+argued capacity from a whole-match UNION footprint, which does not govern cache
+behaviour, and asserted callee lines are "evicted between calls regardless"
+without ever measuring the interval. Same word, invalid route.
+
+**The v3 stall attributor was already in-repo at
+`emulators/melonds-attributor/melonDS.exe`** (since 2026-07-27, emits
+`profile-v3`). The prior block said it was never adopted; that was wrong, and the
+instrument was available the whole time. Source also at
+`D:\Stuff\DevFolder\melonDS-Accurate` (branch `r2-stall-attributor`, `4a1abf61`).
+
+**Geometry, now VERIFIED** from the reference emulator
+(`melonDS-Accurate/src/CP15_Constants.h:28-35`, `CP15.cpp:455-467`): 8192 B,
+32 B lines, 4-way, 64 sets, `set=(addr>>5)&63`, **round-robin replacement**.
+D-cache is 4096 B — different. melonDS names WAYS "sets"; `ICACHE_LINESPERSET`
+is the real set count.
+
+**THE POOL IS ENORMOUS AND REAL.** v3 on the c125 ROM, `stall_partition_residual=0`:
+
+| class | cyc/frame | ticks/frame | share |
+|---|---:|---:|---:|
+| **icache_fill** | **678,551** | **339,275** | **29.7%** |
+| dcache_fill | 504,064 | 252,032 | 22.0% |
+| halt_wait (idle) | 477,575 | 238,788 | 20.9% |
+| issue | 362,511 | 181,256 | 15.8% |
+
+**Instruction fetch is 37.5% of non-idle and 1.87x `issue`** — ~20x the 17K target.
+
+**But it is CAPACITY, and that is now MEASURED, not inferred.** Sweeping the
+hot-line cutoff so set population varies:
+
+```
+top 256 lines -> sets that FIT (<=4 ways): 1,252 fill/1k | oversubscribed (5-8): 1,233
+top 512 lines -> FIT: 1,407 | 5-8: 1,297 | 9-16: 1,403
+```
+
+**A set having room does not make its lines survive.** Uncontended sets refill at
+the same rate as contended ones — marginally worse, in fact. Address conflict is
+not the mechanism.
+
+Phase 3 (skipped last time, and its absence is what made the old claim
+unsupported) **does refute** the "evicted regardless" line: three hot clusters
+FIT the cache (0.5–0.7x) and are scattered over 160–713 KB, and the hottest edge
+`gcPlayDObjAnimJoint -> ndsR2AnimValueQ` (271.2 calls/fr) is 413 KB apart sharing
+10 sets. **But those fixable clusters hold 0.14% of modelled conflict**; the
+99.6% sits in clusters 1.4–4.1x the cache.
+
+Layout model (`scripts/placement-layout-model.py`), all 5 gate conditions met:
+`current 198,087,588 | cluster −2.1% | phase −2.1% | conflict-min −4.3% |
+falsifier +27.8%`. **The first falsifier scored −2.3%, BEATING the principled
+layouts** — it padded by a line, which spreads sets. Gate item 5 caught it; it
+was rebuilt to align every base to the 2048 B set period. A model that rewards
+any movement proves nothing.
+
+**NEXT OWNER: HOT CODE FOOTPRINT REDUCTION — fewer bytes of hot code, not
+better-arranged bytes.** 404,608 B of executed non-ITCM text against an 8,192 B
+cache; `ndsR2AnimValueQ` spends **81.4% of its own cycles fetching itself**,
+`ndsRendererMtxMulAffine20p12` 70.4%, `ndsRendererCommitNativeStageSegment`
+57.1%. Note `.text.hot`+`.text.hot.draw` = 9,844 B is **already 1.2x the cache**,
+so the curated set cannot be resident as it stands.
+
+## (superseded) CODE PLACEMENT (2026-08-14) — verdict withdrawn
 
 `artifacts/performance/2026-08-14_pgo-code-placement/PGO_CODE_PLACEMENT.md`,
 `scripts/census-icache-placement.py`. **No linker order was changed, no ROM
