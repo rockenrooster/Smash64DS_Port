@@ -5044,6 +5044,54 @@ walk IS the call". The three biggest single symbols are already visible:
 `ndsFighterMarioFoxDLAllDrawForSlot` 93,854,253, `ndsRendererCommitNativeStageSegment`
 93,101,009, `ndsRendererNativeEmitProductionPrimitiveGroups` 81,420,680.
 
+## HOT FOOTPRINT (2026-08-14) — the successor lane, and it SIZES ABOVE THE BAR
+
+`artifacts/performance/2026-08-14_hot-footprint/HOT_FOOTPRINT.md`. Census only,
+nothing built.
+
+Of the **288,352 bytes in the 9,011 I-cache lines the match pays to fetch**:
+
+| | bytes | share | removable |
+|---|---:|---:|---|
+| live (executed) | 213,040 | 73.9% | no — this is the work |
+| literal pool (`[pc,#N]` targets) | 5,780 | 2.0% | **no** — Thumb-1 needs them |
+| **cold code** | **42,892** | **14.9%** | **yes** |
+| alignment padding | 26,640 | 9.2% | partly |
+
+**Check the pool split before quoting the raw figure.** Raw "dead-in-line" is
+26.1%, which reads as ~88,000 ticks; Thumb-1 emits constants into pools inside
+`.text` that objdump shows as instructions and no PC profile ever reports, so a
+naive count books them as free. Here pools are only 2.0%, so the lever survives —
+but the confound had to be resolved first.
+
+**Ceiling: needed 218,820 B = 6,839 lines against 9,011 fetched = 24.1%
+reduction = ~81,800 ticks/frame.** Perfect compaction is unreachable at
+basic-block granularity; a third to a half is **~25,000–40,000 ticks/frame**,
+which clears the 17,000 bar. First lane this week to size above it on measurement
+rather than inference.
+
+**Two objects carry 42% of all fetch**: `scene_backend.o` (199,080 B text,
+61,664 fetched, 47.3% executed) and `nds_renderer.o` (187,376 B, 55,008 fetched,
+48.6%). Main text is 914,634 B of which only **43.4% is in functions that execute
+at all**.
+
+**NEXT EXPERIMENT: `-freorder-blocks-and-partition`** (cold blocks to
+`.text.unlikely`) — exactly the transformation the 14.9% sizes. Three gates
+BEFORE building: (1) it changes codegen, so this is **not** "same objects" —
+Boundary must re-verify gameplay/collision/RNG; (2) total `.text` will likely
+GROW while *fetched* text shrinks — correct trade, but price it against the
+GObj-cap RAM threshold; (3) confirm `.text.unlikely` is non-empty in the map for
+`-mthumb` ARMv5TE and that it reaches those two objects — **if empty, stop, no
+build spent**. Primary evidence is the v3 `stall_icache_fill` delta, NOT WORK-H.
+
+**Closed cheaply, do not re-propose:** GCC clone bloat is **168 bytes** total.
+**Not the fetch lever:** 66,488 B of never-executed objects survive
+`--gc-sections` (`mnplayersvs` 22,088 B at 0.0%, `mnvsresults` 15,348, `libc
+categories` 14,420, `mnmaps` 7,388) — they cost ZERO fill because they are never
+fetched; that is a RAM/ROM question, don't conflate it. **Oddity worth chasing:**
+`_vfiprintf_r`/`_svfiprintf_r`/`__ssvfiscanf_r` are in the hot fetched set —
+newlib formatted I/O executing during a battle match.
+
 ## CODE PLACEMENT — CLOSED ON MEASURED TEMPORAL EVIDENCE (2026-08-14, v3)
 
 `artifacts/performance/2026-08-14_icache-temporal/ICACHE_TEMPORAL.md`.
