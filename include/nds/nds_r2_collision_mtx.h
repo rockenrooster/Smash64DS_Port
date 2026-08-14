@@ -49,6 +49,15 @@
  * match, every one a joint collision actually inverted that frame):
  *
  *   real joint scale         1.1138 - 1.1199   (ScaleMin/MaxQ12 4562 - 4587)
+ *
+ * SUPERSEDED 2026-08-13: that range is what 460 samples of THIS oracle saw, and
+ * it is too narrow. Walking the live fighter trees on the gate arm over a whole
+ * both-CPU match (152 joint matrices, artifacts/performance/
+ * 2026-08-13_c-collision-seam/) measures 0.9937 - 2.0479 -- one joint reaches
+ * 2.0479 on all three axes with the source's own unk_dobjtrans_0x6 latch set,
+ * 1.83x the maximum below and past the top of the widest sweep the fixed-point
+ * falsifier even reports. Do not size a domain guard or a gated falsifier row on
+ * the range above.
  *   deviation, probe  1 unit  0.00049 world units   (MaxDevQ12 2)
  *   deviation, probe  4 units 0.00122               (MaxDevQ12 5)
  *   deviation, probe 16 units 0.00513               (MaxDevQ12 21)
@@ -307,8 +316,9 @@ static inline int ndsR2CollisionInvertFrame(NDSR2CollisionMtx *dst,
  * by 400. The information was gone before the first multiply.
  *
  * So the rotation block is read at 6.26 instead. Rows 0-2 of a joint matrix are
- * a rotation scaled per row -- the measured live domain is a single scale of
- * 1.114-1.120 -- so two integer bits are ample and the other twenty-four buy
+ * a rotation scaled per row -- the measured live domain is 0.9937-2.0479, not
+ * the single 1.114-1.120 this comment used to claim (see the correction at the
+ * top of this file) -- so two integer bits are ample and the other twenty-four buy
  * precision: 2^-27 * 400 is 3e-6 against the 0.0200 bound. Row 3 stays 20.12
  * because it holds world coordinates in the hundreds and needs the range. The
  * two rows of the same matrix are therefore in DIFFERENT formats on purpose; a

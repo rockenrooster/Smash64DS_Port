@@ -51,8 +51,18 @@
  *                                                     six integer bits is ample
  *                                                     and twenty-six buy
  *                                                     precision. Live scale is
- *                                                     1.1138-1.1199 (460
- *                                                     samples, L7 oracle).
+ *                                                     0.9937-2.0479, measured
+ *                                                     2026-08-13 on the gate arm
+ *                                                     (152 joint matrices,
+ *                                                     .../2026-08-13_c-collision-
+ *                                                     seam/). NOT the 1.1138-
+ *                                                     1.1199 the L7 oracle read
+ *                                                     in 460 samples: a live
+ *                                                     joint reaches 2.0479 with
+ *                                                     the source's own scale
+ *                                                     latch set, 1.83x that
+ *                                                     maximum. Six integer bits
+ *                                                     still hold it easily.
  *   translation row M[3]     Q12     |t| < 2^17       world coordinates. The
  *                                                     stage's own bounds are
  *                                                     s16 fields (MPGroundData

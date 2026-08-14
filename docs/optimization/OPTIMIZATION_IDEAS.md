@@ -891,6 +891,18 @@ with three reciprocals, nine multiplies, and an orthogonality/domain guard.
 > entry — replace rather than wrap, ensure the float bodies leave the map,
 > differential-test the decisions, reject an additive implementation — stands and
 > was followed.
+>
+> **AMENDED 2026-08-13 (cycle B) — "ensure the float bodies leave the map" is
+> only possible for FOUR of them, and the forward chain cannot be converted at
+> all.** Read off the linked battle ELF rather than from source:
+> `gmCollisionGetWorldPosition` has six referrers outside the cluster,
+> `gmCollisionTransformMatrixAll` is held by `ftParamSetAnimLocks`, and
+> `func_ovl2_800ED490`'s only caller `func_ovl2_800EDBA4` is shared with the
+> renderer. Deletable: `gmCollisionSetInvertMatrix`, `func_ovl2_800EDE5C`,
+> `gmCollisionTestRectangle`, `gmCollisionTestSphere`. The convertible work is
+> **37–52% of what DESIGN §9 sized**, so this row is a measurement rather than a
+> landing: `artifacts/performance/2026-08-13_c-collision-seam/SEAM_CORRECTION.md`
+> and board slice 52.
 Preserve source hit-test ordering and decisions.
 Differentially test attacks, shields, grabs, ledges and boundary cases against the float oracle.
 Reject before running if mapdiff shows an additive implementation comparable to L7.

@@ -81,8 +81,8 @@ its own MEDIAN, so it prices the EXCURSION only — not what deleting the lane p
 instrument** — the HUD costs ~345,024 tk twice a second on exactly the frames P95 is decided on; the
 GATE keeps `DRAW=1`. Soak length is `NDS_R2_SOAK_MATCH_MINUTES`; `Makefile:382` forbids reporting a
 both-CPU P95 as Boundary's. **Route to ATTRIBUTE, re-bank to BANK. Collision paid and is BANKED**
-(slices 35/36/37, −10,752). SIZE IS NOT PERMISSION: float in
-`gmcollision`/`mp*`/`ftMain*`/`ftComputer` is FROZEN — exact memo/hoist/reuse/deletion only.
+(slices 35/36/37, −10,752). Float in `mp*`/`ftMain*`/`ftComputer` is FROZEN; `gmcollision` was UNFROZEN
+2026-08-13, but the LINKED ELF says only **37–52%** is reachable (`…_c-collision-seam/`, slice 52).
 
 ## What is dead, so nobody re-derives it
 

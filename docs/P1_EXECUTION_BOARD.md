@@ -5311,6 +5311,87 @@ anyway and is not an invitation.
 callers clear the 40/80 presence bar (7,187 + 1,883 + 1,838 = 10,908); the other
 ~38,700 is spread across callers each below it. Its mean self-time is 16,912.
 
+### Slice 52 (collision in fixed point) — SEAM CORRECTED, NOT WIRED. Re-brief before spending a build
+
+Evidence: `artifacts/performance/2026-08-13_c-collision-seam/SEAM_CORRECTION.md`
+and `elf-referrers.txt` beside it. **No build was spent; both root ROMs
+untouched.** This row corrects `…/2026-08-13_c-collision-fixed/DESIGN.md` §6,
+which is otherwise still the design.
+
+**Three of the six float bodies cannot leave the map.** The linked battle ELF
+(`objdump -d`, every relocated reference attributed to its containing function)
+says `gmCollisionGetWorldPosition` has **nine referrers, and seven survive the
+change** — `ndsBaseFTComputerSetFighterDamageDetectSize`,
+`ndsBaseFTCommonCapturePulledRotateScale`, `func_ovl2_800EEEAC`,
+`gmCollisionGetFighterPartsWorldPosition` and all three attack-position helpers;
+`gmCollisionTransformMatrixAll` is held by `ftParamSetAnimLocks`; and
+`func_ovl2_800ED490`'s one referrer is `func_ovl2_800EDBA4`, which is shared
+infrastructure with **fifteen** (the renderer adapter,
+`battleship_ftMainProcParams`, `func_ovl0_800C9A38`). DESIGN checklist item 4 is
+**retracted as written**. Deletable: `gmCollisionSetInvertMatrix` (9 referrers,
+all in the ring), `func_ovl2_800EDE5C` (8), `gmCollisionTestRectangle` (3),
+`gmCollisionTestSphere` (5).
+
+**So the forward chain is unreachable and two proven kernels go with it.**
+Keeping `mtx_translate` float keeps `func_ovl2_800EDBA4`, which keeps its two
+callees. `ndsR2CollisionFixedBuildLocal` (1,180 B) and `…Compose` (344 B) have
+**no call site at this seam** — 1,524 of the 4,448 proven bytes — and the
+`lbCommonSin`/`Cos` 6,406 tk/fr they would have removed stay too.
+
+**Corrected sizing: 22,324 tk/fr certain, ≤31,278 with all of
+`gmCollisionGetWorldPosition`, against DESIGN §9's 60,494 — 37–52%.** Through
+§9's own arithmetic that is **0.96x–1.34x the 47,424 bar**, not 2.6x, and it is
+work *replaced* rather than removed. **Brief cycle C as a measurement, not a
+landing.**
+
+**Two facts that make the wiring mechanical, also from the ELF.**
+`func_ovl2_800EDE00` is **inlined away** — which is why the invert has exactly
+nine referrers and confirms L7's ring (the eight `gmCollisionCheck*` plus
+`func_ovl2_800EE018`). And **no in-TU caller of the ring survives**: all nine are
+called only from `battleship_ftMainSearchHit{Fighter,Weapon,Item}`,
+`battleship_ftMainSearchFighterCatch` and `ndsBaseFTCommonAttackS4ProcUpdate`, so
+`#define`-renaming the nine decomp definitions before the `#include` leaves the
+originals unreferenced and `--gc-sections` takes them and the four bodies with
+them. `func_ovl2_800EE24C`/`EE2C0` and the three item-damage checks are already
+absent from the ELF.
+
+**Checklist item 6 is CLOSED on the live gate arm.**
+`scripts/probe-collision-fixed-domain.ps1` (globals and pointer derefs only, no
+register read, no guest call) plus `scripts/grade-r2-collision-live-domain.c`,
+which compiles the shipping header, graded **152 live joint matrices** off the
+gate arm over frames 592–1625. **Admitted 152 of 152; every one of the five
+guards declined ZERO.** Max fixed-vs-float **0.0003662** against the **0.0200**
+bound (55x inside), mean 0.0000710, 5,472 comparisons at 1/4/16/64-unit probes;
+`vec_scale` delta 0.0001220. So the decline path is a **recorded fail-closed
+path**, not a retained float body — a non-zero counter later is a stop, not
+noise. Fixed and float are **equal** against the exact reference here (0.0003176
+vs 0.0003170); cycle A's "more accurate than float" holds only at reach ±4,096.
+
+**THE INHERITED LIVE SCALE DOMAIN IS WRONG.** `nds_r2_collision_mtx.h:51` and
+DESIGN §2 record **1.1138–1.1199** from L7's 2026-07-31 oracle; this capture
+measures **0.9937–2.0479**, and the 2.0479 is a real joint (player 0, joint 15,
+frame 592) with the source's own scale latch live on all three axes. That is
+**1.83x the inherited maximum and outside the top of the widest sweep cycle A
+even reported** (0.25–2.00). Nothing breaks — `NDS_R2_CFX_S2_MAX` is 16 and that
+matrix is inside the 0.0003662 — but the falsifier's GATED rows are centred on a
+domain the game leaves. **Widen the gated sweep to at least 0.95–2.10 before
+quoting cycle A's bounded numbers.**
+
+**`sNdsFighterPartsPool`, `ndsFighterPartsSyncDObj` and
+`ndsFighterPartsSetIdentity` are absent from BOTH the shipped battle ELF and the
+tick-HUD gate ELF**, so `unk_dobjtrans_0x9C` has one writer and the slot is
+reinterpretable. The probe asserts this rather than inheriting it. §3.12 is
+structural: `ndsFTParamsInvalidateFighterParts`
+(`reloc_backend_compat_shims.c:1638`) zeroes `unk_dobjtrans_word` for every joint
+every frame, so there is no lifetime to get wrong and nothing to clear at scene
+entry.
+
+**Two hazards DESIGN §6 did not enumerate.** `ftGetStruct`'s stub
+(`reloc_backend_compat_shims.c:13852`) hands back a `bzero`'d `FTParts` with the
+latches set: reinterpreted, `inv_scale` is zero, so the fixed `center` is `size`
+where the float one is `size + radius`. Fill it or prove it cannot reach the
+ring. `gmCollisionSetMatrixNcs` stays and drags nothing back — verified.
+
 ### Slice 51 KEPT — the shield attach path was paying for a SEARCH. Gate 1,210,944
 
 Evidence: `artifacts/performance/2026-08-13_c-ledger-index/LEDGER_INDEX.md` and

@@ -1,0 +1,32 @@
+Command:
+  gcc -O2 -std=c11 -Wall -Wextra -Werror -fno-fast-math -ffp-contract=off \
+      -Iinclude scripts/grade-r2-collision-live-domain.c -o grade.exe -lm
+  ./grade.exe artifacts/performance/2026-08-13_c-collision-seam/domain-capture-merged.txt
+
+Captures: domain-capture-a.txt (run A, 12 rounds, stride 24, skip 40, partial --
+  the match ended at round 11 and the run was stopped) + domain-capture-b.txt
+  (run B, 24 rounds, stride 3, skip 25, complete). Both on build-c144-ledgeridx,
+  NDS_R2_BOTH_CPU=1, NDS_TICK_HUD_DRAW=1, mode 163, DLDI as built.
+
+R2-07 cycle B -- fixed-point collision frame on the LIVE domain
+  source: artifacts/performance/2026-08-13_c-collision-seam/domain-capture-merged.txt
+  joint matrices: 152   frames 592..1625
+  live vec_scale domain: 0.993740 .. 2.047854
+
+GUARDS (the cofactor frame, built from the FLOAT mtx_translate)
+  admitted            152 (100.0000%)
+  declined f32->fixed overflow    0
+  declined rot/pos range          0
+  declined row scale s^2          0
+  declined determinant            0
+  declined inverse cell           0
+
+ACCURACY, world units, probes at 1/4/16/64 units on each axis
+  comparisons              5472
+  max fixed vs float       0.0003662   (bound 0.0200)  joint 6 frame 1206
+  mean fixed vs float      0.0000710
+  max fixed vs exact       0.0003176
+  max FLOAT vs exact       0.0003170
+  max vec_scale delta      0.0001220  (149 matrices with the scale latch live)
+
+GREEN: every live joint is inside the 0.0200 bound.

@@ -1,0 +1,127 @@
+Referrers of the collision cluster, read off the LINKED battle ELF
+  arm-none-eabi-objdump -d smash64ds-battle-playable-hwtri.elf, 2026-08-13
+  A referrer is a function containing a relocated reference to the symbol.
+  This is the reader oracle; grep over src/ and decomp/ is not (memory:
+  'Linked ELF is the reader oracle').
+
+gmCollisionTransformMatrixAll
+    2x ftParamSetAnimLocks
+    2x func_ovl2_800EDBA4
+    1x gmCollisionGetFighterPartsWorldPosition
+
+func_ovl2_800ED490
+    2x func_ovl2_800EDBA4
+
+gmCollisionSetInvertMatrix
+    1x func_ovl2_800EE018
+    1x gmCollisionCheckFighterAttackDamageCollide
+    1x gmCollisionCheckFighterAttackShieldCollide
+    1x gmCollisionCheckItemAttackFighterDamageCollide
+    1x gmCollisionCheckItemAttackShieldCollide
+    1x gmCollisionCheckItemAttackSpecialCollide
+    1x gmCollisionCheckWeaponAttackFighterDamageCollide
+    1x gmCollisionCheckWeaponAttackShieldCollide
+    1x gmCollisionCheckWeaponAttackSpecialCollide
+
+func_ovl2_800EDE5C
+    1x gmCollisionCheckFighterAttackDamageCollide
+    1x gmCollisionCheckFighterAttackShieldCollide
+    1x gmCollisionCheckItemAttackFighterDamageCollide
+    1x gmCollisionCheckItemAttackShieldCollide
+    1x gmCollisionCheckItemAttackSpecialCollide
+    1x gmCollisionCheckWeaponAttackFighterDamageCollide
+    1x gmCollisionCheckWeaponAttackShieldCollide
+    1x gmCollisionCheckWeaponAttackSpecialCollide
+
+gmCollisionGetWorldPosition
+    3x func_ovl2_800EEEAC
+    1x gmCollisionGetFighterAttackDamagePosition
+    2x gmCollisionGetFighterPartsWorldPosition
+    1x gmCollisionGetItemAttackFighterDamagePosition
+    1x gmCollisionGetWeaponAttackFighterDamagePosition
+    3x gmCollisionTestRectangle
+    3x gmCollisionTestSphere
+    1x ndsBaseFTCommonCapturePulledRotateScale
+    2x ndsBaseFTComputerSetFighterDamageDetectSize
+
+gmCollisionTestRectangle
+    1x gmCollisionCheckFighterAttackDamageCollide
+    1x gmCollisionCheckItemAttackFighterDamageCollide
+    1x gmCollisionCheckWeaponAttackFighterDamageCollide
+
+gmCollisionTestSphere
+    1x gmCollisionCheckFighterAttackShieldCollide
+    1x gmCollisionCheckItemAttackShieldCollide
+    1x gmCollisionCheckItemAttackSpecialCollide
+    1x gmCollisionCheckWeaponAttackShieldCollide
+    1x gmCollisionCheckWeaponAttackSpecialCollide
+
+func_ovl2_800EDE00   [NOT IN THE ELF]
+    (no referrers)
+
+func_ovl2_800EDBA4
+    1x battleship_ftMainProcParams
+    1x func_ovl0_800C9A38
+    1x func_ovl2_800EDE5C
+    1x func_ovl2_800EE018
+    1x gmCollisionCheckFighterAttackDamageCollide
+    1x gmCollisionCheckFighterAttackShieldCollide
+    1x gmCollisionCheckItemAttackFighterDamageCollide
+    1x gmCollisionCheckItemAttackShieldCollide
+    1x gmCollisionCheckItemAttackSpecialCollide
+    1x gmCollisionCheckWeaponAttackFighterDamageCollide
+    1x gmCollisionCheckWeaponAttackShieldCollide
+    1x gmCollisionCheckWeaponAttackSpecialCollide
+    1x gmCollisionGetFighterPartsWorldPosition
+    1x ndsBaseFTComputerSetFighterDamageDetectSize
+    1x ndsRendererAdapterBuildDObjXObjMatrix
+
+func_ovl2_800EE018
+    1x ndsBaseFTCommonAttackS4ProcUpdate
+
+gmCollisionSetMatrixNcs
+    2x func_ovl2_800EDBA4
+
+gmCollisionCopyMatrix
+    1x func_ovl0_800C9A38
+
+func_ovl2_800EE24C   [NOT IN THE ELF]
+    (no referrers)
+
+func_ovl2_800EE2C0   [NOT IN THE ELF]
+    (no referrers)
+
+gmCollisionCheckFighterAttackDamageCollide
+    1x battleship_ftMainSearchFighterCatch
+    1x battleship_ftMainSearchHitFighter
+
+gmCollisionCheckFighterAttackShieldCollide
+    1x battleship_ftMainSearchHitFighter
+
+gmCollisionCheckWeaponAttackFighterDamageCollide
+    1x battleship_ftMainSearchHitWeapon
+
+gmCollisionCheckWeaponAttackShieldCollide
+    1x battleship_ftMainSearchHitWeapon
+
+gmCollisionCheckWeaponAttackSpecialCollide
+    2x battleship_ftMainSearchHitWeapon
+
+gmCollisionCheckItemAttackFighterDamageCollide
+    1x battleship_ftMainSearchHitItem
+
+gmCollisionCheckItemAttackShieldCollide
+    1x battleship_ftMainSearchHitItem
+
+gmCollisionCheckItemAttackSpecialCollide
+    1x battleship_ftMainSearchHitItem
+
+gmCollisionCheckFighterAttackItemDamageCollide   [NOT IN THE ELF]
+    (no referrers)
+
+gmCollisionCheckItemAttackDamageCollide   [NOT IN THE ELF]
+    (no referrers)
+
+gmCollisionCheckWeaponAttackItemDamageCollide   [NOT IN THE ELF]
+    (no referrers)
+
