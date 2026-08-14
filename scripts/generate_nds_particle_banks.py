@@ -428,6 +428,29 @@ QUAD_ATLAS_SHEETS_MAX = 4
 # produce; after restoring a dead effect, re-check this list before the soak.
 # FlameRandom and FlameStatic both take script 0x55 -> texture 15, which was
 # already live, which is why the burn was partly present and wholly wrong.
+# OUTSIDE THE MILESTONE, AND KEPT OUT ON PURPOSE RATHER THAN BY ACCIDENT.
+# These four are reachable from a P1 seam, so they are candidates by
+# derivation, but the owner has ruled them out of the Mario-vs-Fox Dream Land
+# items-off slice (BUGS.md, "Broad-audit exclusions 28/31/35/36 are not
+# required"). Until 2026-08-14 that ruling cost nothing to encode because the
+# packer could not seat them anyway; they simply fell off the end of the greedy
+# tail and were reported as excluded.
+#
+# THE BETTER PACKER IS WHAT MAKES THIS A DECISION. It seats five more textures
+# in the same four sheets, so without this list the greedy tail spends the
+# recovered space on 31 and 35 -- and on a PALETTED sheet that space is not
+# free. Measured on this pack: admitting them alongside the required three put
+# texture 33 (DamageNormalLight, a BUGS.md-named effect) up from 0.0409 to
+# 0.0568 mean decode error, +39%, because sheet 2's 32 entries then had to
+# cover eight textures instead of six. Textures 20, 21 and 29 moved the same
+# way by smaller margins. Deferring the four the milestone does not need
+# leaves every previously admitted texture at or better than its old accuracy.
+#
+# NOTHING IS LOST RELATIVE TO THE OLD BUILD: all four were excluded there too,
+# so they draw exactly what they drew before, which is nothing. Delete an entry
+# here when its effect enters the milestone, and re-measure the sheet it lands
+# on -- the cost is paid by that sheet's palette, not by the texel budget.
+QUAD_P1_DEFERRED = frozenset((28, 31, 35, 36))
 QUAD_KO_LIVE = frozenset((10, 13, 18, 19, 20, 21, 24))
 QUAD_MEASURED_LIVE = frozenset(
     (0, 1, 2, 10, 12, 13, 15, 16, 17, 18, 19, 20, 21, 22, 24, 25, 27, 29, 33,
@@ -1546,43 +1569,104 @@ def measure_error(source: list[list[tuple[int, int, int, int]]],
 # --------------------------------------------------------------------------
 def shelf_pack(cells: list[dict], width: int, height: int,
                sheets: int = 1):
-    """Shelf-pack fixed cells top-down. Returns placements, or None if it fails.
+    """Place fixed cells into `sheets` sheets. Placements, or None if it fails.
 
-    Every cell here is a power of two on both axes (16x8 up to 64x64), which is
-    what makes a shelf packer optimal rather than merely convenient: sorted by
-    descending height, each shelf is filled by cells of exactly its height, so
-    the only waste is the tail of a row.
+    NO LONGER A SHELF PACKER, AND THE DIFFERENCE IS THREE P1 TEXTURES.
+    The old implementation swept one cursor across one shelf at a time and
+    abandoned a shelf the moment the cell height changed, so a sheet could only
+    ever be filled by descending height in one pass. That is optimal for a
+    single sheet whose cells arrive sorted; it is NOT optimal across four
+    sheets, because each height class strands the tail of its own last row and
+    nothing can ever come back for it.
+
+    MEASURED 2026-08-14, on the admitted set this file already produces: the
+    four 8,192-byte sheets held 27,520 texels of 32,768 -- 5,248 FREE -- and
+    the packer still refused every one of the seven excluded textures, each of
+    which is a single 32x32 cell of 1,024 texels. Sheet 3 alone had 4,736 free
+    texels, but they were 16-tall shelf tails and a 24-row strip at the bottom,
+    and a 32x32 cell needs a 32-tall run. So shield-break texture 4 and side-KO
+    textures 11 and 14 (BUGS.md's open P1 coverage row) were excluded by
+    LAYOUT, not by VRAM, and every proposed fix -- more sheets, a bigger sheet,
+    a dedicated allocation, dropping the cell cap to 32 -- was paying real
+    resources for space the atlas already owned.
+
+    First-fit-decreasing over a per-sheet occupancy bitmap gets them in.
+    Cells are sorted by descending area (then height, then width, then input
+    index, so the result is deterministic and does not depend on dict order),
+    and each is placed at the first free position in sheet/row/column order.
+    Every cell is a power of two on both axes and the sheet is 128x64, so the
+    residue after a big cell is itself a run of aligned free columns that the
+    smaller cells fit exactly -- which is why plain first-fit is enough here and
+    a guillotine or buddy allocator would be extra machinery for no extra cells.
+
+    Cells may not overlap and may not leave the sheet; nothing else constrains
+    placement. The renderer takes each cell's (sheet, x, y, w, h) straight from
+    the frame table into glTexCoord2t16, and the c156 MASKS/MASKT mirroring
+    works on that cell's own UV span, so an arbitrary origin costs nothing.
 
     `sheets` is how many SEPARATE sheets of width x height may be used, and a
     placement is (sheet, x, y). Overflowing one sheet starts the next rather
-    than failing; only running out of sheets fails. See QUAD_ATLAS_SHEETS_MAX
-    for why the sheet count is the free variable and the sheet SIZE is not.
+    than failing; only running out of room in the last sheet fails. See
+    QUAD_ATLAS_SHEETS_MAX for why the sheet count is the free variable and the
+    sheet SIZE is not.
+
+    The row bitmaps are Python ints, one per sheet row, and a candidate row's
+    free columns are collapsed by a doubling shift-and so a 64-wide cell costs
+    six ANDs rather than sixty-three. The total-area precheck exists because
+    the admission loop calls this once per candidate at every rung of the cell
+    ladder, and the overwhelmingly common answer once the sheet is full is
+    "cannot possibly fit".
     """
-    order = sorted(range(len(cells)),
-                   key=lambda i: (-cells[i]["h"], -cells[i]["w"], i))
-    placed = {}
-    sheet = 0
-    shelf_y = 0
-    shelf_h = 0
-    cursor_x = 0
-    for index in order:
-        cell = cells[index]
+    total = 0
+    for cell in cells:
         if (cell["w"] > width) or (cell["h"] > height):
             return None
-        if (shelf_h != cell["h"]) or (cursor_x + cell["w"] > width):
-            if shelf_h != cell["h"] or cursor_x != 0:
-                shelf_y += shelf_h
-            shelf_h = cell["h"]
-            cursor_x = 0
-        if shelf_y + cell["h"] > height:
-            sheet += 1
-            if sheet >= sheets:
-                return None
-            shelf_y = 0
-            shelf_h = cell["h"]
-            cursor_x = 0
-        placed[index] = (sheet, cursor_x, shelf_y)
-        cursor_x += cell["w"]
+        total += cell["w"] * cell["h"]
+    if total > width * height * sheets:
+        return None
+
+    full = (1 << width) - 1
+    rows = [[0] * height for _ in range(sheets)]
+    order = sorted(range(len(cells)),
+                   key=lambda i: (-cells[i]["h"] * cells[i]["w"],
+                                  -cells[i]["h"], -cells[i]["w"], i))
+    placed = {}
+    for index in order:
+        cell = cells[index]
+        cell_w = cell["w"]
+        cell_h = cell["h"]
+        mask = (1 << cell_w) - 1
+        spot = None
+        for sheet in range(sheets):
+            sheet_rows = rows[sheet]
+            for origin_y in range(height - cell_h + 1):
+                band = 0
+                for row in range(origin_y, origin_y + cell_h):
+                    band |= sheet_rows[row]
+                    if band == full:
+                        break
+                if band == full:
+                    continue
+                # Bit x survives iff columns x .. x + cell_w - 1 are all free.
+                free = ~band & full
+                span = 1
+                while span < cell_w:
+                    step = min(span, cell_w - span)
+                    free &= free >> step
+                    span += step
+                if free == 0:
+                    continue
+                spot = (sheet, (free & -free).bit_length() - 1, origin_y)
+                break
+            if spot is not None:
+                break
+        if spot is None:
+            return None
+        sheet, origin_x, origin_y = spot
+        placement_mask = mask << origin_x
+        for row in range(origin_y, origin_y + cell_h):
+            rows[sheet][row] |= placement_mask
+        placed[index] = spot
     return placed
 
 
@@ -1614,10 +1698,12 @@ def build_quad_sheet(textures: list[dict], report_rows: list[dict],
     of the big multi-frame animations back reads the exclusion list, and the
     honest answer for those is halving 64x64x10 rather than growing the atlas.
     """
-    def build_candidates(rung: int) -> list[dict]:
+    def build_candidates(rung: int, deferred: bool = False) -> list[dict]:
         rows = []
         for report in report_rows:
             if not report["packed"]:
+                continue
+            if (report["texture"] in QUAD_P1_DEFERRED) != deferred:
                 continue
             texture = textures[report["texture"]]
             cell_max = QUAD_CELL_MAX
@@ -1761,6 +1847,19 @@ def build_quad_sheet(textures: list[dict], report_rows: list[dict],
                 break
         if seated:
             break
+    # The deferred four never entered the search, but they still have to be
+    # NAMED here -- the report's exclusion list is how a BUGS.md row finds out
+    # that its effect has no cell, and a texture that silently stopped being a
+    # candidate would draw nothing with nothing to read.
+    for candidate in build_candidates(chosen_rung, deferred=True):
+        row = dict(candidate)
+        row["frame_list"] = quad_frame_list(candidate["frames"], chosen_cap)
+        row["packed_frames"] = len(row["frame_list"])
+        row["bytes"] = (candidate["width"] * candidate["height"] *
+                        row["packed_frames"])
+        row["deferred"] = True
+        excluded.append(row)
+    excluded.sort(key=lambda row: row["texture"])
     admitted.sort(key=lambda row: row["texture"])
 
     cells = cells_for(admitted)
@@ -1806,19 +1905,50 @@ def build_quad_sheet(textures: list[dict], report_rows: list[dict],
                              alpha // taps))
         box_averaged.append(grid)
 
-    # One palette for the whole sheet. Weight by texel so a texture that covers
-    # more of the atlas has more say, and ignore fully transparent texels --
-    # their colour is arbitrary and would otherwise pull an entry towards black.
-    colours = Counter()
-    for grid in box_averaged:
-        for red, green, blue, alpha in grid:
-            if alpha > 0:
-                colours[(quantise_channel_5bit(red),
-                         quantise_channel_5bit(green),
-                         quantise_channel_5bit(blue))] += 1
-    palette = build_palette(colours, QUAD_ATLAS_PALETTE_ENTRIES)
-    if not palette:
-        palette = [(255, 255, 255)]
+    # ONE PALETTE PER SHEET, NOT ONE PER ATLAS, AND IT COSTS NOTHING.
+    # glColorTableEXT attaches a palette to the texture name BOUND AT THE TIME,
+    # so ndsRendererHardwarePrepareParticleAtlas has always called it once per
+    # sheet inside its upload loop -- four texture names, four 64-byte palette
+    # blocks, 256 bytes of VRAM F/G already spent. Until 2026-08-14 all four
+    # calls handed over the SAME 32 entries, so the atlas paid for 128 palette
+    # slots and used 32 of them.
+    #
+    # WHY IT HAD TO CHANGE HERE: the packer above now seats five more textures
+    # in the same four sheets, and a shared palette makes that a REGRESSION for
+    # everything already on it. Measured on this pack, admitting 4/11/14/31/35
+    # against one shared table raised the decode error of 29 of the 31
+    # previously admitted textures -- texture 2 worst at +0.102 mean -- because
+    # build_palette is texel-weighted and 5,120 new texels pull the centres.
+    # Per-sheet tables reverse that completely: 31 of 36 textures decode
+    # STRICTLY BETTER than the old 31-texture shared build and none decodes
+    # worse, because each table now serves at most eighteen cells instead of
+    # thirty-six and the two 64x64 cells on sheet 0 get eight entries to
+    # themselves.
+    #
+    # The per-sheet stride is fixed at QUAD_ATLAS_PALETTE_ENTRIES so the runtime
+    # indexes sheet * stride with no table; a sheet whose k-means settles on
+    # fewer entries is padded, and the padding is never indexed because
+    # encode_frame only ever emits indices into the real list.
+    sheet_cells: list[list[int]] = [[] for _ in range(sheets_used)]
+    for index in range(len(cells)):
+        sheet_cells[placement[index][0]].append(index)
+
+    palettes: list[list[tuple[int, int, int]]] = []
+    for members in sheet_cells:
+        # Weight by texel so a texture that covers more of the SHEET has more
+        # say, and ignore fully transparent texels -- their colour is arbitrary
+        # and would otherwise pull an entry towards black.
+        colours = Counter()
+        for index in members:
+            for red, green, blue, alpha in box_averaged[index]:
+                if alpha > 0:
+                    colours[(quantise_channel_5bit(red),
+                             quantise_channel_5bit(green),
+                             quantise_channel_5bit(blue))] += 1
+        palette = build_palette(colours, QUAD_ATLAS_PALETTE_ENTRIES)
+        if not palette:
+            palette = [(255, 255, 255)]
+        palettes.append(palette)
 
     # Sheets are concatenated in order, so sheet N starts at
     # N * QUAD_SHEET_BUDGET_BYTES and the runtime reads one sheet per upload
@@ -1827,7 +1957,7 @@ def build_quad_sheet(textures: list[dict], report_rows: list[dict],
     frame_rows = []
     for index, cell in enumerate(cells):
         sheet, origin_x, origin_y = placement[index]
-        encoded = encode_frame(box_averaged[index], DS_A3I5, palette,
+        encoded = encode_frame(box_averaged[index], DS_A3I5, palettes[sheet],
                                cell["w"])
         sheet_base = sheet * QUAD_SHEET_BUDGET_BYTES
         for row in range(cell["h"]):
@@ -1841,10 +1971,18 @@ def build_quad_sheet(textures: list[dict], report_rows: list[dict],
         })
     frame_rows.sort(key=lambda row: (row["texture"], row["frame"]))
     used = sum(row["bytes"] for row in admitted)
-    palette_payload = b"".join(
-        struct.pack("<H", to_bgr555(colour)) for colour in palette)
+    palette_payload = bytearray()
+    for palette in palettes:
+        if len(palette) > QUAD_ATLAS_PALETTE_ENTRIES:
+            raise SystemExit(
+                f"quad atlas sheet palette has {len(palette)} entries, "
+                f"above the A3I5 ceiling of {QUAD_ATLAS_PALETTE_ENTRIES}")
+        for colour in palette:
+            palette_payload += struct.pack("<H", to_bgr555(colour))
+        palette_payload += bytes(
+            2 * (QUAD_ATLAS_PALETTE_ENTRIES - len(palette)))
     return {
-        "payload": bytes(atlas) + palette_payload,
+        "payload": bytes(atlas) + bytes(palette_payload),
         "admitted": admitted,
         "excluded": excluded,
         "frame_cap": chosen_cap,
@@ -1855,7 +1993,10 @@ def build_quad_sheet(textures: list[dict], report_rows: list[dict],
         "bytes": used,
         "atlas_bytes": len(atlas),
         "palette_offset": len(atlas),
-        "palette_entries": len(palette),
+        "palette_entries": QUAD_ATLAS_PALETTE_ENTRIES,
+        "palette_sheet_entries": [len(palette) for palette in palettes],
+        "palette_stride_bytes": QUAD_ATLAS_PALETTE_ENTRIES * 2,
+        "palette_bytes": len(palette_payload),
         "width": QUAD_ATLAS_WIDTH,
         "height": QUAD_ATLAS_HEIGHT,
         "sheets": sheets_used,
@@ -2761,7 +2902,21 @@ extern const u16 gNdsFireballPalettes[NDS_FIREBALL_PALETTE_COUNT]
 #define NDS_PARTICLE_QUAD_ASSET_BYTES {len(pack["quads"]["payload"])}u
 #define NDS_PARTICLE_QUAD_TEXEL_ASSET_BYTES {pack["quads"]["atlas_bytes"]}u
 #define NDS_PARTICLE_QUAD_PALETTE_OFFSET {pack["quads"]["palette_offset"]}u
+/* PER SHEET. The palette block is NDS_PARTICLE_QUAD_ATLAS_SHEETS tables of this
+ * many entries laid end to end, so sheet N's table starts at
+ * NDS_PARTICLE_QUAD_PALETTE_OFFSET + N * NDS_PARTICLE_QUAD_PALETTE_STRIDE_BYTES
+ * and the upload loop needs no table of its own. Sheets whose k-means settles
+ * on fewer than this are zero-padded to keep the stride constant; the padding
+ * is unreachable because no cell on that sheet emits an index into it.
+ *
+ * It costs no VRAM. glColorTableEXT attaches a palette to the texture name
+ * bound at the time, so the four sheets were ALREADY paying for four 64-byte
+ * palette blocks in VRAM F/G -- they were simply being handed the same 32
+ * colours four times. Four independent tables is 128 usable entries for the
+ * bytes one shared table was already spending. */
 #define NDS_PARTICLE_QUAD_PALETTE_ENTRIES {pack["quads"]["palette_entries"]}u
+#define NDS_PARTICLE_QUAD_PALETTE_STRIDE_BYTES {pack["quads"]["palette_stride_bytes"]}u
+#define NDS_PARTICLE_QUAD_PALETTE_BYTES {pack["quads"]["palette_bytes"]}u
 #define NDS_PARTICLE_QUAD_TEXEL_BYTES {pack["quads"]["bytes"]}u
 #define NDS_PARTICLE_QUAD_COUNT {len(pack["quads"]["admitted"])}u
 #define NDS_PARTICLE_QUAD_FRAME_COUNT {len(pack["quads"]["frames"])}u
@@ -2954,7 +3109,10 @@ const u8 gNdsParticleTextureFrames[NDS_PARTICLE_TEXTURE_COUNT] = {{
 }};
 
 /* Ordered by (SOURCE texture id, frame); the admission that built it was by
- * size and the layout by shelf packing, so neither order survives here. */
+ * size and the layout by first-fit-decreasing over an occupancy bitmap, so
+ * neither order survives here. A texture with NO row here draws nothing at all
+ * -- ndsParticleQuadFrameFor returns NULL and the caller takes the `continue`
+ * that emits zero pixels -- so this table IS the coverage contract. */
 const NDSParticleQuadFrame
     gNdsParticleQuadFrames[NDS_PARTICLE_QUAD_FRAME_COUNT] = {{
 {quad_rows}
@@ -3081,6 +3239,14 @@ def render_report(pack: dict) -> dict:
             # size instead of carrying its own copy of the entry count -- that
             # copy is what had to be retyped when the sheet went A5I3 to A3I5.
             "palette_entries": pack["quads"]["palette_entries"],
+            # ONE TABLE PER SHEET since 2026-08-14. `palette_entries` is the
+            # per-sheet stride and `palette_sheet_entries` is what each sheet's
+            # k-means actually settled on, so a checker can see that sheet 0 --
+            # two 64x64 cells and nothing else -- needs only a handful and is
+            # padded, without that padding being mistaken for a dropped colour.
+            "palette_stride_bytes": pack["quads"]["palette_stride_bytes"],
+            "palette_bytes": pack["quads"]["palette_bytes"],
+            "palette_sheet_entries": pack["quads"]["palette_sheet_entries"],
             "atlas_width": pack["quads"]["width"],
             "atlas_height": pack["quads"]["height"],
             # Reported for the same reason as palette_entries: the checker

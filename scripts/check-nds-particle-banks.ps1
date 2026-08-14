@@ -420,6 +420,16 @@ if (([int64]$report.bytes.linked_bytes + [int64]$report.bytes.asset_bytes) -ne
 # That deliberately removes one admitted frame and 512 bytes from this report;
 # the four 8,192-byte sheet allocations and every measured particle texture stay
 # unchanged.
+#
+# 2026-08-14: 31 -> 34 admitted, 27,520 -> 30,592 texels, INSIDE THE SAME FOUR
+# 8,192-byte allocations. Nothing about the VRAM contract moved. What moved is
+# the packer: it was a shelf packer that abandoned a shelf whenever the cell
+# height changed, so the sheet held 27,520 of 32,768 texels and still refused
+# every 1,024-texel candidate, because the 5,248 free texels were 16-tall shelf
+# tails no 32x32 cell could use. First-fit-decreasing over an occupancy bitmap
+# seats shield-break texture 4 and side-KO textures 11 and 14 -- BUGS.md's open
+# P1 coverage row -- in space the atlas already owned. cell_cap stays 64 and
+# frame_cap stays 1, so no admitted texture gives up resolution or frames.
 if (([int64]$report.quads.atlas_width -ne 128) -or
     ([int64]$report.quads.atlas_height -ne 64) -or
     ([int64]$report.quads.sheet_bytes -ne 8192) -or
@@ -427,15 +437,15 @@ if (([int64]$report.quads.atlas_width -ne 128) -or
     ([int64]$report.quads.atlas_bytes -ne
         ([int64]$report.quads.sheets * [int64]$report.quads.sheet_bytes)) -or
     ([int64]$report.quads.cell_cap -ne 64) -or
-    ([int64]$report.quads.bytes -ne 27520) -or
-    ([int64]$report.quads.frame_count -ne 31) -or
-    (@($report.quads.admitted).Count -ne 31) -or
-    # 6 -> 7 on 2026-08-12. The Flame seams made texture 12 reachable, so it
-    # became a candidate for the sheet: one more cell competing, and the sheet
-    # still seats 31. It is texture 4 -- never on the measured-live list, only
-    # ever an opportunistic seat -- that gave up its place, and 12 is on that
-    # list now because it is the fighter fire burn.
-    (@($report.quads.excluded).Count -ne 7)) {
+    ([int64]$report.quads.bytes -ne 30592) -or
+    ([int64]$report.quads.frame_count -ne 34) -or
+    (@($report.quads.admitted).Count -ne 34) -or
+    # 7 -> 4 on 2026-08-14, and the four left are QUAD_P1_DEFERRED rather than
+    # packer casualties: 28/31/35/36 are reachable but outside the Mario-vs-Fox
+    # items-off milestone, and they are held out BY NAME because the sheet now
+    # has room for two of them. That room is not free on a paletted sheet --
+    # admitting 31 and 35 measured texture 33 (DamageNormalLight) 39% worse.
+    (@($report.quads.excluded).Count -ne 4)) {
     throw ('Particle quad sheet changed: ' +
         "$([int64]$report.quads.sheets)x$([int64]$report.quads.sheet_bytes) B, " +
         "cell cap $([int64]$report.quads.cell_cap), " +
@@ -471,6 +481,21 @@ foreach ($id in @(0, 2, 10, 12, 13, 15, 16, 17, 18, 19, 20, 21, 22, 24, 25, 27,
                   29, 33, 34, 37, 38, 40, 41, 45, 64, 65, 66)) {
     if (@($report.quads.admitted) -notcontains $id) {
         throw "Particle quad sheet dropped measured texture $id."
+    }
+}
+# BUGS.md's open P1 coverage row, closed 2026-08-14. 4 is efManagerShieldBreak's
+# second child and 11/14 are the side-KO DeadExplode children, so each of them is
+# an EFFECT that draws nothing at all while it has no cell -- the same
+# binary-absent failure mode as texture 12's fire burn, not a thinned one. They
+# are guarded here rather than folded into the measured-live list above because
+# they were never observed in a soak: a shield break and a side KO are rare
+# enough that a use-mask regrade is the wrong instrument for them, which is
+# exactly how they stayed excluded while the packer was leaving 5,248 texels
+# unusable.
+foreach ($id in @(4, 11, 14)) {
+    if (@($report.quads.admitted) -notcontains $id) {
+        throw ("Particle quad sheet dropped P1 coverage texture $id " +
+               '(shield break / side-KO DeadExplode).')
     }
 }
 $koCells = @($report.quads.admitted_cells | Where-Object {
@@ -635,6 +660,9 @@ foreach ($pair in @(
     @{ Name = 'NDS_PARTICLE_QUAD_ATLAS_HEIGHT';     Want = $report.quads.atlas_height },
     @{ Name = 'NDS_PARTICLE_QUAD_TEXEL_ASSET_BYTES';Want = $report.quads.atlas_bytes },
     @{ Name = 'NDS_PARTICLE_QUAD_PALETTE_OFFSET';   Want = $report.quads.atlas_bytes },
+    @{ Name = 'NDS_PARTICLE_QUAD_PALETTE_STRIDE_BYTES';
+       Want = $report.quads.palette_stride_bytes },
+    @{ Name = 'NDS_PARTICLE_QUAD_PALETTE_BYTES';    Want = $report.quads.palette_bytes },
     @{ Name = 'NDS_PARTICLE_QUAD_TEXEL_BYTES';      Want = $report.quads.bytes },
     @{ Name = 'NDS_PARTICLE_QUAD_COUNT';            Want = @($report.quads.admitted).Count },
     @{ Name = 'NDS_PARTICLE_QUAD_FRAME_COUNT';      Want = $report.quads.frame_count })) {
@@ -646,15 +674,43 @@ foreach ($pair in @(
                "report says $want.")
     }
 }
-# ASSET_BYTES is texels plus the palette, so it is derived too -- from the
-# report's own entry count rather than a literal 16, which is what made this
-# line a second copy of a fact that then had to be retyped when the sheet went
-# A5I3 (8 entries) to A3I5 (32).
+# ASSET_BYTES is texels plus the palette BLOCK, so it is derived too -- from the
+# report's own byte count rather than a literal, which is what made this line a
+# second copy of a fact that then had to be retyped when the sheet went A5I3
+# (8 entries) to A3I5 (32), and again when the block went from one shared table
+# to one per sheet on 2026-08-14.
 $wantAsset = "$(([int64]$report.quads.atlas_bytes) +
-                ([int64]$report.quads.palette_entries * 2))u"
+                ([int64]$report.quads.palette_bytes))u"
 $foundAsset = [regex]::Match($header, '#define NDS_PARTICLE_QUAD_ASSET_BYTES\s+(\S+)')
 if ((-not $foundAsset.Success) -or ($foundAsset.Groups[1].Value -ne $wantAsset)) {
     throw "NDS_PARTICLE_QUAD_ASSET_BYTES is not $wantAsset (texels + palette)."
+}
+# ONE PALETTE PER SHEET, and the runtime indexes it as sheet * stride with no
+# table of its own (ndsRendererHardwarePrepareParticleAtlas). A block that is
+# not exactly sheets x stride would have three of the four sheets reading past
+# their table into the next one -- wrong colours, never a failure. The C side
+# carries the same relation as a _Static_assert; this catches a report that
+# disagrees with the header before a ROM is spent.
+$paletteSheetEntries = @($report.quads.palette_sheet_entries)
+if (([int64]$report.quads.palette_stride_bytes -ne
+        ([int64]$report.quads.palette_entries * 2)) -or
+    ([int64]$report.quads.palette_bytes -ne
+        ([int64]$report.quads.sheets * [int64]$report.quads.palette_stride_bytes)) -or
+    ($paletteSheetEntries.Count -ne [int64]$report.quads.sheets)) {
+    throw ('Particle quad palette block is not one table per sheet: ' +
+        "$([int64]$report.quads.palette_bytes) B, " +
+        "stride $([int64]$report.quads.palette_stride_bytes) B, " +
+        "$($paletteSheetEntries.Count) tables, " +
+        "$([int64]$report.quads.sheets) sheets.")
+}
+foreach ($entries in $paletteSheetEntries) {
+    # A sheet may settle on fewer entries than the stride -- sheet 0 holds only
+    # the two 64x64 cells and needs eight -- and the payload zero-pads it. More
+    # than the stride would overrun the next sheet's table.
+    if (([int]$entries -lt 1) -or
+        ([int]$entries -gt [int64]$report.quads.palette_entries)) {
+        throw "Particle quad sheet palette has $entries entries, outside 1..$([int64]$report.quads.palette_entries)."
+    }
 }
 
 # Whispy's three source textures have different alpha/colour needs, so they are
@@ -867,15 +923,17 @@ if (Test-Path -LiteralPath $assetPath) {
     $assetState = 'built'
 }
 
-# All four sheets' texels plus the one shared palette they each bind. The
-# per-SHEET size is the allocation the VRAM bound applies to, not this total; the palette rides behind it in the same
-# file and is uploaded through glColorTableEXT, not through the texture. Derived
+# All four sheets' texels plus the palette block -- one table PER SHEET since
+# 2026-08-14, not one shared table. The per-SHEET size is the allocation the VRAM
+# bound applies to, not this total; the palettes ride behind the texels in the
+# same file and are uploaded through glColorTableEXT, not through the texture,
+# so they cost nothing the four texture names were not already spending. Derived
 # from the report for the same reason as the header defines above -- this was a
 # literal 8208 and the resize had to be typed into it by hand.
 $quadPath = Join-Path $root 'assets/particles/efcommon_particle_quads.a5i3.bin'
 $quadState = 'not built'
 $quadExpect = ([int64]$report.quads.atlas_bytes) +
-              ([int64]$report.quads.palette_entries * 2)
+              ([int64]$report.quads.palette_bytes)
 if (Test-Path -LiteralPath $quadPath) {
     $quadBytes = (Get-Item -LiteralPath $quadPath).Length
     if ($quadBytes -ne $quadExpect) {

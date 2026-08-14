@@ -90,6 +90,37 @@ static NDSRendererProfileOwner sNdsRendererRuntimeOwner;
 #define NDS_TASK82_EVICTED_HOT_CODE NDS_RENDERER_HOT_CODE
 #endif
 
+/* R2-03 E26 SIZING ARM ONLY -- THE SHIPPED ROM'S ITCM PACK IS UNTOUCHED.
+ *
+ * docs/P1_EXECUTION_BOARD.md names the delta-redundancy census as the thing that
+ * sizes the state-span bake and records it as blocked: "does not build: region
+ * 'itcm' overflowed by 64 bytes". On this tree it overflows by **616**, because
+ * the census block is inline in ndsRendererNativeApplyStateDelta and
+ * ndsRendererNativeApplyStateSpan, both of which are ITCM residents, so arming
+ * the diagnostic grows ITCM itself. The board's own remedy is "evict a resident
+ * for the diagnostic arm before designing the bake".
+ *
+ * ndsRendererScanList is that resident: 7,728 bytes, the largest in ITCM, and it
+ * is the GENERIC display-list interpreter that the native fighter owner path
+ * exists to replace -- ndsRendererExecuteNativeFighterOwnerProduction does not
+ * call it. Evicting it frees twelve times what the census needs.
+ *
+ * WHAT THIS ARM MAY AND MAY NOT BE READ FOR. The census's redundancy figures
+ * (gNdsR2SpanDeltaRepeats, gNdsR2DeltaEffectCounts, gNdsR2SpanIdenticalOperands)
+ * are COUNTS, and a count does not depend on where the code lives, so they are
+ * exactly as valid here as in any build. The Task 91 tick brackets in the same
+ * arm are NOT: moving 7,728 bytes out of ITCM changes instruction fetch for
+ * everything that shares it. Size the bake from the counts; take ticks from an
+ * unevicted arm.
+ *
+ * Placement only, in the spirit of Task 82: NDS_TASK82_EVICTED_HOT_CODE drops
+ * the section and keeps hot/O3/ARM, so no emitted instruction changes. */
+#if NDS_TASK91_DRAW_PHASE_CENSUS
+#define NDS_R2_CENSUS_EVICTED_CODE NDS_TASK82_EVICTED_HOT_CODE
+#else
+#define NDS_R2_CENSUS_EVICTED_CODE NDS_RENDERER_HOT_CODE
+#endif
+
 /* R2-03 E46. ndsRendererNativeApplyStateDelta is already ITCM-resident, but the
  * helpers its switch calls are not: in the census ELF the switch sits at
  * 0x01ff9934 while ndsRendererRecordSetTile is at 0x0200d4e8 and
@@ -4457,7 +4488,27 @@ static NDSRendererWhispyNativeBinding
 #endif
 #endif
 static u32 sNdsRendererParticleAtlasPrepared;
-static u16 sNdsRendererParticleAtlasPalette[NDS_PARTICLE_QUAD_PALETTE_ENTRIES];
+/* THE WHOLE PALETTE BLOCK, NOT ONE TABLE: NDS_PARTICLE_QUAD_ATLAS_SHEETS
+ * tables of NDS_PARTICLE_QUAD_PALETTE_ENTRIES laid end to end, which is how the
+ * generator writes it. Each sheet gets its own colours; see the note at the
+ * glColorTableEXT call in ndsRendererHardwarePrepareParticleAtlas.
+ *
+ * ndsRendererHardwarePrepareWhispyNativeTextures borrows this buffer as palette
+ * scratch, which stays safe because it runs after all four sheets are uploaded
+ * and its own guard still bounds it by NDS_PARTICLE_QUAD_PALETTE_ENTRIES. */
+static u16 sNdsRendererParticleAtlasPalette[
+    NDS_PARTICLE_QUAD_PALETTE_BYTES / sizeof(u16)];
+/* The upload loop indexes sheet * NDS_PARTICLE_QUAD_PALETTE_ENTRIES and the
+ * read above takes sizeof(), so a generator that ever emitted a different
+ * number of tables than sheets would walk off the end silently rather than
+ * fail. Impossible to see on screen; free to catch here. */
+_Static_assert(NDS_PARTICLE_QUAD_PALETTE_BYTES ==
+                   NDS_PARTICLE_QUAD_ATLAS_SHEETS *
+                       NDS_PARTICLE_QUAD_PALETTE_STRIDE_BYTES,
+               "particle atlas palette block must hold one table per sheet");
+_Static_assert(NDS_PARTICLE_QUAD_PALETTE_STRIDE_BYTES ==
+                   NDS_PARTICLE_QUAD_PALETTE_ENTRIES * sizeof(u16),
+               "particle atlas palette stride must be its entry count");
 
 static s32 ndsRendererParticleAtlasOwnsName(int name)
 {
@@ -13212,15 +13263,26 @@ s32 ndsRendererHardwarePrepareParticleAtlas(void)
          * glColorTableEXT attaches the palette to the texture name that is
          * BOUND RIGHT NOW, so one call outside this loop would leave three of
          * the four sheets indexing whatever palette memory happened to follow.
-         * The sheets share one 64-byte table, uploaded four times: 256 bytes of
-         * VRAM F/G, which is not the allocator that was ever refusing.
+         * Four calls means four 64-byte blocks in VRAM F/G -- 256 bytes, and
+         * not the allocator that was ever refusing.
+         *
+         * EACH SHEET NOW GETS ITS OWN COLOURS, which is a change to the ASSET
+         * and not to this loop's cost: until 2026-08-14 all four calls handed
+         * over the same 32 entries, so the atlas paid for 128 palette slots and
+         * used 32. Making the generator emit one table per sheet is what let
+         * the packer seat shield-break texture 4 and side-KO textures 11 and 14
+         * without the extra texels pulling the shared k-means centres off every
+         * texture already on the sheet -- measured, that sharing cost 29 of 31
+         * admitted textures accuracy, and per-sheet tables instead make 31 of
+         * 36 strictly better than the old build with none worse.
          *
          * Read separately above, so no byte-offset arithmetic into a u16 buffer
          * -- which is what used to hand the hardware texels as a palette when
          * the offset was applied through the wrong pointer type. */
         glColorTableEXT(
             GL_TEXTURE_2D, 0, NDS_PARTICLE_QUAD_PALETTE_ENTRIES, 0, 0,
-            sNdsRendererParticleAtlasPalette);
+            &sNdsRendererParticleAtlasPalette[
+                sheet * NDS_PARTICLE_QUAD_PALETTE_ENTRIES]);
 #if NDS_RENDERER_PROFILE_LEVEL < 2
         ndsRendererHardwareTextureLookupRemove(entry);
 #endif
@@ -13639,6 +13701,7 @@ static void ndsRendererFlushWhispyNativePacket(void);
 s32 ndsRendererSubmitParticleQuad(u32 atlas_name, const Vec3f *pos, f32 size,
                                   u32 color, u8 alpha,
                                   const Vec3f *right, const Vec3f *up,
+                                  u32 mirror_mask,
                                   u32 atlas_x, u32 atlas_y,
                                   u32 atlas_w, u32 atlas_h)
 {
@@ -13648,7 +13711,6 @@ s32 ndsRendererSubmitParticleQuad(u32 atlas_name, const Vec3f *pos, f32 size,
     f32 ux;
     f32 uy;
     f32 uz;
-    u32 corner;
     u32 poly_alpha;
 
 #if NDS_R2_WHISPY_NATIVE_AOT
@@ -13807,25 +13869,138 @@ s32 ndsRendererSubmitParticleQuad(u32 atlas_name, const Vec3f *pos, f32 size,
     }
     glColor((rgb)color);
 
-    /* Counter-clockwise from the bottom-left, with T increasing downward to
-     * match the atlas rows. */
-    for (corner = 0u; corner < 4u; corner++)
+    mirror_mask &= 3u;
+    if (mirror_mask == 0u)
     {
-        f32 sx = ((corner == 0u) || (corner == 3u)) ? -1.0f : 1.0f;
-        f32 sy = (corner < 2u) ? -1.0f : 1.0f;
-        u32 texel_s = atlas_x + (((corner == 0u) || (corner == 3u))
-                                     ? 0u : atlas_w);
-        u32 texel_t = atlas_y + ((corner < 2u) ? atlas_h : 0u);
+        u32 corner;
+
+        /* Counter-clockwise from the bottom-left, with T increasing downward
+         * to match the atlas rows. */
+        for (corner = 0u; corner < 4u; corner++)
+        {
+            f32 sx = ((corner == 0u) || (corner == 3u)) ? -1.0f : 1.0f;
+            f32 sy = (corner < 2u) ? -1.0f : 1.0f;
+            u32 texel_s = atlas_x + (((corner == 0u) || (corner == 3u))
+                                         ? 0u : atlas_w);
+            u32 texel_t = atlas_y + ((corner < 2u) ? atlas_h : 0u);
+            u32 shift = sNdsRendererParticleScaleShift;
+
+            glTexCoord2t16((t16)(texel_s << 4), (t16)(texel_t << 4));
+            glVertex3v16(
+                ndsRendererParticleWorldToV16(pos->x + (rx * sx) + (ux * sy),
+                                              shift),
+                ndsRendererParticleWorldToV16(pos->y + (ry * sx) + (uy * sy),
+                                              shift),
+                ndsRendererParticleWorldToV16(pos->z + (rz * sx) + (uz * sy),
+                                              shift));
+        }
+    }
+    else
+    {
+        /* N64 lbParticle does NOT stretch a MASKS/MASKT source fragment over
+         * the rectangle. It doubles dsdx/dtdy and sets G_TX_MIRROR, making a
+         * triangle wave across the SAME rectangle:
+         *
+         *   S:  left 0 -> centre W -> right 0
+         *   T:  top  0 -> centre H -> bottom 0
+         *
+         * The DS can mirror a whole texture name, but this name is an atlas;
+         * hardware wrap would cross the cell boundary into another effect.
+         * Build the 3x3 world grid once using only +/- adds (the expensive
+         * right/up * size products above remain once per particle), then emit
+         * 2 or 4 atlas-cell quads with the exact triangle-wave UVs. */
+        f32 right_x[3] = { -rx, 0.0F, rx };
+        f32 right_y[3] = { -ry, 0.0F, ry };
+        f32 right_z[3] = { -rz, 0.0F, rz };
+        f32 up_x[3] = { -ux, 0.0F, ux };
+        f32 up_y[3] = { -uy, 0.0F, uy };
+        f32 up_z[3] = { -uz, 0.0F, uz };
+        v16 grid_x[3][3];
+        v16 grid_y[3][3];
+        v16 grid_z[3][3];
+        u32 s_edge[3];
+        u32 t_edge[3];
+        u32 s_uv_q4[3];
+        u32 t_uv_q4[3];
+        u32 s_parts;
+        u32 t_parts;
+        u32 row;
+        u32 column;
         u32 shift = sNdsRendererParticleScaleShift;
 
-        glTexCoord2t16((t16)(texel_s << 4), (t16)(texel_t << 4));
-        glVertex3v16(
-            ndsRendererParticleWorldToV16(pos->x + (rx * sx) + (ux * sy),
-                                          shift),
-            ndsRendererParticleWorldToV16(pos->y + (ry * sx) + (uy * sy),
-                                          shift),
-            ndsRendererParticleWorldToV16(pos->z + (rz * sx) + (uz * sy),
-                                          shift));
+        for (row = 0u; row < 3u; row++)
+        {
+            for (column = 0u; column < 3u; column++)
+            {
+                grid_x[row][column] = ndsRendererParticleWorldToV16(
+                    pos->x + right_x[column] + up_x[row], shift);
+                grid_y[row][column] = ndsRendererParticleWorldToV16(
+                    pos->y + right_y[column] + up_y[row], shift);
+                grid_z[row][column] = ndsRendererParticleWorldToV16(
+                    pos->z + right_z[column] + up_z[row], shift);
+            }
+        }
+
+        if ((mirror_mask & 1u) != 0u)
+        {
+            s_parts = 2u;
+            s_edge[0] = 0u; s_edge[1] = 1u; s_edge[2] = 2u;
+            s_uv_q4[0] = atlas_x << 4;
+            /* Atlas cells have no padding. The N64 mirror fold duplicates the
+             * source's last texel; sampling exactly at atlas_x+atlas_w could
+             * name the NEXT cell at the fold. Stay one 1/16-texel unit inside
+             * the source cell so both halves meet on its own edge texel. */
+            s_uv_q4[1] = ((atlas_x + atlas_w) << 4) - 1u;
+            s_uv_q4[2] = atlas_x << 4;
+        }
+        else
+        {
+            s_parts = 1u;
+            s_edge[0] = 0u; s_edge[1] = 2u;
+            s_uv_q4[0] = atlas_x << 4;
+            s_uv_q4[1] = (atlas_x + atlas_w) << 4;
+        }
+        if ((mirror_mask & 2u) != 0u)
+        {
+            t_parts = 2u;
+            t_edge[0] = 0u; t_edge[1] = 1u; t_edge[2] = 2u;
+            /* Grid row 0 is the BOTTOM. Source T increases downward: bottom
+             * and top are both 0 under mirror, and the centre is H. */
+            t_uv_q4[0] = atlas_y << 4;
+            t_uv_q4[1] = ((atlas_y + atlas_h) << 4) - 1u;
+            t_uv_q4[2] = atlas_y << 4;
+        }
+        else
+        {
+            t_parts = 1u;
+            t_edge[0] = 0u; t_edge[1] = 2u;
+            t_uv_q4[0] = (atlas_y + atlas_h) << 4;
+            t_uv_q4[1] = atlas_y << 4;
+        }
+
+        for (row = 0u; row < t_parts; row++)
+        {
+            for (column = 0u; column < s_parts; column++)
+            {
+                u32 s0 = s_edge[column];
+                u32 s1 = s_edge[column + 1u];
+                u32 t0 = t_edge[row];
+                u32 t1 = t_edge[row + 1u];
+
+                glTexCoord2t16((t16)s_uv_q4[column],
+                               (t16)t_uv_q4[row]);
+                glVertex3v16(grid_x[t0][s0], grid_y[t0][s0], grid_z[t0][s0]);
+                glTexCoord2t16((t16)s_uv_q4[column + 1u],
+                               (t16)t_uv_q4[row]);
+                glVertex3v16(grid_x[t0][s1], grid_y[t0][s1], grid_z[t0][s1]);
+                glTexCoord2t16((t16)s_uv_q4[column + 1u],
+                               (t16)t_uv_q4[row + 1u]);
+                glVertex3v16(grid_x[t1][s1], grid_y[t1][s1], grid_z[t1][s1]);
+                glTexCoord2t16((t16)s_uv_q4[column],
+                               (t16)t_uv_q4[row + 1u]);
+                glVertex3v16(grid_x[t1][s0], grid_y[t1][s0], grid_z[t1][s0]);
+            }
+        }
     }
     return TRUE;
 }
@@ -14980,7 +15155,7 @@ s32 ndsRendererSubmitFoxBlasterQuad(const Vec3f *translate,
      * The raise lands on the DECODED translation, before span_x/span_y0/span_y1
      * apply the source scale to the quad's four source vertices. scale.x runs
      * 1.0 -> 53.33 over a shot's first ten ticks; folding the offset in later
-     * would stretch a 24-unit raise into a 1,280-unit one as the beam grew. */
+     * would stretch the raise by that same 53x as the beam grew. */
     if (ty > (INT_MAX - NDS_FOX_BLASTER_BORE_OFFSET_Y_Q12))
     {
         return FALSE;
@@ -20942,11 +21117,12 @@ void ndsRendererSetParticleCamera(const NDSRendererMatrix20p12 *projection,
 s32 ndsRendererSubmitParticleQuad(u32 atlas_name, const Vec3f *pos, f32 size,
                                   u32 color, u8 alpha,
                                   const Vec3f *right, const Vec3f *up,
+                                  u32 mirror_mask,
                                   u32 atlas_x, u32 atlas_y,
                                   u32 atlas_w, u32 atlas_h)
 {
     (void)atlas_name; (void)pos; (void)size; (void)color; (void)alpha;
-    (void)right; (void)up;
+    (void)right; (void)up; (void)mirror_mask;
     (void)atlas_x; (void)atlas_y; (void)atlas_w; (void)atlas_h;
     return FALSE;
 }
@@ -33551,7 +33727,7 @@ s32 ndsRendererExecuteNativeFighterRoot(
 #endif
 }
 
-static void NDS_RENDERER_HOT_CODE
+static void NDS_R2_CENSUS_EVICTED_CODE
 ndsRendererScanList(const Gfx *dl,
                                 const NDSRendererConfig *config,
                                 NDSRendererStats *stats,
