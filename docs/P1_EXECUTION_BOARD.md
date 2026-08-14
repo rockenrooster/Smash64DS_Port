@@ -5079,13 +5079,46 @@ profile never took.
 which is **below the ±8,544 cross-build floor** — banked for correctness and
 static evidence, NOT claimable as an A/B win. `check_anim_null_guard.py` green.
 
-**Next action: take the remaining five splits as ONE slice** so a single A/B
-measures the class rather than any member —
-`ndsRendererAdapterMaterialAnimHash`, `gcRunGObjProcess`, `gcParseDObjAnimJoint`,
-`gcParseMObjMatAnimJoint`, `ndsBaseGcPlayDObjAnimJoint`, worth roughly a further
-9,600 cyc/frame. `ndsR2AnimValueQ` (6,919, the largest single entry) needs its
-`noinline` + `target("arm")` attribute justified before it moves, not assumed
-stale.
+**LANE CLOSED 2026-08-14 — the ceiling does not convert.**
+`artifacts/performance/2026-08-14_call-frame-slice/CALL_FRAME_SLICE.md`,
+`scripts/census-frame-candidates.py`. The top 50 were classified against the
+PUBLISHED ELF and the largest correctness-safe package is **10,544 cyc/frame =
+5,272 ticks — 3.0x short of the 32,000 cyc / 16,000 tick gate.** Nothing was
+implemented; the shipped ROM is untouched.
+
+Three measured reasons the 64,863-tick ceiling is not bankable:
+
+1. **A cold-tail split recovers the REGISTER DELTA, not the frame.** Fitting every
+   frame instruction with ≥2,000 executions: `push(N) ≈ 1.6+1.2N`,
+   `pop+pc(N) ≈ 5.0+1.6N`. **~9.3 cycles a call survive any split** — the `pc`
+   load's pipeline flush is the floor. Only framelessness or call deletion takes
+   the whole frame, and neither is available to a function that works on its taken
+   path. `ftGetStruct` is the correction: −3,770 cyc, not −7,141.
+2. **`ndsR2AnimValueQ` (6,919, the largest entry) is BLOCKED and must not be
+   touched.** Its `noinline, target("arm")` is measured, not stale
+   (`battleship_sys_objanim.c:311-323`): Thumb has no SMULL, so the Thumb arm
+   emitted 11 `__aeabi_lmul` sites and measured **SRC P50 +17,728 / WORK-H P50
+   +25,472**. Its 9-register push is the price of a change that already paid
+   −25,472.
+3. **The diagnostic reservoir is nearly empty.** 202 diagnostic-*shaped* names
+   worth 98,871 cyc/frame contain **7,849 cyc of actual diagnostic**. The rest are
+   load-bearing: `…RecordCapturedDisplay` (16,914) is the stage render hook,
+   `ndsIFCommonRecordHUDState` (4,871) drives the on-screen HUD via
+   `nds_platform.c:2616-2760`, the renderer `Record*` family (5,734) IS the RDP
+   state machine, `syTaskmanCheckBufferLengths` (3,129) is the overflow guard.
+
+**Method note that cost a false 14,800-cycle lead:** `codegraph_explore` returned
+the `#else` (non-hwtri) bodies of `ndsRendererAdapterCommitNativeStageDisplay`
+(`return FALSE;`) and `…MarkDisplayProcHeads` (`{}`). `nm` on the shipped ELF
+shows 180 and 108 bytes — HEAD carries **two definitions of each** under
+`#if NDS_RENDERER_HW_TRIANGLES`. Size candidates against the linked ELF, never
+against a source read.
+
+**The one thing still worth taking:** `ndsFighterDisplayContractCountFlags`, a
+real **7,849 cyc/frame = 3,925 ticks** whole-call deletion (no runtime reader).
+Take it only when something else is being built anyway — alone it cannot clear the
+±8,544 floor. Gate the traversal, keep the globals `__attribute__((used))`, keep
+the harness configuration computing them.
 
 **Separate finding, larger than either cut, and NOT a codegen problem:**
 `ndsFighterDisplayContractCountFlags` recursively walks the whole fighter DObj

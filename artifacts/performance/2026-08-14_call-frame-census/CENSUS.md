@@ -90,6 +90,40 @@ So the fix is structural, per-function, and free: move the cold tail into a
 `noinline` function of its own. The code is the same code, one branch further
 away, on a path the profile never executed.
 
+## CORRECTION 2026-08-14 — a cold-tail split recovers the REGISTER DELTA, not the frame
+
+The predictions below were written assuming a split removes a function's frame.
+It does not. Fitting every frame instruction in the build with ≥2,000 executions
+against its register count gives the actual cost:
+
+| form | cost |
+|---|---|
+| `push` of N registers | ≈ **1.6 + 1.2·N** cycles (N=1 → 2.86, N=6 → 9.66) |
+| `pop`+pc of N registers | ≈ **5.0 + 1.6·N** cycles (N=1 → 6.45, N=6 → 16.75) |
+
+Two consequences, and they reshape the lane:
+
+1. **A function that still returns through `pop {…, pc}` keeps ~9.3 cycles a call
+   no matter how few registers it saves** — the `pc` load's pipeline flush is the
+   floor, not the register list. Splitting a cold tail recovers only
+   `(N_old − N_new) × ~2.8` cycles per call.
+2. **The whole frame is only recoverable if the function becomes genuinely
+   frameless** (no `push`, `bx lr` return) **or if the call disappears entirely**
+   (inlined, or deleted). Whole-call deletion also takes the body with it, which
+   is why the diagnostic-only finding at the end of this document is worth more
+   than any split above it.
+
+`ftGetStruct` corrected: `push{r3-r7,lr}` 9.66 + `pop{r3-r7,pc}` 16.75 = 26.4
+cyc/call becomes `push{r4,lr}` 4.05 + `pop{r4,pc}` 8.42 = 12.5, so the measured
+7,141 cyc/frame falls to ≈3,371. **Realistic saving ≈3,770 cyc/frame ≈1,885
+ticks, not 7,141 cycles.** It did NOT become frameless and must not be credited
+as though it had.
+
+The 64,863 ticks/frame class total remains correct as a *ceiling*. The share of
+it reachable by splitting alone is a fraction of that; see
+`…/2026-08-14_call-frame-slice/CALL_FRAME_SLICE.md` for the package built on the
+corrected model.
+
 ## Implemented this cycle
 
 Two, chosen because their equivalence is provable by inspection and neither adds
@@ -98,16 +132,18 @@ a byte of hot code:
 1. **`ftGetStruct`** (`src/port/reloc_backend_compat_shims.c`) — stub builder
    split to `ftGetStructBuildStub`. The three fast returns are unchanged and in
    the same order, so every caller receives the same pointer on every path.
-   Predicted **−7,141 cyc/frame (−3,570 ticks)**.
+   Predicted **−3,770 cyc/frame (−1,885 ticks)** *(corrected; the first revision
+   claimed −7,141 cycles by assuming the frame vanished — it did not, the hot
+   route still runs `push {r4, lr}` / `pop {r4, pc}`)*.
 2. **`ndsR2AnimAObjToQ`** (`src/import/battleship_ftanim.c`) — the
    already-converted test is now `static inline` at its three call sites, and the
-   conversion is `ndsR2AnimAObjToQConvert`, `noinline`. Predicted
+   conversion is `ndsR2AnimAObjToQConvert`, `noinline`. This one DOES delete the
+   call on the hot route, so the whole ~32 cyc/call goes. Predicted
    **−2,500 cyc/frame (−1,250 ticks)**.
 
-Combined prediction **≈ −9,600 cyc/frame ≈ −4,800 ticks/frame**, which is
-**below** the ±8,544 cross-build placement floor. These two are banked for
-correctness and static evidence (the `push`/`pop` pairs leave the hot path in the
-disassembly); they are not, on their own, a measurable A/B.
+Combined prediction **≈ −6,270 cyc/frame ≈ −3,135 ticks/frame**, well **below**
+the ±8,544 cross-build placement floor. These two are banked for correctness and
+static evidence; they are not, on their own, a measurable A/B.
 
 ## Ranked next targets, and one that is not a codegen problem at all
 

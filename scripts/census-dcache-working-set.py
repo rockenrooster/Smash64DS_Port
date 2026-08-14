@@ -20,11 +20,23 @@ was last set, and classifies the site:
   timer       an mmio site inside the profiler's own clock helpers
   cacheable   an ordinary main-RAM/ROM access, the only class a layout change
               can help
-  unknown     base not resolvable in a short backward window
+  unknown     base not resolvable in a short backward window -- a load that may
+              be either, and is counted as NEITHER
 
 Only `cacheable` rows are ranked for layout work. The others are reported
 separately so they cannot be silently counted, and so the DMA wait is visible as
 the scheduling question it actually is.
+
+`unknown` fails CLOSED. Until 2026-08-14 an unresolvable base defaulted to
+`cacheable`, which is fail-open in the one direction that matters: the size of
+the cacheable class is the number that decides whether the layout lane is worth
+opening, so every site the backward walk could not reach was inflating the case
+for opening it. A base built from a literal pool or across a call boundary is as
+likely to be an I/O register as main RAM.
+
+UNITS: every figure this script prints is a PROFILE CYCLE. Two profile cycles are
+one project tick -- divide by two before comparing anything here against a gate,
+a floor, or a ticks/frame budget.
 """
 
 from __future__ import annotations
@@ -139,7 +151,14 @@ def main() -> None:
             fn, idx = func_index[pc]
             addr = resolve_base(func_lines[fn], idx, base_reg)
             if addr is None:
-                kind = "cacheable"      # not an immediate MMIO base
+                # An unresolved base is UNKNOWN, not cacheable. Calling it
+                # cacheable was a fail-open default that silently enrolled every
+                # site whose base the backward window could not reach into the
+                # one class a layout change is allowed to act on -- the class
+                # whose size decides whether the lane is worth opening. A base
+                # this walk cannot resolve may equally be an MMIO register
+                # loaded from a literal pool or built across a call boundary.
+                kind = "unknown"
             elif IO_LO <= addr <= IO_HI:
                 kind = "mmio"
             else:
