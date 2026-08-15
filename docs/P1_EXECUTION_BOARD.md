@@ -315,6 +315,73 @@ holder 9.1%; every top holder already owned by a named lane, including
 percentile sits. A change removing 100,000 from only the top 20 frames moves P95
 by **zero**; the 80th-largest must fall **91,844**.
 
+## NATIVE BATTLE KERNEL SLICE 1 — PHASE 5 IS RESIDENT AND MEASURED (2026-08-15, `3963b8b14ea`)
+
+`artifacts/performance/2026-08-15_battlepack-resident/BATTLEPACK_RESIDENT.md`.
+
+**`gNdsBattlePackHits` has been read on a live ROM.** Gate arm
+(`NDS_R2_BOTH_CPU=1`), canonical one-minute match, 2,043 presented frames on both
+arms, same target and build recipe:
+
+```text
+                       flag 0      flag 1
+gNdsBattlePackHits          0         197
+gNdsBattlePackMisses      357         160
+total acquisitions        357         357     <- identical: the cost changes, not the count
+gNdsR2AnimCacheHits       338          30
+gNdsR2AnimCacheRejects      0         126
+ArenaReservedBytes    262,144     292,032
+TaskmanArenaChosenSize 0x150000   0x150000    (AllocFailCount 0 both)
+```
+
+`gNdsRelocResolveOffsetCount` 0 → **3,132** corroborates from the other side.
+Per-fighter split, measured: gate arm **197 Fox / 160 Mario**; Boundary-style arm
+**169 / 52**.
+
+**`.incbin` is gone.** NitroFS payload streamed into the taskman arena in 18×16 KB
+chunks at the `ndsR2AnimCachePreloadStep` seam. Proven static headroom **66,816
+→ 354,208** against a 355,104 flag-0 baseline: **+896 B of image, not +288,288**.
+
+**THE MARKER-2 BOUNDARY HANG WAS THE ARENA.** Three timeouts last cycle at
+`ndsRendererHardwareArmBattleStaticTextures`; this cycle the capture costs 27.1 s
+and 26.7 s of a 120 s ceiling. Proven with `gNdsTaskmanArenaChosenSize`
+(1,310,720/16 fails → 1,376,256/0), not by observing that the red went away.
+
+**Flag 1 is still RED on ONE assert, and it is a different one.** The lower-screen
+rolling FPS counter's self-consistency check: `FPS_HUD=289,14,15,16856768`,
+**byte-identical on two consecutive runs**. Recompute from the published windows
+gives 298. Attribution: `X10` lags `FrameWindow`/`TickWindow` by exactly one
+sample (289 with 15 frames needs a ≈17,394,800-tick window; 16,856,768 is
+published beside it). Ruled out: a second writer (one each,
+`nds_platform.c:2371`/`:2374`, inside one `REG_IME=0` block) and a cache-line
+straddle (all four globals in one 32-byte line). This is the R2-04 E2 assert,
+previously recorded as *intermittent* — the flag-1 arm makes it deterministic.
+**Boundary at flag 0 is GREEN on this tree.** `NDS_R204_FPSHUD_SHADOW` exists for
+this question and was not spent.
+
+**ORDERING WAS NOT ENOUGH — the finding worth carrying.** Letting the loader be
+the first caller of the bump allocator lost by **848 bytes**: fighter setup stores
+3,728 B into the arena before the first scene update
+(`ArenaOverflowLastSize 287936`, `LastUsed 3728`, `Hits 0`). The blob now owns
+`[0, RESERVE)` of every arena generation, carved at reservation, and
+`NDS_R2_BATTLEPACK_BLOB_BYTES` is generated from the blob so the reserve cannot
+drift from the asset.
+
+**THE TRADE, UNPRICED.** Only one fighter fits, so the other loses the raw cache
+(`Rejects` 0 → 126). Proof arm, same match, 2,043 frames both:
+`gNdsBattlePlayablePacingVBlanks` **4,274 → 4,805 (+12.4%)**, present-interval
+buckets [4]/[5] 5/12 → 42/108. **Not attributed** — candidates are the 18 streamed
+chunks, the 126 uncached loads, and cross-build placement. Phase 8 must resolve it
+first, and if it holds the answer is to **grow `NDS_TASKMAN_ARENA_SIZE`** out of
+`RAM_RECOVERY_PLAN` Phase 2's 146,560 B so both fighters are resident — not to
+shrink the pack. `NDS_R2_BATTLEPACK` stays **default 0** until then.
+
+**Not done:** phase 8 (the −73,659 at rank-80 is still a projection), phase 6's
+oracle, the measured after-GO per-fighter zero-I/O assertion (the seven K0
+counters are zero *by construction* on the pack-hit path — the early return
+precedes all of them in the same function — but no GO-gated per-fighter counter
+exists), and root-causing the FPS-HUD tear.
+
 ## NATIVE BATTLE KERNEL SLICE 1 (2026-08-14) — phases 1–4 DONE, RAM re-measured, zero builds
 
 `docs/architecture/RUNTIME2_NATIVE_BATTLE_KERNEL.md` (design) ·

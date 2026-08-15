@@ -154,6 +154,31 @@ the generator rather than silently skipped. They keep the generic path.
 
 ## 6. What slice 1 phases 5–9 must still do — the two blockers are CLEARED
 
+> **PHASE 5 IS LANDED AND RESIDENT, 2026-08-15 (`3963b8b14ea`,
+> `artifacts/performance/2026-08-15_battlepack-resident/BATTLEPACK_RESIDENT.md`).**
+> The Fox blob ships as a NitroFS payload and is streamed into the taskman
+> animation arena at scene setup, replacing the 262,144 B raw-file cache;
+> `.incbin` is disqualified and gone (+288,992 B of image drove the arena
+> `0x150000 → 0x140000`; the NitroFS route costs **+896 B**). `gNdsBattlePackHits`
+> reads **197** on the gate arm against a flag-0 control of **0**, with the total
+> acquisition count **identical at 357** — the deletion changes what an
+> acquisition costs, not how many happen.
+>
+> **Two structural lessons this phase paid for.**
+> 1. **A pool is not owned by allocating first.** Fighter setup stores 3,728 B
+>    into the arena before the first scene update, so a loader that merely
+>    allocated early was refused by 848 bytes and the flag read a plausible,
+>    meaningless zero. Residency must be **carved at reservation**, not raced for.
+> 2. **A one-fighter fit is a trade, not a free win.** The un-packed fighter loses
+>    the cache (`gNdsR2AnimCacheRejects` 0 → 126) and the proof arm shows +12.4%
+>    battle VBlanks. The kernel direction's answer is to grow the arena so both
+>    fighters are resident — a cache the pack replaces must not become a cache the
+>    pack *costs*.
+>
+> Still open: phase 6 (oracle), the *measured* phase-7 after-GO per-fighter zero,
+> phase 8 (gate), and a Boundary green at flag 1 — one assert remains, the FPS-HUD
+> self-consistency check, deterministic at flag 1 and green at flag 0.
+
 Phases 5–7 (direct runtime instance, same-build oracle mode, after-GO zero-I/O
 assertion) and 8–9 (performance, re-rank) are unchanged from `plan.md` §K1.
 

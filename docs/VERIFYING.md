@@ -12,6 +12,28 @@ under 5.1 — including any launched indirectly, which is how a probe spending
 reads as `UnexpectedToken` in the innocent caller, never in the file that
 actually holds the PS7 syntax.
 
+**Capturing a verifier's output needs an OS-level redirect, not a PowerShell
+one.** `verify-all.ps1` prints each child verifier's stdout with
+`[Console]::Out.Write` (`Invoke-VerifyScriptOnce`), which writes straight to the
+console handle — so `| Tee-Object`, `> file` and `*> file` all capture the
+*driver's* one progress line and none of the run. On 2026-08-15 that produced a
+90-byte log for a failing Boundary run and cost two repeats. Use:
+
+```powershell
+cmd /c "pwsh -NoProfile -ExecutionPolicy Bypass -File scripts\verify-all.ps1 -Profile Boundary > %TEMP%\b.log 2>&1"
+```
+
+`cmd`'s redirection is a handle the whole process tree inherits. Note `pwsh`,
+not `powershell`, for the reason in the paragraph above — spelling it
+`powershell` inside the `cmd` line reintroduces 5.1 and fails at
+`melonds.ps1:349`.
+
+**Edit every structured file with Read/Edit, not a heredoc or `\n` escapes.**
+`CLAUDE.md` records this for `.ps1`; on 2026-08-15 the same trap ate a backslash
+in a **Makefile** recipe continuation. The rule is not about PowerShell quoting —
+it is about any file whose meaning depends on exact line endings, escapes or
+continuations: `.ps1`, `Makefile`, `.mk`, linker scripts, `.S`, `.toml`, `.json`.
+
 ```powershell
 $env:DEVKITPRO = 'C:/devkitPro'
 $env:DEVKITARM = 'C:/devkitPro/devkitARM'
