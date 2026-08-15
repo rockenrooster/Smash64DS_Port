@@ -7748,7 +7748,7 @@ extern void func_80005BFC(void);
 
 #if NDS_IMPORT_BATTLESHIP_FTMANAGER
 #if NDS_R2_BATTLEPACK_KEEP_CACHE
-/* LAB ARM ONLY -- see the NDS_R2_BATTLEPACK_KEEP_CACHE block in the Makefile.
+/* See the NDS_R2_BATTLEPACK_KEEP_CACHE block in the Makefile.
  *
  * 0x17a000 (1,548,288) = 0x150000 + 172,032, and the size is MEASURED, not
  * derived from the boot ladder. The first attempt asked for 0x18f000 (+258,048,
@@ -7766,7 +7766,26 @@ extern void func_80005BFC(void);
  * does not step at all, and gNdsTaskmanArenaAllocFailCount 0 is the check on
  * that rather than this comment. The headroom ladder cannot see any of this --
  * it meters the STATIC image against a boot threshold, not the heap a runtime
- * calloc can actually be given. */
+ * calloc can actually be given.
+ *
+ * PRICED ON THE STRESS BATTERY 2026-08-15, not projected
+ * (artifacts/performance/2026-08-15_battlepack-arena-price/ARENA_PRICE.md).
+ * 660 s, 12 battle-scene entries, 7 completed matches, 7 START restarts, 4
+ * Sudden Deaths, verdict NO-FREEZE: ChosenSize 1,548,288 with AllocFail 0,
+ * ReserveFail 0, Rejects 0, SyMallocOverflow 0, general-heap low-water 52,400
+ * against the mandated 32,768 floor and the 25,600 ifCommonSetMaxNumGObj latch,
+ * sGCCommonsMaxNum still -1. The low-water is FLAT across the chain -- the
+ * single-match figure is 52,864 -- because syTaskmanStartTask rewinds the
+ * general heap on every scene entry, so Sudden Death's extra per-player
+ * figatree heaps do not accumulate across matches.
+ *
+ * AND THE COUNTERINTUITIVE PART, because "+172,032 of arena" reads like extra
+ * room and is not: the growth REPAYS the pack's own reservation. 1,548,288 less
+ * the 451,776 the animation arena reserves leaves taskman 1,096,512, against the
+ * shipping arm's 1,376,256 - 262,144 = 1,114,112. This arm gives taskman 17,600
+ * bytes LESS, which is why its low-water sits below the shipping arm's rather
+ * than above it. Size the next change against the RESIDUE, not against the
+ * constant on this line. */
 #define NDS_TASKMAN_ARENA_SIZE 0x17a000u
 #else
 #define NDS_TASKMAN_ARENA_SIZE 0x150000u

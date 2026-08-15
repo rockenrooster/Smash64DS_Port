@@ -6519,7 +6519,15 @@ volatile u32 gNdsR204AnimSeen[(NDS_R204_ANIM_ID_SPAN + 31u) / 32u];
  * nothing, and with Fox served from the pack this holds only Mario's working set
  * -- against a 192,240 B both-fighter arena high-water (slice 46). If Rejects is
  * non-zero the arm did not isolate the deletion and its ticks price starvation
- * again, which is the whole thing this configuration exists to avoid. */
+ * again, which is the whole thing this configuration exists to avoid.
+ *
+ * THAT TEST PASSES ON THE STRESS BATTERY, not just on one match (2026-08-15,
+ * artifacts/performance/2026-08-15_battlepack-arena-price/ARENA_PRICE.md).
+ * Over 12 battle-scene entries, 7 completed matches and 4 Sudden Deaths:
+ * Rejects 0, Overflows 0, ReserveFailCount 0, and the arena bump high-water
+ * 425,072 of the 451,776 reserved -- i.e. Mario's half used 137,136 of its
+ * 163,840, 83.7%, with 26,704 spare. That spare is the real margin on this
+ * constant; 163,840 is not a round number to be trimmed casually. */
 #define NDS_R2_ANIM_CACHE_ARENA_BYTES (NDS_BATTLEPACK_RESERVE_BYTES + 163840u)
 #else
 #define NDS_R2_ANIM_CACHE_ARENA_BYTES (NDS_BATTLEPACK_RESERVE_BYTES + 4096u)

@@ -529,3 +529,53 @@ passenger is the whole remaining fare. **§9's constraint is reinstated and is n
 the binding design question**: the Fox blob is 287,904 B against the 262,144 B it
 evicts, **1.098x its own displacement**. Close that gap and the shipping arm
 becomes arm G.
+
+## 12. The arena is affordable; the blocker moved to the instrument (2026-08-15)
+
+`artifacts/performance/2026-08-15_battlepack-arena-price/ARENA_PRICE.md`.
+Zero lab builds — two soaks on binaries that already existed, four Boundary runs.
+
+**§9's displacement constraint is NOT the binding question after all, and the
+reason is arithmetic that was never done.** "+172,032 B of arena" reads as room
+bought; it is repayment. `1,548,288 − 451,776` (blob 287,936 + cache 163,840)
+leaves taskman **1,096,512** against the shipping arm's `1,376,256 − 262,144` =
+**1,114,112** — arm G gives taskman **17,600 B less**, so its general heap ends
+*tighter* than the control's, not looser. Predicted −17,600 from the constants;
+**measured −17,472** on the stress battery. One mechanism, fully accounted.
+
+**Measured, not projected.** 660 s on `build-c168-packfix-bp1` itself — the
+binary whose rank-80 is banked — driving 12 battle-scene entries, 7 completed
+matches, 7 START restarts and **4 Sudden Deaths** to a `NO-FREEZE` verdict:
+`ChosenSize` 1,548,288 · `AllocFail` 0 · `ReserveFail` 0 · `Rejects` **0** ·
+`SyMallocOverflow` 0 · heap low-water **52,400** against the 32,768 floor and the
+25,600 GObj latch, `sGCCommonsMaxNum` still −1. The control ran the identical
+battery: **69,872**, and it **refuses 21 animation loads where arm G refuses
+none** — two fighters do not fit 262,144, one fits 163,840 at 83.7%.
+
+**So the pack does not owe the cache what §9 said it owed.** The displacement
+constraint priced the blob against the *bytes* it evicts; what actually matters
+is whether the residual cache still serves the residual working set, and
+measured over 12 entries it does, with 26,704 B spare. §9 stands as arithmetic
+and is **withdrawn as the binding design question**; dropping clips to reach
+262,144 is not needed and was not attempted.
+
+**The blocker is now the instrument, and it is a known class.** Boundary is GREEN
+at the shipping default, **GREEN with the resident pack at the shipping arena**,
+and **RED only with the arena grown**, on one term of the locked-30 stop-phase
+model: `drawLead = DrawCalls − PresentedFrames = −1`. That is unreachable
+in-guest (`taskman_seam.c:4903` then `:4935`, one writer each on this arm,
+no return between, reset together), so it is a **stale GDB read** —
+`ARMv5::ReadMem` has no DCache lookup — the same defect as R2-04 E2 on a
+different counter group. `docs/KNOWN_ISSUES.md` has carried the sibling tuple
+(`phaseLag=-1`, also triggered by an allocator move) as an open either/or since
+2026-08-09; both are explained by staleness and only by staleness, because a
+stale read is always *behind* and in each row the counter written *first* is the
+one that reads low. **The remedy is one `DC_FlushRange` publication seam for the
+four `BPLAY_PACE` counters**, precedent `ndsPlatformPublishBattleFpsHudGroup`
+(`nds_platform.c:2261`). It changes the shipped binary, so it needs its own
+build, Boundary run and gate re-measure, and it is handed forward rather than
+half-landed.
+
+**Order for the next cycle.** Land the publication seam → re-run Boundary at arm
+G → re-measure the gate on that binary → only then take a default flip to the
+owner. Nothing in slice 1's architecture is waiting on RAM any more.

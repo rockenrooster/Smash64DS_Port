@@ -185,6 +185,34 @@ durable unresolved gaps.
   real off-by-one that only some allocation layouts expose, or the stop-phase
   model is incomplete. **Level 3 is held off by default pending that answer** --
   the reproduction is one `-SetGlobals` poke.
+  **THERE IS A THIRD ANSWER AND IT IS NEITHER OF THOSE (2026-08-15,
+  `artifacts/performance/2026-08-15_battlepack-arena-price/ARENA_PRICE.md` §6).**
+  The pacing counters are read STALE over GDB. `ARMv5::ReadMem`
+  (`melonDS-Accurate/src/ARM.cpp:1545`) special-cases ITCM/DTCM and otherwise
+  falls through to `BusRead32` with **no DCache lookup**, and ARM946E-S does not
+  write-allocate, so a counter whose line is still dirty at the stop reads one
+  behind while its neighbour reads current. That is R2-04 E2, measured
+  frame-by-frame in `artifacts/verification/2026-08-15_fpshud-publication.txt`
+  and fixed by `DC_FlushRange` at the publication seam
+  (`ndsPlatformPublishBattleFpsHudGroup`, `nds_platform.c:2261`). **A second,
+  independent tuple now fits the same explanation and nothing else**: the
+  resident-battlepack arm at `NDS_TASKMAN_ARENA_SIZE 0x17a000` fails with
+  `drawLead=-1`, i.e. `gNdsBattlePlayablePacingDrawCalls` one BEHIND
+  `…PresentedFrames`, which is unreachable in-guest for the same reason the row
+  above gives (`taskman_seam.c:4903` then `:4935`, no return between, reset
+  together; the only other `DrawCalls++` at `:7963` is the fast-logic path).
+  **In both rows the counter written FIRST is the one that reads low, and in both
+  the trigger was a change that moved heap layout** -- which is what decides
+  which lines are resident when the debugger halts. Three-arm separation on the
+  2026-08-15 row: Boundary is GREEN at the shipping default, GREEN with the
+  resident pack at the shipping arena (same code, `NDS_TASKMAN_ARENA_SIZE`
+  unchanged), and RED only with the arena grown -- so it is the ALLOCATOR MOVE,
+  not the feature. A stale read is always
+  behind, never ahead, and that asymmetry is what picks this answer over "a real
+  off-by-one". **The fix is one publication seam for the four `BPLAY_PACE`
+  counters**; it changes the shipped binary, so it needs its own build, Boundary
+  run and gate re-measure. Landing it should also unblock
+  `NDS_R2_CAMERA_MATRIX_LEAN=3`.
 - **A `.data` route pairing does NOT make an arm placement-free if the arm
   changes an allocator.** The pairing guarantees identical *text*; it says
   nothing about where the frame's heap objects land. Split any candidate that

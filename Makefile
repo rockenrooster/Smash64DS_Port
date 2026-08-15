@@ -313,25 +313,41 @@ NDS_R2_AOBJ16_PREBAKE ?= 0
 # fighter fits, so the other loses the raw cache, and that trade is unpriced.
 # `artifacts/performance/2026-08-15_battlepack-pool/BATTLEPACK_POOL.md`.
 NDS_R2_BATTLEPACK ?= 0
-# LAB ONLY, NOT SHIPPABLE AS CONFIGURED. Phase 8 measured the resident pack at
-# 2.9x the gate and attributed all of it to the carve DELETING the raw file cache
-# (262,144 -> 4,096 B; Rejects 0 -> 126; 111 net-new uncached acquisitions at
-# 3,873,969 tk each). That pair therefore cannot price the acquisition-path
-# deletion's BENEFIT in either direction: the arm that could -- pack resident AND
-# cache intact -- has never existed.
+# The arm that isolates the pack from the cache it displaces. Phase 8 measured
+# the resident pack at 2.9x the gate and attributed all of it to the carve
+# DELETING the raw file cache (262,144 -> 4,096 B; Rejects 0 -> 126); the
+# isolation arm then refuted that attribution, and the mechanism cycle found the
+# real owner -- a resolver ordering defect, now fixed. With the defect gone the
+# carve is the whole remaining fare: H - G = +265,856 at rank-80.
 #
-# At 1 this builds it. The animation arena reserves the blob PLUS the full
-# 262,144 B raw cache, and NDS_TASKMAN_ARENA_SIZE grows by the same 258,048 B so
-# the general heap is not robbed to pay for it. It is independent of
-# NDS_R2_BATTLEPACK on purpose: at BATTLEPACK=0 it grows the arena and nothing
-# else, which is the matched control for the pair (same arena size, same
-# addresses, same Task 53 guard -- only the pack differs).
+# At 1 the animation arena reserves the blob PLUS a raw cache, and
+# NDS_TASKMAN_ARENA_SIZE grows so the general heap is not robbed to pay for it.
+# It is independent of NDS_R2_BATTLEPACK on purpose: at BATTLEPACK=0 it grows the
+# arena and nothing else, which is the matched control for the pair (same arena
+# size, same addresses, same Task 53 guard -- only the pack differs).
 #
-# Why this is diagnostic and not a candidate: 258,048 B of arena is not free RAM,
-# it is spent boot headroom. The tick-HUD gate arm has ~320,000 B proven, so the
-# arm boots with ~62,000 B of margin and NOTHING else may be added on top. The
-# shippable closure is a pack SMALLER than the 262,144 B it displaces
-# (docs/architecture/RUNTIME2_NATIVE_BATTLE_KERNEL.md section 9).
+# "LAB ONLY, NOT SHIPPABLE AS CONFIGURED" STOOD HERE AND IS WITHDRAWN 2026-08-15
+# (artifacts/performance/2026-08-15_battlepack-arena-price/ARENA_PRICE.md). Two
+# of its three premises were wrong. (1) The growth is 172,032 B, not 258,048:
+# the cache behind the pack is 163,840, not 262,144. (2) The growth does not
+# spend boot headroom on top of the pack -- it REPAYS the pack's own reservation.
+# 1,548,288 - 451,776 leaves taskman 1,096,512 against the shipping arm's
+# 1,376,256 - 262,144 = 1,114,112, i.e. 17,600 B LESS, so this arm's general heap
+# ends tighter than the control's rather than looser. (3) Measured on the stress
+# battery rather than projected: 12 battle entries, 7 matches, 7 START restarts,
+# 4 Sudden Deaths, NO-FREEZE, with ChosenSize 1,548,288 / AllocFail 0 /
+# ReserveFail 0 / Rejects 0 / SyMallocOverflow 0, general-heap low-water 52,400
+# against the 32,768 floor and the GObj cap never firing.
+#
+# What is still true and still binding: this arena is not free RAM. It is
+# grantable libnds heap, the measured grantable ceiling is 1,564,672, and 0x17a000
+# sits 16,384 B under it. Any static growth on top of this arm eats that 16,384
+# one for one, silently, and the ONLY thing that sees it is
+# gNdsTaskmanArenaChosenSize -- never check-boot-headroom.ps1, which meters the
+# static image. Re-read it after any change here.
+#
+# The default stays 0: turning the pack on by default is the owner's call, not a
+# build flag's (PROJECT_GOAL.md sacrifice order, CLAUDE.OPUS.md rail 5).
 NDS_R2_BATTLEPACK_KEEP_CACHE ?= 0
 # THE SLICE-51 FALSIFIER, and it exists because two arms that disagree about the
 # arena, the cache size (40x) and the ROM loads (14x) still landed 384 ticks

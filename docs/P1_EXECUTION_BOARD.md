@@ -375,6 +375,122 @@ the first caller of the bump allocator lost by **848 bytes**: fighter setup stor
 `NDS_R2_BATTLEPACK_BLOB_BYTES` is generated from the blob so the reserve cannot
 drift from the asset.
 
+## THE ARENA IS AFFORDABLE AND THE BLOCKER MOVED TO THE INSTRUMENT (2026-08-15)
+
+`artifacts/performance/2026-08-15_battlepack-arena-price/ARENA_PRICE.md`.
+**Zero lab builds** — two soaks on binaries that already existed, four Boundary
+runs. The section below stands; this one answers its closing question.
+
+**+172,032 B of arena does not BUY room — it REPAYS the pack's reservation.**
+
+```text
+                                 control (flag 0)     arm G          delta
+NDS_TASKMAN_ARENA_SIZE              1,376,256      1,548,288      +172,032
+  animation-arena reservation         262,144        451,776      +189,632
+    blob (287,904 -> 32B line)              -        287,936
+    raw file cache                    262,144        163,840
+arena left to taskman               1,114,112      1,096,512       -17,600
+```
+
+Predicted −17,600 of general heap from the constants alone; **measured −17,472**.
+One mechanism, fully accounted, nothing hidden — and the *opposite* of how the
+growth reads.
+
+**The stress battery, on `build-c168-packfix-bp1` itself** (the binary whose
+rank-80 is banked, so the reserve and the tick figure share one ROM), 660 s:
+**12 battle-scene entries · 7 completed matches · 7 START restarts · 4 Sudden
+Deaths · NO-FREEZE.**
+
+| counter | control (flag 0) | **arm G** | requirement |
+|---|---:|---:|---|
+| `gNdsTaskmanArenaChosenSize` | 1,376,256 | 1,548,288 | == requested |
+| `gNdsTaskmanArenaAllocFailCount` | 0 | **0** | == 0 |
+| `gNdsR2AnimCacheArenaReserveFailCount` | 0 | **0** | == 0 |
+| `gNdsR2AnimCacheRejects` / `Overflows` | **21 / 21** | **0 / 0** | == 0 |
+| `gNdsSyMallocOverflowCount` | 0 | 0 | == 0 |
+| `sGCCommonsMaxNum` | −1 | −1 | cap unfired |
+| **`gNdsTaskmanGeneralHeapFreeMin`** | **69,872** | **52,400** | > 32,768 |
+
+**Arm G refuses nothing where the shipping control refuses 21 animation loads** —
+two fighters do not fit 262,144, one fits 163,840 (peak 137,136, 83.7%, 26,704
+spare). The low-water is **flat across the chain** (single match 52,864) because
+`syTaskmanStartTask` rewinds the general heap on every scene entry, so Sudden
+Death's extra per-player figatree heaps do not accumulate.
+
+**Three reserves, each with its instrument, because they are different pools:**
+**(a)** grantable libnds heap — **16,384 B** under the measured 1,564,672 ceiling
+(inherited from a same-footprint binary; arm G's own `AllocFailCount 0` is the
+direct proof, and any static growth eats this 1:1 where only
+`gNdsTaskmanArenaChosenSize` can see it). **(b)** taskman general heap —
+**19,632 B** over the mandated floor, 26,800 over the GObj latch. **(c)** static
+image — 319,808 B proven, **context only**: it is the meter that has now failed
+three times on exactly this class.
+
+> **§9's displacement constraint is WITHDRAWN as the binding question.** It
+> priced the blob against the *bytes* it evicts; what matters is whether the
+> residual cache still serves the residual working set, and over 12 entries it
+> does with 26,704 spare. **Dropping ~11 clips to reach 262,144 is not needed and
+> was not attempted**, and the `BLOCKED(decision: lossy stream)` fidelity trade
+> does not have to be taken to the owner.
+
+**BOUNDARY: flag 0 GREEN · flag 1 at the SHIPPING arena GREEN · arm G RED.**
+
+```text
+battle_playable locked-30 pacing failed ... (logicLag=2 drawLead=-1 phaseLag=1
+taskmanPresentLead=2)
+BPLAY_PACE=0x42505443,0,422,212,211,...   logic 422  presented 212  draws 211
+```
+
+**The middle arm exonerates the pack.** Residency, streaming, the carve and the
+whole dispatch — the entire architectural change slice 1 exists for — pass
+Boundary at `NDS_TASKMAN_ARENA_SIZE 1,376,256`. Only the arm that **moves the
+allocator** fails.
+
+**`drawLead = −1` is not a guest-reachable state.**
+`gNdsBattlePlayablePacingDrawCalls` is bumped at `taskman_seam.c:4903` and
+`…PresentedFrames` at `:4935`, in that order, one straight-line region, no
+`return` between, both reset sites zeroing them together; a whole-tree grep finds
+one other `DrawCalls++` at `:7963` and it is the fast-logic path, mutually
+exclusive with `:4903` (worth running — the one-writer claim was not free). So it
+is a **stale GDB read**: `ARMv5::ReadMem` has no DCache lookup, and ARM946E-S
+does not write-allocate. **Same defect as R2-04 E2, different counter group.**
+
+**This closes an either/or that has been open since 2026-08-09.**
+`docs/KNOWN_ISSUES.md` records `phaseLag=-1` from `NDS_R2_CAMERA_MATRIX_LEAN=3`
+— also an allocator move — as "a real off-by-one … or the stop-phase model is
+incomplete", and holds that lever off by default for it. **Both tuples are
+explained by staleness and only by staleness**: a stale read is always *behind*,
+never ahead, and in each row the counter written **first** is the one that reads
+low. **Remedy: one `DC_FlushRange` publication seam for the four `BPLAY_PACE`
+counters**, precedent `ndsPlatformPublishBattleFpsHudGroup`
+(`nds_platform.c:2261`). It changes the shipped binary — its own build, its own
+Boundary run, its own gate re-measure — so it is **handed forward, not
+half-landed**.
+
+**CORRECTION, and it is load-bearing: Boundary does NOT pin
+`gNdsTaskmanArenaChosenSize == 1376256`.** Both runtime sites
+(`verify-battle-mariofox-gcrunall-loop-harness.ps1:2006` and `:2573`) are inside
+`if ($Task34StageStreamCensus)`, which only
+`benchmark-renderer-fast-raw.ps1 -Task34StageStreamCensus` passes, against
+`builds/build-task34-stage-stream-census-lab`. `verify-battle-playable-harness.ps1:142`
+never passes it. **The pin is a Task 34 census lab gate on a lab build built at
+defaults, where 1,376,256 is still exactly right — nothing was retaught, and
+loosening it would have deleted a working check.** What Boundary *does* enforce
+is `check-gbi-decode-fixtures.ps1:2493`, a source-**text** assert that the
+literal still appears in the verifier.
+
+**Also checked and clear.** The Task 36 replay admission guard has a legacy form
+of exactly `gNdsTaskmanArenaChosenSize != 0x150000` (`nds_renderer.c:5735`) which
+arm G would fail, silently disabling rigid-stage replay and confounding every
+tick figure in this campaign. It does not fire: the published (`Makefile:1566`)
+and tick-HUD (`:1717`) blocks both force `NDS_TASK53_REPLAY_ARENA_FIX := 1`
+(`< 0x130000`), and `gNdsRendererTask36ReplayArenaStaleCount` reads **16,914 on
+arm G against 0 on the control** — that counter exists to count exactly the
+frames the relaxed guard admits and the legacy one would have blocked.
+
+**Next**: publication seam → Boundary at arm G → gate re-measure on that binary →
+only then a default flip, which is the owner's.
+
 ## THE PACK PATH'S COST WAS A DEFECT, NOT THE DESIGN — AND IT IS FIXED (2026-08-15)
 
 `artifacts/performance/2026-08-15_battlepack-mechanism/BATTLEPACK_MECHANISM.md` ·

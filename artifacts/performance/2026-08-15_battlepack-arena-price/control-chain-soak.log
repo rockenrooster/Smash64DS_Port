@@ -1,0 +1,291 @@
+soak match timer: canonical 1-minute match (harness default, no override)
+soak: smash64ds-battle-playable-tickhud-hwtri.nds [build-c168-default-check] slot -1, hashing the window every 5s for 11m; trip at 16 identical frames
+  t+   20s  moving again after 2 identical frame(s)
+  t+   40s  alive, 6 distinct frames so far
+  t+   71s  alive, 12 distinct frames so far
+  t+   92s  held START (ENTER) 500 ms  [press 1] on a detected Results screen
+  t+  102s  alive, 18 distinct frames so far
+  t+  132s  alive, 24 distinct frames so far
+  t+  162s  alive, 30 distinct frames so far
+  t+  168s  held START (ENTER) 500 ms  [press 2] on a detected Results screen
+  t+  193s  alive, 36 distinct frames so far
+  t+  224s  alive, 42 distinct frames so far
+  t+  254s  alive, 48 distinct frames so far
+  t+  260s  held START (ENTER) 500 ms  [press 3] on a detected Results screen
+  t+  285s  alive, 54 distinct frames so far
+  t+  315s  alive, 60 distinct frames so far
+  t+  336s  held START (ENTER) 500 ms  [press 4] on a detected Results screen
+  t+  346s  alive, 66 distinct frames so far
+  t+  377s  alive, 72 distinct frames so far
+  t+  407s  alive, 78 distinct frames so far
+  t+  413s  held START (ENTER) 500 ms  [press 5] on a detected Results screen
+  t+  438s  alive, 84 distinct frames so far
+  t+  468s  alive, 90 distinct frames so far
+  t+  489s  held START (ENTER) 500 ms  [press 6] on a detected Results screen
+  t+  499s  alive, 96 distinct frames so far
+  t+  530s  alive, 102 distinct frames so far
+  t+  560s  alive, 108 distinct frames so far
+  t+  566s  held START (ENTER) 500 ms  [press 7] on a detected Results screen
+  t+  591s  alive, 114 distinct frames so far
+  t+  621s  alive, 120 distinct frames so far
+  t+  642s  held START (ENTER) 500 ms  [press 8] on a detected Results screen
+  t+  652s  alive, 126 distinct frames so far
+
+verdict: NO-FREEZE
+  note: this ROM does not define 40 counter(s); dropped gNdsBattlePackState, gNdsBattlePackClips, gNdsBattlePackBytes, gNdsBattlePackLoadSteps, gNdsBattlePackResidentBytes, gNdsBattlePackLoadFails, gNdsBattlePackDrops, gNdsParticleGeneratorStartCount, gNdsRendererTask36RendererRejectReason, gNdsRendererTask36PrepareRunRejectReason, gNdsR2StageKeyMissInvalid, gNdsR2StageKeyMissGeneration, gNdsR2StageKeyMissStamp, gNdsR2StageKeyMissConfig, gNdsR2StageKeyMissAssets, gNdsR2StageRejectCounts[1], gNdsR2StageRejectCounts[2], gNdsR2StageRejectCounts[3], gNdsR2StageRejectCounts[4], gNdsR2StageRejectCounts[5], gNdsR2StageRejectCounts[6], gNdsR2TexRejectCensusValid, gNdsR2TexRejectCensusFree, gNdsR2TexRejectCensusLive, gNdsR2TexRejectCensusPinned, gNdsR2TexRejectCensusThisFrame, gNdsR2TexRejectCensusEvictable, gNdsFtPublicProcUpdateCount, gNdsFtPublicPlayCommonCount, gNdsFtPublicLastCommonFGM, gNdsFtPublicCallStartCount, gNdsFtPublicLastCallFGM, gNdsR2CollisionOracleSamples, gNdsR2CollisionOracleSingular, gNdsR2CollisionOracleMaxDevQ12[0], gNdsR2CollisionOracleMaxDevQ12[1], gNdsR2CollisionOracleMaxDevQ12[2], gNdsR2CollisionOracleOverBoundCount, gNdsR2CollisionOracleScaleMinQ12, gNdsR2CollisionOracleScaleMaxQ12
+progress over the run:
+    sVBlankCount                             48285
+    gNdsBattlePlayablePacingPresentedFrames  555
+    dSYTaskmanUpdateCount                    1110
+    gNdsVSResultsStartCount                  8
+    gNdsVSResultsTickCount                   552
+    gNdsSyMallocOverflowCount                0
+    gNdsTaskmanArenaChosenSize               1376256
+    gNdsTaskmanArenaAllocFailCount           0
+    gSCManagerTransferBattleState.time_limit 1
+    gNdsR2AnimCacheArenaUsedBytes            201408
+    gNdsR2AnimCacheArenaOverflows            21
+    gNdsR2AnimCacheFills                     241
+    gNdsR2AnimCacheHits                      3090
+    gNdsR2AnimCacheRejects                   21
+    gNdsBattlePackHits                       0
+    gNdsBattlePackMisses                     3352
+    gNdsR2AnimCacheArenaReserveCount         18
+    gNdsR2AnimCacheArenaReserveFailCount     0
+    gNdsR2AnimCacheArenaReservedBytes        262144
+    gNdsR2AnimCacheArenaGenerationMismatches 17
+    gNdsR2AnimCacheArenaRangeFaults          0
+    gNdsR2AnimCacheArenaInvalidations        17
+    gNdsR2AnimCacheArenaOverflowLastSize     656
+    gNdsR2AnimCacheArenaOverflowLastUsed     262032
+    gNdsSCVSBattleRebudgetCount              9
+    gNdsSCVSBattleRebudgetGraphicsBytes      53248
+    gNdsParticleQuadAlphaBreaks              18998
+    gNdsVSResultsTransitionTicks             25764096
+    gNdsVSResultsFuncStartTicks              23354880
+    gNdsVSResultsSetupFilesTicks             11924160
+    gNdsVSResultsSetupFilesCalls             2
+    gNdsVSResultsToWallpaperTicks            44259264
+    gNdsVSResultsToResultsTicks              70972672
+    gNdsVSResultsRematchCount                8
+    gNdsVSResultsInputPollCount              4350
+    gNdsVSResultsPadMask                     4096
+    gNdsVSResultsInputSeenMask               4096
+    gNdsVSResultsInputTapMask                4096
+    gNdsControllerReadCount                  1111
+    gNdsControllerReadEdgeCount              0
+    gNdsControllerPublishCount               1116
+    gNdsControllerPublishSuppressedCount     551
+    gNdsControllerPublishTapNonzeroCount     0
+    gNdsControllerEdgeSeenMask               0
+    gNdsControllerPublishedTapMask           0
+    gNdsRendererBattleStaticTexturePrepareCount 10
+    gNdsRendererBattleStaticTextureViolationCount 0
+    gNdsSCVSBattleSuddenDeathPrepareCount    1
+    gNdsRendererSceneTextureVramResetCount   10
+    gNdsSCVSBattlePlacementInitCount         10
+    sIFCommonBattlePlace                     1
+    gNdsRelocSceneReentryEvictCount          2
+    gNdsIFCommonNativeOamTextureDiscardCount 17
+    gNdsR2StagePrepareReuseCount             17288
+    gNdsR2StagePrepareBuildCount             20
+    gNdsR2StagePreflightElideCount           86440
+    sGCCommonsMaxNum                         4294967295
+    sGCCommonsActiveNum                      45
+    gNdsParticleBankLoadResult               1
+    gNdsParticleBankScriptsUnpacked          26
+    gNdsParticleBankScriptsRejected          0
+    gNdsParticleScriptStartCount             2172
+    gNdsParticleRejectCount                  0
+    gNdsParticleDrawSeamCount                82240
+    gNdsParticleStructsLive                  0
+    gNdsParticleStructsMax                   8
+    gNdsParticleGeneratorsLive               0
+    gNdsParticleGeneratorsMax                1
+    gNdsParticleTransformsMax                4
+    gNdsParticleRootSpawnCount               3039
+    gNdsParticleTextureUseMask[0]            998243335
+    gNdsParticleTextureUseMask[1]            9062
+    gNdsParticleDrawVisibleCount             152132
+    gNdsParticleDrawVisibleMax               25
+    gNdsParticleQuadEmitCount                151824
+    gNdsParticleQuadEmitMax                  25
+    gNdsParticleQuadMissCount                81
+    gNdsParticleQuadMissMask[0]              268435456
+    gNdsParticleQuadMissMask[1]              0
+    gNdsParticleQuadMissFrameMask            1048575
+    gNdsParticleQuadStrideCount              21503
+    gNdsParticleBankEFCommonID               1
+    gNdsParticleInitAllCount                 18
+    gNdsParticleBankRegisterCount            28
+    gNdsRendererParticleAtlasPrepareCount    10
+    gNdsRendererParticleAtlasFailCount       0
+    gNdsRendererParticleAtlasBytes           33024
+    gNdsParticleRejectRingCount              0
+    gNdsParticleRejectRingScripts[0]         0
+    gNdsParticleRejectRingBanks[0]           0
+    gNdsParticleRejectRingReasons[0]         0
+    gNdsParticleRejectRingCounts[0]          0
+    gNdsParticleRejectRingScripts[1]         0
+    gNdsParticleRejectRingBanks[1]           0
+    gNdsParticleRejectRingReasons[1]         0
+    gNdsParticleRejectRingCounts[1]          0
+    gNdsParticleRejectRingScripts[2]         0
+    gNdsParticleRejectRingBanks[2]           0
+    gNdsParticleRejectRingReasons[2]         0
+    gNdsParticleRejectRingCounts[2]          0
+    gNdsParticleRejectRingScripts[3]         0
+    gNdsParticleRejectRingBanks[3]           0
+    gNdsParticleRejectRingReasons[3]         0
+    gNdsParticleRejectRingCounts[3]          0
+    gNdsParticleRejectRingScripts[4]         0
+    gNdsParticleRejectRingBanks[4]           0
+    gNdsParticleRejectRingReasons[4]         0
+    gNdsParticleRejectRingCounts[4]          0
+    gNdsParticleRejectRingScripts[5]         0
+    gNdsParticleRejectRingBanks[5]           0
+    gNdsParticleRejectRingReasons[5]         0
+    gNdsParticleRejectRingCounts[5]          0
+    gNdsParticleBankPupupuID                 0
+    gNdsParticlePupupuScriptsPacked          5
+    gNdsRendererTask36ReplayArenaStaleCount  0
+    gNdsRendererProfileTextureRejectReasonMask 0
+    gNdsFighterProjectileProofSpawnCallCount 74
+    gNdsFighterProjectileProofSpawnSuccessCount 74
+    gNdsFighterProjectileProofWeaponCountMax 2
+    gNdsFighterProjectileProofSpawnFailGObjCount 0
+    gNdsFighterProjectileProofSpawnFailPoolCount 0
+    gNdsFighterProjectileProofSpawnFailGObjMax 0
+    gNdsFighterProjectileProofSpawnFailGObjActive 0
+    gNdsFighterProjectileProofSpawnFailHeapFree 0
+    gNdsWeaponStructBytes                    704
+    gNdsWeaponPoolEntries                    3
+    gNdsTaskmanGeneralHeapFreeMin            69872
+    gNdsGCDrawsActiveMax                     130
+    gNdsEffectPoolDepth                      12
+    gNdsEffectPoolFreeMin                    4
+    gNdsEFDescResolveCount                   50
+    gNdsEFDescDisabledCount                  1
+    gNdsEFDescUnknownFileCount               26
+    gNdsEFDescEffectsSpan[0]                 52736
+    gNdsEFDescEffectsSpan[1]                 28352
+    gNdsEFDescEffectsSpan[2]                 13616
+    gNdsKOBurstAttemptCount                  8
+    gNdsKOBurstCompleteCount                 8
+    gNdsKOBurstDropMask                      0
+    gNdsStarKOSparkleCount                   2
+    gNdsStarKOSparkleLastX                   519
+    gNdsStarKOSparkleLastY                   2400
+    gNdsStarKOSparkleLastZ                   4294952297
+    gNdsAudioFgmPrematureRetireCount         0
+    gNdsAudioFgmPrematureRetireLastID        0
+    gNdsAudioFgmPoolExhaustCount             0
+    gNdsAudioFgmGenerationMismatchCount      0
+    sGCDrawsActiveNum                        119
+    gNdsFtPublicActorMakeCount               10
+    gNdsFtPublicCommonCheckCount             257
+    gNdsAudioFgmLoaded                       1
+    gNdsAudioFgmResult                       1179077937
+    gNdsAudioFgmOpenFailCount                0
+    gNdsAudioFgmReadFailCount                6
+    gNdsAudioFgmFormatFailCount              0
+    gNdsAudioFgmResidentBytes                207632
+    gNdsAudioFgmIncludedLookupFailCount      0
+    gNdsAudioFgmSupportedCount               88
+    gNdsAudioFgmPlayCalls                    1761
+    gNdsAudioFgmSupportedPlayCount           1752
+    gNdsAudioFgmUnsupportedCallCount         3
+    gNdsAudioFgmPlayFailCount                6
+    gNdsAudioFgmMaxActiveHandles             7
+    gNdsAudioFgmPoolExhaustCount             0
+    gNdsAudioFgmDurationStopCount            1600
+    gNdsAudioFgmPrematureRetireCount         0
+    gNdsAudioFgmPrematureRetireLastID        0
+    gNdsRelocHeapDeclineCount                0
+    gNdsObjmanPanicCount                     0
+    gNdsObjmanPanicMask                      0
+    gNdsObjAnimRunawayCount                  0
+    gNdsObjAnimRunawayMask                   0
+    gNdsObjAnimRunawayScript                 0
+    gNdsObjAnimRunawayOpcode                 0
+    gNdsRelocResolveOffsetCount              0
+    gNdsRelocResolveMisalignCount            0
+    gNdsRelocResolveMisalignValue            0
+    gNdsAudioFgmReleaseRampCount             4803
+    gNdsAudioFgmGenerationMismatchCount      0
+    gNdsAudioFgmStaleStopCount               0
+    gNdsAudioFgmStopAllCalls                 26
+    gNdsAudioFgmMissRingCount                2
+    gNdsAudioFgmMissRingIDs[0]               17
+    gNdsAudioFgmMissRingCounts[0]            2
+    gNdsAudioFgmMissRingIDs[1]               441
+    gNdsAudioFgmMissRingCounts[1]            1
+    gNdsAudioFgmMissRingIDs[2]               0
+    gNdsAudioFgmMissRingCounts[2]            0
+    gNdsAudioFgmMissRingIDs[3]               0
+    gNdsAudioFgmMissRingCounts[3]            0
+    gNdsAudioFgmMissRingIDs[4]               0
+    gNdsAudioFgmMissRingCounts[4]            0
+    gNdsAudioFgmMissRingIDs[5]               0
+    gNdsAudioFgmMissRingCounts[5]            0
+    gNdsAudioFgmMissRingIDs[6]               0
+    gNdsAudioFgmMissRingCounts[6]            0
+    gNdsAudioFgmMissRingIDs[7]               0
+    gNdsAudioFgmMissRingCounts[7]            0
+    gNdsSObjLayerMemoSkipCount               3799
+    gNdsSObjLayerMemoRedrawCount             50
+    gNdsSObjLayerMemoOverflowCount           0
+    gNdsVSResultsPresentIntervalBucket[2]    2398
+    gNdsVSResultsPresentIntervalBucket[3]    10
+    gNdsVSResultsPresentIntervalBucket[4]    24
+    gNdsVSResultsPresentIntervalBucket[5]    8
+    gNdsVSResultsPresentIntervalBucket[6]    16
+    gNdsVSResultsPresentIntervalBucket[7]    0
+    gNdsVSResultsPresentIntervalBucket[8]    0
+    gNdsVSResultsPresentIntervalBucket[9]    0
+    gNdsVSResultsPresentIntervalBucket[10]   0
+    gNdsVSResultsPresentIntervalBucket[15]   7
+    gNdsVSResultsPresentIntervalMax          5806
+    gNdsVSResultsPresentIntervalSamples      4349
+    gNdsSCVSBattleLifecycleArenaAdapterCount 10
+    gNdsSCVSBattleOriginalGObjCount          46
+    gNdsTaskmanMallocCount                   9836
+    gNdsTickHudFighterTicks                  0
+    gNdsTickHudStageTicks                    0
+    gNdsTickHudSourceTicks                   0
+    gNdsTickHudForegroundTicks               0
+    gNdsTickHudBackgroundTicks               0
+    gNdsTickHudAudioTicks                    0
+    gNdsTickHudFlushTicks                    0
+    gNdsTickHudVBlankWaitTicks               0
+    gNdsControllerPollCount                  56373
+    sSYControllerWaitUpdate                  0
+    gNdsGcRunAllEntryTapMask                 4096
+    gNdsGcRunAllExitTapMask                  4096
+    gNdsGcRunAllTapAliveCount                8
+    gNdsGcRunAllTapLostCount                 0
+    sMNVSResultsTotalTimeTics                552
+    sMNVSResultsAllowExitWait                410
+    gNdsFighterProcessLoopControllerBridgeCount 0
+    gNdsFighterProcessLoopP0InputApplyCount  0
+    gNdsFighterSchedulerLoopP0InputApplyCount 0
+    gNdsR2TexProofFastCount                  172611
+    gNdsR2TexProofSweepCount                 349
+    gNdsR2TexProofSweepFailCount             0
+    gNdsR2TextureEpochBumpCount              562
+    sNdsAObjEvent32NormalizedCount           350
+    gNdsAObjEvent32NormalizeScriptCount      1697
+    gNdsAObjEvent32NormalizeReuseCount       17429
+    gNdsAObjEvent32NormalizeFailCount        0
+    gNdsBattlePlayablePacingPresentIntervalBucket[2] 477
+    gNdsBattlePlayablePacingPresentIntervalBucket[3] 65
+    gNdsBattlePlayablePacingPresentIntervalBucket[4] 2
+    gNdsBattlePlayablePacingPresentIntervalBucket[5] 11
+    gNdsBattlePlayablePacingPresentIntervalMax 25
+    gNdsBattlePlayablePacingCadenceViolationCount 0
+    gNdsBattlePlayablePacingVBlanks          1281
+  match timer confirmed in-guest: 1 minute(s)
+    general heap free bytes                  72856 (end-of-run scene, not battle)
+  => 8 results-scene start(s), i.e. 8 completed match(es)
+  battle completed and Results is up. A passive soak CANNOT reach match 9: Results exits on START only.
+final frame saved to D:\Stuff\DevFolder\Smash64DS_Port\artifacts\verification\freeze-soak\2026-08-15_061639-NO-FREEZE.png
