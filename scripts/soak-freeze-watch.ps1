@@ -645,6 +645,19 @@ try {
             'gNdsR2AnimCacheFills',
             'gNdsR2AnimCacheHits',
             'gNdsR2AnimCacheRejects',
+            # Slice 1 phase 5. State must read 1 (READY) -- 2/3/4 mean the linked
+            # blob failed its magic/version/extent check, which is a build
+            # mismatch, not a runtime fault. Hits are the acquisitions the
+            # resident pack served; Misses are the fighter-animation acquisitions
+            # that still fell through to the generic loader, and that is the
+            # NEGATIVE CONTROL: while only one fighter is resident, Misses MUST
+            # stay non-zero, and when both are resident it is the K0 after-GO
+            # zero-I/O assertion's own counter.
+            'gNdsBattlePackState',
+            'gNdsBattlePackClips',
+            'gNdsBattlePackBytes',
+            'gNdsBattlePackHits',
+            'gNdsBattlePackMisses',
             # Overflows alone CANNOT say why the cache stopped absorbing, and on
             # 2026-08-02 that cost a wrong reading: Overflows 126 beside
             # UsedBytes 3728 was read as "the 92,160-byte arena filled", which

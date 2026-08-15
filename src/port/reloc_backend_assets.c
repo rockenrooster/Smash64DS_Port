@@ -13,6 +13,7 @@
  * and are reported separately. */
 #include "nds_scene_harness_config.h"
 
+#include <nds/nds_battlepack_anim.h>
 #include <nds/nds_ifcommon_oam.h>
 #include <nds/nds_reloc_assets.h>
 #include <ft/fighter.h>
@@ -2792,8 +2793,20 @@ static s32 ndsRelocFindKnownFileContaining(const void *ptr, size_t size,
                                            const void **out_base,
                                            size_t *out_size)
 {
-    NDSRelocLoadedFile *loaded = ndsRelocFindLoadedFileContaining(ptr, size);
+    NDSRelocLoadedFile *loaded;
 
+    /* The pack first, and it is O(1): a resident clip is never registered as a
+     * loaded file, so without this the resolver would fall through to the
+     * status buffers, find the clip's asset id mapped to the pack pointer, and
+     * rebase slot words against a data_size taken from the FILE's header rather
+     * than the blob's extent. Answering here is both faster and the only
+     * correct bound. */
+    if (ndsBattlePackContains(ptr, size, out_base, out_size) != FALSE)
+    {
+        return TRUE;
+    }
+
+    loaded = ndsRelocFindLoadedFileContaining(ptr, size);
     if (loaded != NULL)
     {
         if (out_base != NULL)
@@ -3075,9 +3088,27 @@ static s32 ndsRelocIsFighterAObj32Asset(u32 asset_id)
 
 s32 ndsRelocPointerIsFighterAObj16(const void *ptr)
 {
-    NDSRelocLoadedFile *loaded =
-        ndsRelocFindLoadedFileContaining(ptr, sizeof(u16));
+    NDSRelocLoadedFile *loaded;
 
+    /* THE ADMISSION GATE, and the reason a resident clip has to be named here.
+     *
+     * `gcAddDObjAnimJoint` (`battleship_sys_objanim.c:1710`) admits a script
+     * only if it is NULL, or this says AObj16, or `ndsAObjEvent32NormalizeScript`
+     * succeeds on it. A pack clip is deliberately NOT registered as a loaded
+     * file -- that registration is one of the things slice 1 phase 5 deletes --
+     * so without this branch every packed script would fall through to the
+     * AObjEvent32 normalizer, which would either refuse it (a joint silently
+     * loses its animation) or write through a `const` pointer.
+     *
+     * The pack contains AObj16 fighter scripts and nothing else: the generator
+     * routes the four AObjEvent32 ids (0x279 0x27a 0x309 0x30a) out by name,
+     * never silently. */
+    if (ndsBattlePackContains(ptr, sizeof(u16), NULL, NULL) != FALSE)
+    {
+        return TRUE;
+    }
+
+    loaded = ndsRelocFindLoadedFileContaining(ptr, sizeof(u16));
     return ((loaded != NULL) &&
             (ndsRelocIsFighterAObj16Asset(loaded->asset_id) != FALSE)) ?
                TRUE : FALSE;
@@ -7128,12 +7159,37 @@ static void *ndsRelocForceLoadFighterAObj16File(u32 token, u32 asset_id,
     NDSRelocAssetHeader header;
     NDSRelocLoadedFile *loaded;
     size_t asset_size;
+    void *packed = ndsBattlePackFindFigatree(asset_id);
 
     if ((heap == NULL) ||
         (ndsRelocIsMarioFoxAnimID(asset_id) == FALSE))
     {
         return NULL;
     }
+
+    /* SLICE 1 PHASE 5 -- the acquisition path, deleted.
+     *
+     * Everything below this block exists to reconstruct an N64 loaded-file
+     * image at `heap` on every action change. For a resident clip none of it
+     * is needed: the bytes are already in the parser's own format, at a fixed
+     * address, and `ftmain.c:4623` now takes this function's return value
+     * (decomp patch, 2026-08-15) instead of hardcoding `figatree_heap`.
+     *
+     * The three status writes stay. They are a table store each, they are what
+     * `lbRelocGetStatusBufferFile` answers from, and pointing them at the pack
+     * keeps every existing reader correct. What goes is the memcpy, the alias
+     * strip, the loaded-file registration and the whole finalize chain --
+     * internal fixups, AObj16 normalization, attribute/weapon normalization,
+     * external fixups and the sprite pass. */
+    if (packed != NULL)
+    {
+        ndsRelocSetStatusBufferFile(token, packed);
+        ndsRelocSetStatusBufferFile(asset_id, packed);
+        ndsRelocSetForceStatusBufferFile(token, packed);
+        gNdsBattlePackHits++;
+        return packed;
+    }
+    gNdsBattlePackMisses++;
 
     /* Existence check without I/O. This used to be ndsRelocAssetAllocSize,
      * which answers it by opening the file and parsing the header -- a full

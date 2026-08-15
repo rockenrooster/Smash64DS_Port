@@ -152,8 +152,45 @@ def walk(data, size, off, limit=8192):
     return "no terminator in %d commands" % limit
 
 
-def decode_script(data, size, off, limit=8192):
+def encode_native(source):
+    """Pipeline 4c, verbatim from `ndsRelocAObj16EncodeForNativeBitfields`
+    (`reloc_backend_assets.c:3313-3320`): disk order is `opcode:5, flags:10,
+    toggle:1` MSB-first, the native C bitfield allocates from the bottom."""
+    return ((source >> 11) & 0x1F) | (((source >> 1) & 0x3FF) << 5) | \
+           ((source & 1) << 15)
+
+
+def renormalize_script(data, off, word_count):
+    """Pipeline 4c over one script, verbatim from `ndsRelocNormalizeAObj16Script`
+    (`:3378-3402`) -- a LINEAR walk by the per-opcode step, rewriting every
+    COMMAND word and never a payload or target word, terminating at `End` or on
+    an overrunning step. It does not follow jumps, and reproducing that exactly
+    is the difference between a pack the ROM's parser can read and one it
+    cannot."""
+    index, guard = 0, word_count
+    while (index < word_count) and (guard != 0):
+        source = struct.unpack_from("<H", data, off + index * 2)[0]
+        opcode = (source >> 11) & 0x1F
+        flags = (source >> 1) & 0x3FF
+        toggle = source & 1
+        step = command_words(opcode, flags, toggle)
+        struct.pack_into("<H", data, off + index * 2, encode_native(source))
+        if opcode == OP_END:
+            return
+        if step == 0 or (index + step) > word_count:
+            return
+        index += step
+        guard -= 1
+
+
+def decode_script(data, size, off, limit=8192, native=False):
     """Decode one script into structured commands.
+
+    `native=True` reads a stream that has already had pipeline 4c applied --
+    the form the ROM's parser consumes, and therefore the form a resident pack
+    must store. Decoding the pack in DISK order would make an equivalence run
+    self-consistent and still wrong, which is exactly what happened on
+    2026-08-15: the ROM took a data abort on opcode 26.
 
     Yields dicts with the fields the semantic model needs, which is strictly
     more than `walk` needs: the payload word when `toggle` is set, and the
@@ -174,7 +211,10 @@ def decode_script(data, size, off, limit=8192):
             return out
         seen.add(pc)
         w = struct.unpack_from("<H", data, pc)[0]
-        op, flags, toggle = (w >> 11) & 0x1F, (w >> 1) & 0x3FF, w & 1
+        if native:
+            op, flags, toggle = w & 0x1F, (w >> 5) & 0x3FF, (w >> 15) & 1
+        else:
+            op, flags, toggle = (w >> 11) & 0x1F, (w >> 1) & 0x3FF, w & 1
         if op > OPCODE_MAX:
             raise ValueError("undefined opcode %d at 0x%x" % (op, pc))
 

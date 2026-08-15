@@ -290,6 +290,27 @@ NDS_R2_ANIM_CACHE ?= 0
 # see identical bytes. Requires NDS_R2_ANIM_CACHE. Declines are per asset and
 # fall back to today's path; see the block comment in reloc_backend_assets.c.
 NDS_R2_AOBJ16_PREBAKE ?= 0
+# Native Battle Kernel slice 1 phase 5. The resident figatree pack: one fighter's
+# clips linked into .rodata in the parser's own byte order, with per-slot tables
+# of blob-relative offsets, so an action change resolves to a const pointer
+# instead of rebuilding an N64 loaded-file image at the fighter's heap. This is
+# NOT a bigger cache -- a cache HIT still memcpy'd the payload, re-registered the
+# file, re-ran finalize/fixups/AObj16 normalization and stripped alias nodes, and
+# that sequence sat on 62 of the 80 frames that set P95 against 174 of the 1,520
+# body frames (6.8x).
+#
+# DEFAULT 0, AND IT MUST STAY 0 UNTIL THE BLOB MOVES INTO THE TASKMAN ARENA.
+# At 1 the blob is `.incbin`'d into the ARM9 image, and 288,992 B of static
+# growth was MEASURED to push `gNdsTaskmanArenaChosenSize` from 0x150000 to
+# 0x140000 with 16 alloc failures -- the arena is calloc'd from the same libnds
+# heap `fake_heap_start` bounds, so `.rodata` and the arena come out of the same
+# bytes. Against the match's measured 1,304,068 B of taskman use that projects a
+# general-heap low-water of ~6,652 against the mandated 32,768 floor. The boot
+# ladder does NOT catch this: that arm had 66,784 B of proven headroom.
+# The fit is one fighter resident IN THE ARENA, replacing the 262,144 B raw-file
+# anim cache (Mario 271,728, Fox 287,904), which costs no static image at all.
+# `artifacts/performance/2026-08-15_battlepack-pool/BATTLEPACK_POOL.md`.
+NDS_R2_BATTLEPACK ?= 0
 # Cycle 109. Builds BOTH arms of the two animation cuts into one binary, selected
 # at runtime by gNdsR2AnimCutRoute, so they can be priced without a second link.
 # This is standing rule 7's route, and after the determinism finding it is the
@@ -2205,6 +2226,14 @@ NDS_FTANIM_DENSE_SOURCES := \
 	$(wildcard $(BATTLESHIP_O2R)/reloc_animations/FTMarioAnim*) \
 	$(wildcard $(BATTLESHIP_O2R)/reloc_animations/FTFoxAnim*)
 
+# Slice 1 phase 5's resident figatree pack. One fighter per blob, because the
+# .rodata pool and the taskman arena are separate pools and neither holds both
+# (287,904 Fox + 271,728 Mario). Fox is the .rodata resident: it is the larger
+# blob and it is the CPU whose action changes dominate the Boundary arm.
+# `--items-off` drops the 38 clips proven unreachable from the linked battle ELF.
+NDS_BATTLEPACK_DIR := $(PROJECT_ROOT)/assets/animation
+NDS_BATTLEPACK_BLOB := $(NDS_BATTLEPACK_DIR)/battlepack_fox.bin
+
 NDS_PARTICLE_TEXTURE_ASSET := $(PROJECT_ROOT)/assets/particles/efcommon_particle_textures.ds.bin
 NDS_WHISPY_NATIVE_ASSET := $(PROJECT_ROOT)/assets/particles/grpupupu_whispy_native.ds.bin
 # The draw path's own payload: the admitted textures as RGB555+A1, which is the
@@ -2300,7 +2329,7 @@ export DEPSDIR := $(CURDIR)/$(BUILD)
 NDS_PRIVATE_CHECK_CFILES :=
 NDS_MPPROCESS_SOURCE_CFILES := battleship_mpprocess_edge_support.c \
 	battleship_mpprocess.c
-CFILES := main.c nds_platform.c nds_ifcommon_oam.c nds_task39_effect_census.c nds_reloc_assets.c nds_audio_assets.c nds_audio_bgm.c nds_audio_fgm.c nds_renderer.c battle_playable_static_textures.c port_probe.c n64_stubs.c coroutine.c \
+CFILES := main.c nds_platform.c nds_ifcommon_oam.c nds_task39_effect_census.c nds_reloc_assets.c nds_audio_assets.c nds_audio_bgm.c nds_audio_fgm.c nds_renderer.c battle_playable_static_textures.c nds_battlepack_anim.c port_probe.c n64_stubs.c coroutine.c \
 	libultra_os.c os_selftest.c boot_stubs.c battleship_sys_main.c \
 	scheduler_backend.c controller_backend.c battleship_sys_scheduler.c \
 	battleship_sys_controller.c battleship_sys_maindevice.c \
@@ -3162,6 +3191,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_R2_SPAN_LEAN_TIMING $(NDS_R2_SPAN_LEAN_TIMING)'; \
 		echo '#define NDS_R2_DELTA_PATH_ITCM $(NDS_R2_DELTA_PATH_ITCM)'; \
 		echo '#define NDS_R2_ANIM_CACHE $(NDS_R2_ANIM_CACHE)'; \
+		echo '#define NDS_R2_BATTLEPACK $(NDS_R2_BATTLEPACK)'; \
 		echo '#define NDS_R2_AOBJ16_PREBAKE $(NDS_R2_AOBJ16_PREBAKE)'; \
 		echo '#define NDS_R2_ANIM_CUT_ROUTE $(NDS_R2_ANIM_CUT_ROUTE)'; \
 		echo '#define NDS_R2_STRIP_ROUTE $(NDS_R2_STRIP_ROUTE)'; \
@@ -3392,6 +3422,21 @@ $(NITROFS_DIR)/animation/ftanim_dense_bank.bin: $(NDS_FTANIM_DENSE_ASSET)
 	@mkdir -p $(dir $@)
 	@cp $< $@
 
+# The resident pack. `--blob-out` runs the slot-level equivalence check before it
+# writes: every DObj slot of every clip is decoded OUT OF THE EMITTED BLOB, at
+# the blob's own offsets, and compared command-for-command against the same slot
+# decoded from the o2r file through the ROM's own pipeline. It is not optional
+# for the same reason the dense bank's --verify is not: a wrong offset in one
+# slot of one clip is a garbage script handed to the parser, and the parser's
+# failure mode on garbage is a freeze, not a diagnostic.
+$(NDS_BATTLEPACK_BLOB): \
+		$(PROJECT_ROOT)/scripts/generate_battlepack_anim.py \
+		$(PROJECT_ROOT)/scripts/ftanim_reloc_probe.py \
+		$(NDS_FTANIM_DENSE_SOURCES)
+	@mkdir -p $(dir $@)
+	python "$(PROJECT_ROOT)/scripts/generate_battlepack_anim.py" \
+		--fighter fox --items-off --blob-out "$@"
+
 $(NITROFS_DIR)/particles/efcommon_particle_textures.ds.bin: $(NDS_PARTICLE_TEXTURE_ASSET)
 	@mkdir -p $(dir $@)
 	@cp $< $@
@@ -3532,6 +3577,15 @@ nds_r2_collision_fixed.o: CFLAGS += -marm
 scene_backend.o: $(SCENE_BACKEND_SLICES) $(NDS_SCENE_HARNESS_CONFIG)
 scene_harness.o battleship_grinishie_scale.o: $(NDS_SCENE_HARNESS_CONFIG)
 nds_ifcommon_oam.o: $(NDS_TASK39_HIT_SPARKS_INC)
+
+# The blob is `.incbin`'d, so the object must rebuild when the pack changes and
+# the assembler must be able to find it. `-Wa,-I` rather than an absolute path
+# inside the C string: the inner make runs from $(BUILD), and a Windows path in
+# a C string literal is one backslash away from a silent miscompile.
+ifeq ($(NDS_R2_BATTLEPACK),1)
+nds_battlepack_anim.o: $(NDS_BATTLEPACK_BLOB)
+nds_battlepack_anim.o: CFLAGS += -Wa,-I$(NDS_BATTLEPACK_DIR)
+endif
 
 $(NITROFS_DIR)/reloc/%: $(BATTLESHIP_O2R)/%
 	@mkdir -p $(dir $@)

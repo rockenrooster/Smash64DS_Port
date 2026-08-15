@@ -1,0 +1,116 @@
+rom=D:\Stuff\DevFolder\Smash64DS_Port\builds\build-battle-playable-proof-hwtri-harness\smash64ds-battle-playable-proof-hwtri.nds
+build=build-battle-playable-proof-hwtri-harness
+verdict=FROZEN-FROM-START-ABORT
+diagnosis=the picture never changed once across 8 samples yet holds 5 distinct colours, so the ROM drew a frame and then stopped
+screenshot=D:\Stuff\DevFolder\Smash64DS_Port\artifacts\verification\freeze-soak\2026-08-15_011536-frozen.png
+
+
+elapsedSeconds frameHash        identicalRun
+-------------- ---------        ------------
+            10 B510319A9D463C2B            0
+            20 B510319A9D463C2B            1
+            30 B510319A9D463C2B            2
+            40 B510319A9D463C2B            3
+            50 B510319A9D463C2B            4
+            60 B510319A9D463C2B            5
+            70 B510319A9D463C2B            6
+            80 B510319A9D463C2B            7
+
+
+__excpt_entry () at /home/davem/projects/devkitpro/pacman-packages/calico/src/calico-1.2.0/source/nds/arm9/excpt_handler.32.s:89
+FREEZE-PC=0x1fff38c
+=> 0x1fff38c <__excpt_entry+40>:	b	0x1fff38c <__excpt_entry+40>
+#0  __excpt_entry () at /home/davem/projects/devkitpro/pacman-packages/calico/src/calico-1.2.0/source/nds/arm9/excpt_handler.32.s:89
+#1  0x4000003e in ?? ()
+Backtrace stopped: previous frame identical to this frame (corrupt stack?)
+$1 = (GObj *) 0x0 <ndsR2AObjLiveCount>
+$2 = {id = 3934255823, link_next = 0xea7ffacf, link_prev = 0xea7ffacf, link_id = 207 '�', dl_link_id = 250 '�', frame_draw_last = 127 '\177', obj_kind = 234 '�', link_priority = 3934255823, func_run = 0xe1280174, gobjproc_head = 0xea7fface, {unk_0x1C = -517471876, unk_gobj_0x1C = 0xe128017c, gobjproc_tail = 0xe128017c}, dl_link_next = 0xe2200102, dl_link_prev = 0xea000000, dl_link_priority = 3793817858, proc_display = 0xe1b02080, camera_mask = 1239052860661969025, camera_tag = 300993602, buffer_mask = 16258043179515772999, gobjscripts = {{next_gobj = 0xe0723c23, id = -1065213949}, {next_gobj = 0xc0201001, id = -1071579136}, {next_gobj = 0xc0201001, id = -1302122496}, {next_gobj = 0xe3530019, id = -2127560930}, {next_gobj = 0xe3100102, id = -478149374}}, gobjscripts_num = -473955073, obj = 0x12600000, anim_frame = -2.67485051e+21, flags = 3816887554, func_anim = 0xe3c114ff, user_data = {s = 308350976, u = 308350976, p = 0x12611000}}
+$3 = (GObjProcess *) 0x0 <ndsR2AObjLiveCount>
+$4 = {link_next = 0xea7ffacf, link_prev = 0xea7ffacf, priority_next = 0xea7ffacf, priority_prev = 0xea7ffacf, priority = -360711473, kind = 116 't', is_paused = 1 '\001', parent_gobj = 0xea7fface, exec = {gobjthread = 0xe128017c, func = 0xe128017c}, func_id = 0xe2200102}
+r0             0x38000000          939524096
+r1             0x0                 0
+r2             0x12                18
+r3             0x38000000          939524096
+r4             0x22aaf2c           36351788
+r5             0x0                 0
+r6             0x1                 1
+r7             0x2                 2
+r8             0x0                 0
+r9             0x1                 1
+r10            0x2                 2
+r11            0x3f800000          1065353216
+r12            0x0                 0
+sp             0x2fffd8e           0x2fffd8e
+lr             0x1fff38c           0x1fff38c <__excpt_entry+40>
+pc             0x1fff38c           0x1fff38c <__excpt_entry+40>
+cpsr           0x90000097          -1879048041
+sp_usr         0x229d5d4           0x229d5d4
+lr_usr         0x3f800000          0x3f800000
+r8_fiq         0x0                 0
+r9_fiq         0x0                 0
+r10_fiq        0x0                 0
+r11_fiq        0x0                 0
+r12_fiq        0x0                 0
+sp_fiq         0x0                 0x0 <ndsR2AObjLiveCount>
+lr_fiq         0x0                 0x0 <ndsR2AObjLiveCount>
+sp_irq         0x2ff3f80           0x2ff3f80
+lr_irq         0x1fff3ec           0x1fff3ec <__arm_excpt_irq+88>
+sp_svc         0x2ff3fc0           0x2ff3fc0
+lr_svc         0x1fff2a0           0x1fff2a0 <armContextSave+40>
+sp_abt         0x2fffd8e           0x2fffd8e
+lr_abt         0x1fff38c           0x1fff38c <__excpt_entry+40>
+sp_und         0x0                 0x0 <ndsR2AObjLiveCount>
+lr_und         0x0                 0x0 <ndsR2AObjLiveCount>
+spsr_fiq       0x10                16
+spsr_irq       0x8000003f          -2147483585
+spsr_svc       0x200000df          536871135
+spsr_abt       0x90000097          -1879048041
+spsr_und       0x10                16
+REG_IME=00000001
+REG_IE=00070061
+REG_IF=00000021
+GXSTAT=06000000
+IPCSYNC=00004000
+IPCFIFOCNT=00008505
+COUNTERS=890,0,0,0
+ANIMARENA=1392,0
+TASKARENA=1310720,16
+MALLOCOVF=0,id=0,req=0,head=0,lr=00000000
+KOBURST=att=0,ok=0,drop=000,stage=0
+EFDESC=resolved=42,disabled=1,span=52736/28352/13616
+DLBUF0=start=0x22aeba8,len=16384,head=(nil),used=-36367272
+DLBUF1=start=0x22b2ba8,len=4096,head=(nil),used=-36383656
+DLBUF2=start=0x22b3ba8,len=0,head=(nil),used=-36387752
+DLBUF3=start=0x22b3ba8,len=0,head=(nil),used=-36387752
+DLTASK=0
+GENERALHEAP=start=0x22aa1d0,ptr=0x23df086,end=0x23ea1d0,free=45386
+COMMONSMAX=-1
+COMMONSACTIVE=27
+SPRITESACTIVE=1
+GFXHEAP=start=0x22c5ba8,ptr=0x22c5ba8,end=0x22d2ba8,used=0
+gNdsObjmanPanicCount=0
+gNdsObjmanPanicMask=0
+gNdsObjAnimRunawayCount=0
+gNdsObjAnimRunawayMask=0
+gNdsObjAnimRunawayScript=34458634
+gNdsObjAnimRunawayOpcode=26
+gNdsRelocResolveOffsetCount=17
+gNdsRelocResolveMisalignCount=0
+gNdsRelocResolveMisalignValue=0
+gNdsParticleBankLoadResult=1
+gNdsParticleBankScriptsUnpacked=26
+gNdsParticleBankScriptsRejected=0
+gNdsParticleScriptStartCount=0
+gNdsParticleRejectCount=0
+gNdsParticleStructsLive=0
+gNdsParticleStructsMax=0
+gNdsParticleDrawSeamCount=0
+gNdsRendererParticleAtlasPrepareCount=0
+gNdsRendererParticleAtlasFailCount=0
+gNdsRendererParticleAtlasBytes=0
+gNdsRendererBattleStaticTexturePrepareCount=0
+gNdsRendererBattleStaticTextureViolationCount=0
+gNdsRendererSceneTextureVramResetCount=0
+gNdsIFCommonNativeOamTextureDiscardCount=0
+[Inferior 1 (Remote target) detached]
+

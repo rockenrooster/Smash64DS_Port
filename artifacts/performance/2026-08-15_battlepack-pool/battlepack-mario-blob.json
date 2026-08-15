@@ -1,0 +1,765 @@
+{
+ "bank": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\decomp\\BattleShip-main\\BattleShip_o2r\\reloc_animations",
+ "clips": 122,
+ "skipped": [
+  [
+   "FTFoxAnim000",
+   "excluded (0x282)"
+  ],
+  [
+   "FTFoxAnim001",
+   "excluded (0x283)"
+  ],
+  [
+   "FTFoxAnim002",
+   "excluded (0x284)"
+  ],
+  [
+   "FTFoxAnim003",
+   "excluded (0x285)"
+  ],
+  [
+   "FTFoxAnim004",
+   "excluded (0x286)"
+  ],
+  [
+   "FTFoxAnim005",
+   "excluded (0x287)"
+  ],
+  [
+   "FTFoxAnim006",
+   "excluded (0x288)"
+  ],
+  [
+   "FTFoxAnim007",
+   "excluded (0x289)"
+  ],
+  [
+   "FTFoxAnim008",
+   "excluded (0x28a)"
+  ],
+  [
+   "FTFoxAnim009",
+   "excluded (0x28b)"
+  ],
+  [
+   "FTFoxAnim010",
+   "excluded (0x28c)"
+  ],
+  [
+   "FTFoxAnim011",
+   "excluded (0x28d)"
+  ],
+  [
+   "FTFoxAnim012",
+   "excluded (0x28e)"
+  ],
+  [
+   "FTFoxAnim013",
+   "excluded (0x28f)"
+  ],
+  [
+   "FTFoxAnim014",
+   "excluded (0x290)"
+  ],
+  [
+   "FTFoxAnim015",
+   "excluded (0x291)"
+  ],
+  [
+   "FTFoxAnim016",
+   "excluded (0x292)"
+  ],
+  [
+   "FTFoxAnim017",
+   "excluded (0x293)"
+  ],
+  [
+   "FTFoxAnim018",
+   "excluded (0x294)"
+  ],
+  [
+   "FTFoxAnim019",
+   "excluded (0x295)"
+  ],
+  [
+   "FTFoxAnim020",
+   "excluded (0x296)"
+  ],
+  [
+   "FTFoxAnim021",
+   "excluded (0x297)"
+  ],
+  [
+   "FTFoxAnim022",
+   "excluded (0x298)"
+  ],
+  [
+   "FTFoxAnim023",
+   "excluded (0x299)"
+  ],
+  [
+   "FTFoxAnim024",
+   "excluded (0x29a)"
+  ],
+  [
+   "FTFoxAnim025",
+   "excluded (0x29b)"
+  ],
+  [
+   "FTFoxAnim026",
+   "excluded (0x29c)"
+  ],
+  [
+   "FTFoxAnim027",
+   "excluded (0x29d)"
+  ],
+  [
+   "FTFoxAnim028",
+   "excluded (0x29e)"
+  ],
+  [
+   "FTFoxAnim029",
+   "excluded (0x29f)"
+  ],
+  [
+   "FTFoxAnim030",
+   "excluded (0x2a0)"
+  ],
+  [
+   "FTFoxAnim031",
+   "excluded (0x2a1)"
+  ],
+  [
+   "FTFoxAnim032",
+   "excluded (0x2a2)"
+  ],
+  [
+   "FTFoxAnim033",
+   "excluded (0x2a3)"
+  ],
+  [
+   "FTFoxAnim034",
+   "excluded (0x2a4)"
+  ],
+  [
+   "FTFoxAnim035",
+   "excluded (0x2a5)"
+  ],
+  [
+   "FTFoxAnim036",
+   "excluded (0x2a6)"
+  ],
+  [
+   "FTFoxAnim037",
+   "excluded (0x2a7)"
+  ],
+  [
+   "FTFoxAnim038",
+   "excluded (0x2a8)"
+  ],
+  [
+   "FTFoxAnim039",
+   "excluded (0x2a9)"
+  ],
+  [
+   "FTFoxAnim040",
+   "excluded (0x2aa)"
+  ],
+  [
+   "FTFoxAnim041",
+   "excluded (0x2ab)"
+  ],
+  [
+   "FTFoxAnim042",
+   "excluded (0x2ac)"
+  ],
+  [
+   "FTFoxAnim043",
+   "excluded (0x2ad)"
+  ],
+  [
+   "FTFoxAnim044",
+   "excluded (0x2ae)"
+  ],
+  [
+   "FTFoxAnim045",
+   "excluded (0x2af)"
+  ],
+  [
+   "FTFoxAnim046",
+   "excluded (0x2b0)"
+  ],
+  [
+   "FTFoxAnim047",
+   "excluded (0x2b1)"
+  ],
+  [
+   "FTFoxAnim048",
+   "excluded (0x2b2)"
+  ],
+  [
+   "FTFoxAnim049",
+   "excluded (0x2b3)"
+  ],
+  [
+   "FTFoxAnim050",
+   "excluded (0x2b4)"
+  ],
+  [
+   "FTFoxAnim051",
+   "excluded (0x2b5)"
+  ],
+  [
+   "FTFoxAnim052",
+   "excluded (0x2b6)"
+  ],
+  [
+   "FTFoxAnim053",
+   "excluded (0x2b7)"
+  ],
+  [
+   "FTFoxAnim054",
+   "excluded (0x2b8)"
+  ],
+  [
+   "FTFoxAnim055",
+   "excluded (0x2b9)"
+  ],
+  [
+   "FTFoxAnim056",
+   "excluded (0x2ba)"
+  ],
+  [
+   "FTFoxAnim057",
+   "excluded (0x2bb)"
+  ],
+  [
+   "FTFoxAnim058",
+   "excluded (0x2bc)"
+  ],
+  [
+   "FTFoxAnim059",
+   "excluded (0x2bd)"
+  ],
+  [
+   "FTFoxAnim060",
+   "excluded (0x2be)"
+  ],
+  [
+   "FTFoxAnim061",
+   "excluded (0x2bf)"
+  ],
+  [
+   "FTFoxAnim062",
+   "excluded (0x2c0)"
+  ],
+  [
+   "FTFoxAnim063",
+   "excluded (0x2c1)"
+  ],
+  [
+   "FTFoxAnim064",
+   "excluded (0x2c2)"
+  ],
+  [
+   "FTFoxAnim065",
+   "excluded (0x2c3)"
+  ],
+  [
+   "FTFoxAnim066",
+   "excluded (0x2c4)"
+  ],
+  [
+   "FTFoxAnim067",
+   "excluded (0x2c5)"
+  ],
+  [
+   "FTFoxAnim068",
+   "excluded (0x2c6)"
+  ],
+  [
+   "FTFoxAnim069",
+   "excluded (0x2c7)"
+  ],
+  [
+   "FTFoxAnim070",
+   "excluded (0x2c8)"
+  ],
+  [
+   "FTFoxAnim071",
+   "excluded (0x2c9)"
+  ],
+  [
+   "FTFoxAnim072",
+   "excluded (0x2ca)"
+  ],
+  [
+   "FTFoxAnim073",
+   "excluded (0x2cb)"
+  ],
+  [
+   "FTFoxAnim074",
+   "excluded (0x2cc)"
+  ],
+  [
+   "FTFoxAnim075",
+   "excluded (0x2cd)"
+  ],
+  [
+   "FTFoxAnim076",
+   "excluded (0x2ce)"
+  ],
+  [
+   "FTFoxAnim077",
+   "excluded (0x2cf)"
+  ],
+  [
+   "FTFoxAnim078",
+   "excluded (0x2d0)"
+  ],
+  [
+   "FTFoxAnim079",
+   "excluded (0x2d1)"
+  ],
+  [
+   "FTFoxAnim080",
+   "excluded (0x2d2)"
+  ],
+  [
+   "FTFoxAnim081",
+   "excluded (0x2d3)"
+  ],
+  [
+   "FTFoxAnim082",
+   "excluded (0x2d4)"
+  ],
+  [
+   "FTFoxAnim083",
+   "excluded (0x2d5)"
+  ],
+  [
+   "FTFoxAnim084",
+   "excluded (0x2d6)"
+  ],
+  [
+   "FTFoxAnim085",
+   "excluded (0x2d7)"
+  ],
+  [
+   "FTFoxAnim086",
+   "excluded (0x2d8)"
+  ],
+  [
+   "FTFoxAnim087",
+   "excluded (0x2d9)"
+  ],
+  [
+   "FTFoxAnim088",
+   "excluded (0x2da)"
+  ],
+  [
+   "FTFoxAnim089",
+   "excluded (0x2db)"
+  ],
+  [
+   "FTFoxAnim090",
+   "excluded (0x2dc)"
+  ],
+  [
+   "FTFoxAnim091",
+   "excluded (0x2dd)"
+  ],
+  [
+   "FTFoxAnim092",
+   "excluded (0x2de)"
+  ],
+  [
+   "FTFoxAnim093",
+   "excluded (0x2df)"
+  ],
+  [
+   "FTFoxAnim094",
+   "excluded (0x2e0)"
+  ],
+  [
+   "FTFoxAnim095",
+   "excluded (0x2e1)"
+  ],
+  [
+   "FTFoxAnim096",
+   "excluded (0x2e2)"
+  ],
+  [
+   "FTFoxAnim097",
+   "excluded (0x2e3)"
+  ],
+  [
+   "FTFoxAnim098",
+   "excluded (0x2e4)"
+  ],
+  [
+   "FTFoxAnim099",
+   "excluded (0x2e5)"
+  ],
+  [
+   "FTFoxAnim100",
+   "excluded (0x2e6)"
+  ],
+  [
+   "FTFoxAnim101",
+   "excluded (0x2e7)"
+  ],
+  [
+   "FTFoxAnim102",
+   "excluded (0x2e8)"
+  ],
+  [
+   "FTFoxAnim103",
+   "excluded (0x2e9)"
+  ],
+  [
+   "FTFoxAnim104",
+   "excluded (0x2ea)"
+  ],
+  [
+   "FTFoxAnim105",
+   "excluded (0x2eb)"
+  ],
+  [
+   "FTFoxAnim106",
+   "excluded (0x2ec)"
+  ],
+  [
+   "FTFoxAnim107",
+   "excluded (0x2ed)"
+  ],
+  [
+   "FTFoxAnim108",
+   "excluded (0x2ee)"
+  ],
+  [
+   "FTFoxAnim109",
+   "excluded (0x2ef)"
+  ],
+  [
+   "FTFoxAnim110",
+   "excluded (0x2f0)"
+  ],
+  [
+   "FTFoxAnim111",
+   "excluded (0x2f1)"
+  ],
+  [
+   "FTFoxAnim112",
+   "excluded (0x2f2)"
+  ],
+  [
+   "FTFoxAnim113",
+   "excluded (0x2f3)"
+  ],
+  [
+   "FTFoxAnim114",
+   "excluded (0x2f4)"
+  ],
+  [
+   "FTFoxAnim115",
+   "excluded (0x2f5)"
+  ],
+  [
+   "FTFoxAnim116",
+   "excluded (0x2f6)"
+  ],
+  [
+   "FTFoxAnim117",
+   "excluded (0x2f7)"
+  ],
+  [
+   "FTFoxAnim118",
+   "excluded (0x2f8)"
+  ],
+  [
+   "FTFoxAnim119",
+   "excluded (0x2f9)"
+  ],
+  [
+   "FTFoxAnim120",
+   "excluded (0x2fa)"
+  ],
+  [
+   "FTFoxAnim121",
+   "excluded (0x2fb)"
+  ],
+  [
+   "FTFoxAnim122",
+   "excluded (0x2fc)"
+  ],
+  [
+   "FTFoxAnim123",
+   "excluded (0x2fd)"
+  ],
+  [
+   "FTFoxAnim124",
+   "excluded (0x2fe)"
+  ],
+  [
+   "FTFoxAnim125",
+   "excluded (0x2ff)"
+  ],
+  [
+   "FTFoxAnim126",
+   "excluded (0x300)"
+  ],
+  [
+   "FTFoxAnim127",
+   "excluded (0x301)"
+  ],
+  [
+   "FTFoxAnim128",
+   "excluded (0x302)"
+  ],
+  [
+   "FTFoxAnim129",
+   "excluded (0x303)"
+  ],
+  [
+   "FTFoxAnim130",
+   "excluded (0x304)"
+  ],
+  [
+   "FTFoxAnim131",
+   "excluded (0x305)"
+  ],
+  [
+   "FTFoxAnim132",
+   "excluded (0x306)"
+  ],
+  [
+   "FTFoxAnim133",
+   "excluded (0x307)"
+  ],
+  [
+   "FTFoxAnim134",
+   "excluded (0x308)"
+  ],
+  [
+   "FTFoxAnim135",
+   "AObjEvent32 (0x309)"
+  ],
+  [
+   "FTFoxAnim136",
+   "AObjEvent32 (0x30a)"
+  ],
+  [
+   "FTFoxAnim137",
+   "excluded (0x30b)"
+  ],
+  [
+   "FTFoxAnim138",
+   "excluded (0x30c)"
+  ],
+  [
+   "FTFoxAnim139",
+   "excluded (0x30d)"
+  ],
+  [
+   "FTFoxAnim140",
+   "excluded (0x30e)"
+  ],
+  [
+   "FTFoxAnim141",
+   "excluded (0x30f)"
+  ],
+  [
+   "FTFoxAnim142",
+   "excluded (0x310)"
+  ],
+  [
+   "FTFoxAnim143",
+   "excluded (0x311)"
+  ],
+  [
+   "FTFoxAnim144",
+   "excluded (0x312)"
+  ],
+  [
+   "FTFoxAnim145",
+   "excluded (0x313)"
+  ],
+  [
+   "FTFoxAnim146",
+   "excluded (0x314)"
+  ],
+  [
+   "FTFoxAnim147",
+   "excluded (0x315)"
+  ],
+  [
+   "FTFoxAnim148",
+   "excluded (0x316)"
+  ],
+  [
+   "FTFoxAnim149",
+   "excluded (0x317)"
+  ],
+  [
+   "FTFoxAnim150",
+   "excluded (0x318)"
+  ],
+  [
+   "FTFoxAnim151",
+   "excluded (0x319)"
+  ],
+  [
+   "FTFoxAnim152",
+   "excluded (0x31a)"
+  ],
+  [
+   "FTFoxAnim153",
+   "excluded (0x31b)"
+  ],
+  [
+   "FTFoxAnim154",
+   "excluded (0x31c)"
+  ],
+  [
+   "FTFoxAnim155",
+   "excluded (0x31d)"
+  ],
+  [
+   "FTFoxAnim156",
+   "excluded (0x31e)"
+  ],
+  [
+   "FTFoxAnim157",
+   "excluded (0x31f)"
+  ],
+  [
+   "FTMarioAnim089",
+   "excluded (0x24c)"
+  ],
+  [
+   "FTMarioAnim090",
+   "excluded (0x24d)"
+  ],
+  [
+   "FTMarioAnim091",
+   "excluded (0x24e)"
+  ],
+  [
+   "FTMarioAnim092",
+   "excluded (0x24f)"
+  ],
+  [
+   "FTMarioAnim093",
+   "excluded (0x250)"
+  ],
+  [
+   "FTMarioAnim094",
+   "excluded (0x251)"
+  ],
+  [
+   "FTMarioAnim095",
+   "excluded (0x252)"
+  ],
+  [
+   "FTMarioAnim096",
+   "excluded (0x253)"
+  ],
+  [
+   "FTMarioAnim097",
+   "excluded (0x254)"
+  ],
+  [
+   "FTMarioAnim098",
+   "excluded (0x255)"
+  ],
+  [
+   "FTMarioAnim099",
+   "excluded (0x256)"
+  ],
+  [
+   "FTMarioAnim100",
+   "excluded (0x257)"
+  ],
+  [
+   "FTMarioAnim101",
+   "excluded (0x258)"
+  ],
+  [
+   "FTMarioAnim102",
+   "excluded (0x259)"
+  ],
+  [
+   "FTMarioAnim103",
+   "excluded (0x25a)"
+  ],
+  [
+   "FTMarioAnim104",
+   "excluded (0x25b)"
+  ],
+  [
+   "FTMarioAnim105",
+   "excluded (0x25c)"
+  ],
+  [
+   "FTMarioAnim106",
+   "excluded (0x25d)"
+  ],
+  [
+   "FTMarioAnim134",
+   "AObjEvent32 (0x279)"
+  ],
+  [
+   "FTMarioAnim135",
+   "AObjEvent32 (0x27a)"
+  ],
+  [
+   "FTMarioAnim142",
+   "excluded (0x281)"
+  ]
+ ],
+ "scripts": 2188,
+ "raw_file_bytes": 294736,
+ "raw_payload_bytes": 284976,
+ "raw_table_bytes": 11904,
+ "raw_script_bytes": 273072,
+ "pack_header_bytes": 20,
+ "pack_directory_bytes": 1464,
+ "pack_offset_table_bytes": 8752,
+ "pack_stream_bytes": 258788,
+ "pack_total_bytes": 269024,
+ "dedup": true,
+ "dedup_runs_shared": 152,
+ "dedup_bytes_saved": 14284,
+ "sha256": "ac3d67ab6d329aac816fb17d034fa52bfd66a440423f489245242ed0384fe468",
+ "verify": {
+  "mismatches": 0,
+  "corpus": "68391f28da8df1ed6576b7e81c7a83991613683d59fb5b50db0cca24004dcea8",
+  "clips": 122,
+  "scripts": 2188,
+  "commands": 32253,
+  "states": 29792,
+  "callbacks": 2188,
+  "payload_words": 43375
+ },
+ "blob_bytes": 271728,
+ "blob_clips": 122,
+ "blob_dir_bytes": 976,
+ "blob_slot_table_bytes": 11904,
+ "blob_slots": 2976,
+ "blob_stream_bytes": 258788,
+ "blob_stray_slots": 0,
+ "blob_first_id": 499,
+ "blob_last_id": 640,
+ "blob_checksum": 2285671274,
+ "blob_sha256": "c97284811b687cb98725c81b12e690362d28c0e804f19cccf38626ca971d6003",
+ "verify_blob": {
+  "mismatches": 0,
+  "clips": 122,
+  "slots": 2976,
+  "linked": 2188,
+  "null": 788,
+  "commands": 32253
+ }
+}

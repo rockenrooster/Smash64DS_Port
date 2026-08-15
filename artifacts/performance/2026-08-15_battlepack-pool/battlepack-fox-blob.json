@@ -1,0 +1,705 @@
+{
+ "bank": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\decomp\\BattleShip-main\\BattleShip_o2r\\reloc_animations",
+ "clips": 137,
+ "skipped": [
+  [
+   "FTFoxAnim091",
+   "excluded (0x2dd)"
+  ],
+  [
+   "FTFoxAnim092",
+   "excluded (0x2de)"
+  ],
+  [
+   "FTFoxAnim093",
+   "excluded (0x2df)"
+  ],
+  [
+   "FTFoxAnim094",
+   "excluded (0x2e0)"
+  ],
+  [
+   "FTFoxAnim095",
+   "excluded (0x2e1)"
+  ],
+  [
+   "FTFoxAnim096",
+   "excluded (0x2e2)"
+  ],
+  [
+   "FTFoxAnim097",
+   "excluded (0x2e3)"
+  ],
+  [
+   "FTFoxAnim098",
+   "excluded (0x2e4)"
+  ],
+  [
+   "FTFoxAnim099",
+   "excluded (0x2e5)"
+  ],
+  [
+   "FTFoxAnim100",
+   "excluded (0x2e6)"
+  ],
+  [
+   "FTFoxAnim101",
+   "excluded (0x2e7)"
+  ],
+  [
+   "FTFoxAnim102",
+   "excluded (0x2e8)"
+  ],
+  [
+   "FTFoxAnim103",
+   "excluded (0x2e9)"
+  ],
+  [
+   "FTFoxAnim104",
+   "excluded (0x2ea)"
+  ],
+  [
+   "FTFoxAnim105",
+   "excluded (0x2eb)"
+  ],
+  [
+   "FTFoxAnim106",
+   "excluded (0x2ec)"
+  ],
+  [
+   "FTFoxAnim107",
+   "excluded (0x2ed)"
+  ],
+  [
+   "FTFoxAnim108",
+   "excluded (0x2ee)"
+  ],
+  [
+   "FTFoxAnim135",
+   "AObjEvent32 (0x309)"
+  ],
+  [
+   "FTFoxAnim136",
+   "AObjEvent32 (0x30a)"
+  ],
+  [
+   "FTFoxAnim157",
+   "excluded (0x31f)"
+  ],
+  [
+   "FTMarioAnim001",
+   "excluded (0x1f4)"
+  ],
+  [
+   "FTMarioAnim002",
+   "excluded (0x1f5)"
+  ],
+  [
+   "FTMarioAnim003",
+   "excluded (0x1f6)"
+  ],
+  [
+   "FTMarioAnim004",
+   "excluded (0x1f7)"
+  ],
+  [
+   "FTMarioAnim005",
+   "excluded (0x1f8)"
+  ],
+  [
+   "FTMarioAnim006",
+   "excluded (0x1f9)"
+  ],
+  [
+   "FTMarioAnim007",
+   "excluded (0x1fa)"
+  ],
+  [
+   "FTMarioAnim008",
+   "excluded (0x1fb)"
+  ],
+  [
+   "FTMarioAnim009",
+   "excluded (0x1fc)"
+  ],
+  [
+   "FTMarioAnim010",
+   "excluded (0x1fd)"
+  ],
+  [
+   "FTMarioAnim011",
+   "excluded (0x1fe)"
+  ],
+  [
+   "FTMarioAnim012",
+   "excluded (0x1ff)"
+  ],
+  [
+   "FTMarioAnim013",
+   "excluded (0x200)"
+  ],
+  [
+   "FTMarioAnim014",
+   "excluded (0x201)"
+  ],
+  [
+   "FTMarioAnim015",
+   "excluded (0x202)"
+  ],
+  [
+   "FTMarioAnim016",
+   "excluded (0x203)"
+  ],
+  [
+   "FTMarioAnim017",
+   "excluded (0x204)"
+  ],
+  [
+   "FTMarioAnim018",
+   "excluded (0x205)"
+  ],
+  [
+   "FTMarioAnim019",
+   "excluded (0x206)"
+  ],
+  [
+   "FTMarioAnim020",
+   "excluded (0x207)"
+  ],
+  [
+   "FTMarioAnim021",
+   "excluded (0x208)"
+  ],
+  [
+   "FTMarioAnim022",
+   "excluded (0x209)"
+  ],
+  [
+   "FTMarioAnim023",
+   "excluded (0x20a)"
+  ],
+  [
+   "FTMarioAnim024",
+   "excluded (0x20b)"
+  ],
+  [
+   "FTMarioAnim025",
+   "excluded (0x20c)"
+  ],
+  [
+   "FTMarioAnim026",
+   "excluded (0x20d)"
+  ],
+  [
+   "FTMarioAnim027",
+   "excluded (0x20e)"
+  ],
+  [
+   "FTMarioAnim028",
+   "excluded (0x20f)"
+  ],
+  [
+   "FTMarioAnim029",
+   "excluded (0x210)"
+  ],
+  [
+   "FTMarioAnim030",
+   "excluded (0x211)"
+  ],
+  [
+   "FTMarioAnim031",
+   "excluded (0x212)"
+  ],
+  [
+   "FTMarioAnim032",
+   "excluded (0x213)"
+  ],
+  [
+   "FTMarioAnim033",
+   "excluded (0x214)"
+  ],
+  [
+   "FTMarioAnim034",
+   "excluded (0x215)"
+  ],
+  [
+   "FTMarioAnim035",
+   "excluded (0x216)"
+  ],
+  [
+   "FTMarioAnim036",
+   "excluded (0x217)"
+  ],
+  [
+   "FTMarioAnim037",
+   "excluded (0x218)"
+  ],
+  [
+   "FTMarioAnim038",
+   "excluded (0x219)"
+  ],
+  [
+   "FTMarioAnim039",
+   "excluded (0x21a)"
+  ],
+  [
+   "FTMarioAnim040",
+   "excluded (0x21b)"
+  ],
+  [
+   "FTMarioAnim041",
+   "excluded (0x21c)"
+  ],
+  [
+   "FTMarioAnim042",
+   "excluded (0x21d)"
+  ],
+  [
+   "FTMarioAnim043",
+   "excluded (0x21e)"
+  ],
+  [
+   "FTMarioAnim045",
+   "excluded (0x220)"
+  ],
+  [
+   "FTMarioAnim047",
+   "excluded (0x222)"
+  ],
+  [
+   "FTMarioAnim048",
+   "excluded (0x223)"
+  ],
+  [
+   "FTMarioAnim049",
+   "excluded (0x224)"
+  ],
+  [
+   "FTMarioAnim050",
+   "excluded (0x225)"
+  ],
+  [
+   "FTMarioAnim051",
+   "excluded (0x226)"
+  ],
+  [
+   "FTMarioAnim052",
+   "excluded (0x227)"
+  ],
+  [
+   "FTMarioAnim053",
+   "excluded (0x228)"
+  ],
+  [
+   "FTMarioAnim054",
+   "excluded (0x229)"
+  ],
+  [
+   "FTMarioAnim055",
+   "excluded (0x22a)"
+  ],
+  [
+   "FTMarioAnim056",
+   "excluded (0x22b)"
+  ],
+  [
+   "FTMarioAnim057",
+   "excluded (0x22c)"
+  ],
+  [
+   "FTMarioAnim058",
+   "excluded (0x22d)"
+  ],
+  [
+   "FTMarioAnim059",
+   "excluded (0x22e)"
+  ],
+  [
+   "FTMarioAnim060",
+   "excluded (0x22f)"
+  ],
+  [
+   "FTMarioAnim061",
+   "excluded (0x230)"
+  ],
+  [
+   "FTMarioAnim062",
+   "excluded (0x231)"
+  ],
+  [
+   "FTMarioAnim063",
+   "excluded (0x232)"
+  ],
+  [
+   "FTMarioAnim064",
+   "excluded (0x233)"
+  ],
+  [
+   "FTMarioAnim065",
+   "excluded (0x234)"
+  ],
+  [
+   "FTMarioAnim066",
+   "excluded (0x235)"
+  ],
+  [
+   "FTMarioAnim067",
+   "excluded (0x236)"
+  ],
+  [
+   "FTMarioAnim068",
+   "excluded (0x237)"
+  ],
+  [
+   "FTMarioAnim069",
+   "excluded (0x238)"
+  ],
+  [
+   "FTMarioAnim070",
+   "excluded (0x239)"
+  ],
+  [
+   "FTMarioAnim071",
+   "excluded (0x23a)"
+  ],
+  [
+   "FTMarioAnim072",
+   "excluded (0x23b)"
+  ],
+  [
+   "FTMarioAnim073",
+   "excluded (0x23c)"
+  ],
+  [
+   "FTMarioAnim074",
+   "excluded (0x23d)"
+  ],
+  [
+   "FTMarioAnim075",
+   "excluded (0x23e)"
+  ],
+  [
+   "FTMarioAnim076",
+   "excluded (0x23f)"
+  ],
+  [
+   "FTMarioAnim077",
+   "excluded (0x240)"
+  ],
+  [
+   "FTMarioAnim078",
+   "excluded (0x241)"
+  ],
+  [
+   "FTMarioAnim079",
+   "excluded (0x242)"
+  ],
+  [
+   "FTMarioAnim080",
+   "excluded (0x243)"
+  ],
+  [
+   "FTMarioAnim081",
+   "excluded (0x244)"
+  ],
+  [
+   "FTMarioAnim082",
+   "excluded (0x245)"
+  ],
+  [
+   "FTMarioAnim083",
+   "excluded (0x246)"
+  ],
+  [
+   "FTMarioAnim084",
+   "excluded (0x247)"
+  ],
+  [
+   "FTMarioAnim085",
+   "excluded (0x248)"
+  ],
+  [
+   "FTMarioAnim086",
+   "excluded (0x249)"
+  ],
+  [
+   "FTMarioAnim087",
+   "excluded (0x24a)"
+  ],
+  [
+   "FTMarioAnim088",
+   "excluded (0x24b)"
+  ],
+  [
+   "FTMarioAnim089",
+   "excluded (0x24c)"
+  ],
+  [
+   "FTMarioAnim090",
+   "excluded (0x24d)"
+  ],
+  [
+   "FTMarioAnim091",
+   "excluded (0x24e)"
+  ],
+  [
+   "FTMarioAnim092",
+   "excluded (0x24f)"
+  ],
+  [
+   "FTMarioAnim093",
+   "excluded (0x250)"
+  ],
+  [
+   "FTMarioAnim094",
+   "excluded (0x251)"
+  ],
+  [
+   "FTMarioAnim095",
+   "excluded (0x252)"
+  ],
+  [
+   "FTMarioAnim096",
+   "excluded (0x253)"
+  ],
+  [
+   "FTMarioAnim097",
+   "excluded (0x254)"
+  ],
+  [
+   "FTMarioAnim098",
+   "excluded (0x255)"
+  ],
+  [
+   "FTMarioAnim099",
+   "excluded (0x256)"
+  ],
+  [
+   "FTMarioAnim100",
+   "excluded (0x257)"
+  ],
+  [
+   "FTMarioAnim101",
+   "excluded (0x258)"
+  ],
+  [
+   "FTMarioAnim102",
+   "excluded (0x259)"
+  ],
+  [
+   "FTMarioAnim103",
+   "excluded (0x25a)"
+  ],
+  [
+   "FTMarioAnim104",
+   "excluded (0x25b)"
+  ],
+  [
+   "FTMarioAnim105",
+   "excluded (0x25c)"
+  ],
+  [
+   "FTMarioAnim106",
+   "excluded (0x25d)"
+  ],
+  [
+   "FTMarioAnim107",
+   "excluded (0x25e)"
+  ],
+  [
+   "FTMarioAnim108",
+   "excluded (0x25f)"
+  ],
+  [
+   "FTMarioAnim109",
+   "excluded (0x260)"
+  ],
+  [
+   "FTMarioAnim110",
+   "excluded (0x261)"
+  ],
+  [
+   "FTMarioAnim111",
+   "excluded (0x262)"
+  ],
+  [
+   "FTMarioAnim112",
+   "excluded (0x263)"
+  ],
+  [
+   "FTMarioAnim113",
+   "excluded (0x264)"
+  ],
+  [
+   "FTMarioAnim114",
+   "excluded (0x265)"
+  ],
+  [
+   "FTMarioAnim115",
+   "excluded (0x266)"
+  ],
+  [
+   "FTMarioAnim116",
+   "excluded (0x267)"
+  ],
+  [
+   "FTMarioAnim117",
+   "excluded (0x268)"
+  ],
+  [
+   "FTMarioAnim118",
+   "excluded (0x269)"
+  ],
+  [
+   "FTMarioAnim119",
+   "excluded (0x26a)"
+  ],
+  [
+   "FTMarioAnim120",
+   "excluded (0x26b)"
+  ],
+  [
+   "FTMarioAnim121",
+   "excluded (0x26c)"
+  ],
+  [
+   "FTMarioAnim122",
+   "excluded (0x26d)"
+  ],
+  [
+   "FTMarioAnim123",
+   "excluded (0x26e)"
+  ],
+  [
+   "FTMarioAnim124",
+   "excluded (0x26f)"
+  ],
+  [
+   "FTMarioAnim125",
+   "excluded (0x270)"
+  ],
+  [
+   "FTMarioAnim126",
+   "excluded (0x271)"
+  ],
+  [
+   "FTMarioAnim127",
+   "excluded (0x272)"
+  ],
+  [
+   "FTMarioAnim128",
+   "excluded (0x273)"
+  ],
+  [
+   "FTMarioAnim129",
+   "excluded (0x274)"
+  ],
+  [
+   "FTMarioAnim130",
+   "excluded (0x275)"
+  ],
+  [
+   "FTMarioAnim131",
+   "excluded (0x276)"
+  ],
+  [
+   "FTMarioAnim132",
+   "excluded (0x277)"
+  ],
+  [
+   "FTMarioAnim133",
+   "excluded (0x278)"
+  ],
+  [
+   "FTMarioAnim134",
+   "AObjEvent32 (0x279)"
+  ],
+  [
+   "FTMarioAnim135",
+   "AObjEvent32 (0x27a)"
+  ],
+  [
+   "FTMarioAnim136",
+   "excluded (0x27b)"
+  ],
+  [
+   "FTMarioAnim137",
+   "excluded (0x27c)"
+  ],
+  [
+   "FTMarioAnim138",
+   "excluded (0x27d)"
+  ],
+  [
+   "FTMarioAnim139",
+   "excluded (0x27e)"
+  ],
+  [
+   "FTMarioAnim140",
+   "excluded (0x27f)"
+  ],
+  [
+   "FTMarioAnim141",
+   "excluded (0x280)"
+  ],
+  [
+   "FTMarioAnim142",
+   "excluded (0x281)"
+  ],
+  [
+   "FTMarioAnimDownBounceD",
+   "excluded (0x21f)"
+  ],
+  [
+   "FTMarioAnimDownStandD",
+   "excluded (0x221)"
+  ],
+  [
+   "FTMarioAnimWait",
+   "excluded (0x1f3)"
+  ]
+ ],
+ "scripts": 2713,
+ "raw_file_bytes": 310704,
+ "raw_payload_bytes": 299744,
+ "raw_table_bytes": 14444,
+ "raw_script_bytes": 285300,
+ "pack_header_bytes": 20,
+ "pack_directory_bytes": 1644,
+ "pack_offset_table_bytes": 10852,
+ "pack_stream_bytes": 272292,
+ "pack_total_bytes": 284808,
+ "dedup": true,
+ "dedup_runs_shared": 262,
+ "dedup_bytes_saved": 13008,
+ "sha256": "6b723f2241395e3374b05a980243c641cdf321ae26831f0cfbf4dddb412cc8ab",
+ "verify": {
+  "mismatches": 0,
+  "corpus": "278775508583b68e26b5b67310f84ff847f0db64a2a6b20a5729fff8397c2996",
+  "clips": 137,
+  "scripts": 2713,
+  "commands": 34523,
+  "states": 31329,
+  "callbacks": 2713,
+  "payload_words": 46112
+ },
+ "blob_bytes": 287904,
+ "blob_clips": 137,
+ "blob_dir_bytes": 1096,
+ "blob_slot_table_bytes": 14444,
+ "blob_slots": 3611,
+ "blob_stream_bytes": 272292,
+ "blob_stray_slots": 0,
+ "blob_first_id": 642,
+ "blob_last_id": 798,
+ "blob_checksum": 1425666828,
+ "blob_sha256": "f6a49219a32583f46c1ccab32b0b11750d504e9cb38ed39724735c7e563facef",
+ "verify_blob": {
+  "mismatches": 0,
+  "clips": 137,
+  "slots": 3611,
+  "linked": 2713,
+  "null": 898,
+  "commands": 34523
+ }
+}

@@ -232,6 +232,43 @@ replay-admission guard taught the new constant (`nds_renderer.c:5734-5739`).
 > libnds-heap slack a larger arena draws on. Which pool the pack lands in is
 > phase 3's decision.
 
+> **THE POOL IS THE ARENA, MEASURED 2026-08-15**
+> (`…/2026-08-15_battlepack-pool/BATTLEPACK_POOL.md`). A `.rodata`-resident
+> blob costs the arena as well as the static image: the arena is one `calloc`
+> from the libnds heap that `fake_heap_start` bounds, so the two come out of the
+> same bytes. **+288,992 B of `.incbin` pushed `gNdsTaskmanArenaChosenSize`
+> `0x150000 → 0x140000` with 16 alloc failures**, which against the match's
+> measured 1,304,068 B of taskman use projects a general-heap low-water of
+> ~6,652 against the mandated 32,768 floor. Not shippable;
+> `NDS_R2_BATTLEPACK` lands **default 0**. **The boot-headroom ladder does not
+> catch this** — that arm still had 66,784 B of proven headroom — so any static
+> growth must now also read `gNdsTaskmanArenaChosenSize` (added to the soak's
+> global list).
+>
+> **The fit is one fighter resident IN the arena**, replacing the 262,144 B
+> raw-file anim cache: Mario 271,728 (+9,584 of the 39,420 general-heap slack)
+> or Fox 287,904 (+25,760). Zero static growth, arena stays `0x150000`, ladder
+> untouched. Splitting **per fighter** costs 136 B of cross-fighter dedup. What
+> is not built is the setup-time load that puts the blob there.
+>
+> The emitted format is **BPA2**, not the banked BPA1 blob, for a consumer
+> reason: BPA1's offset table carries one entry per *distinct script*, while
+> `lbCommonAddFighterPartsFigatree` advances one word per *DObj slot* (~26 slots
+> against ~19 distinct scripts per clip). BPA2 emits the per-slot table with
+> blob-relative byte offsets; slot-level equivalence is **mismatch 0** on both
+> fighters (3,611 / 2,976 slots).
+>
+> **AND §5 ITEM 5'S "mismatch = 0" DID NOT COVER THE RUNTIME'S BIT ORDER.** The
+> host probe's `normalize()` is pipeline **4a-4b only**; the ROM also applies
+> **4c**, re-encoding every command word from disk MSB-first order into the
+> native C bitfield order (`ndsRelocAObj16EncodeForNativeBitfields`,
+> `reloc_backend_assets.c:3313`), and the direct path skips
+> `ndsRelocFinalizeLoadedFile` so nothing applied it at runtime either. Phase 4
+> missed it because both sides used the same disk-order decoder. A ROM **data
+> abort** found it. The generator now applies 4c, `decode_script` takes
+> `native=`, and the falsifier is measured: the emitted blob decoded in disk
+> order raises on **75 of 2,713** scripts, in native order **0**.
+
 `plan.md` §K1 phase 3 still forbids the fourth option — falling back to
 gameplay-time FAT loading — and that prohibition stands.
 
