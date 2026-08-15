@@ -1,0 +1,8 @@
+source=artifacts/performance/2026-08-14_icache-temporal/v3-baseline/arm9-profile.csv
+regions=1601
+marginal_frames=138
+marginal_threshold_ticks=1007803
+marginal_axis=total_cycles-halt_wait
+rows=52296701
+distinct_pcs=96218
+cycles_per_tick=2

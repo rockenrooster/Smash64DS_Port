@@ -259,6 +259,62 @@ quote these numbers as gate-arm numbers, and do not rebuild G3's case from them.
   it says UNPROVEN. A failing arm never reaches presented frame 1 and the
   harness reports a timeout, which reads exactly like a hung emulator.
 
+## MARGINAL-FRAME OWNERS (2026-08-14) — the ranking Phase 4 selects from, zero builds
+
+`artifacts/performance/2026-08-14_runtime2-p95-closure/MARGINAL_OWNERS.md`.
+Reducer `scripts/census-marginal-frame-owners.py`; its two cached per-PC CSVs sit
+beside the document so **nothing re-scans the 3.46 GiB v3 profile again**.
+
+**The join `plan.md` §5 assumed does not exist.** The only v3 stall capture in the
+repo (`…/2026-08-14_icache-temporal/v3-baseline`) is `builds/build-c125-profile`,
+**`NDS_R2_BOTH_CPU 0` / `NDS_TICK_HUD_DRAW 0`** — the Boundary arm with the
+instrument burst compiled out — while the c147 rows are `BOTH_CPU 1` / `DRAW 1`.
+Different arm, different binary, different match. Every other profile on disk is
+`profile-v2` and carries no stall classes, including the one gate-arm capture
+(`2026-08-12_c123-rebank/profile`, `build-c123-profile`). Two analyses were run
+on the two axes the captures actually support, and never joined.
+
+**Gate arm, from the c147 rows alone (right arm, right instrument).**
+`WORK-H = (FTR+STG+BG+AUD+SRC+MISC)+(OTHR−WAIT)` closes to **0.0** on both
+populations, and `WORK-H = WORK − HUD` exactly.
+
+| set | n | WORK-H excess vs the 1,360 two-VBlank frames | SRC share |
+|---|---:|---:|---:|
+| **P95 set** — the 80 largest `WORK-H` (P95 of 1,600 IS the 80th-largest) | 80 | **+520,718** | **92.1%** |
+| cadence set — the 160 cheapest dropped frames | 160 | +104,117 | 83.8% |
+
+P95-set owners, nested and not double counted
+(`SRC ⊃ GCRA ⊃ {SINT ⊃ SCPU, SHDT, SPHD/SPHC, SCAT, SPRM}`, resolved from the
+bracket sources, with `SRC − GCRA` measuring **−68** here and **−64** on the
+cadence set):
+
+```text
+SRC   +479,816 (92.1%)   GCRA +479,885   SRC outside GCRA  -68
+  SINT +178,455   SCPU +7,222   SITR = SINT-SCPU +171,234
+  SHDT +119,920  <- 19.2x a two-VBlank frame, the sharpest presence in the table
+  SPHD +112,833   SPRM +49,377 (25.8x)   GCRA remainder (SOBJ) +19,141
+MISC  +16,414    AUD +15,775    FTR +7,987 (1.03x)    STG +546 (1.00x)
+```
+
+**The draw side is 4.8% of the P95 excess.** That is a live tension with the hot
+instruction-footprint lane below, which is sized off whole-match `icache_fill`:
+it is a P50 lever unless its win lands inside `gcRunAll`. Stated, not resolved.
+
+**The cadence set is 64% instrument.** 102 of the 160 are already under the
+1,116,096 cadence boundary in `WORK-H`; 98 of those carry the HUD draw burst.
+Only **58** are `WORK-H`-bound and they need a mean **43,916** — 94,848 is the
+worst frame, not the set. A burst frame presents in two VBlanks 3 times in 1,360.
+Cadence acceptance therefore still turns on `plan.md` §6, which is the owner's.
+
+**The 123,773 pool is not a lane.** Reproduced to the tick (123,772); largest
+holder 9.1%; every top holder already owned by a named lane, including
+`tickGetCount` + `cpuGetTiming` = 13,406 tk/fr of apparatus. Only `memset`
+(10,570 write_buffer) and `ndsRendererSyncTextureTile` (3,945) are pool-shaped.
+
+**Rule this cycle re-earned:** rank the whole distribution and cut where the
+percentile sits. A change removing 100,000 from only the top 20 frames moves P95
+by **zero**; the 80th-largest must fall **91,844**.
+
 ## THE GATE LANE — in order, one row live at a time
 
 ### G1 — MEASURED (cycle 79). Mechanism proven, gate unmoved. Not shipped.
@@ -8386,6 +8442,26 @@ override hook" was wrong. The shim at `:1545` is the hook; what the macro blocks
 is redirecting the *helper* `ftAnimGetTargetValue`, not the parser itself.
 
 ## Red Queue
+
+**R0 (2026-08-14, blocks the widest verifier) — the Boundary realtime harness
+cannot finish its marker capture, and it is a CEILING, not a ROM hang.** The
+stop is breakpoint 2, `ndsRendererHardwareArmBattleStaticTextures` (the Wait→GO
+arm; gdb misreports its file as `nds_renderer.c:15504` — `nm` says otherwise).
+`scVSBattleStartBattle`, breakpoint 1, hits every time, so HANDOFF's old
+"120 s to `scVSBattleStartBattle`" wording was wrong. **600 s times out too**, so
+raising the floor (`Max(-RendererBenchmarkTimeoutSeconds,120)`,
+`verify-battle-mariofox-gcrunall-loop-harness.ps1:1367`) is not a one-line fix.
+The ROM is healthy: booted standalone it reaches a live match — 45 s wall reads
+`TIME 00:36`, `FPS 28.0`, `DMG 18/0`, both fighters drawn; at 14 s it is still on
+`Original boot: PARTIAL`, so boot-to-GO is ~21 s unstubbed and does not complete
+inside 600 s under the melonDS GDB stub. **The ceiling was deliberately NOT
+raised** — 600 already failed and any larger constant chosen without measuring
+boot-to-GO under the stub is a guess. Next cycle: drive
+`verify-battle-mariofox-gcrunall-loop-harness.ps1` directly (its own
+`ValidateRange(5,3600)`) to measure it, set the floor from that number, and make
+`scripts/lib/gdb-markers.ps1` print elapsed on SUCCESS so the next drift is
+visible before it is a red. All host-side checkers, including
+`check-gbi-decode-fixtures.ps1` and the particle-bank pack, are green.
 
 The P1 acceptance-level rows, highest impact first. The gate lane above is
 row 1's execution plan.
