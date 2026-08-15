@@ -467,6 +467,83 @@ counters**, precedent `ndsPlatformPublishBattleFpsHudGroup`
 Boundary run, its own gate re-measure — so it is **handed forward, not
 half-landed**.
 
+**LANDED 2026-08-15 — ARM G IS GREEN, AND THE FIX IS STRUCTURAL RATHER THAN A
+THIRD FLUSH** (`…/2026-08-15_pacing-publication/PACING_PUBLICATION.md`).
+`verify-all.ps1 -Profile Boundary` **passed on all four arms** — arm G
+(`BATTLEPACK=1` + `KEEP_CACHE=1`, arena 1,548,288), flag 0, flag 1 at the
+shipping arena, and `NDS_R2_CAMERA_MATRIX_LEAN=3` — with **0 `Exception:`** in
+every log. Each debugger-read counter group is now ONE X-macro list beside its
+externs and the publish is **generated** from it (`NDS_PUBLISH_DEBUGGER_GROUP`,
+`nds_platform.h`), so a member cannot be added without its flush;
+`check-gbi-decode-fixtures.ps1` requires each list and its marker `printf` to be
+the same set **in both directions**, and the falsifier was run (dropping one
+member turns it red and names the member).
+
+**Publishing `BPLAY_PACE` alone would have been half a fix, and the blast-radius
+sweep is what caught it.** The harness also derives `taskmanPresentLead =
+$tmPace[1] - (2 * $bp[4])` and requires **0..2**; at the frame-complete marker
+that difference **rests at exactly 0**, so pinning one side of the subtraction
+coherent and leaving `GCRUNALL_TASKMAN` free to read stale would have converted
+`drawLead=-1` into `taskmanPresentLead=-1`. Both groups go through the seam.
+The seam sits **before** `ndsBattlePlayableFrameCompleteMarker`, not inside it:
+GDB breaks on a function's **entry**.
+
+**THE PROOF IS A COUNTER, NOT THE GREEN — AND THAT IS A RETRACTION.** A no-seam
+arm G control was built this cycle (`nm`: the publish symbol absent) and **it
+passes Boundary too**, so "the fix made arm G green" is not supportable and the
+inherited *"arm G is Boundary-RED"* premise does not reproduce on this tree.
+What separates the arms is the stop-time read of
+`gNdsBattlePlayablePacingPresentedFrames` in every run's pacing smoke line:
+**212 on all four seam arms, 211 on both no-seam arms**, against the previous
+cycle's RED which read presented **212** with draws **211** — torn. Unpublished
+the group reads *uniformly one behind* (legal, so the harness passes anyway);
+published it reads *current*; the allocator move is what turned uniform lag into
+tearing. A stale read is always behind, never ahead — measured on the quantity.
+**Second, independent signal:** the tick-HUD sampler's ring stops go from
+**5 of 16 skewed** (`c168`) to **0 of 16** (`c170`), and c168's
+`Tick-HUD samples repeated a presented frame (3 of 1600)` warning disappears.
+The instrument was reading its own frame counter one behind at a third of its
+stops.
+
+**GATE, re-measured on the binary that would ship** (`build-c170-seam-bp1`,
+`BOTH_CPU=1`/`DRAW=1`, DLDI on, 1,600 samples, window 439–2038, rank-80):
+**`WORK-H` P50 940,320 · P90 1,091,520 · P95 1,177,920 raw / 1,152,973 net ·
+top-1% 1,518,528 · max 5,277,248**, **net gap +32,593** against 1,120,380.
+Against the banked no-seam arm (1,170,048 / 1,145,101) that is **+7,872 raw,
+below the ≥14,080 cross-build floor — unchanged, not a cost**; the seam's own
+price is bounded at **≤450 tk/frame** from the image (82 Thumb instructions,
+20 `blx armDCacheFlush`), an order of magnitude under the floor. VBI
+**2:1745 3:272 4:13 5+:8 max 19**, slips 0, violations 0. End-of-match pair
+**0/76**, identical to `c168` and to the flag-0 control. Stress battery on the
+same ROM: 660 s **NO-FREEZE**, 10 entries / 8 matches / 8 restarts /
+**2 Sudden Deaths**, `ChosenSize` 1,548,288 · `AllocFail`/`ReserveFail`/
+`Rejects`/`SyMallocOverflow`/`LoadFails` all **0**, heap low-water **52,472**.
+Two frames (1843, 1937) carry ~+4.1M each in one bucket and are unexplained;
+they miss the banked percentile, and isolated multi-megatick frames occur on
+`c169` (3) and `c166` (4) too, so they are not this change.
+**CADENCE, from the `NDS_TICK_HUD_DRAW=0` arm `plan.md` §1 item 3 actually gates
+on** (`build-c170-seam-bp1-draw0`): **VBI 2:1853 3:170 4:7 5+:8 max 19, slips 0
+→ two-VBlank 90.9%** against the **≥95%** requirement. **ITEM 3 IS NOT MET and
+is not claimed.** Removing the HUD draw lifts the share from 85.6% to 90.9%, so
+the instrument owns ~5.3 points and the product still owns **4.1** — the same
+gap the +32,593 net excess describes from the tick side.
+
+**Two cross-marker relations remain unprotected and are named rather than
+fixed** — `$safety[16] -eq $fdc[8]` (`:3126`) and `$textHud[4..9]` against
+`$sourceHud`/`$sourceLower` (`:3384-3389`). Neither has been observed red,
+neither is a strictly-ordered pair with zero slack, and fixing what has not been
+measured broken is the phantom-defect mode. With the group law in place each is
+a three-line change.
+
+**Task B did NOT close the way it was expected to, and the control is why.**
+Built deliberately with the seam removed (`nm`: the publish symbol absent from
+the ELF), `NDS_R2_CAMERA_MATRIX_LEAN=3` **passes Boundary on this HEAD anyway**.
+The 2026-08-09 reproduction is dead, so the seam cannot be credited with fixing
+that row; its *mechanism* question is answered by the `drawLead` evidence, which
+was live and byte-for-byte deterministic. Level 3 is green with and without the
+seam, so the reason it was held has no live symptom — the default flip is
+`BLOCKED(decision: NDS_R2_CAMERA_MATRIX_LEAN default)`.
+
 **CORRECTION, and it is load-bearing: Boundary does NOT pin
 `gNdsTaskmanArenaChosenSize == 1376256`.** Both runtime sites
 (`verify-battle-mariofox-gcrunall-loop-harness.ps1:2006` and `:2573`) are inside

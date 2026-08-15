@@ -576,6 +576,21 @@ four `BPLAY_PACE` counters**, precedent `ndsPlatformPublishBattleFpsHudGroup`
 build, Boundary run and gate re-measure, and it is handed forward rather than
 half-landed.
 
-**Order for the next cycle.** Land the publication seam → re-run Boundary at arm
-G → re-measure the gate on that binary → only then take a default flip to the
-owner. Nothing in slice 1's architecture is waiting on RAM any more.
+**LANDED 2026-08-15 — arm G is Boundary GREEN**
+(`…/2026-08-15_pacing-publication/PACING_PUBLICATION.md`). Not as a third
+bespoke flush: each debugger-read counter group is one X-macro list beside its
+externs and the publish is generated from it (`NDS_PUBLISH_DEBUGGER_GROUP`,
+`nds_platform.h`), placed **before** `ndsBattlePlayableFrameCompleteMarker`
+because GDB breaks on a function's entry. `GCRUNALL_TASKMAN` joined the seam
+too — `taskmanPresentLead` rests at exactly 0 at that stop, so publishing one
+side of it alone would only have moved which counter reads stale. Boundary green
+at arm G, flag 0, flag 1 at the shipping arena and `CAMERA_MATRIX_LEAN=3`.
+
+**Order for the next cycle.** ~~Land the publication seam → re-run Boundary at
+arm G → re-measure the gate on that binary~~ (done) → take the default flip to
+the owner. Nothing in slice 1's architecture is waiting on RAM any more.
+**Slice 1 phases 5–7 are still unbuilt**: there is no `NDSAnimClip` /
+`NDSAnimInstance` anywhere in the tree, so the direct evaluator does not exist,
+and phase 6's same-build oracle cannot be built — an oracle whose candidate arm
+does not exist has only one arm, which is exactly the shared-path failure phase
+4 already paid for.

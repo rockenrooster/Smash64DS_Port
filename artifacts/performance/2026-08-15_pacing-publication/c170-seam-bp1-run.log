@@ -1,0 +1,42 @@
+### c170-seam-bp1-run -- reduced from the complete 0 MB on-disk log (build spew removed), filtered AFTER the run.
+scene_backend.c
+                 from C:/devkitPro/libnds/include/nds/arm9/cache.h:39,
+                 from D:/Stuff/DevFolder/Smash64DS_Port/src/port/scene_backend.c:6:
+                 from D:/Stuff/DevFolder/Smash64DS_Port/src/port/scene_backend.c:77:
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_renderer_dl.c: In function 'ndsRendererAdapterMaterialAnimHash':
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_renderer_dl.c: In function 'ndsFighterDisplayContractSubmit':
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_movement.c: In function 'ndsFighterJumpAttackAirProbeDirections':
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c: In function 'ndsFighterDashRunProbeDamageInvincibleGate':
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c: In function 'ndsFighterMarioFoxStageMPLiveHitDamageLoopRunShieldStatProof':
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c: In function 'ndsFighterDashRunStepAttackDamageProcParams':
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c: At top level:
+Wrote artifacts\performance\2026-08-15_pacing-publication/c170-seam-bp1-rows.csv
+Tick-HUD buckets: target=smash64ds-battle-playable-tickhud-hwtri samples=1600 frames=439..2038 melonDS=1.0 sha=DE80E46BDCF1FD98 git=450470c716a+dirty(15) dldi=ON
+
+bucket p50        p95        spread mean       min        max        %ALLp50
+------ ---        ---        ------ ----       ---        ---        -------
+ALL     1,117,760  1,678,336   1.50  1,213,473  1,114,496  5,872,576   100.0
+FTR       303,936    330,240   1.09    295,237    154,688    338,048    27.2
+STG       172,864    181,248   1.05    177,143    168,192  4,373,952    15.5
+BG          4,288      4,352   1.01      4,290      3,968      4,544     0.4
+AUD         2,752      6,976   2.53      8,746      1,152    159,360     0.2
+HUD         1,088    411,904 378.59     37,184        896  4,608,256     0.1
+SRC       325,376    532,992   1.64    339,954     10,880  4,549,376    29.1
+MISC      104,064    182,016   1.75    117,340     80,960    877,952     9.3
+OTHR      213,696    504,256   2.36    233,580     21,632    581,440    19.1
+WAIT      193,920    485,440   2.50    213,463      1,600    560,128    17.3
+WORK      949,120  1,373,312   1.45  1,000,010    628,224  5,478,784    84.9
+SHDT        4,224      9,536   2.26     11,112          0    470,976     0.4
+SWRM          960      1,024   1.07        952        704      1,152     0.1
+GCRA      319,936    527,616   1.65    334,416      6,656  4,543,936    28.6
+SCPU       39,936    100,480   2.52     42,128          0    136,320     3.6
+SCAT        1,280      1,472   1.15      1,663          0    650,752     0.1
+SPRM        1,856      2,048   1.10      3,785          0    497,856     0.2
+SINT      147,904    285,312   1.93    159,469          0  4,342,976    13.2
+SPHD       58,048     98,176   1.69     67,299          0    750,720     5.2
+SPHC          704        832   1.18        928          0     32,000     0.1
+WORK-H    940,288  1,177,664   1.25    962,827    619,840  5,277,248    84.1
+
+named=979,894 (80.8% of ALL)  VBI 2:1745 3:272 4:13 5+:8 max:19 total:2038  slips=0
+extras: gNdsBattlePackHits=197  gNdsBattlePackMisses=158  gNdsBattlePackLoadSteps=18  gNdsBattlePackState=1  gNdsBattlePackBytes=287,904  gNdsBattlePackDispatch=1  gNdsR2AnimCacheHits=149  gNdsR2AnimCacheFills=9  gNdsR2AnimCacheRejects=0  gNdsR2AnimCacheArenaReservedBytes=451,776  gNdsR2AnimCacheArenaUsedBytes=406,416  gNdsR2AnimCacheArenaReserveFailCount=0  gNdsTaskmanArenaChosenSize=1,548,288  gNdsTaskmanArenaAllocFailCount=0  gNdsTaskmanGeneralHeapFreeMin=52,864  gNdsRelocResolveOffsetCount=3,629  gNdsRelocResolveMisalignCount=0  gNdsObjAnimRunawayCount=0  gNdsBattlePlayablePacingVBlanks=4,451  gNdsBattlePlayablePacingPresentedFrames=2,038  gNdsBattlePlayablePacingPresentIntervalMax=19  gNdsBattleTextHudP0Damage=0  gNdsBattleTextHudP1Damage=76
+Wrote artifacts\performance\2026-08-15_pacing-publication/c170-seam-bp1.json

@@ -209,10 +209,41 @@ durable unresolved gaps.
   unchanged), and RED only with the arena grown -- so it is the ALLOCATOR MOVE,
   not the feature. A stale read is always
   behind, never ahead, and that asymmetry is what picks this answer over "a real
-  off-by-one". **The fix is one publication seam for the four `BPLAY_PACE`
-  counters**; it changes the shipped binary, so it needs its own build, Boundary
-  run and gate re-measure. Landing it should also unblock
-  `NDS_R2_CAMERA_MATRIX_LEAN=3`.
+  off-by-one".
+  **LANDED 2026-08-15 (`…/2026-08-15_pacing-publication/PACING_PUBLICATION.md`),
+  and NOT as a third bespoke flush.** Each debugger-read counter group is now one
+  X-macro list beside its externs and the publish is GENERATED from it
+  (`NDS_PUBLISH_DEBUGGER_GROUP`, `nds_platform.h`), published at
+  `taskman_seam.c` immediately BEFORE `ndsBattlePlayableFrameCompleteMarker` --
+  GDB breaks on a function's entry, so publishing inside the marker is one line
+  too late. **`GCRUNALL_TASKMAN` had to join the seam or the fix would have been
+  half a fix**: the harness also derives `taskmanPresentLead = tmPace[1] -
+  2*bp[4]` and requires 0..2, that difference rests at exactly 0 at this stop, so
+  pinning BPLAY_PACE coherent alone would only move which counter is free to read
+  stale. `check-gbi-decode-fixtures.ps1` (Boundary runs it) now requires each
+  group list and its marker `printf` to be the same set in both directions;
+  falsifier run, it names the dropped member. **Boundary GREEN at all four arms:
+  arm G, flag 0, flag 1 at the shipping arena, and LEAN=3.**
+  **THE EVIDENCE IS A COUNTER, NOT THE GREEN.** A no-seam arm G control was
+  built (`nm`: the publish symbol absent) and **passes Boundary too**, so the
+  red-to-green flip is NOT the proof and the inherited "arm G is RED" premise
+  does not reproduce here. What separates the arms is each run's stop-time read
+  of `gNdsBattlePlayablePacingPresentedFrames` in the pacing smoke line:
+  **212 on all four seam arms, 211 on both no-seam arms**, against the previous
+  cycle's RED at presented 212 / draws 211. Unpublished the group reads
+  *uniformly one behind* — legal, so it passes anyway; published it reads
+  *current*; the allocator move is what turned uniform lag into a torn read.
+  Independent corroboration from the gate instrument: tick-HUD ring stops go
+  from **5 of 16 skewed** to **0 of 16**, and the
+  `Tick-HUD samples repeated a presented frame (3 of 1600)` warning disappears.
+  **BUT THE LEAN=3 ROW ABOVE IS NOT CLOSED BY THIS FIX, AND THE CONTROL IS WHY.**
+  Built deliberately with the seam removed (`nm`: the publish symbol is absent),
+  `NDS_R2_CAMERA_MATRIX_LEAN=3` **passes Boundary on this HEAD anyway**. The
+  2026-08-09 reproduction is dead, so the seam cannot be credited with fixing it;
+  what is answered is the row's mechanism question, by the `drawLead` evidence,
+  which was live and deterministic across two independent builds. Level 3 is now
+  Boundary-green with and without the seam, so the reason it was held has no live
+  symptom -- flipping its default is the owner's call, not a verifier's.
 - **A `.data` route pairing does NOT make an arm placement-free if the arm
   changes an allocator.** The pairing guarantees identical *text*; it says
   nothing about where the frame's heap objects land. Split any candidate that

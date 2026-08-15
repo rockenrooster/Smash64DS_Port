@@ -1,0 +1,29 @@
+### c170-seam-bp1-draw0-run -- reduced from the complete 19 MB on-disk log (build spew removed), filtered AFTER the run.
+Wrote artifacts\performance\2026-08-15_pacing-publication/c170-seam-bp1-draw0-rows.csv
+Tick-HUD buckets: target=smash64ds-battle-playable-tickhud-hwtri samples=1600 frames=439..2038 melonDS=1.0 sha=DE80E46BDCF1FD98 git=450470c716a+dirty(16) dldi=ON
+bucket p50        p95        spread mean       min        max        %ALLp50
+------ ---        ---        ------ ----       ---        ---        -------
+ALL     1,117,760  1,678,016   1.50  1,180,935  1,114,816  5,312,384   100.0
+FTR       305,088    330,624   1.08    298,928    156,608  4,499,648    27.3
+STG       174,848    182,912   1.05    179,057    169,600  4,373,824    15.6
+BG          4,288      4,416   1.03      4,314      4,096      4,480     0.4
+AUD         2,688      6,656   2.48      8,570      1,152    157,376     0.2
+HUD         1,024     22,208  21.69      7,129        896  2,130,944     0.1
+SRC       328,000    536,064   1.63    342,629     10,688  4,639,936    29.3
+MISC      104,064    181,568   1.74    117,385     80,832    876,672     9.3
+OTHR      203,328    503,360   2.48    222,924     23,744    580,608    18.2
+WAIT      183,168    484,480   2.65    202,965      3,200    560,256    16.4
+WORK      948,416  1,192,704   1.26    977,970    631,168  5,299,008    84.8
+SHDT        4,416      9,600   2.17     11,289          0    468,032     0.4
+SWRM        1,024      1,088   1.06      1,019        768      1,152     0.1
+GCRA      322,688    530,816   1.64    337,293      6,592  4,634,752    28.9
+SCPU       40,960    102,080   2.49     43,364          0    139,072     3.7
+SCAT        1,408      1,600   1.14      1,794          0    642,240     0.1
+SPRM        2,048      2,240   1.09      3,984          0    527,424     0.2
+SINT      149,696    285,696   1.91    158,675          0    813,504    13.4
+SPHD       58,304     96,640   1.66     70,076          0  4,275,008     5.2
+SPHC          704        832   1.18        941          0     32,256     0.1
+WORK-H    945,024  1,185,408   1.25    970,841    622,912  5,276,864    84.5
+named=958,012 (81.1% of ALL)  VBI 2:1853 3:170 4:7 5+:8 max:19 total:2038  slips=0
+extras: gNdsBattlePlayablePacingPresentedFrames=2,038  gNdsBattlePlayablePacingVBlanks=4,336  gNdsBattlePlayablePacingPresentIntervalMax=19  gNdsBattleTextHudP0Damage=0  gNdsBattleTextHudP1Damage=76
+Wrote artifacts\performance\2026-08-15_pacing-publication/c170-seam-bp1-draw0.json

@@ -1,0 +1,41 @@
+### c170-seam-chain-soak -- reduced from the complete 18 MB on-disk log (the build's compiler output), filtered AFTER the run.
+soak match timer: canonical 1-minute match (harness default, no override)
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnplayers/mnplayersvs.c: In function 'mnPlayersVSInitSlot':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnmaps/mnmaps.c: In function 'mnMapsGetSlot':
+battleship_ftchar_data_slots.c
+soak: smash64ds-battle-playable-tickhud-hwtri.nds [build-c170-seam-bp1] slot -1, hashing the window every 5s for 11m; trip at 16 identical frames
+  t+   20s  moving again after 2 identical frame(s)
+  t+   40s  alive, 6 distinct frames so far
+  t+   71s  alive, 12 distinct frames so far
+  t+   92s  held START (ENTER) 500 ms  [press 1] on a detected Results screen
+  t+  102s  alive, 18 distinct frames so far
+  t+  132s  alive, 24 distinct frames so far
+  t+  162s  alive, 30 distinct frames so far
+  t+  168s  held START (ENTER) 500 ms  [press 2] on a detected Results screen
+  t+  193s  alive, 36 distinct frames so far
+  t+  224s  alive, 42 distinct frames so far
+  t+  240s  held START (ENTER) 500 ms  [press 3] on a detected Results screen
+  t+  255s  alive, 48 distinct frames so far
+  t+  261s  held START (ENTER) 500 ms  [press 4] on a detected Results screen
+  t+  286s  alive, 54 distinct frames so far
+  t+  316s  alive, 60 distinct frames so far
+  t+  337s  held START (ENTER) 500 ms  [press 5] on a detected Results screen
+  t+  347s  alive, 66 distinct frames so far
+  t+  378s  alive, 72 distinct frames so far
+  t+  409s  held START (ENTER) 500 ms  [press 6] on a detected Results screen
+  t+  409s  alive, 78 distinct frames so far
+  t+  439s  alive, 84 distinct frames so far
+  t+  469s  alive, 90 distinct frames so far
+  t+  500s  held START (ENTER) 500 ms  [press 7] on a detected Results screen
+  t+  500s  alive, 96 distinct frames so far
+  t+  530s  alive, 102 distinct frames so far
+  t+  561s  alive, 108 distinct frames so far
+  t+  587s  held START (ENTER) 500 ms  [press 8] on a detected Results screen
+  t+  592s  alive, 114 distinct frames so far
+  t+  622s  alive, 120 distinct frames so far
+  t+  652s  alive, 126 distinct frames so far
+  t+  663s  held START (ENTER) 500 ms  [press 9] on a detected Results screen
+verdict: NO-FREEZE
+  match timer confirmed in-guest: 1 minute(s)
+  battle completed and Results is up. A passive soak CANNOT reach match 9: Results exits on START only.
+final frame saved to D:\Stuff\DevFolder\Smash64DS_Port\artifacts\verification\freeze-soak\2026-08-15_073437-NO-FREEZE.png
