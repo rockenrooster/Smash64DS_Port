@@ -6215,7 +6215,26 @@ static void ndsRendererTask36ReplayCaptureEndRun(u32 run_index)
     else
     {
         run->word_count = (u16)word_count;
-        run->local_pushed = (owner->capture_push_balance != 0) ? TRUE : FALSE;
+        /* THE STATE THE STREAM LEAVES, NOT THE STREAM'S OWN DELTA. This line
+         * used to read capture_push_balance, which is a per-run DELTA, and the
+         * two differ for every run after the first in a segment: Task 36's
+         * EnsureWorld pops the previous binding's world before pushing its own
+         * (:30290-30294), so run 2..N record balance 0 while the stack is still
+         * one push deep. Replay assigns this flag verbatim (:30783, last run
+         * wins) and EndSegment pops on it (:30424), so a segment with two or
+         * more runs left its push on the GX position/vector stack forever.
+         * Measured on build-c173-cfxcount-bp1 at NDS_R2_FIGHTER_GX_COMPOSE=0:
+         * the stack level advanced +3.000 per presented frame wrapping mod 32
+         * with GXSTAT's error bit set on all 128 sampled frames, against
+         * EXACTLY 3.000 Task36 segments a frame -- and every push/pop the ARM9
+         * writes itself balanced to zero over 1,600 frames (5,143 each), so the
+         * replayed streams were the only unbalanced producer. The live flag is
+         * already correct here because EnsureWorld runs inside the capture
+         * bracket, so recording it costs nothing and cannot underflow: it is
+         * TRUE only where a push is genuinely outstanding. */
+        run->local_pushed =
+            (sNdsNativeStageOwnerExecution.task36_local_pushed != FALSE) ?
+                TRUE : FALSE;
         run->valid = TRUE;
     }
     sNdsRendererTask36CaptureActive = FALSE;

@@ -1,0 +1,2 @@
+54c07fac80c50418949908701f7c2bdbf27512c5f96ac09086fabbb0df6ac68a *smash64ds.nds
+2015fbd1f68b81c03626d8c6d473c8bcbcf527a3a26dfe86ff19bd74ecbb1360 *smash64ds-battle-playable-hwtri.nds

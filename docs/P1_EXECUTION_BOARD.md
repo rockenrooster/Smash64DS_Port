@@ -10078,6 +10078,46 @@ divergence, and it is the weakest case for urgency.
   `WORK-H` P50/P95 -10,624/-13,632, but do **not** arithmetically re-bank; run the
   next 1,600-frame gate before quoting the new current gap.
 
+#### 2026-08-15 — the GX stack leak is SITED AND FIXED, and it never belonged to slice 43
+
+`artifacts/performance/2026-08-15_gxstack-io-draw/GXSTACK_IO_DRAW.md`.
+Measured on a `NDS_R2_FIGHTER_GX_COMPOSE=0` ROM (`build-c173-cfxcount-bp1`,
+128 presented frames 438–565): the position/vector stack level advances
+**+3.000 per frame wrapping mod 32** with GXSTAT's error bit set on 128 of 128
+frames. **The leak predates slice 43; slice 43 only made it visible** by parking
+live data in absolute `MATRIX_STORE` levels the pointer walks over.
+
+- **Not the particles.** In the same run `gNdsParticleBatchOpens` flattens
+  mid-window; the 37 intervals that open no batch still advance 3.000.
+- **Exact ledger from the linked ELF + the per-PC census** (17 `0x04000444` /
+  `0x04000448` stores in 10 functions, counts from `b-c181-pc.csv`, 1,600
+  regions): PUSH 5,143, POP 4,831, and the residual **+312 is exactly** the raw
+  FIFO `MATRIX_POP` word `ndsRendererFinishWhispyNativePacket` emits (312 whole
+  match, 27 on the marginal 80). **Every push/pop the ARM9 writes itself nets
+  zero**, so the producer is the Task 36 replay stream, which is DMA'd into
+  `GFX_FIFO` and invisible to a PC census.
+- **Site.** `nds_renderer.c:6218` recorded `run->local_pushed` from
+  `capture_push_balance`, a per-run **delta**, where `EndSegment` (`:30424`)
+  needs the **state** the stream leaves. `EnsureWorld` pops the previous world
+  before pushing its own (`:30290-30294`), so every run after the first records
+  balance 0 while the stack is still one push deep; replay assigns the last
+  run's value verbatim (`:30783`). `EndSegment.part.0` runs **3.000×/frame** and
+  its `MATRIX_POP` executed **0 times in 1,600 frames**;
+  `gNdsRendererTask36CaptureSegmentMask` = `0xA1` = **3 replayed segments**.
+- **Fix and proof** (`build-c183-gxstackfix`): record the live
+  `sNdsNativeStageOwnerExecution.task36_local_pushed` instead. Level **0** and
+  error bit **0** on all 128 per-frame samples and at all 17 whole-match ring
+  stops (frames 534–2038). Whole-match invariants equal the `c170`/`c174`/`c175`/
+  `c176` bank (P1Damage 76, spark 15, shield 1,352, AObj 1,266, packHits 197,
+  runaway 0). Boundary green, 0 `Exception:`.
+- **Free corroboration**: every Boundary log in `artifacts/` from 2026-08-03 to
+  2026-08-15 prints `gxstat=0x6009600` — level 22, error set — on the
+  **shipping-default arm**; this cycle's prints `0x6000000`. The defect was on
+  the published path, not only the gate arm.
+- **`NDS_R2_FIGHTER_GX_COMPOSE` is still `?= 0` and its −13,632 is still
+  STALE** (baseline 1,258,112 vs today's 1,177,344). The flag was not flipped;
+  re-measure before re-banking.
+
 1. Whole-match `-RingDump` sampling is the only gate instrument; label every
    figure with its arm **and its coverage**; DLDI-on only. **Coverage is part
    of a baseline's identity, not a footnote** — a window is "whole match" only

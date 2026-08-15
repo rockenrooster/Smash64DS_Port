@@ -1,0 +1,381 @@
+pc-csv    artifacts\performance\2026-08-15_cfx-ring-draw0\b-c179-pc.csv
+elf       builds\build-c179-cfxring-b-d0\smash64ds-battle-playable-tickhud-hwtri.elf
+basis     whole-match ticks/frame = cycles / (2 x 1601 regions) = cycles / 3,202
+basis     marginal ticks/frame = cycles / (2 x 80 frames) = cycles / 160
+mask      total_cycles-halt_wait >= 1,171,083 ticks
+
+MARGINAL 80 FRAMES -- symbol census (nm ranges)
+  total 1,316,954 ticks/frame over 1366 owners
+   ticks/fr  share      issue icache_fi dcache_fi write_buf interlock bus_conte  owner
+     43,644   3.3%     41,917     1,727         0         0         0         0  __aeabi_fadd
+     33,145   2.5%     14,392       301     7,948     8,497       625     1,382  memcpy
+     30,241   2.3%      3,778     9,913    12,096     3,222     1,232         0  ndsFighterMarioFoxDLAllDrawForSlot.constprop.0
+     29,507   2.2%     27,736     1,770         0         0         0         0  __mulsf3
+     27,952   2.1%       -141    22,609     4,516        87       881         0  ndsR2AnimValueQ
+     27,880   2.1%       -718    15,910     7,687       314     1,495     3,192  ndsRendererCommitNativeStageSegment
+     26,691   2.0%      4,598     9,038    10,020       557     2,478         0  gcPlayDObjAnimJoint
+     26,485   2.0%     10,926         0     3,763       197     1,312    10,287  ndsRendererNativeEmitProductionPrimitiveGroups
+     25,960   2.0%      5,904    11,919     6,649       342     1,144         0  ndsR2FtAnimParseDObjFigatree
+     24,514   1.9%     10,175       548     9,499     2,595     1,645        51  ndsRendererExecuteNativeFighterOwnerProduction
+     20,735   1.6%      5,360        89       757    14,386       143         0  memset
+     20,316   1.5%      9,620       153     5,420     1,393     1,878     1,852  ndsRendererNativePrepareProductionRun
+     18,909   1.4%       -460    13,759     3,813       304     1,494         0  ndsRendererMtxMulAffine20p12
+     16,448   1.2%       -521     8,941     4,129       544     1,367     1,988  ndsRendererNativeStageBeginRun.part.0
+     15,791   1.2%        989        11    13,099     1,693         0         0  armCopyMem32
+     14,445   1.1%      2,327     4,610     6,265       377       866         0  ftParamUpdateAnimKeys
+     14,140   1.1%       -103     9,713     3,297        17     1,216         0  get_fat.isra.0
+     13,737   1.0%     13,559       179         0         0         0         0  __divsf3
+     12,811   1.0%      2,939     5,448     3,536       281       607         0  ndsRendererAdapterBuildDObjXObjMatrix
+     12,554   1.0%       -401     9,454     2,919       213       370         0  ndsRendererAdapterBuildFighterTraRotRpyDirect20p12
+     12,282   0.9%       -296     6,510     2,826       210       400     2,632  ndsRendererNativeStageLoadNoZMatrix
+     11,840   0.9%      1,795     5,311     3,598       613       523         0  lbParticleDrawTextures
+     10,611   0.8%      8,353        18     2,048       184        10         0  ndsRendererMtxMul20p12
+     10,463   0.8%      2,179     5,300     2,512        94       379         0  mpCollisionGetFCCommonFloor
+     10,405   0.8%       -528     4,541     2,233       132       256     3,771  ndsRendererLoadHardwareSplitMatrices
+     10,131   0.8%        894     3,093     5,032       733       378         0  ftDisplayMainDrawDefault
+      9,616   0.7%      1,208     3,506     4,039       229       634         0  ndsStageGCDrawAllLoopRecordCapturedDisplay
+      9,440   0.7%       -186     2,577     5,980       219       849         0  ndsBaseGcRunAll
+      9,430   0.7%      1,602     3,322     3,737       197       572         0  ftGetStruct
+      9,332   0.7%      1,559     2,971     3,737       748       317         0  ndsRendererAdapterBuildPersistentStageWorldMatrix.constprop.0
+      9,263   0.7%       -455     4,248     1,917       263        91     3,198  tickGetCount
+      9,117   0.7%        581     2,513     4,669       754       600         0  ndsFTParamsInvalidateSubtree
+      8,899   0.7%      1,738     2,810     3,473        97       781         0  gcPlayAnimAll
+      8,899   0.7%        -17     7,010     1,290         3       613         0  f_lseek
+      8,867   0.7%      1,043         1     2,157     5,541       125         0  ndsRendererSyncTextureTile
+      8,771   0.7%        981     3,197     3,842       365       387         0  gcCaptureCameraGObj
+      8,038   0.6%        608     3,932     2,898       314       286         0  battleship_ftMainProcUpdateInterrupt
+      7,714   0.6%      1,076     3,102       477        17     1,040     2,001  sqrtf
+      7,500   0.6%       -105     5,685     1,303       159       458         0  ndsRendererHardwareResolveOrBindTexture
+      7,471   0.6%        442     2,002     3,699       275     1,053         0  ndsR2AnimBuildTrackTable.constprop.0.isra.0
+      7,464   0.6%       -390     4,255     3,000       154       445         0  ndsRendererHardwareBindTextureName
+      7,248   0.6%          9     6,986       185         2        65         0  ndsR2CollisionFixedAxisScalesF32
+      7,098   0.5%      1,993     3,247     1,228        65       565         0  ndsDrawSObjIntoPreview
+      7,079   0.5%      3,156       191     2,622       469       470       170  ndsRendererNativeShadeProductionActions.constprop.0.isra.0
+      6,960   0.5%      3,090       123     2,779       649       319         0  ndsRendererNativeApplyStateDelta
+      6,404   0.5%        540     1,753     3,401       214       105       391  glBindTexture
+      6,301   0.5%      1,203     3,108     1,657        66       268         0  ndsBaseGcPlayMObjMatAnim
+      6,078   0.5%      1,263     2,879     1,270       665         0         0  ndsPlatformCommitOriginalSpritePreviewLayer
+      5,921   0.4%        -23     5,397       392        51       103         0  ndsR2CollisionFixedInvertF32
+      5,855   0.4%        446     1,767     2,843       414       385         0  ndsRendererAdapterPrepareNativeStageOwner
+      5,743   0.4%      1,370     3,025     1,090       190        69         0  ndsStageMPAdjustFloorLoopWallSweep
+      5,666   0.4%        833     3,034     1,424       186       190         0  ndsStageMPSweepFloorLoopSweep
+      5,664   0.4%       -264     3,248     2,285       278       118         0  ndsRendererNativeApplyMaterial.part.0
+      5,646   0.4%        658     2,520     1,790       592        87         0  ndsParticleSetCurrentCamera
+      5,508   0.4%        647     1,965     2,092       685       120         0  battleship_ftMainSetStatus
+      5,454   0.4%        790     2,403     1,825       163       274         0  gcRunGObjProcess
+      5,340   0.4%        584     2,453     2,100       107        96         0  gcParseMObjMatAnimJoint
+      5,319   0.4%        -24     1,975     1,025       181        98     2,063  ndsRendererLoadHardwareMatrixPair.constprop.0
+      5,208   0.4%      2,342       192     1,189        76       484       924  ndsRendererTask36ReplayRun
+      5,202   0.4%        987     1,335     1,878        47       955         0  ndsStageCollisionLoopGeometryReady
+      5,200   0.4%       -177     3,074     1,926        50       328         0  ndsRendererNativeStageEmitNoZTriangle
+      5,137   0.4%        487     1,588     2,438       132       493         0  ndsRendererAdapterBuildDObjLocalMatrix
+      5,126   0.4%        -79     2,682     1,038         8       396     1,082  ndsRendererNativeStageEmitNoZVertex.isra.0
+      4,953   0.4%        858     2,110     1,344        36       604         0  ndsRelocGetFileData
+      4,878   0.4%      1,326     2,016       954        29       554         0  ndsR2AnimTargetValue.constprop.0
+      4,841   0.4%        -46     4,281       373       109       124         0  ndsR2CollisionFixedStoreF32
+      4,805   0.4%        -62     3,377     1,132        16       341         0  mutexUnlock
+      4,768   0.4%       -155     3,743     1,048        90        41         0  ndsR2CollisionFixedBuildLocal
+      4,729   0.4%      1,685     2,846       160         9        30         0  __udivmoddi4
+      4,714   0.4%        366     2,215     1,609       359       165         0  syTaskmanRunTask
+      4,661   0.4%        603     2,324     1,480        80       175         0  ftMainProcPhysicsMap
+      4,651   0.4%      2,105         0       485        23       308     1,730  ndsRendererNativeEmitProductionCrossRun.constprop.0
+      4,615   0.4%        458     2,051     1,601        57       447         0  cpuGetTiming
+      4,474   0.3%        626     1,602     1,713       291       242         0  ndsMPFindLineEndpoints
+      4,398   0.3%        769     1,750     1,660        63       156         0  gcParseDObjAnimJoint
+      4,270   0.3%        380       448     2,855       279       307         0  gcAddDObjAnimJoint
+      4,220   0.3%      1,064     1,815       892        39       411         0  ndsRelocAssetIDForToken
+      4,181   0.3%      1,350     2,337       322       164         7         0  syMatrixLookAtReflectF
+      4,085   0.3%         30     1,042     2,628        97       287         0  ndsFighterDisplayContractCountFlags
+      4,063   0.3%      3,466       597         0         0         0         0  __aeabi_fcmpeq
+      4,008   0.3%        504     1,667     1,642        78       118         0  ndsRendererAdapterMarkDisplayProcHeads
+      3,970   0.3%        185     1,394     1,924       226       240         0  ndsAudioFgmPlayAtPan
+      3,950   0.3%        863     2,340       490       131       125         0  _svfiprintf_r
+      3,912   0.3%        798     1,287     1,442        43       342         0  ndsRendererAdapterStageWorldSourceKeyMatches
+      3,883   0.3%        -94     2,498     1,317        62       101         0  mutexLock
+      3,808   0.3%      2,386        64     1,063        31       264         0  memcmp
+      3,721   0.3%        656     1,538     1,296        43       188         0  ndsRelocFindLoadedFileContaining
+      3,679   0.3%        559     1,685     1,213        93       130         0  ndsMPLineExtentSweepRejects
+      3,582   0.3%       -189     1,774     1,041        67       168       722  ndsRendererHardwareEndBatch.part.0
+      3,551   0.3%        819     1,625       924        19       163         0  ndsBaseGcPlayDObjAnimJoint
+
+MARGINAL 80 FRAMES -- inline attribution (addr2line)
+  total 1,316,954 ticks/frame over 1516 owners
+   ticks/fr  share      issue icache_fi dcache_fi write_buf interlock bus_conte  owner
+     46,871   3.6%     13,088    23,663     6,884     1,180     1,631       425  (not attributed: below the addr2line cut)
+     43,688   3.3%     41,954     1,727         0         0         8         0  __aeabi_fadd
+     33,145   2.5%     14,392       301     7,948     8,497       625     1,382  memcpy
+     29,507   2.2%     27,736     1,770         0         0         0         0  __aeabi_fmul
+     23,934   1.8%      3,803     7,255     9,848       551     2,477         0  gcPlayDObjAnimJoint
+     21,351   1.6%        -58    16,971     3,492        65       881         0  ndsR2AnimValueQ
+     20,832   1.6%      4,435     9,243     6,024       319       810         0  ndsR2FtAnimParseDObjFigatree
+     20,730   1.6%      5,355        89       757    14,386       143         0  memset
+     18,486   1.4%     13,653         0     3,592       154     1,088         0  ndsRendererNativeEmitProductionPrimitiveGroups
+     16,795   1.3%      2,928     7,533     4,203       162     1,969         0  ndsRendererTask29GXRecord
+     15,791   1.2%        989        11    13,099     1,693         0         0  armCopyMem32
+     14,140   1.1%       -103     9,713     3,297        17     1,216         0  get_fat
+     13,756   1.0%       -460     8,930     3,813       303     1,170         0  ndsRendererMtxMulAffine20p12
+     13,737   1.0%     13,559       179         0         0         0         0  __aeabi_fdiv
+     13,487   1.0%      2,097     4,127     6,035       373       855         0  ftParamUpdateAnimKeys
+     13,112   1.0%      6,509        65     4,593     1,235       711         0  ndsRendererNativePrepareProductionRun
+     10,582   0.8%       -112     7,187     3,037       111       359         0  ndsRendererCommitNativeStageSegment
+     10,131   0.8%        894     3,093     5,032       733       378         0  ftDisplayMainDrawDefault
+      9,533   0.7%      3,218       258     4,460       951       638         7  ndsRendererExecuteNativeFighterOwnerProduction
+      9,433   0.7%       -186     2,573     5,979       218       849         0  ndsBaseGcRunAll
+      8,987   0.7%        -26     5,794     2,699       166       355         0  ndsRendererNativeStageBeginRun
+      8,907   0.7%      1,506     6,535       177        16       673         0  ndsRendererRoundShiftS64
+      8,777   0.7%        -22     6,900     1,286         3       609         0  f_lseek
+      8,456   0.6%      6,375        18     1,871       183        10         0  ndsRendererMtxMul20p12
+      8,423   0.6%        916     3,057     3,739       360       351         0  gcCaptureCameraGObj
+      8,134   0.6%        977         1     1,854     5,266        36         0  ndsRendererSyncTextureTile
+      8,000   0.6%        -50     2,127     1,016        94         0     4,812  glLoadMatrix4x4
+      7,951   0.6%        834     3,736     2,499       488       394         0  lbParticleDrawTextures
+      7,432   0.6%        718     2,514     2,566     1,630         4         0  ndsRendererMatrixCopy20p12
+      7,340   0.6%      1,372     2,723     2,885       162       197         0  ftGetStruct
+      7,219   0.5%        412     3,408     2,821       298       279         0  battleship_ftMainProcUpdateInterrupt
+      7,070   0.5%       -289     3,926     1,917       146        91     1,279  tickGetCount
+      7,016   0.5%        427     1,741     3,604       693       551         0  ndsFTParamsInvalidateFlatParts
+      6,508   0.5%        178     1,586     3,605       274       865         0  ndsR2AnimBuildTrackTable
+      6,404   0.5%        540     1,753     3,401       214       105       391  glBindTexture
+      6,384   0.5%      2,849       191     2,502       397       445         0  ndsRendererNativeShadeProductionActions
+      6,382   0.5%        576     2,441     2,632       407       327         0  ndsFighterMarioFoxDLAllDrawForSlot
+      6,225   0.5%      1,175     3,078     1,644        61       267         0  ndsBaseGcPlayMObjMatAnim
+      6,064   0.5%      2,750        50     2,318       631       315         0  ndsRendererNativeApplyStateDelta
+      6,034   0.5%       -218     3,302     2,554        49       347         0  ndsRendererNativeStageEmitVertex
+      6,023   0.5%      1,243     2,853     1,262       665         0         0  ndsPlatformScaleOriginalSpritePreviewNearest
+      5,564   0.4%         54     5,270        78         2       160         0  ndsR2CollisionFixedToF32
+      5,448   0.4%        788     2,402     1,822       162       273         0  gcRunGObjProcess
+      5,430   0.4%      1,254     2,470     1,156        64       485         0  ndsDrawSObjIntoPreview
+      5,417   0.4%     -1,590         0         0         0         0     7,007  ndsRendererHardwareWriteFighterVertex16Words
+      5,228   0.4%        606     2,300     1,826       159       337         0  ndsRendererHardwareEndBatch
+      5,226   0.4%        531     2,404     2,091       107        94         0  gcParseMObjMatAnimJoint
+      5,202   0.4%        987     1,335     1,878        47       955         0  ndsStageCollisionLoopGeometryReady
+      5,134   0.4%        937     2,056     1,866       121       154         0  ndsRendererAdapterComposeOwnerWorldsFlat
+      5,132   0.4%        485     1,584     2,438       132       493         0  ndsRendererAdapterBuildDObjLocalMatrix
+      5,031   0.4%        669       899     1,693     1,665       105         0  ndsRendererAdapterBuildNativeProductionInputs
+      4,936   0.4%        527     1,628     2,038       668        75         0  battleship_ftMainSetStatus
+      4,869   0.4%        367     1,217     2,862       146       276         0  ndsRendererAdapterPrepareNativeMaterials
+      4,831   0.4%        893     3,167       515        37       218         0  ndsRendererAdapterFloatPow2ToS32
+      4,796   0.4%         12     4,785         0         0         0         0  ndsR2CfxIsqrt64Portable
+      4,778   0.4%       -166     2,764     1,805        47       328         0  ndsRendererNativeStageEmitNoZTriangle
+      4,699   0.4%      1,666     2,834       160         9        30         0  __udivmoddi4
+      4,682   0.4%        678     1,797     1,736       124       347         0  ndsStageGCDrawAllLoopRecordCapturedDisplay
+      4,615   0.4%        458     2,051     1,601        57       447         0  cpuGetTiming
+      4,575   0.3%        465     1,716     1,862       295       238         0  ndsRendererAdapterBuildPersistentStageWorldMatrix
+      4,558   0.3%        -70     2,453     1,873       208        94         0  ndsRendererNativeApplyMaterial
+      4,520   0.3%      2,520         0     1,454       345       202         0  ndsRendererNativeApplyStateSpan
+      4,474   0.3%        626     1,602     1,713       291       242         0  ndsMPFindLineEndpoints
+      4,403   0.3%        485     2,218     1,453        76       170         0  ftMainProcPhysicsMap
+      4,362   0.3%        931     1,958     1,235        39       199         0  mpCollisionGetFCCommonFloor
+      4,361   0.3%      1,402     2,958         0         1         0         0  ndsR2F32ToFixed
+      4,144   0.3%        733     1,834     1,001        25       551         0  ndsRelocResolveSymbolOffset
+      4,085   0.3%         30     1,042     2,628        97       287         0  ndsFighterDisplayContractCountFlags
+      4,063   0.3%      3,466       597         0         0         0         0  __aeabi_fcmpeq
+      4,039   0.3%        377     1,754     1,333       526        49         0  ndsParticleSetCurrentCamera
+      4,033   0.3%       -220     1,787       653        38         0     1,774  ndsRendererHardwareFighterLoadModelviewWorldScaled
+      3,990   0.3%        -64     3,387       448        24       195         0  ndsR2CollisionF32ToFixed
+      3,987   0.3%        597     1,573     1,612        62       143         0  gcParseDObjAnimJoint
+      3,972   0.3%        309       278     2,808       281       296         0  ndsBaseGcAddDObjAnimJoint
+      3,911   0.3%        798     1,286     1,442        43       342         0  ndsRendererAdapterStageWorldSourceKeyMatches
+      3,857   0.3%        879       893     1,604        40       441         0  gcGetTreeDObjNext
+      3,800   0.3%      2,381        64     1,063        31       262         0  memcmp
+      3,717   0.3%       -227     1,624     1,921       101       298         0  ndsRendererHardwareBindTextureName
+      3,710   0.3%        528     2,066       856       136       123         0  ndsStageMPSweepFloorLoopSweep
+      3,690   0.3%          1     3,677        11         0         1         0  ndsR2S32ToF32Bits
+      3,683   0.3%        648     1,817     1,060       108        49         0  ndsMPO2RReadU16Kernel
+      3,630   0.3%        855     1,352     1,126       127       171         0  ndsRendererAdapterBuildDObjXObjMatrix
+      3,597   0.3%        335     1,204     1,748        94       217         0  ndsRendererAdapterBuildFighterPartsMtx
+      3,577   0.3%       -360     1,437     2,295        99       106         0  ndsRendererAdapterFighterSinFromIndex
+      3,552   0.3%      1,073     2,082       250       139         7         0  syMatrixLookAtReflectF
+      3,547   0.3%        678     2,193       439       120       117         0  _svfiprintf_r
+      3,521   0.3%        -16     3,134       173         0       230         0  ndsRendererHardwareBlendPrimEnvTexel0
+      3,452   0.3%        228     2,795       290        40       100         0  ndsRendererAdapterRoundShift20p12
+      3,439   0.3%        968     2,470         0         0         0         0  ndsR2SqrtfBits
+      3,419   0.3%        867     1,333       921        39       260         0  ndsRendererAdapterMaterialAnimHash
+
+THE UNEXAMINED POOL on the marginal frames -- write_buffer + interlock + bus_contention (symbol census)
+  total 166,436 ticks/frame over 1291 owners
+   ticks/fr  share  write_buf interlock bus_conte  owner
+     14,528   8.7%     14,386       143         0  memset
+     11,797   7.1%        197     1,312    10,287  ndsRendererNativeEmitProductionPrimitiveGroups
+     10,504   6.3%      8,497       625     1,382  memcpy
+      5,666   3.4%      5,541       125         0  ndsRendererSyncTextureTile
+      5,123   3.1%      1,393     1,878     1,852  ndsRendererNativePrepareProductionRun
+      5,001   3.0%        314     1,495     3,192  ndsRendererCommitNativeStageSegment
+      4,454   2.7%      3,222     1,232         0  ndsFighterMarioFoxDLAllDrawForSlot.constprop.0
+      4,291   2.6%      2,595     1,645        51  ndsRendererExecuteNativeFighterOwnerProduction
+      4,159   2.5%        132       256     3,771  ndsRendererLoadHardwareSplitMatrices
+      3,898   2.3%        544     1,367     1,988  ndsRendererNativeStageBeginRun.part.0
+      3,553   2.1%        263        91     3,198  tickGetCount
+      3,242   1.9%        210       400     2,632  ndsRendererNativeStageLoadNoZMatrix
+      3,059   1.8%         17     1,040     2,001  sqrtf
+      3,035   1.8%        557     2,478         0  gcPlayDObjAnimJoint
+      2,343   1.4%        181        98     2,063  ndsRendererLoadHardwareMatrixPair.constprop.0
+      2,061   1.2%         23       308     1,730  ndsRendererNativeEmitProductionCrossRun.constprop.0
+      1,798   1.1%        304     1,494         0  ndsRendererMtxMulAffine20p12
+      1,693   1.0%      1,693         0         0  armCopyMem32
+      1,487   0.9%        342     1,144         0  ndsR2FtAnimParseDObjFigatree
+      1,486   0.9%          8       396     1,082  ndsRendererNativeStageEmitNoZVertex.isra.0
+      1,484   0.9%         76       484       924  ndsRendererTask36ReplayRun
+      1,354   0.8%        754       600         0  ndsFTParamsInvalidateSubtree
+      1,328   0.8%        275     1,053         0  ndsR2AnimBuildTrackTable.constprop.0.isra.0
+      1,243   0.7%        377       866         0  ftParamUpdateAnimKeys
+      1,233   0.7%         17     1,216         0  get_fat.isra.0
+      1,136   0.7%        613       523         0  lbParticleDrawTextures
+      1,111   0.7%        733       378         0  ftDisplayMainDrawDefault
+      1,109   0.7%        469       470       170  ndsRendererNativeShadeProductionActions.constprop.0.isra.0
+      1,068   0.6%        219       849         0  ndsBaseGcRunAll
+      1,065   0.6%        748       317         0  ndsRendererAdapterBuildPersistentStageWorldMatrix.constprop.0
+      1,002   0.6%         47       955         0  ndsStageCollisionLoopGeometryReady
+        969   0.6%        649       319         0  ndsRendererNativeApplyStateDelta
+        968   0.6%         87       881         0  ndsR2AnimValueQ
+        956   0.6%         67       168       722  ndsRendererHardwareEndBatch.part.0
+        887   0.5%        281       607         0  ndsRendererAdapterBuildDObjXObjMatrix
+        878   0.5%         97       781         0  gcPlayAnimAll
+        863   0.5%        229       634         0  ndsStageGCDrawAllLoopRecordCapturedDisplay
+        804   0.5%        685       120         0  battleship_ftMainSetStatus
+        798   0.5%        414       385         0  ndsRendererAdapterPrepareNativeStageOwner
+        775   0.5%        765         9         0  ndsRendererSetParticleCamera
+        774   0.5%        419       355         0  ndsFighterDisplayContractSelectDL
+        769   0.5%        197       572         0  ftGetStruct
+        752   0.5%        365       387         0  gcCaptureCameraGObj
+        710   0.4%        214       105       391  glBindTexture
+        696   0.4%         61       263       372  ndsRendererR2WriteLightVector
+        679   0.4%        592        87         0  ndsParticleSetCurrentCamera
+        666   0.4%        665         0         0  ndsPlatformCommitOriginalSpritePreviewLayer
+        640   0.4%         36       604         0  ndsRelocGetFileData
+        630   0.4%         65       565         0  ndsDrawSObjIntoPreview
+        625   0.4%        132       493         0  ndsRendererAdapterBuildDObjLocalMatrix
+        617   0.4%        159       458         0  ndsRendererHardwareResolveOrBindTexture
+        616   0.4%          3       613         0  f_lseek
+        600   0.4%        314       286         0  battleship_ftMainProcUpdateInterrupt
+        599   0.4%        154       445         0  ndsRendererHardwareBindTextureName
+        586   0.4%        279       307         0  gcAddDObjAnimJoint
+        582   0.3%        213       370         0  ndsRendererAdapterBuildFighterTraRotRpyDirect20p12
+        582   0.3%         29       554         0  ndsR2AnimTargetValue.constprop.0
+        564   0.3%        495        69         0  gcDrawAll
+        545   0.3%        535         9         0  ndsRendererCaptureTextureLoad.part.0
+        533   0.3%        291       242         0  ndsMPFindLineEndpoints
+        523   0.3%        359       165         0  syTaskmanRunTask
+        507   0.3%        496        11         0  ndsRendererAdapterGetFrameCameraMatrices.constprop.0
+        505   0.3%         57       447         0  cpuGetTiming
+        479   0.3%         82        41       357  ndsRendererNativeStageTask36BeginSegment
+        473   0.3%         53       185       235  ndsRendererSubmitNativeImpactWave
+        472   0.3%         94       379         0  mpCollisionGetFCCommonFloor
+        467   0.3%        226       240         0  ndsAudioFgmPlayAtPan
+        450   0.3%         39       411         0  ndsRelocAssetIDForToken
+        436   0.3%        163       274         0  gcRunGObjProcess
+        427   0.3%        204        38       186  ndsRendererPrepareWhispyQuadState
+        427   0.3%          2       425         0  ndsRendererHardwareTextureColor
+        396   0.2%        278       118         0  ndsRendererNativeApplyMaterial.part.0
+        386   0.2%         43       342         0  ndsRendererAdapterStageWorldSourceKeyMatches
+        384   0.2%         97       287         0  ndsFighterDisplayContractCountFlags
+        378   0.2%         50       328         0  ndsRendererNativeStageEmitNoZTriangle
+        375   0.2%        186       190         0  ndsStageMPSweepFloorLoopSweep
+        375   0.2%          3       201       171  consolePrintChar
+        357   0.2%         16       341         0  mutexUnlock
+        353   0.2%         14       148       191  ndsRendererHardwareSubmitVertex
+        351   0.2%        283        65         3  ndsRendererSubmitWhispyNativeQuad
+        335   0.2%          2       333         0  move_window
+        334   0.2%         66       268         0  ndsBaseGcPlayMObjMatAnim
+        315   0.2%         58       258         0  ndsRendererAdapterCommitNativeStageDisplay
+        311   0.2%         77       235         0  ndsWhispyAOTStructFuncRunLean.isra.0
+        308   0.2%         95       213         0  ndsRendererAdapterFindStageWorldEntry
+        302   0.2%         73       229         0  ndsR2CfxPrepareFighterJoint
+        298   0.2%         39       260         0  ndsRendererAdapterMaterialAnimHash
+        297   0.2%        291         6         0  syMatrixPerspFastF
+        295   0.2%         61       234         0  ndsRelocNormalizeFighterAObj16File
+        294   0.2%         31       264         0  memcmp
+
+THE UNEXAMINED POOL whole match -- write_buffer + interlock + bus_contention (symbol census)
+  total 129,684 ticks/frame over 1404 owners
+   ticks/fr  share  write_buf interlock bus_conte  owner
+     11,466   8.8%        188     1,275    10,003  ndsRendererNativeEmitProductionPrimitiveGroups
+      9,865   7.6%      9,773        93         0  memset
+      5,520   4.3%      5,397       123         0  ndsRendererSyncTextureTile
+      5,018   3.9%      1,380     1,832     1,806  ndsRendererNativePrepareProductionRun
+      5,014   3.9%        330     1,494     3,190  ndsRendererCommitNativeStageSegment
+      4,300   3.3%      3,104     1,196         0  ndsFighterMarioFoxDLAllDrawForSlot.constprop.0
+      4,166   3.2%      2,515     1,601        50  ndsRendererExecuteNativeFighterOwnerProduction
+      4,074   3.1%        132       250     3,691  ndsRendererLoadHardwareSplitMatrices
+      3,893   3.0%        541     1,366     1,987  ndsRendererNativeStageBeginRun.part.0
+      3,650   2.8%      3,378       203        69  memcpy
+      3,386   2.6%        240        87     3,059  tickGetCount
+      3,232   2.5%        204       398     2,630  ndsRendererNativeStageLoadNoZMatrix
+      2,671   2.1%         15       909     1,747  sqrtf
+      2,312   1.8%        178        97     2,038  ndsRendererLoadHardwareMatrixPair.constprop.0
+      2,233   1.7%        408     1,824         0  gcPlayDObjAnimJoint
+      1,987   1.5%         23       297     1,667  ndsRendererNativeEmitProductionCrossRun.constprop.0
+      1,715   1.3%        288     1,427         0  ndsRendererMtxMulAffine20p12
+      1,485   1.1%          8       396     1,081  ndsRendererNativeStageEmitNoZVertex.isra.0
+      1,484   1.1%         77       483       923  ndsRendererTask36ReplayRun
+      1,098   0.8%        654       444         0  ndsFTParamsInvalidateSubtree
+      1,078   0.8%        713       366         0  ftDisplayMainDrawDefault
+      1,077   0.8%        456       455       166  ndsRendererNativeShadeProductionActions.constprop.0.isra.0
+      1,075   0.8%        759       316         0  ndsRendererAdapterBuildPersistentStageWorldMatrix.constprop.0
+      1,038   0.8%        207       832         0  ndsBaseGcRunAll
+        986   0.8%         43       943         0  ndsStageCollisionLoopGeometryReady
+        968   0.7%        545       424         0  lbParticleDrawTextures
+        962   0.7%        649       312         0  ndsRendererNativeApplyStateDelta
+        942   0.7%         64       166       712  ndsRendererHardwareEndBatch.part.0
+        891   0.7%        250       641         0  ftParamUpdateAnimKeys
+        848   0.7%        227       621         0  ndsStageGCDrawAllLoopRecordCapturedDisplay
+        841   0.6%         91       750         0  gcPlayAnimAll
+        794   0.6%        411       383         0  ndsRendererAdapterPrepareNativeStageOwner
+        767   0.6%        757         9         0  ndsRendererSetParticleCamera
+        765   0.6%        247       518         0  ndsRendererAdapterBuildDObjXObjMatrix
+        759   0.6%        414       345         0  ndsFighterDisplayContractSelectDL
+        732   0.6%        350       382         0  gcCaptureCameraGObj
+        709   0.5%        193       516         0  ndsR2FtAnimParseDObjFigatree
+        695   0.5%        205       103       387  glBindTexture
+        683   0.5%        165       519         0  ftGetStruct
+        678   0.5%         60       257       362  ndsRendererR2WriteLightVector
+        666   0.5%         66       600         0  ndsR2AnimValueQ
+        662   0.5%        576        85         0  ndsParticleSetCurrentCamera
+        654   0.5%        238       416         0  ndsRendererAdapterBuildFighterTraRotRpyDirect20p12
+        608   0.5%        132       477         0  ndsRendererAdapterBuildDObjLocalMatrix
+        584   0.5%        149       435         0  ndsRendererHardwareBindTextureName
+        568   0.4%         26       542         0  ndsRelocGetFileData
+        567   0.4%        287       279         0  battleship_ftMainProcUpdateInterrupt
+        564   0.4%        494        70         0  gcDrawAll
+        533   0.4%        524         9         0  ndsRendererCaptureTextureLoad.part.0
+        526   0.4%        105       420         0  ndsR2AnimBuildTrackTable.constprop.0.isra.0
+        519   0.4%        357       162         0  syTaskmanRunTask
+        493   0.4%        271       221         0  ndsMPFindLineEndpoints
+        477   0.4%         88       389         0  mpCollisionGetFCCommonFloor
+        476   0.4%         79        40       357  ndsRendererNativeStageTask36BeginSegment
+        476   0.4%        465        10         0  ndsRendererAdapterGetFrameCameraMatrices.constprop.0
+        465   0.4%         49       416         0  cpuGetTiming
+        403   0.3%        144       259         0  gcRunGObjProcess
+        387   0.3%        273       115         0  ndsRendererNativeApplyMaterial.part.0
+        386   0.3%         42       344         0  ndsRendererAdapterStageWorldSourceKeyMatches
+        382   0.3%         96       286         0  ndsFighterDisplayContractCountFlags
+        378   0.3%         50       328         0  ndsRendererNativeStageEmitNoZTriangle
+        368   0.3%        197       171         0  ndsStageMPSweepFloorLoopSweep
+        311   0.2%         58       254         0  ndsRendererAdapterCommitNativeStageDisplay
+        307   0.2%         93       214         0  ndsRendererAdapterFindStageWorldEntry
+        297   0.2%         58       239         0  ndsBaseGcPlayMObjMatAnim
+        295   0.2%         31       264         0  memcmp
+        290   0.2%         38       252         0  ndsRendererAdapterMaterialAnimHash
+        290   0.2%        223        67         0  ndsRendererPrepareNativeStageOwner
+        289   0.2%        139        27       123  ndsRendererPrepareWhispyQuadState
+        288   0.2%        282         6         0  syMatrixPerspFastF
+        283   0.2%        194        89         0  ndsFighterDisplayContractSubmit
+        250   0.2%         70       179         0  DynamicArrayGet
+        249   0.2%        189        60         0  ndsStageMPAdjustFloorLoopWallSweep
+        242   0.2%        156        86         0  ndsIFCommonRecordHUDState
+        238   0.2%        234         4         0  ndsRendererMtxLoadN64ToDS20p12
+        238   0.2%        100       139         0  ndsRendererNativeApplyProductionPreamble
+        238   0.2%         75       163         0  ftMainProcPhysicsMap
+        233   0.2%          7        72       155  glTexParameter
+        230   0.2%         17       213         0  ndsMPFindLineYakumonoID
+        227   0.2%         61       166         0  ndsWhispyAOTStructFuncRunLean.isra.0
+        226   0.2%         78       147         0  ndsRendererHardwareBindNoTexture.constprop.0
+        224   0.2%         40       184         0  ndsMPGetLineKindForLineID
+        224   0.2%        173        51         0  ndsRendererAdapterBuildNativeMaterialSnapshot
+        221   0.2%        137        84         0  ndsRendererR2RunTextureMemoApply.constprop.0
+        213   0.2%         89       125         0  ndsBaseFTDisplayMainProcDisplay
+        212   0.2%          7        90       116  ndsRendererHardwareSubmitVertex
+        211   0.2%        203         8         0  ndsRendererLoadHardwareMatrices
+        204   0.2%         28       176         0  ndsMPLineExtentRejects
+        203   0.2%         17       186         0  ndsR2AnimTargetValue.constprop.0
+        200   0.2%        162        37         1  ndsRendererSubmitWhispyNativeQuad
