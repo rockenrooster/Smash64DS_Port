@@ -347,17 +347,25 @@ chunks at the `ndsR2AnimCachePreloadStep` seam. Proven static headroom **66,816
 and 26.7 s of a 120 s ceiling. Proven with `gNdsTaskmanArenaChosenSize`
 (1,310,720/16 fails → 1,376,256/0), not by observing that the red went away.
 
-**Flag 1 is still RED on ONE assert, and it is a different one.** The lower-screen
-rolling FPS counter's self-consistency check: `FPS_HUD=289,14,15,16856768`,
-**byte-identical on two consecutive runs**. Recompute from the published windows
-gives 298. Attribution: `X10` lags `FrameWindow`/`TickWindow` by exactly one
-sample (289 with 15 frames needs a ≈17,394,800-tick window; 16,856,768 is
-published beside it). Ruled out: a second writer (one each,
-`nds_platform.c:2371`/`:2374`, inside one `REG_IME=0` block) and a cache-line
-straddle (all four globals in one 32-byte line). This is the R2-04 E2 assert,
-previously recorded as *intermittent* — the flag-1 arm makes it deterministic.
-**Boundary at flag 0 is GREEN on this tree.** `NDS_R204_FPSHUD_SHADOW` exists for
-this question and was not spent.
+**Flag 1 was RED on ONE assert — FIXED 2026-08-15 (`79a9447fd6d`), and the
+recorded direction was BACKWARDS.** R2-04 E2 is a **debugger-coherency defect,
+not a torn write**: melonDS's stub reads through `ARMv5::ReadMem`
+(`melonDS-Accurate/src/ARM.cpp:1545`) → `BusRead32` with **no DCache lookup**, and
+ARM946E-S does not write-allocate. `X10` is the only store before the
+`SampleCount` read-modify-write, so it misses a non-resident line and reaches
+RAM; the load then fills that line and the following three stores hit it, mark it
+dirty and abort the bus write. **`X10` LEADS by one publication; it does not
+lag.** Measured frame by frame (`scripts/probe-fpshud-publication.ps1`, no build):
+420 presented frames, 29 publications, **3 X10-only transitions**; the same probe
+reads sc=14 → x10=**298** and sc=15 → x10=**289**, exactly the pair the assert
+reported as one group. Fix is `DC_FlushRange` at the publication seam
+(`ndsPlatformPublishBattleFpsHudGroup`), per global so it cannot depend on the
+linker keeping four objects adjacent: **0 splits, 0 inconsistent samples** after.
+**Boundary GREEN at flag 1 and GREEN at flag 0**, 0 `Exception:` both.
+`NDS_R204_FPSHUD_SHADOW` was not spent — the probe answered its question free.
+**The general rule is now in `docs/VERIFYING.md`: a GDB read misses the D-cache
+in both directions, so a value read within a line-lifetime of its last write can
+be stale and a group published at a seam can be read torn.**
 
 **ORDERING WAS NOT ENOUGH — the finding worth carrying.** Letting the loader be
 the first caller of the bump allocator lost by **848 bytes**: fighter setup stores
@@ -367,20 +375,76 @@ the first caller of the bump allocator lost by **848 bytes**: fighter setup stor
 `NDS_R2_BATTLEPACK_BLOB_BYTES` is generated from the blob so the reserve cannot
 drift from the asset.
 
-**THE TRADE, UNPRICED.** Only one fighter fits, so the other loses the raw cache
-(`Rejects` 0 → 126). Proof arm, same match, 2,043 frames both:
-`gNdsBattlePlayablePacingVBlanks` **4,274 → 4,805 (+12.4%)**, present-interval
-buckets [4]/[5] 5/12 → 42/108. **Not attributed** — candidates are the 18 streamed
-chunks, the 126 uncached loads, and cross-build placement. Phase 8 must resolve it
-first, and if it holds the answer is to **grow `NDS_TASKMAN_ARENA_SIZE`** out of
-`RAM_RECOVERY_PLAN` Phase 2's 146,560 B so both fighters are resident — not to
-shrink the pack. `NDS_R2_BATTLEPACK` stays **default 0** until then.
+## PHASE 8 IS DONE AND SLICE 1 AS BUILT IS REFUTED AT THIS POOL SIZE (2026-08-15)
 
-**Not done:** phase 8 (the −73,659 at rank-80 is still a projection), phase 6's
-oracle, the measured after-GO per-fighter zero-I/O assertion (the seven K0
+`artifacts/performance/2026-08-15_battlepack-gate/BATTLEPACK_GATE.md`. Both arms
+`smash64ds-battle-playable-tickhud-hwtri`, `BOTH_CPU=1`/`DRAW=1`, DLDI on, mode
+163 one-minute, `-Samples 1600 -RingDump`, window 439–2038, HEAD `79a9447fd6d`.
+
+```text
+              P50        P90        P95 (rank-80) raw / net      top-1%      max
+flag 0     940,416  1,097,920   1,186,112 / 1,161,165        1,570,944  2,300,928
+flag 1     939,648  1,540,032   3,447,488 / 3,422,541        6,118,208  7,252,800
+delta         -768   +442,112      +2,261,376                +4,547,264
+```
+
+**The flag-0 arm is a control that reproduces the bank**: +1,280 / +1,472 /
+**+2,048** against `build-c158-gate` at `a159069af0d`, on a tree that has since
+taken Phase 2, the `ftmain` patch and the whole pack. **The requirement on this
+HEAD is 65,732 at the 80th-largest frame, not 64,452.** Same fight both arms —
+`gNdsBattleTextHudP0Damage/P1Damage` **0/76** on both, 355 acquisitions on both —
+so this is a cost delta, not `route-ab-cannot-price-gameplay-change`.
+
+**THE ATTRIBUTION, AND IT IS NOT CLOSE.**
+
+- **18 streamed chunks: ≤0.3%.** They run once per *source update* at the first 18
+  `scVSBattleFuncUpdate` calls (presented frames ~1–9); the window opens at 439.
+  Bounded independently of that: whole-match pacing VBlanks **4,501 → 5,271
+  (+770, +17.1%)** while the in-window `ALL` delta is **430,010,624 tk = 767.6
+  VBlanks**, so everything outside the window is **≤2.4 VBlanks**.
+- **Cross-build placement: ~0.** P50 moved **−768** against its own ~5,700 floor;
+  a +2,261,376 rank-80 move is **160× the ≥14,080 P95 floor**. No falsifier arm
+  was built — at 160× the floor it is no longer the discriminator.
+- **111 extra uncached acquisitions: the rest.** `430,010,624 / 111 =
+  3,873,969 tk each (~6.9 VBlanks)`, and the P95-set bracket agrees from the other
+  side: **`SITR` +192,781 (41.6%) → +3,348,118 (86.3%) at 36.19×**, `SPRM` 134.61×,
+  while `FTR`/`STG` do not move (1.01×/1.00×). The draw side is untouched; this is
+  the acquisition path on the frames that set P95.
+
+**ROOT CAUSE: the carve did not shrink the raw file cache, it DELETED it.**
+`NDS_BATTLEPACK_RESERVE_BYTES` 287,936 of a 292,032 B reservation leaves **4,096
+B**; `Fills` 17 → **2**, `Rejects` 0 → **126**, `AnimCacheHits` 338 → **30**.
+
+> **CORRECTION — do not reuse the old miss price.** The banked dose-response
+> modelled a cache miss at **+645,225**; measured here it is **3,873,969**, **6.0×**.
+> That figure is a whole-frame regression coefficient taken with a *warm* cache and
+> does not price a load taken with the cache deleted.
+
+**THE RAM DOES NOT CLOSE.** Restoring the un-packed fighter's cache needs
+`287,936 + 262,144 = 550,080` reserve against today's 292,032 = **+258,048 B of
+arena**; both fighters resident needs ~559,632 vs ~301,564 = **~258,068**. Same
+number, same reason. Phase 2's **146,560 is SPENT**; Phase 1 is 21,600 unspent;
+Phase 4 is **≤80,096 of unsized candidates**; Phase 3's ~150 KB premise is
+**REFUTED**; Phase 5 is unstarted. **Optimistic ceiling 248,256 — short of the
+ONE-fighter case and 26% of the two-fighter one. No named phase or combination
+covers it.** The only `.bss` objects big enough are `sNdsAudioFgmCache` (already
+proven *under*-sized) and `sNdsRelocSceneFileBuffer` ("already optimized once").
+
+**The cheapest unpriced lever is not the RAM plan.** The Fox blob is 287,904 B
+against the 262,144 B cache it evicts — **1.098× the thing it displaces**. A pack
+smaller than its own displacement closes this without buying a byte, and the
+items-off re-pack (553,696 B both fighters, mismatch 0) is already proven.
+
+**`NDS_R2_BATTLEPACK` stays default 0.** No flip proposed.
+
+**Not done:** the arm that would isolate the deletion's *benefit* (pack resident
+**and** cache intact) — so **the −73,659 at rank-80 is still a projection and is
+now less supported, not more**: P50 is flat because the median frame has no
+acquisition, and P95 is swamped. Also not done: a `DRAW=0` cadence arm, phase 6's
+oracle, and the measured after-GO per-fighter zero-I/O assertion (the seven K0
 counters are zero *by construction* on the pack-hit path — the early return
 precedes all of them in the same function — but no GO-gated per-fighter counter
-exists), and root-causing the FPS-HUD tear.
+exists).
 
 ## NATIVE BATTLE KERNEL SLICE 1 (2026-08-14) — phases 1–4 DONE, RAM re-measured, zero builds
 

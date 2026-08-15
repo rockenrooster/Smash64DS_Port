@@ -6,7 +6,10 @@ kernel. `plan.md` §1 carries the direction and the six-step order; this documen
 owns the kernel's *design*, and is the place a later cycle reads before touching
 any of it.
 
-Status: **slice 1 phases 1–4 complete (2026-08-14). No DS runtime path exists
+Status: **phase 5 built and phase 8 measured (2026-08-15) — the resident pack as
+built is REFUTED at this pool size; see §9, which adds the design constraint the
+rest of this document was missing.** Slice 1 phases 1–4 complete (2026-08-14).
+Historical status line follows: **slice 1 phases 1–4 complete (2026-08-14). No DS runtime path exists
 yet.** Evidence: `artifacts/performance/2026-08-14_native-battle-kernel/BATTLEPACK_ANIMATION.md`.
 
 ---
@@ -323,3 +326,48 @@ stream is genuinely ~620 KB.
 - **It is not a fidelity trade.** Nothing here changes a value, a duration, an
   interpolation mode, an event order or a packed payload bit; §5 item 5 is the
   proof.
+
+---
+
+## 9. Phase 8 — measured, and it changes the design constraint (2026-08-15)
+
+`artifacts/performance/2026-08-15_battlepack-gate/BATTLEPACK_GATE.md`.
+
+Gate arms, `BOTH_CPU=1`/`DRAW=1`, DLDI on, 1,600 samples, window 439–2038, same
+fight both (P0/P1 damage 0/76; 355 acquisitions both), HEAD `79a9447fd6d`:
+
+```text
+             P50        P90        P95 rank-80 raw / net       top-1%
+flag 0    940,416  1,097,920   1,186,112 / 1,161,165        1,570,944
+flag 1    939,648  1,540,032   3,447,488 / 3,422,541        6,118,208
+```
+
+**The resident pack costs 2.9× the gate at the percentile, and the owner is the
+cache it displaced.** 111 net-new uncached acquisitions at **3,873,969 ticks
+each**; `SITR` goes from 41.6% to **86.3%** of the P95-set excess at 36.19×, while
+the draw side does not move. The 18 streamed chunks own **≤0.3%** and cross-build
+placement ~0 (P50 −768).
+
+**The design constraint this adds, and it is the one §2 was missing.** §2 says
+"do NOT merely enlarge the existing raw-file cache", and that is still right — but
+it never said what the pack owes the cache it replaces. It does now:
+
+> **A resident pack must be SMALLER than the storage it displaces, or it must not
+> displace it.** The Fox blob is 287,904 B against a 262,144 B raw cache carrying
+> 338 of 355 acquisitions — **1.098× its own displacement** — so it removes more
+> capability than it adds and the arithmetic cannot come out positive at any
+> hit rate below 100%.
+
+Two admissible routes follow, and both are engineering rather than fidelity:
+
+1. **Shrink the pack below its displacement.** The items-off re-pack is proven at
+   553,696 B for *both* fighters, mismatch 0 (`§K-RAM`); a single fighter under
+   262,144 B has not been attempted and is the cheapest unpriced lever here.
+2. **Buy the arena so nothing is displaced** — `+258,048 B` for one fighter,
+   `~258,068 B` for two. `RAM_RECOVERY_PLAN`'s remaining phases sum to an
+   optimistic **248,256** and therefore **do not cover it**; see the board.
+
+**Still unmeasured, and it is the next build:** an arm with the pack resident
+**and** the raw cache intact. Without it the deletion's benefit is unpriced in
+both directions — P50 is flat because the median frame takes no acquisition, and
+P95 is swamped by the starvation. **The −73,659 at rank-80 remains a projection.**
