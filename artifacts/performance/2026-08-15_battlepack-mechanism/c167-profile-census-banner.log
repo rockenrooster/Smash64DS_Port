@@ -1,0 +1,60 @@
+free       22,286     2,050,293     92      5.44  .main           tickGetCount
+free       22,044     2,028,044     92      3.24  .main           ftGetStruct
+free       21,388       256,656     12     44.14  .main           sySchedulerGetTicCount
+evict      20,826     2,499,175    120      9.85  .main           ndsBaseGcRunAll
+evict      18,453       590,484     32      2.72  .main           glGetTexParameter
+evict      16,988     1,460,952     86      2.81  .main           __aeabi_lmul (+1 alias)
+evict      16,756     3,686,310    220      3.18  .main           sqrtf
+free       15,048        60,190      4     24.51  .main           ndsFighterMarioFoxNaturalMotionUpdateEnabled
+free       14,728        58,910      4     24.01  .main           gcParseGObjScript
+evict      13,910     1,112,764     80      2.54  .main           ndsBaseGcPlayAnimAll
+evict      13,165       947,860     72      4.31  .main           ndsR2AnimBuildTrackTable.constprop.0.isra.0
+evict      12,960       725,735     56      8.77  .main           ndsFighterDisplayContractCountFlags
+free       11,325        90,597      8     11.55  .main           ftCommonDeadCheckInterruptCommon
+evict      11,049       707,112     64      4.23  .main           lbCommonCos
+free       10,928        43,711      4     15.91  .main           ftHammerCheckHoldHammer
+evict      10,759       215,174     20     18.74  .main           grPupupuProcUpdate
+free       10,320        82,557      8     19.75  .main           mpProcessUpdateMain
+evict      10,179       101,786     10     15.69  .main           mpCollisionGetEdgeUnderLLineID
+-           9,448     5,820,219    616      1.81  .text.hot.draw  ndsRendererMtxMulAffine20p12
+evict       9,219       294,997     32      6.18  .main           __aeabi_idivmod
+evict       9,052     1,448,356    160      4.91  .text.hot       gcRunGObjProcess
+evict       8,949        89,488     10     23.38  .main           grWallpaperCommonProcUpdate
+-           8,882     5,364,792    604      2.58  .text.hot       gcPlayDObjAnimJoint
+-           8,252       462,116     56      2.63  .main           gcPlayMObjMatAnim
+-           8,000        16,000      2     26.00  .main           ndsPlatformBeginFrame
+-           7,869       409,163     52      3.57  .main           glTexParameter
+-           7,851     2,575,003    328      5.50  .main           gcCaptureCameraGObj
+-           7,537        90,445     12     37.58  .main           ndsPlatformHeldKeys
+-           7,458       686,112     92      8.40  .main           glBindTexture
+-           7,452     3,219,408    432      3.98  .main           gcPlayAnimAll
+-           7,440       208,328     28      5.51  .main           mpCollisionCheckLWallLineCollisionSame
+-           7,410        74,098     10     17.46  .main           gcDefaultFuncRun
+-           7,389        59,113      8     12.21  .main           mpProcessRunFloorEdgeAdjust
+-           7,293       408,384     56      4.09  .main           lbCommonSin
+-           7,276       785,813    108      3.05  .main           ndsRendererAdapterMarkDisplayProcHeads
+-           7,268     2,849,086    392      3.77  .main           ndsRendererLoadHardwareSplitMatrices
+-           7,237     3,357,991    464      5.08  .main           ndsStageGCDrawAllLoopRecordCapturedDisplay
+-           7,156       515,207     72      3.23  .main           __clzsi2
+-           7,045       253,609     36     13.48  .main           ftParamsUpdateFighterPartsTransform
+-           6,801        54,406      8      8.05  .main           __sinf
+-           6,750       283,489     42      6.09  .main           syVectorDiff3D
+-           6,580        13,160      2     21.56  .main           func_8001663C
+-           6,388       434,386     68      9.43  .main           gcRunGObj
+-           6,298       226,715     36     15.93  .main           ftMainProcUpdateInterrupt
+-           6,086       231,283     38     12.84  .main           ftParamsUpdateFighterPartsTransformAll
+-           5,899       589,916    100      2.33  .main           ndsRendererAdapterFindStageWorldEntry
+-           5,882     1,058,829    180      3.94  .main           ndsRendererHardwareApplyTextureParams
+-           5,861     1,054,989    180      3.99  .main           ndsRendererAdapterCommitNativeStageDisplay
+-           5,760        11,520      2      5.50  .main           lbCommonPrepSObjAttr
+-           5,702     1,174,609    206      3.66  .main           ndsRendererAdapterBuildDObjLocalMatrix
+-           5,647     1,513,340    268      3.98  .main           ndsRendererHardwareBindTextureName
+-           5,607       336,434     60     15.22  .main           ftMainPlayAnim
+-           5,537       465,102     84      2.57  .main           ndsRendererAdapterFoldDisplayProcOtherModeL
+-           5,535     2,147,605    388      4.86  .main           ftDisplayMainDrawDefault
+
+zero-eviction pack: 584 B, 36,657,056 non-mem stall cycles in reach
+with eviction:      3,178 B, 107,934,241 non-mem stall cycles in reach
+wrote D:\Stuff\DevFolder\Smash64DS_Port\artifacts\performance\2026-08-15_battlepack-mechanism\v3-pack-arm\census.json
+
+wrote D:\Stuff\DevFolder\Smash64DS_Port\artifacts\performance\2026-08-15_battlepack-mechanism\v3-pack-arm\census.txt
