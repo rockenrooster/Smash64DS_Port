@@ -106,8 +106,22 @@ it does: it used **118,480** of its 163,840, leaving 45,360 spare (27.7%). Even
 structurally incapable of passing Boundary.** That is the guard that stops a lab
 configuration being mistaken for a shippable one, and it is worth more than the
 comment in the Makefile. `NDS_R2_BATTLEPACK` and `NDS_R2_BATTLEPACK_KEEP_CACHE`
-both stay default 0; the default build is unchanged by construction (the flag
-only selects between preprocessor branches that resolve to the previous tokens).
+both stay default 0.
+
+**The shipping default is unchanged, and that is MEASURED rather than argued.**
+`build-c165-default-check` (this tree, defaults, `BOTH_CPU=1`) against the banked
+control `build-c164-gate-bp0` (HEAD `79a9447fd6d`):
+
+```text
+                           text     data        bss     total   fake_heap_start
+build-c164-gate-bp0     985,468  148,288  1,307,016  2,440,772      0x022463c4
+build-c165-default-check 985,468  148,288  1,307,016  2,440,772      0x022463c4
+```
+
+Byte-identical in every section. **Zero shipped bytes changed**, so Boundary's
+state — GREEN at flag 0 and flag 1 on `79a9447fd6d` — is undisturbed and was not
+re-run. Compare ELF sections rather than the `.nds`: NitroFS packs directory
+entries nondeterministically.
 
 ---
 
