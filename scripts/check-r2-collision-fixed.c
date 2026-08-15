@@ -22,10 +22,13 @@
  *                perturbation margin of every case measured so the flip rate
  *                can be read against the error bound rather than asserted
  *
- * The live scale domain is not assumed: NDS_R2_COLLISION_L7_ORACLE read it off
- * a natural mode-163 match on 2026-07-31 -- 460 samples, every one a joint
- * collision actually inverted that frame -- and got 1.1138 to 1.1199, a single
- * scale spanning 0.006. include/nds/nds_r2_collision_mtx.h carries the record.
+ * The live scale domain is not assumed, and it is not the one this file used to
+ * grade. NDS_R2_COLLISION_L7_ORACLE read 1.1138-1.1199 off 460 samples on
+ * 2026-07-31; walking the LIVE fighter trees over a whole both-CPU match on
+ * 2026-08-13 read 0.9937-2.0479 over 152 joint matrices, 1.83x that maximum,
+ * with the source's own unk_dobjtrans_0x6 latch live on the widest one. The
+ * gated rows below grade the second domain (widened 2026-08-15 for the wiring
+ * cycle); include/nds/nds_r2_collision_mtx.h carries both records.
  */
 
 #include <math.h>
@@ -46,9 +49,17 @@ typedef float Mtx44f[4][4];
 #define BOUND 0.0200
 #define SINTABLE_COUNT 0x800
 
-/* Live domain, from the L7 oracle. */
-#define LIVE_SCALE_LO 1.1138
-#define LIVE_SCALE_HI 1.1199
+/* Live domain. WIDENED 2026-08-15: the inherited 1.1138-1.1199 is what 460
+ * samples of the L7 oracle saw and it is too narrow. Walking the live fighter
+ * trees on the gate arm over a whole both-CPU match measured 0.9937-2.0479
+ * (152 joint matrices, artifacts/performance/2026-08-13_c-collision-seam/) --
+ * one joint reaches 2.0479 on all three axes with the source's own
+ * unk_dobjtrans_0x6 latch set, 1.83x the inherited maximum and past the top of
+ * the widest sweep this falsifier even reported. Every gated row below is now
+ * graded on the domain the game actually visits; the 0.90-2.10 band is kept as
+ * the ungated margin row it always was. */
+#define LIVE_SCALE_LO 0.9937
+#define LIVE_SCALE_HI 2.0479
 
 static int g_fail = 0;
 
@@ -1135,6 +1146,205 @@ static void TestRectangleDifferential(const char *label, double scale_lo,
 }
 
 /* ======================================================================
+ * T8 -- THE WIRED RING, end to end, exactly as the ROM runs it.
+ *
+ * T3-T6 grade the kernels. This grades the WIRING, and it is a different
+ * question, because src/port/nds_r2_collision_ring.c crosses the f32 boundary
+ * at points the kernel rows never model:
+ *
+ *   func_ovl2_800EDBA4  local -> unk_dobjtrans_0x10 (f32) -> reloaded on a
+ *                       later call whose transform_update_mode is already 1
+ *                       -> composed -> mtx_translate (f32)
+ *   func_ovl2_800EDE00  mtx_translate (f32) -> Q26 cofactor inverse ->
+ *                       unk_dobjtrans_0x9C (f32)
+ *   func_ovl2_800EDE5C  mtx_translate (f32) -> integer roots -> vec_scale (f32)
+ *
+ * and then the DECIDING code -- gmCollisionTestRectangle, unconverted -- reads
+ * those f32 fields with gmCollisionGetWorldPosition, in float. So the quantity
+ * that has to be inside the bound is not a kernel's output: it is the world
+ * position and the local position the shipped float consumer computes from the
+ * ring's fields versus from the float path's fields. That is what this measures,
+ * with the round-trip through unk_dobjtrans_0x10 taken on EVERY level, which is
+ * the worst case rather than the common one.
+ *
+ * vec_scale is reported in its own units (it is a scale, not a position) and
+ * gated at the same bound, which is deliberately conservative: a hurtbox half
+ * extent is `size + radius / scale`, so a scale error near 1 moves the extent
+ * by less than the scale error itself at the radii SSB64 uses.
+ */
+static void TestWiredRing(const char *label, double scale_lo, double scale_hi,
+                          int depth, double world_extent, double reach,
+                          int gated, long cases)
+{
+    double worst_world = 0.0;
+    double worst_local = 0.0;
+    double worst_scale = 0.0;
+    long declined = 0;
+    long counted = 0;
+    long i;
+
+    for (i = 0; i < cases; i++)
+    {
+        Mtx44f facc;
+        Mtx44f racc;      /* the ring's mtx_translate, f32 as the ROM stores it */
+        Mtx44f finv;
+        Mtx44f rinv;
+        NDSR2CfxMtx xacc;
+        float rot[3];
+        float scale[3];
+        float trans[3];
+        float fscale[3];
+        float rscale[3];
+        float fp[3];
+        float rp[3];
+        int level;
+        int c;
+        int bad = 0;
+
+        rot[0] = (float)Rand(-3.15, 3.15);
+        rot[1] = (float)Rand(-3.15, 3.15);
+        rot[2] = (float)Rand(-3.15, 3.15);
+        scale[0] = (float)Rand(scale_lo, scale_hi);
+        scale[1] = (float)Rand(scale_lo, scale_hi);
+        scale[2] = (float)Rand(scale_lo, scale_hi);
+        trans[0] = (float)Rand(-world_extent, world_extent);
+        trans[1] = (float)Rand(-world_extent, world_extent);
+        trans[2] = (float)Rand(-world_extent, world_extent);
+
+        FloatBuildLocal(facc, rot, scale, trans);
+        if (ndsR2CfxBuildLocal(&xacc, gSYSinTable, rot, scale, trans) == 0)
+        {
+            declined++;
+            continue;
+        }
+        /* The root writes unk_dobjtrans_0x10 and then copies it into
+         * mtx_translate; both are f32 stores of the same fixed matrix. */
+        ndsR2CfxStoreF32(racc, &xacc);
+
+        for (level = 0; level < depth; level++)
+        {
+            Mtx44f flocal;
+            Mtx44f fnext;
+            Mtx44f rlocal;
+            NDSR2CfxMtx xlocal;
+            NDSR2CfxMtx xreload;
+            NDSR2CfxMtx xnext;
+
+            rot[0] = (float)Rand(-3.15, 3.15);
+            rot[1] = (float)Rand(-3.15, 3.15);
+            rot[2] = (float)Rand(-3.15, 3.15);
+            scale[0] = scale[1] = scale[2] = 1.0f;
+            trans[0] = (float)Rand(-30.0, 30.0);
+            trans[1] = (float)Rand(-30.0, 30.0);
+            trans[2] = (float)Rand(-30.0, 30.0);
+
+            FloatBuildLocal(flocal, rot, scale, trans);
+            FloatCompose(fnext, facc, flocal);
+            memcpy(facc, fnext, sizeof(Mtx44f));
+
+            if (ndsR2CfxBuildLocal(&xlocal, gSYSinTable, rot, scale,
+                                   trans) == 0)
+            {
+                bad = 1;
+                break;
+            }
+            /* unk_dobjtrans_0x10 out, then straight back in: the ring reloads
+             * it whenever transform_update_mode was already 1, which is the
+             * common case for every joint after the first call of the frame. */
+            ndsR2CfxStoreF32(rlocal, &xlocal);
+            if (ndsR2CfxLoadF32(&xreload, rlocal) == 0)
+            {
+                bad = 1;
+                break;
+            }
+            if (ndsR2CfxCompose(&xnext, &xacc, &xreload) == 0)
+            {
+                bad = 1;
+                break;
+            }
+            xacc = xnext;
+            ndsR2CfxStoreF32(racc, &xacc);
+        }
+        if (bad)
+        {
+            declined++;
+            continue;
+        }
+
+        /* gmCollisionGetFighterPartsWorldPosition reads mtx_translate in
+         * float. Probe a point in the joint's own local space. */
+        for (c = 0; c < 3; c++)
+        {
+            fp[c] = (float)Rand(-reach, reach);
+            rp[c] = fp[c];
+        }
+        FloatWorldPosition(facc, fp);
+        FloatWorldPosition(racc, rp);
+        for (c = 0; c < 3; c++)
+        {
+            double d = fabs((double)fp[c] - (double)rp[c]);
+
+            if (d > worst_world) { worst_world = d; }
+        }
+
+        /* func_ovl2_800EDE00 then gmCollisionTestRectangle: the inverse, and
+         * a world point near the joint carried into its local frame. */
+        if (FloatInvert(finv, facc) == 0)
+        {
+            declined++;
+            continue;
+        }
+        if (ndsR2CollisionInvertMatrix44(rinv, (const float (*)[4])racc) == 0)
+        {
+            declined++;
+            continue;
+        }
+        for (c = 0; c < 3; c++)
+        {
+            fp[c] = facc[3][c] + (float)Rand(-reach, reach);
+            rp[c] = fp[c];
+        }
+        FloatWorldPosition(finv, fp);
+        FloatWorldPosition(rinv, rp);
+        for (c = 0; c < 3; c++)
+        {
+            double d = fabs((double)fp[c] - (double)rp[c]);
+
+            if (d > worst_local) { worst_local = d; }
+        }
+
+        /* func_ovl2_800EDE5C: vec_scale. */
+        FloatAxisScales(facc, fscale);
+        if (ndsR2CfxAxisScalesF32(rscale, racc) == 0)
+        {
+            declined++;
+            continue;
+        }
+        for (c = 0; c < 3; c++)
+        {
+            double d = fabs((double)fscale[c] - (double)rscale[c]);
+
+            if (d > worst_scale) { worst_scale = d; }
+        }
+        counted++;
+    }
+
+    printf("  %-42s %10ld  world %9.7f  local %9.7f  vec_scale %9.7f%s\n",
+           label, counted, worst_world, worst_local, worst_scale,
+           gated ? "" : "  (reported)");
+    if (declined != 0)
+    {
+        printf("  %-42s %10ld declined\n", "", declined);
+    }
+    if (gated)
+    {
+        if (worst_world > BOUND) { g_fail = 1; printf("    RED world\n"); }
+        if (worst_local > BOUND) { g_fail = 1; printf("    RED local\n"); }
+        if (worst_scale > BOUND) { g_fail = 1; printf("    RED vec_scale\n"); }
+    }
+}
+
+/* ======================================================================
  * T7 -- adversarial corners
  */
 static void TestCorners(void)
@@ -1226,8 +1436,8 @@ int main(void)
     printf("R2-07 whole-cluster fixed-point collision kernels\n");
     printf("  Error is WORLD UNITS on a transformed point. Bound %.4f, the\n"
            "  E64b/E65 figure R2-07 L7 already carries.\n", BOUND);
-    printf("  Live joint scale %.4f-%.4f, measured on a natural mode-163\n"
-           "  match (NDS_R2_COLLISION_L7_ORACLE, 460 samples, 2026-07-31).\n\n",
+    printf("  Live joint scale %.4f-%.4f, walked off the LIVE fighter trees on\n"
+           "  the both-CPU gate arm, 152 joint matrices, 2026-08-13.\n\n",
            LIVE_SCALE_LO, LIVE_SCALE_HI);
 
     printf("ENUMERATED\n");
@@ -1244,7 +1454,7 @@ int main(void)
     printf("  %-42s %10s %11s %11s %11s\n", "domain", "cases", "vs float",
            "float vs ex", "vs exact");
     ResetRng();
-    TestChainForward("T3 live 1.1138-1.1199, depth 6, |t|<=400",
+    TestChainForward("T3 live 0.9937-2.0479, depth 6, |t|<=400",
                      LIVE_SCALE_LO, LIVE_SCALE_HI, 6, 400.0, 20.0, 1, 200000);
     TestChainForward("T3 live, depth 12, |t|<=400", LIVE_SCALE_LO,
                      LIVE_SCALE_HI, 12, 400.0, 20.0, 1, 100000);
@@ -1285,6 +1495,22 @@ int main(void)
                               6, 400.0, 200000, BOUND, 1);
     TestRectangleDifferential("T6 live, depth 12", LIVE_SCALE_LO,
                               LIVE_SCALE_HI, 12, 400.0, 100000, BOUND, 1);
+
+    printf("\nWIRED RING -- what src/port/nds_r2_collision_ring.c actually runs\n");
+    printf("  Both arms end in the SAME unconverted float consumer\n"
+           "  (gmCollisionGetWorldPosition / gmCollisionTestRectangle); what is\n"
+           "  graded is the f32 fields the ring writes against the f32 fields\n"
+           "  the decomp float producers write. unk_dobjtrans_0x10 is round-\n"
+           "  tripped through f32 on EVERY level, which is the worst case.\n");
+    ResetRng();
+    TestWiredRing("T8 live, depth 6, reach +/-64", LIVE_SCALE_LO,
+                  LIVE_SCALE_HI, 6, 400.0, 64.0, 1, 200000);
+    TestWiredRing("T8 live, depth 12, reach +/-64", LIVE_SCALE_LO,
+                  LIVE_SCALE_HI, 12, 400.0, 64.0, 1, 100000);
+    TestWiredRing("T8 live, depth 6, |t|<=32767 (blast zone)", LIVE_SCALE_LO,
+                  LIVE_SCALE_HI, 6, 32767.0, 64.0, 0, 100000);
+    TestWiredRing("T8 wide 0.25-2.00, depth 6", 0.25, 2.00, 6, 400.0, 64.0, 0,
+                  100000);
 
     printf("\nADVERSARIAL CORNERS\n");
     printf("  %-46s %12s %12s %9s\n", "case", "cases", "failures", "bound");

@@ -129,7 +129,22 @@ void scManagerRunPrintGObjStatus(void);
  * without capturing a call site (the trap battleship_lbparticle.c documents for
  * lbParticleMakeGenerator), and decomp/ stays untouched. */
 
-#if NDS_TICK_HUD
+/* The ring wrapper exists for two independent reasons and either one turns it
+ * on: the law-1 engagement counter (NDS_TICK_HUD) and the wired fixed-point
+ * cluster (NDS_R2_COLLISION_FIXED). They share one pair of wrappers because
+ * they hook the same two entry points, and hooking them twice would mean two
+ * renames of one definition. */
+#if NDS_TICK_HUD || NDS_R2_COLLISION_FIXED
+#define NDS_R2_CFX_RING_WRAP 1
+#else
+#define NDS_R2_CFX_RING_WRAP 0
+#endif
+
+#if NDS_R2_COLLISION_FIXED
+#include <nds/nds_r2_collision_ring.h>
+#endif
+
+#if NDS_R2_CFX_RING_WRAP
 /* R2-07 slice 52 law-1 counter: the ENGAGEMENT of the fighter narrow phase.
  *
  * `plan.md` §9 law 1 requires a per-frame counter on the SPIKING quantity, on
@@ -161,10 +176,12 @@ void scManagerRunPrintGObjStatus(void);
  * `NDS_TICK_HUD` gates it, so the published ROM carries zero bytes; every
  * measuring arm carries it. `used` because a `volatile u32` whose only consumer
  * is a debugger is what `--gc-sections` collects. */
+#if NDS_TICK_HUD
 volatile u32 gNdsCfxFighterDamagePhaseCalls __attribute__((used));
 volatile u32 gNdsCfxFighterDamagePhaseHits __attribute__((used));
 volatile u32 gNdsCfxFighterShieldPhaseCalls __attribute__((used));
 volatile u32 gNdsCfxFighterShieldPhaseHits __attribute__((used));
+#endif
 
 sb32 ndsBaseGmCollisionCheckFighterAttackDamageCollide(
     FTAttackColl *attack_coll, FTDamageColl *damage_coll);
@@ -175,25 +192,40 @@ sb32 ndsBaseGmCollisionCheckFighterAttackShieldCollide(
     ndsBaseGmCollisionCheckFighterAttackDamageCollide
 #define gmCollisionCheckFighterAttackShieldCollide \
     ndsBaseGmCollisionCheckFighterAttackShieldCollide
-#endif /* NDS_TICK_HUD */
+#endif /* NDS_R2_CFX_RING_WRAP */
 
 #include "../../decomp/BattleShip-main/decomp/src/gm/gmcollision.c"
 
-#if NDS_TICK_HUD
+#if NDS_R2_CFX_RING_WRAP
 #undef gmCollisionCheckFighterAttackDamageCollide
 #undef gmCollisionCheckFighterAttackShieldCollide
 
+/* R2-07 slice 52, the wired ring. `ndsR2CfxPrepareFighterJoint` runs
+ * func_ovl2_800EDBA4, func_ovl2_800EDE00 and func_ovl2_800EDE5C in fixed point
+ * and sets the source's own unk_dobjtrans_0x5/0x6/0x7 latches, so the decomp
+ * body below finds its float producers already satisfied and early-returns out
+ * of them -- the same joints, in the same order, with no speculative work. Its
+ * outputs are the same f32 fields with the same layout; the decision itself is
+ * still gmCollisionTestRectangle's, unchanged, in decomp code.
+ *
+ * Before the base call, not after: the base is where the latches are read. */
 sb32 gmCollisionCheckFighterAttackDamageCollide(FTAttackColl *attack_coll,
                                                 FTDamageColl *damage_coll)
 {
-    sb32 hit = ndsBaseGmCollisionCheckFighterAttackDamageCollide(attack_coll,
-                                                                 damage_coll);
+    sb32 hit;
 
+#if NDS_R2_COLLISION_FIXED
+    ndsR2CfxPrepareFighterJoint(damage_coll->joint);
+#endif
+    hit = ndsBaseGmCollisionCheckFighterAttackDamageCollide(attack_coll,
+                                                            damage_coll);
+#if NDS_TICK_HUD
     gNdsCfxFighterDamagePhaseCalls++;
     if (hit != FALSE)
     {
         gNdsCfxFighterDamagePhaseHits++;
     }
+#endif
     return hit;
 }
 
@@ -201,17 +233,23 @@ sb32 gmCollisionCheckFighterAttackShieldCollide(FTAttackColl *attack_coll,
                                                 GObj *fighter_gobj, DObj *dobj,
                                                 f32 *p_angle)
 {
-    sb32 hit = ndsBaseGmCollisionCheckFighterAttackShieldCollide(
-        attack_coll, fighter_gobj, dobj, p_angle);
+    sb32 hit;
 
+#if NDS_R2_COLLISION_FIXED
+    ndsR2CfxPrepareFighterJoint(dobj);
+#endif
+    hit = ndsBaseGmCollisionCheckFighterAttackShieldCollide(
+        attack_coll, fighter_gobj, dobj, p_angle);
+#if NDS_TICK_HUD
     gNdsCfxFighterShieldPhaseCalls++;
     if (hit != FALSE)
     {
         gNdsCfxFighterShieldPhaseHits++;
     }
+#endif
     return hit;
 }
-#endif /* NDS_TICK_HUD */
+#endif /* NDS_R2_CFX_RING_WRAP */
 
 #if NDS_R2_COLLISION_L7_ORACLE
 /* R2-07 L7 step one. Lives in THIS translation unit and not in a port file

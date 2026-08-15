@@ -1,0 +1,29 @@
+### a-c174-off-run -- reduced from the complete on-disk log (build spew removed), filtered AFTER the run,
+### per docs/VERIFYING.md: Tee the full log, filter the file.
+Tick-HUD buckets: target=smash64ds-battle-playable-tickhud-hwtri samples=1600 frames=439..2038 melonDS=1.0 sha=DE80E46BDCF1FD98 git=223fb499ca5+dirty(13) dldi=ON
+bucket p50        p95        spread mean       min        max        %ALLp50
+------ ---        ---        ------ ----       ---        ---        -------
+ALL     1,117,760  1,678,272   1.50  1,205,252  1,114,304  3,358,336   100.0
+FTR       300,864    326,784   1.09    292,258    153,472    333,504    26.9
+STG       176,640    184,448   1.04    178,153    172,352    192,000    15.8
+BG          4,352      4,416   1.01      4,329      4,032      7,488     0.4
+AUD         2,816      7,040   2.50      8,728      1,152    157,120     0.3
+HUD         1,024    409,664 400.06     34,105        896  2,123,456     0.1
+SRC       326,272    535,168   1.64    338,234     10,816  1,285,952    29.2
+MISC      105,152    182,272   1.73    118,307     81,152    883,456     9.4
+OTHR      211,776    503,040   2.38    231,139     20,800    579,456    18.9
+WAIT      191,808    483,968   2.52    211,186        832    559,616    17.2
+WORK      951,168  1,364,608   1.43    994,066    630,016  3,095,872    85.1
+SHDT        4,288      9,408   2.19     11,195          0    459,264     0.4
+SWRM        1,024      1,088   1.06        998        704      1,152     0.1
+GCRA      320,832    529,856   1.65    332,746      6,656  1,280,384    28.7
+SCPU       40,256    101,312   2.52     42,679          0    137,024     3.6
+SCAT        1,152      1,344   1.17      1,549          0    630,848     0.1
+SPRM        1,856      2,048   1.10      3,799          0    482,624     0.2
+SINT      149,312    286,272   1.92    158,494          0    824,512    13.4
+SPHD       56,704     96,256   1.70     66,079          0    724,608     5.1
+SPHC          640        768   1.20        871          0     31,744     0.1
+WORK-H    942,272  1,173,376   1.25    959,961    621,760  2,221,696    84.3
+named=974,114 (80.8% of ALL)  VBI 2:1744 3:275 4:11 5+:8 max:19 total:2038  slips=0
+extras: gNdsCfxFighterDamagePhaseCalls=1,938  gNdsCfxFighterDamagePhaseHits=20  gNdsCfxFighterShieldPhaseCalls=0  gNdsCfxFighterShieldPhaseHits=0  gNdsCfxRingPrepareCalls=0  gNdsCfxRingChainFixed=0  gNdsCfxRingChainDeclined=0  gNdsCfxRingLocalsBuilt=0  gNdsCfxRingComposes=0  gNdsCfxRingInvertFixed=0  gNdsCfxRingInvertDeclined=0  gNdsCfxRingScaleFixed=0  gNdsCfxRingScaleDeclined=0  gNdsBattleTextHudP0Damage=0  gNdsBattleTextHudP1Damage=76  gNdsStarKOSparkleCount=0  gNdsDamageSparkScaleCount=15  gNdsShieldAnimJointAttachCount=1,352  gNdsAObjEvent32NormalizedHighWater=1,266  gNdsObjAnimRunawayCount=0  gNdsTaskmanGeneralHeapFreeMin=52,864  gNdsTaskmanArenaAllocFailCount=0  gNdsBattlePackHits=197
+Wrote artifacts/performance/2026-08-15_cfx-ring-wiring/a-c174-off.json

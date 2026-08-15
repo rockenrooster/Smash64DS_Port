@@ -6489,6 +6489,118 @@ anyway and is not an invitation.
 callers clear the 40/80 presence bar (7,187 + 1,883 + 1,838 = 10,908); the other
 ~38,700 is spread across callers each below it. Its mean self-time is 16,912.
 
+### Slice 52 WIRED, MEASURED, TICK-NEUTRAL — the collision decisions did NOT move and neither did the gate. `+30,000…+38,000` is RETRACTED
+
+Evidence: `artifacts/performance/2026-08-15_cfx-ring-wiring/RING.md`, with
+`PREDICTION.md` beside it written before the first build. 3 builds, 3 gate runs,
+1 Boundary. **Both root ROMs unchanged** — `NDS_R2_COLLISION_FIXED` still
+defaults to 0, so the ring is compile-time absent from every published target.
+
+**What was wired.** The three PRODUCERS of the fighter narrow phase in fixed
+point behind an f32 boundary — `func_ovl2_800EDBA4`'s chain interior (which
+carries `gmCollisionTransformMatrixAll` and `func_ovl2_800ED490` with it),
+`func_ovl2_800EDE00`'s inverse into `unk_dobjtrans_0x9C`, and
+`func_ovl2_800EDE5C`'s axis scales into `vec_scale`. `gmCollisionTestRectangle`,
+`gmCollisionTestSphere` and `gmCollisionGetWorldPosition` were **not** touched:
+keeping `unk_dobjtrans_0x9C` an f32 `Mtx44f` leaves every collision DECISION in
+decomp code on decomp comparisons, which is what let this be graded by a bound
+instead of argued — and it removes STACK.md §5.1's obligation to convert
+`gmCollisionTestSphere`, whose `*p_angle` no flip count can express.
+
+**MEASURED, A/B/A' on a pair whose ROMs differ in EXACTLY ONE BYTE.** The usual
+flag falsifier cannot work here (at flag 0 the objects leave the link, so the
+"candidate layout" arm is the control layout again). `NDS_R2_COLLISION_FIXED_DISPATCH`
+flips one initialised word of `.data` read through a `volatile`;
+`objcopy --only-section` + `cmp -l` on `build-c176-cfxring-a2` vs
+`build-c175-cfxring-b` gives `.itcm`/`.text.hot`/`.text.hot.draw`/`.main`/`.dtcm`
+**0 differing bytes** and `.main.rw` **1**, at offset 0x3F24 = exactly
+`gNdsCfxRingEnable`. **There is no placement floor on this comparison.**
+
+| | A' c176 (off) | **B c175 (ON)** | A c174 (off) | B − A' |
+|---|---:|---:|---:|---:|
+| `WORK-H` P50 | 942,336 | **942,400** | 942,272 | +64 |
+| P90 | 1,094,976 | **1,094,912** | 1,094,080 | −64 |
+| P95 | 1,173,120 | **1,174,016** | 1,173,376 | +896 |
+| **rank-80** | 1,173,696 | **1,177,344** | 1,173,760 | **+3,648** |
+| top-1% | 1,513,920 | 1,517,504 | 1,511,936 | +3,584 |
+| VBI 2/3/4/5+ max | 1736/285/8/9 · 19 | 1741/278/9/10 · 19 | 1744/275/11/8 · 19 | |
+
+The two controls bracket to ±896 at P95 and ±64 at rank-80; the candidate sits
+3,648 **outside** that bracket at rank-80. **It is a small COST, not a saving,
+against +32,593 required — 0.00x.**
+
+**It is not inert, and that is the point.** Nine counters, all zero on both
+control arms: `gNdsCfxRingPrepareCalls` **1,938** (== `…DamagePhaseCalls`
+exactly), `ChainFixed` **1,006**, `LocalsBuilt` **1,314**, `Composes` **1,621**,
+`InvertFixed` **1,006**, `ScaleFixed` **1,006**, and **`ChainDeclined` /
+`InvertDeclined` / `ScaleDeclined` all 0** — not one of the five domain guards
+fired in a whole both-CPU match, which is what the widened live-domain re-grade
+predicted.
+
+**ZERO collision decisions changed, and the flip budget said zero before the
+run.** `…DamagePhaseCalls` 1,938 / `Hits` **20** identical on all three arms, as
+are `P1Damage` 76, `DamageSparkScaleCount` 15, `ShieldAnimJointAttachCount`
+1,352, `AObjEvent32NormalizedHighWater` 1,266, runaway 0, heap low-water 52,864,
+arena fails 0, `BattlePackHits` 197 — and all of those match the `c170-seam-bp1`
+bank arm too. **The fixed-point producers reproduce the float producers'
+gameplay outcome exactly over a whole match; keep that result even though the
+ticks are not keepable.**
+
+**WHY zero — two candidates, NEITHER MEASURED, and the discriminator is free.**
+By the run's own call counts against the profile's measured float prices (one
+compose 1,290 ticks, one inverse 1,297, `TransformMatrixAll` 512 + its `lbCommonSin`/`Cos`
+share, `EDE5C` ~787/working call) the expected whole-match saving is ~2,415 tk/fr
+at P50; ~2,500 is unaccounted for.
+1. **The f32 boundary** — the counters put it at ~90,000 scalar conversions per
+   match (12×`LocalsBuilt` + 12×`Composes` + 27×`InvertFixed` + 15×`ScaleFixed`
+   + reloads). But `nm` says `ndsR2CollisionFixedStoreF32` is 129 ARM
+   instructions for twelve conversions, ~11 each, so this is the **weaker**
+   candidate.
+2. **The I-cache footprint of 5,596 bytes of new ARM text that now EXECUTES** —
+   R2-07 L7's documented failure mode, reproduced with a better instrument. L7
+   measured 2,332 added bytes at 1.85 cycles/frame per byte; at that rate 5,596
+   is ~5,175 tk/fr, which more than absorbs the arithmetic win. Arm A *links*
+   those bytes without executing them and reads **−4,288 against the `c170`
+   bank**, so linking is free and only executing is not.
+
+**A v3 stall capture on arm B against arm A' splits them in one 560 s run with
+no rebuild**: candidate 2 predicts `icache_fill` up and `issue` down; candidate 1
+predicts both flat with the change inside `issue`. That is the next read.
+
+**What this closes.** *"Give `func_ovl2_800EDBA4` a fixed-point interior with an
+f32 boundary and collect +30,000…+38,000 at rank-80"* is **retracted** — mine
+and this board's, retracted here rather than in a later cycle. And the header's
+own design sentence, *"the representation crosses the float boundary exactly
+twice per joint per frame"*, is **not achievable while `mtx_translate`,
+`unk_dobjtrans_0x10`, `unk_dobjtrans_0x9C` and `vec_scale` all stay f32**: this
+wiring crosses it four to six times per joint per frame because every
+intermediate is stored back into an f32 field a decomp consumer reads. Any
+version of this cluster that can pay must keep the fixed representation
+**resident** across the narrow phase — the `unk_dobjtrans_0x9C` reinterpretation
+this board already proved available **and** a fixed `mtx_translate`, which the
+seam correction ruled out on its fifteen referrers. Larger, and now with a
+measured reason to exist rather than a projected one.
+
+**Kept regardless of the ticks**, all behind the default-0 flag:
+`scripts/check-r2-collision-fixed.c` re-graded at the **live** domain
+**0.9937–2.0479** (the stale 1.1138–1.1199 is gone) and GREEN — chain 0.0017143
+depth 6 / 0.0024254 depth 12, cofactor frame 0.0011086 / 0.0017125, `vec_scale`
+0.0001224, **`TestRectangle` decisions 0 mismatches in 300,000**, smallest margin
+0.0002151; a new **T8 section that grades the WIRING** end to end (world
+0.0017395 / local 0.0010529 / `vec_scale` 0.0001224 at depth 6, world 0.0022583
+/ local 0.0014343 at depth 12, `unk_dobjtrans_0x10` round-tripped through f32 on
+every level); the nine engagement counters; and the byte-identical-dispatch
+falsifier, which is what made this a verdict instead of an argument.
+
+**Two traps worth carrying.** A first section check ran `--only-section=.text`
+on both ELFs and reported IDENTICAL — it was the SHA-256 of the **empty string**,
+because this linker script has no `.text` (`.itcm`, `.text.hot`,
+`.text.hot.draw`, `.main`). *`prove-the-control-differs` applies to a byte
+comparison as much as to a run.* And `gNdsCfxRingEnable` first landed in `.bss`
+on the dispatch-0 arm and `.data` on the dispatch-1 arm, which moved
+`.text.hot`/`.main`/`.main.rw` between them; `section(".data")` pins it. Both
+were caught by reading the symbol table rather than assuming.
+
 ### Slice 53 — FGM cache REVERTED on its own falsifier; `FindPlanned` REFUTED; slice 52 re-briefed. Gate unchanged at 1,210,944
 
 Evidence: `artifacts/performance/2026-08-13_c-collision-stack/STACK.md` and the

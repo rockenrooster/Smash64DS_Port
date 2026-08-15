@@ -84,3 +84,39 @@ int ndsR2CollisionFixedTestRectangle(const int32_t pos_curr[3],
     return ndsR2CfxTestRectangle(pos_curr, pos_prev, radius, is_transfer, frame,
                                  offset, size, inv_scale);
 }
+
+/* The f32 boundary. These four are the ONLY entry points the wired ring calls,
+ * and they are here rather than inlined into the ring so that every 64-bit
+ * product in the cluster stays inside the one object the Makefile builds -marm
+ * and check-r2-collision-fixed.ps1 disassembles. A copy inlined into a Thumb
+ * translation unit would be __aeabi_lmul per multiply and no gate would notice.
+ *
+ * ndsR2CollisionFixedInvertF32 is nds_r2_collision_mtx.h's already-graded
+ * ndsR2CollisionInvertMatrix44 -- gmCollisionSetInvertMatrix's own cofactor
+ * arithmetic at Q26, float in and float out, so unk_dobjtrans_0x9C keeps its
+ * type, its layout and all nine of its readers. It is not restated here for the
+ * same reason the sine table is not: a transcription proves the transcription.
+ */
+int ndsR2CollisionFixedLoadF32(NDSR2CfxMtx *dst, float src[4][4])
+{
+    return ndsR2CfxLoadF32(dst, src);
+}
+
+void ndsR2CollisionFixedStoreF32(float dst[4][4], const NDSR2CfxMtx *src)
+{
+    ndsR2CfxStoreF32(dst, src);
+}
+
+int ndsR2CollisionFixedAxisScalesF32(float out[3], float src[4][4])
+{
+    return ndsR2CfxAxisScalesF32(out, src);
+}
+
+int ndsR2CollisionFixedInvertF32(float dst[4][4], float src[4][4])
+{
+    /* The cast is the C array-qualifier wart, not a const violation: `float
+     * (*)[4]` does not implicitly convert to `const float (*)[4]`, and every
+     * caller here hands over an FTParts field it does not own. Taking the
+     * parameter non-const keeps that cast to exactly one place. */
+    return ndsR2CollisionInvertMatrix44(dst, (const float (*)[4])src);
+}

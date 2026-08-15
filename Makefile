@@ -1280,19 +1280,34 @@ NDS_R2_COLLISION_L7_ORACLE ?= 0
 # src/port/nds_r2_collision_fixed.c, the out-of-line ARM entry points for the
 # kernels in include/nds/nds_r2_collision_fixed.h.
 #
-# DEFAULT 0 EVEN THOUGH NOTHING CALLS IT AND --gc-sections DROPS EVERY BYTE.
-# The reason is the paragraph above CFILES: an object entering the link changes
-# the link INPUT SET, and this project has measured re-addressing collateral
-# from less than that (Tasks 87-89/94/95), against a cross-build P95 floor of
-# +/-5,376. A cycle that lands proven-but-unwired kernels must not move the
-# published ROM's placement to do it.
+# WIRED 2026-08-15 (slice 52). At 1 this also compiles
+# src/port/nds_r2_collision_ring.c and turns on the wrapper in
+# src/import/battleship_gmcollision.c, which runs func_ovl2_800EDBA4,
+# func_ovl2_800EDE00 and func_ovl2_800EDE5C in fixed point behind an f32
+# boundary. gmCollisionTestRectangle and gmCollisionTestSphere are NOT
+# converted: every collision decision stays in decomp float code reading the
+# same f32 fields, which is what makes the change gradeable by a bound rather
+# than by a flip count. include/nds/nds_r2_collision_ring.h owns that argument.
+#
+# DEFAULT STAYS 0 UNTIL THE OWNER FLIPS IT. The shipping default is an owner
+# decision (BLOCKED(decision: shipping default) on the board), and separately
+# an object entering the link changes the link INPUT SET -- this project has
+# measured re-addressing collateral from less than that (Tasks 87-89/94/95)
+# against a cross-build P95 floor of +/-5,376, so a measuring cycle must not
+# move the published ROM's placement as a side effect.
 #
 # The kernels are proven at this flag's 1 by scripts/check-r2-collision-fixed.ps1,
 # which compiles them for the real target independently of the flag, so 0 costs
-# no coverage. Turning it on is step one of wiring, and it doubles as the slice
-# 51 falsifier arm: flag on with the call sites reverted is the candidate's
-# placement carrying the control's behaviour.
+# no coverage. NDS_R2_COLLISION_FIXED_DISPATCH below is the falsifier arm.
 NDS_R2_COLLISION_FIXED ?= 0
+# The falsifier arm for the wiring above, and it is separate from the flag for a
+# measurement reason. Setting NDS_R2_COLLISION_FIXED to 0 removes the objects
+# from the link, which is a DIFFERENT link input set and therefore a different
+# placement -- exactly the confound a flag falsifier exists to remove. This one
+# keeps every byte and flips one initialised word of .data
+# (gNdsCfxRingEnable, read through a volatile so no fold can reach it), so arm A
+# and arm B are expected to have byte-identical .text.
+NDS_R2_COLLISION_FIXED_DISPATCH ?= $(NDS_R2_COLLISION_FIXED)
 # Task 44 stage steady-state excision: generation-based admission, dense
 # rigid/dynamic binding lists, and the hoisted GX capture-active test. Requires
 # the Task 36 hardware-compose stage owner; meaningless without it.
@@ -2476,7 +2491,7 @@ ifeq ($(NDS_R2_FIXED_SQRT),1)
 CFILES += nds_r2_sqrtf.c
 endif
 ifeq ($(NDS_R2_COLLISION_FIXED),1)
-CFILES += nds_r2_collision_fixed.c
+CFILES += nds_r2_collision_fixed.c nds_r2_collision_ring.c
 endif
 ifeq ($(NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET),1)
 CFILES += battleship_ftcommon_normal_moveset.c
@@ -3393,6 +3408,8 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_R2_REBIRTH_HALO_FAST_ADAPTER $(NDS_R2_REBIRTH_HALO_FAST_ADAPTER)'; \
 		echo '#define NDS_R2_FOX_CPU_DEFAULT $(NDS_R2_FOX_CPU_DEFAULT)'; \
 		echo '#define NDS_R2_COLLISION_L7_ORACLE $(NDS_R2_COLLISION_L7_ORACLE)'; \
+		echo '#define NDS_R2_COLLISION_FIXED $(NDS_R2_COLLISION_FIXED)'; \
+		echo '#define NDS_R2_COLLISION_FIXED_DISPATCH $(NDS_R2_COLLISION_FIXED_DISPATCH)u'; \
 		echo '#define NDS_TASK39_FX_SPRITES $(NDS_TASK39_FX_SPRITES)'; \
 		echo '#define NDS_TASK39_FX_FLASH $(NDS_TASK39_FX_FLASH)'; \
 		echo '#define NDS_R2_PARTICLE_RUNTIME $(NDS_R2_PARTICLE_RUNTIME)'; \
@@ -3671,9 +3688,12 @@ endif
 # scripts/check-r2-collision-fixed.ps1 fails on any __aeabi_lmul in this object,
 # so losing this line is a red verifier rather than a silent regression.
 #
-# Nothing calls it yet; --gc-sections drops the object entirely, so today this
-# line costs zero bytes and exists so that wiring the cluster is one edit in
-# gmcollision.c rather than two in two files.
+# src/port/nds_r2_collision_ring.c, the wiring, is deliberately NOT in this
+# list. It is Thumb glue -- control flow, f32 loads and f32 stores -- that calls
+# the ndsR2CollisionFixed* entry points here, so every 64-bit product in the
+# cluster stays inside the one object the check script disassembles. Building
+# the ring -marm too would grow it for nothing; inlining the kernels INTO it
+# would put SMULL-shaped code in a Thumb object and no gate would notice.
 nds_r2_collision_fixed.o: CFLAGS += -marm
 
 scene_backend.o: $(SCENE_BACKEND_SLICES) $(NDS_SCENE_HARNESS_CONFIG)

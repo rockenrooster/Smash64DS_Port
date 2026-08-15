@@ -501,7 +501,16 @@ static inline int ndsR2CfxCompose(NDSR2CfxMtx *dst, const NDSR2CfxMtx *lhs,
  * become multiplies -- those divides are 79% of the band's whole __aeabi_fdiv
  * premium).
  *
- * Returns 0 without writing when a row leaves the s^2 guard. */
+ * Returns 0 without writing when a row leaves the s^2 guard.
+ *
+ * Every output is optional, and that is a cost decision, not a convenience.
+ * func_ovl2_800EDE5C wants `s` ALONE -- it writes FTParts::vec_scale and
+ * nothing else -- and the reciprocals cost one NDS_R2_CFX_DIV64 per row, which
+ * on the default portable divide is libgcc's bit-by-bit __aeabi_ldivmod. Three
+ * of those per joint per frame is a large fraction of what the scale stage is
+ * meant to save. Passing NULL skips the arithmetic, not just the store; the
+ * arithmetic every non-NULL output receives is unchanged, so the falsifier's
+ * existing rows still grade the same code. */
 static inline int ndsR2CfxRowScales(const NDSR2CfxMtx *src, int32_t s2_q26[3],
                                     int32_t inv_s2_q26[3], int32_t s_q12[3],
                                     int32_t inv_s_q26[3])
@@ -515,6 +524,7 @@ static inline int ndsR2CfxRowScales(const NDSR2CfxMtx *src, int32_t s2_q26[3],
                       (int64_t)src->r[row][1] * src->r[row][1] +
                       (int64_t)src->r[row][2] * src->r[row][2];
         int64_t s2 = ndsR2CfxShr(sum, rot_bits);
+        int32_t inv_s2 = 0;
         uint32_t root;
 
         if ((s2 < (int64_t)NDS_R2_CFX_S2_MIN) ||
@@ -522,22 +532,37 @@ static inline int ndsR2CfxRowScales(const NDSR2CfxMtx *src, int32_t s2_q26[3],
         {
             return 0;
         }
-        s2_q26[row] = (int32_t)s2;
+        if (s2_q26 != NULL)
+        {
+            s2_q26[row] = (int32_t)s2;
+        }
 
         /* 2^52 / s2_raw is (1/s^2) at Q26. |s2_raw| >= 2^22 by the guard, so
          * the quotient is at most 2^30 and fits int32 -- the guard is what
          * makes that true, and L7 lost 160 world units once to a quotient that
          * silently did not fit. */
-        inv_s2_q26[row] = NDS_R2_CFX_DIV64((int64_t)1 << (rot_bits * 2u), s2);
+        if ((inv_s2_q26 != NULL) || (inv_s_q26 != NULL))
+        {
+            inv_s2 = NDS_R2_CFX_DIV64((int64_t)1 << (rot_bits * 2u), s2);
+            if (inv_s2_q26 != NULL)
+            {
+                inv_s2_q26[row] = inv_s2;
+            }
+        }
 
         /* s = sqrt(s^2). isqrt(s2_raw << 22) = sqrt(s^2 * 2^48) = s * 2^24. */
         root = NDS_R2_CFX_ISQRT64((uint64_t)s2 << 22);
-        s_q12[row] = (int32_t)ndsR2CfxShr((int64_t)root, 12u);
+        if (s_q12 != NULL)
+        {
+            s_q12[row] = (int32_t)ndsR2CfxShr((int64_t)root, 12u);
+        }
 
         /* 1/s = s * (1/s^2): Q24 x Q26 -> Q50, reduced to Q26. Cheaper than a
          * second divide and no less accurate at this magnitude. */
-        inv_s_q26[row] = (int32_t)ndsR2CfxShr(
-            (int64_t)root * inv_s2_q26[row], 24u);
+        if (inv_s_q26 != NULL)
+        {
+            inv_s_q26[row] = (int32_t)ndsR2CfxShr((int64_t)root * inv_s2, 24u);
+        }
     }
     return 1;
 }
@@ -968,6 +993,114 @@ static inline int ndsR2CfxTestRectangle(const int32_t pos_curr[3],
 }
 
 /* ------------------------------------------------------------------------
+ * Stage 7 -- the f32 BOUNDARY
+ *
+ * These three are what make the cluster wirable without moving a single field.
+ * FTParts::mtx_translate, ::unk_dobjtrans_0x10, ::unk_dobjtrans_0x9C and
+ * ::vec_scale all stay f32, so every one of func_ovl2_800EDBA4's fifteen
+ * referrers -- the renderer adapter, battleship_ftMainProcParams,
+ * func_ovl0_800C9A38 -- reads exactly the type and the value it read before.
+ * The fixed representation lives INSIDE a chain walk and crosses the boundary
+ * once per joint, not once per arithmetic operation, which is the whole reason
+ * R2-07 L7 could not pay: it converted one leaf and round-tripped every call.
+ *
+ * Column 3 is deliberately not written. gmCollisionTransformMatrixAll,
+ * gmCollisionSetInvertMatrix and gmCollisionCopyMatrix all leave m[r][3] alone,
+ * so writing it here would be a difference from the source that no falsifier
+ * row covers.
+ */
+
+/* Mtx44f -> NDSR2CfxMtx. Rows 0-2 at Q26, row 3 at Q12, declining on the same
+ * guards the builders use so a joint the kernel cannot represent takes the
+ * decomp float path instead of being clamped into a wrong answer. */
+static inline int ndsR2CfxLoadF32(NDSR2CfxMtx *dst, float src[4][4])
+{
+    NDSR2CfxMtx out;
+    unsigned int row;
+    unsigned int col;
+
+    for (row = 0u; row < 3u; row++)
+    {
+        for (col = 0u; col < 3u; col++)
+        {
+            out.r[row][col] =
+                ndsR2CollisionF32ToFixed(src[row][col], NDS_R2_CFX_ROT_BITS);
+            if ((out.r[row][col] == NDS_R2_COLLISION_F32_OVERFLOW) ||
+                (ndsR2CfxAbs32(out.r[row][col]) > NDS_R2_CFX_ROT_MAX))
+            {
+                return 0;
+            }
+        }
+    }
+    for (col = 0u; col < 3u; col++)
+    {
+        out.t[col] = ndsR2CollisionF32ToFixed(src[3][col], NDS_R2_CFX_POS_BITS);
+        if ((out.t[col] == NDS_R2_COLLISION_F32_OVERFLOW) ||
+            (ndsR2CfxAbs32(out.t[col]) >= NDS_R2_CFX_POS_MAX))
+        {
+            return 0;
+        }
+    }
+    *dst = out;
+    return 1;
+}
+
+/* NDSR2CfxMtx -> Mtx44f. Rows 0-2 are converted FROM Q26 and never pass through
+ * Q12: the destination is an f32 whose mantissa resolves a rotation cell to
+ * 2^-24, and the consumer multiplies each cell by a world coordinate in the
+ * hundreds, so rounding to 1/4096 on the way out would cost 0.05 world units
+ * from the STORE alone -- two and a half times the whole bound. */
+static inline void ndsR2CfxStoreF32(float dst[4][4], const NDSR2CfxMtx *src)
+{
+    unsigned int row;
+    unsigned int col;
+
+    for (row = 0u; row < 3u; row++)
+    {
+        for (col = 0u; col < 3u; col++)
+        {
+            dst[row][col] = ndsR2CollisionFixedToF32((int64_t)src->r[row][col],
+                                                     NDS_R2_CFX_ROT_BITS);
+        }
+    }
+    for (col = 0u; col < 3u; col++)
+    {
+        dst[3][col] = ndsR2CollisionFixedToF32((int64_t)src->t[col],
+                                               NDS_R2_CFX_POS_BITS);
+    }
+}
+
+/* func_ovl2_800EDE5C (gm/gmcollision.c:472), float in and float out: the three
+ * row magnitudes FTParts::vec_scale holds. Replaces three sqrtf with three
+ * integer square roots and nine soft-float multiplies with nine SMULL.
+ *
+ * The reciprocals ndsR2CfxRowScales can also produce are NOT requested. Nothing
+ * at this seam consumes them -- gmCollisionTestRectangle stays in decomp float
+ * and takes its `radius / scale` from vec_scale itself -- and each one is a
+ * 64/32 divide. */
+static inline int ndsR2CfxAxisScalesF32(float out[3], float src[4][4])
+{
+    NDSR2CfxMtx fixed;
+    int32_t s_q12[3];
+    unsigned int row;
+
+    if (ndsR2CfxLoadF32(&fixed, src) == 0)
+    {
+        return 0;
+    }
+    if (ndsR2CfxRowScales(&fixed, NULL, NULL, s_q12, NULL) == 0)
+    {
+        return 0;
+    }
+    for (row = 0u; row < 3u; row++)
+    {
+        out[row] = ndsR2CollisionFixedToF32((int64_t)s_q12[row],
+                                            NDS_R2_CFX_POS_BITS);
+    }
+    return 1;
+}
+
+/* ------------------------------------------------------------------------
  * The out-of-line ARM entry points, defined in src/port/nds_r2_collision_fixed.c
  * and built -marm. Callers may be Thumb; the interworking branch is free next
  * to what these replace, and the alternative -- inlining 64-bit products into a
@@ -993,5 +1126,14 @@ int ndsR2CollisionFixedTestRectangle(const int32_t pos_curr[3],
                                      const int32_t offset[3],
                                      const int32_t size[3],
                                      const int32_t inv_scale[3]);
+
+/* The f32 boundary, out of line for the same reason as the rest: the caller is
+ * src/port/nds_r2_collision_ring.c, which is Thumb glue with no 64-bit product
+ * of its own, so every SMULL in the cluster stays in this one -marm object and
+ * the check script's codegen gate covers all of it. */
+int ndsR2CollisionFixedLoadF32(NDSR2CfxMtx *dst, float src[4][4]);
+void ndsR2CollisionFixedStoreF32(float dst[4][4], const NDSR2CfxMtx *src);
+int ndsR2CollisionFixedAxisScalesF32(float out[3], float src[4][4]);
+int ndsR2CollisionFixedInvertF32(float dst[4][4], float src[4][4]);
 
 #endif /* NDS_R2_COLLISION_FIXED_H */
