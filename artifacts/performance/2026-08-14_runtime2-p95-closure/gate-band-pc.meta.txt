@@ -1,0 +1,8 @@
+source=artifacts/performance/2026-08-14_runtime2-p95-closure/v3-gate-arm/arm9-profile.csv
+regions=1601
+marginal_frames=60
+marginal_threshold_ticks=1174997
+marginal_axis=total_cycles-halt_wait
+rows=54564874
+distinct_pcs=107455
+cycles_per_tick=2

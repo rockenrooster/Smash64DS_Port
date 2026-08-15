@@ -1,0 +1,1373 @@
+{
+ "profile": "artifacts/performance/2026-08-14_runtime2-p95-closure/v3-gate-arm/arm9-profile.csv",
+ "non_idle_cycles": 3107619919,
+ "attributed_cycles": 237855347,
+ "helpers": {
+  "__floatsisf": {
+   "calls": 126356,
+   "cycles": 971223,
+   "cycles_per_call": 7.6864019120579945
+  },
+  "__aeabi_l2f": {
+   "calls": 118087,
+   "cycles": 3382881,
+   "cycles_per_call": 28.647361690956668
+  },
+  "__aeabi_ui2f": {
+   "calls": 126357,
+   "cycles": 505427,
+   "cycles_per_call": 3.9999920859153035
+  },
+  "__aeabi_fadd": {
+   "calls": 1596355,
+   "cycles": 95505023,
+   "cycles_per_call": 59.826932605842686
+  },
+  "__aeabi_f2iz": {
+   "calls": 499273,
+   "cycles": 6333899,
+   "cycles_per_call": 12.686243798482995
+  },
+  "__aeabi_fcmplt": {
+   "calls": 519977,
+   "cycles": 7576831,
+   "cycles_per_call": 14.571473353629102
+  },
+  "__aeabi_fmul": {
+   "calls": 2603205,
+   "cycles": 65699582,
+   "cycles_per_call": 25.237959361633063
+  },
+  "__aeabi_fcmpgt": {
+   "calls": 258091,
+   "cycles": 3811860,
+   "cycles_per_call": 14.769441786036708
+  },
+  "__aeabi_fcmpeq": {
+   "calls": 1047164,
+   "cycles": 11058479,
+   "cycles_per_call": 10.560407920822335
+  },
+  "__aeabi_fsub": {
+   "calls": 1063894,
+   "cycles": 1063891,
+   "cycles_per_call": 0.9999971801702049
+  },
+  "__aeabi_i2f": {
+   "calls": 310647,
+   "cycles": 5059381,
+   "cycles_per_call": 16.286592176972576
+  },
+  "__aeabi_fcmple": {
+   "calls": 80653,
+   "cycles": 1167313,
+   "cycles_per_call": 14.473274397728542
+  },
+  "__aeabi_fdiv": {
+   "calls": 299716,
+   "cycles": 35170240,
+   "cycles_per_call": 117.34522014173417
+  },
+  "__aeabi_fcmpge": {
+   "calls": 38696,
+   "cycles": 549318,
+   "cycles_per_call": 14.195730824891461
+  }
+ },
+ "callers": {
+  "__aeabi_ui2f": {
+   "calls": 126356,
+   "cycles": 971223
+  },
+  "__floatsisf": {
+   "calls": 116827,
+   "cycles": 3346785
+  },
+  "lbCommonSin": {
+   "calls": 150461,
+   "cycles": 2526317
+  },
+  "lbCommonCos": {
+   "calls": 188076,
+   "cycles": 4776698
+  },
+  "gmCollisionTestRectangle": {
+   "calls": 28681,
+   "cycles": 1053780
+  },
+  "ndsRendererSubmitParticleQuad": {
+   "calls": 361107,
+   "cycles": 10567684
+  },
+  "gmCollisionGetWorldPosition": {
+   "calls": 47160,
+   "cycles": 2005830
+  },
+  "ndsStageMPAdjustFloorLoopWallSweep": {
+   "calls": 379309,
+   "cycles": 6405455
+  },
+  "ndsBaseGcPlayDObjAnimJoint": {
+   "calls": 272704,
+   "cycles": 6399945
+  },
+  "ftComputerCheckEvadeDistance": {
+   "calls": 25464,
+   "cycles": 818650
+  },
+  "ndsBaseFTCommonGuardInitJoints": {
+   "calls": 2537,
+   "cycles": 50327
+  },
+  "ndsBaseMPProcessUpdateMain": {
+   "calls": 90054,
+   "cycles": 3597220
+  },
+  "battleship_ftMainProcUpdateInterrupt": {
+   "calls": 23023,
+   "cycles": 592559
+  },
+  "ndsBaseGcPlayMObjMatAnim": {
+   "calls": 637604,
+   "cycles": 17297324
+  },
+  "func_ovl2_800ED490": {
+   "calls": 155673,
+   "cycles": 6236541
+  },
+  "gmCollisionSetInvertMatrix": {
+   "calls": 57157,
+   "cycles": 1349474
+  },
+  "lbParticleDrawTextures": {
+   "calls": 143276,
+   "cycles": 5255016
+  },
+  "gmCollisionTransformMatrixAll": {
+   "calls": 92988,
+   "cycles": 2249841
+  },
+  "ndsMPLineExtentSweepRejects": {
+   "calls": 67220,
+   "cycles": 2587601
+  },
+  ".vectors": {
+   "calls": 7001,
+   "cycles": 418848
+  },
+  "syMatrixPerspFastF": {
+   "calls": 175883,
+   "cycles": 8399835
+  },
+  "ftComputerCheckFindTarget": {
+   "calls": 60614,
+   "cycles": 1057363
+  },
+  "ndsBaseFTCommonGuardGetJointTransform": {
+   "calls": 24840,
+   "cycles": 712617
+  },
+  "ndsBaseMPProcessCheckTestLWallCollisionAdjNew": {
+   "calls": 30856,
+   "cycles": 1846019
+  },
+  "gcParseMObjMatAnimJoint": {
+   "calls": 139443,
+   "cycles": 1795269
+  },
+  "gcPlayMObjMatAnim": {
+   "calls": 97524,
+   "cycles": 1029893
+  },
+  "ndsWhispyAOTStructFuncRunLean.isra.0": {
+   "calls": 43539,
+   "cycles": 1758204
+  },
+  "gmCameraUpdateInterests": {
+   "calls": 147206,
+   "cycles": 3610693
+  },
+  "ndsWhispyAOTGeneratorFuncRun": {
+   "calls": 22750,
+   "cycles": 467595
+  },
+  "mpCollisionGetFCCommonFloor": {
+   "calls": 254488,
+   "cycles": 6192920
+  },
+  "__ieee754_rem_pio2f": {
+   "calls": 31562,
+   "cycles": 366044
+  },
+  "gmCollisionGetFighterPartsWorldPosition": {
+   "calls": 83394,
+   "cycles": 3546950
+  },
+  "battleship_ftMainProcParams": {
+   "calls": 6478,
+   "cycles": 70463
+  },
+  "ndsRendererHardwarePrepareLitDirection": {
+   "calls": 7560,
+   "cycles": 319992
+  },
+  "ndsParticleSetCurrentCamera": {
+   "calls": 204645,
+   "cycles": 4725063
+  },
+  "syUtilsRandFloat": {
+   "calls": 21024,
+   "cycles": 436506
+  },
+  "syMatrixLookAtReflectF": {
+   "calls": 511565,
+   "cycles": 15133867
+  },
+  "ndsMarioFireballWallLimit": {
+   "calls": 7810,
+   "cycles": 156925
+  },
+  "syMatrixF2L": {
+   "calls": 309409,
+   "cycles": 5867038
+  },
+  "gcParseDObjAnimJoint": {
+   "calls": 157101,
+   "cycles": 2616304
+  },
+  "ftComputerCheckDetectTarget": {
+   "calls": 137821,
+   "cycles": 4063288
+  },
+  "func_ovl2_800EF5D4": {
+   "calls": 338,
+   "cycles": 8751
+  },
+  "ftMainUpdateMotionEventsAll": {
+   "calls": 8726,
+   "cycles": 88841
+  },
+  "ifCommonPlayerDamageUpdateDigits": {
+   "calls": 8495,
+   "cycles": 104732
+  },
+  "wpMarioFireballProcMap": {
+   "calls": 4036,
+   "cycles": 97922
+  },
+  "syMatrixRotRpyRF": {
+   "calls": 26910,
+   "cycles": 710103
+  },
+  "grPupupuFlowersFrontUpdateAll": {
+   "calls": 62,
+   "cycles": 897
+  },
+  "ndsR2FtAnimParseDObjFigatree": {
+   "calls": 241631,
+   "cycles": 8164971
+  },
+  "grPupupuFlowersBackUpdateAll": {
+   "calls": 42,
+   "cycles": 607
+  },
+  "gcPlayDObjAnimJoint": {
+   "calls": 5711,
+   "cycles": 273550
+  },
+  "battleship_ftMainSetStatus": {
+   "calls": 1517,
+   "cycles": 19486
+  },
+  "ndsBaseMPProcessCheckTestLCliffCollision": {
+   "calls": 768,
+   "cycles": 45947
+  },
+  "ftPhysicsCheckClampAirVelXDec": {
+   "calls": 3446,
+   "cycles": 50554
+  },
+  "ndsRendererAdapterBuildNativeMaterialSnapshot": {
+   "calls": 135361,
+   "cycles": 3721964
+  },
+  "__kernel_cosf": {
+   "calls": 42548,
+   "cycles": 956218
+  },
+  "efManagerDustHeavyDoubleMakeEffect": {
+   "calls": 52,
+   "cycles": 1830
+  },
+  "gmCollisionCheckFighterInFighterRange": {
+   "calls": 3192,
+   "cycles": 56640
+  },
+  "func_ovl3_80134964": {
+   "calls": 942,
+   "cycles": 13532
+  },
+  "ndsStageMPSweepFloorLoopSweep": {
+   "calls": 11680,
+   "cycles": 153570
+  },
+  "ftDisplayLightsDrawReflect": {
+   "calls": 76081,
+   "cycles": 2849303
+  },
+  "ndsBaseMPProcessSetCollideFloor": {
+   "calls": 20,
+   "cycles": 1196
+  },
+  "ftParamGetCapturedDamage": {
+   "calls": 72,
+   "cycles": 2052
+  },
+  "efManagerDefaultProcUpdate": {
+   "calls": 808,
+   "cycles": 48340
+  },
+  "guMtxCatF": {
+   "calls": 199424,
+   "cycles": 8481990
+  },
+  "wpProcessUpdateHitPositions": {
+   "calls": 2215,
+   "cycles": 78525
+  },
+  "gmCollisionCheckWeaponInFighterRange": {
+   "calls": 3859,
+   "cycles": 65802
+  },
+  "lbParticleGeneratorFuncRun": {
+   "calls": 4922,
+   "cycles": 147598
+  },
+  "ndsBaseFTCommonDownBounceSetStatus": {
+   "calls": 25,
+   "cycles": 721
+  },
+  "mpCollisionGetVertexPositionID": {
+   "calls": 56,
+   "cycles": 912
+  },
+  "syMatrixTraRotRpyR": {
+   "calls": 3324,
+   "cycles": 63030
+  },
+  "syMatrixTra": {
+   "calls": 1332,
+   "cycles": 25257
+  },
+  "func_ovl3_8013837C": {
+   "calls": 5932,
+   "cycles": 145580
+  },
+  "ndsFighterDisplayContractProjectTarget": {
+   "calls": 87426,
+   "cycles": 3385643
+  },
+  "func_ovl2_800F8FFC": {
+   "calls": 18434,
+   "cycles": 268610
+  },
+  "ndsWhispyAOTSinCos": {
+   "calls": 3720,
+   "cycles": 75003
+  },
+  "ftMainUpdateMotionEventsForward": {
+   "calls": 168,
+   "cycles": 2045
+  },
+  "wpManagerMakeWeapon": {
+   "calls": 84,
+   "cycles": 1430
+  },
+  "ndsStageMPCeilFloorLoopSweep": {
+   "calls": 529,
+   "cycles": 10709
+  },
+  "func_ovl2_800EDA0C": {
+   "calls": 934,
+   "cycles": 35387
+  },
+  "syUtilsArcTan.part.0": {
+   "calls": 115063,
+   "cycles": 6130193
+  },
+  "func_ovl3_8013877C": {
+   "calls": 3740,
+   "cycles": 38096
+  },
+  "wpMarioFireballMakeWeapon": {
+   "calls": 15,
+   "cycles": 378
+  },
+  "ftPublicTryPlayFallSpecialReact": {
+   "calls": 5,
+   "cycles": 71
+  },
+  "ndsBaseEFManagerDamageElectricMakeEffect": {
+   "calls": 8,
+   "cycles": 262
+  },
+  "ndsRendererAdapterPrepareMaterialSegment.isra.0": {
+   "calls": 216,
+   "cycles": 4095
+  },
+  "ndsMarioFireballWallLimitSample.isra.0": {
+   "calls": 20262,
+   "cycles": 490422
+  },
+  "ndsSObjFastWallpaperGetTransform.part.0": {
+   "calls": 22400,
+   "cycles": 500585
+  },
+  "grWallpaperCalcPersp": {
+   "calls": 77900,
+   "cycles": 2466433
+  },
+  "efManagerDustLightProcUpdate": {
+   "calls": 1042,
+   "cycles": 62339
+  },
+  "ftComputerUpdateInputs.part.0": {
+   "calls": 31458,
+   "cycles": 589780
+  },
+  "ndsRendererAdapterBuildDObjXObjMatrix": {
+   "calls": 187475,
+   "cycles": 1989649
+  },
+  "gcPlayAnimAll": {
+   "calls": 46174,
+   "cycles": 487616
+  },
+  "func_ovl2_800EDE5C": {
+   "calls": 14055,
+   "cycles": 549178
+  },
+  "syVectorAngleDiff3D": {
+   "calls": 500,
+   "cycles": 19214
+  },
+  "efManagerDustDashMakeEffect": {
+   "calls": 10,
+   "cycles": 598
+  },
+  "ndsBaseFTCommonAttackAirProcMap": {
+   "calls": 9,
+   "cycles": 132
+  },
+  "syVectorNorm3D": {
+   "calls": 87810,
+   "cycles": 3503507
+  },
+  "lbCommonSim2D": {
+   "calls": 33,
+   "cycles": 1524
+  },
+  "ndsBaseFTCommonDeadCheckInterruptCommon": {
+   "calls": 47276,
+   "cycles": 731762
+  },
+  "ftMainProcPhysicsMap": {
+   "calls": 55172,
+   "cycles": 1309492
+  },
+  "__kernel_sinf": {
+   "calls": 39660,
+   "cycles": 933843
+  },
+  "ndsBaseMPProcessCheckFloorEdgeCollisionR": {
+   "calls": 11808,
+   "cycles": 474893
+  },
+  "ifCommonPlayerDamageUpdateAnim": {
+   "calls": 702,
+   "cycles": 41998
+  },
+  "efManagerFlameRandomMakeEffect": {
+   "calls": 20,
+   "cycles": 781
+  },
+  "syVectorMag3D": {
+   "calls": 66825,
+   "cycles": 2611089
+  },
+  "ftParamMakeEffect": {
+   "calls": 441,
+   "cycles": 9531
+  },
+  "ifCommonAnnounceTimeUpMakeInterface": {
+   "calls": 12,
+   "cycles": 195
+  },
+  "ndsR2AnimAdvanceTail.constprop.0": {
+   "calls": 1736,
+   "cycles": 103859
+  },
+  "mpCollisionCheckProjectFloor": {
+   "calls": 85284,
+   "cycles": 1583347
+  },
+  "mpCommonRunFighterAllCollisions": {
+   "calls": 84,
+   "cycles": 2508
+  },
+  "ftComputerCheckSetTargetEdgeRight": {
+   "calls": 5966,
+   "cycles": 162365
+  },
+  "gmCameraDefaultFuncCamera": {
+   "calls": 45721,
+   "cycles": 1204141
+  },
+  "syUtilsArcTan2": {
+   "calls": 23284,
+   "cycles": 1053431
+  },
+  "ftPhysicsClampAirVelXStickRange": {
+   "calls": 274,
+   "cycles": 7287
+  },
+  "ftPhysicsApplyClampGroundVelStickRange": {
+   "calls": 368,
+   "cycles": 9496
+  },
+  "ftPhysicsApplyGroundVelTransN": {
+   "calls": 3051,
+   "cycles": 50882
+  },
+  "ftFoxSpecialLwEndProcUpdate": {
+   "calls": 18,
+   "cycles": 260
+  },
+  "ndsBaseFTCommonDamageSetPublic": {
+   "calls": 36,
+   "cycles": 613
+  },
+  "ndsBaseMPProcessCheckTestRWallCollisionAdjNew": {
+   "calls": 30861,
+   "cycles": 1186457
+  },
+  "syUtilsArcSin": {
+   "calls": 24,
+   "cycles": 733
+  },
+  "ftComputerFollowObjectiveAttack.part.0": {
+   "calls": 3589,
+   "cycles": 80813
+  },
+  "func_ovl3_80135B78": {
+   "calls": 2325,
+   "cycles": 49652
+  },
+  "gmCameraGetClampDimensionsMax": {
+   "calls": 46740,
+   "cycles": 2459774
+  },
+  "ifCommonPlayerArrowsFuncRun": {
+   "calls": 150,
+   "cycles": 2195
+  },
+  "ftPhysicsSetGroundVelTransferAir": {
+   "calls": 35567,
+   "cycles": 1053799
+  },
+  "func_ovl2_8010C3C0": {
+   "calls": 33609,
+   "cycles": 1795991
+  },
+  "ftPhysicsApplyAirVelDriftFastFall": {
+   "calls": 5253,
+   "cycles": 101775
+  },
+  "ftComputerSetCommandWaitShort": {
+   "calls": 888,
+   "cycles": 34024
+  },
+  "ifCommonPlayerDamageProcDisplay": {
+   "calls": 130499,
+   "cycles": 2424825
+  },
+  "ftComputerFollowObjectiveWalk": {
+   "calls": 23701,
+   "cycles": 396806
+  },
+  "ftPhysicsGetAirVelTransN": {
+   "calls": 1088,
+   "cycles": 22000
+  },
+  "gmCameraSetBoundsPosition": {
+   "calls": 50054,
+   "cycles": 774006
+  },
+  "ndsBaseMPProcessRunRWallCollisionAdjNew": {
+   "calls": 165,
+   "cycles": 6118
+  },
+  "ftParamGetCommonKnockback": {
+   "calls": 362,
+   "cycles": 9894
+  },
+  "lbParticleUpdateStruct.part.0": {
+   "calls": 42201,
+   "cycles": 1910200
+  },
+  "ftMainParseMotionEvent": {
+   "calls": 2423,
+   "cycles": 55908
+  },
+  "gmCameraLookAtFuncMatrix": {
+   "calls": 105600,
+   "cycles": 1539381
+  },
+  "syMatrixRowscaleF": {
+   "calls": 23847,
+   "cycles": 338534
+  },
+  "ndsBaseFTCommonJumpSetStatus": {
+   "calls": 48,
+   "cycles": 1244
+  },
+  "syVectorAdd3D": {
+   "calls": 65520,
+   "cycles": 3919860
+  },
+  "battleship_ftPublicProcUpdate": {
+   "calls": 12464,
+   "cycles": 97041
+  },
+  "ftPhysicsApplyGroundVelFriction": {
+   "calls": 8960,
+   "cycles": 153763
+  },
+  "ftComputerGetObjectiveStatus": {
+   "calls": 13471,
+   "cycles": 283953
+  },
+  "syMatrixLookAtF": {
+   "calls": 196308,
+   "cycles": 6429053
+  },
+  "ndsMPFCSegmentCrossesKernel": {
+   "calls": 17177,
+   "cycles": 84976
+  },
+  "efManagerDamageFlyOrbsProcUpdate": {
+   "calls": 255,
+   "cycles": 10255
+  },
+  "syMatrixTraRotRpyRSca": {
+   "calls": 110304,
+   "cycles": 2091595
+  },
+  "ndsFireGrindUpdate": {
+   "calls": 726,
+   "cycles": 21971
+  },
+  "ftParamGetStickAngleRads": {
+   "calls": 32,
+   "cycles": 521
+  },
+  "ndsBaseMPProcessCheckTestFloorCollisionNew": {
+   "calls": 7866,
+   "cycles": 469035
+  },
+  "lbParticleRotateVel": {
+   "calls": 2400,
+   "cycles": 78001
+  },
+  "ndsStageGCDrawAllLoopRecordDObjDraw": {
+   "calls": 471,
+   "cycles": 5377
+  },
+  "lbCommonReflect2D": {
+   "calls": 24,
+   "cycles": 917
+  },
+  "efManagerDustLightMakeEffect": {
+   "calls": 180,
+   "cycles": 4456
+  },
+  "ndsMPCommonProcFighterDamageFloorOnly": {
+   "calls": 77,
+   "cycles": 1512
+  },
+  "ndsBaseFTCommonDamageCommonProcLagUpdate": {
+   "calls": 42,
+   "cycles": 1418
+  },
+  "efManagerDamageSpawnOrbsProcUpdate": {
+   "calls": 54,
+   "cycles": 2047
+  },
+  "battleship_ftMainSearchFighterCatch": {
+   "calls": 3,
+   "cycles": 30
+  },
+  "gmCollisionGetFighterAttackDamagePosition": {
+   "calls": 114,
+   "cycles": 4848
+  },
+  "ndsBaseFTCommonThrownReleaseThrownUpdateStats": {
+   "calls": 10,
+   "cycles": 241
+  },
+  "efManagerDamageNormalHeavyMakeEffect": {
+   "calls": 4,
+   "cycles": 126
+  },
+  "ifCommonPlayerArrowsUpdateFlags": {
+   "calls": 75,
+   "cycles": 1092
+  },
+  "ifCommonTimerProcDisplay": {
+   "calls": 1089,
+   "cycles": 15768
+  },
+  "ndsBaseMPProcessCheckTestFloorCollisionAdjNew": {
+   "calls": 4188,
+   "cycles": 250555
+  },
+  "ftMainUpdateMotionEventsForwardEffect": {
+   "calls": 8264,
+   "cycles": 84063
+  },
+  "syVectorScale3D": {
+   "calls": 26343,
+   "cycles": 664843
+  },
+  "ndsBaseMPProcessCheckTestCeilCollisionAdjNew": {
+   "calls": 2804,
+   "cycles": 167754
+  },
+  "ndsBaseMPProcessCheckFloorEdgeCollisionL": {
+   "calls": 11808,
+   "cycles": 706436
+  },
+  "syVectorDiff3D": {
+   "calls": 58548,
+   "cycles": 58547
+  },
+  "ftComputerProcDefault": {
+   "calls": 3172,
+   "cycles": 46220
+  },
+  "grPupupuWhispyUpdateBlink": {
+   "calls": 3144,
+   "cycles": 45503
+  },
+  "gmCameraGetAdjustAtAngle": {
+   "calls": 15580,
+   "cycles": 716545
+  },
+  "wpProcessProcWeaponMain": {
+   "calls": 5500,
+   "cycles": 115494
+  },
+  "ifCommonPlayerTagProcDisplay": {
+   "calls": 3267,
+   "cycles": 62399
+  },
+  "ndsBaseFTCommonKneeBendProcUpdate": {
+   "calls": 48,
+   "cycles": 1776
+  },
+  "ftPhysicsApplyAirVelXFriction": {
+   "calls": 4733,
+   "cycles": 87548
+  },
+  "ndsBaseMPProcessSetCollProjectFloorID": {
+   "calls": 1938,
+   "cycles": 115944
+  },
+  "ndsBaseFTCommonLandingProcInterrupt": {
+   "calls": 248,
+   "cycles": 5498
+  },
+  "ndsBaseFTCommonKneeBendProcInterrupt": {
+   "calls": 32,
+   "cycles": 493
+  },
+  "wpMarioFireballProcUpdate": {
+   "calls": 222,
+   "cycles": 13281
+  },
+  "func_ovl3_801397F4.part.0": {
+   "calls": 3578,
+   "cycles": 91270
+  },
+  "ndsBaseFTCommonGuardUpdateJoints": {
+   "calls": 168,
+   "cycles": 10115
+  },
+  "battleship_ftAnimEndSetFall": {
+   "calls": 618,
+   "cycles": 8944
+  },
+  "ftComputerFollowObjectivePatrol.part.0": {
+   "calls": 2035,
+   "cycles": 43020
+  },
+  "func_ovl3_80138AA8": {
+   "calls": 4161,
+   "cycles": 89763
+  },
+  "ndsBaseMPProcessCheckTestRCliffCollision": {
+   "calls": 2528,
+   "cycles": 76885
+  },
+  "grPupupuUpdateWhispyStatus": {
+   "calls": 95,
+   "cycles": 1374
+  },
+  "grPupupuWhispyUpdateOpen": {
+   "calls": 108,
+   "cycles": 1563
+  },
+  "func_ovl2_8010C5C0": {
+   "calls": 21812,
+   "cycles": 873828
+  },
+  "ftMarioSpecialLwProcPhysics": {
+   "calls": 132,
+   "cycles": 3317
+  },
+  "syUtilsArcCos": {
+   "calls": 167,
+   "cycles": 4440
+  },
+  "wpMainGetStaledDamage": {
+   "calls": 24,
+   "cycles": 684
+  },
+  "func_ovl3_801346D4": {
+   "calls": 1589,
+   "cycles": 36631
+  },
+  "ftParamGetHitLag": {
+   "calls": 231,
+   "cycles": 5552
+  },
+  "ndsBaseFTCommonCapturePulledProcMap": {
+   "calls": 4,
+   "cycles": 148
+  },
+  "ndsBaseFTCommonDamageAirCommonProcUpdate": {
+   "calls": 599,
+   "cycles": 8669
+  },
+  "battleship_ftAnimEndSetWait": {
+   "calls": 922,
+   "cycles": 13344
+  },
+  "ndsBaseMPProcessCheckTestFloorCollision": {
+   "calls": 7836,
+   "cycles": 468803
+  },
+  "ndsAObjEvent32CorrectMObjColors.part.0": {
+   "calls": 666,
+   "cycles": 14022
+  },
+  "lbCommonMag2D": {
+   "calls": 675,
+   "cycles": 24818
+  },
+  "ftFoxSpecialNProcUpdate": {
+   "calls": 198,
+   "cycles": 2865
+  },
+  "efManagerNoStructProcUpdate": {
+   "calls": 73,
+   "cycles": 1056
+  },
+  "ndsBaseFTCommonDamageCommonProcUpdate": {
+   "calls": 82,
+   "cycles": 1186
+  },
+  "ndsMPGetWallEdgeU": {
+   "calls": 209,
+   "cycles": 2966
+  },
+  "ndsCameraCatCamera": {
+   "calls": 76800,
+   "cycles": 2381014
+  },
+  "ftPhysicsCheckSetFastFall": {
+   "calls": 1053,
+   "cycles": 15343
+  },
+  "grPupupuWhispySetWindPush": {
+   "calls": 6937,
+   "cycles": 137952
+  },
+  "ftComputerCheckSetTargetEdgeLeft": {
+   "calls": 1843,
+   "cycles": 34988
+  },
+  "gcAddMObjForDObj": {
+   "calls": 28,
+   "cycles": 1870
+  },
+  "ndsMPGetLRCommonWall": {
+   "calls": 121,
+   "cycles": 2643
+  },
+  "grPupupuWhispyUpdateWait": {
+   "calls": 4,
+   "cycles": 59
+  },
+  "efManagerQuakeProcUpdate": {
+   "calls": 1756,
+   "cycles": 31990
+  },
+  "func_ovl3_80138EE4": {
+   "calls": 1492,
+   "cycles": 39793
+  },
+  "ndsBaseFTCommonThrowProcUpdate": {
+   "calls": 34,
+   "cycles": 492
+  },
+  "ndsBaseFTCommonDamageCommonProcPhysics": {
+   "calls": 54,
+   "cycles": 786
+  },
+  "ifCommonTimerFuncRun": {
+   "calls": 1204,
+   "cycles": 62129
+  },
+  "ftPhysicsSetGroundVelAbsStickRange": {
+   "calls": 6054,
+   "cycles": 87207
+  },
+  "wpFoxBlasterProcUpdate": {
+   "calls": 169,
+   "cycles": 3508
+  },
+  "battleship_wpFoxBlasterMakeWeapon": {
+   "calls": 8,
+   "cycles": 166
+  },
+  "efManagerDustHeavyMakeEffect": {
+   "calls": 37,
+   "cycles": 2213
+  },
+  "ndsBaseFTCommonKneeBendCheckInterruptCommon": {
+   "calls": 7,
+   "cycles": 114
+  },
+  "mpCommonProcFighterWaitOrLanding": {
+   "calls": 1,
+   "cycles": 14
+  },
+  "mpCommonSetFighterGround": {
+   "calls": 54,
+   "cycles": 1121
+  },
+  "battleship_wpMarioFireballMakeWeapon": {
+   "calls": 12,
+   "cycles": 276
+  },
+  "ftParamSetDamageShuffle": {
+   "calls": 180,
+   "cycles": 4004
+  },
+  "lbCommonMakePositionFGM": {
+   "calls": 45,
+   "cycles": 2329
+  },
+  "ftParamGetHitStun": {
+   "calls": 19,
+   "cycles": 2229
+  },
+  "ndsBaseFTDisplayMainProcDisplay": {
+   "calls": 6529,
+   "cycles": 242516
+  },
+  "ndsBaseFTCommonDamageCheckMakeScreenFlash": {
+   "calls": 19,
+   "cycles": 280
+  },
+  "ndsBaseFTCommonDamageInitDamageVars": {
+   "calls": 311,
+   "cycles": 7719
+  },
+  "ndsBaseEFManagerDamageNormalLightMakeEffect": {
+   "calls": 112,
+   "cycles": 3669
+  },
+  "battleship_ftMainProcessHitCollisionStatsMain": {
+   "calls": 53,
+   "cycles": 776
+  },
+  "ndsBaseFTCommonGuardUpdateShieldAngle": {
+   "calls": 1498,
+   "cycles": 56223
+  },
+  "ndsBaseFTCommonGuardKneeBendCheckInterruptGuard": {
+   "calls": 1,
+   "cycles": 16
+  },
+  "lbCommonNormDist2D": {
+   "calls": 707,
+   "cycles": 29157
+  },
+  "ndsRendererAdapterPrepareInitialMatrices": {
+   "calls": 138,
+   "cycles": 3482
+  },
+  "ftPhysicsApplyGravityClampTVel": {
+   "calls": 70,
+   "cycles": 545
+  },
+  "ndsBaseFTCommonJumpAerialSetStatus": {
+   "calls": 15,
+   "cycles": 455
+  },
+  "efManagerDamageNormalLightMakeEffect": {
+   "calls": 52,
+   "cycles": 1645
+  },
+  "ndsBaseFTCommonOttottoProcMap": {
+   "calls": 12,
+   "cycles": 121
+  },
+  "ndsBaseFTCommonEscapeProcUpdate": {
+   "calls": 81,
+   "cycles": 1172
+  },
+  "ftFoxSpecialLwStartProcUpdate": {
+   "calls": 3,
+   "cycles": 43
+  },
+  "efManagerImpactWaveProcUpdate": {
+   "calls": 225,
+   "cycles": 2537
+  },
+  "ndsBaseMPProcessSetLandingFloor": {
+   "calls": 50,
+   "cycles": 2991
+  },
+  "ndsBaseFTCommonAttackHi3CheckInterruptCommon": {
+   "calls": 2,
+   "cycles": 29
+  },
+  "ftPublicDecideCommon": {
+   "calls": 11,
+   "cycles": 156
+  },
+  "mpCommonSetFighterLandingParams": {
+   "calls": 30,
+   "cycles": 368
+  },
+  "ndsBaseFTCommonDownForwardOrBackCheckInterruptCommon": {
+   "calls": 2,
+   "cycles": 29
+  },
+  "ftCommonDeadDownSetStatus": {
+   "calls": 8,
+   "cycles": 124
+  },
+  "ifCommonPlayerStockMakeStockSnap": {
+   "calls": 4,
+   "cycles": 40
+  },
+  "ftCommonRebirthDownSetStatus": {
+   "calls": 6,
+   "cycles": 271
+  },
+  "efManagerDamageSpawnSparksProcUpdate": {
+   "calls": 81,
+   "cycles": 2792
+  },
+  "wpMainVelSetModelPitch": {
+   "calls": 6,
+   "cycles": 85
+  },
+  "efManagerFlameLRMakeEffect": {
+   "calls": 48,
+   "cycles": 1396
+  },
+  "ftPhysicsCheckClampAirVelXDecMax": {
+   "calls": 10,
+   "cycles": 145
+  },
+  "mpCollisionGetFCCommonCeil": {
+   "calls": 247,
+   "cycles": 5669
+  },
+  "ndsBaseMPProcessRunCeilCollisionAdjNew": {
+   "calls": 38,
+   "cycles": 2273
+  },
+  "ftMarioSpecialHiProcPhysics": {
+   "calls": 102,
+   "cycles": 2574
+  },
+  "ndsDrawSObjIntoPreview": {
+   "calls": 36,
+   "cycles": 1195
+  },
+  "ndsDrawLayeredSObjFrame": {
+   "calls": 516,
+   "cycles": 6546
+  },
+  "lbCommonTan": {
+   "calls": 12464,
+   "cycles": 797107
+  },
+  "ftComputerCheckTargetItemOrTwister": {
+   "calls": 11616,
+   "cycles": 494056
+  },
+  "ndsBaseFTCommonAttack1CheckInterruptCommon": {
+   "calls": 2187,
+   "cycles": 23095
+  },
+  "gmCameraCheckTargetInBounds": {
+   "calls": 20183,
+   "cycles": 307003
+  },
+  "ndsParticleDrawOwnTextureQuad": {
+   "calls": 3441,
+   "cycles": 102681
+  },
+  "ndsFighterMarioFoxDLAllDrawForSlot.constprop.0": {
+   "calls": 344,
+   "cycles": 6522
+  },
+  "ndsBaseFTCommonDamageUpdateMain": {
+   "calls": 18,
+   "cycles": 190
+  },
+  "ndsBaseEFManagerDustExpandSmallMakeEffect": {
+   "calls": 1,
+   "cycles": 10
+  },
+  "ftComputerSetCommandWaitLong": {
+   "calls": 22,
+   "cycles": 769
+  },
+  "efManagerDamageFlySparksProcUpdate": {
+   "calls": 9,
+   "cycles": 130
+  },
+  "ifCommonPlayerDamageStartBreakAnim": {
+   "calls": 12,
+   "cycles": 364
+  },
+  "mpCollisionGetMapObjPositionID": {
+   "calls": 4,
+   "cycles": 65
+  },
+  "ftMainUpdateColAnim": {
+   "calls": 82,
+   "cycles": 1335
+  },
+  "syVectorRotate3D": {
+   "calls": 726,
+   "cycles": 19575
+  },
+  "ndsBaseFTCommonTurnProcUpdate": {
+   "calls": 220,
+   "cycles": 3184
+  },
+  "battleship_ftAnimEndCheckSetStatus": {
+   "calls": 227,
+   "cycles": 3285
+  },
+  "wpMainApplyGravityClampTVel": {
+   "calls": 444,
+   "cycles": 3500
+  },
+  "ftPhysicsApplyAirVelFriction": {
+   "calls": 1230,
+   "cycles": 9576
+  },
+  "lbCommonScale2D": {
+   "calls": 208,
+   "cycles": 5249
+  },
+  "ftMarioSpecialHiProcUpdate": {
+   "calls": 78,
+   "cycles": 1128
+  },
+  "ftMarioSpecialHiProcMap": {
+   "calls": 68,
+   "cycles": 965
+  },
+  "ndsBaseFTCommonGuardOnProcUpdate": {
+   "calls": 25,
+   "cycles": 361
+  },
+  "ndsBaseFTCommonGuardOffProcUpdate": {
+   "calls": 37,
+   "cycles": 535
+  },
+  "ftPhysicsApplyGravityDefault": {
+   "calls": 54,
+   "cycles": 420
+  },
+  "efManagerFoxReflectorProcUpdate": {
+   "calls": 40,
+   "cycles": 578
+  },
+  "ndsBaseFTCommonDownBounceProcUpdate": {
+   "calls": 104,
+   "cycles": 1505
+  },
+  "ifCommonPlayerScoreMakeEffect": {
+   "calls": 8,
+   "cycles": 130
+  },
+  "ftCommonRebirthCommonProcMap": {
+   "calls": 1165,
+   "cycles": 51189
+  },
+  "ndsBaseFTCommonCatchProcUpdate": {
+   "calls": 5,
+   "cycles": 73
+  },
+  "ndsBaseFTCommonCapturePulledRotateScale": {
+   "calls": 87,
+   "cycles": 2195
+  },
+  "ndsBaseFTCommonCaptureWaitProcMap": {
+   "calls": 17,
+   "cycles": 1017
+  },
+  "ndsPrivateMPGetWallEdgeD": {
+   "calls": 4,
+   "cycles": 58
+  },
+  "ndsBaseMPProcessCheckCeilEdgeCollisionL": {
+   "calls": 57,
+   "cycles": 3410
+  },
+  "ndsBaseMPProcessCheckCeilEdgeCollisionR": {
+   "calls": 57,
+   "cycles": 2292
+  },
+  "ftPhysicsClampAirVelXMax": {
+   "calls": 42,
+   "cycles": 612
+  },
+  "efManagerDustHeavyDoubleProcUpdate": {
+   "calls": 26,
+   "cycles": 25
+  },
+  "ndsBaseFTCommonAttackAirCheckInterruptCommon": {
+   "calls": 13,
+   "cycles": 191
+  },
+  "ndsBaseFTCommonLandingSetStatus": {
+   "calls": 5,
+   "cycles": 72
+  },
+  "mpCommonProcFighterCliffFloorCeil": {
+   "calls": 7,
+   "cycles": 103
+  },
+  "ndsParticleBiasTowardEye": {
+   "calls": 111,
+   "cycles": 1172
+  },
+  "wpMapCheckAllRebound": {
+   "calls": 6,
+   "cycles": 223
+  },
+  "ndsBaseFTCommonDamageSetDustEffectInterval": {
+   "calls": 46,
+   "cycles": 670
+  },
+  "ftPublicCommonCheck": {
+   "calls": 19,
+   "cycles": 269
+  },
+  "ftComputerWaitGetTarget": {
+   "calls": 42,
+   "cycles": 1786
+  },
+  "ftComputerProcessTrait": {
+   "calls": 10,
+   "cycles": 425
+  },
+  "ftPhysicsClampAirVelX": {
+   "calls": 6,
+   "cycles": 88
+  },
+  "ftCommonFallSpecialSetStatus": {
+   "calls": 2,
+   "cycles": 50
+  },
+  "ftPhysicsAddClampAirVelY": {
+   "calls": 2,
+   "cycles": 74
+  },
+  "ftPhysicsClampGroundVel": {
+   "calls": 2,
+   "cycles": 29
+  },
+  "efManagerImpactWaveProcDisplay": {
+   "calls": 30,
+   "cycles": 380
+  },
+  "ftPublicPlayCliffReact": {
+   "calls": 3,
+   "cycles": 42
+  },
+  "ndsBaseFTCommonAttackS3SetStatus": {
+   "calls": 4,
+   "cycles": 58
+  },
+  "ndsBaseFTCommonAttackS3CheckInterruptCommon": {
+   "calls": 2,
+   "cycles": 29
+  },
+  "ndsMPFindLineEndpoints": {
+   "calls": 4,
+   "cycles": 65
+  },
+  "efManagerDeadExplodeMakeEffect": {
+   "calls": 8,
+   "cycles": 570
+  },
+  "ftManagerInitFighter": {
+   "calls": 2,
+   "cycles": 29
+  },
+  "ndsBaseFTCommonThrownReleaseFighterLoseGrip": {
+   "calls": 1,
+   "cycles": 0
+  },
+  "ndsMPCommonRunFighterCliffFloorCeilCollisions": {
+   "calls": 1,
+   "cycles": 14
+  },
+  "ftMarioSpecialAirHiSetStatus": {
+   "calls": 1,
+   "cycles": 117
+  },
+  "ftMarioSpecialHiProcInterrupt": {
+   "calls": 2,
+   "cycles": 41
+  },
+  "ftFoxSpecialHiStartSetStatus": {
+   "calls": 1,
+   "cycles": 25
+  }
+ },
+ "subsystems": {
+  "other": 51042701,
+  "gameplay (other decomp)": 43828211,
+  "collision / stage MP": 24770796,
+  "renderer / other": 11395840,
+  "animation evaluation": 38066745,
+  "CPU player AI": 8108314,
+  "particles": 7390817,
+  "matrices / transform": 53251919
+ }
+}

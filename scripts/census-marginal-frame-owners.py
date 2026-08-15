@@ -252,7 +252,65 @@ def addr2line_names(elf: Path, addresses: list[str]) -> list[str]:
     return out
 
 
-def report(pc_csv: Path, build: Path, top: int, attribute_top: int) -> int:
+OBJDUMP = os.environ.get(
+    "OBJDUMP", r"C:/devkitPro/devkitARM/bin/arm-none-eabi-objdump.exe")
+
+# The six per-fighter procs gcRunAll dispatches, named by the tick-HUD bracket
+# each one is wrapped in (src/port/reloc_backend_diagnostic_recorders.c:5632-
+# 5780). The wrappers forward to the `battleship_` symbol, so THAT is the root
+# of the static call closure -- rooting at the wrapper would stop at the call.
+DEFAULT_OWNER_ROOTS = {
+    "SINT": ("battleship_ftMainProcUpdateInterrupt",),
+    "SHDT": ("battleship_ftMainProcSearchHitAll",),
+    "SPHD": ("battleship_ftMainProcPhysicsMapDefault",),
+    "SPRM": ("battleship_ftMainProcParams",),
+    "SCAT": ("battleship_ftMainProcSearchCatch",),
+    "SPHC": ("battleship_ftMainProcPhysicsMapCapture",),
+}
+CALL_RE = re.compile(r"\sbl[x]?\s+[0-9a-f]+ <([^>+]+)")
+FUNC_RE = re.compile(r"^[0-9a-f]+ <([^>]+)>:$")
+
+
+def call_graph(elf: Path) -> dict[str, set[str]]:
+    """Direct-call graph from the LINKED image.
+
+    Only `bl`/`blx <literal>` edges exist here: an indirect call through a
+    register or a GObj proc pointer is invisible, so every reachable set below
+    is a LOWER BOUND. That is stated wherever the result is printed rather than
+    left for a reader to assume -- `linked-elf-is-the-reader-oracle`.
+    """
+    listing = subprocess.run([OBJDUMP, "-d", str(elf)],
+                             capture_output=True, text=True, check=True).stdout
+    graph: dict[str, set[str]] = {}
+    current = None
+    for line in listing.splitlines():
+        header = FUNC_RE.match(line)
+        if header:
+            current = header.group(1)
+            graph.setdefault(current, set())
+            continue
+        if current is None:
+            continue
+        call = CALL_RE.search(line)
+        if call:
+            graph[current].add(call.group(1))
+    return graph
+
+
+def reachable(graph: dict[str, set[str]], roots) -> set[str]:
+    seen: set[str] = set()
+    stack = [r for r in roots]
+    while stack:
+        name = stack.pop()
+        if name in seen:
+            continue
+        seen.add(name)
+        stack.extend(graph.get(name, ()))
+    return seen
+
+
+def report(pc_csv: Path, build: Path, top: int, attribute_top: int,
+           owner_roots: bool = False) -> int:
     meta = {}
     meta_path = pc_csv.with_suffix(".meta.txt")
     if meta_path.exists():
@@ -334,7 +392,79 @@ def report(pc_csv: Path, build: Path, top: int, attribute_top: int) -> int:
           "THE UNEXAMINED POOL whole match -- "
           "write_buffer + interlock + bus_contention (symbol census)",
           False)
+
+    if owner_roots:
+        owner_table(rows, entries, starts, inline, elf, marg_div)
     return 0
+
+
+def owner_table(rows, entries, starts, inline, elf: Path, divisor: float):
+    """Split the marginal ranking by which fighter proc statically reaches it.
+
+    `MARGINAL_OWNERS.md` §7 named `SITR`/`SHDT`/`SPHD`/`SPRM` as the owners of
+    the P95 excess at BRACKET granularity. A per-PC profile has no call stack,
+    so the only way to ask "which functions inside `gcRunAll` hold it" is to
+    intersect the ranking with each proc's static call closure.
+
+    THREE THINGS THIS IS NOT. It is not proof a function ran under that proc --
+    reachability is not execution. A function reachable from two procs is
+    reported as SHARED, never split between them, because there is nothing in
+    the data to split it with. And it is not a bound in either direction: it
+    misses every indirect call (so a proc's true closure is larger) while
+    charging a shared leaf such as `__aeabi_fadd` to the procs that can reach it
+    even on the frames where only the renderer called it.
+    """
+    graph = call_graph(elf)
+    sets = {name: reachable(graph, roots)
+            for name, roots in DEFAULT_OWNER_ROOTS.items()}
+    per_symbol = collections.defaultdict(int)
+    per_inline = collections.defaultdict(int)
+    for row in rows:
+        value = sum(int(row[f"marg_{c}"]) for c in RANK_CLASSES)
+        if value == 0:
+            continue
+        per_symbol[symbol_for(entries, starts, row["pc"])] += value
+        name = inline.get(row["pc"])
+        if name is not None:
+            per_inline[name] += value
+
+    def classify(name: str) -> str:
+        owners = sorted(k for k, members in sets.items() if name in members)
+        if not owners:
+            return "(not reached by any fighter proc)"
+        if len(owners) == 1:
+            return owners[0]
+        return "SHARED:" + "+".join(owners)
+
+    for label, counts in (("symbol census", per_symbol),
+                          ("inline attribution", per_inline)):
+        roll = collections.defaultdict(int)
+        for name, value in counts.items():
+            roll[classify(name)] += value
+        total = sum(roll.values())
+        print(f"\nFIGHTER-PROC REACHABILITY -- {label} "
+              "(static bl/blx closure. It is NOT a bound in either direction: "
+              "indirect calls are not followed, so a proc's real closure is "
+              "larger; and a shared leaf reachable from a proc is charged here "
+              "even when the draw side called it. Only the EXCLUSIVE rows are "
+              "a clean attribution.)")
+        print(f"  total {total / divisor:,.0f} ticks/frame")
+        for name, value in sorted(roll.items(), key=lambda kv: -kv[1]):
+            print(f"  {value / divisor:9,.0f} {100.0 * value / total:5.1f}%  "
+                  f"{name}")
+
+    print("\n  PER-OWNER TOP FUNCTIONS (symbol census, exclusive owners only)")
+    for owner in sorted(sets):
+        members = [(v, n) for n, v in per_symbol.items()
+                   if classify(n) == owner]
+        if not members:
+            continue
+        members.sort(reverse=True)
+        subtotal = sum(v for v, _ in members)
+        print(f"  {owner}: {subtotal / divisor:,.0f} ticks/frame exclusive, "
+              f"{len(members)} functions")
+        for value, name in members[:8]:
+            print(f"      {value / divisor:9,.0f}  {name}")
 
 
 def main() -> int:
@@ -350,6 +480,9 @@ def main() -> int:
     parser.add_argument("--band-max", type=int, default=0)
     parser.add_argument("--top", type=int, default=25)
     parser.add_argument("--attribute-top", type=int, default=30000)
+    parser.add_argument("--owner-roots", action="store_true",
+                        help="also split the marginal ranking by which of the "
+                             "six fighter procs statically reaches each owner")
     args = parser.parse_args()
     if args.reduce:
         if not args.profile or not args.out:
@@ -359,7 +492,8 @@ def main() -> int:
     if args.report:
         if not args.pc_csv or not args.build:
             raise SystemExit("--report needs --pc-csv and --build")
-        return report(args.pc_csv, args.build, args.top, args.attribute_top)
+        return report(args.pc_csv, args.build, args.top, args.attribute_top,
+                      args.owner_roots)
     parser.print_help()
     return 2
 

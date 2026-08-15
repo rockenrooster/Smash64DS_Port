@@ -52,13 +52,51 @@ function Invoke-GdbMarkerScript {
         [string]$Gdb,
         [string]$Elf,
         [string]$Root,
-        [string[]]$Commands,
+        # object[], NOT string[] -- see the flatten below. This is load-bearing.
+        [object[]]$Commands,
         [string]$ScriptName = '_verify_markers.gdb',
         [ValidateRange(1,3600)][int]$TimeoutSeconds = 30,
         [string]$ReadyFile = '',
         [object[]]$InteractiveSteps = @(),
         [switch]$MiInteractive
     )
+
+    # A JAGGED COMMAND LIST USED TO FUSE ITSELF ONTO ONE LINE, SILENTLY.
+    #
+    # This parameter was [string[]]. A caller that builds its script with a
+    # helper returning several commands -- `$commands = @('target remote ...',
+    # (New-State 'tag'))` -- hands PowerShell a jagged array, and binding that
+    # to [string[]] STRINGIFIES each inner array into ONE space-joined element.
+    # gdb then receives several commands on one line, rejects or half-parses it,
+    # prints an error nobody reads, and carries on: the run reaches its timeout
+    # having executed a different script than the caller wrote.
+    #
+    # It cost a probe on 2026-08-14. The tell was a stray `game_status` file in
+    # the repo root: the fused line was `shell cmd /c echo TIME=%TIME% printf
+    # "... gSCManagerBattleState->game_status ..."`, and cmd read the `->` as a
+    # redirect. The conclusion drawn from that probe had to be retracted
+    # (`…/2026-08-14_runtime2-p95-closure/GATE_ARM_OWNERS.md` §1.3).
+    #
+    # The MI path has guarded against exactly this since 2026-08-03 (see the
+    # fused-verb check below) -- but only for InteractiveSteps, and the batch
+    # command list, which every verifier uses, had no guard at all. Flattening
+    # here makes the wrong form inexpressible rather than merely detected.
+    $Commands = @(
+        $Commands | ForEach-Object {
+            if (($null -ne $_) -and ($_ -isnot [string]) -and
+                ($_ -is [System.Collections.IEnumerable])) {
+                $_ | ForEach-Object { [string]$_ }
+            } else {
+                [string]$_
+            }
+        }
+    )
+    $multiline = @($Commands | Where-Object { $_ -match "[`r`n]" })
+    if ($multiline.Count -gt 0) {
+        throw ("GDB command contains an embedded newline, which would split " +
+               "into lines gdb parses separately: '" +
+               ($multiline[0] -replace "[`r`n]+", ' | ') + "'")
+    }
 
     $interactive = -not [string]::IsNullOrWhiteSpace($ReadyFile)
     if (($InteractiveSteps.Count -ne 0) -and (-not $interactive)) {
@@ -226,13 +264,26 @@ function Invoke-GdbMarkerScript {
     Set-Content $gdbStdoutPath -Value $stdout
     Set-Content $gdbStderrPath -Value $stderr
 
+    $elapsedSeconds = [Math]::Round($timer.Elapsed.TotalSeconds, 1)
+
     if ($timedOut) {
-        throw "GDB marker capture timed out after $TimeoutSeconds seconds.`n$stdout`n$stderr"
+        throw ("GDB marker capture timed out after $TimeoutSeconds seconds " +
+               "(elapsed ${elapsedSeconds}s).`n$stdout`n$stderr")
     }
 
     if ($exitCode -ne 0) {
-        throw "GDB marker capture failed with exit $exitCode.`n$stdout`n$stderr"
+        throw ("GDB marker capture failed with exit $exitCode after " +
+               "${elapsedSeconds}s.`n$stdout`n$stderr")
     }
+
+    # Board row R0, 2026-08-14: a capture that PASSES tells nobody how close it
+    # came to its ceiling, so the drift that eventually turns Boundary red is
+    # invisible until it is a red. Print the margin on every success. Write-Host
+    # rather than Write-Output: this function returns an object and callers
+    # assign it, so an extra pipeline record would corrupt every caller.
+    Write-Host ("GDB marker capture: {0}s elapsed of {1}s ceiling ({2:P0} used)." -f
+                $elapsedSeconds, $TimeoutSeconds,
+                ($elapsedSeconds / [Math]::Max(1, $TimeoutSeconds)))
 
     return [PSCustomObject]@{
         Stdout = $stdout
@@ -240,6 +291,8 @@ function Invoke-GdbMarkerScript {
         ScriptPath = $gdbScriptPath
         StdoutPath = $gdbStdoutPath
         StderrPath = $gdbStderrPath
+        ElapsedSeconds = $elapsedSeconds
+        TimeoutSeconds = $TimeoutSeconds
     }
 }
 

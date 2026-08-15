@@ -1,5 +1,12 @@
 # The marginal frames are 92% simulation, and the v3 profile is the wrong arm to prove it on
 
+> **Superseded in part, 2026-08-14 — see `GATE_ARM_OWNERS.md` in this directory.**
+> §8's "re-banking is the next cycle's first build" is done (P95 1,210,944 →
+> 1,184,064) and the gate-arm v3 capture §8 says is missing now exists. §2.3's
+> `SRC`/`GCRA` structure **reproduces** on the new match; §7's ranking *below*
+> `SRC` does **not** — only `SITR` survives. §3.2's soft-float question is
+> answered there too.
+
 **Date:** 2026-08-14 · **Branch:** `codex/r2-runtime2` · **Builds spent: 0.**
 **UNITS: 2 profile cycles = 1 project tick.** Tick-HUD buckets are already ticks.
 Every table states the window it was computed over and the divisor it used.

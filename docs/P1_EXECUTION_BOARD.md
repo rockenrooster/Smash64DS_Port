@@ -8443,35 +8443,85 @@ is redirecting the *helper* `ftAnimGetTargetValue`, not the parser itself.
 
 ## Red Queue
 
-**R0 (2026-08-14, blocks the widest verifier) — the Boundary realtime harness
-cannot finish its marker capture, and it is a CEILING, not a ROM hang.** The
-stop is breakpoint 2, `ndsRendererHardwareArmBattleStaticTextures` (the Wait→GO
-arm; gdb misreports its file as `nds_renderer.c:15504` — `nm` says otherwise).
-`scVSBattleStartBattle`, breakpoint 1, hits every time, so HANDOFF's old
-"120 s to `scVSBattleStartBattle`" wording was wrong. **600 s times out too**, so
-raising the floor (`Max(-RendererBenchmarkTimeoutSeconds,120)`,
-`verify-battle-mariofox-gcrunall-loop-harness.ps1:1367`) is not a one-line fix.
-The ROM is healthy: booted standalone it reaches a live match — 45 s wall reads
-`TIME 00:36`, `FPS 28.0`, `DMG 18/0`, both fighters drawn; at 14 s it is still on
-`Original boot: PARTIAL`, so boot-to-GO is ~21 s unstubbed and does not complete
-inside 600 s under the melonDS GDB stub. **The ceiling was deliberately NOT
-raised** — 600 already failed and any larger constant chosen without measuring
-boot-to-GO under the stub is a guess. Next cycle: drive
-`verify-battle-mariofox-gcrunall-loop-harness.ps1` directly (its own
-`ValidateRange(5,3600)`) to measure it, set the floor from that number, and make
-`scripts/lib/gdb-markers.ps1` print elapsed on SUCCESS so the next drift is
-visible before it is a red. All host-side checkers, including
-`check-gbi-decode-fixtures.ps1` and the particle-bank pack, are green.
+**R0 (measured 2026-08-14, blocks the widest verifier) — the Boundary realtime
+marker capture never reaches GO, and it is a REGRESSION, not a ceiling. The
+previous "GDB-STUB CEILING, do not chase the ROM" verdict is RETRACTED.**
+Evidence and method: `artifacts/performance/2026-08-14_runtime2-p95-closure/GATE_ARM_OWNERS.md` §1.
+
+- **The ceiling is refuted by measurement.** The loop harness was driven directly
+  with the exact Boundary argument set and its own `ValidateRange(5,3600)` raised
+  to **1800 s**. It timed out at 1800 s exactly as it did at 120 s and 600 s.
+  **Do not raise it again.**
+- **The stub is refuted by a same-session control.** On the same runner slot 2,
+  the same melonDS GDB stub, the same DLDI setting and the same HEAD, the gate
+  tick-HUD ROM booted and completed a *larger* workload — 2,039 presented frames,
+  1,600 samples, 17 ring stops — in **123 seconds**.
+- **The breakpoint is sound, checked three ways.** `nm -S`: one text symbol each.
+  `gdb … info breakpoints` host-side: bp2 lands at **`0x020250a0`, the function's
+  first instruction**, `nds_renderer.c:**15535**` (the ":15504 misreport" note was
+  wrong). `objdump -d`: exactly one live call site, in `syTaskmanRunTask` at the
+  Wait→GO edge (`taskman_seam.c:8100-8111`). ARM/Thumb mode unchanged vs the last
+  green build. So bp2 not firing means the call never happened.
+- **Breakpoint 1 `scVSBattleStartBattle` DOES hit, 0.05 s after the attach**, so
+  the failure is in **battle-scene setup, not early boot**. (A probe written to
+  step the presented-frame marker from there was malformed and its reading is
+  retracted — `GATE_ARM_OWNERS.md` §1.3. Its cause is now impossible:
+  `Invoke-GdbMarkerScript` took `[string[]]$Commands`, so a jagged list built by
+  a multi-command helper was **stringified into one fused gdb line**; the
+  parameter is `[object[]]` and flattened in the body as of this cycle, and
+  embedded newlines throw. The batch command list every verifier uses had no
+  such guard, while the MI path has had one since 2026-08-03.)
+- **The bisect window is five commits.** Boundary was green in the DEFAULT
+  configuration at 2026-08-13 22:01
+  (`…/2026-08-13_c-bore36-bgstretch/boundary.log`; also 17:20 and 18:50, and the
+  `NDS_R2_PATH=1` arm at `…/2026-08-13_c-r2path-recheck/`), i.e. after
+  `8fc8b47c9ce` (08-13 21:27). Every code commit since is 2026-08-14:
+  `697303ed77c` · `33d7cc5d3b7` · `54d7d7862e4` · `9b6c9e72a25` · `813207773c1`.
+- **Next action, in order:** bisect those five with the loop harness at a 600 s
+  ceiling (a green arm returns in ~120 s, so a 600 s budget separates green from
+  red in one run each), then fix at the owning seam. A probe that may be killed
+  must `set logging file …` + `set logging enabled on` — gdb's buffered stdout is
+  otherwise lost with the kill, which cost this cycle the elapsed time of bp1.
+- **Landed:** `scripts/lib/gdb-markers.ps1` now prints elapsed and % of ceiling
+  used on SUCCESS (and elapsed on both failure paths), so the next drift is
+  visible before it is a red.
+
+All host-side checkers, including `check-gbi-decode-fixtures.ps1` and the
+particle-bank pack, are green.
 
 The P1 acceptance-level rows, highest impact first. The gate lane above is
 row 1's execution plan.
 
 1. **Stable 30 FPS** — qualify the whole match at P95 ≤ 1.12M ARM9 ticks per
    presented frame on the **both-CPU stress config**, loading states excluded
-   (owner, 2026-08-05; **gap 503,684** on the corrected 60-second match at
-   86.7% coverage, cycle 80; lane G1–G4), on the accuracy melonDS
-   fork. The shipped ROM stays the Boundary hwtri configuration. Hardware
-   remains the final check for mechanisms the emulator cannot referee.
+   (owner, 2026-08-05), on the accuracy melonDS fork. The shipped ROM stays the
+   Boundary hwtri configuration. Hardware remains the final check for mechanisms
+   the emulator cannot referee.
+
+   **BANK, 2026-08-14 on the settled HEAD** (`build-c158-gate`, git
+   `a159069af0d`, `BOTH_CPU 1`/`DRAW 1`, DLDI ON, frames 440–2039, 1,600 samples;
+   `…/2026-08-14_runtime2-p95-closure/GATE_ARM_OWNERS.md`):
+   `WORK-H` **P50 939,136 · P90 1,096,448 · P95 1,184,064 raw / 1,159,117 net ·
+   top-1% 1,562,560**. Gap **+63,684 raw / +38,737 net**. **The requirement a
+   package is judged on is 64,452 at the 80th-largest frame** — 91,844 is
+   superseded. The −26,880 against the old 1,210,944 is **not** a cost win: the
+   matches diverge (P1 damage 58 → 76 after the Fox bore-84 fix), so nothing may
+   be sized from it. **Cadence, `DRAW=0` per the owner's 2026-08-14 choice:
+   89.1% two-VBlank, max interval 6** (`DRAW=1` reads 84.9%, max 10).
+
+   **OWNER RANKING, corrected.** On the 80 frames that set P95 the excess is
+   +508,993, `SRC` +456,480 = **89.7%, all inside `gcRunAll`** (`SRC−GCRA` =
+   **−22**, a third population putting it at zero). **Below `SRC` the ranking is
+   match-specific and only `SITR` survives** (+171,234 → **+188,907**); `SHDT`
+   119,920 → 80,837, `SPHD` 112,833 → 75,236, `SCPU` +7,222 → **−8,669**, `SPHC`
+   +62 → **+52,780**. Draw side 7.1% by tick-HUD bracket and **8.4% by the v3
+   profile's draw closure — two instruments, two arms, one answer.**
+   The first gate-arm v3 stall capture now exists (`…/v3-gate-arm/`): P95-set
+   excess is `icache_fill` +155,795 (40.0%) · `dcache` +96,800 · `issue`
+   +94,029, **no function above 3.6%**. **Next target: in-match
+   animation-asset load I/O, +93,436 on the 80 and +51,276 after the outlier
+   falsifier — land a per-frame asset-acquisition counter on the gate arm
+   BEFORE any code change.**
 2. **Mario/Fox completeness** — replace battle-reachable weak status callbacks
    with source-backed behavior and prove both complete movesets naturally.
 3. **Dream Land completeness** — close the remaining Whispy material/animation

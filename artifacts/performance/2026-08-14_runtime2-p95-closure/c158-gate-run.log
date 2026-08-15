@@ -1,0 +1,32 @@
+Tick-HUD samples repeated a presented frame (4 of 1600). EVERY duplicate is a ring-stop seam whose recorded skew explains the label collision, and no payload repeats, so these are distinct real iterations that share a frame LABEL. Percentiles are over the iterations and stand; the frame ids at those seams do not. Seam rows: 95,384,959,1247.
+Wrote artifacts/performance/2026-08-14_runtime2-p95-closure/c158-gate-rows.csv
+Tick-HUD buckets: target=smash64ds-battle-playable-tickhud-hwtri samples=1600 frames=440..2039 melonDS=1.0 sha=DE80E46BDCF1FD98 git=a159069af0d+dirty(10) dldi=ON
+
+bucket p50        p95        spread mean       min        max        %ALLp50
+------ ---        ---        ------ ----       ---        ---        -------
+ALL     1,118,144  1,678,656   1.50  1,210,010  1,116,992  5,872,640   100.0
+FTR       299,904    325,376   1.08    291,325    152,704    332,928    26.8
+STG       172,480    181,312   1.05    174,299    168,192    189,888    15.4
+BG          4,224      4,288   1.02      4,197      4,032      4,416     0.4
+AUD         2,688      6,464   2.40      8,589      1,216    156,096     0.2
+HUD         1,024    421,952 412.06     35,301        896  2,124,736     0.1
+SRC       326,912    550,592   1.68    344,534     10,944  4,508,864    29.2
+MISC      104,960    181,952   1.73    118,572     81,600    877,696     9.4
+OTHR      213,824    508,032   2.38    233,194     20,160    578,816    19.1
+WAIT      194,496    489,472   2.52    213,560        896    558,592    17.4
+WORK      948,928  1,380,352   1.45    996,450    623,936  5,532,096    84.9
+SHDT        4,224      9,408   2.23     11,115          0    491,456     0.4
+SWRM          896        960   1.07        890        704      1,024     0.1
+GCRA      321,856    545,344   1.69    339,344      6,656  4,504,000    28.8
+SCPU       39,872    100,352   2.52     42,134          0    135,872     3.6
+SCAT        1,280      1,408   1.10      1,735          0    812,224     0.1
+SPRM        1,856      2,048   1.10      4,241          0    520,192     0.2
+SINT      148,096    312,768   2.11    160,357          0  1,128,384    13.2
+SPHD       57,344     96,640   1.69     66,826          0    694,016     5.1
+SPHC          704        832   1.18      3,542          0  4,195,072     0.1
+WORK-H    939,136  1,184,064   1.26    961,149    615,680  5,112,896    84.0
+
+named=976,817 (80.7% of ALL)  VBI 2:1735 3:280 4:10 5+:13 max:25 total:2038  slips=0
+extras: gNdsBattleTextHudP0Damage=0  gNdsBattleTextHudP1Damage=76  gNdsBattleTextHudP0Stock=1  gNdsBattleTextHudP1Stock=1  gNdsStarKOSparkleCount=0  gNdsDamageSparkScaleCount=15  gNdsAObjEvent32NormalizedHighWater=1,266  gNdsAObjEvent32NormalizeFailCount=0  gNdsAObjEvent32NormalizeReuseCount=1,609  gNdsAObjEvent32NormalizeScriptCount=186  gNdsAObjEvent32NormalizeCommandCount=1,266  gNdsAObjEvent32HashHitCount=1,609  gNdsAObjEvent32HashMissCount=1,460  gNdsAObjEvent32HashProbeCount=4,832  gNdsAObjEvent32HashOverflowCount=0  gNdsObjAnimRunawayCount=0  gNdsTaskmanGeneralHeapFreeMin=70,464  gNdsTaskmanArenaAllocFailCount=0  gNdsRelocResolveMisalignCount=0  gNdsShieldAnimJointInstallCalls=79  gNdsShieldAnimJointAttachCount=1,352  gNdsShieldAnimJointNullCount=790
+Wrote artifacts/performance/2026-08-14_runtime2-p95-closure/c158-gate.json
+EXIT=0 ELAPSED=123s
