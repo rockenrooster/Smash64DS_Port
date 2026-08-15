@@ -49,6 +49,7 @@ from __future__ import annotations
 import argparse
 import collections
 import csv
+import json
 import os
 import re
 import subprocess
@@ -331,8 +332,75 @@ def reachable(graph: dict[str, set[str]], roots) -> set[str]:
     return seen
 
 
+def write_marginal_census(rows, entries, starts, elf: Path, out: Path,
+                          pc_csv: Path, marginal_frames: int) -> None:
+    """Emit a census.json-shaped file whose cycles are the MARGINAL mask only.
+
+    `analyze-subtree-attribution.py` and `analyze-leaf-helper-attribution.py`
+    both take a `census.json` and both were written against a WHOLE-MATCH one,
+    which is the wrong population for a percentile question -- `RESIDUE.md` §1's
+    rule that a lane bimodal at the percentile returns less than its mean is
+    exactly why this reducer exists. Writing the same schema off the marginal
+    columns makes "which caller drives this helper ON THE FRAMES THAT SET P95"
+    expressible with the tools that already exist, at zero extra cost: the
+    reduced CSV is already per-PC and already carries `marg_*`.
+
+    `total_cycles` here is the marginal-frame total, so any percentage a
+    downstream tool prints is a share of the marginal frames, not of the match.
+    """
+    per_symbol_cycles: dict[str, int] = collections.defaultdict(int)
+    per_symbol_insns: dict[str, int] = collections.defaultdict(int)
+    total = 0
+    for row in rows:
+        name = symbol_for(entries, starts, row["pc"])
+        cycles = int(row["marg_total_cycles"])
+        per_symbol_cycles[name] += cycles
+        per_symbol_insns[name] += int(row["marg_instructions"])
+        total += cycles
+    # ONE ROW PER ADDRESS RANGE, aliases listed rather than duplicated. `nm`
+    # reports `__aeabi_fmul` and `__mulsf3` at the same address; `symbol_for`
+    # can only return one of them, so emitting a row per nm entry gives the
+    # other 0 cycles -- and the first smoke test of this export read the whole
+    # soft-float multiply lane as zero for exactly that reason. Summing over a
+    # reachable set (analyze-subtree-attribution) would also double-count if the
+    # alias carried the same cycles.
+    grouped: dict[int, list[str]] = collections.defaultdict(list)
+    sizes: dict[int, int] = {}
+    for address, size, name in entries:
+        grouped[address].append(name)
+        sizes[address] = max(sizes.get(address, 0), size)
+    symbols = []
+    for address, names in sorted(grouped.items()):
+        owner = symbol_for(entries, starts, hex(address))
+        if owner not in names:
+            owner = names[0]
+        symbols.append({
+            "name": owner,
+            "aliases": [n for n in names if n != owner],
+            "address": address,
+            "size": sizes[address],
+            "section": "",
+            "tier": "",
+            "cycles": per_symbol_cycles.get(owner, 0),
+            "instructions": per_symbol_insns.get(owner, 0),
+            "cycles_per_byte": 0.0,
+        })
+    out.write_text(json.dumps({
+        "profile": str(pc_csv),
+        "elf": str(elf),
+        "mask": "marginal",
+        "marginal_frames": marginal_frames,
+        "total_cycles": total,
+        "unattributed_cycles": per_symbol_cycles.get("?", 0),
+        "section_sizes": {},
+        "symbols": symbols,
+    }, indent=1))
+    print(f"\nwrote {out}  (marginal-mask census.json, total_cycles "
+          f"{total:,} over {marginal_frames} frames)")
+
+
 def report(pc_csv: Path, build: Path, top: int, attribute_top: int,
-           owner_roots: bool = False) -> int:
+           owner_roots: bool = False, census_out: Path | None = None) -> int:
     meta = {}
     meta_path = pc_csv.with_suffix(".meta.txt")
     if meta_path.exists():
@@ -417,6 +485,9 @@ def report(pc_csv: Path, build: Path, top: int, attribute_top: int,
 
     if owner_roots:
         owner_table(rows, entries, starts, inline, elf, marg_div)
+    if census_out is not None:
+        write_marginal_census(rows, entries, starts, elf, census_out, pc_csv,
+                              marginal_frames)
     return 0
 
 
@@ -505,6 +576,11 @@ def main() -> int:
     parser.add_argument("--owner-roots", action="store_true",
                         help="also split the marginal ranking by which of the "
                              "six fighter procs statically reaches each owner")
+    parser.add_argument("--census-out", type=Path,
+                        help="write a census.json-shaped file whose cycles are "
+                             "the MARGINAL mask, so analyze-subtree-attribution "
+                             "and analyze-leaf-helper-attribution rank the "
+                             "frames that set P95 instead of the whole match")
     args = parser.parse_args()
     if args.reduce:
         if not args.profile or not args.out:
@@ -515,7 +591,7 @@ def main() -> int:
         if not args.pc_csv or not args.build:
             raise SystemExit("--report needs --pc-csv and --build")
         return report(args.pc_csv, args.build, args.top, args.attribute_top,
-                      args.owner_roots)
+                      args.owner_roots, args.census_out)
     parser.print_help()
     return 2
 

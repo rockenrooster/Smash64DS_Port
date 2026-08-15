@@ -128,7 +128,90 @@ void scManagerRunPrintGObjStatus(void);
  * function exactly once, its definition, so a #define moves the definition
  * without capturing a call site (the trap battleship_lbparticle.c documents for
  * lbParticleMakeGenerator), and decomp/ stays untouched. */
+
+#if NDS_TICK_HUD
+/* R2-07 slice 52 law-1 counter: the ENGAGEMENT of the fighter narrow phase.
+ *
+ * `plan.md` §9 law 1 requires a per-frame counter on the SPIKING quantity, on
+ * the gate arm, before any code changes. The 2026-08-15 v3 capture on the
+ * shipping candidate (`…/2026-08-15_k1-owner-pricing/`) says what spikes: on the
+ * 80 frames that SET P95, `gmCollisionCheckFighterAttackDamageCollide` runs at
+ * **10.81x** its whole-match rate and every body it reaches runs at 5.2-11.7x --
+ * `gmCollisionTestRectangle` 11.70x, `gmCollisionSetInvertMatrix` 11.54x,
+ * `func_ovl2_800EDE5C` 11.27x, `func_ovl2_800ED490` 7.68x. The proc that
+ * contains them is FLAT (`battleship_ftMainProcUpdateInterrupt` 1.06x,
+ * `ndsBaseGcRunAll` 1.03x), so the tick is not spent evenly: it is spent on the
+ * frames where a hitbox is live. A whole-match bar cannot see that, which is
+ * why the slice-52 sizing that used one under-read the lane.
+ *
+ * These two entry points are the WHOLE gateway to that geometry. Verified from
+ * the linked ELF, not from grep: `…AttackDamageCollide` has exactly two
+ * referrers and `…AttackShieldCollide` exactly one, all three in
+ * `battleship_ftmain.c` -- ZERO in-TU callers, which is what makes the
+ * `#define`-before-include rename above capture every call rather than half of
+ * them. (`gmCollisionTestRectangle` and `gmCollisionSetInvertMatrix` do NOT have
+ * that property: their callers are inside gmcollision.c, so a rename would move
+ * the definition AND the call sites and the counter would read zero forever.)
+ *
+ * `hits` is not decoration. Slice 52 replaces this arithmetic with fixed point,
+ * so the A/B has to show the pair COUNT unchanged (same fight) and the HIT count
+ * unchanged (same decisions) before any tick delta means anything -- a fixed
+ * kernel that quietly stops returning TRUE would read as a large, clean win.
+ *
+ * `NDS_TICK_HUD` gates it, so the published ROM carries zero bytes; every
+ * measuring arm carries it. `used` because a `volatile u32` whose only consumer
+ * is a debugger is what `--gc-sections` collects. */
+volatile u32 gNdsCfxFighterDamagePhaseCalls __attribute__((used));
+volatile u32 gNdsCfxFighterDamagePhaseHits __attribute__((used));
+volatile u32 gNdsCfxFighterShieldPhaseCalls __attribute__((used));
+volatile u32 gNdsCfxFighterShieldPhaseHits __attribute__((used));
+
+sb32 ndsBaseGmCollisionCheckFighterAttackDamageCollide(
+    FTAttackColl *attack_coll, FTDamageColl *damage_coll);
+sb32 ndsBaseGmCollisionCheckFighterAttackShieldCollide(
+    FTAttackColl *attack_coll, GObj *fighter_gobj, DObj *dobj, f32 *p_angle);
+
+#define gmCollisionCheckFighterAttackDamageCollide \
+    ndsBaseGmCollisionCheckFighterAttackDamageCollide
+#define gmCollisionCheckFighterAttackShieldCollide \
+    ndsBaseGmCollisionCheckFighterAttackShieldCollide
+#endif /* NDS_TICK_HUD */
+
 #include "../../decomp/BattleShip-main/decomp/src/gm/gmcollision.c"
+
+#if NDS_TICK_HUD
+#undef gmCollisionCheckFighterAttackDamageCollide
+#undef gmCollisionCheckFighterAttackShieldCollide
+
+sb32 gmCollisionCheckFighterAttackDamageCollide(FTAttackColl *attack_coll,
+                                                FTDamageColl *damage_coll)
+{
+    sb32 hit = ndsBaseGmCollisionCheckFighterAttackDamageCollide(attack_coll,
+                                                                 damage_coll);
+
+    gNdsCfxFighterDamagePhaseCalls++;
+    if (hit != FALSE)
+    {
+        gNdsCfxFighterDamagePhaseHits++;
+    }
+    return hit;
+}
+
+sb32 gmCollisionCheckFighterAttackShieldCollide(FTAttackColl *attack_coll,
+                                                GObj *fighter_gobj, DObj *dobj,
+                                                f32 *p_angle)
+{
+    sb32 hit = ndsBaseGmCollisionCheckFighterAttackShieldCollide(
+        attack_coll, fighter_gobj, dobj, p_angle);
+
+    gNdsCfxFighterShieldPhaseCalls++;
+    if (hit != FALSE)
+    {
+        gNdsCfxFighterShieldPhaseHits++;
+    }
+    return hit;
+}
+#endif /* NDS_TICK_HUD */
 
 #if NDS_R2_COLLISION_L7_ORACLE
 /* R2-07 L7 step one. Lives in THIS translation unit and not in a port file

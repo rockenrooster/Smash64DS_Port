@@ -6663,6 +6663,77 @@ latches set: reinterpreted, `inv_scale` is zero, so the fixed `center` is `size`
 where the float one is `size + radius`. Fill it or prove it cannot reach the
 ring. `gmCollisionSetMatrixNcs` stays and drags nothing back — verified.
 
+**RE-PRICED 2026-08-15 ON THE POPULATION THE GATE IS SCORED ON — the sizing
+above is right and the VERDICT it supports is wrong** (`…/2026-08-15_k1-owner-
+pricing/OWNER_PRICING.md`; `build-c172-profile-shipcand`, v3 stall capture at
+HEAD `48741fc`, mask `total_cycles−halt_wait ≥ 1,177,548` = the 80 frames that
+SET P95, basis cycles/(2×80)). "22,324 certain / ≤31,278 … 0.96x–1.34x the
+47,424 bar" compares a WHOLE-MATCH lane against a WHOLE-MATCH bar. **This lane
+is 5.2–11.7x more present on the frames that decide the percentile**:
+`gmCollisionTestRectangle` **11.70x**, `gmCollisionSetInvertMatrix` **11.54x**,
+`gmCollisionGetWorldPosition` **11.46x**, `func_ovl2_800EDE5C` **11.27x**,
+`gmCollisionCheckFighterAttackDamageCollide` **10.81x**, `func_ovl2_800ED490`
+**7.68x**, `func_ovl2_800EDBA4` **6.90x**, `gmCollisionTransformMatrixAll`
+**5.19x** — against `battleship_ftMainProcUpdateInterrupt` **1.06x** and
+`ndsBaseGcRunAll` **1.03x**, which are flat. The bar is not 47,424 either: it is
+**+32,593 net at the 80th-largest frame**.
+
+| body | self | +soft float | +`sqrtf` | **P95-set tk/fr** | calls/fr | tk/call |
+|---|---:|---:|---:|---:|---:|---:|
+| `func_ovl2_800ED490` | 4,055 | 11,808 | — | **15,863** | 12.3 | **1,290** |
+| `gmCollisionSetInvertMatrix` | 2,524 | 6,120 | — | **8,644** | 6.7 | **1,297** |
+| `gmCollisionTransformMatrixAll` | 3,514 | 4,318 | — | **7,832** | 15.3 | 512 |
+| `gmCollisionGetWorldPosition` | 1,711 | 5,310 | — | **7,021** | 18.9 | 371 |
+| `gmCollisionTestRectangle` | 2,102 | 4,466 | — | **6,568** | 11.3 | 581 |
+| `func_ovl2_800EDE5C` | 681 | 1,505 | 2,931 | **5,117** | 11.3 | 453 |
+| `gmCollisionGetFighterPartsWorldPosition` | 1,803 | 2,790 | — | **4,593** | 2.3 | 2,014 |
+| `func_ovl2_800EDBA4` | 1,737 | — | — | **1,737** | 7.0 | 248 |
+| **cluster** | **18,127** | **36,317** | **2,931** | **57,375** | | |
+
+plus `lbCommonSin`+`Cos` **4,975**, six per local build, which
+`ndsR2CfxBuildLocal` replaces with its own table.
+
+**One 4x4 compose costs 1,290 ticks and 960 of those are 63 soft-float library
+calls** — the profile counts **63.0** float calls per `func_ovl2_800ED490`
+invocation and `gmcollision.c:208-225` contains **36 multiplies + 27 adds = 63**.
+The rows are 96% `issue` with no cache component, so this is arithmetic, and
+`PROJECT_GOAL.md` sanctions fixed-point replacement outright.
+
+**Three consequences for this row.**
+1. **The deletable ring alone still does NOT clear the gate, and now that is
+   measured rather than suspected**: `SetInvertMatrix` + `TestRectangle` +
+   `EDE5C` = **20,329 tk/fr (0.62x)**, **27,350 (0.84x)** with
+   `gmCollisionGetWorldPosition`. `gmCollisionTestSphere` is **absent from the
+   linked battle ELF** and prices 0.
+2. **The one extension that closes it is `func_ovl2_800EDBA4`, and the objection
+   to it dissolves if `parts->mtx_translate` stays f32.** Give EDBA4 a
+   fixed-point INTERIOR with an f32 boundary: build each missing local with
+   `ndsR2CfxBuildLocal`, compose with `ndsR2CfxCompose`, convert to f32 once per
+   joint when writing `mtx_translate`. All fifteen referrers are untouched
+   because the type and value they read do not change. Those are exactly the
+   **1,524 of 4,448 proven bytes** this row wrote off as "no call site at this
+   seam", and they carry the 6,406 tk/fr of `lbCommonSin`/`Cos` with them.
+   Predicted (PREDICTION, not a measurement) **+30,000…+38,000 at rank-80**.
+3. **Law-1 counter LANDED and FIRING** (`src/import/battleship_gmcollision.c`,
+   `#if NDS_TICK_HUD`, `__attribute__((used))`):
+   `gNdsCfxFighterDamagePhaseCalls` **1,938** / `…Hits` **20** over frames
+   439–2038 on `build-c173-cfxcount-bp1`, i.e. 1.21 calls/frame whole-match
+   against 13.1 on the P95 frames — **the counter reproduces the profile's
+   10.81x**. Site picked from the LINKED ELF: the two ring entries have **zero
+   in-TU callers**, which is what makes the `#define`-before-`#include` rename
+   capture every call; `gmCollisionTestRectangle` and `gmCollisionSetInvertMatrix`
+   do **not** have that property and a rename there reads zero forever.
+   **`gNdsCfxFighterShieldPhaseCalls` is 0 in this match — UNPROVEN, not proven
+   inert.** `Hits` is the A/B's equivalence guard: a fixed kernel that stops
+   returning `TRUE` reads as a large clean win.
+
+**Instrument for the landing**: A/B/A with a flag falsifier
+(`NDS_R2_COLLISION_FIXED` 0/1/0), because the cross-build floor here is ~17,000.
+Both arms must report equal `…PhaseCalls`, equal `…PhaseHits` and an equal
+end-of-match invariant pair before any tick delta is read. Re-grade the host
+falsifier at the **widened live scale domain 0.9937–2.0479** this row already
+recorded, not the inherited 1.1138–1.1199.
+
 ### Slice 51 KEPT — the shield attach path was paying for a SEARCH. Gate 1,210,944
 
 Evidence: `artifacts/performance/2026-08-13_c-ledger-index/LEDGER_INDEX.md` and

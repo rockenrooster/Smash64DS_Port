@@ -1,0 +1,29 @@
+Tick-HUD buckets: target=smash64ds-battle-playable-tickhud-hwtri samples=1600 frames=439..2038 melonDS=1.0 sha=DE80E46BDCF1FD98 git=48741fcaf05+dirty(9) dldi=ON
+
+bucket p50        p95        spread mean       min        max        %ALLp50
+------ ---        ---        ------ ----       ---        ---        -------
+ALL     1,117,888  1,678,336   1.50  1,215,311  1,116,928  5,872,384   100.0
+FTR       305,216    331,328   1.09    301,724    156,608  4,501,440    27.3
+STG       179,392    187,264   1.04    183,476    175,168  4,379,200    16.0
+BG          4,352      4,480   1.03      4,366      4,096      7,488     0.4
+AUD         2,880      6,976   2.42      8,849      1,152    157,312     0.3
+HUD         1,024    413,312 403.62     34,861        896  2,125,568     0.1
+SRC       327,744    534,720   1.63    340,072     10,944  1,286,080    29.3
+MISC      105,216    182,464   1.73    118,610     81,472    879,232     9.4
+OTHR      203,200    494,912   2.44    223,353     21,248    578,240    18.2
+WAIT      183,296    475,968   2.60    203,495      1,280    558,208    16.4
+WORK      960,320  1,374,464   1.43  1,011,816    637,824  5,614,784    85.9
+SHDT        4,544      9,920   2.18     11,443          0    466,368     0.4
+SWRM        1,024      1,152   1.12      1,033        768      1,216     0.1
+GCRA      322,304    529,280   1.64    334,527      6,592  1,280,832    28.8
+SCPU       40,832    103,168   2.53     43,309          0    141,440     3.7
+SCAT        1,280      1,408   1.10      1,634          0    630,400     0.1
+SPRM        1,920      2,048   1.07      3,848          0    550,720     0.2
+SINT      150,144    288,256   1.92    159,526          0    791,616    13.4
+SPHD       56,896     96,448   1.70     66,400          0    751,232     5.1
+SPHC          704        832   1.18        927          0     31,552     0.1
+WORK-H    951,744  1,200,960   1.26    976,955    629,632  5,202,112    85.1
+
+named=991,958 (81.6% of ALL)  VBI 2:1731 3:287 4:11 5+:9 max:19 total:2038  slips=0
+extras: gNdsCfxFighterDamagePhaseCalls=1,938  gNdsCfxFighterDamagePhaseHits=20  gNdsCfxFighterShieldPhaseCalls=0  gNdsCfxFighterShieldPhaseHits=0  gNdsBattlePackHits=197  gNdsTaskmanArenaChosenSize=1,548,288  gNdsTaskmanArenaAllocFailCount=0  gNdsTaskmanGeneralHeapFreeMin=52,864
+Wrote artifacts\performance\2026-08-15_k1-owner-pricing\c173-cfxcount.json

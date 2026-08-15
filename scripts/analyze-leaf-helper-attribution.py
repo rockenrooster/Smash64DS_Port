@@ -106,7 +106,25 @@ def call_sites(dis_path, helpers):
 
 def main(argv=None):
     ap = argparse.ArgumentParser()
-    ap.add_argument("profile", help="arm9-profile.csv from melonDS")
+    ap.add_argument("profile", nargs="?", default="",
+                    help="arm9-profile.csv from melonDS (whole match)")
+    # THE PERCENTILE FORM. The positional profile is the whole match, and a
+    # whole-match caller ranking is the wrong population for a gate that is a
+    # percentile -- 2026-08-14 read the soft-float trio at 74,283 tk/fr whole
+    # match and 99,762 on the 80 frames that SET P95, and closed the lane on the
+    # first number. `census-marginal-frame-owners.py --reduce` already writes a
+    # per-PC CSV carrying `marg_instructions`, and the instruction count at a
+    # `bl <helper>` PC IS that site's exact dynamic call count on those frames.
+    # Pair it with `--census` from the same reducer's `--census-out` so the rate
+    # and the counts come from the SAME mask; mixing a marginal count with a
+    # whole-match rate silently rescales every row.
+    ap.add_argument("--pc-csv", default="",
+                    help="reduced per-PC CSV from census-marginal-frame-owners"
+                         " --reduce; call counts come from its mask instead of"
+                         " a full profile pass")
+    ap.add_argument("--mask", choices=("marginal", "all"), default="marginal",
+                    help="which column set of --pc-csv to read (default "
+                         "marginal = the frames that set P95)")
     ap.add_argument("--census", required=True, help="census.json for the same run")
     ap.add_argument("--dis", required=True, help="objdump -d of the matching ELF")
     ap.add_argument("--helpers", default="softfloat",
@@ -133,22 +151,50 @@ def main(argv=None):
     if not sites:
         sys.exit("no call sites found -- is --dis the objdump of the profiled ELF?")
 
+    if bool(args.profile) == bool(args.pc_csv):
+        ap.error("give exactly one of the positional profile or --pc-csv")
+
     calls = collections.Counter()
     per_helper = collections.Counter()
-    with open(args.profile, newline="") as handle:
-        rows = csv.reader(handle)
-        next(rows)
-        for row in rows:
-            site = sites.get(int(row[1], 16))
-            if site is None:
-                continue
-            n = int(row[4])
-            calls[site] += n
-            per_helper[site[1]] += n
+    if args.pc_csv:
+        column = "marg_instructions" if args.mask == "marginal" \
+            else "all_instructions"
+        with open(args.pc_csv, newline="") as handle:
+            for row in csv.DictReader(handle):
+                site = sites.get(int(row["pc"], 16))
+                if site is None:
+                    continue
+                n = int(row[column])
+                calls[site] += n
+                per_helper[site[1]] += n
+    else:
+        with open(args.profile, newline="") as handle:
+            rows = csv.reader(handle)
+            next(rows)
+            for row in rows:
+                site = sites.get(int(row[1], 16))
+                if site is None:
+                    continue
+                n = int(row[4])
+                calls[site] += n
+                per_helper[site[1]] += n
 
     census = json.load(open(args.census))
-    cycles = {s["name"]: s["cycles"] for s in census["symbols"]}
+    # Resolve through `aliases`: `__aeabi_fmul` and `__mulsf3` are one range with
+    # one row, and which of the two the census names depends on the reducer.
+    cycles = {}
+    for s in census["symbols"]:
+        cycles[s["name"]] = s["cycles"]
+        for alias in s.get("aliases", ()):
+            cycles.setdefault(alias, s["cycles"])
     work = census["total_cycles"] - cycles.get("armWaitForIrq", 0)
+    frames = int(census.get("marginal_frames") or 0)
+    if args.pc_csv and census.get("mask") != args.mask and args.mask == "marginal":
+        print("WARNING: --mask marginal but --census is not a marginal census; "
+              "the counts and the rate are on different populations.\n")
+    if frames:
+        print("basis     ticks/frame = cycles / (2 x {} frames) = cycles / {:,}"
+              .format(frames, 2 * frames))
 
     # A thunk's callers are charged at its target's rate, and its calls count
     # toward the target's divisor -- otherwise the target's per-call cost is
@@ -180,12 +226,14 @@ def main(argv=None):
         print("{:24s} {:>12,} {:>12,} {:>9.1f}{}".format(
             helper, n, cycles.get(helper, 0), rate.get(helper, 0.0), tag))
 
-    print("\n{:50s} {:>11s} {:>12s} {:>7s} {:>12s}".format(
-        "caller", "calls", "attributed", "%work", "self"))
+    tick_div = float(2 * frames) if frames else 0.0
+    print("\n{:50s} {:>11s} {:>12s} {:>7s} {:>10s} {:>10s}".format(
+        "caller", "calls", "attributed", "%work", "tk/fr", "calls/fr"))
     for name, cyc in attributed.most_common(args.top):
-        print("{:50s} {:>11,} {:>12,} {:>6.2f}% {:>12,}".format(
-            name[:50], ncalls[name], int(cyc), 100.0 * cyc / work,
-            cycles.get(name, 0)))
+        tk = f"{cyc / tick_div:,.0f}" if tick_div else "-"
+        cpf = f"{ncalls[name] / frames:,.1f}" if frames else "-"
+        print("{:50s} {:>11,} {:>12,} {:>6.2f}% {:>10s} {:>10s}".format(
+            name[:50], ncalls[name], int(cyc), 100.0 * cyc / work, tk, cpf))
 
     groups = collections.Counter()
     gcount = collections.Counter()
