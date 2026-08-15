@@ -1,0 +1,26 @@
+A = (control) build-tick-hud-buckets ELF with Task A only, saved before the Task B build
+B = (candidate) builds/build-tick-hud-buckets/smash64ds-battle-playable-tickhud-hwtri.elf, Task A + the ftmain patch
+section              A addr    A size     B addr    B size    dsize  verdict
+.secure          0x0e000000      2048 0x0e000000      2048       +0  IDENTICAL
+.bootstub        0x0e000800       408 0x0e000800       408       +0  IDENTICAL
+.crt0            0x02001000       960 0x02001000       960       +0  DIFFERS
+.dldi            0x0380b000     16384 0x0380b000     16384       +0  IDENTICAL
+.vectors         0x00000000        32 0x00000000        32       +0  IDENTICAL
+.itcm            0x01ff8020     32152 0x01ff8020     32152       +0  DIFFERS
+.dtcm            0x02ff0000      8800 0x02ff0000      8800       +0  IDENTICAL
+.dtcm.bss        0x02ff2260       152 0x02ff2260       152       +0  bss SAME
+.text.hot        0x020013c0      4588 0x020013c0      4588       +0  DIFFERS
+.text.hot.draw   0x020025ac      5268 0x020025ac      5268       +0  DIFFERS
+.main            0x02003a40    925272 0x02003a40    925264       -8  DIFFERS
+.main.rw         0x020e58a0    137428 0x020e58a0    137428       +0  DIFFERS
+.eh_frame        0x02107174         4 0x02107174         4       +0  IDENTICAL
+.tinfo           0x02107178        12 0x02107178        12       +0  IDENTICAL
+.init_array      0x02107184         8 0x02107184         8       +0  IDENTICAL
+.fini_array      0x0210718c         4 0x0210718c         4       +0  IDENTICAL
+.tdata           0x00000000         0 0x00000000         0       +0  IDENTICAL
+.tbss            0x00000000         0 0x00000000         0       +0  bss SAME
+.main.bss        0x021071a0   1306832 0x021071a0   1306832       +0  bss SAME
+.loadlist        0x0e000998        48 0x0e000998        48       +0  IDENTICAL
+.twl.loadlist    0x0e0009c8        12 0x0e0009c8        12       +0  IDENTICAL
+
+sections differing: 6

@@ -1,0 +1,66 @@
+935c935
+<  ldr r1, [pc, #212] @ (20b3b00 )
+---
+>  ldr r1, [pc, #204] @ (20b3af8 )
+942,944d941
+<  movs r3, #157 @ 0x9d
+<  lsls r3, r3, #4
+<  ldr r0, [r4, r3]
+947c944
+<  f8e0 bl 20afc08 <ftMainPlayAnim>
+---
+>  f8e3 bl 20afc08 <ftMainPlayAnim>
+949c946
+<  ff47 bl 20af8dc <ftMainUpdateMotionEventsAll>
+---
+>  ff4a bl 20af8dc <ftMainUpdateMotionEventsAll>
+951,952c948,949
+<  ff86 bl 2055960 <ftGetStruct>
+<  ldr r3, [pc, #172] @ (20b3b04 )
+---
+>  ff89 bl 2055960 <ftGetStruct>
+>  ldr r3, [pc, #172] @ (20b3afc )
+963c960
+<  fb71 bl 2056150 <ftParamResetStatUpdateColAnim>
+---
+>  fb74 bl 2056150 <ftParamResetStatUpdateColAnim>
+975c972
+<  f8de bl 20afc44 <ftMainUpdateColAnim>
+---
+>  f8e1 bl 20afc44 <ftMainUpdateColAnim>
+982c979
+<  fd66 bl 2054564 <gmRumbleStopRumbleID>
+---
+>  fd69 bl 2054564 <gmRumbleStopRumbleID>
+993c990
+<  ffc2 bl 2068a34 <gcSetAnimSpeed>
+---
+>  ffc5 bl 2068a34 <gcSetAnimSpeed>
+995c992
+<  ldr r3, [pc, #84] @ (20b3b08 )
+---
+>  ldr r3, [pc, #80] @ (20b3b00 )
+1000c997
+<  f9b4 bl 2054e28 <ftParamClearAnimLocks>
+---
+>  f9b7 bl 2054e28 <ftParamClearAnimLocks>
+1007c1004
+<  ldr r1, [pc, #60] @ (20b3b0c )
+---
+>  ldr r1, [pc, #60] @ (20b3b04 )
+1010c1007
+<  ldr r3, [pc, #60] @ (20b3b10 )
+---
+>  ldr r3, [pc, #56] @ (20b3b08 )
+1019,1020c1016,1017
+<  f816 bl 2053b14 <ftParamUpdate1PGameAttackStats>
+<  ldr r3, [pc, #40] @ (20b3b14 )
+---
+>  f819 bl 2053b14 <ftParamUpdate1PGameAttackStats>
+>  ldr r3, [pc, #40] @ (20b3b0c )
+1027c1024
+<  ldr r1, [pc, #20] @ (20b3b0c )
+---
+>  ldr r1, [pc, #16] @ (20b3b04 )
+1031d1027
+<  nop @ (mov r8, r8)

@@ -35,6 +35,7 @@ $patchDir = Join-Path $PSScriptRoot 'decomp-patches/battleship'
 # pinned there; re-pin it in the same change and say why the bytes moved.
 $patches = [ordered]@{
     'src/ft/ftanim.c'                = 'src_ft_ftanim.patch'
+    'src/ft/ftmain.c'                = 'src_ft_ftmain.patch'
     'src/mn/mncommon/mnstartup.c'    = 'src_mn_mncommon_mnstartup.patch'
     'src/mn/mncommon/mntitle.c'      = 'src_mn_mncommon_mntitle.patch'
     'src/mv/mvopening/mvopeningroom.c' = 'src_mv_mvopening_mvopeningroom.patch'
