@@ -313,6 +313,26 @@ NDS_R2_AOBJ16_PREBAKE ?= 0
 # fighter fits, so the other loses the raw cache, and that trade is unpriced.
 # `artifacts/performance/2026-08-15_battlepack-pool/BATTLEPACK_POOL.md`.
 NDS_R2_BATTLEPACK ?= 0
+# LAB ONLY, NOT SHIPPABLE AS CONFIGURED. Phase 8 measured the resident pack at
+# 2.9x the gate and attributed all of it to the carve DELETING the raw file cache
+# (262,144 -> 4,096 B; Rejects 0 -> 126; 111 net-new uncached acquisitions at
+# 3,873,969 tk each). That pair therefore cannot price the acquisition-path
+# deletion's BENEFIT in either direction: the arm that could -- pack resident AND
+# cache intact -- has never existed.
+#
+# At 1 this builds it. The animation arena reserves the blob PLUS the full
+# 262,144 B raw cache, and NDS_TASKMAN_ARENA_SIZE grows by the same 258,048 B so
+# the general heap is not robbed to pay for it. It is independent of
+# NDS_R2_BATTLEPACK on purpose: at BATTLEPACK=0 it grows the arena and nothing
+# else, which is the matched control for the pair (same arena size, same
+# addresses, same Task 53 guard -- only the pack differs).
+#
+# Why this is diagnostic and not a candidate: 258,048 B of arena is not free RAM,
+# it is spent boot headroom. The tick-HUD gate arm has ~320,000 B proven, so the
+# arm boots with ~62,000 B of margin and NOTHING else may be added on top. The
+# shippable closure is a pack SMALLER than the 262,144 B it displaces
+# (docs/architecture/RUNTIME2_NATIVE_BATTLE_KERNEL.md section 9).
+NDS_R2_BATTLEPACK_KEEP_CACHE ?= 0
 # Cycle 109. Builds BOTH arms of the two animation cuts into one binary, selected
 # at runtime by gNdsR2AnimCutRoute, so they can be priced without a second link.
 # This is standing rule 7's route, and after the determinism finding it is the
@@ -1348,6 +1368,13 @@ endif
 ifneq ($(filter $(NDS_TASK53_REPLAY_ARENA_FIX),0 1),)
 else
 $(error NDS_TASK53_REPLAY_ARENA_FIX must be 0 or 1)
+endif
+# A mistyped value here silently produces a wrong ARENA, which reads as a clean
+# measurement of the wrong configuration -- the exact failure this arm exists to
+# repair. Fail the build instead.
+ifneq ($(filter $(NDS_R2_BATTLEPACK_KEEP_CACHE),0 1),)
+else
+$(error NDS_R2_BATTLEPACK_KEEP_CACHE must be 0 or 1)
 endif
 ifneq ($(filter $(NDS_TASK55_STAGE_GEOM),0 1),)
 else
@@ -3221,6 +3248,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_R2_DELTA_PATH_ITCM $(NDS_R2_DELTA_PATH_ITCM)'; \
 		echo '#define NDS_R2_ANIM_CACHE $(NDS_R2_ANIM_CACHE)'; \
 		echo '#define NDS_R2_BATTLEPACK $(NDS_R2_BATTLEPACK)'; \
+		echo '#define NDS_R2_BATTLEPACK_KEEP_CACHE $(NDS_R2_BATTLEPACK_KEEP_CACHE)'; \
 		echo "#define NDS_R2_BATTLEPACK_BLOB_BYTES $$(test -f '$(NDS_BATTLEPACK_BLOB)' && wc -c < '$(NDS_BATTLEPACK_BLOB)' || echo 0)u"; \
 		echo '#define NDS_R2_AOBJ16_PREBAKE $(NDS_R2_AOBJ16_PREBAKE)'; \
 		echo '#define NDS_R2_ANIM_CUT_ROUTE $(NDS_R2_ANIM_CUT_ROUTE)'; \

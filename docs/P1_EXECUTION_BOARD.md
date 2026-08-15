@@ -375,6 +375,80 @@ the first caller of the bump allocator lost by **848 bytes**: fighter setup stor
 `NDS_R2_BATTLEPACK_BLOB_BYTES` is generated from the blob so the reserve cannot
 drift from the asset.
 
+## THE ISOLATION ARM WAS BUILT AND SLICE 1 IS REFUTED AS A P95 LEVER (2026-08-15)
+
+`artifacts/performance/2026-08-15_battlepack-isolation/BATTLEPACK_ISOLATION.md` ·
+`build-c165-keepcache-bp1`, base HEAD `30b38f3e9d3`, 2 builds. **This section
+supersedes the root cause in the phase-8 section below; that section's gate
+numbers stand, its attribution does not.**
+
+Arm C = pack resident (197 hits) **and** raw cache healthy: `Rejects` **0**, **9**
+full ROM loads all match against the control's 17. Same window (439–2038), same
+basis, same fight (damage 0/76, 355 acquisitions, all three arms).
+
+```text
+              P50        P90        P95 rank-80 raw / net      top-1%    >2M frames
+A control   940,416  1,097,920   1,186,112 / 1,161,165      1,570,944        2
+B cache-gone  939,648  1,540,032   3,447,488 / 3,422,541    6,118,208      130
+C ISOLATION   940,128  1,216,832   3,447,872 / 3,422,925    6,175,104      128
+
+C - A   P50 -288 (flat)   rank-80 +2,261,760   mean +236,397   over-gate +83
+C - B   P50 +480          rank-80    +384      mean  -22,313   over-gate -53
+```
+
+**`−73,659` IS RETRACTED — measured +2,261,760, opposite sign, ~30× the
+magnitude.** Ranked on P50, mean and over-gate as `VERIFYING.md` requires, all
+three agree.
+
+**AND THE PHASE-8 ROOT CAUSE IS REFUTED.** It charged +2,261,376 to 111 net-new
+uncached acquisitions at 3,873,969 tk each. Arm C removes *more* than those 111
+(ROM loads 128 → 9) and the residual moves **+384 (0.011%)** against a ≥14,080
+floor. Two arms differing in arena size, in cache size by **40×** and in ROM loads
+by **14×**, landing 384 apart, share one cause — **the pack path**, the only thing
+they have in common. `SITR` 41.6%/2.84× → **85.7%/34.48×**, on **128 frames** of
+mean `WORK-H` 4,118,565; draw side flat.
+
+> **RETRACT BOTH PER-ACQUISITION PRICES AND DO NOT PRODUCE A THIRD.**
+> `+645,225 a miss` (warm-cache coefficient) and `3,873,969 per uncached
+> acquisition` (priced a mechanism owning ~0 of the residual) both came from
+> dividing a residual by whichever count was to hand.
+
+**Excluded by counter, two soaks, no build:** normalizer identical
+(`sNdsAObjEvent32NormalizedCount` 245=245, `…ScriptCount` 225=225,
+`…ReuseCount` 1,609=1,609) and `gNdsTaskmanMallocCount` 1,069=1,069. **Sole
+differing counter: `gNdsRelocResolveOffsetCount` 0 → 3,629** — the
+blob-relative-offset branch in `ndsRelocFindKnownFileContaining`, banked as
+engagement proof and never priced. **A lead. Price it per-PC, never by division.**
+
+**THE RAM LANE IS MOOT FOR THIS DECISION.** Arm C displaces nothing — it *adds*
+163,840 B of cache beside the blob — and still costs 2.9×. Buying the arena does
+not buy the win. **Task B (a pack that fits its displacement) is parked**: the
+shipping blob is *already* `--items-off` (287,904 vs 262,144, 25,760 over) and its
+**stream alone is 272,292 B — 10,148 over before any metadata**, so metadata
+compaction is closed by arithmetic and a lossless stream was already refuted.
+`BLOCKED(decision: drop ~11 more clips with a correctness proof, or accept a lossy
+stream — a fidelity trade)`, **and not worth taking until the pack path is shown
+cheap at all.**
+
+**Two allocator lessons, both earned the expensive way.** (1) The first sizing
+asked for +258,048 B of arena on 319,840 B of "proven headroom" and the heap
+granted only **188,416**; the 550,080 reservation *inside* the short arena still
+succeeded, so every guard passed and the battle **never started** (soak
+`NEVER-STARTED`, general heap free **6,076** vs the 32,768 floor, and a 2,400 s
+gate run wasted reaching no ring stop). **`check-boot-headroom.ps1` meters static
+image, not grantable heap — third recurrence, first for arena growth.** (2)
+`NDS_R2_ANIM_CACHE_ARENA_KEEP_FREE` cannot protect against it: it is a
+point-in-time check that correctly saw 582,848 free at reservation and cannot see
+the scene's later demand. **Gate any allocator arm on a 5-minute soak first**
+(now in `docs/VERIFYING.md`).
+
+**NEXT BUILD, and it separates the last two candidates** (the pack's *dispatch*
+vs its mere *presence*): the slice-51 falsifier — pack resident, streamed and
+carved, `ndsBattlePackFindFigatree` returning NULL. `NDS_R2_BATTLEPACK` and the
+new lab flag `NDS_R2_BATTLEPACK_KEEP_CACHE` both stay default 0; Boundary's
+verifier pins `gNdsTaskmanArenaChosenSize == 1376256`, so the grown-arena arm
+cannot drift into a bank.
+
 ## PHASE 8 IS DONE AND SLICE 1 AS BUILT IS REFUTED AT THIS POOL SIZE (2026-08-15)
 
 `artifacts/performance/2026-08-15_battlepack-gate/BATTLEPACK_GATE.md`. Both arms

@@ -1,0 +1,30 @@
+Wrote artifacts\performance\2026-08-15_battlepack-isolation\c165-iso-rows.csv
+Tick-HUD buckets: target=smash64ds-battle-playable-tickhud-hwtri samples=1600 frames=439..2038 melonDS=1.0 sha=DE80E46BDCF1FD98 git=30b38f3e9d3+dirty(9) dldi=ON
+
+bucket p50        p95        spread mean       min        max        %ALLp50
+------ ---        ---        ------ ----       ---        ---        -------
+ALL     1,118,272  3,919,168   3.50  1,459,928  1,117,184  8,113,856   100.0
+FTR       302,400    329,280   1.09    293,742    154,624    336,320    27.0
+STG       173,632    181,952   1.05    177,914    169,344  4,367,680    15.5
+BG          4,288      4,416   1.03      4,313      4,096      7,296     0.4
+AUD         2,752     92,544  33.63      9,610      1,152    151,296     0.2
+HUD         1,024    412,480 402.81     39,181        896  2,532,032     0.1
+SRC       325,568  2,835,648   8.71    572,403     10,816  6,602,752    29.1
+MISC      103,360    181,440   1.76    119,326     80,192  4,347,392     9.2
+OTHR      220,608    507,648   2.30    243,439     20,224    577,728    19.7
+WAIT      201,024    488,960   2.43    223,810        768    558,592    18.0
+WORK      948,352  3,495,360   3.69  1,236,118    626,944  7,664,512    84.8
+SHDT        4,416      9,728   2.20     11,307          0    466,496     0.4
+SWRM        1,024      1,088   1.06        988        704      1,216     0.1
+GCRA      320,064  2,830,208   8.84    566,875      6,656  6,597,504    28.6
+SCPU       40,320    100,224   2.49     42,278          0    136,320     3.6
+SCAT        1,344      1,472   1.10      3,640          0  3,756,864     0.1
+SPRM        1,856      2,048   1.10     14,923          0  3,429,888     0.2
+SINT      147,712  2,359,744  15.98    365,661          0  6,454,592    13.2
+SPHD       57,344     96,896   1.69     80,053          0  2,964,544     5.1
+SPHC          704        832   1.18        929          0     32,576     0.1
+WORK-H    940,096  3,446,336   3.67  1,196,937    618,816  7,245,056    84.1
+
+named=1,216,489 (83.3% of ALL)  VBI 2:1654 3:218 4:17 5+:148 max:19 total:2037  slips=0
+extras: gNdsBattlePackHits=197  gNdsBattlePackMisses=158  gNdsBattlePackLoadSteps=18  gNdsR2AnimCacheHits=149  gNdsR2AnimCacheFills=9  gNdsR2AnimCacheRejects=0  gNdsR2AnimCacheArenaReservedBytes=451,776  gNdsR2AnimCacheArenaUsedBytes=406,416  gNdsR2AnimCacheArenaReserveFailCount=0  gNdsTaskmanArenaChosenSize=1,548,288  gNdsTaskmanArenaAllocFailCount=0  gNdsTaskmanGeneralHeapFreeMin=52,864  gNdsBattlePlayablePacingVBlanks=5,218  gNdsBattlePlayablePacingPresentedFrames=2,038  gNdsBattlePlayablePacingPresentIntervalMax=19  gNdsBattleTextHudP0Damage=0  gNdsBattleTextHudP1Damage=76
+Wrote artifacts\performance\2026-08-15_battlepack-isolation\c165-iso.json

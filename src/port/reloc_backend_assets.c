@@ -6447,8 +6447,32 @@ volatile u32 gNdsR204AnimSeen[(NDS_R204_ANIM_ID_SPAN + 31u) / 32u];
 /* 4,096 of raw cache behind the pack. It is nearly nothing, and that is the
  * honest state of the one-fighter fit: the budget above is 301,564 and the Fox
  * blob is 287,904 of it. Projected general-heap low-water 42,236 against the
- * 32,768 floor. */
+ * 32,768 floor.
+ *
+ * MEASURED 2026-08-15 (BATTLEPACK_GATE.md): that 4,096 is not "nearly nothing",
+ * it is the whole verdict. The carve did not shrink the raw cache, it DELETED it
+ * -- Fills 17 -> 2, Rejects 0 -> 126, hits 338 -> 30 -- and the 111 net-new
+ * uncached acquisitions cost 3,873,969 ticks each, which is the entire
+ * +2,261,376 at rank-80. So this pair cannot price the deletion's BENEFIT: the
+ * starvation swamps it. NDS_R2_BATTLEPACK_KEEP_CACHE builds the arm that can. */
+#if NDS_R2_BATTLEPACK_KEEP_CACHE
+/* 163,840 of raw cache behind the pack, NOT the control's 262,144, and the
+ * reason is the heap rather than the design. Blob + full cache = 550,080 needs
+ * an arena of 0x18f000, and the measured grantable ceiling is 1,564,672 (see
+ * NDS_TASKMAN_ARENA_SIZE): that arm starved the general heap to 6,076 B and the
+ * battle never started. 287,936 + 163,840 = 451,776 against a 0x17a000 arena
+ * projects a general-heap low-water of ~54,588, i.e. 21,820 clear of the floor.
+ *
+ * THE ACCEPTANCE TEST IS gNdsR2AnimCacheRejects == 0, not the byte count. A
+ * smaller cache is equivalent to the control's exactly when it still refuses
+ * nothing, and with Fox served from the pack this holds only Mario's working set
+ * -- against a 192,240 B both-fighter arena high-water (slice 46). If Rejects is
+ * non-zero the arm did not isolate the deletion and its ticks price starvation
+ * again, which is the whole thing this configuration exists to avoid. */
+#define NDS_R2_ANIM_CACHE_ARENA_BYTES (NDS_BATTLEPACK_RESERVE_BYTES + 163840u)
+#else
 #define NDS_R2_ANIM_CACHE_ARENA_BYTES (NDS_BATTLEPACK_RESERVE_BYTES + 4096u)
+#endif
 #else
 #define NDS_R2_ANIM_CACHE_ARENA_BYTES 262144u
 #endif

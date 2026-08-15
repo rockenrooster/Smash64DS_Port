@@ -371,3 +371,59 @@ Two admissible routes follow, and both are engineering rather than fidelity:
 **and** the raw cache intact. Without it the deletion's benefit is unpriced in
 both directions — P50 is flat because the median frame takes no acquisition, and
 P95 is swamped by the starvation. **The −73,659 at rank-80 remains a projection.**
+
+## 10. That arm was built, and it REFUTES both §9's verdict and slice 1 (2026-08-15)
+
+`artifacts/performance/2026-08-15_battlepack-isolation/BATTLEPACK_ISOLATION.md`.
+
+Arm C: pack resident (197 hits) **and** the raw cache healthy —
+`gNdsR2AnimCacheRejects` **0**, and **9** full ROM loads all match against the
+control's 17. Same window, same basis, same fight (damage 0/76, 355 acquisitions,
+all three arms):
+
+```text
+             P50        P90        P95 rank-80 raw / net       top-1%     >2M frames
+A control  940,416  1,097,920   1,186,112 / 1,161,165       1,570,944        2
+B cache-gone 939,648  1,540,032   3,447,488 / 3,422,541     6,118,208      130
+C ISOLATION  940,128  1,216,832   3,447,872 / 3,422,925     6,175,104      128
+```
+
+**`−73,659` IS RETRACTED. Measured: +2,261,760 at rank-80** — opposite sign, ~30×
+the magnitude. P50 −288 (flat), mean +236,397, over-gate +83; ranked on all three
+as `VERIFYING.md` requires, not on rank-80 alone.
+
+**And §9's root cause is refuted.** §9 charged the whole +2,261,376 to 111
+net-new uncached acquisitions at 3,873,969 tk each. Arm C removes *more* than
+those 111 (ROM loads 128 → 9) and the residual moves **+384 — 0.011%**, against a
+≥14,080 cross-build floor. Two arms differing in arena size, in cache size by
+**40×**, and in ROM loads by **14×**, landing 384 ticks apart, do not have
+independent causes.
+
+> **THE DESIGN CONSTRAINT §9 ADDED IS WITHDRAWN AS THE BINDING ONE.** "A resident
+> pack must be smaller than the storage it displaces" is arithmetically true and
+> no longer decisive: arm C displaces nothing — it *adds* 163,840 B of cache
+> beside the blob — and costs the same 2.9×. **Fitting the pack removes the RAM
+> objection, not the cost.** Do not spend another cycle on the fit until the pack
+> path is shown to be cheap at all.
+>
+> **Both banked per-acquisition prices are now retracted:** `+645,225 a miss`
+> (warm-cache coefficient) and `3,873,969 per uncached acquisition` (priced a
+> mechanism owning ~0 of the residual). Both came from dividing a residual by
+> whichever count was to hand. **Do not produce a third.**
+
+**The owner is the pack path**, the only thing arms B and C share. `SITR` +192,781
+(41.6%, 2.84×) → **+3,326,913 (85.7%, 34.48×)**, concentrated on **128 frames** of
+mean `WORK-H` 4,118,565 with `SITR` 68.4% of it; the draw side does not move.
+
+**Excluded by counter, two soaks, no build:** the AObj16 normalizer is *not*
+re-running on packed scripts (`sNdsAObjEvent32NormalizedCount` 245 = 245,
+`…NormalizeScriptCount` 225 = 225, `…NormalizeReuseCount` 1,609 = 1,609) and
+allocation is identical (`gNdsTaskmanMallocCount` 1,069 = 1,069). **The sole
+differing counter is `gNdsRelocResolveOffsetCount` 0 → 3,629** — the
+blob-relative-offset branch in `ndsRelocFindKnownFileContaining`, recorded as
+engagement proof last cycle and never priced. It is a **lead**; price it with
+per-PC attribution, never by division.
+
+**Next build, and it is the last thing separating two candidates** — the pack's
+*dispatch* versus its mere *presence* in the arena: the slice-51 falsifier, pack
+resident and streamed and carved, `ndsBattlePackFindFigatree` returning NULL.

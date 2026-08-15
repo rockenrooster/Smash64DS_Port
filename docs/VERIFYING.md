@@ -136,6 +136,33 @@ R2-07 iteration rules (cycle 79):
     itself. Two self-reproducing arms give an exact delta; judging that delta
     still needs the cross-build floors above, because layout-identical is not
     execution-identical.
+- **A buffered child's stdout is lost to ANY abrupt parent termination — force-kill,
+  tool cap, or timeout alike (2026-08-15, second door in two cycles).** The
+  previous cycle lost a 25-minute `probe-battlepack-pacing.ps1` capture by
+  force-killing gdb, and fixed that one script. The identical loss then happened
+  to a 1,600-sample gate run through a different door: the run outlived a
+  10-minute harness/tool timeout, was terminated, and its `Tee-Object` log was
+  0 bytes because PowerShell block-buffers into a redirected handle. **Fixing one
+  script did not fix the class.** So: anything expected to run past a few minutes
+  is launched **detached with an OS-level redirect**
+  (`cmd /c "pwsh -NoProfile -File … > log 2>&1"`), and anything that may be
+  killed also sets its own incremental logging (`set logging enabled on` for
+  gdb). Wait on the **writer's process handle** (`Wait-Process -Id`), never on
+  the result file — `Test-Path` on a result JSON has already read one mid-write
+  and flipped a KEEP verdict.
+- **GATE AN ALLOCATOR ARM ON THE SOAK BEFORE THE GATE RUN (2026-08-15).** A
+  2,400 s gate run was spent on an arm a 5-minute `soak-freeze-watch.ps1` would
+  have refused: it reported `NEVER-STARTED`, zero presented battle frames, and
+  `general heap free bytes 6,076` against the 32,768 floor. Any change that moves
+  `NDS_TASKMAN_ARENA_SIZE`, a reservation, or a pool gets the soak first, and the
+  checks are `gNdsTaskmanArenaChosenSize == requested`,
+  `gNdsTaskmanArenaAllocFailCount == 0`, `…ReserveFailCount == 0`,
+  `gNdsR2AnimCacheRejects == 0` and a completed match. **`check-boot-headroom.ps1`
+  cannot stand in for this** — it meters the static image against a boot
+  threshold, not the heap a runtime `calloc` can be *given*: an arm with 319,840 B
+  of "proven headroom" was granted only **188,416** of a 258,048 B arena growth,
+  and the reservation *inside* the short arena still succeeded, so every allocator
+  guard passed and the battle simply never started.
 - **A `-SetGlobals` poke can land and still not be seen (cycle 100).** The stub
   writes main RAM; the ARM9 keeps its own copy. When the target shares its
   32-byte D-cache line with anything the guest writes, the line stays dirty, the

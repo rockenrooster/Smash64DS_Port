@@ -1,0 +1,8 @@
+Exception: D:\Stuff\DevFolder\Smash64DS_Port\scripts\sample-tick-hud-buckets.ps1:666
+Line |
+ 666 |          throw ("Tick-HUD GDB run exceeded ${TimeoutSeconds}s before $ …
+     |          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     | Tick-HUD GDB run exceeded 2400s before 1600 samples, and the liveness
+     | probe could not read gNdsBattlePlayablePacingPresentedFrames, so
+     | stalled-vs-slow is UNRESOLVED. never reached ring stop 0 (target frame
+     | 534).

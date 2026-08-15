@@ -7747,7 +7747,30 @@ extern OSMesgQueue sSYTaskmanGameTicMesgQueue;
 extern void func_80005BFC(void);
 
 #if NDS_IMPORT_BATTLESHIP_FTMANAGER
+#if NDS_R2_BATTLEPACK_KEEP_CACHE
+/* LAB ARM ONLY -- see the NDS_R2_BATTLEPACK_KEEP_CACHE block in the Makefile.
+ *
+ * 0x17a000 (1,548,288) = 0x150000 + 172,032, and the size is MEASURED, not
+ * derived from the boot ladder. The first attempt asked for 0x18f000 (+258,048,
+ * enough for the blob plus the full 262,144 B cache) on the strength of
+ * check-boot-headroom's 319,840 B of "proven headroom". The libnds heap refused
+ * it: gNdsTaskmanArenaChosenSize came back 1,564,672 with
+ * gNdsTaskmanArenaAllocFailCount 17 -- the step-down loop below gave up 69,632
+ * bytes -- while the 550,080 B animation reservation inside it still SUCCEEDED
+ * (ReserveFailCount 0). The result booted, passed every allocator guard, and
+ * left the general heap with 6,076 free against the mandated 32,768 floor, so
+ * the battle scene never started: soak verdict NEVER-STARTED, zero presented
+ * battle frames, and the 2,400 s gate run before it never reached ring stop 0.
+ *
+ * PROVEN GRANTABLE CEILING: 1,564,672. This asks 16,384 under it so the loop
+ * does not step at all, and gNdsTaskmanArenaAllocFailCount 0 is the check on
+ * that rather than this comment. The headroom ladder cannot see any of this --
+ * it meters the STATIC image against a boot threshold, not the heap a runtime
+ * calloc can actually be given. */
+#define NDS_TASKMAN_ARENA_SIZE 0x17a000u
+#else
 #define NDS_TASKMAN_ARENA_SIZE 0x150000u
+#endif
 #else
 #define NDS_TASKMAN_ARENA_SIZE (1024u * 1024u)
 #endif
