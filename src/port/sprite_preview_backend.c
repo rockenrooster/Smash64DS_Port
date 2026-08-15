@@ -403,6 +403,11 @@ static NDSSObjWallpaperDecodeCache sNdsSObjWallpaperDecodeCache;
       NDS_SOBJ_WALLPAPER_FINAL_MAP_SLOT_COUNT) + \
      (NDS_SOBJ_WALLPAPER_FINAL_X_MAP_COUNT * 2u))
 
+_Static_assert(
+    NDS_SOBJ_WALLPAPER_FINAL_MAP_SCRATCH_PIXELS <=
+        NDS_ORIGINAL_SPRITE_DECODE_CACHE_SCRATCH_PIXELS,
+    "wallpaper map scratch exceeds retained decode-cache tail");
+
 typedef struct NDSSObjWallpaperFinalCache
 {
     u32 valid;
@@ -777,6 +782,70 @@ static s32 ndsSObjWallpaperIsResultsShape(const Sprite *sprite)
     (void)sprite;
     return FALSE;
 #endif
+}
+
+#define NDS_DREAMLAND_WALLPAPER_STRETCH_SHIFT 3u
+
+/* K = 9/8 = 1.125. The design minimum is 1.090909 and the originally derived
+ * K=1.12 is visually indistinguishable at DS resolution, but /25 generated
+ * ARM software-divide helpers and the exact reciprocal form generated 64-bit
+ * multiply helpers. 9/8 is the DS-native form: shifts/adds only, with 0.45%
+ * more overdraw than 1.12. */
+static inline s32 ndsSObjWallpaperMul9Div8Signed(s32 value)
+{
+    u32 magnitude = (value < 0) ? (u32)(-value) : (u32)value;
+    s32 scaled = (s32)(((magnitude << NDS_DREAMLAND_WALLPAPER_STRETCH_SHIFT) +
+                        magnitude) >> NDS_DREAMLAND_WALLPAPER_STRETCH_SHIFT);
+
+    return (value < 0) ? -scaled : scaled;
+}
+
+/* Dream Land's source wallpaper deliberately leaves the outer ~10 preview
+ * pixels uncovered at its 1.004 camera-scale floor; that was hidden by N64
+ * overscan but the DS presents the full 256x192 image. Grow the presentation
+ * transform by 9/8 (1.125) about the 320x240 preview centre. Keep this a pure
+ * port-side presentation correction: the source SObj/camera state is not
+ * changed, and other stages/results keep their exact source transform.
+ *
+ * This helper uses only fixed integer arithmetic. Dream Land's source scale is
+ * clamped to [1.004, 2.0], and the origin input is already constrained to the
+ * signed 16-bit range by the affine caller. */
+static void ndsSObjApplyDreamLandWallpaperStretch(
+    s32 *origin_x, s32 *origin_y, u32 *scale_x_q16, u32 *scale_y_q16,
+    u32 stretch_scale)
+{
+    s32 dx;
+    s32 dy;
+
+    if ((origin_x == NULL) || (origin_y == NULL) ||
+        (scale_x_q16 == NULL) || (scale_y_q16 == NULL) ||
+        (gSCManagerSceneData.scene_curr != nSCKindVSBattle) ||
+        (gSCManagerBattleState == NULL) ||
+        (gSCManagerBattleState->gkind != nGRKindPupupu))
+    {
+        return;
+    }
+    /* The source contract is 1.004..2.0. Refuse an unexpected transform rather
+     * than multiplying an unrelated/corrupt value under a Dream Land scene. */
+    if ((*scale_x_q16 < (1u << 16)) ||
+        (*scale_y_q16 < (1u << 16)) ||
+        (*scale_x_q16 > (2u << 16)) ||
+        (*scale_y_q16 > (2u << 16)))
+    {
+        return;
+    }
+
+    dx = *origin_x - 160;
+    dy = *origin_y - 120;
+    *origin_x = 160 + ndsSObjWallpaperMul9Div8Signed(dx);
+    *origin_y = 120 + ndsSObjWallpaperMul9Div8Signed(dy);
+    if (stretch_scale != FALSE)
+    {
+        *scale_x_q16 += (*scale_x_q16 + 4u) >>
+            NDS_DREAMLAND_WALLPAPER_STRETCH_SHIFT;
+        *scale_y_q16 += (*scale_y_q16 + 4u) >>
+            NDS_DREAMLAND_WALLPAPER_STRETCH_SHIFT;
+    }
 }
 
 static s32 ndsSObjWallpaperCombinePaletteFor(
@@ -1558,6 +1627,10 @@ static s32 ndsSObjDrawCachedWallpaperFinal(SObj *sobj, u32 combine_mode)
         scale_x_q16 = (u32)((sprite->scalex * 65536.0F) + 0.5F);
         scale_y_q16 = (u32)((sprite->scaley * 65536.0F) + 0.5F);
     }
+    origin_x = (s32)sobj->pos.x;
+    origin_y = (s32)sobj->pos.y;
+    ndsSObjApplyDreamLandWallpaperStretch(
+        &origin_x, &origin_y, &scale_x_q16, &scale_y_q16, TRUE);
     if (ndsSObjGetOpaqueWallpaperCache(
             loaded, sprite, scale_x_q16, scale_y_q16,
             NDS_SOBJ_WALLPAPER_FINAL_MAP_SCRATCH_PIXELS,
@@ -1571,8 +1644,6 @@ static s32 ndsSObjDrawCachedWallpaperFinal(SObj *sobj, u32 combine_mode)
     }
 
     draw_start = cpuGetTiming();
-    origin_x = (s32)sobj->pos.x;
-    origin_y = (s32)sobj->pos.y;
     if (palette != NULL)
     {
         /* Full-bleed the Results wallpaper. `ndsSObjDrawOpaqueWallpaperFinal`
@@ -1763,6 +1834,11 @@ static s32 ndsDrawSObjIntoPreview(SObj *sobj, u32 record_startup,
     {
         scale_x_q16 = (u32)((sprite->scalex * 65536.0F) + 0.5F);
         scale_y_q16 = (u32)((sprite->scaley * 65536.0F) + 0.5F);
+    }
+    if (cache_wallpaper != 0u)
+    {
+        ndsSObjApplyDreamLandWallpaperStretch(
+            &origin_x, &origin_y, &scale_x_q16, &scale_y_q16, TRUE);
     }
     is_scaled = ((scale_x_q16 != (1u << 16)) ||
                  (scale_y_q16 != (1u << 16))) ? TRUE : FALSE;
@@ -2565,6 +2641,13 @@ static u32 ndsSObjFastWallpaperGetTransform(
     *origin_y = (s32)wallpaper->pos.y;
     *scale_x_q16 = (u32)((scale_x * 65536.0F) + 0.5F);
     *scale_y_q16 = (u32)((scale_y * 65536.0F) + 0.5F);
+    /* The seed RASTER was stretched, but the hardware affine needs only the
+     * seed/live scale RATIO. K cancels analytically. Preserve the original
+     * source q16 scales here so the ratio and therefore hdx/vdy are bit-exact
+     * to the pre-fix path instead of suffering a second K-rounding step. The
+     * centered origin still changes because that is the intended coverage fix. */
+    ndsSObjApplyDreamLandWallpaperStretch(
+        origin_x, origin_y, scale_x_q16, scale_y_q16, FALSE);
     return ((*scale_x_q16 != 0u) && (*scale_y_q16 != 0u)) ? TRUE : FALSE;
 }
 

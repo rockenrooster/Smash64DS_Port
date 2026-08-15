@@ -32,6 +32,19 @@ typedef enum NDSFastWallpaperState {
     NDS_FAST_WALLPAPER_STATIC_DEGRADED
 } NDSFastWallpaperState;
 
+/* Hardware-triangle builds use the retained sprite-display buffer only as the
+ * immutable 300x220 wallpaper decode plus renderer scratch. Five 300-pixel
+ * rows leave 1,500 u16 scratch pixels; the renderer statically proves its map
+ * requirement fits this capacity. Software builds keep their legacy 320x240
+ * retained display surface and do not use this decode-cache API. */
+#define NDS_ORIGINAL_SPRITE_DECODE_CACHE_WIDTH 300u
+#define NDS_ORIGINAL_SPRITE_DECODE_CACHE_CONTENT_HEIGHT 220u
+#define NDS_ORIGINAL_SPRITE_DECODE_CACHE_HEIGHT 225u
+#define NDS_ORIGINAL_SPRITE_DECODE_CACHE_SCRATCH_PIXELS \
+    ((NDS_ORIGINAL_SPRITE_DECODE_CACHE_HEIGHT - \
+      NDS_ORIGINAL_SPRITE_DECODE_CACHE_CONTENT_HEIGHT) * \
+     NDS_ORIGINAL_SPRITE_DECODE_CACHE_WIDTH)
+
 void ndsPlatformInit(void);
 u32 ndsPlatformReadInput(void);
 void ndsPlatformBeginFrame(void);

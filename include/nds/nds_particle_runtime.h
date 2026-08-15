@@ -65,6 +65,12 @@ extern volatile u32 gNdsParticleDrawVisibleMax;    /* worst single frame       *
 extern volatile u32 gNdsParticleQuadEmitCount;
 extern volatile u32 gNdsParticleQuadEmitMax;
 extern volatile u32 gNdsParticleQuadMissCount;
+/* Source MASKS/MASKT engagement. ST is also included in the S and T totals;
+ * these count submitted SOURCE particles, not the 2/4 atlas quads emitted for
+ * reconstruction. A ledge-grab FlashMiddle run must engage ST. */
+extern volatile u32 gNdsParticleMirrorSSubmitCount;
+extern volatile u32 gNdsParticleMirrorTSubmitCount;
+extern volatile u32 gNdsParticleMirrorSTSubmitCount;
 /* Which SOURCE texture ids missed (pre-stride), which frame indices missed, and
  * how many draws took the Dream Land bank stride. A bare MissCount cannot tell
  * an unadmitted texture from a frame past the packed animation from a stride

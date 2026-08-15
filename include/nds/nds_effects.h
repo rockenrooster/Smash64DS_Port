@@ -69,6 +69,24 @@ extern volatile u32 gNdsFireballQuadDrawCount;
 extern volatile u32 gNdsFireballQuadFallbackCount;
 extern volatile u32 gNdsFoxBlasterQuadDrawCount;
 extern volatile u32 gNdsFoxBlasterQuadFallbackCount;
+/* Fox Blaster's owner-approved DS bore line. BattleShip's source shot point is
+ * mechanically correct but sits below the rendered pistol bore in this port.
+ * The owner tuned the presentation correction 24 -> 36 -> 48 -> 72 and on
+ * 2026-08-14 confirmed 72 was noticeably better but still a little low.
+ *
+ * That playtest also confirmed Mario still could not crouch under the visibly
+ * raised beam. The natural crouch probe explains why: gameplay collision was
+ * still centered at source Y=223.398 with radius 20 while crouching Mario's
+ * highest hurtbox ended at Y=242.218 -- only about 1.18 units of overlap.
+ * Keeping collision at the old Y while drawing the beam elsewhere was the bug.
+ *
+ * 84 is the final bounded visual step (+12 world ~= -1.5 screen rows at the
+ * locked firing camera) and is now the ONE Y contract for beam, flash, and the
+ * weapon attack-collision center. Weapon/root motion and map collision remain
+ * source-owned and unchanged. */
+#define NDS_FOX_BLASTER_BORE_OFFSET_Y 84
+#define NDS_FOX_BLASTER_BORE_OFFSET_Y_Q12 \
+    ((s32)NDS_FOX_BLASTER_BORE_OFFSET_Y << 12)
 /* EFCommon script 0x62's closed Fox muzzle/impact flash. The native path keeps
  * the source position and nine visible sizes, but owns no LBParticle: its
  * 16x8 PAL16 half-disc is mirrored by the DS texture unit into one quad. */

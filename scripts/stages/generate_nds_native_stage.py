@@ -975,6 +975,16 @@ SOURCE_CLOSURE_POLICIES = (
                 workspace.projection
                 """,
             ),
+            # BUGS.md row 1 (Whispy), 2026-08-14: this closure no longer reads
+            # `slice44_validate_cursor`. Slice 44 strided the DYNAMIC bindings'
+            # allow_stale through the cursor here, which froze an animated
+            # stage world matrix for up to eight presented frames; the stride
+            # now applies only to the rigid guard in
+            # ndsRendererAdapterValidateTask36StageWorld, which is not a
+            # tracked closure. The field is still classified under
+            # ndsRendererAdapterPrepareNativeStageOwner, which advances it, so
+            # dropping it here narrows the certificate to what the code does
+            # rather than retiring the field.
             **_classified(
                 FIELD_CLASS_LIVE,
                 """
@@ -982,7 +992,6 @@ SOURCE_CLOSURE_POLICIES = (
                 workspace.task44_binding_lists_valid
                 workspace.task44_dynamic_binding_count
                 workspace.task44_dynamic_bindings
-                workspace.slice44_validate_cursor
                 """,
             ),
         },

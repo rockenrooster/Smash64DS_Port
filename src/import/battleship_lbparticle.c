@@ -70,6 +70,7 @@
 
 #include <nds/nds_particle_runtime.h>
 #include <nds/nds_firegrind.h>
+#include <nds/nds_effects.h>
 #include <nds/nds_startup.h>
 #include <nds/generated/nds_particle_banks.generated.h>
 #include <nds/nds_renderer.h>
@@ -2449,6 +2450,9 @@ volatile u32 gNdsParticleDrawVisibleCount;
 volatile u32 gNdsParticleDrawVisibleMax;
 volatile u32 gNdsParticleQuadEmitCount;
 volatile u32 gNdsParticleQuadEmitMax;
+volatile u32 gNdsParticleMirrorSSubmitCount;
+volatile u32 gNdsParticleMirrorTSubmitCount;
+volatile u32 gNdsParticleMirrorSTSubmitCount;
 /* TEMPORARY, BUGS.md row 1. Whispy's dust and leaves are alloc-link 1; these
  * record what its quads are actually handed at the submit. Remove with the row. */
 volatile u32 gNdsWhispySubmitOk;
@@ -2603,7 +2607,7 @@ static void ndsParticleDrawFoxBlasterGlowAOT(
             gNdsFoxBlasterGlowAOTFallbackCount++;
             submit_result = ndsRendererSubmitParticleQuad(
                 texture_name, &draw_pos, sNdsFoxBlasterGlowSize[age],
-                0x7fffu, 255u, right, up, 0u, 0u, 16u, 16u);
+                0x7fffu, 255u, right, up, 0u, 0u, 0u, 16u, 16u);
         }
         if (submit_result > 0)
         {
@@ -3380,7 +3384,7 @@ sb32 ndsParticleDrawOwnTextureQuad(u32 texture_name, u32 texture_w,
     }
     ndsParticleBiasTowardEye(pos, depth_bias, &draw_pos);
     if (ndsRendererSubmitParticleQuad(texture_name, &draw_pos, size, color,
-                                      alpha, &right, &up, 0u, 0u,
+                                      alpha, &right, &up, 0u, 0u, 0u,
                                       texture_w, texture_h) == FALSE)
     {
         ndsRendererEndParticleQuads();
@@ -3438,7 +3442,7 @@ sb32 ndsParticleDrawSourceAssetQuad(u32 texture_id, const Vec3f *pos, f32 size,
     if (ndsRendererSubmitParticleQuad(
             ndsRendererHardwareParticleAtlasNameForSheet(row->sheet),
             &draw_pos, size, color, alpha,
-                                      &right, &up, row->x, row->y,
+                                      &right, &up, 0u, row->x, row->y,
                                       row->width, row->height) == FALSE)
     {
         ndsRendererEndParticleQuads();
@@ -3877,6 +3881,10 @@ void lbParticleDrawTextures(GObj *gobj)
 #endif
                 if (submit_result < 0)
                 {
+                    u32 source_mirror_mask =
+                        ((pc->flags & LBPARTICLE_FLAG_MASKS) ? 1u : 0u) |
+                        ((pc->flags & LBPARTICLE_FLAG_MASKT) ? 2u : 0u);
+
                     ndsParticleTransformForDraw(
                         pc, &right, &up, &world_pos, &quad_right, &quad_up
 #if NDS_R2_WHISPY_NATIVE_AOT
@@ -3887,9 +3895,22 @@ void lbParticleDrawTextures(GObj *gobj)
 #if NDS_R2_POSITION_PROBE
                     ndsParticleProbeFlameFirstDraw(pc, &world_pos);
 #endif
+                    if ((source_mirror_mask & 1u) != 0u)
+                    {
+                        gNdsParticleMirrorSSubmitCount++;
+                    }
+                    if ((source_mirror_mask & 2u) != 0u)
+                    {
+                        gNdsParticleMirrorTSubmitCount++;
+                    }
+                    if ((source_mirror_mask & 3u) == 3u)
+                    {
+                        gNdsParticleMirrorSTSubmitCount++;
+                    }
                     submit_result = ndsRendererSubmitParticleQuad(
                         texture_name, &world_pos, pc->size,
                         color, pc->primcolor.a, &quad_right, &quad_up,
+                        source_mirror_mask,
                         texture_x, texture_y,
                         texture_width, texture_height);
                 }
@@ -4011,6 +4032,7 @@ void lbParticleDrawTextures(GObj *gobj)
                                               fg[fg_i].age),
                             255u,
                             &right, &up,
+                            0u,
                             sNdsFireGrindFrameRow->x,
                             sNdsFireGrindFrameRow->y,
                             sNdsFireGrindFrameRow->width,

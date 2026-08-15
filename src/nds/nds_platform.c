@@ -193,9 +193,19 @@ static u32 sSceneWallpaperAffinePending;
 static u32 sSceneWallpaperAffineResetPending;
 #endif
 #endif
+#if NDS_RENDERER_HW_TRIANGLES
+/* HW owns no retained frame copy: this storage is only the 300x220 immutable
+ * wallpaper decode plus the renderer's scratch tail. Keep the larger legacy
+ * extent on software builds, whose diagnostic display path still writes it as
+ * a 320x240 retained image. */
+static u16 sOriginalSpriteDisplayPreview[
+    NDS_ORIGINAL_SPRITE_DECODE_CACHE_WIDTH *
+    NDS_ORIGINAL_SPRITE_DECODE_CACHE_HEIGHT];
+#else
 static u16 sOriginalSpriteDisplayPreview[
     NDS_ORIGINAL_SPRITE_PREVIEW_MAX_WIDTH *
     NDS_ORIGINAL_SPRITE_PREVIEW_MAX_HEIGHT];
+#endif
 static u32 sOriginalSpriteDecodeCacheEpoch = 1u;
 static u32 sOriginalSpriteDisplayPreviewWidth;
 static u32 sOriginalSpriteDisplayPreviewHeight;
@@ -525,11 +535,11 @@ u16 *ndsPlatformGetOriginalSpriteDecodeCache(u32 *out_pitch,
 #if NDS_RENDERER_HW_TRIANGLES
     if (out_pitch != NULL)
     {
-        *out_pitch = NDS_ORIGINAL_SPRITE_PREVIEW_MAX_WIDTH;
+        *out_pitch = NDS_ORIGINAL_SPRITE_DECODE_CACHE_WIDTH;
     }
     if (out_height != NULL)
     {
-        *out_height = NDS_ORIGINAL_SPRITE_PREVIEW_MAX_HEIGHT;
+        *out_height = NDS_ORIGINAL_SPRITE_DECODE_CACHE_HEIGHT;
     }
     if (out_epoch != NULL)
     {

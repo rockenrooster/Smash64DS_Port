@@ -395,7 +395,9 @@ copies. Both are read under `#if NDS_RENDERER_HW_TRIANGLES` (line 730; the
 getter at 538). **Removing either is refuted; the ~150 KiB target is not
 available.**
 
-What IS available is reduction #4, and it is **21,600 bytes, not 150 KiB**.
+What IS available is reduction #4. **Implemented 2026-08-14: 18,600 bytes at
+the object, 18,592 bytes net `.main.bss` after section alignment.** The older
+21,600-byte estimate omitted the renderer's scratch tail.
 Both arrays are 320x240x2 = 153,600 B. Trace each one's real extent:
 
 - **Staging (`sOriginalSpritePreview`) CANNOT shrink.** Two call sites request
@@ -403,11 +405,15 @@ Both arrays are 320x240x2 = 153,600 B. Trace each one's real extent:
   `title_backend.c:66` both call
   `ndsPlatformBeginOriginalSpritePreview(320u, 240u, ...)`. It is written at
   SOURCE (N64) resolution, before the commit clamp.
-- **Decode cache (`sOriginalSpriteDisplayPreview`) can shrink to 300x220.** Its
+- **Decode cache (`sOriginalSpriteDisplayPreview`) shrinks to 300x225 on HW.** Its
   consumer, `ndsSObjGetOpaqueWallpaperCache`
   (`sprite_preview_backend.c:814`), declines unless
-  `sprite->width == 300 && sprite->height == 220`, so the cache never holds
-  more than 300x220x2 = 132,000 B. **Saving: 21,600 B.**
+  `sprite->width == 300 && sprite->height == 220`. The immutable decode itself
+  is 300x220, but `ndsSObjDrawOpaqueWallpaperFinal` also keeps **1,408 u16**
+  map/scratch pixels after it (two X maps, two Y maps, changed-X indices, and
+  one expanded DMA row). Five extra 300-pixel rows provide 1,500 scratch slots.
+  The cross-file `_Static_assert` prevents future map growth from overflowing
+  the tail. Object size: **153,600 -> 135,000 B; saving 18,600 B.**
 
 **CORRECTION, recorded so it is not re-derived.** A first pass here read the
 gate-arm counters `gNdsOriginalSpritePreviewDisplayWidth/Height` as 256x192 and
@@ -423,6 +429,10 @@ quoting a number.**
 
 `CommitCount` is **2 over a whole match**, so neither buffer is a per-frame
 cost — this phase buys RAM, never ticks.
+
+**2026-08-14 linked proof:** `.main.bss` **1,447,312 -> 1,428,720**, net
+**-18,592 B**; proof in
+`artifacts/verification/2026-08-14_ram-decode-cache/RAM_DECODE_CACHE.md`.
 
 Incidental proof the software path really is compiled out: the harness rejected
 `gNdsOriginalSpritePreviewDrawCount` as absent from the hwtri ELF, i.e.
@@ -477,6 +487,17 @@ Start with:
 - native owner/stage workspaces
 - fighter draw-plan/state temporary storage
 - scene-only preview scratch proven not concurrent with battle renderer work.
+
+**2026-08-14 lifetime result — simple texture-scratch overlay REFUTED.**
+`ndsRendererHardwareQueueTextureRefresh` stores the Small/Large staging pointer
+until `ndsRendererHardwareCommitPendingTextureRefreshes` consumes it in VBlank,
+while subsequent texture conversions reuse the 32 KiB Scratch in the same
+frame. The queue holds two uploads and `ndsRendererHardwareTextureRefreshUses`
+explicitly prevents a queued staging pointer from being reused. Therefore
+Scratch/Large, Scratch/Small, and Small/Large all have potentially overlapping
+live ranges and cannot be unioned safely without changing the queue ownership
+model. Evidence:
+`artifacts/verification/2026-08-14_ram-scratch-lifetimes/SCRATCH_LIFETIMES.md`.
 
 ### 4.1 For every candidate record
 

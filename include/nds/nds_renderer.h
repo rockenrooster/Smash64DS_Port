@@ -1360,10 +1360,17 @@ void ndsRendererHardwareDiscardParticleAtlas(void);
 /* `color` is BGR555 (the hardware vertex colour, which has no alpha channel);
  * `alpha` is the particle's own 8-bit source alpha and becomes POLYGON_ATTR's
  * 5-bit polygon alpha. They are separate because the DS splits them, not
- * because the caller has two colours. */
+ * because the caller has two colours.
+ *
+ * `mirror_mask` reproduces lbParticle's live MASKS/MASKT bytecode state for an
+ * ATLAS CELL: bit 0 mirrors S and bit 1 mirrors T. An atlas cell cannot use the
+ * DS texture-unit wrap bits without sampling its neighbours, so the submitter
+ * subdivides the SAME world quad into 2 or 4 pieces and mirrors the cell UVs.
+ * This is texture reconstruction only; the particle's world size is unchanged. */
 s32 ndsRendererSubmitParticleQuad(u32 atlas_name, const Vec3f *pos, f32 size,
                                   u32 color, u8 alpha,
                                   const Vec3f *right, const Vec3f *up,
+                                  u32 mirror_mask,
                                   u32 atlas_x, u32 atlas_y,
                                   u32 atlas_w, u32 atlas_h);
 /* Exact-script Whispy native seam. The camera basis is quantized once per pass;
@@ -1411,11 +1418,11 @@ s32 ndsRendererSubmitWhispyNativeQuad(u32 texture_name,
  *
  * Q12 because both consumers are already fixed point: the beam adds it to its
  * decoded translation (BEFORE the source scale is applied to the quad's own
- * vertices, so a 53x stretched beam is raised 24 units, not 1,280), and the
- * glow adds it to its Q12 centre. */
-#define NDS_FOX_BLASTER_BORE_OFFSET_Y 24
-#define NDS_FOX_BLASTER_BORE_OFFSET_Y_Q12 \
-    ((s32)NDS_FOX_BLASTER_BORE_OFFSET_Y << 12)
+ * vertices, so a 53x stretched beam is raised by this many units, not 53x as
+ * many), and the glow adds it to its Q12 centre.
+ *
+ * The owner-tuned Y contract now lives in nds_effects.h because Fox's weapon
+ * attack collision consumes the same corrected bore line as presentation. */
 /* Fox's source blaster display is an untextured four-vertex quad from
  * relocData 316. This lab submit converts the live source translation/scale
  * directly to fixed GX coordinates; facing is +1 or -1. It returns FALSE

@@ -8816,18 +8816,19 @@ static sb32 ndsRendererAdapterPrepareNativeStageMatrices(
              * path. */
             if ((vp_dobj == NULL) ||
                 (ndsRendererAdapterDirectMvpRecalcKind(vp_dobj) != 0u) ||
+                /* BUGS.md row 1, 2026-08-13. These are the stage's DYNAMIC
+                 * bindings, and several of them are animated (Whispy eyes and
+                 * mouth plus the flower actors). Slice 44 used to pass
+                 * allow_stale=TRUE on seven of eight frames, before the source
+                 * key was even checked. The source DObj therefore advanced at
+                 * 30 Hz while its cached world matrix could remain frozen for
+                 * eight presented frames. FALSE does not force a rebuild: the
+                 * persistent cache still reuses an unchanged source key and
+                 * parent generation. It only forbids blind stale reuse. Keep
+                 * the stride on the separately-proven rigid-binding guard, not
+                 * on dynamic world transforms. */
                 (ndsRendererAdapterBuildPersistentStageWorldMatrix(
-                     vp_dobj, &vp_world,
-#if NDS_R2_STAGE_VALIDATE_STRIDE
-                     /* Slice 44: revalidate this binding's chain only on its
-                      * own frame of the stride. view_projection still multiplies
-                      * in every frame -- the camera moves, the world does not. */
-                     ((dynamic_slot % NDS_R2_STAGE_VALIDATE_STRIDE) ==
-                      workspace->slice44_validate_cursor) ? FALSE : TRUE
-#else
-                     FALSE
-#endif
-                     ) == FALSE))
+                     vp_dobj, &vp_world, FALSE) == FALSE))
             {
                 if (ndsRendererAdapterPrepareNativeStageBindingMatrix(
                         cobj, workspace, vp_binding) == FALSE)

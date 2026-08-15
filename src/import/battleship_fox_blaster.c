@@ -58,6 +58,40 @@ __attribute__((weak)) LBParticle *efManagerFoxBlasterGlowMakeEffect(Vec3f *pos)
 #include "../../decomp/BattleShip-main/decomp/src/wp/wpfox/wpfoxblaster.c"
 #undef wpFoxBlasterMakeWeapon
 
+/* FoxSpecial1's two source attack_offsets are both zero and the relocation
+ * validator in reloc_backend_assets.c pins that invariant. Keep the DS bore
+ * correction as a replacement for those zero Y offsets, not an accumulated
+ * float add. This is exact, constant-time and emits no software-float helper. */
+static void ndsFoxBlasterSetBoreAttackOffsets(WPStruct *wp)
+{
+    f32 local_y;
+
+    if (wp == NULL)
+    {
+        return;
+    }
+    /* wpProcessUpdateHitOffsets rotates this weapon-local vector by the beam's
+     * Rz. Right-facing is 0; left-facing is pi. Sign the local Y with lr so the
+     * transformed correction is world +Y in both cases. */
+    local_y = (wp->lr < 0) ?
+        -(f32)NDS_FOX_BLASTER_BORE_OFFSET_Y :
+         (f32)NDS_FOX_BLASTER_BORE_OFFSET_Y;
+    wp->attack_coll.offsets[0].y = local_y;
+    wp->attack_coll.offsets[1].y = local_y;
+}
+
+/* Reflection can flip lr / horizontal velocity and then recomputes the beam's
+ * Rz in the BattleShip callback. Re-sign the local collision offset AFTER that
+ * source callback so a reflected shot keeps the same world +Y bore line rather
+ * than mirroring the hitbox below the weapon. */
+static sb32 ndsFoxBlasterProcReflectorBore(GObj *weapon_gobj)
+{
+    sb32 result = wpFoxBlasterProcReflector(weapon_gobj);
+
+    ndsFoxBlasterSetBoreAttackOffsets(wpGetStruct(weapon_gobj));
+    return result;
+}
+
 /* wpManager selects func_ovl3_80167618 for this descriptor, whose source
  * callback eventually reaches lbCommonDObjScaleXProcDisplay. The port's
  * shared compatibility definition of that function is deliberately a no-op:
@@ -201,6 +235,23 @@ GObj *wpFoxBlasterMakeWeapon(GObj *fighter_gobj, Vec3f *pos)
     weapon_gobj = battleship_wpFoxBlasterMakeWeapon(fighter_gobj, pos);
     if (weapon_gobj != NULL)
     {
+        WPStruct *wp = (WPStruct *)weapon_gobj->user_data.p;
+
+        /* OWNER 2026-08-14: collision follows the same corrected bore line as
+         * the visible beam. Previously only rendering moved, leaving the source
+         * attack sphere at Y=223.398 while the visible beam was +72 world units
+         * higher. Natural SquatWait evidence still hit Mario's slot-1 hurtbox:
+         * radius 20 reached 243.398 while that crouch box ended at 242.218.
+         *
+         * BattleShip's wpProcessUpdateHitPositions owns attack_pos initialization
+         * and regeneration from these offsets. WPStruct is free-list storage, so
+         * attack_pos may still contain the previous weapon's values here; do NOT
+         * read or patch it. Changing the two source-owned offsets is sufficient
+         * for the first nGMAttackStateNew update and every later update. The
+         * weapon DObj/root and WPAttributes map-collision box stay source-exact.
+         * Radius remains the source-exact 20 -- no hitbox-thinning guess. */
+        ndsFoxBlasterSetBoreAttackOffsets(wp);
+        wp->proc_reflector = ndsFoxBlasterProcReflectorBore;
         weapon_gobj->proc_display = ndsFoxBlasterProcDisplay;
         gNdsFighterProjectileProofSpawnSuccessCount++;
     }

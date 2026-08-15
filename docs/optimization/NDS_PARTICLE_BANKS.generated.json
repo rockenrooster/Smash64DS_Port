@@ -25,11 +25,14 @@
       0,
       2,
       3,
+      4,
       5,
       9,
       10,
+      11,
       12,
       13,
+      14,
       15,
       16,
       17,
@@ -77,6 +80,13 @@
         "width": 16
       },
       {
+        "bytes": 1024,
+        "frames": 1,
+        "height": 32,
+        "texture": 4,
+        "width": 32
+      },
+      {
         "bytes": 256,
         "frames": 3,
         "height": 16,
@@ -99,6 +109,13 @@
       },
       {
         "bytes": 1024,
+        "frames": 1,
+        "height": 32,
+        "texture": 11,
+        "width": 32
+      },
+      {
+        "bytes": 1024,
         "frames": 6,
         "height": 32,
         "texture": 12,
@@ -110,6 +127,13 @@
         "height": 16,
         "texture": 13,
         "width": 16
+      },
+      {
+        "bytes": 1024,
+        "frames": 3,
+        "height": 32,
+        "texture": 14,
+        "width": 32
       },
       {
         "bytes": 256,
@@ -277,28 +301,14 @@
     "atlas_height": 64,
     "atlas_width": 128,
     "budget_bytes": 32768,
-    "bytes": 27520,
+    "bytes": 30592,
     "cell_cap": 64,
     "excluded": [
       {
         "bytes": 1024,
-        "frames": 1,
+        "frames": 20,
         "height": 32,
-        "texture": 4,
-        "width": 32
-      },
-      {
-        "bytes": 1024,
-        "frames": 1,
-        "height": 32,
-        "texture": 11,
-        "width": 32
-      },
-      {
-        "bytes": 1024,
-        "frames": 3,
-        "height": 32,
-        "texture": 14,
+        "texture": 28,
         "width": 32
       },
       {
@@ -321,21 +331,22 @@
         "height": 32,
         "texture": 36,
         "width": 32
-      },
-      {
-        "bytes": 1024,
-        "frames": 20,
-        "height": 32,
-        "texture": 28,
-        "width": 32
       }
     ],
     "frame_cap": 1,
-    "frame_count": 31,
+    "frame_count": 34,
     "held_frames": {
       "25": 2
     },
+    "palette_bytes": 256,
     "palette_entries": 32,
+    "palette_sheet_entries": [
+      8,
+      32,
+      32,
+      32
+    ],
+    "palette_stride_bytes": 64,
     "sheet_bytes": 8192,
     "sheets": 4
   },

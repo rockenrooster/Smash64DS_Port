@@ -7,6 +7,11 @@ param(
     [switch]$Standing,
     [switch]$TraceCrouchExit,
     [switch]$DumpHurtboxes,
+    # Stop immediately after the first natural shot accepted while Mario is in
+    # the requested pose. This is the cheap post-fix mode: it proves the live
+    # attack centre/radius without waiting forever for a collision that is now
+    # expected NOT to happen.
+    [switch]$InspectShotOnly,
     [ValidatePattern('^[A-Za-z0-9][A-Za-z0-9._-]*$')]
     [string]$EvidenceLabel = '2026-08-12_fox-crouch-collision'
 )
@@ -253,6 +258,13 @@ try {
         'set $fox_wp = (WPStruct *)$fox_weapon->user_data.p',
         'set $fox_attack = &$fox_wp->attack_coll',
         ('printf "FOX_SHOT_READY weapon=%p attack=%p size=%f mario_status=%d floor=%d flags=%#x inputy=%d pad_y=%d enabled=%u\n", $fox_weapon, $fox_attack, $fox_attack->size, $mario->status_id, $mario->coll_data.floor_line_id, $mario->coll_data.floor_flags, $mario->input.pl.stick_range.y, *(signed char *)0x{0:x8}, *(unsigned int *)0x{1:x8}' -f ($pads + 3), $enabled),
+        $(if ($InspectShotOnly) {
+            # attack_pos is free-list storage until the source updater consumes
+            # the New-state offsets. Stop AFTER that updater, not at maker
+            # return, or a stale previous weapon can look like the live line.
+            'break wpProcessUpdateHitPositions if (GObj *)$r0 == $fox_weapon' + "`ncontinue`nfinish`n" +
+            'printf "FOX_COLL_LINE root_y=%f curr_y=%f prev_y=%f radius=%f lower=%f offset0_y=%f offset1_y=%f lr=%d\n", ((DObj *)$fox_weapon->obj)->translate.vec.f.y, $fox_attack->attack_pos[0].pos_curr.y, $fox_attack->attack_pos[0].pos_prev.y, $fox_attack->size, $fox_attack->attack_pos[0].pos_curr.y-$fox_attack->size, $fox_attack->offsets[0].y, $fox_attack->offsets[1].y, $fox_wp->lr' + "`ndetach`nquit"
+        } else { '' }),
         # The maker-entry r1 read is taken after GDB's prologue skip and so is
         # NOT trustworthy on its own. Re-read the weapon's OWN spawned position
         # here, through the returned GObj, as an independent witness of where
@@ -302,7 +314,7 @@ try {
     [System.IO.Directory]::CreateDirectory((Split-Path -Parent $artifact)) | Out-Null
     [System.IO.File]::WriteAllText($artifact, $capture.Stdout, [System.Text.Encoding]::UTF8)
     $markers = @($capture.Stdout -split "`r?`n" | Where-Object {
-        $_ -match '^(CROUCH_READY|CROUCH_EXIT|STAND_READY|HURT_DUMP_READY|HURT_DESC|HURT_BOX|FOX_SHOT_READY|FOX_SPAWNED|FOX_MUZZLE|FOX_HIT_POS|FOX_CROUCH_HIT|HURT_MTX)'
+        $_ -match '^(CROUCH_READY|CROUCH_EXIT|STAND_READY|HURT_DUMP_READY|HURT_DESC|HURT_BOX|FOX_SHOT_READY|FOX_SPAWNED|FOX_COLL_LINE|FOX_MUZZLE|FOX_HIT_POS|FOX_CROUCH_HIT|HURT_MTX)'
     })
     $markers | ForEach-Object { Write-Output $_ }
     if ($DumpHurtboxes) {
@@ -326,7 +338,11 @@ try {
     if ((-not $DumpHurtboxes) -and $TraceCrouchExit -and -not ($markers -match '^CROUCH_EXIT')) {
         throw 'Fox crouch trace completed without observing Mario leave SquatWait.'
     }
-    if ((-not $DumpHurtboxes) -and (-not $TraceCrouchExit) -and -not ($markers -match '^FOX_CROUCH_HIT')) {
+    if ($InspectShotOnly -and -not ($markers -match '^FOX_COLL_LINE')) {
+        throw 'Fox crouch shot inspection completed without a live collision-line marker.'
+    }
+    if ((-not $DumpHurtboxes) -and (-not $TraceCrouchExit) -and
+        (-not $InspectShotOnly) -and -not ($markers -match '^FOX_CROUCH_HIT')) {
         throw 'Fox crouch probe completed without a natural Blaster damage hit.'
     }
     Write-Output "probe capture: $artifact"

@@ -82,6 +82,14 @@ $required = @(
     'gNdsAObjEvent32NormalizeReuseCount',
     'gNdsAObjEvent32NormalizeLastFailReason'
 )
+if ($Cadence) {
+    $required += @(
+        'sNdsRendererAdapterNativeStageWorkspace',
+        'sNdsRendererAdapterStageWorldCache',
+        'sNdsRendererAdapterStageWorldCacheCount',
+        'sNdsRendererAdapterDObjWorldCache'
+    )
+}
 $symbols = & $nm $elf | ForEach-Object { ($_ -split '\s+')[-1] }
 $missing = @($required | Where-Object { $symbols -notcontains $_ })
 if ($missing.Count -gt 0) {
@@ -230,6 +238,29 @@ try {
             # computed and then discarded, which is the last unmeasured link.
             'printf "  EX xobjs_num=%d k0=%d k1=%d k2=%d vec=%p vk=%d,%d,%d\n", ($e2 != 0) ? $e2->xobjs_num : -1, (($e2 != 0) && ($e2->xobjs_num > 0) && ($e2->xobjs[0] != 0)) ? $e2->xobjs[0]->kind : -1, (($e2 != 0) && ($e2->xobjs_num > 1) && ($e2->xobjs[1] != 0)) ? $e2->xobjs[1]->kind : -1, (($e2 != 0) && ($e2->xobjs_num > 2) && ($e2->xobjs[2] != 0)) ? $e2->xobjs[2]->kind : -1, ($e2 != 0) ? $e2->vec : (DObjVec *)0, (($e2 != 0) && ($e2->vec != 0)) ? $e2->vec->kinds[0] : -1, (($e2 != 0) && ($e2->vec != 0)) ? $e2->vec->kinds[1] : -1, (($e2 != 0) && ($e2->vec != 0)) ? $e2->vec->kinds[2] : -1',
             'printf "  E2 t=%f,%f,%f r=%f,%f,%f a=%f s=%f,%f,%f wait=%f frame=%f\n", ($e2 != 0) ? $e2->translate.vec.f.x : -1, ($e2 != 0) ? $e2->translate.vec.f.y : -1, ($e2 != 0) ? $e2->translate.vec.f.z : -1, ($e2 != 0) ? $e2->rotate.vec.f.x : -1, ($e2 != 0) ? $e2->rotate.vec.f.y : -1, ($e2 != 0) ? $e2->rotate.vec.f.z : -1, ($e2 != 0) ? $e2->rotate.a : -1, ($e2 != 0) ? $e2->scale.vec.f.x : -1, ($e2 != 0) ? $e2->scale.vec.f.y : -1, ($e2 != 0) ? $e2->scale.vec.f.z : -1, ($e2 != 0) ? $e2->anim_wait : -1, ($e2 != 0) ? $e2->anim_frame : -1',
+            # BUGS.md row 1 downstream proof. Slice 44 used to pass
+            # allow_stale=TRUE to BuildPersistentStageWorldMatrix on seven of
+            # eight frames for these "dynamic" bindings. The source animation
+            # above could therefore move while the cached world matrix stayed
+            # frozen. Find binding 20's persistent-cache entry and print its
+            # generation plus affine rows beside the eye scale so a cadence
+            # capture proves the renderer, not merely the animation player.
+            'set $bd = sNdsRendererAdapterNativeStageWorkspace.binding_dobjs[20]',
+            'set $ci = 0',
+            'set $found = -1',
+            'while ($ci < sNdsRendererAdapterStageWorldCacheCount) && ($found < 0)',
+            'if sNdsRendererAdapterStageWorldCache[$ci].dobj == $bd',
+            'set $found = $ci',
+            'else',
+            'set $ci = $ci + 1',
+            'end',
+            'end',
+            'if ($found >= 0) && (sNdsRendererAdapterDObjWorldCache != 0)',
+            'set $ws = (unsigned int)sNdsRendererAdapterStageWorldCache[$found].world_slot',
+            'printf "  RW bind=20 cache=%d gen=%u valf=%u slot=%u m=%d,%d,%d,%d|%d,%d,%d,%d|%d,%d,%d,%d|%d,%d,%d,%d\n", $found, sNdsRendererAdapterStageWorldCache[$found].generation, sNdsRendererAdapterStageWorldCache[$found].validated_frame, $ws, sNdsRendererAdapterDObjWorldCache[$ws].world.m[0][0], sNdsRendererAdapterDObjWorldCache[$ws].world.m[0][1], sNdsRendererAdapterDObjWorldCache[$ws].world.m[0][2], sNdsRendererAdapterDObjWorldCache[$ws].world.m[0][3], sNdsRendererAdapterDObjWorldCache[$ws].world.m[1][0], sNdsRendererAdapterDObjWorldCache[$ws].world.m[1][1], sNdsRendererAdapterDObjWorldCache[$ws].world.m[1][2], sNdsRendererAdapterDObjWorldCache[$ws].world.m[1][3], sNdsRendererAdapterDObjWorldCache[$ws].world.m[2][0], sNdsRendererAdapterDObjWorldCache[$ws].world.m[2][1], sNdsRendererAdapterDObjWorldCache[$ws].world.m[2][2], sNdsRendererAdapterDObjWorldCache[$ws].world.m[2][3], sNdsRendererAdapterDObjWorldCache[$ws].world.m[3][0], sNdsRendererAdapterDObjWorldCache[$ws].world.m[3][1], sNdsRendererAdapterDObjWorldCache[$ws].world.m[3][2], sNdsRendererAdapterDObjWorldCache[$ws].world.m[3][3]',
+            'else',
+            'printf "  RW bind=20 cache-miss target=%p count=%u\n", $bd, sNdsRendererAdapterStageWorldCacheCount',
+            'end',
             'end',
             ('if $n < ' + $Frames),
             'continue',
