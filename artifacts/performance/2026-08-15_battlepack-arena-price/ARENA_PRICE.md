@@ -397,7 +397,7 @@ architecture. Its negative control already exists and must stay non-zero while
 only one fighter is packed: `gNdsBattlePackMisses` (1,483 over the 12 entries
 measured here) is precisely the un-packed fighter's acquisitions.
 
-## 9. What this cycle did NOT do
+## 8. What this cycle did NOT do
 
 - **No default flip.** `NDS_R2_BATTLEPACK` / `NDS_R2_BATTLEPACK_KEEP_CACHE` /
   `NDS_R2_BATTLEPACK_DISPATCH` remain 0 / 0 / 1. Turning the pack on by default
@@ -426,7 +426,7 @@ measured here) is precisely the un-packed fighter's acquisitions.
   would answer (within-match accumulation) is the one the flat 52,864 → 52,400
   reading already argues against.
 
-## 10. Builds, artifacts and root ROMs
+## 9. Builds, artifacts and root ROMs
 
 **The four `boundary-*-trimmed.log` files are reduced.** Each raw log was ~19 MB,
 of which essentially all was devkitARM `-W` diagnostics from `decomp/` and
@@ -462,7 +462,7 @@ cycle that lands the publication seam, which changes the binary functionally and
 must re-measure anyway — proving byte-identity now would be proving it about a
 binary that is already superseded.
 
-## 11. Reproduction
+## 10. Reproduction
 
 ```powershell
 # Task A, the decisive read.  No build: build-c168-packfix-bp1 IS arm G.
