@@ -47,6 +47,55 @@ function New-GdbMiConsole {
     })
 }
 
+# A CAPTURE THAT TIMES OUT MUST SAY WHETHER THE GUEST CRASHED.
+#
+# 2026-08-14, board row R0: a corrupt DLDI SD image made the ROM load no assets,
+# so the Dream Land wallpaper pointer stayed an unrelocated token and the first
+# dereference took a data abort. Calico's __excpt_entry then disables the PU and
+# blx's a junk handler slot, leaving the ARM9 sliding through zeroed RAM in
+# ABORT mode forever. Every marker capture after that read as "timed out after
+# 120 seconds", which is indistinguishable from a slow capture -- so three
+# cycles were spent raising the ceiling (120 -> 600 -> 1800 s), bisecting eleven
+# commits, and writing a "GDB-STUB CEILING" verdict that had to be retracted.
+#
+# One register would have settled it on the first run. The core's CPSR mode
+# field says ABORT or UNDEF the moment it has crashed. Read it on the failure
+# path only -- the capture has already failed, so a second attach can make
+# nothing worse -- and never let this helper's own failure change the verdict.
+function Get-GdbMarkerTimeoutGuestState {
+    param([string]$Stdout)
+
+    try {
+        # A SECOND ATTACH IS NOT AVAILABLE, measured 2026-08-14: melonDS's GDB
+        # stub refuses every reconnection after the first session ends, so the
+        # obvious "attach again and read CPSR" costs 20 s and returns nothing.
+        # Classify from what gdb already printed instead.
+        #
+        # gdb reports the stop location the moment `target remote` lands. When
+        # the guest is healthy that is a named function (`0x... in memset ()`,
+        # `... in ndsRelocAssetIDForToken (...)`). When it has crashed it is
+        # `in ?? ()` -- no symbol owns the address, because Calico's
+        # __excpt_entry has disabled the PU and branched to a junk slot and the
+        # core is sliding through zeroed RAM in ABORT mode.
+        if ($Stdout -match '(?m)^(0x[0-9a-fA-F]+) in \?\? \(\)') {
+            return ("`nGUEST STATE AT ATTACH: pc=" + $Matches[1] +
+                    ', which no symbol owns. THE GUEST HAD ALREADY CRASHED ' +
+                    'BEFORE THIS CAPTURE ATTACHED -- an unhandled ARM9 abort ' +
+                    'leaves the core executing zeroed RAM. This is not a slow ' +
+                    'capture and raising the ceiling cannot help; attach a ' +
+                    'fresh session early and read $cpsr (mode 0b10111 = ' +
+                    'ABORT) to confirm, then find the fault. A corrupt DLDI ' +
+                    'SD image at emulators/melonds/dldi.bin did exactly this ' +
+                    'on 2026-08-14: no assets loaded, so the first ' +
+                    'unrelocated asset pointer aborted in battle setup.')
+        }
+        return ''
+    }
+    catch {
+        return ''
+    }
+}
+
 function Invoke-GdbMarkerScript {
     param(
         [string]$Gdb,
@@ -267,8 +316,9 @@ function Invoke-GdbMarkerScript {
     $elapsedSeconds = [Math]::Round($timer.Elapsed.TotalSeconds, 1)
 
     if ($timedOut) {
+        $guestState = Get-GdbMarkerTimeoutGuestState -Stdout $stdout
         throw ("GDB marker capture timed out after $TimeoutSeconds seconds " +
-               "(elapsed ${elapsedSeconds}s).`n$stdout`n$stderr")
+               "(elapsed ${elapsedSeconds}s).$guestState`n$stdout`n$stderr")
     }
 
     if ($exitCode -ne 0) {

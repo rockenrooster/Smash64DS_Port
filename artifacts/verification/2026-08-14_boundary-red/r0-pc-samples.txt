@@ -1,0 +1,26 @@
+===== SAMPLE t=15s =====
+0x02000ff2 in ?? ()
+R0 SAMPLE t=15s
+pc             0x2000ff2           0x2000ff2
+cpsr           0x400000b7          1073742007
+#0  0x02000ff2 in ?? ()
+#1  0x000020ee in ?? ()
+Backtrace stopped: previous frame identical to this frame (corrupt stack?)
+R0 COUNTERS status=0 passed=0 remain=0 pacing=0 taskman=0 ground=1 tstat=0 loaded=0 openfail=1402 payload=0 atlas=0
+[Inferior 1 (Remote target) detached]
+
+warning: could not convert 'game_status' from the host encoding (CP1252) to UTF-32.
+This normally should not happen, please file a bug report.
+
+===== SAMPLE t=45s =====
+SAMPLE 45s FAILED: GDB marker capture timed out after 60 seconds (elapsed 60s).
+
+
+===== SAMPLE t=90s =====
+SAMPLE 90s FAILED: GDB marker capture timed out after 60 seconds (elapsed 60s).
+
+
+===== SAMPLE t=150s =====
+SAMPLE 150s FAILED: GDB marker capture timed out after 60 seconds (elapsed 60s).
+
+

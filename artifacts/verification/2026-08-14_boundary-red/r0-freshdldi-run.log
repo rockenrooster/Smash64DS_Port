@@ -1,0 +1,51 @@
+__excpt_entry at 0x01fff364
+GDB marker capture: 0.2s elapsed of 60s ceiling (0% used).
+0x02023e1c in ndsRendererEndParticleQuads () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_renderer.c:15027
+15027	}
+R0 STATE pc=0x2023e1c cpsr=0x6000001f r12=0x8c6
+r0             0x0                 0
+r1             0x0                 0
+r2             0x0                 0
+r3             0x21888c8           35162312
+r4             0x2251768           35985256
+r5             0x2260088           36044936
+r6             0x227ab0c           36154124
+r7             0x0                 0
+r8             0x234b2c8           37008072
+r9             0x227ab18           36154136
+r10            0x0                 0
+r11            0x2100824           34605092
+r12            0x8c6               2246
+sp             0x227aa20           0x227aa20
+lr             0x2023db8           0x2023db8 <ndsRendererEndParticleQuads+12>
+pc             0x2023e1c           0x2023e1c <ndsRendererEndParticleQuads+112>
+cpsr           0x6000001f          1610612767
+sp_usr         0x227aa20           0x227aa20
+lr_usr         0x2023db8           0x2023db8 <ndsRendererEndParticleQuads+12>
+r8_fiq         0x0                 0
+r9_fiq         0x0                 0
+r10_fiq        0x0                 0
+r11_fiq        0x0                 0
+r12_fiq        0x0                 0
+sp_fiq         0x0                 0x0 <ndsRendererProfileGlobalStateHash>
+lr_fiq         0x0                 0x0 <ndsRendererProfileGlobalStateHash>
+sp_irq         0x2ff3f80           0x2ff3f80
+lr_irq         0x1fff3ec           0x1fff3ec <__arm_excpt_irq+88>
+sp_svc         0x2ff3fc0           0x2ff3fc0
+lr_svc         0x1fff2a0           0x1fff2a0 <armContextSave+40>
+sp_abt         0x0                 0x0 <ndsRendererProfileGlobalStateHash>
+lr_abt         0x0                 0x0 <ndsRendererProfileGlobalStateHash>
+sp_und         0x0                 0x0 <ndsRendererProfileGlobalStateHash>
+lr_und         0x0                 0x0 <ndsRendererProfileGlobalStateHash>
+spsr_fiq       0x10                16
+spsr_irq       0x2000003f          536870975
+spsr_svc       0x200000df          536871135
+spsr_abt       0x10                16
+spsr_und       0x10                16
+R0 EXC counters status=0 ground=1 tstat=0 loaded=38 openfail=0 payload=123 atlas=1
+[Inferior 1 (Remote target) detached]
+
+warning: could not convert 'game_status' from the host encoding (CP1252) to UTF-32.
+This normally should not happen, please file a bug report.
+
+R0 capture written to D:\Stuff\DevFolder\Smash64DS_Port\artifacts\verification\2026-08-14_boundary-red\r0-freshdldi.txt

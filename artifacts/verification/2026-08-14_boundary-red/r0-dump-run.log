@@ -1,0 +1,99 @@
+__excpt_entry at 0x01fff364
+GDB marker capture: 0.2s elapsed of 90s ceiling (0% used).
+0x02000c22 in ?? ()
+R0 STATE pc=0x2000c22 lr=0x20ef sp=0x2fffd8e cpsr=0x400000b7
+r0             0x0                 0
+r1             0x0                 0
+r2             0x34                52
+r3             0x31                49
+r4             0x22bdfec           36429804
+r5             0x3c                60
+r6             0x2251730           35985200
+r7             0x227a104           36151556
+r8             0x227a104           36151556
+r9             0x22516f4           35985140
+r10            0x2251730           35985200
+r11            0x225171c           35985180
+r12            0x205               517
+sp             0x2fffd8e           0x2fffd8e
+lr             0x20ef              0x20ef
+pc             0x2000c22           0x2000c22
+cpsr           0x400000b7          1073742007
+sp_usr         0x2279f20           0x2279f20
+lr_usr         0x205ed3f           0x205ed3f <lbCommonMakeSpriteGObj+26>
+r8_fiq         0x0                 0
+r9_fiq         0x0                 0
+r10_fiq        0x0                 0
+r11_fiq        0x0                 0
+r12_fiq        0x0                 0
+sp_fiq         0x0                 0x0 <ndsFighterMarioFoxRunImmediateProofChain>
+lr_fiq         0x0                 0x0 <ndsFighterMarioFoxRunImmediateProofChain>
+sp_irq         0x2ff3f80           0x2ff3f80
+lr_irq         0x1fff2c8           0x1fff2c8 <armWaitForIrq+4>
+sp_svc         0x2ff3fc0           0x2ff3fc0
+lr_svc         0x1fff2a0           0x1fff2a0 <armContextSave+40>
+sp_abt         0x2fffd8e           0x2fffd8e
+lr_abt         0x20ef              0x20ef
+sp_und         0x0                 0x0 <armIrqUnlockByPsr>
+lr_und         0x0                 0x0 <armIrqUnlockByPsr>
+spsr_fiq       0x10                16
+spsr_irq       0x1f                31
+spsr_svc       0x200000df          536871135
+spsr_abt       0x400000b7          1073742007
+spsr_und       0x10                16
+R0 --- code at pc ---
+   0x2000c02:	movs	r0, r0
+   0x2000c04:	movs	r0, r0
+   0x2000c06:	movs	r0, r0
+   0x2000c08:	movs	r0, r0
+   0x2000c0a:	movs	r0, r0
+   0x2000c0c:	movs	r0, r0
+   0x2000c0e:	movs	r0, r0
+   0x2000c10:	movs	r0, r0
+   0x2000c12:	movs	r0, r0
+   0x2000c14:	movs	r0, r0
+   0x2000c16:	movs	r0, r0
+   0x2000c18:	movs	r0, r0
+   0x2000c1a:	movs	r0, r0
+   0x2000c1c:	movs	r0, r0
+   0x2000c1e:	movs	r0, r0
+   0x2000c20:	movs	r0, r0
+=> 0x2000c22:	movs	r0, r0
+   0x2000c24:	movs	r0, r0
+   0x2000c26:	movs	r0, r0
+   0x2000c28:	movs	r0, r0
+   0x2000c2a:	movs	r0, r0
+   0x2000c2c:	movs	r0, r0
+   0x2000c2e:	movs	r0, r0
+   0x2000c30:	movs	r0, r0
+R0 --- words 0x02000f00 ---
+0x2000f00:	0x00000000	0x00000000	0x00000000	0x00000000
+0x2000f10:	0x00000000	0x00000000	0x00000000	0x00000000
+0x2000f20:	0x00000000	0x00000000	0x00000000	0x00000000
+0x2000f30:	0x00000000	0x00000000	0x00000000	0x00000000
+0x2000f40:	0x00000000	0x00000000	0x00000000	0x00000000
+0x2000f50:	0x00000000	0x00000000	0x00000000	0x00000000
+0x2000f60:	0x00000000	0x00000000	0x00000000	0x00000000
+0x2000f70:	0x00000000	0x00000000	0x00000000	0x00000000
+0x2000f80:	0x00000000	0x00000000	0x00000000	0x00000000
+0x2000f90:	0x00000000	0x00000000	0x00000000	0x00000000
+0x2000fa0:	0x00000000	0x00000000	0x00000000	0x00000000
+0x2000fb0:	0x00000000	0x00000000	0x00000000	0x00000000
+0x2000fc0:	0x00000000	0x00000000	0x00000000	0x00000000
+0x2000fd0:	0x00000000	0x00000000	0x00000000	0x00000000
+0x2000fe0:	0x00000000	0x00000000	0x00000000	0x00000000
+0x2000ff0:	0x00000000	0x00000000	0x00000000	0x00000000
+R0 --- vectors 0x00000000 ---
+0x0 <armIrqUnlockByPsr>:	0xea7ffacf	0xea7ffacf	0xea7ffacf	0xea7ffacf
+0x10 <armIrqUnlockByPsr+16>:	0x0012facf	0xe1280174	0xea7fface	0xe128017c
+R0 --- excpt handler slot 0x02fffd9c ---
+0x2fffd9c:	0x00000205	0x00203fc0	0x00000000	0x00000000
+0x2fffdac:	0x00210000	0x4e4c454d	0x00000000	0x00000000
+No symbol matches $lr.
+R0 EXC counters status=0 ground=1 tstat=0 loaded=0 openfail=1402 payload=0 atlas=0
+[Inferior 1 (Remote target) detached]
+
+warning: could not convert 'game_status' from the host encoding (CP1252) to UTF-32.
+This normally should not happen, please file a bug report.
+
+R0 capture written to D:\Stuff\DevFolder\Smash64DS_Port\artifacts\verification\2026-08-14_boundary-red\r0-dump.txt

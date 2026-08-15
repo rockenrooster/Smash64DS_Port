@@ -1,0 +1,125 @@
+M3_NATIVE_STAGE_CHECK_OK callbacks=8 dobjs=57 bindings=42 runs=54 epochs=49 triangles=202 cross_matrix_runs=5 cross_matrix_triangles=10 cross_matrix_foreign_corners=15 state_deltas=148 state_events=423 replay_commands=886 fail_closed_perturbations=12 manifest_fields=618 task26_manifest_fields=120 segment0_program_runs=26 segment0_program_bytes=92 segment0_source_checksum=0x47c2c19d segment0_table_checksum=0xcea1ff03 segment0_hot_checksum=0x54327dfb segment0_prepared_dense_checksum=0xf1c6fadc slab_bytes=12663 total_const_max_bytes=12755 sha256=eda2dbd6ee323c3eb33a323be46b61676d2f63057e315e6f288537f76555942c
+R2-03 E64b/E65 fixed-point cubic -- host error bound vs the decomp float
+  gameplay bound 0.0200 world units / radians
+
+  domain          samples   max|err|        rms       bias steepness gate
+  rotation        1689984   0.002842   0.000507  +0.000001       3.0 green
+  translation     2300256   0.006702   0.000679  +0.000002     173.3 green
+  conservative    1597400   0.043198   0.003078  +0.000005    2293.3 (reported)
+  rotation-Q      1689984   0.002842   0.000507  +0.000001       3.0 green
+  translation-Q   2300256   0.006702   0.000679  +0.000002     173.3 green
+  conservative-Q   1597400   0.043198   0.003078  +0.000005    2293.3 (reported)
+  linear-Q          63896   0.000796   0.000160  +0.000013       0.5 green
+  step-Q-exact      66836   0.000000   0.000000  +0.000000       0.0 green
+  parser-Q-exact    393216   0.000000   0.000000  +0.000000       0.0 green
+
+  'steepness' is L*max|rate| at the worst case -- the amplifier on the
+  Q12 basis quantum, and the whole reason the domain is stated.
+GREEN: every gated domain stays inside 0.0200. Worst gated deviation 0.006702.
+ok    div255 exhaustive over [0, 65152]
+ok    div255 cliff is above the reachable range
+ok    lerp channel over all 16.7M reachable inputs
+ok    nibble*255/15 == nibble*17
+ok    R0e I4 pair loop reads the generic loop's nibbles
+
+SPRITE_LERP_EXACT=PASS  three library divisions per pixel removed and R0e's paired row proven equivalent, both bit-exact
+MP floor-crossing kernel -- shipped vs the pre-cycle-117 float body
+  cases 2332800 hits 40417 ret_mismatch 0 hit_mismatch 0
+GREEN: every case returns the same verdict and the same hit BIT PATTERNS.
+cases 400000
+extent_fired 111961 extent_missed_hits 0
+sweep_fired 68993 segments_replayed 295114 sweep_missed_hits 0 sweep_missed_flat 0
+MP_LINE_EXTENT_REJECT_EXACT=PASS  every fired reject was replayed segment by segment and produced no hit and no flat-ascending flag
+opcodes defined in decomp : 15
+opcodes handled by parser : 15
+FTANIM_OPCODE_SURFACE=CLOSED  all 15 opcodes defined in the reference are handled by the runtime parser, and the parser invents none -- an AOT generator has a finite, known surface to cover
+FTANIM_EFFECT_SURFACE=STABLE  func_anim called only from nGCAnimEvent16End+nGCAnimEvent16Loop, root_dobj->flags written only by nGCAnimEvent16SetFlags
+  ok  gcParseDObjAnimJoint               ftParamUpdateAnimKeys parse arm when is_anim_joint
+  ok  ftAnimParseDObjFigatree            ftParamUpdateAnimKeys parse arm otherwise (decomp body)
+  ok  ndsR2FtAnimParseDObjFigatree       the shipped port parser the shim selects
+  ok  gcPlayDObjAnimJoint                ftParamUpdateAnimKeys play arm
+  ok  lbCommonPlayTranslateScaledDObjAnim ftParamUpdateAnimKeys play arm when translate_scales is set
+ANIM_NULL_GUARD=TOTAL  all 5 per-joint animation entry points are no-ops when anim_wait == AOBJ_ANIM_NULL, so ftParamUpdateAnimKeys may skip the parse and the play together
+AObjEvent16 files : 297
+AObjEvent32 files : 4  (ids 0x279, 0x27a, 0x309, 0x30a -- routed to the other decoder)
+scripts walked    : 5629
+scripts well-formed : 5629 (100.0%)
+
+FTANIM_RELOC_FORMAT=SOLVED  header, u32 big-endian swap, threaded internal fixups, derived table bound, script-region lane unswap, and MSB-first command bits -- every script in all 297 AObj16 files walks to End or a Loop. The generator can read the bank.
+scripts baked   : 5629
+commands        : 77959
+write records   : 145873
+scripts with no state (pure Block/Loop) : 0
+mismatches      : 0
+
+FTANIM_REAL_BAKE=PASS  every script in the shipped Mario/Fox bank resolves to control + write records that reproduce its per-track state timeline and its callback timeline, compared as bit patterns, with no opcode and no flags mask at replay time
+files            : 297
+scripts          : 5629
+records          : 145873
+blob             : 2917460 bytes (2.78 MB)
+same as 36-byte AObj records would be : 5251428 bytes (5.01 MB), so 44.4% smaller
+commands         : 71500
+control stream   : 143000 bytes (0.14 MB)
+index entries    : 5629
+non-integer rate_base (Linear, computed not authored) : 753
+verify           : 0 mismatches
+quantisation against the model (the loss this encoding accepts):
+   rate_base      max abs 7.324e-06  rel 0.001077%  (0.68 -> 0.67999267578125, FTMarioAnim085 script 8)
+   length         max abs 0.000e+00  rel 0.000000%  (0 -> 0, none)
+   length_invert  max abs 4.585e-10  rel 0.000006%  (0.007692307692307693 -> 0.007692307233810425, FTMarioAnim017 script 3)
+
+FTANIM_DENSE_BANK=OK  every record fits its declared encoding, the value fields carry the authored s16 words exactly, and the two fixed-point fields inherit the widths the runtime already uses
+header members  : rate_base:s32, length_invert:s32, value_base:s16, value_target:s16, rate_target:s16, length:s16, kind_track:u8, cmd_index:u8, pad:u16
+emitter format  : <iihhhhBBH (20 bytes)
+Q constants     : {'NDS_ANIM_DENSE_LENGTH_Q': 7, 'NDS_ANIM_DENSE_RATE_BASE_Q': 16, 'NDS_ANIM_DENSE_LENGTH_INVERT_Q': 30}
+
+FTANIM_DENSE_LAYOUT=AGREED  nds_anim_dense.h and generate_ftanim_dense_bank.py describe the same 20-byte record, field for field, with the same Q constants
+GBI decode fixtures passed: F3DEX2 VTX/TRI/MTX/POPMTX packing, F3DEX MVP-recalc matrix move-word packing, transformed and hardware raw/material triangle readiness, N64 matrix to DS 20.12 modelview-projection/modelview-stack vertex transform, wallpaper inverse/overlap oracle, and source snippets verified.
+NDS_PARTICLE_BANKS=PASS scripts=93/119 textures=34/47 tex_n64=262992 tex_ds=175140 pack=187459 linked=12195 asset=175264 atlas=128x64x4 quads=34/38 34frames cap=1 cell=64 whispy_native=1520 headroom=210320 spare=198125 source=0xa2a1e85f table=0xd22b30b6
+Particle bank pack passed: 93/119 reachable efcommon scripts, 34/47 textures, 262992 B N64 texture -> 175140 B DS, 12195 B linked (10912 script bank + 1283 index) of 210320 B arena headroom (198125 B spare) plus 175264 B NitroFS payload, 9 bit-exact CI4 textures, linear texel order pinned, .inc built, payload built, quad atlas 4x 128x64 A3I5, 34/38 textures in 34 frames (frame cap 1, cell cap 64) built; Whispy native 1520 B A5I3/A3I5/PAL16 (one lossless static leaf frame).
+Harness registry check passed: 3 harness mappings, 4 verifier scripts, 0 drift.
+Running verifier: battle_playable_realtime [verify-battle-playable-realtime-harness.ps1]
+Attack visual effects passed: 178/178 Mario/Fox motion calls across 17 source kinds plus blaster glow and three fireball routes have bounded DS presentation, and the reflector routes to its source maker.
+Task 9 float ITCM passed: phase2=1 task16Compare/I2f/AddSub=1/1/1 stockBytes=1952 phase2Bytes=36 task16RawBytes=732 fillBytes=0 itcm=29792/32768 free=2976 omitted=[] libgcc=C:/devkitPro/devkitARM/bin/../lib/gcc/arm-none-eabi/15.2.0/thumb/libgcc.a sha256=C755ADC33ECA252260360327904591B8462CCE5C25E48B0E881AC0B295953F48 code=[_arm_addsubsf3.o=684/E1F79C55786F2323E18924D71A1268945789DD33C3C8C8861042F41A5CCB4A91, _arm_muldivsf3.o=760/C313BBE04B3484CDBE9E6B14BCB14B0828F308B076616D080AA89204FDFD940A, _arm_cmpsf2.o=276/2B656E12FDE0F34CEB17395A5FF8FCC1EF0CEBBF94F8EDA3725BD26C0B3C2884, _arm_unordsf2.o=56/7B4D5CFBE032C0D80470495D888A2598C8D77BD434831B0F28488C0070A60407, _arm_fixsfsi.o=92/73908D204E4625C30FC21DFF9A2F817E26C53D161164A032BD229A9DCDD6EDEE, _arm_fixunssfsi.o=84/1BFBAB489E0E7B2166376F736F04F891A50F7BF04191CFB8731E5294B752D66F, task16-addsub=404/9A74410744210A544CC57EA1323C3C9A896D430E2295718870DA4B827E4139FE, task16-i2f=92/EE6FE8233D98D26A602988362BF014D08515AA477EF493DE55F31B26ED8D0573, phase2-fcmpeq=36/07B3147B9CF599BDD408AF922A4B9F6891734B4C3AB7DE7C3A700DDE92B6FBE2, task16-compare=236/F822244564E6EFF11F3812B241A2E71ED7E013D34905687C4D9E2E8242C1185D]
+Renderer ITCM placement passed: elf=smash64ds-battle-playable-proof-hwtri.elf itcm=29792/32768 renderer=12944 symbols=[ndsRendererHardwareLitShadeColorPrepared=460, ndsRendererHardwareSubmitVertex=2596, ndsRendererSubmitHardwareTriangle=2772, ndsRendererScanList=7116] inlineCollapsed=[]
+Task 20 DTCM layout passed: elf=smash64ds-battle-playable-proof-hwtri.elf sections=8800/152 owners=[sNdsNativeFighterDenseNormals=0x02ff0000+2164, sNdsNativeFighterPreparedDense=0x02ff0874+6492, sNdsRendererRuntimeFrameSummary=0x02ff21d0+108, sControllerPlaybackEnabled=0x02ff2240+4, sControllerPlaybackConnectedMask=0x02ff2244+4, sControllerPlaybackPads=0x02ff2248+24, __irq_table=0x02ff2260+128, __sched_state=0x02ff22e0+24] sharedGap=0x02ff22f8..0x02ff3e80/7048 stackTops=usr:0x02ff3e80,irq:0x02ff3f80,svc:0x02ff3fc0 reserves=irq:256,svc:64,bios:64 forbiddenDmaRefs=0(applicationOwners=3) stackEvidence=[not-supplied]
+GDB marker capture: 27.8s elapsed of 120s ceiling (23% used).
+WARNING: battle_playable Pupupu locked-30 presentation slipped below its target: present=238 x0.1 fps; holds-30 remains a published metric until renderer cuts fit every two-vblank phase budget.
+battle_playable Pupupu realtime pacing smoke passed: frames=211 fps=238/474 ticks=296558720 rprof=0 gxram=466/1099 gxstat=0x6009600/ctrl=0x19 ftrContract=6784/6784/geom0x222005/cycle0x100000/rm0xc4112078/light424/424/bounds424/0 ftrTri=132712/p067840/p164872/own424 oracle=0/0/0 batch=103/725/103/texprep49/725 wallCache=1/0/1/fb0/src300x220/66000/ticks2442240/448128 wallFinal=direct1/skip0/change1/px49152/stage0/0/bg20/0/98304/bg30/0/0 mtx=load99/scale0/p0,0,0,0/mv0,0,0,0,0,0 submit=raw658/snap0/cross44/noz126/dec0/prim0/range0/rej0/div1152 lazy=load519/xf0/hit0/new0/reuse0/ovf0 rawcand=658/0/44 postest=0/0/e0/w0/c0/mw0/drop0 vraw=0..0/0..0/0..0 vhw=0..0/0..0/0..0 depth=stage0:0..0/p00:0..0/p10:0 clip=0 texProof=0/0/0 sample=0/0/0 alias=0 st=0..0/0..0 texUse=0/0/0/0/0/impl0/first0x0/flags0x0/w0x0/w1x0/geom0x0 texFmt=conv0x0/bind0x0/pal0x0/rej0x0/why0x0 texLane=layout0x0/byte0/half0/bFmt0x0/hFmt0x0/bMap0x0/hMap0x0 stageCarry=42/42/tex32/tile34/short6/6/seg3 stageAcct=frames212/boot0,0/weapon0,0/terminal0 combine=0/0/lit0/mat0/proj126 light=0/0/0 profile=present816960/draw564160/stage0/mat0/dl0/tex0/conv0/upload0 texUploads=0/0 binds=54 vtx=2484 tri=828 texDirect=0 intrinsicM3=9/121/828 intrinsicM4=24/61696/hits646/fence0 water=2/0/1 fastWall=state2/seed1/1/0/degraded0/seedTicks0/queue0/apply0/skip0/clamp0/0/0/invalid0/reuse0/affine0/post0/0/hash0xa2dcc88d/opaque49152/restore0 texHash=0/0/0/0/0 cpu=setup1/proc33/target33/stick4/obj0x4 aobj32=40/293/reuse8/fail0
+Published ROM contract passed: smash64ds-battle-playable-hwtri.nds, smash64ds.nds
+Selected capture runtime modes renderer=-1 fox=0.
+Captured live melonDS window: D:\Stuff\DevFolder\Smash64DS_Port\artifacts\visibility\2026-08-14_canonical_fast_223326-4520838-p34912_next.png (877x1400)
+Captured live melonDS window: D:\Stuff\DevFolder\Smash64DS_Port\artifacts\visibility\2026-08-14_canonical_fast_223326-4520838-p34912.png (877x1400)
+Top screen camera registration: scale=1.00 dx=0 dy=0 sample=1.587%.
+Top screen visible: 49152/49152 different pixels (100.000%).
+Top screen green content: 19063/49152 dominant-green pixels (38.784%).
+Top screen detail content: 27591/49152 non-white/non-green pixels (56.134%).
+Top screen delta: raw=1340/49152 (2.726%) meaningful=843/49152 (1.715%, channel>=25) mean=1.95 overlap=100.000%.
+Region left_bush: non-clear=1750/1750 (100.000%) green=817/1750 (46.686%) detail=905/1750 (51.714%) fighter=587/1750 (33.543%) changed=0/1750 (0.000%)
+Region right_bush: non-clear=1750/1750 (100.000%) green=4/1750 (0.229%) detail=1721/1750 (98.343%) fighter=1229/1750 (70.229%) changed=7/1750 (0.400%)
+Region fox: non-clear=2475/2475 (100.000%) green=410/2475 (16.566%) detail=2037/2475 (82.303%) fighter=1094/2475 (44.202%) changed=9/2475 (0.364%)
+Region mario: non-clear=2475/2475 (100.000%) green=320/2475 (12.929%) detail=2144/2475 (86.626%) fighter=1431/2475 (57.818%) changed=0/2475 (0.000%)
+Region stage_body: non-clear=7425/7425 (100.000%) green=3113/7425 (41.926%) detail=4085/7425 (55.017%) fighter=3175/7425 (42.761%) changed=406/7425 (5.468%)
+Top screen visible: 49152/49152 different pixels (100.000%).
+Top screen green content: 19087/49152 dominant-green pixels (38.833%).
+Top screen detail content: 27558/49152 non-white/non-green pixels (56.067%).
+Region left_bush: non-clear=1750/1750 (100.000%) green=817/1750 (46.686%) detail=905/1750 (51.714%) fighter=587/1750 (33.543%)
+Region right_bush: non-clear=1750/1750 (100.000%) green=5/1750 (0.286%) detail=1720/1750 (98.286%) fighter=1230/1750 (70.286%)
+Region fox: non-clear=2475/2475 (100.000%) green=410/2475 (16.566%) detail=2038/2475 (82.343%) fighter=1090/2475 (44.040%)
+Region mario: non-clear=2475/2475 (100.000%) green=320/2475 (12.929%) detail=2144/2475 (86.626%) fighter=1431/2475 (57.818%)
+Region stage_body: non-clear=7425/7425 (100.000%) green=3123/7425 (42.061%) detail=4064/7425 (54.734%) fighter=3163/7425 (42.599%)
+Horizontal detail left_bush: varied=278/496 (56.048%) max-flat-run=8px (limit=32px).
+Horizontal detail stage_body: varied=2246/4920 (45.650%) max-flat-run=43px (limit=112px).
+Horizontal detail pond: varied=1232/2736 (45.029%) max-flat-run=81px (limit=96px).
+Horizontal detail left_bush: varied=278/496 (56.048%) max-flat-run=8px (limit=32px).
+Horizontal detail stage_body: varied=2248/4920 (45.691%) max-flat-run=43px (limit=112px).
+Horizontal detail pond: varied=1247/2736 (45.577%) max-flat-run=81px (limit=96px).
+Top screen visible: 49152/49152 different pixels (100.000%).
+Top screen green content: 19063/49152 dominant-green pixels (38.784%).
+Top screen detail content: 27591/49152 non-white/non-green pixels (56.134%).
+Top-screen required region detail: 4411/7200 pixels (61.264%).
+Published fast-iteration capture: D:\Stuff\DevFolder\Smash64DS_Port\artifacts\visibility\latest.png (previous: D:\Stuff\DevFolder\Smash64DS_Port\artifacts\visibility\previous.png)
+Boundary verification profile passed.
+EXIT=
+
+[exited with code 0]

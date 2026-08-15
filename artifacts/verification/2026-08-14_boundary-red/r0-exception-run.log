@@ -1,0 +1,7 @@
+__excpt_entry at 0x01fff364
+R0 exception probe ended: GDB marker capture timed out after 180 seconds (elapsed 180s).
+0x02000f6e in ?? ()
+Breakpoint 1 at 0x1fff364: file /home/davem/projects/devkitpro/pacman-packages/calico/src/calico-1.2.0/source/nds/arm9/excpt_handler.32.s, line 71.
+
+
+R0 capture written to D:\Stuff\DevFolder\Smash64DS_Port\artifacts\verification\2026-08-14_boundary-red\r0-exception.txt

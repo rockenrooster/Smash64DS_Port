@@ -1,0 +1,3 @@
+warning: could not convert 'scVSBattleStartBattle' from the host encoding (CP1252) to UTF-32.
+This normally should not happen, please file a bug report.
+Temporary breakpoint 1 at 0x207fdec: file D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_scvsbattle.c, line 243.

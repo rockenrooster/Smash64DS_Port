@@ -1,0 +1,47 @@
+__excpt_entry at 0x01fff364
+R0 exception probe ended: GDB marker capture timed out after 45 seconds (elapsed 45.1s).
+0x02020e5c in ndsRendererSetParticleCamera (projection=projection@entry=0x225fc08 <sNdsParticleCameraProjection>, modelview=modelview@entry=0x225fb88 <sNdsParticleCameraModelview>) at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_renderer.c:13585
+13585	{
+R0 STATE pc=0x2020e5c cpsr=0x2000001f r12=0x234b2c8
+r0             0x225fc08           36043784
+r1             0x225fb88           36043656
+r2             0x227ab24           36154148
+r3             0x2188930           35162416
+r4             0xbe0c693b          3188484411
+r5             0x0                 0
+r6             0xbdb9171f          3183023903
+r7             0x225fb84           36043652
+r8             0x234b2c8           37008072
+r9             0x227ab18           36154136
+r10            0x227ab0c           36154124
+r11            0x227ab18           36154136
+r12            0x234b2c8           37008072
+sp             0x227a8a0           0x227a8a0
+lr             0x20a5f91           0x20a5f91 <ndsParticleSetCurrentCamera+1648>
+pc             0x2020e5c           0x2020e5c <ndsRendererSetParticleCamera+36>
+cpsr           0x2000001f          536870943
+sp_usr         0x227a8a0           0x227a8a0
+lr_usr         0x20a5f91           0x20a5f91 <ndsParticleSetCurrentCamera+1648>
+r8_fiq         0x0                 0
+r9_fiq         0x0                 0
+r10_fiq        0x0                 0
+r11_fiq        0x0                 0
+r12_fiq        0x0                 0
+sp_fiq         0x0                 0x0 <ndsParticleDrawSourceAssetQuad>
+lr_fiq         0x0                 0x0 <ndsParticleDrawSourceAssetQuad>
+sp_irq         0x2ff3f80           0x2ff3f80
+lr_irq         0x1fff3ec           0x1fff3ec <__arm_excpt_irq+88>
+sp_svc         0x2ff3fc0           0x2ff3fc0
+lr_svc         0x1fff2a0           0x1fff2a0 <armContextSave+40>
+sp_abt         0x0                 0x0 <ndsParticleDrawSourceAssetQuad>
+lr_abt         0x0                 0x0 <ndsParticleDrawSourceAssetQuad>
+sp_und         0x0                 0x0 <ndsParticleDrawSourceAssetQuad>
+lr_und         0x0                 0x0 <ndsParticleDrawSourceAssetQuad>
+spsr_fiq       0x10                16
+spsr_irq       0x4000003f          1073741887
+spsr_svc       0x200000df          536871135
+spsr_abt       0x10                16
+spsr_und       0x10                16
+
+
+R0 capture written to D:\Stuff\DevFolder\Smash64DS_Port\artifacts\verification\2026-08-14_boundary-red\r0-timeout-classify.txt

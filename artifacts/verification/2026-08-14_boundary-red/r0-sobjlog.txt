@@ -1,0 +1,4 @@
+warning: could not convert '$n' from the host encoding (CP1252) to UTF-32.
+This normally should not happen, please file a bug report.
+Breakpoint 1 at 0x205ecf0: file D:/Stuff/DevFolder/Smash64DS_Port/src/port/sprite_preview_backend.c, line 132.
+R0 SOBJ n=1 gobj=0x22be080 sprite=0x3eb lr=0x205ed3f

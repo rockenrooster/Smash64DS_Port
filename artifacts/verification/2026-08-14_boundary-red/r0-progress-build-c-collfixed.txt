@@ -1,0 +1,9 @@
+warning: could not convert 'scVSBattleStartBattle' from the host encoding (CP1252) to UTF-32.
+This normally should not happen, please file a bug report.
+Temporary breakpoint 1 at 0x207f2a8: file D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_scvsbattle.c, line 243.
+
+Temporary breakpoint 1, scVSBattleStartBattle () at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_scvsbattle.c:243
+243	    gNdsSCVSBattleOriginalFuncStartResult =
+R0 BP1 reached
+Breakpoint 2 at 0x2024928: file D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_renderer.c, line 15360.
+Breakpoint 3 at 0x204f238: file D:/Stuff/DevFolder/Smash64DS_Port/src/port/taskman_seam.c, line 4645.

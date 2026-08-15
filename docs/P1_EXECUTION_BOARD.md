@@ -8443,9 +8443,42 @@ is redirecting the *helper* `ftAnimGetTargetValue`, not the parser itself.
 
 ## Red Queue
 
-**R0 (measured 2026-08-14, blocks the widest verifier) — the Boundary realtime
-marker capture never reaches GO, and it is a REGRESSION, not a ceiling. The
-previous "GDB-STUB CEILING, do not chase the ROM" verdict is RETRACTED.**
+**R0 — CLOSED GREEN 2026-08-14. The Boundary red was a corrupt local DLDI SD
+image, not a commit; the five-commit bisect window is REFUTED by measurement.**
+Evidence: `artifacts/verification/2026-08-14_boundary-red/BOUNDARY_RED.md`
+(log `boundary-after-dldi-reset.log` — `Boundary verification profile passed.`,
+exit 0, zero `Exception:`, marker capture **27.8 s of the 120 s ceiling**).
+
+- **No source byte changed.** `emulators/melonds/dldi.bin` (gitignored,
+  536,870,912 B) left the ROM loading nothing — `sNdsRelocLoadedFileCount 0`,
+  `gNdsRelocAssetPayloadReadCount 0` — so `gMPCollisionGroundData->wallpaper`
+  stayed the raw token `0x3eb`, and `lbCommonMakeSObjForGObj`'s first access
+  (`sprite->bmsiz`, address `0x41c`) took a data abort inside
+  `grWallpaperMakeCommon`, reached from `ndsBaseSCVSBattleStartBattle+0x5a`.
+- **The aftermath is why it read as a timeout.** Calico's `__excpt_entry`
+  disables the protection unit and `blx`es the junk handler slot `0x205`, so
+  the ARM9 slides through zeroed RAM in ABORT mode forever
+  (`cpsr=0x400000b7`, `r12=0x205`, `lr_usr=lbCommonMakeSpriteGObj+26`,
+  `spsr_abt==cpsr`). Reproduced four times.
+- **Three arms, one variable:** 512 MB image → ABORT; DLDI **off** → SYSTEM
+  (diagnosis only — DLDI-on is retail parity and ≈29,696 P95 ticks); fresh
+  melonDS-created 16,957,440 B image, DLDI on → SYSTEM and Boundary green.
+  Old image preserved at `emulators/melonds/dldi.bin.broken-2026-08-14`.
+- **Window refuted, not argued.** `build-c-collfixed` (08-13 19:25) and
+  `build-c156-vfxsymmetry` (08-14 10:44) — both *before* the window — abort
+  with identical registers. Eight of the eleven commits ship no byte anyway:
+  `54d7d7862e4` is comment-only, and `813207773c1` touches a checker the
+  Makefile's 16-entry script list does not contain.
+- **Landed so it cannot cost a fourth cycle:** `scripts/lib/gdb-markers.ps1`
+  classifies a timeout from gdb's own attach line — `in ?? ()` means the guest
+  had already crashed, so the ceiling is not the lever. Proven on both real
+  captures from this cycle. **A second attach is not available: melonDS's stub
+  refuses every reconnection after the first session ends** (measured twice) —
+  sample the PC with a *first* attach instead.
+- **Superseded:** the "REGRESSION, not a ceiling" framing below. Not a ceiling
+  was right and stands (1,800 s proved it). Not a regression either.
+
+**(historical) R0 as measured 2026-08-14 before the cause was found.**
 Evidence and method: `artifacts/performance/2026-08-14_runtime2-p95-closure/GATE_ARM_OWNERS.md` §1.
 
 - **The ceiling is refuted by measurement.** The loop harness was driven directly

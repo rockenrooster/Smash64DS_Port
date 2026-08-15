@@ -1,0 +1,50 @@
+__excpt_entry at 0x01fff364
+GDB marker capture: 0.2s elapsed of 60s ceiling (0% used).
+0x02000d82 in ?? ()
+R0 STATE pc=0x2000d82 cpsr=0x400000b7 r12=0x205
+r0             0x0                 0
+r1             0x0                 0
+r2             0x34                52
+r3             0x31                49
+r4             0x22c1aec           36444908
+r5             0x3c                60
+r6             0x2255230           36000304
+r7             0x227dc04           36166660
+r8             0x227dc04           36166660
+r9             0x22551f4           36000244
+r10            0x2255230           36000304
+r11            0x225521c           36000284
+r12            0x205               517
+sp             0x2fffd8e           0x2fffd8e
+lr             0x20ef              0x20ef
+pc             0x2000d82           0x2000d82
+cpsr           0x400000b7          1073742007
+sp_usr         0x227da20           0x227da20
+lr_usr         0x205e1fb           0x205e1fb <lbCommonMakeSpriteGObj+26>
+r8_fiq         0x0                 0
+r9_fiq         0x0                 0
+r10_fiq        0x0                 0
+r11_fiq        0x0                 0
+r12_fiq        0x0                 0
+sp_fiq         0x0                 0x0 <ndsFighterMarioFoxRunImmediateProofChain>
+lr_fiq         0x0                 0x0 <ndsFighterMarioFoxRunImmediateProofChain>
+sp_irq         0x2ff3f80           0x2ff3f80
+lr_irq         0x1fff2c8           0x1fff2c8 <armWaitForIrq+4>
+sp_svc         0x2ff3fc0           0x2ff3fc0
+lr_svc         0x1fff2a0           0x1fff2a0 <armContextSave+40>
+sp_abt         0x2fffd8e           0x2fffd8e
+lr_abt         0x20ef              0x20ef
+sp_und         0x0                 0x0 <armIrqUnlockByPsr>
+lr_und         0x0                 0x0 <armIrqUnlockByPsr>
+spsr_fiq       0x10                16
+spsr_irq       0x1f                31
+spsr_svc       0x200000df          536871135
+spsr_abt       0x400000b7          1073742007
+spsr_und       0x10                16
+R0 EXC counters status=0 ground=1 tstat=0 loaded=0 openfail=1403 payload=0 atlas=0
+[Inferior 1 (Remote target) detached]
+
+warning: could not convert 'game_status' from the host encoding (CP1252) to UTF-32.
+This normally should not happen, please file a bug report.
+
+R0 capture written to D:\Stuff\DevFolder\Smash64DS_Port\artifacts\verification\2026-08-14_boundary-red\r0-abort-build-c-collfixed.txt
