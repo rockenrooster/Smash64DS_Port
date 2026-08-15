@@ -1,0 +1,8 @@
+source=artifacts/performance/2026-08-15_cfx-ring-split/v3-b-c177/arm9-profile.csv
+regions=1601
+marginal_frames=80
+marginal_threshold_ticks=1359694
+marginal_axis=total_cycles-halt_wait
+rows=54688359
+distinct_pcs=109747
+cycles_per_tick=2

@@ -1,0 +1,41 @@
+window verified against D:\Stuff\DevFolder\Smash64DS_Port\builds\build-c178-cfxring-a2-prof\nds_build_config.h
+scene:         Battle
+census window: frames 438..2038
+per-frame region: True (region r = presented frame 438 + r)
+dldi:          True
+profiler csv:  D:\Stuff\DevFolder\Smash64DS_Port\artifacts\performance\2026-08-15_cfx-ring-split\v3-a2-c178\arm9-profile.csv
+
+  format=melonDS-arm9-retail-profile-v3
+  instructions=1061301485
+  cycles=3863069820
+  program_counters=54667166
+  regions=1601
+  timestamp_discontinuities=0
+  stall_issue=691990538
+  stall_icache_fill=1176682184
+  stall_dcache_fill=860594923
+  stall_write_buffer=163271642
+  stall_bus_contention=118189962
+  stall_dma_hold=27056980
+  stall_cart_spin=0
+  stall_interlock=138761322
+  stall_halt_wait=686522269
+  stall_gx_paid=0
+  stall_gx_blamed=0
+  stall_partition_total=3863069820
+  stall_partition_residual=0
+  gx_stall_events=0
+  gx_stall_raw_cycles=0
+
+profile      D:\Stuff\DevFolder\Smash64DS_Port\artifacts\performance\2026-08-15_cfx-ring-split\v3-a2-c178\arm9-profile.csv
+elf          D:\Stuff\DevFolder\Smash64DS_Port\builds\build-c178-cfxring-a2-prof\smash64ds-battle-playable-tickhud-hwtri.elf
+pc rows      54,667,166
+cycles       3,863,069,820
+unattributed 65,191 (0.00% -- BIOS, ITCM stubs, data)
+symbols hit  1,475 of 3,602 FUNC symbols
+
+section sizes
+  .itcm               32,152
+  .text.hot            4,588  free 3,604 of cap 8,192
+  .text.hot.draw       5,268  free 2,924 of cap 8,192
+  .main.bss        1,307,056

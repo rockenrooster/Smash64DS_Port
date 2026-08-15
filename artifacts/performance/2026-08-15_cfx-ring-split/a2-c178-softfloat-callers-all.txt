@@ -1,0 +1,51 @@
+basis     ticks/frame = cycles / (2 x 1601 frames) = cycles / 3,202
+non-idle work 3,176,513,501 cycles (armWaitForIrq 686,556,319 excluded)
+attributed    236,791,443 cycles = 7.45% of non-idle
+
+helper                          calls       cycles  cyc/call
+__aeabi_fmul                2,603,211   65,699,551      25.2
+__aeabi_fadd                1,596,362   95,505,023      35.9
+__aeabi_fsub                1,063,891    1,063,891      35.9 (thunk -> __aeabi_fadd)
+__aeabi_fcmpeq              1,047,163   11,058,485      10.6
+__aeabi_fcmplt                519,978    7,576,837      14.6
+__aeabi_f2iz                  499,273    6,333,884      12.7
+__aeabi_i2f                   310,648    5,059,402      16.3
+__aeabi_fdiv                  299,716   35,170,228     117.3
+__aeabi_fcmpgt                258,091    3,811,863      14.8
+__aeabi_ui2f                  126,360      505,427       4.0
+__floatsisf                   126,356      971,223       7.7
+__aeabi_l2f                   118,087    3,382,893      28.6
+__aeabi_fcmple                 80,653    1,167,310      14.5
+__aeabi_fcmpge                 38,696      549,318      14.2
+
+caller                                                   calls   attributed   %work      tk/fr   calls/fr
+ndsBaseGcPlayMObjMatAnim                               637,603   16,155,194   0.51%      5,045      398.3
+syMatrixLookAtReflectF                                 511,565   15,306,594   0.48%      4,780      319.5
+ndsStageMPAdjustFloorLoopWallSweep                     379,309   12,783,690   0.40%      3,992      236.9
+mpCollisionGetFCCommonFloor                            254,489    8,785,483   0.28%      2,744      159.0
+ndsR2FtAnimParseDObjFigatree                           241,631    8,674,729   0.27%      2,709      150.9
+ndsRendererSubmitParticleQuad                          361,107    8,416,468   0.26%      2,629      225.6
+syMatrixPerspFastF                                     175,885    8,275,713   0.26%      2,585      109.9
+syUtilsArcTan.part.0                                   115,063    7,226,708   0.23%      2,257       71.9
+syMatrixLookAtF                                        196,308    6,513,152   0.21%      2,034      122.6
+guMtxCatF                                              199,424    6,096,253   0.19%      1,904      124.6
+ndsBaseGcPlayDObjAnimJoint                             272,704    5,871,551   0.18%      1,834      170.3
+syMatrixF2L                                            309,411    5,867,073   0.18%      1,832      193.3
+ndsParticleSetCurrentCamera                            204,645    4,664,522   0.15%      1,457      127.8
+func_ovl2_800ED490                                     155,673    4,640,250   0.15%      1,449       97.2
+ftComputerCheckDetectTarget                            137,821    4,259,132   0.13%      1,330       86.1
+lbParticleDrawTextures                                 143,276    3,963,738   0.12%      1,238       89.5
+lbCommonCos                                            188,077    3,876,708   0.12%      1,211      117.5
+ndsRendererAdapterBuildNativeMaterialSnapshot          135,360    3,863,090   0.12%      1,206       84.5
+gmCameraUpdateInterests                                147,206    3,828,949   0.12%      1,196       91.9
+__floatsisf                                            116,827    3,346,797   0.11%      1,045       73.0
+
+subsystem                         cycles   %work    fns
+matrices / transform          51,169,594   1.61%     12
+other                         47,517,431   1.50%    146
+gameplay (other decomp)       43,515,658   1.37%    112
+animation evaluation          37,186,921   1.17%      9
+collision / stage MP          33,726,316   1.06%     17
+renderer / other               9,147,963   0.29%      5
+CPU player AI                  8,840,880   0.28%     16
+particles                      5,686,677   0.18%      4

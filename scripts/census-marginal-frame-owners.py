@@ -42,6 +42,19 @@ Usage:
   python scripts/census-marginal-frame-owners.py --report \
       --pc-csv artifacts/performance/<out>/marginal-pc.csv \
       --build builds/<dir> [--top 30]
+  python scripts/census-marginal-frame-owners.py --diff \
+      --pc-csv <candidate>.csv --pc-csv-base <control>.csv \
+      --build builds/<dir> [--build-base builds/<other>] [--top 30]
+
+`--diff` exists because a stall PARTITION is only readable as a difference. A
+single capture says a function costs N cycles of `icache_fill`; it cannot say
+whether flipping one switch MOVED work from `issue` into `icache_fill`, which is
+the question a candidate/control pair is run to answer. It requires the two arms
+to have IDENTICAL CODE LAYOUT -- one runtime-gated `.data` word apart, the
+`NDS_R2_*_DISPATCH` shape -- because it joins the two captures ON THE PROGRAM
+COUNTER. It verifies that itself from the two symbol tables and refuses
+otherwise; a relinked pair would silently attribute one arm's PCs to the other
+arm's functions.
 """
 
 from __future__ import annotations
@@ -560,10 +573,122 @@ def owner_table(rows, entries, starts, inline, elf: Path, divisor: float):
             print(f"      {value / divisor:9,.0f}  {name}")
 
 
+def read_pc_rows(pc_csv: Path):
+    """-> (rows keyed by pc, meta dict)."""
+    meta = {}
+    meta_path = pc_csv.with_suffix(".meta.txt")
+    if meta_path.exists():
+        for line in meta_path.read_text().splitlines():
+            key, _, value = line.partition("=")
+            meta[key.strip()] = value.strip()
+    rows = {}
+    for row in csv.DictReader(pc_csv.open(newline="")):
+        rows[row["pc"]] = row
+    return rows, meta
+
+
+def assert_same_layout(elf_a: Path, elf_b: Path) -> None:
+    """Refuse a diff across a relink.
+
+    The join key is the program counter, so if the two arms placed their code
+    differently the same PC names two different functions and every row of the
+    output is fiction. `nm` addresses are the cheapest complete statement of the
+    layout: identical address->name maps means identical placement.
+    """
+    if elf_a.resolve() == elf_b.resolve():
+        return
+    def table(elf):
+        return {(addr, name) for addr, _size, name in elf_symbols(elf)}
+    only_a = table(elf_a) - table(elf_b)
+    only_b = table(elf_b) - table(elf_a)
+    if only_a or only_b:
+        sample = sorted(only_a | only_b)[:6]
+        raise SystemExit(
+            f"{elf_a.name} and {elf_b.name} do not share a code layout: "
+            f"{len(only_a)} symbols only in the first, {len(only_b)} only in "
+            f"the second, e.g. {sample}. A per-PC diff joins the two captures "
+            "on the program counter, so this comparison would attribute one "
+            "arm's addresses to the other arm's functions. Rebuild the pair so "
+            "they differ only in a runtime-gated .data word.")
+
+
+def diff(pc_csv: Path, pc_csv_base: Path, build: Path, build_base: Path,
+         top: int) -> int:
+    """Per-symbol candidate-minus-control delta, by stall class.
+
+    Two populations are printed and they answer different questions. The
+    WHOLE-MATCH delta covers the same 1,600 presented frames on both arms and is
+    the clean total. The MARGINAL delta is each arm masked to ITS OWN most
+    expensive frames, which is the right population for a percentile -- the same
+    convention rank-80 uses -- but the two masks are not the same frame set, so
+    read it as "where the cost sits at the percentile", never as a total.
+    """
+    elf = next(build.glob("*.elf"), None)
+    elf_base = next(build_base.glob("*.elf"), None)
+    if elf is None or elf_base is None:
+        raise SystemExit(f"no .elf in {build} or {build_base}")
+    assert_same_layout(elf, elf_base)
+
+    rows, meta = read_pc_rows(pc_csv)
+    rows_base, meta_base = read_pc_rows(pc_csv_base)
+    regions = int(meta.get("regions", "0") or 0)
+    regions_base = int(meta_base.get("regions", "0") or 0)
+    marg = int(meta.get("marginal_frames", "0") or 0)
+    marg_base = int(meta_base.get("marginal_frames", "0") or 0)
+    if regions != regions_base or marg != marg_base:
+        raise SystemExit(
+            f"window mismatch: {regions} regions / {marg} marginal against "
+            f"{regions_base} / {marg_base}. Both arms must run the same window.")
+
+    entries = elf_symbols(elf)
+    starts = [entry[0] for entry in entries]
+    names = [name for name, _ in CLASSES]
+
+    print(f"candidate {pc_csv}")
+    print(f"control   {pc_csv_base}")
+    print(f"elf       {elf}")
+    print(f"basis     2 cycles = 1 tick; whole-match ticks/frame = cycles / "
+          f"{CYCLES_PER_TICK * regions:,}")
+    print(f"mask      candidate >= "
+          f"{int(meta.get('marginal_threshold_ticks', 0)):,} ticks, control >= "
+          f"{int(meta_base.get('marginal_threshold_ticks', 0)):,} ticks "
+          f"({marg} frames each, EACH ARM ITS OWN)")
+
+    for prefix, frames, label in (("all", regions, "WHOLE MATCH"),
+                                  ("marg", marg, "MARGINAL")):
+        divisor = float(CYCLES_PER_TICK * frames)
+        buckets = collections.defaultdict(lambda: collections.defaultdict(int))
+        zero = {f"{prefix}_{n}": "0" for n in names}
+        for pc in set(rows) | set(rows_base):
+            row = rows.get(pc, zero)
+            base = rows_base.get(pc, zero)
+            slot = buckets[symbol_for(entries, starts, pc)]
+            for cls in names:
+                slot[cls] += (int(row[f"{prefix}_{cls}"])
+                              - int(base[f"{prefix}_{cls}"]))
+        shown = ("total_cycles", "issue", "icache_fill", "dcache_fill",
+                 "write_buffer", "interlock", "bus_contention", "instructions")
+        grand = {cls: sum(s[cls] for s in buckets.values()) for cls in shown}
+        print(f"\n{label} -- candidate minus control, ticks/frame over "
+              f"{frames} frames")
+        print("  " + " ".join(f"{c[:11]:>11s}" for c in shown) + "  owner")
+        print("  " + " ".join(f"{grand[c] / divisor:11,.0f}" for c in shown)
+              + "  == ALL SYMBOLS ==")
+        ordered = sorted(buckets.items(),
+                         key=lambda kv: -abs(kv[1]["total_cycles"]))
+        for name, slot in ordered[:top]:
+            print("  " + " ".join(f"{slot[c] / divisor:11,.0f}" for c in shown)
+                  + f"  {name}")
+    return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--reduce", action="store_true")
     parser.add_argument("--report", action="store_true")
+    parser.add_argument("--diff", action="store_true")
+    parser.add_argument("--pc-csv-base", type=Path)
+    parser.add_argument("--build-base", type=Path)
     parser.add_argument("--profile", type=Path)
     parser.add_argument("--out", type=Path)
     parser.add_argument("--pc-csv", type=Path)
@@ -592,6 +717,13 @@ def main() -> int:
             raise SystemExit("--report needs --pc-csv and --build")
         return report(args.pc_csv, args.build, args.top, args.attribute_top,
                       args.owner_roots, args.census_out)
+    if args.diff:
+        if not args.pc_csv or not args.pc_csv_base or not args.build:
+            raise SystemExit(
+                "--diff needs --pc-csv (candidate), --pc-csv-base (control) "
+                "and --build")
+        return diff(args.pc_csv, args.pc_csv_base, args.build,
+                    args.build_base or args.build, args.top)
     parser.print_help()
     return 2
 

@@ -1,0 +1,55 @@
+basis     ticks/frame = cycles / (2 x 80 frames) = cycles / 160
+non-idle work 239,306,052 cycles (armWaitForIrq 41,957,284 excluded)
+attributed    14,712,991 cycles = 6.15% of non-idle
+
+helper                          calls       cycles  cyc/call
+__aeabi_fmul                  169,068    4,324,167      25.6
+__aeabi_fadd                  105,630    6,104,284      36.0
+__aeabi_fsub                   63,754       63,754      36.0 (thunk -> __aeabi_fadd)
+__aeabi_fcmpeq                 59,265      625,532      10.6
+__aeabi_fcmplt                 28,944      421,936      14.6
+__aeabi_f2iz                   27,504      349,778      12.7
+__aeabi_i2f                    17,053      276,314      16.2
+__aeabi_fdiv                   16,862    1,982,617     117.6
+__aeabi_fcmpgt                 14,416      212,939      14.8
+__floatsisf                     8,520       63,854       7.5
+__aeabi_ui2f                    8,520       34,080       4.0
+__aeabi_l2f                     7,532      215,282      28.6
+__aeabi_fcmple                  4,536       65,630      14.5
+__aeabi_fcmpge                  2,568       36,578      14.2
+
+caller                                                   calls   attributed   %work      tk/fr   calls/fr
+ndsBaseGcPlayMObjMatAnim                                34,277      860,096   0.36%      5,376      428.5
+syMatrixLookAtReflectF                                  25,584      771,487   0.32%      4,822      319.8
+func_ovl2_800ED490                                      24,066      723,425   0.30%      4,521      300.8
+ndsStageMPAdjustFloorLoopWallSweep                      20,650      699,768   0.29%      4,374      258.1
+ndsR2FtAnimParseDObjFigatree                            15,746      567,456   0.24%      3,547      196.8
+ndsRendererSubmitParticleQuad                           20,511      481,236   0.20%      3,008      256.4
+mpCollisionGetFCCommonFloor                             13,775      476,616   0.20%      2,979      172.2
+syMatrixPerspFastF                                       8,952      423,065   0.18%      2,644      111.9
+syUtilsArcTan.part.0                                     6,088      384,021   0.16%      2,400       76.1
+gmCollisionSetInvertMatrix                              12,261      364,813   0.15%      2,280      153.3
+ndsBaseGcPlayDObjAnimJoint                              15,456      346,194   0.14%      2,164      193.2
+syMatrixLookAtF                                         10,080      337,123   0.14%      2,107      126.0
+gmCollisionGetWorldPosition                             10,674      328,837   0.14%      2,055      133.4
+guMtxCatF                                               10,240      315,466   0.13%      1,972      128.0
+syMatrixF2L                                             15,616      298,998   0.12%      1,869      195.2
+lbCommonCos                                             14,295      297,074   0.12%      1,857      178.7
+gmCollisionTransformMatrixAll                           11,589      294,722   0.12%      1,842      144.9
+gmCollisionTestRectangle                                 6,661      281,102   0.12%      1,757       83.3
+lbParticleDrawTextures                                   8,734      243,049   0.10%      1,519      109.2
+ndsParticleSetCurrentCamera                             10,361      237,271   0.10%      1,483      129.5
+ftComputerCheckDetectTarget                              7,508      233,497   0.10%      1,459       93.8
+gmCollisionGetFighterPartsWorldPosition                  7,038      216,821   0.09%      1,355       88.0
+__floatsisf                                              7,478      213,738   0.09%      1,336       93.5
+gmCameraUpdateInterests                                  7,662      200,641   0.08%      1,254       95.8
+
+subsystem                         cycles   %work    fns
+other                          3,264,336   1.36%    146
+collision / stage MP           2,834,306   1.18%     17
+matrices / transform           2,614,607   1.09%     12
+gameplay (other decomp)        2,475,081   1.03%    112
+animation evaluation           2,185,476   0.91%      9
+renderer / other                 516,179   0.22%      5
+CPU player AI                    481,088   0.20%     16
+particles                        341,914   0.14%      4

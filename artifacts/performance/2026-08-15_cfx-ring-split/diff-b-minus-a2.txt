@@ -1,0 +1,73 @@
+candidate artifacts\performance\2026-08-15_cfx-ring-split\b-c177-pc.csv
+control   artifacts\performance\2026-08-15_cfx-ring-split\a2-c178-pc.csv
+elf       builds\build-c177-cfxring-b-prof\smash64ds-battle-playable-tickhud-hwtri.elf
+basis     2 cycles = 1 tick; whole-match ticks/frame = cycles / 3,202
+mask      candidate >= 1,359,694 ticks, control >= 1,363,110 ticks (80 frames each, EACH ARM ITS OWN)
+
+WHOLE MATCH -- candidate minus control, ticks/frame over 1601 frames
+  total_cycle       issue icache_fill dcache_fill write_buffe   interlock bus_content instruction  owner
+        2,799      -1,717       1,854         161          32          16         -62        -204  == ALL SYMBOLS ==
+        2,515           0           0           0           0           0           0           0  armWaitForIrq
+         -924        -872         -51           0           0           0           0        -828  __mulsf3
+         -680        -653         -26           0           0           0           0        -579  __aeabi_fadd
+          612           2         590          14           0           6           0         465  ndsR2CollisionFixedAxisScalesF32
+          502          -4         457          36           5           9           0         298  ndsR2CollisionFixedInvertF32
+          414          -9         370          34           9          11           0         281  ndsR2CollisionFixedStoreF32
+          398          -9         309          86           9           3           0         169  ndsR2CollisionFixedBuildLocal
+         -261         -83        -102         -69          -6          -0           0        -117  func_ovl2_800ED490
+          208          23          66          93           6          19           0          55  ndsR2CfxPrepareFighterJoint
+          191           2         152          35           1           0           0         127  ndsR2CollisionFixedCompose
+         -184         -52         -85         -37         -10          -1           0         -87  gmCollisionSetInvertMatrix
+         -180         -24         -49         -10           0         -33         -63         -78  sqrtf
+          174          -3         146          23           2           6           0         103  ndsR2CollisionFixedLoadF32
+          171          63         102           5           0           1           0         112  __udivmoddi4
+         -121         -30         -58         -27          -6          -1           0         -56  gmCollisionTransformMatrixAll
+         -103         -12         -33         -47          -6          -6           0         -24  func_ovl2_800EDBA4
+           83          31          43           9          -0           0           0          73  ndsPlatformRenderDebugHud
+          -61         -11         -21         -26          -1          -1           0         -20  lbCommonSin
+          -60         -12         -22         -25          -0          -1           0         -23  lbCommonCos
+           56          10          19          24           3           1           0          11  ndsR2CfxLocalFromDObj
+          -54         -20         -30          -3           0          -2           0         -30  __muldi3
+          -45         -43          -2           0           0           0           0         -38  __floatdisf
+           42          35           0           9          -5           1           0          36  memcpy
+          -40         -13         -23          -4          -1          -1           0         -22  func_ovl2_800EDE5C
+          -32         -31          -0           0           0           0           0         -29  __divsf3
+          -28           0         -18          -7          -0          -2           0         -16  get_fat.isra.0
+          -27          -3         -13         -10          -1          -0           0          -0  gcRunGObjProcess
+           25          -0           0           4          21           0           0          -0  ndsRendererSyncTextureTile
+           22           5          16           0           1           0           0           0  gmCollisionTestRectangle
+           20          -0          16           3          -0           1           0           8  __clzsi2
+
+MARGINAL -- candidate minus control, ticks/frame over 80 frames
+  total_cycle       issue icache_fill dcache_fill write_buffe   interlock bus_content instruction  owner
+       21,014      -5,767       5,963      -1,606        -564        -315        -131         660  == ALL SYMBOLS ==
+       23,459           2           0           0           0           0           0           0  armWaitForIrq
+       -3,351      -3,164        -187           0           0           0           0      -3,000  __mulsf3
+        2,549           7       2,459          60           0          23           0       1,943  ndsR2CollisionFixedAxisScalesF32
+       -2,161      -2,067         -94           0           0           0           0      -1,815  __aeabi_fadd
+        2,107         -21       1,921         150          20          36           0       1,244  ndsR2CollisionFixedInvertF32
+        1,869         699         944         227          -2           2           0       1,578  ndsPlatformRenderDebugHud
+        1,696         -38       1,508         143          38          45           0       1,147  ndsR2CollisionFixedStoreF32
+        1,544         -34       1,201         329          34          14           0         656  ndsR2CollisionFixedBuildLocal
+       -1,335        -350        -633        -273          -8         -71           0        -779  ndsR2FtAnimParseDObjFigatree
+       -1,086        -351        -428        -280         -24          -2           0        -475  func_ovl2_800ED490
+          872          96         276         392          27          81           0         229  ndsR2CfxPrepareFighterJoint
+          859         333         485          33           0           7           0         606  __udivmoddi4
+          822          40           0         681          99           0           0          37  armCopyMem32
+          812          10         646         151           3           2           0         534  ndsR2CollisionFixedCompose
+         -794        -101        -213         -58          -1        -144        -278        -341  sqrtf
+          787         -13         657         106           9          27           0         460  ndsR2CollisionFixedLoadF32
+         -766        -216        -353        -156         -40          -2           0        -365  gmCollisionSetInvertMatrix
+         -699         -61         -79        -469         -41         -50           0         -67  gcAddDObjAnimJoint
+         -693         -83        -226        -271         -97         -16           0         -79  battleship_ftMainSetStatus
+          587         140         351          67          11          18           0         188  _svfiprintf_r
+         -560         -95        -269        -134          -6         -56           0        -206  ndsRelocAssetIDForToken
+          541          66         247         132           0          52          45         281  consolePrintChar
+         -535         -74        -183        -236         -11         -31           0         -88  ftParamUpdateAnimKeys
+         -515         -21        -155        -296         -11         -32           0         -76  ndsFTParamsInvalidateSubtree
+          514         128         283          73           8          22           0         190  _vfiprintf_r
+          508         144         300          47          -3          20           0         169  __ssvfiscanf_r
+         -466        -114        -233         -93         -23          -3           0        -207  gmCollisionTransformMatrixAll
+          465          80         189         147          24          25           0          89  lbParticleDrawTextures
+         -455        -117        -171        -126          -6         -35           0        -233  gcParseDObjAnimJoint
+         -428         -52        -139        -187         -27         -23           0         -99  func_ovl2_800EDBA4

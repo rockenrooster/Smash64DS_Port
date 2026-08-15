@@ -6489,6 +6489,108 @@ anyway and is not an invitation.
 callers clear the 40/80 presence bar (7,187 + 1,883 + 1,838 = 10,908); the other
 ~38,700 is spread across callers each below it. Its mean self-time is 16,912.
 
+### Slice 52 — THE NULL IS SPLIT AND IT IS I-CACHE. The resident version is sized at 0.60x and clears only at a concentration ≥5.21x
+
+Evidence: `artifacts/performance/2026-08-15_cfx-ring-split/SPLIT.md`. 2 lab
+builds (`build-c177-cfxring-b-prof`, `build-c178-cfxring-a2-prof`), 2 v3
+captures, **0 production change, 0 Boundary run needed** — the only tracked
+source edit is a new mode in a standalone analysis script no build imports.
+Both root ROMs unchanged and not rebuilt.
+
+**The instrument.** Profile ROMs (`NDS_TASK37_PROFILE=1`, 1,600 frames from 438,
+per-frame regions) carrying the row above's flags, differing in **exactly one
+byte** — `.itcm`/`.text.hot`/`.text.hot.draw`/`.main`/`.dtcm` **0 differing
+bytes**, `.main.rw` **1** at 0x3F24 = `gNdsCfxRingEnable`. **The placement floor
+is zero on this pair too.** *The brief said this needed no rebuild; it did — the
+census window is a compile-time constant and `c175`/`c176` carry
+`NDS_TASK37_PROFILE 0`.*
+
+**The split, whole window, B − A′, ticks/frame over 1,601 regions:**
+
+```text
+issue -1,717 | icache_fill +1,854 | dcache_fill +161 | instructions -204 | net non-idle +284
+```
+
+The six classes sum to +284 exactly (`stall_partition_residual` 0 / −42).
+Per-PC group decomposition: the ring's eight symbols add `issue` **+12** and
+`icache_fill` **+2,110**; the displaced float bodies and libgcc give back `issue`
+**−1,852** and icache only **−475**; the rest of the binary nets **+219**.
+**So it is compulsory fetch of the ring's own instructions, not eviction damage
+to neighbours — CANDIDATE 2, and the arithmetic win was real all along.**
+
+**CANDIDATE 1 is refuted as arithmetic and re-cast as footprint.**
+`StoreF32`+`LoadF32` are 964 B costing **+588 tk/fr**, of which **+516 (88%) is
+`icache_fill`** and **−12 is `issue`**. RING.md's "129 ARM instructions for
+twelve, ~11 each" divided a *static size* by a count: the body is two loops and
+the common path is **38 ARM instructions per fixed→f32 value, 22 per f32→fixed**
+off the disassembly. The instructions were never the price.
+
+**R2-07 L7's 1.85 cycles/frame/byte is not a constant — measured here 0.754**
+(2,110 tk/fr over 5,596 B). Do not carry it into another sizing; carry the
+method.
+
+**Exact call counts, free, from the entry PCs**, A′→B over 1,600 frames:
+`func_ovl2_800ED490` 2,471→1,177 · `gmCollisionTransformMatrixAll` 4,157→3,115
+(**only 25% taken**) · `gmCollisionSetInvertMatrix` 937→141 ·
+`func_ovl2_800EDBA4` 1,133→337 · **`lbCommonSin`/`Cos` 37,615→34,489, i.e. 8.3%
+— sin/cos was never a collision lane** and `PREDICTION.md` §2 booked ~4,975 tk/fr
+for it · `sqrtf` 68,289→65,900 (3.5%) · `func_ovl2_800EDE5C` 1,693→1,693 at
+22 tk/fr because the ring set `0x6` and it early-returns. Same fight on both
+arms: `gmCollisionCheckFighterAttackDamageCollide` **1,552** and
+`gmCollisionTestRectangle` **1,693** on each.
+
+**THE EXCHANGE RATE IS THE WHOLE STORY: the fixed replacement costs 0.987x the
+float it deletes** — +2,726 against −2,762 tk/fr, i.e. **0.4871 tk/fr per byte of
+executing fixed ARM text against 0.4937 removed per byte.** A resident version
+wins only by moving the second number.
+
+**Task B — resident representation, DESIGN ONLY, not built.** Removing the whole
+narrow phase is **9,865 tk/fr** whole match (self 4,717 + soft-float leaves 6,544
+− the 33.7% of sin/cos not collision-driven), at ~7,400 B of executing ARM text =
+3,604 cost. **Net −6,261 tk/fr whole match; at this cycle's MEASURED 3.11x
+percentile concentration that is +19,470 at rank-80 = 0.60x of +32,593.**
+**It clears at 5.21x and not below**, and 5.2–11.7x is the presence range
+`…/2026-08-15_k1-owner-pricing/` §5 reports for these bodies on a clean `DRAW=0`
+mask. **The bar is straddled; one `DRAW=0` re-run of this same byte-identical
+pair settles it with no new code and no new correctness obligation.**
+
+**Correction the board owes itself: "fifteen referrers" belongs to
+`func_ovl2_800EDBA4`, not to `mtx_translate`** (`…/2026-08-13_c-collision-seam/`
+`elf-referrers.txt`). Ten of the fifteen are inside the cluster and call the
+*function*; the *field*'s ~49 readers funnel through `gmCollisionGetWorldPosition`
+(~30 sites, one helper), `gmCollisionCopyMatrix` and `func_ovl2_800EDA0C`.
+**Nothing in that set blocks residency.** The renderer is a net WIN there — it
+already converts `mtx_translate` to 20.12 fixed via
+`ndsRendererAdapterF2LFixedWExact`, and the ring's translation row is already
+Q12. `gmCollisionTestSphere` executes **zero** times on both arms, so STACK.md
+§5.1's `*p_angle` obligation is discharged by a fixed→f32 expansion prologue on
+unreachable code, graded as an expansion rather than as a body.
+
+**UNPRICED, and the cheapest test left in this lane: placement.** All 5,596 B sit
+in `.main`. `.text.hot` has **3,604 B free** of its 8,192 cap and
+`.text.hot.draw` **2,924 B**. One build, one A/B, no new arithmetic, against a
+measured +2,110 tk/fr of compulsory fetch.
+
+**Task C, free negative evidence.** Both 1,600-frame v3 windows contain **zero**
+regions ≥ 2^22 ticks (max 3,361,733 in both, same region 1558) and
+`stall_cart_spin` **0** throughout. The multi-megatick outlier is therefore not
+visible to the instrument that accounts for every emulated cycle, on the same
+configuration and match — a narrowing toward the tick-HUD's own `cpuGetTiming()`
+reader (`nds_platform.c:353`, libnds's cascaded TIMER0/TIMER1 pair read
+non-atomically), **not an answer**. Expectation over 3,200 frames was ~1.5
+events. The `-PerStopGlobals` probe and the +23,040 counter-arm residual were
+**not** run.
+
+**Tooling.** `census-marginal-frame-owners.py --diff` is new: a stall partition
+is only readable as a *difference*, and the mode joins two reduced per-PC
+censuses **on the program counter**, so it verifies identical layout from the two
+ELFs' `nm` address→name maps and refuses otherwise. A per-PC diff across a
+relink is now inexpressible rather than documented. **The same cycle re-caught
+RING.md §3's trap in a new costume**: an `objcopy --only-section` comparison
+against a build directory that did not exist reported **0 differing bytes for
+every section**. A byte comparison that cannot fail is not a control; the loop in
+SPLIT.md §4 fails closed on an objcopy error and on a zero-length section.
+
 ### Slice 52 WIRED, MEASURED, TICK-NEUTRAL — the collision decisions did NOT move and neither did the gate. `+30,000…+38,000` is RETRACTED
 
 Evidence: `artifacts/performance/2026-08-15_cfx-ring-wiring/RING.md`, with

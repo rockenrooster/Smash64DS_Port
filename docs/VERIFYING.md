@@ -34,6 +34,16 @@ in a **Makefile** recipe continuation. The rule is not about PowerShell quoting 
 it is about any file whose meaning depends on exact line endings, escapes or
 continuations: `.ps1`, `Makefile`, `.mk`, linker scripts, `.S`, `.toml`, `.json`.
 
+**Why this rule cannot be made structural by content inspection, and what would
+work.** An eaten `\` leaves a *syntactically valid* file: there is no residue in
+the bytes, so no grep, escape scan or line-ending rule can catch the class. The
+only gate that can is one that **parses the result** —
+`make --dry-run --no-print-directory <target>` fails on a broken recipe
+continuation in seconds without building anything. **ACTION (unowned):** add that
+to `scripts/check-architecture.ps1`, which already sweeps the tracked tree and is
+registry-wired, for the two published targets. Not done 2026-08-15 — a new
+failure mode in a checker that gates Boundary needs its own cycle.
+
 ```powershell
 $env:DEVKITPRO = 'C:/devkitPro'
 $env:DEVKITARM = 'C:/devkitPro/devkitARM'
