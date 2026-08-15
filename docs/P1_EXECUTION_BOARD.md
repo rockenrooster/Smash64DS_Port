@@ -10118,6 +10118,61 @@ live data in absolute `MATRIX_STORE` levels the pointer walks over.
   STALE** (baseline 1,258,112 vs today's 1,177,344). The flag was not flipped;
   re-measure before re-banking.
 
+#### 2026-08-15 — slice 43 RE-MEASURED on the repaired tree: −17,152 at rank-80, and one acceptance item is still missing
+
+`artifacts/performance/2026-08-15_gxcompose-remeasure/GXCOMPOSE.md`, with
+`PREDICTION.md` written before the first run. **Cycle stopped early on the
+owner's instruction; read §6 of that file for what was not done.**
+
+- **The pair.** `build-c184-gxc-a` (flag 0) vs `build-c184-gxc-b` (flag 1),
+  both fresh at HEAD `771cd4b8312` on `smash64ds-battle-playable-tickhud-hwtri`,
+  `BOTH_CPU=1`/`BATTLEPACK=1`/`KEEP_CACHE=1`, DLDI on, `DRAW=1`, 1,600 samples
+  frames 440–2039, `slips=0` both. Their `nds_build_config.h` differ in
+  **exactly one define**.
+- **`WORK-H` rank-80 1,189,312 → 1,172,160 = −17,152** (0.53× of the +32,593
+  requirement); **P50 947,360 → 939,264 = −8,096**; mean −10,737; P90 −8,960;
+  top-1% −14,784; frames over 1,120,380 130 → 129. Both clear their own floor
+  (`VERIFYING.md` cycle 100: P95 ≥14,080 sign unreliable, P50 ~5,700 sign kept)
+  **in the same direction**.
+- **`FTR` rank-80 −9,664 / mean −11,399**, everything else flat except
+  **`STG` +3,200 / +2,675, which is NOT attributed** — relink, GX state handed
+  to the stage, or FIFO contention; three candidates, none measured, do not
+  price one.
+- **The flag is compile-time, so the one-byte pair is impossible.**
+  `compare-elf-sections.py`: `.main` +2,040 B, `.itcm` +36 B, 18,955 differing
+  bytes. The placement floor is **not** zero and this is stated, not hidden;
+  the verdict rests on P50 + the bucket + the control reproducing itself
+  **exactly** (`c183` and `c184-gxc-a`, different ELFs and sessions, both
+  rank-80 **1,189,312**).
+- **Engagement total, flip budget zero.** `Declines` **0** whole match;
+  `Captures`=`Roots` 63,364 (31.08/fr), `Locals`=`Mults` 110,702 (54.29/fr),
+  `Restores` 55,546 (87.7%), `Stores` 41,598 (65.6%), `ProjectionSkips` 59,414
+  (**93.8%**). All eight symbols are **absent from arm A's ELF**. All eight
+  end-of-match invariants equal the bank on both arms.
+- **The withdrawal's acceptance condition holds at flag 1.** GXSTAT
+  `0x06000000` at all 17 whole-match stops and on 128/128 per-frame samples;
+  `GFX_POLYGON_RAM_USAGE` **432/463.5/510 with zero frames under 350** over four
+  full 32-frame wrap periods, against the control's 432/464.5/510. The blink was
+  recorded as **106–306 against a 378 median** at the wrap. **Accepted polygons
+  are the oracle for this defect; submitted triangles are not.**
+- **STILL OPEN, and it is the reason nothing is banked or flipped:** the
+  **frame-locked pixel pair was not taken**. Both capture ROMs exist
+  (`build-c184-cap-a`/`-cap-b`, proof target, `TICK_HUD 0`, `BOTH_CPU 0`) and no
+  capture was run. Slice 43's original "pixel-identical" predates the blink's
+  discovery and must not be inherited. Flipping the default stays
+  `BLOCKED(decision: shipping default)`.
+- **Re-banking the LEVEL was deliberately not done.** Against the `c170` bank
+  the residual would be +15,441 net; on this pair's own arm B (1,172,160 raw /
+  1,147,213 net) it is +26,833. The two controls differ by 11,392, inside the
+  ≥14,080 floor, so **only the within-pair −17,152 is quotable**.
+- **Makefile.** The tick-HUD/proof pin now reads one documented escape,
+  `NDS_R2_FIGHTER_GX_COMPOSE_LAB=1`. Probed on all three targets before a build
+  was spent: tickhud **1**, proof **1**, published
+  `smash64ds-battle-playable-hwtri` **0 even with `LAB=1` set**. Hand-editing a
+  pin to run a lab arm is what this replaces.
+- Both root ROMs byte-identical; Boundary green at the shipping default,
+  0 `Exception:`, and its pacing smoke prints `gxstat=0x6000000`.
+
 1. Whole-match `-RingDump` sampling is the only gate instrument; label every
    figure with its arm **and its coverage**; DLDI-on only. **Coverage is part
    of a baseline's identity, not a footnote** — a window is "whole match" only

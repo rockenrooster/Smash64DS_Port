@@ -1,0 +1,12 @@
+A  builds\build-c184-gxc-a\smash64ds-battle-playable-tickhud-hwtri.elf
+B  builds\build-c184-gxc-b\smash64ds-battle-playable-tickhud-hwtri.elf
+
+section                  bytes   differing  first differing offsets
+.itcm                   32,152        SIZE  A 32,152 vs B 32,188
+.text.hot                4,588         243  0x64 0xEA 0xEC 0xED 0x118 0x148 0x149 0x15A ...
+.text.hot.draw           5,268         106  0x22 0x26 0x27 0x7C 0x7D 0x80 0x81 0x84 ...
+.main                  927,256        SIZE  A 927,256 vs B 929,296
+.main.rw               137,428      16,530  0xE8 0xE9 0xEC 0xED 0xF0 0xF1 0xF4 0xF5 ...
+.dtcm                    8,800           0  
+
+total differing bytes across 6 sections: 18,955

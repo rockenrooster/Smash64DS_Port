@@ -753,6 +753,10 @@ NDS_R2_FIGHTER_HW_MTX ?= 0
 #       is exactly the claim E8 proved gets read wrong.
 # Promote 2 -> 1 only on a zero gNdsR2GxComposeVerifyFail run.
 NDS_R2_FIGHTER_GX_COMPOSE ?= 0
+# Lab escape for the tick-HUD/proof block only, which otherwise pins the flag to
+# the published block's 0. See that override for why it exists and what it may
+# not reach. Never set this on a published target.
+NDS_R2_FIGHTER_GX_COMPOSE_LAB ?= 0
 # Slice 44. Round-robins the stage's per-frame transform revalidation over N
 # frames instead of running the whole sweep every frame. Requires
 # NDS_TASK36_HW_COMPOSE and NDS_TASK44_STAGE_STEADY.
@@ -1730,7 +1734,13 @@ override NDS_TASK36_HW_COMPOSE := 2
 override NDS_R2_FIGHTER_HW_MTX := 1
 # Slice 43 is withdrawn in the published block; measurement/proof siblings must
 # match it exactly or they measure a renderer the user is not running.
-override NDS_R2_FIGHTER_GX_COMPOSE := 0
+#
+# NDS_R2_FIGHTER_GX_COMPOSE_LAB=1 is the one documented escape, and it exists so
+# that re-measuring the withdrawn slice (plan.md Phase 3) never needs a hand-edit
+# of this line -- hand-editing a pin is how a lab flag reaches a published ROM.
+# It reaches ONLY this block: the published block pins 0 unconditionally, so no
+# published target can carry the slice whatever is passed on the command line.
+override NDS_R2_FIGHTER_GX_COMPOSE := $(if $(filter 1,$(NDS_R2_FIGHTER_GX_COMPOSE_LAB)),1,0)
 # Slice 44. This is the instrument every measurement runs on, so it has to stay
 # flag-identical to the published block -- a stride on one and not the other
 # would put ~35,900 of WORK-H P95 between the ROM being judged and the ROM
