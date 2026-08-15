@@ -1,0 +1,22 @@
+symbol,entry_pc,size,calls_whole_match,calls_per_region,calls_on_p95_set,calls_per_p95_region,calls_off_p95_set,calls_per_body_region,p95_regions_with_a_call,p95_regions_total,body_regions_with_a_call,body_regions_total,presence_ratio
+ndsRendererSyncTextureTile,0x01ff87c0,212,114170,71.3563,5814,72.675,108356,71.2868,80,80,1520,1520,1.019
+ndsRendererAdapterBuildPersistentStageWorldMatrix.constprop.0,0x02044464,952,26039,16.2744,1301,16.2625,24738,16.275,80,80,1520,1520,0.999
+ndsRendererAdapterBuildDObjXObjMatrix,0x02043984,2440,88274,55.1713,4564,57.05,83710,55.0724,80,80,1520,1520,1.036
+ndsRendererAdapterBuildFighterTraRotRpyDirect20p12,0x02042d8c,2056,60975,38.1094,2542,31.775,58433,38.4428,80,80,1520,1520,0.827
+ndsRendererMtxMul20p12,0x01ffa044,312,29522,18.4513,1478,18.475,28044,18.45,80,80,1520,1520,1.001
+ndsRendererHardwareResolveOrBindTexture,0x02019e84,10924,176,0.11,14,0.175,162,0.1066,10,80,95,1520,1.642
+ndsRendererHardwareBindTextureName,0x020134e0,268,163323,102.0769,8276,103.45,155047,102.0046,80,80,1520,1520,1.014
+glBindTexture,0x020bf23c,92,88476,55.2975,4458,55.725,84018,55.275,80,80,1520,1520,1.008
+ndsRendererNativeApplyMaterial.part.0,0x02016254,1656,46193,28.8706,2377,29.7125,43816,28.8263,80,80,1520,1520,1.031
+ndsRendererNativeApplyStateDelta,0x01ff9d98,492,304009,190.0056,15556,194.45,288453,189.7717,80,80,1520,1520,1.025
+ndsRendererAdapterBuildDObjLocalMatrix,0x0204430c,206,88323,55.2019,4571,57.1375,83752,55.1,80,80,1520,1520,1.037
+ndsRendererLoadHardwareMatrixPair.constprop.0,0x0201388c,676,30615,19.1344,1541,19.2625,29074,19.1276,80,80,1520,1520,1.007
+ndsRendererTask36ReplayRun,0x01ff8fb8,608,52800,33.0,2640,33.0,50160,33.0,80,80,1520,1520,1.0
+ndsStageGCDrawAllLoopRecordCapturedDisplay,0x0205e9ec,464,43770,27.3562,2195,27.4375,41575,27.352,80,80,1520,1520,1.003
+ndsRendererAdapterMarkDisplayProcHeads,0x0205d454,108,43769,27.3556,2195,27.4375,41574,27.3513,80,80,1520,1520,1.003
+ndsRendererAdapterPrepareNativeStageOwner,0x0205d648,2544,1600,1.0,80,1.0,1520,1.0,80,80,1520,1520,1.0
+ndsRendererNativeShadeProductionActions.constprop.0.isra.0,0x01ffd2e8,580,75798,47.3738,3884,48.55,71914,47.3118,80,80,1520,1520,1.026
+ndsRendererNativeEmitProductionCrossRun.constprop.0,0x01ffce84,576,19763,12.3519,1022,12.775,18741,12.3296,80,80,1520,1520,1.036
+lbParticleDrawTextures,0x020ae7c4,3960,6400,4.0,320,4.0,6080,4.0,80,80,1520,1520,1.0
+ndsRendererBuildRawHardwareMatrix,ABSENT (inlined or not linked),,,,,,,,,,,,
+ndsRendererCopyMtx20p12ToM4x4,ABSENT (inlined or not linked),,,,,,,,,,,,

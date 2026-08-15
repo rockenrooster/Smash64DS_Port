@@ -319,14 +319,58 @@ triangles).
 
 **Honest state: no category-1 item in the draw lane has been sized above
 ~1,300 tk/fr, and I am not going to invent one.** What the enumeration *does*
-establish is where to point the next measurement, because the three rows with
-the strongest "recomputed unchanged" shape are all unmeasured for engagement:
+establish is where to point the next measurement. Every draw-side row now has an
+exact call rate (`perregion3-c181.csv`, entry-PC counts, marginal-80 basis),
+which is what a candidate has to be argued against:
 
-| candidate | tk/fr | why it looks like waste | engagement counter to land first |
+| symbol | rank-80 tk/fr | calls / marginal frame | tk/call | presence |
+|---|---:|---:|---:|---:|
+| `ndsRendererNativeApplyStateDelta` | 6,960 | **194.45** | 36 | 1.03x |
+| `ndsRendererHardwareBindTextureName` | 7,464 | **103.45** | 72 | 1.01x |
+| `ndsRendererSyncTextureTile` | 8,867 | **72.68** | 122 | 1.02x |
+| `ndsRendererAdapterBuildDObjXObjMatrix` | 12,811 | 57.05 | 225 | 1.04x |
+| `ndsRendererAdapterBuildDObjLocalMatrix` | 5,137 | 57.14 | 90 | 1.04x |
+| `glBindTexture` | 6,404 | 55.73 | 115 | 1.01x |
+| `ndsRendererNativeShadeProductionActions` | 7,079 | 48.55 | 146 | 1.03x |
+| `ndsRendererAdapterBuildFighterTraRotRpyDirect20p12` | 12,554 | 31.78 | 395 | 0.83x |
+| `ndsRendererNativeApplyMaterial.part.0` | 5,664 | 29.71 | 191 | 1.03x |
+| `ndsStageGCDrawAllLoopRecordCapturedDisplay` | 9,616 | 27.44 | 350 | 1.00x |
+| `ndsRendererAdapterMarkDisplayProcHeads` | 4,008 | 27.44 | 146 | 1.00x |
+| **`ndsRendererTask36ReplayRun`** | 5,208 | **33.00** | 158 | **1.000x** |
+| `ndsRendererLoadHardwareMatrixPair.constprop.0` | 5,319 | 19.26 | 276 | 1.01x |
+| `ndsRendererMtxMul20p12` | 10,611 | 18.48 | 574 | 1.00x |
+| `ndsRendererAdapterBuildPersistentStageWorldMatrix` | 9,332 | 16.26 | 574 | **1.00x** |
+| `ndsRendererNativeEmitProductionCrossRun` | 4,651 | 12.78 | 364 | 1.04x |
+| `lbParticleDrawTextures` | 11,840 | 4.00 | 2,960 | 1.00x |
+| `ndsRendererAdapterPrepareNativeStageOwner` | 5,855 | 1.00 | 5,855 | 1.00x |
+| `ndsRendererHardwareResolveOrBindTexture` | 7,500 | **0.175** | **42,857** | 1.64x |
+
+`ndsRendererTask36ReplayRun` at **exactly 33.00/frame** is the third independent
+confirmation of the segment split: segments 0, 5 and 7 hold 26 + 3 + 4 = **33
+runs**, and 54 − 33 = 21 live runs across segments 1, 2, 3, 4 and 6.
+
+Two candidates were checked and are **not** clean category-1 items:
+
+- `ndsRendererAdapterBuildPersistentStageWorldMatrix` **already carries a
+  per-frame cache** (`validated_frame == frame`, plus slice 44's
+  `NDS_R2_STAGE_VALIDATE_STRIDE 8` stale-reuse path with its own
+  `gNdsR2Slice44StaleReuse` counter, `reloc_backend_renderer_dl.c:2877-2897`).
+  16.26 calls/frame is what remains *after* memoisation; the open question is the
+  hit rate, not whether a memo exists. Read `gNdsR2Slice44StaleReuse` and the
+  `m2_world_matrix_cache_hit_count` group before proposing anything.
+- `ndsRendererCommitNativeStageSegment` (27,880, 8.00 calls/frame, 2,572 B,
+  **15,910 tk/fr icache = 1,989 tk/call of pure instruction fetch**) is
+  **footprint, not waste** — the body is cold on every one of the 8 consecutive
+  calls. `K-EXCHANGE` has already refuted layout as a lever (ceiling +219 tk/fr).
+  **Do not re-open it as placement.**
+
+The two rows that still look like unmeasured "recomputed unchanged" and are
+worth one counter each:
+
+| candidate | tk/fr | shape | engagement counter to land first |
 |---|---:|---|---|
-| `ndsRendererSyncTextureTile` | 8,867 | a VRAM tile re-upload with 4,943 tk/fr of `write_buffer`; Dream Land's stage textures do not change during a match | tile uploads/frame **and** uploads whose source bytes are unchanged since the last upload, published per frame |
-| `ndsRendererAdapterBuildPersistentStageWorldMatrix.constprop.0` | 9,332 | the name says persistent; the stage's world matrices are static except the camera | builds/frame vs builds whose 16 source words differ from the cached result |
-| `ndsRendererCommitNativeStageSegment` | 27,880 | 8.00 calls/frame, 2,572 B, **15,910 tk/fr of icache = 1,989 tk/call of pure fetch** — the body is cold on *every* one of the 8 consecutive calls | this is footprint, not waste; `K-EXCHANGE` has already refuted layout (ceiling +219 tk/fr). Do not re-open it as placement |
+| `ndsRendererSyncTextureTile` | 8,867 | **72.68 VRAM tile syncs per frame, every frame**, 4,943 tk/fr of `write_buffer`; Dream Land's stage textures do not change during a match | syncs/frame **and** syncs whose source bytes are unchanged since that tile's last sync |
+| `ndsRendererHardwareBindTextureName` -> `glBindTexture` | 7,464 + 6,404 | **103.45 bind requests a frame collapse to 55.73 GX binds** — the tracker already elides 46%; the residual 55.73 is the question | binds/frame split by "same name as the currently bound one" vs a genuine change, per frame |
 
 **The counter discipline that applies (plan.md §9 law 1):** publish it from code
 (header + `diagnostics.c`, `__attribute__((used))`, `nm`-verified against
