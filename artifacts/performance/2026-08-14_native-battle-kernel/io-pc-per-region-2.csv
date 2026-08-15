@@ -1,0 +1,37 @@
+symbol,entry_pc,size,calls_whole_match,calls_per_region,calls_on_p95_set,calls_per_p95_region,calls_off_p95_set,calls_per_body_region,p95_regions_with_a_call,p95_regions_total,body_regions_with_a_call,body_regions_total,presence_ratio
+ndsAudioBgmReadPacket,0x0200c1c0,392,77,0.0481,6,0.075,71,0.0467,6,80,71,1520,1.606
+ndsAudioBgmReadExact,0x0200c178,72,154,0.0963,12,0.15,142,0.0934,6,80,71,1520,1.606
+ndsAudioBgmWorkerMain,0x0200c398,488,0,0.0,0,0.0,0,0.0,0,80,0,1520,inf
+ndsAudioBgmPrepareBuffer,0x0200c0f0,136,77,0.0481,6,0.075,71,0.0467,6,80,71,1520,1.606
+ndsAudioReadAt,0x0200b6c8,100,0,0.0,0,0.0,0,0.0,0,80,0,1520,inf
+ndsAudioAssetLoadFenced,0x0200bda8,744,0,0.0,0,0.0,0,0.0,0,80,0,1520,inf
+ndsAudioFgmLoadFenced,0x0200d4d0,760,0,0.0,0,0.0,0,0.0,0,80,0,1520,inf
+ndsAudioFgmPlayAtPan,0x0200d884,2084,159,0.0994,85,1.0625,74,0.0487,52,80,72,1520,21.824
+ndsAudioBgmPlay,0x0200c898,1252,0,0.0,0,0.0,0,0.0,0,80,0,1520,inf
+f_close,0x020b96fc,88,0,0.0,0,0.0,0,0.0,0,80,0,1520,inf
+f_sync,0x020b955c,416,0,0.0,0,0.0,0,0.0,0,80,0,1520,inf
+move_window,0x020b68dc,196,111523,69.7019,61841,773.0125,49682,32.6855,55,80,118,1520,23.65
+dir_find,0x020b765c,760,0,0.0,0,0.0,0,0.0,0,80,0,1520,inf
+dir_read,0x020b715c,584,0,0.0,0,0.0,0,0.0,0,80,0,1520,inf
+dir_next,0x020b6fec,368,0,0.0,0,0.0,0,0.0,0,80,0,1520,inf
+disk_write,0x020b6114,44,0,0.0,0,0.0,0,0.0,0,80,0,1520,inf
+f_getfree,0x020b9e8c,388,0,0.0,0,0.0,0,0.0,0,80,0,1520,inf
+f_stat,0x020b9d88,260,0,0.0,0,0.0,0,0.0,0,80,0,1520,inf
+_nitroFS_stat_r,0x020b3d90,224,0,0.0,0,0.0,0,0.0,0,80,0,1520,inf
+_nitroFS_fstat_r,0x020b3d10,128,30,0.0187,30,0.375,0,0.0,13,80,0,1520,inf
+nitroromGetSelf,0x020c0384,256,0,0.0,0,0.0,0,0.0,0,80,0,1520,inf
+ndsRelocAssetLoadData,0x0200b51c,176,0,0.0,0,0.0,0,0.0,0,80,0,1520,inf
+ndsRelocAssetLoadHeaderAndData,ABSENT (inlined or not linked),,,,,,,,,,,,
+ndsRelocAssetReadHeader,0x0200b3dc,96,0,0.0,0,0.0,0,0.0,0,80,0,1520,inf
+ndsRelocEnsureLoadedAsset,ABSENT (inlined or not linked),,,,,,,,,,,,
+ndsRelocPrepareSceneCache,0x02037324,504,0,0.0,0,0.0,0,0.0,0,80,0,1520,inf
+ndsR2AnimCachePreloadStep,0x0205a914,592,3200,2.0,160,2.0,3040,2.0,80,80,1520,1520,1.0
+ndsR2AnimWarmLoadOne,ABSENT (inlined or not linked),,,,,,,,,,,,
+ndsAObjEvent32NormalizeScript,0x020675b0,1220,1693,1.0581,137,1.7125,1556,1.0237,23,80,121,1520,1.673
+ndsAObjEvent32FindNormalized,0x020673a4,184,2643,1.6519,356,4.45,2287,1.5046,23,80,121,1520,2.958
+ndsRelocFindLoadedFileByData,ABSENT (inlined or not linked),,,,,,,,,,,,
+ndsRelocFindLoadedFileContaining,0x0203bcb8,276,27517,17.1981,4584,57.3,22933,15.0875,80,80,1520,1520,3.798
+ftAnimUpdateDObjAnim,ABSENT (inlined or not linked),,,,,,,,,,,,
+lbRelocLoadFilesExtern,0x0205bc0c,3008,0,0.0,0,0.0,0,0.0,0,80,0,1520,inf
+syTaskmanMalloc,0x02064878,32,25,0.0156,12,0.15,13,0.0086,5,80,5,1520,17.538
+ndsSyMallocWouldFit,0x02032ba0,34,0,0.0,0,0.0,0,0.0,0,80,0,1520,inf

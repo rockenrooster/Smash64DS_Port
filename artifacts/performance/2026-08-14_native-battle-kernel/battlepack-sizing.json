@@ -1,0 +1,46 @@
+{
+ "bank": "builds\\build-c158-gate\\nitrofs\\reloc\\reloc_animations",
+ "clips": 297,
+ "skipped": [
+  [
+   "FTFoxAnim135",
+   "AObjEvent32 (0x309)"
+  ],
+  [
+   "FTFoxAnim136",
+   "AObjEvent32 (0x30a)"
+  ],
+  [
+   "FTMarioAnim134",
+   "AObjEvent32 (0x279)"
+  ],
+  [
+   "FTMarioAnim135",
+   "AObjEvent32 (0x27a)"
+  ]
+ ],
+ "scripts": 5629,
+ "raw_file_bytes": 709952,
+ "raw_payload_bytes": 686192,
+ "raw_table_bytes": 30180,
+ "raw_script_bytes": 656012,
+ "pack_header_bytes": 20,
+ "pack_directory_bytes": 3564,
+ "pack_offset_table_bytes": 22516,
+ "pack_stream_bytes": 625828,
+ "pack_total_bytes": 651928,
+ "dedup": true,
+ "dedup_runs_shared": 512,
+ "dedup_bytes_saved": 30184,
+ "sha256": "4a066d49f726d1c176a84392d9977f5f23985daefbb194f7711f7000a83b0cea",
+ "verify": {
+  "mismatches": 0,
+  "corpus": "456834182c5d6f4e26bac43509ea04b066c55f5e2f811fad603ed82798e9b7ea",
+  "clips": 297,
+  "scripts": 5629,
+  "commands": 77959,
+  "states": 71500,
+  "callbacks": 5629,
+  "payload_words": 105304
+ }
+}

@@ -315,6 +315,44 @@ holder 9.1%; every top holder already owned by a named lane, including
 percentile sits. A change removing 100,000 from only the top 20 frames moves P95
 by **zero**; the 80th-largest must fall **91,844**.
 
+## NATIVE BATTLE KERNEL SLICE 1 (2026-08-14) — phases 1–4 DONE, zero builds
+
+`docs/architecture/RUNTIME2_NATIVE_BATTLE_KERNEL.md` (design) ·
+`artifacts/performance/2026-08-14_native-battle-kernel/BATTLEPACK_ANIMATION.md`
+(measurement, sizing, equivalence). `plan.md` §K1 phases 5–9 remain.
+
+**The named mechanism was measured and it is NOT the FAT read.** On the gate arm
+(`build-c159-profile-bothcpu`, 1,600 regions) the animation path does **15** file
+loads all match, on 13 frames; **deleting those 13 frames entirely moves the
+80th-largest frame 9,874** against a 64,452 requirement. The lever is the
+**acquisition path**: 299 acquisitions, **95.0% cache HITS**, on **62 of the 80
+P95 frames** against 174 of 1,520 body frames (**6.8x presence**). A hit still
+copies the payload, re-registers, re-finalizes, re-normalizes AObj16, strips
+alias nodes and writes three status entries. Dose-response: **+148,969** ticks
+for the first acquisition, **+77,440** each after, **+645,225** for a miss;
+modelled full deletion moves rank-80 **−73,659** (projection, upper-bound model,
+profile arm — **not banked**).
+
+**Correction to `GATE_ARM_OWNERS.md` §5.2:** `get_fat`/`f_lseek` in that
+mechanism are majority **BGM** — ≤38.8% of the P95-set `get_fat` sits on an
+animation-load frame. Sizing slice 1 off the full +15,058 over-predicts ~2.6x.
+
+**Reachable set = all 301** (`ftdata.c` references 143/143 Mario + 158/158 Fox).
+The 87-entry `sNdsR204AnimWarmList` is 28.9% of it and is observational.
+
+**Pack: 651,928 B (floor 645,450) against ~511,904 B proven RAM — it does NOT
+fit**, and no lossless compaction closes it (dead tails 1.0%, dedup 4.6%,
+substring 0.004%). Three lawful moves are ranked in the architecture doc §6;
+falling back to gameplay-time FAT loading stays forbidden.
+
+**Phase 4 host equivalence: mismatch = 0** over 297 clips / 5,629 scripts /
+77,959 commands / 71,500 states / 5,629 callbacks. Two falsifiers prove the test
+can fail. `scripts/generate_battlepack_anim.py --verify`.
+
+**New reusable instrument:** `scripts/census-profile-pc-per-region.py` gives
+per-presented-frame call counts for any symbol out of a v3 capture, so a
+"does it concentrate on the P95 frames?" question no longer costs a build.
+
 ## THE GATE LANE — in order, one row live at a time
 
 ### G1 — MEASURED (cycle 79). Mechanism proven, gate unmoved. Not shipped.

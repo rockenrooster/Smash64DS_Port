@@ -1,0 +1,29 @@
+bank                    : builds\build-c158-gate\nitrofs\reloc\reloc_animations
+clips (AObj16)          : 297
+scripts (entry points)  : 5629
+raw file bytes          : 709952
+raw payload bytes       : 686192
+  of which pointer table: 30180
+  of which script stream: 656012
+pack header             : 20
+pack clip directory     : 3564
+pack offset table       : 22516
+pack stream             : 625828
+PACK TOTAL              : 651928 bytes (95.0% of raw payload)
+identical script runs shared : 512 (30184 bytes saved)
+sha256                  : 4a066d49f726d1c176a84392d9977f5f23985daefbb194f7711f7000a83b0cea
+   skipped FTFoxAnim135       AObjEvent32 (0x309)
+   skipped FTFoxAnim136       AObjEvent32 (0x30a)
+   skipped FTMarioAnim134     AObjEvent32 (0x279)
+   skipped FTMarioAnim135     AObjEvent32 (0x27a)
+
+EQUIVALENCE (Phase 4)
+  clips decoded        : 297
+  scripts compared     : 5629
+  commands compared    : 77959
+  per-track states     : 71500
+  event callbacks      : 5629
+  target words         : 105304
+  corpus hash          : 456834182c5d6f4e26bac43509ea04b066c55f5e2f811fad603ed82798e9b7ea
+  MISMATCHES           : 0
+BATTLEPACK_ANIM_EQUIVALENCE=PASS  mismatch = 0
