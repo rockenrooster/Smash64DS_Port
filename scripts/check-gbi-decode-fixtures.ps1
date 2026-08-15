@@ -2346,6 +2346,83 @@ Assert-True ($startupHeader.Contains('gNdsStageGCDrawAllLoopHardwareTextureReady
 Assert-True ($startupHeader.Contains('gNdsStageGCDrawAllLoopHardwareFighterTriangleCount')) 'Stage gcDrawAll hardware fighter diagnostics are missing from the startup header.'
 Assert-True ($startupHeader.Contains('gNdsRendererProfileSourceVertexLoadCount')) 'Renderer lazy source-load diagnostic is missing from the startup header.'
 Assert-True ($startupHeader.Contains('gNdsRendererProfileMatrixSnapshotOverflowCount')) 'Renderer snapshot-overflow diagnostic is missing from the startup header.'
+# THE DEBUGGER-VISIBLE COUNTER GROUP LAW (2026-08-15, after the third
+# recurrence). A group of globals the ROM writes and only GDB reads must be
+# cleaned out of the ARM9 D-cache before the stop that reads it: melonDS's
+# ARMv5::ReadMem has no DCache lookup, so a member still dirty reads STALE and
+# the group reads TORN -- one counter current, its neighbour one behind. That
+# invented `phaseLag=-1` (2026-08-09, which held NDS_R2_CAMERA_MATRIX_LEAN=3 off
+# by default), the FPS-HUD tearing (R2-04 E2) and `drawLead=-1` (2026-08-15,
+# the resident-battlepack arm). Three diagnoses, one defect.
+# The defence is structural rather than remembered: each group is ONE X-macro
+# list beside its externs, the publish is GENERATED from that list, and this
+# check pins the list against the marker the harness actually reads. Adding a
+# field to BPLAY_PACE or FPS_HUD without adding it to the group now fails here
+# instead of being found six days later by a red pacing tuple.
+function Get-XMacroGroupMembers {
+    param([string]$Text, [string]$Name)
+    $members = New-Object System.Collections.Generic.List[string]
+    $inside = $false
+    foreach ($line in [regex]::Split($Text, '\r?\n')) {
+        if (-not $inside) {
+            if ($line -match ('^#define\s+' + [regex]::Escape($Name) + '\(X\)')) {
+                $inside = $true
+            } else {
+                continue
+            }
+        }
+        foreach ($hit in [regex]::Matches($line, 'X\(\s*(\w+)\s*\)')) {
+            $members.Add($hit.Groups[1].Value)
+        }
+        if ($line -notmatch '\\\s*$') { break }
+    }
+    return , $members.ToArray()
+}
+function Get-MarkerGlobalNames {
+    param([string]$Text, [string]$Marker)
+    $line = [regex]::Match($Text, ('printf "' + [regex]::Escape($Marker) + '=[^"]*", *([^\r\n]*)'))
+    if (-not $line.Success) { return , @() }
+    return , @([regex]::Matches($line.Groups[1].Value, '(gNds\w+)') |
+        ForEach-Object { $_.Groups[1].Value } | Sort-Object -Unique)
+}
+$platformHeader = Get-Content (Join-Path $root 'include/nds/nds_platform.h') -Raw
+$groupLawHarness = Get-Content (Join-Path $root 'scripts/verify-battle-mariofox-gcrunall-loop-harness.ps1') -Raw
+$paceGroupMembers = Get-XMacroGroupMembers -Text $startupHeader -Name 'NDS_BATTLE_PLAYABLE_PACING_GROUP'
+$fpsGroupMembers = Get-XMacroGroupMembers -Text $platformHeader -Name 'NDS_BATTLE_FPS_HUD_GROUP'
+$tmGroupMembers = Get-XMacroGroupMembers -Text $startupHeader -Name 'NDS_GCRUNALL_TASKMAN_GROUP'
+$paceMarkerGlobals = Get-MarkerGlobalNames -Text $groupLawHarness -Marker 'BPLAY_PACE'
+$fpsMarkerGlobals = Get-MarkerGlobalNames -Text $groupLawHarness -Marker 'FPS_HUD'
+$tmMarkerGlobals = Get-MarkerGlobalNames -Text $groupLawHarness -Marker 'GCRUNALL_TASKMAN'
+$tmUnpublished = @($tmMarkerGlobals | Where-Object { $tmGroupMembers -notcontains $_ })
+$tmUnread = @($tmGroupMembers | Where-Object { $tmMarkerGlobals -notcontains $_ })
+$paceUnpublished = @($paceMarkerGlobals | Where-Object { $paceGroupMembers -notcontains $_ })
+$paceUnread = @($paceGroupMembers | Where-Object { $paceMarkerGlobals -notcontains $_ })
+$fpsUnpublished = @($fpsMarkerGlobals | Where-Object { $fpsGroupMembers -notcontains $_ })
+$fpsUnread = @($fpsGroupMembers | Where-Object { $fpsMarkerGlobals -notcontains $_ })
+Assert-True ($paceGroupMembers.Count -eq 14 -and $paceMarkerGlobals.Count -eq 14 -and
+    $paceUnpublished.Count -eq 0 -and $paceUnread.Count -eq 0) (
+    'BPLAY_PACE group drift: the harness reads ' + $paceMarkerGlobals.Count +
+    ' globals and NDS_BATTLE_PLAYABLE_PACING_GROUP publishes ' + $paceGroupMembers.Count +
+    '. Unpublished: [' + ($paceUnpublished -join ', ') + ']; unread: [' + ($paceUnread -join ', ') +
+    ']. Every member of a debugger-read counter group must be in its publish list.')
+Assert-True ($fpsGroupMembers.Count -eq 4 -and $fpsMarkerGlobals.Count -eq 4 -and
+    $fpsUnpublished.Count -eq 0 -and $fpsUnread.Count -eq 0) (
+    'FPS_HUD group drift. Unpublished: [' + ($fpsUnpublished -join ', ') +
+    ']; unread: [' + ($fpsUnread -join ', ') + '].')
+Assert-True ($tmGroupMembers.Count -eq 6 -and $tmMarkerGlobals.Count -eq 6 -and
+    $tmUnpublished.Count -eq 0 -and $tmUnread.Count -eq 0) (
+    'GCRUNALL_TASKMAN group drift. Unpublished: [' + ($tmUnpublished -join ', ') +
+    ']; unread: [' + ($tmUnread -join ', ') + '].')
+Assert-True ($platformHeader.Contains('DC_FlushRange((const void *)&(sym), sizeof(sym))') -and
+    $platformHeader.Contains('#define NDS_PUBLISH_DEBUGGER_GROUP(members)')) 'The debugger-group publish macro no longer generates a per-member DC_FlushRange.'
+# taskmanPresentLead = GCRUNALL_TASKMAN[1] - 2*BPLAY_PACE[4] crosses the two
+# markers and rests at exactly 0 at this stop, so it has no low-side slack:
+# publishing one side alone would just move which counter is free to read stale.
+Assert-True ($platform.Contains('NDS_PUBLISH_DEBUGGER_GROUP(NDS_BATTLE_PLAYABLE_PACING_GROUP)') -and
+    $platform.Contains('NDS_PUBLISH_DEBUGGER_GROUP(NDS_GCRUNALL_TASKMAN_GROUP)') -and
+    $platform.Contains('NDS_PUBLISH_DEBUGGER_GROUP(NDS_BATTLE_FPS_HUD_GROUP)')) 'A debugger-visible counter group is no longer published through the shared generated seam.'
+Assert-True ($groupLawHarness.Contains('$taskmanPresentLead = $tmPace[1] - (2 * $bp[4])')) 'The cross-marker pacing relation the frame-complete publication seam exists to keep coherent has moved or been rewritten.'
+Assert-True ($taskman -match '(?s)ndsPlatformPublishBattleFrameCompleteGroups\(\);\s*ndsBattlePlayableFrameCompleteMarker\(\);') 'The frame-complete counter groups are not published immediately before the marker GDB breaks on.'
 $rendererAdapter = Get-Content (Join-Path $root 'src/port/reloc_backend_renderer_dl.c') -Raw
 Assert-True ($rendererAdapter.Contains('ndsRendererAdapterPrepareInitialMatrices')) 'Battle DL renderer matrix adapter is missing.'
 Assert-True ($rendererAdapter.Contains('syMatrixTraRotRpyRSca')) 'Battle DL renderer does not route DObj prep through original matrix helpers.'

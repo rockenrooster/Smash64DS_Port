@@ -2254,20 +2254,13 @@ void ndsPlatformTickHudSample(void)
  * never the mechanism and neither was a second writer: the write is coherent,
  * the READ is not. Cleaning the line publishes the whole group.
  *
- * Per global rather than as one 16-byte span: the flush must not depend on the
- * linker keeping four separate objects adjacent or in declaration order. Each
- * call cleans the containing line, so the cost is one CP15 op twice a second
- * however they are laid out. */
+ * The group list and the rule are now in nds_platform.h
+ * (NDS_BATTLE_FPS_HUD_GROUP / NDS_PUBLISH_DEBUGGER_GROUP), because this is the
+ * third group to need it. The measurement above stays here: it is this group's
+ * evidence, not doctrine. */
 static void ndsPlatformPublishBattleFpsHudGroup(void)
 {
-    DC_FlushRange((const void *)&gNdsBattlePlayableHudFpsX10,
-                  sizeof(gNdsBattlePlayableHudFpsX10));
-    DC_FlushRange((const void *)&gNdsBattlePlayableHudFpsSampleCount,
-                  sizeof(gNdsBattlePlayableHudFpsSampleCount));
-    DC_FlushRange((const void *)&gNdsBattlePlayableHudFpsFrameWindow,
-                  sizeof(gNdsBattlePlayableHudFpsFrameWindow));
-    DC_FlushRange((const void *)&gNdsBattlePlayableHudFpsTickWindow,
-                  sizeof(gNdsBattlePlayableHudFpsTickWindow));
+    NDS_PUBLISH_DEBUGGER_GROUP(NDS_BATTLE_FPS_HUD_GROUP);
 }
 
 static void ndsPlatformRenderBattleFpsHud(void)
@@ -2628,6 +2621,21 @@ static void ndsPlatformRenderBattleFpsHud(void)
     }
 }
 #endif
+
+/* The frame-complete stop's groups, published for the debugger exactly as the
+ * FPS-HUD group above is. Unconditional: the realtime harness reads these
+ * markers on every configuration, including the published ROM with no HUD
+ * compiled in, and every quantity it gates on is a DIFFERENCE between two
+ * members -- logicLag, drawLead and phaseLag inside BPLAY_PACE, and
+ * taskmanPresentLead across the two groups. taskman_seam.c calls this
+ * immediately before ndsBattlePlayableFrameCompleteMarker(), which is where the
+ * debugger stops and where every one of those differences is at its resting
+ * value. */
+void ndsPlatformPublishBattleFrameCompleteGroups(void)
+{
+    NDS_PUBLISH_DEBUGGER_GROUP(NDS_BATTLE_PLAYABLE_PACING_GROUP);
+    NDS_PUBLISH_DEBUGGER_GROUP(NDS_GCRUNALL_TASKMAN_GROUP);
+}
 
 static u32 ndsPlatformMixDebugValue(u32 hash, u32 value)
 {

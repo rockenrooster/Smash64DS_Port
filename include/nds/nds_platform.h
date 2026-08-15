@@ -172,4 +172,66 @@ void ndsPlatformProfileSampleFrameBoundaryGXState(void);
 u32 ndsPlatformTicks(void);
 u32 ndsPlatformHeldKeys(void);
 
+/* PUBLISHING A DEBUGGER-VISIBLE COUNTER GROUP -- the one form, in one place.
+ *
+ * A "group" here is a set of globals the ROM writes and only GDB reads, whose
+ * members a harness cross-checks against each other at a stop. melonDS reads
+ * them through `ARMv5::ReadMem` (`src/ARM.cpp:1545`), which special-cases ITCM
+ * and DTCM and otherwise falls through to `BusRead32` -- there is no DCache
+ * lookup anywhere on that path. A word still sitting dirty in the ARM9 data
+ * cache therefore reads STALE over GDB, and a group only PARTLY resident in
+ * main RAM is observed TORN: one member current, its neighbour one behind.
+ * ARM946E-S does not write-allocate, which is what makes the tearing possible
+ * at all -- a store to a non-resident line reaches RAM, while the next store
+ * to a line a load has since filled only marks it dirty and aborts the bus
+ * write.
+ *
+ * This has now been diagnosed three times as three separate defects:
+ *   * R2-04 E2, the FPS-HUD group, measured frame-by-frame in
+ *     `artifacts/verification/2026-08-15_fpshud-publication.txt`;
+ *   * `KNOWN_ISSUES.md`'s `phaseLag=-1` under NDS_R2_CAMERA_MATRIX_LEAN=3
+ *     (2026-08-09), which held that lever off by default for six days;
+ *   * the resident-battlepack arm's `drawLead=-1` (2026-08-15).
+ * In every one the counter written FIRST is the one that reads low, and in
+ * every one the trigger was a change that moved heap layout -- which is what
+ * decides which lines are resident when the debugger halts.
+ *
+ * So the group is declared ONCE as an X-macro list beside its externs, and the
+ * publish is GENERATED from that list. A member cannot be added to a group and
+ * silently left unpublished, because there is only one list and it is both the
+ * group and the flush.
+ *
+ * Per member rather than as one span: the flush must not depend on the linker
+ * keeping separate objects adjacent or in declaration order. Each call cleans
+ * the containing line(s), so the cost is one CP15 clean per line however they
+ * are laid out.
+ *
+ * Publish where the group is CONSISTENT and BEFORE the stop can observe it.
+ * GDB breaks on a function's entry, so publishing inside the marker the
+ * harness breaks on is too late -- it must precede the call. */
+#define NDS_PUBLISH_DEBUGGER_GROUP_MEMBER(sym) \
+    DC_FlushRange((const void *)&(sym), sizeof(sym));
+
+#define NDS_PUBLISH_DEBUGGER_GROUP(members) \
+    do { members(NDS_PUBLISH_DEBUGGER_GROUP_MEMBER) } while (0)
+
+/* The FPS_HUD marker's group, in marker field order. */
+#define NDS_BATTLE_FPS_HUD_GROUP(X) \
+    X(gNdsBattlePlayableHudFpsX10) \
+    X(gNdsBattlePlayableHudFpsSampleCount) \
+    X(gNdsBattlePlayableHudFpsFrameWindow) \
+    X(gNdsBattlePlayableHudFpsTickWindow)
+
+/* Clean every group the frame-complete stop reads as a self-consistent set out
+ * of the D-cache. Called immediately before ndsBattlePlayableFrameCompleteMarker(),
+ * which is the function the realtime harness breaks on; the group lists live in
+ * nds_startup.h beside the externs.
+ *
+ * It publishes BPLAY_PACE and GCRUNALL_TASKMAN together because the harness
+ * cross-checks ACROSS them (`taskmanPresentLead`), and publishing one side of a
+ * subtraction is not a fix -- it just moves which counter is free to read
+ * stale. A group joins this seam when a harness compares one of its members to
+ * another live counter, not merely when it is printed. */
+void ndsPlatformPublishBattleFrameCompleteGroups(void);
+
 #endif

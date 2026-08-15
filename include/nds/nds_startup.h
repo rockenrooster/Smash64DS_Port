@@ -3636,6 +3636,22 @@ extern volatile u32 gNdsFighterGCRunAllLoopTaskmanUpdateCount;
 extern volatile u32 gNdsFighterGCRunAllLoopVSBattleUpdateCount;
 extern volatile u32 gNdsFighterGCRunAllLoopBaseVSBattleUpdateCount;
 extern volatile u32 gNdsFighterGCRunAllLoopRunAllCount;
+/* The GCRUNALL_TASKMAN marker's group. Read at the same stop as BPLAY_PACE and
+ * cross-checked ACROSS the two markers: the harness derives
+ * `taskmanPresentLead = TaskmanUpdateCount - 2*DrawCalls` and requires 0..2.
+ * At the frame-complete marker both source updates of the iteration have
+ * committed, so the true lead there is exactly 0 -- the bound has NO low-side
+ * slack. Publishing BPLAY_PACE while leaving this group unpublished would pin
+ * one side of that subtraction to a coherent value and leave the other free to
+ * read stale, i.e. it would convert the old intermittent `drawLead=-1` into a
+ * new intermittent `taskmanPresentLead=-1`. Both sides go through the seam. */
+#define NDS_GCRUNALL_TASKMAN_GROUP(X) \
+    X(gNdsFighterGCRunAllLoopPrepared) \
+    X(gNdsFighterGCRunAllLoopTaskmanUpdateCount) \
+    X(gNdsFighterGCRunAllLoopVSBattleUpdateCount) \
+    X(gNdsFighterGCRunAllLoopBaseVSBattleUpdateCount) \
+    X(gNdsFighterGCRunAllLoopRunAllCount) \
+    X(gNdsTaskmanBoundedUpdateCount)
 extern volatile u32 gNdsFighterGCRunAllLoopSYReadCount;
 extern volatile u32 gNdsFighterGCRunAllLoopSYUpdateCount;
 extern volatile u32 gNdsFighterGCRunAllLoopGObjCountBefore;
@@ -4156,6 +4172,30 @@ extern volatile u32 gNdsBattlePlayablePacingPhasePresentCount[
     NDS_BATTLE_PLAYABLE_PACING_PHASE_COUNT];
 extern volatile u32 gNdsBattlePlayablePacingPhaseSlipCount[
     NDS_BATTLE_PLAYABLE_PACING_PHASE_COUNT];
+/* The BPLAY_PACE marker's group, in marker field order (the array members
+ * cover five fields each). Every object the realtime harness reads in one
+ * BPLAY_PACE printf is here, because the harness cross-checks its members
+ * against each other -- logicLag, drawLead and phaseLag are all differences
+ * between two of them, so a torn read invents a tuple the guest cannot be in.
+ * See NDS_PUBLISH_DEBUGGER_GROUP in nds_platform.h for why that happens and
+ * for the rule this list exists to enforce. gNdsBattlePlayablePacingVBlankStart
+ * and ...RestartRequested are deliberately absent: they are not in the marker.
+ * check-gbi-decode-fixtures.ps1 pins this list against the harness's printf. */
+#define NDS_BATTLE_PLAYABLE_PACING_GROUP(X) \
+    X(gNdsBattlePlayablePacingResult) \
+    X(gNdsBattlePlayablePacingMode) \
+    X(gNdsBattlePlayablePacingLogicFrames) \
+    X(gNdsBattlePlayablePacingPresentedFrames) \
+    X(gNdsBattlePlayablePacingDrawCalls) \
+    X(gNdsBattlePlayablePacingTimerTicks) \
+    X(gNdsBattlePlayablePacingPresentFpsX10) \
+    X(gNdsBattlePlayablePacingLogicFpsX10) \
+    X(gNdsBattlePlayablePacingVBlanks) \
+    X(gNdsBattlePlayablePacingPresentIntervalMin) \
+    X(gNdsBattlePlayablePacingPresentIntervalMax) \
+    X(gNdsBattlePlayablePacingCadenceViolationCount) \
+    X(gNdsBattlePlayablePacingPhasePresentCount) \
+    X(gNdsBattlePlayablePacingPhaseSlipCount)
 extern volatile u32 gNdsBuildModeCanonicalWord;
 extern volatile u32 gNdsBuildModeShippedWord;
 extern volatile u32 gNdsBuildModeFastWord;

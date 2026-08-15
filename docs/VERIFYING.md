@@ -191,6 +191,18 @@ R2-07 iteration rules (cycle 79):
   stop can therefore under-read.** Whole-run totals are usually safe (the line is
   evicted long before the stop); anything sampled per frame, or any group that
   must be self-consistent, needs the publisher to clean its own line.
+- **THAT RULE IS NOW STRUCTURAL, NOT ADVISORY (2026-08-15).** After the third
+  diagnosis of the same defect, a debugger-read counter group is declared ONCE
+  as an X-macro list beside its externs (`NDS_BATTLE_PLAYABLE_PACING_GROUP`,
+  `NDS_GCRUNALL_TASKMAN_GROUP`, `NDS_BATTLE_FPS_HUD_GROUP`) and the publish is
+  GENERATED from it (`NDS_PUBLISH_DEBUGGER_GROUP`, `nds_platform.h`), so a
+  member cannot be added without its flush. `check-gbi-decode-fixtures.ps1`
+  requires each list and its marker `printf` to be the same set in both
+  directions, and Boundary runs it. **The test for "does this group need the
+  seam" is not "is it printed" but "does a harness compare one of its members
+  to another live counter at a stop that can land mid-update"** — publishing
+  one side of such a comparison and not the other is not a fix, it only moves
+  which counter is free to read stale (`…/2026-08-15_pacing-publication/`).
 - **The general form: ANY construct between the harness and your eyes hides
   its failures.** This has now cost four cycles as `Select-Object -First`, as
   `Where-Object`, and (cycle 92) as the redirect itself — `2>&1 | Out-File`

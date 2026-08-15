@@ -5240,6 +5240,14 @@ static void ndsBattlePlayableFinalizePresentedIteration(void)
      * the same frame numbering the capture harness stops on. */
     ndsRendererR2FlashProbeFrameEnd(gNdsBattlePlayablePacingPresentedFrames);
 #endif
+    /* Publish here and not one line later: the harness breaks on
+     * ndsBattlePlayableFrameCompleteMarker, GDB stops at its entry, and GDB
+     * cannot see the ARM9 D-cache. This is also the only point in the
+     * iteration where the whole tuple is consistent -- DrawCalls,
+     * PresentedFrames, PhasePresentCount, LogicFrames and the taskman update
+     * count have all advanced. See NDS_PUBLISH_DEBUGGER_GROUP in
+     * nds_platform.h. */
+    ndsPlatformPublishBattleFrameCompleteGroups();
     ndsBattlePlayableFrameCompleteMarker();
     NDS_FREEZE_DIAGNOSTICS_HEARTBEAT();
 }
