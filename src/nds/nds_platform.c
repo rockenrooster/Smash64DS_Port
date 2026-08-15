@@ -2227,6 +2227,49 @@ void ndsPlatformTickHudSample(void)
 }
 #endif
 
+/* THE FPS-HUD GROUP HAS EXACTLY ONE CONSUMER AND IT CANNOT SEE THE D-CACHE.
+ *
+ * These four globals are written by the ROM and read only by GDB. melonDS's
+ * stub reads them through `ARMv5::ReadMem` (`src/ARM.cpp:1545`), which special-
+ * cases ITCM and DTCM and otherwise falls through to `ARM::ReadMem` ->
+ * `BusRead32` -- there is no DCache lookup anywhere on that path. So a word
+ * still sitting dirty in the ARM9 data cache reads STALE over GDB, and a
+ * publication that leaves only PART of the group in main RAM is observed torn.
+ *
+ * That is exactly what R2-04 E2 has been reporting since 2026-08-01. Measured
+ * 2026-08-15 (`artifacts/verification/2026-08-15_fpshud-publication.txt`, 420
+ * consecutive presented frames on the flag-1 arm): X10 changes on one presented
+ * frame and SampleCount/FrameWindow/TickWindow on the NEXT one, three times in
+ * 29 publications. The compiled sequence says why -- one store precedes the
+ * SampleCount read-modify-write:
+ *
+ *   2008028:  str r4,[r2]   X10          <- write MISS (ARM946E-S does not
+ *                                           write-allocate) -> reaches RAM
+ *   200802a:  ldr r2,[r1]   SampleCount  <- LINEFILL of that same 32-byte line
+ *   200802e:  str r2,[r1]   SampleCount  <- write HIT: marks the line dirty and
+ *   2008034:  str r1,[r2]   FrameWindow     ABORTS the bus write, so main RAM
+ *   200803a:  str r1,[r2]   TickWindow      keeps the PREVIOUS sample's words
+ *
+ * All four live in one 32-byte line (0x02104f40..0x02104f4c), so a straddle was
+ * never the mechanism and neither was a second writer: the write is coherent,
+ * the READ is not. Cleaning the line publishes the whole group.
+ *
+ * Per global rather than as one 16-byte span: the flush must not depend on the
+ * linker keeping four separate objects adjacent or in declaration order. Each
+ * call cleans the containing line, so the cost is one CP15 op twice a second
+ * however they are laid out. */
+static void ndsPlatformPublishBattleFpsHudGroup(void)
+{
+    DC_FlushRange((const void *)&gNdsBattlePlayableHudFpsX10,
+                  sizeof(gNdsBattlePlayableHudFpsX10));
+    DC_FlushRange((const void *)&gNdsBattlePlayableHudFpsSampleCount,
+                  sizeof(gNdsBattlePlayableHudFpsSampleCount));
+    DC_FlushRange((const void *)&gNdsBattlePlayableHudFpsFrameWindow,
+                  sizeof(gNdsBattlePlayableHudFpsFrameWindow));
+    DC_FlushRange((const void *)&gNdsBattlePlayableHudFpsTickWindow,
+                  sizeof(gNdsBattlePlayableHudFpsTickWindow));
+}
+
 static void ndsPlatformRenderBattleFpsHud(void)
 {
     u32 now_tick = cpuGetTiming();
@@ -2253,6 +2296,7 @@ static void ndsPlatformRenderBattleFpsHud(void)
         gNdsBattlePlayableHudFpsSampleCount = 0u;
         gNdsBattlePlayableHudFpsFrameWindow = 0u;
         gNdsBattlePlayableHudFpsTickWindow = 0u;
+        ndsPlatformPublishBattleFpsHudGroup();
         consoleClear();
         ndsPlatformPrintDebugLine(0u, "FPS --.-  UP --.-");
 #if NDS_BATTLE_PHASE_HUD_ENABLED
@@ -2350,18 +2394,15 @@ static void ndsPlatformRenderBattleFpsHud(void)
      * is 33,513,982 on both sides) and a non-stationary frame rate (these four
      * values come from the same locals in the same breath, so a rolling-versus-
      * spot mismatch cannot arise) -- and left it recorded as intermittent and
-     * unexplained. E2's own wording is where the gap is: "the four fields are
-     * written adjacently ... the harness reads all four in one GDB printf at a
-     * breakpoint, so the read is atomic too". The READ is atomic. The WRITE is
-     * four separate volatile stores, and the VBlank IRQ can land between any
-     * two of them -- so a harness stop taken from inside that IRQ observes a
-     * group that is half this sample and half the last one.
+     * unexplained.
      *
-     * 2026-08-01 made it reproducible instead of intermittent:
-     * `FPS_HUD=299,14,15,17421760` twice, byte-identical. 299 requires a tick
-     * window in (16,785,300, 16,841,196]; 17,421,760 is published beside it.
-     * That gap is about one sample window, which is precisely a torn group and
-     * not a wrong constant or a changed cadence.
+     * RETRACTED 2026-08-15: the IRQ-tearing explanation this comment used to
+     * carry was wrong, and so was the direction it inferred. An IRQ cannot land
+     * inside this block, and measurement says X10 LEADS the other three by one
+     * publication rather than lagging them. The mechanism is the D-cache, not
+     * the write -- see ndsPlatformPublishBattleFpsHudGroup() above, which is
+     * what actually repairs it. The critical section stays because a group
+     * meant to be read as a group should still be written as one.
      *
      * Two register writes once per ~0.5 s window. */
     {
@@ -2374,6 +2415,7 @@ static void ndsPlatformRenderBattleFpsHud(void)
         gNdsBattlePlayableHudFpsTickWindow = elapsed_ticks;
         REG_IME = ime;
     }
+    ndsPlatformPublishBattleFpsHudGroup();
 #if NDS_R204_FPSHUD_SHADOW
     /* R2-04 E2. The Boundary assert recomputes fps from the frame/tick window
      * published beside it and found 290 against 15/17,485,504, which is 288.

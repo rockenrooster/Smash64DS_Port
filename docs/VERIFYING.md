@@ -148,6 +148,22 @@ R2-07 iteration rules (cycle 79):
   poke's readback in the JSON (`setGlobals`) and throws instead of printing a
   percentile table when a poke did not take, but note it **cannot** catch this
   case: the readback comes from RAM, which is exactly where the write did land.
+- **THE SAME BLINDNESS RUNS THE OTHER WAY: A GDB *READ* ALSO MISSES THE D-CACHE
+  (cycle 2026-08-15).** `ARMv5::ReadMem` (`melonDS-Accurate/src/ARM.cpp:1545`)
+  special-cases ITCM and DTCM and otherwise falls through to `ARM::ReadMem` →
+  `BusRead32`; there is no DCache lookup on that path. So a global still dirty in
+  the ARM9 data cache reads **stale** over GDB, and a group of globals published
+  together can be read **torn** — because ARM946E-S does not write-allocate, a
+  store to a non-resident line reaches RAM while the next store to the same line,
+  after any load has filled it, only marks it dirty and aborts the bus write.
+  That is the whole of the two-year-old R2-04 E2 "rolling FPS counter did not
+  sample actual presentation cadence" assert, measured frame by frame in
+  `artifacts/verification/2026-08-15_fpshud-publication.txt` and fixed by
+  `DC_FlushRange` at the publication seam (`nds_platform.c`,
+  `ndsPlatformPublishBattleFpsHudGroup`). **A counter written right up to the
+  stop can therefore under-read.** Whole-run totals are usually safe (the line is
+  evicted long before the stop); anything sampled per frame, or any group that
+  must be self-consistent, needs the publisher to clean its own line.
 - **The general form: ANY construct between the harness and your eyes hides
   its failures.** This has now cost four cycles as `Select-Object -First`, as
   `Where-Object`, and (cycle 92) as the redirect itself — `2>&1 | Out-File`
