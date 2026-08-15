@@ -267,3 +267,30 @@ has a measured reason to exist rather than a projected one.
   producers write, with `unk_dobjtrans_0x10` round-tripped on every level;
 - the nine engagement counters and the byte-identical-dispatch falsifier, which
   are what made this a two-hour verdict instead of an argument.
+
+## 7. The shipping configuration is provably untouched
+
+`NDS_R2_COLLISION_FIXED ?= 0`, and at 0 the wrapper's own condition
+(`NDS_TICK_HUD || NDS_R2_COLLISION_FIXED`) is 0 too, so the whole block --
+counters, `#define` renames and the `ndsR2CfxPrepareFighterJoint` call -- is
+compile-time absent, the ring translation unit is not in `CFILES`, and the new
+header kernels are unreferenced `static inline`s.
+
+Proven from the linked ELF rather than argued. The ELF Boundary built for this
+cycle, `builds/build-battle-playable-proof-hwtri-harness/smash64ds-battle-playable-proof-hwtri.elf`
+(2026-08-15 09:57, its own `nds_build_config.h` reading
+`#define NDS_R2_COLLISION_FIXED 0`), carries **zero** symbols matching
+`ndsR2Cfx|ndsR2CollisionFixed|gNdsCfxRing|gNdsCfxFighter` under `nm`.
+
+`smash64ds.nds` **54C07FAC80C50418949908701F7C2BDBF27512C5F96AC09086FABBB0DF6AC68A**
+and `smash64ds-battle-playable-hwtri.nds`
+**2015FBD1F68B81C03626D8C6D473C8BCBCF527A3A26DFE86FF19BD74ECBB1360** are
+unchanged across the cycle, and neither was rebuilt (mtimes 2026-08-09 and
+2026-08-14), so the hash is evidence of "untouched", not of "rebuilt
+identically" -- the `nm` reading above is the claim that the shipping
+configuration would not move.
+
+**The stress battery (Sudden Death, restart chain, 1-minute, 5-minute) was NOT
+run, and that is deliberate**: it is gated on a KEEP and nothing was kept for
+the shipping default. Boundary covers the tree; the `nm` reading covers the
+published binaries. If a later cycle flips the flag, the battery is owed then.
