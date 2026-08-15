@@ -195,10 +195,19 @@ Subsystem roll-up on the P95 set: **collision / stage MP 2.41%** of non-idle
 > top twelve are one family in one file. The lane concentrates; the earlier
 > population hid it.
 
-**One corroboration that cost nothing and could have failed.** The profile says
-`func_ovl2_800ED490` issues **63.0** soft-float calls per invocation (62,118
-calls ÷ 986 invocations). Its source (`gmcollision.c:208-225`) is **36
-multiplies and 27 adds = 63**. Profile and source agree to the operation.
+**Two corroborations that cost nothing and could have failed.**
+
+1. The profile says `func_ovl2_800ED490` issues **63.0** soft-float calls per
+   invocation (62,118 calls ÷ 986 invocations). Its source
+   (`gmcollision.c:208-225`) is **36 multiplies and 27 adds = 63**. Profile and
+   source agree to the operation.
+2. Price that op mix at the profile's *own* measured helper rates —
+   `36 × 26.0 cyc + 27 × 36.3 cyc = 1,916 cycles = 958 ticks` — against the
+   attribution, which is `11,808 tk/fr ÷ 12.325 calls/fr = 958 ticks`.
+   **Identical.** Three independent quantities (the source's operation count,
+   the profile's per-site call counts, the profile's per-helper rates) close on
+   one number, which is what makes the 1,290 tk/compose a price rather than an
+   estimate.
 
 ---
 
@@ -261,7 +270,7 @@ The seam correction's deletable set, priced on the P95 set:
 | `gmCollisionSetInvertMatrix` | 8,644 | 6,120 |
 | `gmCollisionTestRectangle` | 6,568 | 4,466 |
 | `func_ovl2_800EDE5C` | 5,117 | 4,436 |
-| `gmCollisionTestSphere` | **absent from this ELF** | — |
+| `gmCollisionTestSphere` | **0 — present at `0x0207fcd0`/0x4ac, never executed** | — |
 | **ring** | **20,329** | **15,022** |
 | + `gmCollisionGetWorldPosition` (the ≤31,278 arm) | 27,350 | 20,332 |
 
@@ -364,6 +373,54 @@ the comment beside the counter.
 The chosen entry point is **10.81x present** on the P95 set and is the gateway
 to every body in §5's table.
 
+### 7.1 It fires, and it reproduces the profile
+
+`build-c173-cfxcount-bp1` = the shipping-candidate gate arm (`BOTH_CPU=1`,
+`BATTLEPACK=1`, `KEEP_CACHE=1`, `DRAW=1`), `-Samples 1600 -StartFrame 438
+-RingDump`, DLDI on, window 439–2038, ROM `8F39BAB2F829C690…`.
+
+```text
+gNdsCfxFighterDamagePhaseCalls   1,938        gNdsCfxFighterDamagePhaseHits   20
+gNdsCfxFighterShieldPhaseCalls       0        gNdsCfxFighterShieldPhaseHits    0
+gNdsBattlePackHits                 197        gNdsTaskmanArenaChosenSize 1,548,288
+gNdsTaskmanArenaAllocFailCount       0        gNdsTaskmanGeneralHeapFreeMin 52,864
+```
+
+1,938 / 1,600 = **1.21 calls per frame whole-match**. The profile's own numbers
+put the same function at **13.1 calls/frame on the P95 frames** (self 875 tk/fr
+÷ 67 tk/call). 13.1 / 1.21 = **10.8x** — the counter, taken on a different arm
+with a different instrument, reproduces the capture's 10.81x presence. That is
+the law-1 artifact.
+
+**`gNdsCfxFighterShieldPhaseCalls` reads 0 because nothing shielded an attack in
+this match. That arm is UNPROVEN, not proven inert** — an arm that cannot
+produce the event reads 0 either way.
+
+`BattlePackHits` 197 and heap low-water 52,864 are identical to the banked arm,
+so the fight did not move.
+
+**Boundary GREEN at the shipping default** on this tree — `Boundary
+verification profile passed.`, **0 `Exception:`** in the log
+(`boundary.trimmed.log`). The counter is structurally absent from it rather
+than merely unexercised: the proof target's own generated
+`nds_build_config.h` reads `#define NDS_TICK_HUD 0` and `nm` on
+`smash64ds-battle-playable-proof-hwtri.elf` finds **zero** `gNdsCfxFighter*`
+symbols. Both published targets pin the same value
+(`Makefile:1455` for `smash64ds-battle-playable-hwtri`, `:1944` for the
+published-basename block; nothing raises `NDS_TICK_HUD` except the tickhud,
+results-lab and task37/44-off variants), so neither root ROM can contain it.
+
+**And a figure that must not be read as a bank.** This run's `WORK-H` is
+**P50 951,744 / P95 1,200,960** against `build-c170-seam-bp1`'s banked
+940,320 / 1,177,920 — **+23,040**, inside the ±24,064 one-line spread but above
+the ~17,000 floor. The counter's own rate bounds *its* contribution at 1,938
+wrapper calls over 1,600 frames ≈ **18–24 ticks/frame**, three orders under, so
+it is not the cause. The only other source difference between the two binaries
+is the K0 site counters (`0f121aec2c2`/`48741fcaf05`) — a candidate, not a
+measurement. **The +23,040 is unattributed and is handed forward; `c170-seam-
+bp1` remains the bank.** VBI 2:1731 3:287 4:11 5+:9 max 19, slips 0,
+cadence violations 0.
+
 ---
 
 ## 8. Tooling added, so the next cycle does not re-derive this
@@ -442,4 +499,16 @@ python scripts/analyze-leaf-helper-attribution.py `
     --pc-csv artifacts/performance/2026-08-15_k1-owner-pricing/c172-p95-pc.csv --mask marginal `
     --census artifacts/performance/2026-08-15_k1-owner-pricing/c172-p95-census.json `
     --dis c172.dis --helpers softfloat --top 30
+# and the same tool for the builders rather than the leaves, which is how the
+# cluster's per-call prices and exact call counts came out:
+#   --helpers func_ovl2_800EDBA4,func_ovl2_800ED490,gmCollisionTransformMatrixAll,…
+
+# the law-1 counter arm: one gate run, engagement + inertness + the fight unchanged
+.\scripts\sample-tick-hud-buckets.ps1 -RunnerSlot 2 -Build build-c173-cfxcount-bp1 `
+    -Samples 1600 -StartFrame 438 -RingDump -TimeoutSeconds 2400 `
+    -MakeFlags NDS_R2_BOTH_CPU=1,NDS_R2_BATTLEPACK=1,NDS_R2_BATTLEPACK_KEEP_CACHE=1 `
+    -ExtraGlobals gNdsCfxFighterDamagePhaseCalls,gNdsCfxFighterDamagePhaseHits,`
+gNdsCfxFighterShieldPhaseCalls,gNdsCfxFighterShieldPhaseHits,gNdsBattlePackHits,`
+gNdsTaskmanArenaChosenSize,gNdsTaskmanArenaAllocFailCount,gNdsTaskmanGeneralHeapFreeMin `
+    -RowsCsv …\c173-cfxcount-rows.csv -JsonOut …\c173-cfxcount.json
 ```

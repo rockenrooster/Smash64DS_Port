@@ -6703,8 +6703,11 @@ The rows are 96% `issue` with no cache component, so this is arithmetic, and
 1. **The deletable ring alone still does NOT clear the gate, and now that is
    measured rather than suspected**: `SetInvertMatrix` + `TestRectangle` +
    `EDE5C` = **20,329 tk/fr (0.62x)**, **27,350 (0.84x)** with
-   `gmCollisionGetWorldPosition`. `gmCollisionTestSphere` is **absent from the
-   linked battle ELF** and prices 0.
+   `gmCollisionGetWorldPosition`. `gmCollisionTestSphere` prices **0** — it is
+   in the ELF (`0x0207fcd0`, 0x4ac bytes) and simply never executes in this
+   matchup, so converting it buys ticks nowhere and text everywhere. (`nm`, not
+   the census: a zero census row is "did not run", not "not linked", and the
+   first draft of this note read it as the second.)
 2. **The one extension that closes it is `func_ovl2_800EDBA4`, and the objection
    to it dissolves if `parts->mtx_translate` stays f32.** Give EDBA4 a
    fixed-point INTERIOR with an f32 boundary: build each missing local with
