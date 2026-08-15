@@ -25,6 +25,23 @@ __attribute__((used)) volatile u32 gNdsBattlePackDrops;
  * rewind. `ndsBattlePackDrop` is the seam that makes that visible. */
 static const u8 *sNdsBattlePackBase;
 
+/* THE SLICE-51 FALSIFIER'S SWITCH (lab; `NDS_R2_BATTLEPACK_DISPATCH`, default 1).
+ *
+ * At 0 the blob is still streamed, validated, adopted and carved out of the
+ * arena -- LoadSteps, ResidentBytes, State and Bytes all read exactly as at 1 --
+ * but no clip pointer ever leaves this module, so `gNdsBattlePackHits` reads 0
+ * against a control that reads 197. That separates the blob's PRESENCE from its
+ * DISPATCH, which is the last split the isolation arm could not make.
+ *
+ * A `volatile` global rather than an `#if` so both arms carry the same
+ * instructions at the same addresses and the comparison does not also measure
+ * the linker; the cost is one word of `.data` and a load/compare per lookup,
+ * paid on both arms. `ndsBattlePackContains` is deliberately NOT gated: with no
+ * pack pointer in circulation it answers FALSE anyway, and leaving it live keeps
+ * its two call sites identical between the arms. */
+__attribute__((used)) volatile u32 gNdsBattlePackDispatch =
+    NDS_R2_BATTLEPACK_DISPATCH;
+
 /* generate_battlepack_anim.py `emit_blob`. Every field is a byte offset from
  * the blob base except the two ids, which bound a binary search. */
 typedef struct NDSBattlePackHeader
@@ -126,7 +143,7 @@ void *ndsBattlePackFindFigatree(u32 asset_id)
     u32 lo;
     u32 hi;
 
-    if (header == NULL)
+    if ((header == NULL) || (gNdsBattlePackDispatch == 0u))
     {
         return NULL;
     }

@@ -1,0 +1,10 @@
+Traceback (most recent call last):
+  File "D:\Stuff\DevFolder\Smash64DS_Port\scripts\census-marginal-frame-owners.py", line 502, in <module>
+    sys.exit(main())
+  File "D:\Stuff\DevFolder\Smash64DS_Port\scripts\census-marginal-frame-owners.py", line 490, in main
+    return reduce_profile(args.profile, args.out, args.marginal,
+  File "D:\Stuff\DevFolder\Smash64DS_Port\scripts\census-marginal-frame-owners.py", line 141, in reduce_profile
+    mask, info = marginal_regions(profile_dir, count, band_min, band_max)
+  File "D:\Stuff\DevFolder\Smash64DS_Port\scripts\census-marginal-frame-owners.py", line 118, in marginal_regions
+    non_idle = int(row["total_cycles"]) - int(row["halt_wait"])
+KeyError: 'halt_wait'

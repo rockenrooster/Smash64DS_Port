@@ -1,0 +1,31 @@
+WARNING: Tick-HUD samples repeated a presented frame (5 of 1600). EVERY duplicate is a ring-stop seam whose recorded skew explains the label collision, and no payload repeats, so these are distinct real iterations that share a frame LABEL. Percentiles are over the iterations and stand; the frame ids at those seams do not. Seam rows: 192,768,959,1343,1535.
+Wrote artifacts\performance\2026-08-15_battlepack-mechanism\c166-nodispatch-rows.csv
+Tick-HUD buckets: target=smash64ds-battle-playable-tickhud-hwtri samples=1600 frames=440..2038 melonDS=1.0 sha=DE80E46BDCF1FD98 git=98508e7ad25+dirty(9) dldi=ON
+
+bucket p50        p95        spread mean       min        max        %ALLp50
+------ ---        ---        ------ ----       ---        ---        -------
+ALL     1,118,272  1,678,784   1.50  1,228,859  1,117,440  5,873,088   100.0
+FTR       303,872    329,792   1.09    295,119    155,648    335,872    27.2
+STG       174,400    182,656   1.05    175,971    170,112    190,144    15.6
+BG          4,160      4,224   1.02      4,147      3,968      4,416     0.4
+AUD         2,752      6,848   2.49      8,831      1,152    153,792     0.2
+HUD         1,024    414,528 404.81     35,260        896  2,130,816     0.1
+SRC       326,848    578,304   1.77    353,549     10,944  4,520,832    29.2
+MISC      103,296    180,608   1.75    119,368     80,384  4,374,400     9.2
+OTHR      216,064    505,792   2.34    236,614     21,632    578,496    19.3
+WAIT      196,352    487,296   2.48    216,903      2,240    558,720    17.6
+WORK      949,888  1,397,952   1.47  1,011,956    627,200  5,571,328    84.9
+SHDT        4,608      9,856   2.14     11,550          0    469,504     0.4
+SWRM        1,024      1,152   1.12      1,050        768      1,216     0.1
+GCRA      321,280    572,800   1.78    347,931      6,656  4,515,264    28.7
+SCPU       40,192     99,712   2.48     42,156          0    135,104     3.6
+SCAT        1,344      1,536   1.14      1,811          0    795,328     0.1
+SPRM        2,048      2,304   1.12      4,373          0    497,600     0.2
+SINT      147,712    330,048   2.23    166,347          0  4,339,200    13.2
+SPHD       57,728     96,896   1.68     67,397          0    725,632     5.2
+SPHC          640        768   1.20        892          0     32,064     0.1
+WORK-H    941,568  1,221,952   1.30    976,696    618,688  5,216,320    84.2
+
+named=992,245 (80.7% of ALL)  VBI 2:1702 3:306 4:17 5+:14 max:19 total:2039  slips=0
+extras: gNdsBattlePackHits=0  gNdsBattlePackMisses=355  gNdsBattlePackLoadSteps=18  gNdsBattlePackState=1  gNdsBattlePackBytes=287,904  gNdsBattlePackDispatch=0  gNdsR2AnimCacheHits=319  gNdsR2AnimCacheFills=2  gNdsR2AnimCacheRejects=34  gNdsR2AnimCacheArenaReservedBytes=451,776  gNdsR2AnimCacheArenaUsedBytes=451,328  gNdsR2AnimCacheArenaReserveFailCount=0  gNdsTaskmanArenaChosenSize=1,548,288  gNdsTaskmanArenaAllocFailCount=0  gNdsTaskmanGeneralHeapFreeMin=52,864  gNdsRelocResolveOffsetCount=0  gNdsRelocResolveMisalignCount=0  gNdsBattlePlayablePacingVBlanks=4,517  gNdsBattlePlayablePacingPresentedFrames=2,038  gNdsBattlePlayablePacingPresentIntervalMax=19  gNdsBattleTextHudP0Damage=0  gNdsBattleTextHudP1Damage=76
+Wrote artifacts\performance\2026-08-15_battlepack-mechanism\c166-nodispatch.json

@@ -100,6 +100,27 @@ if ($isResults -and (-not $PSBoundParameters.ContainsKey('Build'))) {
 
 $context = Initialize-MelonDSVerifierContext `
     -Root $root -MelonDS $MelonDS -RunnerSlot $RunnerSlot -NoBuild:$NoBuild
+
+# -RunnerSlot SILENTLY OVERRIDES -MelonDS, and on this harness that swaps the
+# instrument. Resolve-MelonDSRunnerSlot (scripts/lib/melonds.ps1:542) ignores
+# $MelonDS entirely for slot >= 0 and returns emulators\melonds-runners\slotN,
+# which is the v2 build. Asking for emulators\melonds-attributor with a slot
+# therefore produced a capture with NO stall classes at all -- no icache_fill, no
+# halt_wait -- while every banner still said "census". It cost a 25-minute run on
+# 2026-08-15 and the failure only surfaced downstream, as a KeyError inside
+# census-marginal-frame-owners.py. Fail here instead: name a slot OR name an
+# emulator, never both.
+if ($PSBoundParameters.ContainsKey('MelonDS') -and ($RunnerSlot -ge 0)) {
+    $asked = [System.IO.Path]::GetFullPath((Join-Path $root $MelonDS))
+    $got = [System.IO.Path]::GetFullPath($context.MelonDSPath)
+    if ($asked -ne $got) {
+        throw ("-MelonDS asked for '$asked' but -RunnerSlot $RunnerSlot resolved " +
+            "'$got'. A runner slot always wins, so the capture would come from " +
+            'the wrong emulator -- the v3 stall attributor and the v2 build ' +
+            'produce different COLUMNS, not just different numbers. Drop ' +
+            '-RunnerSlot to use -MelonDS, or drop -MelonDS to use the slot.')
+    }
+}
 $rom = Resolve-Smash64DSBuildOutput `
     -Root $root -Target $target -Build $Build -Extension '.nds'
 $elf = Resolve-Smash64DSBuildOutput `

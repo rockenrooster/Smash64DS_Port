@@ -114,7 +114,29 @@ def marginal_regions(profile_dir: Path, count: int,
     path = profile_dir / "arm9-profile.regions.csv"
     work = []
     with path.open(newline="") as handle:
-        for row in csv.DictReader(handle):
+        reader = csv.DictReader(handle)
+        # A v2 capture has no stall columns at all, so the mask axis this module
+        # exists to use does not exist either. Before 2026-08-15 that surfaced as
+        # `KeyError: 'halt_wait'` after the caller had already spent an emulator
+        # run, and the obvious reading of that traceback -- "the script is broken"
+        # -- is wrong. Name the real fault: the wrong emulator produced the
+        # profile. run-task37-profile-census.ps1 now refuses the invocation that
+        # causes it (-MelonDS plus -RunnerSlot), but a v2 capture on disk from
+        # before that guard still reaches here.
+        if reader.fieldnames is not None and "halt_wait" not in reader.fieldnames:
+            meta = profile_dir / "arm9-profile.meta.txt"
+            fmt = ""
+            if meta.exists():
+                for line in meta.read_text().splitlines():
+                    if line.startswith("format="):
+                        fmt = line.split("=", 1)[1]
+            raise SystemExit(
+                f"{path} carries no `halt_wait` column, so this is a v2 profile"
+                f"{' (' + fmt + ')' if fmt else ''}, not a v3 stall capture."
+                " Re-run the census with emulators/melonds-attributor/melonDS.exe"
+                " and WITHOUT -RunnerSlot; a runner slot always resolves to the"
+                " v2 build and silently drops every stall class.")
+        for row in reader:
             non_idle = int(row["total_cycles"]) - int(row["halt_wait"])
             work.append((non_idle, row["region"]))
     work.sort(reverse=True)

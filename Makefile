@@ -333,6 +333,25 @@ NDS_R2_BATTLEPACK ?= 0
 # shippable closure is a pack SMALLER than the 262,144 B it displaces
 # (docs/architecture/RUNTIME2_NATIVE_BATTLE_KERNEL.md section 9).
 NDS_R2_BATTLEPACK_KEEP_CACHE ?= 0
+# THE SLICE-51 FALSIFIER, and it exists because two arms that disagree about the
+# arena, the cache size (40x) and the ROM loads (14x) still landed 384 ticks
+# apart at rank-80 (`.../2026-08-15_battlepack-isolation/BATTLEPACK_ISOLATION.md`).
+# The only thing they share is the pack PATH, and "the pack path" is still two
+# things: the blob's PRESENCE (streamed, carved, resident in the arena) and its
+# DISPATCH (a clip pointer handed to the animation machinery).
+#
+# At 0 the blob is streamed, validated, adopted and carved out of the arena
+# exactly as at 1 -- every residency counter reads the same -- but
+# ndsBattlePackFindFigatree answers NULL, so nothing dispatches through it and
+# gNdsBattlePackHits reads 0 against a control that reads 197. Presence-only cost
+# ~0 says the cost is in the dispatch; presence alone reproducing it says the
+# pack format is exonerated and residency itself is the problem.
+#
+# Runtime-gated rather than #if'd on purpose: both arms then carry the same
+# instructions and the same layout, so the comparison does not also measure the
+# linker. Only the .data initializer differs. Requires NDS_R2_BATTLEPACK=1; at
+# BATTLEPACK=0 the global does not exist and this is inert.
+NDS_R2_BATTLEPACK_DISPATCH ?= 1
 # Cycle 109. Builds BOTH arms of the two animation cuts into one binary, selected
 # at runtime by gNdsR2AnimCutRoute, so they can be priced without a second link.
 # This is standing rule 7's route, and after the determinism finding it is the
@@ -1375,6 +1394,10 @@ endif
 ifneq ($(filter $(NDS_R2_BATTLEPACK_KEEP_CACHE),0 1),)
 else
 $(error NDS_R2_BATTLEPACK_KEEP_CACHE must be 0 or 1)
+endif
+ifneq ($(filter $(NDS_R2_BATTLEPACK_DISPATCH),0 1),)
+else
+$(error NDS_R2_BATTLEPACK_DISPATCH must be 0 or 1)
 endif
 ifneq ($(filter $(NDS_TASK55_STAGE_GEOM),0 1),)
 else
@@ -3249,6 +3272,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_R2_ANIM_CACHE $(NDS_R2_ANIM_CACHE)'; \
 		echo '#define NDS_R2_BATTLEPACK $(NDS_R2_BATTLEPACK)'; \
 		echo '#define NDS_R2_BATTLEPACK_KEEP_CACHE $(NDS_R2_BATTLEPACK_KEEP_CACHE)'; \
+		echo '#define NDS_R2_BATTLEPACK_DISPATCH $(NDS_R2_BATTLEPACK_DISPATCH)'; \
 		echo "#define NDS_R2_BATTLEPACK_BLOB_BYTES $$(test -f '$(NDS_BATTLEPACK_BLOB)' && wc -c < '$(NDS_BATTLEPACK_BLOB)' || echo 0)u"; \
 		echo '#define NDS_R2_AOBJ16_PREBAKE $(NDS_R2_AOBJ16_PREBAKE)'; \
 		echo '#define NDS_R2_ANIM_CUT_ROUTE $(NDS_R2_ANIM_CUT_ROUTE)'; \

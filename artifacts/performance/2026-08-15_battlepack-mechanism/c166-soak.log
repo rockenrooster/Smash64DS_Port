@@ -1,0 +1,108 @@
+soak match timer: canonical 1-minute match (harness default, no override)
+soak: smash64ds-battle-playable-tickhud-hwtri.nds [build-c166-nodispatch-bp1] slot 2, hashing the window every 10s for 5m; trip at 8 identical frames
+  t+   30s  moving again after 1 identical frame(s)
+  t+   70s  alive, 6 distinct frames so far
+
+verdict: FROZEN-PICTURE -- 8 consecutive identical window hashes over 80s, after 8 distinct frames
+frozen frame saved to D:\Stuff\DevFolder\Smash64DS_Port\artifacts\verification\freeze-soak\2026-08-15_052402-frozen.png
+--- freeze capture
+0x01fffc00 in armWaitForIrq () at /home/davem/projects/devkitpro/pacman-packages/calico/src/calico-1.2.0/include/calico/arm/common.h:117
+FREEZE-PC=0x1fffc00
+=> 0x1fffc00 <armWaitForIrq+4>:	bx	lr
+#0  0x01fffc00 in armWaitForIrq () at /home/davem/projects/devkitpro/pacman-packages/calico/src/calico-1.2.0/include/calico/arm/common.h:117
+#1  0x01fffbfc in armContextLoad () at /home/davem/projects/devkitpro/pacman-packages/calico/src/calico-1.2.0/source/arm/arm-context.32.s:36
+Backtrace stopped: previous frame identical to this frame (corrupt stack?)
+$1 = (GObj *) 0x0 <ndsR2AObjLiveCount>
+$2 = {id = 3934256413, link_next = 0x2245974 <s_mainThread>, link_prev = 0xea7ffd1d, link_id = 29 '\035', dl_link_id = 253 '�', frame_draw_last = 127 '\177', obj_kind = 234 '�', link_priority = 3934256413, func_run = 0xe1280174, gobjproc_head = 0xea7ffd1c, {unk_0x1C = -517471876, unk_gobj_0x1C = 0xe128017c, gobjproc_tail = 0xe128017c}, dl_link_next = 0xe2200102, dl_link_prev = 0xea000000, dl_link_priority = 3793817858, proc_display = 0xe1b02080, camera_mask = 1239052860661969025, camera_tag = 300993602, buffer_mask = 16258043179515772999, gobjscripts = {{next_gobj = 0xe0723c23, id = -1065213949}, {next_gobj = 0xc0201001, id = -1071579136}, {next_gobj = 0xc0201001, id = -1302122496}, {next_gobj = 0xe3530019, id = -2127560930}, {next_gobj = 0xe3100102, id = -478149374}}, gobjscripts_num = -473955073, obj = 0x12600000, anim_frame = -2.67485051e+21, flags = 3816887554, func_anim = 0xe3c114ff, user_data = {s = 308350976, u = 308350976, p = 0x12611000}}
+$3 = (GObjProcess *) 0x0 <ndsR2AObjLiveCount>
+$4 = {link_next = 0xea7ffd1d, link_prev = 0x2245974 <s_mainThread>, priority_next = 0xea7ffd1d, priority_prev = 0xea7ffd1d, priority = -360710883, kind = 116 't', is_paused = 1 '\001', parent_gobj = 0xea7ffd1c, exec = {gobjthread = 0xe128017c, func = 0xe128017c}, func_id = 0xe2200102}
+r0             0x0                 0
+r1             0x0                 0
+r2             0x0                 0
+r3             0x0                 0
+r4             0x0                 0
+r5             0x0                 0
+r6             0x0                 0
+r7             0x0                 0
+r8             0x0                 0
+r9             0x0                 0
+r10            0x0                 0
+r11            0x0                 0
+r12            0x0                 0
+sp             0x0                 0x0 <ndsR2AObjLiveCount>
+lr             0x1fffbfc           0x1fffbfc <armWaitForIrq>
+pc             0x1fffc00           0x1fffc00 <armWaitForIrq+4>
+cpsr           0x1f                31
+sp_usr         0x0                 0x0 <ndsR2AObjLiveCount>
+lr_usr         0x1fffbfc           0x1fffbfc <armWaitForIrq>
+r8_fiq         0x0                 0
+r9_fiq         0x0                 0
+r10_fiq        0x0                 0
+r11_fiq        0x0                 0
+r12_fiq        0x0                 0
+sp_fiq         0x0                 0x0 <ndsR2AObjLiveCount>
+lr_fiq         0x0                 0x0 <ndsR2AObjLiveCount>
+sp_irq         0x2ff3f80           0x2ff3f80
+lr_irq         0x1fffd24           0x1fffd24 <__arm_excpt_irq+88>
+sp_svc         0x0                 0x0 <ndsR2AObjLiveCount>
+lr_svc         0x1fffc00           0x1fffc00 <armWaitForIrq+4>
+sp_abt         0x2fffc9e           0x2fffc9e
+lr_abt         0x1fff790           0x1fff790 <threadSwitchTo+120>
+sp_und         0x0                 0x0 <threadBlockCancel>
+lr_und         0x0                 0x0 <threadBlockCancel>
+spsr_fiq       0x10                16
+spsr_irq       0x1f                31
+spsr_svc       0x1f                31
+spsr_abt       0x2000003f          536870975
+spsr_und       0x10                16
+REG_IME=00000001
+REG_IE=00070069
+REG_IF=00000000
+GXSTAT=06008b00
+IPCSYNC=00004000
+IPCFIFOCNT=00008505
+COUNTERS=80012,2043,0,0
+ANIMARENA=451328,14
+TASKARENA=1548288,0
+MALLOCOVF=0,id=0,req=0,head=0,lr=00000000
+KOBURST=att=0,ok=0,drop=000,stage=0
+EFDESC=resolved=42,disabled=1,span=52736/28352/13616
+DLBUF0=start=0x2275f68,len=16384,head=0x2276058,used=240
+DLBUF1=start=0x2279f68,len=4096,head=0x227a058,used=240
+DLBUF2=start=0x227af68,len=0,head=0x227af68,used=0
+DLBUF3=start=0x227af68,len=0,head=0x227af68,used=0
+DLTASK=1
+GENERALHEAP=start=0x226c590,ptr=0x22a3ef4,end=0x23e6590,free=1320604
+COMMONSMAX=-1
+COMMONSACTIVE=3
+SPRITESACTIVE=0
+GFXHEAP=start=0x2287f68,ptr=0x2287f68,end=0x2294f68,used=0
+gNdsObjmanPanicCount=0
+gNdsObjmanPanicMask=0
+gNdsObjAnimRunawayCount=0
+gNdsObjAnimRunawayMask=0
+gNdsObjAnimRunawayScript=0
+gNdsObjAnimRunawayOpcode=0
+gNdsRelocResolveOffsetCount=2
+gNdsRelocResolveMisalignCount=1
+gNdsRelocResolveMisalignValue=37537514
+gNdsParticleBankLoadResult=1
+gNdsParticleBankScriptsUnpacked=26
+gNdsParticleBankScriptsRejected=0
+gNdsParticleScriptStartCount=275
+gNdsParticleRejectCount=0
+gNdsParticleStructsLive=0
+gNdsParticleStructsMax=24
+gNdsParticleDrawSeamCount=8170
+gNdsRendererParticleAtlasPrepareCount=1
+gNdsRendererParticleAtlasFailCount=0
+gNdsRendererParticleAtlasBytes=33024
+gNdsRendererBattleStaticTexturePrepareCount=1
+gNdsRendererBattleStaticTextureViolationCount=0
+gNdsRendererSceneTextureVramResetCount=1
+gNdsIFCommonNativeOamTextureDiscardCount=1
+[Inferior 1 (Remote target) detached]
+
+
+verdict DOWNGRADED to FROZEN-PICTURE-UNCONFIRMED -- the PC is not a self-branch, so the core was executing when halted. This is a stall or a slow scene load, NOT the allocator spin class. Compare against the ~30s NitroFS scene-load dead air before treating it as a hang.
+capture written to artifacts\verification\freeze-soak\2026-08-15_052402-FROZEN-PICTURE-UNCONFIRMED.txt

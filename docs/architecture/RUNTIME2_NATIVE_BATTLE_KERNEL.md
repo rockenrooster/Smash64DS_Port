@@ -427,3 +427,105 @@ per-PC attribution, never by division.
 **Next build, and it is the last thing separating two candidates** — the pack's
 *dispatch* versus its mere *presence* in the arena: the slice-51 falsifier, pack
 resident and streamed and carved, `ndsBattlePackFindFigatree` returning NULL.
+
+## 11. The mechanism was a DEFECT, not the design — §10's refutation is withdrawn (2026-08-15)
+
+`artifacts/performance/2026-08-15_battlepack-mechanism/BATTLEPACK_MECHANISM.md`.
+Four builds: the slice-51 falsifier, a per-frame-region profile arm, the fix, and
+a defaults check.
+
+**The site.** `ndsRelocResolvePointerFromFileBase`
+(`src/port/reloc_backend_assets.c`) asked *"is `ptr` already an absolute pointer
+into a known file?"* **before** interpreting `ptr` as a file-relative offset. For
+a clip served from the pack that probe can never succeed — the generator emits
+blob-relative offsets, so `ptr` is a small integer — and its **miss** path is
+`ndsRelocFindKnownFileContaining` falling through the loaded-file scan into
+`ndsRelocFindStatusNodeContaining` over **both** status buffers, where every node
+visited runs `ndsRelocStatusNodeDataSize` → `ndsRelocAssetIDForToken`, a
+~300-compare chain whose full miss also walks the 143 + 158 Mario/Fox pointer
+arrays. **Two complete status-buffer scans per figatree slot, ~18 slots per
+action change.**
+
+**The price, per PC** (`build-c167-profile-bp1`, `DRAW=0`, 641 presented frames,
+mask = the 69 regions over 4.0M cycles):
+
+```text
+ndsRelocAssetIDForToken           207,877,919 cyc   99.8% on the 69   138x control
+ndsRelocFindStatusNodeContaining  113,559,597 cyc  100.0% on the 69   absent on control
+ndsRelocFindLoadedFileContaining    4,168,059 cyc   53.0% on the 69
+every other symbol                                  ~10.8% = the base rate
+```
+
+323,136,132 masked cycles against a masked work excess of 349,641,078 = **92.4%**,
+i.e. 2,329,254 ticks on each acquisition frame against the gate arm's measured
++2,261,760 at rank-80. Two instruments, two arms, two windows, **3.0% apart**.
+
+**Task A settled residency vs dispatch first.** `build-c166-nodispatch-bp1` —
+blob streamed, validated, adopted and carved exactly as arm C (`State` READY,
+`Bytes` 287,904, `LoadSteps` 18) with `ndsBattlePackFindFigatree` answering NULL
+(`Hits` **0** against a control that reads 197, `ResolveOffsetCount` 0): rank-80
+**1,222,464**, i.e. **−2,225,408 against arm C** and only **+36,352** over the
+no-pack control — and that residue is inside its own 34 cache rejects. **Presence
+is 1.6% of the effect; the dispatch is 98.4%.**
+
+**The fix and its measurement.** Ask the cheap question first: when `file_base`
+is in the pack, resolve the offset directly. It cannot change a result — the blob
+extent is 287,904 B and every DS address is ≥ 0x02000000, so a genuinely absolute
+word fails the bound and takes the original path. `build-c168-packfix-bp1`, same
+arm as C, `Hits` 197 / 355 acquisitions / damage 0/76 / **`gNdsRelocResolveOffsetCount`
+3,629 = 3,629** — the same slots, resolved by a different path:
+
+```text
+             P50        P90      rank-80 raw / net        max        mean    >gate  >2M
+C defect   940,128  1,216,832  3,447,872 / 3,422,925  7,245,056  1,196,937   218   128
+G fixed    938,848  1,086,336  1,170,048 / 1,145,101  2,182,016    955,581   123     1
+A no pack  940,416  1,097,920  1,186,112 / 1,161,165  2,300,928    960,540   135     2
+```
+
+> **WHAT IS AND IS NOT CLAIMED.** `G − A` is −16,064 at rank-80, close to the
+> ≥14,080 cross-build floor, and is **not** banked as a P95 win. What five
+> statistics jointly support is that **the fixed resident pack is no worse than
+> the no-pack control and leans slightly its way** (P50 −1,568, mean −4,959,
+> over-gate 135 → 123, >2M 2 → 1, max −118,912 — one sign throughout).
+> **`−73,659` stays retracted**; it was a projection and the measurement is a
+> wash. **What is withdrawn is §10's "slice 1 is refuted as a P95 lever":** that
+> verdict was measured on a binary carrying this defect.
+
+**§10's other conclusions survive unchanged.** The cache deletion really was a
+passenger (B and C agree to +384). Both per-acquisition prices stay retracted.
+The AObj16 normalizer really is not re-running. `gNdsRelocResolveOffsetCount`
+really was the lead — and the reason the previous cycle was right to refuse to
+divide by it is that the answer is not a table walk: the measured price is
+~68,000 ticks per resolve, and it is that large because each resolve drags ~136
+status-node visits behind it.
+
+**What comes back with it: the RAM question.** §10 declared the fit moot because
+buying the arena did not buy the win. The win is now there, so the constraint is
+live again — `build-c168-packfix-bp1` still grows `NDS_TASKMAN_ARENA_SIZE` to
+0x17A000 and Boundary pins `gNdsTaskmanArenaChosenSize == 1376256`. §9's
+displacement constraint is **reinstated** as the design question, and
+`build-c169-packfix-noarena-bp1` (the fix at the shipping arena) is what sizes it.
+
+**And at the SHIPPING arena the carve is now priced.** `build-c169-packfix-noarena-bp1`
+= `NDS_R2_BATTLEPACK=1` alone: arena **1,376,256** (`AllocFail` 0, heap free-min
+40,576 vs the 32,768 floor), so the blob's carve leaves the raw cache at 4,096 B
+— `Rejects` 126, `Fills` 2, `AnimCacheHits` 30, i.e. arm B's cache state running
+arm G's code.
+
+```text
+             cache    arena       P50     rank-80 raw / net       mean   >2M
+A no pack  262,144  1,376,256  940,416  1,186,112 / 1,161,165   960,540    2
+B defect     4,096  1,376,256  939,712  3,447,488 / 3,422,541 1,219,250  130
+G fixed    163,840  1,548,288  938,848  1,170,048 / 1,145,101   955,581    1
+H fixed      4,096  1,376,256  938,784  1,435,904 / 1,410,957   988,452    8
+
+H - B  rank-80 -2,011,584   H - A  +249,792   H - G  +265,856  <- the carve
+```
+
+**`H − G` prices the carve at +265,856 at rank-80 / +32,871 mean.** Phase 8
+blamed the cache deletion; §10 refuted that and was right on its evidence — the
+cache was a **passenger while the defect dominated**. With the defect gone the
+passenger is the whole remaining fare. **§9's constraint is reinstated and is now
+the binding design question**: the Fox blob is 287,904 B against the 262,144 B it
+evicts, **1.098x its own displacement**. Close that gap and the shipping arm
+becomes arm G.

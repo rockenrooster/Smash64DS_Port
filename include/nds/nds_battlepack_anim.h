@@ -88,6 +88,13 @@ extern volatile u32 gNdsBattlePackLoadSteps;
 extern volatile u32 gNdsBattlePackLoadFails;
 extern volatile u32 gNdsBattlePackResidentBytes;
 extern volatile u32 gNdsBattlePackDrops;
+#if NDS_R2_BATTLEPACK
+/* The slice-51 falsifier's switch: 0 keeps the blob resident and answers every
+ * clip lookup NULL, so `Hits` reads 0 while every residency counter is
+ * unchanged. Lab only; `NDS_R2_BATTLEPACK_DISPATCH` sets its initial value and
+ * the shipping default is 1. Exists only on a pack build. */
+extern volatile u32 gNdsBattlePackDispatch;
+#endif
 
 #define NDS_BATTLEPACK_STATE_UNCHECKED 0u
 #define NDS_BATTLEPACK_STATE_READY 1u

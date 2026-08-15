@@ -375,7 +375,137 @@ the first caller of the bump allocator lost by **848 bytes**: fighter setup stor
 `NDS_R2_BATTLEPACK_BLOB_BYTES` is generated from the blob so the reserve cannot
 drift from the asset.
 
-## THE ISOLATION ARM WAS BUILT AND SLICE 1 IS REFUTED AS A P95 LEVER (2026-08-15)
+## THE PACK PATH'S COST WAS A DEFECT, NOT THE DESIGN — AND IT IS FIXED (2026-08-15)
+
+`artifacts/performance/2026-08-15_battlepack-mechanism/BATTLEPACK_MECHANISM.md` ·
+builds `c166-nodispatch-bp1` (falsifier), `c167-profile-bp1` (per-frame regions,
+`DRAW=0`), `c168-packfix-bp1` (the fix), `c168-default-check`, `c169-packfix-noarena-bp1`.
+**The section below is superseded on its verdict only; every other finding in it
+stands and is re-affirmed here.**
+
+**THE SITE.** `ndsRelocResolvePointerFromFileBase`
+(`src/port/reloc_backend_assets.c`) asked *"is `ptr` ALREADY an absolute pointer
+into a known file?"* **before** interpreting `ptr` as a file-relative offset. For
+a clip served from the pack that probe can never succeed — the generator emits
+blob-relative offsets, so `ptr` is a small integer — and its **miss** path is
+`ndsRelocFindKnownFileContaining` falling through the loaded-file scan into
+`ndsRelocFindStatusNodeContaining` over **both** status buffers, where every node
+runs `ndsRelocStatusNodeDataSize` → **`ndsRelocAssetIDForToken`**, a ~300-compare
+chain whose full miss also walks the 143 + 158 Mario/Fox pointer arrays.
+**Two complete status-buffer scans per figatree slot, ~18 slots per action
+change, ~136 node visits per slot.**
+
+**THE PRICE, PER PC.** `build-c167-profile-bp1`, 641 presented frames, mask = the
+69 regions over 4.0M cycles (the two-VBlank quantum is 2,240,760, so this mask is
+not sorting rounding noise):
+
+| symbol | all cycles | masked | masked/all | tk/fr | control tk/fr |
+|---|---:|---:|---:|---:|---:|
+| `ndsRelocAssetIDForToken` | 207,877,919 | 207,366,743 | **99.8%** | 162,151 | 1,176 (**138x**) |
+| `ndsRelocFindStatusNodeContaining` | 113,559,597 | 113,559,597 | **100.0%** | 88,580 | absent |
+| `ndsRelocFindLoadedFileContaining` | 4,168,059 | 2,209,792 | 53.0% | 3,251 | 2,002 |
+| *every other symbol* | — | — | **≈10.8%** (the base rate) | — | — |
+
+92.4% of the masked work excess. 2,329,254 tk on each acquisition frame against
+the gate arm's measured **+2,261,760** at rank-80 — two instruments, two arms
+(`DRAW=0` vs `DRAW=1`), two windows, **3.0% apart**. The expensive frames
+reproduce on the `DRAW=0` arm at the same game moments (regions 452, 456, 464,
+471 … = the gate arm's 453, 457, 465, 472 … offset by the window base), so the
+tick-HUD draw instrument is not involved.
+
+**WHY NO BRACKET NAMED IT.** The excess lands in whichever bracket is open —
+`SINT` on one frame, `SPHD` on the next, `SCAT`/`SPRM`/`STG`/`MISC` elsewhere —
+because the figatree attach is reached from `gcPlayAnimAll`,
+`ftParamUpdateAnimKeys`, `ftCommonGuardUpdateJoints`, `mpCollisionPlayYakumonoAnim`
+and `gcGetDObjTempAnimTimeMax`. **A bracket ranking would have chased the proc,
+not the call.**
+
+**TASK A — the slice-51 falsifier settled residency vs dispatch.**
+`build-c166-nodispatch-bp1`: blob streamed, validated, adopted and carved exactly
+as arm C (`State` READY, `Bytes` 287,904, `LoadSteps` 18) with
+`ndsBattlePackFindFigatree` answering NULL — `Hits` **0** against a control that
+reads 197, `ResolveOffsetCount` 0. rank-80 **1,222,464**: **−2,225,408 against
+arm C**, **+36,352** over the no-pack control, and that residue sits inside its
+own 34 cache rejects (dispatch off makes the 163,840 B cache serve both fighters
+again). **Presence is 1.6% of the effect. The dispatch is 98.4%.**
+
+**THE FIX.** Ask the cheap question first: when `file_base` is in the pack,
+resolve `ptr` as a blob offset and never run the absolute-pointer probe. It
+cannot change a result — the blob extent is 287,904 B and every DS address is
+≥ 0x02000000, so a genuinely absolute word fails the bound, falls through, and
+takes the original path where `ndsBattlePackContains` answers it O(1) anyway.
+`#if NDS_R2_BATTLEPACK`, because there is no LTO here and a cross-TU call is not
+free at flag 0.
+
+| arm | P50 | P90 | rank-80 raw / net | max | mean | >gate | >2M |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| **A** no pack | 940,416 | 1,097,920 | 1,186,112 / 1,161,165 | 2,300,928 | 960,540 | 135 | 2 |
+| **C** pack, defect | 940,128 | 1,216,832 | 3,447,872 / 3,422,925 | 7,245,056 | 1,196,937 | 218 | 128 |
+| **G** pack, fixed | 938,848 | 1,086,336 | **1,170,048 / 1,145,101** | 2,182,016 | 955,581 | 123 | **1** |
+
+`G − C` rank-80 **−2,277,824**, mean −241,356, over-gate −95, >2M 128 → 1,
+`SINT` max 6,454,592 → 810,176. Engagement identical to arm C — `Hits` 197,
+355 acquisitions, damage **0 / 76**, `Rejects` 0, arena 1,548,288 / `AllocFail` 0
+/ `ReserveFail` 0, heap free-min 52,864 — and **`gNdsRelocResolveOffsetCount`
+3,629 = 3,629**: the same slots, resolved by a different path.
+
+> **WHAT IS AND IS NOT CLAIMED.** `G − A` is −16,064 at rank-80, close to the
+> ≥14,080 cross-build floor, and is **not** banked as a P95 win. The supported
+> claim is that the fixed resident pack is **no worse than the no-pack control
+> and leans slightly its way** — P50 −1,568, mean −4,959, over-gate 135 → 123,
+> >2M 2 → 1, max −118,912, one sign throughout, which is exactly the
+> P50/mean/over-gate ranking `VERIFYING.md` requires.
+> **`−73,659` STAYS RETRACTED** — it was a projection and the measurement is a
+> wash, not a win. **What is WITHDRAWN is "slice 1 is refuted as a P95 lever":**
+> that verdict was measured on a binary carrying this defect.
+
+**THE RAM QUESTION COMES BACK WITH THE WIN — AND IT IS NOW PRICED.**
+`build-c169-packfix-noarena-bp1` is the fix at the **shipping** arena
+(`NDS_R2_BATTLEPACK=1` alone: arena **1,376,256**, `AllocFail` 0, heap free-min
+40,576 vs the 32,768 floor, cache carved to 4,096 → `Rejects` 126, `Fills` 2,
+`AnimCacheHits` 30 — arm B's cache state, arm G's code):
+
+| arm | cache | arena | P50 | rank-80 raw / net | max | mean | >gate | >2M |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| **A** no pack | 262,144 | 1,376,256 | 940,416 | 1,186,112 / 1,161,165 | 2,300,928 | 960,540 | 135 | 2 |
+| **B** pack, defect | 4,096 | 1,376,256 | 939,712 | 3,447,488 / 3,422,541 | 7,252,800 | 1,219,250 | 271 | 130 |
+| **G** pack, fixed | 163,840 | 1,548,288 | 938,848 | 1,170,048 / 1,145,101 | 2,182,016 | 955,581 | 123 | 1 |
+| **H** pack, fixed | 4,096 | **1,376,256** | 938,784 | **1,435,904 / 1,410,957** | 6,401,536 | 988,452 | 190 | 8 |
+
+```text
+H - B   rank-80 -2,011,584   mean -230,798   >2M 130 -> 8     the fix pays here too
+H - A   rank-80   +249,792   mean  +27,912   >2M   2 -> 8
+H - G   rank-80   +265,856   mean  +32,871   >2M   1 -> 8     <- the CARVE, priced
+```
+
+**`H − G` is the price of the carve.** The arms differ only in arena and cache
+size; the defect is fixed in both. **Phase 8 blamed the cache deletion and the
+isolation arm refuted it — correctly, on its evidence: B and C differ 40x in
+cache and landed 384 apart, so the cache was a passenger while the defect
+dominated. With the defect gone the passenger is the whole remaining fare.**
+§9's design constraint is therefore **reinstated and binding**: *a resident pack
+must be smaller than the storage it displaces.* The Fox blob is 287,904 B against
+262,144 B — **1.098x its own displacement**. Close that and the shipping arm
+becomes arm G. `build-c168-packfix-bp1` remains a lab arm (arena 0x17A000;
+Boundary pins `ChosenSize == 1376256`).
+
+**SHIPPING DEFAULT PROVEN INERT, BYTE-FOR-BYTE.** `build-c168-default-check`
+against `build-c165-default-check`: `.text.hot` / `.text.hot.draw` / `.itcm` /
+`.dtcm` section hashes identical; `.main` differs in **7 bytes at offset
+0x0c8fc0**, which is the embedded git short hash. Boundary GREEN at flag 0 and
+flag 1 on `79a9447fd6d` stands and was not re-run. **A section-SIZE compare is
+not a proof of inertness** — hash the content and read the differing run.
+
+**TOOLING TRAP, NOW STRUCTURAL.** `-RunnerSlot` silently overrides `-MelonDS`
+(`scripts/lib/melonds.ps1:542` ignores the parameter for slot ≥ 0), so a census
+asked for with `emulators\melonds-attributor` **and** a slot returns the v2 build
+with **no stall columns at all** while every banner still says "census". It cost
+a 25-minute run and surfaced downstream as `KeyError: 'halt_wait'`.
+`run-task37-profile-census.ps1` now throws on that invocation and
+`census-marginal-frame-owners.py` names the real fault. **The v3 stall-class split
+of these cycles was therefore not taken and is not claimed.**
+
+## THE ISOLATION ARM WAS BUILT AND SLICE 1 IS REFUTED AS A P95 LEVER (2026-08-15) — VERDICT SUPERSEDED ABOVE
 
 `artifacts/performance/2026-08-15_battlepack-isolation/BATTLEPACK_ISOLATION.md` ·
 `build-c165-keepcache-bp1`, base HEAD `30b38f3e9d3`, 2 builds. **This section

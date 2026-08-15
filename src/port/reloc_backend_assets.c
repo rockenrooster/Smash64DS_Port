@@ -2886,6 +2886,57 @@ void *ndsRelocResolvePointerFromFileBase(const void *file_base,
     }
     align_mask = (size >= sizeof(u32)) ? (sizeof(u32) - 1u)
                                        : ((size >= sizeof(u16)) ? 1u : 0u);
+
+    /* THE PACK'S SLOT WORDS ARE OFFSETS BY CONSTRUCTION, SO ASK THAT QUESTION
+     * FIRST -- measured, this ordering was 92.4% of the resident pack's whole
+     * P95 excess (`artifacts/performance/2026-08-15_battlepack-mechanism/`).
+     *
+     * The probe below asks "is `ptr` ALREADY an absolute pointer into a known
+     * file?". For a clip served from the pack it can never be: the generator
+     * emits blob-relative byte offsets, so `ptr` is a small integer. Its MISS
+     * path is the expensive one -- `ndsRelocFindKnownFileContaining` falls
+     * through the loaded-file scan into `ndsRelocFindStatusNodeContaining` over
+     * BOTH status buffers, and every node visited there runs
+     * `ndsRelocStatusNodeDataSize` -> `ndsRelocAssetIDForToken`, a ~300-compare
+     * chain whose full miss also walks the 143 + 158 Mario/Fox pointer arrays.
+     * At ~136 node visits and ~1,003 cycles each that is ~136,000 cycles PER
+     * SLOT, and a fighter action change resolves ~18 of them: v3-arm measured
+     * `ndsRelocAssetIDForToken` 207.9M cycles and
+     * `ndsRelocFindStatusNodeContaining` 113.6M over 641 frames, 99.8%/100.0%
+     * of it on the 69 frames that carry an acquisition.
+     *
+     * Answering from the pack costs one O(1) range test. It cannot change a
+     * result: `data_size` is the blob extent (287,904 B) and every DS address is
+     * >= 0x02000000, so a word that is genuinely an absolute pointer fails the
+     * bound below, falls through, and takes the original path -- where
+     * `ndsBattlePackContains` answers it O(1) anyway. Off a pack build this is a
+     * compiled-out stub returning FALSE and the function is byte-identical.
+     *
+     * `#if`'d rather than left to that stub because a cross-TU call is NOT free
+     * at flag 0 -- there is no LTO here, so the shipped ROM would grow a call
+     * and a branch for a question that can never be answered yes. At flag 0 this
+     * file must still compile to the same bytes it does today. */
+#if NDS_R2_BATTLEPACK
+    if (ndsBattlePackContains(file_base, 1u, &base, &data_size) != FALSE)
+    {
+        raw = (uintptr_t)ptr;
+        if ((raw <= data_size) && (size <= (size_t)(data_size - raw)))
+        {
+            gNdsRelocResolveOffsetCount++;
+            resolved = (uintptr_t)base + raw;
+            if ((resolved & align_mask) != 0u)
+            {
+                gNdsRelocResolveMisalignCount++;
+                gNdsRelocResolveMisalignValue = (u32)resolved;
+                return NULL;
+            }
+            return (u8 *)base + raw;
+        }
+        base = NULL;
+        data_size = 0u;
+    }
+#endif /* NDS_R2_BATTLEPACK */
+
     if (ndsRelocFindKnownFileContaining(ptr, size, NULL, NULL) != FALSE)
     {
         if (((uintptr_t)ptr & align_mask) != 0u)
