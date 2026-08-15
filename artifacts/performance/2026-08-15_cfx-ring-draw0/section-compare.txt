@@ -1,0 +1,12 @@
+A  builds\build-c179-cfxring-b-d0\smash64ds-battle-playable-tickhud-hwtri.elf
+B  builds\build-c180-cfxring-a2-d0\smash64ds-battle-playable-tickhud-hwtri.elf
+
+section                  bytes   differing  first differing offsets
+.itcm                   32,152           0  
+.text.hot                4,588           0  
+.text.hot.draw           5,268           0  
+.main                  932,368           0  
+.main.rw               137,428           1  0x3F24
+.dtcm                    8,800           0  
+
+total differing bytes across 6 sections: 1

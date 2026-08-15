@@ -1,0 +1,805 @@
+make: Entering directory '/d/Stuff/DevFolder/Smash64DS_Port'
+C:/devkitPro/devkitARM/bin/../lib/gcc/arm-none-eabi/15.2.0/thumb/libgcc.a: OK
+C:/devkitPro/devkitARM/bin/../lib/gcc/arm-none-eabi/15.2.0/../../../../arm-none-eabi/lib/thumb/libc.a: OK
+main.c
+nds_platform.c
+nds_ifcommon_oam.c
+nds_reloc_assets.c
+nds_task39_effect_census.c
+nds_audio_assets.c
+nds_audio_fgm.c
+nds_audio_bgm.c
+C:/devkitPro/devkitARM/bin/../lib/gcc/arm-none-eabi/15.2.0/../../../../arm-none-eabi/lib/thumb/libm.a: OK
+nds_battlepack_anim.c
+nds_renderer.c
+battle_playable_static_textures.c
+D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_ifcommon_oam.c: In function 'ndsIFCommonNativeOamCommit':
+D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_ifcommon_oam.c: At top level:
+port_probe.c
+n64_stubs.c
+libultra_os.c
+coroutine.c
+boot_stubs.c
+os_selftest.c
+D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_renderer.c: In function 'ndsRendererStageTextureSiteTryBind':
+D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_renderer.c: In function 'ndsRendererNativeShadeProductionActions':
+D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_renderer.c: At top level:
+D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_renderer.c: In function 'ndsRendererNativeStagePrepareRun':
+D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_renderer.c: In function 'ndsRendererNativeStagePrepareGeneratedSegment0':
+D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_renderer.c: At top level:
+battleship_sys_main.c
+scheduler_backend.c
+controller_backend.c
+battleship_sys_scheduler.c
+battleship_sys_controller.c
+battleship_sys_video.c
+battleship_sys_maindevice.c
+battleship_sys_malloc.c
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/main.c: In function 'syMainSetDmemStatus':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/main.c: In function 'syMainThread5':
+battleship_sys_zbuffer.c
+battleship_sys_sintable.c
+battleship_sys_framebuffer.c
+video_bootstrap.c
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/scheduler.c: In function 'sySchedulerCheckReadyFramebuffer':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/scheduler.c: In function 'sySchedulerAddPausedQueue':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/scheduler.c: In function 'sySchedulerRemovePausedQueue':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/scheduler.c: In function 'sySchedulerUpdateViMode':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/scheduler.c: In function 'sySchedulerExecuteTaskGfx':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/scheduler.c: In function 'sySchedulerExecuteTask':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/scheduler.c: In function 'sySchedulerExecuteTasksAll':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/scheduler.c: In function 'sySchedulerVRetrace':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/scheduler.c: In function 'sySchedulerSpTaskDone':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/scheduler.c: In function 'sySchedulerDpFullSync':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/scheduler.c: In function 'sySchedulerThreadMain':
+battleship_sys_matrix.c
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/controller.c: In function 'syControllerThreadMain':
+battleship_libultra_gu_normalize.c
+battleship_libultra_gu_mtxcatf.c
+battleship_scmanager.c
+battleship_mnstartup.c
+scene_backend.c
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/matrix.c: In function 'syMatrixPerspFastF':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/matrix.c: In function 'syMatrixPerspF':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/matrix.c: In function 'syMatrixTra':
+scene_harness.c
+vector.c
+battleship_scsubsyscontroller.c
+utils.c
+battleship_ftdisplaylights.c
+battleship_sys_objman.c
+battleship_sys_objhelper.c
+battleship_sys_objanim.c
+battleship_sys_taskman.c
+battleship_ftdisplaymain.c
+battleship_mvopeningroom.c
+battleship_sys_interp.c
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sc/scmanager.c: In function 'ndsBaseSCManagerRunLoop':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mncommon/mnstartup.c: In function 'mnStartupActorFuncRun':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/objman.c: In function 'ndsBaseGcSetupObjman':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/vector.c: In function 'syVectorRotate3D':
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_renderer_dl.c: In function 'ndsRendererAdapterMaterialAnimHash':
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_renderer_dl.c: In function 'ndsFighterDisplayContractSubmit':
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_movement.c: In function 'ndsFighterJumpAttackAirProbeDirections':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/objman.c: In function 'gcAddXObjForDObjVar':
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c: In function 'ndsFighterDashRunProbeDamageInvincibleGate':
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c: In function 'ndsFighterMarioFoxStageMPLiveHitDamageLoopRunShieldStatProof':
+battleship_mvopeningportraits.c
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c: In function 'ndsFighterDashRunStepAttackDamageProcParams':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/interp.c: In function 'syInterpBezier4Points':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/interp.c: In function 'syInterpGetFracFrame':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftdisplaymain.c: In function 'ftDisplayMainCalcFogColor':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftdisplaymain.c: In function 'ftDisplayMainSetFogColor':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftdisplaymain.c: In function 'ftDisplayMainDrawDefault':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftdisplaymain.c: In function 'ftDisplayMainDrawSkeleton':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftdisplaymain.c: In function 'ftDisplayMainDrawAfterImage':
+D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_diagnostic_recorders.c: At top level:
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftdisplaymain.c: In function 'ftDisplayMainDrawDefault':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftdisplaymain.c: In function 'ftDisplayMainDrawSkeleton':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftdisplaylights.c: In function 'ftDisplayLightsDrawReflect':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/objanim.c: In function 'ndsBaseGcPlayMObjMatAnim':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/objanim.c: In function 'gcGetAObjTrackAnimTimeMax':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/objanim.c: In function 'func_8000EC64_F864':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/objanim.c: In function 'func_8000EE40_FA40':
+battleship_mvopeningmario.c
+battleship_mvopeninglink.c
+battleship_mvopeningdonkey.c
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/objhelper.c: In function 'gcDefaultFuncRun':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/taskman.c: In function 'syTaskmanInitSegmentF':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/taskman.c: In function 'unref_80006B44':
+battleship_mvopeningyoshi.c
+battleship_mvopeningfox.c
+battleship_mvopeningkirby.c
+battleship_mvopeningsamus.c
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/objanim.c: In function 'ndsBaseGcPlayDObjAnimJoint':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/objanim.c: In function 'ndsBaseGcPlayMObjMatAnim':
+battleship_mntitlefiles.c
+battleship_mvopeningpikachu.c
+battleship_mnplayersvs.c
+battleship_mnvsmode.c
+battleship_mntitle.c
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/objanim.c: In function 'gcGetAObjTrackAnimTimeMax':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mv/mvopening/mvopeningportraits.c: In function 'mvOpeningPortraitsMakeSet1':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mv/mvopening/mvopeningportraits.c: In function 'mvOpeningPortraitsMakeSet2':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mv/mvopening/mvopeningportraits.c: In function 'ndsBaseMVOpeningPortraitsFuncRun':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mv/mvopening/mvopeningportraits.c: In function 'ndsBaseMVOpeningPortraitsFuncStart':
+battleship_mnmaps.c
+battleship_gmcommon.c
+battleship_scvsbattle.c
+battleship_gmcollision.c
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mv/mvopening/mvopeningmario.c: In function 'mvOpeningMarioMakeName':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mv/mvopening/mvopeningmario.c: In function 'mvOpeningMarioPosedWallpaperProcDisplay':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mv/mvopening/mvopeningmario.c: In function 'ndsBaseMVOpeningMarioFuncRun':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mv/mvopening/mvopeningdonkey.c: In function 'mvOpeningDonkeyMakeName':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mv/mvopening/mvopeningdonkey.c: In function 'mvOpeningDonkeyPosedWallpaperProcDisplay':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mv/mvopening/mvopeningdonkey.c: In function 'ndsBaseMVOpeningDonkeyFuncRun':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mv/mvopening/mvopeningkirby.c: In function 'mvOpeningKirbyMakeName':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mv/mvopening/mvopeningkirby.c: In function 'mvOpeningKirbyPosedWallpaperProcDisplay':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mv/mvopening/mvopeningkirby.c: In function 'ndsBaseMVOpeningKirbyFuncRun':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnvsmode/mnvsmode.c: In function 'mnVSModeMakeNumber':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnvsmode/mnvsmode.c: In function 'mnVSModeMakeTimeStockValue':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnvsmode/mnvsmode.c: In function 'mnVSModeMakeSubtitle':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnvsmode/mnvsmode.c: In function 'mnVSModeGetShade':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnvsmode/mnvsmode.c: In function 'mnVSModeGetCostume':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnvsmode/mnvsmode.c: In function 'mnVSModeSetCostumesAndShades':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mv/mvopening/mvopeningyoshi.c: In function 'mvOpeningYoshiMakeName':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mv/mvopening/mvopeningpikachu.c: In function 'mvOpeningPikachuMakeName':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnvsmode/mnvsmode.c: In function 'mnVSModeMain':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sc/sccommon/scvsbattle.c: In function 'ndsBaseSCVSBattleStartBattle':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mv/mvopening/mvopeningyoshi.c: In function 'mvOpeningYoshiPosedWallpaperProcDisplay':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mv/mvopening/mvopeningpikachu.c: In function 'mvOpeningPikachuPosedWallpaperProcDisplay':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sc/sccommon/scvsbattle.c: In function 'ndsBaseSCVSBattleStartSuddenDeath':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mv/mvopening/mvopeningyoshi.c: In function 'ndsBaseMVOpeningYoshiFuncRun':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mv/mvopening/mvopeningpikachu.c: In function 'ndsBaseMVOpeningPikachuFuncRun':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnvsmode/mnvsmode.c: In function 'mnVSModeGetShade':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnvsmode/mnvsmode.c: In function 'mnVSModeGetCostume':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnvsmode/mnvsmode.c: In function 'mnVSModeUpdateButton':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnvsmode/mnvsmode.c: In function 'mnVSModeMain':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/gm/gmcollision.c: In function 'gmCollisionTransformMatrixAll':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/gm/gmcollision.c: In function 'func_ovl2_800EDBA4':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/gm/gmcollision.c: In function 'func_ovl2_800EE050':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/gm/gmcollision.c: In function 'gmCollisionTestSphere':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/gm/gmcollision.c: In function 'ndsBaseGmCollisionCheckFighterAttackShieldCollide':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/gm/gmcollision.c: In function 'gmCollisionCheckWeaponAttackShieldCollide':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/gm/gmcollision.c: In function 'gmCollisionCheckItemAttackShieldCollide':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mv/mvopening/mvopeninglink.c: In function 'mvOpeningLinkMakeName':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mv/mvopening/mvopeningfox.c: In function 'mvOpeningFoxMakeName':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mv/mvopening/mvopeninglink.c: In function 'mvOpeningLinkPosedWallpaperProcDisplay':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mv/mvopening/mvopeninglink.c: In function 'ndsBaseMVOpeningLinkFuncRun':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnmaps/mnmaps.c: In function 'mnMapsMakeString':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mv/mvopening/mvopeningfox.c: In function 'mvOpeningFoxPosedWallpaperProcDisplay':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mv/mvopening/mvopeningfox.c: In function 'ndsBaseMVOpeningFoxFuncRun':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnplayers/mnplayersvs.c: In function 'mnPlayersVSCheckFighterCrossed':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnplayers/mnplayersvs.c: In function 'mnPlayersVSPortraitAddCross':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnplayers/mnplayersvs.c: In function 'mnPlayersVSMakePortraitShadow':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnmaps/mnmaps.c: In function 'mnMapsMakeIcons':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnplayers/mnplayersvs.c: In function 'mnPlayersVSMakePortrait':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnmaps/mnmaps.c: In function 'mnMapsSetNamePosition':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnmaps/mnmaps.c: In function 'mnMapsMakeName':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnplayers/mnplayersvs.c: In function 'mnPlayersVSMakeTeamSelect':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnplayers/mnplayersvs.c: In function 'mnPlayersVSUpdatePlayerKindSelect':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnmaps/mnmaps.c: In function 'mnMapsMakeEmblem':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnplayers/mnplayersvs.c: In function 'mnPlayersVSMakeNameAndEmblem':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnplayers/mnplayersvs.c: In function 'mnPlayersVSSetGateLUT':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnplayers/mnplayersvs.c: In function 'mnPlayersVSMakePlayerKindSelect':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnplayers/mnplayersvs.c: In function 'mnPlayersVSMakePlayerKind':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnplayers/mnplayersvs.c: In function 'mnPlayersVSMakeGate':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnmaps/mnmaps.c: In function 'mnMapsMakePreviewCamera':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnmaps/mnmaps.c: In function 'mnMapsSaveSceneData':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnplayers/mnplayersvs.c: In function 'mnPlayersVSMakeGameRuleNumber':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnmaps/mnmaps.c: In function 'mnMapsFuncRun':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnplayers/mnplayersvs.c: In function 'mnPlayersVSMakeTimeSelect':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnmaps/mnmaps.c: In function 'ndsBaseMNMapsFuncStart':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnplayers/mnplayersvs.c: In function 'mnPlayersVSMakeStockSelect':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnplayers/mnplayersvs.c: In function 'mnPlayersVSMakeLabels':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnplayers/mnplayersvs.c: In function 'mnPlayersVSCheckCostumeUsed':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnplayers/mnplayersvs.c: In function 'mnPlayersVSGetFreeCostumeRoyal':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnplayers/mnplayersvs.c: In function 'mnPlayersVSUpdateCursor':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnplayers/mnplayersvs.c: In function 'mnPlayersVSUpdateGameMode':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnplayers/mnplayersvs.c: In function 'mnPlayersVSCheckTeamSelectInRangeAll':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnplayers/mnplayersvs.c: In function 'mnPlayersVSCheckPuckInRange':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnmaps/mnmaps.c: In function 'mnMapsGetSlot':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnplayers/mnplayersvs.c: In function 'mnPlayersVSUpdateNameAndEmblem':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnplayers/mnplayersvs.c: In function 'mnPlayersVSMakeHandicapLevelValue':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnplayers/mnplayersvs.c: In function 'mnPlayersVSSelectFighter':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnplayers/mnplayersvs.c: In function 'mnPlayersVSUpdateCursorPlacementPriorities':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnplayers/mnplayersvs.c: In function 'mnPlayersVSAdjustCursor':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnplayers/mnplayersvs.c: In function 'mnPlayersVSCursorProcUpdate':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnplayers/mnplayersvs.c: In function 'mnPlayersVSUpdatePuck':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnplayers/mnplayersvs.c: In function 'mnPlayersVSMakeCursor':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnplayers/mnplayersvs.c: In function 'mnPlayersVSMakePuck':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnplayers/mnplayersvs.c: In function 'mnPlayersVSPuckAdjustOverlap':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnplayers/mnplayersvs.c: In function 'mnPlayersVSPuckAdjustProcUpdate':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnplayers/mnplayersvs.c: In function 'mnPlayersVSUpdatePuckGlowColor':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnplayers/mnplayersvs.c: In function 'mnPlayersVSCostumeSyncProcUpdate':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnplayers/mnplayersvs.c: In function 'mnPlayersVSCheckReady':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnplayers/mnplayersvs.c: In function 'mnPlayersVSFuncRun':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnplayers/mnplayersvs.c: In function 'mnPlayersVSInitSlot':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnplayers/mnplayersvs.c: In function 'ndsBaseMNPlayersVSFuncStart':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnplayers/mnplayersvs.c: In function 'mnPlayersVSGetShade':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnplayers/mnplayersvs.c: In function 'mnPlayersVSGetFreeCostumeRoyal':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnplayers/mnplayersvs.c: In function 'mnPlayersVSGetFreeCostume':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnplayers/mnplayersvs.c: In function 'mnPlayersVSUpdateCursorPlacementPriorities':
+battleship_grpupupu_ground.c
+battleship_grinishie_scale.c
+battleship_ftcommon_turn.c
+battleship_ftcommon_walk.c
+battleship_ftcommon_wait.c
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnmaps/mnmaps.c: In function 'mnMapsFuncRun':
+battleship_ftcommon_attack1.c
+battleship_ftcommon_attackdash.c
+battleship_ftcommon_attack100.c
+battleship_ftcommon_dash.c
+battleship_ftcommon_turnrun.c
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mncommon/mntitle.c: In function 'mnTitleGetFighterKindsNum':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mncommon/mntitle.c: In function 'mnTitleFuncRun':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mncommon/mntitle.c: In function 'mnTitleTransitionsFuncRun':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mncommon/mntitle.c: In function 'mnTitleUpdateFireSprite':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mncommon/mntitle.c: In function 'mnTitleMakeFire':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mncommon/mntitle.c: In function 'mnTitleMakeLogoNoOpening':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mncommon/mntitle.c: In function 'mnTitleMakeLogo':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mncommon/mntitle.c: In function 'mnTitleMakeSprites':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mncommon/mntitle.c: In function 'mnTitleMakeLabels':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mncommon/mntitle.c: In function 'mnTitleMakePressStart':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mncommon/mntitle.c: In function 'mnTitleFireCameraProcUpdate':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mncommon/mntitle.c: In function 'mnTitleMakeCameras':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mncommon/mntitle.c: In function 'mnTitleMakeLogoFire':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mncommon/mntitle.c: In function 'ndsBaseMNTitleStartScene':
+D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_mntitle.c: In function 'mnTitleStartScene':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mncommon/mntitle.c: In function 'mnTitleSetDemoFighterKinds':
+battleship_ftcommon_appeal.c
+battleship_ftcommon_catch.c
+battleship_mariofox_mainmotion.c
+battleship_ftcommon_attackair.c
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mv/mvopening/mvopeningsamus.c: In function 'mvOpeningSamusMakeName':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mv/mvopening/mvopeningsamus.c: In function 'mvOpeningSamusMakeMotionWindow':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mv/mvopening/mvopeningsamus.c: In function 'mvOpeningSamusPosedWallpaperProcDisplay':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mv/mvopening/mvopeningsamus.c: In function 'ndsBaseMVOpeningSamusFuncRun':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/gr/grcommon/grpupupu.c: In function 'grPupupuWhispyGetLR':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/gr/grcommon/grpupupu.c: In function 'grPupupuProcUpdate':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/gr/grcommon/grpupupu.c: In function 'grPupupuMakeMapGObj':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/gr/grcommon/grpupupu.c: In function 'grPupupuInitAll':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommonwait.c: In function 'ftCommonWaitProcInterrupt':
+battleship_ftcommon_escape.c
+battleship_ftcommon_run.c
+battleship_ftcommon_guard.c
+battleship_ftcommon_runbrake.c
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommonthrown1.c: In function 'ndsBaseFTCommonThrownProcUpdate':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommonthrown1.c: In function 'ndsBaseFTCommonThrownProcMap':
+battleship_ftcommon_pass.c
+battleship_ftcommon_kneebend.c
+battleship_ftcommon_jump.c
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommonwalk.c: In function 'ftCommonWalkGetWalkAnimLength':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommonattack100.c: In function 'ndsBaseFTCommonAttack100StartCheckInterruptCommon':
+battleship_ftcommon_stopceil.c
+battleship_ftcommon_fall.c
+battleship_ftcommon_ottotto.c
+battleship_ftcommon_landing.c
+battleship_ftcommon_cliffcatchwait.c
+battleship_ftcommon_cliffattack.c
+battleship_ftcommon_cliffescape.c
+battleship_ftcommon_cliffclimb.c
+battleship_ftcommon_walldamage.c
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommonguard1.c: In function 'ndsBaseFTCommonGuardUpdateJoints':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommonsquat.c: In function 'ndsBaseFTCommonSquatWaitProcUpdate':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommonescape.c: In function 'ndsBaseFTCommonEscapeProcUpdate':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommoncliffcatchwait.c: In function 'ftCommonCliffCommonProcMap':
+battleship_ftcommon_damage.c
+battleship_ftcommon_twister.c
+battleship_ftcommon_downforwardback.c
+battleship_ftdata.c
+nds_r2_sqrtf.c
+battleship_ftcommon_downattack.c
+battleship_ftcommon_passive.c
+battleship_ftcommon_passivestand.c
+battleship_scsubsysdata_ft.c
+battleship_ftchar_data_slots.c
+nds_r2_collision_ring.c
+battleship_ftcommon_downwaitbounce.c
+battleship_ftcommon_furasleep.c
+battleship_ftcommon_damagefall.c
+nds_r2_collision_fixed.c
+battleship_ftcommon_downstand.c
+battleship_ftcommon_rebound.c
+battleship_ftcommon_normal_moveset.c
+reloc_backend_ftdata_symbols.c
+battleship_ftanim.c
+reloc_backend_ftdata_stubs.c
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommondamage.c: In function 'ndsBaseFTCommonDamageInitDamageVars':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommondownstand.c: In function 'ndsBaseFTCommonDownStandCheckInterruptCommon':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommondownwaitbounce.c: In function 'ndsBaseFTCommonDownBounceCheckUpOrDown':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommonattacks4.c: In function 'ndsBaseFTCommonAttackS4CheckInterruptDash':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommonattacks4.c: In function 'ndsBaseFTCommonAttackS4CheckInterruptTurn':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommonattacks4.c: In function 'ndsBaseFTCommonAttackS4CheckInterruptCommon':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommonjumpaerial.c: In function 'ndsBaseFTNessJumpAerialProcPhysics':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommonattacks4.c: In function 'ndsBaseFTCommonAttackS4ProcUpdate':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommonjumpaerial.c: In function 'ndsBaseFTCommonJumpAerialMultiSetStatus':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommontwister.c: In function 'ndsBaseFTCommonTwisterProcPhysics':
+battleship_ftkey.c
+battleship_ftmanager.c
+battleship_mpprocess_edge_support.c
+battleship_ftanimend.c
+battleship_mpprocess.c
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftanim.c: In function 'battleship_ftAnimGetTargetValue':
+D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_ftanim.c: In function 'ndsR2FtAnimParseDObjFigatree':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftanim.c: In function 'battleship_ftAnimGetTargetValue':
+battleship_mpprocess_live_bridge.c
+battleship_ftstatus_callback_aliases.c
+battleship_ftstatus_map_physics_shims.c
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mp/mpprocess.c: In function 'ndsBaseMPProcessCheckTestFloorCollisionNew':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mp/mpprocess.c: In function 'ndsBaseMPProcessCheckTestCeilCollisionAdjNew':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmanager.c: In function 'ftManagerSetupFileSize':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmanager.c: In function 'ftManagerAllocFighter':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmanager.c: In function 'ftManagerSetupFilesMainKind':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmanager.c: In function 'ftManagerSetupFilesKind':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmanager.c: In function 'ftManagerInitFighter':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmanager.c: In function 'ndsBaseFTManagerMakeFighter':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mp/mpprocess.c: In function 'ndsBaseMPProcessUpdateMain':
+battleship_gmcamera.c
+battleship_ftcomputer.c
+battleship_ftstatus_inactive_stubs.c
+battleship_ftcommon_dead.c
+battle_playable_compat_stubs.c
+battleship_ftcommon_rebirth.c
+battleship_lbtransition.c
+battleship_grwallpaper.c
+battleship_scsubsysfighter.c
+battleship_mnvsresults.c
+battleship_scsubsysdata.c
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/lb/lbtransition.c: In function 'lbTransitionMakeTransition':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/lb/lbtransition.c: In function 'ndsBaseLBTransitionSetupTransition':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/gm/gmcamera.c: In function 'gmCameraGetAdjustAtAngle':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/gm/gmcamera.c: In function 'gmCameraPan':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/gm/gmcamera.c: In function 'func_ovl2_8010C5C0':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/gm/gmcamera.c: In function 'gmCameraUpdateAcidZoom':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/gm/gmcamera.c: In function 'gmCameraUpdatePlayerZoom':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/gm/gmcamera.c: In function 'gmCameraPlayerFollowFuncCamera':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/gm/gmcamera.c: In function 'func_ovl2_8010D14C':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/gm/gmcamera.c: In function 'battleship_gmCameraLookAtFuncMatrix':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/gm/gmcamera.c: In function 'func_ovl2_8010D4B0':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/gm/gmcamera.c: In function 'gmCameraMakeDefaultCamera':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/gm/gmcamera.c: In function 'gmCameraPlayerMagnifyFuncMatrix':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/gm/gmcamera.c: In function 'gmCameraOrthoLookAtFuncMatrix':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/gm/gmcamera.c: In function 'gmCameraPrepProjectionFuncMatrix':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/gr/grwallpaper.c: In function 'grWallpaperBonus3ProcDisplay':
+battleship_ifcommon.c
+battleship_ifscreenflash.c
+battleship_wpmanager_core.c
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftcomputer.c: In function 'ftComputerCheckDetectTarget':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftcomputer.c: In function 'ftComputerCheckTargetItemOrTwister':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftcomputer.c: In function 'ftComputerFollowObjectiveWalk':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftcomputer.c: In function 'func_ovl3_80135B78':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftcomputer.c: In function 'ftComputerCheckSetEvadeTarget':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftcomputer.c: In function 'ftComputerGetObjectiveStatus':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftcomputer.c: In function 'func_ovl3_8013877C':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftcomputer.c: In function 'ftComputerFollowObjectiveAttack':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftcomputer.c: In function 'func_ovl3_801397F4':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftcomputer.c: In function 'ftComputerFollowObjectiveAlly':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftcomputer.c: In function 'ftComputerFollowObjectivePatrol':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftcomputer.c: In function 'ftComputerFollowObjectiveRush':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftcomputer.c: In function 'ftComputerCheckDetectTarget':
+battleship_lbparticle.c
+battleship_fox_blaster.c
+battleship_special_common.c
+battleship_efmanager.c
+battleship_libultra_gu_mtxutil.c
+nds_firegrind.c
+battleship_mario_fireball.c
+nds_particle_banks.c
+battleship_fox_reflector.c
+battleship_ftcommon_fallspecial.c
+nds_fox_gun.c
+battleship_mario_special_hi.c
+battleship_ftpublic.c
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sc/scsubsys/scsubsysfighter.c: In function 'scSubsysFighterOpeningProcUpdate':
+battleship_mario_special_lw.c
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnvsmode/mnvsresults.c: In function 'mnVSResultsSaveBackup':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnvsmode/mnvsresults.c: In function 'mnVSResultsGetWinPlayer':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnvsmode/mnvsresults.c: In function 'mnVSResultsMakeEmblem':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnvsmode/mnvsresults.c: In function 'mnVSResultsMakeWallpaper':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnvsmode/mnvsresults.c: In function 'mnVSResultsSetFighterPosition':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnvsmode/mnvsresults.c: In function 'mnVSResultsFaceWinner':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnvsmode/mnvsresults.c: In function 'mnVSResultsGetStatusLose':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnvsmode/mnvsresults.c: In function 'mnVSResultsSetFighterScale':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnvsmode/mnvsresults.c: In function 'mnVSResultsMakeFighter':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnvsmode/mnvsresults.c: In function 'mnVSResultsMakePlayerTag':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnvsmode/mnvsresults.c: In function 'mnVSResultsMakeString':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnvsmode/mnvsresults.c: In function 'mnVSResultsMakeWinnerText':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnvsmode/mnvsresults.c: In function 'mnVSResultsMakeDigit':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnvsmode/mnvsresults.c: In function 'mnVSResultsMakePlaceNumber':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnvsmode/mnvsresults.c: In function 'mnVSResultsTintProcDisplay':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnvsmode/mnvsresults.c: In function 'mnVSResultsMakeHeader':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnvsmode/mnvsresults.c: In function 'mnVSResultsDrawResultsTimeRoyal':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnvsmode/mnvsresults.c: In function 'mnVSResultsDrawResultsStockRoyal':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnvsmode/mnvsresults.c: In function 'mnVSResultsDrawResultsTimeTeam':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnvsmode/mnvsresults.c: In function 'mnVSResultsDrawResultsStockTeam':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnvsmode/mnvsresults.c: In function 'mnVSResultsDrawResultsNoContest':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnvsmode/mnvsresults.c: In function 'mnVSResultsMakeLabel':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnvsmode/mnvsresults.c: In function 'mnVSResultsSetRoyalPlace':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnvsmode/mnvsresults.c: In function 'mnVSResultsAudioThreadUpdate':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnvsmode/mnvsresults.c: In function 'func_ovl31_80137898':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnvsmode/mnvsresults.c: In function 'mnVSResultsMakeConfetti':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnvsmode/mnvsresults.c: In function 'mnVSResultsFuncRun':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnvsmode/mnvsresults.c: In function 'mnVSResultsGetWinPlayer':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnvsmode/mnvsresults.c: In function 'mnVSResultsGetBestManExcept':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnvsmode/mnvsresults.c: In function 'mnVSResultsMakeEmblem':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnvsmode/mnvsresults.c: In function 'mnVSResultsMakeWallpaper':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnvsmode/mnvsresults.c: In function 'mnVSResultsGetBestMan':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnvsmode/mnvsresults.c: In function 'mnVSResultsGetWorstMan':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/if/ifcommon.c: In function 'ifCommonPlayerDamageUpdateDigits':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/if/ifcommon.c: In function 'ifCommonPlayerDamageProcDisplay':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/if/ifcommon.c: In function 'ifCommonPlayerDamageSetDigitAttr':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/if/ifcommon.c: In function 'ifCommonPlayerStockMultiProcDisplay':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/if/ifcommon.c: In function 'ifCommonPlayerStockSetIconAttr':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/if/ifcommon.c: In function 'ifCommonPlayerArrowsFuncRun':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/if/ifcommon.c: In function 'ifCommonPlayerArrowsMainProcDisplay':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/if/ifcommon.c: In function 'ifCommonPlayerTagMakeInterface':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/if/ifcommon.c: In function 'ifCommonItemArrowSetAttr':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/if/ifcommon.c: In function 'ifCommonAnnounceThread':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/if/ifcommon.c: In function 'ifCommonAnnounceSetAttr':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/if/ifcommon.c: In function 'ifCommonAnnounceGoMakeInterface':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/if/ifcommon.c: In function 'ifCommonTrafficMakeSObj':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/if/ifcommon.c: In function 'ifCommonEntryAllThread':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/if/ifcommon.c: In function 'ifCommonSuddenDeathThread':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/if/ifcommon.c: In function 'ifCommonTimerProcDisplay':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/if/ifcommon.c: In function 'ifCommonTimerSetAttr':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/if/ifcommon.c: In function 'ifCommonTimerMakeDigits':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/if/ifcommon.c: In function 'ifCommonTimerFuncRun':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/if/ifcommon.c: In function 'ifCommonBattleInterfacePauseGObj':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/if/ifcommon.c: In function 'ifCommonBattleInterfaceResumeGObj':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/if/ifcommon.c: In function 'func_ovl2_80113744':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/if/ifcommon.c: In function 'ifCommonBattlePauseProcDisplay':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/if/ifcommon.c: In function 'ifCommonBattlePausePlayerNumMakeSObj':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/if/ifcommon.c: In function 'ifCommonBattlePauseDecalMakeSObjID':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/wp/wpmanager.c: In function 'wpManagerMakeWeapon':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/wp/wpmain.c: In function 'func_ovl3_8016830C':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/wp/wpmap.c: In function 'wpMapProcLRWallCheckFloor':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/wp/wpmap.c: In function 'wpMapProcAll':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/wp/wpmap.c: In function 'wpMapProcAllCheckFloor':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/wp/wpmap.c: In function 'wpMapProcAllCheckCollEnd':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/wp/wpmap.c: In function 'wpMapCheckAllRebound':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommonfallspecial.c: In function 'ftCommonFallSpecialSetStatus':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efdisplay.c: In function 'efDisplayCLDProcDisplay':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efdisplay.c: In function 'efDisplayXLUProcDisplay':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c: At top level:
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c: In function 'ndsBaseEFManagerInitEffects':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c: In function 'efManagerMakeEffect':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c: In function 'efManagerFlameLRMakeEffect':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c: In function 'efManagerFlameRandomMakeEffect':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c: In function 'efManagerFlameStaticMakeEffect':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c: In function 'efManagerDustCollideMakeEffect':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c: In function 'efManagerDustLightMakeEffect':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c: In function 'efManagerDustHeavyMakeEffect':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c: In function 'efManagerDustHeavyDoubleProcUpdate':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c: In function 'efManagerDustHeavyDoubleMakeEffect':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c: In function 'ndsBaseEFManagerDustExpandSmallMakeEffect':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c: In function 'efManagerDustDashMakeEffect':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c: In function 'efManagerDamageSpawnSparksProcUpdate':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c: In function 'efManagerDamageSpawnMDustProcUpdate':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c: In function 'ndsBaseEFManagerQuakeMakeEffect':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c: In function 'ndsBaseEFManagerDamageCoinMakeEffect':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c: In function 'efManagerFoxReflectorSetAnimID':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c: In function 'ndsBaseEFManagerDeadExplodeMakeEffect':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c: In function 'efManagerKirbyEntryStarMakeEffect':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c: In function 'efManagerMBallThrownMakeEffect':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c: In function 'efManagerYoshiEggLaySetAnim':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c: In function 'efManagerYoshiEggLayMakeEffect':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c: In function 'efManagerLoseKirbyStarMakeEffect':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/if/ifcommon.c: In function 'ifCommonBattleUpdateScoreStocks':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftpublic.c: In function 'battleship_ftPublicTryStartCall':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftpublic.c: In function 'ftPublicDecideCommon':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftpublic.c: In function 'battleship_ftPublicProcUpdate':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/lb/lbparticle.c: In function 'lbParticleSetupBankID':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/lb/lbparticle.c: In function 'lbParticleMakeStruct':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/lb/lbparticle.c: In function 'lbParticleUpdateStruct':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/lb/lbparticle.c: In function 'ndsBaseLbParticleDrawTextures':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/lb/lbparticle.c: In function 'lbParticleGeneratorFuncRun':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/lb/lbparticle.c: In function 'ndsBaseLbParticleMakeGenerator':
+battleship_fox_special_hi.c
+battleship_ftmain.c
+coroutine_arm.s
+nds_task16_float_compare.s
+nds_task9_float_phase2.s
+nds_task16_float_addsub.s
+nds_task16_float_i2f.s
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/if/ifscreenflash.c: In function 'ifScreenFlashProcDisplay':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftchar/ftfox/ftfoxspecialhi.c: In function 'ftFoxSpecialHiDecideSetStatus':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c: In function 'ftMainParseMotionEvent':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c: In function 'ftMainUpdateColAnim':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c: In function 'battleship_ftMainSetHitHazard':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c: In function 'ftMainProcPhysicsMap':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c: In function 'battleship_ftMainSetHitInteractStats':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c: In function 'battleship_ftMainUpdateCatchStatFighter':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c: In function 'battleship_ftMainUpdateDamageStatFighter':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c: In function 'ftMainUpdateShieldStatWeapon':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c: In function 'ftMainUpdateShieldStatItem':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c: In function 'ftMainUpdateDamageStatGround':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c: In function 'battleship_ftMainProcessHitCollisionStatsMain':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c: In function 'battleship_ftMainSearchHitFighter':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c: In function 'battleship_ftMainSearchHitWeapon':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c: In function 'battleship_ftMainSearchHitItem':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c: In function 'battleship_ftMainSearchFighterCatch':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c: In function 'battleship_ftMainProcParams':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c: In function 'battleship_ftMainSetStatus':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c: In function 'battleship_ftMainProcessHitCollisionStatsMain':
+linking smash64ds-battle-playable-tickhud-hwtri.elf
+Nintendo DS rom tool 2.3.1 - Jan  8 2024
+by Rafael Vuijk, Dave Murphy, Alexei Karpenko
+built ... smash64ds-battle-playable-tickhud-hwtri.nds
+make: Leaving directory '/d/Stuff/DevFolder/Smash64DS_Port'
+window verified against D:\Stuff\DevFolder\Smash64DS_Port\builds\build-c179-cfxring-b-d0\nds_build_config.h
+scene:         Battle
+census window: frames 438..2038
+per-frame region: True (region r = presented frame 438 + r)
+dldi:          True
+profiler csv:  D:\Stuff\DevFolder\Smash64DS_Port\artifacts\performance\2026-08-15_cfx-ring-draw0\v3-b-c179\arm9-profile.csv
+
+  format=melonDS-arm9-retail-profile-v3
+  instructions=1008409209
+  cycles=3754393638
+  program_counters=54618025
+  regions=1601
+  timestamp_discontinuities=1
+  stall_issue=653808554
+  stall_icache_fill=1141316610
+  stall_dcache_fill=864059246
+  stall_write_buffer=160138200
+  stall_bus_contention=117701670
+  stall_dma_hold=27058166
+  stall_cart_spin=0
+  stall_interlock=137406744
+  stall_halt_wait=652904438
+  stall_gx_paid=0
+  stall_gx_blamed=0
+  stall_partition_total=3754393628
+  stall_partition_residual=-10
+  gx_stall_events=0
+  gx_stall_raw_cycles=0
+
+profile      D:\Stuff\DevFolder\Smash64DS_Port\artifacts\performance\2026-08-15_cfx-ring-draw0\v3-b-c179\arm9-profile.csv
+elf          D:\Stuff\DevFolder\Smash64DS_Port\builds\build-c179-cfxring-b-d0\smash64ds-battle-playable-tickhud-hwtri.elf
+pc rows      54,618,025
+cycles       3,754,393,638
+unattributed 63,343 (0.00% -- BIOS, ITCM stubs, data)
+symbols hit  1,482 of 3,602 FUNC symbols
+
+section sizes
+  .itcm               32,152
+  .text.hot            4,588  free 3,604 of cap 8,192
+  .text.hot.draw       5,268  free 2,924 of cap 8,192
+  .main.bss        1,306,544
+
+== 0. stall accounting by tier (placement can only touch non-mem stall) ==
+   excluding idle spin: armWaitForIrq
+tier                   cycles        insns  cyc/insn  nonmem stall     %    mem stall     %
+--------------  -------------  -----------  --------  ------------  ----  -----------  ----
+.itcm             750,133,339  377,616,143      1.99   104,493,447  13.9  268,023,749  35.7
+.text.hot         127,208,734   31,984,063      3.98    39,976,604  31.4   55,248,067  43.4
+.text.hot.draw    113,360,938   50,430,776      2.25    23,944,879  21.1   38,985,283  34.4
+.main           2,110,688,228  548,355,548      3.85   622,647,150  29.5  939,685,530  44.5
+
+== A. top 40 symbols by measured cycles ==
+     cycles   %tot  bytes      cyc/byte  tier            symbol
+-----------  -----  -----  ------------  --------------  -------------------------------------------------------------
+652,939,056  17.39      8  81,617,382.0  .itcm           armWaitForIrq
+ 93,763,804   2.50  7,544      12,428.9  .main           ndsFighterMarioFoxDLAllDrawForSlot.constprop.0
+ 93,328,726   2.49    400     233,321.8  .itcm           __aeabi_fadd
+ 88,906,814   2.37  2,572      34,567.2  .main           ndsRendererCommitNativeStageSegment
+ 82,397,837   2.19    548     150,361.0  .itcm           ndsRendererNativeEmitProductionPrimitiveGroups
+ 76,467,757   2.04  3,472      22,024.1  .itcm           ndsRendererExecuteNativeFighterOwnerProduction
+ 63,576,324   1.69  3,720      17,090.4  .itcm           ndsRendererNativePrepareProductionRun
+ 62,902,962   1.68    604     104,144.0  .text.hot       gcPlayDObjAnimJoint
+ 62,741,891   1.67    408     153,779.1  .itcm           __aeabi_fmul (+1 alias)
+ 61,626,139   1.64  1,028      59,947.6  .main           ndsR2AnimValueQ
+ 57,526,903   1.53    616      93,387.8  .text.hot.draw  ndsRendererMtxMulAffine20p12
+ 52,366,066   1.39  1,928      27,160.8  .main           ndsRendererNativeStageBeginRun.part.0
+ 45,590,452   1.21    140     325,646.1  .itcm           memset
+ 44,541,802   1.19    170     262,010.6  .itcm           memcpy
+ 44,112,782   1.17  2,056      21,455.6  .main           ndsRendererAdapterBuildFighterTraRotRpyDirect20p12
+ 42,994,205   1.15    608      70,714.2  .itcm           ndsRendererTask36ReplayRun
+ 40,508,000   1.08  2,512      16,125.8  .main           ndsR2FtAnimParseDObjFigatree
+ 39,202,019   1.04    512      76,566.4  .text.hot.draw  ndsRendererNativeStageLoadNoZMatrix
+ 35,394,863   0.94  2,440      14,506.1  .main           ndsRendererAdapterBuildDObjXObjMatrix
+ 35,068,782   0.93    352      99,627.2  .itcm           __aeabi_fdiv (+1 alias)
+ 33,940,515   0.90    716      47,403.0  .main           ftParamUpdateAnimKeys
+ 33,639,168   0.90    312     107,817.8  .itcm           ndsRendererMtxMul20p12
+ 33,210,347   0.88  1,532      21,677.8  .main           mpCollisionGetFCCommonFloor
+ 32,723,989   0.87    392      83,479.6  .main           ndsRendererLoadHardwareSplitMatrices
+ 31,779,847   0.85  3,960       8,025.2  .main           lbParticleDrawTextures
+ 31,372,347   0.84    388      80,856.6  .main           ftDisplayMainDrawDefault
+ 29,980,668   0.80    464      64,613.5  .main           ndsStageGCDrawAllLoopRecordCapturedDisplay
+ 29,637,568   0.79    952      31,131.9  .main           ndsRendererAdapterBuildPersistentStageWorldMatrix.constprop.0
+ 29,277,766   0.78    120     243,981.4  .main           ndsBaseGcRunAll
+ 27,626,604   0.74    212     130,314.2  .itcm           ndsRendererSyncTextureTile
+ 27,616,612   0.74     92     300,180.6  .main           tickGetCount
+ 27,450,907   0.73    328      83,691.8  .main           gcCaptureCameraGObj
+ 26,765,272   0.71    432      61,956.6  .main           gcPlayAnimAll
+ 26,271,620   0.70     92     285,561.1  .main           ftGetStruct
+ 24,548,649   0.65  2,176      11,281.5  .text.hot       battleship_ftMainProcUpdateInterrupt
+ 23,140,993   0.62    268      86,347.0  .main           ndsRendererHardwareBindTextureName
+ 22,376,575   0.60    376      59,512.2  .main           ndsFTParamsInvalidateSubtree
+ 22,029,292   0.59    580      37,981.5  .itcm           ndsRendererNativeShadeProductionActions.constprop.0.isra.0
+ 21,895,262   0.58    492      44,502.6  .itcm           ndsRendererNativeApplyStateDelta
+ 21,757,567   0.58    220      98,898.0  .main           sqrtf
+
+== B. .itcm rent: 82 residents covering 32,090 of 32,152 section bytes (62 unnamed); 30 never executed (2,594 B idle) ==
+    cyc/byte       cycles  bytes       insns  symbol
+------------  -----------  -----  ----------  ----------------------------------------------------------
+81,617,382.0  652,939,056      8       8,683  armWaitForIrq
+   325,646.1   45,590,452    140  11,102,593  memset
+   305,981.7   11,015,340     36   9,389,168  __aeabi_fcmpeq
+   262,865.5    1,051,462      4   1,051,460  __aeabi_fsub
+   262,010.6   44,541,802    170  17,899,275  memcpy
+   233,321.8   93,328,726    400  78,240,296  __aeabi_fadd
+   174,368.5   12,205,795     70   6,670,631  memcmp
+   153,779.1   62,741,891    408  55,015,796  __aeabi_fmul (+1 alias)
+   150,361.0   82,397,837    548  26,372,901  ndsRendererNativeEmitProductionPrimitiveGroups
+   145,708.4    7,576,837     52   6,759,707  __aeabi_fcmplt
+   130,314.2   27,626,604    212   6,050,936  ndsRendererSyncTextureTile
+   107,817.8   33,639,168    312  23,479,713  ndsRendererMtxMul20p12
+    99,627.2   35,068,782    352  31,810,074  __aeabi_fdiv (+1 alias)
+    74,759.5    5,681,719     76     274,182  armCopyMem32
+    73,305.0    3,811,860     52   3,355,183  __aeabi_fcmpgt
+    70,714.2   42,994,205    608   6,019,232  ndsRendererTask36ReplayRun
+    68,880.7    6,337,028     92   4,893,266  __aeabi_f2iz (+1 alias)
+    54,993.2    5,059,375     92   3,812,790  __aeabi_i2f
+    44,502.6   21,895,262    492   6,229,953  ndsRendererNativeApplyStateDelta
+    41,241.8    1,154,771     28     474,555  armDCacheFlush
+    37,981.5   22,029,292    580   6,685,881  ndsRendererNativeShadeProductionActions.constprop.0.isra.0
+    30,529.6      366,355     12     100,203  armDrainWriteBuffer
+    28,960.5    7,413,889    256   4,991,429  ndsRendererMtxLoadN64ToDS20p12
+    28,940.5      926,096     32     687,316  __floatsisf (+1 alias)
+    24,923.8   14,356,085    576   5,644,572  ndsRendererNativeEmitProductionCrossRun.constprop.0
+    24,723.6      692,261     28     252,661  armDCacheInvalidate
+    22,448.3    1,167,310     52   1,048,489  __aeabi_fcmple
+    22,024.1   76,467,757  3,472  22,564,251  ndsRendererExecuteNativeFighterOwnerProduction
+    18,834.1    3,239,473    172   2,725,560  __aeabi_l2f (+1 alias)
+    17,090.4   63,576,324  3,720  24,944,462  ndsRendererNativePrepareProductionRun
+    15,632.8    2,376,181    152   2,228,475  ndsRendererRecordTextureState
+    14,740.5    3,891,487    264   2,583,560  ndsRendererRecordSetTile
+    12,010.5      480,419     40     240,209  __aeabi_ui2f (+1 alias)
+    10,563.8      549,318     52     503,048  __aeabi_fcmpge
+     8,900.8      890,078    100     335,448  ndsRendererRecordLoadBlock
+     4,365.8      681,065    156     538,992  ndsRendererRecordSetTileSize
+     4,127.8      875,087    212     130,273  threadBlock
+     3,623.9      826,242    228     254,703  __arm_excpt_irq
+     3,557.8      298,855     84     239,367  __aeabi_f2uiz (+1 alias)
+     1,740.8       76,593     44      27,852  armContextSave
+     1,318.5      606,528    460     334,998  ndsRendererHardwareLitShadeColorPrepared
+     1,310.3      162,473    124      76,593  threadSwitchTo
+       557.9    1,499,524  2,688     675,450  ndsRendererHardwareSubmitVertex
+       513.3      123,200    240      86,400  threadUnblockAllByMask
+       306.6       65,005    212      31,603  threadUnblockOneByValue
+       217.6        6,963     32       2,321  armContextLoad
+       201.1    1,554,045  7,728     525,637  ndsRendererScanList
+       173.8       27,808    160      23,198  ndsRendererHardwarePolyFmt
+       165.6      546,984  3,304     193,628  ndsRendererSubmitHardwareTriangle
+        70.3        9,276    132       3,897  ndsRendererHardwareTextureSourceBytes
+        30.0        7,088    236       1,462  __ieee754_sqrtf
+         0.0      625,362      0      32,494  armContextLoadFromSvc
+         0.0            0    444           0  __addsf3 (+1 alias)
+         0.0            0     24           0  __aeabi_cfcmpeq (+1 alias)
+         0.0            0     40           0  __aeabi_cfrcmple
+         0.0            0     28           0  __aeabi_fcmpun
+         0.0            0    456           0  __aeabi_frsub
+         0.0            0    188           0  __aeabi_ul2f (+1 alias)
+         0.0            0     12           0  __arm_excpt_dabt
+         0.0            0      4           0  __arm_excpt_pabt
+         0.0            0      4           0  __arm_excpt_rst
+         0.0            0     12           0  __arm_excpt_und
+         0.0            0    100           0  __cmpsf2 (+2 alias)
+         0.0            0     48           0  __excpt_entry
+         0.0            0    116           0  __gesf2 (+1 alias)
+         0.0            0    108           0  __lesf2 (+1 alias)
+         0.0            0     24           0  __nds_task16_libgcc_fcmpge_golden
+         0.0            0     24           0  __nds_task16_libgcc_fcmpgt_golden
+         0.0            0     24           0  __nds_task16_libgcc_fcmple_golden
+         0.0            0     24           0  __nds_task16_libgcc_fcmplt_golden
+         0.0            0     56           0  __nds_task16_libgcc_fcmpun_golden (+1 alias)
+         0.0            0    448           0  __nds_task16_libgcc_fsub_golden (+1 alias)
+         0.0            0     24           0  __nds_task9_libgcc_fcmpeq_golden
+         0.0            0     40           0  armDCacheFlushAll
+         0.0            0     12           0  armICacheInvalidateAll
+         0.0            0     54           0  ndsFTParamsInvalidateFighterParts
+         0.0            0    404           0  ndsRendererHardwareGetLightShadeLut
+         0.0            0    192           0  ndsRendererNativeApplyStateSpan
+         0.0            0    256           0  ndsRendererNativeEmitDenseRawRun
+         0.0            0    128           0  ndsRendererNativeEmitProductionRawTexturedRun
+         0.0            0    112           0  ndsRendererNativeEmitProductionRawUntexturedRun
+         0.0            0    312           0  threadUnblockAllByValue
+
+== C. unplaced candidates for 3,604 free .text.hot bytes, ranked by recoverable (non-mem) stall ==
+pack  nonmem stall      cycles   bytes  cyc/insn  stall/byte  symbol
+----  ------------  ----------  ------  --------  ----------  -------------------------------------------------------------
+fit     22,890,624  88,906,814   2,572      2.50     8,899.9  ndsRendererCommitNativeStageSegment
+-       22,012,588  93,763,804   7,544      4.42     2,917.9  ndsFighterMarioFoxDLAllDrawForSlot.constprop.0
+-       16,252,879  52,366,066   1,928      4.03     8,429.9  ndsRendererNativeStageBeginRun.part.0
+-       13,975,336  44,112,782   2,056      2.44     6,797.3  ndsRendererAdapterBuildFighterTraRotRpyDirect20p12
+-       13,486,329  33,210,347   1,532      3.06     8,803.1  mpCollisionGetFCCommonFloor
+fit     12,056,506  61,626,139   1,028      1.65    11,728.1  ndsR2AnimValueQ
+-       11,388,713  31,779,847   3,960      5.10     2,875.9  lbParticleDrawTextures
+-       11,068,779  40,508,000   2,512      2.73     4,406.4  ndsR2FtAnimParseDObjFigatree
+-        9,998,870  21,757,567     220      3.19    45,449.4  sqrtf
+-        9,518,554  29,980,668     464      5.53    20,514.1  ndsStageGCDrawAllLoopRecordCapturedDisplay
+-        9,035,293  33,940,515     716      5.32    12,619.1  ftParamUpdateAnimKeys
+-        8,562,641  26,765,272     432      3.99    19,820.9  gcPlayAnimAll
+-        8,214,686  13,324,664     988      4.43     8,314.5  syMatrixLookAtReflectF
+-        7,706,393  35,394,863   2,440      2.28     3,158.4  ndsRendererAdapterBuildDObjXObjMatrix
+-        7,156,856  16,484,145     896      2.93     7,987.6  ndsStageMPAdjustFloorLoopWallSweep
+-        7,083,250  27,450,907     328      5.35    21,595.3  gcCaptureCameraGObj
+-        6,748,425  32,723,989     392      3.85    17,215.4  ndsRendererLoadHardwareSplitMatrices
+-        6,647,354  16,254,465   1,816      4.08     3,660.4  ndsStageMPSweepFloorLoopSweep
+-        6,024,004  29,277,766     120      9.74    50,200.0  ndsBaseGcRunAll
+-        5,824,241  17,537,028     732      2.78     7,956.6  ndsBaseGcPlayMObjMatAnim
+-        5,720,070  17,662,384   1,696      6.35     3,372.7  ndsParticleSetCurrentCamera
+-        5,343,127  14,944,531   5,216     11.91     1,024.4  syTaskmanRunTask
+-        5,030,784  31,372,347     388      4.83    12,965.9  ftDisplayMainDrawDefault
+-        4,867,008  23,140,993     268      4.98    18,160.5  ndsRendererHardwareBindTextureName
+-        4,799,972  18,667,288   2,544      6.56     1,886.8  ndsRendererAdapterPrepareNativeStageOwner
+-        4,726,704  29,637,568     952      2.79     4,965.0  ndsRendererAdapterBuildPersistentStageWorldMatrix.constprop.0
+-        4,695,855  10,222,618   1,416      5.67     3,316.3  gmCameraUpdateInterests
+-        4,564,789  22,376,575     376      7.65    12,140.4  ndsFTParamsInvalidateSubtree
+-        4,498,935  10,789,485   2,276     13.03     1,976.7  ndsBaseFTDisplayMainProcDisplay
+-        4,178,090  26,271,620      92      2.82    45,414.0  ftGetStruct
+-        4,168,353  13,344,397     812      5.43     5,133.4  ndsMPFindLineEndpoints
+-        4,012,150   9,146,941   2,388      3.97     1,680.1  ndsRendererAdapterBuildNativeMaterialSnapshot
+-        3,876,464   8,737,784      86      2.99    45,075.2  __aeabi_lmul (+1 alias)
+-        3,857,523   8,788,004  11,300      9.89       341.4  ndsRendererPrepareNativeStageOwner
+-        3,837,189  16,323,393      68      2.25    56,429.2  ndsStageCollisionLoopGeometryReady
+-        3,678,218  27,616,612      92      4.70    39,980.6  tickGetCount
+-        3,666,124  17,612,128   1,656      4.35     2,213.8  ndsRendererNativeApplyMaterial.part.0
+-        3,610,413  13,364,993      24      4.78   150,433.9  cpuGetTiming
+-        3,484,010  16,414,741     468      2.41     7,444.5  ndsRendererNativeStageEmitNoZVertex.isra.0
+-        3,412,277  13,897,951   2,252      2.03     1,515.2  ndsRelocGetFileData
+
+greedy pack claims 3,600 of 3,604 free bytes and reaches 34,947,130 non-mem stall cycles (0.93% of measured)
+
+== D. ITCM admissions by non-mem stall per byte (584 B free now, +2,594 B recoverable by eviction) ==
+slot   stall/byte  nonmem stall  bytes  cyc/insn  tier            symbol
+-----  ----------  ------------  -----  --------  --------------  --------------------------------------------
+free      150,434     3,610,413     24      4.78  .main           cpuGetTiming
+free       88,513     1,947,287     22      3.18  .main           DynamicArrayGet
+free       56,429     3,837,189     68      2.25  .main           ndsStageCollisionLoopGeometryReady
+free       50,200     6,024,004    120      9.74  .main           ndsBaseGcRunAll
+free       45,449     9,998,870    220      3.19  .main           sqrtf
+free       45,414     4,178,090     92      2.82  .main           ftGetStruct
+evict      45,075     3,876,464     86      2.99  .main           __aeabi_lmul (+1 alias)
+evict      39,981     3,678,218     92      4.70  .main           tickGetCount
+free       37,614        75,227      2     47.27  .main           gcPrepCameraMatrix
+evict      33,937     2,714,938     80      2.57  .main           ndsBaseGcPlayAnimAll
+free       32,691     1,046,119     32      2.59  .main           glGetTexParameter
+evict      32,226     1,804,647     56      8.82  .main           ndsFighterDisplayContractCountFlags
+evict      30,714     2,211,376     72      4.29  .main           ndsR2AnimBuildTrackTable.constprop.0.isra.0
+evict      28,220       225,762      8     19.47  .main           mpProcessUpdateMain
+evict      27,849       222,793      8     11.84  .main           ftCommonDeadCheckInterruptCommon
+free       27,836        55,673      2      9.93  .main           mpCommonUpdateFighterSlopeContour
+evict      25,852     1,344,317     52      3.34  .main           glTexParameter
+evict      24,329       486,589     20     17.49  .main           grPupupuProcUpdate
+evict      23,975     3,836,073    160      4.62  .text.hot       gcRunGObjProcess
+evict      23,887     2,579,773    108      3.11  .main           ndsRendererAdapterMarkDisplayProcHeads
+evict      23,169    14,271,953    616      1.82  .text.hot.draw  ndsRendererMtxMulAffine20p12
+evict      22,937        91,747      4     15.34  .main           ndsFighterMarioFoxNaturalMotionUpdateEnabled
+evict      22,412     2,061,904     92      8.67  .main           glBindTexture
+evict      21,737    13,129,059    604      2.63  .text.hot       gcPlayDObjAnimJoint
+evict      21,595     7,083,250    328      5.35  .main           gcCaptureCameraGObj
+free       20,824        41,649      2     26.63  .main           func_80017CC8
+evict      20,800        41,600      2     27.00  .main           ndsBattlePlayableFrameCompleteMarker
+evict      20,778       207,783     10     23.54  .main           mpCollisionGetEdgeUnderLLineID
+evict      20,516       656,499     32      6.15  .main           __aeabi_idivmod
+-          20,514     9,518,554    464      5.53  .main           ndsStageGCDrawAllLoopRecordCapturedDisplay
+evict      20,123       160,982      8     17.05  .main           mpProcessCheckTestFloorCollisionNew
+evict      20,000        40,000      2     26.00  .main           ndsPlatformBeginFrame
+-          19,821     8,562,641    432      3.99  .main           gcPlayAnimAll
+evict      18,721       149,769      8     15.84  .main           mpProcessCheckTestFloorCollision
+-          18,160     4,867,008    268      4.98  .main           ndsRendererHardwareBindTextureName
+evict      17,590       633,241     36     18.33  .main           ftMainProcUpdateInterrupt
+evict      17,374       173,735     10     15.83  .main           gcDefaultFuncRun
+evict      17,243       344,865     20      5.01  .main           mpCollisionCheckExistLineID
+-          17,215     6,748,425    392      3.85  .main           ndsRendererLoadHardwareSplitMatrices
+evict      17,003       952,161     56      2.61  .main           gcPlayMObjMatAnim
+
+zero-eviction pack: 584 B, 30,814,521 non-mem stall cycles in reach
+with eviction:      3,154 B, 93,794,019 non-mem stall cycles in reach
+wrote D:\Stuff\DevFolder\Smash64DS_Port\artifacts\performance\2026-08-15_cfx-ring-draw0\v3-b-c179\census.json
+
+wrote D:\Stuff\DevFolder\Smash64DS_Port\artifacts\performance\2026-08-15_cfx-ring-draw0\v3-b-c179\census.txt

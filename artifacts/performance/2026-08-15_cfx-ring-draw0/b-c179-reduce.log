@@ -1,0 +1,6 @@
+profile        artifacts\performance\2026-08-15_cfx-ring-draw0\v3-b-c179
+regions        1601
+marginal       80 frames, non-idle >= 1,171,083 ticks (median frame 954,759, max 3,107,499)
+streaming      artifacts\performance\2026-08-15_cfx-ring-draw0\v3-b-c179\arm9-profile.csv (3.62 GiB), one pass
+rows           54,618,025 over 109,380 distinct PCs
+wrote          artifacts\performance\2026-08-15_cfx-ring-draw0\b-c179-pc.csv and artifacts\performance\2026-08-15_cfx-ring-draw0\b-c179-pc.meta.txt

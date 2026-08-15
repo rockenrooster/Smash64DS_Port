@@ -6489,6 +6489,111 @@ anyway and is not an invitation.
 callers clear the 40/80 presence bar (7,187 + 1,883 + 1,838 = 10,908); the other
 ~38,700 is spread across callers each below it. Its mean self-time is 16,912.
 
+### Slice 52 — PLACEMENT REFUTED BY ARITHMETIC, the clean concentration is 11.7x, and `5.21x` is RETRACTED as a decision rule
+
+Evidence: `artifacts/performance/2026-08-15_cfx-ring-draw0/FOOTPRINT.md`. 2 lab
+builds (`build-c179-cfxring-b-d0`, `build-c180-cfxring-a2-d0`), 2 v3 captures,
+**0 production change, 0 Makefile edit, 0 Boundary run needed** — the only
+tracked source edits are two standalone analysis scripts no build imports. Both
+root ROMs unchanged and not rebuilt.
+
+**The instrument, a second one-byte pair, this time at `NDS_TICK_HUD_DRAW=0`:**
+`.itcm`/`.text.hot`/`.text.hot.draw`/`.main`/`.dtcm` **0 differing bytes**,
+`.main.rw` **1** at `0x3F24` = `gNdsCfxRingEnable`. Asserted by
+`scripts/compare-elf-sections.py`, which **refuses** on a missing/empty/non-ELF
+input, an absent or zero-length section, a failed `objcopy` and a size mismatch
+— the two comparisons that could not fail are now inexpressible, and it was
+falsified against the c177/c178 pair before use.
+
+**Whole window, 1,601 regions, B − A′, ticks/frame:**
+
+```text
+issue -1,771 | icache_fill +1,801 | dcache +54 | wbuf -27 | interlock +9
+bus -63 | instructions -621 (a COUNT)      NET NON-IDLE +3
+marginal 80: issue -19,119 | icache_fill +20,112      NET +441
+```
+
+**`+284` IS RETRACTED** — it was HUD/printf noise the `DRAW=1` pair could not
+separate. On the arm the cadence gate is read from the wired ring is
+**tick-neutral to +3 tk/fr**.
+
+**THE EXCHANGE RATE IS THE ANSWER AND IT IS 1.00.** Fixed added +2,705 whole /
++32,010 marginal against float deleted −2,702 / −31,569 = **1.001 and 1.014**,
+and **both sides concentrate identically — 11.68x deleted, 11.83x added.** A
+1.00 exchange rate multiplied by any concentration is still 1.00, so
+**`SPLIT.md`'s "it clears at ≥5.21x" is RETRACTED as a decision rule**: it
+applied ONE factor to the NET, which is valid only if the price stays put while
+the prize concentrates. **The measured concentration is 11.7x — 2.2x above that
+bar — and residency does not follow from it.**
+
+**Task A, placement, REFUTED WITHOUT A BUILD, five ways.**
+
+1. `linker/nds_hot_text.ld:180-200` banks **two builds that measured the
+   opposite sign**: Task 94 moved a 500 B member OUT for **WORK-H P50 +6,144**;
+   R2-03 E65 admitted a **2,032 B** callee predicted at −7,894 and measured
+   **P95 +24,448**, over-gate 7→8. Two different estimators, both wrong on sign.
+2. `ICACHE_TEMPORAL.md` §6 measured the mechanism as **capacity, not conflict**.
+3. The I-cache set period is 2,048 B, so a contiguous **5,596 B block is 2.73
+   set periods** and covers all 64 sets at least twice **at any address**.
+4. `icache_fill` 712,877 cyc/frame at 23–51 cycles per 32 B line =
+   **55–121 complete cache turnovers per presented frame**, 5–11 of them between
+   consecutive narrow-phase entries.
+5. **Decisive: the ring's price is charged per ENTRY and does not fall when
+   entries get 11x denser** — 2,668 / 2,596 / 2,755 / **2,961 ticks per entry**
+   at 0.97 / 4.14 / 0.97 / **10.66** entries per frame. Cost concentration equals
+   CALL concentration twice over (11.82 vs 11.57 on `DRAW=0`; 4.15 vs 4.16 on
+   `DRAW=1`). Ceiling on what any layout could recover: **+219 tk/fr whole match
+   ⇒ ≲2,600 at rank-80 = 0.08x.**
+
+**The mask correction, measured twice on the float control.** The same eight
+bodies read self-cost concentration **2.91x on `DRAW=1` and 7.04x on BOTH
+`DRAW=0` captures** — `c172` is a different build at a different HEAD and agrees
+to three significant figures, so **2.42x is a property of the mask, not the arm.**
+Calls: 3.49x → 8.66x/8.84x. **And the P95 frames are not "more fighter procs"** —
+`battleship_ftMainProcUpdateInterrupt` costs 1.05x there and is called 1.03x,
+while `gmCollisionCheckFighterAttackDamageCollide` goes **0.97 → 10.47
+calls/frame (10.81x)**. **The fighter narrow phase IS the P95 owner, at 11x.**
+
+**The only measured way to move a 1.00 rate is BYTES, and it cost no build.**
+`nds_r2_collision_fixed.c` compiled standalone at **`-Os` instead of `-O2`**
+(same `-marm`, same TU, same config header) is **7,916 B → 5,228 B, −34.0%**
+across its ten entry points; undefined-symbol set identical, **no
+`__aeabi_lmul`**, SMULL 62→58 / SMLAL 26→18. **NOT BUILT: ~−700 tk/fr whole
+match is ~23x under `plan.md` §2's ≥16,000 build floor**, so it rides a package.
+**Consequence found and not fixed:** at `-Os` GCC outlines `ndsR2CfxCosQ15`,
+moving the declared soft-float edge out of `ndsR2CollisionFixedBuildLocal` and
+tripping `scripts/check-r2-collision-fixed.ps1`. Fix with `always_inline` on the
+two table helpers, **not** by widening the allowlist.
+
+**NO RESIDENT NUMBER IS PUBLISHED, on purpose.** §5.4's estimates are replaced by
+measured compiled sizes — `TestRectangle` **1,504 B** not ~1,400,
+`TransformPoint`+`WorldToLocal` **208 B** not ~300, and the `TestSphere`
+expansion prologue costs **zero** fetch because it is never entered — but the
+deciding rate is not determined. The converted half is straight-line matrix code
+that touches all its bytes every call; `gmCollisionTestRectangle` early-exits and
+reads **0.052 tk/byte/call against `StoreF32`'s 0.467, a 9x spread**, so the two
+bounds straddle the requirement. **§5.4's −6,261 and §5.5's 0.60x stand as the
+previous cycle's, neither confirmed nor replaced.**
+
+**NEXT MEASUREMENT, and it is not another concentration capture:** convert ONE
+early-exiting body and read its exchange rate off the same one-byte `--diff`.
+`gmCollisionGetWorldPosition` is the cheapest — **196 B float against a 100 B
+fixed `TransformPoint`**, 19.29 calls per marginal frame, ~30 call sites
+funnelling through one helper. Below 1.00 and residency is worth building; at
+1.00 the lane closes on arithmetic rather than on cache.
+
+**Tooling, and a published number corrected.**
+`census-marginal-frame-owners.py --concentration` prints COST and CALL
+concentration side by side (call counts from the entry PC, so exact). Its
+`--diff` was dividing the `instructions` COUNT by `2 x frames` like a cycle
+total: **`SPLIT.md`'s "204 fewer instructions per frame" is corrected to −407**,
+and the halved form is no longer printable.
+
+**Caveat stated rather than buried:** `DRAW=0` is cleaner, not clean.
+`NDS_TICK_HUD` is still 1, so `_svfiprintf_r` 5.58x / `consolePrintChar` 5.26x /
+`_vfiprintf_r` 4.99x still sit on the mask (~8,800 tk/fr). Collision concentrates
+more than twice as hard, which is exactly what `DRAW=1` could not say.
+
 ### Slice 52 — THE NULL IS SPLIT AND IT IS I-CACHE. The resident version is sized at 0.60x and clears only at a concentration ≥5.21x
 
 Evidence: `artifacts/performance/2026-08-15_cfx-ring-split/SPLIT.md`. 2 lab

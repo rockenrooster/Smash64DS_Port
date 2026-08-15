@@ -1,0 +1,29 @@
+pc-csv    artifacts\performance\2026-08-15_cfx-ring-draw0\a2-c180-pc.csv
+elf       builds\build-c180-cfxring-a2-d0\smash64ds-battle-playable-tickhud-hwtri.elf
+basis     whole-match ticks/frame = cycles / 3,202   marginal = cycles / 160
+mask      total_cycles-halt_wait >= 1,178,511 ticks, 80 of 1601 frames
+
+symbol                                          bytes all tk/fr marg tk/fr  COST x  all ic  marg ic   ic x calls/fr m calls/fr  CALL x
+func_ovl2_800ED490                                580       531      4,136    7.79     220    1,690   7.69     1.54      12.53    8.12
+gmCollisionSetInvertMatrix                        716       218      2,607   11.97     103    1,231  12.00     0.59       6.95   11.88
+gmCollisionTransformMatrixAll                     430       674      3,419    5.07     349    1,717   4.93     2.60      15.07    5.81
+gmCollisionGetWorldPosition                       196       149      1,738   11.66      64      750  11.69     1.64      19.29   11.79
+gmCollisionTestRectangle                         1680       179      2,118   11.86      86    1,029  11.96     1.06      11.85   11.21
+func_ovl2_800EDE5C                                198        62        729   11.80      32      384  11.85     1.06      11.85   11.21
+gmCollisionGetFighterPartsWorldPosition           304       514      1,676    3.26     178      577   3.24     0.64       2.20    3.46
+func_ovl2_800EDBA4                                414       254      1,756    6.93      82      568   6.91     0.71       7.25   10.24
+func_ovl2_800EDA0C                                296         9         29    3.42       5       18   3.50     0.02       0.06    3.45
+gmCollisionCopyMatrix                              50         2          6    3.55       0        1   3.44     0.02       0.06    3.45
+gmCollisionCheckFighterAttackDamageCollide        144        96      1,062   11.07      28      306  11.06     0.97      10.47   10.81
+lbCommonSin                                        56     1,181      2,518    2.13     379      863   2.27    23.50      61.56    2.62
+lbCommonCos                                        64     1,230      2,533    2.06     417      867   2.08    23.49      61.55    2.62
+sqrtf                                             220     6,970      9,783    1.40   2,797    3,667   1.31    42.65      64.51    1.51
+__mulsf3                                          408    20,518     39,746    1.94   1,229    2,340   1.90  1625.99    3058.46    1.88
+__aeabi_fadd                                      400    29,827     50,833    1.70   1,202    2,008   1.67  1657.25    2781.88    1.68
+__floatdisf                                       172     1,056      1,910    1.81      56       98   1.75     0.79       0.26    0.33
+__divsf3                                          352    10,984     14,000    1.27     136      183   1.34   187.21     237.04    1.27
+__muldi3                                           86     2,780      3,921    1.41   1,766    2,444   1.38    47.10      74.16    1.57
+battleship_ftMainProcUpdateInterrupt             2176     7,665      8,044    1.05   3,761    3,945   1.05     3.89       4.00    1.03
+_svfiprintf_r                                    5794       700      3,832    5.47     417    2,281   5.47     0.38       2.23    5.81
+consolePrintChar                                  224       389      2,029    5.21     176      919   5.23     9.08      48.05    5.29
+TOTAL                                                    85,987    158,426    1.84  13,484   27,889   2.07  3632.15    6491.29    1.79

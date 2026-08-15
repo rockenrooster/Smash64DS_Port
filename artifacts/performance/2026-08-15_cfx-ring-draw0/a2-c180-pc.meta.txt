@@ -1,0 +1,8 @@
+source=artifacts/performance/2026-08-15_cfx-ring-draw0/v3-a2-c180/arm9-profile.csv
+regions=1601
+marginal_frames=80
+marginal_threshold_ticks=1178511
+marginal_axis=total_cycles-halt_wait
+rows=54584017
+distinct_pcs=108022
+cycles_per_tick=2

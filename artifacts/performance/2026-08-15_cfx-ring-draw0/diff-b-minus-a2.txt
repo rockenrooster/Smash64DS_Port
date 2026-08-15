@@ -1,0 +1,12 @@
+candidate artifacts\performance\2026-08-15_cfx-ring-draw0\b-c179-pc.csv
+control   artifacts\performance\2026-08-15_cfx-ring-draw0\a2-c180-pc.csv
+elf       builds\build-c179-cfxring-b-d0\smash64ds-battle-playable-tickhud-hwtri.elf
+basis     2 cycles = 1 tick; whole-match ticks/frame = cycles / 3,202
+mask      candidate >= 1,171,083 ticks, control >= 1,178,511 ticks (80 frames each, EACH ARM ITS OWN)
+
+WHOLE MATCH -- candidate minus control, ticks/frame over 1601 frames (instructions column is a COUNT per frame)
+  total_cycle       issue icache_fill dcache_fill write_buffe   interlock bus_content instruction  owner
+       -2,799      -1,771       1,801          54         -27           9         -63        -621  == ALL SYMBOLS ==
+       -2,802           0           0           0           0           0           0           0  armWaitForIrq
+         -924        -872         -51           0           0           0           0      -1,655  __mulsf3
+         -680        -654         -26           0           0           0           0      -1,158  __aeabi_fadd

@@ -1,0 +1,40 @@
+src/port/nds_r2_collision_fixed.c compiled standalone with the build's own flags
+(-std=gnu11 -O2|-Os -ffunction-sections -fdata-sections -march=armv5te -mtune=arm946e-s
+ -mthumb ... -marm, -include builds/build-c179-cfxring-b-d0/nds_build_config.h).
+Not a ROM build; no build directory was written.
+
+=== -O2 ===
+00000000 00000390 T ndsR2CollisionFixedAxisScalesF32
+00000000 0000049c T ndsR2CollisionFixedBuildLocal
+00000000 00000158 T ndsR2CollisionFixedCompose
+00000000 00000638 T ndsR2CollisionFixedInvertF32
+00000000 000001c0 T ndsR2CollisionFixedLoadF32
+00000000 000004bc T ndsR2CollisionFixedMakeFrame
+00000000 00000204 T ndsR2CollisionFixedStoreF32
+00000000 000005e0 T ndsR2CollisionFixedTestRectangle
+00000000 00000064 T ndsR2CollisionFixedTransformPoint
+00000000 0000006c T ndsR2CollisionFixedWorldToLocal
+undefined:          U __aeabi_f2iz          U __aeabi_fadd          U __aeabi_fmul          U __aeabi_ldivmod          U memcpy
+smull=62 smlal=26
+
+=== -Os ===
+00000000 0000003c t ndsR2CfxCosQ15
+00000000 000000d4 t ndsR2CfxLoadF32
+00000000 00000044 t ndsR2CfxOutcodeXY
+00000000 00000180 t ndsR2CfxRowScales
+00000000 0000001c t ndsR2CfxTableQ15
+00000000 00000070 t ndsR2CfxWorldToLocal
+00000000 00000078 t ndsR2CollisionF32ToFixed
+00000000 00000078 T ndsR2CollisionFixedAxisScalesF32
+00000000 0000031c T ndsR2CollisionFixedBuildLocal
+00000000 00000144 T ndsR2CollisionFixedCompose
+00000000 00000380 T ndsR2CollisionFixedInvertF32
+00000000 00000004 T ndsR2CollisionFixedLoadF32
+00000000 00000360 T ndsR2CollisionFixedMakeFrame
+00000000 00000078 T ndsR2CollisionFixedStoreF32
+00000000 00000304 T ndsR2CollisionFixedTestRectangle
+00000000 000000f4 t ndsR2CollisionFixedToF32
+00000000 00000064 T ndsR2CollisionFixedTransformPoint
+00000000 00000004 T ndsR2CollisionFixedWorldToLocal
+undefined:          U __aeabi_f2iz          U __aeabi_fadd          U __aeabi_fmul          U __aeabi_ldivmod          U memcpy
+smull=58 smlal=18

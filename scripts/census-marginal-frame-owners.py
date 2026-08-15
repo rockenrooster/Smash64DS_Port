@@ -668,18 +668,147 @@ def diff(pc_csv: Path, pc_csv_base: Path, build: Path, build_base: Path,
                               - int(base[f"{prefix}_{cls}"]))
         shown = ("total_cycles", "issue", "icache_fill", "dcache_fill",
                  "write_buffer", "interlock", "bus_contention", "instructions")
+
+        # `instructions` is a COUNT, not a cycle total, so it does NOT take the
+        # 2-cycles-per-tick divisor. Dividing it by 2 x frames like the stall
+        # classes halves it, and that is exactly what happened: SPLIT.md's "the
+        # ring executes 204 FEWER instructions per frame" is the true -407 read
+        # through a cycle divisor. Corrected 2026-08-15; `plan.md` section 2's
+        # units audit exists for this class and this is its third instance.
+        def scale(cls: str) -> float:
+            return float(frames) if cls == "instructions" else divisor
+
         grand = {cls: sum(s[cls] for s in buckets.values()) for cls in shown}
         print(f"\n{label} -- candidate minus control, ticks/frame over "
-              f"{frames} frames")
+              f"{frames} frames (instructions column is a COUNT per frame)")
         print("  " + " ".join(f"{c[:11]:>11s}" for c in shown) + "  owner")
-        print("  " + " ".join(f"{grand[c] / divisor:11,.0f}" for c in shown)
+        print("  " + " ".join(f"{grand[c] / scale(c):11,.0f}" for c in shown)
               + "  == ALL SYMBOLS ==")
         ordered = sorted(buckets.items(),
                          key=lambda kv: -abs(kv[1]["total_cycles"]))
         for name, slot in ordered[:top]:
-            print("  " + " ".join(f"{slot[c] / divisor:11,.0f}" for c in shown)
-                  + f"  {name}")
+            print("  " + " ".join(f"{slot[c] / scale(c):11,.0f}"
+                                  for c in shown) + f"  {name}")
     return 0
+
+
+CONC_CLASSES = ("total_cycles", "issue", "icache_fill", "dcache_fill")
+
+
+def concentration(pc_csv: Path, build: Path, symbols: list[str]) -> int:
+    """Per-symbol COST concentration and CALL concentration, side by side.
+
+    The quantity that converts a whole-match saving into a rank-80 saving is a
+    concentration factor, and this campaign has repeatedly guessed one. It is
+    already in the reduced CSV: every row carries `all_*` and `marg_*`, so
+    `marg/marginal_frames` over `all/regions` IS the factor, measured.
+
+    BOTH columns are printed because they are different numbers and the
+    campaign has substituted one for the other (memory `call-share-is-not-cost-
+    share`). Cost concentration is what a saving scales by. CALL concentration
+    is what a per-entry cost -- instruction fetch of a body entered once per
+    call -- scales by. On the 2026-08-15 ring pair they read 4.15x and 4.16x
+    for the fixed kernels but 7.03x and 8.66x for the float bodies they
+    replace, and a sizing that used one factor for both terms was wrong by the
+    ratio.
+
+    Call counts come from the ENTRY PC (`entry-pc-gives-exact-call-counts`):
+    the first instruction of a function executes exactly once per call, so
+    `all_instructions` at the symbol's address is the exact call count over the
+    window. It is 0 for a symbol whose entry was never executed, which is
+    itself a result -- do not read it as "the tool failed".
+    """
+    meta: dict[str, str] = {}
+    meta_path = pc_csv.with_suffix(".meta.txt")
+    if meta_path.exists():
+        for line in meta_path.read_text().splitlines():
+            key, _, value = line.partition("=")
+            meta[key.strip()] = value.strip()
+    regions = int(meta.get("regions", "0") or 0)
+    marginal_frames = int(meta.get("marginal_frames", "0") or 0)
+    if not regions or not marginal_frames:
+        raise SystemExit(f"{meta_path} carries no regions/marginal_frames")
+    elf = next(build.glob("*.elf"), None)
+    if elf is None:
+        raise SystemExit(f"no .elf in {build}")
+
+    entries = elf_symbols(elf)
+    starts = [entry[0] for entry in entries]
+    sizes: dict[str, int] = {}
+    address: dict[str, int] = {}
+    for start, size, name in entries:
+        if size > sizes.get(name, 0):
+            sizes[name] = size
+            address[name] = start
+        address.setdefault(name, start)
+
+    wanted = set(symbols)
+    missing = wanted - set(sizes)
+    agg: dict[str, list[int]] = collections.defaultdict(
+        lambda: [0] * (2 * len(CONC_CLASSES)))
+    calls: dict[int, tuple[int, int]] = {}
+    for row in csv.DictReader(pc_csv.open(newline="")):
+        pc = int(row["pc"], 16) & ~1
+        calls[pc] = (int(row["all_instructions"]),
+                     int(row["marg_instructions"]))
+        name = symbol_for(entries, starts, row["pc"])
+        if name not in wanted:
+            continue
+        slot = agg[name]
+        for i, cls in enumerate(CONC_CLASSES):
+            slot[i] += int(row[f"all_{cls}"])
+            slot[len(CONC_CLASSES) + i] += int(row[f"marg_{cls}"])
+
+    all_div = float(CYCLES_PER_TICK * regions)
+    marg_div = float(CYCLES_PER_TICK * marginal_frames)
+    print(f"pc-csv    {pc_csv}")
+    print(f"elf       {elf}")
+    print(f"basis     whole-match ticks/frame = cycles / {all_div:,.0f}   "
+          f"marginal = cycles / {marg_div:,.0f}")
+    print(f"mask      {meta.get('marginal_axis')} >= "
+          f"{int(meta.get('marginal_threshold_ticks', 0)):,} ticks, "
+          f"{marginal_frames} of {regions} frames")
+    if missing:
+        print(f"NOT DEFINED IN THIS ELF: {', '.join(sorted(missing))}")
+    header = (f"{'symbol':<46}{'bytes':>7}{'all tk/fr':>10}{'marg tk/fr':>11}"
+              f"{'COST x':>8}{'all ic':>8}{'marg ic':>9}{'ic x':>7}"
+              f"{'calls/fr':>9}{'m calls/fr':>11}{'CALL x':>8}")
+    print("\n" + header)
+    totals = [0] * (2 * len(CONC_CLASSES))
+    call_totals = [0, 0]
+    for name in symbols:
+        if name not in sizes:
+            continue
+        slot = agg.get(name, [0] * (2 * len(CONC_CLASSES)))
+        for i in range(2 * len(CONC_CLASSES)):
+            totals[i] += slot[i]
+        entry = calls.get(address[name], (0, 0))
+        call_totals[0] += entry[0]
+        call_totals[1] += entry[1]
+        print(_conc_row(name, sizes[name], slot, entry, all_div, marg_div,
+                        regions, marginal_frames))
+    print(_conc_row("TOTAL", 0, totals, tuple(call_totals), all_div, marg_div,
+                    regions, marginal_frames))
+    return 0
+
+
+def _conc_row(name, size, slot, entry, all_div, marg_div, regions,
+              marginal_frames) -> str:
+    n = len(CONC_CLASSES)
+    all_tk = slot[0] / all_div
+    marg_tk = slot[n] / marg_div
+    all_ic = slot[2] / all_div
+    marg_ic = slot[n + 2] / marg_div
+    all_calls = entry[0] / regions
+    marg_calls = entry[1] / marginal_frames
+
+    def ratio(top, bottom):
+        return f"{top / bottom:.2f}" if bottom else "-"
+
+    return (f"{name:<46}{size or '':>7}{all_tk:>10,.0f}{marg_tk:>11,.0f}"
+            f"{ratio(marg_tk, all_tk):>8}{all_ic:>8,.0f}{marg_ic:>9,.0f}"
+            f"{ratio(marg_ic, all_ic):>7}{all_calls:>9.2f}{marg_calls:>11.2f}"
+            f"{ratio(marg_calls, all_calls):>8}")
 
 
 def main() -> int:
@@ -687,6 +816,15 @@ def main() -> int:
     parser.add_argument("--reduce", action="store_true")
     parser.add_argument("--report", action="store_true")
     parser.add_argument("--diff", action="store_true")
+    parser.add_argument("--concentration", action="store_true",
+                        help="per-symbol COST and CALL concentration on the "
+                             "marginal mask -- the factor that converts a "
+                             "whole-match saving into a rank-80 one, measured "
+                             "rather than assumed")
+    parser.add_argument("--symbols", default="",
+                        help="comma-separated symbol names for "
+                             "--concentration, or @path to a file with one "
+                             "name per line")
     parser.add_argument("--pc-csv-base", type=Path)
     parser.add_argument("--build-base", type=Path)
     parser.add_argument("--profile", type=Path)
@@ -724,6 +862,17 @@ def main() -> int:
                 "and --build")
         return diff(args.pc_csv, args.pc_csv_base, args.build,
                     args.build_base or args.build, args.top)
+    if args.concentration:
+        if not args.pc_csv or not args.build or not args.symbols:
+            raise SystemExit(
+                "--concentration needs --pc-csv, --build and --symbols")
+        if args.symbols.startswith("@"):
+            names = [line.strip() for line
+                     in Path(args.symbols[1:]).read_text().splitlines()
+                     if line.strip() and not line.startswith("#")]
+        else:
+            names = [s for s in args.symbols.split(",") if s]
+        return concentration(args.pc_csv, args.build, names)
     parser.print_help()
     return 2
 

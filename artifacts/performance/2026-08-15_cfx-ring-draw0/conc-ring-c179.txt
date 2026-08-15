@@ -1,0 +1,16 @@
+pc-csv    artifacts\performance\2026-08-15_cfx-ring-draw0\b-c179-pc.csv
+elf       builds\build-c179-cfxring-b-d0\smash64ds-battle-playable-tickhud-hwtri.elf
+basis     whole-match ticks/frame = cycles / 3,202   marginal = cycles / 160
+mask      total_cycles-halt_wait >= 1,171,083 ticks, 80 of 1601 frames
+
+symbol                                          bytes all tk/fr marg tk/fr  COST x  all ic  marg ic   ic x calls/fr m calls/fr  CALL x
+ndsR2CfxLocalFromDObj                              76        62        729   11.74      23      263  11.66     0.65       7.55   11.60
+ndsR2CollisionFixedCompose                        344       191      2,267   11.87     155    1,848  11.88     0.81       9.55   11.82
+ndsR2CollisionFixedLoadF32                        448       175      2,118   12.09     146    1,759  12.08     0.65       7.89   12.05
+ndsR2CollisionFixedStoreF32                       516       412      4,841   11.75     365    4,281  11.74     1.51      17.76   11.75
+ndsR2CfxPrepareFighterJoint                       528       236      2,766   11.70      79      933  11.80     0.97      10.66   11.00
+ndsR2CollisionFixedAxisScalesF32                  912       610      7,248   11.89     588    6,986  11.88     0.50       5.89   11.84
+ndsR2CollisionFixedBuildLocal                    1180       407      4,768   11.71     319    3,743  11.72     0.65       7.55   11.60
+ndsR2CollisionFixedInvertF32                     1592       498      5,921   11.89     454    5,397  11.89     0.50       5.89   11.84
+gmCollisionCheckFighterAttackDamageCollide        144        79        917   11.54      35      407  11.63     0.97      10.66   11.00
+TOTAL                                                     2,671     31,574   11.82   2,164   25,617  11.84     7.21      83.40   11.57
