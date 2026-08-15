@@ -1,0 +1,8 @@
+0x020b6aa4 in validate (obj=0x224e82c, rfs=0x2257204) at /home/davem/projects/devkitpro/pacman-packages/libfat/src/libdvm-2.1.0/fatfs/source/ff.c:893
+BPP build=build-c163-gate-bp1
+Temporary breakpoint 1 at 0x2080144: file D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_scvsbattle.c, line 243.
+
+Temporary breakpoint 1, scVSBattleStartBattle () at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_scvsbattle.c:243
+243	    gNdsSCVSBattleOriginalFuncStartResult =
+Breakpoint 2 at 0x204fde0: file D:/Stuff/DevFolder/Smash64DS_Port/src/port/taskman_seam.c, line 4645.
+

@@ -382,10 +382,16 @@ which would dwarf what it measures.
 - **No phase-6 oracle**, per the brief.
 - **No per-fighter or after-GO K0 counters** — phase 7's assertion is still
   unproven as `§K1` words it.
-- **`scripts/probe-battlepack-pacing.ps1` is committed but its whole-match capture
-  did not complete inside this cycle.** It is the per-frame instrument for §3, and
-  §3's conclusion does not depend on it — the window arithmetic and the P95-set
-  bracket are independent of it.
+- **`scripts/probe-battlepack-pacing.ps1` produced NO usable rows, and the reason
+  was mine.** It ran ~25 minutes on the flag-1 gate arm, then I force-killed gdb
+  to harvest a partial capture — which **discarded gdb's buffered stdout**, since
+  the helper redirects it at the process level. The capture is 587 bytes and holds
+  only the two setup lines. This is the documented trap ("a probe that may be
+  killed still needs `set logging enabled on`") re-earned; the script now sets
+  incremental logging to its own artifact path and prefers that file, so the wrong
+  form is no longer expressible. **§3's conclusion does not depend on it** — the
+  window arithmetic and the P95-set bracket are independent instruments — but the
+  per-frame dose-response it would have added is not in this packet.
 
 ---
 

@@ -102,6 +102,16 @@ try {
         'set pagination off',
         'set confirm off',
         'set remotetimeout 30',
+        # INCREMENTAL LOGGING, and it is not optional for this probe. A
+        # whole-match per-frame run is long enough to be killed or to reach its
+        # timeout, and gdb's stdout is redirected by the helper -- i.e. buffered
+        # by the process and DISCARDED by a forced terminate. On 2026-08-15 that
+        # threw away ~25 minutes of samples and left a 587-byte capture holding
+        # only the lines written before the buffer filled. `set logging` writes
+        # through, so a killed run still carries every frame it sampled.
+        ("set logging file {0}" -f ($Artifact -replace '\\', '/')),
+        'set logging overwrite on',
+        'set logging enabled on',
         ("target remote 127.0.0.1:{0}" -f $context.GdbPort),
         'set $n = 0',
         ('printf "BPP build=' + $Build + '\n"'),
@@ -129,13 +139,20 @@ try {
         -TimeoutSeconds $TimeoutSeconds | Out-Null
 }
 finally {
-    # From the capture file: a whole-match per-frame probe reaches its hit cap or
-    # its timeout, and either way the capture holds every frame sampled.
+    # `set logging` above already wrote $Artifact through, so it is authoritative
+    # even for a killed run. The helper's own .out is copied over it ONLY when it
+    # is larger, i.e. when the run exited cleanly and flushed more than the log
+    # holds.
     $captured = Join-Path $log_temp 'battlepack_pacing_probe.gdb.out'
-    if (Test-Path -LiteralPath $captured) {
+    if ((Test-Path -LiteralPath $captured) -and
+        ((-not (Test-Path -LiteralPath $Artifact)) -or
+         ((Get-Item -LiteralPath $captured).Length -gt
+          (Get-Item -LiteralPath $Artifact).Length))) {
         New-Item -ItemType Directory -Force -Path (Split-Path -Parent $Artifact) |
             Out-Null
         Copy-Item -LiteralPath $captured -Destination $Artifact -Force
+    }
+    if (Test-Path -LiteralPath $Artifact) {
         Get-Content -LiteralPath $Artifact |
             Where-Object { $_ -match 'BPPDONE|BPPBUCKET' } |
             ForEach-Object { Write-Output $_ }
