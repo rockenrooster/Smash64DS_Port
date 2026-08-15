@@ -17,9 +17,25 @@
  * 6.8x (`artifacts/performance/2026-08-14_native-battle-kernel/
  * BATTLEPACK_ANIMATION.md` sections 2.1-2.2).
  *
- * A packed clip needs none of it. The blob is `const`, position independent and
- * already in the exact bytes the parser consumes, so the acquisition collapses
- * to a binary search that returns a pointer into it.
+ * A packed clip needs none of it. The blob is position independent and already
+ * in the exact bytes the parser consumes, so the acquisition collapses to a
+ * binary search that returns a pointer into it.
+ *
+ * WHERE THE BLOB LIVES, AND WHY IT IS NOT `.incbin` ANY MORE. The first build
+ * linked it into `.rodata`. That is disqualified and the reason invalidates how
+ * static growth was being priced here: +288,992 B of ARM9 image MEASURED
+ * `gNdsTaskmanArenaChosenSize` falling 0x150000 -> 0x140000 with
+ * `gNdsTaskmanArenaAllocFailCount` 16, because the taskman arena is one
+ * `calloc` from the libnds heap and `.rodata` and the arena come out of the
+ * same bytes. `check-boot-headroom.ps1` reported 66,784 B of PROVEN headroom on
+ * that same arm -- the ladder records boot/no-boot, not arena size.
+ *
+ * The blob is therefore a NitroFS payload streamed into the taskman arena at
+ * scene setup, in place of the 262,144 B raw-file animation cache it replaces.
+ * Zero static image, so the arena stays 0x150000 and every ladder row stays
+ * valid. The residency loader lives in `reloc_backend_assets.c` because that is
+ * where the arena and its heap-generation ownership test already live; this
+ * module owns only the data model.
  *
  * WHY A POINTER INTO A BLOB IS A LEGAL FIGATREE. `lbCommonAddFighterPartsFigatree`
  * walks one word per DObj slot and resolves each through
@@ -30,9 +46,25 @@
  */
 
 /* The clip's figatree table, or NULL when this asset is not resident. The
- * returned pointer is into read-only pack storage and is stable for the life of
- * the program: unlike `figatree_heap` it is never reused by the next action. */
+ * returned pointer is into pack storage and is stable for the life of the HEAP
+ * GENERATION: unlike `figatree_heap` it is never reused by the next action, but
+ * a scene rewind reclaims the arena under it, which is what `ndsBattlePackDrop`
+ * exists for. Every caller reaches this behind the same generation test the raw
+ * animation cache uses. */
 void *ndsBattlePackFindFigatree(u32 asset_id);
+
+/* Publish a streamed blob as the resident pack. Validates magic, version and
+ * the self-declared extent against `bytes` before anything can look a clip up,
+ * and refuses rather than publishing on any mismatch -- the class this guards is
+ * a stale or half-written asset, which the parser answers with a freeze rather
+ * than a diagnostic. Returns FALSE and leaves the pack unpublished on refusal.
+ */
+s32 ndsBattlePackAdopt(void *base, u32 bytes);
+
+/* Unpublish. Called wherever the arena the blob lives in stops being ours, so a
+ * lookup after a scene rewind returns NULL and the acquisition takes the
+ * generic path instead of a pointer into memory the next scene already owns. */
+void ndsBattlePackDrop(void);
 
 /* TRUE when [ptr, ptr+size) lies inside the pack, reporting the blob base and
  * extent so the resolver can rebase slot words against it. */
@@ -48,6 +80,14 @@ extern volatile u32 gNdsBattlePackBytes;
 extern volatile u32 gNdsBattlePackHits;
 extern volatile u32 gNdsBattlePackMisses;
 extern volatile u32 gNdsBattlePackState;
+/* Residency, published by the loader in reloc_backend_assets.c. Steps is the
+ * number of streamed chunks; ResidentBytes is the adopted extent; LoadFails
+ * separates "the blob never arrived" from "the blob arrived and no clip was
+ * asked for", which read identically in Hits alone. */
+extern volatile u32 gNdsBattlePackLoadSteps;
+extern volatile u32 gNdsBattlePackLoadFails;
+extern volatile u32 gNdsBattlePackResidentBytes;
+extern volatile u32 gNdsBattlePackDrops;
 
 #define NDS_BATTLEPACK_STATE_UNCHECKED 0u
 #define NDS_BATTLEPACK_STATE_READY 1u

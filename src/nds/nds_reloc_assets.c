@@ -591,6 +591,46 @@ s32 ndsRelocAssetLoadIntoZeroedHeap(u32 asset_id, void *dst, u32 align,
  * read as a per-event delta by verify-battle-playable-down-air-stall.ps1, and
  * a load that stopped counting its header would look like a load that never
  * happened. */
+/* Raw NitroFS range read. No asset-table entry, no o2r header, no file id --
+ * slice 1's resident figatree pack is the only such payload the animation path
+ * reads, and it is streamed in chunks because the seam's budget is one BGM
+ * packet (~186 ms), not the whole load.
+ *
+ * It counts through the SAME open/short-read/payload counters as the asset
+ * loads here, deliberately: a run whose after-GO animation I/O is supposed to
+ * read zero must not have a second, uncounted reader hiding in it. */
+s32 ndsRelocAssetReadRawRange(const char *path, u32 offset, void *dst,
+                              u32 bytes)
+{
+    FILE *file;
+
+    if ((path == NULL) || (dst == NULL) || (bytes == 0u))
+    {
+        return FALSE;
+    }
+    file = fopen(path, "rb");
+    if (file == NULL)
+    {
+        gNdsRelocAssetOpenFailCount++;
+        return FALSE;
+    }
+    if (fseek(file, (long)offset, SEEK_SET) != 0)
+    {
+        gNdsRelocAssetShortReadCount++;
+        fclose(file);
+        return FALSE;
+    }
+    if (fread(dst, 1u, (size_t)bytes, file) != (size_t)bytes)
+    {
+        gNdsRelocAssetShortReadCount++;
+        fclose(file);
+        return FALSE;
+    }
+    fclose(file);
+    gNdsRelocAssetPayloadReadCount++;
+    return TRUE;
+}
+
 s32 ndsRelocAssetLoadHeaderAndData(u32 asset_id, void *dst,
                                    size_t dst_capacity,
                                    NDSRelocAssetHeader *out_header)

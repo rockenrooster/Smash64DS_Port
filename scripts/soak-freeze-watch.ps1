@@ -658,6 +658,14 @@ try {
             'gNdsBattlePackBytes',
             'gNdsBattlePackHits',
             'gNdsBattlePackMisses',
+            # Residency, which Hits alone cannot separate from "nobody asked".
+            # LoadSteps counts the streamed 16 KB chunks; ResidentBytes is the
+            # adopted extent; LoadFails is non-zero only when the blob never
+            # arrived; Drops counts the scene rewinds that reclaimed it.
+            'gNdsBattlePackLoadSteps',
+            'gNdsBattlePackResidentBytes',
+            'gNdsBattlePackLoadFails',
+            'gNdsBattlePackDrops',
             # Overflows alone CANNOT say why the cache stopped absorbing, and on
             # 2026-08-02 that cost a wrong reading: Overflows 126 beside
             # UsedBytes 3728 was read as "the 92,160-byte arena filled", which

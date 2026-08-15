@@ -19,6 +19,16 @@
 #include <ft/fighter.h>
 #include <gm/gmsound.h>
 
+#if NDS_R2_BATTLEPACK && !NDS_R2_ANIM_CACHE
+/* Structural, not documentation. The resident pack IS the animation arena's
+ * tenant: its allocation, heap-generation ownership, drop, re-arm and streamed
+ * load all ride the anim cache's seams. Turning the pack on with the cache off
+ * would compile the loader out and leave `gNdsBattlePackHits` reading a
+ * plausible, meaningless 0 -- exactly the "flag that silently never fired"
+ * failure this campaign has already shipped once. */
+#error "NDS_R2_BATTLEPACK requires NDS_R2_ANIM_CACHE (the pack lives in its arena)"
+#endif
+
 #define NDS_RELOC_OPENING_ROOM_FILE_COUNT 8u
 #define NDS_RELOC_OPENING_ROOM_FILE_MASK 0xffu
 #define NDS_RELOC_LOADED_FILE_CAPACITY 96u
@@ -6405,7 +6415,43 @@ volatile u32 gNdsR204AnimSeen[(NDS_R204_ANIM_ID_SPAN + 31u) / 32u];
  * margin, and the run's own gNdsTaskmanGeneralHeapFreeMin is the check on this
  * arithmetic rather than this comment. Overflow still degrades to the uncached
  * load. */
+/* SLICE 1 PHASE 5, 2026-08-15. When the resident figatree pack is on, the arena
+ * stops being a raw-file cache and becomes the pack's home. The two cannot both
+ * exist: the arena-internal budget is
+ *
+ *     262,144   this reservation, reclaimed outright by residency
+ *   +  39,420   gSYTaskmanGeneralHeap free-min 72,188 less the 32,768 floor
+ *   ---------
+ *     301,564   (BATTLEPACK_POOL.md section 1)
+ *
+ * and one fighter's blob is 287,904 (Fox) or 271,728 (Mario). 290,816 leaves the
+ * Fox blob 2,912 bytes of bump slack and projects a general-heap low-water of
+ * 43,516 against the mandated 32,768 floor -- 10,748 of margin. Both fighters
+ * would need ~559,632 and do not fit, which is why this slice packs one and the
+ * other keeps the generic path.
+ *
+ * CONSEQUENCE, STATED BECAUSE IT IS NOT FREE: the un-packed fighter loses this
+ * cache. Its acquisitions were 95% hits and become ROM loads. That is a
+ * PERFORMANCE outcome and never a correctness one -- every failure path here
+ * degrades to the on-demand load -- but it is real, it is unmeasured on the gate
+ * arm, and the remedy is to pack both fighters, which needs the taskman arena
+ * itself grown out of the 146,560 B that RAM_RECOVERY_PLAN Phase 2 recovered. */
+#if NDS_R2_BATTLEPACK
+/* The ARM9 data cache line is 32 bytes and the FAT/DLDI read path may maintain
+ * the destination by line, so the blob is placed on a line boundary and the
+ * reserve rounded up to one. */
+#define NDS_BATTLEPACK_LINE_BYTES 32u
+#define NDS_BATTLEPACK_RESERVE_BYTES \
+    ((NDS_R2_BATTLEPACK_BLOB_BYTES + (2u * NDS_BATTLEPACK_LINE_BYTES) - 1u) & \
+     ~(NDS_BATTLEPACK_LINE_BYTES - 1u))
+/* 4,096 of raw cache behind the pack. It is nearly nothing, and that is the
+ * honest state of the one-fighter fit: the budget above is 301,564 and the Fox
+ * blob is 287,904 of it. Projected general-heap low-water 42,236 against the
+ * 32,768 floor. */
+#define NDS_R2_ANIM_CACHE_ARENA_BYTES (NDS_BATTLEPACK_RESERVE_BYTES + 4096u)
+#else
 #define NDS_R2_ANIM_CACHE_ARENA_BYTES 262144u
+#endif
 
 /* R2-04 E4. The match's animation working set, measured rather than guessed:
  * gNdsR204AnimSeen dumped at frame 1928 (roughly two thirds through the 3,600
@@ -6633,8 +6679,18 @@ static sb32 ndsR2AnimCacheArenaStillOwned(void)
     return TRUE;
 }
 
+/* Defined below with the residency loader; declared here because THIS is the
+ * one seam where the arena stops being ours, and the pack lives in it. Binding
+ * the invalidation to the writer rather than to each reader is the shape the
+ * gMPCollisionGeometry fix settled on. */
+static void ndsBattlePackResidencyDrop(void);
+
 static void ndsR2AnimCacheArenaDropForReset(void)
 {
+    /* BEFORE the pointers are cleared: the pack's storage is inside this block,
+     * so a lookup that survived the rewind would otherwise hand the parser a
+     * figatree pointing into memory the next scene already owns. */
+    ndsBattlePackResidencyDrop();
     sNdsR2AnimCacheArena = NULL;
     sNdsR2AnimCacheArenaBytes = 0u;
     sNdsR2AnimCacheArenaUsed = 0u;
@@ -6693,14 +6749,26 @@ static sb32 ndsR2AnimCacheArenaEnsure(void)
     }
     sNdsR2AnimCacheArena = block;
     sNdsR2AnimCacheArenaBytes = NDS_R2_ANIM_CACHE_ARENA_BYTES;
+#if NDS_R2_BATTLEPACK
+    /* CARVE THE PACK'S REGION FIRST, at reservation, not by being the first
+     * caller of the bump allocator. Ordering was the first design and it lost:
+     * fighter setup stores 3,728 bytes of animation into this arena before the
+     * first scene update runs a pack step, so the 287,936-byte request was
+     * refused by 848 bytes and `gNdsBattlePackHits` read 0 with
+     * `gNdsR2AnimCacheArenaOverflowLastSize 287936` naming the victim
+     * (soak 2026-08-15_015724). Now the blob owns [0, RESERVE) of every arena
+     * generation and no store can get in front of it. */
+    sNdsR2AnimCacheArenaUsed = NDS_BATTLEPACK_RESERVE_BYTES;
+#else
     sNdsR2AnimCacheArenaUsed = 0u;
+#endif
     /* Stamp the generation the block was taken under. Must be read AFTER the
      * allocation: syTaskmanMalloc cannot rewind the heap, so this is the same
      * value either way, but taking it here keeps the store adjacent to the
      * pointer it qualifies. */
     sNdsR2AnimCacheArenaGeneration = gNdsTaskmanHeapGeneration;
     gNdsR2AnimCacheArenaReservedBytes = NDS_R2_ANIM_CACHE_ARENA_BYTES;
-    gNdsR2AnimCacheArenaUsedBytes = 0u;
+    gNdsR2AnimCacheArenaUsedBytes = sNdsR2AnimCacheArenaUsed;
     gNdsR2AnimCacheArenaReserveCount++;
     return TRUE;
 }
@@ -6732,6 +6800,26 @@ static void *ndsR2AnimCacheArenaAlloc(u32 size)
     return &sNdsR2AnimCacheArena[aligned];
 }
 
+/* TRUE when no allocation of any size can succeed. Exact, not a threshold: this
+ * is ndsR2AnimCacheArenaAlloc's own refusal test with `size` at its minimum.
+ *
+ * It exists because ndsR2AnimWarmLoadOne calls ndsRelocAssetAllocSize -- a real
+ * fopen plus header read -- BEFORE it asks the arena for bytes, so a full arena
+ * paid one NitroFS open per remaining warm entry to learn something it already
+ * knew. That was tolerable when the arena had 19.9% spare; with the resident
+ * pack occupying it, it would be the whole rest of the list. */
+static sb32 ndsR2AnimCacheArenaExhausted(void)
+{
+    u32 aligned;
+
+    if (ndsR2AnimCacheArenaEnsure() == FALSE)
+    {
+        return TRUE;
+    }
+    aligned = (sNdsR2AnimCacheArenaUsed + 15u) & ~15u;
+    return (aligned >= sNdsR2AnimCacheArenaBytes) ? TRUE : FALSE;
+}
+
 /* Give back the most recent allocation. Only valid for the immediately preceding
  * alloc with nothing in between, which is exactly the shape of the warm loader's
  * failure path -- it used to leak the buffer it had just taken. */
@@ -6746,6 +6834,190 @@ static void ndsR2AnimCacheArenaRelease(void *payload, u32 size)
         gNdsR2AnimCacheArenaUsedBytes = sNdsR2AnimCacheArenaUsed;
     }
 }
+
+/* ---- Slice 1 phase 5: the resident figatree pack's setup-time load --------
+ *
+ * The blob is a NitroFS payload streamed into the arena above, NOT `.incbin`
+ * into `.rodata`: +288,992 B of ARM9 image was MEASURED to push
+ * gNdsTaskmanArenaChosenSize 0x150000 -> 0x140000 with 16 alloc failures,
+ * because the arena is one calloc from the same libnds heap the image bounds.
+ * See the NDS_R2_ANIM_CACHE_ARENA_BYTES comment and BATTLEPACK_POOL.md.
+ *
+ * IT IS STEPPED, AND THE BOUND IS NOT LOADING-TIME GENEROSITY. It rides
+ * ndsR2AnimCachePreloadStep for two reasons the warm walk already paid for:
+ *
+ *   1. The BGM packet seam. E4 loaded 41 assets in ONE call at this seam and
+ *      Boundary refused the build on the ADPCM smoke -- the stream is
+ *      double-buffered at 8,196 bytes against 44,100 a second, so the main
+ *      thread owns ~186 ms between seams. 287,904 bytes in one read does not
+ *      fit it.
+ *   2. Lazy reservation is a SAFETY property, not an optimisation. Taking the
+ *      arena on the first step rather than at battle start means
+ *      ftManagerSetupFilesAllKind has already taken its 116,752 bytes, so this
+ *      can never be the allocation that starves battle start -- the failure
+ *      mode a 128 KiB static array once caused.
+ *
+ * Every failure degrades to the generic acquisition path: the pack is simply
+ * not published, ndsBattlePackFindFigatree returns NULL, and the load runs as
+ * it does today. A partial blob is never published. */
+#if NDS_R2_BATTLEPACK
+
+#define NDS_BATTLEPACK_PATH "nitro:/animation/battlepack_fox.bin"
+/* 40 B of header padded to the 48 B directory offset (generate_battlepack_anim
+ * BLOB_DIR_OFF). Read as words so the u32 fields are naturally aligned -- an
+ * unaligned ARM9 LDR rotates the word instead of faulting. */
+#define NDS_BATTLEPACK_HEADER_WORDS 12u
+/* One chunk per scene update. 287,904 / 16,384 = 18 steps, and the countdown is
+ * far longer than that; the warm walk's own step is 4 assets, i.e. 4 NitroFS
+ * opens plus ~8 KB, so this is one open plus 16 KB and stays in the same class.
+ */
+#define NDS_BATTLEPACK_STEP_BYTES 16384u
+
+#define NDS_BATTLEPACK_LOAD_IDLE 0u
+#define NDS_BATTLEPACK_LOAD_STREAMING 1u
+#define NDS_BATTLEPACK_LOAD_DONE 2u
+#define NDS_BATTLEPACK_LOAD_FAILED 3u
+
+static u8 *sNdsBattlePackDst;
+static u32 sNdsBattlePackTotal;
+static u32 sNdsBattlePackCursor;
+static u32 sNdsBattlePackLoadState;
+
+static void ndsBattlePackResidencyDrop(void)
+{
+    ndsBattlePackDrop();
+    sNdsBattlePackDst = NULL;
+    sNdsBattlePackTotal = 0u;
+    sNdsBattlePackCursor = 0u;
+    sNdsBattlePackLoadState = NDS_BATTLEPACK_LOAD_IDLE;
+    gNdsBattlePackResidentBytes = 0u;
+}
+
+/* Retry a load that failed, without re-streaming one that succeeded. */
+static void ndsBattlePackResidencyRearm(void)
+{
+    if (sNdsBattlePackLoadState == NDS_BATTLEPACK_LOAD_FAILED)
+    {
+        sNdsBattlePackLoadState = NDS_BATTLEPACK_LOAD_IDLE;
+    }
+}
+
+static void ndsBattlePackResidencyFail(void)
+{
+    /* Hand the reserve to the raw cache rather than stranding 288 KiB of arena
+     * on a degraded run -- but ONLY while the cache has taken nothing yet, or
+     * rewinding the cursor would alias entries that already live above it. */
+    if ((sNdsR2AnimCacheArena != NULL) &&
+        (sNdsR2AnimCacheArenaUsed == NDS_BATTLEPACK_RESERVE_BYTES))
+    {
+        sNdsR2AnimCacheArenaUsed = 0u;
+        gNdsR2AnimCacheArenaUsedBytes = 0u;
+    }
+    ndsBattlePackResidencyDrop();
+    sNdsBattlePackLoadState = NDS_BATTLEPACK_LOAD_FAILED;
+    gNdsBattlePackLoadFails++;
+}
+
+/* TRUE while the pack still needs steps, so the caller holds the warm walk off
+ * the arena until the blob owns its bytes. */
+static sb32 ndsBattlePackResidencyStep(void)
+{
+    u32 want;
+
+    if ((sNdsBattlePackLoadState == NDS_BATTLEPACK_LOAD_DONE) ||
+        (sNdsBattlePackLoadState == NDS_BATTLEPACK_LOAD_FAILED))
+    {
+        return FALSE;
+    }
+    if (sNdsBattlePackLoadState == NDS_BATTLEPACK_LOAD_IDLE)
+    {
+        u32 head[NDS_BATTLEPACK_HEADER_WORDS];
+        u32 total;
+        uintptr_t base;
+
+        /* The reserve exists only inside a live arena, so take ownership first.
+         * This is also where the lazy reservation happens -- see the header
+         * comment: at the first scene update, not at battle start. */
+        if (ndsR2AnimCacheArenaEnsure() == FALSE)
+        {
+            ndsBattlePackResidencyFail();
+            return FALSE;
+        }
+        if (ndsRelocAssetReadRawRange(NDS_BATTLEPACK_PATH, 0u, head,
+                                      (u32)sizeof(head)) == FALSE)
+        {
+            ndsBattlePackResidencyFail();
+            return FALSE;
+        }
+        /* head[2] is blob_bytes. Magic and version are re-checked by
+         * ndsBattlePackAdopt against the bytes that actually landed; all this
+         * needs is a length that fits the carved reserve. A blob larger than
+         * the build-time NDS_R2_BATTLEPACK_BLOB_BYTES the reserve was sized
+         * from means the NitroFS payload and the ARM9 image disagree, which is
+         * a build defect and is refused rather than truncated. */
+        total = head[2];
+        if ((total < (u32)sizeof(head)) ||
+            (total > (NDS_BATTLEPACK_RESERVE_BYTES -
+                      NDS_BATTLEPACK_LINE_BYTES)))
+        {
+            ndsBattlePackResidencyFail();
+            return FALSE;
+        }
+        base = ((uintptr_t)sNdsR2AnimCacheArena +
+                (NDS_BATTLEPACK_LINE_BYTES - 1u)) &
+               ~(uintptr_t)(NDS_BATTLEPACK_LINE_BYTES - 1u);
+        sNdsBattlePackDst = (u8 *)base;
+        sNdsBattlePackTotal = total;
+        /* From zero, not from sizeof(head): re-reading the 48 header bytes
+         * through the same path costs nothing and keeps the CPU from having
+         * written any byte the file read may later invalidate a line under. */
+        sNdsBattlePackCursor = 0u;
+        sNdsBattlePackLoadState = NDS_BATTLEPACK_LOAD_STREAMING;
+    }
+    want = sNdsBattlePackTotal - sNdsBattlePackCursor;
+    if (want > NDS_BATTLEPACK_STEP_BYTES)
+    {
+        want = NDS_BATTLEPACK_STEP_BYTES;
+    }
+    if (ndsRelocAssetReadRawRange(NDS_BATTLEPACK_PATH, sNdsBattlePackCursor,
+                                  &sNdsBattlePackDst[sNdsBattlePackCursor],
+                                  want) == FALSE)
+    {
+        ndsBattlePackResidencyFail();
+        return FALSE;
+    }
+    sNdsBattlePackCursor += want;
+    gNdsBattlePackLoadSteps++;
+    if (sNdsBattlePackCursor < sNdsBattlePackTotal)
+    {
+        return TRUE;
+    }
+    if (ndsBattlePackAdopt(sNdsBattlePackDst, sNdsBattlePackTotal) == FALSE)
+    {
+        ndsBattlePackResidencyFail();
+        return FALSE;
+    }
+    sNdsBattlePackLoadState = NDS_BATTLEPACK_LOAD_DONE;
+    gNdsBattlePackResidentBytes = sNdsBattlePackTotal;
+    return FALSE;
+}
+
+#else /* !NDS_R2_BATTLEPACK */
+
+static void ndsBattlePackResidencyDrop(void)
+{
+}
+
+static void ndsBattlePackResidencyRearm(void)
+{
+}
+
+static sb32 ndsBattlePackResidencyStep(void)
+{
+    return FALSE;
+}
+
+#endif /* NDS_R2_BATTLEPACK */
 
 static NDSR2AnimCacheEntry *ndsR2AnimCacheFind(u32 asset_id)
 {
@@ -7001,6 +7273,18 @@ static void ndsR2AnimWarmLoadOne(u32 asset_id)
     {
         return;
     }
+    /* Already resident in the pack. Warming it into the raw cache would spend a
+     * NitroFS open and a second copy of bytes the acquisition path stopped
+     * reading the moment the pack answered for this id. */
+    if (ndsBattlePackFindFigatree(asset_id) != NULL)
+    {
+        return;
+    }
+    if (ndsR2AnimCacheArenaExhausted() != FALSE)
+    {
+        gNdsR2AnimWarmFailed++;
+        return;
+    }
     alloc_size = ndsRelocAssetAllocSize(asset_id);
     if ((alloc_size == 0u) ||
         (sNdsR2AnimCacheCount >= NDS_R2_ANIM_CACHE_ENTRIES))
@@ -7077,6 +7361,12 @@ void ndsR2AnimCachePreloadMatch(void)
      * the first find could hand back a pointer into reused memory. */
     ndsR2AnimCacheValidateGeneration();
     sNdsR204AnimWarmCursor = 0u;
+    /* And re-arm the pack. The generation test above already dropped it if the
+     * heap moved; this covers the case where it did NOT -- a re-entry that
+     * reuses the same generation must still not be left with a FAILED state
+     * from the previous match's attempt. Re-arming a DONE pack would re-stream
+     * 287,904 bytes for nothing, so only a failed load is retried. */
+    ndsBattlePackResidencyRearm();
 }
 
 /* R2-04 E5. One asset per scene update. The countdown alone is far longer than
@@ -7136,6 +7426,14 @@ void ndsR2AnimCachePreloadStep(void)
             step = 1u;
         }
         ndsR2AnimCacheValidateGeneration();
+        /* The pack first, and ALONE while it is streaming. Two reasons: the
+         * arena is a bump allocator, so the blob must own the low bytes before
+         * any warm payload takes them; and this update's BGM-seam budget is
+         * already spent by a 16 KB chunk. `step = 0` for that update. */
+        if (ndsBattlePackResidencyStep() != FALSE)
+        {
+            step = 0u;
+        }
         for (i = 0u; i < step; i++)
         {
             if (sNdsR204AnimWarmCursor >= (sizeof(sNdsR204AnimWarmList) /
@@ -7159,13 +7457,25 @@ static void *ndsRelocForceLoadFighterAObj16File(u32 token, u32 asset_id,
     NDSRelocAssetHeader header;
     NDSRelocLoadedFile *loaded;
     size_t asset_size;
-    void *packed = ndsBattlePackFindFigatree(asset_id);
+    void *packed;
 
     if ((heap == NULL) ||
         (ndsRelocIsMarioFoxAnimID(asset_id) == FALSE))
     {
         return NULL;
     }
+
+#if NDS_R2_ANIM_CACHE
+    /* Settle arena ownership BEFORE the pack lookup, not only before the raw
+     * cache find further down. The pack's bytes live in that arena, and the
+     * pack is consulted ahead of every other guard in this function -- so a
+     * scene rewind that had not yet been noticed would otherwise return a
+     * figatree pointing into memory the new scene already owns. Invalidating at
+     * the seam where the invariant breaks, rather than at each reader, is the
+     * shape the gMPCollisionGeometry fix settled on. */
+    ndsR2AnimCacheValidateGeneration();
+#endif
+    packed = ndsBattlePackFindFigatree(asset_id);
 
     /* SLICE 1 PHASE 5 -- the acquisition path, deleted.
      *

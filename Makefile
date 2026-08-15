@@ -299,16 +299,18 @@ NDS_R2_AOBJ16_PREBAKE ?= 0
 # that sequence sat on 62 of the 80 frames that set P95 against 174 of the 1,520
 # body frames (6.8x).
 #
-# DEFAULT 0, AND IT MUST STAY 0 UNTIL THE BLOB MOVES INTO THE TASKMAN ARENA.
-# At 1 the blob is `.incbin`'d into the ARM9 image, and 288,992 B of static
-# growth was MEASURED to push `gNdsTaskmanArenaChosenSize` from 0x150000 to
-# 0x140000 with 16 alloc failures -- the arena is calloc'd from the same libnds
-# heap `fake_heap_start` bounds, so `.rodata` and the arena come out of the same
-# bytes. Against the match's measured 1,304,068 B of taskman use that projects a
-# general-heap low-water of ~6,652 against the mandated 32,768 floor. The boot
-# ladder does NOT catch this: that arm had 66,784 B of proven headroom.
-# The fit is one fighter resident IN THE ARENA, replacing the 262,144 B raw-file
-# anim cache (Mario 271,728, Fox 287,904), which costs no static image at all.
+# THE BLOB IS NOW ARENA-RESIDENT (2026-08-15). At 1 the Fox pack ships as a
+# NitroFS payload and is streamed into the taskman animation arena at scene
+# setup, replacing the 262,144 B raw-file cache; the ARM9 image does not grow.
+# The `.incbin` route it replaced is DISQUALIFIED and must not come back:
+# +288,992 B of static image was MEASURED to push `gNdsTaskmanArenaChosenSize`
+# from 0x150000 to 0x140000 with 16 alloc failures -- the arena is calloc'd from
+# the same libnds heap `fake_heap_start` bounds, so `.rodata` and the arena come
+# out of the same bytes -- projecting a general-heap low-water of ~6,652 against
+# the mandated 32,768 floor. The boot ladder does NOT catch that: the failing arm
+# had 66,784 B of proven headroom.
+# DEFAULT 0 until the gate measurement (slice 1 phase 8) has been taken: only one
+# fighter fits, so the other loses the raw cache, and that trade is unpriced.
 # `artifacts/performance/2026-08-15_battlepack-pool/BATTLEPACK_POOL.md`.
 NDS_R2_BATTLEPACK ?= 0
 # Cycle 109. Builds BOTH arms of the two animation cuts into one binary, selected
@@ -2226,11 +2228,21 @@ NDS_FTANIM_DENSE_SOURCES := \
 	$(wildcard $(BATTLESHIP_O2R)/reloc_animations/FTMarioAnim*) \
 	$(wildcard $(BATTLESHIP_O2R)/reloc_animations/FTFoxAnim*)
 
-# Slice 1 phase 5's resident figatree pack. One fighter per blob, because the
-# .rodata pool and the taskman arena are separate pools and neither holds both
-# (287,904 Fox + 271,728 Mario). Fox is the .rodata resident: it is the larger
-# blob and it is the CPU whose action changes dominate the Boundary arm.
+# Slice 1 phase 5's resident figatree pack. ONE fighter, because the taskman
+# arena holds 287,904 (Fox) or 271,728 (Mario) but not the ~559,632 both need.
+# Fox is the resident: it is the autonomous level-3 CPU on the Boundary arm, so
+# its action changes dominate the acquisitions there, and it is the larger blob,
+# which makes it the binding fit test.
 # `--items-off` drops the 38 clips proven unreachable from the linked battle ELF.
+#
+# STAGED INTO NitroFS, NOT `.incbin`. The first build linked it into .rodata and
+# +288,992 B of ARM9 image was MEASURED to push gNdsTaskmanArenaChosenSize
+# 0x150000 -> 0x140000 with 16 alloc failures: the arena is one calloc from the
+# same libnds heap the static image bounds, so image growth and arena size come
+# out of the same bytes. check-boot-headroom.ps1 CANNOT see that -- it reported
+# 66,784 B of proven headroom on that arm. As a NitroFS payload the blob costs
+# the ARM9 image nothing and the runtime streams it into the arena at setup, in
+# place of the 262,144 B raw-file cache it replaces.
 NDS_BATTLEPACK_DIR := $(PROJECT_ROOT)/assets/animation
 NDS_BATTLEPACK_BLOB := $(NDS_BATTLEPACK_DIR)/battlepack_fox.bin
 
@@ -3052,6 +3064,14 @@ ifeq ($(NDS_R2_FTANIM_DENSE),1)
 NDS_NITROFS_FTANIM_FILES := $(NITROFS_DIR)/animation/ftanim_dense_bank.bin
 endif
 
+# Slice 1 phase 5's resident figatree pack. Empty unless a reader is compiled
+# in, for the same reason as the bank above: without NDS_R2_BATTLEPACK it is
+# 287,904 bytes of ROM nothing opens.
+export NDS_NITROFS_BATTLEPACK_FILES :=
+ifeq ($(NDS_R2_BATTLEPACK),1)
+NDS_NITROFS_BATTLEPACK_FILES := $(NITROFS_DIR)/animation/battlepack_fox.bin
+endif
+
 export NDS_NITROFS_PARTICLE_FILES :=
 ifeq ($(NDS_R2_PARTICLE_RUNTIME),1)
 NDS_NITROFS_PARTICLE_FILES := \
@@ -3132,6 +3152,15 @@ SCENE_BACKEND_SLICES := \
 
 all: $(OUTPUT).nds
 
+# The blob must exist before the config is written: the config carries its byte
+# count, and the runtime carves exactly that much at the head of every arena
+# generation. Generated from the blob rather than hardcoded so it cannot drift
+# from the asset -- a stale constant here is a pack that silently never becomes
+# resident.
+ifeq ($(NDS_R2_BATTLEPACK),1)
+$(NDS_BUILD_CONFIG): $(NDS_BATTLEPACK_BLOB)
+endif
+
 $(NDS_BUILD_CONFIG): FORCE
 	@tmp="$@.tmp"; \
 	{ \
@@ -3192,6 +3221,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_R2_DELTA_PATH_ITCM $(NDS_R2_DELTA_PATH_ITCM)'; \
 		echo '#define NDS_R2_ANIM_CACHE $(NDS_R2_ANIM_CACHE)'; \
 		echo '#define NDS_R2_BATTLEPACK $(NDS_R2_BATTLEPACK)'; \
+		echo "#define NDS_R2_BATTLEPACK_BLOB_BYTES $$(test -f '$(NDS_BATTLEPACK_BLOB)' && wc -c < '$(NDS_BATTLEPACK_BLOB)' || echo 0)u"; \
 		echo '#define NDS_R2_AOBJ16_PREBAKE $(NDS_R2_AOBJ16_PREBAKE)'; \
 		echo '#define NDS_R2_ANIM_CUT_ROUTE $(NDS_R2_ANIM_CUT_ROUTE)'; \
 		echo '#define NDS_R2_STRIP_ROUTE $(NDS_R2_STRIP_ROUTE)'; \
@@ -3437,6 +3467,10 @@ $(NDS_BATTLEPACK_BLOB): \
 	python "$(PROJECT_ROOT)/scripts/generate_battlepack_anim.py" \
 		--fighter fox --items-off --blob-out "$@"
 
+$(NITROFS_DIR)/animation/battlepack_fox.bin: $(NDS_BATTLEPACK_BLOB)
+	@mkdir -p $(dir $@)
+	@cp $< $@
+
 $(NITROFS_DIR)/particles/efcommon_particle_textures.ds.bin: $(NDS_PARTICLE_TEXTURE_ASSET)
 	@mkdir -p $(dir $@)
 	@cp $< $@
@@ -3452,7 +3486,7 @@ $(NITROFS_DIR)/particles/grpupupu_whispy_native.ds.bin: $(NDS_WHISPY_NATIVE_ASSE
 prune-obsolete-audio:
 	@rm -f $(foreach file,$(NDS_AUDIO_OBSOLETE_DERIVED_FILES),$(NITROFS_DIR)/$(file))
 
-$(OUTPUT).nds: prune-obsolete-audio $(OUTPUT).elf $(NDS_NITROFS_RELOC_FILES) $(NDS_NITROFS_RELOCDATA_FILES) $(NDS_NITROFS_AUDIO_FILES) $(NDS_NITROFS_BATTLE_STATIC_TEXTURE_FILES) $(NDS_NITROFS_PARTICLE_FILES) $(NDS_NITROFS_EFFECT_FILES) $(NDS_NITROFS_FTANIM_FILES)
+$(OUTPUT).nds: prune-obsolete-audio $(OUTPUT).elf $(NDS_NITROFS_RELOC_FILES) $(NDS_NITROFS_RELOCDATA_FILES) $(NDS_NITROFS_AUDIO_FILES) $(NDS_NITROFS_BATTLE_STATIC_TEXTURE_FILES) $(NDS_NITROFS_PARTICLE_FILES) $(NDS_NITROFS_EFFECT_FILES) $(NDS_NITROFS_FTANIM_FILES) $(NDS_NITROFS_BATTLEPACK_FILES)
 $(OUTPUT).elf: $(OFILES) $(NDS_PRIVATE_CHECK_OFILES) \
 	$(NDS_HOT_TEXT_SPECS) $(NDS_HOT_TEXT_LINKER_SCRIPT) \
 	$(NDS_TASK32_DRAW_HOT_FRAGMENT) $(NDS_PARTICLE_BANKS_INC) \
@@ -3578,14 +3612,6 @@ scene_backend.o: $(SCENE_BACKEND_SLICES) $(NDS_SCENE_HARNESS_CONFIG)
 scene_harness.o battleship_grinishie_scale.o: $(NDS_SCENE_HARNESS_CONFIG)
 nds_ifcommon_oam.o: $(NDS_TASK39_HIT_SPARKS_INC)
 
-# The blob is `.incbin`'d, so the object must rebuild when the pack changes and
-# the assembler must be able to find it. `-Wa,-I` rather than an absolute path
-# inside the C string: the inner make runs from $(BUILD), and a Windows path in
-# a C string literal is one backslash away from a silent miscompile.
-ifeq ($(NDS_R2_BATTLEPACK),1)
-nds_battlepack_anim.o: $(NDS_BATTLEPACK_BLOB)
-nds_battlepack_anim.o: CFLAGS += -Wa,-I$(NDS_BATTLEPACK_DIR)
-endif
 
 $(NITROFS_DIR)/reloc/%: $(BATTLESHIP_O2R)/%
 	@mkdir -p $(dir $@)

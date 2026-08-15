@@ -38,6 +38,16 @@ s32 ndsRelocAssetLoadData(u32 asset_id, void *dst, size_t dst_capacity,
 s32 ndsRelocAssetLoadHeaderAndData(u32 asset_id, void *dst,
                                    size_t dst_capacity,
                                    NDSRelocAssetHeader *out_header);
+/* A byte range out of a NitroFS payload that is NOT an o2r asset -- no asset
+ * table entry, no o2r header, no file id. Slice 1's resident figatree pack is
+ * the only such payload the animation path reads, and it is streamed in chunks
+ * because the seam's budget is one BGM packet.
+ *
+ * File I/O stays in this module rather than being re-implemented in
+ * reloc_backend_assets.c: that TU has no <stdio.h> and the open/short-read
+ * counters that the after-GO zero assertions read live here. */
+s32 ndsRelocAssetReadRawRange(const char *path, u32 offset, void *dst,
+                              u32 bytes);
 /* Size, zero and load from one open. Prefer this over sizing with
  * ndsRelocAssetAllocSize and then loading: that pair walks the NitroFS
  * directory twice for a size the load's own header already carries. `align` is

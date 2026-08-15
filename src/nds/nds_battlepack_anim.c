@@ -8,33 +8,22 @@ __attribute__((used)) volatile u32 gNdsBattlePackBytes;
 __attribute__((used)) volatile u32 gNdsBattlePackHits;
 __attribute__((used)) volatile u32 gNdsBattlePackMisses;
 __attribute__((used)) volatile u32 gNdsBattlePackState;
+__attribute__((used)) volatile u32 gNdsBattlePackLoadSteps;
+__attribute__((used)) volatile u32 gNdsBattlePackLoadFails;
+__attribute__((used)) volatile u32 gNdsBattlePackResidentBytes;
+__attribute__((used)) volatile u32 gNdsBattlePackDrops;
 
 #if NDS_R2_BATTLEPACK
 
-/* The blob is linked, not loaded. `.incbin` costs one ARM9 image region and
- * zero setup work: no NitroFS walk, no cartridge read, no decompression, no
- * relocation -- which is the point of slice 1. It is `.rodata` rather than an
- * arena allocation because the two pools are separate and only the static one
- * has room for a whole fighter today; see BATTLEPACK_POOL.md.
+/* The blob's runtime base, published by ndsBattlePackAdopt once the residency
+ * loader has streamed the whole file into the taskman arena. NULL is the honest
+ * "not resident" answer and every entry point returns it as a miss, so a failed
+ * or unfinished load degrades to the generic acquisition path rather than
+ * handing the parser a partial blob.
  *
- * Alignment is 16 so the directory, the slot tables and every script start are
- * 4-byte aligned no matter where the linker places the section. The resolver
- * REFUSES a misaligned result (reloc_backend_assets.c:2889, the 2026-08-02
- * shield-freeze seam), so this is load-bearing, not tidiness. */
-__asm__(".section .rodata\n"
-        ".balign 16\n"
-        ".global gNdsBattlePackBlob\n"
-        ".hidden gNdsBattlePackBlob\n"
-        "gNdsBattlePackBlob:\n"
-        ".incbin \"battlepack_fox.bin\"\n"
-        ".balign 4\n"
-        ".global gNdsBattlePackBlobEnd\n"
-        ".hidden gNdsBattlePackBlobEnd\n"
-        "gNdsBattlePackBlobEnd:\n"
-        ".previous\n");
-
-extern const u8 gNdsBattlePackBlob[];
-extern const u8 gNdsBattlePackBlobEnd[];
+ * NOT `const`: the storage is arena, and the arena is reclaimed by a scene
+ * rewind. `ndsBattlePackDrop` is the seam that makes that visible. */
+static const u8 *sNdsBattlePackBase;
 
 /* generate_battlepack_anim.py `emit_blob`. Every field is a byte offset from
  * the blob base except the two ids, which bound a binary search. */
@@ -62,42 +51,72 @@ typedef struct NDSBattlePackClip
 #define NDS_BATTLEPACK_MAGIC 0x32415042u /* "BPA2", little endian */
 #define NDS_BATTLEPACK_VERSION 2u
 
-/* Validated once, not per lookup, and never re-validated: the blob is `const`
- * program image, so a second read cannot disagree with the first. The check is
- * against a BUILD mismatch (a stale asset, a format bump), which is exactly the
- * class `--gc-sections` and generated-data drift have produced here before. */
+/* Validated ONCE per residency, at adoption, and never re-validated per lookup:
+ * the bytes do not change after the load completes, so a second read cannot
+ * disagree with the first. The check is against a BUILD or TRANSFER mismatch (a
+ * stale NitroFS payload, a format bump, a short read), which is exactly the
+ * class generated-data drift has produced here before -- and the parser's
+ * failure mode on a garbage script is a freeze, not a diagnostic. */
 static const NDSBattlePackHeader *ndsBattlePackHeader(void)
 {
-    const NDSBattlePackHeader *header =
-        (const NDSBattlePackHeader *)(const void *)gNdsBattlePackBlob;
-    u32 linked;
-
-    if (gNdsBattlePackState != NDS_BATTLEPACK_STATE_UNCHECKED)
+    if ((sNdsBattlePackBase == NULL) ||
+        (gNdsBattlePackState != NDS_BATTLEPACK_STATE_READY))
     {
-        return (gNdsBattlePackState == NDS_BATTLEPACK_STATE_READY) ? header
-                                                                   : NULL;
+        return NULL;
     }
-    linked = (u32)(gNdsBattlePackBlobEnd - gNdsBattlePackBlob);
+    return (const NDSBattlePackHeader *)(const void *)sNdsBattlePackBase;
+}
+
+s32 ndsBattlePackAdopt(void *base, u32 bytes)
+{
+    const NDSBattlePackHeader *header =
+        (const NDSBattlePackHeader *)(const void *)base;
+
+    ndsBattlePackDrop();
+    if ((base == NULL) || (bytes < sizeof(NDSBattlePackHeader)))
+    {
+        gNdsBattlePackState = NDS_BATTLEPACK_STATE_BAD_EXTENT;
+        return FALSE;
+    }
     if (header->magic != NDS_BATTLEPACK_MAGIC)
     {
         gNdsBattlePackState = NDS_BATTLEPACK_STATE_BAD_MAGIC;
-        return NULL;
+        return FALSE;
     }
     if (header->version != NDS_BATTLEPACK_VERSION)
     {
         gNdsBattlePackState = NDS_BATTLEPACK_STATE_BAD_VERSION;
-        return NULL;
+        return FALSE;
     }
-    if ((header->blob_bytes != linked) || (header->clip_count == 0u) ||
-        (header->stream_off >= linked) || (header->dir_off >= linked))
+    /* The blob's own declared length must equal what was actually streamed, and
+     * every region it names must land inside it. A short read that still passed
+     * magic and version is the failure this catches. */
+    if ((header->blob_bytes != bytes) || (header->clip_count == 0u) ||
+        (header->dir_off >= bytes) || (header->table_off >= bytes) ||
+        (header->stream_off >= bytes) ||
+        (header->clip_count >
+         ((bytes - header->dir_off) / sizeof(NDSBattlePackClip))))
     {
         gNdsBattlePackState = NDS_BATTLEPACK_STATE_BAD_EXTENT;
-        return NULL;
+        return FALSE;
     }
+    sNdsBattlePackBase = (const u8 *)(const void *)base;
     gNdsBattlePackClips = header->clip_count;
-    gNdsBattlePackBytes = linked;
+    gNdsBattlePackBytes = bytes;
     gNdsBattlePackState = NDS_BATTLEPACK_STATE_READY;
-    return header;
+    return TRUE;
+}
+
+void ndsBattlePackDrop(void)
+{
+    if (sNdsBattlePackBase != NULL)
+    {
+        gNdsBattlePackDrops++;
+    }
+    sNdsBattlePackBase = NULL;
+    gNdsBattlePackClips = 0u;
+    gNdsBattlePackBytes = 0u;
+    gNdsBattlePackState = NDS_BATTLEPACK_STATE_UNCHECKED;
 }
 
 void *ndsBattlePackFindFigatree(u32 asset_id)
@@ -116,7 +135,7 @@ void *ndsBattlePackFindFigatree(u32 asset_id)
         return NULL;
     }
     dir = (const NDSBattlePackClip *)(const void *)
-        &gNdsBattlePackBlob[header->dir_off];
+        &sNdsBattlePackBase[header->dir_off];
     lo = 0u;
     hi = header->clip_count;
     while (lo < hi)
@@ -126,7 +145,7 @@ void *ndsBattlePackFindFigatree(u32 asset_id)
 
         if (got == asset_id)
         {
-            return (void *)(uintptr_t)&gNdsBattlePackBlob[dir[mid]
+            return (void *)(uintptr_t)&sNdsBattlePackBase[dir[mid]
                                                               .slot_table_off];
         }
         if (got < asset_id)
@@ -157,7 +176,7 @@ s32 ndsBattlePackContains(const void *ptr, size_t size, const void **out_base,
     {
         return FALSE;
     }
-    base = (uintptr_t)(const void *)gNdsBattlePackBlob;
+    base = (uintptr_t)(const void *)sNdsBattlePackBase;
     addr = (uintptr_t)ptr;
     if ((addr < base) || (addr > (base + header->blob_bytes)) ||
         (size > (size_t)(header->blob_bytes - (u32)(addr - base))))
@@ -166,7 +185,7 @@ s32 ndsBattlePackContains(const void *ptr, size_t size, const void **out_base,
     }
     if (out_base != NULL)
     {
-        *out_base = (const void *)gNdsBattlePackBlob;
+        *out_base = (const void *)sNdsBattlePackBase;
     }
     if (out_size != NULL)
     {
@@ -181,6 +200,17 @@ void *ndsBattlePackFindFigatree(u32 asset_id)
 {
     (void)asset_id;
     return NULL;
+}
+
+s32 ndsBattlePackAdopt(void *base, u32 bytes)
+{
+    (void)base;
+    (void)bytes;
+    return FALSE;
+}
+
+void ndsBattlePackDrop(void)
+{
 }
 
 s32 ndsBattlePackContains(const void *ptr, size_t size, const void **out_base,
