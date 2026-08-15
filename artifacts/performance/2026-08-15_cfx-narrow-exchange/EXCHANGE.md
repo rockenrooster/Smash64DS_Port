@@ -333,11 +333,7 @@ to buy P95".
   with a different owner.
 - **No resident implementation.** §0 item 5 prices it from measured rows rather
   than building it, and the price is above 1.00.
-- **No Boundary run.** Both new flags default to `0`, so every published and
-  verifier-covered target is byte-identical to HEAD's; the shipping default was
-  not moved. (Stated as a deviation, not hidden: the change *is* live in the two
-  lab builds and nowhere else.)
-- **Root ROMs untouched** (§9).
+- **Root ROMs untouched** (§9) — and this is now *proven*, not asserted (below).
 
 ## 8. Reproduction
 
@@ -373,10 +369,24 @@ python scripts/census-marginal-frame-owners.py --diff --top 30 `
 # ... and again with gNdsCfxNarrowEnable=0
 ```
 
-## 9. Root ROMs
+## 9. Boundary, and the root ROMs
 
-Hashed before the first build and after the last. **Unchanged, and neither was
-rebuilt** (both new flags default to `0`):
+**`verify-all.ps1 -Profile Boundary` — `Boundary verification profile passed`, 0
+`Exception:`** (run at HEAD `1ac6258a2f1`, after the commit). Every static
+checker green as well: `M3_NATIVE_STAGE_CHECK_OK`, `SPRITE_LERP_EXACT=PASS`,
+`MP_LINE_EXTENT_REJECT_EXACT=PASS`, `FTANIM_REAL_BAKE=PASS`,
+`FTANIM_DENSE_BANK=OK`, `NDS_PARTICLE_BANKS=PASS`, harness registry 0 drift.
+`scripts/check-r2-collision-fixed.ps1` also green: **88 long multiplies, soft
+float confined to `ndsR2CollisionFixedBuildLocal` (15 calls)**, no
+`__aeabi_lmul`.
+
+**And the Boundary run REBUILT `smash64ds-battle-playable-hwtri.nds` (mtime
+12:58) at the new HEAD — and it came out BYTE-IDENTICAL.** That is a stronger
+statement than "the flags default to 0": the published P1 ROM was regenerated
+after these source edits and its SHA-256 did not move by one bit. Zero shipped
+bytes were changed.
+
+Hashed before the first build and after the Boundary rebuild. **Both unchanged:**
 
 ```text
 smash64ds.nds                       54C07FAC80C50418949908701F7C2BDBF27512C5F96AC09086FABBB0DF6AC68A
