@@ -2,6 +2,7 @@
 
 #include <nds/nds_freeze_diagnostics.h>
 #include <nds/nds_ifcommon_oam.h>
+#include <nds/nds_reloc_assets.h>
 #include <nds/nds_task37_profile.h>
 #if NDS_R2_COLLISION_L7_ORACLE
 #include <nds/nds_r2_collision_oracle.h>
@@ -5334,6 +5335,11 @@ u32 ndsR2HostBattleUpdateOnce(u32 update_index)
     u32 input_start = cpuGetTiming();
 #endif
 
+    /* Slice 1 phase 7's gate, from a read this function already performs. One
+     * logic update of lag at the countdown edge, which can only ADD to the
+     * pre-GO side; every acquisition inside a GO update is counted. */
+    gNdsK0BattleInGo =
+        (battle_status_before == (u32)nSCBattleGameStatusGo) ? 1u : 0u;
     NDS_FREEZE_DIAGNOSTICS_MARK(NDS_FREEZE_BREADCRUMB_UPDATE_START);
     (void)ndsPlatformReadInput();
     if (NDS_DEV_LIVE_INPUT_PREVIEW != 0)
@@ -8067,6 +8073,13 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
                     u32 input_start = cpuGetTiming();
 #endif
+                    /* Slice 1 phase 7's gate; see ndsR2HostBattleUpdateOnce.
+                     * Both loops publish it, because which one runs depends on
+                     * the harness mode and a gate that is only armed on one
+                     * path reads zero for the wrong reason. */
+                    gNdsK0BattleInGo =
+                        (battle_status_before ==
+                         (u32)nSCBattleGameStatusGo) ? 1u : 0u;
                     NDS_FREEZE_DIAGNOSTICS_MARK(
                         NDS_FREEZE_BREADCRUMB_UPDATE_START);
                     if (use_realtime_presentation != 0u)

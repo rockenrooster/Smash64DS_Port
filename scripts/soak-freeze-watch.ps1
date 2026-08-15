@@ -666,6 +666,26 @@ try {
             'gNdsBattlePackResidentBytes',
             'gNdsBattlePackLoadFails',
             'gNdsBattlePackDrops',
+            # SLICE 1 PHASE 7 -- the K0 after-GO zero-I/O assertion, per fighter.
+            # Index [0] is Mario, [1] is Fox, and only one of the two is resident
+            # in the pack, so THE CONTROL IS IN THE SAME RUN: the unpacked
+            # fighter must read NON-ZERO on every row where the packed one reads
+            # zero. Both zero means the assertion measured nothing. Each counter
+            # is incremented at its own site (see include/nds/nds_reloc_assets.h)
+            # rather than inferred from BattlePackHits, because a zero one level
+            # downstream of a rejected request reads exactly like a deletion.
+            # Whole-run totals read at the end-of-run stop, which is the shape
+            # the 2026-08-15 D-cache staleness finding explicitly excluded.
+            'gNdsK0AfterGoAcquisitions[0]', 'gNdsK0AfterGoAcquisitions[1]',
+            'gNdsK0AfterGoPackHits[0]', 'gNdsK0AfterGoPackHits[1]',
+            'gNdsK0AfterGoFatReads[0]', 'gNdsK0AfterGoFatReads[1]',
+            'gNdsK0AfterGoSeeks[0]', 'gNdsK0AfterGoSeeks[1]',
+            'gNdsK0AfterGoByteSwaps[0]', 'gNdsK0AfterGoByteSwaps[1]',
+            'gNdsK0AfterGoRelocs[0]', 'gNdsK0AfterGoRelocs[1]',
+            'gNdsK0AfterGoNormalizes[0]', 'gNdsK0AfterGoNormalizes[1]',
+            'gNdsK0AfterGoCacheCopies[0]', 'gNdsK0AfterGoCacheCopies[1]',
+            'gNdsK0AfterGoTokenResolves[0]', 'gNdsK0AfterGoTokenResolves[1]',
+            'gNdsK0AfterGoPathLookups[0]', 'gNdsK0AfterGoPathLookups[1]',
             # Overflows alone CANNOT say why the cache stopped absorbing, and on
             # 2026-08-02 that cost a wrong reading: Overflows 126 beside
             # UsedBytes 3728 was read as "the 92,160-byte arena filled", which

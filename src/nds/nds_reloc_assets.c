@@ -141,6 +141,51 @@ static u32 ndsReadLe32(const u8 *bytes)
 #define NDS_RELOC_FOX_ANIM_LAST 0x31fu
 #define NDS_RELOC_MARIO_ANIM_PATH_CAPACITY 64u
 
+/* Three copies of these four ids existed independently before slice 1 phase 7
+ * -- this file's routing spans, reloc_backend_assets.c's per-animation defines,
+ * and now the header's. Pin them so a future renumber cannot silently split the
+ * fighter attribution from the path routing. */
+_Static_assert(NDS_RELOC_MARIO_ANIM_FIRST == NDS_K0_MARIO_ANIM_FIRST,
+               "K0 fighter span drifted from the Mario animation routing span");
+_Static_assert(NDS_RELOC_MARIO_ANIM_LAST == NDS_K0_MARIO_ANIM_LAST,
+               "K0 fighter span drifted from the Mario animation routing span");
+_Static_assert(NDS_RELOC_FOX_ANIM_FIRST == NDS_K0_FOX_ANIM_FIRST,
+               "K0 fighter span drifted from the Fox animation routing span");
+_Static_assert(NDS_RELOC_FOX_ANIM_LAST == NDS_K0_FOX_ANIM_LAST,
+               "K0 fighter span drifted from the Fox animation routing span");
+
+/* Slice 1 phase 7. Published by the taskman update loops; see the header. */
+__attribute__((used)) volatile u32 gNdsK0BattleInGo;
+__attribute__((used)) volatile u32 gNdsK0AfterGoAcquisitions[2];
+__attribute__((used)) volatile u32 gNdsK0AfterGoPackHits[2];
+__attribute__((used)) volatile u32 gNdsK0AfterGoFatReads[2];
+__attribute__((used)) volatile u32 gNdsK0AfterGoSeeks[2];
+__attribute__((used)) volatile u32 gNdsK0AfterGoByteSwaps[2];
+__attribute__((used)) volatile u32 gNdsK0AfterGoRelocs[2];
+__attribute__((used)) volatile u32 gNdsK0AfterGoNormalizes[2];
+__attribute__((used)) volatile u32 gNdsK0AfterGoCacheCopies[2];
+__attribute__((used)) volatile u32 gNdsK0AfterGoTokenResolves[2];
+__attribute__((used)) volatile u32 gNdsK0AfterGoPathLookups[2];
+
+u32 ndsK0AfterGoFighter(u32 asset_id)
+{
+    if (gNdsK0BattleInGo == 0u)
+    {
+        return NDS_K0_FIGHTER_NONE;
+    }
+    if ((asset_id >= NDS_RELOC_MARIO_ANIM_FIRST) &&
+        (asset_id <= NDS_RELOC_MARIO_ANIM_LAST))
+    {
+        return NDS_K0_FIGHTER_MARIO;
+    }
+    if ((asset_id >= NDS_RELOC_FOX_ANIM_FIRST) &&
+        (asset_id <= NDS_RELOC_FOX_ANIM_LAST))
+    {
+        return NDS_K0_FIGHTER_FOX;
+    }
+    return NDS_K0_FIGHTER_NONE;
+}
+
 static const NDSRelocAssetEntry *ndsRelocAssetMarioAnimEntry(u32 asset_id)
 {
     static const char prefix[] = "nitro:/reloc/reloc_animations/";
@@ -216,6 +261,10 @@ static const NDSRelocAssetEntry *ndsRelocAssetFindEntry(u32 asset_id)
 {
     size_t i;
 
+    /* K0 line 7, "token -> file discovery". Every asset->path resolution in the
+     * port funnels through here -- GetPath, ReadHeader, ReadExternFileIDs and
+     * both payload loaders -- so one mark covers the family. */
+    NDS_K0_MARK(gNdsK0AfterGoPathLookups, asset_id);
     if ((asset_id >= NDS_RELOC_MARIO_ANIM_FIRST) &&
         (asset_id <= NDS_RELOC_MARIO_ANIM_LAST))
     {
@@ -466,6 +515,10 @@ s32 ndsRelocAssetLoadData(u32 asset_id, void *dst, size_t dst_capacity,
         fclose(file);
         return FALSE;
     }
+    /* K0 lines 1 and 2, marked in every payload loader rather than only in the
+     * one the acquisition path happens to use today -- a "zero" must not be
+     * able to hide behind an uninstrumented door. */
+    NDS_K0_MARK(gNdsK0AfterGoSeeks, asset_id);
     if (fseek(file, data_offset, SEEK_SET) != 0)
     {
         gNdsRelocAssetShortReadCount++;
@@ -485,6 +538,7 @@ s32 ndsRelocAssetLoadData(u32 asset_id, void *dst, size_t dst_capacity,
         *out_header = header;
     }
     gNdsRelocAssetPayloadReadCount++;
+    NDS_K0_MARK(gNdsK0AfterGoFatReads, asset_id);
     return TRUE;
 }
 
@@ -536,6 +590,10 @@ s32 ndsRelocAssetLoadIntoZeroedHeap(u32 asset_id, void *dst, u32 align,
         gNdsRelocAssetOpenFailCount++;
         return FALSE;
     }
+    /* K0 line 2, "get_fat / f_lseek". The open walks the directory and seats
+     * the cluster chain; the fseek below is the f_lseek proper. Both are marked
+     * because both are FAT work the resident pack is supposed to delete. */
+    NDS_K0_MARK(gNdsK0AfterGoSeeks, asset_id);
 
     if (ndsRelocAssetReadHeaderFromFile(file, entry->file_id, &header,
                                         &data_offset) == FALSE)
@@ -553,6 +611,7 @@ s32 ndsRelocAssetLoadIntoZeroedHeap(u32 asset_id, void *dst, u32 align,
         *out_alloc_size = alloc_size;
     }
 
+    NDS_K0_MARK(gNdsK0AfterGoSeeks, asset_id);
     if (fseek(file, data_offset, SEEK_SET) != 0)
     {
         gNdsRelocAssetShortReadCount++;
@@ -573,6 +632,8 @@ s32 ndsRelocAssetLoadIntoZeroedHeap(u32 asset_id, void *dst, u32 align,
         *out_header = header;
     }
     gNdsRelocAssetPayloadReadCount++;
+    /* K0 line 1, "fighter-animation FAT reads". */
+    NDS_K0_MARK(gNdsK0AfterGoFatReads, asset_id);
     return TRUE;
 }
 
@@ -673,6 +734,10 @@ s32 ndsRelocAssetLoadHeaderAndData(u32 asset_id, void *dst,
         fclose(file);
         return FALSE;
     }
+    /* K0 lines 1 and 2, marked in every payload loader rather than only in the
+     * one the acquisition path happens to use today -- a "zero" must not be
+     * able to hide behind an uninstrumented door. */
+    NDS_K0_MARK(gNdsK0AfterGoSeeks, asset_id);
     if (fseek(file, data_offset, SEEK_SET) != 0)
     {
         gNdsRelocAssetShortReadCount++;
@@ -692,5 +757,6 @@ s32 ndsRelocAssetLoadHeaderAndData(u32 asset_id, void *dst,
         *out_header = header;
     }
     gNdsRelocAssetPayloadReadCount++;
+    NDS_K0_MARK(gNdsK0AfterGoFatReads, asset_id);
     return TRUE;
 }

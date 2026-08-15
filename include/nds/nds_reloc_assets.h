@@ -68,4 +68,68 @@ extern volatile u32 gNdsRelocAssetOpenFailCount;
 extern volatile u32 gNdsRelocAssetFormatFailCount;
 extern volatile u32 gNdsRelocAssetShortReadCount;
 
+/* ---- Slice 1 phase 7: the K0 after-GO zero-I/O assertion, per fighter -------
+ *
+ * `plan.md` K0 requires that once the battle is in GO, the fighter animation
+ * path performs no FAT read, no seek, no payload byte-swap, no relocation, no
+ * AObj16 normalization, no raw-cache copy and no token/file discovery. Every
+ * one of those already had a whole-run counter, and every one of them reads
+ * zero on the pack-hit path *by construction* -- the early return in
+ * `ndsRelocForceLoadFighterAObj16File` precedes them all. A zero one level
+ * downstream of a rejected request is indistinguishable from a working
+ * deletion, so these counters are incremented AT EACH SITE, keyed by the
+ * asset's own fighter, and gated on the battle actually being in GO.
+ *
+ * THE CONTROL IS IN THE SAME RUN. Only one fighter's clips fit the arena, so
+ * `NDS_R2_BATTLEPACK=1` leaves the other fighter on the generic path: index
+ * [NDS_K0_FIGHTER_MARIO] must read NON-ZERO wherever [NDS_K0_FIGHTER_FOX]
+ * reads zero. A row that is zero on both arms proves nothing; a row that is
+ * zero for the packed fighter while its neighbour counts is a deletion.
+ *
+ * The spans mirror `reloc_backend_assets.c`'s per-animation defines, which are
+ * text-pinned by `check-ft-hitstatus-fixtures.ps1` and therefore stay where
+ * they are; that TU carries `_Static_assert`s tying these four values to them,
+ * so the two cannot drift. Mario's block ends exactly where Fox's begins. */
+#define NDS_K0_MARIO_ANIM_FIRST 0x1f3u
+#define NDS_K0_MARIO_ANIM_LAST 0x281u
+#define NDS_K0_FOX_ANIM_FIRST 0x282u
+#define NDS_K0_FOX_ANIM_LAST 0x31fu
+
+#define NDS_K0_FIGHTER_MARIO 0u
+#define NDS_K0_FIGHTER_FOX 1u
+#define NDS_K0_FIGHTER_NONE 2u
+
+/* 1 while `gSCManagerBattleState->game_status == nSCBattleGameStatusGo`,
+ * published once per logic update by both taskman update loops from a read
+ * they already perform. Not a latch: a rematch and a Sudden Death entry each
+ * run their own countdown, and the asset work their scene setup does is
+ * legitimately pre-GO for that entry. */
+extern volatile u32 gNdsK0BattleInGo;
+
+extern volatile u32 gNdsK0AfterGoAcquisitions[2];
+extern volatile u32 gNdsK0AfterGoPackHits[2];
+extern volatile u32 gNdsK0AfterGoFatReads[2];
+extern volatile u32 gNdsK0AfterGoSeeks[2];
+extern volatile u32 gNdsK0AfterGoByteSwaps[2];
+extern volatile u32 gNdsK0AfterGoRelocs[2];
+extern volatile u32 gNdsK0AfterGoNormalizes[2];
+extern volatile u32 gNdsK0AfterGoCacheCopies[2];
+extern volatile u32 gNdsK0AfterGoTokenResolves[2];
+extern volatile u32 gNdsK0AfterGoPathLookups[2];
+
+/* NDS_K0_FIGHTER_NONE for anything that is not a Mario/Fox animation asset, or
+ * whenever the battle is not in GO. */
+u32 ndsK0AfterGoFighter(u32 asset_id);
+
+#define NDS_K0_MARK(counter_, asset_id_)                                       \
+    do                                                                         \
+    {                                                                          \
+        u32 nds_k0_index_ = ndsK0AfterGoFighter(asset_id_);                    \
+                                                                               \
+        if (nds_k0_index_ < NDS_K0_FIGHTER_NONE)                               \
+        {                                                                      \
+            (counter_)[nds_k0_index_]++;                                       \
+        }                                                                      \
+    } while (0)
+
 #endif

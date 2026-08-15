@@ -145,6 +145,21 @@
 #define NDS_RELOC_ASSET_FOX_ANIM_APPEAR 0x309u
 #define NDS_RELOC_ASSET_FOX_ANIM_ARWING 0x30au
 
+/* Slice 1 phase 7. `ndsK0AfterGoFighter` attributes every K0 counter from the
+ * asset id alone, so its spans and this file's must agree exactly or the
+ * assertion would be measuring a different fighter than the one the pack
+ * serves. Pinned rather than shared because these defines are text-matched by
+ * check-ft-hitstatus-fixtures.ps1 and must stay where they are. */
+_Static_assert(NDS_RELOC_ASSET_MARIO_ANIM_WAIT == NDS_K0_MARIO_ANIM_FIRST,
+               "K0 fighter span drifted from the Mario animation asset ids");
+_Static_assert(NDS_RELOC_ASSET_MARIO_ANIM_FIRE_FLOWER_AIR ==
+                   NDS_K0_MARIO_ANIM_LAST,
+               "K0 fighter span drifted from the Mario animation asset ids");
+_Static_assert(NDS_RELOC_ASSET_FOX_ANIM_FIRST == NDS_K0_FOX_ANIM_FIRST,
+               "K0 fighter span drifted from the Fox animation asset ids");
+_Static_assert(NDS_RELOC_ASSET_FOX_ANIM_LAST == NDS_K0_FOX_ANIM_LAST,
+               "K0 fighter span drifted from the Fox animation asset ids");
+
 #define NDS_FIGHTER_MARIOFOX_FILE_MASK 0x7fffu
 #define NDS_FIGHTER_MARIOFOX_SETUP_FILES (1u << 0)
 #define NDS_FIGHTER_MARIOFOX_SETUP_MANAGER_ALLOC (1u << 1)
@@ -3038,6 +3053,8 @@ static s32 ndsRelocApplyWordByteSwap(NDSRelocLoadedFile *loaded)
         return FALSE;
     }
 
+    /* K0 line 3, "animation payload byte-swaps". */
+    NDS_K0_MARK(gNdsK0AfterGoByteSwaps, loaded->asset_id);
     words = loaded->data_size / sizeof(u32);
     for (i = 0; i < words; i++)
     {
@@ -3494,6 +3511,11 @@ static s32 ndsRelocNormalizeFighterAObj16File(NDSRelocLoadedFile *loaded)
     {
         return TRUE;
     }
+    /* K0 line 5, "AObj16 file normalization". Marked past the two early
+     * returns, so this counts normalization that actually walks the payload --
+     * a prebaked cache entry that claims the transform is correctly not a
+     * normalization. */
+    NDS_K0_MARK(gNdsK0AfterGoNormalizes, loaded->asset_id);
 
     base = (uintptr_t)loaded->data;
     table_bytes = loaded->data_size;
@@ -3969,6 +3991,10 @@ static s32 ndsRelocFinalizeLoadedFile(NDSRelocLoadedFile *loaded)
      * point every load path funnels through exactly once per file -- the early
      * return above is the re-entrant case and must not be counted twice. */
     NDS_TASK75_MARK_ASSET_LOAD();
+    /* K0 line 4, "animation-file relocation / fixups". This function is the
+     * whole fixup chain: internal pointers, AObj16, attributes, weapon
+     * attributes, external pointers and the sprite pass. */
+    NDS_K0_MARK(gNdsK0AfterGoRelocs, loaded->asset_id);
     loaded->fixups_applying = TRUE;
 #if NDS_R2_RELOC_FIXUP_TIMING
     fixup_enter = cpuGetTiming();
@@ -7392,6 +7418,10 @@ static void ndsR2AnimWarmLoadOne(u32 asset_id)
         gNdsR2AnimWarmFailed++;
         return;
     }
+    /* K0 line 3 again: the warm loader swaps the same payload the miss path
+     * would. It normally runs before GO, which is exactly why it is marked --
+     * a warm step that slipped past GO would otherwise be invisible. */
+    NDS_K0_MARK(gNdsK0AfterGoByteSwaps, asset_id);
     words = (u32)(loaded_size / sizeof(u32));
     for (w = 0u; w < words; w++)
     {
@@ -7547,6 +7577,9 @@ static void *ndsRelocForceLoadFighterAObj16File(u32 token, u32 asset_id,
     {
         return NULL;
     }
+    /* Slice 1 phase 7's denominator. Without it every K0 row could read zero
+     * because nobody asked, which is indistinguishable from a deletion. */
+    NDS_K0_MARK(gNdsK0AfterGoAcquisitions, asset_id);
 
 #if NDS_R2_ANIM_CACHE
     /* Settle arena ownership BEFORE the pack lookup, not only before the raw
@@ -7580,6 +7613,7 @@ static void *ndsRelocForceLoadFighterAObj16File(u32 token, u32 asset_id,
         ndsRelocSetStatusBufferFile(asset_id, packed);
         ndsRelocSetForceStatusBufferFile(token, packed);
         gNdsBattlePackHits++;
+        NDS_K0_MARK(gNdsK0AfterGoPackHits, asset_id);
         return packed;
     }
     gNdsBattlePackMisses++;
@@ -7653,6 +7687,8 @@ static void *ndsRelocForceLoadFighterAObj16File(u32 token, u32 asset_id,
 
         if (cached != NULL)
         {
+            /* K0 line 6, "raw animation-file cache copies". */
+            NDS_K0_MARK(gNdsK0AfterGoCacheCopies, asset_id);
             memcpy(heap, cached->payload, cached->size);
             asset_size = cached->size;
             header = cached->header;
@@ -7743,6 +7779,11 @@ void *lbRelocGetForceExternHeapFile(const void *file_id, void *heap)
     if ((heap != NULL) &&
         (ndsRelocIsMarioFoxAnimID(asset_id) != FALSE))
     {
+        /* K0 line 7's other half, and it is the one the pack does NOT delete:
+         * the token -> asset-id resolution above runs BEFORE the pack is
+         * consulted, so it is still paid on every acquisition. The asset -> path
+         * discovery (gNdsK0AfterGoPathLookups) is the half the pack removes. */
+        NDS_K0_MARK(gNdsK0AfterGoTokenResolves, asset_id);
         file = ndsRelocForceLoadFighterAObj16File(token, asset_id, heap);
 #if NDS_FIGHTER_ANIM_AUDIT
         gNdsFighterAnimAuditLoadSerial++;
