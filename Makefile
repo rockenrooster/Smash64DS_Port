@@ -1308,6 +1308,28 @@ NDS_R2_COLLISION_FIXED ?= 0
 # (gNdsCfxRingEnable, read through a volatile so no fold can reach it), so arm A
 # and arm B are expected to have byte-identical .text.
 NDS_R2_COLLISION_FIXED_DISPATCH ?= $(NDS_R2_COLLISION_FIXED)
+# R2-07 slice 53 -- the CONSUMER half, and it exists to measure ONE number.
+#
+# Slice 52 converted the three PRODUCERS and measured an exchange rate of 1.001
+# whole match / 1.014 at rank-80: the fixed text costs exactly what the float it
+# deletes costs. The lane's remaining hope is RESIDENCY -- keeping the fixed
+# representation so the f32 boundary stops being paid -- and residency's price
+# is dominated by gmCollisionTestRectangle, whose per-call byte footprint the
+# 2026-08-15 captures could only bracket between 0.052 and 0.467 tk/byte/call, a
+# 9x spread that straddles the requirement.
+#
+# At 1 this compiles ndsR2CfxTestFighterDamage into the ring and lets the
+# src/import/battleship_gmcollision.c wrapper answer the fighter hurtbox test
+# from ndsR2CfxTestRectangle instead of calling the decomp float body. The
+# decision itself therefore moves into port code for the first time, which is
+# why it is a MEASURING flag with a default of 0 and not a shipping candidate.
+NDS_R2_COLLISION_FIXED_NARROW ?= 0
+# The falsifier arm for the line above, same mechanism and same reason as
+# NDS_R2_COLLISION_FIXED_DISPATCH: one initialised word of .data
+# (gNdsCfxNarrowEnable) read through a volatile, so both arms link byte-identical
+# text and scripts/compare-elf-sections.py can assert the pair differs in exactly
+# one byte.
+NDS_R2_COLLISION_FIXED_NARROW_DISPATCH ?= $(NDS_R2_COLLISION_FIXED_NARROW)
 # Task 44 stage steady-state excision: generation-based admission, dense
 # rigid/dynamic binding lists, and the hoisted GX capture-active test. Requires
 # the Task 36 hardware-compose stage owner; meaningless without it.
@@ -3410,6 +3432,8 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_R2_COLLISION_L7_ORACLE $(NDS_R2_COLLISION_L7_ORACLE)'; \
 		echo '#define NDS_R2_COLLISION_FIXED $(NDS_R2_COLLISION_FIXED)'; \
 		echo '#define NDS_R2_COLLISION_FIXED_DISPATCH $(NDS_R2_COLLISION_FIXED_DISPATCH)u'; \
+		echo '#define NDS_R2_COLLISION_FIXED_NARROW $(NDS_R2_COLLISION_FIXED_NARROW)'; \
+		echo '#define NDS_R2_COLLISION_FIXED_NARROW_DISPATCH $(NDS_R2_COLLISION_FIXED_NARROW_DISPATCH)u'; \
 		echo '#define NDS_TASK39_FX_SPRITES $(NDS_TASK39_FX_SPRITES)'; \
 		echo '#define NDS_TASK39_FX_FLASH $(NDS_TASK39_FX_FLASH)'; \
 		echo '#define NDS_R2_PARTICLE_RUNTIME $(NDS_R2_PARTICLE_RUNTIME)'; \

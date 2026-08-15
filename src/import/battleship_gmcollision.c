@@ -213,9 +213,25 @@ sb32 gmCollisionCheckFighterAttackDamageCollide(FTAttackColl *attack_coll,
                                                 FTDamageColl *damage_coll)
 {
     sb32 hit;
+#if NDS_R2_COLLISION_FIXED && NDS_R2_COLLISION_FIXED_NARROW
+    int fixed_result;
+#endif
 
 #if NDS_R2_COLLISION_FIXED
     ndsR2CfxPrepareFighterJoint(damage_coll->joint);
+#endif
+#if NDS_R2_COLLISION_FIXED && NDS_R2_COLLISION_FIXED_NARROW
+    /* R2-07 slice 53. The decomp tail this replaces is three statements --
+     * func_ovl2_800EDE00, func_ovl2_800EDE5C, gmCollisionTestRectangle -- and
+     * prepare above already ran the first two in fixed point. A decline falls
+     * through to the base, which runs all three exactly as before. */
+    fixed_result = ndsR2CfxTestFighterDamage(
+        (struct FTAttackColl *)attack_coll, (struct FTDamageColl *)damage_coll);
+    if (fixed_result != NDS_R2_CFX_NARROW_DECLINE)
+    {
+        hit = (fixed_result != 0) ? TRUE : FALSE;
+    }
+    else
 #endif
     hit = ndsBaseGmCollisionCheckFighterAttackDamageCollide(attack_coll,
                                                             damage_coll);

@@ -74,6 +74,22 @@ volatile u32 gNdsCfxRingScaleDeclined __attribute__((used));
 #define NDS_R2_CFX_COUNT(counter) ((void)0)
 #endif
 
+#if NDS_R2_COLLISION_FIXED_NARROW
+/* R2-07 slice 53's switch. Same construction, same reasons, as
+ * gNdsCfxRingEnable above -- `volatile` so no fold can reach it and
+ * section(".data") so a zero initialiser cannot migrate it to .bss and move
+ * every global after it. */
+volatile u32 gNdsCfxNarrowEnable __attribute__((used, section(".data"))) =
+    NDS_R2_COLLISION_FIXED_NARROW_DISPATCH;
+
+#if NDS_TICK_HUD
+volatile u32 gNdsCfxNarrowCalls __attribute__((used));
+volatile u32 gNdsCfxNarrowAnswered __attribute__((used));
+volatile u32 gNdsCfxNarrowHits __attribute__((used));
+volatile u32 gNdsCfxNarrowDeclined __attribute__((used));
+#endif
+#endif
+
 /* gmCollisionTransformMatrixAll (gm/gmcollision.c:29) in fixed point.
  *
  * The three Vec3f are copied into plain float[3] rather than cast in place:
@@ -305,3 +321,107 @@ void ndsR2CfxPrepareFighterJoint(DObj *main_dobj)
         }
     }
 }
+
+#if NDS_R2_COLLISION_FIXED_NARROW
+/* Q12 conversion with the same domain guard ndsR2CfxLoadF32 applies to row 3.
+ * Integer only -- ndsR2CollisionF32ToFixed is exponent arithmetic on the IEEE
+ * bits with no 64-bit product, so it stays legal in this Thumb translation unit
+ * where an SMULL would have become __aeabi_lmul. */
+static int ndsR2CfxPosQ12(int32_t *out, float value)
+{
+    int32_t q = ndsR2CollisionF32ToFixed(value, NDS_R2_CFX_POS_BITS);
+
+    if ((q == NDS_R2_COLLISION_F32_OVERFLOW) ||
+        (ndsR2CfxAbs32(q) >= NDS_R2_CFX_POS_MAX))
+    {
+        return 0;
+    }
+    *out = q;
+    return 1;
+}
+
+static int ndsR2CfxPosQ12Vec(int32_t out[3], const Vec3f *v)
+{
+    return ndsR2CfxPosQ12(&out[0], v->x) && ndsR2CfxPosQ12(&out[1], v->y) &&
+           ndsR2CfxPosQ12(&out[2], v->z);
+}
+
+/* gmCollisionCheckFighterAttackDamageCollide's tail (gm/gmcollision.c:1379).
+ *
+ * The source's two producer calls are absent because they already ran: the
+ * wrapper calls ndsR2CfxPrepareFighterJoint first, which is func_ovl2_800EDE00
+ * and func_ovl2_800EDE5C in fixed point and sets the same three latches. This
+ * requires all three, so a joint prepare declined is a joint the decomp body
+ * takes -- side effects included.
+ *
+ * The frame is built from mtx_translate rather than read from
+ * unk_dobjtrans_0x9C. Those are the same transform, but ndsR2CfxMakeFrameCofactor
+ * keeps the forward translation and subtracts it from the query point instead of
+ * storing -t.R^-1, which is the numerically better half of the pair and the one
+ * the falsifier grades. It also yields inv_scale, so the source's three
+ * `radius / scale` divides become three multiplies of values already in hand. */
+int ndsR2CfxTestFighterDamage(struct FTAttackColl *attack_coll,
+                              struct FTDamageColl *damage_coll)
+{
+    FTAttackColl *attack = (FTAttackColl *)attack_coll;
+    FTDamageColl *damage = (FTDamageColl *)damage_coll;
+    FTParts *parts;
+    NDSR2CfxMtx world;
+    NDSR2CfxFrame frame;
+    int32_t pos_curr[3];
+    int32_t pos_prev[3];
+    int32_t offset[3];
+    int32_t size[3];
+    int32_t radius;
+    int result;
+
+    if (gNdsCfxNarrowEnable == 0u)
+    {
+        return NDS_R2_CFX_NARROW_DECLINE; /* falsifier arm: same bytes, no dispatch */
+    }
+    NDS_R2_CFX_COUNT(gNdsCfxNarrowCalls);
+
+    parts = ftGetParts(damage->joint);
+    if (parts == NULL)
+    {
+        NDS_R2_CFX_COUNT(gNdsCfxNarrowDeclined);
+        return NDS_R2_CFX_NARROW_DECLINE;
+    }
+    /* All three latches, because the decomp body the caller would otherwise run
+     * is what fills unk_dobjtrans_0x9C and vec_scale. Prepare set them or it
+     * did not. */
+    if ((parts->unk_dobjtrans_0x5 == 0) || (parts->unk_dobjtrans_0x6 == 0) ||
+        (parts->unk_dobjtrans_0x7 == 0))
+    {
+        NDS_R2_CFX_COUNT(gNdsCfxNarrowDeclined);
+        return NDS_R2_CFX_NARROW_DECLINE;
+    }
+
+    if ((ndsR2CollisionFixedLoadF32(&world, parts->mtx_translate) == 0) ||
+        (ndsR2CollisionFixedMakeFrame(&frame, &world) == 0) ||
+        (ndsR2CfxPosQ12Vec(pos_curr, &attack->pos_curr) == 0) ||
+        (ndsR2CfxPosQ12Vec(pos_prev, &attack->pos_prev) == 0) ||
+        (ndsR2CfxPosQ12Vec(offset, &damage->offset) == 0) ||
+        (ndsR2CfxPosQ12Vec(size, &damage->size) == 0) ||
+        (ndsR2CfxPosQ12(&radius, attack->size) == 0))
+    {
+        NDS_R2_CFX_COUNT(gNdsCfxNarrowDeclined);
+        return NDS_R2_CFX_NARROW_DECLINE;
+    }
+
+    result = ndsR2CollisionFixedTestRectangle(pos_curr, pos_prev, radius,
+                                              attack->attack_state == 2, &frame,
+                                              offset, size, frame.inv_scale);
+    if (result == NDS_R2_CFX_DECLINE)
+    {
+        NDS_R2_CFX_COUNT(gNdsCfxNarrowDeclined);
+        return NDS_R2_CFX_NARROW_DECLINE;
+    }
+    NDS_R2_CFX_COUNT(gNdsCfxNarrowAnswered);
+    if (result != 0)
+    {
+        NDS_R2_CFX_COUNT(gNdsCfxNarrowHits);
+    }
+    return result;
+}
+#endif /* NDS_R2_COLLISION_FIXED_NARROW */

@@ -1,0 +1,30 @@
+Wrote artifacts/performance/2026-08-15_cfx-narrow-exchange/gate-off-rows.csv
+Tick-HUD buckets: target=smash64ds-battle-playable-tickhud-hwtri samples=1600 frames=439..2038 melonDS=1.0 sha=DE80E46BDCF1FD98 git=1e2833cccba+dirty(10) dldi=ON
+
+bucket p50        p95        spread mean       min        max        %ALLp50
+------ ---        ---        ------ ----       ---        ---        -------
+ALL     1,117,568  1,677,824   1.50  1,178,309  1,114,560  5,872,960   100.0
+FTR       308,992    335,104   1.08    300,066    157,376    342,016    27.6
+STG       174,720    182,528   1.04    176,275    171,072    188,288    15.6
+BG          4,224      4,352   1.03      4,227      3,712      4,544     0.4
+AUD         2,816      6,528   2.32      8,589      1,152    153,024     0.3
+HUD         1,088     22,400  20.59      7,256        960  2,129,024     0.1
+SRC       327,488    545,280   1.67    342,841     10,688  4,642,240    29.3
+MISC      104,768    183,488   1.75    118,744     80,960    876,864     9.4
+OTHR      198,592    499,648   2.52    220,312     20,416    579,968    17.8
+WAIT      178,880    480,832   2.69    200,633        832    559,744    16.0
+WORK      953,408  1,203,328   1.26    977,676    635,136  5,344,768    85.3
+SHDT        4,672      9,792   2.10     11,817          0    482,880     0.4
+SWRM        1,024      1,088   1.06      1,035        768      1,216     0.1
+GCRA      321,984    540,032   1.68    337,314      6,656  4,636,992    28.8
+SCPU       40,960    105,344   2.57     43,402          0    141,568     3.7
+SCAT        1,216      1,408   1.16      1,611          0    635,904     0.1
+SPRM        1,984      2,176   1.10      3,971          0    553,536     0.2
+SINT      150,400    288,640   1.92    159,701          0    775,232    13.5
+SPHD       58,048     97,600   1.68     67,385          0    769,280     5.2
+SPHC          576        704   1.22        838          0     32,384     0.1
+WORK-H    950,656  1,191,488   1.25    970,421    625,856  5,271,168    85.1
+
+named=957,998 (81.3% of ALL)  VBI 2:1843 3:178 4:8 5+:9 max:19 total:2038  slips=0
+extras: gNdsCfxFighterDamagePhaseCalls=1,938  gNdsCfxFighterDamagePhaseHits=20  gNdsCfxFighterShieldPhaseCalls=0  gNdsCfxFighterShieldPhaseHits=0  gNdsCfxNarrowCalls=0  gNdsCfxNarrowAnswered=0  gNdsCfxNarrowHits=0  gNdsCfxNarrowDeclined=0  gNdsCfxRingPrepareCalls=1,938  gNdsCfxRingChainFixed=1,006  gNdsCfxRingChainDeclined=0  gNdsCfxRingInvertFixed=1,006  gNdsCfxRingInvertDeclined=0  gNdsCfxRingScaleFixed=1,006  gNdsCfxRingScaleDeclined=0  gNdsBattleTextHudP1Damage=76  gNdsDamageSparkScaleCount=15  gNdsShieldAnimJointAttachCount=1,352  gNdsAObjEvent32NormalizedHighWater=1,266  gNdsBattlePackHits=197  gNdsObjAnimRunawayCount=0
+Wrote artifacts/performance/2026-08-15_cfx-narrow-exchange/gate-off.json

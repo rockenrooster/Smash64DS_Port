@@ -1,0 +1,8 @@
+source=artifacts/performance/2026-08-15_cfx-narrow-exchange/v3-b-c181/arm9-profile.csv
+regions=1601
+marginal_frames=80
+marginal_threshold_ticks=1194342
+marginal_axis=total_cycles-halt_wait
+rows=54640424
+distinct_pcs=110131
+cycles_per_tick=2

@@ -62,6 +62,51 @@ void ndsR2CfxPrepareFighterJoint(DObj *main_dobj);
  * Volatile so both arms link byte-identical text; see the definition. */
 extern volatile u32 gNdsCfxRingEnable;
 
+#if NDS_R2_COLLISION_FIXED_NARROW
+/* R2-07 slice 53 -- the CONSUMER, and it exists to measure one number.
+ *
+ * Slice 52 stopped at the producers on purpose: leaving every collision DECISION
+ * in decomp float code is what let it be graded by a bound instead of by a flip
+ * count. It measured an exchange rate of 1.00, and the only remaining reason to
+ * believe the lane pays is that the f32 boundary -- not the arithmetic -- is
+ * what it spends. Deciding that needs a CONSUMER converted, because a consumer
+ * early-exits and the straight-line producers do not.
+ *
+ * This answers gmCollisionCheckFighterAttackDamageCollide's tail
+ * (gm/gmcollision.c:1379) directly: the source runs func_ovl2_800EDE00 and
+ * func_ovl2_800EDE5C -- which ndsR2CfxPrepareFighterJoint has already done in
+ * fixed point -- and then returns gmCollisionTestRectangle against
+ * FTParts::unk_dobjtrans_0x9C. Here the same test runs as ndsR2CfxTestRectangle
+ * against a frame built from FTParts::mtx_translate.
+ *
+ * FAIL-CLOSED, and the guard is the source's own latches rather than a new one:
+ * unless prepare left unk_dobjtrans_0x5/0x6/0x7 all set, this declines and the
+ * decomp body runs -- which also guarantees the two side effects the caller
+ * would otherwise lose (unk_dobjtrans_0x9C and vec_scale are filled by prepare,
+ * not by this).
+ *
+ * Returns 1 (hit), 0 (miss) or NDS_R2_CFX_NARROW_DECLINE. */
+#define NDS_R2_CFX_NARROW_DECLINE (-1)
+
+struct FTAttackColl;
+struct FTDamageColl;
+
+int ndsR2CfxTestFighterDamage(struct FTAttackColl *attack_coll,
+                              struct FTDamageColl *damage_coll);
+
+/* Slice 53's own falsifier arm, initialised from
+ * NDS_R2_COLLISION_FIXED_NARROW_DISPATCH. Same mechanism as gNdsCfxRingEnable:
+ * volatile, forced into .data, so the two arms differ in one byte. */
+extern volatile u32 gNdsCfxNarrowEnable;
+
+#if NDS_TICK_HUD
+extern volatile u32 gNdsCfxNarrowCalls;    /* entries with dispatch on */
+extern volatile u32 gNdsCfxNarrowAnswered; /* answered in fixed point */
+extern volatile u32 gNdsCfxNarrowHits;     /* of those, TRUE */
+extern volatile u32 gNdsCfxNarrowDeclined; /* latch/domain/clip-guard declines */
+#endif
+#endif /* NDS_R2_COLLISION_FIXED_NARROW */
+
 #if NDS_TICK_HUD
 /* Engagement, per the standing law that a fix ships with a counter showing it
  * firing AND a control showing where it is inert. `Declined` is not a warning

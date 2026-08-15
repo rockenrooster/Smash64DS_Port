@@ -6489,6 +6489,79 @@ anyway and is not an invitation.
 callers clear the 40/80 presence bar (7,187 + 1,883 + 1,838 = 10,908); the other
 ~38,700 is spread across callers each below it. Its mean self-time is 16,912.
 
+### FIXED-POINT COLLISION — **LANE CLOSED 2026-08-15.** Exchange rate 2.68, and the whole lane is 0.47x the requirement even at a rate of zero
+
+Evidence: `artifacts/performance/2026-08-15_cfx-narrow-exchange/EXCHANGE.md`
+(prediction written first in `PREDICTION.md`) and `MENU.md`. 2 lab builds
+(`build-c181-cfxnarrow-b-d0`, `build-c182-cfxnarrow-a-d0`), 2 v3 captures, 2
+same-binary gate runs. **Both new flags default 0, so every published target is
+byte-identical to HEAD's; both root ROMs unchanged and not rebuilt.**
+
+**Slice 53 converted the CONSUMER.** The briefed target
+`gmCollisionGetWorldPosition` **does not early-exit** (`gm/gmcollision.c:196-205`
+is nine `f32` multiplies and nine adds, no branch) and **cannot be intercepted**
+— fifteen in-TU call sites, and the `#define`-before-`#include` rename moves the
+definition *and* the callers together (the trap
+`battleship_gmcollision.c:167-169` already documents). The one interceptable unit
+containing both bodies is `gmCollisionCheckFighterAttackDamageCollide`'s tail
+(`:1379-1400`), so that is what ran in fixed point: `ndsR2CfxTestRectangle` plus
+the **two** `GetWorldPosition` calls it makes, behind
+`gNdsCfxNarrowEnable` — a second one-byte pair (`.main.rw` **1** differing byte
+at `0x3F24`, everything else **0**).
+
+```text
+WHOLE MATCH B - A   issue -364 · icache_fill +2,459 · net non-idle +2,228 tk/fr
+RANK-80             net non-idle +29,290
+SAME-BINARY ROUTE   -SetGlobals gNdsCfxNarrowEnable=1|0 on ONE build:
+                    WORK-H rank-80 1,222,848 vs 1,194,368 = +28,480  (2.8% apart)
+                    P50 -384 (flat), 2-VBlank 1,835 vs 1,843 of 2,038
+EXCHANGE RATE       fixed +3,392 / float -1,264 = 2.68  (whole match, mask-free)
+```
+
+**Three closures, none depending on the others.** (1) Rate: producers 1.001
+straight-line, consumers **2.68** early-exiting — neither below 1.00. (2)
+**Ceiling: the identifiable float in the whole fighter narrow phase is 15,217
+tk/fr at rank-80 = 0.47x of +32,593; whole match its soft float is 840 of a
+59,694 tk/fr bill, 1.4%. Free would not have been enough.** (3) Best remaining
+case — resident `unk_dobjtrans_0x9C` plus the DS hardware divider — prices at
+**≈1.29**.
+
+**The mechanism is nameable and it is not only cache.** The fixed form calls
+libgcc's **64-bit divide 4.0 times per entry** (`__udivmoddi4` 7.76 → 11.65
+calls/fr), a bit-by-bit loop, worth **+988 whole / +17,377 at rank-80** — more
+than the entire float bill it deletes. `nds_r2_collision_fixed.h:210-217` offers
+`NDS_R2_CFX_DIV64`/`ISQRT64` overrides for the DS hardware unit and **nothing
+ever defined them**. Meanwhile `__mulsf3` pays **0.77 tk of fetch per call** at
+1,545 calls/frame: the soft-float library is permanently I-cache resident and a
+kernel entered 0.97 times a frame is cold every call.
+
+**Correctness is the part worth keeping.** Flip budget stated ZERO before the run
+and measured ZERO: `DamagePhaseCalls` 1,938 / `Hits` **20**, P1Damage 76, spark
+15, shield 1,352, AObj 1,266, packHits 197, runaway 0 — **all equal to the
+`c170`/`c174`/`c175`/`c176` bank on both arms** — with `gNdsCfxNarrowCalls`
+**1,938 == DamagePhaseCalls**, `Answered` **1,938**, `Hits` **20 ==
+DamagePhaseHits**, `Declined` **0**, and all four **0** on the control. The
+collision **decision itself** ran in port fixed point for 1,938 of 1,938 pairs
+and reproduced the decomp float outcome exactly.
+
+**Retraction — this cycle's own written-down prediction, wrong on both halves.**
+Predicted +560…+7,890 marginal and +50…+670 whole; measured **+29,290** and
+**+2,228**. The *prize* half was right (predicted ≈15,000, measured 15,217); the
+*price* half was **2.2x low** because it priced the kernel's own bytes at 0.467
+tk/byte/call and never counted the library the kernel calls. Third distinct
+static-quantity mispricing in this campaign, after a residual ÷ a count and a
+static size ÷ a count.
+
+`FOOTPRINT.md` §5's 9x straddle is answered, and **neither bound was binding**:
+the fixed `TestRectangle` measures **0.13 tk/byte/call** — the early-exiting end,
+as predicted — and `MakeFrame` + `__udivmoddi4` are **11.7x** its cost.
+
+**What stays.** `NDS_R2_COLLISION_FIXED` and the new
+`NDS_R2_COLLISION_FIXED_NARROW` are both `?= 0`. The kernels, the falsifier
+(GREEN: 88 long multiplies, soft float confined to `BuildLocal`) and both wirings
+are retained as the evidence. **What is retired is the direction** — "convert
+collision to fixed point to buy P95" — not the code.
+
 ### Slice 52 — PLACEMENT REFUTED BY ARITHMETIC, the clean concentration is 11.7x, and `5.21x` is RETRACTED as a decision rule
 
 Evidence: `artifacts/performance/2026-08-15_cfx-ring-draw0/FOOTPRINT.md`. 2 lab

@@ -1,0 +1,73 @@
+candidate artifacts\performance\2026-08-15_cfx-narrow-exchange\b-c181-pc.csv
+control   artifacts\performance\2026-08-15_cfx-narrow-exchange\a-c182-pc.csv
+elf       builds\build-c181-cfxnarrow-b-d0\smash64ds-battle-playable-tickhud-hwtri.elf
+basis     2 cycles = 1 tick; whole-match ticks/frame = cycles / 3,202
+mask      candidate >= 1,194,342 ticks, control >= 1,182,119 ticks (80 frames each, EACH ARM ITS OWN)
+
+WHOLE MATCH -- candidate minus control, ticks/frame over 1601 frames (instructions column is a COUNT per frame)
+  total_cycle       issue icache_fill dcache_fill write_buffe   interlock bus_content instruction  owner
+        1,750        -364       2,459          74           8          51          -0       3,056  == ALL SYMBOLS ==
+        1,256          -2       1,205          43           0           9           0       1,886  ndsR2CollisionFixedMakeFrame
+          988         395         559          28           0           6           0       1,548  __udivmoddi4
+         -478          -0           0           0           0           0           0          -0  armWaitForIrq
+         -464        -450         -14           0           0           0           0        -798  __aeabi_fadd
+          265           0         233          23           1           8           0         337  ndsR2CollisionFixedLoadF32
+         -192         -47        -103         -38          -2          -1           0        -144  gmCollisionTestRectangle
+          191          -1         162          29           0           1           0         181  ndsR2CollisionFixedTestRectangle
+         -190        -180         -11           0           0           0           0        -345  __mulsf3
+         -185        -182          -3           0           0           0           0        -336  __divsf3
+          164          75          71          13           0           4           0         242  ndsR2CfxPosQ12
+         -154         -49         -70         -31          -1          -1           0        -140  gmCollisionGetWorldPosition
+          139          43          68          23           0           4           0         172  ndsR2CfxPosQ12Vec
+          107          28          51          20           1           7           0          83  ndsR2CfxTestFighterDamage
+           71           0          60           3          -0           8           0         109  __clzsi2
+           65          -0          53           9           0           4           0          59  __clzdi2
+           65          54           1           9          -0           1           0         112  memcpy
+           62          -1          42          14          -0           5           0          75  get_fat.isra.0
+           57           2          49           6           0          -0           0          55  ?
+           55           5          49           1          -0           0           0          -0  ndsR2CollisionFixedInvertF32
+           49           6          43           1          -0           0           0          -0  ndsR2CollisionFixedBuildLocal
+           36          -0          29           5          -0           3           0          56  f_lseek
+          -36          -6         -17         -12          -0          -1           0         -30  gmCollisionCheckFighterAttackDamageCollide
+           31           3          20           8           1           1           0           0  ndsR2CfxPrepareFighterJoint
+          -28         -25          -3           0           0           0           0         -50  __aeabi_fcmplt
+          -15          -1          -8          -4           0          -1           0          -7  func_ovl2_800EDE5C
+           14          -0           8           3           3           0           0          -0  ndsStageMPSweepFloorLoopSweep
+          -13           1          -6          -7          -1           0           0           0  ndsRendererLoadHardwareSplitMatrices
+          -13          -1          -5          -7           1          -1           0          -0  gcPlayDObjAnimJoint
+           11           1          11          -0           0          -0           0          -0  ndsR2CollisionFixedStoreF32
+           11          -0           8           1          -0           1           0          14  move_window
+
+MARGINAL -- candidate minus control, ticks/frame over 80 frames (instructions column is a COUNT per frame)
+  total_cycle       issue icache_fill dcache_fill write_buffe   interlock bus_content instruction  owner
+       14,031      -5,268      40,439      -4,415      -1,182        -225         -83      54,861  == ALL SYMBOLS ==
+       21,439         -27      20,572         726           7         161           0      32,357  ndsR2CollisionFixedMakeFrame
+       17,377       6,925       9,846         496           4         105           0      27,168  __udivmoddi4
+      -15,259          -2           0           0           0           0           0          -1  armWaitForIrq
+       -5,941      -5,751        -190           0           0           0           0     -10,147  __aeabi_fadd
+        5,179          12       4,515         475          27         150           0       6,470  ndsR2CollisionFixedLoadF32
+        3,278         -19       2,772         498           1          25           0       3,145  ndsR2CollisionFixedTestRectangle
+        2,815       1,290       1,223         226           1          75           0       4,152  ndsR2CfxPosQ12
+        2,715          89       2,452         128          16          30           0       2,074  ndsR2CollisionFixedInvertF32
+       -2,555        -635      -1,375        -497         -30         -18           0      -1,933  gmCollisionTestRectangle
+       -2,368      -2,233        -136           0           0           0           0      -4,273  __mulsf3
+        2,368         732       1,168         393           8          66           0       2,942  ndsR2CfxPosQ12Vec
+       -2,350      -2,314         -36           0           0           0           0      -4,256  __divsf3
+       -2,311        -550      -1,103        -526         -28        -104           0      -2,294  ndsR2FtAnimParseDObjFigatree
+        2,246          89       1,809         310          25          12           0       1,181  ndsR2CollisionFixedBuildLocal
+        2,206           6       2,135          47           0          19           0       3,246  ndsR2CollisionFixedAxisScalesF32
+       -2,003        -650        -906        -409         -18         -19           0      -1,851  gmCollisionGetWorldPosition
+        1,911         486         911         375          16         125           0       1,492  ndsR2CfxTestFighterDamage
+        1,594         -23       1,449         101          32          36           0       1,903  ndsR2CollisionFixedStoreF32
+        1,460         146         690         505          30          90           0         482  ndsR2CfxPrepareFighterJoint
+       -1,401         -92          -1      -1,157        -150           0           0        -137  armCopyMem32
+        1,226           0       1,040          58          -2         131           0       1,851  __clzsi2
+        1,183          -5         963         155           1          70           0       1,028  __clzdi2
+        1,062          50         909         103           0          -0           0         960  ?
+         -993          -1        -802        -157           0         -34           0      -1,202  ndsR2AnimValueQ
+         -889        -117        -304        -335        -114         -19           0        -193  battleship_ftMainSetStatus
+         -860        -192        -396        -177         -15         -80           0        -902  gcPlayDObjAnimJoint
+         -793        -178        -366        -208          -5         -36           0        -637  mpCollisionGetFCCommonFloor
+         -748         -44        -204        -364         -24        -112           0        -429  ndsR2AnimBuildTrackTable.constprop.0.isra.0
+         -706         -60         -71        -473         -52         -51           0        -129  gcAddDObjAnimJoint
+         -689         -98        -231        -296         -22         -42           0        -244  ftParamUpdateAnimKeys

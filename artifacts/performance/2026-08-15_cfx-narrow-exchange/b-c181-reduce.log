@@ -1,0 +1,6 @@
+profile        artifacts\performance\2026-08-15_cfx-narrow-exchange\v3-b-c181
+regions        1601
+marginal       80 frames, non-idle >= 1,194,342 ticks (median frame 958,078, max 3,109,012)
+streaming      artifacts\performance\2026-08-15_cfx-narrow-exchange\v3-b-c181\arm9-profile.csv (3.62 GiB), one pass
+rows           54,640,424 over 110,131 distinct PCs
+wrote          artifacts\performance\2026-08-15_cfx-narrow-exchange\b-c181-pc.csv and artifacts\performance\2026-08-15_cfx-narrow-exchange\b-c181-pc.meta.txt
