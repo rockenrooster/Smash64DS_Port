@@ -1774,7 +1774,15 @@ Assert-True ($renderer.Contains('state->prepared_projected_source_z_valid_mask =
 # evicted to main RAM to free ITCM for five higher-stall admissions, because it
 # measures zero cycles while PROJECT_GOAL.md freezes Dream Land water at source
 # frame 0. Narrowed rather than deleted so a stage with live water re-opens it.
-Assert-True ([regex]::Matches($renderer, 'static (?:void|s32|u32) NDS_RENDERER_HOT_CODE').Count -eq 5) 'Renderer hot-code set drifted from the five measured VTX/shade/vertex/triangle/scan paths.'
+# 2026-08-14: the scan path is now spelled through NDS_R2_CENSUS_EVICTED_CODE,
+# which the draw-phase census arm points at NDS_TASK82_EVICTED_HOT_CODE so the
+# census block fits ITCM. The set is still exactly five and the shipped
+# placement is unchanged -- NDS_TASK91_DRAW_PHASE_CENSUS defaults to 0 -- so the
+# count below sees the alias, and the assert after it pins the alias to
+# NDS_RENDERER_HOT_CODE with the census off. Without that pin, an alias is a way
+# to evict an ITCM resident permanently and still count five.
+Assert-True ([regex]::Matches($renderer, 'static (?:void|s32|u32) (?:NDS_RENDERER_HOT_CODE|NDS_R2_CENSUS_EVICTED_CODE)').Count -eq 5) 'Renderer hot-code set drifted from the five measured VTX/shade/vertex/triangle/scan paths.'
+Assert-True ($renderer -match '(?s)#if NDS_TASK91_DRAW_PHASE_CENSUS\s*#define NDS_R2_CENSUS_EVICTED_CODE NDS_TASK82_EVICTED_HOT_CODE\s*#else\s*#define NDS_R2_CENSUS_EVICTED_CODE NDS_RENDERER_HOT_CODE\s*#endif') 'Census-evicted renderer code no longer falls back to the ITCM-resident hot-code policy when the draw-phase census is off.'
 Assert-True ($renderer -match '(?s)#define NDS_RENDERER_HOT_CODE.*?optimize\("O3"\).*?target\("arm"\).*?section\("\.itcm"\)') 'Renderer hot-code policy no longer combines targeted O3, ARM state, and ITCM placement.'
 Assert-True (-not $renderer.Contains('NDS_HOT_TEXT')) 'Rejected renderer main-RAM hot-text annotations returned.'
 Assert-True ($renderer -match '(?s)#define NDS_RENDERER_FAST_RUN_CODE.*?noinline.*?optimize\("O3"\).*?target\("arm"\)' -and $renderer.Contains('static void NDS_RENDERER_FAST_RUN_CODE ndsRendererExecuteFastRawCurrentRun')) 'Renderer shared raw-current run kernel is not isolated as one noinline ARM/O3 call.'
