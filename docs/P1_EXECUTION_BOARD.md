@@ -379,22 +379,38 @@ items off (259, PROVEN)           553,696     511,904      41,792
   stream is already u16 command headers and **s16** target words — no f32 to
   narrow, and no dictionary can beat a 16-bit alphabet. A pre-GO arena creates
   no RAM at all.
-- **THE CLOSURE IS `docs/RAM_RECOVERY_PLAN.md` PHASE 2, NAMED AND SIZED:**
-  `gSYFramebufferSets[2][230][320]` = 294,400 B that the DS never rasterises
-  into; `include/sys/video.h:62-72` documents its only reader (the Results photo
-  wipe) as touching `base+7,060..base+147,819` = 231 rows = 147,840 B.
-  Collapsing to that span recovers **146,560 B** — the *full* pack then fits by
-  6,536, the items-off pack by 104,768. Phase 2 gate and the owner's eye on the
-  wipe apply.
-- **PHASE 5's INHERITED PREMISE IS HALF THE REASON THE COPY EXISTS.** The
-  absolute-pointer fixups are one; the other is
-  `decomp/…/ft/ftmain.c:4623-4624`, which discards the return value and
-  hardcodes `fp->figatree = fp->figatree_heap` — and `battleship_ftmain.c`
-  `#include`s that body rather than owning it (board §"force-load seam is
-  CLOSED", cycle 108, same line). The unblock is a one-line, **today-inert**
-  patch under `scripts/decomp-patches/battleship/` making the returned pointer
-  authoritative; `fp->figatree` is read only at `:4628` and `:4704` and never
-  assumed equal to the heap.
+- **PHASE 2 IS SPENT — +146,560 B, MEASURED, 2026-08-15** (`8cfbc2eaa2b`;
+  `…/2026-08-15_framebuffer-collapse/PHASE2_FRAMEBUFFER.md`).
+  `gSYFramebufferSets` `[2][230][320]` → `[1][231][320]`, 294,400 → 147,840 B.
+  Same build directory both arms: **bss 1,453,544 → 1,306,984 (−146,560
+  exact)**, text and data unchanged, `fake_heap_start` `0x02269ee4` →
+  `0x02246264`, proven headroom **174,368 → 320,928**. The reader set is from
+  the **linked ELF** — one reader (`ndsBaseLBTransitionSetupTransition`, the
+  wipe), one writer (`ndsBaseSCManagerRunLoop`'s clear, self-bounded by
+  `sizeof`), plus address-only users — and the span was re-derived from the
+  wipe's compiled literals (`+0x23f14`, `−640`/row, 220 rows, 600 B/row →
+  `base+7,060 .. base+147,819`). `mntitle.c`'s `[1]`/`[2]` gap is closed by a
+  new decomp patch. Boundary green, 0 `Exception:`. **VS Results at source tic
+  160 is a byte-identical capture across the arms; the wipe's animated frames
+  were NOT captured and still need the owner's eye — not marked FIXED.**
+- **CORRECTION: "the full pack then fits by 6,536" is about the COMBINED pool,
+  and the non-additivity above is untouched.** Measured static headroom on the
+  **published** arm 213,216 → **359,776**; a `.rodata` full pack is still short
+  292,152, items-off short 193,920; an arena pack still draws on 299,968 alone.
+  Only the combined row fits (full by 7,816, items-off by 106,048) and it still
+  needs the constant cut, the floor lowered and the Task 36 guard retaught. The
+  older **211,936** static figure was the `build-battle-playable-proof-hwtri-harness`
+  arm, which is neither the shipped nor the measuring ROM (it reads 208,672
+  today). **State the arm with the headroom.**
+- **PHASE 5's OTHER REASON TO COPY IS REMOVED — the patch is landed and provably
+  inert** (`6e93def43cd`, `scripts/decomp-patches/battleship/src_ft_ftmain.patch`).
+  `decomp/…/ft/ftmain.c:4623` no longer discards the return value.
+  **Exactly one symbol changes size in the whole binary**
+  (`battleship_ftMainSetStatus` 0x8e4 → 0x8dc): the deleted instructions are the
+  post-call reload of `fp->figatree_heap`, and both arms then execute the same
+  `str r0, [r4, #FIGATREE]`. Source-side the callee returns exactly `heap` on
+  every path when `heap != NULL`, and NULL only when `heap` is NULL. Boundary
+  green with every semantic smoke counter identical.
 
 **Phase 4 host equivalence: mismatch = 0** over 297 clips / 5,629 scripts /
 77,959 commands / 71,500 states / 5,629 callbacks. Two falsifiers prove the test
@@ -541,7 +557,16 @@ configuration, never freeing it at runtime.
 **ALL FOUR LARGE TARGETS NOW TRACED (cycle 83). Two refuted, two live, nothing
 freed yet.** Trace = who writes it, who reads it, in which configuration.
 
-- **`gSYFramebufferSets` 441,600 — LIVE, do NOT delete.** Three N64 software
+- **`gSYFramebufferSets` 441,600 — LIVE, do NOT delete. SUPERSEDED 2026-08-15:
+  it is now `[1][231][320]` = 147,840 B, and the two collapses freed 147,200 +
+  146,560 = 293,760 B in total** (`8cfbc2eaa2b`;
+  `…/2026-08-15_framebuffer-collapse/PHASE2_FRAMEBUFFER.md`). The "open question"
+  this row ends on was answered by sizing, not by deletion: the extent is
+  arithmetic on the wipe's own compiled read span, so the wipe reads exactly
+  what it read before whether or not it is sampling the clear. **The fidelity
+  question the row raises — whether the DS photo wipe samples cleared black —
+  is still open and is still the owner's**, and it is now independent of RAM.
+  The trace below stands as written for the era it describes. Three N64 software
   framebuffers (`[3][230][320]` u16, `include/sys/video.h:55`). It **is
   dereferenced on DS**: `decomp/…/src/lb/lbtransition.c:228` reads through
   `gSYSchedulerCurrentFramebuffer`, and `src/import/battleship_lbtransition.c:47`

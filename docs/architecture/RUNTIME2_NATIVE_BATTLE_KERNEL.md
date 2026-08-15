@@ -152,14 +152,15 @@ the generator rather than silently skipped. They keep the generic path.
    / 77,959 commands / 71,500 per-track states / 5,629 event callbacks, with two
    falsifiers demonstrating the test can fail.
 
-## 6. What slice 1 phases 5–9 must still do, and the one thing blocking them
+## 6. What slice 1 phases 5–9 must still do — the two blockers are CLEARED
 
 Phases 5–7 (direct runtime instance, same-build oracle mode, after-GO zero-I/O
 assertion) and 8–9 (performance, re-rank) are unchanged from `plan.md` §K1.
 
-**The blocker is RAM. MEASURED 2026-08-14 (cycle 2): it does not fit, and the
-closure is a static-RAM recovery, not a pack change.** Evidence and every
-citation: `BATTLEPACK_ANIMATION.md` §11–§12.
+**The blocker was RAM. MEASURED 2026-08-14 (cycle 2): it did not fit, and the
+closure was a static-RAM recovery, not a pack change.** Evidence and every
+citation: `BATTLEPACK_ANIMATION.md` §11–§12. **That recovery is now spent — see
+the landing note below.**
 
 ```text
                                    pack        pool        short
@@ -197,25 +198,51 @@ heap. A `.rodata` pack draws on **211,936** alone; an arena-resident pack draws 
 which also needs the search's `0x130000` floor lowered *and* the Task 36
 replay-admission guard taught the new constant (`nds_renderer.c:5734-5739`).
 
-**What the evidence favours, and it is inside the approved architecture:** spend
-`docs/RAM_RECOVERY_PLAN.md` Phase 2. `gSYFramebufferSets[2][230][320]` is
-294,400 B that the DS never rasterises into; `include/sys/video.h:62-72` already
-documents its only reader — the Results photo wipe — as touching
-`base+7,060 .. base+147,819`, i.e. 231 rows = 147,840 B. Collapsing the object to
-that span recovers **146,560 B**, which makes the *full* 297-clip pack fit by
-6,536 and the proven items-off pack fit with 104,768 to spare.
+**BOTH BLOCKERS ARE LANDED AND VERIFIED, 2026-08-15**
+(`…/2026-08-15_framebuffer-collapse/PHASE2_FRAMEBUFFER.md`; commits
+`8cfbc2eaa2b`, `6e93def43cd`). Phases 5–9 are no longer blocked.
+
+1. **`docs/RAM_RECOVERY_PLAN.md` Phase 2 is spent: +146,560 B, MEASURED.**
+   `gSYFramebufferSets` `[2][230][320]` → `[1][231][320]`, 294,400 → 147,840 B.
+   Same build directory both arms: bss 1,453,544 → 1,306,984 (−146,560 exact),
+   text and data unchanged, `fake_heap_start` `0x02269ee4` → `0x02246264`,
+   proven boot headroom 174,368 → 320,928. The reader set came from the **linked
+   ELF**, not the doc comment — one reader (the wipe), one writer (`scmanager`'s
+   clear, self-bounded by `sizeof`) — and the span was re-derived from the
+   wipe's own compiled literals (`+0x23f14` start, `−640` row step, 220 rows,
+   600 B/row → `base+7,060 .. base+147,819`). Boundary green, VS Results at
+   source tic 160 byte-identical across the arms; the wipe's animated frames
+   were not captured and still need the owner's eye.
+2. **The `ftmain.c:4623` patch is landed and provably inert** —
+   `scripts/decomp-patches/battleship/src_ft_ftmain.patch`. Exactly one symbol
+   changes size in the whole binary (`battleship_ftMainSetStatus`, −8 B): the
+   deleted instructions are the post-call reload of `fp->figatree_heap`, after
+   which both arms execute the same store. Source-side, the callee returns
+   exactly `heap` on every path when `heap != NULL`.
+
+> **CORRECTION, and it matters for phase 3: "+146,560 makes the full pack fit by
+> 6,536" is an arithmetic statement about the COMBINED 511,904 pool, and the
+> non-additivity finding below is unchanged.** Measured static headroom on the
+> **published** arm is 213,216 → **359,776**; a `.rodata`-resident full pack is
+> still short 292,152 and an items-off pack short 193,920. An arena-resident
+> pack still draws on 299,968 alone. Only the combined row fits (full by 7,816,
+> items-off by 106,048), and reaching it still needs `NDS_TASKMAN_ARENA_SIZE`
+> cut, the `0x130000` floor lowered and the Task 36 guard retaught. Phase 2 is
+> what makes that coupling worth doing — the freed 146,560 B is exactly the
+> libnds-heap slack a larger arena draws on. Which pool the pack lands in is
+> phase 3's decision.
 
 `plan.md` §K1 phase 3 still forbids the fourth option — falling back to
 gameplay-time FAT loading — and that prohibition stands.
 
-**Phase 5's premise is half the story (`BATTLEPACK_ANIMATION.md` §12).** The
-absolute-pointer fixups are one reason the adapter copies; the other is
-`decomp/…/ft/ftmain.c:4623-4624`, which discards the return value and hardcodes
-`fp->figatree = fp->figatree_heap`, so the bytes must be at that heap whatever
-the fixups do — and `src/import/battleship_ftmain.c` `#include`s that body rather
-than owning it. §3's inventory does not mention it. The unblocking move is a
-one-line, today-inert patch under `scripts/decomp-patches/battleship/` making the
-returned pointer authoritative.
+**Phase 5's premise was half the story (`BATTLEPACK_ANIMATION.md` §12), and the
+other half is now fixed.** The absolute-pointer fixups are one reason the
+adapter copies; the other was `decomp/…/ft/ftmain.c:4623-4624`, which discarded
+the return value and hardcoded `fp->figatree = fp->figatree_heap`, so the bytes
+had to be at that heap whatever the fixups did — and `src/import/battleship_ftmain.c`
+`#include`s that body rather than owning it, so it could not be fixed port-side.
+§3's inventory does not mention it. The returned pointer is now authoritative,
+so a `const` clip path may hand back pack storage.
 
 **No lossless compaction is available and this was measured, not assumed:** dead
 tail bytes past each script's terminator are 6,262 (1.0%), exact duplicate runs
