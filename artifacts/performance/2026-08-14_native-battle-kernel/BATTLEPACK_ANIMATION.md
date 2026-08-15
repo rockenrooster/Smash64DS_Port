@@ -468,3 +468,209 @@ Committed alongside: `io-pc-per-region.csv` / `-2.csv` (call counts),
 re-scans 3.88 GB), `anim-asset-sizes.json` (per-asset payload sizes),
 `anim-id-names.json` (asset-id ↔ symbol name), `battlepack-sizing.json`,
 `battlepack-verify.log`.
+
+---
+
+# Cycle 2 (2026-08-14, later) — the RAM shortfall, measured; and phase 5's premise, corrected
+
+**Builds spent: 0.** Root ROMs unchanged (§10 hashes still hold, re-verified). No
+shipped byte changed; the only source edit is a host-side `--exclude-ids` option
+on `scripts/generate_battlepack_anim.py`, which the Makefile never invokes.
+
+## 11. Outcome — it still does not fit, and route 1 is 5-11x smaller than briefed
+
+```text
+                                   pack        pool        short
+full pack (297 AObj16 clips)      651,928     511,904     140,024
+items off (259 clips, PROVEN)     553,696     511,904      41,792
+  + route 1, 2 figatree heaps     553,696     524,352      29,344
+  + route 1, 4 (Sudden Death)     553,696     537,120      16,576
+  + matchup lead (245, UNPROVEN)  528,624     524,352       4,272   (-8,496 at 4 heaps)
+```
+
+**DOES NOT FIT.** The one row that goes negative spends the entire pool to zero
+reserve and half of its exclusion is unproven, so it is not a fit either —
+`PROJECT_GOAL.md` requires "sufficient reserve … for reliable operation".
+
+## 11.1 Three corrections to the ledger the brief inherited
+
+**(a) The warm arena is already inside the 511,904; counting it again is a
+double count.** `NDS_R2_ANIM_CACHE_ARENA_BYTES` is **262,144**
+(`src/port/reloc_backend_assets.c:6377`) and that is the *reservation* §6's table
+already banks. `docs/HANDOFF.md`'s slice-46 figure **192,240** is
+`sNdsR2AnimCacheArenaUsed` — the bump high-water *inside* that reservation
+(`:6470`, published as `gNdsR2AnimCacheArenaUsedBytes`). It is not a second pool
+and it is not "1.37x the shortfall".
+
+**(b) The three pool terms are not additive as written, and making them additive
+is a coupled three-file change nobody has recorded.** `gSYTaskmanGeneralHeap` is
+one `calloc` of `NDS_TASKMAN_ARENA_SIZE = 0x150000` = 1,376,256 B from the libnds
+heap (`src/port/diagnostics.c:7750`, `:7791-7849`). The anim arena is a
+`syTaskmanMalloc` *inside* it, so releasing it frees **no** libnds heap:
+
+```text
+pack in .rodata                 draws on the static headroom only        211,936
+pack in the taskman arena       draws on arena-internal free only        299,968
+                                  (262,144 reclaim + 37,824 slack)
+the 511,904 total exists ONLY if NDS_TASKMAN_ARENA_SIZE is also cut by the
+reclaimed arena -- which additionally needs the downward search's 0x130000 floor
+lowered (diagnostics.c:7810) AND the Task 36 replay-admission guard taught the
+new constant: it blocks unless gNdsTaskmanArenaChosenSize == 0x150000 (legacy) or
+>= 0x130000 (NDS_TASK53_REPLAY_ARENA_FIX) -- src/nds/nds_renderer.c:5734-5739.
+```
+
+**(c) Route 1 is worth 12,608-25,216 B, not 140,024, and it needs no gdb read.**
+The per-status `syTaskmanMalloc` animation volume is `gFTManagerFigatreeHeapSize`
+per fighter, which `ftmanager.c:170-206` computes as the **largest single
+animation file** over the loaded kinds — a compile-time max over the bank, not a
+runtime quantity. The bank's max payload is **6,224 B** (`anim-asset-sizes.json`;
+mean 2,338.8), so the heap is at most 6,304 B with the 0x50 O2R header.
+`decomp/…/sc/sccommon/scvsbattle.c:199` allocates one per active player (2 in P1)
+and `:472` one more per player on the Sudden Death entry, never freed — the
+taskman heap is a bump region with no `free`. So 12,608 for the match, 25,216
+across Sudden Death. It is real, and it is an order of magnitude short.
+
+## 11.2 The items-off exclusion is PROVEN — from the linked ELF, not from names
+
+Modality: the repo's own oracle (`linked-ELF-is-the-reader-oracle`), on
+`builds/build-c158-gate/smash64ds-battle-playable-tickhud-hwtri.elf`. Not a name
+grep, not one match's observation.
+
+**Every function that could set an item status in the shipped battle ELF is a
+two-byte `bx lr` stub.** `arm-none-eabi-nm -S`:
+
+```text
+T 00000002  ftCommonItemThrowSetStatus        ftCommonItemSwingSetStatus
+T 00000002  ftCommonItemShootSetStatus        ftCommonItemShootAirSetStatus
+T 00000002  ftCommonLightThrowDecideSetStatus ftCommonHammerFallSetStatus
+W 00000002  ftCommonItemThrowProcUpdate       ftCommonHeavyThrowProcMap
+W 00000002  ftCommonLGunShoot{,Air}Proc*      ftCommonFireFlowerShoot{,Air}Proc*
+W 00000002  ftCommonStarRodSwingProcUpdate    ftCommonHarisenSwingProcUpdate
+W 00000002  ftCommonHammer{Walk,Turn,KneeBend,Fall,Landing}Proc*
+```
+
+`objdump -d` on the cluster at `0x208fc34..0x208fc74` reads `bx lr; nop` for each.
+And **there is no item spawner at all**: the entire `it*` surface in the ELF is
+`itManagerInitItems` (32 B), `itManagerMakeAppearActor` (16 B),
+`itMainGetDamageOutput` (48 B), `itProcessSetHitInteractStats` (208 B),
+`itMainDestroyItem` (2 B stub) and `itMainCheckShootNoAmmo` (4 B stub). No item
+GObj can exist, and the statuses that would play the item clips return
+immediately when asked.
+
+**Priced by re-packing, never by subtracting a mean** — dedup makes a subset's
+cost non-linear, which is why `--exclude-ids` re-packs:
+
+```text
+651,928 -> 553,696   (-98,232)   38 clips, 728 scripts
+equivalence re-run on the subset: MISMATCHES 0
+  259 clips / 4,901 scripts / 66,776 commands / 61,121 states / 4,901 callbacks
+  corpus c034b342b0760d13152eaeafe60ac204cd39e7905e9ae438d958377429d4982e
+  sha256 c7a042de9e96315e6c3773e499d3c8819b2645808e7529c7faab19be7ccc5c2b
+artifacts/performance/2026-08-14_native-battle-kernel/battlepack-sizing-itemsoff.json
+```
+
+## 11.3 A sized LEAD, explicitly not proven
+
+Fourteen further clips — Mushroom Kingdom pipes (`0x276-0x278`, `0x306-0x308`)
+and grabs by fighters absent from the matchup (`0x205`, `0x22d`, `0x22e`,
+`0x230`, `0x29c`, `0x2c4`, `0x2c5`, `0x2c7`) — take the pack to **528,624**
+(-123,304 from full). Their handlers are *absent* from the ELF rather than
+stubbed, and absence is the weakest evidence available (`nm` cannot see an
+inlined or differently-named body), so this is a lead and not a saving.
+`battlepack-sizing-matchup-lead.json`; not equivalence-verified.
+
+## 11.4 The design answer to route 3 — and it is neither of route 3's options
+
+**(a) "A more compact clip representation" is REFUTED as a *lossless* lever.**
+The AObj16 stream is already 16-bit throughout: one u16 command header, one
+optional u16 payload, and one or two **s16** target words per selected track
+(`scripts/ftanim_reloc_probe.py:197-209`, `struct.unpack_from("<%dh")`). There is
+no f32 field to narrow and no value dictionary that can pay — an index over a
+16-bit alphabet is not smaller than the alphabet. What remains is a lossy
+re-encode (a fidelity trade, `BLOCKED(decision:)` material) or a decompression
+step, which re-introduces exactly the per-acquisition work slice 1 exists to
+delete. **This also retracts a hypothesis this cycle started with** — that the
+105,304 target words were f32 and compactable. They are s16.
+
+**(b) "A deterministic pre-GO arena" creates no RAM.** It only chooses which of
+§11.1(b)'s two pools pays, and it forfeits the 211,936 static pool.
+
+**(c) What the evidence favours: spend one named, sized, unspent
+`docs/RAM_RECOVERY_PLAN.md` Phase 2 item.** `gSYFramebufferSets[2][230][320]` is
+**294,400 B**. The DS never rasterises into it (GX renders to VRAM); its only
+reader is the VS Results photo wipe, and `include/sys/video.h:62-72` already
+documents the exact span that wipe touches: `base+7,060 .. base+147,819`, i.e.
+**231 rows = 147,840 B**. Collapsing the object to that span recovers
+**146,560 B**:
+
+```text
+proven pool + 146,560 = 658,464   vs full pack 651,928   FITS by 6,536
+                                  vs items-off  553,696   FITS by 104,768
+```
+
+Blast radius is bounded and that header states it: `scmanager.c` bounds its clear
+with `sizeof(gSYFramebufferSets)` so the clear shrinks with the extent, and
+`mntitle.c:126-127` hardcodes `[1]`/`[2]` in a scene P1 never runs. It is Phase 2
+work with its own gate and the owner's eye on the Results wipe — not this cycle's.
+
+> `BLOCKED(decision: none required.)` Still a measurement/engineering gap, not a
+> fidelity trade. It becomes an owner question only if Phase 2 is refused.
+
+## 12. Phase 5's inherited premise is HALF the reason the copy exists
+
+The line this cycle was told to verify before building on it:
+
+> "The adapter copies only because internal fixups write *absolute* pointers …
+> Remove those and the reason to copy goes with them."
+
+**Verified as far as it goes, and incomplete.** Reason one is real:
+`ndsRelocApplyInternalPointerFixups` writes `data + target*4`, stated at
+`reloc_backend_assets.c:6222-6228` and again at `:7199-7201` and `:7264-7266`,
+and the pack's word offsets delete it.
+
+**Reason two is independent of the fixups and the pack cannot touch it.**
+`decomp/…/ft/ftmain.c:4623-4624` is
+
+```c
+lbRelocGetForceExternHeapFile(motion_desc->anim_file_id, (void*) fp->figatree_heap);
+fp->figatree = fp->figatree_heap;
+```
+
+— the **return value is discarded** and the fighter always animates from its own
+heap, so the bytes must physically be at `figatree_heap` whatever the fixups do.
+`docs/P1_EXECUTION_BOARD.md:3408-3425` already closed the zero-copy seam on
+exactly this line in cycle 108; §3 of the architecture doc does not mention it.
+And the port does **not** own that body: `src/import/battleship_ftmain.c` renames
+the decomp symbols and `#include`s `ft/ftmain.c` verbatim, wrapping only the
+entry point.
+
+**The unblocking move, for the next cycle.** `fp->figatree` is read at `:4628`
+(a NULL test) and `:4704` (`lbCommonAddFighterPartsFigatree`) and nowhere assumed
+equal to `figatree_heap`, so the one-line patch
+
+```c
+fp->figatree = lbRelocGetForceExternHeapFile(motion_desc->anim_file_id,
+                                             (void*) fp->figatree_heap);
+```
+
+under `scripts/decomp-patches/battleship/` makes the returned pointer
+authoritative. **It is inert today for fighter animations** — the
+`NDS_IMPORT_BATTLESHIP_FTMANAGER` arm of `lbRelocGetForceExternHeapFile`
+(`reloc_backend_assets.c:7294-7305`) returns `file != NULL ? file : heap`, and
+`file == heap` on every success — so it changes no behaviour until a const-clip
+path returns a different pointer. One caveat to check before landing it: the
+generic arm at `:7308-7322` can return a `file != heap` when
+`ndsRelocFindLoadedFileByData` misses, which today is discarded; that path is not
+fighter-animation and must be confirmed unreachable or handled.
+
+## 13. What this cycle did NOT do
+
+- **No DS runtime path (phase 5), no oracle mode (phase 6).** The premise check
+  above moved phase 5's shape, and the RAM verdict is a stop condition for
+  sizing the resident set it would point at.
+- **No build, no ROM, no gate measurement.** The -73,659 remains a projection.
+- **The matchup lead (§11.3) is not proven and not equivalence-verified.**
+- **No RAM was recovered.** §11.4(c) names and sizes the recovery; it does not
+  take it.
+- **`gNdsRelocAssetOpenFailCount` still not split** (§2.4); `gNdsR2AnimCacheHitBytes`
+  still not added (§3.3).

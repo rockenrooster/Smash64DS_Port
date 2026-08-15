@@ -119,9 +119,18 @@ def read_clip(probe, path):
             "n_slots": len(fx)}
 
 
-def build(bank: pathlib.Path, dedup=True):
+def build(bank: pathlib.Path, dedup=True, exclude=()):
+    """`exclude` is a set of asset ids to leave OUT of the resident pack.
+
+    It exists to price a *split* resident pack (`plan.md` §K1 phase 3's third
+    admissible route) without hand-arithmetic on per-clip means: dedup makes a
+    subset's cost non-linear, so an exclusion must be re-packed to be priced.
+    Every excluded id is reported in `skipped`, never dropped silently, and an
+    id that is not in the bank is an error rather than a no-op.
+    """
+    exclude = frozenset(exclude)
     probe = _load("ftanim_reloc_probe")
-    clips, skipped = [], []
+    clips, skipped, seen = [], [], set()
     for path in sorted(bank.iterdir()):
         if not path.name.startswith(("FTMarioAnim", "FTFoxAnim")):
             continue
@@ -129,10 +138,20 @@ def build(bank: pathlib.Path, dedup=True):
         if clip is None:
             skipped.append((path.name, "unreadable"))
             continue
+        seen.add(clip["asset_id"])
         if clip["aobj32"]:
             skipped.append((clip["name"], "AObjEvent32 (0x%x)" % clip["asset_id"]))
             continue
+        if clip["asset_id"] in exclude:
+            skipped.append((clip["name"],
+                            "excluded (0x%x)" % clip["asset_id"]))
+            continue
         clips.append(clip)
+    missing = sorted(exclude - seen)
+    if missing:
+        raise SystemExit("--exclude-ids names %d id(s) absent from the bank: %s"
+                         % (len(missing), ", ".join("0x%x" % i
+                                                    for i in missing)))
 
     # Clip body = u16 script_count, u16 off[script_count] (word offsets into the
     # clip's own stream), then the streams. Word offsets keep the body
@@ -312,14 +331,22 @@ def main() -> int:
     ap.add_argument("--json", type=pathlib.Path)
     ap.add_argument("--verify", action="store_true")
     ap.add_argument("--no-dedup", action="store_true")
+    ap.add_argument("--exclude-ids", default="",
+                    help="comma-separated asset ids (0x… or decimal) to leave "
+                         "out of the resident pack; priced by re-packing, not "
+                         "by subtracting a mean")
     args = ap.parse_args()
+
+    exclude = frozenset(int(tok, 0) for tok in args.exclude_ids.split(",")
+                        if tok.strip())
 
     if not args.bank.is_dir():
         print("SKIP: %s absent" % args.bank)
         return 0
 
     blob, directory, pool, table, stats = build(args.bank,
-                                                dedup=not args.no_dedup)
+                                                dedup=not args.no_dedup,
+                                                exclude=exclude)
     print("bank                    : %s" % stats["bank"])
     print("clips (AObj16)          : %d" % stats["clips"])
     print("scripts (entry points)  : %d" % stats["scripts"])

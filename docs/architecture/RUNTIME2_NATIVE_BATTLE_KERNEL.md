@@ -145,8 +145,9 @@ the generator rather than silently skipped. They keep the generic path.
    presence**. A modelled full deletion moves rank-80 by **73,659**.
 3. **The complete reachable set is all 301 clips**, from `ftdata.c` — not the
    87-entry observational warm list.
-4. **The complete pack is 651,928 B and does not fit proven RAM** (~511,904 B).
-   §6 owns what that blocks.
+4. **The complete pack is 651,928 B and does not fit proven RAM** (~511,904 B),
+   and cycle 2 confirmed it still does not with the items-off exclusion proven
+   and route 1 measured. §6 owns what that blocks and what closes it.
 5. **Host equivalence is proven at mismatch = 0** over 297 clips / 5,629 scripts
    / 77,959 commands / 71,500 per-track states / 5,629 event callbacks, with two
    falsifiers demonstrating the test can fail.
@@ -156,23 +157,65 @@ the generator rather than silently skipped. They keep the generic path.
 Phases 5–7 (direct runtime instance, same-build oracle mode, after-GO zero-I/O
 assertion) and 8–9 (performance, re-rank) are unchanged from `plan.md` §K1.
 
-**The blocker is RAM, and it is a measurement, not a decision.** The complete
-pack needs ~140 KB more than is proven available. Three lawful moves remain, in
-the order a next cycle should take them:
+**The blocker is RAM. MEASURED 2026-08-14 (cycle 2): it does not fit, and the
+closure is a static-RAM recovery, not a pack change.** Evidence and every
+citation: `BATTLEPACK_ANIMATION.md` §11–§12.
 
-1. **Measure what the resident pack makes unnecessary.** A `const` shared clip
-   removes the per-status `syTaskmanMalloc` animation allocations *and* the
-   262,144 B raw-file arena *and* the animation entries in
-   `sNdsRelocLoadedFiles[96]`. The arena is already counted in the 511,904;
-   the status-heap allocations are **not**, because nobody has measured their
-   volume. That is one gdb read on the existing gate ROM, not a build.
-2. **Items are off for P1**, and 38 of the 301 animations are item-flavoured
-   (101,472 payload bytes, 14.4%). Excluding them is provable from the match
-   rules rather than guessed — but it must be *proven* from `ftdata.c`'s status
-   graph, not from symbol names, before a byte is dropped.
-3. **If neither closes it, a deterministic pre-GO loading arena** sized to the
-   whole pack. `plan.md` §K1 phase 3 forbids the fourth option — falling back to
-   gameplay-time FAT loading — and that prohibition stands.
+```text
+                                   pack        pool        short
+full pack (297 AObj16 clips)      651,928     511,904     140,024
+items off (259 clips, PROVEN)     553,696     511,904      41,792
+  + route 1 (2..4 figatree heaps) 553,696     524,352..537,120   29,344..16,576
+  + matchup lead (245, UNPROVEN)  528,624     524,352..537,120    4,272..-8,496
+```
+
+Three findings settle the three moves that were listed here:
+
+1. **Route 1 is 12,608–25,216 B, not 140,024, and it needed no gdb read.** The
+   per-status `syTaskmanMalloc` volume is `gFTManagerFigatreeHeapSize` per
+   fighter — `ftmanager.c:170-206` makes it the **largest single animation file**
+   over the loaded kinds, a compile-time max over the bank (max payload 6,224 B),
+   and `scvsbattle.c:199`/`:472` take one per active player plus one per player
+   on Sudden Death entry. The 262,144 B arena was **already** counted; the
+   192,240 in `docs/HANDOFF.md` is that arena's bump high-water *inside* the
+   reservation, not a second pool.
+2. **The items-off exclusion is PROVEN, and priced by re-packing: −98,232.**
+   Not from `ftdata.c`'s status graph but from the linked battle ELF, which is
+   stronger: every function that could set an item status is a two-byte `bx lr`
+   stub and the ELF contains no item spawner at all. The 259-clip pack
+   re-verifies at **mismatch = 0** (corpus `c034b342…`).
+3. **Neither remaining route closes it.** A more compact representation is
+   refuted as a *lossless* lever — the stream is already u16 headers and **s16**
+   target words, so there is no f32 to narrow and no dictionary that can pay; a
+   pre-GO arena creates no RAM at all, it only chooses which pool pays.
+
+**And the pool's three terms are not additive as written.** The 262,144 arena and
+its 37,824 slack live *inside* one `calloc` of `NDS_TASKMAN_ARENA_SIZE = 0x150000`
+(`diagnostics.c:7750`, `:7791-7849`), so freeing the arena releases no libnds
+heap. A `.rodata` pack draws on **211,936** alone; an arena-resident pack draws on
+**299,968** alone. The 511,904 exists only if `NDS_TASKMAN_ARENA_SIZE` is cut too,
+which also needs the search's `0x130000` floor lowered *and* the Task 36
+replay-admission guard taught the new constant (`nds_renderer.c:5734-5739`).
+
+**What the evidence favours, and it is inside the approved architecture:** spend
+`docs/RAM_RECOVERY_PLAN.md` Phase 2. `gSYFramebufferSets[2][230][320]` is
+294,400 B that the DS never rasterises into; `include/sys/video.h:62-72` already
+documents its only reader — the Results photo wipe — as touching
+`base+7,060 .. base+147,819`, i.e. 231 rows = 147,840 B. Collapsing the object to
+that span recovers **146,560 B**, which makes the *full* 297-clip pack fit by
+6,536 and the proven items-off pack fit with 104,768 to spare.
+
+`plan.md` §K1 phase 3 still forbids the fourth option — falling back to
+gameplay-time FAT loading — and that prohibition stands.
+
+**Phase 5's premise is half the story (`BATTLEPACK_ANIMATION.md` §12).** The
+absolute-pointer fixups are one reason the adapter copies; the other is
+`decomp/…/ft/ftmain.c:4623-4624`, which discards the return value and hardcodes
+`fp->figatree = fp->figatree_heap`, so the bytes must be at that heap whatever
+the fixups do — and `src/import/battleship_ftmain.c` `#include`s that body rather
+than owning it. §3's inventory does not mention it. The unblocking move is a
+one-line, today-inert patch under `scripts/decomp-patches/battleship/` making the
+returned pointer authoritative.
 
 **No lossless compaction is available and this was measured, not assumed:** dead
 tail bytes past each script's terminator are 6,262 (1.0%), exact duplicate runs

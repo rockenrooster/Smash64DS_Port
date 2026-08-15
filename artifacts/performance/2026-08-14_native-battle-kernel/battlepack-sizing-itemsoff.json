@@ -1,0 +1,198 @@
+{
+ "bank": "builds\\build-c158-gate\\nitrofs\\reloc\\reloc_animations",
+ "clips": 259,
+ "skipped": [
+  [
+   "FTFoxAnim091",
+   "excluded (0x2dd)"
+  ],
+  [
+   "FTFoxAnim092",
+   "excluded (0x2de)"
+  ],
+  [
+   "FTFoxAnim093",
+   "excluded (0x2df)"
+  ],
+  [
+   "FTFoxAnim094",
+   "excluded (0x2e0)"
+  ],
+  [
+   "FTFoxAnim095",
+   "excluded (0x2e1)"
+  ],
+  [
+   "FTFoxAnim096",
+   "excluded (0x2e2)"
+  ],
+  [
+   "FTFoxAnim097",
+   "excluded (0x2e3)"
+  ],
+  [
+   "FTFoxAnim098",
+   "excluded (0x2e4)"
+  ],
+  [
+   "FTFoxAnim099",
+   "excluded (0x2e5)"
+  ],
+  [
+   "FTFoxAnim100",
+   "excluded (0x2e6)"
+  ],
+  [
+   "FTFoxAnim101",
+   "excluded (0x2e7)"
+  ],
+  [
+   "FTFoxAnim102",
+   "excluded (0x2e8)"
+  ],
+  [
+   "FTFoxAnim103",
+   "excluded (0x2e9)"
+  ],
+  [
+   "FTFoxAnim104",
+   "excluded (0x2ea)"
+  ],
+  [
+   "FTFoxAnim105",
+   "excluded (0x2eb)"
+  ],
+  [
+   "FTFoxAnim106",
+   "excluded (0x2ec)"
+  ],
+  [
+   "FTFoxAnim107",
+   "excluded (0x2ed)"
+  ],
+  [
+   "FTFoxAnim108",
+   "excluded (0x2ee)"
+  ],
+  [
+   "FTFoxAnim135",
+   "AObjEvent32 (0x309)"
+  ],
+  [
+   "FTFoxAnim136",
+   "AObjEvent32 (0x30a)"
+  ],
+  [
+   "FTFoxAnim157",
+   "excluded (0x31f)"
+  ],
+  [
+   "FTMarioAnim089",
+   "excluded (0x24c)"
+  ],
+  [
+   "FTMarioAnim090",
+   "excluded (0x24d)"
+  ],
+  [
+   "FTMarioAnim091",
+   "excluded (0x24e)"
+  ],
+  [
+   "FTMarioAnim092",
+   "excluded (0x24f)"
+  ],
+  [
+   "FTMarioAnim093",
+   "excluded (0x250)"
+  ],
+  [
+   "FTMarioAnim094",
+   "excluded (0x251)"
+  ],
+  [
+   "FTMarioAnim095",
+   "excluded (0x252)"
+  ],
+  [
+   "FTMarioAnim096",
+   "excluded (0x253)"
+  ],
+  [
+   "FTMarioAnim097",
+   "excluded (0x254)"
+  ],
+  [
+   "FTMarioAnim098",
+   "excluded (0x255)"
+  ],
+  [
+   "FTMarioAnim099",
+   "excluded (0x256)"
+  ],
+  [
+   "FTMarioAnim100",
+   "excluded (0x257)"
+  ],
+  [
+   "FTMarioAnim101",
+   "excluded (0x258)"
+  ],
+  [
+   "FTMarioAnim102",
+   "excluded (0x259)"
+  ],
+  [
+   "FTMarioAnim103",
+   "excluded (0x25a)"
+  ],
+  [
+   "FTMarioAnim104",
+   "excluded (0x25b)"
+  ],
+  [
+   "FTMarioAnim105",
+   "excluded (0x25c)"
+  ],
+  [
+   "FTMarioAnim106",
+   "excluded (0x25d)"
+  ],
+  [
+   "FTMarioAnim134",
+   "AObjEvent32 (0x279)"
+  ],
+  [
+   "FTMarioAnim135",
+   "AObjEvent32 (0x27a)"
+  ],
+  [
+   "FTMarioAnim142",
+   "excluded (0x281)"
+  ]
+ ],
+ "scripts": 4901,
+ "raw_file_bytes": 605440,
+ "raw_payload_bytes": 584720,
+ "raw_table_bytes": 26348,
+ "raw_script_bytes": 558372,
+ "pack_header_bytes": 20,
+ "pack_directory_bytes": 3108,
+ "pack_offset_table_bytes": 19604,
+ "pack_stream_bytes": 530964,
+ "pack_total_bytes": 553696,
+ "dedup": true,
+ "dedup_runs_shared": 418,
+ "dedup_bytes_saved": 27408,
+ "sha256": "c7a042de9e96315e6c3773e499d3c8819b2645808e7529c7faab19be7ccc5c2b",
+ "verify": {
+  "mismatches": 0,
+  "corpus": "c034b342b0760d13152eaeafe60ac204cd39e7905e9ae438d958377429d4982e",
+  "clips": 259,
+  "scripts": 4901,
+  "commands": 66776,
+  "states": 61121,
+  "callbacks": 4901,
+  "payload_words": 89487
+ }
+}

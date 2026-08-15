@@ -315,7 +315,7 @@ holder 9.1%; every top holder already owned by a named lane, including
 percentile sits. A change removing 100,000 from only the top 20 frames moves P95
 by **zero**; the 80th-largest must fall **91,844**.
 
-## NATIVE BATTLE KERNEL SLICE 1 (2026-08-14) — phases 1–4 DONE, zero builds
+## NATIVE BATTLE KERNEL SLICE 1 (2026-08-14) — phases 1–4 DONE, RAM re-measured, zero builds
 
 `docs/architecture/RUNTIME2_NATIVE_BATTLE_KERNEL.md` (design) ·
 `artifacts/performance/2026-08-14_native-battle-kernel/BATTLEPACK_ANIMATION.md`
@@ -342,8 +342,59 @@ The 87-entry `sNdsR204AnimWarmList` is 28.9% of it and is observational.
 
 **Pack: 651,928 B (floor 645,450) against ~511,904 B proven RAM — it does NOT
 fit**, and no lossless compaction closes it (dead tails 1.0%, dedup 4.6%,
-substring 0.004%). Three lawful moves are ranked in the architecture doc §6;
-falling back to gameplay-time FAT loading stays forbidden.
+substring 0.004%). Falling back to gameplay-time FAT loading stays forbidden.
+
+### RAM RE-MEASURED (2026-08-14, cycle 2, zero builds) — it STILL does not fit, and the closure is Phase 2 of the RAM plan
+
+`BATTLEPACK_ANIMATION.md` §11–§12 · architecture doc §6 rewritten.
+
+```text
+                                   pack        pool        short
+full pack (297 clips)             651,928     511,904     140,024
+items off (259, PROVEN)           553,696     511,904      41,792
+  + route 1 (2..4 figatree heaps) 553,696     524,352..537,120   29,344..16,576
+  + matchup lead (245, UNPROVEN)  528,624     524,352..537,120    4,272..-8,496
+```
+
+- **Items-off is PROVEN from the LINKED ELF**, which is stronger than the status
+  graph the brief asked for: every function that could set an item status is a
+  two-byte `bx lr` stub (`ftCommonItem{Throw,Swing,Shoot,ShootAir}SetStatus`,
+  `ftCommonLightThrowDecideSetStatus`, `ftCommonHammerFallSetStatus`, and the
+  `W` cluster at `0x208fc34..0x208fc74`), and the ELF holds **no item spawner**.
+  Priced by **re-packing** (dedup makes a subset non-linear), −98,232, and the
+  259-clip pack re-verifies at **mismatch = 0**, corpus `c034b342…`.
+  `scripts/generate_battlepack_anim.py --exclude-ids` is the new instrument.
+- **Route 1 is 12,608–25,216 B, not 140,024.** `gFTManagerFigatreeHeapSize` is
+  the largest single animation FILE over the loaded kinds (max payload 6,224),
+  two heaps a match plus two on Sudden Death entry. **The 262,144 arena was
+  already counted** — HANDOFF's 192,240 is its bump high-water *inside* that
+  reservation, not a second pool. No gdb read was needed; the quantity is a
+  compile-time max over the bank.
+- **THE THREE POOL TERMS ARE NOT ADDITIVE.** The arena is one `calloc` of
+  `NDS_TASKMAN_ARENA_SIZE 0x150000`, so a `.rodata` pack draws on **211,936**
+  alone and an arena-resident pack on **299,968** alone. Reaching 511,904 needs
+  the constant cut, the `0x130000` search floor lowered *and* the Task 36
+  replay-admission guard retaught (`nds_renderer.c:5734-5739`).
+- **A more compact representation is REFUTED as a lossless lever**: the AObj16
+  stream is already u16 command headers and **s16** target words — no f32 to
+  narrow, and no dictionary can beat a 16-bit alphabet. A pre-GO arena creates
+  no RAM at all.
+- **THE CLOSURE IS `docs/RAM_RECOVERY_PLAN.md` PHASE 2, NAMED AND SIZED:**
+  `gSYFramebufferSets[2][230][320]` = 294,400 B that the DS never rasterises
+  into; `include/sys/video.h:62-72` documents its only reader (the Results photo
+  wipe) as touching `base+7,060..base+147,819` = 231 rows = 147,840 B.
+  Collapsing to that span recovers **146,560 B** — the *full* pack then fits by
+  6,536, the items-off pack by 104,768. Phase 2 gate and the owner's eye on the
+  wipe apply.
+- **PHASE 5's INHERITED PREMISE IS HALF THE REASON THE COPY EXISTS.** The
+  absolute-pointer fixups are one; the other is
+  `decomp/…/ft/ftmain.c:4623-4624`, which discards the return value and
+  hardcodes `fp->figatree = fp->figatree_heap` — and `battleship_ftmain.c`
+  `#include`s that body rather than owning it (board §"force-load seam is
+  CLOSED", cycle 108, same line). The unblock is a one-line, **today-inert**
+  patch under `scripts/decomp-patches/battleship/` making the returned pointer
+  authoritative; `fp->figatree` is read only at `:4628` and `:4704` and never
+  assumed equal to the heap.
 
 **Phase 4 host equivalence: mismatch = 0** over 297 clips / 5,629 scripts /
 77,959 commands / 71,500 states / 5,629 callbacks. Two falsifiers prove the test
