@@ -59,16 +59,59 @@ typedef struct SYVideoSetup {
  * src/import/battleship_sys_zbuffer.c carries the full proof and MUST be kept
  * in step with this extent. Nothing takes sizeof(gSYZBuffer). */
 extern u16 gSYZBuffer[320 * 10];
-/* Reduced from [3] to [2]: 441,600 -> 294,400 bytes, freeing 147,200.
+/* [3][230][320] -> [2] -> [1][231][320]: 441,600 -> 294,400 -> 147,840 bytes.
+ * The second step frees 146,560 more.
  *
  * The DS never rasterises into these (GX renders to VRAM; we present from
  * sFramebuffers[] in nds_platform.c), but the array is NOT dead -- the VS
  * Results photo wipe reads it. Sizing it is therefore arithmetic on that read,
- * not a judgement call. lbtransition.c:226-241 starts at
- *   base + BORDER(320,10) + BORDER(320,220) + BORDER(1,10) = base + 147,220
- * -- already 20 bytes past buffer 0 -- and walks BACKWARD 640 bytes per row for
- * 220 rows, so it touches base+7,060 .. base+147,819. That is 620 bytes into
- * buffer 1, which is why [1] is NOT sufficient and [2] is.
+ * not a judgement call.
+ *
+ * THE SPAN, RE-DERIVED FROM THE COMPILED READER, NOT FROM THIS COMMENT
+ * (ndsBaseLBTransitionSetupTransition, mnVSResultsFuncStart's only caller;
+ * disassembly in artifacts/performance/2026-08-15_framebuffer-collapse/):
+ *
+ *   ldr r1, [gSYSchedulerCurrentFramebuffer]   ; base
+ *   adds r1, r1, #0x00023f14                   ; + 147,220  = BORDER(320,10)
+ *                                              ;            + BORDER(320,220)
+ *                                              ;            + BORDER(1,10)
+ *   inner: ldr r2,[r1,r3] for r3 = 0..596 step 4   ; 600 bytes read per row
+ *   outer: adds r1, r1, #0xfffffd80            ; -640 = one row BACKWARD
+ *          220 iterations (heap advance 0x203a0 = 300*220*2, 600 B per row)
+ *
+ * highest byte read = 147,220 + 599            = 147,819
+ * lowest  byte read = 147,220 - 640*219        =   7,060
+ *
+ * So the wipe touches base+7,060 .. base+147,819 INCLUSIVE. The object must
+ * therefore span offsets 0..147,819 = 147,820 bytes, which is 230.97 rows;
+ * rounded up to whole 640-byte rows that is 231 rows = 147,840 bytes. The
+ * loads are 32-bit and 147,220 % 4 == 0, so the base must stay 4-aligned --
+ * hence the explicit attribute rather than relying on a linker default.
+ *
+ * READER SET ESTABLISHED FROM THE LINKED ELF, NOT FROM GREP (2026-08-15,
+ * smash64ds-battle-playable-hwtri.elf; every word-aligned literal in every
+ * SHF_ALLOC section whose value lands inside the object):
+ *   - ndsBaseLBTransitionSetupTransition  READS, through
+ *     gSYSchedulerCurrentFramebuffer (which has exactly four references: two
+ *     scheduler ASSIGNS, this read, and lbTransitionSetupTransition's NULL
+ *     fallback in src/import/battleship_lbtransition.c).
+ *   - ndsBaseSCManagerRunLoop             WRITES the clear, bounded by
+ *     sizeof(gSYFramebufferSets), so it shrinks with this extent.
+ *   - ndsBaseSCVSBattleStartScene         address arithmetic only
+ *     (arena_size = &gSYFramebufferSets - &ovl4_BSS_END), and the port
+ *     overwrites that field with ndsTaskmanArenaSize().
+ *   - the SYVideoSetup initializers       data only, all slots = [0].
+ *   - sixteen *StartScene z-buffer stores of SYVIDEO_ZBUFFER_START(...) =
+ *     gSYZBuffer-6,400. gSYZBuffer still immediately follows this object, so
+ *     that pointer lands at base+141,440 -- which the collapse moved from the
+ *     dead tail of old buffer [2] INTO the wipe's read span. It is NEVER
+ *     dereferenced (cycle 84 measured the whole 6,400 still holding the
+ *     scmanager clear value mid-battle, against a control that moved in the
+ *     same run; src/import/battleship_sys_zbuffer.c carries the proof), so this
+ *     is inert -- but if anything ever DOES rasterise through that pointer it
+ *     now corrupts the Results photo instead of nothing. Restore both extents
+ *     together if that day comes.
+ * No other reader exists. Nothing else takes sizeof().
  *
  * All three SYVIDEO_SETUP_DEFAULT slots alias buffer 0 so the wipe always reads
  * from the one buffer whose 147,820-byte span is in range. Safe because
@@ -83,12 +126,13 @@ extern u16 gSYZBuffer[320 * 10];
  * bounds itself with sizeof(gSYFramebufferSets), so the clear shrinks with this
  * extent instead of overrunning it.
  *
- * KNOWN GAP, out of P1 scope: mntitle.c:126-127 hardcodes &gSYFramebufferSets[1]
- * and [2]. [1] stays valid and [2] becomes a one-past-the-end pointer, legal to
- * form and never dereferenced in P1 because the title scene never runs. If the
- * title scene is ever brought into a shipping configuration, patch it under
- * scripts/decomp-patches/battleship/ first. */
-extern u16 gSYFramebufferSets[2][230][320];
+ * The outer [1] is kept rather than dropping to [231][320] on purpose: it keeps
+ * &gSYFramebufferSets[0] a pointer to a whole BUFFER, so a future [1]/[2] would
+ * be out of range rather than silently overlapping row 1 and row 2 of the live
+ * one. mntitle.c was the only such user and is patched to alias [0] under
+ * scripts/decomp-patches/battleship/src_mn_mncommon_mntitle.patch, which closes
+ * the KNOWN GAP this comment used to carry. */
+extern u16 gSYFramebufferSets[1][231][320] __attribute__((aligned(4)));
 extern u16 *gSYVideoZBuffer;
 extern u32 gSYVideoColorDepth;
 extern s32 gSYVideoResWidth;

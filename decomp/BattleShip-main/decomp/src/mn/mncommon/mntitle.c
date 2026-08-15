@@ -122,9 +122,24 @@ Gfx dMNTitleDisplayList[/* */] =
 // 0x80134370
 SYVideoSetup dMNTitleVideoSetup =
 {
+#if defined(SSB64_TARGET_NDS)
+	/* The DS keeps ONE software framebuffer -- gSYFramebufferSets collapsed to
+	 * [1][231][320], the extent the VS Results photo wipe provably reads (see
+	 * include/sys/video.h). [1] and [2] no longer exist, and this is the only
+	 * place in the tree that named them. Aliasing all three slots to [0] is what
+	 * SYVIDEO_SETUP_DEFAULT already does for every other scene, and it is safe
+	 * for the same reason: sys/scheduler.c only ASSIGNS
+	 * gSYSchedulerCurrentFramebuffer and never compares the buffers against each
+	 * other. Its only pointer test is the SYSCHEDULER_BUFFER_NULL sentinel,
+	 * which a non-NULL alias passes. */
+	&gSYFramebufferSets[0],
+	&gSYFramebufferSets[0],
+	&gSYFramebufferSets[0],
+#else
 	&gSYFramebufferSets[0],
 	&gSYFramebufferSets[1],
 	&gSYFramebufferSets[2],
+#endif
 	NULL,
 	320,
 	240,

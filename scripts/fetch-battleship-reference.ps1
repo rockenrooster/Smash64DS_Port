@@ -36,6 +36,7 @@ $patchDir = Join-Path $PSScriptRoot 'decomp-patches/battleship'
 $patches = [ordered]@{
     'src/ft/ftanim.c'                = 'src_ft_ftanim.patch'
     'src/mn/mncommon/mnstartup.c'    = 'src_mn_mncommon_mnstartup.patch'
+    'src/mn/mncommon/mntitle.c'      = 'src_mn_mncommon_mntitle.patch'
     'src/mv/mvopening/mvopeningroom.c' = 'src_mv_mvopening_mvopeningroom.patch'
     'src/sc/scmanager.c'             = 'src_sc_scmanager.patch'
     'src/sys/objanim.c'              = 'src_sys_objanim.patch'
