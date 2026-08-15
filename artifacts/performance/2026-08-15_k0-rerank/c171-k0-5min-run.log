@@ -1,0 +1,30 @@
+Wrote artifacts\performance\2026-08-15_k0-rerank\c171-k0-5min-rows.csv
+Tick-HUD buckets: target=smash64ds-battle-playable-tickhud-hwtri samples=8448 frames=439..8886 melonDS=1.0 sha=DE80E46BDCF1FD98 git=7309ce785ad+dirty(12) dldi=ON
+
+bucket p50        p95        spread mean       min        max        %ALLp50
+------ ---        ---        ------ ----       ---        ---        -------
+ALL     1,117,824  1,678,336   1.50  1,217,270  1,114,432  6,432,896   100.0
+FTR       303,552    329,920   1.09    292,254    151,808    339,072    27.2
+STG       175,104    182,848   1.04    176,569    170,048    190,336    15.7
+BG          4,288      4,416   1.03      4,304      3,840      7,424     0.4
+AUD         2,880      7,360   2.56      8,848      1,408    160,064     0.3
+HUD         1,024    410,496 400.88     33,324        896    485,248     0.1
+SRC       330,304    557,568   1.69    354,949    152,320  4,809,664    29.5
+MISC      105,792    178,816   1.69    116,252     79,168    876,544     9.5
+OTHR      214,016    503,104   2.35    230,770     20,224    580,544    19.1
+WAIT      194,304    482,944   2.49    210,877        832    560,640    17.4
+WORK      958,720  1,376,256   1.44  1,006,394    708,416  5,928,256    85.8
+SHDT        4,672    105,344  22.55     15,480      3,072    468,032     0.4
+SWRM        1,024      1,152   1.12      1,046        832      4,480     0.1
+GCRA      324,800    552,128   1.70    349,486    146,880  4,804,160    29.1
+SCPU       44,672     94,656   2.12     43,846        576    138,176     4.0
+SCAT        1,280      1,408   1.10      1,454        896    630,720     0.1
+SPRM        1,920      2,112   1.10      4,388      1,536    688,384     0.2
+SINT      155,328    291,456   1.88    166,924      6,912  4,622,272    13.9
+SPHD       61,568    102,336   1.66     68,938     30,784    785,152     5.5
+SPHC          704        832   1.18        824        448     31,872     0.1
+WORK-H    946,944  1,198,720   1.27    973,070    707,328  5,512,128    84.7
+
+named=986,500 (81.0% of ALL)  VBI 2:7418 3:1402 4:55 5+:11 max:19 total:8886  slips=0
+extras: gSCManagerTransferBattleState.time_limit=5  gNdsBattlePlayablePacingLogicFrames=17,772  gNdsK0BattleInGo=1  gNdsK0AfterGoAcquisitions[0]=812  gNdsK0AfterGoAcquisitions[1]=999  gNdsK0AfterGoPackHits[0]=0  gNdsK0AfterGoPackHits[1]=999  gNdsK0AfterGoFatReads[0]=21  gNdsK0AfterGoFatReads[1]=0  gNdsK0AfterGoSeeks[0]=42  gNdsK0AfterGoSeeks[1]=0  gNdsK0AfterGoByteSwaps[0]=21  gNdsK0AfterGoByteSwaps[1]=0  gNdsK0AfterGoRelocs[0]=812  gNdsK0AfterGoRelocs[1]=0  gNdsK0AfterGoNormalizes[0]=42  gNdsK0AfterGoNormalizes[1]=0  gNdsK0AfterGoCacheCopies[0]=791  gNdsK0AfterGoCacheCopies[1]=0  gNdsK0AfterGoTokenResolves[0]=812  gNdsK0AfterGoTokenResolves[1]=999  gNdsK0AfterGoPathLookups[0]=833  gNdsK0AfterGoPathLookups[1]=0  gNdsRelocAssetPayloadReadCount=121  gNdsRelocAssetHeaderReadCount=1,613  gNdsBattlePackState=1  gNdsBattlePackHits=999  gNdsBattlePackMisses=814  gNdsBattlePackLoadSteps=18  gNdsBattlePackLoadFails=0  gNdsR2AnimCacheHits=791  gNdsR2AnimCacheMisses=23  gNdsR2AnimCacheFills=23  gNdsR2AnimCacheRejects=0  gNdsR2AnimCacheArenaReserveFailCount=0  gNdsTaskmanArenaChosenSize=1,548,288  gNdsTaskmanArenaAllocFailCount=0  gNdsTaskmanGeneralHeapFreeMin=51,876  gNdsSyMallocOverflowCount=0  sGCCommonsMaxNum=4,294,967,295  gNdsRelocResolveOffsetCount=18,538  gNdsBattleTextHudP0Damage=0  gNdsBattleTextHudP1Damage=139
+Wrote artifacts\performance\2026-08-15_k0-rerank\c171-k0-5min.json

@@ -259,7 +259,124 @@ quote these numbers as gate-arm numbers, and do not rebuild G3's case from them.
   it says UNPROVEN. A failing arm never reaches presented frame 1 and the
   harness reports a timeout, which reads exactly like a hung emulator.
 
+## SLICE 1 PHASE 7 IS MEASURED, ITEMS 3 AND 4 ARE ANSWERED, AND THE RE-RANK SIZES SLICE 2 (2026-08-15)
+
+`artifacts/performance/2026-08-15_k0-rerank/K0_RERANK.md`; kernel doc §13.
+One build (`build-c171-k0-5min-bp1`), one five-minute gate run, one Boundary.
+
+**PHASE 7 — six of the seven K0 lines read exactly ZERO for the packed fighter,
+against a control in the SAME RUN.** Ten `volatile u32[2]` counters, one per K0
+line plus two denominators, incremented **at their own sites** (`NDS_K0_MARK`,
+`include/nds/nds_reloc_assets.h`), keyed by the asset's fighter and gated on
+`gNdsK0BattleInGo` — published once per logic update from a `game_status` read
+both taskman update loops already perform. Only one fighter fits the arena, so
+Mario stays generic and *is* the negative control.
+
+| K0 line | Mario (control) | **Fox (packed)** |
+|---|---:|---:|
+| acquisitions after GO | 812 | **999** |
+| served by the pack | 0 | **999** |
+| FAT reads | 21 | **0** |
+| `get_fat` / `f_lseek` | 42 | **0** |
+| payload byte-swaps | 21 | **0** |
+| relocation / fixups | 812 | **0** |
+| AObj16 normalizations | 42 | **0** |
+| raw cache copies | 791 | **0** |
+| **token → asset-id resolves** | 812 | **999 — NOT deleted** |
+| asset → path lookups | 833 | **0** |
+
+`lbRelocGetForceExternHeapFile` resolves `ndsRelocAssetIDForToken` **before** the
+pack is consulted, so K0 line 7 is **half** discharged. Ordering fix, unpriced,
+do not round it away. Cross-checks: `BattlePackHits` 999 == packHits[1] ==
+acquisitions[1] (**zero fall-through**), `AnimCacheHits` 791 == cacheCopies[0],
+seeks[0] == 2 × fatReads[0], whole-run `PayloadReadCount` 121 vs 21 attributed.
+
+**ITEM 4 CLOSED — and the match length is read out of the guest.**
+`time_limit` **5**, `PacingLogicFrames` **17,772 of 18,000 = 98.7%**, 8,886
+presented, **slips 0**, `WORK-H` P50 946,944 / **P95 1,198,720** vs the 1-minute
+bank 1,177,920. **Length does not accumulate cost** (third independent time).
+Heap low-water **51,876** across five times the match (1-minute 52,472/52,864);
+every allocator gate 0; `sGCCommonsMaxNum` −1.
+**`soak-freeze-watch.ps1` CANNOT DO THIS ITEM**: `-MinutesToRun` ceils at 12.0
+and one game minute is ~136 s of wall clock. Use the tick-HUD sampler, as the
+2026-08-13 battery did — it also reads the guest timer, the histogram, the
+allocator gates and the K0 counters from the same run.
+
+**ITEM 3's 4.1 PRODUCT POINTS ARE TWO THINGS, AND ONE OF THEM THE GATE CANNOT
+SEE.** `DRAW=0` deficit = **70 frames**. **55 are WORK-H-bound** (mean overrun
+36,982 over the 1,113,152 boundary; excess **81.2% inside `gcRunAll`** — `SITR`
+33.7%, `SPHD` 18.1%, `SHDT` 13.8% at 5.8x, `AUD` 10.6%, draw side 8.1%).
+**15 are not**: WORK-H under the boundary, **13 of them carrying a HUD-bucket
+burst**. On a `DRAW=0` arm that bucket is `gNdsTickHudForegroundTicks` alone =
+**the game's own battle-interface OAM draw** (`sprite_preview_backend.c:3032`),
+**1.41 bursts/s, mean 100,853, dropping 47% against an 8% base rate.**
+**`WORK-H = (ALL − WAIT) − HUD` by construction**, so ~7,128 tk/fr of shipped
+product cost — up to ~100,853 on the cadence frames — is outside the gate number.
+Recorded, **not** re-scored: `plan.md` §0 owns the scoring.
+
+**THE RE-RANK, on two independent populations** (banked 1-minute arm, 80 P95
+frames; this cycle's 5-minute arm, 423 — 5.3x the sample, different fight):
+
+| owner | 1-min | 5-min |
+|---|---|---|
+| `SRC` = `GCRA` | 84.8% | 85.7% |
+| **`SITR`** | **36.0%** (2.46x) | **31.6%** (2.19x) |
+| `SHDT` | 20.5% (**16.34x**) | 27.0% (**17.02x**) |
+| `SPHD` | 15.2% | 11.3% |
+| `SPRM` | 8.3% (**20.40x**) | 10.2% (**23.15x**) |
+| **`GCRA-REM`** | **3.6%** (1.17x) | **4.4%** (1.21x) |
+| draw side | 9.3% | 10.7% |
+
+**This RETRACTS `GATE_ARM_OWNERS.md`'s "the sub-`SRC` ranking is match-specific,
+only `SITR` survives"** — all four survive within one position across two matches.
+**And it kills a false draw owner:** `STG` reads +53,383 / 10.2% on the 1-minute
+set and **that is ONE FRAME** (1937); excluded it is **+840, 1.00x, 0.2%**.
+
+**SLICE 2 IS SIZED AND IT IS 1.8x SHORT — do not brief it as the next mechanism.**
+§K2's "~90% of the tail excess is inside `gcRunAll`" is true *because the fighter
+process bodies are inside `gcRunAll`*, and slice 2 leaves those untouched. The
+bracket that isolates what it can touch is `GCRA-REM`, a **flat** 1.17–1.21x lane.
+From the gate-arm v3 capture, the whole scheduler machinery on the P95 frames is
+`ndsBaseGcRunAll` **9,550** + `gcRunGObjProcess` **5,988** + `gcRunGObj` 1,255 +
+`gcRunAll` 491 + graph maintenance 502 = **17,786 tk/fr**, against **+32,593 net**
+required — a 100% deletion is 1.8x short and a flat vector still calls each
+process. (Sizing is on `build-c159-profile-bothcpu`, the only gate-arm v3 capture;
+slice 1 never touched the scheduler, so it carries — but it is a sizing, not a bank.)
+**The ranking points at `SITR`, `SHDT` on the P95 frames, and the soft-float trio
+(99,762 tk/fr on the P95 set = 3.0x the requirement, 38% inside the fighter procs).**
+
+**THE MULTI-MEGATICK FRAMES ARE CHARACTERISED AND THEY ARE NOT WORK.** Every one
+carries an excess of **2^22 ticks (4,194,304 = 0.1252 s)** in whichever single
+bucket was open — ±0.02% in the tight cases, six arms, six buckets, ~1 per 2,100
+presented frames, `SINT` over-represented 6 of 14 against 13.9% occupancy. `ALL`
+rises with it, so the guest timer really advanced. **Predates the pack** (`c158`,
+2026-08-14) and is **not a function of game state**: the `DRAW=1` and `DRAW=0`
+arms of the *same build* put them on completely different presented frames, and
+two arms have none. Never moved a banked percentile. Leading hypothesis
+(unmeasured): a fixed-duration I/O stall. **Discriminator is free on the next gate
+run — `-PerFrameGlobals gNdsRelocAssetPayloadReadCount,gNdsR2AnimCacheFills`.**
+`--drop-frames` added to `census-tick-hud-p95-set.py` for the attribution
+falsifier, with the never-bank-a-percentile prohibition in its help text.
+
+**PHASE 6 AS WORDED IS RETIRED FOR SLICE 1** (kernel doc §13.2). It assumes two
+evaluators; slice 1 shipped one. The binding obligation is a **representation**
+one and it is discharged in two tiers (host side over **all** clips at mismatch 0
+with a falsifier that fails; end-to-end on the exercised subset), with the
+residual **named**: coverage of clips no match has requested, closed by one
+distinct-packed-clip counter — **not by building a one-armed oracle.** The
+original wording is inherited unchanged by slice 3, which will have two arms.
+
+**Boundary GREEN at the shipping default** on this tree, 0 `Exception:`, marker
+capture 28 s of the 120 s ceiling, `frames=212`.
+**`BLOCKED(decision: shipping default)` is now ready for the owner** — items 3
+and 4 answered, phase 7 measured — but **item 3 is still NOT MET** (90.7–90.9%
+two-VBlank against ≥95%) and nothing was flipped.
+
 ## MARGINAL-FRAME OWNERS (2026-08-14) — the ranking Phase 4 selects from, zero builds
+
+> **The sub-`SRC` ranking below is superseded by the 2026-08-15 re-rank above**,
+> which reproduces `SITR`/`SHDT`/`SPHD`/`SPRM` on two matches and two window
+> sizes, and shows that one instrument frame was carrying `STG`'s apparent share.
 
 `artifacts/performance/2026-08-14_runtime2-p95-closure/MARGINAL_OWNERS.md`.
 Reducer `scripts/census-marginal-frame-owners.py`; its two cached per-PC CSVs sit

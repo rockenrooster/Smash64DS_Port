@@ -181,9 +181,16 @@ the generator rather than silently skipped. They keep the generic path.
 > Still open: phase 6 (oracle), the *measured* phase-7 after-GO per-fighter zero,
 > phase 8 (gate), and a Boundary green at flag 1 — one assert remains, the FPS-HUD
 > self-consistency check, deterministic at flag 1 and green at flag 0.
+>
+> **SUPERSEDED BY §13 (2026-08-15).** Phase 7 is measured — six of the seven K0
+> lines read zero for the packed fighter against a live control in the same run,
+> and the seventh splits. Phase 6 as worded is retired for slice 1 and replaced by
+> a representation obligation with its residual named. Boundary is green at flag 1
+> and at flag 0; the FPS-HUD assert was the publication-seam defect and is fixed.
 
 Phases 5–7 (direct runtime instance, same-build oracle mode, after-GO zero-I/O
-assertion) and 8–9 (performance, re-rank) are unchanged from `plan.md` §K1.
+assertion) and 8–9 (performance, re-rank) are unchanged from `plan.md` §K1
+**except phase 6, which §13.2 re-words for what slice 1 actually shipped.**
 
 **The blocker was RAM. MEASURED 2026-08-14 (cycle 2): it did not fit, and the
 closure was a static-RAM recovery, not a pack change.** Evidence and every
@@ -594,3 +601,139 @@ the owner. Nothing in slice 1's architecture is waiting on RAM any more.
 and phase 6's same-build oracle cannot be built — an oracle whose candidate arm
 does not exist has only one arm, which is exactly the shared-path failure phase
 4 already paid for.
+
+> **CORRECTED BY §13 (2026-08-15).** Phase 5 *is* built and resident; what is
+> unbuilt is the *representation* change (`NDSAnimClip`/`NDSAnimInstance`), which
+> §K1 phase 5 explicitly permits deferring for the first integration. Phase 7 is
+> now measured. The one-arm reasoning above is right about an **evaluator**
+> oracle and wrong as a reason to leave the obligation open: the binding
+> obligation for what shipped is a **representation** one, and §13.2 states it,
+> discharges it in two tiers and names its residual.
+
+## 13. Phase 7 is MEASURED; phase 6's obligation is RE-WORDED for what shipped (2026-08-15)
+
+`artifacts/performance/2026-08-15_k0-rerank/K0_RERANK.md`. One build, one
+5-minute measurement run, one Boundary run at the shipping default (GREEN,
+0 `Exception:`).
+
+### 13.1 Phase 7 — six of the seven K0 lines read exactly zero, with a live control
+
+Ten `volatile u32[2]` counters, one per K0 line plus two denominators, each
+incremented **at its own site** (`include/nds/nds_reloc_assets.h` owns the
+list and the `NDS_K0_MARK` form), keyed by the asset's fighter and gated on
+`gNdsK0BattleInGo` — published once per logic update from a read both taskman
+update loops already perform. **The control is in the same run**: only one
+fighter fits the arena, so the other stays on the generic path.
+
+`build-c171-k0-5min-bp1`, `BOTH_CPU=1` + `BATTLEPACK=1` + `KEEP_CACHE=1`,
+arena 1,548,288, DLDI on, a **five-minute** match, frames 439–8886:
+
+| K0 line | Mario — control | **Fox — packed** |
+|---|---:|---:|
+| acquisitions after GO | 812 | **999** |
+| served by the pack | 0 | **999** |
+| FAT reads | 21 | **0** |
+| `get_fat` / `f_lseek` | 42 | **0** |
+| payload byte-swaps | 21 | **0** |
+| relocation / fixups | 812 | **0** |
+| AObj16 normalizations | 42 | **0** |
+| raw cache copies | 791 | **0** |
+| token → asset-id resolves | 812 | **999** |
+| asset → path lookups | 833 | **0** |
+
+`gNdsBattlePackHits` 999 == `PackHits[1]` == `Acquisitions[1]`: **every Fox
+acquisition after GO took the pack, zero fall-through.** `AnimCacheHits` 791 ==
+`CacheCopies[0]`; `Seeks[0]` 42 == 2 × `FatReads[0]` 21 (one `fopen` + one
+`fseek` per generic load). Whole-run `gNdsRelocAssetPayloadReadCount` 121 against
+21 attributed — nothing escaped the attribution.
+
+**The seventh line splits, and the residue is real.**
+`lbRelocGetForceExternHeapFile` resolves `ndsRelocAssetIDForToken(token)`
+**before** the pack is consulted, so the token → asset-id half still runs 999
+times in five minutes. K0 line 7 is therefore *half* discharged: file discovery
+is deleted, token resolution is not. The fix is an ordering change (consult the
+pack by token, or memoise the map), it is unpriced, and it must not be rounded
+away in a summary.
+
+### 13.2 Phase 6 — the obligation as worded does not apply, and this is what replaces it
+
+**§K1 phase 6 was written for a design with two evaluators.** It asks old and new
+to *evaluate the same input* and compare animation time, generated values, event
+callbacks, joint poses and end/loop transitions. **What shipped has one
+evaluator.** There is no `NDSAnimClip` and no `NDSAnimInstance`; the same
+`ndsR2FtAnimParseDObjFigatree` / `gcPlayDObjAnimJoint` code reads the clip on both
+arms. Slice 1 removed the **file architecture** — build-time blob, native bit
+order, `const` pointers, no copy / register / finalize / normalize — which is
+exactly what phase 5 permits for the first integration. Building the phase-6
+oracle *as worded* would produce a candidate arm that is the incumbent arm, i.e.
+the shared-path failure phase 4 already paid for once.
+
+**The obligation that actually binds what shipped is a REPRESENTATION
+obligation:** *for every clip the pack serves, the byte stream the one evaluator
+walks must be semantically identical to the stream the generic path would have
+produced.* Restated that way it is discharged in two tiers:
+
+1. **Complete coverage, host side.** Every generated clip decoded and compared
+   against the parser's semantics: 297 clips / 5,629 scripts / 77,959 commands /
+   71,500 per-track states / 5,629 event callbacks / 105,304 target words,
+   **mismatch 0**, corpus `c034b342…` after the items-off re-pack, **with the
+   native-bit-order stage included** and a falsifier that fails (a disk-order
+   decode raises on 75 of 2,713 scripts; native raises on 0). Per-slot table
+   re-verified at mismatch 0 (Fox 3,611 slots / 34,523 commands; Mario 2,976 /
+   32,253).
+2. **End-to-end on the exercised subset, on the ROM.** End-of-match invariant pair
+   identical across five arms including the no-pack control (0/76);
+   `gNdsRelocResolveOffsetCount` **3,629 = 3,629** (same slots, different path);
+   normalizer counters 245 = 245, 225 = 225, 1,609 = 1,609; allocation
+   1,069 = 1,069; acquisition totals identical at 355; `gNdsBattlePackHits` 197
+   against a control reading 0 — and now 999/999 over a five-minute match.
+   The damage invariant is a whole-match integrator over 3,600 logic ticks and two
+   CPUs, and this repository has measured it flip on **one poked bit**
+   (`route-ab-cannot-price-gameplay-change`), so it is a sensitive oracle, not a
+   smoke test.
+
+**The residual gap, named rather than argued away: coverage.** Tier 2 exercises
+only the clips a match actually asks for. Clips the pack holds but no match has
+requested are covered by tier 1 alone — and tier 1 is exactly the test that could
+not see the 4c bit-order stage until a ROM data abort found it. The cheapest thing
+that closes it is not a new oracle but a **distinct-packed-clip counter** on the
+pack-hit path, compared against the pack's clip count; one counter, rides any run.
+This cycle's five-minute match already widens the exercised subset ~5x (999 pack
+hits against 197).
+
+**So: phase 6 as worded is retired for slice 1 and replaced by the two tiers
+above plus the coverage counter.** A later cycle that introduces a genuine second
+evaluator — slice 3's compact pose / dirty-joint evaluator — inherits phase 6's
+original wording unchanged, and it will then have two arms.
+
+### 13.3 Slice 2 is sized, and it is not the next mechanism
+
+Bracket re-rank on two independent populations (the banked 1-minute gate arm's 80
+P95 frames and this cycle's 5-minute arm's 423), instrument-artifact frames
+excluded from the *attribution* only:
+
+```text
+SRC = GCRA        84.8% / 85.7%        <- the excess is in gcRunAll because the
+SITR              36.0% / 31.6%           fighter PROCESS BODIES are in gcRunAll
+SHDT              20.5% / 27.0%   (16-17x presence)
+SPHD              15.2% / 11.3%
+SPRM               8.3% / 10.2%   (20-23x presence)
+GCRA-REM           3.6% /  4.4%   (1.17-1.21x)   <- all slice 2 can touch
+draw side          9.3% / 10.7%
+```
+
+Sized directly from the gate-arm v3 capture, the `gcRunAll` scheduler machinery on
+the frames that set P95 is `ndsBaseGcRunAll` 9,550 + `gcRunGObjProcess` 5,988 +
+`gcRunGObj` 1,255 + `gcRunAll` 491 + graph maintenance 502 = **17,786 tk/fr**.
+Against a **+32,593 net** requirement, deleting the scheduler outright is **1.8x
+short**, and a flat vector cannot delete it outright because it still calls each
+process. §K2's justification (*"~90% of the tail excess is inside `gcRunAll`"*) is
+true and does not transfer: it is true because of the process bodies slice 2
+leaves untouched.
+
+**Slice 2 stays a correct architectural direction and is a poor next mechanism.**
+What the ranking points at instead: `SITR` (largest on both populations, never had
+a mechanism priced against it), `SHDT` (16–17x presence, closed only *for the
+mechanisms tried* on a whole-match bar), and the soft-float trio — `__aeabi_fadd`
++ `fmul` + `fdiv` = **99,762 tk/fr on the P95 set**, 3.0x the requirement, 38%
+of it inside the fighter procs.

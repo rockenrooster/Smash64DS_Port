@@ -111,10 +111,29 @@ def main() -> int:
                     help="size of the cadence set (cheapest dropped frames)")
     ap.add_argument("--apparatus", type=int, default=24947,
                     help="approved instrument apparatus, RESIDUE.md section 5")
+    # ATTRIBUTION FALSIFIER, NOT A GATE ADJUSTMENT. plan.md section 0 is
+    # explicit that every banked P95 uses all 1,600 samples with no exclusion,
+    # and this option must never be used to publish one. What it IS for: a
+    # handful of frames in every arm carry an excess of 2^22 ticks (0.125 s) in
+    # whichever single bucket happens to be open, which is enough to hand a
+    # whole bracket's excess to a bucket that did no work
+    # (artifacts/performance/2026-08-15_k0-rerank/). Re-running the ranking
+    # without them says whether an owner is real or is one frame.
+    ap.add_argument("--drop-frames", default="",
+                    help="comma-separated frame numbers to exclude from the "
+                         "ATTRIBUTION only; never for a banked percentile")
     ap.add_argument("--json", type=Path, default=None)
     args = ap.parse_args()
 
     rows = load_rows(args.rows)
+    dropped_frames = [int(f) for f in args.drop_frames.split(",") if f.strip()]
+    if dropped_frames:
+        keep = set(dropped_frames)
+        removed = [r["frame"] for r in rows if r["frame"] in keep]
+        rows = [r for r in rows if r["frame"] not in keep]
+        print("EXCLUDED {} frame(s) from the attribution: {}".format(
+            len(removed), ",".join(str(f) for f in removed)))
+        print("         percentiles below are NOT bankable -- plan.md section 0")
     n = len(rows)
     for r in rows:
         r["VBI"] = int(round(r["ALL"] / VBLANK_TICKS))
