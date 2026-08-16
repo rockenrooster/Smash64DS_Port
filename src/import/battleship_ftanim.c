@@ -283,7 +283,28 @@ static inline f32 ndsR2AnimFramesSlot(u32 n, f32 as_float, u32 q)
 
 /* `-anim_wait - anim_speed`, the segment's starting phase. Loop-invariant
  * across the flag scan, and two soft-float operations, so the Q form converts
- * it once per event rather than once per track. */
+ * it once per event rather than once per track.
+ *
+ * REGRESSION, FOUND AND REPAIRED 2026-08-15. `69ce92e279f` (Requirement 4)
+ * introduced `len_new` and hoisted this call out of the per-track loop in ALL
+ * FOUR write cases, but added the assignment to only ONE of them
+ * (`SetVal0Rate{,Block}`). The other three -- `SetVal{,Block}`,
+ * `SetValRate{,Block}` and `SetValAfter{,Block}` -- kept reading `len_new`,
+ * which is a function-local reset to `0.0F` on every call. The decomp writes
+ * `-anim_wait - anim_speed` fresh in each of the four cases
+ * (`decomp/.../ft/ftanim.c:158/193/232/293`) and so did this file before
+ * `69ce92e279f` (four identical expressions at :334/:375/:415/:476).
+ *
+ * SIZE OF THE DIVERGENCE, from the items-off Mario/Fox corpus
+ * (`generate_ftanim_track_pack.py --items-off`): opcodes 4+5 are 45,679 of the
+ * 55,261 write commands = **82.7%**, and they are in the case that never
+ * assigned. Only opcodes 7+8 (5,210 = 9.4%) ever set it. So on a typical
+ * stepping call every new segment started at phase `0` instead of
+ * `-anim_wait - anim_speed`, and `gcPlayDObjAnimJoint`'s `length += speed`
+ * then put the first evaluated sample one whole frame INTO the segment. The
+ * three assignments are restored below; keep them per case rather than hoisting
+ * to the top of the loop body, because `Block`, `Loop`, `End`, `SetTargetRate`
+ * and `AddLen` must not pay for a value they never read. */
 static inline f32 ndsR2AnimSegmentStart(const DObj *root_dobj, u32 q)
 {
     f32 v = -root_dobj->anim_wait - root_dobj->anim_speed;
@@ -489,6 +510,22 @@ static void ndsR2AnimBuildTrackTable(DObj *root_dobj, AObj **track_aobjs,
         }                                                                    \
     } while (0)
 
+/* Stage 3 exports. The dense track runtime (`src/nds/nds_ftanim_track.c`) does
+ * the same two things, so they stay ONE body here rather than two that can
+ * drift: the Q migration -- which the dense binder runs once per clip bind
+ * instead of once per stepped call -- and the script-exhausted tail `End` runs
+ * over the whole AObj list. Both are `q = 1` unconditionally, because the dense
+ * path only exists under `NDS_R2_CUBIC_FIXED`. */
+void ndsR2FtAnimAObjToQ(AObj *a)
+{
+    ndsR2AnimAObjToQ(a);
+}
+
+void ndsR2FtAnimAdvanceTailQ(DObj *root_dobj)
+{
+    ndsR2AnimAdvanceTail(root_dobj, 1u);
+}
+
 void ndsR2FtAnimParseDObjFigatree(DObj *root_dobj)
 {
     AObj *track_aobjs[nGCAnimTrackJointEnd - nGCAnimTrackJointStart + 1];
@@ -607,6 +644,7 @@ void ndsR2FtAnimParseDObjFigatree(DObj *root_dobj)
             case nGCAnimEvent16SetVal:
                 flags = root_dobj->anim_joint.event16->command.flags;
                 NDS_R2_FTANIM_PAYLOAD();
+                len_new = ndsR2AnimSegmentStart(root_dobj, q);
 
                 for (i = 0; i < (s32)ARRAY_COUNT(track_aobjs);
                      i++, flags = flags >> 1)
@@ -667,6 +705,7 @@ void ndsR2FtAnimParseDObjFigatree(DObj *root_dobj)
             case nGCAnimEvent16SetValRate:
                 flags = root_dobj->anim_joint.event16->command.flags;
                 NDS_R2_FTANIM_PAYLOAD();
+                len_new = ndsR2AnimSegmentStart(root_dobj, q);
 
                 for (i = 0; i < (s32)ARRAY_COUNT(track_aobjs);
                      i++, flags = flags >> 1)
@@ -734,6 +773,7 @@ void ndsR2FtAnimParseDObjFigatree(DObj *root_dobj)
             case nGCAnimEvent16SetValAfter:
                 flags = root_dobj->anim_joint.event16->command.flags;
                 NDS_R2_FTANIM_PAYLOAD();
+                len_new = ndsR2AnimSegmentStart(root_dobj, q);
 
                 for (i = 0; i < (s32)ARRAY_COUNT(track_aobjs);
                      i++, flags = flags >> 1)
