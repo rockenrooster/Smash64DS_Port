@@ -92,6 +92,158 @@ CALLS ZERO** (a build default has no pre-poke frame). `Saturate`/`Degenerate`/
 > `build-c200-trackprof-off` at `GX_COMPOSE=1`. Quoting a stale split is what
 > made `MENU.md`'s 94,602 wrong for fourteen cycles.
 
+## `SITR` IS A CALL-COUNT EVENT, NOT A COST — 288 FRAMES, 72,768 AT RANK-80 (2026-08-16) — `artifacts/performance/2026-08-16_sitr-excursion/SITR_EXCURSION.md`
+
+**1 lab build (`build-c221-sitrprof`), 1 v3 capture, 2 counter runs on the
+existing basis ROM. 0 production source edits, 0 defaults flipped, nothing
+published, both root ROMs byte-unchanged. The level is unmoved at +65,297.**
+
+**THE INHERITED CLUSTER FIGURES RESTATE ON THE CURRENT BASIS.** `IO_AUDIT.md`
+§5's `SITR` 27 frames / 231,264 / **−51,200** were measured on
+`build-c219-animitcm-ship`. Re-derived on `build-c220-camship` by both of its
+methods, with the leaf closure exact on all 1,600 rows and rank-80 reproducing
+1,210,624 / +65,297: **25 frames, median own excess 227,968, median `SITR`
+332,288 against a run median of 104,320 = 3.19×, exact re-rank 45,056 → level
++20,241.** Cluster sizes are now `SHDT` 32 / **`SITR` 25** / `SPRM` 8 / `SPHD` 8
+/ `MISC` 4 / **`AUD` 3** (new). **Quote 3.19× for `SITR`, not 57×** — 57.69× is
+`SHDT`'s, whose run median is 4,608.
+
+**THE MECHANISM, from the first per-PC census ever taken in the SHIPPING
+configuration** (`build-c221-sitrprof`; its `nds_build_config.h` differs from the
+basis in **four lines**, all of them the profiler or the git string —
+`config-diff.txt`. `GX_COMPOSE 0`, `FTANIM_TRACK 0`, `CAMERA_FIXED 1`. Every
+prior census — c200, c191, c192 — was `GX_COMPOSE=1` and/or `FTANIM_TRACK=1`, the
+caveat `ANIM_ITCM.md` §2 and `ITCM_CENSUS.md` §1 both had to carry.)
+
+Entry-PC call rates, per frame, on the 288 attach/force-load frames against the
+other 1,313:
+
+| symbol | event-288 | rest | ratio |
+|---|---:|---:|---:|
+| `ftMainProcUpdateInterrupt` (the `SINT` root) | **4.00** | **3.87** | **1.03×** |
+| `battleship_ftMainSetStatus` | 1.22 | **0.00** | 798× |
+| `lbCommonAddFighterPartsFigatree` | 1.22 | **0.00** | ∞ |
+| `ndsRelocAssetIDForToken` | 2.61 | **0.00** | ∞ |
+| **`gcAddDObjAnimJoint`** | **22.06** | 0.35 | **62.4×** |
+| `ndsR2FtAnimParseDObjFigatree` | 100.83 | 63.69 | 1.58× |
+| `ndsR2AnimValueQ` | 386.15 | 242.05 | 1.60× |
+| `ndsR2AnimBuildTrackTable` | 37.05 | 13.09 | 2.83× |
+| `ndsR2AnimTargetValue` | 253.20 | 39.80 | **6.36×** |
+| `ndsR2AnimAObjToQConvert` | 208.99 | 16.48 | **12.68×** |
+
+> **The bracket's own root is entered 1.03× as often**, so nothing about the
+> excursion is "the frame ran more simulation". A fighter changes status;
+> `ftMainSetStatus` resolves the new clip through `ndsRelocAssetIDForToken` — a
+> ~110-branch linear `if`-chain plus two pointer scans over 143 + 158 animation
+> ids, **1,578 ticks per call**, whose own source header already says *"remove
+> this work … or move it off the gameplay frame entirely"* — then attaches it
+> **joint by joint, 22.06 times**, and the attach re-runs the entire per-joint
+> animation pipeline inside the same presented frame.
+
+**THE LEVER: 288 of 1,600 frames (18%) carry an attach or a force-load, they hold
+81.2% of the run's whole `SITR` excess, and clearing it is worth 72,768 at
+rank-80 — level +65,297 → −7,471, i.e. 1.11× the entire remaining requirement.**
+On those frames **only `SITR` moves**: 1.77× against `SCPU` 0.87×, `FTR` 1.00×,
+`STG` 1.00×, `SHDT` 1.01×, `GCRARES` 1.03×, `SPHD` 1.08×. Shape per event frame:
+**ANIM parse +28,094, ANIM evaluate +26,813, ATTACH chain +23,801**, card I/O
++15,576, memory movers +14,319, soft float +6,028. Ceiling from an exact re-rank,
+not an implementation.
+
+| candidate route | size on the 288 | note |
+|---|---:|---|
+| `ndsRelocAssetIDForToken` — replace the linear chain | **+4,118 tk/fr** at 2.61 calls | pure lookup, cannot change behaviour; smallest and most self-contained |
+| per-joint quantisation (`ndsR2AnimTargetValue` + `…AObjToQConvert`) | +6,246 tk/fr | re-derives `arg × 2^-k` from constant `s16` on every attach |
+| the re-attach itself (`gcAddDObjAnimJoint` 22.06/fr) | ~half of +54,907 | **gameplay question — BattleShip source must answer whether the new clip must be evaluated in the same logic tick. Not proposed.** |
+
+**REFUTED: "the force-load is the owner."** Over all 1,600 frames the attach
+(r=+0.623) and the *stepped* parse (r=+0.650) outrank the force-load (r=+0.487)
+and the card read (r=+0.549); **10 of the 25 cluster frames carry no force-load**;
+and the implied per-load `SITR` cost still falls with count (+122,931 / +96,777 /
++68,794 for 1 / 2 / 3 loads), reproducing `IO_AUDIT.md` §4 on a new basis.
+
+**RULED OUT, each measured:** the `2^22` artifact (2 corrected samples, frames
+1464 and 1849, neither a cluster frame); the HUD refresh (r=+0.058; the 114
+HUD frames read `SITR` median 104,384 against a run median of 104,320); the draw
+side (`FTR` 1.00× on the 288); extra logic ticks (root entry rate 1.03×).
+`gNdsFTComputerStatusChangeCount` and `gNdsR2FtAnimRecipMisses` read **0** for the
+whole run and `gNdsFighterStructStatusSetCount` is **never incremented anywhere in
+the tree** — three dead counters, named so nobody spends a run on them.
+
+**THE ALIGNMENT WAS RE-MEASURED, NOT INHERITED.** `region = frame − 439`: the 7
+card-read frames land at median profile rank **12** of 1,601 there and 315–699 at
+every other offset in 434…444, and `r`(profile non-idle, tick-HUD `WORK-H`) is
+**+0.694** at 439 against +0.342 at 438. The 7 card-read frames are **456, 830,
+1015, 1186, 1625, 1655, 1886** — the identical list `IO_AUDIT.md` §1.1 measured on
+`c219`, so the load events belong to the match, not to the binary.
+
+**BY-PRODUCT — the draw-side per-PC census the board asked for now exists.**
+`v3-c221` is `GX_COMPOSE=0` at 1,600 frames, which is what a precise
+re-derivation of the stale soft-float split needs. Not re-derived here.
+
+**OPEN.** The 4 cluster frames with *no* counter movement (530, 989, 991, 1302)
+are diagnosed only to "the simulation, not the draw" — their `SCPU` reads 2.25×
+and that is unexplained.
+
+## THE `frsub` EVICTION DOES NOT EXIST, AND THE BIND ITEM IS SEVENTH (2026-08-16) — `artifacts/performance/2026-08-16_itcm-frsub/ITCM_FRSUB.md`
+
+**0 builds, 0 emulator runs for this item.** `nm`/`objdump` over ELFs in
+`builds/`, joined to a per-PC CSV already on disk.
+
+**`ITCM_CENSUS.md` §3's unreachability proof STANDS. Its eviction does not.** The
+mechanism it names — listing the member in `NDS_TASK9_FLOAT_MAIN_MEMBERS` —
+operates on `_arm_addsubsf3.o`, and that member is **one 0x2ac = 684-byte `.itcm`
+input section**:
+
+```text
+0x000..0x1c8  456 B  __aeabi_frsub / __subsf3 / __addsf3     DEAD, 0 executing PCs
+0x1c8..0x2ac  228 B  __aeabi_ui2f / __floatsisf / __aeabi_ul2f / __aeabi_l2f
+                     LIVE: 42 executing PCs, 2,396.6 instr/frame whole match,
+                     3,544.7 tk/fr on the marginal-80, from zero-wait ITCM today
+```
+
+`--rename-section` and the `<stem>.mainram.o` filename both act on the whole
+member and **a linker cannot split an input section: 684 bytes move or none do.**
+`__aeabi_ui2f` has **99 call sites in 21 functions**; `__aeabi_l2f` is called from
+`ndsRendererHardwarePrepareLitDirection`. `build-c221-sitrprof`'s shipping-config
+census confirms it: `__aeabi_l2f` **3,016,910 cycles**, `__floatsisf` 876,227,
+`__aeabi_ui2f` 456,083, against `__aeabi_frsub` and `__addsf3` at **0**. So the
+eviction is not "zero ticks on its own" — it is an unmeasured placement
+regression bought to free space. **NOT TAKEN, and it should not be by this
+mechanism.** The 456 B is not separable by any tool in the toolchain; the only
+route left is hand-authoring replacements for three shared soft-float leaves,
+which is refused.
+
+**THE BIND ITEM RANKS SEVENTH ON ITS OWN METRIC.** Ranking every `.main` symbol of
+16–800 bytes by marginal-80 `icache_fill` tk/fr per resident byte — the metric
+`ANIM_ITCM.md` §6 used — `ndsRendererHardwareBindTextureName` (14.19) sits behind
+`__syscall_getreent` 39.20, `DynamicArrayGet` 39.06, **`ftGetStruct` 32.59**,
+`ndsStageCollisionLoopGeometryReady` 27.62, `__aeabi_lmul` 26.27,
+`get_fat.isra.0` 24.33 and `ndsR2AnimBuildTrackTable` 22.52. `v3-c221`'s own
+census §D agrees from the campaign's own tooling. **ITEM B NOT BUILT** — the
+cycle's budget went to the item twelve times larger.
+(`cpuGetTiming` 70.97 and `tickGetCount` 38.32 are the tick-HUD **apparatus** and
+are excluded; moving them changes the instrument, not the product.)
+
+**THE FREE-SPACE ROUTE THAT IS ACTUALLY AVAILABLE, premise now closed.** Four
+port-side ITCM residents execute **zero instructions in the SHIPPING
+configuration** (`v3-c221/census.txt`, not the old `GX_COMPOSE=1` census):
+`ndsRendererNativeEmitDenseRawRun` 256, `ndsRendererNativeApplyStateSpan` 192,
+`…EmitProductionRawTexturedRun` 128, `…EmitProductionRawUntexturedRun` 112 =
+**688 B**, plus `ndsFTParamsInvalidateFighterParts` 54. One-line
+`NDS_TASK82_ITCM_CODE` removal each; none is pinned by
+`check-renderer-itcm-placement.ps1`. Instrument free **220 → 908 B**, proof ROM
+**2,572 → 3,260**. **NOT TAKEN** — it needs its own build and Boundary.
+
+> **The census's own "+1,858 B recoverable by eviction" over-counts by 456**: that
+> figure is symbol-level and includes the frsub blob, which no available mechanism
+> can take.
+
+> **`gcPlayDObjAnimJoint` (604 B, 8,218.6 marginal icache) now fits a freed
+> budget**, and `linker/nds_hot_text.ld:180-200` prohibits exactly that move on a
+> Task 94 verdict taken on a **128-frame window** and as a **cross-build** pair —
+> the instrument retired 2026-08-04 and the comparison class with a ≥14,080 floor.
+> Recorded as re-testable **by the same-binary route method only**. Not re-opened.
+
 ## ITCM IS 44.3% COLD, AND THE FIXED-POINT PLACEMENT OBJECTION RUNS THE OTHER WAY (2026-08-16) — `artifacts/performance/2026-08-16_itcm-census/ITCM_CENSUS.md`
 
 **0 builds, 0 emulator runs.** `nm`/`objdump` over ELFs already in `builds/`

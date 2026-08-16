@@ -1,0 +1,7 @@
+source=artifacts/performance/2026-08-16_sitr-excursion/v3-c221/arm9-profile.csv
+rows=54400815
+distinct_pcs=102018
+regions=1601
+alignment=region = frame - 439 (align.py: card anchor median profile rank 12)
+mask sizes: whole=1601 sitr25=25 event288=288 quiet=773 card=7
+cycles_per_tick=2

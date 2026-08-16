@@ -1,0 +1,99 @@
+SITR EXCURSION, PER SYMBOL -- profile build-c221-sitrprof
+(c220 config + the profiler; config-diff.txt is 4 lines and all 4 are the
+profiler or the git string, so this is the first per-PC census taken in the
+SHIPPING configuration: GX_COMPOSE 0, FTANIM_TRACK 0, CAMERA_FIXED 1)
+window 1,600 presented frames 439-2038, regions=1601
+alignment region = frame - 439, MEASURED (align.py): the 7 card-read frames land
+at median profile rank 12 of 1601 there and 315-699 at every other offset in
+434..444; r(profile non-idle, tick-HUD WORK-H) = +0.694 at 439, +0.342 at 438,
++0.338 at 440.  2 profile cycles = 1 project tick.
+
+MASKS  event288 = every frame carrying a figatree attach or an animation
+                  force-load (per-frame counters, offset measured at +1)
+       rest     = the other 1,313 frames, derived (whole*1601-event*288)/1313
+       quiet    = 773 below-median-WORK-H frames carrying neither event
+       sitr25   = the 25 over-gate frames whose dominant excess leaf is SITR
+
+symbol                                                event288      rest     DELTA     quiet    sitr25 icache d
+armWaitForIrq  (IDLE)                                   247451    228235     19217    260026    435573        0
+ndsR2FtAnimParseDObjFigatree                             28853     11262     17591     10270     28014     8330
+ndsR2AnimValueQ                                          25066     16024      9041     14912     24987      144
+gcPlayDObjAnimJoint                                      26611     18641      7970     17508     26935     2926
+memcpy                                                   21094     13911      7183     13260     29391       59
+battleship_ftMainSetStatus                                6660         2      6658         0      6028     2346
+ftParamUpdateAnimKeys                                    14500      9696      4804      9098     14526     1383
+gcAddDObjAnimJoint                                        4618        78      4540         0      4246      475
+armCopyMem32                                              5243       955      4288       630     14583        3
+ndsR2AnimBuildTrackTable.constprop.0.isra.0               6939      2681      4257      2439      7226     1188
+ndsRelocAssetIDForToken                                   4118         0      4118         0      4460     2023
+ndsR2AnimTargetValue.constprop.0                          4587       971      3615       858      4272     1388
+__aeabi_fadd                                             34116     30535      3581     23781     45560      156
+get_fat.isra.0                                            4120       835      3285       577     14254     2248
+lbCommonAddFighterPartsFigatree                           3082         0      3082         0      2733      695
+ndsR2AnimAObjToQConvert                                   2970       340      2631       324      2790     1235
+memset                                                   15792     13330      2462     12747     17020       14
+ndsFTParamsInvalidateSubtree                              8322      6137      2185      5738      8629      516
+f_lseek                                                   2597       518      2079       355      9026     1648
+ndsDrawSObjIntoPreview                                    1970         0      1970         0         0      902
+gcParseMObjMatAnimJoint                                   6111      4296      1815      4041      6072      766
+ndsPlatformCommitOriginalSpritePreviewLayer               1690         0      1690         0         0      800
+ndsAudioFgmPlayAtPan                                      1609       103      1506        27      3424      513
+ndsRelocSetStatusBufferFile                               1401         0      1401         0      1457      596
+ndsRelocNormalizeFighterAObj16File                        1384         0      1384         0     13736      630
+_svfiprintf_r                                             3462      2101      1361      1910      1886      851
+mutexUnlock                                               1688       334      1354       271     10864      947
+__mulsf3                                                 18724     17423      1300     13535     25883       77
+ndsBattlePackContains                                     1330        32      1299         5      1179      543
+lbRelocGetForceExternHeapFile                             1106         0      1106         0      1253      589
+ndsRelocResolvePointerFromFileBase                        1101        16      1085         0       935      415
+ndsBaseGcPlayMObjMatAnim                                  6398      5320      1078      5093      6531      513
+mutexLock                                                 1404       351      1052       292      7798      738
+ndsRelocFindLoadedFileContaining                          2271      1239      1032      1107      3034      410
+ndsR2AnimAdvanceTail.constprop.0                          1031        21      1009        21       766      193
+f_read                                                    1091        88      1003        58      7983      738
+_dvmDiscCacheReadWrite                                    1105       189       916       119      3478      608
+ftGetStruct                                               8862      7991       872      7664      9083      332
+ndsRelocRemoveFighterAObj16StatusAliases.part.0            851         0       851         0      1267      376
+ndsFighterMarioFoxDLAllDrawForSlot.constprop.0           29803     29005       798     28024     30513      246
+
+NEGATIVE DELTAS (cheaper on an event frame)
+ndsWhispyAOTStructFuncRunLean.isra.0                      2206      2495      -289      1911      2349         
+ftComputerGetObjectiveStatus                              1602      1905      -303      1709      1977         
+ftComputerFollowObjectiveWalk                             1076      1433      -357      1298      1354         
+ndsRendererSubmitWhispyNativeQuad                         1312      1806      -494       926      1798         
+mpCollisionGetFCCommonFloor                              10348     11099      -751      9307     14321         
+ndsPlatformRenderDebugHud                                10917     13177     -2260     12073       771         
+
+GROUPED, tk/fr  (each symbol counted once)
+group                                                        event288       rest      DELTA sitr25-rest
+ATTACH chain (status transition -> figatree attach)             30169       6368      23801      39797
+ANIM parse (re-derives AObj fields from static FIGATREE bytes)      43349      15255      28094      27047
+ANIM evaluate                                                   87043      60230      26813      27617
+CARD I/O stack (FAT + NitroFS + newlib + calico locks)          19487       3910      15576      93578
+SOFT FLOAT leaves                                               70507      64479       6028      28000
+MEMORY movers                                                   43666      29347      14319      32498
+everything else (non-idle)                                     819930     773561      46369     110469
+TOTAL non-idle                                                1114150     953150     161001     359006
+armWaitForIrq (idle)                                           247451     228235      19217     207339
+
+ENTRY-PC CALL RATES, calls per frame.  The profiler is instruction-accurate, so
+the instruction count at a function entry PC is exactly its call count.
+symbol                                                 event288       rest     sitr25      whole    ratio
+battleship_ftMainSetStatus                                 1.22       0.00       1.08       0.22  797.83x
+lbCommonAddFighterPartsFigatree                            1.22       0.00       1.08       0.22      inf
+gcAddDObjAnimJoint                                        22.06       0.35      19.44       4.26   62.41x
+ndsRelocAssetIDForToken                                    2.61       0.00       3.16       0.47      inf
+ndsRelocNormalizeFighterAObj16File                         0.49       0.00       0.92       0.09      inf
+ndsRelocSetStatusBufferFile                                2.43       0.00       2.16       0.44      inf
+ndsR2FtAnimParseDObjFigatree                             100.83      63.69     100.48      70.37    1.58x
+ndsR2AnimBuildTrackTable.constprop.0.isra.0               37.05      13.09      37.72      17.40    2.83x
+ndsR2AnimTargetValue.constprop.0                         253.20      39.80     231.68      78.19    6.36x
+ndsR2AnimAObjToQConvert                                  208.99      16.48     191.80      51.11   12.68x
+gcPlayDObjAnimJoint                                      100.91      64.04     100.64      70.67    1.58x
+ndsR2AnimValueQ                                          386.15     242.05     382.32     267.97    1.60x
+ftParamUpdateAnimKeys                                      5.65       3.71       5.60       4.06    1.52x
+get_fat.isra.0                                           176.09      36.10     612.40      61.28    4.88x
+ftMainProcUpdateInterrupt                                  4.00       3.87       4.00       3.89    1.03x
+battleship_ftMainProcUpdateInterrupt                       4.00       3.87       4.00       3.89    1.03x
+ftComputerProcessAll                                       4.00       3.87       4.00       3.89    1.03x
+ftMainPlayAnim                                             5.65       3.71       5.60       4.06    1.52x

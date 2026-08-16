@@ -1,0 +1,66 @@
+=== 1. _arm_addsubsf3 IS ONE 684-BYTE SECTION, NOT A 456-BYTE BLOB ===
+builds/build-c220-camship/_arm_addsubsf3.itcm.o  (the extracted libgcc member as built)
+Sections:
+Idx Name          Size      VMA       LMA       File off  Algn
+  0 .itcm         000002ac  00000000  00000000  00000034  2**2
+                  CONTENTS, ALLOC, LOAD, RELOC, READONLY, CODE
+
+00000000 000001c8 T __aeabi_frsub
+00000008 000001c0 T __nds_task16_libgcc_fsub_golden
+00000008 000001c0 T __subsf3
+0000000c 000001bc T __addsf3
+0000000c 000001bc T __nds_task16_libgcc_fadd_golden
+000001c8 00000028 T __aeabi_ui2f
+000001c8 00000028 T __floatunsisf
+000001d0 00000020 T __floatsisf
+000001d0 00000020 T __nds_task16_libgcc_i2f_golden
+000001f0 000000bc T __aeabi_ul2f
+000001f0 000000bc T __floatundisf
+00000200 000000ac T __aeabi_l2f
+00000200 000000ac T __floatdisf
+
+=== 2. THE SAME LAYOUT IN THE LINKED BASIS IMAGE (build-c220-camship) ===
+01ff8020 000001c8 T __aeabi_frsub
+01ff8028 000001c0 T __nds_task16_libgcc_fsub_golden
+01ff8028 000001c0 T __subsf3
+01ff802c 000001bc T __addsf3
+01ff802c 000001bc T __nds_task16_libgcc_fadd_golden
+01ff81e8 00000028 T __aeabi_ui2f
+01ff81e8 00000028 T __floatunsisf
+01ff81f0 00000020 T __floatsisf
+01ff81f0 00000020 T __nds_task16_libgcc_i2f_golden
+01ff8210 000000bc T __aeabi_ul2f
+01ff8210 000000bc T __floatundisf
+01ff8220 000000ac T __aeabi_l2f
+01ff8220 000000ac T __floatdisf
+
+  next resident after the member:
+01ff82cc 00000198 T __aeabi_fmul
+01ff82cc 00000198 T __mulsf3
+
+=== 3. c200 PER-PC EXECUTION OVER THE TWO HALVES (same addresses in c200 and c220) ===
+source: artifacts/performance/2026-08-15_ftanim-dispatch-attribution/c200-off-pc.csv
+window: 1,600 presented frames 439-2038, regions=1601, marginal_frames=80, 2 cycles = 1 tick
+
+range                                           bytes   pcs whole instr/fr     marg tk/fr marg icache tk
+DEAD  __aeabi_frsub/__subsf3/__addsf3             456     0            0.0            0.0           0.0
+LIVE  ui2f/floatsisf/ul2f/l2f                     228    42         2396.6         3544.7         151.7
+   __aeabi_ui2f / __floatunsisf                     8     2          158.6          400.6           0.0
+   __floatsisf (shared tail)                       32     6          454.2          737.1          29.5
+   __aeabi_ul2f / __floatundisf                    16     0            0.0            0.0           0.0
+   __aeabi_l2f / __floatdisf                      172    34         1783.7         2407.0         122.2
+
+=== 4. WHO CALLS THE LIVE HALF (objdump -d over the whole c220 ELF, bl/b targets) ===
+__addsf3 : 1 call sites in 1 functions
+        1  __aeabi_frsub
+__aeabi_l2f : 3 call sites in 1 functions
+        3  ndsRendererHardwarePrepareLitDirection
+__aeabi_ui2f : 99 call sites in 21 functions
+       17  lbParticleUpdateStruct.part.0
+       14  ndsOpeningRoomRecordDObjDraw
+       14  ndsRendererAdapterPrepareMaterialSegment.isra.0
+       14  ndsRendererAdapterBuildNativeMaterialSnapshot
+        8  gcParseMObjMatAnimJoint
+        6  gcParseDObjAnimJoint
+        5  gcParseCObjCamAnimJoint
+        3  mnTitleInitVars

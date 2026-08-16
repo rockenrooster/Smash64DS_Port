@@ -1,0 +1,44 @@
+ITCM ADMISSION CANDIDATES, RANKED BY THE SAME METRIC ANIM_ITCM.md section 6 USED
+(marginal-80 icache_fill ticks/frame per resident byte)
+
+source   : artifacts/performance/2026-08-15_ftanim-dispatch-attribution/c200-off-pc.csv
+symbols  : builds/build-c200-trackprof-off/...-tickhud-hwtri.elf (nm -S)
+window   : 1,600 presented frames 439-2038, regions=1601, marginal_frames=80
+units    : 2 profile cycles = 1 project tick
+filter   : .main only (>=0x02000000), 16..800 resident bytes
+CAVEAT   : c200 is GX_COMPOSE=1 / FTANIM_TRACK=1; the ship is 0 / 0.  These are SIZES,
+           not predictions, and the renderer rows carry that caveat most.
+APPARATUS: the tick-HUD instrument's own timing leaves are marked (*) -- moving them
+           changes the apparatus, not the product, so they are NOT candidates.
+
+symbol                                              bytes marg ic tk marg tot tk      tk/B whole ic tk
+cpuGetTiming                                           24     1703.3     2824.6     70.97     1497.4  (*)
+__syscall_getreent                                     20      784.0     1196.0     39.20       83.8
+DynamicArrayGet                                        22      859.4     1229.6     39.06      836.6
+tickGetCount                                           92     3525.2     8802.8     38.32     3189.3  (*)
+ftGetStruct                                            92     2998.5     4161.2     32.59     2665.6
+ndsStageCollisionLoopGeometryReady                     68     1878.0     3952.4     27.62     1441.1
+__aeabi_lmul                                           86     2259.5     2768.5     26.27     1445.3
+get_fat.isra.0                                        352     8562.6    12515.8     24.33      979.7
+read                                                   28      661.6      709.7     23.63       37.3
+ndsR2AnimBuildTrackTable.constprop.0.isra.0            72     1621.4     4484.3     22.52      818.6
+lbCommonSin                                            56     1044.7     2006.2     18.66      336.6
+mutexUnlock                                           188     3461.1     5000.4     18.41      315.0
+ndsBaseGcRunAll                                       120     2202.4     6137.7     18.35     2066.2
+glGetTexParameter                                      32      582.5     1351.5     18.20      565.4
+glBindTexture                                          92     1645.8     3769.2     17.89     1560.4
+ndsFighterDisplayContractCountFlags                    56      907.4     2201.1     16.20      907.0
+ndsRendererAdapterMarkDisplayProcHeads                108     1598.2     2736.5     14.80     1510.9
+ndsRendererHardwareBindTextureName                    268     3802.1     6100.8     14.19     3514.5
+__libc_lock_release                                    24      337.0      589.2     14.04       25.9
+gcRunGObjProcess                                      160     2234.4     3696.5     13.96     1987.7
+sqrtf                                                 220     3064.4     5879.8     13.93     2065.3
+lbCommonCos                                            64      887.8     1063.3     13.87      298.0
+gcPlayDObjAnimJoint                                   604     8218.6    15323.7     13.61     6179.0
+ndsRendererNativeStageLoadNoZMatrix                   512     6670.5    12547.1     13.03     6679.2
+__libc_lock_acquire                                    24      310.8      589.9     12.95       25.4
+__getreent                                             32      411.8      821.2     12.87       66.9
+ndsRendererAdapterFindStageWorldEntry                 100     1271.8     2354.9     12.72     1242.3
+__clzsi2                                               72      745.3     1111.5     10.35      447.6
+_FAT_read_r                                           124     1280.7     1552.9     10.33       78.8
+ndsFtAnimTrackIsDense                                  32      315.9      554.7      9.87      241.5

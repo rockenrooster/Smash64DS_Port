@@ -1,0 +1,32 @@
+WARNING: cpuGetTiming() 2^22 timer-overflow artifact detected and CORRECTED on 2 of 1600 samples (one subtraction of 4,194,304 per affected bucket). The run's ALL median after correction is 1,117,632; a corrected value far from it would mean the row was a real stall and the correction wrong, so check these against it:
+  frame 1464: ALL 5,872,448 -> 1,678,144, 2 bucket(s) corrected
+  frame 1849: ALL 5,311,296 -> 1,116,992, 1 bucket(s) corrected
+Wrote artifacts\performance\2026-08-16_sitr-excursion\pf220b-rows.csv
+Tick-HUD buckets: target=smash64ds-battle-playable-tickhud-hwtri samples=1600 frames=438..2037 melonDS=1.0 sha=DE80E46BDCF1FD98 git=31c4bca3922+dirty(5) dldi=ON
+
+bucket p50        p95        spread mean       min        max        %ALLp50
+------ ---        ---        ------ ----       ---        ---        -------
+ALL     1,117,632  1,678,144   1.50  1,212,791  1,116,544  3,358,656   100.0
+FTR       290,432    294,272   1.01    278,906    164,672    326,784    26.0
+STG       175,424    183,040   1.04    176,869    171,200    189,504    15.7
+BG          4,288      4,352   1.01      4,280      3,968      4,480     0.4
+AUD         2,688      7,360   2.74      8,735      1,152    156,480     0.2
+HUD         1,088    416,128 382.47     35,203        896  2,124,864     0.1
+SRC       334,208    575,424   1.72    355,939     11,072  4,729,536    29.9
+MISC      107,840    177,152   1.64    115,894     82,496  4,379,456     9.6
+OTHR      224,832    479,872   2.13    242,207     20,672    581,056    20.1
+WAIT      205,184    460,224   2.24    222,384        896    560,064    18.4
+WORK      944,768  1,366,080   1.45    995,650    667,456  5,742,976    84.5
+SHDT        4,608     80,320  17.43     14,570          0    452,480     0.4
+SWRM          960      1,088   1.13        980        832      1,152     0.1
+GCRA      328,896    569,792   1.73    350,440      6,784  4,724,352    29.4
+SCPU       53,696    111,744   2.08     48,097          0    144,256     4.8
+SCAT        1,344      1,536   1.14      1,313          0      1,728     0.1
+SPRM        2,112      2,304   1.09      4,944          0    589,952     0.2
+SINT      161,472    294,144   1.82    165,714          0    956,480    14.4
+SPHD       72,128    108,800   1.51     72,001          0    463,232     6.5
+SPHC          704        832   1.18        672          0      1,024     0.1
+WORK-H    929,408  1,211,200   1.30    960,447    659,072  5,323,072    83.2
+
+named=975,826 (80.5% of ALL)  VBI 2:1730 3:282 4:17 5+:8 max:19 total:2037  slips=0
+Wrote artifacts\performance\2026-08-16_sitr-excursion\pf220b.json

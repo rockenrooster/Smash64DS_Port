@@ -1,0 +1,6 @@
+54c07fac80c50418949908701f7c2bdbf27512c5f96ac09086fabbb0df6ac68a  smash64ds.nds
+6c939434c53c9b3a76ff016540b810a84f207b1a4e24540b8653b15717367c99  smash64ds-battle-playable-hwtri.nds
+Both hashed after the cycle's only build (build-c221-sitrprof, a lab tick-HUD instrument).
+Neither file was rebuilt: mtimes are 2026-08-09 08:47:36 and 2026-08-15 17:48:21, both before
+this session. The hashes are identical to the ones ../2026-08-16_camera-ship/CAMERA_SHIP.md
+section 8 recorded.

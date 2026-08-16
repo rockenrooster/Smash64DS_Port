@@ -1,0 +1,400 @@
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:2087:95: warning: unused parameter 'victim_fp' [-Wunused-parameter]
+ 2087 | void ftMainUpdateCatchStatFighter(FTStruct *attacker_fp, FTAttackColl *attack_coll, FTStruct *victim_fp, GObj *attacker_gobj, GObj *victim_gobj)
+      |                                                                                     ~~~~~~~~~~^~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c: In function 'battleship_ftMainUpdateDamageStatFighter':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:2151:9: warning: unused variable 'unused' [-Wunused-variable]
+ 2151 |     s32 unused;
+      |         ^~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c: In function 'ftMainUpdateShieldStatWeapon':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:2245:114: warning: unused parameter 'weapon_gobj' [-Wunused-parameter]
+ 2245 | void ftMainUpdateShieldStatWeapon(WPStruct *wp, WPAttackColl *wp_attack_coll, s32 attack_id, FTStruct *fp, GObj *weapon_gobj, GObj *fighter_gobj, f32 angle, Vec3f *dir)
+      |                                                                                                            ~~~~~~^~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c: In function 'ftMainUpdateShieldStatItem':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:2427:112: warning: unused parameter 'item_gobj' [-Wunused-parameter]
+ 2427 | void ftMainUpdateShieldStatItem(ITStruct *ip, ITAttackColl *it_attack_coll, s32 attack_id, FTStruct *fp, GObj *item_gobj, GObj *fighter_gobj, f32 angle, Vec3f *vec)
+      |                                                                                                          ~~~~~~^~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c: In function 'ftMainUpdateDamageStatGround':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:2593:61: warning: unused parameter 'fighter_gobj' [-Wunused-parameter]
+ 2593 | void ftMainUpdateDamageStatGround(GObj *special_gobj, GObj *fighter_gobj, FTStruct *fp, GRAttackColl *gr_attack_coll, s32 kind)
+      |                                                       ~~~~~~^~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c: In function 'battleship_ftMainProcessHitCollisionStatsMain':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:2785:101: warning: passing argument 4 of 'efManagerDamageNormalLightMakeEffect' makes integer from pointer without a cast [-Wint-conversion]
+ 2785 |                         efManagerDamageNormalLightMakeEffect(&pos, hitlog->attacker_player, damage, NULL);
+      |                                                                                                     ^~~~
+      |                                                                                                     |
+      |                                                                                                     void *
+In file included from D:/Stuff/DevFolder/Smash64DS_Port/include/ef/effect.h:107,
+                 from D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_ftmain.c:14:
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.h:25:96: note: expected 'sb32' {aka 'long int'} but argument is of type 'void *'
+   25 | extern LBParticle* efManagerDamageNormalLightMakeEffect(Vec3f *pos, s32 player, s32 size, sb32 is_static);
+      |                                                                                           ~~~~~^~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:2822:101: warning: passing argument 4 of 'efManagerDamageNormalLightMakeEffect' makes integer from pointer without a cast [-Wint-conversion]
+ 2822 |                         efManagerDamageNormalLightMakeEffect(&pos, hitlog->attacker_player, damage, NULL);
+      |                                                                                                     ^~~~
+      |                                                                                                     |
+      |                                                                                                     void *
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.h:25:96: note: expected 'sb32' {aka 'long int'} but argument is of type 'void *'
+   25 | extern LBParticle* efManagerDamageNormalLightMakeEffect(Vec3f *pos, s32 player, s32 size, sb32 is_static);
+      |                                                                                           ~~~~~^~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c: In function 'battleship_ftMainSearchHitFighter':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:3049:61: warning: suggest parentheses around '&&' within '||' [-Wparentheses]
+ 3049 |                         if ((this_fp->ga == nMPKineticsAir) && (other_attack_coll->is_hit_air) || (this_fp->ga == nMPKineticsGround) && (other_attack_coll->is_hit_ground))
+      |                             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:3084:98: warning: suggest parentheses around '&&' within '||' [-Wparentheses]
+ 3084 |                         if ((this_fp->throw_gobj == NULL) || (other_gobj != this_fp->throw_gobj) && (((gSCManagerBattleState->is_team_battle != TRUE) || (gSCManagerBattleState->is_team_attack != FALSE)) || (((other_fp->throw_gobj != NULL) ? other_fp->throw_team : other_fp->team) != this_fp->throw_team)))
+      |                                                              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:3094:74: warning: suggest parentheses around '&&' within '||' [-Wparentheses]
+ 3094 |                                     if ((other_fp->ga == nMPKineticsAir) && (this_attack_coll->is_hit_air) || (other_fp->ga == nMPKineticsGround) && (this_attack_coll->is_hit_ground))
+      |                                         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c: In function 'battleship_ftMainSearchHitWeapon':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:3269:146: warning: suggest parentheses around '&&' within '||' [-Wparentheses]
+ 3269 |                     if ((wp_attack_coll->can_setoff) && !(fp->is_catchstatus) && ((fp->throw_gobj == NULL) || (fp->throw_gobj != wp->owner_gobj) && ((gSCManagerBattleState->is_team_battle != TRUE) || (gSCManagerBattleState->is_team_attack != FALSE) || (fp->throw_team != wp->team))))
+      |                                                                                                               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:3280:120: warning: suggest parentheses around '&&' within '||' [-Wparentheses]
+ 3280 |                                 if ((ft_attack_coll->attack_state != nGMAttackStateOff) && ((wp->ga == nMPKineticsAir) && (ft_attack_coll->is_hit_air) || (wp->ga == nMPKineticsGround) && (ft_attack_coll->is_hit_ground)))
+      |                                                                                             ~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:3240:9: warning: unused variable 'unused1' [-Wunused-variable]
+ 3240 |     s32 unused1;
+      |         ^~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c: In function 'battleship_ftMainSearchHitItem':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:3466:146: warning: suggest parentheses around '&&' within '||' [-Wparentheses]
+ 3466 |                     if ((it_attack_coll->can_setoff) && !(fp->is_catchstatus) && ((fp->throw_gobj == NULL) || (fp->throw_gobj != ip->owner_gobj) && ((gSCManagerBattleState->is_team_battle != TRUE) || (gSCManagerBattleState->is_team_attack != FALSE) || (fp->throw_team != ip->team))))
+      |                                                                                                               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:3476:120: warning: suggest parentheses around '&&' within '||' [-Wparentheses]
+ 3476 |                                 if ((ft_attack_coll->attack_state != nGMAttackStateOff) && ((ip->ga == nMPKineticsAir) && (ft_attack_coll->is_hit_air) || (ip->ga == nMPKineticsGround) && (ft_attack_coll->is_hit_ground)))
+      |                                                                                             ~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:3437:9: warning: unused variable 'unused1' [-Wunused-variable]
+ 3437 |     s32 unused1;
+      |         ^~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c: In function 'battleship_ftMainSearchFighterCatch':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:3724:23: warning: suggest parentheses around comparison in operand of '^' [-Wparentheses]
+ 3724 |         for (i = 0; i < ARRAY_COUNT(this_fp->attack_colls) ^ 0; i++) // XOR 0 ???
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:3732:50: warning: suggest parentheses around '&&' within '||' [-Wparentheses]
+ 3732 |             if ((other_fp->ga == nMPKineticsAir) && !(attack_coll->is_hit_air) || (other_fp->ga == nMPKineticsGround) && !(attack_coll->is_hit_ground))
+      |                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c: In function 'battleship_ftMainProcParams':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:4054:21: warning: unused variable 'unused' [-Wunused-variable]
+ 4054 |                 s32 unused;
+      |                     ^~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:3825:9: warning: unused variable 'element' [-Wunused-variable]
+ 3825 |     s32 element;
+      |         ^~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c: In function 'battleship_ftMainSetStatus':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:4561:24: warning: assignment to 'FTOpeningDesc *' from incompatible pointer type 'FTOpeningDesc (*)[]' [-Wincompatible-pointer-types]
+ 4561 |         opening_struct = &D_ovl1_80390BE8;
+      |                        ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:4623:54: warning: passing argument 1 of 'lbRelocGetForceExternHeapFile' makes pointer from integer without a cast [-Wint-conversion]
+ 4623 |             lbRelocGetForceExternHeapFile(motion_desc->anim_file_id, (void*) fp->figatree_heap);
+      |                                           ~~~~~~~~~~~^~~~~~~~~~~~~~
+      |                                                      |
+      |                                                      u32 {aka long unsigned int}
+In file included from D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_ftmain.c:15:
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/fighter.h:3687:49: note: expected 'const void *' but argument is of type 'u32' {aka 'long unsigned int'}
+ 3687 | void *lbRelocGetForceExternHeapFile(const void *file_id, void *heap);
+      |                                     ~~~~~~~~~~~~^~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:4748:37: warning: comparison of integer expressions of different signedness: 'intptr_t' {aka 'int'} and 'unsigned int' [-Wsign-compare]
+ 4748 |             if (motion_desc->offset != 0x80000000)
+      |                                     ^~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:4753:37: warning: assignment to 'intptr_t' {aka 'int'} from 'void *' makes integer from pointer without a cast [-Wint-conversion]
+ 4753 |                     event_file_head = *fp->data->p_file_submotion;
+      |                                     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:4759:37: warning: assignment to 'intptr_t' {aka 'int'} from 'void *' makes integer from pointer without a cast [-Wint-conversion]
+ 4759 |                     event_file_head = *fp->data->p_file_mainmotion;
+      |                                     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:4770:37: warning: comparison of integer expressions of different signedness: 'intptr_t' {aka 'int'} and 'unsigned int' [-Wsign-compare]
+ 4770 |             if (motion_desc->offset != 0x80000000)
+      |                                     ^~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:4383:9: warning: unused variable 'unused3' [-Wunused-variable]
+ 4383 |     s32 unused3;
+      |         ^~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:4379:9: warning: unused variable 'unused2' [-Wunused-variable]
+ 4379 |     s32 unused2;
+      |         ^~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:4376:9: warning: unused variable 'unused1' [-Wunused-variable]
+ 4376 |     s32 unused1;
+      |         ^~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c: In function 'battleship_ftMainProcessHitCollisionStatsMain':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:2845:12: warning: 'knockback_temp' may be used uninitialized [-Wmaybe-uninitialized]
+ 2845 |         if (knockback < knockback_temp)
+      |            ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:2675:9: note: 'knockback_temp' was declared here
+ 2675 |     f32 knockback_temp;
+      |         ^~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:2855:19: warning: 'j' may be used uninitialized [-Wmaybe-uninitialized]
+ 2855 |     switch (hitlog->attacker_object_class)
+      |             ~~~~~~^~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:2674:12: note: 'j' was declared here
+ 2674 |     s32 i, j;
+      |            ^
+linking smash64ds-battle-playable-tickhud-hwtri.elf
+C:/devkitPro/devkitARM/bin/../lib/gcc/arm-none-eabi/15.2.0/../../../../arm-none-eabi/bin/ld.exe: warning: C:/devkitPro/devkitARM/bin/../lib/gcc/arm-none-eabi/15.2.0/thumb/crtn.o: missing .note.GNU-stack section implies executable stack
+C:/devkitPro/devkitARM/bin/../lib/gcc/arm-none-eabi/15.2.0/../../../../arm-none-eabi/bin/ld.exe: NOTE: This behaviour is deprecated and will be removed in a future version of the linker
+Nintendo DS rom tool 2.3.1 - Jan  8 2024
+by Rafael Vuijk, Dave Murphy, Alexei Karpenko
+built ... smash64ds-battle-playable-tickhud-hwtri.nds
+make: Leaving directory '/d/Stuff/DevFolder/Smash64DS_Port'
+window verified against D:\Stuff\DevFolder\Smash64DS_Port\builds\build-c221-sitrprof\nds_build_config.h
+scene:         Battle
+census window: frames 438..2038
+per-frame region: True (region r = presented frame 438 + r)
+dldi:          True
+profiler csv:  D:\Stuff\DevFolder\Smash64DS_Port\artifacts\performance\2026-08-16_sitr-excursion\v3-c221\arm9-profile.csv
+
+  format=melonDS-arm9-retail-profile-v3
+  instructions=1048562499
+  cycles=3886597991
+  program_counters=54400815
+  regions=1601
+  timestamp_discontinuities=2
+  stall_issue=705610235
+  stall_icache_fill=1137644730
+  stall_dcache_fill=868355274
+  stall_write_buffer=144800609
+  stall_bus_contention=121604251
+  stall_dma_hold=26541892
+  stall_cart_spin=0
+  stall_interlock=140199598
+  stall_halt_wait=741841383
+  stall_gx_paid=0
+  stall_gx_blamed=0
+  stall_partition_total=3886597972
+  stall_partition_residual=-19
+  gx_stall_events=0
+  gx_stall_raw_cycles=0
+
+profile      D:\Stuff\DevFolder\Smash64DS_Port\artifacts\performance\2026-08-16_sitr-excursion\v3-c221\arm9-profile.csv
+elf          D:\Stuff\DevFolder\Smash64DS_Port\builds\build-c221-sitrprof\smash64ds-battle-playable-tickhud-hwtri.elf
+pc rows      54,400,815
+cycles       3,886,597,991
+unattributed 64,782 (0.00% -- BIOS, ITCM stubs, data)
+symbols hit  1,398 of 3,611 FUNC symbols
+
+section sizes
+  .itcm               32,516
+  .text.hot            4,588  free 3,604 of cap 8,192
+  .text.hot.draw       5,268  free 2,924 of cap 8,192
+  .main.bss        1,307,248
+
+== 0. stall accounting by tier (placement can only touch non-mem stall) ==
+   excluding idle spin: armWaitForIrq
+tier                   cycles        insns  cyc/insn  nonmem stall     %    mem stall     %
+--------------  -------------  -----------  --------  ------------  ----  -----------  ----
+.itcm             757,596,652  403,057,764      1.88   108,306,594  14.3  246,232,294  32.5
+.text.hot         128,918,555   32,376,680      3.98    39,958,264  31.0   56,583,611  43.9
+.text.hot.draw    112,217,161   49,850,402      2.25    23,741,541  21.2   38,625,218  34.4
+.main           2,145,924,716  563,254,592      3.81   633,059,926  29.5  949,610,198  44.3
+
+== A. top 40 symbols by measured cycles ==
+     cycles   %tot  bytes      cyc/byte  tier            symbol
+-----------  -----  -----  ------------  --------------  -------------------------------------------------------------
+741,876,125  19.09      8  92,734,515.6  .itcm           armWaitForIrq
+ 99,836,110   2.57    400     249,590.3  .itcm           __aeabi_fadd
+ 93,334,914   2.40  7,544      12,372.1  .main           ndsFighterMarioFoxDLAllDrawForSlot.constprop.0
+ 90,040,649   2.32  2,588      34,791.6  .main           ndsRendererCommitNativeStageSegment
+ 80,255,338   2.06    548     146,451.3  .itcm           ndsRendererNativeEmitProductionPrimitiveGroups
+ 67,986,600   1.75  3,472      19,581.4  .itcm           ndsRendererExecuteNativeFighterOwnerProduction
+ 64,278,996   1.65    604     106,422.2  .text.hot       gcPlayDObjAnimJoint
+ 56,713,727   1.46    616      92,067.7  .text.hot.draw  ndsRendererMtxMulAffine20p12
+ 56,708,206   1.46  3,720      15,244.1  .itcm           ndsRendererNativePrepareProductionRun
+ 56,538,898   1.45    408     138,575.7  .itcm           __aeabi_fmul (+1 alias)
+ 56,517,992   1.45  1,028      54,978.6  .itcm           ndsR2AnimValueQ
+ 51,929,730   1.34  1,928      26,934.5  .main           ndsRendererNativeStageBeginRun.part.0
+ 48,681,731   1.25    170     286,363.1  .itcm           memcpy
+ 46,194,686   1.19  3,016      15,316.5  .main           ndsR2FtAnimParseDObjFigatree
+ 44,101,083   1.13    140     315,007.7  .itcm           memset
+ 43,653,646   1.12    608      71,798.8  .itcm           ndsRendererTask36ReplayRun
+ 42,819,251   1.10  2,056      20,826.5  .main           ndsRendererAdapterBuildFighterTraRotRpyDirect20p12
+ 40,890,061   1.05  1,640      24,933.0  .main           ndsPlatformRenderDebugHud
+ 37,899,786   0.98    512      74,023.0  .text.hot.draw  ndsRendererNativeStageLoadNoZMatrix
+ 35,382,485   0.91  2,440      14,501.0  .main           ndsRendererAdapterBuildDObjXObjMatrix
+ 35,105,285   0.90  1,532      22,914.7  .main           mpCollisionGetFCCommonFloor
+ 33,813,847   0.87    716      47,226.0  .main           ftParamUpdateAnimKeys
+ 33,409,642   0.86    312     107,082.2  .itcm           ndsRendererMtxMul20p12
+ 32,652,444   0.84    392      83,297.1  .main           ndsRendererLoadHardwareSplitMatrices
+ 32,238,192   0.83  3,948       8,165.7  .main           lbParticleDrawTextures
+ 31,879,092   0.82    464      68,704.9  .main           ndsStageGCDrawAllLoopRecordCapturedDisplay
+ 30,573,800   0.79    352      86,857.4  .itcm           __aeabi_fdiv (+1 alias)
+ 30,394,590   0.78    388      78,336.6  .main           ftDisplayMainDrawDefault
+ 29,924,863   0.77    952      31,433.7  .main           ndsRendererAdapterBuildPersistentStageWorldMatrix.constprop.0
+ 29,404,367   0.76    120     245,036.4  .main           ndsBaseGcRunAll
+ 29,167,867   0.75    328      88,926.4  .main           gcCaptureCameraGObj
+ 27,977,679   0.72     92     304,105.2  .main           tickGetCount
+ 26,087,954   0.67     92     283,564.7  .main           ftGetStruct
+ 25,861,187   0.67    432      59,863.9  .main           gcPlayAnimAll
+ 22,810,974   0.59  2,176      10,483.0  .text.hot       battleship_ftMainProcUpdateInterrupt
+ 20,982,688   0.54    268      78,293.6  .main           ndsRendererHardwareBindTextureName
+ 20,908,398   0.54    376      55,607.4  .main           ndsFTParamsInvalidateSubtree
+ 19,636,996   0.51    492      39,912.6  .itcm           ndsRendererNativeApplyStateDelta
+ 19,563,950   0.50    896      21,834.8  .main           ndsStageMPAdjustFloorLoopWallSweep
+ 19,261,824   0.50     92     209,367.7  .main           glBindTexture
+
+== B. .itcm rent: 71 residents covering 32,454 of 32,516 section bytes (62 unnamed); 18 never executed (1,858 B idle) ==
+    cyc/byte       cycles  bytes       insns  symbol
+------------  -----------  -----  ----------  ----------------------------------------------------------
+92,734,515.6  741,876,125      8       8,713  armWaitForIrq
+   315,007.7   44,101,083    140  10,832,607  memset
+   308,011.9   11,088,429     36   9,451,437  __aeabi_fcmpeq
+   286,363.1   48,681,731    170  18,856,725  memcpy
+   283,816.0    1,135,264      4   1,135,254  __aeabi_fsub
+   249,590.3   99,836,110    400  83,936,903  __aeabi_fadd
+   171,071.9   11,975,036     70   6,613,503  memcmp
+   146,451.3   80,255,338    548  26,128,794  ndsRendererNativeEmitProductionPrimitiveGroups
+   138,575.7   56,538,898    408  49,726,897  __aeabi_fmul (+1 alias)
+   119,088.3    6,192,594     52   5,498,458  __aeabi_fcmplt
+   107,082.2   33,409,642    312  23,179,089  ndsRendererMtxMul20p12
+    86,857.4   30,573,800    352  27,732,591  __aeabi_fdiv (+1 alias)
+    74,155.8    3,856,099     52   3,397,850  __aeabi_fcmpgt
+    72,716.2    5,526,435     76     267,823  armCopyMem32
+    71,798.8   43,653,646    608   6,019,236  ndsRendererTask36ReplayRun
+    70,980.5    6,530,209     92   4,905,844  __aeabi_i2f
+    54,978.6   56,517,992  1,028  37,350,575  ndsR2AnimValueQ
+    51,668.7   12,813,840    248   3,441,691  ndsRendererSyncTextureTile
+    47,489.5    4,369,033     92   3,441,343  __aeabi_f2iz (+1 alias)
+    41,255.4    1,155,150     28     476,167  armDCacheFlush
+    39,912.6   19,636,996    492   6,217,463  ndsRendererNativeApplyStateDelta
+    31,080.5   18,026,719    580   6,652,239  ndsRendererNativeShadeProductionActions.constprop.0.isra.0
+    29,255.7      351,068     12     104,019  armDrainWriteBuffer
+    27,382.1      876,227     32     649,536  __floatsisf (+1 alias)
+    24,830.7      695,259     28     253,755  armDCacheInvalidate
+    24,098.0   13,880,475    576   5,488,033  ndsRendererNativeEmitProductionCrossRun.constprop.0
+    22,992.2    1,195,597     52   1,078,389  __aeabi_fcmple
+    19,581.4   67,986,600  3,472  22,408,876  ndsRendererExecuteNativeFighterOwnerProduction
+    17,540.2    3,016,910    172   2,544,889  __aeabi_l2f (+1 alias)
+    15,472.1    2,351,766    152   2,211,602  ndsRendererRecordTextureState
+    15,244.1   56,708,206  3,720  24,771,284  ndsRendererNativePrepareProductionRun
+    12,535.0      651,818     52     596,947  __aeabi_fcmpge
+    12,460.7    4,136,946    332   2,775,926  ndsRendererRecordSetTile
+    12,236.9    3,132,634    256   2,241,165  ndsRendererMtxLoadN64ToDS20p12
+    11,402.1      456,083     40     228,041  __aeabi_ui2f (+1 alias)
+     8,165.5      816,552    100     334,369  ndsRendererRecordLoadBlock
+     4,294.5      773,004    180     617,409  ndsRendererRecordSetTileSize
+     4,012.2      850,585    212     130,874  threadBlock
+     3,429.1      781,830    228     260,126  __arm_excpt_irq
+     2,487.3      208,930     84     163,207  __aeabi_f2uiz (+1 alias)
+     1,795.2       78,991     44      27,984  armContextSave
+     1,348.6      167,231    124      76,956  threadSwitchTo
+       831.4      199,541    240      86,400  threadUnblockAllByMask
+       608.8      280,048    460     155,202  ndsRendererHardwareLitShadeColorPrepared
+       369.6       78,358    212      32,100  threadUnblockOneByValue
+       218.6        6,996     32       2,332  armContextLoad
+       187.0      492,186  2,632     235,608  ndsRendererHardwareSubmitVertex
+        81.7       13,072    160      10,908  ndsRendererHardwarePolyFmt
+        74.3      574,415  7,728     201,820  ndsRendererScanList
+        64.1      211,667  3,304      73,164  ndsRendererSubmitHardwareTriangle
+        50.2        6,622    132       1,672  ndsRendererHardwareTextureSourceBytes
+         0.8          181    236          34  __ieee754_sqrtf
+         0.0      742,810      0      32,648  armContextLoadFromSvc
+         0.0            0    444           0  __addsf3 (+1 alias)
+         0.0            0     28           0  __aeabi_fcmpun
+         0.0            0    456           0  __aeabi_frsub
+         0.0            0    188           0  __aeabi_ul2f (+1 alias)
+         0.0            0     12           0  __arm_excpt_dabt
+         0.0            0      4           0  __arm_excpt_pabt
+         0.0            0      4           0  __arm_excpt_rst
+         0.0            0     12           0  __arm_excpt_und
+         0.0            0     48           0  __excpt_entry
+         0.0            0    448           0  __nds_task16_libgcc_fsub_golden (+1 alias)
+         0.0            0     40           0  armDCacheFlushAll
+         0.0            0     12           0  armICacheInvalidateAll
+         0.0            0     54           0  ndsFTParamsInvalidateFighterParts
+         0.0            0    192           0  ndsRendererNativeApplyStateSpan
+         0.0            0    256           0  ndsRendererNativeEmitDenseRawRun
+         0.0            0    128           0  ndsRendererNativeEmitProductionRawTexturedRun
+         0.0            0    112           0  ndsRendererNativeEmitProductionRawUntexturedRun
+         0.0            0    312           0  threadUnblockAllByValue
+
+== C. unplaced candidates for 3,604 free .text.hot bytes, ranked by recoverable (non-mem) stall ==
+pack  nonmem stall      cycles  bytes  cyc/insn  stall/byte  symbol
+----  ------------  ----------  -----  --------  ----------  -------------------------------------------------------------
+fit     23,048,376  90,040,649  2,588      2.53     8,905.9  ndsRendererCommitNativeStageSegment
+-       22,207,463  93,334,914  7,544      4.39     2,943.7  ndsFighterMarioFoxDLAllDrawForSlot.constprop.0
+-       15,025,054  51,929,730  1,928      4.00     7,793.1  ndsRendererNativeStageBeginRun.part.0
+-       14,108,337  32,238,192  3,948      4.99     3,573.5  lbParticleDrawTextures
+-       13,667,520  42,819,251  2,056      2.41     6,647.6  ndsRendererAdapterBuildFighterTraRotRpyDirect20p12
+-       13,563,005  35,105,285  1,532      3.13     8,853.1  mpCollisionGetFCCommonFloor
+-       12,760,611  46,194,686  3,016      2.71     4,231.0  ndsR2FtAnimParseDObjFigatree
+fit      9,513,318  31,879,092    464      5.87    20,502.8  ndsStageGCDrawAllLoopRecordCapturedDisplay
+-        8,447,925  19,563,950    896      2.66     9,428.5  ndsStageMPAdjustFloorLoopWallSweep
+-        8,026,768  35,382,485  2,440      2.29     3,289.7  ndsRendererAdapterBuildDObjXObjMatrix
+-        7,933,926  33,813,847    716      5.31    11,080.9  ftParamUpdateAnimKeys
+fit      7,686,013  25,861,187    432      3.89    17,791.7  gcPlayAnimAll
+-        7,159,058  11,843,113    944      8.34     7,583.7  ndsR2CameraLookAtReflect20p12
+-        6,991,100  32,652,444    392      3.90    17,834.4  ndsRendererLoadHardwareSplitMatrices
+-        6,777,450  40,890,061  1,640      1.28     4,132.6  ndsPlatformRenderDebugHud
+-        6,721,089  29,167,867    328      5.67    20,491.1  gcCaptureCameraGObj
+-        6,643,171  16,974,959  1,816      3.54     3,658.1  ndsStageMPSweepFloorLoopSweep
+-        6,066,887  18,086,860  1,696      6.51     3,577.2  ndsParticleSetCurrentCamera
+fit      5,709,220  29,404,367    120      9.74    47,576.8  ndsBaseGcRunAll
+-        5,385,225  12,627,897     68      4.53    79,194.5  ndsR2CamDiv64
+-        5,297,324  17,656,360    732      2.82     7,236.8  ndsBaseGcPlayMObjMatAnim
+-        4,945,617  16,938,594     68      2.21    72,729.7  ndsStageCollisionLoopGeometryReady
+-        4,900,038  30,394,590    388      4.73    12,629.0  ftDisplayMainDrawDefault
+-        4,785,047  20,908,398    376      7.59    12,726.2  ndsFTParamsInvalidateSubtree
+-        4,713,804  12,590,073    220      4.15    21,426.4  sqrtf
+-        4,701,259  18,758,878  2,528      6.62     1,859.7  ndsRendererAdapterPrepareNativeStageOwner
+-        4,652,190  10,332,772  1,416      5.71     3,285.4  gmCameraUpdateInterests
+-        4,637,501  10,229,125  2,276     12.41     2,037.6  ndsBaseFTDisplayMainProcDisplay
+-        4,611,225   8,507,178  1,272      3.63     3,625.2  mpCollisionCheckProjectFloor
+-        4,523,367  15,072,435  5,220     11.95       866.5  syTaskmanRunTask
+-        4,314,421  29,924,863    952      2.84     4,532.0  ndsRendererAdapterBuildPersistentStageWorldMatrix.constprop.0
+-        4,220,444   9,248,735  2,388      4.01     1,767.4  ndsRendererAdapterBuildNativeMaterialSnapshot
+-        4,214,662  17,077,464    468      2.51     9,005.7  ndsRendererNativeStageEmitNoZVertex.isra.0
+-        4,194,286  14,748,967     24      5.33   174,761.9  cpuGetTiming
+-        4,034,229  16,035,840  2,252      1.95     1,791.4  ndsRelocGetFileData
+-        4,008,365  26,087,954     92      2.80    43,569.2  ftGetStruct
+-        3,959,600  15,884,336  1,656      3.96     2,391.1  ndsRendererNativeApplyMaterial.part.0
+-        3,855,857   7,510,800  5,794      2.99       665.5  _svfiprintf_r
+-        3,769,946   8,311,658  4,232      2.73       890.8  ndsRendererSubmitParticleQuad
+-        3,646,959  14,694,839    812      5.22     4,491.3  ndsMPFindLineEndpoints
+
+greedy pack claims 3,604 of 3,604 free bytes and reaches 45,956,927 non-mem stall cycles (1.18% of measured)
+
+== D. ITCM admissions by non-mem stall per byte (220 B free now, +1,858 B recoverable by eviction) ==
+slot   stall/byte  nonmem stall  bytes  cyc/insn  tier            symbol
+-----  ----------  ------------  -----  --------  --------------  --------------------------------------------
+free      174,762     4,194,286     24      5.33  .main           cpuGetTiming
+free       79,194     5,385,225     68      4.53  .main           ndsR2CamDiv64
+free       72,730     4,945,617     68      2.21  .main           ndsStageCollisionLoopGeometryReady
+free       67,078     1,475,705     22      2.77  .main           DynamicArrayGet
+evict      47,577     5,709,220    120      9.74  .main           ndsBaseGcRunAll
+free       46,822        93,644      2      8.24  .main           lbCommonPrepSObjDraw
+evict      43,569     4,008,365     92      2.80  .main           ftGetStruct
+free       39,243        78,486      2     46.84  .main           gcPrepCameraMatrix
+evict      38,251     3,519,105     92      4.81  .main           tickGetCount
+free       36,904        73,808      2     12.84  .main           mpCommonUpdateFighterSlopeContour
+free       36,451       145,804      4     23.78  .main           ndsFighterMarioFoxLivePreviewUpdateEnabled
+free       35,830       143,321      4     24.00  .main           gcParseGObjScript
+free       31,549       630,976     20      4.84  .main           __gnu_thumb1_case_uhi
+evict      30,592     2,202,660     72      4.34  .main           ndsR2AnimBuildTrackTable.constprop.0.isra.0
+evict      30,247     2,419,738     80      2.45  .main           ndsBaseGcPlayAnimAll
+evict      29,974     1,678,553     56      8.93  .main           ndsFighterDisplayContractCountFlags
+evict      29,604       355,254     12      2.54  .main           ndsR2CamDivQ
+evict      28,915       231,317      8     12.23  .main           ftCommonDeadCheckInterruptCommon
+evict      28,850       923,208     32      3.10  .main           glGetTexParameter
+evict      28,144     4,503,109    160      4.85  .text.hot       gcRunGObjProcess
+evict      24,767     1,287,885     52      4.24  .main           glTexParameter
+free       24,015        48,030      2     31.02  .main           ndsBattlePlayableFrameCompleteMarker
+evict      23,253       186,025      8     19.97  .main           mpProcessUpdateMain
+evict      22,814    14,053,563    616      1.83  .text.hot.draw  ndsRendererMtxMulAffine20p12
+evict      21,972       527,326     24      1.91  .main           ndsR2CamMulQ
+evict      21,614       432,285     20     16.18  .main           grPupupuProcUpdate
+-          21,564    13,024,393    604      2.63  .text.hot       gcPlayDObjAnimJoint
+evict      21,426     4,713,804    220      4.15  .main           sqrtf
+free       20,568        41,136      2     25.03  .main           func_80017CC8
+-          20,503     9,513,318    464      5.87  .main           ndsStageGCDrawAllLoopRecordCapturedDisplay
+-          20,491     6,721,089    328      5.67  .main           gcCaptureCameraGObj
+evict      19,758        79,034      4     13.35  .main           ndsFighterMarioFoxNaturalMotionUpdateEnabled
+evict      19,664       157,313      8      7.82  .main           __sinf
+evict      19,578     2,114,442    108      3.46  .main           ndsRendererAdapterMarkDisplayProcHeads
+evict      18,728       749,140     40      3.71  .main           __clzdi2
+-          18,491     1,183,411     64      4.20  .main           lbCommonCos
+evict      18,337       586,775     32      2.46  .main           __getreent
+-          18,166     1,816,588    100      2.44  .main           ndsRendererAdapterFindStageWorldEntry
+-          17,877       178,774     10     27.30  .main           grWallpaperCommonProcUpdate
+-          17,834     6,991,100    392      3.90  .main           ndsRendererLoadHardwareSplitMatrices
+
+zero-eviction pack: 220 B, 17,256,038 non-mem stall cycles in reach
+with eviction:      2,076 B, 67,694,159 non-mem stall cycles in reach
+wrote D:\Stuff\DevFolder\Smash64DS_Port\artifacts\performance\2026-08-16_sitr-excursion\v3-c221\census.json
+
+wrote D:\Stuff\DevFolder\Smash64DS_Port\artifacts\performance\2026-08-16_sitr-excursion\v3-c221\census.txt

@@ -1,0 +1,77 @@
+SYMBOLS RANKED BY (SITR-25 tk/fr) - (QUIET tk/fr)
+masks: sitr25=25 frames, quiet=773 frames, event288=288, whole=1601; 2 cyc = 1 tick
+
+symbol                                                       sitr25      quiet      DELTA   event288     whole  icache d
+armWaitForIrq                                                435573     260026     175548     247451    231691         0
+__aeabi_fadd                                                  45560      23781      21779      34116     31179       835
+ndsR2FtAnimParseDObjFigatree                                  28014      10270      17744      28853     14427      8372
+memcpy                                                        29391      13260      16131      21094     15204       141
+armCopyMem32                                                  14583        630      13953       5243      1726        12
+ndsRelocNormalizeFighterAObj16File                            13736          0      13736       1384       249      6174
+get_fat.isra.0                                                14254        577      13678       4120      1426      9365
+__mulsf3                                                      25883      13535      12348      18724     17657       730
+mutexUnlock                                                   10864        271      10593       1688       578      7499
+ndsR2AnimValueQ                                               24987      14912      10075      25066     17651       156
+gcPlayDObjAnimJoint                                           26935      17508       9427      26611     20075      3412
+f_lseek                                                        9026        355       8671       2597       892      6866
+f_read                                                         7983         58       7924       1091       268      5790
+mutexLock                                                      7798        292       7506       1404       541      5621
+battleship_ftMainSetStatus                                     6028          0       6028       6660      1200      2148
+threadRemoveWaiter                                             5919        193       5725       1000       371      3585
+ndsRendererHardwareResolveOrBindTexture                        5775        182       5593        569       242      4210
+ftParamUpdateAnimKeys                                         14526       9098       5428      14500     10560      1631
+mpCollisionGetFCCommonFloor                                   14321       9307       5013      10348     10964      2196
+ndsR2AnimBuildTrackTable.constprop.0.isra.0                    7226       2439       4787       6939      3447      1329
+validate                                                       4799         21       4778        583       131      2779
+ndsRelocAssetIDForToken                                        4460          0       4460       4118       741      2168
+memset                                                        17020      12747       4273      15792     13773        27
+gcAddDObjAnimJoint                                             4246          0       4246       4618       895       445
+_read_r                                                        4207         38       4169        621       161      1822
+_FAT_read_r                                                    3923         14       3909        463       101      3314
+ndsStageMPAdjustFloorLoopWallSweep                             8851       5012       3839       6703      6110      1791
+strncasecmp                                                    3663          0       3663        337        61      1313
+__divsf3                                                      11735       8211       3523       9792      9548        49
+ndsRelocApplyWordByteSwap                                      3465          0       3465        333        60      1167
+ndsR2AnimTargetValue.constprop.0                               4272        858       3414       4587      1622      1322
+ndsAudioFgmPlayAtPan                                           3424         27       3397       1609       374      1106
+ftComputerCheckDetectTarget                                    3959        598       3361       1564      1543      1395
+_dvmDiscCacheReadWrite                                         3478        119       3359       1105       354      2222
+_nitroromFdRead                                                3352         15       3337        423        97      2627
+nitroromReadIter                                               3286          0       3286        316        57      2541
+ndsStageCollisionLoopGeometryReady                             7550       4325       3225       5301      5290      1004
+move_window                                                    3275        114       3161        843       286      2359
+ndsFTParamsInvalidateSubtree                                   8629       5738       2891       8322      6530       748
+read                                                           2790          6       2784        299        62      2031
+lbCommonAddFighterPartsFigatree                                2733          0       2733       3082       554       609
+ndsFighterMarioFoxDLAllDrawForSlot.constprop.0                30513      28024       2489      29803     29149       787
+ndsR2AnimAObjToQConvert                                        2790        324       2465       2970       813      1174
+ndsMPLineExtentSweepRejects                                    5558       3101       2456       4207      3702      1194
+__libc_lock_release                                            2466         33       2433        353        99      1051
+
+SUM over all symbols  sitr25 1747729  quiet 1154419  delta 593310 (non-idle: minus armWaitForIrq)
+   armWaitForIrq  sitr25 435573  quiet 260026
+
+NEGATIVE DELTAS (cheaper on an excursion frame):
+__udivsi3                                                       692       1057       -365       1408      1198          
+__sfvwrite_r                                                      0        419       -419        548       478          
+con_write                                                         0        491       -491        626       555          
+__udivmoddi4                                                   2530       3138       -608       3450      3284          
+consolePrintChar                                                  0       1435      -1435       1849      1629          
+__ssvfiscanf_r                                                    0       1468      -1468       1864      1660          
+_vfiprintf_r                                                      0       1768      -1768       2248      2006          
+ndsPlatformRenderDebugHud                                       771      12073     -11302      10917     12770          
+
+STALL SHAPE of the delta, top 12 symbols:
+symbol                                                   issue    icache    dcache   bus+dma interlock
+armWaitForIrq                                               44         0         0         0         0
+__aeabi_fadd                                             20944       835         0         0         0
+ndsR2FtAnimParseDObjFigatree                              4577      8372      3762         0       832
+memcpy                                                    5954       141      3511         0       565
+armCopyMem32                                              1022        12     11465         0         0
+ndsRelocNormalizeFighterAObj16File                        4287      6174      1982         0       970
+get_fat.isra.0                                            -102      9365      3220         0      1174
+__mulsf3                                                 11618       730         0         0         0
+mutexUnlock                                                -66      7499      2308         0       839
+ndsR2AnimValueQ                                           8035       156      1519         0       336
+gcPlayDObjAnimJoint                                       1780      3412      3117         0       893
+f_lseek                                                    -33      6866      1242         0       594
