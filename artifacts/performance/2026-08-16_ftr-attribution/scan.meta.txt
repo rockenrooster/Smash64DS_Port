@@ -1,0 +1,7 @@
+source=artifacts/performance/2026-08-16_sitr-excursion/v3-c221/arm9-profile.csv
+rows=54400815
+symbols=1396
+tracked_pcs=7677
+masks: whole=1601 m80prof=80 m80gate=80
+alignment=region = frame - 439 (m80gate only; m80prof needs none)
+cycles_per_tick=2

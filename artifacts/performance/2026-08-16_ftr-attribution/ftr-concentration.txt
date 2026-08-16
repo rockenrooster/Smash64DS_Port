@@ -1,0 +1,22 @@
+symbol                                             whole   m80gate   m80prof    conc
+ndsFighterMarioFoxDLAllDrawForSlot.constprop       29149     30616     30586    1.05
+ndsRendererNativeEmitProductionPrimitiveGrou       25064     26228     26292    1.05
+ndsRendererExecuteNativeFighterOwnerProducti       21233     22201     22242    1.05
+ndsRendererNativePrepareProductionRun              17710     18454     18424    1.04
+ndsRendererMtxMulAffine20p12                       17316     18549     18457    1.07
+ndsRendererAdapterBuildFighterTraRotRpyDirec       13093     11159     13139    0.85
+ndsRendererAdapterBuildDObjXObjMatrix              10819     13295     11803    1.23
+ndsRendererLoadHardwareSplitMatrices               10165     10614     10622    1.04
+ftDisplayMainDrawDefault                            9492      9988      9960    1.05
+memcpy                                              8461     10800      9334    1.28
+ndsRendererNativeApplyStateDelta                    6133      6327      6352    1.03
+ndsRendererNativeShadeProductionActions.cons        5630      5881      5862    1.04
+ndsRendererNativeApplyMaterial.part.0               4958      5202      5217    1.05
+ndsRendererAdapterBuildDObjLocalMatrix              4822      5096      5100    1.06
+ndsRendererNativeEmitProductionCrossRun.cons        4335      4723      4718    1.09
+ndsFighterDisplayContractCountFlags                 4108      4117      4125    1.00
+ndsRendererSyncTextureTile                          3955      4154      4106    1.05
+ndsRendererR2RunTextureMemoApply.constprop.0        3355      3470      3493    1.03
+ndsFighterDisplayContractSelectDL                   3351      3498      3515    1.04
+ndsRendererAdapterMaterialAnimHash                  3307      3473      3480    1.05
+(sum of listed rows)                              254117    266739    267003    1.05

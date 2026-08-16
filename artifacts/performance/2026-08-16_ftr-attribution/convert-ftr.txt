@@ -1,0 +1,34 @@
+CONTROL  rank-80 1210624 raw / 1185677 net   level +65297   band 41-120 1218356
+         (expect 1,210,624 / 1,185,677 / +65,297 / 1,218,356)
+FTR P50 290432, band 41-120 290400, ratio 1.000 -- the lane is FLAT, which is why a
+uniform cut converts 1:1 here and would not in SITR or SHDT.
+touched frames: ALL 1600.  At or above rank-80: 80.  A cut that reaches every
+frame has no sub-population that can sink below the rank and stop paying.
+
+=== CONVERSION CURVE: a uniform D on the FTR lane ===
+candidate                                                       D   rank-80    moved   ratio       level
+gmCameraLookAtFuncMatrix hoisted to once per frame           5143   1205481     5143   1.000      +60154
+ndsRendererMtxMulAffine20p12 -> ITCM (616 B)                 2989   1207635     2989   1.000      +62308
+ftDisplayMainDrawDefault + LoadHardwareSplitMatrices ->      3231   1207393     3231   1.000      +62066
+the whole 908 B ITCM pool, best FTR tenants                  4000   1206624     4000   1.000      +61297
+cold-path out-of-lining, REALISTIC third-to-half             4900   1205724     4900   1.000      +60397
+cold-path out-of-lining, PERFECT-COMPACTION CEILING          9714   1200910     9714   1.000      +55583
+cross-build placement floor, for reference                  14080   1196544    14080   1.000      +51217
+the CAPTURE pass deleted entirely (ceiling)                 44600   1166024    44600   1.000      +20697
+the whole PER-JOINT MATRIX build deleted (ceiling)          61848   1148776    61848   1.000       +3449
+the whole NATIVE PRODUCTION emit deleted (ceiling)          71448   1139176    71448   1.000       -6151
+FTR cut by 22%, the lanes.txt figure that closes the gat    63895   1146729    63895   1.000       +1402
+
+=== the curve itself, so nobody quotes one point ===
+  D=1000    rank-80 1209624  moved   1000  ratio 1.000  level +64297
+  D=2989    rank-80 1207635  moved   2989  ratio 1.000  level +62308
+  D=5143    rank-80 1205481  moved   5143  ratio 1.000  level +60154
+  D=9714    rank-80 1200910  moved   9714  ratio 1.000  level +55583
+  D=14080   rank-80 1196544  moved  14080  ratio 1.000  level +51217
+  D=20000   rank-80 1190624  moved  20000  ratio 1.000  level +45297
+  D=44600   rank-80 1166024  moved  44600  ratio 1.000  level +20697
+  D=65297   rank-80 1145327  moved  65297  ratio 1.000  level +0
+  D=90000   rank-80 1120624  moved  90000  ratio 1.000  level -24703
+  D=120000  rank-80 1090624  moved 120000  ratio 1.000  level -54703
+The ratio holds at 1.000 until D exceeds the FTR value of the frames
+near the rank; the lane is flat so that does not happen below ~120,000.

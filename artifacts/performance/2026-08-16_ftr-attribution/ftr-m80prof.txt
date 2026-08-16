@@ -1,0 +1,102 @@
+MASK m80prof   80 frames   root ndsFighterDisplayContractSubmit
+root invocations/frame  4.00 enter, 2.00 reach the timer (the span)
+MODEL TOTAL   root inclusive 290958 tk/fr   sum of per-symbol self 290958
+CHECK vs the instrument: tick-HUD FTR on the c220 basis reads P50 290,432, band 41-120 290,400
+      (../2026-08-16_collision-setup-share/lanes.txt).  This script never reads that file.
+
+=== FTR BY SELF COST (a leaf charged to itself) ===
+ self t/f  incl t/f   FTRc/f   bytes cyc/in  share  symbol                                       iss   ic   dc   wb  bus  ilk
+    30586    242143     2.00    7544   4.39   100%  ndsFighterMarioFoxDLAllDrawForSlot.constprop   14%   33%   38%   11%    0%    4%
+    26292     26292    54.00     548   3.07   100%  ndsRendererNativeEmitProductionPrimitiveGrou   42%    0%   13%    1%   40%    5%
+    22242    135077     2.00    3472   3.04   100%  ndsRendererExecuteNativeFighterOwnerProducti   44%    2%   37%    9%    0%    7%
+    18457     18457    52.62     616   1.83    97%  ndsRendererMtxMulAffine20p12                   -2%   73%   20%    2%    0%    8%
+    18424     31916    67.00    3720   2.28   100%  ndsRendererNativePrepareProductionRun          50%    1%   25%    3%   10%   10%
+    13139     13139    36.34    2056   2.43    97%  ndsRendererAdapterBuildFighterTraRotRpyDirec   -3%   76%   22%    1%    0%    3%
+    11803     37329    56.10    2440   2.22    97%  ndsRendererAdapterBuildDObjXObjMatrix          22%   41%   29%    3%    0%    5%
+    10622     12024    32.00     392   3.89   100%  ndsRendererLoadHardwareSplitMatrices           -4%   43%   23%    1%   36%    2%
+     9960     19236    52.17     388   4.72   100%  ftDisplayMainDrawDefault                        9%   31%   49%    7%    0%    4%
+     9334      9334    71.08     170   3.04    21%  memcpy                                         43%    1%   25%   26%    3%    1%
+     6352     18719   196.00     492   3.16   100%  ndsRendererNativeApplyStateDelta               48%    2%   40%    5%    0%    5%
+     5862      9508    49.00     580   2.71   100%  ndsRendererNativeShadeProductionActions.cons   50%    3%   34%    2%    3%    8%
+     5217      5223    30.00    1656   3.97   100%  ndsRendererNativeApplyMaterial.part.0          -4%   62%   36%    4%    0%    2%
+     5100     42429    56.12     206   3.71    97%  ndsRendererAdapterBuildDObjLocalMatrix          8%   33%   47%    2%    0%    9%
+     4718      4718    13.00     576   2.53   100%  ndsRendererNativeEmitProductionCrossRun.cons   45%    0%   10%    0%   37%    7%
+     4125      4125    54.17      56   8.97   100%  ndsFighterDisplayContractCountFlags             1%   25%   64%    3%    0%    7%
+     4106      4106    72.07     248   3.72    99%  ndsRendererSyncTextureTile                     26%    0%   41%   32%    0%    1%
+     3515      3515    32.00     304   2.18   100%  ndsFighterDisplayContractSelectDL              14%   31%   32%   14%    0%   10%
+     3493      5543     9.00     532   8.27   100%  ndsRendererR2RunTextureMemoApply.constprop.0   -7%   48%   51%    6%    0%    3%
+     3480      3480    30.02     132   1.73   100%  ndsRendererAdapterMaterialAnimHash             24%   40%   27%    1%    0%    8%
+     3359    290958     2.00     676  11.50    50%  ndsFighterDisplayContractSubmit                 9%   44%   39%    5%    0%    3%
+     3325     29899     2.00    2276  12.46   100%  ndsBaseFTDisplayMainProcDisplay                10%   50%   34%    2%    0%    4%
+     3148      7342    48.06     268   4.62    46%  ndsRendererHardwareBindTextureName             -3%   57%   40%    2%    0%    5%
+     2866      3341    25.90      92   8.45    46%  glBindTexture                                   8%   26%   54%    4%    6%    2%
+     2848      2848    40.55      68   4.53    72%  ndsR2CamDiv64                                  -3%   14%    7%    1%   51%   31%
+     2828      2828    21.30     140   4.07    13%  memset                                         27%    1%    4%   67%    0%    1%
+     2725      6129     2.90     944   8.47    72%  ndsR2CameraLookAtReflect20p12                   4%   79%    9%    8%    0%    0%
+     2590      2592    47.94     228   3.09    69%  ndsRendererHardwareEndBatch.part.0             -5%   53%   26%    3%   19%    4%
+     2281      2281    98.00     292   1.72   100%  ndsRendererR2MaterialColor15                   -0%   88%    8%    0%    0%    5%
+     2228      3423     9.00     268   8.25    99%  ndsRendererCaptureTextureLoad.part.0           -4%   56%   24%   24%    0%    0%
+     2189      2905     4.03     584   3.88    97%  syMatrixTraRotRpyRSca                          23%   57%   16%    3%    0%    1%
+     2109      2109    60.79      92   2.89    24%  ftGetStruct                                    14%   37%   40%    2%    0%    6%
+     1990      1990    32.00     152   3.27   100%  ndsRendererNativeApplyProductionPreamble       -6%   54%   41%    4%    0%    7%
+     1940     10291     2.00     800   4.50   100%  gmCameraLookAtFuncMatrix                       12%   49%   28%   10%    0%    2%
+     1899      3436     2.90     520   9.23    72%  ndsR2CameraPerspFast20p12                      -4%   72%   16%   15%    0%    0%
+     1848      2211    32.00     168   2.79   100%  ftDisplayMainDecideFogDraw                     19%   34%   38%    3%    0%    6%
+     1838      7948    40.00     488   6.56    89%  ndsRendererHardwareBindNoTexture.constprop.0   -5%   51%   47%    2%    0%    6%
+     1766      1766   135.38     408   1.13     6%  __mulsf3                                       94%    6%    0%    0%    0%    0%
+     1486      5770     2.06     556  12.66    90%  ndsRendererAdapterGetFrameCameraMatrices.con    5%   37%   29%   28%    0%    1%
+     1365      1365     2.00     724   8.12   100%  ndsRendererR2WriteLightVector                   1%   50%   14%    4%   20%   12%
+     1342      2766    25.00     332   1.51    99%  ndsRendererRecordSetTile                       69%    0%   15%   15%    0%    1%
+     1323      1323    52.17      92   2.98   100%  gcPrepDObjMatrix                               10%   36%   41%    1%    0%   13%
+
+=== FTR BY INCLUSIVE COST (the BUILDERS, leaves rolled up) ===
+ self t/f  incl t/f   FTRc/f   bytes cyc/in  share  symbol                                       iss   ic   dc   wb  bus  ilk
+     3359    290958     2.00     676  11.50    50%  ndsFighterDisplayContractSubmit                 9%   44%   39%    5%    0%    3%
+    30586    242143     2.00    7544   4.39   100%  ndsFighterMarioFoxDLAllDrawForSlot.constprop   14%   33%   38%   11%    0%    4%
+    22242    135077     2.00    3472   3.04   100%  ndsRendererExecuteNativeFighterOwnerProducti   44%    2%   37%    9%    0%    7%
+     5100     42429    56.12     206   3.71    97%  ndsRendererAdapterBuildDObjLocalMatrix          8%   33%   47%    2%    0%    9%
+    11803     37329    56.10    2440   2.22    97%  ndsRendererAdapterBuildDObjXObjMatrix          22%   41%   29%    3%    0%    5%
+    18424     31916    67.00    3720   2.28   100%  ndsRendererNativePrepareProductionRun          50%    1%   25%    3%   10%   10%
+     3325     29899     2.00    2276  12.46   100%  ndsBaseFTDisplayMainProcDisplay                10%   50%   34%    2%    0%    4%
+    26292     26292    54.00     548   3.07   100%  ndsRendererNativeEmitProductionPrimitiveGrou   42%    0%   13%    1%   40%    5%
+      380     19686     2.00     136  21.14   100%  ftDisplayMainDrawAll                           13%   46%   36%    1%    0%    4%
+     9960     19236    52.17     388   4.72   100%  ftDisplayMainDrawDefault                        9%   31%   49%    7%    0%    4%
+     6352     18719   196.00     492   3.16   100%  ndsRendererNativeApplyStateDelta               48%    2%   40%    5%    0%    5%
+    18457     18457    52.62     616   1.83    97%  ndsRendererMtxMulAffine20p12                   -2%   73%   20%    2%    0%    8%
+    13139     13139    36.34    2056   2.43    97%  ndsRendererAdapterBuildFighterTraRotRpyDirec   -3%   76%   22%    1%    0%    3%
+    10622     12024    32.00     392   3.89   100%  ndsRendererLoadHardwareSplitMatrices           -4%   43%   23%    1%   36%    2%
+     1940     10291     2.00     800   4.50   100%  gmCameraLookAtFuncMatrix                       12%   49%   28%   10%    0%    2%
+     5862      9508    49.00     580   2.71   100%  ndsRendererNativeShadeProductionActions.cons   50%    3%   34%    2%    3%    8%
+     9334      9334    71.08     170   3.04    21%  memcpy                                         43%    1%   25%   26%    3%    1%
+     1838      7948    40.00     488   6.56    89%  ndsRendererHardwareBindNoTexture.constprop.0   -5%   51%   47%    2%    0%    6%
+     3148      7342    48.06     268   4.62    46%  ndsRendererHardwareBindTextureName             -3%   57%   40%    2%    0%    5%
+     2725      6129     2.90     944   8.47    72%  ndsR2CameraLookAtReflect20p12                   4%   79%    9%    8%    0%    0%
+     1486      5770     2.06     556  12.66    90%  ndsRendererAdapterGetFrameCameraMatrices.con    5%   37%   29%   28%    0%    1%
+     3493      5543     9.00     532   8.27   100%  ndsRendererR2RunTextureMemoApply.constprop.0   -7%   48%   51%    6%    0%    3%
+     5217      5223    30.00    1656   3.97   100%  ndsRendererNativeApplyMaterial.part.0          -4%   62%   36%    4%    0%    2%
+     4718      4718    13.00     576   2.53   100%  ndsRendererNativeEmitProductionCrossRun.cons   45%    0%   10%    0%   37%    7%
+      503      4284     0.90     516  12.61    90%  ndsRendererAdapterBuildCameraMatrices.constp    5%   46%   37%   10%    0%    2%
+     4125      4125    54.17      56   8.97   100%  ndsFighterDisplayContractCountFlags             1%   25%   64%    3%    0%    7%
+
+=== RECONCILIATION: direct call sites against entry-PC counts ===
+Shortfall = calls this model cannot see (register-indirect, veneers).
+symbol                                        entry count    sites sum  covered
+ndsFighterMarioFoxDLAllDrawForSlot.constprop          160          160    100%
+ndsRendererNativeEmitProductionPrimitiveGrou         4320         4320    100%
+ndsRendererExecuteNativeFighterOwnerProducti          160          160    100%
+ndsRendererMtxMulAffine20p12                         4333         4333    100%
+ndsRendererNativePrepareProductionRun                5360         5360    100%
+ndsRendererAdapterBuildFighterTraRotRpyDirec         2987         2987    100%
+ndsRendererAdapterBuildDObjXObjMatrix                4611         4611    100%
+ndsRendererLoadHardwareSplitMatrices                 2566         2566    100%
+ftDisplayMainDrawDefault                             4174         4174    100%
+memcpy                                              26894        26894    100%
+ndsRendererNativeApplyStateDelta                    15680        15680    100%
+ndsRendererNativeShadeProductionActions.cons         3920         3920    100%
+ndsRendererNativeApplyMaterial.part.0                2403         2403    100%
+ndsRendererAdapterBuildDObjLocalMatrix               4613         4613    100%
+ndsRendererNativeEmitProductionCrossRun.cons         1040         1040    100%
+ndsFighterDisplayContractCountFlags                  4334         4334    100%
+ndsRendererSyncTextureTile                           5829         5829    100%
+ndsFighterDisplayContractSelectDL                    2560         2560    100%
+ALL FTR-reached symbols: sites 893669 vs entries 973061 = 91.8% covered

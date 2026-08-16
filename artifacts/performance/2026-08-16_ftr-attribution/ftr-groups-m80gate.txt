@@ -1,0 +1,55 @@
+FTR LANE, mask m80gate, 80 frames.   TOTAL 291051 tk/fr
+  the instrument's own figure for this lane: FTR band 41-120 = 290,400, P50 290,432
+
+=== STALL CLASSES OF THE WHOLE LANE ===
+"issue" is the profiler's RESIDUAL class and can read slightly negative on a
+symbol that retires under one cycle per instruction; it is not a stall you can delete.
+  class                 tk/fr   share
+  instructions          96391   33.1%
+  issue                 62929   21.6%
+  icache_fill           88486   30.4%
+  dcache_fill           84164   28.9%
+  write_buffer          19445    6.7%
+  bus_contention        20896    7.2%
+  interlock             15131    5.2%
+
+=== THE LANE BY PHASE (self ticks, each symbol counted once) ===
+group                                                               tk/fr    share
+CAPTURE pass  (walk the DObj tree, record the draw event list)      24919     8.6%
+PER-JOINT MATRIX build (local -> XObj -> affine compose)            61848    21.3%
+NATIVE PRODUCTION emit (build and push the GX command stream)       71448    24.5%
+MATERIAL and TEXTURE                                                29539    10.1%
+CAMERA (per-fighter look-at and perspective)                        10758     3.7%
+MEMORY movers                                                       13368     4.6%
+SOFT FLOAT leaves                                                    4038     1.4%
+everything else in the span                                         75134    25.8%
+TOTAL                                                              291051   100.0%
+
+  (of which the two top-level branches, by INCLUSIVE cost:
+     ndsBaseFTDisplayMainProcDisplay                             30190 tk/fr
+     gmCameraLookAtFuncMatrix                                    10285 tk/fr
+     ndsFighterMarioFoxDLAllDrawForSlot.constprop.0             241951 tk/fr
+     ndsRendererExecuteNativeFighterOwnerProduction             135075 tk/fr
+   the first three are siblings under the root; the fourth is inside the third)
+
+=== INSTRUCTION-FETCH OWNERS: what a placement lever could reach ===
+   icache  self t/f   bytes   ic/byte  symbol                                        
+    13564     18549     616     22.02  ndsRendererMtxMulAffine20p12                  
+    10176     30616    7544      1.35  ndsFighterMarioFoxDLAllDrawForSlot.constprop.0
+     8510     11159    2056      4.14  ndsRendererAdapterBuildFighterTraRotRpyDirect2
+     5706     13295    2440      2.34  ndsRendererAdapterBuildDObjXObjMatrix         
+     4542     10614     392     11.59  ndsRendererLoadHardwareSplitMatrices          
+     3221      5202    1656      1.94  ndsRendererNativeApplyMaterial.part.0         
+     3086      9988     388      7.95  ftDisplayMainDrawDefault                      
+     2096      2661     944      2.22  ndsR2CameraLookAtReflect20p12                 
+     2000      2286     292      6.85  ndsRendererR2MaterialColor15                  
+     1846      3206     268      6.89  ndsRendererHardwareBindTextureName            
+     1683      3348    2276      0.74  ndsBaseFTDisplayMainProcDisplay               
+     1667      5096     206      8.09  ndsRendererAdapterBuildDObjLocalMatrix        
+     1660      3470     532      3.12  ndsRendererR2RunTextureMemoApply.constprop.0  
+     1473      3346     676      2.18  ndsFighterDisplayContractSubmit               
+     1396      3473     132     10.58  ndsRendererAdapterMaterialAnimHash            
+     1386      2604     228      6.08  ndsRendererHardwareEndBatch.part.0            
+     1344      1862     520      2.59  ndsR2CameraPerspFast20p12                     
+     1282      2253     268      4.78  ndsRendererCaptureTextureLoad.part.0          
+    88486  <= FTR instruction fetch, total

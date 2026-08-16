@@ -1,0 +1,6 @@
+regions in profile        1601
+tick-HUD frames in basis  1600   rank-80 WORK-H 1210624
+m80prof  80 regions, non-idle cycles 2686104..7198034
+m80gate  80 regions (frames 447..1975 mapped by -439)
+OVERLAP  25 of 80 (31%)
+mean non-idle tk/fr: m80prof 1492796  m80gate 1339052  whole 982123

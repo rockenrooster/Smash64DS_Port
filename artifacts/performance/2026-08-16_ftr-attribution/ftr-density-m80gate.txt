@@ -1,0 +1,55 @@
+FTR FETCH DENSITY, mask m80gate (80 frames).  Symbols the FTR flow reaches: 128
+paid 42080 B in 1315 lines | live 34306 B (81.5%) | pool 644 B (1.5%) | cold 7130 B (16.9%)
+FTR instruction fetch on this mask: 88338 tk/fr
+PERFECT-COMPACTION CEILING (upper bound, not achievable): 9714 tk/fr
+
+ ceil t/f  fill t/f  lines  paid B  live B pool B  cold B   need  symbol                                    
+     1785     10176    114    3648    2890     96     662     94  ndsFighterMarioFoxDLAllDrawForSlot.constpr
+     1522      5706     30     960     698      0     262     22  ndsRendererAdapterBuildDObjXObjMatrix     
+      926      3086     10     320     192      4     124      7  ftDisplayMainDrawDefault                  
+      476      1667      7     224     150      0      74      5  ndsRendererAdapterBuildDObjLocalMatrix    
+      471       942      4     128      56      0      72      2  ndsRendererHardwareBindNoTexture.constprop
+      396      1683     34    1088     796     24     268     26  ndsBaseFTDisplayMainProcDisplay           
+      346      1039      3      96      36      8      52      2  ndsFighterDisplayContractCountFlags       
+      333      3221     29     928     820      0     108     26  ndsRendererNativeApplyMaterial.part.0     
+      295       884      9     288     160     20     108      6  ndsRendererApplyMatrixMoveWordCommand.part
+      286      2000      7     224     164      4      56      6  ndsRendererR2MaterialColor15              
+      270       809      3      96      48      0      48      2  ftGetStruct                               
+      262      8510     65    2080    2004      8      68     63  ndsRendererAdapterBuildFighterTraRotRpyDir
+      256      1282     10     320     240      0      80      8  ndsRendererCaptureTextureLoad.part.0      
+      231      1846      8     256     204      0      52      7  ndsRendererHardwareBindTextureName        
+      179       537      6     192     108      0      84      4  ndsRendererProfileSetOwner                
+      159       953     12     384     314      0      70     10  gmCameraLookAtFuncMatrix                  
+      130       652      5     160     112      8      40      4  ndsR2CamF32ToQ                            
+      128      1660     13     416     380      0      36     12  ndsRendererR2RunTextureMemoApply.constprop
+      126       630      5     160      98      0      62      4  ftDisplayMainDecideFogDraw                
+      106       213      2      64      26      4      34      1  glGetTexParameter                         
+       95       667      7     224     180      0      44      6  ndsRendererRecordOtherMode                
+       82      1473     18     576     504     28      44     17  ndsFighterDisplayContractSubmit           
+       79       158      2      64      32      0      32      1  ndsR2CamQToF32                            
+       66       132      2      64      12      0      52      1  ndsR2CamDivQ                              
+       66       131      2      64      18     12      34      1  ndsFighterDisplayContractSetRenderMode    
+       58       175      3      96      36      4      56      2  ftDisplayMainDrawAll                      
+
+=== ITCM CANDIDATES: the same fetch, bought with ITCM instead ===
+A body in ITCM pays no fetch at all.  The bound below is NOT the fill
+figure -- an instruction still retires -- it is
+    cycles - (instructions + dcache + write_buffer + bus + interlock),
+the cost this symbol would shed if fetch were free and nothing else
+changed.  ITCM_CENSUS.md puts the recoverable pool at 688 B by eviction
+(+54), on top of 220 B free on the instrument today.
+fetch-free  fill t/f   bytes   tk/fr/B  symbol                                        
+     7380     10176    7544      0.98  ndsFighterMarioFoxDLAllDrawForSlot.constprop.0
+     3799      8510    2056      1.85  ndsRendererAdapterBuildFighterTraRotRpyDirect2
+     2989     13564     616      4.85  ndsRendererMtxMulAffine20p12                  
+     2917       486    3472      0.84  ndsRendererExecuteNativeFighterOwnerProduction
+     2412         0     548      4.40  ndsRendererNativeEmitProductionPrimitiveGroups
+     2277      5706    2440      0.93  ndsRendererAdapterBuildDObjXObjMatrix         
+     1896      3086     388      4.89  ftDisplayMainDrawDefault                      
+     1881      2096     944      1.99  ndsR2CameraLookAtReflect20p12                 
+     1739      1683    2276      0.76  ndsBaseFTDisplayMainProcDisplay               
+     1710      3221    1656      1.03  ndsRendererNativeApplyMaterial.part.0         
+     1476      1473     676      2.18  ndsFighterDisplayContractSubmit               
+     1350       123    3720      0.36  ndsRendererNativePrepareProductionRun         
+     1335      4542     392      3.41  ndsRendererLoadHardwareSplitMatrices          
+     1173       122     492      2.38  ndsRendererNativeApplyStateDelta              
