@@ -147,12 +147,17 @@ carry). So these shares are of the lane, not of some sub-total. `issue` is the
 overlaps issue (−2.4% on `MtxMulAffine20p12`); `icache_fill` is a directly
 measured counter.
 
-| class | tk/fr | share of FTR | FTR's share of the whole run's class |
+The first two columns are the marginal-80 (`m80gate`). The third is computed
+**entirely on the whole mask** — FTR's whole-match figure over the run's own
+whole-match total from `arm9-profile.meta.txt` — because a lane share against a
+run total must not mix populations.
+
+| class | FTR tk/fr (m80gate) | share of FTR | FTR whole / run whole |
 |---|---:|---:|---:|
-| **icache_fill** | **88,486** | **30.4%** | 24.1% of 355,292 |
-| dcache_fill | 84,164 | 28.9% | 29.8% of 271,192 |
+| **icache_fill** | **88,486** | **30.4%** | **85,457 / 355,292 = 24.1%** |
+| dcache_fill | 84,164 | 28.9% | 80,747 / 271,192 = 29.8% |
 | issue (residual) | 62,929 | 21.6% | — |
-| bus_contention | 20,896 | 7.2% | **52.6% of 37,978** |
+| bus_contention | 20,896 | 7.2% | **19,992 / 37,978 = 52.6%** |
 | write_buffer | 19,445 | 6.7% | — |
 | interlock | 15,131 | 5.2% | — |
 
