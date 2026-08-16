@@ -5284,28 +5284,6 @@ extern volatile u32 gNdsFtrDrawMemoFills;
 extern volatile u32 gNdsFtrDrawMemoBypass;
 extern volatile u32 gNdsFtrDrawMemoBoundary;
 extern volatile u32 gNdsFtrDrawMemoReplayEvents;
-#if NDS_R2_FT_TRANSITION_PLAY_TOGGLE
-/* Owner play-test route for BLOCKED(decision: transition-frame animation play);
- * see artifacts/performance/2026-08-16_sitr-attach-lane/ATTACH_LANE.md section 4
- * and src/port/reloc_backend_compat_shims.c, which owns both the cell and the
- * hold. `route` 0 is the shipping arm: ftMainSetStatus evaluates the new clip's
- * joint keys on the transition frame exactly as the source does. `route` 1
- * holds the pre-transition pose for that one frame instead.
- *
- * A 32-byte cell for the reason gNdsFtrDrawMemoRoute records: a word sharing a
- * D-cache line with a word the frame writes gets stamped back on that line's
- * next writeback. This one is flipped from the keypad rather than poked, but it
- * costs nothing to own the line and it keeps a -SetGlobals poke honest. */
-typedef struct NDSFtTransitionPlayRouteCell {
-    volatile u32 route;
-    u32 line_pad[7];
-} NDSFtTransitionPlayRouteCell;
-extern NDSFtTransitionPlayRouteCell gNdsR2FtTransitionPlayRoute;
-/* Transitions the hold arm actually held. Zero on the shipping arm by
- * construction, so it is the negative control as well as the engagement
- * counter. */
-extern volatile u32 gNdsR2FtTransitionPlayHolds;
-#endif
 #if NDS_R2_FTR_CONTRACT_CENSUS
 /* Fighter draw-contract change census; see src/port/diagnostics.c. Lab only. */
 extern volatile u32 gNdsFtrContractCaptures;

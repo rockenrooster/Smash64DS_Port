@@ -1186,27 +1186,6 @@ NDS_R2_CAMERA_FIXED ?= 1
 # taken on. Pass NDS_R2_CAMERA_FIXED_TOGGLE=1 on the command line for the
 # owner's play-test ROM only.
 NDS_R2_CAMERA_FIXED_TOGGLE ?= 0
-# LAB ONLY, and never set by a target block. The owner's play-test binary for
-# BLOCKED(decision: transition-frame animation play) --
-# artifacts/performance/2026-08-16_sitr-attach-lane/ATTACH_LANE.md section 4.
-#
-# ftMainSetStatus plays the new clip itself (decomp ft/ftmain.c:4787-4795) and
-# the fighter's ordinary frame update plays it again, ~1.6 whole plays per
-# transition. This flag binds SELECT to a `.data` route word that holds the
-# fighter's pre-transition pose for the transition frame instead of evaluating
-# the new clip's keys on it, so hitboxes, hurtboxes and the drawn pose are one
-# frame behind ON TRANSITION FRAMES ONLY. Motion-event execution, attack-
-# collision creation, SFX, effects and the colour animation are untouched.
-#
-# THIS IS A GAMEPLAY CHANGE, so the two arms stop playing the same fight the
-# moment it is flipped. It is a feel instrument for the owner, not an A/B
-# measurement instrument, and it is not a measurement instrument in the other
-# direction either: the hold arm costs a joint-pose snapshot and restore that a
-# real implementation would not pay.
-#
-# DEFAULT 0 and command line only. Pass
-# NDS_R2_FT_TRANSITION_PLAY_TOGGLE=1 for the owner's play-test ROM.
-NDS_R2_FT_TRANSITION_PLAY_TOGGLE ?= 0
 # Draw Fox's source blaster model as its four baked, untextured vertices instead
 # of walking and decoding relocData 316's nine-command display list every
 # frame. Owner-playtested and accepted 2026-08-09; ON BY DEFAULT. The source
@@ -3699,7 +3678,6 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_R2_CAMERA_MATRIX_LEAN $(NDS_R2_CAMERA_MATRIX_LEAN)'; \
 		echo '#define NDS_R2_CAMERA_FIXED $(NDS_R2_CAMERA_FIXED)'; \
 		echo '#define NDS_R2_CAMERA_FIXED_TOGGLE $(NDS_R2_CAMERA_FIXED_TOGGLE)'; \
-		echo '#define NDS_R2_FT_TRANSITION_PLAY_TOGGLE $(NDS_R2_FT_TRANSITION_PLAY_TOGGLE)'; \
 		echo '#define NDS_R2_FOX_BLASTER_QUAD $(NDS_R2_FOX_BLASTER_QUAD)'; \
 		echo '#define NDS_R2_FOX_BLASTER_GLOW_AOT $(NDS_R2_FOX_BLASTER_GLOW_AOT)'; \
 		echo '#define NDS_R2_FOX_GUN_OVERLAY $(NDS_R2_FOX_GUN_OVERLAY)'; \

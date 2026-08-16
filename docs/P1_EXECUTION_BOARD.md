@@ -401,6 +401,33 @@ one: the play establishes the new status's pose on the transition frame and
 options are priced in `ATTACH_LANE.md` §4; **none is recommended.** The attach
 chain itself (+23,801) is the same question about the same transition.
 
+> **CLOSED 2026-08-16 — REJECTED BY THE OWNER. DO NOT RE-PROPOSE IT, IN ANY
+> FORM.** The owner played `builds/build-c224-animhold`, a one-binary SELECT
+> toggle carrying both arms, and returned: *"kill animhold, lots of issues with
+> animations not visibly playing"*. **13,376 capped / 37,027 uncapped at rank-80
+> is forgone.** The attach chain (+23,801, capped 10,496 / uncapped 11,968) is
+> the same question about the same transition and is closed by the same verdict.
+>
+> **The reason, from the source, so nobody re-derives it.** The play
+> `ftMainSetStatus` makes is not a duplicate of the frame update's. That
+> function **resets every common joint to the model's bind transform**
+> (`ftmain.c:4655-4668`), zeroes TransN/XRotN/YRotN, attaches the new figatree
+> **without posing it** (`gcAddDObjAnimJoint` sets every AObj to
+> `nGCAnimKindNone`, `objanim.c:137-149`), and only then plays. That play is the
+> **sole writer of the new status's first pose**, and the reset above it is only
+> safe because it runs. `ftMainProcSearchHitAll` (priority 1) reads those joints
+> later in the same frame, as does the draw. So §4 option 1 as written does not
+> lag the pose by a frame — it leaves the **bind pose** for a frame. The ROM the
+> owner played did not do that: it held the *previous* pose instead, which is
+> the cleanest isolation of "one frame of pose and hitbox lag on transition
+> frames only" that exists, and it still failed. **That closes the family, not
+> one implementation.** `artifacts/performance/2026-08-16_transition-play-verdict/VERDICT.md`.
+>
+> Correction carried by the same artifact: **`ftMainRunUpdateColAnim` does not
+> place hitboxes or hurtboxes** — it is the colour animation (`GMColAnim`,
+> `nGMColEvent*`, `ftmain.c:1203-1211`). The sentence above and `ATTACH_LANE.md`
+> §4 both say otherwise and both are wrong.
+
 **REFUSED — `ndsRelocAssetIDForToken` is a small load-frame cut its own file
 already forbids.** +4,118 tk/fr on the 288 = **3,542 at rank-80** (5.4% of the
 requirement), under the ≥14,080 floor. `src/port/reloc_backend_assets.c:1876-1921`
