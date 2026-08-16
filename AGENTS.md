@@ -21,9 +21,6 @@ feel; the DS implementation may differ radically from the original engine.
 ## Hard Rules
 
 - Treat `decomp/` as read-only reference source. Our Source of Truth. Never edit it. 
- `/decomp/` is gitignored (third-party source
-  plus ROM-derived data); `scripts/fetch-battleship-reference.ps1` rebuilds it
-  from upstream at the pinned commits, and `-VerifyOnly` checks an existing tree.
 - Never edit Agents.md or Claude.md unless given permission.
 - Inspect relevant BattleShip source before changing gameplay or renderer behavior.
 - Inspect `decomp/sm64-nds` and `decomp/sm64ds-decomp` before substantial DS

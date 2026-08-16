@@ -45,9 +45,13 @@ rule below exists because an Opus agent broke it at least once.
   is never swept in. Name-scan every committed blob (case-insensitive owner
   name patterns; must return nothing). Trailer per `CLAUDE.md`. No push, no
   snapshot — both belong to the orchestrator or owner.
-- **Tree:** `decomp/` is read-only; its tracked edits are patches under
-  `scripts/decomp-patches/battleship/` (verify with
-  `fetch-battleship-reference.ps1 -VerifyOnly`, never by grep).
+- **Tree:** `decomp/` is read-only and stays byte-pristine; its tracked edits are
+  patches under `scripts/import-overlays/battleship/`, applied at build time to
+  an ephemeral copy in `$(BUILD)/battleship_overlay/` that the `src/import/`
+  wrappers include. Verify with `fetch-battleship-reference.ps1 -VerifyOnly`,
+  never by grep. `check-decomp-pristine.ps1` enforces this on every
+  `verify-all.ps1` profile and fails on hash drift, on a DS marker under
+  `decomp/`, or on a `scripts/decomp-patches/battleship/*.patch` existing at all.
 - **Probes:** never call the guest allocator from gdb (it hangs the target).
   Stack locals and stack objects lie through this stub — globals and
   pointer-derefs only; validate a struct pointer by comparing one field to a
