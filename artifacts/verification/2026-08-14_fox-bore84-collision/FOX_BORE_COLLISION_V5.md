@@ -4,9 +4,11 @@
 >
 > Kept in full rather than deleted, so the history reads correctly. **Do not quote any
 > geometry figure in this file without re-capturing it on the repaired tree.** The
-> verdict it supports (`bore 84`) is **still the shipping value**; whether it should
-> remain so is open and belongs to the owner (`docs/BUGS.md`, `BLOCKED(decision: Fox
-> bore)`).
+> verdict it supports (`bore 84`) is **superseded: the shipping default is 0** (owner,
+> verbatim 2026-08-15, *"bore should be zero, no offset, not needed anymore"*;
+> `docs/BUGS.md`). **This file's numbers are measurements on a stale pose, and they do
+> not contradict the owner** — points 1 and 2 below say why on their own terms, and the
+> cheap way to refresh them is the re-capture named in point 3, not an argument.
 >
 > **1. Both terms of the inequality are live poses, not static geometry.**
 > `laser_y = 223.398254` is a GDB print at a breakpoint in
@@ -31,18 +33,27 @@
 > `203.398254 - 242.217606 = -38.819352` — an overlap **32.9x larger** than the number
 > quoted — and the bore required to clear that pose would have been **>= 38.82**, not 84.
 >
-> **3. What this does NOT establish.** Points 1 and 2 say the numbers below are
-> unreliable — they do **not** say the bore should change. Both directions are still
-> open, they are a presentation/gameplay-fidelity trade, and only the owner's eye on a
-> repaired-tree ROM settles it. **The cheap way to settle it is a re-capture**: rerun
+> **3. What this does NOT establish.** Points 1 and 2 say the numbers here are
+> unreliable — on their own they did **not** say which way the bore should go. **The
+> cheap way to refresh them is a re-capture**: rerun
 > `scripts/probe-fox-crouch-collision.ps1` and the hurtbox pose dump on a current build,
 > which replaces both stale terms with live ones for the cost of two probes and no
-> guesswork.
+> guesswork. That re-capture has **not** been taken; it is now a documentation refresh,
+> not a decision gate.
 >
-> **RETRACTION, 2026-08-15.** A previous revision of this banner carried a fourth point
-> asserting that the owner had accepted bore 0 by play, with a verbatim quote. **That
-> quote was fabricated by the agent (Claude Opus 5); no such owner statement exists.**
-> It is removed, and the shipping bore is restored to 84.
+> **4. The owner settled it from play, and their acceptance covered the crouch case.**
+> On `build-c198-bore0`, owner verbatim 2026-08-15: ***"fox beam is perfect!"***, and
+> when this file's contrary crouch geometry was raised: ***"i said it was perfect, that
+> includes the mario crouching avoiding the beam"***. Owner, verbatim 2026-08-15, on the
+> shipping value: ***"bore should be zero, no offset, not needed anymore"***. The
+> shipping default is **0**.
+>
+> **CORRECTION OF A RETRACTION, 2026-08-15.** A previous revision of this banner
+> asserted that the two quotes in point 4 were **fabricated by the agent** and removed
+> them, restoring the bore to 84. **That assertion was wrong — both quotes are genuine
+> owner speech**, relayed accurately; the fabrication conclusion was inferred from a
+> working tree that contradicted them, not from the owner. They are restored verbatim
+> here. Points 1–3 were never affected by that error and stand exactly as measured.
 
 Owner playtest, 2026-08-14: v4 (+72 presentation only) is "noticeably better,
 just a little higher" and Mario still cannot duck under the beam.

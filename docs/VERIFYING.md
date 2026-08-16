@@ -489,8 +489,14 @@ number captured in its window is suspect — not just the constants somebody tun
 Two 2026-08-14 artifacts are both left suspect by the same one-frame segment-phase bug
 (`69ce92e279f`, repaired `64c41c361a7`): the `NDS_FOX_BLASTER_BORE_OFFSET_Y` value, and
 `FOX_BORE_COLLISION_V5.md`'s crouch-clearance geometry, whose *both* terms were GDB
-prints of evaluated poses rather than static data. Suspect is not refuted — neither has
-been re-captured on the repaired tree, and the bore has not moved. So: when closing a pose defect, sweep
+prints of evaluated poses rather than static data. Neither has been re-captured on the
+repaired tree; the **bore is now 0** (owner, 2026-08-15, *"bore should be zero, no
+offset, not needed anymore"*), so v5's geometry is a stale-pose document with no live
+consumer and the re-capture is a documentation refresh rather than a decision gate. A
+second reading trap in the same file, worth its own line: v5 measured **one sphere from
+two different edges** (`45.180648` off the laser's bottom, `1.180648` off its top), which
+made a 32.9x-larger overlap read as a near-miss — state the edge, or the inequality is
+not comparable to itself. So: when closing a pose defect, sweep
 the capture window for derived geometry and mark it stale in place; and when writing such
 a document, record whether each term is **static data** or an **evaluated pose**, because
 that one label is what decides whether a later repair invalidates it.

@@ -1,15 +1,21 @@
 # The ladder re-read against the repaired-tree gap — the inventory is now ~1.6x the gap, and only one rung clears alone
 
 > **CORRECTION, 2026-08-15: the gap this file is titled after is superseded, and every
-> ratio below is ~4.8% pessimistic.** `+85,393` came from `build-c199-bank0`, which was
-> built at bore 0 — **not** the shipping default. The bank on the shipping-default
-> binary (`build-c200-bank84`) is **rank-80 1,226,624 raw / 1,201,677 net, gap
-> `+81,297`** (`../2026-08-15_ftanim-full-coverage/REBANK.md`). Multiply every "x the
-> gap" figure below by **85,393 / 81,297 = 1.050** to read it against the real
-> requirement. **No conclusion in this file changes sign**: the ordering of the rungs,
-> the "only compensated 30 Hz clears alone" verdict, and the 0.357x
-> unambiguously-available engineering share are all unaffected at that scale.
+> ratio below is ~4.8% pessimistic.** The banked requirement is **`+81,297`** from
+> `build-c200-bank84` — rank-80 **1,226,624 raw / 1,201,677 net**
+> (`../2026-08-15_ftanim-full-coverage/REBANK.md`). Multiply every "x the gap" figure
+> below by **85,393 / 81,297 = 1.050** to read it against the real requirement.
+> **No conclusion in this file changes sign**: the ordering of the rungs, the "only
+> compensated 30 Hz clears alone" verdict, and the 0.357x unambiguously-available
+> engineering share are all unaffected at that scale.
 > The directory name is left as-is so existing citations keep resolving.
+>
+> **Basis footnote, stated rather than buried.** `+85,393` is `build-c199-bank0`, built
+> at bore **0**; `+81,297` is `build-c200-bank84`, built at bore **84**. The shipping
+> default is now **0**, so the bore-0 arm is the one that matches the shipped binary —
+> but the two arms are **4,096 apart at rank-80, inside the ≥14,080 cross-build floor**,
+> i.e. the same level to this instrument. Quote **+81,297** and carry ±4,096 of bore
+> basis with it until a re-bank is taken at bore 0.
 
 **Date:** 2026-08-15 · **Branch:** `codex/r2-runtime2` · **HEAD `1eb6b453803`**
 **Zero builds, zero runs.** Every figure below is re-quoted from a census already on

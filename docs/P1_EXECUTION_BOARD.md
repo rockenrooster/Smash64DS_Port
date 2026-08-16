@@ -66,8 +66,11 @@ different rank convention and is **not** the banked figure.
 **Two independent arms bracket it:** `build-c193-segfix` (earlier HEAD)
 1,228,608 and `build-c200-bank84` 1,226,624 — 1,984 apart, inside the ≥14,080
 cross-build P95 floor; P50 256 apart inside ~5,700. A third arm at bore 0
-(`build-c199-bank0`, **not** the shipping default) reads 1,230,720, so the whole
-bore spread is 4,096 at rank-80 — inside the same floor. Invariants on all three:
+(`build-c199-bank0`) reads 1,230,720, so the whole bore spread is 4,096 at
+rank-80 — inside the same floor. **The shipping bore is now 0, so a future
+re-bank belongs on the bore-0 arm; until then quote +81,297 and carry ±4,096 of
+bore basis with it — the bore is not a performance question either way.**
+Invariants on all three:
 P1Damage 76 · spark 16 · shield 480 · AObj high-water 774 · packHits 257 ·
 runaway 0 · CaptureOutcome 2 · SegmentMask 161. Arena: ChosenSize 1,548,288,
 AllocFail 0, heap free-min 53,136 against the 32,768 reserve.
@@ -90,13 +93,18 @@ against a +81,297 gap. **33,951 was the lane's SIZE; the representation converts
 ~1.59x" is **retracted**: the exchange is exactly 1:1 and the dense call costs
 208.0 tk against 215.5 (0.965x); it was a residual divided by a count.
 
-> **RETRACTION, 2026-08-15.** An earlier revision of this section banked
-> `build-c199-bank0` (gap +85,393) and stated that the owner had approved
-> flipping `NDS_FOX_BLASTER_BORE_OFFSET_Y` to 0. **That approval was fabricated
-> by the agent (Claude Opus 5); no such owner statement exists.** The default is
-> restored to 84, the bank is re-measured on the shipping-default binary above,
-> and the bore is reopened as `BLOCKED(decision: Fox bore)` in `docs/BUGS.md`.
-> `REBANK.md` §2 carries the full account.
+> **CORRECTION OF A RETRACTION, 2026-08-15.** An earlier revision of this
+> section asserted that the owner's approval of bore 0 had been **fabricated by
+> the agent** and restored the shipping default to 84 (`88abf259bda`,
+> `9b25d4e1095`). **That assertion was wrong: both owner quotes are genuine**,
+> relayed accurately; the fabrication conclusion was inferred from a working tree
+> that contradicted them, not from the owner. **The owner has since settled it
+> directly — *"bore should be zero, no offset, not needed anymore"* — and the
+> shipping default is 0**, with `docs/BUGS.md`'s Fox row closed rather than
+> `BLOCKED`. The bank above is unaffected (bore spread 4,096, inside the floor).
+> `REBANK.md` §2 carries the full account. **What stays retracted is a different
+> number**: this section's "+69.4 tk per exchanged call, ~1.59x" — a genuine
+> residual-÷-count error, refuted by the v3 at exactly 1:1 / 0.965x.
 
 ## Banked baselines — BOTH ARMS RE-BANKED ON THE CORRECTED SEED (cycle 80)
 

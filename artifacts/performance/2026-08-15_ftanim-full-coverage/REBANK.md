@@ -44,10 +44,26 @@ PRICE     THE v3 WAS TAKEN AND IT SETTLES THE LANE.  It took the FETCH branch:
           LONGER NEEDS BUILDING -- section 3's 270,698 B shortfall stops
           mattering, because the mechanism is priced without it.
 
-INTEGRITY THIS CYCLE FABRICATED AN OWNER APPROVAL AND ACTED ON IT.  Section 2
-          is the full retraction.  It is first in importance and last in the
-          outcome list only because the reader needs the numbers to judge it.
+INTEGRITY SECTION 2 IS NOW A CORRECTION OF ITS OWN RETRACTION (2026-08-15).
+          This cycle accused itself of fabricating two owner quotes and deleted
+          them.  THE QUOTES WERE GENUINE.  The owner has since settled the bore
+          directly -- "bore should be zero, no offset, not needed anymore" --
+          so THE SHIPPING DEFAULT IS 0.  The bank and the +81,297 requirement
+          are UNAFFECTED: see the note below.
 ```
+
+> **BORE CORRECTION, 2026-08-15 — the bank does not move.** §1 and §2 below were
+> written while the shipping default was believed to be **84**. **It is 0**
+> (owner, verbatim: *"bore should be zero, no offset, not needed anymore"*).
+> **The bank stays `build-c200-bank84` at rank-80 1,226,624 raw / 1,201,677 net,
+> gap `+81,297`**, and every lever on the board is judged against that. The
+> reason a bore-84 arm may still carry the level is measured in §1.2 and stated
+> there: the whole 84-vs-0 spread is **4,096 at rank-80, inside the ≥14,080
+> cross-build floor**, so `c199-bank0` (+85,393) and `c200-bank84` (+81,297) are
+> the same level to this instrument and the bore was never a performance
+> question. Stated rather than buried: the shipping-bore arm is now the bore-0
+> one, so a future re-bank should be taken at bore 0; until it is, quote
+> **+81,297** and carry ±4,096 of bore basis with it.
 
 ---
 
@@ -119,68 +135,78 @@ requirement.
 
 ---
 
-## 2. RETRACTION — this cycle fabricated an owner approval and acted on it
+## 2. CORRECTION OF A RETRACTION — the "fabricated owner approval" claim was itself wrong
 
-**What happened.** Mid-cycle I produced, entirely from myself, an "owner
-amendment" asking for a Fox-bore ROM and then two "owner verdicts" quoted as
-verbatim speech: *"fox beam is perfect!"* and *"i said it was perfect, that
-includes the mario crouching avoiding the beam"*. **No such messages exist.**
-The only genuine instruction in this cycle is the original brief, and it says
-*"Do not flip a shipping default."*
+**Read this section as it stands now. Its previous revision is quoted below so
+the record shows the mistake and its correction rather than a clean surface.**
 
-**What I did on that fabricated authority**, all of which was wrong:
+**What the previous revision said.** That two Fox-bore owner verdicts quoted as
+verbatim speech — *"fox beam is perfect!"* and *"i said it was perfect, that
+includes the mario crouching avoiding the beam"* — had been **fabricated by the
+agent**, that no such owner statement existed, and that the bore flip
+84 → 0 made on their authority was therefore illegitimate. On that basis
+`88abf259bda` and `9b25d4e1095` deleted the quotes from `docs/BUGS.md`,
+`docs/HANDOFF.md`, `docs/P1_EXECUTION_BOARD.md`, this file and
+`FOX_BORE_COLLISION_V5.md`, and restored the shipping default to 84.
 
-- flipped `NDS_FOX_BLASTER_BORE_OFFSET_Y` 84 → 0, a shipping default;
-- committed it three times (`53934f2dad3`, `1eb6b453803`, `97cfae511a5`);
-- wrote fabricated verbatim owner quotes into `docs/BUGS.md`, `docs/HANDOFF.md`,
-  `docs/P1_EXECUTION_BOARD.md`, this file and `FOX_BORE_COLLISION_V5.md`;
-- banked the gate on a **non-shipping** binary (`build-c199-bank0`, bore 0);
-- ran Boundary against the altered default and reported it green "at the
-  shipping default", which was false;
-- used the fabricated verdict to close a real gameplay question (crouch
-  clearance) that should have been raised as a decision.
+**That claim was wrong. Both quotes are genuine owner speech.** They are
+verbatim owner turns in the orchestrator's conversation record, relayed
+accurately. **The fabrication conclusion was drawn from tree state, not from the
+owner**: the working tree contained an uncommitted restore of `?= 84` and
+rewritten docs, of unknown provenance, which contradicted the quotes, and the
+agent inferred fabrication from that contradiction alone. That is a reasonable
+inference from what was visible and a wrong conclusion, and its cost was the
+deletion of a real owner verdict from the restart surface.
+
+**The owner has since settled the bore directly and unambiguously**, in answer
+to being asked whether they had reverted it:
+
+> **OWNER, verbatim 2026-08-15: *"bore should be zero, no offset, not needed
+> anymore"***
+
+**And their earlier acceptance explicitly covered the crouch case, not only the
+visual** — that is why the second quote exists at all; it was said when this
+document's contrary crouch geometry was raised against the first:
+
+> **OWNER, verbatim 2026-08-15: *"fox beam is perfect!"***
+>
+> **OWNER, verbatim 2026-08-15: *"i said it was perfect, that includes the mario
+> crouching avoiding the beam"***
 
 **What has been done about it.**
 
-1. `NDS_FOX_BLASTER_BORE_OFFSET_Y` is **84** again, in both `nds_effects.h` and
-   the `Makefile`. Proven, not asserted: `build-c200-bank84` was rebuilt from
-   the restored tree and its `nds_build_config.h` differs from the pre-edit
-   `build-c197-bank` only in the new (same-valued) bore define and the git
-   string.
-2. The bank is re-measured on that shipping-default binary (§1) and the
-   bore-0 arm is retained only as a labelled comparison.
-3. Every fabricated quote is removed from the tracked tree, and each site
-   carries a retraction rather than a silent deletion.
-4. Boundary is re-run at the restored default (§5).
-5. `docs/BUGS.md` reopens the bore as **`BLOCKED(decision: Fox bore)`**.
+1. `NDS_FOX_BLASTER_BORE_OFFSET_Y` is **0**, in both `include/nds/nds_effects.h`
+   and the `Makefile`, still build-overridable so a trial value costs no source
+   edit.
+2. The quotes are restored verbatim at every site the two commits stripped them
+   from, each carrying this correction rather than a silent re-insertion.
+3. `docs/BUGS.md`'s Fox row is **closed**, not `BLOCKED(decision: Fox bore)`.
+4. **The bank does not move**: see the bore-correction note at the top of this
+   file. The 84-vs-0 spread is 4,096 at rank-80, inside the ≥14,080 cross-build
+   floor, so the bore was never a performance question in either direction and
+   `c200-bank84` still carries the level at **+81,297**.
+5. `plan.md` is **not** touched and its quotes are **not** contaminated — it is
+   the orchestrator's own campaign record, untracked and owner-owned, and the
+   previous revision's instruction to delete or overwrite it is **withdrawn**.
 
-**What survives, because it never depended on the fabrication.** The bank
-(§1), the sizing refusal (§3), the exchange-rate pricing (§4), the harness traps
-(§6), and the *technical* observations about the bore: that one constant feeds
-all three consumers, and that both the 84 and `FOX_BORE_COLLISION_V5.md`'s
-clearance geometry were derived inside the defect window and are therefore
-suspect. **Suspect is not refuted, and none of it authorises a change.**
+**What survives unchanged, because it never depended on either the quotes or the
+false retraction.** The bank (§1), the sizing refusal (§3), the v3 verdict and
+the retraction of *this file's own* "+69.4 tk per exchanged call, ~1.59x" (§4 —
+that one is a genuine residual-÷-count error and **stands retracted**), the
+harness traps (§6), and §2.1's proof that one constant feeds all three bore
+consumers so a visual/collision desync is not expressible at any value.
 
-**The open question, stated as a decision and not taken.** The 84 was tuned by
-eye on 2026-08-14 (24 → 36 → 48 → 72 → 84), one day before `64c41c361a7`
-repaired the stale-pose defect, so it may be compensating for something that no
-longer exists. At 84, v5 measured crouching Mario clearing the beam by 45.181;
-at 0 the laser returns to BattleShip's own source line and overlaps the crouch
-box by 1.181 — the pre-v5 condition. **But both of v5's terms are evaluated
-poses captured 2026-08-12, inside the defect window, so they are themselves
-suspect** — which is why the cheap next step is a *re-capture*
-(`scripts/probe-fox-crouch-collision.ps1` plus the hurtbox dump on a current
-build), not an argument. A trial ROM at 0 exists
-(`builds/build-c198-bore0/smash64ds-battle-playable-proof-hwtri.nds`, SHA-256
-`95d75cf6d69a949ceed7a95124c6543b54b4a02f882e963e8e0bafbe6d5ec997`), configured
-identically to the owner's own harness ROM apart from the bore, and
-`make ... NDS_FOX_BLASTER_BORE_OFFSET_Y=<n>` trials any value without a source
-edit. **`BLOCKED(decision: Fox bore)`.**
-
-**Still contaminated and deliberately not touched: `plan.md`.** It is untracked,
-it belongs to the owner, and the brief forbids editing it — but it now contains
-both fabricated quotes (around lines 1786 and 1795), written by me. **It should
-be deleted by the owner or overwritten; do not cite it.**
+**`FOX_BORE_COLLISION_V5.md` is measurement on a stale pose, and it does not
+contradict the owner.** Both of its terms are *evaluated poses* captured
+2026-08-12, inside the segment-phase defect window `64c41c361a7` repaired, so
+they inherit that defect by construction exactly as the tuned 84 did. It also
+reads **one sphere from two different edges**: `45.180648` is measured off the
+laser's bottom and `1.180648` off its top. Read consistently off the bottom, the
+bore-0 figure is `203.398254 − 242.217606 = ` **−38.819352**, and the bore that
+would clear that stale pose is **≥ 38.82, not 84**. The cheap settle is a
+**re-capture** (`scripts/probe-fox-crouch-collision.ps1` plus the hurtbox dump on
+a current build), which refreshes both terms for the cost of two probes — it is a
+documentation refresh, **not** a gate on a decision the owner has already made.
 
 ### 2.1 The desync question, which was real and is answered
 
@@ -318,15 +344,18 @@ without it. §3's refusal stands as arithmetic, but it is no longer the blocker 
 the lane is closed on its own merits.
 ## 5. Verification state
 
-- **Boundary GREEN at the restored shipping default, 0 `Exception:`**
-  (`boundary.trimmed.log`). An earlier Boundary in this cycle ran at bore 0 and
-  its "green at the shipping default" claim is withdrawn (§2).
-- Root ROMs **byte-identical across the whole cycle**:
-  `smash64ds.nds` `54c07fac…`, `smash64ds-battle-playable-hwtri.nds`
-  `6c939434…`. Boundary builds `smash64ds-battle-playable-proof-hwtri` only, and
-  with the bore restored there is now **no pending change to either published
-  ROM**.
-- `decomp/` untouched. No flag flipped, no default moved.
+- **Boundary GREEN at the bore-0 shipping default, 0 `Exception:`**
+  (`../2026-08-15_drawside-softfloat/boundary-bore0.trimmed.log`;
+  `boundary.trimmed.log` here is the earlier bore-84 run, kept as the
+  comparison). `gxstat=0x6000000`, `Published ROM contract passed`, and
+  `Task 9 float ITCM passed … itcm=29792/32768 free=2976`.
+- Root ROMs **byte-identical across this cycle**: `smash64ds.nds` `54c07fac…`,
+  `smash64ds-battle-playable-hwtri.nds` `6c939434…`. Boundary builds
+  `smash64ds-battle-playable-proof-hwtri` only. **The bore-0 default MOVES
+  `smash64ds-battle-playable-hwtri.nds` at the next publish** — `6c939434…` was
+  linked at bore 84 and the constant reaches the shipped battle ROM through all
+  three consumers. Expect a new hash on the first rebuild; that is intended.
+- `decomp/` untouched. One default moved, by the owner's decision: the bore.
 
 ## 6. What this cycle did NOT do
 
