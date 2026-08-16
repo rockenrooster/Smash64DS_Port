@@ -1,0 +1,64 @@
+CONTROL  rank-80 1210624 raw / 1185677 net   level +65297   band 41-120 1218356
+         (expect 1,210,624 / 1,185,677 / +65,297 / 1,218,356)
+
+Sum of the sixteen lane medians = 926560.  The raw gate is 1145327, so a frame that
+spends every lane at its own median passes with 218767 to spare: the whole
+remaining requirement is EXCURSION above that baseline, not baseline.
+
+=== every lane, three interventions, exact re-rank ===
+lane     |       P50 band41-120     x P50 | f to close | EXCmoved     level | ALLmoved     level
+SITR     |    104320    210060      2.01 |      39% |    86528    -21231 |   184704   -119407
+SHDT     |      4608     82239     17.85 |      80% |    68928     -3631 |    73536     -8239
+SPHD     |     72288    102233      1.41 |      69% |    31776    +33521 |    99584    -34287
+MISC     |    107872    137152      1.27 |      49% |    26368    +38929 |   133760    -68463
+GCRARES  |     81632     95895      1.17 |      67% |    13600    +51697 |    95232    -29935
+SCPU     |     53696     57455      1.07 |    never |    10880    +54417 |    44352    +20945
+SPRM     |      2112     12807      6.06 |    never |    10176    +55121 |    12288    +53009
+AUD      |      2688     20938      7.79 |    never |     6528    +58769 |     9216    +56081
+FTR      |    290432    290400      1.00 |      22% |     4224    +61073 |   294528   -229231
+STG      |    175424    177477      1.01 |      38% |     2624    +62673 |   178048   -112751
+OTHRW    |     19776     19900      1.01 |    never |      384    +64913 |    20160    +45137
+SCAT     |      1344      1381      1.03 |    never |      192    +65105 |     1536    +63761
+SWRM     |       960       984      1.02 |    never |       64    +65233 |     1024    +64273
+SRCRES   |      4416      4442      1.01 |    never |        0    +65297 |     4352    +60945
+SPHC     |       704       710      1.01 |    never |        0    +65297 |      640    +64657
+BG       |      4288      4282      1.00 |    never |        0    +65297 |     4224    +61073
+
+=== the fighter collision per-joint SETUP, at its own ceiling ===
+SHDT_MECHANISM.md section 2 proved the setup is per ENGAGED frame, so it lives
+in the SHDT EXCURSION (bucket minus its own run P50), not in the flat baseline.
+Its size, from that document's section 3.1 engaged-57 leaf attribution (self+leaf
+tk/fr on the 57 engaged frames of build-c191-sitr-profile-c185):
+    func_ovl2_800ED490      world matrix compose   7,006 + 20,696 = 27,702
+    gmCollisionSetInvertMatrix  3x3 cofactor       5,301 +  9,329 = 14,630
+    func_ovl2_800EDE5C      axis scales, 3 sqrtf   1,509 +  9,686 = 11,195
+    gmCollisionTransformMatrixAll  local matrix    5,060 +  5,791 = 10,851
+    lbCommonSin + lbCommonCos   its trig           3,805 +  2,477 =  6,282
+                                                  SETUP TOTAL      70,660
+against the whole chain's 102,988 (68.6% of it).  NOT setup, and excluded: the
+CONSUMERS -- gmCollisionGetWorldPosition 14,737 and gmCollisionTestRectangle
+11,880, which section 2's natural experiment already showed are the flat half.
+
+  SHDT excursion, whole match: 16416192 tk
+  setup incl. trig    70660 tk/fr x 57 frames =  4027620 tk = f 0.245 of the excursion
+                     rank-80 1200514  moved  10110  level +55187  band 1197943
+  setup excl. trig    64378 tk/fr x 57 frames =  3669546 tk = f 0.224 of the excursion
+                     rank-80 1200519  moved  10105  level +55192  band 1199852
+  whole chain        102988 tk/fr x 57 frames =  5870316 tk = f 0.358 of the excursion
+                     rank-80 1191670  moved  18954  level +46343  band 1188160
+
+  sensitivity -- the answer is flat across the whole plausible range:
+    f=0.150  rank-80 1201844  moved   8780  level +56517
+    f=0.200  rank-80 1200525  moved  10099  level +55198
+    f=0.224  rank-80 1200519  moved  10105  level +55192
+    f=0.245  rank-80 1200514  moved  10110  level +55187
+    f=0.300  rank-80 1195936  moved  14688  level +50609
+    f=0.350  rank-80 1193076  moved  17548  level +47749
+    f=0.500  rank-80 1171200  moved  39424  level +25873
+
+=== reference: what a UNIFORM saving on EVERY frame is worth ===
+  D=3542   moved   3542  ratio 1.000  level +61755
+  D=10112  moved  10112  ratio 1.000  level +55185
+  D=14080  moved  14080  ratio 1.000  level +51217
+  D=21267  moved  21267  ratio 1.000  level +44030
+  D=65297  moved  65297  ratio 1.000  level +0

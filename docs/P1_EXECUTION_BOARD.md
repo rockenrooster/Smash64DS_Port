@@ -92,6 +92,93 @@ CALLS ZERO** (a build default has no pre-poke frame). `Saturate`/`Degenerate`/
 > `build-c200-trackprof-off` at `GX_COMPOSE=1`. Quoting a stale split is what
 > made `MENU.md`'s 94,602 wrong for fourteen cycles.
 
+## THE PER-JOINT COLLISION SETUP IS NOT REDUNDANT — THE RENDERER *CALLS* IT — AND AT ZERO COST IT IS 10,110 AT RANK-80 (2026-08-16) — `artifacts/performance/2026-08-16_collision-setup-share/SETUP_SHARE.md`
+
+**0 lab builds, 0 emulator runs of my own, 0 production source edits, 0 defaults
+flipped, nothing published, nothing re-banked, both root ROMs byte-unchanged
+across Boundary's own rebuild. The level is unmoved at +65,297.** `lanes.py`
+prints the control before any result and needs no emulator.
+
+**ANSWERED — the redundancy does not exist, and the sharing already does.** The
+renderer does not build a competing fighter joint matrix; it **consumes** the
+collision chain's. `ndsRendererAdapterBuildJointAttachMtx`
+(`src/port/reloc_backend_renderer_dl.c:1464-1499`) **calls `func_ovl2_800EDBA4`**
+and then quantises `parts->mtx_translate` float → 16.16 → 20.12;
+`ndsRendererAdapterBuildFighterPartsMtx` (`:1247-1306`) reads
+`parts->unk_dobjtrans_0x10` gated on the same `transform_update_mode` latch. One
+producer, two consumers, memoised by the source's own four dirty flags
+(`gmcollision.c:29-79`, `:208-225`, `:228-278`, `:332-452`, `:455-469`). **The
+memo this question was looking for IS the dirty flag**, and
+`BAND_OWNER.md` §4's *"the renderer builds every joint's world matrix each frame
+in 20.12"* describes a producer that does not exist.
+
+**And the direction is the other way.** `func_ovl2_800ED490` is entered **22.77
+times on an engaged frame against 0.76 on a control frame**
+(`SHDT_MECHANISM.md` §3.1's 1,434.7 / 47.9 leaf calls ÷ a source-checked 63.01 per
+invocation), so the renderer drives under one compose a frame and hit detection
+drives all 22.01 of the rise. **The frame has not already built these matrices
+when hit detection asks — it builds them because hit detection asks.**
+
+**SIZED — and it would not matter if it had.** The whole per-joint setup (local
+matrix + world compose + 3×3 cofactor inverse + axis scales + their trig =
+**70,660 tk/fr on the 57 engaged frames, 68.6% of the chain's 102,988**; the
+excluded 26,617 are the *consumers* `GetWorldPosition` and `TestRectangle`, which
+`SHDT_MECHANISM.md` §2 already showed are the flat half) is **f = 0.245 of the
+`SHDT` excursion**:
+
+| intervention | rank-80 | moved | band 41–120 | level |
+|---|---:|---:|---:|---:|
+| *(control)* | 1,210,624 | — | 1,218,356 | **+65,297** |
+| the whole per-joint SETUP free | 1,200,514 | **10,110** | 1,197,943 | **+55,187** |
+| the whole CHAIN free | 1,191,670 | 18,954 | 1,188,160 | +46,343 |
+| the whole `SHDT` bucket free | 1,137,088 | 73,536 | 1,142,335 | −8,239 |
+
+**10,110 is 15.5% of the requirement and under the ≥14,080 cross-build floor**,
+and the estimate is not load-bearing: 8,780 at f=0.15 … 10,110 at f=0.245.
+Reaching even the floor needs f ≈ 0.30 — more than the whole measured chain.
+
+> **Two configuration facts, so nobody re-derives them.**
+> `builds/build-c220-camship/nds_build_config.h` reads **`NDS_R2_SIM_MAC_SHADOW 0`**
+> and **`NDS_R2_COLLISION_FIXED 0`**, so the shipping ROM runs the decomp bodies
+> **unwrapped** (c191's attribution needs no apparatus correction) and
+> `ndsR2CfxPrepareFighterJoint` (`src/port/nds_r2_collision_ring.c:253-323`) —
+> already a fixed-point implementation of exactly the inverse and the axis
+> scales — is compiled out. `EXCHANGE.md`'s 2.68 exchange rate is **not
+> reopened**. One consequence: `parts->mtx_translate` is also what the renderer
+> quantises, so a fixed-point `func_ovl2_800ED490` would move **drawn geometry**
+> as well as hits — `SHDT_MECHANISM.md` §4.2's declined route is *more* blocked.
+
+**CORRECTED — `SHDT` is not the largest single row at lane level.** Exact re-rank
+of every leaf on this basis: **`SITR` excess 86,528 (level −21,231)** against
+**`SHDT` 68,928 (−3,631)**. `SITR` is larger and is the only lane whose excess
+alone closes the gate. The "`SHDT` 50,240 > `SITR` 45,056" ordering below is the
+**cluster** rows — dominant-excess-owner subsets of the top 80 — which is a
+different quantity from the lane. Both are ceilings; both lanes' levers are
+already refuted.
+
+**NEW — the median frame passes the gate by 218,767, so the whole requirement is
+excursion.** The sixteen lane medians sum to **926,560** against a raw gate of
+**1,145,327**. The smallest *proportional* cut of a lane that closes +65,297:
+
+| lane | P50 | band 41–120 | × P50 | **f to close** | EXCESS moved → level | WHOLE moved |
+|---|---:|---:|---:|---:|---:|---:|
+| `SITR` | 104,320 | 210,060 | 2.01 | **39%** | **86,528** → −21,231 | 184,704 |
+| `SHDT` | 4,608 | 82,239 | 17.85 | 80% | 68,928 → −3,631 | 73,536 |
+| `SPHD` | 72,288 | 102,233 | 1.41 | 69% | 31,776 → +33,521 | 99,584 |
+| `MISC` | 107,872 | 137,152 | 1.27 | 49% | 26,368 → +38,929 | 133,760 |
+| `GCRARES` | 81,632 | 95,895 | 1.17 | 67% | 13,600 → +51,697 | 95,232 |
+| **`FTR`** | **290,432** | 290,400 | **1.00** | **22%** | 4,224 → +61,073 | 294,528 |
+| `STG` | 175,424 | 177,477 | 1.01 | 38% | 2,624 → +62,673 | 178,048 |
+| `SCPU` · `SPRM` · `AUD` · `OTHRW` · `SCAT` · `SWRM` · `SRCRES` · `SPHC` · `BG` | — | — | — | **never** | ≤10,880 | ≤44,352 |
+
+**Nine of sixteen lanes cannot close the gate even deleted entirely.** `FTR` is
+the cheapest at 22% because it is dead flat (1.00× at the band) and therefore
+converts **1:1** (`[[a-flat-lane-is-the-best-converting-lane]]`). It is the run's
+largest lane and **has never been attributed per-PC in the shipping
+configuration**; `v3-c221` (`GX_COMPOSE=0`, 1,600 frames) is the capture that
+would do it **with no build**. That is the next cycle's cheapest discriminating
+read.
+
 ## THE ATTACH LANE DOES NOT CONVERT — 72,768 IS 13,376–37,027 AT RANK-80, AND ITS PARSE/EVALUATE HALF IS THE TRANSITION'S OWN SECOND ANIMATION PLAY (2026-08-16) — `artifacts/performance/2026-08-16_sitr-attach-lane/ATTACH_LANE.md`
 
 **0 builds, 0 emulator runs, 0 production source edits, 0 defaults flipped,
@@ -157,10 +244,22 @@ still **+15,744**) — and sets the bar: *"Do not bring another small load-frame
 cut. Either remove this work in one change large enough to clear ~16,000 of tail
 movement, or move it off the gameplay frame entirely."* A runtime table is also
 ~1.5 KB of main RAM (keys are link-time addresses, so it must be built at run
-time) against `[[ram-is-not-free-gobj-cap]]`. **The second clause is the open
-route:** the tokens a match resolves are a bounded static set, so resolving each
-fighter's status→figatree table once at load removes the call from the gameplay
-frame instead of making it faster. Not started.
+time) against `[[ram-is-not-free-gobj-cap]]`.
+
+> **CLOSED 2026-08-16 — the second clause is NOT an open route, because it is the
+> same 3,542.** Moving the resolver off the gameplay frame removes 4,118 tk/fr
+> from the 288 event frames, which is *arithmetically identical to making it
+> free*: rank-80 is an order statistic over the window's 1,600 **gameplay** frames
+> 439–2038, and a match load sits outside it. `convert.py` prints **one row for
+> both — 3,542, level +61,755**, 22% of the file's own ~16,000 bar and 25% of the
+> ≥14,080 floor. The clause names a **mechanism**, not an exemption from the first
+> clause's **size**, and the failure it was written from was a **measurement**
+> failure the mechanism does not touch — E11 was provably identical, added
+> *negative* bytes, cut the function 7,667, and still read P95 +15,744. A ~1.5 KB
+> runtime table makes this change **byte-positive** where E11's was byte-negative.
+> **Not built.** Correct to take only if it ever rides along with something large,
+> exactly like the `AObjToQConvert` store below.
+> (`artifacts/performance/2026-08-16_collision-setup-share/SETUP_SHARE.md` §3.)
 
 **Also sized and refused: `ndsR2AnimAObjToQConvert`'s `nGCAnimKindNone` arm**
 (`battleship_ftanim.c:362-369`) writes `length_invert = Q(1.0)` and returns
@@ -178,6 +277,19 @@ frames and `SITR` **25**. Of the 118 frames over the gate, **41 carry no event a
 all.** This agrees with the section below's own §1 table, which already put the
 `SHDT` cluster at **50,240 moved / level +15,057** — larger than `SITR`'s 45,056
 and the largest single row in it. Not opened here.
+
+> **ANSWERED 2026-08-16, and the "largest single row" reading is corrected.**
+> Those are **cluster** figures (dominant-excess-owner subsets of the top 80). At
+> **lane** level on the same basis, `SITR`'s excess is **86,528** (level −21,231)
+> and `SHDT`'s is **68,928** (−3,631), so `SITR` is the larger of the two. The
+> follow-up question this paragraph implied — *is the per-joint hit-detection
+> setup redundant with work the frame already does?* — is **no**: the port's
+> renderer **calls** `func_ovl2_800EDBA4` and consumes `parts->mtx_translate`
+> rather than producing a rival matrix, and of the 22.77 composes on an engaged
+> frame hit detection drives 22.01 (a control frame runs 0.76). At zero cost the
+> whole setup is **10,110 at
+> rank-80**, under the floor. See the `SETUP_SHARE.md` section at the top of this
+> board.
 
 ## `SITR` IS A CALL-COUNT EVENT, NOT A COST — 288 FRAMES, 72,768 AT RANK-80 (2026-08-16) — `artifacts/performance/2026-08-16_sitr-excursion/SITR_EXCURSION.md`
 
