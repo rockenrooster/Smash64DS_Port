@@ -1,0 +1,48 @@
+pc-csv    artifacts\performance\2026-08-15_sitr-direct-children\c192-pc.csv
+elf       builds\build-c192-sitr-profile-gxc\smash64ds-battle-playable-tickhud-hwtri.elf
+basis     whole-match ticks/frame = cycles / 3,202   marginal = cycles / 160
+mask      total_cycles-halt_wait >= 1,172,523 ticks, 80 of 1601 frames
+NOT DEFINED IN THIS ELF: ftAnimParseDObjFigatree, ndsFTStructJointLoopLimit, ndsR2AnimBuildTrackTable.constprop.0.i
+
+symbol                                          bytes all tk/fr marg tk/fr  COST x  all ic  marg ic   ic x calls/fr m calls/fr  CALL x
+battleship_ftMainProcUpdateInterrupt             2176     7,567      7,986    1.06   3,698    3,892   1.05     3.89       4.00    1.03
+ftMainProcUpdateInterrupt                          36       526        545    1.04     248      256   1.03     3.89       4.00    1.03
+ftMainPlayAnim                                     60       655        909    1.39     340      465   1.37     4.08       5.49    1.34
+ftMainPlayAnimEventsAll                            16         5         26    4.79       3       16   4.82     0.14       0.66    4.76
+ftMainUpdateMotionEventsAll                       288       937      1,603    1.71     440      756   1.72     4.07       5.46    1.34
+ftMainParseMotionEvent                           2324       229      1,395    6.08     123      740   6.04     1.23       6.75    5.51
+ftParamUpdateAnimKeys                             716    10,208     13,796    1.35   3,002    4,084   1.36     4.08       5.49    1.34
+ftParamsUpdateFighterPartsTransform                36       426        576    1.35     169      226   1.34     4.13       5.55    1.34
+ftParamsUpdateFighterPartsTransformAll             38       394        422    1.07     156      173   1.11     3.91       4.15    1.06
+ndsFTParamsInvalidateSubtree                      376     7,176      9,291    1.29   1,955    2,453   1.25     8.04       9.70    1.21
+ndsR2FtAnimParseDObjFigatree                     2512    12,936     26,368    2.04   5,698   11,987   2.10    67.72      96.94    1.43
+ndsR2AnimTargetValue.constprop.0                  232     1,834      5,014    2.73     802    2,115   2.64    73.44     242.53    3.30
+ndsR2AnimAObjToQConvert                           852       734      2,687    3.66     380    1,304   3.43    43.15     181.66    4.21
+ndsR2AnimValueQ                                  1028    19,130     27,457    1.44  15,671   22,469   1.43   260.97     387.40    1.48
+gcPlayDObjAnimJoint                               604    20,022     27,038    1.35   6,403    9,262   1.45    69.00      99.16    1.44
+gcParseDObjAnimJoint                             1624     3,665      4,428    1.21   1,399    1,768   1.26    60.66      63.34    1.04
+gcParseMObjMatAnimJoint                          1868     4,063      5,298    1.30   1,844    2,400   1.30    69.06      89.88    1.30
+gcPlayMObjMatAnim                                  56     1,203      1,622    1.35     519      703   1.35    60.91      81.35    1.34
+ndsBaseGcPlayMObjMatAnim                          732     5,579      6,461    1.16   2,694    3,129   1.16    69.06      89.88    1.30
+ndsBaseGcPlayAnimAll                               80     1,622      1,742    1.07     987    1,066   1.08    10.72      11.68    1.09
+ndsBaseGcPlayDObjAnimJoint                        500     3,086      3,570    1.16   1,406    1,652   1.18    59.80      62.09    1.04
+gcPlayAnimAll                                     432     8,557      9,068    1.06   2,708    2,940   1.09    10.72      11.68    1.09
+lbCommonPlayTranslateScaledDObjAnim                 2         0          0       -       0        0      -     0.00       0.00       -
+ftMainUpdateColAnim                              1040     1,526      1,903    1.25     895    1,105   1.23     6.03       6.99    1.16
+battleship_ftMainRunUpdateColAnim                  72         0          0       -       0        0      -     0.00       0.00       -
+ftParamResetStatUpdateColAnim                      64         1          2    1.98       1        1   2.15     0.01       0.03    2.11
+ftMainSetStatus                                    72        44        223    5.10      28      143   5.13     0.19       1.01    5.23
+battleship_ftMainSetStatus                       2276     1,036      5,481    5.29     373    1,976   5.29     0.19       1.01    5.23
+lbCommonAddFighterPartsFigatree                   264       478      2,518    5.27     105      550   5.24     0.19       0.99    5.29
+gcAddDObjAnimJoint                                 68       896      4,161    4.64      96      433   4.53     4.21      19.26    4.57
+lbCommonAddDObjAnimJointAll                       176        92        119    1.29      23       29   1.28     0.05       0.06    1.27
+ndsBaseFTCommonGuardUpdateJoints                  308        15        128    8.36       7       55   8.04     0.04       0.16    3.94
+ndsBaseFTCommonGuardInitJoints                    480        81        104    1.29      32       42   1.31     0.05       0.06    1.27
+ftComputerProcessAll                               92       800        805    1.01     350      353   1.01     3.89       4.00    1.03
+ftKeyProcessKeyEvents                               8         0          0       -       0        0      -     0.00       0.00       -
+ftHammerUpdateStats                                 2         0          0       -       0        0      -     0.00       0.00       -
+ftParamTryUpdateItemMusic                           2         0          1   20.01       0        0  20.01     0.00       0.03   20.01
+func_800269C0_275C0                                68        13        125    9.60       8       80   9.66     0.08       0.74    9.45
+ftGetStruct                                        92     8,615      9,806    1.14   3,299    3,767   1.14   243.00     264.24    1.09
+ndsRelocPointerIsFighterAObj16                     84        94        464    4.91      52      247   4.78     4.38      19.61    4.47
+TOTAL                                                   124,244    183,139    1.47  55,914   82,639   1.48  1154.99    1787.00    1.55

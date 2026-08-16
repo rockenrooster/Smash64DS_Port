@@ -89,8 +89,65 @@ same-frame revisits, but they require draw reordering rather than local deletion
 Even a perfect-ordering upper bound adds only **2,484**, for **10,248 total**;
 even deleting all 8,867 sync ticks would reach only **12,656**. Zero census
 overflows, invariants/GXSTAT match, and the default ROM is byte-identical before
-and after the default-OFF instrumentation. **No micro-cut, no re-bank. Next:
-SITR decomposition.** Evidence: `artifacts/performance/2026-08-15_renderer-state-redundancy/STATE_REDUNDANCY.md`.
+and after the default-OFF instrumentation. **No micro-cut, no re-bank.**
+Evidence: `artifacts/performance/2026-08-15_renderer-state-redundancy/STATE_REDUNDANCY.md`.
+
+**`SITR` DECOMPOSITION DONE — IT DOES NOT CLOSE AS A BRACKET; ANIMATION OWNS IT
+AND THE PARSE HALF IS A 41,376 tk/fr AOT DELETION (2026-08-15).** Attribution
+only: 2 lab builds, 2 v3 captures, 1 Boundary, **0 production source edited, 0
+flag flipped, no re-bank**. Arm `build-c192-sitr-profile-gxc` = the c185 bank
+configuration to four defines, `GX_COMPOSE=1` via the documented
+`NDS_R2_FIGHTER_GX_COMPOSE_LAB=1` escape. Direct children on the marginal-80
+mask (≥1,172,523 ticks, basis `cycles/160`), each priced by **measured call
+rates against program-wide caller sets** rather than static reachability:
+
+| direct child | marg-80 tk/fr | whole | conc | marg calls/fr |
+|---|---:|---:|---:|---:|
+| **`ftMainPlayAnim`** (inlined `ftMainPlayAnimEventsAll`, first half) | **89,099** | 57,356 | **1.55x** | 5.49 (3.82 from the root) |
+| status callbacks (60 targets) | 62,155 | 25,143 | 2.47x | — |
+| root body | 7,986 | 7,567 | 1.06x | **4.00** |
+| `ftMainUpdateMotionEventsAll` | 2,998 | 1,166 | 2.57x | 5.46 |
+| `ftMainUpdateColAnim` (+Reset) | 1,905 | 1,527 | 1.25x | 6.99 |
+| *(`ftComputerProcessAll` = `SCPU`, **subtracted**)* | *12,435* | *12,272* | *1.01x* | *4.00* |
+| `ftKeyProcessKeyEvents` / `ftHammerUpdateStats` | **0** | 0 | — | **0.00** |
+
+Named non-SCPU subtotal **164,144 = 63.6%** of the bracket; the 94,052 residual
+is the shared leaf pool and is never charged twice (the static SHARED row is
+508,694, **1.97x the whole bracket** — the arithmetic proof that reachability
+cannot answer this). **THE MECHANISM: the PARSE half — `ndsR2FtAnimParseDObjFigatree`
++ `BuildTrackTable` + `TargetValue` + `AObjToQConvert` — is 41,376 tk/fr at
+rank-80** (whole 18,564, conc **2.23x**), **96.94 calls/marginal frame**
+re-deriving AObj node fields from **static FIGATREE ROM data**: **1.44x the
++28,689 requirement, 2.59x the 16K floor.** It is a representation change (AOT
+typed track rows in the Q form `ndsR2AnimValueQ` already consumes) — **not** the
+evaluate half (`gcPlayDObjAnimJoint`+`ndsR2AnimValueQ` **53,818** at 1.40x,
+already fixed-point, reducible not deletable), **not** AObj layout, **not**
+cadence. Per-call prices for a replacement: parser **272 tk/call** at 17.66
+joints per `ftParamUpdateAnimKeys` call, `gcPlayDObjAnimJoint` **273 tk/call**,
+`ndsR2AnimValueQ` **70.9 tk/call** at 3.91 AObj nodes per DObj.
+
+**RETRACTION — `SITR` = 310,662.4 marginal-80 is ONE INSTRUMENT FRAME.** Frame
+**756** carries a 2^22 event in `SINT` (4,163,136 over median, 0.74% off
+4,194,304), sits inside the c185 raw top-80, and alone contributes **+50,309**.
+The bracket is **260,354** (DRAW=1, 79 frames) / **258,196** (DRAW=0, 80) — two
+arms 0.83% apart. **Task 108's callback verdict is untouched and strengthened**
+(6,373.5 / 14,395.5 = 2.5% / 5.6% of a 16%-smaller bracket);
+`NDS_TASK108_SITR_CALLBACK_CENSUS` stays default OFF. The banked rank-80
+1,174,016 is a percentile and is **not** adjusted.
+
+**INSTRUMENT TRAP, MEASURED AND NOW IN THE TOOL'S DOCSTRING: the profile's
+frame→region map is `frame − 439`, not the banner's `− 438`.** At `−438` the
+c185 rank-80 frames land at median profile rank **454 of 1600** and every `SITR`
+row reads *below* its whole-match rate; at `−439`, median rank **43**, 63 of 79
+inside the profile's own top-80, and every row reproduces within 5% (PARSE half
+**40,003** vs 41,376). Lags −1/+2 are as bad as 0. Separately, the two
+instruments never share a frame bracket at all: three profile arms correlate
+**r ≥ 0.982** with each other, a profile against a tick-HUD arm peaks at
+**r ≈ 0.67**. **Cycle 109's "~96% in `ftMainPlayAnim` + `ftComputerProcessAll`"
+is half refuted** — right about the owner, wrong about the size (39.3%, and the
+AI half is subtracted out). **Next: animation representation, consuming these
+numbers.** Evidence:
+`artifacts/performance/2026-08-15_sitr-direct-children/SITR_DIRECT_CHILDREN.md`.
 
 **The previous bank — `WORK-H` P50 923,392 / P95 1,210,880** (slice 50,
 `builds/build-c131-cand`, same configuration), superseded by the anim-joint fix's +49,216.

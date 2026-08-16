@@ -1,0 +1,43 @@
+pc-csv    artifacts\performance\2026-08-15_sitr-direct-children\c191-pc.csv
+elf       builds\build-c191-sitr-profile-c185\smash64ds-battle-playable-tickhud-hwtri.elf
+basis     whole-match ticks/frame = cycles / (2 x 1601 regions) = cycles / 3,202
+basis     marginal ticks/frame = cycles / (2 x 80 frames) = cycles / 160
+mask      total_cycles-halt_wait >= 1,180,462 ticks
+
+MARGINAL 80 FRAMES -- symbol census (nm ranges)
+  total 1,323,123 ticks/frame over 1360 owners
+   ticks/fr  share      issue icache_fi dcache_fi write_buf interlock bus_conte  owner
+     51,654   3.9%     49,622     2,032         0         0         0         0  __aeabi_fadd
+     40,022   3.0%     37,670     2,352         0         0         0         0  __mulsf3
+     32,998   2.5%     14,026       297     7,878     8,809       606     1,382  memcpy
+     30,272   2.3%      3,960     9,943    11,894     3,266     1,210         0  ndsFighterMarioFoxDLAllDrawForSlot.constprop.0
+     29,609   2.2%       -993    17,166     8,423       289     1,532     3,192  ndsRendererCommitNativeStageSegment
+
+MARGINAL 80 FRAMES -- inline attribution (addr2line)
+  total 1,323,123 ticks/frame over 1511 owners
+   ticks/fr  share      issue icache_fi dcache_fi write_buf interlock bus_conte  owner
+     51,697   3.9%     49,657     2,032         0         0         8         0  __aeabi_fadd
+     44,006   3.3%     12,378    22,328     6,371     1,113     1,548       268  (not attributed: below the addr2line cut)
+     40,022   3.0%     37,670     2,352         0         0         0         0  __aeabi_fmul
+     32,998   2.5%     14,026       297     7,878     8,809       606     1,382  memcpy
+     24,184   1.8%      3,845     7,313     9,978       544     2,504         0  gcPlayDObjAnimJoint
+
+THE UNEXAMINED POOL on the marginal frames -- write_buffer + interlock + bus_contention (symbol census)
+  total 167,237 ticks/frame over 1284 owners
+   ticks/fr  share  write_buf interlock bus_conte  owner
+     14,499   8.7%     14,357       142         0  memset
+     11,831   7.1%        209     1,335    10,287  ndsRendererNativeEmitProductionPrimitiveGroups
+     10,797   6.5%      8,809       606     1,382  memcpy
+      5,273   3.2%      1,541     1,880     1,852  ndsRendererNativePrepareProductionRun
+      5,248   3.1%      5,125       123         0  ndsRendererSyncTextureTile
+
+THE UNEXAMINED POOL whole match -- write_buffer + interlock + bus_contention (symbol census)
+  total 129,844 ticks/frame over 1399 owners
+   ticks/fr  share  write_buf interlock bus_conte  owner
+     11,510   8.9%        208     1,299    10,003  ndsRendererNativeEmitProductionPrimitiveGroups
+      9,913   7.6%      9,821        93         0  memset
+      5,129   4.0%      5,010       120         0  ndsRendererSyncTextureTile
+      5,122   3.9%      1,485     1,831     1,806  ndsRendererNativePrepareProductionRun
+      5,009   3.9%        288     1,531     3,190  ndsRendererCommitNativeStageSegment
+
+wrote artifacts\performance\2026-08-15_sitr-direct-children\c191-marginal-census.json  (marginal-mask census.json, total_cycles 281,237,020 over 80 frames)

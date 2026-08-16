@@ -113,7 +113,8 @@ def profile_regions(profile_dir: Path) -> int:
 
 
 def marginal_regions(profile_dir: Path, count: int,
-                     band_min: int = 0, band_max: int = 0):
+                     band_min: int = 0, band_max: int = 0,
+                     region_list: str = ""):
     """-> (set of region ids as strings, diagnostic dict).
 
     Ranked on non-idle cycles, for the reason in the module docstring.
@@ -124,6 +125,30 @@ def marginal_regions(profile_dir: Path, count: int,
     CHEAPEST dropped ones, so a plain top-N mask pulls in load-frame outliers
     that no cadence conversion has to fix. Run both and compare the rankings --
     if they disagree, the top-N answer was an outlier artefact.
+
+    `region_list` masks by an EXPLICIT set of region ids instead of ranking
+    anything. It exists so that a population defined by the OTHER instrument --
+    the tick-HUD gate run's rank-80 frames -- can be carried onto a profile
+    without the caller re-deriving it, and so that the difference between the
+    two masks is measurable rather than assumed.
+
+    THE FRAME -> REGION MAPPING IS `region = frame - 439`, NOT `- 438`.
+    run-task37-profile-census.ps1's banner prints "region r = presented frame
+    438 + r", which is the ROM's own accounting; measured against the tick-HUD
+    sampler's frame numbering on 2026-08-15 it is off by one. It is not a
+    judgement call -- at `-438` the c185 rank-80 frames land at median profile
+    rank 454 of 1600 with 13 of 79 inside the profile's own top-80, and the
+    resulting attribution reads EVERY SITR row BELOW its whole-match rate; at
+    `-439` they land at median rank 43 with 63 of 79 inside it. Lags -1 and +2
+    are as bad as 0, so the alignment is unique. Re-measure it (rank the mapped
+    regions) before trusting either number on a new capture.
+
+    Even aligned, the two instruments do not bracket the same interval -- the
+    tick-HUD sums brackets inside one logic+draw iteration, a region is the span
+    between two CP15 markers -- so their rank-80 memberships differ. Two
+    independent PROFILE arms correlate r=0.98 with 71/80 overlap; a profile
+    against a tick-HUD arm peaks at r~0.67. Use this to cross-check a ranking,
+    not to relabel one mask as the other.
     """
     path = profile_dir / "arm9-profile.regions.csv"
     work = []
@@ -154,7 +179,20 @@ def marginal_regions(profile_dir: Path, count: int,
             non_idle = int(row["total_cycles"]) - int(row["halt_wait"])
             work.append((non_idle, row["region"]))
     work.sort(reverse=True)
-    if band_max:
+    if region_list:
+        text = (Path(region_list[1:]).read_text() if region_list.startswith("@")
+                else region_list)
+        wanted = {t.strip() for t in text.replace("\n", ",").split(",")
+                  if t.strip()}
+        chosen = [entry for entry in work if entry[1] in wanted]
+        missing = wanted - {region for _, region in chosen}
+        if missing:
+            raise SystemExit(
+                f"--region-list names {len(missing)} regions this profile does "
+                f"not have: {sorted(missing)[:8]}. A silently short mask "
+                "changes every per-frame divisor below it.")
+        axis = f"explicit region list, {len(chosen)} regions"
+    elif band_max:
         lo = band_min * CYCLES_PER_TICK
         hi = band_max * CYCLES_PER_TICK
         chosen = [entry for entry in work if lo <= entry[0] <= hi]
@@ -173,8 +211,10 @@ def marginal_regions(profile_dir: Path, count: int,
 
 
 def reduce_profile(profile_dir: Path, out_path: Path, count: int,
-                   band_min: int = 0, band_max: int = 0) -> int:
-    mask, info = marginal_regions(profile_dir, count, band_min, band_max)
+                   band_min: int = 0, band_max: int = 0,
+                   region_list: str = "") -> int:
+    mask, info = marginal_regions(profile_dir, count, band_min, band_max,
+                                  region_list)
     print(f"profile        {profile_dir}")
     print(f"regions        {info['regions_total']}")
     print(f"marginal       {info['marginal_count']} frames, non-idle "
@@ -834,6 +874,13 @@ def main() -> int:
     parser.add_argument("--marginal", type=int, default=160)
     parser.add_argument("--band-min", type=int, default=0)
     parser.add_argument("--band-max", type=int, default=0)
+    parser.add_argument("--region-list", default="",
+                        help="mask by these profile REGION ids (comma list or "
+                             "@file) instead of ranking. For carrying the tick-"
+                             "HUD gate arm's frame population onto a profile; "
+                             "the caller owns the frame->region mapping, "
+                             "because the two instruments do not bracket the "
+                             "same interval.")
     parser.add_argument("--top", type=int, default=25)
     parser.add_argument("--attribute-top", type=int, default=30000)
     parser.add_argument("--owner-roots", action="store_true",
@@ -849,7 +896,7 @@ def main() -> int:
         if not args.profile or not args.out:
             raise SystemExit("--reduce needs --profile and --out")
         return reduce_profile(args.profile, args.out, args.marginal,
-                              args.band_min, args.band_max)
+                              args.band_min, args.band_max, args.region_list)
     if args.report:
         if not args.pc_csv or not args.build:
             raise SystemExit("--report needs --pc-csv and --build")

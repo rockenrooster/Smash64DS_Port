@@ -1,0 +1,6 @@
+profile        artifacts\performance\2026-08-15_sitr-direct-children\v3-c192
+regions        1601
+marginal       80 frames, non-idle >= 1,172,523 ticks (median frame 950,566, max 3,101,208)
+streaming      artifacts\performance\2026-08-15_sitr-direct-children\v3-c192\arm9-profile.csv (3.64 GiB), one pass
+rows           54,881,164 over 108,441 distinct PCs
+wrote          artifacts\performance\2026-08-15_sitr-direct-children\c192-pc.csv and artifacts\performance\2026-08-15_sitr-direct-children\c192-pc.meta.txt

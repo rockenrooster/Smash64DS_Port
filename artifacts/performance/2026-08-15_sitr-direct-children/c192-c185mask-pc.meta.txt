@@ -1,0 +1,8 @@
+source=artifacts/performance/2026-08-15_sitr-direct-children/v3-c192/arm9-profile.csv
+regions=1601
+marginal_frames=79
+marginal_threshold_ticks=970727
+marginal_axis=total_cycles-halt_wait
+rows=54881164
+distinct_pcs=108441
+cycles_per_tick=2

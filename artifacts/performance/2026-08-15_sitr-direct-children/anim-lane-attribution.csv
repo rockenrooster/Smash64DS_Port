@@ -1,0 +1,16 @@
+symbol,marg80_tk_fr_total,whole_tk_fr_total,share_from_ftMainPlayAnim_lane,marg80_tk_fr_charged,whole_tk_fr_charged,share_evidence
+ftMainPlayAnim,909,655,1.0000,909,655,root of the lane
+ftParamUpdateAnimKeys,13796,10208,1.0000,13796,10208,sole caller ftMainPlayAnim
+ndsR2FtAnimParseDObjFigatree,26368,12936,1.0000,26368,12936,sole caller ftParamUpdateAnimKeys
+ndsR2AnimBuildTrackTable.constprop.0.isra.0,7308,3061,1.0000,7308,3061,sole caller the parser
+ndsR2AnimTargetValue.constprop.0,5014,1834,1.0000,5014,1834,sole caller the parser
+ndsR2AnimAObjToQConvert,2687,734,1.0000,2687,734,both callers in the parse lane
+gcPlayMObjMatAnim,1622,1203,1.0000,1622,1203,81.35 calls; other caller is the 0.99/fr figatree attach
+gcPlayDObjAnimJoint,27038,20022,0.9776,26433,19574,96.94 of 99.16 calls from ftParamUpdateAnimKeys
+ndsR2AnimValueQ,27457,19130,0.9776,26843,18702,"sole caller gcPlayDObjAnimJoint, inherits its share"
+ndsR2CubicValueFixed,556,277,0.9776,543,271,sole caller gcPlayDObjAnimJoint
+ndsBaseGcPlayMObjMatAnim,6461,5579,0.9051,5848,5049,"89.88 calls, 81.35 via gcPlayMObjMatAnim"
+gcParseMObjMatAnimJoint,5298,4063,0.9051,4795,3677,"same 89.88 rate, same split"
+ftParamsUpdateFighterPartsTransform,576,426,0.9892,570,422,5.49 of 5.55 calls from ftMainPlayAnim
+ndsFTParamsInvalidateSubtree,9291,7176,0.5722,5316,4106,"5.55 of 9.70 via …PartsTransform, 4.15 via …TransformAll"
+LANE TOTAL,,,,128050,82431,sum
