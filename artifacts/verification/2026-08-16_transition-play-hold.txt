@@ -1,0 +1,19 @@
+0x020be44c in mutexLock (m=0x2250bf0) at /home/davem/projects/devkitpro/pacman-packages/calico/src/calico-1.2.0/source/system/mutex.c:131
+Temporary breakpoint 1 at 0x20809ac: file D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_scvsbattle.c, line 243.
+
+Temporary breakpoint 1, scVSBattleStartBattle () at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_scvsbattle.c:243
+243	    gNdsSCVSBattleOriginalFuncStartResult =
+AHOLD entered route=0 holds=0
+Breakpoint 2 at 0x2050398: file D:/Stuff/DevFolder/Smash64DS_Port/src/port/taskman_seam.c, line 4646.
+AHOLD n=50 route=0 holds=0
+AHOLD n=100 route=0 holds=0
+AHOLD n=150 route=0 holds=0
+AHOLD FLIP n=200 route=1 holds=0
+AHOLD n=200 route=1 holds=0
+AHOLD n=250 route=1 holds=7
+AHOLD n=300 route=1 holds=18
+AHOLD n=350 route=1 holds=23
+AHOLD n=400 route=1 holds=32
+AHOLDDONE n=400 route=1 holds=32
+[Inferior 1 (Remote target) detached]
+

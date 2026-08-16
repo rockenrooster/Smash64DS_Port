@@ -45,7 +45,20 @@ param(
     # the same thing a player does -- synthesising it by calling
     # gmCameraSetStatusPlayerZoom over GDB crashes the core.
     [switch]$InGamePause,
-    [switch]$JumpBeforePause
+    [switch]$JumpBeforePause,
+    # Presses SELECT this many times between the first and the second capture.
+    # SELECT is the one DS key the battle input map leaves unbound, so every
+    # lab A/B toggle ROM binds it (NDS_R2_CAMERA_FIXED_TOGGLE 2026-08-16,
+    # NDS_R2_FT_TRANSITION_PLAY_TOGGLE 2026-08-16) and every one of them then
+    # needs the same thing from this harness: one binary, two captures, an arm
+    # flip in between. Pair it with -SecondOutput.
+    #
+    # It cannot go through SendKeys. In the repo melonDS config SELECT is
+    # 0x81000020 = Qt::Key_Shift | melonDS's right-modifier bit 31, i.e. the
+    # RIGHT shift key specifically, and SendKeys has no way to say which shift
+    # it means -- so this sends the right-shift virtual key with its own
+    # scancode through keybd_event instead.
+    [ValidateRange(0,16)][int]$SelectPresses = 0
 )
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'lib\melonds.ps1')
@@ -210,8 +223,27 @@ public static class Smash64DSWindowCapture
     public static extern bool SetWindowPos(
         IntPtr window, IntPtr insertAfter, int x, int y, int width, int height,
         uint flags);
+    [DllImport("user32.dll")]
+    public static extern void keybd_event(
+        byte vk, byte scan, uint flags, IntPtr extra);
 }
 '@
+function Send-MelonDSSelectPress {
+    param(
+        [Parameter(Mandatory=$true)]
+        [System.IntPtr]$WindowHandle
+    )
+    # VK_RSHIFT with the right-shift scancode, so Qt reports the RIGHT modifier
+    # and matches the 0x81000020 the repo config binds SELECT to. 0x0002 is
+    # KEYEVENTF_KEYUP. The hold is longer than one DS frame on purpose: melonDS
+    # samples the keypad once a frame and a sub-frame tap can be missed.
+    [void][Smash64DSWindowCapture]::SetForegroundWindow($WindowHandle)
+    Start-Sleep -Milliseconds 200
+    [Smash64DSWindowCapture]::keybd_event(0xA1, 0x36, 0, [IntPtr]::Zero)
+    Start-Sleep -Milliseconds 120
+    [Smash64DSWindowCapture]::keybd_event(0xA1, 0x36, 2, [IntPtr]::Zero)
+    Start-Sleep -Milliseconds 200
+}
 function Save-MelonDSWindowCapture {
     param(
         [Parameter(Mandatory=$true)]
@@ -550,6 +582,10 @@ try {
         $size = Save-MelonDSWindowCapture `
             -WindowHandle $emulator.MainWindowHandle -Path $Output
         if (-not [string]::IsNullOrWhiteSpace($SecondOutput)) {
+            for ($press = 0; $press -lt $SelectPresses; $press++) {
+                Send-MelonDSSelectPress `
+                    -WindowHandle $emulator.MainWindowHandle
+            }
             if ($SecondDelayMilliseconds -gt 0) {
                 Start-Sleep -Milliseconds $SecondDelayMilliseconds
             } else {

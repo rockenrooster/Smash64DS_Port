@@ -37,6 +37,13 @@ sb32 ndsDiagnosticsHandleImportedFTMainSetStatusBefore(GObj *fighter_gobj,
 #if NDS_TASK108_SITR_CALLBACK_CENSUS
 void ndsTask108SitrRefreshCallbacks(GObj *fighter_gobj);
 #endif
+#if NDS_R2_FT_TRANSITION_PLAY_TOGGLE
+/* Owner play-test arm for BLOCKED(decision: transition-frame animation play).
+ * Both live in src/port/reloc_backend_compat_shims.c beside the
+ * `ftParamUpdateAnimKeys` they gate; the whole argument is written out there. */
+sb32 ndsR2FtTransitionPlayBegin(GObj *fighter_gobj);
+void ndsR2FtTransitionPlayEnd(sb32 armed);
+#endif
 
 #ifndef DObjGetStruct
 #define DObjGetStruct(gobj) ((DObj *)((gobj)->obj))
@@ -127,8 +134,16 @@ void ftMainSetStatus(GObj *fighter_gobj, s32 status_id,
     {
         return;
     }
+#if NDS_R2_FT_TRANSITION_PLAY_TOGGLE
+    {
+        sb32 nds_transition_armed = ndsR2FtTransitionPlayBegin(fighter_gobj);
+#endif
     battleship_ftMainSetStatus(fighter_gobj, status_id, frame_begin,
                                anim_speed, flags);
+#if NDS_R2_FT_TRANSITION_PLAY_TOGGLE
+        ndsR2FtTransitionPlayEnd(nds_transition_armed);
+    }
+#endif
 #if NDS_TASK108_SITR_CALLBACK_CENSUS
     /* A status change can happen between the census's outer-proc entry and the
      * later proc_update/proc_interrupt calls. Re-wrap the newly installed

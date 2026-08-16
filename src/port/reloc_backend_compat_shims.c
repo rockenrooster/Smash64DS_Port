@@ -7,6 +7,11 @@
 #include <nds/nds_task37_itcm.h>
 #include <nds/nds_ftanim_track.h>
 #include <sys/vector.h>
+#if NDS_R2_FT_TRANSITION_PLAY_TOGGLE
+/* Owner play-test route cell for BLOCKED(decision: transition-frame animation
+ * play); this TU defines it. Argument at `ndsR2FtTransitionPlayBegin` below. */
+#include <nds/nds_startup.h>
+#endif
 
 /* Shield anim-joint install engagement + the lab dispatch audit; legends in
  * include/nds/nds_startup.h beside the declarations. */
@@ -1946,6 +1951,144 @@ static s32 ndsFTStructJointLoopLimit(const FTStruct *fp)
     return (s32)limit;
 }
 
+#if NDS_R2_FT_TRANSITION_PLAY_TOGGLE
+/* ---------------------------------------------------------------------------
+ * BLOCKED(decision: transition-frame animation play) -- the owner's play-test
+ * arm. artifacts/performance/2026-08-16_sitr-attach-lane/ATTACH_LANE.md sec. 4.
+ *
+ * WHAT THE SOURCE DOES. `ftMainSetStatus` resets every common joint to its
+ * `DObjDesc` bind transform (decomp ft/ftmain.c:4655-4668), zeroes
+ * TransN/XRotN/YRotN, attaches the new figatree, and only THEN plays the clip
+ * at 4787-4795. The fighter's ordinary frame update (ftmain.c:1399) already
+ * played the OLD clip earlier in the same frame -- that is where the measured
+ * ~1.6 whole plays per transition come from.
+ *
+ * WHY THIS IS A HOLD AND NOT A SKIP. Dropping the play outright, which is how
+ * section 4 option 1 is written, does NOT leave the fighter one frame behind.
+ * It leaves it in the BIND POSE for one frame, because the reset above has
+ * already run and nothing else writes those joints until the next frame's play.
+ * That is a flash, and AGENTS.md does not allow a flash to be handed over as a
+ * feel question. So this arm snapshots the joint locals before the reset can
+ * run and re-asserts them in place of the play. The result is the change the
+ * decision is actually about: the pose, and every attack collision and
+ * hurtbox hung off those joints, is one frame stale ON TRANSITION FRAMES ONLY.
+ * Motion-event execution, attack-collision creation, SFX, effects and the
+ * colour animation are untouched -- only the joint evaluation is deferred.
+ *
+ * WHY THE RESTORE HAPPENS HERE AND NOT AFTER ftMainSetStatus RETURNS.
+ * `ftMainPlayAnim` calls `ftParamsUpdateFighterPartsTransform` on the line
+ * after this function, and `ftMainUpdateMotionEventsAll` -- which spawns
+ * effects at joint WORLD positions -- immediately after that. Restoring later
+ * would leave both of them reading the bind pose.
+ *
+ * TransN/XRotN/YRotN are deliberately NOT restored. `ftMainSetStatus` zeroes
+ * them as the new clip's root-motion origin; re-asserting the previous status's
+ * root offset would inject a one-frame translation instead of delaying one.
+ *
+ * NOT A MEASUREMENT INSTRUMENT, in either direction. The snapshot and restore
+ * are traffic a real implementation would not pay, and the two arms stop
+ * playing the same fight the moment the route is flipped.
+ * ------------------------------------------------------------------------- */
+NDSFtTransitionPlayRouteCell gNdsR2FtTransitionPlayRoute
+    __attribute__((used, section(".data"), aligned(32))) = {
+        0u, { 0u, 0u, 0u, 0u, 0u, 0u, 0u }
+    };
+volatile u32 gNdsR2FtTransitionPlayHolds __attribute__((used));
+
+typedef struct NDSFtTransitionJointPose {
+    Vec3f translate;
+    Vec3f rotate;
+    Vec3f scale;
+} NDSFtTransitionJointPose;
+
+static NDSFtTransitionJointPose
+    sNdsFtTransitionPose[nFTPartsJointNumMax - nFTPartsJointCommonStart];
+/* The fighter whose next joint evaluation is held, NULL when nothing is armed.
+ * Identity rather than a flag so a nested or cross-fighter `ftMainSetStatus`
+ * cannot consume another fighter's snapshot. */
+static GObj *sNdsFtTransitionGObj;
+static s32 sNdsFtTransitionLimit;
+
+sb32 ndsR2FtTransitionPlayBegin(GObj *fighter_gobj)
+{
+    FTStruct *fp;
+    s32 i;
+
+    /* Armed only while the route is ALREADY on, so a mid-match flip can never
+     * pair a restore with a snapshot that was never taken: turning the hold on
+     * takes effect at the next status transition. A nested `ftMainSetStatus`
+     * (`proc_status` can raise one) leaves the outer arming alone and runs
+     * unheld -- degrading to the shipping path is the safe direction. */
+    if ((gNdsR2FtTransitionPlayRoute.route == 0u) ||
+        (sNdsFtTransitionGObj != NULL) || (fighter_gobj == NULL))
+    {
+        return FALSE;
+    }
+    fp = ftGetStruct(fighter_gobj);
+    if (fp == NULL)
+    {
+        return FALSE;
+    }
+    sNdsFtTransitionLimit = ndsFTStructJointLoopLimit(fp);
+
+    for (i = nFTPartsJointCommonStart; i < sNdsFtTransitionLimit; i++)
+    {
+        DObj *joint = fp->joints[i];
+
+        if (joint != NULL)
+        {
+            NDSFtTransitionJointPose *slot =
+                &sNdsFtTransitionPose[i - nFTPartsJointCommonStart];
+
+            slot->translate = joint->translate.vec.f;
+            slot->rotate = joint->rotate.vec.f;
+            slot->scale = joint->scale.vec.f;
+        }
+    }
+    sNdsFtTransitionGObj = fighter_gobj;
+    return TRUE;
+}
+
+void ndsR2FtTransitionPlayEnd(sb32 armed)
+{
+    if (armed != FALSE)
+    {
+        sNdsFtTransitionGObj = NULL;
+    }
+}
+
+static sb32 ndsR2FtTransitionPlayHold(GObj *fighter_gobj, FTStruct *fp)
+{
+    s32 i;
+
+    if ((sNdsFtTransitionGObj == NULL) ||
+        (sNdsFtTransitionGObj != fighter_gobj))
+    {
+        return FALSE;
+    }
+    /* Consumed here, so only the FIRST evaluation inside a transition is held.
+     * A second one would run normally, i.e. shipping behaviour. */
+    sNdsFtTransitionGObj = NULL;
+
+    for (i = nFTPartsJointCommonStart; i < sNdsFtTransitionLimit; i++)
+    {
+        DObj *joint = fp->joints[i];
+
+        if (joint != NULL)
+        {
+            const NDSFtTransitionJointPose *slot =
+                &sNdsFtTransitionPose[i - nFTPartsJointCommonStart];
+
+            joint->translate.vec.f = slot->translate;
+            joint->rotate.vec.f = slot->rotate;
+            joint->scale.vec.f = slot->scale;
+        }
+    }
+    gNdsR2FtTransitionPlayHolds++;
+    return TRUE;
+}
+#endif /* NDS_R2_FT_TRANSITION_PLAY_TOGGLE */
+
 /* Slice 33. Route bit 32 selects the caller-side idle-joint skip below. The
  * route word is the same one the parser and player arms use; this TU only reads
  * it, and only once per joint on the arm being measured. With the route
@@ -1978,6 +2121,14 @@ void ftParamUpdateAnimKeys(GObj *fighter_gobj)
     {
         return;
     }
+#if NDS_R2_FT_TRANSITION_PLAY_TOGGLE
+    /* Placed ahead of every other path in this function, so a `motion_id == -2`
+     * fighter is held on the same terms as an animated one. */
+    if (ndsR2FtTransitionPlayHold(fighter_gobj, fp) != FALSE)
+    {
+        return;
+    }
+#endif
     p_joint = &fp->joints[nFTPartsJointTopN];
     joint_limit = ndsFTStructJointLoopLimit(fp);
 #if NDS_ANIM_JOINT_AUDIT

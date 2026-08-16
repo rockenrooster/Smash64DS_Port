@@ -63,6 +63,16 @@
  * desync the fight. See artifacts/performance/2026-08-16_camera-fixedpoint/. */
 #include <nds/nds_r2_camera_fixed.h>
 #endif
+
+#ifndef NDS_R2_FT_TRANSITION_PLAY_TOGGLE
+#define NDS_R2_FT_TRANSITION_PLAY_TOGGLE 0
+#endif
+
+#if NDS_R2_FT_TRANSITION_PLAY_TOGGLE && NDS_R2_CAMERA_FIXED_TOGGLE
+/* Both bind SELECT and both own text-HUD row 3. One binary carrying the two
+ * would flip an arm the owner did not ask for and label neither correctly. */
+#error "NDS_R2_FT_TRANSITION_PLAY_TOGGLE and NDS_R2_CAMERA_FIXED_TOGGLE both own SELECT; build one at a time"
+#endif
 #if NDS_R2_SIM_MAC_SHADOW
 #include <nds/nds_r2_sim_mac_fixed.h>
 #endif
@@ -113,6 +123,12 @@ extern volatile u32 gNdsFrameCounter;
  * error, not a silently degraded ROM. */
 #error "NDS_R2_CAMERA_FIXED_TOGGLE needs NDS_BATTLE_FPS_HUD_ENABLED for its arm indicator"
 #endif
+#if NDS_R2_FT_TRANSITION_PLAY_TOGGLE && !NDS_BATTLE_FPS_HUD_ENABLED
+/* Same reasoning as the camera toggle above: an arm the owner cannot read is
+ * worse than no toggle, and this arm changes the fight rather than the picture,
+ * so guessing which one is live is not recoverable by looking harder. */
+#error "NDS_R2_FT_TRANSITION_PLAY_TOGGLE needs NDS_BATTLE_FPS_HUD_ENABLED for its arm indicator"
+#endif
 #if !NDS_RENDERER_HW_TRIANGLES
 static u16 *sFramebuffer;
 static u16 *sFramebuffers[2];
@@ -148,6 +164,12 @@ static u32 sBattleFpsHudPrintedUpdatesX10 = 0xffffffffu;
  * repaint until the clock or a damage value happened to change and the owner
  * would press SELECT and watch nothing happen for up to a second. */
 static u32 sBattleCameraArmPrinted = 0xffffffffu;
+#endif
+#if NDS_R2_FT_TRANSITION_PLAY_TOGGLE
+/* Own repaint gate, for the same reason the camera one has it: the text HUD's
+ * fingerprint is match state only, so an arm flip would not repaint until the
+ * clock or a damage value happened to move. */
+static u32 sBattleTransitionArmPrinted = 0xffffffffu;
 #endif
 static u32 sBattleTextHudReady;
 static u32 sBattleTextHudFingerprint = 0xffffffffu;
@@ -499,6 +521,18 @@ u32 ndsPlatformReadInput(void)
     if ((keysDown() & KEY_SELECT) != 0)
     {
         gNdsR2CameraFixedEnabled = (gNdsR2CameraFixedEnabled != 0u) ? 0u : 1u;
+    }
+#endif
+
+#if NDS_R2_FT_TRANSITION_PLAY_TOGGLE
+    /* Same key and the same rule about not re-scanning. The route is read at
+     * the START of each status transition, so a flip lands on the next
+     * transition rather than part-way through one -- there is no frame on which
+     * a snapshot is restored that was never taken. */
+    if ((keysDown() & KEY_SELECT) != 0)
+    {
+        gNdsR2FtTransitionPlayRoute.route =
+            (gNdsR2FtTransitionPlayRoute.route != 0u) ? 0u : 1u;
     }
 #endif
 
@@ -2354,6 +2388,9 @@ static void ndsPlatformRenderBattleFpsHud(void)
          * of this same call repaints it. */
         sBattleCameraArmPrinted = 0xffffffffu;
 #endif
+#if NDS_R2_FT_TRANSITION_PLAY_TOGGLE
+        sBattleTransitionArmPrinted = 0xffffffffu;
+#endif
         gNdsBattlePlayableHudFpsX10 = 0u;
         gNdsBattlePlayableHudFpsSampleCount = 0u;
         gNdsBattlePlayableHudFpsFrameWindow = 0u;
@@ -2704,6 +2741,20 @@ static void ndsPlatformRenderBattleFpsHud(void)
         }
     }
 #endif
+#if NDS_R2_FT_TRANSITION_PLAY_TOGGLE
+    /* Row 3, free for the same reason the camera toggle's comment gives. */
+    {
+        u32 arm = (gNdsR2FtTransitionPlayRoute.route != 0u) ? 1u : 0u;
+
+        if (arm != sBattleTransitionArmPrinted)
+        {
+            sBattleTransitionArmPrinted = arm;
+            ndsPlatformPrintDebugLine(
+                3u, (arm != 0u) ? "ANIM HOLD  1-frame [SELECT]"
+                                : "ANIM PLAY  shipping[SELECT]");
+        }
+    }
+#endif
 }
 #endif
 
@@ -2938,6 +2989,9 @@ void ndsPlatformClearBattleTextHud(void)
     sBattleTextHudFingerprint = 0xffffffffu;
 #if NDS_R2_CAMERA_FIXED_TOGGLE
     sBattleCameraArmPrinted = 0xffffffffu;
+#endif
+#if NDS_R2_FT_TRANSITION_PLAY_TOGGLE
+    sBattleTransitionArmPrinted = 0xffffffffu;
 #endif
 #endif
 }
