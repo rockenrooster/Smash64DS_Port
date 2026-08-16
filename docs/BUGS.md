@@ -11,4 +11,10 @@ These bugs should be fixed for P1 delivery:
   the segment-phase regression that caused it). `NDS_FOX_BLASTER_BORE_OFFSET_Y` is now **0** and
   build-overridable. Beam draw, muzzle/impact glow and the weapon attack collision read that one
   constant, so the visual and the hitbox moved together in both directions and never desynced.
+  Owner, 2026-08-15, when asked whether the acceptance covered gameplay as well as the visual:
+  *"i said it was perfect, that includes the mario crouching avoiding the beam"*
+  So crouch-avoids-beam is **accepted at bore 0 on the repaired tree**, by play, and is not open.
+  `FOX_BORE_COLLISION_V5.md`'s contrary "1.181 units of overlap" is marked **stale** in that
+  artifact: both of its terms are runtime poses captured 2026-08-12, inside the segment-phase
+  defect window, and it also measured one sphere from two different edges (details there).
 
