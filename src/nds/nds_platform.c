@@ -37,6 +37,30 @@
 #define NDS_FAST_WALLPAPER_AFFINE 0
 #endif
 
+#ifndef NDS_R2_CAMERA_FIXED_TOGGLE
+#define NDS_R2_CAMERA_FIXED_TOGGLE 0
+#endif
+
+#if NDS_R2_CAMERA_FIXED_TOGGLE
+/* Lab-only live A/B of the Q20.12 camera chain. gNdsR2CameraFixedEnabled is
+ * already a `.data` word read at each call site rather than a compile-time
+ * gate, so flipping it between frames is exactly the same switch -SetGlobals
+ * performs -- the only new thing here is who pushes it.
+ *
+ * SAFE MID-MATCH, and the reason is structural rather than empirical: both arms
+ * of both producers are pure functions of the CObj passed to them that frame,
+ * and every value either arm publishes -- gGMCameraMatrix, sGCMatrixProjectL,
+ * gGCMatrixPerspF, the caller's Mtx, the renderer's NDSRendererMatrix20p12 --
+ * is rewritten from scratch on the next entry. Nothing is carried across a
+ * frame, so no arm can read a value the other arm left behind. The one field
+ * BOTH arms write into live state, gGMCameraStruct.look_at, has exactly two
+ * referrers in this tree and they are those two writes; its only consumers in
+ * the source are gSPLookAtX/gSPLookAtY, which are RSP display-list commands
+ * this port does not emit. No simulation reader exists, so the flip cannot
+ * desync the fight. See artifacts/performance/2026-08-16_camera-fixedpoint/. */
+#include <nds/nds_r2_camera_fixed.h>
+#endif
+
 extern volatile u32 gNdsBootSelfTestResult;
 extern volatile u32 gNdsFrameCounter;
 
@@ -76,6 +100,13 @@ extern volatile u32 gNdsFrameCounter;
  * a device or in a screenshot. */
 #define NDS_BATTLE_TICK_HUD_DRAW_ENABLED \
     (NDS_BATTLE_TICK_HUD_ENABLED && NDS_TICK_HUD_DRAW)
+#if NDS_R2_CAMERA_FIXED_TOGGLE && !NDS_BATTLE_FPS_HUD_ENABLED
+/* The indicator draws into the battle FPS HUD's console. Without it the owner
+ * could flip the camera arm and have no way to tell which one is on screen,
+ * which is the one failure this build exists to prevent -- so it is a build
+ * error, not a silently degraded ROM. */
+#error "NDS_R2_CAMERA_FIXED_TOGGLE needs NDS_BATTLE_FPS_HUD_ENABLED for its arm indicator"
+#endif
 #if !NDS_RENDERER_HW_TRIANGLES
 static u16 *sFramebuffer;
 static u16 *sFramebuffers[2];
@@ -105,6 +136,13 @@ static u32 sBattleFpsHudLastPresentedFrames;
 static u32 sBattleFpsHudLastLogicFrames;
 static u32 sBattleFpsHudPrintedFpsX10 = 0xffffffffu;
 static u32 sBattleFpsHudPrintedUpdatesX10 = 0xffffffffu;
+#if NDS_R2_CAMERA_FIXED_TOGGLE
+/* Its own repaint gate rather than a field of the text HUD's fingerprint: that
+ * fingerprint is a function of match state only, so an arm flip would not
+ * repaint until the clock or a damage value happened to change and the owner
+ * would press SELECT and watch nothing happen for up to a second. */
+static u32 sBattleCameraArmPrinted = 0xffffffffu;
+#endif
 static u32 sBattleTextHudReady;
 static u32 sBattleTextHudFingerprint = 0xffffffffu;
 #if NDS_BATTLE_PHASE_HUD_ENABLED
@@ -437,6 +475,17 @@ u32 ndsPlatformReadInput(void)
     held = keysHeld();
     sHeldKeys = held;
     gNdsPlatformHeldKeys = held;
+
+#if NDS_R2_CAMERA_FIXED_TOGGLE
+    /* SELECT is the only key the battle leaves unbound, so binding it here
+     * cannot shadow a real input. keysDown() is READ, never re-scanned: the
+     * single scanKeys() above is the frame's only scan and a second one would
+     * eat the edge ndsControllerLiveButtons depends on. */
+    if ((keysDown() & KEY_SELECT) != 0)
+    {
+        gNdsR2CameraFixedEnabled = (gNdsR2CameraFixedEnabled != 0u) ? 0u : 1u;
+    }
+#endif
 
     if (held & KEY_LEFT) input |= NDS_INPUT_LEFT;
     if (held & KEY_RIGHT) input |= NDS_INPUT_RIGHT;
@@ -2285,6 +2334,11 @@ static void ndsPlatformRenderBattleFpsHud(void)
         sBattleFpsHudPrintedUpdatesX10 = 0xffffffffu;
         sBattleTextHudReady = FALSE;
         sBattleTextHudFingerprint = 0xffffffffu;
+#if NDS_R2_CAMERA_FIXED_TOGGLE
+        /* consoleClear() below wipes row 3 with the rest; the block at the end
+         * of this same call repaints it. */
+        sBattleCameraArmPrinted = 0xffffffffu;
+#endif
         gNdsBattlePlayableHudFpsX10 = 0u;
         gNdsBattlePlayableHudFpsSampleCount = 0u;
         gNdsBattlePlayableHudFpsFrameWindow = 0u;
@@ -2619,6 +2673,22 @@ static void ndsPlatformRenderBattleFpsHud(void)
                                    (unsigned long)(updates_x10 / 10u),
                                    (unsigned long)(updates_x10 % 10u));
     }
+#if NDS_R2_CAMERA_FIXED_TOGGLE
+    /* Row 3 is free in this configuration: row 0 is FPS, row 2 TIME, rows 5/6
+     * and 9/10 the two players, and rows 11+ belong to the tick HUD, which is
+     * compiled out here (NDS_TICK_HUD is 0 on the proof target). */
+    {
+        u32 arm = (gNdsR2CameraFixedEnabled != 0u) ? 1u : 0u;
+
+        if (arm != sBattleCameraArmPrinted)
+        {
+            sBattleCameraArmPrinted = arm;
+            ndsPlatformPrintDebugLine(
+                3u, (arm != 0u) ? "CAM  FIXED Q20.12  [SELECT]"
+                                : "CAM  FLOAT shipping[SELECT]");
+        }
+    }
+#endif
 }
 #endif
 
@@ -2844,6 +2914,9 @@ void ndsPlatformClearBattleTextHud(void)
     sBattleFpsHudPrintedFpsX10 = 0xffffffffu;
     sBattleTextHudReady = FALSE;
     sBattleTextHudFingerprint = 0xffffffffu;
+#if NDS_R2_CAMERA_FIXED_TOGGLE
+    sBattleCameraArmPrinted = 0xffffffffu;
+#endif
 #endif
 }
 

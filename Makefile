@@ -1120,6 +1120,20 @@ NDS_R2_CAMERA_MATRIX_LEAN ?= 2
 # section moves). DEFAULT 0 -- precision changes pixels and the owner's eye is
 # the acceptance gate, so nothing here ships without that decision.
 NDS_R2_CAMERA_FIXED ?= 0
+# LAB ONLY, and never set by a target block. Binds SELECT -- the one DS key the
+# battle input map leaves unbound (controller_backend.c maps A/B/X/Y/L/R/START
+# and the d-pad, and nothing maps SELECT) -- to flip gNdsR2CameraFixedEnabled
+# mid-match, and prints the live arm on the battle text HUD. The route word is
+# already `.data` and already read per call site, so one binary carries both
+# arms and the owner can A/B on the same frame, same camera, same fight rather
+# than reloading two ROMs.
+#
+# DEFAULT 0, and it must stay 0 for every measurement and every published ROM:
+# this adds a keypad edge test to ndsPlatformReadInput and a row to the HUD, so
+# a build carrying it is NOT the instrument the campaign's tick figures were
+# taken on. Pass NDS_R2_CAMERA_FIXED_TOGGLE=1 on the command line for the
+# owner's play-test ROM only.
+NDS_R2_CAMERA_FIXED_TOGGLE ?= 0
 # Draw Fox's source blaster model as its four baked, untextured vertices instead
 # of walking and decoding relocData 316's nine-command display list every
 # frame. Owner-playtested and accepted 2026-08-09; ON BY DEFAULT. The source
@@ -3509,6 +3523,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_R2_PARTICLE_CAMERA_CACHE $(NDS_R2_PARTICLE_CAMERA_CACHE)'; \
 		echo '#define NDS_R2_CAMERA_MATRIX_LEAN $(NDS_R2_CAMERA_MATRIX_LEAN)'; \
 		echo '#define NDS_R2_CAMERA_FIXED $(NDS_R2_CAMERA_FIXED)'; \
+		echo '#define NDS_R2_CAMERA_FIXED_TOGGLE $(NDS_R2_CAMERA_FIXED_TOGGLE)'; \
 		echo '#define NDS_R2_FOX_BLASTER_QUAD $(NDS_R2_FOX_BLASTER_QUAD)'; \
 		echo '#define NDS_R2_FOX_BLASTER_GLOW_AOT $(NDS_R2_FOX_BLASTER_GLOW_AOT)'; \
 		echo '#define NDS_R2_FOX_GUN_OVERLAY $(NDS_R2_FOX_GUN_OVERLAY)'; \
