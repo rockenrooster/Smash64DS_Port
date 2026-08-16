@@ -5031,6 +5031,50 @@ u32 gNdsTask93KeyTrace[NDS_TASK93_KEY_TRACE_COUNT];
 u32 gNdsTask93KeyTraceNext;
 #endif
 
+#if NDS_TASK107_RENDER_STATE_CENSUS
+/* Task 107. Observation only: these counters size two renderer-state candidates
+ * before any production path is changed. The stats tracker compares exact tile
+ * source bytes against the previous sync of that SAME stats object/tile. A
+ * stats init retires the object's history, so stack-address reuse cannot create
+ * a false repeat. The load tile's set_seen bit is tracked separately because it
+ * contributes NDS_RENDERER_TILE_LOAD_SEEN to the published flags word. */
+#define NDS_TASK107_SYNC_SITE_COUNT 4u
+#define NDS_TASK107_SYNC_TRACK_COUNT 32u
+#define NDS_TASK107_BIND_NAME_CAPACITY 64u
+enum
+{
+    NDS_TASK107_SYNC_TEXTURE = 0,
+    NDS_TASK107_SYNC_SETTILE = 1,
+    NDS_TASK107_SYNC_SETTILESIZE = 2,
+    NDS_TASK107_SYNC_RESOLVE = 3
+};
+typedef struct NDSRendererTask107SyncTrack
+{
+    const NDSRendererStats *stats;
+    u32 valid_mask;
+    u32 load_seen[NDS_RENDERER_TILE_COUNT];
+    NDSRendererTileState tile[NDS_RENDERER_TILE_COUNT];
+} NDSRendererTask107SyncTrack;
+
+__attribute__((used)) volatile u32
+    gNdsTask107SyncCalls[NDS_TASK107_SYNC_SITE_COUNT];
+__attribute__((used)) volatile u32
+    gNdsTask107SyncUnchanged[NDS_TASK107_SYNC_SITE_COUNT];
+__attribute__((used)) volatile u32 gNdsTask107SyncTrackerOverflow;
+__attribute__((used)) volatile u32 gNdsTask107BindRequests;
+__attribute__((used)) volatile u32 gNdsTask107BindZeroNameExits;
+__attribute__((used)) volatile u32 gNdsTask107BindCurrentNameElisions;
+__attribute__((used)) volatile u32 gNdsTask107BindIssues;
+__attribute__((used)) volatile u32 gNdsTask107BindRevisitIssues;
+__attribute__((used)) volatile u32 gNdsTask107BindNameSetOverflow;
+
+static NDSRendererTask107SyncTrack
+    sNdsTask107SyncTrack[NDS_TASK107_SYNC_TRACK_COUNT];
+static u32 sNdsTask107BindFrameSerial;
+static u32 sNdsTask107BindNameCount;
+static u32 sNdsTask107BindNames[NDS_TASK107_BIND_NAME_CAPACITY];
+#endif
+
 #if NDS_TASK90_SHADE_CENSUS
 /* Task 90. The instrument behind NDS_RENDERER_HW_LIGHT_SHADE_CACHE_COUNT: it
  * records every light-shade request in order, so the cache size is set from the
@@ -7080,6 +7124,11 @@ static void ndsRendererRecordCull(NDSRendererStats *stats, u32 w0, u32 w1)
 }
 
 static void ndsRendererSyncTextureTile(NDSRendererStats *stats);
+#if NDS_TASK107_RENDER_STATE_CENSUS
+static void ndsRendererTask107RecordTextureSync(
+    NDSRendererStats *stats,
+    u32 site);
+#endif
 
 static void NDS_R2_DELTA_PATH_CODE
 ndsRendererRecordTextureState(NDSRendererStats *stats, u32 w0, u32 w1)
@@ -7110,6 +7159,9 @@ ndsRendererRecordTextureState(NDSRendererStats *stats, u32 w0, u32 w1)
     {
         stats->texture_state_flags |= NDS_RENDERER_TEXTURE_STATE_SCALE_T;
     }
+#if NDS_TASK107_RENDER_STATE_CENSUS
+    ndsRendererTask107RecordTextureSync(stats, NDS_TASK107_SYNC_TEXTURE);
+#endif
     ndsRendererSyncTextureTile(stats);
 }
 
@@ -7135,6 +7187,92 @@ static u32 ndsRendererActiveTextureTile(const NDSRendererStats *stats)
     }
     return NDS_RENDERER_RENDER_TILE;
 }
+
+#if NDS_TASK107_RENDER_STATE_CENSUS
+static NDSRendererTask107SyncTrack *ndsRendererTask107FindSyncTrack(
+    const NDSRendererStats *stats,
+    s32 create)
+{
+    NDSRendererTask107SyncTrack *free_track = NULL;
+    u32 i;
+
+    for (i = 0u; i < NDS_TASK107_SYNC_TRACK_COUNT; i++)
+    {
+        NDSRendererTask107SyncTrack *track = &sNdsTask107SyncTrack[i];
+
+        if (track->stats == stats)
+        {
+            return track;
+        }
+        if ((free_track == NULL) && (track->stats == NULL))
+        {
+            free_track = track;
+        }
+    }
+    if ((create != FALSE) && (free_track != NULL))
+    {
+        free_track->stats = stats;
+        free_track->valid_mask = 0u;
+        return free_track;
+    }
+    if (create != FALSE)
+    {
+        gNdsTask107SyncTrackerOverflow++;
+    }
+    return NULL;
+}
+
+static void ndsRendererTask107ForgetSyncTrack(const NDSRendererStats *stats)
+{
+    NDSRendererTask107SyncTrack *track;
+
+    if (stats == NULL)
+    {
+        return;
+    }
+    track = ndsRendererTask107FindSyncTrack(stats, FALSE);
+    if (track != NULL)
+    {
+        track->stats = NULL;
+        track->valid_mask = 0u;
+    }
+}
+
+static void ndsRendererTask107RecordTextureSync(
+    NDSRendererStats *stats,
+    u32 site)
+{
+    NDSRendererTask107SyncTrack *track;
+    const NDSRendererTileState *tile;
+    u32 tile_index;
+    u32 bit;
+    u32 load_seen;
+
+    if ((stats == NULL) || (site >= NDS_TASK107_SYNC_SITE_COUNT))
+    {
+        return;
+    }
+    gNdsTask107SyncCalls[site]++;
+    tile_index = ndsRendererActiveTextureTile(stats);
+    tile = &stats->texture_tiles[tile_index];
+    load_seen = stats->texture_tiles[NDS_RENDERER_LOAD_TILE].set_seen;
+    bit = 1u << tile_index;
+    track = ndsRendererTask107FindSyncTrack(stats, TRUE);
+    if (track == NULL)
+    {
+        return;
+    }
+    if (((track->valid_mask & bit) != 0u) &&
+        (track->load_seen[tile_index] == load_seen) &&
+        (memcmp(&track->tile[tile_index], tile, sizeof(*tile)) == 0))
+    {
+        gNdsTask107SyncUnchanged[site]++;
+    }
+    track->tile[tile_index] = *tile;
+    track->load_seen[tile_index] = load_seen;
+    track->valid_mask |= bit;
+}
+#endif
 
 static void NDS_R2_DELTA_PATH_CODE
 ndsRendererSyncTextureTile(NDSRendererStats *stats)
@@ -7239,6 +7377,9 @@ ndsRendererRecordSetTile(NDSRendererStats *stats, u32 w0, u32 w1)
         stats->texture_load_tile = tile;
     }
 
+#if NDS_TASK107_RENDER_STATE_CENSUS
+    ndsRendererTask107RecordTextureSync(stats, NDS_TASK107_SYNC_SETTILE);
+#endif
     ndsRendererSyncTextureTile(stats);
 }
 
@@ -7375,6 +7516,9 @@ ndsRendererRecordSetTileSize(NDSRendererStats *stats, u32 w0, u32 w1)
     {
         tile->height = ((lrt - ult) >> 2) + 1u;
     }
+#if NDS_TASK107_RENDER_STATE_CENSUS
+    ndsRendererTask107RecordTextureSync(stats, NDS_TASK107_SYNC_SETTILESIZE);
+#endif
     ndsRendererSyncTextureTile(stats);
 }
 
@@ -12367,6 +12511,58 @@ static void ndsRendererHardwareBindTextureName(
     NDSRendererStats *stats,
     u32 texture_name)
 {
+#if NDS_TASK107_RENDER_STATE_CENSUS
+    u32 i;
+    s32 seen = FALSE;
+
+    gNdsTask107BindRequests++;
+    if (sNdsTask107BindFrameSerial != sNdsRendererHardwareFrameSerial)
+    {
+        sNdsTask107BindFrameSerial = sNdsRendererHardwareFrameSerial;
+        sNdsTask107BindNameCount = 0u;
+    }
+    if (texture_name == 0u)
+    {
+        gNdsTask107BindZeroNameExits++;
+        return;
+    }
+    if (sNdsRendererHardwareBoundTextureName == texture_name)
+    {
+        gNdsTask107BindCurrentNameElisions++;
+        return;
+    }
+    gNdsTask107BindIssues++;
+    for (i = 0u; i < sNdsTask107BindNameCount; i++)
+    {
+        if (sNdsTask107BindNames[i] == texture_name)
+        {
+            seen = TRUE;
+            break;
+        }
+    }
+    if (seen != FALSE)
+    {
+        gNdsTask107BindRevisitIssues++;
+    }
+    else if (sNdsTask107BindNameCount < NDS_TASK107_BIND_NAME_CAPACITY)
+    {
+        sNdsTask107BindNames[sNdsTask107BindNameCount++] = texture_name;
+    }
+    else
+    {
+        gNdsTask107BindNameSetOverflow++;
+    }
+    {
+        ndsRendererHardwareEndBatch();
+        ndsRendererHardwareBindTextureState((int)texture_name);
+        sNdsRendererHardwareBoundTextureName = texture_name;
+        ndsRendererProfileRecordTextureBind();
+        if (stats != NULL)
+        {
+            stats->hardware_texture_bind_count++;
+        }
+    }
+#else
     if (texture_name == 0u)
     {
         return;
@@ -12382,6 +12578,7 @@ static void ndsRendererHardwareBindTextureName(
             stats->hardware_texture_bind_count++;
         }
     }
+#endif
 }
 
 static void ndsRendererHardwareReleaseBattleStaticTextureEntries(void)
@@ -17631,6 +17828,9 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
 #endif
         return TRUE;
     }
+#if NDS_TASK107_RENDER_STATE_CENSUS
+    ndsRendererTask107RecordTextureSync(stats, NDS_TASK107_SYNC_RESOLVE);
+#endif
     ndsRendererSyncTextureTile(stats);
     render_tile_index = ndsRendererActiveTextureTile(stats);
     render_tile = &stats->texture_tiles[render_tile_index];
@@ -34183,6 +34383,9 @@ void ndsRendererInitStats(NDSRendererStats *stats)
 {
     if (stats != NULL)
     {
+#if NDS_TASK107_RENDER_STATE_CENSUS
+        ndsRendererTask107ForgetSyncTrack(stats);
+#endif
         memset(stats, 0, sizeof(*stats));
         stats->geometry_mode = NDS_RENDERER_GEOM_RESET_MODE;
         stats->othermode_h = NDS_RENDERER_TP_PERSP | NDS_RENDERER_TF_BILERP;

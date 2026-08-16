@@ -1,7 +1,4 @@
 #include <sys/obj.h>
-#if defined(SSB64_TARGET_NDS)
-#include <nds/nds_startup.h>
-#endif
 
 // // // // // // // // // // // //
 //                               //
@@ -135,9 +132,6 @@ void gcDefaultFuncRun(GObj *gobj)
 // 0x8000B1E8
 void gcSleepCurrentGObjThread(s32 tics)
 {
-#if defined(SSB64_TARGET_NDS)
-    gNdsTaskmanGObjThreadSleeps++;
-#endif
     if (gGCCurrentProcess->exec.gobjthread->stack[7] != 0xFEDCBA98)
     {
         syDebugPrintf("gobjthread stack over  gobjid = %d\n", gGCCurrentProcess->parent_gobj->id);

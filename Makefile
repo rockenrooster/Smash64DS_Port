@@ -243,6 +243,17 @@ NDS_TASK90_SHADE_CENSUS ?= 0
 # sequence, so a front-cache is sized from the measured trace the way Task 90
 # sized the light-shade LUT. Lab only.
 NDS_TASK93_TEXKEY_CENSUS ?= 0
+# Task 107. Lab-only renderer-state redundancy census. Counts exact repeated
+# texture-tile republishes at the four surviving call sites and texture-bind
+# request/elision/revisit behavior. Default off: the arrays and bookkeeping do
+# not exist in shipping or ordinary performance builds.
+NDS_TASK107_RENDER_STATE_CENSUS ?= 0
+# Task 108. Lab-only dynamic decomposition of the three callbacks dispatched
+# from ftMainProcUpdateInterrupt. The census temporarily interposes the live
+# FTStruct callback pointers while that one proc is running and records the
+# exact (fighter kind, status, proc slot, original target) call/tick tuple.
+# Default off; no callback interposition or storage exists in shipping builds.
+NDS_TASK108_SITR_CALLBACK_CENSUS ?= 0
 # BUGS.md #10 lab probe. Holding SELECT draws every polygon two-sided, so the
 # owner can A/B culling in place at one fixed camera. The original culling
 # probe compared two separate captures and was judged on an image that did not
@@ -2265,6 +2276,29 @@ BATTLESHIP_SYS := $(BATTLESHIP_DECOMP)/src/sys
 BATTLESHIP_O2R := $(PROJECT_ROOT)/decomp/BattleShip-main/BattleShip_o2r
 BATTLESHIP_RELOCDATA := $(PROJECT_ROOT)/decomp/BattleShip-main/decomp/assets/us/relocData
 
+# decomp/ is immutable source of truth. Eight older DS safety adaptations still
+# need source-level interposition inside imported BattleShip translation units;
+# generate those into the per-build include tree instead of ever editing decomp/.
+# New adaptations belong directly in src/import/src/port and must not be added
+# to this list.
+NDS_BATTLESHIP_IMPORT_OVERLAY := $(PROJECT_ROOT)/$(BUILD)/battleship_overlay
+NDS_BATTLESHIP_IMPORT_OVERLAY_STAMP := $(NDS_BATTLESHIP_IMPORT_OVERLAY)/.stamp
+NDS_BATTLESHIP_IMPORT_OVERLAY_GENERATOR := $(PROJECT_ROOT)/scripts/generate-battleship-import-overlay.ps1
+NDS_BATTLESHIP_IMPORT_OVERLAY_PATCHES := $(wildcard $(PROJECT_ROOT)/scripts/import-overlays/battleship/*.patch)
+NDS_BATTLESHIP_IMPORT_OVERLAY_INPUTS := \
+	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/ft/ftanim.c \
+	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/mn/mncommon/mnstartup.c \
+	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/mv/mvopening/mvopeningroom.c \
+	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/sc/scmanager.c \
+	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/sys/objanim.c \
+	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/sys/objhelper.c \
+	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/sys/objman.c \
+	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/sys/taskman.c
+NDS_BATTLESHIP_IMPORT_OVERLAY_OFILES := \
+	battleship_ftanim.o battleship_mnstartup.o battleship_mvopeningroom.o \
+	battleship_scmanager.o battleship_sys_objanim.o battleship_sys_objhelper.o \
+	battleship_sys_objman.o battleship_sys_taskman.o
+
 # BattleShip source files are compiled in place. They remain the source of truth.
 SOURCES := src/nds src/nds/r2 src/port src/import $(BATTLESHIP_SYS)
 # Do not add BattleShip's full include root globally: its N64 libc headers
@@ -3326,6 +3360,8 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_RENDERER_SCREEN_SPACE_CENSUS $(NDS_RENDERER_SCREEN_SPACE_CENSUS)'; \
 		echo '#define NDS_TASK90_SHADE_CENSUS $(NDS_TASK90_SHADE_CENSUS)'; \
 		echo '#define NDS_TASK93_TEXKEY_CENSUS $(NDS_TASK93_TEXKEY_CENSUS)'; \
+		echo '#define NDS_TASK107_RENDER_STATE_CENSUS $(NDS_TASK107_RENDER_STATE_CENSUS)'; \
+		echo '#define NDS_TASK108_SITR_CALLBACK_CENSUS $(NDS_TASK108_SITR_CALLBACK_CENSUS)'; \
 		echo '#define NDS_LAB_CULL_PROBE $(NDS_LAB_CULL_PROBE)'; \
 		echo '#define NDS_LAB_TINT_SHIFT $(NDS_LAB_TINT_SHIFT)'; \
 		echo '#define NDS_LAB_NO_CULL $(NDS_LAB_NO_CULL)'; \
@@ -3733,6 +3769,15 @@ nds_r2_collision_fixed.o: CFLAGS += -marm
 scene_backend.o: $(SCENE_BACKEND_SLICES) $(NDS_SCENE_HARNESS_CONFIG)
 scene_harness.o battleship_grinishie_scale.o: $(NDS_SCENE_HARNESS_CONFIG)
 nds_ifcommon_oam.o: $(NDS_TASK39_HIT_SPARKS_INC)
+
+$(NDS_BATTLESHIP_IMPORT_OVERLAY_STAMP): \
+		$(NDS_BATTLESHIP_IMPORT_OVERLAY_GENERATOR) \
+		$(NDS_BATTLESHIP_IMPORT_OVERLAY_PATCHES) \
+		$(NDS_BATTLESHIP_IMPORT_OVERLAY_INPUTS)
+	pwsh -NoProfile -ExecutionPolicy Bypass -File "$(NDS_BATTLESHIP_IMPORT_OVERLAY_GENERATOR)" \
+		-OutputRoot "$(NDS_BATTLESHIP_IMPORT_OVERLAY)"
+
+$(NDS_BATTLESHIP_IMPORT_OVERLAY_OFILES): $(NDS_BATTLESHIP_IMPORT_OVERLAY_STAMP)
 
 
 $(NITROFS_DIR)/reloc/%: $(BATTLESHIP_O2R)/%

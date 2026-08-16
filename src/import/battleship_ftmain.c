@@ -14,6 +14,7 @@ typedef struct alSoundEffect {
 #include <ef/effect.h>
 #include <ft/fighter.h>
 #include <gm/gmsound.h>
+#include <nds/nds_reloc_assets.h>
 
 void lbCommonAddFighterPartsFigatree(DObj *root_dobj, void *figatree,
                                      f32 anim_frame);
@@ -33,6 +34,9 @@ sb32 ndsDiagnosticsHandleImportedFTMainSetStatusBefore(GObj *fighter_gobj,
                                                        f32 frame_begin,
                                                        f32 anim_speed,
                                                        u32 flags);
+#if NDS_TASK108_SITR_CALLBACK_CENSUS
+void ndsTask108SitrRefreshCallbacks(GObj *fighter_gobj);
+#endif
 
 #ifndef DObjGetStruct
 #define DObjGetStruct(gobj) ((DObj *)((gobj)->obj))
@@ -125,6 +129,21 @@ void ftMainSetStatus(GObj *fighter_gobj, s32 status_id,
     }
     battleship_ftMainSetStatus(fighter_gobj, status_id, frame_begin,
                                anim_speed, flags);
+#if NDS_TASK108_SITR_CALLBACK_CENSUS
+    /* A status change can happen between the census's outer-proc entry and the
+     * later proc_update/proc_interrupt calls. Re-wrap the newly installed
+     * source callbacks only while that lab census is active. */
+    ndsTask108SitrRefreshCallbacks(fighter_gobj);
+#endif
+#if NDS_R2_BATTLEPACK
+    {
+        FTStruct *fp = ftGetStruct(fighter_gobj);
+        if (fp != NULL)
+        {
+            fp->figatree = ndsRelocResolveAuthoritativeForceFile(fp->figatree);
+        }
+    }
+#endif
 #if NDS_SHIP_TELEMETRY
     ndsDiagnosticsRecordImportedFTMainSetStatus(fighter_gobj, status_id,
                                                  frame_begin, anim_speed,

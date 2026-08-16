@@ -63,14 +63,34 @@ so length accumulates no cost; only the 3-VBlank share moves (16.6% against
 13.1%). The gate is still 85,760 over and its lane is unchanged. **Do not leave
 `NDS_R2_SOAK_MATCH_MINUTES` set anywhere** — that build is a lab directory only.
 
-**CURRENT BANKED GATE — `WORK-H` P50 924,928 / P95 raw 1,260,096, net ≈1,235,149**
-(`builds/build-c136-animjoint`, `NDS_R2_BOTH_CPU=1`, 1600 frames from 438, DLDI ON,
-`slips=0`; **gap 139,716 raw / 114,769 net** against 1,120,380). **STANDING, owner-approved
-2026-08-13 (`…/2026-08-13_c-residue/OWNER_DECISIONS.md` §8): quote BOTH figures from now on.**
-The net arm subtracts the **24,947 tk/frame** of tick-HUD-only apparatus that the published ROM
-does not execute (`RESIDUE.md` §5); the instrument is deliberately NOT being slimmed, so every
-banked figure stays comparable. It was re-confirmed on 2026-08-13 by the Fox bore-offset cycle's
-control run, which reproduced 924,928 / 1,260,096 and the identical VBlank histogram.
+**CURRENT BANKED GATE — `WORK-H` P50 938,112 / P95 rank-80 raw 1,174,016,
+net 1,149,069** (`builds/build-c185-gxcompose-bank`, `NDS_R2_BOTH_CPU=1`,
+`NDS_R2_FIGHTER_GX_COMPOSE=1`, DRAW=1, 1,600 samples frames 440–2039,
+DLDI ON, `slips=0`; **gap 53,636 raw / 28,689 net** against 1,120,380).
+P90 **1,088,192**, top-1% **1,520,832**, over-gate frames **122/1600**.
+The net arm subtracts the standing **24,947 tk/frame** of tick-HUD-only apparatus
+that the published ROM does not execute (`RESIDUE.md` §5); quote raw and net.
+This is a fresh measured level, **not** the prior −17,152 A/B applied
+arithmetically. The owner reviewed the new matched-tic pixel diff masks and
+accepted the measured 0.0358–0.1742% battle-screen variance; GXSTAT remains
+0x06000000, the old low-polygon blink signature is absent, and gameplay
+invariants match. **Published GX compose remains pinned OFF.**
+
+Cadence truth comes from the required DRAW=0 sibling
+`build-c185-gxcompose-bank-d0`: **VBI 2:1850 3:173 4:8 5+:8 max 19**, total
+2039, `slips=0` = **90.731% two-VBlank**, still below the ≥95% acceptance target.
+
+**RENDERER-STATE REDUNDANCY CLOSED BELOW THE 16K PACKAGE FLOOR (2026-08-15).**
+Task107 on the c185 configuration measured 146,221 tile syncs with **106,500
+exact repeats (72.835%)**: count-scaled ceiling **6,458 tk/fr**. Adding the
+already-proven no-Z duplicate gives **7,763 exact local**. Texture binding is
+already eliding 95,934 of 208,327 requests; 26,769 of 112,393 actual issues are
+same-frame revisits, but they require draw reordering rather than local deletion.
+Even a perfect-ordering upper bound adds only **2,484**, for **10,248 total**;
+even deleting all 8,867 sync ticks would reach only **12,656**. Zero census
+overflows, invariants/GXSTAT match, and the default ROM is byte-identical before
+and after the default-OFF instrumentation. **No micro-cut, no re-bank. Next:
+SITR decomposition.** Evidence: `artifacts/performance/2026-08-15_renderer-state-redundancy/STATE_REDUNDANCY.md`.
 
 **The previous bank — `WORK-H` P50 923,392 / P95 1,210,880** (slice 50,
 `builds/build-c131-cand`, same configuration), superseded by the anim-joint fix's +49,216.
@@ -1034,8 +1054,10 @@ items off (259, PROVEN)           553,696     511,904      41,792
   wipe), one writer (`ndsBaseSCManagerRunLoop`'s clear, self-bounded by
   `sizeof`), plus address-only users — and the span was re-derived from the
   wipe's compiled literals (`+0x23f14`, `−640`/row, 220 rows, 600 B/row →
-  `base+7,060 .. base+147,819`). `mntitle.c`'s `[1]`/`[2]` gap is closed by a
-  new decomp patch. Boundary green, 0 `Exception:`. **VS Results at source tic
+  `base+7,060 .. base+147,819`). `mntitle.c`'s `[1]`/`[2]` gap is closed at the
+  DS import boundary: `battleship_mntitle.c` aliases all three setup pointers to
+  framebuffer `[0]` before `syVideoInit`, while the decomp stays pristine.
+  Boundary green, 0 `Exception:`. **VS Results at source tic
   160 is a byte-identical capture across the arms; the wipe's animated frames
   were NOT captured and still need the owner's eye — not marked FIXED.**
 - **CORRECTION: "the full pack then fits by 6,536" is about the COMBINED pool,
@@ -1047,15 +1069,14 @@ items off (259, PROVEN)           553,696     511,904      41,792
   older **211,936** static figure was the `build-battle-playable-proof-hwtri-harness`
   arm, which is neither the shipped nor the measuring ROM (it reads 208,672
   today). **State the arm with the headroom.**
-- **PHASE 5's OTHER REASON TO COPY IS REMOVED — the patch is landed and provably
-  inert** (`6e93def43cd`, `scripts/decomp-patches/battleship/src_ft_ftmain.patch`).
-  `decomp/…/ft/ftmain.c:4623` no longer discards the return value.
-  **Exactly one symbol changes size in the whole binary**
-  (`battleship_ftMainSetStatus` 0x8e4 → 0x8dc): the deleted instructions are the
-  post-call reload of `fp->figatree_heap`, and both arms then execute the same
-  `str r0, [r4, #FIGATREE]`. Source-side the callee returns exactly `heap` on
-  every path when `heap != NULL`, and NULL only when `heap` is NULL. Boundary
-  green with every semantic smoke counter identical.
+- **PHASE 5's OTHER REASON TO COPY IS REMOVED WITHOUT EDITING `decomp/`.**
+  The old `6e93def43cd` decomp patch is retired. The DS force loader records the
+  authoritative file for the fighter's heap; the port-owned figatree attachment
+  seam substitutes that file when pristine BattleShip passes `figatree_heap`,
+  and `battleship_ftmain.c` mirrors the authoritative pointer into `fp->figatree`
+  after the source call. The bridge exists only when `NDS_R2_BATTLEPACK=1`.
+  Boundary is green on the pack+keep-cache arm with upstream `ftmain.c`
+  byte-for-byte restored.
 
 **Phase 4 host equivalence: mismatch = 0** over 297 clips / 5,629 scripts /
 77,959 commands / 71,500 states / 5,629 callbacks. Two falsifiers prove the test
@@ -9650,11 +9671,11 @@ second converter.
 
 **But the mechanism I reached for is closed.** `src/import/battleship_ftanim.c`
 `#define`s the parser's name, which renames its **definition and its call sites
-together**, so no macro can redirect only the calls. The obvious next seam —
-extending `scripts/decomp-patches/battleship/src_ft_ftanim.patch`, which already
-carries DS-guarded inserts to this exact file — **runs against a standing owner
-decision**: 2026-08-06, the eight patches **migrate port-side over time**, and
-that table lists this very patch. Adding to it moves the wrong way.
+together**, so no macro can redirect only the calls. Extending the legacy
+`scripts/import-overlays/battleship/src_ft_ftanim.patch` would still move the
+wrong way: that overlay exists only to preserve older DS adaptations while
+`decomp/` remains byte-for-byte pristine, and the standing direction is to
+migrate those adaptations into owned import/port seams rather than deepen it.
 
 **The slice was a port-side replacement of `ftAnimParseDObjFigatree`**, selected
 by `src/port/reloc_backend_compat_shims.c:1545`, which already defined that symbol
@@ -9807,12 +9828,33 @@ sanctioned-exception paragraph that used to permit tracked patches. Asked
 whether the eight existing patches should be grandfathered, migrated, or kept as
 an acknowledged exception, the owner chose **migrated port-side over time**.
 
-Until that finishes the rule text and the tree disagree: `fetch-battleship-reference.ps1`
-still applies all eight on every fetch and they are load-bearing, so **do not
-delete one without its port-side replacement landing in the same change.**
+**DONE 2026-08-15, and the rule text and the tree now agree.** All ten patches
+are gone from `scripts/decomp-patches/` and `decomp/` is byte-for-byte upstream.
+Two were genuinely lifted port-side — `src_ft_ftmain` into
+`src/import/battleship_ftmain.c` + `ndsRelocResolveAuthoritativeForceFile`, and
+`src_mn_..._mntitle` into `battleship_mntitle.c`'s three framebuffer aliases
+before `syVideoInit`. The other **eight keep their patch text but never touch the
+source of truth**: `scripts/generate-battleship-import-overlay.ps1` copies the
+pristine files into `$(BUILD)/battleship_overlay/` and `git apply --directory`s
+`scripts/import-overlays/battleship/*.patch` onto that ephemeral copy, and the
+`src/import/` wrappers `#include <battleship_overlay/…>` instead of
+`"../../decomp/…"`. Deepening those eight is still moving the wrong way; the
+overlay is a holding pen for the older adaptations, not a sanctioned home.
 
-**Migrate opportunistically** — when you are already working in that file's area,
-not as a sweep. Nothing here is on the gate lane.
+**The gate is structural, not a note.** `scripts/check-decomp-pristine.ps1` runs
+inside `check-gbi-decode-fixtures.ps1`, which `verify-all.ps1` invokes on **every**
+profile including Boundary. It fails on three separate things: a pinned-hash or
+whole-tree-hash drift under `decomp/src` (`fetch-battleship-reference.ps1
+-VerifyOnly`, which now hashes rather than greps for markers), any
+`SSB64_TARGET_NDS` marker inside `decomp/`, and the mere **existence** of a
+`scripts/decomp-patches/battleship/*.patch`. Editing `decomp/` is therefore
+inexpressible without a red verifier.
+
+**Zero built bytes moved.** `builds/build-c190-overlay-byteproof` rebuilt the
+`c185` bank configuration at the same HEAD and `compare-elf-sections.py` reads
+**0 differing bytes** across `.itcm`/`.text.hot`/`.text.hot.draw`/`.main`/
+`.main.rw`/`.dtcm`, with every section header identical in name, size and VMA
+(only `.debug_*` grew, by the two default-OFF census `#define`s). The bank stands.
 
 | patch | added | shape | difficulty |
 |---|---:|---|---|
@@ -10172,6 +10214,25 @@ owner's instruction; read §6 of that file for what was not done.**
   pin to run a lab arm is what this replaces.
 - Both root ROMs byte-identical; Boundary green at the shipping default,
   0 `Exception:`, and its pacing smoke prints `gxstat=0x6000000`.
+
+#### 2026-08-15 — GX compose pixel variance OWNER-ACCEPTED; fresh c185 bank established
+
+The missing matched-tic proof was taken from `build-c184-cap-a/-cap-b`.
+Battle-screen differences were **43–209 / 120,000 pixels (0.0358–0.1742%)**;
+the owner inspected the actual diff masks and accepted that variance as visually
+acceptable. This supersedes the blocker above without claiming pixel identity.
+GXSTAT remains **0x06000000**, the accepted-polygon blink signature remains
+absent, and gameplay invariants match.
+
+Fresh bank `build-c185-gxcompose-bank`, DRAW=1, BOTH_CPU=1, DLDI on, 1,600
+samples frames 440–2039, slips 0: **P50 938,112 · P90 1,088,192 · rank-80
+1,174,016 raw / 1,149,069 net · top-1% 1,520,832 · over gate 122/1600**.
+Exact gap: **+53,636 raw / +28,689 net**. This is the measured bank level; the
+old −17,152 A/B was not subtracted from any prior bank.
+
+Required DRAW=0 cadence sibling: **VBI 2:1850 3:173 4:8 5+:8 max 19**, total
+2039, slips 0 = **90.731% two-VBlank**, still below ≥95%. Published GX compose
+remains pinned OFF while the overall acceptance set is still red.
 
 1. Whole-match `-RingDump` sampling is the only gate instrument; label every
    figure with its arm **and its coverage**; DLDI-on only. **Coverage is part

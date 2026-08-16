@@ -28,7 +28,7 @@ volatile u32 gNdsR2CubicSaturations;
 #define gcPlayDObjAnimJoint ndsBaseGcPlayDObjAnimJoint
 #endif
 
-#include "../../decomp/BattleShip-main/decomp/src/sys/objanim.c"
+#include <battleship_overlay/src/sys/objanim.c>
 
 #undef gcAddDObjAnimJoint
 #undef gcAddMObjMatAnimJoint

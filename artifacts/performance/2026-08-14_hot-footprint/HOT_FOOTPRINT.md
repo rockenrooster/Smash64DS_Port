@@ -120,6 +120,26 @@ Checked and closed for the cost of one scan.
 
 ## 6. The specified next experiment
 
+> **STOP — step 1 below is REFUTED, 2026-08-15, zero builds spent.** The
+> compiler capability gate fails outright: devkitARM **GCC 15.2.0** answers
+> `cc1.exe: note: '-freorder-blocks-and-partition' not supported on this
+> architecture` and emits **no** `.text.unlikely`/cold section at all. Checked
+> three ways on a probe TU with a bulky `__builtin_expect(...,0)` path, under
+> the repo's exact `-O2 -ffunction-sections -fdata-sections`: `-march=armv5te
+> -mthumb` (the build's `ARCH`), `-march=armv5te -marm`, and `-march=armv7-a
+> -marm`. The section table is **identical with and without the flag** in every
+> case, so this is an ARM back-end limitation, not a Thumb-1 or `-Os`/`-O2`
+> artifact and not something a different `-march` or a section attribute
+> unblocks. **The linker was never the obstacle** — `linker/nds_hot_text.ld`'s
+> `.main` already collects `*(.text.unlikely .text.*_unlikely .text.unlikely.*)`
+> ahead of `.text.hot` and the `.text.*` catch-all, so a cold partition would
+> have been grouped away from its hot bodies for free if one had ever existed.
+>
+> §3's 42,892 B is therefore reachable only through **step 3** — manual
+> out-of-lining of cold fallback/error paths — which is hand work per function,
+> not a flag, and must be sized against the ≥16,000 tk/fr floor before it is
+> started. Do not re-run step 1.
+
 **Hot/cold basic-block splitting.** GCC's `-freorder-blocks-and-partition` moves
 cold basic blocks out of a function's body into `.text.unlikely`, which is exactly
 the transformation §3 sizes: it converts cold-bytes-sharing-a-line-with-live-code

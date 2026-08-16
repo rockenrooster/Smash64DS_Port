@@ -23,28 +23,25 @@ $decompPin = 'e6f3eee68dbe19fbac87914b613ff4ea6f29e251'      # main, 2026-06-12
 
 $destination = Join-Path $root 'decomp/BattleShip-main'
 $decompDestination = Join-Path $destination 'decomp'
-$patchDir = Join-Path $PSScriptRoot 'decomp-patches/battleship'
 
-# The port's own edits to the decompilation, keyed on -DSSB64_TARGET_NDS. Every
-# one of these files is compiled into the ROM through a src/import wrapper, so
-# they are build input and must survive a re-fetch.
-#
-# Patching a file that scripts/stages/generate_nds_native_stage.py pins costs a
-# verifier run if you forget: the M3 stage falsifier hashes its TEXT_INPUTS and
-# aborts Boundary with "SHA256 x != pinned y" before anything runs. objanim.c is
-# pinned there; re-pin it in the same change and say why the bytes moved.
-$patches = [ordered]@{
-    'src/ft/ftanim.c'                = 'src_ft_ftanim.patch'
-    'src/ft/ftmain.c'                = 'src_ft_ftmain.patch'
-    'src/mn/mncommon/mnstartup.c'    = 'src_mn_mncommon_mnstartup.patch'
-    'src/mn/mncommon/mntitle.c'      = 'src_mn_mncommon_mntitle.patch'
-    'src/mv/mvopening/mvopeningroom.c' = 'src_mv_mvopening_mvopeningroom.patch'
-    'src/sc/scmanager.c'             = 'src_sc_scmanager.patch'
-    'src/sys/objanim.c'              = 'src_sys_objanim.patch'
-    'src/sys/objhelper.c'            = 'src_sys_objhelper.patch'
-    'src/sys/objman.c'               = 'src_sys_objman.patch'
-    'src/sys/taskman.c'              = 'src_sys_taskman.patch'
+# `decomp/` is the immutable source-of-truth checkout.  The hashes below are
+# the pinned upstream bytes for the files that historically received DS-local
+# edits.  Keeping this small explicit list makes a regression loud without
+# requiring ROM-derived assets to exist.  Build-time DS overlays are generated
+# outside decomp/ by generate-battleship-import-overlay.ps1.
+$sourceHashes = [ordered]@{
+    'src/ft/ftanim.c'                  = 'ce1117762b59daa30005b877d76300f9ab7d605f31261d8bc1eef21f67e5a370'
+    'src/ft/ftmain.c'                  = '16b94385756eba833da25f09c35a5566d9196c4026b482698f862f06422757b8'
+    'src/mn/mncommon/mnstartup.c'      = '269dc61008aa367030a020d6226d2e9115625a9801087bd97abe2b74114d91c5'
+    'src/mn/mncommon/mntitle.c'        = '858fdde72bd07af1a18cf0879ad20162de39d20f1b55c76ab2995a1ce9055133'
+    'src/mv/mvopening/mvopeningroom.c' = 'efe584d094f97615dd3addcb3d7d9eb06a63541bc6c077a842c98ca93931832e'
+    'src/sc/scmanager.c'               = 'c0bec9e72124b02090de7e76fe4fe1e2116599a80c97eaf769d217414acdd17b'
+    'src/sys/objanim.c'                = 'eddedabd7aaffb4090e01fe0edcfac77f4262f42b91a3fe8faeddae2e3356dde'
+    'src/sys/objhelper.c'              = '3db4a43da04541229579ba5c5ee87e03193223cab0545c9d12d89d53d9c5d36b'
+    'src/sys/objman.c'                 = '65827df0a5de50300e9874cb1f008bebe009732315dc1c779f53f5f3ea07faf6'
+    'src/sys/taskman.c'                = '1676abe622c02d91c1172622176461bd042489c1cd520576dab6e1836ddc44e1'
 }
+$sourceTreeHash = '1f77d1bc5705504fe7e4c36e1588ea540c59d5446d412c6bbd4f79d7c2892efa'
 
 function Invoke-Git {
     param([string[]]$Arguments)
@@ -55,22 +52,59 @@ function Invoke-Git {
     return $output
 }
 
-function Test-PatchApplied {
-    param([string]$RelativePath)
-    $file = Join-Path $decompDestination $RelativePath
-    if (-not (Test-Path -LiteralPath $file -PathType Leaf)) { return $false }
-    return (Select-String -LiteralPath $file -Pattern 'SSB64_TARGET_NDS' -Quiet -SimpleMatch)
+function Assert-PristineSource {
+    foreach ($relativePath in $sourceHashes.Keys) {
+        $file = Join-Path $decompDestination $relativePath
+        if (-not (Test-Path -LiteralPath $file -PathType Leaf)) {
+            throw ('Missing pinned BattleShip source file: {0}' -f $relativePath)
+        }
+        $actual = (Get-FileHash -LiteralPath $file -Algorithm SHA256).Hash.ToLowerInvariant()
+        $expected = $sourceHashes[$relativePath]
+        if ($actual -ne $expected) {
+            throw ('BattleShip source-of-truth drift: {0} SHA256 {1} != pinned {2}. ' +
+                'Do not edit decomp/; put DS behavior in src/import, src/port, or the build overlay.' -f
+                $relativePath, $actual, $expected)
+        }
+    }
+
+    # The named hashes above give a useful error for every file the DS port has
+    # historically touched. This aggregate closes the rest of the rule: ANY
+    # byte change, addition, deletion, or rename anywhere under decomp/src is a
+    # source-of-truth violation even if it has no SSB64_TARGET_NDS marker.
+    $sourceRoot = Join-Path $decompDestination 'src'
+    $hasher = [Security.Cryptography.IncrementalHash]::CreateHash(
+        [Security.Cryptography.HashAlgorithmName]::SHA256)
+    try {
+        $relativePaths = [System.Collections.Generic.List[string]]::new()
+        Get-ChildItem -LiteralPath $sourceRoot -Recurse -File | ForEach-Object {
+            $relativePaths.Add(
+                [IO.Path]::GetRelativePath($sourceRoot, $_.FullName).Replace('\', '/'))
+        }
+        $relativePathsArray = $relativePaths.ToArray()
+        [Array]::Sort($relativePathsArray, [StringComparer]::Ordinal)
+        foreach ($relative in $relativePathsArray) {
+            $entry = Join-Path $sourceRoot $relative.Replace('/', [IO.Path]::DirectorySeparatorChar)
+            $hasher.AppendData([Text.Encoding]::UTF8.GetBytes($relative))
+            $hasher.AppendData([byte[]](0))
+            $hasher.AppendData([IO.File]::ReadAllBytes($entry))
+            $hasher.AppendData([byte[]](0))
+        }
+        $actualTreeHash = [Convert]::ToHexString($hasher.GetHashAndReset()).ToLowerInvariant()
+    } finally {
+        $hasher.Dispose()
+    }
+    if ($actualTreeHash -ne $sourceTreeHash) {
+        throw (('BattleShip decomp/src tree drift: SHA256 {0} != pinned {1}. ' +
+            'The entire decomp/src tree is immutable; put DS behavior in src/import, src/port, ' +
+            'or the build overlay.') -f $actualTreeHash, $sourceTreeHash)
+    }
 }
 
 if ($VerifyOnly) {
     if (-not (Test-Path -LiteralPath $decompDestination -PathType Container)) {
         throw ('Missing {0}. Run this script without -VerifyOnly to fetch it.' -f $decompDestination)
     }
-    $unpatched = @($patches.Keys | Where-Object { -not (Test-PatchApplied $_) })
-    if ($unpatched.Count -gt 0) {
-        throw ('BattleShip reference is missing its SSB64_TARGET_NDS port edits: {0}' -f
-            ($unpatched -join ', '))
-    }
+    Assert-PristineSource
     $missingRom = @(
         'assets/us/relocData'
     ) | Where-Object {
@@ -80,7 +114,7 @@ if ($VerifyOnly) {
     if ($missingRom.Count -gt 0 -or $missingO2r) {
         Write-Output 'BattleShip source present; ROM-derived payloads absent (see the note below).'
     } else {
-        Write-Output 'BattleShip reference verified: pinned source, port edits, and ROM-derived payloads all present.'
+        Write-Output 'BattleShip reference verified: pinned pristine source and ROM-derived payloads all present.'
     }
     exit 0
 }
@@ -94,8 +128,7 @@ if (Test-Path -LiteralPath $destination) {
 }
 
 # core.autocrlf=false keeps the working tree byte-identical to the pinned blobs,
-# which is what lets the patches below apply and lets a hash comparison mean
-# anything on Windows.
+# which is what makes the source-of-truth hash check meaningful on Windows.
 Write-Output ('Cloning BattleShip @ {0} ...' -f $battleShipPin.Substring(0, 9))
 Invoke-Git @('-c', 'core.autocrlf=false', 'clone', '--no-checkout',
     '--no-recurse-submodules', $battleShipUrl, $destination) | Out-Null
@@ -110,21 +143,10 @@ Invoke-Git @('-c', 'core.autocrlf=false', 'clone', '--no-checkout',
     $decompUrl, $decompDestination) | Out-Null
 Invoke-Git @('-C', $decompDestination, '-c', 'core.autocrlf=false', 'checkout',
     '--detach', $decompPin) | Out-Null
-
-foreach ($relativePath in $patches.Keys) {
-    $patchFile = Join-Path $patchDir $patches[$relativePath]
-    if (-not (Test-Path -LiteralPath $patchFile -PathType Leaf)) {
-        throw ('Missing patch {0}' -f $patchFile)
-    }
-    Invoke-Git @('-C', $decompDestination, 'apply', '--whitespace=nowarn', $patchFile) | Out-Null
-    if (-not (Test-PatchApplied $relativePath)) {
-        throw ('Patch applied but {0} has no SSB64_TARGET_NDS marker.' -f $relativePath)
-    }
-    Write-Output ('  patched {0}' -f $relativePath)
-}
+Assert-PristineSource
 
 Write-Output ''
-Write-Output 'BattleShip source reference restored.'
+Write-Output 'BattleShip source reference restored byte-for-byte from the pinned upstream commits.'
 Write-Output ''
 Write-Output 'NOT restored, because it is ROM-derived and cannot be redistributed:'
 Write-Output '  decomp/BattleShip-main/decomp/assets/     (make extract, needs your own baserom.us.z64)'

@@ -11,7 +11,7 @@
 
 void ndsOpeningMovieRecordRoomHandoff(u32 tick, u32 next_scene);
 
-#include "../../decomp/BattleShip-main/decomp/src/mv/mvopening/mvopeningroom.c"
+#include <battleship_overlay/src/mv/mvopening/mvopeningroom.c>
 
 #undef mvOpeningRoomFuncRun
 #undef mvOpeningRoomFuncStart

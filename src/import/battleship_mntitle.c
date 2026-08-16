@@ -358,6 +358,9 @@ void ndsMNTitleRunBoundedUpdates(u32 count)
 
 void mnTitleStartScene(void)
 {
+    dMNTitleVideoSetup.framebuffers[0] = &gSYFramebufferSets[0];
+    dMNTitleVideoSetup.framebuffers[1] = &gSYFramebufferSets[0];
+    dMNTitleVideoSetup.framebuffers[2] = &gSYFramebufferSets[0];
     dMNTitleVideoSetup.zbuffer = SYVIDEO_ZBUFFER_START(320, 240, 0, 10, u16);
     syVideoInit(&dMNTitleVideoSetup);
 

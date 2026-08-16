@@ -7598,8 +7598,9 @@ static void *ndsRelocForceLoadFighterAObj16File(u32 token, u32 asset_id,
      * Everything below this block exists to reconstruct an N64 loaded-file
      * image at `heap` on every action change. For a resident clip none of it
      * is needed: the bytes are already in the parser's own format, at a fixed
-     * address, and `ftmain.c:4623` now takes this function's return value
-     * (decomp patch, 2026-08-15) instead of hardcoding `figatree_heap`.
+     * address. Pristine BattleShip still hardcodes `figatree_heap`; the
+     * import/compat seam records this function's return and substitutes it when
+     * lbCommonAddFighterPartsFigatree receives that heap pointer.
      *
      * The three status writes stay. They are a table store each, they are what
      * `lbRelocGetStatusBufferFile` answers from, and pointing them at the pack
@@ -7768,6 +7769,60 @@ fail:
 }
 #endif
 
+#if NDS_R2_BATTLEPACK
+typedef struct NDSRelocForceResult {
+    void *heap;
+    void *file;
+    u32 heap_generation;
+} NDSRelocForceResult;
+
+#define NDS_RELOC_FORCE_RESULT_SLOTS 8u
+static NDSRelocForceResult sNdsRelocForceResults[NDS_RELOC_FORCE_RESULT_SLOTS];
+static u32 sNdsRelocForceResultNext;
+
+static void ndsRelocRecordAuthoritativeForceFile(void *heap, void *file)
+{
+    u32 i;
+
+    if (heap == NULL)
+    {
+        return;
+    }
+    for (i = 0u; i < NDS_RELOC_FORCE_RESULT_SLOTS; i++)
+    {
+        if (sNdsRelocForceResults[i].heap == heap)
+        {
+            sNdsRelocForceResults[i].file = file;
+            sNdsRelocForceResults[i].heap_generation = gNdsTaskmanHeapGeneration;
+            return;
+        }
+    }
+    i = sNdsRelocForceResultNext++ % NDS_RELOC_FORCE_RESULT_SLOTS;
+    sNdsRelocForceResults[i].heap = heap;
+    sNdsRelocForceResults[i].file = file;
+    sNdsRelocForceResults[i].heap_generation = gNdsTaskmanHeapGeneration;
+}
+
+void *ndsRelocResolveAuthoritativeForceFile(void *file)
+{
+    u32 i;
+
+    if (file == NULL)
+    {
+        return NULL;
+    }
+    for (i = 0u; i < NDS_RELOC_FORCE_RESULT_SLOTS; i++)
+    {
+        if ((sNdsRelocForceResults[i].heap == file) &&
+            (sNdsRelocForceResults[i].heap_generation == gNdsTaskmanHeapGeneration))
+        {
+            return sNdsRelocForceResults[i].file;
+        }
+    }
+    return file;
+}
+#endif
+
 void *lbRelocGetForceExternHeapFile(const void *file_id, void *heap)
 {
     u32 token = ndsRelocFileID(file_id);
@@ -7791,7 +7846,11 @@ void *lbRelocGetForceExternHeapFile(const void *file_id, void *heap)
         gNdsFighterAnimAuditLoadResolved = (file != NULL) ? 1u : 0u;
         gNdsFighterAnimAuditLoadFallback = (file == NULL) ? 1u : 0u;
 #endif
-        return (file != NULL) ? file : heap;
+        file = (file != NULL) ? file : heap;
+#if NDS_R2_BATTLEPACK
+        ndsRelocRecordAuthoritativeForceFile(heap, file);
+#endif
+        return file;
     }
 #endif
 
@@ -7809,6 +7868,9 @@ void *lbRelocGetForceExternHeapFile(const void *file_id, void *heap)
 #endif
 
     ndsRelocSetForceStatusBufferFile(token, file);
+#if NDS_R2_BATTLEPACK
+    ndsRelocRecordAuthoritativeForceFile(heap, file);
+#endif
     return file;
 }
 

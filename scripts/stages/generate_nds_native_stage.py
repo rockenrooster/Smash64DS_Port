@@ -321,12 +321,13 @@ TEXT_INPUTS = {
     ),
     # Re-pinned 2026-08-03 for src_sys_objanim.patch: the three animation-script
     # parsers get an SSB64_TARGET_NDS-only event bound and a recorded fault on an
-    # unrecognised opcode, which is where the shield freeze actually stopped. The
-    # generator reads this file only for the two contract tokens below, and both
-    # still hold; nothing it derives lives inside those loops.
+    # `decomp/` is the immutable source-of-truth checkout. The DS runaway guards
+    # that once changed this file now live in the build-only BattleShip import
+    # overlay, so this pin is intentionally the pristine upstream hash. The
+    # generator reads this file only for the two contract tokens below.
     "objanim": InputSpec(
         "decomp/BattleShip-main/decomp/src/sys/objanim.c",
-        "89fc8a93bf70809514c1e88ef3c29af5c1311c010b59e8b696155ac9c6483bbe",
+        "eddedabd7aaffb4090e01fe0edcfac77f4262f42b91a3fe8faeddae2e3356dde",
     ),
     "objdisplay": InputSpec(
         "decomp/BattleShip-main/decomp/src/sys/objdisplay.c",

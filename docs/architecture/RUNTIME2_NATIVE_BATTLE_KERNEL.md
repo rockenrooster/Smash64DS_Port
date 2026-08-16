@@ -248,12 +248,13 @@ replay-admission guard taught the new constant (`nds_renderer.c:5734-5739`).
    600 B/row → `base+7,060 .. base+147,819`). Boundary green, VS Results at
    source tic 160 byte-identical across the arms; the wipe's animated frames
    were not captured and still need the owner's eye.
-2. **The `ftmain.c:4623` patch is landed and provably inert** —
-   `scripts/decomp-patches/battleship/src_ft_ftmain.patch`. Exactly one symbol
-   changes size in the whole binary (`battleship_ftMainSetStatus`, −8 B): the
-   deleted instructions are the post-call reload of `fp->figatree_heap`, after
-   which both arms execute the same store. Source-side, the callee returns
-   exactly `heap` on every path when `heap != NULL`.
+2. **The `ftmain.c:4623` constraint is handled without editing the decomp.**
+   BattleShip's pinned `ftmain.c` is pristine again. `lbRelocGetForceExternHeapFile`
+   records its authoritative DS return, `lbCommonAddFighterPartsFigatree` resolves
+   the original heap pointer at the port-owned compatibility seam, and
+   `src/import/battleship_ftmain.c` publishes that same pointer back to
+   `fp->figatree`. The bridge is compiled only for `NDS_R2_BATTLEPACK=1`; the
+   shipping-default route does not pay it.
 
 > **CORRECTION, and it matters for phase 3: "+146,560 makes the full pack fit by
 > 6,536" is an arithmetic statement about the COMBINED 511,904 pool, and the

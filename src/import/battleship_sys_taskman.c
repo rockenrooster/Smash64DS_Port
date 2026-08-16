@@ -15,7 +15,7 @@
 #if NDS_R2_SECOND_ENTRY_DIAG
 #define syTaskmanMalloc ndsBaseSyTaskmanMalloc
 #endif
-#include "../../decomp/BattleShip-main/decomp/src/sys/taskman.c"
+#include <battleship_overlay/src/sys/taskman.c>
 #if NDS_R2_SECOND_ENTRY_DIAG
 #undef syTaskmanMalloc
 

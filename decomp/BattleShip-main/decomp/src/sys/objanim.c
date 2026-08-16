@@ -1,39 +1,4 @@
 #include <sys/obj.h>
-#if defined(SSB64_TARGET_NDS)
-#include <stdint.h>
-#include <nds/nds_startup.h>
-
-/* THE FREEZE THAT IS NOT A `while (TRUE);`.
- *
- * The 2026-08-03 objman patch converted nineteen give-up spins and the class
- * came back anyway, from three captures that all stopped HERE: inside the event
- * loop of gcParseDObjAnimJoint, on the same DObj, on the same script pointer
- * 0x23842ea -- which is 2 mod 4 and therefore cannot be an AObjEvent32*.
- *
- * These three parsers walk asset data with no bound. Each terminates only on a
- * well-formed stream: a NULL script, an End opcode, or enough Block/Wait
- * payload to push anim_wait positive. Feed one a pointer into the middle of a
- * word and neither happens -- and `default:` is worse than the outer loop,
- * because it is the ONE case that consumes nothing, so an unrecognised opcode
- * re-reads the same word forever at 100% CPU with interrupts still on. That is
- * exactly what a frozen picture that keeps presenting looks like.
- *
- * Opcodes 18..23 are the SetExtVal and camera set: legal words in a MATERIAL or
- * CAMERA script and unreachable in a well-formed joint script, so `default`
- * here is a data fault, not a no-op. Record which loop and which script, end
- * the animation the way a NULL script already ends it (AOBJ_ANIM_NULL, which
- * both Parse and Play early-out on, so the fault costs one pose and cannot
- * repeat every frame), and return.
- *
- * gNdsObjAnimRunawayCount must read 0. If it does not, the mask names the loop
- * and gNdsObjAnimRunawayScript/Opcode name the data -- the next report is
- * "bit 0, a joint script with opcode 21 at 0x23842ea" instead of a bisect.
- *
- * The limit is per CALL, not per script. Every case except `default` consumes
- * at least one word, so 4096 iterations is 16 KB of script eaten for one joint
- * in one frame; no animation in the game comes near it. */
-#define NDS_OBJANIM_EVENT_LIMIT 4096u
-#endif
 
 extern void syInterpCubic(Vec3f*, void*, f32);
 
@@ -308,9 +273,6 @@ void gcParseDObjAnimJoint(DObj *dobj)
     u32 command_kind;
     u32 flags;
     f32 payload;
-#if defined(SSB64_TARGET_NDS)
-    u32 events = 0;
-#endif
 
     if (dobj->anim_wait != AOBJ_ANIM_NULL)
     {
@@ -664,29 +626,9 @@ void gcParseDObjAnimJoint(DObj *dobj)
 
                 // empty, but necessary
             default:
-#if defined(SSB64_TARGET_NDS)
-                gNdsObjAnimRunawayCount++;
-                gNdsObjAnimRunawayMask |= 1u << 0u;
-                gNdsObjAnimRunawayScript = (u32)(uintptr_t)dobj->anim_joint.event32;
-                gNdsObjAnimRunawayOpcode = command_kind;
-                dobj->anim_wait = AOBJ_ANIM_NULL;
-                return;
-#else
                 break;
-#endif
             }
-#if defined(SSB64_TARGET_NDS)
-            if (++events >= NDS_OBJANIM_EVENT_LIMIT)
-            {
-                gNdsObjAnimRunawayCount++;
-                gNdsObjAnimRunawayMask |= 1u << 1u;
-                gNdsObjAnimRunawayScript = (u32)(uintptr_t)dobj->anim_joint.event32;
-                gNdsObjAnimRunawayOpcode = command_kind;
-                dobj->anim_wait = AOBJ_ANIM_NULL;
-                return;
-            }
-#endif
-        }
+        } 
         while (dobj->anim_wait <= 0.0F);
     }
 }
@@ -894,9 +836,6 @@ void gcParseMObjMatAnimJoint(MObj *mobj)
     u32 command_kind;
     u32 flags;
     f32 payload;
-#if defined(SSB64_TARGET_NDS)
-    u32 events = 0;
-#endif
 
     if (mobj->anim_wait != AOBJ_ANIM_NULL)
     {
@@ -1295,29 +1234,9 @@ void gcParseMObjMatAnimJoint(MObj *mobj)
                 break;
 
             default:
-#if defined(SSB64_TARGET_NDS)
-                gNdsObjAnimRunawayCount++;
-                gNdsObjAnimRunawayMask |= 1u << 2u;
-                gNdsObjAnimRunawayScript = (u32)(uintptr_t)mobj->matanim_joint.event32;
-                gNdsObjAnimRunawayOpcode = command_kind;
-                mobj->anim_wait = AOBJ_ANIM_NULL;
-                return;
-#else
                 break;
-#endif
             }
-#if defined(SSB64_TARGET_NDS)
-            if (++events >= NDS_OBJANIM_EVENT_LIMIT)
-            {
-                gNdsObjAnimRunawayCount++;
-                gNdsObjAnimRunawayMask |= 1u << 3u;
-                gNdsObjAnimRunawayScript = (u32)(uintptr_t)mobj->matanim_joint.event32;
-                gNdsObjAnimRunawayOpcode = command_kind;
-                mobj->anim_wait = AOBJ_ANIM_NULL;
-                return;
-            }
-#endif
-        }
+        } 
         while (mobj->anim_wait <= 0.0F);
     }
 }
@@ -2574,9 +2493,6 @@ void gcParseCObjCamAnimJoint(CObj *cobj)
     u32 command_kind;
     u32 flags;
     f32 payload;
-#if defined(SSB64_TARGET_NDS)
-    u32 events = 0;
-#endif
 
     if (cobj->anim_wait != AOBJ_ANIM_NULL)
     {
@@ -2899,28 +2815,8 @@ void gcParseCObjCamAnimJoint(CObj *cobj)
 
                 // empty, but necessary
             default:
-#if defined(SSB64_TARGET_NDS)
-                gNdsObjAnimRunawayCount++;
-                gNdsObjAnimRunawayMask |= 1u << 4u;
-                gNdsObjAnimRunawayScript = (u32)(uintptr_t)cobj->camanim_joint.event32;
-                gNdsObjAnimRunawayOpcode = command_kind;
-                cobj->anim_wait = AOBJ_ANIM_NULL;
-                return;
-#else
                 break;
-#endif
             }
-#if defined(SSB64_TARGET_NDS)
-            if (++events >= NDS_OBJANIM_EVENT_LIMIT)
-            {
-                gNdsObjAnimRunawayCount++;
-                gNdsObjAnimRunawayMask |= 1u << 5u;
-                gNdsObjAnimRunawayScript = (u32)(uintptr_t)cobj->camanim_joint.event32;
-                gNdsObjAnimRunawayOpcode = command_kind;
-                cobj->anim_wait = AOBJ_ANIM_NULL;
-                return;
-            }
-#endif
         }
         while (cobj->anim_wait <= 0.0F);
     }

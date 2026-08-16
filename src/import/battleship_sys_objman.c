@@ -20,7 +20,7 @@
 
 #define gcRunAll ndsBaseGcRunAll
 #define gcSetupObjman ndsBaseGcSetupObjman
-#include "../../decomp/BattleShip-main/decomp/src/sys/objman.c"
+#include <battleship_overlay/src/sys/objman.c>
 #undef gcRunAll
 #undef gcSetupObjman
 

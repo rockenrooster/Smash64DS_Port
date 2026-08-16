@@ -5730,6 +5730,269 @@ void ftMainProcParams(GObj *fighter_gobj)
  *   SGCO = (SINT - SCPU) + SPHD + SPHC + SOBJ
  * where SOBJ is the analyzer-derived non-fighter remainder (camera, effects,
  * items, weapons, interface, and gcRunAll's own two dispatch loops). */
+#if NDS_TASK108_SITR_CALLBACK_CENSUS
+#define NDS_TASK108_SITR_ENTRY_CAPACITY 512u
+#define NDS_TASK108_SITR_CONTEXT_COUNT 4u
+
+enum
+{
+    NDS_TASK108_SITR_SLOT_PASSIVE = 0,
+    NDS_TASK108_SITR_SLOT_UPDATE = 1,
+    NDS_TASK108_SITR_SLOT_INTERRUPT = 2,
+    NDS_TASK108_SITR_SLOT_COUNT = 3
+};
+
+typedef void (*NDS_TASK108_SITR_PROC)(GObj *);
+
+typedef struct NdsTask108SitrEntry
+{
+    u32 fkind;
+    u32 status_id;
+    u32 slot;
+    u32 target;
+    u32 calls;
+    u32 ticks;
+} NdsTask108SitrEntry;
+
+typedef struct NdsTask108SitrContext
+{
+    GObj *fighter_gobj;
+    NDS_TASK108_SITR_PROC original[NDS_TASK108_SITR_SLOT_COUNT];
+    u8 active;
+    u8 in_callback;
+    u8 refresh_pending;
+    u8 reserved;
+} NdsTask108SitrContext;
+
+__attribute__((used)) volatile NdsTask108SitrEntry
+    gNdsTask108SitrEntries[NDS_TASK108_SITR_ENTRY_CAPACITY];
+__attribute__((used)) volatile u32 gNdsTask108SitrEntryCount;
+__attribute__((used)) volatile u32 gNdsTask108SitrEntryOverflow;
+__attribute__((used)) volatile u32 gNdsTask108SitrTotalCalls;
+__attribute__((used)) volatile u32 gNdsTask108SitrTotalTicks;
+__attribute__((used)) volatile u32 gNdsTask108SitrRefreshCount;
+
+static NdsTask108SitrContext
+    sNdsTask108SitrContexts[NDS_TASK108_SITR_CONTEXT_COUNT];
+
+static void ndsTask108SitrPassive(GObj *fighter_gobj);
+static void ndsTask108SitrUpdate(GObj *fighter_gobj);
+static void ndsTask108SitrInterrupt(GObj *fighter_gobj);
+
+static NdsTask108SitrContext *ndsTask108SitrContextFor(GObj *fighter_gobj)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+    u32 i;
+
+    if ((fp != NULL) && (fp->player >= 0) &&
+        ((u32)fp->player < NDS_TASK108_SITR_CONTEXT_COUNT))
+    {
+        return &sNdsTask108SitrContexts[(u32)fp->player];
+    }
+    for (i = 0u; i < NDS_TASK108_SITR_CONTEXT_COUNT; i++)
+    {
+        if (sNdsTask108SitrContexts[i].fighter_gobj == fighter_gobj)
+        {
+            return &sNdsTask108SitrContexts[i];
+        }
+    }
+    return NULL;
+}
+
+static void ndsTask108SitrRestore(NdsTask108SitrContext *context,
+                                  FTStruct *fp)
+{
+    if ((context == NULL) || (fp == NULL))
+    {
+        return;
+    }
+    if (fp->proc_passive == ndsTask108SitrPassive)
+    {
+        fp->proc_passive = context->original[NDS_TASK108_SITR_SLOT_PASSIVE];
+    }
+    if (fp->proc_update == ndsTask108SitrUpdate)
+    {
+        fp->proc_update = context->original[NDS_TASK108_SITR_SLOT_UPDATE];
+    }
+    if (fp->proc_interrupt == ndsTask108SitrInterrupt)
+    {
+        fp->proc_interrupt = context->original[NDS_TASK108_SITR_SLOT_INTERRUPT];
+    }
+}
+
+static void ndsTask108SitrWrap(NdsTask108SitrContext *context, FTStruct *fp)
+{
+    if ((context == NULL) || (fp == NULL) || (context->active == FALSE))
+    {
+        return;
+    }
+    if (fp->proc_passive != ndsTask108SitrPassive)
+    {
+        context->original[NDS_TASK108_SITR_SLOT_PASSIVE] = fp->proc_passive;
+    }
+    if (fp->proc_update != ndsTask108SitrUpdate)
+    {
+        context->original[NDS_TASK108_SITR_SLOT_UPDATE] = fp->proc_update;
+    }
+    if (fp->proc_interrupt != ndsTask108SitrInterrupt)
+    {
+        context->original[NDS_TASK108_SITR_SLOT_INTERRUPT] = fp->proc_interrupt;
+    }
+    fp->proc_passive =
+        (context->original[NDS_TASK108_SITR_SLOT_PASSIVE] != NULL) ?
+            ndsTask108SitrPassive : NULL;
+    fp->proc_update =
+        (context->original[NDS_TASK108_SITR_SLOT_UPDATE] != NULL) ?
+            ndsTask108SitrUpdate : NULL;
+    fp->proc_interrupt =
+        (context->original[NDS_TASK108_SITR_SLOT_INTERRUPT] != NULL) ?
+            ndsTask108SitrInterrupt : NULL;
+}
+
+static void ndsTask108SitrRecord(u32 fkind, u32 status_id, u32 slot,
+                                 NDS_TASK108_SITR_PROC target, u32 ticks)
+{
+    u32 i;
+    u32 target_u32 = (u32)(uintptr_t)target;
+
+    gNdsTask108SitrTotalCalls++;
+    gNdsTask108SitrTotalTicks += ticks;
+    for (i = 0u; i < gNdsTask108SitrEntryCount; i++)
+    {
+        volatile NdsTask108SitrEntry *entry = &gNdsTask108SitrEntries[i];
+        if ((entry->fkind == fkind) && (entry->status_id == status_id) &&
+            (entry->slot == slot) && (entry->target == target_u32))
+        {
+            entry->calls++;
+            entry->ticks += ticks;
+            return;
+        }
+    }
+    if (gNdsTask108SitrEntryCount >= NDS_TASK108_SITR_ENTRY_CAPACITY)
+    {
+        gNdsTask108SitrEntryOverflow++;
+        return;
+    }
+    i = gNdsTask108SitrEntryCount++;
+    gNdsTask108SitrEntries[i].fkind = fkind;
+    gNdsTask108SitrEntries[i].status_id = status_id;
+    gNdsTask108SitrEntries[i].slot = slot;
+    gNdsTask108SitrEntries[i].target = target_u32;
+    gNdsTask108SitrEntries[i].calls = 1u;
+    gNdsTask108SitrEntries[i].ticks = ticks;
+}
+
+static void ndsTask108SitrDispatch(GObj *fighter_gobj, u32 slot)
+{
+    NdsTask108SitrContext *context = ndsTask108SitrContextFor(fighter_gobj);
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+    NDS_TASK108_SITR_PROC target;
+    u32 fkind;
+    u32 status_id;
+    u32 start;
+    u32 ticks;
+
+    if ((context == NULL) || (fp == NULL) || (slot >= NDS_TASK108_SITR_SLOT_COUNT))
+    {
+        return;
+    }
+    target = context->original[slot];
+    if (target == NULL)
+    {
+        return;
+    }
+    fkind = (u32)fp->fkind;
+    status_id = (u32)fp->status_id;
+
+    /* The interposition is observational. Restore all three original pointers
+     * while source code executes so callback-pointer identity remains exact. */
+    ndsTask108SitrRestore(context, fp);
+    context->in_callback = TRUE;
+    context->refresh_pending = FALSE;
+    start = cpuGetTiming();
+    target(fighter_gobj);
+    ticks = cpuGetTiming() - start;
+    context->in_callback = FALSE;
+    ndsTask108SitrRecord(fkind, status_id, slot, target, ticks);
+
+    fp = ftGetStruct(fighter_gobj);
+    if ((fp != NULL) && (context->active != FALSE))
+    {
+        ndsTask108SitrWrap(context, fp);
+    }
+}
+
+static void ndsTask108SitrPassive(GObj *fighter_gobj)
+{
+    ndsTask108SitrDispatch(fighter_gobj, NDS_TASK108_SITR_SLOT_PASSIVE);
+}
+
+static void ndsTask108SitrUpdate(GObj *fighter_gobj)
+{
+    ndsTask108SitrDispatch(fighter_gobj, NDS_TASK108_SITR_SLOT_UPDATE);
+}
+
+static void ndsTask108SitrInterrupt(GObj *fighter_gobj)
+{
+    ndsTask108SitrDispatch(fighter_gobj, NDS_TASK108_SITR_SLOT_INTERRUPT);
+}
+
+void ndsTask108SitrRefreshCallbacks(GObj *fighter_gobj)
+{
+    NdsTask108SitrContext *context = ndsTask108SitrContextFor(fighter_gobj);
+    FTStruct *fp;
+
+    if ((context == NULL) || (context->active == FALSE) ||
+        (context->fighter_gobj != fighter_gobj))
+    {
+        return;
+    }
+    if (context->in_callback != FALSE)
+    {
+        context->refresh_pending = TRUE;
+        return;
+    }
+    fp = ftGetStruct(fighter_gobj);
+    if (fp != NULL)
+    {
+        gNdsTask108SitrRefreshCount++;
+        ndsTask108SitrWrap(context, fp);
+    }
+}
+
+static void ndsTask108SitrBegin(GObj *fighter_gobj)
+{
+    NdsTask108SitrContext *context = ndsTask108SitrContextFor(fighter_gobj);
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+
+    if ((context == NULL) || (fp == NULL) ||
+        ((fp->fkind != nFTKindMario) && (fp->fkind != nFTKindFox)))
+    {
+        return;
+    }
+    context->fighter_gobj = fighter_gobj;
+    context->active = TRUE;
+    context->in_callback = FALSE;
+    context->refresh_pending = FALSE;
+    ndsTask108SitrWrap(context, fp);
+}
+
+static void ndsTask108SitrEnd(GObj *fighter_gobj)
+{
+    NdsTask108SitrContext *context = ndsTask108SitrContextFor(fighter_gobj);
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+
+    if ((context == NULL) || (context->fighter_gobj != fighter_gobj))
+    {
+        return;
+    }
+    ndsTask108SitrRestore(context, fp);
+    context->active = FALSE;
+    context->in_callback = FALSE;
+    context->refresh_pending = FALSE;
+}
+#endif
+
 void ftMainProcUpdateInterrupt(GObj *fighter_gobj)
 {
     /* SINT. Fighter proc priority 5, the first to run. The level-3 CPU AI is
@@ -5741,7 +6004,13 @@ void ftMainProcUpdateInterrupt(GObj *fighter_gobj)
     u32 interrupt_start = cpuGetTiming();
 #endif
 
+#if NDS_TASK108_SITR_CALLBACK_CENSUS
+    ndsTask108SitrBegin(fighter_gobj);
+#endif
     battleship_ftMainProcUpdateInterrupt(fighter_gobj);
+#if NDS_TASK108_SITR_CALLBACK_CENSUS
+    ndsTask108SitrEnd(fighter_gobj);
+#endif
 #if NDS_TICK_HUD
     gNdsTickHudSrcInterruptTicks += cpuGetTiming() - interrupt_start;
 #endif

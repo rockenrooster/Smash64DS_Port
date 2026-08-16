@@ -60,6 +60,10 @@ s32 ndsRelocGetLoadedAssetView(u32 asset_id, const void **out_data,
                                u32 *out_size);
 s32 ndsRelocCopyMObjSubForAttachment(struct MObjSub *dst,
                                      const struct MObjSub *src);
+/* Recover the file returned by lbRelocGetForceExternHeapFile when pristine
+ * BattleShip code later hands its original figatree_heap pointer to the port.
+ * Non-matching pointers pass through unchanged. */
+void *ndsRelocResolveAuthoritativeForceFile(void *file);
 
 extern volatile u32 gNdsRelocAssetInitResult;
 extern volatile u32 gNdsRelocAssetHeaderReadCount;

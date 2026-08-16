@@ -17,9 +17,6 @@
 #include <PR/mbi.h>
 #include <PR/ucode.h>
 #include <PR/ultratypes.h>
-#if defined(SSB64_TARGET_NDS)
-#include <nds/nds_startup.h>
-#endif
 
 // externs
 extern void syTaskmanCheckBufferLengths();
@@ -41,10 +38,6 @@ typedef struct SYTaskFunction
 	/* 0x10 */ void (*task_draw)(struct SYTaskFunction*);
 
 } SYTaskFunction; // size == 0x14 (sSYTaskmanDefaultFunction)
-
-#if defined(SSB64_TARGET_NDS)
-extern void syTaskmanRunTask(SYTaskFunction *tfunc);
-#endif
 
 // // // // // // // // // // // //
 //                               //
@@ -270,11 +263,7 @@ void syTaskmanInitGeneralHeap(void *start, u32 size)
 // 0x80004980
 void* syTaskmanMalloc(size_t size, u32 align) // alloc_with_alignment
 {
-	void *ptr = syMallocSet(&gSYTaskmanGeneralHeap, size, align);
-#if defined(SSB64_TARGET_NDS)
-	gNdsTaskmanMallocCount++;
-#endif
-	return ptr;
+	return syMallocSet(&gSYTaskmanGeneralHeap, size, align);
 }
 
 // 0x800049B0
@@ -335,32 +324,13 @@ void syTaskmanCheckBufferLengths(void)
 		if (sSYTaskmanDLBuffers[gSYTaskmanTaskID][i].length + (uintptr_t)sSYTaskmanDLBuffers[gSYTaskmanTaskID][i].start < (uintptr_t)gSYTaskmanDLHeads[i])
 		{
 			syDebugPrintf("gtl : DLBuffer over flow !  kind = %d  vol = %d byte\n", i, (uintptr_t)gSYTaskmanDLHeads[i] - (uintptr_t)sSYTaskmanDLBuffers[gSYTaskmanTaskID][i].start);
-#if defined(SSB64_TARGET_NDS)
-			/* A devkit assert becomes a dead handheld. Record and return; the
-			 * per-frame func_80004AB0 rewinds the heads anyway, so the cost is
-			 * one frame of truncated display list instead of the session. */
-			gNdsTaskmanDLOverflowCount++;
-			gNdsTaskmanDLOverflowKind = (u32)i;
-			gNdsTaskmanDLOverflowBytes =
-				(u32)((uintptr_t)gSYTaskmanDLHeads[i] -
-				      ((uintptr_t)sSYTaskmanDLBuffers[gSYTaskmanTaskID][i].start +
-				       sSYTaskmanDLBuffers[gSYTaskmanTaskID][i].length));
-#else
 			while (TRUE);
-#endif
 		}
 	}
 	if ((uintptr_t)gSYTaskmanGraphicsHeap.end < (uintptr_t)gSYTaskmanGraphicsHeap.ptr)
 	{
 		syDebugPrintf("gtl : DynamicBuffer over flow !  %d byte\n", (uintptr_t)gSYTaskmanGraphicsHeap.ptr - (uintptr_t)gSYTaskmanGraphicsHeap.start);
-#if defined(SSB64_TARGET_NDS)
-		gNdsTaskmanGraphicsOverflowCount++;
-		gNdsTaskmanGraphicsOverflowBytes =
-			(u32)((uintptr_t)gSYTaskmanGraphicsHeap.ptr -
-			      (uintptr_t)gSYTaskmanGraphicsHeap.end);
-#else
 		while (TRUE);
-#endif
 	}
 }
 
@@ -973,7 +943,6 @@ void func_80005D10()
 }
 
 // 0x80005DA0
-#if !defined(SSB64_TARGET_NDS)
 void syTaskmanRunTask(SYTaskFunction *tfunc)
 {
 	s32 i;
@@ -1099,7 +1068,6 @@ void syTaskmanRunTask(SYTaskFunction *tfunc)
 	syRdpSetFuncLights(NULL);
 	D_800454BC = 2;
 }
-#endif
 
 // 0x800062B4
 void func_800062B4(SYTaskFunction *tfunc)

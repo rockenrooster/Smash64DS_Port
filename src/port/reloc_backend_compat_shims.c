@@ -9000,6 +9000,7 @@ extern void gcAddDObjAnimJoint(DObj *dobj, AObjEvent32 *anim_joint,
 extern void *ndsRelocResolvePointerFromFileBase(const void *file_base,
                                                 const void *ptr,
                                                 size_t size);
+extern void *ndsRelocResolveAuthoritativeForceFile(void *file);
 
 static DObj *ndsLBCommonGetTreeDObjNextFromRoot(DObj *dobj, DObj *root_dobj)
 {
@@ -9045,6 +9046,9 @@ void lbCommonAddFighterPartsFigatree(DObj *root_dobj, void *figatree,
                                      f32 anim_frame)
 {
 #if NDS_IMPORT_BATTLESHIP_FTMANAGER
+#if NDS_R2_BATTLEPACK
+    figatree = ndsRelocResolveAuthoritativeForceFile(figatree);
+#endif
     void **figatree_entries = figatree;
     DObj *current_dobj = root_dobj;
 

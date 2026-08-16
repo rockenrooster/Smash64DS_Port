@@ -3,7 +3,7 @@
 
 #define scManagerRunLoop ndsBaseSCManagerRunLoop
 
-#include "../../decomp/BattleShip-main/decomp/src/sc/scmanager.c"
+#include <battleship_overlay/src/sc/scmanager.c>
 
 #undef scManagerRunLoop
 

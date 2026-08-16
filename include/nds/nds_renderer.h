@@ -1235,6 +1235,19 @@ void ndsRendererMtxMulAffine20p12(const NDSRendererMatrix20p12 *lhs,
 void ndsRendererTransformVertex20p12(const NDSRendererMatrix20p12 *mtx,
                                      const NDSRendererInputVertex *vtx,
                                      NDSRendererClipVertex20p12 *out);
+#if NDS_TASK107_RENDER_STATE_CENSUS
+/* Task 107 sync-site indices:
+ *   0 TEXTURE, 1 SETTILE, 2 SETTILESIZE, 3 resolve/bind preflight. */
+extern volatile u32 gNdsTask107SyncCalls[4];
+extern volatile u32 gNdsTask107SyncUnchanged[4];
+extern volatile u32 gNdsTask107SyncTrackerOverflow;
+extern volatile u32 gNdsTask107BindRequests;
+extern volatile u32 gNdsTask107BindZeroNameExits;
+extern volatile u32 gNdsTask107BindCurrentNameElisions;
+extern volatile u32 gNdsTask107BindIssues;
+extern volatile u32 gNdsTask107BindRevisitIssues;
+extern volatile u32 gNdsTask107BindNameSetOverflow;
+#endif
 void ndsRendererInitStats(NDSRendererStats *stats);
 void ndsRendererInitVertexCache(NDSRendererVertexCache *vertex_cache);
 void ndsRendererScanDisplayList(const Gfx *dl,

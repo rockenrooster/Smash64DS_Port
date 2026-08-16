@@ -6,9 +6,6 @@
 #include <sys/objdisplay.h>
 #include <sys/rdp.h>
 #include <stddef.h>
-#if defined(SSB64_TARGET_NDS)
-#include <nds/nds_startup.h>
-#endif
 
 // // // // // // // // // // // //
 //                               //
@@ -126,20 +123,7 @@ GObjThread* gcGetGObjThread(void)
 	if (sGCThreadHead == NULL)
 	{
 		syDebugPrintf("om : couldn't get GObjThread\n");
-		/* A devkit assert becomes a dead handheld, and this file holds NINETEEN of
-		 * them -- every one an exhausted GObj/DObj/MObj/AObj/XObj/SObj/CObj pool or a
-		 * broken stack link. BUGS.md has carried "the match froze" against the shield
-		 * for several cycles; converting syTaskmanCheckBufferLengths alone left these
-		 * reachable. Record which one and fail the allocation instead: every caller of
-		 * these allocators already has to handle a NULL, because the pools are finite.
-		 * gNdsObjmanPanicCount must read 0; the mask names the site if it does not. */
-#if defined(SSB64_TARGET_NDS)
-		gNdsObjmanPanicCount++;
-		gNdsObjmanPanicMask |= 1u << 0u;
-		return NULL;
-#else
 		while (TRUE);
-#endif
 	}
 
 	gobjthread = sGCThreadHead;
@@ -227,13 +211,7 @@ void gcEjectGObjStack(GObjStack *gobjstack)
 	if (gobjthreadstack == NULL)
 	{
 		syDebugPrintf("om : Illegal GObjThreadStack Link\n");
-#if defined(SSB64_TARGET_NDS)
-		gNdsObjmanPanicCount++;
-		gNdsObjmanPanicMask |= 1u << 1u;
-		return;
-#else
 		while (TRUE);
-#endif
 	}
 	gobjstack->next = gobjthreadstack->stack;
 	gobjthreadstack->stack = gobjstack;
@@ -254,13 +232,7 @@ GObjProcess* gcGetGObjProcess(void)
 	if (sGCProcessHead == NULL)
 	{
 		syDebugPrintf("om : couldn't get GObjProcess\n");
-#if defined(SSB64_TARGET_NDS)
-		gNdsObjmanPanicCount++;
-		gNdsObjmanPanicMask |= 1u << 2u;
-		return NULL;
-#else
 		while (TRUE);
-#endif
 	}
 
 	gobjproc = sGCProcessHead;
@@ -609,13 +581,7 @@ XObj* gcGetXObjSetNextAlloc(void)
 	if (sGCMatrixHead == NULL)
 	{
 		syDebugPrintf("om : couldn't get OMMtx\n");
-#if defined(SSB64_TARGET_NDS)
-		gNdsObjmanPanicCount++;
-		gNdsObjmanPanicMask |= 1u << 3u;
-		return NULL;
-#else
 		while (TRUE);
-#endif
 	}
 	xobj = sGCMatrixHead;
 	sGCMatrixHead = sGCMatrixHead->next;
@@ -646,13 +612,7 @@ AObj* gcGetAObjSetNextAlloc(void)
 	if (sGCAnimHead == NULL)
 	{
 		syDebugPrintf("om : couldn't get AObj\n");
-#if defined(SSB64_TARGET_NDS)
-		gNdsObjmanPanicCount++;
-		gNdsObjmanPanicMask |= 1u << 4u;
-		return NULL;
-#else
 		while (TRUE);
-#endif
 	}
 	aobj = sGCAnimHead;
 	sGCAnimHead = sGCAnimHead->next;
@@ -704,13 +664,7 @@ MObj* gcGetMObjSetNextAlloc(void)
 	if (sGCMaterialHead == NULL)
 	{
 		syDebugPrintf("om : couldn't get MObj\n");
-#if defined(SSB64_TARGET_NDS)
-		gNdsObjmanPanicCount++;
-		gNdsObjmanPanicMask |= 1u << 5u;
-		return NULL;
-#else
 		while (TRUE);
-#endif
 	}
 
 	mobj = sGCMaterialHead;
@@ -742,13 +696,7 @@ DObj* gcGetDObjSetNextAlloc(void)
 	if (sGCDrawHead == NULL)
 	{
 		syDebugPrintf("om : couldn't get DObj\n");
-#if defined(SSB64_TARGET_NDS)
-		gNdsObjmanPanicCount++;
-		gNdsObjmanPanicMask |= 1u << 6u;
-		return NULL;
-#else
 		while (TRUE);
-#endif
 	}
 	dobj = sGCDrawHead;
 	sGCDrawHead = sGCDrawHead->alloc_free;
@@ -778,13 +726,7 @@ SObj* gcGetSObjSetNextAlloc(void)
 	if (sGCSpriteHead == NULL)
 	{
 		syDebugPrintf("om : couldn't get SObj\n");
-#if defined(SSB64_TARGET_NDS)
-		gNdsObjmanPanicCount++;
-		gNdsObjmanPanicMask |= 1u << 7u;
-		return NULL;
-#else
 		while (TRUE);
-#endif
 	}
 	sobj = sGCSpriteHead;
 	sGCSpriteHead = sGCSpriteHead->alloc_free;
@@ -815,13 +757,7 @@ CObj *gcGetCObjSetNextAlloc(void)
 	if (sGCCameraHead == NULL)
 	{
 		syDebugPrintf("om : couldn't get Camera\n");
-#if defined(SSB64_TARGET_NDS)
-		gNdsObjmanPanicCount++;
-		gNdsObjmanPanicMask |= 1u << 8u;
-		return NULL;
-#else
 		while (TRUE);
-#endif
 	}
 
 	cobj = sGCCameraHead;
@@ -855,13 +791,7 @@ GObjProcess* gcAddGObjProcess(GObj *gobj, void (*proc)(GObj*), u8 kind, u32 prio
 	if (priority >= 6)
 	{
 		syDebugPrintf("om : GObjProcess's priority is bad value\n");
-#if defined(SSB64_TARGET_NDS)
-		gNdsObjmanPanicCount++;
-		gNdsObjmanPanicMask |= 1u << 9u;
-		return NULL;
-#else
 		while (TRUE);
-#endif
 	}
 	gobjproc->priority = priority;
 	gobjproc->kind = kind;
@@ -902,13 +832,7 @@ GObjProcess* gcAddGObjProcess(GObj *gobj, void (*proc)(GObj*), u8 kind, u32 prio
 	
 	default:
 		syDebugPrintf("om : GObjProcess's kind is bad value\n");
-#if defined(SSB64_TARGET_NDS)
-		gNdsObjmanPanicCount++;
-		gNdsObjmanPanicMask |= 1u << 10u;
-		return NULL;
-#else
 		while (TRUE);
-#endif
 	}
 	gcLinkGObjProcess(gobjproc);
 
@@ -932,13 +856,7 @@ GObjProcess* unref_80008304(GObj *gobj, void (*proc)(GObj*), u32 pri, s32 thread
 	if (pri >= 6)
 	{
 		syDebugPrintf("om : GObjProcess's priority is bad value\n");
-#if defined(SSB64_TARGET_NDS)
-		gNdsObjmanPanicCount++;
-		gNdsObjmanPanicMask |= 1u << 11u;
-		return NULL;
-#else
 		while (TRUE);
-#endif
 	}
 
 	gobjproc->priority = pri;
@@ -1024,13 +942,7 @@ XObj* gcAddXObjForDObjVar(DObj *dobj, u8 kind, u8 arg2, s32 xobj_id)
 	if (dobj->xobjs_num == ARRAY_COUNT(dobj->xobjs))
 	{
 		syDebugPrintf("om : couldn\'t add OMMtx for DObj\n");
-#if defined(SSB64_TARGET_NDS)
-		gNdsObjmanPanicCount++;
-		gNdsObjmanPanicMask |= 1u << 12u;
-		return NULL;
-#else
 		while (TRUE);
-#endif
 	}
 	if (dobj->vec != NULL)
 	{
@@ -1225,13 +1137,7 @@ XObj* gcAddXObjForCamera(CObj *cobj, u8 kind, u8 arg2)
 	if (cobj->xobjs_num == ARRAY_COUNT(cobj->xobjs))
 	{
 		syDebugPrintf("om : couldn't add OMMtx for Camera\n");
-#if defined(SSB64_TARGET_NDS)
-		gNdsObjmanPanicCount++;
-		gNdsObjmanPanicMask |= 1u << 13u;
-		return NULL;
-#else
 		while (TRUE);
-#endif
 	}
 	xobj = gcGetXObjSetNextAlloc();
 
@@ -1786,13 +1692,7 @@ GObj* gcInitGObjCommon(u32 id, void (*func_run)(GObj*), u8 link, u32 priority)
 	if (link >= ARRAY_COUNT(gGCCommonLinks))
 	{
 		syDebugPrintf("omGAddCommon() : link num over : link = %d : id = %d\n", link, id);
-#if defined(SSB64_TARGET_NDS)
-		gNdsObjmanPanicCount++;
-		gNdsObjmanPanicMask |= 1u << 14u;
-		return NULL;
-#else
 		while (TRUE);
-#endif
 	}
 
 	new_gobj = gcGetGObjSetNextAlloc();
@@ -1914,13 +1814,7 @@ void gcMoveGObjCommon(s32 sw, GObj *this_gobj, u8 link, u32 priority, GObj *othe
 	{
 		syDebugPrintf("omGMoveCommon() : link num over : link = %d : id = %d\n", link, this_gobj->id);
 
-#if defined(SSB64_TARGET_NDS)
-		gNdsObjmanPanicCount++;
-		gNdsObjmanPanicMask |= 1u << 15u;
-		return;
-#else
 		while (TRUE);
-#endif
 	}
 
 	if (this_gobj == NULL)
@@ -1988,13 +1882,7 @@ void gcLinkGObjDLCommon(GObj *gobj, void (*proc_display)(GObj*), u8 dl_link, u32
 	if (dl_link >= ARRAY_COUNT(gGCCommonDLLinks) - 1)
 	{
 		syDebugPrintf("omGLinkObjDLCommon() : dl_link num over : dl_link = %d : id = %d\n", dl_link, gobj->id);
-#if defined(SSB64_TARGET_NDS)
-		gNdsObjmanPanicCount++;
-		gNdsObjmanPanicMask |= 1u << 16u;
-		return;
-#else
 		while (TRUE);
-#endif
 	}
 
 	gobj->dl_link_id = dl_link;
@@ -2107,13 +1995,7 @@ void gcMoveGObjDL(GObj *gobj, u8 dl_link, u32 priority)
 	if (dl_link >= ARRAY_COUNT(gGCCommonDLLinks) - 1)
 	{
 		syDebugPrintf("omGMoveObjDL() : dl_link num over : dl_link = %d : id = %d\n", dl_link, gobj->id);
-#if defined(SSB64_TARGET_NDS)
-		gNdsObjmanPanicCount++;
-		gNdsObjmanPanicMask |= 1u << 17u;
-		return;
-#else
 		while (TRUE);
-#endif
 	}
 	gcRemoveGObjFromDLLinkedList(gobj);
 
@@ -2129,13 +2011,7 @@ void gcMoveGObjDLHead(GObj *gobj, u8 dl_link, u32 priority)
 	if (dl_link >= ARRAY_COUNT(gGCCommonDLLinks) - 1)
 	{
 		syDebugPrintf("omGMoveObjDLHead() : dl_link num over : dl_link = %d : id = %d\n", dl_link, gobj->id);
-#if defined(SSB64_TARGET_NDS)
-		gNdsObjmanPanicCount++;
-		gNdsObjmanPanicMask |= 1u << 18u;
-		return;
-#else
 		while (TRUE);
-#endif
 	}
 	gcRemoveGObjFromDLLinkedList(gobj);
 	

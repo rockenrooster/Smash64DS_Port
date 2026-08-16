@@ -853,11 +853,7 @@ void scManagerRunLoop(sb32 arg)
 	lbBackupApplyOptions();
 
 	framebuffer = (u16*) gSYFramebufferSets;
-	#if defined(SSB64_TARGET_NDS)
-	end = (uintptr_t)gSYFramebufferSets + sizeof(gSYFramebufferSets);
-	#else
 	end = 0x80400000;
-	#endif
 
 	while ((uintptr_t)framebuffer < end)
 	{
@@ -1286,7 +1282,6 @@ void scManagerRunLoop(sb32 arg)
 	}
 }
 
-#if !defined(SSB64_TARGET_NDS)
 // 0x800A2698
 void scManagerFuncUpdate(SYTaskmanSetup *arg)
 {
@@ -1557,4 +1552,3 @@ void scManagerRunPrintGObjStatus(void)
 {
 	syDebugRunFuncPrint(scManagerFuncPrint);
 }
-#endif

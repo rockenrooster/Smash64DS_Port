@@ -2,6 +2,11 @@
 $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $nativeStageChecker = Join-Path $PSScriptRoot 'stages\check_nds_native_stage.py'
+$decompPristineChecker = Join-Path $PSScriptRoot 'check-decomp-pristine.ps1'
+& pwsh -NoProfile -ExecutionPolicy Bypass -File $decompPristineChecker
+if ($LASTEXITCODE -ne 0) {
+    throw "BattleShip source-of-truth checker failed with exit code $LASTEXITCODE."
+}
 & python -B $nativeStageChecker
 if ($LASTEXITCODE -ne 0) {
     throw "Native-stage consumed-field/packet checker failed with exit code $LASTEXITCODE."

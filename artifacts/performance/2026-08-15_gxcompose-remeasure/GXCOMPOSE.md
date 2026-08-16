@@ -380,3 +380,103 @@ candidates (`GXSTACK_IO_DRAW.md` §4.2). Neither was implemented.
   at `0x0c8fc0`). `NDS_TASK93_TEXKEY_CENSUS` was checked and does **not** cover
   either of these: it counts key rebuilds inside
   `ndsRendererHardwareResolveOrBindTexture`, which runs 0.175 times a frame.
+
+## 8. Follow-up 2026-08-15 — fresh pixel proof FAILS; do not bank GX compose
+
+The missing acceptance item from §6 was run against the already-built proof
+ROMs, without rebuilding either arm. Their generated configs still differ in
+exactly one define: `NDS_R2_FIGHTER_GX_COMPOSE` is 0 in
+`build-c184-cap-a` and 1 in `build-c184-cap-b`; both are proof-target,
+`NDS_TICK_HUD=0`, `NDS_R2_BOTH_CPU=0` ROMs.
+
+The captures used `capture-melonds.ps1 -ExactTimeRemain ... -SoftwareRenderer
+-NoJit`, so cross-build pairs are locked on the same simulation clock instead
+of the presented-frame counter. Two sets were taken:
+
+| lock | battle-screen A vs B | max channel delta | same-build adjacent-tick floor |
+|---|---:|---:|---:|
+| 50 | **83 / 120,000 (0.0692%)** | 251 | A 47.1117%, B 47.1133% |
+| 48 | **43 / 120,000 (0.0358%)** | 251 | paired with lock 50 |
+| 1694 | **148 / 120,000 (0.1233%)** | 251 | A 67.4892%, B 67.4842% |
+| 1692 | **209 / 120,000 (0.1742%)** | 251 | paired with lock 1694 |
+
+The 1694 lock was chosen because prior independent capture work had produced a
+0/120,000 cross-build negative control there. On this exact C184 control /
+candidate pair it does **not** reproduce pixel identity. Diff masks localize
+scene pixels around the fighters / ground as well as sparse raster differences;
+the failure is therefore not just melonDS window chrome or the lower performance
+readout. Evidence is under
+`artifacts/visibility/2026-08-15_gxcompose-bank/`, including
+`gxcompose-cross-t1694-battle-diff.png` and
+`gxcompose-cross-t1692-battle-diff.png`.
+
+This is a strict failure under `PREDICTION.md` §5, which said **any pixel
+difference** stops this being a free correctness-unlocked win. The old
+pre-blink pixel-identical claim is not inherited.
+
+The non-pixel correctness evidence remains green and was re-read from the C184
+artifacts for this follow-up:
+
+- `gNdsHardwareRendererStatus` is decimal 100663296 = **0x06000000** on all
+  128/128 per-frame samples on both arms.
+- Accepted polygon RAM is control **432 / 464.5 / 510** and candidate
+  **432 / 463.5 / 510** (min / median / max), with **0/128 under 350** on both.
+  The historical blink signature was the 106..306 low-polygon collapse, so it
+  is absent here.
+- Both whole-match arms end at the same eight invariants: P1Damage 76, damage
+  sparks 15, shield attaches 1,352, AObjEvent32 high-water 1,266, battle-pack hits
+  197, runaway 0, Task36 capture outcome 2, segment mask 161.
+
+Because the pixel gate is red, the conditional performance-promotion step was
+**not run**: there is no fresh 1,600-frame GX-compose bank, no new DRAW=0
+cadence arm, and no arithmetic re-bank from the old -17,152 result.
+`NDS_R2_FIGHTER_GX_COMPOSE` remains `?= 0`, and the published target remains
+unconditionally pinned to 0. Status: **BLOCKED(decision: visible pixel delta)**.
+
+## 9. Owner acceptance + fresh bank, 2026-08-15
+
+The owner reviewed the actual diff masks from §8 and accepted the measured
+0.0358–0.1742% battle-screen differences as visually acceptable. This is an
+explicit fidelity decision; it does **not** rewrite the strict prediction in §5
+or resurrect the pre-blink pixel-identical claim. The measured C184 pixel delta
+stands, but it is no longer a blocker.
+
+With that decision recorded, GX compose was enabled only in a fresh performance
+candidate build, **not** in the published target:
+
+- `build-c185-gxcompose-bank`: `GX_COMPOSE=1`, `BOTH_CPU=1`, `BATTLEPACK=1`,
+  `KEEP_CACHE=1`, `NDS_TICK_HUD_DRAW=1`, DLDI on.
+- `build-c185-gxcompose-bank-d0`: same candidate configuration with
+  `NDS_TICK_HUD_DRAW=0`, used only for the owner-selected cadence truth.
+- Both lab builds clear the absolute boot-headroom gate by more than 312 KiB.
+
+The canonical DRAW=1 whole-match measurement is 1,600 samples, frames
+440..2039, `slips=0`. **This is the new bank; it is a measured level, not the
+old -17,152 applied arithmetically:**
+
+| statistic | fresh GX-compose bank |
+|---|---:|
+| `WORK-H` P50 / rank-800 | **938,112** |
+| P90 / rank-160 | **1,088,192** |
+| **P95 / rank-80 raw** | **1,174,016** |
+| **P95 net of approved 24,947 apparatus** | **1,149,069** |
+| top-1% / rank-16 | **1,520,832** |
+| frames over 1,120,380 | **122 / 1,600** |
+| raw gap to 1,120,380 | **+53,636** |
+| **net gap to 1,120,380** | **+28,689** |
+
+The end-of-match invariants remain exactly the established bank values:
+P1Damage 76, sparks 15, shield attaches 1,352, AObj32 high-water 1,266,
+BattlePackHits 197, runaway 0, Task36 outcome 2, segment mask 161. GX compose
+also re-engages identically to C184: Captures/Roots 63,364,
+Locals/Mults 110,702, Restores 55,546, Stores 41,598, ProjectionSkips 59,414,
+and **Declines 0**.
+
+The required DRAW=0 cadence arm is also a full 1,600-sample run, DLDI on,
+frames 440..2039, `slips=0`: **VBI 2:1850 3:173 4:8 5+:8 max 19**, total 2039,
+for **90.731% two-VBlank**. This remains below the plan's ≥95% cadence target.
+
+Therefore GX compose is now **visually owner-approved and freshly banked**, but
+the published default remains unchanged: `NDS_R2_FIGHTER_GX_COMPOSE ?= 0` and
+the published target's unconditional pin to 0 are still in force. The remaining
+P95 distance is **28,689 net ticks**, and cadence is still a separate red gate.

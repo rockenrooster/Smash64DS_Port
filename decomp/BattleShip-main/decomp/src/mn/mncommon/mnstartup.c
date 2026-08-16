@@ -5,9 +5,6 @@
 #include <sys/video.h>
 #include <sys/rdp.h>
 #include <reloc_data.h>
-#if defined(SSB64_TARGET_NDS)
-#include <nds/nds_startup.h>
-#endif
 
 
 // // // // // // // // // // // //
@@ -186,10 +183,6 @@ void mnStartupFuncStart(void)
 	Sprite *sprite;
 	SYColorRGBA color;
 
-#if defined(SSB64_TARGET_NDS)
-	gNdsStartupFuncStartResult = NDS_STARTUP_FUNC_START_PASS;
-#endif
-
 	sMNStartupSkipAllowWait = 8;
 	sMNStartupIsProceedOpening = FALSE;
 
@@ -276,18 +269,6 @@ void mnStartupStartScene(void)
 	dMNStartupVideoSetup.zbuffer = SYVIDEO_ZBUFFER_START(320, 240, 0, 10, u16);
 	syVideoInit(&dMNStartupVideoSetup);
 
-#if defined(SSB64_TARGET_NDS)
-	ndsResetStartupDiagnostics();
-	dMNStartupTaskmanSetup.scene_setup.arena_start = ndsTaskmanArenaStart();
-	dMNStartupTaskmanSetup.scene_setup.arena_size = ndsTaskmanArenaSize();
-	gNdsStartupTaskmanResult = NDS_STARTUP_TASKMAN_PASS;
-	gNdsStartupTaskmanSceneKind = gSCManagerSceneData.scene_curr;
-	gNdsStartupTaskmanDL0Size = dMNStartupTaskmanSetup.scene_setup.dl_buffer0_size;
-	gNdsStartupTaskmanDL1Size = dMNStartupTaskmanSetup.scene_setup.dl_buffer1_size;
-	gNdsStartupTaskmanControllerSet =
-		(dMNStartupTaskmanSetup.scene_setup.func_controller == syControllerFuncRead) ? 1u : 0u;
-#else
 	dMNStartupTaskmanSetup.scene_setup.arena_size = (size_t) ((uintptr_t)&ovl1_VRAM - (uintptr_t)&ovl58_BSS_END);
-#endif
 	syTaskmanStartTask(&dMNStartupTaskmanSetup);
 }

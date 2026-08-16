@@ -129,9 +129,8 @@ extern u16 gSYZBuffer[320 * 10];
  * The outer [1] is kept rather than dropping to [231][320] on purpose: it keeps
  * &gSYFramebufferSets[0] a pointer to a whole BUFFER, so a future [1]/[2] would
  * be out of range rather than silently overlapping row 1 and row 2 of the live
- * one. mntitle.c was the only such user and is patched to alias [0] under
- * scripts/decomp-patches/battleship/src_mn_mncommon_mntitle.patch, which closes
- * the KNOWN GAP this comment used to carry. */
+ * one. mntitle.c is the only such upstream user; battleship_mntitle.c aliases
+ * all three setup pointers to [0] at the import boundary before syVideoInit. */
 extern u16 gSYFramebufferSets[1][231][320] __attribute__((aligned(4)));
 extern u16 *gSYVideoZBuffer;
 extern u32 gSYVideoColorDepth;
