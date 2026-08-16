@@ -1,0 +1,54 @@
+total marginal ticks/frame in range: 5305
+pc             tk/fr      %   ex/fr   dfill   ilock  insn
+0x0208ca54      949  17.9%    78.9    2095       0  ldr	r3, [r7, #4]
+0x0208ca56      621  11.7%    78.9       0       0  str	r0, [r7, #124]	@ 0x7c
+0x0208ca22      302   5.7%    96.9     639       0  ldr	r2, [pc, #816]	@ (208cd54 <ndsR2FtAnimParseDObjFigatree+0x33c>)
+0x0208ca3a      285   5.4%    96.9     637       0  ldr	r4, [r7, #124]	@ 0x7c
+0x0208ca24      274   5.2%    96.9       0       0  push	{r5, r6, r7, lr}
+0x0208ca18      249   4.7%    96.9       0       0  push	{r4, r5, r6, r7, lr}
+0x0208ca40      233   4.4%    78.9      79       0  ldr	r6, [r7, #120]	@ 0x78
+0x0208ca26      214   4.0%    96.9     456       0  ldr	r3, [r2, #0]
+0x0208ca5e      200   3.8%    54.9       0       0  b.n	208cff6 <ndsR2FtAnimParseDObjFigatree+0x5de>
+0x0208ca3c      193   3.6%    96.9       0       0  cmp	r0, r3
+0x0208ca2e      190   3.6%    96.9      97       0  ldr	r0, [r0, #116]	@ 0x74
+0x0208ca46      160   3.0%    78.9       0       0  ?
+0x0208ca52      118   2.2%    78.9       0       0  ?
+0x0208ca5c      112   2.1%    78.9       0       0  ble.n	208ca60 <ndsR2FtAnimParseDObjFigatree+0x48>
+0x0208ca34       97   1.8%    96.9       0      97  cmp	r0, r3
+0x0208ca1c       95   1.8%    96.9       0       0  mov	lr, fp
+0x0208ca3e       91   1.7%    96.9       0       0  beq.n	208caca <ndsR2FtAnimParseDObjFigatree+0xb2>
+0x0208ca28       83   1.6%    96.9       0       0  movs	r7, r0
+0x0208ca42       79   1.5%    78.9       0      79  adds	r1, r6, #0
+0x0208ca20       53   1.0%    96.9       0       0  mov	r5, r8
+total marginal ticks/frame in range: 21063
+pc             tk/fr      %   ex/fr   dfill   ilock  insn
+0x0208ca64      655   3.1%    42.0    1046       0  ldr	r3, [r2, #0]
+0x0208ca86      651   3.1%    89.5    1409       0  ldrb	r3, [r3, #0]
+0x0208cac8      474   2.2%    96.9     515     101  pop	{r4, r5, r6, r7, pc}
+0x0208cabe      469   2.2%    96.9     928       0  pop	{r4, r5, r6, r7}
+0x0208ca98      369   1.8%    89.5       0     144  mov	pc, r3
+0x0208ca92      299   1.4%    89.5     206       0  ldr	r2, [sp, #8]
+0x0208cff8      290   1.4%    54.9     122     117  ldr	r3, [r2, #0]
+0x0208ca96      255   1.2%    89.5     473       0  ldr	r3, [r2, r3]
+0x0208ca88      235   1.1%    89.5       0     380  lsls	r3, r3, #27
+0x0208d1dc      221   1.1%    43.8       0       0  ?
+0x0208cccc      217   1.0%    56.1       0       0  b.n	208cd3a <ndsR2FtAnimParseDObjFigatree+0x322>
+0x0208d254      207   1.0%    63.9     146     100  ldr	r3, [r2, #0]
+0x0208ca80      188   0.9%    89.5       0       0  bne.n	208ca86 <ndsR2FtAnimParseDObjFigatree+0x6e>
+0x0208d06a      187   0.9%    63.9       0       0  b.n	208d252 <ndsR2FtAnimParseDObjFigatree+0x83a>
+0x0208cd40      177   0.8%   151.5       0       0  beq.n	208cd2a <ndsR2FtAnimParseDObjFigatree+0x312>
+0x0208cd36      171   0.8%   151.5       0       0  bne.n	208cd3a <ndsR2FtAnimParseDObjFigatree+0x322>
+0x0208caf8      165   0.8%    86.2       0       0  bne.n	208cafe <ndsR2FtAnimParseDObjFigatree+0xe6>
+0x0208cce4      160   0.8%    91.2     294      26  ldr	r3, [r5, #20]
+0x0208d262      158   0.8%    63.9       0       0  b.n	208d084 <ndsR2FtAnimParseDObjFigatree+0x66c>
+0x0208ca7c      157   0.7%    89.5       0      90  mov	r8, r3
+0x0208cffe      157   0.7%    54.9       0       0  b.n	208cabc <ndsR2FtAnimParseDObjFigatree+0xa4>
+0x0208cd30      152   0.7%   151.5       0       0  bne.n	208cd34 <ndsR2FtAnimParseDObjFigatree+0x31c>
+0x0208cff6      148   0.7%    54.9     323       0  ldr	r2, [pc, #552]	@ (208d220 <ndsR2FtAnimParseDObjFigatree+0x808>)
+0x0208ca60      143   0.7%    42.0     318       0  ldr	r2, [pc, #764]	@ (208cd60 <ndsR2FtAnimParseDObjFigatree+0x348>)
+0x0208ccd8      139   0.7%    91.2       0     188  cmp	r1, #4
+0x0208ccd2      137   0.6%    91.2       0       0  bne.n	208ccd6 <ndsR2FtAnimParseDObjFigatree+0x2be>
+0x0208cd22      134   0.6%    63.9       0       0  b.n	208d066 <ndsR2FtAnimParseDObjFigatree+0x64e>
+0x0208cce8      133   0.6%    91.2       0       0  str	r3, [r5, #16]
+0x0208d260      132   0.6%    63.9     277       0  ldr	r0, [r2, r3]
+0x0208cac0      130   0.6%    96.9       0     124  mov	fp, r7

@@ -1,0 +1,77 @@
+{
+ "clips": 297,
+ "scripts": 5629,
+ "sizes": {
+  "header": 20,
+  "clip_dir": 3564,
+  "script_tab": 33774,
+  "rows": 619350,
+  "total": 656708,
+  "shared_scripts": 515,
+  "shared_bytes": 30400
+ },
+ "source_bytes": 656012,
+ "facts": {
+  "ops": {
+   "0": 4799,
+   "1": 6142,
+   "2": 1130,
+   "3": 408,
+   "4": 38254,
+   "5": 15441,
+   "6": 293,
+   "7": 3860,
+   "8": 2191,
+   "9": 2554,
+   "10": 996,
+   "11": 231,
+   "13": 830
+  },
+  "tracks": {
+   "RotX": 27970,
+   "RotY": 25083,
+   "RotZ": 39648,
+   "TraX": 3385,
+   "TraY": 3824,
+   "TraZ": 3768,
+   "ScaX": 609,
+   "ScaY": 519,
+   "ScaZ": 498
+  },
+  "max_frames": 185,
+  "max_scripts_per_clip": 22,
+  "commands": 77129,
+  "track_segments": 105304,
+  "target_words": 184629,
+  "union_popcount": {
+   "1": 10,
+   "2": 2,
+   "3": 3603,
+   "4": 9,
+   "5": 2,
+   "6": 1972,
+   "7": 2,
+   "9": 29
+  }
+ },
+ "layer_c": {
+  "alphabet": 20601,
+  "mismatches": 0,
+  "max_q_bits": 24,
+  "over_s16": 2378
+ },
+ "sha256": "9106f7dd5464e135dad174493fca743aa0624876259e5ca4c646849caef15468",
+ "verify": {
+  "mismatches": {},
+  "total": 0,
+  "counts": {
+   "scripts": 5629,
+   "rows": 77129,
+   "commands": 94135,
+   "states": 86846,
+   "callbacks": 7289
+  },
+  "corpus": "f01725cc2d71152960a0ebee1daaa2e7d995a3694683f3d3de84654c2ebf6f26",
+  "examples": []
+ }
+}

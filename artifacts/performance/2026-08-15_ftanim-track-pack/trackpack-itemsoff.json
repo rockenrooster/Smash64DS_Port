@@ -1,0 +1,77 @@
+{
+ "clips": 259,
+ "scripts": 4901,
+ "sizes": {
+  "header": 20,
+  "clip_dir": 3108,
+  "script_tab": 29406,
+  "rows": 525136,
+  "total": 557670,
+  "shared_scripts": 421,
+  "shared_bytes": 27672
+ },
+ "source_bytes": 558372,
+ "facts": {
+  "ops": {
+   "0": 4147,
+   "1": 5351,
+   "2": 958,
+   "3": 347,
+   "4": 32472,
+   "5": 13207,
+   "6": 281,
+   "7": 3297,
+   "8": 1913,
+   "9": 2208,
+   "10": 859,
+   "11": 228,
+   "13": 754
+  },
+  "tracks": {
+   "RotX": 23796,
+   "RotY": 21197,
+   "RotZ": 33566,
+   "TraX": 2885,
+   "TraY": 3299,
+   "TraZ": 3218,
+   "ScaX": 559,
+   "ScaY": 485,
+   "ScaZ": 482
+  },
+  "max_frames": 185,
+  "max_scripts_per_clip": 22,
+  "commands": 66022,
+  "track_segments": 89487,
+  "target_words": 156538,
+  "union_popcount": {
+   "1": 8,
+   "2": 2,
+   "3": 3173,
+   "4": 9,
+   "5": 2,
+   "6": 1678,
+   "7": 2,
+   "9": 27
+  }
+ },
+ "layer_c": {
+  "alphabet": 19303,
+  "mismatches": 0,
+  "max_q_bits": 24,
+  "over_s16": 2102
+ },
+ "sha256": "fdbcaeaca54100dcbe56b5d3a59066e906c12107a7f2ef2173f57b10fd58324b",
+ "verify": {
+  "mismatches": {},
+  "total": 0,
+  "counts": {
+   "scripts": 4901,
+   "rows": 66022,
+   "commands": 81646,
+   "states": 75237,
+   "callbacks": 6409
+  },
+  "corpus": "cb28f9bf65c4511e8234c2487ae7b3c3e0764d72d406366e2f75e39fee5ebc56",
+  "examples": []
+ }
+}

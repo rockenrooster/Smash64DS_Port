@@ -1,0 +1,12 @@
+block                                                    marg tk/fr     whole   insn/fr  dfill/fr
+ndsR2FtAnimParseDObjFigatree TOTAL                           26368     12936   23054.3     14048
+  CLOCK      (prologue+anim_wait/frame+cmp, EVERY call)       5305      4025    3177.6      4196
+  EPILOGUE   (shared by every return)                         1293       911     678.6      1443
+  EARLYOUT   (counter++ then branch to epilogue)               763       688     274.6       445
+  CHANGED    (anim_wait = -anim_frame arm)                      65        12      72.0         0
+  STEPPED-EXCLUSIVE (everything else in the body)            18942      7300   18851.6      7964
+
+ndsR2AnimBuildTrackTable                                      7308      3061    3722.9      7244
+ndsR2AnimTargetValue                                          5014      1834    4149.7      2016
+ndsR2AnimAObjToQConvert                                       2687       734    2361.6       983
+ndsR2AnimAdvanceTail                                           715       227     297.2       768
