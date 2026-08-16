@@ -16,6 +16,19 @@ come out bit-identical because that arm is textually unchanged.
 Extraction, not a copy: the candidate is lifted out of the shipped TU, so this
 cannot drift away from the code that ships.
 
+SCOPE, and why it is not a narrowing. `69ce92e279f` (Requirement 4) gave
+`ndsR2AnimTargetValue` a second output representation behind a `q` argument, and
+the extracted body has carried its `q != 0u` branches ever since -- which is what
+broke this checker: the lifted tail stopped compiling against a harness that
+knows nothing about them. This file covers the FLOAT route, `q == 0`, which is
+the route that ships (`NDS_R2_CUBIC_FIXED ?= 0`, `Makefile:455`) and is exactly
+the claim above. The Q route is already proven exhaustively, over the same
+65,536 s16 on the same six power-of-two tracks, by
+`check_r2_cubic_error_bound.py` -- which is wired into
+`check-gbi-decode-fixtures.ps1` -- so duplicating it here would buy nothing. The
+Q helpers are therefore linked in as POISONED stubs: if `q == 0` ever reaches
+one, this checker aborts instead of quietly comparing something else.
+
 Usage:
     python scripts/check_ftanim_target_exact.py [--verbose]
 """
@@ -32,6 +45,7 @@ SRC = os.path.join(ROOT, "src", "import", "battleship_ftanim.c")
 
 HARNESS = r"""
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <math.h>
 
@@ -41,6 +55,31 @@ typedef int s32;
 typedef short s16;
 typedef unsigned char u8;
 typedef int sb32;
+
+/* The shipped body's `q != 0u` arms, present but unreachable at q == 0. They are
+ * poisoned rather than emulated: reaching one would mean this checker is no
+ * longer measuring the float route it claims to measure. The Q route itself is
+ * proven by check_r2_cubic_error_bound.py, not here. */
+#define NDS_R2_AQ_VF 12
+static f32 ndsR2AQStore(s32 v)
+{
+    (void)v;
+    fprintf(stderr, "RED: ndsR2AQStore reached at q == 0 -- the extracted "
+                    "float route is not the float route.\n");
+    exit(2);
+}
+static s32 ndsR2F32ToFixed(f32 v, s32 bits)
+{
+    (void)v; (void)bits;
+    fprintf(stderr, "RED: ndsR2F32ToFixed reached at q == 0.\n");
+    exit(2);
+}
+static s32 ndsR2AnimArgToQ(s32 arg, s32 shift)
+{
+    (void)arg; (void)shift;
+    fprintf(stderr, "RED: ndsR2AnimArgToQ reached at q == 0.\n");
+    exit(2);
+}
 
 /* The decomp's own table, verbatim from ftanim.c:28-38. */
 static f32 fracs[8] = {
@@ -74,7 +113,7 @@ int main(void)
         for (a = -32768; a <= 32767; a++) {
             s16 arg = (s16)a;
             f32 want = reference(arg, id);
-            f32 got = candidate(arg, id);
+            f32 got = candidate(arg, id, 0u);   /* the shipping route */
             u32 wb, gb;
             memcpy(&wb, &want, 4);
             memcpy(&gb, &got, 4);
@@ -129,6 +168,15 @@ def extract_candidate() -> str:
             "shipped conversion changed shape and this checker needs updating "
             "rather than deleting."
         )
+    # The `q` route must still be PRESENT and still be a route this file does not
+    # take. If it vanishes, the poisoned stubs stop being a control and the
+    # docstring's scope note becomes a lie -- fail rather than silently widen.
+    if "q != 0u" not in tail:
+        sys.exit(
+            "FAIL: the extracted tail no longer branches on `q`. Either the Q "
+            "route was removed (drop the stubs and this guard) or it was "
+            "renamed; either way the scope note in this file is now wrong."
+        )
 
     helper = re.search(
         r"static inline f32 ndsR2BitsToF32\(u32 bits\)\s*\{.*?\n\}", text, re.S
@@ -136,7 +184,7 @@ def extract_candidate() -> str:
     if not helper:
         sys.exit("FAIL: ndsR2BitsToF32 not found in %s." % SRC)
 
-    return "%s\n\n%s\n\nstatic f32 candidate(s16 arg, int id)\n{\n" \
+    return "%s\n\n%s\n\nstatic f32 candidate(s16 arg, int id, u32 q)\n{\n" \
            "    u32 mag;\n    u32 shift;\n    u32 k;\n%s\n}\n" % (
                helper.group(0), table, tail)
 

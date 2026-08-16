@@ -134,6 +134,38 @@ $ftanimDenseLayout = Join-Path $PSScriptRoot 'check_ftanim_dense_layout.py'
 if ($LASTEXITCODE -ne 0) {
     throw "Dense animation track layout check failed with exit code $LASTEXITCODE."
 }
+
+# Cycle 206. Both of the next two were written in `514fad238da` and never wired,
+# and both went RED in `69ce92e279f` (Requirement 4) -- the same commit that
+# shipped the segment-phase defect. Measured, not argued: run the original
+# transcribe checker against the port body at `514fad238da` and `69ce92e279f^`
+# and it is GREEN; at `69ce92e279f` it is RED. Nothing ran them, so the animation
+# regression shipped and stood until 2026-08-15. They are wired here now, next to
+# their five siblings, because an unwired checker is worth exactly nothing.
+#
+# The transcribe checker no longer proves token equality -- Requirement 4
+# restructured the port body, so that proof is not expressible -- it proves the
+# two invariants that survive: the per-arm `AObjAnimAdvance` sequence (a slip
+# desynchronises the animation stream, which moves hitboxes) and hoist liveness
+# (defect 1's exact shape). It re-fails the defective body arm-for-arm. Skips
+# cleanly when decomp/ is absent. Host-only, <1 s.
+$ftanimTranscribe = Join-Path $PSScriptRoot 'check_ftanim_transcribe.py'
+& python -B $ftanimTranscribe
+if ($LASTEXITCODE -ne 0) {
+    throw "Figatree parser transcription fidelity failed with exit code $LASTEXITCODE."
+}
+
+# The companion exactness proof: `ftAnimGetTargetValue` is replaced by an
+# exponent subtraction, and that is an EXACTNESS claim about data that drives
+# hitboxes, so it is proven over all 65,536 s16 on all 8 track ids rather than
+# argued from a comment. Covers the shipping float route (`q == 0`); the Q route
+# is proven by check_r2_cubic_error_bound.py above. Needs a host C compiler and
+# skips cleanly without one. Host-only, ~3 s.
+$ftanimTargetExact = Join-Path $PSScriptRoot 'check_ftanim_target_exact.py'
+& python -B $ftanimTargetExact
+if ($LASTEXITCODE -ne 0) {
+    throw "ftAnimGetTargetValue exactness check failed with exit code $LASTEXITCODE."
+}
 function Assert-Equal {
     param(
         [object]$Actual,
