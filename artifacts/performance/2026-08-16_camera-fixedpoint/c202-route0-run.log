@@ -1,0 +1,29 @@
+Tick-HUD buckets: target=smash64ds-battle-playable-tickhud-hwtri samples=1600 frames=439..2038 melonDS=1.0 sha=DE80E46BDCF1FD98 git=4957d636f16+dirty(9) dldi=ON
+
+bucket p50        p95        spread mean       min        max        %ALLp50
+------ ---        ---        ------ ----       ---        ---        -------
+ALL     1,117,760  1,678,208   1.50  1,230,809  1,116,672  5,872,896   100.0
+FTR       299,776    304,192   1.01    288,161    171,520    335,744    26.8
+STG       181,120    189,056   1.04    185,278    175,808  4,373,440    16.2
+BG          4,288      4,352   1.01      4,272      4,096      7,104     0.4
+AUD         2,752      6,784   2.47      8,834      1,152    155,328     0.2
+HUD         1,088    414,400 380.88     35,446        960  2,126,912     0.1
+SRC       336,448    577,536   1.72    358,013     10,944  4,514,112    30.1
+MISC      109,632    177,536   1.62    115,335     84,096    326,784     9.8
+OTHR      210,240    521,664   2.48    235,470     23,808    580,160    18.8
+WAIT      190,464    501,760   2.63    215,713      3,968    560,192    17.0
+WORK      961,408  1,384,256   1.44  1,015,096    684,160  5,526,720    86.0
+SHDT        4,416     83,712  18.96     14,731          0    456,768     0.4
+SWRM        1,024      1,152   1.12      1,028        704      1,280     0.1
+GCRA      331,008    572,032   1.73    352,510      6,784  4,508,672    29.6
+SCPU       55,168    113,472   2.06     49,420          0    145,216     4.9
+SCAT        1,344      1,472   1.10      1,286          0      1,664     0.1
+SPRM        2,048      2,240   1.09      5,004          0    641,472     0.2
+SINT      163,584    301,632   1.84    169,870          0  4,357,504    14.6
+SPHD       72,320    108,480   1.50     72,059          0    437,824     6.5
+SPHC          640        768   1.20        627          0        896     0.1
+WORK-H    949,056  1,232,384   1.30    979,650    675,968  5,109,760    84.9
+
+named=995,339 (80.9% of ALL)  VBI 2:1687 3:325 4:18 5+:8 max:19 total:2038  slips=0
+extras: gNdsBattleTextHudP1Damage=76  gNdsDamageSparkScaleCount=16  gNdsShieldAnimJointAttachCount=480  gNdsAObjEvent32NormalizedHighWater=774  gNdsBattlePackHits=257  gNdsObjAnimRunawayCount=0  gNdsRendererTask36CaptureOutcome=2  gNdsRendererTask36CaptureSegmentMask=161  gNdsR2FtAnimParseCalls=144,383  gNdsR2FtAnimParseEarlyOut=108,128  gNdsR2FtAnimParseStepped=36,255  gNdsR2FtAnimNullSkips=70,796  gNdsTaskmanGeneralHeapFreeMin=53,136  gNdsTaskmanArenaChosenSize=1,548,288  gNdsTaskmanArenaAllocFailCount=0  gNdsBattlePackResidentBytes=287,904  gNdsBattlePackLoadFails=0  gNdsR2CameraFixedLookAtCalls=0  gNdsR2CameraFixedPerspCalls=0  gNdsR2CameraFixedFloatLookAtCalls=4,076  gNdsR2CameraFixedFloatPerspCalls=4,152  gNdsR2CameraFixedGameCalls=0  gNdsR2CameraFixedGameFloatCalls=4,076  gNdsR2CameraFixedSaturateCount=0  gNdsR2CameraFixedDegenerateCount=0  gNdsR2CameraFixedRescaleCount=0  gNdsCameraMatrixLeanRescaleCount=0  gNdsCameraMatrixLeanSkippedF2LCount=4,076
+Wrote artifacts\performance\2026-08-16_camera-fixedpoint\c202-route0.json

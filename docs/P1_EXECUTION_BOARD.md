@@ -134,6 +134,72 @@ chain only — 15,812 tk/fr gross, 2,764 B, 181 sites. `NDS_R2_CFX_DIV64`/`ISQRT
 > number**: this section's "+69.4 tk per exchanged call, ~1.59x" — a genuine
 > residual-÷-count error, refuted by the v3 at exactly 1:1 / 0.965x.
 
+**TASK 5 — THE CAMERA CHAIN IS BUILT, MEASURED, AND THE 5.14x PRIOR IS REFUTED IN SITU AT
+1.70x** (`…/2026-08-16_camera-fixedpoint/CAMERA_Q20_12.md`; **3 lab builds, 4 gate runs**,
+two same-binary `.data`-route A/Bs, 0 published bytes moved, route ships at **0**).
+
+Two of the three camera producers converted to Q20.12 — the game camera
+(`gmCameraLookAtFuncMatrix`, 2.000 entries/fr) and the renderer adapter's
+(`syMatrixLookAtReflect` 2.000/fr + `syMatrixPerspFast` 2.138/fr) — sharing one look-at and
+one perspective kernel. **`syMatrixF2L` is deleted, not converted, for all 6.138 of its
+entries a frame.** The particle camera (`syMatrixLookAtF`, `syMatrixOrthoF`, `guMtxCatF`)
+is a different kernel set and was left alone. Divides and roots go to the DS hardware units
+at `0x04000280`/`0x040002B0`; **nothing was added to `__udivmoddi4`**.
+
+```text
+v1 build-c201-camfix, same-binary route, floor zero, WORK-H, 1,600 frames, slips=0
+  paired median  -4,736   mean -4,728   improved 1,439/1,600
+  P50 -4,160 · P90 -6,016 · trimmed -4,573 · top-80 paired median -5,568
+  rank-80 point estimate -1,408  <- NOISE, see below
+  FTR -3,264 · STG -1,664 (sum -4,928); no other bucket moves at the median
+```
+
+**The rank-80 point estimate is not the result.** Rank-by-rank the delta is −7,808 /
+−6,016 / −4,160 / −3,904 / −4,160 / −5,248 / −4,992 at ranks 40/160/320/640/800/1200/1600 —
+a **level**, as a per-frame-constant workload must be. Ranks 10 and 20 read **+30,336** and
+**+20,224** from cartridge-read frames that do not reproduce between two emulator sessions
+of a match whose seventeen invariants are bit-identical. Rank-80 sits inside that band.
+**Quote the paired per-frame median.**
+
+**THE RATE.** Gross deleted 11,657 tk/fr marginal-80 / 11,504 whole match (rates from
+`DRAW_FIXEDPOINT.md`, call counts confirmed by this cycle's own engagement counters).
+`R = gross/(gross − net)` → **1.700x whole match, 1.915x on the gate population, against
+the 5.14x prior.** It is an **upper** bound: the numerator carries only the soft-float
+library bill, and the float form's self time — which the prior's 2,921 tk *did* include —
+can only drive R toward 1. **Reasons, named:** the prior is a pure multiply-accumulate
+pair, while a look-at needs **3 roots and 9 divides** per entry and a perspective 5 more,
+and those convert badly; and the float library is ITCM-resident while the replacement
+cannot be.
+
+**ITCM IS NOT AVAILABLE, and the 2,976 B free is the wrong ROM.** `.itcm` on the
+measurement instrument (`…-tickhud-hwtri`) is **32,188/32,768 — 580 B free**; the 2,976 is
+Boundary's manifest for the **proof** ROM. Two link attempts overflowed `itcm` by **916 B**
+(kernels only) and **1,452 B** (with leaves). Structurally, a `.data` route needs both arms
+resident, so **a same-binary route can never test ITCM residency for a replacement of an
+ITCM-resident library**; that needs a compile-time pair whose ≥14,080 rank-80 floor is 3x
+the effect.
+
+**THE CYCLE'S MOST USEFUL SURPRISE: inlining the leaves INVERTED the win.** v2
+(`build-c202-camfix2`) made every leaf `always_inline` — 42 calls per entry became 12 — and
+the paired median went **−4,736 → +1,600**. Across the two same-binary pairs and the
+measured cross-build control term (+5,440 paired median on two builds whose route-0 path is
+identical), the fixed kernel became **+11,776 tk/fr more expensive for +3,032 B**, ~30
+cycles per added line per entry — inside the measured 23–51 cycle `icache_fill` band.
+**On a kernel entered a handful of times a frame, inlining is a cost.** `K-ICACHE`'s
+mechanism, at 8.138 entries/frame instead of 0.97, strong enough to flip a sign.
+
+**Two build traps, both reproduced and both fixed before any number was believed:** the
+kernels first compiled to **Thumb** (18 `bl __aeabi_lmul` in one look-at), and even in ARM
+state `noinline` plus mismatched `target` attributes kept 42 calls per entry, because GCC
+will not inline across differing target attributes.
+
+**Engagement and control.** Candidate 8,148 fixed look-ats / 8,224 fixed perspectives
+against 2 and 2 float (one pre-poke frame); control 0 fixed, 4,076/4,152 float. **Saturate
+0, degenerate 0, rescale 0.** All eight new or routed symbols classify **`draw+dispatch`,
+100.0%** from the linked ELF; `gGMCameraMatrix`'s four readers, from the image's literal
+pools, are all display/present callbacks. **All seventeen match invariants are bit-identical
+across all four runs and equal to `build-c199-bank0`'s.**
+
 ## Banked baselines — BOTH ARMS RE-BANKED ON THE CORRECTED SEED (cycle 80)
 
 1,600 samples, frames 441–2040, `dldi=ON`, git `34091054`+reseed,

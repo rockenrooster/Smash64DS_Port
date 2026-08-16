@@ -2,6 +2,7 @@
 
 #include <nds/nds_effects.h>
 #include <nds/nds_fighter_matrix_index.h>
+#include <nds/nds_r2_camera_fixed.h>
 #if NDS_R2_FOX_GUN_OVERLAY
 #include <nds/nds_fox_gun.h>
 #endif
@@ -601,6 +602,60 @@ static void ndsRendererAdapterMtxFromN64(
         return;
     }
     ndsRendererMtxLoadN64ToDS20p12(src, dst);
+}
+
+/* The renderer's camera producers, routed.  Every site below ran
+ *
+ *     syMatrixLookAtReflect(&mtx, &look_at, ...)   float chain + syMatrixF2L
+ *     ndsRendererAdapterMtxFromN64(&mtx, out)      s15.16 -> Q20.12
+ *
+ * which is float -> 16.16 -> 12.12 for a consumer that only ever sees twelve
+ * fractional bits.  The Q20.12 arm produces the SAME representable value with
+ * no float and no intermediate Mtx, so syMatrixF2L disappears for 4.138 of its
+ * 6.138 entries a frame rather than being converted.
+ *
+ * The route word is read, not compiled: gNdsR2CameraFixedEnabled lives in
+ * `.data` so one binary carries both arms with byte-identical placement.  See
+ * include/nds/nds_r2_camera_fixed.h. */
+static void ndsRendererAdapterCameraLookAtReflect(
+    NDSRendererMatrix20p12 *out, LookAt *look_at,
+    f32 eye_x, f32 eye_y, f32 eye_z,
+    f32 at_x, f32 at_y, f32 at_z,
+    f32 up_x, f32 up_y, f32 up_z)
+{
+    Mtx mtx;
+
+    if (gNdsR2CameraFixedEnabled != 0u)
+    {
+        /* NULL, not `look_at`: every caller here passes a stack local that
+         * nothing reads, so the six reflectance conversions are dead work the
+         * float arm still pays and this arm skips. */
+        (void)look_at;
+        ndsR2CameraLookAtReflect20p12(out, NULL, eye_x, eye_y, eye_z,
+                                      at_x, at_y, at_z, up_x, up_y, up_z);
+        return;
+    }
+    gNdsR2CameraFixedFloatLookAtCalls++;
+    syMatrixLookAtReflect(&mtx, look_at, eye_x, eye_y, eye_z,
+                          at_x, at_y, at_z, up_x, up_y, up_z);
+    ndsRendererAdapterMtxFromN64(&mtx, out);
+}
+
+static void ndsRendererAdapterCameraPerspFast(
+    NDSRendererMatrix20p12 *out, u16 *persp_norm,
+    f32 fovy, f32 aspect, f32 near, f32 far, f32 scale)
+{
+    Mtx mtx;
+
+    if (gNdsR2CameraFixedEnabled != 0u)
+    {
+        ndsR2CameraPerspFast20p12(out, persp_norm, fovy, aspect, near, far,
+                                  scale);
+        return;
+    }
+    gNdsR2CameraFixedFloatPerspCalls++;
+    syMatrixPerspFast(&mtx, persp_norm, fovy, aspect, near, far, scale);
+    ndsRendererAdapterMtxFromN64(&mtx, out);
 }
 
 static inline sb32 ndsRendererAdapterFloatPow2ToS32(
@@ -1980,7 +2035,6 @@ static void ndsRendererAdapterApplyMvpRecalc(
     const NDSRendererMatrix20p12 **modelview_ptr)
 {
     Mtx rotation_mtx;
-    Mtx perspective_mtx;
     NDSRendererMatrix20p12 rotation;
     NDSRendererMatrix20p12 perspective;
     NDSRendererMatrix20p12 source_orientation;
@@ -2056,14 +2110,13 @@ static void ndsRendererAdapterApplyMvpRecalc(
      * contains LookAt * Persp, so seed the renderer with the completed MVP to
      * avoid applying LookAt a second time to the rewritten orientation. */
     perspective_norm = cobj->projection.persp.norm;
-    syMatrixPerspFast(&perspective_mtx,
-                      &perspective_norm,
-                      cobj->projection.persp.fovy,
-                      cobj->projection.persp.aspect,
-                      cobj->projection.persp.near,
-                      cobj->projection.persp.far,
-                      cobj->projection.persp.scale);
-    ndsRendererAdapterMtxFromN64(&perspective_mtx, &perspective);
+    ndsRendererAdapterCameraPerspFast(&perspective,
+                                      &perspective_norm,
+                                      cobj->projection.persp.fovy,
+                                      cobj->projection.persp.aspect,
+                                      cobj->projection.persp.near,
+                                      cobj->projection.persp.far,
+                                      cobj->projection.persp.scale);
     if (kind == NDS_RENDERER_ADAPTER_MVP_RECALC_PERSP_SCA_KIND)
     {
         NDSRendererMatrix20p12 scale;
@@ -3067,36 +3120,35 @@ static sb32 ndsRendererAdapterBuildCameraMatrices(
         case NDS_RENDERER_ADAPTER_GM_CAMERA_MTX_KIND:
         {
             LookAt look_at;
-            Mtx mtx;
             NDSRendererMatrix20p12 lookat;
             NDSRendererMatrix20p12 persp;
 
-            syMatrixLookAtReflect(&mtx, &look_at,
-                                  cobj->vec.eye.x, cobj->vec.eye.y,
-                                  cobj->vec.eye.z, cobj->vec.at.x,
-                                  cobj->vec.at.y, cobj->vec.at.z,
-                                  cobj->vec.up.x, cobj->vec.up.y,
-                                  cobj->vec.up.z);
-            ndsRendererAdapterMtxFromN64(&mtx, &lookat);
-            syMatrixPerspFast(&mtx, &cobj->projection.persp.norm,
-                              cobj->projection.persp.fovy,
-                              cobj->projection.persp.aspect,
-                              cobj->projection.persp.near,
-                              cobj->projection.persp.far,
-                              cobj->projection.persp.scale);
-            ndsRendererAdapterMtxFromN64(&mtx, &persp);
+            ndsRendererAdapterCameraLookAtReflect(
+                &lookat, &look_at,
+                cobj->vec.eye.x, cobj->vec.eye.y,
+                cobj->vec.eye.z, cobj->vec.at.x,
+                cobj->vec.at.y, cobj->vec.at.z,
+                cobj->vec.up.x, cobj->vec.up.y,
+                cobj->vec.up.z);
+            ndsRendererAdapterCameraPerspFast(
+                &persp, &cobj->projection.persp.norm,
+                cobj->projection.persp.fovy,
+                cobj->projection.persp.aspect,
+                cobj->projection.persp.near,
+                cobj->projection.persp.far,
+                cobj->projection.persp.scale);
             ndsRendererMtxMul20p12(&lookat, &persp, projection);
             *projection_valid = TRUE;
             break;
         }
         case nGCMatrixKindPerspFastF:
-            syMatrixPerspFast(&mtx, &cobj->projection.persp.norm,
-                              cobj->projection.persp.fovy,
-                              cobj->projection.persp.aspect,
-                              cobj->projection.persp.near,
-                              cobj->projection.persp.far,
-                              cobj->projection.persp.scale);
-            ndsRendererAdapterMtxFromN64(&mtx, projection);
+            ndsRendererAdapterCameraPerspFast(
+                projection, &cobj->projection.persp.norm,
+                cobj->projection.persp.fovy,
+                cobj->projection.persp.aspect,
+                cobj->projection.persp.near,
+                cobj->projection.persp.far,
+                cobj->projection.persp.scale);
             *projection_valid = TRUE;
             break;
         case nGCMatrixKindPerspF:
@@ -3204,9 +3256,8 @@ static void ndsRendererAdapterBuildDefaultBattleCameraMatrices(
         return;
     }
 
-    syMatrixPerspFast(&mtx, &norm, 38.0F, 15.0F / 11.0F,
-                      256.0F, 39936.0F, 1.0F);
-    ndsRendererAdapterMtxFromN64(&mtx, projection);
+    ndsRendererAdapterCameraPerspFast(projection, &norm, 38.0F, 15.0F / 11.0F,
+                                      256.0F, 39936.0F, 1.0F);
     *projection_valid = TRUE;
 
     syMatrixLookAt(&mtx,
@@ -3224,7 +3275,6 @@ static sb32 ndsRendererAdapterBuildTask36StageCameraMatrices(
     NDSRendererMatrix20p12 *modelview)
 {
     LookAt look_at;
-    Mtx mtx;
     u32 i;
 
     if ((cobj == NULL) || (projection == NULL) || (modelview == NULL))
@@ -3238,20 +3288,20 @@ static sb32 ndsRendererAdapterBuildTask36StageCameraMatrices(
         {
             continue;
         }
-        syMatrixLookAtReflect(&mtx, &look_at,
-                              cobj->vec.eye.x, cobj->vec.eye.y,
-                              cobj->vec.eye.z, cobj->vec.at.x,
-                              cobj->vec.at.y, cobj->vec.at.z,
-                              cobj->vec.up.x, cobj->vec.up.y,
-                              cobj->vec.up.z);
-        ndsRendererAdapterMtxFromN64(&mtx, modelview);
-        syMatrixPerspFast(&mtx, &cobj->projection.persp.norm,
-                          cobj->projection.persp.fovy,
-                          cobj->projection.persp.aspect,
-                          cobj->projection.persp.near,
-                          cobj->projection.persp.far,
-                          cobj->projection.persp.scale);
-        ndsRendererAdapterMtxFromN64(&mtx, projection);
+        ndsRendererAdapterCameraLookAtReflect(
+            modelview, &look_at,
+            cobj->vec.eye.x, cobj->vec.eye.y,
+            cobj->vec.eye.z, cobj->vec.at.x,
+            cobj->vec.at.y, cobj->vec.at.z,
+            cobj->vec.up.x, cobj->vec.up.y,
+            cobj->vec.up.z);
+        ndsRendererAdapterCameraPerspFast(
+            projection, &cobj->projection.persp.norm,
+            cobj->projection.persp.fovy,
+            cobj->projection.persp.aspect,
+            cobj->projection.persp.near,
+            cobj->projection.persp.far,
+            cobj->projection.persp.scale);
         return TRUE;
     }
     return FALSE;
@@ -4486,22 +4536,21 @@ ndsRendererAdapterGetHierarchyCameraMatrices(
             (xobj->kind == NDS_RENDERER_ADAPTER_GM_CAMERA_MTX_KIND))
         {
             LookAt look_at;
-            Mtx mtx;
 
-            syMatrixLookAtReflect(&mtx, &look_at,
-                                  cobj->vec.eye.x, cobj->vec.eye.y,
-                                  cobj->vec.eye.z, cobj->vec.at.x,
-                                  cobj->vec.at.y, cobj->vec.at.z,
-                                  cobj->vec.up.x, cobj->vec.up.y,
-                                  cobj->vec.up.z);
-            ndsRendererAdapterMtxFromN64(&mtx, modelview);
-            syMatrixPerspFast(&mtx, &cobj->projection.persp.norm,
-                              cobj->projection.persp.fovy,
-                              cobj->projection.persp.aspect,
-                              cobj->projection.persp.near,
-                              cobj->projection.persp.far,
-                              cobj->projection.persp.scale);
-            ndsRendererAdapterMtxFromN64(&mtx, projection);
+            ndsRendererAdapterCameraLookAtReflect(
+                modelview, &look_at,
+                cobj->vec.eye.x, cobj->vec.eye.y,
+                cobj->vec.eye.z, cobj->vec.at.x,
+                cobj->vec.at.y, cobj->vec.at.z,
+                cobj->vec.up.x, cobj->vec.up.y,
+                cobj->vec.up.z);
+            ndsRendererAdapterCameraPerspFast(
+                projection, &cobj->projection.persp.norm,
+                cobj->projection.persp.fovy,
+                cobj->projection.persp.aspect,
+                cobj->projection.persp.near,
+                cobj->projection.persp.far,
+                cobj->projection.persp.scale);
             return TRUE;
         }
     }

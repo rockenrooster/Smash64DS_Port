@@ -1111,6 +1111,15 @@ NDS_R2_PARTICLE_CAMERA_CACHE ?= 1
 # syMatrixLookAtReflectF writes, so an approximated look-at moves the Task 9
 # hash and is not a free fidelity trade.
 NDS_R2_CAMERA_MATRIX_LEAN ?= 2
+# Q20.12 camera + projection chain, the falsifier for the draw-side soft-float
+# exchange rate (include/nds/nds_r2_camera_fixed.h). This only sets the INITIAL
+# value of gNdsR2CameraFixedEnabled, which is a `.data` word: the A/B is one
+# binary poked through both arms with -SetGlobals, and this flag exists so a
+# capture harness that cannot poke a global still gets a candidate ROM whose
+# layout is byte-identical to the control's (one initialised word differs, no
+# section moves). DEFAULT 0 -- precision changes pixels and the owner's eye is
+# the acceptance gate, so nothing here ships without that decision.
+NDS_R2_CAMERA_FIXED ?= 0
 # Draw Fox's source blaster model as its four baked, untextured vertices instead
 # of walking and decoding relocData 316's nine-command display list every
 # frame. Owner-playtested and accepted 2026-08-09; ON BY DEFAULT. The source
@@ -3499,6 +3508,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_R2_FIREBALL_QUAD $(NDS_R2_FIREBALL_QUAD)'; \
 		echo '#define NDS_R2_PARTICLE_CAMERA_CACHE $(NDS_R2_PARTICLE_CAMERA_CACHE)'; \
 		echo '#define NDS_R2_CAMERA_MATRIX_LEAN $(NDS_R2_CAMERA_MATRIX_LEAN)'; \
+		echo '#define NDS_R2_CAMERA_FIXED $(NDS_R2_CAMERA_FIXED)'; \
 		echo '#define NDS_R2_FOX_BLASTER_QUAD $(NDS_R2_FOX_BLASTER_QUAD)'; \
 		echo '#define NDS_R2_FOX_BLASTER_GLOW_AOT $(NDS_R2_FOX_BLASTER_GLOW_AOT)'; \
 		echo '#define NDS_R2_FOX_GUN_OVERLAY $(NDS_R2_FOX_GUN_OVERLAY)'; \
