@@ -1,0 +1,30 @@
+Wrote artifacts\performance\2026-08-16_gxcompose-bank-basis\c207-gx1-rows.csv
+Tick-HUD buckets: target=smash64ds-battle-playable-tickhud-hwtri samples=1600 frames=439..2038 melonDS=1.0 sha=DE80E46BDCF1FD98 git=b1339828070+dirty(5) dldi=ON
+
+bucket p50        p95        spread mean       min        max        %ALLp50
+------ ---        ---        ------ ----       ---        ---        -------
+ALL     1,117,760  1,678,208   1.50  1,232,720  1,114,432  5,872,384   100.0
+FTR       296,704    300,992   1.01    285,234    169,664    334,784    26.5
+STG       182,272    190,464   1.04    183,911    178,048    194,752    16.3
+BG          4,288      4,416   1.03      4,317      3,968      4,544     0.4
+AUD         2,880      7,232   2.51      8,954      1,216    155,264     0.3
+HUD         1,088    414,208 380.71     35,373        960  2,126,080     0.1
+SRC       336,640    572,800   1.70    363,057     11,008  4,575,616    30.1
+MISC      110,592    178,112   1.61    116,555     84,928    328,256     9.9
+OTHR      209,792    514,304   2.45    235,318     21,952    580,800    18.8
+WAIT      189,696    494,272   2.61    215,313      1,920    560,000    17.0
+WORK      961,600  1,387,776   1.44  1,017,407    682,560  5,467,456    86.0
+SHDT        4,416     84,032  19.03     14,718          0    454,976     0.4
+SWRM        1,024      1,088   1.06      1,001        768      1,152     0.1
+GCRA      331,072    567,232   1.71    357,396      6,720  4,570,048    29.6
+SCPU       54,976    112,384   2.04     49,141          0    143,168     4.9
+SCAT        1,280      1,408   1.10      1,237          0      1,600     0.1
+SPRM        1,984      2,176   1.10      4,863          0    653,376     0.2
+SINT      163,584    298,880   1.83    169,667          0  4,295,488    14.6
+SPHD       71,936    108,224   1.50     71,295          0    410,496     6.4
+SPHC          640        768   1.20        643          0      4,352     0.1
+WORK-H    948,736  1,231,552   1.30    982,034    674,240  5,200,640    84.9
+
+named=997,401 (80.9% of ALL)  VBI 2:1689 3:324 4:16 5+:9 max:20 total:2038  slips=0
+extras: gNdsBattleTextHudP1Damage=76  gNdsDamageSparkScaleCount=16  gNdsShieldAnimJointAttachCount=480  gNdsAObjEvent32NormalizedHighWater=774  gNdsBattlePackHits=257  gNdsObjAnimRunawayCount=0  gNdsRendererTask36CaptureOutcome=2  gNdsRendererTask36CaptureSegmentMask=161  gNdsR2FtAnimParseCalls=144,383  gNdsR2FtAnimParseEarlyOut=108,128  gNdsR2FtAnimParseStepped=36,255  gNdsR2FtAnimNullSkips=70,796  gNdsTaskmanGeneralHeapFreeMin=53,136  gNdsTaskmanArenaChosenSize=1,548,288  gNdsTaskmanArenaAllocFailCount=0  gNdsBattlePackResidentBytes=287,904  gNdsBattlePackLoadFails=0  gNdsR2GxComposeDeclines=0  gNdsR2GxComposeCaptures=62,920  gNdsR2GxComposeRoots=62,920  gNdsR2GxComposeMults=109,346  gNdsR2GxComposeLocals=109,346
+Wrote artifacts\performance\2026-08-16_gxcompose-bank-basis\c207-gx1.json

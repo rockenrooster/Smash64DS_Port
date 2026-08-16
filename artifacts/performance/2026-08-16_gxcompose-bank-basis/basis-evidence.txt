@@ -1,0 +1,38 @@
+# Basis evidence for the GX_COMPOSE bank question, 2026-08-16
+
+## 1. Each build's own generated config record (NDS_R2_FIGHTER_GX_COMPOSE)
+
+build-c170-seam-bp1              #define NDS_R2_FIGHTER_GX_COMPOSE 0
+build-c183-gxstackfix            #define NDS_R2_FIGHTER_GX_COMPOSE 0
+build-c184-gxc-a                 #define NDS_R2_FIGHTER_GX_COMPOSE 0
+build-c184-gxc-b                 #define NDS_R2_FIGHTER_GX_COMPOSE 1
+build-c185-gxcompose-bank        #define NDS_R2_FIGHTER_GX_COMPOSE 1
+build-c193-segfix                #define NDS_R2_FIGHTER_GX_COMPOSE 1
+build-c197-bank                  #define NDS_R2_FIGHTER_GX_COMPOSE 1
+build-c198-bore0                 #define NDS_R2_FIGHTER_GX_COMPOSE 0
+build-c199-bank0                 #define NDS_R2_FIGHTER_GX_COMPOSE 1
+build-c200-bank84                #define NDS_R2_FIGHTER_GX_COMPOSE 1
+build-c201-camfix                #define NDS_R2_FIGHTER_GX_COMPOSE 1
+build-c206-shipgx0               #define NDS_R2_FIGHTER_GX_COMPOSE 0
+build-c207-gx1                   #define NDS_R2_FIGHTER_GX_COMPOSE 1
+
+## 2. Linked-ELF oracle: gNdsR2GxCompose* symbol count (exists only inside #if NDS_R2_FIGHTER_GX_COMPOSE)
+
+build-c199-bank0         smash64ds-battle-playable-tickhud-hwtri.elf -> 8 symbols
+build-c200-bank84        smash64ds-battle-playable-tickhud-hwtri.elf -> 8 symbols
+build-c198-bore0         smash64ds-battle-playable-proof-hwtri.elf -> 0 symbols
+build-c205-camtoggle     smash64ds-battle-playable-proof-hwtri.elf -> 0 symbols
+build-c206-shipgx0       smash64ds-battle-playable-tickhud-hwtri.elf -> 0 symbols
+build-c207-gx1           smash64ds-battle-playable-tickhud-hwtri.elf -> 8 symbols
+
+## 3. The two arms differ in exactly one config line
+
+102c102
+< #define NDS_R2_FIGHTER_GX_COMPOSE 0
+---
+> #define NDS_R2_FIGHTER_GX_COMPOSE 1
+
+## 4. Lab ROM hashes
+
+ae1eecedd333ea778e46ffa8223597306d7c8a289e8cca96f88d3dcbe148480b *builds/build-c206-shipgx0/smash64ds-battle-playable-tickhud-hwtri.nds
+2582c7a699150e0b13eeb71ae85f719ed541a79e9d6e44cae033c0ae9adbdb71 *builds/build-c207-gx1/smash64ds-battle-playable-tickhud-hwtri.nds

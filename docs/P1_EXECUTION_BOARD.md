@@ -52,6 +52,43 @@ NDS_R2_BATTLEPACK_KEEP_CACHE=1 NDS_R2_FIGHTER_GX_COMPOSE_LAB=1`, DLDI on, mode
 | over-gate | 166/1600 |
 | VBI 2/3/4/5+ · max · total | 1711/303/16/8 · 19 · 2038 |
 
+> ### BASIS CORRECTION, 2026-08-16 — "at the shipping default" was about the BORE, not the renderer
+>
+> `artifacts/performance/2026-08-16_gxcompose-bank-basis/BASIS.md`.
+> **This bank, `c199-bank0` and every bank since `c185` were built
+> `NDS_R2_FIGHTER_GX_COMPOSE=1` while the ROM ships `0`** — proven from
+> `builds/build-c199-bank0/nds_build_config.h` and from `nm` finding the 8
+> `gNdsR2GxCompose*` symbols in its ELF that exist only inside that `#if`
+> (0 on every GX=0 ELF). `Makefile:766` is `?= 0`; the published block
+> (`Makefile:1545`) pins **0 unconditionally**. `c170` and everything before it
+> was GX=0, so the basis changed at `c185`.
+>
+> **The shipping level, measured fresh at HEAD `b1339828070`:**
+> `build-c206-shipgx0` (GX=0) rank-80 **1,239,808 raw / 1,214,861 net =
+> GAP +94,481**. Its one-config-line sibling `build-c207-gx1` reads
+> 1,232,768 / 1,207,821 (+87,441) and lands 2,048 from `c199-bank0`, so the
+> banked configuration replicates. All seventeen invariants identical on all
+> three arms, `slips=0`, GX engagement complete on the GX=1 arm
+> (`Declines=0`, `Captures=Roots=62,920`).
+>
+> **The 9,088 between the two configurations is inside the ≥14,080 cross-build
+> floor**, so the bank is not *provably* optimistic — but it is measured on a
+> renderer the user does not run. **Quote `+94,481` and cite
+> `build-c206-shipgx0`**; every "x of the gap" ratio multiplies by **0.904**
+> and no conclusion in `LADDER.md`, `MENU.md` or `CAMERA_Q20_12.md` changes
+> sign. Re-dividing those documents is an open task, not done here.
+>
+> **`GX_COMPOSE`'s `−17,152` is RETIRED.** The same-HEAD pair reads rank-80
+> **+7,040** (GX on cheaper, floor ≥14,080) and P50 **−4,288** (GX on dearer,
+> floor ~5,700) — inside both floors and disagreeing in sign. The −17,152 came
+> from `build-c184-gxc-a/-b` at a 1,189,312 level, i.e. **before the segment
+> repair `64c41c361a7`**. What reproduces is a **transfer**: FTR P50
+> 305,152→296,704 and STG 175,680→182,272, with the second independent GX=1
+> build agreeing to 704 on STG. **Open, one counter's work:** whether the stage
+> genuinely pays that or the ticks merely cross a tick-HUD bucket boundary.
+> **BLOCKED(decision: `GX_COMPOSE` default)** is now a basis-consistency
+> question, not a performance one — package in `BASIS.md` §5.
+
 **`+28,689` IS DEAD AND EVERY LEVER PRICED AGAINST IT MUST BE RE-READ.** The
 c185 bank (1,174,016 raw / 1,149,069 net) measured a match the shipped
 segment-phase parser defect made *cheaper* (`64c41c361a7`); the repaired match
@@ -10487,6 +10524,34 @@ owner's instruction; read §6 of that file for what was not done.**
   pin to run a lab arm is what this replaces.
 - Both root ROMs byte-identical; Boundary green at the shipping default,
   0 `Exception:`, and its pacing smoke prints `gxstat=0x6000000`.
+
+#### 2026-08-16 — two draw-side falsifiers closed with zero builds
+
+`artifacts/performance/2026-08-16_gxcompose-bank-basis/BASIS.md` §6–§7.
+
+- **ITCM golden reclaim — CLOSED at 632 B, and only 56 B of it is takeable.**
+  The **literal-pool modality has no discriminating power**: scanning every
+  LOAD section for words equal to a helper's address returns 0 for
+  `__aeabi_fadd`, `__mulsf3` and `__divsf3` too, and those are entered
+  1,728 / 2,122 / 431 times. Branch reachability (external edges only) finds
+  **0 entries** into `__aeabi_frsub`/`__subsf3`/`__addsf3` (456 B), the five
+  `fcmp` goldens (120 B) and `__unordsf2` (56 B); independently, a whole-match
+  v3 capture has **0 sampled instructions** in `0x01ff802c..0x01ff81e8`.
+  **But the live bodies are repo-authored** (`nds_task16_float_addsub.o`,
+  `nds_task16_float_compare.o`), so `NDS_TASK16_FLOAT_*=0` **reverts Task 16 to
+  stock libgcc — it is not a reclaim**; and `--rename-section .text=.itcm`
+  (`Makefile:3767`) renames whole members, trapping 576 B beside live symbols
+  that `--gc-sections` cannot split. Only `_arm_unordsf2.itcm.o` (56 B) is
+  wholly dead. **Consequence: 616 B free on the shipping configuration + 56 =
+  672 B against the camera v3's 916 B overflow — the ITCM route stays closed**
+  until the extraction emits per-function sections.
+- **`__aeabi_fadd` is FLAT — the only lever is the call count.** Top PC
+  **4.63%** across 81 PCs over its 400 B, **96.22% issue stall / 3.78%
+  icache**, 18.33 tk/call, **1,805.7 calls/frame** whole match and 3,903.9 on
+  the marginal-80 (33,106 / 74,380 tk/fr). Per
+  `a-flat-function-only-lever-is-not-entering-it` there is no instruction to
+  delete, and it is already ITCM-resident so placement will not move it. The
+  brief's "444 B ladder" is `__addsf3`, the *dead* libgcc original.
 
 #### 2026-08-15 — GX compose pixel variance OWNER-ACCEPTED; fresh c185 bank established
 

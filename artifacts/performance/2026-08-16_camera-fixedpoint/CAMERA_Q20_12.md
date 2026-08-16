@@ -49,8 +49,11 @@ PIXELS    BLOCKED(decision: draw-side precision).  Frame-locked on the SIMULATIO
           3.6325% of the top screen differ, max channel delta 251, against a
           same-build adjacent-present floor of 35.2217% / 37.7983% on the same
           crop.  Structurally identical picture -- same stage, fighters, HUD,
-          no corruption -- with speckle over textured surfaces.  For scale, the
-          GX_COMPOSE change REFUSED on pixels measured 0.0692%.  Section 8.
+          no corruption -- with speckle over textured surfaces.  THIS REPO HAS
+          NO DRAW-SIDE PIXEL BUDGET.  The only comparable number -- GX_COMPOSE's
+          0.0358-0.1742% -- was measured against a pre-registered ZERO criterion
+          and then ACCEPTED by the owner; it is a precedent point, not a bar.
+          This decision SETS the first ceiling; it does not exceed one.  Sec 8.
 
 NOT DONE  NOT BANKED, NOT DEFAULTED ON.  The route word ships at 0.  Section 7.
 ```
@@ -68,6 +71,7 @@ NOT DONE  NOT BANKED, NOT DEFAULTED ON.  The route word ships at 0.  Section 7.
 | window | 1,600 samples, frames 439..2038, `-RingDump`, `slips=0` on all four runs |
 | series | **`WORK-H`**, rank-80 = 80th-largest of the run's own 1,600 rows, net = raw − 24,947 apparatus |
 | requirement | **+85,393** (`build-c199-bank0`, rank-80 1,230,720 raw / 1,205,773 net) |
+| requirement basis | **CORRECTED 2026-08-16:** `c199-bank0` was built `GX_COMPOSE=1`; the ROM ships `0`. On the shipping configuration the gap is **+94,481** (`build-c206-shipgx0`, rank-80 1,239,808 raw / 1,214,861 net, same HEAD as this cycle's arms). Multiply every "x of the gap" below by **0.904** to read it on the ROM's basis — the camera chain's 5.5% becomes **5.0%**. No conclusion here changes sign. See `../2026-08-16_gxcompose-bank-basis/BASIS.md`. |
 | route | `gNdsR2CameraFixedEnabled`, a `.data` word, poked with `-SetGlobals`; the harness records `readback` == `requested` and `stuck: true` on every run |
 
 **The pairs are same-binary and the harness proves it**: `c201-route0` and `c201-route1`
@@ -422,9 +426,23 @@ edges by a fraction of a pixel.
 
 **Two honest caveats the owner should have with the number:**
 
-1. **6.5% is not "invisible".** For scale, the `GX_COMPOSE` change that was *refused* on
-   pixel evidence measured **0.0692%** and **0.1233%** on the same instrument and the same
-   crop. This is 50-90x that. A precision change to the view-projection touches every
+1. **6.5% is not "invisible" — and there is no bar here that it fails.** *(Corrected
+   2026-08-16. The earlier revision of this item called `GX_COMPOSE`'s 0.0692% a figure the
+   change "was refused on", and read it as a threshold this one has to clear. That is a
+   category error and it was relayed to the owner in that form; the correction is below.)*
+
+   **This repo has no established draw-side pixel budget of any kind.** The only comparable
+   measurement is `GX_COMPOSE`, and **0.0692% was never a threshold**: `PREDICTION.md` §5
+   pre-registered *identity* — "Frame-locked captures identical between the arms", "**any**
+   pixel difference" — as the stop condition. So its 0.0358–0.1742% is a **value measured
+   against a zero criterion**, not a bar that was passed or failed, and nothing about it
+   says where a budget lies. The owner then reviewed those diff masks and **accepted** the
+   delta (`GXCOMPOSE.md` §9), so it was not ultimately refused either.
+
+   The honest scale statement is therefore: **0.1742% is the largest draw-side pixel delta
+   this project has ever accepted, this arm asks for 6.5350% — about 37x that — and this is
+   the first time a draw-side pixel *ceiling* is being set at all**, rather than a case of
+   exceeding an existing one. A precision change to the view-projection touches every
    textured pixel in the scene, so a large *count* of differing pixels at a small *per-pixel*
    magnitude is the expected shape — but the count is what it is.
 2. **This method cannot fully separate precision from present-phase skew.** The lock
