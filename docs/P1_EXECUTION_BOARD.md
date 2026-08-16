@@ -33,6 +33,105 @@ clock.** Coverage is part of a baseline's identity now, not a footnote. The
 conversion: the sim runs 60 Hz and presents 30 Hz, ratio **measured at exactly
 2.000**, so 1,600 presented = 3,200 logic = **53.3 s**.
 
+## THE CARD *IS* READ IN-MATCH — 7 times — AND THE INSTRUMENT INFLATES 5 FRAMES BY 2^22 (2026-08-16) — `artifacts/performance/2026-08-16_match-io-audit/IO_AUDIT.md`
+
+**0 builds, 0 source changes, 3 whole-match runs on the existing
+`build-c219-animitcm-ship` ROM.** Boundary green, 0 `Exception:`, root ROMs
+byte-unchanged. Owner's question — *"does the match start before everything has
+loaded?"* — answered below.
+
+**1. Yes, seven times, and every one is a top-twelve frame.**
+`gNdsRelocAssetPayloadReadCount` **101 → 108**, `HeaderReadCount` 1,593 → 1,600,
+`ShortReadCount` **0**. Each read is one animation-cache **miss**
+(`Misses`/`Fills` 3 → 10). **Cycle 105's mechanism is closed, not improved**:
+arena `Overflows 0 / Rejects 0`, `UsedBytes` 415,984 of `ReservedBytes` 451,776,
+`WarmFailed 0` — against that cycle's `142/142` at a full arena. Of the **349**
+in-match animation acquisitions, **215 (61.6%) never reach the load path** (battle
+pack), 127 hit the RAM cache, **7 read the card**. Frames **456, 830, 1015, 1186,
+1625, 1655, 1886** = ranks **4, 1, 7, 10, 12, 8, 9** of 1,600. Priced against a
+*matched* control (a frame that force-loads and does no I/O): **+593,728 median /
++536,988 mean**, 490,476 of it in `SITR`. **Worth 12,736 at rank-80** —
+`POSITION.md`'s "seven load frames | 9,863" is the same lane, correctly counted.
+
+**2. `cpuGetTiming()` reports a span exactly 2^22 = 4,194,304 ticks too large, in
+9 of the last 13 whole-match runs.** Proven three ways: subtracting 2^22 lands
+`ALL` within **−192/+256/+192/+128** of the run's own median on four of five
+frames; the inflated `ALL` is **9.505 VBlanks** where every clean `ALL` is a whole
+number; and it lands in whichever span was open (`FTR`, `SCPU`, `SPHD`). Mechanism
+from the linked image: `cpuGetTiming` is `((u32)(tickGetCount()-start)) << 6`
+(`0x020be710`) and `tickGetCount` credits **one** pending 16-bit timer overflow via
+the heuristic `((timer ^ 0x8000) >> 15) & (IF >> 5)`; when that fails on a span's
+*start* read the span is one overflow long — 2^16 × 64 = **2^22**.
+
+> **THE REQUIREMENT IS +64,977, NOT +71,569.** Corrected, `build-c219-animitcm-ship`
+> reads rank-80 **1,210,304 raw / 1,185,357 net**; band 41–120 =
+> 1,323,072 / 1,300,480 / 1,266,240 / 1,225,152 / **1,210,304** / 1,188,480 /
+> 1,166,144 / 1,154,944 / 1,140,608. Per-run correction ranges **−1,536 … −6,592**
+> and is **asymmetric** (it can only inflate), so it adds build-dependent noise on
+> top of the ≥14,080 placement floor. **Nothing was rebanked** — both numbers stand
+> until the sampler filters it. **The filter is one condition, `ALL >= (1<<22)`,
+> complete by construction, and it is NOT built.**
+
+**3. `-PerFrameGlobals` emits a TORN bucket row and must not be used for bucket
+values.** `ALL` comes from iteration *f*, every other bucket from *f+1*, so
+**1,526 of 1,600 rows violate `ALL == WORK + WAIT`** — an identity the ring path
+satisfies on all 1,600. Its counters are sound at ring offset **+1** (association
++212,620 there, −6,751 at 0, −882 at −1). Cycle 105's spike probe used this path.
+
+**4. The force-load path is LIVE and it is the largest identified item — but the
+"~228,600 per cache hit" price is REFUTED.** 134 force-loads on 116 frames.
+`WORK-H` mean lift **+193,677 / +179,545 / +274,542** for 1 / 2 / 3 loads on the
+frame, i.e. implied per-load **193,677 → 89,773 → 91,514**: it does not scale, so
+it is not a per-event price. The count-linear part is **`SITR`** (+87,805 /
++193,086 / +205,572 → **~68,500–96,500 per load**), which **vindicates cycle 105's
+`SINT` attribution**. `SPHD`/`SHDT`/`SPRM` also jump on single-load frames and
+none of them scale — that is the state change, not the load. Exact re-rank:
+deleting the premium on the 109 non-I/O force-load frames is **52,736 = 81% of
++64,977**.
+
+**5. The over-gate set is FIVE populations, not one, and two methods agree**
+(dominant-excess-owner labelling; Ward on excess-share vectors, best k=5,
+silhouette 0.458). Leaf closure asserted **exact** — `leafsum == WORK-H` on all
+1,600 rows, no clamping.
+
+| cluster | n | median own excess | withFL | withRead | delete its excess → rank-80 |
+|---|---:|---:|---:|---:|---:|
+| **`SHDT`** live hitbox hit detection | 33 | 259,776 | 7 | 0 | **−57,152** → gap +7,825 |
+| **`SITR`** interrupt/state proc | 27 | 231,264 | 16 | 6 | **−51,200** → gap +13,777 |
+| `SPHD` physics map default | 8 | 215,136 | 5 | 0 | −14,464 |
+| `SPRM` params/anim interpreter | 7 | 298,496 | 7 | 1 | −12,736 |
+| `MISC` frames 450–453,455 | 5 | 215,680 | 0 | 0 | −6,016 |
+
+They are **disjoint**: `SHDT` frames carry 14,112 of `SITR` excess (median
+102,944) and `SITR` frames carry 2,176 of `SHDT` excess (median 4,608). 94.8%
+median of an over-gate frame's excess is inside `SRC`; only 450/451/452 are
+majority outside.
+
+> **`SHDT` has a run P50 of 4,608 and a mean of 14,544 — a 56× concentration on
+> its own frames.** Every lane sizing done from a mean or a median self time has
+> read it as noise. It owns **41% of the over-gate frames and 88% of the remaining
+> gap**. This is the concrete answer to "is the marginal-80 one population": **no**,
+> and the worst-blurred lane is the one with the smallest median.
+
+**Open, unexplained, not this cycle's:** the load-frame population moves
+**±100,000–150,000** between two *same-binary* arms (camera pair: 830 −124,160,
+1500 −142,016, 747 −103,360, 1975 +152,448, 1447 +129,280) against a whole-run
+paired median of −4,768. Not the 2^22 artifact — neither camera arm carries one.
+
+**`CAMERA_Q20_12.md` §3.2 is corrected in place**: ranks 10 and 20 are **different
+frames** in the two arms (rank-10 = control 1655 vs candidate 1975; top-20 sets
+overlap 19/20 but only 9/20 share a rank), so +30,336/+20,224 are rank-permutation
+artifacts, not cartridge cost, and "not reproducible between two emulator
+sessions" is false — three sessions on one ROM gave **byte-identical** 1,600-row
+CSVs. **The banked −4,736 is untouched.**
+
+**Harness note, cost 20 minutes:** `verify-all.ps1`'s pre-flight throws
+*"Recursive make is unusable … `NDS_RECURSIVE_MAKE=FAIL:127`"* when launched from a
+Git-Bash-spawned shell and passes under PowerShell. The message blames the
+toolchain; the toolchain is fine. Run the harnesses from PowerShell.
+
+---
+
 ## THE LEVEL IS +71,569 (2026-08-16) — `artifacts/performance/2026-08-16_anim-itcm/ANIM_ITCM.md`
 
 **New basis `build-c219-animitcm-ship`: rank-80 1,216,896 raw / 1,191,949 net.**

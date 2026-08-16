@@ -215,6 +215,27 @@ inside that contaminated band, so its **-1,408 is a sample of the noise, not a s
 effect**. The paired per-frame median is immune to it by construction and is what this
 document quotes. `a-threshold-on-the-quantum-sorts-noise`, in a new place.
 
+> ### CORRECTION, 2026-08-16 — the conclusion stands, the stated reason does not
+>
+> `../2026-08-16_match-io-audit/IO_AUDIT.md` §3. **The instrument is bit-deterministic**:
+> three separate emulator sessions on one ROM produce byte-identical 1,600-row CSVs,
+> extreme frames included, so "not reproducible between two emulator sessions" is false.
+> And **ranks 10 and 20 are not the same frame in the two arms** — rank-10 is control
+> frame **1655** (1,611,968) against candidate frame **1975** (1,642,304); rank-20 is
+> control **1937** against candidate **1447**. The two top-20 *sets* overlap 19 of 20 but
+> only **9 of 20** sit at the same rank, so rank-by-rank differencing is measuring the
+> permutation, not a cost. Paired on the same frame those four read **-5,504 / -7,872**
+> (the level cut) and **+152,448 / +129,280**.
+>
+> **Nothing banked here changes**: rank-80's -1,408 really is not the result and the
+> paired per-frame median really is the right estimator — because rank-by-rank fails on
+> a permuting tail, not because of session noise. The **-4,736** stands.
+>
+> What is real and still unexplained: the load-frame population moves **±100,000–150,000**
+> between these two same-binary arms (830 **-124,160**, 1500 **-142,016**, 747 **-103,360**,
+> 1975 **+152,448**, 1447 **+129,280**) against a whole-run paired median of -4,768.
+> Those are the force-load and card-read frames identified in `IO_AUDIT.md` §1.
+
 ### 3.3 The cross-build floor, measured on this pair rather than assumed
 
 `c201-route0` and `c202-route0` execute **the same code path** — route 0 never enters a
