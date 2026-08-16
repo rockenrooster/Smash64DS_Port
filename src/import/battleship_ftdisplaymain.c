@@ -122,10 +122,45 @@ extern void func_ovl2_800EB924(CObj *cobj, Mtx44f matrix, Vec3f *pos,
 #define gDPSetPrimColor(pkt, m, l, r, g, b, a) \
     ndsFighterDisplayContractSetPrimColor((r), (g), (b), (a))
 
-#ifndef gDPSetFogColor
-#define gDPSetFogColor(pkt, r, g, b, a) \
-    do { (void)(pkt); (void)(r); (void)(g); (void)(b); (void)(a); } while (0)
-#endif
+/* --------------------------------------------------------------------------
+ * The fighter draw-contract memo's two seams. Both are here rather than in the
+ * renderer because both need to sit INSIDE ftDisplayMainProcDisplay, and the
+ * preprocessor cannot rename a definition apart from its uses, so
+ * ftDisplayMainDrawAll's two same-translation-unit call sites cannot be
+ * intercepted by a shim rename. decomp/ stays byte-pristine and no new
+ * import-overlay input is added (the Makefile forbids one).
+ *
+ * SEAM 1, the head boundary. ftDisplayMainProcDisplay's last contract-visible
+ * head action before the walk is its fog colour: :1211-1213 calls
+ * ftDisplayMainSetFogColor or ftDisplayMainDecideFogColor, and those hold the
+ * only three gDPSetFogColor sites in the file (:668, :676, :682). All three
+ * have `fp` in scope, so the display-mode test is taken here where the enum is
+ * visible. The call is one-shot per capture on the renderer's side; the walk's
+ * own ftDisplayMainDecideFogDraw reaches the same macro and is ignored. On the
+ * magnify / is_invisible early returns the head never gets this far, which is
+ * exactly right: those captures produce no events and must not be memoised.
+ *
+ * SEAM 2, the walk root. On a hit the renderer points gNdsFtrDrawMemoSkipRoot
+ * at this fighter's live root DObj and DObjGetStruct hands ftDisplayMainDrawAll
+ * an empty HIDDEN stub, so ftDisplayMainDrawDefault(stub) is a flag test and a
+ * NULL sibling test. Nothing in the live tree is written. Disarmed, SkipRoot
+ * equals the stub's own address, so no live root can ever match it and the
+ * expansion costs one load and one compare.
+ * ------------------------------------------------------------------------- */
+#undef gDPSetFogColor
+#define gDPSetFogColor(pkt, r, g, b, a)                                    \
+    do {                                                                   \
+        (void)(pkt); (void)(r); (void)(g); (void)(b); (void)(a);           \
+        ndsFighterDisplayContractHeadBoundary(                             \
+            (u32)sFTDisplayMainSkyFogAlpha,                                \
+            (u32)(sFTDisplayMainIsShadeFog != FALSE),                      \
+            (u32)((fp)->display_mode == nDBDisplayModeMaster));            \
+    } while (0)
+
+#undef DObjGetStruct
+#define DObjGetStruct(gobj)                                                \
+    ((DObj *)(((void *)((gobj)->obj) == gNdsFtrDrawMemoSkipRoot) ?         \
+              gNdsFtrDrawMemoStubRoot : (void *)((gobj)->obj)))
 #ifndef gSPPopMatrix
 #define gSPPopMatrix(pkt, mode) do { (void)(pkt); (void)(mode); } while (0)
 #endif
@@ -145,3 +180,6 @@ extern void func_ovl2_800EB924(CObj *cobj, Mtx44f matrix, Vec3f *pos,
 #undef scSubsysFighterDrawLightColorGetAlpha
 #undef gmCameraCheckTargetInBounds
 #undef func_ovl2_800EB924
+#undef gDPSetFogColor
+#undef DObjGetStruct
+#define DObjGetStruct(gobj) ((DObj *)((gobj)->obj))

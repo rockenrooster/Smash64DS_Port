@@ -5269,6 +5269,21 @@ extern volatile u32 gNdsFighterDisplayContractBoundsPassCount;
 extern volatile u32 gNdsFighterDisplayContractBoundsFailCount;
 extern volatile u32 gNdsFighterDisplayContractBoundsXBits;
 extern volatile u32 gNdsFighterDisplayContractBoundsYBits;
+/* Fighter draw-contract memo. Route is poke-able (.data, own cache line);
+ * the rest are engagement counters. See src/port/diagnostics.c. It is a
+ * 32-byte cell rather than a bare u32 so nothing else can share its line and
+ * stamp a poke back; poke `gNdsFtrDrawMemoRoute.route`. */
+typedef struct NDSFtrDrawMemoRouteCell {
+    volatile u32 route;
+    u32 line_pad[7];
+} NDSFtrDrawMemoRouteCell;
+extern NDSFtrDrawMemoRouteCell gNdsFtrDrawMemoRoute;
+extern volatile u32 gNdsFtrDrawMemoHits;
+extern volatile u32 gNdsFtrDrawMemoInvalidations;
+extern volatile u32 gNdsFtrDrawMemoFills;
+extern volatile u32 gNdsFtrDrawMemoBypass;
+extern volatile u32 gNdsFtrDrawMemoBoundary;
+extern volatile u32 gNdsFtrDrawMemoReplayEvents;
 #if NDS_R2_FTR_CONTRACT_CENSUS
 /* Fighter draw-contract change census; see src/port/diagnostics.c. Lab only. */
 extern volatile u32 gNdsFtrContractCaptures;

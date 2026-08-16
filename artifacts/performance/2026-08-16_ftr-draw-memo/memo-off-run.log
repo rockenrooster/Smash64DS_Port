@@ -1,0 +1,34 @@
+WARNING: cpuGetTiming() 2^22 timer-overflow artifact detected and CORRECTED on 3 of 1600 samples (one subtraction of 4,194,304 per affected bucket). The run's ALL median after correction is 1,117,824; a corrected value far from it would mean the row was a real stall and the correction wrong, so check these against it:
+  frame 954: ALL 5,872,896 -> 1,678,592, 3 bucket(s) corrected
+  frame 1333: ALL 5,311,872 -> 1,117,568, 5 bucket(s) corrected
+  frame 2003: ALL 5,312,000 -> 1,117,696, 3 bucket(s) corrected
+Wrote artifacts/performance/2026-08-16_ftr-draw-memo/memo-off-rows.csv
+Tick-HUD buckets: target=smash64ds-battle-playable-tickhud-hwtri samples=1600 frames=440..2039 melonDS=1.0 sha=DE80E46BDCF1FD98 git=38779ca6de7+dirty(11) dldi=ON
+
+bucket p50        p95        spread mean       min        max        %ALLp50
+------ ---        ---        ------ ----       ---        ---        -------
+ALL     1,117,824  1,678,400   1.50  1,211,280  1,116,736  3,918,976   100.0
+FTR       290,432    294,528   1.01    278,694    162,432    328,896    26.0
+STG       175,488    183,424   1.05    177,061    171,136    188,096    15.7
+BG          4,416      4,544   1.03      4,441      4,224      7,872     0.4
+AUD         2,688      6,976   2.60      8,689      1,024    155,456     0.2
+HUD         1,088    413,056 379.65     35,010        960  2,526,720     0.1
+SRC       331,200    567,168   1.71    350,958     11,264  1,265,856    29.6
+MISC      107,776    177,792   1.65    113,508     82,944    325,888     9.6
+OTHR      226,048    476,032   2.11    242,920     22,016    579,264    20.2
+WAIT      206,528    455,680   2.21    223,149      2,304    559,680    18.5
+WORK      939,200  1,367,872   1.46    988,131    666,432  3,641,664    84.0
+SHDT        4,352     80,640  18.53     14,382          0    450,816     0.4
+SWRM        1,024      1,152   1.12      1,042        768      1,216     0.1
+GCRA      325,632    561,600   1.72    345,301      6,784  1,260,160    29.1
+SCPU       51,904    108,480   2.09     46,630          0    140,224     4.6
+SCAT        1,280      1,472   1.15      1,271          0      1,664     0.1
+SPRM        2,176      2,368   1.09      5,102          0    648,064     0.2
+SINT      157,312    291,264   1.85    161,916          0    954,880    14.1
+SPHD       73,280    109,504   1.49     72,648          0    436,224     6.6
+SPHC          640        768   1.20        625          0      1,024     0.1
+WORK-H    928,320  1,203,648   1.30    953,121    657,920  1,890,304    83.0
+
+named=968,361 (79.9% of ALL)  VBI 2:1733 3:282 4:16 5+:8 max:19 total:2039  slips=0
+extras: gNdsFtrDrawMemoHits=0  gNdsFtrDrawMemoInvalidations=0  gNdsFtrDrawMemoFills=2  gNdsFtrDrawMemoBypass=4,076  gNdsFtrDrawMemoBoundary=2  gNdsFtrDrawMemoReplayEvents=0  gNdsFighterDisplayContractSelectedCount=62,952  gNdsFighterDisplayContractSubmittedCount=62,952  gNdsFighterDisplayContractLightDirectionCount=4,010  gNdsFighterDisplayContractBoundsPassCount=3,823  gNdsFighterDisplayContractBoundsFailCount=142  gNdsFighterDLAllDrawP0HardwareTriangleCount=600,000  gNdsFighterDLAllDrawP1HardwareTriangleCount=623,934  gNdsStageGCDrawAllLoopHardwareFighterTriangleCount=1,223,934  gNdsTaskmanGeneralHeapFreeMin=53,136
+Wrote artifacts/performance/2026-08-16_ftr-draw-memo/memo-off.json

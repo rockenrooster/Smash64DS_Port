@@ -13697,11 +13697,18 @@ static u32 ndsFighterDisplayContractPackColor(u8 r, u8 g, u8 b, u8 a)
     return ((u32)r << 24) | ((u32)g << 16) | ((u32)b << 8) | (u32)a;
 }
 
+#if NDS_R2_FTR_CONTRACT_CENSUS
+/* A recursive walk of both fighters' whole DObj trees, every frame, inside the
+ * run's largest lane -- 4,117 tk/fr on build-c220-camship -- whose only outputs
+ * are gNdsFighterDisplayContractHiddenCount and ...NoTextureCount. Nothing in
+ * the runtime reads either; the only readers are two harness printf lines
+ * (verify-battle-mariofox-gcrunall-loop-harness.ps1:2065, probe-ko-vfx.ps1),
+ * neither in Boundary. It is now census-only: the census needs the walk for its
+ * candidate tree key, and the shipping binary does not run it at all. */
 static void ndsFighterDisplayContractCountFlags(DObj *dobj)
 {
     while (dobj != NULL)
     {
-#if NDS_R2_FTR_CONTRACT_CENSUS
         {
             const FTParts *parts = ftGetParts(dobj);
             u32 key = sNdsFtrContractCensusKey;
@@ -13722,7 +13729,6 @@ static void ndsFighterDisplayContractCountFlags(DObj *dobj)
                 key, (parts != NULL) ? (u32)parts->flags : 0xffffffffu);
             sNdsFtrContractCensusKey = key;
         }
-#endif
         if ((dobj->flags & DOBJ_FLAG_HIDDEN) != 0)
         {
             gNdsFighterDisplayContractHiddenCount++;
@@ -13735,6 +13741,7 @@ static void ndsFighterDisplayContractCountFlags(DObj *dobj)
         dobj = dobj->sib_next;
     }
 }
+#endif
 
 void ndsFighterDisplayContractSetGeometryMode(u32 clear_mask, u32 set_mask)
 {
@@ -13984,6 +13991,243 @@ void gcDrawMObjForDObj(DObj *dobj, Gfx **dls)
     }
 }
 
+/* ===========================================================================
+ * The fighter draw-contract memo (2026-08-16).
+ *
+ * artifacts/performance/2026-08-16_ftr-capture-memo/CAPTURE_MEMO.md measured the
+ * only number that decides whether this pass is memoisable: over a whole
+ * canonical match the contract is UNCHANGED on 4,025 of 4,076 captures
+ * (98.75%), MaxRun 848, and all 51 changes are decided in the HEAD of
+ * ftDisplayMainProcDisplay -- the magnify/invisible early returns and the fp
+ * material state -- never in the DObj tree. The same cycle REFUTED the obvious
+ * DObj-tree key: it reads "unchanged" on 49 of those 51 frames.
+ *
+ * So the memo skips the WALK (ftDisplayMainDrawAll -> ftDisplayMainDrawDefault,
+ * 19,300 tk/fr inclusive) and keeps the head, which is not read-only: it writes
+ * the off-screen player arrow HUD, gLBCommonScale, the fog statics and the
+ * scene light twice, and BoundsFailCount=142 proves the magnify branch fires in
+ * the canonical match.
+ *
+ * MECHANISM, and why it is where it is. The decision cannot be taken before the
+ * head runs (the key IS the head's output) and it must be taken before the
+ * walk, but head and walk are welded inside one decomp function. The
+ * preprocessor cannot split a definition from its uses, so a shim rename cannot
+ * intercept ftDisplayMainDrawAll's two same-TU call sites, and the Makefile
+ * forbids new battleship import-overlay inputs ("New adaptations belong
+ * directly in src/import/src/port"). The seam that IS available is the head's
+ * last contract-visible action: ftDisplayMainProcDisplay emits exactly one
+ * fog colour (ftdisplaymain.c:1211-1213 -> :668 / :676 / :682, the only three
+ * gDPSetFogColor sites in the file) immediately before the walk, and
+ * gDPSetFogColor is a macro the import shim owns. The shim calls
+ * ndsFighterDisplayContractHeadBoundary from it, one-shot per capture.
+ *
+ * On a hit the walk is collapsed rather than skipped: gNdsFtrDrawMemoSkipRoot
+ * is pointed at this fighter's live root DObj, and the shim's DObjGetStruct
+ * hands ftDisplayMainDrawAll an empty HIDDEN stub instead. Nothing in the live
+ * tree is written, and ftDisplayMainDrawDefault(stub) is a flag test and a
+ * NULL sibling test. The cached event list and preambles are then copied back
+ * over the (empty) contract before ndsFighterDisplayContractSubmit reads it.
+ *
+ * SOUNDNESS. The key covers every input the walk branches on that can change in
+ * this build:
+ *  - the head's own contract output (geometry mode, cycle type, render mode,
+ *    prim/env colour, light + validity + count) -- 51 of 51 measured changes;
+ *  - sFTDisplayMainSkyFogAlpha / sFTDisplayMainIsShadeFog, the two head statics
+ *    ftDisplayMainDecideFogDraw reads inside the walk;
+ *  - the fp fields the walk and ftDisplayMainDrawAll read directly
+ *    (colanim.is_use_color1, colanim.skeleton_id, fkind, shade, costume,
+ *    detail_curr, lr, display_mode, attr) and the tree root pointer, so a
+ *    rebuilt fighter tree invalidates by construction.
+ * The per-DObj state the walk also reads -- dobj->dl / dls / dv / flags and
+ * FTParts flags -- is not hashed, and does not need to be: in THIS build no
+ * compiled writer changes it for a fighter joint. decomp's ftparam.c is not
+ * compiled; ftParamSetModelPartID / ResetModelPartAll / HideModelPartAll are
+ * port bodies in reloc_backend_compat_shims.c that deliberately leave
+ * joint->dl alone and move only fp->modelpart_status, and no DOBJ_FLAG_HIDDEN
+ * writer in the compiled tree touches a fighter joint (they are items, weapons,
+ * stage and menus). fp->is_modelpart_modify is in the key anyway, so the model
+ * part state that DOES move is an invalidation.
+ * Two states are refused outright rather than keyed: a display_mode other than
+ * Master (the MapCollision and hit-outline blocks re-read DObjGetStruct AFTER
+ * the walk) and a pending afterimage draw (ftDisplayMainDrawAfterImage runs
+ * inside ftDisplayMainDrawAll and builds fresh scratch geometry every frame).
+ * ========================================================================= */
+
+#define NDS_FTR_DRAW_MEMO_KEY_WORDS 16u
+
+typedef struct NDSFtrDrawMemoSlot {
+    u32 key[NDS_FTR_DRAW_MEMO_KEY_WORDS];
+    NDSFighterDisplayContractEvent
+        events[NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED];
+    NDSRendererNativeFighterPreamble
+        preambles[NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED];
+    u32 event_count;
+    u32 valid;
+} NDSFtrDrawMemoSlot;
+
+static NDSFtrDrawMemoSlot sNdsFtrDrawMemo[2];
+/* The empty tree the walk gets on a hit. Zeroed: no child, no siblings, no
+ * FTParts. Only flags and parent_gobj are ever written. */
+static DObj sNdsFtrDrawMemoStub;
+/* Published as void* so the import shim can compare without needing DObj to be
+ * complete in the header. Disarmed, Skip points at the stub itself, so the
+ * shim's compare can never match a live root and needs no NULL case. */
+void *gNdsFtrDrawMemoStubRoot = &sNdsFtrDrawMemoStub;
+void *gNdsFtrDrawMemoSkipRoot = &sNdsFtrDrawMemoStub;
+
+static FTStruct *sNdsFtrDrawMemoFp;
+static GObj *sNdsFtrDrawMemoGObj;
+static u32 sNdsFtrDrawMemoSlotIndex;
+/* 0 = not a candidate, 1 = armed and awaiting the head boundary, 2 = the
+ * boundary fired and the key is built, so the result is cacheable. */
+static u32 sNdsFtrDrawMemoState;
+static u32 sNdsFtrDrawMemoHit;
+static u32 sNdsFtrDrawMemoKey[NDS_FTR_DRAW_MEMO_KEY_WORDS];
+
+static u32 ndsFtrDrawMemoMixBytes(const void *data, u32 bytes)
+{
+    const u8 *p = data;
+    u32 h = 2166136261u;
+    u32 i;
+
+    for (i = 0u; i < bytes; i++)
+    {
+        h = (h ^ p[i]) * 16777619u;
+    }
+    return h;
+}
+
+static void ndsFtrDrawMemoBuildKey(u32 *k, const FTStruct *fp,
+                                   const void *root,
+                                   u32 sky_fog_alpha, u32 is_shade_fog)
+{
+    k[0] = sNdsFighterDisplayContract.geometry_mode;
+    k[1] = sNdsFighterDisplayContract.cycle_type;
+    k[2] = sNdsFighterDisplayContract.render_mode;
+    k[3] = sNdsFighterDisplayContract.prim_color;
+    k[4] = sNdsFighterDisplayContract.env_color;
+    k[5] = sNdsFighterDisplayContract.light_count;
+    k[6] = sNdsFighterDisplayContract.light_valid;
+    k[7] = ndsFtrDrawMemoMixBytes(&sNdsFighterDisplayContract.light,
+                                  (u32)sizeof(sNdsFighterDisplayContract.light));
+    k[8] = (sky_fog_alpha & 0xffffu) | (is_shade_fog << 16);
+    k[9] = (u32)(uintptr_t)root;
+    k[10] = (u32)(uintptr_t)fp->attr;
+    k[11] = ((u32)(u8)fp->colanim.is_use_color1) |
+            (((u32)(u8)fp->colanim.skeleton_id) << 8) |
+            (((u32)(u8)fp->shade) << 16) |
+            (((u32)(u8)fp->costume) << 24);
+    k[12] = ((u32)(u8)fp->detail_curr) |
+            (((u32)(u8)fp->is_modelpart_modify) << 8) |
+            (((u32)(u8)fp->afterimage.drawstatus) << 16) |
+            (((u32)(u8)fp->afterimage.is_itemswing) << 24);
+    k[13] = (u32)fp->fkind;
+    k[14] = (u32)fp->lr;
+    k[15] = (u32)fp->display_mode;
+}
+
+/* Called from src/import/battleship_ftdisplaymain.c's gDPSetFogColor, i.e. from
+ * ftDisplayMainProcDisplay's last contract-visible head action. One-shot: the
+ * walk's own ftDisplayMainDecideFogDraw reaches the same macro and must not
+ * re-arm. display_mode_master is passed in because the enum lives in a header
+ * this translation unit does not include and fp is in scope at the macro. */
+void ndsFighterDisplayContractHeadBoundary(u32 sky_fog_alpha, u32 is_shade_fog,
+                                           u32 display_mode_master)
+{
+    const FTStruct *fp = sNdsFtrDrawMemoFp;
+    const NDSFtrDrawMemoSlot *slot;
+    u32 i;
+
+    if (sNdsFtrDrawMemoState != 1u)
+    {
+        return;
+    }
+    sNdsFtrDrawMemoState = 3u;      /* boundary seen; not cacheable yet */
+    gNdsFtrDrawMemoBoundary++;
+    if ((display_mode_master == 0u) || (fp == NULL) ||
+        (fp->afterimage.drawstatus >= 2))
+    {
+        return;
+    }
+    ndsFtrDrawMemoBuildKey(sNdsFtrDrawMemoKey, fp,
+                           (const void *)sNdsFtrDrawMemoGObj->obj,
+                           sky_fog_alpha, is_shade_fog);
+    sNdsFtrDrawMemoState = 2u;
+    slot = &sNdsFtrDrawMemo[sNdsFtrDrawMemoSlotIndex];
+    if (slot->valid == 0u)
+    {
+        return;
+    }
+    for (i = 0u; i < NDS_FTR_DRAW_MEMO_KEY_WORDS; i++)
+    {
+        if (slot->key[i] != sNdsFtrDrawMemoKey[i])
+        {
+            gNdsFtrDrawMemoInvalidations++;
+            return;
+        }
+    }
+    sNdsFtrDrawMemoHit = 1u;
+    sNdsFtrDrawMemoStub.flags = DOBJ_FLAG_HIDDEN;
+    sNdsFtrDrawMemoStub.parent_gobj = sNdsFtrDrawMemoGObj;
+    gNdsFtrDrawMemoSkipRoot = (void *)sNdsFtrDrawMemoGObj->obj;
+}
+
+static void ndsFtrDrawMemoFinish(void)
+{
+    NDSFtrDrawMemoSlot *slot;
+    u32 n;
+    u32 i;
+
+    gNdsFtrDrawMemoSkipRoot = gNdsFtrDrawMemoStubRoot;
+    if (sNdsFtrDrawMemoState != 2u)
+    {
+        gNdsFtrDrawMemoBypass++;
+        sNdsFtrDrawMemoState = 0u;
+        return;
+    }
+    slot = &sNdsFtrDrawMemo[sNdsFtrDrawMemoSlotIndex];
+    if (sNdsFtrDrawMemoHit != 0u)
+    {
+        n = slot->event_count;
+        if (n != 0u)
+        {
+            memcpy(sNdsFighterDisplayContract.events, slot->events,
+                   n * sizeof(slot->events[0]));
+            memcpy(sNdsFighterDisplayContractPreambles, slot->preambles,
+                   n * sizeof(slot->preambles[0]));
+        }
+        sNdsFighterDisplayContract.event_count = n;
+        /* The contract still selected these display lists; only the derivation
+         * was replayed. Keeping the counter's meaning is what makes Boundary's
+         * ftrContract smoke an equality control rather than a known diff. */
+        gNdsFighterDisplayContractSelectedCount += n;
+        gNdsFtrDrawMemoHits++;
+        gNdsFtrDrawMemoReplayEvents += n;
+        sNdsFtrDrawMemoState = 0u;
+        return;
+    }
+    n = sNdsFighterDisplayContract.event_count;
+    if (n > NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED)
+    {
+        n = NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED;
+    }
+    if (n != 0u)
+    {
+        memcpy(slot->events, sNdsFighterDisplayContract.events,
+               n * sizeof(slot->events[0]));
+        memcpy(slot->preambles, sNdsFighterDisplayContractPreambles,
+               n * sizeof(slot->preambles[0]));
+    }
+    slot->event_count = n;
+    for (i = 0u; i < NDS_FTR_DRAW_MEMO_KEY_WORDS; i++)
+    {
+        slot->key[i] = sNdsFtrDrawMemoKey[i];
+    }
+    slot->valid = 1u;
+    gNdsFtrDrawMemoFills++;
+    sNdsFtrDrawMemoState = 0u;
+}
+
 static void ndsFighterDisplayContractCapture(GObj *fighter_gobj)
 {
     extern void ndsBaseFTDisplayMainProcDisplay(GObj *fighter_gobj);
@@ -14046,9 +14290,17 @@ static void ndsFighterDisplayContractCapture(GObj *fighter_gobj)
     }
 #if NDS_R2_FTR_CONTRACT_CENSUS
     sNdsFtrContractCensusKey = NDS_FTR_CONTRACT_HASH_SEED;
-#endif
     ndsFighterDisplayContractCountFlags(DObjGetStruct(fighter_gobj));
+#endif
+    sNdsFtrDrawMemoFp = fp;
+    sNdsFtrDrawMemoGObj = fighter_gobj;
+    sNdsFtrDrawMemoHit = 0u;
+    sNdsFtrDrawMemoState =
+        ((gNdsFtrDrawMemoRoute.route != 0u) && (fp != NULL) &&
+         ((u32)fp->nds_slot <= 1u)) ? 1u : 0u;
+    sNdsFtrDrawMemoSlotIndex = (fp != NULL) ? ((u32)fp->nds_slot & 1u) : 0u;
     ndsBaseFTDisplayMainProcDisplay(fighter_gobj);
+    ndsFtrDrawMemoFinish();
     sNdsFighterDisplayContract.active = FALSE;
     for (i = 0u; i < 4u; i++)
     {

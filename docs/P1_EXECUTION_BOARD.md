@@ -33,7 +33,60 @@ clock.** Coverage is part of a baseline's identity now, not a footnote. The
 conversion: the sim runs 60 Hz and presents 30 Hz, ratio **measured at exactly
 2.000**, so 1,600 presented = 3,200 logic = **53.3 s**.
 
-## THE LEVEL IS +65,297: THE CAMERA SHIPS IN Q20.12 (2026-08-16) — `artifacts/performance/2026-08-16_camera-ship/CAMERA_SHIP.md`
+## THE LEVEL IS +48,081: THE FIGHTER DRAW-CONTRACT MEMO IS BUILT AND BANKED (2026-08-16) — `artifacts/performance/2026-08-16_ftr-draw-memo/DRAW_MEMO.md`
+
+**GREEN. New basis `build-c223-ftrmemo` route 1 — which IS the shipping
+configuration, since `NDS_R2_FTR_DRAW_MEMO ?= 1`: rank-80 1,193,408 raw /
+1,168,461 net, band 41–120 1,200,254, REQUIREMENT +65,297 → +48,081.** 1 lab
+build, 2 whole-match runs, Boundary green with 0 `Exception:` over 316,161
+lines, root ROMs byte-unchanged, nothing published, `decomp/` byte-pristine.
+
+**The 17,216 between the two bases is two different measurements. Do not quote
+it as one.** The memo is **12,864, same binary, one poked `.data` word,
+floor-free** (`WORK-H` paired median **−12,992**, 1,488/1,600 frames win;
+`FTR` paired median −13,312, 1,578/1,600; `FTR` P50 290,464 → 276,800; `STG`,
+`ALL`, `SRC` flat inside the quantum). The other **4,352** is this binary's
+control arm against `c220` — a cross-build residual inside the ≥14,080 floor,
+right sign and 106% of `FTR_LANE.md`'s profiled 4,117 for the `CountFlags`
+deletion, so corroboration and not a price. The ≥14,080 floor is the
+*cross-build* one; the same-binary floor is `CAMERA_SHIP.md`'s ~5,440 paired
+median.
+
+**Equivalence is exact**, whole match, both arms: `Selected`/`Submitted`
+62,952, `LightDirection` 4,010, `BoundsPass` 3,823, `BoundsFail` 142, P0/P1
+triangles 600,000 / 623,934, stage fighter triangles 1,223,934 — every one
+identical. Boundary's smoke is exact on `ftrContract`, `ftrTri`,
+`binds/vtx/tri`, `itcm`, `renderer`; **`ticks=294353408 → 294160832` is the one
+number that moved and it is VBlank-quantised wall time, not geometry** — the
+seven-run streak ends by design.
+
+**Engagement**: `Boundary 3,914 / Hits 3,765 / Invalidations 147 / Fills 149 /
+Bypass 164 / ReplayEvents 60,462`, against a control reading `Hits 0 /
+ReplayEvents 0 / Bypass 4,076`. `Boundary+Bypass = 4,078 = 2 × 2,039` frames
+exactly, and **`Bypass = 164` is exactly the census's `ZeroEvents = 164`**.
+Hit rate **96.19%**, not 98.75%: the key is strictly stronger than the contract
+hash, so 96 of the 147 invalidations are deliberate false misses (~454 tk/fr).
+
+**Boot headroom, measured on this build:
+`gNdsTaskmanGeneralHeapFreeMin = 53,136` on both arms = 27,536 B above the
+25,600 latch**, with the 2,924 B of cache already in. The memory index's 24,404
+is the stale pre-arena figure.
+
+**NEXT IN THIS LANE, sized but not built: 4,901 tk/fr of memo overhead.** The
+gross ceiling at the measured hit rate is 18,565 and `FTR` P50 moved 13,664; the
+gap is the key, 460 B of new cold code, and **1,280 B of `memcpy` a frame**
+copying events and preambles back into `sNdsFighterDisplayContract` in a lane
+that is 28.9% D-cache fill. Submit is per-slot and runs immediately after that
+slot's capture, so the consumer could read the slot cache directly and the copy
+would vanish.
+
+**`CAPTURE_MEMO.md` §6's `ftparam.c` dirty hook is unnecessary — do not build
+it.** decomp's `ftparam.c` is not compiled; the model-part writers are port
+bodies in `reloc_backend_compat_shims.c` that deliberately leave `joint->dl`
+alone, and no `DOBJ_FLAG_HIDDEN` writer in the compiled tree touches a fighter
+joint.
+
+## SUPERSEDED BASIS — THE CAMERA SHIPS IN Q20.12 (2026-08-16) — `artifacts/performance/2026-08-16_camera-ship/CAMERA_SHIP.md`
 
 **New basis `build-c220-camship`: rank-80 1,210,624 raw / 1,185,677 net, band
 41–120 1,218,356.** 1 lab build, 4 gate runs, Boundary green, 0 `Exception:`,
@@ -94,10 +147,19 @@ CALLS ZERO** (a build default has no pre-poke frame). `Saturate`/`Degenerate`/
 
 ## THE FIGHTER DRAW CONTRACT IS NEARLY STATIC — 51 CHANGES IN 4,076 CAPTURES, AND THE SOUND MEMO IS 19,058 (2026-08-16) — `artifacts/performance/2026-08-16_ftr-capture-memo/CAPTURE_MEMO.md`
 
-**RED, unowned, and the largest sized item on this board.** 1 lab build
-(`build-c222-ftrcensus`), 1 whole-match run, 1 Boundary. **The level is unmoved
-at +65,297**; `size.py` re-derives rank-80 1,210,624 / net 1,185,677 / band
-41–120 1,218,356 from the basis rows before printing any result.
+**CLOSED 2026-08-16 — BUILT, MEASURED AND BANKED as −12,864 same-binary; see
+the DRAW_MEMO section at the top of this board. The sizing below is the
+prediction it was built against and is kept for the comparison: predicted
+19,058 at a 98.75% hit rate, delivered 13,664 of `FTR` P50 at a measured 96.19%,
+the difference being 4,901 tk/fr of memo overhead (still open) and 96 deliberate
+false misses. Two design notes in it are now REFUTED BY THE BUILD: the shim
+redirect of `ftDisplayMainDrawAll` is not expressible, and the `ftparam.c` dirty
+hook is unnecessary because that file is not compiled.**
+
+1 lab build (`build-c222-ftrcensus`), 1 whole-match run, 1 Boundary. **The level
+was unmoved at +65,297** when this was written; `size.py` re-derives rank-80
+1,210,624 / net 1,185,677 / band 41–120 1,218,356 from the basis rows before
+printing any result.
 
 **Predicted 70% unchanged, band 55–85%. Measured 98.75% — outside my own band.**
 `PREDICTION.md` was written before the ROM existed. `FTR_LANE.md` §5 left the

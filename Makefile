@@ -602,6 +602,17 @@ NDS_TASK75_LOAD_CENSUS ?= 0
 # byte hash per fighter per frame inside the FTR span, so a ROM built with it
 # must never be read for ticks.
 NDS_R2_FTR_CONTRACT_CENSUS ?= 0
+# 2026-08-16: the INITIAL VALUE of gNdsFtrDrawMemoRoute -- the fighter draw
+# contract memo. The census above measured the answer: the contract is unchanged
+# on 4,025 of 4,076 captures (98.75%), and every one of the 51 changes is decided
+# in the HEAD of ftDisplayMainProcDisplay, not in the DObj tree. So the walk
+# (ftDisplayMainDrawAll -> ftDisplayMainDrawDefault, 19,300 tk/fr) is memoisable
+# against a key made of the head's OWN output, while the head keeps running for
+# its side effects (the off-screen arrow HUD, the fog statics, the scene light).
+# 1 = memo live; 0 = the walk runs every capture exactly as before. The runtime
+# poke reaches gNdsFtrDrawMemoRoute (its own 32-byte line), so an A/B is one
+# binary and two arms.
+NDS_R2_FTR_DRAW_MEMO ?= 1
 # Cycle 100: the INITIAL VALUE of gNdsFtrPlanRoute (the baked fighter draw
 # plan). 0 = the eligibility pass and the owner-validate cache run every draw,
 # exactly as shipped; 1 = both are replaced by replaying a plan baked at scene
@@ -3605,6 +3616,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_TASK106_UPDATES_PER_PRESENT $(NDS_TASK106_UPDATES_PER_PRESENT)u'; \
 		echo '#define NDS_TASK75_LOAD_CENSUS $(NDS_TASK75_LOAD_CENSUS)'; \
 		echo '#define NDS_R2_FTR_CONTRACT_CENSUS $(NDS_R2_FTR_CONTRACT_CENSUS)'; \
+		echo '#define NDS_R2_FTR_DRAW_MEMO $(NDS_R2_FTR_DRAW_MEMO)u'; \
 		echo '#define NDS_FTR_PLAN_ROUTE $(NDS_FTR_PLAN_ROUTE)u'; \
 		echo '#define NDS_FTR_PLAN_VERIFY $(NDS_FTR_PLAN_VERIFY)u'; \
 		echo '#define NDS_R2_SECOND_ENTRY_DIAG $(NDS_R2_SECOND_ENTRY_DIAG)'; \

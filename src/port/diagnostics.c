@@ -3297,6 +3297,44 @@ volatile u32 gNdsFtrPlanHit;
 volatile u32 gNdsFtrPlanBuild;
 volatile u32 gNdsFtrPlanVerifyRuns;
 volatile u32 gNdsFtrPlanVerifyMismatch;
+
+/* ---------------------------------------------------------------------------
+ * The fighter draw-contract memo (2026-08-16). See
+ * artifacts/performance/2026-08-16_ftr-capture-memo/CAPTURE_MEMO.md.
+ *
+ * .data for the reason gNdsFtrPlanRoute records four lines up: a poked word
+ * that shares its 32-byte D-cache line with a word the frame writes gets
+ * stamped back on that line's next writeback. aligned(32) alone is NOT enough
+ * and this was measured on this very build -- with a bare aligned(32) u32 the
+ * linker packed gNdsFtrPlanVerify, gNdsFtrPlanRoute, sLastSceneCurr.0 and a
+ * 16-byte `memo` into the same line, i.e. into the exact line that already has
+ * a recorded failed poke. The route is therefore a 32-byte CELL that owns the
+ * whole line, and the counters below start the next one. Poke it as
+ * `-SetGlobals gNdsFtrDrawMemoRoute.route=0`; the sampler's grammar accepts a
+ * dotted field path and rejects array subscripts.
+ * ------------------------------------------------------------------------- */
+NDSFtrDrawMemoRouteCell gNdsFtrDrawMemoRoute
+    __attribute__((used, section(".data"), aligned(32))) = {
+        NDS_R2_FTR_DRAW_MEMO, { 0u, 0u, 0u, 0u, 0u, 0u, 0u }
+    };
+/* Captures whose walk was replaced by a replay of the cached event list. */
+volatile u32 gNdsFtrDrawMemoHits __attribute__((used, aligned(32)));
+/* Captures that ran the walk with a VALID cache present, i.e. the key said the
+ * head's output had changed. This is the run's measured contract-change count
+ * and is the number to read against the census's 51. */
+volatile u32 gNdsFtrDrawMemoInvalidations __attribute__((used));
+/* Captures that ran the walk and then filled the cache (misses + first fill). */
+volatile u32 gNdsFtrDrawMemoFills __attribute__((used));
+/* Captures the memo never armed on: route off, no slot, not display-mode
+ * Master, an afterimage draw pending, or the head took an early return before
+ * the walk. A bypass is always the unmodified path. */
+volatile u32 gNdsFtrDrawMemoBypass __attribute__((used));
+/* Head boundaries observed -- one per capture that reached the walk. Its sum
+ * with Bypass is the capture count, which is the instrument check. */
+volatile u32 gNdsFtrDrawMemoBoundary __attribute__((used));
+/* Events replayed from the cache, so a hit that replayed an empty list is
+ * visible rather than silently counted as a hit. */
+volatile u32 gNdsFtrDrawMemoReplayEvents __attribute__((used));
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
 volatile u32 gNdsRendererProfileLoopWallTicks;
 volatile u32 gNdsRendererProfileInputTicks;
@@ -3892,6 +3930,12 @@ volatile u32 gNdsRendererAdapterCustom47LastTranslateY20p12;
 volatile u32 gNdsRendererAdapterCustom47LastTranslateZ20p12;
 volatile u32 gNdsRendererAdapterMvpRecalcPerspScaCount;
 volatile u32 gNdsFighterDisplayContractSelectedCount;
+/* Written only when NDS_R2_FTR_CONTRACT_CENSUS is on. The recursive DObj walk
+ * that produced them (ndsFighterDisplayContractCountFlags) cost 4,117 tk/fr
+ * inside the run's largest lane and its only readers are
+ * verify-battle-mariofox-gcrunall-loop-harness.ps1 and probe-ko-vfx.ps1, both
+ * of which merely print it; nothing in the runtime and nothing in Boundary
+ * reads either. Kept defined so those two printf lines still resolve. */
 volatile u32 gNdsFighterDisplayContractHiddenCount;
 volatile u32 gNdsFighterDisplayContractNoTextureCount;
 volatile u32 gNdsFighterDisplayContractSubmittedCount;

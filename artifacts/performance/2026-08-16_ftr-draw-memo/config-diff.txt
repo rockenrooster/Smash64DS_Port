@@ -1,0 +1,4 @@
+=> #define NDS_R2_FTR_CONTRACT_CENSUS 0
+=> #define NDS_R2_FTR_DRAW_MEMO 1u
+=> #define NDS_TASK10_GIT_SHORT "38779ca"
+<= #define NDS_TASK10_GIT_SHORT "f5e13aa"

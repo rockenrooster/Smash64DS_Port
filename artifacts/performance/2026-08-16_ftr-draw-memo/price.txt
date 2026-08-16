@@ -1,0 +1,19 @@
+               CONTROL   CANDIDATE       delta
+WORK-H         1206272     1193408      -12864   rank-80
+FTR             294528      289344       -5184   rank-80
+STG             183424      183360         -64   rank-80
+SRC             568320      569280         960   rank-80
+ALL            1678400     1678336         -64   rank-80
+WORK-H          928352      916480      -11872   P50
+WORK-H         1216202     1200254      -15949   band 41-120
+FTR             290464      276800      -13664   P50
+FTR             298682      292832       -5850   band 41-120
+WORK-H     paired median -12992, mean -12240, wins 1488/1600
+FTR        paired median -13312, mean -12331, wins 1578/1600
+
+CONTROL   rank-80 1206272 raw / 1181325 net   level +60945   band 41-120 1216202
+CANDIDATE rank-80 1193408 raw / 1168461 net   level +48081   band 41-120 1200254
+MOVED     12864 at rank-80 on this binary
+
+Applied to the banked c220 basis (rank-80 1210624, level +65297):
+  new rank-80 1197760, NEW REQUIREMENT +52433

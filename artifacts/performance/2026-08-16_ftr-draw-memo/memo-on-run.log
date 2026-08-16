@@ -1,0 +1,30 @@
+Wrote artifacts/performance/2026-08-16_ftr-draw-memo/memo-on-rows.csv
+Tick-HUD buckets: target=smash64ds-battle-playable-tickhud-hwtri samples=1600 frames=440..2039 melonDS=1.0 sha=DE80E46BDCF1FD98 git=38779ca6de7+dirty(11) dldi=ON
+
+bucket p50        p95        spread mean       min        max        %ALLp50
+------ ---        ---        ------ ----       ---        ---        -------
+ALL     1,117,824  1,678,336   1.50  1,206,383  1,116,608  3,918,976   100.0
+FTR       276,800    289,216   1.04    266,363    155,264    323,968    24.8
+STG       175,424    183,360   1.05    177,033    171,136    188,928    15.7
+BG          4,416      4,544   1.03      4,437      3,968      4,672     0.4
+AUD         2,688      6,784   2.52      8,711      1,088    157,888     0.2
+HUD         1,088    412,480 379.12     34,503        960  2,527,424     0.1
+SRC       331,520    566,336   1.71    351,081     11,328  1,263,808    29.7
+MISC      107,840    177,408   1.65    113,484     82,752    324,288     9.6
+OTHR      237,504    481,216   2.03    250,771     20,736    579,840    21.2
+WAIT      217,536    462,784   2.13    230,998        832    559,744    19.5
+WORK      927,680  1,350,208   1.46    975,385    652,544  3,635,008    83.0
+SHDT        4,352     81,216  18.66     14,409          0    420,352     0.4
+SWRM        1,024      1,152   1.12      1,042        768      4,416     0.1
+GCRA      325,952    560,640   1.72    345,415      6,784  1,257,984    29.2
+SCPU       52,032    108,224   2.08     46,670          0    139,072     4.7
+SCAT        1,280      1,472   1.15      1,267          0      1,728     0.1
+SPRM        2,176      2,368   1.09      5,083          0    648,384     0.2
+SINT      157,312    292,800   1.86    162,060          0    956,160    14.1
+SPHD       73,536    110,016   1.50     72,638          0    435,456     6.6
+SPHC          640        768   1.20        623          0        960     0.1
+WORK-H    916,352  1,192,832   1.30    940,881    644,160  1,892,544    82.0
+
+named=955,612 (79.2% of ALL)  VBI 2:1754 3:259 4:18 5+:8 max:19 total:2039  slips=0
+extras: gNdsFtrDrawMemoHits=3,765  gNdsFtrDrawMemoInvalidations=147  gNdsFtrDrawMemoFills=149  gNdsFtrDrawMemoBypass=164  gNdsFtrDrawMemoBoundary=3,914  gNdsFtrDrawMemoReplayEvents=60,462  gNdsFighterDisplayContractSelectedCount=62,952  gNdsFighterDisplayContractSubmittedCount=62,952  gNdsFighterDisplayContractLightDirectionCount=4,010  gNdsFighterDisplayContractBoundsPassCount=3,823  gNdsFighterDisplayContractBoundsFailCount=142  gNdsFighterDLAllDrawP0HardwareTriangleCount=600,000  gNdsFighterDLAllDrawP1HardwareTriangleCount=623,934  gNdsStageGCDrawAllLoopHardwareFighterTriangleCount=1,223,934  gNdsTaskmanGeneralHeapFreeMin=53,136
+Wrote artifacts/performance/2026-08-16_ftr-draw-memo/memo-on.json
