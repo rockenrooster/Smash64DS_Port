@@ -276,6 +276,84 @@ against 2 and 2 float (one pre-poke frame); control 0 fixed, 4,076/4,152 float. 
 pools, are all display/present callbacks. **All seventeen match invariants are bit-identical
 across all four runs and equal to `build-c199-bank0`'s.**
 
+### THE CAMERA ARM'S PRESENTED CADENCE — MEASURED 2026-08-16, AND THE ARM IS INNOCENT
+
+`artifacts/performance/2026-08-16_camera-cadence/CADENCE.md`. Nine runs on
+`builds/build-c205-camtoggle` — **the toggle ROM the owner played**, not the tick-HUD
+instrument. Arm selected at frame 1, two gdb stops, 2,043 presented frames each; both arms
+reproduce **bit-identically** on a repeat run.
+
+| arm | iv 2 | iv 3 | iv 4 | iv 5+ | max | VBlanks | P50 | P95 | P99 | violations |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| FLOAT (shipping) | 1,953 | 72 | 5 | 13 | 26 | 4,277 | 2 | 2 | 3 | 0 |
+| FIXED Q20.12 | **1,956** | **69** | 5 | 13 | 26 | **4,273** | 2 | 2 | 3 | 0 |
+
+**The fixed arm is 3 frames BETTER and 4 VBlanks shorter over the match**, and the per-frame
+instrument reproduces the same margin independently (151 vs 147 slip-VBlanks over 1,900
+frames). Quantisation did not invert the −4,736 tk/fr tick cut.
+
+**The owner's report is real and its cause is the TOGGLE, not the arm.** The penalty attaches
+to running the **non-boot arm**, symmetrically: boot FLOAT then flip to FIXED slips 355 of
+800 frames; boot FIXED then flip to FLOAT slips 395 of 600, block-for-block the same. A null
+flip (0→1 at frame 400, 1→0 at 401) costs nothing, so it is not the debugger write; per-frame
+stops cost nothing either. Flipping *back* to the boot arm recovers in **6 frames**; flipping
+*away* never recovers. **Mechanism unidentified** — the particle camera cache is measured
+inert across the flip (2 hits + 1 miss per frame on both sides). **Consequence: the toggle ROM
+answers the PICTURE question and cannot answer the FPS question. Per-arm cadence needs each
+arm as the boot arm.**
+
+**Instrument defect worth one line:** `gNdsBattlePlayablePacingPresentIntervalBucket` is not a
+member of `NDS_BATTLE_PLAYABLE_PACING_GROUP` (`nds_startup.h:4184`); it is readable over gdb
+only because `DC_FlushRange` cleans whole lines and two group members share the array's two
+lines. **ACTION (unowned):** add the `X()` line, so the one histogram `AGENTS.md` requires in
+every device A/B cannot go stale under a `diagnostics.c` relayout.
+
+### THE SIM-SIDE SOFT-FLOAT LANE IS SIZED (2026-08-16, zero builds) — 142,786 tk/fr, and POSITION.md's 0.563x was incomplete
+
+`artifacts/performance/2026-08-16_simside-softfloat/SIMSIDE.md`. Same capture, same tool, and
+the same method that produced `DRAW_FIXEDPOINT.md`; `analyze-leaf-helper-attribution.py` gained
+`--matrix-json` because `--json` collapsed the **helper axis, which is the axis that decides
+whether a lane converts**. Marginal-80 mask; every figure below is already a rank-80 figure.
+
+```text
+sim-only 45,539 + sim+dispatch 37,665 + shared 59,582 = 142,786 tk/fr = 1.511x of +94,481
+op mix:  fmul 29.9% · fadd 29.3% · fsub 16.7%  ->  MAC 75.9%
+         fdiv  9.7% · sqrtf 5.7%               ->  transcendental 15.4%
+shape:   MAC>=80%  82,798 (64 fns, 71,491 of it WARM >=8 entr/fr)
+         mixed     30,199 (115 fns)
+         hard>=30% 29,789 (31 fns)
+```
+
+**The warm MAC subset is 14 functions, 71,491 tk/fr**: collision/MP 50,044, animation 13,904,
+math leaves 7,541. Its two largest are **100% MAC and warm** — `func_ovl2_800ED490` 18,759
+tk/fr (19.0 entr/fr, 63 ops/entry, 580 B) and `gmCollisionGetWorldPosition` 13,091 (45.2
+entr/fr, 18 ops/entry, 196 B). Both reproduce their source op counts **to the unit**, which is
+the check that these are dynamic call counts.
+
+**Rate NOT asserted.** Three in-binary rates span 3× — 1.70x (camera, 3 roots + 9 divides per
+entry, 8.1 entr/fr), 2.68x (narrow phase, `__udivmoddi4` ×4/entry, 0.97 entr/fr), 5.14x
+(`guMtxCatF` → `ndsRendererMtxMul20p12`, same op, 18.55 entr/fr). **Both named causes of the
+two low rates are absent from the warm MAC subset**; that is a mechanism argument, not a
+measurement. Range: **29,437 (1.70x) – 57,584 (5.14x) tk/fr = 0.312x–0.609x**.
+
+**Three columns, and the fidelity question is not uniform:**
+- **N — bit-exact helper acceleration.** Fidelity-neutral *by construction*: a faster
+  `__aeabi_fdiv` / `sqrtf` returning the identical IEEE result changes nothing anywhere.
+  Surface 21,886 tk/fr sim + 7,900 draw. **UNSIZED** — nobody has built one, and the DS
+  divide/sqrt units are still unused (`NDS_R2_CFX_DIV64`/`ISQRT64` undefined).
+- **P — provable-equivalence fixed point.** The warm MAC subset. Belongs in the
+  fidelity-neutral column **iff** the decision-margin proof lands, and the instrument already
+  exists: `NDS_R2_CFX_NARROW_DECLINE` (structural, not statistical),
+  `grade-r2-collision-live-domain.c` + `probe-collision-fixed-domain.ps1` (bound 0.0200 world
+  units against a double-precision reference on live match matrices), `NDS_R2_COLLISION_L7_ORACLE`,
+  and the seventeen match invariants.
+- **T — rung-3 trades.** The transcendental and mixed remainder, where the *value* is consumed.
+
+**Effect on `POSITION.md`:** 53,215 (0.563x) → **82,652–110,799 (0.875x–1.173x)** if column P
+moves. `syUtilsRandFloat` is 229 tk/fr (0.16% of the lane) and is excluded by name.
+**Concentration warning:** call volume on the marginal-80 frames is **4.96×** whole match, so a
+whole-match or soak measurement of any conversion here under-reads it ~5×.
+
 ## Banked baselines — BOTH ARMS RE-BANKED ON THE CORRECTED SEED (cycle 80)
 
 1,600 samples, frames 441–2040, `dldi=ON`, git `34091054`+reseed,

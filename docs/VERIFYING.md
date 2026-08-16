@@ -28,19 +28,37 @@ not `powershell`, for the reason in the paragraph above — spelling it
 `powershell` inside the `cmd` line reintroduces 5.1 and fails at
 `melonds.ps1:349`.
 
-**`verify-all.ps1` returns exit 0 when a child build fails, so judge it by its
-log tail and never by its exit code.** On 2026-08-16 a Boundary run ended
-`make: *** [Makefile:3312: builds/build-battle-playable-proof-hwtri-harness]
-Error 127` and still exited **0**. The cause is one line up the chain:
-`verify-all.ps1:157` guards the toolchain with
-`if (-not $env:DEVKITPRO) { $env:DEVKITPRO = 'C:/devkitPro' }`, which tests
-**presence, not usability** — launched from a shell where `DEVKITPRO` /
-`DEVKITARM` are already set with Windows backslashes, the guard does not fire,
-the value does not survive into the `make` sub-shell, and make resolves the
-devkitPro *Linux* default `/opt/devkitpro/msys2/usr/bin/make`. Set both
-variables forward-slash in the invoking shell, and grep the log for
-`Boundary verification profile passed.` — its absence is the only reliable
-failure signal.
+**`verify-all.ps1` used to be able to return exit 0 after a child build died.
+It now refuses to start in that environment, and refuses to print its pass line
+without one success per planned verifier (fixed 2026-08-16).** The failure was a
+Boundary run ending `make: *** [Makefile:3312:
+builds/build-battle-playable-proof-hwtri-harness] Error 127`. Three separate
+holes, all closed at the driver:
+
+- **The toolchain guard tested presence, not usability**, and it lived inside
+  `if ($Build -and $needsNormalBuild)` — so on Boundary, whose plan has no
+  `smash64ds` target, it never ran at all. `Assert-Smash64DSToolchainUsable`
+  now runs unconditionally before any verifier: it normalizes `DEVKITPRO` /
+  `DEVKITARM` into the process environment every child inherits, requires
+  `ds_rules` and `arm-none-eabi-gcc.exe` to exist under `DEVKITARM`, and then
+  **runs one recursive make** and requires it to succeed.
+- **The 127 is `$(MAKE)`, and only a recursive make can see it.** `Makefile:3312`
+  is `@$(MAKE) --no-print-directory -C $(BUILD) …`, and on this host `$(MAKE)`
+  measures as **`/opt/devkitpro/msys2/usr/bin/make`** — devkitPro's msys2 reports
+  its own argv[0] in the MSYS namespace, so that path resolves only when the
+  recipe shell (`SHELL = /usr/bin/env bash`) is that same msys2. No spelling of
+  `DEVKITPRO` fixes it and no static inspection can see it; the Makefile's own
+  normalization is fine (`check-toolchain-path-normalization.ps1` proves six
+  spellings). The probe is `make --eval='…: ;@$(MAKE) --version …'`, which fails
+  exactly where the real build fails, in seconds, with the cause named.
+- **`exit $null` exits 0.** `$null -eq 0` is `$false` in PowerShell, so a null
+  child exit code fell through to the failure branch and exited **0** anyway.
+  `Invoke-VerifyScriptOnce` now substitutes `70`, and `Get-Smash64DSFailureExitCode`
+  refuses to exit 0 from a failure branch.
+
+Judging a run by its log tail is still good practice, but it is no longer the
+only signal: the pass line `"<Profile> verification profile passed."` is gated on
+a counter that every passing verifier increments, and an empty plan throws.
 
 **Edit every structured file with Read/Edit, not a heredoc or `\n` escapes.**
 `CLAUDE.md` records this for `.ps1`; on 2026-08-15 the same trap ate a backslash

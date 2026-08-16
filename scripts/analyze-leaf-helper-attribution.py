@@ -134,6 +134,15 @@ def main(argv=None):
                          "at b's rate (e.g. __aeabi_fsub=__aeabi_fadd)")
     ap.add_argument("--top", type=int, default=22)
     ap.add_argument("--json", default="")
+    ap.add_argument("--matrix-json", default="",
+                    help="per-(caller, helper) call counts and attributed "
+                         "cycles. --json collapses the helper axis, which is "
+                         "the axis that decides whether a lane converts: a "
+                         "MAC-heavy caller and a divide-heavy caller of equal "
+                         "cost convert at rates that differ by more than 3x "
+                         "(1.70 measured on the camera chain against a 5.14 "
+                         "MAC prior). Rebuilding the matrix by hand needed the "
+                         "whole tool a second time.")
     args = ap.parse_args(argv)
 
     helpers = (SOFTFLOAT if args.helpers == "softfloat"
@@ -259,6 +268,23 @@ def main(argv=None):
             "subsystems": {k: int(v) for k, v in groups.items()},
         }, open(args.json, "w"), indent=1)
         print("\nwrote " + args.json)
+    if args.matrix_json:
+        matrix = collections.defaultdict(dict)
+        for (caller, helper), n in calls.items():
+            matrix[caller][helper] = {
+                "calls": n,
+                "cycles": int(n * rate.get(helper, 0.0)),
+            }
+        json.dump({
+            "pc_csv": args.pc_csv,
+            "profile": args.profile,
+            "mask": args.mask,
+            "marginal_frames": frames,
+            "tick_divisor": 2 * frames,
+            "rates": {h: rate.get(h, 0.0) for h in sorted(rate)},
+            "callers": matrix,
+        }, open(args.matrix_json, "w"), indent=1)
+        print("wrote " + args.matrix_json)
     return 0
 
 

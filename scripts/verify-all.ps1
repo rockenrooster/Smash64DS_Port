@@ -62,6 +62,85 @@ function Test-TransportVerifierFailure {
     }
     return $false
 }
+function Assert-Smash64DSToolchainUsable {
+    param([string]$Root)
+    # PRESENCE IS NOT USABILITY, AND THIS GUARD USED TO TEST PRESENCE.
+    #
+    # Until 2026-08-16 the only toolchain guard in this driver was
+    # `if (-not $env:DEVKITPRO) { $env:DEVKITPRO = 'C:/devkitPro' }`, and it sat
+    # inside `if ($Build -and $needsNormalBuild)` -- so on a Boundary run, whose
+    # plan has no `smash64ds` target, it never executed at all. A shell whose
+    # DEVKITPRO was already set did not trip it either. The run then died deep
+    # inside a grandchild at
+    #   make: *** [Makefile:3312: builds/build-...-harness] Error 127
+    # and the driver reported nothing useful.
+    #
+    # Makefile:3312 is `@$(MAKE) --no-print-directory -C $(BUILD) ...`, and on
+    # this host `$(MAKE)` measures as **/opt/devkitpro/msys2/usr/bin/make** --
+    # devkitPro's msys2 reports its own argv[0] in the MSYS namespace, so that
+    # path only resolves when the recipe shell (`SHELL = /usr/bin/env bash`) is
+    # that same msys2. When it is not, the recursion is a literal nonexistent
+    # path and the sub-make exits 127. No amount of DEVKITPRO spelling fixes
+    # that, and no static inspection can see it: the only thing that answers the
+    # question is running one recursive make.
+    #
+    # So this runs one, before any verifier starts, and throws by name if it
+    # fails. It also normalizes both variables in the process environment every
+    # child inherits, which is the half the old guard was trying to do.
+    foreach ($name in @('DEVKITPRO', 'DEVKITARM')) {
+        $value = [Environment]::GetEnvironmentVariable($name, 'Process')
+        if ([string]::IsNullOrWhiteSpace($value)) {
+            $value = if ($name -eq 'DEVKITPRO') {
+                'C:/devkitPro'
+            } else {
+                'C:/devkitPro/devkitARM'
+            }
+        }
+        $value = (($value -replace '\\', '/') -replace '/+$', '')
+        [Environment]::SetEnvironmentVariable($name, $value, 'Process')
+    }
+    foreach ($relative in @('ds_rules', 'bin/arm-none-eabi-gcc.exe')) {
+        $required = $env:DEVKITARM + '/' + $relative
+        if (-not (Test-Path -LiteralPath $required)) {
+            throw ("Toolchain is present but unusable: DEVKITARM='" +
+                $env:DEVKITARM + "' does not contain '" + $relative + "'.")
+        }
+    }
+    $makeCommand = Get-Command 'make.exe' -CommandType Application `
+        -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($null -eq $makeCommand) {
+        $makeCommand = Get-Command 'make' -CommandType Application `
+            -ErrorAction SilentlyContinue | Select-Object -First 1
+    }
+    if ($null -eq $makeCommand) {
+        throw 'Toolchain is unusable: no make executable is on PATH.'
+    }
+    # A unique BUILD, for the same reason check-toolchain-path-normalization.ps1
+    # uses one: the probe target has no prerequisites and must not be able to
+    # touch, or collide with, a real build directory.
+    $probeBuild = "builds/build-verify-all-toolchain-probe-{0}" -f `
+        ([Guid]::NewGuid().ToString('N'))
+    $probeEval = '--eval=nds-recursive-make-probe: ;' +
+        '@$(MAKE) --version >/dev/null 2>&1 && ' +
+        'echo NDS_RECURSIVE_MAKE=OK || echo NDS_RECURSIVE_MAKE=FAIL:$$?'
+    $probeOutput = @(& $makeCommand.Source '--no-print-directory' '-s' `
+        '-C' $Root "BUILD=$probeBuild" $probeEval 'nds-recursive-make-probe' 2>&1 |
+        ForEach-Object { "$_" })
+    $probeExit = $LASTEXITCODE
+    $probeText = ($probeOutput -join "`n")
+    if (($probeExit -ne 0) -or ($probeText -notmatch 'NDS_RECURSIVE_MAKE=OK')) {
+        throw ("Recursive make is unusable, so every harness build in this " +
+            "profile would die at Makefile:3312 with Error 127. " +
+            "make='" + $makeCommand.Source + "' DEVKITPRO='" + $env:DEVKITPRO +
+            "' DEVKITARM='" + $env:DEVKITARM + "' probe exit=" + $probeExit +
+            "`n" + $probeText)
+    }
+    if (Test-Path -LiteralPath (Join-Path $Root $probeBuild)) {
+        throw ("The toolchain probe created a build directory: " + $probeBuild)
+    }
+    Write-Output ("Toolchain usable: recursive make OK, DEVKITPRO=" +
+        $env:DEVKITPRO + " DEVKITARM=" + $env:DEVKITARM)
+}
 function Invoke-VerifyScriptOnce {
     param(
         [string]$Script,
@@ -88,8 +167,14 @@ function Invoke-VerifyScriptOnce {
     if ($stdout) { [Console]::Out.Write($stdout) }
     if ($stderr) { [Console]::Error.Write($stderr) }
     Remove-Item -LiteralPath $stdoutPath, $stderrPath -Force -ErrorAction SilentlyContinue
+    # AN UNKNOWN EXIT CODE IS A FAILURE, NOT A PASS. `$null -eq 0` is $false in
+    # PowerShell, so a null ExitCode reaches the failure branch below and
+    # `exit $null` exits **0** -- a driver reporting green for a run it never
+    # got an answer about. Give it a definite code here instead.
+    $exitCode = if ($null -eq $process) { 70 } else { $process.ExitCode }
+    if ($null -eq $exitCode) { $exitCode = 70 }
     return [PSCustomObject]@{
-        ExitCode = $process.ExitCode
+        ExitCode = $exitCode
         Output = "$stdout`n$stderr"
     }
 }
@@ -102,6 +187,7 @@ function Invoke-VerifyScript {
     )
     $result = Invoke-VerifyScriptOnce -Script $Script -Arguments $Arguments
     if ($result.ExitCode -eq 0) {
+        $script:verifiersPassed++
         return
     }
     if ($RetryTransport -and (Test-TransportVerifierFailure -Text $result.Output)) {
@@ -109,12 +195,21 @@ function Invoke-VerifyScript {
         $retry = Invoke-VerifyScriptOnce -Script $Script -Arguments $Arguments
         if ($retry.ExitCode -eq 0) {
             Write-Output "Transport retry passed: $Label"
+            $script:verifiersPassed++
             return
         }
-        exit $retry.ExitCode
+        exit (Get-Smash64DSFailureExitCode -Code $retry.ExitCode)
     }
-    exit $result.ExitCode
+    exit (Get-Smash64DSFailureExitCode -Code $result.ExitCode)
 }
+function Get-Smash64DSFailureExitCode {
+    param($Code)
+    # Reaching a failure branch with a success code is a contradiction, and it
+    # is the exact shape of a false green. Refuse to exit 0 from here.
+    if (($null -eq $Code) -or ($Code -eq 0)) { return 70 }
+    return $Code
+}
+$script:verifiersPassed = 0
 if ($Build -and $NoBuild) {
     throw 'Use either -Build or -NoBuild, not both.'
 }
@@ -142,6 +237,14 @@ try {
         $plan | Select-Object Name, Mode, Harness, Script, Target, Build, @{Name='Tags';Expression={$_.Tags -join ','}} | Format-Table -AutoSize
         exit 0
     }
+    if ($plan.Count -lt 1) {
+        throw "Verification profile '$Profile' selected no verifiers to run."
+    }
+    # Unconditional, and before anything else runs: see the function's own
+    # comment. The old guard ran only on `-Build` with a normal-build plan,
+    # i.e. never on Boundary, which is the profile that reported green after a
+    # sub-build died.
+    Assert-Smash64DSToolchainUsable -Root $root
     if ($RunnerSlot -ge 0) {
         Resolve-MelonDSRunnerSlot `
             -Root $root `
@@ -154,11 +257,10 @@ try {
         [string]::IsNullOrWhiteSpace($_.Target) -or $_.Target -eq 'smash64ds'
     }).Count -gt 0
     if ($Build -and $needsNormalBuild) {
-        if (-not $env:DEVKITPRO) { $env:DEVKITPRO = 'C:/devkitPro' }
-        if (-not $env:DEVKITARM) { $env:DEVKITARM = 'C:/devkitPro/devkitARM' }
         & make -C $root TARGET=smash64ds BUILD=build NDS_DEV_SCENE_HARNESS=normal NDS_HARNESS_FAST_LOGIC=0 -B
-        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+        if ($LASTEXITCODE -ne 0) { exit (Get-Smash64DSFailureExitCode -Code $LASTEXITCODE) }
     }
+    $expectedVerifiers = 2 + $plan.Count + $(if ($SkipRegistryCheck) { 0 } else { 1 })
     Invoke-VerifyScript `
         -Script (Join-Path $PSScriptRoot 'check-gbi-decode-fixtures.ps1') `
         -Arguments @()
@@ -214,6 +316,14 @@ try {
             }
         }
         Invoke-VerifyScript -Script $scriptPath -Arguments $arguments -Label $record.Name -RetryTransport
+    }
+    # THE PASS LINE IS THE ONLY RELIABLE FAILURE SIGNAL THIS DRIVER HAS
+    # (docs/VERIFYING.md says so), so it must not be printable without the work.
+    # It is now gated on a count that every passing verifier increments.
+    if ($script:verifiersPassed -ne $expectedVerifiers) {
+        throw ("Verifier accounting mismatch: {0} passed, {1} expected. " +
+            "Refusing to report '{2} verification profile passed.'" -f `
+            $script:verifiersPassed, $expectedVerifiers, $Profile)
     }
     Write-Output "$Profile verification profile passed."
 } finally {

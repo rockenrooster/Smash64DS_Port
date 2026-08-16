@@ -1,0 +1,19 @@
+0x020bf33c in _nitroromFdReadImpl (self=0x223e590 <s_nitroromFd>, offset=1191429, buf=0x22582d4, size=1) at /home/davem/projects/devkitpro/pacman-packages/calico/src/calico-1.2.0/source/nds/arm9/nitrorom.c:24
+warning: 24	/home/davem/projects/devkitpro/pacman-packages/calico/src/calico-1.2.0/source/nds/arm9/nitrorom.c: No such file or directory
+warning: could not convert '$n' from the host encoding (CP1252) to UTF-32.
+This normally should not happen, please file a bug report.
+PCAD build=build-c205-camtoggle route=gNdsR2CameraFixedEnabled initial=1 perframe=0 flips=
+Temporary breakpoint 1 at 0x20804b4: file D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_scvsbattle.c, line 243.
+
+Temporary breakpoint 1, scVSBattleStartBattle () at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_scvsbattle.c:243
+243	    gNdsSCVSBattleOriginalFuncStartResult =
+Breakpoint 2 at 0x2050064: file D:/Stuff/DevFolder/Smash64DS_Port/src/port/taskman_seam.c, line 4646.
+PCADFLIP 1 -> 1
+PCADHIST INIT n=1 2=0 3=0 4=0 5=1 max=26 min=26 viol=0 vbl=26 pres=1 tk=14047168
+PCADHIST FINAL n=1 2=0 3=0 4=0 5=1 max=26 min=26 viol=0 vbl=26 pres=1 tk=14047168
+Temporary breakpoint 3 at 0x209b384: file D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnvsmode/mnvsresults.c, line 3326.
+
+Temporary breakpoint 3, mnVSResultsFuncStart () at D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnvsmode/mnvsresults.c:3326
+3326		rl_setup.table_addr = (uintptr_t)&lLBRelocTableAddr;
+PCADHIST DONE n=1 2=1956 3=69 4=5 5=13 max=26 min=2 viol=0 vbl=4273 pres=2043 tk=2405769408
+[Inferior 1 (Remote target) detached]

@@ -1,0 +1,132 @@
+{
+ "pc_csv": "artifacts/performance/2026-08-15_ftanim-dispatch-attribution/c200-off-pc.csv",
+ "profile": "",
+ "mask": "marginal",
+ "marginal_frames": 80,
+ "tick_divisor": 160,
+ "rates": {
+  "sqrtf": 289.2403052484037
+ },
+ "callers": {
+  "ndsRendererHardwarePrepareLitDirection": {
+   "sqrtf": {
+    "calls": 3,
+    "cycles": 867
+   }
+  },
+  "func_ovl2_800EDE5C": {
+   "sqrtf": {
+    "calls": 2724,
+    "cycles": 787890
+   }
+  },
+  "lbCommonSim2D": {
+   "sqrtf": {
+    "calls": 2,
+    "cycles": 578
+   }
+  },
+  "lbParticleDrawTextures": {
+   "sqrtf": {
+    "calls": 504,
+    "cycles": 145777
+   }
+  },
+  "syVectorMag3D": {
+   "sqrtf": {
+    "calls": 683,
+    "cycles": 197551
+   }
+  },
+  "ftComputerCheckFindTarget": {
+   "sqrtf": {
+    "calls": 316,
+    "cycles": 91399
+   }
+  },
+  "syVectorNorm3D": {
+   "sqrtf": {
+    "calls": 457,
+    "cycles": 132182
+   }
+  },
+  "syMatrixLookAtReflectF": {
+   "sqrtf": {
+    "calls": 960,
+    "cycles": 277670
+   }
+  },
+  "ftComputerCheckEvadeDistance": {
+   "sqrtf": {
+    "calls": 175,
+    "cycles": 50617
+   }
+  },
+  "lbCommonMag2D": {
+   "sqrtf": {
+    "calls": 45,
+    "cycles": 13015
+   }
+  },
+  "lbParticleGeneratorFuncRun": {
+   "sqrtf": {
+    "calls": 9,
+    "cycles": 2603
+   }
+  },
+  "syMatrixLookAtF": {
+   "sqrtf": {
+    "calls": 480,
+    "cycles": 138835
+   }
+  },
+  "gmCollisionTestSphere": {
+   "sqrtf": {
+    "calls": 2,
+    "cycles": 578
+   }
+  },
+  "lbCommonNormDist2D": {
+   "sqrtf": {
+    "calls": 0,
+    "cycles": 0
+   }
+  },
+  "ndsBaseFTCommonGuardUpdateShieldAngle": {
+   "sqrtf": {
+    "calls": 5,
+    "cycles": 1446
+   }
+  },
+  "func_ovl3_8013837C": {
+   "sqrtf": {
+    "calls": 26,
+    "cycles": 7520
+   }
+  },
+  "ndsRendererAdapterBuildDObjXObjMatrix": {
+   "sqrtf": {
+    "calls": 11,
+    "cycles": 3181
+   }
+  },
+  "syUtilsArcCos": {
+   "sqrtf": {
+    "calls": 5,
+    "cycles": 1446
+   }
+  },
+  "syVectorAngleDiff3D": {
+   "sqrtf": {
+    "calls": 12,
+    "cycles": 3470
+   }
+  },
+  "lbParticleRotateVel": {
+   "sqrtf": {
+    "calls": 2,
+    "cycles": 578
+   }
+  }
+ }
+}

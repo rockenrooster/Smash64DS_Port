@@ -1,0 +1,4265 @@
+{
+ "pc_csv": "artifacts/performance/2026-08-15_ftanim-dispatch-attribution/c200-off-pc.csv",
+ "profile": "",
+ "mask": "marginal",
+ "marginal_frames": 80,
+ "tick_divisor": 160,
+ "rates": {
+  "__aeabi_f2iz": 12.919838373305527,
+  "__aeabi_fadd": 37.95571275482867,
+  "__aeabi_fcmpeq": 10.578297715549006,
+  "__aeabi_fcmpge": 14.242324888226527,
+  "__aeabi_fcmpgt": 14.765676010356861,
+  "__aeabi_fcmple": 14.424689899586532,
+  "__aeabi_fcmplt": 14.597166803893005,
+  "__aeabi_fdiv": 118.37297517297517,
+  "__aeabi_fmul": 26.457461716439273,
+  "__aeabi_fsub": 37.95571275482867,
+  "__aeabi_i2f": 16.316656654938644,
+  "__aeabi_l2f": 28.451832151300238,
+  "__aeabi_ui2f": 4.0,
+  "__floatsisf": 7.359960059910135
+ },
+ "callers": {
+  "__aeabi_ui2f": {
+   "__floatsisf": {
+    "calls": 16024,
+    "cycles": 117936
+   }
+  },
+  "__floatsisf": {
+   "__aeabi_l2f": {
+    "calls": 13527,
+    "cycles": 384867
+   }
+  },
+  "lbCommonSin": {
+   "__aeabi_ui2f": {
+    "calls": 6708,
+    "cycles": 26832
+   },
+   "__aeabi_f2iz": {
+    "calls": 6708,
+    "cycles": 86666
+   },
+   "__aeabi_fmul": {
+    "calls": 13416,
+    "cycles": 354953
+   }
+  },
+  "lbCommonCos": {
+   "__aeabi_ui2f": {
+    "calls": 6708,
+    "cycles": 26832
+   },
+   "__aeabi_fadd": {
+    "calls": 6708,
+    "cycles": 254606
+   },
+   "__aeabi_fmul": {
+    "calls": 13416,
+    "cycles": 354953
+   },
+   "__aeabi_f2iz": {
+    "calls": 6708,
+    "cycles": 86666
+   }
+  },
+  "gmCollisionGetWorldPosition": {
+   "__aeabi_fadd": {
+    "calls": 32517,
+    "cycles": 1234205
+   },
+   "__aeabi_fmul": {
+    "calls": 32517,
+    "cycles": 860317
+   }
+  },
+  "lbParticleDrawTextures": {
+   "__aeabi_fcmpeq": {
+    "calls": 549,
+    "cycles": 5807
+   },
+   "__aeabi_fmul": {
+    "calls": 5792,
+    "cycles": 153241
+   },
+   "__aeabi_fadd": {
+    "calls": 3901,
+    "cycles": 148065
+   },
+   "__aeabi_fcmplt": {
+    "calls": 525,
+    "cycles": 7663
+   }
+  },
+  "ndsRendererSubmitParticleQuad": {
+   "__aeabi_fcmpgt": {
+    "calls": 4592,
+    "cycles": 67803
+   },
+   "__aeabi_fmul": {
+    "calls": 12341,
+    "cycles": 326511
+   },
+   "__aeabi_fcmplt": {
+    "calls": 6027,
+    "cycles": 87977
+   },
+   "__aeabi_fadd": {
+    "calls": 8610,
+    "cycles": 326798
+   },
+   "__aeabi_f2iz": {
+    "calls": 3731,
+    "cycles": 48203
+   }
+  },
+  "ndsBaseMPProcessUpdateMain": {
+   "__aeabi_fsub": {
+    "calls": 672,
+    "cycles": 25506
+   },
+   "__aeabi_fadd": {
+    "calls": 3024,
+    "cycles": 114778
+   },
+   "__aeabi_fdiv": {
+    "calls": 0,
+    "cycles": 0
+   },
+   "__aeabi_fcmplt": {
+    "calls": 672,
+    "cycles": 9809
+   },
+   "__aeabi_fcmpgt": {
+    "calls": 672,
+    "cycles": 9922
+   },
+   "__aeabi_f2iz": {
+    "calls": 0,
+    "cycles": 0
+   },
+   "__aeabi_i2f": {
+    "calls": 0,
+    "cycles": 0
+   }
+  },
+  "gmCollisionTestRectangle": {
+   "__aeabi_fadd": {
+    "calls": 5883,
+    "cycles": 223293
+   },
+   "__aeabi_fdiv": {
+    "calls": 5868,
+    "cycles": 694612
+   },
+   "__aeabi_fcmplt": {
+    "calls": 13221,
+    "cycles": 192989
+   },
+   "__aeabi_fsub": {
+    "calls": 15074,
+    "cycles": 572144
+   },
+   "__aeabi_fcmpgt": {
+    "calls": 115,
+    "cycles": 1698
+   },
+   "__aeabi_fcmpge": {
+    "calls": 773,
+    "cycles": 11009
+   },
+   "__aeabi_fmul": {
+    "calls": 30,
+    "cycles": 793
+   }
+  },
+  "syMatrixTraRotRpyRSca": {
+   "__aeabi_fmul": {
+    "calls": 2340,
+    "cycles": 61910
+   },
+   "__aeabi_f2iz": {
+    "calls": 2340,
+    "cycles": 30232
+   }
+  },
+  "syVectorDiff3D": {
+   "__aeabi_fsub": {
+    "calls": 2955,
+    "cycles": 112159
+   }
+  },
+  "func_ovl2_800ED490": {
+   "__aeabi_fmul": {
+    "calls": 54648,
+    "cycles": 1445847
+   },
+   "__aeabi_fadd": {
+    "calls": 40986,
+    "cycles": 1555652
+   }
+  },
+  "ndsBaseFTCommonGuardInitJoints": {
+   "__aeabi_fcmpeq": {
+    "calls": 0,
+    "cycles": 0
+   },
+   "__aeabi_i2f": {
+    "calls": 0,
+    "cycles": 0
+   },
+   "__aeabi_fdiv": {
+    "calls": 0,
+    "cycles": 0
+   },
+   "__aeabi_fmul": {
+    "calls": 0,
+    "cycles": 0
+   },
+   "__aeabi_fadd": {
+    "calls": 0,
+    "cycles": 0
+   }
+  },
+  "ndsStageMPAdjustFloorLoopWallSweep": {
+   "__aeabi_fcmpeq": {
+    "calls": 2040,
+    "cycles": 21579
+   },
+   "__aeabi_fmul": {
+    "calls": 7776,
+    "cycles": 205733
+   },
+   "__aeabi_fsub": {
+    "calls": 15552,
+    "cycles": 590287
+   },
+   "__aeabi_fcmplt": {
+    "calls": 3888,
+    "cycles": 56753
+   },
+   "__aeabi_fdiv": {
+    "calls": 1944,
+    "cycles": 230117
+   },
+   "__aeabi_fcmpgt": {
+    "calls": 472,
+    "cycles": 6969
+   }
+  },
+  "syMatrixPerspFastF": {
+   "__aeabi_fmul": {
+    "calls": 3437,
+    "cycles": 90934
+   },
+   "__aeabi_ui2f": {
+    "calls": 982,
+    "cycles": 3928
+   },
+   "__aeabi_f2iz": {
+    "calls": 491,
+    "cycles": 6343
+   },
+   "__aeabi_fdiv": {
+    "calls": 2295,
+    "cycles": 271665
+   },
+   "__aeabi_fadd": {
+    "calls": 982,
+    "cycles": 37272
+   },
+   "__aeabi_fsub": {
+    "calls": 491,
+    "cycles": 18636
+   },
+   "__aeabi_fcmple": {
+    "calls": 331,
+    "cycles": 4774
+   }
+  },
+  "ndsWhispyAOTStructFuncRunLean.isra.0": {
+   "__aeabi_fadd": {
+    "calls": 853,
+    "cycles": 32376
+   },
+   "__aeabi_fmul": {
+    "calls": 409,
+    "cycles": 10821
+   },
+   "__aeabi_fsub": {
+    "calls": 314,
+    "cycles": 11918
+   }
+  },
+  "syMatrixF2L": {
+   "__aeabi_fmul": {
+    "calls": 7856,
+    "cycles": 207849
+   },
+   "__aeabi_f2iz": {
+    "calls": 7856,
+    "cycles": 101498
+   }
+  },
+  "gmCollisionSetInvertMatrix": {
+   "__aeabi_fmul": {
+    "calls": 38136,
+    "cycles": 1008981
+   },
+   "__aeabi_fadd": {
+    "calls": 3632,
+    "cycles": 137855
+   },
+   "__aeabi_fsub": {
+    "calls": 11804,
+    "cycles": 448029
+   },
+   "__aeabi_fcmpeq": {
+    "calls": 908,
+    "cycles": 9605
+   },
+   "__aeabi_fdiv": {
+    "calls": 908,
+    "cycles": 107482
+   }
+  },
+  "ftComputerCheckEvadeDistance": {
+   "__aeabi_fmul": {
+    "calls": 525,
+    "cycles": 13890
+   },
+   "__aeabi_fsub": {
+    "calls": 350,
+    "cycles": 13284
+   },
+   "__aeabi_fadd": {
+    "calls": 525,
+    "cycles": 19926
+   }
+  },
+  ".vectors": {
+   "__aeabi_fadd": {
+    "calls": 1230,
+    "cycles": 46685
+   }
+  },
+  "gcParseDObjAnimJoint": {
+   "__aeabi_fcmple": {
+    "calls": 186,
+    "cycles": 2682
+   },
+   "__aeabi_fsub": {
+    "calls": 813,
+    "cycles": 30857
+   },
+   "__aeabi_fcmpeq": {
+    "calls": 5448,
+    "cycles": 57630
+   },
+   "__aeabi_fdiv": {
+    "calls": 173,
+    "cycles": 20478
+   },
+   "__aeabi_ui2f": {
+    "calls": 159,
+    "cycles": 636
+   },
+   "__aeabi_fadd": {
+    "calls": 698,
+    "cycles": 26493
+   },
+   "__aeabi_fcmpgt": {
+    "calls": 449,
+    "cycles": 6629
+   },
+   "__aeabi_i2f": {
+    "calls": 11,
+    "cycles": 179
+   }
+  },
+  "battleship_ftMainProcUpdateInterrupt": {
+   "__aeabi_i2f": {
+    "calls": 106,
+    "cycles": 1729
+   },
+   "__aeabi_fadd": {
+    "calls": 168,
+    "cycles": 6376
+   },
+   "__aeabi_fmul": {
+    "calls": 106,
+    "cycles": 2804
+   },
+   "__aeabi_fsub": {
+    "calls": 62,
+    "cycles": 2353
+   },
+   "__aeabi_fcmplt": {
+    "calls": 118,
+    "cycles": 1722
+   },
+   "__aeabi_fcmpeq": {
+    "calls": 152,
+    "cycles": 1607
+   }
+  },
+  "ndsBaseMPProcessCheckTestLWallCollisionAdjNew": {
+   "__aeabi_fadd": {
+    "calls": 3608,
+    "cycles": 136944
+   }
+  },
+  "ndsR2FtAnimParseDObjFigatree": {
+   "__aeabi_fsub": {
+    "calls": 11843,
+    "cycles": 449509
+   },
+   "__aeabi_fadd": {
+    "calls": 10219,
+    "cycles": 387869
+   }
+  },
+  "wpMarioFireballProcMap": {
+   "__aeabi_fadd": {
+    "calls": 179,
+    "cycles": 6794
+   },
+   "__aeabi_i2f": {
+    "calls": 105,
+    "cycles": 1713
+   },
+   "__aeabi_fcmpgt": {
+    "calls": 53,
+    "cycles": 782
+   },
+   "__aeabi_fcmple": {
+    "calls": 63,
+    "cycles": 908
+   },
+   "__aeabi_fcmpge": {
+    "calls": 106,
+    "cycles": 1509
+   },
+   "__aeabi_fcmplt": {
+    "calls": 127,
+    "cycles": 1853
+   },
+   "__aeabi_fsub": {
+    "calls": 16,
+    "cycles": 607
+   },
+   "__aeabi_fcmpeq": {
+    "calls": 3,
+    "cycles": 31
+   },
+   "__aeabi_fdiv": {
+    "calls": 3,
+    "cycles": 355
+   },
+   "__aeabi_fmul": {
+    "calls": 3,
+    "cycles": 79
+   }
+  },
+  "mpCollisionGetFCCommonFloor": {
+   "__aeabi_i2f": {
+    "calls": 7505,
+    "cycles": 122456
+   },
+   "__aeabi_fsub": {
+    "calls": 7352,
+    "cycles": 279050
+   },
+   "__aeabi_fdiv": {
+    "calls": 1838,
+    "cycles": 217569
+   },
+   "__aeabi_fmul": {
+    "calls": 1838,
+    "cycles": 48628
+   },
+   "__aeabi_fadd": {
+    "calls": 1838,
+    "cycles": 69762
+   },
+   "__aeabi_fcmpeq": {
+    "calls": 153,
+    "cycles": 1618
+   }
+  },
+  "ndsBaseFTCommonGuardGetJointTransform": {
+   "__aeabi_fsub": {
+    "calls": 30,
+    "cycles": 1138
+   },
+   "__aeabi_fmul": {
+    "calls": 30,
+    "cycles": 793
+   },
+   "__aeabi_fadd": {
+    "calls": 30,
+    "cycles": 1138
+   }
+  },
+  "ndsMPLineExtentSweepRejects": {
+   "__aeabi_fadd": {
+    "calls": 3280,
+    "cycles": 124494
+   },
+   "__aeabi_fsub": {
+    "calls": 1106,
+    "cycles": 41979
+   }
+  },
+  "syMatrixLookAtReflectF": {
+   "__aeabi_fmul": {
+    "calls": 14400,
+    "cycles": 380987
+   },
+   "__aeabi_fcmplt": {
+    "calls": 1920,
+    "cycles": 28026
+   },
+   "__aeabi_fadd": {
+    "calls": 3840,
+    "cycles": 145749
+   },
+   "__aeabi_fdiv": {
+    "calls": 960,
+    "cycles": 113638
+   },
+   "__aeabi_f2iz": {
+    "calls": 1716,
+    "cycles": 22170
+   },
+   "__aeabi_fsub": {
+    "calls": 2880,
+    "cycles": 109312
+   }
+  },
+  "gcPlayMObjMatAnim": {
+   "__aeabi_fcmpeq": {
+    "calls": 6124,
+    "cycles": 64781
+   }
+  },
+  "ftComputerCheckDetectTarget": {
+   "__aeabi_fmul": {
+    "calls": 4978,
+    "cycles": 131705
+   },
+   "__aeabi_fsub": {
+    "calls": 4475,
+    "cycles": 169851
+   },
+   "__aeabi_i2f": {
+    "calls": 2351,
+    "cycles": 38360
+   },
+   "__aeabi_fdiv": {
+    "calls": 1404,
+    "cycles": 166195
+   },
+   "__aeabi_f2iz": {
+    "calls": 1404,
+    "cycles": 18139
+   },
+   "__aeabi_fadd": {
+    "calls": 4954,
+    "cycles": 188032
+   },
+   "__aeabi_fcmplt": {
+    "calls": 2478,
+    "cycles": 36171
+   },
+   "__aeabi_fcmpgt": {
+    "calls": 213,
+    "cycles": 3145
+   }
+  },
+  "ftComputerCheckFindTarget": {
+   "__aeabi_fcmple": {
+    "calls": 632,
+    "cycles": 9116
+   },
+   "__aeabi_fmul": {
+    "calls": 632,
+    "cycles": 16721
+   },
+   "__aeabi_i2f": {
+    "calls": 316,
+    "cycles": 5156
+   },
+   "__aeabi_fcmpeq": {
+    "calls": 322,
+    "cycles": 3406
+   },
+   "__aeabi_fcmpge": {
+    "calls": 316,
+    "cycles": 4500
+   },
+   "__aeabi_fcmpgt": {
+    "calls": 316,
+    "cycles": 4665
+   },
+   "__aeabi_fsub": {
+    "calls": 632,
+    "cycles": 23988
+   },
+   "__aeabi_fadd": {
+    "calls": 316,
+    "cycles": 11994
+   },
+   "__aeabi_fcmplt": {
+    "calls": 316,
+    "cycles": 4612
+   }
+  },
+  "ndsR2AnimAdvanceTail.constprop.0": {
+   "__aeabi_fadd": {
+    "calls": 173,
+    "cycles": 6566
+   }
+  },
+  "ndsRendererHardwarePrepareLitDirection": {
+   "__aeabi_fdiv": {
+    "calls": 9,
+    "cycles": 1065
+   },
+   "__aeabi_fmul": {
+    "calls": 18,
+    "cycles": 476
+   },
+   "__aeabi_l2f": {
+    "calls": 9,
+    "cycles": 256
+   },
+   "__aeabi_f2iz": {
+    "calls": 9,
+    "cycles": 116
+   },
+   "__aeabi_fadd": {
+    "calls": 6,
+    "cycles": 227
+   },
+   "__aeabi_fcmpgt": {
+    "calls": 3,
+    "cycles": 44
+   }
+  },
+  "gcParseMObjMatAnimJoint": {
+   "__aeabi_fcmpeq": {
+    "calls": 7204,
+    "cycles": 76206
+   },
+   "__aeabi_fsub": {
+    "calls": 393,
+    "cycles": 14916
+   },
+   "__aeabi_fadd": {
+    "calls": 394,
+    "cycles": 14954
+   },
+   "__aeabi_fcmpgt": {
+    "calls": 375,
+    "cycles": 5537
+   },
+   "__aeabi_fdiv": {
+    "calls": 8,
+    "cycles": 946
+   },
+   "__aeabi_fcmple": {
+    "calls": 8,
+    "cycles": 115
+   },
+   "__aeabi_ui2f": {
+    "calls": 7,
+    "cycles": 28
+   },
+   "__aeabi_i2f": {
+    "calls": 1,
+    "cycles": 16
+   }
+  },
+  "ndsBaseGcPlayMObjMatAnim": {
+   "__aeabi_fcmpeq": {
+    "calls": 9230,
+    "cycles": 97637
+   },
+   "__aeabi_fadd": {
+    "calls": 8484,
+    "cycles": 322016
+   },
+   "__aeabi_fmul": {
+    "calls": 12608,
+    "cycles": 333575
+   },
+   "__aeabi_fsub": {
+    "calls": 4096,
+    "cycles": 155466
+   },
+   "__aeabi_fcmple": {
+    "calls": 682,
+    "cycles": 9837
+   }
+  },
+  "mpCommonRunFighterAllCollisions": {
+   "__aeabi_fsub": {
+    "calls": 0,
+    "cycles": 0
+   },
+   "__aeabi_fcmple": {
+    "calls": 0,
+    "cycles": 0
+   },
+   "__aeabi_fadd": {
+    "calls": 0,
+    "cycles": 0
+   }
+  },
+  "ndsBaseMPProcessCheckTestLCliffCollision": {
+   "__aeabi_fadd": {
+    "calls": 68,
+    "cycles": 2580
+   }
+  },
+  "__kernel_sinf": {
+   "__aeabi_fadd": {
+    "calls": 621,
+    "cycles": 23570
+   },
+   "__aeabi_fmul": {
+    "calls": 2002,
+    "cycles": 52967
+   },
+   "__aeabi_f2iz": {
+    "calls": 517,
+    "cycles": 6679
+   },
+   "__aeabi_fsub": {
+    "calls": 967,
+    "cycles": 36703
+   }
+  },
+  "gcPlayDObjAnimJoint": {
+   "__aeabi_fadd": {
+    "calls": 10,
+    "cycles": 379
+   },
+   "__aeabi_fcmple": {
+    "calls": 0,
+    "cycles": 0
+   }
+  },
+  "ifCommonPlayerDamageUpdateDigits": {
+   "__aeabi_i2f": {
+    "calls": 145,
+    "cycles": 2365
+   },
+   "__aeabi_fmul": {
+    "calls": 202,
+    "cycles": 5344
+   },
+   "__aeabi_fadd": {
+    "calls": 44,
+    "cycles": 1670
+   },
+   "__aeabi_fcmpeq": {
+    "calls": 301,
+    "cycles": 3184
+   },
+   "__aeabi_fsub": {
+    "calls": 152,
+    "cycles": 5769
+   },
+   "__aeabi_ui2f": {
+    "calls": 76,
+    "cycles": 304
+   },
+   "__aeabi_fcmpgt": {
+    "calls": 6,
+    "cycles": 88
+   },
+   "__aeabi_fdiv": {
+    "calls": 19,
+    "cycles": 2249
+   },
+   "__aeabi_fcmplt": {
+    "calls": 0,
+    "cycles": 0
+   }
+  },
+  "gmCameraUpdateInterests": {
+   "__aeabi_fadd": {
+    "calls": 1280,
+    "cycles": 48583
+   },
+   "__aeabi_fcmpgt": {
+    "calls": 1440,
+    "cycles": 21262
+   },
+   "__aeabi_i2f": {
+    "calls": 0,
+    "cycles": 0
+   },
+   "__aeabi_fmul": {
+    "calls": 2068,
+    "cycles": 54714
+   },
+   "__aeabi_fcmplt": {
+    "calls": 1588,
+    "cycles": 23180
+   },
+   "__aeabi_fsub": {
+    "calls": 1256,
+    "cycles": 47672
+   },
+   "__aeabi_fdiv": {
+    "calls": 148,
+    "cycles": 17519
+   }
+  },
+  "ftMainParseMotionEvent": {
+   "__aeabi_i2f": {
+    "calls": 548,
+    "cycles": 8941
+   },
+   "__aeabi_fsub": {
+    "calls": 15,
+    "cycles": 569
+   },
+   "__aeabi_fadd": {
+    "calls": 85,
+    "cycles": 3226
+   },
+   "__aeabi_fmul": {
+    "calls": 64,
+    "cycles": 1693
+   }
+  },
+  "mpCollisionCheckProjectFloor": {
+   "__aeabi_fsub": {
+    "calls": 1130,
+    "cycles": 42889
+   },
+   "__aeabi_fcmple": {
+    "calls": 1666,
+    "cycles": 24031
+   },
+   "__aeabi_fcmpge": {
+    "calls": 1369,
+    "cycles": 19497
+   },
+   "__aeabi_i2f": {
+    "calls": 2816,
+    "cycles": 45947
+   },
+   "__aeabi_fdiv": {
+    "calls": 297,
+    "cycles": 35156
+   },
+   "__aeabi_fmul": {
+    "calls": 297,
+    "cycles": 7857
+   },
+   "__aeabi_fadd": {
+    "calls": 297,
+    "cycles": 11272
+   },
+   "__aeabi_fcmplt": {
+    "calls": 239,
+    "cycles": 3488
+   },
+   "__aeabi_fcmpeq": {
+    "calls": 170,
+    "cycles": 1798
+   }
+  },
+  "syMatrixRotRpyRF": {
+   "__aeabi_fadd": {
+    "calls": 400,
+    "cycles": 15182
+   },
+   "__aeabi_fmul": {
+    "calls": 2800,
+    "cycles": 74080
+   },
+   "__aeabi_fsub": {
+    "calls": 400,
+    "cycles": 15182
+   }
+  },
+  "ndsBaseGcPlayDObjAnimJoint": {
+   "__aeabi_fsub": {
+    "calls": 1748,
+    "cycles": 66346
+   },
+   "__aeabi_fadd": {
+    "calls": 4486,
+    "cycles": 170269
+   },
+   "__aeabi_fcmpeq": {
+    "calls": 6897,
+    "cycles": 72958
+   },
+   "__aeabi_fmul": {
+    "calls": 5710,
+    "cycles": 151072
+   },
+   "__aeabi_fcmple": {
+    "calls": 556,
+    "cycles": 8020
+   }
+  },
+  "ftPhysicsCheckClampAirVelXDec": {
+   "__aeabi_fcmplt": {
+    "calls": 152,
+    "cycles": 2218
+   },
+   "__aeabi_fcmpgt": {
+    "calls": 152,
+    "cycles": 2244
+   },
+   "__aeabi_fadd": {
+    "calls": 1,
+    "cycles": 37
+   },
+   "__aeabi_fsub": {
+    "calls": 0,
+    "cycles": 0
+   }
+  },
+  "efManagerDefaultProcUpdate": {
+   "__aeabi_fadd": {
+    "calls": 62,
+    "cycles": 2353
+   }
+  },
+  "ndsBaseFTCommonDamageCommonProcUpdate": {
+   "__aeabi_fcmple": {
+    "calls": 0,
+    "cycles": 0
+   }
+  },
+  "ndsBaseFTCommonLandingProcInterrupt": {
+   "__aeabi_fcmplt": {
+    "calls": 10,
+    "cycles": 145
+   },
+   "__aeabi_fadd": {
+    "calls": 2,
+    "cycles": 75
+   },
+   "__aeabi_fcmpge": {
+    "calls": 2,
+    "cycles": 28
+   }
+  },
+  "syMatrixTraRotRpyR": {
+   "__aeabi_fmul": {
+    "calls": 18,
+    "cycles": 476
+   },
+   "__aeabi_f2iz": {
+    "calls": 18,
+    "cycles": 232
+   }
+  },
+  "syUtilsArcTan.part.0": {
+   "__aeabi_fsub": {
+    "calls": 1864,
+    "cycles": 70749
+   },
+   "__aeabi_fmul": {
+    "calls": 734,
+    "cycles": 19419
+   },
+   "__aeabi_fadd": {
+    "calls": 367,
+    "cycles": 13929
+   },
+   "__aeabi_fdiv": {
+    "calls": 2231,
+    "cycles": 264090
+   },
+   "__aeabi_fcmplt": {
+    "calls": 339,
+    "cycles": 4948
+   },
+   "__aeabi_fcmpgt": {
+    "calls": 367,
+    "cycles": 5419
+   }
+  },
+  "ftMainUpdateMotionEventsForwardEffect": {
+   "__aeabi_fcmpeq": {
+    "calls": 578,
+    "cycles": 6114
+   },
+   "__aeabi_fcmpgt": {
+    "calls": 421,
+    "cycles": 6216
+   },
+   "__aeabi_fsub": {
+    "calls": 157,
+    "cycles": 5959
+   }
+  },
+  "ndsWhispyAOTGeneratorFuncRun": {
+   "__aeabi_fmul": {
+    "calls": 364,
+    "cycles": 9630
+   },
+   "__aeabi_fadd": {
+    "calls": 117,
+    "cycles": 4440
+   },
+   "__aeabi_fsub": {
+    "calls": 198,
+    "cycles": 7515
+   },
+   "__aeabi_fcmpge": {
+    "calls": 172,
+    "cycles": 2449
+   }
+  },
+  "wpManagerMakeWeapon": {
+   "__aeabi_i2f": {
+    "calls": 66,
+    "cycles": 1076
+   },
+   "__aeabi_fmul": {
+    "calls": 6,
+    "cycles": 158
+   }
+  },
+  "gmCollisionTransformMatrixAll": {
+   "__aeabi_fmul": {
+    "calls": 26552,
+    "cycles": 702498
+   },
+   "__aeabi_fsub": {
+    "calls": 3596,
+    "cycles": 136488
+   },
+   "__aeabi_fadd": {
+    "calls": 3596,
+    "cycles": 136488
+   },
+   "__aeabi_fcmpeq": {
+    "calls": 5394,
+    "cycles": 57059
+   }
+  },
+  "gmCollisionCheckFighterInFighterRange": {
+   "__aeabi_fsub": {
+    "calls": 959,
+    "cycles": 36399
+   },
+   "__aeabi_fcmpgt": {
+    "calls": 722,
+    "cycles": 10660
+   },
+   "__aeabi_fadd": {
+    "calls": 474,
+    "cycles": 17991
+   },
+   "__aeabi_fcmplt": {
+    "calls": 247,
+    "cycles": 3605
+   }
+  },
+  "ftDisplayLightsDrawReflect": {
+   "__aeabi_fmul": {
+    "calls": 2359,
+    "cycles": 62413
+   },
+   "__aeabi_fdiv": {
+    "calls": 674,
+    "cycles": 79783
+   },
+   "__aeabi_f2iz": {
+    "calls": 1011,
+    "cycles": 13061
+   }
+  },
+  "ftComputerFollowObjectiveWalk": {
+   "__aeabi_fcmplt": {
+    "calls": 325,
+    "cycles": 4744
+   },
+   "__aeabi_fsub": {
+    "calls": 181,
+    "cycles": 6869
+   },
+   "__aeabi_fcmpgt": {
+    "calls": 243,
+    "cycles": 3588
+   },
+   "__aeabi_fadd": {
+    "calls": 75,
+    "cycles": 2846
+   },
+   "__aeabi_i2f": {
+    "calls": 20,
+    "cycles": 326
+   },
+   "__aeabi_fcmple": {
+    "calls": 75,
+    "cycles": 1081
+   }
+  },
+  "guMtxCatF": {
+   "__aeabi_fmul": {
+    "calls": 5120,
+    "cycles": 135462
+   },
+   "__aeabi_fadd": {
+    "calls": 5120,
+    "cycles": 194333
+   }
+  },
+  "func_ovl2_800F8FFC": {
+   "__aeabi_fcmplt": {
+    "calls": 1685,
+    "cycles": 24596
+   }
+  },
+  "func_ovl3_8013837C": {
+   "__aeabi_i2f": {
+    "calls": 6,
+    "cycles": 97
+   },
+   "__aeabi_fmul": {
+    "calls": 61,
+    "cycles": 1613
+   },
+   "__aeabi_fcmplt": {
+    "calls": 99,
+    "cycles": 1445
+   },
+   "__aeabi_fadd": {
+    "calls": 29,
+    "cycles": 1100
+   },
+   "__aeabi_fsub": {
+    "calls": 52,
+    "cycles": 1973
+   }
+  },
+  "func_ovl3_8013877C": {
+   "__aeabi_fadd": {
+    "calls": 0,
+    "cycles": 0
+   },
+   "__aeabi_fcmplt": {
+    "calls": 83,
+    "cycles": 1211
+   },
+   "__aeabi_fsub": {
+    "calls": 56,
+    "cycles": 2125
+   },
+   "__aeabi_fcmpgt": {
+    "calls": 35,
+    "cycles": 516
+   }
+  },
+  "gmCameraGetClampDimensionsMax": {
+   "__aeabi_i2f": {
+    "calls": 320,
+    "cycles": 5221
+   },
+   "__aeabi_fmul": {
+    "calls": 800,
+    "cycles": 21165
+   },
+   "__aeabi_fdiv": {
+    "calls": 800,
+    "cycles": 94698
+   },
+   "__aeabi_fcmplt": {
+    "calls": 320,
+    "cycles": 4671
+   },
+   "__aeabi_fcmpgt": {
+    "calls": 160,
+    "cycles": 2362
+   }
+  },
+  "ndsFighterDisplayContractProjectTarget": {
+   "__aeabi_fmul": {
+    "calls": 2080,
+    "cycles": 55031
+   },
+   "__aeabi_i2f": {
+    "calls": 320,
+    "cycles": 5221
+   },
+   "__aeabi_fadd": {
+    "calls": 1440,
+    "cycles": 54656
+   },
+   "__aeabi_fcmplt": {
+    "calls": 320,
+    "cycles": 4671
+   },
+   "__aeabi_fdiv": {
+    "calls": 160,
+    "cycles": 18939
+   }
+  },
+  "ndsMarioFireballWallLimit": {
+   "__aeabi_fcmpgt": {
+    "calls": 64,
+    "cycles": 945
+   },
+   "__aeabi_i2f": {
+    "calls": 112,
+    "cycles": 1827
+   },
+   "__aeabi_fcmplt": {
+    "calls": 122,
+    "cycles": 1780
+   },
+   "__aeabi_fcmpeq": {
+    "calls": 12,
+    "cycles": 126
+   },
+   "__aeabi_fadd": {
+    "calls": 42,
+    "cycles": 1594
+   }
+  },
+  "efManagerDamageSpawnSparksProcUpdate": {
+   "__aeabi_fmul": {
+    "calls": 7,
+    "cycles": 185
+   },
+   "__aeabi_i2f": {
+    "calls": 1,
+    "cycles": 16
+   },
+   "__aeabi_fdiv": {
+    "calls": 1,
+    "cycles": 118
+   }
+  },
+  "lbParticleUpdateStruct.part.0": {
+   "__aeabi_fsub": {
+    "calls": 286,
+    "cycles": 10855
+   },
+   "__aeabi_fadd": {
+    "calls": 1689,
+    "cycles": 64107
+   },
+   "__aeabi_fmul": {
+    "calls": 933,
+    "cycles": 24684
+   },
+   "__aeabi_i2f": {
+    "calls": 243,
+    "cycles": 3964
+   },
+   "__aeabi_fdiv": {
+    "calls": 243,
+    "cycles": 28764
+   },
+   "__aeabi_fcmpeq": {
+    "calls": 0,
+    "cycles": 0
+   }
+  },
+  "ftMainUpdateColAnim": {
+   "__aeabi_i2f": {
+    "calls": 50,
+    "cycles": 815
+   }
+  },
+  "ndsStageMPSweepFloorLoopSweep": {
+   "__aeabi_fcmpgt": {
+    "calls": 56,
+    "cycles": 826
+   },
+   "__aeabi_fcmpeq": {
+    "calls": 288,
+    "cycles": 3046
+   },
+   "__aeabi_fcmplt": {
+    "calls": 344,
+    "cycles": 5021
+   },
+   "__aeabi_fcmpge": {
+    "calls": 65,
+    "cycles": 925
+   },
+   "__aeabi_fcmple": {
+    "calls": 64,
+    "cycles": 923
+   },
+   "__aeabi_fadd": {
+    "calls": 18,
+    "cycles": 683
+   },
+   "__aeabi_fsub": {
+    "calls": 18,
+    "cycles": 683
+   },
+   "__aeabi_f2iz": {
+    "calls": 18,
+    "cycles": 232
+   },
+   "__aeabi_i2f": {
+    "calls": 9,
+    "cycles": 146
+   }
+  },
+  "gmCollisionGetFighterPartsWorldPosition": {
+   "__aeabi_fmul": {
+    "calls": 13185,
+    "cycles": 348841
+   },
+   "__aeabi_fadd": {
+    "calls": 13185,
+    "cycles": 500446
+   }
+  },
+  "lbParticleGeneratorFuncRun": {
+   "__aeabi_fcmplt": {
+    "calls": 26,
+    "cycles": 379
+   },
+   "__aeabi_fmul": {
+    "calls": 302,
+    "cycles": 7990
+   },
+   "__aeabi_fadd": {
+    "calls": 140,
+    "cycles": 5313
+   },
+   "__aeabi_fsub": {
+    "calls": 49,
+    "cycles": 1859
+   },
+   "__aeabi_fcmpge": {
+    "calls": 22,
+    "cycles": 313
+   },
+   "__aeabi_f2iz": {
+    "calls": 5,
+    "cycles": 64
+   },
+   "__aeabi_i2f": {
+    "calls": 5,
+    "cycles": 81
+   },
+   "__aeabi_fdiv": {
+    "calls": 5,
+    "cycles": 591
+   }
+  },
+  "ndsRendererAdapterBuildDObjXObjMatrix": {
+   "__aeabi_fcmpeq": {
+    "calls": 7367,
+    "cycles": 77930
+   },
+   "__aeabi_fadd": {
+    "calls": 22,
+    "cycles": 835
+   },
+   "__aeabi_fmul": {
+    "calls": 33,
+    "cycles": 873
+   }
+  },
+  "gcPlayAnimAll": {
+   "__aeabi_fcmpeq": {
+    "calls": 2484,
+    "cycles": 26276
+   }
+  },
+  "wpMarioFireballMakeWeapon": {
+   "__aeabi_fmul": {
+    "calls": 15,
+    "cycles": 396
+   }
+  },
+  "ftParamMakeEffect": {
+   "__aeabi_fmul": {
+    "calls": 3,
+    "cycles": 79
+   },
+   "__aeabi_fadd": {
+    "calls": 18,
+    "cycles": 683
+   },
+   "__aeabi_fcmpeq": {
+    "calls": 93,
+    "cycles": 983
+   },
+   "__aeabi_fsub": {
+    "calls": 3,
+    "cycles": 113
+   }
+  },
+  "ftParamGetCapturedDamage": {
+   "__aeabi_i2f": {
+    "calls": 19,
+    "cycles": 310
+   },
+   "__aeabi_fmul": {
+    "calls": 19,
+    "cycles": 502
+   },
+   "__aeabi_fadd": {
+    "calls": 19,
+    "cycles": 721
+   },
+   "__aeabi_f2iz": {
+    "calls": 19,
+    "cycles": 245
+   }
+  },
+  "func_ovl2_800EDE5C": {
+   "__aeabi_fmul": {
+    "calls": 8172,
+    "cycles": 216210
+   },
+   "__aeabi_fadd": {
+    "calls": 5448,
+    "cycles": 206782
+   }
+  },
+  "grWallpaperCalcPersp": {
+   "__aeabi_fsub": {
+    "calls": 960,
+    "cycles": 36437
+   },
+   "__aeabi_fcmplt": {
+    "calls": 640,
+    "cycles": 9342
+   },
+   "__aeabi_fcmpgt": {
+    "calls": 480,
+    "cycles": 7087
+   },
+   "__aeabi_fmul": {
+    "calls": 960,
+    "cycles": 25399
+   },
+   "__aeabi_fadd": {
+    "calls": 480,
+    "cycles": 18218
+   },
+   "__aeabi_fdiv": {
+    "calls": 480,
+    "cycles": 56819
+   }
+  },
+  "syMatrixRowscaleF": {
+   "__aeabi_fcmpeq": {
+    "calls": 2400,
+    "cycles": 25387
+   },
+   "__aeabi_fmul": {
+    "calls": 784,
+    "cycles": 20742
+   }
+  },
+  "efManagerDustLightProcUpdate": {
+   "__aeabi_fadd": {
+    "calls": 106,
+    "cycles": 4023
+   }
+  },
+  "syVectorMag3D": {
+   "__aeabi_fmul": {
+    "calls": 2049,
+    "cycles": 54211
+   },
+   "__aeabi_fadd": {
+    "calls": 1366,
+    "cycles": 51847
+   }
+  },
+  "grPupupuWhispySetWindPush": {
+   "__aeabi_fcmpge": {
+    "calls": 60,
+    "cycles": 854
+   },
+   "__aeabi_fcmple": {
+    "calls": 78,
+    "cycles": 1125
+   },
+   "__aeabi_fadd": {
+    "calls": 30,
+    "cycles": 1138
+   },
+   "__aeabi_fmul": {
+    "calls": 30,
+    "cycles": 793
+   },
+   "__aeabi_fsub": {
+    "calls": 30,
+    "cycles": 1138
+   }
+  },
+  "syUtilsArcTan2": {
+   "__aeabi_fcmpeq": {
+    "calls": 359,
+    "cycles": 3797
+   },
+   "__aeabi_fcmplt": {
+    "calls": 45,
+    "cycles": 656
+   },
+   "__aeabi_fsub": {
+    "calls": 12,
+    "cycles": 455
+   },
+   "__aeabi_fcmpgt": {
+    "calls": 371,
+    "cycles": 5478
+   },
+   "__aeabi_fdiv": {
+    "calls": 369,
+    "cycles": 43679
+   },
+   "__aeabi_fmul": {
+    "calls": 14,
+    "cycles": 370
+   }
+  },
+  "ndsEFManagerMakeVisualEffect": {
+   "__aeabi_fmul": {
+    "calls": 2,
+    "cycles": 52
+   },
+   "__aeabi_fcmplt": {
+    "calls": 1,
+    "cycles": 14
+   },
+   "__aeabi_fcmpgt": {
+    "calls": 1,
+    "cycles": 14
+   },
+   "__aeabi_i2f": {
+    "calls": 3,
+    "cycles": 48
+   }
+  },
+  "ndsMarioFireballWallLimitSample.isra.0": {
+   "__aeabi_fcmpeq": {
+    "calls": 30,
+    "cycles": 317
+   },
+   "__aeabi_i2f": {
+    "calls": 120,
+    "cycles": 1957
+   },
+   "__aeabi_fsub": {
+    "calls": 191,
+    "cycles": 7249
+   },
+   "__aeabi_fdiv": {
+    "calls": 58,
+    "cycles": 6865
+   },
+   "__aeabi_fmul": {
+    "calls": 58,
+    "cycles": 1534
+   },
+   "__aeabi_fadd": {
+    "calls": 45,
+    "cycles": 1708
+   },
+   "__aeabi_fcmplt": {
+    "calls": 40,
+    "cycles": 583
+   },
+   "__aeabi_fcmpgt": {
+    "calls": 38,
+    "cycles": 561
+   },
+   "__aeabi_fcmple": {
+    "calls": 56,
+    "cycles": 807
+   }
+  },
+  "grPupupuWhispyUpdateWait": {
+   "__aeabi_fcmpgt": {
+    "calls": 0,
+    "cycles": 0
+   }
+  },
+  "ndsParticleSetCurrentCamera": {
+   "__aeabi_i2f": {
+    "calls": 480,
+    "cycles": 7831
+   },
+   "__aeabi_fadd": {
+    "calls": 480,
+    "cycles": 18218
+   },
+   "__aeabi_fmul": {
+    "calls": 3280,
+    "cycles": 86780
+   },
+   "__aeabi_f2iz": {
+    "calls": 2560,
+    "cycles": 33074
+   },
+   "__aeabi_fcmpeq": {
+    "calls": 2841,
+    "cycles": 30052
+   },
+   "__aeabi_fsub": {
+    "calls": 240,
+    "cycles": 9109
+   },
+   "__aeabi_fdiv": {
+    "calls": 480,
+    "cycles": 56819
+   },
+   "__aeabi_fcmpgt": {
+    "calls": 160,
+    "cycles": 2362
+   }
+  },
+  "ndsBaseMPProcessCheckTestRWallCollisionAdjNew": {
+   "__aeabi_fadd": {
+    "calls": 2296,
+    "cycles": 87146
+   },
+   "__aeabi_fsub": {
+    "calls": 1312,
+    "cycles": 49797
+   }
+  },
+  "ifCommonPlayerDamageUpdateAnim": {
+   "__aeabi_fadd": {
+    "calls": 0,
+    "cycles": 0
+   }
+  },
+  "syUtilsRandFloat": {
+   "__aeabi_i2f": {
+    "calls": 856,
+    "cycles": 13967
+   },
+   "__aeabi_fmul": {
+    "calls": 856,
+    "cycles": 22647
+   }
+  },
+  "ftMainUpdateReflectorStatWeapon": {
+   "__aeabi_fcmplt": {
+    "calls": 1,
+    "cycles": 14
+   }
+  },
+  "efManagerDustLightMakeEffect": {
+   "__aeabi_fmul": {
+    "calls": 30,
+    "cycles": 793
+   },
+   "__aeabi_fadd": {
+    "calls": 5,
+    "cycles": 189
+   },
+   "__aeabi_fcmpeq": {
+    "calls": 5,
+    "cycles": 52
+   },
+   "__aeabi_fsub": {
+    "calls": 5,
+    "cycles": 189
+   }
+  },
+  "ifCommonAnnounceTimeUpMakeInterface": {
+   "__aeabi_i2f": {
+    "calls": 12,
+    "cycles": 195
+   }
+  },
+  "gmCameraSetBoundsPosition": {
+   "__aeabi_i2f": {
+    "calls": 1280,
+    "cycles": 20885
+   },
+   "__aeabi_fcmpgt": {
+    "calls": 640,
+    "cycles": 9450
+   },
+   "__aeabi_fcmplt": {
+    "calls": 640,
+    "cycles": 9342
+   }
+  },
+  "gmCollisionCheckWeaponInFighterRange": {
+   "__aeabi_fcmpgt": {
+    "calls": 216,
+    "cycles": 3189
+   },
+   "__aeabi_fcmplt": {
+    "calls": 51,
+    "cycles": 744
+   },
+   "__aeabi_fsub": {
+    "calls": 288,
+    "cycles": 10931
+   },
+   "__aeabi_fadd": {
+    "calls": 117,
+    "cycles": 4440
+   }
+  },
+  "func_ovl3_80135B78": {
+   "__aeabi_fadd": {
+    "calls": 24,
+    "cycles": 910
+   },
+   "__aeabi_fdiv": {
+    "calls": 0,
+    "cycles": 0
+   },
+   "__aeabi_i2f": {
+    "calls": 24,
+    "cycles": 391
+   },
+   "__aeabi_fmul": {
+    "calls": 72,
+    "cycles": 1904
+   },
+   "__aeabi_fsub": {
+    "calls": 72,
+    "cycles": 2732
+   },
+   "__aeabi_fcmpgt": {
+    "calls": 48,
+    "cycles": 708
+   },
+   "__aeabi_fcmplt": {
+    "calls": 0,
+    "cycles": 0
+   }
+  },
+  "gmCollisionTestSphere": {
+   "__aeabi_fdiv": {
+    "calls": 11,
+    "cycles": 1302
+   },
+   "__aeabi_fmul": {
+    "calls": 11,
+    "cycles": 291
+   },
+   "__aeabi_fadd": {
+    "calls": 9,
+    "cycles": 341
+   },
+   "__aeabi_fcmpeq": {
+    "calls": 3,
+    "cycles": 31
+   },
+   "__aeabi_fsub": {
+    "calls": 13,
+    "cycles": 493
+   },
+   "__aeabi_fcmplt": {
+    "calls": 1,
+    "cycles": 14
+   },
+   "__aeabi_fcmpge": {
+    "calls": 2,
+    "cycles": 28
+   },
+   "__aeabi_fcmple": {
+    "calls": 2,
+    "cycles": 28
+   }
+  },
+  "ndsEFManagerVisualProcUpdate": {
+   "__aeabi_fcmple": {
+    "calls": 9,
+    "cycles": 129
+   },
+   "__aeabi_fadd": {
+    "calls": 54,
+    "cycles": 2049
+   },
+   "__aeabi_fsub": {
+    "calls": 9,
+    "cycles": 341
+   }
+  },
+  "ftMainProcPhysicsMap": {
+   "__aeabi_fadd": {
+    "calls": 623,
+    "cycles": 23646
+   },
+   "__aeabi_fcmpeq": {
+    "calls": 919,
+    "cycles": 9721
+   },
+   "__aeabi_i2f": {
+    "calls": 320,
+    "cycles": 5221
+   },
+   "__aeabi_fmul": {
+    "calls": 88,
+    "cycles": 2328
+   },
+   "__aeabi_fcmpge": {
+    "calls": 320,
+    "cycles": 4557
+   },
+   "__aeabi_fcmpgt": {
+    "calls": 323,
+    "cycles": 4769
+   },
+   "__aeabi_fcmplt": {
+    "calls": 43,
+    "cycles": 627
+   },
+   "__aeabi_fsub": {
+    "calls": 42,
+    "cycles": 1594
+   }
+  },
+  "ndsBaseMPProcessCheckTestCeilCollisionAdjNew": {
+   "__aeabi_fadd": {
+    "calls": 328,
+    "cycles": 12449
+   }
+  },
+  "gmCameraDefaultFuncCamera": {
+   "__aeabi_fmul": {
+    "calls": 640,
+    "cycles": 16932
+   },
+   "__aeabi_fsub": {
+    "calls": 755,
+    "cycles": 28656
+   },
+   "__aeabi_fadd": {
+    "calls": 321,
+    "cycles": 12183
+   },
+   "__aeabi_fcmple": {
+    "calls": 160,
+    "cycles": 2307
+   },
+   "__aeabi_fcmpgt": {
+    "calls": 160,
+    "cycles": 2362
+   },
+   "__aeabi_fcmplt": {
+    "calls": 160,
+    "cycles": 2335
+   },
+   "__aeabi_fdiv": {
+    "calls": 160,
+    "cycles": 18939
+   }
+  },
+  "ftComputerFollowObjectiveAttack.part.0": {
+   "__aeabi_fcmpgt": {
+    "calls": 79,
+    "cycles": 1166
+   },
+   "__aeabi_fdiv": {
+    "calls": 5,
+    "cycles": 591
+   },
+   "__aeabi_fmul": {
+    "calls": 67,
+    "cycles": 1772
+   },
+   "__aeabi_fsub": {
+    "calls": 52,
+    "cycles": 1973
+   },
+   "__aeabi_fcmplt": {
+    "calls": 265,
+    "cycles": 3868
+   },
+   "__aeabi_fadd": {
+    "calls": 67,
+    "cycles": 2543
+   },
+   "__aeabi_i2f": {
+    "calls": 5,
+    "cycles": 81
+   }
+  },
+  "ftPhysicsApplyAirVelDriftFastFall": {
+   "__aeabi_fcmplt": {
+    "calls": 237,
+    "cycles": 3459
+   },
+   "__aeabi_i2f": {
+    "calls": 67,
+    "cycles": 1093
+   },
+   "__aeabi_fmul": {
+    "calls": 67,
+    "cycles": 1772
+   },
+   "__aeabi_fadd": {
+    "calls": 67,
+    "cycles": 2543
+   },
+   "__aeabi_fsub": {
+    "calls": 109,
+    "cycles": 4137
+   }
+  },
+  "__ieee754_rem_pio2f": {
+   "__aeabi_fadd": {
+    "calls": 235,
+    "cycles": 8919
+   },
+   "__aeabi_fsub": {
+    "calls": 2170,
+    "cycles": 82363
+   },
+   "__aeabi_fmul": {
+    "calls": 984,
+    "cycles": 26034
+   },
+   "__aeabi_f2iz": {
+    "calls": 228,
+    "cycles": 2945
+   },
+   "__aeabi_i2f": {
+    "calls": 228,
+    "cycles": 3720
+   }
+  },
+  "ndsBaseMPProcessCheckFloorEdgeCollisionR": {
+   "__aeabi_fadd": {
+    "calls": 306,
+    "cycles": 11614
+   },
+   "__aeabi_fsub": {
+    "calls": 153,
+    "cycles": 5807
+   }
+  },
+  "ndsBaseFTCommonOttottoProcMap": {
+   "__aeabi_fcmplt": {
+    "calls": 0,
+    "cycles": 0
+   },
+   "__aeabi_fsub": {
+    "calls": 0,
+    "cycles": 0
+   },
+   "__aeabi_fcmpgt": {
+    "calls": 0,
+    "cycles": 0
+   }
+  },
+  "ndsBaseFTCommonGuardUpdateShieldAngle": {
+   "__aeabi_fmul": {
+    "calls": 10,
+    "cycles": 264
+   },
+   "__aeabi_i2f": {
+    "calls": 20,
+    "cycles": 326
+   },
+   "__aeabi_fcmpgt": {
+    "calls": 10,
+    "cycles": 147
+   },
+   "__aeabi_fcmplt": {
+    "calls": 5,
+    "cycles": 72
+   },
+   "__aeabi_fdiv": {
+    "calls": 15,
+    "cycles": 1775
+   },
+   "__aeabi_f2iz": {
+    "calls": 5,
+    "cycles": 64
+   },
+   "__aeabi_fsub": {
+    "calls": 5,
+    "cycles": 189
+   }
+  },
+  "ftMarioSpecialLwProcPhysics": {
+   "__aeabi_fcmplt": {
+    "calls": 2,
+    "cycles": 29
+   },
+   "__aeabi_fsub": {
+    "calls": 2,
+    "cycles": 75
+   },
+   "__aeabi_fadd": {
+    "calls": 2,
+    "cycles": 75
+   }
+  },
+  "ndsBaseFTCommonDeadCheckInterruptCommon": {
+   "__aeabi_fcmplt": {
+    "calls": 634,
+    "cycles": 9254
+   },
+   "__aeabi_i2f": {
+    "calls": 1268,
+    "cycles": 20689
+   },
+   "__aeabi_fcmpgt": {
+    "calls": 634,
+    "cycles": 9361
+   }
+  },
+  "func_ovl2_8010C3C0": {
+   "__aeabi_fmul": {
+    "calls": 320,
+    "cycles": 8466
+   },
+   "__aeabi_fsub": {
+    "calls": 160,
+    "cycles": 6072
+   },
+   "__aeabi_fcmpgt": {
+    "calls": 304,
+    "cycles": 4488
+   },
+   "__aeabi_fdiv": {
+    "calls": 640,
+    "cycles": 75758
+   },
+   "__aeabi_fcmplt": {
+    "calls": 320,
+    "cycles": 4671
+   }
+  },
+  "ftPhysicsClampAirVelXStickRange": {
+   "__aeabi_fcmpgt": {
+    "calls": 0,
+    "cycles": 0
+   },
+   "__aeabi_i2f": {
+    "calls": 0,
+    "cycles": 0
+   },
+   "__aeabi_fmul": {
+    "calls": 0,
+    "cycles": 0
+   },
+   "__aeabi_fadd": {
+    "calls": 0,
+    "cycles": 0
+   },
+   "__aeabi_fcmplt": {
+    "calls": 0,
+    "cycles": 0
+   }
+  },
+  "syMatrixTra": {
+   "__aeabi_f2iz": {
+    "calls": 84,
+    "cycles": 1085
+   },
+   "__aeabi_fmul": {
+    "calls": 84,
+    "cycles": 2222
+   }
+  },
+  "ftPhysicsGetAirVelTransN": {
+   "__aeabi_fmul": {
+    "calls": 72,
+    "cycles": 1904
+   },
+   "__aeabi_fadd": {
+    "calls": 8,
+    "cycles": 303
+   },
+   "__aeabi_fsub": {
+    "calls": 32,
+    "cycles": 1214
+   },
+   "__aeabi_i2f": {
+    "calls": 16,
+    "cycles": 261
+   }
+  },
+  "ndsBaseMPProcessCheckFloorEdgeCollisionL": {
+   "__aeabi_fadd": {
+    "calls": 459,
+    "cycles": 17421
+   }
+  },
+  "ftParamGetStickAngleRads": {
+   "__aeabi_i2f": {
+    "calls": 12,
+    "cycles": 195
+   }
+  },
+  "ifCommonPlayerArrowsFuncRun": {
+   "__aeabi_fcmplt": {
+    "calls": 0,
+    "cycles": 0
+   },
+   "__aeabi_fcmpgt": {
+    "calls": 0,
+    "cycles": 0
+   }
+  },
+  "syMatrixLookAtF": {
+   "__aeabi_fmul": {
+    "calls": 6240,
+    "cycles": 165094
+   },
+   "__aeabi_fdiv": {
+    "calls": 480,
+    "cycles": 56819
+   },
+   "__aeabi_fadd": {
+    "calls": 1920,
+    "cycles": 72874
+   },
+   "__aeabi_fsub": {
+    "calls": 1440,
+    "cycles": 54656
+   }
+  },
+  "ftPhysicsApplyClampGroundVelStickRange": {
+   "__aeabi_fmul": {
+    "calls": 8,
+    "cycles": 211
+   },
+   "__aeabi_fadd": {
+    "calls": 4,
+    "cycles": 151
+   },
+   "__aeabi_fcmpgt": {
+    "calls": 4,
+    "cycles": 59
+   },
+   "__aeabi_i2f": {
+    "calls": 8,
+    "cycles": 130
+   },
+   "__aeabi_fcmplt": {
+    "calls": 4,
+    "cycles": 58
+   }
+  },
+  "ftParamGetCommonKnockback": {
+   "__aeabi_fmul": {
+    "calls": 202,
+    "cycles": 5344
+   },
+   "__aeabi_ui2f": {
+    "calls": 19,
+    "cycles": 76
+   },
+   "__aeabi_fadd": {
+    "calls": 57,
+    "cycles": 2163
+   },
+   "__aeabi_i2f": {
+    "calls": 69,
+    "cycles": 1125
+   },
+   "__aeabi_fcmpge": {
+    "calls": 19,
+    "cycles": 270
+   }
+  },
+  "ndsParticleDrawOwnTextureQuad": {
+   "__aeabi_fmul": {
+    "calls": 380,
+    "cycles": 10053
+   },
+   "__aeabi_i2f": {
+    "calls": 60,
+    "cycles": 978
+   },
+   "__aeabi_fadd": {
+    "calls": 120,
+    "cycles": 4554
+   },
+   "__aeabi_fcmpeq": {
+    "calls": 20,
+    "cycles": 211
+   },
+   "__aeabi_fcmple": {
+    "calls": 20,
+    "cycles": 288
+   },
+   "__aeabi_f2iz": {
+    "calls": 20,
+    "cycles": 258
+   }
+  },
+  "gmCameraLookAtFuncMatrix": {
+   "__aeabi_fcmplt": {
+    "calls": 5120,
+    "cycles": 74737
+   },
+   "__aeabi_fcmpgt": {
+    "calls": 160,
+    "cycles": 2362
+   }
+  },
+  "__kernel_cosf": {
+   "__aeabi_f2iz": {
+    "calls": 517,
+    "cycles": 6679
+   },
+   "__aeabi_fmul": {
+    "calls": 2070,
+    "cycles": 54766
+   },
+   "__aeabi_fadd": {
+    "calls": 621,
+    "cycles": 23570
+   },
+   "__aeabi_fsub": {
+    "calls": 1158,
+    "cycles": 43952
+   }
+  },
+  "ftMainUpdateMotionEventsForward": {
+   "__aeabi_fcmpgt": {
+    "calls": 10,
+    "cycles": 147
+   },
+   "__aeabi_fcmpeq": {
+    "calls": 11,
+    "cycles": 116
+   },
+   "__aeabi_fsub": {
+    "calls": 1,
+    "cycles": 37
+   }
+  },
+  "ndsRendererAdapterBuildNativeMaterialSnapshot": {
+   "__aeabi_f2iz": {
+    "calls": 832,
+    "cycles": 10749
+   },
+   "__aeabi_fmul": {
+    "calls": 1472,
+    "cycles": 38945
+   },
+   "__aeabi_fcmpgt": {
+    "calls": 672,
+    "cycles": 9922
+   },
+   "__aeabi_ui2f": {
+    "calls": 1328,
+    "cycles": 5312
+   },
+   "__aeabi_fsub": {
+    "calls": 656,
+    "cycles": 24898
+   },
+   "__aeabi_fcmplt": {
+    "calls": 672,
+    "cycles": 9809
+   },
+   "__aeabi_fadd": {
+    "calls": 656,
+    "cycles": 24898
+   },
+   "__aeabi_fdiv": {
+    "calls": 688,
+    "cycles": 81440
+   }
+  },
+  "syVectorAdd3D": {
+   "__aeabi_fadd": {
+    "calls": 3228,
+    "cycles": 122521
+   }
+  },
+  "ftPhysicsApplyGroundVelFriction": {
+   "__aeabi_fmul": {
+    "calls": 103,
+    "cycles": 2725
+   },
+   "__aeabi_fcmplt": {
+    "calls": 206,
+    "cycles": 3007
+   },
+   "__aeabi_fcmpgt": {
+    "calls": 103,
+    "cycles": 1520
+   },
+   "__aeabi_fsub": {
+    "calls": 9,
+    "cycles": 341
+   },
+   "__aeabi_fadd": {
+    "calls": 0,
+    "cycles": 0
+   }
+  },
+  "battleship_ftPublicProcUpdate": {
+   "__aeabi_fcmplt": {
+    "calls": 320,
+    "cycles": 4671
+   },
+   "__aeabi_fsub": {
+    "calls": 320,
+    "cycles": 12145
+   }
+  },
+  "ftComputerGetObjectiveStatus": {
+   "__aeabi_fcmpgt": {
+    "calls": 83,
+    "cycles": 1225
+   },
+   "__aeabi_fcmplt": {
+    "calls": 0,
+    "cycles": 0
+   },
+   "__aeabi_fmul": {
+    "calls": 168,
+    "cycles": 4444
+   },
+   "__aeabi_fsub": {
+    "calls": 168,
+    "cycles": 6376
+   },
+   "__aeabi_fadd": {
+    "calls": 83,
+    "cycles": 3150
+   },
+   "__aeabi_i2f": {
+    "calls": 0,
+    "cycles": 0
+   },
+   "__aeabi_fcmple": {
+    "calls": 2,
+    "cycles": 28
+   }
+  },
+  "func_ovl3_801397F4.part.0": {
+   "__aeabi_fadd": {
+    "calls": 60,
+    "cycles": 2277
+   },
+   "__aeabi_fcmpgt": {
+    "calls": 83,
+    "cycles": 1225
+   },
+   "__aeabi_fcmplt": {
+    "calls": 124,
+    "cycles": 1810
+   },
+   "__aeabi_fmul": {
+    "calls": 60,
+    "cycles": 1587
+   },
+   "__aeabi_i2f": {
+    "calls": 4,
+    "cycles": 65
+   },
+   "__aeabi_fdiv": {
+    "calls": 4,
+    "cycles": 473
+   }
+  },
+  "battleship_ftMainSetStatus": {
+   "__aeabi_fcmpeq": {
+    "calls": 126,
+    "cycles": 1332
+   },
+   "__aeabi_fsub": {
+    "calls": 63,
+    "cycles": 2391
+   },
+   "__aeabi_fmul": {
+    "calls": 63,
+    "cycles": 1666
+   },
+   "__aeabi_i2f": {
+    "calls": 63,
+    "cycles": 1027
+   }
+  },
+  "ndsBaseEFManagerDamageNormalLightMakeEffect": {
+   "__aeabi_fadd": {
+    "calls": 22,
+    "cycles": 835
+   },
+   "__aeabi_fmul": {
+    "calls": 55,
+    "cycles": 1455
+   },
+   "__aeabi_i2f": {
+    "calls": 11,
+    "cycles": 179
+   }
+  },
+  "battleship_ftAnimEndSetFall": {
+   "__aeabi_fcmple": {
+    "calls": 87,
+    "cycles": 1254
+   }
+  },
+  "ndsFireGrindUpdate": {
+   "__aeabi_fadd": {
+    "calls": 81,
+    "cycles": 3074
+   },
+   "__aeabi_fmul": {
+    "calls": 162,
+    "cycles": 4286
+   },
+   "__aeabi_fsub": {
+    "calls": 54,
+    "cycles": 2049
+   }
+  },
+  "ndsMPFCSegmentCrossesKernel": {
+   "__aeabi_fsub": {
+    "calls": 985,
+    "cycles": 37386
+   },
+   "__aeabi_fdiv": {
+    "calls": 37,
+    "cycles": 4379
+   },
+   "__aeabi_fmul": {
+    "calls": 37,
+    "cycles": 978
+   },
+   "__aeabi_fadd": {
+    "calls": 37,
+    "cycles": 1404
+   }
+  },
+  "ifCommonPlayerDamageProcDisplay": {
+   "__aeabi_i2f": {
+    "calls": 2046,
+    "cycles": 33383
+   },
+   "__aeabi_fmul": {
+    "calls": 2297,
+    "cycles": 60772
+   },
+   "__aeabi_f2iz": {
+    "calls": 971,
+    "cycles": 12545
+   },
+   "__aeabi_fsub": {
+    "calls": 1075,
+    "cycles": 40802
+   },
+   "__aeabi_fcmpeq": {
+    "calls": 304,
+    "cycles": 3215
+   },
+   "__aeabi_fdiv": {
+    "calls": 147,
+    "cycles": 17400
+   },
+   "__aeabi_fcmplt": {
+    "calls": 147,
+    "cycles": 2145
+   }
+  },
+  "lbCommonSim2D": {
+   "__aeabi_fadd": {
+    "calls": 4,
+    "cycles": 151
+   },
+   "__aeabi_fmul": {
+    "calls": 6,
+    "cycles": 158
+   },
+   "__aeabi_fdiv": {
+    "calls": 1,
+    "cycles": 118
+   }
+  },
+  "ftMainUpdateMotionEventsAll": {
+   "__aeabi_fsub": {
+    "calls": 185,
+    "cycles": 7021
+   },
+   "__aeabi_fcmpeq": {
+    "calls": 725,
+    "cycles": 7669
+   },
+   "__aeabi_fcmpgt": {
+    "calls": 540,
+    "cycles": 7973
+   }
+  },
+  "wpProcessUpdateHitPositions": {
+   "__aeabi_fadd": {
+    "calls": 207,
+    "cycles": 7856
+   },
+   "__aeabi_fcmpeq": {
+    "calls": 207,
+    "cycles": 2189
+   }
+  },
+  "ftComputerSetCommandWaitShort": {
+   "__aeabi_fmul": {
+    "calls": 21,
+    "cycles": 555
+   },
+   "__aeabi_i2f": {
+    "calls": 42,
+    "cycles": 685
+   },
+   "__aeabi_fadd": {
+    "calls": 51,
+    "cycles": 1935
+   }
+  },
+  "lbCommonReflect2D": {
+   "__aeabi_fmul": {
+    "calls": 5,
+    "cycles": 132
+   },
+   "__aeabi_fadd": {
+    "calls": 3,
+    "cycles": 113
+   }
+  },
+  "syVectorAngleDiff3D": {
+   "__aeabi_fadd": {
+    "calls": 36,
+    "cycles": 1366
+   },
+   "__aeabi_fmul": {
+    "calls": 60,
+    "cycles": 1587
+   },
+   "__aeabi_fcmpeq": {
+    "calls": 6,
+    "cycles": 63
+   },
+   "__aeabi_fdiv": {
+    "calls": 6,
+    "cycles": 710
+   },
+   "__aeabi_fcmpgt": {
+    "calls": 6,
+    "cycles": 88
+   },
+   "__aeabi_fcmplt": {
+    "calls": 6,
+    "cycles": 87
+   }
+  },
+  "ndsStageGCDrawAllLoopRecordDObjDraw": {
+   "__aeabi_fcmpeq": {
+    "calls": 67,
+    "cycles": 708
+   },
+   "__aeabi_fcmpge": {
+    "calls": 20,
+    "cycles": 284
+   }
+  },
+  "ndsBaseMPProcessCheckTestFloorCollisionAdjNew": {
+   "__aeabi_fadd": {
+    "calls": 384,
+    "cycles": 14574
+   }
+  },
+  "lbParticleRotateVel": {
+   "__aeabi_fmul": {
+    "calls": 44,
+    "cycles": 1164
+   },
+   "__aeabi_fadd": {
+    "calls": 14,
+    "cycles": 531
+   },
+   "__aeabi_fsub": {
+    "calls": 2,
+    "cycles": 75
+   }
+  },
+  "atanf": {
+   "__aeabi_fadd": {
+    "calls": 12,
+    "cycles": 455
+   },
+   "__aeabi_fmul": {
+    "calls": 28,
+    "cycles": 740
+   },
+   "__aeabi_fsub": {
+    "calls": 14,
+    "cycles": 531
+   },
+   "__aeabi_fdiv": {
+    "calls": 2,
+    "cycles": 236
+   }
+  },
+  "ndsMPCommonProcFighterDamageFloorOnly": {
+   "__aeabi_f2iz": {
+    "calls": 0,
+    "cycles": 0
+   },
+   "__aeabi_fadd": {
+    "calls": 0,
+    "cycles": 0
+   },
+   "__aeabi_fcmpgt": {
+    "calls": 0,
+    "cycles": 0
+   },
+   "__aeabi_fmul": {
+    "calls": 0,
+    "cycles": 0
+   },
+   "__aeabi_fcmpge": {
+    "calls": 0,
+    "cycles": 0
+   },
+   "__aeabi_fsub": {
+    "calls": 0,
+    "cycles": 0
+   }
+  },
+  "battleship_ftAnimEndSetWait": {
+   "__aeabi_fcmple": {
+    "calls": 49,
+    "cycles": 706
+   }
+  },
+  "efManagerDamageFlyOrbsProcUpdate": {
+   "__aeabi_fadd": {
+    "calls": 0,
+    "cycles": 0
+   },
+   "__aeabi_fsub": {
+    "calls": 0,
+    "cycles": 0
+   }
+  },
+  "ifCommonPlayerArrowsUpdateFlags": {
+   "__aeabi_fcmplt": {
+    "calls": 0,
+    "cycles": 0
+   },
+   "__aeabi_fcmpgt": {
+    "calls": 0,
+    "cycles": 0
+   }
+  },
+  "ifCommonTimerProcDisplay": {
+   "__aeabi_i2f": {
+    "calls": 15,
+    "cycles": 244
+   },
+   "__aeabi_fsub": {
+    "calls": 6,
+    "cycles": 227
+   },
+   "__aeabi_fmul": {
+    "calls": 6,
+    "cycles": 158
+   },
+   "__aeabi_f2iz": {
+    "calls": 6,
+    "cycles": 77
+   }
+  },
+  "wpProcessProcWeaponMain": {
+   "__aeabi_i2f": {
+    "calls": 252,
+    "cycles": 4111
+   },
+   "__aeabi_fadd": {
+    "calls": 189,
+    "cycles": 7173
+   },
+   "__aeabi_fsub": {
+    "calls": 189,
+    "cycles": 7173
+   },
+   "__aeabi_fcmpgt": {
+    "calls": 189,
+    "cycles": 2790
+   },
+   "__aeabi_fcmplt": {
+    "calls": 189,
+    "cycles": 2758
+   }
+  },
+  "gmCameraGetAdjustAtAngle": {
+   "__aeabi_fadd": {
+    "calls": 480,
+    "cycles": 18218
+   },
+   "__aeabi_fmul": {
+    "calls": 320,
+    "cycles": 8466
+   }
+  },
+  "syVectorNorm3D": {
+   "__aeabi_fdiv": {
+    "calls": 457,
+    "cycles": 54096
+   },
+   "__aeabi_fmul": {
+    "calls": 2742,
+    "cycles": 72546
+   },
+   "__aeabi_fadd": {
+    "calls": 914,
+    "cycles": 34691
+   },
+   "__aeabi_fcmpeq": {
+    "calls": 457,
+    "cycles": 4834
+   }
+  },
+  "ndsBaseMPProcessCheckTestFloorCollisionNew": {
+   "__aeabi_fadd": {
+    "calls": 300,
+    "cycles": 11386
+   },
+   "__aeabi_fcmple": {
+    "calls": 2,
+    "cycles": 28
+   },
+   "__aeabi_fsub": {
+    "calls": 2,
+    "cycles": 75
+   }
+  },
+  "ftComputerUpdateInputs.part.0": {
+   "__aeabi_fsub": {
+    "calls": 262,
+    "cycles": 9944
+   },
+   "__aeabi_fcmplt": {
+    "calls": 430,
+    "cycles": 6276
+   },
+   "__aeabi_i2f": {
+    "calls": 94,
+    "cycles": 1533
+   },
+   "__aeabi_fdiv": {
+    "calls": 106,
+    "cycles": 12547
+   },
+   "__aeabi_fcmpeq": {
+    "calls": 177,
+    "cycles": 1872
+   },
+   "__aeabi_fcmpgt": {
+    "calls": 218,
+    "cycles": 3218
+   },
+   "__aeabi_fmul": {
+    "calls": 145,
+    "cycles": 3836
+   },
+   "__aeabi_f2iz": {
+    "calls": 131,
+    "cycles": 1692
+   }
+  },
+  "ftComputerProcDefault": {
+   "__aeabi_fcmplt": {
+    "calls": 174,
+    "cycles": 2539
+   }
+  },
+  "grPupupuWhispyUpdateBlink": {
+   "__aeabi_fcmple": {
+    "calls": 161,
+    "cycles": 2322
+   }
+  },
+  "ifCommonPlayerTagProcDisplay": {
+   "__aeabi_fcmpgt": {
+    "calls": 159,
+    "cycles": 2347
+   },
+   "__aeabi_fadd": {
+    "calls": 2,
+    "cycles": 75
+   }
+  },
+  "ndsBaseMPProcessCheckTestFloorCollision": {
+   "__aeabi_fadd": {
+    "calls": 300,
+    "cycles": 11386
+   }
+  },
+  "wpMarioFireballProcUpdate": {
+   "__aeabi_fadd": {
+    "calls": 44,
+    "cycles": 1670
+   }
+  },
+  "ftFoxSpecialLwStartProcUpdate": {
+   "__aeabi_fcmple": {
+    "calls": 1,
+    "cycles": 14
+   }
+  },
+  "ftFoxSpecialLwHitProcUpdate": {
+   "__aeabi_fcmple": {
+    "calls": 6,
+    "cycles": 86
+   }
+  },
+  "ftFoxSpecialLwEndProcUpdate": {
+   "__aeabi_fcmple": {
+    "calls": 0,
+    "cycles": 0
+   }
+  },
+  "ftPhysicsApplyGroundVelTransN": {
+   "__aeabi_fsub": {
+    "calls": 14,
+    "cycles": 531
+   },
+   "__aeabi_fmul": {
+    "calls": 28,
+    "cycles": 740
+   },
+   "__aeabi_i2f": {
+    "calls": 14,
+    "cycles": 228
+   },
+   "__aeabi_fcmplt": {
+    "calls": 7,
+    "cycles": 102
+   }
+  },
+  "ftMarioSpecialHiProcUpdate": {
+   "__aeabi_fcmple": {
+    "calls": 10,
+    "cycles": 144
+   }
+  },
+  "func_ovl2_8010C5C0": {
+   "__aeabi_fadd": {
+    "calls": 480,
+    "cycles": 18218
+   },
+   "__aeabi_fmul": {
+    "calls": 640,
+    "cycles": 16932
+   }
+  },
+  "ndsBaseFTCommonKneeBendProcUpdate": {
+   "__aeabi_fcmpge": {
+    "calls": 6,
+    "cycles": 85
+   },
+   "__aeabi_fadd": {
+    "calls": 6,
+    "cycles": 227
+   }
+  },
+  "ndsBaseFTCommonKneeBendProcInterrupt": {
+   "__aeabi_fcmplt": {
+    "calls": 3,
+    "cycles": 43
+   },
+   "__aeabi_i2f": {
+    "calls": 3,
+    "cycles": 48
+   }
+  },
+  "ftFoxSpecialNProcUpdate": {
+   "__aeabi_fcmple": {
+    "calls": 16,
+    "cycles": 230
+   }
+  },
+  "func_ovl3_80138AA8": {
+   "__aeabi_fsub": {
+    "calls": 14,
+    "cycles": 531
+   },
+   "__aeabi_fcmplt": {
+    "calls": 31,
+    "cycles": 452
+   },
+   "__aeabi_i2f": {
+    "calls": 5,
+    "cycles": 81
+   },
+   "__aeabi_fdiv": {
+    "calls": 5,
+    "cycles": 591
+   },
+   "__aeabi_fcmpgt": {
+    "calls": 2,
+    "cycles": 29
+   },
+   "__aeabi_fmul": {
+    "calls": 0,
+    "cycles": 0
+   },
+   "__aeabi_fadd": {
+    "calls": 0,
+    "cycles": 0
+   }
+  },
+  "ftPhysicsApplyAirVelXFriction": {
+   "__aeabi_fadd": {
+    "calls": 66,
+    "cycles": 2505
+   },
+   "__aeabi_fcmplt": {
+    "calls": 205,
+    "cycles": 2992
+   },
+   "__aeabi_fcmpgt": {
+    "calls": 150,
+    "cycles": 2214
+   },
+   "__aeabi_fsub": {
+    "calls": 55,
+    "cycles": 2087
+   }
+  },
+  "ndsBaseMPProcessCheckTestRCliffCollision": {
+   "__aeabi_fsub": {
+    "calls": 18,
+    "cycles": 683
+   },
+   "__aeabi_fadd": {
+    "calls": 18,
+    "cycles": 683
+   }
+  },
+  "ftParamGetHitLag": {
+   "__aeabi_fmul": {
+    "calls": 70,
+    "cycles": 1852
+   },
+   "__aeabi_i2f": {
+    "calls": 70,
+    "cycles": 1142
+   },
+   "__aeabi_fadd": {
+    "calls": 35,
+    "cycles": 1328
+   },
+   "__aeabi_f2iz": {
+    "calls": 70,
+    "cycles": 904
+   }
+  },
+  "ndsBaseMPProcessSetCollProjectFloorID": {
+   "__aeabi_fadd": {
+    "calls": 167,
+    "cycles": 6338
+   }
+  },
+  "ndsBaseFTCommonDamageAirCommonProcUpdate": {
+   "__aeabi_fcmple": {
+    "calls": 19,
+    "cycles": 274
+   }
+  },
+  "grPupupuWhispyUpdateOpen": {
+   "__aeabi_fcmple": {
+    "calls": 2,
+    "cycles": 28
+   }
+  },
+  "grPupupuFlowersBackUpdateAll": {
+   "__aeabi_fcmple": {
+    "calls": 2,
+    "cycles": 28
+   }
+  },
+  "grPupupuFlowersFrontUpdateAll": {
+   "__aeabi_fcmple": {
+    "calls": 0,
+    "cycles": 0
+   }
+  },
+  "efManagerImpactWaveProcUpdate": {
+   "__aeabi_fsub": {
+    "calls": 13,
+    "cycles": 493
+   },
+   "__aeabi_fcmple": {
+    "calls": 14,
+    "cycles": 201
+   },
+   "__aeabi_fcmpgt": {
+    "calls": 13,
+    "cycles": 191
+   },
+   "__aeabi_fcmplt": {
+    "calls": 13,
+    "cycles": 189
+   }
+  },
+  "grPupupuUpdateWhispyStatus": {
+   "__aeabi_fcmple": {
+    "calls": 10,
+    "cycles": 144
+   }
+  },
+  "wpMainGetStaledDamage": {
+   "__aeabi_fadd": {
+    "calls": 7,
+    "cycles": 265
+   },
+   "__aeabi_i2f": {
+    "calls": 7,
+    "cycles": 114
+   },
+   "__aeabi_fmul": {
+    "calls": 7,
+    "cycles": 185
+   },
+   "__aeabi_f2iz": {
+    "calls": 7,
+    "cycles": 90
+   }
+  },
+  "ndsBaseFTCommonTurnProcUpdate": {
+   "__aeabi_fcmple": {
+    "calls": 4,
+    "cycles": 57
+   }
+  },
+  "ndsBaseFTCommonGuardUpdateJoints": {
+   "__aeabi_i2f": {
+    "calls": 5,
+    "cycles": 81
+   },
+   "__aeabi_fdiv": {
+    "calls": 10,
+    "cycles": 1183
+   },
+   "__aeabi_fmul": {
+    "calls": 10,
+    "cycles": 264
+   },
+   "__aeabi_fadd": {
+    "calls": 5,
+    "cycles": 189
+   }
+  },
+  "ndsBaseFTCommonGuardOffProcUpdate": {
+   "__aeabi_fcmple": {
+    "calls": 0,
+    "cycles": 0
+   }
+  },
+  "func_ovl3_801346D4": {
+   "__aeabi_fadd": {
+    "calls": 0,
+    "cycles": 0
+   },
+   "__aeabi_fsub": {
+    "calls": 0,
+    "cycles": 0
+   },
+   "__aeabi_fcmplt": {
+    "calls": 0,
+    "cycles": 0
+   },
+   "__aeabi_fcmpgt": {
+    "calls": 0,
+    "cycles": 0
+   }
+  },
+  "func_ovl3_80134964": {
+   "__aeabi_fcmpge": {
+    "calls": 0,
+    "cycles": 0
+   }
+  },
+  "battleship_ftMainProcParams": {
+   "__aeabi_fcmpeq": {
+    "calls": 320,
+    "cycles": 3385
+   },
+   "__aeabi_fcmplt": {
+    "calls": 19,
+    "cycles": 277
+   },
+   "__aeabi_fsub": {
+    "calls": 19,
+    "cycles": 721
+   },
+   "__aeabi_fcmple": {
+    "calls": 19,
+    "cycles": 274
+   },
+   "__aeabi_i2f": {
+    "calls": 35,
+    "cycles": 571
+   },
+   "__aeabi_fmul": {
+    "calls": 35,
+    "cycles": 926
+   },
+   "__aeabi_fadd": {
+    "calls": 35,
+    "cycles": 1328
+   },
+   "__aeabi_f2iz": {
+    "calls": 35,
+    "cycles": 452
+   }
+  },
+  "lbCommonMag2D": {
+   "__aeabi_fmul": {
+    "calls": 90,
+    "cycles": 2381
+   },
+   "__aeabi_fadd": {
+    "calls": 45,
+    "cycles": 1708
+   }
+  },
+  "ftPhysicsSetGroundVelTransferAir": {
+   "__aeabi_fmul": {
+    "calls": 592,
+    "cycles": 15662
+   },
+   "__aeabi_fcmpgt": {
+    "calls": 160,
+    "cycles": 2362
+   },
+   "__aeabi_i2f": {
+    "calls": 148,
+    "cycles": 2414
+   },
+   "__aeabi_fadd": {
+    "calls": 308,
+    "cycles": 11690
+   },
+   "__aeabi_fcmplt": {
+    "calls": 154,
+    "cycles": 2247
+   }
+  },
+  "ndsCameraCatCamera": {
+   "__aeabi_fmul": {
+    "calls": 3200,
+    "cycles": 84663
+   },
+   "__aeabi_fadd": {
+    "calls": 640,
+    "cycles": 24291
+   }
+  },
+  "ftPhysicsCheckSetFastFall": {
+   "__aeabi_fcmplt": {
+    "calls": 111,
+    "cycles": 1620
+   }
+  },
+  "func_ovl2_800EF5D4": {
+   "__aeabi_fsub": {
+    "calls": 10,
+    "cycles": 379
+   },
+   "__aeabi_fcmpgt": {
+    "calls": 20,
+    "cycles": 295
+   },
+   "__aeabi_fadd": {
+    "calls": 18,
+    "cycles": 683
+   },
+   "__aeabi_fmul": {
+    "calls": 2,
+    "cycles": 52
+   },
+   "__aeabi_fcmplt": {
+    "calls": 3,
+    "cycles": 43
+   }
+  },
+  "ftMarioSpecialHiProcMap": {
+   "__aeabi_fcmpge": {
+    "calls": 8,
+    "cycles": 113
+   }
+  },
+  "ndsBaseFTCommonGuardOnProcUpdate": {
+   "__aeabi_fcmple": {
+    "calls": 2,
+    "cycles": 28
+   }
+  },
+  "ifCommonTimerFuncRun": {
+   "__aeabi_ui2f": {
+    "calls": 34,
+    "cycles": 136
+   },
+   "__aeabi_fdiv": {
+    "calls": 34,
+    "cycles": 4024
+   },
+   "__aeabi_fadd": {
+    "calls": 34,
+    "cycles": 1290
+   },
+   "__aeabi_fmul": {
+    "calls": 34,
+    "cycles": 899
+   }
+  },
+  "ndsSObjFastWallpaperGetTransform.part.0": {
+   "__aeabi_fcmpgt": {
+    "calls": 320,
+    "cycles": 4725
+   },
+   "__aeabi_fcmplt": {
+    "calls": 320,
+    "cycles": 4671
+   },
+   "__aeabi_f2iz": {
+    "calls": 160,
+    "cycles": 2067
+   },
+   "__aeabi_fmul": {
+    "calls": 160,
+    "cycles": 4233
+   },
+   "__aeabi_fadd": {
+    "calls": 160,
+    "cycles": 6072
+   }
+  },
+  "syVectorScale3D": {
+   "__aeabi_fmul": {
+    "calls": 1371,
+    "cycles": 36273
+   }
+  },
+  "gcAddMObjForDObj": {
+   "__aeabi_fdiv": {
+    "calls": 5,
+    "cycles": 591
+   },
+   "__aeabi_i2f": {
+    "calls": 5,
+    "cycles": 81
+   }
+  },
+  "battleship_wpMarioFireballMakeWeapon": {
+   "__aeabi_i2f": {
+    "calls": 3,
+    "cycles": 48
+   },
+   "__aeabi_fmul": {
+    "calls": 9,
+    "cycles": 238
+   }
+  },
+  "efManagerFoxReflectorProcUpdate": {
+   "__aeabi_fcmple": {
+    "calls": 15,
+    "cycles": 216
+   }
+  },
+  "ndsRendererAdapterPrepareInitialMatrices": {
+   "__aeabi_fmul": {
+    "calls": 22,
+    "cycles": 582
+   }
+  },
+  "wpMainVelSetModelPitch": {
+   "__aeabi_fcmpge": {
+    "calls": 5,
+    "cycles": 71
+   }
+  },
+  "wpProcessProcHitCollisions": {
+   "__aeabi_i2f": {
+    "calls": 1,
+    "cycles": 16
+   },
+   "__aeabi_fmul": {
+    "calls": 1,
+    "cycles": 26
+   },
+   "__aeabi_fadd": {
+    "calls": 1,
+    "cycles": 37
+   },
+   "__aeabi_f2iz": {
+    "calls": 1,
+    "cycles": 12
+   }
+  },
+  "wpMainReflectorSetLR": {
+   "__aeabi_i2f": {
+    "calls": 1,
+    "cycles": 16
+   },
+   "__aeabi_fmul": {
+    "calls": 1,
+    "cycles": 26
+   },
+   "__aeabi_fcmplt": {
+    "calls": 1,
+    "cycles": 14
+   }
+  },
+  "ndsMarioFireballProcReflectorProbe": {
+   "__aeabi_fmul": {
+    "calls": 2,
+    "cycles": 52
+   },
+   "__aeabi_f2iz": {
+    "calls": 2,
+    "cycles": 25
+   }
+  },
+  "ftParamSetDamageShuffle": {
+   "__aeabi_fmul": {
+    "calls": 57,
+    "cycles": 1508
+   },
+   "__aeabi_i2f": {
+    "calls": 57,
+    "cycles": 930
+   },
+   "__aeabi_fadd": {
+    "calls": 19,
+    "cycles": 721
+   },
+   "__aeabi_f2iz": {
+    "calls": 57,
+    "cycles": 736
+   }
+  },
+  "ftParamGetHitStun": {
+   "__aeabi_fdiv": {
+    "calls": 19,
+    "cycles": 2249
+   }
+  },
+  "ndsBaseFTCommonDamageCheckMakeScreenFlash": {
+   "__aeabi_fcmpgt": {
+    "calls": 19,
+    "cycles": 280
+   }
+  },
+  "ndsBaseFTCommonDamageInitDamageVars": {
+   "__aeabi_fmul": {
+    "calls": 75,
+    "cycles": 1984
+   },
+   "__aeabi_fdiv": {
+    "calls": 15,
+    "cycles": 1775
+   },
+   "__aeabi_fcmpgt": {
+    "calls": 15,
+    "cycles": 221
+   },
+   "__aeabi_fcmplt": {
+    "calls": 74,
+    "cycles": 1080
+   },
+   "__aeabi_fcmpge": {
+    "calls": 53,
+    "cycles": 754
+   },
+   "__aeabi_f2iz": {
+    "calls": 19,
+    "cycles": 245
+   },
+   "__aeabi_i2f": {
+    "calls": 35,
+    "cycles": 571
+   }
+  },
+  "efManagerFlameLRMakeEffect": {
+   "__aeabi_fadd": {
+    "calls": 9,
+    "cycles": 341
+   },
+   "__aeabi_fmul": {
+    "calls": 18,
+    "cycles": 476
+   },
+   "__aeabi_fsub": {
+    "calls": 6,
+    "cycles": 227
+   },
+   "__aeabi_i2f": {
+    "calls": 3,
+    "cycles": 48
+   }
+  },
+  "battleship_ftMainProcessHitCollisionStatsMain": {
+   "__aeabi_fcmpgt": {
+    "calls": 20,
+    "cycles": 295
+   },
+   "__aeabi_fcmplt": {
+    "calls": 34,
+    "cycles": 496
+   }
+  },
+  "efManagerFlameRandomMakeEffect": {
+   "__aeabi_fmul": {
+    "calls": 0,
+    "cycles": 0
+   },
+   "__aeabi_fadd": {
+    "calls": 0,
+    "cycles": 0
+   }
+  },
+  "ftPhysicsSetGroundVelAbsStickRange": {
+   "__aeabi_i2f": {
+    "calls": 34,
+    "cycles": 554
+   },
+   "__aeabi_fmul": {
+    "calls": 34,
+    "cycles": 899
+   },
+   "__aeabi_fcmplt": {
+    "calls": 66,
+    "cycles": 963
+   },
+   "__aeabi_fsub": {
+    "calls": 32,
+    "cycles": 1214
+   }
+  },
+  "ftPhysicsApplyGravityClampTVel": {
+   "__aeabi_fsub": {
+    "calls": 0,
+    "cycles": 0
+   },
+   "__aeabi_fcmplt": {
+    "calls": 0,
+    "cycles": 0
+   }
+  },
+  "ftPublicTryPlayFallSpecialReact": {
+   "__aeabi_fcmple": {
+    "calls": 0,
+    "cycles": 0
+   }
+  },
+  "mpCommonSetFighterGround": {
+   "__aeabi_i2f": {
+    "calls": 6,
+    "cycles": 97
+   },
+   "__aeabi_fmul": {
+    "calls": 6,
+    "cycles": 158
+   }
+  },
+  "efManagerDustHeavyDoubleMakeEffect": {
+   "__aeabi_fadd": {
+    "calls": 8,
+    "cycles": 303
+   },
+   "__aeabi_fcmpeq": {
+    "calls": 8,
+    "cycles": 84
+   }
+  },
+  "efManagerDustHeavyMakeEffect": {
+   "__aeabi_fadd": {
+    "calls": 9,
+    "cycles": 341
+   }
+  },
+  "ndsBaseFTCommonKneeBendCheckInterruptCommon": {
+   "__aeabi_i2f": {
+    "calls": 2,
+    "cycles": 32
+   }
+  },
+  "ndsBaseFTCommonJumpSetStatus": {
+   "__aeabi_f2iz": {
+    "calls": 3,
+    "cycles": 38
+   },
+   "__aeabi_fmul": {
+    "calls": 6,
+    "cycles": 158
+   },
+   "__aeabi_i2f": {
+    "calls": 6,
+    "cycles": 97
+   },
+   "__aeabi_fadd": {
+    "calls": 3,
+    "cycles": 113
+   }
+  },
+  "wpFoxBlasterProcUpdate": {
+   "__aeabi_fadd": {
+    "calls": 7,
+    "cycles": 265
+   },
+   "__aeabi_fcmplt": {
+    "calls": 19,
+    "cycles": 277
+   },
+   "__aeabi_fcmpgt": {
+    "calls": 7,
+    "cycles": 103
+   }
+  },
+  "battleship_wpFoxBlasterMakeWeapon": {
+   "__aeabi_fmul": {
+    "calls": 3,
+    "cycles": 79
+   },
+   "__aeabi_i2f": {
+    "calls": 3,
+    "cycles": 48
+   }
+  },
+  "mpCommonProcFighterWaitOrLanding": {
+   "__aeabi_fcmpgt": {
+    "calls": 1,
+    "cycles": 14
+   }
+  },
+  "ndsBaseFTCommonJumpAerialSetStatus": {
+   "__aeabi_fmul": {
+    "calls": 3,
+    "cycles": 79
+   },
+   "__aeabi_fadd": {
+    "calls": 1,
+    "cycles": 37
+   },
+   "__aeabi_i2f": {
+    "calls": 1,
+    "cycles": 16
+   }
+  },
+  "lbCommonMakePositionFGM": {
+   "__aeabi_fdiv": {
+    "calls": 16,
+    "cycles": 1893
+   },
+   "__aeabi_fmul": {
+    "calls": 16,
+    "cycles": 423
+   },
+   "__aeabi_f2iz": {
+    "calls": 16,
+    "cycles": 206
+   }
+  },
+  "ndsBaseFTDisplayMainProcDisplay": {
+   "__aeabi_i2f": {
+    "calls": 17,
+    "cycles": 277
+   },
+   "__aeabi_fadd": {
+    "calls": 160,
+    "cycles": 6072
+   },
+   "__aeabi_fcmplt": {
+    "calls": 160,
+    "cycles": 2335
+   },
+   "__aeabi_fmul": {
+    "calls": 17,
+    "cycles": 449
+   }
+  },
+  "efManagerDamageNormalLightMakeEffect": {
+   "__aeabi_fmul": {
+    "calls": 22,
+    "cycles": 582
+   },
+   "__aeabi_i2f": {
+    "calls": 11,
+    "cycles": 179
+   },
+   "__aeabi_fadd": {
+    "calls": 11,
+    "cycles": 417
+   }
+  },
+  "ndsBaseFTCommonDamageSetPublic": {
+   "__aeabi_fcmpge": {
+    "calls": 6,
+    "cycles": 85
+   },
+   "__aeabi_fmul": {
+    "calls": 11,
+    "cycles": 291
+   },
+   "__aeabi_fcmpgt": {
+    "calls": 19,
+    "cycles": 280
+   },
+   "__aeabi_fcmplt": {
+    "calls": 11,
+    "cycles": 160
+   }
+  },
+  "ndsBaseFTCommonAttackAirProcMap": {
+   "__aeabi_fcmpgt": {
+    "calls": 0,
+    "cycles": 0
+   },
+   "__aeabi_ui2f": {
+    "calls": 3,
+    "cycles": 12
+   },
+   "__aeabi_fmul": {
+    "calls": 3,
+    "cycles": 79
+   }
+  },
+  "ndsBaseFTCommonAttackAirCheckInterruptCommon": {
+   "__aeabi_fcmpgt": {
+    "calls": 3,
+    "cycles": 44
+   },
+   "__aeabi_fcmplt": {
+    "calls": 2,
+    "cycles": 29
+   }
+  },
+  "ndsWhispyAOTSinCos": {
+   "__aeabi_fmul": {
+    "calls": 78,
+    "cycles": 2063
+   },
+   "__aeabi_f2iz": {
+    "calls": 26,
+    "cycles": 335
+   },
+   "__aeabi_i2f": {
+    "calls": 52,
+    "cycles": 848
+   }
+  },
+  "ndsBaseFTCommonDownBounceSetStatus": {
+   "__aeabi_fdiv": {
+    "calls": 1,
+    "cycles": 118
+   },
+   "__aeabi_fcmpgt": {
+    "calls": 1,
+    "cycles": 14
+   },
+   "__aeabi_f2iz": {
+    "calls": 1,
+    "cycles": 12
+   },
+   "__aeabi_i2f": {
+    "calls": 1,
+    "cycles": 16
+   },
+   "__aeabi_fsub": {
+    "calls": 1,
+    "cycles": 37
+   },
+   "__aeabi_fcmplt": {
+    "calls": 2,
+    "cycles": 29
+   }
+  },
+  "ndsBaseMPProcessSetLandingFloor": {
+   "__aeabi_fadd": {
+    "calls": 12,
+    "cycles": 455
+   }
+  },
+  "ndsBaseFTCommonDownForwardOrBackCheckInterruptCommon": {
+   "__aeabi_fcmplt": {
+    "calls": 2,
+    "cycles": 29
+   }
+  },
+  "ftPublicDecideCommon": {
+   "__aeabi_fcmpge": {
+    "calls": 12,
+    "cycles": 170
+   }
+  },
+  "lbCommonNormDist2D": {
+   "__aeabi_fmul": {
+    "calls": 0,
+    "cycles": 0
+   },
+   "__aeabi_fadd": {
+    "calls": 0,
+    "cycles": 0
+   },
+   "__aeabi_fcmpeq": {
+    "calls": 0,
+    "cycles": 0
+   },
+   "__aeabi_fdiv": {
+    "calls": 0,
+    "cycles": 0
+   }
+  },
+  "efManagerDamageNormalHeavyMakeEffect": {
+   "__aeabi_fmul": {
+    "calls": 4,
+    "cycles": 105
+   },
+   "__aeabi_i2f": {
+    "calls": 2,
+    "cycles": 32
+   },
+   "__aeabi_fadd": {
+    "calls": 2,
+    "cycles": 75
+   }
+  },
+  "efManagerDamageSpawnOrbsProcUpdate": {
+   "__aeabi_fadd": {
+    "calls": 0,
+    "cycles": 0
+   },
+   "__aeabi_fsub": {
+    "calls": 0,
+    "cycles": 0
+   },
+   "__aeabi_fmul": {
+    "calls": 0,
+    "cycles": 0
+   }
+  },
+  "ftCommonDeadUpStarProcUpdate": {
+   "__aeabi_i2f": {
+    "calls": 0,
+    "cycles": 0
+   },
+   "__aeabi_fsub": {
+    "calls": 0,
+    "cycles": 0
+   },
+   "__aeabi_fmul": {
+    "calls": 0,
+    "cycles": 0
+   },
+   "__aeabi_fdiv": {
+    "calls": 0,
+    "cycles": 0
+   }
+  },
+  "efManagerQuakeProcUpdate": {
+   "__aeabi_fmul": {
+    "calls": 2,
+    "cycles": 52
+   },
+   "__aeabi_fcmple": {
+    "calls": 27,
+    "cycles": 389
+   },
+   "__aeabi_fcmpgt": {
+    "calls": 25,
+    "cycles": 369
+   },
+   "__aeabi_fdiv": {
+    "calls": 1,
+    "cycles": 118
+   }
+  },
+  "ifCommonPlayerStockMakeStockSnap": {
+   "__aeabi_ui2f": {
+    "calls": 0,
+    "cycles": 0
+   },
+   "__aeabi_i2f": {
+    "calls": 0,
+    "cycles": 0
+   }
+  },
+  "efManagerSparkleWhiteDeadMakeEffect": {
+   "__aeabi_f2iz": {
+    "calls": 0,
+    "cycles": 0
+   }
+  },
+  "ftCommonRebirthDownSetStatus": {
+   "__aeabi_i2f": {
+    "calls": 0,
+    "cycles": 0
+   },
+   "__aeabi_fadd": {
+    "calls": 0,
+    "cycles": 0
+   }
+  },
+  "ndsDrawSObjIntoPreview": {
+   "__aeabi_fcmplt": {
+    "calls": 12,
+    "cycles": 175
+   },
+   "__aeabi_fmul": {
+    "calls": 12,
+    "cycles": 317
+   },
+   "__aeabi_fadd": {
+    "calls": 12,
+    "cycles": 455
+   }
+  },
+  "ndsDrawLayeredSObjFrame": {
+   "__aeabi_f2iz": {
+    "calls": 12,
+    "cycles": 155
+   }
+  },
+  "func_ovl3_80138EE4": {
+   "__aeabi_fcmplt": {
+    "calls": 67,
+    "cycles": 978
+   },
+   "__aeabi_fmul": {
+    "calls": 35,
+    "cycles": 926
+   },
+   "__aeabi_fadd": {
+    "calls": 32,
+    "cycles": 1214
+   },
+   "__aeabi_fsub": {
+    "calls": 3,
+    "cycles": 113
+   },
+   "__aeabi_i2f": {
+    "calls": 3,
+    "cycles": 48
+   },
+   "__aeabi_fcmpgt": {
+    "calls": 0,
+    "cycles": 0
+   }
+  },
+  "lbCommonTan": {
+   "__aeabi_fcmpeq": {
+    "calls": 320,
+    "cycles": 3385
+   },
+   "__aeabi_fdiv": {
+    "calls": 320,
+    "cycles": 37879
+   }
+  },
+  "ndsBaseFTCommonAttack1CheckInterruptCommon": {
+   "__aeabi_fcmpeq": {
+    "calls": 62,
+    "cycles": 655
+   }
+  },
+  "ftComputerCheckTargetItemOrTwister": {
+   "__aeabi_fmul": {
+    "calls": 258,
+    "cycles": 6826
+   },
+   "__aeabi_fadd": {
+    "calls": 258,
+    "cycles": 9792
+   }
+  },
+  "gmCameraCheckTargetInBounds": {
+   "__aeabi_i2f": {
+    "calls": 323,
+    "cycles": 5270
+   },
+   "__aeabi_fcmpgt": {
+    "calls": 323,
+    "cycles": 4769
+   },
+   "__aeabi_fcmplt": {
+    "calls": 323,
+    "cycles": 4714
+   }
+  },
+  "ifCommonPlayerDamageStartBreakAnim": {
+   "__aeabi_fadd": {
+    "calls": 0,
+    "cycles": 0
+   },
+   "__aeabi_fsub": {
+    "calls": 0,
+    "cycles": 0
+   }
+  },
+  "efManagerImpactWaveProcDisplay": {
+   "__aeabi_f2iz": {
+    "calls": 8,
+    "cycles": 103
+   }
+  },
+  "ndsFighterMarioFoxDLAllDrawForSlot.constprop.0": {
+   "__aeabi_fmul": {
+    "calls": 38,
+    "cycles": 1005
+   },
+   "__aeabi_f2iz": {
+    "calls": 38,
+    "cycles": 490
+   }
+  },
+  "syUtilsArcCos": {
+   "__aeabi_fdiv": {
+    "calls": 5,
+    "cycles": 591
+   },
+   "__aeabi_fcmpgt": {
+    "calls": 6,
+    "cycles": 88
+   },
+   "__aeabi_fcmplt": {
+    "calls": 5,
+    "cycles": 72
+   },
+   "__aeabi_fmul": {
+    "calls": 5,
+    "cycles": 132
+   },
+   "__aeabi_fsub": {
+    "calls": 9,
+    "cycles": 341
+   },
+   "__aeabi_fcmpeq": {
+    "calls": 5,
+    "cycles": 52
+   }
+  },
+  "ndsBaseFTCommonDamageUpdateMain": {
+   "__aeabi_fcmpeq": {
+    "calls": 19,
+    "cycles": 200
+   }
+  },
+  "ndsBaseFTCommonDamageCommonProcLagUpdate": {
+   "__aeabi_i2f": {
+    "calls": 0,
+    "cycles": 0
+   },
+   "__aeabi_fmul": {
+    "calls": 0,
+    "cycles": 0
+   },
+   "__aeabi_fadd": {
+    "calls": 0,
+    "cycles": 0
+   }
+  },
+  "ndsBaseEFManagerDustExpandSmallMakeEffect": {
+   "__aeabi_fcmpeq": {
+    "calls": 2,
+    "cycles": 21
+   }
+  },
+  "ndsMPFindLineEndpoints": {
+   "__aeabi_i2f": {
+    "calls": 0,
+    "cycles": 0
+   }
+  },
+  "__ieee754_atan2f": {
+   "__aeabi_fdiv": {
+    "calls": 2,
+    "cycles": 236
+   }
+  },
+  "mpCollisionGetMapObjPositionID": {
+   "__aeabi_i2f": {
+    "calls": 0,
+    "cycles": 0
+   }
+  },
+  "battleship_ftAnimEndCheckSetStatus": {
+   "__aeabi_fcmple": {
+    "calls": 38,
+    "cycles": 548
+   }
+  },
+  "wpMainApplyGravityClampTVel": {
+   "__aeabi_fsub": {
+    "calls": 44,
+    "cycles": 1670
+   },
+   "__aeabi_fcmpgt": {
+    "calls": 44,
+    "cycles": 649
+   }
+  },
+  "ftComputerProcessTrait": {
+   "__aeabi_fmul": {
+    "calls": 0,
+    "cycles": 0
+   },
+   "__aeabi_fadd": {
+    "calls": 0,
+    "cycles": 0
+   }
+  },
+  "ftPhysicsApplyAirVelFriction": {
+   "__aeabi_fsub": {
+    "calls": 19,
+    "cycles": 721
+   },
+   "__aeabi_fcmplt": {
+    "calls": 19,
+    "cycles": 277
+   }
+  },
+  "ftPhysicsCheckClampAirVelXDecMax": {
+   "__aeabi_fcmplt": {
+    "calls": 0,
+    "cycles": 0
+   }
+  },
+  "ftMarioSpecialHiProcPhysics": {
+   "__aeabi_fmul": {
+    "calls": 24,
+    "cycles": 634
+   }
+  },
+  "ndsBaseFTCommonDownBounceProcUpdate": {
+   "__aeabi_fcmple": {
+    "calls": 5,
+    "cycles": 72
+   }
+  },
+  "lbCommonScale2D": {
+   "__aeabi_fmul": {
+    "calls": 2,
+    "cycles": 52
+   }
+  },
+  "ftPhysicsApplyGravityDefault": {
+   "__aeabi_fsub": {
+    "calls": 0,
+    "cycles": 0
+   },
+   "__aeabi_fcmplt": {
+    "calls": 0,
+    "cycles": 0
+   }
+  },
+  "ifCommonPlayerScoreMakeEffect": {
+   "__aeabi_i2f": {
+    "calls": 0,
+    "cycles": 0
+   }
+  },
+  "ftCommonRebirthCommonProcMap": {
+   "__aeabi_fsub": {
+    "calls": 3,
+    "cycles": 113
+   },
+   "__aeabi_fdiv": {
+    "calls": 3,
+    "cycles": 355
+   },
+   "__aeabi_i2f": {
+    "calls": 3,
+    "cycles": 48
+   },
+   "__aeabi_fmul": {
+    "calls": 3,
+    "cycles": 79
+   },
+   "__aeabi_fadd": {
+    "calls": 3,
+    "cycles": 113
+   }
+  },
+  "ndsParticleBiasTowardEye": {
+   "__aeabi_fcmpeq": {
+    "calls": 20,
+    "cycles": 211
+   }
+  },
+  "efManagerDustDashMakeEffect": {
+   "__aeabi_fadd": {
+    "calls": 2,
+    "cycles": 75
+   }
+  },
+  "wpMapCheckAllRebound": {
+   "__aeabi_fadd": {
+    "calls": 1,
+    "cycles": 37
+   },
+   "__aeabi_fcmplt": {
+    "calls": 1,
+    "cycles": 14
+   }
+  },
+  "ndsBaseFTCommonDamageSetDustEffectInterval": {
+   "__aeabi_fcmplt": {
+    "calls": 27,
+    "cycles": 394
+   }
+  },
+  "ftPublicCommonCheck": {
+   "__aeabi_fcmpge": {
+    "calls": 19,
+    "cycles": 270
+   }
+  },
+  "ftComputerWaitGetTarget": {
+   "__aeabi_fmul": {
+    "calls": 5,
+    "cycles": 132
+   },
+   "__aeabi_fadd": {
+    "calls": 5,
+    "cycles": 189
+   }
+  },
+  "ftPhysicsClampAirVelX": {
+   "__aeabi_fcmplt": {
+    "calls": 0,
+    "cycles": 0
+   },
+   "__aeabi_fcmpgt": {
+    "calls": 0,
+    "cycles": 0
+   }
+  },
+  "ftCommonFallSpecialSetStatus": {
+   "__aeabi_fmul": {
+    "calls": 0,
+    "cycles": 0
+   }
+  },
+  "mpCommonSetFighterLandingParams": {
+   "__aeabi_fcmpeq": {
+    "calls": 6,
+    "cycles": 63
+   },
+   "__aeabi_fcmpge": {
+    "calls": 0,
+    "cycles": 0
+   }
+  },
+  "efManagerDustHeavyDoubleProcUpdate": {
+   "__aeabi_fsub": {
+    "calls": 4,
+    "cycles": 151
+   }
+  },
+  "mpCommonProcFighterCliffFloorCeil": {
+   "__aeabi_fcmpgt": {
+    "calls": 0,
+    "cycles": 0
+   }
+  },
+  "ftPhysicsClampAirVelXMax": {
+   "__aeabi_fcmplt": {
+    "calls": 8,
+    "cycles": 116
+   }
+  },
+  "gmCollisionGetFighterAttackDamagePosition": {
+   "__aeabi_fadd": {
+    "calls": 51,
+    "cycles": 1935
+   },
+   "__aeabi_fmul": {
+    "calls": 51,
+    "cycles": 1349
+   }
+  },
+  "ftMarioSpecialAirHiSetStatus": {
+   "__aeabi_fdiv": {
+    "calls": 0,
+    "cycles": 0
+   }
+  },
+  "efManagerDamageCoinProcDead": {
+   "__aeabi_fadd": {
+    "calls": 2,
+    "cycles": 75
+   }
+  },
+  "ndsBaseFTCommonLandingSetStatus": {
+   "__aeabi_fcmple": {
+    "calls": 0,
+    "cycles": 0
+   }
+  },
+  "efManagerDamageFlySparksProcUpdate": {
+   "__aeabi_fcmple": {
+    "calls": 0,
+    "cycles": 0
+   }
+  },
+  "ftComputerSetCommandWaitLong": {
+   "__aeabi_i2f": {
+    "calls": 0,
+    "cycles": 0
+   },
+   "__aeabi_fmul": {
+    "calls": 0,
+    "cycles": 0
+   },
+   "__aeabi_fadd": {
+    "calls": 0,
+    "cycles": 0
+   }
+  },
+  "ndsBaseFTCommonAttackHi3CheckInterruptCommon": {
+   "__aeabi_fcmpgt": {
+    "calls": 1,
+    "cycles": 14
+   }
+  },
+  "ftPhysicsAddClampAirVelY": {
+   "__aeabi_fadd": {
+    "calls": 0,
+    "cycles": 0
+   },
+   "__aeabi_fcmpgt": {
+    "calls": 0,
+    "cycles": 0
+   }
+  },
+  "ftPhysicsClampGroundVel": {
+   "__aeabi_fcmplt": {
+    "calls": 0,
+    "cycles": 0
+   },
+   "__aeabi_fcmpgt": {
+    "calls": 0,
+    "cycles": 0
+   }
+  },
+  "ftManagerInitFighter": {
+   "__aeabi_fcmpgt": {
+    "calls": 0,
+    "cycles": 0
+   }
+  }
+ }
+}
