@@ -33,7 +33,57 @@ clock.** Coverage is part of a baseline's identity now, not a footnote. The
 conversion: the sim runs 60 Hz and presents 30 Hz, ratio **measured at exactly
 2.000**, so 1,600 presented = 3,200 logic = **53.3 s**.
 
-## THE LEVEL IS +73,425 (2026-08-16) — `artifacts/performance/2026-08-16_tilesync-memo/TILESYNC.md`
+## THE LEVEL IS +71,569 (2026-08-16) — `artifacts/performance/2026-08-16_anim-itcm/ANIM_ITCM.md`
+
+**New basis `build-c219-animitcm-ship`: rank-80 1,216,896 raw / 1,191,949 net.**
+Same target, config and window as every basis before it.
+
+**`ndsR2AnimValueQ` IS IN ITCM.** The campaign's largest single fidelity-neutral
+item was a placement question, and it is answered on a **same-binary route** —
+two byte-identical copies of one body (**257 words, 0 differing words**) at two
+addresses, one `.data` word choosing the `bl`. Engagement equality
+`gNdsR2CubicEvals = 290,076` on **both** arms; complement `WORK-H −3,840 /
+WAIT +3,840 / ALL +0`.
+
+```text
+whole-run paired median   -3,840  (85.8% of 1,600 frames)   BANKED
+marginal-80 median        -6,432  (73 of 80)
+rank-80                  -14,208      ranks 41-120 band    -15,572
+```
+
+Every one of 14 sampled ranks improves, rank 1 through rank 1200. The percentile
+readings are 2.2–2.4× the paired median because the saving **clusters on
+expensive frames** — a heavy frame plays more Q AObj nodes. Bank the −3,840; the
+cross-build −1,856 is deep inside the ≥14,080 floor and its band moved the other
+way, so **+71,569 is a LEVEL, not a bank.**
+
+**ITCM WAS NOT FULL — IT HELD 2,454 DEAD BYTES.** The per-PC census that priced
+the kernel also prices every ITCM resident, and 33 non-overlapping blocks execute
+**zero** instructions across the whole 1,600-frame window. 736 B taken:
+`_arm_cmpsf2.o` + `_arm_unordsf2.o` (332 B — the port defines the `fcmp` helpers
+itself, so libgcc's renamed goldens have no caller **by construction**) and
+`ndsRendererHardwareGetLightShadeLut` (404 B — the miss-path LUT *builder*).
+Instrument ITCM free **512 → 220**; proof ROM **2,572**. `itcm-census.txt` lists
+the 1,718 B left.
+
+**Two traps this cost, both now structural.** (1) `linker/nds_hot_text.ld:113`
+matches `*.itcm.*` by **filename**, so dropping `--rename-section` freed nothing
+until the object was also renamed `<stem>.mainram.o` — the first link overflowed
+by exactly the 332 B that were supposed to have moved. (2)
+`check-task9-float-itcm.ps1` asserted a **placement policy** where it meant to
+assert the Phase-2 **rename**; it now reads each member's placement from the
+build's own emitted object name, still throws on a mismatch (proven three ways,
+`ANIM_ITCM.md` §8), and its new fail-closed guard caught a stale-object hazard
+the Makefile recipe now cleans.
+
+| row | now |
+|---|---|
+| `ndsR2AnimValueQ` fetch (21,719) | **BANKED −3,840**, shipped in ITCM. §2 corrects the "a kernel is fetched whole by construction" premise: **162 of 257 slots and 23 of 33 lines** execute; 320 B are never fetched |
+| bind placement (`ndsRendererHardwareBindTextureName`) | **STILL UNBUILT, and now blocked twice**: 268 B wanted against **220 B free**, and its 3,802 ceiling is **inside** the ≥14,080 cross-build floor, so it needs its own **route**, not just its own build. Next 240 B come from the two raw-run emitters |
+
+---
+
+## SUPERSEDED — the level was +73,425 (2026-08-16) — `artifacts/performance/2026-08-16_tilesync-memo/TILESYNC.md`
 
 **New basis `build-c217-tilesync-ship`: rank-80 1,218,752 raw / 1,193,805 net.**
 Same target, config and window as every basis before it.
@@ -197,6 +247,11 @@ camera inlining added                       3,032 B  = 3.1x the WHOLE budget
 Its two standing limits both survive and both got worse: the chain's own `issue` cost is
 **7,924 of 37,854 (20.9%)**, and `dcache_fill` (10,817) exceeds it, so it is memory-bound
 on both sides and a Q26 joint matrix is the same 32 bits as the `f32` it replaces.
+
+**CLOSED 2026-08-16 — the kernel is in ITCM, banked −3,840, see the level header
+and `artifacts/performance/2026-08-16_anim-itcm/ANIM_ITCM.md`. The "fetched whole
+by construction" mechanism below is REFUTED by its own census (162 of 257 slots
+execute); the 21.13 tk/fr per byte price stands.**
 
 **WHAT THE LEDGER UNCOVERED, AND IT IS UNOWNED: `ndsR2AnimValueQ` pays 21,719 tk/fr of
 PURE INSTRUCTION FETCH** for 1,028 bytes at 370.6 entries a frame — **0.296x of +73,425**,

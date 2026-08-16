@@ -114,12 +114,35 @@ try {
 
     $codeRows = @()
     $stockBytes = 0
+    # Per-member placement, discovered from the build's own emitted object name
+    # rather than assumed. Everything downstream reads these instead of naming
+    # `<stem>.itcm.o` directly, so a member that moves to main RAM stays checked.
+    $memberSections = @{}
+    $memberCopies = @{}
     foreach ($entry in $members.GetEnumerator()) {
         $member = $entry.Key
         $expected = [int]$entry.Value
         $stem = [System.IO.Path]::GetFileNameWithoutExtension($member)
         $fresh = Join-Path $temp $member
-        $relocatedSource = Join-Path $resolvedBuild "$stem.itcm.o"
+        # NDS_TASK9_FLOAT_MAIN_MEMBERS (2026-08-16) sends a member to main RAM
+        # by emitting `<stem>.mainram.o` with its .text left alone, instead of
+        # `<stem>.itcm.o` with .text renamed to .itcm. The build's own output
+        # filename is the source of truth for which happened -- an artifact
+        # independent of the ELF under test. Exactly one of the two must exist;
+        # the byte-for-byte equivalence proof below is identical either way and
+        # is the whole point of the check, so it runs on both.
+        $relocatedItcm = Join-Path $resolvedBuild "$stem.itcm.o"
+        $relocatedMain = Join-Path $resolvedBuild "$stem.mainram.o"
+        $itcmMember = Test-Path -LiteralPath $relocatedItcm -PathType Leaf
+        $mainMember = Test-Path -LiteralPath $relocatedMain -PathType Leaf
+        if ($itcmMember -and $mainMember) {
+            throw ("Task 9 member '$member' produced BOTH $stem.itcm.o and " +
+                "$stem.mainram.o; one placement per member.")
+        }
+        $relocatedSource = if ($itcmMember) { $relocatedItcm } else { $relocatedMain }
+        $relocatedSection = if ($itcmMember) { '.itcm' } else { '.text' }
+        $relocatedLeaf = Split-Path -Leaf $relocatedSource
+        $memberSections[$member] = $relocatedSection
         foreach ($path in @($fresh, $relocatedSource)) {
             if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
                 throw "Missing Task 9 generated object '$path'."
@@ -128,19 +151,23 @@ try {
         # Work on a private copy. Multiple same-ROM verifier runs may inspect
         # one build concurrently, and Windows objcopy is not reliable when all
         # processes dump sections from the same input object at once.
-        $relocated = Join-Path $temp "$stem.itcm.o"
+        $relocated = Join-Path $temp $relocatedLeaf
+        $memberCopies[$member] = $relocated
         Copy-Item -LiteralPath $relocatedSource -Destination $relocated
         if ((Get-SectionBytes -Path $fresh -Section '.text') -ne $expected -or
-            (Get-SectionBytes -Path $relocated -Section '.itcm') -ne $expected) {
+            (Get-SectionBytes -Path $relocated -Section $relocatedSection) -ne
+                $expected) {
             throw "$member did not preserve its expected $expected code bytes."
         }
 
         $rawCode = Join-Path $temp "$stem.text.bin"
-        $itcmCode = Join-Path $temp "$stem.itcm.bin"
+        $itcmCode = Join-Path $temp "$stem.reloc.bin"
         & $Objcopy --dump-section ".text=$rawCode" $fresh
         if ($LASTEXITCODE -ne 0) { throw "Could not dump $member .text." }
-        & $Objcopy --dump-section ".itcm=$itcmCode" $relocated
-        if ($LASTEXITCODE -ne 0) { throw "Could not dump $stem.itcm.o .itcm." }
+        & $Objcopy --dump-section "$relocatedSection=$itcmCode" $relocated
+        if ($LASTEXITCODE -ne 0) {
+            throw "Could not dump $relocatedLeaf $relocatedSection."
+        }
         $codeHash = (Get-FileHash -LiteralPath $rawCode -Algorithm SHA256).Hash
         if ($codeHash -ne
             (Get-FileHash -LiteralPath $itcmCode -Algorithm SHA256).Hash) {
@@ -150,7 +177,7 @@ try {
         $stockBytes += $expected
     }
 
-    $relocatedAddSub = Join-Path $temp '_arm_addsubsf3.itcm.o'
+    $relocatedAddSub = $memberCopies['_arm_addsubsf3.o']
     $addSubSymbols = @(& $Objdump -t $relocatedAddSub)
     if ($LASTEXITCODE -ne 0) {
         throw 'Could not inspect the relocated add/sub object.'
@@ -290,7 +317,7 @@ try {
 
     $phase2Bytes = 0
     if ($Phase2Mode -eq 1) {
-        $relocatedCompare = Join-Path $temp '_arm_cmpsf2.itcm.o'
+        $relocatedCompare = $memberCopies['_arm_cmpsf2.o']
         $compareSymbols = @(& $Objdump -t $relocatedCompare)
         if ($LASTEXITCODE -ne 0) {
             throw 'Could not inspect the relocated comparison golden object.'
@@ -350,7 +377,7 @@ try {
         }
         $codeRows += "phase2-fcmpeq=$phase2Bytes/$phase2CodeHash"
     } else {
-        $relocatedCompare = Join-Path $temp '_arm_cmpsf2.itcm.o'
+        $relocatedCompare = $memberCopies['_arm_cmpsf2.o']
         $compareSymbols = @(& $Objdump -t $relocatedCompare)
         if ($LASTEXITCODE -ne 0 -or
             @($compareSymbols | Where-Object {
@@ -364,7 +391,7 @@ try {
     }
 
     $compareRoutines = @('fcmplt', 'fcmple', 'fcmpge', 'fcmpgt')
-    $unordObject = Join-Path $temp '_arm_unordsf2.itcm.o'
+    $unordObject = $memberCopies['_arm_unordsf2.o']
     $unordSymbols = @(& $Objdump -t $unordObject)
     if ($LASTEXITCODE -ne 0) {
         throw 'Could not inspect the relocated unordered-comparison object.'
@@ -516,11 +543,35 @@ try {
             throw "ELF helper $($entry.Key) does not match selected size $size."
         }
     }
-    if ($Phase2Mode -eq 1 -and
-        @($symbols | Where-Object {
-            $_ -match '\sF\s+\.itcm\s+[0-9a-fA-F]+.*\s__nds_task9_libgcc_fcmpeq_golden$'
-        }).Count -ne 1) {
-        throw 'Task 9 Phase 2 ELF omitted its selected-libgcc fcmpeq golden.'
+    # The invariant this proves is that Phase 2's --redefine-sym actually fired,
+    # so the stock helper was renamed OUT of the call graph and the port's
+    # replacement is the one linked. The golden's SECTION was never part of that
+    # invariant -- it read .itcm only because the whole member was placed there.
+    # NDS_TASK9_FLOAT_MAIN_MEMBERS (2026-08-16) can now send a member to main
+    # RAM, and the build states which it did by the name of the relocated object
+    # it emitted. Read that, rather than hardcoding a placement policy the
+    # Makefile no longer owns -- and keep it strict in both directions: the
+    # golden must still exist exactly once, and it must be in the section its
+    # own member was built for, so losing it or misplacing it still throws.
+    if ($Phase2Mode -eq 1) {
+        # Input section -> linked OUTPUT section: an object left in `.text` is
+        # gathered into `.main` by the linker script, so objdump -t on the ELF
+        # reports `.main`. Naming `.text` here would look like a placement bug
+        # and is really just the wrong side of the link.
+        $compareInItcm = ($memberSections['_arm_cmpsf2.o'] -eq '.itcm')
+        $goldenSection = if ($compareInItcm) { '\.itcm' } else { '\.main' }
+        $goldenWhere = if ($compareInItcm) {
+            'ITCM'
+        } else {
+            'main RAM (NDS_TASK9_FLOAT_MAIN_MEMBERS)'
+        }
+        if (@($symbols | Where-Object {
+                $_ -match ("\sF\s+$goldenSection\s+[0-9a-fA-F]+.*" +
+                    '\s__nds_task9_libgcc_fcmpeq_golden$')
+            }).Count -ne 1) {
+            throw ('Task 9 Phase 2 ELF omitted its selected-libgcc fcmpeq ' +
+                "golden from $goldenWhere.")
+        }
     }
     if ($Phase2Mode -eq 0 -and
         @($symbols | Where-Object {
@@ -528,9 +579,20 @@ try {
         }).Count -ne 0) {
         throw 'Task 9 Phase 1 ELF unexpectedly contains the Phase 2 golden symbol.'
     }
+    # Every golden below lives wherever ITS OWN member was placed. Ask the
+    # placement map for the linked output section instead of writing `.itcm`
+    # into the pattern -- that is the form that broke when
+    # NDS_TASK9_FLOAT_MAIN_MEMBERS first moved a member.
+    $goldenElf = {
+        param([string]$Member)
+        if ($memberSections[$Member] -eq '.itcm') { '\.itcm' } else { '\.main' }
+    }
+    $addSubElfSection = & $goldenElf '_arm_addsubsf3.o'
+    $compareElfSection = & $goldenElf '_arm_cmpsf2.o'
+    $unordElfSection = & $goldenElf '_arm_unordsf2.o'
     foreach ($routine in @('fadd', 'fsub')) {
         $goldenCount = @($symbols | Where-Object {
-            $_ -match ("\sF\s+\.itcm\s+[0-9a-fA-F]+.*\s__nds_task16_libgcc_{0}_golden$" -f $routine)
+            $_ -match ("\sF\s+$addSubElfSection\s+[0-9a-fA-F]+.*\s__nds_task16_libgcc_{0}_golden$" -f $routine)
         }).Count
         if (($Task16AddSubMode -eq 1 -and $goldenCount -ne 1) -or
             ($Task16AddSubMode -eq 0 -and $goldenCount -ne 0)) {
@@ -538,15 +600,20 @@ try {
         }
     }
     $i2fGoldenCount = @($symbols | Where-Object {
-        $_ -match '\sF\s+\.itcm\s+[0-9a-fA-F]+.*\s__nds_task16_libgcc_i2f_golden$'
+        $_ -match ("\sF\s+$addSubElfSection\s+[0-9a-fA-F]+.*\s__nds_task16_libgcc_i2f_golden$")
     }).Count
     if (($Task16I2fMode -eq 1 -and $i2fGoldenCount -ne 1) -or
         ($Task16I2fMode -eq 0 -and $i2fGoldenCount -ne 0)) {
         throw "Task 16 ELF i2f golden state does not match mode $Task16I2fMode."
     }
     foreach ($routine in @($compareRoutines + 'fcmpun')) {
+        $routineSection = if ($routine -eq 'fcmpun') {
+            $unordElfSection
+        } else {
+            $compareElfSection
+        }
         $goldenCount = @($symbols | Where-Object {
-            $_ -match ("\sF\s+\.itcm\s+[0-9a-fA-F]+.*\s__nds_task16_libgcc_{0}_golden$" -f $routine)
+            $_ -match ("\sF\s+$routineSection\s+[0-9a-fA-F]+.*\s__nds_task16_libgcc_{0}_golden$" -f $routine)
         }).Count
         if (($Task16CompareMode -eq 1 -and $goldenCount -ne 1) -or
             ($Task16CompareMode -eq 0 -and $goldenCount -ne 0)) {

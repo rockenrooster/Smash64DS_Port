@@ -937,6 +937,21 @@ NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS ?= 0
 NDS_FREEZE_DIAGNOSTICS ?= 0
 NDS_TASK9_FLOAT_CENSUS ?= 0
 NDS_TASK9_FLOAT_ITCM ?= 1
+# 2026-08-16 ITCM reclaim. Two of the six Task 9 libgcc members are DEAD CODE in
+# ITCM: the port defines __aeabi_fcmpeq/lt/le/ge/gt/un itself, and the Task 9/16
+# --redefine-sym filters below rename libgcc's copies to `*_golden` names, which
+# by construction have no caller. The per-PC census agrees from the other side:
+# `_arm_cmpsf2.o` (0x01ff85c4..0x01ff86d8, 276 B: __gesf2/__lesf2/__cmpsf2/
+# __aeabi_cfrcmple/__aeabi_cfcmpeq + five fcmp goldens) and `_arm_unordsf2.o`
+# (0x01ff86d8..0x01ff8710, 56 B) execute ZERO instructions across the whole
+# 1,600-frame gate window (frames 439-2038, c200-off-pc.csv whole-match column).
+# 332 bytes of zero-wait memory carrying code the match never runs.
+#
+# Listing a member here keeps it extracted, keeps every --redefine-sym filter,
+# and keeps it in $(OFILES) -- only the --rename-section is skipped, so its code
+# lands in .main. PLACEMENT ONLY: identical bytes, every symbol still defined,
+# every reference still satisfied. Set empty to restore the old layout.
+NDS_TASK9_FLOAT_MAIN_MEMBERS ?= _arm_cmpsf2.o _arm_unordsf2.o
 NDS_TASK9_FLOAT_PHASE2 ?= 1
 NDS_TASK16_FLOAT_COMPARE ?= 0
 NDS_TASK16_FLOAT_I2F ?= 0
@@ -1433,6 +1448,22 @@ NDS_R2_HWMATH_ROUTE ?= 0
 # Both arms evaluate the predicate and both advance the sync serial, so
 # gNdsR2TileSyncSkips/Runs must be IDENTICAL on the two arms.
 NDS_R2_TILESYNC_ROUTE ?= 0
+# 2026-08-16. ndsR2AnimValueQ into ITCM. The marginal-80 per-PC census charges
+# the kernel 26,664 tk/fr and 21,719 of that -- 81.4% -- is `icache_fill` on
+# 1,028 bytes entered 370.6 times a frame. That is the largest single
+# fidelity-neutral item on the board (0.296x of the +73,425 level) and the
+# arithmetic does not change, because only the address does. Paid for by
+# NDS_TASK9_FLOAT_MAIN_MEMBERS (332 B) plus the light-shade LUT builder (404 B),
+# both measured at ZERO executed instructions across the gate window.
+NDS_R2_ANIM_Q_ITCM_ON ?= 1
+# Lab SAME-BINARY route for that placement: two out-of-line copies of one body,
+# one in .itcm and one in .main, selected by a `.data` word. Costs 1,028 B of
+# .main and nothing in the shipped build.
+#   gNdsR2AnimItcmRoute  0 = call the .main copy (the pre-move behaviour)
+#                        1 = call the .itcm copy (ships)
+# Both arms execute identical instructions on identical inputs, so
+# gNdsR2CubicEvals must read IDENTICALLY on the two arms.
+NDS_R2_ANIM_ITCM_ROUTE ?= 0
 # Task 44 stage steady-state excision: generation-based admission, dense
 # rigid/dynamic binding lists, and the hoisted GX capture-active test. Requires
 # the Task 36 hardware-compose stage owner; meaningless without it.
@@ -2573,8 +2604,15 @@ NDS_TASK9_FLOAT_LIBGCC_SHA256 := \
 NDS_TASK9_FLOAT_ITCM_MEMBERS := \
 	_arm_addsubsf3.o _arm_muldivsf3.o _arm_cmpsf2.o \
 	_arm_unordsf2.o _arm_fixsfsi.o _arm_fixunssfsi.o
+# The suffix is load-bearing, not cosmetic. `linker/nds_hot_text.ld:113` reads
+#   *.itcm.* (.text .stub .text.* .gnu.linkonce.t.*)
+# so a file NAMED `*.itcm.*` has its .text placed in ITCM whatever its section
+# is called. Dropping --rename-section alone therefore frees nothing; the member
+# has to leave the filename pattern as well. `.mainram.o` matches neither that
+# rule nor the `*.32.o` one beside it.
 NDS_TASK9_FLOAT_ITCM_OFILES := \
-	$(addsuffix .itcm.o,$(basename $(NDS_TASK9_FLOAT_ITCM_MEMBERS)))
+	$(foreach member,$(NDS_TASK9_FLOAT_ITCM_MEMBERS), \
+		$(basename $(member))$(if $(filter $(member),$(NDS_TASK9_FLOAT_MAIN_MEMBERS)),.mainram.o,.itcm.o))
 
 # Task 37 measured leaves. The census split every profiled instruction's stall
 # cycles by whether the instruction touched data, because only the non-memory
@@ -3632,6 +3670,8 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_R2_HWMATH_BENCH $(NDS_R2_HWMATH_BENCH)'; \
 		echo '#define NDS_R2_HWMATH_ROUTE $(NDS_R2_HWMATH_ROUTE)'; \
 		echo '#define NDS_R2_TILESYNC_ROUTE $(NDS_R2_TILESYNC_ROUTE)'; \
+		echo '#define NDS_R2_ANIM_Q_ITCM_ON $(NDS_R2_ANIM_Q_ITCM_ON)'; \
+		echo '#define NDS_R2_ANIM_ITCM_ROUTE $(NDS_R2_ANIM_ITCM_ROUTE)'; \
 		echo '#define NDS_TASK39_FX_SPRITES $(NDS_TASK39_FX_SPRITES)'; \
 		echo '#define NDS_TASK39_FX_FLASH $(NDS_TASK39_FX_FLASH)'; \
 		echo '#define NDS_R2_PARTICLE_RUNTIME $(NDS_R2_PARTICLE_RUNTIME)'; \
@@ -3825,7 +3865,12 @@ NDS_TASK9_FLOAT_AR := $(shell $(CC) -print-prog-name=ar)
 # One grouped recipe makes one verified private copy and extracts only from it.
 $(NDS_TASK9_FLOAT_ITCM_OFILES) &: $(PROJECT_ROOT)/Makefile $(NDS_BUILD_CONFIG)
 	@echo "$(NDS_TASK9_FLOAT_LIBGCC_SHA256) *$(NDS_TASK9_FLOAT_LIBGCC)" | sha256sum -c -
-	@rm -rf ".task9-float-itcm" $(NDS_TASK9_FLOAT_ITCM_OFILES)
+	@# Remove BOTH spellings, not just the ones this configuration emits. A build
+	@# directory that previously held `<stem>.itcm.o` keeps it when the member
+	@# moves to `<stem>.mainram.o`, and the two then look like one member
+	@# claiming two placements. check-task9-float-itcm.ps1 fails closed on that,
+	@# which is how this was caught rather than shipped.
+	@rm -rf ".task9-float-itcm" $(foreach member,$(NDS_TASK9_FLOAT_ITCM_MEMBERS),$(basename $(member)).itcm.o $(basename $(member)).mainram.o)
 	@mkdir -p ".task9-float-itcm"
 	@cp "$(NDS_TASK9_FLOAT_LIBGCC)" ".task9-float-itcm/libgcc.a"
 	@cd ".task9-float-itcm" && $(NDS_TASK9_FLOAT_AR) x "libgcc.a" $(NDS_TASK9_FLOAT_ITCM_MEMBERS)
@@ -3847,9 +3892,13 @@ $(NDS_TASK9_FLOAT_ITCM_OFILES) &: $(PROJECT_ROOT)/Makefile $(NDS_BUILD_CONFIG)
 		if test "$(NDS_TASK16_FLOAT_I2F)" = "1" && test "$$member" = "_arm_addsubsf3.o"; then \
 			phase2_filter="$$phase2_filter --redefine-sym __aeabi_i2f=__nds_task16_libgcc_i2f_golden"; \
 		fi; \
-		$(OBJCOPY) $$phase2_filter \
-			--rename-section .text=.itcm,alloc,load,readonly,code,contents \
-			".task9-float-itcm/$$member" "$$stem.itcm.o" || exit $$?; \
+		rename_filter="--rename-section .text=.itcm,alloc,load,readonly,code,contents"; \
+		out="$$stem.itcm.o"; \
+		case " $(strip $(NDS_TASK9_FLOAT_MAIN_MEMBERS)) " in \
+			*" $$member "*) rename_filter=""; out="$$stem.mainram.o";; \
+		esac; \
+		$(OBJCOPY) $$phase2_filter $$rename_filter \
+			".task9-float-itcm/$$member" "$$out" || exit $$?; \
 	done
 	@rm -rf ".task9-float-itcm"
 endif

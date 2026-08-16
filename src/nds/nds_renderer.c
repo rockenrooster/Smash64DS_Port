@@ -6600,7 +6600,14 @@ static u32 ndsRendererHardwareLitShadeColorPrepared(
 #if NDS_RENDERER_PROFILE_LEVEL < 2
 static const u32 *ndsRendererHardwareFindLightShadeLut(
     u32 diffuse, u32 ambient);
-static const u32 * NDS_TASK82_ITCM_CODE
+/* 2026-08-16 ITCM reclaim: this is the LUT BUILDER, reached only on a cache
+ * miss; ndsRendererHardwareFindLightShadeLut is the lookup and stays where it
+ * is. The shade-LUT set stabilises before the gate window, so the builder
+ * executes ZERO instructions across frames 439-2038 (per-PC census whole-match
+ * column) while holding 404 bytes of zero-wait ITCM. Moved to .main so
+ * ndsR2AnimValueQ -- 370.6 entries a frame, 21,719 tk/fr of instruction fetch
+ * -- can have the space. Placement only; the body is untouched. */
+static const u32 *
 ndsRendererHardwareGetLightShadeLut(
     u32 diffuse, u32 ambient);
 #endif

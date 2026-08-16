@@ -1,0 +1,25 @@
+rows per arm = 1600; paired frames common to all = 1600
+
+   arm   rank80 raw          net        gap   ranks41-120         P50        mean
+    a0    1,231,616    1,206,669    +86,289     1,240,412     940,192     973,005
+    a1    1,217,408    1,192,461    +72,081     1,224,839     936,640     966,516
+
+marginal-80 population (arm a0, paired set): 80 frames, threshold 1,231,616
+
+      pair   paired median        mean  win share   marg80 median  marg80 mean    dRank80      dBand
+    a0->a1          -3,840      -6,489     85.8%          -6,432     -172,098    -14,208    -15,572
+
+per-bucket paired medians vs the control arm (whole run / marginal-80):
+bucket                     a1
+  WORK-H     -3,840/  -6,432
+  ALL            +0/     -32
+  FTR            +0/    -128
+  STG            +0/     -64
+  SRC        -3,840/  -5,760
+  MISC          -64/     +64
+  OTHR       +3,904/  +5,440
+  GCRA       -3,872/  -5,728
+  SINT       -3,712/  -4,832
+  WAIT       +3,840/  +5,376
+
+a1: flat-cut re-rank of the control by -6,432 -> rank80 1,225,184 (measured a1 rank80 1,217,408)

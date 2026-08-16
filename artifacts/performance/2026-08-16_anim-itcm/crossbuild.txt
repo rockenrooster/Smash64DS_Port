@@ -1,0 +1,25 @@
+rows per arm = 1600; paired frames common to all = 1600
+
+   arm   rank80 raw          net        gap   ranks41-120         P50        mean
+  c217    1,218,752    1,193,805    +73,425     1,222,048     934,944     962,780
+  ship    1,216,896    1,191,949    +71,569     1,229,122     933,696     971,729
+
+marginal-80 population (arm c217, paired set): 80 frames, threshold 1,218,752
+
+      pair   paired median        mean  win share   marg80 median  marg80 mean    dRank80      dBand
+c217->ship          -1,600      +8,949     68.1%          -1,792      -58,620     -1,856     +7,074
+
+per-bucket paired medians vs the control arm (whole run / marginal-80):
+bucket                   ship
+  WORK-H     -1,600/  -1,792
+  ALL           -64/     -64
+  FTR          -576/    -992
+  STG           +64/    +352
+  SRC        -1,024/  -1,120
+  MISC          -64/    -192
+  OTHR       +1,824/  +2,720
+  GCRA       -1,024/    -960
+  SINT       -1,280/  -1,024
+  WAIT       +1,856/  +2,720
+
+ship: flat-cut re-rank of the control by -1,792 -> rank80 1,216,960 (measured ship rank80 1,216,896)

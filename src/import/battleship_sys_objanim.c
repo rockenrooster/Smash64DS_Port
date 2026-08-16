@@ -323,8 +323,28 @@ static inline f32 ndsR2FixedToF32(s32 q, s32 bits)
  * compile the extracted kernel on the host. */
 #if defined(__arm__)
 #define NDS_R2_CUBIC_ATTR __attribute__((noinline, target("arm")))
+#define NDS_R2_ANIM_Q_BODY_ATTR \
+    inline __attribute__((always_inline, target("arm")))
 #else
 #define NDS_R2_CUBIC_ATTR
+/* Host side (check_r2_cubic_error_bound.py extracts this region and compiles it
+ * natively): an ordinary static function. Only the DS build needs the body
+ * duplicated, and always_inline at the harness's -O level is a needless way to
+ * fail a numeric gate that does not care where the code lives. */
+#define NDS_R2_ANIM_Q_BODY_ATTR
+#endif
+
+/* ITCM residency for the Q evaluator. Zero-wait and never evicted, against
+ * 21,719 tk/fr of instruction fetch measured on the marginal-80. The 1,028
+ * bytes come from three ITCM residents that execute ZERO instructions across
+ * the gate window -- `_arm_cmpsf2.o` + `_arm_unordsf2.o` (332 B, dead because
+ * the port defines the fcmp helpers itself) and
+ * ndsRendererHardwareGetLightShadeLut (404 B, the miss-path LUT builder) --
+ * plus the 512 B that were already free on the tick-HUD instrument. */
+#if NDS_R2_ANIM_Q_ITCM_ON && defined(__arm__)
+#define NDS_R2_ANIM_Q_ITCM __attribute__((section(".itcm")))
+#else
+#define NDS_R2_ANIM_Q_ITCM
 #endif
 
 /* Both kernels square `t` and then cube it, and t^3 wraps an s32 well before
@@ -444,8 +464,24 @@ static NDS_R2_CUBIC_ATTR f32 ndsR2CubicValueFixed(const AObj *aobj)
  *
  * ARM, not Thumb, for the same reason `ndsR2CubicValueFixed` is: SMULL and CLZ.
  * See `thumb-hides-64bit-cost` -- a pure-precision change cost +36,032 P95
- * until one `target("arm")` attribute won -71,616 back. */
-static NDS_R2_CUBIC_ATTR f32 ndsR2AnimValueQ(const AObj *aobj)
+ * until one `target("arm")` attribute won -71,616 back.
+ *
+ * WHERE IT LIVES IS NOW THE EXPENSIVE PART OF IT (2026-08-16). The marginal-80
+ * per-PC census charges this kernel 26,664 tk/fr, of which 21,719 -- 81.4% --
+ * is `icache_fill`: 1,028 bytes entered 370.6 times a frame, 117 cycles of
+ * fetch stall per entry, i.e. its lines do not survive between entries at all.
+ * The arithmetic below is already as cheap as it gets and the fetch is bigger
+ * than any arithmetic left to delete, so the lever is ITCM residency, which is
+ * zero-wait and never evicted. It is not "fetched whole by construction"
+ * either: 162 of its 257 instruction slots and 23 of its 33 cache lines carry
+ * any execution at all, which is why the whole body is moved rather than a
+ * hand-split hot half -- the cold 320 bytes are already free of fills.
+ *
+ * The body lives in an always_inline impl so the route below can emit TWO
+ * out-of-line copies at different addresses from ONE source. `target("arm")`
+ * is repeated on the impl because GCC refuses always_inline across a target
+ * mismatch and this TU is built -mthumb. */
+static NDS_R2_ANIM_Q_BODY_ATTR f32 ndsR2AnimValueQBody(const AObj *aobj)
 {
     s32 len = ndsR2AQLoad(aobj->length);            /* Q12 frames */
     s32 inv = ndsR2AQLoad(aobj->length_invert);     /* Q30 recip, or Q12 frames */
@@ -512,6 +548,45 @@ static NDS_R2_CUBIC_ATTR f32 ndsR2AnimValueQ(const AObj *aobj)
     }
     return ndsR2FixedToF32(out, NDS_R2_AQ_VF);
 }
+
+#if NDS_R2_ANIM_ITCM_ROUTE
+/* Lab SAME-BINARY route for the placement. Two out-of-line copies of one body,
+ * one in .itcm and one in .main; a `.data` word picks which `bl` the caller
+ * takes. Placement is a link-time property of a symbol, so it cannot be routed
+ * on one copy -- but it CAN be routed between two, and that turns a cross-build
+ * question with a >=14,080 rank-80 floor into a zero-repeat-floor difference.
+ *
+ * .data AND NOT .bss, per nds_r2_sqrtf.c: a zero-initialised route word with no
+ * explicit section lands in .bss and drags a ~10,000 tk/fr placement floor.
+ *
+ * Both arms run identical instructions on identical inputs, so the engagement
+ * control is an EQUALITY: gNdsR2CubicEvals must read the same on both arms. */
+volatile u32 gNdsR2AnimItcmRoute
+    __attribute__((used, section(".data"))) = 1u;
+
+static NDS_R2_CUBIC_ATTR f32 ndsR2AnimValueQMain(const AObj *aobj)
+{
+    return ndsR2AnimValueQBody(aobj);
+}
+
+static NDS_R2_CUBIC_ATTR NDS_R2_ANIM_Q_ITCM f32
+ndsR2AnimValueQItcm(const AObj *aobj)
+{
+    return ndsR2AnimValueQBody(aobj);
+}
+
+static f32 ndsR2AnimValueQ(const AObj *aobj)
+{
+    return (gNdsR2AnimItcmRoute != 0u) ? ndsR2AnimValueQItcm(aobj)
+                                       : ndsR2AnimValueQMain(aobj);
+}
+#else
+static NDS_R2_CUBIC_ATTR NDS_R2_ANIM_Q_ITCM f32
+ndsR2AnimValueQ(const AObj *aobj)
+{
+    return ndsR2AnimValueQBody(aobj);
+}
+#endif
 /* NDS_R2_CUBIC_FIXED_KERNEL_END */
 
 /* The original body with the arithmetic replaced twice over: E64's fixed cubic

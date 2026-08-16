@@ -1,0 +1,76 @@
+ITCM COLD CENSUS -- build-c200-trackprof-off, whole-match column of
+c200-off-pc.csv (1,600 presented frames, 439-2038).  Overlapping alias
+ranges collapsed into NON-OVERLAPPING blocks first: reading __addsf3 and
+__aeabi_frsub as separate 444+456 B symbols double-counts one blob and was
+the first, wrong version of this table.
+
+addr      bytes  names (whole-match executed instructions = 0)
+01ff8020      8  __aeabi_frsub
+01ff8028      4  __nds_task16_libgcc_fsub_golden,__subsf3
+01ff802c    444  __addsf3,__nds_task16_libgcc_fadd_golden
+01ff8210     16  __aeabi_ul2f,__floatundisf
+01ff85c4      8  __gesf2,__gtsf2
+01ff85cc      8  __lesf2,__ltsf2
+01ff85d4    100  __cmpsf2,__eqsf2,__nesf2
+01ff8638     16  __aeabi_cfrcmple
+01ff8648     24  __aeabi_cfcmpeq,__aeabi_cfcmple
+01ff8660     24  __nds_task9_libgcc_fcmpeq_golden
+01ff8678     24  __nds_task16_libgcc_fcmplt_golden
+01ff8690     24  __nds_task16_libgcc_fcmple_golden
+01ff86a8     24  __nds_task16_libgcc_fcmpge_golden
+01ff86c0     24  __nds_task16_libgcc_fcmpgt_golden
+01ff86d8     56  __nds_task16_libgcc_fcmpun_golden,__unordsf2
+01ff8ad0    404  ndsRendererHardwareGetLightShadeLut
+01ff9f84    192  ndsRendererNativeApplyStateSpan
+01ffcc94    128  ndsRendererNativeEmitProductionRawTexturedRun
+01ffcd14    112  ndsRendererNativeEmitProductionRawUntexturedRun
+01ffcd84    256  ndsRendererNativeEmitDenseRawRun
+01fff168     54  ndsFTParamsInvalidateFighterParts
+01fff294     28  __aeabi_fcmpun
+01fff4b8     24  __excpt_vectors
+01fff960    312  threadUnblockAllByValue
+01fffc34     40  armDCacheFlushAll
+01fffc94     12  armICacheInvalidateAll
+01fffca0      4  __arm_excpt_rst
+01fffca4      4  __arm_excpt_pabt
+01fffca8     12  __arm_excpt_und
+01fffcb4     12  __arm_excpt_dabt
+01fffcc0     48  __excpt_entry
+01fffdd4      4  tiny
+01fffdd8      4  one
+           2454  TOTAL COLD ITCM
+
+TAKEN THIS CYCLE (736 B):  _arm_cmpsf2.o 276 + _arm_unordsf2.o 56
+                           + ndsRendererHardwareGetLightShadeLut 404
+LEFT ALONE: exception vectors/handlers, armDCacheFlushAll,
+            armICacheInvalidateAll, threadUnblockAllByValue -- kernel
+            paths whose gate-window silence is not proof of disuse.
+
+ndsR2AnimValueQ PER-CACHE-LINE, marginal-80 (0x02068c74, 0x404 = 1,028 B)
+entry PC executes 29644 times over 80 frames = 370.6 entries/frame
+
+line         off  slots    instr/fr   icache tk/fr
+0x02068c60   -20    3/8      1111.7         1675.5
+0x02068c80    12    8/8      2457.5         1248.0
+0x02068ca0    44    8/8      1585.6          976.8
+0x02068cc0    76    8/8      1540.7          956.1
+0x02068ce0   108    8/8      1540.7          945.2
+0x02068d00   140    8/8      1540.7         1141.4
+0x02068d20   172    8/8      1540.7          883.8
+0x02068d40   204    8/8      1540.7          919.1
+0x02068d60   236    8/8      1540.7         1123.7
+0x02068d80   268    8/8      1540.7         1353.7
+0x02068da0   300    8/8      1540.7          959.2
+0x02068dc0   332    8/8      1540.7         1111.4
+0x02068de0   364    8/8      1540.7         1030.3
+0x02068e00   396    8/8      1540.7         1054.5
+0x02068e20   428    8/8      1540.7          819.7
+0x02068e40   460    8/8      2074.6         1410.0
+0x02068e60   492    8/8      1915.0         1135.7
+0x02068e80   524    8/8      1915.0         1010.1
+0x02068ea0   556    8/8      1716.6         1187.5
+0x02068ec0   588    8/8        71.9           85.7
+0x02068ee0   620    4/8        36.0           53.0
+0x02068f00   652    2/8       337.9          229.8
+0x02068f20   684    1/8       169.0          409.1
+lines touched 23 of 33; slots executed 162 of 257; icache total 21719.2 tk/fr
