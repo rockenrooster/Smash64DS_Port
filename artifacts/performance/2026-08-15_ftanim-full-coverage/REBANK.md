@@ -171,13 +171,19 @@ arm (`c193-segfix`) and the bore-0 arm (`c199-bank0`) — `P1Damage 76`,
 `spark 16`, `shield 480`, `AObj 774`, `packHits 257`, `runaway 0`, and the ROMs
 themselves differ (`f53b9efb…` vs `11f5d7d9…`). In this deterministic one-minute
 match **no blaster hit outcome changed**. That is a measurement of this match,
-not a proof that the hitbox move is inert in general: v5's own geometry says
-crouch clearance goes 45.181 → **−38.8** (the laser now sits on the old source
-line, `Y=223.398 ± 20`, against a crouching Mario hurtbox topping out at
-242.218), i.e. **crouching no longer clears the beam by geometry**. That was the
-symptom v5 existed to fix, and it is now back by construction. **Flagged for the
-owner's eye, not decided here** — it is a gameplay-fidelity question and the
-source line is what BattleShip itself uses.
+not a proof that the hitbox move is inert in general. **v5's own geometry says
+crouching Mario is hittable again.** The laser is back on the source line
+`Y = 223.398 ± 20`, i.e. spanning **203.398 .. 243.398**, against a crouching
+Mario hurtbox topping out at **242.218** — so its bottom edge sits **38.819
+BELOW** the crouch box top (clearance 45.181 → −38.819) and the two **overlap by
+1.181 world units**, which is exactly the pre-v5 number v5 was built to remove
+(`FOX_BORE_COLLISION_V5.md`: *"overlapped that crouch box by only 1.180648"*).
+**Crouching no longer ducks the beam, by geometry.** It did not show up in this
+match's invariants because no such exchange occurred in it. **Flagged for the
+owner's eye, not decided here** — 1.18 units of overlap is a grazing hit and may
+simply read as correct now that the pose is right; the source line is what
+BattleShip itself uses, and re-tuning it would be re-introducing a DS
+compensation the owner has just removed.
 
 ### 2.4 The other three 2026-08-14 eye-tuned fixes — enumerated, and none is suspect
 
