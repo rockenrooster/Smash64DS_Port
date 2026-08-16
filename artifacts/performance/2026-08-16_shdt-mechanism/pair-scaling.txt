@@ -1,0 +1,34 @@
+regions 1600   total pair tests 1,552   frames with >=1 pair test 57
+whole-match rate 0.97 calls/frame  (EXCHANGE.md section 3.5 counter gNdsCfxFighterDamagePhaseCalls = 1,938/match)
+
+baseline non-idle (median of the 1543 zero-pair frames) = 956,968 tk/fr
+
+  pairs on the frame     n  non-idle tk/fr       lift  IMPLIED per pair
+                 1-4     9       1,357,815    400,848           327,966
+                 5-9     2       1,420,848    463,881            66,269
+               10-19     4       1,333,806    376,838            30,147
+               20-29    19       1,149,156    192,189             9,039
+               30-49    19       1,171,083    214,115             5,229
+              50-999     4       1,448,860    491,893             6,670
+
+resolved per exact pair count (n >= 8):
+ pairs     n  non-idle tk/fr       lift  IMPLIED per pair
+    22    12       1,185,286    228,319            10,378
+    44    10       1,175,283    218,315             4,962
+
+OLS over the 57 engaged frames: non-idle tk/fr = -440 x pairs + 1,244,904   R2 = 0.003
+  (baseline from the zero-pair frames is 956,968; the intercept is +287,937 above it)
+
+EXACT per-pair-test call counts, engaged frames, chain symbols:
+  gmCollisionTestRectangle                         1.00 raw       1.00 above baseline rate
+  gmCollisionGetWorldPosition                      1.49 raw       1.48 above baseline rate
+  gmCollisionSetInvertMatrix                       0.51 raw       0.51 above baseline rate
+  func_ovl2_800ED490                               0.84 raw       0.81 above baseline rate
+  func_ovl2_800EDE5C                               1.00 raw       1.00 above baseline rate
+  func_ovl2_800EDBA4                               0.51 raw       0.51 above baseline rate
+  gmCollisionTransformMatrixAll                    0.96 raw       0.89 above baseline rate
+  gmCollisionCheckFighterInFighterRange            0.11 raw       0.11 above baseline rate
+  __aeabi_fadd                                   133.68 raw      75.46 above baseline rate
+  __aeabi_fmul                                   159.73 raw     103.67 above baseline rate
+  __aeabi_fdiv                                    10.44 raw       3.70 above baseline rate
+  sqrtf                                            3.10 raw       1.59 above baseline rate

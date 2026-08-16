@@ -33,6 +33,71 @@ clock.** Coverage is part of a baseline's identity now, not a footnote. The
 conversion: the sim runs 60 Hz and presents 30 Hz, ratio **measured at exactly
 2.000**, so 1,600 presented = 3,200 logic = **53.3 s**.
 
+## `SHDT` IS CLOSED: FREE HIT DETECTION CLEARS +64,977 BY 2,543 (2026-08-16) — `artifacts/performance/2026-08-16_shdt-mechanism/SHDT_MECHANISM.md`
+
+**0 builds, 0 emulator runs, 1 harness change (the 2^22 filter, built and
+verified). Boundary green, 0 `Exception:`. Root ROMs byte-unchanged.**
+
+**Do not brief `SHDT` as an 88%-of-the-gap lever again.** Exact re-rank of
+`build-c219-animitcm-ship`'s own 1,600 corrected rows (band 41–120 beside
+rank-80, because rank-80 sits on a steep slope):
+
+| intervention | rank-80 | moved | band 41–120 | gap |
+|---|---:|---:|---:|---:|
+| *(control)* | 1,210,304 | — | 1,217,946 | **+64,977** |
+| delete `func_ovl2_800ED490` (self+leaf) everywhere | 1,203,600 | 6,704 | 1,212,715 | +58,273 |
+| delete the whole collision chain's **excursion** | 1,186,630 | 23,674 | 1,197,387 | +41,303 |
+| delete the whole collision chain **everywhere** | 1,166,216 | 44,088 | 1,172,913 | +20,889 |
+| `SHDT` down to its own P50, every frame | 1,147,264 | 63,040 | 1,149,093 | **+1,937** |
+| **the WHOLE `SHDT` bucket deleted, every frame** | **1,142,784** | **67,520** | **1,144,552** | **−2,543** |
+
+**Hit detection running at literally zero cost clears the requirement by 3.8% of
+it; reduced to its own median it does not clear it at all.**
+
+**Mechanism, measured not read.** 57 of 1,600 frames run ≥1 (attack collision ×
+hurtbox) test; their work premium is **+268,255 tk/fr**. The victim's **~14**
+hurtbox joints get a world matrix, a 3×3 cofactor inverse and axis scales built
+**once each**, then one rectangle test per pair. **The cost is per FRAME, not per
+pair** — natural experiment on `build-c191-sitr-profile-c185`: frames with 44
+pairs run **exactly 2.00×** the `TestRectangle` of frames with 22, while
+`SetInvertMatrix` 0.98×, `EDBA4` 0.98×, `ED490` 0.97×, `__aeabi_fadd` 1.04×,
+`__aeabi_fmul` 0.98× and `sqrtf` 0.98× stay **flat** and the frame gets **10,004
+ticks cheaper**. OLS over the 57: **−440 tk/pair, R² = 0.003**; implied per-pair
+collapses 327,966 → 5,229 across the count buckets (63×).
+
+**Three routes closed by that one table.** The source's latch is already optimal
+(nothing to memoise); the pair test is nearly free; a per-hurtbox broad phase
+removes the flat half — a second, independent refutation of slice 47.
+
+**Owner.** The fighter collision transform chain, **+102,988 tk/fr = 38.4%** of
+the engaged premium (self 35,277 + leaf 67,712, `--attribute-leaves` over 8,746
+`bl` sites). Largest item `func_ovl2_800ED490`, the 3×4 affine multiply: **63.0
+soft-float calls per invocation** — exactly `gmcollision.c`'s 36 `fmul` + 27
+`fadd` — at **32.7 ARM9 cycles per helper call**. **93.5% is genuine marginal
+work; the cache-displacement reading is 4.5%.** Mask controls: random-88 negative
+control −19,189 with **no** collision symbol; the cost-ranked mask overlaps at
+37/88 and reproduces the asset-load ranking instead.
+
+**The one sub-lane whose refutation does NOT transfer, and it is still declined.**
+`EXCHANGE.md`'s 2.68 exchange rate was driven by `__udivmoddi4` at 4.0 sixty-four-bit
+divides per entry; **an affine multiply has no divide.** But it changes the joint
+matrices that decide hits (gameplay fidelity, rung 3), it is worth **6,704 =
+0.103× of the requirement even free**, and `HWROUTE.md` §7 prices a byte in that
+chain at 3.61 tk/fr. **Named, sized, not recommended — no owner decision asked.**
+
+**Banked: the 2^22 filter.** `sample-tick-hud-buckets.ps1` now detects
+`ALL >= (1<<22)` and subtracts it from `ALL` and every bucket at or above it, with
+a new trailing **`WRAPFIX`** CSV column (last, so no column moves) and a warning
+naming each frame against the run's corrected `ALL` median. Verified: all five
+known-bad rows reproduce `IO_AUDIT.md` §2 **exactly**; frame 1357 corrects **6**
+buckets = `SCPU`+`SINT`+`GCRA`+`SRC`+`WORK`+`ALL`, the parent chain §2 Proof 3
+names, and the count was not used to build the filter; largest clean `ALL` is
+3,358,080, a **25% margin** under the threshold. **Trigger still unproven.**
+
+**Next largest un-diagnosed item: the `SITR` cluster** (27 frames, −51,200).
+
+---
+
 ## THE CARD *IS* READ IN-MATCH — 7 times — AND THE INSTRUMENT INFLATES 5 FRAMES BY 2^22 (2026-08-16) — `artifacts/performance/2026-08-16_match-io-audit/IO_AUDIT.md`
 
 **0 builds, 0 source changes, 3 whole-match runs on the existing
@@ -94,9 +159,14 @@ deleting the premium on the 109 non-I/O force-load frames is **52,736 = 81% of
 silhouette 0.458). Leaf closure asserted **exact** — `leafsum == WORK-H` on all
 1,600 rows, no clamping.
 
-| cluster | n | median own excess | withFL | withRead | delete its excess → rank-80 |
+**Read the last column as it is headed: it deletes EVERY leaf's excess on those
+frames, not the named cluster's.** Deleting only `SHDT`'s excess on its own 33
+frames is **−50,752 (gap +14,225)**, not −57,152 (2026-08-16, `SHDT_MECHANISM.md`
+§6).
+
+| cluster | n | median own excess | withFL | withRead | delete ALL its frames' excess → rank-80 |
 |---|---:|---:|---:|---:|---:|
-| **`SHDT`** live hitbox hit detection | 33 | 259,776 | 7 | 0 | **−57,152** → gap +7,825 |
+| **`SHDT`** live hitbox hit detection | 33 | 259,776 | 7 | 0 | **−57,152** → gap +7,825 (`SHDT` alone: −50,752) |
 | **`SITR`** interrupt/state proc | 27 | 231,264 | 16 | 6 | **−51,200** → gap +13,777 |
 | `SPHD` physics map default | 8 | 215,136 | 5 | 0 | −14,464 |
 | `SPRM` params/anim interpreter | 7 | 298,496 | 7 | 1 | −12,736 |
@@ -107,11 +177,18 @@ They are **disjoint**: `SHDT` frames carry 14,112 of `SITR` excess (median
 median of an over-gate frame's excess is inside `SRC`; only 450/451/452 are
 majority outside.
 
-> **`SHDT` has a run P50 of 4,608 and a mean of 14,544 — a 56× concentration on
-> its own frames.** Every lane sizing done from a mean or a median self time has
-> read it as noise. It owns **41% of the over-gate frames and 88% of the remaining
-> gap**. This is the concrete answer to "is the marginal-80 one population": **no**,
-> and the worst-blurred lane is the one with the smallest median.
+> **`SHDT` has a run P50 of 4,608 and a mean of 14,544, and on its own 33 cluster
+> frames it runs 56× the run P50.** Every lane sizing done from a mean or a median
+> self time has read it as noise; it owns **41% of the over-gate frames**. This is
+> the concrete answer to "is the marginal-80 one population": **no**, and the
+> worst-blurred lane is the one with the smallest median.
+>
+> **Two corrections, 2026-08-16 (`SHDT_MECHANISM.md` §6).** *mean ÷ P50 is 3.2×,
+> not 56×* — the 56.4 is the cluster's excess ÷ the run P50, a different quantity.
+> And *"88% of the remaining gap" is a ceiling on a deletion nobody can perform*:
+> the whole `SHDT` bucket deleted from every frame moves rank-80 by **67,520**
+> against a +64,977 requirement, so **the lane at zero cost clears it by 2,543 and
+> nothing short of zero clears it at all.**
 
 **Open, unexplained, not this cycle's:** the load-frame population moves
 **±100,000–150,000** between two *same-binary* arms (camera pair: 830 −124,160,

@@ -1,0 +1,16 @@
+TEST OF THE 2^22 CORRECTION BLOCK NOW IN scripts/sample-tick-hud-buckets.ps1
+input: artifacts/performance/2026-08-16_match-io-audit/io-rows.csv (RAW, uncorrected)
+       build-c219-animitcm-ship, 1,600 samples, frames 439-2038, gate arm
+loaded 1600 rows
+
+frame 1056: ALL 5,311,744 -> 1,117,440, 3 bucket(s) corrected
+frame 1357: ALL 5,312,192 -> 1,117,888, 6 bucket(s) corrected
+frame 1629: ALL 5,872,576 -> 1,678,272, 3 bucket(s) corrected
+frame 1750: ALL 5,312,128 -> 1,117,824, 5 bucket(s) corrected
+frame 1961: ALL 5,312,064 -> 1,117,760, 3 bucket(s) corrected
+WRAPFIX nonzero rows: 5   sum of corrected buckets: 20
+
+PASS: all five corrected values match IO_AUDIT.md section 2 Proof 1 exactly
+PASS (bucket count): frame 1357 corrected 6 = SCPU+SINT+GCRA+SRC+WORK+ALL, exactly the parent chain Proof 3 names
+NEGATIVE CONTROL rows still >= 2^22 after correction: 0
+NEGATIVE CONTROL max ALL after correction: 3,358,080 = 6 VBlanks; threshold 4,194,304 has a 25% margin over the largest real frame

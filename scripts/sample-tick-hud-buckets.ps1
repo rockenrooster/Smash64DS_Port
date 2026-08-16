@@ -957,6 +957,68 @@ try {
         throw "Tick-HUD sampling began at frame $($frames[0]), before $StartFrame."
     }
 
+    # INSTRUMENT DEFECT: cpuGetTiming() intermittently reports a span exactly
+    # 2^22 = 4,194,304 ticks too large, and the error can ONLY INFLATE.
+    #
+    # cpuGetTiming (0x020be710) is ((u32)(tickGetCount() - start)) << 6 -- which
+    # is also where this campaign's 64-tick sampling granularity comes from.
+    # tickGetCount (0x020bfc2c) assembles (software_overflow << 16) | TIMER_DATA
+    # and credits ONE pending, un-serviced 16-bit overflow with the heuristic
+    # ((timer ^ 0x8000) >> 15) & (IF >> 5). When that correction fails on a
+    # span's START read the span reads exactly one overflow too long:
+    # 2^16 tick units << 6 = 2^22. The artifact lands in whichever span is open
+    # and therefore in that span's parents and in ALL.
+    #
+    # ALL contains every span, so `ALL >= 2^22` detects it COMPLETELY -- the
+    # test is complete by construction, not by calibration. Two independent
+    # proofs that the residual is the real frame: subtracting 2^22 lands within
+    # +-260 of the run's own ALL median on four of the five frames it was first
+    # found on, and the raw value is not a whole number of VBlanks (5,311,744 is
+    # 9.505 of them) while every clean ALL is.
+    # See artifacts/performance/2026-08-16_match-io-audit/IO_AUDIT.md section 2.
+    #
+    # It was present in 8 of the 13 whole-match runs surveyed on 2026-08-16 and
+    # moved rank-80 by 0..6,592. That is ON TOP OF the >=14,080 cross-build
+    # placement floor and, unlike it, is not symmetric -- a pair where one arm
+    # caught three of these and the other none is 4,800 apart before any code
+    # difference. So it is corrected HERE, once, rather than in each analysis.
+    #
+    # WRAPFIX (last CSV column) carries how many buckets each row had corrected,
+    # so the correction is auditable from the artifact and an analysis that
+    # would rather drop the row entirely can.
+    #
+    # WHAT IS NOT PROVEN: the trigger -- how the tick IRQ comes to be deferred
+    # long enough for the heuristic to miss. The magnitude, the site and the
+    # arithmetic that produces exactly 2^22 are.
+    $timerWrap = [uint64]4194304
+    $allIndex = [array]::IndexOf($bucketNames, 'ALL') + 1
+    $wrapFix = New-Object 'int[]' $rows.Count
+    $wrapReport = @()
+    for ($i = 0; $i -lt $rows.Count; $i++) {
+        if ([uint64]$rows[$i][$allIndex] -lt $timerWrap) { continue }
+        $rawAll = [uint64]$rows[$i][$allIndex]
+        $fixed = 0
+        for ($b = 0; $b -lt $bucketNames.Count; $b++) {
+            if ([uint64]$rows[$i][$b + 1] -ge $timerWrap) {
+                $rows[$i][$b + 1] = [uint64]$rows[$i][$b + 1] - $timerWrap
+                $fixed++
+            }
+        }
+        $wrapFix[$i] = $fixed
+        $wrapReport += ('frame {0}: ALL {1:N0} -> {2:N0}, {3} bucket(s) corrected' -f
+            $rows[$i][0], $rawAll, [uint64]$rows[$i][$allIndex], $fixed)
+    }
+    if ($wrapReport.Count -ne 0) {
+        $allSorted = @($rows | ForEach-Object { [uint64]$_[$allIndex] } | Sort-Object)
+        Write-Warning ("cpuGetTiming() 2^22 timer-overflow artifact detected and " +
+            "CORRECTED on $($wrapReport.Count) of $($rows.Count) samples (one " +
+            "subtraction of 4,194,304 per affected bucket). The run's ALL median " +
+            "after correction is $('{0:N0}' -f $allSorted[[int]($rows.Count / 2)]); a " +
+            "corrected value far from it would mean the row was a real stall and " +
+            "the correction wrong, so check these against it:`n  " +
+            ($wrapReport -join "`n  "))
+    }
+
     if (-not [string]::IsNullOrWhiteSpace($RowsCsv)) {
         $workCsvIndex = [array]::IndexOf($bucketNames, 'WORK') + 1
         $hudCsvIndex = [array]::IndexOf($bucketNames, 'HUD') + 1
@@ -968,12 +1030,18 @@ try {
         # with the buckets) and was then dropped at write time -- the same shape
         # as -ExtraGlobals, data collected and discarded. R2-07 L4 needs exactly
         # this column: which frames fell off the native fighter owner.
+        # WRAPFIX goes LAST, after the per-frame globals, so every existing
+        # column keeps its position -- prior rows CSVs and the tooling that
+        # reads them are unaffected. (Every consumer in scripts/ reads by NAME
+        # -- csv.DictReader or Import-Csv -- so this is belt and braces.)
         $csv = @(,('frame,' + ($bucketNames -join ',') + ',WORK-H' +
             $(if ($fallbackFields.Count) { ',fbTotal' }) +
-            $(if ($PerFrameGlobals.Count) { ',' + ($PerFrameGlobals -join ',') })))
+            $(if ($PerFrameGlobals.Count) { ',' + ($PerFrameGlobals -join ',') }) +
+            ',WRAPFIX'))
         $fallbackBase = $bucketNames.Count + 1
         $perFrameBase = $bucketNames.Count + $fallbackFields.Count + 1
-        foreach ($row in $rows) {
+        for ($ri = 0; $ri -lt $rows.Count; $ri++) {
+            $row = $rows[$ri]
             $cells = @($row[0])
             for ($b = 0; $b -lt $bucketNames.Count; $b++) {
                 $cells += $row[$b + 1]
@@ -985,6 +1053,7 @@ try {
             for ($g = 0; $g -lt $PerFrameGlobals.Count; $g++) {
                 $cells += $row[$perFrameBase + $g]
             }
+            $cells += $wrapFix[$ri]
             $csv += ($cells -join ',')
         }
         # Same two lines -JsonOut has carried since it was added, and they

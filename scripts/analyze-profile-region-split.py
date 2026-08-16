@@ -307,7 +307,12 @@ def main() -> int:
         want = {int(t) for t in args.regions_file.read_text().replace(",", " ").split()}
         band = np.array([r in want for r in live])
         control = ~band
-        label = f"regions-file {args.regions_file}"
+        # Basename only, for exactly the reason --cache is (see the print above):
+        # this output is committed as evidence, and a regions file under a
+        # scratch directory carries the build machine's user directory into a
+        # tracked file, which the owner-name scan then fails on. It did, on
+        # 2026-08-16, the first time --regions-file was used for a committed run.
+        label = f"regions-file {args.regions_file.name} ({len(want)} regions)"
     elif args.top_by_symbols:
         keys = [idx[n] for n in args.top_by_symbols.split(",") if n in idx]
         if not keys:

@@ -1,0 +1,44 @@
+2^22 instrument correction applied to 5 frames: [1056, 1357, 1629, 1750, 1961]
+CLOSURE exact on all 1600 rows (leafsum == WORK-H)
+corrected rank-80 1,210,304 raw / 1,185,357 net   gate 1,120,380   REQUIREMENT +64,977
+ranks 41-120 band mean 1,217,946
+
+SHDT cluster reproduces at n=33   frames [472, 605, 628, 652, 708, 713, 747, 903, 904, 997, 1022, 1162, 1163, 1164, 1188, 1301, 1449, 1495, 1656, 1657, 1696, 1930, 1931, 1932, 1933, 1934, 1935, 1936, 1937, 1938, 1939, 1940, 1975]
+  median own SHDT excess 259,776   total SHDT excess on the cluster 8,358,144
+
+--- the SHDT lane, whole match, 1,600 frames ---
+  P50 4,608   mean 14,544   P95 82,175   max 453,056   concentration mean/P50 3.2x
+  lane TOTAL over the match 23,270,656 tk   flat baseline (P50 x 1600) 7,372,800 tk   excursion 15,897,856 tk
+  frames over 30,000: 93   they carry 69.7% of the lane
+
+--- EXACT RE-RANK: delete a FRACTION of SHDT, two shapes ---
+    f |               cluster-only (33 fr) |                every frame (1,600)
+      |    rank-80    moved   band41-120 |    rank-80    moved   band41-120
+0.100 |  1,206,848    3,456    1,212,973 |  1,199,584   10,720    1,210,159
+0.200 |  1,206,848    3,456    1,207,442 |  1,189,760   20,544    1,201,848
+0.250 |  1,206,848    3,456    1,204,518 |  1,186,640   23,664    1,197,581
+0.333 |  1,201,513    8,791    1,199,425 |  1,184,738   25,566    1,190,326
+0.500 |  1,181,024   29,280    1,188,906 |  1,168,288   42,016    1,176,057
+0.667 |  1,168,704   41,600    1,179,006 |  1,153,162   57,142    1,163,027
+0.750 |  1,167,808   42,496    1,175,291 |  1,152,288   58,016    1,157,334
+1.000 |  1,159,552   50,752    1,167,448 |  1,142,784   67,520    1,144,552
+
+--- ceilings ---
+  delete ALL SHDT excess on the 33-frame cluster       rank-80  1,159,552  moved  50,752  gap  +14,225  band   1,167,448
+  delete the WHOLE SHDT bucket on every frame          rank-80  1,142,784  moved  67,520  gap   -2,543  band   1,144,552
+  delete SHDT down to its own P50 on every frame       rank-80  1,147,264  moved  63,040  gap   +1,937  band   1,149,093
+
+--- the shape a real implementation has: cut a FRACTION of the SHDT
+    EXCURSION (bucket minus its own P50) on every frame ---
+    f    rank-80    moved   band41-120       gap
+0.100  1,200,045   10,259    1,210,615   +54,718
+0.200  1,190,682   19,622    1,202,760   +45,355
+0.250  1,187,776   22,528    1,198,721   +42,449
+0.333  1,186,272   24,032    1,191,846   +40,945
+0.500  1,170,592   39,712    1,178,337   +25,265
+0.667  1,156,235   54,069    1,166,068   +10,908
+0.750  1,155,744   54,560    1,160,754   +10,417
+1.000  1,147,264   63,040    1,149,093    +1,937
+
+  the fraction of the SHDT EXCURSION that must go to close +64,977:
+    NONE. Deleting 100% of the SHDT excursion does not close the gap.

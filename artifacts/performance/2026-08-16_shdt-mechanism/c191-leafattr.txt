@@ -1,0 +1,68 @@
+bl sites     8,746 into 20 of 25 named leaves
+profile      artifacts\performance\2026-08-15_sitr-direct-children\v3-c191\arm9-profile.csv
+regions      1600 (region 0 dropped)
+basis        ticks = cycles / (2 x 1600) -- ARM9 is 2x the tick timer
+attributed   3,774,270,704 of 3,775,680,772 cycles (1,410,068 unmapped)
+non-idle     974,235 tk/frame mean
+
+=== top 88 by gmCollisionCheckFighterAttackDamageCollide ===
+    88 frames in 31 runs | control 1512 frames
+    non-idle premium +179,942 tk/frame
+       +tk/fr    bandtk    ctltk    on    callsB   callsC  ratio  symbol
+       80,237   281,048  200,811    88      4.52     1.60    2.8  armWaitForIrq
+       29,451    57,677   28,226    88   3010.41  1579.59    1.9  __aeabi_fadd
+       25,526    44,654   19,127    88   3386.20  1524.62    2.2  __aeabi_fmul
+        5,828     7,258    1,431    26      4.86     1.01    4.8  armCopyMem32
+        4,506    15,249   10,743    88    254.24   183.43    1.4  __aeabi_fdiv
+        4,435     4,717      283    57     14.75     0.78   19.0  func_ovl2_800ED490
+        4,357    16,959   12,602    88     77.82    67.18    1.2  ndsR2FtAnimParseDObjFigatree
+        4,207     5,408    1,202    26    229.74    51.31    4.5  get_fat.isra.0
+        3,716    17,121   13,404    88    120.40   118.83    1.0  memcpy
+        3,569    10,154    6,585    88     70.02    41.09    1.7  sqrtf
+        3,420     3,457       37    57      9.05     0.09   97.0  gmCollisionSetInvertMatrix
+        3,116     3,600      484    59     16.90     1.77    9.6  gmCollisionTransformMatrixAll
+        2,899     2,923       25    57     17.64     0.09  189.1  gmCollisionTestRectangle
+        2,744    22,424   19,680    88     77.82    68.53    1.1  gcPlayDObjAnimJoint
+        2,723    21,969   19,246    88    314.89   258.00    1.2  ndsR2AnimValueQ
+        2,649     3,400      751    25      0.56     0.11    5.1  f_lseek
+        2,376     4,333    1,957    38      5.08     2.16    2.4  ndsRendererSubmitWhispyNativeQuad
+        2,337     2,358       21    57     26.26     0.20  128.5  gmCollisionGetWorldPosition
+        2,177    12,145    9,968    88      4.00     4.00    1.0  lbParticleDrawTextures
+        2,129     2,375      245    41      0.70     0.06   11.0  ndsAudioFgmPlayAtPan
+        2,045    12,839   10,794    88     56.73    55.08    1.0  ndsRendererAdapterBuildDObjXObjMatrix
+        1,727     1,727        0    57     17.64     0.00    inf  gmCollisionCheckFighterAttackDamageCollide
+        1,723     1,878      155    57      9.08     0.22   41.1  func_ovl2_800EDBA4
+        1,579     4,564    2,985    87     23.62    15.65    1.5  ndsR2AnimBuildTrackTable.constprop.0.isra.0
+        1,543     3,951    2,408    88      2.00     1.94    1.0  ndsWhispyAOTStructFuncRunLean.isra.0
+        1,453     2,363      910    88     66.90    20.98    3.2  lbCommonSin
+
+=== leaf work charged to its CALLER, same mask (+56,172 tk/frame over all callers) ===
+       +tk/fr     leafB    leafC  caller
+       13,139     929.3     48.9  func_ovl2_800ED490
+        7,180     472.7      3.7  gmCollisionGetWorldPosition
+        6,250     162.8      1.7  func_ovl2_800EDE5C
+        6,020     551.8      5.7  gmCollisionSetInvertMatrix
+        4,777     287.9      2.2  gmCollisionTestRectangle
+        3,597     367.7     40.1  gmCollisionTransformMatrixAll
+        2,368     334.5    104.9  lbCommonCos
+        2,019     176.7     44.9  gmCollisionGetFighterPartsWorldPosition
+        1,557      70.0     41.0  sqrtf
+        1,542     267.6     83.9  lbCommonSin
+        1,477     290.9    163.4  ndsBaseGcPlayDObjAnimJoint
+        1,199      23.6     15.7  ndsR2AnimBuildTrackTable.constprop.0.isra.0
+          931     343.4    230.9  ndsStageMPAdjustFloorLoopWallSweep
+          746     141.2     94.4  lbParticleDrawTextures
+          523       6.8      2.2  f_read
+          488      62.5     25.2  ndsWhispyAOTStructFuncRunLean.isra.0
+          488      10.7      6.7  ndsRendererAdapterCaptureStageWorldSourceKey
+          446     100.9     50.5  mpCollisionCheckProjectFloor
+          361      38.2     18.2  ndsBaseMPProcessCheckTestLWallCollisionAdjNew
+          346     177.6    149.5  ndsR2FtAnimParseDObjFigatree
+          305     250.2    224.3  ndsRendererSubmitParticleQuad
+          263      52.5     25.1  __kernel_cosf
+          256      48.7     23.4  __kernel_sinf
+          255      80.9     71.4  syUtilsArcTan.part.0
+          233      38.2     18.2  ndsBaseMPProcessCheckTestRWallCollisionAdjNew
+          231      51.1     41.5  ndsMPLineExtentSweepRejects
+
+named chain: 17 symbols, premium +73,898 tk/frame (self +26,874 + leaf +47,024) = 41.1% of the non-idle premium

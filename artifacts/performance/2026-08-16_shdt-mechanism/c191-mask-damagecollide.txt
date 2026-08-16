@@ -1,0 +1,86 @@
+profile      artifacts\performance\2026-08-15_sitr-direct-children\v3-c191\arm9-profile.csv
+regions      1600 (region 0 dropped)
+basis        ticks = cycles / (2 x 1600) -- ARM9 is 2x the tick timer
+attributed   3,774,270,704 of 3,775,680,772 cycles (1,410,068 unmapped)
+non-idle     974,235 tk/frame mean
+
+=== top 88 by gmCollisionCheckFighterAttackDamageCollide ===
+    88 frames in 31 runs | control 1512 frames
+    non-idle premium +179,942 tk/frame
+       +tk/fr    bandtk    ctltk    on    callsB   callsC  ratio  symbol
+       80,237   281,048  200,811    88      4.52     1.60    2.8  armWaitForIrq
+       29,451    57,677   28,226    88   3010.41  1579.59    1.9  __aeabi_fadd
+       25,526    44,654   19,127    88   3386.20  1524.62    2.2  __aeabi_fmul
+        5,828     7,258    1,431    26      4.86     1.01    4.8  armCopyMem32
+        4,506    15,249   10,743    88    254.24   183.43    1.4  __aeabi_fdiv
+        4,435     4,717      283    57     14.75     0.78   19.0  func_ovl2_800ED490
+        4,357    16,959   12,602    88     77.82    67.18    1.2  ndsR2FtAnimParseDObjFigatree
+        4,207     5,408    1,202    26    229.74    51.31    4.5  get_fat.isra.0
+        3,716    17,121   13,404    88    120.40   118.83    1.0  memcpy
+        3,569    10,154    6,585    88     70.02    41.09    1.7  sqrtf
+        3,420     3,457       37    57      9.05     0.09   97.0  gmCollisionSetInvertMatrix
+        3,116     3,600      484    59     16.90     1.77    9.6  gmCollisionTransformMatrixAll
+        2,899     2,923       25    57     17.64     0.09  189.1  gmCollisionTestRectangle
+        2,744    22,424   19,680    88     77.82    68.53    1.1  gcPlayDObjAnimJoint
+        2,723    21,969   19,246    88    314.89   258.00    1.2  ndsR2AnimValueQ
+        2,649     3,400      751    25      0.56     0.11    5.1  f_lseek
+        2,376     4,333    1,957    38      5.08     2.16    2.4  ndsRendererSubmitWhispyNativeQuad
+        2,337     2,358       21    57     26.26     0.20  128.5  gmCollisionGetWorldPosition
+        2,177    12,145    9,968    88      4.00     4.00    1.0  lbParticleDrawTextures
+        2,129     2,375      245    41      0.70     0.06   11.0  ndsAudioFgmPlayAtPan
+        2,045    12,839   10,794    88     56.73    55.08    1.0  ndsRendererAdapterBuildDObjXObjMatrix
+        1,727     1,727        0    57     17.64     0.00    inf  gmCollisionCheckFighterAttackDamageCollide
+        1,723     1,878      155    57      9.08     0.22   41.1  func_ovl2_800EDBA4
+        1,579     4,564    2,985    87     23.62    15.65    1.5  ndsR2AnimBuildTrackTable.constprop.0.isra.0
+        1,543     3,951    2,408    88      2.00     1.94    1.0  ndsWhispyAOTStructFuncRunLean.isra.0
+        1,453     2,363      910    88     66.90    20.98    3.2  lbCommonSin
+        1,436     2,028      592    31      1.23     0.34    3.7  _svfiprintf_r
+        1,430     6,611    5,181    88     22.52    14.92    1.5  ndsStageMPAdjustFloorLoopWallSweep
+        1,403     2,377      974    88     66.90    20.98    3.2  lbCommonCos
+        1,368     2,860    1,492    88      4.00     3.68    1.1  battleship_ftMainSearchHitFighter
+        1,319     1,764      446    59      2.44     0.53    4.6  gmCollisionGetFighterPartsWorldPosition
+        1,284     1,772      488    22      1.98     0.51    3.9  _vfiprintf_r
+        1,279     2,894    1,614    62      2.10     1.17    1.8  mpCollisionCheckProjectFloor
+        1,272     4,283    3,011    88     61.52    59.74    1.0  ndsBaseGcPlayDObjAnimJoint
+        1,215     1,520      305    26      4.59     0.97    4.7  _dvmDiscCacheReadWrite
+        1,210     3,674    2,464    88     74.92    45.51    1.6  __aeabi_lmul
+        1,190     2,359    1,169    59      5.23     2.51    2.1  ndsStageMPCeilFloorLoopSweep
+        1,169     1,332      162    52      5.48     0.98    5.6  ftMainParseMotionEvent
+        1,120     1,525      405    75     41.22    10.70    3.9  mutexUnlock
+        1,095    11,487   10,391    88      4.45     4.06    1.1  ftParamUpdateAnimKeys
+        1,043     1,438      395    22      0.99     0.25    3.9  __ssvfiscanf_r
+        1,032     4,153    3,121    88     39.00    26.07    1.5  ndsMPLineExtentSweepRejects
+        1,029     2,030    1,001    88      0.00     0.83    0.0  __aeabi_l2f
+          973     1,299      326    75     41.22    10.70    3.9  mutexLock
+          954     1,292      338    22     30.65     7.87    3.9  consolePrintChar
+
+named chain: 14 symbols, premium +22,699 tk/frame (self +22,699 + leaf +0) = 12.6% of the non-idle premium
+
+--- controls: does the ranking survive only on ITS OWN mask? ---
+    overlap band vs profile-top-cost: 37 of 88 (chance 4.8)
+
+=== random mask (negative control) ===
+    88 frames in 85 runs | control 1512 frames
+    non-idle premium -19,189 tk/frame
+       +tk/fr    bandtk    ctltk    on    callsB   callsC  ratio  symbol
+       10,083   214,752  204,670    88      1.62     1.77    0.9  armWaitForIrq
+          392    20,902   20,510    88   1652.68  1625.52    1.0  __aeabi_fmul
+          263     1,299    1,036     8      0.27     0.21    1.3  ndsRendererSubmitNativeRebirthHalo
+          243       699      457     5      1.84     1.17    1.6  ndsRendererHardwareSubmitVertex
+          230       686      457     5      0.47     0.26    1.8  ndsRendererScanList
+          227     1,027      801    15      0.44     0.34    1.3  ndsRendererAdapterSubmitStageDL
+          172    10,700   10,528    84     33.77    32.54    1.0  mpCollisionGetFCCommonFloor
+          171     2,626    2,455    54      2.02     1.83    1.1  ndsRendererSubmitParticleQuad
+
+=== profile's own top-N by cost ===
+    88 frames in 73 runs | control 1512 frames
+    non-idle premium +362,157 tk/frame
+       +tk/fr    bandtk    ctltk    on    callsB   callsC  ratio  symbol
+      241,363   433,312  191,949    88      8.17     1.39    5.9  armWaitForIrq
+       23,473    52,027   28,554    88   2837.90  1589.63    1.8  __aeabi_fadd
+       21,076    40,448   19,372    88   3106.25  1540.92    2.0  __aeabi_fmul
+       19,060    31,620   12,560    88    300.11   108.37    2.8  memcpy
+       14,490    15,445      954    58     10.64     0.68   15.7  armCopyMem32
+       13,620    25,713   12,093    88     95.92    66.12    1.5  ndsR2FtAnimParseDObjFigatree
+       12,611    13,350      739    58    570.33    31.49   18.1  get_fat.isra.0
+        8,703    27,620   18,917    88    384.09   253.97    1.5  ndsR2AnimValueQ

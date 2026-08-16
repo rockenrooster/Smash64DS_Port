@@ -1,0 +1,53 @@
+bl sites     8,746 into 20 of 25 named leaves
+cache        c191-leaf.npz (reused)
+profile      artifacts\performance\2026-08-15_sitr-direct-children\v3-c191\arm9-profile.csv
+regions      1600 (region 0 dropped)
+basis        ticks = cycles / (2 x 1600) -- ARM9 is 2x the tick timer
+attributed   3,774,270,704 of 3,775,680,772 cycles (1,410,068 unmapped)
+non-idle     974,235 tk/frame mean
+
+=== regions-file regions.txt (57 regions) ===
+    57 frames in 30 runs | control 1543 frames
+    non-idle premium +268,255 tk/frame
+       +tk/fr    bandtk    ctltk    on    callsB   callsC  ratio  symbol
+      128,344   328,996  200,652    57      6.23     1.60    3.9  armWaitForIrq
+       41,158    69,537   28,379    57   3639.74  1585.08    2.3  __aeabi_fadd
+       38,582    57,739   19,157    57   4349.21  1526.45    2.8  __aeabi_fmul
+        9,026    10,456    1,430    22      6.96     1.01    6.9  armCopyMem32
+        7,331    19,911   12,581    57     84.25    67.15    1.3  ndsR2FtAnimParseDObjFigatree
+        7,006     7,283      277    57     22.77     0.76   30.0  func_ovl2_800ED490
+        6,701     7,896    1,194    22    336.00    50.97    6.6  get_fat.isra.0
+        6,312    17,078   10,766    57    284.35   183.74    1.5  __aeabi_fdiv
+        5,864    19,264   13,400    57    123.75   118.73    1.0  memcpy
+        5,543    24,741   19,198    57    342.88   258.11    1.3  ndsR2AnimValueQ
+        5,301     5,337       36    57     13.96     0.09  152.8  gmCollisionSetInvertMatrix
+        5,257    11,851    6,594    57     84.46    41.14    2.1  sqrtf
+        5,060     5,536      475    57     26.05     1.73   15.0  gmCollisionTransformMatrixAll
+        4,489     4,513       24    57     27.23     0.09  298.0  gmCollisionTestRectangle
+        4,209     4,956      747    21      0.79     0.11    7.2  f_lseek
+        3,784    23,481   19,697    57     84.25    68.48    1.2  gcPlayDObjAnimJoint
+        3,620     3,641       20    57     40.54     0.20  202.5  gmCollisionGetWorldPosition
+        3,389    14,174   10,785    57     57.39    55.09    1.0  ndsRendererAdapterBuildDObjXObjMatrix
+
+=== leaf work charged to its CALLER, same mask (+84,619 tk/frame over all callers) ===
+       +tk/fr     leafB    leafC  caller
+       20,696    1434.7     47.9  func_ovl2_800ED490
+       11,117     729.8      3.6  gmCollisionGetWorldPosition
+        9,686     251.4      1.6  func_ovl2_800EDE5C
+        9,329     851.9      5.6  gmCollisionSetInvertMatrix
+        7,391     444.5      2.2  gmCollisionTestRectangle
+        5,791     566.6     39.3  gmCollisionTransformMatrixAll
+        3,805     473.2    104.4  lbCommonCos
+        3,494     272.2     44.0  gmCollisionGetFighterPartsWorldPosition
+        2,477     378.6     83.5  lbCommonSin
+        2,329      84.5     41.1  sqrtf
+        2,166      30.0     15.6  ndsR2AnimBuildTrackTable.constprop.0.isra.0
+        1,275     171.0     94.2  lbParticleDrawTextures
+          926      10.3      2.2  f_read
+          852     157.5     83.5  ftComputerCheckDetectTarget
+          849     295.6    223.1  ndsRendererSubmitParticleQuad
+          644      74.0     25.5  ndsWhispyAOTStructFuncRunLean.isra.0
+          582     196.5    149.3  ndsR2FtAnimParseDObjFigatree
+          358      63.4     25.2  __kernel_cosf
+
+named chain: 10 symbols, premium +102,988 tk/frame (self +35,277 + leaf +67,712) = 38.4% of the non-idle premium
