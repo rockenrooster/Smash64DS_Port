@@ -92,6 +92,111 @@ CALLS ZERO** (a build default has no pre-poke frame). `Saturate`/`Degenerate`/
 > `build-c200-trackprof-off` at `GX_COMPOSE=1`. Quoting a stale split is what
 > made `MENU.md`'s 94,602 wrong for fourteen cycles.
 
+## THE FIGHTER DRAW CONTRACT IS NEARLY STATIC — 51 CHANGES IN 4,076 CAPTURES, AND THE SOUND MEMO IS 19,058 (2026-08-16) — `artifacts/performance/2026-08-16_ftr-capture-memo/CAPTURE_MEMO.md`
+
+**RED, unowned, and the largest sized item on this board.** 1 lab build
+(`build-c222-ftrcensus`), 1 whole-match run, 1 Boundary. **The level is unmoved
+at +65,297**; `size.py` re-derives rank-80 1,210,624 / net 1,185,677 / band
+41–120 1,218,356 from the basis rows before printing any result.
+
+**Predicted 70% unchanged, band 55–85%. Measured 98.75% — outside my own band.**
+`PREDICTION.md` was written before the ROM existed. `FTR_LANE.md` §5 left the
+capture pass at 34,307 tk/fr as a *ceiling* precisely because this rate had
+never been measured.
+
+```text
+Captures 4,076   Same 4,025   ChangeTotal 51   MaxRun 848   ZeroEvents 164
+CountSame 4,064  DObjSame 4,064  DLSame 4,064  PreSame 4,025
+KeySame 4,049    KeySameContractDiff 49        KeyDiffContractSame 25
+EventTotal 62,920            BoundsPass 3,823  BoundsFail 142
+```
+
+**The instrument check could have failed and did not:**
+`62,920 / (4,076 − 164) = 16.08` events per fighter against Boundary's
+independent `ftrContract=6784/6784` = 16.0, and `4,076 + 2` bootstraps
+`= 2 × 2,039` presented frames exactly — the census saw every frame.
+In-window (per-stop deltas, frames 535–2039): **3,008 comparisons, 45 changes =
+98.50%**, stationary (worst 96-frame window 8, five windows 0–1).
+
+**What changes.** The populations nest: **51 preamble changes, 12 of them also
+structural**, and those 12 move count + dobj + dl *together* — the whole event
+list appearing or disappearing, not a part swap. `event_count` cannot move
+without moving both hashes, so containment plus equal cardinality (4,064 three
+times) forces the three sets equal: **zero DL-only changes.** The
+12 are accounted for by the 164 zero-event captures, of which `BoundsFail = 142`
+are `ftDisplayMainProcDisplay`'s off-screen magnify early return
+(`ftdisplaymain.c:1131-1152`) and the rest its `is_invisible` return at `:1088`.
+**Every one of those decisions is taken in the head, before the tree walk.**
+
+**REFUTED, TWICE — do not build a DObj-tree-keyed memo.** The census hashed the
+obvious key (per DObj: `flags`, `dl`, `dv`, `dls`, `dls[0..1]`, `FTParts` flags
+— exactly what `ftdisplaymain.c:753-841` branches on) and it reads
+`KeySameContractDiff = 49`: **unchanged on 49 of the 51 frames the contract
+changed.** It is also expensive — FTR P50 290,432 → **301,120**, +10,688, a
+cross-build pair against a ~5,700 P50 floor, so an order of magnitude rather
+than a banked price, and the shape a walk that adds `dls[0]`, `dls[1]` and
+`parts->flags` chases to every node predicts. That +10,688 is the engagement
+proof and the reason **this ROM must never be read for ticks.**
+
+**CORRECTED — the sound ceiling is 19,300, not 34,307.** The capture pass is not
+read-only: `ndsBaseFTDisplayMainProcDisplay` **is** decomp's
+`ftDisplayMainProcDisplay`, and its head writes the off-screen player arrow HUD
+(`fp->is_magnify_show`, `fp->magnify_pos`,
+`gIFCommonPlayerInterface.magnify_mode`, `ifCommonPlayerArrowsUpdateFlags`),
+`gLBCommonScale`, the fog statics and the scene light twice — and
+`BoundsFail = 142` proves that branch fires in the canonical match. The target
+is the walk, `ftDisplayMainDrawAll → ftDisplayMainDrawDefault`, inclusive
+**19,300**.
+
+**SIZED** (uniform D on the basis's own 1,600 rows; conversion **1.000**
+throughout because `FTR` band/P50 = 1.000, so D *is* the rank-80 move):
+
+| candidate | D | rank-80 | level |
+|---|---:|---:|---:|
+| ≥14,080 cross-build floor, for reference | 14,080 | 1,196,544 | +51,217 |
+| `CountFlags` deleted — diagnostic-only, no memo needed | 4,117 | 1,206,507 | +61,180 |
+| **WALK memo at the measured 0.9875 — SOUND, recommended** | **19,058** | **1,191,566** | **+46,239** |
+| WALK memo + `CountFlags` deleted | 23,175 | 1,187,449 | +42,122 |
+| whole-capture memo at 0.9875 (needs the head proven) | 33,877 | 1,176,747 | +31,420 |
+
+**19,058 is 29.2% of the requirement and clears the floor by 35%; 23,175 is
+35.5%.**
+
+**FOUND IN PASSING: `ndsFighterDisplayContractCountFlags` is 4,117 tk/fr of
+recursive tree walk whose only outputs are two debug counters.**
+`gNdsFighterDisplayContractHiddenCount` / `…NoTextureCount` are written in
+`reloc_backend_renderer_dl.c`, reset in `taskman_seam.c:3148-3149`, and read
+only by `verify-battle-mariofox-gcrunall-loop-harness.ps1:2065` and
+`probe-ko-vfx.ps1` — **neither in Boundary.** Free once the walk is memoised.
+
+**THE DESIGN, SPECIFIED NOT BUILT — the key is the head's own output.** When
+`ftDisplayMainDrawAll` is reached the head has already written every scalar that
+decides the preamble into `sNdsFighterDisplayContract` (`geometry_mode`,
+`cycle_type`, `render_mode`, `prim_color`, `env_color`, `light`, `light_valid`,
+`light_count`) and has already taken its early returns. Comparing those ~10
+words costs a compare, not a walk, and covers **51 of 51** observed changes.
+Redirect through the shim — `battleship_ftdisplaymain.c` already renames
+`ProcDisplay`, and `ftDisplayMainDrawAll` has exactly two call sites, both
+inside it — **not a decomp edit**.
+
+**The one unproven piece has a cheap sound answer.** Zero DL-only changes is one
+match, not an invariant; the fighter joint DL writers are a closed set in one
+file (`decomp/…/ft/ftparam.c:780,794,813,863,873,887,934`; every other `->dl =`
+in the tree is items, weapons or stage), so a one-line dirty set there makes the
+key sound by construction — the `bind-where-broken-not-where-read` pattern
+already shipped for `gMPCollisionGeometry`.
+
+**Not built, and the reasons are sizes rather than taste:** the cache is ~2.6 KB
+of bss against a heap low-water already under the GObj-cap threshold; the sound
+key needs the `ftparam.c` overlay patch, a second seam with its own
+`check-decomp-pristine.ps1` obligation; and the item's size *and* shape both
+moved inside this cycle. **Next cycle builds the corrected design.**
+
+**Not done:** the 39 preamble-only changes are not attributed to a specific
+field (all head-decided either way); `gmCameraLookAtFuncMatrix`'s 5,143 rider is
+untouched; `STG` is untouched. The census source is behind
+`NDS_R2_FTR_CONTRACT_CENSUS ?= 0`, so the shipping binary is unchanged.
+
 ## THE PER-JOINT COLLISION SETUP IS NOT REDUNDANT — THE RENDERER *CALLS* IT — AND AT ZERO COST IT IS 10,110 AT RANK-80 (2026-08-16) — `artifacts/performance/2026-08-16_collision-setup-share/SETUP_SHARE.md`
 
 **0 lab builds, 0 emulator runs of my own, 0 production source edits, 0 defaults

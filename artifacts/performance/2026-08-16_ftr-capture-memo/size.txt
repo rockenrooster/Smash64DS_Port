@@ -1,0 +1,14 @@
+CONTROL  rank-80 1210624 raw / 1185677 net   level +65297   band 41-120 1218356
+         (expect 1,210,624 / 1,185,677 / +65,297 / 1,218,356)
+FTR P50 290432, band 41-120 290400, ratio 1.000
+measured hit rate 0.9875 (4,025 unchanged of 4,076 comparisons)
+
+candidate                                                         D   rank-80    moved   ratio       level
+the >=14,080 cross-build placement floor, for reference       14080   1196544    14080   1.000      +51217
+CountFlags deleted -- diagnostic-only tree walk, NO memo n     4117   1206507     4117   1.000      +61180
+WALK memo at the measured 0.9875 (SOUND, recommended)         19058   1191566    19058   1.000      +46239
+WALK memo + CountFlags deleted                                23175   1187449    23175   1.000      +42122
+WALK memo, ceiling if the contract never changed              19300   1191324    19300   1.000      +45997
+WHOLE capture memo at 0.9875 -- needs the head side effect    33877   1176747    33877   1.000      +31420
+WHOLE capture memo, ceiling (FTR_LANE section 5s figure)      34307   1176317    34307   1.000      +30990
+the requirement itself                                        65297   1145327    65297   1.000          +0

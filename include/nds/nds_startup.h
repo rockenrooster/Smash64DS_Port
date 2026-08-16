@@ -5269,6 +5269,22 @@ extern volatile u32 gNdsFighterDisplayContractBoundsPassCount;
 extern volatile u32 gNdsFighterDisplayContractBoundsFailCount;
 extern volatile u32 gNdsFighterDisplayContractBoundsXBits;
 extern volatile u32 gNdsFighterDisplayContractBoundsYBits;
+#if NDS_R2_FTR_CONTRACT_CENSUS
+/* Fighter draw-contract change census; see src/port/diagnostics.c. Lab only. */
+extern volatile u32 gNdsFtrContractCaptures;
+extern volatile u32 gNdsFtrContractSame;
+extern volatile u32 gNdsFtrContractCountSame;
+extern volatile u32 gNdsFtrContractDObjSame;
+extern volatile u32 gNdsFtrContractDLSame;
+extern volatile u32 gNdsFtrContractPreSame;
+extern volatile u32 gNdsFtrContractKeySame;
+extern volatile u32 gNdsFtrContractKeySameContractDiff;
+extern volatile u32 gNdsFtrContractKeyDiffContractSame;
+extern volatile u32 gNdsFtrContractChangeTotal;
+extern volatile u32 gNdsFtrContractMaxRun;
+extern volatile u32 gNdsFtrContractZeroEvents;
+extern volatile u32 gNdsFtrContractEventTotal;
+#endif
 extern volatile u32 gNdsStageGCDrawAllLoopHardwareCarrySeedCount;
 extern volatile u32 gNdsStageGCDrawAllLoopHardwareCarryCaptureCount;
 extern volatile u32 gNdsStageGCDrawAllLoopHardwareCarryTextureSeedCount;

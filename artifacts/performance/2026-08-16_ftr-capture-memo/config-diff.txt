@@ -1,0 +1,6 @@
+87a88
+> #define NDS_R2_FTR_CONTRACT_CENSUS 1
+185c186
+< #define NDS_TASK10_GIT_SHORT "f5e13aa"
+---
+> #define NDS_TASK10_GIT_SHORT "7b64a57"

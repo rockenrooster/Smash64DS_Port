@@ -591,6 +591,17 @@ NDS_TASK106_UPDATES_PER_PRESENT ?= 2
 # update rate unchanged, so the tail is loading, not simulation.
 # Sample with -FallbackCensus -RingDump; lab only, default 0.
 NDS_TASK75_LOAD_CENSUS ?= 0
+# 2026-08-16: does the fighter DRAW CONTRACT actually change every frame?
+# FTR_LANE.md section 5 sized the capture pass at 34,307 tk/fr and called it a
+# CEILING, because the contract-change rate had never been measured and no
+# counter existed for it. This flag adds that counter and nothing else: after
+# each capture, hash the emitted event list, the DL pointers, the preambles and
+# a candidate DObj-tree key, and count changed/unchanged against that slot's
+# previous frame. It answers whether the pass is a memo, a load-time table, or
+# dead, without building a memo first. Lab only, default 0 -- it costs a ~640-
+# byte hash per fighter per frame inside the FTR span, so a ROM built with it
+# must never be read for ticks.
+NDS_R2_FTR_CONTRACT_CENSUS ?= 0
 # Cycle 100: the INITIAL VALUE of gNdsFtrPlanRoute (the baked fighter draw
 # plan). 0 = the eligibility pass and the owner-validate cache run every draw,
 # exactly as shipped; 1 = both are replaced by replaying a plan baked at scene
@@ -3593,6 +3604,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_TASK104_STAGE_STATS_ELISION $(NDS_TASK104_STAGE_STATS_ELISION)'; \
 		echo '#define NDS_TASK106_UPDATES_PER_PRESENT $(NDS_TASK106_UPDATES_PER_PRESENT)u'; \
 		echo '#define NDS_TASK75_LOAD_CENSUS $(NDS_TASK75_LOAD_CENSUS)'; \
+		echo '#define NDS_R2_FTR_CONTRACT_CENSUS $(NDS_R2_FTR_CONTRACT_CENSUS)'; \
 		echo '#define NDS_FTR_PLAN_ROUTE $(NDS_FTR_PLAN_ROUTE)u'; \
 		echo '#define NDS_FTR_PLAN_VERIFY $(NDS_FTR_PLAN_VERIFY)u'; \
 		echo '#define NDS_R2_SECOND_ENTRY_DIAG $(NDS_R2_SECOND_ENTRY_DIAG)'; \

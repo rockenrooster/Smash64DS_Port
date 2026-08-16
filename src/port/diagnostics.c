@@ -3907,6 +3907,33 @@ volatile u32 gNdsFighterDisplayContractBoundsPassCount;
 volatile u32 gNdsFighterDisplayContractBoundsFailCount;
 volatile u32 gNdsFighterDisplayContractBoundsXBits;
 volatile u32 gNdsFighterDisplayContractBoundsYBits;
+#if NDS_R2_FTR_CONTRACT_CENSUS
+/* 2026-08-16. FTR_LANE.md section 5 priced the capture pass at 34,307 tk/fr and
+ * refused to call it a saving, because nobody had ever measured how often the
+ * contract it re-derives actually CHANGES. These count exactly that, per
+ * fighter slot, against that slot's own previous capture.
+ *
+ * `used` is not decoration: --gc-sections has already dropped five diagnostic
+ * globals in this repo and turned Boundary red on "Missing ELF symbol". */
+volatile u32 gNdsFtrContractCaptures __attribute__((used));
+volatile u32 gNdsFtrContractSame __attribute__((used));
+volatile u32 gNdsFtrContractCountSame __attribute__((used));
+volatile u32 gNdsFtrContractDObjSame __attribute__((used));
+volatile u32 gNdsFtrContractDLSame __attribute__((used));
+volatile u32 gNdsFtrContractPreSame __attribute__((used));
+volatile u32 gNdsFtrContractKeySame __attribute__((used));
+/* The soundness column. A DObj-tree key that reads "unchanged" while the
+ * contract changed would make a key-guarded memo WRONG, so this must be read
+ * before any memo is proposed. */
+volatile u32 gNdsFtrContractKeySameContractDiff __attribute__((used));
+volatile u32 gNdsFtrContractKeyDiffContractSame __attribute__((used));
+/* Cumulative, so -PerFrameGlobals differencing gives per-frame changes and the
+ * change set can be intersected with the marginal-80 frames. */
+volatile u32 gNdsFtrContractChangeTotal __attribute__((used));
+volatile u32 gNdsFtrContractMaxRun __attribute__((used));
+volatile u32 gNdsFtrContractZeroEvents __attribute__((used));
+volatile u32 gNdsFtrContractEventTotal __attribute__((used));
+#endif
 Vec3f gLBCommonScale;
 volatile u32 gNdsStageGCDrawAllLoopHardwareCarrySeedCount;
 volatile u32 gNdsStageGCDrawAllLoopHardwareCarryCaptureCount;

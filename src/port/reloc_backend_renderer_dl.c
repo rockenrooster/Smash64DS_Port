@@ -13536,6 +13536,162 @@ static u32 sNdsFighterDisplayContractLastFrame[2] = {
     0xffffffffu, 0xffffffffu
 };
 
+#if NDS_R2_FTR_CONTRACT_CENSUS
+/* 2026-08-16, the discriminating measurement for FTR_LANE.md section 5.
+ *
+ * The capture pass re-derives this contract from BattleShip's own display code
+ * every frame for both fighters and costs 34,307 tk/fr. That figure is a
+ * CEILING: a memo only pays for the frames on which the contract is actually
+ * unchanged, and nobody had measured that rate. These hashes measure it,
+ * against each slot's own previous capture:
+ *
+ *   CNT   event_count
+ *   DOBJ  every event's dobj / matrix_dobj / material_dobj  (tree structure)
+ *   DL    every event's dl                                  (model part swaps)
+ *   PRE   every preamble                                    (material state)
+ *   KEY   a CANDIDATE memo key, accumulated by the tree walk that already runs
+ *         in ndsFighterDisplayContractCountFlags: per DObj, its flags, dl, dv,
+ *         dls and dls[0..1], plus its FTParts flags. Those are exactly what
+ *         ftdisplaymain.c:753-841 branches on, so a key-guarded memo would use
+ *         this. It deliberately does NOT cover the fp-level state that decides
+ *         the preamble, so KEY-same/contract-different is a real possibility
+ *         and is counted -- that column is the soundness answer, not a
+ *         formality. */
+#define NDS_FTR_CONTRACT_H_CNT 0
+#define NDS_FTR_CONTRACT_H_DOBJ 1
+#define NDS_FTR_CONTRACT_H_DL 2
+#define NDS_FTR_CONTRACT_H_PRE 3
+#define NDS_FTR_CONTRACT_H_KEY 4
+#define NDS_FTR_CONTRACT_H_COUNT 5
+#define NDS_FTR_CONTRACT_HASH_SEED 2166136261u
+
+static u32 sNdsFtrContractCensusPrev[2][NDS_FTR_CONTRACT_H_COUNT];
+static u32 sNdsFtrContractCensusSeen[2];
+static u32 sNdsFtrContractCensusRun[2];
+static u32 sNdsFtrContractCensusKey = NDS_FTR_CONTRACT_HASH_SEED;
+
+static u32 ndsFtrContractCensusMix(u32 hash, u32 word)
+{
+    return (hash ^ word) * 16777619u;
+}
+
+static void ndsFtrContractCensusRecord(u32 slot)
+{
+    u32 h[NDS_FTR_CONTRACT_H_COUNT];
+    u32 count = sNdsFighterDisplayContract.event_count;
+    u32 i;
+    u32 same_all;
+
+    if (slot > 1u)
+    {
+        return;
+    }
+    h[NDS_FTR_CONTRACT_H_CNT] = count;
+    h[NDS_FTR_CONTRACT_H_DOBJ] = NDS_FTR_CONTRACT_HASH_SEED;
+    h[NDS_FTR_CONTRACT_H_DL] = NDS_FTR_CONTRACT_HASH_SEED;
+    h[NDS_FTR_CONTRACT_H_PRE] = NDS_FTR_CONTRACT_HASH_SEED;
+    h[NDS_FTR_CONTRACT_H_KEY] = sNdsFtrContractCensusKey;
+    for (i = 0u; i < count; i++)
+    {
+        const NDSFighterDisplayContractEvent *ev =
+            &sNdsFighterDisplayContract.events[i];
+        const u32 *pre = (const u32 *)(const void *)
+            &sNdsFighterDisplayContractPreambles[i];
+        u32 w;
+
+        h[NDS_FTR_CONTRACT_H_DOBJ] = ndsFtrContractCensusMix(
+            h[NDS_FTR_CONTRACT_H_DOBJ], (u32)(size_t)ev->dobj);
+        h[NDS_FTR_CONTRACT_H_DOBJ] = ndsFtrContractCensusMix(
+            h[NDS_FTR_CONTRACT_H_DOBJ], (u32)(size_t)ev->matrix_dobj);
+        h[NDS_FTR_CONTRACT_H_DOBJ] = ndsFtrContractCensusMix(
+            h[NDS_FTR_CONTRACT_H_DOBJ], (u32)(size_t)ev->material_dobj);
+        h[NDS_FTR_CONTRACT_H_DL] = ndsFtrContractCensusMix(
+            h[NDS_FTR_CONTRACT_H_DL], (u32)(size_t)ev->dl);
+        for (w = 0u;
+             w < (sizeof(NDSRendererNativeFighterPreamble) / sizeof(u32));
+             w++)
+        {
+            h[NDS_FTR_CONTRACT_H_PRE] = ndsFtrContractCensusMix(
+                h[NDS_FTR_CONTRACT_H_PRE], pre[w]);
+        }
+    }
+    if (sNdsFtrContractCensusSeen[slot] != 0u)
+    {
+        u32 key_same =
+            (h[NDS_FTR_CONTRACT_H_KEY] ==
+             sNdsFtrContractCensusPrev[slot][NDS_FTR_CONTRACT_H_KEY]) ? 1u : 0u;
+
+        same_all =
+            ((h[NDS_FTR_CONTRACT_H_CNT] ==
+              sNdsFtrContractCensusPrev[slot][NDS_FTR_CONTRACT_H_CNT]) &&
+             (h[NDS_FTR_CONTRACT_H_DOBJ] ==
+              sNdsFtrContractCensusPrev[slot][NDS_FTR_CONTRACT_H_DOBJ]) &&
+             (h[NDS_FTR_CONTRACT_H_DL] ==
+              sNdsFtrContractCensusPrev[slot][NDS_FTR_CONTRACT_H_DL]) &&
+             (h[NDS_FTR_CONTRACT_H_PRE] ==
+              sNdsFtrContractCensusPrev[slot][NDS_FTR_CONTRACT_H_PRE])) ?
+            1u : 0u;
+        gNdsFtrContractCaptures++;
+        gNdsFtrContractEventTotal += count;
+        if (count == 0u)
+        {
+            gNdsFtrContractZeroEvents++;
+        }
+        if (h[NDS_FTR_CONTRACT_H_CNT] ==
+            sNdsFtrContractCensusPrev[slot][NDS_FTR_CONTRACT_H_CNT])
+        {
+            gNdsFtrContractCountSame++;
+        }
+        if (h[NDS_FTR_CONTRACT_H_DOBJ] ==
+            sNdsFtrContractCensusPrev[slot][NDS_FTR_CONTRACT_H_DOBJ])
+        {
+            gNdsFtrContractDObjSame++;
+        }
+        if (h[NDS_FTR_CONTRACT_H_DL] ==
+            sNdsFtrContractCensusPrev[slot][NDS_FTR_CONTRACT_H_DL])
+        {
+            gNdsFtrContractDLSame++;
+        }
+        if (h[NDS_FTR_CONTRACT_H_PRE] ==
+            sNdsFtrContractCensusPrev[slot][NDS_FTR_CONTRACT_H_PRE])
+        {
+            gNdsFtrContractPreSame++;
+        }
+        if (key_same != 0u)
+        {
+            gNdsFtrContractKeySame++;
+            if (same_all == 0u)
+            {
+                gNdsFtrContractKeySameContractDiff++;
+            }
+        }
+        else if (same_all != 0u)
+        {
+            gNdsFtrContractKeyDiffContractSame++;
+        }
+        if (same_all != 0u)
+        {
+            gNdsFtrContractSame++;
+            sNdsFtrContractCensusRun[slot]++;
+            if (sNdsFtrContractCensusRun[slot] > gNdsFtrContractMaxRun)
+            {
+                gNdsFtrContractMaxRun = sNdsFtrContractCensusRun[slot];
+            }
+        }
+        else
+        {
+            gNdsFtrContractChangeTotal++;
+            sNdsFtrContractCensusRun[slot] = 0u;
+        }
+    }
+    for (i = 0u; i < (u32)NDS_FTR_CONTRACT_H_COUNT; i++)
+    {
+        sNdsFtrContractCensusPrev[slot][i] = h[i];
+    }
+    sNdsFtrContractCensusSeen[slot] = 1u;
+}
+#endif
+
 static u32 ndsFighterDisplayContractPackColor(u8 r, u8 g, u8 b, u8 a)
 {
     return ((u32)r << 24) | ((u32)g << 16) | ((u32)b << 8) | (u32)a;
@@ -13545,6 +13701,28 @@ static void ndsFighterDisplayContractCountFlags(DObj *dobj)
 {
     while (dobj != NULL)
     {
+#if NDS_R2_FTR_CONTRACT_CENSUS
+        {
+            const FTParts *parts = ftGetParts(dobj);
+            u32 key = sNdsFtrContractCensusKey;
+
+            key = ndsFtrContractCensusMix(key, (u32)(size_t)dobj);
+            key = ndsFtrContractCensusMix(key, (u32)dobj->flags);
+            key = ndsFtrContractCensusMix(key, (u32)(size_t)dobj->dl);
+            key = ndsFtrContractCensusMix(key, (u32)(size_t)dobj->dv);
+            key = ndsFtrContractCensusMix(key, (u32)(size_t)dobj->dls);
+            if (dobj->dls != NULL)
+            {
+                key = ndsFtrContractCensusMix(key,
+                                              (u32)(size_t)dobj->dls[0]);
+                key = ndsFtrContractCensusMix(key,
+                                              (u32)(size_t)dobj->dls[1]);
+            }
+            key = ndsFtrContractCensusMix(
+                key, (parts != NULL) ? (u32)parts->flags : 0xffffffffu);
+            sNdsFtrContractCensusKey = key;
+        }
+#endif
         if ((dobj->flags & DOBJ_FLAG_HIDDEN) != 0)
         {
             gNdsFighterDisplayContractHiddenCount++;
@@ -13866,6 +14044,9 @@ static void ndsFighterDisplayContractCapture(GObj *fighter_gobj)
                                  CObjGetStruct(gGMCameraGObj),
                                  gSYTaskmanDLHeads);
     }
+#if NDS_R2_FTR_CONTRACT_CENSUS
+    sNdsFtrContractCensusKey = NDS_FTR_CONTRACT_HASH_SEED;
+#endif
     ndsFighterDisplayContractCountFlags(DObjGetStruct(fighter_gobj));
     ndsBaseFTDisplayMainProcDisplay(fighter_gobj);
     sNdsFighterDisplayContract.active = FALSE;
@@ -16871,6 +17052,12 @@ void ndsFighterDisplayContractSubmit(GObj *fighter_gobj)
     NDS_RENDERER_M2_DETAILED_LEDGER
     gNdsRendererProfileOwners[(u32)owner_id].m2_contract_capture_ticks +=
         cpuGetTiming() - m2_capture_start;
+#endif
+#if NDS_R2_FTR_CONTRACT_CENSUS
+    /* Before the event_count == 0 early-out, so a magnified/off-screen fighter
+     * (ftdisplaymain.c:1140-1152 returns before drawing anything) is counted as
+     * the zero-event contract it is rather than dropped from the census. */
+    ndsFtrContractCensusRecord((u32)fp->nds_slot);
 #endif
     if (sNdsFighterDisplayContract.event_count == 0u)
     {
