@@ -33,11 +33,42 @@ clock.** Coverage is part of a baseline's identity now, not a footnote. The
 conversion: the sim runs 60 Hz and presents 30 Hz, ratio **measured at exactly
 2.000**, so 1,600 presented = 3,200 logic = **53.3 s**.
 
-## THE GAP IS +82,065 (2026-08-16) — `artifacts/performance/2026-08-16_hwmath-route/HWROUTE.md`
+## THE LEVEL IS +73,425 (2026-08-16) — `artifacts/performance/2026-08-16_tilesync-memo/TILESYNC.md`
 
-**Two bit-identical codegen changes shipped, and the new basis is
+**New basis `build-c217-tilesync-ship`: rank-80 1,218,752 raw / 1,193,805 net.**
+Same target, config and window as every basis before it.
+
+**Bank only −3,648 of the −8,640.** The tile-sync memo is measured on a
+same-binary zero-noise route at **−3,648 paired median, 87.1% of 1,600 frames
+improving**, complement-controlled (`WORK-H −3,648 / WAIT +3,648 / ALL +0`). The
+shipping build reads −8,640 at rank-80 and −9,216 paired against
+`build-c215-hwmath-ship`, but rank-80's cross-build floor is ≥14,080 and this
+pair's own placement term is visible as `SRC +3,136` — a bucket the memo cannot
+touch. **+73,425 is a LEVEL, not a bank.**
+
+**THE TWO COUNTER-GATED ROWS HAD THEIR COUNTER, AND IT HAD BEEN READ ON
+2026-08-15.** `NDS_TASK107_RENDER_STATE_CENSUS` (`Makefile:250`) publishes both,
+and `artifacts/performance/2026-08-15_renderer-state-redundancy/` is its run.
+Three documents since then said "needs one counter first". Before writing an
+instrument, `ls artifacts/performance/`. That census then stopped on a
+**16,000-tick package floor that `AGENTS.md` now explicitly disavows** ("keep
+every repeatable correctness-preserving gain"), which is why a real 62%-redundant
+lane sat unbanked for a day.
+
+| row | was | now |
+|---|---|---|
+| `ndsRendererSyncTextureTile` | 8,867, "needs a counter" | **BANKED −3,648.** 89,511 of 144,105 calls (62.12%) provably redundant; an exact serial memo ships |
+| texture-bind collapse | 13,868, "needs a counter" | **0 as an elision item** — the census measured **zero** exact locally-redundant issues; 46.05% are already elided; the 26,769 revisits need draw REORDERING, ceiling 2,484 |
+| — | — | **NEW: +5,754 as a PLACEMENT item.** 45% of the bind pair's cost is `icache_fill` on **360 B** (14.19 and 21.22 tk/fr per byte). 268 B is port-reachable (`ndsRendererHardwareBindTextureName` is `static`); `glBindTexture` is libnds. Ceiling, unbuilt, **one build** |
+
+`POSITION.md`'s fidelity-neutral inventory is corrected in place: 53,215 →
+**42,366**, i.e. **10,849 tk/fr of it was never there.**
+
+### SUPERSEDED — the gap was +82,065 (2026-08-16, `HWROUTE.md`)
+
+**Two bit-identical codegen changes shipped, and the basis was
 `build-c215-hwmath-ship`: rank-80 1,227,392 raw / 1,202,445 net = GAP +82,065.**
-Same target, config and window as the `c206-shipgx0` basis it replaces.
+Same target, config and window as the `c206-shipgx0` basis it replaced.
 
 | item | change | state |
 |---|---|---|
@@ -124,25 +155,52 @@ subtracted, `build-c213-hwmath4`):
 2.68, killed by 3,228 B at **0.97 entries/frame**. C3 trig leaves 4,519 tk/fr are C2's
 interior and already implemented in `nds_r2_collision_fixed.h`.
 
-**C2 animation→joint-matrix is SIZED, 2026-08-16 (`HWROUTE.md` §7), and the byte budget
-is the verdict.** The four members hold **4,680 B** and already spend **44.6% of their own
-cost on instruction fetch** — 16,891 tk/fr of `icache_fill` at 22–93 entries a frame — so
-**a byte in that chain costs 3.61 tk/fr, and a 32 B cache line costs 115.** The prize is
-exactly the 20,357 (confirmed: it is the soft-float gross charged to those four callers,
-1,446.2 helper calls/frame, disjoint from the 37,854 the bodies cost).
+**C2 animation→joint-matrix is CLOSED, 2026-08-16. The byte ledger is written and the
+answer is NO by 3x** (`../2026-08-16_tilesync-memo/TILESYNC.md` §5). Do not re-open it.
+
+**Two facts kill it, and neither needs a build.**
+
+1. **Most of C2 is already converted.** `Makefile:1680` is
+   `override NDS_R2_CUBIC_FIXED := 1` and `NDS_R2_ANIM_CUT_ROUTE ?= 0` folds
+   `NDS_R2_ANIM_CUT_ON(bit)` to a constant 1, so `ndsR2FtAnimParseDObjFigatree` is the
+   **Q parser in every shipped ROM** with its float arms dead-coded, its evaluator is
+   `ndsR2AnimValueQ`, and `ndsR2AQStore` is a bit-pun so the representation costs zero
+   storage. The 20,357 "prize" is not un-converted arithmetic — it is what **survives**:
+   the f32 fields the decomp ABI fixes (`anim_wait`, `anim_speed`, `anim_frame`,
+   `aobj->length`, the `Vec3f` joint outputs). That is the representation boundary, which
+   `EXCHANGE_LEAF.md` already measured at R 0.83x–1.00x. `gmCollisionTransformMatrixAll`
+   makes it exact: 21.7 ops/entry against **21 conversions — conv/op 0.97**, the same
+   reading `gmCollisionGetWorldPosition` returned at 18/18. Blast radius if the ABI moves
+   instead: **1,403 exact `->anim_wait`/`->anim_speed`/`->anim_frame` accesses in 117
+   files**, and `Makefile:2302` makes every one a caller rewrite.
+
+2. **`HWROUTE.md` §7's 3.61 tk/fr per byte is an AVERAGE, and it understates an added hot
+   kernel by 4.6x–5.9x.** Measured on the same census: `ndsR2AnimValueQ` 1,028 B at 370.6
+   entries/frame pays **21,719 tk/fr of `icache_fill` = 21.13 tk/fr per byte**;
+   `lbCommonSin` 18.66; `lbCommonCos` 16.74. A large caller fetches only its executed
+   path; a kernel is fetched whole on every call, by construction.
 
 ```text
-the whole prize is spent by  +5,640 bytes;  half of it by +2,820
-the ring's 3,228 B would cost 11,650 tk/fr of fetch alone
-the camera inlining's 3,032 B inverted a -4,736 win into +1,600
+                                     HWROUTE section 7   MEASURED
+whole 20,357 prize spent by                +5,640 B       963 B
+half of it by                              +2,820 B       482 B
+collision ring added                        3,228 B  = 3.4x the WHOLE budget
+camera inlining added                       3,032 B  = 3.1x the WHOLE budget
 ```
 
-**So C2 converts if and only if the rewrite is byte-neutral or byte-negative, and no
-fixed-point rewrite in this tree has been.** A C2 cycle's first deliverable is a byte
-ledger, not an arithmetic argument. Two limits it must carry: the chain's own `issue` cost
-is only **7,924 of 37,854 (20.9%)**, so the addressable ceiling is ~24,000 tk/fr = **0.29x
-of +82,065**; and `dcache_fill` (10,817) exceeds `issue` (7,924), so it is memory-bound on
-both sides and a Q26 joint matrix is the same 32 bits per element as the `f32` it replaces.
+Its two standing limits both survive and both got worse: the chain's own `issue` cost is
+**7,924 of 37,854 (20.9%)**, and `dcache_fill` (10,817) exceeds it, so it is memory-bound
+on both sides and a Q26 joint matrix is the same 32 bits as the `f32` it replaces.
+
+**WHAT THE LEDGER UNCOVERED, AND IT IS UNOWNED: `ndsR2AnimValueQ` pays 21,719 tk/fr of
+PURE INSTRUCTION FETCH** for 1,028 bytes at 370.6 entries a frame — **0.296x of +73,425**,
+fidelity-neutral by construction (the arithmetic does not change), and priced by no
+document on this board. Add `lbCommonSin`+`lbCommonCos` (120 B, 2,116 tk/fr of fetch) and
+the animation chain's *fetch* bill is **23,835 tk/fr against an arithmetic prize of 20,357
+that does not convert.** It does not fit in the instrument's 512 B of free ITCM as it
+stands; the open question is whether its **executed path** does, or whether the 1,028 B
+splits so the hot half can. That is the next animation-lane cycle, and it is placement,
+not arithmetic.
 
 **One defect found and fixed at its seam.** `int32_t` is `long` on devkitARM, so an
 `(int32_t *)` cast onto an `int *` in the bench's wrapper was a strict-aliasing violation;

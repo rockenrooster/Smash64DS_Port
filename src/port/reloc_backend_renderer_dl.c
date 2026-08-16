@@ -6077,6 +6077,12 @@ static void ndsFighterDLDrawCopyPersistentRendererState(
     NDS_RENDERER_COPY_STATE(texture_tile_size_lrt);
     NDS_RENDERER_COPY_STATE(texture_tile_width);
     NDS_RENDERER_COPY_STATE(texture_tile_height);
+    /* The tile-sync memo's two words travel with the state they describe. This
+     * copy carries texture_tiles[] and every republished texture_render_tile_*
+     * field, so carrying the serials keeps dst's memo exact; dropping either
+     * one would let dst skip a republish it still owes. */
+    NDS_RENDERER_COPY_STATE(texture_tile_write_serial);
+    NDS_RENDERER_COPY_STATE(texture_tile_sync_serial);
     memcpy(dst->texture_tiles, src->texture_tiles, sizeof(dst->texture_tiles));
     NDS_RENDERER_COPY_STATE(texture_load_sequence);
     memcpy(dst->texture_loads, src->texture_loads,

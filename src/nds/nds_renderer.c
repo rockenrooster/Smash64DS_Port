@@ -5076,6 +5076,29 @@ static u32 sNdsTask107BindNameCount;
 static u32 sNdsTask107BindNames[NDS_TASK107_BIND_NAME_CAPACITY];
 #endif
 
+#if NDS_R2_TILESYNC_ROUTE
+/* Lab SAME-BINARY route for the tile-sync memo. One `.data` word selects
+ * whether the proven-redundant republish is skipped; both arms evaluate the
+ * predicate and both keep texture_tile_sync_serial in step, so the ONLY
+ * difference between them is the 19-field store burst, and the two counters
+ * below must read IDENTICALLY on both arms -- that equality is the control.
+ *
+ * .data AND NOT .bss, for the reason nds_r2_sqrtf.c states: a zero-initialised
+ * route word without an explicit section attribute lands in .bss and drags a
+ * ~10,000 tk/fr placement floor. */
+volatile u32 gNdsR2TileSyncRoute
+    __attribute__((used, section(".data"))) = 1u;
+__attribute__((used)) volatile u32 gNdsR2TileSyncSkips;
+__attribute__((used)) volatile u32 gNdsR2TileSyncRuns;
+#define NDS_R2_TILESYNC_MEMO_ON() (gNdsR2TileSyncRoute != 0u)
+#define NDS_R2_TILESYNC_COUNT_SKIP() (gNdsR2TileSyncSkips++)
+#define NDS_R2_TILESYNC_COUNT_RUN() (gNdsR2TileSyncRuns++)
+#else
+#define NDS_R2_TILESYNC_MEMO_ON() (1)
+#define NDS_R2_TILESYNC_COUNT_SKIP() ((void)0)
+#define NDS_R2_TILESYNC_COUNT_RUN() ((void)0)
+#endif
+
 #if NDS_TASK90_SHADE_CENSUS
 /* Task 90. The instrument behind NDS_RENDERER_HW_LIGHT_SHADE_CACHE_COUNT: it
  * records every light-shade request in order, so the cache size is set from the
@@ -7288,6 +7311,28 @@ ndsRendererSyncTextureTile(NDSRendererStats *stats)
     }
 
     tile_index = ndsRendererActiveTextureTile(stats);
+    /* The memo, and its exactness argument. Everything below is a pure function
+     * of (tile_index, texture_tiles[tile_index], texture_tiles[LOAD_TILE]
+     * .set_seen). texture_tile_write_serial is bumped by both writers of
+     * texture_tiles[] whenever the write can reach either of those two inputs
+     * for the LAST SYNCED tile, so serial equality proves both inputs are
+     * unchanged, and index equality proves the last sync targeted this tile.
+     * The initial state is exact too: a memset stats has serial 0 == 0, index
+     * 0 == NDS_RENDERER_RENDER_TILE and all republished fields already 0. */
+    if ((stats->texture_tile_sync_serial == stats->texture_tile_write_serial) &&
+        (stats->texture_render_tile == tile_index))
+    {
+        NDS_R2_TILESYNC_COUNT_SKIP();
+        if (NDS_R2_TILESYNC_MEMO_ON())
+        {
+            return;
+        }
+    }
+    else
+    {
+        NDS_R2_TILESYNC_COUNT_RUN();
+    }
+    stats->texture_tile_sync_serial = stats->texture_tile_write_serial;
     tile = &stats->texture_tiles[tile_index];
 
     stats->texture_render_tile = tile_index;
@@ -7372,6 +7417,18 @@ ndsRendererRecordSetTile(NDSRendererStats *stats, u32 w0, u32 w1)
     tile_state->shifts = shifts;
     tile_state->shiftt = shiftt;
     tile_state->flags = ndsRendererTileFlags(cms, cmt, masks, maskt);
+
+    /* Tile-sync memo invariant, and the ONLY rule either writer applies: bump
+     * when the write targets the last-synced tile or the load tile, because
+     * those are the two texture_tiles[] entries ndsRendererSyncTextureTile
+     * reads. A write to any other tile cannot change that function's output
+     * for the tile it last published, and if the active tile later moves to
+     * this one the memo's index compare forces a full republish anyway. */
+    if ((tile == stats->texture_render_tile) ||
+        (tile == NDS_RENDERER_LOAD_TILE))
+    {
+        stats->texture_tile_write_serial++;
+    }
 
     if (tile == NDS_RENDERER_LOAD_TILE)
     {
@@ -7516,6 +7573,12 @@ ndsRendererRecordSetTileSize(NDSRendererStats *stats, u32 w0, u32 w1)
     if (lrt >= ult)
     {
         tile->height = ((lrt - ult) >> 2) + 1u;
+    }
+    /* Same memo invariant as ndsRendererRecordSetTile. */
+    if ((tile_index == stats->texture_render_tile) ||
+        (tile_index == NDS_RENDERER_LOAD_TILE))
+    {
+        stats->texture_tile_write_serial++;
     }
 #if NDS_TASK107_RENDER_STATE_CENSUS
     ndsRendererTask107RecordTextureSync(stats, NDS_TASK107_SYNC_SETTILESIZE);

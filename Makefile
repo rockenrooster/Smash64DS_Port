@@ -1422,6 +1422,17 @@ NDS_R2_HWMATH_BENCH ?= 0
 # Arm 0 is exactly what shipped before this date; arm 3 is exactly what ships
 # after it.
 NDS_R2_HWMATH_ROUTE ?= 0
+# Lab SAME-BINARY route for the tile-sync memo (2026-08-16). The memo itself is
+# unconditional and ships; this flag only adds the `.data` selector and the two
+# engagement counters that price it. Task 107's census measured 72.835% of
+# ndsRendererSyncTextureTile's 146,221 whole-match calls to be exact repeats
+# against an 8,867 tk/fr owner -- far under the >=14,080 rank-80 cross-build
+# floor, so a two-build A/B cannot decide it.
+#   gNdsR2TileSyncRoute  0 = republish always (the pre-memo behaviour)
+#                        1 = skip the proven-redundant republish (ships)
+# Both arms evaluate the predicate and both advance the sync serial, so
+# gNdsR2TileSyncSkips/Runs must be IDENTICAL on the two arms.
+NDS_R2_TILESYNC_ROUTE ?= 0
 # Task 44 stage steady-state excision: generation-based admission, dense
 # rigid/dynamic binding lists, and the hoisted GX capture-active test. Requires
 # the Task 36 hardware-compose stage owner; meaningless without it.
@@ -3620,6 +3631,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_R2_CFX_HWMATH $(NDS_R2_CFX_HWMATH)'; \
 		echo '#define NDS_R2_HWMATH_BENCH $(NDS_R2_HWMATH_BENCH)'; \
 		echo '#define NDS_R2_HWMATH_ROUTE $(NDS_R2_HWMATH_ROUTE)'; \
+		echo '#define NDS_R2_TILESYNC_ROUTE $(NDS_R2_TILESYNC_ROUTE)'; \
 		echo '#define NDS_TASK39_FX_SPRITES $(NDS_TASK39_FX_SPRITES)'; \
 		echo '#define NDS_TASK39_FX_FLASH $(NDS_TASK39_FX_FLASH)'; \
 		echo '#define NDS_R2_PARTICLE_RUNTIME $(NDS_R2_PARTICLE_RUNTIME)'; \

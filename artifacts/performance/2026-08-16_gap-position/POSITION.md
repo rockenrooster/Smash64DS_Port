@@ -90,12 +90,31 @@ measured rate at which that size becomes rank-80 movement.
 | item | tk/fr | conversion | **x of +94,481** | state |
 |---|---:|---|---:|---|
 | Slice 2 — `gcRunAll` scheduler machinery | 17,786 | 1.00x (flat lane) | **0.188x** | **100% is measured unavailable** — a flat vector still calls each process |
-| Texture-bind collapse (103.45 requests → 55.73 binds) | 13,868 | unmeasured | **0.147x** | **not an item yet** — needs one counter |
+| ~~Texture-bind collapse (103.45 requests → 55.73 binds)~~ | ~~13,868~~ | see below | ~~0.147x~~ | **RE-PRICED 2026-08-16 — the elision half is REFUTED at ZERO** |
 | In-match asset I/O — delete all seven load frames | 9,863 | 1.00x (measured as a deletion) | **0.104x** | engineering; 100% = deleting the lane |
-| `ndsRendererSyncTextureTile` (72.68 syncs/frame) | 8,867 | unmeasured | **0.094x** | **not an item yet** — needs one counter |
+| ~~`ndsRendererSyncTextureTile` (72.68 syncs/frame)~~ | ~~8,867~~ | **0.41x measured** | ~~0.094x~~ | **BANKED 2026-08-16 — memo shipped, −3,648** |
 | newlib `_svfiprintf_r` shipped residual | 1,526 | — | **0.016x** (ceiling 4,267 = 0.045x) | engineering |
 | no-Z bit-identical repeat matrix loads | 1,305 | 1.00x | **0.014x** | engineering |
-| **TOTAL at 100% conversion** | **53,215** | | **0.563x** | |
+| ~~**TOTAL at 100% conversion**~~ | ~~**53,215**~~ | | ~~**0.563x**~~ | **superseded — see the correction below** |
+
+> ### CORRECTION, 2026-08-16 — the two counter-gated rows had their counter, and it had already been read
+>
+> `../2026-08-16_tilesync-memo/TILESYNC.md`. `NDS_TASK107_RENDER_STATE_CENSUS` publishes
+> both counters and was **run on 2026-08-15** (`../2026-08-15_renderer-state-redundancy/`).
+> The 22,735 tk/fr this table carried as *unsized volume* resolves as follows, and it is
+> **10,849 tk/fr smaller than the inventory assumed**:
+>
+> | was | now | how |
+> |---|---|---|
+> | `ndsRendererSyncTextureTile` 8,867, unmeasured | **−3,648 BANKED** | 62.12% of 144,105 calls provably redundant (89,511 skips, this cycle's own counters, identical on both route arms); an exact serial memo ships in `build-c217-tilesync-ship`, measured on a zero-noise same-binary route, 87.1% of 1,600 frames improve, complement-controlled `WORK-H −3,648 / WAIT +3,648 / ALL +0` |
+> | texture-bind collapse 13,868, unmeasured | **0 as an elision item** | the 2026-08-15 census measured **zero** exact locally-redundant bind issues; 46.05% of requests are already elided; the 26,769 revisits need draw REORDERING, ceiling **2,484** |
+> | — | **+5,754 as a PLACEMENT item** | 45% of the bind pair's 13,868 is `icache_fill` on **360 bytes** (14.19 and 21.22 tk/fr per byte). Ceiling, unbuilt; 268 B of it is port-reachable and ITCM has 512 B free |
+>
+> **Corrected fidelity-neutral inventory: 30,480 available today + 2,484 reordering
+> ceiling + 5,754 placement ceiling = 38,718**, against a gap that is now **+73,425**
+> (`build-c217-tilesync-ship`) — **0.527x**, from four items none above 0.24x. The ratio
+> barely moves because the gap moved too; what moved is that **10,497 tk/fr of it was
+> never there.**
 
 **Verified against the gate series rather than summed on paper.** Deleting 53,215 from
 every one of `build-c206-shipgx0`'s 1,600 frames and re-ranking gives rank-80 1,186,593 =
@@ -344,9 +363,18 @@ Against **+94,481**, with no double counting (each row is a distinct symbol set)
 
 ```text
 fidelity-neutral, available today                30,480   0.323x
-fidelity-neutral, gated on one counter each      22,735   0.241x
+fidelity-neutral, gated on one counter each      22,735   0.241x   SUPERSEDED 2026-08-16
                                                 -------
 FIDELITY-NEUTRAL TOTAL                           53,215   0.563x   -> +41,266 remains
+
+  CORRECTED 2026-08-16 (section 2) -- the counter existed and had been read:
+    available today                              30,480
+    BANKED this cycle, tile-sync memo              3,648   shipped and measured
+    bind revisit reordering, ceiling               2,484   unbuilt
+    bind text ITCM placement, ceiling              5,754   unbuilt, 3,802 port-reachable
+                                                -------
+  CORRECTED FIDELITY-NEUTRAL TOTAL               42,366   -- 10,849 of the 53,215 was
+                                                             never there
 
 rung 1  audio fidelity                            3,040   0.032x
 rung 2  visual fidelity                     44,476-50,203 0.471x-0.531x

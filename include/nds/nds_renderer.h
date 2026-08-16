@@ -1165,6 +1165,18 @@ typedef struct NDSRendererStats
     u32 texture_tile_size_lrt;
     u32 texture_tile_width;
     u32 texture_tile_height;
+    /* Tile-sync memo. Everything ndsRendererSyncTextureTile republishes above
+     * is a pure function of (texture_render_tile, texture_tiles[that tile],
+     * texture_tiles[NDS_RENDERER_LOAD_TILE].set_seen). texture_tiles[] has
+     * exactly two writers -- ndsRendererRecordSetTile and
+     * ndsRendererRecordSetTileSize -- and each bumps texture_tile_write_serial
+     * only when its write can reach that function, so equal serials plus an
+     * equal active tile index is an EXACT proof that the republish would store
+     * the values already there. Not semantic state: deliberately absent from
+     * both state hashes, and carried by the persistent-state copy because that
+     * copy carries texture_tiles[] and the republished fields together. */
+    u32 texture_tile_write_serial;
+    u32 texture_tile_sync_serial;
     NDSRendererTileState texture_tiles[NDS_RENDERER_TILE_COUNT];
     u32 texture_load_sequence;
     NDSRendererTextureLoadState
