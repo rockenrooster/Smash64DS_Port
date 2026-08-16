@@ -1,0 +1,30 @@
+Wrote artifacts\performance\2026-08-16_simmac-exchange\r64t-rows.csv
+Tick-HUD buckets: target=smash64ds-battle-playable-tickhud-hwtri samples=1600 frames=440..2039 melonDS=1.0 sha=DE80E46BDCF1FD98 git=cc9a40e19bf+dirty(13) dldi=ON
+
+bucket p50        p95        spread mean       min        max        %ALLp50
+------ ---        ---        ------ ----       ---        ---        -------
+ALL     1,117,504  1,678,080   1.50  1,259,766  1,114,304  6,992,896   100.0
+FTR       307,776    312,000   1.01    295,786    176,192    342,272    27.5
+STG       180,480    188,352   1.04    181,999    176,192    194,880    16.2
+BG          4,224      4,352   1.03      4,243      4,096      7,424     0.4
+AUD         2,688     91,776  34.14      8,904      1,088    152,512     0.2
+HUD         1,152    416,128 361.22     36,013      1,024  2,125,312     0.1
+SRC       336,000    681,280   2.03    390,701     10,880  5,518,272    30.1
+MISC      111,232    177,408   1.59    116,766     85,312    328,320    10.0
+OTHR      199,232    502,080   2.52    225,355     20,800    580,736    17.8
+WAIT      179,328    482,048   2.69    205,419        896    560,576    16.0
+WORK      970,944  1,494,272   1.54  1,054,348    693,888  6,667,584    86.9
+SHDT        4,224    174,400  41.29     47,493          0  2,733,248     0.4
+SWRM          960      1,024   1.07        938        704      1,152     0.1
+GCRA      330,752    675,776   2.04    385,234      6,720  5,512,960    29.6
+SCPU       54,656    112,448   2.06     48,992          0    143,552     4.9
+SCAT        1,280      1,408   1.10      1,221          0      1,600     0.1
+SPRM        1,984      2,176   1.10      7,386          0  4,498,944     0.2
+SINT      164,352    299,136   1.82    167,561          0    936,768    14.7
+SPHD       72,384    108,352   1.50     72,181          0    416,064     6.5
+SPHC          640        768   1.20        646          0        896     0.1
+WORK-H    958,336  1,350,464   1.41  1,018,335    685,632  6,189,184    85.8
+
+named=1,034,412 (82.1% of ALL)  VBI 2:1677 3:293 4:33 5+:36 max:19 total:2039  slips=0
+extras: gNdsBattleTextHudP1Damage=76  gNdsDamageSparkScaleCount=16  gNdsShieldAnimJointAttachCount=480  gNdsAObjEvent32NormalizedHighWater=774  gNdsBattlePackHits=257  gNdsObjAnimRunawayCount=0  gNdsRendererTask36CaptureOutcome=2  gNdsRendererTask36CaptureSegmentMask=161  gNdsR2FtAnimParseCalls=144,383  gNdsR2FtAnimParseEarlyOut=108,128  gNdsR2FtAnimParseStepped=36,255  gNdsR2FtAnimNullSkips=70,796  gNdsTaskmanGeneralHeapFreeMin=53,136  gNdsTaskmanArenaChosenSize=1,548,288  gNdsTaskmanArenaAllocFailCount=0  gNdsBattlePackResidentBytes=287,904  gNdsBattlePackLoadFails=0  gNdsCfxFighterDamagePhaseCalls=2,684  gNdsCfxFighterDamagePhaseHits=26  gNdsR2SimMacDriveCalls=2,684  gNdsR2SimMacXfrmCalls=168  gNdsR2SimMacXfrmShadow=171,776  gNdsR2SimMacXfrmDecline=0  gNdsR2SimMacCmpsCalls=0  gNdsR2SimMacCmpsShadow=0  gNdsR2SimMacCmpsDecline=0  gNdsR2SimMacXfrmMaxDevQ12=0  gNdsR2SimMacXfrmDev0=0  gNdsR2SimMacXfrmDev1=0  gNdsR2SimMacXfrmDev2=0  gNdsR2SimMacXfrmDev3=0  gNdsR2SimMacXfrmDev4=0  gNdsR2SimMacXfrmDev5=0
+Wrote artifacts\performance\2026-08-16_simmac-exchange\r64t.json

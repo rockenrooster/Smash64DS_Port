@@ -4196,6 +4196,22 @@ extern volatile u32 gNdsBattlePlayablePacingPhaseSlipCount[
     X(gNdsBattlePlayablePacingCadenceViolationCount) \
     X(gNdsBattlePlayablePacingPhasePresentCount) \
     X(gNdsBattlePlayablePacingPhaseSlipCount)
+/* The present-interval histogram's own group, published at the same seam but
+ * kept OUT of the list above, because that list is pinned bilaterally against
+ * the BPLAY_PACE printf and this array is not in that marker -- its readers are
+ * probe-present-cadence.ps1, sample-tick-hud-buckets.ps1,
+ * probe-battlepack-pacing.ps1 and ab-fireball-quad.ps1, all of which read it at
+ * a gdb stop.
+ *
+ * IT WAS PUBLISHED BY ACCIDENT UNTIL 2026-08-16. DC_FlushRange cleans whole
+ * 32-byte lines, and two members of the group above happened to share this
+ * array's two lines -- CadenceViolationCount covering buckets 0-2 and
+ * IntervalMax/Min covering buckets 3-5 -- so any relayout of diagnostics.c
+ * would have silently broken the ONE histogram AGENTS.md requires every device
+ * A/B report to carry, and broken it as stale numbers rather than as an error.
+ * probe-present-cadence.ps1 recorded the hazard; this is the fix. */
+#define NDS_BATTLE_PLAYABLE_PACING_HISTOGRAM_GROUP(X) \
+    X(gNdsBattlePlayablePacingPresentIntervalBucket)
 extern volatile u32 gNdsBuildModeCanonicalWord;
 extern volatile u32 gNdsBuildModeShippedWord;
 extern volatile u32 gNdsBuildModeFastWord;

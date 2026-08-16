@@ -69,13 +69,18 @@ param(
 # assert it: the same arm run with two stops must produce the same histogram as
 # the same arm run with two thousand.
 #
-# THE HISTOGRAM IS PUBLISHED BY ACCIDENT, NOT BY CONTRACT.
-# gNdsBattlePlayablePacingPresentIntervalBucket is NOT a member of
-# NDS_BATTLE_PLAYABLE_PACING_GROUP (nds_startup.h:4184). It stays readable only
-# because DC_FlushRange cleans whole 32-byte lines and two group members happen
-# to share the array's two lines -- CadenceViolationCount at ...220 covers
-# buckets 0-2 at ...234/238/23c, and IntervalMax/Min at ...24c/250 cover buckets
-# 3-5 at ...240/244/248. Any relayout of diagnostics.c silently breaks it.
+# THE HISTOGRAM WAS PUBLISHED BY ACCIDENT UNTIL 2026-08-16, AND NOW IS NOT.
+# gNdsBattlePlayablePacingPresentIntervalBucket is not a member of
+# NDS_BATTLE_PLAYABLE_PACING_GROUP and cannot be -- that list is pinned
+# bilaterally against the BPLAY_PACE printf by check-gbi-decode-fixtures.ps1 and
+# this array is not in that marker. Until 2026-08-16 it stayed readable only
+# because DC_FlushRange cleans whole 32-byte lines and two group members happened
+# to share the array's two lines (CadenceViolationCount at ...220 covering
+# buckets 0-2 at ...234/238/23c, IntervalMax/Min at ...24c/250 covering buckets
+# 3-5 at ...240/244/248), so any relayout of diagnostics.c silently returned the
+# one histogram AGENTS.md requires in every device A/B to stale reads. It now has
+# its own NDS_BATTLE_PLAYABLE_PACING_HISTOGRAM_GROUP, published at the same
+# frame-complete seam and pinned by the same checker.
 
 $ErrorActionPreference = 'Stop'
 $flips = @()

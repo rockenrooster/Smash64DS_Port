@@ -2450,6 +2450,20 @@ Assert-True ($tmGroupMembers.Count -eq 6 -and $tmMarkerGlobals.Count -eq 6 -and
     $tmUnpublished.Count -eq 0 -and $tmUnread.Count -eq 0) (
     'GCRUNALL_TASKMAN group drift. Unpublished: [' + ($tmUnpublished -join ', ') +
     ']; unread: [' + ($tmUnread -join ', ') + '].')
+# The present-interval histogram is the one counter AGENTS.md requires in every
+# device A/B report, and until 2026-08-16 it was cleaned out of the D-cache ONLY
+# because DC_FlushRange rounds to whole 32-byte lines and two BPLAY_PACE members
+# happened to straddle its two lines. It cannot join the group above -- that list
+# is pinned bilaterally against the BPLAY_PACE printf and this array is not in
+# that marker -- so it has its own one-member group, and this is the pin that
+# stops a diagnostics.c relayout from silently returning it to stale reads.
+$histGroupMembers = Get-XMacroGroupMembers -Text $startupHeader -Name 'NDS_BATTLE_PLAYABLE_PACING_HISTOGRAM_GROUP'
+Assert-True ($histGroupMembers.Count -eq 1 -and
+    $histGroupMembers[0] -eq 'gNdsBattlePlayablePacingPresentIntervalBucket') (
+    'NDS_BATTLE_PLAYABLE_PACING_HISTOGRAM_GROUP no longer publishes exactly ' +
+    'gNdsBattlePlayablePacingPresentIntervalBucket; it publishes [' +
+    ($histGroupMembers -join ', ') + '].')
+Assert-True ($platform.Contains('NDS_PUBLISH_DEBUGGER_GROUP(NDS_BATTLE_PLAYABLE_PACING_HISTOGRAM_GROUP)')) 'The present-interval histogram is no longer published at the frame-complete seam, so every device A/B histogram is free to read stale.'
 Assert-True ($platformHeader.Contains('DC_FlushRange((const void *)&(sym), sizeof(sym))') -and
     $platformHeader.Contains('#define NDS_PUBLISH_DEBUGGER_GROUP(members)')) 'The debugger-group publish macro no longer generates a per-member DC_FlushRange.'
 # taskmanPresentLead = GCRUNALL_TASKMAN[1] - 2*BPLAY_PACE[4] crosses the two

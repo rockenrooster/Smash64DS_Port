@@ -354,6 +354,78 @@ moves. `syUtilsRandFloat` is 229 tk/fr (0.16% of the lane) and is excluded by na
 **Concentration warning:** call volume on the marginal-80 frames is **4.96×** whole match, so a
 whole-match or soak measurement of any conversion here under-reads it ~5×.
 
+### THE WARM-MAC EXCHANGE RATE — MEASURED 2026-08-16, AND COLUMN P DOES NOT MOVE
+
+`artifacts/performance/2026-08-16_simmac-exchange/EXCHANGE_LEAF.md`. Two lab builds, seven
+whole-match runs, **one binary** (`build-c209-simmac2`, `romSha256` identical on all six
+arms, so no placement term), `slips=0` everywhere, arm-0 rank-80 **1,238,912 raw /
+1,213,965 net** — 896 from `build-c206-shipgx0`, i.e. the shadow is inert at arm 0.
+
+**The route is a SHADOW, not a replacement**: every arm runs the decomp float body and
+keeps its result, then evaluates the fixed form and discards it. So the arms play the
+bit-identical match by construction — **all nineteen whole-match invariants are equal on
+all six arms**, `gNdsCfxFighterDamagePhaseCalls` 2,684 and `Hits` 26 included — and the
+measured delta is the **replacement cost directly**, not a residual divided by a count.
+
+| body | gross tk/entry | fixed tk/entry | **R** | entr/fr | lane | net |
+|---|---:|---:|---:|---:|---:|---:|
+| `gmCollisionGetWorldPosition` | 289.6 | 348.2 | **0.83x** | 45.2 | 13,091 | **−2,650** |
+| `func_ovl2_800ED490` | 987.3 | 987.8 | **1.00x** | 19.0 | 18,759 | **−10** |
+
+**Negative net: the conversion costs more than it deletes.** Counting the float bodies'
+own self time in the numerator (the gross is library-only, `CAMERA_Q20_12.md` §4's
+convention) lifts them only to **1.00x and 1.17x**.
+
+**THE LAW, and it is knowable from a signature with no build.** An f32↔Q edge conversion
+costs **31–42 cycles**, between one `__aeabi_fmul` (26.5) and one `__aeabi_fadd` (38). So a
+leaf conversion's rate is decided by **conversions per deleted float operation**:
+transform 18/18 = **1.00**, compose 36/63 = **0.57**, `gmCollisionSetInvertMatrix`
+24/61 = **0.39** (predicts ~1.2–1.4x), and the 5.14x prior's `guMtxCatF` →
+`ndsRendererMtxMul20p12` = **0**, because both sides already hold their native
+representation. **That is why the prior never transferred — not warmth, not
+transcendentals, not Thumb.** `SIMSIDE.md` §5's two named reasons to expect better than
+1.70x are both true here and neither mattered.
+
+**Effect on `POSITION.md`: 0.563x stays 0.563x.** The projected **0.875x–1.173x is
+REFUTED for the leaf route** on 44.6% of the warm-MAC subset by size. What survives is the
+**chain** route, where `n_conv` is fixed at the endpoints while `n_op` grows — the design
+of `nds_r2_collision_fixed.h`, whose only measured instance is the ring at 2.68x, whose
+named cause (`NDS_R2_CFX_DIV64` still the portable bit-by-bit divide, hardware unit hook
+undefined at `nds_r2_collision_fixed.h:205`) is **still unaddressed**. Column N is
+untouched by this and is mildly supported by it: the thing that proved expensive is the
+representation boundary, and a bit-exact helper never crosses one.
+
+**BOTH BODIES ARE UNREACHABLE FROM PORT CODE, and that cost the first build.** A
+`#define`-before-`#include` rename moves the definition and `gmcollision.c`'s own call
+sites together, so a wrapper sees cross-TU calls only: measured over a whole match,
+`func_ovl2_800ED490` has **exactly 0** and `gmCollisionGetWorldPosition` **168 of ~92,000
+(0.18%)**. `Makefile:2302` forbids a decomp overlay patch for a new adaptation, so
+**converting either one is a caller rewrite, never an interception.** The second build
+drives the kernels from the damage-collide gateway (zero in-TU callers, 2,684 of 2,684
+captured) with a repeat count in the route word, and reads the price from the slope.
+
+**THE STATISTIC MATTERS AND ALL THREE OBVIOUS ONES ARE WRONG HERE.** The driving seam
+fires in bursts, so the per-frame paired median is structurally ~0 (128), the mean is
+carried by two cartridge frames (123,628), and the trimmed mean deletes exactly the frames
+that carry the work (trim-40: 19,755). **Use the per-ring-stop window sum**: each 96-frame
+window carries its own exact evaluation count from `-PerStopGlobals`, and the ratio is
+stable — 632.8–714.3 tk/eval over 11 windows, median 668.0, with a 4× density change
+(`r16tc` 679.7) agreeing inside 5%.
+
+**Live-domain equivalence, graded at zero fidelity risk** (route word 7, the fixed answer
+against the decomp float body's own answer on the same inputs, every captured call):
+8,052 components — **6,241 exactly equal, 1,811 off by ONE Q12 quantum, none worse, max
+deviation 1 quantum = 0.000244 world units against the 0.0200 bound, 82× inside it**, and
+`XfrmDecline`/`CmpsDecline` **0** on every arm. The arithmetic is settled; the population
+is one seam's 2,684 calls, not coverage of the call set — and it is moot for the lever
+question, because at R ≤ 1.00 there is nothing to trade fidelity *for*.
+
+**Bounds, stated as bounds.** The once-per-driving-call term (compulsory fetch of 2,784 B
+of kernel) is bounded at ≤ ~500 tk by the `r16tc`/`r64tc` agreement and is **not fitted** —
+`r1tc` at 2.81 evaluations/frame is inside session noise and resolves nothing. Because that
+term would be paid **per entry** at the real spread rate, 348.2/987.8 are **lower** bounds
+on real per-entry cost and 0.83x/1.00x are **upper** bounds on R.
+
 ## Banked baselines — BOTH ARMS RE-BANKED ON THE CORRECTED SEED (cycle 80)
 
 1,600 samples, frames 441–2040, `dldi=ON`, git `34091054`+reseed,

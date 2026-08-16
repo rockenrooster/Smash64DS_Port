@@ -1,0 +1,53 @@
+=== provenance ===
+r0       arm=     0 readback=     0 stuck=True  samples=1600 frames=440..2039 slips=0
+r64tc    arm= 16387 readback= 16387 stuck=True  samples=1600 frames=440..2039 slips=0
+r64t     arm= 16385 readback= 16385 stuck=True  samples=1600 frames=440..2039 slips=0
+r16tc    arm=  4099 readback=  4099 stuck=True  samples=1600 frames=440..2039 slips=0
+r1tc     arm=     3 readback=     3 stuck=True  samples=1600 frames=440..2039 slips=0
+rgrade   arm=     7 readback=     7 stuck=True  samples=1600 frames=440..2039 slips=0
+romSha256 set size = 1  (SAME BINARY, no placement term)
+
+=== the arms must play the SAME FIGHT: whole-match invariants ===
+  19/19 invariants bit-identical across 6 arms  -- OK
+
+=== engagement ===
+arm         DriveCalls     XfrmCalls    XfrmShadow   XfrmDecline     CmpsCalls    CmpsShadow   CmpsDecline XfrmMaxDevQ12
+r0                   0           168             0             0             0             0             0             0
+r64tc            2,684           168       171,776             0             0       171,776             0             0
+r64t             2,684           168       171,776             0             0             0             0             0
+r16tc            2,684           168        42,944             0             0        42,944             0             0
+r1tc             2,684           168         2,684             0             0         2,684             0             0
+rgrade           2,684           168         2,684             0             0         2,684             0             1
+
+=== in-window evaluation rate, from the per-ring-stop reads ===
+r0       frames 535..2039 (span 1504)  DriveCalls =    0.000/fr  XfrmShadow =    0.000/fr  CmpsShadow =    0.000/fr
+r64tc    frames 535..2039 (span 1504)  DriveCalls =    1.407/fr  XfrmShadow =   90.043/fr  CmpsShadow =   90.043/fr
+r64t     frames 535..2039 (span 1504)  DriveCalls =    1.407/fr  XfrmShadow =   90.043/fr  CmpsShadow =    0.000/fr
+r16tc    frames 535..2039 (span 1504)  DriveCalls =    1.407/fr  XfrmShadow =   22.511/fr  CmpsShadow =   22.511/fr
+r1tc     frames 535..2039 (span 1504)  DriveCalls =    1.407/fr  XfrmShadow =    1.407/fr  CmpsShadow =    1.407/fr
+rgrade   frames 535..2039 (span 1504)  DriveCalls =    1.407/fr  XfrmShadow =    1.407/fr  CmpsShadow =    1.407/fr
+
+=== paired per-frame WORK-H against r0 ===
+arm       pairedMean  trimMean40  pairedMed    B>A    B<A     P50 d   rank80 d
+r64tc        123,628      19,755        128    820    762       736    145,344
+r64t          33,132       7,770         64    802    777     1,312    125,632
+r16tc         29,583       7,607        128    823    762       896    122,624
+r1tc           5,528       2,659        128    817    774     1,024     13,568
+rgrade           856       2,811        224    842    742     1,376     17,664
+
+=== cost per evaluation ===
+TWO estimators, and only the second one is quotable.
+  trim-40 is WRONG here and is printed to show that it is: the driving
+  seam fires in BURSTS, so trimming 2.5% off each tail deletes exactly
+  the frames that carry the evaluations. It disagrees with itself across
+  arms by 10x. The price comes from window-regression.txt, whose 96-frame
+  windows each carry their own exact evaluation count.
+r64tc    windows:   117,742 tk/fr over  180.09 eval/fr ->    653.8 tk/eval   [trim-40 would say    109.7 -- do not use]
+r64t     windows:    31,598 tk/fr over   90.04 eval/fr ->    350.9 tk/eval   [trim-40 would say     86.3 -- do not use]
+r16tc    windows:    27,858 tk/fr over   45.02 eval/fr ->    618.8 tk/eval   [trim-40 would say    169.0 -- do not use]
+r1tc     windows:     5,591 tk/fr over    2.81 eval/fr ->   1986.9 tk/eval   [trim-40 would say    944.9 -- do not use]
+rgrade   windows:       540 tk/fr over    2.81 eval/fr ->    191.9 tk/eval   [trim-40 would say    999.1 -- do not use]
+
+=== exchange rate, gross from SIMSIDE.md section 3 per-call rates ===
+gross transform 289.9 tk/entry (9 fmul @13.23 + 9 fadd @18.98); SIMSIDE 13,091/45.2 = 289.6
+gross compose   988.8 tk/entry (36 fmul + 27 fadd);            SIMSIDE 18,759/19.0 = 987.3

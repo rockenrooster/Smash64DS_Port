@@ -178,6 +178,21 @@ R2-07 iteration rules (cycle 79):
     itself. Two self-reproducing arms give an exact delta; judging that delta
     still needs the cross-build floors above, because layout-identical is not
     execution-identical.
+- **A BURSTY EFFECT NEEDS WINDOW SUMS, NOT A MEDIAN AND NOT A TRIMMED MEAN
+  (2026-08-16).** When the thing being priced fires on a minority of frames —
+  anything gated on a live hitbox, a KO, an asset load — all three of the usual
+  per-frame statistics are wrong at once, and each is wrong in a different
+  direction. The warm-MAC shadow measured this on one pair: paired median **128**
+  (structurally ~0, because most frames carry no event at all), paired mean
+  **123,628** (carried by two cartridge-read frames whose delta reaches
+  ±4 million), trimmed mean at 2.5% each tail **19,755** — *trimming deletes
+  exactly the frames that carry the work*. The statistic that works is the
+  **per-ring-stop window sum**: `sample-tick-hud-buckets.ps1 -PerStopGlobals`
+  records the event counter at every stop, so each 96-frame window carries its
+  own exact event count and the ratio is a direct per-event price. It is also
+  self-checking — the eleven usable windows spanned 632.8–714.3 tk/event, and a
+  4× change in event density reproduced it inside 5%. **Quote the window
+  regression; print the trimmed mean only to show it disagreeing with itself.**
 - **A buffered child's stdout is lost to ANY abrupt parent termination — force-kill,
   tool cap, or timeout alike (2026-08-15, second door in two cycles).** The
   previous cycle lost a 25-minute `probe-battlepack-pacing.ps1` capture by

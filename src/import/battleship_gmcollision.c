@@ -194,7 +194,127 @@ sb32 ndsBaseGmCollisionCheckFighterAttackShieldCollide(
     ndsBaseGmCollisionCheckFighterAttackShieldCollide
 #endif /* NDS_R2_CFX_RING_WRAP */
 
+#if NDS_R2_SIM_MAC_SHADOW
+/* THE WARM-MAC EXCHANGE-RATE INSTRUMENT. Lab only, default off, and it changes
+ * NO gameplay value at either arm: the decomp float body still runs, still
+ * writes the same result, and the fixed form is evaluated beside it and thrown
+ * away. See include/nds/nds_r2_sim_mac_fixed.h for what it measures and why a
+ * replacement route could not measure it (a route A/B cannot price a gameplay
+ * change; one on this exact code ended with damage 130/51 against 33/65).
+ *
+ * COVERAGE IS PARTIAL AND THE COUNTERS SAY BY HOW MUCH. The rename below moves
+ * the DEFINITION and gmcollision.c's own fifteen call sites together, so these
+ * wrappers see cross-TU calls only -- the property the ring wrapper above
+ * relies on (`ZERO in-TU callers`) is exactly what these two do NOT have.
+ * Makefile:2302 forbids a decomp overlay patch for a new adaptation, so 100%
+ * capture is not purchasable without editing the source of truth. */
+#include <nds/nds_r2_sim_mac_fixed.h>
+
+void ndsR2SimMacBaseGetWorldPosition(Mtx44f mtx, Vec3f *vec);
+void ndsR2SimMacBaseCompose(Mtx44f dst, Mtx44f lhs, Mtx44f rhs);
+
+#define gmCollisionGetWorldPosition ndsR2SimMacBaseGetWorldPosition
+#define func_ovl2_800ED490 ndsR2SimMacBaseCompose
+#endif /* NDS_R2_SIM_MAC_SHADOW */
+
 #include "../../decomp/BattleShip-main/decomp/src/gm/gmcollision.c"
+
+#if NDS_R2_SIM_MAC_SHADOW
+#undef gmCollisionGetWorldPosition
+#undef func_ovl2_800ED490
+
+void gmCollisionGetWorldPosition(Mtx44f mtx, Vec3f *vec)
+{
+    const u32 arm = gNdsR2SimMacShadowArm;
+    f32 in[3];
+
+    /* Before the base call: it writes *vec in place. */
+    in[0] = vec->x;
+    in[1] = vec->y;
+    in[2] = vec->z;
+
+    ndsR2SimMacBaseGetWorldPosition(mtx, vec);
+    gNdsR2SimMacXfrmCalls++;
+
+    if ((arm & NDS_R2_SIM_MAC_ARM_TRANSFORM) != 0u)
+    {
+        f32 ref[3];
+
+        ref[0] = vec->x;
+        ref[1] = vec->y;
+        ref[2] = vec->z;
+        ndsR2SimMacShadowTransform(mtx, in, ref, arm);
+    }
+    if ((arm & NDS_R2_SIM_MAC_ARM_COMPOSE) != 0u)
+    {
+        ndsR2SimMacShadowCompose(mtx, arm);
+    }
+}
+
+void func_ovl2_800ED490(Mtx44f dst, Mtx44f lhs, Mtx44f rhs)
+{
+    ndsR2SimMacBaseCompose(dst, lhs, rhs);
+    gNdsR2SimMacCmpsCalls++;
+}
+
+/* THE DRIVING SEAM, and it is not the one the shape wanted.
+ *
+ * The wrappers above measured their own coverage on the first run and it is
+ * 0.082 entries a frame for the transform and EXACTLY ZERO for the compose, so
+ * neither can drive a measurable delta. This one can: the fighter damage-collide
+ * gateway has zero in-TU callers -- the property the ring wrapper above already
+ * relies on -- so it captures 100% of its 1,938 calls a match, and its operands
+ * are the live joint matrix and the live hurtbox offset, i.e. the SAME data
+ * gm/gmcollision.c:504/527/1953 hands gmCollisionGetWorldPosition.
+ *
+ * It is still only 0.95 calls a frame against the real 45.2 and 19.0, which is
+ * why the arm word carries a repeat count: the slope in R is the warm marginal
+ * cost and the intercept is what a driving call pays once, and the real
+ * per-entry cost is bracketed between them. See the header. */
+void ndsR2SimMacDriveJoint(DObj *joint, const Vec3f *offset, u32 arm)
+{
+    FTParts *parts;
+    f32 in[3];
+    f32 ref[3];
+
+    if ((joint == NULL) || (offset == NULL))
+    {
+        return;
+    }
+    parts = ftGetParts(joint);
+    if (parts == NULL)
+    {
+        return;
+    }
+    in[0] = offset->x;
+    in[1] = offset->y;
+    in[2] = offset->z;
+    ref[0] = 0.0F;
+    ref[1] = 0.0F;
+    ref[2] = 0.0F;
+    if ((arm & NDS_R2_SIM_MAC_ARM_GRADE) != 0u)
+    {
+        /* The float reference, produced by the decomp body itself on the same
+         * inputs. It is a REAL soft-float call and it is deliberately confined
+         * to the grading arm, whose ticks are never used as a price. */
+        Vec3f reference = *offset;
+
+        ndsR2SimMacBaseGetWorldPosition(parts->mtx_translate, &reference);
+        ref[0] = reference.x;
+        ref[1] = reference.y;
+        ref[2] = reference.z;
+    }
+    if ((arm & NDS_R2_SIM_MAC_ARM_TRANSFORM) != 0u)
+    {
+        ndsR2SimMacShadowTransform(parts->mtx_translate, in, ref, arm);
+    }
+    if ((arm & NDS_R2_SIM_MAC_ARM_COMPOSE) != 0u)
+    {
+        ndsR2SimMacShadowCompose(parts->mtx_translate, arm);
+    }
+    gNdsR2SimMacDriveCalls++;
+}
+#endif /* NDS_R2_SIM_MAC_SHADOW */
 
 #if NDS_R2_CFX_RING_WRAP
 #undef gmCollisionCheckFighterAttackDamageCollide
@@ -235,6 +355,21 @@ sb32 gmCollisionCheckFighterAttackDamageCollide(FTAttackColl *attack_coll,
 #endif
     hit = ndsBaseGmCollisionCheckFighterAttackDamageCollide(attack_coll,
                                                             damage_coll);
+#if NDS_R2_SIM_MAC_SHADOW
+    /* After the base, never before: the base is where the joint's matrices are
+     * brought up to date, so this reads exactly what the source's own call read.
+     * At arm 0 this is one volatile load, a test and a not-taken branch, paid
+     * identically on every arm. */
+    {
+        const u32 sim_mac_arm = gNdsR2SimMacShadowArm;
+
+        if (sim_mac_arm != 0u)
+        {
+            ndsR2SimMacDriveJoint(damage_coll->joint, &damage_coll->offset,
+                                  sim_mac_arm);
+        }
+    }
+#endif
 #if NDS_TICK_HUD
     gNdsCfxFighterDamagePhaseCalls++;
     if (hit != FALSE)

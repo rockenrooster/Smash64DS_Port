@@ -60,6 +60,9 @@
  * desync the fight. See artifacts/performance/2026-08-16_camera-fixedpoint/. */
 #include <nds/nds_r2_camera_fixed.h>
 #endif
+#if NDS_R2_SIM_MAC_SHADOW
+#include <nds/nds_r2_sim_mac_fixed.h>
+#endif
 
 extern volatile u32 gNdsBootSelfTestResult;
 extern volatile u32 gNdsFrameCounter;
@@ -2704,7 +2707,14 @@ static void ndsPlatformRenderBattleFpsHud(void)
 void ndsPlatformPublishBattleFrameCompleteGroups(void)
 {
     NDS_PUBLISH_DEBUGGER_GROUP(NDS_BATTLE_PLAYABLE_PACING_GROUP);
+    NDS_PUBLISH_DEBUGGER_GROUP(NDS_BATTLE_PLAYABLE_PACING_HISTOGRAM_GROUP);
     NDS_PUBLISH_DEBUGGER_GROUP(NDS_GCRUNALL_TASKMAN_GROUP);
+#if NDS_R2_SIM_MAC_SHADOW
+    /* The warm-MAC instrument's counters. A max-deviation counter is written
+     * only when a new maximum occurs, which is exactly the access pattern that
+     * is still dirty in the D-cache at the run's final stop and reads STALE. */
+    NDS_PUBLISH_DEBUGGER_GROUP(NDS_R2_SIM_MAC_GROUP);
+#endif
 }
 
 static u32 ndsPlatformMixDebugValue(u32 hash, u32 value)

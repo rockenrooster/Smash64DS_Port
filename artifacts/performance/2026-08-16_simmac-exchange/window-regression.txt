@@ -1,0 +1,101 @@
+=== PER-RING-STOP WINDOW REGRESSION (the robust statistic) ===
+Window sums, not per-frame means: the driving seam fires in BURSTS on the
+frames where a hitbox is live, so most frames carry no evaluation and both
+the median (structurally 0) and the trimmed mean (which deletes exactly the
+frames that carry the work: trim40 reads 19,755 against the untrimmed
+123,628) are wrong here. A 96-frame window carries its own exact evaluation
+count from -PerStopGlobals, so the ratio is a direct price.
+
+--- r64tc  arm=16387  rom=049D2BEF93D5624A
+    536-631   evals      256  dWORK-H sum        159,232      622.0 tk/eval   (under 1,000 evals: noise-dominated, excluded)
+    632-727   evals   23,936  dWORK-H sum     16,128,064      673.8 tk/eval
+    728-823   evals    2,304  dWORK-H sum      1,645,696      714.3 tk/eval
+    920-1015  evals    1,408  dWORK-H sum        938,496      666.5 tk/eval
+   1016-1111  evals   10,112  dWORK-H sum      6,661,312      658.8 tk/eval
+   1112-1207  evals   22,912  dWORK-H sum     15,305,792      668.0 tk/eval
+   1208-1303  evals    7,296  dWORK-H sum      4,935,616      676.5 tk/eval
+   1400-1495  evals   27,264  dWORK-H sum     18,118,208      664.5 tk/eval
+   1496-1591  evals      128  dWORK-H sum        259,264     2025.5 tk/eval   (under 1,000 evals: noise-dominated, excluded)
+   1592-1687  evals   28,416  dWORK-H sum     18,947,008      666.8 tk/eval
+   1688-1783  evals   17,024  dWORK-H sum     11,523,904      676.9 tk/eval
+   1880-1975  evals  124,672  dWORK-H sum     78,896,576      632.8 tk/eval
+   1976-2039  evals    5,120  dWORK-H sum      3,611,136      705.3 tk/eval
+  MEDIAN across 11 usable windows: 668.0 tk/eval   (min 632.8, max 714.3)
+  whole-window aggregate: 180.09 eval/fr, +117,742 tk/fr, 653.8 tk/eval
+
+--- r64t  arm=16385  rom=049D2BEF93D5624A
+    536-631   evals      128  dWORK-H sum       -130,560    -1020.0 tk/eval   (under 1,000 evals: noise-dominated, excluded)
+    632-727   evals   11,968  dWORK-H sum      4,267,456      356.6 tk/eval
+    728-823   evals    1,152  dWORK-H sum        562,688      488.4 tk/eval
+    920-1015  evals      704  dWORK-H sum      4,361,472     6195.3 tk/eval   (under 1,000 evals: noise-dominated, excluded)
+   1016-1111  evals    5,056  dWORK-H sum      1,724,096      341.0 tk/eval
+   1112-1207  evals   11,456  dWORK-H sum      3,960,192      345.7 tk/eval
+   1208-1303  evals    3,648  dWORK-H sum      1,229,056      336.9 tk/eval
+   1400-1495  evals   13,632  dWORK-H sum      4,925,376      361.3 tk/eval
+   1496-1591  evals       64  dWORK-H sum        130,560     2040.0 tk/eval   (under 1,000 evals: noise-dominated, excluded)
+   1592-1687  evals   14,208  dWORK-H sum      4,983,872      350.8 tk/eval
+   1688-1783  evals    8,512  dWORK-H sum      2,908,608      341.7 tk/eval
+   1880-1975  evals   62,336  dWORK-H sum     17,460,608      280.1 tk/eval
+   1976-2039  evals    2,560  dWORK-H sum      1,057,344      413.0 tk/eval
+  MEDIAN across 10 usable windows: 348.2 tk/eval   (min 280.1, max 488.4)
+  whole-window aggregate: 90.04 eval/fr, +31,598 tk/fr, 350.9 tk/eval
+
+--- r16tc  arm=4099  rom=049D2BEF93D5624A
+    536-631   evals       64  dWORK-H sum       -129,728    -2027.0 tk/eval   (under 1,000 evals: noise-dominated, excluded)
+    632-727   evals    5,984  dWORK-H sum      4,133,760      690.8 tk/eval
+    728-823   evals      576  dWORK-H sum        552,384      959.0 tk/eval   (under 1,000 evals: noise-dominated, excluded)
+    920-1015  evals      352  dWORK-H sum        185,152      526.0 tk/eval   (under 1,000 evals: noise-dominated, excluded)
+   1016-1111  evals    2,528  dWORK-H sum      1,581,760      625.7 tk/eval
+   1112-1207  evals    5,728  dWORK-H sum      3,937,280      687.4 tk/eval
+   1208-1303  evals    1,824  dWORK-H sum      1,239,808      679.7 tk/eval
+   1400-1495  evals    6,816  dWORK-H sum      4,711,488      691.2 tk/eval
+   1496-1591  evals       32  dWORK-H sum         54,144     1692.0 tk/eval   (under 1,000 evals: noise-dominated, excluded)
+   1592-1687  evals    7,104  dWORK-H sum      4,828,224      679.6 tk/eval
+   1688-1783  evals    4,256  dWORK-H sum      2,835,008      666.1 tk/eval
+   1880-1975  evals   31,168  dWORK-H sum     16,813,888      539.5 tk/eval
+   1976-2039  evals    1,280  dWORK-H sum      1,025,216      801.0 tk/eval
+  MEDIAN across 9 usable windows: 679.7 tk/eval   (min 539.5, max 801.0)
+  whole-window aggregate: 45.02 eval/fr, +27,858 tk/fr, 618.8 tk/eval
+
+--- r1tc  arm=3  rom=049D2BEF93D5624A
+    536-631   evals        4  dWORK-H sum         53,504    13376.0 tk/eval   (under 1,000 evals: noise-dominated, excluded)
+    632-727   evals      374  dWORK-H sum        366,528      980.0 tk/eval   (under 1,000 evals: noise-dominated, excluded)
+    728-823   evals       36  dWORK-H sum        159,552     4432.0 tk/eval   (under 1,000 evals: noise-dominated, excluded)
+    920-1015  evals       22  dWORK-H sum      4,224,384   192017.5 tk/eval   (under 1,000 evals: noise-dominated, excluded)
+   1016-1111  evals      158  dWORK-H sum        133,568      845.4 tk/eval   (under 1,000 evals: noise-dominated, excluded)
+   1112-1207  evals      358  dWORK-H sum        327,360      914.4 tk/eval   (under 1,000 evals: noise-dominated, excluded)
+   1208-1303  evals      114  dWORK-H sum         34,240      300.4 tk/eval   (under 1,000 evals: noise-dominated, excluded)
+   1400-1495  evals      426  dWORK-H sum        543,808     1276.5 tk/eval   (under 1,000 evals: noise-dominated, excluded)
+   1496-1591  evals        2  dWORK-H sum        121,408    60704.0 tk/eval   (under 1,000 evals: noise-dominated, excluded)
+   1592-1687  evals      444  dWORK-H sum      4,558,016    10265.8 tk/eval   (under 1,000 evals: noise-dominated, excluded)
+   1688-1783  evals      266  dWORK-H sum        264,320      993.7 tk/eval   (under 1,000 evals: noise-dominated, excluded)
+   1880-1975  evals    1,948  dWORK-H sum     -2,408,704    -1236.5 tk/eval
+   1976-2039  evals       80  dWORK-H sum        100,672     1258.4 tk/eval   (under 1,000 evals: noise-dominated, excluded)
+  MEDIAN across 1 usable windows: -1236.5 tk/eval   (min -1236.5, max -1236.5)
+  whole-window aggregate: 2.81 eval/fr, +5,591 tk/fr, 1986.9 tk/eval
+
+--- rgrade  arm=7  rom=049D2BEF93D5624A
+    536-631   evals        4  dWORK-H sum          2,944      736.0 tk/eval   (under 1,000 evals: noise-dominated, excluded)
+    632-727   evals      374  dWORK-H sum        468,928     1253.8 tk/eval   (under 1,000 evals: noise-dominated, excluded)
+    728-823   evals       36  dWORK-H sum        146,112     4058.7 tk/eval   (under 1,000 evals: noise-dominated, excluded)
+    920-1015  evals       22  dWORK-H sum         -5,120     -232.7 tk/eval   (under 1,000 evals: noise-dominated, excluded)
+   1016-1111  evals      158  dWORK-H sum        145,408      920.3 tk/eval   (under 1,000 evals: noise-dominated, excluded)
+   1112-1207  evals      358  dWORK-H sum        421,184     1176.5 tk/eval   (under 1,000 evals: noise-dominated, excluded)
+   1208-1303  evals      114  dWORK-H sum         29,760      261.1 tk/eval   (under 1,000 evals: noise-dominated, excluded)
+   1400-1495  evals      426  dWORK-H sum        606,528     1423.8 tk/eval   (under 1,000 evals: noise-dominated, excluded)
+   1496-1591  evals        2  dWORK-H sum        121,408    60704.0 tk/eval   (under 1,000 evals: noise-dominated, excluded)
+   1592-1687  evals      444  dWORK-H sum        512,896     1155.2 tk/eval   (under 1,000 evals: noise-dominated, excluded)
+   1688-1783  evals      266  dWORK-H sum        310,080     1165.7 tk/eval   (under 1,000 evals: noise-dominated, excluded)
+   1880-1975  evals    1,948  dWORK-H sum     -2,007,936    -1030.8 tk/eval
+   1976-2039  evals       80  dWORK-H sum         87,232     1090.4 tk/eval   (under 1,000 evals: noise-dominated, excluded)
+  MEDIAN across 1 usable windows: -1030.8 tk/eval   (min -1030.8, max -1030.8)
+  whole-window aggregate: 2.81 eval/fr, +540 tk/fr, 191.9 tk/eval
+
+=== SPLIT ===
+transform (r64t, transform only)             348.2 tk/evaluation
+blended   (r64tc, transform+compose)         668.0 tk/evaluation
+compose   = 2*blended - transform            987.8 tk/evaluation
+
+=== EXCHANGE RATE ===
+transform  gross   289.6 tk/entry   fixed   348.2 tk/entry   R =  0.83x   net    -2,650 tk/fr on a 13,091 lane
+compose    gross   987.3 tk/entry   fixed   987.8 tk/entry   R =  1.00x   net       -10 tk/fr on a 18,759 lane

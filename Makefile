@@ -1368,6 +1368,23 @@ NDS_R2_COLLISION_FIXED_NARROW ?= 0
 # text and scripts/compare-elf-sections.py can assert the pair differs in exactly
 # one byte.
 NDS_R2_COLLISION_FIXED_NARROW_DISPATCH ?= $(NDS_R2_COLLISION_FIXED_NARROW)
+# THE WARM-MAC EXCHANGE-RATE INSTRUMENT (include/nds/nds_r2_sim_mac_fixed.h).
+# LAB ONLY, DEFAULT 0, and at 0 the translation unit is not linked at all so a
+# published ROM stays byte-identical.
+#
+# It is a SHADOW, not a route: at every arm the decomp float body still runs and
+# still writes the same result, and the fixed form is evaluated beside it and
+# discarded. That is deliberate -- a replacement route cannot price these two
+# bodies, because they feed gameplay decisions and the two arms would play
+# different fights (one such A/B on this exact code ended with damage 130/51
+# against 33/65 on the same ELF, one poked bit apart). The shadow's arms are
+# bit-identical matches by construction, so every whole-match invariant must be
+# equal and an unequal one means the INSTRUMENT is broken.
+#
+# gNdsR2SimMacShadowArm is a `.data` word poked with -SetGlobals: bit 0 runs the
+# fixed point-x-matrix transform, bit 1 the fixed 3x4 affine compose, bit 2
+# grades the transform against the float body's own result on the same inputs.
+NDS_R2_SIM_MAC_SHADOW ?= 0
 # Task 44 stage steady-state excision: generation-based admission, dense
 # rigid/dynamic binding lists, and the hoisted GX capture-active test. Requires
 # the Task 36 hardware-compose stage owner; meaningless without it.
@@ -2618,6 +2635,9 @@ endif
 ifeq ($(NDS_R2_COLLISION_FIXED),1)
 CFILES += nds_r2_collision_fixed.c nds_r2_collision_ring.c
 endif
+ifeq ($(NDS_R2_SIM_MAC_SHADOW),1)
+CFILES += nds_r2_sim_mac_fixed.c
+endif
 # Conditional so a published ROM stays byte-identical: at flag 0 the TU is not
 # linked at all, rather than linked as ten `used` counters nothing writes.
 ifeq ($(NDS_R2_FTANIM_TRACK),1)
@@ -3550,6 +3570,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_R2_COLLISION_FIXED_DISPATCH $(NDS_R2_COLLISION_FIXED_DISPATCH)u'; \
 		echo '#define NDS_R2_COLLISION_FIXED_NARROW $(NDS_R2_COLLISION_FIXED_NARROW)'; \
 		echo '#define NDS_R2_COLLISION_FIXED_NARROW_DISPATCH $(NDS_R2_COLLISION_FIXED_NARROW_DISPATCH)u'; \
+		echo '#define NDS_R2_SIM_MAC_SHADOW $(NDS_R2_SIM_MAC_SHADOW)'; \
 		echo '#define NDS_TASK39_FX_SPRITES $(NDS_TASK39_FX_SPRITES)'; \
 		echo '#define NDS_TASK39_FX_FLASH $(NDS_TASK39_FX_FLASH)'; \
 		echo '#define NDS_R2_PARTICLE_RUNTIME $(NDS_R2_PARTICLE_RUNTIME)'; \
@@ -3853,6 +3874,12 @@ endif
 # the ring -marm too would grow it for nothing; inlining the kernels INTO it
 # would put SMULL-shaped code in a Thumb object and no gate would notice.
 nds_r2_collision_fixed.o: CFLAGS += -marm
+# Same rule, same reason: src/port/nds_r2_sim_mac_fixed.c holds the shadow
+# bodies of the warm-MAC exchange-rate instrument, and its whole content is
+# 64-bit integer products. A Thumb build of it would price __aeabi_lmul at 4.49
+# cyc/multiply instead of a hardware umull at 2.00 and report an exchange rate
+# that no shipped conversion would ever see.
+nds_r2_sim_mac_fixed.o: CFLAGS += -marm
 
 scene_backend.o: $(SCENE_BACKEND_SLICES) $(NDS_SCENE_HARNESS_CONFIG)
 scene_harness.o battleship_grinishie_scale.o: $(NDS_SCENE_HARNESS_CONFIG)
