@@ -2416,10 +2416,10 @@ NDS_R2_FTANIM_TRACK_ORACLE ?= 0
 
 # Fox Blaster's shared beam/flash/collision bore line (`nds_effects.h`). The 84
 # was owner-confirmed 2026-08-14, BEFORE the segment-phase parser repair, so it
-# compensated a gun-joint pose that was a frame stale. With the parser repaired
-# the owner confirmed 0 on `build-c198-bore0` ("fox beam is perfect!",
-# 2026-08-15), so the DS correction is REMOVED rather than re-tuned.
-NDS_FOX_BLASTER_BORE_OFFSET_Y ?= 0
+# may be compensating a gun-joint pose that was a frame stale. That is a
+# fidelity call the owner owns: BLOCKED(decision: Fox bore). This variable
+# exists so a trial value costs no source edit; THE DEFAULT DOES NOT MOVE.
+NDS_FOX_BLASTER_BORE_OFFSET_Y ?= 84
 NDS_FTANIM_TRACK_MAX_BYTES ?= 12288
 NDS_FTANIM_TRACK_HEADER := $(PROJECT_ROOT)/include/nds/generated/nds_ftanim_track_pack.generated.h
 ifeq ($(NDS_R2_FTANIM_TRACK),1)

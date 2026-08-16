@@ -85,25 +85,31 @@ extern volatile u32 gNdsFoxBlasterQuadFallbackCount;
  * weapon attack-collision center. Weapon/root motion and map collision remain
  * source-owned and unchanged.
  *
- * 2026-08-15 -- THE OFFSET IS NOW 0, AND THE 84 ABOVE IS SUPERSEDED HISTORY.
- * The 84 was tuned and owner-confirmed on 2026-08-14, i.e. BEFORE the
- * segment-phase parser repair (`64c41c361a7`). That defect started every new
+ * 2026-08-15 -- THE VALUE IS UNCHANGED AT 84, AND IT IS NOW A QUESTION FOR THE
+ * OWNER.  BLOCKED(decision: Fox bore).  The 84 was tuned by eye on 2026-08-14
+ * in the steps 24 -> 36 -> 48 -> 72 -> 84, i.e. one day BEFORE the
+ * segment-phase parser repair (`64c41c361a7`).  That defect started every new
  * animation segment at phase 0 instead of `-anim_wait - anim_speed` in 82.7% of
  * write commands, so the gun joint's pose at the firing instant was a whole
- * frame stale and the shot point derived from it sat low. The 84 was pure
- * compensation for that stale pose. With the parser repaired the compensation
- * is wrong, and the owner confirmed it on `build-c198-bore0`
- * (`smash64ds-battle-playable-proof-hwtri.nds`, SHA-256 95d75cf6...5ec997):
- *   "fox beam is perfect!"  -- owner, 2026-08-15, at offset 0
- * Overridable so a trial value costs one `make` variable and no source edit:
+ * frame stale and the shot point derived from it sat low.  THE 84 MAY THEREFORE
+ * BE COMPENSATION FOR A DEFECT THAT NO LONGER EXISTS -- but that is a
+ * fidelity/presentation call, so it is reported, not taken, and the shipping
+ * value does not move without the owner's eye.
+ * The two arms are priced in
+ * `artifacts/performance/2026-08-15_ftanim-full-coverage/REBANK.md` section 2:
+ * at 84 crouching Mario clears the beam by 45.181; at 0 the laser returns to
+ * BattleShip's own source line and OVERLAPS the crouch box by 1.181, which is
+ * the pre-v5 condition v5 was built to remove.
+ * Overridable so trialling a value costs one `make` variable and no source
+ * edit, and the DEFAULT DOES NOT MOVE:
  *   make TARGET=... BUILD=... NDS_FOX_BLASTER_BORE_OFFSET_Y=<n>
  * All three consumers -- beam draw (`nds_renderer.c`), muzzle/impact glow draw
  * (`battleship_lbparticle.c`) and the weapon attack collision
- * (`battleship_fox_blaster.c`) -- read THIS ONE constant, so any value keeps
- * presentation and collision on one shared line. At 0 the line is BattleShip's
- * own shot point, so the DS correction is gone rather than re-tuned. */
+ * (`battleship_fox_blaster.c`) -- read THIS ONE constant, proven by enumeration
+ * over the whole tree, so any value keeps presentation and collision on one
+ * shared line and a visual/hitbox desync is not expressible here. */
 #ifndef NDS_FOX_BLASTER_BORE_OFFSET_Y
-#define NDS_FOX_BLASTER_BORE_OFFSET_Y 0
+#define NDS_FOX_BLASTER_BORE_OFFSET_Y 84
 #endif
 #define NDS_FOX_BLASTER_BORE_OFFSET_Y_Q12 \
     ((s32)NDS_FOX_BLASTER_BORE_OFFSET_Y << 12)
