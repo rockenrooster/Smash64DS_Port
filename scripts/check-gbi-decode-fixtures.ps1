@@ -1818,7 +1818,25 @@ Assert-True ($renderer.Contains('state->prepared_projected_source_z_valid_mask =
 # count below sees the alias, and the assert after it pins the alias to
 # NDS_RENDERER_HOT_CODE with the census off. Without that pin, an alias is a way
 # to evict an ITCM resident permanently and still count five.
-Assert-True ([regex]::Matches($renderer, 'static (?:void|s32|u32) (?:NDS_RENDERER_HOT_CODE|NDS_R2_CENSUS_EVICTED_CODE)').Count -eq 5) 'Renderer hot-code set drifted from the five measured VTX/shade/vertex/triangle/scan paths.'
+# Count definitions, not forward declarations. The scan split now needs a
+# prototype so its cold branch helper can recurse into the hot scanner; counting
+# the prototype as another resident would reject a source-only declaration even
+# though it emits no code. Pin the same five measured bodies explicitly.
+$rendererHotDefinitions = [regex]::Matches(
+    $renderer,
+    '(?s)static (?:void|s32|u32) (?:NDS_RENDERER_HOT_CODE|NDS_R2_CENSUS_EVICTED_CODE)\s+(\w+)\s*\([^;]*?\)\s*\{')
+$rendererHotNames = @($rendererHotDefinitions | ForEach-Object { $_.Groups[1].Value })
+$rendererExpectedHotNames = @(
+    'ndsRendererApplyVertexCommand',
+    'ndsRendererHardwareLitShadeColorPrepared',
+    'ndsRendererHardwareSubmitVertex',
+    'ndsRendererSubmitHardwareTriangle',
+    'ndsRendererScanList'
+)
+$rendererHotNameKey = (@($rendererHotNames | Sort-Object) -join ',')
+$rendererExpectedHotNameKey = (@($rendererExpectedHotNames | Sort-Object) -join ',')
+Assert-True ($rendererHotDefinitions.Count -eq 5 -and
+             $rendererHotNameKey -eq $rendererExpectedHotNameKey) 'Renderer hot-code set drifted from the five measured VTX/shade/vertex/triangle/scan paths.'
 Assert-True ($renderer -match '(?s)#if NDS_TASK91_DRAW_PHASE_CENSUS\s*#define NDS_R2_CENSUS_EVICTED_CODE NDS_TASK82_EVICTED_HOT_CODE\s*#else\s*#define NDS_R2_CENSUS_EVICTED_CODE NDS_RENDERER_HOT_CODE\s*#endif') 'Census-evicted renderer code no longer falls back to the ITCM-resident hot-code policy when the draw-phase census is off.'
 Assert-True ($renderer -match '(?s)#define NDS_RENDERER_HOT_CODE.*?optimize\("O3"\).*?target\("arm"\).*?section\("\.itcm"\)') 'Renderer hot-code policy no longer combines targeted O3, ARM state, and ITCM placement.'
 Assert-True (-not $renderer.Contains('NDS_HOT_TEXT')) 'Rejected renderer main-RAM hot-text annotations returned.'

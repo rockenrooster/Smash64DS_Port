@@ -33,7 +33,34 @@ clock.** Coverage is part of a baseline's identity now, not a footnote. The
 conversion: the sim runs 60 Hz and presents 30 Hz, ratio **measured at exactly
 2.000**, so 1,600 presented = 3,200 logic = **53.3 s**.
 
-## THE LEVEL IS +48,081: THE FIGHTER DRAW-CONTRACT MEMO IS BUILT AND BANKED (2026-08-16) — `artifacts/performance/2026-08-16_ftr-draw-memo/DRAW_MEMO.md`
+## THE LEVEL IS +19,089: ITCM REPACK + HOT-LEAF ADMISSION IS BUILT AND BANKED (2026-08-16) — `artifacts/performance/2026-08-16_itcm-repack/ITCM_REPACK.md`
+
+**GREEN candidate `build-c235-itcm-final`, byte-identical to the freshly measured
+`build-c234-itcm-finalpack` ROM (SHA-256 `CABAF279...003F`): WORK-H P50 885,440,
+P90 1,064,128, rank-80 1,164,416 raw / 1,139,469 net, top-1% 1,470,720,
+95/1600 over gate. REQUIREMENT +48,081 -> +19,089.** Fresh measured rank-80
+movement versus c223 is **-28,992**, 2.06x the >=14,080 cross-build floor.
+
+The campaign reclaimed **4,108 B** from the 9,484 B cold-inside-hot census
+reserve using exact source splits, then admitted about **4,312 B** of the
+highest-value port-owned hot leaves. Final `.itcm = 0x7fd0 = 32,720 B`, leaving
+16 B. The static marginal-80 I-cache ceiling of the admitted set was ~62.9K;
+that was used only to rank tenants, never as a bank. Actual measured conversion
+is -28,992 at rank-80, P50 -31,040, P90 -28,416, top-1% -35,584, and over-gate
+123 -> 95. FTR/STG/SRC rank-80 move -8,832/-8,128/-16,256 while ALL stays
+within one 64-tick quantum, i.e. saved work becomes wait time.
+
+All retained gameplay/render counters are bit-identical to c223: draw-memo
+3765/147/149/164/3914/60462, Selected/Submitted 62952/62952,
+LightDirection 4010, BoundsPass/Fail 3823/142, P0/P1 triangles
+600000/623934, stage fighter triangles 1223934, heap low-water 53136. The broad
+first source split (`c225`) regressed and is rejected; do not treat all 9,484 B
+as freely movable. The remaining 5,376 B is compiler-expanded cold code mixed
+with executed paths and needs a new structural decomposition, not blanket
+`cold` attributes. No decomp body was edited and no published feature flag was
+flipped.
+
+## SUPERSEDED LEVEL +48,081: THE FIGHTER DRAW-CONTRACT MEMO IS BUILT AND BANKED (2026-08-16) — `artifacts/performance/2026-08-16_ftr-draw-memo/DRAW_MEMO.md`
 
 **GREEN. New basis `build-c223-ftrmemo` route 1 — which IS the shipping
 configuration, since `NDS_R2_FTR_DRAW_MEMO ?= 1`: rank-80 1,193,408 raw /

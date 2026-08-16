@@ -56,11 +56,15 @@ static NDSRendererProfileOwner sNdsRendererRuntimeOwner;
 #define NDS_RENDERER_NATIVE_FIGHTER_CODE \
     __attribute__((noinline, hot, optimize("O3"), target("arm"), \
                    section(".itcm.native_fighter")))
+#define NDS_RENDERER_NATIVE_FIGHTER_MAIN_CODE \
+    __attribute__((noinline, hot, optimize("O3"), target("arm")))
 #else
 #define NDS_RENDERER_HOT_CODE __attribute__((hot, optimize("O3")))
 #define NDS_RENDERER_FAST_RUN_CODE \
     __attribute__((noinline, optimize("O3")))
 #define NDS_RENDERER_NATIVE_FIGHTER_CODE \
+    __attribute__((noinline, hot, optimize("O3")))
+#define NDS_RENDERER_NATIVE_FIGHTER_MAIN_CODE \
     __attribute__((noinline, hot, optimize("O3")))
 #endif
 
@@ -6856,7 +6860,8 @@ ndsRendererMtxMul20p12(const NDSRendererMatrix20p12 *lhs,
     *out = temp;
 }
 
-void ndsRendererMtxMulAffine20p12(const NDSRendererMatrix20p12 *lhs,
+void NDS_TASK82_ITCM_CODE
+ndsRendererMtxMulAffine20p12(const NDSRendererMatrix20p12 *lhs,
                                   const NDSRendererMatrix20p12 *rhs,
                                   NDSRendererMatrix20p12 *out)
 {
@@ -12323,7 +12328,7 @@ _Static_assert(
     sizeof(sNdsRendererStageTextureSites) <= (12u * 1024u),
     "stage texture-site plans must stay below 12 KiB");
 
-static void ndsRendererHardwareBindTextureName(
+static void NDS_TASK82_ITCM_CODE ndsRendererHardwareBindTextureName(
     NDSRendererStats *stats,
     u32 texture_name);
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
@@ -12584,7 +12589,7 @@ static u32 ndsRendererHardwareFogStateKey(const NDSRendererStats *stats)
            ((stats->fog_color & 0xfffu) << 20);
 }
 
-static void ndsRendererHardwareBindTextureName(
+static void NDS_TASK82_ITCM_CODE ndsRendererHardwareBindTextureName(
     NDSRendererStats *stats,
     u32 texture_name)
 {
@@ -19298,7 +19303,8 @@ static inline void ndsRendererHardwareFighterLoadModelviewWorldScaled(
     }
 }
 
-static void __attribute__((noinline)) ndsRendererLoadHardwareSplitMatrices(
+static void __attribute__((noinline)) NDS_TASK82_ITCM_CODE
+ndsRendererLoadHardwareSplitMatrices(
     const NDSRendererMatrix20p12 *projection,
     const NDSRendererMatrix20p12 *modelview,
     u32 generation)
@@ -20092,6 +20098,33 @@ static void ndsRendererHardwareBeginTriangleBatch(
     sNdsRendererHardwareTriangleBatchMatrixGeneration = matrix_generation;
 }
 
+/* c200's whole-match PC census never enters either of these position-emission
+ * branches.  Keep the generic renderer exact for callers that need them, but
+ * do not make the hot vertex submitter carry their inlined bodies in ITCM. */
+static void __attribute__((noinline, cold))
+ndsRendererHardwareSubmitVertexRawZCold(
+    const NDSRendererInputVertex *vtx, u32 scale_world)
+{
+    v16 x = ndsRendererHardwareVertexCoord(vtx->x, scale_world);
+    v16 y = ndsRendererHardwareVertexCoord(vtx->y, scale_world);
+    v16 z = ndsRendererHardwareVertexCoord(vtx->z, scale_world);
+
+    ndsRendererProfileVertexRange(vtx, x, y, z);
+    glVertex3v16(x, y, z);
+}
+
+static void __attribute__((noinline, cold))
+ndsRendererHardwareSubmitVertexDecalCold(
+    const NDSRendererClipVertex20p12 *clip_vtx, s32 projected_z)
+{
+    (void)projected_z;
+    if (clip_vtx != NULL)
+    {
+        ndsRendererHardwareClipVertex(
+            clip_vtx, clip_vtx->z - NDS_RENDERER_HW_DECAL_DEPTH_BIAS);
+    }
+}
+
 static void NDS_RENDERER_HOT_CODE
 ndsRendererHardwareSubmitVertex(
     NDSRendererStats *stats,
@@ -20242,11 +20275,12 @@ ndsRendererHardwareSubmitVertex(
         (decal_depth == FALSE) &&
         (prim_depth == FALSE))
     {
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+        ndsRendererHardwareSubmitVertexRawZCold(vtx, scale_world);
+#else
         v16 x = ndsRendererHardwareVertexCoord(vtx->x, scale_world);
         v16 y = ndsRendererHardwareVertexCoord(vtx->y, scale_world);
         v16 z = ndsRendererHardwareVertexCoord(vtx->z, scale_world);
-
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
         if (semantic_vertex != NULL)
         {
             semantic_vertex->x = x;
@@ -20255,9 +20289,9 @@ ndsRendererHardwareSubmitVertex(
             semantic_vertex->valid_flags |=
                 NDS_RENDERER_SEMANTIC_VERTEX_XYZ_VALID;
         }
-#endif
         ndsRendererProfileVertexRange(vtx, x, y, z);
         glVertex3v16(x, y, z);
+#endif
     }
     else if (prim_depth != FALSE)
     {
@@ -20269,15 +20303,16 @@ ndsRendererHardwareSubmitVertex(
     }
     else if (decal_depth != FALSE)
     {
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+        ndsRendererHardwareSubmitVertexDecalCold(clip_vtx, projected_z);
+#else
         if (clip_vtx != NULL)
         {
             ndsRendererHardwareClipVertex(
-                clip_vtx, clip_vtx->z - NDS_RENDERER_HW_DECAL_DEPTH_BIAS
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-                , semantic_vertex
-#endif
-                );
+                clip_vtx, clip_vtx->z - NDS_RENDERER_HW_DECAL_DEPTH_BIAS,
+                semantic_vertex);
         }
+#endif
     }
     else
     {
@@ -20785,6 +20820,42 @@ ndsRendererSubmitHardwareTriangle(
     sNdsRendererBenchmarkTriangleCount++;
 }
 #else
+/* The c200 canonical census never takes either raw-matrix load arm or the
+ * z-buffer accounting arm below.  Keep those exact generic-renderer paths
+ * available in main RAM while leaving the projected/no-Z path contiguous. */
+static void __attribute__((noinline, cold))
+ndsRendererSubmitHardwareTriangleRawMatrixCold(
+    NDSRendererTraversalState *state,
+    NDSRendererHWSubmitClass submit_class,
+    const NDSRendererMatrixSnapshot *raw_snapshot,
+    s32 scale_world)
+{
+    if (submit_class == NDS_RENDERER_HW_SUBMIT_RAW_Z_CURRENT_MATRIX)
+    {
+        ndsRendererLoadHardwareMatrices(state, scale_world);
+    }
+    else if (raw_snapshot != NULL)
+    {
+        ndsRendererLoadHardwareRawComposedMatrix(
+            &raw_snapshot->matrix, raw_snapshot->generation);
+    }
+}
+
+static void __attribute__((noinline, cold))
+ndsRendererSubmitHardwareTriangleDepthStatsCold(
+    NDSRendererStats *stats, s32 decal_depth, s32 prim_depth)
+{
+    stats->hardware_zbuffer_triangle_count++;
+    if (decal_depth != FALSE)
+    {
+        stats->hardware_decal_depth_triangle_count++;
+    }
+    if (prim_depth != FALSE)
+    {
+        stats->hardware_prim_depth_triangle_count++;
+    }
+}
+
 static void NDS_RENDERER_HOT_CODE
 ndsRendererSubmitHardwareTriangle(
     NDSRendererStats *stats,
@@ -21177,12 +21248,13 @@ ndsRendererSubmitHardwareTriangle(
 #endif
     if (submit_class == NDS_RENDERER_HW_SUBMIT_RAW_Z_CURRENT_MATRIX)
     {
-        ndsRendererLoadHardwareMatrices(state, scale_world);
+        ndsRendererSubmitHardwareTriangleRawMatrixCold(
+            state, submit_class, raw_snapshot, scale_world);
     }
     else if (raw_snapshot != NULL)
     {
-        ndsRendererLoadHardwareRawComposedMatrix(
-            &raw_snapshot->matrix, raw_snapshot->generation);
+        ndsRendererSubmitHardwareTriangleRawMatrixCold(
+            state, submit_class, raw_snapshot, scale_world);
     }
     else
     {
@@ -21300,15 +21372,8 @@ ndsRendererSubmitHardwareTriangle(
     ndsRendererProfileRecordHardwareTriangle();
     if (zbuffered != FALSE)
     {
-        stats->hardware_zbuffer_triangle_count++;
-        if (decal_depth != FALSE)
-        {
-            stats->hardware_decal_depth_triangle_count++;
-        }
-        if (prim_depth != FALSE)
-        {
-            stats->hardware_prim_depth_triangle_count++;
-        }
+        ndsRendererSubmitHardwareTriangleDepthStatsCold(
+            stats, decal_depth, prim_depth);
     }
     else
     {
@@ -22604,6 +22669,7 @@ static u8 sNdsR2DeltaLastValid[NDS_R2_DELTA_EFFECT_MAX];
 #endif
 
 static void __attribute__((noinline, optimize("Os")))
+NDS_TASK82_ITCM_CODE
 ndsRendererNativeApplyRootLightPreamble(
     const NDSNativeRoot *root, NDSRendererStats *stats)
 {
@@ -22758,7 +22824,7 @@ static u32 sNdsR2DeltaLastFrame[70];
 #endif
 #endif
 
-static void NDS_R2_DELTA_PATH_CODE
+static void
 ndsRendererNativeApplyStateSpan(
     u16 first,
     u32 count,
@@ -24951,7 +25017,7 @@ static inline void ndsRendererNativeBeginDirectBatch(
     (void)stats;
 }
 
-static void ndsRendererNativeApplyProductionPreamble(
+static void NDS_TASK82_ITCM_CODE ndsRendererNativeApplyProductionPreamble(
     const NDSRendererNativeFighterPreamble *preamble,
     NDSRendererStats *stats)
 {
@@ -26423,8 +26489,67 @@ volatile u32 gNdsR2RunUvSkip;
 volatile u32 gNdsR2RunUvBuild;
 #endif
 
-static s32 NDS_RENDERER_NATIVE_FIGHTER_CODE
-ndsRendererNativePrepareProductionRun(
+/* The production UV memo miss is a setup/invalidated-data path, not steady
+ * state. c200 executes the equality/validity guard but no instruction in this
+ * rebuild body during the 1,600-frame gate window. Keep the exact writes and
+ * proof hooks, but do not reserve ITCM for a branch the hot path does not take. */
+static void __attribute__((noinline, cold))
+ndsRendererNativeRebuildProductionRunUv(
+    u32 run_index,
+    u32 unique_first,
+    u32 unique_count,
+    NDSRendererTraversalState *state,
+    NDSNativeFighterRunUvInputs *uv)
+{
+    u32 unique_offset;
+
+    for (unique_offset = 0u;
+         unique_offset < unique_count;
+         unique_offset++)
+    {
+        u32 dense_id = sNdsNativeFighterRunUniqueDense[
+            unique_first + unique_offset];
+        const NDSNativeDenseVertex *dense =
+            &sNdsNativeFighterDenseVertices[dense_id];
+        NDSNativePreparedDenseVertex *prepared =
+            &sNdsNativeFighterPreparedDense[dense_id];
+        s32 scaled_s =
+            ((s32)dense->s *
+             (s32)state->texture_prepare_scale_s) >> 17;
+        s32 scaled_t =
+            ((s32)dense->t *
+             (s32)state->texture_prepare_scale_t) >> 17;
+
+        prepared->s = (s16)(
+            scaled_s -
+            ((s32)state->texture_prepare_origin_s << 2) +
+            state->texture_prepare_offset);
+        prepared->t = (s16)(
+            scaled_t -
+            ((s32)state->texture_prepare_origin_t << 2) +
+            state->texture_prepare_offset);
+#if NDS_R2_FIGHTER_RUN_PROOF
+        ndsRendererR2FighterUvProofWrite(dense_id, prepared->s,
+                                         prepared->t);
+#endif
+    }
+    if (uv != NULL)
+    {
+        uv->scale_s = state->texture_prepare_scale_s;
+        uv->scale_t = state->texture_prepare_scale_t;
+        uv->origin_s = state->texture_prepare_origin_s;
+        uv->origin_t = state->texture_prepare_origin_t;
+        uv->offset = state->texture_prepare_offset;
+        uv->heap_generation = gNdsTaskmanHeapGeneration;
+        sNdsNativeFighterRunUvValid[run_index] = 1u;
+    }
+#if NDS_TICK_HUD
+    gNdsR2RunUvBuild++;
+#endif
+}
+
+static inline __attribute__((always_inline)) s32
+ndsRendererNativePrepareProductionRunCore(
     u32 run_index,
     u32 epoch_policy,
     u32 packet_mode,
@@ -26451,7 +26576,6 @@ ndsRendererNativePrepareProductionRun(
     u32 texture_origin_t = 0u;
     u32 unique_first;
     u32 unique_count;
-    u32 unique_offset;
     s32 texture_offset = 0;
     NDSRendererHardwareResolvedTexture resolved_texture;
 #if NDS_R2_FIGHTER_RUN_PROOF >= 2
@@ -26723,49 +26847,8 @@ ndsRendererNativePrepareProductionRun(
         }
         else
         {
-        for (unique_offset = 0u;
-             unique_offset < unique_count;
-             unique_offset++)
-        {
-            u32 dense_id = sNdsNativeFighterRunUniqueDense[
-                unique_first + unique_offset];
-            const NDSNativeDenseVertex *dense =
-                &sNdsNativeFighterDenseVertices[dense_id];
-            NDSNativePreparedDenseVertex *prepared =
-                &sNdsNativeFighterPreparedDense[dense_id];
-            s32 scaled_s =
-                ((s32)dense->s *
-                 (s32)state->texture_prepare_scale_s) >> 17;
-            s32 scaled_t =
-                ((s32)dense->t *
-                 (s32)state->texture_prepare_scale_t) >> 17;
-
-            prepared->s = (s16)(
-                scaled_s -
-                ((s32)state->texture_prepare_origin_s << 2) +
-                state->texture_prepare_offset);
-            prepared->t = (s16)(
-                scaled_t -
-                ((s32)state->texture_prepare_origin_t << 2) +
-                state->texture_prepare_offset);
-#if NDS_R2_FIGHTER_RUN_PROOF
-            ndsRendererR2FighterUvProofWrite(dense_id, prepared->s,
-                                             prepared->t);
-#endif
-        }
-        if (uv != NULL)
-        {
-            uv->scale_s = state->texture_prepare_scale_s;
-            uv->scale_t = state->texture_prepare_scale_t;
-            uv->origin_s = state->texture_prepare_origin_s;
-            uv->origin_t = state->texture_prepare_origin_t;
-            uv->offset = state->texture_prepare_offset;
-            uv->heap_generation = gNdsTaskmanHeapGeneration;
-            sNdsNativeFighterRunUvValid[run_index] = 1u;
-        }
-#if NDS_TICK_HUD
-        gNdsR2RunUvBuild++;
-#endif
+            ndsRendererNativeRebuildProductionRunUv(
+                run_index, unique_first, unique_count, state, uv);
         }
     }
 
@@ -26806,6 +26889,38 @@ ndsRendererNativePrepareProductionRun(
     return TRUE;
 }
 
+/* The production owner always passes hierarchy_run == NULL, while the
+ * hierarchy preflight always passes a real destination.  Specialize those two
+ * cases at the call site so the production copy does not keep hierarchy-only
+ * branches resident in ITCM.  The source body remains shared and identical. */
+static s32 NDS_RENDERER_NATIVE_FIGHTER_CODE
+ndsRendererNativePrepareProductionRun(
+    u32 run_index,
+    u32 epoch_policy,
+    u32 packet_mode,
+    const NDSRendererConfig *config,
+    NDSRendererStats *stats,
+    NDSRendererTraversalState *state)
+{
+    return ndsRendererNativePrepareProductionRunCore(
+        run_index, epoch_policy, packet_mode, config, stats, state, NULL);
+}
+
+static s32 NDS_RENDERER_NATIVE_FIGHTER_MAIN_CODE
+ndsRendererNativePrepareHierarchyRun(
+    u32 run_index,
+    u32 epoch_policy,
+    u32 packet_mode,
+    const NDSRendererConfig *config,
+    NDSRendererStats *stats,
+    NDSRendererTraversalState *state,
+    NDSNativeHierarchyPreparedRun *hierarchy_run)
+{
+    return ndsRendererNativePrepareProductionRunCore(
+        run_index, epoch_policy, packet_mode, config, stats, state,
+        hierarchy_run);
+}
+
 
 #if NDS_LAB_CULL_PROBE
 /* BUGS.md #10 probe. Paints each fighter run a distinct colour so a capture
@@ -26823,7 +26938,7 @@ static u16 ndsRendererNativeLabRunTint(u32 run_index)
 }
 #endif
 
-static void NDS_RENDERER_NATIVE_FIGHTER_CODE
+static void NDS_RENDERER_NATIVE_FIGHTER_MAIN_CODE
 ndsRendererNativeEmitProductionRawTexturedRun(
     u32 run_index,
     u32 corner_count)
@@ -26866,7 +26981,7 @@ ndsRendererNativeEmitProductionRawTexturedRun(
     }
 }
 
-static void NDS_RENDERER_NATIVE_FIGHTER_CODE
+static void NDS_RENDERER_NATIVE_FIGHTER_MAIN_CODE
 ndsRendererNativeEmitProductionRawUntexturedRun(
     u32 run_index,
     u32 corner_count)
@@ -27245,7 +27360,7 @@ static s32 ndsRendererNativeSubmitProductionRun(
     if (ndsRendererNativePrepareProductionRun(
             run_index, epoch_policy,
             FALSE,
-            config, stats, state, NULL) == FALSE)
+            config, stats, state) == FALSE)
     {
 #if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
     NDS_RENDERER_M2_DETAILED_LEDGER
@@ -27373,7 +27488,7 @@ static s32 ndsRendererNativeSubmitProductionRun(
     return TRUE;
 }
 
-static void NDS_RENDERER_NATIVE_FIGHTER_CODE
+static void NDS_RENDERER_NATIVE_FIGHTER_MAIN_CODE
 ndsRendererNativeEmitDenseRawRun(
     u32 run_index,
     u32 corner_count,
@@ -28432,7 +28547,7 @@ static s32 ndsRendererNativePreflightFighterHierarchy(
 
 #if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
     NDS_RENDERER_M2_DETAILED_LEDGER
-                run_ready = ndsRendererNativePrepareProductionRun(
+                run_ready = ndsRendererNativePrepareHierarchyRun(
                     run_index,
                     sNdsNativeFighterEpochDirectPolicy[epoch_index],
                     TRUE, hierarchy->config, scratch, state,
@@ -28444,7 +28559,7 @@ static s32 ndsRendererNativePreflightFighterHierarchy(
                 }
                 if (run_ready == FALSE)
 #else
-                if (ndsRendererNativePrepareProductionRun(
+                if (ndsRendererNativePrepareHierarchyRun(
                         run_index,
                         sNdsNativeFighterEpochDirectPolicy[epoch_index],
                         TRUE, hierarchy->config, scratch, state,
@@ -31171,7 +31286,7 @@ static void ndsRendererNativeStageSetNoZColumn(
     }
 }
 
-static void ndsRendererNativeStageLoadNoZMatrix(
+static void NDS_TASK82_ITCM_CODE ndsRendererNativeStageLoadNoZMatrix(
     u32 binding_index,
     u32 coordinate_shift,
     s16 projected_z)
@@ -34025,6 +34140,181 @@ s32 ndsRendererExecuteNativeFighterRoot(
 
 static void NDS_R2_CENSUS_EVICTED_CODE
 ndsRendererScanList(const Gfx *dl,
+                    const NDSRendererConfig *config,
+                    NDSRendererStats *stats,
+                    NDSRendererTraversalState *state,
+                    u32 depth,
+                    NDSRendererCommandCallback callback,
+                    void *callback_user);
+
+enum
+{
+    NDS_RENDERER_SCAN_COLD_PROCEED = 0,
+    NDS_RENDERER_SCAN_COLD_CONTINUE = 1,
+    NDS_RENDERER_SCAN_COLD_RETURN = 2
+};
+
+/* The generic command record is needed only when a command callback is active
+ * or when a DL opcode must be resolved.  The canonical profile-0 battle does
+ * neither in this scanner, so keep that record/branch machinery in main RAM
+ * without changing its ordering or semantics for generic callers. */
+static u32 __attribute__((noinline, cold))
+ndsRendererScanColdCommand(const Gfx *dl,
+                           const NDSRendererConfig *config,
+                           NDSRendererStats *stats,
+                           NDSRendererTraversalState *state,
+                           u32 depth,
+                           u32 list_index,
+                           u32 w0,
+                           u32 w1,
+                           u32 op,
+                           NDSRendererCommandCallback callback,
+                           void *callback_user)
+{
+    NDSRendererCommand command;
+
+    memset(&command, 0, sizeof(command));
+    command.dl = dl;
+    command.w0 = w0;
+    command.w1 = w1;
+    command.op = op;
+    command.depth = depth;
+    command.list_index = list_index;
+    command.transformed_vertices = state->vertices;
+    command.transformed_vertex_valid_mask = state->vertex_valid_mask;
+    command.matrix_valid = state->matrix_valid;
+
+    if (op == NDS_RENDERER_OP_DL)
+    {
+        command.raw_branch_dl = (const Gfx *)(uintptr_t)w1;
+        command.resolved_branch_dl = command.raw_branch_dl;
+        if (config->resolve_branch != NULL)
+        {
+            command.resolved_branch_dl = config->resolve_branch(
+                command.raw_branch_dl,
+                &command.branch_resolve_kind,
+                config->user);
+        }
+        command.branch_is_jump =
+            ((w0 & (1u << 16)) != 0) ? TRUE : FALSE;
+    }
+
+    if (stats->first_opcode == 0)
+    {
+        stats->first_opcode = op;
+    }
+    stats->command_count++;
+
+    if ((callback != NULL) &&
+        (callback(&command, callback_user) == FALSE))
+    {
+        ndsRendererRecordUnsupported(stats, op);
+        stats->blocker = NDS_RENDERER_BLOCKER_UNSUPPORTED;
+        return NDS_RENDERER_SCAN_COLD_RETURN;
+    }
+    if (op != NDS_RENDERER_OP_DL)
+    {
+        return NDS_RENDERER_SCAN_COLD_PROCEED;
+    }
+
+    {
+        const Gfx *raw_branch = command.raw_branch_dl;
+        const Gfx *branch = command.resolved_branch_dl;
+#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL >= 2)
+        u32 parent_branch_path = state->semantic_branch_path;
+        u32 child_branch_path;
+#endif
+
+        stats->branch_command_count++;
+        if (stats->first_branch_dl == NULL)
+        {
+            stats->first_branch_dl = raw_branch;
+        }
+        if (stats->first_resolved_branch_dl == NULL)
+        {
+            stats->first_resolved_branch_dl = branch;
+        }
+        if (command.branch_resolve_kind == NDS_RENDERER_RESOLVE_SEGMENT)
+        {
+            stats->segment_resolve_count++;
+        }
+        if (ndsRendererValidateCommand(branch, config) == FALSE)
+        {
+            stats->blocker = NDS_RENDERER_BLOCKER_BAD_BRANCH;
+            return NDS_RENDERER_SCAN_COLD_RETURN;
+        }
+        if ((w0 & (1u << 16)) != 0)
+        {
+            stats->branch_jump_count++;
+#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL >= 2)
+            child_branch_path = ndsRendererSemanticBranchPath(
+                parent_branch_path, list_index, depth + 1u, TRUE);
+            state->semantic_branch_path = child_branch_path;
+#endif
+            ndsRendererScanList(branch, config, stats, state, depth + 1u,
+                                callback, callback_user);
+            return NDS_RENDERER_SCAN_COLD_RETURN;
+        }
+
+        stats->branch_call_count++;
+#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL >= 2)
+        child_branch_path = ndsRendererSemanticBranchPath(
+            parent_branch_path, list_index, depth + 1u, FALSE);
+        state->semantic_branch_path = child_branch_path;
+#endif
+        ndsRendererScanList(branch, config, stats, state, depth + 1u,
+                            callback, callback_user);
+#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL >= 2)
+        state->semantic_branch_path = parent_branch_path;
+#endif
+        return (stats->blocker != NDS_RENDERER_BLOCKER_NONE) ?
+            NDS_RENDERER_SCAN_COLD_RETURN : NDS_RENDERER_SCAN_COLD_CONTINUE;
+    }
+}
+
+/* These generic state opcodes are present for compatibility, but their
+ * ScanList arms have zero PCs in the canonical whole-match census.  MOVEWORD
+ * itself remains hot for its other callers; only this cold scanner dispatch is
+ * moved out of ITCM. */
+static void __attribute__((noinline, cold))
+ndsRendererScanColdStateOpcode(const NDSRendererConfig *config,
+                               NDSRendererStats *stats,
+                               NDSRendererTraversalState *state,
+                               u32 op, u32 w0, u32 w1)
+{
+    switch (op)
+    {
+    case NDS_RENDERER_OP_MTX:
+        ndsRendererApplyMatrixCommand(config, stats, state, w0, w1);
+        break;
+    case NDS_RENDERER_OP_POPMTX:
+        ndsRendererApplyPopMatrixCommand(stats, state, w1);
+        break;
+    case NDS_RENDERER_OP_MOVEWORD:
+        ndsRendererApplyMatrixMoveWordCommand(stats, state, w0, w1);
+        break;
+    case NDS_RENDERER_OP_MOVEMEM:
+        ndsRendererRecordLightMoveMem(config, stats, w0, w1);
+        NDS_RENDERER_INVALIDATE_LIGHT_DIRECTION(state);
+        break;
+    case NDS_RENDERER_OP_SPECIAL_1:
+        ndsRendererApplyMvpRecalcCommand(stats, state, w0, w1);
+        break;
+    case NDS_RENDERER_OP_SETSCISSOR:
+    case NDS_RENDERER_OP_SETCIMG:
+        NDS_RENDERER_RECORD_PROOF_ONLY(stats->state_command_count++);
+        stats->ignored_state_command_count++;
+        break;
+    case NDS_RENDERER_OP_SETPRIMDEPTH:
+        ndsRendererRecordPrimDepth(stats, w1);
+        break;
+    default:
+        break;
+    }
+}
+
+static void NDS_R2_CENSUS_EVICTED_CODE
+ndsRendererScanList(const Gfx *dl,
                                 const NDSRendererConfig *config,
                                 NDSRendererStats *stats,
                                 NDSRendererTraversalState *state,
@@ -34077,7 +34367,6 @@ ndsRendererScanList(const Gfx *dl,
         u32 w0;
         u32 w1;
         u32 op;
-        NDSRendererCommand command;
 
         if ((i >= immutable_command_count) &&
             (ndsRendererValidateCommand(dl, config) == FALSE))
@@ -34127,45 +34416,26 @@ ndsRendererScanList(const Gfx *dl,
 #endif
         if ((callback != NULL) || (op == NDS_RENDERER_OP_DL))
         {
-            memset(&command, 0, sizeof(command));
-            command.dl = dl;
-            command.w0 = w0;
-            command.w1 = w1;
-            command.op = op;
-            command.depth = depth;
-            command.list_index = i;
-            command.transformed_vertices = state->vertices;
-            command.transformed_vertex_valid_mask = state->vertex_valid_mask;
-            command.matrix_valid = state->matrix_valid;
+            u32 cold_action = ndsRendererScanColdCommand(
+                dl, config, stats, state, depth, i, w0, w1, op,
+                callback, callback_user);
 
-            if (op == NDS_RENDERER_OP_DL)
+            if (cold_action == NDS_RENDERER_SCAN_COLD_RETURN)
             {
-                command.raw_branch_dl = (const Gfx *)(uintptr_t)w1;
-                command.resolved_branch_dl = command.raw_branch_dl;
-                if (config->resolve_branch != NULL)
-                {
-                    command.resolved_branch_dl = config->resolve_branch(
-                        command.raw_branch_dl,
-                        &command.branch_resolve_kind,
-                        config->user);
-                }
-                command.branch_is_jump =
-                    ((w0 & (1u << 16)) != 0) ? TRUE : FALSE;
+                return;
+            }
+            if (cold_action == NDS_RENDERER_SCAN_COLD_CONTINUE)
+            {
+                continue;
             }
         }
-
-        if (stats->first_opcode == 0)
+        else
         {
-            stats->first_opcode = op;
-        }
-        stats->command_count++;
-
-        if ((callback != NULL) &&
-            (callback(&command, callback_user) == FALSE))
-        {
-            ndsRendererRecordUnsupported(stats, op);
-            stats->blocker = NDS_RENDERER_BLOCKER_UNSUPPORTED;
-            return;
+            if (stats->first_opcode == 0)
+            {
+                stats->first_opcode = op;
+            }
+            stats->command_count++;
         }
 
         switch (op)
@@ -34244,62 +34514,8 @@ ndsRendererScanList(const Gfx *dl,
             return;
 
         case NDS_RENDERER_OP_DL:
-        {
-            const Gfx *raw_branch = command.raw_branch_dl;
-            const Gfx *branch = command.resolved_branch_dl;
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL >= 2)
-            u32 parent_branch_path = state->semantic_branch_path;
-            u32 child_branch_path;
-#endif
-
-            stats->branch_command_count++;
-            if (stats->first_branch_dl == NULL)
-            {
-                stats->first_branch_dl = raw_branch;
-            }
-            if (stats->first_resolved_branch_dl == NULL)
-            {
-                stats->first_resolved_branch_dl = branch;
-            }
-            if (command.branch_resolve_kind == NDS_RENDERER_RESOLVE_SEGMENT)
-            {
-                stats->segment_resolve_count++;
-            }
-            if (ndsRendererValidateCommand(branch, config) == FALSE)
-            {
-                stats->blocker = NDS_RENDERER_BLOCKER_BAD_BRANCH;
-                return;
-            }
-            if ((w0 & (1u << 16)) != 0)
-            {
-                stats->branch_jump_count++;
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL >= 2)
-                child_branch_path = ndsRendererSemanticBranchPath(
-                    parent_branch_path, i, depth + 1u, TRUE);
-                state->semantic_branch_path = child_branch_path;
-#endif
-                ndsRendererScanList(branch, config, stats, state, depth + 1u,
-                                    callback, callback_user);
-                return;
-            }
-
-            stats->branch_call_count++;
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL >= 2)
-            child_branch_path = ndsRendererSemanticBranchPath(
-                parent_branch_path, i, depth + 1u, FALSE);
-            state->semantic_branch_path = child_branch_path;
-#endif
-            ndsRendererScanList(branch, config, stats, state, depth + 1u,
-                                callback, callback_user);
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL >= 2)
-            state->semantic_branch_path = parent_branch_path;
-#endif
-            if (stats->blocker != NDS_RENDERER_BLOCKER_NONE)
-            {
-                return;
-            }
+            /* Handled by ndsRendererScanColdCommand above. */
             break;
-        }
 
         case NDS_RENDERER_OP_TEXTURE:
             NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(state);
@@ -34309,34 +34525,14 @@ ndsRendererScanList(const Gfx *dl,
             break;
 
         case NDS_RENDERER_OP_MTX:
-            ndsRendererApplyMatrixCommand(config, stats, state, w0, w1);
-            break;
-
         case NDS_RENDERER_OP_POPMTX:
-            ndsRendererApplyPopMatrixCommand(stats, state, w1);
-            break;
-
         case NDS_RENDERER_OP_MOVEWORD:
-            ndsRendererApplyMatrixMoveWordCommand(stats, state, w0, w1);
-            break;
-
         case NDS_RENDERER_OP_MOVEMEM:
-            ndsRendererRecordLightMoveMem(config, stats, w0, w1);
-            NDS_RENDERER_INVALIDATE_LIGHT_DIRECTION(state);
-            break;
-
         case NDS_RENDERER_OP_SPECIAL_1:
-            ndsRendererApplyMvpRecalcCommand(stats, state, w0, w1);
-            break;
-
         case NDS_RENDERER_OP_SETSCISSOR:
         case NDS_RENDERER_OP_SETCIMG:
-            NDS_RENDERER_RECORD_PROOF_ONLY(stats->state_command_count++);
-            stats->ignored_state_command_count++;
-            break;
-
         case NDS_RENDERER_OP_SETPRIMDEPTH:
-            ndsRendererRecordPrimDepth(stats, w1);
+            ndsRendererScanColdStateOpcode(config, stats, state, op, w0, w1);
             break;
 
         case NDS_RENDERER_OP_GEOMETRYMODE:

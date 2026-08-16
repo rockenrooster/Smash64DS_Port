@@ -4340,7 +4340,8 @@ static void ndsOpeningRoomRenderSelectedDLPreview(void)
     sNdsOpeningRoomPreviewCameraGObj = saved_preview_camera;
 }
 
-void gcCaptureCameraGObj(GObj *camera_gobj, sb32 is_tag_mask_or_id)
+void __attribute__((section(".itcm")))
+gcCaptureCameraGObj(GObj *camera_gobj, sb32 is_tag_mask_or_id)
 {
     u64 camera_mask;
     s32 link_id = 0;

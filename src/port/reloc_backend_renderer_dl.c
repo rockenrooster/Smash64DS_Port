@@ -1931,7 +1931,8 @@ static sb32 ndsRendererAdapterIsMvpRecalcKind(u32 kind)
         TRUE : FALSE;
 }
 
-static sb32 ndsRendererAdapterBuildDObjLocalMatrix(
+static sb32 __attribute__((section(".itcm")))
+ndsRendererAdapterBuildDObjLocalMatrix(
     DObj *dobj, NDSRendererMatrix20p12 *out)
 {
     NDSRendererMatrix20p12 incoming;
@@ -2425,6 +2426,7 @@ static sb32 ndsRendererAdapterEnsureStageWorldCache(void)
 }
 
 static NDSRendererAdapterStageWorldCacheEntry *
+__attribute__((section(".itcm")))
 ndsRendererAdapterFindStageWorldEntry(const DObj *dobj)
 {
     u32 slot;
@@ -7242,7 +7244,8 @@ static void ndsRendererAdapterScanDisplayProcOtherMode(void)
     }
 }
 
-void ndsRendererAdapterMarkDisplayProcHeads(void)
+void __attribute__((section(".itcm")))
+ndsRendererAdapterMarkDisplayProcHeads(void)
 {
     u32 i;
 
@@ -9499,7 +9502,8 @@ reject:
     return FALSE;
 }
 
-s32 ndsRendererAdapterCommitNativeStageDisplay(
+s32 __attribute__((section(".itcm")))
+ndsRendererAdapterCommitNativeStageDisplay(
     void *display_gobj_ptr, s32 link_id)
 {
     NDSRendererAdapterNativeStageWorkspace *workspace =
@@ -9589,7 +9593,8 @@ s32 ndsRendererAdapterPrepareNativeStageOwner(void *camera_gobj)
     return FALSE;
 }
 
-s32 ndsRendererAdapterCommitNativeStageDisplay(
+s32 __attribute__((section(".itcm")))
+ndsRendererAdapterCommitNativeStageDisplay(
     void *display_gobj, s32 link_id)
 {
     (void)display_gobj;
@@ -9819,7 +9824,8 @@ static u32 ndsRendererAdapterMaterialRow(DObj *dobj, u32 fallback_row)
  * that shares their run -- and texture_id_curr through palette_id is the twelve
  * bytes immediately after `sub`. Two cache lines instead of five, nine
  * multiply-accumulates instead of thirty-four. */
-static u32 ndsRendererAdapterMaterialAnimHash(const MObj *mobj)
+static u32 __attribute__((section(".itcm")))
+ndsRendererAdapterMaterialAnimHash(const MObj *mobj)
 {
     const u32 *colors = (const u32 *)(const void *)&mobj->sub.primcolor;
     u32 hash = 2166136261u;

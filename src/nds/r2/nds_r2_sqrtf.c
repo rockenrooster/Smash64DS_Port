@@ -105,7 +105,7 @@ volatile uint32_t gNdsR2HwMathRoute
 
 extern float ndsR2SqrtfArmBody(float x);
 
-float sqrtf(float x)
+float __attribute__((section(".itcm"))) sqrtf(float x)
 {
     if ((gNdsR2HwMathRoute & NDS_R2_HWMATH_ROUTE_SQRTF_ARM) != 0u)
     {
@@ -116,7 +116,7 @@ float sqrtf(float x)
 
 #else
 
-float sqrtf(float x)
+float __attribute__((section(".itcm"))) sqrtf(float x)
 {
     return ndsR2SqrtfBody(x);
 }

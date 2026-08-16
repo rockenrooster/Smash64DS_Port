@@ -20,7 +20,8 @@ _Static_assert(sizeof(MPLineInfo) == 18u,
 static sb32 ndsMPBuildTopologyCache(void);
 static void ndsMPVertexF32Reset(void);
 
-static sb32 ndsStageCollisionLoopGeometryReady(void)
+static sb32 __attribute__((section(".itcm")))
+ndsStageCollisionLoopGeometryReady(void)
 {
     return ((gSCManagerSceneData.gkind == nGRKindPupupu) &&
             (gMPCollisionGroundData != NULL) &&

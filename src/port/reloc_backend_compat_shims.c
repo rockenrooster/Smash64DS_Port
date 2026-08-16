@@ -13552,7 +13552,7 @@ Vec3f *lbCommonReflect2D(Vec3f *a, Vec3f *b)
  * below is unchanged from lbcommon.c:321 and :340 -- including cos adding 90
  * degrees to the ANGLE before the multiply, which is not the same as adding
  * 0x400 to the index after it. */
-f32 lbCommonSin(f32 angle)
+f32 __attribute__((section(".itcm"))) lbCommonSin(f32 angle)
 {
     s32 index = ((s32)(angle * 651.8986206F)) & 0xFFF;
     f32 sin = (f32)gSYSinTable[index & SINTABLE_MASK_ID] * (1.0F / 32768.0F);
@@ -13560,7 +13560,7 @@ f32 lbCommonSin(f32 angle)
     return (index & 0x800) ? -sin : sin;
 }
 
-f32 lbCommonCos(f32 angle)
+f32 __attribute__((section(".itcm"))) lbCommonCos(f32 angle)
 {
     s32 index =
         ((s32)((angle + F_CST_DTOR32(90.0F)) * 651.8986206F)) & 0xFFF;
@@ -13855,7 +13855,7 @@ void mpCollisionGetSpeedLineID(s32 line_id, Vec3f *vel)
  * reads them. Callers still receive the same pointer on every path. */
 static FTStruct *__attribute__((noinline)) ftGetStructBuildStub(GObj *fighter_gobj);
 
-FTStruct *ftGetStruct(GObj *fighter_gobj)
+FTStruct *__attribute__((section(".itcm"))) ftGetStruct(GObj *fighter_gobj)
 {
     if ((fighter_gobj != NULL) &&
         (sNdsFTCommonCliffCommon2BridgeStruct != NULL) &&

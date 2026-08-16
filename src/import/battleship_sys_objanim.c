@@ -593,6 +593,7 @@ ndsR2AnimValueQ(const AObj *aobj)
  * for float AObjs, and Requirement 4's Q dispatch for the fighter ones. The
  * float arms below are still the decomp's own expressions verbatim and still
  * run for every non-fighter DObj this player is called for. */
+void gcPlayDObjAnimJoint(DObj *dobj) __attribute__((section(".itcm")));
 void gcPlayDObjAnimJoint(DObj *dobj)
 {
     f32 value = 0.0f;
@@ -805,6 +806,7 @@ volatile u32 gNdsR2AnimCensusNoAnimSkips;
 volatile u32 gNdsR2AnimCensusAnimEnd;
 volatile u32 gNdsR2AnimCensusLongestChain;
 
+void gcPlayDObjAnimJoint(DObj *dobj) __attribute__((section(".itcm")));
 void gcPlayDObjAnimJoint(DObj *dobj)
 {
     const AObj *aobj;
@@ -1634,6 +1636,7 @@ static void ndsAObjEvent32CorrectMObjColors(MObj *mobj, sb32 force)
     }
 }
 
+void gcPlayMObjMatAnim(MObj *mobj) __attribute__((section(".itcm")));
 void gcPlayMObjMatAnim(MObj *mobj)
 {
     sb32 was_active = ((mobj != NULL) &&

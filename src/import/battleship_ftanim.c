@@ -460,7 +460,8 @@ static void ndsR2AnimAdvanceTail(DObj *root_dobj, u32 q)
  * `kind >= NDS_R2_AQ_KIND_BASE` -- and the difference is inside the Q bound
  * already proven for Requirement 4, but it is a difference, so it gets an A/B
  * on one binary rather than an assertion. */
-static void ndsR2AnimBuildTrackTable(DObj *root_dobj, AObj **track_aobjs,
+static void __attribute__((section(".itcm")))
+ndsR2AnimBuildTrackTable(DObj *root_dobj, AObj **track_aobjs,
                                      s32 count, u32 q)
 {
     AObj *current_aobj = root_dobj->aobj;
