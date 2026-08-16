@@ -1,0 +1,3 @@
+Toolchain usable: recursive make OK, DEVKITPRO=C:/devkitPro DEVKITARM=C:/devkitPro/devkitARM
+Running verifier: battle_playable_realtime [verify-battle-playable-realtime-harness.ps1]
+Boundary verification profile passed.

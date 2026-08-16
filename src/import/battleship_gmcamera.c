@@ -98,9 +98,23 @@ volatile u32 gNdsR2CameraFixedRescaleCount __attribute__((used));
 #define NDS_R2_CAM_ONE (1 << NDS_R2_CAM_Q)
 
 /* The DS divide and square-root units, written out rather than pulled from
- * libnds so this TU keeps its decomp include set.  Identical register sequence
- * to nds/arm9/math.h's div64/sqrt64, which are `static inline` there and
- * therefore add no call either way.
+ * libnds so this TU keeps its decomp include set.  Same register sequence as
+ * nds/arm9/math.h's div64/sqrt64 -- which are `static inline` there and
+ * therefore add no call either way -- MINUS the leading busy poll, i.e. the
+ * form include/nds/nds_r2_hwmath_unit.h ships and SM64DS's cstd::div and
+ * cstd::sqrt use (decomp/sm64ds-decomp/src/_ZN4cstd3divEii.c).
+ *
+ * WHY THE LEADING POLL IS GONE (2026-08-16, with NDS_R2_CAMERA_FIXED's default
+ * flip).  GBATEK: writing DIVCNT, DIV_NUMER or DIV_DENOM restarts the division
+ * and raises DIVCNT bit 15, and the same holds for SQRTCNT / SQRT_PARAM.  Only
+ * the LAST write matters, so a poll that PRECEDES the parameter writes waits out
+ * a result nobody is going to read.  These two were the last leading polls in
+ * the binary; they were left in place while this chain was default-off because
+ * they executed zero times and editing them would have staled the -4,736 tk/fr
+ * the owner's decision was priced on.  The decision is taken, so they execute --
+ * measured elsewhere at 43.5 tk/call for a divide and 23.0 tk/call for a root
+ * (../../../artifacts/performance/2026-08-16_hwmath-route/HWROUTE.md section 2,
+ * per-PC iteration counts at two live sites) -- and they come out.
  *
  * ONE SHARED SET OF REGISTERS.  Every caller of these kernels runs inside the
  * frame loop's display phase; none is reachable from an interrupt handler, so
@@ -159,9 +173,6 @@ volatile u32 gNdsR2CameraFixedRescaleCount __attribute__((used));
 NDS_R2_CAM_ARM static s32 ndsR2CamDiv64(s64 numerator, s32 denominator)
 {
     NDS_R2_CAM_DIVCNT = NDS_R2_CAM_DIV_64_32;
-    while ((NDS_R2_CAM_DIVCNT & NDS_R2_CAM_BUSY) != 0u)
-    {
-    }
     NDS_R2_CAM_DIV_NUMER = numerator;
     NDS_R2_CAM_DIV_DENOM = denominator;
     while ((NDS_R2_CAM_DIVCNT & NDS_R2_CAM_BUSY) != 0u)
@@ -173,9 +184,6 @@ NDS_R2_CAM_ARM static s32 ndsR2CamDiv64(s64 numerator, s32 denominator)
 NDS_R2_CAM_ARM static s32 ndsR2CamSqrt64(s64 value)
 {
     NDS_R2_CAM_SQRTCNT = NDS_R2_CAM_SQRT_64;
-    while ((NDS_R2_CAM_SQRTCNT & NDS_R2_CAM_BUSY) != 0u)
-    {
-    }
     NDS_R2_CAM_SQRT_PARAM = value;
     while ((NDS_R2_CAM_SQRTCNT & NDS_R2_CAM_BUSY) != 0u)
     {

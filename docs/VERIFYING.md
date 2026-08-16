@@ -396,6 +396,21 @@ launch one to "check something quickly".
 
 ## Checkpoint Choice
 
+**`Tee-Object` CANNOT CAPTURE A VERIFIER'S OUTPUT. Use `cmd`'s own redirect.**
+`verify-all.ps1:167` writes each child checker's stdout with
+`[Console]::Out.Write($stdout)` — straight to the console handle, bypassing the
+PowerShell pipeline — so `verify-all.ps1 … *>&1 | Tee-Object -FilePath log`
+silently produces a **three-line** log holding only the driver's own
+`Write-Output` calls, and every per-checker line (GBI fixtures, particle bank,
+Task 9 ITCM, renderer ITCM placement, DTCM layout, the pacing smoke's counters,
+published-ROM contract) is lost. The verdict is still trustworthy — the pass line
+is gated on a per-verifier count that throws on a mismatch — but the counters an
+equality control needs are not there. Capture like this instead:
+
+```powershell
+cmd /c "pwsh -NoProfile -ExecutionPolicy Bypass -File scripts\verify-all.ps1 -Profile Boundary > log 2>&1"
+```
+
 Choose one widest relevant wrapper:
 
 ```powershell

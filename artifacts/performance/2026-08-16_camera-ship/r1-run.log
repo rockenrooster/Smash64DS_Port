@@ -1,0 +1,33 @@
+WARNING: cpuGetTiming() 2^22 timer-overflow artifact detected and CORRECTED on 2 of 1600 samples (one subtraction of 4,194,304 per affected bucket). The run's ALL median after correction is 1,117,632; a corrected value far from it would mean the row was a real stall and the correction wrong, so check these against it:
+  frame 905: ALL 5,871,936 -> 1,677,632, 3 bucket(s) corrected
+  frame 1020: ALL 5,872,064 -> 1,677,760, 3 bucket(s) corrected
+Wrote artifacts\performance\2026-08-16_camera-ship\r1-rows.csv
+Tick-HUD buckets: target=smash64ds-battle-playable-tickhud-hwtri samples=1600 frames=439..2038 melonDS=1.0 sha=DE80E46BDCF1FD98 git=f5e13aa3e27+dirty(8) dldi=ON
+
+bucket p50        p95        spread mean       min        max        %ALLp50
+------ ---        ---        ------ ----       ---        ---        -------
+ALL     1,117,632  1,678,144   1.50  1,213,535  1,114,880  3,358,464   100.0
+FTR       291,776    295,872   1.01    280,348    166,400    327,872    26.1
+STG       173,760    181,440   1.04    175,257    169,856    187,328    15.5
+BG          4,288      4,352   1.01      4,259      4,096      4,416     0.4
+AUD         2,752      7,040   2.56      8,744      1,088    153,600     0.2
+HUD         1,088    415,872 382.24     35,192        896  2,123,648     0.1
+SRC       333,440    573,568   1.72    352,405     11,136  1,171,840    29.8
+MISC      108,544    177,472   1.64    113,946     83,328    325,568     9.7
+OTHR      226,048    484,608   2.14    243,384     20,928    581,504    20.2
+WAIT      206,208    464,768   2.25    223,426        896    559,616    18.5
+WORK      942,400  1,372,224   1.46    990,109    665,728  3,214,976    84.3
+SHDT        4,608     81,408  17.67     14,547          0    453,376     0.4
+SWRM        1,024      1,088   1.06        998        768      1,152     0.1
+GCRA      328,000    568,384   1.73    346,886      6,784  1,166,336    29.3
+SCPU       53,504    111,296   2.08     48,081          0    141,376     4.8
+SCAT        1,344      1,536   1.14      1,337          0      1,792     0.1
+SPRM        2,112      2,304   1.09      4,953          0    594,304     0.2
+SINT      160,256    293,248   1.83    164,294          0    956,352    14.3
+SPHD       72,704    109,312   1.50     72,310          0    460,480     6.5
+SPHC          640        832   1.30        653          0      1,024     0.1
+WORK-H    928,960  1,205,568   1.30    954,917    657,344  1,811,968    83.1
+
+named=970,151 (79.9% of ALL)  VBI 2:1726 3:289 4:15 5+:8 max:19 total:2038  slips=0
+extras: gNdsR2CameraFixedLookAtCalls=8,148  gNdsR2CameraFixedPerspCalls=8,224  gNdsR2CameraFixedFloatLookAtCalls=2  gNdsR2CameraFixedFloatPerspCalls=2  gNdsR2CameraFixedGameCalls=4,074  gNdsR2CameraFixedGameFloatCalls=2  gNdsR2CameraFixedSaturateCount=0  gNdsR2CameraFixedDegenerateCount=0  gNdsR2CameraFixedRescaleCount=0
+Wrote artifacts\performance\2026-08-16_camera-ship\r1.json

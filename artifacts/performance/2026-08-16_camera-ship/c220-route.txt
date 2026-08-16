@@ -1,0 +1,23 @@
+series WORK-H   A=s220a0-rows.csv (1600 rows, fixwrap=False)   B=ship220-rows.csv (1600 rows, fixwrap=False)
+A                          rank-80 raw   1219520  net   1194573  LEVEL   +74193  band41-120   1223781  P50    936000
+B                          rank-80 raw   1210624  net   1185677  LEVEL   +65297  band41-120   1218356  P50    929376
+
+PAIRED over 1600 common frames
+  median    -6336   mean     -6475   improved 1493/1600 (93.3%)
+  trimmed(8/8) mean     -6487   min -155648   max +159104
+  marginal-80 paired median    -7264  (69/80 improve)
+
+  rank curve (A rank -> delta at that rank position)
+    rank     1  A   1910784  B   1808384   -102400
+    rank     5  A   1747584  B   1741568     -6016
+    rank    10  A   1628672  B   1692736    +64064
+    rank    20  A   1461888  B   1442112    -19776
+    rank    40  A   1325120  B   1321728     -3392
+    rank    80  A   1219520  B   1210624     -8896
+    rank   120  A   1148672  B   1142208     -6464
+    rank   160  A   1114880  B   1111680     -3200
+    rank   320  A   1031424  B   1022080     -9344
+    rank   640  A    961856  B    955392     -6464
+    rank   800  A    936000  B    929408     -6592
+    rank  1200  A    888192  B    883264     -4928
+    rank  1600  A    664448  B    659072     -5376

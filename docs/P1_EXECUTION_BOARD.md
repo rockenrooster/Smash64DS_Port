@@ -33,6 +33,119 @@ clock.** Coverage is part of a baseline's identity now, not a footnote. The
 conversion: the sim runs 60 Hz and presents 30 Hz, ratio **measured at exactly
 2.000**, so 1,600 presented = 3,200 logic = **53.3 s**.
 
+## THE LEVEL IS +65,297: THE CAMERA SHIPS IN Q20.12 (2026-08-16) — `artifacts/performance/2026-08-16_camera-ship/CAMERA_SHIP.md`
+
+**New basis `build-c220-camship`: rank-80 1,210,624 raw / 1,185,677 net, band
+41–120 1,218,356.** 1 lab build, 4 gate runs, Boundary green, 0 `Exception:`,
+root ROMs byte-unchanged, nothing published.
+
+**THE OWNER ACCEPTED THE DRAW-SIDE PRECISION ARM** — *"I think camera fixed
+point is ok"*, after playing `build-c205-camtoggle` and saying of the picture
+*"otherwise it looks fine"*. `NDS_R2_CAMERA_FIXED ?= 0 → 1`, still
+build-overridable. That closes `CAMERA_Q20_12.md` §8's
+`BLOCKED(decision: draw-side precision)` and sets this project's **first
+draw-side pixel ceiling**: 6.5350% of the top screen at a simulation-locked tic,
+against a same-build adjacent-present floor of 35.2217%.
+
+**PRICE −6,336 tk/fr, SAME BINARY, ZERO PLACEMENT FLOOR** (`build-c220-camship`,
+one poked `.data` word, `romSha256 5AE3F716…` on both arms):
+
+| | route 0 (float) | shipped default | Δ |
+|---|---:|---:|---:|
+| paired median, whole run | — | — | **−6,336** (93.3% win) |
+| paired median, marginal-80 | — | — | −7,264 (69/80) |
+| rank-80 | 1,219,520 | **1,210,624** | **−8,896** |
+| ranks 41–120 | 1,223,781 | 1,218,356 | −5,425 |
+| complement | `WORK-H −6,336 / WAIT +6,272 / ALL +0` | | |
+| attribution | `FTR −4,416` (99.4% of frames), `STG −1,856`; `SRC`/`SINT`/`GCRA` **0** | | |
+
+**+64,977 → +65,297 is +320 and it is PLACEMENT, not a regression.** This
+binary's own float arm reads **+74,193** on the same window — **+9,216 against
+`c219`'s float arm for identical float behaviour**, the ≥14,080 cross-build floor
+re-measured on this pair. **The route is the price; this is the level.**
+
+**The last two leading polls came out with the flip** — all sixteen now gone from
+the binary. Isolated by a second same-binary route on the previous basis (flip
+alone: −3,776 paired median / −3,072 rank-80), difference of differences
+**−2,560** against **2,721 predicted before the run** from `HWROUTE.md` §2's
+per-call figures and this cycle's engagement counts. Right sign, 94% of size, but
+it carries a residual cross-build term inside the ~5,440 paired-median floor —
+**corroboration, not a price.**
+
+**Engagement, shipped arm: 8,152 fixed look-ats, 8,228 fixed perspectives, FLOAT
+CALLS ZERO** (a build default has no pre-poke frame). `Saturate`/`Degenerate`/
+`Rescale` **0** on all four arms.
+
+> **THE TASK 9 STATE HASH IS THE WRONG INSTRUMENT AND `CAMERA_Q20_12.md` §9.4'S
+> "a default flip must measure it first" IS RETIRED.** `Makefile:1683` already
+> settled the category: the hash asserts bit-exactness, this change is authorized
+> NON-bit-exact, so it can only ever report "differs". It is `?= 0` and no
+> verifier references it. The instruments that could have failed and did not are
+> the ELF caller classification (`draw+dispatch` 100.0%), the flat animation and
+> simulation buckets, and Boundary.
+
+> **THE DRAW-SIDE SOFT-FLOAT SPLIT RE-BASES — DO NOT QUOTE THE OLD ONE.**
+> shared 57,521 / sim-only 39,537 / sim+dispatch 37,662 / **draw 34,178** is
+> stale on the draw row only (the camera is `draw+dispatch` 100.0%). The chain's
+> **11,504 tk/fr whole-match gross** is no longer called, leaving ≈**22,521**. A
+> precise re-derivation needs a new per-PC census — the existing one is
+> `build-c200-trackprof-off` at `GX_COMPOSE=1`. Quoting a stale split is what
+> made `MENU.md`'s 94,602 wrong for fourteen cycles.
+
+## ITCM IS 44.3% COLD, AND THE FIXED-POINT PLACEMENT OBJECTION RUNS THE OTHER WAY (2026-08-16) — `artifacts/performance/2026-08-16_itcm-census/ITCM_CENSUS.md`
+
+**0 builds, 0 emulator runs.** `nm`/`objdump` over ELFs already in `builds/`
+joined to a per-PC CSV already on disk.
+
+**Every ITCM resident censused, not just the one anyone asked about.** 32,180
+walked bytes; **14,242 (44.3%) never execute an instruction** in the 1,600-frame
+window — 2,448 B in 33 wholly-dead blocks (reproducing last cycle's 2,454 to
+within 6 B) and **11,010 B cold inside 52 LIVE blocks**, 4.5× the whole-symbol
+pool.
+
+| resident | bytes | executed | **cold** |
+|---|---:|---:|---:|
+| `ndsRendererScanList` (23.8% of the region, never censused before) | 7,728 | 46.0% | **4,112** |
+| `ndsRendererNativePrepareProductionRun` | 3,720 | 43.0% | 2,056 |
+| `ndsRendererSubmitHardwareTriangle` | 3,304 | 53.4% | 1,488 |
+| `ndsRendererHardwareSubmitVertex` | 2,688 | 57.8% | 1,116 |
+| `ndsRendererExecuteNativeFighterOwnerProduction` | 3,508 | 78.9% | 712 |
+| **five renderer functions** | **20,948** | | **9,484** |
+
+**None of that is reclaimable by evicting a symbol** — all five are hot, so
+eviction pays fetch on their executed half. Reaching it means splitting cold
+blocks out of a live function: the largest ITCM reserve in the tree, and the one
+that costs engineering rather than a flag.
+
+**`__aeabi_frsub`'s 456 B blob is UNREACHABLE BY CONSTRUCTION, not merely
+silent.** Three reads on the current linked image: no branch into it from outside
+the blob; **no word in any allocatable PROGBITS section holds any of its three
+addresses**; zero executed instructions. Takeable with no reachability argument,
+by the `NDS_TASK9_FLOAT_MAIN_MEMBERS` mechanism `ANIM_ITCM.md` §3 built. **NOT
+TAKEN** — it buys zero ticks on its own and needs its own build, Boundary and
+checker declaration.
+
+> **THE PLACEMENT OBJECTION IS REAL BUT MIS-LOCATED, AND ON THE ANCHOR ROW IT
+> RUNS TOWARD FIXED POINT.** From the linked ELF: `guMtxCatF` is at `0x020356e8`
+> (**`.main`**) and `ndsRendererMtxMul20p12` at `0x01ff9dac` (**ITCM**) — the
+> 5.14× prior's *fixed* arm is the ITCM-resident one, so **5.14× OVERSTATES**
+> what a fixed rewrite converts at. **Every other pair has BOTH bodies in
+> `.main`**: camera, sim leaf, collision. What is at `0x01ff…` is the soft-float
+> *library leaves* a float body calls, not the float body.
+>
+> The real asymmetry is one level down — a float body's arithmetic runs inside
+> ITCM leaves at zero fetch, a fixed body inlines it into fetch-charged `.main`
+> bytes — and **it is already measured with a sign, twice, both against fixed**:
+> `CAMERA_Q20_12.md` §6 (+3,032 B of inlined leaves turned −4,736 into +1,600)
+> and the collision ring's `K-ICACHE` null. **NO CLOSED LANE REOPENS.**
+
+**Budget: 220 B free on the INSTRUMENT, 2,572 B on the PROOF ROM; 676 / 3,028
+after the frsub eviction.** A particle/quad fixed kernel needs 1,100–1,500 B, so
+the warm re-test **does not fit on the instrument** — the only target that
+produces a tick number. **Record that as structural: a placement candidate can
+fit the ROM that ships and still be unpriceable.** `ANIM_ITCM.md` §6's Item B
+(268 B) sits exactly in that gap and **fits after the eviction**.
+
 ## `SHDT` IS CLOSED: FREE HIT DETECTION CLEARS +64,977 BY 2,543 (2026-08-16) — `artifacts/performance/2026-08-16_shdt-mechanism/SHDT_MECHANISM.md`
 
 **0 builds, 0 emulator runs, 1 harness change (the 2^22 filter, built and
@@ -305,7 +418,7 @@ Same target, config and window as the `c206-shipgx0` basis it replaced.
 | item | change | state |
 |---|---|---|
 | **A** | `nds_r2_sqrtf.o` built `-marm`, so `nds_r2_sqrtf.h:73`'s 48-bit `root*root` is one `UMULL` instead of `bl __aeabi_lmul` | **LANDED** |
-| **B** | the leading `DIVCNT`/`SQRTCNT` busy poll deleted from every executing site — `sqrtf` and nine renderer sites, via `ndsR2HwMathDiv64`/`ndsR2HwMathSqrt64`. **16 leading polls before, 2 after**, both survivors behind `NDS_R2_CAMERA_FIXED=0` and executing zero times | **LANDED** |
+| **B** | the leading `DIVCNT`/`SQRTCNT` busy poll deleted from every executing site — `sqrtf` and nine renderer sites, via `ndsR2HwMathDiv64`/`ndsR2HwMathSqrt64`. **16 leading polls before, 2 after**; **the last 2 came out 2026-08-16 with the `NDS_R2_CAMERA_FIXED` flip that made them execute — all sixteen are now gone** | **LANDED** |
 
 ```text
 same-binary route, one ROM (sha BEBC5801...), four arms, readback==requested on each
@@ -379,9 +492,10 @@ subtracted, `build-c213-hwmath4`):
    was counted from the entry PCs before a byte was written (`[[entry-pc-gives-exact-call-counts]]`):
    **2,491.3 tk/fr** at marginal-80, of which `sqrtf` alone is 1,845.8. The outlined
    libnds `div64` executes **zero** times in this match, so nothing had to be done about
-   libnds. `battleship_gmcamera.c`'s two are the only survivors and they execute zero
-   times at `NDS_R2_CAMERA_FIXED=0` — leave them, so the owner's pending
-   draw-side-precision arm stays priced as measured.
+   libnds. **DONE 2026-08-16:** `battleship_gmcamera.c`'s two came out the moment the
+   owner's decision made them execute; sized at **2,721 tk/fr** before the run from the
+   engagement counts (56.2 divides + 12.0 roots a frame), difference of differences
+   **−2,560**. The binary now has **no leading poll anywhere**.
 
 **Chain map (item C).** C1 collision cluster 50,044 tk/fr — built, conv/op ~0.02, still
 2.68, killed by 3,228 B at **0.97 entries/frame**. C3 trig leaves 4,519 tk/fr are C2's
@@ -434,10 +548,11 @@ PURE INSTRUCTION FETCH** for 1,028 bytes at 370.6 entries a frame — **0.296x o
 fidelity-neutral by construction (the arithmetic does not change), and priced by no
 document on this board. Add `lbCommonSin`+`lbCommonCos` (120 B, 2,116 tk/fr of fetch) and
 the animation chain's *fetch* bill is **23,835 tk/fr against an arithmetic prize of 20,357
-that does not convert.** It does not fit in the instrument's 512 B of free ITCM as it
-stands; the open question is whether its **executed path** does, or whether the 1,028 B
-splits so the hot half can. That is the next animation-lane cycle, and it is placement,
-not arithmetic.
+that does not convert.** **CLOSED for `ndsR2AnimValueQ` 2026-08-16** — it is in ITCM and
+banked −3,840. The instrument's free ITCM is now **220 B** (not 512), and
+`ITCM_CENSUS.md` prices what is left: **456 B provably unreachable**, 788 B silent,
+468 B of crash/kernel paths to leave alone, and **9,484 B cold inside five live
+renderer functions** that only a source split can reach.
 
 **One defect found and fixed at its seam.** `int32_t` is `long` on devkitARM, so an
 `(int32_t *)` cast onto an `int *` in the bench's wrapper was a strict-aliasing violation;

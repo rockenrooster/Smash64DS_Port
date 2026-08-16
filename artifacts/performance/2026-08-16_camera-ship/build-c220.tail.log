@@ -1,0 +1,400 @@
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftyoshi/ftyoshistatus.h:6:45: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftyoshi/ftyoshistatus.h:6:45: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftyoshi/ftyoshistatus.h:6:45: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftyoshi/ftyoshistatus.h:6:45: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftyoshi/ftyoshistatus.h:6:45: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftyoshi/ftyoshistatus.h:6:45: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftyoshi/ftyoshistatus.h:6:45: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftyoshi/ftyoshistatus.h:6:45: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftyoshi/ftyoshistatus.h:6:45: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftyoshi/ftyoshistatus.h:6:45: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftyoshi/ftyoshistatus.h:6:45: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftyoshi/ftyoshistatus.h:6:45: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftyoshi/ftyoshistatus.h:6:45: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftyoshi/ftyoshistatus.h:6:45: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftyoshi/ftyoshistatus.h:6:45: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftyoshi/ftyoshistatus.h:6:45: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftyoshi/ftyoshistatus.h:6:45: warning: missing braces around initializer [-Wmissing-braces]
+In file included from D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:72:
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftpikachu/ftpikachustatus.h:6:47: warning: missing braces around initializer [-Wmissing-braces]
+    6 | FTStatusDesc dFTPikachuSpecialStatusDescs[] = {
+      |                                               ^
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftpikachu/ftpikachustatus.h:6:47: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftpikachu/ftpikachustatus.h:6:47: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftpikachu/ftpikachustatus.h:6:47: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftpikachu/ftpikachustatus.h:6:47: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftpikachu/ftpikachustatus.h:6:47: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftpikachu/ftpikachustatus.h:6:47: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftpikachu/ftpikachustatus.h:6:47: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftpikachu/ftpikachustatus.h:6:47: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftpikachu/ftpikachustatus.h:6:47: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftpikachu/ftpikachustatus.h:6:47: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftpikachu/ftpikachustatus.h:6:47: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftpikachu/ftpikachustatus.h:6:47: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftpikachu/ftpikachustatus.h:6:47: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftpikachu/ftpikachustatus.h:6:47: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftpikachu/ftpikachustatus.h:6:47: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftpikachu/ftpikachustatus.h:6:47: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftpikachu/ftpikachustatus.h:6:47: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftpikachu/ftpikachustatus.h:6:47: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftpikachu/ftpikachustatus.h:6:47: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftpikachu/ftpikachustatus.h:6:47: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftpikachu/ftpikachustatus.h:6:47: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftpikachu/ftpikachustatus.h:6:47: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftpikachu/ftpikachustatus.h:6:47: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftpikachu/ftpikachustatus.h:6:47: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftpikachu/ftpikachustatus.h:6:47: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftpikachu/ftpikachustatus.h:6:47: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftpikachu/ftpikachustatus.h:6:47: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftpikachu/ftpikachustatus.h:6:47: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftpikachu/ftpikachustatus.h:6:47: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftpikachu/ftpikachustatus.h:6:47: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftpikachu/ftpikachustatus.h:6:47: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftpikachu/ftpikachustatus.h:6:47: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftpikachu/ftpikachustatus.h:6:47: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftpikachu/ftpikachustatus.h:6:47: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftpikachu/ftpikachustatus.h:6:47: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftpikachu/ftpikachustatus.h:6:47: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftpikachu/ftpikachustatus.h:6:47: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftpikachu/ftpikachustatus.h:6:47: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftpikachu/ftpikachustatus.h:6:47: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftpikachu/ftpikachustatus.h:6:47: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftpikachu/ftpikachustatus.h:6:47: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftpikachu/ftpikachustatus.h:6:47: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftpikachu/ftpikachustatus.h:6:47: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftpikachu/ftpikachustatus.h:6:47: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftpikachu/ftpikachustatus.h:6:47: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftpikachu/ftpikachustatus.h:6:47: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftpikachu/ftpikachustatus.h:6:47: warning: missing braces around initializer [-Wmissing-braces]
+In file included from D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:73:
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftpurin/ftpurinstatus.h:6:45: warning: missing braces around initializer [-Wmissing-braces]
+    6 | FTStatusDesc dFTPurinSpecialStatusDescs[] = {
+      |                                             ^
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftpurin/ftpurinstatus.h:6:45: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftpurin/ftpurinstatus.h:6:45: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftpurin/ftpurinstatus.h:6:45: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftpurin/ftpurinstatus.h:6:45: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftpurin/ftpurinstatus.h:6:45: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftpurin/ftpurinstatus.h:6:45: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftpurin/ftpurinstatus.h:6:45: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftpurin/ftpurinstatus.h:6:45: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftpurin/ftpurinstatus.h:6:45: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftpurin/ftpurinstatus.h:6:45: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftpurin/ftpurinstatus.h:6:45: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftpurin/ftpurinstatus.h:6:45: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftpurin/ftpurinstatus.h:6:45: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftpurin/ftpurinstatus.h:6:45: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftpurin/ftpurinstatus.h:6:45: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftpurin/ftpurinstatus.h:6:45: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftpurin/ftpurinstatus.h:6:45: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftpurin/ftpurinstatus.h:6:45: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftpurin/ftpurinstatus.h:6:45: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftpurin/ftpurinstatus.h:6:45: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftpurin/ftpurinstatus.h:6:45: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftpurin/ftpurinstatus.h:6:45: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftpurin/ftpurinstatus.h:6:45: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftpurin/ftpurinstatus.h:6:45: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftpurin/ftpurinstatus.h:6:45: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftpurin/ftpurinstatus.h:6:45: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftpurin/ftpurinstatus.h:6:45: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftpurin/ftpurinstatus.h:6:45: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftpurin/ftpurinstatus.h:6:45: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftpurin/ftpurinstatus.h:6:45: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftpurin/ftpurinstatus.h:6:45: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftpurin/ftpurinstatus.h:6:45: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftpurin/ftpurinstatus.h:6:45: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftpurin/ftpurinstatus.h:6:45: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftpurin/ftpurinstatus.h:6:45: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftpurin/ftpurinstatus.h:6:45: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftpurin/ftpurinstatus.h:6:45: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftpurin/ftpurinstatus.h:6:45: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftpurin/ftpurinstatus.h:6:45: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftpurin/ftpurinstatus.h:6:45: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftpurin/ftpurinstatus.h:6:45: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftpurin/ftpurinstatus.h:6:45: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftpurin/ftpurinstatus.h:6:45: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftpurin/ftpurinstatus.h:6:45: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftpurin/ftpurinstatus.h:6:45: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftpurin/ftpurinstatus.h:6:45: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftpurin/ftpurinstatus.h:6:45: warning: missing braces around initializer [-Wmissing-braces]
+In file included from D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:74:
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftness/ftnessstatus.h:6:44: warning: missing braces around initializer [-Wmissing-braces]
+    6 | FTStatusDesc dFTNessSpecialStatusDescs[] = {
+      |                                            ^
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftness/ftnessstatus.h:6:44: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftness/ftnessstatus.h:6:44: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftness/ftnessstatus.h:6:44: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftness/ftnessstatus.h:6:44: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftness/ftnessstatus.h:6:44: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftness/ftnessstatus.h:6:44: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftness/ftnessstatus.h:6:44: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftness/ftnessstatus.h:6:44: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftness/ftnessstatus.h:6:44: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftness/ftnessstatus.h:6:44: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftness/ftnessstatus.h:6:44: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftness/ftnessstatus.h:6:44: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftness/ftnessstatus.h:6:44: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftness/ftnessstatus.h:6:44: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftness/ftnessstatus.h:6:44: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftness/ftnessstatus.h:6:44: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftness/ftnessstatus.h:6:44: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftness/ftnessstatus.h:6:44: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftness/ftnessstatus.h:6:44: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftness/ftnessstatus.h:6:44: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftness/ftnessstatus.h:6:44: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftness/ftnessstatus.h:6:44: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftness/ftnessstatus.h:6:44: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftness/ftnessstatus.h:6:44: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftness/ftnessstatus.h:6:44: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftness/ftnessstatus.h:6:44: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftness/ftnessstatus.h:6:44: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftness/ftnessstatus.h:6:44: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftness/ftnessstatus.h:6:44: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftness/ftnessstatus.h:6:44: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftness/ftnessstatus.h:6:44: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftness/ftnessstatus.h:6:44: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftness/ftnessstatus.h:6:44: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftness/ftnessstatus.h:6:44: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftness/ftnessstatus.h:6:44: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftness/ftnessstatus.h:6:44: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftness/ftnessstatus.h:6:44: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftness/ftnessstatus.h:6:44: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftness/ftnessstatus.h:6:44: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftness/ftnessstatus.h:6:44: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftness/ftnessstatus.h:6:44: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftness/ftnessstatus.h:6:44: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftness/ftnessstatus.h:6:44: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftness/ftnessstatus.h:6:44: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftness/ftnessstatus.h:6:44: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftness/ftnessstatus.h:6:44: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftness/ftnessstatus.h:6:44: warning: missing braces around initializer [-Wmissing-braces]
+In file included from D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:75:
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftboss/ftbossstatus.h:6:44: warning: missing braces around initializer [-Wmissing-braces]
+    6 | FTStatusDesc dFTBossSpecialStatusDescs[] = {
+      |                                            ^
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftboss/ftbossstatus.h:6:44: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftboss/ftbossstatus.h:6:44: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftboss/ftbossstatus.h:6:44: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftboss/ftbossstatus.h:6:44: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftboss/ftbossstatus.h:6:44: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftboss/ftbossstatus.h:6:44: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftboss/ftbossstatus.h:6:44: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftboss/ftbossstatus.h:6:44: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftboss/ftbossstatus.h:6:44: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftboss/ftbossstatus.h:6:44: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftboss/ftbossstatus.h:6:44: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftboss/ftbossstatus.h:6:44: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftboss/ftbossstatus.h:6:44: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftboss/ftbossstatus.h:6:44: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftboss/ftbossstatus.h:6:44: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftboss/ftbossstatus.h:6:44: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftboss/ftbossstatus.h:6:44: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftboss/ftbossstatus.h:6:44: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftboss/ftbossstatus.h:6:44: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftboss/ftbossstatus.h:6:44: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftboss/ftbossstatus.h:6:44: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftboss/ftbossstatus.h:6:44: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftboss/ftbossstatus.h:6:44: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftboss/ftbossstatus.h:6:44: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftboss/ftbossstatus.h:6:44: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftboss/ftbossstatus.h:6:44: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftboss/ftbossstatus.h:6:44: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftboss/ftbossstatus.h:6:44: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftboss/ftbossstatus.h:6:44: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftboss/ftbossstatus.h:6:44: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftboss/ftbossstatus.h:6:44: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftboss/ftbossstatus.h:6:44: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftboss/ftbossstatus.h:6:44: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftboss/ftbossstatus.h:6:44: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftboss/ftbossstatus.h:6:44: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftboss/ftbossstatus.h:6:44: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftboss/ftbossstatus.h:6:44: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftboss/ftbossstatus.h:6:44: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftboss/ftbossstatus.h:6:44: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftboss/ftbossstatus.h:6:44: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftboss/ftbossstatus.h:6:44: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftboss/ftbossstatus.h:6:44: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftboss/ftbossstatus.h:6:44: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftboss/ftbossstatus.h:6:44: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftboss/ftbossstatus.h:6:44: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftboss/ftbossstatus.h:6:44: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/ftchar/ftboss/ftbossstatus.h:6:44: warning: missing braces around initializer [-Wmissing-braces]
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c: In function 'ftMainParseMotionEvent':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:173:10: warning: unused variable 'unused3' [-Wunused-variable]
+  173 |     sb32 unused3;
+      |          ^~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:171:9: warning: unused variable 'script_id' [-Wunused-variable]
+  171 |     s32 script_id;
+      |         ^~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:161:9: warning: unused variable 'sfx_id' [-Wunused-variable]
+  161 |     u32 sfx_id;
+      |         ^~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:160:9: warning: unused variable 'group_id' [-Wunused-variable]
+  160 |     s32 group_id;
+      |         ^~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:157:9: warning: unused variable 'unused2' [-Wunused-variable]
+  157 |     s32 unused2;
+      |         ^~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:154:9: warning: unused variable 'unused1' [-Wunused-variable]
+  154 |     s32 unused1;
+      |         ^~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c: In function 'ftMainUpdateColAnim':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:1016:73: warning: assignment to 'void *' from 'unsigned int:26' makes pointer from integer without a cast [-Wint-conversion]
+ 1016 |                 colanim->cs[i].p_subroutine[colanim->cs[i].script_id++] = gmColEventCast(colanim->cs[i].p_script, GMColEventDefault)->value,
+      |                                                                         ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:969:24: warning: unused variable 'def' [-Wunused-variable]
+  969 |     GMColEventDefault *def;
+      |                        ^~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:965:11: warning: unused variable 'p_script' [-Wunused-variable]
+  965 |     void *p_script;
+      |           ^~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c: In function 'battleship_ftMainSetHitHazard':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:1665:67: warning: unused parameter 'fp' [-Wunused-parameter]
+ 1665 | void ftMainSetHitHazard(GObj *gobj, GObj *fighter_gobj, FTStruct *fp, s32 kind)
+      |                                                         ~~~~~~~~~~^~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c: In function 'ftMainProcPhysicsMap':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:1748:9: warning: unused variable 'tan' [-Wunused-variable]
+ 1748 |     f32 tan;
+      |         ^~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:1746:9: warning: unused variable 'unused' [-Wunused-variable]
+ 1746 |     s32 unused[2];
+      |         ^~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c: In function 'battleship_ftMainSetHitInteractStats':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:1946:48: warning: suggest braces around empty body in an 'if' statement [-Wempty-body]
+ 1946 |         if (i == ARRAY_COUNT(fp->attack_colls)); // WAT
+      |                                                ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c: In function 'battleship_ftMainUpdateCatchStatFighter':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:2087:95: warning: unused parameter 'victim_fp' [-Wunused-parameter]
+ 2087 | void ftMainUpdateCatchStatFighter(FTStruct *attacker_fp, FTAttackColl *attack_coll, FTStruct *victim_fp, GObj *attacker_gobj, GObj *victim_gobj)
+      |                                                                                     ~~~~~~~~~~^~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c: In function 'battleship_ftMainUpdateDamageStatFighter':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:2151:9: warning: unused variable 'unused' [-Wunused-variable]
+ 2151 |     s32 unused;
+      |         ^~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c: In function 'ftMainUpdateShieldStatWeapon':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:2245:114: warning: unused parameter 'weapon_gobj' [-Wunused-parameter]
+ 2245 | void ftMainUpdateShieldStatWeapon(WPStruct *wp, WPAttackColl *wp_attack_coll, s32 attack_id, FTStruct *fp, GObj *weapon_gobj, GObj *fighter_gobj, f32 angle, Vec3f *dir)
+      |                                                                                                            ~~~~~~^~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c: In function 'ftMainUpdateShieldStatItem':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:2427:112: warning: unused parameter 'item_gobj' [-Wunused-parameter]
+ 2427 | void ftMainUpdateShieldStatItem(ITStruct *ip, ITAttackColl *it_attack_coll, s32 attack_id, FTStruct *fp, GObj *item_gobj, GObj *fighter_gobj, f32 angle, Vec3f *vec)
+      |                                                                                                          ~~~~~~^~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c: In function 'ftMainUpdateDamageStatGround':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:2593:61: warning: unused parameter 'fighter_gobj' [-Wunused-parameter]
+ 2593 | void ftMainUpdateDamageStatGround(GObj *special_gobj, GObj *fighter_gobj, FTStruct *fp, GRAttackColl *gr_attack_coll, s32 kind)
+      |                                                       ~~~~~~^~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c: In function 'battleship_ftMainProcessHitCollisionStatsMain':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:2785:101: warning: passing argument 4 of 'efManagerDamageNormalLightMakeEffect' makes integer from pointer without a cast [-Wint-conversion]
+ 2785 |                         efManagerDamageNormalLightMakeEffect(&pos, hitlog->attacker_player, damage, NULL);
+      |                                                                                                     ^~~~
+      |                                                                                                     |
+      |                                                                                                     void *
+In file included from D:/Stuff/DevFolder/Smash64DS_Port/include/ef/effect.h:107,
+                 from D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_ftmain.c:14:
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.h:25:96: note: expected 'sb32' {aka 'long int'} but argument is of type 'void *'
+   25 | extern LBParticle* efManagerDamageNormalLightMakeEffect(Vec3f *pos, s32 player, s32 size, sb32 is_static);
+      |                                                                                           ~~~~~^~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:2822:101: warning: passing argument 4 of 'efManagerDamageNormalLightMakeEffect' makes integer from pointer without a cast [-Wint-conversion]
+ 2822 |                         efManagerDamageNormalLightMakeEffect(&pos, hitlog->attacker_player, damage, NULL);
+      |                                                                                                     ^~~~
+      |                                                                                                     |
+      |                                                                                                     void *
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.h:25:96: note: expected 'sb32' {aka 'long int'} but argument is of type 'void *'
+   25 | extern LBParticle* efManagerDamageNormalLightMakeEffect(Vec3f *pos, s32 player, s32 size, sb32 is_static);
+      |                                                                                           ~~~~~^~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c: In function 'battleship_ftMainSearchHitFighter':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:3049:61: warning: suggest parentheses around '&&' within '||' [-Wparentheses]
+ 3049 |                         if ((this_fp->ga == nMPKineticsAir) && (other_attack_coll->is_hit_air) || (this_fp->ga == nMPKineticsGround) && (other_attack_coll->is_hit_ground))
+      |                             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:3084:98: warning: suggest parentheses around '&&' within '||' [-Wparentheses]
+ 3084 |                         if ((this_fp->throw_gobj == NULL) || (other_gobj != this_fp->throw_gobj) && (((gSCManagerBattleState->is_team_battle != TRUE) || (gSCManagerBattleState->is_team_attack != FALSE)) || (((other_fp->throw_gobj != NULL) ? other_fp->throw_team : other_fp->team) != this_fp->throw_team)))
+      |                                                              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:3094:74: warning: suggest parentheses around '&&' within '||' [-Wparentheses]
+ 3094 |                                     if ((other_fp->ga == nMPKineticsAir) && (this_attack_coll->is_hit_air) || (other_fp->ga == nMPKineticsGround) && (this_attack_coll->is_hit_ground))
+      |                                         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c: In function 'battleship_ftMainSearchHitWeapon':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:3269:146: warning: suggest parentheses around '&&' within '||' [-Wparentheses]
+ 3269 |                     if ((wp_attack_coll->can_setoff) && !(fp->is_catchstatus) && ((fp->throw_gobj == NULL) || (fp->throw_gobj != wp->owner_gobj) && ((gSCManagerBattleState->is_team_battle != TRUE) || (gSCManagerBattleState->is_team_attack != FALSE) || (fp->throw_team != wp->team))))
+      |                                                                                                               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:3280:120: warning: suggest parentheses around '&&' within '||' [-Wparentheses]
+ 3280 |                                 if ((ft_attack_coll->attack_state != nGMAttackStateOff) && ((wp->ga == nMPKineticsAir) && (ft_attack_coll->is_hit_air) || (wp->ga == nMPKineticsGround) && (ft_attack_coll->is_hit_ground)))
+      |                                                                                             ~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:3240:9: warning: unused variable 'unused1' [-Wunused-variable]
+ 3240 |     s32 unused1;
+      |         ^~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c: In function 'battleship_ftMainSearchHitItem':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:3466:146: warning: suggest parentheses around '&&' within '||' [-Wparentheses]
+ 3466 |                     if ((it_attack_coll->can_setoff) && !(fp->is_catchstatus) && ((fp->throw_gobj == NULL) || (fp->throw_gobj != ip->owner_gobj) && ((gSCManagerBattleState->is_team_battle != TRUE) || (gSCManagerBattleState->is_team_attack != FALSE) || (fp->throw_team != ip->team))))
+      |                                                                                                               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:3476:120: warning: suggest parentheses around '&&' within '||' [-Wparentheses]
+ 3476 |                                 if ((ft_attack_coll->attack_state != nGMAttackStateOff) && ((ip->ga == nMPKineticsAir) && (ft_attack_coll->is_hit_air) || (ip->ga == nMPKineticsGround) && (ft_attack_coll->is_hit_ground)))
+      |                                                                                             ~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:3437:9: warning: unused variable 'unused1' [-Wunused-variable]
+ 3437 |     s32 unused1;
+      |         ^~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c: In function 'battleship_ftMainSearchFighterCatch':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:3724:23: warning: suggest parentheses around comparison in operand of '^' [-Wparentheses]
+ 3724 |         for (i = 0; i < ARRAY_COUNT(this_fp->attack_colls) ^ 0; i++) // XOR 0 ???
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:3732:50: warning: suggest parentheses around '&&' within '||' [-Wparentheses]
+ 3732 |             if ((other_fp->ga == nMPKineticsAir) && !(attack_coll->is_hit_air) || (other_fp->ga == nMPKineticsGround) && !(attack_coll->is_hit_ground))
+      |                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c: In function 'battleship_ftMainProcParams':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:4054:21: warning: unused variable 'unused' [-Wunused-variable]
+ 4054 |                 s32 unused;
+      |                     ^~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:3825:9: warning: unused variable 'element' [-Wunused-variable]
+ 3825 |     s32 element;
+      |         ^~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c: In function 'battleship_ftMainSetStatus':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:4561:24: warning: assignment to 'FTOpeningDesc *' from incompatible pointer type 'FTOpeningDesc (*)[]' [-Wincompatible-pointer-types]
+ 4561 |         opening_struct = &D_ovl1_80390BE8;
+      |                        ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:4623:54: warning: passing argument 1 of 'lbRelocGetForceExternHeapFile' makes pointer from integer without a cast [-Wint-conversion]
+ 4623 |             lbRelocGetForceExternHeapFile(motion_desc->anim_file_id, (void*) fp->figatree_heap);
+      |                                           ~~~~~~~~~~~^~~~~~~~~~~~~~
+      |                                                      |
+      |                                                      u32 {aka long unsigned int}
+In file included from D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_ftmain.c:15:
+D:/Stuff/DevFolder/Smash64DS_Port/include/ft/fighter.h:3687:49: note: expected 'const void *' but argument is of type 'u32' {aka 'long unsigned int'}
+ 3687 | void *lbRelocGetForceExternHeapFile(const void *file_id, void *heap);
+      |                                     ~~~~~~~~~~~~^~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:4748:37: warning: comparison of integer expressions of different signedness: 'intptr_t' {aka 'int'} and 'unsigned int' [-Wsign-compare]
+ 4748 |             if (motion_desc->offset != 0x80000000)
+      |                                     ^~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:4753:37: warning: assignment to 'intptr_t' {aka 'int'} from 'void *' makes integer from pointer without a cast [-Wint-conversion]
+ 4753 |                     event_file_head = *fp->data->p_file_submotion;
+      |                                     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:4759:37: warning: assignment to 'intptr_t' {aka 'int'} from 'void *' makes integer from pointer without a cast [-Wint-conversion]
+ 4759 |                     event_file_head = *fp->data->p_file_mainmotion;
+      |                                     ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:4770:37: warning: comparison of integer expressions of different signedness: 'intptr_t' {aka 'int'} and 'unsigned int' [-Wsign-compare]
+ 4770 |             if (motion_desc->offset != 0x80000000)
+      |                                     ^~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:4383:9: warning: unused variable 'unused3' [-Wunused-variable]
+ 4383 |     s32 unused3;
+      |         ^~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:4379:9: warning: unused variable 'unused2' [-Wunused-variable]
+ 4379 |     s32 unused2;
+      |         ^~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:4376:9: warning: unused variable 'unused1' [-Wunused-variable]
+ 4376 |     s32 unused1;
+      |         ^~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c: In function 'battleship_ftMainProcessHitCollisionStatsMain':
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:2845:12: warning: 'knockback_temp' may be used uninitialized [-Wmaybe-uninitialized]
+ 2845 |         if (knockback < knockback_temp)
+      |            ^
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:2675:9: note: 'knockback_temp' was declared here
+ 2675 |     f32 knockback_temp;
+      |         ^~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:2855:19: warning: 'j' may be used uninitialized [-Wmaybe-uninitialized]
+ 2855 |     switch (hitlog->attacker_object_class)
+      |             ~~~~~~^~~~~~~~~~~~~~~~~~~~~~~
+D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmain.c:2674:12: note: 'j' was declared here
+ 2674 |     s32 i, j;
+      |            ^
+linking smash64ds-battle-playable-tickhud-hwtri.elf
+C:/devkitPro/devkitARM/bin/../lib/gcc/arm-none-eabi/15.2.0/../../../../arm-none-eabi/bin/ld.exe: warning: C:/devkitPro/devkitARM/bin/../lib/gcc/arm-none-eabi/15.2.0/thumb/crtn.o: missing .note.GNU-stack section implies executable stack
+C:/devkitPro/devkitARM/bin/../lib/gcc/arm-none-eabi/15.2.0/../../../../arm-none-eabi/bin/ld.exe: NOTE: This behaviour is deprecated and will be removed in a future version of the linker
+Nintendo DS rom tool 2.3.1 - Jan  8 2024
+by Rafael Vuijk, Dave Murphy, Alexei Karpenko
+built ... smash64ds-battle-playable-tickhud-hwtri.nds

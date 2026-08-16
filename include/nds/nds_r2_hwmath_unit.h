@@ -47,12 +47,14 @@
  * in-tree-proven one and is what the CFX hook aliases at the bottom select.
  *
  * SHIPPED SINCE 2026-08-16: src/nds/nds_renderer.c and src/nds/r2/nds_r2_sqrtf.c
- * call ndsR2HwMathDiv64 / ndsR2HwMathSqrt64 below instead of libnds's inlines,
- * i.e. the leading poll is gone from every site that executes in the battle.
- * src/import/battleship_gmcamera.c still carries it and is deliberately left
- * alone: NDS_R2_CAMERA_FIXED is 0 in every shipping basis, so its kernels
- * execute zero times and editing them would only stale the -4,736 tk/fr the
- * owner's pending draw-side-precision decision is priced on.
+ * call ndsR2HwMathDiv64 / ndsR2HwMathSqrt64 below instead of libnds's inlines.
+ * src/import/battleship_gmcamera.c's own two kernels lost theirs the same day,
+ * when the owner accepted NDS_R2_CAMERA_FIXED and its default flipped to 1 --
+ * until then they executed zero times and removing them would only have staled
+ * the price the decision was pending on. THE LEADING POLL IS NOW GONE FROM EVERY
+ * SITE IN THE BINARY: all sixteen found. The camera TU keeps its own copy of the
+ * register sequence rather than including this header, because it is a decomp
+ * translation unit and its include set is part of what makes it one.
  */
 
 #include <stddef.h>

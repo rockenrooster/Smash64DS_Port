@@ -1132,9 +1132,24 @@ NDS_R2_CAMERA_MATRIX_LEAN ?= 2
 # binary poked through both arms with -SetGlobals, and this flag exists so a
 # capture harness that cannot poke a global still gets a candidate ROM whose
 # layout is byte-identical to the control's (one initialised word differs, no
-# section moves). DEFAULT 0 -- precision changes pixels and the owner's eye is
-# the acceptance gate, so nothing here ships without that decision.
-NDS_R2_CAMERA_FIXED ?= 0
+# section moves).
+#
+# DEFAULT 1 SINCE 2026-08-16, ON THE OWNER'S DECISION. Precision changes pixels
+# and the owner's eye is the acceptance gate; they played build-c205-camtoggle,
+# said "otherwise it looks fine" of the picture, and then accepted the arm --
+# "I think camera fixed point is ok". That is the acceptance the 6.5350%
+# top-screen pixel delta of ../artifacts/performance/2026-08-16_camera-fixedpoint
+# section 8 was BLOCKED on, and it is the first draw-side precision ceiling this
+# project has set. Supporting evidence, both on disk: -4,736 tk/fr paired median
+# on a same-binary route, and presented cadence on the ROM they played is very
+# slightly BETTER on this arm (1,956/69/5/13 against 1,953/72/5/13, four VBlanks
+# shorter over 2,043 frames, 0 cadence violations --
+# 2026-08-16_camera-cadence/CADENCE.md section 2).
+#
+# Still overridable per build (NDS_R2_CAMERA_FIXED=0 restores the float chain
+# byte for byte) because the route word stays `.data` and both arms stay linked;
+# that is what makes the A/B a same-binary poke rather than a cross-build pair.
+NDS_R2_CAMERA_FIXED ?= 1
 # LAB ONLY, and never set by a target block. Binds SELECT -- the one DS key the
 # battle input map leaves unbound (controller_backend.c maps A/B/X/Y/L/R/START
 # and the d-pad, and nothing maps SELECT) -- to flip gNdsR2CameraFixedEnabled

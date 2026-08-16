@@ -1,0 +1,45 @@
+PLACEMENT OF EVERY ARM THIS CAMPAIGN COMPARED, read from the linked ELF
+  builds/build-c219-animitcm-ship/smash64ds-battle-playable-tickhud-hwtri.elf
+  (build-c209-simmac2 for the sim-leaf pair, which is not linked into c219)
+  ITCM = 0x01ff8020..0x02000000.  .main starts 0x02003a40.
+
+symbol                                     address    region
+------                                     -------    ------
+guMtxCatF                                  0x020356e8 .main 
+ndsRendererMtxMul20p12                     0x01ff9dac ITCM  
+syMatrixLookAtReflectF                     0x02034144 .main 
+ndsR2CameraLookAtReflect20p12              0x02098640 .main 
+syMatrixPerspFastF                         0x0203465c .main 
+ndsR2CameraPerspFast20p12                  0x020989f0 .main 
+syMatrixLookAtF                            0x02033b2c .main 
+syMatrixOrthoF                             0x02034554 .main 
+syMatrixF2L                                0x02033860 .main 
+__aeabi_fmul                               0x01ff82cc ITCM  
+__aeabi_fadd                               0x01fff458 ITCM  
+__aeabi_fdiv                               0x01ff8464 ITCM  
+__ieee754_sqrtf                            0x01fff798 ITCM  
+sqrtf                                      0x0208b000 .main 
+gmCollisionGetWorldPosition                0x020824d8 .main  (c209)
+ndsR2SimMacShadowTransform                 0x0208b4d8 .main  (c209)
+ndsR2SimMacBaseCompose                     0x0207f020 .main  (c209)
+ndsR2SimMacShadowCompose                   0x0208b9dc .main  (c209)
+
+NOTE.  func_ovl2_800ED490 -- the compose EXCHANGE_LEAF.md names as its second
+candidate -- has NO symbol in c209's table: it is inlined.  Its float arm is
+therefore quoted here as ndsR2SimMacBaseCompose, the shadow harness's own copy
+of the same body.  [[addr2line-names-deleted-functions]] -- a name in a report
+is not a symbol in an image.
+
+WHAT THIS TABLE SETTLES.  The float BODIES this campaign replaced are ALL in
+.main, exactly like the fixed bodies that replaced them.  The one ITCM-resident
+member of any pair is ndsRendererMtxMul20p12 -- the FIXED arm of the 5.14x
+prior.  So the 5.14x is the one comparison with a placement asymmetry and it
+runs TOWARD fixed point, not away from it.
+
+The real asymmetry is one level down: a float body in .main executes its
+arithmetic inside ITCM-resident library leaves (__aeabi_fmul/fadd/fdiv,
+__ieee754_sqrtf, all ITCM above) and pays `bl` overhead instead of fetch, while
+a fixed body inlines that arithmetic into its own .main bytes, which ARE
+fetch-charged.  That trade has been measured twice, both times against fixed:
+CAMERA_Q20_12.md section 6 (+3,032 B of inlined leaves turned -4,736 into
++1,600) and the collision ring's K-ICACHE null.
