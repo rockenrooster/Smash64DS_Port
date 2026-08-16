@@ -83,8 +83,28 @@ extern volatile u32 gNdsFoxBlasterQuadFallbackCount;
  * 84 is the final bounded visual step (+12 world ~= -1.5 screen rows at the
  * locked firing camera) and is now the ONE Y contract for beam, flash, and the
  * weapon attack-collision center. Weapon/root motion and map collision remain
- * source-owned and unchanged. */
-#define NDS_FOX_BLASTER_BORE_OFFSET_Y 84
+ * source-owned and unchanged.
+ *
+ * 2026-08-15 -- THE OFFSET IS NOW 0, AND THE 84 ABOVE IS SUPERSEDED HISTORY.
+ * The 84 was tuned and owner-confirmed on 2026-08-14, i.e. BEFORE the
+ * segment-phase parser repair (`64c41c361a7`). That defect started every new
+ * animation segment at phase 0 instead of `-anim_wait - anim_speed` in 82.7% of
+ * write commands, so the gun joint's pose at the firing instant was a whole
+ * frame stale and the shot point derived from it sat low. The 84 was pure
+ * compensation for that stale pose. With the parser repaired the compensation
+ * is wrong, and the owner confirmed it on `build-c198-bore0`
+ * (`smash64ds-battle-playable-proof-hwtri.nds`, SHA-256 95d75cf6...5ec997):
+ *   "fox beam is perfect!"  -- owner, 2026-08-15, at offset 0
+ * Overridable so a trial value costs one `make` variable and no source edit:
+ *   make TARGET=... BUILD=... NDS_FOX_BLASTER_BORE_OFFSET_Y=<n>
+ * All three consumers -- beam draw (`nds_renderer.c`), muzzle/impact glow draw
+ * (`battleship_lbparticle.c`) and the weapon attack collision
+ * (`battleship_fox_blaster.c`) -- read THIS ONE constant, so any value keeps
+ * presentation and collision on one shared line. At 0 the line is BattleShip's
+ * own shot point, so the DS correction is gone rather than re-tuned. */
+#ifndef NDS_FOX_BLASTER_BORE_OFFSET_Y
+#define NDS_FOX_BLASTER_BORE_OFFSET_Y 0
+#endif
 #define NDS_FOX_BLASTER_BORE_OFFSET_Y_Q12 \
     ((s32)NDS_FOX_BLASTER_BORE_OFFSET_Y << 12)
 /* EFCommon script 0x62's closed Fox muzzle/impact flash. The native path keeps

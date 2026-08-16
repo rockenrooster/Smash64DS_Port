@@ -1,0 +1,30 @@
+Wrote D:\Stuff\DevFolder\Smash64DS_Port\artifacts\performance\2026-08-15_ftanim-full-coverage\c199-bank0-rows.csv
+Tick-HUD buckets: target=smash64ds-battle-playable-tickhud-hwtri samples=1600 frames=439..2038 melonDS=1.0 sha=DE80E46BDCF1FD98 git=5d014c1519b+dirty(8) dldi=ON
+
+bucket p50        p95        spread mean       min        max        %ALLp50
+------ ---        ---        ------ ----       ---        ---        -------
+ALL     1,117,632  1,678,144   1.50  1,229,100  1,114,304  5,311,936   100.0
+FTR       293,376    297,984   1.02    284,561    167,552  4,486,912    26.2
+STG       182,976    191,168   1.04    184,598    178,688    197,248    16.4
+BG          4,224      4,416   1.05      4,258      4,032      4,544     0.4
+AUD         2,688      7,168   2.67      8,722      1,088    152,896     0.2
+HUD         1,024    410,560 400.94     35,088        896  2,123,520     0.1
+SRC       334,080    567,616   1.70    355,536     11,136  4,494,720    29.9
+MISC      108,864    176,384   1.62    114,514     83,072    325,760     9.7
+OTHR      216,192    516,992   2.39    241,823     20,352  4,430,272    19.3
+WAIT      196,736    497,024   2.53    219,727        896    560,064    17.6
+WORK      955,392  1,387,072   1.45  1,009,373    678,528  5,125,888    85.5
+SHDT        4,608     83,904  18.21     14,732          0    399,104     0.4
+SWRM          960      1,024   1.07        949        768      1,088     0.1
+GCRA      328,640    562,304   1.71    350,007      6,784  4,489,344    29.4
+SCPU       54,592    114,752   2.10     49,316          0    147,264     4.9
+SCAT        1,344      1,536   1.14      1,322          0      1,664     0.1
+SPRM        1,792      1,984   1.11      4,699          0    614,784     0.2
+SINT      161,280    297,472   1.84    167,827          0  4,365,312    14.4
+SPHD       72,320    108,608   1.50     72,075          0    408,512     6.5
+SPHC          704        832   1.18        682          0        960     0.1
+WORK-H    942,848  1,230,592   1.31    974,285    670,336  5,124,864    84.4
+
+named=987,277 (80.3% of ALL)  VBI 2:1701 3:313 4:16 5+:8 max:19 total:2038  slips=0
+extras: gNdsBattleTextHudP1Damage=76  gNdsDamageSparkScaleCount=16  gNdsShieldAnimJointAttachCount=480  gNdsAObjEvent32NormalizedHighWater=774  gNdsBattlePackHits=257  gNdsObjAnimRunawayCount=0  gNdsRendererTask36CaptureOutcome=2  gNdsRendererTask36CaptureSegmentMask=161  gNdsR2FtAnimParseCalls=144,383  gNdsR2FtAnimParseEarlyOut=108,128  gNdsR2FtAnimParseStepped=36,255  gNdsR2FtAnimNullSkips=70,796  gNdsTaskmanGeneralHeapFreeMin=53,136  gNdsTaskmanArenaChosenSize=1,548,288  gNdsTaskmanArenaAllocFailCount=0  gNdsBattlePackResidentBytes=287,904  gNdsBattlePackLoadFails=0
+Wrote D:\Stuff\DevFolder\Smash64DS_Port\artifacts\performance\2026-08-15_ftanim-full-coverage\c199-bank0.json

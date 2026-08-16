@@ -2413,6 +2413,13 @@ NDS_BATTLEPACK_BLOB := $(NDS_BATTLEPACK_DIR)/battlepack_fox.bin
 NDS_R2_FTANIM_TRACK ?= 0
 NDS_R2_FTANIM_TRACK_DISPATCH ?= 1
 NDS_R2_FTANIM_TRACK_ORACLE ?= 0
+
+# Fox Blaster's shared beam/flash/collision bore line (`nds_effects.h`). The 84
+# was owner-confirmed 2026-08-14, BEFORE the segment-phase parser repair, so it
+# compensated a gun-joint pose that was a frame stale. With the parser repaired
+# the owner confirmed 0 on `build-c198-bore0` ("fox beam is perfect!",
+# 2026-08-15), so the DS correction is REMOVED rather than re-tuned.
+NDS_FOX_BLASTER_BORE_OFFSET_Y ?= 0
 NDS_FTANIM_TRACK_MAX_BYTES ?= 12288
 NDS_FTANIM_TRACK_HEADER := $(PROJECT_ROOT)/include/nds/generated/nds_ftanim_track_pack.generated.h
 ifeq ($(NDS_R2_FTANIM_TRACK),1)
@@ -3408,6 +3415,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_R2_FTANIM_TRACK $(NDS_R2_FTANIM_TRACK)'; \
 		echo '#define NDS_R2_FTANIM_TRACK_DISPATCH $(NDS_R2_FTANIM_TRACK_DISPATCH)'; \
 		echo '#define NDS_R2_FTANIM_TRACK_ORACLE $(NDS_R2_FTANIM_TRACK_ORACLE)'; \
+		echo '#define NDS_FOX_BLASTER_BORE_OFFSET_Y $(NDS_FOX_BLASTER_BORE_OFFSET_Y)'; \
 		echo "#define NDS_R2_BATTLEPACK_BLOB_BYTES $$(test -f '$(NDS_BATTLEPACK_BLOB)' && wc -c < '$(NDS_BATTLEPACK_BLOB)' || echo 0)u"; \
 		echo '#define NDS_R2_AOBJ16_PREBAKE $(NDS_R2_AOBJ16_PREBAKE)'; \
 		echo '#define NDS_R2_ANIM_CUT_ROUTE $(NDS_R2_ANIM_CUT_ROUTE)'; \

@@ -33,6 +33,54 @@ clock.** Coverage is part of a baseline's identity now, not a footnote. The
 conversion: the sim runs 60 Hz and presents 30 Hz, ratio **measured at exactly
 2.000**, so 1,600 presented = 3,200 logic = **53.3 s**.
 
+## THE BANK — RE-ESTABLISHED ON THE REPAIRED, BORE-0 TREE (2026-08-15, `build-c199-bank0`)
+
+`artifacts/performance/2026-08-15_ftanim-full-coverage/REBANK.md`. c185's
+configuration on the repaired tree: `NDS_R2_BOTH_CPU=1 NDS_R2_BATTLEPACK=1
+NDS_R2_BATTLEPACK_KEEP_CACHE=1 NDS_R2_FIGHTER_GX_COMPOSE_LAB=1`, DLDI on, mode
+163 one-minute, 1,600 samples, `-RingDump`, frames 439–2038, `slips=0`.
+
+| | value |
+|---|---:|
+| `WORK-H` P50 | 942,912 |
+| P90 | 1,124,480 |
+| **rank-80 raw** | **1,230,720** |
+| **rank-80 net of apparatus 24,947** | **1,205,773** |
+| **gap to 1,120,380** | **+85,393** |
+| top-1% · max | 1,550,592 · 5,124,864 |
+| trimmed mean (drop top 8) | 963,993 |
+| over-gate | 170/1600 |
+| VBI 2/3/4/5+ · max · total | 1701/313/16/8 · 19 · 2038 |
+
+**`+28,689` IS DEAD AND EVERY LEVER PRICED AGAINST IT MUST BE RE-READ.** The
+c185 bank (1,174,016 raw / 1,149,069 net) measured a match the shipped
+segment-phase parser defect made *cheaper* (`64c41c361a7`); the repaired match
+costs **56,704 more raw ticks at rank-80**. Nothing regressed — the requirement
+is simply three times larger than the `MENU.md` ladder was sized against.
+
+**Basis, because two conventions are in circulation:** rank-80 is recomputed
+from the 1,600 per-frame rows in the run's own JSON (it reproduces
+`DENSE_RUNTIME.md`'s table exactly). The harness banner's `p95` column uses a
+different rank convention and is **not** the banked figure.
+
+**Two independent arms bracket it:** `build-c193-segfix` (bore 84, earlier HEAD)
+1,228,608 and `build-c199-bank0` 1,230,720 — 2,112 apart, inside the ≥14,080
+cross-build P95 floor; P50 512 apart inside ~5,700. Invariants on both:
+P1Damage 76 · spark 16 · shield 480 · AObj high-water 774 · packHits 257 ·
+runaway 0 · CaptureOutcome 2 · SegmentMask 161. Arena: ChosenSize 1,548,288,
+AllocFail 0, heap free-min 53,136 against the 32,768 reserve.
+
+**Full-coverage dense animation is REFUSED on a measured sizing failure.** The
+track pack can only *coexist* with `battlepack_fox.bin` (three consumers need
+the o2r stream: the bind's asset-id resolution, the fail-open generic parser
+that Mario uses entirely, and the oracle's reference cursor), and coexistence
+needs +287,082 B against +16,384 B of grantable arena — **short by 270,698 B**.
+Priced from the existing same-ROM pair, the dense path costs **+69.4 ticks per
+exchanged call (~1.59x the generic path)**; whether coverage would fix that
+turns on whether the excess is compulsory fetch or steady-state issue, and
+**one v3 capture separates two predictions that differ in sign.** That capture
+is the next decision and it costs two profiler builds, not zero.
+
 ## Banked baselines — BOTH ARMS RE-BANKED ON THE CORRECTED SEED (cycle 80)
 
 1,600 samples, frames 441–2040, `dldi=ON`, git `34091054`+reseed,

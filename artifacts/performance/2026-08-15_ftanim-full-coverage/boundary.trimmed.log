@@ -1,0 +1,10 @@
+2:DECOMP_PRISTINE=PASS pinned_historical_files=10 ds_markers=0 decomp_patch_pipeline=absent
+20:GREEN: every gated domain stays inside 0.0200. Worst gated deviation 0.006702.
+27:SPRITE_LERP_EXACT=PASS  three library divisions per pixel removed and R0e's paired row proven equivalent, both bit-exact
+30:GREEN: every case returns the same verdict and the same hit BIT PATTERNS.
+34:MP_LINE_EXTENT_REJECT_EXACT=PASS  every fired reject was replayed segment by segment and produced no hit and no flat-ascending flag
+57:FTANIM_REAL_BAKE=PASS  every script in the shipped Mario/Fox bank resolves to control + write records that reproduce its per-track state timeline and its callback timeline, compared as bit patterns, with no opcode and no flags mask at replay time
+80:NDS_PARTICLE_BANKS=PASS scripts=93/119 textures=34/47 tex_n64=262992 tex_ds=175140 pack=187459 linked=12195 asset=175264 atlas=128x64x4 quads=34/38 34frames cap=1 cell=64 whispy_native=1520 headroom=210320 spare=198125 source=0xa2a1e85f table=0xd22b30b6
+82:Harness registry check passed: 3 harness mappings, 4 verifier scripts, 0 drift.
+83:Running verifier: battle_playable_realtime [verify-battle-playable-realtime-harness.ps1]
+316148:Boundary verification profile passed.
