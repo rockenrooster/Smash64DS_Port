@@ -92,7 +92,102 @@ CALLS ZERO** (a build default has no pre-poke frame). `Saturate`/`Degenerate`/
 > `build-c200-trackprof-off` at `GX_COMPOSE=1`. Quoting a stale split is what
 > made `MENU.md`'s 94,602 wrong for fourteen cycles.
 
+## THE ATTACH LANE DOES NOT CONVERT — 72,768 IS 13,376–37,027 AT RANK-80, AND ITS PARSE/EVALUATE HALF IS THE TRANSITION'S OWN SECOND ANIMATION PLAY (2026-08-16) — `artifacts/performance/2026-08-16_sitr-attach-lane/ATTACH_LANE.md`
+
+**0 builds, 0 emulator runs, 0 production source edits, 0 defaults flipped,
+nothing published, both root ROMs byte-unchanged. The level is unmoved at
++65,297.** Everything below is re-derived from artifacts already in the tree plus
+BattleShip source; `convert.py` and `outside.py` need no emulator and reproduce
+the control (`rank-80 1,210,624 / +65,297`) before printing any result.
+
+**CORRECTION — the 72,768 below is not a size an implementation can deliver.** It
+is the re-rank of clipping every event frame's `SITR` back to the run median, a
+per-frame **variable** that reaches 227,968 on the cluster. The mechanism the
+section below names is 78,708 tk/fr as a **mean over the 288**. Re-ranking a
+*uniform* saving `D` on those frames — which is what an engineering change
+produces — gives, capped at each frame's own excess / uncapped:
+
+| candidate (size on the 288) | D | capped | uncapped |
+|---|---:|---:|---:|
+| `ndsRelocAssetIDForToken` | 4,118 | **3,542** → +61,755 | 3,542 |
+| ATTACH chain group | 23,801 | 10,496 → +54,801 | 11,968 |
+| ANIM evaluate group | 26,813 | 10,496 | 14,845 → +50,452 |
+| ANIM parse group | 28,094 | 11,134 | 16,126 → +49,171 |
+| parse + evaluate + attach | 78,708 | **13,376** → +51,921 | **59,520** → +5,777 |
+
+Conversion is **not monotone**: 0.860 at D=4,118, 0.435 at 20,000, 0.244 at
+54,907 capped. Small savings convert best because they bite on the frames just
+above rank-80; large ones saturate as the event population sinks below the 1,312
+frames the lever cannot reach. **Size every candidate on `convert.py` before
+building it.** Only 50 of the 288 sit at or above rank-80.
+
+**ANSWERED — the parse/evaluate work is NOT redundant across joints, so there is
+no memo here.** Per joint it is flat or cheaper on an event frame:
+`ndsR2AnimValueQ` **0.98×/call**, `gcPlayDObjAnimJoint` **0.91×**,
+`ftParamUpdateAnimKeys` **0.98×** (self time ÷ that function's own entry-PC count,
+same capture). What runs 1.52× is the **whole animation play**, because
+`ftMainSetStatus` calls one itself — `decomp/…/src/ft/ftmain.c:4787-4795`, both
+arms reach `ftMainPlayAnim` → `ftParamUpdateAnimKeys`. `ftMainSetStatus` 1.22/fr
+against `ftParamUpdateAnimKeys` +1.94/fr = **1.59 extra whole plays per
+transition**, and extra plays are **89.7%** of the parse-call growth. That is
+**100% of the evaluate group** and **~49% of the parse group**. The other ~51% of
+parse is `ndsR2FtAnimParseDObjFigatree` at **1.62× per call**, because a fresh
+`AOBJ_ANIM_CHANGED` attach must consume the clip's first event block instead of
+early-outing (`ParseStepped` 2.27× against `ParseEarlyOut` 1.02×). **Both halves
+are the transition itself, and the second play is not a repeat — the clip was
+attached between the two.**
+
+**`BLOCKED(decision: transition-frame animation play)`.** Suppressing or deferring
+`ftMainSetStatus`'s own play is D = **49,251 tk/fr** on the 288 = rank-80
+**13,376 (capped) to 37,027 (uncapped)**, level +51,921 to +28,270. It is the
+only item in this lane whose size clears the ≥14,080 cross-build floor, and it
+does not close the gate alone. It is a gameplay change, not a representation
+one: the play establishes the new status's pose on the transition frame and
+`ftMainRunUpdateColAnim` runs on the next line against those joints. Three
+options are priced in `ATTACH_LANE.md` §4; **none is recommended.** The attach
+chain itself (+23,801) is the same question about the same transition.
+
+**REFUSED — `ndsRelocAssetIDForToken` is a small load-frame cut its own file
+already forbids.** +4,118 tk/fr on the 288 = **3,542 at rank-80** (5.4% of the
+requirement), under the ≥14,080 floor. `src/port/reloc_backend_assets.c:1876-1921`
+records two measured failures on this exact function — Task 74's memo (`STG`,
+which a token lookup cannot touch, moved 8,128) and R2-06 E11's hoist (**negative
+bytes added**, function −7,667, load-frame set bit-identical, and `WORK-H` P95
+still **+15,744**) — and sets the bar: *"Do not bring another small load-frame
+cut. Either remove this work in one change large enough to clear ~16,000 of tail
+movement, or move it off the gameplay frame entirely."* A runtime table is also
+~1.5 KB of main RAM (keys are link-time addresses, so it must be built at run
+time) against `[[ram-is-not-free-gobj-cap]]`. **The second clause is the open
+route:** the tokens a match resolves are a bounded static set, so resolving each
+fighter's status→figatree table once at load removes the call from the gameplay
+frame instead of making it faster. Not started.
+
+**Also sized and refused: `ndsR2AnimAObjToQConvert`'s `nGCAnimKindNone` arm**
+(`battleship_ftanim.c:362-369`) writes `length_invert = Q(1.0)` and returns
+without changing `a->kind`, so the `kind >= NDS_R2_AQ_KIND_BASE` early-out never
+catches it and the same constant is re-stored on every `BuildTrackTable` while the
+AObj stays `None` — ~209 armed per event frame by the decomp
+`gcAddDObjAnimJoint`'s chain reset, matching the measured 208.99 calls/frame.
+Provably idempotent, and worth **298 ticks at rank-80**. Hoist it into the inline
+wrapper only if it ever rides along with something large.
+
+**INHERITED — 30 of the top-80 frames carry neither an attach nor a force-load,
+and `SHDT` owns 22 of those 30** at 219,616 against a run median of 4,608
+(**47.66×**); their `SCPU` is 1.99×. Across the whole top-80 `SHDT` owns **32**
+frames and `SITR` **25**. Of the 118 frames over the gate, **41 carry no event at
+all.** This agrees with the section below's own §1 table, which already put the
+`SHDT` cluster at **50,240 moved / level +15,057** — larger than `SITR`'s 45,056
+and the largest single row in it. Not opened here.
+
 ## `SITR` IS A CALL-COUNT EVENT, NOT A COST — 288 FRAMES, 72,768 AT RANK-80 (2026-08-16) — `artifacts/performance/2026-08-16_sitr-excursion/SITR_EXCURSION.md`
+
+> **SUPERSEDED IN PART (2026-08-16, the section above).** The 72,768 headline is a
+> ceiling on clipping a per-frame variable, not on the mechanism this section
+> names; re-ranked as a uniform saving it is 13,376–37,027. The three candidate
+> routes in its §5 are re-priced there: the resolver is refused on the floor, the
+> per-joint quantisation is 298 at rank-80, and the re-attach question is now
+> stated as `BLOCKED(decision: transition-frame animation play)` with its size.
+> Everything else in this section stands and was used unchanged.
 
 **1 lab build (`build-c221-sitrprof`), 1 v3 capture, 2 counter runs on the
 existing basis ROM. 0 production source edits, 0 defaults flipped, nothing

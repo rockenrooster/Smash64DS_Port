@@ -1,0 +1,5 @@
+root ROMs, before the cycle and after Boundary -- unchanged and NOT rebuilt.
+(this cycle built nothing; Boundary links its own smash64ds-battle-playable-proof-hwtri)
+
+54c07fac80c50418949908701f7c2bdbf27512c5f96ac09086fabbb0df6ac68a *smash64ds.nds
+6c939434c53c9b3a76ff016540b810a84f207b1a4e24540b8653b15717367c99 *smash64ds-battle-playable-hwtri.nds
