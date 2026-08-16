@@ -2533,7 +2533,13 @@ Assert-True ($renderer -match '(?s)sNdsRendererHardwareTriangleBatchMatrixMode =
 Assert-True ($renderer -match '(?s)ndsRendererHardwareBeginTriangleBatch.*?ndsRendererProfileRecordBatchReuse\(\);\s*return;\s*\}\s*alpha_key = ndsRendererHardwareAlphaStateKey') 'Renderer adjacent TRI reuse no longer bypasses invariant alpha/fog key construction.'
 Assert-True ($renderer -match '(?s)ndsRendererProfileRecordSubmitClass\(submit_class\).*?ndsRendererProfileRecordHardwareTriangle') 'Renderer does not account hybrid submit classes before final hardware triangle accounting.'
 Assert-True (-not ($renderer.Contains('ndsRendererProfileRecordProjectedDivisions'))) 'Renderer restored redundant hot-loop logical division accounting instead of deriving it from submitted classes.'
-Assert-True ($renderer -match '(?s)static inline v16 ndsRendererHardwareProjectToV16.*?low_product = \(s64\)-32768 \* \(s64\)denominator;.*?high_product = \(s64\)32767 \* \(s64\)denominator;.*?#if defined\(__arm__\)\s*result = \(v16\)div64\(numerator, denominator\);') 'Renderer projected helper no longer bounds the exact signed quotient before using the DS 64/32 divider.'
+# ndsR2HwMathDiv64 replaced libnds's div64 here on 2026-08-16: the identical
+# DIV_64_32 register sequence minus the leading busy poll, which waits out a
+# stale quotient nobody reads. The invariant this row guards -- the exact signed
+# pre-clamp before the hardware divide -- is unchanged, so only the helper name
+# moves. Both spellings are accepted so the row cannot be silenced by reverting
+# to a poll-carrying form without anyone noticing.
+Assert-True ($renderer -match '(?s)static inline v16 ndsRendererHardwareProjectToV16.*?low_product = \(s64\)-32768 \* \(s64\)denominator;.*?high_product = \(s64\)32767 \* \(s64\)denominator;.*?#if defined\(__arm__\).*?result = \(v16\)(?:div64|ndsR2HwMathDiv64)\(numerator, denominator\);') 'Renderer projected helper no longer bounds the exact signed quotient before using the DS 64/32 divider.'
 Assert-True ($renderer -match '(?s)#if NDS_RENDERER_PROFILE_LEVEL >= 2\s*static v16 __attribute__\(\(noinline, optimize\("Os"\)\)\)\s*ndsRendererHardwareProjectToV16.*?#else\s*static inline v16 ndsRendererHardwareProjectToV16') 'Forensic projected-divider oracle no longer keeps one size-optimized helper copy outside the hot submit loop.'
 Assert-True ($renderer -match '(?s)#if NDS_RENDERER_PROFILE_LEVEL >= 2\s*if \(result != ndsRendererHardwareClampS64ToV16\(\s*numerator / denominator\)\).*?sNdsRendererHardwareDivideSummary \|=\s*NDS_RENDERER_HW_DIVISION_MISMATCH;') 'Forensic renderer no longer compares every hardware quotient with the former exact C division.'
 Assert-True (-not ($renderer -match 'static u32 sNdsRendererHardwareDivide(?:Call|Preclamp|Zero|Mismatch)')) 'Hardware-divider evidence restored separate forensic BSS counters instead of one packed summary.'

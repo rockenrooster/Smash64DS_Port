@@ -33,6 +33,48 @@ clock.** Coverage is part of a baseline's identity now, not a footnote. The
 conversion: the sim runs 60 Hz and presents 30 Hz, ratio **measured at exactly
 2.000**, so 1,600 presented = 3,200 logic = **53.3 s**.
 
+## THE GAP IS +82,065 (2026-08-16) — `artifacts/performance/2026-08-16_hwmath-route/HWROUTE.md`
+
+**Two bit-identical codegen changes shipped, and the new basis is
+`build-c215-hwmath-ship`: rank-80 1,227,392 raw / 1,202,445 net = GAP +82,065.**
+Same target, config and window as the `c206-shipgx0` basis it replaces.
+
+| item | change | state |
+|---|---|---|
+| **A** | `nds_r2_sqrtf.o` built `-marm`, so `nds_r2_sqrtf.h:73`'s 48-bit `root*root` is one `UMULL` instead of `bl __aeabi_lmul` | **LANDED** |
+| **B** | the leading `DIVCNT`/`SQRTCNT` busy poll deleted from every executing site — `sqrtf` and nine renderer sites, via `ndsR2HwMathDiv64`/`ndsR2HwMathSqrt64`. **16 leading polls before, 2 after**, both survivors behind `NDS_R2_CAMERA_FIXED=0` and executing zero times | **LANDED** |
+
+```text
+same-binary route, one ROM (sha BEBC5801...), four arms, readback==requested on each
+  rank-80         arm0 1,241,536 -> arm3 1,229,824      -11,712
+  ranks 41-120 band mean (reorder-robust tail)          -14,125
+  paired median, whole run                               -5,184   79.9% of frames win
+the shipping build, cross-build on the same window       -12,416  band -12,144
+.main                          931,088 -> 930,872 B      -216 B   NEGATIVE
+```
+
+**The ladder now reads 0.695x of +94,481** (12,416 banked + `POSITION.md`'s untouched
+53,215 inventory = 65,631), leaving **+28,850** unaccounted. It read 0.611x.
+
+**Method result worth reusing: this instrument is deterministic.** Two repeat runs
+reproduced their 1,600-row CSVs **byte for byte** (identical sha256, VBI histogram
+included). On a same-binary route with a fixed input script the same-arm repeat floor is
+**exactly zero**, so every tick between arms is the change — and a repeat of an unchanged
+arm buys nothing and should not be spent.
+
+**Read the concentration, not just the headline.** The change removes ~5,200 tk/fr from
+the median frame and ~13,000–14,000 from the gate population, because the `sqrtf` lane is
+**1.76x denser on the marginal-80 frames** (80.26 calls/frame there against 45.72
+whole-match, from the entry PC). rank-80 sits on a steep local slope — rank 60 −26,880,
+rank 80 −11,712, rank 100 −5,824 — so quote the 41–120 band, not one order statistic.
+For the same reason **arm 2's rank-80 of +3,072 is not a regression**: its paired median
+is −768 and its band is −1,571.
+
+**BLOCKED(decision: `sqrtf` IME mask).** `nds_r2_hwmath_unit.h`'s ELF survey shows this
+binary has no interrupt-context user of either unit, so the reachability the mask guards
+does not currently exist. Priced: **698 tk/fr** for its three I/O accesses, **1,294** with
+their register setup. Removing a safety property is the owner's call, not an optimisation.
+
 ## THE DS DIVIDE AND ROOT UNITS ARE PRICED (2026-08-16) — `artifacts/performance/2026-08-16_hwmath-units/HWMATH.md`
 
 **The three never-defined hooks are defined.** `NDS_R2_CFX_DIV64`,
@@ -65,25 +107,42 @@ subtracted, `build-c213-hwmath4`):
    *is* the hardware implementation. Its `fdiv` half is refused on price by a floor
    argument: the unit alone costs 65.0 tk against a 71.5 tk routine that does the whole
    job. **`SIMSIDE.md` §6's 29,786 tk/fr surface should be read as 4,300–4,750 measured.**
-3. **RED / OPEN — `nds_r2_sqrtf.o` is the one R2 kernel object still built `-mthumb`,**
-   so `nds_r2_sqrtf.h:73`'s 48-bit `root * root` is a `bl __aeabi_lmul` at `0x0208b10c`.
-   `-marm` costs **+24 B** and buys **37%–41%** of 11,608 tk/fr = **4,300–4,750 tk/fr,
-   0.046x–0.050x**, bit-identical (graded 0/65,536). It is below the ≥14,080 cross-build
-   floor, so its gate proof needs a **same-binary `.data` route** between a Thumb body and
-   an ARM body. **Next cycle's build, and it is small.**
-4. **OPEN, unpriced — the leading poll costs 41.0 tk per divide and 20.0 per root and
-   protects nothing.** Only the last write to `DIVCNT`/`NUMER`/`DENOM` matters. libnds's
-   `div64`/`sqrt64`, five `nds_renderer.c` sites and `battleship_gmcamera.c`'s kernels all
-   carry it; SM64DS's `cstd::div` does not. Both forms grade bit-identical here. Nobody
-   has counted those sites' call rate.
+3. **LANDED 2026-08-16 — `nds_r2_sqrtf.o` is built `-marm`.** The 4,300–4,750 estimate
+   here was **2.8x low**: measured on a same-binary route it is worth −3,840 tk/fr at the
+   median frame and −8,960 on the marginal-80 population, because that estimate was priced
+   on the whole-match `sqrtf` rate and the gate population carries 1.76x of it. See the
+   section above.
+4. **LANDED 2026-08-16 — the leading poll is gone from every executing site.** Its rate
+   was counted from the entry PCs before a byte was written (`[[entry-pc-gives-exact-call-counts]]`):
+   **2,491.3 tk/fr** at marginal-80, of which `sqrtf` alone is 1,845.8. The outlined
+   libnds `div64` executes **zero** times in this match, so nothing had to be done about
+   libnds. `battleship_gmcamera.c`'s two are the only survivors and they execute zero
+   times at `NDS_R2_CAMERA_FIXED=0` — leave them, so the owner's pending
+   draw-side-precision arm stays priced as measured.
 
-**Chain map (item C, assessment only, no build).** C1 collision cluster 50,044 tk/fr —
-built, conv/op ~0.02, still 2.68, killed by 3,228 B at **0.97 entries/frame**. C2
-animation→joint-matrix 20,357 tk/fr, conv/op ~0, **22–93 entries/frame**, front endpoint
-free because figatree tracks are `s16` on disk. C3 trig leaves 4,519 tk/fr are C2's
-interior and already implemented in `nds_r2_collision_fixed.h`. **C2 is the only chain
-worth a build and its first question is bytes, not arithmetic** — conv/op near zero is
-necessary and not sufficient, which is exactly what C1 proves.
+**Chain map (item C).** C1 collision cluster 50,044 tk/fr — built, conv/op ~0.02, still
+2.68, killed by 3,228 B at **0.97 entries/frame**. C3 trig leaves 4,519 tk/fr are C2's
+interior and already implemented in `nds_r2_collision_fixed.h`.
+
+**C2 animation→joint-matrix is SIZED, 2026-08-16 (`HWROUTE.md` §7), and the byte budget
+is the verdict.** The four members hold **4,680 B** and already spend **44.6% of their own
+cost on instruction fetch** — 16,891 tk/fr of `icache_fill` at 22–93 entries a frame — so
+**a byte in that chain costs 3.61 tk/fr, and a 32 B cache line costs 115.** The prize is
+exactly the 20,357 (confirmed: it is the soft-float gross charged to those four callers,
+1,446.2 helper calls/frame, disjoint from the 37,854 the bodies cost).
+
+```text
+the whole prize is spent by  +5,640 bytes;  half of it by +2,820
+the ring's 3,228 B would cost 11,650 tk/fr of fetch alone
+the camera inlining's 3,032 B inverted a -4,736 win into +1,600
+```
+
+**So C2 converts if and only if the rewrite is byte-neutral or byte-negative, and no
+fixed-point rewrite in this tree has been.** A C2 cycle's first deliverable is a byte
+ledger, not an arithmetic argument. Two limits it must carry: the chain's own `issue` cost
+is only **7,924 of 37,854 (20.9%)**, so the addressable ceiling is ~24,000 tk/fr = **0.29x
+of +82,065**; and `dcache_fill` (10,817) exceeds `issue` (7,924), so it is memory-bound on
+both sides and a Q26 joint matrix is the same 32 bits per element as the `f32` it replaces.
 
 **One defect found and fixed at its seam.** `int32_t` is `long` on devkitARM, so an
 `(int32_t *)` cast onto an `int *` in the bench's wrapper was a strict-aliasing violation;

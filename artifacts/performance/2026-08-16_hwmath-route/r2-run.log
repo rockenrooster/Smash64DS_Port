@@ -1,0 +1,30 @@
+WARNING: Tick-HUD samples repeated a presented frame (3 of 1600). EVERY duplicate is a ring-stop seam whose recorded skew explains the label collision, and no payload repeats, so these are distinct real iterations that share a frame LABEL. Percentiles are over the iterations and stand; the frame ids at those seams do not. Seam rows: 192,672,1344.
+Wrote artifacts/performance/2026-08-16_hwmath-route\r2-rows.csv
+Tick-HUD buckets: target=smash64ds-battle-playable-tickhud-hwtri samples=1600 frames=439..2038 melonDS=1.0 sha=DE80E46BDCF1FD98 git=efe31fd0abe+dirty(11) dldi=ON
+
+bucket p50        p95        spread mean       min        max        %ALLp50
+------ ---        ---        ------ ----       ---        ---        -------
+ALL     1,117,760  1,678,208   1.50  1,226,558  1,114,432  3,358,400   100.0
+FTR       306,688    311,168   1.01    294,852    175,552    343,616    27.4
+STG       182,592    189,952   1.04    183,891    178,240    195,712    16.3
+BG          4,288      4,416   1.03      4,290      4,096      4,480     0.4
+AUD         2,816      7,104   2.52      8,919      1,280    156,160     0.3
+HUD         1,088    411,264 378.00     35,162        896  2,123,840     0.1
+SRC       336,640    573,824   1.70    355,269     11,008  1,235,264    30.1
+MISC      109,248    181,504   1.66    115,237     83,712    329,920     9.8
+OTHR      203,072    513,856   2.53    228,940     20,928    578,176    18.2
+WAIT      183,744    494,208   2.69    209,479        896    558,528    16.4
+WORK      969,728  1,384,256   1.43  1,016,739    691,008  3,241,728    86.8
+SHDT        4,672     83,968  17.97     14,873          0    452,800     0.4
+SWRM        1,024      1,088   1.06      1,028        768      1,216     0.1
+GCRA      331,136    568,192   1.72    349,692      6,656  1,229,632    29.6
+SCPU       54,592    112,384   2.06     48,845          0    143,872     4.9
+SCAT        1,280      1,472   1.15      1,275          0      1,664     0.1
+SPRM        1,984      2,176   1.10      4,862          0    645,312     0.2
+SINT      163,520    301,376   1.84    167,375          0    965,056    14.6
+SPHD       72,640    109,568   1.51     71,917          0    437,632     6.5
+SPHC          640        768   1.20        634          0      1,024     0.1
+WORK-H    956,992  1,244,416   1.30    981,578    356,160  1,882,304    85.6
+
+named=997,620 (81.3% of ALL)  VBI 2:1683 3:330 4:16 5+:9 max:19 total:2038  slips=0
+Wrote artifacts/performance/2026-08-16_hwmath-route\r2.json

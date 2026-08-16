@@ -1,0 +1,25 @@
+C2 CHAIN FOOTPRINT -- the byte budget, measured, not modelled.
+source : build-c200-trackprof-off ELF + c200-off-pc.csv, marginal-80 window, tk/fr = cycles/160
+
+member                             bytes  lines  ent/fr    issue   icache   dcache   wbuf  ilock    TOTAL
+ndsR2FtAnimParseDObjFigatree       3,016     95    93.4    5,851   11,546    6,807    344  1,101   25,648
+ndsBaseGcPlayDObjAnimJoint           500     16    62.1      626    1,371    1,104     26    192    3,318
+ndsBaseGcPlayMObjMatAnim             732     23    85.3      871    2,401    1,818     61    266    5,416
+gmCollisionTransformMatrixAll        432     14    22.5      576    1,574    1,089    206     27    3,472
+C2 TOTAL                           4,680    147            7,924   16,891   10,817    637  1,585   37,854
+
+instruction fetch is 44.6% of the chain's own cost.
+MARGINAL PRICE OF A BYTE IN THIS CHAIN = 3.61 tk/fr   (115 tk/fr per 32 B cache line)
+
+soft-float GROSS charged to these four callers (the prize):
+  ndsR2FtAnimParseDObjFigatree        5,234 tk/fr    275.8 helper calls/frame
+  ndsBaseGcPlayDObjAnimJoint          2,929 tk/fr    242.5 helper calls/frame
+  ndsBaseGcPlayMObjMatAnim            5,741 tk/fr    438.8 helper calls/frame
+  gmCollisionTransformMatrixAll       6,453 tk/fr    489.2 helper calls/frame
+  PRIZE                              20,357 tk/fr   1446.2 helper calls/frame
+
+BYTE BUDGET: the whole prize is spent by 5,640 added bytes.
+             half the prize is spent by 2,820 added bytes.
+CALIBRATION: the collision ring added 3,228 B (at 0.97 entries/frame) and returned 2.68x;
+             the camera inlining added 3,032 B and inverted a -4,736 win into +1,600.
+             3,228 B here would cost 11,650 tk/fr of fetch alone.

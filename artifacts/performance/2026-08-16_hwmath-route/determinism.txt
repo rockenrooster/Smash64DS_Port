@@ -1,0 +1,16 @@
+THE INSTRUMENT IS DETERMINISTIC.
+r0b and r3b re-ran arms 0 and 3 of build-c214-hwroute from scratch, same ROM, same
+script, same route word. Each reproduced its 1,600-row CSV byte for byte -- the
+summary rows, the `named` total and the VBlank-interval histogram included.
+So on a same-binary route the same-arm repeat floor on this instrument is EXACTLY
+ZERO: every tick of difference between arms is the change, and a repeat run of an
+unchanged arm buys nothing and should not be spent.
+
+sha256 of the WORKING-TREE files (CRLF). git normalises these to LF on commit, so a
+re-hash of a fresh checkout gives different values -- still equal to each other,
+which is the claim.
+
+754bf77b475e19d36c1a0c2ec0f6427dfb4b07c6308fde35c5d4275b9d4c9de3 *r0-rows.csv
+754bf77b475e19d36c1a0c2ec0f6427dfb4b07c6308fde35c5d4275b9d4c9de3 *r0b-rows.csv
+dc0bef4ebcbc852563f56e06155e8a6bb6ecc98fc7ce1ef44aa4d4de159d9f6f *r3-rows.csv
+dc0bef4ebcbc852563f56e06155e8a6bb6ecc98fc7ce1ef44aa4d4de159d9f6f *r3b-rows.csv

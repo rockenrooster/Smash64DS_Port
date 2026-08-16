@@ -1409,6 +1409,19 @@ NDS_R2_CFX_HWMATH ?= $(NDS_R2_COLLISION_FIXED)
 # form each would replace -- which is transferable across lanes in a way a
 # whole-match A/B of one lane is not.
 NDS_R2_HWMATH_BENCH ?= 0
+# Lab SAME-BINARY route for the two hardware-math changes banked on 2026-08-16.
+# Default 0; at 0 there is no route word, no selector and no second sqrtf body,
+# so a published ROM carries only the shipped form. At 1 the binary holds both
+# arms and one `.data` word (gNdsR2HwMathRoute, src/nds/r2/nds_r2_sqrtf.c)
+# picks between them, which is the only way to price either change: sqrtf in ARM
+# state is worth 4,300-4,750 tk/fr and the leading busy poll 2,491, both FAR
+# under the >=14,080 rank-80 cross-build floor, so a two-build A/B cannot decide
+# them.
+#   bit 0  NDS_R2_HWMATH_ROUTE_SQRTF_ARM  sqrtf body from the -marm object
+#   bit 1  NDS_R2_HWMATH_ROUTE_NO_LEAD    skip the leading DIVCNT/SQRTCNT poll
+# Arm 0 is exactly what shipped before this date; arm 3 is exactly what ships
+# after it.
+NDS_R2_HWMATH_ROUTE ?= 0
 # Task 44 stage steady-state excision: generation-based admission, dense
 # rigid/dynamic binding lists, and the hoisted GX capture-active test. Requires
 # the Task 36 hardware-compose stage owner; meaningless without it.
@@ -2655,6 +2668,12 @@ CFILES += nds_r2_battle.c
 endif
 ifeq ($(NDS_R2_FIXED_SQRT),1)
 CFILES += nds_r2_sqrtf.c
+# The ARM-state arm of the sqrtf route. Lab only: at NDS_R2_HWMATH_ROUTE 0 it is
+# not in CFILES at all, so a published ROM's link input set is unchanged rather
+# than merely equivalent.
+ifeq ($(NDS_R2_HWMATH_ROUTE),1)
+CFILES += nds_r2_sqrtf_arm.c
+endif
 endif
 ifeq ($(NDS_R2_COLLISION_FIXED),1)
 CFILES += nds_r2_collision_fixed.c nds_r2_collision_ring.c
@@ -3600,6 +3619,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_R2_SIM_MAC_SHADOW $(NDS_R2_SIM_MAC_SHADOW)'; \
 		echo '#define NDS_R2_CFX_HWMATH $(NDS_R2_CFX_HWMATH)'; \
 		echo '#define NDS_R2_HWMATH_BENCH $(NDS_R2_HWMATH_BENCH)'; \
+		echo '#define NDS_R2_HWMATH_ROUTE $(NDS_R2_HWMATH_ROUTE)'; \
 		echo '#define NDS_TASK39_FX_SPRITES $(NDS_TASK39_FX_SPRITES)'; \
 		echo '#define NDS_TASK39_FX_FLASH $(NDS_TASK39_FX_FLASH)'; \
 		echo '#define NDS_R2_PARTICLE_RUNTIME $(NDS_R2_PARTICLE_RUNTIME)'; \
@@ -3915,6 +3935,25 @@ nds_r2_sim_mac_fixed.o: CFLAGS += -marm
 # src/nds/r2/nds_r2_sqrtf.c. Building this object -mthumb would make both arms
 # call __aeabi_lmul and the comparison would read zero.
 nds_r2_hwmath_bench.o: CFLAGS += -marm
+# Same rule, and this one is the SHIPPED half of it. include/nds/nds_r2_sqrtf.h
+# line 73 needs a 48-bit `root * root`; ARMv5TE Thumb has no UMULL, so in Thumb
+# state that one expression is `bl __aeabi_lmul` -- visible at 0x0208b10c in
+# build-c206-shipgx0's own disassembly. src/nds/r2/nds_r2_sqrtf.c was the last
+# R2 kernel object still built -mthumb. -marm costs +24 B of text and takes the
+# 11,608 tk/fr sqrtf lane (8,068 sim + 3,540 draw at marginal-80) down by
+# 37%-41%. Bit-identical, not merely equivalent: build-c213-hwmath4's
+# gNdsR2HwMathBenchSqrtfMismatch is 0 over 65,536 inputs comparing exactly these
+# two builds of the header.
+#
+# EXCEPT in the route build, where this object IS THE CONTROL ARM and must stay
+# -mthumb while nds_r2_sqrtf_arm.o carries the -marm body. Building both -marm
+# would make the two arms identical and the measurement would read zero -- the
+# same trap the bench block above records.
+ifeq ($(NDS_R2_HWMATH_ROUTE),1)
+nds_r2_sqrtf_arm.o: CFLAGS += -marm
+else
+nds_r2_sqrtf.o: CFLAGS += -marm
+endif
 
 scene_backend.o: $(SCENE_BACKEND_SLICES) $(NDS_SCENE_HARNESS_CONFIG)
 scene_harness.o battleship_grinishie_scale.o: $(NDS_SCENE_HARNESS_CONFIG)

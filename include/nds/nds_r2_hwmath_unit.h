@@ -44,7 +44,15 @@
  * kernels all carry that leading poll; SM64DS's cstd::div and cstd::sqrt do not
  * (decomp/sm64ds-decomp/src/_ZN4cstd3divEii.c). Both forms are here and both
  * are priced by src/port/nds_r2_hwmath_bench.c; the *Lead form is the
- * in-tree-proven one and is what the hook aliases at the bottom select.
+ * in-tree-proven one and is what the CFX hook aliases at the bottom select.
+ *
+ * SHIPPED SINCE 2026-08-16: src/nds/nds_renderer.c and src/nds/r2/nds_r2_sqrtf.c
+ * call ndsR2HwMathDiv64 / ndsR2HwMathSqrt64 below instead of libnds's inlines,
+ * i.e. the leading poll is gone from every site that executes in the battle.
+ * src/import/battleship_gmcamera.c still carries it and is deliberately left
+ * alone: NDS_R2_CAMERA_FIXED is 0 in every shipping basis, so its kernels
+ * execute zero times and editing them would only stale the -4,736 tk/fr the
+ * owner's pending draw-side-precision decision is priced on.
  */
 
 #include <stddef.h>
@@ -55,6 +63,7 @@
 #define NDS_R2_HWMATH_DIV_DENOM    (*(volatile int64_t *)0x04000298)
 #define NDS_R2_HWMATH_DIV_DENOM_L  (*(volatile int32_t *)0x04000298)
 #define NDS_R2_HWMATH_DIV_RESULT   (*(volatile int64_t *)0x040002A0)
+#define NDS_R2_HWMATH_DIV_RESULT_L (*(volatile int32_t *)0x040002A0)
 #define NDS_R2_HWMATH_DIVREM_L     (*(volatile int32_t *)0x040002A8)
 #define NDS_R2_HWMATH_SQRTCNT      (*(volatile uint16_t *)0x040002B0)
 #define NDS_R2_HWMATH_SQRT_RESULT  (*(volatile uint32_t *)0x040002B4)
@@ -172,6 +181,98 @@ static inline uint32_t ndsR2HwMathSqrt64Lead(uint64_t value)
 static inline uint32_t ndsR2HwMathSqrt64Fast(uint64_t value)
 {
     NDS_R2_HWMATH_SQRTCNT = (uint16_t)NDS_R2_HWMATH_SQRT_64;
+    NDS_R2_HWMATH_SQRT_PARAM = value;
+    while ((NDS_R2_HWMATH_SQRTCNT & NDS_R2_HWMATH_BUSY) != 0u)
+    {
+    }
+    return NDS_R2_HWMATH_SQRT_RESULT;
+}
+
+/* ==========================================================================
+ * THE SHIPPED DROP-INS FOR libnds `div64` / `sqrt64`, WITHOUT THE LEADING POLL.
+ *
+ * libnds's div64/sqrt64 are `static inline` in nds/arm9/math.h, so their
+ * leading poll is compiled into OUR objects, not into a system library: this is
+ * a port-side change and libnds is not touched. Both forms are graded
+ * bit-identical over 65,536 live-shaped operands per class on four builds
+ * (src/port/nds_r2_hwmath_bench.c: DivMismatch / DivFastMismatch /
+ * SqrtMismatch / SqrtFastMismatch / QuotMismatch / QuotLeadMismatch /
+ * RemMismatch / RemLeadMismatch all 0, with 32,914 negative denominators and
+ * 223 rounding half-cases as live controls).
+ *
+ * ndsR2HwMathDiv64 is `div64` to the register: same DIV_64_32 mode, same single
+ * 32-bit result read (NOT the 64-bit read ndsR2HwMathDivideFast does, which
+ * would add an I/O access). ndsR2HwMathSqrt64 is `sqrt64` the same way.
+ *
+ * PRICE, measured two independent ways. In situ, from the per-PC execution
+ * profile of build-c200-trackprof-off over its 80 marginal frames, the leading
+ * polls that these two delete cost 398,615 cycles = 2,491.3 tk/fr:
+ * sqrtf 295,320, ndsRendererR2WriteLightVector 46,191,
+ * ndsRendererSubmitNativeImpactWave 25,088, ndsRendererHardwareSubmitVertex
+ * 32,016. On the microbenchmark, 41.0 tk per divide and 20.0 per root.
+ * ========================================================================== */
+
+/* The lab-only same-binary route. At NDS_R2_HWMATH_ROUTE 0 -- every shipped
+ * build -- these expand to nothing and no route word is read, so the shipped
+ * text is the poll-free form with no selector in it. At 1 the leading poll is
+ * present but skipped by a `.data` word, which is how the change is priced
+ * against the gate without a cross-build placement term (the expected win is
+ * far under the >=14,080 rank-80 cross-build floor). */
+#if defined(NDS_R2_HWMATH_ROUTE) && NDS_R2_HWMATH_ROUTE
+
+#define NDS_R2_HWMATH_ROUTE_SQRTF_ARM 1u
+#define NDS_R2_HWMATH_ROUTE_NO_LEAD   2u
+
+extern volatile uint32_t gNdsR2HwMathRoute;
+
+static inline void ndsR2HwMathDivLeadPoll(void)
+{
+    if ((gNdsR2HwMathRoute & NDS_R2_HWMATH_ROUTE_NO_LEAD) == 0u)
+    {
+        while ((NDS_R2_HWMATH_DIVCNT & NDS_R2_HWMATH_BUSY) != 0u)
+        {
+        }
+    }
+}
+
+static inline void ndsR2HwMathSqrtLeadPoll(void)
+{
+    if ((gNdsR2HwMathRoute & NDS_R2_HWMATH_ROUTE_NO_LEAD) == 0u)
+    {
+        while ((NDS_R2_HWMATH_SQRTCNT & NDS_R2_HWMATH_BUSY) != 0u)
+        {
+        }
+    }
+}
+
+#else
+
+static inline void ndsR2HwMathDivLeadPoll(void)
+{
+}
+
+static inline void ndsR2HwMathSqrtLeadPoll(void)
+{
+}
+
+#endif
+
+static inline int32_t ndsR2HwMathDiv64(int64_t numerator, int32_t denominator)
+{
+    NDS_R2_HWMATH_DIVCNT = (uint16_t)NDS_R2_HWMATH_DIV_64_32;
+    ndsR2HwMathDivLeadPoll();
+    NDS_R2_HWMATH_DIV_NUMER = numerator;
+    NDS_R2_HWMATH_DIV_DENOM_L = denominator;
+    while ((NDS_R2_HWMATH_DIVCNT & NDS_R2_HWMATH_BUSY) != 0u)
+    {
+    }
+    return NDS_R2_HWMATH_DIV_RESULT_L;
+}
+
+static inline uint32_t ndsR2HwMathSqrt64(uint64_t value)
+{
+    NDS_R2_HWMATH_SQRTCNT = (uint16_t)NDS_R2_HWMATH_SQRT_64;
+    ndsR2HwMathSqrtLeadPoll();
     NDS_R2_HWMATH_SQRT_PARAM = value;
     while ((NDS_R2_HWMATH_SQRTCNT & NDS_R2_HWMATH_BUSY) != 0u)
     {

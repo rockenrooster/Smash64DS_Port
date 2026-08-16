@@ -1,0 +1,43 @@
+LEADING-POLL CENSUS, exact per-PC execution counts.
+source : artifacts/performance/2026-08-15_ftanim-dispatch-attribution/c200-off-pc.csv
+         (build-c200-trackprof-off, regions=1601, marginal_frames=80, cycles_per_tick=2)
+window : the 80 marginal frames; tk/fr = marg_total_cycles / 160
+
+function                                                         loop kind     iters  marg_cyc    tk/fr     all_cyc
+ndsRendererHardwareSubmitVertex                0x01ff988c-0x01ff9894 LEAD      1104     16008    100.0       48372
+ndsRendererHardwareSubmitVertex                0x01ff98a8-0x01ff98b0 trail     1104     16008    100.0       48361
+ndsRendererHardwareSubmitVertex                0x01ff99d4-0x01ff99dc LEAD      1104     16008    100.0       48372
+ndsRendererHardwareSubmitVertex                0x01ff99f4-0x01ff99fc trail     1104     16008    100.0       48360
+ndsRendererR2WriteLightVector                  0x02014190-0x02014198 LEAD       323     12224     76.4      232039
+ndsRendererR2WriteLightVector                  0x020141a4-0x020141ac trail      480      6560     41.0      124476
+ndsRendererR2WriteLightVector                  0x020142bc-0x020142c4 LEAD       489      9823     61.4      186983
+ndsRendererR2WriteLightVector                  0x020142d8-0x020142e0 trail      648     14856     92.8      281514
+ndsRendererR2WriteLightVector                  0x02014304-0x0201430c LEAD       658     10864     67.9      205838
+ndsRendererR2WriteLightVector                  0x02014320-0x02014328 trail      960     13920     87.0      264132
+ndsRendererR2WriteLightVector                  0x0201434c-0x02014354 LEAD       960     13280     83.0      251952
+ndsRendererR2WriteLightVector                  0x02014368-0x02014370 trail      960     13920     87.0      264121
+ndsRendererSubmitNativeImpactWave              0x02026a7c-0x02026a84 LEAD       864     12528     78.3       37584
+ndsRendererSubmitNativeImpactWave              0x02026a98-0x02026aa0 trail      848     12576     78.6       37728
+ndsRendererSubmitNativeImpactWave              0x02026b70-0x02026b78 LEAD       840     12560     78.5       37680
+ndsRendererSubmitNativeImpactWave              0x02026b8c-0x02026b94 trail      864     12528     78.3       37584
+
+LEADING   marg_cyc=   103295 =    645.6 tk/fr   (all_cyc=1048820)
+TRAILING  marg_cyc=   106376 =    664.9 tk/fr
+UNKNOWN   marg_cyc=        0 =      0.0 tk/fr
+
+sqrtf is Thumb in c200 and uses the lsls/asrs/bmi form, so the tst-#32768
+detector above does not see it. Its two polls, read directly:
+  LEADING  0x0208b6ea-0x0208b6f0  iters 19,260  marg_cyc 295,320 = 1,845.8 tk/fr
+  trailing 0x0208b6f8-0x0208b6fe  iters 18,276  marg_cyc 286,320 = 1,789.5 tk/fr
+  sqrtf entry PC 0x0208b694: marg 6,421 calls / 80 frames = 80.26 calls/frame
+                             all  73,191 calls / 1,601 frames = 45.72 calls/frame
+
+TOTAL LEADING = 103,295 (renderer) + 295,320 (sqrtf) = 398,615 cycles
+              = 2,491.3 tk/fr at marginal-80
+
+sqrtf IME mask, same source, for the record (NOT removed this cycle):
+  0x0208b6d6 ldr  REG_IME      marg_cyc  55,537
+  0x0208b6de str  REG_IME=0    marg_cyc  36,908
+  0x0208b70c str  REG_IME=ime  marg_cyc  19,260
+  three I/O accesses = 111,705 cycles = 698.2 tk/fr
+  with their register setup (0x6d2,0x6dc,0x708) = 206,956 = 1,293.5 tk/fr
