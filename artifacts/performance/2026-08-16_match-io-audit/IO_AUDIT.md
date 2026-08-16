@@ -32,7 +32,7 @@ ANSWER A2   THE CAMERA CYCLE'S RANK-10/20 ATTRIBUTION IS WRONG AS STATED, and
             +20,224 are rank-permutation artifacts of a rank-by-rank estimator
             applied to a tail that permutes 11 of its top 20.  Section 3.
 
-FOUND       AN INSTRUMENT DEFECT WORTH UP TO 6,592 AT RANK-80, IN 9 OF 13 RECENT
+FOUND       AN INSTRUMENT DEFECT WORTH UP TO 6,592 AT RANK-80, IN 8 OF 13 RECENT
             WHOLE-MATCH RUNS.  cpuGetTiming() intermittently reports a span
             exactly 4,194,304 = 2^22 ticks too large.  Proven two ways: the
             residual lands within +-260 of the run's own ALL median on four of
@@ -187,7 +187,7 @@ and only while the timer's top bit is clear. When that correction fails on a spa
 `<< 6` = **2^22 = 4,194,304**. The exact trigger (how the tick IRQ comes to be
 deferred that long) is **not** proven here.
 
-**It is in 9 of the last 13 whole-match runs and it moves rank-80.**
+**It is in 8 of the last 13 whole-match runs and it moves rank-80.**
 
 | run | contaminated frames | rank-80 raw | corrected | delta |
 |---|---|---:|---:|---:|

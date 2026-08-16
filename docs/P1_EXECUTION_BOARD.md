@@ -54,7 +54,7 @@ pack), 127 hit the RAM cache, **7 read the card**. Frames **456, 830, 1015, 1186
 `POSITION.md`'s "seven load frames | 9,863" is the same lane, correctly counted.
 
 **2. `cpuGetTiming()` reports a span exactly 2^22 = 4,194,304 ticks too large, in
-9 of the last 13 whole-match runs.** Proven three ways: subtracting 2^22 lands
+8 of the last 13 whole-match runs.** Proven three ways: subtracting 2^22 lands
 `ALL` within **−192/+256/+192/+128** of the run's own median on four of five
 frames; the inflated `ALL` is **9.505 VBlanks** where every clean `ALL` is a whole
 number; and it lands in whichever span was open (`FTR`, `SCPU`, `SPHD`). Mechanism
