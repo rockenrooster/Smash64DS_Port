@@ -31,7 +31,10 @@ ITEM A1      ndsRendererSyncTextureTile IS REAL WASTE, AND IT IS NOW SHIPPED.
                                                  marginal-80    -3,456
                                                  win share       87.1% of 1,600
                complement control  WORK-H -3,648 / WAIT +3,648 / ALL +0
-             Sections 2 and 3.
+             SECOND, INDEPENDENT CONTROL: Boundary's own 212-frame smoke reads
+             binds/vtx/tri 54/2484/828 and ftrTri 132712/p067840/p164872/own424
+             IDENTICAL to the last two Boundary runs, for 118,976 FEWER ticks.
+             Sections 2, 3 and 3.4.
 
 ITEM A2      THE TEXTURE-BIND COLLAPSE IS REFUTED AS AN ELISION ITEM, AND
              RE-ATTRIBUTED.  The 2026-08-15 census already measured ZERO exact
@@ -255,6 +258,25 @@ NEW BASIS LEVEL          +73,425                          (build-c217-tilesync-s
 
 The basis is quoted as a **level**, because that is what the shipping configuration reads
 today on the same target, config and window; it is not a claim that 8,640 was earned.
+
+### 3.4 Boundary is a second, independent equality control — and it could have failed
+
+Boundary builds its own `smash64ds-battle-playable-proof-hwtri` and `nm` on that ELF
+confirms it carries the memo (`ndsRendererSyncTextureTile` 0xf8 = 248 B, no
+`gNdsR2TileSync*` symbols — the ship form). Its realtime pacing smoke over the same 212
+frames, against the last two Boundary runs on this tree:
+
+| | `boundary-c206` / `-c209b` | this cycle | Δ |
+|---|---|---|---|
+| `binds` / `vtx` / `tri` | `54 / 2484 / 828` | `54 / 2484 / 828` | **identical** |
+| `ftrTri` | `132712/p067840/p164872/own424` | `132712/p067840/p164872/own424` | **identical** |
+| `frames` / `fps` / `rprof` | `212 / 241/480 / 0` | `212 / 241/480 / 0` | identical |
+| `ticks` | 294,482,496 | **294,363,520** | **−118,976 = −561 tk/fr** |
+
+**Same geometry, same binds, same triangles, measurably less time.** The counters that
+would move if the memo published a wrong tile state are the ones that did not move at all.
+(The −561 tk/fr is the proof ROM's boot/Pupupu scene, not the gate window; it is a
+direction check, not a second price.)
 
 ---
 

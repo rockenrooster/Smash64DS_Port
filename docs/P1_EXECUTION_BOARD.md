@@ -46,6 +46,12 @@ shipping build reads −8,640 at rank-80 and −9,216 paired against
 pair's own placement term is visible as `SRC +3,136` — a bucket the memo cannot
 touch. **+73,425 is a LEVEL, not a bank.**
 
+**A second, independent equality control.** Boundary's own proof ROM carries the
+memo and its 212-frame realtime smoke reads `binds=54 vtx=2484 tri=828` and
+`ftrTri=132712/p067840/p164872/own424` **identical** to `boundary-c206` and
+`-c209b`, for `ticks` 294,482,496 → 294,363,520 = **−118,976**. Same geometry,
+same binds, same triangles, measurably less time.
+
 **THE TWO COUNTER-GATED ROWS HAD THEIR COUNTER, AND IT HAD BEEN READ ON
 2026-08-15.** `NDS_TASK107_RENDER_STATE_CENSUS` (`Makefile:250`) publishes both,
 and `artifacts/performance/2026-08-15_renderer-state-redundancy/` is its run.
