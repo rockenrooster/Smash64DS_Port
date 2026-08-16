@@ -229,6 +229,19 @@ PARSE half                  41,376   (26,368 + 7,308 + 5,014 + 2,687)
   DELETABLE CEILING         33,951   = 1.18x the +28,689 requirement, 2.12x the 16K floor
 ```
 
+**33,951 is conservative by about 1,900, and the arithmetic is stated rather than
+buried.** Three `volatile` diagnostic counters live *inside* the blocks called
+irreducible above — `gNdsR2FtAnimParseCalls++` at `0x208ca22..30` (≈516, inside
+CLOCK) and `gNdsR2FtAnimParseEarlyOut++` at `0x208cff6..fe` (595 of EARLYOUT's
+763, so the real early-out branch is ~168) — with `gNdsR2FtAnimParseStepped++`
+(798) already inside the deletable side. **No verifier reads any of the four
+parser counters**: searched across `scripts/`, `src/` and `include/`, the only
+reference outside their own two TUs is in `check_ftanim_transcribe.py`, which is
+itself RED and unwired (§6). They are removable, and the dense arm would not
+carry them at all — but `gc-sections drops harness globals` says a deleted
+diagnostic has turned Boundary red here before, so this is recorded as a sized
+item and **not** taken.
+
 ### 4.1 The call split, measured from the counters' own entry PCs
 
 The parser's three shipped `volatile` counters give an exact per-path call rate for free
@@ -346,9 +359,13 @@ port parser is still a faithful transcription of the decomp one.
 - **The pack is not wired into the Makefile** and no ROM contains it. `--out` writes it on demand.
 - **The 262,144 B raw-cache reclaim is a lead, not a saving** (§3.1).
 - **The two stale checkers were not fixed** (§6).
-- **The ~1,900 tk/fr of shipped diagnostic counters was measured, not removed** — `gc-sections
-  drops harness globals` says a deleted diagnostic has turned Boundary red here before, so that
-  needs the verifier's ELF symbol list checked first.
+- **The ~1,900 tk/fr of shipped diagnostic counters was measured and cleared for removal, but not
+  removed** (§4). No verifier reads them; the caution is `gc-sections drops harness globals`.
+- **Boundary was not re-run.** No compiled byte changed — the commit is one new host script, seven
+  artifacts and `docs/HANDOFF.md`. The two static gates that run on *every* `verify-all.ps1`
+  profile were run and pass: `DECOMP_PRISTINE=PASS pinned_historical_files=10 ds_markers=0
+  decomp_patch_pipeline=absent`, and `check-gbi-decode-fixtures.ps1` end to end including
+  `FTANIM_OPCODE_SURFACE=CLOSED` / `FTANIM_EFFECT_SURFACE=STABLE`.
 - **`func_anim`'s absence is a search result, not runtime proof** (§5).
 
 ## 8. State and reproduction
