@@ -2393,6 +2393,34 @@ NDS_FTANIM_DENSE_SOURCES := \
 NDS_BATTLEPACK_DIR := $(PROJECT_ROOT)/assets/animation
 NDS_BATTLEPACK_BLOB := $(NDS_BATTLEPACK_DIR)/battlepack_fox.bin
 
+# Task 3 stage 3 -- the AOT typed track rows the dense fighter-animation runtime
+# steps (`src/nds/nds_ftanim_track.c`).
+#
+# THIS ONE *IS* .rodata, and the reason is the opposite of the battlepack's. The
+# rows do not REPLACE the o2r payload here: both are resident at once, which is
+# what makes the route bit a SAME-BINARY A/B with no placement floor and what
+# lets the stage-4 oracle compare the dense stepper against the generic parser
+# on the same joint of the same frame. That costs image, so it is bounded by
+# measurement rather than by the boot-headroom ladder: static growth comes out
+# of the same bytes as the taskman arena, and `gNdsTaskmanGeneralHeapFreeMin`
+# read 53,136 on the c193 gate arm against the mandated 32,768 B reserve.
+# 12,288 B of rows plus ~3,552 B of cursor blocks leaves ~37,000.
+#
+# `--max-bytes` selects in ASCENDING ASSET ID, which is ascending motion index,
+# so a tight budget buys the common motions rather than a coverage lottery. The
+# admitted clip count and the runtime's own bind/step counters are the coverage
+# figure; nothing here estimates it.
+NDS_R2_FTANIM_TRACK ?= 0
+NDS_R2_FTANIM_TRACK_DISPATCH ?= 1
+NDS_R2_FTANIM_TRACK_ORACLE ?= 0
+NDS_FTANIM_TRACK_MAX_BYTES ?= 12288
+NDS_FTANIM_TRACK_HEADER := $(PROJECT_ROOT)/include/nds/generated/nds_ftanim_track_pack.generated.h
+ifeq ($(NDS_R2_FTANIM_TRACK),1)
+NDS_FTANIM_TRACK_PREREQ := $(NDS_FTANIM_TRACK_HEADER)
+else
+NDS_FTANIM_TRACK_PREREQ :=
+endif
+
 NDS_PARTICLE_TEXTURE_ASSET := $(PROJECT_ROOT)/assets/particles/efcommon_particle_textures.ds.bin
 NDS_WHISPY_NATIVE_ASSET := $(PROJECT_ROOT)/assets/particles/grpupupu_whispy_native.ds.bin
 # The draw path's own payload: the admitted textures as RGB555+A1, which is the
@@ -2558,6 +2586,11 @@ CFILES += nds_r2_sqrtf.c
 endif
 ifeq ($(NDS_R2_COLLISION_FIXED),1)
 CFILES += nds_r2_collision_fixed.c nds_r2_collision_ring.c
+endif
+# Conditional so a published ROM stays byte-identical: at flag 0 the TU is not
+# linked at all, rather than linked as ten `used` counters nothing writes.
+ifeq ($(NDS_R2_FTANIM_TRACK),1)
+CFILES += nds_ftanim_track.c
 endif
 ifeq ($(NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET),1)
 CFILES += battleship_ftcommon_normal_moveset.c
@@ -3372,6 +3405,9 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_R2_BATTLEPACK $(NDS_R2_BATTLEPACK)'; \
 		echo '#define NDS_R2_BATTLEPACK_KEEP_CACHE $(NDS_R2_BATTLEPACK_KEEP_CACHE)'; \
 		echo '#define NDS_R2_BATTLEPACK_DISPATCH $(NDS_R2_BATTLEPACK_DISPATCH)'; \
+		echo '#define NDS_R2_FTANIM_TRACK $(NDS_R2_FTANIM_TRACK)'; \
+		echo '#define NDS_R2_FTANIM_TRACK_DISPATCH $(NDS_R2_FTANIM_TRACK_DISPATCH)'; \
+		echo '#define NDS_R2_FTANIM_TRACK_ORACLE $(NDS_R2_FTANIM_TRACK_ORACLE)'; \
 		echo "#define NDS_R2_BATTLEPACK_BLOB_BYTES $$(test -f '$(NDS_BATTLEPACK_BLOB)' && wc -c < '$(NDS_BATTLEPACK_BLOB)' || echo 0)u"; \
 		echo '#define NDS_R2_AOBJ16_PREBAKE $(NDS_R2_AOBJ16_PREBAKE)'; \
 		echo '#define NDS_R2_ANIM_CUT_ROUTE $(NDS_R2_ANIM_CUT_ROUTE)'; \
@@ -3626,6 +3662,24 @@ $(NITROFS_DIR)/animation/battlepack_fox.bin: $(NDS_BATTLEPACK_BLOB)
 	@mkdir -p $(dir $@)
 	@cp $< $@
 
+# The dense runtime's rows. `--verify` is deliberately NOT passed (it is the
+# 90-second three-layer corpus proof and belongs to a checker run, not to every
+# build), but LAYER D always runs inside `--emit-c` and the generator returns
+# non-zero on it: every emitted figatree entry is decoded back out of the rows
+# at the offset the directory publishes and compared against the o2r script that
+# entry actually points at. A pack that binds joint 7 to joint 8's script is an
+# animation that plays on the wrong bone with no crash and no counter, so this
+# is not optional for the same reason the battlepack's slot check is not.
+$(NDS_FTANIM_TRACK_HEADER): \
+		$(PROJECT_ROOT)/scripts/generate_ftanim_track_pack.py \
+		$(PROJECT_ROOT)/scripts/ftanim_reloc_probe.py \
+		$(PROJECT_ROOT)/scripts/ftanim_script_model.py \
+		$(NDS_FTANIM_DENSE_SOURCES)
+	@mkdir -p $(dir $@)
+	python "$(PROJECT_ROOT)/scripts/generate_ftanim_track_pack.py" \
+		--items-off --fighter fox --emit-c "$@" \
+		--max-bytes $(NDS_FTANIM_TRACK_MAX_BYTES)
+
 $(NITROFS_DIR)/particles/efcommon_particle_textures.ds.bin: $(NDS_PARTICLE_TEXTURE_ASSET)
 	@mkdir -p $(dir $@)
 	@cp $< $@
@@ -3646,7 +3700,7 @@ $(OUTPUT).elf: $(OFILES) $(NDS_PRIVATE_CHECK_OFILES) \
 	$(NDS_HOT_TEXT_SPECS) $(NDS_HOT_TEXT_LINKER_SCRIPT) \
 	$(NDS_TASK32_DRAW_HOT_FRAGMENT) $(NDS_PARTICLE_BANKS_INC) \
 	$(NDS_BATTLE_STATIC_TEXTURE_INC)
-$(OFILES) $(NDS_PRIVATE_CHECK_OFILES): $(PROJECT_ROOT)/Makefile $(NDS_BUILD_CONFIG)
+$(OFILES) $(NDS_PRIVATE_CHECK_OFILES): $(PROJECT_ROOT)/Makefile $(NDS_BUILD_CONFIG) $(NDS_FTANIM_TRACK_PREREQ)
 ifeq ($(NDS_TASK9_FLOAT_ITCM),1)
 NDS_TASK9_FLOAT_LIBGCC := $(shell $(CC) $(ARCH) -print-libgcc-file-name)
 NDS_TASK9_FLOAT_AR := $(shell $(CC) -print-prog-name=ar)

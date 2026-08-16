@@ -1,0 +1,26 @@
+clips 259  scripts 4901  commands 66022  track-segments 89835  target words 156538
+source script-region bytes 558372   (entry tables 26348, files 584720)
+  header             20
+  clip_dir         3108
+  script_tab      29406
+  rows           525136
+  total          557670
+  shared scripts 421 (27672 B saved)
+  PACK / SOURCE SCRIPT BYTES  0.9987x
+  sha256 6384f26ddc59944e1f7dc96d2959ad9e44fa681a530d12134ab1deb372f9bfe8
+  max frames 185 (fits u8: True)  max scripts/clip 22
+  per-script union popcount {1: 8, 2: 2, 3: 3173, 4: 9, 5: 2, 6: 1678, 7: 2, 9: 27}
+  opcodes {0: 4147, 1: 5351, 2: 958, 3: 347, 4: 32472, 5: 13207, 6: 281, 7: 3297, 8: 1913, 9: 2208, 10: 859, 11: 228, 13: 754}
+  track usage {'RotX': 23875, 'RotY': 21266, 'RotZ': 33626, 'TraX': 2937, 'TraY': 3342, 'TraZ': 3253, 'ScaX': 565, 'ScaY': 487, 'ScaZ': 484}
+
+LAYER C  quantisation alphabet 19303  mismatches 0  max Q width 24 bits  values needing >16 bits 2102
+
+LAYERS A+B  (passes=3)
+  scripts 4901  rows 66022  commands 81646  states 75237  callbacks 6409
+  corpus 64b2f5a6a7e86ee0bd80ef04b77542356703ff57c7b623534c683f8d521ad954
+  MISMATCHES 0 
+  falsifier: one byte flipped in the row stream                   -> 1 mismatches
+  falsifier: one script's row offset shifted by one word          -> 1 mismatches
+  falsifier: candidate drops the value_base <- value_target chain -> 4272 mismatches
+
+FTANIM_TRACK_PACK=PASS

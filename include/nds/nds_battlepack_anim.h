@@ -53,6 +53,16 @@
  * animation cache uses. */
 void *ndsBattlePackFindFigatree(u32 asset_id);
 
+/* The inverse: which clip does this slot-table pointer belong to, or -1.
+ *
+ * `lbCommonAddFighterPartsFigatree` receives a POINTER and never an id, so the
+ * dense track runtime (`nds_ftanim_track.h`) cannot key its pack without this.
+ * The reverse lookup lives here rather than in a second address map because a
+ * second map could disagree with the directory it is derived from. Linear over
+ * `clip_count`, and it runs once per clip bind (197 in a whole gate match), not
+ * per joint and not per frame. */
+s32 ndsBattlePackAssetIdForSlotTable(const void *slot_table);
+
 /* Publish a streamed blob as the resident pack. Validates magic, version and
  * the self-declared extent against `bytes` before anything can look a clip up,
  * and refuses rather than publishing on any mismatch -- the class this guards is

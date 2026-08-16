@@ -1,0 +1,30 @@
+Wrote artifacts/performance/2026-08-15_ftanim-dense-runtime/c194-oracle-rows.csv
+Tick-HUD buckets: target=smash64ds-battle-playable-tickhud-hwtri samples=1600 frames=439..2038 melonDS=1.0 sha=DE80E46BDCF1FD98 git=df3bc581f28+dirty(14) dldi=ON
+
+bucket p50        p95        spread mean       min        max        %ALLp50
+------ ---        ---        ------ ----       ---        ---        -------
+ALL     1,117,760  1,678,272   1.50  1,224,342  1,116,544  6,432,640   100.0
+FTR       300,544    304,704   1.01    291,471    172,992  4,492,352    26.9
+STG       178,240    186,688   1.05    179,926    174,400    192,192    15.9
+BG          4,160      4,224   1.02      4,153      3,840      4,416     0.4
+AUD         2,816      6,976   2.48      8,916      1,280    153,984     0.3
+HUD         1,088    414,528 381.00     35,296        960  2,128,192     0.1
+SRC       337,792    564,928   1.67    356,850     11,008  1,186,048    30.2
+MISC      110,528    176,192   1.59    115,889     84,608    327,936     9.9
+OTHR      207,680    505,408   2.43    231,841     20,928    579,968    18.6
+WAIT      188,032    485,696   2.58    212,313        896    560,192    16.8
+WORK      961,280  1,388,224   1.44  1,012,028    682,176  5,941,376    86.0
+SHDT        4,480     84,480  18.86     14,654          0    401,856     0.4
+SWRM        1,024      1,152   1.12      1,026        768      1,216     0.1
+GCRA      332,352    559,680   1.68    351,318      6,592  1,180,480    29.7
+SCPU       55,168    114,496   2.08     49,317          0    145,920     4.9
+SCAT        1,280      1,408   1.10      1,222          0      1,600     0.1
+SPRM        2,048      2,240   1.09      4,986          0    617,408     0.2
+SINT      163,968    301,696   1.84    167,648          0    942,144    14.7
+SPHD       72,448    109,312   1.51     72,663          0    414,144     6.5
+SPHC          576        704   1.22        584          0        896     0.1
+WORK-H    949,312  1,239,296   1.31    976,732    674,112  5,529,792    84.9
+
+named=992,501 (81.1% of ALL)  VBI 2:1699 3:315 4:16 5+:8 max:19 total:2038  slips=0
+extras: gNdsBattleTextHudP1Damage=76  gNdsDamageSparkScaleCount=16  gNdsShieldAnimJointAttachCount=480  gNdsAObjEvent32NormalizedHighWater=774  gNdsBattlePackHits=257  gNdsObjAnimRunawayCount=0  gNdsR2FtAnimParseCalls=144,366  gNdsR2FtAnimParseEarlyOut=108,128  gNdsR2FtAnimParseStepped=36,238  gNdsFtAnimTrackBinds=17  gNdsFtAnimTrackBindMiss=4  gNdsFtAnimTrackBindFull=0  gNdsFtAnimTrackSteps=17  gNdsFtAnimTrackEarlyOut=0  gNdsFtAnimTrackRowsRun=64  gNdsFtAnimTrackOracleRows=64  gNdsFtAnimTrackOracleBad=4  gNdsFtAnimTrackOracleFirst=329,483  gNdsFtAnimTrackDispatch=0  gNdsTaskmanGeneralHeapFreeMin=40,848
+Wrote artifacts/performance/2026-08-15_ftanim-dense-runtime/c194-oracle.json

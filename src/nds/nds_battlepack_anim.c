@@ -177,6 +177,37 @@ void *ndsBattlePackFindFigatree(u32 asset_id)
     return NULL;
 }
 
+s32 ndsBattlePackAssetIdForSlotTable(const void *slot_table)
+{
+    const NDSBattlePackHeader *header = ndsBattlePackHeader();
+    const NDSBattlePackClip *dir;
+    u32 want;
+    u32 i;
+
+    if ((header == NULL) || (slot_table == NULL))
+    {
+        return -1;
+    }
+    if (((uintptr_t)slot_table < (uintptr_t)(const void *)sNdsBattlePackBase) ||
+        ((uintptr_t)slot_table >=
+         ((uintptr_t)(const void *)sNdsBattlePackBase + header->blob_bytes)))
+    {
+        return -1;
+    }
+    want = (u32)((uintptr_t)slot_table -
+                 (uintptr_t)(const void *)sNdsBattlePackBase);
+    dir = (const NDSBattlePackClip *)(const void *)
+        &sNdsBattlePackBase[header->dir_off];
+    for (i = 0u; i < header->clip_count; i++)
+    {
+        if (dir[i].slot_table_off == want)
+        {
+            return (s32)dir[i].asset_id;
+        }
+    }
+    return -1;
+}
+
 s32 ndsBattlePackContains(const void *ptr, size_t size, const void **out_base,
                           size_t *out_size)
 {
@@ -217,6 +248,12 @@ void *ndsBattlePackFindFigatree(u32 asset_id)
 {
     (void)asset_id;
     return NULL;
+}
+
+s32 ndsBattlePackAssetIdForSlotTable(const void *slot_table)
+{
+    (void)slot_table;
+    return -1;
 }
 
 s32 ndsBattlePackAdopt(void *base, u32 bytes)

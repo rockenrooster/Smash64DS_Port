@@ -185,8 +185,15 @@ def read_clip(path: pathlib.Path):
         return None
     table = probe.normalize(f, fx)
     offs = sorted(set(fx.values()))
+    # ENTRY ORDER, not sorted-offset order. `lbCommonAddFighterPartsFigatree`
+    # walks the DObj tree and reads `figatree_entries[j]` for j = 0,1,2,...,
+    # so a runtime bind can only be O(1) if the pack is indexed the same way.
+    # Slots with no relocation are NULL entries (that joint has no script) and
+    # are kept in place -- dropping them would shift every later joint.
     return {"asset_id": f["file_id"], "name": path.name,
             "scripts": [probe.decode_script(f["data"], f["size"], t) for t in offs],
+            "script_offs": offs,
+            "entries": [fx.get(j * 4) for j in range(table // 4)],
             "src_bytes": f["size"] - table, "table_bytes": table,
             "file_bytes": f["size"]}
 
@@ -660,6 +667,230 @@ def scan(clips):
             "union_popcount": dict(sorted(union_pop.items()))}
 
 
+# --------------------------------------------------------------------------- #
+# The RESIDENT form: a C table the DS links into .rodata, indexed the way
+# `lbCommonAddFighterPartsFigatree` actually walks a figatree.
+#
+# Everything above is keyed by "script index" = position in the sorted set of
+# distinct script offsets, which is a HOST convenience and is NOT what the
+# runtime has. The runtime has entry j of the figatree's own pointer table and
+# nothing else, so the resident directory is keyed by (asset_id, entry j).
+#
+# The row index is in u16 units because every row is u16-aligned by construction;
+# 22 bits of it addresses 4 Mi rows against a 137-clip Fox pack of ~143 Ki.
+
+ENT_MASK_BITS = 10
+ENT_NULL = 0xFFFFFFFF
+CLIP_STRUCT_BYTES = 6                                    # u16 x 3
+
+
+def build_c_pack(clips, max_bytes=None):
+    """(selected, rows, entries, dirs, sizes), taken in ASCENDING ASSET ID.
+
+    The order is not cosmetic and not "smallest first". A fighter's animation
+    files are named `FTFoxAnim<N>` / `FTMarioAnim<N>` with N the motion index,
+    and the o2r `file_id` follows that order, so ascending id is ascending
+    motion index -- the common motions (`nFTCommonMotion*`: Wait, Walk, Dash,
+    Run, Turn, Jump, Fall, Landing, the standard attacks) come FIRST and the
+    character-specific tail comes last. Under a tight byte budget that buys
+    the clips a match actually binds. Smallest-first buys the most clips and
+    would be a coverage lottery.
+
+    Dedup is applied incrementally, so a clip sharing scripts with one already
+    admitted costs less than its own size.
+    """
+    order = [(0, clip["asset_id"], clip) for clip in clips]
+    order.sort(key=lambda t: t[1])
+
+    rows, seen = bytearray(), {}
+    entries, dirs, chosen = [], [], []
+    for _n, _aid, clip in order:
+        row_add, ent_add, local = bytearray(), [], dict(seen)
+        for off in clip["entries"]:
+            if off is None:
+                ent_add.append(ENT_NULL)
+                continue
+            cmds = clip["scripts"][clip["script_offs"].index(off)]
+            blob, union = encode_script(cmds)
+            if blob in local:
+                at = local[blob]
+            else:
+                at = len(rows) + len(row_add)
+                local[blob] = at
+                row_add += blob
+            if (at & 1) or (at >> 1) >= (1 << (32 - ENT_MASK_BITS)):
+                raise ValueError("row offset %d not representable" % at)
+            # The DS stepper shifts an authored s16 by a per-track power of two.
+            # TraI's 1/16384-3e-12 is not one, so a TraI bit would need the
+            # float expression on the hot path. The corpus contains ZERO of
+            # them; refuse rather than ship a silently wrong shift.
+            if union & (1 << 3):
+                raise ValueError("clip %d entry uses TraI, which the dense "
+                                 "stepper cannot shift exactly" % clip["asset_id"])
+            # The stepper's Q30 reciprocal table is 256 entries, so a frame
+            # count that does not index it would be a silent wrong curve.
+            for c in cmds:
+                if (c.get("payload") or 0) > 255:
+                    raise ValueError("clip %d has a %d-frame block, past the "
+                                     "256-entry reciprocal table"
+                                     % (clip["asset_id"], c["payload"]))
+            ent_add.append(((at >> 1) << ENT_MASK_BITS) | union)
+        cand = (CLIP_STRUCT_BYTES * (len(dirs) + 1) +
+                4 * (len(entries) + len(ent_add)) + len(rows) + len(row_add))
+        if max_bytes is not None and cand > max_bytes:
+            continue
+        dirs.append((clip["asset_id"], len(clip["entries"]), len(entries)))
+        entries.extend(ent_add)
+        rows += row_add
+        seen = local
+        chosen.append(clip)
+    dirs.sort()
+    return chosen, bytes(rows), entries, dirs, {
+        "clips": CLIP_STRUCT_BYTES * len(dirs), "entries": 4 * len(entries),
+        "rows": len(rows),
+        "total": CLIP_STRUCT_BYTES * len(dirs) + 4 * len(entries) + len(rows)}
+
+
+def verify_c_pack(chosen, rows, entries, dirs):
+    """LAYER D -- entry-order fidelity, the one the FTTP blob cannot cover.
+
+    For every clip and every figatree entry j, decode the rows at the offset the
+    C directory publishes and compare the recovered command sequence against the
+    o2r script that entry j actually points at. A pack that is internally
+    consistent but binds joint 7 to joint 8's script passes A, B and C and fails
+    only here.
+    """
+    mm = collections.Counter()
+    by_id = {aid: (n, first) for aid, n, first in dirs}
+    n = collections.Counter()
+    for clip in chosen:
+        if clip["asset_id"] not in by_id:
+            mm["clip missing"] += 1
+            continue
+        cnt, first = by_id[clip["asset_id"]]
+        if cnt != len(clip["entries"]):
+            mm["entry count"] += 1
+            continue
+        for j, off in enumerate(clip["entries"]):
+            word = entries[first + j]
+            if off is None:
+                n["null entries"] += 1
+                if word != ENT_NULL:
+                    mm["null entry not null"] += 1
+                continue
+            if word == ENT_NULL:
+                mm["live entry marked null"] += 1
+                continue
+            n["entries"] += 1
+            at = (word >> ENT_MASK_BITS) * 2
+            mask = word & ((1 << ENT_MASK_BITS) - 1)
+            cmds = clip["scripts"][clip["script_offs"].index(off)]
+            want, union = [], 0
+            for c in cmds:
+                if c.get("cyclic"):
+                    break
+                r = row_of_command(c)
+                want.append(r)
+                union |= r[1]
+            got, p = [], at
+            for _ in range(len(want)):
+                kind, m, frames, words, blk, jump, nxt = decode_row(rows, p)
+                got.append((kind, m, frames, words, blk))
+                n["rows"] += 1
+                p = nxt
+            if want != got:
+                mm["entry rows"] += 1
+            if union != mask:
+                mm["entry union mask"] += 1
+    return {"mismatches": dict(mm), "total": sum(mm.values()), "counts": dict(n)}
+
+
+def nds_f32_to_fixed(v: float, bits: int) -> int:
+    """`ndsR2F32ToFixed` (nds_anim_fixed.h:114) BIT FOR BIT, not an approximation.
+
+    The dense stepper replaces `ndsR2AnimRecipSlot(payload, 1)` -- a table read
+    plus this conversion, on the hot path -- with one `ldr` from the table
+    emitted below. That is only a deletion if the emitted word is the SAME word,
+    so this reproduces the shipped algorithm rather than `round(v * 2**bits)`.
+    """
+    bits_in = struct.unpack("<I", struct.pack("<f", v))[0]
+    exp = (bits_in >> 23) & 0xFF
+    if exp == 0:
+        return 0
+    if exp == 0xFF:
+        raise ValueError("infinite/NaN reciprocal")
+    mant = (bits_in & 0x7FFFFF) | 0x800000
+    shift = (exp - 127) - 23 + bits
+    if shift >= 0:
+        if shift > 7:
+            raise ValueError("saturating reciprocal at shift %d" % shift)
+        mant <<= shift
+    elif shift < -24:
+        mant = 0
+    else:
+        mant = (mant + (1 << (-shift - 1))) >> -shift
+    return -mant if (bits_in & 0x80000000) else mant
+
+
+def recip_q_table(n=256):
+    """`sNdsR2Recip[i]` folded to Q30, the word the Cubic arms store in
+    `length_invert`. Entry 0 is a placeholder -- every reader is guarded by a
+    payload-not-zero test, exactly as in the shipped parser."""
+    out = [0]
+    for i in range(1, n):
+        f = struct.unpack("<f", struct.pack("<f", 1.0 / i))[0]
+        out.append(nds_f32_to_fixed(f, AQ_IF))
+    return out
+
+
+def emit_c(path, chosen, rows, entries, dirs, sizes, budget):
+    u16 = struct.unpack("<%dH" % (len(rows) // 2), rows)
+    out = ["/* GENERATED by scripts/generate_ftanim_track_pack.py -- do not edit.",
+           " *",
+           " * Typed animation track rows for the converted fighter clips, in",
+           " * FIGATREE ENTRY ORDER so a bind is one index. Layer D of the",
+           " * generator proves entry j decodes to the script entry j points at.",
+           " */",
+           "#define NDS_FTANIM_TRACK_PACK_GENERATED 1",
+           "#define NDS_FTANIM_TRACK_PACK_CLIPS %du" % len(dirs),
+           "#define NDS_FTANIM_TRACK_PACK_ENTRIES %du" % len(entries),
+           "#define NDS_FTANIM_TRACK_PACK_ROWS_U16 %du" % len(u16),
+           "#define NDS_FTANIM_TRACK_PACK_BYTES %du" % sizes["total"],
+           "#define NDS_FTANIM_TRACK_PACK_BUDGET %du" % (budget or 0),
+           "#define NDS_FTANIM_TRACK_PACK_FIRST_ID %du" % dirs[0][0],
+           "#define NDS_FTANIM_TRACK_PACK_LAST_ID %du" % dirs[-1][0],
+           "",
+           "static const NDSFtAnimTrackClip",
+           "    sNdsFtAnimTrackClips[NDS_FTANIM_TRACK_PACK_CLIPS] = {"]
+    for aid, cnt, first in dirs:
+        out.append("    { %du, %du, %du }," % (aid, cnt, first))
+    out.append("};")
+    out.append("")
+    out.append("static const u32 "
+               "sNdsFtAnimTrackEntries[NDS_FTANIM_TRACK_PACK_ENTRIES] = {")
+    for i in range(0, len(entries), 8):
+        out.append("    " + " ".join("0x%08xu," % w for w in entries[i:i + 8]))
+    out.append("};")
+    out.append("")
+    out.append("static const u16 "
+               "sNdsFtAnimTrackRows[NDS_FTANIM_TRACK_PACK_ROWS_U16] = {")
+    for i in range(0, len(u16), 12):
+        out.append("    " + " ".join("0x%04xu," % w for w in u16[i:i + 12]))
+    out.append("};")
+    out.append("")
+    out.append("/* `ndsR2AnimRecipSlot(n, 1)` precomputed: the Q30 reciprocal the")
+    out.append(" * Cubic arms store in `length_invert`, produced by this file's")
+    out.append(" * bit-for-bit model of `ndsR2F32ToFixed`. The dense stepper reads")
+    out.append(" * it instead of running the conversion per row. */")
+    out.append("static const s32 sNdsFtAnimTrackRecipQ[256] = {")
+    tab = recip_q_table()
+    for i in range(0, len(tab), 6):
+        out.append("    " + " ".join("%d," % w for w in tab[i:i + 6]))
+    out.append("};")
+    out.append("")
+    pathlib.Path(path).write_text("\n".join(out))
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--items-off", action="store_true")
@@ -669,6 +900,11 @@ def main() -> int:
     ap.add_argument("--verify", action="store_true")
     ap.add_argument("--out")
     ap.add_argument("--json")
+    # The resident C form. `--max-bytes` is a HARD budget on .rodata, because
+    # static image growth costs the taskman arena 1:1 and the general heap's
+    # measured free minimum is what bounds it, not the boot-headroom ladder.
+    ap.add_argument("--emit-c")
+    ap.add_argument("--max-bytes", type=int)
     args = ap.parse_args()
 
     if not BANK.is_dir():
@@ -737,13 +973,39 @@ def main() -> int:
                     print("  FAIL: a falsifier did not fail -- the test is blind")
                     rc = 1
         print("\nFTANIM_TRACK_PACK=%s" % ("PASS" if rc == 0 else "FAIL"))
+
+    cpack = None
+    if args.emit_c:
+        chosen, crows, cents, cdirs, csizes = build_c_pack(clips, args.max_bytes)
+        if not cdirs:
+            print("REFUSED: --max-bytes %s admits no clip at all" % args.max_bytes)
+            return 1
+        d = verify_c_pack(chosen, crows, cents, cdirs)
+        emit_c(args.emit_c, chosen, crows, cents, cdirs, csizes, args.max_bytes)
+        cpack = {"selected": len(cdirs), "of": len(clips), "sizes": csizes,
+                 "layer_d": d,
+                 "sha256": hashlib.sha256(crows).hexdigest()}
+        print("\nRESIDENT C PACK  %d of %d clips  %d B "
+              "(clips %d + entries %d + rows %d)  budget %s"
+              % (len(cdirs), len(clips), csizes["total"], csizes["clips"],
+                 csizes["entries"], csizes["rows"], args.max_bytes))
+        print("  LAYER D entry-order  entries %d  null %d  rows %d  "
+              "MISMATCHES %d %s"
+              % (d["counts"].get("entries", 0), d["counts"].get("null entries", 0),
+                 d["counts"].get("rows", 0), d["total"], d["mismatches"] or ""))
+        print("  rows sha256 %s" % cpack["sha256"])
+        print("  -> %s" % args.emit_c)
+        if d["total"]:
+            rc = 1
+        print("FTANIM_TRACK_PACK_C=%s" % ("PASS" if d["total"] == 0 else "FAIL"))
     if args.out:
         pathlib.Path(args.out).write_bytes(blob)
     if args.json:
         pathlib.Path(args.json).write_text(json.dumps(
             {"clips": len(clips), "scripts": nscripts, "sizes": sizes,
              "source_bytes": src, "facts": facts, "layer_c": lc,
-             "sha256": hashlib.sha256(blob).hexdigest(), "verify": result},
+             "sha256": hashlib.sha256(blob).hexdigest(), "verify": result,
+             "c_pack": cpack},
             indent=1))
     return rc
 

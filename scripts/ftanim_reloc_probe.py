@@ -239,12 +239,24 @@ def decode_script(data, size, off, limit=8192, native=False):
             cmd["payload"] = struct.unpack_from("<H", data, p)[0]
             p += 2
         per = 2 if op in (4, 5) else (1 if op in (2, 3, 6, 7, 8, 9, 10) else 0)
-        if per:
+        # `targets` is "which tracks this command TOUCHES", not "which tracks
+        # carry a word". Opcode 11 (`nGCAnimEvent1611`) carries no per-track
+        # word -- `ndsRelocAObj16CommandWords` gives it `1 + toggle` words --
+        # but it still scans `flags` and adds the payload to `length` on every
+        # selected track (`ft/ftanim.c:281-300`). Gating the scan on `per` made
+        # it look like a command that touches nothing, and because
+        # `ftanim_script_model.run_commands` also iterates `targets`, BOTH the
+        # reference and every candidate built on this decoder agreed on the
+        # wrong answer -- a shared-decoder blind spot of exactly the kind
+        # `2026-08-15`'s track-pack write-up named. Found 2026-08-15 by the
+        # on-target decision-point oracle, which reads the command word itself.
+        if per or (op == 11):
             for bit in range(10):
                 if not (flags >> bit):
                     break
                 if (flags >> bit) & 1:
-                    vals = struct.unpack_from("<%dh" % per, data, p)
+                    vals = struct.unpack_from("<%dh" % per, data, p) if per \
+                        else ()
                     cmd["targets"].append((bit, vals))
                     p += 2 * per
         out.append(cmd)

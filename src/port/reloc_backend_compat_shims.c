@@ -5,6 +5,7 @@
 #include <nds/nds_ifcommon_oam.h>
 #include <nds/nds_task39_effect_census.h>
 #include <nds/nds_task37_itcm.h>
+#include <nds/nds_ftanim_track.h>
 #include <sys/vector.h>
 
 /* Shield anim-joint install engagement + the lab dispatch audit; legends in
@@ -1895,6 +1896,19 @@ extern volatile u32 gNdsR2AnimCutRoute;
 void ftAnimParseDObjFigatree(DObj *root_dobj)
 {
 #if NDS_IMPORT_BATTLESHIP_FTMANAGER
+#if NDS_R2_FTANIM_TRACK
+    /* Stage 3. One range compare against a static array decides it: a joint
+     * bound to precompiled rows carries its own cursor block in
+     * `anim_joint.event16`, and nothing else in the tree reads that field for a
+     * figatree joint (`gcParseDObjAnimJoint` owns the AObj32 path and is
+     * selected by `is_anim_joint` at the caller). At dispatch 0 no block is
+     * ever installed, so this is FALSE for every joint on the same binary. */
+    if (ndsFtAnimTrackIsDense(root_dobj->anim_joint.event16) != FALSE)
+    {
+        ndsFtAnimTrackStep(root_dobj);
+        return;
+    }
+#endif
 #if NDS_R2_ANIM_CUT_ROUTE
     if ((gNdsR2AnimCutRoute & 4u) != 0u)
     {
@@ -9051,6 +9065,14 @@ void lbCommonAddFighterPartsFigatree(DObj *root_dobj, void *figatree,
 #endif
     void **figatree_entries = figatree;
     DObj *current_dobj = root_dobj;
+#if NDS_R2_FTANIM_TRACK
+    /* Stage 3: status/motion selection binds the precompiled rows ONCE, here.
+     * This is the only site that attaches a fighter figatree, and the tree walk
+     * below indexes the figatree's own entry table -- which is exactly how the
+     * AOT pack is keyed, so the bind is one array index per joint. */
+    const s32 trk_base = ndsFtAnimTrackBeginClip(root_dobj, figatree);
+    s32 trk_index = 0;
+#endif
 
     if ((root_dobj != NULL) && (root_dobj->parent_gobj != NULL))
     {
@@ -9067,6 +9089,13 @@ void lbCommonAddFighterPartsFigatree(DObj *root_dobj, void *figatree,
         if (anim_joint != NULL)
         {
             gcAddDObjAnimJoint(current_dobj, anim_joint, anim_frame);
+#if NDS_R2_FTANIM_TRACK
+            /* AFTER the generic bind, never instead of it: `gcAddDObjAnimJoint`
+             * resets every AObj to `nGCAnimKindNone`, sets `anim_wait` to
+             * AOBJ_ANIM_CHANGED and stores the anim frame, and all three are
+             * load-bearing. This only replaces the cursor. */
+            (void)ndsFtAnimTrackBindJoint(current_dobj, trk_base, trk_index);
+#endif
             gNdsFighterNaturalMotionFigatreeAttachCount++;
             if (parts != NULL)
             {
@@ -9091,6 +9120,9 @@ void lbCommonAddFighterPartsFigatree(DObj *root_dobj, void *figatree,
             }
         }
         figatree_entries++;
+#if NDS_R2_FTANIM_TRACK
+        trk_index++;
+#endif
         current_dobj =
             ndsLBCommonGetTreeDObjNextFromRoot(current_dobj, root_dobj);
     }

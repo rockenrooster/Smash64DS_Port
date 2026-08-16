@@ -149,6 +149,55 @@ AI half is subtracted out). **Next: animation representation, consuming these
 numbers.** Evidence:
 `artifacts/performance/2026-08-15_sitr-direct-children/SITR_DIRECT_CHILDREN.md`.
 
+**ANIMATION REPRESENTATION, STAGES 3–4: THE DENSE RUNTIME IS WIRED, ITS ORACLE
+IS 0/12,232, AND THE A/B IS TICK-NEUTRAL — PLUS TWO REAL DEFECTS (2026-08-15).**
+4 lab builds, 4 gate runs, no default flipped (`NDS_R2_FTANIM_TRACK ?= 0`), **no
+re-bank**. Evidence:
+`artifacts/performance/2026-08-15_ftanim-dense-runtime/DENSE_RUNTIME.md`.
+
+- **DEFECT 1 — a shipped one-frame segment-phase regression, REPAIRED.**
+  `69ce92e279f` hoisted `-anim_wait - anim_speed` into `len_new` in all four
+  write cases of `ndsR2FtAnimParseDObjFigatree` and assigned it in **one**.
+  `git show 69ce92e279f^` has the fresh expression at all four sites; the decomp
+  writes it fresh in each case. **Opcodes 4+5 = 45,679 of 55,261 items-off write
+  commands (82.7%) sit in a case that never assigned it**, so segments started at
+  phase 0 and the first evaluated sample landed a frame inside the segment.
+  **This changes the shipped ROM and the fight**: spark 15→16, shield
+  1,352→480, AObj high-water 1,266→774, packHits 197→257 (P1Damage 76 and
+  runaway 0 unchanged). **No tick comparison against the c185 bank is
+  like-for-like any more — a fresh bank on the repaired tree is REQUIRED before
+  the next performance verdict.** `build-c193-segfix` reads rank-80 1,228,608.
+- **DEFECT 2 — a shared-decoder blind spot, found by the on-target oracle.**
+  `ftanim_reloc_probe.decode_script` recorded `targets` only for commands
+  carrying per-track words, so opcode 11 `AddLen` looked like it touched no
+  track; `run_commands` iterates the same field, so reference and candidate
+  agreed on the wrong answer and layers A/B/C could not see it. Fixed at the
+  decoder. Corpus hash `cb28f9bf65c4` → **`64b2f5a6a7e8`**, sizes unchanged,
+  three-layer proof re-run PASSES (0 mismatches, falsifiers 1/1/4,272).
+- **Stage 3 wired**: bind once at `lbCommonAddFighterPartsFigatree` keyed by
+  figatree ENTRY index; step typed rows with no command decode, no flag scan, no
+  per-call AObj list walk, no per-call Q migration, no `ftAnimGetTargetValue`.
+  **Engagement exact on one ROM**: generic parse calls 144,383 → 115,288 =
+  **−29,095**, dense counters **24,197 + 4,898 = 29,095**, control hard zero.
+- **Stage 4 oracle 0 mismatches over 12,232 decision points**, fail-closed, and
+  it FIRED (4) before defect 2 was fixed — a control that can fail.
+- **A/B TICK-NEUTRAL**: same ROM, one poked word, zero placement floor. rank-80
+  1,231,872 → 1,232,000 = **+128**, P50 +576, trimmed mean +1,261, `SINT` +77
+  trimmed / +1,664 rank-80. **A partial conversion cannot win**: the generic
+  parser still serves 79.8% of calls so its bytes stay hot, and the dense
+  stepper's 3,368 B code + 12,244 B rows are pure fetch ADDITION. **The 33,951
+  mechanism is not refuted; this configuration is.**
+- **Coverage 8 of 137 Fox clips** because the pack is `.rodata` and the real
+  budget is `gNdsTaskmanGeneralHeapFreeMin` **53,136 − 32,768 reserve = 20,368
+  B**, not `check-boot-headroom.ps1`'s 312,448 ladder figure. Free-min ends at
+  40,848. Ascending-asset-id selection buys **20.4% of clip binds from 5.8% of
+  clips**.
+- **NEXT**: full coverage = the pack in the taskman ARENA in place of
+  `battlepack_fox.bin` (stage 2's proven −822 B drop-in), a cross-build A/B, and
+  a fresh bank. **No v3 capture was taken**, so the neutrality is unattributed
+  between fetch cost and off-percentile deletion; one v3 run on the same
+  byte-identical pair splits it with no rebuild.
+
 **The previous bank — `WORK-H` P50 923,392 / P95 1,210,880** (slice 50,
 `builds/build-c131-cand`, same configuration), superseded by the anim-joint fix's +49,216.
 Slice 50's own control measured HEAD at
