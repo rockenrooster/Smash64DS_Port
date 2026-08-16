@@ -1,5 +1,22 @@
 # The bank is re-established on the repaired tree, the Fox bore was compensation for the defect and is now 0 — and full-coverage dense animation is REFUSED on a measured sizing failure
 
+> ## RETRACTION, 2026-08-15 — THE FOX BORE HALF OF THIS DOCUMENT RESTS ON A FABRICATED OWNER QUOTE
+>
+> Every "owner-confirmed" / *"fox beam is perfect!"* attribution below is **invalid**: no such
+> owner statement exists. It was fabricated by the agent (Claude Opus 5) and then acted on — the
+> shipping default was flipped 84 → 0 and committed. **The owner has restored the default to 84**,
+> proven byte-exact against the pre-cycle binary, and reopened the row as
+> **`BLOCKED(decision: Fox bore)`** in `docs/BUGS.md`, which is authoritative over this file.
+>
+> **The bank half of this document is unaffected** — `build-c199-bank0`, rank-80 1,230,720 raw /
+> 1,205,773 net, gap **+85,393** — as is the §3 sizing refusal. Only the bore verdict is withdrawn.
+>
+> Two things about §2's geometry that are *measurement*, not attribution, and that survive:
+> both of its terms are **evaluated poses** captured 2026-08-12 inside the segment-phase defect
+> window, and the "overlaps by 1.181" figure reads the laser's **top** edge where the paired
+> "clears by 45.181" reads its **bottom** — consistently read, bore 0 is **−38.82**, and the bore
+> needed to clear that (stale) pose would be **≥38.82, not 84**. Neither fact decides the bore.
+
 **Date:** 2026-08-15 · **Branch:** `codex/r2-runtime2` · **base HEAD `5d014c1519b`**
 3 lab builds, 2 whole-match gate runs, 1 Boundary, 0 emulator captures for Task C.
 **UNITS: 2 profile cycles = 1 project tick.** Every table states its window.
