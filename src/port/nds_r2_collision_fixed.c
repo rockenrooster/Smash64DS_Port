@@ -32,7 +32,45 @@
  * charter 3.11 (no gameplay-time allocation) and 3.12 (nothing keyed on a
  * pointer that survives a scene boundary) are satisfied by construction rather
  * than by a guard.
+ *
+ * -- with one qualification since NDS_R2_CFX_HWMATH landed. The two hooks the
+ * header has carried undefined since it was written, NDS_R2_CFX_DIV64 and
+ * NDS_R2_CFX_ISQRT64, are now bound to the ARM9 divide and square-root
+ * coprocessors here, so the kernels touch shared MMIO state and are no longer
+ * pure in the strict sense. What that costs is set out in
+ * include/nds/nds_r2_hwmath_unit.h: this binary has no interrupt-context user
+ * of either unit -- the port's one registered handler is a counter increment --
+ * so a mainline sequence cannot be interleaved, and the property the purity was
+ * buying (no protocol needed) still holds for the same reason it did before.
+ * It is now a measured property of the link rather than a structural one, which
+ * is a real downgrade and is why it is written down here and not only there.
+ *
+ * The hooks are bound in THIS translation unit and nowhere else, deliberately:
+ * scripts/check-r2-collision-fixed.c compiles the same header on the host and
+ * must keep the portable default, and every executing instance of a
+ * divide-using kernel is instantiated out-of-line below.
  */
+
+/* NDS_R2_CFX_HWMATH arrives through the Makefile's global
+ * `-include $(BUILD)/nds_build_config.h` (Makefile:2382), the same way
+ * NDS_R2_COLLISION_FIXED reaches src/import/battleship_gmcollision.c. */
+#if NDS_R2_CFX_HWMATH
+#include <nds/nds_r2_hwmath_unit.h>
+#define NDS_R2_CFX_DIV64(numerator, denominator) \
+    ndsR2HwMathCfxDiv64((int64_t)(numerator), (int64_t)(denominator))
+#define NDS_R2_CFX_ISQRT64(value) ndsR2HwMathCfxIsqrt64(value)
+/* THE THIRD HOOK, and it was not in the brief. include/nds/nds_r2_collision_mtx.h:361
+ * carries its own never-defined NDS_R2_COLLISION_DIV64 with the same "the port
+ * overrides this with the DS hardware divider" comment, and it is the divide
+ * inside ndsR2CollisionInvertMatrix44 -- i.e. inside ndsR2CollisionFixedInvertF32,
+ * which is one of the four f32-boundary entry points the wired ring actually
+ * calls (EXCHANGE.md section 3.1 lists InvertF32 among the ring rows). Binding
+ * only the two CFX hooks left a `bl __aeabi_ldivmod` in this object, found by
+ * disassembling it rather than by reading the brief. That header is included by
+ * nds_r2_collision_fixed.h, so defining the macro here reaches it. */
+#define NDS_R2_COLLISION_DIV64(numerator, denominator) \
+    ndsR2HwMathCfxDiv64((int64_t)(numerator), (int64_t)(denominator))
+#endif
 
 #include <nds/nds_r2_collision_fixed.h>
 

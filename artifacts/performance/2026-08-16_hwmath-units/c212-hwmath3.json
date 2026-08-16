@@ -1,0 +1,501 @@
+{
+  "target": "smash64ds-battle-playable-tickhud-hwtri",
+  "rom": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\builds\\build-c212-hwmath3\\smash64ds-battle-playable-tickhud-hwtri.nds",
+  "romSha256": "64F6CA36EBC713CC172833D19A34CD0561F9EEAE71044D9481DF698D393B1584",
+  "melonDS": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\emulators\\melonds\\melonDS.exe",
+  "melonDSSha256": "DE80E46BDCF1FD986162DE6AFFD9EE1148F8C40565DBAF667B9C2B3EF5475715",
+  "melonDSVersion": "1.0",
+  "gitShort": "3204ffa5178",
+  "gitDirtyPaths": 15,
+  "dldiEnabled": true,
+  "ringDump": false,
+  "samples": 8,
+  "startFrame": 60,
+  "endFrame": 67,
+  "buckets": [
+    {
+      "bucket": "ALL",
+      "mean": 1117680,
+      "p50": 1117568,
+      "p95": 1117824,
+      "min": 1117504,
+      "max": 1117952
+    },
+    {
+      "bucket": "FTR",
+      "mean": 304304,
+      "p50": 303680,
+      "p95": 306048,
+      "min": 301760,
+      "max": 307840
+    },
+    {
+      "bucket": "STG",
+      "mean": 175416,
+      "p50": 175232,
+      "p95": 176192,
+      "min": 174272,
+      "max": 176256
+    },
+    {
+      "bucket": "BG",
+      "mean": 4304,
+      "p50": 4288,
+      "p95": 4352,
+      "min": 4224,
+      "max": 4352
+    },
+    {
+      "bucket": "AUD",
+      "mean": 2792,
+      "p50": 2752,
+      "p95": 2816,
+      "min": 2752,
+      "max": 2880
+    },
+    {
+      "bucket": "HUD",
+      "mean": 50240,
+      "p50": 12096,
+      "p95": 12288,
+      "min": 11904,
+      "max": 317376
+    },
+    {
+      "bucket": "SRC",
+      "mean": 247200,
+      "p50": 246080,
+      "p95": 250688,
+      "min": 244288,
+      "max": 252352
+    },
+    {
+      "bucket": "MISC",
+      "mean": 79936,
+      "p50": 79808,
+      "p95": 80512,
+      "min": 79040,
+      "max": 80576
+    },
+    {
+      "bucket": "OTHR",
+      "mean": 291208,
+      "p50": 289408,
+      "p95": 295488,
+      "min": 284160,
+      "max": 298624
+    },
+    {
+      "bucket": "WAIT",
+      "mean": 265288,
+      "p50": 263488,
+      "p95": 270016,
+      "min": 258176,
+      "max": 272768
+    },
+    {
+      "bucket": "WORK",
+      "mean": 852392,
+      "p50": 850560,
+      "p95": 857088,
+      "min": 845184,
+      "max": 859392
+    },
+    {
+      "bucket": "SHDT",
+      "mean": 4672,
+      "p50": 4608,
+      "p95": 4864,
+      "min": 4480,
+      "max": 5056
+    },
+    {
+      "bucket": "SWRM",
+      "mean": 984,
+      "p50": 960,
+      "p95": 1024,
+      "min": 960,
+      "max": 1024
+    },
+    {
+      "bucket": "GCRA",
+      "mean": 242272,
+      "p50": 241152,
+      "p95": 245632,
+      "min": 239360,
+      "max": 247360
+    },
+    {
+      "bucket": "SCPU",
+      "mean": 0,
+      "p50": 0,
+      "p95": 0,
+      "min": 0,
+      "max": 0
+    },
+    {
+      "bucket": "SCAT",
+      "mean": 1312,
+      "p50": 1280,
+      "p95": 1408,
+      "min": 1216,
+      "max": 1408
+    },
+    {
+      "bucket": "SPRM",
+      "mean": 1984,
+      "p50": 1920,
+      "p95": 2112,
+      "min": 1920,
+      "max": 2112
+    },
+    {
+      "bucket": "SINT",
+      "mean": 94312,
+      "p50": 93952,
+      "p95": 97472,
+      "min": 90560,
+      "max": 98816
+    },
+    {
+      "bucket": "SPHD",
+      "mean": 58512,
+      "p50": 58368,
+      "p95": 59264,
+      "min": 57280,
+      "max": 59328
+    },
+    {
+      "bucket": "SPHC",
+      "mean": 648,
+      "p50": 576,
+      "p95": 768,
+      "min": 576,
+      "max": 832
+    },
+    {
+      "bucket": "WORK-H",
+      "mean": 802152,
+      "p50": 838336,
+      "p95": 845120,
+      "min": 527808,
+      "max": 847232
+    }
+  ],
+  "bucketNames": [
+    "ALL",
+    "FTR",
+    "STG",
+    "BG",
+    "AUD",
+    "HUD",
+    "SRC",
+    "MISC",
+    "OTHR",
+    "WAIT",
+    "WORK",
+    "SHDT",
+    "SWRM",
+    "GCRA",
+    "SCPU",
+    "SCAT",
+    "SPRM",
+    "SINT",
+    "SPHD",
+    "SPHC"
+  ],
+  "rows": [
+    [
+      60,
+      1117504,
+      302144,
+      174272,
+      4288,
+      2752,
+      12224,
+      247552,
+      80320,
+      293312,
+      266944,
+      850560,
+      4800,
+      960,
+      242688,
+      0,
+      1344,
+      1984,
+      95232,
+      58304,
+      576
+    ],
+    [
+      61,
+      1117696,
+      307840,
+      176192,
+      4224,
+      2752,
+      11968,
+      252352,
+      79808,
+      286592,
+      260608,
+      857088,
+      4480,
+      960,
+      247360,
+      0,
+      1280,
+      2112,
+      98816,
+      58816,
+      768
+    ],
+    [
+      62,
+      1117568,
+      306048,
+      176128,
+      4352,
+      2752,
+      12160,
+      250688,
+      80512,
+      284160,
+      258176,
+      859392,
+      4480,
+      1024,
+      245632,
+      0,
+      1344,
+      2112,
+      97472,
+      59328,
+      832
+    ],
+    [
+      63,
+      1117824,
+      304704,
+      175232,
+      4288,
+      2816,
+      12288,
+      247232,
+      80576,
+      287488,
+      261376,
+      856448,
+      4608,
+      960,
+      242368,
+      0,
+      1408,
+      1920,
+      95232,
+      57280,
+      576
+    ],
+    [
+      64,
+      1117504,
+      304640,
+      176256,
+      4288,
+      2816,
+      11904,
+      245056,
+      79744,
+      289408,
+      263488,
+      854016,
+      4608,
+      1024,
+      240000,
+      0,
+      1216,
+      1984,
+      92480,
+      58368,
+      704
+    ],
+    [
+      65,
+      1117824,
+      303616,
+      174848,
+      4352,
+      2816,
+      11904,
+      244352,
+      80128,
+      295488,
+      270016,
+      847808,
+      4480,
+      960,
+      239616,
+      0,
+      1408,
+      1920,
+      90752,
+      58944,
+      576
+    ],
+    [
+      66,
+      1117568,
+      303680,
+      175744,
+      4352,
+      2880,
+      12096,
+      244288,
+      79360,
+      294592,
+      268928,
+      848640,
+      5056,
+      1024,
+      239360,
+      0,
+      1280,
+      1920,
+      90560,
+      59264,
+      576
+    ],
+    [
+      67,
+      1117952,
+      301760,
+      174656,
+      4288,
+      2752,
+      317376,
+      246080,
+      79040,
+      298624,
+      272768,
+      845184,
+      4864,
+      960,
+      241152,
+      0,
+      1216,
+      1920,
+      93952,
+      57792,
+      576
+    ]
+  ],
+  "meanAll": 1117680,
+  "meanNamed": 864192.0,
+  "vbi2": 51,
+  "vbi3": 8,
+  "vbi4": 1,
+  "vbi5plus": 7,
+  "vbiMax": 19,
+  "vbiTotal": 67,
+  "cadenceViolations": 0,
+  "extras": [
+    {
+      "name": "gNdsR2HwMathBenchRan",
+      "value": 1
+    },
+    {
+      "name": "gNdsR2HwMathBenchQuotMismatch",
+      "value": 0
+    },
+    {
+      "name": "gNdsR2HwMathBenchRemMismatch",
+      "value": 0
+    },
+    {
+      "name": "gNdsR2HwMathBenchQuotLeadMismatch",
+      "value": 0
+    },
+    {
+      "name": "gNdsR2HwMathBenchRemLeadMismatch",
+      "value": 0
+    },
+    {
+      "name": "gNdsR2HwMathBenchHalfCases",
+      "value": 223
+    },
+    {
+      "name": "gNdsR2HwMathBenchFdivMismatch",
+      "value": 0
+    },
+    {
+      "name": "gNdsR2HwMathBenchDivMismatch",
+      "value": 0
+    },
+    {
+      "name": "gNdsR2HwMathBenchDivFastMismatch",
+      "value": 0
+    },
+    {
+      "name": "gNdsR2HwMathBenchSqrtMismatch",
+      "value": 0
+    },
+    {
+      "name": "gNdsR2HwMathBenchSqrtFastMismatch",
+      "value": 0
+    },
+    {
+      "name": "gNdsR2HwMathBenchSqrtfMismatch",
+      "value": 0
+    },
+    {
+      "name": "gNdsR2HwMathBenchBaseTicks",
+      "value": 14528
+    },
+    {
+      "name": "gNdsR2HwMathBenchDivSoftTicks",
+      "value": 1212736
+    },
+    {
+      "name": "gNdsR2HwMathBenchDivLeadTicks",
+      "value": 448768
+    },
+    {
+      "name": "gNdsR2HwMathBenchDivFastTicks",
+      "value": 280896
+    },
+    {
+      "name": "gNdsR2HwMathBenchSqrtSoftTicks",
+      "value": 1222848
+    },
+    {
+      "name": "gNdsR2HwMathBenchSqrtLeadTicks",
+      "value": 241792
+    },
+    {
+      "name": "gNdsR2HwMathBenchSqrtFastTicks",
+      "value": 159872
+    },
+    {
+      "name": "gNdsR2HwMathBenchFdivSoftTicks",
+      "value": 307328
+    },
+    {
+      "name": "gNdsR2HwMathBenchFdivHwTicks",
+      "value": 414080
+    },
+    {
+      "name": "gNdsR2HwMathBenchSqrtfShipTicks",
+      "value": 641280
+    },
+    {
+      "name": "gNdsR2HwMathBenchSqrtfArmTicks",
+      "value": 385216
+    }
+  ],
+  "setGlobals": [],
+  "ringStops": 0,
+  "ringStopSkews": null,
+  "ringStopReads": null,
+  "capturedUtc": "2026-08-16T11:38:47.4564851Z"
+}

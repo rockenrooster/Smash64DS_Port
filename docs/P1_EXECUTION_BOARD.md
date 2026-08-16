@@ -33,6 +33,65 @@ clock.** Coverage is part of a baseline's identity now, not a footnote. The
 conversion: the sim runs 60 Hz and presents 30 Hz, ratio **measured at exactly
 2.000**, so 1,600 presented = 3,200 logic = **53.3 s**.
 
+## THE DS DIVIDE AND ROOT UNITS ARE PRICED (2026-08-16) — `artifacts/performance/2026-08-16_hwmath-units/HWMATH.md`
+
+**The three never-defined hooks are defined.** `NDS_R2_CFX_DIV64`,
+`NDS_R2_CFX_ISQRT64` **and** `NDS_R2_COLLISION_DIV64` (`nds_r2_collision_mtx.h:361`,
+which nobody had counted and which sits inside `ndsR2CollisionFixedInvertF32`, a live
+ring entry point) now reach the ARM9 coprocessors. +44 B of text; 0 libgcc 64-bit divides
+left in the object against 6 in the control; graded 0 mismatches over 65,536 operands per
+class on four builds. `NDS_R2_CFX_HWMATH` follows `NDS_R2_COLLISION_FIXED`, which is 0
+everywhere, so no shipped byte moves.
+
+**Measured per-operation prices** (in situ, 4,096 iterations, loop and operand generator
+subtracted, `build-c213-hwmath4`):
+
+| operation | software | DS unit (leading poll / SM64DS form) | ratio |
+|---|---:|---:|---|
+| 64-bit divide | 292.5 tk | **106.0 / 65.0** | 2.76x / 4.50x |
+| 64-bit isqrt | 294.9 tk | **55.5 / 35.5** | 5.32x / 8.31x |
+| f32 divide | `__aeabi_fdiv` **71.5 tk** | 137.6 / 97.6 | **0.52x / 0.73x — REFUTED** |
+| `sqrtf` | shipped Thumb **153.0 tk** | ARM state **90.5–96.5** | **1.59x–1.69x** |
+
+**Three things this settles, and one it opens.**
+
+1. **The ring stays closed.** The hooks take its exchange rate from 2.68 to **2.19–2.08**
+   (arithmetic on `EXCHANGE.md` §3.1's own measured `__udivmoddi4` row, not a new A/B).
+   Still a loss, and `EXCHANGE.md` §0.3's 15,217 tk/fr ceiling is **0.161x of +94,481 at
+   an exchange rate of zero.** Do not re-price this lane again.
+2. **Column N is 0.050x, not 0.315x.** Its `sqrtf` half is **already shipped** —
+   `NDS_R2_FIXED_SQRT ?= 1` and it reads 1 in `build-c200-trackprof-off`,
+   `build-c206-shipgx0` and `build-c209-simmac2` — so `SIMSIDE.md` §6's 144.62 tk/call
+   *is* the hardware implementation. Its `fdiv` half is refused on price by a floor
+   argument: the unit alone costs 65.0 tk against a 71.5 tk routine that does the whole
+   job. **`SIMSIDE.md` §6's 29,786 tk/fr surface should be read as 4,300–4,750 measured.**
+3. **RED / OPEN — `nds_r2_sqrtf.o` is the one R2 kernel object still built `-mthumb`,**
+   so `nds_r2_sqrtf.h:73`'s 48-bit `root * root` is a `bl __aeabi_lmul` at `0x0208b10c`.
+   `-marm` costs **+24 B** and buys **37%–41%** of 11,608 tk/fr = **4,300–4,750 tk/fr,
+   0.046x–0.050x**, bit-identical (graded 0/65,536). It is below the ≥14,080 cross-build
+   floor, so its gate proof needs a **same-binary `.data` route** between a Thumb body and
+   an ARM body. **Next cycle's build, and it is small.**
+4. **OPEN, unpriced — the leading poll costs 41.0 tk per divide and 20.0 per root and
+   protects nothing.** Only the last write to `DIVCNT`/`NUMER`/`DENOM` matters. libnds's
+   `div64`/`sqrt64`, five `nds_renderer.c` sites and `battleship_gmcamera.c`'s kernels all
+   carry it; SM64DS's `cstd::div` does not. Both forms grade bit-identical here. Nobody
+   has counted those sites' call rate.
+
+**Chain map (item C, assessment only, no build).** C1 collision cluster 50,044 tk/fr —
+built, conv/op ~0.02, still 2.68, killed by 3,228 B at **0.97 entries/frame**. C2
+animation→joint-matrix 20,357 tk/fr, conv/op ~0, **22–93 entries/frame**, front endpoint
+free because figatree tracks are `s16` on disk. C3 trig leaves 4,519 tk/fr are C2's
+interior and already implemented in `nds_r2_collision_fixed.h`. **C2 is the only chain
+worth a build and its first question is bytes, not arithmetic** — conv/op near zero is
+necessary and not sufficient, which is exactly what C1 proves.
+
+**One defect found and fixed at its seam.** `int32_t` is `long` on devkitARM, so an
+`(int32_t *)` cast onto an `int *` in the bench's wrapper was a strict-aliasing violation;
+GCC folded the remainder to its initialiser and deleted the sticky term, producing 110
+wrong IEEE quotients in 65,536 — deterministic, in one of three builds of the same source.
+No pointer cast is left in the chain, so drift is now a `-Werror` error. Nothing shipped
+carried it. `HWMATH.md` §7.
+
 ## THE BANK — RE-ESTABLISHED ON THE REPAIRED TREE AT THE SHIPPING DEFAULT (2026-08-15, `build-c200-bank84`)
 
 `artifacts/performance/2026-08-15_ftanim-full-coverage/REBANK.md`. c185's
@@ -193,8 +252,9 @@ run at 2.00 cycles, so the whole difference is unpack/normalise/round. The float
 **No implementation, no build, no A/B, no pixel pair — and that is stated, not discovered.**
 No sub-package clears 16K alone. Next step is a **falsifier**, not the package: one build,
 one same-binary route (explicit `.data` attribute on the route word), one gate run, camera
-chain only — 15,812 tk/fr gross, 2,764 B, 181 sites. `NDS_R2_CFX_DIV64`/`ISQRT64` remain
-**undefined**, so the DS hardware divide/sqrt units are free and uncontended;
+chain only — 15,812 tk/fr gross, 2,764 B, 181 sites. **SUPERSEDED 2026-08-16:**
+`NDS_R2_CFX_DIV64`/`ISQRT64` are now DEFINED and the units are priced (2.76x–4.50x on the
+divide, 5.32x–8.31x on the root) — see the hardware-units section at the top of this board;
 `__udivmoddi4` already runs 11.70×/frame at 2,909 tk/fr and nothing may add to it.
 
 > **CORRECTION OF A RETRACTION, 2026-08-15.** An earlier revision of this
@@ -339,8 +399,10 @@ measurement. Range: **29,437 (1.70x) – 57,584 (5.14x) tk/fr = 0.312x–0.609x*
 **Three columns, and the fidelity question is not uniform:**
 - **N — bit-exact helper acceleration.** Fidelity-neutral *by construction*: a faster
   `__aeabi_fdiv` / `sqrtf` returning the identical IEEE result changes nothing anywhere.
-  Surface 21,886 tk/fr sim + 7,900 draw. **UNSIZED** — nobody has built one, and the DS
-  divide/sqrt units are still unused (`NDS_R2_CFX_DIV64`/`ISQRT64` undefined).
+  Surface 21,886 tk/fr sim + 7,900 draw. **SIZED 2026-08-16 AND IT IS 4,300–4,750 tk/fr,
+  not 29,786**: the `sqrtf` half was already shipped (`NDS_R2_FIXED_SQRT` defaults to 1),
+  the `fdiv` half is refused on price (the DS unit alone costs 65.0 tk against a 71.5 tk
+  `__aeabi_fdiv`), and all that survives is `nds_r2_sqrtf.o` built `-marm`. `HWMATH.md`.
 - **P — provable-equivalence fixed point.** The warm MAC subset. Belongs in the
   fidelity-neutral column **iff** the decision-margin proof lands, and the instrument already
   exists: `NDS_R2_CFX_NARROW_DECLINE` (structural, not statistical),
@@ -391,9 +453,10 @@ REFUTED for the leaf route** on 44.6% of the warm-MAC subset by size. What survi
 **chain** route, where `n_conv` is fixed at the endpoints while `n_op` grows — the design
 of `nds_r2_collision_fixed.h`, whose only measured instance is the ring at 2.68x, whose
 named cause (`NDS_R2_CFX_DIV64` still the portable bit-by-bit divide, hardware unit hook
-undefined at `nds_r2_collision_fixed.h:205`) is **still unaddressed**. Column N is
-untouched by this and is mildly supported by it: the thing that proved expensive is the
-representation boundary, and a bit-exact helper never crosses one.
+undefined at `nds_r2_collision_fixed.h:205`) was **addressed on 2026-08-16**: the hook is
+defined, the divide is 2.76x–4.50x cheaper, and the ring's rate moves 2.68 → 2.19–2.08 —
+still a loss, on a lane whose ceiling is 0.161x at an exchange rate of zero. Column N was
+sized the same day and is **0.050x, not the 0.315x its surface suggested**.
 
 **BOTH BODIES ARE UNREACHABLE FROM PORT CODE, and that cost the first build.** A
 `#define`-before-`#include` rename moves the definition and `gmcollision.c`'s own call
@@ -7051,7 +7114,8 @@ libgcc's **64-bit divide 4.0 times per entry** (`__udivmoddi4` 7.76 → 11.65
 calls/fr), a bit-by-bit loop, worth **+988 whole / +17,377 at rank-80** — more
 than the entire float bill it deletes. `nds_r2_collision_fixed.h:210-217` offers
 `NDS_R2_CFX_DIV64`/`ISQRT64` overrides for the DS hardware unit and **nothing
-ever defined them**. Meanwhile `__mulsf3` pays **0.77 tk of fetch per call** at
+ever defined them** — DEFINED 2026-08-16, the divide measures 2.76x–4.50x cheaper and the
+ring's rate becomes 2.19–2.08, which is still a loss. Meanwhile `__mulsf3` pays **0.77 tk of fetch per call** at
 1,545 calls/frame: the soft-float library is permanently I-cache resident and a
 kernel entered 0.97 times a frame is cold every call.
 

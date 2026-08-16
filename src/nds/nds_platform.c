@@ -8,6 +8,9 @@
 #include <nds/nds_controller.h>
 #include <nds/nds_freeze_diagnostics.h>
 #include <nds/nds_ifcommon_oam.h>
+#if NDS_R2_HWMATH_BENCH
+#include <nds/nds_r2_hwmath_bench.h>
+#endif
 #include <nds/nds_platform.h>
 #include <nds/nds_reloc_assets.h>
 #include <nds/nds_renderer.h>
@@ -461,6 +464,15 @@ void ndsPlatformInit(void)
     consoleInit(NULL, 0, BgType_Text4bpp, BgSize_T_256x256, 15, 0, false, true);
     iprintf("\x1b[?25l");
     NDS_FREEZE_DIAGNOSTICS_INIT();
+
+#if NDS_R2_HWMATH_BENCH
+    /* Once, at boot, before any scene exists. It is loading-time work by
+     * construction -- the thing PROJECT_GOAL.md says is cheap -- and it cannot
+     * perturb a gameplay frame because it has finished before the first one.
+     * The counters it publishes are read at the end of the run by
+     * sample-tick-hud-buckets.ps1 -ExtraGlobals. */
+    ndsR2HwMathBenchRun();
+#endif
 
 #if NDS_DEBUG_HUD
     iprintf("Smash 64 DS Port\n");

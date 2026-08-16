@@ -1385,6 +1385,30 @@ NDS_R2_COLLISION_FIXED_NARROW_DISPATCH ?= $(NDS_R2_COLLISION_FIXED_NARROW)
 # fixed point-x-matrix transform, bit 1 the fixed 3x4 affine compose, bit 2
 # grades the transform against the float body's own result on the same inputs.
 NDS_R2_SIM_MAC_SHADOW ?= 0
+# THE TWO HOOKS include/nds/nds_r2_collision_fixed.h:205,215 HAS CARRIED SINCE
+# IT WAS WRITTEN, finally bound. At 1, NDS_R2_CFX_DIV64 and NDS_R2_CFX_ISQRT64
+# reach the ARM9 divide and square-root coprocessors instead of libgcc's
+# bit-by-bit __aeabi_ldivmod and the header's own restoring digit-by-digit root.
+# EXCHANGE.md section 0.4 names that portable divide -- four calls per
+# narrow-phase entry -- as the measured cause of the collision ring's 2.68x
+# exchange rate.
+#
+# It follows NDS_R2_COLLISION_FIXED rather than defaulting to 0 on its own,
+# because at NDS_R2_COLLISION_FIXED=0 the translation unit that binds them is
+# not linked at all and the flag cannot change a byte. There is no arm to
+# choose between: the arithmetic is proven identical (scripts/check-r2-hwmath.ps1
+# for the algorithm, gNdsR2HwMathBench*Mismatch for the unit) and the hardware
+# form is not slower, so a default-off "candidate" here would only be a flag
+# nobody flips.
+NDS_R2_CFX_HWMATH ?= $(NDS_R2_COLLISION_FIXED)
+# Lab price-and-equivalence instrument for those units
+# (src/port/nds_r2_hwmath_bench.c). Default 0 and NOT linked at 0, so a
+# published ROM is byte-identical with or without it. It answers a per-operation
+# question -- what does one hardware divide, one hardware root, one
+# hardware-unit f32 divide and one ARM-state sqrtf cost against the software
+# form each would replace -- which is transferable across lanes in a way a
+# whole-match A/B of one lane is not.
+NDS_R2_HWMATH_BENCH ?= 0
 # Task 44 stage steady-state excision: generation-based admission, dense
 # rigid/dynamic binding lists, and the hoisted GX capture-active test. Requires
 # the Task 36 hardware-compose stage owner; meaningless without it.
@@ -2638,6 +2662,9 @@ endif
 ifeq ($(NDS_R2_SIM_MAC_SHADOW),1)
 CFILES += nds_r2_sim_mac_fixed.c
 endif
+ifeq ($(NDS_R2_HWMATH_BENCH),1)
+CFILES += nds_r2_hwmath_bench.c
+endif
 # Conditional so a published ROM stays byte-identical: at flag 0 the TU is not
 # linked at all, rather than linked as ten `used` counters nothing writes.
 ifeq ($(NDS_R2_FTANIM_TRACK),1)
@@ -3571,6 +3598,8 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_R2_COLLISION_FIXED_NARROW $(NDS_R2_COLLISION_FIXED_NARROW)'; \
 		echo '#define NDS_R2_COLLISION_FIXED_NARROW_DISPATCH $(NDS_R2_COLLISION_FIXED_NARROW_DISPATCH)u'; \
 		echo '#define NDS_R2_SIM_MAC_SHADOW $(NDS_R2_SIM_MAC_SHADOW)'; \
+		echo '#define NDS_R2_CFX_HWMATH $(NDS_R2_CFX_HWMATH)'; \
+		echo '#define NDS_R2_HWMATH_BENCH $(NDS_R2_HWMATH_BENCH)'; \
 		echo '#define NDS_TASK39_FX_SPRITES $(NDS_TASK39_FX_SPRITES)'; \
 		echo '#define NDS_TASK39_FX_FLASH $(NDS_TASK39_FX_FLASH)'; \
 		echo '#define NDS_R2_PARTICLE_RUNTIME $(NDS_R2_PARTICLE_RUNTIME)'; \
@@ -3880,6 +3909,12 @@ nds_r2_collision_fixed.o: CFLAGS += -marm
 # cyc/multiply instead of a hardware umull at 2.00 and report an exchange rate
 # that no shipped conversion would ever see.
 nds_r2_sim_mac_fixed.o: CFLAGS += -marm
+# Same rule for the same reason, and here it is also the THING BEING MEASURED:
+# one of this object's arms is include/nds/nds_r2_sqrtf.h compiled in ARM state,
+# against the shipped Thumb build of the identical header in
+# src/nds/r2/nds_r2_sqrtf.c. Building this object -mthumb would make both arms
+# call __aeabi_lmul and the comparison would read zero.
+nds_r2_hwmath_bench.o: CFLAGS += -marm
 
 scene_backend.o: $(SCENE_BACKEND_SLICES) $(NDS_SCENE_HARNESS_CONFIG)
 scene_harness.o battleship_grinishie_scale.o: $(NDS_SCENE_HARNESS_CONFIG)
