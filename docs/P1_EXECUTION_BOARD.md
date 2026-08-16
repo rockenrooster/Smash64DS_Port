@@ -77,11 +77,18 @@ track pack can only *coexist* with `battlepack_fox.bin` (three consumers need
 the o2r stream: the bind's asset-id resolution, the fail-open generic parser
 that Mario uses entirely, and the oracle's reference cursor), and coexistence
 needs +287,082 B against +16,384 B of grantable arena — **short by 270,698 B**.
-Priced from the existing same-ROM pair, the dense path costs **+69.4 ticks per
-exchanged call (~1.59x the generic path)**; whether coverage would fix that
-turns on whether the excess is compulsory fetch or steady-state issue, and
-**one v3 capture separates two predictions that differ in sign.** That capture
-is the next decision and it costs two profiler builds, not zero.
+
+**But the v3 was taken and the lane is closed on its own merits**
+(`…/2026-08-15_ftanim-dispatch-attribution/RESULT.md`). It took the **FETCH**
+branch — the dense side is 72.4% icache+dcache fill — and refuted the ISSUE
+branch three placement-immune ways. **Both sides of the exchange are ~3,800 tk/fr
+and they cancel**: the measured whole-match named exchange at 23.25% parse-call
+coverage is **−74 tk/fr**, linear to 100% **−319 tk/fr**, i.e. order 10² tk/fr
+against a +81,297 gap. **33,951 was the lane's SIZE; the representation converts
+~1% of it.** So **the full-coverage arena arm no longer needs building** — the
+270,698 B shortfall stops mattering. An earlier "+69.4 tk per exchanged call,
+~1.59x" is **retracted**: the exchange is exactly 1:1 and the dense call costs
+208.0 tk against 215.5 (0.965x); it was a residual divided by a count.
 
 > **RETRACTION, 2026-08-15.** An earlier revision of this section banked
 > `build-c199-bank0` (gap +85,393) and stated that the owner had approved

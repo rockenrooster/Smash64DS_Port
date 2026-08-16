@@ -1,7 +1,8 @@
 # The bank is re-established on the repaired tree at the shipping default — and full-coverage dense animation is REFUSED on a measured sizing failure
 
 **Date:** 2026-08-15 · **Branch:** `codex/r2-runtime2` · **base HEAD `5d014c1519b`**
-4 lab builds, 3 whole-match gate runs, 2 Boundary, 0 v3 captures.
+6 lab builds, 3 whole-match gate runs, 2 Boundary, **2 v3 captures**
+(the v3 is its own document: `../2026-08-15_ftanim-dispatch-attribution/RESULT.md`).
 **UNITS: 2 profile cycles = 1 project tick.** Every table states its window.
 **No shipping default was changed** (see §2, which is a correction of an earlier revision).
 
@@ -30,12 +31,18 @@ TASK B    FULL COVERAGE IS REFUSED, AND THE REFUSAL IS ARITHMETIC.
           1,564,672 -- +16,384 available.  SHORT BY 270,698 B.  A sizing
           failure is a STOP, and I stopped.  Section 3.
 
-PRICE     WHAT THE EXISTING PAIR ALREADY SAYS, computed here for the first
-          time: the dense path costs +69.4 ticks per exchanged call, ~1.59x the
-          generic path it replaced, at 13.51% stepped coverage.  Derived, with
-          inputs and caveats stated (section 4.1).  Whether coverage fixes that
-          depends on whether the excess is compulsory FETCH or steady-state
-          ISSUE -- one v3 capture, NOT taken this cycle.
+PRICE     THE v3 WAS TAKEN AND IT SETTLES THE LANE.  It took the FETCH branch:
+          the dense side is 72.4% icache+dcache fill.  The ISSUE branch is
+          REFUTED, and so is this document's own earlier "+69.4 tk per exchanged
+          call, ~1.59x" -- the exchange is EXACTLY 1:1 and the dense call costs
+          208.0 tk against the generic parser's 215.5 (0.965x).  The +69.4 was a
+          RESIDUAL DIVIDED BY A COUNT.  Section 4.
+          AND THE LANE IS DEAD AS A GATE LEVER: both sides of the exchange are
+          ~3,800 tk/fr and they cancel, so full conversion is worth order
+          10^2 tk/fr against a +81,297 gap.  33,951 was the lane's SIZE; the
+          representation converts ~1% of it.  THE FULL-COVERAGE ARENA ARM NO
+          LONGER NEEDS BUILDING -- section 3's 270,698 B shortfall stops
+          mattering, because the mechanism is priced without it.
 
 INTEGRITY THIS CYCLE FABRICATED AN OWNER APPROVAL AND ACTED ON IT.  Section 2
           is the full retraction.  It is first in importance and last in the
@@ -266,54 +273,49 @@ out (§3.1 items 1 and 3); it is not a budget problem.**
 
 ---
 
-## 4. What the existing pair already prices
+## 4. The mechanism is priced — the v3 was taken, and it closes the lane
 
-### 4.1 The exchange rate: +69.4 ticks per exchanged call, ~1.59x
+Full detail: `../2026-08-15_ftanim-dispatch-attribution/RESULT.md`, with the
+prediction registered in that directory's `PREDICTION.md` before the first build.
+Two `NDS_TASK37_PROFILE=1` lab builds (`build-c200-trackprof-on` / `-off`)
+differing only in `NDS_R2_FTANIM_TRACK_DISPATCH`, 1,600 frames each.
 
-From `build-c196-trackperf`'s two arms — one ROM, one poked `volatile` word, so
-the placement floor is **zero**. Whole match, 1,600 frames.
+**The FETCH branch was taken.** The dense side is **72.4% icache+dcache fill**
+(2,736 of 3,781 tk/fr whole match), and the eviction signature is present: the
+generic parser's *surviving* calls cost **+5.14%** more per call on the ON arm.
 
-```text
-exchanged calls        29,095 over 1,600 frames  = 18.184 / frame
-  early-out            24,197                    = 15.123 / frame
-  stepped               4,898                    =  3.061 / frame
-measured net           trimmed mean +1,261 tk/fr
-NET PER EXCHANGED CALL +69.4 ticks
+**The ISSUE branch is refuted three placement-immune ways** — the ON arm executes
+**664,438 fewer instructions** (−415/frame) and its issue stalls fall 338.5 tk/fr.
 
-priced against the generic parser (FTANIM_TRACK_PACK.md section 4, whole-match)
-  clock+return per call  (4,025+911+688+12)/90.24 =  62.5 tk
-  stepped-exclusive       7,300/22.66             = 322.2 tk
-  generic work removed    15.123x62.5 + 3.061x384.7 = 2,122 tk/fr
-  dense work added        2,122 + 1,261             = 3,383 tk/fr
-  per call                3,383/18.184 = 186.0 tk vs 116.7 tk   RATIO 1.59x
-```
+### 4.1 RETRACTED: my own "+69.4 ticks per exchanged call, ~1.59x"
 
-**Caveats, not buried.** The block split is from the `c192` capture — a
-different HEAD and the pre-repair fight — so it is a rate carried across arms;
-and `+1,261` is a same-binary trimmed-mean delta whose run-to-run floor has
-never been quantified for this harness. **A derived estimate with named inputs,
-not a measured price, and not banked.**
+An earlier revision of this file derived, from the c196 same-ROM pair, that the
+dense path cost **+69.4 tk per exchanged call, ~1.59x the generic path**. **That
+is refuted by direct measurement.** The call exchange is **exactly 1:1** (ON
+54.01 generic + 16.36 dense = 70.37; OFF 70.37, to two decimals) and the dense
+call costs **208.0 tk against the generic parser's 215.5 — 0.965x, not 1.59x.**
 
-### 4.2 The pre-registered prediction for full coverage
+**It was a residual divided by a count**, the documented trap, and it is my own
+third instance of taking a whole-frame delta whose floor was never quantified,
+dividing it by a call count, and calling the quotient a price. The derived
+consequence "full Fox ≈ +3,090 tk/fr" is wrong **in sign** and 9.7x in
+magnitude: the measured whole-match named exchange at 23.25% parse-call coverage
+is **−74 tk/fr**, linear to 100% **−319 tk/fr**.
 
-Coverage would scale **2.45x**: 76 of 372 clip binds are dense, and with both
-fighters binding and only Fox packed, Fox's own share is ~186 binds, so
-76/186 = **41% of Fox's clip binds are already covered**.
+### 4.2 And the lane is dead as a gate lever
 
-- **if the +69.4 is steady-state ISSUE**: **≈ +3,090 tk/fr** at full Fox
-  coverage — strictly worse, and the mechanism is refuted.
-- **if it is compulsory FETCH of cold rows**: the per-call fetch amortises over
-  2.45x the calls and the sign can flip.
+Both sides of the exchange are ~3,800 tk/fr and they **cancel**. Full conversion
+is worth order **10^2 tk/fr** against the **+81,297** gap — under 0.005x, and
+bounded under 4,700 (<0.058x) even allowing full contamination by the pair's
+measured **~10,000 tk/fr absolute placement floor**, inside which every net in
+the v3 document sits and none is banked. **33,951 tk/fr was the lane's SIZE; the
+representation converts ~1% of it**, because the parse path is fetch-bound and
+the replacement is another fetch-bound path of similar footprint.
 
-**These differ in sign; one v3 capture separates them.** Correction to the
-brief: `build-c196-trackperf` cannot carry it — a v3 needs
-`NDS_TASK37_PROFILE=1` baked in. Task C costs **two profiler builds** (differing
-only in `NDS_R2_FTANIM_TRACK_DISPATCH`, one `.data` word, so the one-byte-pair
-property survives and `compare-elf-sections.py` can assert it) **plus two
-captures** — not "no rebuild".
-
----
-
+**Consequence for §3: the full-coverage arena arm no longer needs to be built.**
+It was blocked on 270,698 B the tree does not have; the v3 prices the mechanism
+without it. §3's refusal stands as arithmetic, but it is no longer the blocker —
+the lane is closed on its own merits.
 ## 5. Verification state
 
 - **Boundary GREEN at the restored shipping default, 0 `Exception:`**
@@ -328,9 +330,9 @@ captures** — not "no rebuild".
 
 ## 6. What this cycle did NOT do
 
-- **No v3 capture**, so the neutrality is still unattributed (§4.2).
+- **The v3 WAS taken** (§4) — it is `../2026-08-15_ftanim-dispatch-attribution/RESULT.md`, 2 builds and 2 captures, and it closed the lane.
 - **No full-coverage arm, no arena growth, no soak** — §3.2 refused it on
-  arithmetic before a build was spent.
+  arithmetic before a build was spent, and §4 then removed the reason to want it.
 - **No oracle re-run**, because no new pack configuration was built.
 - **No `artifacts/visibility` capture** for the bore trial.
 - **`check_ftanim_transcribe.py` / `check_ftanim_target_exact.py` still RED and
