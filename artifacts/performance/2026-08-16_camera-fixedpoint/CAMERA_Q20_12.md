@@ -457,7 +457,9 @@ edges by a fraction of a pixel.
 `diff-lock1694-top.png` for where the difference lives.
 
 **What is being asked, and what it buys.** Accepting this precision change on the camera
-chain buys **-4,736 tk/fr paired median, 5.5% of the +85,393 gap**. It is not a lever that
+chain buys **-4,736 tk/fr paired median = 5.01% of +94,481, the shipping-renderer gap at
+HEAD** (`build-c206-shipgx0`; the 5.5% first written here divided by `+85,393`, a
+`GX_COMPOSE=1` bank the ROM does not ship). It is not a lever that
 closes anything on its own, and section 4 says the rest of the draw-side lane will not
 convert at the prior's rate either. The decision is therefore not "accept this cut" but
 **"is a draw-side precision budget of this shape open at all"** — because if it is, the
@@ -480,19 +482,26 @@ draw-side lane            34,178 tk/fr   (30,638 soft float + 3,540 draw-side sq
 converted this cycle     -11,657         (gross, marginal-80; see section 4)
 RESIDUAL                  22,521 tk/fr
 
-at the MEASURED 1.70x     22,521 x (1 - 1/1.70) =  9,273 tk/fr   0.109x of +85,393
-at the PRIOR   5.14x      22,521 x (1 - 1/5.14) = 18,140 tk/fr   0.212x
+DENOMINATOR: +94,481, the shipping-renderer gap at HEAD (build-c206-shipgx0,
+rank-80 1,239,808 raw / 1,214,861 net, GX_COMPOSE 0).  The +85,393 first used
+here was a GX_COMPOSE=1 bank the ROM does not ship; conversion x0.904.
+
+at the MEASURED 1.70x     22,521 x (1 - 1/1.70) =  9,273 tk/fr   0.098x of +94,481
+at the PRIOR   5.14x      22,521 x (1 - 1/5.14) = 18,140 tk/fr   0.192x of +94,481
 ```
 
    (The brief framed the residual as ~18,000 because it assumed the camera chain would
    take 15,812; it took 11,657, because `syMatrixPerspFastF`'s particle-camera third and
    `gmCameraCheckTargetInBounds` were left in float. At 1.70x, 18,000 would be 7,412.)
 
-   i.e. **the whole remaining draw-side soft-float lane is now worth 0.11x-0.21x of the
-   gap, against the 0.302x the conservative ceiling claimed for the WHOLE lane.** `DRAW_FIXEDPOINT.md`
-   section 5's 24,564 tk/fr ceiling should be read as **~11,000-15,000** on this evidence,
-   and `LADDER.md` section 4's amendment (which lifted the engineering share from 0.357x to
-   0.659x on that ceiling) needs re-reading against it.
+   i.e. **the whole remaining draw-side soft-float lane is now worth 0.098x-0.192x of
+   +94,481, against the 0.302x the conservative ceiling claimed for the WHOLE lane.**
+   `DRAW_FIXEDPOINT.md` section 5's 24,564 tk/fr ceiling should be read as
+   **~11,000-15,000 = 0.116x-0.159x of +94,481** on this evidence.
+   **DONE 2026-08-16:** `LADDER.md` section 4's amendment (which lifted the engineering
+   share from 0.357x to 0.659x on that ceiling) is **withdrawn** there, on both halves —
+   the rate was refuted, and the lane was never engineering-available because it is
+   `BLOCKED(decision: draw-side precision)`. See `../2026-08-16_gap-position/POSITION.md`.
 
 2. **The ITCM question is the largest single uncertainty and it needs a compile-time pair.**
    580 B free on the instrument, 2,976 on the proof ROM, and a `.data` route structurally

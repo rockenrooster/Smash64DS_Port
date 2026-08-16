@@ -1,0 +1,30 @@
+Wrote artifacts/performance/2026-08-16_gx-transfer-locate/c209-t103-gx1-rows.csv
+Tick-HUD buckets: target=smash64ds-battle-playable-tickhud-hwtri samples=1600 frames=439..2038 melonDS=1.0 sha=DE80E46BDCF1FD98 git=f644ea15c8b+dirty(7) dldi=ON
+
+[32;1mbucket[0m[32;1m p50       [0m[32;1m p95       [0m[32;1m spread[0m[32;1m mean      [0m[32;1m min       [0m[32;1m max       [0m[32;1m %ALLp50[0m
+[32;1m------[0m [32;1m---       [0m [32;1m---       [0m [32;1m------[0m [32;1m----      [0m [32;1m---       [0m [32;1m---       [0m [32;1m-------[0m
+ALL     1,117,824  1,678,272   1.50  1,251,822  1,116,544  5,872,640   100.0
+FTR       295,872    300,480   1.02    287,059    170,048  4,488,512    26.5
+STG       217,344    225,408   1.04    221,492    212,736  4,412,544    19.4
+BG          4,352      4,416   1.01      4,324      4,032      4,544     0.4
+AUD         2,624      6,912   2.63      8,646      1,024    150,848     0.2
+HUD         1,088    414,784 381.24     35,926        960  2,125,760     0.1
+SRC       336,256    575,680   1.71    360,169     11,072  4,521,344    30.1
+MISC      109,504    175,552   1.60    115,174     84,032    328,704     9.8
+OTHR      184,704    517,440   2.80    219,031     21,056    580,416    16.5
+WAIT      165,056    497,344   3.01    199,136        960    560,448    14.8
+WORK      993,792  1,409,856   1.42  1,052,686    716,672  5,688,640    88.9
+SHDT        4,224     85,824  20.32     17,060          0  4,198,592     0.4
+SWRM          896      1,024   1.14        924        640      1,088     0.1
+GCRA      331,072    570,368   1.72    354,818      7,040  4,516,160    29.6
+SCPU       54,144    114,176   2.11     48,862          0    147,136     4.8
+SCAT        1,152      1,344   1.17      1,142          0      1,536     0.1
+SPRM        1,792      1,984   1.11      4,689          0    612,992     0.2
+SINT      162,560    298,688   1.84    166,454          0    943,168    14.5
+SPHD       73,728    110,272   1.50     75,513          0  4,252,288     6.6
+SPHC          640        768   1.20        649          0        896     0.1
+WORK-H    981,312  1,277,504   1.30  1,016,760    708,416  5,266,304    87.8
+
+named=1,032,790 (82.5% of ALL)  VBI 2:1639 3:372 4:19 5+:8 max:19 total:2038  slips=0
+extras: gNdsTask103PrepareTicks=130,706,304  gNdsTask103PrepareCount=2,038  gNdsTask103TraversalTicks=2,959,872  gNdsTask103TraversalCount=8  gNdsTask103DisplayTicks=318,491,392  gNdsTask103DisplayCount=55,890  gNdsTask103FinishTicks=963,392  gNdsTask103FinishCount=2,037  gNdsTask103BeginTicks=54,151,104  gNdsTask103BeginMtxTicks=35,175,996  gNdsTask103BeginMtxCount=35,175,980  gNdsTask103BeginEndBatchTicks=5,833,472  gNdsTask103PushTicks=21,638,016  gNdsTask103WordCount=7,972,976  gNdsTask103RunCount=67,188  gNdsTask103TailTicks=7,516,288  gNdsTask103CommitTicks=305,463,424  gNdsTask103CommitCount=16,296  gNdsBattleTextHudP1Damage=76  gNdsBattlePackHits=257  gNdsRendererTask36CaptureSegmentMask=161  gNdsDamageSparkScaleCount=16
+Wrote artifacts/performance/2026-08-16_gx-transfer-locate/c209-t103-gx1.json

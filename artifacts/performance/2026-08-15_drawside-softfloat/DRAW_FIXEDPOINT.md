@@ -1,5 +1,34 @@
 # The draw-only soft-float lane is 34,178 tk/fr, it is FLAT, and the collision lane's 1.00 exchange rate does NOT transfer — measured, on one instrument, at 5.14x
 
+> ## CORRECTED TWICE, 2026-08-16. Read this before quoting any figure below.
+>
+> **1. The denominator changed. Every `x` in this file divides by `+81,297`; the current
+> requirement is `+94,481`, the shipping-renderer gap at HEAD** (`build-c206-shipgx0`:
+> rank-80 1,239,808 raw / 1,214,861 net, gate 1,120,380, `NDS_R2_FIGHTER_GX_COMPOSE 0`,
+> HEAD `b1339828070`; `../2026-08-16_gxcompose-bank-basis/BASIS.md`). `+81,297` was
+> measured with `GX_COMPOSE=1`, which the ROM does not ship. **Multiply every `x` below by
+> `81,297 / 94,481 = 0.860`.** Re-quoted headlines:
+>
+> | figure | as written (`/81,297`) | **against +94,481** |
+> |---|---:|---:|
+> | draw-side lane 34,178 | 0.420x | **0.362x** |
+> | conservative ceiling 24,564 | 0.302x | **0.260x** |
+> | route A 24,677 | 0.304x | 0.261x |
+> | route B 25,814 | 0.318x | 0.273x |
+> | route C 21,364 | 0.263x | 0.226x |
+>
+> **2. The 5.14x PRICE in this file was refuted in situ at 1.70x by its own named
+> falsifier** (`../2026-08-16_camera-fixedpoint/CAMERA_Q20_12.md`, §7.3's build, taken).
+> The camera chain converted for a paired median of **−4,736 tk/fr = 0.050x of +94,481**,
+> and the residual 22,521 tk/fr at the measured rate is **9,273 = 0.098x**. **§5's
+> ceiling should be read as ~11,000–15,000 tk/fr, i.e. 0.116x–0.159x of +94,481, not
+> 24,564.** The mechanism is named there: a look-at needs 3 roots + 9 divides per entry,
+> and the lane's transcendental half converts far worse than its arithmetic half.
+>
+> **3. This lane is NOT engineering-available.** Converting it changes pixels (6.5350% on
+> the camera chain alone) and is `BLOCKED(decision: draw-side precision)` with the owner.
+> It is sacrifice rung 2, visual fidelity — see `../2026-08-16_gap-position/POSITION.md` §3.
+
 **Date:** 2026-08-15 · **Branch:** `codex/r2-runtime2` · **HEAD `b16dc16997a`**
 **Zero builds, zero emulator runs.** Every figure is derived from a v3 capture already on
 disk (`../2026-08-15_ftanim-dispatch-attribution/`) plus the linked ELF of the arm that

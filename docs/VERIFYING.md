@@ -28,6 +28,20 @@ not `powershell`, for the reason in the paragraph above — spelling it
 `powershell` inside the `cmd` line reintroduces 5.1 and fails at
 `melonds.ps1:349`.
 
+**`verify-all.ps1` returns exit 0 when a child build fails, so judge it by its
+log tail and never by its exit code.** On 2026-08-16 a Boundary run ended
+`make: *** [Makefile:3312: builds/build-battle-playable-proof-hwtri-harness]
+Error 127` and still exited **0**. The cause is one line up the chain:
+`verify-all.ps1:157` guards the toolchain with
+`if (-not $env:DEVKITPRO) { $env:DEVKITPRO = 'C:/devkitPro' }`, which tests
+**presence, not usability** — launched from a shell where `DEVKITPRO` /
+`DEVKITARM` are already set with Windows backslashes, the guard does not fire,
+the value does not survive into the `make` sub-shell, and make resolves the
+devkitPro *Linux* default `/opt/devkitpro/msys2/usr/bin/make`. Set both
+variables forward-slash in the invoking shell, and grep the log for
+`Boundary verification profile passed.` — its absence is the only reliable
+failure signal.
+
 **Edit every structured file with Read/Edit, not a heredoc or `\n` escapes.**
 `CLAUDE.md` records this for `.ps1`; on 2026-08-15 the same trap ate a backslash
 in a **Makefile** recipe continuation. The rule is not about PowerShell quoting —

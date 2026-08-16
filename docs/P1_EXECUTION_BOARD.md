@@ -76,18 +76,57 @@ NDS_R2_BATTLEPACK_KEEP_CACHE=1 NDS_R2_FIGHTER_GX_COMPOSE_LAB=1`, DLDI on, mode
 > renderer the user does not run. **Quote `+94,481` and cite
 > `build-c206-shipgx0`**; every "x of the gap" ratio multiplies by **0.904**
 > and no conclusion in `LADDER.md`, `MENU.md` or `CAMERA_Q20_12.md` changes
-> sign. Re-dividing those documents is an open task, not done here.
+> sign.
 >
-> **`GX_COMPOSE`'s `−17,152` is RETIRED.** The same-HEAD pair reads rank-80
-> **+7,040** (GX on cheaper, floor ≥14,080) and P50 **−4,288** (GX on dearer,
-> floor ~5,700) — inside both floors and disagreeing in sign. The −17,152 came
-> from `build-c184-gxc-a/-b` at a 1,189,312 level, i.e. **before the segment
-> repair `64c41c361a7`**. What reproduces is a **transfer**: FTR P50
-> 305,152→296,704 and STG 175,680→182,272, with the second independent GX=1
-> build agreeing to 704 on STG. **Open, one counter's work:** whether the stage
-> genuinely pays that or the ticks merely cross a tick-HUD bucket boundary.
-> **BLOCKED(decision: `GX_COMPOSE` default)** is now a basis-consistency
-> question, not a performance one — package in `BASIS.md` §5.
+> **RE-DIVISION DONE 2026-08-16.** `LADDER.md`, `MENU.md`, `DRAW_FIXEDPOINT.md`
+> and `CAMERA_Q20_12.md` are re-quoted **in place**, and every table that
+> carries a ratio now states `+94,481` next to it so the denominator can no
+> longer be separated from the number. Two rows moved for reasons other than
+> the denominator: the animation-representation mechanism (33,951) is struck
+> as **closed at ~1% conversion**, and `LADDER.md` §4's "0.357x → 0.659x"
+> amendment is **withdrawn** on both halves (the 5.14x rate was refuted at
+> 1.70x, and the lane was never engineering-available — it is
+> `BLOCKED(decision: draw-side precision)`).
+>
+> **`GX_COMPOSE`'s `−17,152` is RETIRED, and the "transfer" is REFUTED too.**
+> The same-HEAD pair reads rank-80 **+7,040** and P50 **−4,288** — inside both
+> floors and disagreeing in sign. The −17,152 came from `build-c184-gxc-a/-b`
+> at a 1,189,312 level, i.e. **before the segment repair `64c41c361a7`**.
+> **The `FTR −8,192 / STG +6,656` was taken to a second pair with
+> `NDS_TASK103_STAGE_RUN_PHASE=1` and the stage half did not survive**
+> (`artifacts/performance/2026-08-16_gx-transfer-locate/`, 2 builds, 2 gate
+> runs): every stage *work* counter is **bit-identical to the unit** —
+> `WordCount` 7,972,976, `RunCount` 67,188, `CommitCount` 16,296,
+> `DisplayCount` 55,890 — `PushTicks` differs 0.09%, and ΔSTG inverts to
+> **−1,632**. The fighter saving reproduces on both pairs; the stage rise does
+> not. Not a quantisation artefact either: **zero floored rows in any bucket**
+> over 3,200 sampled frames, granularity 64 ticks. What is left is cross-build
+> placement or a GX queue effect the instrument absorbs — bounded, not
+> mechanised. **BLOCKED(decision: `GX_COMPOSE` default) NO LONGER BLOCKS
+> ANYTHING**: it has no performance content, and the basis-consistency half is
+> discharged by the re-division above.
+>
+> ### THE ASSEMBLED POSITION — `BLOCKED(decision: sacrifice order)`, with the owner
+>
+> `artifacts/performance/2026-08-16_gap-position/POSITION.md`. **Everything
+> that costs no fidelity at all sums to 53,215 tk/fr = 0.563x of +94,481 at
+> 100% conversion, and 100% is available for none of it** — two items need a
+> counter before they are items, one is measured unable to reach 100%. Deleting
+> the whole inventory leaves **+41,266**. Priced in `PROJECT_GOAL.md`'s own
+> order: rung 1 audio **≤3,040 = 0.032x** (the gate is an ARM9 metric; DS
+> mixing is the ARM7's job); rung 2 visual **44,476–50,203 = 0.471x–0.531x**;
+> rung 3 gameplay **55,473–84,451 = 0.587x–0.894x, projected**; rung 4 the
+> 60 Hz simulation **291,488 = 3.085x, and it is the only thing on the board
+> that closes alone.** That last figure is **re-derived on this tree** — halve
+> `SRC` (which `taskman_seam.c:4273-4275` states is exactly the two logical
+> updates a presented frame runs) across `build-c206-shipgx0`'s own 1,600 rows
+> and re-rank — and it is **2.4x the recorded Task 106 figure of 119,744**,
+> because `SRC` concentrates **2.09x on the gate population**. Only **16.4% of
+> `SRC`** is needed to close, so partial-cadence variants close too: `SINT`
+> half alone is 1.398x, and `GCRA` half with the AI and the interrupt/physics
+> half **held at 60 Hz** is 1.283x. `POSITION.md` §4.1 names what must not
+> halve (input sampling, hitbox resolution, the single shared `syUtilsRandFloat`
+> LCG behind 135 draw sites, and every integer frame counter).
 
 **`+28,689` IS DEAD AND EVERY LEVER PRICED AGAINST IT MUST BE RE-READ.** The
 c185 bank (1,174,016 raw / 1,149,069 net) measured a match the shipped

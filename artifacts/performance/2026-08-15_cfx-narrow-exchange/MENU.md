@@ -1,8 +1,33 @@
 # What is actually left, priced at rank-80 on this tree
 
 Date: 2026-08-15. Branch `codex/r2-runtime2`. Base HEAD `1e2833cccba`.
-Requirement: **+32,593 net at rank-80** (bank `c170`: 1,177,920 raw / 1,152,973 net).
+Requirement **as written**: **+32,593 net at rank-80** (bank `c170`: 1,177,920 raw /
+1,152,973 net).
 **UNITS: 2 profile cycles = 1 project tick.**
+
+> ## RE-QUOTED 2026-08-16 AGAINST **+94,481** — the `× requirement` column below is 2.899x too large
+>
+> **The current denominator is `+94,481`, the shipping-renderer gap at HEAD**
+> (`build-c206-shipgx0`: rank-80 1,239,808 raw / 1,214,861 net, gate 1,120,380,
+> `NDS_R2_FIGHTER_GX_COMPOSE 0`, bore 0, HEAD `b1339828070`;
+> `../2026-08-16_gxcompose-bank-basis/BASIS.md`).
+> **Multiply every `× requirement` in this file by `32,593 / 94,481 = 0.345`**, and see
+> §1's re-quoted table below, which does it in place.
+>
+> **Two numerators in this file are also wrong and must be corrected BEFORE the
+> division** — the correction is larger than the re-division:
+> - **In-match asset I/O `100,689` is concentration read as size.** What *deleting* the
+>   lane is worth at rank-80 is **9,863**, because the seven frames carrying 85.4% of the
+>   FAT reads rank 3/5/10/13/14/16/23 — deep *inside* the top 80
+>   (`../2026-08-15_ladder-vs-85393/LADDER.md` §2b). **0.104x, not 3.1x. Dead lane.**
+> - **Soft float `94,602` is a pre-repair `c179` capture.** Re-measured on the repaired
+>   tree it is **168,060**, of which only the draw side (**34,178**) is convertible at all
+>   and that part is an owner precision decision, not engineering
+>   (`../2026-08-15_drawside-softfloat/DRAW_FIXEDPOINT.md`).
+> - **Draw side `170,953` is a floor, not the lane.** The enumerated lane is **348,268**
+>   over 36 symbols (`GXSTACK_IO_DRAW.md` §4).
+>
+> The assembled current position is `../2026-08-16_gap-position/POSITION.md`.
 
 ## 0. The basis every number below shares — read this before quoting one
 
@@ -29,14 +54,18 @@ the marginal value is than the mean; it is the marginal value that is spent.
 
 ## 1. The five lanes, by what they are worth at rank-80
 
-| lane | marg tk/fr | conc | × requirement | call |
-|---|---:|---:|---:|---|
-| **In-match asset I/O** | **100,689** (excess **+67,454**) | 1.46–19.31× | 3.1× | engineering |
-| **Animation evaluate/parse** | **95,048** | 1.36–2.05× | 2.9× | engineering |
-| **Soft float** | **94,602** | 1.14–1.51× | 2.9× | engineering (Task A prices it) |
-| **Draw side, flat** | **170,953** | 1.00–1.05× | 5.2× | mixed; the no-Z 22,608 is owner |
-| **Particle draw kernels** | **12,595** | 1.19× | 0.39× | owner (visible) |
-| tick-HUD apparatus (not a lane) | 8,085 | 4.7–5.6× | — | vanishes at `NDS_TICK_HUD=0` |
+**`× req` as written divides by +32,593; `x of +94,481` is the same lane against the
+shipping-renderer gap at HEAD. Where the numerator itself was later corrected, the
+corrected value is the one to quote.**
+
+| lane | marg tk/fr | conc | × req (+32,593) | **x of +94,481** | corrected numerator → **x of +94,481** | call |
+|---|---:|---:|---:|---:|---|---|
+| **In-match asset I/O** | **100,689** (excess **+67,454**) | 1.46–19.31× | 3.1× | 1.066x | **9,863 deletion value → 0.104x** | dead lane |
+| **Animation evaluate/parse** | **95,048** | 1.36–2.05× | 2.9× | **1.006x** | — | engineering |
+| **Soft float** | **94,602** | 1.14–1.51× | 2.9× | 1.001x | **168,060 → 1.779x**; convertible draw half **34,178 → 0.362x** | OWNER (precision) |
+| **Draw side, flat** | **170,953** | 1.00–1.05× | 5.2× | 1.809x | **348,268 (36 symbols) → 3.686x** | mixed; the no-Z 22,608 is owner |
+| **Particle draw kernels** | **12,595** | 1.19× | 0.39× | **0.133x** | — | owner (visible) |
+| tick-HUD apparatus (not a lane) | 8,085 | 4.7–5.6× | — | — | — | vanishes at `NDS_TICK_HUD=0` |
 
 ---
 
