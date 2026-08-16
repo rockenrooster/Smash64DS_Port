@@ -58,7 +58,8 @@ their *numerators* corrected before the division (§2).
 | **Compensated 30 Hz** | 119,744 | 4.17x | **1.402x** | **YES** | OWNER — sacrifice rung 4 |
 | Draw side, whole flat lane | **348,268** | 12.14x | **4.078x** | *surface, not a lever* — §3 | mixed |
 | Animation evaluate/parse lane | 95,048 | 3.31x | **1.113x** | no | engineering |
-| Soft float | 94,602 | 3.30x | **1.108x** | no | engineering |
+| Soft float — **RE-MEASURED 168,060, see note** | ~~94,602~~ | 3.30x | **2.067x** | no | engineering |
+| — **of which DRAW-ONLY, convertible** | **34,178** | — | **0.420x** | no | **gate PASSED, falsifier named** |
 | — animation's named mechanism | 33,951 | 1.18x | **0.398x** | no | **Task B decides** |
 | Stage no-Z band @ **exactly 1.00x** | 22,608 | 0.79x | **0.265x** | no | OWNER (visible) |
 | Slice 2 — `gcRunAll` scheduler machinery, **100 % deletion** | 17,786 | 0.62x | **0.208x** | no | engineering |
@@ -97,6 +98,19 @@ rank-80 by **9,863 tk/fr**, reproducing an independent 9,874. That is
 
 **(c) Particle draw's −30,676 stays retracted.** The real draw kernels are **12,595**
 (2.4x below it) — **0.147x**. The owner must be shown 12,595, never 30,676.
+
+**(d) Soft float is 168,060, not 94,602 — and only 34,178 of it is convertible.**
+`MENU.md`'s 94,602 is the pre-repair `c179` DRAW=0 capture. Re-measured on the repaired
+tree (`../2026-08-15_drawside-softfloat/DRAW_FIXEDPOINT.md`, arm `c200-trackprof-off`,
+same marginal-80 basis) the class is **168,060 tk/fr**, cross-checked at 165,187 by direct
+`nm` range sum. **That is not good news, because 80.2% of it is simulation or shared and
+`PROJECT_GOAL.md` freezes it.** The draw-only + draw+dispatch part, classified from the
+linked ELF rather than from names, is **30,638 + 3,540 `sqrtf` = 34,178 = 0.420x**, and it
+is **flat at 1.12x** against the class's 2.11x — the concentration is all in the collision
+half. Conservative removable ceiling after replacement **24,564 (0.302x)**, on a measured
+5.14x same-operation exchange rate that **falsifies the collision lane's 1.00 for this
+lane**. It still does not close alone; it is now the largest *engineering-available*
+single item on this board by a factor of ~2.7.
 
 ---
 
@@ -177,6 +191,17 @@ Strip out what is not engineering-available *today*:
 > pending measurement and no new counter, is **30,480 tk/fr — 35.7 % of the gap** — and it
 > is four items none of which exceeds 0.21x. **Closure is now a combination or an owner
 > decision; it is no longer a lever hunt.**
+
+**AMENDED 2026-08-15 by §2(d).** The inventory above predates the draw-only soft-float
+measurement and does not contain it. Adding the **24,564 tk/fr** conservative ceiling
+(a distinct symbol set — none of the 35 callers appears in any row above; the draw-side
+figure excludes everything in `shared`/`sim-*`) lifts the unambiguously-available
+engineering share from **0.357x to 0.659x**, and it is now the largest single engineering
+item on the board — 2.7x the next one. It is not free: it needs one falsifier build, a
+Q20.12 chain design, an ITCM leaf, a hardware-divider seam, and **owner visual acceptance
+on a frame-locked pixel pair**, because precision changes. The animation-representation
+row (33,951, "pending Task B's verdict") is **closed at ~1% conversion** and should be
+struck from the pending class, not carried.
 
 ## 5. What this means for the queue, stated as consequences and not as recommendations
 

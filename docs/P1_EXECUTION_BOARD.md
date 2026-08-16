@@ -93,6 +93,34 @@ against a +81,297 gap. **33,951 was the lane's SIZE; the representation converts
 ~1.59x" is **retracted**: the exchange is exactly 1:1 and the dense call costs
 208.0 tk against 215.5 (0.965x); it was a residual divided by a count.
 
+**TASK 4 — DRAW-SIDE FIXED POINT: the arithmetic gate is PASSED, and the collision
+lane's exchange rate is falsified at 5.14x** (`…/2026-08-15_drawside-softfloat/DRAW_FIXEDPOINT.md`;
+**0 builds, 0 emulator runs** — priced from the `c200-trackprof-off` v3 already on disk,
+marginal-80 threshold 1,224,970, 1,654 from the bank's rank-80).
+
+Soft float is **168,060 tk/fr** at rank-80. Split by phase from the **linked ELF** (reverse
+call graph pruned to the 1,363 of 3,803 symbols that executed; roots labelled by callback
+*role* before module prefix): shared 57,521 · sim-only 39,537 · sim+dispatch 37,662 ·
+**draw+dispatch 17,407 · draw-only 13,231** · unresolved 2,702. With draw-side `sqrtf`
+(3,540) the convertible lane is **34,178 tk/fr = 0.420x of +81,297**, over 2,271.9
+calls/frame and 872 sites. **Draw-side concentration is 1.12x against the class's 2.11x** —
+flat, so it converts 1:1 against a level gate.
+
+**The deciding measurement, free:** the same operation exists in this binary in both forms.
+Float 4×4 concat `guMtxCatF` **2,921 tk/call**; port 20.12 concat `ndsRendererMtxMul20p12`
+**568.40 tk/call**. Same mask, same build, both live — **5.14x**. Both forms' multiplies
+run at 2.00 cycles, so the whole difference is unpack/normalise/round. The float library is
+**ITCM-resident with 2,976 B free**, which is why the ring lost and why this need not:
+55% of the lane converts to inline integer ops *smaller* than the `bl` they delete.
+**Conservative ceiling 24,564 tk/fr (lowest of three routes) = 1.54x the 16,000 floor.**
+
+**No implementation, no build, no A/B, no pixel pair — and that is stated, not discovered.**
+No sub-package clears 16K alone. Next step is a **falsifier**, not the package: one build,
+one same-binary route (explicit `.data` attribute on the route word), one gate run, camera
+chain only — 15,812 tk/fr gross, 2,764 B, 181 sites. `NDS_R2_CFX_DIV64`/`ISQRT64` remain
+**undefined**, so the DS hardware divide/sqrt units are free and uncontended;
+`__udivmoddi4` already runs 11.70×/frame at 2,909 tk/fr and nothing may add to it.
+
 > **CORRECTION OF A RETRACTION, 2026-08-15.** An earlier revision of this
 > section asserted that the owner's approval of bore 0 had been **fabricated by
 > the agent** and restored the shipping default to 84 (`88abf259bda`,

@@ -1,0 +1,3620 @@
+{
+ "frames": 80,
+ "rows": [
+  {
+   "caller": "func_ovl2_800ED490",
+   "phase": "shared",
+   "calls": 95634,
+   "cycles": 3001500,
+   "tk_per_frame": 18759.375,
+   "calls_per_frame": 1195.425,
+   "roots": [
+    "efManagerImpactWaveProcDisplay",
+    "efManagerShieldProcDisplay",
+    "ftCommonAttackAirProcMap",
+    "ftCommonDamageAirCommonProcInterrupt",
+    "ftCommonDamageAirCommonProcMap",
+    "ftCommonDamageAirCommonProcUpdate",
+    "ftCommonDamageCommonProcInterrupt",
+    "ftCommonDamageCommonProcUpdate"
+   ],
+   "root_count": 72
+  },
+  {
+   "caller": "gmCollisionGetWorldPosition",
+   "phase": "shared",
+   "calls": 65034,
+   "cycles": 2094523,
+   "tk_per_frame": 13090.76875,
+   "calls_per_frame": 812.925,
+   "roots": [
+    "efManagerImpactWaveProcDisplay",
+    "efManagerShieldProcDisplay",
+    "ftCommonAttackAirProcMap",
+    "ftCommonDamageAirCommonProcInterrupt",
+    "ftCommonDamageAirCommonProcMap",
+    "ftCommonDamageAirCommonProcUpdate",
+    "ftCommonDamageCommonProcInterrupt",
+    "ftCommonDamageCommonProcUpdate"
+   ],
+   "root_count": 72
+  },
+  {
+   "caller": "gmCollisionSetInvertMatrix",
+   "phase": "sim-only",
+   "calls": 55388,
+   "cycles": 1711953,
+   "tk_per_frame": 10699.70625,
+   "calls_per_frame": 692.35,
+   "roots": [
+    "ftMainProcSearchHitAll"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "gmCollisionTestRectangle",
+   "phase": "sim-only",
+   "calls": 40964,
+   "cycles": 1696540,
+   "tk_per_frame": 10603.375,
+   "calls_per_frame": 512.05,
+   "roots": [
+    "ftMainProcSearchHitAll"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "ndsStageMPAdjustFloorLoopWallSweep",
+   "phase": "sim+dispatch",
+   "calls": 31672,
+   "cycles": 1111440,
+   "tk_per_frame": 6946.5,
+   "calls_per_frame": 395.9,
+   "roots": [
+    "ftFoxSpecialNProcUpdate",
+    "ftMainProcUpdateInterrupt",
+    "ftMarioSpecialNProcAccessory",
+    "mpCommonRunFighterAllCollisions",
+    "ndsMPCommonProcFighterDamageFloorOnly",
+    "ndsMPCommonRunFighterCliffFloorCeilCollisions",
+    "wpMapProcAllCheckCollEnd"
+   ],
+   "root_count": 7
+  },
+  {
+   "caller": "gmCollisionTransformMatrixAll",
+   "phase": "shared",
+   "calls": 39138,
+   "cycles": 1032535,
+   "tk_per_frame": 6453.34375,
+   "calls_per_frame": 489.225,
+   "roots": [
+    "efManagerImpactWaveProcDisplay",
+    "efManagerShieldProcDisplay",
+    "ftCommonAttackAirProcMap",
+    "ftCommonDamageAirCommonProcInterrupt",
+    "ftCommonDamageAirCommonProcMap",
+    "ftCommonDamageAirCommonProcUpdate",
+    "ftCommonDamageCommonProcInterrupt",
+    "ftCommonDamageCommonProcUpdate"
+   ],
+   "root_count": 72
+  },
+  {
+   "caller": "ndsBaseGcPlayMObjMatAnim",
+   "phase": "sim+dispatch",
+   "calls": 35100,
+   "cycles": 918533,
+   "tk_per_frame": 5740.83125,
+   "calls_per_frame": 438.75,
+   "roots": [
+    "efManagerDamageFlyOrbsProcUpdate",
+    "efManagerDamageFlySparksProcUpdate",
+    "efManagerDamageSpawnOrbsProcUpdate",
+    "efManagerDamageSpawnSparksProcUpdate",
+    "efManagerFoxReflectorProcUpdate",
+    "efManagerImpactWaveProcUpdate",
+    "efManagerQuakeProcUpdate",
+    "ftCommonAttackAirProcMap"
+   ],
+   "root_count": 75
+  },
+  {
+   "caller": "ndsRendererSubmitParticleQuad",
+   "phase": "draw-only",
+   "calls": 35301,
+   "cycles": 857295,
+   "tk_per_frame": 5358.09375,
+   "calls_per_frame": 441.2625,
+   "roots": [
+    "efDisplayZPerspAAXLUProcDisplay",
+    "efDisplayZPerspCLDProcDisplay",
+    "efDisplayZPerspXLUProcDisplay",
+    "efManagerImpactWaveProcDisplay",
+    "efManagerShieldProcDisplay",
+    "gcDrawDObjDLHead1",
+    "gcDrawDObjTreeForGObj"
+   ],
+   "root_count": 7
+  },
+  {
+   "caller": "gmCollisionGetFighterPartsWorldPosition",
+   "phase": "shared",
+   "calls": 26370,
+   "cycles": 849287,
+   "tk_per_frame": 5308.04375,
+   "calls_per_frame": 329.625,
+   "roots": [
+    "efManagerImpactWaveProcDisplay",
+    "efManagerShieldProcDisplay",
+    "ftCommonAttackAirProcMap",
+    "ftCommonDamageAirCommonProcInterrupt",
+    "ftCommonDamageAirCommonProcMap",
+    "ftCommonDamageAirCommonProcUpdate",
+    "ftCommonDamageCommonProcInterrupt",
+    "ftCommonDamageCommonProcUpdate"
+   ],
+   "root_count": 71
+  },
+  {
+   "caller": "ndsR2FtAnimParseDObjFigatree",
+   "phase": "sim+dispatch",
+   "calls": 22062,
+   "cycles": 837378,
+   "tk_per_frame": 5233.6125,
+   "calls_per_frame": 275.775,
+   "roots": [
+    "ftCommonAttackAirProcMap",
+    "ftCommonDamageAirCommonProcInterrupt",
+    "ftCommonDamageAirCommonProcMap",
+    "ftCommonDamageAirCommonProcUpdate",
+    "ftCommonDamageCommonProcInterrupt",
+    "ftCommonDamageCommonProcUpdate",
+    "ftCommonDamageFallProcMap",
+    "ftCommonDeadUpStarProcUpdate"
+   ],
+   "root_count": 62
+  },
+  {
+   "caller": "syMatrixLookAtReflectF",
+   "phase": "draw+dispatch",
+   "calls": 25716,
+   "cycles": 799884,
+   "tk_per_frame": 4999.275,
+   "calls_per_frame": 321.45,
+   "roots": [
+    "efManagerImpactWaveProcDisplay",
+    "efManagerShieldProcDisplay",
+    "ftDisplayMainProcDisplay",
+    "gcDrawDObjDLHead1",
+    "gcDrawDObjTreeForGObj",
+    "syTaskmanRunTask"
+   ],
+   "root_count": 6
+  },
+  {
+   "caller": "ftComputerCheckDetectTarget",
+   "phase": "sim-only",
+   "calls": 22257,
+   "cycles": 751602,
+   "tk_per_frame": 4697.5125,
+   "calls_per_frame": 278.2125,
+   "roots": [
+    "ftMainProcUpdateInterrupt"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "mpCollisionGetFCCommonFloor",
+   "phase": "sim+dispatch",
+   "calls": 20524,
+   "cycles": 739086,
+   "tk_per_frame": 4619.2875,
+   "calls_per_frame": 256.55,
+   "roots": [
+    "ftComputerProcDefault",
+    "ftFoxSpecialNProcUpdate",
+    "ftMainProcUpdateInterrupt",
+    "ftMarioSpecialNProcAccessory",
+    "mpCommonRunFighterAllCollisions",
+    "ndsMPCommonProcFighterDamageFloorOnly",
+    "ndsMPCommonRunFighterCliffFloorCeilCollisions",
+    "wpMapProcAllCheckCollEnd"
+   ],
+   "root_count": 8
+  },
+  {
+   "caller": "lbCommonCos",
+   "phase": "shared",
+   "calls": 33540,
+   "cycles": 723058,
+   "tk_per_frame": 4519.1125,
+   "calls_per_frame": 419.25,
+   "roots": [
+    "efManagerImpactWaveProcDisplay",
+    "efManagerShieldProcDisplay",
+    "ftCommonAttackAirProcMap",
+    "ftCommonDamageAirCommonProcInterrupt",
+    "ftCommonDamageAirCommonProcMap",
+    "ftCommonDamageAirCommonProcUpdate",
+    "ftCommonDamageCommonProcInterrupt",
+    "ftCommonDamageCommonProcUpdate"
+   ],
+   "root_count": 74
+  },
+  {
+   "caller": "ndsBaseGcPlayDObjAnimJoint",
+   "phase": "sim+dispatch",
+   "calls": 19397,
+   "cycles": 468666,
+   "tk_per_frame": 2929.1625,
+   "calls_per_frame": 242.4625,
+   "roots": [
+    "efManagerDamageFlyOrbsProcUpdate",
+    "efManagerDamageFlySparksProcUpdate",
+    "efManagerDamageSpawnOrbsProcUpdate",
+    "efManagerDamageSpawnSparksProcUpdate",
+    "efManagerFoxReflectorProcUpdate",
+    "efManagerImpactWaveProcUpdate",
+    "efManagerQuakeProcUpdate",
+    "ftCommonAttackAirProcMap"
+   ],
+   "root_count": 75
+  },
+  {
+   "caller": "lbCommonSin",
+   "phase": "shared",
+   "calls": 26832,
+   "cycles": 468451,
+   "tk_per_frame": 2927.81875,
+   "calls_per_frame": 335.4,
+   "roots": [
+    "efManagerImpactWaveProcDisplay",
+    "efManagerShieldProcDisplay",
+    "ftCommonAttackAirProcMap",
+    "ftCommonDamageAirCommonProcInterrupt",
+    "ftCommonDamageAirCommonProcMap",
+    "ftCommonDamageAirCommonProcUpdate",
+    "ftCommonDamageCommonProcInterrupt",
+    "ftCommonDamageCommonProcUpdate"
+   ],
+   "root_count": 74
+  },
+  {
+   "caller": "syMatrixPerspFastF",
+   "phase": "draw+dispatch",
+   "calls": 9009,
+   "cycles": 433555,
+   "tk_per_frame": 2709.71875,
+   "calls_per_frame": 112.6125,
+   "roots": [
+    "efDisplayZPerspAAXLUProcDisplay",
+    "efDisplayZPerspCLDProcDisplay",
+    "efDisplayZPerspXLUProcDisplay",
+    "efManagerImpactWaveProcDisplay",
+    "efManagerShieldProcDisplay",
+    "ftDisplayMainProcDisplay",
+    "gcDrawDObjDLHead1",
+    "gcDrawDObjTreeForGObj"
+   ],
+   "root_count": 9
+  },
+  {
+   "caller": "func_ovl2_800EDE5C",
+   "phase": "sim-only",
+   "calls": 13620,
+   "cycles": 422993,
+   "tk_per_frame": 2643.70625,
+   "calls_per_frame": 170.25,
+   "roots": [
+    "ftMainProcSearchHitAll"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "__floatsisf",
+   "phase": "unresolved",
+   "calls": 13527,
+   "cycles": 384867,
+   "tk_per_frame": 2405.41875,
+   "calls_per_frame": 169.0875,
+   "roots": [
+    "__floatsisf"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "syUtilsArcTan.part.0",
+   "phase": "sim+dispatch",
+   "calls": 5902,
+   "cycles": 378556,
+   "tk_per_frame": 2365.975,
+   "calls_per_frame": 73.775,
+   "roots": [
+    "efManagerDamageCoinProcDead",
+    "efManagerDamageNormalHeavyProcDead",
+    "ftCommonAttackAirProcMap",
+    "ftCommonDamageAirCommonProcInterrupt",
+    "ftCommonDamageAirCommonProcMap",
+    "ftCommonDamageAirCommonProcUpdate",
+    "ftCommonDamageCommonProcInterrupt",
+    "ftCommonDamageCommonProcUpdate"
+   ],
+   "root_count": 75
+  },
+  {
+   "caller": "syMatrixLookAtF",
+   "phase": "draw-only",
+   "calls": 10080,
+   "cycles": 349444,
+   "tk_per_frame": 2184.025,
+   "calls_per_frame": 126.0,
+   "roots": [
+    "efDisplayZPerspAAXLUProcDisplay",
+    "efDisplayZPerspCLDProcDisplay",
+    "efDisplayZPerspXLUProcDisplay",
+    "efManagerImpactWaveProcDisplay",
+    "efManagerShieldProcDisplay",
+    "gcDrawDObjDLHead1",
+    "gcDrawDObjTreeForGObj"
+   ],
+   "root_count": 7
+  },
+  {
+   "caller": "guMtxCatF",
+   "phase": "draw+dispatch",
+   "calls": 10240,
+   "cycles": 329795,
+   "tk_per_frame": 2061.21875,
+   "calls_per_frame": 128.0,
+   "roots": [
+    "efDisplayZPerspAAXLUProcDisplay",
+    "efDisplayZPerspCLDProcDisplay",
+    "efDisplayZPerspXLUProcDisplay",
+    "efManagerImpactWaveProcDisplay",
+    "efManagerShieldProcDisplay",
+    "ftDisplayMainProcDisplay",
+    "gcDrawDObjDLHead1",
+    "gcDrawDObjTreeForGObj"
+   ],
+   "root_count": 9
+  },
+  {
+   "caller": "lbParticleDrawTextures",
+   "phase": "draw-only",
+   "calls": 10767,
+   "cycles": 314777,
+   "tk_per_frame": 1967.35625,
+   "calls_per_frame": 134.5875,
+   "roots": [
+    "efDisplayZPerspAAXLUProcDisplay",
+    "efDisplayZPerspCLDProcDisplay",
+    "efDisplayZPerspXLUProcDisplay"
+   ],
+   "root_count": 3
+  },
+  {
+   "caller": "syMatrixF2L",
+   "phase": "draw+dispatch",
+   "calls": 15712,
+   "cycles": 309348,
+   "tk_per_frame": 1933.425,
+   "calls_per_frame": 196.4,
+   "roots": [
+    "efManagerImpactWaveProcDisplay",
+    "efManagerShieldProcDisplay",
+    "ftDisplayMainProcDisplay",
+    "gcDrawDObjDLHead1",
+    "gcDrawDObjTreeForGObj",
+    "syTaskmanRunTask"
+   ],
+   "root_count": 6
+  },
+  {
+   "caller": "ndsParticleSetCurrentCamera",
+   "phase": "draw-only",
+   "calls": 10521,
+   "cycles": 244249,
+   "tk_per_frame": 1526.55625,
+   "calls_per_frame": 131.5125,
+   "roots": [
+    "efDisplayZPerspAAXLUProcDisplay",
+    "efDisplayZPerspCLDProcDisplay",
+    "efDisplayZPerspXLUProcDisplay",
+    "efManagerImpactWaveProcDisplay",
+    "efManagerShieldProcDisplay",
+    "gcDrawDObjDLHead1",
+    "gcDrawDObjTreeForGObj"
+   ],
+   "root_count": 7
+  },
+  {
+   "caller": "gmCameraUpdateInterests",
+   "phase": "sim-only",
+   "calls": 7780,
+   "cycles": 212931,
+   "tk_per_frame": 1330.81875,
+   "calls_per_frame": 97.25,
+   "roots": [
+    "gmCameraDefaultFuncCamera"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "ndsRendererAdapterBuildNativeMaterialSnapshot",
+   "phase": "draw+dispatch",
+   "calls": 6976,
+   "cycles": 205977,
+   "tk_per_frame": 1287.35625,
+   "calls_per_frame": 87.2,
+   "roots": [
+    "efManagerImpactWaveProcDisplay",
+    "efManagerShieldProcDisplay",
+    "ftDisplayMainProcDisplay",
+    "gcDrawDObjDLHead1",
+    "gcDrawDObjTreeForGObj",
+    "syTaskmanRunTask"
+   ],
+   "root_count": 6
+  },
+  {
+   "caller": "mpCollisionCheckProjectFloor",
+   "phase": "sim+dispatch",
+   "calls": 8281,
+   "cycles": 191941,
+   "tk_per_frame": 1199.63125,
+   "calls_per_frame": 103.5125,
+   "roots": [
+    "ftCommonDeadUpStarProcUpdate",
+    "ftFoxSpecialNProcUpdate",
+    "ftMarioSpecialNProcAccessory",
+    "mpCommonRunFighterAllCollisions",
+    "ndsMPCommonProcFighterDamageFloorOnly",
+    "ndsMPCommonRunFighterCliffFloorCeilCollisions"
+   ],
+   "root_count": 6
+  },
+  {
+   "caller": "ifCommonPlayerDamageProcDisplay",
+   "phase": "draw-only",
+   "calls": 6987,
+   "cycles": 170266,
+   "tk_per_frame": 1064.1625,
+   "calls_per_frame": 87.3375,
+   "roots": [
+    "ifCommonPlayerDamageProcDisplay"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "ndsMPLineExtentSweepRejects",
+   "phase": "sim+dispatch",
+   "calls": 4386,
+   "cycles": 166473,
+   "tk_per_frame": 1040.45625,
+   "calls_per_frame": 54.825,
+   "roots": [
+    "ftFoxSpecialNProcUpdate",
+    "ftMainProcUpdateInterrupt",
+    "ftMarioSpecialNProcAccessory",
+    "mpCommonRunFighterAllCollisions",
+    "ndsMPCommonProcFighterDamageFloorOnly",
+    "ndsMPCommonRunFighterCliffFloorCeilCollisions",
+    "wpMapProcAllCheckCollEnd"
+   ],
+   "root_count": 7
+  },
+  {
+   "caller": "syVectorNorm3D",
+   "phase": "shared",
+   "calls": 4570,
+   "cycles": 166168,
+   "tk_per_frame": 1038.55,
+   "calls_per_frame": 57.125,
+   "roots": [
+    "ftDisplayMainProcDisplay",
+    "ftMainProcParams",
+    "gmCameraDefaultFuncCamera",
+    "syTaskmanRunTask"
+   ],
+   "root_count": 4
+  },
+  {
+   "caller": "ndsBaseMPProcessUpdateMain",
+   "phase": "sim-only",
+   "calls": 5040,
+   "cycles": 160016,
+   "tk_per_frame": 1000.1,
+   "calls_per_frame": 63.0,
+   "roots": [
+    "ftCommonAttackAirProcMap",
+    "ftCommonDamageAirCommonProcMap",
+    "ftCommonDamageFallProcMap",
+    "ftCommonFallSpecialProcMap",
+    "ftCommonOttottoProcMap",
+    "ftMarioSpecialAirLwProcMap",
+    "ftMarioSpecialAirNProcMap",
+    "ftMarioSpecialHiProcMap"
+   ],
+   "root_count": 16
+  },
+  {
+   "caller": "ftDisplayLightsDrawReflect",
+   "phase": "draw+dispatch",
+   "calls": 4044,
+   "cycles": 155258,
+   "tk_per_frame": 970.3625,
+   "calls_per_frame": 50.55,
+   "roots": [
+    "ftDisplayMainProcDisplay",
+    "scVSBattleFuncLights",
+    "syTaskmanRunTask"
+   ],
+   "root_count": 3
+  },
+  {
+   "caller": "grWallpaperCalcPersp",
+   "phase": "sim+dispatch",
+   "calls": 4000,
+   "cycles": 153304,
+   "tk_per_frame": 958.15,
+   "calls_per_frame": 50.0,
+   "roots": [
+    "grWallpaperCommonProcUpdate",
+    "syTaskmanRunTask"
+   ],
+   "root_count": 2
+  },
+  {
+   "caller": "gcParseDObjAnimJoint",
+   "phase": "sim+dispatch",
+   "calls": 7937,
+   "cycles": 145588,
+   "tk_per_frame": 909.925,
+   "calls_per_frame": 99.2125,
+   "roots": [
+    "efManagerDamageFlyOrbsProcUpdate",
+    "efManagerDamageFlySparksProcUpdate",
+    "efManagerDamageSpawnOrbsProcUpdate",
+    "efManagerDamageSpawnSparksProcUpdate",
+    "efManagerFoxReflectorProcUpdate",
+    "efManagerImpactWaveProcUpdate",
+    "efManagerQuakeProcUpdate",
+    "ftCommonAttackAirProcMap"
+   ],
+   "root_count": 75
+  },
+  {
+   "caller": "ndsFighterDisplayContractProjectTarget",
+   "phase": "draw+dispatch",
+   "calls": 4320,
+   "cycles": 138519,
+   "tk_per_frame": 865.74375,
+   "calls_per_frame": 54.0,
+   "roots": [
+    "ftDisplayMainProcDisplay",
+    "syTaskmanRunTask"
+   ],
+   "root_count": 2
+  },
+  {
+   "caller": "ndsBaseMPProcessCheckTestLWallCollisionAdjNew",
+   "phase": "sim+dispatch",
+   "calls": 3608,
+   "cycles": 136944,
+   "tk_per_frame": 855.9,
+   "calls_per_frame": 45.1,
+   "roots": [
+    "ndsMPCommonRunFighterCliffFloorCeilCollisions",
+    "wpMapProcAllCheckCollEnd"
+   ],
+   "root_count": 2
+  },
+  {
+   "caller": "ndsBaseMPProcessCheckTestRWallCollisionAdjNew",
+   "phase": "sim+dispatch",
+   "calls": 3608,
+   "cycles": 136944,
+   "tk_per_frame": 855.9,
+   "calls_per_frame": 45.1,
+   "roots": [
+    "ndsMPCommonRunFighterCliffFloorCeilCollisions",
+    "wpMapProcAllCheckCollEnd"
+   ],
+   "root_count": 2
+  },
+  {
+   "caller": "lbParticleUpdateStruct.part.0",
+   "phase": "sim+dispatch",
+   "calls": 3394,
+   "cycles": 132376,
+   "tk_per_frame": 827.35,
+   "calls_per_frame": 42.425,
+   "roots": [
+    "efManagerDamageCoinProcDead",
+    "efManagerDamageNormalHeavyProcDead",
+    "ftCommonAttackAirProcMap",
+    "ftCommonDamageAirCommonProcInterrupt",
+    "ftCommonDamageAirCommonProcMap",
+    "ftCommonDamageAirCommonProcUpdate",
+    "ftCommonDamageCommonProcInterrupt",
+    "ftCommonDamageCommonProcUpdate"
+   ],
+   "root_count": 72
+  },
+  {
+   "caller": "__kernel_cosf",
+   "phase": "shared",
+   "calls": 4366,
+   "cycles": 128969,
+   "tk_per_frame": 806.05625,
+   "calls_per_frame": 54.575,
+   "roots": [
+    "efDisplayZPerspAAXLUProcDisplay",
+    "efDisplayZPerspCLDProcDisplay",
+    "efDisplayZPerspXLUProcDisplay",
+    "efManagerDamageCoinProcDead",
+    "efManagerDamageNormalHeavyProcDead",
+    "efManagerDamageSpawnOrbsProcUpdate",
+    "efManagerDamageSpawnSparksProcUpdate",
+    "ftCommonAttackAirProcMap"
+   ],
+   "root_count": 79
+  },
+  {
+   "caller": "gmCameraGetClampDimensionsMax",
+   "phase": "sim-only",
+   "calls": 2400,
+   "cycles": 128119,
+   "tk_per_frame": 800.74375,
+   "calls_per_frame": 30.0,
+   "roots": [
+    "gmCameraDefaultFuncCamera"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "__ieee754_rem_pio2f",
+   "phase": "shared",
+   "calls": 3845,
+   "cycles": 123983,
+   "tk_per_frame": 774.89375,
+   "calls_per_frame": 48.0625,
+   "roots": [
+    "efDisplayZPerspAAXLUProcDisplay",
+    "efDisplayZPerspCLDProcDisplay",
+    "efDisplayZPerspXLUProcDisplay",
+    "efManagerDamageCoinProcDead",
+    "efManagerDamageNormalHeavyProcDead",
+    "efManagerDamageSpawnOrbsProcUpdate",
+    "efManagerDamageSpawnSparksProcUpdate",
+    "ftCommonAttackAirProcMap"
+   ],
+   "root_count": 79
+  },
+  {
+   "caller": "syVectorAdd3D",
+   "phase": "shared",
+   "calls": 3228,
+   "cycles": 122521,
+   "tk_per_frame": 765.75625,
+   "calls_per_frame": 40.35,
+   "roots": [
+    "ftDisplayMainProcDisplay",
+    "ftMainProcPhysicsMapCapture",
+    "ftMainProcPhysicsMapDefault",
+    "gmCameraDefaultFuncCamera",
+    "syTaskmanRunTask"
+   ],
+   "root_count": 5
+  },
+  {
+   "caller": "__kernel_sinf",
+   "phase": "shared",
+   "calls": 4107,
+   "cycles": 119921,
+   "tk_per_frame": 749.50625,
+   "calls_per_frame": 51.3375,
+   "roots": [
+    "efDisplayZPerspAAXLUProcDisplay",
+    "efDisplayZPerspCLDProcDisplay",
+    "efDisplayZPerspXLUProcDisplay",
+    "efManagerDamageCoinProcDead",
+    "efManagerDamageNormalHeavyProcDead",
+    "efManagerDamageSpawnOrbsProcUpdate",
+    "efManagerDamageSpawnSparksProcUpdate",
+    "ftCommonAttackAirProcMap"
+   ],
+   "root_count": 79
+  },
+  {
+   "caller": "__aeabi_ui2f",
+   "phase": "shared",
+   "calls": 16024,
+   "cycles": 117936,
+   "tk_per_frame": 737.1,
+   "calls_per_frame": 200.3,
+   "roots": [
+    "efDisplayZPerspAAXLUProcDisplay",
+    "efDisplayZPerspCLDProcDisplay",
+    "efDisplayZPerspXLUProcDisplay",
+    "efManagerDamageCoinProcDead",
+    "efManagerDamageFlyOrbsProcUpdate",
+    "efManagerDamageFlySparksProcUpdate",
+    "efManagerDamageNormalHeavyProcDead",
+    "efManagerDamageSpawnOrbsProcUpdate"
+   ],
+   "root_count": 97
+  },
+  {
+   "caller": "gcParseMObjMatAnimJoint",
+   "phase": "sim+dispatch",
+   "calls": 8390,
+   "cycles": 112721,
+   "tk_per_frame": 704.50625,
+   "calls_per_frame": 104.875,
+   "roots": [
+    "efManagerDamageFlyOrbsProcUpdate",
+    "efManagerDamageFlySparksProcUpdate",
+    "efManagerDamageSpawnOrbsProcUpdate",
+    "efManagerDamageSpawnSparksProcUpdate",
+    "efManagerFoxReflectorProcUpdate",
+    "efManagerImpactWaveProcUpdate",
+    "efManagerQuakeProcUpdate",
+    "ftCommonAttackAirProcMap"
+   ],
+   "root_count": 75
+  },
+  {
+   "caller": "syVectorDiff3D",
+   "phase": "shared",
+   "calls": 2955,
+   "cycles": 112159,
+   "tk_per_frame": 700.99375,
+   "calls_per_frame": 36.9375,
+   "roots": [
+    "efManagerQuakeProcUpdate",
+    "ftDisplayMainProcDisplay",
+    "ftMainProcPhysicsMapCapture",
+    "ftMainProcPhysicsMapDefault",
+    "gmCameraDefaultFuncCamera",
+    "grWallpaperCommonProcUpdate",
+    "syTaskmanRunTask"
+   ],
+   "root_count": 7
+  },
+  {
+   "caller": "ndsCameraCatCamera",
+   "phase": "draw+dispatch",
+   "calls": 3840,
+   "cycles": 108955,
+   "tk_per_frame": 680.96875,
+   "calls_per_frame": 48.0,
+   "roots": [
+    "ftDisplayMainProcDisplay",
+    "syTaskmanRunTask"
+   ],
+   "root_count": 2
+  },
+  {
+   "caller": "syVectorMag3D",
+   "phase": "shared",
+   "calls": 3415,
+   "cycles": 106058,
+   "tk_per_frame": 662.8625,
+   "calls_per_frame": 42.6875,
+   "roots": [
+    "efManagerQuakeProcUpdate",
+    "ftCommonDamageAirCommonProcUpdate",
+    "ftCommonDamageCommonProcPhysics",
+    "ftDisplayMainProcDisplay",
+    "ftMainProcParams",
+    "ftMainProcSearchHitAll",
+    "gmCameraDefaultFuncCamera",
+    "grWallpaperCommonProcUpdate"
+   ],
+   "root_count": 9
+  },
+  {
+   "caller": "syMatrixRotRpyRF",
+   "phase": "draw-only",
+   "calls": 3600,
+   "cycles": 104445,
+   "tk_per_frame": 652.78125,
+   "calls_per_frame": 45.0,
+   "roots": [
+    "efDisplayZPerspAAXLUProcDisplay",
+    "efDisplayZPerspCLDProcDisplay",
+    "efDisplayZPerspXLUProcDisplay"
+   ],
+   "root_count": 3
+  },
+  {
+   "caller": "func_ovl2_8010C3C0",
+   "phase": "sim-only",
+   "calls": 1744,
+   "cycles": 99457,
+   "tk_per_frame": 621.60625,
+   "calls_per_frame": 21.8,
+   "roots": [
+    "gmCameraDefaultFuncCamera"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "syMatrixTraRotRpyRSca",
+   "phase": "draw+dispatch",
+   "calls": 4680,
+   "cycles": 92142,
+   "tk_per_frame": 575.8875,
+   "calls_per_frame": 58.5,
+   "roots": [
+    "efManagerImpactWaveProcDisplay",
+    "efManagerShieldProcDisplay",
+    "ftDisplayMainProcDisplay",
+    "gcDrawDObjDLHead1",
+    "gcDrawDObjTreeForGObj",
+    "syTaskmanRunTask"
+   ],
+   "root_count": 6
+  },
+  {
+   "caller": "ftComputerCheckFindTarget",
+   "phase": "sim-only",
+   "calls": 3798,
+   "cycles": 84161,
+   "tk_per_frame": 526.00625,
+   "calls_per_frame": 47.475,
+   "roots": [
+    "ftComputerProcDefault",
+    "ftMainProcUpdateInterrupt"
+   ],
+   "root_count": 2
+  },
+  {
+   "caller": "gmCameraDefaultFuncCamera",
+   "phase": "sim-only",
+   "calls": 2356,
+   "cycles": 83718,
+   "tk_per_frame": 523.2375,
+   "calls_per_frame": 29.45,
+   "roots": [
+    "gmCameraDefaultFuncCamera"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "ndsRendererAdapterBuildDObjXObjMatrix",
+   "phase": "draw+dispatch",
+   "calls": 7422,
+   "cycles": 79638,
+   "tk_per_frame": 497.7375,
+   "calls_per_frame": 92.775,
+   "roots": [
+    "efManagerImpactWaveProcDisplay",
+    "efManagerShieldProcDisplay",
+    "ftDisplayMainProcDisplay",
+    "gcDrawDObjDLHead1",
+    "gcDrawDObjTreeForGObj",
+    "syTaskmanRunTask"
+   ],
+   "root_count": 6
+  },
+  {
+   "caller": "gmCameraLookAtFuncMatrix",
+   "phase": "draw+dispatch",
+   "calls": 5280,
+   "cycles": 77100,
+   "tk_per_frame": 481.875,
+   "calls_per_frame": 66.0,
+   "roots": [
+    "ftDisplayMainProcDisplay",
+    "syTaskmanRunTask"
+   ],
+   "root_count": 2
+  },
+  {
+   "caller": "gmCollisionCheckFighterInFighterRange",
+   "phase": "sim-only",
+   "calls": 2402,
+   "cycles": 68656,
+   "tk_per_frame": 429.1,
+   "calls_per_frame": 30.025,
+   "roots": [
+    "ftMainProcSearchHitAll"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "gcPlayMObjMatAnim",
+   "phase": "sim+dispatch",
+   "calls": 6124,
+   "cycles": 64781,
+   "tk_per_frame": 404.88125,
+   "calls_per_frame": 76.55,
+   "roots": [
+    "ftCommonAttackAirProcMap",
+    "ftCommonDamageAirCommonProcInterrupt",
+    "ftCommonDamageAirCommonProcMap",
+    "ftCommonDamageAirCommonProcUpdate",
+    "ftCommonDamageCommonProcInterrupt",
+    "ftCommonDamageCommonProcUpdate",
+    "ftCommonDamageFallProcMap",
+    "ftCommonDeadUpStarProcUpdate"
+   ],
+   "root_count": 62
+  },
+  {
+   "caller": "ndsWhispyAOTStructFuncRunLean.isra.0",
+   "phase": "sim-only",
+   "calls": 1576,
+   "cycles": 55115,
+   "tk_per_frame": 344.46875,
+   "calls_per_frame": 19.7,
+   "roots": [
+    "ndsWhispyAOTStructFuncRun"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "syUtilsArcTan2",
+   "phase": "sim+dispatch",
+   "calls": 1170,
+   "cycles": 54438,
+   "tk_per_frame": 340.2375,
+   "calls_per_frame": 14.625,
+   "roots": [
+    "efManagerDamageCoinProcDead",
+    "efManagerDamageNormalHeavyProcDead",
+    "ftCommonAttackAirProcMap",
+    "ftCommonDamageAirCommonProcInterrupt",
+    "ftCommonDamageAirCommonProcMap",
+    "ftCommonDamageAirCommonProcUpdate",
+    "ftCommonDamageCommonProcInterrupt",
+    "ftCommonDamageCommonProcUpdate"
+   ],
+   "root_count": 74
+  },
+  {
+   "caller": "ftMainProcPhysicsMap",
+   "phase": "sim-only",
+   "calls": 2678,
+   "cycles": 52466,
+   "tk_per_frame": 327.9125,
+   "calls_per_frame": 33.475,
+   "roots": [
+    "ftMainProcPhysicsMapCapture",
+    "ftMainProcPhysicsMapDefault"
+   ],
+   "root_count": 2
+  },
+  {
+   "caller": "ftComputerCheckEvadeDistance",
+   "phase": "sim-only",
+   "calls": 1400,
+   "cycles": 47101,
+   "tk_per_frame": 294.38125,
+   "calls_per_frame": 17.5,
+   "roots": [
+    "ftComputerProcDefault"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": ".vectors",
+   "phase": "unresolved",
+   "calls": 1230,
+   "cycles": 46685,
+   "tk_per_frame": 291.78125,
+   "calls_per_frame": 15.375,
+   "roots": [
+    ".vectors"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "syMatrixRowscaleF",
+   "phase": "draw-only",
+   "calls": 3184,
+   "cycles": 46130,
+   "tk_per_frame": 288.3125,
+   "calls_per_frame": 39.8,
+   "roots": [
+    "efDisplayZPerspAAXLUProcDisplay",
+    "efDisplayZPerspCLDProcDisplay",
+    "efDisplayZPerspXLUProcDisplay"
+   ],
+   "root_count": 3
+  },
+  {
+   "caller": "ndsMPFCSegmentCrossesKernel",
+   "phase": "sim+dispatch",
+   "calls": 1096,
+   "cycles": 44149,
+   "tk_per_frame": 275.93125,
+   "calls_per_frame": 13.7,
+   "roots": [
+    "ftFoxSpecialNProcUpdate",
+    "ftMainProcUpdateInterrupt",
+    "ftMarioSpecialNProcAccessory",
+    "mpCommonRunFighterAllCollisions",
+    "ndsMPCommonProcFighterDamageFloorOnly",
+    "ndsMPCommonRunFighterCliffFloorCeilCollisions",
+    "wpMapProcAllCheckCollEnd"
+   ],
+   "root_count": 7
+  },
+  {
+   "caller": "lbCommonTan",
+   "phase": "sim-only",
+   "calls": 640,
+   "cycles": 41264,
+   "tk_per_frame": 257.9,
+   "calls_per_frame": 8.0,
+   "roots": [
+    "gmCameraDefaultFuncCamera"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "ftComputerUpdateInputs.part.0",
+   "phase": "sim-only",
+   "calls": 1563,
+   "cycles": 40922,
+   "tk_per_frame": 255.7625,
+   "calls_per_frame": 19.5375,
+   "roots": [
+    "ftMainProcUpdateInterrupt"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "gmCameraSetBoundsPosition",
+   "phase": "sim-only",
+   "calls": 2560,
+   "cycles": 39677,
+   "tk_per_frame": 247.98125,
+   "calls_per_frame": 32.0,
+   "roots": [
+    "gmCameraDefaultFuncCamera"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "ndsBaseFTCommonDeadCheckInterruptCommon",
+   "phase": "sim-only",
+   "calls": 2536,
+   "cycles": 39305,
+   "tk_per_frame": 245.65625,
+   "calls_per_frame": 31.7,
+   "roots": [
+    "ftMainProcPhysicsMapCapture",
+    "ftMainProcPhysicsMapDefault"
+   ],
+   "root_count": 2
+  },
+  {
+   "caller": "syUtilsRandFloat",
+   "phase": "sim+dispatch",
+   "calls": 1712,
+   "cycles": 36614,
+   "tk_per_frame": 228.8375,
+   "calls_per_frame": 21.4,
+   "roots": [
+    "efManagerDamageCoinProcDead",
+    "efManagerDamageNormalHeavyProcDead",
+    "efManagerDamageSpawnOrbsProcUpdate",
+    "efManagerDamageSpawnSparksProcUpdate",
+    "ftCommonAttackAirProcMap",
+    "ftCommonDamageAirCommonProcInterrupt",
+    "ftCommonDamageAirCommonProcMap",
+    "ftCommonDamageAirCommonProcUpdate"
+   ],
+   "root_count": 75
+  },
+  {
+   "caller": "syVectorScale3D",
+   "phase": "shared",
+   "calls": 1371,
+   "cycles": 36273,
+   "tk_per_frame": 226.70625,
+   "calls_per_frame": 17.1375,
+   "roots": [
+    "ftDisplayMainProcDisplay",
+    "gmCameraDefaultFuncCamera",
+    "syTaskmanRunTask"
+   ],
+   "root_count": 3
+  },
+  {
+   "caller": "func_ovl2_8010C5C0",
+   "phase": "sim-only",
+   "calls": 1120,
+   "cycles": 35151,
+   "tk_per_frame": 219.69375,
+   "calls_per_frame": 14.0,
+   "roots": [
+    "gmCameraDefaultFuncCamera"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "ftPhysicsSetGroundVelTransferAir",
+   "phase": "sim-only",
+   "calls": 1362,
+   "cycles": 34378,
+   "tk_per_frame": 214.8625,
+   "calls_per_frame": 17.025,
+   "roots": [
+    "ftCommonDamageCommonProcPhysics",
+    "ftCommonWalkProcPhysics",
+    "ftMarioSpecialHiProcPhysics",
+    "ftMarioSpecialLwProcPhysics",
+    "ftPhysicsApplyGroundFrictionOrTransN"
+   ],
+   "root_count": 5
+  },
+  {
+   "caller": "gmCameraGetAdjustAtAngle",
+   "phase": "sim-only",
+   "calls": 800,
+   "cycles": 26685,
+   "tk_per_frame": 166.78125,
+   "calls_per_frame": 10.0,
+   "roots": [
+    "gmCameraDefaultFuncCamera"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "gcPlayAnimAll",
+   "phase": "sim+dispatch",
+   "calls": 2484,
+   "cycles": 26276,
+   "tk_per_frame": 164.225,
+   "calls_per_frame": 31.05,
+   "roots": [
+    "efManagerDamageFlyOrbsProcUpdate",
+    "efManagerDamageFlySparksProcUpdate",
+    "efManagerDamageSpawnOrbsProcUpdate",
+    "efManagerDamageSpawnSparksProcUpdate",
+    "efManagerFoxReflectorProcUpdate",
+    "efManagerImpactWaveProcUpdate",
+    "efManagerQuakeProcUpdate",
+    "ftCommonAttackAirProcMap"
+   ],
+   "root_count": 75
+  },
+  {
+   "caller": "func_ovl2_800F8FFC",
+   "phase": "sim-only",
+   "calls": 1685,
+   "cycles": 24596,
+   "tk_per_frame": 153.725,
+   "calls_per_frame": 21.0625,
+   "roots": [
+    "ftComputerProcDefault",
+    "ftMainProcUpdateInterrupt"
+   ],
+   "root_count": 2
+  },
+  {
+   "caller": "ndsWhispyAOTGeneratorFuncRun",
+   "phase": "sim-only",
+   "calls": 851,
+   "cycles": 24036,
+   "tk_per_frame": 150.225,
+   "calls_per_frame": 10.6375,
+   "roots": [
+    "ndsWhispyAOTGeneratorFuncRun"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "wpProcessProcWeaponMain",
+   "phase": "sim-only",
+   "calls": 1008,
+   "cycles": 24008,
+   "tk_per_frame": 150.05,
+   "calls_per_frame": 12.6,
+   "roots": [
+    "wpProcessProcWeaponMain"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "ftMainUpdateMotionEventsAll",
+   "phase": "sim+dispatch",
+   "calls": 1450,
+   "cycles": 22664,
+   "tk_per_frame": 141.65,
+   "calls_per_frame": 18.125,
+   "roots": [
+    "ftCommonAttackAirProcMap",
+    "ftCommonDamageAirCommonProcInterrupt",
+    "ftCommonDamageAirCommonProcMap",
+    "ftCommonDamageAirCommonProcUpdate",
+    "ftCommonDamageCommonProcInterrupt",
+    "ftCommonDamageCommonProcUpdate",
+    "ftCommonDamageFallProcMap",
+    "ftCommonDeadUpStarProcUpdate"
+   ],
+   "root_count": 62
+  },
+  {
+   "caller": "ndsSObjFastWallpaperGetTransform.part.0",
+   "phase": "draw+dispatch",
+   "calls": 1120,
+   "cycles": 21769,
+   "tk_per_frame": 136.05625,
+   "calls_per_frame": 14.0,
+   "roots": [
+    "ifCommonPlayerStockSingleProcDisplay",
+    "ifCommonPlayerTagProcDisplay",
+    "ifCommonTimerProcDisplay",
+    "syTaskmanRunTask"
+   ],
+   "root_count": 4
+  },
+  {
+   "caller": "ndsMarioFireballWallLimitSample.isra.0",
+   "phase": "sim-only",
+   "calls": 636,
+   "cycles": 21585,
+   "tk_per_frame": 134.90625,
+   "calls_per_frame": 7.95,
+   "roots": [
+    "ndsMarioFireballProcMapProbe"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "ifCommonPlayerDamageUpdateDigits",
+   "phase": "sim-only",
+   "calls": 945,
+   "cycles": 20975,
+   "tk_per_frame": 131.09375,
+   "calls_per_frame": 11.8125,
+   "roots": [
+    "ifCommonPlayerDamageProcUpdate"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "ftComputerFollowObjectiveWalk",
+   "phase": "sim-only",
+   "calls": 919,
+   "cycles": 19456,
+   "tk_per_frame": 121.6,
+   "calls_per_frame": 11.4875,
+   "roots": [
+    "ftMainProcUpdateInterrupt"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "gmCollisionCheckWeaponInFighterRange",
+   "phase": "sim-only",
+   "calls": 672,
+   "cycles": 19305,
+   "tk_per_frame": 120.65625,
+   "calls_per_frame": 8.4,
+   "roots": [
+    "ftMainProcSearchHitAll"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "ftMainUpdateMotionEventsForwardEffect",
+   "phase": "sim+dispatch",
+   "calls": 1156,
+   "cycles": 18289,
+   "tk_per_frame": 114.30625,
+   "calls_per_frame": 14.45,
+   "roots": [
+    "ftCommonAttackAirProcMap",
+    "ftCommonDamageAirCommonProcInterrupt",
+    "ftCommonDamageAirCommonProcMap",
+    "ftCommonDamageAirCommonProcUpdate",
+    "ftCommonDamageCommonProcInterrupt",
+    "ftCommonDamageCommonProcUpdate",
+    "ftCommonDamageFallProcMap",
+    "ftCommonDeadUpStarProcUpdate"
+   ],
+   "root_count": 61
+  },
+  {
+   "caller": "ndsBaseMPProcessCheckFloorEdgeCollisionR",
+   "phase": "sim+dispatch",
+   "calls": 459,
+   "cycles": 17421,
+   "tk_per_frame": 108.88125,
+   "calls_per_frame": 5.7375,
+   "roots": [
+    "ftFoxSpecialNProcUpdate",
+    "ftMarioSpecialNProcAccessory",
+    "mpCommonRunFighterAllCollisions",
+    "ndsMPCommonProcFighterDamageFloorOnly",
+    "ndsMPCommonRunFighterCliffFloorCeilCollisions"
+   ],
+   "root_count": 5
+  },
+  {
+   "caller": "ndsBaseMPProcessCheckFloorEdgeCollisionL",
+   "phase": "sim+dispatch",
+   "calls": 459,
+   "cycles": 17421,
+   "tk_per_frame": 108.88125,
+   "calls_per_frame": 5.7375,
+   "roots": [
+    "ftFoxSpecialNProcUpdate",
+    "ftMarioSpecialNProcAccessory",
+    "mpCommonRunFighterAllCollisions",
+    "ndsMPCommonProcFighterDamageFloorOnly",
+    "ndsMPCommonRunFighterCliffFloorCeilCollisions"
+   ],
+   "root_count": 5
+  },
+  {
+   "caller": "battleship_ftPublicProcUpdate",
+   "phase": "sim-only",
+   "calls": 640,
+   "cycles": 16816,
+   "tk_per_frame": 105.1,
+   "calls_per_frame": 8.0,
+   "roots": [
+    "battleship_ftPublicProcUpdate"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "ftComputerCheckTargetItemOrTwister",
+   "phase": "sim-only",
+   "calls": 516,
+   "cycles": 16618,
+   "tk_per_frame": 103.8625,
+   "calls_per_frame": 6.45,
+   "roots": [
+    "ftMainProcUpdateInterrupt"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "battleship_ftMainProcUpdateInterrupt",
+   "phase": "sim-only",
+   "calls": 712,
+   "cycles": 16594,
+   "tk_per_frame": 103.7125,
+   "calls_per_frame": 8.9,
+   "roots": [
+    "ftMainProcUpdateInterrupt"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "lbParticleGeneratorFuncRun",
+   "phase": "sim-only",
+   "calls": 554,
+   "cycles": 16594,
+   "tk_per_frame": 103.7125,
+   "calls_per_frame": 6.925,
+   "roots": [
+    "ndsWhispyAOTGeneratorFuncRun"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "ndsParticleDrawOwnTextureQuad",
+   "phase": "draw-only",
+   "calls": 620,
+   "cycles": 16345,
+   "tk_per_frame": 102.15625,
+   "calls_per_frame": 7.75,
+   "roots": [
+    "efManagerImpactWaveProcDisplay",
+    "efManagerShieldProcDisplay",
+    "gcDrawDObjDLHead1",
+    "gcDrawDObjTreeForGObj"
+   ],
+   "root_count": 4
+  },
+  {
+   "caller": "ftComputerGetObjectiveStatus",
+   "phase": "sim-only",
+   "calls": 504,
+   "cycles": 15226,
+   "tk_per_frame": 95.1625,
+   "calls_per_frame": 6.3,
+   "roots": [
+    "ftComputerProcDefault"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "gmCameraCheckTargetInBounds",
+   "phase": "draw+dispatch",
+   "calls": 969,
+   "cycles": 14754,
+   "tk_per_frame": 92.2125,
+   "calls_per_frame": 12.1125,
+   "roots": [
+    "ftDisplayMainProcDisplay",
+    "ifCommonPlayerTagProcDisplay",
+    "syTaskmanRunTask"
+   ],
+   "root_count": 3
+  },
+  {
+   "caller": "wpMarioFireballProcMap",
+   "phase": "sim-only",
+   "calls": 658,
+   "cycles": 14635,
+   "tk_per_frame": 91.46875,
+   "calls_per_frame": 8.225,
+   "roots": [
+    "ndsMarioFireballProcMapProbe"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "ndsBaseMPProcessCheckTestFloorCollisionAdjNew",
+   "phase": "sim+dispatch",
+   "calls": 384,
+   "cycles": 14574,
+   "tk_per_frame": 91.0875,
+   "calls_per_frame": 4.8,
+   "roots": [
+    "ftFoxSpecialNProcUpdate",
+    "ftMarioSpecialNProcAccessory",
+    "ndsMPCommonProcFighterDamageFloorOnly",
+    "ndsMPCommonRunFighterCliffFloorCeilCollisions",
+    "wpMapProcAllCheckCollEnd"
+   ],
+   "root_count": 5
+  },
+  {
+   "caller": "ftMainParseMotionEvent",
+   "phase": "sim+dispatch",
+   "calls": 712,
+   "cycles": 14430,
+   "tk_per_frame": 90.1875,
+   "calls_per_frame": 8.9,
+   "roots": [
+    "ftCommonAttackAirProcMap",
+    "ftCommonDamageAirCommonProcInterrupt",
+    "ftCommonDamageAirCommonProcMap",
+    "ftCommonDamageAirCommonProcUpdate",
+    "ftCommonDamageCommonProcInterrupt",
+    "ftCommonDamageCommonProcUpdate",
+    "ftCommonDamageFallProcMap",
+    "ftCommonDeadUpStarProcUpdate"
+   ],
+   "root_count": 62
+  },
+  {
+   "caller": "ftPhysicsApplyAirVelDriftFastFall",
+   "phase": "sim-only",
+   "calls": 547,
+   "cycles": 13005,
+   "tk_per_frame": 81.28125,
+   "calls_per_frame": 6.8375,
+   "roots": [
+    "ftCommonDamageCommonProcPhysics",
+    "ftPhysicsApplyAirVelDrift"
+   ],
+   "root_count": 2
+  },
+  {
+   "caller": "ndsStageMPSweepFloorLoopSweep",
+   "phase": "sim+dispatch",
+   "calls": 880,
+   "cycles": 12489,
+   "tk_per_frame": 78.05625,
+   "calls_per_frame": 11.0,
+   "roots": [
+    "ftFoxSpecialNProcUpdate",
+    "ftMainProcUpdateInterrupt",
+    "ftMarioSpecialNProcAccessory",
+    "mpCommonRunFighterAllCollisions",
+    "ndsMPCommonProcFighterDamageFloorOnly",
+    "ndsMPCommonRunFighterCliffFloorCeilCollisions",
+    "wpMapProcAllCheckCollEnd"
+   ],
+   "root_count": 7
+  },
+  {
+   "caller": "ndsBaseMPProcessCheckTestCeilCollisionAdjNew",
+   "phase": "sim+dispatch",
+   "calls": 328,
+   "cycles": 12449,
+   "tk_per_frame": 77.80625,
+   "calls_per_frame": 4.1,
+   "roots": [
+    "ndsMPCommonRunFighterCliffFloorCeilCollisions",
+    "wpMapProcAllCheckCollEnd"
+   ],
+   "root_count": 2
+  },
+  {
+   "caller": "ftComputerFollowObjectiveAttack.part.0",
+   "phase": "sim-only",
+   "calls": 540,
+   "cycles": 11997,
+   "tk_per_frame": 74.98125,
+   "calls_per_frame": 6.75,
+   "roots": [
+    "ftMainProcUpdateInterrupt"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "ndsBaseMPProcessCheckTestFloorCollisionNew",
+   "phase": "sim-only",
+   "calls": 304,
+   "cycles": 11491,
+   "tk_per_frame": 71.81875,
+   "calls_per_frame": 3.8,
+   "roots": [
+    "mpCommonRunFighterAllCollisions"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "ndsBaseMPProcessCheckTestFloorCollision",
+   "phase": "sim-only",
+   "calls": 300,
+   "cycles": 11386,
+   "tk_per_frame": 71.1625,
+   "calls_per_frame": 3.75,
+   "roots": [
+    "mpCommonRunFighterAllCollisions"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "wpProcessUpdateHitPositions",
+   "phase": "sim+dispatch",
+   "calls": 414,
+   "cycles": 10046,
+   "tk_per_frame": 62.7875,
+   "calls_per_frame": 5.175,
+   "roots": [
+    "ftFoxSpecialNProcUpdate",
+    "ftMarioSpecialNProcAccessory",
+    "wpProcessProcWeaponMain"
+   ],
+   "root_count": 3
+  },
+  {
+   "caller": "ftPhysicsApplyAirVelXFriction",
+   "phase": "sim-only",
+   "calls": 476,
+   "cycles": 9799,
+   "tk_per_frame": 61.24375,
+   "calls_per_frame": 5.95,
+   "roots": [
+    "ftCommonDamageCommonProcPhysics",
+    "ftCommonFallSpecialProcPhysics",
+    "ftMarioSpecialHiProcPhysics",
+    "ftPhysicsApplyAirVelDrift"
+   ],
+   "root_count": 4
+  },
+  {
+   "caller": "ndsFireGrindUpdate",
+   "phase": "draw-only",
+   "calls": 297,
+   "cycles": 9410,
+   "tk_per_frame": 58.8125,
+   "calls_per_frame": 3.7125,
+   "roots": [
+    "efDisplayZPerspAAXLUProcDisplay",
+    "efDisplayZPerspCLDProcDisplay",
+    "efDisplayZPerspXLUProcDisplay"
+   ],
+   "root_count": 3
+  },
+  {
+   "caller": "ndsBaseFTDisplayMainProcDisplay",
+   "phase": "draw+dispatch",
+   "calls": 354,
+   "cycles": 9135,
+   "tk_per_frame": 57.09375,
+   "calls_per_frame": 4.425,
+   "roots": [
+    "ftDisplayMainProcDisplay",
+    "syTaskmanRunTask"
+   ],
+   "root_count": 2
+  },
+  {
+   "caller": "ftParamGetCommonKnockback",
+   "phase": "sim-only",
+   "calls": 366,
+   "cycles": 8980,
+   "tk_per_frame": 56.125,
+   "calls_per_frame": 4.575,
+   "roots": [
+    "ftMainProcSearchHitAll"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "battleship_ftMainProcParams",
+   "phase": "sim-only",
+   "calls": 517,
+   "cycles": 7935,
+   "tk_per_frame": 49.59375,
+   "calls_per_frame": 6.4625,
+   "roots": [
+    "ftMainProcParams"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "ftPhysicsApplyGroundVelFriction",
+   "phase": "sim-only",
+   "calls": 421,
+   "cycles": 7594,
+   "tk_per_frame": 47.4625,
+   "calls_per_frame": 5.2625,
+   "roots": [
+    "ftCommonDamageCommonProcPhysics",
+    "ftPhysicsApplyGroundFrictionOrTransN"
+   ],
+   "root_count": 2
+  },
+  {
+   "caller": "func_ovl3_801397F4.part.0",
+   "phase": "sim-only",
+   "calls": 335,
+   "cycles": 7439,
+   "tk_per_frame": 46.49375,
+   "calls_per_frame": 4.1875,
+   "roots": [
+    "ftMainProcUpdateInterrupt"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "func_ovl3_80135B78",
+   "phase": "sim-only",
+   "calls": 240,
+   "cycles": 6649,
+   "tk_per_frame": 41.55625,
+   "calls_per_frame": 3.0,
+   "roots": [
+    "ftComputerProcDefault"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "ndsBaseFTCommonDamageInitDamageVars",
+   "phase": "sim-only",
+   "calls": 286,
+   "cycles": 6632,
+   "tk_per_frame": 41.45,
+   "calls_per_frame": 3.575,
+   "roots": [
+    "ftMainProcParams"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "ndsR2AnimAdvanceTail.constprop.0",
+   "phase": "sim+dispatch",
+   "calls": 173,
+   "cycles": 6566,
+   "tk_per_frame": 41.0375,
+   "calls_per_frame": 2.1625,
+   "roots": [
+    "ftCommonAttackAirProcMap",
+    "ftCommonDamageAirCommonProcInterrupt",
+    "ftCommonDamageAirCommonProcMap",
+    "ftCommonDamageAirCommonProcUpdate",
+    "ftCommonDamageCommonProcInterrupt",
+    "ftCommonDamageCommonProcUpdate",
+    "ftCommonDamageFallProcMap",
+    "ftCommonDeadUpStarProcUpdate"
+   ],
+   "root_count": 62
+  },
+  {
+   "caller": "battleship_ftMainSetStatus",
+   "phase": "sim+dispatch",
+   "calls": 315,
+   "cycles": 6418,
+   "tk_per_frame": 40.1125,
+   "calls_per_frame": 3.9375,
+   "roots": [
+    "ftCommonAttackAirProcMap",
+    "ftCommonDamageAirCommonProcInterrupt",
+    "ftCommonDamageAirCommonProcMap",
+    "ftCommonDamageAirCommonProcUpdate",
+    "ftCommonDamageCommonProcInterrupt",
+    "ftCommonDamageCommonProcUpdate",
+    "ftCommonDamageFallProcMap",
+    "ftCommonDeadUpStarProcUpdate"
+   ],
+   "root_count": 61
+  },
+  {
+   "caller": "ifCommonTimerFuncRun",
+   "phase": "sim-only",
+   "calls": 136,
+   "cycles": 6350,
+   "tk_per_frame": 39.6875,
+   "calls_per_frame": 1.7,
+   "roots": [
+    "ifCommonTimerFuncRun"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "ndsBaseMPProcessSetCollProjectFloorID",
+   "phase": "sim+dispatch",
+   "calls": 167,
+   "cycles": 6338,
+   "tk_per_frame": 39.6125,
+   "calls_per_frame": 2.0875,
+   "roots": [
+    "ftFoxSpecialNProcUpdate",
+    "ftMarioSpecialNProcAccessory",
+    "ndsMPCommonProcFighterDamageFloorOnly",
+    "ndsMPCommonRunFighterCliffFloorCeilCollisions"
+   ],
+   "root_count": 4
+  },
+  {
+   "caller": "ndsMarioFireballWallLimit",
+   "phase": "sim-only",
+   "calls": 352,
+   "cycles": 6274,
+   "tk_per_frame": 39.2125,
+   "calls_per_frame": 4.4,
+   "roots": [
+    "ndsMarioFireballProcMapProbe"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "func_ovl3_8013837C",
+   "phase": "sim-only",
+   "calls": 247,
+   "cycles": 6231,
+   "tk_per_frame": 38.94375,
+   "calls_per_frame": 3.0875,
+   "roots": [
+    "ftMainProcUpdateInterrupt"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "ftParamGetHitLag",
+   "phase": "sim-only",
+   "calls": 245,
+   "cycles": 5227,
+   "tk_per_frame": 32.66875,
+   "calls_per_frame": 3.0625,
+   "roots": [
+    "ftMainProcParams"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "grPupupuWhispySetWindPush",
+   "phase": "sim-only",
+   "calls": 228,
+   "cycles": 5050,
+   "tk_per_frame": 31.5625,
+   "calls_per_frame": 2.85,
+   "roots": [
+    "grPupupuProcUpdate"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "ftPhysicsCheckClampAirVelXDec",
+   "phase": "sim-only",
+   "calls": 305,
+   "cycles": 4501,
+   "tk_per_frame": 28.13125,
+   "calls_per_frame": 3.8125,
+   "roots": [
+    "ftCommonDamageCommonProcPhysics",
+    "ftCommonFallSpecialProcPhysics",
+    "ftPhysicsApplyAirVelDrift"
+   ],
+   "root_count": 3
+  },
+  {
+   "caller": "lbCommonMag2D",
+   "phase": "sim-only",
+   "calls": 135,
+   "cycles": 4089,
+   "tk_per_frame": 25.55625,
+   "calls_per_frame": 1.6875,
+   "roots": [
+    "ndsMarioFireballProcMapProbe",
+    "ndsMarioFireballProcUpdateProbe"
+   ],
+   "root_count": 2
+  },
+  {
+   "caller": "efManagerDustLightProcUpdate",
+   "phase": "sim-only",
+   "calls": 106,
+   "cycles": 4023,
+   "tk_per_frame": 25.14375,
+   "calls_per_frame": 1.325,
+   "roots": [
+    "efManagerDustLightProcUpdate"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "syVectorAngleDiff3D",
+   "phase": "sim-only",
+   "calls": 120,
+   "cycles": 3903,
+   "tk_per_frame": 24.39375,
+   "calls_per_frame": 1.5,
+   "roots": [
+    "ftMainProcParams",
+    "ftMainProcSearchHitAll",
+    "ndsMPCommonProcFighterDamageFloorOnly"
+   ],
+   "root_count": 3
+  },
+  {
+   "caller": "ftParamSetDamageShuffle",
+   "phase": "sim-only",
+   "calls": 190,
+   "cycles": 3895,
+   "tk_per_frame": 24.34375,
+   "calls_per_frame": 2.375,
+   "roots": [
+    "ftMainProcParams"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "func_ovl3_8013877C",
+   "phase": "sim-only",
+   "calls": 174,
+   "cycles": 3853,
+   "tk_per_frame": 24.08125,
+   "calls_per_frame": 2.175,
+   "roots": [
+    "ftMainProcUpdateInterrupt"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "ftPhysicsGetAirVelTransN",
+   "phase": "sim-only",
+   "calls": 128,
+   "cycles": 3684,
+   "tk_per_frame": 23.025,
+   "calls_per_frame": 1.6,
+   "roots": [
+    "ftMarioSpecialHiProcPhysics"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "ftPhysicsSetGroundVelAbsStickRange",
+   "phase": "sim-only",
+   "calls": 166,
+   "cycles": 3632,
+   "tk_per_frame": 22.7,
+   "calls_per_frame": 2.075,
+   "roots": [
+    "ftCommonWalkProcPhysics"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "syMatrixTra",
+   "phase": "draw+dispatch",
+   "calls": 168,
+   "cycles": 3307,
+   "tk_per_frame": 20.66875,
+   "calls_per_frame": 2.1,
+   "roots": [
+    "efManagerImpactWaveProcDisplay",
+    "efManagerShieldProcDisplay",
+    "ftDisplayMainProcDisplay",
+    "gcDrawDObjDLHead1",
+    "gcDrawDObjTreeForGObj",
+    "syTaskmanRunTask"
+   ],
+   "root_count": 6
+  },
+  {
+   "caller": "gmCollisionGetFighterAttackDamagePosition",
+   "phase": "sim-only",
+   "calls": 102,
+   "cycles": 3285,
+   "tk_per_frame": 20.53125,
+   "calls_per_frame": 1.275,
+   "roots": [
+    "ftMainProcSearchHitAll"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "func_ovl3_80138EE4",
+   "phase": "sim-only",
+   "calls": 140,
+   "cycles": 3281,
+   "tk_per_frame": 20.50625,
+   "calls_per_frame": 1.75,
+   "roots": [
+    "ftMainProcUpdateInterrupt"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "ndsWhispyAOTSinCos",
+   "phase": "sim-only",
+   "calls": 156,
+   "cycles": 3248,
+   "tk_per_frame": 20.3,
+   "calls_per_frame": 1.95,
+   "roots": [
+    "ndsWhispyAOTGeneratorFuncRun"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "ftComputerSetCommandWaitShort",
+   "phase": "sim-only",
+   "calls": 114,
+   "cycles": 3176,
+   "tk_per_frame": 19.85,
+   "calls_per_frame": 1.425,
+   "roots": [
+    "ftComputerProcDefault",
+    "ftMainProcUpdateInterrupt"
+   ],
+   "root_count": 2
+  },
+  {
+   "caller": "ndsBaseFTCommonGuardGetJointTransform",
+   "phase": "sim-only",
+   "calls": 90,
+   "cycles": 3071,
+   "tk_per_frame": 19.19375,
+   "calls_per_frame": 1.125,
+   "roots": [
+    "ftCommonDamageCommonProcInterrupt",
+    "ftCommonLandingProcInterrupt",
+    "ftCommonOttottoProcInterrupt",
+    "ftCommonRebirthWaitProcInterrupt",
+    "ftCommonTurnProcInterrupt",
+    "ftCommonWalkProcInterrupt",
+    "ndsBaseFTCommonGuardOffProcUpdate",
+    "ndsBaseFTCommonGuardOnProcUpdate"
+   ],
+   "root_count": 12
+  },
+  {
+   "caller": "ndsBaseFTCommonGuardUpdateShieldAngle",
+   "phase": "sim-only",
+   "calls": 70,
+   "cycles": 2841,
+   "tk_per_frame": 17.75625,
+   "calls_per_frame": 0.875,
+   "roots": [
+    "ftCommonDamageCommonProcInterrupt",
+    "ftCommonLandingProcInterrupt",
+    "ftCommonOttottoProcInterrupt",
+    "ftCommonRebirthWaitProcInterrupt",
+    "ftCommonTurnProcInterrupt",
+    "ftCommonWalkProcInterrupt",
+    "ndsBaseFTCommonGuardOffProcUpdate",
+    "ndsBaseFTCommonGuardOnProcUpdate"
+   ],
+   "root_count": 12
+  },
+  {
+   "caller": "ndsBaseMPProcessCheckTestLCliffCollision",
+   "phase": "sim-only",
+   "calls": 68,
+   "cycles": 2580,
+   "tk_per_frame": 16.125,
+   "calls_per_frame": 0.85,
+   "roots": [
+    "ndsMPCommonRunFighterCliffFloorCeilCollisions"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "ftComputerProcDefault",
+   "phase": "sim-only",
+   "calls": 174,
+   "cycles": 2539,
+   "tk_per_frame": 15.86875,
+   "calls_per_frame": 2.175,
+   "roots": [
+    "ftComputerProcDefault"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "gmCollisionTestSphere",
+   "phase": "sim-only",
+   "calls": 52,
+   "cycles": 2531,
+   "tk_per_frame": 15.81875,
+   "calls_per_frame": 0.65,
+   "roots": [
+    "ftMainProcSearchHitAll"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "lbCommonMakePositionFGM",
+   "phase": "sim-only",
+   "calls": 48,
+   "cycles": 2524,
+   "tk_per_frame": 15.775,
+   "calls_per_frame": 0.6,
+   "roots": [
+    "ftMainProcSearchHitAll"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "ndsEFManagerVisualProcUpdate",
+   "phase": "sim-only",
+   "calls": 72,
+   "cycles": 2521,
+   "tk_per_frame": 15.75625,
+   "calls_per_frame": 0.9,
+   "roots": [
+    "ndsEFManagerVisualProcUpdate"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "ndsBaseEFManagerDamageNormalLightMakeEffect",
+   "phase": "sim-only",
+   "calls": 88,
+   "cycles": 2469,
+   "tk_per_frame": 15.43125,
+   "calls_per_frame": 1.1,
+   "roots": [
+    "efManagerDamageNormalHeavyProcDead",
+    "ftMainProcSearchHitAll"
+   ],
+   "root_count": 2
+  },
+  {
+   "caller": "ifCommonPlayerTagProcDisplay",
+   "phase": "draw-only",
+   "calls": 161,
+   "cycles": 2423,
+   "tk_per_frame": 15.14375,
+   "calls_per_frame": 2.0125,
+   "roots": [
+    "ifCommonPlayerTagProcDisplay"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "efManagerDefaultProcUpdate",
+   "phase": "sim-only",
+   "calls": 62,
+   "cycles": 2353,
+   "tk_per_frame": 14.70625,
+   "calls_per_frame": 0.775,
+   "roots": [
+    "efManagerDefaultProcUpdate"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "grPupupuWhispyUpdateBlink",
+   "phase": "sim-only",
+   "calls": 161,
+   "cycles": 2322,
+   "tk_per_frame": 14.5125,
+   "calls_per_frame": 2.0125,
+   "roots": [
+    "grPupupuProcUpdate"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "wpMainApplyGravityClampTVel",
+   "phase": "sim-only",
+   "calls": 88,
+   "cycles": 2319,
+   "tk_per_frame": 14.49375,
+   "calls_per_frame": 1.1,
+   "roots": [
+    "ndsMarioFireballProcUpdateProbe"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "ftParamGetHitStun",
+   "phase": "sim-only",
+   "calls": 19,
+   "cycles": 2249,
+   "tk_per_frame": 14.05625,
+   "calls_per_frame": 0.2375,
+   "roots": [
+    "ftMainProcParams"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "ndsRendererHardwarePrepareLitDirection",
+   "phase": "draw+dispatch",
+   "calls": 54,
+   "cycles": 2185,
+   "tk_per_frame": 13.65625,
+   "calls_per_frame": 0.675,
+   "roots": [
+    "efManagerImpactWaveProcDisplay",
+    "efManagerShieldProcDisplay",
+    "ftDisplayMainProcDisplay",
+    "gcDrawDObjDLHead1",
+    "gcDrawDObjTreeForGObj",
+    "syTaskmanRunTask"
+   ],
+   "root_count": 6
+  },
+  {
+   "caller": "atanf",
+   "phase": "sim-only",
+   "calls": 56,
+   "cycles": 1964,
+   "tk_per_frame": 12.275,
+   "calls_per_frame": 0.7,
+   "roots": [
+    "ftCommonDamageAirCommonProcInterrupt",
+    "ftCommonDamageCommonProcInterrupt",
+    "ftCommonDownBounceProcUpdate",
+    "ftCommonJumpProcInterrupt",
+    "ftCommonLandingProcInterrupt",
+    "ftCommonOttottoProcInterrupt",
+    "ftCommonRebirthWaitProcInterrupt",
+    "ftCommonTurnProcInterrupt"
+   ],
+   "root_count": 14
+  },
+  {
+   "caller": "ftParamMakeEffect",
+   "phase": "sim+dispatch",
+   "calls": 117,
+   "cycles": 1860,
+   "tk_per_frame": 11.625,
+   "calls_per_frame": 1.4625,
+   "roots": [
+    "ftCommonAttackAirProcMap",
+    "ftCommonDamageAirCommonProcInterrupt",
+    "ftCommonDamageAirCommonProcMap",
+    "ftCommonDamageAirCommonProcUpdate",
+    "ftCommonDamageCommonProcInterrupt",
+    "ftCommonDamageCommonProcUpdate",
+    "ftCommonDamageFallProcMap",
+    "ftCommonDeadUpStarProcUpdate"
+   ],
+   "root_count": 63
+  },
+  {
+   "caller": "ftParamGetCapturedDamage",
+   "phase": "sim-only",
+   "calls": 76,
+   "cycles": 1779,
+   "tk_per_frame": 11.11875,
+   "calls_per_frame": 0.95,
+   "roots": [
+    "ftMainProcSearchHitAll"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "lbParticleRotateVel",
+   "phase": "sim+dispatch",
+   "calls": 60,
+   "cycles": 1771,
+   "tk_per_frame": 11.06875,
+   "calls_per_frame": 0.75,
+   "roots": [
+    "efManagerDamageCoinProcDead",
+    "efManagerDamageNormalHeavyProcDead",
+    "ftCommonAttackAirProcMap",
+    "ftCommonDamageAirCommonProcInterrupt",
+    "ftCommonDamageAirCommonProcMap",
+    "ftCommonDamageAirCommonProcUpdate",
+    "ftCommonDamageCommonProcInterrupt",
+    "ftCommonDamageCommonProcUpdate"
+   ],
+   "root_count": 72
+  },
+  {
+   "caller": "ndsBaseFTCommonGuardUpdateJoints",
+   "phase": "sim-only",
+   "calls": 30,
+   "cycles": 1719,
+   "tk_per_frame": 10.74375,
+   "calls_per_frame": 0.375,
+   "roots": [
+    "ftCommonDamageCommonProcInterrupt",
+    "ftCommonLandingProcInterrupt",
+    "ftCommonOttottoProcInterrupt",
+    "ftCommonRebirthWaitProcInterrupt",
+    "ftCommonTurnProcInterrupt",
+    "ftCommonWalkProcInterrupt",
+    "ndsBaseFTCommonGuardOffProcUpdate",
+    "ndsBaseFTCommonGuardOnProcUpdate"
+   ],
+   "root_count": 12
+  },
+  {
+   "caller": "func_ovl3_80138AA8",
+   "phase": "sim-only",
+   "calls": 57,
+   "cycles": 1686,
+   "tk_per_frame": 10.5375,
+   "calls_per_frame": 0.7125,
+   "roots": [
+    "ftMainProcUpdateInterrupt"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "wpMarioFireballProcUpdate",
+   "phase": "sim-only",
+   "calls": 44,
+   "cycles": 1670,
+   "tk_per_frame": 10.4375,
+   "calls_per_frame": 0.55,
+   "roots": [
+    "ndsMarioFireballProcUpdateProbe"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "ftPhysicsCheckSetFastFall",
+   "phase": "sim-only",
+   "calls": 111,
+   "cycles": 1620,
+   "tk_per_frame": 10.125,
+   "calls_per_frame": 1.3875,
+   "roots": [
+    "ftCommonDamageCommonProcPhysics",
+    "ftCommonFallSpecialProcPhysics",
+    "ftPhysicsApplyAirVelDrift"
+   ],
+   "root_count": 3
+  },
+  {
+   "caller": "ftPhysicsApplyGroundVelTransN",
+   "phase": "sim-only",
+   "calls": 63,
+   "cycles": 1602,
+   "tk_per_frame": 10.0125,
+   "calls_per_frame": 0.7875,
+   "roots": [
+    "ftMarioSpecialHiProcPhysics",
+    "ftPhysicsApplyGroundFrictionOrTransN"
+   ],
+   "root_count": 2
+  },
+  {
+   "caller": "ndsFighterMarioFoxDLAllDrawForSlot.constprop.0",
+   "phase": "draw+dispatch",
+   "calls": 76,
+   "cycles": 1496,
+   "tk_per_frame": 9.35,
+   "calls_per_frame": 0.95,
+   "roots": [
+    "ftDisplayMainProcDisplay",
+    "syTaskmanRunTask"
+   ],
+   "root_count": 2
+  },
+  {
+   "caller": "func_ovl2_800EF5D4",
+   "phase": "sim-only",
+   "calls": 53,
+   "cycles": 1454,
+   "tk_per_frame": 9.0875,
+   "calls_per_frame": 0.6625,
+   "roots": [
+    "ftMainProcSearchHitAll"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "ndsBaseMPProcessCheckTestRCliffCollision",
+   "phase": "sim-only",
+   "calls": 36,
+   "cycles": 1366,
+   "tk_per_frame": 8.5375,
+   "calls_per_frame": 0.45,
+   "roots": [
+    "ndsMPCommonRunFighterCliffFloorCeilCollisions"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "syUtilsArcCos",
+   "phase": "sim-only",
+   "calls": 35,
+   "cycles": 1280,
+   "tk_per_frame": 8.0,
+   "calls_per_frame": 0.4375,
+   "roots": [
+    "ftMainProcParams",
+    "ftMainProcSearchHitAll",
+    "ndsMPCommonProcFighterDamageFloorOnly"
+   ],
+   "root_count": 3
+  },
+  {
+   "caller": "battleship_ftAnimEndSetFall",
+   "phase": "sim-only",
+   "calls": 87,
+   "cycles": 1254,
+   "tk_per_frame": 7.8375,
+   "calls_per_frame": 1.0875,
+   "roots": [
+    "ftMarioSpecialAirLwProcUpdate",
+    "ndsBaseFTCommonAttackAirLwProcUpdate",
+    "ndsBaseFTCommonJumpAerialProcUpdate"
+   ],
+   "root_count": 3
+  },
+  {
+   "caller": "wpManagerMakeWeapon",
+   "phase": "sim+dispatch",
+   "calls": 72,
+   "cycles": 1235,
+   "tk_per_frame": 7.71875,
+   "calls_per_frame": 0.9,
+   "roots": [
+    "ftFoxSpecialNProcUpdate",
+    "ftMarioSpecialNProcAccessory"
+   ],
+   "root_count": 2
+  },
+  {
+   "caller": "efManagerDustLightMakeEffect",
+   "phase": "sim+dispatch",
+   "calls": 45,
+   "cycles": 1226,
+   "tk_per_frame": 7.6625,
+   "calls_per_frame": 0.5625,
+   "roots": [
+    "ftCommonAttackAirProcMap",
+    "ftCommonDamageAirCommonProcInterrupt",
+    "ftCommonDamageAirCommonProcMap",
+    "ftCommonDamageAirCommonProcUpdate",
+    "ftCommonDamageCommonProcInterrupt",
+    "ftCommonDamageCommonProcUpdate",
+    "ftCommonDamageFallProcMap",
+    "ftCommonDeadUpStarProcUpdate"
+   ],
+   "root_count": 63
+  },
+  {
+   "caller": "efManagerDamageNormalLightMakeEffect",
+   "phase": "sim-only",
+   "calls": 44,
+   "cycles": 1179,
+   "tk_per_frame": 7.36875,
+   "calls_per_frame": 0.55,
+   "roots": [
+    "ftMainProcSearchHitAll"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "efManagerFlameLRMakeEffect",
+   "phase": "sim+dispatch",
+   "calls": 36,
+   "cycles": 1094,
+   "tk_per_frame": 6.8375,
+   "calls_per_frame": 0.45,
+   "roots": [
+    "ftCommonAttackAirProcMap",
+    "ftCommonDamageAirCommonProcInterrupt",
+    "ftCommonDamageAirCommonProcMap",
+    "ftCommonDamageAirCommonProcUpdate",
+    "ftCommonDamageCommonProcInterrupt",
+    "ftCommonDamageCommonProcUpdate",
+    "ftCommonDamageFallProcMap",
+    "ftCommonDeadUpStarProcUpdate"
+   ],
+   "root_count": 63
+  },
+  {
+   "caller": "efManagerImpactWaveProcUpdate",
+   "phase": "sim-only",
+   "calls": 53,
+   "cycles": 1077,
+   "tk_per_frame": 6.73125,
+   "calls_per_frame": 0.6625,
+   "roots": [
+    "efManagerImpactWaveProcUpdate"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "ftPhysicsApplyAirVelFriction",
+   "phase": "sim-only",
+   "calls": 38,
+   "cycles": 998,
+   "tk_per_frame": 6.2375,
+   "calls_per_frame": 0.475,
+   "roots": [
+    "ftCommonDamageCommonProcPhysics"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "ndsStageGCDrawAllLoopRecordDObjDraw",
+   "phase": "draw-only",
+   "calls": 87,
+   "cycles": 993,
+   "tk_per_frame": 6.20625,
+   "calls_per_frame": 1.0875,
+   "roots": [
+    "efManagerImpactWaveProcDisplay",
+    "efManagerShieldProcDisplay",
+    "gcDrawDObjDLHead1",
+    "gcDrawDObjTreeForGObj"
+   ],
+   "root_count": 4
+  },
+  {
+   "caller": "ndsDrawSObjIntoPreview",
+   "phase": "draw+dispatch",
+   "calls": 36,
+   "cycles": 948,
+   "tk_per_frame": 5.925,
+   "calls_per_frame": 0.45,
+   "roots": [
+    "ifCommonPlayerStockSingleProcDisplay",
+    "ifCommonPlayerTagProcDisplay",
+    "ifCommonTimerProcDisplay",
+    "syTaskmanRunTask"
+   ],
+   "root_count": 4
+  },
+  {
+   "caller": "efManagerQuakeProcUpdate",
+   "phase": "sim-only",
+   "calls": 55,
+   "cycles": 929,
+   "tk_per_frame": 5.80625,
+   "calls_per_frame": 0.6875,
+   "roots": [
+    "efManagerQuakeProcUpdate"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "ndsBaseFTCommonDamageSetPublic",
+   "phase": "sim-only",
+   "calls": 47,
+   "cycles": 817,
+   "tk_per_frame": 5.10625,
+   "calls_per_frame": 0.5875,
+   "roots": [
+    "ftMainProcParams"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "ftMainUpdateColAnim",
+   "phase": "sim+dispatch",
+   "calls": 50,
+   "cycles": 815,
+   "tk_per_frame": 5.09375,
+   "calls_per_frame": 0.625,
+   "roots": [
+    "ftCommonAttackAirProcMap",
+    "ftCommonDamageAirCommonProcInterrupt",
+    "ftCommonDamageAirCommonProcMap",
+    "ftCommonDamageAirCommonProcUpdate",
+    "ftCommonDamageCommonProcInterrupt",
+    "ftCommonDamageCommonProcUpdate",
+    "ftCommonDamageFallProcMap",
+    "ftCommonDeadUpStarProcUpdate"
+   ],
+   "root_count": 63
+  },
+  {
+   "caller": "battleship_ftMainProcessHitCollisionStatsMain",
+   "phase": "sim-only",
+   "calls": 54,
+   "cycles": 791,
+   "tk_per_frame": 4.94375,
+   "calls_per_frame": 0.675,
+   "roots": [
+    "ftMainProcSearchHitAll"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "ftCommonRebirthCommonProcMap",
+   "phase": "sim-only",
+   "calls": 15,
+   "cycles": 711,
+   "tk_per_frame": 4.44375,
+   "calls_per_frame": 0.1875,
+   "roots": [
+    "ftCommonRebirthCommonProcMap"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "syMatrixTraRotRpyR",
+   "phase": "draw+dispatch",
+   "calls": 36,
+   "cycles": 708,
+   "tk_per_frame": 4.425,
+   "calls_per_frame": 0.45,
+   "roots": [
+    "efManagerImpactWaveProcDisplay",
+    "efManagerShieldProcDisplay",
+    "ftDisplayMainProcDisplay",
+    "gcDrawDObjDLHead1",
+    "gcDrawDObjTreeForGObj",
+    "syTaskmanRunTask"
+   ],
+   "root_count": 6
+  },
+  {
+   "caller": "ifCommonTimerProcDisplay",
+   "phase": "draw-only",
+   "calls": 33,
+   "cycles": 708,
+   "tk_per_frame": 4.425,
+   "calls_per_frame": 0.4125,
+   "roots": [
+    "ifCommonTimerProcDisplay"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "battleship_ftAnimEndSetWait",
+   "phase": "sim-only",
+   "calls": 49,
+   "cycles": 706,
+   "tk_per_frame": 4.4125,
+   "calls_per_frame": 0.6125,
+   "roots": [
+    "ftMarioSpecialLwProcUpdate"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "gcAddMObjForDObj",
+   "phase": "sim+dispatch",
+   "calls": 10,
+   "cycles": 673,
+   "tk_per_frame": 4.20625,
+   "calls_per_frame": 0.125,
+   "roots": [
+    "efManagerDamageSpawnOrbsProcUpdate",
+    "efManagerDamageSpawnSparksProcUpdate",
+    "ftCommonAttackAirProcMap",
+    "ftCommonDamageAirCommonProcInterrupt",
+    "ftCommonDamageAirCommonProcMap",
+    "ftCommonDamageAirCommonProcUpdate",
+    "ftCommonDamageCommonProcInterrupt",
+    "ftCommonDamageCommonProcUpdate"
+   ],
+   "root_count": 67
+  },
+  {
+   "caller": "wpMainGetStaledDamage",
+   "phase": "sim-only",
+   "calls": 28,
+   "cycles": 655,
+   "tk_per_frame": 4.09375,
+   "calls_per_frame": 0.35,
+   "roots": [
+    "ftMainProcSearchHitAll"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "ndsBaseFTCommonAttack1CheckInterruptCommon",
+   "phase": "sim-only",
+   "calls": 62,
+   "cycles": 655,
+   "tk_per_frame": 4.09375,
+   "calls_per_frame": 0.775,
+   "roots": [
+    "ftCommonDamageCommonProcInterrupt",
+    "ftCommonLandingProcInterrupt",
+    "ftCommonOttottoProcInterrupt",
+    "ftCommonRebirthWaitProcInterrupt",
+    "ftCommonTurnProcInterrupt",
+    "ftCommonWalkProcInterrupt",
+    "ndsBaseFTCommonSquatProcInterrupt",
+    "ndsBaseFTCommonSquatRvProcInterrupt"
+   ],
+   "root_count": 9
+  },
+  {
+   "caller": "wpFoxBlasterProcUpdate",
+   "phase": "sim-only",
+   "calls": 33,
+   "cycles": 646,
+   "tk_per_frame": 4.0375,
+   "calls_per_frame": 0.4125,
+   "roots": [
+    "wpFoxBlasterProcUpdate"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "ftMarioSpecialHiProcPhysics",
+   "phase": "sim-only",
+   "calls": 24,
+   "cycles": 634,
+   "tk_per_frame": 3.9625,
+   "calls_per_frame": 0.3,
+   "roots": [
+    "ftMarioSpecialHiProcPhysics"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "ftPhysicsApplyClampGroundVelStickRange",
+   "phase": "sim-only",
+   "calls": 28,
+   "cycles": 611,
+   "tk_per_frame": 3.81875,
+   "calls_per_frame": 0.35,
+   "roots": [
+    "ftMarioSpecialLwProcPhysics"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "ndsRendererAdapterPrepareInitialMatrices",
+   "phase": "draw+dispatch",
+   "calls": 22,
+   "cycles": 582,
+   "tk_per_frame": 3.6375,
+   "calls_per_frame": 0.275,
+   "roots": [
+    "efManagerImpactWaveProcDisplay",
+    "efManagerShieldProcDisplay",
+    "ftDisplayMainProcDisplay",
+    "gcDrawDObjDLHead1",
+    "gcDrawDObjTreeForGObj",
+    "syTaskmanRunTask"
+   ],
+   "root_count": 6
+  },
+  {
+   "caller": "battleship_ftAnimEndCheckSetStatus",
+   "phase": "sim-only",
+   "calls": 38,
+   "cycles": 548,
+   "tk_per_frame": 3.425,
+   "calls_per_frame": 0.475,
+   "roots": [
+    "ftCommonOttottoProcUpdate",
+    "ftCommonRebirthStandProcUpdate",
+    "ftMarioSpecialNProcUpdate",
+    "ndsBaseFTCommonSquatProcUpdate"
+   ],
+   "root_count": 4
+  },
+  {
+   "caller": "ndsBaseMPProcessSetLandingFloor",
+   "phase": "sim-only",
+   "calls": 12,
+   "cycles": 455,
+   "tk_per_frame": 2.84375,
+   "calls_per_frame": 0.15,
+   "roots": [
+    "mpCommonRunFighterAllCollisions",
+    "ndsMPCommonProcFighterDamageFloorOnly",
+    "ndsMPCommonRunFighterCliffFloorCeilCollisions"
+   ],
+   "root_count": 3
+  },
+  {
+   "caller": "lbCommonSim2D",
+   "phase": "sim-only",
+   "calls": 11,
+   "cycles": 428,
+   "tk_per_frame": 2.675,
+   "calls_per_frame": 0.1375,
+   "roots": [
+    "ndsMarioFireballProcMapProbe"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "ndsBaseFTCommonJumpSetStatus",
+   "phase": "sim-only",
+   "calls": 18,
+   "cycles": 409,
+   "tk_per_frame": 2.55625,
+   "calls_per_frame": 0.225,
+   "roots": [
+    "ftCommonKneeBendProcUpdate"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "wpMarioFireballMakeWeapon",
+   "phase": "unresolved",
+   "calls": 15,
+   "cycles": 396,
+   "tk_per_frame": 2.475,
+   "calls_per_frame": 0.1875,
+   "roots": [
+    "ftMarioSpecialNProcAccessory"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "ndsBaseFTCommonDamageSetDustEffectInterval",
+   "phase": "sim-only",
+   "calls": 27,
+   "cycles": 394,
+   "tk_per_frame": 2.4625,
+   "calls_per_frame": 0.3375,
+   "roots": [
+    "ftCommonDamageAirCommonProcUpdate",
+    "ftMainProcParams"
+   ],
+   "root_count": 2
+  },
+  {
+   "caller": "efManagerDustHeavyDoubleMakeEffect",
+   "phase": "sim+dispatch",
+   "calls": 16,
+   "cycles": 388,
+   "tk_per_frame": 2.425,
+   "calls_per_frame": 0.2,
+   "roots": [
+    "ftCommonAttackAirProcMap",
+    "ftCommonDamageAirCommonProcInterrupt",
+    "ftCommonDamageAirCommonProcMap",
+    "ftCommonDamageAirCommonProcUpdate",
+    "ftCommonDamageCommonProcInterrupt",
+    "ftCommonDamageCommonProcUpdate",
+    "ftCommonDamageFallProcMap",
+    "ftCommonDeadUpStarProcUpdate"
+   ],
+   "root_count": 63
+  },
+  {
+   "caller": "gcPlayDObjAnimJoint",
+   "phase": "sim+dispatch",
+   "calls": 10,
+   "cycles": 379,
+   "tk_per_frame": 2.36875,
+   "calls_per_frame": 0.125,
+   "roots": [
+    "ftCommonAttackAirProcMap",
+    "ftCommonDamageAirCommonProcInterrupt",
+    "ftCommonDamageAirCommonProcMap",
+    "ftCommonDamageAirCommonProcUpdate",
+    "ftCommonDamageCommonProcInterrupt",
+    "ftCommonDamageCommonProcUpdate",
+    "ftCommonDamageFallProcMap",
+    "ftCommonDeadUpStarProcUpdate"
+   ],
+   "root_count": 62
+  },
+  {
+   "caller": "efManagerDustHeavyMakeEffect",
+   "phase": "sim+dispatch",
+   "calls": 9,
+   "cycles": 341,
+   "tk_per_frame": 2.13125,
+   "calls_per_frame": 0.1125,
+   "roots": [
+    "efManagerDustHeavyDoubleProcUpdate",
+    "ftCommonAttackAirProcMap",
+    "ftCommonDamageAirCommonProcInterrupt",
+    "ftCommonDamageAirCommonProcMap",
+    "ftCommonDamageAirCommonProcUpdate",
+    "ftCommonDamageCommonProcInterrupt",
+    "ftCommonDamageCommonProcUpdate",
+    "ftCommonDamageFallProcMap"
+   ],
+   "root_count": 64
+  },
+  {
+   "caller": "ftComputerWaitGetTarget",
+   "phase": "sim-only",
+   "calls": 10,
+   "cycles": 322,
+   "tk_per_frame": 2.0125,
+   "calls_per_frame": 0.125,
+   "roots": [
+    "ftMainProcUpdateInterrupt"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "efManagerDamageSpawnSparksProcUpdate",
+   "phase": "sim-only",
+   "calls": 9,
+   "cycles": 319,
+   "tk_per_frame": 1.99375,
+   "calls_per_frame": 0.1125,
+   "roots": [
+    "efManagerDamageSpawnSparksProcUpdate"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "ndsBaseFTCommonKneeBendProcUpdate",
+   "phase": "sim-only",
+   "calls": 12,
+   "cycles": 313,
+   "tk_per_frame": 1.95625,
+   "calls_per_frame": 0.15,
+   "roots": [
+    "ftCommonKneeBendProcUpdate"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "ftMainUpdateMotionEventsForward",
+   "phase": "sim+dispatch",
+   "calls": 22,
+   "cycles": 301,
+   "tk_per_frame": 1.88125,
+   "calls_per_frame": 0.275,
+   "roots": [
+    "ftCommonAttackAirProcMap",
+    "ftCommonDamageAirCommonProcInterrupt",
+    "ftCommonDamageAirCommonProcMap",
+    "ftCommonDamageAirCommonProcUpdate",
+    "ftCommonDamageCommonProcInterrupt",
+    "ftCommonDamageCommonProcUpdate",
+    "ftCommonDamageFallProcMap",
+    "ftCommonDeadUpStarProcUpdate"
+   ],
+   "root_count": 61
+  },
+  {
+   "caller": "battleship_wpMarioFireballMakeWeapon",
+   "phase": "unresolved",
+   "calls": 12,
+   "cycles": 287,
+   "tk_per_frame": 1.79375,
+   "calls_per_frame": 0.15,
+   "roots": [
+    "ftMarioSpecialNProcAccessory"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "ndsBaseFTCommonDamageCheckMakeScreenFlash",
+   "phase": "sim-only",
+   "calls": 19,
+   "cycles": 280,
+   "tk_per_frame": 1.75,
+   "calls_per_frame": 0.2375,
+   "roots": [
+    "ftMainProcParams"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "ndsBaseFTCommonDamageAirCommonProcUpdate",
+   "phase": "sim-only",
+   "calls": 19,
+   "cycles": 274,
+   "tk_per_frame": 1.7125,
+   "calls_per_frame": 0.2375,
+   "roots": [
+    "ftCommonDamageAirCommonProcUpdate"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "ftPublicCommonCheck",
+   "phase": "sim-only",
+   "calls": 19,
+   "cycles": 270,
+   "tk_per_frame": 1.6875,
+   "calls_per_frame": 0.2375,
+   "roots": [
+    "ftMainProcParams"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "mpCommonSetFighterGround",
+   "phase": "sim+dispatch",
+   "calls": 12,
+   "cycles": 256,
+   "tk_per_frame": 1.6,
+   "calls_per_frame": 0.15,
+   "roots": [
+    "ftCommonAttackAirProcMap",
+    "ftCommonDamageAirCommonProcMap",
+    "ftCommonDamageCommonProcUpdate",
+    "ftCommonDamageFallProcMap",
+    "ftCommonDeadUpStarProcUpdate",
+    "ftCommonFallSpecialProcMap",
+    "ftCommonOttottoProcMap",
+    "ftCommonTurnProcUpdate"
+   ],
+   "root_count": 21
+  },
+  {
+   "caller": "ndsBaseFTCommonLandingProcInterrupt",
+   "phase": "sim-only",
+   "calls": 14,
+   "cycles": 250,
+   "tk_per_frame": 1.5625,
+   "calls_per_frame": 0.175,
+   "roots": [
+    "ftCommonLandingProcInterrupt"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "lbCommonReflect2D",
+   "phase": "sim-only",
+   "calls": 8,
+   "cycles": 246,
+   "tk_per_frame": 1.5375,
+   "calls_per_frame": 0.1,
+   "roots": [
+    "ndsMarioFireballProcMapProbe"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "__ieee754_atan2f",
+   "phase": "sim-only",
+   "calls": 2,
+   "cycles": 236,
+   "tk_per_frame": 1.475,
+   "calls_per_frame": 0.025,
+   "roots": [
+    "ftCommonDamageAirCommonProcInterrupt",
+    "ftCommonDamageCommonProcInterrupt",
+    "ftCommonDownBounceProcUpdate",
+    "ftCommonJumpProcInterrupt",
+    "ftCommonLandingProcInterrupt",
+    "ftCommonOttottoProcInterrupt",
+    "ftCommonRebirthWaitProcInterrupt",
+    "ftCommonTurnProcInterrupt"
+   ],
+   "root_count": 14
+  },
+  {
+   "caller": "ftFoxSpecialNProcUpdate",
+   "phase": "sim-only",
+   "calls": 16,
+   "cycles": 230,
+   "tk_per_frame": 1.4375,
+   "calls_per_frame": 0.2,
+   "roots": [
+    "ftFoxSpecialNProcUpdate"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "ndsBaseFTCommonDownBounceSetStatus",
+   "phase": "sim-only",
+   "calls": 7,
+   "cycles": 229,
+   "tk_per_frame": 1.43125,
+   "calls_per_frame": 0.0875,
+   "roots": [
+    "ftCommonDamageAirCommonProcMap",
+    "ftCommonDamageFallProcMap"
+   ],
+   "root_count": 2
+  },
+  {
+   "caller": "efManagerFoxReflectorProcUpdate",
+   "phase": "sim-only",
+   "calls": 15,
+   "cycles": 216,
+   "tk_per_frame": 1.35,
+   "calls_per_frame": 0.1875,
+   "roots": [
+    "efManagerFoxReflectorProcUpdate"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "efManagerDamageNormalHeavyMakeEffect",
+   "phase": "sim-only",
+   "calls": 8,
+   "cycles": 214,
+   "tk_per_frame": 1.3375,
+   "calls_per_frame": 0.1,
+   "roots": [
+    "ftMainProcSearchHitAll"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "ndsParticleBiasTowardEye",
+   "phase": "draw-only",
+   "calls": 20,
+   "cycles": 211,
+   "tk_per_frame": 1.31875,
+   "calls_per_frame": 0.25,
+   "roots": [
+    "efManagerImpactWaveProcDisplay",
+    "efManagerShieldProcDisplay",
+    "gcDrawDObjDLHead1",
+    "gcDrawDObjTreeForGObj"
+   ],
+   "root_count": 4
+  },
+  {
+   "caller": "ndsBaseFTCommonDamageUpdateMain",
+   "phase": "sim-only",
+   "calls": 19,
+   "cycles": 200,
+   "tk_per_frame": 1.25,
+   "calls_per_frame": 0.2375,
+   "roots": [
+    "ftMainProcParams"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "ifCommonAnnounceTimeUpMakeInterface",
+   "phase": "sim-only",
+   "calls": 12,
+   "cycles": 195,
+   "tk_per_frame": 1.21875,
+   "calls_per_frame": 0.15,
+   "roots": [
+    "ifCommonAnnounceTimeUpInitInterface"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "ftParamGetStickAngleRads",
+   "phase": "sim-only",
+   "calls": 12,
+   "cycles": 195,
+   "tk_per_frame": 1.21875,
+   "calls_per_frame": 0.15,
+   "roots": [
+    "ftCommonDamageAirCommonProcInterrupt",
+    "ftCommonDamageCommonProcInterrupt",
+    "ftCommonDownBounceProcUpdate",
+    "ftCommonJumpProcInterrupt",
+    "ftCommonLandingProcInterrupt",
+    "ftCommonOttottoProcInterrupt",
+    "ftCommonRebirthWaitProcInterrupt",
+    "ftCommonTurnProcInterrupt"
+   ],
+   "root_count": 14
+  },
+  {
+   "caller": "ftMarioSpecialLwProcPhysics",
+   "phase": "sim-only",
+   "calls": 6,
+   "cycles": 181,
+   "tk_per_frame": 1.13125,
+   "calls_per_frame": 0.075,
+   "roots": [
+    "ftMarioSpecialLwProcPhysics"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "ftPublicDecideCommon",
+   "phase": "sim-only",
+   "calls": 12,
+   "cycles": 170,
+   "tk_per_frame": 1.0625,
+   "calls_per_frame": 0.15,
+   "roots": [
+    "ftMainProcParams"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "ndsDrawLayeredSObjFrame",
+   "phase": "draw-only",
+   "calls": 12,
+   "cycles": 155,
+   "tk_per_frame": 0.96875,
+   "calls_per_frame": 0.15,
+   "roots": [
+    "ifCommonPlayerStockSingleProcDisplay",
+    "ifCommonPlayerTagProcDisplay",
+    "ifCommonTimerProcDisplay"
+   ],
+   "root_count": 3
+  },
+  {
+   "caller": "efManagerDustHeavyDoubleProcUpdate",
+   "phase": "sim-only",
+   "calls": 4,
+   "cycles": 151,
+   "tk_per_frame": 0.94375,
+   "calls_per_frame": 0.05,
+   "roots": [
+    "efManagerDustHeavyDoubleProcUpdate"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "ftMarioSpecialHiProcUpdate",
+   "phase": "sim-only",
+   "calls": 10,
+   "cycles": 144,
+   "tk_per_frame": 0.9,
+   "calls_per_frame": 0.125,
+   "roots": [
+    "ftMarioSpecialHiProcUpdate"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "grPupupuUpdateWhispyStatus",
+   "phase": "sim-only",
+   "calls": 10,
+   "cycles": 144,
+   "tk_per_frame": 0.9,
+   "calls_per_frame": 0.125,
+   "roots": [
+    "grPupupuProcUpdate"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "ndsBaseFTCommonJumpAerialSetStatus",
+   "phase": "sim-only",
+   "calls": 5,
+   "cycles": 133,
+   "tk_per_frame": 0.83125,
+   "calls_per_frame": 0.0625,
+   "roots": [
+    "ftCommonDamageAirCommonProcInterrupt",
+    "ftCommonDamageCommonProcInterrupt",
+    "ftCommonFallSpecialProcInterrupt",
+    "ftCommonJumpProcInterrupt",
+    "ndsBaseFTCommonJumpAerialProcInterrupt",
+    "ndsBaseFTCommonPassProcInterrupt"
+   ],
+   "root_count": 6
+  },
+  {
+   "caller": "ndsEFManagerMakeVisualEffect",
+   "phase": "sim+dispatch",
+   "calls": 7,
+   "cycles": 131,
+   "tk_per_frame": 0.81875,
+   "calls_per_frame": 0.0875,
+   "roots": [
+    "ftCommonAttackAirProcMap",
+    "ftCommonDamageAirCommonProcInterrupt",
+    "ftCommonDamageAirCommonProcMap",
+    "ftCommonDamageAirCommonProcUpdate",
+    "ftCommonDamageCommonProcInterrupt",
+    "ftCommonDamageCommonProcUpdate",
+    "ftCommonDamageFallProcMap",
+    "ftCommonDeadUpStarProcUpdate"
+   ],
+   "root_count": 63
+  },
+  {
+   "caller": "battleship_wpFoxBlasterMakeWeapon",
+   "phase": "sim-only",
+   "calls": 6,
+   "cycles": 128,
+   "tk_per_frame": 0.8,
+   "calls_per_frame": 0.075,
+   "roots": [
+    "ftFoxSpecialNProcUpdate"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "ftPhysicsClampAirVelXMax",
+   "phase": "sim-only",
+   "calls": 8,
+   "cycles": 116,
+   "tk_per_frame": 0.725,
+   "calls_per_frame": 0.1,
+   "roots": [
+    "ftCommonDamageAirCommonProcUpdate",
+    "ftCommonDamageCommonProcUpdate",
+    "ftCommonOttottoProcMap",
+    "ftFoxSpecialLwEndProcUpdate",
+    "ftFoxSpecialNProcUpdate",
+    "ftMainProcPhysicsMapCapture",
+    "ftMainProcPhysicsMapDefault",
+    "ftMarioSpecialAirLwProcUpdate"
+   ],
+   "root_count": 16
+  },
+  {
+   "caller": "ftMarioSpecialHiProcMap",
+   "phase": "sim-only",
+   "calls": 8,
+   "cycles": 113,
+   "tk_per_frame": 0.70625,
+   "calls_per_frame": 0.1,
+   "roots": [
+    "ftMarioSpecialHiProcMap"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "efManagerImpactWaveProcDisplay",
+   "phase": "draw-only",
+   "calls": 8,
+   "cycles": 103,
+   "tk_per_frame": 0.64375,
+   "calls_per_frame": 0.1,
+   "roots": [
+    "efManagerImpactWaveProcDisplay"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "wpProcessProcHitCollisions",
+   "phase": "sim-only",
+   "calls": 4,
+   "cycles": 93,
+   "tk_per_frame": 0.58125,
+   "calls_per_frame": 0.05,
+   "roots": [
+    "wpProcessProcHitCollisions"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "ndsBaseFTCommonKneeBendProcInterrupt",
+   "phase": "sim-only",
+   "calls": 6,
+   "cycles": 92,
+   "tk_per_frame": 0.575,
+   "calls_per_frame": 0.075,
+   "roots": [
+    "ftCommonKneeBendProcInterrupt"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "ndsBaseFTCommonAttackAirProcMap",
+   "phase": "sim-only",
+   "calls": 6,
+   "cycles": 91,
+   "tk_per_frame": 0.56875,
+   "calls_per_frame": 0.075,
+   "roots": [
+    "ftCommonAttackAirProcMap"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "ftFoxSpecialLwHitProcUpdate",
+   "phase": "sim-only",
+   "calls": 6,
+   "cycles": 86,
+   "tk_per_frame": 0.5375,
+   "calls_per_frame": 0.075,
+   "roots": [
+    "ftFoxSpecialLwHitProcUpdate"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "ndsMarioFireballProcReflectorProbe",
+   "phase": "unresolved",
+   "calls": 4,
+   "cycles": 78,
+   "tk_per_frame": 0.4875,
+   "calls_per_frame": 0.05,
+   "roots": [
+    "ndsMarioFireballProcReflectorProbe"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "efManagerDustDashMakeEffect",
+   "phase": "sim+dispatch",
+   "calls": 2,
+   "cycles": 75,
+   "tk_per_frame": 0.46875,
+   "calls_per_frame": 0.025,
+   "roots": [
+    "ftCommonAttackAirProcMap",
+    "ftCommonDamageAirCommonProcInterrupt",
+    "ftCommonDamageAirCommonProcMap",
+    "ftCommonDamageAirCommonProcUpdate",
+    "ftCommonDamageCommonProcInterrupt",
+    "ftCommonDamageCommonProcUpdate",
+    "ftCommonDamageFallProcMap",
+    "ftCommonDeadUpStarProcUpdate"
+   ],
+   "root_count": 63
+  },
+  {
+   "caller": "efManagerDamageCoinProcDead",
+   "phase": "sim-only",
+   "calls": 2,
+   "cycles": 75,
+   "tk_per_frame": 0.46875,
+   "calls_per_frame": 0.025,
+   "roots": [
+    "efManagerDamageCoinProcDead"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "ndsBaseFTCommonAttackAirCheckInterruptCommon",
+   "phase": "sim-only",
+   "calls": 5,
+   "cycles": 73,
+   "tk_per_frame": 0.45625,
+   "calls_per_frame": 0.0625,
+   "roots": [
+    "ftCommonDamageAirCommonProcInterrupt",
+    "ftCommonDamageCommonProcInterrupt",
+    "ftCommonJumpProcInterrupt",
+    "ndsBaseFTCommonJumpAerialProcInterrupt",
+    "ndsBaseFTCommonPassProcInterrupt"
+   ],
+   "root_count": 5
+  },
+  {
+   "caller": "ndsBaseFTCommonDownBounceProcUpdate",
+   "phase": "sim-only",
+   "calls": 5,
+   "cycles": 72,
+   "tk_per_frame": 0.45,
+   "calls_per_frame": 0.0625,
+   "roots": [
+    "ftCommonDownBounceProcUpdate"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "wpMainVelSetModelPitch",
+   "phase": "sim+dispatch",
+   "calls": 5,
+   "cycles": 71,
+   "tk_per_frame": 0.44375,
+   "calls_per_frame": 0.0625,
+   "roots": [
+    "ftMarioSpecialNProcAccessory",
+    "ndsMarioFireballProcMapProbe",
+    "ndsMarioFireballProcReflectorProbe"
+   ],
+   "root_count": 3
+  },
+  {
+   "caller": "mpCommonSetFighterLandingParams",
+   "phase": "sim-only",
+   "calls": 6,
+   "cycles": 63,
+   "tk_per_frame": 0.39375,
+   "calls_per_frame": 0.075,
+   "roots": [
+    "ndsMPCommonProcFighterDamageFloorOnly",
+    "ndsMPCommonRunFighterCliffFloorCeilCollisions"
+   ],
+   "root_count": 2
+  },
+  {
+   "caller": "ndsBaseFTCommonTurnProcUpdate",
+   "phase": "sim-only",
+   "calls": 4,
+   "cycles": 57,
+   "tk_per_frame": 0.35625,
+   "calls_per_frame": 0.05,
+   "roots": [
+    "ftCommonTurnProcUpdate"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "wpMainReflectorSetLR",
+   "phase": "unresolved",
+   "calls": 3,
+   "cycles": 57,
+   "tk_per_frame": 0.35625,
+   "calls_per_frame": 0.0375,
+   "roots": [
+    "ndsMarioFireballProcReflectorProbe"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "lbCommonScale2D",
+   "phase": "sim-only",
+   "calls": 2,
+   "cycles": 52,
+   "tk_per_frame": 0.325,
+   "calls_per_frame": 0.025,
+   "roots": [
+    "ndsMarioFireballProcMapProbe",
+    "ndsMarioFireballProcUpdateProbe"
+   ],
+   "root_count": 2
+  },
+  {
+   "caller": "wpMapCheckAllRebound",
+   "phase": "sim-only",
+   "calls": 2,
+   "cycles": 52,
+   "tk_per_frame": 0.325,
+   "calls_per_frame": 0.025,
+   "roots": [
+    "ndsMarioFireballProcMapProbe"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "ndsBaseFTCommonKneeBendCheckInterruptCommon",
+   "phase": "sim-only",
+   "calls": 2,
+   "cycles": 32,
+   "tk_per_frame": 0.2,
+   "calls_per_frame": 0.025,
+   "roots": [
+    "ftCommonDamageCommonProcInterrupt",
+    "ftCommonLandingProcInterrupt",
+    "ftCommonOttottoProcInterrupt",
+    "ftCommonRebirthWaitProcInterrupt",
+    "ftCommonTurnProcInterrupt",
+    "ftCommonWalkProcInterrupt",
+    "ndsBaseFTCommonSquatProcInterrupt",
+    "ndsBaseFTCommonSquatRvProcInterrupt"
+   ],
+   "root_count": 9
+  },
+  {
+   "caller": "ndsBaseFTCommonDownForwardOrBackCheckInterruptCommon",
+   "phase": "sim-only",
+   "calls": 2,
+   "cycles": 29,
+   "tk_per_frame": 0.18125,
+   "calls_per_frame": 0.025,
+   "roots": [
+    "ftCommonDownBounceProcUpdate"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "grPupupuWhispyUpdateOpen",
+   "phase": "sim-only",
+   "calls": 2,
+   "cycles": 28,
+   "tk_per_frame": 0.175,
+   "calls_per_frame": 0.025,
+   "roots": [
+    "grPupupuProcUpdate"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "grPupupuFlowersBackUpdateAll",
+   "phase": "sim-only",
+   "calls": 2,
+   "cycles": 28,
+   "tk_per_frame": 0.175,
+   "calls_per_frame": 0.025,
+   "roots": [
+    "grPupupuProcUpdate"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "ndsBaseFTCommonGuardOnProcUpdate",
+   "phase": "sim-only",
+   "calls": 2,
+   "cycles": 28,
+   "tk_per_frame": 0.175,
+   "calls_per_frame": 0.025,
+   "roots": [
+    "ndsBaseFTCommonGuardOnProcUpdate"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "ndsBaseEFManagerDustExpandSmallMakeEffect",
+   "phase": "sim+dispatch",
+   "calls": 2,
+   "cycles": 21,
+   "tk_per_frame": 0.13125,
+   "calls_per_frame": 0.025,
+   "roots": [
+    "efManagerDamageCoinProcDead",
+    "ftCommonAttackAirProcMap",
+    "ftCommonDamageAirCommonProcInterrupt",
+    "ftCommonDamageAirCommonProcMap",
+    "ftCommonDamageAirCommonProcUpdate",
+    "ftCommonDamageCommonProcInterrupt",
+    "ftCommonDamageCommonProcUpdate",
+    "ftCommonDamageFallProcMap"
+   ],
+   "root_count": 66
+  },
+  {
+   "caller": "ftMainUpdateReflectorStatWeapon",
+   "phase": "sim-only",
+   "calls": 1,
+   "cycles": 14,
+   "tk_per_frame": 0.0875,
+   "calls_per_frame": 0.0125,
+   "roots": [
+    "ftMainProcSearchHitAll"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "ftFoxSpecialLwStartProcUpdate",
+   "phase": "sim-only",
+   "calls": 1,
+   "cycles": 14,
+   "tk_per_frame": 0.0875,
+   "calls_per_frame": 0.0125,
+   "roots": [
+    "ftFoxSpecialLwStartProcUpdate"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "mpCommonProcFighterWaitOrLanding",
+   "phase": "sim-only",
+   "calls": 1,
+   "cycles": 14,
+   "tk_per_frame": 0.0875,
+   "calls_per_frame": 0.0125,
+   "roots": [
+    "mpCommonProcFighterWaitOrLanding"
+   ],
+   "root_count": 1
+  },
+  {
+   "caller": "ndsBaseFTCommonAttackHi3CheckInterruptCommon",
+   "phase": "sim-only",
+   "calls": 1,
+   "cycles": 14,
+   "tk_per_frame": 0.0875,
+   "calls_per_frame": 0.0125,
+   "roots": [
+    "ftCommonDamageCommonProcInterrupt",
+    "ftCommonLandingProcInterrupt",
+    "ftCommonOttottoProcInterrupt",
+    "ftCommonRebirthWaitProcInterrupt",
+    "ftCommonTurnProcInterrupt",
+    "ftCommonWalkProcInterrupt",
+    "ndsBaseFTCommonSquatProcInterrupt",
+    "ndsBaseFTCommonSquatRvProcInterrupt"
+   ],
+   "root_count": 9
+  }
+ ],
+ "phase_cycles": {
+  "shared": 9203342,
+  "sim-only": 6325895,
+  "sim+dispatch": 6025950,
+  "draw-only": 2116954,
+  "draw+dispatch": 2785055,
+  "unresolved": 432370
+ }
+}
