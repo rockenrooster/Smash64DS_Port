@@ -1,0 +1,8 @@
+source=artifacts/performance/2026-08-15_ftanim-dispatch-attribution/v3-on/arm9-profile.csv
+regions=1601
+marginal_frames=80
+marginal_threshold_ticks=1151393
+marginal_axis=total_cycles-halt_wait
+rows=55117714
+distinct_pcs=103023
+cycles_per_tick=2
