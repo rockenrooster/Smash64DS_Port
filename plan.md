@@ -1141,9 +1141,10 @@ as a layout lever). **Two survive, each needing one counter first**:
 `ndsRendererSyncTextureTile` (**8,867 tk/fr, 72.68 syncs/frame**) and the texture-bind collapse
 (**103.45 requests → 55.73 GX binds/frame**, 13,868 tk/fr combined).
 
-**`NDS_R2_FIGHTER_GX_COMPOSE` is still `?= 0` and its −13,632 is still stale** (baseline 1,258,112 vs
-1,177,344) — **but the leak was its only blocker, so re-measuring it is now unblocked and is the
-obvious next package.** `c183`'s whole-match P95 1,187,648 is **not** an A/B and is not quotable.
+**Historical note:** `NDS_R2_FIGHTER_GX_COMPOSE` was still `?= 0` at this point and its −13,632 was
+stale (baseline 1,258,112 vs 1,177,344). The leak was subsequently fixed, the repaired path was
+re-measured, the owner accepted its matched-tic visual delta, and on 2026-08-16 the accepted route
+became the shipping default (`?= 1`). `c183`'s whole-match P95 1,187,648 is still **not** an A/B.
 
 ## K-GXC. `GX_COMPOSE` is owner-approved and freshly banked (2026-08-15, `dd80585d6eb`)
 
@@ -1183,10 +1184,12 @@ Locals=Mults 110,702).
 The ≥95% cadence target is therefore still RED even though GX compose itself is
 accepted and banked.
 
-The published default is deliberately unchanged: `NDS_R2_FIGHTER_GX_COMPOSE`
-remains default 0 and the published target remains pinned to 0. Next performance
-work is sized against **+28,689 net ticks**, while cadence remains a separate
-acceptance gap.
+**Updated 2026-08-16 by owner policy:** accepted optimisations ship enabled.
+`NDS_R2_FIGHTER_GX_COMPOSE` is now default 1 and the published, tick-HUD/proof,
+and stage-floor targets all carry it. The c185 figures above remain valid as that
+bank's measurements, but later GX=0 ITCM measurements must be freshly re-banked
+with GX compose on before quoting a current shipping gap; do not add old A/B
+prices arithmetically.
 
 **Renderer-state redundancy is measured and CLOSED below the package floor**
 (`artifacts/performance/2026-08-15_renderer-state-redundancy/STATE_REDUNDANCY.md`).
@@ -1960,9 +1963,9 @@ was measured on) is the better next candidate. If no, the whole 34,178 closes.
 1. **Task 5 — devkitARM/devkitPro toolchain bump.** Owner-queued, not started.
 2. `check_ftanim_transcribe.py` / `check_ftanim_target_exact.py` still RED and unwired since
    `514fad238da`.
-3. **`GX_COMPOSE` published default is still 0** while −17,152 sits in the bank and this plan
-   records its captures as *pixel-identical*. Resolve the contradiction with the 0.0692% figure
-   quoted in the c204 report before flipping anything.
+3. **CLOSED 2026-08-16 — `GX_COMPOSE` now ships ON.** The old pixel-identical wording was retired;
+   the owner inspected and accepted the repaired matched-tic masks at 0.0358–0.1742% battle-screen
+   variance, and the published/proof/measurement targets now all carry the accepted route.
 4. Re-capture the two Fox probes — v5's clearance terms are evaluated poses from inside the
    segment-phase defect window. Documentation refresh, not a gate.
 5. Three measurement-tool defects fixed this cycle, each of which produced a wrong number first:

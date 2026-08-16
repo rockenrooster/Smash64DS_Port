@@ -779,16 +779,17 @@ NDS_R2_FIGHTER_HW_MTX ?= 0
 # is preorder, so RESTORE(parent) / MTX_MULT_4x4(chain) / STORE(i) rebuilds the
 # tree in the loop's own order with the palette as the parent store.
 # Requires NDS_R2_FIGHTER_HW_MTX.
-#   0 = CPU compose (shipped).
-#   1 = GX compose.
+#   0 = CPU compose (control arm).
+#   1 = GX compose (shipped; owner-accepted 2026-08-15).
 #   2 = GX compose AND keep the CPU compose, comparing the two per binding.
 #       Costs more than either arm; it exists because "same order, same operands"
 #       is exactly the claim E8 proved gets read wrong.
-# Promote 2 -> 1 only on a zero gNdsR2GxComposeVerifyFail run.
-NDS_R2_FIGHTER_GX_COMPOSE ?= 0
-# Lab escape for the tick-HUD/proof block only, which otherwise pins the flag to
-# the published block's 0. See that override for why it exists and what it may
-# not reach. Never set this on a published target.
+# Promote 2 -> 1 only on a zero gNdsR2GxComposeVerifyFail run. That verification,
+# the full-match stack fix, and the owner's matched-tic visual acceptance are now
+# complete, so the accepted route is the default rather than a lab-only bank.
+NDS_R2_FIGHTER_GX_COMPOSE ?= 1
+# Historical lab escape retained so old measurement commands remain parseable.
+# The accepted route now ships directly, so canonical targets no longer need it.
 NDS_R2_FIGHTER_GX_COMPOSE_LAB ?= 0
 # Slice 44. Round-robins the stage's per-frame transform revalidation over N
 # frames instead of running the whole sweep every frame. Requires
@@ -1669,13 +1670,12 @@ override NDS_TASK36_HW_COMPOSE := 2
 # both flag states, geometry proven identical (136,640 P0 triangles either way
 # over the same 480-frame window), owner-approved 2026-07-28.
 override NDS_R2_FIGHTER_HW_MTX := 1
-# Slice 43 WITHDRAWN 2026-08-11. It saved WORK-H P50/P95 10,624/13,632, but the
-# owner bisect found the periodic one-frame fighter disappearance only when this
-# GX joint-compose path is enabled. Reserving the union of Mario/Fox parent/cross
-# palette slots removed one real collision and still did NOT remove the blink on
-# the owner's ROM. Ship the known-clean CPU joint compose until the remaining GX
-# state defect is isolated; keep HW_MTX above, which predates Slice 43 and is clean.
-override NDS_R2_FIGHTER_GX_COMPOSE := 0
+# Slice 43 was withdrawn on 2026-08-11 after the owner found a periodic one-frame
+# fighter disappearance. The later full-match repair closed the GX matrix-stack
+# leak, and the 2026-08-15 matched-tic diff masks were explicitly owner-accepted
+# (0.0358-0.1742% battle-screen variance, GXSTAT 0x06000000, gameplay invariants
+# unchanged). Owner policy 2026-08-16: accepted optimisations ship enabled.
+override NDS_R2_FIGHTER_GX_COMPOSE := 1
 # Slice 44: the stage's per-frame transform revalidation round-robins over 8
 # frames instead of re-proving all 42 bindings constant every frame. Matched
 # control from the same tree, 1,600-frame both-CPU gate: WORK-H P50 -17,088 /
@@ -1899,15 +1899,10 @@ override NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE := 1
 override NDS_TASK36_HW_COMPOSE := 2
 # R2-03 E17/E16: match the published block. Any flag there is on this one too.
 override NDS_R2_FIGHTER_HW_MTX := 1
-# Slice 43 is withdrawn in the published block; measurement/proof siblings must
-# match it exactly or they measure a renderer the user is not running.
-#
-# NDS_R2_FIGHTER_GX_COMPOSE_LAB=1 is the one documented escape, and it exists so
-# that re-measuring the withdrawn slice (plan.md Phase 3) never needs a hand-edit
-# of this line -- hand-editing a pin is how a lab flag reaches a published ROM.
-# It reaches ONLY this block: the published block pins 0 unconditionally, so no
-# published target can carry the slice whatever is passed on the command line.
-override NDS_R2_FIGHTER_GX_COMPOSE := $(if $(filter 1,$(NDS_R2_FIGHTER_GX_COMPOSE_LAB)),1,0)
+# GX compose is owner-accepted and now ships enabled. Measurement/proof siblings
+# must match the published renderer rather than requiring the historical _LAB
+# escape, or the instrument would measure a path the user is not running.
+override NDS_R2_FIGHTER_GX_COMPOSE := 1
 # Slice 44. This is the instrument every measurement runs on, so it has to stay
 # flag-identical to the published block -- a stride on one and not the other
 # would put ~35,900 of WORK-H P95 between the ROM being judged and the ROM
@@ -2162,9 +2157,9 @@ override NDS_TASK36_HW_COMPOSE := 1
 override NDS_TASK36_RIGID_BINDING_MASK := \
 	$(if $(filter %-rigidoff-hwtri,$(TARGET)),0ULL,)
 override NDS_R2_FIGHTER_HW_MTX := 1
-# Match the published fighter path. The stage-floor A/B must not carry the
-# withdrawn Slice 43 fighter regression as an unrelated variable.
-override NDS_R2_FIGHTER_GX_COMPOSE := 0
+# Match the published fighter path. GX compose is owner-accepted and ships on;
+# stage-floor A/Bs therefore carry the same fighter renderer as the user ROM.
+override NDS_R2_FIGHTER_GX_COMPOSE := 1
 override NDS_R2_FIGHTER_HW_LIGHT := 1
 override NDS_R2_FIGHTER_SHUFFLE_FOLD := 1
 override NDS_R2_CUBIC_FIXED := 1

@@ -33,7 +33,7 @@ clock.** Coverage is part of a baseline's identity now, not a footnote. The
 conversion: the sim runs 60 Hz and presents 30 Hz, ratio **measured at exactly
 2.000**, so 1,600 presented = 3,200 logic = **53.3 s**.
 
-## THE LEVEL IS +19,089: ITCM REPACK + HOT-LEAF ADMISSION IS BUILT AND BANKED (2026-08-16) — `artifacts/performance/2026-08-16_itcm-repack/ITCM_REPACK.md`
+## LAST MEASURED GX=0 LEVEL IS +19,089: ITCM REPACK + HOT-LEAF ADMISSION IS BUILT AND BANKED (2026-08-16) — `artifacts/performance/2026-08-16_itcm-repack/ITCM_REPACK.md`
 
 **GREEN candidate `build-c235-itcm-final`, byte-identical to the freshly measured
 `build-c234-itcm-finalpack` ROM (SHA-256 `CABAF279...003F`): WORK-H P50 885,440,
@@ -57,8 +57,11 @@ LightDirection 4010, BoundsPass/Fail 3823/142, P0/P1 triangles
 first source split (`c225`) regressed and is rejected; do not treat all 9,484 B
 as freely movable. The remaining 5,376 B is compiler-expanded cold code mixed
 with executed paths and needs a new structural decomposition, not blanket
-`cold` attributes. No decomp body was edited and no published feature flag was
-flipped.
+`cold` attributes. No decomp body was edited in that campaign. **Afterward, on
+the owner's 2026-08-16 policy that accepted optimisations ship enabled,
+`NDS_R2_FIGHTER_GX_COMPOSE` was promoted from the accepted c185 bank into the
+published default. The +19,089 figure above is therefore the last measured GX=0
+level, not the current shipping level; re-bank before quoting a new gap.**
 
 ## SUPERSEDED LEVEL +48,081: THE FIGHTER DRAW-CONTRACT MEMO IS BUILT AND BANKED (2026-08-16) — `artifacts/performance/2026-08-16_ftr-draw-memo/DRAW_MEMO.md`
 
@@ -1579,7 +1582,8 @@ This is a fresh measured level, **not** the prior −17,152 A/B applied
 arithmetically. The owner reviewed the new matched-tic pixel diff masks and
 accepted the measured 0.0358–0.1742% battle-screen variance; GXSTAT remains
 0x06000000, the old low-polygon blink signature is absent, and gameplay
-invariants match. **Published GX compose remains pinned OFF.**
+invariants match. **Owner policy 2026-08-16 promotes this accepted route to the
+published default; GX compose now ships ON.**
 
 Cadence truth comes from the required DRAW=0 sibling
 `build-c185-gxcompose-bank-d0`: **VBI 2:1850 3:173 4:8 5+:8 max 19**, total
@@ -11871,8 +11875,9 @@ Exact gap: **+53,636 raw / +28,689 net**. This is the measured bank level; the
 old −17,152 A/B was not subtracted from any prior bank.
 
 Required DRAW=0 cadence sibling: **VBI 2:1850 3:173 4:8 5+:8 max 19**, total
-2039, slips 0 = **90.731% two-VBlank**, still below ≥95%. Published GX compose
-remains pinned OFF while the overall acceptance set is still red.
+2039, slips 0 = **90.731% two-VBlank**, still below ≥95% on that historical
+bank. **Owner policy changed 2026-08-16: GX compose is accepted, so it now ships
+ON rather than remaining artificially pinned off.**
 
 1. Whole-match `-RingDump` sampling is the only gate instrument; label every
    figure with its arm **and its coverage**; DLDI-on only. **Coverage is part
