@@ -123,11 +123,17 @@ That is **≥2,178 B of measured eviction pool against the 16 B the repack left
 free and the 28 B by which its named runner-up missed**. `__aeabi_fdiv` is NOT
 the most expensive helper: the order is **fadd 31,134 > fmul 17,625 > fdiv
 9,536** whole-match (**67,504 > 46,211 > 15,347** on the gate frames), and
-`sqrtf` is 2,540, not 8,068. **The card filesystem is 9.07× concentrated on the
-gate's own rank-80 frames** — `get_fat` 1,424 → 12,907, `f_lseek` 886 → 8,073,
-`f_read` 239 → 2,928, **23,908 tk/fr = 90% of the whole requirement**, while
+`sqrtf` is 2,540, not 8,068. **The card filesystem is 9.75× concentrated on the
+gate's own rank-80 frames** — the whole stack (31 symbols, not the 3 first
+quoted) is **41,712 tk/fr gate-80 against 4,278 whole-match** — while
 `ndsRelocGetFileData` is flat at conc 1.04, so it is a *different* reader than
-the one Campaign 14 closed. The fighter collision chain is **9–13×**
+the one Campaign 14 closed. **Its "= 90% of the whole requirement" is RETRACTED
+2026-08-17** (`artifacts/performance/2026-08-17_card-fs-caller/`): the reader is
+`ndsAudioFgmPlayAtPan`, and deleting **all** of it moves rank-80 by **−11,003**,
+conversion 0.264, because the I/O lands on 175/1,600 frames at `WORK-H` ranks
+2–29 — *above* the percentile. Removing 25% buys **+0**; 0 frames change VBlank
+bucket; slice 53's residency arithmetic and its 424-hop unit price both hold.
+The fighter collision chain is **9–13×**
 concentrated (1,517 whole-match → 16,602 gate-80), independently matching
 `SHDT`'s own lane concentration of 15.39.
 

@@ -82,13 +82,21 @@ re-derive measurements at execution time; never bank projections.
   only reference it. Still open; the repack worked within the old rules.
 
 **Fully diagnosed, cheap, low-risk**
-- **14 residual — PROMOTED, it is now the best-shaped item on the board.** The
-  card filesystem is **9.07× concentrated on the gate's own rank-80 frames**:
-  `get_fat` 1,424 → 12,907 tk/fr, `f_lseek` 886 → 8,073, `f_read` 239 → 2,928 =
-  **23,908 tk/fr on exactly the 80 frames that set the gate, 90% of the whole
-  requirement**. `ndsRelocGetFileData` is flat (conc 1.04) and genuinely quiet,
-  so this is a *different* reader than the one the campaign closed. Fail-closed
-  invariant first, then find that reader.
+- **14 residual — DEMOTED 2026-08-17; the reader is named and the lane does not
+  convert.** `artifacts/performance/2026-08-17_card-fs-caller/CARD_FS_CALLER.md`.
+  The reader is **`ndsAudioFgmPlayAtPan`** (`src/nds/nds_audio_fgm.c:477-480`
+  sample-cache miss, `:1147-1156` envelope) reading
+  `nitro:/audio/fgm_phase_pack_ima.bin` through NitroFS → FatFs → DLDI;
+  `ndsRelocGetFileData` stays flat at conc 1.04, so the campaign's own closure
+  holds. The **whole** stack is 31 symbols and **41,712 tk/fr gate-80**, not the
+  23,908 of three — but **deleting all of it moves rank-80 by only −11,003**
+  (conversion 0.264), because the I/O lands on 175/1,600 frames at `WORK-H`
+  ranks 2–29, *above* the percentile. **Removing 25% of it buys +0**, and 0
+  frames change VBlank bucket. Residency is impossible anyway (board slice 53:
+  59 cues / 575,760 B against a 204,800 B cache), and that closure's one stated
+  reopening condition — the per-seek unit price — is **unchanged at 424 FAT hops
+  / 18,131 ticks**. **The "90% of the requirement" claim is retracted.** Phase 4
+  stays valid for animation/texture/reloc only; it cannot be armed for audio.
 - **01/06 — ITCM has ≥2,178 B of measured eviction pool, not 16 B.**
   `ndsRendererMtxMulAffine20p12` fell **18,549 → 384 tk/fr** (52.94 → 1.19
   calls/frame) when GX compose shipped, and still rents 616 B at 1,993.8
