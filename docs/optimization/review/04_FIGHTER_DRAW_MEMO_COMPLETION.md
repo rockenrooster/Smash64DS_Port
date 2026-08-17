@@ -71,6 +71,16 @@ Before weakening the key, create/reuse a compact generation that changes wheneve
 
 Update the epoch at the authoritative mutation point, not by rescanning fields later.
 
+**This doctrine now has a shipped, owner-confirmed precedent** (2026-08-17,
+`artifacts/verification/2026-08-17_grab-throw-world-cache/GRAB_THROW_WORLD_CACHE.md`):
+the flattened `ftParamsUpdateFighterPartsTransform` cache was keyed only by
+`(root, heap generation)` and survived `ftMainSetStatus` inserting/re-parenting
+Mario's joint 28 — frozen world transform, visible grab/back-throw spin bug.
+The fix invalidates at the `ftMainSetStatus` **topology-writer seam**, exactly
+the bind-where-broken pattern this phase specifies. A key narrower than the
+mutation surface is not a theoretical risk in this codebase; it shipped a bug
+this week.
+
 This phase closes the memo's one known soundness hole: per-DObj
 `dl`/`dls`/`dv`/flags state is **not hashed** (`DRAW_MEMO.md` §6). It is
 currently believed unreachable for fighter joints — decomp's `ftparam.c` is not

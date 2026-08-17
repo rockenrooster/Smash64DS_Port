@@ -16,9 +16,9 @@ Use the measured **142,786 marginal-80 tk/fr simulation soft-float reservoir**
 as a search space, not promised savings. Two caveats travel with that number:
 
 - it was attributed on the `c200-trackprof-off` per-PC capture
-  (`GX_COMPOSE=1`); the shipping-configuration census `v3-c221`
-  (`GX_COMPOSE=0`, 1,600 frames) now exists — Phase 0 re-derives from it
-  without a build;
+  (`GX_COMPOSE=1`-era). No census on disk matches today's shipping config
+  (GX compose ON since 2026-08-16 + post-ITCM-repack layout) — Phase 0 takes
+  a fresh one (shared with 05/07/11/13);
 - the **rate is not asserted**: measured conversion rates in this binary
   disagree by 3× (1.70× camera chain, 2.68× fighter narrow phase, 5.14×
   same-op matrix pair), so the warm-MAC subset is worth 29,437–57,584 tk/fr
@@ -50,8 +50,10 @@ Start with fighter physics/movement/math chains that run every frame.
 
 ## Phase 0 — Rebuild current simulation float reservoir
 
-Re-derive the census on shipping `GX_COMPOSE=0`. **No build is needed**: the
-`v3-c221` per-PC capture is the shipping configuration and is already on disk.
+Re-derive the census on the **current** shipping configuration (GX compose
+ON, post-ITCM-repack). This needs one instrumented build; `v3-c221` no longer
+matches what ships. Simulation-side ranks are less GX-sensitive than draw-side
+ones, but the marginal-80 mask itself moves when the tail moves — re-mask.
 
 For each simulation caller record:
 

@@ -19,10 +19,13 @@ members totalling **1,952 B** (`_arm_addsubsf3.o` 684 + `_arm_muldivsf3.o` 760 +
 hash), plus the Task16 replacement bodies and r2 sqrt support also resident in
 ITCM. The frequently quoted "~2.6 KB" is a soft aggregate: **Phase 0 must state
 the exact current occupancy from the linked ELF** before any dividend is
-promised. For scale, free ITCM is currently ≈2.6 KB on the Boundary ROM
-(`itcm=30164/32768 free=2604`) and only ~220 B on the tick-HUD instrument
-(`CAMERA_SHIP.md`), so this dividend roughly doubles the pool Campaign 01 can
-repack.
+promised. **Post-repack (2026-08-16) this dividend is the only meaningful
+admission capacity left**: the measurement binary links `.itcm = 32,720 B`
+with **16 B free** (`ITCM_REPACK.md`), and the repack's knapsack already names
+the first runner-up tenant that missed the cut by 28 B
+(`ndsRendererHardwareApplyTextureParams`, 180 B / 1,309.5 tk/fr) plus a ranked
+list behind it — every input section this campaign frees has an immediate,
+already-ranked consumer in Campaign 01.
 
 Success is not “fewer `__aeabi_f*` calls.” It is **zero shipping reachability for a helper family** followed by linker-level removal.
 

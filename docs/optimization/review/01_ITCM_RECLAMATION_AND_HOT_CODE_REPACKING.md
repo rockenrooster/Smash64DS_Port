@@ -6,9 +6,38 @@
 >
 > **Campaign rule:** optimize toward a DS-native architecture and four-fighter headroom. The current two-fighter P95 gate is a checkpoint, not the architectural finish line. Never bank projected savings; measure the shipping configuration. Prefer same-binary route A/B when practical because this tree is placement-sensitive.
 
-## Objective
+## Status — the core of this campaign LANDED 2026-08-16
 
-Recover ITCM bytes occupied by code that is dead, diagnostic-only, or mostly cold, then spend the recovered bytes on the highest-value hot code still executing from `.main`.
+`artifacts/performance/2026-08-16_itcm-repack/ITCM_REPACK.md` executed Phases
+1, 2, 4 and 5 and banked **−28,992 tk/fr at rank-80** (2.06× the cross-build
+floor; +48,081 → +19,089 at GX=0):
+
+- **4,108 B** of the 9,484 B cold-inside-hot reserve reclaimed as small exact
+  source splits (dead/cold residents, production-run specialization,
+  `ndsRendererScanList` branch split, zero-PC arms, UV-miss helper);
+- **~4,312 B** of knapsack-ranked port-owned hot leaves admitted (list in the
+  artifact; includes `ndsRendererMtxMulAffine20p12`, `ftGetStruct`, `sqrtf`,
+  `gcPlayDObjAnimJoint`, `ndsRendererAdapterBuildDObjLocalMatrix`, …);
+- final `.itcm = 32,720 B`, **16 B free**;
+- the broad one-shot split (`c225`) **regressed and was rejected** — the
+  remaining **5,376 B** of cold-inside-hot is compiler-expanded code
+  interleaved with executed paths and is **not** a free eviction pool; further
+  recovery needs a new structural renderer decomposition, not more `cold`
+  attributes;
+- `gcPlayDObjAnimJoint` moved to ITCM via a section attribute in the import
+  shim (`battleship_sys_objanim.c:596`), so `.text.hot`'s input-section
+  pattern for it now matches nothing — the linker's Task 94/E66 comment block
+  is historical context, superseded by this measured whole-config win.
+
+## Remaining objective
+
+What is left of this campaign: (a) consume Campaign 06's float-helper dividend
+— the repack's own knapsack names the first runner-up tenant
+(`ndsRendererHardwareApplyTextureParams`, 180 B / 1,309.5 tk/fr, missed by
+28 B) and the ranked candidate list is in the artifact; (b) the 5,376 B
+structural decomposition, only if a real decomposition design appears; (c)
+keep the ITCM census fresh so future admissions rank on current truth, on the
+GX-compose-ON shipping config.
 
 This is **not** a generic linker reshuffle. The current linker records that the curated 8 KiB `.text.hot` working set is **closed in both directions** after two placement experiments changed neighboring addresses and regressed performance. Do not reorder, add to, or remove from `.text.hot` in this campaign. Note there are **two** curated main-RAM hot-text regions, each with its own ≤8 KiB assert: `.text.hot` (hand-curated update set, `linker/nds_hot_text.ld:179-223`) and `.text.hot.draw` (populated by the generated `nds_task32_draw_hot.inc`, empty on control ROMs, `:227-232`). They are cache-curated main-RAM sections, not ITCM; the inventory must report them separately from ITCM proper and treat both as closed.
 
@@ -34,27 +63,23 @@ The campaign succeeds when ITCM contains a deliberately selected shipping workin
   into a 684 B input section whose other half is live (a linker cannot split an
   input section). The census's "+1,858 B recoverable by eviction" over-counts
   by 456.
-- Known cheap reclamation with its premise already closed (board, `v3-c221`
-  shipping census): four port-side production emitters + one invalidate helper
-  execute **zero instructions in the shipping configuration** — 688 B + 54 B,
-  one-line `NDS_TASK82_ITCM_CODE` removals, none pinned by
-  `check-renderer-itcm-placement.ps1`. Still needs its own build + Boundary.
+- The 688 B + 54 B zero-instruction reclamation route was **consumed** by the
+  repack's first step (`c226`, 688 B moved to main). Do not re-derive it.
 - Current animation hot kernel `ndsR2AnimValueQ` is already an ITCM resident and has been same-binary tested. Do not evict it without new evidence.
 - Campaign 06 owns the software-float/helper ITCM dividend (stock member total
   1,952 B plus Task16/r2 bodies; exact occupancy comes from its Phase 0, and
-  members free only at input-section granularity). Treat it as a future
-  dividend, not space already available.
-- Calibrate refill expectations: `FTR_LANE.md` sized the best available ITCM
-  tenants at **~3,000–4,000 tk/fr total** for the 908 B pool, using the
-  fetch-free bound `cycles − (instructions + dcache + wb + bus + interlock)` —
-  NOT the raw `icache_fill` figure. ITCM refill is a rider, not a gate-closer.
-- The instrument must fit too: a candidate can fit the ROM that SHIPS and still
-  be unpriceable because it does not fit the tick-HUD ROM that MEASURES
-  (~220 B free there vs ~2.6 KB on the Boundary ROM; `CAMERA_SHIP.md`).
-- `linker/nds_hot_text.ld:180-200` records the Task 94 / E66 prohibition on
-  `gcPlayDObjAnimJoint` moves; the board marks it re-testable **by the
-  same-binary route method only** (the original verdict was a 128-frame
-  cross-build pair). Do not re-open it any other way.
+  members free only at input-section granularity). With 16 B free, that
+  dividend is now the **only** meaningful source of admission capacity.
+- Refill calibration history, so neither number is misused: `FTR_LANE.md`
+  sized the best tenants for the then-908 B pool at ~3,000–4,000 tk/fr; the
+  repack then reclaimed 4,108 B first and its ~4.3 KB admission measured
+  **−28,992** whole-config. Lesson: the pool size was the binding constraint,
+  not the tenant quality — and static I-cache ceilings (the pack's ~62.9K)
+  rank tenants but never bank; the measured conversion was 46% of ceiling.
+- The instrument must fit too: a candidate can fit the ROM that SHIPS and
+  still be unpriceable because it does not fit the tick-HUD ROM that MEASURES
+  (`CAMERA_SHIP.md` lesson). Post-repack the measurement binary is at **16 B
+  free**, so ANY new admission first needs freed bytes there.
 
 ## Hard constraints
 

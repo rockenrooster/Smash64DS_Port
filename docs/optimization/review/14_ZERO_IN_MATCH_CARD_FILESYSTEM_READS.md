@@ -6,23 +6,43 @@
 >
 > **Campaign rule:** optimize toward a DS-native architecture and four-fighter headroom. The current two-fighter P95 gate is a checkpoint, not the architectural finish line. Never bank projected savings; measure the shipping configuration. Prefer same-binary route A/B when practical because this tree is placement-sensitive.
 
-## Objective
+## Status — the core LANDED 2026-08-16
 
-Make **GO a hard preparation boundary**.
+The countdown/loading fix
+(`artifacts/verification/2026-08-16_owner-bug-closure/BUG_CLOSURE.md`;
+`docs/BUGS.md`) moved DS texture/placement preparation and the animation
+warm-up to the **exact pre-BGM seam**: the import shim intercepts
+`mpCollisionSetPlayBGM` → `ndsSCVSBattleStartPlayBGM`, which drains scene
+textures, placement, and `ndsR2AnimCachePreloadFinish()` before BGM/countdown
+begins. The preload is **stepped** (`ndsR2AnimCachePreloadStep`, bounded
+16,384 B chunks, ~18 steps) with barrier counters
+(`gNdsR2AnimPreloadBarrier*`), and the warm set includes the common
+grab/throw animations (`0x231-0x234`, `0x2c0-0x2c3`), all pinned by
+`check-gbi-decode-fixtures.ps1`.
 
-After player control unlocks:
+**Measured: a 1,600-frame run has 0 post-start animation cache misses and 0
+post-start payload reads, with BGM seam/error/overrun all 0.** The seven card
+reads (12,736 at rank-80 on `c219`) are claimed — do not re-chase them.
 
-- **0 filesystem/card reads**;
-- **0 asset conversions/normalization**;
-- **0 avoidable first-use cache fills**.
+## Remaining objective
 
-The remaining seven Mario/Fox animation misses all land in the top twelve measured frames and are worth about **12,736 ticks at rank-80** despite there being only seven. (Sized on the `c219` basis — re-size on the current basis before banking, per the campaign rule.)
+Make **GO a hard, fail-closed preparation boundary** rather than a currently
+true fact:
 
-## Current measured facts
+- the invariant today is proven for **animation** misses/payload reads; extend
+  the counters to texture conversion/repack, reloc normalization/fixup, and
+  any first-use asset conversion (Phase 4);
+- make the one-minute verification **fail** (not report) when a forbidden
+  counter increments post-GO, naming the asset;
+- price the enlarged warm set against RAM headroom (Phase 5);
+- keep the invariant permanent as Campaign 03 replaces legacy normalization
+  with native packs (Phase 6).
+
+## Pre-fix measured facts (historical baseline the fix was built against)
 
 From `artifacts/performance/2026-08-16_match-io-audit/IO_AUDIT.md` (basis
 `build-c219-animitcm-ship`, gate stress arm `NDS_R2_BOTH_CPU=1`, three
-byte-identical whole-match runs):
+byte-identical whole-match runs — **before** the pre-BGM preload landed):
 
 - `349` animation acquisitions;
 - `215` BattlePack;

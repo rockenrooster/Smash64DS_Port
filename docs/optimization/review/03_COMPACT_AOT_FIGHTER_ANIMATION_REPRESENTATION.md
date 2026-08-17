@@ -241,6 +241,11 @@ Required:
 - transcriber matches source/oracle;
 - all live opcodes covered;
 - exact transition-frame behavior;
+- the `ftMainSetStatus` invalidation seams are preserved or provably
+  re-owned: since 2026-08-17 that function invalidates the fighter's flattened
+  transform walk (grab/back-throw fix, `GRAB_THROW_WORLD_CACHE.md`) and the
+  renderer cache at the topology-writer seam — a native representation that
+  changes when/how joints are attached must keep those consumers correct;
 - identical motion/event sequence;
 - gameplay hashes/invariants unchanged;
 - attachment/effect positions unchanged;

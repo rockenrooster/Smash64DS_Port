@@ -8,7 +8,7 @@
 
 ## Objective
 
-Finish draw-side transition to DS-native fixed math in the **current shipping** profile: fixed camera and `GX_COMPOSE=0`.
+Finish draw-side transition to DS-native fixed math in the **current shipping** profile: fixed camera and — since 2026-08-16 — **`NDS_R2_FIGHTER_GX_COMPOSE=1`** (owner-accepted GX joint compose now ships ON; the ITCM repack also moved several draw kernels into ITCM). Any older attribution taken at `GX_COMPOSE=0` describes a profile the user no longer runs.
 
 The board records **≈22,521 tk/fr** of draw-side soft-float remaining after the
 camera shipped in Q20.12 (`docs/P1_EXECUTION_BOARD.md` "THE DRAW-SIDE
@@ -50,12 +50,11 @@ Re-census:
 
 ## Phase 0 — Re-derive current draw float lane
 
-**No build is needed for this phase.** The shipping-configuration per-PC
-census the board asked for already exists: `v3-c221`
-(`build-c221-sitrprof`, `GX_COMPOSE=0`, 1,600 frames — the first per-PC census
-ever taken in the shipping configuration; see the board's `SITR_EXCURSION`
-entry). Re-derive the draw-side split from that capture before proposing any
-slice.
+**Take a fresh per-PC census on the current shipping configuration first**
+(GX compose ON + post-ITCM-repack layout; one instrumented build). `v3-c221`
+was the shipping census when these briefs were written, but it is `GX_COMPOSE
+0` and pre-repack — both facts changed on 2026-08-16, so it no longer matches
+what ships. This re-basing also serves 05/07/11/12; take it once, share it.
 
 For every draw-side float caller record:
 

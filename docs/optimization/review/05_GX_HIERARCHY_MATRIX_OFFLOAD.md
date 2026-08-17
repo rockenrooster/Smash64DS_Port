@@ -6,25 +6,47 @@
 >
 > **Campaign rule:** optimize toward a DS-native architecture and four-fighter headroom. The current two-fighter P95 gate is a checkpoint, not the architectural finish line. Never bank projected savings; measure the shipping configuration. Prefer same-binary route A/B when practical because this tree is placement-sensitive.
 
-## Objective
+## Status — the core mechanism SHIPPED 2026-08-16
 
-Move **render-only** fighter hierarchy composition from ARM9 to the DS geometry/matrix pipeline.
+**`NDS_R2_FIGHTER_GX_COMPOSE=1` is now the published default** (owner policy
+2026-08-16: accepted optimisations ship enabled). The shipped route is the
+accepted c185 bank: fighter joint composition on the GX matrix stack
+(`RESTORE(parent)` / `MTX_MULT_4x4(chain)` / `STORE(i)` in preorder, matrix
+palette as parent store, requires `NDS_R2_FIGHTER_HW_MTX=1`). The Slice 43
+one-frame-blink defect was a GX matrix-stack leak, since fixed full-match; the
+owner accepted the matched-tic pixel masks (0.0358–0.1742% battle-screen
+variance, GXSTAT `0x06000000`, gameplay invariants unchanged). Its historical
+DRAW=0 cadence sibling read 90.731% two-VBlank — the cadence arm is still
+open. Mode 2 (compose-and-compare per binding) remains the verification arm;
+`gNdsR2GxComposeVerifyFail` must stay zero.
+
+## Remaining objective
+
+The flag flip is done; the campaign's remaining value is everything the flag
+did **not** change:
+
+1. **Joint-consumer classification (Phase 0)** — still unowned; needed by
+   Campaign 11 and for AOT folding.
+2. **AOT-fold static/identity transforms** so neither CPU nor GX composes
+   what never changes.
+3. **Feed fixed-native local matrices directly** (Phase 5): CPU still builds
+   every local matrix each frame. The named live seam is
+   `ndsRendererAdapterBuildDObjLocalMatrix` — 62 `bl __aeabi_*` sites in one
+   per-joint-per-frame function whose **interior is already fixed point**; the
+   soft float is its f32 boundary, concentrated in the MVP-recalc scale path
+   gated on `has_mvp_recalc_rpy_0x47` (board). Coordinate with Campaign 13.
+4. **CPU anchor minimization**: stop building CPU world matrices that only
+   feed drawing now that GX composes; gameplay-authoritative joints keep their
+   CPU transforms.
 
 Do not redo triangle stripification; Task 56 primitive streams are already shipped.
 
-Do not simply flip an old `GX_COMPOSE` flag. Re-derive against the current fixed-camera, shipping `GX_COMPOSE=0` path.
-
-**The sized prize** (`FTR_LANE.md`, shipping-config per-PC attribution):
-per-joint matrix build is **61,848 tk/fr (21.3% of `FTR`)**, the
-`BuildDObjLocalMatrix → BuildDObjXObjMatrix → TraRotRpyDirect` chain is 42,017
-inclusive, and `ndsRendererMtxMulAffine20p12` alone is 18,549 with **72.9%
-icache stall** (its 616 B body is re-fetched from main RAM essentially every
-call). Offload wins twice: the multiply work moves to GX and the resident code
-that thrashes the I-cache shrinks. Two prior failure modes to design against:
-the per-joint GX hierarchy experiment that regressed **+33K on transport** (84
-matrix restores — archived), and `FTR` already holding **52.6% of the whole
-run's GX-FIFO stall**, so added GX commands must be watched for FIFO
-backpressure.
+Sizing note: the old prize figure — per-joint matrix build 61,848 tk/fr,
+`MtxMulAffine20p12` 18,549 with 72.9% icache stall (`FTR_LANE.md`) — is
+**GX=0-era and pre-ITCM-repack** (that kernel is now ITCM-resident and the
+compose is on GX). Re-attribute on the new shipping census before sizing any
+slice. `FTR` held 52.6% of the run's GX-FIFO stall at GX=0; with compose ON,
+watch FIFO backpressure counters even more closely.
 
 ## Core classification
 
@@ -75,6 +97,11 @@ Extend native-owner generation with:
 Add a host simulation of push/mult/pop and compare node-world transforms with CPU oracle poses.
 
 ## Phase 2 — One render-only subtree
+
+*Overtaken as written: the shipped c185 route already composes the whole joint
+hierarchy on GX. Keep this phase's shape as the template for the remaining
+slices (AOT folds, CPU-anchor removal, fixed local-matrix feed): one bounded
+change, differ, measure.*
 
 Pick a subtree with no gameplay transform readers and meaningful CPU matrix cost.
 

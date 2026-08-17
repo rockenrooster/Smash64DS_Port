@@ -34,8 +34,10 @@ Runtime supplies only genuinely dynamic:
 
 Initial target: **20–50K+ ticks/frame** with larger upside as generic machinery disappears. This is a target, not guaranteed savings.
 
-**What the target is made of** (`FTR_LANE.md`, per-PC attribution of the
-shipping configuration, 2026-08-16): `FTR` is 291,051 tk/fr and **59.3% cache
+**What the target is made of** (`FTR_LANE.md`, per-PC attribution taken at
+`GX_COMPOSE=0` before the 2026-08-16 ITCM repack and GX-compose default flip —
+directionally right, numerically stale; re-derive on the fresh shipping
+census before sizing): `FTR` is 291,051 tk/fr and **59.3% cache
 fill, not arithmetic** — icache_fill 88,486 (30.4%) beats issue 62,929
 (21.6%), the six hottest draw bodies are 21,508 B against an 8 KB I-cache
 walked twice a frame, and the lane holds 24.1% of the whole run's instruction
@@ -64,8 +66,15 @@ The native renderer must consume generated code/data directly; it must not const
 - `src/port/reloc_backend_renderer_dl.c`
 - renderer parity corpus/checkers
 - Task 56 primitive streams already shipping
+- the shipping renderer's **baked plan** path — `ndsFighterDrawPlanApply` on
+  `native_owner_plan_hit` (0 hash variants over 3,961 comparisons), validator
+  99.95% cached, resolve elided as the plan-miss `else`, reset dead at the
+  shipped profile (board: "four of five seams already elided"). The native
+  renderer starts from this, it does not reinvent it; the board also records
+  why a resolve memo was refused (key narrower than the function's inputs)
 - Campaign 04 memo
-- Campaign 05 hierarchy classification
+- Campaign 05 hierarchy classification (GX compose itself ships since
+  2026-08-16)
 
 The Makefile already describes `NDS_BATTLE_PROFILE=0` as the intended native precompiled path while profile 1 is the shipping translation/correctness oracle (`Makefile:1643-1649`: profile 0 "lands with **Task 51**" and errors out until the native path exists, so it can never silently fall through to profile 1). Build on that seam; this campaign is the Task 51 tracked on the board.
 

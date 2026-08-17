@@ -14,12 +14,13 @@ Do **not** blindly rewrite arbitrary IEEE division.
 
 ## Phase 0 — Census shipping divides
 
-The surface is already sized: `__aeabi_fdiv` is **10,084 tk/fr over 308,426
-calls at 117.9 cycles each — the most expensive helper in the build by 3.2×**
-(board, fixed-point census), and `SIMSIDE.md` puts fdiv 13,818 + sqrtf 8,068 =
-**21,886 tk/fr** of bit-exact helper-acceleration surface on the marginal-80
-(conversion unmeasured). The `v3-c221` shipping-config capture re-derives these
-without a build.
+The surface is already sized, on pre-2026-08-16 attributions: `__aeabi_fdiv`
+was **10,084 tk/fr over 308,426 calls at 117.9 cycles each — the most
+expensive helper in the build by 3.2×** (board, fixed-point census), and
+`SIMSIDE.md` puts fdiv 13,818 + sqrtf 8,068 = **21,886 tk/fr** of bit-exact
+helper-acceleration surface on the marginal-80 (conversion unmeasured). Note
+`sqrtf` became ITCM-resident in the 2026-08-16 repack. Re-derive on the fresh
+shipping census (GX compose ON, post-repack) shared with 12/13.
 
 From linked ELF/source enumerate:
 
