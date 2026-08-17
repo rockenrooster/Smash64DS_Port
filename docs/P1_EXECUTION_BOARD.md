@@ -46,7 +46,10 @@ floor); net 1,146,829 → 1,102,285; REQUIREMENT +26,449 → −18,095.** Band 4
 top-1% 1,455,232 → 1,396,288, max 1,888,832 → 1,812,672, over gate 106 → **88**
 of 1,600. **It does not rest on the cross-build floor**: joined on presented
 frame, the paired `WORK-H` median is **−41,344** and the candidate wins
-**1,521/1,600 frames (95.1%)**.
+**1,521/1,600 frames (95.1%)**. **Harness control: repeating the run on the same
+binary reproduced the rows CSV byte-identically**, so no hiccup — but the
+instrument is deterministic, so that control cannot speak to cross-build
+placement noise; the 3.16× margin and the paired view are what carry it.
 
 **THE TICK ARM IS MET ON THIS INSTRUMENT; THE CADENCE ARM IS NOT.**
 `2:1816 3:210 4:11 5+:2`, max interval **19**, 2,039 presented = **89.06%**
