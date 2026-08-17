@@ -1681,6 +1681,14 @@ override NDS_TICK_HUD := 0
 override NDS_RENDERER_FAST_RUN_DEFAULT := 9
 override NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE := 1
 override NDS_TASK36_HW_COMPOSE := 2
+# R2-08: THE SWITCH (SwitchPlan §6). The Boundary configuration is produced by
+# the Runtime 2 battle path. The Runtime 1 loop stays in-tree as the oracle, so
+# it needs a way to be built: `override` defeats a command-line 0, exactly as it
+# does for NDS_R2_CUBIC_FIXED below, and without an escape hatch a Runtime 1
+# control arm silently builds identical to the candidate.
+ifneq ($(NDS_R2_LAB_R1_PATH),1)
+override NDS_R2_PATH := 1
+endif
 # R2-03 E17: split matrix load. Stops composing modelview x projection on the
 # CPU and lets the geometry engine multiply, -17,600 FTR P50. Boundary green in
 # both flag states, geometry proven identical (136,640 P0 triangles either way
@@ -1913,6 +1921,22 @@ endif
 override NDS_RENDERER_FAST_RUN_DEFAULT := 9
 override NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE := 1
 override NDS_TASK36_HW_COMPOSE := 2
+# R2-08: THE SWITCH (SwitchPlan §6), the measurement/proof half. This block must
+# carry every published flag or the instrument measures a path the user is not
+# running, and check-tickhud-parity.ps1 fails a one-sided edit (BENCH_MAKE_R2_PATH,
+# Makefile:4203).
+#
+# smash64ds-results-lab-hwtri is EXCLUDED, and it is not a taste call: this
+# block's filter admits it, but it overrides NDS_DEV_SCENE_HARNESS to
+# results_playable above, and both taskman_seam.c and src/nds/r2/nds_r2_battle.c
+# `#error` when NDS_R2_PATH=1 under any harness but battle_playable. Without the
+# guard the Results lab stops compiling. check-tickhud-parity.ps1 compares only
+# the published and tick-HUD targets, so the exclusion cannot hide drift.
+ifneq ($(TARGET),smash64ds-results-lab-hwtri)
+ifneq ($(NDS_R2_LAB_R1_PATH),1)
+override NDS_R2_PATH := 1
+endif
+endif
 # R2-03 E17/E16: match the published block. Any flag there is on this one too.
 override NDS_R2_FIGHTER_HW_MTX := 1
 # GX compose is owner-accepted and now ships enabled. Measurement/proof siblings

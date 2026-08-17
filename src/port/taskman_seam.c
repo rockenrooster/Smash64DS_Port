@@ -5329,6 +5329,13 @@ void ndsR2HostBattleIterationBegin(void)
 
 u32 ndsR2HostBattleUpdateOnce(u32 update_index)
 {
+#if NDS_R2_POSITION_PROBE
+    /* Mirrors the Runtime 1 loop, which publishes the capture index in the
+     * same position -- immediately before its own `battle_status_before` read.
+     * Without this the R2 path leaves the index at 0, so every hurtbox capture
+     * below reads as "tick 0" and the probe silently reports one substep. */
+    gNdsPositionProbeUpdateInPresent = update_index;
+#endif
     u32 battle_status_before = (gSCManagerBattleState != NULL) ?
         (u32)gSCManagerBattleState->game_status : 0xffffffffu;
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
