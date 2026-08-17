@@ -51,7 +51,16 @@ stop that target compiling.
 | 2 | Visual gate + owner's approval | **OWNER-ACCEPTED 2026-08-17**, verbatim: ***"looks good to me"*** |
 | 3 | P95 ≤ 1.12M DLDI-on | **GREEN** — 1,962/2,043 = **96.03%** two-VBlank, `viol=0`, max 18, margin **+21** frames |
 | 4 | Full 3600-tick soak | **GREEN** — `NO-FREEZE` at **both** 1-minute and 5-minute lengths, each timer confirmed in-guest; 4 Sudden Deaths counted |
-| 5 | Owner play test on retail hardware | **OPEN — the only remaining item** |
+| 5 | Owner play test on retail hardware | **OWNER-ACCEPTED 2026-08-17**, verbatim: ***"play test good."*** |
+
+**ALL FIVE §6 ACCEPTANCE ITEMS ARE DISCHARGED. R2-08 IS COMPLETE.** The ROM played is
+the published `smash64ds-battle-playable-hwtri.nds`, 12,530,688 B, SHA-256
+`2F47C8AC…CB2F`, built from the switch commit `843fe40f4d2`.
+
+**Recorded as missing rather than invented:** §6 item 5 asks for the ROM hash, the
+hardware, the duration, and what was watched for. Only the hash and the verdict exist —
+the other three were not captured at the time. A future acceptance should take all four
+in the moment, because none of them are recoverable afterwards.
 
 The visual acceptance was given on the before/after pair captured on the same Boundary
 arm (`artifacts/visibility/2026-08-17_r2-switch/`), R1 published `5F3D1FE3…` against R2
