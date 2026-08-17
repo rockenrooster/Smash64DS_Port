@@ -186,7 +186,8 @@ static inline f32 ndsR2Recip(u32 n)
  * shift for them and TraI is one track of ten. */
 static const u8 sNdsR2AnimFracShift[8] = { 9u, 2u, 12u, 0u, 9u, 5u, 13u, 0u };
 
-static f32 ndsR2AnimTargetValue(s16 arg, s32 track, sb32 value_or_step, u32 q)
+static f32 __attribute__((section(".itcm")))
+ndsR2AnimTargetValue(s16 arg, s32 track, sb32 value_or_step, u32 q)
 {
     s32 id;
     u32 mag;

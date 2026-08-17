@@ -1,5 +1,6 @@
 #include <sys/matrix.h>
 
+#include <nds/nds_task37_itcm.h>
 #include <nds/nds_effects.h>
 #include <nds/nds_fighter_matrix_index.h>
 #include <nds/nds_r2_camera_fixed.h>
@@ -931,7 +932,7 @@ ndsRendererAdapterBuildFighterTraRotRpyExact(
  * Kept as a separate function rather than parameterising the original: the two
  * differ only in their store, and a shared version would need a branch per cell
  * in the hottest loop of the phase. */
-static NDS_RENDERER_ADAPTER_FIGHTER_MATRIX_CODE sb32
+static NDS_RENDERER_ADAPTER_FIGHTER_MATRIX_CODE NDS_R2_ITCM_PACK2_CODE sb32
 ndsRendererAdapterBuildFighterTraRotRpyDirect20p12(
     NDSRendererMatrix20p12 *dst,
     f32 tx,
@@ -2580,7 +2581,7 @@ static sb32 ndsRendererAdapterCaptureStageWorldSourceKey(
     return TRUE;
 }
 
-static sb32 ndsRendererAdapterStageWorldSourceKeyMatches(
+static sb32 NDS_R2_ITCM_PACK2_CODE ndsRendererAdapterStageWorldSourceKeyMatches(
     DObj *dobj, const NDSRendererAdapterStageWorldSourceKey *source_key)
 {
     u32 i;

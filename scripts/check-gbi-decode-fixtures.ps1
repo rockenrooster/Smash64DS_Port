@@ -1394,6 +1394,7 @@ foreach ($file in $files) {
     }
 }
 $renderer = Get-Content (Join-Path $root 'src/nds/nds_renderer.c') -Raw
+$itcmHeader = Get-Content (Join-Path $root 'include/nds/nds_task37_itcm.h') -Raw
 $nativeStageFullValidation = [regex]::Match(
     $renderer,
     '(?s)static s32 ndsRendererNativeStageValidateTopologyFull\(.*?(?=\r?\nstatic s32 ndsRendererNativeStageValidateTopology\()'
@@ -1839,7 +1840,7 @@ Assert-True ($renderer.Contains('state->prepared_projected_source_z_valid_mask =
 # though it emits no code. Pin the same five measured bodies explicitly.
 $rendererHotDefinitions = [regex]::Matches(
     $renderer,
-    '(?s)static (?:void|s32|u32) (?:NDS_RENDERER_HOT_CODE|NDS_R2_CENSUS_EVICTED_CODE)\s+(\w+)\s*\([^;]*?\)\s*\{')
+    '(?s)static (?:void|s32|u32) (?:NDS_RENDERER_HOT_CODE|NDS_R2_CENSUS_EVICTED_CODE|NDS_R2_ITCM_PACK2_EVICTED_CODE)\s+(\w+)\s*\([^;]*?\)\s*\{')
 $rendererHotNames = @($rendererHotDefinitions | ForEach-Object { $_.Groups[1].Value })
 $rendererExpectedHotNames = @(
     'ndsRendererApplyVertexCommand',
@@ -1852,7 +1853,13 @@ $rendererHotNameKey = (@($rendererHotNames | Sort-Object) -join ',')
 $rendererExpectedHotNameKey = (@($rendererExpectedHotNames | Sort-Object) -join ',')
 Assert-True ($rendererHotDefinitions.Count -eq 5 -and
              $rendererHotNameKey -eq $rendererExpectedHotNameKey) 'Renderer hot-code set drifted from the five measured VTX/shade/vertex/triangle/scan paths.'
-Assert-True ($renderer -match '(?s)#if NDS_TASK91_DRAW_PHASE_CENSUS\s*#define NDS_R2_CENSUS_EVICTED_CODE NDS_TASK82_EVICTED_HOT_CODE\s*#else\s*#define NDS_R2_CENSUS_EVICTED_CODE NDS_RENDERER_HOT_CODE\s*#endif') 'Census-evicted renderer code no longer falls back to the ITCM-resident hot-code policy when the draw-phase census is off.'
+Assert-True ($renderer -match '(?s)#if NDS_TASK91_DRAW_PHASE_CENSUS\s*#define NDS_R2_CENSUS_EVICTED_CODE NDS_TASK82_EVICTED_HOT_CODE\s*#else\s*#define NDS_R2_CENSUS_EVICTED_CODE NDS_R2_ITCM_PACK2_EVICTED_CODE\s*#endif') 'Census-evicted renderer code no longer falls back to the 2026-08-17 re-knapsack eviction policy when the draw-phase census is off.'
+# Campaign 01 re-knapsack, 2026-08-17: both directions are placement-only. The
+# eviction macro must keep hot/O3/ARM and drop only the section, and the
+# admission macro must add a section and nothing else, so that neither direction
+# can be confused with a recompile.
+Assert-True ($renderer -match '(?s)#define NDS_R2_ITCM_PACK2_EVICTED_CODE\s*\\\s*__attribute__\(\(hot, optimize\("O3"\), target\("arm"\)\)\)' -and -not ($renderer -match 'NDS_R2_ITCM_PACK2_EVICTED_CODE\s*\\?\s*__attribute__\(\([^)]*section')) 'Re-knapsack eviction policy is no longer NDS_RENDERER_HOT_CODE minus the ITCM section.'
+Assert-True ($itcmHeader -match '(?s)#if NDS_R2_ITCM_PACK2 && defined\(__arm__\)\s*#define NDS_R2_ITCM_PACK2_CODE __attribute__\(\(section\("\.itcm"\)\)\)\s*#else\s*#define NDS_R2_ITCM_PACK2_CODE\s*#endif') 'Re-knapsack admission policy is no longer a bare ITCM section attribute.'
 Assert-True ($renderer -match '(?s)#define NDS_RENDERER_HOT_CODE.*?optimize\("O3"\).*?target\("arm"\).*?section\("\.itcm"\)') 'Renderer hot-code policy no longer combines targeted O3, ARM state, and ITCM placement.'
 Assert-True (-not $renderer.Contains('NDS_HOT_TEXT')) 'Rejected renderer main-RAM hot-text annotations returned.'
 Assert-True ($renderer -match '(?s)#define NDS_RENDERER_FAST_RUN_CODE.*?noinline.*?optimize\("O3"\).*?target\("arm"\)' -and $renderer.Contains('static void NDS_RENDERER_FAST_RUN_CODE ndsRendererExecuteFastRawCurrentRun')) 'Renderer shared raw-current run kernel is not isolated as one noinline ARM/O3 call.'
@@ -2214,7 +2221,7 @@ Assert-True ($renderer -match '(?s)#if NDS_RENDERER_HW_TRIANGLES.*?#define NDS_R
 Assert-True ([regex]::Matches($renderer, 'NDS_RENDERER_INVALIDATE_LIGHT_DIRECTION\(state\);').Count -ge 3) 'Renderer light-direction cache is not invalidated by composed/matrix-word/light-state mutations.'
 Assert-True ($renderer.Contains('state->prepared_light_direction_valid = TRUE;')) 'Renderer never validates its exact prepared light direction.'
 Assert-True ($renderer -match 'static void NDS_RENDERER_HOT_CODE\s+ndsRendererApplyVertexCommand') 'Renderer source G_VTX handler is not retained in the measured ARM/O3 ITCM path.'
-Assert-True ($renderer -match 'static u32 NDS_RENDERER_HOT_CODE\s+ndsRendererHardwareLitShadeColorPrepared') 'Renderer generic lit-shade fallback is not retained with the measured VTX hot path.'
+Assert-True ($renderer -match 'static u32 NDS_R2_ITCM_PACK2_EVICTED_CODE\s+ndsRendererHardwareLitShadeColorPrepared') 'Renderer generic lit-shade fallback is not retained as an out-of-line ARM/O3 body.'
 Assert-True ($renderer.Contains('typedef u32 NDSRendererAliasedU32 __attribute__((__may_alias__))')) 'Renderer aligned VTX decode lost its strict-alias-safe source word type.'
 Assert-True ($renderer.Contains('if ((((uintptr_t)src) & 3u) == 0u)') -and $renderer.Contains('xy = words[0];') -and $renderer.Contains('rgba = words[3];')) 'Renderer does not use the measured aligned four-word VTX decode.'
 Assert-True ($renderer.Contains('xy = ndsRendererReadU32(src);') -and $renderer.Contains('rgba = ndsRendererReadU32((const u8 *)src + 12);')) 'Renderer aligned VTX decode lost the exact bytewise unaligned fallback.'

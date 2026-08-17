@@ -1,6 +1,7 @@
 #include "nds_scene_harness_config.h"
 #include <nds/nds_effects.h>
 #include <nds/nds_scene_harness.h>
+#include <nds/nds_task37_itcm.h>
 #if NDS_R2_FIREBALL_QUAD
 /* The baked fireball texels/palettes and the GL_RGB16 upload they need. Only
  * this flag's path uses either, so neither is pulled in unconditionally. */
@@ -13705,9 +13706,10 @@ volatile u32 gNdsTask103FinishTicks;
 volatile u32 gNdsTask103FinishCount;
 #endif
 
-s32 ndsStageGCDrawAllLoopRecordCapturedDisplay(void *camera_gobj,
-                                               void *display_gobj,
-                                               s32 link_id)
+s32 NDS_R2_ITCM_PACK2_CODE
+ndsStageGCDrawAllLoopRecordCapturedDisplay(void *camera_gobj,
+                                           void *display_gobj,
+                                           s32 link_id)
 {
     GObj *display = display_gobj;
     u32 mask;

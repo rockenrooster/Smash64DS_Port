@@ -21,13 +21,22 @@ members totalling **1,952 B** (`_arm_addsubsf3.o` 684 + `_arm_muldivsf3.o` 760 +
 hash), plus the Task16 replacement bodies and r2 sqrt support also resident in
 ITCM. The frequently quoted "~2.6 KB" is a soft aggregate: **Phase 0 must state
 the exact current occupancy from the linked ELF** before any dividend is
-promised. **Post-repack (2026-08-16) this dividend is the only meaningful
-admission capacity left**: the measurement binary links `.itcm = 32,720 B`
-with **16 B free** (`ITCM_REPACK.md`), and the repack's knapsack already names
-the first runner-up tenant that missed the cut by 28 B
-(`ndsRendererHardwareApplyTextureParams`, 180 B / 1,309.5 tk/fr) plus a ranked
-list behind it — every input section this campaign frees has an immediate,
-already-ranked consumer in Campaign 01.
+promised.
+
+**2026-08-17 — the ITCM half of this campaign's case is spent, and its urgency
+is now ordinary.** The re-knapsack (`ITCM_REPACK2.md`) found **13,188 B** in the
+generic display-list renderer without touching a helper family, admitted
+14,350 B, and banked **−44,544 at rank-80**. `.itcm` is back to **88 B free**, so
+a freed input section still has an immediate consumer — but the next-best
+consumers are archive members needing an extract-and-rename, not a starved
+ranked list. Do not justify a numerics change by the ITCM dividend alone: the
+one member this campaign can actually free is `_arm_addsubsf3.itcm.o`, 684 B, of
+which 456 B is already dead and 228 B is live and hot (3,544.7 tk/fr).
+
+**What DID go up is the arithmetic half.** The shipping census prices the whole
+soft-float + integer-divide helper class at **160,996 tk/fr on the gate's own
+rank-80 frames, concentration 2.02**, cross-checked against caller attribution
+to 0.34%. That is the largest single class left on the board.
 
 Success is not “fewer `__aeabi_f*` calls.” It is **zero shipping reachability for a helper family** followed by linker-level removal.
 
@@ -54,6 +63,69 @@ call sites in 21 functions; `__aeabi_l2f` is called from
   (over-counts by 456).
 - Hand-authoring replacement soft-float leaves to work around the granularity
   is **refused** (board verdict).
+
+## Named call-elimination candidates (measured 2026-08-17, none started)
+
+**The lever is the CALL, not the representation.** The float→fixed conversion
+class is closed: the leaf route measured **R = 0.83× and 1.00×** because an
+f32↔Q edge conversion costs **31–42 cycles**, so above ~0.5 conversions per
+deleted operation the exchange rate is negative. Nothing below proposes
+converting arithmetic.
+
+Ranked by helper cost attributed to the caller on the **gate's own rank-80
+frames** (`softfloat-callers.txt`), with the caller's own self-time
+concentration beside it — because `[[cluster-where-the-percentile-lives]]`: a
+saving on frames that sit *above* rank-80 converts terribly (the card-FS lane
+was 23,908 gate-80 and re-ranked to only −11,003, conversion 0.264).
+
+| caller | g80 helper tk/fr | helper calls / gate frame | self conc | note |
+|---|---:|---:|---:|---|
+| `ndsBaseGcPlayMObjMatAnim` | **11,334** | **7,923** | **1.15** | the #1 candidate |
+| `ndsStageMPAdjustFloorLoopWallSweep` | 10,924 | 6,136 | 1.20 | **collision — FROZEN** |
+| `ndsR2FtAnimParseDObjFigatree` | 7,237 | 3,656 | 1.82 | Campaign 03 owns |
+| `ndsRendererSubmitParticleQuad` | 6,856 | 5,252 | 1.79 | Campaign 13 |
+| `mpCollisionGetFCCommonFloor` | 5,482 | 3,330 | 1.23 | **collision — FROZEN** |
+| `syMatrixLookAtF` | 4,703 | 2,452 | — | camera/particle basis |
+| `guMtxCatF` | 4,546 | 2,491 | — | 4×4 float concat |
+| `syUtilsArcTan.part.0` | 4,044 | 1,439 | — | |
+| `ndsBaseGcPlayDObjAnimJoint` | 3,789 | 3,309 | 1.34 | Campaign 03 |
+
+A concentration near 1.00 is **good**, not bad: a uniform cut converts at ratio
+1.000 on this basis, so a flat 11,334 is worth ~11,334 at rank-80.
+
+**1. `ndsBaseGcPlayMObjMatAnim` — the largest, and the shape is a memo, not a
+conversion.** The decomp body (`sys/objanim.c:1244`) walks every AObj of every
+MObj and, before any track work, does `aobj->length += mobj->anim_speed` — one
+`__aeabi_fadd` per AObj per frame, unconditionally, whenever
+`anim_wait != AOBJ_ANIM_END`. Each scalar track then costs 1 mul + 1 add
+(Linear) or ~10 mul + ~8 add (Cubic), and stores `value` into
+`mobj->sub.trau/trav/scau/scav/scrollu/scrollv`, `texture_id_*`, `lfrac`,
+`palette_id`. **On a stage whose water is frozen at source frame 0, an unknown
+but plausibly large fraction of those AObjs have `anim_speed == 0` and therefore
+produce a value identical to last frame's.** That is exactly the redundancy
+shape this repo has already banked twice (62.12% with two compares; the draw
+contract at 88–96%).
+**Do not build it yet — measure the redundancy first.** One counter pair
+(AObjs walked / AObjs whose `length` or output value did not change), read
+through `-ExtraGlobals` on a run that is happening anyway, costs one build and
+settles it. `[[declared-bound-is-not-trip-count]]`: 7,923 helper calls/frame is
+measured, the *fraction that is redundant* is not.
+It is now ITCM-resident (2026-08-17 pack, 732 B), so its I-cache half is already
+paid; what is left is the arithmetic.
+
+**2. The particle-camera basis — the memo exists, is ON, and misses 31.4%.**
+`gNdsParticleCameraCacheEnabled` is `NDS_R2_PARTICLE_CAMERA_CACHE = 1` in the
+shipping config (audited, not assumed), and the c239 run read its engagement
+pair at end of match: **Hit 4,324 / Miss 1,889 — 31.4% miss** over 2,039
+presented frames. Each miss rebuilds a perspective matrix, a look-at basis with
+three `sqrtf`, and a full 4×4 float `guMtxCatF`. But the counters also **refute
+the obvious follow-up**: hits+misses total ≈3.0 calls per presented frame, while
+`guMtxCatF` alone takes 2,491 helper calls per gate frame — orders apart, so the
+float-concat class has **other, larger callers** and tightening this key would
+not touch most of it. Find those callers before proposing anything here.
+
+**3. `syUtilsArcTan.part.0` (4,044) and `syMatrixLookAtF` (4,703)** are unowned
+and unsized for concentration; neither has a named mechanism yet.
 
 ## Current repo anchors
 

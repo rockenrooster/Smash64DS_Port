@@ -1852,7 +1852,8 @@ static void NDS_TASK37_ITCM_CODE ndsFTParamsInvalidateFlatParts(
     }
 }
 
-static void ndsFTParamsInvalidateSubtree(DObj *root, sb32 reset_mode)
+static void NDS_R2_ITCM_PACK2_CODE
+ndsFTParamsInvalidateSubtree(DObj *root, sb32 reset_mode)
 {
     const NDSFtPartsFlatWalk *flat;
     DObj *child;
@@ -2005,7 +2006,7 @@ extern volatile u32 gNdsR2AnimCutRoute;
  * without this the parser would appear to lose a third of its callers. */
 volatile u32 gNdsR2FtAnimNullSkips;
 
-void ftParamUpdateAnimKeys(GObj *fighter_gobj)
+void NDS_R2_ITCM_PACK2_CODE ftParamUpdateAnimKeys(GObj *fighter_gobj)
 {
     FTStruct *fp = (fighter_gobj != NULL) ? ftGetStruct(fighter_gobj) : NULL;
     DObj **p_joint;

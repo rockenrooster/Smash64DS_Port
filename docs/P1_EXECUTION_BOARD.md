@@ -33,7 +33,78 @@ clock.** Coverage is part of a baseline's identity now, not a footnote. The
 conversion: the sim runs 60 Hz and presents 30 Hz, ratio **measured at exactly
 2.000**, so 1,600 presented = 3,200 logic = **53.3 s**.
 
-## THE SHIPPING LEVEL IS +26,449 AND CADENCE IS 87.44%: BASIS RE-BANKED AND RE-CENSUSED ON GX COMPOSE ON (2026-08-17) — `artifacts/performance/2026-08-17_shipping-rebank/SHIPPING_REBANK.md`
+## THE ITCM RE-KNAPSACK LANDED: −44,544 AT RANK-80, REQUIREMENT +26,449 → −18,095, CADENCE 89.06% (2026-08-17) — `artifacts/performance/2026-08-17_itcm-repack2/ITCM_REPACK2.md`
+
+**`build-c239-itcm-repack2`, same flags as the c237 basis, one whole-match run,
+1,600 samples, frames 440–2039, `slips=0`. 2 builds, 1 emulator run, 1 Boundary
+(green, 0 `Exception:`, `DECOMP_PRISTINE=PASS`). Nothing published; both root
+ROMs SHA-256 UNCHANGED (`887D82FA…9853` / `54C07FAC…C68A`).**
+
+**rank-80 raw 1,171,776 → 1,127,232 (−44,544 = 3.16× the ≥14,080 cross-build
+floor); net 1,146,829 → 1,102,285; REQUIREMENT +26,449 → −18,095.** Band 41–120
+1,175,961.6 → 1,130,086.4, P50 882,336 → 841,024, P90 1,070,848 → 1,027,776,
+top-1% 1,455,232 → 1,396,288, max 1,888,832 → 1,812,672, over gate 106 → **88**
+of 1,600. **It does not rest on the cross-build floor**: joined on presented
+frame, the paired `WORK-H` median is **−41,344** and the candidate wins
+**1,521/1,600 frames (95.1%)**.
+
+**THE TICK ARM IS MET ON THIS INSTRUMENT; THE CADENCE ARM IS NOT.**
+`2:1816 3:210 4:11 5+:2`, max interval **19**, 2,039 presented = **89.06%**
+two-VBlank against the owner's ≥95% (was 87.44%). Do not read this as the P1
+gate passing.
+
+**Every retained counter is bit-identical to c237** — Selected/Submitted 62,952,
+memo 3,452/111/462/164/3,914/55,292, P0 600,000, P1 623,934, StageFighter
+1,223,934, heap free min 53,136, GxCompose Roots 62,952 / Declines 0. Placement
+in both directions; no emitted instruction changed.
+
+**THE POOL WAS 13,188 B, NOT 2,178.** §7.7's "14 never-executed residents,
+1,170 B idle" is mostly **not** evictable and it double-counts: `__addsf3` 444 +
+`__aeabi_frsub` 456 + the fsub golden 448 all name the **same 456 B** welded
+inside `_arm_addsubsf3.itcm.o`'s live 684 B section, `__aeabi_ul2f` 188 B sits in
+that section's *live* half, and 80 B of exception vectors + 52 B of cache
+maintenance stay resident. The real pool was the **generic display-list renderer**,
+priced on the gate's own rank-80 frames at **0.0–1.1 tk/byte** against a resident
+table running 20–200: `ndsRendererScanList` 5,972 B, `ndsRendererSubmitHardwareTriangle`
+3,204 B, `ndsRendererHardwareSubmitVertex` 2,276 B, `ndsRendererMtxMulAffine20p12`
+616 B, `…LitShadeColorPrepared` 460 B, `…LoadHardwareSplitMatrices` 368 B,
+`…HardwarePolyFmt` 160 B, `…HardwareTextureSourceBytes` 132 B. All still emitted
+and callable — they moved to main RAM. **`nds_renderer.o` contributes ONE
+16,948-byte `.itcm` input section**, so eviction is a source attribute, not a
+linker rule.
+
+**23 admissions, 14,350 B, static ceiling 80,745 gate-80 I-cache-fill tk/fr,
+realised 44,544 = 55% of ceiling** (the 2026-08-16 pack realised 46%). `.itcm`
+32,600 → **32,648 B, 88 free**. `.text.hot` **3,984 B unchanged**.
+`.text.hot.draw` 4,332 → 4,924 because `nds_task32_draw_hot.inc` already listed
+`*nds_renderer.o(.text.ndsRendererMtxMulAffine20p12)`, a pattern that matched
+nothing while the symbol was ITCM-resident.
+
+**`check-renderer-itcm-placement.ps1` now pins BOTH directions** — the admitted
+pack must be resident and the evicted set must not return
+(`Evicted renderer symbol '…' returned to ITCM`), while the generic chain is
+still required to be *emitted*. **NEXT, and it is a build-system change, not a
+source one:** the densest unplaced candidates are archive members —
+`get_fat.isra.0` 352 B / **8,868** gate-80 icf (25.2/B), `f_lseek` 664 B / 6,366,
+`tickGetCount` 92 B / 3,739, `cpuGetTiming` 24 B / **1,938 (80.8/B)**,
+`mutexUnlock` 188 B / 2,883, `glBindTexture` 92 B / 1,524. `linker/nds_hot_text.ld:113`
+matches `*.itcm.*` **by filename**, so each needs an extract-and-rename of the
+whole member; only 88 B are free until something else is evicted.
+
+**Two pre-existing findings, one line each, not detoured into:**
+`*battleship_sys_objman.o(.text.gcRunAll)` in `.text.hot` has been matching
+**nothing** since the shim renamed that symbol to `ndsBaseGcRunAll` — the silent
+input-section miss the linker's own comment warns about; the symbol was measured
+in `.main` and this cycle admitted it to `.itcm`.
+`scripts/check-task32-draw-hot-text.ps1` is **never invoked** (only read as text
+by `check-gbi-decode-fixtures.ps1:2608`) and its `$expectedBytes` equality could
+not have passed on this ELF before this cycle either.
+
+## THE SHIPPING LEVEL WAS +26,449 AND CADENCE 87.44%: BASIS RE-BANKED AND RE-CENSUSED ON GX COMPOSE ON (2026-08-17) — `artifacts/performance/2026-08-17_shipping-rebank/SHIPPING_REBANK.md`
+
+> **SUPERSEDED as the level by the ITCM re-knapsack above (`+26,449 → −18,095`).
+> Still the basis for every per-PC attribution: the `v4-c238` census, its
+> gate-80 mask, and §7.7's corrections are unchanged and remain current.**
 
 **`build-c237-shipbank`, the flag-identical tick-HUD sibling of the published P1
 ROM, mode 163, `NDS_R2_BOTH_CPU=1`, DLDI ON, `-RingDump`, 1,600 samples,

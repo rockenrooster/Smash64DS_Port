@@ -95,6 +95,24 @@ static NDSRendererProfileOwner sNdsRendererRuntimeOwner;
 #define NDS_TASK82_EVICTED_HOT_CODE NDS_RENDERER_HOT_CODE
 #endif
 
+/* Campaign 01 re-knapsack, 2026-08-17. See include/nds/nds_task37_itcm.h for
+ * the ranking and the measured rents. The generic display-list interpreter and
+ * its submit chain are the fallback renderer that the native stage and fighter
+ * owner paths replaced; GX compose retired the affine multiply on top of that.
+ * They stay exact and stay callable -- they move to main RAM, they do not go
+ * away -- and the bytes go to residents the shipping census actually measures.
+ *
+ * Placement only, in both directions: NDS_R2_ITCM_PACK2_EVICTED_CODE is
+ * NDS_RENDERER_HOT_CODE minus the section. */
+#if NDS_R2_ITCM_PACK2 && defined(__arm__)
+#define NDS_R2_ITCM_PACK2_EVICTED_CODE \
+    __attribute__((hot, optimize("O3"), target("arm")))
+#define NDS_R2_ITCM_PACK2_EVICTED_PLAIN_CODE
+#else
+#define NDS_R2_ITCM_PACK2_EVICTED_CODE NDS_RENDERER_HOT_CODE
+#define NDS_R2_ITCM_PACK2_EVICTED_PLAIN_CODE NDS_TASK82_ITCM_CODE
+#endif
+
 /* R2-03 E26 SIZING ARM ONLY -- THE SHIPPED ROM'S ITCM PACK IS UNTOUCHED.
  *
  * docs/P1_EXECUTION_BOARD.md names the delta-redundancy census as the thing that
@@ -120,10 +138,15 @@ static NDSRendererProfileOwner sNdsRendererRuntimeOwner;
  *
  * Placement only, in the spirit of Task 82: NDS_TASK82_EVICTED_HOT_CODE drops
  * the section and keeps hot/O3/ARM, so no emitted instruction changes. */
+/* 2026-08-17: the re-knapsack makes this eviction unconditional. The shipping
+ * census measures ndsRendererScanList at 599 tk/fr on the gate's own rank-80
+ * frames over 6,188 bytes -- 0.1 tk/byte, the second-cheapest rent in a table
+ * whose top residents run 100,000 cyc/byte -- so the census arm and the
+ * shipping arm now want the same placement for the same measured reason. */
 #if NDS_TASK91_DRAW_PHASE_CENSUS
 #define NDS_R2_CENSUS_EVICTED_CODE NDS_TASK82_EVICTED_HOT_CODE
 #else
-#define NDS_R2_CENSUS_EVICTED_CODE NDS_RENDERER_HOT_CODE
+#define NDS_R2_CENSUS_EVICTED_CODE NDS_R2_ITCM_PACK2_EVICTED_CODE
 #endif
 
 /* R2-03 E46. ndsRendererNativeApplyStateDelta is already ITCM-resident, but the
@@ -6860,7 +6883,7 @@ ndsRendererMtxMul20p12(const NDSRendererMatrix20p12 *lhs,
     *out = temp;
 }
 
-void NDS_TASK82_ITCM_CODE
+void NDS_R2_ITCM_PACK2_EVICTED_PLAIN_CODE
 ndsRendererMtxMulAffine20p12(const NDSRendererMatrix20p12 *lhs,
                                   const NDSRendererMatrix20p12 *rhs,
                                   NDSRendererMatrix20p12 *out)
@@ -9818,7 +9841,7 @@ static s32 ndsRendererHardwareAlphaUsesVertex(
 
 /* Task 37: 100 bytes, 3.60 cycles per instruction, on the per-polygon submit
  * path. */
-static u32 NDS_TASK37_ITCM_CODE ndsRendererHardwarePolyFmt(
+static u32 NDS_R2_ITCM_PACK2_EVICTED_PLAIN_CODE ndsRendererHardwarePolyFmt(
     const NDSRendererStats *stats, u32 alpha)
 {
     u32 poly_id = (stats != NULL) ?
@@ -10204,7 +10227,7 @@ static u32 ndsRendererHardwareLitDiffuseNumer(
 extern volatile u32 gNdsR2FlashLive[];
 #endif
 
-static u32 NDS_RENDERER_HOT_CODE
+static u32 NDS_R2_ITCM_PACK2_EVICTED_CODE
 ndsRendererHardwareLitShadeColorPrepared(
     NDSRendererStats *stats,
     const NDSRendererInputVertex *vtx,
@@ -12286,7 +12309,7 @@ static u32 ndsRendererHardwareMergeTextureParams(u32 params)
     return current;
 }
 
-static void ndsRendererHardwareApplyTextureParams(u32 params)
+static void NDS_R2_ITCM_PACK2_CODE ndsRendererHardwareApplyTextureParams(u32 params)
 {
     if (((sNdsRendererGXStateShadow.valid_mask &
           NDS_RENDERER_GX_STATE_TEXTURE_PARAMS) != 0u) &&
@@ -13889,7 +13912,8 @@ static NDSRendererMatrix20p12 sNdsRendererParticleProjection;
 static NDSRendererMatrix20p12 sNdsRendererParticleModelview;
 static u32 sNdsRendererParticleCameraValid;
 
-void ndsRendererSetParticleCamera(const NDSRendererMatrix20p12 *projection,
+void NDS_R2_ITCM_PACK2_CODE
+ndsRendererSetParticleCamera(const NDSRendererMatrix20p12 *projection,
                                   const NDSRendererMatrix20p12 *modelview)
 {
     if ((projection == NULL) || (modelview == NULL))
@@ -16014,7 +16038,7 @@ static u32 ndsRendererHardwareTextureLinePixels(u32 size, u32 line)
 /* Task 37: 132 bytes at 8.54 cycles per instruction, called from every texture
  * bind and resolve. Small, hot, and reached from many different call sites --
  * the shape that never stays resident in a shared instruction cache. */
-static u32 NDS_TASK37_ITCM_CODE ndsRendererHardwareTextureSourceBytes(
+static u32 NDS_R2_ITCM_PACK2_EVICTED_PLAIN_CODE ndsRendererHardwareTextureSourceBytes(
     u32 format, u32 size, u32 texels)
 {
     if (format == NDS_RENDERER_HW_TEXTURE_FMT_CI)
@@ -19319,7 +19343,7 @@ static inline void ndsRendererHardwareFighterLoadModelviewWorldScaled(
     }
 }
 
-static void __attribute__((noinline)) NDS_TASK82_ITCM_CODE
+static void __attribute__((noinline)) NDS_R2_ITCM_PACK2_EVICTED_PLAIN_CODE
 ndsRendererLoadHardwareSplitMatrices(
     const NDSRendererMatrix20p12 *projection,
     const NDSRendererMatrix20p12 *modelview,
@@ -19482,7 +19506,8 @@ static inline void ndsRendererHardwareFighterMultMatrixWorldScaled(
  * commands acts on the position and vector matrices together -- which is what
  * NDS_R2_FIGHTER_HW_LIGHT needs, and the scale is a no-op on the 3x3 vector
  * matrix because it only touches row 3. */
-static void __attribute__((noinline)) ndsRendererLoadHardwareGxComposedMatrices(
+static void __attribute__((noinline)) NDS_R2_ITCM_PACK2_CODE
+ndsRendererLoadHardwareGxComposedMatrices(
     const NDSRendererNativeFighterRoot *input, u32 generation)
 {
     u32 i;
@@ -20038,7 +20063,7 @@ static void ndsRendererHardwareClipVertexNdcDepth(
     glVertex3v16(x, y, out_z);
 }
 
-static void ndsRendererHardwareEndBatch(void)
+static void NDS_R2_ITCM_PACK2_CODE ndsRendererHardwareEndBatch(void)
 {
     if (sNdsRendererHardwareTriangleBatchOpen != 0u)
     {
@@ -20141,7 +20166,7 @@ ndsRendererHardwareSubmitVertexDecalCold(
     }
 }
 
-static void NDS_RENDERER_HOT_CODE
+static void NDS_R2_ITCM_PACK2_EVICTED_CODE
 ndsRendererHardwareSubmitVertex(
     NDSRendererStats *stats,
     NDSRendererTraversalState *state,
@@ -20872,7 +20897,7 @@ ndsRendererSubmitHardwareTriangleDepthStatsCold(
     }
 }
 
-static void NDS_RENDERER_HOT_CODE
+static void NDS_R2_ITCM_PACK2_EVICTED_CODE
 ndsRendererSubmitHardwareTriangle(
     NDSRendererStats *stats,
     const NDSRendererConfig *config,
@@ -25037,8 +25062,12 @@ static inline void ndsRendererNativeBeginDirectBatch(
  * The c235 knapsack had only 16 B free, so the tick-HUD linker overflowed once
  * that accepted arm became the default. This was the lowest-value retained
  * admission (152 B / 1,074.9 marginal-80 I-cache ceiling); return it to main
- * RAM rather than evicting a higher-value leaf or overcommitting ITCM. */
-static void ndsRendererNativeApplyProductionPreamble(
+ * RAM rather than evicting a higher-value leaf or overcommitting ITCM.
+ *
+ * 2026-08-17: re-admitted. The re-knapsack frees 13,416 B, so the 152 B is no
+ * longer contested, and the shipping census prices it at 1,123 I-cache-fill
+ * tk/fr on the gate's own rank-80 frames (7.4 per byte). */
+static void NDS_R2_ITCM_PACK2_CODE ndsRendererNativeApplyProductionPreamble(
     const NDSRendererNativeFighterPreamble *preamble,
     NDSRendererStats *stats)
 {
@@ -25550,7 +25579,7 @@ static void __attribute__((noinline)) ndsRendererR2WriteLightVector(
     sNdsR2LightVectorWritten = 1u;
 }
 
-static u16 ndsRendererR2MaterialColor15(
+static u16 NDS_R2_ITCM_PACK2_CODE ndsRendererR2MaterialColor15(
     u32 light_color, u32 material_color, u32 use_material, u32 color_modulate)
 {
     u32 r = ndsRendererR2MaterialChannel(
@@ -30863,7 +30892,7 @@ static void ndsRendererNativeStageTask36EndSegment(void)
 }
 #endif
 
-static s32 ndsRendererNativeStageBeginRun(
+static s32 NDS_R2_ITCM_PACK2_CODE ndsRendererNativeStageBeginRun(
     const NDSNativeStageRun *native_run,
     const NDSNativeStagePreparedRun *run,
     u32 submit_class,
@@ -31342,7 +31371,7 @@ static void NDS_TASK82_ITCM_CODE ndsRendererNativeStageLoadNoZMatrix(
 #endif
 }
 
-static void ndsRendererNativeStageEmitNoZVertex(
+static void NDS_R2_ITCM_PACK2_CODE ndsRendererNativeStageEmitNoZVertex(
     const NDSNativeStageDenseVertex *dense,
     const NDSNativeStagePreparedDense *prepared,
     const NDSNativeStagePreparedRun *run,
@@ -32625,7 +32654,7 @@ static u32 ndsRendererEconomySkipNativeStageSegment(
 }
 #endif
 
-s32 ndsRendererCommitNativeStageSegment(u32 segment_index)
+s32 NDS_R2_ITCM_PACK2_CODE ndsRendererCommitNativeStageSegment(u32 segment_index)
 {
     NDSRendererStats *stats = sNdsNativeStageOwnerExecution.stats;
     const NDSNativeStageSegment *segment;

@@ -17,9 +17,21 @@
  *
  * Delete once the tap defect is closed; this is an instrument, not a seam. */
 #include <nds/nds_os.h>
+#include <nds/nds_task37_itcm.h>
 
 #define gcRunAll ndsBaseGcRunAll
 #define gcSetupObjman ndsBaseGcSetupObjman
+/* Campaign 01 re-knapsack, 2026-08-17. 120 bytes carrying 2,513 I-cache-fill
+ * tk/fr on the gate's own rank-80 frames -- 20.9 per byte, the densest
+ * placeable candidate on the v4-c238 census. The attribute rides a declaration
+ * because the definition is the read-only decomp body, the same mechanism
+ * battleship_sys_objanim.c uses for gcPlayDObjAnimJoint.
+ *
+ * This does NOT perturb .text.hot: its member pattern is
+ * `*battleship_sys_objman.o(.text.gcRunAll)`, written before the rename above
+ * existed, so it has been matching nothing and the symbol was measured in
+ * .main. See docs/P1_EXECUTION_BOARD.md. */
+void ndsBaseGcRunAll(void) NDS_R2_ITCM_PACK2_CODE;
 #include <battleship_overlay/src/sys/objman.c>
 #undef gcRunAll
 #undef gcSetupObjman

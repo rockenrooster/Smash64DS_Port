@@ -1,4 +1,5 @@
 #include "nds_scene_harness_config.h"
+#include <nds/nds_task37_itcm.h>
 #include <nds/nds_mp_floor_crossing.h>
 #include <nds/nds_mp_topology.h>
 #include <nds/nds_mpprocess_source.h>
@@ -664,7 +665,7 @@ static inline int ndsMPLineExtentReady(MPVertexArray *ids,
     return 1;
 }
 
-static int ndsMPLineExtentRejects(MPVertexArray *ids,
+static int NDS_R2_ITCM_PACK2_CODE ndsMPLineExtentRejects(MPVertexArray *ids,
                                   MPVertexPosContainer *verts, u32 line_id,
                                   u32 vertex_first, u32 vertex_count,
                                   f32 object_x)
@@ -708,7 +709,7 @@ static int ndsMPLineExtentRejects(MPVertexArray *ids,
  * fighters floating under the stage. The y half is provably exact and, on Dream
  * Land, is the discriminating axis anyway: the main floor and the three
  * pass-through platforms sit at four distinct heights. */
-static int ndsMPLineExtentSweepRejects(MPVertexArray *ids,
+static int NDS_R2_ITCM_PACK2_CODE ndsMPLineExtentSweepRejects(MPVertexArray *ids,
                                        MPVertexPosContainer *verts,
                                        u32 line_id, u32 vertex_first,
                                        u32 vertex_count,
@@ -804,7 +805,7 @@ static void ndsMPGetFCAngle(Vec3f *angle, s32 v1x, s32 v1y, s32 v2x,
  * prologue, `ndsStageCollisionLoopGeometryReady`, the per-kind O2R halfword
  * reads and the epilogue are the rest. Slice 36's board entry retired this on
  * E51's authority before measuring it, and had to withdraw that. */
-static s32 ndsMPGetLineKindForLineID(s32 line_id)
+static s32 NDS_R2_ITCM_PACK2_CODE ndsMPGetLineKindForLineID(s32 line_id)
 {
     MPGeometryData *geometry = gMPCollisionGeometry;
     MPLineInfo *line_info;
@@ -2390,7 +2391,8 @@ static sb32 ndsMPFCSegmentCrosses(const Vec3f *position,
         TRUE : FALSE;
 }
 
-static sb32 ndsStageMPAdjustFloorLoopWallSweep(Vec3f *position,
+static sb32 NDS_R2_ITCM_PACK2_CODE
+ndsStageMPAdjustFloorLoopWallSweep(Vec3f *position,
                                                Vec3f *translate,
                                                Vec3f *ga_last,
                                                s32 *stand_line_id,

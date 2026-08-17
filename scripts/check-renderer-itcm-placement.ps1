@@ -12,12 +12,41 @@ $ErrorActionPreference = 'Stop'
 # Task 82: ndsRendererHardwareConvertTexel01Ci4Direct was evicted from ITCM on
 # the owner's decision -- it measures zero cycles while Dream Land water is
 # frozen at source frame 0. Restore it here if a stage ships with live water.
+#
+# Campaign 01 re-knapsack, 2026-08-17. This guard used to pin the generic
+# display-list interpreter and its submit chain into ITCM. That set was measured
+# on a GX=1-era c200 capture; on the v4-c238 shipping census, masked by the
+# gate's own rank-80 frames, it rents ITCM at 0.1-1.1 ticks/frame per byte
+# against residents running 20-200:
+#
+#   ndsRendererScanList                       6,188 B    599 tk/fr   0.1/B
+#   ndsRendererSubmitHardwareTriangle         3,212 B    291 tk/fr   0.1/B
+#   ndsRendererHardwareSubmitVertex           2,256 B    775 tk/fr   0.3/B
+#   ndsRendererHardwareLitShadeColorPrepared    460 B     61 tk/fr   0.1/B
+#   ndsRendererMtxMulAffine20p12                616 B    676 tk/fr   1.1/B
+#   ndsRendererLoadHardwareSplitMatrices        392 B      8 tk/fr   0.0/B
+#
+# So the guard now pins BOTH directions: the admitted pack must be resident, and
+# the evicted set must not silently come back. The generic renderer is still
+# required to be EMITTED -- it is the fallback path, it just lives in main RAM.
+# artifacts/performance/2026-08-17_itcm-repack2/ carries the ranking.
 $hotFunctions = @(
-    'ndsRendererApplyVertexCommand',
-    'ndsRendererHardwareLitShadeColorPrepared',
-    'ndsRendererHardwareSubmitVertex',
+    'ndsRendererCommitNativeStageSegment',
+    'ndsRendererNativeStageBeginRun',
+    'ndsRendererLoadHardwareGxComposedMatrices',
+    'ndsRendererNativeStageEmitNoZVertex',
+    'ndsRendererHardwareEndBatch',
+    'ndsRendererHardwareApplyTextureParams',
+    'ndsRendererR2MaterialColor15',
+    'ndsRendererNativeApplyProductionPreamble'
+)
+$evictedFunctions = @(
+    'ndsRendererScanList',
     'ndsRendererSubmitHardwareTriangle',
-    'ndsRendererScanList'
+    'ndsRendererHardwareSubmitVertex',
+    'ndsRendererHardwareLitShadeColorPrepared',
+    'ndsRendererMtxMulAffine20p12',
+    'ndsRendererLoadHardwareSplitMatrices'
 )
 $requiredEmittedFunctions = if ($BenchmarkAblation) {
     @('ndsRendererSubmitHardwareTriangle', 'ndsRendererScanList')
@@ -101,17 +130,10 @@ foreach ($elfPath in $Elf) {
         $matches = @($functionSymbols | Where-Object {
             ($_.Name -eq $baseName) -or $_.Name.StartsWith("$baseName.")
         })
-        if ((($requiredForElf -contains $baseName) -or
-            ($requiresNativeFighter -and
-                ($nativeFighterFunctions -contains $baseName))) -and
+        if ($requiresNativeFighter -and
+            ($nativeFighterFunctions -contains $baseName) -and
             ($matches.Count -eq 0)) {
             throw "Required hot renderer function '$baseName' was not emitted in '$resolvedElf'."
-        }
-        if ($allowsInlineCollapsedSubmitChain -and
-            ($matches.Count -eq 0) -and
-            ($baseName -in @('ndsRendererHardwareSubmitVertex',
-                             'ndsRendererSubmitHardwareTriangle'))) {
-            $inlineCollapsedNames.Add($baseName) | Out-Null
         }
         foreach ($symbol in $matches) {
             if ($symbol.Section -ne '.itcm') {
@@ -122,7 +144,35 @@ foreach ($elfPath in $Elf) {
         }
     }
 
-    Write-Output ("Renderer ITCM placement passed: elf={0} itcm={1}/{2} renderer={3} symbols=[{4}] inlineCollapsed=[{5}]" -f
+    # The other half of the 2026-08-17 re-knapsack: the generic display-list
+    # renderer must still EXIST and must NOT be back in ITCM. A re-admission
+    # here silently costs the admitted pack the bytes it was measured on.
+    [uint32]$evictedBytes = 0
+    $evictedSeen = [System.Collections.Generic.List[string]]::new()
+    foreach ($baseName in $evictedFunctions) {
+        $matches = @($functionSymbols | Where-Object {
+            ($_.Name -eq $baseName) -or $_.Name.StartsWith("$baseName.")
+        })
+        if (($requiredForElf -contains $baseName) -and ($matches.Count -eq 0)) {
+            throw "Required hot renderer function '$baseName' was not emitted in '$resolvedElf'."
+        }
+        if ($allowsInlineCollapsedSubmitChain -and
+            ($matches.Count -eq 0) -and
+            ($baseName -in @('ndsRendererHardwareSubmitVertex',
+                             'ndsRendererSubmitHardwareTriangle'))) {
+            $inlineCollapsedNames.Add($baseName) | Out-Null
+        }
+        foreach ($symbol in $matches) {
+            if ($symbol.Section -eq '.itcm') {
+                throw "Evicted renderer symbol '$($symbol.Name)' returned to ITCM in '$resolvedElf'."
+            }
+            $evictedBytes += $symbol.Bytes
+            $evictedSeen.Add("$($symbol.Name)=$($symbol.Section)") | Out-Null
+        }
+    }
+
+    Write-Output ("Renderer ITCM placement passed: elf={0} itcm={1}/{2} renderer={3} symbols=[{4}] inlineCollapsed=[{5}] evicted={6} [{7}]" -f
         $elfName, $itcmBytes, $MaxItcmBytes, $rendererItcmBytes,
-        ($emittedNames -join ', '), ($inlineCollapsedNames -join ', '))
+        ($emittedNames -join ', '), ($inlineCollapsedNames -join ', '),
+        $evictedBytes, ($evictedSeen -join ', '))
 }

@@ -8,27 +8,65 @@
 >
 > **Basis (2026-08-17):** the shipping level is **+26,449** at rank-80 and the fresh per-PC census is `artifacts/performance/2026-08-17_shipping-rebank/v4-c238`. `c200` and `v3-c221` are retired. **Read `SHIPPING_REBANK.md` §7.7 before quoting any figure in this brief** — it lists what the new census contradicts, and mask the census by the GATE's own rank-80 frames.
 
-## MEASURED 2026-08-17 — the pool is ≥2,178 B, not 16 B
+## THE RE-KNAPSACK RAN AND LANDED 2026-08-17 — −44,544 at rank-80
 
-The shipping census (`v4-c238`, §B of its `census.txt`) reads the admitted pack
-back and **two of its tenants are now nearly dead, because GX compose ships**:
+`artifacts/performance/2026-08-17_itcm-repack2/ITCM_REPACK2.md`,
+`build-c239-itcm-repack2`. **REQUIREMENT +26,449 → −18,095**; rank-80
+1,171,776 → 1,127,232; band 41–120 1,175,961.6 → 1,130,086.4; P50 882,336 →
+841,024; over gate 106 → 88 of 1,600; cadence 87.44% → **89.06%** (still short of
+the ≥95% arm). Paired on presented frame the median is **−41,344** and the
+candidate wins **1,521/1,600**. Every retained counter bit-identical; Boundary
+green.
 
-- `ndsRendererMtxMulAffine20p12` — `FTR_LANE.md` measured **18,549 tk/fr over
-  52.94 calls/frame, 72.9% icache**, and the knapsack admitted it first at
-  **616 B**. On the shipping config it is **384 tk/fr at 1.19 calls/frame**
-  (48× down): the geometry engine does that multiply now. Its ITCM rent is
-  **1,993.8 cyc/byte**, near the bottom of an 87-resident table.
-- `ndsRendererLoadHardwareSplitMatrices` — **392 B at 170.3 cyc/byte,
-  0.10 calls/frame**.
-- **14 residents never execute at all: 1,170 B idle**, including `__addsf3`
-  444 B, `__aeabi_frsub` 456 B, `__nds_task16_libgcc_fsub_golden` 448 B.
+**The pool this brief predicted at ≥2,178 B was really 13,188 B, and it was not
+where the census pointed.** Corrections, from the linker map at input-section
+granularity:
 
-That is **≥2,178 B** of measured eviction pool against the 16 B this campaign
-left free and the 28 B by which its own named runner-up
-(`ndsRendererHardwareApplyTextureParams`, 180 B / 1,309.5) missed. **Re-run the
-knapsack on `v4-c238` before spending any more of 06's dividend** — the values
-that ranked the last pack came from a GX=1-era `c200` capture that no longer
-describes what runs.
+- The census's **"14 never-executed residents, 1,170 B idle"** is mostly
+  unusable and it **double-counts**: `__addsf3` 444 + `__aeabi_frsub` 456 +
+  `__nds_task16_libgcc_fsub_golden` 448 all name the **same 456 B** at the head
+  of `_arm_addsubsf3.itcm.o`, one 684 B input section whose other 228 B is live;
+  `__aeabi_ul2f` 188 B sits inside that *live* half; 80 B are exception vectors
+  and 52 B cache maintenance, both correctly resident;
+  `threadUnblockAllByValue` 312 B is its own section but arrives through the
+  `*.32.o` linker rule, so taking it is a linker-script change.
+- The real pool was the **generic display-list renderer** — the fallback the
+  native stage/fighter owner paths replaced — priced on the **gate's own rank-80
+  frames** at 0.0–1.1 tk/byte against a resident table running 20–200:
+  `ndsRendererScanList` 5,972 B / 599 tk/fr, `ndsRendererSubmitHardwareTriangle`
+  3,204 / 291, `ndsRendererHardwareSubmitVertex` 2,276 / 775,
+  `ndsRendererMtxMulAffine20p12` 616 / 676,
+  `ndsRendererHardwareLitShadeColorPrepared` 460 / 61,
+  `ndsRendererLoadHardwareSplitMatrices` 368 / 8, `…HardwarePolyFmt` 160 / 8,
+  `…HardwareTextureSourceBytes` 132 / 5. **They are still emitted and callable;
+  only residency changed.**
+- **`nds_renderer.o` contributes ONE 16,948-byte `.itcm` input section** — every
+  function carrying `section(".itcm")` in that TU merges into it — so eviction
+  here is a source attribute, never a linker rule.
+
+**23 admissions, 14,350 B, static ceiling 80,745 gate-80 I-cache-fill tk/fr,
+realised 44,544 = 55% of ceiling** (the 2026-08-16 pack realised 46%; the
+ceiling is a ranking, never a prediction). `ndsRendererHardwareApplyTextureParams`
+— the runner-up that missed by 28 B — is in, as is
+`ndsRendererNativeApplyProductionPreamble`, which the GX-compose default flip had
+evicted for want of 32 B. `.itcm` is now **32,648 B with 88 free**; `.text.hot`
+is **unchanged at 3,984 B**; `.text.hot.draw` grew 4,332 → 4,924 because
+`nds_task32_draw_hot.inc` already carried
+`*nds_renderer.o(.text.ndsRendererMtxMulAffine20p12)`, a pattern that matched
+nothing while that symbol was ITCM-resident.
+
+**What is left of this campaign, in order of measured value:**
+
+1. **Archive members are now the densest unplaced candidates and need a
+   build-system change.** `get_fat.isra.0` 352 B / **8,868** gate-80 icf
+   (25.2/B), `f_lseek` 664 / 6,366, `tickGetCount` 92 / 3,739, `cpuGetTiming`
+   24 / **1,938 (80.8/B)**, `mutexUnlock` 188 / 2,883, `glBindTexture` 92 /
+   1,524. `linker/nds_hot_text.ld:113` matches `*.itcm.*` by **filename**, so
+   each means extracting a member and renaming it — and the member arrives
+   whole, which is why the last two packs excluded them. Only 88 B are free, so
+   this needs its own eviction first.
+2. The 5,376 B structural renderer decomposition, unchanged and still hard.
+3. Census freshness.
 
 ## Status — the core of this campaign LANDED 2026-08-16
 

@@ -39,6 +39,34 @@
 #define NDS_TASK37_ITCM_CODE
 #endif
 
+/* Campaign 01 re-knapsack, 2026-08-17. Same rule as NDS_TASK37_ITCM_CODE above:
+ * placement and nothing else, in both directions, so an admission cannot be
+ * confused with a recompile.
+ *
+ * The 2026-08-16 pack was ranked on a GX=1-era c200 capture. GX compose now
+ * ships, and on the v4-c238 shipping census the generic display-list
+ * interpreter chain it protected has gone nearly cold measured on the gate's
+ * own rank-80 frames: ndsRendererScanList 6,188 B at 0.1 tk/byte,
+ * ndsRendererSubmitHardwareTriangle 3,212 B at 0.1,
+ * ndsRendererHardwareSubmitVertex 2,256 B at 0.3,
+ * ndsRendererMtxMulAffine20p12 616 B at 1.1 (18,549 -> 384 tk/fr whole match
+ * when the geometry engine took over the multiply). Those bytes rent ITCM at
+ * one to three orders of magnitude below the residents around them.
+ *
+ * NDS_R2_ITCM_PACK2_EVICTED_CODE keeps hot/O3/ARM exactly as
+ * NDS_RENDERER_HOT_CODE had them and drops only the section, so no emitted
+ * instruction changes; NDS_R2_ITCM_PACK2_CODE adds a section and no more.
+ * artifacts/performance/2026-08-17_itcm-repack2/ carries the ranking. */
+#ifndef NDS_R2_ITCM_PACK2
+#define NDS_R2_ITCM_PACK2 1
+#endif
+
+#if NDS_R2_ITCM_PACK2 && defined(__arm__)
+#define NDS_R2_ITCM_PACK2_CODE __attribute__((section(".itcm")))
+#else
+#define NDS_R2_ITCM_PACK2_CODE
+#endif
+
 /* Layout control.
  *
  * Every Task 37 mask -- the libc leaves, a single 236-byte float leaf, the port

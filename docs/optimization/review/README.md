@@ -10,23 +10,32 @@ re-derive measurements at execution time; never bank projections.
 
 ## Where the gate stands (STEP 0 IS DONE — measured 2026-08-17)
 
-- **The shipping level is `+26,449` at rank-80** — rank-80 **1,171,776 raw /
-  1,146,829 net**, band 41–120 1,175,961.6, P50 882,336, P90 1,070,848, top-1%
-  1,455,232, 106/1600 over gate, WRAPFIX corrected 0 rows
-  (`artifacts/performance/2026-08-17_shipping-rebank/SHIPPING_REBANK.md`,
-  `build-c237-shipbank`, GX compose ON, `NDS_R2_BOTH_CPU=1`, DLDI ON, 1,600
-  samples, frames 440–2039). **Size every candidate against +26,449.**
+- **The shipping level is `−18,095` at rank-80** since the ITCM re-knapsack
+  landed (`artifacts/performance/2026-08-17_itcm-repack2/ITCM_REPACK2.md`,
+  `build-c239-itcm-repack2`): rank-80 **1,127,232 raw / 1,102,285 net**, band
+  41–120 1,130,086.4, P50 841,024, P90 1,027,776, top-1% 1,396,288, **88/1600**
+  over gate. It moved **−44,544** from the c237 basis (3.16× the ≥14,080
+  cross-build floor) with a paired per-frame median of **−41,344** across
+  1,521/1,600 frames won, and every retained counter bit-identical.
+  **The TICK arm of the gate is met on this instrument. The CADENCE arm is
+  not — see below. Do not report the P1 gate as passed.**
+  The previous basis was `+26,449` on `build-c237-shipbank`
+  (`SHIPPING_REBANK.md`); that document remains current for every **per-PC
+  attribution**, only its level is superseded. **Size new candidates against a
+  level that is already under the gate: the remaining work is the cadence arm
+  and four-fighter headroom, not the tick number.**
 - **The old +19,089 is not a comparison, it is a different run.** c234 → c237 is
   +7,360 at rank-80, inside the ≥14,080 cross-build floor, and the frame-joined
   views disagree in sign (whole-match paired median −4,032, inside the ~5,700
   P50 floor). The two bases are not distinguishable; do not report a regression
   and do not arithmetically add the old GX A/B price.
-- **Cadence does NOT clear its arm: 87.44% two-VBlank** —
-  `2:1783 3:245 4:8 5+:3`, max interval 18 over 2,039 presented frames,
-  `slips=0`. The previous basis read 87.79%; the 90.731% on record is the c185
-  **DRAW=0** sibling and is a different instrument. The ≥95% arm (owner-decided,
-  `plan.md`) remains open. Banked gate claims still report the histogram and max
-  interval alongside P50/P95 (AGENTS.md).
+- **Cadence still does NOT clear its arm: 89.06% two-VBlank** on the c239 pack —
+  `2:1816 3:210 4:11 5+:2`, max interval **19** over 2,039 presented frames,
+  `slips=0`. It was 87.44% on c237 and 87.79% on c234, so the re-knapsack moved
+  it **+1.62 pt**; the 90.731% on record is the c185 **DRAW=0** sibling and is a
+  different instrument. The ≥95% arm (owner-decided, `plan.md`) remains open and
+  is now **the binding half of the gate**. Banked gate claims still report the
+  histogram and max interval alongside P50/P95 (AGENTS.md).
 - **The fresh per-PC census is on disk**:
   `artifacts/performance/2026-08-17_shipping-rebank/v4-c238/` (54,913,786 PC
   rows, shipping config), with the gate-mask reductions beside it. **Use it, do
@@ -97,12 +106,19 @@ re-derive measurements at execution time; never bank projections.
   reopening condition — the per-seek unit price — is **unchanged at 424 FAT hops
   / 18,131 ticks**. **The "90% of the requirement" claim is retracted.** Phase 4
   stays valid for animation/texture/reloc only; it cannot be armed for audio.
-- **01/06 — ITCM has ≥2,178 B of measured eviction pool, not 16 B.**
-  `ndsRendererMtxMulAffine20p12` fell **18,549 → 384 tk/fr** (52.94 → 1.19
-  calls/frame) when GX compose shipped, and still rents 616 B at 1,993.8
-  cyc/byte; `ndsRendererLoadHardwareSplitMatrices` 392 B at 170.3; and the
-  census names **14 never-executed residents, 1,170 B idle**. The repack's own
-  named runner-up missed by 28 B. Re-run the knapsack on `v4-c238`.
+- **01/06 — DONE 2026-08-17, and the pool was 13,188 B, not 2,178.**
+  `ITCM_REPACK2.md`. The "14 never-executed residents, 1,170 B idle" was mostly
+  **not evictable and double-counted** (three names for the same 456 B welded
+  inside `_arm_addsubsf3.itcm.o`'s live section; `__aeabi_ul2f` inside that live
+  half; 80 B exception vectors + 52 B cache maintenance stay). The real pool was
+  the **generic display-list renderer**, renting the gate's own rank-80 frames at
+  **0.0–1.1 tk/byte**: `ndsRendererScanList` 5,972 B, `…SubmitHardwareTriangle`
+  3,204 B, `…HardwareSubmitVertex` 2,276 B, `ndsRendererMtxMulAffine20p12` 616 B
+  and four smaller. 23 admissions / 14,350 B / ceiling 80,745 gate-80 icf
+  realised **44,544 (55%)**. `.itcm` **32,648 B, 88 free**. Next capacity is
+  archive members (`get_fat.isra.0` 8,868 icf at 25.2/B, `cpuGetTiming` 80.8/B),
+  which need an extract-and-rename because
+  `linker/nds_hot_text.ld:113` matches `*.itcm.*` by **filename**.
 - **04** Draw-memo completion — Phase 2's 1,280 B/frame copy is now **sized at
   ~500–1,500 tk/fr and is BELOW every floor this instrument has**; it must ride
   with a larger slice (`SHIPPING_REBANK.md` §6). What Phase 2 should take first
@@ -141,10 +157,18 @@ re-derive measurements at execution time; never bank projections.
   the per-phase split in the brief predates GX compose (§7.7).
 
 **Continuous / dividend consumers**
-- **06** Soft-float elimination — **urgency went UP**: ITCM has 16 B free and
-  the repack's knapsack already names the first runner-up tenant that missed
-  by 28 B, so every input-section 06 frees has an immediate measured consumer.
-  Helper members free only at **input-section granularity**.
+- **06** Soft-float elimination — the ITCM half of its case is **spent**: the
+  2026-08-17 re-knapsack found 13,188 B without touching a helper family, and
+  ITCM is back to **88 B free**. What is left of 06 is the arithmetic half, and
+  it is the largest thing on the board: **160,996 tk/fr on the gate's own
+  rank-80 frames at concentration 2.02** (`softfloat.txt`). The float→**fixed**
+  conversion class stays CLOSED (leaf route measured R = 0.83×/1.00×; an f32↔Q
+  edge costs 31–42 cycles). The live lever is eliminating the **call**, and the
+  measured #1 is `ndsBaseGcPlayMObjMatAnim`: **11,334 tk/fr / 633,842 helper
+  calls over the 80 gate frames = 7,923 per frame**, self-time concentration
+  **1.15** so a cut converts near 1:1 — but it needs a redundancy count before a
+  build is spent. Helper members still free only at **input-section
+  granularity**.
 - **07** Division/reciprocal — pairs with 03/12 slices; `__aeabi_fdiv` was the
   most expensive helper in the build (10,084 tk/fr, pre-repack attribution).
 - **08** Native texture formats, **10** DMA/transfer specialization —

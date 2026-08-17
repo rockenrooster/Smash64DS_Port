@@ -28,6 +28,19 @@ volatile u32 gNdsR2CubicSaturations;
 #define gcPlayDObjAnimJoint ndsBaseGcPlayDObjAnimJoint
 #endif
 
+/* Campaign 01 re-knapsack, 2026-08-17: 80 bytes carrying 1,070 I-cache-fill
+ * tk/fr on the gate's own rank-80 frames (13.4 per byte). Same declaration
+ * mechanism as gcPlayDObjAnimJoint below; the attribute has to precede the
+ * decomp body, so the type it needs is pulled in here rather than waiting for
+ * that body's own first include. */
+#include <sys/obj.h>
+void ndsBaseGcPlayAnimAll(GObj *gobj) __attribute__((section(".itcm")));
+/* 732 bytes / 2,950 I-cache-fill tk/fr on the gate's rank-80 frames. It is also
+ * the largest single soft-float caller in the build -- 633,842 helper calls over
+ * those 80 frames, 7,923 per frame (SHIPPING_REBANK.md softfloat-callers) -- and
+ * its ITCM-resident wrapper gcPlayMObjMatAnim already sits beside it. */
+void ndsBaseGcPlayMObjMatAnim(MObj *mobj) __attribute__((section(".itcm")));
+
 #include <battleship_overlay/src/sys/objanim.c>
 
 #undef gcAddDObjAnimJoint
@@ -1675,6 +1688,7 @@ static u32 ndsAObjEvent32CollectActiveMObjs(GObj *gobj, MObj **active_mobjs)
     return count;
 }
 
+void gcPlayAnimAll(GObj *gobj) __attribute__((section(".itcm")));
 void gcPlayAnimAll(GObj *gobj)
 {
     DObj *dobj;
