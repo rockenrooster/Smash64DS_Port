@@ -118,9 +118,15 @@ tick arm      the 1,600-frame gameplay window, frames 440-2039
 
 The ~443 entry frames are almost entirely 2-VBlank (`CADENCE_ARM.md` §3 read that window
 at 97.49%), so including them lifts the rate by ~1.5 points.
-`Smash64DS_Runtime2_SwitchPlan.md` §7 says *"the whole match … loading states excluded"*,
-which is the 1,600. **Nothing should be reported as a pass while the two arms are read
-over different denominators.** That is a basis question and it is the owner's.
+
+> **OWNER RULING, 2026-08-17, asked and answered: THE GATE POPULATION IS ALL 2,043
+> PRESENTED FRAMES, not the 1,600-frame gameplay window.**
+
+**On that population the shipping configuration reads 95.20% two-VBlank and the gate
+PASSES by 4 frames** (`c245`, the published target, both-CPU stress arm). The
+1,600-frame rank-80 figure keeps its job as the **sizing** basis — it is what a candidate
+lever is priced against — but it is no longer the verdict. **Label which of the two any
+figure is.**
 
 **THE LARGEST AVAILABLE LEVER IS A DECISION, NOT ENGINEERING.**
 `NDS_R2_BATTLEPACK=1` is **−34,304 at rank-80 — 2.1× the requirement**, turning +16,209
@@ -128,10 +134,46 @@ into −18,095, plus 13 frames of cadence. Its *"LAB ONLY, NOT SHIPPABLE AS CONF
 label was **withdrawn 2026-08-15** (`Makefile:340-351`, `ARENA_PRICE.md`) on a measured
 stress battery — 12 battle entries, 7 matches, 7 START restarts, 4 Sudden Deaths,
 NO-FREEZE, `AllocFail`/`ReserveFail`/`Rejects`/`SyMallocOverflow` all 0 — and this run
-adds the independent heap confirmation above. The only thing holding the default at 0 is
-`Makefile:360-361` reserving the flip for the owner. **The campaign has been implicitly
-banking the pack for weeks; flipping it does not *find* 34,304 ticks, it stops the basis
-and the ROM disagreeing.**
+adds the independent heap confirmation above.
+
+> **OWNER DECISION, 2026-08-17: FLIP IT, BUT SOAK IT FIRST.** The default moves to 1 only
+> after a fresh freeze soak and a full Boundary on the flipped default are run and
+> reported. **R2-08 (`NDS_R2_PATH=1`) is HELD until the gate settles** — same exchange.
+
+**BOTH CONDITIONS DISCHARGED; THE FLIP IS COMMITTED (`603238b168e`)** —
+`artifacts/performance/2026-08-17_ship-cadence/BATTLEPACK_FLIP.md`.
+
+- **Cadence, published target, both-CPU stress, whole match, DLDI on:**
+  `c247` **1,966 / 2,043 = 96.23%**, `viol=0`, against `c245`'s 1,945 = 95.20%.
+  **The gate margin goes from +4 frames to +25.** The prediction was written before
+  the build (1,958, range 1,950–1,966) and measured 1,966 — the exact upper edge;
+  the additive isolation model under-predicted by 8 and is corrected in the artifact.
+- **Soak:** `verdict: NO-FREEZE`, canonical 1-minute match **confirmed in-guest**,
+  **8 completed successive matches**, 7 START restarts, 12 battle-scene entries,
+  **4 Sudden Deaths read from `gNdsSCVSBattleSuddenDeathPrepareCount`**, not inferred.
+  Arena `gNdsTaskmanArenaChosenSize` 1,548,288 of the 1,564,672 grantable ceiling;
+  `AllocFail` / `ReserveFail` / `Rejects` / `SyMallocOverflow` all 0; general-heap
+  low-water 52,768 against the mandated 32,768 floor.
+- **`Boundary verification profile passed.`** — 0 `Exception:` over 316,166 lines,
+  `DECOMP_PRISTINE=PASS`.
+- **The price, stated:** 17,600 B of general heap (confirmed twice, on different run
+  shapes, against `Makefile:345-347`'s prediction) and 172,032 B of taskman arena,
+  leaving **16,384 B under the grantable ceiling**. Future arena growth prices against
+  that margin, never against boot headroom — `check-boot-headroom.ps1` meters the
+  static image and cannot see it.
+
+**CORRECTION TO `SWITCH_READY.md` §6.3 — the root pair DOES reproduce bit-exactly.**
+Deleting both halves and rebuilding with no overrides returned an identical `.nds`
+`5F3D1FE3…D20C` (12,538,880 B) and `.elf` `DDB055C2…9E10`. The claim that NitroFS
+directory ordering makes ROM hashes irreproducible does not hold on this tree, which
+makes R2-08's `DECOMP_PIN.txt` refresh a real check rather than a decorative one.
+
+**New published root ROM: 12,538,880 B, SHA-256
+`5F3D1FE3C78720CF666E5F5C8131BCC19158CF615413D8389568292B29D2D20C`.**
+`smash64ds.nds` unchanged and not rebuilt (not needed for P1).
+
+**The campaign has been implicitly banking the pack for weeks; flipping it does not
+*find* 34,304 ticks, it stops the basis and the ROM disagreeing.**
 
 **RECURRENCE — recorded, not written.** A `scripts/check-shipping-basis.ps1` that
 resolves the published target's `nds_build_config.h` into a throwaway build directory and
