@@ -169,8 +169,33 @@ directory ordering makes ROM hashes irreproducible does not hold on this tree, w
 makes R2-08's `DECOMP_PIN.txt` refresh a real check rather than a decorative one.
 
 **New published root ROM: 12,538,880 B, SHA-256
-`5F3D1FE3C78720CF666E5F5C8131BCC19158CF615413D8389568292B29D2D20C`.**
-`smash64ds.nds` unchanged and not rebuilt (not needed for P1).
+`5F3D1FE3C78720CF666E5F5C8131BCC19158CF615413D8389568292B29D2D20C`, built at
+`798007f30d8`.** Pin that commit beside the hash: `NDS_TASK10_GIT_SHORT` has since
+advanced, so a relink from a later HEAD yields a different and equally valid ROM, and
+without the commit the hash reads as a reproducibility failure. `smash64ds.nds`
+unchanged and not rebuilt (not needed for P1).
+
+### OPEN, AND IT IS A HELPER DEFECT: the Makefile's own recovery instruction silently no-ops
+
+When a lab build uses a published target, `Makefile` prints *"Run `make
+TARGET=smash64ds-battle-playable-hwtri` with no overrides afterwards, or the root ROM
+stays this lab build."* **That instruction does not work.** The lab build leaves the
+root pair NEWER than `builds/build`'s objects, so the no-override make relinks nothing,
+**exits 0**, and leaves the lab ROM published — the failure looks exactly like success.
+Recovery requires deleting BOTH halves of the root pair first, then relinking.
+
+This is the meta-rule case (`CLAUDE.OPUS.md`): a documented remedy that cannot work is
+worse than no remedy, because it is trusted. **The fix is to make the wrong form
+inexpressible** — the NOTE should either force the relink itself or refuse the lab build
+of a published target — and it must not be attempted while another cycle is editing the
+`Makefile`. Recorded here rather than half-applied.
+
+Two related hazards from the same day, both already paid for: the realtime harness reads
+the **root** ROM (`verify-battle-playable-realtime-harness.ps1:316`) while the published
+target writes ROM *and* ELF to the root, so restoring one half while a verifier owns the
+pair produces a wrong-breakpoint timeout; and `Tee-Object` captures only the driver's few
+lines for these harnesses, so a full greppable log needs `cmd`'s redirect
+(`docs/VERIFYING.md`).
 
 **The campaign has been implicitly banking the pack for weeks; flipping it does not
 *find* 34,304 ticks, it stops the basis and the ROM disagreeing.**
