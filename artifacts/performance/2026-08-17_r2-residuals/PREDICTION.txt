@@ -1,0 +1,48 @@
+PRE-REGISTERED PREDICTION -- written 2026-08-17 BEFORE the R1 control was built or run.
+Cycle: R2-08 residuals. Branch codex/r2-runtime2. HEAD at writing: 83978bb4ed8.
+
+ARM UNDER TEST
+  make TARGET=smash64ds-battle-playable-hwtri BUILD=build-c254-pubgate-r1ctl \
+       NDS_R2_LAB_R1_PATH=1 NDS_R2_BOTH_CPU=1
+  scripts/probe-present-cadence.ps1 -Hits 1 -EndBreak mnVSResultsStartScene
+       -TimeoutSeconds 2700
+  i.e. the PUBLISHED target, at THIS HEAD, on the Runtime 1 path, both-CPU stress.
+
+THE TWO ARMS IT IS COMPARED AGAINST
+  c250-pubgate-r2 (R2, HEAD e419cf8): 2=1962 3=75 4=4 5+=2 pres=2043 max=18 viol=0
+  c247-pubgate-packon (R1, HEAD 798007f): 2=1966 3=71 4=4 5+=2 pres=2043 max=19 viol=0
+  The -4 two-VBlank frames between them are CROSS-HEAD and therefore unattributed.
+
+PREDICTION (stated as a falsifiable range, not a direction)
+  1. The presented-frame denominator will again be 2,043 +/- a few frames. The
+     match length is fixed at 3600 ticks and the probe reads the guest's own
+     gNdsBattlePlayablePacingPresentedFrames after the battle loop exits.
+  2. c254 (R1 @ this HEAD) will land within +/- ~10 two-VBlank frames of c250
+     (R2 @ e419cf8), i.e. roughly 1,952-1,972, and will NOT differ from c250 by
+     materially more than c250 differs from c247. Basis: SwitchPlan §7 and
+     R2-06 E0 both hold that the switch cannot move the histogram, because all
+     fourteen non-zero NDS_R2_* renderer overrides ship on BOTH sides and only
+     the loop selector changes; R2-06 E0's tick deltas sat inside the placement
+     floor and pointed in opposite directions.
+  3. Therefore the expected ATTRIBUTION of the -4 is link/code placement across
+     two different NDS_TASK10_GIT_SHORT stamps, not work added by the switch.
+  4. viol=0 on the R1 control. 4- and 5+-VBlank populations small and in the
+     same neighbourhood (4 and 2 on both prior arms).
+
+WHAT WOULD FALSIFY IT, AND WILL BE REPORTED LOUDLY IF SEEN
+  - c254 two-VBlank materially ABOVE c250 (say >= 1,975, i.e. R1-at-HEAD better
+    than R2-at-HEAD by more than the cross-HEAD gap being explained). That would
+    make the -4 a real cost of the switch and would be a finding about the
+    switch, not about placement. It will be reported as such and NOT explained
+    away.
+  - Any viol > 0, or a 5+ population that grows.
+  - A presented count far off 2,043, which would mean the two arms are not the
+    same fight and no comparison is licensed at all.
+
+NOTE ON WHAT THIS ARM CANNOT DO
+  Even a perfect null does not prove the switch is free. It proves R1 and R2 at
+  the SAME HEAD land in the same place on THIS histogram, under THIS both-CPU
+  stress arm, over ONE run each. c250 and c254 still differ in link placement
+  from each other (different BUILD dirs, different object layout is possible),
+  so "within noise" is the only conclusion available; an exact tie would be
+  luck, not proof.

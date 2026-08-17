@@ -1,0 +1,17 @@
+0x01fffb00 in armWaitForIrq () at /home/davem/projects/devkitpro/pacman-packages/calico/src/calico-1.2.0/include/calico/arm/common.h:117
+warning: 117	/home/davem/projects/devkitpro/pacman-packages/calico/src/calico-1.2.0/include/calico/arm/common.h: No such file or directory
+warning: could not convert '$n' from the host encoding (CP1252) to UTF-32.
+This normally should not happen, please file a bug report.
+PCAD build=build-c254-pubgate-r1ctl route=gNdsR2CameraFixedEnabled initial=-1 perframe=0 flips=
+Temporary breakpoint 1 at 0x2080134: file D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_scvsbattle.c, line 265.
+
+Temporary breakpoint 1, scVSBattleStartBattle () at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_scvsbattle.c:265
+265	    gNdsSCVSBattleOriginalFuncStartResult =
+Breakpoint 2 at 0x205048c: file D:/Stuff/DevFolder/Smash64DS_Port/src/port/taskman_seam.c, line 4646.
+PCADHIST FINAL n=1 2=0 3=0 4=0 5=1 max=19 min=19 viol=0 vbl=19 pres=1 tk=10198976
+Temporary breakpoint 3 at 0x209b4e0: file D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_mnvsresults.c, line 468.
+
+Temporary breakpoint 3, mnVSResultsStartScene () at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_mnvsresults.c:468
+468	    gNdsVSResultsResult = 0;
+PCADHIST DONE n=1 2=1963 3=74 4=4 5=2 max=19 min=2 viol=0 vbl=4189 pres=2043 tk=2350396160
+[Inferior 1 (Remote target) detached]

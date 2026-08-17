@@ -81,6 +81,57 @@ Runtime 1 loop is no longer compiled in.
 Both are settled by one arm: the published target at HEAD with
 `NDS_R2_LAB_R1_PATH=1 NDS_R2_BOTH_CPU=1`.
 
+### THAT ARM WAS RUN — and it produced two corrections (2026-08-17) — `artifacts/performance/2026-08-17_r2-residuals/RESIDUALS.md`
+
+**THE SWITCH COSTS 1 FRAME OF 2,043, AND THE CADENCE PROBE HAS A 3-FRAME
+SAME-BINARY SPREAD.**
+
+| build | path | HEAD | 2-VBlank | presented | % | max | `viol` | VBlanks |
+|---|---|---|---:|---:|---:|---:|---:|---:|
+| `c247` | R1 | `798007f` | 1,966 | 2,043 | 96.23 | 19 | 0 | 4,186 |
+| `c250` | **R2** | `e419cf8` | 1,962 | 2,043 | 96.04 | 18 | 0 | 4,189 |
+| `c254` | R1 | `83978bb` | **1,963** | 2,043 | 96.08 | 19 | 0 | 4,189 |
+
+- `c254` vs `c250` is the **at-HEAD single-flag A/B**: the switch is **1 frame of
+  2,043 = 0.05 points**.
+- `c247` vs `c254` differ only in a build stamp that is **not in the binary** (below),
+  so they are **the same binary measured twice: 1,966 vs 1,963, and 4,186 vs 4,189
+  VBlanks — a 3-frame same-binary cross-run spread.**
+
+**Stated without spin: R1 at this HEAD is 1 frame better than R2.** It is 1/2,043
+against a measured 3-frame spread, so it supports no claim either way — but it is not
+rounded into a null. The earlier −4 decomposes as ~3 frames of run-to-run spread plus
+1 frame of switch.
+
+**CONSEQUENCE FOR EVERY CADENCE FIGURE ON THIS BOARD: the instrument's run-to-run
+spread is ≥3 frames (≈0.15 points), so a margin of +1 or +4 frames is NOT
+significant.** The ≥95% verdicts that survive it are the large ones — `c247` +25,
+`c250` +21, the shipped Boundary arm +69. The pre-flip `c242` (+1) and `c245` (+4)
+must be read as *at* the bar, not over it. The prediction that named this run's range
+(1,952–1,972) did not trigger its falsifier.
+
+**RETRACTION — `NDS_TASK10_GIT_SHORT` DOES NOT REACH THE PUBLISHED ROM.** This board
+and `HANDOFF.md` both claimed the published hash changes on every commit. Measured with
+a control that fires: **0** occurrences of any recent short hash in the published `.nds`
+*and* `.elf`, against **1** in the tick-HUD `.nds` at byte 917,152. It is the Makefile's
+only `$(shell git …)` and there is no `__DATE__`/`__TIME__`. **The published ROM is
+HEAD-independent**, and `make p1` reproduced the pinned pair bit-for-bit across a stamp
+change. The pin's commit key survives for a different reason than the one given: it names
+the **source state**, and `e419cf819f5` was wrong because it did not contain the switch.
+Pin now reads `OUTPUT_BUILT_AT_COMMIT=843fe40f4d2`.
+
+**The drift fix is now compile-proven and disassembly-proven**, not argued: built with
+`NDS_R2_POSITION_PROBE=1`, exit 0, and `ndsR2HostBattleUpdateOnce` emits
+`str r0,[r3,#0]` against a literal resolving to `gNdsPositionProbeUpdateInPresent`
+(`0222d0e4`), first statement, ahead of `battle_status_before`. Negative control: the
+published ELF's copy of that function has no such store.
+
+**Still open, deliberately:** the anim-cache overflow question needs a second build
+(`NDS_R2_SOAK_MATCH_MINUTES` is baked in), so it was not run. Settled for free: the cache
+is **not R2-only** — both the R1 and R2 ELFs carry 18 `gNdsR2AnimCache*` state symbols and
+8 `ndsR2AnimCache*` functions, which makes the control constructible and *weakens*
+"the switch causes it" without settling it. Symbol presence is not exercise.
+
 ## THE PUBLISHED CONFIGURATION READS 95.20% ON THE GATE AND 98.38% ON THE SHIPPED BOUNDARY — AND THE WHOLE BANKED BASIS CARRIES A LAB FLAG THE ROM DOES NOT (2026-08-17) — `artifacts/performance/2026-08-17_ship-cadence/SHIP_CADENCE.md`
 
 **The step-0 item this board opened at line 111 is closed, and it needed no proof-ROM

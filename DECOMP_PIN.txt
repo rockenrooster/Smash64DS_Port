@@ -17,6 +17,30 @@ LIBULTRASHIP_COMMIT=b58e7063da285e01b3ac8e86d942c7cbf71b5483
 TORCH_COMMIT=8060a909d9fa128d8c28db1ae2bcb6be7c446790
 BASEROM_US_BYTES=16777216
 BASEROM_US_SHA1=e2929e10fccc0aa84e5776227e798abc07cedabf
+# R2-08: the published ROM is produced by the Runtime 2 battle path
+# (NDS_R2_PATH=1).
+#
+# OUTPUT_BUILT_AT_COMMIT names the first commit whose SOURCE TREE produces the
+# hash below; verify by checking that commit out and running `make p1`, not by
+# building at whatever HEAD happens to be current.
+#
+# It is a source-state record, NOT a hash qualifier. An earlier revision of this
+# comment claimed the published hash changes on every commit, because
+# NDS_TASK10_GIT_SHORT (Makefile:1601) is `git rev-parse --short=7 HEAD`. That is
+# false for THIS artifact and was measured false on 2026-08-17: the stamp reaches
+# only the tick-HUD ROM, which renders it. The published .nds and .elf contain no
+# occurrence of it, and `make p1` at HEAD 83978bb4ed8 reproduced the byte-for-byte
+# identical pair first built at HEAD e419cf819f5. NDS_TASK10_GIT_SHORT is the
+# Makefile's only $(shell git ...) and there is no __DATE__/__TIME__ input, so the
+# published ROM is HEAD-independent and deterministic.
+#
+# The previous value (e419cf819f5) was the defect this replaces: the switch was
+# still uncommitted in the working tree at that commit, so a clean checkout of it
+# builds the PRE-switch ROM 5F3D1FE3...D20C / 12538880 B, not the hash below.
+# 843fe40f4d2 is the switch commit; 83978bb4ed8 is what the verifying build ran
+# at, and the two differ only under artifacts/performance/ -- no build input.
+# Re-pin whenever the published ROM is rebuilt for release.
+OUTPUT_BUILT_AT_COMMIT=843fe40f4d2d5e8fdcd38210ce2e65ab4870e519
 OUTPUT_NAME=smash64ds-battle-playable-hwtri.nds
-OUTPUT_BYTES=11428864
-OUTPUT_SHA256=4D795B4E83B335598B20A3B5953FDB1821797CC5E0A825FA96A0643ABBA4A090
+OUTPUT_BYTES=12530688
+OUTPUT_SHA256=2F47C8AC0730B0DAC6AA1B7A482B8599F33CA3E831B3AB6A7B0AA974A6ACCB2F
