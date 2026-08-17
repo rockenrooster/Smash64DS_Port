@@ -33,7 +33,96 @@ clock.** Coverage is part of a baseline's identity now, not a footnote. The
 conversion: the sim runs 60 Hz and presents 30 Hz, ratio **measured at exactly
 2.000**, so 1,600 presented = 3,200 logic = **53.3 s**.
 
-## THE ITCM RE-KNAPSACK LANDED: −44,544 AT RANK-80, REQUIREMENT +26,449 → −18,095, CADENCE 89.06% (2026-08-17) — `artifacts/performance/2026-08-17_itcm-repack2/ITCM_REPACK2.md`
+## THE CADENCE ARM IS 94.90%, NOT 89.06% — THE BANKED FIGURE WAS `NDS_TICK_HUD_DRAW=1` (2026-08-17) — `artifacts/performance/2026-08-17_cadence-arm/CADENCE_ARM.md`
+
+**`docs/HANDOFF.md:47` and the `build-c170-seam-bp1-draw0` row below both already
+said it: cadence is read from `NDS_TICK_HUD_DRAW=0` (owner, 2026-08-14). The
+89.06% and 87.44% banked in `ITCM_REPACK2.md` and `SHIPPING_REBANK.md` are
+`DRAW=1` figures.** `build-c240-cadence-draw0` is `build-c239-itcm-repack2` with
+`NDS_TICK_HUD_DRAW 1 → 0` and nothing else — the generated-header diff is that
+line plus the git stamp — and it reads **`VBI 2:1935 3:95 4:7 5+:2 max:19
+total:2039 slips=0` = 94.90%**, with **all 21 retained counters bit-identical to
+c239** and rank-80 `WORK-H` 1,126,912 raw / 1,101,965 net (−320 across the pair,
+i.e. the flag moves no work). 1 build, 2 runs, 1 Boundary; nothing published,
+both root ROMs unchanged.
+
+**THE DEFICIT IS 3 FRAMES, NOT 121.** ≥95% of 2,039 needs 1,938 at two VBlanks;
+the arm reads 1,935. **And 3 is inside the noise** — c239 and c240 are one
+instrument flag apart and their in-window over-boundary counts differ by 2
+(89 vs 87), so a candidate must move materially more than 3 to be distinguishable.
+
+**THE BOUNDARY IS BRACKETED, NOT ASSUMED**: max `WORK` at 2 VBlanks 1,116,864 vs
+min `WORK` at 3+ 1,120,128, **zero overlap on 1,600 rows** (c239 the same), so
+`B = 1,118,496` and "3+ **iff** `WORK > B`" is exact. `B` and the 1,120,380 tick
+gate agree to **0.17%**.
+
+**DISTANCE TO BOUNDARY, the 93 in-window 3+ frames, on `WORK`:** ≤5K **3** ·
+≤10K 8 · ≤25K 13 · ≤50K 23 · ≤100K 47 · ≤200K 68 · ≤400K 81 · **>400K
+unreachable 12** (frames 1997, 1709, 928, 830, 1449, 1500, 1254, 1625, 1015,
+1042, 1186, 904 — the load/force-load/`SPRM` population). Median excess 99,360,
+max 2,039,072. **The brief's premise inverts: concentrated cuts on the HEAVIEST
+frames are worth nothing (they need 400K–2.04M each), and a uniform 15,000 moves
+11 frames — 3.7× the deficit.** Only density just over the boundary matters.
+
+**OWNERS, RESTRICTED BY REACH** (same method as `IO_AUDIT.md` §5, and it
+reproduces its five populations on a different basis, arm and mask —
+a control that could have failed): reachable ≤25K **`SITR` 6 · `SHDT` 5 ·
+`AUD` 2**; ≤50K `SITR` 10 · `SHDT` 7 · `AUD` 2 · `SPRM` 2 · `SPHD` 2; all 93
+`SHDT` 34 · `SITR` 30 · `SPRM` 9 · `SPHD` 8 · `AUD` 7 · `MISC` 4 · `GCRARES` 1.
+
+**CANDIDATES SCORED IN FRAMES MOVED** (clip-to-median ceiling, this basis):
+`SITR` 42 / 89,792 tk · `SHDT` 36 / 63,680 · `SPHD` 21 / 25,792 · `MISC` 13 /
+20,160 · `FTR` 10 / 14,016 · `SCPU` 10 / 11,072 · `GCRARES` 7 / 7,104 · **`AUD`
+6 / 8,128** · `SPRM` 5 / 5,184 · `STG` 1 / 1,024. **Every lane converts at
+1,000–2,200 rank-80 ticks per frame moved and so does a uniform cut — the two
+metrics rank the lanes in nearly the same order.** What the cadence metric
+changes is the ceiling: past ~50,000 the curve flattens, because 12 frames
+cannot be reached at all.
+
+**NEW, NAMED, NOT BUILT — the BGM refill is a phasing problem.** `AUD` is
+`ndsAudioBackendUpdate` (`taskman_seam.c:4487`). On c240, **74 of 1,600 frames
+carry `AUD` > 60,000, median 129,600 against a lane median of 2,944**, gap
+histogram **22×45 21×15 20×7 23×4** — a strict ~22-frame (0.73 s) period, and
+**12 of the 74 present at 3+**. The mechanism is `ndsAudioBgmServiceRefills`
+(`nds_audio_bgm.c:668`) reading and preparing one packet buffer inside a single
+frame. Spreading it moves **6 frames** (7 on `WORK-H`) for 8,128 at rank-80.
+The audio need not change — the buffer only has to be ready before the seam — so
+this is **not** a sacrifice-order question. Its own redistribution cost is
+unmeasured.
+
+**`ndsBaseGcPlayMObjMatAnim` is worth ~8–9 frames** — a near-flat lane (self
+concentration 1.15) behaves as a uniform cut, so **flat is a strength on this
+metric, not a weakness**. Its blocker is unchanged: the redundancy fraction is
+still unmeasured and one counter pair settles it. **The draw memo's 313 lost
+hits are 1 to 8 frames** and cannot be narrowed without a per-frame
+`ftMainSetStatus` counter (one `-PerStopGlobals` name, not a build).
+
+**MAX INTERVAL 19 IS LOCATED: presented frame 2**, the only 5+ frame in the
+entry window (`2:428 3:9 4:1 5+:1` over frames 1–439, measured by a second
+sampler run). Its row carries **`STG` 3,792,000 and `FTR` 1,100,096** against
+medians of 154,176 / 256,064 — the stage's and fighters' first full draw,
+decaying to the median by frame 4. It is match-entry load, not a gameplay hitch:
+the 1,600-frame gameplay window maxes at **7**. **Open, instrument-side:** the
+`WRAPFIX` filter corrected that row to 6,085,888 = 10.89 VBlanks, which fails the
+harness's own median test (5.4× the run median) and matches neither the counter's
+19 nor the uncorrected 18.39. `ALL == WORK + WAIT` cannot arbitrate because
+`OTHR` is a residual. No banked figure is affected.
+
+**NOT DONE: the shipping configuration's cadence is NOT measured.** `DRAW=0`
+still pays the ~24,947 tick-HUD apparatus the published ROM does not; a uniform
+24,947 moves **13** more in-window frames, which would put the arm near 95.5% —
+**a model, not a measurement**. Settling it needs a `NDS_TICK_HUD=0` proof ROM
+and a reader for `gNdsBattlePlayablePacingPresentIntervalBucket[]` that does not
+depend on the tick HUD. **That is the next cycle's step 0, and the ≥95% verdict
+is the owner's, not an agent's.**
+
+**Correction to `CARD_FS_CALLER.md` §3**: its *"0 frames change VBlank bucket"*
+was modelled on the **`ALL`** column, which is VBlank-quantised and therefore
+cannot change bucket by construction — a control that could not fail. On `WORK`
+against a bracketed boundary the lane is **6 frames** on its own c237 basis
+(7 including caller self time). **The closure survives; the method does not.**
+
+## THE ITCM RE-KNAPSACK LANDED: −44,544 AT RANK-80, REQUIREMENT +26,449 → −18,095 (2026-08-17) — `artifacts/performance/2026-08-17_itcm-repack2/ITCM_REPACK2.md`
 
 **`build-c239-itcm-repack2`, same flags as the c237 basis, one whole-match run,
 1,600 samples, frames 440–2039, `slips=0`. 2 builds, 1 emulator run, 1 Boundary
