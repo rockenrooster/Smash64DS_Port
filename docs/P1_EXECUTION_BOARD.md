@@ -33,7 +33,73 @@ clock.** Coverage is part of a baseline's identity now, not a footnote. The
 conversion: the sim runs 60 Hz and presents 30 Hz, ratio **measured at exactly
 2.000**, so 1,600 presented = 3,200 logic = **53.3 s**.
 
-## THE CADENCE ARM IS 94.90%, NOT 89.06% — THE BANKED FIGURE WAS `NDS_TICK_HUD_DRAW=1` (2026-08-17) — `artifacts/performance/2026-08-17_cadence-arm/CADENCE_ARM.md`
+## THE PUBLISHED CONFIGURATION READS 95.20% ON THE GATE AND 98.38% ON THE SHIPPED BOUNDARY — AND THE WHOLE BANKED BASIS CARRIES A LAB FLAG THE ROM DOES NOT (2026-08-17) — `artifacts/performance/2026-08-17_ship-cadence/SHIP_CADENCE.md`
+
+**The step-0 item this board opened at line 111 is closed, and it needed no proof-ROM
+proxy.** `gNdsBattlePlayablePacingPresentIntervalBucket[]` is incremented
+(`taskman_seam.c:5069`), published (`:5251`) and flushed (`nds_platform.h:212-216`, a
+bare `DC_FlushRange`) **unconditionally**, and the marker it is read at is
+`__attribute__((noinline, used))`. So `build-c245-pubgate` is
+`TARGET=smash64ds-battle-playable-hwtri` with **`NDS_R2_BOTH_CPU=1` and nothing else** —
+the gate configuration, not a stand-in. The reader,
+`scripts/probe-present-cadence.ps1 -Hits 1 -EndBreak mnVSResultsStartScene`, was already
+in the tree and takes **three GDB stops for a whole match**.
+
+**CONTROL THAT COULD HAVE FAILED.** The same reader on `build-c240-cadence-draw0`
+reproduces this board's own banked row exactly: 3/4/5+ = **95/7/2**, max **19**. Its
+2-bucket reads 1,939 against the banked 1,935 only because this window closes at Results
+entry and all four extra frames are 2-VBlank. **Free second result: 2,038 per-frame stops
+against 3 give identical slip counts — halting melonDS does not perturb pacing.**
+
+| build | target | `TICK_HUD` | `SHIP_TELEM` | pack | `BOTH_CPU` | 2 | 3 | 4 | 5+ | two-VBlank | max |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| `c240-cadence-draw0` | tickhud | 1 (`DRAW=0`) | 0 | 1 | 1 | 1,939 | 95 | 7 | 2 | 94.91% | 19 |
+| `c241-shipcadence` | proof | 0 | 1 | 1 | 1 | 1,955 | 82 | 4 | 2 | 95.69% | 18 |
+| `c242-shipexact` | proof | 0 | 1 | **0** | 1 | 1,942 | 90 | 9 | 2 | 95.06% | 18 |
+| **`c245-pubgate`** | **published** | **0** | **0** | **0** | **1** | **1,945** | **88** | **8** | **2** | **95.20%** | **18** |
+| `c244-shipboundary` | proof | 0 | 1 | **0** | **0** | 2,010 | 30 | 1 | 2 | **98.38%** | 18 |
+
+2,043 presented on every arm, `viol=0` on every arm, DLDI on, mode 163, one minute.
+≥95% needs 1,941.
+
+**THREE ONE-FLAG ISOLATIONS, AND THEY SUM.** Tick-HUD apparatus **+16 frames** (this
+board modelled 13 — right in kind, 19% low); battlepack **+13**; ship telemetry **+3**.
+1,939 + 16 − 13 + 3 = **1,945 measured**. Separately `BOTH_CPU` alone is **+68 frames**
+(`c242 → c244`, one generated-header line), so gating on the stress arm carries
+essentially the entire remaining risk.
+
+**THE BASIS DEFECT.** `NDS_R2_BATTLEPACK=1 NDS_R2_BATTLEPACK_KEEP_CACHE=1` is on the
+reproduce line of every recent artifact — `SHIPPING_REBANK`, `ITCM_REPACK2`,
+`CADENCE_ARM`, `CAMERA_SHIP`, `ANIM_ITCM`, `HWMATH`, `FTR_LANE`, `CAPTURE_MEMO`,
+`BASIS` — and **the published ROM has neither flag.** Proven three ways: `Makefile:326`
+and `:362` are the only assignments and the published block never overrides them; the
+root ROM contains **0** occurrences of `battlepack_fox` against a packed build's 2; and
+it is **283,648 B smaller** against the blob's own 287,904 B. `Makefile:360-361` and
+this board's own PHASE 8 section both state the default stays 0 and the flip is the
+owner's call. **The banked cadence was therefore 0.49 points optimistic, and the banked
+tick arm's −18,095 margin is UNVERIFIED at the shipping defaults — sizing a candidate
+against +26,449 is sizing it against a ROM nobody runs.**
+
+**NEXT, and it is the only thing between here and an honest requirement:** re-bank the
+tick arm on `build-c246-tickship` (tick-HUD target, `NDS_R2_BOTH_CPU=1`, pack off), one
+whole-match `-RingDump`, `-StartFrame 439 -Samples 1600`.
+
+**RECURRENCE — recorded, not written.** A `scripts/check-shipping-basis.ps1` that
+resolves the published target's `nds_build_config.h` into a throwaway build directory and
+fails on any divergence outside a named instrument allowlist (`NDS_TICK_HUD`,
+`NDS_SHIP_TELEMETRY`, `NDS_RENDERER_PROFILE_LEVEL`, `NDS_R2_BOTH_CPU`, the census flags).
+Every build already emits its full resolved flag set, so the check is a diff, not an
+investigation. Blocked only on the Makefile's own `$(CURDIR)` spelling for a config-only
+goal, which is a build-system change and was out of this cycle's scope.
+
+**SIDE EFFECT, RECORDED RATHER THAN HIDDEN.** The published target writes its ROM *and
+ELF* into the project root (`scripts/lib/build-output.ps1`), so the root
+`smash64ds-battle-playable-hwtri.elf` is now the `c245` lab link. The ROM was restored
+from a pre-run backup and verified byte-identical (`887D82FA…9853`); nothing tracked
+depends on the ELF (`.gitignore:10`), and the next no-override publish regenerates the
+pair — with a new hash, because `NDS_TASK10_GIT_SHORT` has advanced.
+
+## (superseded on its shipping claim) THE CADENCE ARM IS 94.90%, NOT 89.06% — THE BANKED FIGURE WAS `NDS_TICK_HUD_DRAW=1` (2026-08-17) — `artifacts/performance/2026-08-17_cadence-arm/CADENCE_ARM.md`
 
 **`docs/HANDOFF.md:47` and the `build-c170-seam-bp1-draw0` row below both already
 said it: cadence is read from `NDS_TICK_HUD_DRAW=0` (owner, 2026-08-14). The
