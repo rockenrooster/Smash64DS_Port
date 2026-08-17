@@ -33,6 +33,54 @@ clock.** Coverage is part of a baseline's identity now, not a footnote. The
 conversion: the sim runs 60 Hz and presents 30 Hz, ratio **measured at exactly
 2.000**, so 1,600 presented = 3,200 logic = **53.3 s**.
 
+## R2-08 IS LANDED AND THE VISUAL GATE IS OWNER-ACCEPTED — ONLY THE RETAIL PLAY TEST REMAINS (2026-08-17) — `artifacts/performance/2026-08-17_r2-switch/R2_SWITCH.md`
+
+**The switch is committed (`843fe40f4d2`).** The Boundary configuration is produced by
+the Runtime 2 battle path; `NDS_R2_PATH ?= 0` at `Makefile:685` stays 0 and the published
+and tick-HUD/proof blocks carry a guarded `override NDS_R2_PATH := 1`.
+`smash64ds-results-lab-hwtri` is excluded from the tick-HUD block's override — its harness
+is `results_playable` and both `taskman_seam.c:16-18` and `nds_r2_battle.c:45-47` `#error`
+under any other harness, so the unguarded insertion the 08-13 runbook prescribes would
+stop that target compiling.
+
+**SwitchPlan §6 acceptance:**
+
+| # | item | state |
+|---|---|---|
+| 1 | Boundary green on the Runtime 2 path | **GREEN** — `Boundary verification profile passed.`, exit 0, `Exception:` **0** over an 18,964,809-byte log, `DECOMP_PRISTINE=PASS` |
+| 2 | Visual gate + owner's approval | **OWNER-ACCEPTED 2026-08-17**, verbatim: ***"looks good to me"*** |
+| 3 | P95 ≤ 1.12M DLDI-on | **GREEN** — 1,962/2,043 = **96.03%** two-VBlank, `viol=0`, max 18, margin **+21** frames |
+| 4 | Full 3600-tick soak | **GREEN** — `NO-FREEZE` at **both** 1-minute and 5-minute lengths, each timer confirmed in-guest; 4 Sudden Deaths counted |
+| 5 | Owner play test on retail hardware | **OPEN — the only remaining item** |
+
+The visual acceptance was given on the before/after pair captured on the same Boundary
+arm (`artifacts/visibility/2026-08-17_r2-switch/`), R1 published `5F3D1FE3…` against R2
+published `2F47C8AC…`, plus R2-path gameplay, a Results screen and a 5-minute-match
+Results.
+
+**Engagement proven both directions on the same target:** the built ELF carries
+`ndsR2BattleRun` and all eight `ndsR2Host*` entries; an `NDS_R2_LAB_R1_PATH=1` control on
+that same target carries **zero** of them while still resolving
+`ndsBattlePlayableFrameCompleteMarker`, `main` and `ndsPlatformReadInput` — a control
+proven readable rather than merely empty. The published ROM **shrank 8,192 B** because the
+Runtime 1 loop is no longer compiled in.
+
+**TWO THINGS THAT ARE NOT CLAIMED, and both are open:**
+
+1. **The −4 cadence frames against the pre-switch arm are UNATTRIBUTED.** `c247` was built
+   at HEAD `798007f` and `c250` at `e419cf8`, so the two do not share a link placement and
+   this is *not* an at-HEAD control. The 4- and 5+-VBlank populations are identical and the
+   worst frame *improved* 19→18, but nothing may be sized against the −4.
+2. **`gNdsR2AnimCacheArenaOverflows`/`Rejects` read 0 on the 1-minute arm and 2 then 6 on
+   the 5-minute runs.** It tracks match **duration**, not wall time, entry count, or the
+   loop selector — the 1-minute arm did *more* entries (11 vs 3) in the same wall time with
+   zero. Nothing failed to allocate; the cache declined to grow. **Whether the switch
+   causes it is not established** — there is no Runtime 1 five-minute control. The shipping
+   one-minute configuration reads 0.
+
+Both are settled by one arm: the published target at HEAD with
+`NDS_R2_LAB_R1_PATH=1 NDS_R2_BOTH_CPU=1`.
+
 ## THE PUBLISHED CONFIGURATION READS 95.20% ON THE GATE AND 98.38% ON THE SHIPPED BOUNDARY — AND THE WHOLE BANKED BASIS CARRIES A LAB FLAG THE ROM DOES NOT (2026-08-17) — `artifacts/performance/2026-08-17_ship-cadence/SHIP_CADENCE.md`
 
 **The step-0 item this board opened at line 111 is closed, and it needed no proof-ROM
