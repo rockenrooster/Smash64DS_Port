@@ -1,0 +1,17 @@
+0x020c0a14 in mutexUnlock (m=0x20c3faf <lseek+14>) at /home/davem/projects/devkitpro/pacman-packages/calico/src/calico-1.2.0/source/system/mutex.c:146
+warning: 146	/home/davem/projects/devkitpro/pacman-packages/calico/src/calico-1.2.0/source/system/mutex.c: No such file or directory
+warning: could not convert '$n' from the host encoding (CP1252) to UTF-32.
+This normally should not happen, please file a bug report.
+PCAD build=build-c240-cadence-draw0 route=gNdsR2CameraFixedEnabled initial=-1 perframe=0 flips=
+Temporary breakpoint 1 at 0x208310c: file D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_scvsbattle.c, line 265.
+
+Temporary breakpoint 1, scVSBattleStartBattle () at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_scvsbattle.c:265
+265	    gNdsSCVSBattleOriginalFuncStartResult =
+Breakpoint 2 at 0x2052ac4: file D:/Stuff/DevFolder/Smash64DS_Port/src/port/taskman_seam.c, line 4646.
+PCADHIST FINAL n=1 2=0 3=0 4=0 5=1 max=19 min=19 viol=0 vbl=19 pres=1 tk=10280576
+Temporary breakpoint 3 at 0x209e4b8: file D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_mnvsresults.c, line 468.
+
+Temporary breakpoint 3, mnVSResultsStartScene () at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_mnvsresults.c:468
+468	    gNdsVSResultsResult = 0;
+PCADHIST DONE n=1 2=1939 3=95 4=7 5=2 max=19 min=2 viol=0 vbl=4216 pres=2043 tk=2369800256
+[Inferior 1 (Remote target) detached]

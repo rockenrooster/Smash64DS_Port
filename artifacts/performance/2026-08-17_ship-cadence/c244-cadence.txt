@@ -1,0 +1,17 @@
+0x0200e69e in ndsRelocAssetReadHeader (asset_id=asset_id@entry=543, out_header=out_header@entry=0x225a3b0) at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_reloc_assets.c:396
+396	    ok = ndsRelocAssetReadHeaderFromFile(file, entry->file_id, out_header, &data_offset);
+warning: could not convert '$n' from the host encoding (CP1252) to UTF-32.
+This normally should not happen, please file a bug report.
+PCAD build=build-c244-shipboundary route=gNdsR2CameraFixedEnabled initial=-1 perframe=0 flips=
+Temporary breakpoint 1 at 0x2080b44: file D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_scvsbattle.c, line 265.
+
+Temporary breakpoint 1, scVSBattleStartBattle () at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_scvsbattle.c:265
+265	    gNdsSCVSBattleOriginalFuncStartResult =
+Breakpoint 2 at 0x2050da8: file D:/Stuff/DevFolder/Smash64DS_Port/src/port/taskman_seam.c, line 4646.
+PCADHIST FINAL n=1 2=0 3=0 4=0 5=1 max=18 min=18 viol=0 vbl=18 pres=1 tk=9663808
+Temporary breakpoint 3 at 0x209bf84: file D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_mnvsresults.c, line 468.
+
+Temporary breakpoint 3, mnVSResultsStartScene () at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_mnvsresults.c:468
+468	    gNdsVSResultsResult = 0;
+PCADHIST DONE n=1 2=2010 3=30 4=1 5=2 max=18 min=2 viol=0 vbl=4138 pres=2043 tk=2317658240
+[Inferior 1 (Remote target) detached]

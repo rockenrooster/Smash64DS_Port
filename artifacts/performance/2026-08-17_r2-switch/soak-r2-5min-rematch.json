@@ -1,0 +1,1834 @@
+{
+  "runnerSlot": 6,
+  "diagnosis": null,
+  "build": "build-c252-soak-r2-5min",
+  "minutesToRun": 12.0,
+  "identicalFramesToTrip": 16,
+  "samples": [
+    {
+      "elapsedSeconds": 5,
+      "frameHash": "B510319A9D463C2B",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 10,
+      "frameHash": "B510319A9D463C2B",
+      "identicalRun": 1
+    },
+    {
+      "elapsedSeconds": 15,
+      "frameHash": "B510319A9D463C2B",
+      "identicalRun": 2
+    },
+    {
+      "elapsedSeconds": 20,
+      "frameHash": "B510319A9D463C2B",
+      "identicalRun": 3
+    },
+    {
+      "elapsedSeconds": 25,
+      "frameHash": "25D2B30A1E4A92E5",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 30,
+      "frameHash": "F7F2E720C1590E6D",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 36,
+      "frameHash": "7987B55C7745F456",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 41,
+      "frameHash": "7E5434975301B474",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 46,
+      "frameHash": "51972CF699B7FAA7",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 51,
+      "frameHash": "72B7488F7E130E4E",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 56,
+      "frameHash": "FD7664B44F5B7D7F",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 61,
+      "frameHash": "6826CCFDBD4689B5",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 66,
+      "frameHash": "0AAFDB12A5CF5483",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 71,
+      "frameHash": "1D4467DE67F4F6D8",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 76,
+      "frameHash": "CE73814E76002A69",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 81,
+      "frameHash": "9627D357360DFD19",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 86,
+      "frameHash": "266A0BB47F44836B",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 91,
+      "frameHash": "D3E9EAD252A58928",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 96,
+      "frameHash": "A6CBD82770E5A86B",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 101,
+      "frameHash": "5415AB26422266E2",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 106,
+      "frameHash": "3875F20BAAEA60D3",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 112,
+      "frameHash": "1D2EABAA1092C8F9",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 117,
+      "frameHash": "52F63A627E1669BE",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 122,
+      "frameHash": "FFDB9ADE457F13E1",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 127,
+      "frameHash": "8D6B270D025BB32A",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 132,
+      "frameHash": "DCE530D8814E1EE8",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 137,
+      "frameHash": "E87F9CABC159CA2D",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 142,
+      "frameHash": "5765DC4611A64EF3",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 147,
+      "frameHash": "D52D8213A5E5E7B6",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 152,
+      "frameHash": "8B3BC2856925FD89",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 157,
+      "frameHash": "E3BD1FF3DE6610CB",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 162,
+      "frameHash": "CA8C281E677B3C73",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 167,
+      "frameHash": "9AEA476033C9EBE3",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 172,
+      "frameHash": "25D1A21C903CB135",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 177,
+      "frameHash": "7869D87105CDA22A",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 182,
+      "frameHash": "67BC1D59CC00BBE1",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 188,
+      "frameHash": "7F21808C64569003",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 193,
+      "frameHash": "D5282C9ED51E05CB",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 198,
+      "frameHash": "99D61E3A17C16206",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 203,
+      "frameHash": "0E53264588248A2B",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 208,
+      "frameHash": "53060EC450F2008B",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 213,
+      "frameHash": "8F90D477FF9F5B76",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 218,
+      "frameHash": "C16B53C93BEF98D7",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 223,
+      "frameHash": "E027F674D3C3FDFB",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 228,
+      "frameHash": "6951FDC08124156D",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 233,
+      "frameHash": "6371FB1F963F16BB",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 238,
+      "frameHash": "8B8A14A2C5A292F5",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 243,
+      "frameHash": "0AE885940AF6021C",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 248,
+      "frameHash": "CBFAEC4DFB168158",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 253,
+      "frameHash": "87EA374AFF9403F0",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 258,
+      "frameHash": "4C5F11691FF07671",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 263,
+      "frameHash": "2784E2811E97BF9C",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 269,
+      "frameHash": "58B5D89868DD75E7",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 274,
+      "frameHash": "CE65F1EC0FB028FA",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 279,
+      "frameHash": "20686C8A720B02D0",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 284,
+      "frameHash": "5231E33B8346DA14",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 289,
+      "frameHash": "781F16C6B891E62A",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 294,
+      "frameHash": "3A8A79877AECAF77",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 299,
+      "frameHash": "9BF02B11865C989A",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 304,
+      "frameHash": "8D151B559F04FD14",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 309,
+      "frameHash": "3D8C9D4DF4D42BD5",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 314,
+      "frameHash": "A0CE7669FBBA1AB0",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 320,
+      "frameHash": "98A9195AAB0246D4",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 325,
+      "frameHash": "F39CCB4223A04FFF",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 330,
+      "frameHash": "D3B994ABF54D4874",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 335,
+      "frameHash": "EC31679A13F2A5AC",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 340,
+      "frameHash": "2A891B5133276D21",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 345,
+      "frameHash": "82EE389ED0A800D7",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 351,
+      "frameHash": "DCC646F0F91AE339",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 356,
+      "frameHash": "DE159A3DB365E716",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 361,
+      "frameHash": "2A7A8F0EBE5D6740",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 366,
+      "frameHash": "8CA2FDA5765FEF3E",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 371,
+      "frameHash": "901A424449318DFA",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 376,
+      "frameHash": "2592B2DF58C7FD5D",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 381,
+      "frameHash": "A39FE535EE8E3AC7",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 386,
+      "frameHash": "BF8F5F0FD7E4514A",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 391,
+      "frameHash": "F4365299FDEB7531",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 396,
+      "frameHash": "67203297878DE0D4",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 401,
+      "frameHash": "723C6740553BFE45",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 406,
+      "frameHash": "11CF2F7385832D98",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 411,
+      "frameHash": "9BCD6BD64B3484C0",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 416,
+      "frameHash": "7A893AE0ADE3C85C",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 421,
+      "frameHash": "129FA455FF932196",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 426,
+      "frameHash": "3A38CAC7D9708FB9",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 432,
+      "frameHash": "8A96E2FACB2FD8E1",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 437,
+      "frameHash": "48F94CCD34A1101A",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 442,
+      "frameHash": "0043CD44E4939C07",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 447,
+      "frameHash": "F35BB1002448B75F",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 452,
+      "frameHash": "EB7F8BADFF5931F6",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 457,
+      "frameHash": "584A68BC641EAD5A",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 462,
+      "frameHash": "0F0CBAA742520005",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 467,
+      "frameHash": "69D06BAC5DC897D2",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 472,
+      "frameHash": "766622CA11D88AAE",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 477,
+      "frameHash": "6E005923910A4F3C",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 482,
+      "frameHash": "D979FDE1D9745FD9",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 487,
+      "frameHash": "0E90F2F06D7F904D",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 492,
+      "frameHash": "21047BA9E5C0A9BE",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 497,
+      "frameHash": "8C54B91A49BC07C3",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 502,
+      "frameHash": "F66D125EB425017B",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 508,
+      "frameHash": "F06E67B5EB72A003",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 513,
+      "frameHash": "985539E1D193CDD3",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 518,
+      "frameHash": "89B2E2DD40C1DC76",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 523,
+      "frameHash": "A95599C336BEC5FF",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 528,
+      "frameHash": "502E928BEA45BC62",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 533,
+      "frameHash": "968EA748D9518476",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 538,
+      "frameHash": "39F3795F24D18862",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 543,
+      "frameHash": "09A7C5AA5051C749",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 548,
+      "frameHash": "A65611FB49EAE013",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 553,
+      "frameHash": "087D8B26C44142DB",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 558,
+      "frameHash": "A92E3CAA96204677",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 563,
+      "frameHash": "DC41B720286F173F",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 568,
+      "frameHash": "E5F34F2FE48BCA82",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 573,
+      "frameHash": "74413C7B23B4AD2E",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 578,
+      "frameHash": "1432AFFDFB15405A",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 584,
+      "frameHash": "C0F21D0A6364B70C",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 589,
+      "frameHash": "263F07EF2B72858A",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 594,
+      "frameHash": "CFFC539F800054AA",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 599,
+      "frameHash": "C523B63230C056FD",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 604,
+      "frameHash": "1C559AB019705D97",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 609,
+      "frameHash": "9AEE3EB9B4E260DE",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 614,
+      "frameHash": "BABC846754D27959",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 619,
+      "frameHash": "36B910AD941B32F8",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 624,
+      "frameHash": "BF753A89BD1DBFA7",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 629,
+      "frameHash": "0172202FF2E5F035",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 634,
+      "frameHash": "C09BC6A5D8D7CDF1",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 640,
+      "frameHash": "D8207BCD7E6AF7E4",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 645,
+      "frameHash": "1C79E6C197CF86F3",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 650,
+      "frameHash": "CAF9160CBB89615D",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 655,
+      "frameHash": "01738B3DE0F4F315",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 660,
+      "frameHash": "F5D2EF312B7254F2",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 666,
+      "frameHash": "EA7536CEDD7CE65A",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 671,
+      "frameHash": "9E99C6BBE659E07A",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 676,
+      "frameHash": "74255216CF635D38",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 681,
+      "frameHash": "C50F69446835512B",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 686,
+      "frameHash": "3DD4962DB6DA9753",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 691,
+      "frameHash": "87C2F33FF9944BEE",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 696,
+      "frameHash": "5327FE59CFC19EEB",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 701,
+      "frameHash": "D62D340147EC5EDF",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 706,
+      "frameHash": "ABCE755100D342C7",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 711,
+      "frameHash": "37C2371BAEBE1990",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 716,
+      "frameHash": "CD0E0EF831F1BFD0",
+      "identicalRun": 0
+    },
+    {
+      "elapsedSeconds": 721,
+      "frameHash": "5E59B90CEDD585DB",
+      "identicalRun": 0
+    },
+    {
+      "counter": "sVBlankCount",
+      "value": 46863
+    },
+    {
+      "counter": "gNdsBattlePlayablePacingPresentedFrames",
+      "value": 2262
+    },
+    {
+      "counter": "dSYTaskmanUpdateCount",
+      "value": 4526
+    },
+    {
+      "counter": "gNdsVSResultsStartCount",
+      "value": 2
+    },
+    {
+      "counter": "gNdsVSResultsTickCount",
+      "value": 591
+    },
+    {
+      "counter": "gNdsSyMallocOverflowCount",
+      "value": 0
+    },
+    {
+      "counter": "gNdsTaskmanArenaChosenSize",
+      "value": 1548288
+    },
+    {
+      "counter": "gNdsTaskmanArenaAllocFailCount",
+      "value": 0
+    },
+    {
+      "counter": "gSCManagerTransferBattleState.time_limit",
+      "value": 5
+    },
+    {
+      "counter": "gNdsR2AnimCacheArenaUsedBytes",
+      "value": 441920
+    },
+    {
+      "counter": "gNdsR2AnimCacheArenaOverflows",
+      "value": 6
+    },
+    {
+      "counter": "gNdsR2AnimCacheFills",
+      "value": 41
+    },
+    {
+      "counter": "gNdsR2AnimCacheHits",
+      "value": 1937
+    },
+    {
+      "counter": "gNdsR2AnimCacheRejects",
+      "value": 6
+    },
+    {
+      "counter": "gNdsBattlePackState",
+      "value": 1
+    },
+    {
+      "counter": "gNdsBattlePackClips",
+      "value": 137
+    },
+    {
+      "counter": "gNdsBattlePackBytes",
+      "value": 287904
+    },
+    {
+      "counter": "gNdsBattlePackHits",
+      "value": 2497
+    },
+    {
+      "counter": "gNdsBattlePackMisses",
+      "value": 1984
+    },
+    {
+      "counter": "gNdsBattlePackLoadSteps",
+      "value": 54
+    },
+    {
+      "counter": "gNdsBattlePackResidentBytes",
+      "value": 287904
+    },
+    {
+      "counter": "gNdsBattlePackLoadFails",
+      "value": 0
+    },
+    {
+      "counter": "gNdsBattlePackDrops",
+      "value": 2
+    },
+    {
+      "counter": "gNdsK0AfterGoAcquisitions[0]",
+      "value": 1974
+    },
+    {
+      "counter": "gNdsK0AfterGoAcquisitions[1]",
+      "value": 2497
+    },
+    {
+      "counter": "gNdsK0AfterGoPackHits[0]",
+      "value": 0
+    },
+    {
+      "counter": "gNdsK0AfterGoPackHits[1]",
+      "value": 2497
+    },
+    {
+      "counter": "gNdsK0AfterGoFatReads[0]",
+      "value": 37
+    },
+    {
+      "counter": "gNdsK0AfterGoFatReads[1]",
+      "value": 0
+    },
+    {
+      "counter": "gNdsK0AfterGoSeeks[0]",
+      "value": 74
+    },
+    {
+      "counter": "gNdsK0AfterGoSeeks[1]",
+      "value": 0
+    },
+    {
+      "counter": "gNdsK0AfterGoByteSwaps[0]",
+      "value": 37
+    },
+    {
+      "counter": "gNdsK0AfterGoByteSwaps[1]",
+      "value": 0
+    },
+    {
+      "counter": "gNdsK0AfterGoRelocs[0]",
+      "value": 1974
+    },
+    {
+      "counter": "gNdsK0AfterGoRelocs[1]",
+      "value": 0
+    },
+    {
+      "counter": "gNdsK0AfterGoNormalizes[0]",
+      "value": 68
+    },
+    {
+      "counter": "gNdsK0AfterGoNormalizes[1]",
+      "value": 0
+    },
+    {
+      "counter": "gNdsK0AfterGoCacheCopies[0]",
+      "value": 1937
+    },
+    {
+      "counter": "gNdsK0AfterGoCacheCopies[1]",
+      "value": 0
+    },
+    {
+      "counter": "gNdsK0AfterGoTokenResolves[0]",
+      "value": 1974
+    },
+    {
+      "counter": "gNdsK0AfterGoTokenResolves[1]",
+      "value": 2497
+    },
+    {
+      "counter": "gNdsK0AfterGoPathLookups[0]",
+      "value": 2011
+    },
+    {
+      "counter": "gNdsK0AfterGoPathLookups[1]",
+      "value": 0
+    },
+    {
+      "counter": "gNdsR2AnimCacheArenaReserveCount",
+      "value": 5
+    },
+    {
+      "counter": "gNdsR2AnimCacheArenaReserveFailCount",
+      "value": 0
+    },
+    {
+      "counter": "gNdsR2AnimCacheArenaReservedBytes",
+      "value": 451776
+    },
+    {
+      "counter": "gNdsR2AnimCacheArenaGenerationMismatches",
+      "value": 4
+    },
+    {
+      "counter": "gNdsR2AnimCacheArenaRangeFaults",
+      "value": 0
+    },
+    {
+      "counter": "gNdsR2AnimCacheArenaInvalidations",
+      "value": 4
+    },
+    {
+      "counter": "gNdsR2AnimCacheArenaOverflowLastSize",
+      "value": 1712
+    },
+    {
+      "counter": "gNdsR2AnimCacheArenaOverflowLastUsed",
+      "value": 451200
+    },
+    {
+      "counter": "gNdsSCVSBattleRebudgetCount",
+      "value": 3
+    },
+    {
+      "counter": "gNdsSCVSBattleRebudgetGraphicsBytes",
+      "value": 53248
+    },
+    {
+      "counter": "gNdsParticleQuadAlphaBreaks",
+      "value": 28553
+    },
+    {
+      "counter": "gNdsVSResultsTransitionTicks",
+      "value": 26319232
+    },
+    {
+      "counter": "gNdsVSResultsFuncStartTicks",
+      "value": 23916224
+    },
+    {
+      "counter": "gNdsVSResultsSetupFilesTicks",
+      "value": 12297152
+    },
+    {
+      "counter": "gNdsVSResultsSetupFilesCalls",
+      "value": 2
+    },
+    {
+      "counter": "gNdsVSResultsToWallpaperTicks",
+      "value": 44266048
+    },
+    {
+      "counter": "gNdsVSResultsToResultsTicks",
+      "value": 71009600
+    },
+    {
+      "counter": "gNdsVSResultsRematchCount",
+      "value": 2
+    },
+    {
+      "counter": "gNdsVSResultsInputPollCount",
+      "value": 1113
+    },
+    {
+      "counter": "gNdsVSResultsPadMask",
+      "value": 4096
+    },
+    {
+      "counter": "gNdsVSResultsInputSeenMask",
+      "value": 4096
+    },
+    {
+      "counter": "gNdsVSResultsInputTapMask",
+      "value": 4096
+    },
+    {
+      "counter": "gNdsControllerReadCount",
+      "value": 4526
+    },
+    {
+      "counter": "gNdsControllerReadEdgeCount",
+      "value": 0
+    },
+    {
+      "counter": "gNdsControllerPublishCount",
+      "value": 4531
+    },
+    {
+      "counter": "gNdsControllerPublishSuppressedCount",
+      "value": 590
+    },
+    {
+      "counter": "gNdsControllerPublishTapNonzeroCount",
+      "value": 0
+    },
+    {
+      "counter": "gNdsControllerEdgeSeenMask",
+      "value": 0
+    },
+    {
+      "counter": "gNdsControllerPublishedTapMask",
+      "value": 0
+    },
+    {
+      "counter": "gNdsRendererBattleStaticTexturePrepareCount",
+      "value": 3
+    },
+    {
+      "counter": "gNdsRendererBattleStaticTextureViolationCount",
+      "value": 0
+    },
+    {
+      "counter": "gNdsSCVSBattleSuddenDeathPrepareCount",
+      "value": 0
+    },
+    {
+      "counter": "gNdsRendererSceneTextureVramResetCount",
+      "value": 3
+    },
+    {
+      "counter": "gNdsSCVSBattlePlacementInitCount",
+      "value": 3
+    },
+    {
+      "counter": "sIFCommonBattlePlace",
+      "value": 1
+    },
+    {
+      "counter": "gNdsRelocSceneReentryEvictCount",
+      "value": 1
+    },
+    {
+      "counter": "gNdsIFCommonNativeOamTextureDiscardCount",
+      "value": 4
+    },
+    {
+      "counter": "gNdsR2StagePrepareReuseCount",
+      "value": 20743
+    },
+    {
+      "counter": "gNdsR2StagePrepareBuildCount",
+      "value": 6
+    },
+    {
+      "counter": "gNdsR2StagePreflightElideCount",
+      "value": 103715
+    },
+    {
+      "counter": "sGCCommonsMaxNum",
+      "value": 4294967295
+    },
+    {
+      "counter": "sGCCommonsActiveNum",
+      "value": 45
+    },
+    {
+      "counter": "gNdsParticleBankLoadResult",
+      "value": 1
+    },
+    {
+      "counter": "gNdsParticleBankScriptsUnpacked",
+      "value": 26
+    },
+    {
+      "counter": "gNdsParticleBankScriptsRejected",
+      "value": 0
+    },
+    {
+      "counter": "gNdsParticleScriptStartCount",
+      "value": 3173
+    },
+    {
+      "counter": "gNdsParticleRejectCount",
+      "value": 0
+    },
+    {
+      "counter": "gNdsParticleDrawSeamCount",
+      "value": 86323
+    },
+    {
+      "counter": "gNdsParticleStructsLive",
+      "value": 0
+    },
+    {
+      "counter": "gNdsParticleStructsMax",
+      "value": 28
+    },
+    {
+      "counter": "gNdsParticleGeneratorsLive",
+      "value": 0
+    },
+    {
+      "counter": "gNdsParticleGeneratorsMax",
+      "value": 10
+    },
+    {
+      "counter": "gNdsParticleTransformsMax",
+      "value": 13
+    },
+    {
+      "counter": "gNdsParticleRootSpawnCount",
+      "value": 4249
+    },
+    {
+      "counter": "gNdsParticleTextureUseMask[0]",
+      "value": 998243335
+    },
+    {
+      "counter": "gNdsParticleTextureUseMask[1]",
+      "value": 9062
+    },
+    {
+      "counter": "gNdsParticleDrawVisibleCount",
+      "value": 101497
+    },
+    {
+      "counter": "gNdsParticleDrawVisibleMax",
+      "value": 23
+    },
+    {
+      "counter": "gNdsParticleQuadEmitCount",
+      "value": 101198
+    },
+    {
+      "counter": "gNdsParticleQuadEmitMax",
+      "value": 23
+    },
+    {
+      "counter": "gNdsParticleQuadMissCount",
+      "value": 110
+    },
+    {
+      "counter": "gNdsParticleQuadMissMask[0]",
+      "value": 268435456
+    },
+    {
+      "counter": "gNdsParticleQuadMissMask[1]",
+      "value": 0
+    },
+    {
+      "counter": "gNdsParticleQuadMissFrameMask",
+      "value": 1048575
+    },
+    {
+      "counter": "gNdsParticleQuadStrideCount",
+      "value": 31665
+    },
+    {
+      "counter": "gNdsParticleBankEFCommonID",
+      "value": 1
+    },
+    {
+      "counter": "gNdsParticleInitAllCount",
+      "value": 5
+    },
+    {
+      "counter": "gNdsParticleBankRegisterCount",
+      "value": 8
+    },
+    {
+      "counter": "gNdsRendererParticleAtlasPrepareCount",
+      "value": 3
+    },
+    {
+      "counter": "gNdsRendererParticleAtlasFailCount",
+      "value": 0
+    },
+    {
+      "counter": "gNdsRendererParticleAtlasBytes",
+      "value": 33024
+    },
+    {
+      "counter": "gNdsParticleRejectRingCount",
+      "value": 0
+    },
+    {
+      "counter": "gNdsParticleRejectRingScripts[0]",
+      "value": 0
+    },
+    {
+      "counter": "gNdsParticleRejectRingBanks[0]",
+      "value": 0
+    },
+    {
+      "counter": "gNdsParticleRejectRingReasons[0]",
+      "value": 0
+    },
+    {
+      "counter": "gNdsParticleRejectRingCounts[0]",
+      "value": 0
+    },
+    {
+      "counter": "gNdsParticleRejectRingScripts[1]",
+      "value": 0
+    },
+    {
+      "counter": "gNdsParticleRejectRingBanks[1]",
+      "value": 0
+    },
+    {
+      "counter": "gNdsParticleRejectRingReasons[1]",
+      "value": 0
+    },
+    {
+      "counter": "gNdsParticleRejectRingCounts[1]",
+      "value": 0
+    },
+    {
+      "counter": "gNdsParticleRejectRingScripts[2]",
+      "value": 0
+    },
+    {
+      "counter": "gNdsParticleRejectRingBanks[2]",
+      "value": 0
+    },
+    {
+      "counter": "gNdsParticleRejectRingReasons[2]",
+      "value": 0
+    },
+    {
+      "counter": "gNdsParticleRejectRingCounts[2]",
+      "value": 0
+    },
+    {
+      "counter": "gNdsParticleRejectRingScripts[3]",
+      "value": 0
+    },
+    {
+      "counter": "gNdsParticleRejectRingBanks[3]",
+      "value": 0
+    },
+    {
+      "counter": "gNdsParticleRejectRingReasons[3]",
+      "value": 0
+    },
+    {
+      "counter": "gNdsParticleRejectRingCounts[3]",
+      "value": 0
+    },
+    {
+      "counter": "gNdsParticleRejectRingScripts[4]",
+      "value": 0
+    },
+    {
+      "counter": "gNdsParticleRejectRingBanks[4]",
+      "value": 0
+    },
+    {
+      "counter": "gNdsParticleRejectRingReasons[4]",
+      "value": 0
+    },
+    {
+      "counter": "gNdsParticleRejectRingCounts[4]",
+      "value": 0
+    },
+    {
+      "counter": "gNdsParticleRejectRingScripts[5]",
+      "value": 0
+    },
+    {
+      "counter": "gNdsParticleRejectRingBanks[5]",
+      "value": 0
+    },
+    {
+      "counter": "gNdsParticleRejectRingReasons[5]",
+      "value": 0
+    },
+    {
+      "counter": "gNdsParticleRejectRingCounts[5]",
+      "value": 0
+    },
+    {
+      "counter": "gNdsParticleBankPupupuID",
+      "value": 0
+    },
+    {
+      "counter": "gNdsParticlePupupuScriptsPacked",
+      "value": 5
+    },
+    {
+      "counter": "gNdsRendererTask36ReplayArenaStaleCount",
+      "value": 20749
+    },
+    {
+      "counter": "gNdsRendererProfileTextureRejectReasonMask",
+      "value": 0
+    },
+    {
+      "counter": "gNdsFighterProjectileProofSpawnCallCount",
+      "value": 88
+    },
+    {
+      "counter": "gNdsFighterProjectileProofSpawnSuccessCount",
+      "value": 88
+    },
+    {
+      "counter": "gNdsFighterProjectileProofWeaponCountMax",
+      "value": 2
+    },
+    {
+      "counter": "gNdsFighterProjectileProofSpawnFailGObjCount",
+      "value": 0
+    },
+    {
+      "counter": "gNdsFighterProjectileProofSpawnFailPoolCount",
+      "value": 0
+    },
+    {
+      "counter": "gNdsFighterProjectileProofSpawnFailGObjMax",
+      "value": 0
+    },
+    {
+      "counter": "gNdsFighterProjectileProofSpawnFailGObjActive",
+      "value": 0
+    },
+    {
+      "counter": "gNdsFighterProjectileProofSpawnFailHeapFree",
+      "value": 0
+    },
+    {
+      "counter": "gNdsWeaponStructBytes",
+      "value": 704
+    },
+    {
+      "counter": "gNdsWeaponPoolEntries",
+      "value": 3
+    },
+    {
+      "counter": "gNdsTaskmanGeneralHeapFreeMin",
+      "value": 52368
+    },
+    {
+      "counter": "gNdsGCDrawsActiveMax",
+      "value": 128
+    },
+    {
+      "counter": "gNdsEffectPoolDepth",
+      "value": 12
+    },
+    {
+      "counter": "gNdsEffectPoolFreeMin",
+      "value": 4
+    },
+    {
+      "counter": "gNdsEFDescResolveCount",
+      "value": 52
+    },
+    {
+      "counter": "gNdsEFDescDisabledCount",
+      "value": 1
+    },
+    {
+      "counter": "gNdsEFDescUnknownFileCount",
+      "value": 7
+    },
+    {
+      "counter": "gNdsEFDescEffectsSpan[0]",
+      "value": 52736
+    },
+    {
+      "counter": "gNdsEFDescEffectsSpan[1]",
+      "value": 28352
+    },
+    {
+      "counter": "gNdsEFDescEffectsSpan[2]",
+      "value": 13616
+    },
+    {
+      "counter": "gNdsKOBurstAttemptCount",
+      "value": 10
+    },
+    {
+      "counter": "gNdsKOBurstCompleteCount",
+      "value": 10
+    },
+    {
+      "counter": "gNdsKOBurstDropMask",
+      "value": 0
+    },
+    {
+      "counter": "gNdsStarKOSparkleCount",
+      "value": 5
+    },
+    {
+      "counter": "gNdsStarKOSparkleLastX",
+      "value": 2951
+    },
+    {
+      "counter": "gNdsStarKOSparkleLastY",
+      "value": 2399
+    },
+    {
+      "counter": "gNdsStarKOSparkleLastZ",
+      "value": 4294952297
+    },
+    {
+      "counter": "gNdsAudioFgmPrematureRetireCount",
+      "value": 0
+    },
+    {
+      "counter": "gNdsAudioFgmPrematureRetireLastID",
+      "value": 0
+    },
+    {
+      "counter": "gNdsAudioFgmPoolExhaustCount",
+      "value": 1
+    },
+    {
+      "counter": "gNdsAudioFgmGenerationMismatchCount",
+      "value": 0
+    },
+    {
+      "counter": "sGCDrawsActiveNum",
+      "value": 119
+    },
+    {
+      "counter": "gNdsFtPublicActorMakeCount",
+      "value": 3
+    },
+    {
+      "counter": "gNdsFtPublicCommonCheckCount",
+      "value": 311
+    },
+    {
+      "counter": "gNdsAudioFgmLoaded",
+      "value": 1
+    },
+    {
+      "counter": "gNdsAudioFgmResult",
+      "value": 1179077937
+    },
+    {
+      "counter": "gNdsAudioFgmOpenFailCount",
+      "value": 0
+    },
+    {
+      "counter": "gNdsAudioFgmReadFailCount",
+      "value": 2
+    },
+    {
+      "counter": "gNdsAudioFgmFormatFailCount",
+      "value": 0
+    },
+    {
+      "counter": "gNdsAudioFgmResidentBytes",
+      "value": 207632
+    },
+    {
+      "counter": "gNdsAudioFgmIncludedLookupFailCount",
+      "value": 0
+    },
+    {
+      "counter": "gNdsAudioFgmSupportedCount",
+      "value": 88
+    },
+    {
+      "counter": "gNdsAudioFgmPlayCalls",
+      "value": 2111
+    },
+    {
+      "counter": "gNdsAudioFgmSupportedPlayCount",
+      "value": 2105
+    },
+    {
+      "counter": "gNdsAudioFgmUnsupportedCallCount",
+      "value": 3
+    },
+    {
+      "counter": "gNdsAudioFgmPlayFailCount",
+      "value": 3
+    },
+    {
+      "counter": "gNdsAudioFgmMaxActiveHandles",
+      "value": 8
+    },
+    {
+      "counter": "gNdsAudioFgmPoolExhaustCount",
+      "value": 1
+    },
+    {
+      "counter": "gNdsAudioFgmDurationStopCount",
+      "value": 1943
+    },
+    {
+      "counter": "gNdsAudioFgmPrematureRetireCount",
+      "value": 0
+    },
+    {
+      "counter": "gNdsAudioFgmPrematureRetireLastID",
+      "value": 0
+    },
+    {
+      "counter": "gNdsRelocHeapDeclineCount",
+      "value": 0
+    },
+    {
+      "counter": "gNdsObjmanPanicCount",
+      "value": 0
+    },
+    {
+      "counter": "gNdsObjmanPanicMask",
+      "value": 0
+    },
+    {
+      "counter": "gNdsObjAnimRunawayCount",
+      "value": 0
+    },
+    {
+      "counter": "gNdsObjAnimRunawayMask",
+      "value": 0
+    },
+    {
+      "counter": "gNdsObjAnimRunawayScript",
+      "value": 0
+    },
+    {
+      "counter": "gNdsObjAnimRunawayOpcode",
+      "value": 0
+    },
+    {
+      "counter": "gNdsRelocResolveOffsetCount",
+      "value": 46464
+    },
+    {
+      "counter": "gNdsRelocResolveMisalignCount",
+      "value": 0
+    },
+    {
+      "counter": "gNdsRelocResolveMisalignValue",
+      "value": 0
+    },
+    {
+      "counter": "gNdsAudioFgmReleaseRampCount",
+      "value": 6065
+    },
+    {
+      "counter": "gNdsAudioFgmGenerationMismatchCount",
+      "value": 0
+    },
+    {
+      "counter": "gNdsAudioFgmStaleStopCount",
+      "value": 0
+    },
+    {
+      "counter": "gNdsAudioFgmStopAllCalls",
+      "value": 6
+    },
+    {
+      "counter": "gNdsAudioFgmMissRingCount",
+      "value": 2
+    },
+    {
+      "counter": "gNdsAudioFgmMissRingIDs[0]",
+      "value": 17
+    },
+    {
+      "counter": "gNdsAudioFgmMissRingCounts[0]",
+      "value": 2
+    },
+    {
+      "counter": "gNdsAudioFgmMissRingIDs[1]",
+      "value": 118
+    },
+    {
+      "counter": "gNdsAudioFgmMissRingCounts[1]",
+      "value": 1
+    },
+    {
+      "counter": "gNdsAudioFgmMissRingIDs[2]",
+      "value": 0
+    },
+    {
+      "counter": "gNdsAudioFgmMissRingCounts[2]",
+      "value": 0
+    },
+    {
+      "counter": "gNdsAudioFgmMissRingIDs[3]",
+      "value": 0
+    },
+    {
+      "counter": "gNdsAudioFgmMissRingCounts[3]",
+      "value": 0
+    },
+    {
+      "counter": "gNdsAudioFgmMissRingIDs[4]",
+      "value": 0
+    },
+    {
+      "counter": "gNdsAudioFgmMissRingCounts[4]",
+      "value": 0
+    },
+    {
+      "counter": "gNdsAudioFgmMissRingIDs[5]",
+      "value": 0
+    },
+    {
+      "counter": "gNdsAudioFgmMissRingCounts[5]",
+      "value": 0
+    },
+    {
+      "counter": "gNdsAudioFgmMissRingIDs[6]",
+      "value": 0
+    },
+    {
+      "counter": "gNdsAudioFgmMissRingCounts[6]",
+      "value": 0
+    },
+    {
+      "counter": "gNdsAudioFgmMissRingIDs[7]",
+      "value": 0
+    },
+    {
+      "counter": "gNdsAudioFgmMissRingCounts[7]",
+      "value": 0
+    },
+    {
+      "counter": "gNdsSObjLayerMemoSkipCount",
+      "value": 953
+    },
+    {
+      "counter": "gNdsSObjLayerMemoRedrawCount",
+      "value": 12
+    },
+    {
+      "counter": "gNdsSObjLayerMemoOverflowCount",
+      "value": 0
+    },
+    {
+      "counter": "gNdsVSResultsPresentIntervalBucket[2]",
+      "value": 71
+    },
+    {
+      "counter": "gNdsVSResultsPresentIntervalBucket[3]",
+      "value": 2
+    },
+    {
+      "counter": "gNdsVSResultsPresentIntervalBucket[4]",
+      "value": 7
+    },
+    {
+      "counter": "gNdsVSResultsPresentIntervalBucket[5]",
+      "value": 1
+    },
+    {
+      "counter": "gNdsVSResultsPresentIntervalBucket[6]",
+      "value": 4
+    },
+    {
+      "counter": "gNdsVSResultsPresentIntervalBucket[7]",
+      "value": 0
+    },
+    {
+      "counter": "gNdsVSResultsPresentIntervalBucket[8]",
+      "value": 0
+    },
+    {
+      "counter": "gNdsVSResultsPresentIntervalBucket[9]",
+      "value": 0
+    },
+    {
+      "counter": "gNdsVSResultsPresentIntervalBucket[10]",
+      "value": 0
+    },
+    {
+      "counter": "gNdsVSResultsPresentIntervalBucket[15]",
+      "value": 1
+    },
+    {
+      "counter": "gNdsVSResultsPresentIntervalMax",
+      "value": 19883
+    },
+    {
+      "counter": "gNdsVSResultsPresentIntervalSamples",
+      "value": 1112
+    },
+    {
+      "counter": "gNdsSCVSBattleLifecycleArenaAdapterCount",
+      "value": 3
+    },
+    {
+      "counter": "gNdsSCVSBattleOriginalGObjCount",
+      "value": 46
+    },
+    {
+      "counter": "gNdsTaskmanMallocCount",
+      "value": 2794
+    },
+    {
+      "counter": "gNdsTickHudFighterTicks",
+      "value": 255104
+    },
+    {
+      "counter": "gNdsTickHudStageTicks",
+      "value": 132032
+    },
+    {
+      "counter": "gNdsTickHudSourceTicks",
+      "value": 247552
+    },
+    {
+      "counter": "gNdsTickHudForegroundTicks",
+      "value": 0
+    },
+    {
+      "counter": "gNdsTickHudBackgroundTicks",
+      "value": 0
+    },
+    {
+      "counter": "gNdsTickHudAudioTicks",
+      "value": 6400
+    },
+    {
+      "counter": "gNdsTickHudFlushTicks",
+      "value": 0
+    },
+    {
+      "counter": "gNdsTickHudVBlankWaitTicks",
+      "value": 0
+    },
+    {
+      "counter": "gNdsControllerPollCount",
+      "value": 63388
+    },
+    {
+      "counter": "sSYControllerWaitUpdate",
+      "value": 0
+    },
+    {
+      "counter": "gNdsGcRunAllEntryTapMask",
+      "value": 4096
+    },
+    {
+      "counter": "gNdsGcRunAllExitTapMask",
+      "value": 4096
+    },
+    {
+      "counter": "gNdsGcRunAllTapAliveCount",
+      "value": 2
+    },
+    {
+      "counter": "gNdsGcRunAllTapLostCount",
+      "value": 0
+    },
+    {
+      "counter": "sMNVSResultsTotalTimeTics",
+      "value": 591
+    },
+    {
+      "counter": "sMNVSResultsAllowExitWait",
+      "value": 410
+    },
+    {
+      "counter": "gNdsFighterProcessLoopControllerBridgeCount",
+      "value": 0
+    },
+    {
+      "counter": "gNdsFighterProcessLoopP0InputApplyCount",
+      "value": 0
+    },
+    {
+      "counter": "gNdsFighterSchedulerLoopP0InputApplyCount",
+      "value": 0
+    },
+    {
+      "counter": "gNdsR2TexProofFastCount",
+      "value": 207416
+    },
+    {
+      "counter": "gNdsR2TexProofSweepCount",
+      "value": 36
+    },
+    {
+      "counter": "gNdsR2TexProofSweepFailCount",
+      "value": 0
+    },
+    {
+      "counter": "gNdsR2TextureEpochBumpCount",
+      "value": 136
+    },
+    {
+      "counter": "sNdsAObjEvent32NormalizedCount",
+      "value": 1158
+    },
+    {
+      "counter": "gNdsAObjEvent32NormalizeScriptCount",
+      "value": 715
+    },
+    {
+      "counter": "gNdsAObjEvent32NormalizeReuseCount",
+      "value": 20679
+    },
+    {
+      "counter": "gNdsAObjEvent32NormalizeFailCount",
+      "value": 0
+    },
+    {
+      "counter": "gNdsBattlePlayablePacingPresentIntervalBucket[2]",
+      "value": 1998
+    },
+    {
+      "counter": "gNdsBattlePlayablePacingPresentIntervalBucket[3]",
+      "value": 251
+    },
+    {
+      "counter": "gNdsBattlePlayablePacingPresentIntervalBucket[4]",
+      "value": 12
+    },
+    {
+      "counter": "gNdsBattlePlayablePacingPresentIntervalBucket[5]",
+      "value": 1
+    },
+    {
+      "counter": "gNdsBattlePlayablePacingPresentIntervalMax",
+      "value": 18
+    },
+    {
+      "counter": "gNdsBattlePlayablePacingCadenceViolationCount",
+      "value": 0
+    },
+    {
+      "counter": "gNdsBattlePlayablePacingVBlanks",
+      "value": 4815
+    },
+    {
+      "counter": "generalHeapFreeBytes",
+      "value": 52720
+    }
+  ],
+  "pollSeconds": 5,
+  "rom": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\builds\\build-c252-soak-r2-5min\\smash64ds-battle-playable-tickhud-hwtri.nds",
+  "verdict": "NO-FREEZE"
+}
