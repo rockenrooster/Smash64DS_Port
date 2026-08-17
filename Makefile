@@ -320,10 +320,23 @@ NDS_R2_AOBJ16_PREBAKE ?= 0
 # out of the same bytes -- projecting a general-heap low-water of ~6,652 against
 # the mandated 32,768 floor. The boot ladder does NOT catch that: the failing arm
 # had 66,784 B of proven headroom.
-# DEFAULT 0 until the gate measurement (slice 1 phase 8) has been taken: only one
-# fighter fits, so the other loses the raw cache, and that trade is unpriced.
-# `artifacts/performance/2026-08-15_battlepack-pool/BATTLEPACK_POOL.md`.
-NDS_R2_BATTLEPACK ?= 0
+# OWNER DECISION 2026-08-17: THE DEFAULT IS 1, taken with KEEP_CACHE below.
+# `artifacts/performance/2026-08-17_ship-cadence/SHIP_CADENCE.md`. The trade the
+# previous comment called unpriced is priced: measured on the shipping defaults,
+# the pack is -34,304 at rank-80 (2.44x the >=14,080 cross-build floor, 2.1x the
+# +16,209 requirement a pack-off ROM carries) and 13 of the frames the cadence
+# arm counts, against 17,600 B of general heap -- low-water 70,736 without it
+# and 53,136 with it, on the mandated 32,768 floor, which is exactly the figure
+# the comment at :345-347 predicted before the run.
+#
+# What made this a decision rather than a candidate: every requirement, every
+# candidate size and BOTH gate arms of this campaign had already been measured
+# with the flag ON while the published ROM shipped without it, nine artifacts
+# deep. The flip does not FIND 34,304 ticks; it stops the measurement basis and
+# the published ROM disagreeing.
+# `artifacts/performance/2026-08-15_battlepack-pool/BATTLEPACK_POOL.md` is the
+# pool history; the 2026-08-15 stress battery is in ARENA_PRICE.md.
+NDS_R2_BATTLEPACK ?= 1
 # The arm that isolates the pack from the cache it displaces. Phase 8 measured
 # the resident pack at 2.9x the gate and attributed all of it to the carve
 # DELETING the raw file cache (262,144 -> 4,096 B; Rejects 0 -> 126); the
@@ -357,9 +370,12 @@ NDS_R2_BATTLEPACK ?= 0
 # gNdsTaskmanArenaChosenSize -- never check-boot-headroom.ps1, which meters the
 # static image. Re-read it after any change here.
 #
-# The default stays 0: turning the pack on by default is the owner's call, not a
-# build flag's (PROJECT_GOAL.md sacrifice order, CLAUDE.OPUS.md rail 5).
-NDS_R2_BATTLEPACK_KEEP_CACHE ?= 0
+# OWNER DECISION 2026-08-17: THE DEFAULT IS 1, and it moves as a PAIR with
+# NDS_R2_BATTLEPACK above. The -34,304 was measured with both flags on, and the
+# pack WITHOUT this arm is the phase-8 configuration whose carve deleted the raw
+# file cache and cost +2,261,376 at rank-80. Never ship one of the two without
+# the other; a build that sets only one is a configuration nothing has measured.
+NDS_R2_BATTLEPACK_KEEP_CACHE ?= 1
 # THE SLICE-51 FALSIFIER, and it exists because two arms that disagree about the
 # arena, the cache size (40x) and the ROM loads (14x) still landed 384 ticks
 # apart at rank-80 (`.../2026-08-15_battlepack-isolation/BATTLEPACK_ISOLATION.md`).
