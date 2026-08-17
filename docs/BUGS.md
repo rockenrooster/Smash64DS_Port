@@ -2,6 +2,40 @@
 AI Agent should mark fixed items with **FIXED** prefix or a 20 word summary if not fixed yet.
 These bugs should be fixed for P1 delivery:
 
+- **FIXED — Fox pistol texture lifetime + Results visibility (2026-08-16).** The dedicated Fox gun
+  sidecar kept a stale GL name after the generic texture cache deleted it, explaining the intermittent
+  solid-white pistol; cache discard now invalidates both together. Results uses Demo fighters, so the
+  battle-only overlay now admits only real gameplay player kinds. Live Results tic 160 proves
+  `FoxGunDraw/Prepare/Fail = 0/0/0`. Evidence:
+  `artifacts/verification/2026-08-16_owner-bug-closure/BUG_CLOSURE.md`.
+
+- **FIXED — countdown/loading audio hitch (2026-08-16).** DS texture/placement preparation and the
+  animation warm-up used to run after BattleShip had already started BGM. Loading now drains at the
+  exact pre-BGM seam. A 1,600-frame run has **0 post-start animation cache misses and 0 post-start
+  payload reads**, with BGM seam/error/overrun all 0. Evidence:
+  `artifacts/verification/2026-08-16_owner-bug-closure/BUG_CLOSURE.md`.
+
+- **FIXED / OWNER-CONFIRMED — intermittent Mario grab/back-throw spin (2026-08-17).**
+  The 08-16 warm-list diagnosis and the first renderer-cache-only repair were both disproved by the
+  owner's retest of the current proof-harness ROM. A deterministic source back-throw then isolated the
+  actual fault: Mario's dynamically enabled joint 28 is also `joint_itemheavy_id=28`, the exact world
+  transform `ftCommonCapturePulledRotateScale` uses to position/rotate the captured fighter. The local
+  joint animation advanced correctly, but the port's cached flattened `ftParamsUpdateFighterPartsTransform`
+  walk was keyed only by `(root, heap generation)` and survived `ftMainSetStatus` inserting that joint.
+  Its `unk_dobjtrans_0x5` world-matrix latch therefore stayed set: before the fix, ThrowB samples 0..44
+  changed joint-28 animation every frame while its world translation and Fox root stayed frozen at
+  `(1399.4, 235.2, 0)`. `ftMainSetStatus` now invalidates the owning fighter's flattened transform walk
+  at the topology-writer seam. On the same deterministic repro, samples 0..44 now rebuild continuously
+  and Fox follows the moving capture anchor from the first ThrowB frame. Renderer memo/plan/GX defaults
+  remain enabled; they were not the root cause. Owner retest of the repaired published ROM confirmed:
+  **"ok its fixed now, thanks"**. Evidence:
+  `artifacts/verification/2026-08-17_grab-throw-world-cache/GRAB_THROW_WORLD_CACHE.md`.
+
+- **ANSWERED — VS Results does not hold its large working set during battle (2026-08-16).** Results
+  taskman/fighter/particle/file allocations are created only after entering the Results scene. The
+  monolithic P1 ELF keeps only **1,685 B** of Results-named static data/BSS resident during battle, so
+  there is no meaningful Results RAM pool to release early. No memory-lifetime change was warranted.
+
 - **FIXED — Fox blaster bore. The owner has settled it: the shipping default is 0.**
   Owner, verbatim 2026-08-15: **"bore should be zero, no offset, not needed anymore"**.
   `NDS_FOX_BLASTER_BORE_OFFSET_Y` is **0** in `Makefile` and `include/nds/nds_effects.h`, still
@@ -35,4 +69,3 @@ These bugs should be fixed for P1 delivery:
   > different edges — read consistently, its own bore-0 figure is **−38.819352**, and the bore that
   > would clear that stale pose is **≥ 38.82, not 84**. A re-capture stays the cheap way to refresh
   > the geometry; it is not a gate on the owner's decision.
-

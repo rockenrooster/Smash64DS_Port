@@ -169,8 +169,12 @@ Assert-True ($ndsRelocAssets.Contains(
         '"nitro:/reloc/reloc_animations/FTFoxAnim%03lu"')) `
     'The Fox dynamic NitroFS path owner is missing.'
 Assert-True ([regex]::IsMatch(
+        $ndsRelocAssets,
+        '(?s)ndsRelocAssetLoadIntoZeroedHeap\(.*?memset\(dst, 0, alloc_size\);')) `
+    'The collapsed fighter-animation loader no longer zeroes its destination before a payload read.'
+Assert-True ([regex]::IsMatch(
         $relocBackendAssets,
-        '(?s)memset\(heap, 0, asset_size\);.*?fail:.*?memset\(heap, 0, asset_size\);')) `
+        '(?s)ndsRelocAssetLoadIntoZeroedHeap\(asset_id, heap, NDS_RELOC_ALIGN_BYTES,.*?&asset_size, &header\).*?fail:.*?memset\(heap, 0, asset_size\);')) `
     'Failed fighter-animation loads can retain stale heap bytes.'
 
 

@@ -3604,6 +3604,15 @@ static u32 sNdsFoxGunWorldProbeSpawnCount;
  * It deliberately does NOT write sNdsRendererAdapterMvpRecalcScaleX. That
  * global is the shield's billboard size, consumed by a recalc later in the same
  * call; the gun is not a billboard and must not move it. */
+static sb32 __attribute__((noinline, cold))
+ndsRendererAdapterFoxGunGameplayOwner(const FTStruct *fp)
+{
+    return ((fp != NULL) &&
+            ((fp->pkind == nFTPlayerKindMan) ||
+             (fp->pkind == nFTPlayerKindCom) ||
+             (fp->pkind == nFTPlayerKindGameKey))) ? TRUE : FALSE;
+}
+
 static sb32 ndsRendererAdapterBuildFoxGunJointMtx(
     FTStruct *fp, CObj *cobj, NDSRendererMatrix20p12 *out)
 {
@@ -3618,10 +3627,16 @@ static sb32 ndsRendererAdapterBuildFoxGunJointMtx(
 
     if ((fp == NULL) || (out == NULL) ||
         (fp->fkind != nFTKindFox) ||
-        ((u32)NDS_FOX_GUN_HOLD_JOINT >= ARRAY_COUNT(fp->joints)))
+        ((u32)NDS_FOX_GUN_HOLD_JOINT >= ARRAY_COUNT(fp->joints)) ||
+        (ndsRendererAdapterFoxGunGameplayOwner(fp) == FALSE))
     {
         return FALSE;
     }
+    /* Results constructs Demo fighters and its win/lose statuses do not own the
+     * battle-only pistol overlay. modelpart_status can inherit a non-negative
+     * value there, which used to draw a solid/stray gun over the Results pose.
+     * Gate on fighter ownership rather than scene kind so other real gameplay
+     * scenes can still use Fox's source blaster presentation. */
     if (fp->modelpart_status[NDS_FOX_GUN_HOLD_JOINT -
                              nFTPartsJointCommonStart].modelpart_id_curr < 0)
     {
@@ -14034,8 +14049,7 @@ void gcDrawMObjForDObj(DObj *dobj, Gfx **dls)
  * NULL sibling test. The cached event list and preambles are then copied back
  * over the (empty) contract before ndsFighterDisplayContractSubmit reads it.
  *
- * SOUNDNESS. The key covers every input the walk branches on that can change in
- * this build:
+ * SOUNDNESS. The key covers the ordinary per-frame inputs the walk branches on:
  *  - the head's own contract output (geometry mode, cycle type, render mode,
  *    prim/env colour, light + validity + count) -- 51 of 51 measured changes;
  *  - sFTDisplayMainSkyFogAlpha / sFTDisplayMainIsShadeFog, the two head statics
@@ -14045,14 +14059,22 @@ void gcDrawMObjForDObj(DObj *dobj, Gfx **dls)
  *    detail_curr, lr, display_mode, attr) and the tree root pointer, so a
  *    rebuilt fighter tree invalidates by construction.
  * The per-DObj state the walk also reads -- dobj->dl / dls / dv / flags and
- * FTParts flags -- is not hashed, and does not need to be: in THIS build no
- * compiled writer changes it for a fighter joint. decomp's ftparam.c is not
- * compiled; ftParamSetModelPartID / ResetModelPartAll / HideModelPartAll are
- * port bodies in reloc_backend_compat_shims.c that deliberately leave
- * joint->dl alone and move only fp->modelpart_status, and no DOBJ_FLAG_HIDDEN
- * writer in the compiled tree touches a fighter joint (they are items, weapons,
- * stage and menus). fp->is_modelpart_modify is in the key anyway, so the model
- * part state that DOES move is an invalidation.
+ * FTParts flags -- is deliberately not re-hashed every frame. One source path
+ * DOES mutate fighter topology, however, and the original memo missed it:
+ * ftMainSetStatus interprets FTAnimDesc's enabled-joint bits by calling
+ * ftMainUpdateHiddenPartID / AddHiddenPartID / EjectHiddenPartID. Those calls
+ * allocate, detach and re-parent live DObjs while the fighter GObj/root pointer
+ * can stay unchanged. Mario/Fox Catch, CatchPull and both Throws all carry
+ * 0x10000000, so this is not theoretical -- it is the grab/throw path.
+ *
+ * Hashing the tree here would put the pointer walk we are deleting back on the
+ * hot path. Instead the imported ftMainSetStatus wrapper bumps one per-slot
+ * renderer status generation and invalidates this memo immediately after the
+ * authoritative source status change. Hidden-part helpers have no other callers
+ * in BattleShip, so the cache cannot survive a topology rewrite; the next draw
+ * performs the real walk and refills from the new DObjs. This also covers
+ * same-status/same-motion re-entry, which a key made only from status_id /
+ * motion_id / anim_desc.word would miss.
  * Two states are refused outright rather than keyed: a display_mode other than
  * Master (the MapCollision and hit-outline blocks re-read DObjGetStruct AFTER
  * the walk) and a pending afterimage draw (ftDisplayMainDrawAfterImage runs
@@ -14084,11 +14106,40 @@ void *gNdsFtrDrawMemoSkipRoot = &sNdsFtrDrawMemoStub;
 static FTStruct *sNdsFtrDrawMemoFp;
 static GObj *sNdsFtrDrawMemoGObj;
 static u32 sNdsFtrDrawMemoSlotIndex;
+/* Monotonic renderer-coherency generation. The imported ftMainSetStatus wrapper
+ * bumps this after every authoritative source status change. Besides the
+ * display-contract memo below, the later Cycle-99 draw plan stores DObj pointers
+ * too, so both caches share the same writer-side invalidation generation. */
+static u32 sNdsFighterStatusGeneration[2];
 /* 0 = not a candidate, 1 = armed and awaiting the head boundary, 2 = the
  * boundary fired and the key is built, so the result is cacheable. */
 static u32 sNdsFtrDrawMemoState;
 static u32 sNdsFtrDrawMemoHit;
 static u32 sNdsFtrDrawMemoKey[NDS_FTR_DRAW_MEMO_KEY_WORDS];
+
+/* ftMainSetStatus is the sole owner of BattleShip's fighter hidden-part DObj
+ * topology changes. Invalidate at that write seam rather than rediscovering the
+ * mutation by walking/hash-reading the whole tree every draw. The function is
+ * intentionally public to the import wrapper; both renderer caches remain
+ * private here and the later draw plan keys the generation bumped below. */
+void ndsFighterRendererInvalidateStatusCachesOnSetStatus(GObj *fighter_gobj)
+{
+    FTStruct *fp;
+    u32 slot;
+
+    if (fighter_gobj == NULL)
+    {
+        return;
+    }
+    fp = ftGetStruct(fighter_gobj);
+    if ((fp == NULL) || ((u32)fp->nds_slot > 1u))
+    {
+        return;
+    }
+    slot = (u32)fp->nds_slot;
+    sNdsFighterStatusGeneration[slot]++;
+    sNdsFtrDrawMemo[slot].valid = 0u;
+}
 
 static u32 ndsFtrDrawMemoMixBytes(const void *data, u32 bytes)
 {
@@ -15637,16 +15688,18 @@ u32 gNdsTask91GxStatOr;
 /* ---------------------------------------------------------------------------
  * Cycle 99 -- the baked fighter draw plan.
  *
- * Cycle 98 proved the DObj collection is a match-load constant: 3,961 same, 0
- * variant over a whole both-CPU match, hashing the selected DObj pointers
- * together with the display list each is drawn from. Everything the eligibility
- * pass then derives from that collection is a function of it plus the owner
- * asset file -- the resolved NDSRelocLoadedFile, the root offsets, the material
- * counts, the matrix bindings and the material DObjs. So the pass is not
- * building anything per frame; it is re-proving a constant, once per selected
- * root per fighter per frame, with a loaded-file search at its centre. Charter
- * R2-03 names exactly this ("no PrepareProductionRun policy re-checks, no
- * per-frame texture identity proof").
+ * Cycle 98 measured the ordinary DObj collection as stable over its both-CPU
+ * match. That remains the dominant case, but it was not a lifetime proof:
+ * ftMainSetStatus's enabled-joint path can replace/re-parent DObjs during a live
+ * fighter status without changing the reloc file identity. The plan therefore
+ * treats the collection as stable only inside one renderer status generation.
+ * Everything the eligibility pass then derives from that collection is a
+ * function of it plus the owner asset file -- the resolved NDSRelocLoadedFile,
+ * the root offsets, the material counts, the matrix bindings and the material
+ * DObjs. Between status changes the pass is still re-proving a constant once per
+ * selected root per fighter per frame, with a loaded-file search at its centre.
+ * Charter R2-03 names exactly this ("no PrepareProductionRun policy re-checks,
+ * no per-frame texture identity proof").
  *
  * This bakes that derivation once per (slot, owner-asset identity) and replays
  * it. It deletes, per fighter per frame: the collection walk, the whole
@@ -15660,11 +15713,15 @@ u32 gNdsTask91GxStatOr;
  *
  * Section 3.12: the plan is keyed on the loaded file's identity and is
  * additionally cleared from ndsRendererAdapterResetSceneCaches, so a scene
- * entry -- including a START-restart out of Results -- re-derives it. No
- * pointer is trusted across a scene boundary.
+ * entry -- including a START-restart out of Results -- re-derives it. It also
+ * carries sNdsFighterStatusGeneration: ftMainSetStatus can replace/re-parent
+ * hidden-part DObjs without changing the loaded fighter file, and the plan
+ * stores both matrix_bindings and material_dobjs. A source status change must
+ * therefore miss this cache even when every reloc identity word still matches.
  *
- * gNdsFtrPlanRoute 0 is the default and reproduces shipped behaviour exactly:
- * nothing is captured and nothing is replayed.
+ * gNdsFtrPlanRoute remains runtime-selectable for same-binary A/B; the shipping
+ * default is route 1, so the lifetime key above is part of the correctness
+ * contract rather than lab-only instrumentation.
  * ------------------------------------------------------------------------- */
 
 typedef enum NDSFighterDrawPlanResult
@@ -15695,6 +15752,7 @@ typedef struct NDSFighterDrawPlan
     u32 key_asset_id;
     u32 key_owner_generation;
     u32 key_data_size;
+    u32 key_status_generation;
     u32 valid;
 } NDSFighterDrawPlan;
 
@@ -15724,7 +15782,9 @@ static sb32 ndsFighterDrawPlanHit(u32 slot)
     return ((file->data == plan->key_data) &&
             (file->asset_id == plan->key_asset_id) &&
             (file->owner_generation == plan->key_owner_generation) &&
-            (file->data_size == plan->key_data_size)) ? TRUE : FALSE;
+            (file->data_size == plan->key_data_size) &&
+            (plan->key_status_generation ==
+             sNdsFighterStatusGeneration[slot])) ? TRUE : FALSE;
 }
 
 /* The eligibility pass, lifted out of the draw so the live path, the capture
@@ -16275,6 +16335,8 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
                 plan->key_owner_generation =
                     native_owner_file->owner_generation;
                 plan->key_data_size = native_owner_file->data_size;
+                plan->key_status_generation =
+                    sNdsFighterStatusGeneration[slot];
                 plan->valid = 1u;
 #if NDS_TICK_HUD
                 gNdsFtrPlanBuild++;

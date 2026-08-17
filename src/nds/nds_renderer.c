@@ -11394,6 +11394,10 @@ ndsRendererHardwareAllocTexture(void)
     return NULL;
 }
 
+#if NDS_R2_FOX_GUN_OVERLAY
+static void ndsRendererHardwareResetFoxGunTextureState(void);
+#endif
+
 void ndsRendererHardwareDiscardTextureCache(void)
 {
     if ((sNdsRendererBattleStaticTexturePrepared != 0u) ||
@@ -11456,6 +11460,13 @@ void ndsRendererHardwareDiscardTextureCache(void)
     sNdsRendererHardwareTextureCacheNext = 0u;
     sNdsRendererHardwareBoundTextureName = 0u;
     sNdsRendererHardwareActiveTextureEntry = NULL;
+#if NDS_R2_FOX_GUN_OVERLAY
+    /* Fox's dedicated texture is backed by one of the cache entries released
+     * above, but its fast-path identity lives outside that entry. Clear both
+     * together or PrepareFoxGunTexture will accept a deleted/recycled GL name
+     * after a scene reset and the white MODULATE latch becomes visible. */
+    ndsRendererHardwareResetFoxGunTextureState();
+#endif
     ndsRendererHardwareResetSourceCaches();
 #endif
     sNdsRendererBattleStaticTextureArmed = FALSE;
@@ -15575,6 +15586,13 @@ s32 ndsRendererSubmitFoxBlasterQuad(const Vec3f *translate,
 static int sNdsRendererFoxGunName;
 static int sNdsRendererFoxGunPaletteFormat = -1;
 
+static void ndsRendererHardwareResetFoxGunTextureState(void)
+{
+    sNdsRendererFoxGunName = 0;
+    sNdsRendererFoxGunPaletteFormat = -1;
+    gNdsRendererFoxGunBytes = 0u;
+}
+
 static s32 ndsRendererHardwarePrepareFoxGunTexture(void)
 {
     NDSRendererHardwareTextureCacheEntry *entry = NULL;
@@ -15655,9 +15673,7 @@ fail:
         entry->pinned = FALSE;
         (void)ndsRendererHardwareReleaseTexture(entry);
     }
-    sNdsRendererFoxGunName = 0;
-    sNdsRendererFoxGunPaletteFormat = -1;
-    gNdsRendererFoxGunBytes = 0u;
+    ndsRendererHardwareResetFoxGunTextureState();
     gNdsRendererFoxGunFailCount++;
     return FALSE;
 }
@@ -25017,7 +25033,12 @@ static inline void ndsRendererNativeBeginDirectBatch(
     (void)stats;
 }
 
-static void NDS_TASK82_ITCM_CODE ndsRendererNativeApplyProductionPreamble(
+/* GX-compose's owner-approved shipping arm grows the production owner by 32 B.
+ * The c235 knapsack had only 16 B free, so the tick-HUD linker overflowed once
+ * that accepted arm became the default. This was the lowest-value retained
+ * admission (152 B / 1,074.9 marginal-80 I-cache ceiling); return it to main
+ * RAM rather than evicting a higher-value leaf or overcommitting ITCM. */
+static void ndsRendererNativeApplyProductionPreamble(
     const NDSRendererNativeFighterPreamble *preamble,
     NDSRendererStats *stats)
 {

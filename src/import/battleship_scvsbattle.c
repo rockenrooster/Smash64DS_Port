@@ -59,12 +59,16 @@ void efManagerInitEffects(void);
 void gmRumbleMakeActor(void);
 void gmRumbleInitPlayers(void);
 void ndsSCVSBattleManagerFuncUpdate(SYTaskmanSetup *setup);
+static void ndsSCVSBattleBeginSceneTextures(void);
+static void ndsSCVSBattleBeginScenePlacement(void);
+static void ndsSCVSBattleStartPlayBGM(void);
 
 #define scVSBattleStartScene ndsBaseSCVSBattleStartScene
 #define scVSBattleStartBattle ndsBaseSCVSBattleStartBattle
 #define scVSBattleStartSuddenDeath ndsBaseSCVSBattleStartSuddenDeath
 #define scVSBattleFuncUpdate ndsBaseSCVSBattleFuncUpdate
 #define scManagerFuncUpdate ndsSCVSBattleManagerFuncUpdate
+#define mpCollisionSetPlayBGM ndsSCVSBattleStartPlayBGM
 #if NDS_IMPORT_BATTLESHIP_FTMANAGER
 #define ftManagerMakeFighter ndsSCVSBattleFTManagerMakeFighter
 #endif
@@ -85,6 +89,7 @@ GObj *ndsSCVSBattleFTManagerMakeFighter(FTDesc *desc);
 #undef scVSBattleStartSuddenDeath
 #undef scVSBattleFuncUpdate
 #undef scManagerFuncUpdate
+#undef mpCollisionSetPlayBGM
 #if NDS_IMPORT_BATTLESHIP_FTMANAGER
 #undef ftManagerMakeFighter
 #endif
@@ -238,22 +243,29 @@ static void ndsSCVSBattleBeginScenePlacement(void)
     ndsEFParticleEnsureGObjPlaceholders();
 }
 
+/* The original starts BGM only after fighters, interface and stage setup are
+ * complete. That is the last safe seam before the visible countdown. Do every
+ * DS-side scene prepare here and drain the animation preload before delegating
+ * to the source BGM start. Previously these ran after ndsBase... returned, so
+ * cartridge reads and texture preparation overlapped the countdown/audio and
+ * produced the exact startup hitch the owner reported. */
+static void ndsSCVSBattleStartPlayBGM(void)
+{
+    ndsSCVSBattleBeginSceneTextures();
+    ndsSCVSBattleBeginScenePlacement();
+#if NDS_R2_ANIM_CACHE
+    ndsR2AnimCachePreloadMatch();
+    (void)ndsR2AnimCachePreloadFinish();
+#endif
+    mpCollisionSetPlayBGM();
+}
+
 void scVSBattleStartBattle(void)
 {
     gNdsSCVSBattleOriginalFuncStartResult =
         NDS_SCVSBATTLE_ORIGINAL_FUNC_START_PASS;
 
     ndsBaseSCVSBattleStartBattle();
-    ndsSCVSBattleBeginSceneTextures();
-    ndsSCVSBattleBeginScenePlacement();
-#if NDS_R2_ANIM_CACHE
-    /* R2-04 E4/E5. Same prepare-at-load seam as the two above, but armed here
-     * and stepped from scVSBattleFuncUpdate: the match's animation streams
-     * become resident during the countdown so no gameplay frame pays a NitroFS
-     * walk and a cartridge read for a move. Doing all 41 here missed a BGM
-     * buffer seam and killed the music. */
-    ndsR2AnimCachePreloadMatch();
-#endif
 
     gNdsSCVSBattleOriginalGObjCount = (u32)gcGetGObjsActiveNum();
     gNdsSCVSBattleOriginalCameraCount = sGCCamerasActiveNum;
@@ -340,11 +352,6 @@ void scVSBattleStartBattle(void)
 void scVSBattleStartSuddenDeath(void)
 {
     ndsBaseSCVSBattleStartSuddenDeath();
-    ndsSCVSBattleBeginSceneTextures();
-    ndsSCVSBattleBeginScenePlacement();
-#if NDS_R2_ANIM_CACHE
-    ndsR2AnimCachePreloadMatch();
-#endif
     gNdsSCVSBattleSuddenDeathPrepareCount++;
 }
 
@@ -353,6 +360,8 @@ void scVSBattleFuncUpdate(void)
     ndsBaseSCVSBattleFuncUpdate();
 
 #if NDS_R2_ANIM_CACHE
+    /* Normally exhausted by the pre-BGM barrier. Keep the bounded step here as
+     * fail-open recovery if a future larger preload exceeds the barrier bound. */
     ndsR2AnimCachePreloadStep();
 #endif
 

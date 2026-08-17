@@ -1415,6 +1415,21 @@ $titleBackend = Get-Content (Join-Path $root 'src/port/title_backend.c') -Raw
 $relocRendererDL = Get-Content (Join-Path $root 'src/port/reloc_backend_renderer_dl.c') -Raw
 $relocMPCollision = Get-Content (Join-Path $root 'src/port/reloc_backend_mp_collision.c') -Raw
 $objAnimImport = Get-Content (Join-Path $root 'src/import/battleship_sys_objanim.c') -Raw
+$scVSBattleImport = Get-Content (Join-Path $root 'src/import/battleship_scvsbattle.c') -Raw
+Assert-True ($renderer -match '(?s)void ndsRendererHardwareDiscardTextureCache\(void\).*?ndsRendererHardwareResetFoxGunTextureState\(\);.*?ndsRendererHardwareResetSourceCaches\(\);') `
+    'Fox gun texture identity is no longer invalidated with the generic texture cache.'
+Assert-True ($relocRendererDL -match '(?s)ndsRendererAdapterFoxGunGameplayOwner.*?nFTPlayerKindMan.*?nFTPlayerKindCom.*?nFTPlayerKindGameKey') `
+    'Fox gun overlay is no longer restricted to real gameplay fighter owners; Results Demo fighters can inherit it.'
+Assert-True ($relocRendererDL -match '(?s)ndsRendererAdapterBuildFoxGunJointMtx\(.*?ndsRendererAdapterFoxGunGameplayOwner\(fp\) == FALSE') `
+    'Fox gun joint builder no longer applies the gameplay-owner gate.'
+Assert-True ($scVSBattleImport -match '#define mpCollisionSetPlayBGM ndsSCVSBattleStartPlayBGM') `
+    'Battle startup no longer intercepts the source pre-BGM seam for DS-side loading.'
+Assert-True ($scVSBattleImport -match '(?s)static void ndsSCVSBattleStartPlayBGM\(void\).*?ndsSCVSBattleBeginSceneTextures\(\);.*?ndsSCVSBattleBeginScenePlacement\(\);.*?ndsR2AnimCachePreloadFinish\(\);.*?mpCollisionSetPlayBGM\(\);') `
+    'DS battle preparation is no longer drained before BGM/countdown starts.'
+foreach ($grabWarmId in @('0x231u','0x232u','0x233u','0x234u','0x2c0u','0x2c1u','0x2c2u','0x2c3u')) {
+    Assert-True ($relocAssets.Contains($grabWarmId)) `
+        "The pre-BGM warm set lost common grab/throw animation $grabWarmId."
+}
 Assert-True ($relocAssets -match '(?s)static NDSFighterDLDrawState\s+sNdsFighterDLAllDrawStates\[NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED\];') `
     'Fighter display-list scratch is no longer one serially shared state array.'
 Assert-True ($relocRendererDL -notmatch 'sNdsFighterDLAllDrawStates\[slot\]') `
@@ -2330,6 +2345,8 @@ Assert-True ($taskmanSeam -match '(?s)#if NDS_SHIP_TELEMETRY \|\| \(NDS_RENDERER
 # not make the disjunct optional, or the next change to this guard goes unseen.
 Assert-True ($platform -match '(?s)#if NDS_SHIP_TELEMETRY \|\| \(NDS_RENDERER_PROFILE_LEVEL >= 1\) \|\| NDS_TICK_HUD\s*gNdsHardwareRendererPolyRamCount = GFX_POLYGON_RAM_USAGE;.*?gNdsHardwareRendererControl = GFX_CONTROL;\s*#endif' -and $platform.Contains('sBattleTickHudNames[nNDSTickHudBucketCount]') -and $platform.Contains('"ALL ", "FTR ", "STG ", "BG  ", "AUD ", "HUD ", "SRC ",') -and $platform.Contains('"MISC", "OTHR", "WAIT", "WORK"') -and $platform.Contains('gNdsTickHudVBlankWaitTicks += cpuGetTiming() - tickhud_wait_start;')) 'Task 41 GX-read gate, or the Task 66 WAIT/WORK tick-HUD buckets, are missing.'
 Assert-True ($audioBgm -match '(?s)#if NDS_SHIP_TELEMETRY\s*static void ndsAudioBgmUpdateRateMarkers.*?#endif' -and $nativeOam.Contains('NDS_IFCOMMON_TELEMETRY_TICK() 0u') -and $nativeOam -match '(?s)#if NDS_SHIP_TELEMETRY\s*static void ndsIFCommonRecordSemantic.*?#endif' -and $ftComputer -match '(?s)ndsBaseFTComputerProcessAll\(fighter_gobj\);\s*#if NDS_SHIP_TELEMETRY\s*gNdsFTComputerProcessCount\+\+;\s*ndsFTComputerRecord\(fp\);\s*#endif' -and $ftMainImport -match '(?s)battleship_ftMainPlayAnimEventsAll\(fighter_gobj\);\s*#if NDS_SHIP_TELEMETRY\s*ndsDiagnosticsRecordImportedFTMainAnimEvents') 'Task 41 observer gates regressed for BGM, OAM, Fox AI, or fighter animation.'
+Assert-True ($ftMainImport -match '(?s)battleship_ftMainSetStatus\(fighter_gobj, status_id, frame_begin,\s*anim_speed, flags\);\s*.*?ndsFighterRendererInvalidateStatusCachesOnSetStatus\(fighter_gobj\);' -and $relocRendererDL -match '(?s)void ndsFighterRendererInvalidateStatusCachesOnSetStatus\(GObj \*fighter_gobj\).*?fp = ftGetStruct\(fighter_gobj\);.*?\(u32\)fp->nds_slot > 1u.*?sNdsFighterStatusGeneration\[slot\]\+\+;.*?sNdsFtrDrawMemo\[slot\]\.valid = 0u;') 'Fighter display-contract memo no longer invalidates at ftMainSetStatus, so grab/throw hidden-part DObj topology can replay stale cached DObj pointers.'
+Assert-True ($relocRendererDL -match '(?s)typedef struct NDSFighterDrawPlan.*?u32 key_status_generation;.*?static sb32 ndsFighterDrawPlanHit.*?plan->key_status_generation ==\s*sNdsFighterStatusGeneration\[slot\].*?plan->key_status_generation =\s*sNdsFighterStatusGeneration\[slot\];') 'Cycle-99 fighter draw plan no longer keys the ftMainSetStatus generation, so its cached matrix/material DObj bindings can survive grab/throw topology changes.'
 Assert-True ($renderer -match '(?s)sNdsRendererHardwareProjectedDepth -=\s*\(s32\)run->triangle_count \*\s*NDS_RENDERER_HW_PROJECTED_DEPTH_STEP;\s*\}\s*else\s*\{\s*ndsRendererHardwareEnterProjectedForeground\(\);') 'Task 43 replay no longer uses constant-time painter advance.'
 Assert-True ($audioFgm -match '(?s)void ndsAudioFgmUpdate\(void\).*?if \(gNdsAudioFgmActiveHandles == 0u\)\s*\{\s*return;\s*\}\s*now = cpuGetTiming\(\);') 'Task 43 idle FGM service again reads the CPU timer or scans handles.'
 Assert-True ($makefile.Contains('NDS_RENDERER_M3_PHASE0_PROFILE ?= 0') -and $makefile.Contains("echo '#define NDS_RENDERER_M3_PHASE0_PROFILE `$(NDS_RENDERER_M3_PHASE0_PROFILE)';") -and $makefile.Contains('BENCH_MAKE_M3_PHASE0_PROFILE=$(NDS_RENDERER_M3_PHASE0_PROFILE)')) 'M3 Phase-0 profiler is not default-off or omitted from build/benchmark identity.'

@@ -1648,18 +1648,22 @@ static void NDS_TASK37_ITCM_CODE ndsFTParamsInvalidateFighterParts(
  * 159,748 joint visits is 86 cycles a joint for two word writes, because every
  * step is its own cache line: joint->user_data.p, transform_update_mode,
  * unk_dobjtrans_word, joint->child, child->sib_next. The walk is the cost, not
- * the writes -- and the topology it walks is immutable. A fighter's DObj tree
- * is built when the fighter is built; animation moves rotations, not joints.
+ * the writes -- and the topology it walks is stable during ordinary animation.
+ * A fighter's common DObj tree is built when the fighter is built, but
+ * ftMainSetStatus is the important exception: enabled-joint animation flags can
+ * add/eject/re-parent hidden DObjs for actions such as Catch/Throw. The writer
+ * seam explicitly invalidates this flattened walk below when that happens.
  *
  * So flatten it: preorder the subtree once into an array of FTParts pointers
  * and replay that array. Same joints, same order, three of the five loads gone
  * and the recursion with them.
  *
- * Validity is (root, gNdsTaskmanHeapGeneration). The generation is bumped at
+ * Steady-state validity is (root, gNdsTaskmanHeapGeneration). The generation is bumped at
  * the two primitives that rewind the taskman heap cursor
  * (battleship_sys_malloc.c), which is the only way a live fighter tree can be
  * freed and rebuilt, so a stale list cannot survive a scene rewind or a
- * START-rematch. Anything the table cannot hold -- a third root thrashing the
+ * START-rematch; ftMainSetStatus separately invalidates same-generation topology
+ * edits. Anything the table cannot hold -- a third root thrashing the
  * two slots, or a subtree deeper than the array -- falls back to the recursive
  * walk above. Fail-closed: never a partial invalidate.
  *
@@ -1677,6 +1681,43 @@ typedef struct NDSFtPartsFlatWalk
 } NDSFtPartsFlatWalk;
 
 static NDSFtPartsFlatWalk sNdsFtPartsFlat[NDS_FTPARTS_FLAT_SLOTS];
+
+/* ftMainSetStatus can materialize/eject/re-parent hidden fighter DObjs without
+ * changing either the fighter root pointer or the taskman heap generation. The
+ * flattened transform-invalidation walk is keyed on exactly those two values,
+ * so a list built before Catch/Throw would otherwise remain "valid" while
+ * omitting the newly enabled item-heavy/capture joint (Mario 28 / Fox 30).
+ *
+ * Invalidate only cached roots owned by this fighter. Status changes are rare
+ * compared with the per-frame replay this protects, and the next transform
+ * invalidation rebuilds the list from the authoritative live topology. */
+void ndsFTParamsInvalidateFlatWalkCacheForFighter(GObj *fighter_gobj)
+{
+    u32 i;
+
+    if (fighter_gobj == NULL)
+    {
+        return;
+    }
+    for (i = 0u; i < NDS_FTPARTS_FLAT_SLOTS; i++)
+    {
+        NDSFtPartsFlatWalk *flat = &sNdsFtPartsFlat[i];
+
+        if (flat->root == NULL)
+        {
+            continue;
+        }
+        if (flat->heap_generation != gNdsTaskmanHeapGeneration)
+        {
+            flat->root = NULL;
+            continue;
+        }
+        if (flat->root->parent_gobj == fighter_gobj)
+        {
+            flat->root = NULL;
+        }
+    }
+}
 
 /* Preorder every joint BELOW `root`. The root is excluded because the two
  * callers treat it differently -- ...TransformAll resets the root's update mode

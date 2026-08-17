@@ -6615,19 +6615,35 @@ volatile u32 gNdsR204AnimSeen[(NDS_R204_ANIM_ID_SPAN + 31u) / 32u];
  * gameplay change would not be: a miss simply takes the on-demand path.
  * `gNdsR204AnimForceLoadRepeat/Total` remains the drift check -- re-dump
  * `gNdsR204AnimSeen` and re-diff rather than assuming this list is still true.
+ *
+ * OWNER BUG CLOSURE 2026-08-16: that warning fired. After GX compose became the
+ * shipping default, a fresh HUMAN-MARIO Boundary-style match ended with 46
+ * distinct force-loaded assets and 12 IDs absent from the 87-ID gate list:
+ * 20b/20f/217/219/221/222/23c/23d, 2c0, 2fe, 30d/30e. The old stepped loader
+ * consequently took 14 misses and six payload reads after frame 535. Add that
+ * natural-play set here, plus the complete common Catch/CatchPull/ThrowF/ThrowB
+ * quartet for both Mario (231..234) and Fox (2c0..2c3). The Mario quartet is
+ * deliberate even when a deterministic CPU seed does not choose it: the owner
+ * reported the visible failure while manually doing Mario's back throw, and
+ * those are exactly dFTMarioMotionDescs[146..149]. The barrier below moves this
+ * whole union before BGM/countdown; arena usage is verified by the retained
+ * runtime counters rather than assumed from this comment.
  */
 static const u16 sNdsR204AnimWarmList[] = {
     0x1f3u, 0x1f4u, 0x1f5u, 0x1fbu, 0x1fdu, 0x1feu, 0x1ffu, 0x200u,
     0x201u, 0x202u, 0x203u, 0x204u, 0x205u, 0x206u, 0x207u, 0x209u,
-    0x20eu, 0x212u, 0x216u, 0x218u, 0x21au, 0x21cu, 0x21du, 0x21fu,
-    0x220u, 0x223u, 0x228u, 0x229u, 0x22au, 0x22du, 0x22eu, 0x22fu,
-    0x230u, 0x26cu, 0x26du, 0x270u, 0x271u, 0x272u, 0x27bu, 0x27cu,
-    0x27du, 0x27eu, 0x27fu, 0x280u, 0x282u, 0x284u, 0x285u, 0x28au,
-    0x28cu, 0x28du, 0x28eu, 0x28fu, 0x290u, 0x291u, 0x292u, 0x293u,
-    0x294u, 0x295u, 0x296u, 0x298u, 0x2a0u, 0x2a7u, 0x2a8u, 0x2a9u,
-    0x2abu, 0x2acu, 0x2afu, 0x2b5u, 0x2b9u, 0x2bcu, 0x2bdu, 0x2bfu,
-    0x2f7u, 0x2fau, 0x2fbu, 0x2fcu, 0x302u, 0x30bu, 0x30cu, 0x311u,
-    0x312u, 0x313u, 0x314u, 0x316u, 0x317u, 0x318u, 0x319u
+    0x20bu, 0x20eu, 0x20fu, 0x212u, 0x216u, 0x217u, 0x218u, 0x219u,
+    0x21au, 0x21cu, 0x21du, 0x21fu, 0x220u, 0x221u, 0x222u, 0x223u,
+    0x228u, 0x229u, 0x22au, 0x22du, 0x22eu, 0x22fu, 0x230u, 0x231u,
+    0x232u, 0x233u, 0x234u, 0x23cu, 0x23du, 0x26cu, 0x26du, 0x270u,
+    0x271u, 0x272u, 0x27bu, 0x27cu, 0x27du, 0x27eu, 0x27fu, 0x280u,
+    0x282u, 0x284u, 0x285u, 0x28au, 0x28cu, 0x28du, 0x28eu, 0x28fu,
+    0x290u, 0x291u, 0x292u, 0x293u, 0x294u, 0x295u, 0x296u, 0x298u,
+    0x2a0u, 0x2a7u, 0x2a8u, 0x2a9u, 0x2abu, 0x2acu, 0x2afu, 0x2b5u,
+    0x2b9u, 0x2bcu, 0x2bdu, 0x2bfu, 0x2c0u, 0x2c1u, 0x2c2u, 0x2c3u,
+    0x2f7u, 0x2fau, 0x2fbu, 0x2fcu, 0x2feu, 0x302u, 0x30bu, 0x30cu,
+    0x30du, 0x30eu, 0x311u, 0x312u, 0x313u, 0x314u, 0x316u, 0x317u,
+    0x318u, 0x319u
 };
 
 typedef struct NDSR2AnimCacheEntry {
@@ -6952,19 +6968,18 @@ static void ndsR2AnimCacheArenaRelease(void *payload, u32 size)
  * because the arena is one calloc from the same libnds heap the image bounds.
  * See the NDS_R2_ANIM_CACHE_ARENA_BYTES comment and BATTLEPACK_POOL.md.
  *
- * IT IS STEPPED, AND THE BOUND IS NOT LOADING-TIME GENEROSITY. It rides
- * ndsR2AnimCachePreloadStep for two reasons the warm walk already paid for:
+ * IT IS STEPPED. It rides ndsR2AnimCachePreloadStep so each read remains a
+ * bounded chunk even though battle startup now drains the steps before BGM:
  *
- *   1. The BGM packet seam. E4 loaded 41 assets in ONE call at this seam and
- *      Boundary refused the build on the ADPCM smoke -- the stream is
- *      double-buffered at 8,196 bytes against 44,100 a second, so the main
- *      thread owns ~186 ms between seams. 287,904 bytes in one read does not
- *      fit it.
+ *   1. Historical safety. E4 loaded 41 assets in ONE call AFTER BGM was live
+ *      and Boundary refused the build on the ADPCM smoke. The new startup
+ *      barrier runs before mpCollisionSetPlayBGM, but keeping bounded chunks
+ *      prevents this helper from regressing if another caller steps it live.
  *   2. Lazy reservation is a SAFETY property, not an optimisation. Taking the
- *      arena on the first step rather than at battle start means
- *      ftManagerSetupFilesAllKind has already taken its 116,752 bytes, so this
- *      can never be the allocation that starves battle start -- the failure
- *      mode a 128 KiB static array once caused.
+ *      arena on the first step rather than before fighter setup means
+ *      ftManagerSetupFilesAllKind has already taken its 116,752 bytes. The
+ *      pre-BGM barrier is deliberately reached only after source battle setup,
+ *      so this can never be the allocation that starves fighter construction.
  *
  * Every failure degrades to the generic acquisition path: the pack is simply
  * not published, ndsBattlePackFindFigatree returns NULL, and the load runs as
@@ -6976,10 +6991,7 @@ static void ndsR2AnimCacheArenaRelease(void *payload, u32 size)
  * BLOB_DIR_OFF). Read as words so the u32 fields are naturally aligned -- an
  * unaligned ARM9 LDR rotates the word instead of faulting. */
 #define NDS_BATTLEPACK_HEADER_WORDS 12u
-/* One chunk per scene update. 287,904 / 16,384 = 18 steps, and the countdown is
- * far longer than that; the warm walk's own step is 4 assets, i.e. 4 NitroFS
- * opens plus ~8 KB, so this is one open plus 16 KB and stays in the same class.
- */
+/* One bounded chunk per preload step. 287,904 / 16,384 = 18 steps. */
 #define NDS_BATTLEPACK_STEP_BYTES 16384u
 
 #define NDS_BATTLEPACK_LOAD_IDLE 0u
@@ -7045,8 +7057,8 @@ static sb32 ndsBattlePackResidencyStep(void)
         uintptr_t base;
 
         /* The reserve exists only inside a live arena, so take ownership first.
-         * This is also where the lazy reservation happens -- see the header
-         * comment: at the first scene update, not at battle start. */
+         * This is also where the lazy reservation happens -- after source fighter
+         * setup, at the first preload step, never before battle allocations. */
         if (ndsR2AnimCacheArenaEnsure() == FALSE)
         {
             ndsBattlePackResidencyFail();
@@ -7454,17 +7466,13 @@ static void ndsR2AnimWarmLoadOne(u32 asset_id)
 
 /* R2-04 E5. Arms the warm walk; it does not load anything itself.
  *
- * E4 loaded all 41 in one call at this seam and Boundary refused the build on
- * the BGM ADPCM smoke: SeamMissCount 0 -> 1, ErrorStopCount 0 -> 1,
- * OverrunCount 0 -> 1, gNdsAudioBgmPlaying 1 -> 0 with StopCalls still 0. The
- * stream is double-buffered at 8,196 bytes per packet against 44,100 bytes per
- * second, so the main thread owns a hard ~186 ms budget between buffer seams,
- * and 41 back-to-back NitroFS walks plus 84 KB of cartridge reads do not fit in
- * it. Missing one seam kills BGM for the rest of the match.
- *
- * Standing consequence, recorded in TASK_STANDING_RULES: prepare-at-load work
- * on this seam is bounded by the BGM packet duration, not by loading-time
- * generosity. Anything longer has to be stepped. */
+ * Historical E4 loaded all 41 in one call AFTER BGM was live and Boundary
+ * refused the build on the ADPCM smoke: SeamMissCount 0 -> 1, ErrorStopCount
+ * 0 -> 1, OverrunCount 0 -> 1, gNdsAudioBgmPlaying 1 -> 0 with StopCalls still
+ * 0. That is why the loader remains chunked. Battle startup now arms this walk
+ * and drains those chunks BEFORE mpCollisionSetPlayBGM, so the old audio budget
+ * no longer limits total startup work and the visible countdown inherits no
+ * warm-load I/O. */
 void ndsR2AnimCachePreloadMatch(void)
 {
     /* Arm the walk AND settle ownership first. This is the second-entry seam:
@@ -7482,11 +7490,9 @@ void ndsR2AnimCachePreloadMatch(void)
     ndsBattlePackResidencyRearm();
 }
 
-/* R2-04 E5. One asset per scene update. The countdown alone is far longer than
- * the 41 frames this needs, so the working set is resident before the first
- * scored frame, and a stepped frame costs exactly what the on-demand path
- * already costs when a fighter changes action -- which demonstrably does not
- * miss a seam.
+/* R2-04 E5. One bounded preload step. This used to run once per countdown scene
+ * update; battle startup now drains it before BGM/countdown begins so neither
+ * the visible countdown nor live audio carries cartridge I/O.
  *
  * SLICE 46: that stopped being true once the list grew to 85. Measured on the
  * c123 gate arm, `gNdsR2AnimWarmLoaded` is **83 of 85** at the end of a whole
@@ -7496,14 +7502,10 @@ void ndsR2AnimCachePreloadMatch(void)
  * the 80 costliest frames, and capping `SINT` on just the 32 highest-`SINT`
  * frames is worth **-32,512 WORK-H P95**.
  *
- * So step several per update. The bound is NOT loading-time generosity, it is
- * the BGM packet seam: E4 loaded all 41 in ONE call here and Boundary refused
- * the build on the ADPCM smoke (SeamMiss 0->1, gNdsAudioBgmPlaying 1->0),
- * because the stream is double-buffered at 8,196 bytes against 44,100 a second
- * and the main thread owns ~186 ms between seams. E4's failure puts a real
- * number on one load: 41 did not fit 186 ms, so a load is >4.5 ms and a safe
- * step is single digits, not tens. Four finishes the 85-entry list in 22
- * updates and spends ~18 ms of a 186 ms budget.
+ * So step several per call. Four remains the ordinary bounded chunk; the new
+ * pre-BGM barrier simply calls this helper repeatedly until the measured list is
+ * resident. The bound is retained for fail-open/background callers and to keep
+ * each NitroFS burst small, not because battle startup is racing live audio.
  *
  * `.data` aligned(32) so `-SetGlobals gNdsR2AnimWarmStep=1` restores the old
  * cadence at IDENTICAL placement -- and a route A/B is legitimate here in a way
@@ -7513,6 +7515,28 @@ void ndsR2AnimCachePreloadMatch(void)
  * never a correctness one. */
 volatile u32 gNdsR2AnimWarmStep
     __attribute__((section(".data"), aligned(32))) = 4u;
+
+volatile u32 gNdsR2AnimPreloadBarrierRuns;
+volatile u32 gNdsR2AnimPreloadBarrierSteps;
+volatile u32 gNdsR2AnimPreloadBarrierCompleteCount;
+volatile u32 gNdsR2AnimPreloadBarrierIncompleteCount;
+
+static sb32 ndsR2AnimCachePreloadComplete(void)
+{
+    if (sNdsR204AnimWarmCursor <
+        (sizeof(sNdsR204AnimWarmList) / sizeof(sNdsR204AnimWarmList[0])))
+    {
+        return FALSE;
+    }
+#if NDS_R2_BATTLEPACK
+    if ((sNdsBattlePackLoadState != NDS_BATTLEPACK_LOAD_DONE) &&
+        (sNdsBattlePackLoadState != NDS_BATTLEPACK_LOAD_FAILED))
+    {
+        return FALSE;
+    }
+#endif
+    return TRUE;
+}
 
 void ndsR2AnimCachePreloadStep(void)
 {
@@ -7541,8 +7565,9 @@ void ndsR2AnimCachePreloadStep(void)
         ndsR2AnimCacheValidateGeneration();
         /* The pack first, and ALONE while it is streaming. Two reasons: the
          * arena is a bump allocator, so the blob must own the low bytes before
-         * any warm payload takes them; and this update's BGM-seam budget is
-         * already spent by a 16 KB chunk. `step = 0` for that update. */
+         * any warm payload takes them; and a recovery/background caller should
+         * still perform only one bounded I/O class per step. `step = 0` for a
+         * 16 KB pack chunk. */
         if (ndsBattlePackResidencyStep() != FALSE)
         {
             step = 0u;
@@ -7561,6 +7586,32 @@ void ndsR2AnimCachePreloadStep(void)
 #if NDS_TICK_HUD
     gNdsTickHudSrcAnimWarmTicks += cpuGetTiming() - warm_start;
 #endif
+}
+
+/* Battle startup owns a loading barrier now. Do not turn this into one giant
+ * read: PreloadStep's bounded chunks are also the failure containment boundary.
+ * 256 iterations covers the 106-entry warm list even with WarmStep clamped to 1
+ * plus the 18-chunk BattlePack stream, with large margin. If a future change
+ * breaks that invariant, fail open into the old on-demand path rather than hang
+ * before the match. */
+s32 ndsR2AnimCachePreloadFinish(void)
+{
+    u32 steps = 0u;
+
+    gNdsR2AnimPreloadBarrierRuns++;
+    while ((ndsR2AnimCachePreloadComplete() == FALSE) && (steps < 256u))
+    {
+        ndsR2AnimCachePreloadStep();
+        steps++;
+    }
+    gNdsR2AnimPreloadBarrierSteps += steps;
+    if (ndsR2AnimCachePreloadComplete() == FALSE)
+    {
+        gNdsR2AnimPreloadBarrierIncompleteCount++;
+        return FALSE;
+    }
+    gNdsR2AnimPreloadBarrierCompleteCount++;
+    return TRUE;
 }
 #endif
 

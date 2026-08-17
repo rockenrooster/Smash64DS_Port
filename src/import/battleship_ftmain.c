@@ -26,9 +26,11 @@ void func_80026738_27338(alSoundEffect *sfx);
 alSoundEffect *lbCommonMakePositionFGM(u16 fgm, f32 pos);
 void ndsDiagnosticsRecordImportedFTMainAnimEvents(GObj *fighter_gobj);
 void ndsDiagnosticsRecordImportedFTMainSetStatus(GObj *fighter_gobj,
-                                                s32 status_id,
-                                                f32 frame_begin,
-                                                f32 anim_speed, u32 flags);
+                                                 s32 status_id,
+                                                 f32 frame_begin,
+                                                 f32 anim_speed, u32 flags);
+void ndsFTParamsInvalidateFlatWalkCacheForFighter(GObj *fighter_gobj);
+void ndsFighterRendererInvalidateStatusCachesOnSetStatus(GObj *fighter_gobj);
 sb32 ndsDiagnosticsHandleImportedFTMainSetStatusBefore(GObj *fighter_gobj,
                                                        s32 status_id,
                                                        f32 frame_begin,
@@ -129,6 +131,15 @@ void ftMainSetStatus(GObj *fighter_gobj, s32 status_id,
     }
     battleship_ftMainSetStatus(fighter_gobj, status_id, frame_begin,
                                anim_speed, flags);
+    /* BattleShip's status setter owns the dynamic hidden-part topology used by
+     * grab/throw animations. It can allocate/eject/re-parent a DObj without
+     * changing either the fighter root pointer or the taskman heap generation.
+     * Invalidate BOTH consumers that key on those stable identities: the
+     * flattened per-frame transform-invalidation walk and the renderer caches.
+     * The former is gameplay-critical: ftCommonCapturePulledRotateScale reads
+     * the dynamically enabled item-heavy joint's world matrix. */
+    ndsFTParamsInvalidateFlatWalkCacheForFighter(fighter_gobj);
+    ndsFighterRendererInvalidateStatusCachesOnSetStatus(fighter_gobj);
 #if NDS_TASK108_SITR_CALLBACK_CENSUS
     /* A status change can happen between the census's outer-proc entry and the
      * later proc_update/proc_interrupt calls. Re-wrap the newly installed

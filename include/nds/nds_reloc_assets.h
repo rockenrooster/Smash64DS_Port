@@ -19,14 +19,16 @@ struct MObjSub;
 
 void ndsRelocAssetsInit(void);
 /* R2-04 E4/E5. Makes the match's animation streams resident. PreloadMatch arms
- * the walk at the battle-start seam; PreloadStep loads one asset per scene
- * update until the list is exhausted. The work is stepped rather than done in
- * one burst because the seam's budget is one BGM packet (~186 ms), not the
- * whole load. Declared unconditionally so this header does not depend on the
- * generated config defines being visible before it; defined only under
- * NDS_R2_ANIM_CACHE, and both call sites are guarded by the same flag. */
+ * the walk at the battle-start seam; PreloadStep advances one bounded chunk.
+ * PreloadFinish drains those bounded chunks before battle BGM/countdown starts,
+ * so gameplay never inherits the old background warm walk. The chunking stays
+ * because the same routine is also safe for callers that elect to step it.
+ * Declared unconditionally so this header does not depend on the generated
+ * config defines being visible before it; definitions/callers are guarded by
+ * NDS_R2_ANIM_CACHE. */
 void ndsR2AnimCachePreloadMatch(void);
 void ndsR2AnimCachePreloadStep(void);
+s32 ndsR2AnimCachePreloadFinish(void);
 const char *ndsRelocAssetGetPath(u32 asset_id);
 s32 ndsRelocAssetReadHeader(u32 asset_id, NDSRelocAssetHeader *out_header);
 s32 ndsRelocAssetReadExternFileIDs(u32 asset_id, u32 *out_file_ids,
@@ -71,6 +73,10 @@ extern volatile u32 gNdsRelocAssetPayloadReadCount;
 extern volatile u32 gNdsRelocAssetOpenFailCount;
 extern volatile u32 gNdsRelocAssetFormatFailCount;
 extern volatile u32 gNdsRelocAssetShortReadCount;
+extern volatile u32 gNdsR2AnimPreloadBarrierRuns;
+extern volatile u32 gNdsR2AnimPreloadBarrierSteps;
+extern volatile u32 gNdsR2AnimPreloadBarrierCompleteCount;
+extern volatile u32 gNdsR2AnimPreloadBarrierIncompleteCount;
 
 /* ---- Slice 1 phase 7: the K0 after-GO zero-I/O assertion, per fighter -------
  *
