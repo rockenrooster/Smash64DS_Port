@@ -5,6 +5,8 @@
 > If HEAD has moved when implementation begins, re-run the inventory/measurement steps first and update symbol names/line references rather than blindly applying this document.
 >
 > **Campaign rule:** optimize toward a DS-native architecture and four-fighter headroom. The current two-fighter P95 gate is a checkpoint, not the architectural finish line. Never bank projected savings; measure the shipping configuration. Prefer same-binary route A/B when practical because this tree is placement-sensitive.
+>
+> **Basis (2026-08-17):** the shipping level is **+26,449** at rank-80 and the fresh per-PC census is `artifacts/performance/2026-08-17_shipping-rebank/v4-c238`. `c200` and `v3-c221` are retired. **Read `SHIPPING_REBANK.md` §7.7 before quoting any figure in this brief** — it lists what the new census contradicts, and mask the census by the GATE's own rank-80 frames.
 
 ## Status — the core mechanism SHIPPED 2026-08-16
 
@@ -40,6 +42,16 @@ did **not** change:
    CPU transforms.
 
 Do not redo triangle stripification; Task 56 primitive streams are already shipped.
+
+**MEASURED 2026-08-17 (`v4-c238`, shipping config).** The compose path is
+engaged against a control that could have read zero — `Roots 62,952` (exactly
+the Selected count, one composed root per submitted fighter draw),
+`Mults 109,403`, `Stores 41,343`, **`Declines 0`** — and costs
+`ndsRendererLoadHardwareGxComposedMatrices` **13,319 tk/fr whole-match /
+14,082 gate-80, conc 1.06**. The clearest evidence that it works:
+**`ndsRendererMtxMulAffine20p12` fell 18,549 → 384 tk/fr, 52.94 → 1.19
+calls/frame**. The one live seam this brief names,
+`ndsRendererAdapterBuildDObjLocalMatrix`, is **4,829 / 5,142, conc 1.06**.
 
 Sizing note: the old prize figure — per-joint matrix build 61,848 tk/fr,
 `MtxMulAffine20p12` 18,549 with 72.9% icache stall (`FTR_LANE.md`) — is

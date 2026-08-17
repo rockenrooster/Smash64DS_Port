@@ -5,6 +5,8 @@
 > If HEAD has moved when implementation begins, re-run the inventory/measurement steps first and update symbol names/line references rather than blindly applying this document.
 >
 > **Campaign rule:** optimize toward a DS-native architecture and four-fighter headroom. The current two-fighter P95 gate is a checkpoint, not the architectural finish line. Never bank projected savings; measure the shipping configuration. Prefer same-binary route A/B when practical because this tree is placement-sensitive.
+>
+> **Basis (2026-08-17):** the shipping level is **+26,449** at rank-80 and the fresh per-PC census is `artifacts/performance/2026-08-17_shipping-rebank/v4-c238`. `c200` and `v3-c221` are retired. **Read `SHIPPING_REBANK.md` §7.7 before quoting any figure in this brief** — it lists what the new census contradicts, and mask the census by the GATE's own rank-80 frames.
 
 ## Objective
 
@@ -23,6 +25,15 @@ Calibration: inside `FTR` — the run's largest lane — soft float is only
 draw-side float therefore lives *outside* the fighter draw lane (stage,
 particles/VFX, adapters, dispatch); pick targets from the census, not from
 fighter-lane intuition.
+
+**MEASURED 2026-08-17 (`v4-c238`, caller rollup, gate-80 mask):** renderer
+7,189 + particles 4,670 = **11,859 tk/fr** strictly draw-side, plus **16,447**
+of matrices/transform shared with the camera (`syMatrixLookAtF` 4,703,
+`guMtxCatF` 4,546). The board's ≈22,521 sits inside that range but was never
+mask-labelled — **always quote gate-80 or whole-match, never a bare number**;
+the class as a whole is 2.02× concentrated, so the two differ by roughly that
+factor. `ndsRendererAdapterBuildDObjLocalMatrix` (05's one live seam) is
+**4,829 whole-match / 5,142 gate-80, conc 1.06**.
 
 First realistic target: **10–20K ticks/frame**.
 

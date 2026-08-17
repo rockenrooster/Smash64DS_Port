@@ -5,6 +5,30 @@
 > If HEAD has moved when implementation begins, re-run the inventory/measurement steps first and update symbol names/line references rather than blindly applying this document.
 >
 > **Campaign rule:** optimize toward a DS-native architecture and four-fighter headroom. The current two-fighter P95 gate is a checkpoint, not the architectural finish line. Never bank projected savings; measure the shipping configuration. Prefer same-binary route A/B when practical because this tree is placement-sensitive.
+>
+> **Basis (2026-08-17):** the shipping level is **+26,449** at rank-80 and the fresh per-PC census is `artifacts/performance/2026-08-17_shipping-rebank/v4-c238`. `c200` and `v3-c221` are retired. **Read `SHIPPING_REBANK.md` §7.7 before quoting any figure in this brief** — it lists what the new census contradicts, and mask the census by the GATE's own rank-80 frames.
+
+## MEASURED 2026-08-17 — the pool is ≥2,178 B, not 16 B
+
+The shipping census (`v4-c238`, §B of its `census.txt`) reads the admitted pack
+back and **two of its tenants are now nearly dead, because GX compose ships**:
+
+- `ndsRendererMtxMulAffine20p12` — `FTR_LANE.md` measured **18,549 tk/fr over
+  52.94 calls/frame, 72.9% icache**, and the knapsack admitted it first at
+  **616 B**. On the shipping config it is **384 tk/fr at 1.19 calls/frame**
+  (48× down): the geometry engine does that multiply now. Its ITCM rent is
+  **1,993.8 cyc/byte**, near the bottom of an 87-resident table.
+- `ndsRendererLoadHardwareSplitMatrices` — **392 B at 170.3 cyc/byte,
+  0.10 calls/frame**.
+- **14 residents never execute at all: 1,170 B idle**, including `__addsf3`
+  444 B, `__aeabi_frsub` 456 B, `__nds_task16_libgcc_fsub_golden` 448 B.
+
+That is **≥2,178 B** of measured eviction pool against the 16 B this campaign
+left free and the 28 B by which its own named runner-up
+(`ndsRendererHardwareApplyTextureParams`, 180 B / 1,309.5) missed. **Re-run the
+knapsack on `v4-c238` before spending any more of 06's dividend** — the values
+that ranked the last pack came from a GX=1-era `c200` capture that no longer
+describes what runs.
 
 ## Status — the core of this campaign LANDED 2026-08-16
 

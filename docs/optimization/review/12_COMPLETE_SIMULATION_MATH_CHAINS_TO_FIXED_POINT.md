@@ -5,6 +5,8 @@
 > If HEAD has moved when implementation begins, re-run the inventory/measurement steps first and update symbol names/line references rather than blindly applying this document.
 >
 > **Campaign rule:** optimize toward a DS-native architecture and four-fighter headroom. The current two-fighter P95 gate is a checkpoint, not the architectural finish line. Never bank projected savings; measure the shipping configuration. Prefer same-binary route A/B when practical because this tree is placement-sensitive.
+>
+> **Basis (2026-08-17):** the shipping level is **+26,449** at rank-80 and the fresh per-PC census is `artifacts/performance/2026-08-17_shipping-rebank/v4-c238`. `c200` and `v3-c221` are retired. **Read `SHIPPING_REBANK.md` §7.7 before quoting any figure in this brief** — it lists what the new census contradicts, and mask the census by the GATE's own rank-80 frames.
 
 ## Objective
 
@@ -23,6 +25,21 @@ as a search space, not promised savings. Two caveats travel with that number:
   disagree by 3× (1.70× camera chain, 2.68× fighter narrow phase, 5.14×
   same-op matrix pair), so the warm-MAC subset is worth 29,437–57,584 tk/fr
   depending on the rate — bank measurements, never the reservoir.
+
+**RE-MEASURED 2026-08-17 on the shipping census — the SIZE held and the RATIO
+did not.** Caller-attributed soft float on the gate-80 mask is **147,180 tk/fr**
+(against 160,996 of helper self time including the integer divides and `sqrtf`
+this tool does not count — the two agree to **0.34%**). The strictly simulation
+subsystems are **87,085** (collision/stage MP 28,305, gameplay 27,109,
+animation 25,005, CPU AI 6,666) against `SIMSIDE.md`'s sim-only + sim+dispatch
+83,204 — **4.5% apart, so the reservoir is confirmed**. What is stale is the
+denominator: "1.511× the requirement" was against `+94,481`, and against the
+measured **+26,449** the same class is **5.57×**. Largest individual callers:
+`ndsBaseGcPlayMObjMatAnim` 11,334, `ndsStageMPAdjustFloorLoopWallSweep` 10,924,
+`ndsR2FtAnimParseDObjFigatree` 7,237, `mpCollisionGetFCCommonFloor` 5,482,
+`func_ovl2_800ED490` 3,846. Note the collision bodies are **9–13×
+concentrated** on the gate's own rank-80 frames, so a cut there converts far
+better than its whole-match average suggests.
 
 The best-qualified subset is already named (`SIMSIDE.md` §4): **14 functions
 ≥80% MAC by cycles and entered ≥8×/frame = 71,491 tk/fr** — 5 collision bodies

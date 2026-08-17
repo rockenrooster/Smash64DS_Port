@@ -33,7 +33,116 @@ clock.** Coverage is part of a baseline's identity now, not a footnote. The
 conversion: the sim runs 60 Hz and presents 30 Hz, ratio **measured at exactly
 2.000**, so 1,600 presented = 3,200 logic = **53.3 s**.
 
-## LAST MEASURED GX=0 LEVEL IS +19,089: ITCM REPACK + HOT-LEAF ADMISSION IS BUILT AND BANKED (2026-08-16) — `artifacts/performance/2026-08-16_itcm-repack/ITCM_REPACK.md`
+## THE SHIPPING LEVEL IS +26,449 AND CADENCE IS 87.44%: BASIS RE-BANKED AND RE-CENSUSED ON GX COMPOSE ON (2026-08-17) — `artifacts/performance/2026-08-17_shipping-rebank/SHIPPING_REBANK.md`
+
+**`build-c237-shipbank`, the flag-identical tick-HUD sibling of the published P1
+ROM, mode 163, `NDS_R2_BOTH_CPU=1`, DLDI ON, `-RingDump`, 1,600 samples,
+presented frames 440–2039, `slips=0`, WRAPFIX corrected 0 rows.
+`NDS_R2_FIGHTER_GX_COMPOSE 1` read from the build's own
+`nds_build_config.h`. 2 builds, 2 emulator runs, 1 Boundary; 0 production source
+edits, 0 defaults flipped, nothing published, both root ROMs SHA-256 UNCHANGED
+(`887D82FA...9853` / `54C07FAC...C68A`).**
+
+**THE LEVEL: rank-80 1,171,776 raw / 1,146,829 net, REQUIREMENT +26,449.**
+Band 41–120 1,175,961.6, P50 882,336, P90 1,070,848, top-1% (rank-16) 1,455,232,
+max 1,888,832, 106/1600 over gate. `rebank.py` re-derives `ITCM_REPACK.md`'s
+c234 row from c234's own rows first and reproduces it to the tick on every
+statistic — a control that could have failed.
+
+**THE OLD +19,089 IS NOT A COMPARISON, IT IS A DIFFERENT RUN, AND THE MOVE IS
+NOT MEASURABLE.** c234 → c237 is **+7,360** at rank-80 against a `>=14,080`
+cross-build floor whose sign is unreliable, and the frame-joined views disagree
+in sign: whole match paired **mean −1,446 / median −4,032** (candidate wins
+75.7%, and −4,032 is inside the ~5,700 cross-build P50 floor); union of both
+arms' top-80 sets **mean −2,293**; the candidate's own top-80 **+19,272**, which
+is selection-biased by construction. Top-80 frame **sets overlap 66/80**. The
+two arms are also **not one flag apart in source** — `14977e0ab8c` (the
+grab-transform + presentation repair) sits between them. **Quote +26,449; do not
+report a regression, and do not arithmetically add the old GX A/B price.**
+
+**CADENCE DOES NOT CLEAR ITS ARM: 87.44% TWO-VBLANK.** `2:1783 3:245 4:8 5+:3`,
+**max interval 18**, 2,039 presented frames. c234 read 87.79%. The 90.731% on
+record is the c185 GX-compose **DRAW=0** sibling and is a different instrument.
+
+**EQUIVALENCE IS EXACT AND ONE COUNTER MOVED.** Selected/Submitted
+62,952/62,952, LightDirection 4,010, BoundsPass/Fail 3,823/142, P0/P1 triangles
+600,000/623,934, stage fighter triangles 1,223,934, heap low-water 53,136 — all
+bit-identical to c234. GX compose engaged against a control that could have read
+zero: **Roots 62,952 == the Selected count, Mults 109,403, Stores 41,343,
+Declines 0**. **But the draw memo's hit rate fell 96.19% → 88.20%**: Hits
+3,765 → 3,452, Fills 149 → 462, Invalidations 147 → 111, ReplayEvents
+60,462 → 55,292, Boundary 3,914 both. The arithmetic closes — **lost hits ==
+gained fills == 313**, and 5,170/313 = 16.52 events per lost hit against the
+census's 16.08 per capture. **The mechanism is in source**: `14977e0ab8c` added
+`ndsFighterRendererInvalidateStatusCachesOnSetStatus`
+(`reloc_backend_renderer_dl.c:14125`), called from `ftMainSetStatus`, which does
+`sNdsFtrDrawMemo[slot].valid = 0u`; a `valid == 0` slot returns before the key
+compare, which is why the *key-mismatch* counter fell while Fills rose. So
+`ftMainSetStatus` blows the memo **313 times a match**, worth **~1,888 tk/fr
+match-average** (313 × `CAPTURE_MEMO.md`'s ~9,650 ticks per walk — an estimate,
+labelled) and MORE at rank-80, because `battleship_ftMainSetStatus` is **4.03×**
+and `ftDisplayMainDrawDefault` **3.51×** concentrated on the gate's own top-80
+frames. **The invalidation is correctness-motivated and owner-confirmed — do not
+delete it; Campaign 04 should make it conditional on the topology changing.**
+
+**THE GAP IS STILL EXCURSION AND IT GREW: the median frame passes the gate by
+269,423** (sixteen lane medians sum 875,904 against the raw gate 1,145,327;
+218,767 on c220, 265,263 on c234). A uniform D converts at ratio **1.000** from
+D=5,440 to D=100,000.
+
+**LANE TABLE, size AND concentration (band41-120 / P50), quoted together:**
+`SITR` P50 99,968 conc **2.12** (EXC 93,312) · `SHDT` 4,416 conc **15.39**
+(64,896) · `SPHD` 71,296 conc 1.60 (39,616) · `MISC` 101,504 conc 1.24 (21,824)
+· `SCPU` 49,984 conc 1.19 (14,656) · **`FTR` 264,128 conc 1.05 (12,928) — it was
+1.00/6,848 on c234, so the fighter lane is no longer flat** · `AUD` 2,752 conc
+6.41 · `GCRARES` 81,408 conc 1.16 · `SPRM` 1,984 conc 3.62 · `STG` 167,616 conc
+1.01 · the other six 0.98–1.02 and effectively zero excess.
+
+**THE FRESH PER-PC CENSUS IS `v4-c238` (54,913,786 PC rows, shipping config) AND
+IT RETIRES `c200` AND `v3-c221`.** Mask it by the **gate's own rank-80 frames**
+(`region = frame - 440`, derived empirically at r=0.714 against a 0.336
+runner-up; the harness banner says 439): the profile's own
+`total_cycles - halt_wait` axis contains the tick HUD's console render that
+`WORK-H` subtracts, and under it `ndsPlatformRenderDebugHud` is the largest
+named owner at **8.8%** versus **0.9%** on the gate's frames. Stall partition on
+the gate frames: `icache_fill` 32.0%, `issue` 28.8% (residual), `dcache_fill`
+25.9%, `write_buffer` 5.2%, `interlock` 4.3%, `bus_contention` 3.2%,
+`dma_hold` 0.6%. Three cross-instrument controls that could have failed: profile
+non-apparatus whole-match work **918,169** against the tick run's `WORK-H` mean
+**908,970** (1.0%); soft-float helper self time **160,996** against caller
+attribution **147,180 + 13,261 uncounted = 160,441** (0.34%); profile apparatus
+**21,494** against the campaign's 24,947 constant.
+
+**WHAT THE CENSUS CONTRADICTS — full list in `SHIPPING_REBANK.md` §7.7:**
+**`ndsRendererMtxMulAffine20p12` is 18,549 → 384 tk/fr, 52.94 → 1.19 calls per
+frame**, because GX compose does that multiply on the geometry engine — and the
+ITCM repack admitted it FIRST, so **616 B of ITCM is now rented at 1,993.8
+cyc/byte**, next to `ndsRendererLoadHardwareSplitMatrices` (392 B, 170.3
+cyc/byte, 0.10 calls/frame) and **14 never-executed residents holding 1,170 B**.
+That is **≥2,178 B of measured eviction pool against the 16 B the repack left
+free and the 28 B by which its named runner-up missed**. `__aeabi_fdiv` is NOT
+the most expensive helper: the order is **fadd 31,134 > fmul 17,625 > fdiv
+9,536** whole-match (**67,504 > 46,211 > 15,347** on the gate frames), and
+`sqrtf` is 2,540, not 8,068. **The card filesystem is 9.07× concentrated on the
+gate's own rank-80 frames** — `get_fat` 1,424 → 12,907, `f_lseek` 886 → 8,073,
+`f_read` 239 → 2,928, **23,908 tk/fr = 90% of the whole requirement**, while
+`ndsRelocGetFileData` is flat at conc 1.04, so it is a *different* reader than
+the one Campaign 14 closed. The fighter collision chain is **9–13×**
+concentrated (1,517 whole-match → 16,602 gate-80), independently matching
+`SHDT`'s own lane concentration of 15.39.
+
+**NOT DONE, AND THE NEXT CYCLE INHERITS IT.** Campaign 04 Phase 2 was **sized
+and not started**: the hit-path copy is `2 × 16 × (16 + 24) =` **1,280 B/frame**
+confirmed from the linked ELF, the linked `memcpy` is the 170-byte ITCM
+word-copy (not decomp's byte loop), so the deletion is order **500–1,500
+ticks/frame — 4–10× below the same-binary paired-median floor (~5,440)**. It
+cannot be measured on its own; it must ride with a larger slice. Also not done:
+no FTR call-flow reconstruction on the new census (so `FTR_LANE.md`'s 291,051
+is not directly re-derived — only the tick-HUD band it reconciled against, now
+276,857, −4.7%); no ITCM re-knapsack; no per-word attribution of the memo's
+false misses.
+
+## SUPERSEDED BASIS — LAST MEASURED GX=0 LEVEL WAS +19,089: ITCM REPACK + HOT-LEAF ADMISSION IS BUILT AND BANKED (2026-08-16) — `artifacts/performance/2026-08-16_itcm-repack/ITCM_REPACK.md`
 
 **GREEN candidate `build-c235-itcm-final`, byte-identical to the freshly measured
 `build-c234-itcm-finalpack` ROM (SHA-256 `CABAF279...003F`): WORK-H P50 885,440,

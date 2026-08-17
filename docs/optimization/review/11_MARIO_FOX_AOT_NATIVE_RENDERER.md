@@ -5,6 +5,8 @@
 > If HEAD has moved when implementation begins, re-run the inventory/measurement steps first and update symbol names/line references rather than blindly applying this document.
 >
 > **Campaign rule:** optimize toward a DS-native architecture and four-fighter headroom. The current two-fighter P95 gate is a checkpoint, not the architectural finish line. Never bank projected savings; measure the shipping configuration. Prefer same-binary route A/B when practical because this tree is placement-sensitive.
+>
+> **Basis (2026-08-17):** the shipping level is **+26,449** at rank-80 and the fresh per-PC census is `artifacts/performance/2026-08-17_shipping-rebank/v4-c238`. `c200` and `v3-c221` are retired. **Read `SHIPPING_REBANK.md` §7.7 before quoting any figure in this brief** — it lists what the new census contradicts, and mask the census by the GATE's own rank-80 frames.
 
 ## Objective
 
@@ -48,6 +50,23 @@ Campaign 04), soft float only 4,038 (1.4%). A generated renderer wins by
 **shrinking and specializing the resident code that walks/decodes**, not by
 optimizing arithmetic. `FTR` is dead flat (1.00× at the band), so cuts here
 convert ~1:1 at rank-80.
+
+**RE-MEASURED 2026-08-17 (`SHIPPING_REBANK.md` §§7.3–7.5), and two of those
+statements are now wrong.** (1) **`FTR` is NOT dead flat**: on the shipping
+basis it is **conc 1.05 with 12,928 of excess at rank-80** (it was 1.00 / 6,848
+on c234), P50 264,128, band 41–120 276,857 — so the 290,400 band figure that
+`FTR_LANE.md`'s 291,051 reconciled against has fallen **4.7%**, and the lane now
+carries attackable variance it did not have. (2) **`ndsRendererMtxMulAffine20p12`
+is 18,549 → 384 tk/fr at 52.94 → 1.19 calls/frame**, because GX compose does
+that multiply on the geometry engine — so the "per-joint matrix build 61,848"
+phase no longer exists in that shape; the chain now reads
+`BuildDObjXObjMatrix` 10,920 + `TraRotRpyDirect20p12` 12,695 +
+`MtxMul20p12` 10,469 + `BuildDObjLocalMatrix` 4,829 +
+`LoadHardwareGxComposedMatrices` 13,319 = **52,232 whole-match**. What SURVIVES
+is the direction: on the gate's own rank-80 frames `icache_fill` 32.0% +
+`dcache_fill` 25.9% = **57.9%** against `issue` 28.8%, so the win is still
+deleting resident walk/decode code, and `ndsFighterMarioFoxDLAllDrawForSlot` is
+**34,449 whole / 36,846 gate-80 at conc 1.07**.
 
 ## Non-negotiable prohibition
 

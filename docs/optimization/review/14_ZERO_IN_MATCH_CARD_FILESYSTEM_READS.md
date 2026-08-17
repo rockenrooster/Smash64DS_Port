@@ -5,6 +5,29 @@
 > If HEAD has moved when implementation begins, re-run the inventory/measurement steps first and update symbol names/line references rather than blindly applying this document.
 >
 > **Campaign rule:** optimize toward a DS-native architecture and four-fighter headroom. The current two-fighter P95 gate is a checkpoint, not the architectural finish line. Never bank projected savings; measure the shipping configuration. Prefer same-binary route A/B when practical because this tree is placement-sensitive.
+>
+> **Basis (2026-08-17):** the shipping level is **+26,449** at rank-80 and the fresh per-PC census is `artifacts/performance/2026-08-17_shipping-rebank/v4-c238`. `c200` and `v3-c221` are retired. **Read `SHIPPING_REBANK.md` §7.7 before quoting any figure in this brief** — it lists what the new census contradicts, and mask the census by the GATE's own rank-80 frames.
+
+## MEASURED 2026-08-17 — the FAT layer is 9× concentrated on the gate's frames
+
+The per-PC shipping census (`v4-c238`, gate-80 mask = the 80 presented frames
+that set the tick run's own rank-80 `WORK-H`):
+
+| symbol | whole match | **gate-80** | COST× |
+|---|---:|---:|---:|
+| `get_fat.isra.0` | 1,424 | **12,907** | **9.07** |
+| `f_lseek` | 886 | **8,073** | **9.11** |
+| `f_read` | 239 | **2,928** | **12.24** |
+| `ndsRelocGetFileData` | 5,055 | 5,255 | 1.04 |
+
+**23,908 tk/fr of FAT machinery on exactly the frames that set the gate — 90%
+of the whole `+26,449` requirement — against 2,549 whole-match.** The campaign's
+closed claim (0 post-start payload reads) is about `ndsRelocGetFileData`, and
+that symbol *is* genuinely flat at conc 1.04. So **this is a different reader**,
+and the residual below should start by finding it rather than by extending the
+existing invariant. Per `[[cluster-where-the-percentile-lives]]` this is the
+best-shaped item currently on the board: nothing else combines this size with
+this concentration.
 
 ## Status — the core LANDED 2026-08-16
 

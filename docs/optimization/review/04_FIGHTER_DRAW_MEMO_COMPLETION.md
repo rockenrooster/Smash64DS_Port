@@ -5,6 +5,8 @@
 > If HEAD has moved when implementation begins, re-run the inventory/measurement steps first and update symbol names/line references rather than blindly applying this document.
 >
 > **Campaign rule:** optimize toward a DS-native architecture and four-fighter headroom. The current two-fighter P95 gate is a checkpoint, not the architectural finish line. Never bank projected savings; measure the shipping configuration. Prefer same-binary route A/B when practical because this tree is placement-sensitive.
+>
+> **Basis (2026-08-17):** the shipping level is **+26,449** at rank-80 and the fresh per-PC census is `artifacts/performance/2026-08-17_shipping-rebank/v4-c238`. `c200` and `v3-c221` are retired. **Read `SHIPPING_REBANK.md` §7.7 before quoting any figure in this brief** — it lists what the new census contradicts, and mask the census by the GATE's own rank-80 frames.
 
 ## Objective
 
@@ -91,6 +93,37 @@ cycle. Re-verify the writer census before, and make the invalidation explicit
 here rather than relying on the current absence of writers.
 
 Force a binding/display-list change in a test and prove: one invalidation, then clean hits.
+
+## MEASURED 2026-08-17 — take the hit rate first, and Phase 2 cannot be measured alone
+
+**The memo's hit rate fell 96.19% → 88.20% when the grab-transform repair
+landed** (`SHIPPING_REBANK.md` §4): Hits 3,765 → 3,452, Fills 149 → 462,
+Invalidations 147 → 111, ReplayEvents 60,462 → 55,292, Boundary 3,914 on both.
+Lost hits == gained fills == **313**, and 5,170/313 = 16.52 replay events per
+lost hit against the census's 16.08 per capture. The cause is
+`ndsFighterRendererInvalidateStatusCachesOnSetStatus`
+(`src/port/reloc_backend_renderer_dl.c:14125`, added by `14977e0ab8c`, called
+from `ftMainSetStatus`) doing `sNdsFtrDrawMemo[slot].valid = 0u`; a `valid == 0`
+slot returns before the key compare, which is why the *key-mismatch* counter
+fell while Fills rose. Worth **~1,888 tk/fr match-average** (313 × ~9,650 ticks
+per walk — an estimate) and more at rank-80: `battleship_ftMainSetStatus` is
+**4.03×** and `ftDisplayMainDrawDefault` **3.51×** concentrated on the gate's
+own rank-80 frames. **The invalidation is correctness-motivated and the repair
+is owner-confirmed — do not delete it. Make it conditional on the topology
+actually changing.** This is now the largest item in this campaign.
+
+**Phase 2 is sized and it is below every floor this instrument has.** From the
+linked ELF: `sNdsFtrDrawMemo` is `0xa90 = 2,704 B` for two slots,
+`sNdsFighterDisplayContractPreambles` `0x300 = 768 B` for 32 entries
+(24 B/preamble), so a slot event is 16 B, and at the measured 16.08 events per
+capture over two fighters the hit-path copy is `2 × 16 × (16 + 24) =`
+**1,280 B/frame** — confirming `DRAW_MEMO.md` §7. The linked `memcpy` is the
+**170-byte ITCM word-copy** (`01fff6ec T memcpy`), not decomp's byte loop, so
+the deletion is order **500–1,500 ticks/frame: 4–10× below the same-binary
+paired-median floor (~5,440) and ~10–28× below the cross-build rank-80 floor
+(≥14,080)**. **Do not run a whole-match A/B for it.** Ship it inside a larger
+Campaign 04/11 slice, or price it with a per-unit constant probe
+(`-PerStopGlobals` window sums).
 
 ## Phase 2 — Delete the 1,280 B/frame copy
 

@@ -5,6 +5,8 @@
 > If HEAD has moved when implementation begins, re-run the inventory/measurement steps first and update symbol names/line references rather than blindly applying this document.
 >
 > **Campaign rule:** optimize toward a DS-native architecture and four-fighter headroom. The current two-fighter P95 gate is a checkpoint, not the architectural finish line. Never bank projected savings; measure the shipping configuration. Prefer same-binary route A/B when practical because this tree is placement-sensitive.
+>
+> **Basis (2026-08-17):** the shipping level is **+26,449** at rank-80 and the fresh per-PC census is `artifacts/performance/2026-08-17_shipping-rebank/v4-c238`. `c200` and `v3-c221` are retired. **Read `SHIPPING_REBANK.md` §7.7 before quoting any figure in this brief** — it lists what the new census contradicts, and mask the census by the GATE's own rank-80 frames.
 
 ## Objective
 
@@ -21,6 +23,17 @@ expensive helper in the build by 3.2×** (board, fixed-point census), and
 helper-acceleration surface on the marginal-80 (conversion unmeasured). Note
 `sqrtf` became ITCM-resident in the 2026-08-16 repack. Re-derive on the fresh
 shipping census (GX compose ON, post-repack) shared with 12/13.
+
+**MEASURED 2026-08-17, and the ranking claim above is REFUTED.** On the
+shipping census (`v4-c238`, gate-80 mask) the helper order is **`__aeabi_fadd`
+31,134 whole-match / 67,504 gate-80 > `__aeabi_fmul` 17,625 / 46,211 >
+`__aeabi_fdiv` 9,536 / 15,347**: fdiv's *size* is right (−5.4% against the
+cited 10,084) but it is the **third** helper, not the most expensive, and fadd
+is 3.3–4.4× larger. `sqrtf` is **2,540 / 4,716**, not 8,068, so the
+"fdiv + sqrtf = 21,886" surface is **12,076 whole-match / 20,062 gate-80**. The
+whole soft-float + integer-divide class is **79,625 / 160,996, concentration
+2.02** — tail-concentrated, so a cut here is worth 2.02× its whole-match average
+at rank-80.
 
 From linked ELF/source enumerate:
 

@@ -8,29 +8,45 @@ campaign is worked when the board carries its row. Every brief pins the same
 planning baseline (`codex/r2-runtime2` @ `a63dd0e4b3a`) and the same rule:
 re-derive measurements at execution time; never bank projections.
 
-## Where the gate stands (updated 2026-08-17 — re-derive from the board)
+## Where the gate stands (STEP 0 IS DONE — measured 2026-08-17)
 
-- **Last measured level: +19,089 net at rank-80, at GX compose OFF** — the
-  ITCM repack banked **−28,992** on top of the c223 memo basis (rank-80
-  1,164,416 raw / 1,139,469 net, P50 885,440, 95/1600 over gate;
-  `artifacts/performance/2026-08-16_itcm-repack/ITCM_REPACK.md`).
-- **The shipping configuration then changed and its level is UNMEASURED**:
-  owner policy 2026-08-16 promotes accepted optimisations to shipping
-  defaults, so `NDS_R2_FIGHTER_GX_COMPOSE ?= 1` now ships (the accepted c185
-  bank). The board's own warning: re-bank before quoting a new gap; do **not**
-  arithmetically add the old GX A/B price.
-- **Step 0 for any campaign work now: re-bank the shipping basis and take a
-  fresh per-PC census on it.** Every existing census (`c200` GX=1-era,
-  `v3-c221` GX=0) mismatches the current shipping config — briefs 05/07/11/12/13
-  size against attributions that predate GX compose ON and the ITCM repack.
-- **The gap was excursion, not level** (median frame passed by ~219K on the
-  c220 basis; board `SETUP_SHARE` entry). Re-verify that shape on the new
-  basis, then size every candidate with the `convert.py`-style uniform-D
-  re-rank **at rank-80**; means and medians mislead here.
-- The gate's second arm is **cadence ≥95% two-VBlank** (owner-decided,
-  `plan.md`) and it is still open: the c185 GX-compose DRAW=0 sibling read
-  90.731%. Banked gate claims report the 2/3/4/5+ VBlank-interval histogram
-  and max interval alongside P50/P95 (AGENTS.md).
+- **The shipping level is `+26,449` at rank-80** — rank-80 **1,171,776 raw /
+  1,146,829 net**, band 41–120 1,175,961.6, P50 882,336, P90 1,070,848, top-1%
+  1,455,232, 106/1600 over gate, WRAPFIX corrected 0 rows
+  (`artifacts/performance/2026-08-17_shipping-rebank/SHIPPING_REBANK.md`,
+  `build-c237-shipbank`, GX compose ON, `NDS_R2_BOTH_CPU=1`, DLDI ON, 1,600
+  samples, frames 440–2039). **Size every candidate against +26,449.**
+- **The old +19,089 is not a comparison, it is a different run.** c234 → c237 is
+  +7,360 at rank-80, inside the ≥14,080 cross-build floor, and the frame-joined
+  views disagree in sign (whole-match paired median −4,032, inside the ~5,700
+  P50 floor). The two bases are not distinguishable; do not report a regression
+  and do not arithmetically add the old GX A/B price.
+- **Cadence does NOT clear its arm: 87.44% two-VBlank** —
+  `2:1783 3:245 4:8 5+:3`, max interval 18 over 2,039 presented frames,
+  `slips=0`. The previous basis read 87.79%; the 90.731% on record is the c185
+  **DRAW=0** sibling and is a different instrument. The ≥95% arm (owner-decided,
+  `plan.md`) remains open. Banked gate claims still report the histogram and max
+  interval alongside P50/P95 (AGENTS.md).
+- **The fresh per-PC census is on disk**:
+  `artifacts/performance/2026-08-17_shipping-rebank/v4-c238/` (54,913,786 PC
+  rows, shipping config), with the gate-mask reductions beside it. **Use it, do
+  not take another** — `c200` (GX=1-era) and `v3-c221` (GX=0) are both retired.
+  §7.7 of `SHIPPING_REBANK.md` lists what it contradicts in 01/05/07/11/12/13/14;
+  the largest are `ndsRendererMtxMulAffine20p12` **18,549 → 384 tk/fr** (GX
+  compose retired it; its 616 B of ITCM is now waste) and the card filesystem at
+  **9.07× concentration** on the gate's own rank-80 frames.
+- **Mask the census by the GATE's frames, not by the profile's own axis.**
+  `total_cycles - halt_wait` includes the tick-HUD's console render, which
+  `WORK-H` subtracts: under the profile's own marginal-80,
+  `ndsPlatformRenderDebugHud` is the largest named owner at 8.8%; under the
+  gate's own rank-80 frames it is 0.9%. `region = frame - 440` (derived
+  empirically; the harness banner says 439).
+- **The gap is still excursion, not level, and it grew**: the sixteen lane
+  medians sum to 875,904 against a raw gate of 1,145,327, so **the median frame
+  passes by 269,423** (218,767 on the c220 basis, 265,263 on c234). Size every
+  candidate with the `convert.py`-style uniform-D re-rank **at rank-80** — it
+  converts at ratio 1.000 from D=5,440 to D=100,000 — and never with a
+  clip-to-median excess.
 - Measurement law lives in `docs/VERIFYING.md` + the board's standing rules.
   Shorthand carried by all briefs: same-binary route A/B preferred; cross-build
   placement floor ≥14,080; same-binary paired-median floor ~5,440; the 2^22
@@ -56,10 +72,9 @@ re-derive measurements at execution time; never bank projections.
 
 ## Suggested order (dependencies, not a queue)
 
-**Step 0 — re-base (blocks all sizing)**
-- Re-bank the shipping level (GX compose ON) with a whole-match run + cadence
-  histogram, and take a fresh per-PC census on that config. Cheap, no design
-  risk, and every campaign below sizes against it.
+**Step 0 — re-base (DONE 2026-08-17, `SHIPPING_REBANK.md`)**
+- Level `+26,449`, cadence 87.44%, census `v4-c238`. Nothing below needs to
+  re-measure the basis; read §7.7 before quoting any pre-2026-08-17 attribution.
 
 **Foundation**
 - **09** ARM/Thumb partitioning — Phase 1 (ISA ↔ TCM decoupling + shipping
@@ -67,12 +82,27 @@ re-derive measurements at execution time; never bank projections.
   only reference it. Still open; the repack worked within the old rules.
 
 **Fully diagnosed, cheap, low-risk**
-- **04** Draw-memo completion — Phase 2 (delete the 1,280 B/frame copy) is
-  sketched in `DRAW_MEMO.md` §7; part of a known 4,901 tk/fr overhead.
+- **14 residual — PROMOTED, it is now the best-shaped item on the board.** The
+  card filesystem is **9.07× concentrated on the gate's own rank-80 frames**:
+  `get_fat` 1,424 → 12,907 tk/fr, `f_lseek` 886 → 8,073, `f_read` 239 → 2,928 =
+  **23,908 tk/fr on exactly the 80 frames that set the gate, 90% of the whole
+  requirement**. `ndsRelocGetFileData` is flat (conc 1.04) and genuinely quiet,
+  so this is a *different* reader than the one the campaign closed. Fail-closed
+  invariant first, then find that reader.
+- **01/06 — ITCM has ≥2,178 B of measured eviction pool, not 16 B.**
+  `ndsRendererMtxMulAffine20p12` fell **18,549 → 384 tk/fr** (52.94 → 1.19
+  calls/frame) when GX compose shipped, and still rents 616 B at 1,993.8
+  cyc/byte; `ndsRendererLoadHardwareSplitMatrices` 392 B at 170.3; and the
+  census names **14 never-executed residents, 1,170 B idle**. The repack's own
+  named runner-up missed by 28 B. Re-run the knapsack on `v4-c238`.
+- **04** Draw-memo completion — Phase 2's 1,280 B/frame copy is now **sized at
+  ~500–1,500 tk/fr and is BELOW every floor this instrument has**; it must ride
+  with a larger slice (`SHIPPING_REBANK.md` §6). What Phase 2 should take first
+  is new: the grab-fix seam blows the memo **313 times a match**
+  (hit rate 96.19% → 88.20%), and those frames are 3.5–4.0× concentrated on the
+  gate's own rank-80 frames (§4).
 - **15** Dream Land collision tables — extends the proven slices 35–37
   playbook (−10,752 banked, bit-identical by construction).
-- **14 residual** — make the GO/pre-BGM invariant fail-closed and extend it
-  past animation (texture conversion, reloc normalization).
 
 **Big rocks (each may span many cycles; keep slices small and banked)**
 - **03** Compact AOT animation representation — attacks the attach-driven
@@ -80,20 +110,27 @@ re-derive measurements at execution time; never bank projections.
   Carries the owner-closed transition-play constraint: the transition-frame
   play is the sole writer of the new status's first pose. **Do not re-propose
   skipping it.**
-- **12** Simulation Q chains — 142,786 reservoir (re-attribute on the new
-  shipping census first); warm-MAC subset 71,491 in 14 functions; collision
-  bodies carry a renderer coupling (`parts->mtx_translate`) — read the brief's
-  caution before touching them.
-- **13** Draw-side fixed point — ≈22,521 board estimate, stale twice over;
-  re-derive from the new shipping census. Coordinate with 05's one live seam
-  (`ndsRendererAdapterBuildDObjLocalMatrix` f32 boundary).
+- **12** Simulation Q chains — re-measured: the reservoir is **147,180 tk/fr**
+  caller-attributed on the gate-80 mask, of which the strictly simulation
+  subsystems are **87,085** (`SIMSIDE.md`'s 83,204, agreeing to 4.5%). The size
+  held; the **ratio did not** — "1.511× the requirement" was against +94,481, and
+  against +26,449 it is **5.57×**. Collision bodies carry a renderer coupling
+  (`parts->mtx_translate`) — read the brief's caution before touching them.
+- **13** Draw-side fixed point — measured: renderer + particles **11,859 tk/fr**
+  on the gate-80 mask, plus 16,447 of matrices/transform shared with the camera.
+  Always label the mask. Coordinate with 05's one live seam
+  (`ndsRendererAdapterBuildDObjLocalMatrix`, now **4,829 whole / 5,142 gate-80,
+  conc 1.06**).
 - **05 residual** — joint-consumer classification, AOT folding, fixed-native
-  local matrices into the now-shipping GX compose; feeds 11.
+  local matrices into the now-shipping GX compose (`Roots 62,952`, `Declines 0`,
+  `LoadHardwareGxComposedMatrices` 13,319 / 14,082, conc 1.06); feeds 11.
 - **11** AOT-native renderer (**Task 51**, `NDS_BATTLE_PROFILE=0` seam) — the
   four-fighter-headroom structural change; consumes 04's memo seam and 05's
-  ownership data. The GX=0-era attribution said `FTR` was 59.3% cache fill:
-  the win is deleting resident walk/decode code, not arithmetic — re-derive
-  the split on the new census.
+  ownership data. Cache fill still beats arithmetic on the shipping census
+  (`icache_fill` 32.0% + `dcache_fill` 25.9% = 57.9% on the gate's own frames,
+  `issue` 28.8%), so the win is still deleting resident walk/decode code — but
+  **`FTR` is no longer flat**: conc 1.05 with 12,928 of excess at rank-80, and
+  the per-phase split in the brief predates GX compose (§7.7).
 
 **Continuous / dividend consumers**
 - **06** Soft-float elimination — **urgency went UP**: ITCM has 16 B free and
