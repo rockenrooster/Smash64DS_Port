@@ -80,9 +80,58 @@ owner's call. **The banked cadence was therefore 0.49 points optimistic, and the
 tick arm's −18,095 margin is UNVERIFIED at the shipping defaults — sizing a candidate
 against +26,449 is sizing it against a ROM nobody runs.**
 
-**NEXT, and it is the only thing between here and an honest requirement:** re-bank the
-tick arm on `build-c246-tickship` (tick-HUD target, `NDS_R2_BOTH_CPU=1`, pack off), one
-whole-match `-RingDump`, `-StartFrame 439 -Samples 1600`.
+**THE TICK ARM IS RE-BANKED AT THE SHIPPING DEFAULTS AND IT FAILS: REQUIREMENT
++16,209.** `build-c246-tickship` is `build-c239-itcm-repack2` with the two pack flags
+off and nothing else — ROM `DECCB900…`, same instrument, same 1,600-sample `-RingDump`
+at `-StartFrame 439`, DLDI on, `BOTH_CPU=1`.
+
+| | `c239` pack **on** (banked) | **`c246` pack off = SHIPPING** | delta |
+|---|---:|---:|---:|
+| P50 | 841,024 | 844,992 | +3,968 |
+| P90 | 1,027,776 | 1,046,272 | +18,496 |
+| **rank-80 raw / net** | 1,127,232 / 1,102,285 | **1,161,536 / 1,136,589** | **+34,304** |
+| band 41–120 | 1,130,086.4 | 1,165,102.4 | +35,016 |
+| top-1% | 1,396,288 | 1,428,864 | +32,576 |
+| max | 1,812,672 | 1,928,320 | +115,648 |
+| over gate, of 1,600 | 88 | **101** | **+13** |
+| **REQUIREMENT vs 1,120,380** | **−18,095** | **+16,209** | |
+
+`artifacts/performance/2026-08-17_ship-cadence/rebank.py` reproduces **every** banked
+`c239` figure from that run's own rows before it is pointed at `c246`, so it is checked
+against the bank rather than asserted. **+34,304 is 2.44× the ≥14,080 cross-build floor**,
+and the over-gate delta **+13 is the same 13 frames the cadence isolation measured on a
+different instrument and a different metric.**
+
+**Equivalence: 19 of 21 retained counters bit-identical to `c239`.** The two that moved:
+`gNdsParticleCameraCacheHitCount` 4,324 → 4,323, and `gNdsTaskmanGeneralHeapFreeMin`
+53,136 → **70,736, exactly +17,600 — the number `Makefile:345-347` predicted before this
+run, to the byte.** A control that could have failed.
+
+**THE TWO GATE ARMS NOW DISAGREE IN SIGN, AND THE REASON IS THE POPULATION.**
+
+```text
+cadence arm   ALL 2,043 presented frames, entry window included
+              c245 published: 98 over the boundary -> 95.20%   PASSES
+tick arm      the 1,600-frame gameplay window, frames 440-2039
+              c246 shipping:  101 over the gate   -> 93.69%    FAILS by 16,209
+```
+
+The ~443 entry frames are almost entirely 2-VBlank (`CADENCE_ARM.md` §3 read that window
+at 97.49%), so including them lifts the rate by ~1.5 points.
+`Smash64DS_Runtime2_SwitchPlan.md` §7 says *"the whole match … loading states excluded"*,
+which is the 1,600. **Nothing should be reported as a pass while the two arms are read
+over different denominators.** That is a basis question and it is the owner's.
+
+**THE LARGEST AVAILABLE LEVER IS A DECISION, NOT ENGINEERING.**
+`NDS_R2_BATTLEPACK=1` is **−34,304 at rank-80 — 2.1× the requirement**, turning +16,209
+into −18,095, plus 13 frames of cadence. Its *"LAB ONLY, NOT SHIPPABLE AS CONFIGURED"*
+label was **withdrawn 2026-08-15** (`Makefile:340-351`, `ARENA_PRICE.md`) on a measured
+stress battery — 12 battle entries, 7 matches, 7 START restarts, 4 Sudden Deaths,
+NO-FREEZE, `AllocFail`/`ReserveFail`/`Rejects`/`SyMallocOverflow` all 0 — and this run
+adds the independent heap confirmation above. The only thing holding the default at 0 is
+`Makefile:360-361` reserving the flip for the owner. **The campaign has been implicitly
+banking the pack for weeks; flipping it does not *find* 34,304 ticks, it stops the basis
+and the ROM disagreeing.**
 
 **RECURRENCE — recorded, not written.** A `scripts/check-shipping-basis.ps1` that
 resolves the published target's `nds_build_config.h` into a throwaway build directory and
