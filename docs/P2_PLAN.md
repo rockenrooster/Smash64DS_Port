@@ -86,6 +86,19 @@ Ordering rationale (owner-ratified 2026-08-17):
 - Standing permission to keep `CLAUDE.md`/`AGENTS.md` board and Boundary
   pointers current as phases land (content rules untouched).
 
+## Owner decisions log (2026-08-18)
+
+- **All first-party branding and original presentation assets ship** —
+  logos, title/boot screens, menu artwork, copyright text — converted from
+  source like every other asset; no invented "identity-safe" placeholders.
+  (Recorded contract-side in `PROJECT_GOAL.md` Visual Requirements.)
+- Boot goes **straight to the original title screen** (no invented splash);
+  the intro cinematic precedes it when P2-7 lands, matching the N64 flow.
+- DS system-menu banner (icon + title text) carries **original branding**.
+- The menu collage (`llMNCommonSmashBrosCollageSprite`) is required content
+  and lands **now**, ahead of P2-2 — board row P2-1h, via the cheapest
+  `docs/p2/P2-1c-vram-map.md` option that holds 60 Hz menus.
+
 ## Top risks
 
 1. **4-fighter frame cost** — P1 margin was thin at 2 fighters. Mitigation

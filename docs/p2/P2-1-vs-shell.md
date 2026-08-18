@@ -5,11 +5,19 @@ and Dream Land selectable. Everything later plugs into the seams built here.
 
 ## Scope
 
-Boot → splash (identity-safe, no first-party branding) → title screen (music,
-PRESS START) → main menu → VS mode → character select → stage select → load →
-battle → results → back to character select, indefinitely. 1P GAME / OPTIONS /
-DATA entries present but greyed until their phases land. Intro cinematic is
-**deferred to P2-7** (owner, 2026-08-17).
+Boot → title screen (the original title presentation: logo art, copyright
+line, music, PRESS START) → main menu → VS mode → character select → stage
+select → load → battle → results → back to character select, indefinitely.
+1P GAME / OPTIONS / DATA entries present but greyed until their phases land.
+Intro cinematic is **deferred to P2-7** (owner, 2026-08-17); until it lands,
+boot goes straight to title — the N64 game has no separate splash screen, so
+none is invented here.
+
+**Fidelity ruling (owner, 2026-08-18): this is a port — ALL original
+presentation assets ship, including first-party branding, logos, title/boot
+screens, menu artwork, and copyright text, converted from source like every
+other asset. Never substitute invented "identity-safe" placeholders.** The
+menu collage backlog from this ruling is board row P2-1h.
 
 ## Work breakdown
 

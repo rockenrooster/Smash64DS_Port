@@ -420,6 +420,13 @@ The following compromises are explicitly allowed:
 
 The result only needs to remain recognizable, readable during gameplay, and consistent with the identity of SSB64.
 
+Presentation identity includes the original's own presentation assets: title
+and boot screens, logos and first-party branding, menu artwork, fonts, and
+copyright text are content to be converted like any other asset (owner,
+2026-08-18). Do not substitute invented or "identity-safe" placeholder
+branding. The compromises above govern **how** such assets are realized
+within DS budgets, never **whether** they appear.
+
 ---
 
 ## Audio Requirements

@@ -30,7 +30,8 @@ soon as records exist to save).
    opening in-engine within visual doctrine (timeboxed approximation,
    skippable). Master Hand desk scene + character vignettes.
 8. **DS platform polish.** Lid-close sleep, soft-reset safety, low-battery
-   save safety, clean boot on retail flashcart, icon/banner metadata.
+   save safety, clean boot on retail flashcart, icon/banner metadata
+   (original branding — owner ruling 2026-08-18).
 9. **Menu completion.** 1P GAME / OPTIONS / DATA entries go live; Bonus
    Practice (BTT/BTP select) menu; CSS/SSS unlock-gating flips from dev-open
    to save-driven.
