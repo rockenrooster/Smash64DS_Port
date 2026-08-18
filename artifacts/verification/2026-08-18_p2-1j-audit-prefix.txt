@@ -1,0 +1,447 @@
+=== P2-1j screen asset-coverage audit (source -> shipped) ===
+
+-- title: Title screen
+   source sprites reachable from FuncStart: 43  (unreachable, not audited: 0)  fill panels: 0
+   we draw 3 kit tokens covering 39 source sprites
+   MISSING     llMNTitleLogoAnimCutoutSprite
+               mn/mncommon/mntitle.c:22 in <file scope>()
+   MISSING     llMNTitleLogoAnimStrikeHSprite
+               mn/mncommon/mntitle.c:24 in <file scope>()
+   MISSING     llMNTitleLogoAnimStrikeVSprite
+               mn/mncommon/mntitle.c:23 in <file scope>()
+   MISSING     llMNTitleTMSprite
+               mn/mncommon/mntitle.c:92 in <file scope>()
+
+-- mode_select: Main menu (mode select)
+   source sprites reachable from FuncStart: 17  (unreachable, not audited: 0)  fill panels: 0
+   we draw 5 kit tokens covering 17 source sprites
+   no deltas
+
+-- vs_mode: VS menu (rules)
+   source sprites reachable from FuncStart: 31  (unreachable, not audited: 0)  fill panels: 1
+   we draw 13 kit tokens covering 13 source sprites
+   MISSING     llMNCommonArrowLSprite
+               mn/mnvsmode/mnvsmode.c:438 in mnVSModeMakeLeftArrow()
+   MISSING     llMNCommonArrowRSprite
+               mn/mnvsmode/mnvsmode.c:454 in mnVSModeMakeRightArrow()
+   MISSING     llMNCommonDecalPaperSprite
+               mn/mnvsmode/mnvsmode.c:976 in mnVSModeMakeBackground()
+   MISSING     llMNCommonGameModeTextSprite
+               mn/mnvsmode/mnvsmode.c:953 in mnVSModeMakeMenuName()
+   MISSING     llMNCommonOptionTabLeftSprite
+               mn/mnvsmode/mnvsmode.c:286 in mnVSModeMakeButton()
+   MISSING     llMNCommonOptionTabMiddleSprite
+               mn/mnvsmode/mnvsmode.c:292 in mnVSModeMakeButton()
+   MISSING     llMNCommonOptionTabRightSprite
+               mn/mnvsmode/mnvsmode.c:304 in mnVSModeMakeButton()
+   MISSING     llMNCommonSmashLogoSprite
+               mn/mnvsmode/mnvsmode.c:935 in mnVSModeMakeMenuName()
+   MISSING     llMNVSModeConsoleIconDarkSprite
+               mn/mnvsmode/mnvsmode.c:994 in mnVSModeMakeBackground()
+   MISSING     llMNVSModeMinTextSprite
+               mn/mnvsmode/mnvsmode.c:701 in mnVSModeMakeTimeStockButton()
+   MISSING     llMNVSModeRulePeriodTextSprite
+               mn/mnvsmode/mnvsmode.c:604 in mnVSModeMakeRuleButton()
+   MISSING     llMNVSModeStockPeriodTextSprite
+               mn/mnvsmode/mnvsmode.c:712 in mnVSModeMakeTimeStockButton()
+   MISSING     llMNVSModeStockTextSprite
+               mn/mnvsmode/mnvsmode.c:349 in mnVSModeMakeRuleValue()
+   MISSING     llMNVSModeTeamTextSprite
+               mn/mnvsmode/mnvsmode.c:378 in mnVSModeMakeRuleValue()
+   MISSING     llMNVSModeTimePeriodTextSprite
+               mn/mnvsmode/mnvsmode.c:692 in mnVSModeMakeTimeStockButton()
+   MISSING     llMNVSModeTimeTextSprite
+               mn/mnvsmode/mnvsmode.c:359 in mnVSModeMakeRuleValue()
+   MISSING     llMNVSModeVSOptionsTextSprite
+               mn/mnvsmode/mnvsmode.c:736 in mnVSModeMakeVSOptionsButton()
+   MISSING     llMNVSModeVSStartTextSprite
+               mn/mnvsmode/mnvsmode.c:323 in mnVSModeMakeVSStartButton()
+   MISSING     llMNVSModeVSTextSprite
+               mn/mnvsmode/mnvsmode.c:944 in mnVSModeMakeMenuName()
+   EXTRA       IMAGE_CSS_CURSOR_POINT
+               drawn at src\nds\nds_menu_shell.c:1070 from ['llMNPlayersCommonCursorHandPointSprite']
+
+-- css: Character select
+   source sprites reachable from FuncStart: 104  (unreachable, not audited: 0)  fill panels: 0
+   we draw 23 kit tokens covering 23 source sprites
+   MISSING     llFTEmblemSpritesDonkeySprite
+               mn/mnplayers/mnplayersvs.c:593 in mnPlayersVSMakeNameAndEmblem()
+   MISSING     llFTEmblemSpritesFZeroSprite
+               mn/mnplayers/mnplayersvs.c:595 in mnPlayersVSMakeNameAndEmblem()
+   MISSING     llFTEmblemSpritesFoxSprite
+               mn/mnplayers/mnplayersvs.c:592 in mnPlayersVSMakeNameAndEmblem()
+   MISSING     llFTEmblemSpritesKirbySprite
+               mn/mnplayers/mnplayersvs.c:596 in mnPlayersVSMakeNameAndEmblem()
+   MISSING     llFTEmblemSpritesMarioSprite
+               mn/mnplayers/mnplayersvs.c:592 in mnPlayersVSMakeNameAndEmblem()
+   MISSING     llFTEmblemSpritesMetroidSprite
+               mn/mnplayers/mnplayersvs.c:593 in mnPlayersVSMakeNameAndEmblem()
+   MISSING     llFTEmblemSpritesMotherSprite
+               mn/mnplayers/mnplayersvs.c:597 in mnPlayersVSMakeNameAndEmblem()
+   MISSING     llFTEmblemSpritesPMonstersSprite
+               mn/mnplayers/mnplayersvs.c:596 in mnPlayersVSMakeNameAndEmblem()
+   MISSING     llFTEmblemSpritesYoshiSprite
+               mn/mnplayers/mnplayersvs.c:595 in mnPlayersVSMakeNameAndEmblem()
+   MISSING     llFTEmblemSpritesZeldaSprite
+               mn/mnplayers/mnplayersvs.c:594 in mnPlayersVSMakeNameAndEmblem()
+   MISSING     llMNCommonColonSprite
+               mn/mnplayers/mnplayersvs.c:2734 in mnPlayersVSMakeHandicapLevel()
+   MISSING     llMNPlayersCommon0DarkSprite
+               mn/mnplayers/mnplayersvs.c:1181 in mnPlayersVSMakeGameRuleNumber()
+   MISSING     llMNPlayersCommon1DarkSprite
+               mn/mnplayers/mnplayersvs.c:1182 in mnPlayersVSMakeGameRuleNumber()
+   MISSING     llMNPlayersCommon1PTextGradientSprite
+               mn/mnplayers/mnplayersvs.c:1719 in mnPlayersVSUpdateCursor()
+   MISSING     llMNPlayersCommon1PTextSprite
+               mn/mnplayers/mnplayersvs.c:976 in mnPlayersVSMakePlayerKind()
+   MISSING     llMNPlayersCommon2DarkSprite
+               mn/mnplayers/mnplayersvs.c:1183 in mnPlayersVSMakeGameRuleNumber()
+   MISSING     llMNPlayersCommon2PPuckSprite
+               mn/mnplayers/mnplayersvs.c:3435 in mnPlayersVSUpdatePuck()
+   MISSING     llMNPlayersCommon2PTextGradientSprite
+               mn/mnplayers/mnplayersvs.c:1720 in mnPlayersVSUpdateCursor()
+   MISSING     llMNPlayersCommon2PTextSprite
+               mn/mnplayers/mnplayersvs.c:976 in mnPlayersVSMakePlayerKind()
+   MISSING     llMNPlayersCommon3DarkSprite
+               mn/mnplayers/mnplayersvs.c:1184 in mnPlayersVSMakeGameRuleNumber()
+   MISSING     llMNPlayersCommon3PPuckSprite
+               mn/mnplayers/mnplayersvs.c:3436 in mnPlayersVSUpdatePuck()
+   MISSING     llMNPlayersCommon3PTextGradientSprite
+               mn/mnplayers/mnplayersvs.c:1721 in mnPlayersVSUpdateCursor()
+   MISSING     llMNPlayersCommon3PTextSprite
+               mn/mnplayers/mnplayersvs.c:977 in mnPlayersVSMakePlayerKind()
+   MISSING     llMNPlayersCommon4DarkSprite
+               mn/mnplayers/mnplayersvs.c:1185 in mnPlayersVSMakeGameRuleNumber()
+   MISSING     llMNPlayersCommon4PPuckSprite
+               mn/mnplayers/mnplayersvs.c:3437 in mnPlayersVSUpdatePuck()
+   MISSING     llMNPlayersCommon4PTextGradientSprite
+               mn/mnplayers/mnplayersvs.c:1722 in mnPlayersVSUpdateCursor()
+   MISSING     llMNPlayersCommon4PTextSprite
+               mn/mnplayers/mnplayersvs.c:977 in mnPlayersVSMakePlayerKind()
+   MISSING     llMNPlayersCommon5DarkSprite
+               mn/mnplayers/mnplayersvs.c:1186 in mnPlayersVSMakeGameRuleNumber()
+   MISSING     llMNPlayersCommon6DarkSprite
+               mn/mnplayers/mnplayersvs.c:1187 in mnPlayersVSMakeGameRuleNumber()
+   MISSING     llMNPlayersCommon7DarkSprite
+               mn/mnplayers/mnplayersvs.c:1188 in mnPlayersVSMakeGameRuleNumber()
+   MISSING     llMNPlayersCommon8DarkSprite
+               mn/mnplayers/mnplayersvs.c:1189 in mnPlayersVSMakeGameRuleNumber()
+   MISSING     llMNPlayersCommon9DarkSprite
+               mn/mnplayers/mnplayersvs.c:1190 in mnPlayersVSMakeGameRuleNumber()
+   MISSING     llMNPlayersCommonArrowLSprite
+               mn/mnplayers/mnplayersvs.c:2655 in mnPlayersVSArrowThreadUpdate()
+   MISSING     llMNPlayersCommonArrowRSprite
+               mn/mnplayers/mnplayersvs.c:2673 in mnPlayersVSArrowThreadUpdate()
+   MISSING     llMNPlayersCommonBackButtonSprite
+               mn/mnplayers/mnplayersvs.c:1444 in mnPlayersVSMakeLabels()
+   MISSING     llMNPlayersCommonBlueLabelSprite
+               mn/mnplayers/mnplayersvs.c:495 in mnPlayersVSMakeTeamSelect()
+   MISSING     llMNPlayersCommonCPTextSprite
+               mn/mnplayers/mnplayersvs.c:986 in mnPlayersVSMakePlayerKind()
+   MISSING     llMNPlayersCommonCaptainFalconTextSprite
+               mn/mnplayers/mnplayersvs.c:604 in mnPlayersVSMakeNameAndEmblem()
+   MISSING     llMNPlayersCommonDKTextSprite
+               mn/mnplayers/mnplayersvs.c:602 in mnPlayersVSMakeNameAndEmblem()
+   MISSING     llMNPlayersCommonFoxTextSprite
+               mn/mnplayers/mnplayersvs.c:601 in mnPlayersVSMakeNameAndEmblem()
+   MISSING     llMNPlayersCommonGreenLabelSprite
+               mn/mnplayers/mnplayersvs.c:496 in mnPlayersVSMakeTeamSelect()
+   MISSING     llMNPlayersCommonHandicapTextSprite
+               mn/mnplayers/mnplayersvs.c:2717 in mnPlayersVSMakeHandicapLevel()
+   MISSING     llMNPlayersCommonInfinityDarkSprite
+               mn/mnplayers/mnplayersvs.c:1232 in mnPlayersVSMakeTimeSetting()
+   MISSING     llMNPlayersCommonJigglypuffTextSprite
+               mn/mnplayers/mnplayersvs.c:606 in mnPlayersVSMakeNameAndEmblem()
+   MISSING     llMNPlayersCommonKirbyTextSprite
+               mn/mnplayers/mnplayersvs.c:605 in mnPlayersVSMakeNameAndEmblem()
+   MISSING     llMNPlayersCommonLinkTextSprite
+               mn/mnplayers/mnplayersvs.c:603 in mnPlayersVSMakeNameAndEmblem()
+   MISSING     llMNPlayersCommonLuigiTextSprite
+               mn/mnplayers/mnplayersvs.c:603 in mnPlayersVSMakeNameAndEmblem()
+   MISSING     llMNPlayersCommonMarioTextSprite
+               mn/mnplayers/mnplayersvs.c:601 in mnPlayersVSMakeNameAndEmblem()
+   MISSING     llMNPlayersCommonNessTextSprite
+               mn/mnplayers/mnplayersvs.c:606 in mnPlayersVSMakeNameAndEmblem()
+   MISSING     llMNPlayersCommonPikachuTextSprite
+               mn/mnplayers/mnplayersvs.c:605 in mnPlayersVSMakeNameAndEmblem()
+   MISSING     llMNPlayersCommonPressTextSprite
+               mn/mnplayers/mnplayersvs.c:4151 in mnPlayersVSMakeReady()
+   MISSING     llMNPlayersCommonReadyBannerSprite
+               mn/mnplayers/mnplayersvs.c:4116 in mnPlayersVSMakeReady()
+   MISSING     llMNPlayersCommonReadyToFightTextSprite
+               mn/mnplayers/mnplayersvs.c:4134 in mnPlayersVSMakeReady()
+   MISSING     llMNPlayersCommonRedCardSprite
+               mn/mnplayers/mnplayersvs.c:1039 in mnPlayersVSMakeGate()
+   MISSING     llMNPlayersCommonRedLabelSprite
+               mn/mnplayers/mnplayersvs.c:494 in mnPlayersVSMakeTeamSelect()
+   MISSING     llMNPlayersCommonSamusTextSprite
+               mn/mnplayers/mnplayersvs.c:602 in mnPlayersVSMakeNameAndEmblem()
+   MISSING     llMNPlayersCommonSmashLogoCardLeftSprite
+               mn/mnplayers/mnplayersvs.c:1084 in mnPlayersVSMakeGate()
+   MISSING     llMNPlayersCommonSmashLogoCardRightSprite
+               mn/mnplayers/mnplayersvs.c:1099 in mnPlayersVSMakeGate()
+   MISSING     llMNPlayersCommonStartTextSprite
+               mn/mnplayers/mnplayersvs.c:4167 in mnPlayersVSMakeReady()
+   MISSING     llMNPlayersCommonStockSelectorSprite
+               mn/mnplayers/mnplayersvs.c:1327 in mnPlayersVSMakeStockSelect()
+   MISSING     llMNPlayersCommonTimeSelectorSprite
+               mn/mnplayers/mnplayersvs.c:1274 in mnPlayersVSMakeTimeSelect()
+   MISSING     llMNPlayersCommonYoshiTextSprite
+               mn/mnplayers/mnplayersvs.c:604 in mnPlayersVSMakeNameAndEmblem()
+   MISSING     llMNPlayersGameModesFreeForAllTextSprite
+               mn/mnplayers/mnplayersvs.c:1390 in mnPlayersVSMakeLabels()
+   MISSING     llMNPlayersGameModesTeamBattleTextSprite
+               mn/mnplayers/mnplayersvs.c:1391 in mnPlayersVSMakeLabels()
+   MISSING     llMNPlayersPortraitsCaptainShadowSprite
+               mn/mnplayers/mnplayersvs.c:383 in mnPlayersVSMakePortraitShadow()
+   MISSING     llMNPlayersPortraitsCaptainSprite
+               mn/mnplayers/mnplayersvs.c:438 in mnPlayersVSMakePortrait()
+   MISSING     llMNPlayersPortraitsCrossSprite
+               mn/mnplayers/mnplayersvs.c:284 in mnPlayersVSPortraitAddCross()
+   MISSING     llMNPlayersPortraitsDonkeySprite
+               mn/mnplayers/mnplayersvs.c:436 in mnPlayersVSMakePortrait()
+   MISSING     llMNPlayersPortraitsKirbySprite
+               mn/mnplayers/mnplayersvs.c:439 in mnPlayersVSMakePortrait()
+   MISSING     llMNPlayersPortraitsLinkSprite
+               mn/mnplayers/mnplayersvs.c:437 in mnPlayersVSMakePortrait()
+   MISSING     llMNPlayersPortraitsLuigiShadowSprite
+               mn/mnplayers/mnplayersvs.c:382 in mnPlayersVSMakePortraitShadow()
+   MISSING     llMNPlayersPortraitsLuigiSprite
+               mn/mnplayers/mnplayersvs.c:437 in mnPlayersVSMakePortrait()
+   MISSING     llMNPlayersPortraitsNessShadowSprite
+               mn/mnplayers/mnplayersvs.c:385 in mnPlayersVSMakePortraitShadow()
+   MISSING     llMNPlayersPortraitsNessSprite
+               mn/mnplayers/mnplayersvs.c:440 in mnPlayersVSMakePortrait()
+   MISSING     llMNPlayersPortraitsPikachuSprite
+               mn/mnplayers/mnplayersvs.c:439 in mnPlayersVSMakePortrait()
+   MISSING     llMNPlayersPortraitsPortraitFireBgSprite
+               mn/mnplayers/mnplayersvs.c:392 in mnPlayersVSMakePortraitShadow()
+   MISSING     llMNPlayersPortraitsPurinShadowSprite
+               mn/mnplayers/mnplayersvs.c:385 in mnPlayersVSMakePortraitShadow()
+   MISSING     llMNPlayersPortraitsPurinSprite
+               mn/mnplayers/mnplayersvs.c:440 in mnPlayersVSMakePortrait()
+   MISSING     llMNPlayersPortraitsSamusSprite
+               mn/mnplayers/mnplayersvs.c:436 in mnPlayersVSMakePortrait()
+   MISSING     llMNPlayersPortraitsWhiteSquareSprite
+               mn/mnplayers/mnplayersvs.c:2464 in mnPlayersVSMakePortraitFlash()
+   MISSING     llMNPlayersPortraitsYoshiSprite
+               mn/mnplayers/mnplayersvs.c:438 in mnPlayersVSMakePortrait()
+
+-- sss: Stage select
+   source sprites reachable from FuncStart: 38  (unreachable, not audited: 29)  fill panels: 3
+   we draw 5 kit tokens covering 5 source sprites
+   MISSING     llFTEmblemSpritesDonkeySprite
+               mn/mnmaps/mnmaps.c:787 in mnMapsMakeEmblem()
+   MISSING     llFTEmblemSpritesFoxSprite
+               mn/mnmaps/mnmaps.c:786 in mnMapsMakeEmblem()
+   MISSING     llFTEmblemSpritesKirbySprite
+               mn/mnmaps/mnmaps.c:789 in mnMapsMakeEmblem()
+   MISSING     llFTEmblemSpritesMarioSprite
+               mn/mnmaps/mnmaps.c:786 in mnMapsMakeEmblem()
+   MISSING     llFTEmblemSpritesMetroidSprite
+               mn/mnmaps/mnmaps.c:787 in mnMapsMakeEmblem()
+   MISSING     llFTEmblemSpritesPMonstersSprite
+               mn/mnmaps/mnmaps.c:789 in mnMapsMakeEmblem()
+   MISSING     llFTEmblemSpritesYoshiSprite
+               mn/mnmaps/mnmaps.c:788 in mnMapsMakeEmblem()
+   MISSING     llFTEmblemSpritesZeldaSprite
+               mn/mnmaps/mnmaps.c:788 in mnMapsMakeEmblem()
+   MISSING     llGRWallpaperTrainingBlueSprite
+               mn/mnmaps/mnmaps.c:952 in mnMapsMakePreviewWallpaper()
+   MISSING     llMNMapsCongoJungleSprite
+               mn/mnmaps/mnmaps.c:516 in mnMapsMakeIcons()
+   MISSING     llMNMapsCongoJungleTextSprite
+               mn/mnmaps/mnmaps.c:585 in mnMapsMakeName()
+   MISSING     llMNMapsDreamLandTextSprite
+               mn/mnmaps/mnmaps.c:589 in mnMapsMakeName()
+   MISSING     llMNMapsHyruleCastleSprite
+               mn/mnmaps/mnmaps.c:517 in mnMapsMakeIcons()
+   MISSING     llMNMapsHyruleCastleTextSprite
+               mn/mnmaps/mnmaps.c:587 in mnMapsMakeName()
+   MISSING     llMNMapsMushroomKingdomSprite
+               mn/mnmaps/mnmaps.c:519 in mnMapsMakeIcons()
+   MISSING     llMNMapsMushroomKingdomTextSprite
+               mn/mnmaps/mnmaps.c:591 in mnMapsMakeName()
+   MISSING     llMNMapsPeachsCastleSprite
+               mn/mnmaps/mnmaps.c:515 in mnMapsMakeIcons()
+   MISSING     llMNMapsPeachsCastleTextSprite
+               mn/mnmaps/mnmaps.c:583 in mnMapsMakeName()
+   MISSING     llMNMapsPlanetZebesSprite
+               mn/mnmaps/mnmaps.c:516 in mnMapsMakeIcons()
+   MISSING     llMNMapsPlanetZebesTextSprite
+               mn/mnmaps/mnmaps.c:586 in mnMapsMakeName()
+   MISSING     llMNMapsPlateLeftSprite
+               mn/mnmaps/mnmaps.c:433 in mnMapsMakeLabels()
+   MISSING     llMNMapsPlateMiddleSprite
+               mn/mnmaps/mnmaps.c:442 in mnMapsMakeLabels()
+   MISSING     llMNMapsPlateRightSprite
+UNEXPLAINED DELTAS -- ship the element, or record the ruling in scripts\menus\mn_screen_coverage_allowlist.json:
+  title: MISSING llMNTitleLogoAnimCutoutSprite (mn/mncommon/mntitle.c:22 in <file scope>())
+  title: MISSING llMNTitleLogoAnimStrikeHSprite (mn/mncommon/mntitle.c:24 in <file scope>())
+  title: MISSING llMNTitleLogoAnimStrikeVSprite (mn/mncommon/mntitle.c:23 in <file scope>())
+  title: MISSING llMNTitleTMSprite (mn/mncommon/mntitle.c:92 in <file scope>())
+  vs_mode: MISSING llMNCommonArrowLSprite (mn/mnvsmode/mnvsmode.c:438 in mnVSModeMakeLeftArrow())
+  vs_mode: MISSING llMNCommonArrowRSprite (mn/mnvsmode/mnvsmode.c:454 in mnVSModeMakeRightArrow())
+  vs_mode: MISSING llMNCommonDecalPaperSprite (mn/mnvsmode/mnvsmode.c:976 in mnVSModeMakeBackground())
+  vs_mode: MISSING llMNCommonGameModeTextSprite (mn/mnvsmode/mnvsmode.c:953 in mnVSModeMakeMenuName())
+  vs_mode: MISSING llMNCommonOptionTabLeftSprite (mn/mnvsmode/mnvsmode.c:286 in mnVSModeMakeButton())
+  vs_mode: MISSING llMNCommonOptionTabMiddleSprite (mn/mnvsmode/mnvsmode.c:292 in mnVSModeMakeButton())
+  vs_mode: MISSING llMNCommonOptionTabRightSprite (mn/mnvsmode/mnvsmode.c:304 in mnVSModeMakeButton())
+  vs_mode: MISSING llMNCommonSmashLogoSprite (mn/mnvsmode/mnvsmode.c:935 in mnVSModeMakeMenuName())
+  vs_mode: MISSING llMNVSModeConsoleIconDarkSprite (mn/mnvsmode/mnvsmode.c:994 in mnVSModeMakeBackground())
+  vs_mode: MISSING llMNVSModeMinTextSprite (mn/mnvsmode/mnvsmode.c:701 in mnVSModeMakeTimeStockButton())
+  vs_mode: MISSING llMNVSModeRulePeriodTextSprite (mn/mnvsmode/mnvsmode.c:604 in mnVSModeMakeRuleButton())
+  vs_mode: MISSING llMNVSModeStockPeriodTextSprite (mn/mnvsmode/mnvsmode.c:712 in mnVSModeMakeTimeStockButton())
+  vs_mode: MISSING llMNVSModeStockTextSprite (mn/mnvsmode/mnvsmode.c:349 in mnVSModeMakeRuleValue())
+  vs_mode: MISSING llMNVSModeTeamTextSprite (mn/mnvsmode/mnvsmode.c:378 in mnVSModeMakeRuleValue())
+  vs_mode: MISSING llMNVSModeTimePeriodTextSprite (mn/mnvsmode/mnvsmode.c:692 in mnVSModeMakeTimeStockButton())
+  vs_mode: MISSING llMNVSModeTimeTextSprite (mn/mnvsmode/mnvsmode.c:359 in mnVSModeMakeRuleValue())
+  vs_mode: MISSING llMNVSModeVSOptionsTextSprite (mn/mnvsmode/mnvsmode.c:736 in mnVSModeMakeVSOptionsButton())
+  vs_mode: MISSING llMNVSModeVSStartTextSprite (mn/mnvsmode/mnvsmode.c:323 in mnVSModeMakeVSStartButton())
+  vs_mode: MISSING llMNVSModeVSTextSprite (mn/mnvsmode/mnvsmode.c:944 in mnVSModeMakeMenuName())
+  vs_mode: EXTRA IMAGE_CSS_CURSOR_POINT (drawn at src\nds\nds_menu_shell.c:1070 from ['llMNPlayersCommonCursorHandPointSprite'])
+  css: MISSING llFTEmblemSpritesDonkeySprite (mn/mnplayers/mnplayersvs.c:593 in mnPlayersVSMakeNameAndEmblem())
+  css: MISSING llFTEmblemSpritesFZeroSprite (mn/mnplayers/mnplayersvs.c:595 in mnPlayersVSMakeNameAndEmblem())
+  css: MISSING llFTEmblemSpritesFoxSprite (mn/mnplayers/mnplayersvs.c:592 in mnPlayersVSMakeNameAndEmblem())
+  css: MISSING llFTEmblemSpritesKirbySprite (mn/mnplayers/mnplayersvs.c:596 in mnPlayersVSMakeNameAndEmblem())
+  css: MISSING llFTEmblemSpritesMarioSprite (mn/mnplayers/mnplayersvs.c:592 in mnPlayersVSMakeNameAndEmblem())
+  css: MISSING llFTEmblemSpritesMetroidSprite (mn/mnplayers/mnplayersvs.c:593 in mnPlayersVSMakeNameAndEmblem())
+  css: MISSING llFTEmblemSpritesMotherSprite (mn/mnplayers/mnplayersvs.c:597 in mnPlayersVSMakeNameAndEmblem())
+  css: MISSING llFTEmblemSpritesPMonstersSprite (mn/mnplayers/mnplayersvs.c:596 in mnPlayersVSMakeNameAndEmblem())
+  css: MISSING llFTEmblemSpritesYoshiSprite (mn/mnplayers/mnplayersvs.c:595 in mnPlayersVSMakeNameAndEmblem())
+  css: MISSING llFTEmblemSpritesZeldaSprite (mn/mnplayers/mnplayersvs.c:594 in mnPlayersVSMakeNameAndEmblem())
+  css: MISSING llMNCommonColonSprite (mn/mnplayers/mnplayersvs.c:2734 in mnPlayersVSMakeHandicapLevel())
+  css: MISSING llMNPlayersCommon0DarkSprite (mn/mnplayers/mnplayersvs.c:1181 in mnPlayersVSMakeGameRuleNumber())
+  css: MISSING llMNPlayersCommon1DarkSprite (mn/mnplayers/mnplayersvs.c:1182 in mnPlayersVSMakeGameRuleNumber())
+  css: MISSING llMNPlayersCommon1PTextGradientSprite (mn/mnplayers/mnplayersvs.c:1719 in mnPlayersVSUpdateCursor())
+  css: MISSING llMNPlayersCommon1PTextSprite (mn/mnplayers/mnplayersvs.c:976 in mnPlayersVSMakePlayerKind())
+  css: MISSING llMNPlayersCommon2DarkSprite (mn/mnplayers/mnplayersvs.c:1183 in mnPlayersVSMakeGameRuleNumber())
+  css: MISSING llMNPlayersCommon2PPuckSprite (mn/mnplayers/mnplayersvs.c:3435 in mnPlayersVSUpdatePuck())
+  css: MISSING llMNPlayersCommon2PTextGradientSprite (mn/mnplayers/mnplayersvs.c:1720 in mnPlayersVSUpdateCursor())
+  css: MISSING llMNPlayersCommon2PTextSprite (mn/mnplayers/mnplayersvs.c:976 in mnPlayersVSMakePlayerKind())
+  css: MISSING llMNPlayersCommon3DarkSprite (mn/mnplayers/mnplayersvs.c:1184 in mnPlayersVSMakeGameRuleNumber())
+  css: MISSING llMNPlayersCommon3PPuckSprite (mn/mnplayers/mnplayersvs.c:3436 in mnPlayersVSUpdatePuck())
+  css: MISSING llMNPlayersCommon3PTextGradientSprite (mn/mnplayers/mnplayersvs.c:1721 in mnPlayersVSUpdateCursor())
+  css: MISSING llMNPlayersCommon3PTextSprite (mn/mnplayers/mnplayersvs.c:977 in mnPlayersVSMakePlayerKind())
+  css: MISSING llMNPlayersCommon4DarkSprite (mn/mnplayers/mnplayersvs.c:1185 in mnPlayersVSMakeGameRuleNumber())
+  css: MISSING llMNPlayersCommon4PPuckSprite (mn/mnplayers/mnplayersvs.c:3437 in mnPlayersVSUpdatePuck())
+  css: MISSING llMNPlayersCommon4PTextGradientSprite (mn/mnplayers/mnplayersvs.c:1722 in mnPlayersVSUpdateCursor())
+  css: MISSING llMNPlayersCommon4PTextSprite (mn/mnplayers/mnplayersvs.c:977 in mnPlayersVSMakePlayerKind())
+  css: MISSING llMNPlayersCommon5DarkSprite (mn/mnplayers/mnplayersvs.c:1186 in mnPlayersVSMakeGameRuleNumber())
+  css: MISSING llMNPlayersCommon6DarkSprite (mn/mnplayers/mnplayersvs.c:1187 in mnPlayersVSMakeGameRuleNumber())
+  css: MISSING llMNPlayersCommon7DarkSprite (mn/mnplayers/mnplayersvs.c:1188 in mnPlayersVSMakeGameRuleNumber())
+  css: MISSING llMNPlayersCommon8DarkSprite (mn/mnplayers/mnplayersvs.c:1189 in mnPlayersVSMakeGameRuleNumber())
+  css: MISSING llMNPlayersCommon9DarkSprite (mn/mnplayers/mnplayersvs.c:1190 in mnPlayersVSMakeGameRuleNumber())
+  css: MISSING llMNPlayersCommonArrowLSprite (mn/mnplayers/mnplayersvs.c:2655 in mnPlayersVSArrowThreadUpdate())
+  css: MISSING llMNPlayersCommonArrowRSprite (mn/mnplayers/mnplayersvs.c:2673 in mnPlayersVSArrowThreadUpdate())
+  css: MISSING llMNPlayersCommonBackButtonSprite (mn/mnplayers/mnplayersvs.c:1444 in mnPlayersVSMakeLabels())
+  css: MISSING llMNPlayersCommonBlueLabelSprite (mn/mnplayers/mnplayersvs.c:495 in mnPlayersVSMakeTeamSelect())
+  css: MISSING llMNPlayersCommonCPTextSprite (mn/mnplayers/mnplayersvs.c:986 in mnPlayersVSMakePlayerKind())
+  css: MISSING llMNPlayersCommonCaptainFalconTextSprite (mn/mnplayers/mnplayersvs.c:604 in mnPlayersVSMakeNameAndEmblem())
+  css: MISSING llMNPlayersCommonDKTextSprite (mn/mnplayers/mnplayersvs.c:602 in mnPlayersVSMakeNameAndEmblem())
+  css: MISSING llMNPlayersCommonFoxTextSprite (mn/mnplayers/mnplayersvs.c:601 in mnPlayersVSMakeNameAndEmblem())
+  css: MISSING llMNPlayersCommonGreenLabelSprite (mn/mnplayers/mnplayersvs.c:496 in mnPlayersVSMakeTeamSelect())
+  css: MISSING llMNPlayersCommonHandicapTextSprite (mn/mnplayers/mnplayersvs.c:2717 in mnPlayersVSMakeHandicapLevel())
+  css: MISSING llMNPlayersCommonInfinityDarkSprite (mn/mnplayers/mnplayersvs.c:1232 in mnPlayersVSMakeTimeSetting())
+  css: MISSING llMNPlayersCommonJigglypuffTextSprite (mn/mnplayers/mnplayersvs.c:606 in mnPlayersVSMakeNameAndEmblem())
+  css: MISSING llMNPlayersCommonKirbyTextSprite (mn/mnplayers/mnplayersvs.c:605 in mnPlayersVSMakeNameAndEmblem())
+  css: MISSING llMNPlayersCommonLinkTextSprite (mn/mnplayers/mnplayersvs.c:603 in mnPlayersVSMakeNameAndEmblem())
+  css: MISSING llMNPlayersCommonLuigiTextSprite (mn/mnplayers/mnplayersvs.c:603 in mnPlayersVSMakeNameAndEmblem())
+  css: MISSING llMNPlayersCommonMarioTextSprite (mn/mnplayers/mnplayersvs.c:601 in mnPlayersVSMakeNameAndEmblem())
+  css: MISSING llMNPlayersCommonNessTextSprite (mn/mnplayers/mnplayersvs.c:606 in mnPlayersVSMakeNameAndEmblem())
+  css: MISSING llMNPlayersCommonPikachuTextSprite (mn/mnplayers/mnplayersvs.c:605 in mnPlayersVSMakeNameAndEmblem())
+  css: MISSING llMNPlayersCommonPressTextSprite (mn/mnplayers/mnplayersvs.c:4151 in mnPlayersVSMakeReady())
+  css: MISSING llMNPlayersCommonReadyBannerSprite (mn/mnplayers/mnplayersvs.c:4116 in mnPlayersVSMakeReady())
+  css: MISSING llMNPlayersCommonReadyToFightTextSprite (mn/mnplayers/mnplayersvs.c:4134 in mnPlayersVSMakeReady())
+  css: MISSING llMNPlayersCommonRedCardSprite (mn/mnplayers/mnplayersvs.c:1039 in mnPlayersVSMakeGate())
+  css: MISSING llMNPlayersCommonRedLabelSprite (mn/mnplayers/mnplayersvs.c:494 in mnPlayersVSMakeTeamSelect())
+  css: MISSING llMNPlayersCommonSamusTextSprite (mn/mnplayers/mnplayersvs.c:602 in mnPlayersVSMakeNameAndEmblem())
+  css: MISSING llMNPlayersCommonSmashLogoCardLeftSprite (mn/mnplayers/mnplayersvs.c:1084 in mnPlayersVSMakeGate())
+  css: MISSING llMNPlayersCommonSmashLogoCardRightSprite (mn/mnplayers/mnplayersvs.c:1099 in mnPlayersVSMakeGate())
+  css: MISSING llMNPlayersCommonStartTextSprite (mn/mnplayers/mnplayersvs.c:4167 in mnPlayersVSMakeReady())
+  css: MISSING llMNPlayersCommonStockSelectorSprite (mn/mnplayers/mnplayersvs.c:1327 in mnPlayersVSMakeStockSelect())
+  css: MISSING llMNPlayersCommonTimeSelectorSprite (mn/mnplayers/mnplayersvs.c:1274 in mnPlayersVSMakeTimeSelect())
+  css: MISSING llMNPlayersCommonYoshiTextSprite (mn/mnplayers/mnplayersvs.c:604 in mnPlayersVSMakeNameAndEmblem())
+  css: MISSING llMNPlayersGameModesFreeForAllTextSprite (mn/mnplayers/mnplayersvs.c:1390 in mnPlayersVSMakeLabels())
+  css: MISSING llMNPlayersGameModesTeamBattleTextSprite (mn/mnplayers/mnplayersvs.c:1391 in mnPlayersVSMakeLabels())
+  css: MISSING llMNPlayersPortraitsCaptainShadowSprite (mn/mnplayers/mnplayersvs.c:383 in mnPlayersVSMakePortraitShadow())
+  css: MISSING llMNPlayersPortraitsCaptainSprite (mn/mnplayers/mnplayersvs.c:438 in mnPlayersVSMakePortrait())
+  css: MISSING llMNPlayersPortraitsCrossSprite (mn/mnplayers/mnplayersvs.c:284 in mnPlayersVSPortraitAddCross())
+  css: MISSING llMNPlayersPortraitsDonkeySprite (mn/mnplayers/mnplayersvs.c:436 in mnPlayersVSMakePortrait())
+  css: MISSING llMNPlayersPortraitsKirbySprite (mn/mnplayers/mnplayersvs.c:439 in mnPlayersVSMakePortrait())
+  css: MISSING llMNPlayersPortraitsLinkSprite (mn/mnplayers/mnplayersvs.c:437 in mnPlayersVSMakePortrait())
+  css: MISSING llMNPlayersPortraitsLuigiShadowSprite (mn/mnplayers/mnplayersvs.c:382 in mnPlayersVSMakePortraitShadow())
+  css: MISSING llMNPlayersPortraitsLuigiSprite (mn/mnplayers/mnplayersvs.c:437 in mnPlayersVSMakePortrait())
+  css: MISSING llMNPlayersPortraitsNessShadowSprite (mn/mnplayers/mnplayersvs.c:385 in mnPlayersVSMakePortraitShadow())
+  css: MISSING llMNPlayersPortraitsNessSprite (mn/mnplayers/mnplayersvs.c:440 in mnPlayersVSMakePortrait())
+  css: MISSING llMNPlayersPortraitsPikachuSprite (mn/mnplayers/mnplayersvs.c:439 in mnPlayersVSMakePortrait())
+  css: MISSING llMNPlayersPortraitsPortraitFireBgSprite (mn/mnplayers/mnplayersvs.c:392 in mnPlayersVSMakePortraitShadow())
+  css: MISSING llMNPlayersPortraitsPurinShadowSprite (mn/mnplayers/mnplayersvs.c:385 in mnPlayersVSMakePortraitShadow())
+  css: MISSING llMNPlayersPortraitsPurinSprite (mn/mnplayers/mnplayersvs.c:440 in mnPlayersVSMakePortrait())
+  css: MISSING llMNPlayersPortraitsSamusSprite (mn/mnplayers/mnplayersvs.c:436 in mnPlayersVSMakePortrait())
+  css: MISSING llMNPlayersPortraitsWhiteSquareSprite (mn/mnplayers/mnplayersvs.c:2464 in mnPlayersVSMakePortraitFlash())
+  css: MISSING llMNPlayersPortraitsYoshiSprite (mn/mnplayers/mnplayersvs.c:438 in mnPlayersVSMakePortrait())
+  sss: MISSING llFTEmblemSpritesDonkeySprite (mn/mnmaps/mnmaps.c:787 in mnMapsMakeEmblem())
+  sss: MISSING llFTEmblemSpritesFoxSprite (mn/mnmaps/mnmaps.c:786 in mnMapsMakeEmblem())
+  sss: MISSING llFTEmblemSpritesKirbySprite (mn/mnmaps/mnmaps.c:789 in mnMapsMakeEmblem())
+  sss: MISSING llFTEmblemSpritesMarioSprite (mn/mnmaps/mnmaps.c:786 in mnMapsMakeEmblem())
+  sss: MISSING llFTEmblemSpritesMetroidSprite (mn/mnmaps/mnmaps.c:787 in mnMapsMakeEmblem())
+  sss: MISSING llFTEmblemSpritesPMonstersSprite (mn/mnmaps/mnmaps.c:789 in mnMapsMakeEmblem())
+  sss: MISSING llFTEmblemSpritesYoshiSprite (mn/mnmaps/mnmaps.c:788 in mnMapsMakeEmblem())
+  sss: MISSING llFTEmblemSpritesZeldaSprite (mn/mnmaps/mnmaps.c:788 in mnMapsMakeEmblem())
+  sss: MISSING llGRWallpaperTrainingBlueSprite (mn/mnmaps/mnmaps.c:952 in mnMapsMakePreviewWallpaper())
+  sss: MISSING llMNMapsCongoJungleSprite (mn/mnmaps/mnmaps.c:516 in mnMapsMakeIcons())
+  sss: MISSING llMNMapsCongoJungleTextSprite (mn/mnmaps/mnmaps.c:585 in mnMapsMakeName())
+  sss: MISSING llMNMapsDreamLandTextSprite (mn/mnmaps/mnmaps.c:589 in mnMapsMakeName())
+  sss: MISSING llMNMapsHyruleCastleSprite (mn/mnmaps/mnmaps.c:517 in mnMapsMakeIcons())
+  sss: MISSING llMNMapsHyruleCastleTextSprite (mn/mnmaps/mnmaps.c:587 in mnMapsMakeName())
+  sss: MISSING llMNMapsMushroomKingdomSprite (mn/mnmaps/mnmaps.c:519 in mnMapsMakeIcons())
+  sss: MISSING llMNMapsMushroomKingdomTextSprite (mn/mnmaps/mnmaps.c:591 in mnMapsMakeName())
+  sss: MISSING llMNMapsPeachsCastleSprite (mn/mnmaps/mnmaps.c:515 in mnMapsMakeIcons())
+  sss: MISSING llMNMapsPeachsCastleTextSprite (mn/mnmaps/mnmaps.c:583 in mnMapsMakeName())
+  sss: MISSING llMNMapsPlanetZebesSprite (mn/mnmaps/mnmaps.c:516 in mnMapsMakeIcons())
+  sss: MISSING llMNMapsPlanetZebesTextSprite (mn/mnmaps/mnmaps.c:586 in mnMapsMakeName())
+  sss: MISSING llMNMapsPlateLeftSprite (mn/mnmaps/mnmaps.c:433 in mnMapsMakeLabels())
+  sss: MISSING llMNMapsPlateMiddleSprite (mn/mnmaps/mnmaps.c:442 in mnMapsMakeLabels())
+  sss: MISSING llMNMapsPlateRightSprite (mn/mnmaps/mnmaps.c:446 in mnMapsMakeLabels())
+  sss: MISSING llMNMapsQuestionMarkSprite (mn/mnmaps/mnmaps.c:795 in mnMapsMakeEmblem())
+  sss: MISSING llMNMapsRandomBigSprite (mn/mnmaps/mnmaps.c:931 in mnMapsMakePreviewWallpaper())
+  sss: MISSING llMNMapsSaffronCitySprite (mn/mnmaps/mnmaps.c:518 in mnMapsMakeIcons())
+  sss: MISSING llMNMapsSaffronCityTextSprite (mn/mnmaps/mnmaps.c:590 in mnMapsMakeName())
+  sss: MISSING llMNMapsSectorZSprite (mn/mnmaps/mnmaps.c:515 in mnMapsMakeIcons())
+  sss: MISSING llMNMapsSectorZTextSprite (mn/mnmaps/mnmaps.c:584 in mnMapsMakeName())
+  sss: MISSING llMNMapsStageSelectTextSprite (mn/mnmaps/mnmaps.c:418 in mnMapsMakeLabels())
+  sss: MISSING llMNMapsTilesSprite (mn/mnmaps/mnmaps.c:921 in mnMapsMakePreviewWallpaper())
+  sss: MISSING llMNMapsWoodenCircleSprite (mn/mnmaps/mnmaps.c:380 in mnMapsMakePlaque())
+  sss: MISSING llMNMapsYoshisIslandSprite (mn/mnmaps/mnmaps.c:517 in mnMapsMakeIcons())
+  sss: MISSING llMNMapsYoshisIslandTextSprite (mn/mnmaps/mnmaps.c:588 in mnMapsMakeName())
+  sss: EXTRA IMAGE_PORTRAIT_LOCKED (drawn at src\nds\nds_menu_shell.c:2559 from ['llMNPlayersPortraitsPortraitQuestionMarkSprite'])
+
+               mn/mnmaps/mnmaps.c:446 in mnMapsMakeLabels()
+   MISSING     llMNMapsQuestionMarkSprite
+               mn/mnmaps/mnmaps.c:795 in mnMapsMakeEmblem()
+   MISSING     llMNMapsRandomBigSprite
+               mn/mnmaps/mnmaps.c:931 in mnMapsMakePreviewWallpaper()
+   MISSING     llMNMapsSaffronCitySprite
+               mn/mnmaps/mnmaps.c:518 in mnMapsMakeIcons()
+   MISSING     llMNMapsSaffronCityTextSprite
+               mn/mnmaps/mnmaps.c:590 in mnMapsMakeName()
+   MISSING     llMNMapsSectorZSprite
+               mn/mnmaps/mnmaps.c:515 in mnMapsMakeIcons()
+   MISSING     llMNMapsSectorZTextSprite
+               mn/mnmaps/mnmaps.c:584 in mnMapsMakeName()
+   MISSING     llMNMapsStageSelectTextSprite
+               mn/mnmaps/mnmaps.c:418 in mnMapsMakeLabels()
+   MISSING     llMNMapsTilesSprite
+               mn/mnmaps/mnmaps.c:921 in mnMapsMakePreviewWallpaper()
+   MISSING     llMNMapsWoodenCircleSprite
+               mn/mnmaps/mnmaps.c:380 in mnMapsMakePlaque()
+   MISSING     llMNMapsYoshisIslandSprite
+               mn/mnmaps/mnmaps.c:517 in mnMapsMakeIcons()
+   MISSING     llMNMapsYoshisIslandTextSprite
+               mn/mnmaps/mnmaps.c:588 in mnMapsMakeName()
+   EXTRA       IMAGE_PORTRAIT_LOCKED
+               drawn at src\nds\nds_menu_shell.c:2559 from ['llMNPlayersPortraitsPortraitQuestionMarkSprite']
+
+allowlist: 0 ruled, 0 open, 0 stale
+unexplained deltas: 140

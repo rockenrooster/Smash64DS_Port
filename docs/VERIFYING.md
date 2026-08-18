@@ -353,6 +353,9 @@ Run only the relevant group:
 .\scripts\check-audio-bgm-derived-assets.ps1
 .\scripts\check-audio-fgm-phase-pack.ps1
 
+# Menus/UI
+.\scripts\check-mn-screen-coverage.ps1
+
 # Tooling/docs
 .\scripts\check-docs.ps1
 .\scripts\check-harness-registry.ps1
@@ -362,16 +365,55 @@ Run only the relevant group:
 Do not run all groups merely because they are cheap. `verify-dev-fast.ps1` is a
 cross-domain checkpoint helper, not an every-edit command.
 
-`verify-all.ps1` runs three of the forty-seven `check-*.ps1` scripts itself:
-`check-gbi-decode-fixtures`, `check-harness-registry`, and (since 2026-08-01)
-`check-nds-particle-banks`. The other forty-four are hand-run, which on
-2026-08-01 meant the particle-bank pins sat stale across a commit and cost seven
-failing runs of arrears to clear. **Actionable:** when a checker pins numbers
-that a generator can move, wire it into `verify-all.ps1` at the point of the
-change rather than trusting anyone to remember it. The generic version of that
-fix -- a static-checker aggregator -- is not worth building until a second
-checker has actually gone stale, because most of the forty-four need a specific
-ROM or build and would turn one wrapper into a fleet.
+`verify-all.ps1` runs four of the forty-eight `check-*.ps1` scripts itself:
+`check-gbi-decode-fixtures`, `check-harness-registry`, (since 2026-08-01)
+`check-nds-particle-banks`, and (since 2026-08-18) `check-mn-screen-coverage`.
+The other forty-four are hand-run, which on 2026-08-01 meant the particle-bank
+pins sat stale across a commit and cost seven failing runs of arrears to clear.
+**Actionable:** when a checker pins numbers that a generator can move, wire it
+into `verify-all.ps1` at the point of the change rather than trusting anyone to
+remember it. The generic version of that fix -- a static-checker aggregator --
+is not worth building until a second checker has actually gone stale, because
+most of the forty-four need a specific ROM or build and would turn one wrapper
+into a fleet.
+
+### `check-mn-screen-coverage.ps1` — the screen asset-coverage gate (P2-1j)
+
+**What it answers: "does our shell draw everything the original draws on this
+screen?"** It runs `scripts/menus/audit_mn_screen_coverage.py`, which parses
+each `mn*` scene source for every sprite the scene CONSTRUCTS -- desc tables,
+`lbCommonMakeSObjForGObj`/`lbRelocGetFileData` sites, per-state variant tables
+-- and diffs that inventory against what our shell draws on the same screen.
+It is static: no ROM, no emulator, about a second, so it runs unconditionally
+beside the other two static checkers rather than inside a runtime verifier.
+
+- **Source side.** The identity of a drawn element is its RELOC SYMBOL, so a
+  reference to `&ll<Name>Sprite` covers direct construction, per-state variant
+  tables and per-fighter tables alike, and cannot be defeated by a helper
+  indirection the way matching on the call would be. `#if defined(REGION_JP)`
+  blocks are masked out; dead code is separated by REACHABILITY from the
+  scene's own `mn*FuncStart` rather than by judgement.
+- **Our side.** `generate_mn_ui_kit.py` is IMPORTED, not parsed, so its
+  `IMAGE_SOURCES`/`SURFACE_SOURCES` tables map every kit token back to the
+  source symbols it was converted from; `src/nds/nds_menu_shell.c` is scanned
+  for token references, attributed to a screen by the enclosing function's (or
+  file-scope table's) own name, with the backdrop switch supplying the shared
+  ones.
+- **Deltas.** MISSING (the source draws it, we draw nothing from it), EXTRA (we
+  draw something the source does not draw there), SUBSTITUTED (a declared
+  approximation). Any unexplained delta FAILS, and so does a STALE allowlist
+  entry -- so a delta that gets fixed takes its excuse with it.
+- **The allowlist** is `scripts/menus/mn_screen_coverage_allowlist.json`. Every
+  entry names the ruling that accepted it. `status: "ruled"` means a board row,
+  a plan phase or a source-read fact decided it; `status: "open"` means the
+  delta is real and nobody has ruled yet -- those are the owner's queue and the
+  audit prints them as `[OPEN]` and counts them separately.
+
+**Why it exists:** three owner visual passes in a row found on-screen elements
+that had simply never been converted, and every one arrived through the owner's
+eye. Nothing in this tree compared a screen's source sprite list against the
+one we ship, so an element that was never converted looked exactly like one
+that was.
 
 ## Run Economics — the both-CPU soak is final-acceptance only
 

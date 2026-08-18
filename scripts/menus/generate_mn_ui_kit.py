@@ -270,6 +270,32 @@ def decode_i4(fileobj: RelocFile, bitmap: Bitmap, sprite: Sprite,
     return rows
 
 
+def decode_ia4(fileobj: RelocFile, bitmap: Bitmap, sprite: Sprite,
+               width: int, height: int) -> list[list[tuple[int, int]]]:
+    """4-bit IA (3 intensity + 1 alpha in one nibble) -> rows of (i, a).
+
+    P2-1j.  The option-tab MIDDLE is the only IA4 asset the shell reaches
+    (`llMNCommonOptionTabMiddleSprite`, 8x29 fmt=IA siz=4b) and it is the strip
+    the source TILES across a button's whole width, so nothing about the tab
+    can be baked without it.  The nibble is the RDP's own IA4 layout: the top
+    three bits are the intensity ramp over 0..7 and the bottom bit is a hard
+    alpha, which is why the tab's interior is solid and only its rounded caps
+    carry an edge.
+    """
+    stride = max(1, bitmap.width_img // 2)
+    rows = []
+    for y in range(height):
+        raw = read_row(fileobj, bitmap, sprite, y, stride)
+        row = []
+        for x in range(width):
+            sx = bitmap.s + x
+            nib = raw[sx >> 1]
+            nib = (nib >> 4) if (sx & 1) == 0 else (nib & 0xF)
+            row.append((((nib >> 1) & 0x7) * 255 // 7, 255 if (nib & 1) else 0))
+        rows.append(row)
+    return rows
+
+
 def decode_ia16(fileobj: RelocFile, bitmap: Bitmap, sprite: Sprite,
                 width: int, height: int) -> list[list[tuple[int, int]]]:
     """16-bit IA (8 intensity + 8 alpha) -> rows of (intensity, alpha)."""
@@ -597,7 +623,8 @@ def box_scale(raster: list[list[tuple[int, int, int, int]]],
 def decode_sprite_raster(fileobj: RelocFile, symbol: str, offset: int,
                          tint: tuple[int, int, int] | None = None,
                          alpha_ramp: bool = False,
-                         width_override: int | None = None
+                         width_override: int | None = None,
+                         lut_override: int | None = None
                          ) -> tuple[Sprite, list[list[tuple[int, int, int, int]]]]:
     """Decode one sprite's bands into an RGBA raster at the sprite's own size.
 
@@ -624,6 +651,14 @@ def decode_sprite_raster(fileobj: RelocFile, symbol: str, offset: int,
         raise ConvertError(f"{symbol}: no bitmaps")
     width = sprite.width
     height = sprite.height
+    if lut_override is not None:
+        # P2-1j.  `mnPlayersVSSetGateLUT` (mnplayersvs.c:900) draws ONE card
+        # sprite through one of eight palettes -- Man/Com x four player colours
+        # -- by overwriting `sprite->LUT` in place.  The card sprite's own
+        # `lut` field is `llMNPlayersCommonGateMan1PLUT` exactly, which is what
+        # proves the header's LUT offsets and the resolved `sprite.lut` are the
+        # same coordinate and this override is the source's own operation.
+        sprite = replace(sprite, lut=lut_override)
     if width_override is not None:
         # A WRAPPED sprite draws more columns than `sprite.width`: the RDP
         # tiles at 2^masks texels and the SObj's own width is only the piece
@@ -690,6 +725,13 @@ def decode_band(fileobj: RelocFile, sprite: Sprite, piece: Bitmap, symbol: str,
     elif sprite.bmfmt == G_IM_FMT_IA and sprite.bmsiz == G_IM_SIZ_8b:
         for y, pixels in enumerate(
                 decode_ia8(fileobj, piece, sprite, piece_w, piece_h)):
+            for x, (i, a) in enumerate(pixels):
+                raster[row + y][x] = (
+                    (sprite.red * i) // 255, (sprite.green * i) // 255,
+                    (sprite.blue * i) // 255, a)
+    elif sprite.bmfmt == G_IM_FMT_IA and sprite.bmsiz == G_IM_SIZ_4b:
+        for y, pixels in enumerate(
+                decode_ia4(fileobj, piece, sprite, piece_w, piece_h)):
             for x, (i, a) in enumerate(pixels):
                 raster[row + y][x] = (
                     (sprite.red * i) // 255, (sprite.green * i) // 255,
@@ -830,9 +872,40 @@ class Placement:
     # was a different size from the dark one it replaces would read as a jump.
     scale: tuple[int, int] | None = None
     centre_in: tuple[int, int] | None = None
+    # P2-1j.  THE IA COMBINER IS A LERP, NOT A MODULATE, and the option tab is
+    # the asset that forces the distinction.  `lbCommonPrepSObjAttr` gives an
+    # IA sprite `colour = (PRIMITIVE - ENVIRONMENT) * TEXEL0 + ENVIRONMENT`
+    # (lbcommon.c:2598), so a draw site that sets BOTH colours -- every VS-menu
+    # button state (`mnVSModeUpdateButton`, mnvsmode.c:231) and the CSS locked
+    # slot's question mark (mnplayersvs.c:2437) -- paints a two-colour RAMP
+    # across the sprite's intensity.  `tint` alone is the PRIMITIVE; `env` is
+    # the other end, and setting it switches this placement to the lerp.
+    #
+    # NOTE the source's own struct spells the pair the other way round: the
+    # `SYColorRGBPair` field named `prim` is assigned to `sobj->envcolor` and
+    # the one named `env` to `sobj->sprite.red/green/blue`, so the RDP ENV is
+    # the pair's `prim` field.  The values below are in RDP terms.
+    env: tuple[int, int, int] | None = None
+    # A NOISE-dithered draw, as an expected value.  `mnPlayersVSPortraitProcDisplay`
+    # (mnplayersvs.c:361) sets `colour = (NOISE - TEXEL0) * PRIMITIVE + TEXEL0`
+    # with PRIMITIVE = 0x30 grey, which is the locked-fighter silhouette's
+    # static-television look.  A DS bitmap has no per-frame noise source, so the
+    # bake ships E[colour] over a uniform NOISE -- `TEXEL0 + (128 - TEXEL0) *
+    # k / 255` -- which is the same mean brightness with the per-frame grain
+    # removed.  `noise` is that k.
+    noise: int | None = None
+    # A flat rectangle rather than a sprite: `gDPFillRectangle` in the source's
+    # own frame, with `symbol` left empty.  The VS menu's menu-name plate is
+    # one (mnvsmode.c:916: prim A0/78/14 alpha E6 over 225,143..310,230).
+    fill: tuple[int, int, int, int] | None = None
+    size: tuple[int, int] | None = None
+    # A CI sprite drawn through a DIFFERENT palette, by its reloc symbol.  The
+    # player panel is one card sprite and eight palettes (see `lut_override`).
+    lut_symbol: str | None = None
 
 
-def place_raster(fileobj: RelocFile, part: Placement, offset: int
+def place_raster(fileobj: RelocFile | None, part: Placement, offset: int,
+                 lut_offset: int | None = None
                  ) -> tuple[int, int, list[list[tuple[int, int, int, int]]]]:
     """One placement decoded, combined and scaled to the DS frame's 4/5.
 
@@ -841,23 +914,48 @@ def place_raster(fileobj: RelocFile, part: Placement, offset: int
     instead would modulate twice for any sprite whose container carries a
     non-white primitive of its own.
     """
-    period_s = part.period[0] if part.period is not None else None
-    sprite, raster = decode_sprite_raster(fileobj, part.symbol, offset,
-                                          (255, 255, 255), alpha_ramp=True,
-                                          width_override=period_s)
-    prim = part.tint if part.tint is not None else (sprite.red, sprite.green,
-                                                    sprite.blue)
-    combined = []
-    for row in raster:
-        out = []
-        for (r, g, b, a) in row:
-            if part.flat:
-                out.append((prim[0], prim[1], prim[2],
-                            (a * part.alpha) // 255))
-            else:
-                out.append(((r * prim[0]) // 255, (g * prim[1]) // 255,
-                            (b * prim[2]) // 255, (a * part.alpha) // 255))
-        combined.append(out)
+    if part.fill is not None:
+        if part.size is None:
+            raise ConvertError("a fill placement needs its own size")
+        red, green, blue, alpha = part.fill
+        combined = [[(red, green, blue, alpha)] * part.size[0]
+                    for _ in range(part.size[1])]
+    else:
+        period_s = part.period[0] if part.period is not None else None
+        sprite, raster = decode_sprite_raster(fileobj, part.symbol, offset,
+                                              (255, 255, 255), alpha_ramp=True,
+                                              width_override=period_s,
+                                              lut_override=lut_offset)
+        prim = part.tint if part.tint is not None else (sprite.red,
+                                                        sprite.green,
+                                                        sprite.blue)
+        combined = []
+        for row in raster:
+            out = []
+            for (r, g, b, a) in row:
+                if part.flat:
+                    out.append((prim[0], prim[1], prim[2],
+                                (a * part.alpha) // 255))
+                elif part.noise is not None:
+                    # E[(NOISE - TEXEL0) * k + TEXEL0] over a uniform NOISE.
+                    k = part.noise
+                    out.append((r + (((128 - r) * k) // 255),
+                                g + (((128 - g) * k) // 255),
+                                b + (((128 - b) * k) // 255),
+                                (a * part.alpha) // 255))
+                elif part.env is not None:
+                    # colour = (PRIM - ENV) * TEXEL0 + ENV.  The neutral decode
+                    # above leaves r == g == b == the texel's own intensity, so
+                    # one channel is the lerp parameter for all three.
+                    env = part.env
+                    out.append((env[0] + (((prim[0] - env[0]) * r) // 255),
+                                env[1] + (((prim[1] - env[1]) * r) // 255),
+                                env[2] + (((prim[2] - env[2]) * r) // 255),
+                                (a * part.alpha) // 255))
+                else:
+                    out.append(((r * prim[0]) // 255, (g * prim[1]) // 255,
+                                (b * prim[2]) // 255, (a * part.alpha) // 255))
+            combined.append(out)
     src_w = len(combined[0])
     src_h = len(combined)
     if part.tile is not None:
@@ -911,6 +1009,17 @@ class SurfaceSpec:
     # manifest sizes the runtime's single cache buffer from this flag, so a
     # second cacheable surface costs .bss rather than silently overflowing.
     cacheable: bool = False
+    # P2-1j.  WHAT THIS SURFACE SITS ON, composited first and then cropped away
+    # to the bounding box of `parts` alone.
+    #
+    # It exists so a surface the runtime RE-BLITS can be OPAQUE.  A VS-menu
+    # button changes state under the cursor, and a keyed re-blit would leave
+    # the previous state's antialiased edge behind -- the tab's rounded caps
+    # carry an alpha ramp, and a 1-bit DS texel cannot erase what it does not
+    # cover.  Baking the artwork that is underneath INTO the button makes every
+    # texel opaque, so a state change is a whole-row DMA that overwrites the
+    # old state exactly, with no runtime memory of what was there.
+    under: tuple[Placement, ...] = ()
 
 
 def convert_surface(cache: dict[str, RelocFile], offsets: dict[str, int],
@@ -927,18 +1036,32 @@ def convert_surface(cache: dict[str, RelocFile], offsets: dict[str, int],
     bitmap the result lands in carries one alpha bit per texel, so a blend
     performed on the console would have nothing to blend with.
     """
-    placed = []
-    for part in spec.parts:
-        if part.symbol not in offsets:
-            raise ConvertError(
-                f"{part.symbol} missing from include/reloc_data.h and "
-                "reloc_data.us.h")
-        if part.o2r not in cache:
-            cache[part.o2r] = RelocFile(
-                repo_root / "decomp" / "BattleShip-main" / "BattleShip_o2r" /
-                "reloc_menus" / part.o2r)
-        placed.append(place_raster(cache[part.o2r], part,
-                                   offsets[part.symbol]))
+    def place_all(parts: tuple[Placement, ...]) -> list:
+        out = []
+        for part in parts:
+            if part.fill is not None:
+                out.append(place_raster(None, part, 0))
+                continue
+            if part.symbol not in offsets:
+                raise ConvertError(
+                    f"{part.symbol} missing from include/reloc_data.h and "
+                    "reloc_data.us.h")
+            if part.o2r not in cache:
+                cache[part.o2r] = RelocFile(
+                    repo_root / "decomp" / "BattleShip-main" /
+                    "BattleShip_o2r" / "reloc_menus" / part.o2r)
+            lut = None
+            if part.lut_symbol is not None:
+                if part.lut_symbol not in offsets:
+                    raise ConvertError(
+                        f"{part.lut_symbol} missing from reloc_data")
+                lut = offsets[part.lut_symbol]
+            out.append(place_raster(cache[part.o2r], part,
+                                    offsets[part.symbol], lut))
+        return out
+
+    placed = place_all(spec.parts)
+    beneath = place_all(spec.under)
 
     left = min(x for x, _, _ in placed)
     top = min(y for _, y, _ in placed)
@@ -965,7 +1088,7 @@ def convert_surface(cache: dict[str, RelocFile], offsets: dict[str, int],
     field = spec.background
     canvas = [[(field[0], field[1], field[2], 255) if field is not None
                else (0, 0, 0, 0) for _ in range(width)] for _ in range(height)]
-    for x0, y0, raster in placed:
+    for x0, y0, raster in (beneath + placed):
         for sy, row in enumerate(raster):
             dy = y0 + sy - top
             if (dy < 0) or (dy >= height):
@@ -1328,6 +1451,44 @@ IMAGE_SOURCES = [
     ("MNMain", "llMNMainConsoleIconSprite", "MODE_ICON_VS", (5, 8)),
     ("MNMain", "llMNMainSettingsIconSprite", "MODE_ICON_OPTION", (5, 8)),
     ("MNMain", "llMNMainDataIconSprite", "MODE_ICON_DATA", (5, 8)),
+    # ---- P2-1j, owner findings (b) and (e): the two ARROW pairs. -----------
+    # Both screens draw a blinking left/right pair beside the value the cursor
+    # is on, and BOTH are OBJ rather than surface art for the same reason: they
+    # blink on a fixed cycle (30 tics on the VS menu, `mnVSModeAnimateRule
+    # Arrows`/`...TimeStockArrows` :466/:539; 10 tics on the character select,
+    # `mnPlayersVSArrowThreadUpdate` :2626) and hiding an OBJ costs nothing
+    # while re-blitting a surface costs a NitroFS read.  They are also the
+    # smallest art in the pack: 128 and 256 bytes a cell.
+    #
+    # The VS pair is I4 modulated by the source's own amber (mnvsmode.c:2578:
+    # red 0xFF, green 0xAE, blue 0x00), baked in as the map cursor's red is.
+    ("MNCommon", "llMNCommonArrowLSprite", "VS_ARROW_L", (4, 5),
+     (0xFF, 0xAE, 0x00)),
+    ("MNCommon", "llMNCommonArrowRSprite", "VS_ARROW_R", (4, 5),
+     (0xFF, 0xAE, 0x00)),
+    # The character select's pair is CI4 and carries its own colour
+    # (mnplayersvs.c:2655/:2673 set no primitive at all).
+    ("MNPlayersCommon", "llMNPlayersCommonArrowLSprite", "CSS_ARROW_L",
+     (4, 5)),
+    ("MNPlayersCommon", "llMNPlayersCommonArrowRSprite", "CSS_ARROW_R",
+     (4, 5)),
+    # The colon between CP LEVEL and its value, white (mnplayersvs.c:2740).
+    ("MNCommon", "llMNCommonColonSprite", "COLON", (4, 5)),
+    # THE PANEL'S OWN PLAYER TAG, mnPlayersVSMakePlayerKind :2003.  A human
+    # slot draws `llMNPlayersCommon<N>PTextSprite` and a CPU one the shared
+    # `CPTextSprite`, both in BLACK on the card.  Only 1P exists here because
+    # this build fills one human slot; 2P/3P/4P arrive with P2-2's fourth
+    # fighter, exactly as the puck block above.
+    ("MNPlayersCommon", "llMNPlayersCommon1PTextSprite", "PANEL_1P", (4, 5),
+     (0x00, 0x00, 0x00)),
+    # 3/4 rather than the frame's 4/5, and it is a CELL fact exactly as P2-1f's
+    # map icons were: the DS has no 64x16 OBJ cell, so the CP tag at 4/5 is 34
+    # px wide, lands in a 64x32 cell and costs 4,096 B, while its 1P twin at 31
+    # px fits a 32x16 one for 1,024. 3/4 is the largest exact ratio that lands
+    # CP in the SAME cell as 1P (43 * 3/4 = 32), and it buys 3,072 B of a bank
+    # with 3,456 left.
+    ("MNPlayersCommon", "llMNPlayersCommonCPTextSprite", "PANEL_CP", (3, 4),
+     (0x00, 0x00, 0x00)),
 ]
 
 # P2-1h.  THE ORIGINAL PRESENTATION ART (owner ruling, 2026-08-18: this is a
@@ -1401,10 +1562,11 @@ SURFACE_SOURCES = [
     # (10, 10) (mnmodeselect.c:527, mnvsmode.c:974), top-left and untinted, and
     # the source leaves its own 10 px margin showing the decal blue, which the
     # DS backdrop paints at zero cost.
-    SurfaceSpec("MENU_COLLAGE",
-                (Placement("MNCommon", "llMNCommonSmashBrosCollageSprite",
-                           10, 10, False),),
-                None),
+    #
+    # P2-1j RETIRED the standalone surface: the mode select composes it into
+    # MODE_SELECT and the VS menu into VS_MODE below, so nothing blits the bare
+    # collage any more and baking it would ship 84,480 dead bytes.  It survives
+    # as the first placement of both plates.
     # P2-1i, owner finding (1). THE CHARACTER AND STAGE SELECTS HAVE A REAL
     # BACKGROUND AND IT IS THE SAME ONE: `mnPlayersVSMakeWallpaper`
     # (mnplayersvs.c:1342) and `mnMapsMakeWallpaper` (mnmaps.c:348) are the
@@ -1473,6 +1635,227 @@ SURFACE_SOURCES = [
                            102, 163, False, (0xFF, 0x00, 0x00))),
                 MENU_FIELD),
 ]
+
+
+# ---------------------------------------------------------------------------
+# P2-1j -- the VS rules screen, owner finding (b): the source's OWN buttons.
+# ---------------------------------------------------------------------------
+#
+# WHAT THE SOURCE DRAWS, and it is not a cursor.  `mnvsmode.c` has no cursor
+# sprite at all: `sMNVSModeCursorIndex` selects which of four BUTTONS is
+# recoloured, through `mnVSModeUpdateButton` (:231).  Each button is three
+# sprites -- `llMNCommonOptionTab{Left,Middle,Right}Sprite` with the middle
+# TILED across `arg3 * 8` pixels at its own 16-texel wrap (`masks = 4`,
+# `lrs = arg3 * 8`, :286-306) -- and all four use arg3 = 17, so every button on
+# this screen is the same 168x29 plate at a different place.
+#
+# THE STATE IS A COLOUR PAIR, so the DS cost is two bakes and not two artworks:
+#
+#   nMNOptionTabStatusHighlight   ENV 82/00/28   PRIM FF/00/28
+#   nMNOptionTabStatusNot         ENV 00/00/00   PRIM 82/82/AA
+#
+# through the IA combiner `colour = (PRIM - ENV) * TEXEL0 + ENV`.  (The third
+# status, Selected, is never reached on this screen -- `mnVSModeUpdateButton`
+# is only ever called with Highlight or Not, :2157/:2196/:2235/:2277.)
+#
+# WHY EACH BUTTON IS ITS OWN SURFACE RATHER THAN AN OBJ.  A plate is 134x23
+# DS pixels; a bitmap OBJ cell tops out at 64x64, so one button is three cells
+# (8,704 B) and the two states of four buttons is 34,816 B against 16,640 B of
+# free main OBJ.  As BG2 surfaces they cost no VRAM at all, and each is baked
+# WITH the artwork underneath it (`under=VS_BACKGROUND`) so it is fully opaque
+# and a state change overwrites the previous state exactly -- no runtime memory
+# of what was there, and no leftover from the tab's antialiased caps.
+#
+# THE RULE-DEPENDENT TEXT rides on the button it sits inside, which is why the
+# rule button has TIME and STOCK variants: `mnVSModeMakeRuleValue` (:337) draws
+# the value word at (183|187, 78), inside the rule plate's own 97..265 x 70..99
+# rectangle, and `mnVSModeMakeTimeStockButton` (:679) swaps its own period text
+# the same way.
+VS_TAB_HI = ((0x82, 0x00, 0x28), (0xFF, 0x00, 0x28))
+VS_TAB_NOT = ((0x00, 0x00, 0x00), (0x82, 0x82, 0xAA))
+
+# mnVSModeMakeBackground (:965) then mnVSModeRenderMenuName (:909), in the
+# source's own construction order -- background link 2 / display 0 first, then
+# the menu-name GObj's fill rectangle and its three plaque sprites.
+VS_BACKGROUND = (
+    Placement("MNCommon", "llMNCommonSmashBrosCollageSprite", 10, 10, False),
+    Placement("MNCommon", "llMNCommonDecalPaperSprite", 140, 143, False,
+              (0xA0, 0x78, 0x14)),
+    Placement("MNCommon", "llMNCommonDecalPaperSprite", 225, 56, False,
+              (0xA0, 0x78, 0x14)),
+    Placement("MNVSMode", "llMNVSModeConsoleIconDarkSprite", 10, 10, False,
+              (0x99, 0x99, 0x99)),
+    # gDPFillRectangle(225, 143, 310, 230) at PRIM A0/78/14 alpha E6, drawn
+    # G_RM_AA_XLU_SURF -- a translucent plate, so it is composited here at its
+    # own alpha rather than thresholded (mnvsmode.c:916).
+    Placement("MNCommon", "", 225, 143, False,
+              fill=(0xA0, 0x78, 0x14, 0xE6), size=(86, 88)),
+    Placement("MNCommon", "llMNCommonSmashLogoSprite", 235, 158, False,
+              (0x00, 0x00, 0x00)),
+    Placement("MNVSMode", "llMNVSModeVSTextSprite", 158, 192, False,
+              (0x00, 0x00, 0x00)),
+    Placement("MNCommon", "llMNCommonGameModeTextSprite", 189, 87, False,
+              (0x00, 0x00, 0x00)),
+)
+
+# mnVSModeMakeButton, :281.  arg3 = 17 on all four (:2159/:2600/:2851/:2937).
+VS_BUTTON_SPAN = 17
+
+
+def vs_button(token: str, x: int, y: int, state, texts) -> SurfaceSpec:
+    env, prim = state
+    parts = [
+        Placement("MNCommon", "llMNCommonOptionTabLeftSprite", x, y, False,
+                  prim, env=env),
+        Placement("MNCommon", "llMNCommonOptionTabMiddleSprite", x + 16, y,
+                  False, prim, env=env,
+                  tile=(VS_BUTTON_SPAN * 8, 29), period=(16, None)),
+        Placement("MNCommon", "llMNCommonOptionTabRightSprite",
+                  x + 16 + (VS_BUTTON_SPAN * 8), y, False, prim, env=env),
+    ]
+    parts.extend(texts)
+    return SurfaceSpec(token, tuple(parts), MENU_FIELD, under=VS_BACKGROUND)
+
+
+def vs_text(o2r: str, symbol: str, x: int, y: int,
+            rgb=(0x00, 0x00, 0x00)) -> Placement:
+    return Placement(o2r, symbol, x, y, False, rgb)
+
+
+# Every button's own geometry and text, quoted from its Make function.  The
+# black text colour is the source's (`sprite.red/green/blue = 0x00` at each
+# site); the rule VALUE is white (`color = { 0xFF, 0xFF, 0xFF }`, :2251).
+VS_BUTTONS = (
+    ("START", 120, 31,
+     (vs_text("MNVSMode", "llMNVSModeVSStartTextSprite", 153, 36),)),
+    ("RULE_TIME", 97, 70,
+     (vs_text("MNVSMode", "llMNVSModeRulePeriodTextSprite", 108, 75),
+      vs_text("MNVSMode", "llMNVSModeTimeTextSprite", 187, 78,
+              (0xFF, 0xFF, 0xFF)))),
+    ("RULE_STOCK", 97, 70,
+     (vs_text("MNVSMode", "llMNVSModeRulePeriodTextSprite", 108, 75),
+      vs_text("MNVSMode", "llMNVSModeStockTextSprite", 183, 78,
+              (0xFF, 0xFF, 0xFF)))),
+    ("TIME", 74, 109,
+     (vs_text("MNVSMode", "llMNVSModeTimePeriodTextSprite", 97, 113),
+      vs_text("MNVSMode", "llMNVSModeMinTextSprite", 197, 120))),
+    ("STOCK", 74, 109,
+     (vs_text("MNVSMode", "llMNVSModeStockPeriodTextSprite", 106, 114),)),
+    ("OPTIONS", 51, 148,
+     (vs_text("MNVSMode", "llMNVSModeVSOptionsTextSprite", 71, 151),)),
+)
+
+SURFACE_SOURCES.append(SurfaceSpec("VS_MODE", VS_BACKGROUND, MENU_FIELD))
+for _name, _x, _y, _texts in VS_BUTTONS:
+    SURFACE_SOURCES.append(
+        vs_button(f"VS_BTN_{_name}_HI", _x, _y, VS_TAB_HI, _texts))
+    SURFACE_SOURCES.append(
+        vs_button(f"VS_BTN_{_name}_NOT", _x, _y, VS_TAB_NOT, _texts))
+
+
+# ---------------------------------------------------------------------------
+# P2-1j -- the character select, owner findings (c), (d) and (e).
+# ---------------------------------------------------------------------------
+#
+# (d) THE FIGHTER BOX is `llMNPlayersPortraitsPortraitFireBgSprite`, a 45x43
+# RGBA16 plate that `mnPlayersVSMakePortrait` puts behind EVERY portrait --
+# locked or not, :2437 and :2503 -- on the source's own 45 px grid,
+# `x = (portrait % 6) * 45 + 25`, `y = (portrait >= 6) * 43 + 36`.  Nothing in
+# this shell drew it, so the twelve cells sat directly on the stone.
+#
+# (c) THE LOCKED SLOT is a THREE-layer stack, not the question mark alone
+# (`mnPlayersVSMakePortraitShadow`, :2404): the box, then the fighter's own
+# SHADOW sprite drawn through `mnPlayersVSPortraitProcDisplay`'s noise
+# combiner, then the question mark at ENV 5B/41/33 / PRIM C4/B9/A9.  The
+# shadow table is indexed by fkind and is populated for exactly the four
+# fighters the retail cart locks -- Luigi, Captain Falcon, Purin, Ness -- and
+# is 0x0 for the other eight, so a build whose locked set is wider draws box +
+# question mark for those, which is what the source's own table says to do.
+#
+# The stack is baked into the backdrop because a locked cell never changes for
+# the life of the screen, and doing so also frees the OBJ slots the twelve
+# portrait cells used to need.
+CSS_PORTRAIT_FKIND = (4, 0, 2, 5, 3, 7, 11, 6, 8, 1, 9, 10)
+CSS_SHADOW = {
+    4: "llMNPlayersPortraitsLuigiShadowSprite",
+    7: "llMNPlayersPortraitsCaptainShadowSprite",
+    10: "llMNPlayersPortraitsPurinShadowSprite",
+    11: "llMNPlayersPortraitsNessShadowSprite",
+}
+# Which fighters this build HAS (nFTKindMario, nFTKindFox).  Same bound the
+# shell's NDS_CSS_FIGHTER_MASK carries.
+CSS_BUILT_FKIND = (0, 1)
+# mnPlayersVSPortraitProcDisplay's primitive, :361.
+CSS_SHADOW_NOISE = 0x30
+
+
+def css_portrait_pos(portrait: int) -> tuple[int, int]:
+    return (((portrait % 6) * 45) + 25, ((1 if portrait >= 6 else 0) * 43) + 36)
+
+
+def css_screen_parts() -> tuple[Placement, ...]:
+    parts = [
+        # mnPlayersVSMakeWallpaper, :1370 -- the same stone MENU_STONE carries.
+        Placement("MNSelectCommon", "llMNSelectCommonStoneBackgroundSprite",
+                  10, 10, False, tile=(300, 220), period=(64, 32)),
+    ]
+    for portrait in range(12):
+        x, y = css_portrait_pos(portrait)
+        fkind = CSS_PORTRAIT_FKIND[portrait]
+        parts.append(Placement("MNPlayersPortraits",
+                               "llMNPlayersPortraitsPortraitFireBgSprite",
+                               x, y, False))
+        if fkind in CSS_BUILT_FKIND:
+            continue
+        shadow = CSS_SHADOW.get(fkind)
+        if shadow is not None:
+            parts.append(Placement("MNPlayersPortraits", shadow, x, y, False,
+                                   noise=CSS_SHADOW_NOISE))
+        parts.append(Placement(
+            "MNPlayersPortraits",
+            "llMNPlayersPortraitsPortraitQuestionMarkSprite", x, y, False,
+            (0xC4, 0xB9, 0xA9), env=(0x5B, 0x41, 0x33)))
+    return tuple(parts)
+
+
+SURFACE_SOURCES.append(
+    SurfaceSpec("CSS_SCREEN", css_screen_parts(), MENU_FIELD))
+
+# (e) THE PLAYER PANEL.  `mnPlayersVSMakeGate` (:1010) builds one CI4 card per
+# slot at `(player * 69 + 22, 126)` and picks its PALETTE by player colour and
+# player kind -- `mnPlayersVSSetGateLUT`, :900, eight `llMNPlayersCommonGate
+# {Man,Com}<N>PLUT` tables -- so the card is one artwork and eight colourways.
+# An EMPTY slot additionally has its two shutter doors closed over it
+# (`door_offset` 41: left at `p*69+22`, right at `p*69+47`, :640), which is
+# exactly the card's own 66 px width.
+#
+# Three surfaces per slot, blitted on a kind change, is what a palette swap
+# costs on a direct-colour DS bitmap; the alternative was twelve more OBJ cells
+# of 53x73, which does not fit a 64x64 cell OR the free bank.
+CSS_PANEL_KINDS = (("MAN", "GateMan%dPLUT", False),
+                   ("COM", "GateCom%dPLUT", False),
+                   ("NA", "GateCom%dPLUT", True))
+
+
+def css_panel(player: int, kind: str, lut: str, shut: bool) -> SurfaceSpec:
+    start = player * 69
+    parts = [Placement("MNPlayersCommon", "llMNPlayersCommonRedCardSprite",
+                       start + 22, 126, False,
+                       lut_symbol="llMNPlayersCommon" + (lut % (player + 1)))]
+    if shut:
+        parts.append(Placement("MNPlayersCommon",
+                               "llMNPlayersCommonSmashLogoCardLeftSprite",
+                               start + 22, 126, False))
+        parts.append(Placement("MNPlayersCommon",
+                               "llMNPlayersCommonSmashLogoCardRightSprite",
+                               start + 47, 126, False))
+    return SurfaceSpec(f"CSS_PANEL_{player}_{kind}", tuple(parts), None,
+                       under=css_screen_parts())
+
+
+for _player in range(4):
+    for _kind, _lut, _shut in CSS_PANEL_KINDS:
+        SURFACE_SOURCES.append(css_panel(_player, _kind, _lut, _shut))
 
 
 # ---------------------------------------------------------------------------
@@ -1739,7 +2122,24 @@ def write_surface_previews(out_dir: Path, surfaces: list[Surface]) -> None:
         "screen_title_cell15": ((0x00, 0x00, 0x00),
                                 ["TITLE_SCREEN", "TITLE_PRESS_START"], 15),
         # The menus' own decal blue, mnmodeselect.c:517 (0x083365).
-        "screen_menu": ((0x08, 0x33, 0x65), ["MENU_COLLAGE"], None),
+        "screen_menu": ((0x08, 0x33, 0x65), ["MODE_SELECT"], None),
+        # P2-1j.  The two screens whose art is now STATE-dependent, composed in
+        # the runtime's own blit order at the state the screen opens in: the VS
+        # menu with the cursor on VS START and the rule on TIME, and the
+        # character select with slot 1 human, slot 2 CPU and slots 3-4 empty.
+        # A per-surface PNG cannot show that a button plate lands on the wrong
+        # row or that a panel card covers the portrait grid; this can.
+        "screen_vs_mode": ((0x08, 0x33, 0x65),
+                           ["VS_MODE", "VS_BTN_START_HI",
+                            "VS_BTN_RULE_TIME_NOT", "VS_BTN_TIME_NOT",
+                            "VS_BTN_OPTIONS_NOT"], None),
+        "screen_vs_mode_rule": ((0x08, 0x33, 0x65),
+                                ["VS_MODE", "VS_BTN_START_NOT",
+                                 "VS_BTN_RULE_STOCK_HI", "VS_BTN_STOCK_NOT",
+                                 "VS_BTN_OPTIONS_NOT"], None),
+        "screen_css": ((0x08, 0x33, 0x65),
+                       ["CSS_SCREEN", "CSS_PANEL_0_MAN", "CSS_PANEL_1_COM",
+                        "CSS_PANEL_2_NA", "CSS_PANEL_3_NA"], None),
     }
     for name, (field, tokens, fire_cell) in scenes.items():
         if not all(token in by_token for token in tokens):

@@ -69,8 +69,14 @@
  * screen assigns these in is its depth order.  The character select needs the
  * most: one cursor, four tokens, four player-kind labels, four CPU-level
  * labels, four CPU-level digits and twelve portrait cells -- 29, and the
- * digits a rules screen draws are the same slots reused. */
-#define NDS_UI_KIT_SPRITE_SLOTS 29u
+ * digits a rules screen draws are the same slots reused.
+ *
+ * P2-1j takes it to 45: the character select's player panel gained the four
+ * elements the source draws on it that this shell had never converted -- the
+ * 1P/CP player tag, the CP LEVEL colon and the two blinking level arrows, one
+ * of each per slot. A slot costs an OAM id and a shadow entry, not VRAM, and
+ * 45 plus the 32 text chunks is 77 of an engine's 128 OAM entries. */
+#define NDS_UI_KIT_SPRITE_SLOTS 45u
 
 #define NDS_UI_KIT_OAM_IDS \
     ((NDS_UI_KIT_TEXT_SLOTS * NDS_UI_KIT_TEXT_CHUNKS) + \

@@ -1,0 +1,236 @@
+{
+  "_comment": [
+    "P2-1j. Every screen delta scripts/menus/audit_mn_screen_coverage.py finds",
+    "and this project has DECIDED about. Nothing here is silent: an entry must",
+    "name the ruling that accepted it, and an entry whose delta no longer",
+    "exists fails the run, so a fixed element cannot keep its excuse.",
+    "",
+    "status 'ruled'  a decision exists -- a board row, a plan phase, or a fact",
+    "                read out of the source itself.",
+    "status 'open'   the delta is real and nobody has ruled on it yet. These",
+    "                are the OWNER'S QUEUE: the audit prints them as [OPEN] and",
+    "                counts them separately from the ruled ones, and P2-1j's",
+    "                report packet lists every one. They are allowed to pass",
+    "                the gate only so the gate can be RED for something new.",
+    "",
+    "A key spelled 're:<pattern>' matches by regex, which is how one decision",
+    "stays one entry: 'the ten fighters P2-3 has not produced' is a single",
+    "ruling, and ten copies of it would be ten places for it to rot."
+  ],
+  "entries": [
+    {
+      "screen": "title",
+      "kind": "missing",
+      "key": "re:llMNTitleLogoAnim(Cutout|StrikeH|StrikeV)Sprite",
+      "reason": "The emblem's own animation cels. mnTitleMakeLogo builds the resting FULL sprite this shell bakes; the cutout and the two strike frames belong to the logo/label animation, which is the parked slide-in decision -- mnTitlePlayAnim gives every piece its own translate AND scale, which a BG2 affine cannot express.",
+      "ruling": "docs/P2_EXECUTION_BOARD.md Decisions pending: 'Title label slide-in', BLOCKED(decision) raised by P2-1i round 2",
+      "status": "open"
+    },
+    {
+      "screen": "title",
+      "kind": "missing",
+      "key": "llMNTitleTMSprite",
+      "reason": "Title label kind 9 (TM2). It has a desc entry and a colour case and NOTHING in the US build constructs it -- mnTitleMakeSprites, its only would-be loop, stops before it and is marked unused in the source. The TM that IS drawn is llMNTitleTMUnkSprite, kind 4, which ships.",
+      "ruling": "P2-1h (board row): source-read finding, transcribed rather than omitted",
+      "status": "ruled"
+    },
+    {
+      "screen": "vs_mode",
+      "kind": "missing",
+      "key": "llMNVSModeTeamTextSprite",
+      "reason": "The TEAM word in the rule value, drawn only for nMNVSModeRuleStockTeam/TimeTeam. Team battles are P2-2; this build's rule set is {Time, Stock} and is_team_battle is FALSE by construction.",
+      "ruling": "docs/P2_PLAN.md phase P2-2 (teams); P2-1e deliberate narrowing",
+      "status": "ruled"
+    },
+
+    {
+      "screen": "css",
+      "kind": "missing",
+      "key": "re:llMNPlayersPortraits(Luigi|Donkey|Link|Samus|Captain|Ness|Yoshi|Kirby|Pikachu|Purin)Sprite",
+      "reason": "The unlocked portrait art for the ten fighters this build does not have. Their cells draw the source's own locked stack instead (box + shadow where the source has one + question-mark plate), which is exactly what mnPlayersVSMakePortrait draws for a fighter the mask excludes.",
+      "ruling": "docs/P2_PLAN.md phase P2-3 (fighter production); P2-1e's fighter-mask bound",
+      "status": "ruled"
+    },
+    {
+      "screen": "css",
+      "kind": "missing",
+      "key": "re:llMNPlayersCommon(CaptainFalcon|DK|Jigglypuff|Kirby|Link|Luigi|Ness|Pikachu|Samus|Yoshi)TextSprite",
+      "reason": "The fighter-name art for the ten fighters this build does not have. No slot can hold them, so nothing would draw them.",
+      "ruling": "docs/P2_PLAN.md phase P2-3 (fighter production)",
+      "status": "ruled"
+    },
+    {
+      "screen": "css",
+      "kind": "substituted",
+      "key": "re:llMNPlayersCommon(Mario|Fox)TextSprite",
+      "substitute": "the same words composed from the source's own menu font (kNdsCssFighterName through ndsUiKitSetText)",
+      "reason": "The two built fighters' name art. P2-1e composes the words from the source's own menu font -- the P2-1c kit's whole reason for existing -- rather than baking two IA8 strips up to 66 px wide. P2-1i finding (2) asks for source sprite art on BUTTONS and PANELS; whether it also binds a plain name string has not been ruled.",
+      "ruling": "P2-1e (board row) disclosed narrowing; P2-1i finding (2) scope not ruled for text",
+      "status": "open"
+    },
+    {
+      "screen": "css",
+      "kind": "missing",
+      "key": "re:llFTEmblemSprites\\w+Sprite",
+      "reason": "The series emblem mnPlayersVSMakeNameAndEmblem draws beside a selected fighter's name (:592). Never converted -- P2-1e shipped the name and not the emblem, and did not say so. Ten of the twelve belong to fighters P2-3 owns; Mario's and Fox's do not, and are a real gap on this screen today.",
+      "ruling": "P2-1j audit finding, beyond the owner's four -- ruling requested",
+      "status": "open"
+    },
+    {
+      "screen": "css",
+      "kind": "missing",
+      "key": "re:llMNPlayersCommon(\\d|Infinity)DarkSprite",
+      "reason": "The CSS's OWN time/stock rule display (mnPlayersVSMakeGameRuleNumber :1181, mnPlayersVSMakeTimeSetting :1232). It duplicates the rule the VS menu already sets and commits through the P2-1a descriptor.",
+      "ruling": "P2-1e (board row) deliberate narrowing: the CSS's own TIME/STOCK controls duplicate the VS menu's",
+      "status": "ruled"
+    },
+    {
+      "screen": "css",
+      "kind": "missing",
+      "key": "re:llMNPlayersCommon(Time|Stock)SelectorSprite",
+      "reason": "The selector frames around that same duplicated time/stock control.",
+      "ruling": "P2-1e (board row) deliberate narrowing: the CSS's own TIME/STOCK controls duplicate the VS menu's",
+      "status": "ruled"
+    },
+    {
+      "screen": "css",
+      "kind": "missing",
+      "key": "re:llMNPlayersCommon[2-4]P(Puck|Text)Sprite",
+      "reason": "The tokens and panel tags for players 2-4. This build fills one human slot and one CPU slot; the fourth slot arrives with the four-fighter engine, and the source's own tables are indexed by player so nothing else has to change.",
+      "ruling": "docs/P2_PLAN.md phase P2-2 (four-fighter engine); P2-1e's own puck bound",
+      "status": "ruled"
+    },
+    {
+      "screen": "css",
+      "kind": "missing",
+      "key": "re:llMNPlayersCommon[1-4]PTextGradientSprite",
+      "reason": "The player tag mnPlayersVSUpdateCursor (:1719) hangs on a cursor so four players can tell whose hand is whose. The DS has one keypad and this shell draws exactly one cursor, so three of the four could never appear -- but the 1P tag on OUR cursor is a real element we do not draw.",
+      "ruling": "P2-1j audit finding, beyond the owner's four -- ruling requested",
+      "status": "open"
+    },
+    {
+      "screen": "css",
+      "kind": "missing",
+      "key": "re:llMNPlayersCommon(Red|Blue|Green)LabelSprite",
+      "reason": "The team-colour buttons (mnPlayersVSMakeTeamSelect :494). is_team_battle is FALSE in every configuration this build reaches, so the source's own code is already branchless here.",
+      "ruling": "docs/P2_PLAN.md phase P2-2 (teams); P2-1e deliberate narrowing",
+      "status": "ruled"
+    },
+    {
+      "screen": "css",
+      "kind": "missing",
+      "key": "llMNPlayersGameModesTeamBattleTextSprite",
+      "reason": "The TEAM BATTLE mode label, the other half of the FREE FOR ALL label above.",
+      "ruling": "docs/P2_PLAN.md phase P2-2 (teams)",
+      "status": "ruled"
+    },
+    {
+      "screen": "css",
+      "kind": "substituted",
+      "key": "llMNPlayersGameModesFreeForAllTextSprite",
+      "substitute": "\"FREE FOR ALL\" composed from the source's own menu font",
+      "reason": "The mode label above the portrait grid.",
+      "ruling": "P2-1e (board row); P2-1i finding (2) scope not ruled for text",
+      "status": "open"
+    },
+    {
+      "screen": "css",
+      "kind": "missing",
+      "key": "llMNPlayersCommonHandicapTextSprite",
+      "reason": "The HANDICAP twin of the CP LEVEL row. mnPlayersVSMakeHandicapLevel draws one or the other by pkind, and handicap is Off in every configuration this build reaches, so only the CPU arm can run.",
+      "ruling": "P2-1e (board row); handicap belongs to P2-5/P2-7 options work",
+      "status": "ruled"
+    },
+    {
+      "screen": "css",
+      "kind": "substituted",
+      "key": "llMNPlayersCommonBackButtonSprite",
+      "substitute": "\"BACK\" composed from the source's own menu font, on the source's own hit box (244..292, 13..34)",
+      "reason": "The BACK button's own art. Its geometry is transcribed and its behaviour is the source's; only the artwork is font-composed.",
+      "ruling": "P2-1e (board row); P2-1i finding (2) asks for source art on buttons -- ruling requested for this one",
+      "status": "open"
+    },
+    {
+      "screen": "css",
+      "kind": "substituted",
+      "key": "re:llMNPlayersCommon(ReadyBanner|ReadyToFight|Press|Start)(Text)?Sprite",
+      "substitute": "\"READY TO FIGHT\" and \"PRESS START\" composed from the source's own menu font, on the source's own 40/30 blink",
+      "reason": "The READY TO FIGHT banner and its PRESS START line. The gate that shows them is mnPlayersVSCheckNoPuckOnPortraitAll's, transcribed; the artwork is font-composed.",
+      "ruling": "P2-1e (board row); P2-1i finding (2) scope not ruled for text -- ruling requested",
+      "status": "open"
+    },
+    {
+      "screen": "css",
+      "kind": "missing",
+      "key": "llMNPlayersPortraitsCrossSprite",
+      "reason": "NOT DRAWN BY THE SOURCE EITHER. mnPlayersVSPortraitAddCross's only caller is gated on mnPlayersVSCheckFighterCrossed, which is `return FALSE;` -- an unconditional constant (mnplayersvs.c:236). The audit's reachability walk sees the call; the guard is what makes it dead.",
+      "ruling": "Source-read fact, mnplayersvs.c:236",
+      "status": "ruled"
+    },
+    {
+      "screen": "css",
+      "kind": "missing",
+      "key": "llMNPlayersPortraitsWhiteSquareSprite",
+      "reason": "mnPlayersVSMakePortraitFlash's white plate -- the flash a portrait gives when a token lands on it (:2464). A one-shot animation on a cell whose artwork is otherwise static; not converted.",
+      "ruling": "P2-1j audit finding, beyond the owner's four -- ruling requested",
+      "status": "open"
+    },
+
+    {
+      "screen": "sss",
+      "kind": "missing",
+      "key": "re:llMNMaps(PeachsCastle|CongoJungle|HyruleCastle|PlanetZebes|YoshisIsland|SectorZ|SaffronCity|MushroomKingdom)Sprite",
+      "reason": "The stage icons for the eight grounds this build does not have. Their cells draw the source's own locked plate instead.",
+      "ruling": "docs/P2_PLAN.md phase P2-4 (stage production); P2-1f's ground-mask bound",
+      "status": "ruled"
+    },
+    {
+      "screen": "sss",
+      "kind": "missing",
+      "key": "re:llMNMaps\\w+TextSprite",
+      "reason": "The per-stage name art and the STAGE SELECT header. P2-1f composes the same words from the source's own menu font, exactly as P2-1e does with the fighter names; the eight unbuilt stages' names could not be drawn at all.",
+      "ruling": "P2-1f (board row) deliberate narrowing; P2-1i finding (2) scope not ruled for text",
+      "status": "open"
+    },
+    {
+      "screen": "sss",
+      "kind": "missing",
+      "key": "re:llFTEmblemSprites\\w+Sprite",
+      "reason": "The series emblem on the stage-name plaque (mnMapsMakeEmblem :786), one per stage.",
+      "ruling": "P2-1f (board row): the plaque and its emblem are a disclosed narrowing -- an 84x85 CI8 circle plus a per-series emblem for one decoration, against 8,448 B of free main OBJ at the time",
+      "status": "ruled"
+    },
+    {
+      "screen": "sss",
+      "kind": "missing",
+      "key": "re:llMNMaps(WoodenCircle|Plate(Left|Middle|Right)|Tiles)Sprite",
+      "reason": "The stage-name plaque's own furniture -- the wooden circle the emblem sits in, the three-part name plate and the tile field behind the grid.",
+      "ruling": "P2-1f (board row) deliberate narrowing (the plaque); P2-1i finding (2) applies to the plate -- ruling requested",
+      "status": "open"
+    },
+    {
+      "screen": "sss",
+      "kind": "missing",
+      "key": "re:llMNMaps(RandomBig|QuestionMark)Sprite",
+      "reason": "The RANDOM cell's large icon and its question mark, drawn in the PREVIEW panel for a random pick. This build's preview panel holds the selected ground's own small icon instead of the 3D preview.",
+      "ruling": "P2-1f (board row) deliberate narrowing: the 3D stage preview is not converted",
+      "status": "ruled"
+    },
+    {
+      "screen": "sss",
+      "kind": "missing",
+      "key": "llGRWallpaperTrainingBlueSprite",
+      "reason": "mnMapsMakePreviewWallpaper's training-mode backdrop. sMNMapsIsTrainingMode is set only when scene_prev is nSCKindPlayers1PTraining, which is P2-7, so this branch is FALSE by construction here.",
+      "ruling": "P2-1f (board row): training mode is P2-7 and the flag is FALSE by construction",
+      "status": "ruled"
+    },
+    {
+      "screen": "sss",
+      "kind": "extra",
+      "key": "IMAGE_PORTRAIT_LOCKED",
+      "reason": "ONE LOCKED CELL DRAWN WHERE THE SOURCE DRAWS NOTHING, and the row that added it said so: mnMapsMakeIcons simply skips a locked ground, so a build with eight locked grounds would show two icons in an empty field and the 5x2 grid the cursor moves around would be invisible. The cell borrows the character select's own locked plate.",
+      "ruling": "P2-1f (board row): the shell's only deliberate presentation ADDITION, disclosed at landing",
+      "status": "ruled"
+    }
+  ]
+}

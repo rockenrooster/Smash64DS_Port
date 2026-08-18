@@ -260,7 +260,7 @@ try {
         & make -C $root TARGET=smash64ds BUILD=build NDS_DEV_SCENE_HARNESS=normal NDS_HARNESS_FAST_LOGIC=0 -B
         if ($LASTEXITCODE -ne 0) { exit (Get-Smash64DSFailureExitCode -Code $LASTEXITCODE) }
     }
-    $expectedVerifiers = 2 + $plan.Count + $(if ($SkipRegistryCheck) { 0 } else { 1 })
+    $expectedVerifiers = 3 + $plan.Count + $(if ($SkipRegistryCheck) { 0 } else { 1 })
     Invoke-VerifyScript `
         -Script (Join-Path $PSScriptRoot 'check-gbi-decode-fixtures.ps1') `
         -Arguments @()
@@ -272,6 +272,13 @@ try {
     # so making a kept checkpoint prove them is the whole point of having them.
     Invoke-VerifyScript `
         -Script (Join-Path $PSScriptRoot 'check-nds-particle-banks.ps1') `
+        -Arguments @()
+    # P2-1j, and it is here for the same reason the two above are: the owner
+    # found four missing menu elements by LOOKING at three separate builds, and
+    # nothing in this tree compared a screen's source sprite list against the
+    # one we ship. ~1 s, static, no ROM.
+    Invoke-VerifyScript `
+        -Script (Join-Path $PSScriptRoot 'check-mn-screen-coverage.ps1') `
         -Arguments @()
     if (-not $SkipRegistryCheck) {
         Invoke-VerifyScript `

@@ -1,0 +1,45 @@
+P2-1j Boundary run, 2026-08-18. Full log was 632555 lines, 0 'Exception:' matches;
+trimmed to its verdict lines here because /artifacts/ carries evidence, not 40 MB of build output.
+Workaround: the untracked, gitignored smash64ds_P1.nds was relocated to builds/ for the run and
+restored with its hash re-verified (576F51ED69CA21B137FA24F9433F2B56DEC4F2FDB258E2197D0BDE0F9B50E723).
+Root ROMs unchanged across the run: smash64ds.nds 54C07FAC...C68A, smash64ds-battle-playable-hwtri.nds 576F51ED...E723.
+---- verdict lines ----
+P1-COPY before: 576F51ED69CA21B137FA24F9433F2B56DEC4F2FDB258E2197D0BDE0F9B50E723
+P1-COPY relocated to builds/
+Toolchain usable: recursive make OK, DEVKITPRO=C:/devkitPro DEVKITARM=C:/devkitPro/devkitARM
+DECOMP_PRISTINE=PASS pinned_historical_files=10 ds_markers=0 decomp_patch_pipeline=absent
+GREEN: every gated domain stays inside 0.0200. Worst gated deviation 0.006702.
+GREEN: every case returns the same verdict and the same hit BIT PATTERNS.
+GREEN: 12 arms, 25 AObjAnimAdvance reads, sequence and fields identical
+GREEN: bit-identical on every input, including both signed zeros
+allowlist: 16 ruled, 10 open, 0 stale
+unexplained deltas: 0
+screen asset coverage: PASS
+check-mn-screen-coverage: PASS
+Harness registry check passed: 3 harness mappings, 5 verifier scripts, 0 drift.
+Running verifier: p2_shell_loop [verify-p2-shell-loop.ps1]
+LOOPDONE: budget=20 denied=1 enters=87 exits=87 input=393 mism=0 press=1040 rej=0 rematch=20 resb=16392 sd=1 steps=393 trans=45 unreg=1 walkloops=20 winf=18 winm=2
+LOOPKIT hash=6b06b3d9 mismatch=0 readfail=0 overflow=0 rej=0 csscommit=21 cssstart=21 ssscommit=21 sssconfirm=20 sssback=1 fallback=11
+LOOPINPUT pad=0000 seen=1000 tap=1000 poll=8220
+LOOPCFG s0=0/0/1 s1=1/1/9 s2=28/2/1 s3=28/2/1 gkind=06 rule=1 time=1 stagesel=1
+LOOPXFER s0=0/0/1 s1=1/1/9 pl=1 cp=1 gkind=06
+LOOPSCREENS startup=1 f0=150 f1=301 f2=1811 f3=16926 f4=2562 e0=1 e1=1 e2=1 e3=21 e4=21 x0=1 x1=1 x2=1 x3=21 x4=21
+LOOPSURF blit=191 mismatch=0 readfail=0 nolayer=0 fireblit=1 vsbtn=20 csspanel=126
+LOOPARENA base=0226ef40 size=1548288
+HIGHWATER Title      kind= 1 n=  1 min=416828 max=416828 spread=0
+HIGHWATER ModeSelect kind= 7 n=  1 min=253600 max=253600 spread=0
+HIGHWATER VSMode     kind= 9 n=  1 min=392536 max=392536 spread=0
+HIGHWATER PlayersVS  kind=16 n= 21 min=126704 max=126704 spread=0
+HIGHWATER Maps       kind=21 n= 21 min=159408 max=159408 spread=0
+HIGHWATER VSBattle   kind=22 n= 21 min=1477744 max=1482752 spread=5008
+HIGHWATER VSBattle series: 1481496,1481632,1481912,1482016,1481772,1482328,1482376,1481976,1477744,1482752,1482256,1482200,1482168,1481656,1481976,1481640,1482304,1481192,1481896,1482472,1481992
+HIGHWATER VSResults  kind=24 n= 20 min=1322828 max=1328228 spread=5400
+HIGHWATER VSResults series: 1322828,1322828,1322828,1322828,1322828,1322828,1322828,1322940,1328228,1322828,1322828,1322828,1322828,1322828,1322828,1322828,1322828,1322828,1322828,1328228
+HIGHWATER Startup    kind=27 n=  1 min=164892 max=164892 spread=0
+ARENA FREE FLOOR: 65536 B (minimum required 32768)
+P2 shell loop verifier passed: 20 laps, 87 scene entries, per-kind high-waters flat, free floor 65536 B, zero faults.
+Running verifier: battle_playable_realtime [verify-battle-playable-realtime-harness.ps1]
+Boundary verification profile passed.
+VERIFY-ALL-EXIT=0
+P1-COPY restored: 576F51ED69CA21B137FA24F9433F2B56DEC4F2FDB258E2197D0BDE0F9B50E723
+P1-COPY hash verified equal to 576F51ED...E723

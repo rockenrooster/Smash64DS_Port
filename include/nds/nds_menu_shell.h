@@ -198,6 +198,17 @@ extern volatile u32 gNdsMenuShellCssCueCount;
 extern volatile u32 gNdsMenuShellCssCueLastId;
 extern volatile u32 gNdsMenuShellCssAnnounceCount;
 
+/* --- P2-1j, the state-dependent backdrop art. ----------------------------
+ *
+ * The VS menu's four buttons and the character select's four player panels are
+ * BG2 surfaces rather than OBJ cells (a 168x29 option tab and a 66x91 gate
+ * card both exceed a 64x64 bitmap-OBJ cell, and their two/three states would
+ * cost more main OBJ than the bank has left), so changing one costs a re-blit.
+ * These count them, and their whole purpose is to be READ AGAINST the screen's
+ * presented-frame count: a screen holding still must hold these still. */
+extern volatile u32 gNdsMenuShellVsButtonBlitCount;
+extern volatile u32 gNdsMenuShellCssPanelBlitCount;
+
 /* --- P2-1f, the stage select. Same rule: none of it is read by gameplay. --- */
 
 /* The cursor's slot, 0..9, in mnMapsGetGroundKind's own numbering (mnmaps.c

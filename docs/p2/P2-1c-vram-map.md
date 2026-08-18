@@ -75,6 +75,29 @@ eight fields since P2-1e and is at its ceiling:
 | 6,400 – 22,784 | 16,384 | 8 text fields x 4 cells of 32x8 |
 | 0 – 6,400 | 6,400 | **left for the battle's OBJ tenant** |
 
+**P2-1j spent 2,944 of that floor and left 3,456.** The image block is now
+**45,696 bytes over 37 images** (19,840 – 65,536), the text budget is
+unchanged, and the floor is **3,456 bytes**. What it bought is the four
+elements the owner's round-3 pass found missing that are small enough to be
+OBJ at all: the VS menu's amber arrow pair (128 B each, `llMNCommonArrowL/R`
+at 4/5), the character select's own arrow pair (256 B each, CI4), the CP LEVEL
+colon (128 B) and the panel's 1P/CP player tags (1,024 B each). Everything
+else this row shipped is a BG2 surface and costs bank E nothing — the option
+tab is 134x23 and the gate card 53x73, both past a 64x64 cell, and their two
+and three states would have been 34,816 and 92,856 bytes of a bank with
+16,640 free.
+
+**THE CP TAG IS 3/4 AND ITS TWIN IS 4/5, and that is the same cell fact 5/8
+was**: the DS has no 64x16 OBJ cell, so `llMNPlayersCommonCPTextSprite` at the
+frame's own 4/5 is 34 px wide, lands in a 64x32 cell and costs 4,096 B, while
+its 39 px 1P twin at 4/5 is 31 and fits a 32x16 one for 1,024. 3/4 is the
+largest exact ratio that lands CP in the SAME cell as 1P (43 x 3/4 = 32).
+
+**THE FLOOR IS NOW 3,456 BYTES.** The next row that wants main OBJ space has
+to evict something, and the first candidate is `PORTRAIT_LOCKED` (2,048 B):
+the character select stopped drawing it when P2-1j baked the locked stack into
+its backdrop, and only the stage select's borrowed locked cell still does.
+
 The image block, in the generator's own order
 (`scripts/menus/generate_mn_ui_kit.py`): Mario and Fox portraits at 32/45 in
 32x32 cells (2,048 each, down from 8,192 at 1:1 — twelve portrait CELLS have

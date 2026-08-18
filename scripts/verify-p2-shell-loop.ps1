@@ -225,7 +225,12 @@ if (-not [string]::IsNullOrWhiteSpace($AnalyzeOnly)) {
         'gNdsUiKitSurfaceBlitCount', 'gNdsUiKitSurfaceHashMismatchCount',
         'gNdsUiKitSurfaceReadFailCount', 'gNdsUiKitSurfaceNoLayerCount',
         # P2-1i. The title's BG3 fire sheet, counted apart from the backdrops.
-        'gNdsUiKitFireAtlasBlitCount'
+        'gNdsUiKitFireAtlasBlitCount',
+        # P2-1j. The state-dependent surfaces -- the VS menu's four buttons and
+        # the character select's four player panels. They are the reason the
+        # backdrop assertion below is no longer "one blit per entry": these
+        # count the rest of it exactly, so the invariant stays an equality.
+        'gNdsMenuShellVsButtonBlitCount', 'gNdsMenuShellCssPanelBlitCount'
     )
     $symbols = & $nm $elf | ForEach-Object { ($_ -split '\s+')[-1] }
     $missing = @($required | Where-Object { $symbols -notcontains $_ })
@@ -446,10 +451,11 @@ if (-not [string]::IsNullOrWhiteSpace($AnalyzeOnly)) {
             # counter must stay 0. A lap that stopped drawing the collage would
             # otherwise close green on scene bookkeeping alone.
             ('printf "LOOPSURF blit=%u mismatch=%u readfail=%u nolayer=%u ' +
-             'fireblit=%u\n", ' +
+             'fireblit=%u vsbtn=%u csspanel=%u\n", ' +
              'gNdsUiKitSurfaceBlitCount, gNdsUiKitSurfaceHashMismatchCount, ' +
              'gNdsUiKitSurfaceReadFailCount, gNdsUiKitSurfaceNoLayerCount, ' +
-             'gNdsUiKitFireAtlasBlitCount'),
+             'gNdsUiKitFireAtlasBlitCount, gNdsMenuShellVsButtonBlitCount, ' +
+             'gNdsMenuShellCssPanelBlitCount'),
             ('printf "LOOPARENA base=%08x size=%u\n", ' +
              'gNdsSceneManagerArenaBase, gNdsSceneManagerArenaSize'),
             ('printf "LOOPINPUTRING ' + $ringFmt + '\n", ' + $inputRing),
@@ -597,12 +603,36 @@ if ($null -ne $surf) {
         # source's own stone tile instead of a flat blue field, so ALL FIVE
         # screens are backdrop screens and the two looped ones make this an
         # assertion about 21 entries apiece rather than one.
-        $expected = $e['e0'] + $e['e1'] + $e['e2'] + $e['e3'] + $e['e4']
+        #
+        # P2-1j SPLIT THE EQUALITY rather than loosening it. The VS menu's four
+        # buttons and the character select's four player panels are surfaces
+        # too now, and they are re-blitted on a cursor move or a player-kind
+        # change -- so "one blit per entry" stopped being true, and a >= would
+        # have thrown away the invariant. The two state counters below record
+        # exactly those blits, so the total stays an EQUALITY: every surface
+        # blit is either a backdrop (one per screen entry) or a state change
+        # that named itself.
+        $state = [int64]$s['vsbtn'] + [int64]$s['csspanel']
+        $expected = $e['e0'] + $e['e1'] + $e['e2'] + $e['e3'] + $e['e4'] + $state
         Assert-Loop ([int64]$s['blit'] -eq $expected) (
             "BACKDROP SURFACES: blit=$($s['blit']) against " +
-            "e0+e1+e2+e3+e4=$expected backdrop-screen entries; every entry " +
-            'of the title, the mode select, the VS menu, the character ' +
-            'select and the stage select draws exactly one.')
+            "e0+e1+e2+e3+e4=$($expected - $state) backdrop-screen entries " +
+            "plus $state state blits (vsbtn=$($s['vsbtn']) " +
+            "csspanel=$($s['csspanel'])); every entry of the title, the mode " +
+            'select, the VS menu, the character select and the stage select ' +
+            'draws exactly one backdrop, and every other blit is a button or ' +
+            'panel state change.')
+        # The state blits must also be BOUNDED: four buttons and four panels
+        # are written on every entry of their screen, and everything above that
+        # is a scripted input. A run whose state blits scaled with FRAMES
+        # instead of with actions would still satisfy the equality above.
+        Assert-Loop ([int64]$s['vsbtn'] -ge (4 * $e['e2'])) (
+            "VS BUTTONS: vsbtn=$($s['vsbtn']) is below the 4 per VS-menu " +
+            "entry ($($e['e2']) entries) the screen writes on entry alone.")
+        Assert-Loop ([int64]$s['csspanel'] -ge (4 * $e['e3'])) (
+            "CSS PANELS: csspanel=$($s['csspanel']) is below the 4 per " +
+            "character-select entry ($($e['e3']) entries) the screen writes " +
+            'on entry alone.')
         # P2-1i. The title's BG3 fire sheet, asserted on its own rather than
         # folded into the backdrop count above -- one atlas blit per title
         # entry. A run that stopped blitting it would still draw a correct

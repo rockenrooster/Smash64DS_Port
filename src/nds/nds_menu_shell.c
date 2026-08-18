@@ -114,6 +114,11 @@ extern s32 syUtilsRandTimeUCharRange(s32 range);
 #define NDS_MENU_SPRITE_CURSOR 0u
 #define NDS_MENU_SPRITE_NUM0 1u
 #define NDS_MENU_SPRITE_NUM2 3u /* one past the last number slot */
+/* P2-1j -- the VS rules screen's own blinking value arrows (mnvsmode.c:2570).
+ * They take the slots the invented hand cursor used to reach for, which is
+ * what makes owner finding (b) a straight replacement rather than a growth. */
+#define NDS_MENU_SPRITE_ARROW_L 4u
+#define NDS_MENU_SPRITE_ARROW_R 5u
 
 /* --gc-sections drops a global whose only reader is a probe script; that has
  * reddened Boundary once already on "Missing ELF symbol". */
@@ -177,6 +182,13 @@ NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellWalkBudget =
  * scene-routing failure without guessing. */
 NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellWalkResultsPressCount;
 NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellWalkResultsHoldFrames;
+/* P2-1j. Every re-blit of a STATE-dependent backdrop element, counted where it
+ * is spent. A menu's steady state must show these flat: they climb only on a
+ * cursor move, a rule change or a player-kind change, and the difference
+ * between "the art follows the state" and "the art is recomposed per frame" is
+ * exactly this number against the screen's presented-frame count. */
+NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellVsButtonBlitCount;
+NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellCssPanelBlitCount;
 NDS_MENU_PUBLISHED volatile s32 gNdsMenuShellCssCursorX;
 NDS_MENU_PUBLISHED volatile s32 gNdsMenuShellCssCursorY;
 NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellCssCursorStatus;
@@ -655,36 +667,12 @@ static void ndsMenuShellGoto(u32 next_kind)
 
 /* --- Text helpers -------------------------------------------------------- */
 
-/* The kit's text path has no digits: '0'-'9' are the source's own kerning
- * ESCAPES and advance without drawing (mnmaps.c:308). That is exactly what a
- * label needs when a NUMBER SPRITE is going to be drawn into the gap, so a
- * label like "TIME." followed by a value followed by "MIN" is one string with
- * the value's width spelled out in escapes. Nothing here invents a mechanism:
- * it uses the one the original font already carries. */
-static void ndsMenuShellAppendGap(char *dst, u32 capacity, u32 *len, u32 pixels)
-{
-    while ((pixels > 0u) && (*len + 1u < capacity))
-    {
-        u32 step = (pixels > 9u) ? 9u : pixels;
-
-        dst[*len] = (char)('0' + step);
-        (*len)++;
-        pixels -= step;
-    }
-    dst[*len] = '\0';
-}
-
-static void ndsMenuShellAppend(char *dst, u32 capacity, u32 *len,
-                               const char *text)
-{
-    while ((*text != '\0') && (*len + 1u < capacity))
-    {
-        dst[*len] = *text;
-        (*len)++;
-        text++;
-    }
-    dst[*len] = '\0';
-}
+/* P2-1j deleted the kerning-escape gap builder and its string appender with
+ * the VS rules screen's font-composed rows: the only caller spelled
+ * "TIME. <value> MIN" as one font string with the value's width in escapes,
+ * and that whole row is now the source's own `llMNVSModeTimePeriodTextSprite`
+ * and `...MinTextSprite` baked into the button plate they sit on. Nothing else
+ * in this shell composes a label around a number sprite. */
 
 static s32 ndsMenuShellCentre(const char *text)
 {
@@ -977,10 +965,47 @@ static void ndsMenuShellUpdateMode(u32 held, u32 taps)
 #define NDS_MENU_TIME_MAX 100 /* SCBATTLE_TIMELIMIT_INFINITE */
 #define NDS_MENU_STOCK_MAX 98
 
+/* P2-1j, owner finding (b). THE SOURCE HAS NO CURSOR ON THIS SCREEN, and the
+ * hand P2-1d put here was an invention that survived P2-1i only because
+ * removing it would have left the screen with no selection feedback at all
+ * (that row's own note). This is the feedback the source uses:
+ * `mnVSModeUpdateButton` (mnvsmode.c:231) recolours the BUTTON the cursor
+ * index names, through the IA combiner's two-colour ramp, and the four buttons
+ * are the screen's only moving part.
+ *
+ * WHAT A BUTTON IS: `llMNCommonOptionTab{Left,Middle,Right}Sprite` with the
+ * middle tiled over `arg3 * 8` px (:281), arg3 = 17 everywhere here, plus the
+ * button's own black text -- 168x29 in the source's frame, 134x23 on the DS.
+ * That is larger than a 64x64 bitmap-OBJ cell in both axes' worth of area, and
+ * two states of four buttons would be 34,816 B of main OBJ against 16,640 B
+ * free, so each button-state is a BG2 surface baked WITH the collage that sits
+ * under it (generate_mn_ui_kit.py `under=`). Opaque, so a state change is a
+ * whole-row DMA that overwrites the previous state exactly.
+ *
+ * THE COST IS PAID ON A CURSOR MOVE AND NOWHERE ELSE. Only the two buttons
+ * whose state actually changed are re-blitted, so a move reads 12,328 B of
+ * NitroFS against the 560,190-tick 60 Hz budget, and a screen holding still
+ * reads none. `gNdsMenuShellVsButtonBlitCount` is what keeps that honest.
+ *
+ * THE ARROWS ARE OBJ, and that is a blink fact rather than a size one: both
+ * pairs toggle on a 30-tic cycle while the cursor is on their row
+ * (`mnVSModeAnimateRuleArrows` :466, `...TimeStockArrows` :539), and hiding an
+ * OBJ is free where re-blitting a surface is a NitroFS read. */
+#define NDS_MENU_VS_SURFACE_NONE 0xffu
+/* mnVSModeAnimateRuleArrows' own blink period (30 tics on, 30 off). */
+#define NDS_MENU_VS_ARROW_BLINK 30u
+/* This screen's layout is now kept in the SOURCE's own 320x240 units, exactly
+ * as the character select's and the stage select's are, because every number
+ * on it is quoted from mnvsmode.c. The DS screen is exactly 0.8 of that frame
+ * on both axes (256/320 = 192/240), so drawing is one multiply. */
+#define NDS_MENU_VS_DS(v) (((v) * 4) / 5)
+
 static u32 sMenuVsCursor;
 static u32 sMenuVsRule;
 static s32 sMenuVsTime;
 static s32 sMenuVsStock;
+static u8 sMenuVsButtonSurface[NDS_MENU_VS_ENTRIES];
+static u32 sMenuVsArrowsShown;
 
 static u32 ndsMenuShellVsIsTime(void)
 {
@@ -992,92 +1017,223 @@ static s32 ndsMenuShellVsValue(void)
     return (ndsMenuShellVsIsTime() != FALSE) ? sMenuVsTime : (sMenuVsStock + 1);
 }
 
-static void ndsMenuShellPopulateVs(void)
+/* Which baked state each button should be showing right now. The pairs are the
+ * source's own branches: the rule button carries its VALUE word and the
+ * time/stock button its PERIOD word, both of which change with the rule
+ * (mnvsmode.c:337/:679), so those two buttons have a TIME and a STOCK bake. */
+static u8 ndsMenuShellVsWantSurface(u32 button)
 {
-    char buffer[40];
-    u32 len = 0u;
-    s32 value = ndsMenuShellVsValue();
-    s32 label_x = NDS_MENU_VS_X0 + (2 * NDS_MENU_VS_DX);
-    s32 label_y = NDS_MENU_VS_Y0 + (2 * NDS_MENU_VS_DY);
-    s32 digits_right;
-    u32 i;
-    u32 used;
+    u32 lit = (sMenuVsCursor == button) ? TRUE : FALSE;
 
-    ndsUiKitSetText(NDS_MENU_SLOT_HEADER, "VS MODE", NDS_MENU_RGB_HEADER);
-    ndsUiKitMoveText(NDS_MENU_SLOT_HEADER, NDS_MENU_HEADER_X,
-                     NDS_MENU_HEADER_Y);
-
-    ndsUiKitSetText(NDS_MENU_SLOT_ROW0, "VS START",
-                    (sMenuVsCursor == NDS_MENU_VS_START) ? NDS_MENU_RGB_WHITE :
-                                                           NDS_MENU_RGB_RED);
-    ndsUiKitMoveText(NDS_MENU_SLOT_ROW0, NDS_MENU_VS_X0, NDS_MENU_VS_Y0);
-
-    ndsUiKitSetText(NDS_MENU_SLOT_ROW1,
-                    (ndsMenuShellVsIsTime() != FALSE) ? "RULE. TIME" :
-                                                        "RULE. STOCK",
-                    (sMenuVsCursor == NDS_MENU_VS_RULE) ? NDS_MENU_RGB_WHITE :
-                                                          NDS_MENU_RGB_RED);
-    ndsUiKitMoveText(NDS_MENU_SLOT_ROW1, NDS_MENU_VS_X0 + NDS_MENU_VS_DX,
-                     NDS_MENU_VS_Y0 + NDS_MENU_VS_DY);
-
-    /* "TIME." + <value gap> + "MIN", one slot, the gap spelled in the font's
-     * own kerning escapes so the digit sprites drop into it. */
-    ndsMenuShellAppend(buffer, sizeof(buffer), &len,
-                       (ndsMenuShellVsIsTime() != FALSE) ? "TIME." : "STOCK.");
-    ndsMenuShellAppendGap(buffer, sizeof(buffer), &len,
-                          4u + ((value == NDS_MENU_TIME_MAX) ?
-                                26u : ndsUiKitNumberWidth(value)) + 4u);
-    if (ndsMenuShellVsIsTime() != FALSE)
+    switch (button)
     {
-        ndsMenuShellAppend(buffer, sizeof(buffer), &len, "MIN");
+    case NDS_MENU_VS_START:
+        return (u8)((lit != FALSE) ? NDS_MN_UI_KIT_SURFACE_VS_BTN_START_HI :
+                                     NDS_MN_UI_KIT_SURFACE_VS_BTN_START_NOT);
+    case NDS_MENU_VS_RULE:
+        if (ndsMenuShellVsIsTime() != FALSE)
+        {
+            return (u8)((lit != FALSE) ?
+                        NDS_MN_UI_KIT_SURFACE_VS_BTN_RULE_TIME_HI :
+                        NDS_MN_UI_KIT_SURFACE_VS_BTN_RULE_TIME_NOT);
+        }
+        return (u8)((lit != FALSE) ?
+                    NDS_MN_UI_KIT_SURFACE_VS_BTN_RULE_STOCK_HI :
+                    NDS_MN_UI_KIT_SURFACE_VS_BTN_RULE_STOCK_NOT);
+    case NDS_MENU_VS_VALUE:
+        if (ndsMenuShellVsIsTime() != FALSE)
+        {
+            return (u8)((lit != FALSE) ?
+                        NDS_MN_UI_KIT_SURFACE_VS_BTN_TIME_HI :
+                        NDS_MN_UI_KIT_SURFACE_VS_BTN_TIME_NOT);
+        }
+        return (u8)((lit != FALSE) ? NDS_MN_UI_KIT_SURFACE_VS_BTN_STOCK_HI :
+                                     NDS_MN_UI_KIT_SURFACE_VS_BTN_STOCK_NOT);
+    default:
+        break;
     }
-    ndsUiKitSetText(NDS_MENU_SLOT_ROW2, buffer,
-                    (sMenuVsCursor == NDS_MENU_VS_VALUE) ? NDS_MENU_RGB_WHITE :
-                                                           NDS_MENU_RGB_RED);
-    ndsUiKitMoveText(NDS_MENU_SLOT_ROW2, label_x, label_y);
+    return (u8)((lit != FALSE) ? NDS_MN_UI_KIT_SURFACE_VS_BTN_OPTIONS_HI :
+                                 NDS_MN_UI_KIT_SURFACE_VS_BTN_OPTIONS_NOT);
+}
 
-    ndsUiKitSetText(NDS_MENU_SLOT_ROW3, "VS OPTIONS",
-                    (sMenuVsCursor == NDS_MENU_VS_OPTIONS) ?
-                        NDS_MENU_RGB_GREY : NDS_MENU_RGB_LOCKED);
-    ndsUiKitMoveText(NDS_MENU_SLOT_ROW3, NDS_MENU_VS_X0 +
-                         (3 * NDS_MENU_VS_DX),
-                     NDS_MENU_VS_Y0 + (3 * NDS_MENU_VS_DY));
+/* Re-blit the buttons whose state changed, AT MOST `budget` of them, in one
+ * call so a batch costs one NitroFS open.
+ *
+ * THE BUDGET IS THE 60 Hz FRAME, and it is measured rather than assumed. The
+ * first cut of this blitted every changed button on the frame the change
+ * happened, which for a cursor move is TWO -- the one going dark and the one
+ * lighting up, 12,328 B of NitroFS -- and the shipping-configuration probe
+ * priced that frame at **606,336 ticks against the 560,190-tick single-VBlank
+ * budget**, the one 2-VBlank present in 1,811 VS-menu frames
+ * (artifacts/verification/2026-08-18_p2-1j-shell-before.txt, MSVB2/MSMAX w2).
+ * A screen ENTRY can afford all four because it is already a load frame; a
+ * cursor move gets one a frame, so the two-button swap completes in two
+ * frames, 33 ms, and no single present carries the burst.
+ *
+ * The order that falls out is also the right one to watch: the loop below
+ * takes buttons in cursor order, so the button that just LIT UP is written
+ * first whenever the cursor moved down, and the stale highlight is cleared on
+ * the following frame. */
+static void ndsMenuShellVsSyncButtons(u32 budget)
+{
+    u8 list[NDS_MENU_VS_ENTRIES];
+    u8 wanted[NDS_MENU_VS_ENTRIES];
+    u32 index[NDS_MENU_VS_ENTRIES];
+    u32 count = 0u;
+    u32 i;
+
+    for (i = 0u; i < NDS_MENU_VS_ENTRIES; i++)
+    {
+        wanted[i] = ndsMenuShellVsWantSurface(i);
+        if ((wanted[i] != sMenuVsButtonSurface[i]) && (count < budget))
+        {
+            list[count] = wanted[i];
+            index[count] = i;
+            count++;
+        }
+    }
+    if (count == 0u)
+    {
+        return;
+    }
+    if (ndsUiKitBlitSurfaces(list, count) == FALSE)
+    {
+        /* A refused blit leaves the tracker alone so the next frame retries,
+         * rather than recording a state the screen is not showing. */
+        return;
+    }
+    for (i = 0u; i < count; i++)
+    {
+        sMenuVsButtonSurface[index[i]] = list[i];
+    }
+    gNdsMenuShellVsButtonBlitCount += count;
+}
+
+/* mnVSModeMakeTimeStockValue, mnvsmode.c:634. `x` is the RIGHT edge -- the
+ * first digit lands at `x - 11` and the rest walk left at that pitch, which is
+ * exactly ndsUiKitSetNumber's contract -- and the value is drawn in white at
+ * y = 116, or the infinity glyph at (162, 118) for the infinite time limit. */
+static void ndsMenuShellVsDrawValue(void)
+{
+    s32 value = ndsMenuShellVsValue();
+    s32 right;
+    u32 i;
 
     for (i = NDS_MENU_SPRITE_NUM0; i < NDS_MENU_SPRITE_NUM2 + 1u; i++)
     {
         ndsUiKitHideSprite(i);
     }
-    digits_right = label_x +
-        (s32)ndsUiKitTextWidth((ndsMenuShellVsIsTime() != FALSE) ? "TIME." :
-                                                                   "STOCK.");
-    digits_right += 4;
     if (value == NDS_MENU_TIME_MAX)
     {
-        /* The source draws the infinity glyph instead of a number when the
-         * time limit is SCBATTLE_TIMELIMIT_INFINITE (mnvsmode.c:1206). */
         ndsUiKitSetSprite(NDS_MENU_SPRITE_NUM0, NDS_MN_UI_KIT_IMAGE_INFINITY,
-                          digits_right, label_y - 2);
+                          NDS_MENU_VS_DS(162), NDS_MENU_VS_DS(118));
+        return;
+    }
+    if (ndsMenuShellVsIsTime() != FALSE)
+    {
+        right = (value < 10) ? 185 : 190;
     }
     else
     {
-        used = ndsUiKitSetNumber(NDS_MENU_SPRITE_NUM0, 2u, value,
-                                 digits_right + (s32)ndsUiKitNumberWidth(value),
-                                 label_y - 4);
-        (void)used;
+        right = (value < 10) ? 210 : 215;
     }
+    (void)ndsUiKitSetNumber(NDS_MENU_SPRITE_NUM0, 2u, value,
+                            NDS_MENU_VS_DS(right), NDS_MENU_VS_DS(116));
+}
 
-    ndsUiKitSetSprite(NDS_MENU_SPRITE_CURSOR,
-                      NDS_MN_UI_KIT_IMAGE_CSS_CURSOR_POINT,
-                      NDS_MENU_VS_X0 + ((s32)sMenuVsCursor * NDS_MENU_VS_DX) +
-                          NDS_MENU_CURSOR_DX,
-                      NDS_MENU_VS_Y0 + ((s32)sMenuVsCursor * NDS_MENU_VS_DY) +
-                          NDS_MENU_CURSOR_DY);
+/* The two arrow pairs, at their own source positions. Only the pair belonging
+ * to the row the cursor is on is ever shown (`else ... GOBJ_FLAG_HIDDEN` in
+ * both animate threads), the rule pair drops its LEFT arrow at the first rule
+ * and its RIGHT at the last (:487/:501 -- our rule set is {Time, Stock}, so
+ * that is Time and Stock exactly), and the pair blinks on the source's own
+ * 30-tic cycle. */
+static void ndsMenuShellVsDrawArrows(void)
+{
+    s32 x_left;
+    s32 y;
+    u32 show_left;
+    u32 show_right;
+
+    if (sMenuVsCursor == NDS_MENU_VS_RULE)
+    {
+        x_left = 165;
+        y = 70;
+        show_left = (ndsMenuShellVsIsTime() != FALSE) ? FALSE : TRUE;
+        show_right = (ndsMenuShellVsIsTime() != FALSE) ? TRUE : FALSE;
+    }
+    else if (sMenuVsCursor == NDS_MENU_VS_VALUE)
+    {
+        x_left = (ndsMenuShellVsIsTime() != FALSE) ? 155 : 165;
+        y = 109;
+        show_left = TRUE;
+        show_right = TRUE;
+    }
+    else
+    {
+        ndsUiKitHideSprite(NDS_MENU_SPRITE_ARROW_L);
+        ndsUiKitHideSprite(NDS_MENU_SPRITE_ARROW_R);
+        return;
+    }
+    if (sMenuVsArrowsShown == FALSE)
+    {
+        ndsUiKitHideSprite(NDS_MENU_SPRITE_ARROW_L);
+        ndsUiKitHideSprite(NDS_MENU_SPRITE_ARROW_R);
+        return;
+    }
+    if (show_left != FALSE)
+    {
+        ndsUiKitSetSprite(NDS_MENU_SPRITE_ARROW_L,
+                          NDS_MN_UI_KIT_IMAGE_VS_ARROW_L,
+                          NDS_MENU_VS_DS(x_left), NDS_MENU_VS_DS(y));
+    }
+    else
+    {
+        ndsUiKitHideSprite(NDS_MENU_SPRITE_ARROW_L);
+    }
+    if (show_right != FALSE)
+    {
+        ndsUiKitSetSprite(NDS_MENU_SPRITE_ARROW_R,
+                          NDS_MN_UI_KIT_IMAGE_VS_ARROW_R,
+                          NDS_MENU_VS_DS((sMenuVsCursor ==
+                                          NDS_MENU_VS_RULE) ? 250 : 230),
+                          NDS_MENU_VS_DS(y));
+    }
+    else
+    {
+        ndsUiKitHideSprite(NDS_MENU_SPRITE_ARROW_R);
+    }
+}
+
+/* A STATE CHANGE, not an entry: the OBJ half only. The buttons follow on the
+ * next frames through the per-frame sync above, which is what keeps a cursor
+ * move inside one 60 Hz present. */
+static void ndsMenuShellRefreshVs(void)
+{
+    ndsMenuShellVsDrawValue();
+    ndsMenuShellVsDrawArrows();
+}
+
+/* Screen ENTRY. This one runs on a load frame -- ndsMenuShellRun calls it once
+ * after the backdrop, before the loop -- so it may write all four buttons. */
+static void ndsMenuShellPopulateVs(void)
+{
+    ndsMenuShellVsSyncButtons(NDS_MENU_VS_ENTRIES);
+    ndsMenuShellRefreshVs();
 }
 
 /* mnVSModeFuncStartVars: the screen opens on the rules the battle state
  * already carries, so a return trip shows what the last visit committed. */
 static void ndsMenuShellVsLoadRules(void)
 {
+    u32 i;
+
+    for (i = 0u; i < NDS_MENU_VS_ENTRIES; i++)
+    {
+        /* Nothing is on the screen yet, so every button differs from what the
+         * freshly cleared BG2 shows and all four blit on the entry frame. */
+        sMenuVsButtonSurface[i] = (u8)NDS_MENU_VS_SURFACE_NONE;
+    }
+    sMenuVsArrowsShown = TRUE;
     sMenuVsCursor = NDS_MENU_VS_START;
     sMenuVsRule = (gSCManagerTransferBattleState.game_rules ==
                    SCBATTLE_GAMERULE_TIME) ? NDS_MENU_RULE_TIME :
@@ -1122,7 +1278,7 @@ static void ndsMenuShellVsAdjust(s32 direction)
             return;
         }
         ndsUiKitSfx(NDS_UI_KIT_SFX_VALUE);
-        ndsMenuShellPopulateVs();
+        ndsMenuShellRefreshVs();
         return;
     }
     if (sMenuVsCursor != NDS_MENU_VS_VALUE)
@@ -1156,12 +1312,29 @@ static void ndsMenuShellVsAdjust(s32 direction)
         }
     }
     ndsUiKitSfx(NDS_UI_KIT_SFX_VALUE);
-    ndsMenuShellPopulateVs();
+    ndsMenuShellRefreshVs();
 }
 
 static void ndsMenuShellUpdateVs(u32 held, u32 taps)
 {
     u32 moved = FALSE;
+    /* The arrows' own blink, mnvsmode.c:474/:545: a tic counter that toggles
+     * the GObj's HIDDEN flag every 30 tics. Recomputed from sMenuTics rather
+     * than kept as a countdown, so a screen re-entry restarts the phase where
+     * the source's own timer restarts it -- at the top. */
+    u32 shown = (((sMenuTics / NDS_MENU_VS_ARROW_BLINK) & 1u) == 0u) ? TRUE :
+                                                                       FALSE;
+
+    /* ONE button surface a frame, and never more (see ndsMenuShellVsSyncButtons
+     * for the 606,336-tick measurement that put this here). A frame on which
+     * nothing changed compares four bytes and returns. */
+    ndsMenuShellVsSyncButtons(1u);
+
+    if (shown != sMenuVsArrowsShown)
+    {
+        sMenuVsArrowsShown = shown;
+        ndsMenuShellVsDrawArrows();
+    }
 
     if (ndsMenuShellDirection(held, taps, NDS_INPUT_UP) != FALSE)
     {
@@ -1177,7 +1350,7 @@ static void ndsMenuShellUpdateVs(u32 held, u32 taps)
     if (moved != FALSE)
     {
         ndsUiKitSfx(NDS_UI_KIT_SFX_MOVE);
-        ndsMenuShellPopulateVs();
+        ndsMenuShellRefreshVs();
     }
     else if (ndsMenuShellDirection(held, taps, NDS_INPUT_LEFT) != FALSE)
     {
@@ -1556,7 +1729,32 @@ static u32 ndsMenuShellCssBoxHit(s32 x0, s32 x1, s32 y0, s32 y1)
 #define NDS_CSS_SPRITE_KIND0 5u
 #define NDS_CSS_SPRITE_LEVEL0 9u
 #define NDS_CSS_SPRITE_DIGIT0 13u
+/* P2-1j, owner finding (e): the player panel's own art. The tag is the
+ * mnPlayersVSMakePlayerKind sprite (1P / CP, :2003), the colon and the two
+ * blinking arrows are mnPlayersVSMakeHandicapLevel's and
+ * mnPlayersVSArrowThreadUpdate's (:2696/:2626). All four are behind the
+ * tokens and the cursor in id order, which is the depth the source draws them
+ * at (display 35 under the puck's 37). */
 #define NDS_CSS_SPRITE_PORTRAIT0 17u
+#define NDS_CSS_SPRITE_TAG0 29u
+#define NDS_CSS_SPRITE_COLON0 33u
+#define NDS_CSS_SPRITE_ARROWL0 37u
+#define NDS_CSS_SPRITE_ARROWR0 41u
+
+/* mnPlayersVSArrowThreadUpdate's own blink (10 tics on, 10 off) and the two
+ * values at which an arrow is EJECTED rather than blinked (:2643/:2660). */
+#define NDS_CSS_ARROW_BLINK 10u
+#define NDS_CSS_LEVEL_MIN 1u
+#define NDS_CSS_LEVEL_MAX 9u
+
+/* THE PORTRAIT ARTWORK IS SMALLER THAN ITS BOX, and these two numbers are that
+ * difference rather than an offset tuned by eye: the box bakes at the frame's
+ * own 4/5 (45x43 -> 36x34, so the twelve cells tile contiguously exactly as
+ * the source's 45 px grid does) and the portrait at P2-1e's 32/45 (-> 32x31,
+ * which is what lands it in one 32x32 OBJ cell). Centring is (36-32)/2 and
+ * (34-31)/2. */
+#define NDS_CSS_PORTRAIT_INSET_X 2
+#define NDS_CSS_PORTRAIT_INSET_Y 1
 
 static const char *const kNdsCssFighterName[NDS_CSS_PORTRAITS] = {
     "MARIO", "FOX", "DK", "SAMUS", "LUIGI", "LINK",
@@ -1582,6 +1780,118 @@ static u32 ndsMenuShellCssKindImage(u32 pkind)
     return NDS_MN_UI_KIT_IMAGE_LABEL_HMN + pkind;
 }
 
+/* P2-1j, owner finding (e). THE PANEL IS ONE CARD AND EIGHT PALETTES in the
+ * source -- `mnPlayersVSSetGateLUT` (mnplayersvs.c:900) swaps the CI4 gate
+ * card's TLUT between `GateMan<N>PLUT` and `GateCom<N>PLUT` -- and an EMPTY
+ * slot additionally has its two shutter doors closed over it (door_offset 41,
+ * :640). A direct-colour DS bitmap has no palette to swap, so the bake resolves
+ * the three reachable results per slot and the runtime blits the one the slot's
+ * pkind names. Indexed [slot][pkind] in nFTPlayerKind order, which is the same
+ * order the HMN/CP/NA labels above are indexed in. */
+static const u8 kNdsCssPanelSurface[NDS_CSS_SLOTS][3] = {
+    { (u8)NDS_MN_UI_KIT_SURFACE_CSS_PANEL_0_MAN,
+      (u8)NDS_MN_UI_KIT_SURFACE_CSS_PANEL_0_COM,
+      (u8)NDS_MN_UI_KIT_SURFACE_CSS_PANEL_0_NA },
+    { (u8)NDS_MN_UI_KIT_SURFACE_CSS_PANEL_1_MAN,
+      (u8)NDS_MN_UI_KIT_SURFACE_CSS_PANEL_1_COM,
+      (u8)NDS_MN_UI_KIT_SURFACE_CSS_PANEL_1_NA },
+    { (u8)NDS_MN_UI_KIT_SURFACE_CSS_PANEL_2_MAN,
+      (u8)NDS_MN_UI_KIT_SURFACE_CSS_PANEL_2_COM,
+      (u8)NDS_MN_UI_KIT_SURFACE_CSS_PANEL_2_NA },
+    { (u8)NDS_MN_UI_KIT_SURFACE_CSS_PANEL_3_MAN,
+      (u8)NDS_MN_UI_KIT_SURFACE_CSS_PANEL_3_COM,
+      (u8)NDS_MN_UI_KIT_SURFACE_CSS_PANEL_3_NA }
+};
+
+static u8 sCssPanelSurface[NDS_CSS_SLOTS];
+static u32 sCssArrowsShown;
+
+/* Only the panels whose kind changed, at most `budget` of them, in one call.
+ * The VS menu's rule, for the VS menu's measured reason: a panel is 7,738 B of
+ * NitroFS and the character select's own worst frame already sits at 71% of
+ * the 60 Hz budget before one is read, so the screen ENTRY (a load frame)
+ * writes all four and everything after it writes one a frame. A kind change
+ * only ever moves one slot anyway; the budget is what keeps that true when the
+ * next row adds a reason for two. */
+static void ndsMenuShellCssSyncPanels(u32 budget)
+{
+    u8 list[NDS_CSS_SLOTS];
+    u8 wanted[NDS_CSS_SLOTS];
+    u32 index[NDS_CSS_SLOTS];
+    u32 count = 0u;
+    u32 i;
+
+    for (i = 0u; i < (u32)NDS_CSS_SLOTS; i++)
+    {
+        u32 pkind = (u32)sCssPkind[i];
+
+        if (pkind > (u32)nFTPlayerKindNot)
+        {
+            pkind = (u32)nFTPlayerKindNot;
+        }
+        wanted[i] = kNdsCssPanelSurface[i][pkind];
+        if ((wanted[i] != sCssPanelSurface[i]) && (count < budget))
+        {
+            list[count] = wanted[i];
+            index[count] = i;
+            count++;
+        }
+    }
+    if (count == 0u)
+    {
+        return;
+    }
+    if (ndsUiKitBlitSurfaces(list, count) == FALSE)
+    {
+        return;
+    }
+    for (i = 0u; i < count; i++)
+    {
+        sCssPanelSurface[index[i]] = list[i];
+    }
+    gNdsMenuShellCssPanelBlitCount += count;
+}
+
+/* The CPU-level arrows, mnPlayersVSArrowThreadUpdate (:2626). Drawn only for a
+ * slot that shows the CP LEVEL row at all, dropped at the ends of the 1..9
+ * range exactly as the source ejects the SObj there, and blinking on its own
+ * 10-tic cycle. Split from the populate below because the blink is per frame
+ * and the row's existence is not. */
+static void ndsMenuShellCssDrawArrows(void)
+{
+    u32 i;
+
+    for (i = 0u; i < (u32)NDS_CSS_SLOTS; i++)
+    {
+        s32 panel = (s32)(i * 69u);
+        u32 level = (u32)sCssLevel[i];
+        u32 live = ((sCssPkind[i] == (u8)nFTPlayerKindCom) &&
+                    (sCssSelected[i] != 0u) && (sCssArrowsShown != FALSE)) ?
+            TRUE : FALSE;
+
+        if ((live != FALSE) && (level > NDS_CSS_LEVEL_MIN))
+        {
+            ndsUiKitSetSprite(NDS_CSS_SPRITE_ARROWL0 + i,
+                              NDS_MN_UI_KIT_IMAGE_CSS_ARROW_L,
+                              NDS_CSS_DS(panel + 25), NDS_CSS_DS(201));
+        }
+        else
+        {
+            ndsUiKitHideSprite(NDS_CSS_SPRITE_ARROWL0 + i);
+        }
+        if ((live != FALSE) && (level < NDS_CSS_LEVEL_MAX))
+        {
+            ndsUiKitSetSprite(NDS_CSS_SPRITE_ARROWR0 + i,
+                              NDS_MN_UI_KIT_IMAGE_CSS_ARROW_R,
+                              NDS_CSS_DS(panel + 79), NDS_CSS_DS(201));
+        }
+        else
+        {
+            ndsUiKitHideSprite(NDS_CSS_SPRITE_ARROWR0 + i);
+        }
+    }
+}
+
 static void ndsMenuShellCssPopulate(void)
 {
     u32 i;
@@ -1594,21 +1904,25 @@ static void ndsMenuShellCssPopulate(void)
     for (i = 0u; i < NDS_CSS_PORTRAITS; i++)
     {
         u32 fkind = (u32)kNdsCssPortraitFighter[i];
-        u32 image;
 
+        /* P2-1j (c)/(d): a LOCKED cell is drawn by the backdrop now -- box,
+         * noise-dithered shadow where the source has one, question-mark plate
+         * -- because none of it changes while the screen is up. The two built
+         * fighters keep their OBJ cell, centred in the box the backdrop drew
+         * under them. */
         if (ndsMenuShellCssFighterLocked(fkind) != FALSE)
         {
-            image = NDS_MN_UI_KIT_IMAGE_PORTRAIT_LOCKED;
+            ndsUiKitHideSprite(NDS_CSS_SPRITE_PORTRAIT0 + i);
+            continue;
         }
-        else
-        {
-            image = (fkind == (u32)nFTKindMario) ?
-                NDS_MN_UI_KIT_IMAGE_PORTRAIT_MARIO :
-                NDS_MN_UI_KIT_IMAGE_PORTRAIT_FOX;
-        }
-        ndsUiKitSetSprite(NDS_CSS_SPRITE_PORTRAIT0 + i, image,
-                          NDS_CSS_DS(ndsMenuShellCssPortraitX(i)),
-                          NDS_CSS_DS(ndsMenuShellCssPortraitY(i)));
+        ndsUiKitSetSprite(NDS_CSS_SPRITE_PORTRAIT0 + i,
+                          (fkind == (u32)nFTKindMario) ?
+                              NDS_MN_UI_KIT_IMAGE_PORTRAIT_MARIO :
+                              NDS_MN_UI_KIT_IMAGE_PORTRAIT_FOX,
+                          NDS_CSS_DS(ndsMenuShellCssPortraitX(i)) +
+                              NDS_CSS_PORTRAIT_INSET_X,
+                          NDS_CSS_DS(ndsMenuShellCssPortraitY(i)) +
+                              NDS_CSS_PORTRAIT_INSET_Y);
     }
 
     for (i = 0u; i < (u32)NDS_CSS_SLOTS; i++)
@@ -1620,6 +1934,28 @@ static void ndsMenuShellCssPopulate(void)
         ndsUiKitSetSprite(NDS_CSS_SPRITE_KIND0 + i,
                           ndsMenuShellCssKindImage((u32)sCssPkind[i]),
                           NDS_CSS_DS(panel + 64), NDS_CSS_DS(131));
+
+        /* P2-1j (e): the panel's own player tag, mnPlayersVSMakePlayerKind
+         * (:2003) -- a CPU slot draws the shared CP art at `p*69+26` and a
+         * human one its own `<N>P` art at `pos_x[p] + p*69 + 22`, both black
+         * on the card at y 131. An empty slot draws neither, because the
+         * source only builds this GObj from mnPlayersVSMakeGate. */
+        if (sCssPkind[i] == (u8)nFTPlayerKindCom)
+        {
+            ndsUiKitSetSprite(NDS_CSS_SPRITE_TAG0 + i,
+                              NDS_MN_UI_KIT_IMAGE_PANEL_CP,
+                              NDS_CSS_DS(panel + 26), NDS_CSS_DS(131));
+        }
+        else if (sCssPkind[i] == (u8)nFTPlayerKindMan)
+        {
+            ndsUiKitSetSprite(NDS_CSS_SPRITE_TAG0 + i,
+                              NDS_MN_UI_KIT_IMAGE_PANEL_1P,
+                              NDS_CSS_DS(panel + 30), NDS_CSS_DS(131));
+        }
+        else
+        {
+            ndsUiKitHideSprite(NDS_CSS_SPRITE_TAG0 + i);
+        }
 
         /* The fighter's name. The source draws a per-fighter name SPRITE
          * (llMNPlayersCommon<X>TextSprite); those are IA8 strips up to 66 px
@@ -1647,6 +1983,12 @@ static void ndsMenuShellCssPopulate(void)
             ndsUiKitSetSprite(NDS_CSS_SPRITE_LEVEL0 + i,
                               NDS_MN_UI_KIT_IMAGE_CP_LEVEL,
                               NDS_CSS_DS(panel + 34), NDS_CSS_DS(201));
+            /* P2-1j (e): the colon between label and value is its own sprite
+             * in the source too (llMNCommonColonSprite at `p*69+61`, y 202,
+             * white -- mnplayersvs.c:2740), and it was simply absent. */
+            ndsUiKitSetSprite(NDS_CSS_SPRITE_COLON0 + i,
+                              NDS_MN_UI_KIT_IMAGE_COLON,
+                              NDS_CSS_DS(panel + 61), NDS_CSS_DS(202));
             (void)ndsUiKitSetNumber(NDS_CSS_SPRITE_DIGIT0 + i, 1u,
                                     (s32)sCssLevel[i],
                                     NDS_CSS_DS(panel + 67) +
@@ -1657,6 +1999,7 @@ static void ndsMenuShellCssPopulate(void)
         {
             ndsUiKitHideSprite(NDS_CSS_SPRITE_LEVEL0 + i);
             ndsUiKitHideSprite(NDS_CSS_SPRITE_DIGIT0 + i);
+            ndsUiKitHideSprite(NDS_CSS_SPRITE_COLON0 + i);
         }
 
         /* The token. mnPlayersVSUpdatePuckDisplay hides it for an empty slot
@@ -1675,6 +2018,7 @@ static void ndsMenuShellCssPopulate(void)
                               NDS_CSS_DS((s32)sCssPuckY[i]));
         }
     }
+    ndsMenuShellCssDrawArrows();
 }
 
 /* Per frame, and deliberately separate from the populate above: the cursor and
@@ -1685,6 +2029,15 @@ static void ndsMenuShellCssMove(void)
 {
     u32 image = NDS_MN_UI_KIT_IMAGE_CSS_CURSOR_POINT;
     u32 i;
+    /* mnPlayersVSArrowThreadUpdate's 10-tic toggle, recomputed from the
+     * screen's tic count for the same reason the VS menu's 30-tic one is. */
+    u32 shown = (((sMenuTics / NDS_CSS_ARROW_BLINK) & 1u) == 0u) ? TRUE : FALSE;
+
+    if (shown != sCssArrowsShown)
+    {
+        sCssArrowsShown = shown;
+        ndsMenuShellCssDrawArrows();
+    }
 
     if (sCssStatus == NDS_CSS_STATUS_GRAB)
     {
@@ -2066,6 +2419,12 @@ static void ndsMenuShellCssUpdateStatus(void)
 
 static void ndsMenuShellUpdateCss(u32 held, u32 taps)
 {
+    /* ONE panel surface a frame, and BEFORE this frame's input, so a kind
+     * change lands on the frame AFTER the press rather than on the press's own
+     * frame -- which is also the frame the source spends an FGM cue on. See
+     * ndsMenuShellCssSyncPanels for the measurement behind the budget. */
+    ndsMenuShellCssSyncPanels(1u);
+
     /* mnPlayersVSFuncRun's start delay: once START is accepted the screen stops
      * taking input and counts down before the scene changes. */
     if (sCssStartWait != 0u)
@@ -2270,6 +2629,15 @@ static void ndsMenuShellCssInit(void)
     sCssStartWait = 0u;
     sCssReadyBlink = 0u;
     sCssReadyShown = 0xffffffffu; /* forces the first ShowReady to publish */
+    sCssArrowsShown = TRUE;
+
+    for (i = 0u; i < (u32)NDS_CSS_SLOTS; i++)
+    {
+        /* Nothing of this screen is on BG2 yet, so every panel differs and all
+         * four blit on the entry frame -- the same tracker reset the VS menu's
+         * buttons take in ndsMenuShellVsLoadRules. */
+        sCssPanelSurface[i] = (u8)NDS_MENU_VS_SURFACE_NONE;
+    }
 
     for (i = 0u; i < (u32)NDS_CSS_SLOTS; i++)
     {
@@ -2314,8 +2682,12 @@ static void ndsMenuShellCssInit(void)
     }
 }
 
+/* Screen ENTRY, on a load frame: the only place all four panels are written at
+ * once. Every later change goes through ndsMenuShellCssMove's one-a-frame
+ * sync. */
 static void ndsMenuShellPopulateCssScreen(void)
 {
+    ndsMenuShellCssSyncPanels((u32)NDS_CSS_SLOTS);
     ndsMenuShellCssPopulate();
     ndsMenuShellCssShowReady(FALSE);
     ndsMenuShellCssMove();
@@ -2843,16 +3215,14 @@ static void ndsMenuShellSssInit(void)
 static const u8 kNdsMenuTitleSurfaces[] = {
     (u8)NDS_MN_UI_KIT_SURFACE_TITLE_SCREEN
 };
-static const u8 kNdsMenuCollageSurfaces[] = {
-    (u8)NDS_MN_UI_KIT_SURFACE_MENU_COLLAGE
-};
 /* P2-1i, owner finding (2). The main menu's own plate: one surface carrying
  * everything mnModeSelectMake* composes that the cursor does not change --
  * the collage, both decal bars, the MODE SELECT text, the SMASH emblem, the
- * four dark entry icons and the four red labels. The VS menu above still
- * takes the bare collage because its own button art (mnVSModeMakeButton's
- * highlight/not states) is not baked yet; when it is, it gets a plate here
- * the same way. */
+ * four dark entry icons and the four red labels.
+ *
+ * P2-1j gave the VS menu the same treatment, so the BARE collage surface no
+ * longer has a consumer and is no longer baked: both screens that show it now
+ * show it inside their own composed plate. */
 static const u8 kNdsMenuModeSelectSurfaces[] = {
     (u8)NDS_MN_UI_KIT_SURFACE_MODE_SELECT
 };
@@ -2864,6 +3234,25 @@ static const u8 kNdsMenuModeSelectSurfaces[] = {
  * surface serves both. */
 static const u8 kNdsMenuStoneSurfaces[] = {
     (u8)NDS_MN_UI_KIT_SURFACE_MENU_STONE
+};
+
+/* P2-1j. The VS rules screen's own plate -- collage, both decal papers, the
+ * console-icon watermark, the menu-name fill rectangle and its three plaque
+ * sprites (mnvsmode.c:965 and :909) -- with the four buttons blitted over it
+ * by ndsMenuShellVsSyncButtons in whichever state the cursor puts them.
+ *
+ * P2-1j findings (c)/(d). The character select's stone now carries the twelve
+ * portrait BOXES and the ten locked stacks, because neither ever changes while
+ * the screen is up: `llMNPlayersPortraitsPortraitFireBgSprite` behind every
+ * cell (mnplayersvs.c:2437/:2503) and, for a locked one, the fighter's noise-
+ * dithered shadow and the question-mark plate over it (:2404). The stage
+ * select keeps the plain stone -- it draws no portrait grid. */
+static const u8 kNdsMenuVsSurfaces[] = {
+    (u8)NDS_MN_UI_KIT_SURFACE_VS_MODE
+};
+
+static const u8 kNdsMenuCssSurfaces[] = {
+    (u8)NDS_MN_UI_KIT_SURFACE_CSS_SCREEN
 };
 
 static void ndsMenuShellEnterBackdrop(u32 screen)
@@ -2901,11 +3290,15 @@ static void ndsMenuShellEnterBackdrop(u32 screen)
                                          sizeof(kNdsMenuModeSelectSurfaces[0])));
         break;
     case NDS_MENU_SHELL_SCREEN_VSMODE:
-        (void)ndsUiKitBlitSurfaces(kNdsMenuCollageSurfaces,
-                                   (u32)(sizeof(kNdsMenuCollageSurfaces) /
-                                         sizeof(kNdsMenuCollageSurfaces[0])));
+        (void)ndsUiKitBlitSurfaces(kNdsMenuVsSurfaces,
+                                   (u32)(sizeof(kNdsMenuVsSurfaces) /
+                                         sizeof(kNdsMenuVsSurfaces[0])));
         break;
     case NDS_MENU_SHELL_SCREEN_CSS:
+        (void)ndsUiKitBlitSurfaces(kNdsMenuCssSurfaces,
+                                   (u32)(sizeof(kNdsMenuCssSurfaces) /
+                                         sizeof(kNdsMenuCssSurfaces[0])));
+        break;
     case NDS_MENU_SHELL_SCREEN_SSS:
         (void)ndsUiKitBlitSurfaces(kNdsMenuStoneSurfaces,
                                    (u32)(sizeof(kNdsMenuStoneSurfaces) /
