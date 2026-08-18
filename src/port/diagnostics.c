@@ -157,6 +157,12 @@ volatile u32 gNdsOsGObjThreadProvisionFailCount;
 volatile u32 gNdsOsThreadHeapCreateCount;
 volatile u32 gNdsOsStartThreadNoEntryCount;
 volatile u32 gNdsOsStartThreadCreateFailCount;
+/* Arena-resident threads dropped from the registry at a scene rewind; the
+ * legend is on the declarations in nds_os.h. Read by the scene-loop walk probe
+ * only, so `used` keeps --gc-sections honest about them. */
+volatile u32 gNdsOsArenaThreadsDropped __attribute__((used));
+volatile u32 gNdsOsArenaThreadDropEntries __attribute__((used));
+volatile u32 gNdsOsArenaThreadDropLastId __attribute__((used));
 volatile u32 gNdsTaskmanPostUpdateLogoPosX;
 volatile u32 gNdsTaskmanPostUpdateLogoPosY;
 volatile u32 gNdsTaskmanPostUpdateOpening;

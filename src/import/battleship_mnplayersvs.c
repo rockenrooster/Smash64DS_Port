@@ -5,6 +5,8 @@
  * continuous interactive loop unless a harness explicitly drives the original
  * ready/start transition.
  */
+#include "nds_build_config.h"
+
 #include <PR/gbi.h>
 #include <PR/ultratypes.h>
 #include <ft/fighter.h>
@@ -69,6 +71,12 @@ void ndsBaseMNPlayersVSStartScene(void);
 #undef mnPlayersVSStartScene
 
 static GObj *sNdsPlayersVSMainGObj;
+
+/* Only mnPlayersVSStartScene below uses this, and that is compiled out with the
+ * P2-1e menu shell on -- marked rather than bracketed so the guard stays one
+ * block around the scene it belongs to. */
+static SYTaskmanSetup ndsMNPlayersVSMakeTaskmanSetup(void)
+    __attribute__((unused));
 
 static SYTaskmanSetup ndsMNPlayersVSMakeTaskmanSetup(void)
 {
@@ -404,6 +412,11 @@ void ndsMNPlayersVSRunReadyTransitionProbe(void)
     }
 }
 
+#if !NDS_P2_MENU_SHELL
+/* P2-1e defines the real character-select scene in src/nds/nds_menu_shell.c.
+ * This one runs the ORIGINAL mnPlayersVSFuncStart, which loads seven menu
+ * files, sets up all twelve fighters and allocates four figatree heaps out of
+ * the scene arena -- the bounded proof path, not a playable screen. */
 void mnPlayersVSStartScene(void)
 {
     dMNPlayersVSVideoSetup.zbuffer =
@@ -418,3 +431,4 @@ void mnPlayersVSStartScene(void)
         scManagerFuncUpdate(&setup);
     }
 }
+#endif

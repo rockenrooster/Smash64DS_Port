@@ -1,3 +1,4 @@
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -61,6 +62,38 @@ static void ndsOsTask20SampleStack(const OSThread *thread, s32 finished)
     gNdsTask20SampleCount++;
 }
 #endif
+
+u32 ndsOsForgetThreadsInArena(const void *base, u32 size)
+{
+    uintptr_t lo = (uintptr_t)base;
+    uintptr_t hi = lo + (uintptr_t)size;
+    u32 dropped = 0u;
+    s32 i;
+
+    if ((base == NULL) || (size == 0u)) return 0u;
+
+    for (i = 0; i < NDS_OS_MAX_THREADS; i++) {
+        OSThread *thread = sThreads[i];
+        uintptr_t addr = (uintptr_t)thread;
+
+        if (thread == NULL) continue;
+        if (addr < lo || addr >= hi) continue;
+
+        /* Read the id -- the struct is still intact, the rewind has not
+         * happened yet -- but write only the registry slot. `thread` is about
+         * to stop existing, so clearing its port_registered flag would be a
+         * write into the next scene's memory. */
+        gNdsOsArenaThreadDropLastId = (u32)thread->id;
+        sThreads[i] = NULL;
+        dropped++;
+    }
+
+    if (dropped != 0u) {
+        gNdsOsArenaThreadsDropped += dropped;
+        gNdsOsArenaThreadDropEntries++;
+    }
+    return dropped;
+}
 
 static OSThread *ndsOsCurrentThread(void)
 {

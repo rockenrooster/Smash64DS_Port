@@ -47,7 +47,32 @@ $expectedIDs = @(626,470,469,467,490,74,363,364,372,373,374,430,439,292,
     271, 368,
     # And three from the run in which every fireball spawned and the match went
     # to SUDDEN DEATH: a light swing, the Sudden Death call, Fox's select voice.
-    18, 365, 514)
+    18, 365, 514,
+    # P2-1c-1: the four menu SFX the UI kit's seam (ndsUiKitSfx) already asks
+    # for and the pack did not carry -- MenuSelect, MenuScroll1, MenuScroll2,
+    # MenuDenied. Proven by the miss ring, not inferred: 2026-08-17 P2-1c
+    # evidence read `UKMISS ring=3 id0=164 c0=17 id1=165 c1=6`.
+    158, 163, 164, 165,
+    # P2-1d-1: the title screen's own confirm cue, which the menu shell's seam
+    # already asks for with the source's own id (mntitle.c:501) and the pack
+    # did not carry. Proven by the miss ring, not inferred: 2026-08-18 P2-1d
+    # evidence read `MSMISS ring=1 id0=157 c0=1` -- the only cue any menu
+    # screen misses.
+    157,
+    # P2-1e-1: the character select's own four cues (nds_menu_shell.c,
+    # NDS_CSS_FGM_ANNOUNCE_WHOOSH/_GRAB/_SLOT_WHOOSH/NDS_CSS_VOICE_FREE_FOR_ALL),
+    # already asked for with the source's own ids at P2-1e landing so the gap
+    # could be measured. Proven by the miss ring, not inferred: 2026-08-18
+    # P2-1e evidence read `MSMISS ring=4 id0=512 c0=1 id1=127 c1=1 id2=121
+    # c2=2 id3=167 c3=1`.
+    121, 127, 167, 512,
+    # P2-1f-1: the stage select's own confirm cue (NDS_SSS_FGM_CONFIRM in
+    # nds_menu_shell.c, mnmaps.c:1470's A/START confirm), already asked for
+    # with the source's own id at the SSS screen's own landing so the gap
+    # could be measured. Proven by the miss ring, not inferred: 2026-08-18
+    # P2-1f evidence read `MSMISS ring=1 id0=159 c0=1` one-pass, `c0=3`
+    # three-lap.
+    159)
 $actualIDs = @($metadata.entries | ForEach-Object { [int]$_.id })
 if (($actualIDs -join ',') -ne ($expectedIDs -join ',')) {
     throw "Unexpected FGM mapping: $($actualIDs -join ',')"
@@ -76,7 +101,33 @@ if (([int]$metadata.format_version -ne 4) -or
     # 299 ms, 622 by 744 ms. Now 1,437 ms and 2,185 ms, matching their note
     # totals exactly. 605 and 609 carry `pitch_code`, not `notes`; they are
     # genuinely single-note and stay flat.
-    ([int64]$metadata.resident_bytes -ne 938996) -or
+    # 938996 -> 948068 on 2026-08-18 (P2-1c-1): the UI kit's four menu SFX
+    # (158 MenuSelect, 163 MenuScroll1, 164 MenuScroll2, 165 MenuDenied)
+    # joined SELECTED, 88 -> 92 entries. 158/163/164 share one short UI-click
+    # wave (untrimmed, no loop); 165's 70-tick hold outlives its 1,664-sample
+    # source, rendered via the same `render_source_loop` software path as 216
+    # and 28 above (source loop replayed to the note's proven reach, then a
+    # normal one-shot IMA encode -- no DS hardware repeat, no hand-derived
+    # IMA seed).
+    # 948068 -> 950168 on 2026-08-18 (P2-1d-1): FGM 157 TitlePressStart joined
+    # SELECTED, 92 -> 93 entries (+2100 bytes: 2068-byte IMA body + 32-byte
+    # entry header). A flat two-note schedule (both notes pitch code 9) whose
+    # ceiling reach exceeds its 4,128-sample decoded source, so it retains the
+    # full untrimmed source exactly like 158/163/164 above.
+    # 950168 -> 973524 on 2026-08-18 (P2-1e-1): the CSS's four cues (121
+    # MarioDash, 127 SamusDash, 167 PlayerSlotWhoosh, 512 AnnounceFreeForAll)
+    # joined SELECTED, 93 -> 97 entries. 127/167/512 are plain flat renders
+    # (6880/3681/33829 retained samples); 121 forks to 118 FoxDash with no
+    # local notes and 118's first note overflows the u16 frequency field
+    # (71,838 Hz), so it renders full-program AOT like 85/153/189/190/219 and
+    # stores 2,024 samples at FGM_OUTPUT_RATE.
+    # 973524 -> 990120 on 2026-08-18 (P2-1f-1): FGM 159 StageSelect joined
+    # SELECTED, 97 -> 98 entries. Unlike 121, 159 has a real local note of its
+    # own (pitch 6, 180 ticks) AND forks two voices at tick 0 (163
+    # MenuScroll1, 6 UnkSmallPing1), so it joins FULL_PROGRAM_AOT_IDS to
+    # render all three voices fused -- 33,120 samples at FGM_OUTPUT_RATE,
+    # +16,596 bytes (16,564-byte IMA body + 32-byte entry header).
+    ([int64]$metadata.resident_bytes -ne 990120) -or
     ([int64]$metadata.resident_limit_bytes -ne 204800) -or
     # ROM, not RAM: the runtime streams cues into resident_limit_bytes and never
     # holds the pack. 512 KiB blocked the five announcer lines and 768 KiB then
@@ -91,7 +142,15 @@ if (([int]$metadata.format_version -ne 4) -or
     # 0xb6be788e -> 0x5d1c7cf5 -> 0x885657f4 on 2026-08-06 for 617 and 622
     # changing render strategy, which is exactly the case this hash exists to
     # catch and must never be repinned without.
-    ($metadata.mapping_sha256_lo -ne '0x885657f4') -or
+    # 0x885657f4 -> 0xe4b8921c on 2026-08-18 (P2-1c-1) for the four menu SFX
+    # joining SELECTED -- same reason, the selector table changed.
+    # 0xe4b8921c -> 0x9bc3e069 on 2026-08-18 (P2-1d-1) for FGM 157 joining
+    # SELECTED -- same reason, the selector table changed.
+    # 0x9bc3e069 -> 0xcb181af6 on 2026-08-18 (P2-1e-1) for the CSS's four cues
+    # joining SELECTED -- same reason, the selector table changed.
+    # 0xcb181af6 -> 0x3d9a9ac2 on 2026-08-18 (P2-1f-1) for FGM 159 joining
+    # SELECTED -- same reason, the selector table changed.
+    ($metadata.mapping_sha256_lo -ne '0x3d9a9ac2') -or
     # Repinned 2026-08-02: FGM 11 (the rolling dodge) dropped 127 -> 96 -> 68 ->
     # 48 on the owner's ear via FGM_OWNER_VOLUME_TRIM, -8.4 dB total against the
     # source; the 68 pin was
@@ -111,8 +170,20 @@ if (([int]$metadata.format_version -ne 4) -or
     # signal that the change did not land.
     # Repinned 2026-08-06 with the 617/622 render change; the prior pin was
     # 5f12e380c4036401414cc490f4a29cc708281ba574813ccaf13acb56327fa6db.
+    # Repinned 2026-08-18 (P2-1c-1) for the four menu SFX joining SELECTED;
+    # the prior pin was
+    # 51ac736c2421fe63b0f5cba4e791572ed5c453e1c85614303b464cd3374d749e.
+    # Repinned 2026-08-18 (P2-1d-1) for FGM 157 joining SELECTED; the prior
+    # pin was
+    # 101fd1d5b369dc6932090e6de3a43508fb0b79d2f2507c56151a99f7d7e3d2b7.
+    # Repinned 2026-08-18 (P2-1e-1) for the CSS's four cues joining SELECTED;
+    # the prior pin was
+    # 011a59be88752138b985faee776814d4c0fed048173f1d337ef51351adec741a.
+    # Repinned 2026-08-18 (P2-1f-1) for FGM 159 joining SELECTED; the prior
+    # pin was
+    # 6cc5f91c35a82833d23bf3001c0c108225615e03a04ccc49eda800812f86c0b7.
     ($metadata.pack_sha256 -ne
-        '51ac736c2421fe63b0f5cba4e791572ed5c453e1c85614303b464cd3374d749e')) {
+        '91ef45107ee0126b6b44b385e485ab3f6987250585c067b4d1abadcedec2a325')) {
     throw 'FGM pack format, budget, mapping, or binary identity changed.'
 }
 if ((@($metadata.excluded_entries).Count -ne 0) -or
@@ -236,7 +307,7 @@ if (($fgm218.acoustic_oracle.source_custom_fx_dry_only -ne $true) -or
 $header = Get-Content -LiteralPath $headerPath -Raw
 $runtime = Get-Content -LiteralPath $runtimePath -Raw
 foreach ($token in @(
-    '#define NDS_AUDIO_FGM_ENTRY_COUNT 88u',
+    '#define NDS_AUDIO_FGM_ENTRY_COUNT 98u',
     '#define NDS_AUDIO_FGM_CACHE_BYTES 204800u')) {
     if (-not $header.Contains($token)) { throw "Runtime header lost: $token" }
 }

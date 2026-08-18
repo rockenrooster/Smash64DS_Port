@@ -146,6 +146,72 @@ FULL_COVERAGE_IDS = (
     # among the swings (18 LightSwingLw1, 19 Catch), not with the crowd cues the
     # open BUGS.md row is about -- that row's cut-off was the release window, and
     # nds_audio_fgm.c:1014 already holds the fix.
+    #
+    # P2-1c-1. The 2D UI kit's SFX seam (src/nds/nds_ui_kit.c:ndsUiKitSfx,
+    # sNdsUiKitSfxIds = {164, 158, 165}) already asks for these with the
+    # source's own ids and the pack did not carry them -- proven by the miss
+    # ring, not inferred (2026-08-17 P2-1c evidence:
+    # `UKMISS ring=3 id0=164 c0=17 id1=165 c1=6`). Ids re-verified by fully
+    # parsing gm/gmsound.h's gmFGMVoiceID enum with REGION_US honored (the
+    # enum is not a line count -- REGION_US conditionals shift it by ten
+    # entries before this run of names) and cross-checked against every id
+    # this file already pins: Escape 11, GuardOn 13, GamePause 278,
+    # FoxLanding 74, MarioLanding 77, UnkGrind4 85, AltitudeWarn 153,
+    # DeadExplodeL 154 all land exactly where this file already has them,
+    # then MenuSelect 158, MenuScroll1 163, MenuScroll2 164, MenuDenied 165
+    # follow in the same parse. 163 MenuScroll1 has no live caller yet (the
+    # kit only wires move/confirm/back to 164/158/165); packed anyway per the
+    # board row's exact id list, for whichever P2-1d direction wires it.
+    158, 163, 164, 165,
+    # P2-1d-1. The title screen's own confirm cue, mntitle.c:501 --
+    # ndsMenuShellUpdateTitle's seam already asks for it with the source's own
+    # id and the pack did not carry it, proven by the miss ring rather than
+    # inferred (P2-1d evidence: `MSMISS ring=1 id0=157 c0=1`, the only cue any
+    # menu screen misses). Id re-verified by fully parsing gm/gmsound.h's
+    # gmFGMVoiceID enum with REGION_US honored (a Python parser, not
+    # hand-counting) and cross-checked against every id this file already
+    # pins -- Escape 11, GuardOn 13, GamePause 278, FoxLanding 74,
+    # MarioLanding 77, UnkGrind4 85, AltitudeWarn 153, DeadExplodeL 154,
+    # MenuSelect 158, MenuScroll1 163, MenuScroll2 164, MenuDenied 165 all
+    # land exactly where this file already has them, and 157 lands one below
+    # MenuSelect's 158 -- nSYAudioFGMTitlePressStart, immediately before it in
+    # the enum, exactly where the name says it should sit.
+    157,
+    # P2-1e-1. The character select's own audio seam (nds_menu_shell.c,
+    # NDS_CSS_FGM_ANNOUNCE_WHOOSH/_GRAB/_SLOT_WHOOSH/NDS_CSS_VOICE_FREE_FOR_ALL)
+    # already asks for these four with the source's own ids -- transcribed at
+    # P2-1e landing so the gap could be MEASURED rather than guessed -- and the
+    # pack did not carry them, proven by the miss ring, not inferred (2026-08-18
+    # P2-1e evidence: `MSMISS ring=4 id0=512 c0=1 id1=127 c1=1 id2=121 c2=2
+    # id3=167 c3=1`, counts x3 on the three-lap walk arm). Ids re-verified by
+    # fully parsing gm/gmsound.h's gmFGMVoiceID enum with REGION_US honored (a
+    # Python parser, not hand-counting) and cross-checked against all eighteen
+    # ids this file already pins (thirteen FGM anchors -- Escape 11, GuardOn 13,
+    # FoxLanding 74, MarioLanding 77, UnkGrind4 85, AltitudeWarn 153,
+    # DeadExplodeL 154, TitlePressStart 157, MenuSelect 158, MenuScroll1 163,
+    # MenuScroll2 164, MenuDenied 165, GamePause 278 -- plus five BGM anchors
+    # 0/12/16/22/44 in gmMusicID) -- all landed exactly where this file already
+    # has them before any of the four below was trusted: 121
+    # nSYAudioFGMMarioDash (the CSS announce whoosh), 127 nSYAudioFGMSamusDash
+    # (the token-grab whoosh), 167 nSYAudioFGMPlayerSlotWhoosh (the kind-toggle
+    # whoosh), 512 nSYAudioVoiceAnnounceFreeForAll (the game-mode call at CSS
+    # entry).
+    121, 127, 167, 512,
+    # P2-1f-1. The stage select's own confirm cue (NDS_SSS_FGM_CONFIRM in
+    # nds_menu_shell.c, mnmaps.c:1470's A/START confirm) already asks for it
+    # with the source's own id -- transcribed at the SSS screen's own landing
+    # so the gap could be MEASURED rather than guessed -- and the pack did not
+    # carry it, proven by the miss ring, not inferred (2026-08-18 P2-1f
+    # evidence: `MSMISS ring=1 id0=159 c0=1` one-pass, `c0=3` three-lap). Id
+    # re-verified by fully parsing gm/gmsound.h's gmFGMVoiceID enum with
+    # REGION_US honored (a Python parser, not hand-counting) and cross-checked
+    # against all eighteen ids this file already pins before trusting the new
+    # one: 159 nSYAudioFGMStageSelect lands exactly one above MenuSelect's
+    # 158, matching the name and matching this port's own hand-curated
+    # `include/gm/gmsound.h` (`nSYAudioFGMStageSelect = 159` already present
+    # there from earlier curation, unused for packing until this row) -- a
+    # second, independent corroboration.
+    159,
 )
 FULL_PROGRAM_AOT_IDS = frozenset((
     154, 40, 38, 37, 34, 32, 31,
@@ -216,6 +282,27 @@ FULL_PROGRAM_AOT_IDS = frozenset((
     # Tick math is validated against this file's own figure: 623 is 150 ticks
     # and nds_audio_fgm.c calls it an "862 ms note"; 150 * 5.75 ms = 862.5.
     617, 622,
+    # P2-1e-1. 121 nSYAudioFGMMarioDash forks straight to 118 FoxDash (no local
+    # notes of its own) and 118's first note (pitch code 20, +700 cents) asks
+    # for 71,838 Hz -- past the pack entry's u16 frequency field, the same
+    # `source_rate_above_u16` shape as 85/189/190/219 above. Same answer: bake
+    # the note schedule into the samples and store FGM_OUTPUT_RATE.
+    121,
+    # P2-1f-1. 159 nSYAudioFGMStageSelect is not a fork-only root like 121 --
+    # its own program has a real local note (pitch code 6, 180 ticks) -- but it
+    # ALSO forks TWO voices at tick 0, before that note: 163 MenuScroll1 (its
+    # own two-note program) and 6 UnkSmallPing1 (its own five-note program).
+    # That is the same "local notes plus fork(s)" shape as 154/616/618/619/
+    # 620/623/625 above, and the flat path can express only one voice, so a
+    # flat render would omit both layers -- the exact `omitted_fork_voice`
+    # debt this file spent 2026-08-02/08-06 clearing off the crowd cues.
+    # Nothing forces the omission here: both forks are cheap (33/15 ticks) and
+    # the fused render this file already proves correct for 154/616-625/121
+    # handles two simultaneous forks exactly the same way it handles one --
+    # render_fgm_composite_aot mixes every voice in root_meta["forks"], not
+    # just the first. Full-program AOT keeps the confirm chime complete
+    # instead of shipping a shorter, quieter partial of it.
+    159,
 ))
 
 ATTACK_ACTION_AUDIT_SHA256 = (
@@ -2608,6 +2695,352 @@ SELECTED += (
         "articulation_program_sha256":
             "a58c3cff3972a3140b9a507942634ac9d2df4eb6b310e9e01c0db0797ef852ae",
         "fidelity_debt": (),
+    },
+)
+
+# P2-1c-1. All four fields (articulation/sound/notes/wave) came out of
+# `--derive 158,163,164,165`, not a guess. 158/163/164 share wave_base 119296
+# (the same short UI click, pitch/volume-varied per context by articulation
+# 18/17/17) and each note schedule's ceiling reach exceeds the 2,752-sample
+# source by a wide margin, so all three retain the full untrimmed source --
+# the same shape as every other flat single-wave UI/voice cue in this file.
+SELECTED += (
+    {
+        "id": 158,
+        "name": "nSYAudioFGMMenuSelect",
+        "kind": "menu",
+        "articulation": 18,
+        "sound": 10,
+        "notes": ((4, 7, 4), (11, 7, 3), (18, 7, 5), (20, 7, 12)),
+        "duration_ticks": 24,
+        "ucd_volume": 130,
+        "articulation_pitch_cents": 320,
+        "loop": False,
+        "wave_base": 119296,
+        "wave_length": 1548,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 2752,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "6c3209b1777b82cf3f5d6a889fa44acccc074061b4ace5b0839abfd970ad9b95",
+        "render_program_sha256":
+            "6c3209b1777b82cf3f5d6a889fa44acccc074061b4ace5b0839abfd970ad9b95",
+        "articulation_program_sha256":
+            "ede797dd2729ec039339e9c53f2afa1007769693deb1ecdc76ace3547d178e30",
+        "fidelity_debt": (),
+    },
+    {
+        "id": 163,
+        "name": "nSYAudioFGMMenuScroll1",
+        "kind": "menu",
+        "articulation": 17,
+        "sound": 10,
+        "notes": ((7, 7, 8), (7, 7, 25)),
+        "duration_ticks": 33,
+        "ucd_volume": 170,
+        "articulation_pitch_cents": 550,
+        "loop": False,
+        "wave_base": 119296,
+        "wave_length": 1548,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 2752,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "191531a69a863630319ef40c5b12e0ccb48cf4d5eb3c88c442201884122acd1b",
+        "render_program_sha256":
+            "191531a69a863630319ef40c5b12e0ccb48cf4d5eb3c88c442201884122acd1b",
+        "articulation_program_sha256":
+            "f014df4f7f920736f102d2844f1a79c4d86896f0e5d9b6ba7fb786c1765a3f0a",
+        "fidelity_debt": (),
+    },
+    {
+        "id": 164,
+        "name": "nSYAudioFGMMenuScroll2",
+        "kind": "menu",
+        "articulation": 17,
+        "sound": 10,
+        "notes": ((3, 7, 8), (3, 7, 16)),
+        "duration_ticks": 24,
+        "ucd_volume": 135,
+        "articulation_pitch_cents": 550,
+        "loop": False,
+        "wave_base": 119296,
+        "wave_length": 1548,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 2752,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "64032b63e43dc958035b0870994f7dab79157ec7e5f4b405bb76ec644f2f7ea9",
+        "render_program_sha256":
+            "64032b63e43dc958035b0870994f7dab79157ec7e5f4b405bb76ec644f2f7ea9",
+        "articulation_program_sha256":
+            "f014df4f7f920736f102d2844f1a79c4d86896f0e5d9b6ba7fb786c1765a3f0a",
+        "fidelity_debt": (),
+    },
+    {
+        # Two notes bracket a rest, not one held note -- (13,7,7) blip,
+        # (0,7,5) rest, (13,7,70) hold -- the same shape as 216 and 28 above,
+        # and like them this cannot use the pitch_code/duration_ticks
+        # shorthand. The 70-tick final note (402 ms) far outlives the raw
+        # 1,664-sample source (~52 ms at its own rate); the source wave
+        # itself declares a loop (loop_start=2, loop_end=1652), which is what
+        # the N64 replays for the note's full hold. Rendered on the same
+        # `render_source_loop` software path as 216 MarioSpecialHiCoin and 28
+        # BurnS -- a proven pattern, and simpler and lower-risk than a DS
+        # hardware repeat (285/153's path): no hand-derived IMA predictor/
+        # index seed, just the source loop region replayed to the note's
+        # proven reach before a normal one-shot IMA encode.
+        "id": 165,
+        "name": "nSYAudioFGMMenuDenied",
+        "kind": "menu",
+        "articulation": 15,
+        "sound": 8,
+        "notes": ((13, 7, 7), (0, 7, 5), (13, 7, 70)),
+        "duration_ticks": 82,
+        "ucd_volume": 180,
+        "articulation_pitch_cents": 0,
+        "loop": True,
+        "wave_base": 112584,
+        "wave_length": 936,
+        "loop_start": 2,
+        "loop_end": 1652,
+        "render_source_loop": True,
+        "expected_retained_samples": 15089,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "a2bd6c78a59eff2844cd0ce7d39ad1b14bac6fde08f66ea1da945ee542ede099",
+        "render_program_sha256":
+            "a2bd6c78a59eff2844cd0ce7d39ad1b14bac6fde08f66ea1da945ee542ede099",
+        "articulation_program_sha256":
+            "feb1bdd0f1134b0cb6081f033e16d0721619c2cd7aa1b0736d5191de7db95076",
+        "fidelity_debt": (),
+    },
+)
+
+# P2-1d-1. All fields (articulation/sound/notes/wave) came out of
+# `--derive 157`, not a guess. A flat two-note schedule (both notes pitch
+# code 9, i.e. one fixed rate throughout) whose ceiling reach -- 7,627
+# samples on the first note's own schedule, 7,626 on the cue's whole
+# duration_ticks against that same rate -- exceeds the 4,128-sample decoded
+# source by a wide margin, so like every other flat single-wave UI cue in
+# this file (158/163/164 above) the source's own `min(len(pcm), ...)` bound
+# collapses to the full untrimmed source: expected_retained_samples equals
+# the decoded sample count exactly, not a trimmed schedule length.
+SELECTED += (
+    {
+        "id": 157,
+        "name": "nSYAudioFGMTitlePressStart",
+        "kind": "menu",
+        "articulation": 92,
+        "sound": 21,
+        "notes": ((9, 7, 10), (9, 7, 28)),
+        "duration_ticks": 38,
+        "ucd_volume": 220,
+        "articulation_pitch_cents": 550,
+        "loop": False,
+        "wave_base": 196736,
+        "wave_length": 2322,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 4128,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "cc16a109c4a8bfd4a4c7e1ac3ae28e2b1a6cccdc46e710383d6438329547c3fa",
+        "render_program_sha256":
+            "cc16a109c4a8bfd4a4c7e1ac3ae28e2b1a6cccdc46e710383d6438329547c3fa",
+        "articulation_program_sha256":
+            "c11c77d213ceb7403e2f5921cdfb7994d11cf42d60bc5d75b4d2a37b0ea6c2a5",
+        "fidelity_debt": (),
+    },
+)
+
+# P2-1e-1. All four fields (articulation/sound/notes/wave) came out of
+# `--derive 121,127,167,512`, not a guess.
+SELECTED += (
+    {
+        # 121 nSYAudioFGMMarioDash has no `set_articulation` of its own -- its
+        # root UCD program is just `set_unk2D 0 / set_unk1E 255 / fork_voice 118
+        # / stop_voice` -- so, like FoxLanding (74, above), it plays entirely
+        # through a fork: program 118 is nSYAudioFGMFoxDash's own program (Mario
+        # and Fox share one dash sound, matching the source comment on
+        # nSYAudioFGMMarioDash, "// Also Luigi" -- a shared-cue family). Every
+        # field below (articulation/sound/notes/wave/volume/pitch) is 118's own,
+        # read via `--derive 118`, exactly as validate_ucd requires for a
+        # render_program entry.
+        "id": 121,
+        "name": "nSYAudioFGMMarioDash",
+        "kind": "menu",
+        "render_program": 118,
+        "articulation": 3,
+        "sound": 1,
+        "notes": ((20, 7, 3), (15, 7, 8)),
+        "duration_ticks": 11,
+        "ucd_volume": 210,
+        "articulation_pitch_cents": 700,
+        "loop": False,
+        "wave_base": 14224,
+        "wave_length": 2944,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 4545,
+        "root_fork_programs": (118,),
+        "root_program_sha256":
+            "575eadac8121cd2ef1f31b11dc3f14865943b88bceed0dfcfeaee291f8d02cfe",
+        "render_program_sha256":
+            "707014fffb8375076a1dfb4b57da6b2e85719397837bab988116fcca6d85a8bd",
+        "articulation_program_sha256":
+            "300492238b0d3e3b82ac86f63da05c445083fe1aafa2a6d10d7b4bf4f59b7576",
+        "fidelity_debt": (),
+    },
+    {
+        # 127 nSYAudioFGMSamusDash: a plain two-note program, no fork. Its
+        # 6,880-sample source is retained whole -- the note schedule's own
+        # ceiling reach already meets it, the same "collapses to the full
+        # untrimmed source" shape as 158/163/164/157 above.
+        "id": 127,
+        "name": "nSYAudioFGMSamusDash",
+        "kind": "menu",
+        "articulation": 4,
+        "sound": 2,
+        "notes": ((1, 7, 3), (24, 7, 14)),
+        "duration_ticks": 17,
+        "ucd_volume": 180,
+        "articulation_pitch_cents": 1111,
+        "loop": False,
+        "wave_base": 17168,
+        "wave_length": 3870,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 6880,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "ff68f1bdc2917b4536fa3048f20476dfbbdf7f3c7074e9e9d1ac7797c3babbc0",
+        "render_program_sha256":
+            "ff68f1bdc2917b4536fa3048f20476dfbbdf7f3c7074e9e9d1ac7797c3babbc0",
+        "articulation_program_sha256":
+            "b7c818ca65e5ec1b70608c8e0ea939dc9b4f98be40cfae13645c4fb74e2a9ae2",
+        "fidelity_debt": (),
+    },
+    {
+        # 167 nSYAudioFGMPlayerSlotWhoosh shares its wave_base/wave_length
+        # (21040/7516) and loop_start/loop_end (48/13348) with 285 Whispy Wind
+        # above -- the CSS's kind-toggle whoosh and the stage's wind gust are
+        # the SAME source sample, different articulation (25, not 451) and a
+        # much shorter note schedule (40 ticks, not 470). That schedule reach
+        # (3,681 samples) falls well short of the 13,360-sample decoded source
+        # AND short of loop_start, so this renders on the plain (non-forked,
+        # non-hardware-loop) trim path like every ordinary one-shot cue in this
+        # file -- confirmed by running the real trim_proof computation before
+        # authoring this entry, not assumed from the wave's own loop flag.
+        # `loop: True` here is honest bookkeeping about the WAVE's structural
+        # loop declaration (validated against the source ctl data), not a
+        # request for DS hardware repeat -- no "hardware_loop" key, so the
+        # sample is encoded once and stops, the same as any short click.
+        "id": 167,
+        "name": "nSYAudioFGMPlayerSlotWhoosh",
+        "kind": "menu",
+        "articulation": 25,
+        "sound": 3,
+        "notes": ((12, 7, 10), (13, 7, 10), (12, 7, 10), (10, 7, 10)),
+        "duration_ticks": 40,
+        "ucd_volume": 215,
+        "articulation_pitch_cents": -1100,
+        "loop": True,
+        "wave_base": 21040,
+        "wave_length": 7516,
+        "loop_start": 48,
+        "loop_end": 13348,
+        "expected_retained_samples": 3681,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "c48d8e62b4ee5d95d0487fb86c7fdf85240aa89697ccde2f8403c3610bf19098",
+        "render_program_sha256":
+            "c48d8e62b4ee5d95d0487fb86c7fdf85240aa89697ccde2f8403c3610bf19098",
+        "articulation_program_sha256":
+            "6692337582f54b1f309d0b653b771acaf8de940b2fdc6225f46f57624f22a82a",
+        "fidelity_debt": (),
+    },
+    {
+        # 512 nSYAudioVoiceAnnounceFreeForAll: a single 260-tick held note, no
+        # fork. Its 34,448-sample source trims to 33,829 -- the schedule's
+        # reach falls just short of the raw decode's tail, a genuine (if
+        # small) trim rather than a full retain.
+        "id": 512,
+        "name": "nSYAudioVoiceAnnounceFreeForAll",
+        "kind": "menu",
+        "articulation": 324,
+        "sound": 201,
+        "notes": ((13, 7, 260),),
+        "duration_ticks": 260,
+        "ucd_volume": 240,
+        "articulation_pitch_cents": -600,
+        "loop": False,
+        "wave_base": 1677288,
+        "wave_length": 19378,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 33829,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "2ad845c6f0ae6e795b09f52b6507de76b37190490e3e685ea3f7b0ce0bce9efd",
+        "render_program_sha256":
+            "2ad845c6f0ae6e795b09f52b6507de76b37190490e3e685ea3f7b0ce0bce9efd",
+        "articulation_program_sha256":
+            "0983cc40b68cf2dd44248302e1cc1b481acdfef0615223a26a39a55af6553f59",
+        "fidelity_debt": (),
+    },
+)
+
+# P2-1f-1. All fields came out of `--derive 159`, not a guess. Unlike 121
+# above, 159 nSYAudioFGMStageSelect has a real local note of its own (pitch
+# code 6, 180 ticks) -- but its root program ALSO forks two voices at tick 0,
+# before that note runs: 163 nSYAudioFGMMenuScroll1 (two notes, 33 ticks) and
+# 6 nSYAudioFGMUnkSmallPing1 (five notes, 15 ticks). Declared in
+# FULL_PROGRAM_AOT_IDS so render_fgm_composite_aot mixes all three voices
+# (root + both forks, every one starting at sample 0) into one baked sample,
+# the same mechanism 154/616/618/619/620/623/625 above already prove correct
+# for a root note plus a fork -- it does not stop at the first fork.
+SELECTED += (
+    {
+        "id": 159,
+        "name": "nSYAudioFGMStageSelect",
+        "kind": "menu",
+        "articulation": 84,
+        "sound": 40,
+        "notes": ((6, 7, 180),),
+        "duration_ticks": 180,
+        "ucd_volume": 160,
+        "articulation_pitch_cents": -1000,
+        "loop": True,
+        "wave_base": 344720,
+        "wave_length": 7660,
+        "loop_start": 11619,
+        "loop_end": 13590,
+        "expected_retained_samples": 13616,
+        "root_fork_programs": (163, 6),
+        # Both forks are themselves independently packed cues (163 since
+        # P2-1c-1, 6 not otherwise packed), but that is not why this omission
+        # is safe -- FULL_PROGRAM_AOT_IDS membership above means the built
+        # pack's own metadata reports zero omission for this id (the fused
+        # render actually includes both), the same as every other
+        # fork-declaring id in FULL_PROGRAM_AOT_IDS. These two fields are the
+        # hash-pinned proof that the forked programs did not silently change
+        # underneath the fusion.
+        "omitted_fork_programs": (163, 6),
+        "omitted_fork_program_sha256": (
+            "191531a69a863630319ef40c5b12e0ccb48cf4d5eb3c88c442201884122acd1b",
+            "b21992d98d31c8f49152b5aaf624d544da054bb41e5ce005b30b4b5452ec93df",
+        ),
+        "root_program_sha256":
+            "322849140b9950e3ebb61ec49dae97f6061adfafdc050279444f58ace677fe62",
+        "render_program_sha256":
+            "322849140b9950e3ebb61ec49dae97f6061adfafdc050279444f58ace677fe62",
+        "articulation_program_sha256":
+            "dac41667edc35bfd590f9d30dda62096c6c84242fdb03775c7e1a63a96b4b249",
+        "fidelity_debt": ("omitted_fork_voice_163", "omitted_fork_voice_6"),
     },
 )
 
@@ -5284,8 +5717,16 @@ def build_pack(repo_root: Path) -> tuple[bytes, dict]:
         envelope = articulation_envelope(art_program, selector)
         if selector.get("aot_full_program"):
             root_duration_ticks = selector["duration_ticks"]
+            # P2-1e-1: render_program_id, not selector["id"] -- 121 MarioDash's
+            # own UCD program is a pure fork_voice with zero local notes (no
+            # set_articulation of its own), so render_fgm_composite_aot must
+            # walk render_program_id's (118 FoxDash's) schedule instead. This is
+            # a no-op for every prior aot_full_program id: none of them declare
+            # "render_program", so render_program_id already defaulted to
+            # selector["id"] for all of them (see the identical default two
+            # lines above validate_ucd).
             runtime_pcm, acoustic_oracle = render_fgm_composite_aot(
-                selector["id"], ucd, articulations, modulators, instrument,
+                render_program_id, ucd, articulations, modulators, instrument,
                 ctl_by_offset, source_raw["B1_sounds2_tbl"], audio_codec,
                 sine_table)
             selector["duration_ticks"] = acoustic_oracle["duration_ticks"]

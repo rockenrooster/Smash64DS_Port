@@ -5,7 +5,7 @@
 #include <sys/audio.h>
 
 #define NDS_AUDIO_FGM_PASS 0x46474d31u /* FGM1 */
-#define NDS_AUDIO_FGM_ENTRY_COUNT 88u
+#define NDS_AUDIO_FGM_ENTRY_COUNT 98u
 #define NDS_AUDIO_FGM_PHASE_COUNT 5u
 #define NDS_AUDIO_FGM_PHASE_COMPLETE_MASK 0x1fu
 #define NDS_AUDIO_FGM_KO_COUNT 5u
@@ -38,8 +38,40 @@
  * schedule the flat path cannot express -- it renders one one-shot and every
  * note after the first is silence.  617 1,138 -> 1,437 ms, 622 1,441 -> 2,185
  * ms, each now matching its own note total exactly. */
-#define NDS_AUDIO_FGM_PACK_BYTES 938996u
-#define NDS_AUDIO_FGM_PACK_MAPPING_SHA256_LO 0x885657f4u
+/* 938996 -> 948068 and 0x885657f4 -> 0xe4b8921c on 2026-08-18 (P2-1c-1): the
+ * UI kit's four menu SFX (158 MenuSelect, 163 MenuScroll1, 164 MenuScroll2,
+ * 165 MenuDenied) joined SELECTED, 88 -> 92 entries.  The kit's seam already
+ * asked for 164/158/165 and missed -- UKMISS id0=164 c0=17 id1=165 c1=6,
+ * 2026-08-17 P2-1c evidence -- so this is the same silent-miss class as every
+ * prior repin here, not a new one. */
+/* 948068 -> 950168 and 0xe4b8921c -> 0x9bc3e069 on 2026-08-18 (P2-1d-1): FGM
+ * 157 nSYAudioFGMTitlePressStart (the title screen's own confirm cue,
+ * mntitle.c:501) joined SELECTED, 92 -> 93 entries.  The menu shell's seam
+ * already asked for it with the source's own id and missed -- MSMISS ring=1
+ * id0=157 c0=1, P2-1d evidence, the only cue any menu screen misses -- same
+ * silent-miss class as every prior repin here. */
+/* 950168 -> 973524 and 0x9bc3e069 -> 0xcb181af6 on 2026-08-18 (P2-1e-1): the
+ * character select's own four cues (121 MarioDash, 127 SamusDash, 167
+ * PlayerSlotWhoosh, 512 AnnounceFreeForAll) joined SELECTED, 93 -> 97
+ * entries.  The menu shell's seam already asked for all four with the
+ * source's own ids and missed -- MSMISS ring=4 id0=512 c0=1 id1=127 c1=1
+ * id2=121 c2=2 id3=167 c3=1, 2026-08-18 P2-1e evidence -- same silent-miss
+ * class as every prior repin here.  121 forks to 118 FoxDash with no local
+ * notes and 118's own first note overflows the pack entry's u16 frequency
+ * field (71,838 Hz), so it renders through FULL_PROGRAM_AOT_IDS like 85/189/
+ * 190/219 -- the only one of the four that is not a plain flat render. */
+/* 973524 -> 990120 and 0xcb181af6 -> 0x3d9a9ac2 on 2026-08-18 (P2-1f-1): the
+ * stage select's own confirm cue (159 nSYAudioFGMStageSelect,
+ * NDS_SSS_FGM_CONFIRM in nds_menu_shell.c) joined SELECTED, 97 -> 98
+ * entries.  The menu shell's seam already asked for it with the source's own
+ * id and missed -- MSMISS ring=1 id0=159 c0=1, 2026-08-18 P2-1f evidence --
+ * same silent-miss class as every prior repin here.  159 has a real local
+ * note of its own AND forks two voices (163 MenuScroll1, 6 UnkSmallPing1) at
+ * tick 0, so it joins FULL_PROGRAM_AOT_IDS to render all three voices fused
+ * -- the same mechanism 154/616-625/121 above already use, extended to two
+ * simultaneous forks instead of one or zero. */
+#define NDS_AUDIO_FGM_PACK_BYTES 990120u
+#define NDS_AUDIO_FGM_PACK_MAPPING_SHA256_LO 0x3d9a9ac2u
 #define NDS_AUDIO_FGM_CACHE_BYTES 204800u
 #define NDS_AUDIO_FGM_HANDLE_CAPACITY 8u
 #define NDS_AUDIO_FGM_FIDELITY_DEBT_PITCH_AUTOMATION (1u << 2)

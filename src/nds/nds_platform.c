@@ -8,6 +8,8 @@
 #include <nds/nds_controller.h>
 #include <nds/nds_freeze_diagnostics.h>
 #include <nds/nds_ifcommon_oam.h>
+#include <nds/nds_menu_shell.h>
+#include <nds/nds_ui_kit.h>
 #if NDS_R2_HWMATH_BENCH
 #include <nds/nds_r2_hwmath_bench.h>
 #endif
@@ -166,6 +168,16 @@ static u32 sOriginalSpritePreviewReady;
 #if NDS_RENDERER_HW_TRIANGLES
 static int sOriginalSpriteOverlayBg = -1;
 static int sOriginalSpriteOverlayForegroundBg = -1;
+/* P2-1i. The fire's affine steps, held so a frame change can rewrite the
+ * whole matrix+scroll block in one call without re-deriving them. */
+static s32 sTitleFirePa = 1 << 8;
+static s32 sTitleFirePd = 1 << 8;
+/* Published so "the animation ran" is a counter and not a screenshot: enable
+ * and disable must balance across a loop, and Frame must climb once per
+ * presented title frame. */
+__attribute__((used)) volatile u32 gNdsTitleFireEnableCount;
+__attribute__((used)) volatile u32 gNdsTitleFireDisableCount;
+__attribute__((used)) volatile u32 gNdsTitleFireFrameCount;
 static u32 sOriginalSpriteOverlayLayerMask;
 static s32 sOriginalSpriteOverlayNeedsFlush;
 static u32 sOriginalSpriteOverlayEpoch[2] = { 1u, 1u };
@@ -488,6 +500,19 @@ u32 ndsPlatformReadInput(void)
 
     scanKeys();
     held = keysHeld();
+#if (NDS_P2_MENU_SHELL && NDS_P2_MENU_WALK)
+    /* P2-1g. The scripted walk's ONE non-shell button: START on the Results
+     * screen, which is the imported scene's own exit and the only input in the
+     * loop that no shell handler can synthesise. It is ORed in BEFORE the
+     * latch, so it reaches `osContGetReadData` (which reads exactly this
+     * latched value) and from there the source's controller pipeline and
+     * `mnVSResultsCheckExit`. Compiled out of every published and Boundary
+     * configuration with the rest of the walk. */
+    if (ndsMenuShellWalkWantsResultsStart() != 0u)
+    {
+        held |= KEY_START;
+    }
+#endif
     sHeldKeys = held;
     gNdsPlatformHeldKeys = held;
 
@@ -1046,6 +1071,93 @@ void ndsPlatformSetOriginalSpriteOverlayEnabled(s32 is_enabled)
 {
     ndsPlatformSetOriginalSpriteOverlayLayerMask(
         (is_enabled != FALSE) ? NDS_ORIGINAL_SPRITE_OVERLAY_ALL : 0u);
+}
+
+/* P2-1h. Apply BG2's queued affine NOW instead of at the next present.
+ *
+ * The fast wallpaper leaves BG2 under the battle's own 4/5 transform, and
+ * clearing the layer only QUEUES the identity reset -- ndsPlatformEndFrame
+ * commits it. A menu that draws backdrop art between the clear and the first
+ * present would therefore show one frame of that art scaled by whatever the
+ * last battle left behind. This is the same commit, called early; it is
+ * idempotent, because the commit clears its own pending flag. */
+void ndsPlatformCommitOriginalSpriteOverlayTransform(void)
+{
+#if NDS_RENDERER_HW_TRIANGLES && NDS_FAST_WALLPAPER_AFFINE
+    ndsPlatformFastWallpaperCommitAffine();
+#endif
+}
+
+/* P2-1i -- BG3 as the title's fire layer. See the header for why this is an
+ * affine and not a blit.
+ *
+ * PA/PD are the SOURCE step per screen pixel in 8.8, so a cell 51 wide across
+ * a 256 px screen is PA = 51 and a cell 42 tall across 192 rows is PD = 56.
+ * PB/PC are zero: the source's fire is axis-aligned. */
+void ndsPlatformSetTitleFireEnabled(s32 is_enabled, s32 pa, s32 pd)
+{
+#if NDS_RENDERER_HW_TRIANGLES
+    if (sOriginalSpriteOverlayForegroundBg < 0)
+    {
+        return;
+    }
+    if (is_enabled != FALSE)
+    {
+        /* BEHIND BG2, which is where the fire belongs: the title's wordmark,
+         * emblem and copyright line are BG2 surfaces and the source draws
+         * them over the fire, not under it. */
+        bgSetPriority(sOriginalSpriteOverlayForegroundBg, 3);
+        /* WRAP IS DELIBERATELY NOT TOUCHED. It would be a reasonable safety
+         * net, but there is no bgGetWrap to restore it with, and the affine
+         * provably cannot sample outside the sheet: the largest source
+         * coordinate is ((255 * PA) >> 8, (191 * PD) >> 8) = (50, 41) plus a
+         * cell origin of at most (204, 210), i.e. (254, 251), inside the
+         * 255x252 atlas. Leaving it alone is what makes "BG3 is handed back
+         * exactly as it was found" a property of this function rather than a
+         * claim about the battle's tolerance. */
+        sTitleFirePa = pa;
+        sTitleFirePd = pd;
+        bgSetAffineMatrixScroll(sOriginalSpriteOverlayForegroundBg,
+                                pa, 0, 0, pd, 0, 0);
+        gNdsTitleFireEnableCount++;
+    }
+    else
+    {
+        sTitleFirePa = 1 << 8;
+        sTitleFirePd = 1 << 8;
+        bgSetAffineMatrixScroll(sOriginalSpriteOverlayForegroundBg,
+                                1 << 8, 0, 0, 1 << 8, 0, 0);
+        bgSetPriority(sOriginalSpriteOverlayForegroundBg, 0);
+        gNdsTitleFireDisableCount++;
+    }
+#else
+    (void)is_enabled;
+    (void)pa;
+    (void)pd;
+#endif
+}
+
+void ndsPlatformSetTitleFireFrame(s32 atlas_x, s32 atlas_y)
+{
+#if NDS_RENDERER_HW_TRIANGLES
+    if (sOriginalSpriteOverlayForegroundBg < 0)
+    {
+        return;
+    }
+    /* The reference point is 20.8, so a whole-texel cell origin is << 8.
+     * `bgSetAffineMatrixScroll` and not `bgSetScrollf`: the latter only marks
+     * the shadow dirty, and the `bgUpdate` that would flush it REBUILDS the
+     * matrix from libnds' own angle/scale state -- which would throw the
+     * upscale away on the first animation frame. This writes the six
+     * registers and nothing else, so an animation frame costs no pixels. */
+    bgSetAffineMatrixScroll(sOriginalSpriteOverlayForegroundBg,
+                            sTitleFirePa, 0, 0, sTitleFirePd,
+                            atlas_x << 8, atlas_y << 8);
+    gNdsTitleFireFrameCount++;
+#else
+    (void)atlas_x;
+    (void)atlas_y;
+#endif
 }
 
 #if NDS_RENDERER_HW_TRIANGLES && NDS_FAST_WALLPAPER_AFFINE
@@ -3447,6 +3559,12 @@ void ndsPlatformEndFrame(void)
 #endif
     ndsRendererHardwareCommitPendingTextureRefreshes();
     ndsIFCommonNativeOamCommit();
+#if NDS_P2_UI_KIT
+    /* P2-1c. After the battle's OBJ tenant, because the two share one shadow
+     * OAM and the later publisher wins; they are never live in the same scene,
+     * so this ordering only decides which one pays for the oamUpdate. */
+    ndsUiKitCommit();
+#endif
 #if NDS_SCENE_MIP_CACHE_LAB
     if (sSceneMipCapturePending != 0u)
     {

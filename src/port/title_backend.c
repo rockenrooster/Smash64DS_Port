@@ -400,7 +400,10 @@ NDS_SCENE_STUB(mnCharactersStartScene)
 NDS_SCENE_STUB(mnCongraStartScene)
 NDS_SCENE_STUB(mnDataStartScene)
 NDS_SCENE_STUB(mnMessageStartScene)
+#if !NDS_P2_MENU_SHELL
+/* P2-1d defines the real main-menu scene in src/nds/nds_menu_shell.c. */
 NDS_SCENE_STUB(mnModeSelectStartScene)
+#endif
 NDS_SCENE_STUB(mnNoControllerStartScene)
 NDS_SCENE_STUB(mnOptionStartScene)
 NDS_SCENE_STUB(mnPlayers1PBonusStartScene)

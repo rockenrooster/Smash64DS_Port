@@ -8,6 +8,20 @@
 #define NDS_AUDIO_BGM_TRACK_WIN_MARIO 12u
 #define NDS_AUDIO_BGM_TRACK_WIN_FOX 16u
 #define NDS_AUDIO_BGM_TRACK_RESULTS 22u
+/* P2-1d-1. nSYAudioBGMModeSelect, gm/gmsound.h's gmMusicID enum -- verified by
+ * fully parsing the enum (no REGION_US conditionals in gmMusicID, unlike
+ * gmFGMVoiceID) and cross-checked against the four anchors already pinned
+ * above: Pupupu 0, WinMario 12, WinFox 16, Results 22 all land exactly where
+ * this file already has them, and ModeSelect follows at 44 in the same
+ * parse. */
+#define NDS_AUDIO_BGM_TRACK_MODE_SELECT 44u
+/* P2-1e-1. nSYAudioBGMBattleSelect, gm/gmsound.h's gmMusicID enum -- verified
+ * by fully parsing the enum (no REGION_US conditionals in gmMusicID) and
+ * cross-checked against the five anchors already pinned above: Pupupu 0,
+ * WinMario 12, WinFox 16, Results 22, ModeSelect 44 all land exactly where
+ * this file already has them, and BattleSelect lands at 10 in the same
+ * parse -- the eleventh declared entry, two below WinDefault (11). */
+#define NDS_AUDIO_BGM_TRACK_BATTLE_SELECT 10u
 #define NDS_AUDIO_BGM_SAMPLE_RATE 22050u
 #define NDS_AUDIO_BGM_PUPUPU_STREAM_BYTES 2886710u
 #define NDS_AUDIO_BGM_PUPUPU_LOOP_START_BYTES 8798u
@@ -35,6 +49,35 @@
 #define NDS_AUDIO_BGM_RESULTS_PACKET_COUNT 51u
 #define NDS_AUDIO_BGM_RESULTS_LOOP_PACKET 2u
 #define NDS_AUDIO_BGM_RESULTS_LOOP_RECORD 8792u
+/* P2-1d-1. Rendered through scripts/sfx/bgm/render-audio-bgm-pupupu.py
+ * --sequence-index 44, which is the source's own S1_music_sbk sequence index
+ * for nSYAudioBGMModeSelect -- exactly the invocation the four tracks above
+ * use, and the same script (its name is historical, from when Pupupu was the
+ * only track). All values read off the rendered artifact and its own JSON
+ * metadata, never invented: check-audio-bgm-derived-assets.ps1 re-derives
+ * every one of them from the same two files. */
+#define NDS_AUDIO_BGM_MODE_SELECT_STREAM_BYTES 2829896u
+#define NDS_AUDIO_BGM_MODE_SELECT_LOOP_START_BYTES 477382u
+#define NDS_AUDIO_BGM_MODE_SELECT_STREAM_SHA256_LO 0x8a623e38u
+#define NDS_AUDIO_BGM_MODE_SELECT_ASSET_BYTES 708564u
+#define NDS_AUDIO_BGM_MODE_SELECT_ASSET_SHA256_LO 0xa32dd435u
+#define NDS_AUDIO_BGM_MODE_SELECT_PACKET_COUNT 87u
+#define NDS_AUDIO_BGM_MODE_SELECT_LOOP_PACKET 15u
+#define NDS_AUDIO_BGM_MODE_SELECT_LOOP_RECORD 119568u
+/* P2-1e-1. Rendered through scripts/sfx/bgm/render-audio-bgm-pupupu.py
+ * --sequence-index 10, the source's own S1_music_sbk sequence index for
+ * nSYAudioBGMBattleSelect -- the same script and invocation shape as the
+ * five tracks above. All values read off the rendered artifact and its own
+ * JSON metadata, never invented: check-audio-bgm-derived-assets.ps1
+ * re-derives every one of them from the same two files. */
+#define NDS_AUDIO_BGM_BATTLE_SELECT_STREAM_BYTES 672034u
+#define NDS_AUDIO_BGM_BATTLE_SELECT_LOOP_START_BYTES 92456u
+#define NDS_AUDIO_BGM_BATTLE_SELECT_STREAM_SHA256_LO 0xbd0e222du
+#define NDS_AUDIO_BGM_BATTLE_SELECT_ASSET_BYTES 168304u
+#define NDS_AUDIO_BGM_BATTLE_SELECT_ASSET_SHA256_LO 0x295c8d26u
+#define NDS_AUDIO_BGM_BATTLE_SELECT_PACKET_COUNT 21u
+#define NDS_AUDIO_BGM_BATTLE_SELECT_LOOP_PACKET 3u
+#define NDS_AUDIO_BGM_BATTLE_SELECT_LOOP_RECORD 23192u
 /* Retain the first stream's names for older Boundary diagnostics. */
 #define NDS_AUDIO_BGM_STREAM_BYTES NDS_AUDIO_BGM_PUPUPU_STREAM_BYTES
 #define NDS_AUDIO_BGM_STREAM_SHA256_LO NDS_AUDIO_BGM_PUPUPU_STREAM_SHA256_LO
@@ -110,6 +153,8 @@ extern volatile u32 gNdsAudioBgmPupupuPlayCount;
 extern volatile u32 gNdsAudioBgmWinMarioPlayCount;
 extern volatile u32 gNdsAudioBgmWinFoxPlayCount;
 extern volatile u32 gNdsAudioBgmResultsPlayCount;
+extern volatile u32 gNdsAudioBgmModeSelectPlayCount;
+extern volatile u32 gNdsAudioBgmBattleSelectPlayCount;
 extern volatile u32 gNdsAudioBgmNaturalStopCount;
 extern volatile u32 gNdsAudioBgmLastNaturalStopTrackID;
 extern volatile u32 gNdsAudioBgmPostNaturalTransitionCount;

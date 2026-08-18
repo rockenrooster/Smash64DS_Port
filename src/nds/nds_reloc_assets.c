@@ -692,6 +692,63 @@ s32 ndsRelocAssetReadRawRange(const char *path, u32 offset, void *dst,
     return TRUE;
 }
 
+/* The chunked form of the same read, one open for the whole payload. Contract
+ * and the measurement that motivated it: include/nds/nds_reloc_assets.h. */
+s32 ndsRelocAssetStreamOpen(NdsRelocAssetStream *stream, const char *path)
+{
+    if (stream == NULL)
+    {
+        return FALSE;
+    }
+    stream->file = NULL;
+    if (path == NULL)
+    {
+        return FALSE;
+    }
+    stream->file = (void *)fopen(path, "rb");
+    if (stream->file == NULL)
+    {
+        gNdsRelocAssetOpenFailCount++;
+        return FALSE;
+    }
+    return TRUE;
+}
+
+s32 ndsRelocAssetStreamRead(NdsRelocAssetStream *stream, u32 offset, void *dst,
+                            u32 bytes)
+{
+    FILE *file;
+
+    if ((stream == NULL) || (stream->file == NULL) || (dst == NULL) ||
+        (bytes == 0u))
+    {
+        return FALSE;
+    }
+    file = (FILE *)stream->file;
+    if (fseek(file, (long)offset, SEEK_SET) != 0)
+    {
+        gNdsRelocAssetShortReadCount++;
+        return FALSE;
+    }
+    if (fread(dst, 1u, (size_t)bytes, file) != (size_t)bytes)
+    {
+        gNdsRelocAssetShortReadCount++;
+        return FALSE;
+    }
+    gNdsRelocAssetPayloadReadCount++;
+    return TRUE;
+}
+
+void ndsRelocAssetStreamClose(NdsRelocAssetStream *stream)
+{
+    if ((stream == NULL) || (stream->file == NULL))
+    {
+        return;
+    }
+    fclose((FILE *)stream->file);
+    stream->file = NULL;
+}
+
 s32 ndsRelocAssetLoadHeaderAndData(u32 asset_id, void *dst,
                                    size_t dst_capacity,
                                    NDSRelocAssetHeader *out_header)

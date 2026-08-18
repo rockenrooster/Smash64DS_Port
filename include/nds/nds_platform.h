@@ -68,6 +68,29 @@ void ndsPlatformClearOriginalSpriteOverlayLayer(s32 is_foreground);
 void ndsPlatformClearOriginalSpritePreview(void);
 void ndsPlatformSetOriginalSpriteOverlayLayerMask(u32 layer_mask);
 void ndsPlatformSetOriginalSpriteOverlayEnabled(s32 is_enabled);
+/* Applies BG2's queued affine transform immediately rather than at the next
+ * present. A caller that draws into the overlay bitmap between a clear and
+ * the first present of a scene needs this, or one frame renders under the
+ * previous scene's transform. */
+void ndsPlatformCommitOriginalSpriteOverlayTransform(void);
+/* P2-1i -- the title screen's animated fire background.
+ *
+ * `mnTitleMakeFire` (mntitle.c:934) fills the title's field with two hugely
+ * upscaled 32x32 textures that advance a frame a tic. On the DS that is a
+ * SCALE, not a blit: BG3 is already an extended-rotscale bitmap
+ * (`bgInit(3, BgType_Bmp16, BgSize_B16_256x256, 8, 0)`), so the thirty baked
+ * states live as cells of one 255x252 sheet in its own bank and a frame costs
+ * the affine reference point -- six register writes, no pixels touched.
+ *
+ * Enable also moves BG3 BEHIND BG2 (priority 0 -> 3), because the title's own
+ * art is a BG2 surface and the fire is what it burns over; disable restores
+ * the identity transform and priority 0 the battle's foreground overlay
+ * expects. Both are idempotent. */
+void ndsPlatformSetTitleFireEnabled(s32 is_enabled, s32 pa, s32 pd);
+void ndsPlatformSetTitleFireFrame(s32 atlas_x, s32 atlas_y);
+extern volatile u32 gNdsTitleFireEnableCount;
+extern volatile u32 gNdsTitleFireDisableCount;
+extern volatile u32 gNdsTitleFireFrameCount;
 u32 ndsPlatformFastWallpaperCanSeed(void);
 u32 ndsPlatformFastWallpaperBeginSeed(s32 origin_x, s32 origin_y,
                                        u32 scale_x_q16,

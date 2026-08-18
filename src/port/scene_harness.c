@@ -1,4 +1,5 @@
 #include <ft/fighter.h>
+#include <nds/nds_match_config.h>
 #include <nds/nds_scene_harness.h>
 #include "nds_build_config.h"
 #include "nds_scene_harness_config.h"
@@ -173,98 +174,25 @@ static void ndsSceneHarnessSeedBattlePupupuStageDefaults(void)
     dSCManagerDefaultBattleState = gSCManagerTransferBattleState;
 }
 
+/* Mode 163's configuration is now a PRESET plus an APPLY (P2-1a). The whole
+ * match -- who fights, at what CPU level, on which stage, under which rules,
+ * with which items -- lives in `gNdsMatchConfig`, and every field that used to
+ * be written here inline now travels through it. `nds_match_config.c` carries
+ * the reasoning that used to sit in this function, including the both-CPU
+ * stress arm and the soak's separate match-length flag.
+ *
+ * What stays here is not match configuration: the backup block is save data
+ * (unlock masks and the error/boot flags), which the harness declares so a
+ * booted match sees a fully unlocked cart. */
 static void ndsSceneHarnessSeedBattlePlayableDefaults(void)
 {
-    ndsSceneHarnessSeedBattlePupupuStageDefaults();
+    ndsMatchConfigLoadMarioFoxDreamLand(&gNdsMatchConfig);
+    ndsMatchConfigApply(&gNdsMatchConfig);
 
-#if NDS_DEV_LIVE_INPUT_PREVIEW
-    gSCManagerTransferBattleState.game_rules = SCBATTLE_GAMERULE_TIME;
-    gSCManagerTransferBattleState.time_limit = 1;
-    gSCManagerTransferBattleState.item_toggles = 0u;
-    gSCManagerTransferBattleState.item_appearance_rate =
-        nSCBattleItemSwitchNone;
-    gSCManagerTransferBattleState.pl_count = 1;
-    gSCManagerTransferBattleState.cp_count = 1;
-    gSCManagerTransferBattleState.players[1].pkind = nFTPlayerKindCom;
-#if NDS_DEMO_FOX_CPU_LADDER
-    /* The demo ladder owns Fox's level: 1 at boot, +1 per Mario win, wrapping
-     * 9 -> 1 (owner, 2026-08-17). ndsMNVSResultsSetLoadScene advances it just
-     * before this function re-runs on a START restart. The NDS_R2_BOTH_CPU
-     * stress arm below deliberately does NOT ride the ladder -- it pins both
-     * fighters at level 3 so every banked measurement stays comparable. */
-    gSCManagerTransferBattleState.players[1].level =
-        (s32)gNdsDemoFoxCpuLevel;
-#else
-    gSCManagerTransferBattleState.players[1].level = 3;
-#endif
-#if NDS_R2_BOTH_CPU
-    /* Switch plan R2-06's harness prerequisite, owner-requested 2026-07-29.
-     * Mario becomes a level-3 CPU too, so both fighters attack continuously
-     * without a recorded input stream. That is what makes it useful: it
-     * maximises the live hitbox population, which R2-03 E35 measured as the
-     * owner of the SRC P95 excursion, so it is a deliberate STRESS case.
-     *
-     * The plan is explicit that this is a harness configuration and not a
-     * product change: "The shipped Boundary stays Mario human vs level-3 Fox CPU
-     * at mode 163, and PROJECT_GOAL.md's P95 gate is defined on *representative*
-     * gameplay -- so a P95 read off the stress config is a harder number than
-     * the milestone requires and must be reported as such, never swapped in
-     * silently for the Boundary figure." Honour that: never publish a number
-     * from this build as the Boundary P95. */
-    gSCManagerTransferBattleState.players[0].pkind = nFTPlayerKindCom;
-    gSCManagerTransferBattleState.players[0].level = 3;
-    /* OFF THE DEMO LADDER ON PURPOSE. Every banked gate figure was measured
-     * with both fighters at level 3, so the stress arm re-pins Fox here even
-     * when NDS_DEMO_FOX_CPU_LADDER seeded it from the ladder above. Letting the
-     * ladder reach this arm would make a rematched measurement incomparable to
-     * the one before it, silently. */
-    gSCManagerTransferBattleState.players[1].level = 3;
-    gSCManagerTransferBattleState.pl_count = 0;
-    gSCManagerTransferBattleState.cp_count = 2;
-    /* THE MATCH LENGTH IS NOT THIS FLAG'S BUSINESS. This branch changes WHO
-     * plays, never HOW LONG -- the one-minute Time match seeded above stands.
-     *
-     * It used to seed time_limit = 7 here, for the freeze soak, and that made
-     * the gate arm sample a 420-second match through a window sized for a
-     * 60-second one: measured 2026-08-05, this arm's banked "whole match"
-     * baseline covered 12.6% of its own match (the opening minute) against
-     * Boundary's 86.7%. Every both-CPU tick figure in the campaign, and the
-     * SRC/MISC split derived from them, was superseded by that one line.
-     * Owner's ruling the same day: *"the soak was only meant to catch freezes,
-     * boundary and both cpu gates should be the 60 sec match"*.
-     *
-     * The soak's long match is real and still needed -- see the block below --
-     * but it is a soak property, not a stress-config property, so it lives on
-     * its own flag where reading it cannot be mistaken for reading the gate. */
-#endif
-#if NDS_R2_SOAK_MATCH_MINUTES
-    /* THE FREEZE SOAK'S LONG MATCH, on its own flag, off by default.
-     *
-     * The owner's rule this satisfies: *"if you want to run a longer soak for
-     * any reason, then you also need to change the match timer to match the
-     * soak time"*. Without it a long soak spends one minute in gameplay and the
-     * rest watching a Results screen, so a 7-minute run reads NO-FREEZE having
-     * exercised less play than the 3.5-minute run that caught the original
-     * heap-exhaustion hang. Two runs on 2026-08-02 were wasted exactly that way.
-     *
-     * soak-freeze-watch.ps1 computes this from its own -MinutesToRun rather
-     * than hardcoding a constant, so the match can no longer be shorter than
-     * the run that watches it. It is deliberately NOT tied to NDS_R2_BOTH_CPU:
-     * the soak runs single-CPU too (-BothCpu:$false), and a gate arm and a soak
-     * arm must be able to differ in match length without differing in anything
-     * else. Both gate arms build with this at 0 and get the 60-second match. */
-    gSCManagerTransferBattleState.time_limit = NDS_R2_SOAK_MATCH_MINUTES;
-#endif
-#else
-    gSCManagerTransferBattleState.game_rules = SCBATTLE_GAMERULE_STOCK;
-    gSCManagerTransferBattleState.time_limit = SCBATTLE_TIMELIMIT_INFINITE;
-    gSCManagerTransferBattleState.stocks = 8;
-    gSCManagerTransferBattleState.players[0].stock_count = 8;
-    gSCManagerTransferBattleState.players[1].stock_count = 8;
-#endif
-    ndsSceneHarnessSyncSingleStockIconFlags();
-
-    dSCManagerDefaultBattleState = gSCManagerTransferBattleState;
+    gSCManagerBackupData.error_flags = 0;
+    gSCManagerBackupData.boot = 0;
+    gSCManagerBackupData.fighter_mask = LBBACKUP_CHARACTER_MASK_ALL;
+    gSCManagerBackupData.ground_mask = 0xFFFFu;
 }
 
 /* Seed the transfer state as if the canonical one-minute Time match had just
@@ -614,7 +542,21 @@ void ndsDevSceneHarnessApply(void)
         return;
 
     case NDS_DEV_SCENE_HARNESS_BATTLE_PLAYABLE:
+#if NDS_P2_MENU_SHELL
+        /* P2-1d. The VS shell boots the GAME, not the match: the flow starts
+         * at the splash and the player reaches the battle through the menus.
+         *
+         * The seeding below is unchanged and deliberately still runs -- the
+         * mode-163 preset is what fills the match descriptor, and the VS rules
+         * screen edits that descriptor rather than replacing it, so the match
+         * the menus enter is the canonical one. ONLY the boot scene moves, and
+         * only under this flag: at NDS_P2_MENU_SHELL == 0, which is every
+         * published and Boundary configuration, mode 163 still boots straight
+         * into nSCKindVSBattle with nSCKindMaps behind it. */
+        ndsSceneHarnessSetDefaultScene(nSCKindStartup, nSCKindStartup);
+#else
         ndsSceneHarnessSetDefaultScene(nSCKindVSBattle, nSCKindMaps);
+#endif
         ndsSceneHarnessSeedBattlePlayableDefaults();
         gNdsSceneHarnessResult = NDS_SCENE_HARNESS_PASS;
         return;

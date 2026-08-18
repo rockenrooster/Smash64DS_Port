@@ -362,6 +362,26 @@ $verifierContext = Initialize-MelonDSVerifierContext `
     -NoBuild:$NoBuild
 $rom = Resolve-Smash64DSBuildOutput -Root $root -Target $Target -Build $Build -Extension '.nds'
 $elf = Resolve-Smash64DSBuildOutput -Root $root -Target $Target -Build $Build -Extension '.elf'
+# THE FOX CPU LEVEL IS NOT A LITERAL 3 (owner, 2026-08-17). The P1 demo ladder
+# opens Fox at level 1 and advances a level per Mario win, so the FIRST match of
+# a run -- which is what every stop below reads -- is level 1 whenever
+# NDS_DEMO_FOX_CPU_LADDER is on, and 3 when it is off. Read the expectation from
+# the build's own generated config rather than pinning either number: a literal
+# would either red the shipped demo or stop pinning the level at all, and
+# pinning the match configuration is these assertions' whole job.
+#
+# HOISTED HERE BECAUSE THE SAME FACT IS PINNED TWICE. When the ladder landed
+# (48a11f518bc) only the CPU_CONFIG assertion was updated; the IFHUD_LOWER pin
+# on gNdsIFCommonHUDP1Level -- the HUD's copy of the very same players[1].level
+# -- kept its 2026-07-14 literal 3 and reds every Boundary run. One derivation
+# read by both sites is the only shape in which they cannot drift again.
+$expectedFoxLevel = 3
+$ladderConfigPath = Join-Path (Split-Path -Parent $elf) 'nds_build_config.h'
+if ((Test-Path -LiteralPath $ladderConfigPath) -and
+    ((Get-Content -LiteralPath $ladderConfigPath -Raw) -match
+     '#define\s+NDS_DEMO_FOX_CPU_LADDER\s+1')) {
+    $expectedFoxLevel = 1
+}
 $melonDsPath = $verifierContext.MelonDSPath
 $melonDsDir = Split-Path -Parent $melonDsPath
 $logDir = Get-MelonDSVerifierLogDir -Root $root -RunnerSlot (Get-MelonDSActiveRunnerSlot)
@@ -2908,21 +2928,9 @@ try {
     if ($ImportBattleShipFTComputer) {
         $cc = Get-Ints $computerConfig
         $expectedTimeLimit = 1
-        # THE FOX CPU LEVEL IS NO LONGER A LITERAL 3 (owner, 2026-08-17). The P1
-        # demo ladder opens Fox at level 1 and advances a level per Mario win,
-        # so the FIRST match of a run -- which is what this stop reads -- is
-        # level 1 whenever NDS_DEMO_FOX_CPU_LADDER is on, and 3 when it is off.
-        # Read the expectation from the build's own generated config rather than
-        # pinning either number here: a literal would either red the shipped
-        # demo or stop pinning the level at all, and this assertion's whole job
-        # is to pin the match configuration.
-        $ladderConfig = Join-Path (Split-Path -Parent $elf) 'nds_build_config.h'
-        $expectedFoxLevel = 3
-        if ((Test-Path -LiteralPath $ladderConfig) -and
-            ((Get-Content -LiteralPath $ladderConfig -Raw) -match
-             '#define\s+NDS_DEMO_FOX_CPU_LADDER\s+1')) {
-            $expectedFoxLevel = 1
-        }
+        # $expectedFoxLevel is derived once from the build's own generated
+        # config near $elf; the IFHUD_LOWER pin on the HUD's copy of the same
+        # players[1].level reads that same variable.
         Assert-Condition ($computerConfig.Success -and $cc[0] -eq 0 -and $cc[1] -eq 1 -and $cc[2] -eq $expectedFoxLevel -and $cc[3] -eq 1 -and $cc[4] -eq 1 -and $cc[5] -eq $expectedTimeLimit -and $cc[6] -eq 0 -and $cc[7] -eq 0 -and $cc[8] -eq $FoxCpuMode) ("Mode 163 did not preserve the items-off Mario human versus Fox CPU match at the expected opening level $expectedFoxLevel and selected Fox CPU decision mode.") $gdbStdout
     }
     $task9StateCapture = $null
@@ -3384,13 +3392,13 @@ try {
                      $sourceLower[2]) -and
                     $sourceLower[3] -eq 0x2 -and
                     $sourceLower[4] -eq 0 -and $sourceLower[5] -eq 1 -and
-                    $sourceLower[7] -eq 3 -and
+                    $sourceLower[7] -eq $expectedFoxLevel -and
                     $sourceLower[8] -gt 0 -and $sourceLower[9] -gt 0 -and
                     $sourceLower[11] -eq 3600 -and
                     $lowerTimerStateOk -and
                     $sourceRoute[0] -eq $LowerTextHudMode -and
                     $lowerRoutingOk -and $topPresentationRouteOk
-                ) 'BattleShip timer/stock callbacks were not routed narrowly below, or countdown/GO lacked top-interface evidence outside the exact pre-update-91 native-OAM idle window.' $gdbStdout
+                ) "BattleShip timer/stock callbacks were not routed narrowly below at Fox CPU level $expectedFoxLevel, or countdown/GO lacked top-interface evidence outside the exact pre-update-91 native-OAM idle window." $gdbStdout
                 Assert-Condition (
                     $battleTextHud.Success -and
                     $textHud[0] -gt 0 -and $textHud[1] -gt 0 -and

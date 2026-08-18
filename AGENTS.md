@@ -61,12 +61,19 @@ feel; the DS implementation may differ radically from the original engine.
 
 Gameplay, collision, rules, state, camera meaning, and flow stay mechanically
 equivalent to the source contract in `PROJECT_GOAL.md`.
-Presentation must remain recognizable, readable, and consistent with SSB64's
-identity. Timebox cosmetic exactness to one measured experiment, then keep the
-cheapest acceptable source-derived approximation.
-Record its source, visible delta, measured reason, and `artifacts/visibility`
-screenshot. Never accept changed telegraphs, missing/corrupt presentation, or
-unexplained behavior. Dream Land water is frozen at source frame 0.
+The presentation **target** is the original's own art, layout, and animation,
+converted from source; inspect the original assets before implementing any
+screen, effect, or UI element. Approximation or omission is a **fallback**
+requiring a measured DS-budget reason — the sacrifice order applies only to
+measured conflicts, and 60 Hz menu/2D screens rarely have one. "Recognizable,
+readable, consistent with SSB64's identity" is the floor a forced compromise
+must still clear, not the goal. Timebox exactness-polish to one measured
+experiment, then keep the cheapest source-derived result that clears the
+floor.
+Record every accepted delta's source, visible delta, measured reason, and
+`artifacts/visibility` screenshot. Never accept changed telegraphs,
+missing/corrupt presentation, or unexplained behavior. Dream Land water is
+frozen at source frame 0.
 
 ## Operating Model
 
@@ -77,9 +84,9 @@ Start each cycle with:
 git status --short
 ```
 
-Then read `docs/P1_EXECUTION_BOARD.md` and `docs/HANDOFF.md`. The board is the
+Then read `docs/P2_EXECUTION_BOARD.md` and `docs/HANDOFF.md`. The board is the
 only dynamic queue; handoff contains only the restart surface. Select its
-highest-impact unowned red P1 row.
+highest-impact unowned red row (P2 phase plans: `docs/P2_PLAN.md` + `docs/p2/`).
 
 Preserve a known-good checkpoint before risky changes. On regression, find the
 first bad change before layering fixes; trace shared dependencies before edits.
@@ -141,10 +148,27 @@ Examples of inefficiencies:
 
 ## Current Boundary
 
-Canonical Boundary is `battle_playable_realtime`, mode `163`: Mario human versus the
-imported level-3 Fox CPU on Dream Land, items off, one-minute (`3600` tick) Time
-mode. A diagnostic ROM may pause Fox decision/input only; proof runs and milestone
+Boundary has **two arms** since the P2-1 phase close (row P2-1g, 2026-08-18),
+and `verify-all.ps1 -Profile Boundary -List` is the membership authority:
+
+1. `p2_shell_loop` — twenty full laps of the VS shell (title → main menu → VS
+   rules → character select → stage select → battle → results → START →
+   character select) under scripted input, asserting per-scene-kind arena
+   high-waters flat, the arena free floor, one input entry per step, the exact
+   lap pattern, and no CPU abort. It is a **scene-boundary** instrument at
+   `NDS_HARNESS_FAST_LOGIC=1`: no tick figure from it is a cadence figure.
+2. `battle_playable_realtime`, mode `163`: Mario human versus the imported
+   level-3 Fox CPU on Dream Land, items off, one-minute (`3600` tick) Time
+   mode — unchanged, and the **P1 regression guard** `docs/P2_PLAN.md` law 4
+   keeps green throughout P2. It stays the only gameplay/performance arm.
+
+A diagnostic ROM may pause Fox decision/input only; proof runs and milestone
 acceptance enable it. Never launch the obsolete five-minute configuration, except for specific instruction to do so.
+Menu cadence and the realtime pass through the menus are measured beside the
+profile, not inside it: `scripts/menus/probe-p2-shell.ps1`
+(`smash64ds-p2-shell-hwtri`, fast logic 0). The Boundary definition evolves at
+P2 phase closes by board row (`docs/P2_PLAN.md` law 4); this section is updated
+when it does.
 
 **Both gate arms run the one-minute match** (owner, 2026-08-05: *"the soak was
 only meant to catch freezes, boundary and both cpu gates should be the 60 sec

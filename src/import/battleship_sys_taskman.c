@@ -12,10 +12,33 @@
  * runs startup updates, mirrors the original cleanup tail, and returns to the
  * original scene manager before task_draw. */
 
+/* P2-1b. `syTaskmanStartTask` IS the scene boundary on this target: decomp
+ * taskman.c:1227 calls syTaskmanInitGeneralHeap on the arena the scene
+ * declared -- the per-scene arena rewind -- then carves the object pools out
+ * of it, then does not return until syTaskmanRunTask has finished the scene.
+ * Wrapping it therefore brackets exactly one scene lifetime, which is what the
+ * scene manager needs to record an entry's arena high-water and prove N loops
+ * leak nothing. No intra-TU caller binds around this: taskman.c calls
+ * syTaskmanLoadScene directly and never syTaskmanStartTask. */
+#include <nds/nds_scene_manager.h>
+
+#define syTaskmanStartTask ndsBaseSyTaskmanStartTask
 #if NDS_R2_SECOND_ENTRY_DIAG
 #define syTaskmanMalloc ndsBaseSyTaskmanMalloc
 #endif
 #include <battleship_overlay/src/sys/taskman.c>
+#undef syTaskmanStartTask
+
+void syTaskmanStartTask(SYTaskmanSetup *tsetup);
+
+void syTaskmanStartTask(SYTaskmanSetup *tsetup)
+{
+    ndsSceneManagerEnter(tsetup->scene_setup.arena_start,
+                         (u32)tsetup->scene_setup.arena_size);
+    ndsBaseSyTaskmanStartTask(tsetup);
+    ndsSceneManagerExit();
+}
+
 #if NDS_R2_SECOND_ENTRY_DIAG
 #undef syTaskmanMalloc
 

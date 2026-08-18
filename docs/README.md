@@ -1,11 +1,15 @@
 # Documentation Index
 
-One fact, one owner. Current P1 state lives only in `P1_EXECUTION_BOARD.md`;
-historical detail stays in `PORTING.md` and `PERF_LEDGER.md`.
+One fact, one owner. Current state lives only in `P2_EXECUTION_BOARD.md`;
+historical detail stays in `PORTING.md` and `PERF_LEDGER.md`. P1 surfaces
+(`P1_EXECUTION_BOARD.md`, `Smash64DS_Runtime2_SwitchPlan.md`, the final P1
+`HANDOFF.md`) are archived under `archive/`.
 
 | Doc | Owner |
 |---|---|
-| `P1_EXECUTION_BOARD.md` | Dynamic queue, artifact identity, blockers, dates, decisions |
+| `P2_EXECUTION_BOARD.md` | Dynamic queue, artifact identity, blockers, dates, decisions |
+| `P2_PLAN.md` + `p2/` | P2 execution order, cross-cutting laws, phase subplans, per-unit plans |
+| `P3_Multiplayer/Multiplayer.md` | Owner's P3 wireless multiplayer design |
 | `HANDOFF.md` | Restart surface and exact next command |
 | `VERIFYING.md` | A/B iteration, verifier, emulator, capture, snapshot workflow |
 | `HARNESSES.md` | Registry authority and harness naming |
@@ -14,7 +18,7 @@ historical detail stays in `PORTING.md` and `PERF_LEDGER.md`.
 | `BUGS.md` | User-reported playtest bugs |
 | `BACKLOG.md` | Minor deferred bugs the owner parked for after P1-critical work |
 | `BUG_FIXING_PROCESS.md` | Intake, diagnosis, proof, and closure process for `BUGS.md` |
-| `Smash64DS_Runtime2_SwitchPlan.md` | Runtime 2 charter, budgets, phase plan, and the definition of the switch |
+| `archive/Smash64DS_Runtime2_SwitchPlan.md` | (archived) Runtime 2 charter — R2-08 complete 2026-08-17 |
 | `RAM_RECOVERY_PLAN.md` | Main-RAM recovery and cache-residency plan for a bounded, pre-resident battle working set |
 | `OPTIMIZE_LIST.md` | Owner's standing wish-list of subsystems to specialize, bake or offload |
 | `optimization/OPTIMIZATION_IDEAS.md` | Dated optimization reviews and idea bin for the P95 gate (corrections at top govern) |

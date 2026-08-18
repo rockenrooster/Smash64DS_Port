@@ -1,0 +1,182 @@
+[CmdletBinding()]
+param(
+    [string]$Build = 'build-p2-shell',
+    [string]$Target = 'smash64ds-p2-shell-hwtri',
+    [ValidateRange(1, 8)][int]$RunnerSlot = 7,
+    [ValidateRange(30, 900)][int]$TimeoutSeconds = 600,
+    [string]$OutputPrefix = '',
+    # Presents to step past after a state is reached. A stop AT
+    # ndsPlatformEndFrame is BEFORE that frame reaches the screen, and the kit
+    # composes into shadow OAM, so a capture taken at the state's own stop is
+    # one state behind -- measured twice, once as a black screen and once as
+    # the pre-move cursor.
+    [ValidateRange(1, 32)][int]$PresentsAfterState = 6
+)
+
+# P2-1g visibility, and the phase-level successor to
+# scripts/menus/capture-p2-1f-sss.ps1. Captures EVERY shell screen at a KNOWN
+# state in one run, for the owner's visual pass at the P2-1 close.
+#
+# WHY THIS EXISTS RATHER THAN `capture-melonds.ps1 -DelaySeconds`. The menu
+# screens present far faster than real time under this emulator -- measured on
+# three runs of the same ROM, the character select ran at 353, 717 and 738 fps
+# against its own 60 Hz VBlank pacing -- so a wall-clock delay lands on a
+# different screen every run, and the stage select's scripted visit is only 122
+# presented frames wide. Two calibration runs missed it in both directions
+# before the P2-1f version of this was written.
+#
+# THE LOCK IS THE SCREEN'S OWN ENTRY POINT. `scManagerRunLoop` dispatches each
+# shell screen through its own exported `ndsMenuShellRun<X>`, so breaking there
+# IS "screen X just opened" no matter how fast the host runs -- one symbol per
+# screen, no hit arithmetic, and the printf beside each one reads
+# `gNdsMenuShellScreen` back so the artifact records which screen was actually
+# photographed rather than which one was intended. The two stage-select states
+# keep P2-1f's finer lock (`ndsMenuShellSssShowSelection`, called once on entry
+# and once per cursor move) because they differ by a cursor move inside one
+# screen rather than by which screen is up.
+#
+# HOW THE CAPTURE HAPPENS WHILE HALTED. A gdb-halted melonDS keeps its window
+# up showing the last presented frame, so the shot is taken from a stopped
+# target through `capture-running-melonds-window.ps1` (gdb's own `shell`).
+#
+# Nothing here writes guest memory.
+
+$ErrorActionPreference = 'Stop'
+$scripts = Split-Path -Parent $PSScriptRoot
+$root = Split-Path -Parent $scripts
+. (Join-Path $scripts 'lib\melonds.ps1')
+. (Join-Path $scripts 'lib\gdb-markers.ps1')
+. (Join-Path $scripts 'lib\build-output.ps1')
+. (Join-Path $scripts 'lib\melonds-screenshot.ps1')
+
+$gdb = 'C:\devkitPro\devkitARM\bin\arm-none-eabi-gdb.exe'
+$nm = 'C:\devkitPro\devkitARM\bin\arm-none-eabi-nm.exe'
+$rom = Resolve-Smash64DSBuildOutput -Root $root -Target $Target -Build $Build -Extension '.nds'
+$elf = Resolve-Smash64DSBuildOutput -Root $root -Target $Target -Build $Build -Extension '.elf'
+if ([string]::IsNullOrWhiteSpace($OutputPrefix)) {
+    $OutputPrefix = Join-Path $root ('artifacts\visibility\' +
+        (Get-Date -Format 'yyyy-MM-dd') + '_p2-shell')
+}
+
+# One entry per screenshot, in the order a cold boot reaches them.
+$states = @(
+    # P2-1h deleted the splash: boot reaches the title with no screen in
+    # between, so the title IS the first capture of a cold boot.
+    @{ Name = 'title';       Break = 'ndsMenuShellRunTitle' },
+    @{ Name = 'main-menu';   Break = 'ndsMenuShellRunModeSelect' },
+    @{ Name = 'vs-rules';    Break = 'ndsMenuShellRunVSMode' },
+    @{ Name = 'css-default'; Break = 'ndsMenuShellRunCharSelect' },
+    @{ Name = 'sss-default'; Break = 'ndsMenuShellSssShowSelection' },
+    # Hit 2 of the same symbol: the scripted RIGHT has moved the cursor. Slots
+    # 7 and 8 are locked, so the move lands on 9 -- RANDOM.
+    @{ Name = 'sss-random';  Break = 'ndsMenuShellSssShowSelection' }
+)
+
+$required = @('ndsPlatformEndFrame', 'gNdsMenuShellScreen') +
+    @($states | ForEach-Object { $_.Break } | Select-Object -Unique)
+$symbols = & $nm $elf | ForEach-Object { ($_ -split '\s+')[-1] }
+$missing = @($required | Where-Object { $symbols -notcontains $_ })
+if ($missing.Count -gt 0) {
+    throw ("p2-shell capture symbols absent from {0}: {1}" -f $elf, ($missing -join ', '))
+}
+
+$context = Initialize-MelonDSVerifierContext `
+    -Root $root -MelonDS '' -RunnerSlot $RunnerSlot -NoBuild
+$melon_dir = Split-Path -Parent $context.MelonDSPath
+$config_state = $null
+$emulator = $null
+$capture = Join-Path $scripts 'capture-running-melonds-window.ps1'
+
+try {
+    $config_state = Enable-MelonDSGdbConfig `
+        -MelonDSPath $context.MelonDSPath `
+        -GdbPort $context.GdbPort -Persistent -MuteAudio
+    # WindowStyle: visible-by-design -- this harness photographs the emulator
+    # window, and a hidden launch leaves MainWindowHandle at IntPtr.Zero, so
+    # the run succeeds and every PNG comes out black. Exactly the case
+    # check-melonds-policy.ps1's per-call-site exemption exists for.
+    $emulator = Start-Process `
+        -FilePath $context.MelonDSPath `
+        -ArgumentList $rom `
+        -WorkingDirectory $melon_dir `
+        -PassThru
+    $deadline = (Get-Date).AddSeconds(30)
+    do {
+        Start-Sleep -Milliseconds 250
+        $emulator.Refresh()
+    } while (($emulator.MainWindowHandle -eq [IntPtr]::Zero) -and
+             (-not $emulator.HasExited) -and ((Get-Date) -lt $deadline))
+    if ($emulator.HasExited -or ($emulator.MainWindowHandle -eq [IntPtr]::Zero)) {
+        throw 'melonDS did not present a window to capture.'
+    }
+    Wait-MelonDSGdbListener -Process $emulator -Port $context.GdbPort | Out-Null
+    # Foreground once, while emulation is still running: bringing the window
+    # forward after the target is halted can capture a Qt repaint instead of
+    # the completed DS presentation (capture-melonds.ps1's own lesson).
+    [void][Smash64DSWindowCapture]::SetForegroundWindow(
+        $emulator.MainWindowHandle)
+    Start-Sleep -Milliseconds 300
+
+    $commands = @(
+        'set pagination off',
+        'set confirm off',
+        'set remotetimeout 20',
+        ("target remote 127.0.0.1:{0}" -f $context.GdbPort)
+    )
+    foreach ($state in $states) {
+        $commands += @(
+            'delete',
+            ('break ' + $state.Break),
+            'continue',
+            ('printf "SHELLCAP ' + $state.Name +
+             ' screen=%u sss_slot=%u sss_gkind=%02x\n", gNdsMenuShellScreen, ' +
+             'gNdsMenuShellSssCursorSlot, gNdsMenuShellSssCursorGkind'),
+            'delete',
+            'break ndsPlatformEndFrame'
+        )
+        # P2-1i. The fire's own counters at every state, which is what makes
+        # ONE run carry both halves of the proof: on the title they must climb
+        # once per presented frame with enable=1/disable=0, and on every later
+        # screen they must be FROZEN with enable==disable -- the negative
+        # control. Printed at the state's entry (before the presents below) and
+        # again after them, so the title's delta over a known number of
+        # presents is readable rather than inferred.
+        # Index 0 is NDS_MENU_SHELL_SCREEN_TITLE (nds_menu_shell.h:48).
+        $fire_args = (' en=%u dis=%u frame=%u reveal=%u titleframes=%u\n", ' +
+            'gNdsTitleFireEnableCount, gNdsTitleFireDisableCount, ' +
+            'gNdsTitleFireFrameCount, gNdsTitleFireRevealFrame, ' +
+            'gNdsMenuShellFrames[0]')
+        $commands += @(
+            ('printf "SHELLFIRE ' + $state.Name + ' enter' + $fire_args))
+        # SEPARATE CONTINUES, and that is load-bearing: `continue N` sets the
+        # IGNORE COUNT of the breakpoint that last stopped, and the one that
+        # last stopped was just deleted, so gdb would continue exactly once and
+        # say nothing.
+        $commands += @(1..$PresentsAfterState | ForEach-Object { 'continue' })
+        $commands += @(
+            ('printf "SHELLFIRE ' + $state.Name + ' shot' + $fire_args))
+        $commands += @(
+            ('shell pwsh -NoProfile -ExecutionPolicy Bypass -File "' + $capture +
+             '" -EmulatorProcessId ' + $emulator.Id + ' -Output "' +
+             ($OutputPrefix + '-' + $state.Name + '.png') + '"')
+        )
+    }
+    $commands += @(
+        'printf "SHELLCAP done move=%u blocked=%u csscommit=%u ssscommit=%u\n", gNdsMenuShellSssMoveCount, gNdsMenuShellSssBlockedCount, gNdsMenuShellCssCommitCount, gNdsMenuShellSssCommitCount',
+        'detach',
+        'quit'
+    )
+
+    Invoke-GdbMarkerScript `
+        -Gdb $gdb -Elf $elf -Root $root -Commands $commands `
+        -ScriptName 'p2_shell_capture.gdb' `
+        -TimeoutSeconds $TimeoutSeconds | Out-Null
+}
+finally {
+    if ($null -ne $emulator) {
+        Stop-Process -Id $emulator.Id -Force -ErrorAction SilentlyContinue
+    }
+    if ($null -ne $config_state) {
+        Restore-MelonDSGdbConfig -State $config_state
+    }
+}

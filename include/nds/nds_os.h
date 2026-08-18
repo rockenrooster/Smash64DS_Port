@@ -41,6 +41,37 @@ extern volatile u32 gNdsOsThreadHeapCreateCount;
 extern volatile u32 gNdsOsStartThreadNoEntryCount;
 extern volatile u32 gNdsOsStartThreadCreateFailCount;
 
+/* Drop every registered thread whose OSThread lives inside [base, base+size),
+ * returning how many registry slots that cleared.
+ *
+ * A GObj thread's OSThread and its coroutine block are drawn from the taskman
+ * general arena: objman.c:810-818 hands osCreateThread a stack top inside a
+ * GObjThreadStack that syTaskmanMalloc carved out of it. That arena is rewound
+ * on every scene entry (decomp sys/taskman.c:1227 -> :258), so the instant a
+ * scene starts, any registered thread inside it is storage the next scene is
+ * about to reuse -- while sThreads[] still points at it and ndsOsRunThreads
+ * still dereferences it.
+ *
+ * BattleShip has the matching contract by construction: objman.c:918 destroys a
+ * GObj process's thread before ejecting its stack, so nothing arena-resident
+ * survives a scene. The port keeps a private registry the source does not have
+ * and nothing tied it to the arena's lifetime; that is the defect this closes
+ * (P2-1b-1). Called from ndsSceneManagerEnter BEFORE the rewind, so the structs
+ * inspected here are still intact -- and nothing is WRITTEN through them, since
+ * a courtesy `port_registered = FALSE` would be a write into the next scene's
+ * memory. */
+u32 ndsOsForgetThreadsInArena(const void *base, u32 size);
+
+/* Registry slots cleared by the above, the scene entries that cleared at least
+ * one, and the id of the last thread dropped. BattleShip hands GObj threads ids
+ * from `dGCProcessThreadID` (10000000 up), so a drop id in that range is the
+ * proof the dropped entries were GObj threads and not service threads. All
+ * three read 0 through the first scene entry of a run, which is this fix's
+ * negative control. */
+extern volatile u32 gNdsOsArenaThreadsDropped;
+extern volatile u32 gNdsOsArenaThreadDropEntries;
+extern volatile u32 gNdsOsArenaThreadDropLastId;
+
 #if NDS_TASK20_STACK_PROFILE
 extern volatile u32 gNdsTask20GameplayStackBase;
 extern volatile u32 gNdsTask20GameplayStackSize;

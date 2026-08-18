@@ -1,6 +1,7 @@
 #include "nds_scene_harness_config.h"
 
 #include <nds/nds_freeze_diagnostics.h>
+#include <nds/nds_menu_shell.h>
 #include <nds/nds_ifcommon_oam.h>
 #include <nds/nds_reloc_assets.h>
 #include <nds/nds_task37_profile.h>
@@ -7253,6 +7254,79 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
 {
     ndsPrepareTaskmanRun();
 
+#if NDS_P2_MENU_SHELL
+    /* P2-1d. The VS shell's four real screens, ahead of every bounded branch
+     * below because they REPLACE those branches rather than sit beside them:
+     * with the shell on, Startup/Title/ModeSelect/VSMode are screens the player
+     * drives, not scenes that park. Each returns with its successor already
+     * requested through the scene manager, so returning here hands control
+     * back to scManagerRunLoop's dispatch exactly as the source's own scene
+     * tail does. The VSBattle and VSResults branches are untouched: this shell
+     * takes the player TO the match and the match is still the Boundary's. */
+    switch (gSCManagerSceneData.scene_curr)
+    {
+    case nSCKindStartup:
+        /* P2-1h: no screen, no presented frame -- this requests the title and
+         * returns, so boot reaches the title directly (the N64 flow, with the
+         * opening cinematic that precedes it deferred to P2-7). It still runs,
+         * rather than being deleted, because it carries the menu audio load
+         * and the startup scene's own GObj teardown. */
+        ndsMenuShellRunStartup();
+        ndsFinishTaskmanRun();
+        gNdsSceneBoundaryKind = gSCManagerSceneData.scene_curr;
+        gNdsSceneBoundaryResult = NDS_SCENE_BOUNDARY_PASS;
+        gNdsOriginalBootStage |= NDS_BOOT_SCENE_REACHED;
+        return;
+    case nSCKindTitle:
+        ndsMenuShellRunTitle();
+        ndsFinishTaskmanRun();
+        gNdsOpeningMovieTitleResult = NDS_OPENING_MOVIE_TITLE_PASS;
+        gNdsSceneBoundaryKind = gSCManagerSceneData.scene_curr;
+        gNdsSceneBoundaryResult = NDS_SCENE_BOUNDARY_PASS;
+        gNdsOriginalBootStage |= NDS_BOOT_SCENE_REACHED;
+        return;
+    case nSCKindModeSelect:
+        ndsMenuShellRunModeSelect();
+        ndsFinishTaskmanRun();
+        gNdsSceneBoundaryKind = gSCManagerSceneData.scene_curr;
+        gNdsSceneBoundaryResult = NDS_SCENE_BOUNDARY_PASS;
+        return;
+    case nSCKindVSMode:
+        ndsMenuShellRunVSMode();
+        ndsFinishTaskmanRun();
+        gNdsSceneBoundaryKind = gSCManagerSceneData.scene_curr;
+        gNdsSceneBoundaryResult = NDS_SCENE_BOUNDARY_PASS;
+        return;
+    case nSCKindPlayersVS:
+        /* P2-1e. Unlike the four above, this branch replaces a scene that was
+         * not a park: the imported PlayersVS branch further down runs the
+         * original setup and its transition probe. That branch is unreachable
+         * with the shell on, because this switch runs first -- and the imported
+         * scene's own StartScene is compiled out at NDS_P2_MENU_SHELL so the
+         * heavy original func_start cannot run either. */
+        ndsMenuShellRunCharSelect();
+        ndsFinishTaskmanRun();
+        gNdsSceneBoundaryKind = gSCManagerSceneData.scene_curr;
+        gNdsSceneBoundaryResult = NDS_SCENE_BOUNDARY_PASS;
+        return;
+    case nSCKindMaps:
+        /* P2-1f, and the same story as PlayersVS above: the imported Maps
+         * branch further down runs the original setup and its own bounded
+         * select-transition probe. That branch is unreachable with the shell
+         * on because this switch runs first, and the imported scene's own
+         * StartScene is compiled out at NDS_P2_MENU_SHELL so the heavy
+         * original func_start (five menu files, two stage-sized model heaps,
+         * the 3D preview graph) cannot run either. */
+        ndsMenuShellRunStageSelect();
+        ndsFinishTaskmanRun();
+        gNdsSceneBoundaryKind = gSCManagerSceneData.scene_curr;
+        gNdsSceneBoundaryResult = NDS_SCENE_BOUNDARY_PASS;
+        return;
+    default:
+        break;
+    }
+#endif
+
 #if NDS_IMPORT_BATTLESHIP_VS_RESULTS
     if (gSCManagerSceneData.scene_curr == nSCKindVSResults)
     {
@@ -7272,7 +7346,13 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
                ((NDS_HARNESS_FAST_LOGIC == 0) ||
                 (updates < fast_update_max)))
         {
-            if (NDS_HARNESS_FAST_LOGIC == 0)
+            /* P2-1g adds the second disjunct. The fast-logic arm used to skip
+             * the controller pipeline entirely here, so Results could only be
+             * left by its update cap -- and the scripted walk's START (which
+             * travels the real keypad latch) had no reader. `NDS_P2_MENU_WALK`
+             * is 0 in every published and Boundary configuration, so mode 163
+             * evaluates the identical expression it always did. */
+            if ((NDS_HARNESS_FAST_LOGIC == 0) || (NDS_P2_MENU_WALK != 0))
             {
                 (void)ndsPlatformReadInput();
 #if NDS_SEAM_CONTROLLER_PAIR
@@ -7319,6 +7399,31 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
             ndsPlatformSetOriginalSpriteOverlayEnabled(FALSE);
             return;
         }
+#if NDS_R2_SCENE_LOOP_WALK
+        /* Results leg. Closing the loop back to the menu is what makes the
+         * high-water ring an N-loop reading instead of a two-entry one; the
+         * START rematch above still sends Results straight to its own
+         * destination when a human presses it, and that path is untouched.
+         *
+         * P2-1f MOVED THE TARGET. The source's Results exit goes to
+         * `nSCKindPlayersVS` (mnvsresults.c:3312) and `ndsMNVSResultsSetLoadScene`
+         * now transcribes that whenever the shell owns the menus, so the walk's
+         * substitute leg has to arrive at the same place or the two arms of the
+         * evidence would describe different flows. With the shell off there is
+         * no character-select screen to arrive at, so the leg keeps VS Mode --
+         * which is the scene the P2-1b walk was defined against. */
+        if (ndsSceneWalkAdvance(
+#if NDS_P2_MENU_SHELL
+                (u32)nSCKindPlayersVS
+#else
+                (u32)nSCKindVSMode
+#endif
+            ) != FALSE)
+        {
+            ndsPlatformSetOriginalSpriteOverlayEnabled(FALSE);
+            return;
+        }
+#endif
         osStopThread(NULL);
         return;
     }
@@ -7588,6 +7693,16 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
         gNdsSceneBoundaryKind = gSCManagerSceneData.scene_curr;
         gNdsSceneBoundaryResult = NDS_SCENE_BOUNDARY_PASS;
         gNdsOriginalBootStage |= NDS_BOOT_SCENE_REACHED;
+#if NDS_R2_SCENE_LOOP_WALK
+        /* P2-1b scene-loop walk, menu leg. This bounded VS Mode branch parks
+         * here in every other configuration; with the walk armed it spends a
+         * hop and hands the loop to the match instead. */
+        if (ndsSceneWalkAdvance((u32)nSCKindVSBattle) != FALSE)
+        {
+            ndsFinishTaskmanRun();
+            return;
+        }
+#endif
         osStopThread(NULL);
         return;
     }
@@ -9460,8 +9575,24 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
             return;
         }
 #endif
+#if NDS_R2_SCENE_LOOP_WALK
+        /* Battle leg -- and it spends NO hop, because the battle scene already
+         * owns this transition and must keep owning it. decomp
+         * sc/sccommon/scvsbattle.c:559 sets `scene_prev = scene_curr;
+         * scene_curr = nSCKindVSResults` after taskman returns, unconditionally
+         * and AFTER the Sudden Death check at :540 has had its chance to run a
+         * second entry into this same scene. A walk hop here would be
+         * overwritten by :560 anyway, and worse, :559 would then copy the hop's
+         * VSResults into scene_prev and break the `prev == VSBattle` test
+         * battleship_scvsbattle.c:486 makes. Returning instead of parking hands
+         * the scene back to its own tail, so the walk gets the source's real
+         * battle teardown -- Sudden Death included, which is the re-entry the
+         * arena ring most needs to hold flat. */
+        return;
+#else
         osStopThread(NULL);
         return;
+#endif
     }
 
     /* The real taskman scene setup populated sSYTaskmanDefaultFunction and the

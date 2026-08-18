@@ -2003,6 +2003,11 @@ static s32 ndsTask39PrepareHitSparks(u32 *vram_cursor)
  * already cleared by ndsRendererHardwareDiscardTextureCache -- that latch
  * survived the bug because someone wired its invalidation; this one was
  * missed. */
+s32 ndsIFCommonNativeOamIsPrepared(void)
+{
+    return (sNdsIFCommonPrepared != FALSE) ? TRUE : FALSE;
+}
+
 void ndsIFCommonNativeOamDiscardTextures(void)
 {
     memset(sNdsIFCommonCloudTextureNames, 0,
