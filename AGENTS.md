@@ -141,13 +141,27 @@ Examples of inefficiencies:
 
 ## Current Boundary
 
-Canonical Boundary is `battle_playable_realtime`, mode `163`: Mario human versus the
-imported level-3 Fox CPU on Dream Land, items off, one-minute (`3600` tick) Time
-mode. A diagnostic ROM may pause Fox decision/input only; proof runs and milestone
+Boundary has **two arms** since the P2-1 phase close (row P2-1g, 2026-08-18),
+and `verify-all.ps1 -Profile Boundary -List` is the membership authority:
+
+1. `p2_shell_loop` — twenty full laps of the VS shell (title → main menu → VS
+   rules → character select → stage select → battle → results → START →
+   character select) under scripted input, asserting per-scene-kind arena
+   high-waters flat, the arena free floor, one input entry per step, the exact
+   lap pattern, and no CPU abort. It is a **scene-boundary** instrument at
+   `NDS_HARNESS_FAST_LOGIC=1`: no tick figure from it is a cadence figure.
+2. `battle_playable_realtime`, mode `163`: Mario human versus the imported
+   level-3 Fox CPU on Dream Land, items off, one-minute (`3600` tick) Time
+   mode — unchanged, and the **P1 regression guard** `docs/P2_PLAN.md` law 4
+   keeps green throughout P2. It stays the only gameplay/performance arm.
+
+A diagnostic ROM may pause Fox decision/input only; proof runs and milestone
 acceptance enable it. Never launch the obsolete five-minute configuration, except for specific instruction to do so.
-The Boundary definition evolves at P2 phase closes by board row
-(`docs/P2_PLAN.md` law 4); this section is updated when it does, and the P1
-configuration stays green throughout P2 as a regression guard.
+Menu cadence and the realtime pass through the menus are measured beside the
+profile, not inside it: `scripts/menus/probe-p2-shell.ps1`
+(`smash64ds-p2-shell-hwtri`, fast logic 0). The Boundary definition evolves at
+P2 phase closes by board row (`docs/P2_PLAN.md` law 4); this section is updated
+when it does.
 
 **Both gate arms run the one-minute match** (owner, 2026-08-05: *"the soak was
 only meant to catch freezes, boundary and both cpu gates should be the 60 sec

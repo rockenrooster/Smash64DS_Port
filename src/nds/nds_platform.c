@@ -8,6 +8,7 @@
 #include <nds/nds_controller.h>
 #include <nds/nds_freeze_diagnostics.h>
 #include <nds/nds_ifcommon_oam.h>
+#include <nds/nds_menu_shell.h>
 #include <nds/nds_ui_kit.h>
 #if NDS_R2_HWMATH_BENCH
 #include <nds/nds_r2_hwmath_bench.h>
@@ -489,6 +490,19 @@ u32 ndsPlatformReadInput(void)
 
     scanKeys();
     held = keysHeld();
+#if (NDS_P2_MENU_SHELL && NDS_P2_MENU_WALK)
+    /* P2-1g. The scripted walk's ONE non-shell button: START on the Results
+     * screen, which is the imported scene's own exit and the only input in the
+     * loop that no shell handler can synthesise. It is ORed in BEFORE the
+     * latch, so it reaches `osContGetReadData` (which reads exactly this
+     * latched value) and from there the source's controller pipeline and
+     * `mnVSResultsCheckExit`. Compiled out of every published and Boundary
+     * configuration with the rest of the walk. */
+    if (ndsMenuShellWalkWantsResultsStart() != 0u)
+    {
+        held |= KEY_START;
+    }
+#endif
     sHeldKeys = held;
     gNdsPlatformHeldKeys = held;
 

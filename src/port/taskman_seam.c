@@ -7341,7 +7341,13 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
                ((NDS_HARNESS_FAST_LOGIC == 0) ||
                 (updates < fast_update_max)))
         {
-            if (NDS_HARNESS_FAST_LOGIC == 0)
+            /* P2-1g adds the second disjunct. The fast-logic arm used to skip
+             * the controller pipeline entirely here, so Results could only be
+             * left by its update cap -- and the scripted walk's START (which
+             * travels the real keypad latch) had no reader. `NDS_P2_MENU_WALK`
+             * is 0 in every published and Boundary configuration, so mode 163
+             * evaluates the identical expression it always did. */
+            if ((NDS_HARNESS_FAST_LOGIC == 0) || (NDS_P2_MENU_WALK != 0))
             {
                 (void)ndsPlatformReadInput();
 #if NDS_SEAM_CONTROLLER_PAIR

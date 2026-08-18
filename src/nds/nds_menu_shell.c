@@ -137,6 +137,10 @@ NDS_MENU_PUBLISHED volatile u32
 NDS_MENU_PUBLISHED volatile u32
     gNdsMenuShellVBlankMax[NDS_MENU_SHELL_SCREEN_COUNT];
 NDS_MENU_PUBLISHED volatile u32
+    gNdsMenuShellWorkMaxFrame[NDS_MENU_SHELL_SCREEN_COUNT];
+NDS_MENU_PUBLISHED volatile u32
+    gNdsMenuShellWorkMaxCues[NDS_MENU_SHELL_SCREEN_COUNT];
+NDS_MENU_PUBLISHED volatile u32
     gNdsMenuShellEnterTicks[NDS_MENU_SHELL_SCREEN_COUNT];
 NDS_MENU_PUBLISHED volatile u32
     gNdsMenuShellTransitionRing[NDS_MENU_SHELL_RING];
@@ -150,6 +154,24 @@ NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellCommitTime;
 NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellCommitStocks;
 NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellWalkSteps;
 NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellWalkLoops;
+/* P2-1g. The budget is a VARIABLE seeded from the compile-time count, not the
+ * macro itself, so one linked walk ROM serves a three-lap smoke and a
+ * twenty-lap phase-close run. Two lap counts used to mean two builds, and this
+ * repository's own measurement law prefers one dual-route binary over two
+ * linked ROMs for exactly this reason. Poke it before the first lap closes. */
+NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellWalkBudget =
+#if NDS_P2_MENU_WALK
+    (u32)NDS_P2_MENU_WALK;
+#else
+    0u;
+#endif
+/* Results START taps the walk synthesised, and the frames it held the button.
+ * Non-zero `Press` with a flat gNdsVSResultsRematchCount is "the tap reached
+ * the pad and the source's exit test refused it"; both zero is "the walk never
+ * pressed". They are the two halves that separate an input failure from a
+ * scene-routing failure without guessing. */
+NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellWalkResultsPressCount;
+NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellWalkResultsHoldFrames;
 NDS_MENU_PUBLISHED volatile s32 gNdsMenuShellCssCursorX;
 NDS_MENU_PUBLISHED volatile s32 gNdsMenuShellCssCursorY;
 NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellCssCursorStatus;
@@ -191,6 +213,7 @@ static u32 sMenuHeldPrev;
 static u32 sMenuTics;
 static u32 sMenuNextScene;
 static u32 sMenuLeaving;
+static u32 sMenuFrameFgmAtStart;
 
 static void ndsMenuShellRecordFrame(void)
 {
@@ -215,6 +238,18 @@ static void ndsMenuShellRecordFrame(void)
     if (work > gNdsMenuShellWorkMax[sMenuScreen])
     {
         gNdsMenuShellWorkMax[sMenuScreen] = work;
+        /* P2-1g. THE WORST FRAME NOW CARRIES ITS OWN LABEL, because a maximum
+         * with no label is what left P2-1e and P2-1f with an unattributed
+         * one-frame outlier on three screens and a suspicion on the board
+         * instead of a cause. `Frame` is which presented frame it was, and
+         * `Cues` is how many FGM play calls that same frame made -- so the
+         * question "is the worst frame the frame that started a sound?" is a
+         * comparison in the artifact rather than a theory. A max whose Cues is
+         * 0 refutes the audio explanation outright. */
+        gNdsMenuShellWorkMaxFrame[sMenuScreen] =
+            gNdsMenuShellFrames[sMenuScreen];
+        gNdsMenuShellWorkMaxCues[sMenuScreen] =
+            gNdsAudioFgmPlayCalls - sMenuFrameFgmAtStart;
     }
     gNdsMenuShellFrames[sMenuScreen]++;
 }
@@ -240,6 +275,8 @@ static void ndsMenuShellRecordPresent(void)
     }
     sMenuLastVBlank = vblank;
     sMenuFrameStartTicks = cpuGetTiming();
+    /* Snapshot beside the tick start, so the pair describes the SAME frame. */
+    sMenuFrameFgmAtStart = gNdsAudioFgmPlayCalls;
     /* Armed one present AFTER entry so the scene-load frame -- the NitroFS
      * pack read and the source scene's own file loads -- is reported alone. */
     sMenuFrameArmed = 1u;
@@ -422,7 +459,7 @@ static u32 ndsMenuShellWalkTap(u32 screen, u32 *out_tap)
     u32 dwell;
 
     *out_tap = 0u;
-    if (gNdsMenuShellWalkLoops >= (u32)NDS_P2_MENU_WALK)
+    if (gNdsMenuShellWalkLoops >= gNdsMenuShellWalkBudget)
     {
         /* Budget spent: stop driving and leave the shell to the player. The
          * screen parks rather than looping forever, which is what makes the
@@ -477,6 +514,54 @@ static u32 ndsMenuShellWalkTap(u32 screen, u32 *out_tap)
     sMenuWalkHold = (u32)script[sMenuWalkCursor - 1u].hold - 1u;
     *out_tap = sMenuWalkHeld;
     return sMenuWalkHeld;
+}
+
+/* P2-1g -- THE ONE BUTTON THIS SHELL CANNOT PRESS FOR ITSELF.
+ *
+ * Results is not a shell screen. It is the imported `mnVSResultsFuncRun`, and
+ * it leaves only when `mnVSResultsCheckExit` (mnvsresults.c:266) sees
+ * START in `gSCManagerDevices[i].button_tap` after `sMNVSResultsTotalTimeTics`
+ * has reached `sMNVSResultsAllowExitWait` (410 ticks for a normal result,
+ * :2820). Nothing in the shell's own input path can reach that test, so the
+ * P2-1b scene walk substituted a scene-manager hop out of Results instead --
+ * which closes a lap without ever running `ndsMNVSResultsSetLoadScene`'s body.
+ * P2-1f rewrote that body for the shell and could not exercise it; this is
+ * what exercises it.
+ *
+ * IT IS A KEYPAD PRESS, NOT A SHORTCUT. This returns "hold START this frame"
+ * and `ndsPlatformReadInput` ORs the DS key in before it latches, so the tap
+ * travels the whole real path -- `osContGetReadData` reads the latched keys,
+ * `syControllerReadDeviceData`/`syControllerUpdateGlobalData` derive the
+ * rising edge, and the source's own exit test samples it. A write straight
+ * into `gSYControllerDevices` would prove nothing about that chain, and
+ * `battleship_mnvsresults.c:376` records that it also cannot work: the port
+ * runs the controller pipeline BEFORE `task_update`, so anything written
+ * beside it lands after its only reader.
+ *
+ * THE PULSE, and why it is a pulse. `button_tap` is an EDGE. A permanently
+ * held START produces exactly one edge -- on the frame Results is entered,
+ * long before tic 410 -- and then nothing, which is the failure
+ * `battleship_mnvsresults.c:357` already paid for once. So the button is held
+ * for four frames in every sixteen: the first edge that lands after the wait
+ * expires is at most sixteen frames late, and Results runs at least 600
+ * updates before any bound in this build stops it. The frame counter is this
+ * screen's own dwell, reset whenever Results is not the current scene, so the
+ * phase is deterministic per entry rather than free-running across a run. */
+u32 ndsMenuShellWalkWantsResultsStart(void)
+{
+    if ((u32)gSCManagerSceneData.scene_curr != (u32)nSCKindVSResults)
+    {
+        gNdsMenuShellWalkResultsHoldFrames = 0u;
+        return 0u;
+    }
+    gNdsMenuShellWalkResultsHoldFrames++;
+    if ((gNdsMenuShellWalkResultsHoldFrames & 15u) == 8u)
+    {
+        /* Count the RISING frame only -- one press, however long it is held. */
+        gNdsMenuShellWalkResultsPressCount++;
+    }
+    return (((gNdsMenuShellWalkResultsHoldFrames & 15u) >= 8u) &&
+            ((gNdsMenuShellWalkResultsHoldFrames & 15u) < 12u)) ? 1u : 0u;
 }
 #endif /* NDS_P2_MENU_WALK */
 

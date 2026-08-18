@@ -516,8 +516,45 @@ Use the one-minute gate only for timer/lifecycle/CPU/memory/M4-residency work or
 release qualification. Use renderer forensic checks only when renderer semantics
 changed. The retired profiles and modes no longer exist.
 
-`verify-all.ps1 -Profile Boundary -List` is the membership authority. Boundary
-currently contains only `battle_playable_realtime`, mode `163`.
+`verify-all.ps1 -Profile Boundary -List` is the membership authority. **Since
+the P2-1 phase close (row P2-1g, 2026-08-18) Boundary has TWO arms, in this
+order:**
+
+1. **`p2_shell_loop`** — `scripts/verify-p2-shell-loop.ps1`, target
+   `smash64ds-p2-shell-loop-hwtri`. Twenty full laps of the VS shell (title →
+   main menu → VS rules → character select → stage select → battle → results →
+   START → character select), asserting per-scene-kind arena high-waters flat,
+   the arena free floor, one input-ring entry per scripted step, the exact lap
+   pattern out of the scene ring, and no CPU abort. It is a **scene-boundary**
+   instrument at `NDS_HARNESS_FAST_LOGIC=1`: **no tick figure from it is a
+   cadence or performance figure**, and it never publishes one.
+2. **`battle_playable_realtime`**, mode `163` — unchanged, and it stays. It is
+   the P1 regression guard `docs/P2_PLAN.md` law 4 requires to be green through
+   all of P2, and it remains the only gameplay/performance arm of the profile.
+
+The registry still exposes exactly Latest and Boundary; Latest is `runtime` +
+both of the above. The retired diagnostic fleet does not return.
+
+Two surfaces belong beside the profile rather than in it, because they are
+measurements rather than gates:
+
+- **Menu cadence and the realtime pass through the menus**:
+  `scripts/menus/probe-p2-shell.ps1`, target `smash64ds-p2-shell-hwtri`
+  (`NDS_HARNESS_FAST_LOGIC=0`) — one scripted pass through all six screens and
+  the real one-minute match. This is the arm every menu tick figure comes from.
+- **Shell screenshots**: `scripts/menus/capture-p2-shell.ps1`, same target, one
+  run for every screen, locked on each screen's own `ndsMenuShellRun<X>` entry
+  point because a wall-clock delay cannot target a screen that presents at
+  353–738 fps.
+
+**A stray third ROM at the repo root turns Boundary red** and has since
+2026-08-17: `check-published-roms.ps1` (run by the realtime arm) enforces the
+two-ROM contract, and untracked `smash64ds_P1.nds` violates it. Until the owner
+rules on the parked decision in `docs/P2_EXECUTION_BOARD.md`, a Boundary run
+relocates that file to `builds/` for the run and restores it afterwards in a
+`try`/`finally`, re-verifying its SHA-256. The loop arm deliberately does **not**
+do this itself: the relocation has to span the realtime arm too, so it belongs
+to the run, not to one verifier.
 
 ## Emulator And Captures
 

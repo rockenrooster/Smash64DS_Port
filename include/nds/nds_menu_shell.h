@@ -86,6 +86,12 @@ extern volatile u32
     gNdsMenuShellWorkHist[NDS_MENU_SHELL_SCREEN_COUNT]
                          [NDS_MENU_SHELL_TICK_BUCKETS];
 extern volatile u32 gNdsMenuShellWorkMax[NDS_MENU_SHELL_SCREEN_COUNT];
+/* P2-1g: the worst frame's LABEL. `Frame` is which presented frame of that
+ * screen it was; `Cues` is how many FGM play calls that same frame made. A
+ * maximum with no label is what left the P2-1e/1f one-frame outlier
+ * unattributed and on the board as a suspicion. */
+extern volatile u32 gNdsMenuShellWorkMaxFrame[NDS_MENU_SHELL_SCREEN_COUNT];
+extern volatile u32 gNdsMenuShellWorkMaxCues[NDS_MENU_SHELL_SCREEN_COUNT];
 extern volatile u32
     gNdsMenuShellVBlankHist[NDS_MENU_SHELL_SCREEN_COUNT]
                            [NDS_MENU_SHELL_VBLANK_BUCKETS];
@@ -114,6 +120,23 @@ extern volatile u32 gNdsMenuShellCommitStocks;
 /* Scripted-walk state (NDS_P2_MENU_WALK). Steps injected and loops closed. */
 extern volatile u32 gNdsMenuShellWalkSteps;
 extern volatile u32 gNdsMenuShellWalkLoops;
+/* P2-1g. Laps the walk will drive, seeded from NDS_P2_MENU_WALK and writable,
+ * so one linked ROM covers a three-lap smoke and a twenty-lap phase-close run.
+ * Poke it before the first lap closes; the walk parks when Loops reaches it. */
+extern volatile u32 gNdsMenuShellWalkBudget;
+/* P2-1g. The Results START the walk synthesises: presses made (rising edges)
+ * and frames spent on the Results screen this entry. Paired with
+ * gNdsVSResultsRematchCount these split "the walk never pressed" from "the
+ * source's own exit test refused the press". */
+extern volatile u32 gNdsMenuShellWalkResultsPressCount;
+extern volatile u32 gNdsMenuShellWalkResultsHoldFrames;
+/* Returns 1 while the walk wants START held on the Results screen. Defined
+ * only under NDS_P2_MENU_WALK and called only from ndsPlatformReadInput under
+ * the same guard -- the DS key constant stays on the platform side, the scene
+ * test stays in the shell. Declared unconditionally: a declaration nothing
+ * calls costs nothing, and a #if here would depend on every includer having
+ * pulled nds_build_config.h first. */
+u32 ndsMenuShellWalkWantsResultsStart(void);
 
 /* --- P2-1e, the character select. Everything below is the CSS's own seam
  * state; none of it is read by gameplay. --- */

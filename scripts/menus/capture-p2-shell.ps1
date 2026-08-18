@@ -1,13 +1,21 @@
 [CmdletBinding()]
 param(
-    [string]$Build = 'build-p2-1f-sss',
-    [string]$Target = 'smash64ds-p2-1f-sss-hwtri',
+    [string]$Build = 'build-p2-shell',
+    [string]$Target = 'smash64ds-p2-shell-hwtri',
     [ValidateRange(1, 8)][int]$RunnerSlot = 7,
-    [ValidateRange(30, 900)][int]$TimeoutSeconds = 300,
-    [string]$OutputPrefix = ''
+    [ValidateRange(30, 900)][int]$TimeoutSeconds = 600,
+    [string]$OutputPrefix = '',
+    # Presents to step past after a state is reached. A stop AT
+    # ndsPlatformEndFrame is BEFORE that frame reaches the screen, and the kit
+    # composes into shadow OAM, so a capture taken at the state's own stop is
+    # one state behind -- measured twice, once as a black screen and once as
+    # the pre-move cursor.
+    [ValidateRange(1, 32)][int]$PresentsAfterState = 6
 )
 
-# P2-1f visibility. Captures the stage select at KNOWN screen states.
+# P2-1g visibility, and the phase-level successor to
+# scripts/menus/capture-p2-1f-sss.ps1. Captures EVERY shell screen at a KNOWN
+# state in one run, for the owner's visual pass at the P2-1 close.
 #
 # WHY THIS EXISTS RATHER THAN `capture-melonds.ps1 -DelaySeconds`. The menu
 # screens present far faster than real time under this emulator -- measured on
@@ -15,19 +23,21 @@ param(
 # against its own 60 Hz VBlank pacing -- so a wall-clock delay lands on a
 # different screen every run, and the stage select's scripted visit is only 122
 # presented frames wide. Two calibration runs missed it in both directions
-# before this was written. The state lock here is the SCREEN'S OWN code: gdb
-# breaks on `ndsMenuShellSssShowSelection`, which the screen calls exactly once
-# on entry and once per cursor move (mnMapsMakeNameAndEmblem's role), so hit 1
-# IS "the stage select just opened" and hit 2 IS "the cursor just moved" no
-# matter how fast the host runs.
+# before the P2-1f version of this was written.
+#
+# THE LOCK IS THE SCREEN'S OWN ENTRY POINT. `scManagerRunLoop` dispatches each
+# shell screen through its own exported `ndsMenuShellRun<X>`, so breaking there
+# IS "screen X just opened" no matter how fast the host runs -- one symbol per
+# screen, no hit arithmetic, and the printf beside each one reads
+# `gNdsMenuShellScreen` back so the artifact records which screen was actually
+# photographed rather than which one was intended. The two stage-select states
+# keep P2-1f's finer lock (`ndsMenuShellSssShowSelection`, called once on entry
+# and once per cursor move) because they differ by a cursor move inside one
+# screen rather than by which screen is up.
 #
 # HOW THE CAPTURE HAPPENS WHILE HALTED. A gdb-halted melonDS keeps its window
 # up showing the last presented frame, so the shot is taken from a stopped
 # target through `capture-running-melonds-window.ps1` (gdb's own `shell`).
-# After each state is reached the script steps forward a few PRESENTS -- the
-# selection change is composed into shadow OAM and only reaches the screen at
-# the next `ndsPlatformEndFrame` -- so what is captured is the state after the
-# move, not the frame before it.
 #
 # Nothing here writes guest memory.
 
@@ -45,22 +55,33 @@ $rom = Resolve-Smash64DSBuildOutput -Root $root -Target $Target -Build $Build -E
 $elf = Resolve-Smash64DSBuildOutput -Root $root -Target $Target -Build $Build -Extension '.elf'
 if ([string]::IsNullOrWhiteSpace($OutputPrefix)) {
     $OutputPrefix = Join-Path $root ('artifacts\visibility\' +
-        (Get-Date -Format 'yyyy-MM-dd') + '_p2-1f-sss')
+        (Get-Date -Format 'yyyy-MM-dd') + '_p2-shell')
 }
 
-$required = @('ndsMenuShellSssShowSelection', 'ndsPlatformEndFrame')
+# One entry per screenshot, in the order a cold boot reaches them.
+$states = @(
+    @{ Name = 'splash';      Break = 'ndsMenuShellRunSplash' },
+    @{ Name = 'title';       Break = 'ndsMenuShellRunTitle' },
+    @{ Name = 'main-menu';   Break = 'ndsMenuShellRunModeSelect' },
+    @{ Name = 'vs-rules';    Break = 'ndsMenuShellRunVSMode' },
+    @{ Name = 'css-default'; Break = 'ndsMenuShellRunCharSelect' },
+    @{ Name = 'sss-default'; Break = 'ndsMenuShellSssShowSelection' },
+    # Hit 2 of the same symbol: the scripted RIGHT has moved the cursor. Slots
+    # 7 and 8 are locked, so the move lands on 9 -- RANDOM.
+    @{ Name = 'sss-random';  Break = 'ndsMenuShellSssShowSelection' }
+)
+
+$required = @('ndsPlatformEndFrame', 'gNdsMenuShellScreen') +
+    @($states | ForEach-Object { $_.Break } | Select-Object -Unique)
 $symbols = & $nm $elf | ForEach-Object { ($_ -split '\s+')[-1] }
 $missing = @($required | Where-Object { $symbols -notcontains $_ })
 if ($missing.Count -gt 0) {
-    throw ("p2-1f capture symbols absent from {0}: {1}" -f $elf, ($missing -join ', '))
+    throw ("p2-shell capture symbols absent from {0}: {1}" -f $elf, ($missing -join ', '))
 }
 
 $context = Initialize-MelonDSVerifierContext `
     -Root $root -MelonDS '' -RunnerSlot $RunnerSlot -NoBuild
 $melon_dir = Split-Path -Parent $context.MelonDSPath
-$log_dir = Get-MelonDSVerifierLogDir -Root $root -RunnerSlot $RunnerSlot
-$stdout = Join-Path $log_dir 'melonds.p2-1f-capture.stdout.log'
-$stderr = Join-Path $log_dir 'melonds.p2-1f-capture.stderr.log'
 $config_state = $null
 $emulator = $null
 $capture = Join-Path $scripts 'capture-running-melonds-window.ps1'
@@ -69,7 +90,6 @@ try {
     $config_state = Enable-MelonDSGdbConfig `
         -MelonDSPath $context.MelonDSPath `
         -GdbPort $context.GdbPort -Persistent -MuteAudio
-    Remove-Item -LiteralPath $stdout, $stderr -Force -ErrorAction SilentlyContinue
     # WindowStyle: visible-by-design -- this harness photographs the emulator
     # window, and a hidden launch leaves MainWindowHandle at IntPtr.Zero, so
     # the run succeeds and every PNG comes out black. Exactly the case
@@ -91,61 +111,48 @@ try {
     Wait-MelonDSGdbListener -Process $emulator -Port $context.GdbPort | Out-Null
     # Foreground once, while emulation is still running: bringing the window
     # forward after the target is halted can capture a Qt repaint instead of
-    # the completed DS presentation (capture-melonds.ps1's own lesson). The
-    # window is left at whatever size it opens, which is why the assertions
-    # against these PNGs run with -WindowScaledCapture.
+    # the completed DS presentation (capture-melonds.ps1's own lesson).
     [void][Smash64DSWindowCapture]::SetForegroundWindow(
         $emulator.MainWindowHandle)
     Start-Sleep -Milliseconds 300
-
-    $shot = {
-        param([string]$Name)
-        @(
-            'delete',
-            'break ndsPlatformEndFrame',
-            # SIX SEPARATE CONTINUES, and both halves of that are load-bearing.
-            # SEPARATE, because `continue 6` sets the IGNORE COUNT of the
-            # breakpoint that last stopped -- and the one that last stopped was
-            # just deleted, so gdb continues exactly once and says nothing.
-            # SIX, because a stop AT ndsPlatformEndFrame is before that frame
-            # is presented: the first capture written this way came out one
-            # state behind on both shots (a black screen for "the stage select
-            # just opened", and the pre-move cursor for "the cursor moved").
-            'continue', 'continue', 'continue',
-            'continue', 'continue', 'continue',
-            ('shell pwsh -NoProfile -ExecutionPolicy Bypass -File "' + $capture +
-             '" -EmulatorProcessId ' + $emulator.Id + ' -Output "' +
-             ($OutputPrefix + '-' + $Name + '.png') + '"')
-        )
-    }
 
     $commands = @(
         'set pagination off',
         'set confirm off',
         'set remotetimeout 20',
-        ("target remote 127.0.0.1:{0}" -f $context.GdbPort),
-        # Hit 1: the stage select has just opened. mnMapsInitVars put the
-        # cursor on the cell maps_vsmode_gkind names -- Dream Land on a cold
-        # boot -- and the other eight grounds draw the locked plate.
-        'break ndsMenuShellSssShowSelection',
-        'continue',
-        'printf "SSSCAP default slot=%u gkind=%02x\n", gNdsMenuShellSssCursorSlot, gNdsMenuShellSssCursorGkind'
-    ) + (& $shot 'default') + @(
-        # Hit 2: the scripted RIGHT has moved the cursor. Slots 7 and 8 are
-        # locked, so the move lands on 9 -- RANDOM.
-        'delete',
-        'break ndsMenuShellSssShowSelection',
-        'continue',
-        'printf "SSSCAP random slot=%u gkind=%02x\n", gNdsMenuShellSssCursorSlot, gNdsMenuShellSssCursorGkind'
-    ) + (& $shot 'random') + @(
-        'printf "SSSCAP done move=%u blocked=%u\n", gNdsMenuShellSssMoveCount, gNdsMenuShellSssBlockedCount',
+        ("target remote 127.0.0.1:{0}" -f $context.GdbPort)
+    )
+    foreach ($state in $states) {
+        $commands += @(
+            'delete',
+            ('break ' + $state.Break),
+            'continue',
+            ('printf "SHELLCAP ' + $state.Name +
+             ' screen=%u sss_slot=%u sss_gkind=%02x\n", gNdsMenuShellScreen, ' +
+             'gNdsMenuShellSssCursorSlot, gNdsMenuShellSssCursorGkind'),
+            'delete',
+            'break ndsPlatformEndFrame'
+        )
+        # SEPARATE CONTINUES, and that is load-bearing: `continue N` sets the
+        # IGNORE COUNT of the breakpoint that last stopped, and the one that
+        # last stopped was just deleted, so gdb would continue exactly once and
+        # say nothing.
+        $commands += @(1..$PresentsAfterState | ForEach-Object { 'continue' })
+        $commands += @(
+            ('shell pwsh -NoProfile -ExecutionPolicy Bypass -File "' + $capture +
+             '" -EmulatorProcessId ' + $emulator.Id + ' -Output "' +
+             ($OutputPrefix + '-' + $state.Name + '.png') + '"')
+        )
+    }
+    $commands += @(
+        'printf "SHELLCAP done move=%u blocked=%u csscommit=%u ssscommit=%u\n", gNdsMenuShellSssMoveCount, gNdsMenuShellSssBlockedCount, gNdsMenuShellCssCommitCount, gNdsMenuShellSssCommitCount',
         'detach',
         'quit'
     )
 
     Invoke-GdbMarkerScript `
         -Gdb $gdb -Elf $elf -Root $root -Commands $commands `
-        -ScriptName 'p2_1f_sss_capture.gdb' `
+        -ScriptName 'p2_shell_capture.gdb' `
         -TimeoutSeconds $TimeoutSeconds | Out-Null
 }
 finally {

@@ -272,13 +272,33 @@ $legacyRecords = @($registry | Where-Object {
 if ($legacyRecords.Count -gt 0) {
     Fail-Check "retired mode 1-162 record(s) remain: $(@($legacyRecords.Name) -join ', ')"
 }
+# P2-1g moved Boundary from one arm to two at the P2-1 phase close. The
+# mode-163 realtime arm is pinned as the SECOND entry rather than merely
+# present: P2_PLAN.md law 4 keeps the P1 configuration green through all of P2
+# as the regression guard, so a change that drops it has to fail here.
 Assert-ProfilePlan 'Boundary' @(
+    'p2_shell_loop',
     'battle_playable_realtime'
 )
 Assert-ProfilePlan 'Latest' @(
     'runtime',
+    'p2_shell_loop',
     'battle_playable_realtime'
 )
+# The loop arm's own contract, pinned so it cannot be softened into a shorter
+# walk or into the P2-1b substitute hop that closed a lap WITHOUT running
+# ndsMNVSResultsSetLoadScene -- which is the one thing this arm exists to
+# exercise.
+$shellLoopText = Get-Content -LiteralPath (
+    Join-Path $PSScriptRoot 'verify-p2-shell-loop.ps1') -Raw
+if (($shellLoopText -notmatch '\[ValidateRange\(1,64\)\]\[int\]\$Loops = 20') -or
+    ($shellLoopText -notmatch 'NDS_R2_SCENE_LOOP_WALK') -or
+    ($shellLoopText -notmatch "\`$sceneWalk -ne 0") -or
+    ($shellLoopText -notmatch 'gNdsVSResultsRematchCount') -or
+    ($shellLoopText -notmatch 'gNdsMenuShellWalkResultsPressCount') -or
+    ($shellLoopText -notmatch '__excpt_entry')) {
+    Fail-Check 'P2 shell loop verifier lost its 20-lap default, its scene-walk refusal, its Results-rematch proof, or its abort breakpoint'
+}
  $harnessCount = $harnessRecords.Count
 $harnessCount = $harnessRecords.Count
 $scriptCount = (@($registry | Select-Object -ExpandProperty Script -Unique)).Count

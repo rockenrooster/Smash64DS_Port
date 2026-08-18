@@ -2159,18 +2159,19 @@ endif
 # NEVER PUBLISHED. The boot scene differs from the shipped ROM's, so no tick
 # figure from it is a Boundary figure.
 #
-# P2-1e ADDS A NAME, NOT A BLOCK. The character select is another screen inside
-# NDS_P2_MENU_SHELL, so its lab arm wants exactly these flags; a second copy of
-# this list is a second thing to keep in step, and the one measurable difference
-# between the two would be the ROM's filename. `smash64ds-p2-1e-css-hwtri`
-# therefore selects the same block (the pattern NDS_TASK37_DEVICE_TARGETS uses).
+# P2-1d/1e/1f EACH ADDED A NAME, NOT A BLOCK -- the character select and the
+# stage select are more screens inside NDS_P2_MENU_SHELL and wanted exactly
+# these flags, so all three selected this one block and the only measurable
+# difference between them was the ROM's filename.
 #
-# P2-1f ADDS A NAME FOR THE SAME REASON. The stage select is another screen
-# inside NDS_P2_MENU_SHELL and wants exactly these flags.
+# P2-1g COLLAPSES THE THREE INTO ONE PHASE NAME. Every row in P2-1 is closed,
+# the shell is one screen set rather than three in progress, and a per-row lab
+# name outliving its row is scaffolding: the next reader cannot tell which of
+# three identical ROMs is current. `smash64ds-p2-shell-hwtri` is the shipping-
+# configuration shell arm -- the cadence, screenshot and realtime-through-menus
+# surface the phase closes on -- and the loop block below carries the other.
 NDS_P2_MENU_SHELL_TARGETS := \
-	smash64ds-p2-1d-menus-hwtri \
-	smash64ds-p2-1e-css-hwtri \
-	smash64ds-p2-1f-sss-hwtri
+	smash64ds-p2-shell-hwtri
 ifneq ($(filter $(TARGET),$(NDS_P2_MENU_SHELL_TARGETS)),)
 override NDS_DEV_SCENE_HARNESS := battle_playable_realtime
 override NDS_DEV_LIVE_INPUT_PREVIEW := 1
@@ -2217,24 +2218,36 @@ override NDS_P2_UI_KIT := 1
 override NDS_P2_MENU_SHELL := 1
 override NDS_P2_MENU_WALK := 1
 endif
-# P2-1d loop target: the same shell, walked N times.
+# P2-1g LOOP-VERIFIER TARGET: the same shell, walked twenty times, and the ROM
+# the Boundary profile's loop arm runs. P2-1d/1e/1f each had their own name for
+# this too; the phase is closed and one name replaces the three.
 #
-# It is the P2-1b scene-walk block plus the shell, and it carries that block's
-# one deviation for that block's reason: NDS_HARNESS_FAST_LOGIC := 1, because
-# the VS Results branch of syTaskmanRunTask loops until sSYTaskmanStatus
-# becomes LoadScene, which in realtime means "until a human presses START", so
-# the loop would never close on its own. NDS_R2_SCENE_LOOP_WALK supplies the
-# Results -> VS Mode leg, which is Results' own branch and not a screen this
-# row owns; the VS Mode -> battle leg is a real A press on the VS START row and
-# spends the same hop, so the two-hops-a-loop budget P2-1b defined still holds.
+# NDS_HARNESS_FAST_LOGIC := 1 for the block's original reason -- the walk's
+# BATTLE leg is a bounded run, because this measures the scene BOUNDARY over
+# many laps and not gameplay. Every gameplay figure comes from the realtime
+# shell arm above and from Boundary's own mode-163 arm; nothing here is a
+# performance surface.
 #
-# NEVER PUBLISHED AND NEVER A PERFORMANCE SURFACE. Fast logic is not the
-# shipping cadence; no tick figure from this target means anything.
+# NDS_R2_SCENE_LOOP_WALK := 0, AND THAT IS THE ROW'S POINT. P2-1b's substitute
+# hop used to carry the Results -> menu leg, which closed a lap without ever
+# running `ndsMNVSResultsSetLoadScene` -- the very function P2-1f rewrote for
+# the shell and could not exercise. The walk now presses START on Results
+# through the real keypad latch (`ndsMenuShellWalkWantsResultsStart`), so the
+# lap closes through the source's own exit test and the rematch body runs on
+# every one of the twenty laps. Every other leg already had a non-walk path:
+# VS START and the stage select's confirm are the shell's own transitions, and
+# battle -> Results is the source's (scvsbattle.c:560).
+#
+# NDS_P2_MENU_WALK := 20 is the phase-close gate written into the ROM, and
+# `gNdsMenuShellWalkBudget` makes it a SEED rather than a pin -- a smoke run at
+# three laps pokes that variable and costs no build.
+#
+# NEVER PUBLISHED.
 NDS_P2_MENU_WALK_TARGETS := \
-	smash64ds-p2-1d-menu-walk-hwtri \
-	smash64ds-p2-1e-css-walk-hwtri \
-	smash64ds-p2-1f-sss-walk-hwtri
+	smash64ds-p2-shell-loop-hwtri
 ifneq ($(filter $(TARGET),$(NDS_P2_MENU_WALK_TARGETS)),)
+override NDS_R2_SCENE_LOOP_WALK := 0
+override NDS_P2_MENU_WALK := 20
 override NDS_DEV_SCENE_HARNESS := battle_playable_realtime
 override NDS_DEV_LIVE_INPUT_PREVIEW := 1
 override NDS_HARNESS_FAST_LOGIC := 1
