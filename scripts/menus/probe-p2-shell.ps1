@@ -182,7 +182,18 @@ $required = @(
     'gNdsAudioBgmRefillCount', 'gNdsAudioBgmStreamedBytes',
     'gNdsAudioBgmStreamBytesPerSecond', 'gNdsAudioBgmElapsedFrames',
     'gNdsAudioBgmLoopCount', 'gNdsAudioFgmPlayCalls',
-    'gNdsAudioFgmPlayFailCount', 'gNdsAudioFgmLoaded'
+    'gNdsAudioFgmPlayFailCount', 'gNdsAudioFgmLoaded',
+    # P2-1h. The frameless boot scene and the backdrop-surface seam. Listed
+    # here for the reason P2-1g listed the rest: --gc-sections has dropped a
+    # diagnostic global before now and the failure showed up as a red gate
+    # rather than as a missing line in the log.
+    'gNdsMenuShellStartupCount',
+    'gNdsUiKitSurfaceOpenCount', 'gNdsUiKitSurfaceBlitCount',
+    'gNdsUiKitSurfaceBytes', 'gNdsUiKitSurfaceLastHash',
+    'gNdsUiKitSurfaceHashMismatchCount', 'gNdsUiKitSurfaceReadFailCount',
+    'gNdsUiKitSurfaceNoLayerCount', 'gNdsUiKitSurfaceCacheCount',
+    'gNdsUiKitSurfaceDrawCachedCount', 'gNdsUiKitSurfaceEraseCachedCount',
+    'gNdsUiKitSurfaceTicks'
 )
 $nm_lines = & $nm $elf
 $symbols = $nm_lines | ForEach-Object { ($_ -split '\s+')[-1] }
@@ -258,19 +269,22 @@ try {
         'silent',
         'set $n = $n + 1',
         'printf "MSSCENE %d curr=%u prev=%u enters=%u exits=%u rej=%u unreg=%u mism=%u\n", $n, gSCManagerSceneData.scene_curr, gSCManagerSceneData.scene_prev, gNdsSceneManagerEnterCount, gNdsSceneManagerExitCount, gNdsSceneManagerRejectCount, gNdsSceneManagerUnregisteredEnterCount, gNdsSceneManagerArenaMismatchCount',
-        'printf "MSSHELL %d screen=%u splash=%u/%u title=%u/%u mode=%u/%u vs=%u/%u css=%u/%u sss=%u/%u\n", $n, gNdsMenuShellScreen, gNdsMenuShellEnterCount[0], gNdsMenuShellExitCount[0], gNdsMenuShellEnterCount[1], gNdsMenuShellExitCount[1], gNdsMenuShellEnterCount[2], gNdsMenuShellExitCount[2], gNdsMenuShellEnterCount[3], gNdsMenuShellExitCount[3], gNdsMenuShellEnterCount[4], gNdsMenuShellExitCount[4], gNdsMenuShellEnterCount[5], gNdsMenuShellExitCount[5]',
-        'printf "MSFRAMES %d f0=%u f1=%u f2=%u f3=%u f4=%u f5=%u\n", $n, gNdsMenuShellFrames[0], gNdsMenuShellFrames[1], gNdsMenuShellFrames[2], gNdsMenuShellFrames[3], gNdsMenuShellFrames[4], gNdsMenuShellFrames[5]',
-        'printf "MSMAX %d w0=%u w1=%u w2=%u w3=%u w4=%u w5=%u\n", $n, gNdsMenuShellWorkMax[0], gNdsMenuShellWorkMax[1], gNdsMenuShellWorkMax[2], gNdsMenuShellWorkMax[3], gNdsMenuShellWorkMax[4], gNdsMenuShellWorkMax[5]',
+        # P2-1h DELETED THE SPLASH and renumbered every screen index down one:
+        # title is 0 now, sss is 4, and there are five. `startup` is the
+        # frameless boot scene that replaced it -- exactly 1 per run, and the
+        # menu audio pack load rides on it.
+        'printf "MSSHELL %d screen=%u startup=%u title=%u/%u mode=%u/%u vs=%u/%u css=%u/%u sss=%u/%u\n", $n, gNdsMenuShellScreen, gNdsMenuShellStartupCount, gNdsMenuShellEnterCount[0], gNdsMenuShellExitCount[0], gNdsMenuShellEnterCount[1], gNdsMenuShellExitCount[1], gNdsMenuShellEnterCount[2], gNdsMenuShellExitCount[2], gNdsMenuShellEnterCount[3], gNdsMenuShellExitCount[3], gNdsMenuShellEnterCount[4], gNdsMenuShellExitCount[4]',
+        'printf "MSFRAMES %d f0=%u f1=%u f2=%u f3=%u f4=%u\n", $n, gNdsMenuShellFrames[0], gNdsMenuShellFrames[1], gNdsMenuShellFrames[2], gNdsMenuShellFrames[3], gNdsMenuShellFrames[4]',
+        'printf "MSMAX %d w0=%u w1=%u w2=%u w3=%u w4=%u\n", $n, gNdsMenuShellWorkMax[0], gNdsMenuShellWorkMax[1], gNdsMenuShellWorkMax[2], gNdsMenuShellWorkMax[3], gNdsMenuShellWorkMax[4]',
         # P2-1g. THE WORST FRAME'S LABEL, per screen: which presented frame it
         # was and how many FGM play calls that same frame made. This is what
         # turns MSMAX from a number into an attribution -- a max whose `c` is
         # 0 is not an audio frame, whatever anyone suspected.
-        'printf "MSMAXAT %d f0=%u/c%u f1=%u/c%u f2=%u/c%u f3=%u/c%u f4=%u/c%u f5=%u/c%u
-", $n, gNdsMenuShellWorkMaxFrame[0], gNdsMenuShellWorkMaxCues[0], gNdsMenuShellWorkMaxFrame[1], gNdsMenuShellWorkMaxCues[1], gNdsMenuShellWorkMaxFrame[2], gNdsMenuShellWorkMaxCues[2], gNdsMenuShellWorkMaxFrame[3], gNdsMenuShellWorkMaxCues[3], gNdsMenuShellWorkMaxFrame[4], gNdsMenuShellWorkMaxCues[4], gNdsMenuShellWorkMaxFrame[5], gNdsMenuShellWorkMaxCues[5]',
-        'printf "MSENTER %d e0=%u e1=%u e2=%u e3=%u e4=%u e5=%u\n", $n, gNdsMenuShellEnterTicks[0], gNdsMenuShellEnterTicks[1], gNdsMenuShellEnterTicks[2], gNdsMenuShellEnterTicks[3], gNdsMenuShellEnterTicks[4], gNdsMenuShellEnterTicks[5]'
+        'printf "MSMAXAT %d f0=%u/c%u f1=%u/c%u f2=%u/c%u f3=%u/c%u f4=%u/c%u\n", $n, gNdsMenuShellWorkMaxFrame[0], gNdsMenuShellWorkMaxCues[0], gNdsMenuShellWorkMaxFrame[1], gNdsMenuShellWorkMaxCues[1], gNdsMenuShellWorkMaxFrame[2], gNdsMenuShellWorkMaxCues[2], gNdsMenuShellWorkMaxFrame[3], gNdsMenuShellWorkMaxCues[3], gNdsMenuShellWorkMaxFrame[4], gNdsMenuShellWorkMaxCues[4]',
+        'printf "MSENTER %d e0=%u e1=%u e2=%u e3=%u e4=%u\n", $n, gNdsMenuShellEnterTicks[0], gNdsMenuShellEnterTicks[1], gNdsMenuShellEnterTicks[2], gNdsMenuShellEnterTicks[3], gNdsMenuShellEnterTicks[4]'
     ) + (New-MenuScreenPrintf -Screen 0) + (New-MenuScreenPrintf -Screen 1) +
         (New-MenuScreenPrintf -Screen 2) + (New-MenuScreenPrintf -Screen 3) +
-        (New-MenuScreenPrintf -Screen 4) + (New-MenuScreenPrintf -Screen 5) + @(
+        (New-MenuScreenPrintf -Screen 4) + @(
         'printf "MSFLOW %d trans=%u input=%u denied=%u commit=%u rule=%u time=%u stocks=%u walk=%u loops=%u\n", $n, gNdsMenuShellTransitionCount, gNdsMenuShellInputCount, gNdsMenuShellDeniedCount, gNdsMenuShellCommitCount, gNdsMenuShellCommitRule, gNdsMenuShellCommitTime, gNdsMenuShellCommitStocks, gNdsMenuShellWalkSteps, gNdsMenuShellWalkLoops',
         'printf "MSTRANS %d %04x %04x %04x %04x %04x %04x %04x %04x\n", $n, gNdsMenuShellTransitionRing[0], gNdsMenuShellTransitionRing[1], gNdsMenuShellTransitionRing[2], gNdsMenuShellTransitionRing[3], gNdsMenuShellTransitionRing[4], gNdsMenuShellTransitionRing[5], gNdsMenuShellTransitionRing[6], gNdsMenuShellTransitionRing[7]',
         # All SIXTEEN, not the first eight P2-1d printed: the character select
@@ -292,7 +306,7 @@ try {
         'printf "CSSLIVE %d none\n", $n',
         'end',
         'printf "CSSCUE %d cues=%u lastid=%u announce=%u\n", $n, gNdsMenuShellCssCueCount, gNdsMenuShellCssCueLastId, gNdsMenuShellCssAnnounceCount',
-        'printf "SSSPOS %d slot=%u gkind=%02x enters=%u\n", $n, gNdsMenuShellSssCursorSlot, gNdsMenuShellSssCursorGkind, gNdsMenuShellEnterCount[5]',
+        'printf "SSSPOS %d slot=%u gkind=%02x enters=%u\n", $n, gNdsMenuShellSssCursorSlot, gNdsMenuShellSssCursorGkind, gNdsMenuShellEnterCount[4]',
         'printf "SSSACT %d move=%u blocked=%u confirm=%u back=%u cues=%u lastid=%u\n", $n, gNdsMenuShellSssMoveCount, gNdsMenuShellSssBlockedCount, gNdsMenuShellSssConfirmCount, gNdsMenuShellSssBackCount, gNdsMenuShellSssCueCount, gNdsMenuShellSssCueLastId',
         'printf "SSSCOMMIT %d n=%u gkind=%02x slot=%02x rand=%u fallback=%u\n", $n, gNdsMenuShellSssCommitCount, gNdsMenuShellSssCommitGkind, gNdsMenuShellSssCommitSlotGkind, gNdsMenuShellSssRandomCount, gNdsMenuShellSssRandomFallbackCount',
         # THE STAGE, END TO END, three independent reads: the descriptor the
@@ -303,6 +317,14 @@ try {
         'printf "SSSCFG %d cfg=%02x scene=%02x default=%02x maps=%02x stagesel=%u\n", $n, gNdsMatchConfig.gkind, gSCManagerSceneData.gkind, dSCManagerDefaultSceneData.gkind, gSCManagerSceneData.maps_vsmode_gkind, gNdsMatchConfig.is_stage_select',
         'printf "MSKIT %d enters=%u rej=%u exits=%u opens=%u bytes=%u hash=%08x mismatch=%u readfail=%u\n", $n, gNdsUiKitEnterCount, gNdsUiKitEnterRejectCount, gNdsUiKitExitCount, gNdsUiKitPackOpenCount, gNdsUiKitPackBytesLoaded, gNdsUiKitPackHash, gNdsUiKitPackHashMismatchCount, gNdsUiKitPackReadFailCount',
         'printf "MSDRAW %d compose=%u overflow=%u commit=%u visible=%u\n", $n, gNdsUiKitTextComposeCount, gNdsUiKitTextOverflowCount, gNdsUiKitCommitCount, gNdsUiKitVisibleObjectCount',
+        # P2-1h BACKDROP SURFACES. `blit` is surfaces drawn and `open` the
+        # NitroFS opens they cost, so one open per backdrop screen stays
+        # measured. `mismatch` is checked per surface against the bake's own
+        # FNV-1a, so this proves the art reached BG2 rather than that a
+        # function was called; `nolayer` is the only way a blit can silently
+        # do nothing. `draw`/`erase` are the title blink, which must climb on
+        # the title and stay flat everywhere else.
+        'printf "MSSURF %d open=%u blit=%u bytes=%u hash=%08x mismatch=%u readfail=%u nolayer=%u cache=%u draw=%u erase=%u ticks=%u\n", $n, gNdsUiKitSurfaceOpenCount, gNdsUiKitSurfaceBlitCount, gNdsUiKitSurfaceBytes, gNdsUiKitSurfaceLastHash, gNdsUiKitSurfaceHashMismatchCount, gNdsUiKitSurfaceReadFailCount, gNdsUiKitSurfaceNoLayerCount, gNdsUiKitSurfaceCacheCount, gNdsUiKitSurfaceDrawCachedCount, gNdsUiKitSurfaceEraseCachedCount, gNdsUiKitSurfaceTicks',
         'printf "MSSFX %d move=%u confirm=%u back=%u value=%u start=%u lastid=%u\n", $n, gNdsUiKitSfxRequestCount[0], gNdsUiKitSfxRequestCount[1], gNdsUiKitSfxRequestCount[2], gNdsUiKitSfxRequestCount[3], gNdsUiKitSfxRequestCount[4], gNdsUiKitSfxLastId',
         $(if ($hasMissRing) {
             'printf "MSMISS %d ring=%u id0=%u c0=%u id1=%u c1=%u id2=%u c2=%u id3=%u c3=%u\n", $n, gNdsAudioFgmMissRingCount, gNdsAudioFgmMissRingIDs[0], gNdsAudioFgmMissRingCounts[0], gNdsAudioFgmMissRingIDs[1], gNdsAudioFgmMissRingCounts[1], gNdsAudioFgmMissRingIDs[2], gNdsAudioFgmMissRingCounts[2], gNdsAudioFgmMissRingIDs[3], gNdsAudioFgmMissRingCounts[3]'
@@ -311,7 +333,7 @@ try {
         }),
         # P2-1g CADENCE ATTRIBUTION. The one-frame outlier P2-1e/1f left
         # unattributed on the row screens is an AUDIO suspicion on record
-        # (P2-1d-1's splash FGM-pack load and mode-select BGM stream), and
+        # (P2-1d-1's boot-scene FGM-pack load and mode-select BGM stream), and
         # these are the counters that can refute it: a screen that carries
         # the outlier while its refill count is FLAT across its own scene
         # stops did not pay for a stream refill, and a screen with no track
@@ -319,8 +341,7 @@ try {
         # settle it directly and is NOT in this build -- it lives behind
         # NDS_RENDERER_PROFILE_LEVEL >= 1, which the shipping shell arm sets
         # to 0 -- so the split here is by PRESENCE, not by price.
-        'printf "MSAUDIOWORK %d refills=%u streamed=%u bps=%u elapsed=%u loops=%u fgmcalls=%u fgmfail=%u fgmloaded=%u
-", $n, gNdsAudioBgmRefillCount, gNdsAudioBgmStreamedBytes, gNdsAudioBgmStreamBytesPerSecond, gNdsAudioBgmElapsedFrames, gNdsAudioBgmLoopCount, gNdsAudioFgmPlayCalls, gNdsAudioFgmPlayFailCount, gNdsAudioFgmLoaded',
+        'printf "MSAUDIOWORK %d refills=%u streamed=%u bps=%u elapsed=%u loops=%u fgmcalls=%u fgmfail=%u fgmloaded=%u\n", $n, gNdsAudioBgmRefillCount, gNdsAudioBgmStreamedBytes, gNdsAudioBgmStreamBytesPerSecond, gNdsAudioBgmElapsedFrames, gNdsAudioBgmLoopCount, gNdsAudioFgmPlayCalls, gNdsAudioFgmPlayFailCount, gNdsAudioFgmLoaded',
         'printf "MSBGM %d playing=%u track=%u calls=%u looping=%u streambytes=%u modesel=%u pupupu=%u winmario=%u winfox=%u results=%u unsupported=%u\n", $n, gNdsAudioBgmPlaying, gNdsAudioBgmTrackID, gNdsAudioBgmPlayCalls, gNdsAudioBgmIsLooping, gNdsAudioBgmStreamBytes, gNdsAudioBgmModeSelectPlayCount, gNdsAudioBgmPupupuPlayCount, gNdsAudioBgmWinMarioPlayCount, gNdsAudioBgmWinFoxPlayCount, gNdsAudioBgmResultsPlayCount, gNdsAudioBgmUnsupportedTrackCount',
         # The arena BASE and SIZE, which P2-1d's probe did not print and which a
         # cross-build high-water comparison is uninterpretable without: the

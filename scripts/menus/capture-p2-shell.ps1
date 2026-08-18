@@ -60,7 +60,8 @@ if ([string]::IsNullOrWhiteSpace($OutputPrefix)) {
 
 # One entry per screenshot, in the order a cold boot reaches them.
 $states = @(
-    @{ Name = 'splash';      Break = 'ndsMenuShellRunSplash' },
+    # P2-1h deleted the splash: boot reaches the title with no screen in
+    # between, so the title IS the first capture of a cold boot.
     @{ Name = 'title';       Break = 'ndsMenuShellRunTitle' },
     @{ Name = 'main-menu';   Break = 'ndsMenuShellRunModeSelect' },
     @{ Name = 'vs-rules';    Break = 'ndsMenuShellRunVSMode' },

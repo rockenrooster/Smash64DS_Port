@@ -532,6 +532,7 @@ extern uintptr_t llMVOpeningCommonKirbyCamAnimJoint;
     X(llMNCommonDigit8Sprite, 0xd990) \
     X(llMNCommonDigit9Sprite, 0xda60) \
     X(llMNCommonInfinitySprite, 0xdc48) \
+    X(llMNCommonSmashBrosCollageSprite, 0x18000) \
     X(llMNCommonFontsFileID, 0x21) \
     X(llMNCommonFontsLetterASprite, 0x40) \
     X(llMNCommonFontsLetterBSprite, 0xd0) \

@@ -145,6 +145,7 @@ NDS_MENU_PUBLISHED volatile u32
 NDS_MENU_PUBLISHED volatile u32
     gNdsMenuShellTransitionRing[NDS_MENU_SHELL_RING];
 NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellTransitionCount;
+NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellStartupCount;
 NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellInputRing[NDS_MENU_SHELL_RING];
 NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellInputCount;
 NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellDeniedCount;
@@ -214,6 +215,9 @@ static u32 sMenuTics;
 static u32 sMenuNextScene;
 static u32 sMenuLeaving;
 static u32 sMenuFrameFgmAtStart;
+/* P2-1h. Which half of the title's blink cycle the backdrop currently shows,
+ * so the surface is toggled on the EDGE and a still title costs nothing. */
+static u32 sMenuTitleBlinkPhase;
 
 static void ndsMenuShellRecordFrame(void)
 {
@@ -429,13 +433,16 @@ static const NdsMenuWalkStep kNdsMenuWalkSss[] = {
     { (u16)NDS_INPUT_A, 1u }
 };
 
+/* P2-1h: the leading NULL/0 entry that used to be the splash's is gone with
+ * it. These two tables are indexed by SCREEN, so they move with the screen
+ * numbering; the walk's step count per lap is unchanged, because the splash
+ * never had a scripted step. */
 static const NdsMenuWalkStep *const
     kNdsMenuWalkScripts[NDS_MENU_SHELL_SCREEN_COUNT] = {
-    NULL, kNdsMenuWalkTitle, kNdsMenuWalkMode, kNdsMenuWalkVs, kNdsMenuWalkCss,
+    kNdsMenuWalkTitle, kNdsMenuWalkMode, kNdsMenuWalkVs, kNdsMenuWalkCss,
     kNdsMenuWalkSss
 };
 static const u8 kNdsMenuWalkLengths[NDS_MENU_SHELL_SCREEN_COUNT] = {
-    0u,
     (u8)(sizeof(kNdsMenuWalkTitle) / sizeof(kNdsMenuWalkTitle[0])),
     (u8)(sizeof(kNdsMenuWalkMode) / sizeof(kNdsMenuWalkMode[0])),
     (u8)(sizeof(kNdsMenuWalkVs) / sizeof(kNdsMenuWalkVs[0])),
@@ -694,77 +701,60 @@ static void ndsMenuShellHideRows(void)
     }
 }
 
-/* --- Screen: splash ------------------------------------------------------
- *
- * The source's boot scene is the N64 logo (mnstartup.c:230). That is
- * first-party branding this project must not ship, so the slot carries a
- * Smash64DS identity card instead: the project wordmark, briefly, skippable,
- * which is the same role the original screen plays. */
-#define NDS_MENU_SPLASH_FRAMES 110u
-
-static void ndsMenuShellPopulateSplash(void)
-{
-    s32 head_w = (s32)ndsUiKitTextWidth("SMASH");
-    s32 tail_w = (s32)ndsUiKitTextWidth("DS");
-    s32 num_w = (s32)(2 * NDS_UI_KIT_DIGIT_PITCH);
-    s32 x = (256 - (head_w + num_w + tail_w)) / 2;
-
-    ndsUiKitSetText(NDS_MENU_SLOT_ROW0, "SMASH", NDS_MENU_RGB_WHITE);
-    ndsUiKitMoveText(NDS_MENU_SLOT_ROW0, x, 90);
-    /* "64" as two digit sprites: the wordmark carries digits and the menu font
-     * does not have any. */
-    (void)ndsUiKitSetNumber(NDS_MENU_SPRITE_NUM0, 2u, 64,
-                            x + head_w + num_w, 86);
-    ndsUiKitSetText(NDS_MENU_SLOT_ROW1, "DS", NDS_MENU_RGB_WHITE);
-    ndsUiKitMoveText(NDS_MENU_SLOT_ROW1, x + head_w + num_w, 90);
-}
-
-static void ndsMenuShellUpdateSplash(u32 held, u32 taps)
-{
-    (void)held;
-    if ((sMenuTics >= NDS_MENU_SPLASH_FRAMES) ||
-        ((taps & (NDS_INPUT_A | NDS_INPUT_B | NDS_INPUT_START)) != 0u))
-    {
-        ndsMenuShellGoto((u32)nSCKindTitle);
-    }
-}
-
 /* --- Screen: title -------------------------------------------------------
  *
- * The source's title screen shows the SUPER SMASH BROS. logo and a blinking
- * PRESS START, and takes A or START to the mode select (mntitle.c:490). It
- * plays no BGM of its own -- mnTitleInitVars calls syAudioStopBGMAll when the
+ * P2-1h: THIS IS THE ORIGINAL TITLE PRESENTATION, not a text stand-in. The
+ * owner's 2026-08-18 ruling is that a port ships the original branding, so
+ * `scripts/menus/generate_mn_ui_kit.py` bakes what `mnTitleMakeLabels` and
+ * `mnTitleMakeLogoNoOpening` draw -- the SUPER / SMASH / BROS. wordmark over
+ * its drop-shadow cutout, both TM marks, the upper border, the copyright line
+ * and the emblem at its own resting alpha -- composited at the DS frame's 4/5
+ * into one surface, and blits it into BG2 once on entry. PRESS START is a
+ * second surface because it blinks.
+ *
+ * WHAT IS DELIBERATELY ABSENT, so a reader does not look for a bug: the
+ * thirty-frame fire animation behind all of it (`mnTitleMakeFire`, two 32x32
+ * sprites blown up 12x/8.5x) and the label slide-in the DObj anim joints
+ * drive. `PROJECT_GOAL.md` names both classes as sacrificable -- "reduced
+ * background animation", "static substitutes for expensive animation" -- and
+ * the field the fire burns over is the black this composites onto.
+ *
+ * It still plays no BGM: mnTitleInitVars calls syAudioStopBGMAll when the
  * previous scene is not the opening movie (mntitle.c:352), because the music
- * heard over the original title is the opening cinematic's, and that cinematic
- * is deferred to P2-7. A silent title is therefore the source's behaviour, not
- * a gap. Its confirm cue (FGM 157) is a gap and is named as one: the FGM pack
- * carries 158/163/164/165 and not 157, so the request lands in the miss ring
- * and row P2-1d-1 renders it. */
+ * heard over the original title belongs to the opening cinematic, and that
+ * cinematic is P2-7. A silent title is the source's behaviour, not a gap. */
 #define NDS_MENU_TITLE_BLINK 32u
+
+/* The field the title art is composited over at bake time, as a DS BGR5551
+ * texel: erasing the blinking PRESS START means writing this back. */
+#define NDS_MENU_TITLE_FIELD_TEXEL ((u16)BIT(15))
 
 static void ndsMenuShellPopulateTitle(void)
 {
-    ndsUiKitSetText(NDS_MENU_SLOT_ROW0, "SUPER SMASH BROS.",
-                    NDS_MENU_RGB_WHITE);
-    ndsUiKitMoveText(NDS_MENU_SLOT_ROW0,
-                     ndsMenuShellCentre("SUPER SMASH BROS."), 66);
-    ndsUiKitSetText(NDS_MENU_SLOT_ROW1, "PRESS START", NDS_MENU_RGB_VALUE);
-    ndsUiKitMoveText(NDS_MENU_SLOT_ROW1, ndsMenuShellCentre("PRESS START"),
-                     138);
+    /* Nothing. The title's whole presentation is its backdrop surface, drawn
+     * once by ndsMenuShellEnterBackdrop; this function exists because populate
+     * is re-run on every content change and a backdrop must not be. */
 }
 
 static void ndsMenuShellUpdateTitle(u32 held, u32 taps)
 {
+    u32 phase = ((sMenuTics / NDS_MENU_TITLE_BLINK) & 1u);
+
     (void)held;
-    if (((sMenuTics / NDS_MENU_TITLE_BLINK) & 1u) == 0u)
+    /* Toggle on the EDGE only. Redrawing every frame would put a 77x14 blit in
+     * the steady-state frame cost of a screen that is not changing, which is
+     * exactly what the kit's compose/commit discipline exists to avoid. */
+    if (phase != sMenuTitleBlinkPhase)
     {
-        ndsUiKitSetText(NDS_MENU_SLOT_ROW1, "PRESS START", NDS_MENU_RGB_VALUE);
-        ndsUiKitMoveText(NDS_MENU_SLOT_ROW1,
-                         ndsMenuShellCentre("PRESS START"), 138);
-    }
-    else
-    {
-        ndsUiKitHideText(NDS_MENU_SLOT_ROW1);
+        sMenuTitleBlinkPhase = phase;
+        if (phase == 0u)
+        {
+            ndsUiKitDrawCachedSurface();
+        }
+        else
+        {
+            ndsUiKitEraseCachedSurface(NDS_MENU_TITLE_FIELD_TEXEL);
+        }
     }
     if ((taps & (NDS_INPUT_A | NDS_INPUT_START)) != 0u)
     {
@@ -2773,13 +2763,54 @@ static void ndsMenuShellSssInit(void)
 
 /* --- The screen loop ----------------------------------------------------- */
 
+/* P2-1h. A screen's backdrop art, drawn ONCE per entry into BG2.
+ *
+ * Separate from `ndsMenuShellPopulate` on purpose: populate re-runs on every
+ * content change -- a cursor move, a value change -- and re-reading 84 KiB of
+ * NitroFS on a keypress would put a scene load inside a 60 Hz frame. This runs
+ * from `ndsMenuShellRun` only, after the overlay layers are cleared and the
+ * backdrop colour is set, and then never again for the life of the screen.
+ *
+ * The two menus that take the collage are the two the SOURCE gives it to:
+ * `mnModeSelectMakeDecals` (mnmodeselect.c:525) and `mnVSModeMakeBackground`
+ * (mnvsmode.c:972), both at (10, 10). The character and stage selects have
+ * their own source backgrounds and are not this row's. */
+static const u8 kNdsMenuTitleSurfaces[] = {
+    (u8)NDS_MN_UI_KIT_SURFACE_TITLE_SCREEN
+};
+static const u8 kNdsMenuCollageSurfaces[] = {
+    (u8)NDS_MN_UI_KIT_SURFACE_MENU_COLLAGE
+};
+
+static void ndsMenuShellEnterBackdrop(u32 screen)
+{
+    switch (screen)
+    {
+    case NDS_MENU_SHELL_SCREEN_TITLE:
+        (void)ndsUiKitBlitSurfaces(kNdsMenuTitleSurfaces,
+                                   (u32)(sizeof(kNdsMenuTitleSurfaces) /
+                                         sizeof(kNdsMenuTitleSurfaces[0])));
+        /* Cached rather than re-read: PRESS START toggles every 32 frames and
+         * one NitroFS open costs more than a whole 60 Hz frame's budget. */
+        (void)ndsUiKitCacheSurface(NDS_MN_UI_KIT_SURFACE_TITLE_PRESS_START);
+        sMenuTitleBlinkPhase = 0u;
+        ndsUiKitDrawCachedSurface();
+        break;
+    case NDS_MENU_SHELL_SCREEN_MODE:
+    case NDS_MENU_SHELL_SCREEN_VSMODE:
+        (void)ndsUiKitBlitSurfaces(kNdsMenuCollageSurfaces,
+                                   (u32)(sizeof(kNdsMenuCollageSurfaces) /
+                                         sizeof(kNdsMenuCollageSurfaces[0])));
+        break;
+    default:
+        break;
+    }
+}
+
 static void ndsMenuShellPopulate(u32 screen)
 {
     switch (screen)
     {
-    case NDS_MENU_SHELL_SCREEN_SPLASH:
-        ndsMenuShellPopulateSplash();
-        break;
     case NDS_MENU_SHELL_SCREEN_TITLE:
         ndsMenuShellPopulateTitle();
         break;
@@ -2802,9 +2833,6 @@ static void ndsMenuShellUpdate(u32 screen, u32 held, u32 taps)
 {
     switch (screen)
     {
-    case NDS_MENU_SHELL_SCREEN_SPLASH:
-        ndsMenuShellUpdateSplash(held, taps);
-        break;
     case NDS_MENU_SHELL_SCREEN_TITLE:
         ndsMenuShellUpdateTitle(held, taps);
         break;
@@ -2884,9 +2912,21 @@ static void ndsMenuShellRun(u32 screen)
      * player would turn one visible defect into two invisible ones. */
     (void)ndsUiKitEnter(NDS_UI_KIT_ENGINE_MAIN);
     ndsMenuShellHideRows();
-    ndsMenuShellPopulate(screen);
-    BG_PALETTE[0] = (screen == NDS_MENU_SHELL_SCREEN_SPLASH) ?
+    /* THE BACKDROP IS SET BEFORE THE ART, not after. A backdrop surface is
+     * composited over its screen's own field at bake time, so the two have to
+     * agree: the title's art is composited over black and every other screen's
+     * collage over the source's decal blue. Setting it afterwards left one
+     * entry frame showing the previous screen's field behind the new art. */
+    BG_PALETTE[0] = (screen == NDS_MENU_SHELL_SCREEN_TITLE) ?
         NDS_MENU_BACKDROP_BLACK : NDS_MENU_BACKDROP_BLUE;
+    /* The battle's fast wallpaper leaves BG2 under a 4/5 affine transform, and
+     * the reset the clear above queues is only applied at the next present --
+     * which is one frame AFTER this backdrop is drawn. Committing it here is
+     * what stops a menu entered straight out of a battle showing one frame of
+     * scaled artwork. */
+    ndsPlatformCommitOriginalSpriteOverlayTransform();
+    ndsMenuShellEnterBackdrop(screen);
+    ndsMenuShellPopulate(screen);
 
     gNdsMenuShellEnterTicks[screen] = cpuGetTiming() - enter_start;
 
@@ -2927,9 +2967,19 @@ static void ndsMenuShellRun(u32 screen)
     }
 }
 
-void ndsMenuShellRunSplash(void)
+void ndsMenuShellRunStartup(void)
 {
-    /* P2-1d-1 ROOT CAUSE, not scoped to FGM 157: ndsAudioAssetLoadFenced (which
+    /* P2-1h MOVED THIS SEAM, and it is the one thing that had to move with the
+     * splash rather than after it. The splash was the shell's earliest entry;
+     * with the splash deleted, THIS is, and the load has to stay ahead of the
+     * first cue or every menu SFX before the first battle resolves against an
+     * empty pack again. Startup presents no frame -- boot reaches the title
+     * directly, which is the N64 flow once the opening cinematic (P2-7) is
+     * accounted for -- but the scene still EXISTS, because the source's own
+     * startup func_start has already run and made GObjs by the time
+     * syTaskmanRunTask is reached.
+     *
+     * P2-1d-1 ROOT CAUSE, not scoped to FGM 157: ndsAudioAssetLoadFenced (which
      * loads the FGM pack, nds_audio_fgm.c's ndsAudioFgmLoadFenced included) had
      * exactly three call sites before this one -- battleship_scvsbattle.c:469
      * and the two ndsR2HostBattlePrepare/is_battle_playable sites in
@@ -2944,7 +2994,7 @@ void ndsMenuShellRunSplash(void)
      * (158/163/164/165) are NOT in the miss ring either: they are declared in
      * ndsAudioFgmIDIsIncluded, so the same unloaded-pack failure silently
      * incremented gNdsAudioFgmIncludedLookupFailCount instead of the miss ring
-     * -- a defect the miss-ring-only P2-1c probe could not see. Splash is the
+     * -- a defect the miss-ring-only P2-1c probe could not see. Startup is the
      * menu shell's own earliest entry (nSCKindStartup, scene kind 27, the
      * first scene of every run) and this call is idempotent
      * (sNdsAudioAssetLoaded guards it), so loading here once, before Title can
@@ -2956,7 +3006,20 @@ void ndsMenuShellRunSplash(void)
 #if NDS_IMPORT_BATTLESHIP_AUDIO_ASSETS
     ndsAudioAssetLoadFenced();
 #endif
-    ndsMenuShellRun(NDS_MENU_SHELL_SCREEN_SPLASH);
+    gNdsMenuShellStartupCount++;
+
+    /* THE SOURCE'S OWN TEARDOWN, for the same reason every screen runs it
+     * (decomp sys/taskman.c:1099). This branch presents no frame, but the
+     * startup scene's func_start ran before syTaskmanRunTask and its GObjs are
+     * live in the arena the next scene entry rewinds -- which is precisely the
+     * shape of the P2-1b-1 stale-thread data abort. Skipping it because "this
+     * screen draws nothing" would reopen that bug. */
+    gcEjectAll();
+    /* Deliberately NOT written into the transition ring: the ring pairs a
+     * SCREEN with the scene it hands off to, and no screen ran here. An empty
+     * first ring slot is the evidence that boot reaches the title directly. */
+    ndsSceneManagerRequest((u32)nSCKindTitle,
+                           (u32)gSCManagerSceneData.scene_curr);
 }
 
 void ndsMenuShellRunTitle(void)

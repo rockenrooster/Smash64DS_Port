@@ -138,11 +138,37 @@ HUD is text and small sprites.
   halfword, no bank, no arbitration with the battle, restored to black on
   scene exit.
 
-  What is still open is the source's own artwork — the 300x220 CI
-  `llMNCommonSmashBrosCollageSprite` both menus draw at (10,10) — and that is
-  a fidelity decision with a real price, so it is parked as
-  `BLOCKED(decision: menu artwork background)` on the board rather than
-  chosen here.
+  **P2-1h TOOK OPTION (b), and it turned out to cost nothing at all.** The
+  owner ruled on 2026-08-18 that the original artwork ships, and the option
+  that holds 60 Hz is the BG2 bitmap compositor — because the menu shell
+  ALREADY writes that surface. `ndsMenuShellRun` clears both overlay layers on
+  every screen entry so a menu cannot inherit the last battle frame; writing
+  the collage there instead of zeroes adds no bank, no arbitration and no
+  per-frame work. Options (a) and (c) both cost a texture bank (a 240x176
+  backdrop needs a 256x256 texture: 65,536 B at CI8 or 131,072 B direct) plus a
+  per-frame GX submit the menus do not otherwise pay, so (b) wins by
+  arithmetic before a tick is measured — and the measurement confirms it:
+  `gNdsUiKitSurfaceBlitCount` reaches 3 at the third backdrop entry and never
+  moves again, across 3,667 further presented frames and a whole one-minute
+  battle, while every present on all five shell screens held a single-VBlank
+  interval (4,118 presents, max interval 1).
+
+  **Scene exclusivity did not need enforcing here**, and that is worth saying
+  plainly because the row was scoped expecting it to: the menu is not
+  BORROWING a battle surface, it is writing one it already owns for the
+  duration of a menu scene, and the battle's own compositor refills BG2 every
+  frame from its first frame onward. The one real hazard was the transform,
+  not the pixels — `NDS_FAST_WALLPAPER_AFFINE` leaves BG2 under the battle's
+  4/5 affine, and clearing the layer only QUEUES the identity reset for the
+  next present. `ndsPlatformCommitOriginalSpriteOverlayTransform` applies it
+  before the backdrop is drawn, so a menu entered straight out of a battle
+  cannot show one frame of scaled artwork.
+
+  Surfaces are baked by `scripts/menus/generate_mn_ui_kit.py` into their own
+  NitroFS payload (`nitro:/menus/mn_surfaces.bin`), separate from the OBJ pack
+  because `ndsUiKitEnter` reads and hashes the whole OBJ pack on every screen
+  entry — art in there would cost the character select the bytes of a title
+  screen it never shows.
 
 - **The main OBJ layer needs the sprite overlay left DISPLAYED**, and this is
   the row's most expensive finding. A menu scene wants BG2/BG3 empty, and

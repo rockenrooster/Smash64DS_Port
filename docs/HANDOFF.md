@@ -7,9 +7,11 @@ PASS. BOUNDARY NOW HAS TWO ARMS.**
 
 - **P2-1 closed by row `P2-1g`.** Every row 1a…1g is green and archived to
   `docs/archive/P2_CLOSED_ROWS.md`; the board keeps only what is next. The
-  shell is the game's flow now: boot → splash → title → main menu → VS
-  menu/rules → character select → stage select → battle → results → **START on
-  Results** → character select → … indefinitely.
+  shell is the game's flow now: boot → title → main menu → VS menu/rules →
+  character select → stage select → battle → results → **START on Results** →
+  character select → … indefinitely. **P2-1h is green too**: the original
+  title art, the menu collage and the DS banner ship, the interim splash is
+  deleted, and boot reaches the title with no screen in between.
 - **Boundary is two arms** (`verify-all.ps1 -Profile Boundary -List` is the
   authority; `docs/VERIFYING.md` owns the definition):
   1. `p2_shell_loop` — `scripts/verify-p2-shell-loop.ps1`, twenty full laps of
@@ -29,12 +31,11 @@ PASS. BOUNDARY NOW HAS TWO ARMS.**
 
 ## Next
 
-1. **P2-1h first — the original-presentation pass (owner ruling 2026-08-18:
-   this is a port, ALL first-party branding and original presentation assets
-   ship; no invented placeholders).** Menu collage via the cheapest
-   `docs/p2/P2-1c-vram-map.md` option that holds 60 Hz menus; original title
-   presentation (logo art, copyright line); boot straight to title (no
-   splash — the intro precedes title at P2-7); DS banner = original branding.
+1. **The owner's shell visual pass.** P2-1h landed the original presentation
+   and its after-screenshots ARE the pass set:
+   `artifacts/visibility/2026-08-18_p2-1h-*.png` — title, main menu, VS rules,
+   character select, stage select, and the DS banner icon decoded back out of
+   the built ROM. Nothing else in P2-1 is open.
 2. **P2-2 — four-fighter engine.** The board carries its rows, seeded from
    `docs/p2/P2-2-four-fighters.md`'s own work breakdown. Take `P2-2a` (fighter
    array generalization) first: everything else in the phase depends on the
@@ -45,13 +46,7 @@ PASS. BOUNDARY NOW HAS TWO ARMS.**
    it is ruled on: the run relocates that file to `builds/` and restores it
    hash-verified. Do not delete it; it is the owner's file. (The menu-artwork
    decision is RULED, 2026-08-18 — row P2-1h.)
-4. **The owner's visual pass on the shell screens is still owed** and is not an
-   agent's to give; it now rides P2-1h's after-screenshots. Ten dated PNGs are
-   in `artifacts/visibility/`
-   (`2026-08-18_p2-shell-*` for the seven the P2-1g capture took, plus the
-   three P2-1e character-select interaction shots). One run of
-   `scripts/menus/capture-p2-shell.ps1` retakes the set.
-5. Before implementing: read `docs/p2/P2-2-four-fighters.md`, then BattleShip
+4. Before implementing: read `docs/p2/P2-2-four-fighters.md`, then BattleShip
    `ft/ftmanager.c` + `ft/ftcommon/` (N-fighter iteration and engagement
    order), `gm/` (rules, teams, results ranking), and `sm64ds-decomp` for the
    sub-screen 2D HUD layer. CodeGraph first per repo rules.

@@ -10,12 +10,17 @@
 
 #include <nds/nds_ui_kit.h>
 #include <nds/nds_ifcommon_oam.h>
+#include <nds/nds_platform.h>
 #include <nds/nds_reloc_assets.h>
 #include <nds/nds_audio_fgm.h>
 
 #include "generated/mn_ui_kit.generated.inc"
 
 #define NDS_UI_KIT_PACK_PATH "nitro:/menus/mn_ui_kit.bin"
+/* P2-1h. A SECOND file, deliberately: ndsUiKitEnter reads and hashes the whole
+ * OBJ pack on every screen entry, so backdrop art living in it would cost the
+ * character select the bytes of a title screen it never shows. */
+#define NDS_UI_KIT_SURFACE_PATH "nitro:/menus/mn_surfaces.bin"
 
 /* Bank E on main, bank I on sub. */
 #define NDS_UI_KIT_OBJ_BYTES_MAIN (64u * 1024u)
@@ -69,6 +74,17 @@ NDS_UI_KIT_PUBLISHED volatile u32 gNdsUiKitVisibleObjectCount;
 NDS_UI_KIT_PUBLISHED volatile u32
     gNdsUiKitSfxRequestCount[NDS_UI_KIT_SFX_COUNT];
 NDS_UI_KIT_PUBLISHED volatile u32 gNdsUiKitSfxLastId;
+NDS_UI_KIT_PUBLISHED volatile u32 gNdsUiKitSurfaceOpenCount;
+NDS_UI_KIT_PUBLISHED volatile u32 gNdsUiKitSurfaceBlitCount;
+NDS_UI_KIT_PUBLISHED volatile u32 gNdsUiKitSurfaceBytes;
+NDS_UI_KIT_PUBLISHED volatile u32 gNdsUiKitSurfaceHashMismatchCount;
+NDS_UI_KIT_PUBLISHED volatile u32 gNdsUiKitSurfaceReadFailCount;
+NDS_UI_KIT_PUBLISHED volatile u32 gNdsUiKitSurfaceNoLayerCount;
+NDS_UI_KIT_PUBLISHED volatile u32 gNdsUiKitSurfaceLastHash;
+NDS_UI_KIT_PUBLISHED volatile u32 gNdsUiKitSurfaceCacheCount;
+NDS_UI_KIT_PUBLISHED volatile u32 gNdsUiKitSurfaceDrawCachedCount;
+NDS_UI_KIT_PUBLISHED volatile u32 gNdsUiKitSurfaceEraseCachedCount;
+NDS_UI_KIT_PUBLISHED volatile u32 gNdsUiKitSurfaceTicks;
 
 /* The source's own FGM ids, gm/gmsound.h under REGION_US. Cross-checked
  * against three ids the FGM pack's own comments name (Escape 11, GuardOn 13,
@@ -690,6 +706,307 @@ u32 ndsUiKitSetNumber(u32 slot, u32 slots_available, s32 value, s32 right_x,
         used++;
     }
     return used;
+}
+
+/* --- Backdrop surfaces (P2-1h) -------------------------------------------
+ *
+ * The destination is the main engine's BG2 bitmap -- the surface the menu
+ * shell already clears on every screen entry -- so this costs no VRAM bank
+ * and no per-frame work. See docs/p2/P2-1c-vram-map.md.
+ *
+ * Rows travel through the same 2 KiB staging buffer the pack load uses, and
+ * for the same hardware reason: VRAM drops 8-bit writes and `fread` is a byte
+ * path, so every byte lands in main RAM first. */
+
+static u8 sNdsUiKitSurfaceCache[NDS_MN_UI_KIT_SURFACE_CACHE_BYTES]
+    __attribute__((aligned(4)));
+static u32 sNdsUiKitSurfaceCached = 0xffffffffu;
+
+_Static_assert(NDS_MN_UI_KIT_SURFACE_MAX_ROW_BYTES <= NDS_UI_KIT_STAGING_BYTES,
+               "one surface row must fit the staging buffer");
+
+/* One row into BG2, clipped on all four edges.
+ *
+ * The clipping is not defensive padding: the title emblem's 4/5 origin is
+ * y = -2 and its right edge lands at 259, which is the same overhang the
+ * source's own 320-wide frame gives it, so a surface that runs off the screen
+ * is the CORRECT result and not a bake error. */
+static void ndsUiKitSurfaceRow(const u16 *src, u16 *layer, u32 pitch,
+                               u32 layer_w, u32 layer_h,
+                               const NdsUiKitSurfaceMetric *metric, s32 sy)
+{
+    s32 dy = (s32)metric->y + sy;
+    s32 dx = (s32)metric->x;
+    s32 sx = 0;
+    s32 count;
+    u16 *dst;
+
+    if ((dy < 0) || (dy >= (s32)layer_h))
+    {
+        return;
+    }
+    if (dx < 0)
+    {
+        sx = -dx;
+        dx = 0;
+    }
+    count = (s32)metric->width - sx;
+    if (count > ((s32)layer_w - dx))
+    {
+        count = (s32)layer_w - dx;
+    }
+    if (count <= 0)
+    {
+        return;
+    }
+    dst = layer + ((u32)dy * pitch) + (u32)dx;
+    src += sx;
+    if (metric->opaque != 0u)
+    {
+        /* Nothing to key out, so the whole row is one 16-bit DMA. This is the
+         * path the 240x176 collage and the 248x184 title take. */
+        dmaCopyHalfWords(3, src, dst, (u32)count * sizeof(u16));
+    }
+    else
+    {
+        s32 i;
+
+        for (i = 0; i < count; i++)
+        {
+            u16 texel = src[i];
+
+            if (texel != 0u)
+            {
+                dst[i] = texel;
+            }
+        }
+    }
+}
+
+static s32 ndsUiKitBlitOneSurface(NdsRelocAssetStream *stream, u32 index,
+                                  u16 *layer, u32 pitch, u32 layer_w,
+                                  u32 layer_h)
+{
+    const NdsUiKitSurfaceMetric *metric = &kNdsUiKitSurfaceMetrics[index];
+    u32 row_bytes = (u32)metric->width * sizeof(u16);
+    u32 rows_per_slice = NDS_UI_KIT_STAGING_BYTES / row_bytes;
+    u32 hash = 0x811C9DC5u;
+    u32 row = 0u;
+
+    while (row < (u32)metric->height)
+    {
+        u32 rows = (u32)metric->height - row;
+        u32 i;
+
+        if (rows > rows_per_slice)
+        {
+            rows = rows_per_slice;
+        }
+        if (ndsRelocAssetStreamRead(stream,
+                                    metric->offset + (row * row_bytes),
+                                    sNdsUiKitStaging,
+                                    rows * row_bytes) == FALSE)
+        {
+            gNdsUiKitSurfaceReadFailCount++;
+            return FALSE;
+        }
+        hash = ndsUiKitHashFold(hash, sNdsUiKitStaging, rows * row_bytes);
+        DC_FlushRange(sNdsUiKitStaging, rows * row_bytes);
+        for (i = 0u; i < rows; i++)
+        {
+            ndsUiKitSurfaceRow(
+                (const u16 *)(sNdsUiKitStaging + (i * row_bytes)),
+                layer, pitch, layer_w, layer_h, metric, (s32)(row + i));
+        }
+        gNdsUiKitSurfaceBytes += rows * row_bytes;
+        row += rows;
+    }
+
+    gNdsUiKitSurfaceLastHash = hash;
+    if (hash != metric->fnv32)
+    {
+        /* Per surface, not per pack: a stale or truncated surface pack is a
+         * counted failure here rather than a garbled backdrop nobody can
+         * attribute. */
+        gNdsUiKitSurfaceHashMismatchCount++;
+        return FALSE;
+    }
+    gNdsUiKitSurfaceBlitCount++;
+    return TRUE;
+}
+
+s32 ndsUiKitBlitSurfaces(const u8 *surfaces, u32 count)
+{
+    NdsRelocAssetStream stream;
+    u32 start = cpuGetTiming();
+    u32 pitch = 0u;
+    u32 layer_w = 0u;
+    u32 layer_h = 0u;
+    u16 *layer;
+    u32 i;
+    s32 ok = TRUE;
+
+    if ((surfaces == NULL) || (count == 0u))
+    {
+        return FALSE;
+    }
+    layer = ndsPlatformGetOriginalSpriteOverlayLayer(FALSE, &pitch, &layer_w,
+                                                     &layer_h, NULL);
+    if ((layer == NULL) || (pitch == 0u))
+    {
+        /* The overlay is disabled or unmapped. The screen still runs and still
+         * reaches its successor; it just has no backdrop, and this counter is
+         * the difference between that and a blit that never fired. */
+        gNdsUiKitSurfaceNoLayerCount++;
+        return FALSE;
+    }
+    if (ndsRelocAssetStreamOpen(&stream, NDS_UI_KIT_SURFACE_PATH) == FALSE)
+    {
+        gNdsUiKitSurfaceReadFailCount++;
+        return FALSE;
+    }
+    gNdsUiKitSurfaceOpenCount++;
+    for (i = 0u; i < count; i++)
+    {
+        if (surfaces[i] >= NDS_MN_UI_KIT_SURFACE_COUNT)
+        {
+            ok = FALSE;
+            continue;
+        }
+        if (ndsUiKitBlitOneSurface(&stream, surfaces[i], layer, pitch, layer_w,
+                                   layer_h) == FALSE)
+        {
+            ok = FALSE;
+        }
+    }
+    ndsRelocAssetStreamClose(&stream);
+    gNdsUiKitSurfaceTicks += cpuGetTiming() - start;
+    return ok;
+}
+
+s32 ndsUiKitCacheSurface(u32 surface)
+{
+    NdsRelocAssetStream stream;
+    const NdsUiKitSurfaceMetric *metric;
+    u32 hash = 0x811C9DC5u;
+
+    sNdsUiKitSurfaceCached = 0xffffffffu;
+    if (surface >= NDS_MN_UI_KIT_SURFACE_COUNT)
+    {
+        return FALSE;
+    }
+    metric = &kNdsUiKitSurfaceMetrics[surface];
+    if (metric->bytes > (u32)sizeof(sNdsUiKitSurfaceCache))
+    {
+        /* The manifest sizes this buffer from the bake's own `cacheable` set,
+         * so reaching here means a caller asked to cache a surface the bake
+         * did not mark -- refused and counted, never a buffer overrun. */
+        return FALSE;
+    }
+    if (ndsRelocAssetStreamOpen(&stream, NDS_UI_KIT_SURFACE_PATH) == FALSE)
+    {
+        gNdsUiKitSurfaceReadFailCount++;
+        return FALSE;
+    }
+    gNdsUiKitSurfaceOpenCount++;
+    if (ndsRelocAssetStreamRead(&stream, metric->offset,
+                                sNdsUiKitSurfaceCache, metric->bytes) == FALSE)
+    {
+        ndsRelocAssetStreamClose(&stream);
+        gNdsUiKitSurfaceReadFailCount++;
+        return FALSE;
+    }
+    ndsRelocAssetStreamClose(&stream);
+    hash = ndsUiKitHashFold(hash, sNdsUiKitSurfaceCache, metric->bytes);
+    gNdsUiKitSurfaceLastHash = hash;
+    if (hash != metric->fnv32)
+    {
+        gNdsUiKitSurfaceHashMismatchCount++;
+        return FALSE;
+    }
+    sNdsUiKitSurfaceCached = surface;
+    gNdsUiKitSurfaceCacheCount++;
+    return TRUE;
+}
+
+/* Both toggles walk the cached surface's own rows, so a blink costs no
+ * NitroFS work at all -- one open is more than a whole 60 Hz frame's budget.
+ * `field_texel` is the field the bake composited the surface over, which is
+ * what makes erasing it a fill rather than a second stored image. */
+static void ndsUiKitToggleCachedSurface(u16 field_texel, s32 draw)
+{
+    const NdsUiKitSurfaceMetric *metric;
+    u32 pitch = 0u;
+    u32 layer_w = 0u;
+    u32 layer_h = 0u;
+    u16 *layer;
+    u32 row;
+
+    if (sNdsUiKitSurfaceCached >= NDS_MN_UI_KIT_SURFACE_COUNT)
+    {
+        return;
+    }
+    layer = ndsPlatformGetOriginalSpriteOverlayLayer(FALSE, &pitch, &layer_w,
+                                                     &layer_h, NULL);
+    if ((layer == NULL) || (pitch == 0u))
+    {
+        gNdsUiKitSurfaceNoLayerCount++;
+        return;
+    }
+    metric = &kNdsUiKitSurfaceMetrics[sNdsUiKitSurfaceCached];
+    for (row = 0u; row < (u32)metric->height; row++)
+    {
+        if (draw != FALSE)
+        {
+            ndsUiKitSurfaceRow(
+                (const u16 *)(sNdsUiKitSurfaceCache +
+                              (row * (u32)metric->width * sizeof(u16))),
+                layer, pitch, layer_w, layer_h, metric, (s32)row);
+        }
+        else
+        {
+            s32 dy = (s32)metric->y + (s32)row;
+            s32 dx = (s32)metric->x;
+            s32 count;
+            s32 i;
+
+            if ((dy < 0) || (dy >= (s32)layer_h))
+            {
+                continue;
+            }
+            if (dx < 0)
+            {
+                dx = 0;
+            }
+            count = (s32)metric->width;
+            if (count > ((s32)layer_w - dx))
+            {
+                count = (s32)layer_w - dx;
+            }
+            for (i = 0; i < count; i++)
+            {
+                layer[((u32)dy * pitch) + (u32)dx + (u32)i] = field_texel;
+            }
+        }
+    }
+    if (draw != FALSE)
+    {
+        gNdsUiKitSurfaceDrawCachedCount++;
+    }
+    else
+    {
+        gNdsUiKitSurfaceEraseCachedCount++;
+    }
+}
+
+void ndsUiKitDrawCachedSurface(void)
+{
+    ndsUiKitToggleCachedSurface(0u, TRUE);
+}
+
+void ndsUiKitEraseCachedSurface(u16 field_texel)
+{
+    ndsUiKitToggleCachedSurface(field_texel, FALSE);
 }
 
 /* --- Audio --------------------------------------------------------------- */

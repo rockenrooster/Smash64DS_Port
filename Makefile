@@ -37,11 +37,22 @@ ifneq ($(strip $(NDS_JOBS)),)
 MAKEFLAGS += -j$(strip $(NDS_JOBS))
 endif
 
-GAME_TITLE     := Smash 64 DS Port
-GAME_SUBTITLE1 := BattleShip architecture probe
-GAME_SUBTITLE2 := Built with devkitPro/libnds
-
+# The DS system-menu banner. P2-1h, owner ruling 2026-08-18: this is a port,
+# so the original branding ships -- and the banner is the first branding a
+# player sees, before the ROM boots at all. The three lines are what ndstool
+# packs into the banner's title field; the copyright is the original's own,
+# transcribed from `llMNTitleCopyrightSprite`, the sprite the title screen
+# draws at its foot (mntitle.c:64, kind nMNTitleSpriteKindFooter).
+#
+# GAME_ICON must be set BEFORE `include $(DEVKITARM)/ds_rules`, which only
+# defaults it to calico's own placeholder when it is empty.
 PROJECT_ROOT ?= $(CURDIR)
+GAME_TITLE     := Super Smash Bros.
+GAME_SUBTITLE1 := Smash64DS
+GAME_SUBTITLE2 := (C)1999 Nintendo/HAL Laboratory, Inc.
+NDS_BANNER_ICON := $(PROJECT_ROOT)/assets/banner/smash64ds_icon.bmp
+GAME_ICON      := $(NDS_BANNER_ICON)
+
 TARGET := smash64ds
 BUILD := build
 NDS_OUTPUT_BASENAME ?= $(TARGET)
@@ -2908,6 +2919,10 @@ NDS_BATTLE_STATIC_TEXTURE_ASSET := $(PROJECT_ROOT)/assets/renderer/battle_playab
 # stale pair cannot link.
 NDS_MN_UI_KIT_INC := $(PROJECT_ROOT)/src/nds/generated/mn_ui_kit.generated.inc
 NDS_MN_UI_KIT_ASSET := $(PROJECT_ROOT)/assets/menus/mn_ui_kit.bin
+# P2-1h. The backdrop art is a SECOND payload from the same generator: the OBJ
+# pack is read and hashed on every kit entry, so a title screen living in it
+# would cost the character select bytes it never draws.
+NDS_MN_UI_SURFACE_ASSET := $(PROJECT_ROOT)/assets/menus/mn_surfaces.bin
 LDFLAGS := -specs=$(NDS_HOT_TEXT_SPECS) -g $(ARCH) \
 	-Wl,-Map,$(notdir $*.map),--gc-sections \
 	-Wl,-T,$(NDS_HOT_TEXT_LINKER_SCRIPT)
@@ -3734,6 +3749,10 @@ endif
 export NDS_NITROFS_MN_UI_KIT_FILES :=
 ifeq ($(NDS_P2_UI_KIT),1)
 NDS_NITROFS_MN_UI_KIT_FILES := $(NITROFS_DIR)/menus/mn_ui_kit.bin
+# P2-1h's backdrop art rides the same flag and the same reason: without the kit
+# there is no reader, and 177,900 bytes of ROM nothing opens is what keeps the
+# published ROMs byte-identical across this row.
+NDS_NITROFS_MN_UI_KIT_FILES += $(NITROFS_DIR)/menus/mn_surfaces.bin
 endif
 
 # The efcommon payloads only ship with the interpreter that reads them; without
@@ -4216,7 +4235,7 @@ $(NITROFS_DIR)/particles/grpupupu_whispy_native.ds.bin: $(NDS_WHISPY_NATIVE_ASSE
 prune-obsolete-audio:
 	@rm -f $(foreach file,$(NDS_AUDIO_OBSOLETE_DERIVED_FILES),$(NITROFS_DIR)/$(file))
 
-$(OUTPUT).nds: prune-obsolete-audio $(OUTPUT).elf $(NDS_NITROFS_RELOC_FILES) $(NDS_NITROFS_RELOCDATA_FILES) $(NDS_NITROFS_AUDIO_FILES) $(NDS_NITROFS_BATTLE_STATIC_TEXTURE_FILES) $(NDS_NITROFS_PARTICLE_FILES) $(NDS_NITROFS_EFFECT_FILES) $(NDS_NITROFS_FTANIM_FILES) $(NDS_NITROFS_BATTLEPACK_FILES) $(NDS_NITROFS_MN_UI_KIT_FILES)
+$(OUTPUT).nds: prune-obsolete-audio $(OUTPUT).elf $(NDS_NITROFS_RELOC_FILES) $(NDS_NITROFS_RELOCDATA_FILES) $(NDS_NITROFS_AUDIO_FILES) $(NDS_NITROFS_BATTLE_STATIC_TEXTURE_FILES) $(NDS_NITROFS_PARTICLE_FILES) $(NDS_NITROFS_EFFECT_FILES) $(NDS_NITROFS_FTANIM_FILES) $(NDS_NITROFS_BATTLEPACK_FILES) $(NDS_NITROFS_MN_UI_KIT_FILES) $(NDS_BANNER_ICON)
 $(OUTPUT).elf: $(OFILES) $(NDS_PRIVATE_CHECK_OFILES) \
 	$(NDS_HOT_TEXT_SPECS) $(NDS_HOT_TEXT_LINKER_SCRIPT) \
 	$(NDS_TASK32_DRAW_HOT_FRAGMENT) $(NDS_PARTICLE_BANKS_INC) \
@@ -4463,15 +4482,30 @@ $(NITROFS_DIR)/renderer/battle_playable_static_textures.rgb5a1.bin: $(NDS_BATTLE
 # reloc_data.h` is a real prerequisite -- the generator reads every sprite
 # offset out of it rather than carrying a second copy, so a moved offset must
 # re-bake.
-$(NDS_MN_UI_KIT_INC) $(NDS_MN_UI_KIT_ASSET) &: \
+$(NDS_MN_UI_KIT_INC) $(NDS_MN_UI_KIT_ASSET) $(NDS_MN_UI_SURFACE_ASSET) &: \
 		$(PROJECT_ROOT)/scripts/menus/generate_mn_ui_kit.py \
 		$(PROJECT_ROOT)/include/reloc_data.h
 	python "$(PROJECT_ROOT)/scripts/menus/generate_mn_ui_kit.py" --repo-root "$(PROJECT_ROOT)"
-	@touch $(NDS_MN_UI_KIT_INC) $(NDS_MN_UI_KIT_ASSET)
+	@touch $(NDS_MN_UI_KIT_INC) $(NDS_MN_UI_KIT_ASSET) $(NDS_MN_UI_SURFACE_ASSET)
 
 $(NITROFS_DIR)/menus/mn_ui_kit.bin: $(NDS_MN_UI_KIT_ASSET)
 	@mkdir -p $(dir $@)
 	@cp $< $@
+
+$(NITROFS_DIR)/menus/mn_surfaces.bin: $(NDS_MN_UI_SURFACE_ASSET)
+	@mkdir -p $(dir $@)
+	@cp $< $@
+
+# P2-1h's banner icon. Generated like every other asset here rather than
+# checked in as a bitmap, so the emblem it comes from stays traceable to the
+# reloc offset it is decoded at. Unconditional: the banner is not behind a
+# feature flag, so EVERY target -- published and lab -- carries it, and the
+# next published build is where it reaches the owner's system menu.
+$(NDS_BANNER_ICON): $(PROJECT_ROOT)/scripts/menus/generate_nds_banner_icon.py \
+		$(PROJECT_ROOT)/scripts/menus/generate_mn_ui_kit.py \
+		$(PROJECT_ROOT)/include/reloc_data.h
+	python "$(PROJECT_ROOT)/scripts/menus/generate_nds_banner_icon.py" --repo-root "$(PROJECT_ROOT)"
+	@touch $(NDS_BANNER_ICON)
 
 $(NITROFS_DIR)/audio/%: $(BATTLESHIP_O2R)/audio/%
 	@mkdir -p $(dir $@)

@@ -401,12 +401,40 @@ def rgba8_to_ds(red: int, green: int, blue: int, alpha: int) -> int:
 # ---------------------------------------------------------------------------
 
 def load_reloc_offsets(repo_root: Path) -> dict[str, int]:
+    """Every sprite offset this bake can reach, from both headers that hold one.
+
+    `include/reloc_data.h`'s X-macro rows are the port's own compile-time
+    offsets and stay the authority.  They cannot cover the title, though: the
+    port ALREADY has `llMNTitleCutoutSprite` and friends as runtime-resolved
+    `uintptr_t` globals (`src/port/diagnostics.c`, filled by
+    `reloc_backend_assets.c` with a RAM address), so the same names cannot also
+    carry a file offset -- an X row for them is a duplicate definition, not a
+    second opinion.  The offsets are therefore read straight out of the
+    read-only decomp header that owns them, and every symbol the two headers
+    SHARE is checked to agree, so this fallback can never quietly disagree with
+    the port's table.
+    """
     text = (repo_root / "include" / "reloc_data.h").read_text(errors="replace")
     out: dict[str, int] = {}
     for name, value in re.findall(r"X\((ll\w+),\s*(0x[0-9a-fA-F]+|\d+)\)", text):
         out[name] = int(value, 0)
     if not out:
         raise ConvertError("include/reloc_data.h yielded no X(name, offset) rows")
+
+    decomp = (repo_root / "decomp" / "BattleShip-main" / "include" /
+              "reloc_data.us.h")
+    if decomp.exists():
+        pattern = r"#define\s+(ll\w+)\s+\(\(intptr_t\)(0x[0-9a-fA-F]+|\d+)\)"
+        for name, value in re.findall(pattern,
+                                      decomp.read_text(errors="replace")):
+            parsed = int(value, 0)
+            if name in out:
+                if out[name] != parsed:
+                    raise ConvertError(
+                        f"{name}: include/reloc_data.h says {out[name]:#x}, "
+                        f"reloc_data.us.h says {parsed:#x}")
+                continue
+            out[name] = parsed
     return out
 
 
@@ -495,6 +523,27 @@ class Image:
     texels: list[int]  # cell_w * cell_h DS BGR5551 halfwords
 
 
+@dataclass
+class Surface:
+    """A menu BACKDROP element: too large for an OBJ cell, drawn into BG2.
+
+    P2-1h.  The menu collage is 300x220 and the title's drop-shadow cutout is
+    208x90; a DS OBJ cell tops out at 64x64 and main OBJ VRAM has 8,448 bytes
+    free, so neither can be a sprite.  They go to the main engine's BG2 bitmap
+    -- the surface the menu shell already CLEARS on every screen entry -- which
+    costs no new VRAM and no per-frame work, because a backdrop is composed
+    once and then simply stays there.
+    """
+    name: str
+    token: str
+    width: int
+    height: int
+    dst_x: int   # DS top-left, signed: the title logo starts at y = -2
+    dst_y: int
+    opaque: bool  # no transparent texel, so the runtime may DMA whole rows
+    texels: list[int]  # width * height DS BGR5551 halfwords, row-major
+
+
 def box_scale(raster: list[list[tuple[int, int, int, int]]],
               dst_w: int, dst_h: int) -> list[list[tuple[int, int, int, int]]]:
     """Area-average downscale of an RGBA raster.
@@ -536,6 +585,123 @@ def box_scale(raster: list[list[tuple[int, int, int, int]]],
     return out
 
 
+def decode_sprite_raster(fileobj: RelocFile, symbol: str, offset: int,
+                         tint: tuple[int, int, int] | None = None,
+                         alpha_ramp: bool = False
+                         ) -> tuple[Sprite, list[list[tuple[int, int, int, int]]]]:
+    """Decode one sprite's bands into an RGBA raster at the sprite's own size.
+
+    THE BAND POLICY IS spDraw's, TRANSCRIBED (libultra/sp/sprite.c:302-386),
+    not "stack each band under the last".  The source advances the destination
+    row by `s->bmheight` on every wrap and draws each band `b->actualHeight`
+    tall, so consecutive bands OVERLAP when the two differ, and it stops when
+    the next band would not fit inside `s->height`:
+
+        y += s->bmheight;                     /* wrap to the next band row */
+        bh = b->actualHeight ? : s->bmheight;
+        if ((y + bh) > s->height) break;      /* can't wrap any more       */
+
+    Both live assets differ: the 300x220 CI4 menu collage is 44 bands of 6 rows
+    stepping 5 (44 * 5 = 220 exactly, with the last band 5 tall so the final
+    row lands on 219), and the 45x43 CSS portraits are bands of 21/21/3 rows
+    stepping 20.  Stepping by the band height instead put the portraits' lower
+    two thirds one row low and clipped the last band from three rows to one --
+    a real defect in the shipped P2-1e bake, fixed here because the collage
+    forced the policy to be read rather than assumed.
+    """
+    sprite = fileobj.sprite(offset)
+    if sprite.nbitmaps < 1:
+        raise ConvertError(f"{symbol}: no bitmaps")
+    width = sprite.width
+    height = sprite.height
+    if tint is not None:
+        sprite = replace(sprite, red=tint[0], green=tint[1], blue=tint[2])
+    raster = [[(0, 0, 0, 0)] * width for _ in range(height)]
+
+    row = 0
+    for index in range(sprite.nbitmaps):
+        piece = fileobj.bitmap(sprite.bitmap + index * BITMAP_BYTES)
+        if piece.width <= 0:
+            break  # spDraw's own loop guard: `b->width > 0`
+        band_h = piece.actual_height if piece.actual_height != 0 \
+            else sprite.bmheight
+        if index > 0:
+            # Every band here is full sprite width, so spDraw's horizontal
+            # `x += b->width` wrap fires on every one of them.  A narrower
+            # band would mean a 2D band grid, which nothing in this pack has
+            # and which is a falsifier rather than a silent half-decode.
+            if piece.width != sprite.width:
+                raise ConvertError(
+                    f"{symbol}: band {index} is {piece.width} wide against a "
+                    f"{sprite.width}-wide sprite (2D band grid unsupported)")
+            row += sprite.bmheight
+            if (row + band_h) > height:
+                break
+        piece_h = min(band_h, height - row)
+        if piece_h <= 0:
+            break
+        piece_w = min(piece.width, width)
+        decode_band(fileobj, sprite, piece, symbol, raster, row,
+                    piece_w, piece_h, alpha_ramp)
+    return sprite, raster
+
+
+def decode_band(fileobj: RelocFile, sprite: Sprite, piece: Bitmap, symbol: str,
+                raster: list[list[tuple[int, int, int, int]]], row: int,
+                piece_w: int, piece_h: int, alpha_ramp: bool = False) -> None:
+    """One band into `raster` at `row`, in the sprite's own pixel format.
+
+    `alpha_ramp` picks which I4 alpha rule applies.  The RDP's is the ramp --
+    `G_CC_MODULATEIDECALA_PRIM` takes alpha straight from TEXEL0, and for an
+    I4 texel that is the intensity.  A bitmap-OBJ cell has ONE alpha bit and
+    is not composited offline, so the OBJ path keeps `any ink is ink`: at 4/5
+    a menu digit is six pixels wide and thresholding its ramp at half would
+    eat the strokes.  Surfaces composite here against a known field, so they
+    take the ramp and the difference is antialiasing the OBJ cells cannot
+    carry.
+    """
+    if sprite.bmfmt == G_IM_FMT_I and sprite.bmsiz == G_IM_SIZ_4b:
+        for y, pixels in enumerate(
+                decode_i4(fileobj, piece, sprite, piece_w, piece_h)):
+            for x, i in enumerate(pixels):
+                raster[row + y][x] = (
+                    (sprite.red * i) // 255, (sprite.green * i) // 255,
+                    (sprite.blue * i) // 255,
+                    i if alpha_ramp else (255 if i else 0))
+    elif sprite.bmfmt == G_IM_FMT_IA and sprite.bmsiz == G_IM_SIZ_8b:
+        for y, pixels in enumerate(
+                decode_ia8(fileobj, piece, sprite, piece_w, piece_h)):
+            for x, (i, a) in enumerate(pixels):
+                raster[row + y][x] = (
+                    (sprite.red * i) // 255, (sprite.green * i) // 255,
+                    (sprite.blue * i) // 255, a)
+    elif sprite.bmfmt == G_IM_FMT_IA and sprite.bmsiz == G_IM_SIZ_16b:
+        for y, pixels in enumerate(
+                decode_ia16(fileobj, piece, sprite, piece_w, piece_h)):
+            for x, (i, a) in enumerate(pixels):
+                raster[row + y][x] = (
+                    (sprite.red * i) // 255, (sprite.green * i) // 255,
+                    (sprite.blue * i) // 255, a)
+    elif sprite.bmfmt == G_IM_FMT_RGBA and sprite.bmsiz == G_IM_SIZ_32b:
+        for y, pixels in enumerate(
+                decode_rgba32(fileobj, piece, sprite, piece_w, piece_h)):
+            for x, (r, g, b, a) in enumerate(pixels):
+                raster[row + y][x] = (r, g, b, a)
+    elif sprite.bmfmt == G_IM_FMT_RGBA and sprite.bmsiz == G_IM_SIZ_16b:
+        for y, pixels in enumerate(
+                decode_rgba16(fileobj, piece, sprite, piece_w, piece_h)):
+            for x, (r, g, b, a) in enumerate(pixels):
+                raster[row + y][x] = (r, g, b, a)
+    elif sprite.bmfmt == G_IM_FMT_CI and sprite.bmsiz == G_IM_SIZ_4b:
+        for y, pixels in enumerate(
+                decode_ci4(fileobj, piece, sprite, piece_w, piece_h)):
+            for x, (r, g, b, a) in enumerate(pixels):
+                raster[row + y][x] = (r, g, b, a)
+    else:
+        raise ConvertError(
+            f"{symbol}: unsupported fmt={sprite.bmfmt} siz={sprite.bmsiz}")
+
+
 def convert_image(fileobj: RelocFile, symbol: str, token: str, offset: int,
                   scale: tuple[int, int] | None = None,
                   tint: tuple[int, int, int] | None = None) -> Image:
@@ -550,11 +716,6 @@ def convert_image(fileobj: RelocFile, symbol: str, token: str, offset: int,
     (8,192 B) and 32x31 lands in a 32x32 one (2,048 B), and twelve portrait
     cells at the larger size do not fit main OBJ VRAM beside the text budget.
     """
-    sprite = fileobj.sprite(offset)
-    if sprite.nbitmaps < 1:
-        raise ConvertError(f"{symbol}: no bitmaps")
-    width = sprite.width
-    height = sprite.height
     # THE PRIMITIVE COLOUR AN INTENSITY SPRITE IS MODULATED BY.  An I/IA sprite
     # carries SHAPE only and the drawing code sets `sobj->sprite.red/green/blue`
     # per SObj (mnmaps.c:340); the container's own values are whatever the
@@ -562,61 +723,10 @@ def convert_image(fileobj: RelocFile, symbol: str, token: str, offset: int,
     # source that sets it, and it is baked in because the kit's image path has
     # no per-slot tint -- unlike its text path, which takes the colour as an
     # argument exactly because a string IS re-tinted per use.
-    if tint is not None:
-        sprite = replace(sprite, red=tint[0], green=tint[1], blue=tint[2])
-    raster = [[(0, 0, 0, 0)] * width for _ in range(height)]
+    sprite, raster = decode_sprite_raster(fileobj, symbol, offset, tint)
+    width = sprite.width
+    height = sprite.height
 
-    # Multi-bitmap sprites stack vertically: bitmap i covers rows
-    # [i * bmheight, ...).  Walk them in order and stop at the sprite height.
-    row = 0
-    for index in range(sprite.nbitmaps):
-        piece = fileobj.bitmap(sprite.bitmap + index * BITMAP_BYTES)
-        piece_h = min(piece.actual_height, height - row)
-        if piece_h <= 0:
-            break
-        piece_w = min(piece.width, width)
-        if sprite.bmfmt == G_IM_FMT_I and sprite.bmsiz == G_IM_SIZ_4b:
-            for y, pixels in enumerate(
-                    decode_i4(fileobj, piece, sprite, piece_w, piece_h)):
-                for x, i in enumerate(pixels):
-                    raster[row + y][x] = (
-                        (sprite.red * i) // 255, (sprite.green * i) // 255,
-                        (sprite.blue * i) // 255, 255 if i else 0)
-        elif sprite.bmfmt == G_IM_FMT_IA and sprite.bmsiz == G_IM_SIZ_8b:
-            for y, pixels in enumerate(
-                    decode_ia8(fileobj, piece, sprite, piece_w, piece_h)):
-                for x, (i, a) in enumerate(pixels):
-                    raster[row + y][x] = (
-                        (sprite.red * i) // 255, (sprite.green * i) // 255,
-                        (sprite.blue * i) // 255, a)
-        elif sprite.bmfmt == G_IM_FMT_IA and sprite.bmsiz == G_IM_SIZ_16b:
-            for y, pixels in enumerate(
-                    decode_ia16(fileobj, piece, sprite, piece_w, piece_h)):
-                for x, (i, a) in enumerate(pixels):
-                    raster[row + y][x] = (
-                        (sprite.red * i) // 255, (sprite.green * i) // 255,
-                        (sprite.blue * i) // 255, a)
-        elif sprite.bmfmt == G_IM_FMT_RGBA and sprite.bmsiz == G_IM_SIZ_32b:
-            for y, pixels in enumerate(
-                    decode_rgba32(fileobj, piece, sprite, piece_w, piece_h)):
-                for x, (r, g, b, a) in enumerate(pixels):
-                    raster[row + y][x] = (r, g, b, a)
-        elif sprite.bmfmt == G_IM_FMT_RGBA and sprite.bmsiz == G_IM_SIZ_16b:
-            for y, pixels in enumerate(
-                    decode_rgba16(fileobj, piece, sprite, piece_w, piece_h)):
-                for x, (r, g, b, a) in enumerate(pixels):
-                    raster[row + y][x] = (r, g, b, a)
-        elif sprite.bmfmt == G_IM_FMT_CI and sprite.bmsiz == G_IM_SIZ_4b:
-            for y, pixels in enumerate(
-                    decode_ci4(fileobj, piece, sprite, piece_w, piece_h)):
-                for x, (r, g, b, a) in enumerate(pixels):
-                    raster[row + y][x] = (r, g, b, a)
-        else:
-            raise ConvertError(
-                f"{symbol}: unsupported fmt={sprite.bmfmt} siz={sprite.bmsiz}")
-        row += piece_h
-        if row >= height:
-            break
 
     if scale is not None:
         num, den = scale
@@ -630,6 +740,199 @@ def convert_image(fileobj: RelocFile, symbol: str, token: str, offset: int,
         for x in range(width):
             texels[y * cell_w + x] = rgba8_to_ds(*raster[y][x])
     return Image(symbol, token, width, height, cell_w, cell_h, texels)
+
+
+# ---------------------------------------------------------------------------
+# Surfaces (menu backdrop art) -> DS BG2 bitmap rows
+# ---------------------------------------------------------------------------
+
+# The DS frame is 256x192 and the N64 frame these menus are laid out in is
+# 320x240 -- exactly 4/5 on both axes -- so a surface is baked at 4/5 and
+# placed at 4/5 of the source's own top-left.  Every position below is derived
+# from the source, never nudged: the collage from `sobj->pos.x/y = 10.0F`
+# (mnmodeselect.c:527, mnvsmode.c:974) and the title set from
+# `mnTitleSetPosition`, which is `desc->pos - size * 0.5` over the CENTRES in
+# `dMNTitleCommonSpriteDescs` (mntitle.c:64, :792).
+FRAME_SCALE = (4, 5)
+DS_SCREEN_W = 256
+DS_SCREEN_H = 192
+
+
+def frame_pos(value: int) -> int:
+    """One N64 frame coordinate at the DS frame's 4/5, rounded half up."""
+    num, den = FRAME_SCALE
+    if value < 0:
+        return -((-value * num + den // 2) // den)
+    return (value * num + den // 2) // den
+
+
+@dataclass(frozen=True)
+class Placement:
+    """One source sprite inside a surface, with its own draw-site state.
+
+    THE COMBINER IS THE SOURCE'S, and it is not the OBJ path's.  spDraw sets
+    `G_CC_MODULATEIDECALA_PRIM` for every sprite whose `alpha == 255`
+    (libultra/sp/sprite.c:213-232, gbi.h:518), which is
+    `colour = TEXEL0 * PRIMITIVE`, `alpha = TEXEL0`.  So an I4 sprite is a
+    PRIMITIVE-coloured stencil whose alpha is its own intensity ramp -- not
+    the hard-edged `alpha = 255 if intensity else 0` an OBJ cell has to settle
+    for, because a bitmap-OBJ texel carries one alpha bit and a surface is
+    composited here, offline, against a known field.
+
+    `flat` and `alpha` exist for one sprite: the title emblem draws through
+    `mnTitleLogoProcDisplay`'s OWN combiner (mntitle.c:1023), which is
+    `colour = PRIMITIVE` flat and `alpha = TEXEL0 * PRIMITIVE_alpha`, with the
+    primitive alpha being `sMNTitleLogoAlpha` -- a value the title fades from
+    0xFF and clamps at 0x4C (mntitle.c:1042), so 0x4C is its RESTING value and
+    the one a static substitute must use.
+    """
+    o2r: str
+    symbol: str
+    x: int          # in the source's own 320x240 frame
+    y: int
+    centred: bool   # title descs are centres; the collage's draw site is not
+    tint: tuple[int, int, int] | None = None
+    alpha: int = 255
+    flat: bool = False
+
+
+def place_raster(fileobj: RelocFile, part: Placement, offset: int
+                 ) -> tuple[int, int, list[list[tuple[int, int, int, int]]]]:
+    """One placement decoded, combined and scaled to the DS frame's 4/5.
+
+    Decoded with a NEUTRAL primitive so what comes back is TEXEL0 itself; the
+    real primitive is applied once here.  Feeding the tint into the decoder
+    instead would modulate twice for any sprite whose container carries a
+    non-white primitive of its own.
+    """
+    sprite, raster = decode_sprite_raster(fileobj, part.symbol, offset,
+                                          (255, 255, 255), alpha_ramp=True)
+    prim = part.tint if part.tint is not None else (sprite.red, sprite.green,
+                                                    sprite.blue)
+    combined = []
+    for row in raster:
+        out = []
+        for (r, g, b, a) in row:
+            if part.flat:
+                out.append((prim[0], prim[1], prim[2],
+                            (a * part.alpha) // 255))
+            else:
+                out.append(((r * prim[0]) // 255, (g * prim[1]) // 255,
+                            (b * prim[2]) // 255, (a * part.alpha) // 255))
+        combined.append(out)
+    num, den = FRAME_SCALE
+    width = max(1, (sprite.width * num + den // 2) // den)
+    height = max(1, (sprite.height * num + den // 2) // den)
+    left = part.x - (sprite.width // 2) if part.centred else part.x
+    top = part.y - (sprite.height // 2) if part.centred else part.y
+    return (frame_pos(left), frame_pos(top),
+            box_scale(combined, width, height))
+
+
+@dataclass(frozen=True)
+class SurfaceSpec:
+    token: str
+    parts: tuple[Placement, ...]
+    # The field the surface is composited over, or None to keep alpha keyed.
+    # An opaque field makes the result opaque, which lets the runtime DMA whole
+    # rows instead of testing every texel.
+    background: tuple[int, int, int] | None = None
+    # A surface the runtime keeps in RAM so it can be toggled without a NitroFS
+    # read. Exactly one element needs it -- PRESS START blinks -- and the
+    # manifest sizes the runtime's single cache buffer from this flag, so a
+    # second cacheable surface costs .bss rather than silently overflowing.
+    cacheable: bool = False
+
+
+def convert_surface(cache: dict[str, RelocFile], offsets: dict[str, int],
+                    repo_root: Path, spec: SurfaceSpec) -> Surface:
+    """Composite one surface: the union of its placements, resolved offline.
+
+    The canvas is the union bounding box of the placements, clipped to the DS
+    screen -- so nothing bakes a margin of flat backdrop that main BG palette
+    entry 0 already paints for free, and the title's emblem keeps the same
+    right-edge clip the source's own 320-wide frame gives it.
+
+    Compositing HERE rather than at runtime is what makes the emblem's 0x4C
+    primitive alpha and every antialiased sprite edge survive the trip: the DS
+    bitmap the result lands in carries one alpha bit per texel, so a blend
+    performed on the console would have nothing to blend with.
+    """
+    placed = []
+    for part in spec.parts:
+        if part.symbol not in offsets:
+            raise ConvertError(
+                f"{part.symbol} missing from include/reloc_data.h and "
+                "reloc_data.us.h")
+        if part.o2r not in cache:
+            cache[part.o2r] = RelocFile(
+                repo_root / "decomp" / "BattleShip-main" / "BattleShip_o2r" /
+                "reloc_menus" / part.o2r)
+        placed.append(place_raster(cache[part.o2r], part,
+                                   offsets[part.symbol]))
+
+    left = min(x for x, _, _ in placed)
+    top = min(y for _, y, _ in placed)
+    right = max(x + len(raster[0]) for x, _, raster in placed)
+    bottom = max(y + len(raster) for _, y, raster in placed)
+    left = max(left, 0)
+    top = max(top, 0)
+    right = min(right, DS_SCREEN_W)
+    bottom = min(bottom, DS_SCREEN_H)
+    width = right - left
+    height = bottom - top
+    if (width <= 0) or (height <= 0):
+        raise ConvertError(f"{spec.token}: composites to an empty canvas")
+    # A SURFACE ORIGIN IS NEVER NEGATIVE, and the runtime relies on it: its
+    # erase path clamps a negative x to 0 without shortening the run, which
+    # would spill the field colour past the surface's right edge.  The clamps
+    # above already guarantee this; asserting it is what keeps a future change
+    # to them from turning a bake into a drawing bug nobody looks for.
+    if (left < 0) or (top < 0):
+        raise ConvertError(
+            f"{spec.token}: origin ({left},{top}) is off the top-left of the "
+            "screen; the runtime's erase path assumes a non-negative origin")
+
+    field = spec.background
+    canvas = [[(field[0], field[1], field[2], 255) if field is not None
+               else (0, 0, 0, 0) for _ in range(width)] for _ in range(height)]
+    for x0, y0, raster in placed:
+        for sy, row in enumerate(raster):
+            dy = y0 + sy - top
+            if (dy < 0) or (dy >= height):
+                continue
+            target = canvas[dy]
+            for sx, (r, g, b, a) in enumerate(row):
+                if a == 0:
+                    continue
+                dx = x0 + sx - left
+                if (dx < 0) or (dx >= width):
+                    continue
+                if a == 255:
+                    target[dx] = (r, g, b, 255)
+                    continue
+                dr, dg, db, da = target[dx]
+                inv = 255 - a
+                out_a = a + ((da * inv) // 255)
+                if out_a == 0:
+                    target[dx] = (0, 0, 0, 0)
+                    continue
+                target[dx] = (
+                    ((r * a) + ((dr * da * inv) // 255)) // out_a,
+                    ((g * a) + ((dg * da * inv) // 255)) // out_a,
+                    ((b * a) + ((db * da * inv) // 255)) // out_a,
+                    out_a)
+
+    texels = [0] * (width * height)
+    opaque = True
+    for y in range(height):
+        for x in range(width):
+            texel = rgba8_to_ds(*canvas[y][x])
+            texels[y * width + x] = texel
+            if texel == 0:
+                opaque = False
+    return Surface(spec.token, spec.token, width, height, left, top, opaque,
+                   texels)
 
 
 # ---------------------------------------------------------------------------
@@ -669,9 +972,33 @@ def build_pack(glyphs: list[Glyph], images: list[Image]
     return bytes(blob), image_table
 
 
+def build_surface_pack(surfaces: list[Surface]
+                       ) -> tuple[bytes, list[tuple[str, int, int, int]]]:
+    """A SEPARATE blob from the OBJ pack, and that is the point.
+
+    `ndsUiKitEnter` reads and hashes the whole OBJ pack on every screen entry,
+    so a backdrop living in it would cost every screen the bytes of a screen it
+    does not show.  Surfaces are streamed individually by index instead: the
+    title reads its own set, the two collage screens read one surface, and the
+    character/stage selects read none.  Each entry carries its own FNV-1a so a
+    single blit is verifiable on its own rather than only in aggregate.
+    """
+    blob = bytearray()
+    table: list[tuple[str, int, int, int]] = []
+    for surface in surfaces:
+        offset = len(blob)
+        for texel in surface.texels:
+            blob += struct.pack("<H", texel)
+        payload = bytes(blob[offset:])
+        table.append((surface.name, offset, len(payload), fnv1a32(payload)))
+    return bytes(blob), table
+
+
 def emit_manifest(path: Path, glyphs: list[Glyph], images: list[Image],
                   image_table: list[tuple[str, int, int]],
-                  pack: bytes) -> None:
+                  pack: bytes, surfaces: list[Surface],
+                  surface_table: list[tuple[str, int, int, int]],
+                  surface_pack: bytes) -> None:
     lines = [
         "/* GENERATED by scripts/menus/generate_mn_ui_kit.py -- do not edit. */",
         "#ifndef NDS_MN_UI_KIT_GENERATED_INC",
@@ -709,6 +1036,33 @@ def emit_manifest(path: Path, glyphs: list[Glyph], images: list[Image],
     lines.append("")
     for index, image in enumerate(images):
         lines.append(f"#define NDS_MN_UI_KIT_IMAGE_{image.token} {index}u")
+    lines.append("")
+    lines.append(f"#define NDS_MN_UI_KIT_SURFACE_PACK_BYTES "
+                 f"{len(surface_pack)}u")
+    lines.append(f"#define NDS_MN_UI_KIT_SURFACE_COUNT {len(surfaces)}u")
+    lines.append(f"#define NDS_MN_UI_KIT_SURFACE_MAX_ROW_BYTES "
+                 f"{max((s.width * 2 for s in surfaces), default=0)}u")
+    lines.append(f"#define NDS_MN_UI_KIT_SURFACE_MAX_BYTES "
+                 f"{max((s.width * s.height * 2 for s in surfaces), default=0)}u")
+    cacheable = [spec.token for spec in SURFACE_SOURCES if spec.cacheable]
+    lines.append(f"#define NDS_MN_UI_KIT_SURFACE_CACHE_BYTES "
+                 f"{max((s.width * s.height * 2 for s in surfaces
+                        if s.token in cacheable), default=0)}u")
+    lines.append("")
+    lines.append("/* Backdrop surfaces, DS BGR5551, drawn into the main BG2 "
+                 "bitmap. */")
+    lines.append("static const NdsUiKitSurfaceMetric kNdsUiKitSurfaceMetrics"
+                 "[NDS_MN_UI_KIT_SURFACE_COUNT] __attribute__((unused)) = {")
+    for surface, (name, offset, size, hash32) in zip(surfaces, surface_table):
+        lines.append(
+            f"    {{ {offset}u, {size}u, {surface.width}u, {surface.height}u, "
+            f"{surface.dst_x}, {surface.dst_y}, "
+            f"{1 if surface.opaque else 0}u, 0x{hash32:08x}u }}, /* {name} */")
+    lines.append("};")
+    lines.append("")
+    for index, surface in enumerate(surfaces):
+        lines.append(
+            f"#define NDS_MN_UI_KIT_SURFACE_{surface.token} {index}u")
     lines.append("")
     lines.append("#endif /* NDS_MN_UI_KIT_GENERATED_INC */")
     write_if_changed(path, "\n".join(lines) + "\n")
@@ -839,6 +1193,75 @@ IMAGE_SOURCES = [
     ("MNMaps", "llMNMapsCursorSprite", "MAP_CURSOR", (5, 8), (0xFF, 0, 0)),
 ]
 
+# P2-1h.  THE ORIGINAL PRESENTATION ART (owner ruling, 2026-08-18: this is a
+# port, so the first-party branding, logos and copyright line ship, converted
+# from source like every other asset).
+#
+# TITLE_FIELD is the flat field the title art composites over.  The original
+# burns a thirty-frame fire animation there (`mnTitleMakeFire`, two 32x32
+# RGBA32 sprites blown up 12x/8.5x), which `PROJECT_GOAL.md` names twice as
+# sacrificable -- "reduced background animation", "static substitutes for
+# expensive animation".  It is DELIBERATELY ABSENT and recorded as such rather
+# than approximated badly; black is what the fire itself burns over.
+TITLE_FIELD = (0x00, 0x00, 0x00)
+
+# THE TITLE, in the source's own draw order.  `mnTitleMakeLabels` builds kinds
+# 0..4 into one GObj -- which is what puts the black drop-shadow cutout BEHIND
+# the wordmark -- then 5..6; `mnTitleMakePressStart` adds 7 and
+# `mnTitleMakeLogoNoOpening` adds 8, the branch this build takes because
+# `scene_prev` cannot be the opening cinematic until P2-7 lands (mntitle.c
+# :1051, :1179, :1203, :1221, :1255).  Colours are `mnTitleSetColors`
+# (mntitle.c:800); positions are the CENTRES in `dMNTitleCommonSpriteDescs`
+# (mntitle.c:64), which `mnTitleSetPosition` turns into a top-left.
+#
+# Kind 9 (TM2) is deliberately absent, and that is a finding rather than an
+# omission: it has a desc entry AND a colour case, and nothing in the US build
+# ever constructs it -- `mnTitleMakeSprites`, the only loop that would reach
+# it, stops at PressStart and is marked unused in the source itself.
+TITLE_PARTS = (
+    Placement("MNTitle", "llMNTitleCutoutSprite", 157, 94, True,
+              (0x00, 0x00, 0x00)),
+    Placement("MNTitle", "llMNTitleSmashSprite", 161, 88, True,
+              (0xFF, 0xFE, 0x2A)),
+    Placement("MNTitle", "llMNTitleSuperSprite", 55, 96, True,
+              (0xFF, 0xFE, 0x2A)),
+    Placement("MNTitle", "llMNTitleBrosSprite", 268, 96, True,
+              (0xFF, 0xFE, 0x2A)),
+    Placement("MNTitle", "llMNTitleTMUnkSprite", 270, 132, True,
+              (0x00, 0x00, 0x00)),
+    Placement("MNTitle", "llMNTitleCopyrightSprite", 160, 208, True,
+              (0xB7, 0xAE, 0x7C)),
+    Placement("MNTitle", "llMNTitleBorderUpperSprite", 160, 15, True,
+              (0x14, 0x12, 0x06)),
+    # The emblem sets its own primitive (mntitle.c:1073) and draws through its
+    # own flat combiner at the resting alpha the title fades it to.
+    Placement("MNTitle", "llMNTitleLogoAnimFullSprite", 260, 60, True,
+              (0xFF, 0x00, 0x00), alpha=0x4C, flat=True),
+)
+
+SURFACE_SOURCES = [
+    SurfaceSpec("TITLE_SCREEN", TITLE_PARTS, TITLE_FIELD),
+    # PRESS START blinks, so it is its own surface: the runtime caches these
+    # bytes and redraws or erases them in place, while everything above is
+    # composed once per entry and then never touched again.  Composited over
+    # the same field, so erasing it is a fill with that field's texel.
+    SurfaceSpec("TITLE_PRESS_START",
+                (Placement("MNTitle", "llMNTitlePressStartSprite", 162, 177,
+                           True, (0xFF, 0xFF, 0xFF)),),
+                TITLE_FIELD, cacheable=True),
+    # THE MENU COLLAGE.  300x220 CI4 with a 16-entry TLUT, 44 bands of 6 rows
+    # stepping 5 -- the asset that forced decode_sprite_raster to transcribe
+    # spDraw's band policy.  Both screens that show it place it identically at
+    # (10, 10) (mnmodeselect.c:527, mnvsmode.c:974), top-left and untinted, and
+    # the source leaves its own 10 px margin showing the decal blue, which the
+    # DS backdrop paints at zero cost.
+    SurfaceSpec("MENU_COLLAGE",
+                (Placement("MNCommon", "llMNCommonSmashBrosCollageSprite",
+                           10, 10, False),),
+                None),
+]
+
+
 # The digit block must stay contiguous and in ascending order: the runtime
 # indexes it as NDS_MN_UI_KIT_IMAGE_DIGIT_0 + digit.  Asserted rather than
 # assumed, because a reordered IMAGE_SOURCES would otherwise print 7 for 3.
@@ -901,6 +1324,53 @@ def ds_texel_to_rgb(texel: int, backdrop: tuple[int, int, int]) -> tuple[int, in
     g = ((texel >> 5) & 0x1F) << 3
     b = ((texel >> 10) & 0x1F) << 3
     return (r, g, b)
+
+
+def write_surface_previews(out_dir: Path, surfaces: list[Surface]) -> None:
+    """One PNG per surface, plus the composed 256x192 title/menu screens.
+
+    The composite is what actually catches a wrong position or a wrong draw
+    order: a per-sprite PNG cannot show that the black cutout ended up ON TOP
+    of the wordmark.  Composition here is the runtime's own rule -- in list
+    order, skipping transparent texels, clipped to the DS screen.
+    """
+    backdrop = (255, 0, 255)
+    for surface in surfaces:
+        pixels = bytearray()
+        for texel in surface.texels:
+            pixels += bytes(ds_texel_to_rgb(texel, backdrop))
+        write_png(out_dir / f"mn_ui_kit_{surface.token}.png", surface.width,
+                  surface.height, bytes(pixels))
+
+    by_token = {surface.token: surface for surface in surfaces}
+    scenes = {
+        "screen_title": (TITLE_FIELD,
+                         ["TITLE_SCREEN", "TITLE_PRESS_START"]),
+        # The menus' own decal blue, mnmodeselect.c:517 (0x083365).
+        "screen_menu": ((0x08, 0x33, 0x65), ["MENU_COLLAGE"]),
+    }
+    for name, (field, tokens) in scenes.items():
+        if not all(token in by_token for token in tokens):
+            continue
+        frame = [[field] * 256 for _ in range(192)]
+        for token in tokens:
+            surface = by_token[token]
+            for y in range(surface.height):
+                dy = surface.dst_y + y
+                if (dy < 0) or (dy >= 192):
+                    continue
+                for x in range(surface.width):
+                    dx = surface.dst_x + x
+                    if (dx < 0) or (dx >= 256):
+                        continue
+                    texel = surface.texels[y * surface.width + x]
+                    if texel != 0:
+                        frame[dy][dx] = ds_texel_to_rgb(texel, field)
+        rgb = bytearray()
+        for row in frame:
+            for pixel in row:
+                rgb += bytes(pixel)
+        write_png(out_dir / f"mn_ui_kit_{name}.png", 256, 192, bytes(rgb))
 
 
 def write_previews(out_dir: Path, glyphs: list[Glyph],
@@ -995,10 +1465,15 @@ def main(argv: list[str] | None = None) -> int:
     check_digit_block(images)
     check_kind_label_block(images)
 
+    surfaces = [convert_surface(cache, offsets, repo_root, spec)
+                for spec in SURFACE_SOURCES]
+
     pack, image_table = build_pack(glyphs, images)
+    surface_pack, surface_table = build_surface_pack(surfaces)
 
     if args.preview_dir is not None:
         write_previews(args.preview_dir.resolve(), glyphs, images)
+        write_surface_previews(args.preview_dir.resolve(), surfaces)
 
     if args.preview:
         preview_glyphs(glyphs)
@@ -1006,15 +1481,26 @@ def main(argv: list[str] | None = None) -> int:
             print(f"-- {name} src {image.src_w}x{image.src_h} "
                   f"cell {image.cell_w}x{image.cell_h} "
                   f"offset {offset} bytes {size}")
+        for surface, (name, offset, size, hash32) in zip(surfaces,
+                                                         surface_table):
+            print(f"== {name} {surface.width}x{surface.height} at "
+                  f"({surface.dst_x},{surface.dst_y}) "
+                  f"{'opaque' if surface.opaque else 'keyed'} "
+                  f"offset {offset} bytes {size} fnv32 0x{hash32:08x}")
         print(f"pack {len(pack)} bytes fnv32 0x{fnv1a32(pack):08x}")
+        print(f"surfaces {len(surface_pack)} bytes")
         return 0
 
     write_bytes_if_changed(repo_root / "assets" / "menus" / "mn_ui_kit.bin",
                            pack)
+    write_bytes_if_changed(repo_root / "assets" / "menus" / "mn_surfaces.bin",
+                           surface_pack)
     emit_manifest(repo_root / "src" / "nds" / "generated" /
-                  "mn_ui_kit.generated.inc", glyphs, images, image_table, pack)
+                  "mn_ui_kit.generated.inc", glyphs, images, image_table, pack,
+                  surfaces, surface_table, surface_pack)
     print(f"mn_ui_kit: {len(glyphs)} glyphs, {len(images)} images, "
-          f"{len(pack)} bytes, fnv32 0x{fnv1a32(pack):08x}")
+          f"{len(pack)} bytes, fnv32 0x{fnv1a32(pack):08x}; "
+          f"{len(surfaces)} surfaces, {len(surface_pack)} bytes")
     return 0
 
 

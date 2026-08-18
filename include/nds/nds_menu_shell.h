@@ -3,10 +3,11 @@
 
 #include <PR/ultratypes.h>
 
-/* P2-1d -- the VS shell's real screens: splash, title, main menu, VS menu and
- * its rules. `docs/p2/P2-1-vs-shell.md` work item 4.
+/* P2-1d -- the VS shell's real screens: title, main menu, VS menu and its
+ * rules, plus P2-1e/1f's character and stage selects.
+ * `docs/p2/P2-1-vs-shell.md` work item 4.
  *
- * WHAT THIS IS. Four native DS screens drawn out of the P2-1c UI kit, each
+ * WHAT THIS IS. Native DS screens drawn out of the P2-1c UI kit, each
  * running as a REAL SCENE: `scManagerRunLoop` dispatches to a `<X>StartScene`,
  * `syTaskmanStartTask` rewinds the per-scene arena (and the scene manager
  * brackets that entry), and the screen owns its own frame loop until it
@@ -33,20 +34,25 @@
  *
  * MODE 163 IS UNTOUCHED. Every entry point here is compiled out at
  * `NDS_P2_MENU_SHELL == 0`, which is every published and Boundary
- * configuration, and the boot scene only becomes the splash when the flag is
+ * configuration, and the boot scene only reaches the title when the flag is
  * on. The battle scene, its harness seeding and its transitions are not
  * modified by this row at all. */
 
-/* Which screen a published per-screen figure belongs to. */
-#define NDS_MENU_SHELL_SCREEN_SPLASH 0u
-#define NDS_MENU_SHELL_SCREEN_TITLE 1u
-#define NDS_MENU_SHELL_SCREEN_MODE 2u
-#define NDS_MENU_SHELL_SCREEN_VSMODE 3u
+/* Which screen a published per-screen figure belongs to.
+ *
+ * P2-1h RENUMBERED THESE. Screen 0 used to be an invented "Smash64DS" splash
+ * card; the owner's 2026-08-18 ruling deleted it -- this is a port, so the
+ * original branding ships and nothing stands in for it -- and boot now reaches
+ * the title with no screen in between, which is the N64 flow once the opening
+ * cinematic (P2-7) is accounted for. Every index below moved down one. */
+#define NDS_MENU_SHELL_SCREEN_TITLE 0u
+#define NDS_MENU_SHELL_SCREEN_MODE 1u
+#define NDS_MENU_SHELL_SCREEN_VSMODE 2u
 /* P2-1e, the VS character select (mn/mnplayers/mnplayersvs.c). */
-#define NDS_MENU_SHELL_SCREEN_CSS 4u
+#define NDS_MENU_SHELL_SCREEN_CSS 3u
 /* P2-1f, the VS stage select (mn/mnmaps/mnmaps.c). */
-#define NDS_MENU_SHELL_SCREEN_SSS 5u
-#define NDS_MENU_SHELL_SCREEN_COUNT 6u
+#define NDS_MENU_SHELL_SCREEN_SSS 4u
+#define NDS_MENU_SHELL_SCREEN_COUNT 5u
 
 /* Per-screen work histogram: sixteen buckets of 35,012 ARM9 ticks, one
  * sixteenth of the 560,190-tick 60 Hz VBlank budget, so a bucket index is
@@ -63,7 +69,13 @@
 /* Screen entry points, called from the bounded scene branches in
  * src/port/taskman_seam.c. Each returns with the next scene already requested
  * through the scene manager. */
-void ndsMenuShellRunSplash(void);
+/* The boot scene, and NOT a screen: it presents no frame and draws nothing.
+ * It exists because the source's own startup scene still runs its func_start
+ * (and makes GObjs), so its teardown still has work, and because it is the
+ * shell's earliest entry -- which is where the menu audio pack has to be
+ * loaded, or every menu cue before the first battle resolves against an empty
+ * pack. It requests the title and returns. */
+void ndsMenuShellRunStartup(void);
 void ndsMenuShellRunTitle(void);
 void ndsMenuShellRunModeSelect(void);
 void ndsMenuShellRunVSMode(void);
@@ -104,6 +116,10 @@ extern volatile u32 gNdsMenuShellEnterTicks[NDS_MENU_SHELL_SCREEN_COUNT];
 /* ((from_screen << 8) | to_scene_kind) per menu transition this shell made. */
 extern volatile u32 gNdsMenuShellTransitionRing[NDS_MENU_SHELL_RING];
 extern volatile u32 gNdsMenuShellTransitionCount;
+/* P2-1h. How many times the frameless boot scene ran and handed straight to
+ * the title. Exactly 1 per run, and the audio-pack load rides on it: a run
+ * that shows 0 here has no menu SFX, whatever the miss ring says. */
+extern volatile u32 gNdsMenuShellStartupCount;
 /* Input taps the screens acted on, ((screen << 16) | tap_mask), so a walk's
  * evidence pairs an INPUT with the transition it produced rather than
  * asserting that one caused the other. */

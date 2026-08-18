@@ -79,7 +79,8 @@ Ordering rationale (owner-ratified 2026-08-17):
   top screen is gameplay. HUD migration lands with P2-2's 4-slot HUD rework.
   Menus render on the top screen; bottom screen static outside battle until
   revisited.
-- Intro cinematic deferred to P2-7; P2-1 boots splash → title → menus.
+- Intro cinematic deferred to P2-7; P2-1 boots straight to the title (row
+  P2-1h deleted the interim splash), then menus.
 - Wireless multiplayer is P3 (multi-card host/join, design already in
   `docs/P3_Multiplayer/Multiplayer.md`). Determinism discipline (replay
   verifier stays green) is maintained through P2 so lockstep stays cheap.

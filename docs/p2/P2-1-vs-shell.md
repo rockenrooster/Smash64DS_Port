@@ -17,7 +17,13 @@ none is invented here.
 presentation assets ship, including first-party branding, logos, title/boot
 screens, menu artwork, and copyright text, converted from source like every
 other asset. Never substitute invented "identity-safe" placeholders.** The
-menu collage backlog from this ruling is board row P2-1h.
+backlog from this ruling is board row P2-1h, **landed 2026-08-18**: the
+original title presentation, the menu collage on both screens that draw it,
+the DS system-menu banner, and the deletion of the interim splash so boot
+reaches the title with no screen in between. The title's fire animation and
+label slide-in remain deliberately absent (sacrificable per
+`PROJECT_GOAL.md`); the title's music is the opening cinematic's and arrives
+with P2-7, which is why a silent title is source-correct.
 
 ## Work breakdown
 

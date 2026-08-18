@@ -217,7 +217,13 @@ if (-not [string]::IsNullOrWhiteSpace($AnalyzeOnly)) {
         'gNdsMatchConfig',
         'gNdsUiKitPackHash', 'gNdsUiKitPackHashMismatchCount',
         'gNdsUiKitPackReadFailCount', 'gNdsUiKitTextOverflowCount',
-        'gNdsUiKitEnterRejectCount'
+        'gNdsUiKitEnterRejectCount',
+        # P2-1h. The frameless boot scene, and the backdrop surfaces' own
+        # failure counters -- a lap that silently stopped drawing the collage
+        # would otherwise close green.
+        'gNdsMenuShellStartupCount',
+        'gNdsUiKitSurfaceBlitCount', 'gNdsUiKitSurfaceHashMismatchCount',
+        'gNdsUiKitSurfaceReadFailCount', 'gNdsUiKitSurfaceNoLayerCount'
     )
     $symbols = & $nm $elf | ForEach-Object { ($_ -split '\s+')[-1] }
     $missing = @($required | Where-Object { $symbols -notcontains $_ })
@@ -400,16 +406,21 @@ if (-not [string]::IsNullOrWhiteSpace($AnalyzeOnly)) {
              'gSCManagerTransferBattleState.pl_count, ' +
              'gSCManagerTransferBattleState.cp_count, ' +
              'gSCManagerSceneData.gkind'),
-            ('printf "LOOPSCREENS f0=%u f1=%u f2=%u f3=%u f4=%u f5=%u ' +
-             'e0=%u e1=%u e2=%u e3=%u e4=%u e5=%u x0=%u x1=%u x2=%u x3=%u x4=%u x5=%u\n", ' +
+            # P2-1h deleted the splash screen and renumbered the rest down one:
+            # there are FIVE screens now, title at 0. `startup` is the frameless
+            # boot scene that replaced it -- 1 per run, whatever the lap count,
+            # because it runs before the loop starts.
+            ('printf "LOOPSCREENS startup=%u f0=%u f1=%u f2=%u f3=%u f4=%u ' +
+             'e0=%u e1=%u e2=%u e3=%u e4=%u x0=%u x1=%u x2=%u x3=%u x4=%u\n", ' +
+             'gNdsMenuShellStartupCount, ' +
              'gNdsMenuShellFrames[0], gNdsMenuShellFrames[1], gNdsMenuShellFrames[2], ' +
-             'gNdsMenuShellFrames[3], gNdsMenuShellFrames[4], gNdsMenuShellFrames[5], ' +
+             'gNdsMenuShellFrames[3], gNdsMenuShellFrames[4], ' +
              'gNdsMenuShellEnterCount[0], gNdsMenuShellEnterCount[1], ' +
              'gNdsMenuShellEnterCount[2], gNdsMenuShellEnterCount[3], ' +
-             'gNdsMenuShellEnterCount[4], gNdsMenuShellEnterCount[5], ' +
+             'gNdsMenuShellEnterCount[4], ' +
              'gNdsMenuShellExitCount[0], gNdsMenuShellExitCount[1], ' +
              'gNdsMenuShellExitCount[2], gNdsMenuShellExitCount[3], ' +
-             'gNdsMenuShellExitCount[4], gNdsMenuShellExitCount[5]'),
+             'gNdsMenuShellExitCount[4]'),
             ('printf "LOOPKIT hash=%08x mismatch=%u readfail=%u overflow=%u rej=%u ' +
              'csscommit=%u cssstart=%u ssscommit=%u sssconfirm=%u sssback=%u fallback=%u\n", ' +
              'gNdsUiKitPackHash, gNdsUiKitPackHashMismatchCount, ' +
@@ -418,6 +429,13 @@ if (-not [string]::IsNullOrWhiteSpace($AnalyzeOnly)) {
              'gNdsMenuShellCssStartCount, gNdsMenuShellSssCommitCount, ' +
              'gNdsMenuShellSssConfirmCount, gNdsMenuShellSssBackCount, ' +
              'gNdsMenuShellSssRandomFallbackCount'),
+            # P2-1h. The backdrop art, over the WHOLE run: `blit` must climb by
+            # three per lap (title + two collage screens) and every failure
+            # counter must stay 0. A lap that stopped drawing the collage would
+            # otherwise close green on scene bookkeeping alone.
+            ('printf "LOOPSURF blit=%u mismatch=%u readfail=%u nolayer=%u\n", ' +
+             'gNdsUiKitSurfaceBlitCount, gNdsUiKitSurfaceHashMismatchCount, ' +
+             'gNdsUiKitSurfaceReadFailCount, gNdsUiKitSurfaceNoLayerCount'),
             ('printf "LOOPARENA base=%08x size=%u\n", ' +
              'gNdsSceneManagerArenaBase, gNdsSceneManagerArenaSize'),
             ('printf "LOOPINPUTRING ' + $ringFmt + '\n", ' + $inputRing),
@@ -532,7 +550,48 @@ if ($null -ne $kit) {
         "STAGE COMMITS: ssscommit=$($k['ssscommit']), expected at least $Loops.")
 }
 
-foreach ($tag in @('LOOPINPUT', 'LOOPCFG', 'LOOPXFER', 'LOOPSCREENS', 'LOOPARENA')) {
+# P2-1h. The backdrop art, gated rather than merely printed: a run that quietly
+# stopped drawing the collage, or drew a stale pack, is a RED here instead of a
+# screenshot nobody takes on the twentieth lap.
+#
+# THE EXPECTED COUNT IS COUNTED, NOT GUESSED. Three screens carry a backdrop --
+# the title and the two the source gives the collage to -- and each draws it
+# ONCE per entry, so the expectation is the sum of those three screens' own
+# entry counts. Writing it as `2 * Loops + 1` instead was wrong on its first
+# run: this walk re-enters at the CHARACTER SELECT, not at VS Mode, so the
+# three backdrop screens are entered once for the whole run whatever the lap
+# count. Tying the assertion to the entry counters also makes it survive a
+# future walk that does re-enter them.
+$surf = $lines | Where-Object { $_ -match '^LOOPSURF ' } | Select-Object -Last 1
+$screens = $lines | Where-Object { $_ -match '^LOOPSCREENS ' } | Select-Object -Last 1
+if ($null -ne $surf) {
+    $s = @{}
+    foreach ($m in [regex]::Matches($surf, '(\w+)=(\d+)')) {
+        $s[$m.Groups[1].Value] = $m.Groups[2].Value
+    }
+    foreach ($zero in @('mismatch', 'readfail', 'nolayer')) {
+        Assert-Loop ([int64]$s[$zero] -eq 0) (
+            "BACKDROP SURFACES: $zero=$($s[$zero]), expected 0.")
+    }
+    if ($null -ne $screens) {
+        $e = @{}
+        foreach ($m in [regex]::Matches($screens, '(\w+)=(\d+)')) {
+            $e[$m.Groups[1].Value] = [int64]$m.Groups[2].Value
+        }
+        # e0 title, e1 mode select, e2 VS mode -- the three backdrop screens.
+        $expected = $e['e0'] + $e['e1'] + $e['e2']
+        Assert-Loop ([int64]$s['blit'] -eq $expected) (
+            "BACKDROP SURFACES: blit=$($s['blit']) against " +
+            "e0+e1+e2=$expected backdrop-screen entries; every entry of the " +
+            'title, the mode select and the VS menu draws exactly one.')
+        Assert-Loop ($e['startup'] -eq 1) (
+            "BOOT SCENE: startup=$($e['startup']), expected exactly 1 -- the " +
+            'frameless boot scene runs once and carries the menu audio load.')
+    }
+}
+
+foreach ($tag in @('LOOPINPUT', 'LOOPCFG', 'LOOPXFER', 'LOOPSCREENS', 'LOOPSURF',
+                   'LOOPARENA')) {
     $line = $lines | Where-Object { $_ -match ("^$tag ") } | Select-Object -Last 1
     if ($null -ne $line) { Write-Output $line }
 }

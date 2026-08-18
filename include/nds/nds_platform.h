@@ -68,6 +68,11 @@ void ndsPlatformClearOriginalSpriteOverlayLayer(s32 is_foreground);
 void ndsPlatformClearOriginalSpritePreview(void);
 void ndsPlatformSetOriginalSpriteOverlayLayerMask(u32 layer_mask);
 void ndsPlatformSetOriginalSpriteOverlayEnabled(s32 is_enabled);
+/* Applies BG2's queued affine transform immediately rather than at the next
+ * present. A caller that draws into the overlay bitmap between a clear and
+ * the first present of a scene needs this, or one frame renders under the
+ * previous scene's transform. */
+void ndsPlatformCommitOriginalSpriteOverlayTransform(void);
 u32 ndsPlatformFastWallpaperCanSeed(void);
 u32 ndsPlatformFastWallpaperBeginSeed(s32 origin_x, s32 origin_y,
                                        u32 scale_x_q16,

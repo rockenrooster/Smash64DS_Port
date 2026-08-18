@@ -7266,7 +7266,12 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
     switch (gSCManagerSceneData.scene_curr)
     {
     case nSCKindStartup:
-        ndsMenuShellRunSplash();
+        /* P2-1h: no screen, no presented frame -- this requests the title and
+         * returns, so boot reaches the title directly (the N64 flow, with the
+         * opening cinematic that precedes it deferred to P2-7). It still runs,
+         * rather than being deleted, because it carries the menu audio load
+         * and the startup scene's own GObj teardown. */
+        ndsMenuShellRunStartup();
         ndsFinishTaskmanRun();
         gNdsSceneBoundaryKind = gSCManagerSceneData.scene_curr;
         gNdsSceneBoundaryResult = NDS_SCENE_BOUNDARY_PASS;

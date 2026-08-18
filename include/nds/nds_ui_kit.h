@@ -119,6 +119,36 @@ typedef struct NdsUiKitImageMetric {
     u8 src_h;
 } NdsUiKitImageMetric;
 
+/* P2-1h -- a BACKDROP surface: menu art too large for an OBJ cell, drawn into
+ * the main engine's BG2 bitmap.
+ *
+ * WHY BG2 AND NOT A NEW BANK.  `docs/p2/P2-1c-vram-map.md` prices the three
+ * options a menu background could take (3D through BG0, the existing BG2
+ * bitmap compositor, or a texture bank) and every one of the other two costs
+ * VRAM this build does not have: main C and D are exactly one 256x256 Bmp16
+ * each with zero slack, and A/B are the GX texture pool.  BG2 costs NOTHING,
+ * because the menu shell ALREADY writes it -- `ndsMenuShellRun` clears both
+ * overlay layers on every screen entry so a menu cannot inherit the last
+ * battle frame.  Writing art there instead of zeroes adds no bank, no
+ * arbitration and no per-frame work: a backdrop is composed once at scene
+ * entry and then simply stays on the screen.
+ *
+ * `x`/`y` are the DS top-left and are SIGNED -- the title emblem's 4/5 origin
+ * is y = -2, exactly as the source's own 320-wide frame clips it at 324.
+ * `opaque` is a bake-time fact (no transparent texel anywhere), and it is what
+ * lets the biggest surface move by whole-row DMA instead of a per-texel
+ * transparency test. */
+typedef struct NdsUiKitSurfaceMetric {
+    u32 offset; /* byte offset into the surface pack */
+    u32 bytes;
+    u16 width;
+    u16 height;
+    s16 x;
+    s16 y;
+    u16 opaque;
+    u32 fnv32; /* this surface's own FNV-1a, so one blit is verifiable alone */
+} NdsUiKitSurfaceMetric;
+
 /* --- Lifetime. Enter claims the engine's OBJ surface and loads the pack;
  * Exit hides everything the kit owns and releases the claim.  Both are
  * idempotent, and both are safe to call on a scene that never draws UI. --- */
@@ -158,6 +188,25 @@ u32 ndsUiKitSetNumber(u32 slot, u32 slots_available, s32 value, s32 right_x,
 /* Layout width in pixels a number of this value will occupy. */
 u32 ndsUiKitNumberWidth(s32 value);
 
+/* --- Backdrop surfaces (P2-1h). `surfaces` indexes the generated manifest
+ * (NDS_MN_UI_KIT_SURFACE_*).
+ *
+ * `ndsUiKitBlitSurfaces` takes a LIST because a screen's whole backdrop is one
+ * NitroFS open: the title reads its own set, the two collage screens read one
+ * surface, and the character/stage selects read none. Call it once, at screen
+ * entry, AFTER the overlay layers are cleared.
+ *
+ * A blinking element cannot be re-read at 60 Hz -- one NitroFS open costs
+ * more than a whole frame's budget -- so `ndsUiKitCacheSurface` keeps exactly
+ * one surface's texels in RAM and `ndsUiKitDrawCachedSurface` /
+ * `ndsUiKitEraseCachedSurface` toggle it in place. Erase writes the field the
+ * surface was composited over, which is why that field is a bake-time
+ * constant rather than something the runtime has to remember. --- */
+s32 ndsUiKitBlitSurfaces(const u8 *surfaces, u32 count);
+s32 ndsUiKitCacheSurface(u32 surface);
+void ndsUiKitDrawCachedSurface(void);
+void ndsUiKitEraseCachedSurface(u16 field_texel);
+
 /* --- Audio. One of NDS_UI_KIT_SFX_*. --- */
 void ndsUiKitSfx(u32 cue);
 
@@ -191,5 +240,22 @@ extern volatile u32 gNdsUiKitVisibleObjectCount;
  * ring, this separates "the seam never fired" from "the pack has no sample". */
 extern volatile u32 gNdsUiKitSfxRequestCount[NDS_UI_KIT_SFX_COUNT];
 extern volatile u32 gNdsUiKitSfxLastId;
+/* P2-1h backdrop surfaces. `Blit` counts surfaces drawn and `Open` the NitroFS
+ * opens they cost, so "one open per screen entry" stays measured rather than
+ * asserted. `HashMismatch` is checked per surface against the bake's own
+ * constant, so a truncated or stale pack is a counted failure and not a
+ * garbled screen; `NoLayer` counts a blit that found no BG2 to draw into,
+ * which is the only way this can silently do nothing. */
+extern volatile u32 gNdsUiKitSurfaceOpenCount;
+extern volatile u32 gNdsUiKitSurfaceBlitCount;
+extern volatile u32 gNdsUiKitSurfaceBytes;
+extern volatile u32 gNdsUiKitSurfaceHashMismatchCount;
+extern volatile u32 gNdsUiKitSurfaceReadFailCount;
+extern volatile u32 gNdsUiKitSurfaceNoLayerCount;
+extern volatile u32 gNdsUiKitSurfaceLastHash;
+extern volatile u32 gNdsUiKitSurfaceCacheCount;
+extern volatile u32 gNdsUiKitSurfaceDrawCachedCount;
+extern volatile u32 gNdsUiKitSurfaceEraseCachedCount;
+extern volatile u32 gNdsUiKitSurfaceTicks;
 
 #endif /* NDS_UI_KIT_H */

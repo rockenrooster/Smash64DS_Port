@@ -1063,6 +1063,21 @@ void ndsPlatformSetOriginalSpriteOverlayEnabled(s32 is_enabled)
         (is_enabled != FALSE) ? NDS_ORIGINAL_SPRITE_OVERLAY_ALL : 0u);
 }
 
+/* P2-1h. Apply BG2's queued affine NOW instead of at the next present.
+ *
+ * The fast wallpaper leaves BG2 under the battle's own 4/5 transform, and
+ * clearing the layer only QUEUES the identity reset -- ndsPlatformEndFrame
+ * commits it. A menu that draws backdrop art between the clear and the first
+ * present would therefore show one frame of that art scaled by whatever the
+ * last battle left behind. This is the same commit, called early; it is
+ * idempotent, because the commit clears its own pending flag. */
+void ndsPlatformCommitOriginalSpriteOverlayTransform(void)
+{
+#if NDS_RENDERER_HW_TRIANGLES && NDS_FAST_WALLPAPER_AFFINE
+    ndsPlatformFastWallpaperCommitAffine();
+#endif
+}
+
 #if NDS_RENDERER_HW_TRIANGLES && NDS_FAST_WALLPAPER_AFFINE
 #define NDS_FAST_WALLPAPER_PREFILL_COLOR (RGB15(8, 20, 27) | BIT(15))
 #define NDS_FAST_WALLPAPER_SCROLL_QUANTUM_Q8 0x40
