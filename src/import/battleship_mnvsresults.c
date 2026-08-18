@@ -11,6 +11,7 @@
 #include <mn/menu.h>
 #include <nds/nds_controller.h>
 #include <nds/nds_platform.h>
+#include <nds/nds_scene_manager.h>
 #include <nds/nds_startup.h>
 #include <nds/nds_task37_profile.h>
 #include <nds/timers.h>
@@ -236,10 +237,14 @@ void ndsMNVSResultsSetLoadScene(void)
     }
 #endif
     ndsDevSceneHarnessApply();
-    gSCManagerSceneData.scene_prev = nSCKindMaps;
-    gSCManagerSceneData.scene_curr = nSCKindVSBattle;
+    /* P2-1b: the destination goes through the scene registry rather than being
+     * two assignments and a taskman call written out here. Same bytes into the
+     * same two fields -- `nSCKindMaps` as scene_prev for the reason above -- but
+     * a kind this build does not have is now refused and counted instead of
+     * handed to scManagerRunLoop's switch, and the hop lands in the transition
+     * ring so the flow is read rather than inferred. */
     gNdsVSResultsRematchCount++;
-    syTaskmanSetLoadScene();
+    ndsSceneManagerRequest((u32)nSCKindVSBattle, (u32)nSCKindMaps);
 }
 
 static void (*sNdsMNVSResultsFuncStart)(void);

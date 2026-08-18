@@ -672,6 +672,16 @@ NDS_FTR_PLAN_VERIFY ?= 0
 # heap generation at probe time. Lab only, default 0: it walks every chain twice
 # per DObj per frame and keeps a 64-entry seen list on the stack.
 NDS_R2_SECOND_ENTRY_DIAG ?= 0
+# P2-1b scene-loop walk. Number of menu -> battle -> results -> menu loops the
+# bounded scene tails in taskman_seam.c drive automatically before they park
+# again. 0 (the default, and the value every published and Boundary
+# configuration carries) compiles the three walk tails out entirely, so mode
+# 163 parks exactly where it always did. Set it on a LAB build to produce the
+# per-scene arena high-water evidence the row closes on -- the ring lives in
+# gNdsSceneManagerRing* and is read by scripts/probe-scene-loop-walk.ps1.
+# Needs a fast-logic harness: the walk's battle leg is a bounded run, not a
+# match, because this measures the scene BOUNDARY, not gameplay.
+NDS_R2_SCENE_LOOP_WALK ?= 0
 # Runtime 2 (docs/Smash64DS_Runtime2_SwitchPlan.md). The whole family defaults
 # to 0 and the published ROMs stay pure Runtime 1 until the switch (plan S5).
 #
@@ -2038,6 +2048,74 @@ override NDS_TASK32_DRAW_HOT_TEXT := 1
 override NDS_TASK39_FX_SPRITES := 1
 override NDS_TASK39_FX_FLASH := 1
 endif
+# P2-1b scene-loop-walk lab target. Its OWN block for the same reason the Task
+# 49 differ has one: appending a member to the tickhud/proof filter above
+# breaks the structural pin at check-gbi-decode-fixtures.ps1:1847.
+#
+# It is the proof build with ONE flag changed -- NDS_HARNESS_FAST_LOGIC := 1.
+# The walk measures the SCENE BOUNDARY (does entry k+1 into a scene reach the
+# same arena high-water as entry k), not gameplay, and it cannot run at
+# NDS_HARNESS_FAST_LOGIC := 0 for a structural reason: the VS Results branch of
+# syTaskmanRunTask loops until sSYTaskmanStatus becomes LoadScene, which in
+# realtime means "until a human presses START", so the loop would never close
+# on its own. Everything else is copied from the proof block deliberately --
+# a walk over a differently-configured binary would be measuring a scene
+# boundary the shipping ROM does not have.
+#
+# NEVER PUBLISHED AND NEVER A PERFORMANCE SURFACE. Fast logic is not the
+# shipping cadence; no tick figure from this target means anything.
+ifeq ($(TARGET),smash64ds-p2-1b-scene-walk-hwtri)
+override NDS_DEV_SCENE_HARNESS := battle_playable_realtime
+override NDS_DEV_LIVE_INPUT_PREVIEW := 1
+override NDS_HARNESS_FAST_LOGIC := 1
+override NDS_RENDERER_HW_TRIANGLES := 1
+override NDS_DEBUG_HUD := 0
+override NDS_RENDERER_PROFILE_LEVEL := 0
+override NDS_SHIP_TELEMETRY := 1
+override NDS_TICK_HUD := 0
+override NDS_RENDERER_FAST_RUN_DEFAULT := 9
+override NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE := 1
+override NDS_TASK36_HW_COMPOSE := 2
+# NDS_R2_PATH is deliberately NOT set here, and it is the one place this target
+# is not the proof build: taskman_seam.c:21 refuses NDS_R2_PATH=1 with
+# NDS_HARNESS_FAST_LOGIC=1, because the R2 battle loop IS the realtime loop.
+# The walk keeps fast logic and loses the R2 battle path. That is sound for
+# what it measures and unsound for anything else: scene entry and teardown are
+# syTaskmanStartTask on both paths, so the per-entry arena high-water is the
+# same question -- but the battle scene's own allocation set is not identical
+# to the shipping one, so a number from this target says "the boundary does not
+# leak", never "the shipping battle costs N".
+override NDS_R2_FIGHTER_HW_MTX := 1
+override NDS_R2_FIGHTER_GX_COMPOSE := 1
+override NDS_R2_STAGE_VALIDATE_STRIDE := 8
+override NDS_R2_FIGHTER_HW_LIGHT := 1
+override NDS_R2_FIGHTER_SHUFFLE_FOLD := 1
+override NDS_R2_CUBIC_FIXED := 1
+override NDS_R2_DELTA_PATH_ITCM := 1
+override NDS_R2_ANIM_CACHE := 1
+override NDS_R2_AOBJ16_PREBAKE := 1
+override NDS_TASK53_REPLAY_ARENA_FIX := 1
+override NDS_BATTLE_PROFILE := 1
+override NDS_TASK44_STAGE_STEADY := 1
+override NDS_R2_STAGE_DIRECT := 1
+override NDS_R2_STAGE_DMA := 1
+override NDS_R2_STAGE_VIEWPROJ := 1
+override NDS_R2_STAGE_PREFLIGHT := 1
+override NDS_R2_FIGHTER_MTX_DIRECT := 1
+override NDS_R2_FIGHTER_RUN_MEMO := 1
+override NDS_TASK37_ITCM_LEAVES := 7
+override NDS_SCENE_MIP_CACHE_LAB := 0
+override NDS_FAST_WALLPAPER_AFFINE := 1
+override NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT := 1
+override NDS_IFCOMMON_HYBRID_OAM := 0
+override NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS := 0
+override NDS_TASK16_FLOAT_COMPARE := 1
+override NDS_TASK16_FLOAT_I2F := 1
+override NDS_TASK16_FLOAT_ADDSUB := 1
+override NDS_TASK32_DRAW_HOT_TEXT := 1
+override NDS_TASK39_FX_SPRITES := 1
+override NDS_TASK39_FX_FLASH := 1
+endif
 # Task 49 GX-differ lab target. Its OWN block (appending to the tickhud/proof
 # block breaks the structural pin at check-gbi-decode-fixtures.ps1:1847).
 # Profile 1 (oracle instrumentation), HW_COMPOSE=2 (capture the real shipping
@@ -2741,7 +2819,7 @@ CFILES := main.c nds_platform.c nds_ifcommon_oam.c nds_task39_effect_census.c nd
 	battleship_sys_framebuffer.c battleship_sys_zbuffer.c video_bootstrap.c \
 	battleship_sys_sintable.c battleship_sys_matrix.c \
 	battleship_libultra_gu_normalize.c battleship_libultra_gu_mtxcatf.c \
-	battleship_scmanager.c battleship_mnstartup.c scene_backend.c scene_harness.c nds_match_config.c utils.c vector.c \
+	battleship_scmanager.c battleship_mnstartup.c scene_backend.c scene_harness.c nds_match_config.c nds_scene_manager.c utils.c vector.c \
 	battleship_scsubsyscontroller.c \
 	battleship_sys_taskman.c battleship_sys_objman.c \
 	battleship_sys_objhelper.c battleship_sys_objanim.c \
@@ -3666,6 +3744,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_FTR_PLAN_ROUTE $(NDS_FTR_PLAN_ROUTE)u'; \
 		echo '#define NDS_FTR_PLAN_VERIFY $(NDS_FTR_PLAN_VERIFY)u'; \
 		echo '#define NDS_R2_SECOND_ENTRY_DIAG $(NDS_R2_SECOND_ENTRY_DIAG)'; \
+		echo '#define NDS_R2_SCENE_LOOP_WALK $(NDS_R2_SCENE_LOOP_WALK)u'; \
 		echo '#define NDS_R2_PATH $(NDS_R2_PATH)'; \
 		echo '#define NDS_R2_STAGE_DIRECT $(NDS_R2_STAGE_DIRECT)'; \
 		echo '#define NDS_R2_FIXED_SQRT $(NDS_R2_FIXED_SQRT)'; \

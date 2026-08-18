@@ -7319,6 +7319,17 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
             ndsPlatformSetOriginalSpriteOverlayEnabled(FALSE);
             return;
         }
+#if NDS_R2_SCENE_LOOP_WALK
+        /* Results leg. Closing the loop back to the menu is what makes the
+         * high-water ring an N-loop reading instead of a two-entry one; the
+         * START rematch above still sends Results straight to VSBattle when a
+         * human presses it, and that path is untouched. */
+        if (ndsSceneWalkAdvance((u32)nSCKindVSMode) != FALSE)
+        {
+            ndsPlatformSetOriginalSpriteOverlayEnabled(FALSE);
+            return;
+        }
+#endif
         osStopThread(NULL);
         return;
     }
@@ -7588,6 +7599,16 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
         gNdsSceneBoundaryKind = gSCManagerSceneData.scene_curr;
         gNdsSceneBoundaryResult = NDS_SCENE_BOUNDARY_PASS;
         gNdsOriginalBootStage |= NDS_BOOT_SCENE_REACHED;
+#if NDS_R2_SCENE_LOOP_WALK
+        /* P2-1b scene-loop walk, menu leg. This bounded VS Mode branch parks
+         * here in every other configuration; with the walk armed it spends a
+         * hop and hands the loop to the match instead. */
+        if (ndsSceneWalkAdvance((u32)nSCKindVSBattle) != FALSE)
+        {
+            ndsFinishTaskmanRun();
+            return;
+        }
+#endif
         osStopThread(NULL);
         return;
     }
@@ -9460,8 +9481,24 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
             return;
         }
 #endif
+#if NDS_R2_SCENE_LOOP_WALK
+        /* Battle leg -- and it spends NO hop, because the battle scene already
+         * owns this transition and must keep owning it. decomp
+         * sc/sccommon/scvsbattle.c:559 sets `scene_prev = scene_curr;
+         * scene_curr = nSCKindVSResults` after taskman returns, unconditionally
+         * and AFTER the Sudden Death check at :540 has had its chance to run a
+         * second entry into this same scene. A walk hop here would be
+         * overwritten by :560 anyway, and worse, :559 would then copy the hop's
+         * VSResults into scene_prev and break the `prev == VSBattle` test
+         * battleship_scvsbattle.c:486 makes. Returning instead of parking hands
+         * the scene back to its own tail, so the walk gets the source's real
+         * battle teardown -- Sudden Death included, which is the re-entry the
+         * arena ring most needs to hold flat. */
+        return;
+#else
         osStopThread(NULL);
         return;
+#endif
     }
 
     /* The real taskman scene setup populated sSYTaskmanDefaultFunction and the

@@ -28,6 +28,7 @@
 #include <nds/nds_renderer.h>
 #include <nds/nds_scene.h>
 #include <nds/nds_scene_harness.h>
+#include <nds/nds_scene_manager.h>
 #include "nds_scene_harness_config.h"
 #include <nds/nds_startup.h>
 #include <nds/nds_task9_float_census.h>
