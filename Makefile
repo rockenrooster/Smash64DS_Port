@@ -1348,6 +1348,17 @@ NDS_R2_REBIRTH_HALO_FAST_ADAPTER ?= 1
 # 2026-08-06. MUST STAY 1 for anything published or measured: a frozen Fox is
 # not representative gameplay and its ticks are not a Boundary figure.
 NDS_R2_FOX_CPU_DEFAULT ?= 1
+# THE P1 DEMO LADDER (owner, 2026-08-17): Fox opens at CPU level 1 and gains a
+# level each time Mario wins and START restarts from Results, wrapping 9 -> 1.
+# The battle text HUD already prints the live level as "CPU L<n> [Fox]" from
+# gNdsIFCommonHUDP1Level, so this adds no HUD code.
+#
+# It changes what the SHIPPED demo plays, so it also changes the first match of
+# a Boundary run from level 3 to level 1. That is the owner's call and it is
+# deliberate; the NDS_R2_BOTH_CPU stress arm re-pins both fighters at level 3
+# (scene_harness.c) so every banked gate figure stays comparable. Build with 0
+# for a fixed level-3 Fox.
+NDS_DEMO_FOX_CPU_LADDER ?= 1
 # NDS_R2_PARTICLE_V16_HEADROOM IS DELETED, AND A FIXED FACTOR IS WHY.
 #
 # It bought one extra bit of range (x16 -> x8, reach +/-2047.9 -> +/-4095.9) at
@@ -3734,7 +3745,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_R2_REBIRTH_HALO_PHASE_PROFILE $(NDS_R2_REBIRTH_HALO_PHASE_PROFILE)'; \
 		echo '#define NDS_R2_REBIRTH_HALO_FAST_ADAPTER $(NDS_R2_REBIRTH_HALO_FAST_ADAPTER)'; \
 		echo '#define NDS_R2_FOX_CPU_DEFAULT $(NDS_R2_FOX_CPU_DEFAULT)'; \
-		echo '#define NDS_R2_COLLISION_L7_ORACLE $(NDS_R2_COLLISION_L7_ORACLE)'; \
+		echo '#define NDS_DEMO_FOX_CPU_LADDER $(NDS_DEMO_FOX_CPU_LADDER)'; \n		echo '#define NDS_R2_COLLISION_L7_ORACLE $(NDS_R2_COLLISION_L7_ORACLE)'; \
 		echo '#define NDS_R2_COLLISION_FIXED $(NDS_R2_COLLISION_FIXED)'; \
 		echo '#define NDS_R2_COLLISION_FIXED_DISPATCH $(NDS_R2_COLLISION_FIXED_DISPATCH)u'; \
 		echo '#define NDS_R2_COLLISION_FIXED_NARROW $(NDS_R2_COLLISION_FIXED_NARROW)'; \

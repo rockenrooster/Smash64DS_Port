@@ -84,6 +84,8 @@ volatile u32 gNdsVSResultsToResultsTicks;
  * restart match (P1 specific)". Counts the redirects so a soak can prove match
  * two happened rather than inferring it from a screenshot. */
 volatile u32 gNdsVSResultsRematchCount;
+/* 1..9, wrapping. Starts at 1 so the demo opens easy. */
+volatile u32 gNdsDemoFoxCpuLevel = 1u;
 volatile u32 gNdsVSResultsInputPollCount;
 volatile u32 gNdsVSResultsInputSeenMask;
 volatile u32 gNdsVSResultsInputTapMask;
@@ -204,6 +206,35 @@ void ndsBaseMNVSResultsStartScene(void);
  * Do not retry bare `swi #0` -- it is measured, not suspected. */
 void ndsMNVSResultsSetLoadScene(void)
 {
+#if NDS_DEMO_FOX_CPU_LADDER
+    /* THE DEMO LADDER (owner, 2026-08-17): Fox opens at level 1 and gains a
+     * level every time Mario wins and START starts the next match, wrapping
+     * 9 -> 1. A Mario loss repeats the level rather than punishing twice.
+     *
+     * BEFORE ndsDevSceneHarnessApply(), not after: that call re-seeds
+     * gSCManagerTransferBattleState from the harness defaults, and the harness
+     * reads this variable. Advancing afterwards would show the new level on the
+     * HUD one match late.
+     *
+     * PLACE 0 IS THE WINNER, NOT 1. sMNVSResultsPlaces is 0-based: in a
+     * two-player match decomp mnvsresults.c:901-909 sets the WIN status on
+     * case 0 and the LOSE status on case 1, and :422/:445/:494 all test == 0
+     * for the winner. The on-screen "Place 1" is a display value, and the
+     * `place == 1` in the winner-sprite helper at :1558 is a different,
+     * display-side parameter -- reading either of those instead of the array's
+     * own writers is what made the first version of this line test for SECOND
+     * place, so it advanced on a loss and never on a win (owner, 2026-08-17:
+     * "it does not increment").
+     *
+     * Index 0 is Mario, populated every Results frame by
+     * ndsMNVSResultsRecordFrame from sMNVSResultsPlaces and cleared at scene
+     * start -- so it is final and valid at the moment START is pressed. */
+    if (gNdsVSResultsFighterPlace[0] == 0u)
+    {
+        gNdsDemoFoxCpuLevel = (gNdsDemoFoxCpuLevel >= 9u) ?
+            1u : (gNdsDemoFoxCpuLevel + 1u);
+    }
+#endif
     ndsDevSceneHarnessApply();
     gSCManagerSceneData.scene_prev = nSCKindMaps;
     gSCManagerSceneData.scene_curr = nSCKindVSBattle;

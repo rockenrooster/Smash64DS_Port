@@ -186,7 +186,17 @@ static void ndsSceneHarnessSeedBattlePlayableDefaults(void)
     gSCManagerTransferBattleState.pl_count = 1;
     gSCManagerTransferBattleState.cp_count = 1;
     gSCManagerTransferBattleState.players[1].pkind = nFTPlayerKindCom;
+#if NDS_DEMO_FOX_CPU_LADDER
+    /* The demo ladder owns Fox's level: 1 at boot, +1 per Mario win, wrapping
+     * 9 -> 1 (owner, 2026-08-17). ndsMNVSResultsSetLoadScene advances it just
+     * before this function re-runs on a START restart. The NDS_R2_BOTH_CPU
+     * stress arm below deliberately does NOT ride the ladder -- it pins both
+     * fighters at level 3 so every banked measurement stays comparable. */
+    gSCManagerTransferBattleState.players[1].level =
+        (s32)gNdsDemoFoxCpuLevel;
+#else
     gSCManagerTransferBattleState.players[1].level = 3;
+#endif
 #if NDS_R2_BOTH_CPU
     /* Switch plan R2-06's harness prerequisite, owner-requested 2026-07-29.
      * Mario becomes a level-3 CPU too, so both fighters attack continuously
@@ -203,6 +213,12 @@ static void ndsSceneHarnessSeedBattlePlayableDefaults(void)
      * from this build as the Boundary P95. */
     gSCManagerTransferBattleState.players[0].pkind = nFTPlayerKindCom;
     gSCManagerTransferBattleState.players[0].level = 3;
+    /* OFF THE DEMO LADDER ON PURPOSE. Every banked gate figure was measured
+     * with both fighters at level 3, so the stress arm re-pins Fox here even
+     * when NDS_DEMO_FOX_CPU_LADDER seeded it from the ladder above. Letting the
+     * ladder reach this arm would make a rematched measurement incomparable to
+     * the one before it, silently. */
+    gSCManagerTransferBattleState.players[1].level = 3;
     gSCManagerTransferBattleState.pl_count = 0;
     gSCManagerTransferBattleState.cp_count = 2;
     /* THE MATCH LENGTH IS NOT THIS FLAG'S BUSINESS. This branch changes WHO

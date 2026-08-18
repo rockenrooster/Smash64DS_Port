@@ -2908,7 +2908,22 @@ try {
     if ($ImportBattleShipFTComputer) {
         $cc = Get-Ints $computerConfig
         $expectedTimeLimit = 1
-        Assert-Condition ($computerConfig.Success -and $cc[0] -eq 0 -and $cc[1] -eq 1 -and $cc[2] -eq 3 -and $cc[3] -eq 1 -and $cc[4] -eq 1 -and $cc[5] -eq $expectedTimeLimit -and $cc[6] -eq 0 -and $cc[7] -eq 0 -and $cc[8] -eq $FoxCpuMode) 'Mode 163 did not preserve the items-off Mario human versus Fox level-3 CPU match and selected Fox CPU decision mode.' $gdbStdout
+        # THE FOX CPU LEVEL IS NO LONGER A LITERAL 3 (owner, 2026-08-17). The P1
+        # demo ladder opens Fox at level 1 and advances a level per Mario win,
+        # so the FIRST match of a run -- which is what this stop reads -- is
+        # level 1 whenever NDS_DEMO_FOX_CPU_LADDER is on, and 3 when it is off.
+        # Read the expectation from the build's own generated config rather than
+        # pinning either number here: a literal would either red the shipped
+        # demo or stop pinning the level at all, and this assertion's whole job
+        # is to pin the match configuration.
+        $ladderConfig = Join-Path (Split-Path -Parent $elf) 'nds_build_config.h'
+        $expectedFoxLevel = 3
+        if ((Test-Path -LiteralPath $ladderConfig) -and
+            ((Get-Content -LiteralPath $ladderConfig -Raw) -match
+             '#define\s+NDS_DEMO_FOX_CPU_LADDER\s+1')) {
+            $expectedFoxLevel = 1
+        }
+        Assert-Condition ($computerConfig.Success -and $cc[0] -eq 0 -and $cc[1] -eq 1 -and $cc[2] -eq $expectedFoxLevel -and $cc[3] -eq 1 -and $cc[4] -eq 1 -and $cc[5] -eq $expectedTimeLimit -and $cc[6] -eq 0 -and $cc[7] -eq 0 -and $cc[8] -eq $FoxCpuMode) ("Mode 163 did not preserve the items-off Mario human versus Fox CPU match at the expected opening level $expectedFoxLevel and selected Fox CPU decision mode.") $gdbStdout
     }
     $task9StateCapture = $null
     if ($Task9StateHashMode -eq 1) {

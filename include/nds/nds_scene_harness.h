@@ -187,6 +187,17 @@ extern volatile u32 gNdsSceneHarnessSceneCurr;
 extern volatile u32 gNdsSceneHarnessScenePrev;
 extern volatile u32 gNdsSceneHarnessReservedMask;
 extern volatile u32 gNdsBattlePlayableFoxCpuEnabled;
+/* THE DEMO LADDER'S CURRENT FOX CPU LEVEL, 1..9 (owner, 2026-08-17).
+ *
+ * Seeded into gSCManagerTransferBattleState.players[1].level by the
+ * battle_playable harness and advanced by ndsMNVSResultsSetLoadScene when Mario
+ * wins and START restarts. It is a plain u32, not a pointer or a size, so it is
+ * deliberately allowed to outlive the scene boundary that rewinds the taskman
+ * arena -- SwitchPlan 3.12 governs things the boundary MOVES, and this is not
+ * one of them. The HUD needs no new code: ifcommon publishes
+ * gNdsIFCommonHUDP1Level from players[1].level every frame and the battle text
+ * HUD already prints it as "CPU L<n> [Fox]". */
+extern volatile u32 gNdsDemoFoxCpuLevel;
 
 void ndsDevSceneHarnessApply(void);
 
