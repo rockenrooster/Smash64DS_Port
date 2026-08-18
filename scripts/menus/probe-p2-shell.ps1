@@ -1,30 +1,39 @@
 [CmdletBinding()]
 param(
-    [string]$Build = 'build-p2-1f-sss',
-    [string]$Target = 'smash64ds-p2-1f-sss-hwtri',
+    [string]$Build = 'build-p2-shell',
+    [string]$Target = 'smash64ds-p2-shell-hwtri',
     [ValidateRange(1, 8)][int]$RunnerSlot = 7,
-    [ValidateRange(30, 3600)][int]$TimeoutSeconds = 900,
+    [ValidateRange(30, 3600)][int]$TimeoutSeconds = 1800,
     # Stops, not frames, and it must not exceed what the ROM produces (the
     # trailing `continue` below otherwise waits for a stop that never comes and
     # the probe exits by timeout). The breakpoint is ndsSceneManagerEnter, so
-    # one stop is one scene entry. A one-pass P2-1f build makes at least NINE --
-    # Startup, Title, ModeSelect, VSMode, PlayersVS, Maps, PlayersVS (the stage
-    # select's own B back-out), Maps, VSBattle -- and then either Sudden Death
-    # or VSResults depending on how the match ends. Nine is therefore the
-    # largest count that does not depend on the match's OUTCOME, and the outcome
-    # moves with the CPU level the character select changes.
-    [ValidateRange(2, 64)][int]$Hits = 9,
+    # one stop is one scene entry. A one-pass shipping-configuration run makes
+    # ELEVEN -- Startup, Title, ModeSelect, VSMode, PlayersVS, Maps, PlayersVS
+    # (the stage select's own B back-out), Maps, VSBattle, VSResults, and then
+    # PlayersVS again because P2-1g's scripted START closes the lap through the
+    # source's own Results exit. Nine was the P2-1f ceiling for a reason that no
+    # longer holds: the run used to end at a Results screen nothing could leave,
+    # so a tenth stop depended on how the match ENDED (Sudden Death or Results).
+    # It still does, but only for stop 10's KIND -- and the eleventh stop is
+    # what makes the realtime arm carry the rematch evidence too.
+    [ValidateRange(2, 64)][int]$Hits = 11,
     [string]$Artifact = ''
 )
 
-# P2-1f evidence. Reads the stage select's own seam state -- cursor slot,
-# refused moves, the two confirm paths and the descriptor's STAGE field -- on
-# top of everything the P2-1e probe read, out of a ROM built
-# NDS_P2_MENU_SHELL=1. It SUPERSEDES scripts/menus/probe-p2-1e-css.ps1 for the
-# same reason that one superseded the P2-1d probe: the flow it walked no longer
-# exists (a ready START now leads to the stage select, and Results returns to
-# the character select), and every figure it printed is printed here for six
-# screens instead of five.
+# THE VS SHELL'S SHIPPING-CONFIGURATION PROBE, and the phase's cadence
+# instrument. One scripted pass through all six screens and the REAL one-minute
+# match at NDS_HARNESS_FAST_LOGIC=0, out of a ROM built NDS_P2_MENU_SHELL=1 --
+# so every tick figure here is a shipping-cadence figure, unlike the loop
+# verifier's fast-logic arm (scripts/verify-p2-shell-loop.ps1), which is the
+# scene-boundary instrument and no cadence surface at all.
+#
+# IT WAS probe-p2-1f-sss.ps1 UNTIL P2-1g. Each row of P2-1 renamed its
+# predecessor because the flow it walked stopped existing; the phase is now
+# closed, so the name is the phase's. The last flow change is this row's own:
+# Results no longer parks at the end of the pass, because the walk presses
+# START on it, so the run continues back to the character select and the
+# realtime arm carries the rematch evidence (MSREMATCH) as well as the
+# fast-logic loop arm.
 #
 # WHY THIS BREAKPOINT. Every figure here is cumulative, so the LAST line of a
 # run is the whole window and the intermediate lines are the timeline. A stop
@@ -94,12 +103,12 @@ $rom = Resolve-Smash64DSBuildOutput -Root $root -Target $Target -Build $Build -E
 $elf = Resolve-Smash64DSBuildOutput -Root $root -Target $Target -Build $Build -Extension '.elf'
 if ([string]::IsNullOrWhiteSpace($Artifact)) {
     $Artifact = Join-Path $root ('artifacts\verification\' +
-        (Get-Date -Format 'yyyy-MM-dd') + '_p2-1f-sss.txt')
+        (Get-Date -Format 'yyyy-MM-dd') + '_p2-shell.txt')
 }
 
 $buildConfig = Join-Path (Resolve-Smash64DSBuildPath -Root $root -Build $Build) 'nds_build_config.h'
 if (-not (Test-Path -LiteralPath $buildConfig -PathType Leaf)) {
-    throw "p2-1f probe: $Build has no nds_build_config.h; refusing stale evidence."
+    throw "p2-shell probe: $Build has no nds_build_config.h; refusing stale evidence."
 }
 $configText = Get-Content -LiteralPath $buildConfig -Raw
 foreach ($flag in @('NDS_P2_UI_KIT', 'NDS_P2_MENU_SHELL')) {
@@ -107,7 +116,7 @@ foreach ($flag in @('NDS_P2_UI_KIT', 'NDS_P2_MENU_SHELL')) {
     if ((-not $m.Success) -or ($m.Groups[1].Value -eq '0')) {
         # A run against a shell-less ROM would report every counter as
         # "missing symbol" and read as a broken shell rather than a wrong build.
-        throw "p2-1f probe: $Build was built with $flag off; nothing to read."
+        throw "p2-shell probe: $Build was built with $flag off; nothing to read."
     }
     Write-Output ("build config: {0}={1}" -f $flag, $m.Groups[1].Value)
 }
@@ -123,6 +132,7 @@ $required = @(
     'gNdsMenuShellScreen', 'gNdsMenuShellEnterCount', 'gNdsMenuShellExitCount',
     'gNdsMenuShellFrames', 'gNdsMenuShellWorkHist', 'gNdsMenuShellWorkMax',
     'gNdsMenuShellVBlankHist', 'gNdsMenuShellVBlankMax',
+    'gNdsMenuShellWorkMaxFrame', 'gNdsMenuShellWorkMaxCues',
     'gNdsMenuShellEnterTicks', 'gNdsMenuShellTransitionRing',
     'gNdsMenuShellTransitionCount', 'gNdsMenuShellInputRing',
     'gNdsMenuShellInputCount', 'gNdsMenuShellDeniedCount',
@@ -148,6 +158,10 @@ $required = @(
     'gNdsMenuShellSssRandomFallbackCount', 'gNdsMenuShellSssCueCount',
     'gNdsMenuShellSssCueLastId',
     'gNdsMatchConfig',
+    # P2-1g rematch seam.
+    'gNdsVSResultsRematchCount', 'gNdsMenuShellWalkResultsPressCount',
+    'gNdsVSResultsPadMask', 'gNdsVSResultsInputSeenMask',
+    'gNdsVSResultsInputTapMask', 'gNdsVSResultsInputPollCount',
     'gNdsUiKitEnterCount', 'gNdsUiKitEnterRejectCount', 'gNdsUiKitExitCount',
     'gNdsUiKitPackOpenCount', 'gNdsUiKitPackBytesLoaded', 'gNdsUiKitPackHash',
     'gNdsUiKitPackHashMismatchCount', 'gNdsUiKitPackReadFailCount',
@@ -163,13 +177,18 @@ $required = @(
     'gNdsAudioBgmIsLooping', 'gNdsAudioBgmStreamBytes',
     'gNdsAudioBgmModeSelectPlayCount', 'gNdsAudioBgmPupupuPlayCount',
     'gNdsAudioBgmWinMarioPlayCount', 'gNdsAudioBgmWinFoxPlayCount',
-    'gNdsAudioBgmResultsPlayCount', 'gNdsAudioBgmUnsupportedTrackCount'
+    'gNdsAudioBgmResultsPlayCount', 'gNdsAudioBgmUnsupportedTrackCount',
+    # P2-1g cadence attribution.
+    'gNdsAudioBgmRefillCount', 'gNdsAudioBgmStreamedBytes',
+    'gNdsAudioBgmStreamBytesPerSecond', 'gNdsAudioBgmElapsedFrames',
+    'gNdsAudioBgmLoopCount', 'gNdsAudioFgmPlayCalls',
+    'gNdsAudioFgmPlayFailCount', 'gNdsAudioFgmLoaded'
 )
 $nm_lines = & $nm $elf
 $symbols = $nm_lines | ForEach-Object { ($_ -split '\s+')[-1] }
 $missing = @($required | Where-Object { $symbols -notcontains $_ })
 if ($missing.Count -gt 0) {
-    throw ("p2-1f probe symbols absent from {0}: {1}" -f $elf, ($missing -join ', '))
+    throw ("p2-shell probe symbols absent from {0}: {1}" -f $elf, ($missing -join ', '))
 }
 # The FGM miss ring is the SFX seam's negative half: the shell asks with the
 # source's own cue ids and this ring says which of them the pack carries.
@@ -189,8 +208,8 @@ $context = Initialize-MelonDSVerifierContext `
     -Root $root -MelonDS '' -RunnerSlot $RunnerSlot -NoBuild
 $melon_dir = Split-Path -Parent $context.MelonDSPath
 $log_dir = Get-MelonDSVerifierLogDir -Root $root -RunnerSlot $RunnerSlot
-$stdout = Join-Path $log_dir 'melonds.p2-1f-sss.stdout.log'
-$stderr = Join-Path $log_dir 'melonds.p2-1f-sss.stderr.log'
+$stdout = Join-Path $log_dir 'melonds.p2-shell.stdout.log'
+$stderr = Join-Path $log_dir 'melonds.p2-shell.stderr.log'
 $log_temp = if (-not [string]::IsNullOrWhiteSpace($env:SMASH64DS_VERIFY_TEMP_DIR)) {
     $env:SMASH64DS_VERIFY_TEMP_DIR
 } else {
@@ -242,6 +261,12 @@ try {
         'printf "MSSHELL %d screen=%u splash=%u/%u title=%u/%u mode=%u/%u vs=%u/%u css=%u/%u sss=%u/%u\n", $n, gNdsMenuShellScreen, gNdsMenuShellEnterCount[0], gNdsMenuShellExitCount[0], gNdsMenuShellEnterCount[1], gNdsMenuShellExitCount[1], gNdsMenuShellEnterCount[2], gNdsMenuShellExitCount[2], gNdsMenuShellEnterCount[3], gNdsMenuShellExitCount[3], gNdsMenuShellEnterCount[4], gNdsMenuShellExitCount[4], gNdsMenuShellEnterCount[5], gNdsMenuShellExitCount[5]',
         'printf "MSFRAMES %d f0=%u f1=%u f2=%u f3=%u f4=%u f5=%u\n", $n, gNdsMenuShellFrames[0], gNdsMenuShellFrames[1], gNdsMenuShellFrames[2], gNdsMenuShellFrames[3], gNdsMenuShellFrames[4], gNdsMenuShellFrames[5]',
         'printf "MSMAX %d w0=%u w1=%u w2=%u w3=%u w4=%u w5=%u\n", $n, gNdsMenuShellWorkMax[0], gNdsMenuShellWorkMax[1], gNdsMenuShellWorkMax[2], gNdsMenuShellWorkMax[3], gNdsMenuShellWorkMax[4], gNdsMenuShellWorkMax[5]',
+        # P2-1g. THE WORST FRAME'S LABEL, per screen: which presented frame it
+        # was and how many FGM play calls that same frame made. This is what
+        # turns MSMAX from a number into an attribution -- a max whose `c` is
+        # 0 is not an audio frame, whatever anyone suspected.
+        'printf "MSMAXAT %d f0=%u/c%u f1=%u/c%u f2=%u/c%u f3=%u/c%u f4=%u/c%u f5=%u/c%u
+", $n, gNdsMenuShellWorkMaxFrame[0], gNdsMenuShellWorkMaxCues[0], gNdsMenuShellWorkMaxFrame[1], gNdsMenuShellWorkMaxCues[1], gNdsMenuShellWorkMaxFrame[2], gNdsMenuShellWorkMaxCues[2], gNdsMenuShellWorkMaxFrame[3], gNdsMenuShellWorkMaxCues[3], gNdsMenuShellWorkMaxFrame[4], gNdsMenuShellWorkMaxCues[4], gNdsMenuShellWorkMaxFrame[5], gNdsMenuShellWorkMaxCues[5]',
         'printf "MSENTER %d e0=%u e1=%u e2=%u e3=%u e4=%u e5=%u\n", $n, gNdsMenuShellEnterTicks[0], gNdsMenuShellEnterTicks[1], gNdsMenuShellEnterTicks[2], gNdsMenuShellEnterTicks[3], gNdsMenuShellEnterTicks[4], gNdsMenuShellEnterTicks[5]'
     ) + (New-MenuScreenPrintf -Screen 0) + (New-MenuScreenPrintf -Screen 1) +
         (New-MenuScreenPrintf -Screen 2) + (New-MenuScreenPrintf -Screen 3) +
@@ -284,6 +309,18 @@ try {
         } else {
             'printf "MSMISS %d ring=absent\n", $n'
         }),
+        # P2-1g CADENCE ATTRIBUTION. The one-frame outlier P2-1e/1f left
+        # unattributed on the row screens is an AUDIO suspicion on record
+        # (P2-1d-1's splash FGM-pack load and mode-select BGM stream), and
+        # these are the counters that can refute it: a screen that carries
+        # the outlier while its refill count is FLAT across its own scene
+        # stops did not pay for a stream refill, and a screen with no track
+        # at all cannot have paid for one. gNdsAudioBgmRefillTicksMax would
+        # settle it directly and is NOT in this build -- it lives behind
+        # NDS_RENDERER_PROFILE_LEVEL >= 1, which the shipping shell arm sets
+        # to 0 -- so the split here is by PRESENCE, not by price.
+        'printf "MSAUDIOWORK %d refills=%u streamed=%u bps=%u elapsed=%u loops=%u fgmcalls=%u fgmfail=%u fgmloaded=%u
+", $n, gNdsAudioBgmRefillCount, gNdsAudioBgmStreamedBytes, gNdsAudioBgmStreamBytesPerSecond, gNdsAudioBgmElapsedFrames, gNdsAudioBgmLoopCount, gNdsAudioFgmPlayCalls, gNdsAudioFgmPlayFailCount, gNdsAudioFgmLoaded',
         'printf "MSBGM %d playing=%u track=%u calls=%u looping=%u streambytes=%u modesel=%u pupupu=%u winmario=%u winfox=%u results=%u unsupported=%u\n", $n, gNdsAudioBgmPlaying, gNdsAudioBgmTrackID, gNdsAudioBgmPlayCalls, gNdsAudioBgmIsLooping, gNdsAudioBgmStreamBytes, gNdsAudioBgmModeSelectPlayCount, gNdsAudioBgmPupupuPlayCount, gNdsAudioBgmWinMarioPlayCount, gNdsAudioBgmWinFoxPlayCount, gNdsAudioBgmResultsPlayCount, gNdsAudioBgmUnsupportedTrackCount',
         # The arena BASE and SIZE, which P2-1d's probe did not print and which a
         # cross-build high-water comparison is uninterpretable without: the
@@ -294,6 +331,16 @@ try {
         # entries is read rather than guessed at: `hops` reaching 0 is the
         # walk deliberately parking, and any other reason would leave it
         # non-zero. Absent (and printed as such) on a non-walk build.
+        # P2-1g. The rematch seam, on the REALTIME arm -- the one arm where
+        # Results genuinely waits for a human. `rematch` counts
+        # ndsMNVSResultsSetLoadScene bodies run, `press` counts the rising
+        # edges the walk synthesised, and pad/seen/tap split a refusal into
+        # its three possible halves (battleship_mnvsresults.c:376): the pad the
+        # port can read, the hold the SOURCE pipeline saw, and the edge
+        # mnVSResultsCheckExit samples. `pad` reading 0 while `seen`/`tap` carry
+        # 0x1000 is correct and not a defect -- ndsControllerLiveButtons reads
+        # the RAW keypad, which a synthesised press deliberately never touches.
+        'printf "MSREMATCH %d rematch=%u press=%u pad=%04x seen=%04x tap=%04x poll=%u\n", $n, gNdsVSResultsRematchCount, gNdsMenuShellWalkResultsPressCount, gNdsVSResultsPadMask, gNdsVSResultsInputSeenMask, gNdsVSResultsInputTapMask, gNdsVSResultsInputPollCount',
         $(if ($symbols -contains 'gNdsSceneWalkHopsRemaining') {
             'printf "MSWALK %d hops=%u loops=%u\n", $n, gNdsSceneWalkHopsRemaining, gNdsSceneWalkLoopsCompleted'
         } else {
@@ -339,14 +386,14 @@ try {
 
     Invoke-GdbMarkerScript `
         -Gdb $gdb -Elf $elf -Root $root -Commands $commands `
-        -ScriptName 'p2_1f_sss_probe.gdb' `
+        -ScriptName 'p2_shell_probe.gdb' `
         -TimeoutSeconds $TimeoutSeconds | Out-Null
 }
 finally {
     # From the capture file, never the helper's return value: this probe's last
     # command is an unbounded `continue`, so it exits by timeout by design and
     # the capture still holds every line taken before that.
-    $captured = Join-Path $log_temp 'p2_1f_sss_probe.gdb.out'
+    $captured = Join-Path $log_temp 'p2_shell_probe.gdb.out'
     if (Test-Path -LiteralPath $captured) {
         New-Item -ItemType Directory -Force -Path (Split-Path -Parent $Artifact) |
             Out-Null
