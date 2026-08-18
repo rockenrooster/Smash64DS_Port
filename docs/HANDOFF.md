@@ -30,14 +30,15 @@ Current: 2026-08-17 — **P1 IS COMPLETE AND P2 IS PLANNED AND OWNER-APPROVED.**
 
 ## Next
 
-1. `P2-1a`…`P2-1e` are GREEN (descriptor seam, scene manager, UI kit, splash/
-   title/menu/rules, character select, and the two audio-pack splits 1c-1 and
-   1d-1). The shell now runs boot → splash → title → main menu → VS menu →
-   character select → battle → results. Take the board's highest-impact
-   remaining red: `P2-1e-1` (the four CSS cues and BGM 10, a pack render plus
-   a repin — the spec is written out in full on the row), then `P2-1f` (stage
-   select), then `P2-1g` (loop verifier, which becomes the new Boundary and
-   carries the owner visual pass for every shell screen).
+1. `P2-1a`…`P2-1e-1` are GREEN (descriptor seam, scene manager, UI kit, splash/
+   title/menu/rules, character select, and the three audio-pack splits 1c-1,
+   1d-1, 1e-1). The shell now runs boot → splash → title → main menu → VS
+   menu → character select → battle → results, with the CSS's own five audio
+   cues (four FGM + BGM 10) fully packed and proven (`MSMISS ring=0`,
+   `MSBGM … unsupported=0`). Take the board's highest-impact remaining red:
+   `P2-1f` (stage select — inherits the CSS's own `is_stage_select` branch,
+   see the row), then `P2-1g` (loop verifier, which becomes the new Boundary
+   and carries the owner visual pass for every shell screen).
 2. Before implementing: read `docs/p2/P2-1-vs-shell.md`, then BattleShip
    `src/sc/` and `src/gm/` (how VS settings reach battle) and `src/mn/`
    (menu scenes). CodeGraph first per repo rules.

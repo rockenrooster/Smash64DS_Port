@@ -37,6 +37,16 @@ $tracks = @(
         Bytes = 708564; Sha256 = '1ed52a352886327cc0c178dcbb37308c254804d1378e12d9bcfa97a3a32dd435'
         SourceBytes = 2829896; SourceSha256 = '53a7e2ffdabab17a0126b7d86056b39c082aba480c314ec0c5d506428a623e38'
         Packets = 87; Looping = $true; LoopSample = 238691; LoopPacket = 15; LoopRecord = 119568
+    },
+    # P2-1e-1: nSYAudioBGMBattleSelect (id 10), rendered through the same script
+    # (--sequence-index 10) as every track above -- the source's own S1_music_sbk
+    # sequence index for the CSS's own track. mnplayersvs.c:4899 plays it on
+    # arrival at PlayersVS unless scene_prev is the stage select (nSCKindMaps).
+    [PSCustomObject]@{
+        Name = 'Battle select'; File = 'bgm_battle_select_ima.bin'; Sequence = 10
+        Bytes = 168304; Sha256 = '4a8e0be2dec6c373c0615d2d18cbf1abdfb81ec73879a9c39732db18295c8d26'
+        SourceBytes = 672034; SourceSha256 = '7c399c8aa2bd6a88be4d4c3f86fc0a61ba0153c0846f3469bdd4a0a7bd0e222d'
+        Packets = 21; Looping = $true; LoopSample = 46228; LoopPacket = 3; LoopRecord = 23192
     }
 )
 
@@ -136,14 +146,15 @@ $required = @(
     'NDS_AUDIO_BGM_WIN_MARIO_ASSET_BYTES 81860u',
     'NDS_AUDIO_BGM_WIN_FOX_ASSET_BYTES 72940u',
     'NDS_AUDIO_BGM_RESULTS_ASSET_BYTES 406840u',
-    'NDS_AUDIO_BGM_MODE_SELECT_ASSET_BYTES 708564u'
+    'NDS_AUDIO_BGM_MODE_SELECT_ASSET_BYTES 708564u',
+    'NDS_AUDIO_BGM_BATTLE_SELECT_ASSET_BYTES 168304u'
 )
 foreach ($needle in $required) {
     if (-not $header.Contains($needle)) {
         throw "BGM runtime header is missing exact ADPCM constant: $needle"
     }
 }
-if ($compressedTotal -ne 1992992) {
+if ($compressedTotal -ne 2161296) {
     throw "ADPCM asset total changed: $compressedTotal"
 }
 if (-not $runtime.Contains('#define NDS_AUDIO_BGM_TIMER 0u') -or
@@ -162,4 +173,4 @@ if ($makefile -notmatch '(?s)prune-obsolete-audio:\s*@rm -f .*NDS_AUDIO_OBSOLETE
     throw 'Incremental builds can repack removed PCM BGM assets.'
 }
 
-Write-Output 'BattleShip-derived BGM ADPCM assets passed: tracks=0/12/16/22/44 compressed=1992992 source_pcm=7955310 resident=16392 packets=246.'
+Write-Output 'BattleShip-derived BGM ADPCM assets passed: tracks=0/12/16/22/44/10 compressed=2161296 source_pcm=8631344 resident=16392 packets=267.'

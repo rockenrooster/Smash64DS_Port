@@ -11,6 +11,7 @@
 #define NDS_AUDIO_BGM_PATH_WIN_FOX "nitro:/audio/bgm_win_fox_ima.bin"
 #define NDS_AUDIO_BGM_PATH_RESULTS "nitro:/audio/bgm_results_ima.bin"
 #define NDS_AUDIO_BGM_PATH_MODE_SELECT "nitro:/audio/bgm_mode_select_ima.bin"
+#define NDS_AUDIO_BGM_PATH_BATTLE_SELECT "nitro:/audio/bgm_battle_select_ima.bin"
 #define NDS_AUDIO_BGM_CHANNEL_BASE 14u
 #define NDS_AUDIO_BGM_CHANNEL_MASK (3u << NDS_AUDIO_BGM_CHANNEL_BASE)
 #define NDS_AUDIO_BGM_TIMER 0u
@@ -94,6 +95,17 @@ static const NDSAudioBgmTrack sNdsAudioBgmTracks[] = {
         NDS_AUDIO_BGM_MODE_SELECT_LOOP_PACKET,
         NDS_AUDIO_BGM_MODE_SELECT_LOOP_RECORD,
         TRUE
+    },
+    {
+        nSYAudioBGMBattleSelect,
+        NDS_AUDIO_BGM_PATH_BATTLE_SELECT,
+        NDS_AUDIO_BGM_BATTLE_SELECT_STREAM_BYTES,
+        NDS_AUDIO_BGM_BATTLE_SELECT_LOOP_START_BYTES,
+        NDS_AUDIO_BGM_BATTLE_SELECT_ASSET_BYTES,
+        NDS_AUDIO_BGM_BATTLE_SELECT_PACKET_COUNT,
+        NDS_AUDIO_BGM_BATTLE_SELECT_LOOP_PACKET,
+        NDS_AUDIO_BGM_BATTLE_SELECT_LOOP_RECORD,
+        TRUE
     }
 };
 
@@ -146,6 +158,7 @@ volatile u32 gNdsAudioBgmWinMarioPlayCount;
 volatile u32 gNdsAudioBgmWinFoxPlayCount;
 volatile u32 gNdsAudioBgmResultsPlayCount;
 volatile u32 gNdsAudioBgmModeSelectPlayCount;
+volatile u32 gNdsAudioBgmBattleSelectPlayCount;
 volatile u32 gNdsAudioBgmNaturalStopCount;
 volatile u32 gNdsAudioBgmLastNaturalStopTrackID;
 volatile u32 gNdsAudioBgmPostNaturalTransitionCount;
@@ -910,6 +923,7 @@ void ndsAudioBgmPlay(s32 player, s32 bgm_id)
     case nSYAudioBGMWinFox: gNdsAudioBgmWinFoxPlayCount++; break;
     case nSYAudioBGMResults: gNdsAudioBgmResultsPlayCount++; break;
     case nSYAudioBGMModeSelect: gNdsAudioBgmModeSelectPlayCount++; break;
+    case nSYAudioBGMBattleSelect: gNdsAudioBgmBattleSelectPlayCount++; break;
     }
     if ((gNdsAudioBgmSetVolumeCalls == 0u) &&
         (gNdsAudioBgmVolume == 0u))

@@ -49,9 +49,11 @@ param(
 #             owns one, which is the P2-1a CPU_CONFIG pin read at a scene stop.
 #   CSSCUE    cue requests this screen made, by the source's own FGM id. Paired
 #             with MSMISS this separates "the seam never asked" from "the pack
-#             has no sample"; three of the CSS's ids are deliberately unpacked.
+#             has no sample" -- P2-1e-1 packed the four ids this screen asks
+#             for (121/127/167/512), so MSMISS now reads ring=0 here.
 #   MSBGM     ...unsupported is the same split on the BGM side: BGM 10
-#             (BattleSelect) is not one of the five tracks the assets carry.
+#             (BattleSelect) joined the assets at P2-1e-1, so unsupported
+#             reads 0 and `track=10` engages at the CSS's own scene stop.
 #
 # Nothing here writes guest memory.
 
@@ -138,10 +140,11 @@ if ($missing.Count -gt 0) {
     throw ("p2-1e probe symbols absent from {0}: {1}" -f $elf, ($missing -join ', '))
 }
 # The FGM miss ring is the SFX seam's negative half: the shell asks with the
-# source's own cue ids and this ring says which of them the pack carries. Three
-# of the character select's are deliberately NOT packed (121 MarioDash, 127
-# SamusDash, 167 PlayerSlotWhoosh) plus 512 FreeForAll, so a NON-EMPTY ring is
-# the expected reading here and is what row P2-1e-1's scope is derived from.
+# source's own cue ids and this ring says which of them the pack carries.
+# Before P2-1e-1, three of the character select's own ids were NOT packed
+# (121 MarioDash, 127 SamusDash, 167 PlayerSlotWhoosh) plus 512 FreeForAll,
+# which is what row P2-1e-1's scope was derived from (MSMISS ring=4). P2-1e-1
+# packed all four, so an EMPTY ring (ring=0) is now the expected reading.
 $hasMissRing = ($symbols -contains 'gNdsAudioFgmMissRingIDs') -and
     ($symbols -contains 'gNdsAudioFgmMissRingCounts') -and
     ($symbols -contains 'gNdsAudioFgmMissRingCount')

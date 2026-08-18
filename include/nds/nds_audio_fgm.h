@@ -5,7 +5,7 @@
 #include <sys/audio.h>
 
 #define NDS_AUDIO_FGM_PASS 0x46474d31u /* FGM1 */
-#define NDS_AUDIO_FGM_ENTRY_COUNT 93u
+#define NDS_AUDIO_FGM_ENTRY_COUNT 97u
 #define NDS_AUDIO_FGM_PHASE_COUNT 5u
 #define NDS_AUDIO_FGM_PHASE_COMPLETE_MASK 0x1fu
 #define NDS_AUDIO_FGM_KO_COUNT 5u
@@ -50,8 +50,18 @@
  * already asked for it with the source's own id and missed -- MSMISS ring=1
  * id0=157 c0=1, P2-1d evidence, the only cue any menu screen misses -- same
  * silent-miss class as every prior repin here. */
-#define NDS_AUDIO_FGM_PACK_BYTES 950168u
-#define NDS_AUDIO_FGM_PACK_MAPPING_SHA256_LO 0x9bc3e069u
+/* 950168 -> 973524 and 0x9bc3e069 -> 0xcb181af6 on 2026-08-18 (P2-1e-1): the
+ * character select's own four cues (121 MarioDash, 127 SamusDash, 167
+ * PlayerSlotWhoosh, 512 AnnounceFreeForAll) joined SELECTED, 93 -> 97
+ * entries.  The menu shell's seam already asked for all four with the
+ * source's own ids and missed -- MSMISS ring=4 id0=512 c0=1 id1=127 c1=1
+ * id2=121 c2=2 id3=167 c3=1, 2026-08-18 P2-1e evidence -- same silent-miss
+ * class as every prior repin here.  121 forks to 118 FoxDash with no local
+ * notes and 118's own first note overflows the pack entry's u16 frequency
+ * field (71,838 Hz), so it renders through FULL_PROGRAM_AOT_IDS like 85/189/
+ * 190/219 -- the only one of the four that is not a plain flat render. */
+#define NDS_AUDIO_FGM_PACK_BYTES 973524u
+#define NDS_AUDIO_FGM_PACK_MAPPING_SHA256_LO 0xcb181af6u
 #define NDS_AUDIO_FGM_CACHE_BYTES 204800u
 #define NDS_AUDIO_FGM_HANDLE_CAPACITY 8u
 #define NDS_AUDIO_FGM_FIDELITY_DEBT_PITCH_AUTOMATION (1u << 2)
