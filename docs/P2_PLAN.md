@@ -66,10 +66,19 @@ Ordering rationale (owner-ratified 2026-08-17):
    complete assets, VFX, SFX, voice/announcer where applicable; within its
    budgets; measured under the current stress config; visual deltas recorded
    per the DS Visual Fidelity rules with an `artifacts/visibility` screenshot;
+   **visual acceptance ships a side-by-side against the extracted source
+   assets** (asset-dump comparison — owner, 2026-08-18): converted art,
+   layout, and animation inventory checked against the source dump *before*
+   the owner's eye, so deltas are caught by the implementer, not the owner;
    its board row closed with evidence links.
-7. **Reference-first**: before implementing any subsystem, read the named
-   BattleShip directory in its subplan; before DS architecture choices, check
-   `sm64-nds`/`sm64ds-decomp` per `AGENTS.md`.
+7. **Reference-first, assets included**: before implementing any subsystem,
+   read the named BattleShip directory in its subplan; before DS architecture
+   choices, check `sm64-nds`/`sm64ds-decomp` per `AGENTS.md`. **Before
+   implementing any screen, effect, or UI element, enumerate the original's
+   assets** — art, layouts, fonts, cursor placements/states, animations —
+   from the source asset dumps into the unit's inventory (owner, 2026-08-18:
+   "inspect original assets before DS implementation"). Implementation starts
+   from converted source assets, never invented stand-ins.
 
 ## Owner decisions log (2026-08-17)
 
@@ -99,6 +108,13 @@ Ordering rationale (owner-ratified 2026-08-17):
 - The menu collage (`llMNCommonSmashBrosCollageSprite`) is required content
   and lands **now**, ahead of P2-2 — board row P2-1h, via the cheapest
   `docs/p2/P2-1c-vram-map.md` option that holds 60 Hz menus.
+- **Round-1 visual pass on the shell: FAIL, six findings** (see risk 5) —
+  P2-1h's "landed" state did not meet the ruling. Doctrine sharpened at both
+  roots: **target = the original's own art/layout/animation; approximation is
+  a measured-fallback only; sacrifice order applies only to measured
+  conflicts**. Asset inspection before implementation and side-by-side
+  **asset-dump comparison** are now unit-DoD requirements (laws 6/7). Rework
+  row P2-1i re-opens the phase.
 
 ## Top risks
 
@@ -114,8 +130,14 @@ Ordering rationale (owner-ratified 2026-08-17):
 4. **Pipeline generalization stalling on the first new fighter** — Luigi
    (Mario variant) is deliberately first to prove the variant path cheaply
    before the harder archetypes.
-5. **Menu/2D engine scope creep in P2-1** — the shell ships with recognizable
-   approximations per the visual doctrine; cosmetic exactness is timeboxed.
+5. **Presentation drift** — P2-1's round-1 visual pass FAILED on six findings
+   (placeholder CSS/SSS backgrounds, invented button art, hand cursor missing
+   from screens the source gives it, missing title background and title
+   fire/label animation) because "recognizable" was read as the target and
+   "sacrificable" as a skip-license without measurement. The doctrine now
+   pins target = source at both roots (`PROJECT_GOAL.md` Visual Requirements,
+   `AGENTS.md` DS Visual Fidelity); laws 6/7 make asset inspection and
+   side-by-side comparison mandatory. Rework is board row P2-1i.
 
 ## Plan tree
 

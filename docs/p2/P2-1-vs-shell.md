@@ -16,14 +16,20 @@ none is invented here.
 **Fidelity ruling (owner, 2026-08-18): this is a port — ALL original
 presentation assets ship, including first-party branding, logos, title/boot
 screens, menu artwork, and copyright text, converted from source like every
-other asset. Never substitute invented "identity-safe" placeholders.** The
-backlog from this ruling is board row P2-1h, **landed 2026-08-18**: the
-original title presentation, the menu collage on both screens that draw it,
-the DS system-menu banner, and the deletion of the interim splash so boot
-reaches the title with no screen in between. The title's fire animation and
-label slide-in remain deliberately absent (sacrificable per
-`PROJECT_GOAL.md`); the title's music is the opening cinematic's and arrives
-with P2-7, which is why a silent title is source-correct.
+other asset. Never substitute invented "identity-safe" placeholders.** Row
+P2-1h landed the first slice (original title art + copyright, menu collage,
+DS banner, splash deleted) but the **round-1 visual pass FAILED on six owner
+findings**: placeholder CSS/SSS backgrounds, invented button/panel art, hand
+cursor missing from screens the source gives it, missing title background,
+and the missing title fire/label animation — the earlier claim that the
+animation was "deliberately absent (sacrificable)" was the exact misread the
+doctrine now bans: **no measurement, no sacrifice**. Rework is board row
+P2-1i: original CSS/SSS backgrounds, source button/panel art, hand cursor
+everywhere the source has it, title background + fire/label animation, with
+source-asset inspection before implementation and side-by-side asset-dump
+comparison before the owner's re-pass. (The title-music claim — that title
+audio belongs to the P2-7 intro cinematic — stands only if verified against
+source, marked, not assumed.)
 
 ## Work breakdown
 

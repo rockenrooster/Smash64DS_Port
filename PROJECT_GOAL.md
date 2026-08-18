@@ -418,7 +418,17 @@ The following compromises are explicitly allowed:
 * effects updated every other frame
 * highly stage-specific rendering tricks
 
-The result only needs to remain recognizable, readable during gameplay, and consistent with the identity of SSB64.
+The **target** for every screen and asset is the original's own art, layout,
+and animation, converted from source — *"look and feel like the N64 version,
+just adapted to DS hardware"* (owner, 2026-08-18). The compromises above are
+the sanctioned **fallback space** when a measured DS budget conflict forces
+adaptation; they are never a default, and the sacrifice order applies only to
+measured conflicts. An approximation or omission ships only with its measured
+reason recorded alongside the `artifacts/visibility` screenshot.
+
+"Recognizable, readable during gameplay, and consistent with the identity of
+SSB64" is the **floor** a forced compromise must still clear — it is not the
+goal, and meeting it does not justify a compromise nothing forced.
 
 Presentation identity includes the original's own presentation assets: title
 and boot screens, logos and first-party branding, menu artwork, fonts, and

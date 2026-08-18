@@ -61,12 +61,19 @@ feel; the DS implementation may differ radically from the original engine.
 
 Gameplay, collision, rules, state, camera meaning, and flow stay mechanically
 equivalent to the source contract in `PROJECT_GOAL.md`.
-Presentation must remain recognizable, readable, and consistent with SSB64's
-identity. Timebox cosmetic exactness to one measured experiment, then keep the
-cheapest acceptable source-derived approximation.
-Record its source, visible delta, measured reason, and `artifacts/visibility`
-screenshot. Never accept changed telegraphs, missing/corrupt presentation, or
-unexplained behavior. Dream Land water is frozen at source frame 0.
+The presentation **target** is the original's own art, layout, and animation,
+converted from source; inspect the original assets before implementing any
+screen, effect, or UI element. Approximation or omission is a **fallback**
+requiring a measured DS-budget reason — the sacrifice order applies only to
+measured conflicts, and 60 Hz menu/2D screens rarely have one. "Recognizable,
+readable, consistent with SSB64's identity" is the floor a forced compromise
+must still clear, not the goal. Timebox exactness-polish to one measured
+experiment, then keep the cheapest source-derived result that clears the
+floor.
+Record every accepted delta's source, visible delta, measured reason, and
+`artifacts/visibility` screenshot. Never accept changed telegraphs,
+missing/corrupt presentation, or unexplained behavior. Dream Land water is
+frozen at source frame 0.
 
 ## Operating Model
 
