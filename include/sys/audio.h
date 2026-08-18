@@ -17,7 +17,19 @@ enum {
 };
 
 enum {
-    nSYAudioFGMTitlePressStart = 0,
+    /* Was stubbed = 0 (colliding with nSYAudioFGMExplodeS) until P2-1f-1.
+     * 157 is the REGION_US gm/gmsound.h value (mntitle.c:501's own confirm
+     * cue), independently re-verified the same way this file's audio ids
+     * always are; nds_menu_shell.c's NDS_CSS_FGM_PRESS_START and
+     * nds_ui_kit.c's SFX table already used the correct literal 157u
+     * directly, so this stub's wrong value was inert everywhere until
+     * ndsAudioFgmIDIsIncluded's switch became the first live reader of the
+     * symbol itself (P2-1f-1, closing the case P2-1e-1 recorded as missing).
+     * nSYAudioFGMOpeningBatM/PublicPrologue below carry the same
+     * placeholder-0/1/2 pattern and are ALSO wrong (real values 152 and 150),
+     * but neither is referenced anywhere else in this tree -- out of this
+     * row's scope, left for whoever next needs them. */
+    nSYAudioFGMTitlePressStart = 157,
     nSYAudioFGMOpeningBatM = 1,
     nSYAudioFGMPublicPrologue = 2
 };

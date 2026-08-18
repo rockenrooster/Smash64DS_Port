@@ -197,6 +197,21 @@ FULL_COVERAGE_IDS = (
     # whoosh), 512 nSYAudioVoiceAnnounceFreeForAll (the game-mode call at CSS
     # entry).
     121, 127, 167, 512,
+    # P2-1f-1. The stage select's own confirm cue (NDS_SSS_FGM_CONFIRM in
+    # nds_menu_shell.c, mnmaps.c:1470's A/START confirm) already asks for it
+    # with the source's own id -- transcribed at the SSS screen's own landing
+    # so the gap could be MEASURED rather than guessed -- and the pack did not
+    # carry it, proven by the miss ring, not inferred (2026-08-18 P2-1f
+    # evidence: `MSMISS ring=1 id0=159 c0=1` one-pass, `c0=3` three-lap). Id
+    # re-verified by fully parsing gm/gmsound.h's gmFGMVoiceID enum with
+    # REGION_US honored (a Python parser, not hand-counting) and cross-checked
+    # against all eighteen ids this file already pins before trusting the new
+    # one: 159 nSYAudioFGMStageSelect lands exactly one above MenuSelect's
+    # 158, matching the name and matching this port's own hand-curated
+    # `include/gm/gmsound.h` (`nSYAudioFGMStageSelect = 159` already present
+    # there from earlier curation, unused for packing until this row) -- a
+    # second, independent corroboration.
+    159,
 )
 FULL_PROGRAM_AOT_IDS = frozenset((
     154, 40, 38, 37, 34, 32, 31,
@@ -273,6 +288,21 @@ FULL_PROGRAM_AOT_IDS = frozenset((
     # `source_rate_above_u16` shape as 85/189/190/219 above. Same answer: bake
     # the note schedule into the samples and store FGM_OUTPUT_RATE.
     121,
+    # P2-1f-1. 159 nSYAudioFGMStageSelect is not a fork-only root like 121 --
+    # its own program has a real local note (pitch code 6, 180 ticks) -- but it
+    # ALSO forks TWO voices at tick 0, before that note: 163 MenuScroll1 (its
+    # own two-note program) and 6 UnkSmallPing1 (its own five-note program).
+    # That is the same "local notes plus fork(s)" shape as 154/616/618/619/
+    # 620/623/625 above, and the flat path can express only one voice, so a
+    # flat render would omit both layers -- the exact `omitted_fork_voice`
+    # debt this file spent 2026-08-02/08-06 clearing off the crowd cues.
+    # Nothing forces the omission here: both forks are cheap (33/15 ticks) and
+    # the fused render this file already proves correct for 154/616-625/121
+    # handles two simultaneous forks exactly the same way it handles one --
+    # render_fgm_composite_aot mixes every voice in root_meta["forks"], not
+    # just the first. Full-program AOT keeps the confirm chime complete
+    # instead of shipping a shorter, quieter partial of it.
+    159,
 ))
 
 ATTACK_ACTION_AUDIT_SHA256 = (
@@ -2961,6 +2991,56 @@ SELECTED += (
         "articulation_program_sha256":
             "0983cc40b68cf2dd44248302e1cc1b481acdfef0615223a26a39a55af6553f59",
         "fidelity_debt": (),
+    },
+)
+
+# P2-1f-1. All fields came out of `--derive 159`, not a guess. Unlike 121
+# above, 159 nSYAudioFGMStageSelect has a real local note of its own (pitch
+# code 6, 180 ticks) -- but its root program ALSO forks two voices at tick 0,
+# before that note runs: 163 nSYAudioFGMMenuScroll1 (two notes, 33 ticks) and
+# 6 nSYAudioFGMUnkSmallPing1 (five notes, 15 ticks). Declared in
+# FULL_PROGRAM_AOT_IDS so render_fgm_composite_aot mixes all three voices
+# (root + both forks, every one starting at sample 0) into one baked sample,
+# the same mechanism 154/616/618/619/620/623/625 above already prove correct
+# for a root note plus a fork -- it does not stop at the first fork.
+SELECTED += (
+    {
+        "id": 159,
+        "name": "nSYAudioFGMStageSelect",
+        "kind": "menu",
+        "articulation": 84,
+        "sound": 40,
+        "notes": ((6, 7, 180),),
+        "duration_ticks": 180,
+        "ucd_volume": 160,
+        "articulation_pitch_cents": -1000,
+        "loop": True,
+        "wave_base": 344720,
+        "wave_length": 7660,
+        "loop_start": 11619,
+        "loop_end": 13590,
+        "expected_retained_samples": 13616,
+        "root_fork_programs": (163, 6),
+        # Both forks are themselves independently packed cues (163 since
+        # P2-1c-1, 6 not otherwise packed), but that is not why this omission
+        # is safe -- FULL_PROGRAM_AOT_IDS membership above means the built
+        # pack's own metadata reports zero omission for this id (the fused
+        # render actually includes both), the same as every other
+        # fork-declaring id in FULL_PROGRAM_AOT_IDS. These two fields are the
+        # hash-pinned proof that the forked programs did not silently change
+        # underneath the fusion.
+        "omitted_fork_programs": (163, 6),
+        "omitted_fork_program_sha256": (
+            "191531a69a863630319ef40c5b12e0ccb48cf4d5eb3c88c442201884122acd1b",
+            "b21992d98d31c8f49152b5aaf624d544da054bb41e5ce005b30b4b5452ec93df",
+        ),
+        "root_program_sha256":
+            "322849140b9950e3ebb61ec49dae97f6061adfafdc050279444f58ace677fe62",
+        "render_program_sha256":
+            "322849140b9950e3ebb61ec49dae97f6061adfafdc050279444f58ace677fe62",
+        "articulation_program_sha256":
+            "dac41667edc35bfd590f9d30dda62096c6c84242fdb03775c7e1a63a96b4b249",
+        "fidelity_debt": ("omitted_fork_voice_163", "omitted_fork_voice_6"),
     },
 )
 

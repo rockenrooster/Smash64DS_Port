@@ -370,6 +370,15 @@ static s32 ndsAudioFgmIDIsIncluded(u16 id)
     case nSYAudioFGMSamusDash:
     case nSYAudioFGMPlayerSlotWhoosh:
     case nSYAudioVoiceAnnounceFreeForAll:
+    /* P2-1f-1 closing a residual P2-1e-1 recorded: 157 nSYAudioFGMTitlePressStart
+     * (the title screen's own confirm cue) joined the pack at P2-1d-1 but never
+     * gained its case here -- harmless (this switch is diagnostic-only
+     * consistency bookkeeping, not a playback gate), but out of step with every
+     * other packed id. And the stage select's own confirm cue (nds_menu_shell.c,
+     * NDS_SSS_FGM_CONFIRM), already asking for it with the source's own id and
+     * missing for want of a pack entry, same as every case above. */
+    case nSYAudioFGMTitlePressStart:
+    case nSYAudioFGMStageSelect:
         return TRUE;
     default:
         return FALSE;

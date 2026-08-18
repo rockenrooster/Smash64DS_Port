@@ -5,7 +5,7 @@
 #include <sys/audio.h>
 
 #define NDS_AUDIO_FGM_PASS 0x46474d31u /* FGM1 */
-#define NDS_AUDIO_FGM_ENTRY_COUNT 97u
+#define NDS_AUDIO_FGM_ENTRY_COUNT 98u
 #define NDS_AUDIO_FGM_PHASE_COUNT 5u
 #define NDS_AUDIO_FGM_PHASE_COMPLETE_MASK 0x1fu
 #define NDS_AUDIO_FGM_KO_COUNT 5u
@@ -60,8 +60,18 @@
  * notes and 118's own first note overflows the pack entry's u16 frequency
  * field (71,838 Hz), so it renders through FULL_PROGRAM_AOT_IDS like 85/189/
  * 190/219 -- the only one of the four that is not a plain flat render. */
-#define NDS_AUDIO_FGM_PACK_BYTES 973524u
-#define NDS_AUDIO_FGM_PACK_MAPPING_SHA256_LO 0xcb181af6u
+/* 973524 -> 990120 and 0xcb181af6 -> 0x3d9a9ac2 on 2026-08-18 (P2-1f-1): the
+ * stage select's own confirm cue (159 nSYAudioFGMStageSelect,
+ * NDS_SSS_FGM_CONFIRM in nds_menu_shell.c) joined SELECTED, 97 -> 98
+ * entries.  The menu shell's seam already asked for it with the source's own
+ * id and missed -- MSMISS ring=1 id0=159 c0=1, 2026-08-18 P2-1f evidence --
+ * same silent-miss class as every prior repin here.  159 has a real local
+ * note of its own AND forks two voices (163 MenuScroll1, 6 UnkSmallPing1) at
+ * tick 0, so it joins FULL_PROGRAM_AOT_IDS to render all three voices fused
+ * -- the same mechanism 154/616-625/121 above already use, extended to two
+ * simultaneous forks instead of one or zero. */
+#define NDS_AUDIO_FGM_PACK_BYTES 990120u
+#define NDS_AUDIO_FGM_PACK_MAPPING_SHA256_LO 0x3d9a9ac2u
 #define NDS_AUDIO_FGM_CACHE_BYTES 204800u
 #define NDS_AUDIO_FGM_HANDLE_CAPACITY 8u
 #define NDS_AUDIO_FGM_FIDELITY_DEBT_PITCH_AUTOMATION (1u << 2)
