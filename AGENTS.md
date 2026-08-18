@@ -77,9 +77,9 @@ Start each cycle with:
 git status --short
 ```
 
-Then read `docs/P1_EXECUTION_BOARD.md` and `docs/HANDOFF.md`. The board is the
+Then read `docs/P2_EXECUTION_BOARD.md` and `docs/HANDOFF.md`. The board is the
 only dynamic queue; handoff contains only the restart surface. Select its
-highest-impact unowned red P1 row.
+highest-impact unowned red row (P2 phase plans: `docs/P2_PLAN.md` + `docs/p2/`).
 
 Preserve a known-good checkpoint before risky changes. On regression, find the
 first bad change before layering fixes; trace shared dependencies before edits.
@@ -145,6 +145,9 @@ Canonical Boundary is `battle_playable_realtime`, mode `163`: Mario human versus
 imported level-3 Fox CPU on Dream Land, items off, one-minute (`3600` tick) Time
 mode. A diagnostic ROM may pause Fox decision/input only; proof runs and milestone
 acceptance enable it. Never launch the obsolete five-minute configuration, except for specific instruction to do so.
+The Boundary definition evolves at P2 phase closes by board row
+(`docs/P2_PLAN.md` law 4); this section is updated when it does, and the P1
+configuration stays green throughout P2 as a regression guard.
 
 **Both gate arms run the one-minute match** (owner, 2026-08-05: *"the soak was
 only meant to catch freezes, boundary and both cpu gates should be the 60 sec

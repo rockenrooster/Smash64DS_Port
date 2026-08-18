@@ -190,6 +190,8 @@ Stability is mandatory.
 
 Unused resources have no intrinsic value.
 
+RAM resources may HAVE to be reclaimed or shuffled to make room for other performance improvements.
+
 ---
 
 ## Independent Update Rates
@@ -288,31 +290,52 @@ Before changing gameplay behavior, completely exhaust cheaper ways of reproducin
 
 ---
 
-# Current Milestone
+# Milestone P1 — COMPLETE (2026-08-17)
 
-The immediate target is a complete vertical slice (P1):
-
-# Mario vs. Level-3 CPU Fox
-
-# Dream Land
-
-# One-minute timed match
-
-# Items Off
-
-# Results
-
-# Sudden Death
-
-The ROM may boot directly into the match.
-
-No menus are required for this milestone.
+The vertical slice shipped: Mario vs. level-3 CPU Fox on Dream Land, one-minute
+timed match, items off, with GAME SET, Results, Sudden Death, the START-restart
+loop, and the complete match audio experience, at the performance gate
+(owner-ruled cadence population: ≥95% two-VBlank over all presented frames on
+the stress arm). Its requirements below remain binding product behavior,
+regression-guarded by the Boundary verifier. The P1 ROM
+`smash64ds-battle-playable-hwtri.nds` remains the published P1 artifact.
 
 ---
 
-## Gameplay Requirements
+# Current Milestone — P2: The Rest of the Game
 
-Mario and Fox must have their complete original movesets and applicable gameplay behavior, including:
+P2 turns the vertical slice into the complete game described by the Ultimate
+Goal. Execution order (operational detail lives in `docs/P2_PLAN.md`):
+
+1. **VS shell** — the full flow Title → main menu → character select
+   (Mario/Fox) → stage select (Dream Land) → battle → results → back to
+   character select, replacing the boot-into-match demo. The battle HUD moves
+   to the bottom screen (owner decision, 2026-08-17).
+2. **Four-fighter engine** — up to 4 fighters in a match (on one console:
+   1 human + up to 3 CPUs), 4-slot HUD, camera, engagement, teams,
+   free-for-all; stands up the standing P2 stress gate below.
+3. **All fighters** — the remaining 10, pipeline-produced, each with complete
+   moveset, assets, VFX, SFX, voice, and announcer audio.
+4. **All stages** — the remaining 8 VS stages with full hazards, effects, and
+   music.
+5. **All items** — all items and Poké Ball Pokémon, with the spawn/carry/throw
+   system and item switch UI.
+6. **1P Game** — the full campaign (Mario first), bosses and variants (Master
+   Hand, Metal Mario, Giant DK, Fighting Polygon Team), 1P-only stages, bonus
+   stages, scoring, continues, endings, credits.
+7. **Modes & meta** — Training, unlock flow, records, options, save data,
+   attract demos, and the intro cinematic (deferred here by owner decision).
+
+Every step includes its applicable menu/UI work. Wireless multiplayer is P3
+(`docs/P3_Multiplayer/Multiplayer.md`); single-console VS play is 1 human plus
+CPUs and is delivered by step 2. P2 publishes `smash64ds.nds`.
+
+---
+
+## Fighter Completeness Standard
+
+Every fighter must have its complete original moveset and applicable gameplay
+behavior, including:
 
 * walking
 * running
@@ -346,28 +369,29 @@ Mario and Fox must have their complete original movesets and applicable gameplay
 * ties
 * sudden death
 * results screen
-* pressing start at results screen restarts the P1 match, up to infinite successive matches
 
-Fox must use behavior equivalent to the original Level-3 CPU.
+CPU fighters must use behavior equivalent to the original CPU at the selected
+level. Once items exist, every fighter also carries its item pickup, hold,
+swing, and throw behavior.
 
 ---
 
-## Dream Land Requirements
+## Stage Completeness Standard
 
-Dream Land must include:
+Every stage must include (Dream Land, completed in P1, is the exemplar —
+collision, three pass-through platforms, blast zones, Whispy wind, tree-face
+and flower animation, camera bounds, moving background, lighting, music):
 
-* correct gameplay collision
-* three pass-through platforms
+* correct gameplay collision and pass-through platforms
 * correct blast zones
-* Whispy wind gameplay
-* tree-face animation
-* flower animation
+* its hazards and interactive elements, mechanically equivalent
+* its animated set pieces
 * correct camera behavior/bounds
-* moving background
+* its background treatment, moving where the original moved
 * recognizable lighting/presentation
 * stage music
 
-Its visual implementation may differ from the N64 version.
+A stage's visual implementation may differ from the N64 version.
 
 ---
 
@@ -400,7 +424,8 @@ The result only needs to remain recognizable, readable during gameplay, and cons
 
 ## Audio Requirements
 
-The milestone should include the applicable complete match audio experience:
+Every playable configuration should include the applicable complete audio
+experience:
 
 * stage music
 * character voices
@@ -417,46 +442,44 @@ Exact audio fidelity may be reduced before visual/gameplay/performance requireme
 
 ---
 
-## Current Performance Gate
+## Current Performance Gate (P2)
 
-The Mario/Fox/Dream Land milestone succeeds when representative gameplay achieves approximately:
+The standing P2 gate is the strictest configuration the shipped content
+supports, re-derived as content lands — "hardest" is the measured argmax over
+landed content, never a guess:
 
-**P95 ≤ 1.12M ARM9 ticks per presented frame**
+**A 4-CPU stress battle on the measured hardest stage with the measured
+hardest fighter set, all items on, holding P95 ≤ 1.12M ARM9 ticks per
+presented frame and ≥95% two-VBlank cadence over all presented frames, at a
+stable perceived 30 FPS.**
 
-and maintains a stable perceived 30 FPS.
+Every landed fighter, stage, and item is measured under the then-current
+stress configuration before its work closes. Rare overruns remain acceptable.
 
-Rare overruns are acceptable.
-
-The stability requirement applies to every screen in the milestone, not only the battle: GAME SET, the Results screen, and Sudden Death must hold their presented cadence without perceptible hitching. The tick budget is per presented frame **at that screen's cadence** — a screen presented at 60 Hz budgets approximately 560K ARM9 ticks per presented frame; one presented at 30 Hz budgets approximately 1.12M.
+The stability requirement applies to every screen, not only battle: menus,
+character/stage select, GAME SET, Results, Sudden Death, campaign
+interstitials, and bonus stages must hold their presented cadence without
+perceptible hitching. The tick budget is per presented frame **at that
+screen's cadence** — a screen presented at 60 Hz budgets approximately 560K
+ARM9 ticks per presented frame; one presented at 30 Hz budgets approximately
+1.12M.
 
 Any implementation that exceeds the gate is an intermediate implementation, not an acceptable endpoint.
 
 ---
 
-## Explicitly Out of Scope for This Milestone
+## Explicitly Out of Scope for P2
 
-The current milestone does not require:
+P2 does not require:
 
-* items
-* additional fighters
-* additional stages
-* local multiplayer
-* single-player modes
-* training
-* character select
-* stage select
-* main menus
-* unlockables
-* intro
-* credits
-* save data
-* full rematch flow (character/stage re-select; START-restart from the Results screen **is** in scope)
+* wireless multiplayer (P3 — design parked in `docs/P3_Multiplayer/`)
+* localization beyond the original US English content
+* content the original game does not have
 * exact graphical fidelity
 * native 60 FPS rendering
 * generic interpreter compatibility
-* generic support for arbitrary SSB64 content
 
-These remain part of the ultimate full-game goal.
+Everything else in the Ultimate Goal is P2 scope.
 
 ---
 

@@ -12,8 +12,9 @@ Read these before starting, not after being surprised by them:
   bit-exactness is not. Carries the performance gate and the sacrifice order
   (audio fidelity, then visual fidelity, then 60 Hz simulation, then gameplay
   fidelity) that decides what may be traded for frame rate.
-- `docs/P1_EXECUTION_BOARD.md` — the only dynamic queue. `docs/HANDOFF.md` — the
-  restart surface, and nothing else.
+- `docs/P2_EXECUTION_BOARD.md` — the only dynamic queue (`docs/P2_PLAN.md` +
+  `docs/p2/` hold the P2 plans; the P1 board is archived in `docs/archive/`).
+  `docs/HANDOFF.md` — the restart surface, and nothing else.
 - `docs/VERIFYING.md` — which verifier covers which runtime, why stacking them
   is wasted time, and how a performance task is run, measured, and judged; the
   board's standing-rules section carries the measurement law. (The owner

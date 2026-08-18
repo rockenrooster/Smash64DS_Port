@@ -1,0 +1,62 @@
+# P2 Execution Board
+
+Created: 2026-08-17. **The only dynamic queue.** Plans live in
+`docs/P2_PLAN.md` + `docs/p2/`; this board is what is actually next. Closed
+work goes to `docs/archive/` (dated section), not back onto this board. The
+P1 board is archived at `docs/archive/P1_EXECUTION_BOARD.md`.
+
+## Standing rules (carried from P1 — still law)
+
+1. **Measurement law** lives in `docs/VERIFYING.md` + this section. Boundary
+   today is still `battle_playable_realtime`, mode `163` (Mario vs level-3
+   CPU Fox, Dream Land, one-minute Time match, items off); it evolves per
+   `P2_PLAN.md` law 4, by board row, at phase closes.
+2. **Match-length rule (owner, 2026-08-05)**: gate arms run the one-minute
+   match. The soak's long match is its own flag (`NDS_R2_SOAK_MATCH_MINUTES`)
+   and never rides a gate seed.
+3. **Cadence population (owner, 2026-08-17)**: cadence verdicts read over ALL
+   presented frames. The 1,600-frame gameplay-window rank-80 stays the
+   candidate-sizing basis. Label which of the two any figure is.
+4. **Whole-match instrument only**; cross-build placement floor ≥14,080 at
+   rank-80; size levers against the current requirement, never a stale basis;
+   measure the configuration that ships (`nds_build_config.h` is the truth).
+5. **Publish law**: P2 publishes `smash64ds.nds` from verifier-covered
+   configurations only. `smash64ds-battle-playable-hwtri.nds` is the frozen
+   P1 artifact (12,530,688 B, SHA-256 `2F47C8AC…CB2F`, commit `843fe40f4d2`;
+   root-pin rebuild pair per `docs/archive/` HANDOFF record).
+6. Evidence: performance/visibility artifacts are permanent
+   (`artifacts/performance`, `artifacts/visibility`); board rows close with
+   links, and Device A/B reports show the 2/3/4/5+ histogram, max interval,
+   P50/P95.
+
+## Phase status
+
+| Phase | State | Gate summary |
+|---|---|---|
+| P2-1 VS shell | **OPEN — active phase** | Loop soak green, menus hold cadence, Boundary re-defined |
+| P2-2 Four-fighter engine | queued | 4-CPU stress arm stands up; budgets published |
+| P2-3 Fighter production | queued | 10 fighters, pipeline reproducible |
+| P2-4 Stage production | queued | 8 VS stages |
+| P2-5 Items | queued | System + 20 items + 13 Pokémon; stress = items ON |
+| P2-6 1P Game | queued | Campaign start-to-credits |
+| P2-7 Modes & meta | queued | Fresh-cart parity; P2 close gate |
+
+## Queue — P2-1 VS shell (all unowned, all red)
+
+| ID | Slice | Status | Notes |
+|---|---|---|---|
+| P2-1a | Match-config seam: descriptor struct (4 slots), mode 163 becomes a preset; battle consumes descriptor only | red | First — everything plugs into this. Prereq reading: `sc/`+`gm/` in BattleShip for VS settings flow |
+| P2-1b | Scene manager: menu scenes + transitions + per-scene arena reset discipline | red | Teardown correctness is the phase's core risk |
+| P2-1c | 2D UI kit: SSB64 font/text, cursors, menu SFX, portrait conversion (Mario/Fox), dual-screen aware | red | Groundwork for P2-2 bottom-screen HUD |
+| P2-1d | Title screen + main menu + VS menu + rules screen (greyed stubs for unbuilt modes) | red | After 1b/1c |
+| P2-1e | Character select: hand cursor, tokens, CPU toggle/level, 12-slot layout (10 locked) | red | Reference `mn/mnplayers` |
+| P2-1f | Stage select (Dream Land + locked slots + random) → load → battle → results → CSS loop | red | Reference `mn/mnmaps` |
+| P2-1g | Loop verifier: scripted full-loop walk ×N, heap watermarks, cadence, Boundary equivalence; becomes new Boundary at phase close | red | Closes the phase; owner visual pass rides here |
+
+## Decisions pending
+
+*(none — owner decisions of 2026-08-17 are logged in `P2_PLAN.md`)*
+
+## Closed
+
+*(empty)*
