@@ -163,6 +163,20 @@ FULL_COVERAGE_IDS = (
     # kit only wires move/confirm/back to 164/158/165); packed anyway per the
     # board row's exact id list, for whichever P2-1d direction wires it.
     158, 163, 164, 165,
+    # P2-1d-1. The title screen's own confirm cue, mntitle.c:501 --
+    # ndsMenuShellUpdateTitle's seam already asks for it with the source's own
+    # id and the pack did not carry it, proven by the miss ring rather than
+    # inferred (P2-1d evidence: `MSMISS ring=1 id0=157 c0=1`, the only cue any
+    # menu screen misses). Id re-verified by fully parsing gm/gmsound.h's
+    # gmFGMVoiceID enum with REGION_US honored (a Python parser, not
+    # hand-counting) and cross-checked against every id this file already
+    # pins -- Escape 11, GuardOn 13, GamePause 278, FoxLanding 74,
+    # MarioLanding 77, UnkGrind4 85, AltitudeWarn 153, DeadExplodeL 154,
+    # MenuSelect 158, MenuScroll1 163, MenuScroll2 164, MenuDenied 165 all
+    # land exactly where this file already has them, and 157 lands one below
+    # MenuSelect's 158 -- nSYAudioFGMTitlePressStart, immediately before it in
+    # the enum, exactly where the name says it should sit.
+    157,
 )
 FULL_PROGRAM_AOT_IDS = frozenset((
     154, 40, 38, 37, 34, 32, 31,
@@ -2746,6 +2760,43 @@ SELECTED += (
             "a2bd6c78a59eff2844cd0ce7d39ad1b14bac6fde08f66ea1da945ee542ede099",
         "articulation_program_sha256":
             "feb1bdd0f1134b0cb6081f033e16d0721619c2cd7aa1b0736d5191de7db95076",
+        "fidelity_debt": (),
+    },
+)
+
+# P2-1d-1. All fields (articulation/sound/notes/wave) came out of
+# `--derive 157`, not a guess. A flat two-note schedule (both notes pitch
+# code 9, i.e. one fixed rate throughout) whose ceiling reach -- 7,627
+# samples on the first note's own schedule, 7,626 on the cue's whole
+# duration_ticks against that same rate -- exceeds the 4,128-sample decoded
+# source by a wide margin, so like every other flat single-wave UI cue in
+# this file (158/163/164 above) the source's own `min(len(pcm), ...)` bound
+# collapses to the full untrimmed source: expected_retained_samples equals
+# the decoded sample count exactly, not a trimmed schedule length.
+SELECTED += (
+    {
+        "id": 157,
+        "name": "nSYAudioFGMTitlePressStart",
+        "kind": "menu",
+        "articulation": 92,
+        "sound": 21,
+        "notes": ((9, 7, 10), (9, 7, 28)),
+        "duration_ticks": 38,
+        "ucd_volume": 220,
+        "articulation_pitch_cents": 550,
+        "loop": False,
+        "wave_base": 196736,
+        "wave_length": 2322,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 4128,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "cc16a109c4a8bfd4a4c7e1ac3ae28e2b1a6cccdc46e710383d6438329547c3fa",
+        "render_program_sha256":
+            "cc16a109c4a8bfd4a4c7e1ac3ae28e2b1a6cccdc46e710383d6438329547c3fa",
+        "articulation_program_sha256":
+            "c11c77d213ceb7403e2f5921cdfb7994d11cf42d60bc5d75b4d2a37b0ea6c2a5",
         "fidelity_debt": (),
     },
 )

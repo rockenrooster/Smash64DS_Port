@@ -46,6 +46,11 @@ param(
 #              is what makes the walk an INPUT-driven proof: the taps and the
 #              transitions they produced are both recorded, rather than a hop
 #              counter asserting the flow happened.
+#   MSBGM      (P2-1d-1) the BGM seam's live state plus every track's own
+#              play count. modesel is the engagement proof (0 -> 1 once, flat
+#              after); pupupu/winmario/winfox/results are the negative
+#              control that adding a fifth track table row left the first
+#              four dispatching exactly as before.
 #
 # Nothing here writes guest memory.
 
@@ -106,7 +111,16 @@ $required = @(
     'gNdsSceneManagerEnterCount', 'gNdsSceneManagerExitCount',
     'gNdsSceneManagerRejectCount', 'gNdsSceneManagerUnregisteredEnterCount',
     'gNdsSceneManagerArenaMismatchCount', 'gNdsSceneManagerRingKind',
-    'gNdsSceneManagerRingArenaHigh', 'gNdsSceneManagerRingArenaFree'
+    'gNdsSceneManagerRingArenaHigh', 'gNdsSceneManagerRingArenaFree',
+    # P2-1d-1. BGM engagement: the mode-select track's own play-count proves it
+    # starts on menu arrival and does not re-fire on the scenes downstream of
+    # it, and the four pre-existing counters are the negative control that a
+    # fifth table row did not disturb the other tracks' dispatch.
+    'gNdsAudioBgmPlaying', 'gNdsAudioBgmTrackID', 'gNdsAudioBgmPlayCalls',
+    'gNdsAudioBgmIsLooping', 'gNdsAudioBgmStreamBytes',
+    'gNdsAudioBgmModeSelectPlayCount', 'gNdsAudioBgmPupupuPlayCount',
+    'gNdsAudioBgmWinMarioPlayCount', 'gNdsAudioBgmWinFoxPlayCount',
+    'gNdsAudioBgmResultsPlayCount'
 )
 $nm_lines = & $nm $elf
 $symbols = $nm_lines | ForEach-Object { ($_ -split '\s+')[-1] }
@@ -116,8 +130,9 @@ if ($missing.Count -gt 0) {
 }
 # The FGM miss ring is the SFX seam's negative half: the shell asks with the
 # source's own cue ids and this ring says which of them the pack carries.
-# FGM 157 (TitlePressStart) is knowingly absent from the pack, so a non-empty
-# ring naming 157 is the EXPECTED reading, not a failure.
+# P2-1d-1 packed FGM 157 (TitlePressStart), the one cue P2-1d's own evidence
+# named as the ring's sole survivor (`MSMISS ring=1 id0=157 c0=1`), so
+# `ring=0` is now the expected reading on this target, not a non-empty ring.
 $hasMissRing = ($symbols -contains 'gNdsAudioFgmMissRingIDs') -and
     ($symbols -contains 'gNdsAudioFgmMissRingCounts') -and
     ($symbols -contains 'gNdsAudioFgmMissRingCount')
@@ -197,6 +212,15 @@ try {
         } else {
             'printf "MSMISS %d ring=absent\n", $n'
         }),
+        # P2-1d-1. modesel is the mode-select track's own play count: 0 -> 1 at
+        # the ModeSelect entry stop and flat at 1 through every stop after it
+        # (VSMode, VSBattle, Sudden Death, VSResults) is the "starts on arrival,
+        # never restarts downstream" proof. track/streambytes/looping are the
+        # LIVE fields ndsAudioBgmPlay populates for whichever track is current,
+        # so the VSBattle stop reading track=0 (Pupupu) with streambytes at its
+        # unchanged pinned value (2886710) is the kept-coverage proof that a
+        # fifth table row left the first row alone.
+        'printf "MSBGM %d playing=%u track=%u calls=%u looping=%u streambytes=%u modesel=%u pupupu=%u winmario=%u winfox=%u results=%u\n", $n, gNdsAudioBgmPlaying, gNdsAudioBgmTrackID, gNdsAudioBgmPlayCalls, gNdsAudioBgmIsLooping, gNdsAudioBgmStreamBytes, gNdsAudioBgmModeSelectPlayCount, gNdsAudioBgmPupupuPlayCount, gNdsAudioBgmWinMarioPlayCount, gNdsAudioBgmWinFoxPlayCount, gNdsAudioBgmResultsPlayCount',
         'printf "MSARENA %d k=%u,%u,%u,%u,%u,%u,%u,%u h=%u,%u,%u,%u,%u,%u,%u,%u\n", $n, gNdsSceneManagerRingKind[0], gNdsSceneManagerRingKind[1], gNdsSceneManagerRingKind[2], gNdsSceneManagerRingKind[3], gNdsSceneManagerRingKind[4], gNdsSceneManagerRingKind[5], gNdsSceneManagerRingKind[6], gNdsSceneManagerRingKind[7], gNdsSceneManagerRingArenaHigh[0], gNdsSceneManagerRingArenaHigh[1], gNdsSceneManagerRingArenaHigh[2], gNdsSceneManagerRingArenaHigh[3], gNdsSceneManagerRingArenaHigh[4], gNdsSceneManagerRingArenaHigh[5], gNdsSceneManagerRingArenaHigh[6], gNdsSceneManagerRingArenaHigh[7]',
         'printf "MSFREE %d %u,%u,%u,%u,%u,%u,%u,%u\n", $n, gNdsSceneManagerRingArenaFree[0], gNdsSceneManagerRingArenaFree[1], gNdsSceneManagerRingArenaFree[2], gNdsSceneManagerRingArenaFree[3], gNdsSceneManagerRingArenaFree[4], gNdsSceneManagerRingArenaFree[5], gNdsSceneManagerRingArenaFree[6], gNdsSceneManagerRingArenaFree[7]',
         ('if $n < ' + $Hits),

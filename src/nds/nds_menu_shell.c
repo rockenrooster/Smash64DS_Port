@@ -16,12 +16,15 @@
 #include <string.h>
 
 #include <ft/fighter.h>
+#include <gm/gmsound.h>
 #include <mn/menu.h>
 #include <sc/scene.h>
 #include <sys/objman.h>
 #include <sys/taskman.h>
 #include <sys/video.h>
 
+#include <nds/nds_audio_assets.h>
+#include <nds/nds_audio_bgm.h>
 #include <nds/nds_match_config.h>
 #include <nds/nds_menu_shell.h>
 #include <nds/nds_platform.h>
@@ -1054,6 +1057,33 @@ static void ndsMenuShellRun(u32 screen)
 
 void ndsMenuShellRunSplash(void)
 {
+    /* P2-1d-1 ROOT CAUSE, not scoped to FGM 157: ndsAudioAssetLoadFenced (which
+     * loads the FGM pack, nds_audio_fgm.c's ndsAudioFgmLoadFenced included) had
+     * exactly three call sites before this one -- battleship_scvsbattle.c:469
+     * and the two ndsR2HostBattlePrepare/is_battle_playable sites in
+     * taskman_seam.c -- all battle-entry only. Every menu-shell FGM request
+     * made before battle starts therefore found gNdsAudioFgmLoaded == 0 and
+     * sNdsAudioFgmEntries[] all-zero: not a missing pack entry, a pack that had
+     * not been asked to load yet. Measured with a throwaway GDB read at
+     * ndsMenuShellRunModeSelect: `loaded=0 result=00000000 openfail=0
+     * readfail=0 fmtfail=0` (every failure counter zero -- the loader was never
+     * called, not called-and-failed) alongside `unsupported=1`, matching FGM
+     * 157's miss ring entry exactly. This is why the P2-1c-1 kit's ids
+     * (158/163/164/165) are NOT in the miss ring either: they are declared in
+     * ndsAudioFgmIDIsIncluded, so the same unloaded-pack failure silently
+     * incremented gNdsAudioFgmIncludedLookupFailCount instead of the miss ring
+     * -- a defect the miss-ring-only P2-1c probe could not see. Splash is the
+     * menu shell's own earliest entry (nSCKindStartup, scene kind 27, the
+     * first scene of every run) and this call is idempotent
+     * (sNdsAudioAssetLoaded guards it), so loading here once, before Title can
+     * ever request the press-start cue, costs nothing on every later call and
+     * makes every downstream FGM request resolve against a real pack instead
+     * of an empty one. The pack lives in static .bss (sNdsAudioFgmMetadata /
+     * sNdsAudioFgmEntries), not the taskman arena, so it survives every scene's
+     * arena rewind after this one load. */
+#if NDS_IMPORT_BATTLESHIP_AUDIO_ASSETS
+    ndsAudioAssetLoadFenced();
+#endif
     ndsMenuShellRun(NDS_MENU_SHELL_SCREEN_SPLASH);
 }
 
@@ -1062,8 +1092,32 @@ void ndsMenuShellRunTitle(void)
     ndsMenuShellRun(NDS_MENU_SHELL_SCREEN_TITLE);
 }
 
+/* mnmodeselect.c:882 (mnModeSelectFuncStart), transcribed exactly: the main
+ * menu's own track plays on arrival at ModeSelect UNLESS the previous scene
+ * is one of ModeSelect's own children -- 1P Game, VS Mode, Option, or Data --
+ * in which case a track is presumably already playing and is left alone
+ * rather than restarted. `scene_prev` is read here because this function
+ * runs once, as ModeSelect's func_start-equivalent (wired from
+ * syTaskmanRunTask, P2-1d), which is after ndsSceneManagerRequest has written
+ * it and before anything else can change it -- the same ordering the source
+ * itself relies on. Only VSMode is reachable as scene_prev in this build
+ * today (1P Game/Option/Data are P2-1e/1f/1g); all four are transcribed
+ * unconditionally so the condition matches the source exactly and needs no
+ * revisiting when those scenes land. */
+static void ndsMenuShellModeSelectPlayBgm(void)
+{
+    if (((u8)gSCManagerSceneData.scene_prev != (u8)nSCKind1PMode) &&
+        ((u8)gSCManagerSceneData.scene_prev != (u8)nSCKindVSMode) &&
+        ((u8)gSCManagerSceneData.scene_prev != (u8)nSCKindOption) &&
+        ((u8)gSCManagerSceneData.scene_prev != (u8)nSCKindData))
+    {
+        ndsAudioBgmPlay(0, (s32)nSYAudioBGMModeSelect);
+    }
+}
+
 void ndsMenuShellRunModeSelect(void)
 {
+    ndsMenuShellModeSelectPlayBgm();
     ndsMenuShellRun(NDS_MENU_SHELL_SCREEN_MODE);
 }
 

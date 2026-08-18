@@ -27,6 +27,16 @@ $tracks = @(
         Bytes = 406840; Sha256 = 'f28bdca56febe893cf27bbeaca044a8699c66b0a50b0aa9530a222aaf27c7e0c'
         SourceBytes = 1624750; SourceSha256 = 'a96c3e5b0c0348ce0a35baf7b1d29c38f9f771edaaf82ff51d6101a668d32bd8'
         Packets = 51; Looping = $true; LoopSample = 17456; LoopPacket = 2; LoopRecord = 8792
+    },
+    # P2-1d-1: nSYAudioBGMModeSelect (id 44), rendered through the same script
+    # (--sequence-index 44) as every track above -- the source's own S1_music_sbk
+    # sequence index for the main menu track. mnmodeselect.c:882 plays it on
+    # arrival at ModeSelect from a non-menu scene.
+    [PSCustomObject]@{
+        Name = 'Mode select'; File = 'bgm_mode_select_ima.bin'; Sequence = 44
+        Bytes = 708564; Sha256 = '1ed52a352886327cc0c178dcbb37308c254804d1378e12d9bcfa97a3a32dd435'
+        SourceBytes = 2829896; SourceSha256 = '53a7e2ffdabab17a0126b7d86056b39c082aba480c314ec0c5d506428a623e38'
+        Packets = 87; Looping = $true; LoopSample = 238691; LoopPacket = 15; LoopRecord = 119568
     }
 )
 
@@ -125,14 +135,15 @@ $required = @(
     'NDS_AUDIO_BGM_PUPUPU_ASSET_BYTES 722788u',
     'NDS_AUDIO_BGM_WIN_MARIO_ASSET_BYTES 81860u',
     'NDS_AUDIO_BGM_WIN_FOX_ASSET_BYTES 72940u',
-    'NDS_AUDIO_BGM_RESULTS_ASSET_BYTES 406840u'
+    'NDS_AUDIO_BGM_RESULTS_ASSET_BYTES 406840u',
+    'NDS_AUDIO_BGM_MODE_SELECT_ASSET_BYTES 708564u'
 )
 foreach ($needle in $required) {
     if (-not $header.Contains($needle)) {
         throw "BGM runtime header is missing exact ADPCM constant: $needle"
     }
 }
-if ($compressedTotal -ne 1284428) {
+if ($compressedTotal -ne 1992992) {
     throw "ADPCM asset total changed: $compressedTotal"
 }
 if (-not $runtime.Contains('#define NDS_AUDIO_BGM_TIMER 0u') -or
@@ -151,4 +162,4 @@ if ($makefile -notmatch '(?s)prune-obsolete-audio:\s*@rm -f .*NDS_AUDIO_OBSOLETE
     throw 'Incremental builds can repack removed PCM BGM assets.'
 }
 
-Write-Output 'BattleShip-derived BGM ADPCM assets passed: tracks=0/12/16/22 compressed=1284428 source_pcm=5125414 resident=16392 packets=159.'
+Write-Output 'BattleShip-derived BGM ADPCM assets passed: tracks=0/12/16/22/44 compressed=1992992 source_pcm=7955310 resident=16392 packets=246.'

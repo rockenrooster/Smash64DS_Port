@@ -3642,7 +3642,8 @@ NDS_AUDIO_DERIVED_FILES := \
 	audio/bgm_pupupu_ima.bin \
 	audio/bgm_win_mario_ima.bin \
 	audio/bgm_win_fox_ima.bin \
-	audio/bgm_results_ima.bin
+	audio/bgm_results_ima.bin \
+	audio/bgm_mode_select_ima.bin
 endif
 
 # Removed Task 42 PCM assets can survive an incremental build-directory reuse
@@ -4385,6 +4386,10 @@ $(NITROFS_DIR)/audio/bgm_win_fox_ima.bin: $(PROJECT_ROOT)/assets/audio/bgm_win_f
 	@cp $< $@
 
 $(NITROFS_DIR)/audio/bgm_results_ima.bin: $(PROJECT_ROOT)/assets/audio/bgm_results_ima.bin
+	@mkdir -p $(dir $@)
+	@cp $< $@
+
+$(NITROFS_DIR)/audio/bgm_mode_select_ima.bin: $(PROJECT_ROOT)/assets/audio/bgm_mode_select_ima.bin
 	@mkdir -p $(dir $@)
 	@cp $< $@
 

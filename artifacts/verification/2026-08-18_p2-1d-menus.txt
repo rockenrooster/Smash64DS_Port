@@ -1,5 +1,5 @@
-0x020c0254 in mutexUnlock (m=0x3 <nitroromClose+2>) at /home/davem/projects/devkitpro/pacman-packages/calico/src/calico-1.2.0/source/system/mutex.c:146
-Breakpoint 1 at 0x2063034: file D:/Stuff/DevFolder/Smash64DS_Port/src/port/nds_scene_manager.c, line 139.
+0x020b6cb8 in _FAT_read_r (r=0x2106b20 <_impure_data>, fd=<optimized out>, buf=<optimized out>, len=<optimized out>) at /home/davem/projects/devkitpro/pacman-packages/libfat/src/libdvm-2.1.0/source/fat_driver.c:270
+Breakpoint 1 at 0x2063070: file D:/Stuff/DevFolder/Smash64DS_Port/src/port/nds_scene_manager.c, line 139.
 MSSCENE 1 curr=27 prev=27 enters=0 exits=0 rej=0 unreg=0 mism=0
 MSSHELL 1 screen=4294967295 splash=0/0 title=0/0 mode=0/0 vs=0/0
 MSFRAMES 1 f0=0 f1=0 f2=0 f3=0
@@ -20,13 +20,14 @@ MSKIT 1 enters=0 rej=0 exits=0 opens=0 bytes=0 hash=00000000 mismatch=0 readfail
 MSDRAW 1 compose=0 overflow=0 commit=0 visible=0
 MSSFX 1 move=0 confirm=0 back=0 value=0 start=0 lastid=0
 MSMISS 1 ring=0 id0=0 c0=0 id1=0 c1=0
+MSBGM 1 playing=0 track=0 calls=0 looping=0 streambytes=0 modesel=0 pupupu=0 winmario=0 winfox=0 results=0
 MSARENA 1 k=0,0,0,0,0,0,0,0 h=0,0,0,0,0,0,0,0
 MSFREE 1 0,0,0,0,0,0,0,0
 MSSCENE 2 curr=1 prev=27 enters=1 exits=1 rej=0 unreg=1 mism=0
-MSSHELL 2 screen=4294967295 splash=1/1 title=0/0 mode=0/0 vs=0/0
-MSFRAMES 2 f0=110 f1=0 f2=0 f3=0
+MSSHELL 2 screen=4294967295 splash=1/0 title=0/0 mode=0/0 vs=0/0
+MSFRAMES 2 f0=0 f1=0 f2=0 f3=0
 MSMAX 2 w0=384 w1=0 w2=0 w3=0
-MSENTER 2 e0=1601792 e1=0 e2=0 e3=0
+MSENTER 2 e0=1162176 e1=0 e2=0 e3=0
 MSWORK0 2 110 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
 MSVB0 2 110 0 0 0 max=1
 MSWORK1 2 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
@@ -42,40 +43,42 @@ MSKIT 2 enters=1 rej=0 exits=1 opens=1 bytes=30272 hash=6ee7d1c2 mismatch=0 read
 MSDRAW 2 compose=2 overflow=0 commit=1 visible=0
 MSSFX 2 move=0 confirm=0 back=0 value=0 start=0 lastid=0
 MSMISS 2 ring=0 id0=0 c0=0 id1=0 c1=0
+MSBGM 2 playing=0 track=0 calls=0 looping=0 streambytes=0 modesel=0 pupupu=0 winmario=0 winfox=0 results=0
 MSARENA 2 k=27,0,0,0,0,0,0,0 h=164892,0,0,0,0,0,0,0
 MSFREE 2 1383396,0,0,0,0,0,0,0
 MSSCENE 3 curr=7 prev=1 enters=2 exits=2 rej=0 unreg=1 mism=0
 MSSHELL 3 screen=4294967295 splash=1/1 title=1/1 mode=0/0 vs=0/0
 MSFRAMES 3 f0=110 f1=150 f2=0 f3=0
-MSMAX 3 w0=384 w1=4544 w2=0 w3=0
-MSENTER 3 e0=1601792 e1=1481216 e2=0 e3=0
+MSMAX 3 w0=384 w1=134144 w2=0 w3=0
+MSENTER 3 e0=1162176 e1=1460800 e2=0 e3=0
 MSWORK0 3 110 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
 MSVB0 3 110 0 0 0 max=1
-MSWORK1 3 150 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
-MSVB1 3 149 0 0 0 max=1
+MSWORK1 3 149 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0
+MSVB1 3 150 0 0 0 max=1
 MSWORK2 3 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
 MSVB2 3 0 0 0 0 max=0
 MSWORK3 3 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
 MSVB3 3 0 0 0 0 max=0
-MSFLOW 3 trans=1 input=1 denied=0 commit=0 rule=0 time=0 stocks=0 walk=1 loops=0
-MSTRANS 3 0001 0000 0000 0000 0000 0000 0000 0000
+MSFLOW 3 trans=2 input=1 denied=0 commit=0 rule=0 time=0 stocks=0 walk=1 loops=0
+MSTRANS 3 0001 0107 0000 0000 0000 0000 0000 0000
 MSINPUT 3 010020 000000 000000 000000 000000 000000 000000 000000
-MSKIT 3 enters=2 rej=0 exits=2 opens=2 bytes=30272 hash=6ee7d1c2 mismatch=0 readfail=0
+MSKIT 3 enters=2 rej=0 exits=1 opens=2 bytes=30272 hash=6ee7d1c2 mismatch=0 readfail=0
 MSDRAW 3 compose=4 overflow=0 commit=152 visible=0
 MSSFX 3 move=0 confirm=0 back=0 value=0 start=1 lastid=157
-MSMISS 3 ring=1 id0=157 c0=1 id1=0 c1=0
+MSMISS 3 ring=0 id0=0 c0=0 id1=0 c1=0
+MSBGM 3 playing=0 track=0 calls=0 looping=0 streambytes=0 modesel=0 pupupu=0 winmario=0 winfox=0 results=0
 MSARENA 3 k=27,1,0,0,0,0,0,0 h=164892,416828,0,0,0,0,0,0
 MSFREE 3 1383396,1131460,0,0,0,0,0,0
-MSSCENE 4 curr=9 prev=7 enters=3 exits=2 rej=0 unreg=1 mism=0
+MSSCENE 4 curr=9 prev=7 enters=3 exits=3 rej=0 unreg=1 mism=0
 MSSHELL 4 screen=4294967295 splash=1/1 title=1/1 mode=1/1 vs=0/0
 MSFRAMES 4 f0=110 f1=150 f2=301 f3=0
-MSMAX 4 w0=384 w1=4544 w2=13440 w3=0
-MSENTER 4 e0=1601792 e1=1481216 e2=1270912 e3=0
+MSMAX 4 w0=384 w1=134144 w2=143744 w3=0
+MSENTER 4 e0=1162176 e1=1460800 e2=1014272 e3=0
 MSWORK0 4 110 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
 MSVB0 4 110 0 0 0 max=1
-MSWORK1 4 150 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+MSWORK1 4 149 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0
 MSVB1 4 150 0 0 0 max=1
-MSWORK2 4 301 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+MSWORK2 4 299 1 0 0 1 0 0 0 0 0 0 0 0 0 0 0
 MSVB2 4 301 0 0 0 max=1
 MSWORK3 4 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
 MSVB3 4 0 0 0 0 max=0
@@ -85,21 +88,22 @@ MSINPUT 4 010020 020008 020010 000000 000000 000000 000000 000000
 MSKIT 4 enters=3 rej=0 exits=3 opens=3 bytes=30272 hash=6ee7d1c2 mismatch=0 readfail=0
 MSDRAW 4 compose=10 overflow=0 commit=154 visible=0
 MSSFX 4 move=1 confirm=1 back=0 value=0 start=1 lastid=158
-MSMISS 4 ring=1 id0=157 c0=1 id1=0 c1=0
+MSMISS 4 ring=0 id0=0 c0=0 id1=0 c1=0
+MSBGM 4 playing=1 track=44 calls=1 looping=1 streambytes=2829896 modesel=1 pupupu=0 winmario=0 winfox=0 results=0
 MSARENA 4 k=27,1,7,0,0,0,0,0 h=164892,416828,253600,0,0,0,0,0
 MSFREE 4 1383396,1131460,1294688,0,0,0,0,0
 MSSCENE 5 curr=22 prev=9 enters=4 exits=4 rej=0 unreg=1 mism=0
 MSSHELL 5 screen=4294967295 splash=1/1 title=1/1 mode=1/1 vs=1/1
 MSFRAMES 5 f0=110 f1=150 f2=301 f3=1811
-MSMAX 5 w0=384 w1=4544 w2=13440 w3=21504
-MSENTER 5 e0=1601792 e1=1481216 e2=1270912 e3=1726784
+MSMAX 5 w0=384 w1=134144 w2=143744 w3=153600
+MSENTER 5 e0=1162176 e1=1460800 e2=1014272 e3=1624256
 MSWORK0 5 110 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
 MSVB0 5 110 0 0 0 max=1
-MSWORK1 5 150 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+MSWORK1 5 149 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0
 MSVB1 5 150 0 0 0 max=1
-MSWORK2 5 301 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+MSWORK2 5 299 1 0 0 1 0 0 0 0 0 0 0 0 0 0 0
 MSVB2 5 301 0 0 0 max=1
-MSWORK3 5 1811 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+MSWORK3 5 1803 2 5 0 1 0 0 0 0 0 0 0 0 0 0 0
 MSVB3 5 1811 0 0 0 max=1
 MSFLOW 5 trans=4 input=15 denied=1 commit=1 rule=1 time=1 stocks=2 walk=15 loops=1
 MSTRANS 5 0001 0107 0209 0316 0000 0000 0000 0000
@@ -107,21 +111,22 @@ MSINPUT 5 010020 020008 020010 030008 030002 030001 030008 030002
 MSKIT 5 enters=4 rej=0 exits=4 opens=4 bytes=30272 hash=6ee7d1c2 mismatch=0 readfail=0
 MSDRAW 5 compose=31 overflow=0 commit=165 visible=0
 MSSFX 5 move=7 confirm=2 back=1 value=4 start=1 lastid=158
-MSMISS 5 ring=1 id0=157 c0=1 id1=0 c1=0
+MSMISS 5 ring=0 id0=0 c0=0 id1=0 c1=0
+MSBGM 5 playing=0 track=44 calls=1 looping=1 streambytes=2829896 modesel=1 pupupu=0 winmario=0 winfox=0 results=0
 MSARENA 5 k=27,1,7,9,0,0,0,0 h=164892,416828,253600,392536,0,0,0,0
 MSFREE 5 1383396,1131460,1294688,1155752,0,0,0,0
-MSSCENE 6 curr=22 prev=9 enters=5 exits=5 rej=0 unreg=1 mism=0
+MSSCENE 6 curr=22 prev=9 enters=5 exits=4 rej=0 unreg=1 mism=0
 MSSHELL 6 screen=4294967295 splash=1/1 title=1/1 mode=1/1 vs=1/1
 MSFRAMES 6 f0=110 f1=150 f2=301 f3=1811
-MSMAX 6 w0=384 w1=4544 w2=13440 w3=21504
-MSENTER 6 e0=1601792 e1=1481216 e2=1270912 e3=1726784
+MSMAX 6 w0=384 w1=134144 w2=143744 w3=153600
+MSENTER 6 e0=1162176 e1=1460800 e2=1014272 e3=1624256
 MSWORK0 6 110 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
 MSVB0 6 110 0 0 0 max=1
-MSWORK1 6 150 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+MSWORK1 6 149 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0
 MSVB1 6 150 0 0 0 max=1
-MSWORK2 6 301 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+MSWORK2 6 299 1 0 0 1 0 0 0 0 0 0 0 0 0 0 0
 MSVB2 6 301 0 0 0 max=1
-MSWORK3 6 1811 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+MSWORK3 6 1803 2 5 0 1 0 0 0 0 0 0 0 0 0 0 0
 MSVB3 6 1811 0 0 0 max=1
 MSFLOW 6 trans=4 input=15 denied=1 commit=1 rule=1 time=1 stocks=2 walk=15 loops=1
 MSTRANS 6 0001 0107 0209 0316 0000 0000 0000 0000
@@ -129,21 +134,22 @@ MSINPUT 6 010020 020008 020010 030008 030002 030001 030008 030002
 MSKIT 6 enters=4 rej=0 exits=4 opens=4 bytes=30272 hash=6ee7d1c2 mismatch=0 readfail=0
 MSDRAW 6 compose=31 overflow=0 commit=165 visible=0
 MSSFX 6 move=7 confirm=2 back=1 value=4 start=1 lastid=158
-MSMISS 6 ring=1 id0=157 c0=1 id1=0 c1=0
+MSMISS 6 ring=0 id0=0 c0=0 id1=0 c1=0
+MSBGM 6 playing=0 track=0 calls=2 looping=1 streambytes=2886710 modesel=1 pupupu=1 winmario=0 winfox=0 results=0
 MSARENA 6 k=27,1,7,9,22,0,0,0 h=164892,416828,253600,392536,1494260,0,0,0
 MSFREE 6 1383396,1131460,1294688,1155752,54028,0,0,0
 MSSCENE 7 curr=24 prev=22 enters=6 exits=6 rej=0 unreg=1 mism=0
 MSSHELL 7 screen=4294967295 splash=1/1 title=1/1 mode=1/1 vs=1/1
 MSFRAMES 7 f0=110 f1=150 f2=301 f3=1811
-MSMAX 7 w0=384 w1=4544 w2=13440 w3=21504
-MSENTER 7 e0=1601792 e1=1481216 e2=1270912 e3=1726784
+MSMAX 7 w0=384 w1=134144 w2=143744 w3=153600
+MSENTER 7 e0=1162176 e1=1460800 e2=1014272 e3=1624256
 MSWORK0 7 110 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
 MSVB0 7 110 0 0 0 max=1
-MSWORK1 7 150 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+MSWORK1 7 149 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0
 MSVB1 7 150 0 0 0 max=1
-MSWORK2 7 301 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+MSWORK2 7 299 1 0 0 1 0 0 0 0 0 0 0 0 0 0 0
 MSVB2 7 301 0 0 0 max=1
-MSWORK3 7 1811 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+MSWORK3 7 1803 2 5 0 1 0 0 0 0 0 0 0 0 0 0 0
 MSVB3 7 1811 0 0 0 max=1
 MSFLOW 7 trans=4 input=15 denied=1 commit=1 rule=1 time=1 stocks=2 walk=15 loops=1
 MSTRANS 7 0001 0107 0209 0316 0000 0000 0000 0000
@@ -151,7 +157,15 @@ MSINPUT 7 010020 020008 020010 030008 030002 030001 030008 030002
 MSKIT 7 enters=4 rej=0 exits=4 opens=4 bytes=30272 hash=6ee7d1c2 mismatch=0 readfail=0
 MSDRAW 7 compose=31 overflow=0 commit=165 visible=0
 MSSFX 7 move=7 confirm=2 back=1 value=4 start=1 lastid=158
-MSMISS 7 ring=1 id0=157 c0=1 id1=0 c1=0
+MSMISS 7 ring=0 id0=0 c0=0 id1=0 c1=0
+MSBGM 7 playing=0 track=0 calls=3 looping=1 streambytes=2886710 modesel=1 pupupu=2 winmario=0 winfox=0 results=0
 MSARENA 7 k=27,1,7,9,22,22,0,0 h=164892,416828,253600,392536,1494260,1490888,0,0
 MSFREE 7 1383396,1131460,1294688,1155752,54028,57400,0,0
+MSSTOP n=7 pc=02063070 cpsr=2000003f
+ndsSceneManagerEnter in section .main
+$1 = {110, 150, 301, 1811}
+$2 = {1, 263, 521, 790, 0 <repeats 12 times>}
+$3 = {65568, 131080, 131088, 196616, 196610, 196609, 196616, 196610, 196609, 196616, 196624, 196612, 196612, 196612, 196624, 0}
+$4 = {7, 2, 1, 4, 1}
+[Inferior 1 (Remote target) detached]
 

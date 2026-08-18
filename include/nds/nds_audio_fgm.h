@@ -5,7 +5,7 @@
 #include <sys/audio.h>
 
 #define NDS_AUDIO_FGM_PASS 0x46474d31u /* FGM1 */
-#define NDS_AUDIO_FGM_ENTRY_COUNT 92u
+#define NDS_AUDIO_FGM_ENTRY_COUNT 93u
 #define NDS_AUDIO_FGM_PHASE_COUNT 5u
 #define NDS_AUDIO_FGM_PHASE_COMPLETE_MASK 0x1fu
 #define NDS_AUDIO_FGM_KO_COUNT 5u
@@ -44,8 +44,14 @@
  * asked for 164/158/165 and missed -- UKMISS id0=164 c0=17 id1=165 c1=6,
  * 2026-08-17 P2-1c evidence -- so this is the same silent-miss class as every
  * prior repin here, not a new one. */
-#define NDS_AUDIO_FGM_PACK_BYTES 948068u
-#define NDS_AUDIO_FGM_PACK_MAPPING_SHA256_LO 0xe4b8921cu
+/* 948068 -> 950168 and 0xe4b8921c -> 0x9bc3e069 on 2026-08-18 (P2-1d-1): FGM
+ * 157 nSYAudioFGMTitlePressStart (the title screen's own confirm cue,
+ * mntitle.c:501) joined SELECTED, 92 -> 93 entries.  The menu shell's seam
+ * already asked for it with the source's own id and missed -- MSMISS ring=1
+ * id0=157 c0=1, P2-1d evidence, the only cue any menu screen misses -- same
+ * silent-miss class as every prior repin here. */
+#define NDS_AUDIO_FGM_PACK_BYTES 950168u
+#define NDS_AUDIO_FGM_PACK_MAPPING_SHA256_LO 0x9bc3e069u
 #define NDS_AUDIO_FGM_CACHE_BYTES 204800u
 #define NDS_AUDIO_FGM_HANDLE_CAPACITY 8u
 #define NDS_AUDIO_FGM_FIDELITY_DEBT_PITCH_AUTOMATION (1u << 2)

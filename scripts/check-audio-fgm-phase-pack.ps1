@@ -52,7 +52,13 @@ $expectedIDs = @(626,470,469,467,490,74,363,364,372,373,374,430,439,292,
     # for and the pack did not carry -- MenuSelect, MenuScroll1, MenuScroll2,
     # MenuDenied. Proven by the miss ring, not inferred: 2026-08-17 P2-1c
     # evidence read `UKMISS ring=3 id0=164 c0=17 id1=165 c1=6`.
-    158, 163, 164, 165)
+    158, 163, 164, 165,
+    # P2-1d-1: the title screen's own confirm cue, which the menu shell's seam
+    # already asks for with the source's own id (mntitle.c:501) and the pack
+    # did not carry. Proven by the miss ring, not inferred: 2026-08-18 P2-1d
+    # evidence read `MSMISS ring=1 id0=157 c0=1` -- the only cue any menu
+    # screen misses.
+    157)
 $actualIDs = @($metadata.entries | ForEach-Object { [int]$_.id })
 if (($actualIDs -join ',') -ne ($expectedIDs -join ',')) {
     throw "Unexpected FGM mapping: $($actualIDs -join ',')"
@@ -89,7 +95,12 @@ if (([int]$metadata.format_version -ne 4) -or
     # and 28 above (source loop replayed to the note's proven reach, then a
     # normal one-shot IMA encode -- no DS hardware repeat, no hand-derived
     # IMA seed).
-    ([int64]$metadata.resident_bytes -ne 948068) -or
+    # 948068 -> 950168 on 2026-08-18 (P2-1d-1): FGM 157 TitlePressStart joined
+    # SELECTED, 92 -> 93 entries (+2100 bytes: 2068-byte IMA body + 32-byte
+    # entry header). A flat two-note schedule (both notes pitch code 9) whose
+    # ceiling reach exceeds its 4,128-sample decoded source, so it retains the
+    # full untrimmed source exactly like 158/163/164 above.
+    ([int64]$metadata.resident_bytes -ne 950168) -or
     ([int64]$metadata.resident_limit_bytes -ne 204800) -or
     # ROM, not RAM: the runtime streams cues into resident_limit_bytes and never
     # holds the pack. 512 KiB blocked the five announcer lines and 768 KiB then
@@ -106,7 +117,9 @@ if (([int]$metadata.format_version -ne 4) -or
     # catch and must never be repinned without.
     # 0x885657f4 -> 0xe4b8921c on 2026-08-18 (P2-1c-1) for the four menu SFX
     # joining SELECTED -- same reason, the selector table changed.
-    ($metadata.mapping_sha256_lo -ne '0xe4b8921c') -or
+    # 0xe4b8921c -> 0x9bc3e069 on 2026-08-18 (P2-1d-1) for FGM 157 joining
+    # SELECTED -- same reason, the selector table changed.
+    ($metadata.mapping_sha256_lo -ne '0x9bc3e069') -or
     # Repinned 2026-08-02: FGM 11 (the rolling dodge) dropped 127 -> 96 -> 68 ->
     # 48 on the owner's ear via FGM_OWNER_VOLUME_TRIM, -8.4 dB total against the
     # source; the 68 pin was
@@ -129,8 +142,11 @@ if (([int]$metadata.format_version -ne 4) -or
     # Repinned 2026-08-18 (P2-1c-1) for the four menu SFX joining SELECTED;
     # the prior pin was
     # 51ac736c2421fe63b0f5cba4e791572ed5c453e1c85614303b464cd3374d749e.
+    # Repinned 2026-08-18 (P2-1d-1) for FGM 157 joining SELECTED; the prior
+    # pin was
+    # 101fd1d5b369dc6932090e6de3a43508fb0b79d2f2507c56151a99f7d7e3d2b7.
     ($metadata.pack_sha256 -ne
-        '101fd1d5b369dc6932090e6de3a43508fb0b79d2f2507c56151a99f7d7e3d2b7')) {
+        '011a59be88752138b985faee776814d4c0fed048173f1d337ef51351adec741a')) {
     throw 'FGM pack format, budget, mapping, or binary identity changed.'
 }
 if ((@($metadata.excluded_entries).Count -ne 0) -or
@@ -254,7 +270,7 @@ if (($fgm218.acoustic_oracle.source_custom_fx_dry_only -ne $true) -or
 $header = Get-Content -LiteralPath $headerPath -Raw
 $runtime = Get-Content -LiteralPath $runtimePath -Raw
 foreach ($token in @(
-    '#define NDS_AUDIO_FGM_ENTRY_COUNT 92u',
+    '#define NDS_AUDIO_FGM_ENTRY_COUNT 93u',
     '#define NDS_AUDIO_FGM_CACHE_BYTES 204800u')) {
     if (-not $header.Contains($token)) { throw "Runtime header lost: $token" }
 }

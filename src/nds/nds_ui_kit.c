@@ -79,7 +79,7 @@ static const u16 sNdsUiKitSfxIds[NDS_UI_KIT_SFX_COUNT] = {
     158u, /* nSYAudioFGMMenuSelect      -- mnmodeselect.c:734 confirm   */
     165u, /* nSYAudioFGMMenuDenied      -- mnplayersvs.c:177 refusal    */
     163u, /* nSYAudioFGMMenuScroll1     -- mnvsmode.c:1449 value change */
-    157u  /* nSYAudioFGMTitlePressStart -- mntitle.c:501 (NOT PACKED)   */
+    157u  /* nSYAudioFGMTitlePressStart -- mntitle.c:501 confirm        */
 };
 
 typedef struct NdsUiKitTextSlot {
