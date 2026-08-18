@@ -97,6 +97,25 @@ None is P2-1 work; each is a one-line fix in the checker that already exists.
 
 ## Decisions pending
 
+- **P2-1k row ownership — two concurrent writers (2026-08-18 ~18:40)**: my
+  P2-1k implementer observed a SECOND uncommitted implementation of
+  deliverable (f) (viewport-scale full-bleed: `FRAME_ORIGIN`/`FRAME_SCALE_*`
+  mapping `syRdpSetViewport(10,10,310,230)` to 256x192 so background AND
+  foreground scale together) appear in `scripts/menus/generate_mn_ui_kit.py`
+  between its own edits, then get reverted ~70 s later — another session is
+  working this row. The implementer stopped clean: tree restored
+  byte-identical to HEAD, its bake preserved as a patch (see
+  `docs/p2/P2-1k-source-notes.md`, which also carries all transcribed source
+  facts). Owner picks ONE: (a) the other session owns P2-1k (it should take
+  the notes/patch), or (b) it stands down and this orchestrator's agent is
+  re-dispatched. Note: the foreign hunk's whole-viewport-scale reading of
+  full-bleed (f) is plausibly the better one — worth ratifying either way.
+- **CSS live 3D fighter preview (new, found in source)**: the original also
+  renders a live 3D fighter model in each occupied panel
+  (`mnPlayersVSMakeFighter`, `mnplayersvs.c:1624`, via
+  `ftManagerMakeFighter` + its own camera). Needs the fighter manager +
+  figatree heaps inside a menu scene — its own row if wanted for P2-1;
+  otherwise an audit allowlist entry citing this decision.
 - **Title label slide-in / text pop animation** — **RULED (owner, 2026-08-18
   round 4): ship it** (owner notes it reads as scaling code — pieces pop/
   scale in per `mnTitlePlayAnim`). Unblocked by the same ruling's 30 Hz
