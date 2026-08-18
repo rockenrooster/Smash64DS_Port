@@ -95,6 +95,27 @@ None is P2-1 work; each is a one-line fix in the checker that already exists.
 
 ## Decisions pending
 
+- **Title label slide-in** (`BLOCKED(decision: title slide-in)`, raised by
+  P2-1i round 2): `mnTitlePlayAnim` (mntitle.c:729-748) animates SObj and
+  DObj pieces in parallel — each piece has its own translate AND scale — so
+  the BG2 affine scroll cannot express it. Every option carries a bill: OBJ
+  cells against a 6,400 B bank-E floor (means evicting something), per-frame
+  surface recompose is banned, a ~51-frame pre-render is ~91 KB/frame-class
+  storage, and there is no second free affine layer (BG3 is the fire's).
+  Only 51 frames are ever seen (the source snaps at tic 220). Owner picks
+  which pieces animate — or accepts the static composition that ships today.
+- **VS-menu selection feedback** (raised by P2-1i round 2): the source shows
+  a hand cursor on the CSS ONLY — mode-select's icon light-up IS its
+  selection, the VS menu uses button highlight states
+  (`mnVSModeUpdateButton…Highlight/Not`), the SSS uses the red frame
+  (shipped). Finding (3)'s premise (hand everywhere) contradicts the source.
+  Shipped accordingly: the invented hand is REMOVED from the main menu; the
+  VS menu temporarily KEEPS its invented hand because the source's
+  button-highlight art is not baked yet and removing it would leave that
+  screen with no feedback. Owner chooses: (a) bake the source's VS-menu
+  button-highlight art and drop the hand (source-faithful), or (b) keep the
+  hand as a permanent delta.
+
 - **Menu artwork background** (`BLOCKED(decision: menu artwork background)`,
   raised by P2-1d): the mode-select and VS-mode screens both draw
   `llMNCommonSmashBrosCollageSprite` -- a 300x220 CI artwork montage -- at
