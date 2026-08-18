@@ -1,5 +1,6 @@
 /* P2-1b -- the port-owned scene seam. Contract and reasoning: include/nds/nds_scene_manager.h. */
 
+#include <nds/nds_os.h>
 #include <nds/nds_scene_manager.h>
 #include <sc/scene.h>
 #include <sys/malloc.h>
@@ -145,6 +146,24 @@ void ndsSceneManagerEnter(const void *arena_start, u32 arena_size)
 
         if ((desc->flags & NDS_SCENE_FLAG_ARENA_RESET) != 0u)
         {
+            /* THE REWIND IS ONE CALL AWAY -- ndsBaseSyTaskmanStartTask ->
+             * syTaskmanInitGeneralHeap (decomp sys/taskman.c:1227 -> :258) --
+             * so every GObj thread the OUTGOING scene left registered is about
+             * to become a pointer into the incoming scene's memory. The port's
+             * thread registry is the only structure that outlives the rewind
+             * still holding those pointers, so it is dropped HERE, at the
+             * rewind that invalidates them, and not by a validity test in each
+             * reader.
+             *
+             * P2-1b-1 measured: the VS Mode scene left two GObj threads
+             * registered (sThreads[5]/[6] = 0x022c6868/0x022c7f20, both inside
+             * this arena), the next VSBattle entry rewound over them, and
+             * ndsOsRunThreads then read 0xFFFFFFFF out of the reused memory as
+             * their coroutine and took a data abort in portCoroutineIsFinished
+             * -- reported as a SIGILL in a function --gc-sections had already
+             * deleted. Reads 0 on the first entry of a run. */
+            (void)ndsOsForgetThreadsInArena(arena_start, arena_size);
+
             if (gNdsSceneManagerArenaBase == 0u)
             {
                 gNdsSceneManagerArenaBase = (u32)(uintptr_t)arena_start;

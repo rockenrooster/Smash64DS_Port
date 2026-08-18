@@ -110,6 +110,24 @@ if (-not $hasHeapFreeMin) {
         'build (no realtime present path); per-scene arena free comes from ' +
         'the ring instead.')
 }
+# P2-1b-1's counters: registry slots dropped because their storage was inside
+# the arena the entering scene is about to rewind. Optional rather than
+# required, so this probe still reads an ELF built before that row landed --
+# reported absent rather than read as 0, which would look like "never fired".
+$hasDropCounters = ($symbols -contains 'gNdsOsArenaThreadsDropped') -and
+    ($symbols -contains 'gNdsOsArenaThreadDropEntries') -and
+    ($symbols -contains 'gNdsOsArenaThreadDropLastId')
+if (-not $hasDropCounters) {
+    Write-Output ('note: gNdsOsArenaThread* are absent from this build; the ' +
+        'SLWDROP line will read `absent`, not 0.')
+}
+# calico's exception entry. Breaking here catches the FIRST abort with its own
+# banked registers instead of whatever the nested one degenerates into.
+$hasExcptEntry = $symbols -contains '__excpt_entry'
+if (-not $hasExcptEntry) {
+    Write-Output ('note: __excpt_entry is absent from this build; a CPU abort ' +
+        'will only be seen wherever the emulator finally stops.')
+}
 
 $context = Initialize-MelonDSVerifierContext `
     -Root $root -MelonDS '' -RunnerSlot $RunnerSlot -NoBuild
@@ -163,11 +181,41 @@ try {
         'printf "SLWRINGK %d %u %u %u %u %u %u %u %u %u %u %u %u\n", $n, gNdsSceneManagerRingKind[0], gNdsSceneManagerRingKind[1], gNdsSceneManagerRingKind[2], gNdsSceneManagerRingKind[3], gNdsSceneManagerRingKind[4], gNdsSceneManagerRingKind[5], gNdsSceneManagerRingKind[6], gNdsSceneManagerRingKind[7], gNdsSceneManagerRingKind[8], gNdsSceneManagerRingKind[9], gNdsSceneManagerRingKind[10], gNdsSceneManagerRingKind[11]',
         'printf "SLWRINGH %d %u %u %u %u %u %u %u %u %u %u %u %u\n", $n, gNdsSceneManagerRingArenaHigh[0], gNdsSceneManagerRingArenaHigh[1], gNdsSceneManagerRingArenaHigh[2], gNdsSceneManagerRingArenaHigh[3], gNdsSceneManagerRingArenaHigh[4], gNdsSceneManagerRingArenaHigh[5], gNdsSceneManagerRingArenaHigh[6], gNdsSceneManagerRingArenaHigh[7], gNdsSceneManagerRingArenaHigh[8], gNdsSceneManagerRingArenaHigh[9], gNdsSceneManagerRingArenaHigh[10], gNdsSceneManagerRingArenaHigh[11]',
         'printf "SLWRINGF %d %u %u %u %u %u %u %u %u %u %u %u %u\n", $n, gNdsSceneManagerRingArenaFree[0], gNdsSceneManagerRingArenaFree[1], gNdsSceneManagerRingArenaFree[2], gNdsSceneManagerRingArenaFree[3], gNdsSceneManagerRingArenaFree[4], gNdsSceneManagerRingArenaFree[5], gNdsSceneManagerRingArenaFree[6], gNdsSceneManagerRingArenaFree[7], gNdsSceneManagerRingArenaFree[8], gNdsSceneManagerRingArenaFree[9], gNdsSceneManagerRingArenaFree[10], gNdsSceneManagerRingArenaFree[11]',
+        $(if ($hasDropCounters) {
+            'printf "SLWDROP %d dropped=%u dropentries=%u lastid=%u\n", $n, gNdsOsArenaThreadsDropped, gNdsOsArenaThreadDropEntries, gNdsOsArenaThreadDropLastId'
+        } else {
+            'printf "SLWDROP %d dropped=absent dropentries=absent lastid=absent\n", $n'
+        }),
         ('if $n < ' + $Hits),
         'continue',
         'end',
         'end',
+        $(if ($hasExcptEntry) {
+            'break __excpt_entry'
+        } else {
+            'echo note: no __excpt_entry breakpoint in this build\n'
+        }),
         'continue',
+        # THE FAULT SITE, READ FROM THE PC AND NEVER FROM A NAME.
+        #
+        # gdb resolves a stop address through DWARF, and --gc-sections leaves a
+        # deleted function's line-table entry behind relocated to 0. That is how
+        # P2-1b's abort at PC 0x00000910 was reported -- and written onto the
+        # board -- as `ndsBaseLbParticleDrawTextures` (lbparticle.c:1942), a
+        # function battleship_lbparticle.c:27 deliberately lets the linker drop
+        # and which `nm` cannot find in the ELF at all. A whole cycle's plan was
+        # built on that name. `info symbol` is the check that refuses it: it
+        # prints "No symbol matches" for exactly this case.
+        #
+        # With the __excpt_entry breakpoint above, the stop is the FIRST
+        # exception rather than the nested one it degenerates into, so
+        # `info registers` carries lr_abt (the faulting address) and the
+        # pre-abort r0-r12. On a clean run this block just describes the last
+        # scene entry, which costs nothing.
+        'printf "SLWPC pc=%08x lr=%08x cpsr=%08x\n", $pc, $lr, $cpsr',
+        'info symbol $pc',
+        'info symbol $lr',
+        'info registers',
         $(if ($hasHeapFreeMin) {
             'printf "SLWSTOP n=%d arena_base=%x arena_size=%u heap_free_min=%u\n", $n, gNdsSceneManagerArenaBase, gNdsSceneManagerArenaSize, gNdsTaskmanGeneralHeapFreeMin'
         } else {
