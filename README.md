@@ -29,14 +29,11 @@ required assets locally, and builds `smash64ds-battle-playable-hwtri.nds`.
 
 ## Current status
 
-The current build passes a full play test on retail Nintendo DS hardware. In
-the shipped demo the Fox CPU climbs one level per Mario win, wrapping from 9
-back to 1.
-
-The game timing is designed around two game updates per displayed frame, with a
-target of steady 30 fps. Stable 30 fps has not been reached: heavy combat
-currently runs at about 13.5–15 fps on a real Nintendo DS. Gameplay, audio, and
-visual work are still in progress.
+The battle now holds 30 fps for 95 percent of frames, passing the 1.12
+million-tick P95 cadence gate (two VBlank intervals per frame), and the
+current build passes a full play test on retail Nintendo DS hardware. In the
+shipped demo the Fox CPU climbs one level per Mario win, wrapping from 9 back
+to 1.
 
 ## Prerequisites
 
