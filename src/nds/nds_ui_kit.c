@@ -76,6 +76,7 @@ NDS_UI_KIT_PUBLISHED volatile u32
 NDS_UI_KIT_PUBLISHED volatile u32 gNdsUiKitSfxLastId;
 NDS_UI_KIT_PUBLISHED volatile u32 gNdsUiKitSurfaceOpenCount;
 NDS_UI_KIT_PUBLISHED volatile u32 gNdsUiKitSurfaceBlitCount;
+NDS_UI_KIT_PUBLISHED volatile u32 gNdsUiKitFireAtlasBlitCount;
 NDS_UI_KIT_PUBLISHED volatile u32 gNdsUiKitSurfaceBytes;
 NDS_UI_KIT_PUBLISHED volatile u32 gNdsUiKitSurfaceHashMismatchCount;
 NDS_UI_KIT_PUBLISHED volatile u32 gNdsUiKitSurfaceReadFailCount;
@@ -882,6 +883,93 @@ s32 ndsUiKitBlitSurfaces(const u8 *surfaces, u32 count)
     ndsRelocAssetStreamClose(&stream);
     gNdsUiKitSurfaceTicks += cpuGetTiming() - start;
     return ok;
+}
+
+/* P2-1i -- the title's fire atlas. NOT a screen-space backdrop: it is the
+ * thirty mnTitleMakeFire states tiled 5x6 into one 255x252 sheet written
+ * into the FOREGROUND overlay bitmap (BG3), full-height -- the backdrop
+ * path clips every row to the 192-row screen, which is correct for a
+ * backdrop and would throw 60 of this sheet's rows away. The BG3 affine
+ * then reads one 51x42 cell per frame (ndsPlatformSetTitleFireFrame).
+ *
+ * The caller must have cleared the layer first (the shell's entry path
+ * clears both overlay bitmaps), because this writes only rows 0..251,
+ * columns 0..254: column 255 and rows 252..255 stay at the clear's
+ * transparent 0, which is also what keeps the affine window from ever
+ * sampling garbage at the sheet's edge. */
+s32 ndsUiKitBlitFireAtlas(void)
+{
+    const NdsUiKitSurfaceMetric *metric =
+        &kNdsUiKitSurfaceMetrics[NDS_MN_UI_KIT_SURFACE_TITLE_FIRE_ATLAS];
+    NdsRelocAssetStream stream;
+    u32 start = cpuGetTiming();
+    u32 row_bytes = (u32)metric->width * sizeof(u16);
+    u32 rows_per_slice = NDS_UI_KIT_STAGING_BYTES / row_bytes;
+    u32 hash = 0x811C9DC5u;
+    u32 pitch = 0u;
+    u32 row = 0u;
+    u16 *layer;
+
+    layer = ndsPlatformGetOriginalSpriteOverlayLayer(TRUE, &pitch, NULL, NULL,
+                                                     NULL);
+    if ((layer == NULL) || (pitch == 0u))
+    {
+        gNdsUiKitSurfaceNoLayerCount++;
+        return FALSE;
+    }
+    if (ndsRelocAssetStreamOpen(&stream, NDS_UI_KIT_SURFACE_PATH) == FALSE)
+    {
+        gNdsUiKitSurfaceReadFailCount++;
+        return FALSE;
+    }
+    gNdsUiKitSurfaceOpenCount++;
+    while (row < (u32)metric->height)
+    {
+        u32 rows = (u32)metric->height - row;
+        u32 i;
+
+        if (rows > rows_per_slice)
+        {
+            rows = rows_per_slice;
+        }
+        if (ndsRelocAssetStreamRead(&stream,
+                                    metric->offset + (row * row_bytes),
+                                    sNdsUiKitStaging,
+                                    rows * row_bytes) == FALSE)
+        {
+            gNdsUiKitSurfaceReadFailCount++;
+            ndsRelocAssetStreamClose(&stream);
+            return FALSE;
+        }
+        hash = ndsUiKitHashFold(hash, sNdsUiKitStaging, rows * row_bytes);
+        DC_FlushRange(sNdsUiKitStaging, rows * row_bytes);
+        for (i = 0u; i < rows; i++)
+        {
+            /* Whole rows at the layer's pitch, no clip: the sheet is opaque
+             * by construction (every atlas texel carries bit 15), so this is
+             * the same one-DMA-per-row shape the opaque backdrop rows take. */
+            dmaCopyHalfWords(3, sNdsUiKitStaging + (i * row_bytes),
+                             layer + ((row + i) * pitch), row_bytes);
+        }
+        gNdsUiKitSurfaceBytes += rows * row_bytes;
+        row += rows;
+    }
+    ndsRelocAssetStreamClose(&stream);
+
+    gNdsUiKitSurfaceLastHash = hash;
+    if (hash != metric->fnv32)
+    {
+        gNdsUiKitSurfaceHashMismatchCount++;
+        return FALSE;
+    }
+    /* ITS OWN COUNTER, not gNdsUiKitSurfaceBlitCount: the loop verifier's
+     * standing invariant is one BACKDROP blit per backdrop-screen entry, and
+     * this sheet is not a backdrop. Counting it there made blit=4 against
+     * three backdrop entries and reddened the arm. The shared failure counters
+     * above stay shared on purpose -- they are asserted zero either way. */
+    gNdsUiKitFireAtlasBlitCount++;
+    gNdsUiKitSurfaceTicks += cpuGetTiming() - start;
+    return TRUE;
 }
 
 s32 ndsUiKitCacheSurface(u32 surface)

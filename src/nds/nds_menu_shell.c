@@ -145,6 +145,10 @@ NDS_MENU_PUBLISHED volatile u32
 NDS_MENU_PUBLISHED volatile u32
     gNdsMenuShellTransitionRing[NDS_MENU_SHELL_RING];
 NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellTransitionCount;
+/* P2-1i. The 1-based presented title frame the fire was first shown on. The
+ * source shows it during scene construction on our branch, so this reads 1;
+ * anything else means the fire missed frames the source had it burning on. */
+NDS_MENU_PUBLISHED volatile u32 gNdsTitleFireRevealFrame;
 NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellStartupCount;
 NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellInputRing[NDS_MENU_SHELL_RING];
 NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellInputCount;
@@ -712,12 +716,33 @@ static void ndsMenuShellHideRows(void)
  * into one surface, and blits it into BG2 once on entry. PRESS START is a
  * second surface because it blinks.
  *
- * WHAT IS DELIBERATELY ABSENT, so a reader does not look for a bug: the
- * thirty-frame fire animation behind all of it (`mnTitleMakeFire`, two 32x32
- * sprites blown up 12x/8.5x) and the label slide-in the DObj anim joints
- * drive. `PROJECT_GOAL.md` names both classes as sacrificable -- "reduced
- * background animation", "static substitutes for expensive animation" -- and
- * the field the fire burns over is the black this composites onto.
+ * P2-1i. THE FIRE SHIPS (owner findings 4/5, 2026-08-18). The source's title
+ * is one GObj with two SObjs over a FILL camera (mntitle.c:934-996): 32x32
+ * RGBA32 fire textures blown up 12x/8.5x and 9.5x/7.0x, each advancing its
+ * texture index one per tic from (12, 0) -- a constant phase difference of 12,
+ * so exactly thirty distinct pair-states. The bake tiles those thirty states
+ * into the 255x252 TITLE_FIRE_ATLAS sheet (build_fire_atlas), this screen
+ * blits it into BG3 once on entry, and the BG3 affine reads one 51x42 cell per
+ * presented frame: the upscale is the 2D hardware's and a frame costs the
+ * matrix+scroll register write alone.
+ *
+ * THE FIELD IS NOT BLACK, and that was worth measuring rather than assuming.
+ * Both fire SObjs are SP_TRANSPARENT and `mnTitleFireProcDisplay` (:864) draws
+ * them with RGB = TEXEL0, so the fire camera's COBJ_FLAG_FILLCOLOR colour
+ * reaches the screen as a literal gDPFillRectangle (sys/objdisplay.c:2750).
+ * Measured over the thirty states, that fill's mean transmittance through the
+ * pair is 125.4/255 and only 0.012% of texels are fully covered -- half the
+ * title's field IS the fill. The seven `dMNTitleFireColors` are all near-white,
+ * so the bake composites onto (0xFF, 0xFF, 0xFF), table entry 0.
+ *
+ * ONE APPROXIMATION, disclosed: the source re-rolls that fill among the seven
+ * every 260 tics with an 80-tic crossfade (mnTitleFireCameraProcUpdate,
+ * :1329); a 16bpp DS BG layer has no per-channel modulator, so the bake pins
+ * entry 0 rather than cycling.
+ *
+ * The label slide-in (`mnTitleMakeLabels`' anim joints, ended and snapped to
+ * rest by mnTitleSetEndLayout at tic 220) is still a later slice; the wordmark
+ * sits at its resting position from frame 0.
  *
  * It still plays no BGM: mnTitleInitVars calls syAudioStopBGMAll when the
  * previous scene is not the opening movie (mntitle.c:352), because the music
@@ -725,15 +750,49 @@ static void ndsMenuShellHideRows(void)
  * cinematic is P2-7. A silent title is the source's behaviour, not a gap. */
 #define NDS_MENU_TITLE_BLINK 32u
 
+/* THERE IS NO REVEAL ON THIS BRANCH, and getting that wrong is worth the
+ * paragraph. `mnTitleMakeFire` does set GOBJ_FLAG_HIDDEN (mntitle.c:988) --
+ * and then calls `mnTitleShowFire` immediately unless the previous scene was
+ * the opening movie (:990-993), which sets alpha to 0xFF and clears the flag
+ * before the scene's first tic. Our shell enters the title from the frameless
+ * boot scene, the same branch whose `mnTitleInitVars` stops the BGM
+ * (:344-352) -- so the fire is at FULL ALPHA on presented frame 0.
+ *
+ * The tic-220 case in `mnTitleTransitionsFuncRun` (:669-677) does call
+ * `mnTitleShowFire` again, which is what a reading of that switch alone
+ * suggests is the reveal; on this branch it is a no-op re-show. Its real work
+ * is `mnTitleSetEndLayout`'s LABEL half -- it ends the link-8 GObj's
+ * animation and snaps every logo sprite to its resting position and colour.
+ * That half is the still-unimplemented slide-in, not the fire. */
+
 /* The field the title art is composited over at bake time, as a DS BGR5551
- * texel: erasing the blinking PRESS START means writing this back. */
-#define NDS_MENU_TITLE_FIELD_TEXEL ((u16)BIT(15))
+ * texel. The title surfaces are baked KEYED (the field is the fire, which
+ * runs on BG3 behind the BG2 art), so the field texel is the transparent
+ * key: erasing the blinking PRESS START must punch through to the fire, not
+ * paint an opaque black box over it. The fire covers every screen pixel with
+ * an opaque atlas texel from the first frame, so main BG palette entry 0 is
+ * never actually seen on this screen -- it stays black as the safe floor. */
+#define NDS_MENU_TITLE_FIELD_TEXEL ((u16)0)
 
 static void ndsMenuShellPopulateTitle(void)
 {
     /* Nothing. The title's whole presentation is its backdrop surface, drawn
      * once by ndsMenuShellEnterBackdrop; this function exists because populate
      * is re-run on every content change and a backdrop must not be. */
+}
+
+/* The fire's cell for a presented frame: pair-state (frame % 30), with the
+ * atlas 5 columns wide. `ndsPlatformSetTitleFireFrame` takes the cell's atlas
+ * origin; the affine reference point is 20.8, so whole texels arrive shifted
+ * there. */
+static void ndsMenuShellTitleFireFrame(u32 presented_frame)
+{
+    u32 cell = presented_frame % NDS_MN_UI_KIT_FIRE_FRAMES;
+    u32 col = cell % NDS_MN_UI_KIT_FIRE_COLS;
+
+    ndsPlatformSetTitleFireFrame((s32)(col * NDS_MN_UI_KIT_FIRE_CELL_W),
+                                 (s32)((cell / NDS_MN_UI_KIT_FIRE_COLS) *
+                                       NDS_MN_UI_KIT_FIRE_CELL_H));
 }
 
 static void ndsMenuShellUpdateTitle(u32 held, u32 taps)
@@ -756,6 +815,16 @@ static void ndsMenuShellUpdateTitle(u32 held, u32 taps)
             ndsUiKitEraseCachedSurface(NDS_MENU_TITLE_FIELD_TEXEL);
         }
     }
+    /* THE FIRE'S TIMELINE: one cell per presented frame, from entry. The
+     * source advances both fire SObjs one texture index per tic
+     * (`mnTitleFireProcUpdate`, mntitle.c:925) at a constant phase difference
+     * of 12, so the pair has exactly thirty states and state k is the atlas's
+     * cell k. Enable happened at entry, so this is the whole per-frame cost:
+     * an affine matrix+scroll write, four registers and no texels.
+     * `gNdsMenuShellFrames` lags the presented frame by one here (RecordFrame
+     * increments after Update), hence +1 to name it in 1-based frames. */
+    ndsMenuShellTitleFireFrame(
+        gNdsMenuShellFrames[NDS_MENU_SHELL_SCREEN_TITLE] + 1u);
     if ((taps & (NDS_INPUT_A | NDS_INPUT_START)) != 0u)
     {
         ndsUiKitSfx(NDS_UI_KIT_SFX_START);
@@ -819,7 +888,7 @@ static void ndsMenuShellPopulateMode(void)
                             NDS_MENU_MODE_X0, NDS_MENU_MODE_Y0 - 4);
 
     ndsUiKitSetSprite(NDS_MENU_SPRITE_CURSOR,
-                      NDS_MN_UI_KIT_IMAGE_CURSOR_HAND_POINT,
+                      NDS_MN_UI_KIT_IMAGE_CSS_CURSOR_POINT,
                       NDS_MENU_MODE_X0 +
                           ((s32)sMenuModeCursor * NDS_MENU_MODE_DX) +
                           NDS_MENU_CURSOR_DX_DIGIT,
@@ -1002,7 +1071,7 @@ static void ndsMenuShellPopulateVs(void)
     }
 
     ndsUiKitSetSprite(NDS_MENU_SPRITE_CURSOR,
-                      NDS_MN_UI_KIT_IMAGE_CURSOR_HAND_POINT,
+                      NDS_MN_UI_KIT_IMAGE_CSS_CURSOR_POINT,
                       NDS_MENU_VS_X0 + ((s32)sMenuVsCursor * NDS_MENU_VS_DX) +
                           NDS_MENU_CURSOR_DX,
                       NDS_MENU_VS_Y0 + ((s32)sMenuVsCursor * NDS_MENU_VS_DY) +
@@ -2795,6 +2864,18 @@ static void ndsMenuShellEnterBackdrop(u32 screen)
         (void)ndsUiKitCacheSurface(NDS_MN_UI_KIT_SURFACE_TITLE_PRESS_START);
         sMenuTitleBlinkPhase = 0u;
         ndsUiKitDrawCachedSurface();
+        /* P2-1i: the fire atlas goes into BG3 at entry and BURNS FROM THE
+         * FIRST PRESENT -- `mnTitleMakeFire` shows it during construction on
+         * this branch (mntitle.c:990), before the scene's first tic, so a
+         * title whose first frames are a black field is not the source's.
+         * Enabling here rather than in the update is what guarantees frame 0
+         * already has it: the loop's first Update runs after this. */
+        (void)ndsUiKitBlitFireAtlas();
+        ndsPlatformSetTitleFireEnabled(TRUE, (s32)NDS_MN_UI_KIT_FIRE_PA,
+                                       (s32)NDS_MN_UI_KIT_FIRE_PD);
+        ndsMenuShellTitleFireFrame(1u);
+        gNdsTitleFireRevealFrame =
+            gNdsMenuShellFrames[NDS_MENU_SHELL_SCREEN_TITLE] + 1u;
         break;
     case NDS_MENU_SHELL_SCREEN_MODE:
     case NDS_MENU_SHELL_SCREEN_VSMODE:
@@ -2944,6 +3025,16 @@ static void ndsMenuShellRun(u32 screen)
         ndsMenuShellRecordFrame();
         ndsPlatformEndFrame();
         ndsMenuShellRecordPresent();
+    }
+
+    /* EVERY title exit path lands here (START/A is the only one today), so
+     * this is where the fire hands BG3 back: disable restores the identity
+     * affine and priority 0, and the NEXT screen's entry clears the bitmap
+     * itself (the same clear above), which is what leaves the next owner the
+     * transparent foreground overlay it expects. */
+    if (screen == NDS_MENU_SHELL_SCREEN_TITLE)
+    {
+        ndsPlatformSetTitleFireEnabled(FALSE, 0, 0);
     }
 
     ndsUiKitExit();

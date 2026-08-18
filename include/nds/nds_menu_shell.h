@@ -116,6 +116,13 @@ extern volatile u32 gNdsMenuShellEnterTicks[NDS_MENU_SHELL_SCREEN_COUNT];
 /* ((from_screen << 8) | to_scene_kind) per menu transition this shell made. */
 extern volatile u32 gNdsMenuShellTransitionRing[NDS_MENU_SHELL_RING];
 extern volatile u32 gNdsMenuShellTransitionCount;
+/* P2-1i. The 1-based presented title frame the fire was first shown on.
+ * `mnTitleMakeFire` shows it during scene construction on our branch
+ * (mntitle.c:990-993 -- the HIDDEN flag two lines above is the opening-movie
+ * branch only), so a correct run reads 1 and 0 means it never fired. The
+ * platform's own enable/frame/disable counters live beside the fire helpers
+ * in nds_platform.c. */
+extern volatile u32 gNdsTitleFireRevealFrame;
 /* P2-1h. How many times the frameless boot scene ran and handed straight to
  * the title. Exactly 1 per run, and the audio-pack load rides on it: a run
  * that shows 0 here has no menu SFX, whatever the miss ring says. */

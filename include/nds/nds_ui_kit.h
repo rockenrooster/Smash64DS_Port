@@ -203,6 +203,15 @@ u32 ndsUiKitNumberWidth(s32 value);
  * surface was composited over, which is why that field is a bake-time
  * constant rather than something the runtime has to remember. --- */
 s32 ndsUiKitBlitSurfaces(const u8 *surfaces, u32 count);
+
+/* P2-1i -- the title's fire ATLAS. Its own entry point because it is the one
+ * surface that is not a screen-space backdrop: it is a 255x252 sheet of the
+ * thirty `mnTitleMakeFire` states written into BG3's 256x256 bitmap, which the
+ * BG3 affine then reads one 51x42 cell of per frame. The backdrop path clips
+ * every row to the 192-row SCREEN, which is correct for a backdrop and would
+ * throw away 60 of this sheet's rows. Returns FALSE and counts the same
+ * surface counters on any failure. */
+s32 ndsUiKitBlitFireAtlas(void);
 s32 ndsUiKitCacheSurface(u32 surface);
 void ndsUiKitDrawCachedSurface(void);
 void ndsUiKitEraseCachedSurface(u16 field_texel);
@@ -248,6 +257,13 @@ extern volatile u32 gNdsUiKitSfxLastId;
  * which is the only way this can silently do nothing. */
 extern volatile u32 gNdsUiKitSurfaceOpenCount;
 extern volatile u32 gNdsUiKitSurfaceBlitCount;
+/* P2-1i. The fire atlas is counted SEPARATELY from the backdrop blits above,
+ * and that separation is the point: the loop verifier asserts one backdrop
+ * blit per backdrop-screen entry, and the atlas is not a backdrop -- it is the
+ * title's BG3 animation sheet. Folding it into the backdrop count turned a
+ * live invariant into "3 or 4 depending on the screen", so it gets its own
+ * counter and its own assertion (exactly one per title entry) instead. */
+extern volatile u32 gNdsUiKitFireAtlasBlitCount;
 extern volatile u32 gNdsUiKitSurfaceBytes;
 extern volatile u32 gNdsUiKitSurfaceHashMismatchCount;
 extern volatile u32 gNdsUiKitSurfaceReadFailCount;

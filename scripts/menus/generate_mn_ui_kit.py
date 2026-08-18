@@ -587,7 +587,8 @@ def box_scale(raster: list[list[tuple[int, int, int, int]]],
 
 def decode_sprite_raster(fileobj: RelocFile, symbol: str, offset: int,
                          tint: tuple[int, int, int] | None = None,
-                         alpha_ramp: bool = False
+                         alpha_ramp: bool = False,
+                         width_override: int | None = None
                          ) -> tuple[Sprite, list[list[tuple[int, int, int, int]]]]:
     """Decode one sprite's bands into an RGBA raster at the sprite's own size.
 
@@ -614,6 +615,14 @@ def decode_sprite_raster(fileobj: RelocFile, symbol: str, offset: int,
         raise ConvertError(f"{symbol}: no bitmaps")
     width = sprite.width
     height = sprite.height
+    if width_override is not None:
+        # A WRAPPED sprite draws more columns than `sprite.width`: the RDP
+        # tiles at 2^masks texels and the SObj's own width is only the piece
+        # spDraw hands the rectangle.  The two decal bars are exactly this --
+        # `width` 8, `width_img` 16, `masks` 4 (mnmodeselect.c:530,
+        # mnvsmode.c:290) -- so tiling the 8 columns the normal path decodes
+        # would repeat at half the source's period.
+        width = width_override
     if tint is not None:
         sprite = replace(sprite, red=tint[0], green=tint[1], blue=tint[2])
     raster = [[(0, 0, 0, 0)] * width for _ in range(height)]
@@ -640,7 +649,8 @@ def decode_sprite_raster(fileobj: RelocFile, symbol: str, offset: int,
         piece_h = min(band_h, height - row)
         if piece_h <= 0:
             break
-        piece_w = min(piece.width, width)
+        piece_w = min(piece.width_img if width_override is not None
+                      else piece.width, width)
         decode_band(fileobj, sprite, piece, symbol, raster, row,
                     piece_w, piece_h, alpha_ramp)
     return sprite, raster
@@ -794,6 +804,23 @@ class Placement:
     tint: tuple[int, int, int] | None = None
     alpha: int = 255
     flat: bool = False
+    # A WRAPPED draw: `(lrs, lrt)`, the rectangle the SObj covers in the
+    # source's own frame, filled by repeating the texture at its RDP wrap
+    # period.  `sobj->cms/cmt = G_TX_WRAP` with `masks`/`maskt` set is the
+    # source saying exactly this -- the character/stage-select stone is one
+    # 64x32 tile over 300x220 (mnplayersvs.c:1370, mnmaps.c:356) and the
+    # mode-select decal bar one 16-wide strip over 96 (mnmodeselect.c:530).
+    # `period` is (2^masks, 2^maskt), or None on an axis the source clamps.
+    tile: tuple[int, int] | None = None
+    period: tuple[int | None, int | None] | None = None
+    # `scale` overrides the frame's own 4/5 for this placement's ARTWORK, and
+    # `centre_in` is the ratio whose footprint the smaller artwork is centred
+    # inside, so the source's LAYOUT is untouched.  This is the P2-1f map-icon
+    # split, reused: the four mode-select icons come down to 5/8 because the
+    # bright twin of each has to fit one 32x32 OBJ cell, and a bright icon that
+    # was a different size from the dark one it replaces would read as a jump.
+    scale: tuple[int, int] | None = None
+    centre_in: tuple[int, int] | None = None
 
 
 def place_raster(fileobj: RelocFile, part: Placement, offset: int
@@ -805,8 +832,10 @@ def place_raster(fileobj: RelocFile, part: Placement, offset: int
     instead would modulate twice for any sprite whose container carries a
     non-white primitive of its own.
     """
+    period_s = part.period[0] if part.period is not None else None
     sprite, raster = decode_sprite_raster(fileobj, part.symbol, offset,
-                                          (255, 255, 255), alpha_ramp=True)
+                                          (255, 255, 255), alpha_ramp=True,
+                                          width_override=period_s)
     prim = part.tint if part.tint is not None else (sprite.red, sprite.green,
                                                     sprite.blue)
     combined = []
@@ -820,13 +849,44 @@ def place_raster(fileobj: RelocFile, part: Placement, offset: int
                 out.append(((r * prim[0]) // 255, (g * prim[1]) // 255,
                             (b * prim[2]) // 255, (a * part.alpha) // 255))
         combined.append(out)
-    num, den = FRAME_SCALE
-    width = max(1, (sprite.width * num + den // 2) // den)
-    height = max(1, (sprite.height * num + den // 2) // den)
-    left = part.x - (sprite.width // 2) if part.centred else part.x
-    top = part.y - (sprite.height // 2) if part.centred else part.y
-    return (frame_pos(left), frame_pos(top),
-            box_scale(combined, width, height))
+    src_w = len(combined[0])
+    src_h = len(combined)
+    if part.tile is not None:
+        # Repeat at the RDP's own wrap period on each axis the source wraps;
+        # an axis the source clamps (maskt == 0 on both decal bars) keeps the
+        # texture's own extent and simply stops.
+        tile_w, tile_h = part.tile
+        wrap_s = part.period[0] if part.period is not None else src_w
+        wrap_t = part.period[1] if part.period is not None else src_h
+        tiled = []
+        for y in range(tile_h):
+            sy = (y % wrap_t) if wrap_t else y
+            if sy >= src_h:
+                tiled.append([(0, 0, 0, 0)] * tile_w)
+                continue
+            row = combined[sy]
+            tiled.append([
+                row[(x % wrap_s) if wrap_s else x]
+                if ((x % wrap_s) if wrap_s else x) < src_w else (0, 0, 0, 0)
+                for x in range(tile_w)])
+        combined = tiled
+        src_w, src_h = tile_w, tile_h
+    num, den = part.scale if part.scale is not None else FRAME_SCALE
+    width = max(1, (src_w * num + den // 2) // den)
+    height = max(1, (src_h * num + den // 2) // den)
+    left = part.x - (src_w // 2) if part.centred else part.x
+    top = part.y - (src_h // 2) if part.centred else part.y
+    dst_x = frame_pos(left)
+    dst_y = frame_pos(top)
+    if part.centre_in is not None:
+        # Keep the source's own footprint on the screen and put the smaller
+        # artwork in the middle of it, so only the drawing shrinks.
+        cnum, cden = part.centre_in
+        foot_w = max(1, (src_w * cnum + cden // 2) // cden)
+        foot_h = max(1, (src_h * cnum + cden // 2) // cden)
+        dst_x += (foot_w - width) // 2
+        dst_y += (foot_h - height) // 2
+    return (dst_x, dst_y, box_scale(combined, width, height))
 
 
 @dataclass(frozen=True)
@@ -1064,6 +1124,16 @@ def emit_manifest(path: Path, glyphs: list[Glyph], images: list[Image],
         lines.append(
             f"#define NDS_MN_UI_KIT_SURFACE_{surface.token} {index}u")
     lines.append("")
+    lines.append("/* P2-1i -- mnTitleMakeFire's thirty states, tiled into the")
+    lines.append(" * BG3 bitmap. A frame is selected by the affine reference")
+    lines.append(" * point alone; PA/PD are the hardware upscale. */")
+    lines.append(f"#define NDS_MN_UI_KIT_FIRE_FRAMES {FIRE_FRAMES}u")
+    lines.append(f"#define NDS_MN_UI_KIT_FIRE_CELL_W {FIRE_CELL_W}u")
+    lines.append(f"#define NDS_MN_UI_KIT_FIRE_CELL_H {FIRE_CELL_H}u")
+    lines.append(f"#define NDS_MN_UI_KIT_FIRE_COLS {FIRE_COLS}u")
+    lines.append(f"#define NDS_MN_UI_KIT_FIRE_PA {FIRE_PA}")
+    lines.append(f"#define NDS_MN_UI_KIT_FIRE_PD {FIRE_PD}")
+    lines.append("")
     lines.append("#endif /* NDS_MN_UI_KIT_GENERATED_INC */")
     write_if_changed(path, "\n".join(lines) + "\n")
 
@@ -1090,10 +1160,17 @@ IMAGE_SOURCES = [
     # `scale` is an exact (numerator, denominator); absent means 1:1.
     # `tint` is the (r, g, b) the SOURCE modulates an intensity sprite by at its
     # draw site; absent keeps the container's own primitive colour.
-    ("MNPlayersCommon", "llMNPlayersCommonCursorHandPointSprite",
-     "CURSOR_HAND_POINT"),
-    ("MNPlayersCommon", "llMNPlayersCommonCursorHandGrabSprite",
-     "CURSOR_HAND_GRAB"),
+    # P2-1i. THE 1:1 HAND CURSORS ARE GONE, and their removal is the finding
+    # behind owner note (3) rather than a saving. `mnmodeselect.c` contains no
+    # cursor of any kind -- the entry it is on is shown by swapping to the
+    # BRIGHT icon (:161 vs :213) -- and `mnvsmode.c` shows it by recolouring an
+    # option tab (`mnVSModeUpdateButton`, :321). Neither screen has a hand, so
+    # nothing sets its size; drawn at 1:1 in a layout scaled to 4/5 it came out
+    # a fifth too large for everything around it. Both screens now point the
+    # same 4/5 hand the character select uses (CSS_CURSOR_POINT below), which
+    # is the only hand the source draws anywhere in this shell
+    # (mnplayersvs.c:1723). That frees the 6,144 bytes of main OBJ the four
+    # mode-select icons below need.
     # P2-1e. The CSS draws twelve 45x43 portraits across a 256 px screen, which
     # the source does across 320, so these two come down to 32/45 -- the ratio
     # that lands them in a 32x32 OBJ cell.  Nothing else in the tree drew them
@@ -1191,19 +1268,47 @@ IMAGE_SOURCES = [
     # pure RED (mnmaps.c:876: red 0xFF, green 0x00, blue 0x00).  Baked in,
     # because the kit's image path draws a cell as it is packed.
     ("MNMaps", "llMNMapsCursorSprite", "MAP_CURSOR", (5, 8), (0xFF, 0, 0)),
+    # ---- P2-1i, the main menu's SELECTED entry. --------------------------
+    # `mnModeSelectMake<Entry>` draws a DIFFERENT sprite for the entry the
+    # cursor is on: the bright IA8 icon at white (mnmodeselect.c:161/:238/
+    # :315/:392) instead of the dark I4 twin at grey 0x96 (:213/:290/:367/
+    # :444). The dark four are composited into the MODE_SELECT surface; these
+    # four are OBJ cells because exactly one of them moves per cursor move and
+    # a bitmap surface cannot change without a re-blit.
+    #
+    # 5/8, and it is the same CELL FACT P2-1f's map icons are: 51x51 at the
+    # frame's own 4/5 is 41x41 and lands in a 64x64 cell (8,192 B) -- four of
+    # those is 32,768 and main OBJ has 8,448 free. At 5/8 the icon is 32x32 in
+    # a 32x32 cell (2,048 B) and the four fit exactly the space the two 1:1
+    # cursors above gave back. The surface's dark twins are baked at the SAME
+    # 5/8 inside the source's own 4/5 footprint, so lighting an entry up is a
+    # recolour in place and not a resize.
+    ("MNMain", "llMNMainControllerIconSprite", "MODE_ICON_1P", (5, 8)),
+    ("MNMain", "llMNMainConsoleIconSprite", "MODE_ICON_VS", (5, 8)),
+    ("MNMain", "llMNMainSettingsIconSprite", "MODE_ICON_OPTION", (5, 8)),
+    ("MNMain", "llMNMainDataIconSprite", "MODE_ICON_DATA", (5, 8)),
 ]
 
 # P2-1h.  THE ORIGINAL PRESENTATION ART (owner ruling, 2026-08-18: this is a
 # port, so the first-party branding, logos and copyright line ship, converted
 # from source like every other asset).
 #
-# TITLE_FIELD is the flat field the title art composites over.  The original
-# burns a thirty-frame fire animation there (`mnTitleMakeFire`, two 32x32
-# RGBA32 sprites blown up 12x/8.5x), which `PROJECT_GOAL.md` names twice as
-# sacrificable -- "reduced background animation", "static substitutes for
-# expensive animation".  It is DELIBERATELY ABSENT and recorded as such rather
-# than approximated badly; black is what the fire itself burns over.
-TITLE_FIELD = (0x00, 0x00, 0x00)
+# P2-1i.  THE TITLE'S FIELD IS THE FIRE, so both title surfaces bake KEYED
+# (background=None): the fire runs on the DS as the BG3 bitmap behind the BG2
+# art (`ndsPlatformSetTitleFireEnabled` puts it there), and a keyed
+# TITLE_SCREEN is what lets it show everywhere the art has no texel.  The fire
+# is on from the first presented frame -- `mnTitleMakeFire` calls
+# `mnTitleShowFire` during construction on our branch (mntitle.c:990-993) --
+# and its atlas is opaque on every texel, so main BG palette entry 0 is never
+# actually seen on this screen; the shell still paints it black as the floor.
+TITLE_FIELD = None
+
+# The decal blue every non-title menu sits on (mnmodeselect.c:517).  It is
+# baked as a surface's FIELD, not as a margin: `rgba8_to_ds` sends it to
+# exactly `RGB15(1, 6, 12)`, which is the texel `NDS_MENU_BACKDROP_BLUE`
+# already paints through BG palette entry 0, so an opaque surface over it has
+# no seam AND may move by whole-row DMA.
+MENU_FIELD = (0x08, 0x33, 0x65)
 
 # THE TITLE, in the source's own draw order.  `mnTitleMakeLabels` builds kinds
 # 0..4 into one GObj -- which is what puts the black drop-shadow cutout BEHIND
@@ -1259,7 +1364,225 @@ SURFACE_SOURCES = [
                 (Placement("MNCommon", "llMNCommonSmashBrosCollageSprite",
                            10, 10, False),),
                 None),
+    # P2-1i, owner finding (1). THE CHARACTER AND STAGE SELECTS HAVE A REAL
+    # BACKGROUND AND IT IS THE SAME ONE: `mnPlayersVSMakeWallpaper`
+    # (mnplayersvs.c:1342) and `mnMapsMakeWallpaper` (mnmaps.c:348) are the
+    # same eleven lines -- `llMNSelectCommonStoneBackgroundSprite`, a 64x32
+    # CI4 stone tile, `cms`/`cmt = G_TX_WRAP`, `masks = 6` / `maskt = 5` (its
+    # own 64x32 period), drawn over `lrs`/`lrt` = 300x220 at (10, 10).  That
+    # rectangle is the CSS camera's own viewport (`syRdpSetViewport(..., 10,
+    # 10, 310, 230)`), which is what proves lrs/lrt are the rect's SIZE and
+    # not its lower-right corner.  One surface, blitted by both screens: the
+    # two calls differ in nothing a bake can see.
+    SurfaceSpec("MENU_STONE",
+                (Placement("MNSelectCommon",
+                           "llMNSelectCommonStoneBackgroundSprite",
+                           10, 10, False,
+                           tile=(300, 220), period=(64, 32)),),
+                None),
+    # P2-1i, owner finding (2), the MAIN MENU.  Everything `mnModeSelectMake*`
+    # composes that does not change with the cursor, in the source's own draw
+    # order: the collage and both decal bars first (link 2 / display 0), then
+    # the MODE SELECT plate and the SMASH emblem, then the four entry icons in
+    # their UNSELECTED form and the four English labels (link 3 / display 1).
+    # Positions and colours are quoted from mnmodeselect.c:161-579 and are the
+    # source's own -- the icons at (169,27)/(128,64)/(87,101)/(46,138), the
+    # labels at (224,52)/(183,89)/(142,126)/(102,163) in pure red, the decal
+    # bar tinted the same decal blue the DS backdrop already paints.
+    #
+    # THE SELECTED ICON IS NOT HERE, and that is the one thing this surface
+    # cannot carry: `mnModeSelectMake1PMode` swaps to a DIFFERENT sprite
+    # (`...IconSprite`, IA8, white) for the highlighted entry and back to
+    # `...IconDarkSprite` (I4, grey 0x96) for the rest, and a composited
+    # bitmap cannot change on a cursor move without a re-blit.  The four
+    # bright icons are OBJ images instead (IMAGE_SOURCES below), drawn over
+    # the dark one at the same 5/8 artwork size so the swap is a light-up and
+    # not a resize.
+    SurfaceSpec("MODE_SELECT",
+                (Placement("MNCommon", "llMNCommonSmashBrosCollageSprite",
+                           10, 10, False),
+                 Placement("MNMain", "llMNMainDecalBarMiddleSprite",
+                           0, 37, False, (0x08, 0x33, 0x65),
+                           tile=(96, 38), period=(16, None)),
+                 Placement("MNMain", "llMNMainDecalBarEdgeSprite",
+                           96, 37, False, (0x08, 0x33, 0x65)),
+                 Placement("MNMain", "llMNMainModeSelectTextSprite",
+                           28, 27, False, (0x3C, 0x73, 0xB4)),
+                 Placement("MNMain", "llMNMainSmashLogoSprite",
+                           226, 137, False, (0x08, 0x33, 0x65)),
+                 Placement("MNMain", "llMNMainControllerIconDarkSprite",
+                           169, 27, False, (0x96, 0x96, 0x96),
+                           scale=(5, 8), centre_in=(4, 5)),
+                 Placement("MNMain", "llMNMainConsoleIconDarkSprite",
+                           128, 64, False, (0x96, 0x96, 0x96),
+                           scale=(5, 8), centre_in=(4, 5)),
+                 Placement("MNMain", "llMNMainSettingsIconDarkSprite",
+                           87, 101, False, (0x96, 0x96, 0x96),
+                           scale=(5, 8), centre_in=(4, 5)),
+                 Placement("MNMain", "llMNMainDataIconDarkSprite",
+                           46, 138, False, (0x96, 0x96, 0x96),
+                           scale=(5, 8), centre_in=(4, 5)),
+                 Placement("MNMain", "llMNMain1PModeTextSprite",
+                           224, 52, False, (0xFF, 0x00, 0x00)),
+                 Placement("MNMain", "llMNMainVsModeTextSprite",
+                           183, 89, False, (0xFF, 0x00, 0x00)),
+                 Placement("MNMain", "llMNMainOptionTextSprite",
+                           142, 126, False, (0xFF, 0x00, 0x00)),
+                 Placement("MNMain", "llMNMainDataTextSprite",
+                           102, 163, False, (0xFF, 0x00, 0x00))),
+                MENU_FIELD),
 ]
+
+
+# ---------------------------------------------------------------------------
+# P2-1i -- the title screen's own background: `mnTitleMakeFire`.
+# ---------------------------------------------------------------------------
+#
+# THE TITLE SCREEN'S BACKGROUND IS THE FIRE, and the owner overruled P2-1h's
+# decision to sacrifice it.  What the source draws (mntitle.c:934-996) is ONE
+# GObj carrying TWO SObjs over a black fill camera:
+#
+#   sobj[0]  texture 12  pos (-32, -16)  scale (12.0, 8.5)
+#   sobj[1]  texture  0  pos (  8,   8)  scale ( 9.5,  7.0)
+#
+# and `mnTitleFireProcUpdate` advances EACH sobj's own texture index by one a
+# tic, wrapping at 30 (`mnTitleUpdateFireSprite`, :906).  The phase difference
+# is therefore constant at 12, so the pair takes exactly THIRTY distinct
+# states and the whole animation is a thirty-entry cycle -- which is what makes
+# it bakeable at all.  The textures are `llMNTitleFireAnimFrame1..30Sprite`,
+# 32x32 RGBA32 each, blown up 12x/8.5x, so the screen image is a very
+# low-frequency field and survives being stored small.
+#
+# The draw combiner is `colour = TEXEL0, alpha = TEXEL0 * PRIMITIVE`
+# (mntitle.c:872) with the primitive alpha `sMNTitleFireAlpha`, which
+# `mnTitleShowFire` sets to 0xFF on the branch this build takes (scene_prev is
+# never the opening cinematic until P2-7), so the resting composite is the two
+# layers alpha-blended at their own texel alpha over black.
+#
+# THE CAMERA COLOUR IS THE FIELD THE FIRE BURNS OVER, and it is NOT a
+# modulator of the artwork -- `mnTitleFireProcDisplay` (:864) sets the combiner
+# to RGB = TEXEL0, A = TEXEL0.a * PRIM.a, so the sprites carry their own colour
+# and the camera's `color` reaches the screen as a literal fill: the fire
+# camera is made with COBJ_FLAG_FILLCOLOR (:1393), which `gcPrepCamera` turns
+# into G_CYC_FILL + gDPFillRectangle over the whole viewport
+# (sys/objdisplay.c:2750-2756).
+#
+# THAT FILL IS LOAD-BEARING, measured, not assumed: both fire layers are
+# SP_TRANSPARENT and semi-transparent nearly everywhere, so over the thirty
+# states the fill's mean transmittance through the pair is 125.4/255 -- 49% of
+# the title's field is the fill colour, and only 0.012% of texels are fully
+# uncovered.  A bake onto BLACK therefore ships a title about half as bright as
+# the source's, which is owner finding 4.  It is baked onto the fill instead.
+#
+# WHICH fill: `mnTitleInitVars` (:358) seeds a RANDOM one of seven
+# `dMNTitleFireColors{R,G,B}` on our branch and `mnTitleFireCameraProcUpdate`
+# (:1329) re-rolls it every 260 tics with an 80-tic crossfade.  All seven are
+# near-white (min channel 0x64).  A DS background layer has no per-channel
+# modulator at 16bpp, so a 16bpp bake has to pin one of the seven; it pins
+# entry 0, which is exactly (0xFF, 0xFF, 0xFF) -- the table's own first entry
+# and the identity.  THE PINNING IS THE APPROXIMATION, the black field was a
+# defect.
+FIRE_FILL = (0xFF, 0xFF, 0xFF)   # dMNTitleFireColors{R,G,B}[0]
+FIRE_FRAMES = 30
+FIRE_PHASE = 12          # sobj[0] starts at texture 12, sobj[1] at 0
+FIRE_CELL_W = 51         # 5 columns x 51 = 255 <= 256
+FIRE_CELL_H = 42         # 6 rows    x 42 = 252 <= 256
+FIRE_COLS = 5
+FIRE_ROWS = 6
+FIRE_TEX = 32            # every frame sprite is 32x32
+
+# The DS affine steps, in 8.8: PA = cell_w * 256 / 256, PD = cell_h * 256 /
+# 192.  BG3 is an extended-rotscale bitmap (`bgInit(3, BgType_Bmp16,
+# BgSize_B16_256x256, ...)`) so the whole upscale is the 2D hardware's, the
+# frame select is the reference point, and a frame costs FOUR register writes.
+FIRE_PA = (FIRE_CELL_W * 256) // DS_SCREEN_W
+FIRE_PD = (FIRE_CELL_H * 256) // DS_SCREEN_H
+
+# `sobj->pos`, `sprite.scalex/scaley` for the two layers, in the source's frame.
+FIRE_LAYERS = ((-32.0, -16.0, 12.0, 8.5), (8.0, 8.0, 9.5, 7.0))
+
+
+def _fire_sample(raster, u: float, v: float) -> tuple[int, int, int, int]:
+    """Bilinear tap of one 32x32 fire texture.
+
+    The atlas is an UPSAMPLE of the source on both axes (a 51-wide cell spans
+    the 256 px screen, which spans about 21 of the layer's 32 texels), so
+    bilinear is the reconstruction that matches what an N64 texture rectangle
+    at G_TF_BILERP puts on the television -- and point sampling here would
+    bake in blocks the hardware upscale would then magnify again.
+    """
+    if (u < 0.0) or (v < 0.0) or (u > (FIRE_TEX - 1)) or (v > (FIRE_TEX - 1)):
+        return (0, 0, 0, 0)
+    x0 = int(u)
+    y0 = int(v)
+    x1 = min(x0 + 1, FIRE_TEX - 1)
+    y1 = min(y0 + 1, FIRE_TEX - 1)
+    fx = u - x0
+    fy = v - y0
+    out = []
+    for c in range(4):
+        top = (raster[y0][x0][c] * (1.0 - fx)) + (raster[y0][x1][c] * fx)
+        bot = (raster[y1][x0][c] * (1.0 - fx)) + (raster[y1][x1][c] * fx)
+        out.append(int(round((top * (1.0 - fy)) + (bot * fy))))
+    return (out[0], out[1], out[2], out[3])
+
+
+def build_fire_atlas(cache: dict[str, RelocFile], offsets: dict[str, int],
+                     repo_root: Path) -> Surface:
+    """The thirty composited states, packed 5x6 into one 255x252 BG3 bitmap."""
+    o2r = "MNTitleFireAnim"
+    if o2r not in cache:
+        cache[o2r] = RelocFile(
+            repo_root / "decomp" / "BattleShip-main" / "BattleShip_o2r" /
+            "reloc_menus" / o2r)
+    fileobj = cache[o2r]
+    frames = []
+    for i in range(FIRE_FRAMES):
+        symbol = f"llMNTitleFireAnimFrame{i + 1}Sprite"
+        if symbol not in offsets:
+            raise ConvertError(f"{symbol} missing from the reloc headers")
+        sprite, raster = decode_sprite_raster(fileobj, symbol, offsets[symbol],
+                                              (255, 255, 255), alpha_ramp=True)
+        if (sprite.width != FIRE_TEX) or (sprite.height != FIRE_TEX):
+            raise ConvertError(
+                f"{symbol}: {sprite.width}x{sprite.height}, expected "
+                f"{FIRE_TEX}x{FIRE_TEX}")
+        frames.append(raster)
+
+    width = FIRE_COLS * FIRE_CELL_W
+    height = FIRE_ROWS * FIRE_CELL_H
+    texels = [0] * (width * height)
+    # One atlas texel spans this many source-frame pixels on each axis; the
+    # inverse of the affine the hardware will run.
+    step_x = (DS_SCREEN_W / FIRE_CELL_W) * (FRAME_SCALE[1] / FRAME_SCALE[0])
+    step_y = (DS_SCREEN_H / FIRE_CELL_H) * (FRAME_SCALE[1] / FRAME_SCALE[0])
+    for t in range(FIRE_FRAMES):
+        col = t % FIRE_COLS
+        row = t // FIRE_COLS
+        layers = ((frames[(FIRE_PHASE + t) % FIRE_FRAMES], FIRE_LAYERS[0]),
+                  (frames[t % FIRE_FRAMES], FIRE_LAYERS[1]))
+        for ay in range(FIRE_CELL_H):
+            fy = (ay + 0.5) * step_y
+            base = ((row * FIRE_CELL_H) + ay) * width + (col * FIRE_CELL_W)
+            for ax in range(FIRE_CELL_W):
+                fx = (ax + 0.5) * step_x
+                # The fire camera's FILL is the starting colour, not black:
+                # see FIRE_FILL.  Both layers then alpha-composite over it in
+                # mnTitleFireProcDisplay's own draw order (base SObj, then
+                # next), which is the order `layers` is built in.
+                red, green, blue = FIRE_FILL
+                for raster, (px, py, sx, sy) in layers:
+                    r, g, b, a = _fire_sample(raster, (fx - px) / sx,
+                                              (fy - py) / sy)
+                    if a == 0:
+                        continue
+                    inv = 255 - a
+                    red = ((r * a) + (red * inv)) // 255
+                    green = ((g * a) + (green * inv)) // 255
+                    blue = ((b * a) + (blue * inv)) // 255
+                texels[base + ax] = rgba8_to_ds(red, green, blue, 255)
+    return Surface("TITLE_FIRE_ATLAS", "TITLE_FIRE_ATLAS", width, height,
+                   0, 0, True, texels)
 
 
 # The digit block must stay contiguous and in ascending order: the runtime
@@ -1344,15 +1667,33 @@ def write_surface_previews(out_dir: Path, surfaces: list[Surface]) -> None:
 
     by_token = {surface.token: surface for surface in surfaces}
     scenes = {
-        "screen_title": (TITLE_FIELD,
-                         ["TITLE_SCREEN", "TITLE_PRESS_START"]),
+        # THE TITLE'S FIELD IS THE FIRE, from the first presented frame -- on
+        # our branch `mnTitleMakeFire` calls `mnTitleShowFire` at construction
+        # (mntitle.c:990), so there is no black-field phase to preview.  These
+        # composites run the BG3 affine the hardware runs, so a wrong PA/PD or
+        # a wrong cell origin shows up here rather than on the owner's screen.
+        # Two cells, because one still picture cannot show an animation.
+        "screen_title": ((0x00, 0x00, 0x00),
+                         ["TITLE_SCREEN", "TITLE_PRESS_START"], 0),
+        "screen_title_cell15": ((0x00, 0x00, 0x00),
+                                ["TITLE_SCREEN", "TITLE_PRESS_START"], 15),
         # The menus' own decal blue, mnmodeselect.c:517 (0x083365).
-        "screen_menu": ((0x08, 0x33, 0x65), ["MENU_COLLAGE"]),
+        "screen_menu": ((0x08, 0x33, 0x65), ["MENU_COLLAGE"], None),
     }
-    for name, (field, tokens) in scenes.items():
+    for name, (field, tokens, fire_cell) in scenes.items():
         if not all(token in by_token for token in tokens):
             continue
         frame = [[field] * 256 for _ in range(192)]
+        if (fire_cell is not None) and ("TITLE_FIRE_ATLAS" in by_token):
+            atlas = by_token["TITLE_FIRE_ATLAS"]
+            org_x = (fire_cell % FIRE_COLS) * FIRE_CELL_W
+            org_y = (fire_cell // FIRE_COLS) * FIRE_CELL_H
+            for y in range(192):
+                sy = org_y + ((y * FIRE_PD) >> 8)
+                for x in range(256):
+                    sx = org_x + ((x * FIRE_PA) >> 8)
+                    frame[y][x] = ds_texel_to_rgb(
+                        atlas.texels[sy * atlas.width + sx], field)
         for token in tokens:
             surface = by_token[token]
             for y in range(surface.height):
@@ -1467,6 +1808,12 @@ def main(argv: list[str] | None = None) -> int:
 
     surfaces = [convert_surface(cache, offsets, repo_root, spec)
                 for spec in SURFACE_SOURCES]
+    # The fire atlas is not a SurfaceSpec because it is not one composite at
+    # one screen position: it is thirty of them tiled into a 255x252 sheet the
+    # BG3 affine reads a cell out of, so it has its own builder and its own
+    # blit path.  It rides in the same payload because that is one NitroFS
+    # open the title screen already pays for.
+    surfaces.append(build_fire_atlas(cache, offsets, repo_root))
 
     pack, image_table = build_pack(glyphs, images)
     surface_pack, surface_table = build_surface_pack(surfaces)

@@ -223,7 +223,9 @@ if (-not [string]::IsNullOrWhiteSpace($AnalyzeOnly)) {
         # would otherwise close green.
         'gNdsMenuShellStartupCount',
         'gNdsUiKitSurfaceBlitCount', 'gNdsUiKitSurfaceHashMismatchCount',
-        'gNdsUiKitSurfaceReadFailCount', 'gNdsUiKitSurfaceNoLayerCount'
+        'gNdsUiKitSurfaceReadFailCount', 'gNdsUiKitSurfaceNoLayerCount',
+        # P2-1i. The title's BG3 fire sheet, counted apart from the backdrops.
+        'gNdsUiKitFireAtlasBlitCount'
     )
     $symbols = & $nm $elf | ForEach-Object { ($_ -split '\s+')[-1] }
     $missing = @($required | Where-Object { $symbols -notcontains $_ })
@@ -240,8 +242,18 @@ if (-not [string]::IsNullOrWhiteSpace($AnalyzeOnly)) {
             'will only be seen wherever the emulator finally stops.')
     }
 
+    # FORWARD -MelonDS, do not hardcode ''. With a runner slot the slot still
+    # wins (Resolve-MelonDSRunnerSlot ignores this argument, which is what the
+    # param block above means by "the slot wins"), but with the default
+    # RunnerSlot of -1 there is no slot to win: the context falls through to
+    # Resolve-MelonDSPath -> Resolve-MelonDSRepoExecutablePath, whose $MelonDS
+    # is [Parameter(Mandatory)] and rejects an empty string outright. A literal
+    # '' therefore made `verify-all.ps1 -Profile Boundary` -- the invocation
+    # AGENTS.md's Operating Model opens with, and the one with no -RunnerSlot --
+    # die on this arm before the verifier ran, with a parameter-binding error
+    # that reads nothing like a shell problem.
     $context = Initialize-MelonDSVerifierContext `
-        -Root $root -MelonDS '' -RunnerSlot $RunnerSlot -NoBuild
+        -Root $root -MelonDS $MelonDS -RunnerSlot $RunnerSlot -NoBuild
     $melon_dir = Split-Path -Parent $context.MelonDSPath
     $log_dir = Get-MelonDSVerifierLogDir -Root $root -RunnerSlot $RunnerSlot
     $stdout = Join-Path $log_dir 'melonds.p2-shell-loop.stdout.log'
@@ -433,9 +445,11 @@ if (-not [string]::IsNullOrWhiteSpace($AnalyzeOnly)) {
             # three per lap (title + two collage screens) and every failure
             # counter must stay 0. A lap that stopped drawing the collage would
             # otherwise close green on scene bookkeeping alone.
-            ('printf "LOOPSURF blit=%u mismatch=%u readfail=%u nolayer=%u\n", ' +
+            ('printf "LOOPSURF blit=%u mismatch=%u readfail=%u nolayer=%u ' +
+             'fireblit=%u\n", ' +
              'gNdsUiKitSurfaceBlitCount, gNdsUiKitSurfaceHashMismatchCount, ' +
-             'gNdsUiKitSurfaceReadFailCount, gNdsUiKitSurfaceNoLayerCount'),
+             'gNdsUiKitSurfaceReadFailCount, gNdsUiKitSurfaceNoLayerCount, ' +
+             'gNdsUiKitFireAtlasBlitCount'),
             ('printf "LOOPARENA base=%08x size=%u\n", ' +
              'gNdsSceneManagerArenaBase, gNdsSceneManagerArenaSize'),
             ('printf "LOOPINPUTRING ' + $ringFmt + '\n", ' + $inputRing),
@@ -584,6 +598,16 @@ if ($null -ne $surf) {
             "BACKDROP SURFACES: blit=$($s['blit']) against " +
             "e0+e1+e2=$expected backdrop-screen entries; every entry of the " +
             'title, the mode select and the VS menu draws exactly one.')
+        # P2-1i. The title's BG3 fire sheet, asserted on its own rather than
+        # folded into the backdrop count above -- one atlas blit per title
+        # entry. A run that stopped blitting it would still draw a correct
+        # backdrop and would otherwise close green with a black title field.
+        if ($null -ne $s['fireblit']) {
+            Assert-Loop ([int64]$s['fireblit'] -eq $e['e0']) (
+                "TITLE FIRE ATLAS: fireblit=$($s['fireblit']) against " +
+                "e0=$($e['e0']) title entries; every title entry blits the " +
+                'thirty-state fire sheet into BG3 exactly once.')
+        }
         Assert-Loop ($e['startup'] -eq 1) (
             "BOOT SCENE: startup=$($e['startup']), expected exactly 1 -- the " +
             'frameless boot scene runs once and carries the menu audio load.')

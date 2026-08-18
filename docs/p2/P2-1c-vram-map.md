@@ -54,7 +54,7 @@ that scene runs*.
 |---|---|---|---|---|---|---|
 | `nSCKindVSBattle` | fighter + stage textures | sprite overlay + foreground | **IFCommon** — `ndsIFCommonNativeOamPrepareGameStatus` packs upward from offset 0; the sixteen asset specs sum to ~41.7 KB before the Task 39 hit-spark sheet | A5I3 flare palettes | console | — |
 | `nSCKindVSResults` | results textures | same compositor | IFCommon, still prepared | palettes | console | — |
-| `nSCKindTitle`, `nSCKindVSMode`, `nSCKindPlayersVS`, `nSCKindMaps` | menu textures | same compositor | **free** — IFCommon's prepare is driven by the battle scene's own asset load and its latch is cleared at teardown (`ndsIFCommonNativeOamDiscardTextures`) | palettes | console | **P2-1c UI kit** when a sub-engine surface is entered |
+| `nSCKindTitle`, `nSCKindVSMode`, `nSCKindPlayersVS`, `nSCKindMaps` | menu textures | same compositor; at the **title**, BG3 additionally holds the P2-1i fire atlas (below) | **free** — IFCommon's prepare is driven by the battle scene's own asset load and its latch is cleared at teardown (`ndsIFCommonNativeOamDiscardTextures`) | palettes | console | **P2-1c UI kit** when a sub-engine surface is entered |
 
 ## What P2-1c takes, and why that is safe
 
@@ -62,25 +62,30 @@ The kit draws on **main OBJ (bank E) in menu scenes** and on **sub OBJ (bank
 I) whenever a bottom-screen surface is entered**. It takes no BG bank on
 either engine, so it cannot collide with the battle compositor or the console.
 
-Main bank E, allocated top-down (`src/nds/nds_ui_kit.c`). Sizes as of **P2-1f**,
-which grew the image block from 32,512 to 40,704 bytes; the text budget has been
+Main bank E, allocated top-down (`src/nds/nds_ui_kit.c`). Sizes as of **P2-1i**,
+which swapped the two 1:1 menu cursors out (6,144 B — nothing in the source
+draws a 1:1 hand on those two screens; both point at the CSS's own 4/5 hand)
+for the main menu's four bright mode icons at 5/8 (8,192 B), netting the
+image block from 40,704 to 42,752 bytes; the text budget has been
 eight fields since P2-1e and is at its ceiling:
 
 | Range | Bytes | Content |
 |---|---:|---|
-| 24,832 – 65,536 | 40,704 | 28 baked images (below) |
-| 8,448 – 24,832 | 16,384 | 8 text fields x 4 cells of 32x8 |
-| 0 – 8,448 | 8,448 | **left for the battle's OBJ tenant** |
+| 22,784 – 65,536 | 42,752 | 30 baked images (below) |
+| 6,400 – 22,784 | 16,384 | 8 text fields x 4 cells of 32x8 |
+| 0 – 6,400 | 6,400 | **left for the battle's OBJ tenant** |
 
 The image block, in the generator's own order
-(`scripts/menus/generate_mn_ui_kit.py`): the two 1:1 menu cursors (4,096 +
-2,048), Mario and Fox portraits at 32/45 in 32x32 cells (2,048 each, down from
-8,192 at 1:1 — twelve portrait CELLS have to fit a 256 px screen), the ten
-digits and the infinity glyph (5,888), P2-1e's character-select set — the
-locked-slot question mark (2,048), three 4/5-scaled cursor states (6,144), the
-1P and CP tokens (4,096), the three player-kind labels at 1:1 (3,072) and the
-CP LEVEL label (1,024) — and P2-1f's stage-select set: the Dream Land and RANDOM
-map icons (2,048 each) and the cursor frame (4,096), all three at **5/8**.
+(`scripts/menus/generate_mn_ui_kit.py`): Mario and Fox portraits at 32/45 in
+32x32 cells (2,048 each, down from 8,192 at 1:1 — twelve portrait CELLS have
+to fit a 256 px screen), the ten digits and the infinity glyph (5,888), P2-1e's
+character-select set — the locked-slot question mark (2,048), three 4/5-scaled
+cursor states (6,144), the 1P and CP tokens (4,096), the three player-kind
+labels at 1:1 (3,072) and the CP LEVEL label (1,024) — P2-1f's stage-select
+set: the Dream Land and RANDOM map icons (2,048 each) and the cursor frame
+(4,096), all three at **5/8** — and P2-1i's four main-menu mode icons at 5/8
+(2,048 each), the bright selected-state sprites `mnModeSelectMake1PMode`
+swaps to.
 
 **5/8 IS A CELL FACT.** At the frame's own 4/5 the source's 62x50 cursor frame
 becomes 50x40 and lands in a 64x64 cell (8,192 B); at 5/8 it is 39x31 and lands
@@ -91,8 +96,8 @@ bytes of the 16,640 that were free. The icons keep the source's own 4/5 GRID
 positions and are centred inside the 4/5 footprint, so only the artwork inside
 each cell is smaller than the source's.
 
-**THE FLOOR IS NOW 8,448 BYTES**, and the next row that wants main OBJ space has
-to say what it evicts. Two 32x32 cells and change is what remains.
+**THE FLOOR IS NOW 6,400 BYTES** (three 32x32 cells and change), and the next
+row that wants main OBJ space has to say what it evicts.
 
 **EIGHT TEXT FIELDS IS THE CEILING, not a choice**: 8 x 4 x 512 is exactly
 16,384 and bank I is exactly 16,384, so a ninth field would take the sub engine
@@ -169,6 +174,46 @@ HUD is text and small sprites.
   because `ndsUiKitEnter` reads and hashes the whole OBJ pack on every screen
   entry — art in there would cost the character select the bytes of a title
   screen it never shows.
+
+  **P2-1i PUT THE TITLE'S FIRE ON BG3 THE SAME WAY** (`mnTitleMakeFire`,
+  mntitle.c:934 — owner findings 4/5, 2026-08-18). The thirty pair-states of
+  the source's two upscaled fire SObjs bake into one 255x252 sheet
+  (128,520 B, streamed through the 2 KiB staging buffer like every other
+  surface), BG3's extended-rotscale mode scales the 51x42 cell of the current
+  frame to the full screen, and a frame change is the affine reference-point
+  write alone — no per-frame VRAM traffic. The title's BG2 art re-baked KEYED
+  (field transparent, 58.1% of its texels) so the fire shows through;
+  `ndsPlatformSetTitleFireEnabled` drops BG3 behind BG2 (priority 0 → 3) at
+  the title's ENTRY and restores priority 0 plus the identity transform on
+  every title exit, and the next screen's entry clear wipes the bitmap — the
+  same scene-exclusive hand-back P2-1h used for BG2. Wrap is deliberately not
+  touched, because there is no `bgGetWrap` to restore it with and the affine
+  provably cannot leave the sheet (max source coordinate (254, 251) of
+  255x252).
+
+  **THERE IS NO REVEAL DELAY, and the first cut of this row had one.**
+  `mnTitleMakeFire` sets `GOBJ_FLAG_HIDDEN` and then calls `mnTitleShowFire`
+  immediately unless the previous scene is the opening movie
+  (mntitle.c:988-993) — our branch — so the fire is at full alpha on presented
+  frame 0. The tic-220 `mnTitleSetEndLayout` that looks like the reveal is a
+  no-op re-show here; its real work is the label layout.
+
+  **THE FIELD IS THE FILL, NOT BLACK.** Both fire SObjs are `SP_TRANSPARENT`
+  and `mnTitleFireProcDisplay` draws RGB = TEXEL0, so the fire camera's
+  `COBJ_FLAG_FILLCOLOR` colour reaches the screen as a literal
+  `gDPFillRectangle` (sys/objdisplay.c:2750). Measured over the thirty states,
+  its mean transmittance through the pair is **125.4/255** and only 0.012% of
+  texels are fully covered — half the title's field IS that fill, so a bake
+  onto black shipped a title about half as bright as the source's. It bakes
+  onto `dMNTitleFireColors[0]` = (0xFF, 0xFF, 0xFF). One approximation
+  remains, disclosed: the source re-rolls that fill among seven near-white
+  colours every 260 tics with an 80-tic crossfade, and a 16bpp DS BG layer has
+  no per-channel modulator, so the bake pins entry 0 rather than cycling.
+
+  Measured cost, 150 presented title frames: every present single-VBlank
+  (interval histogram 150/0/0/0, max 1), worst frame 137,600 ARM9 ticks
+  against the 60 Hz budget of 560,190 — and that worst frame is frame 149,
+  the one carrying the START cue, not a fire frame.
 
 - **The main OBJ layer needs the sprite overlay left DISPLAYED**, and this is
   the row's most expensive finding. A menu scene wants BG2/BG3 empty, and

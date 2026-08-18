@@ -168,6 +168,16 @@ static u32 sOriginalSpritePreviewReady;
 #if NDS_RENDERER_HW_TRIANGLES
 static int sOriginalSpriteOverlayBg = -1;
 static int sOriginalSpriteOverlayForegroundBg = -1;
+/* P2-1i. The fire's affine steps, held so a frame change can rewrite the
+ * whole matrix+scroll block in one call without re-deriving them. */
+static s32 sTitleFirePa = 1 << 8;
+static s32 sTitleFirePd = 1 << 8;
+/* Published so "the animation ran" is a counter and not a screenshot: enable
+ * and disable must balance across a loop, and Frame must climb once per
+ * presented title frame. */
+__attribute__((used)) volatile u32 gNdsTitleFireEnableCount;
+__attribute__((used)) volatile u32 gNdsTitleFireDisableCount;
+__attribute__((used)) volatile u32 gNdsTitleFireFrameCount;
 static u32 sOriginalSpriteOverlayLayerMask;
 static s32 sOriginalSpriteOverlayNeedsFlush;
 static u32 sOriginalSpriteOverlayEpoch[2] = { 1u, 1u };
@@ -1075,6 +1085,78 @@ void ndsPlatformCommitOriginalSpriteOverlayTransform(void)
 {
 #if NDS_RENDERER_HW_TRIANGLES && NDS_FAST_WALLPAPER_AFFINE
     ndsPlatformFastWallpaperCommitAffine();
+#endif
+}
+
+/* P2-1i -- BG3 as the title's fire layer. See the header for why this is an
+ * affine and not a blit.
+ *
+ * PA/PD are the SOURCE step per screen pixel in 8.8, so a cell 51 wide across
+ * a 256 px screen is PA = 51 and a cell 42 tall across 192 rows is PD = 56.
+ * PB/PC are zero: the source's fire is axis-aligned. */
+void ndsPlatformSetTitleFireEnabled(s32 is_enabled, s32 pa, s32 pd)
+{
+#if NDS_RENDERER_HW_TRIANGLES
+    if (sOriginalSpriteOverlayForegroundBg < 0)
+    {
+        return;
+    }
+    if (is_enabled != FALSE)
+    {
+        /* BEHIND BG2, which is where the fire belongs: the title's wordmark,
+         * emblem and copyright line are BG2 surfaces and the source draws
+         * them over the fire, not under it. */
+        bgSetPriority(sOriginalSpriteOverlayForegroundBg, 3);
+        /* WRAP IS DELIBERATELY NOT TOUCHED. It would be a reasonable safety
+         * net, but there is no bgGetWrap to restore it with, and the affine
+         * provably cannot sample outside the sheet: the largest source
+         * coordinate is ((255 * PA) >> 8, (191 * PD) >> 8) = (50, 41) plus a
+         * cell origin of at most (204, 210), i.e. (254, 251), inside the
+         * 255x252 atlas. Leaving it alone is what makes "BG3 is handed back
+         * exactly as it was found" a property of this function rather than a
+         * claim about the battle's tolerance. */
+        sTitleFirePa = pa;
+        sTitleFirePd = pd;
+        bgSetAffineMatrixScroll(sOriginalSpriteOverlayForegroundBg,
+                                pa, 0, 0, pd, 0, 0);
+        gNdsTitleFireEnableCount++;
+    }
+    else
+    {
+        sTitleFirePa = 1 << 8;
+        sTitleFirePd = 1 << 8;
+        bgSetAffineMatrixScroll(sOriginalSpriteOverlayForegroundBg,
+                                1 << 8, 0, 0, 1 << 8, 0, 0);
+        bgSetPriority(sOriginalSpriteOverlayForegroundBg, 0);
+        gNdsTitleFireDisableCount++;
+    }
+#else
+    (void)is_enabled;
+    (void)pa;
+    (void)pd;
+#endif
+}
+
+void ndsPlatformSetTitleFireFrame(s32 atlas_x, s32 atlas_y)
+{
+#if NDS_RENDERER_HW_TRIANGLES
+    if (sOriginalSpriteOverlayForegroundBg < 0)
+    {
+        return;
+    }
+    /* The reference point is 20.8, so a whole-texel cell origin is << 8.
+     * `bgSetAffineMatrixScroll` and not `bgSetScrollf`: the latter only marks
+     * the shadow dirty, and the `bgUpdate` that would flush it REBUILDS the
+     * matrix from libnds' own angle/scale state -- which would throw the
+     * upscale away on the first animation frame. This writes the six
+     * registers and nothing else, so an animation frame costs no pixels. */
+    bgSetAffineMatrixScroll(sOriginalSpriteOverlayForegroundBg,
+                            sTitleFirePa, 0, 0, sTitleFirePd,
+                            atlas_x << 8, atlas_y << 8);
+    gNdsTitleFireFrameCount++;
+#else
+    (void)atlas_x;
+    (void)atlas_y;
 #endif
 }
 

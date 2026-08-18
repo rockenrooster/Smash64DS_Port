@@ -134,11 +134,27 @@ try {
             'delete',
             'break ndsPlatformEndFrame'
         )
+        # P2-1i. The fire's own counters at every state, which is what makes
+        # ONE run carry both halves of the proof: on the title they must climb
+        # once per presented frame with enable=1/disable=0, and on every later
+        # screen they must be FROZEN with enable==disable -- the negative
+        # control. Printed at the state's entry (before the presents below) and
+        # again after them, so the title's delta over a known number of
+        # presents is readable rather than inferred.
+        # Index 0 is NDS_MENU_SHELL_SCREEN_TITLE (nds_menu_shell.h:48).
+        $fire_args = (' en=%u dis=%u frame=%u reveal=%u titleframes=%u\n", ' +
+            'gNdsTitleFireEnableCount, gNdsTitleFireDisableCount, ' +
+            'gNdsTitleFireFrameCount, gNdsTitleFireRevealFrame, ' +
+            'gNdsMenuShellFrames[0]')
+        $commands += @(
+            ('printf "SHELLFIRE ' + $state.Name + ' enter' + $fire_args))
         # SEPARATE CONTINUES, and that is load-bearing: `continue N` sets the
         # IGNORE COUNT of the breakpoint that last stopped, and the one that
         # last stopped was just deleted, so gdb would continue exactly once and
         # say nothing.
         $commands += @(1..$PresentsAfterState | ForEach-Object { 'continue' })
+        $commands += @(
+            ('printf "SHELLFIRE ' + $state.Name + ' shot' + $fire_args))
         $commands += @(
             ('shell pwsh -NoProfile -ExecutionPolicy Bypass -File "' + $capture +
              '" -EmulatorProcessId ' + $emulator.Id + ' -Output "' +
