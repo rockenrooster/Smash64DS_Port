@@ -1,6 +1,7 @@
 #include "nds_scene_harness_config.h"
 
 #include <nds/nds_freeze_diagnostics.h>
+#include <nds/nds_menu_shell.h>
 #include <nds/nds_ifcommon_oam.h>
 #include <nds/nds_reloc_assets.h>
 #include <nds/nds_task37_profile.h>
@@ -7252,6 +7253,49 @@ static void ndsRunBoundedOpeningPortraitsDraw(struct SYTaskFunction *tfunc)
 void syTaskmanRunTask(struct SYTaskFunction *tfunc)
 {
     ndsPrepareTaskmanRun();
+
+#if NDS_P2_MENU_SHELL
+    /* P2-1d. The VS shell's four real screens, ahead of every bounded branch
+     * below because they REPLACE those branches rather than sit beside them:
+     * with the shell on, Startup/Title/ModeSelect/VSMode are screens the player
+     * drives, not scenes that park. Each returns with its successor already
+     * requested through the scene manager, so returning here hands control
+     * back to scManagerRunLoop's dispatch exactly as the source's own scene
+     * tail does. The VSBattle and VSResults branches are untouched: this shell
+     * takes the player TO the match and the match is still the Boundary's. */
+    switch (gSCManagerSceneData.scene_curr)
+    {
+    case nSCKindStartup:
+        ndsMenuShellRunSplash();
+        ndsFinishTaskmanRun();
+        gNdsSceneBoundaryKind = gSCManagerSceneData.scene_curr;
+        gNdsSceneBoundaryResult = NDS_SCENE_BOUNDARY_PASS;
+        gNdsOriginalBootStage |= NDS_BOOT_SCENE_REACHED;
+        return;
+    case nSCKindTitle:
+        ndsMenuShellRunTitle();
+        ndsFinishTaskmanRun();
+        gNdsOpeningMovieTitleResult = NDS_OPENING_MOVIE_TITLE_PASS;
+        gNdsSceneBoundaryKind = gSCManagerSceneData.scene_curr;
+        gNdsSceneBoundaryResult = NDS_SCENE_BOUNDARY_PASS;
+        gNdsOriginalBootStage |= NDS_BOOT_SCENE_REACHED;
+        return;
+    case nSCKindModeSelect:
+        ndsMenuShellRunModeSelect();
+        ndsFinishTaskmanRun();
+        gNdsSceneBoundaryKind = gSCManagerSceneData.scene_curr;
+        gNdsSceneBoundaryResult = NDS_SCENE_BOUNDARY_PASS;
+        return;
+    case nSCKindVSMode:
+        ndsMenuShellRunVSMode();
+        ndsFinishTaskmanRun();
+        gNdsSceneBoundaryKind = gSCManagerSceneData.scene_curr;
+        gNdsSceneBoundaryResult = NDS_SCENE_BOUNDARY_PASS;
+        return;
+    default:
+        break;
+    }
+#endif
 
 #if NDS_IMPORT_BATTLESHIP_VS_RESULTS
     if (gSCManagerSceneData.scene_curr == nSCKindVSResults)

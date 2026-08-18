@@ -689,12 +689,22 @@ NDS_R2_SCENE_LOOP_WALK ?= 0
 # both published ROMs are byte-identical to a build without the row. P2-1d
 # turns it on for real.
 NDS_P2_UI_KIT ?= 0
-# The lab demo surface for that kit (src/nds/nds_ui_kit_demo.c). Draws the
-# font, the cursor and both portraits on whichever scene the bounded boot
-# parks in, and publishes the per-frame work-tick and VBlank-interval
-# histograms scripts/menus/probe-p2-1c-ui-kit.ps1 reads. NEVER PUBLISHED: it
-# is deleted with P2-1d, which replaces it with the real screens.
-NDS_P2_UI_KIT_DEMO ?= 0
+# P2-1d. The VS shell's real screens: splash, title, main menu, and the VS menu
+# that carries the rules (src/nds/nds_menu_shell.c). It turns the kit above on
+# for the first time, replaces the bounded Startup/Title/VSMode park branches
+# with screens the player drives, gives nSCKindModeSelect a scene where it had
+# an NDS_SCENE_STUB, and moves the mode-163 BOOT SCENE from the match to the
+# splash. That last one is why it is a flag and not a default: at 0 -- every
+# published and Boundary configuration -- mode 163 boots straight into the
+# battle exactly as it always has, no menu symbol is linked, and the NitroFS
+# pack is not staged.
+NDS_P2_MENU_SHELL ?= 0
+# Scripted menu walk, lab only, N loops. Feeds the SCREENS' OWN input handlers
+# a fixed button script -- title START, main menu down/confirm, then every VS
+# row, both value directions and the refusal, then VS START -- with a dwell
+# between steps so each screen is both measurable and capturable. Zero means no
+# injection at all and the shell is driven only by the player.
+NDS_P2_MENU_WALK ?= 0
 # Runtime 2 (docs/Smash64DS_Runtime2_SwitchPlan.md). The whole family defaults
 # to 0 and the published ROMs stay pure Runtime 1 until the switch (plan S5).
 #
@@ -2129,32 +2139,29 @@ override NDS_TASK32_DRAW_HOT_TEXT := 1
 override NDS_TASK39_FX_SPRITES := 1
 override NDS_TASK39_FX_FLASH := 1
 endif
-# P2-1c 2D UI kit lab target. Its own block, and deliberately NOT a copy of the
-# proof block: this row draws a 2D menu surface and touches no part of the
-# battle, so the battle's renderer/gameplay overrides would only add variables
-# to a measurement about OAM.
+# P2-1d VS shell lab target: the playable menu flow, in the SHIPPING battle
+# configuration.
 #
-# `normal` is the harness on purpose. It runs the source's own scene chain and
-# parks at the Title scene (scripts/verify-title-boundary.ps1 is the verifier
-# that already covers reaching it), and a parked scene leaves the main loop
-# presenting once a VBlank with the scene thread stopped -- which is exactly
-# the 60 Hz menu-screen cadence P2-1's exit criteria budget ~560K ARM9 ticks a
-# frame for. HW_TRIANGLES is required, not stylistic: main OAM is only
-# initialised on that path (nds_platform.c:414), so a framebuffer build has no
-# OBJ layer for the kit to draw on.
+# It is the proof block with three flags added -- NDS_P2_UI_KIT,
+# NDS_P2_MENU_SHELL and NDS_P2_MENU_WALK -- and nothing removed, which is the
+# whole point. P2-1c's kit target could use `normal` because it drew a surface
+# and touched no battle; this row's flow ENDS IN THE MATCH, so the match it
+# reaches has to be the canonical one or the run proves nothing about entering
+# a battle through menus. Harness 163 keeps the ARM renderer, the static
+# texture pack, and every gameplay flag the Boundary arm carries; the shell
+# flag moves only the BOOT SCENE, from the battle to the splash.
 #
-# NEVER PUBLISHED. Its ROM is a UI surface, not a performance arm for the
-# battle; no tick figure from it says anything about a match.
+# NDS_P2_MENU_WALK := 1 drives the screens' own input handlers through one
+# scripted pass with a dwell on each screen, so a single run is both the
+# cadence measurement and the capture window for every screenshot. The battle
+# it enters then runs for real at NDS_HARNESS_FAST_LOGIC := 0.
 #
-# The renderer half of the list below is copied from the proof block, not
-# defaulted: bare defaults are not a legal configuration at
-# NDS_RENDERER_HW_TRIANGLES=1 (NDS_R2_FIGHTER_GX_COMPOSE defaults on and
-# `#error`s without NDS_R2_SHADE_SKIP_SOFT_LIGHT), and a target that compiled
-# only by turning the shipping renderer off would be a different program.
-# NDS_R2_PATH and NDS_HARNESS_FAST_LOGIC are the two the proof block carries
-# that this one cannot: both `#error` under any harness but battle_playable.
-ifeq ($(TARGET),smash64ds-p2-1c-ui-kit-hwtri)
-override NDS_DEV_SCENE_HARNESS := normal
+# NEVER PUBLISHED. The boot scene differs from the shipped ROM's, so no tick
+# figure from it is a Boundary figure.
+ifeq ($(TARGET),smash64ds-p2-1d-menus-hwtri)
+override NDS_DEV_SCENE_HARNESS := battle_playable_realtime
+override NDS_DEV_LIVE_INPUT_PREVIEW := 1
+override NDS_HARNESS_FAST_LOGIC := 0
 override NDS_RENDERER_HW_TRIANGLES := 1
 override NDS_DEBUG_HUD := 0
 override NDS_RENDERER_PROFILE_LEVEL := 0
@@ -2194,7 +2201,66 @@ override NDS_TASK32_DRAW_HOT_TEXT := 1
 override NDS_TASK39_FX_SPRITES := 1
 override NDS_TASK39_FX_FLASH := 1
 override NDS_P2_UI_KIT := 1
-override NDS_P2_UI_KIT_DEMO := 1
+override NDS_P2_MENU_SHELL := 1
+override NDS_P2_MENU_WALK := 1
+endif
+# P2-1d loop target: the same shell, walked N times.
+#
+# It is the P2-1b scene-walk block plus the shell, and it carries that block's
+# one deviation for that block's reason: NDS_HARNESS_FAST_LOGIC := 1, because
+# the VS Results branch of syTaskmanRunTask loops until sSYTaskmanStatus
+# becomes LoadScene, which in realtime means "until a human presses START", so
+# the loop would never close on its own. NDS_R2_SCENE_LOOP_WALK supplies the
+# Results -> VS Mode leg, which is Results' own branch and not a screen this
+# row owns; the VS Mode -> battle leg is a real A press on the VS START row and
+# spends the same hop, so the two-hops-a-loop budget P2-1b defined still holds.
+#
+# NEVER PUBLISHED AND NEVER A PERFORMANCE SURFACE. Fast logic is not the
+# shipping cadence; no tick figure from this target means anything.
+ifeq ($(TARGET),smash64ds-p2-1d-menu-walk-hwtri)
+override NDS_DEV_SCENE_HARNESS := battle_playable_realtime
+override NDS_DEV_LIVE_INPUT_PREVIEW := 1
+override NDS_HARNESS_FAST_LOGIC := 1
+override NDS_RENDERER_HW_TRIANGLES := 1
+override NDS_DEBUG_HUD := 0
+override NDS_RENDERER_PROFILE_LEVEL := 0
+override NDS_SHIP_TELEMETRY := 1
+override NDS_TICK_HUD := 0
+override NDS_RENDERER_FAST_RUN_DEFAULT := 9
+override NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE := 1
+override NDS_TASK36_HW_COMPOSE := 2
+override NDS_R2_FIGHTER_HW_MTX := 1
+override NDS_R2_FIGHTER_GX_COMPOSE := 1
+override NDS_R2_STAGE_VALIDATE_STRIDE := 8
+override NDS_R2_FIGHTER_HW_LIGHT := 1
+override NDS_R2_FIGHTER_SHUFFLE_FOLD := 1
+override NDS_R2_CUBIC_FIXED := 1
+override NDS_R2_DELTA_PATH_ITCM := 1
+override NDS_R2_ANIM_CACHE := 1
+override NDS_R2_AOBJ16_PREBAKE := 1
+override NDS_TASK53_REPLAY_ARENA_FIX := 1
+override NDS_BATTLE_PROFILE := 1
+override NDS_TASK44_STAGE_STEADY := 1
+override NDS_R2_STAGE_DIRECT := 1
+override NDS_R2_STAGE_DMA := 1
+override NDS_R2_STAGE_VIEWPROJ := 1
+override NDS_R2_STAGE_PREFLIGHT := 1
+override NDS_R2_FIGHTER_MTX_DIRECT := 1
+override NDS_R2_FIGHTER_RUN_MEMO := 1
+override NDS_TASK37_ITCM_LEAVES := 7
+override NDS_SCENE_MIP_CACHE_LAB := 0
+override NDS_FAST_WALLPAPER_AFFINE := 1
+override NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT := 1
+override NDS_IFCOMMON_HYBRID_OAM := 0
+override NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS := 0
+override NDS_TASK16_FLOAT_COMPARE := 1
+override NDS_TASK16_FLOAT_I2F := 1
+override NDS_TASK16_FLOAT_ADDSUB := 1
+override NDS_TASK32_DRAW_HOT_TEXT := 1
+override NDS_TASK39_FX_SPRITES := 1
+override NDS_TASK39_FX_FLASH := 1
+override NDS_P2_UI_KIT := 1
+override NDS_P2_MENU_SHELL := 1
 endif
 # Task 49 GX-differ lab target. Its OWN block (appending to the tickhud/proof
 # block breaks the structural pin at check-gbi-decode-fixtures.ps1:1847).
@@ -3119,8 +3185,8 @@ endif
 ifeq ($(NDS_P2_UI_KIT),1)
 CFILES += nds_ui_kit.c
 endif
-ifeq ($(NDS_P2_UI_KIT_DEMO),1)
-CFILES += nds_ui_kit_demo.c
+ifeq ($(NDS_P2_MENU_SHELL),1)
+CFILES += nds_menu_shell.c
 endif
 
 export LD := $(CC)
@@ -3846,7 +3912,8 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_R2_SECOND_ENTRY_DIAG $(NDS_R2_SECOND_ENTRY_DIAG)'; \
 		echo '#define NDS_R2_SCENE_LOOP_WALK $(NDS_R2_SCENE_LOOP_WALK)u'; \
 		echo '#define NDS_P2_UI_KIT $(NDS_P2_UI_KIT)'; \
-		echo '#define NDS_P2_UI_KIT_DEMO $(NDS_P2_UI_KIT_DEMO)'; \
+		echo '#define NDS_P2_MENU_SHELL $(NDS_P2_MENU_SHELL)'; \
+		echo '#define NDS_P2_MENU_WALK $(NDS_P2_MENU_WALK)u'; \
 		echo '#define NDS_R2_PATH $(NDS_R2_PATH)'; \
 		echo '#define NDS_R2_STAGE_DIRECT $(NDS_R2_STAGE_DIRECT)'; \
 		echo '#define NDS_R2_FIXED_SQRT $(NDS_R2_FIXED_SQRT)'; \

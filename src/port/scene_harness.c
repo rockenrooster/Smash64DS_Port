@@ -542,7 +542,21 @@ void ndsDevSceneHarnessApply(void)
         return;
 
     case NDS_DEV_SCENE_HARNESS_BATTLE_PLAYABLE:
+#if NDS_P2_MENU_SHELL
+        /* P2-1d. The VS shell boots the GAME, not the match: the flow starts
+         * at the splash and the player reaches the battle through the menus.
+         *
+         * The seeding below is unchanged and deliberately still runs -- the
+         * mode-163 preset is what fills the match descriptor, and the VS rules
+         * screen edits that descriptor rather than replacing it, so the match
+         * the menus enter is the canonical one. ONLY the boot scene moves, and
+         * only under this flag: at NDS_P2_MENU_SHELL == 0, which is every
+         * published and Boundary configuration, mode 163 still boots straight
+         * into nSCKindVSBattle with nSCKindMaps behind it. */
+        ndsSceneHarnessSetDefaultScene(nSCKindStartup, nSCKindStartup);
+#else
         ndsSceneHarnessSetDefaultScene(nSCKindVSBattle, nSCKindMaps);
+#endif
         ndsSceneHarnessSeedBattlePlayableDefaults();
         gNdsSceneHarnessResult = NDS_SCENE_HARNESS_PASS;
         return;

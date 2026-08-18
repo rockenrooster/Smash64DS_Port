@@ -43,6 +43,19 @@ static const NdsSceneDesc sNdsSceneTable[] = {
 #endif
     { (u8)nSCKindTitle, NDS_SCENE_FLAG_ARENA_RESET | NDS_SCENE_FLAG_MENU,
       NDS_SCENE_TRANSITION_NONE },
+#if NDS_P2_MENU_SHELL
+    /* P2-1d. The main menu. It is the one scene in this table with no imported
+     * translation unit behind it -- nSCKindModeSelect was an NDS_SCENE_STUB --
+     * so its StartScene is the port's own (src/nds/nds_menu_shell.c). It
+     * declares the same arena as every other row, which is what keeps the
+     * high-water ring comparable across kinds.
+     *
+     * Gated because it can only be REQUESTED when the shell exists: with the
+     * flag off nothing names this kind, and admitting it would advertise a
+     * destination whose scene is still the stub that parks forever. */
+    { (u8)nSCKindModeSelect, NDS_SCENE_FLAG_ARENA_RESET | NDS_SCENE_FLAG_MENU,
+      NDS_SCENE_TRANSITION_NONE },
+#endif
 };
 
 #define NDS_SCENE_TABLE_COUNT \

@@ -562,7 +562,45 @@ IMAGE_SOURCES = [
     ("MNPlayersPortraits", "llMNPlayersPortraitsMarioSprite",
      "PORTRAIT_MARIO"),
     ("MNPlayersPortraits", "llMNPlayersPortraitsFoxSprite", "PORTRAIT_FOX"),
+    # P2-1d. The menu font has NO digits: mnMapsGetCharacterID maps A-Z ' % .
+    # and nothing else, and '0'-'9' are the source's kerning ESCAPES, which
+    # advance the cursor by their digit value and draw nothing (mnmaps.c:308).
+    # So every number the VS rules screen shows -- the time limit, the stock
+    # count -- has to come from the same place the original got it: MNCommon's
+    # own digit sprites, which mnVSModeMakeNumber draws one SObj at a time
+    # (mnvsmode.c:173).  They are 10x13, which does not fit the kit's 8-row
+    # text cell, so they are baked as IMAGES and drawn as one OBJ per digit --
+    # which is exactly the original's own structure.
+    ("MNCommon", "llMNCommonDigit0Sprite", "DIGIT_0"),
+    ("MNCommon", "llMNCommonDigit1Sprite", "DIGIT_1"),
+    ("MNCommon", "llMNCommonDigit2Sprite", "DIGIT_2"),
+    ("MNCommon", "llMNCommonDigit3Sprite", "DIGIT_3"),
+    ("MNCommon", "llMNCommonDigit4Sprite", "DIGIT_4"),
+    ("MNCommon", "llMNCommonDigit5Sprite", "DIGIT_5"),
+    ("MNCommon", "llMNCommonDigit6Sprite", "DIGIT_6"),
+    ("MNCommon", "llMNCommonDigit7Sprite", "DIGIT_7"),
+    ("MNCommon", "llMNCommonDigit8Sprite", "DIGIT_8"),
+    ("MNCommon", "llMNCommonDigit9Sprite", "DIGIT_9"),
+    # SCBATTLE_TIMELIMIT_INFINITE draws this instead of a number
+    # (mnvsmode.c:1206).
+    ("MNCommon", "llMNCommonInfinitySprite", "INFINITY"),
 ]
+
+# The digit block must stay contiguous and in ascending order: the runtime
+# indexes it as NDS_MN_UI_KIT_IMAGE_DIGIT_0 + digit.  Asserted rather than
+# assumed, because a reordered IMAGE_SOURCES would otherwise print 7 for 3.
+DIGIT_TOKENS = [f"DIGIT_{d}" for d in range(10)]
+
+
+def check_digit_block(images: list[Image]) -> None:
+    tokens = [image.token for image in images]
+    if not all(token in tokens for token in DIGIT_TOKENS):
+        raise ConvertError("the digit images are missing from the pack")
+    first = tokens.index("DIGIT_0")
+    if tokens[first:first + 10] != DIGIT_TOKENS:
+        raise ConvertError(
+            "DIGIT_0..9 must be ten consecutive entries in ascending order; "
+            f"got {tokens[first:first + 10]}")
 
 
 def write_png(path: Path, width: int, height: int, rgb: bytes) -> None:
@@ -679,6 +717,7 @@ def main(argv: list[str] | None = None) -> int:
                 "reloc_menus" / o2r_name)
         images.append(convert_image(cache[o2r_name], symbol, token,
                                     offsets[symbol]))
+    check_digit_block(images)
 
     pack, image_table = build_pack(glyphs, images)
 

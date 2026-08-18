@@ -64,13 +64,33 @@
      NDS_UI_KIT_SPRITE_SLOTS)
 
 /* The menu cues, by the source's own FGM ids (gm/gmsound.h, REGION_US
- * numbering).  mnmodeselect.c:805 and mnvsmode.c:1361 scroll with
- * MenuScroll2, mnmodeselect.c:734 confirms with MenuSelect, and MenuDenied is
- * the refusal. */
+ * numbering).  Every one is placed where the source places it, and the two
+ * P2-1d added are the two the source distinguishes and P2-1c could not yet
+ * name a caller for:
+ *
+ *   MOVE    MenuScroll2 -- the CURSOR moving between entries
+ *                          (mnmodeselect.c:805, mnvsmode.c:1361/:1401).
+ *   VALUE   MenuScroll1 -- a VALUE changing inside one entry, left/right
+ *                          (mnvsmode.c:1449/:1481/:1516/:1554, mnoption.c).
+ *                          This is the caller P2-1c-1 packed 163 for and left
+ *                          "for whichever direction P2-1d wires it".
+ *   CONFIRM MenuSelect  -- A/START on an entry (mnmodeselect.c:734).
+ *   BACK    MenuDenied  -- the REFUSAL. The source never cues plain B (it
+ *                          transitions silently); it spends this id when an
+ *                          action is refused (mnplayersvs.c:177/:2840/:3175),
+ *                          which is what the greyed 1P/OPTION/DATA entries and
+ *                          the not-yet-built VS OPTIONS button do here.
+ *   START   TitlePressStart -- the title screen's own confirm
+ *                          (mntitle.c:501). NOT IN THE FGM PACK: the pack
+ *                          carries 158/163/164/165 and this is 157, so the
+ *                          seam asks and the FGM miss ring records it. Row
+ *                          P2-1d-1 renders it. */
 #define NDS_UI_KIT_SFX_MOVE 0u
 #define NDS_UI_KIT_SFX_CONFIRM 1u
 #define NDS_UI_KIT_SFX_BACK 2u
-#define NDS_UI_KIT_SFX_COUNT 3u
+#define NDS_UI_KIT_SFX_VALUE 3u
+#define NDS_UI_KIT_SFX_START 4u
+#define NDS_UI_KIT_SFX_COUNT 5u
 
 typedef struct NdsUiKitGlyphMetric {
     u8 width;
@@ -112,10 +132,23 @@ s32 ndsUiKitSetSprite(u32 slot, u32 image, s32 x, s32 y);
 void ndsUiKitMoveSprite(u32 slot, s32 x, s32 y);
 void ndsUiKitHideSprite(u32 slot);
 
+/* --- Numbers. The font has no digits (see the SFX block above): the source
+ * draws every menu number as one digit SPRITE per place, right-aligned, at an
+ * 11 px pitch (mnvsmode.c mnVSModeMakeNumber). This does the same, consuming
+ * `digits` sprite slots starting at `slot`, and returns the number of slots it
+ * used so a caller can hide the rest. `right_x` is the pixel one past the
+ * last digit, as in the source, so a two-digit value grows leftward and the
+ * label before it does not move. --- */
+#define NDS_UI_KIT_DIGIT_PITCH 11
+u32 ndsUiKitSetNumber(u32 slot, u32 slots_available, s32 value, s32 right_x,
+                      s32 y);
+/* Layout width in pixels a number of this value will occupy. */
+u32 ndsUiKitNumberWidth(s32 value);
+
 /* --- Audio. One of NDS_UI_KIT_SFX_*. --- */
 void ndsUiKitSfx(u32 cue);
 
-/* --- Published state. Read by scripts/menus/probe-p2-1c-ui-kit.ps1; none of
+/* --- Published state. Read by scripts/menus/probe-p2-1d-menus.ps1; none of
  * it is read by gameplay. --- */
 extern volatile u32 gNdsUiKitEnterCount;
 extern volatile u32 gNdsUiKitEnterRejectCount;
@@ -124,6 +157,11 @@ extern volatile u32 gNdsUiKitEngine;
 /* Pack load: bytes read, the FNV-1a the load computed, and the mismatch
  * count. A zero-byte load with a clean hash is impossible by construction --
  * the hash is seeded and folded over every byte that reaches the engine. */
+/* NitroFS opens the pack load spent. It is ONE per kit entry since P2-1d; it
+ * was one per staged chunk before (twelve for the P2-1c pack, and the digit
+ * block would have made it twenty-three). Published so the residual stays
+ * closed by measurement rather than by assertion. */
+extern volatile u32 gNdsUiKitPackOpenCount;
 extern volatile u32 gNdsUiKitPackBytesLoaded;
 extern volatile u32 gNdsUiKitPackHash;
 extern volatile u32 gNdsUiKitPackHashMismatchCount;

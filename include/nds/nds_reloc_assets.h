@@ -50,6 +50,28 @@ s32 ndsRelocAssetLoadHeaderAndData(u32 asset_id, void *dst,
  * counters that the after-GO zero assertions read live here. */
 s32 ndsRelocAssetReadRawRange(const char *path, u32 offset, void *dst,
                               u32 bytes);
+/* The same raw range read, with the NitroFS open hoisted out of the loop.
+ *
+ * WHY IT EXISTS (P2-1c residual, closed by P2-1d). An open by path on NitroFS
+ * is a directory walk -- the same walk Task 71 measured `strncasecmp` at
+ * 30,484 ticks/frame on -- and a caller that reads one payload in N staged
+ * chunks pays it N times for one file. The UI kit's pack was twelve opens for
+ * 24 KB before this, and the digit block P2-1d adds would have made it
+ * twenty-three.  Open once, read the chunks, close.
+ *
+ * `stream` is opaque state the caller owns; a failed Open leaves it closed and
+ * every later call on it returns FALSE, so a caller may check once at the end.
+ * Close is idempotent and safe on a stream that never opened. Reads count
+ * through gNdsRelocAssetPayloadReadCount exactly as the one-shot form does, so
+ * a run's payload-read total does not change shape when a caller switches. */
+typedef struct NdsRelocAssetStream {
+    void *file; /* FILE*, kept void so callers need no <stdio.h> */
+} NdsRelocAssetStream;
+
+s32 ndsRelocAssetStreamOpen(NdsRelocAssetStream *stream, const char *path);
+s32 ndsRelocAssetStreamRead(NdsRelocAssetStream *stream, u32 offset, void *dst,
+                            u32 bytes);
+void ndsRelocAssetStreamClose(NdsRelocAssetStream *stream);
 /* Size, zero and load from one open. Prefer this over sizing with
  * ndsRelocAssetAllocSize and then loading: that pair walks the NitroFS
  * directory twice for a size the load's own header already carries. `align` is

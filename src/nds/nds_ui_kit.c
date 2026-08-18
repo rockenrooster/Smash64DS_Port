@@ -55,6 +55,7 @@ NDS_UI_KIT_PUBLISHED volatile u32 gNdsUiKitEnterCount;
 NDS_UI_KIT_PUBLISHED volatile u32 gNdsUiKitEnterRejectCount;
 NDS_UI_KIT_PUBLISHED volatile u32 gNdsUiKitExitCount;
 NDS_UI_KIT_PUBLISHED volatile u32 gNdsUiKitEngine = 0xffffffffu;
+NDS_UI_KIT_PUBLISHED volatile u32 gNdsUiKitPackOpenCount;
 NDS_UI_KIT_PUBLISHED volatile u32 gNdsUiKitPackBytesLoaded;
 NDS_UI_KIT_PUBLISHED volatile u32 gNdsUiKitPackHash;
 NDS_UI_KIT_PUBLISHED volatile u32 gNdsUiKitPackHashMismatchCount;
@@ -74,9 +75,11 @@ NDS_UI_KIT_PUBLISHED volatile u32 gNdsUiKitSfxLastId;
  * GamePause 278) because the enum carries REGION_US conditionals and a naive
  * line count is off by seven through them. */
 static const u16 sNdsUiKitSfxIds[NDS_UI_KIT_SFX_COUNT] = {
-    164u, /* nSYAudioFGMMenuScroll2 -- mnvsmode.c:1361 cursor move */
-    158u, /* nSYAudioFGMMenuSelect  -- mnmodeselect.c:734 confirm  */
-    165u  /* nSYAudioFGMMenuDenied  -- the refusal / back cue      */
+    164u, /* nSYAudioFGMMenuScroll2     -- mnvsmode.c:1361 cursor move  */
+    158u, /* nSYAudioFGMMenuSelect      -- mnmodeselect.c:734 confirm   */
+    165u, /* nSYAudioFGMMenuDenied      -- mnplayersvs.c:177 refusal    */
+    163u, /* nSYAudioFGMMenuScroll1     -- mnvsmode.c:1449 value change */
+    157u  /* nSYAudioFGMTitlePressStart -- mntitle.c:501 (NOT PACKED)   */
 };
 
 typedef struct NdsUiKitTextSlot {
@@ -254,13 +257,25 @@ static s32 ndsUiKitLoadPack(u32 objbytes)
     u32 hash = 0x811C9DC5u;
     u32 image;
     u32 cursor;
+    /* ONE NitroFS open for the whole pack (P2-1c residual). Every chunk below
+     * used to be its own fopen/fseek/fread/fclose -- twelve directory walks
+     * for 24 KB, and twenty-three once P2-1d's digit block landed. */
+    NdsRelocAssetStream stream;
 
     gNdsUiKitPackBytesLoaded = 0u;
     gNdsUiKitPackHash = 0u;
 
-    if (ndsRelocAssetReadRawRange(NDS_UI_KIT_PACK_PATH, 0u, sNdsUiKitGlyphs,
-                                  NDS_MN_UI_KIT_GLYPH_BLOCK_BYTES) == FALSE)
+    if (ndsRelocAssetStreamOpen(&stream, NDS_UI_KIT_PACK_PATH) == FALSE)
     {
+        gNdsUiKitPackReadFailCount++;
+        return FALSE;
+    }
+    gNdsUiKitPackOpenCount++;
+
+    if (ndsRelocAssetStreamRead(&stream, 0u, sNdsUiKitGlyphs,
+                                NDS_MN_UI_KIT_GLYPH_BLOCK_BYTES) == FALSE)
+    {
+        ndsRelocAssetStreamClose(&stream);
         gNdsUiKitPackReadFailCount++;
         return FALSE;
     }
@@ -284,6 +299,7 @@ static s32 ndsUiKitLoadPack(u32 objbytes)
         }
         if (metric->bytes > cursor)
         {
+            ndsRelocAssetStreamClose(&stream);
             gNdsUiKitPackReadFailCount++;
             return FALSE;
         }
@@ -297,10 +313,10 @@ static s32 ndsUiKitLoadPack(u32 objbytes)
             {
                 slice = NDS_UI_KIT_STAGING_BYTES;
             }
-            if (ndsRelocAssetReadRawRange(NDS_UI_KIT_PACK_PATH,
-                                          metric->offset + done,
-                                          sNdsUiKitStaging, slice) == FALSE)
+            if (ndsRelocAssetStreamRead(&stream, metric->offset + done,
+                                        sNdsUiKitStaging, slice) == FALSE)
             {
+                ndsRelocAssetStreamClose(&stream);
                 gNdsUiKitPackReadFailCount++;
                 return FALSE;
             }
@@ -312,6 +328,8 @@ static s32 ndsUiKitLoadPack(u32 objbytes)
             done += slice;
         }
     }
+
+    ndsRelocAssetStreamClose(&stream);
 
     sNdsUiKitTextVramBase = cursor - NDS_UI_KIT_TEXT_BYTES;
     dmaFillHalfWords(0u, ndsUiKitObjAt(sNdsUiKitTextVramBase),
@@ -620,6 +638,58 @@ void ndsUiKitHideSprite(u32 slot)
     }
     sNdsUiKitSprites[slot].visible = 0u;
     sNdsUiKitDirty = TRUE;
+}
+
+/* --- Numbers ------------------------------------------------------------- */
+
+/* mnVSModeMakeNumber's own shape: the ones place is placed first at
+ * `right_x - 11`, and each further place steps another 11 px left, so the
+ * number grows leftward from a fixed right edge and the label in front of it
+ * never moves when the value crosses ten. Negative values are clamped to 0,
+ * as the source clamps them (mnvsmode.c:1206). */
+static u32 ndsUiKitDigitCount(s32 value)
+{
+    u32 magnitude = (value > 0) ? (u32)value : 0u;
+    u32 digits = 1u;
+
+    while (magnitude >= 10u)
+    {
+        magnitude /= 10u;
+        digits++;
+    }
+    return digits;
+}
+
+u32 ndsUiKitNumberWidth(s32 value)
+{
+    return ndsUiKitDigitCount(value) * (u32)NDS_UI_KIT_DIGIT_PITCH;
+}
+
+u32 ndsUiKitSetNumber(u32 slot, u32 slots_available, s32 value, s32 right_x,
+                      s32 y)
+{
+    u32 magnitude = (value > 0) ? (u32)value : 0u;
+    u32 places = ndsUiKitDigitCount(value);
+    u32 used = 0u;
+    s32 x = right_x;
+
+    if (places > slots_available)
+    {
+        places = slots_available;
+    }
+    while (used < places)
+    {
+        x -= NDS_UI_KIT_DIGIT_PITCH;
+        if (ndsUiKitSetSprite(slot + used,
+                              NDS_MN_UI_KIT_IMAGE_DIGIT_0 + (magnitude % 10u),
+                              x, y) == FALSE)
+        {
+            break;
+        }
+        magnitude /= 10u;
+        used++;
+    }
+    return used;
 }
 
 /* --- Audio --------------------------------------------------------------- */

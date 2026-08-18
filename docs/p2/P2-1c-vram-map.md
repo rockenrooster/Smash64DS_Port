@@ -98,4 +98,32 @@ is a capacity fact — the P2-2 bottom-screen HUD is text and small sprites.
 - **A menu background image** would need a main BG bank, and there is none.
   The options are (a) draw it as 3D through BG0, (b) reuse the existing BG2
   bitmap compositor the imported source sprites already target, or (c) take a
-  texture bank. All three are P2-1d decisions with a cost; none is free.
+  texture bank. All three carry a cost; none is free.
+
+  **P2-1d took none of them.** It uses a fourth surface the audit had not
+  named: the main engine's BACKDROP, which is BG palette entry 0 and costs no
+  VRAM at all. It shows wherever no BG and no OBJ covers a pixel, so with the
+  overlay layers cleared it is the flat field behind a menu, and P2-1d sets it
+  to the source's own decal blue (`mnmodeselect.c:517`, `0x083365`). One
+  halfword, no bank, no arbitration with the battle, restored to black on
+  scene exit.
+
+  What is still open is the source's own artwork — the 300x220 CI
+  `llMNCommonSmashBrosCollageSprite` both menus draw at (10,10) — and that is
+  a fidelity decision with a real price, so it is parked as
+  `BLOCKED(decision: menu artwork background)` on the board rather than
+  chosen here.
+
+- **The main OBJ layer needs the sprite overlay left DISPLAYED**, and this is
+  the row's most expensive finding. A menu scene wants BG2/BG3 empty, and
+  `ndsPlatformSetOriginalSpriteOverlayEnabled(FALSE)` looks like the way to
+  say so -- but it takes the 3D clear to alpha 31 and `bgHide`s both overlay
+  layers, and with that state the main OBJ layer does not reach the screen at
+  all. Measured on P2-1d's own build: DISPCNT bit 12 read 1, OAM held valid
+  32x8 bitmap-OBJ entries at priority 0, the composed texels were in bank E at
+  exactly the offset attr2 named, and three separate captures still measured
+  0/49152 top-screen pixels differing from the clear colour. Keeping the
+  overlay ENABLED and clearing both layers instead (which is the state P2-1c's
+  demo rendered in) restores the OBJ layer: the same captures then measure
+  0.5-2.0% drawn content. A menu surface clears the overlay; it does not
+  disable it.

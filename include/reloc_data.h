@@ -521,6 +521,17 @@ extern uintptr_t llMVOpeningCommonKirbyCamAnimJoint;
     X(llGRZebesMapFileID, 0x101) \
     X(llGRZebesMapMapHeader, 0x14) \
     X(llMNCommonColonSprite, 0xdcf0) \
+    X(llMNCommonDigit0Sprite, 0xd310) \
+    X(llMNCommonDigit1Sprite, 0xd3e0) \
+    X(llMNCommonDigit2Sprite, 0xd4b0) \
+    X(llMNCommonDigit3Sprite, 0xd580) \
+    X(llMNCommonDigit4Sprite, 0xd650) \
+    X(llMNCommonDigit5Sprite, 0xd720) \
+    X(llMNCommonDigit6Sprite, 0xd7f0) \
+    X(llMNCommonDigit7Sprite, 0xd8c0) \
+    X(llMNCommonDigit8Sprite, 0xd990) \
+    X(llMNCommonDigit9Sprite, 0xda60) \
+    X(llMNCommonInfinitySprite, 0xdc48) \
     X(llMNCommonFontsFileID, 0x21) \
     X(llMNCommonFontsLetterASprite, 0x40) \
     X(llMNCommonFontsLetterBSprite, 0xd0) \
