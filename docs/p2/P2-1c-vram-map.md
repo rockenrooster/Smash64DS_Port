@@ -62,24 +62,37 @@ The kit draws on **main OBJ (bank E) in menu scenes** and on **sub OBJ (bank
 I) whenever a bottom-screen surface is entered**. It takes no BG bank on
 either engine, so it cannot collide with the battle compositor or the console.
 
-Main bank E, allocated top-down (`src/nds/nds_ui_kit.c`). Sizes as of **P2-1e**,
-which grew the image block from 28,416 to 32,512 bytes and the text budget from
-six fields to eight:
+Main bank E, allocated top-down (`src/nds/nds_ui_kit.c`). Sizes as of **P2-1f**,
+which grew the image block from 32,512 to 40,704 bytes; the text budget has been
+eight fields since P2-1e and is at its ceiling:
 
 | Range | Bytes | Content |
 |---|---:|---|
-| 33,024 – 65,536 | 32,512 | 25 baked images (below) |
-| 16,640 – 33,024 | 16,384 | 8 text fields x 4 cells of 32x8 |
-| 0 – 16,640 | 16,640 | **left for the battle's OBJ tenant** |
+| 24,832 – 65,536 | 40,704 | 28 baked images (below) |
+| 8,448 – 24,832 | 16,384 | 8 text fields x 4 cells of 32x8 |
+| 0 – 8,448 | 8,448 | **left for the battle's OBJ tenant** |
 
 The image block, in the generator's own order
 (`scripts/menus/generate_mn_ui_kit.py`): the two 1:1 menu cursors (4,096 +
 2,048), Mario and Fox portraits at 32/45 in 32x32 cells (2,048 each, down from
 8,192 at 1:1 — twelve portrait CELLS have to fit a 256 px screen), the ten
-digits and the infinity glyph (5,888), and P2-1e's character-select set: the
+digits and the infinity glyph (5,888), P2-1e's character-select set — the
 locked-slot question mark (2,048), three 4/5-scaled cursor states (6,144), the
 1P and CP tokens (4,096), the three player-kind labels at 1:1 (3,072) and the
-CP LEVEL label (1,024).
+CP LEVEL label (1,024) — and P2-1f's stage-select set: the Dream Land and RANDOM
+map icons (2,048 each) and the cursor frame (4,096), all three at **5/8**.
+
+**5/8 IS A CELL FACT.** At the frame's own 4/5 the source's 62x50 cursor frame
+becomes 50x40 and lands in a 64x64 cell (8,192 B); at 5/8 it is 39x31 and lands
+in a 64x32 one (4,096 B), with the 48x36 icons at 30x23 in 32x32 cells instead
+of 38x29 in 64x32 ones. 5/8 is the largest exact ratio at which the source's own
+cursor fits one 64x32 cell, and it halved this row's cost from 16,384 to 8,192
+bytes of the 16,640 that were free. The icons keep the source's own 4/5 GRID
+positions and are centred inside the 4/5 footprint, so only the artwork inside
+each cell is smaller than the source's.
+
+**THE FLOOR IS NOW 8,448 BYTES**, and the next row that wants main OBJ space has
+to say what it evicts. Two 32x32 cells and change is what remains.
 
 **EIGHT TEXT FIELDS IS THE CEILING, not a choice**: 8 x 4 x 512 is exactly
 16,384 and bank I is exactly 16,384, so a ninth field would take the sub engine

@@ -57,7 +57,7 @@ import argparse
 import re
 import struct
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 # ---------------------------------------------------------------------------
@@ -319,6 +319,75 @@ def decode_rgba32(fileobj: RelocFile, bitmap: Bitmap, sprite: Sprite,
     return rows
 
 
+def rgba16_to_rgba8(texel: int) -> tuple[int, int, int, int]:
+    """One N64 RGBA5551 texel -> (r, g, b, a) at 8 bits.
+
+    5-bit channels are expanded by `(v << 3) | (v >> 2)` rather than `v << 3`
+    so full-scale stays full-scale: 31 must become 255, not 248, or every
+    white pixel in the bake comes out three percent grey.
+    """
+    red = (texel >> 11) & 0x1F
+    green = (texel >> 6) & 0x1F
+    blue = (texel >> 1) & 0x1F
+    return ((red << 3) | (red >> 2), (green << 3) | (green >> 2),
+            (blue << 3) | (blue >> 2), 255 if (texel & 1) else 0)
+
+
+def decode_rgba16(fileobj: RelocFile, bitmap: Bitmap, sprite: Sprite,
+                  width: int, height: int) -> list[list[tuple[int, int, int, int]]]:
+    """16-bit RGBA (RGBA5551, big-endian) -> rows of (r, g, b, a).
+
+    Granule 8, not the 16 the RGBA32 path needs: a 16-bit texel occupies ONE
+    TMEM word half like the 4/8-bit formats do, so the LoadBlock swizzle spans
+    the narrow granule.  P2-1f's map icons are this format and the preview
+    PNGs are what confirmed the granule (16 combs the icon into 8 px columns).
+    """
+    stride = max(2, bitmap.width_img * 2)
+    rows = []
+    for y in range(height):
+        raw = read_row(fileobj, bitmap, sprite, y, stride)
+        row = []
+        for x in range(width):
+            base = (bitmap.s + x) * 2
+            row.append(rgba16_to_rgba8((raw[base] << 8) | raw[base + 1]))
+        rows.append(row)
+    return rows
+
+
+def decode_ci4(fileobj: RelocFile, bitmap: Bitmap, sprite: Sprite,
+               width: int, height: int) -> list[list[tuple[int, int, int, int]]]:
+    """4-bit colour index through the sprite's own TLUT -> (r, g, b, a).
+
+    The palette is the sprite's `LUT` pointer, `nTLUT` RGBA5551 entries, loaded
+    whole by the original (`spDraw`: `gDPSetTextureLUT(G_TT_RGBA16)` then
+    `gDPLoadTLUT(nTLUT, 256 + startTLUT, LUT)` -- libultra/sp/sprite.c:236).
+    The nibble indexes it directly: `Bitmap.LUToffset` exists in the header
+    (PR/sp.h:52) but sprite.c never reads it, so there is no palette-bank
+    selection to reproduce and inventing one would be a guess.
+    """
+    if sprite.lut == 0:
+        raise ConvertError("CI4 sprite has no TLUT pointer")
+    stride = max(1, bitmap.width_img // 2)
+    palette: list[tuple[int, int, int, int]] = []
+    for index in range(16):
+        base = sprite.lut + ((sprite.start_tlut + index) * 2)
+        raw = fileobj.payload[base:base + 2]
+        if len(raw) < 2:
+            raise ConvertError("TLUT runs past the payload")
+        palette.append(rgba16_to_rgba8((raw[0] << 8) | raw[1]))
+    rows = []
+    for y in range(height):
+        raw = read_row(fileobj, bitmap, sprite, y, stride)
+        row = []
+        for x in range(width):
+            sx = bitmap.s + x
+            nib = raw[sx >> 1]
+            nib = (nib >> 4) if (sx & 1) == 0 else (nib & 0xF)
+            row.append(palette[nib])
+        rows.append(row)
+    return rows
+
+
 def rgba8_to_ds(red: int, green: int, blue: int, alpha: int) -> int:
     """RGBA8888 -> DS BGR5551.  Bit 15 is the bitmap-OBJ opacity bit."""
     if alpha < 128:
@@ -468,7 +537,8 @@ def box_scale(raster: list[list[tuple[int, int, int, int]]],
 
 
 def convert_image(fileobj: RelocFile, symbol: str, token: str, offset: int,
-                  scale: tuple[int, int] | None = None) -> Image:
+                  scale: tuple[int, int] | None = None,
+                  tint: tuple[int, int, int] | None = None) -> Image:
     """Decode one sprite to an RGBA raster, optionally rescale it, then pack it
     into the smallest DS OBJ cell that holds the result.
 
@@ -485,6 +555,15 @@ def convert_image(fileobj: RelocFile, symbol: str, token: str, offset: int,
         raise ConvertError(f"{symbol}: no bitmaps")
     width = sprite.width
     height = sprite.height
+    # THE PRIMITIVE COLOUR AN INTENSITY SPRITE IS MODULATED BY.  An I/IA sprite
+    # carries SHAPE only and the drawing code sets `sobj->sprite.red/green/blue`
+    # per SObj (mnmaps.c:340); the container's own values are whatever the
+    # asset was authored with.  `tint` is that draw-site colour, quoted from the
+    # source that sets it, and it is baked in because the kit's image path has
+    # no per-slot tint -- unlike its text path, which takes the colour as an
+    # argument exactly because a string IS re-tinted per use.
+    if tint is not None:
+        sprite = replace(sprite, red=tint[0], green=tint[1], blue=tint[2])
     raster = [[(0, 0, 0, 0)] * width for _ in range(height)]
 
     # Multi-bitmap sprites stack vertically: bitmap i covers rows
@@ -520,6 +599,16 @@ def convert_image(fileobj: RelocFile, symbol: str, token: str, offset: int,
         elif sprite.bmfmt == G_IM_FMT_RGBA and sprite.bmsiz == G_IM_SIZ_32b:
             for y, pixels in enumerate(
                     decode_rgba32(fileobj, piece, sprite, piece_w, piece_h)):
+                for x, (r, g, b, a) in enumerate(pixels):
+                    raster[row + y][x] = (r, g, b, a)
+        elif sprite.bmfmt == G_IM_FMT_RGBA and sprite.bmsiz == G_IM_SIZ_16b:
+            for y, pixels in enumerate(
+                    decode_rgba16(fileobj, piece, sprite, piece_w, piece_h)):
+                for x, (r, g, b, a) in enumerate(pixels):
+                    raster[row + y][x] = (r, g, b, a)
+        elif sprite.bmfmt == G_IM_FMT_CI and sprite.bmsiz == G_IM_SIZ_4b:
+            for y, pixels in enumerate(
+                    decode_ci4(fileobj, piece, sprite, piece_w, piece_h)):
                 for x, (r, g, b, a) in enumerate(pixels):
                     raster[row + y][x] = (r, g, b, a)
         else:
@@ -642,8 +731,11 @@ def write_bytes_if_changed(path: Path, data: bytes) -> None:
 # ---------------------------------------------------------------------------
 
 IMAGE_SOURCES = [
-    # (o2r file, reloc_data.h symbol, NDS_MN_UI_KIT_IMAGE_<token>[, scale])
+    # (o2r file, reloc_data.h symbol, NDS_MN_UI_KIT_IMAGE_<token>[, scale
+    #  [, tint]])
     # `scale` is an exact (numerator, denominator); absent means 1:1.
+    # `tint` is the (r, g, b) the SOURCE modulates an intensity sprite by at its
+    # draw site; absent keeps the container's own primitive colour.
     ("MNPlayersCommon", "llMNPlayersCommonCursorHandPointSprite",
      "CURSOR_HAND_POINT"),
     ("MNPlayersCommon", "llMNPlayersCommonCursorHandGrabSprite",
@@ -723,6 +815,28 @@ IMAGE_SOURCES = [
     # handicap is off in every configuration this build reaches and the row it
     # would draw belongs to P2-5/P2-7's options work.
     ("MNPlayersCommon", "llMNPlayersCommonCPLevelTextSprite", "CP_LEVEL"),
+    # ---- P2-1f, the stage select. ----------------------------------------
+    # THE SCALE IS 5/8, AND IT IS A CELL FACT, not a taste call.  mnMapsMakeIcons
+    # draws 48x36 icons on a 50 px pitch and mnMapsMakeCursor a 62x50 frame
+    # around them (mnmaps.c:530/:865); at the frame's own 4/5 the cursor is
+    # 50x40 and lands in a 64x64 OBJ cell (8,192 B), while at 5/8 it is 39x31
+    # and lands in a 64x32 one (4,096 B) with the icons at 30x23 in 32x32
+    # cells.  5/8 is the largest exact ratio at which the SOURCE'S OWN cursor
+    # fits a single 64x32 cell, and main OBJ VRAM has 16,640 B free after the
+    # P2-1e pack -- so 4/5 for this set would have cost 16,384 of it for three
+    # sprites.  The icons keep the source's own 4/5 GRID positions and are
+    # centred in the 4/5 footprint, so the layout is the source's and only the
+    # artwork inside each cell is smaller.
+    #
+    # Two new pixel formats arrive with these, and both are the sprite's own:
+    # the map icons are RGBA16 (fmt=0 siz=2) and the RANDOM icon is CI4 with a
+    # 256-entry TLUT (fmt=2 siz=0).  decode_rgba16/decode_ci4 above.
+    ("MNMaps", "llMNMapsDreamLandSprite", "MAP_DREAM_LAND", (5, 8)),
+    ("MNMaps", "llMNMapsRandomSmallSprite", "MAP_RANDOM", (5, 8)),
+    # The cursor is I4 -- shape only -- and mnMapsMakeCursor modulates it by
+    # pure RED (mnmaps.c:876: red 0xFF, green 0x00, blue 0x00).  Baked in,
+    # because the kit's image path draws a cell as it is packed.
+    ("MNMaps", "llMNMapsCursorSprite", "MAP_CURSOR", (5, 8), (0xFF, 0, 0)),
 ]
 
 # The digit block must stay contiguous and in ascending order: the runtime
@@ -869,6 +983,7 @@ def main(argv: list[str] | None = None) -> int:
     for entry in IMAGE_SOURCES:
         o2r_name, symbol, token = entry[0], entry[1], entry[2]
         scale = entry[3] if len(entry) > 3 else None
+        tint = entry[4] if len(entry) > 4 else None
         if symbol not in offsets:
             raise ConvertError(f"{symbol} missing from include/reloc_data.h")
         if o2r_name not in cache:
@@ -876,7 +991,7 @@ def main(argv: list[str] | None = None) -> int:
                 repo_root / "decomp" / "BattleShip-main" / "BattleShip_o2r" /
                 "reloc_menus" / o2r_name)
         images.append(convert_image(cache[o2r_name], symbol, token,
-                                    offsets[symbol], scale))
+                                    offsets[symbol], scale, tint))
     check_digit_block(images)
     check_kind_label_block(images)
 

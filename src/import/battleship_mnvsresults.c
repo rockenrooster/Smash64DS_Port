@@ -236,6 +236,33 @@ void ndsMNVSResultsSetLoadScene(void)
             1u : (gNdsDemoFoxCpuLevel + 1u);
     }
 #endif
+#if NDS_P2_MENU_SHELL
+    /* P2-1f: THE SOURCE'S OWN DESTINATION, once there is a menu to return to.
+     * `mnVSResultsFuncRun`'s exit block sets `scene_curr = nSCKindPlayersVS`
+     * (mnvsresults.c:3312) whenever no unlock message is pending -- the
+     * character select, not a rematch and not the VS menu. Everything above
+     * this line existed because this ROM booted straight into one match and
+     * had nowhere else to send the player.
+     *
+     * ndsDevSceneHarnessApply() IS DELIBERATELY NOT CALLED HERE. It re-runs
+     * `ndsMatchConfigLoadMarioFoxDreamLand` and overwrites the whole
+     * descriptor from the mode-163 preset (scene_harness.c:560,189), which
+     * would throw away the fighters the character select just chose and the
+     * stage the stage select just chose -- the defect P2-1e handed forward
+     * against the day Results routed anywhere the descriptor survives. It is
+     * not needed either: its job is to hand match two a clean base state, and
+     * the character select's own commit does exactly that through
+     * `ndsMatchConfigApply`, whose first act is
+     * `gSCManagerTransferBattleState = dSCManagerDefaultBattleState` -- the
+     * pre-match snapshot, taken by that same function's tail and written by
+     * nothing else in this build.
+     *
+     * The demo ladder above still runs: it is a build flag, it advances
+     * `gNdsDemoFoxCpuLevel` only, and the descriptor is what the character
+     * select re-reads on entry. */
+    gNdsVSResultsRematchCount++;
+    ndsSceneManagerRequest((u32)nSCKindPlayersVS, (u32)nSCKindVSResults);
+#else
     ndsDevSceneHarnessApply();
     /* P2-1b: the destination goes through the scene registry rather than being
      * two assignments and a taskman call written out here. Same bytes into the
@@ -245,6 +272,7 @@ void ndsMNVSResultsSetLoadScene(void)
      * ring so the flow is read rather than inferred. */
     gNdsVSResultsRematchCount++;
     ndsSceneManagerRequest((u32)nSCKindVSBattle, (u32)nSCKindMaps);
+#endif
 }
 
 static void (*sNdsMNVSResultsFuncStart)(void);

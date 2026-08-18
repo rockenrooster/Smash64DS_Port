@@ -1,28 +1,30 @@
 [CmdletBinding()]
 param(
-    [string]$Build = 'build-p2-1e-css',
-    [string]$Target = 'smash64ds-p2-1e-css-hwtri',
+    [string]$Build = 'build-p2-1f-sss',
+    [string]$Target = 'smash64ds-p2-1f-sss-hwtri',
     [ValidateRange(1, 8)][int]$RunnerSlot = 7,
     [ValidateRange(30, 3600)][int]$TimeoutSeconds = 900,
     # Stops, not frames, and it must not exceed what the ROM produces (the
     # trailing `continue` below otherwise waits for a stop that never comes and
     # the probe exits by timeout). The breakpoint is ndsSceneManagerEnter, so
-    # one stop is one scene entry. A one-pass CSS build makes at least SEVEN --
-    # Startup, Title, ModeSelect, VSMode, PlayersVS, VSBattle, and then either
-    # Sudden Death or VSResults depending on how the match ends. Seven is
-    # therefore the largest count that does not depend on the match's OUTCOME,
-    # and the outcome moves with the CPU level this screen changes.
-    [ValidateRange(2, 64)][int]$Hits = 7,
+    # one stop is one scene entry. A one-pass P2-1f build makes at least NINE --
+    # Startup, Title, ModeSelect, VSMode, PlayersVS, Maps, PlayersVS (the stage
+    # select's own B back-out), Maps, VSBattle -- and then either Sudden Death
+    # or VSResults depending on how the match ends. Nine is therefore the
+    # largest count that does not depend on the match's OUTCOME, and the outcome
+    # moves with the CPU level the character select changes.
+    [ValidateRange(2, 64)][int]$Hits = 9,
     [string]$Artifact = ''
 )
 
-# P2-1e evidence. Reads the character select's own seam state -- cursor, token,
-# player-kind and CPU-level actions, and the descriptor it commits -- on top of
-# everything the P2-1d probe read, out of a ROM built NDS_P2_MENU_SHELL=1.
-# It SUPERSEDES scripts/menus/probe-p2-1d-menus.ps1: the flow that probe walked
-# no longer exists (VS START now leads to the character select, not to the
-# battle), and every figure it printed is printed here for five screens instead
-# of four.
+# P2-1f evidence. Reads the stage select's own seam state -- cursor slot,
+# refused moves, the two confirm paths and the descriptor's STAGE field -- on
+# top of everything the P2-1e probe read, out of a ROM built
+# NDS_P2_MENU_SHELL=1. It SUPERSEDES scripts/menus/probe-p2-1e-css.ps1 for the
+# same reason that one superseded the P2-1d probe: the flow it walked no longer
+# exists (a ready START now leads to the stage select, and Results returns to
+# the character select), and every figure it printed is printed here for six
+# screens instead of five.
 #
 # WHY THIS BREAKPOINT. Every figure here is cumulative, so the LAST line of a
 # run is the whole window and the intermediate lines are the timeline. A stop
@@ -53,7 +55,29 @@ param(
 #             for (121/127/167/512), so MSMISS now reads ring=0 here.
 #   MSBGM     ...unsupported is the same split on the BGM side: BGM 10
 #             (BattleSelect) joined the assets at P2-1e-1, so unsupported
-#             reads 0 and `track=10` engages at the CSS's own scene stop.
+#             reads 0 and `track=10` engages at the CSS's own scene stop. The
+#             stage select starts NO track (mnMapsFuncStart has no BGM call),
+#             so `calls` must be FLAT across its scene stops -- that flatness
+#             is the evidence for "the CSS's music plays through", not a
+#             comment.
+#
+# WHAT P2-1f ADDS.
+#   SSSPOS    the cursor's SLOT (0..9, mnMapsGetGroundKind's numbering) and the
+#             ground kind it names -- 0xde is RANDOM, the source's own spelling.
+#   SSSACT    cursor moves that changed the slot, direction presses the lock
+#             table REFUSED, A/START confirms and B back-outs. `blocked` being
+#             non-zero is the proof the locked cells are inert rather than
+#             absent.
+#   SSSCOMMIT the stage write. `n` counts mnMapsSaveSceneData-equivalents,
+#             `gkind` is the ground it RESOLVED to and `slot` is what the
+#             cursor NAMED -- the two differ on the random path (slot 0xde,
+#             gkind 6) and agree on the direct one, which is what makes them a
+#             control that can fail. `rand`/`fallback` say which arm of
+#             mnMapsSaveSceneData's random pick resolved: with ONE unlocked
+#             ground the source's no-repeat clause is unsatisfiable, so
+#             `fallback` is the expected reading until P2-4 lands a second.
+#   SSSCFG    the descriptor's own stage field and the scene data's, read back
+#             independently, so "the loader consumed it" is a comparison.
 #
 # Nothing here writes guest memory.
 
@@ -70,12 +94,12 @@ $rom = Resolve-Smash64DSBuildOutput -Root $root -Target $Target -Build $Build -E
 $elf = Resolve-Smash64DSBuildOutput -Root $root -Target $Target -Build $Build -Extension '.elf'
 if ([string]::IsNullOrWhiteSpace($Artifact)) {
     $Artifact = Join-Path $root ('artifacts\verification\' +
-        (Get-Date -Format 'yyyy-MM-dd') + '_p2-1e-css.txt')
+        (Get-Date -Format 'yyyy-MM-dd') + '_p2-1f-sss.txt')
 }
 
 $buildConfig = Join-Path (Resolve-Smash64DSBuildPath -Root $root -Build $Build) 'nds_build_config.h'
 if (-not (Test-Path -LiteralPath $buildConfig -PathType Leaf)) {
-    throw "p2-1e probe: $Build has no nds_build_config.h; refusing stale evidence."
+    throw "p2-1f probe: $Build has no nds_build_config.h; refusing stale evidence."
 }
 $configText = Get-Content -LiteralPath $buildConfig -Raw
 foreach ($flag in @('NDS_P2_UI_KIT', 'NDS_P2_MENU_SHELL')) {
@@ -83,7 +107,7 @@ foreach ($flag in @('NDS_P2_UI_KIT', 'NDS_P2_MENU_SHELL')) {
     if ((-not $m.Success) -or ($m.Groups[1].Value -eq '0')) {
         # A run against a shell-less ROM would report every counter as
         # "missing symbol" and read as a broken shell rather than a wrong build.
-        throw "p2-1e probe: $Build was built with $flag off; nothing to read."
+        throw "p2-1f probe: $Build was built with $flag off; nothing to read."
     }
     Write-Output ("build config: {0}={1}" -f $flag, $m.Groups[1].Value)
 }
@@ -115,6 +139,14 @@ $required = @(
     'gNdsMenuShellCssCommitCount', 'gNdsMenuShellCssCommitSlot',
     'gNdsMenuShellCssCueCount', 'gNdsMenuShellCssCueLastId',
     'gNdsMenuShellCssAnnounceCount',
+    # P2-1f.
+    'gNdsMenuShellSssCursorSlot', 'gNdsMenuShellSssCursorGkind',
+    'gNdsMenuShellSssMoveCount', 'gNdsMenuShellSssBlockedCount',
+    'gNdsMenuShellSssConfirmCount', 'gNdsMenuShellSssBackCount',
+    'gNdsMenuShellSssCommitCount', 'gNdsMenuShellSssCommitGkind',
+    'gNdsMenuShellSssCommitSlotGkind', 'gNdsMenuShellSssRandomCount',
+    'gNdsMenuShellSssRandomFallbackCount', 'gNdsMenuShellSssCueCount',
+    'gNdsMenuShellSssCueLastId',
     'gNdsMatchConfig',
     'gNdsUiKitEnterCount', 'gNdsUiKitEnterRejectCount', 'gNdsUiKitExitCount',
     'gNdsUiKitPackOpenCount', 'gNdsUiKitPackBytesLoaded', 'gNdsUiKitPackHash',
@@ -137,7 +169,7 @@ $nm_lines = & $nm $elf
 $symbols = $nm_lines | ForEach-Object { ($_ -split '\s+')[-1] }
 $missing = @($required | Where-Object { $symbols -notcontains $_ })
 if ($missing.Count -gt 0) {
-    throw ("p2-1e probe symbols absent from {0}: {1}" -f $elf, ($missing -join ', '))
+    throw ("p2-1f probe symbols absent from {0}: {1}" -f $elf, ($missing -join ', '))
 }
 # The FGM miss ring is the SFX seam's negative half: the shell asks with the
 # source's own cue ids and this ring says which of them the pack carries.
@@ -157,8 +189,8 @@ $context = Initialize-MelonDSVerifierContext `
     -Root $root -MelonDS '' -RunnerSlot $RunnerSlot -NoBuild
 $melon_dir = Split-Path -Parent $context.MelonDSPath
 $log_dir = Get-MelonDSVerifierLogDir -Root $root -RunnerSlot $RunnerSlot
-$stdout = Join-Path $log_dir 'melonds.p2-1e-css.stdout.log'
-$stderr = Join-Path $log_dir 'melonds.p2-1e-css.stderr.log'
+$stdout = Join-Path $log_dir 'melonds.p2-1f-sss.stdout.log'
+$stderr = Join-Path $log_dir 'melonds.p2-1f-sss.stderr.log'
 $log_temp = if (-not [string]::IsNullOrWhiteSpace($env:SMASH64DS_VERIFY_TEMP_DIR)) {
     $env:SMASH64DS_VERIFY_TEMP_DIR
 } else {
@@ -207,13 +239,13 @@ try {
         'silent',
         'set $n = $n + 1',
         'printf "MSSCENE %d curr=%u prev=%u enters=%u exits=%u rej=%u unreg=%u mism=%u\n", $n, gSCManagerSceneData.scene_curr, gSCManagerSceneData.scene_prev, gNdsSceneManagerEnterCount, gNdsSceneManagerExitCount, gNdsSceneManagerRejectCount, gNdsSceneManagerUnregisteredEnterCount, gNdsSceneManagerArenaMismatchCount',
-        'printf "MSSHELL %d screen=%u splash=%u/%u title=%u/%u mode=%u/%u vs=%u/%u css=%u/%u\n", $n, gNdsMenuShellScreen, gNdsMenuShellEnterCount[0], gNdsMenuShellExitCount[0], gNdsMenuShellEnterCount[1], gNdsMenuShellExitCount[1], gNdsMenuShellEnterCount[2], gNdsMenuShellExitCount[2], gNdsMenuShellEnterCount[3], gNdsMenuShellExitCount[3], gNdsMenuShellEnterCount[4], gNdsMenuShellExitCount[4]',
-        'printf "MSFRAMES %d f0=%u f1=%u f2=%u f3=%u f4=%u\n", $n, gNdsMenuShellFrames[0], gNdsMenuShellFrames[1], gNdsMenuShellFrames[2], gNdsMenuShellFrames[3], gNdsMenuShellFrames[4]',
-        'printf "MSMAX %d w0=%u w1=%u w2=%u w3=%u w4=%u\n", $n, gNdsMenuShellWorkMax[0], gNdsMenuShellWorkMax[1], gNdsMenuShellWorkMax[2], gNdsMenuShellWorkMax[3], gNdsMenuShellWorkMax[4]',
-        'printf "MSENTER %d e0=%u e1=%u e2=%u e3=%u e4=%u\n", $n, gNdsMenuShellEnterTicks[0], gNdsMenuShellEnterTicks[1], gNdsMenuShellEnterTicks[2], gNdsMenuShellEnterTicks[3], gNdsMenuShellEnterTicks[4]'
+        'printf "MSSHELL %d screen=%u splash=%u/%u title=%u/%u mode=%u/%u vs=%u/%u css=%u/%u sss=%u/%u\n", $n, gNdsMenuShellScreen, gNdsMenuShellEnterCount[0], gNdsMenuShellExitCount[0], gNdsMenuShellEnterCount[1], gNdsMenuShellExitCount[1], gNdsMenuShellEnterCount[2], gNdsMenuShellExitCount[2], gNdsMenuShellEnterCount[3], gNdsMenuShellExitCount[3], gNdsMenuShellEnterCount[4], gNdsMenuShellExitCount[4], gNdsMenuShellEnterCount[5], gNdsMenuShellExitCount[5]',
+        'printf "MSFRAMES %d f0=%u f1=%u f2=%u f3=%u f4=%u f5=%u\n", $n, gNdsMenuShellFrames[0], gNdsMenuShellFrames[1], gNdsMenuShellFrames[2], gNdsMenuShellFrames[3], gNdsMenuShellFrames[4], gNdsMenuShellFrames[5]',
+        'printf "MSMAX %d w0=%u w1=%u w2=%u w3=%u w4=%u w5=%u\n", $n, gNdsMenuShellWorkMax[0], gNdsMenuShellWorkMax[1], gNdsMenuShellWorkMax[2], gNdsMenuShellWorkMax[3], gNdsMenuShellWorkMax[4], gNdsMenuShellWorkMax[5]',
+        'printf "MSENTER %d e0=%u e1=%u e2=%u e3=%u e4=%u e5=%u\n", $n, gNdsMenuShellEnterTicks[0], gNdsMenuShellEnterTicks[1], gNdsMenuShellEnterTicks[2], gNdsMenuShellEnterTicks[3], gNdsMenuShellEnterTicks[4], gNdsMenuShellEnterTicks[5]'
     ) + (New-MenuScreenPrintf -Screen 0) + (New-MenuScreenPrintf -Screen 1) +
         (New-MenuScreenPrintf -Screen 2) + (New-MenuScreenPrintf -Screen 3) +
-        (New-MenuScreenPrintf -Screen 4) + @(
+        (New-MenuScreenPrintf -Screen 4) + (New-MenuScreenPrintf -Screen 5) + @(
         'printf "MSFLOW %d trans=%u input=%u denied=%u commit=%u rule=%u time=%u stocks=%u walk=%u loops=%u\n", $n, gNdsMenuShellTransitionCount, gNdsMenuShellInputCount, gNdsMenuShellDeniedCount, gNdsMenuShellCommitCount, gNdsMenuShellCommitRule, gNdsMenuShellCommitTime, gNdsMenuShellCommitStocks, gNdsMenuShellWalkSteps, gNdsMenuShellWalkLoops',
         'printf "MSTRANS %d %04x %04x %04x %04x %04x %04x %04x %04x\n", $n, gNdsMenuShellTransitionRing[0], gNdsMenuShellTransitionRing[1], gNdsMenuShellTransitionRing[2], gNdsMenuShellTransitionRing[3], gNdsMenuShellTransitionRing[4], gNdsMenuShellTransitionRing[5], gNdsMenuShellTransitionRing[6], gNdsMenuShellTransitionRing[7]',
         # All SIXTEEN, not the first eight P2-1d printed: the character select
@@ -225,11 +257,25 @@ try {
         'printf "CSSCFG %d s0=%u/%u/%u s1=%u/%u/%u s2=%u/%u/%u s3=%u/%u/%u\n", $n, gNdsMatchConfig.fighters[0].fkind, gNdsMatchConfig.fighters[0].pkind, gNdsMatchConfig.fighters[0].level, gNdsMatchConfig.fighters[1].fkind, gNdsMatchConfig.fighters[1].pkind, gNdsMatchConfig.fighters[1].level, gNdsMatchConfig.fighters[2].fkind, gNdsMatchConfig.fighters[2].pkind, gNdsMatchConfig.fighters[2].level, gNdsMatchConfig.fighters[3].fkind, gNdsMatchConfig.fighters[3].pkind, gNdsMatchConfig.fighters[3].level',
         'printf "CSSXFER %d s0=%u/%u/%u s1=%u/%u/%u s2=%u/%u/%u s3=%u/%u/%u pl=%u cp=%u\n", $n, gSCManagerTransferBattleState.players[0].fkind, gSCManagerTransferBattleState.players[0].pkind, gSCManagerTransferBattleState.players[0].level, gSCManagerTransferBattleState.players[1].fkind, gSCManagerTransferBattleState.players[1].pkind, gSCManagerTransferBattleState.players[1].level, gSCManagerTransferBattleState.players[2].fkind, gSCManagerTransferBattleState.players[2].pkind, gSCManagerTransferBattleState.players[2].level, gSCManagerTransferBattleState.players[3].fkind, gSCManagerTransferBattleState.players[3].pkind, gSCManagerTransferBattleState.players[3].level, gSCManagerTransferBattleState.pl_count, gSCManagerTransferBattleState.cp_count',
         'if gSCManagerBattleState != 0',
-        'printf "CSSLIVE %d s0=%u/%u/%u s1=%u/%u/%u pl=%u cp=%u time=%u\n", $n, gSCManagerBattleState->players[0].fkind, gSCManagerBattleState->players[0].pkind, gSCManagerBattleState->players[0].level, gSCManagerBattleState->players[1].fkind, gSCManagerBattleState->players[1].pkind, gSCManagerBattleState->players[1].level, gSCManagerBattleState->pl_count, gSCManagerBattleState->cp_count, gSCManagerBattleState->time_limit',
+        # `gkind` here is the END of the stage chain and the read that can
+        # FAIL: scvsbattle.c:500 copies gSCManagerSceneData.gkind into the live
+        # battle state at scene start, so this is the ground the match is
+        # actually running on, read out of the struct the match owns rather
+        # than out of the descriptor that asked for it.
+        'printf "CSSLIVE %d s0=%u/%u/%u s1=%u/%u/%u pl=%u cp=%u time=%u gkind=%02x\n", $n, gSCManagerBattleState->players[0].fkind, gSCManagerBattleState->players[0].pkind, gSCManagerBattleState->players[0].level, gSCManagerBattleState->players[1].fkind, gSCManagerBattleState->players[1].pkind, gSCManagerBattleState->players[1].level, gSCManagerBattleState->pl_count, gSCManagerBattleState->cp_count, gSCManagerBattleState->time_limit, gSCManagerBattleState->gkind',
         'else',
         'printf "CSSLIVE %d none\n", $n',
         'end',
         'printf "CSSCUE %d cues=%u lastid=%u announce=%u\n", $n, gNdsMenuShellCssCueCount, gNdsMenuShellCssCueLastId, gNdsMenuShellCssAnnounceCount',
+        'printf "SSSPOS %d slot=%u gkind=%02x enters=%u\n", $n, gNdsMenuShellSssCursorSlot, gNdsMenuShellSssCursorGkind, gNdsMenuShellEnterCount[5]',
+        'printf "SSSACT %d move=%u blocked=%u confirm=%u back=%u cues=%u lastid=%u\n", $n, gNdsMenuShellSssMoveCount, gNdsMenuShellSssBlockedCount, gNdsMenuShellSssConfirmCount, gNdsMenuShellSssBackCount, gNdsMenuShellSssCueCount, gNdsMenuShellSssCueLastId',
+        'printf "SSSCOMMIT %d n=%u gkind=%02x slot=%02x rand=%u fallback=%u\n", $n, gNdsMenuShellSssCommitCount, gNdsMenuShellSssCommitGkind, gNdsMenuShellSssCommitSlotGkind, gNdsMenuShellSssRandomCount, gNdsMenuShellSssRandomFallbackCount',
+        # THE STAGE, END TO END, three independent reads: the descriptor the
+        # stage select writes, the scene data ndsMatchConfigApply installs from
+        # it, and the field mnMapsInitVars restores the cursor from on the next
+        # visit. A write that never fired shows as a descriptor that still
+        # carries the preset while `maps` stays at its seed.
+        'printf "SSSCFG %d cfg=%02x scene=%02x default=%02x maps=%02x stagesel=%u\n", $n, gNdsMatchConfig.gkind, gSCManagerSceneData.gkind, dSCManagerDefaultSceneData.gkind, gSCManagerSceneData.maps_vsmode_gkind, gNdsMatchConfig.is_stage_select',
         'printf "MSKIT %d enters=%u rej=%u exits=%u opens=%u bytes=%u hash=%08x mismatch=%u readfail=%u\n", $n, gNdsUiKitEnterCount, gNdsUiKitEnterRejectCount, gNdsUiKitExitCount, gNdsUiKitPackOpenCount, gNdsUiKitPackBytesLoaded, gNdsUiKitPackHash, gNdsUiKitPackHashMismatchCount, gNdsUiKitPackReadFailCount',
         'printf "MSDRAW %d compose=%u overflow=%u commit=%u visible=%u\n", $n, gNdsUiKitTextComposeCount, gNdsUiKitTextOverflowCount, gNdsUiKitCommitCount, gNdsUiKitVisibleObjectCount',
         'printf "MSSFX %d move=%u confirm=%u back=%u value=%u start=%u lastid=%u\n", $n, gNdsUiKitSfxRequestCount[0], gNdsUiKitSfxRequestCount[1], gNdsUiKitSfxRequestCount[2], gNdsUiKitSfxRequestCount[3], gNdsUiKitSfxRequestCount[4], gNdsUiKitSfxLastId',
@@ -244,6 +290,15 @@ try {
         # shared arena starts after the binary's bss, so a build that grew moves
         # the base and re-aligns every allocation behind it.
         'printf "MSARENABASE %d base=%08x size=%u mism=%u\n", $n, gNdsSceneManagerArenaBase, gNdsSceneManagerArenaSize, gNdsSceneManagerArenaMismatchCount',
+        # The scene walk's own budget, so a run that stops producing scene
+        # entries is read rather than guessed at: `hops` reaching 0 is the
+        # walk deliberately parking, and any other reason would leave it
+        # non-zero. Absent (and printed as such) on a non-walk build.
+        $(if ($symbols -contains 'gNdsSceneWalkHopsRemaining') {
+            'printf "MSWALK %d hops=%u loops=%u\n", $n, gNdsSceneWalkHopsRemaining, gNdsSceneWalkLoopsCompleted'
+        } else {
+            'printf "MSWALK %d hops=absent\n", $n'
+        }),
         # ALL SIXTEEN ring slots. NDS_SCENE_MANAGER_RING is 16 and P2-1d's probe
         # printed eight, which on a three-lap walk shows the FIRST lap and calls
         # it the run -- the flat-high-water claim needs the laps that follow.
@@ -271,20 +326,27 @@ try {
         'print gNdsMenuShellCssCommitCount',
         'print gNdsMenuShellCssStartCount',
         'print gNdsMatchConfig.fighters',
+        'print gNdsMenuShellSssCommitCount',
+        'print gNdsMenuShellSssCommitGkind',
+        'print gNdsMenuShellSssCommitSlotGkind',
+        'print gNdsMenuShellSssBackCount',
+        'print gNdsMatchConfig.gkind',
+        'print gSCManagerSceneData.gkind',
+        'print gSCManagerSceneData.maps_vsmode_gkind',
         'detach',
         'quit'
     )
 
     Invoke-GdbMarkerScript `
         -Gdb $gdb -Elf $elf -Root $root -Commands $commands `
-        -ScriptName 'p2_1e_css_probe.gdb' `
+        -ScriptName 'p2_1f_sss_probe.gdb' `
         -TimeoutSeconds $TimeoutSeconds | Out-Null
 }
 finally {
     # From the capture file, never the helper's return value: this probe's last
     # command is an unbounded `continue`, so it exits by timeout by design and
     # the capture still holds every line taken before that.
-    $captured = Join-Path $log_temp 'p2_1e_css_probe.gdb.out'
+    $captured = Join-Path $log_temp 'p2_1f_sss_probe.gdb.out'
     if (Test-Path -LiteralPath $captured) {
         New-Item -ItemType Directory -Force -Path (Split-Path -Parent $Artifact) |
             Out-Null

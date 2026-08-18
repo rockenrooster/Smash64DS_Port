@@ -37,6 +37,11 @@
 
 extern void *ndsTaskmanArenaStart(void);
 extern size_t ndsTaskmanArenaSize(void);
+/* sys/utils.c's own time-seeded pick, which mnMapsSaveSceneData uses for the
+ * RANDOM cell (mnmaps.c:1379). It reads osGetTime() and does NOT touch
+ * sSYUtilsRandomSeed, so calling it from a menu cannot perturb the gameplay
+ * RNG. Declared rather than included: include/sys/ carries no utils.h. */
+extern s32 syUtilsRandTimeUCharRange(s32 range);
 
 /* --- Layout ---------------------------------------------------------------
  *
@@ -162,6 +167,19 @@ NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellCssCommitSlot[4];
 NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellCssCueCount;
 NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellCssCueLastId;
 NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellCssAnnounceCount;
+NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellSssCursorSlot;
+NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellSssCursorGkind;
+NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellSssMoveCount;
+NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellSssBlockedCount;
+NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellSssConfirmCount;
+NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellSssBackCount;
+NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellSssCommitCount;
+NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellSssCommitGkind;
+NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellSssCommitSlotGkind;
+NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellSssRandomCount;
+NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellSssRandomFallbackCount;
+NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellSssCueCount;
+NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellSssCueLastId;
 
 /* --- Per-screen frame accounting ----------------------------------------- */
 
@@ -239,6 +257,11 @@ static void ndsMenuShellRecordPresent(void)
 #define NDS_MENU_REPEAT_WAIT 12
 
 static u32 sMenuChangeWait;
+
+/* Stage-select entries so far. Declared here rather than beside the rest of
+ * the stage select's state because the scripted walk below picks its script
+ * from it, and the walk is compiled before that section. */
+static u32 sSssEnterCount;
 
 #if NDS_P2_MENU_WALK
 /* Scripted input, lab only. It drives the SCREENS' OWN handlers, not the scene
@@ -336,16 +359,51 @@ static const NdsMenuWalkStep kNdsMenuWalkCss[] = {
     { (u16)NDS_INPUT_START, 1u }
 };
 
+/* THE STAGE-SELECT TOUR (P2-1f), and it is TWO scripts because this screen has
+ * two exits and both are the row's deliverable. The cursor opens on the cell
+ * `gSCManagerSceneData.maps_vsmode_gkind` names, so where each visit STARTS is
+ * decided by what the visit before it chose -- the source's own rule
+ * (mnMapsInitVars) -- and that is what makes one pair of scripts cover both
+ * confirm paths without a lap counter:
+ *
+ *   visit 1  opens on slot 6 (Dream Land, the harness seed)
+ *            RIGHT  7 and 8 are locked and are SKIPPED -> slot 9, RANDOM
+ *            UP     slot 4 is locked: REFUSED, and the counter says so
+ *            B      BACK to the character select -- which still commits
+ *                   (mnmaps.c:1481), so maps_vsmode_gkind becomes 0xde
+ *   visit 2  opens on slot 9 (RANDOM, restored)
+ *            RIGHT  wraps to 5, locked, SKIPPED -> slot 6, Dream Land
+ *            UP     slot 1 is locked: REFUSED
+ *            A      confirm on a GROUND: the direct write path
+ *   visit 3  opens on slot 6 again, so RIGHT lands on RANDOM and A confirms
+ *            THERE: the random write path, resolving to the same ground by
+ *            different code. Visit 4 is visit 2 again, and so on.
+ *
+ * So a one-pass run proves the back-out and the direct path, and any run of
+ * two or more laps proves the random path as well -- with the alternation
+ * falling out of the SOURCE's cursor-restore rule rather than out of a lap
+ * test written here. */
+static const NdsMenuWalkStep kNdsMenuWalkSssBack[] = {
+    { (u16)NDS_INPUT_RIGHT, 1u }, { (u16)NDS_INPUT_UP, 1u },
+    { (u16)NDS_INPUT_B, 1u }
+};
+static const NdsMenuWalkStep kNdsMenuWalkSss[] = {
+    { (u16)NDS_INPUT_RIGHT, 1u }, { (u16)NDS_INPUT_UP, 1u },
+    { (u16)NDS_INPUT_A, 1u }
+};
+
 static const NdsMenuWalkStep *const
     kNdsMenuWalkScripts[NDS_MENU_SHELL_SCREEN_COUNT] = {
-    NULL, kNdsMenuWalkTitle, kNdsMenuWalkMode, kNdsMenuWalkVs, kNdsMenuWalkCss
+    NULL, kNdsMenuWalkTitle, kNdsMenuWalkMode, kNdsMenuWalkVs, kNdsMenuWalkCss,
+    kNdsMenuWalkSss
 };
 static const u8 kNdsMenuWalkLengths[NDS_MENU_SHELL_SCREEN_COUNT] = {
     0u,
     (u8)(sizeof(kNdsMenuWalkTitle) / sizeof(kNdsMenuWalkTitle[0])),
     (u8)(sizeof(kNdsMenuWalkMode) / sizeof(kNdsMenuWalkMode[0])),
     (u8)(sizeof(kNdsMenuWalkVs) / sizeof(kNdsMenuWalkVs[0])),
-    (u8)(sizeof(kNdsMenuWalkCss) / sizeof(kNdsMenuWalkCss[0]))
+    (u8)(sizeof(kNdsMenuWalkCss) / sizeof(kNdsMenuWalkCss[0])),
+    (u8)(sizeof(kNdsMenuWalkSss) / sizeof(kNdsMenuWalkSss[0]))
 };
 
 static u32 sMenuWalkCursor;
@@ -359,6 +417,7 @@ static u32 sMenuWalkHeld;
  * ring would stop being a record of what the player pressed. */
 static u32 ndsMenuShellWalkTap(u32 screen, u32 *out_tap)
 {
+    const NdsMenuWalkStep *script;
     u32 length;
     u32 dwell;
 
@@ -388,8 +447,9 @@ static u32 ndsMenuShellWalkTap(u32 screen, u32 *out_tap)
     {
         return 0u;
     }
-    dwell = (screen == NDS_MENU_SHELL_SCREEN_CSS) ? NDS_MENU_WALK_DWELL_CSS :
-                                                    NDS_MENU_WALK_DWELL;
+    dwell = ((screen == NDS_MENU_SHELL_SCREEN_CSS) ||
+             (screen == NDS_MENU_SHELL_SCREEN_SSS)) ?
+        NDS_MENU_WALK_DWELL_CSS : NDS_MENU_WALK_DWELL;
     if (sMenuWalkTimer != 0u)
     {
         sMenuWalkTimer--;
@@ -398,18 +458,23 @@ static u32 ndsMenuShellWalkTap(u32 screen, u32 *out_tap)
     sMenuWalkTimer = dwell;
     gNdsMenuShellWalkSteps++;
     sMenuWalkCursor++;
-    if ((screen == NDS_MENU_SHELL_SCREEN_CSS) && (sMenuWalkCursor == length))
+    /* P2-1f MOVED THE LAP COUNT OFF THIS FUNCTION. A lap ends where the pass
+     * reaches the match, and that is now the STAGE SELECT's own confirm --
+     * counted there (ndsMenuShellUpdateSss) rather than at a script position,
+     * because this screen runs two different scripts and only one of them
+     * ends in the battle. */
+    script = kNdsMenuWalkScripts[screen];
+    if ((screen == NDS_MENU_SHELL_SCREEN_SSS) && (sSssEnterCount == 1u))
     {
-        /* A lap is a completed menu pass into the match, counted where the
-         * pass actually ends rather than where a ring happens to wrap. P2-1d
-         * counted it on the VS screen because that screen was the last stop
-         * before the battle; the character select is now that stop. */
-        gNdsMenuShellWalkLoops++;
+        /* The FIRST stage-select visit of the run takes the back-out script;
+         * every later one takes the confirm script. Keyed on the screen's own
+         * entry counter, not on a lap index, because the back-out is a
+         * once-per-run proof and a lap index would take it every lap and never
+         * reach the battle. */
+        script = kNdsMenuWalkSssBack;
     }
-    sMenuWalkHeld =
-        (u32)kNdsMenuWalkScripts[screen][sMenuWalkCursor - 1u].button;
-    sMenuWalkHold =
-        (u32)kNdsMenuWalkScripts[screen][sMenuWalkCursor - 1u].hold - 1u;
+    sMenuWalkHeld = (u32)script[sMenuWalkCursor - 1u].button;
+    sMenuWalkHold = (u32)script[sMenuWalkCursor - 1u].hold - 1u;
     *out_tap = sMenuWalkHeld;
     return sMenuWalkHeld;
 }
@@ -1083,12 +1148,12 @@ static void ndsMenuShellUpdateVs(u32 held, u32 taps)
  *     frames and re-grabs it at tic 11 (mnplayersvs.c:3927). The END STATE is
  *     transcribed -- the token is back in the cursor's hand -- and the arc is
  *     not; it is presentation, and this screen has no SObj velocity model.
- *   - STAGE SELECT. mnPlayersVSFuncRun sends a ready START to `nSCKindMaps`
- *     when `is_stage_select` is set (mnplayersvs.c:4497). That scene is P2-1f,
- *     so until it lands the CSS goes straight to the battle and keeps the
- *     descriptor's stage. It deliberately does NOT take the source's other
- *     branch either, which randomises the stage over every unlocked ground --
- *     eight of the nine are P2-4. */
+ *   - STAGE SELECT is no longer a narrowing: P2-1f landed the screen, so the
+ *     ready START takes the source's own `is_stage_select` branch to
+ *     `nSCKindMaps` (mnplayersvs.c:4497). The branch's OTHER arm -- randomise
+ *     the ground here and go straight to the battle -- is still not the
+ *     source's, because eight of the nine grounds are P2-4; it is unreachable
+ *     in every configuration this build ships. */
 
 /* Source frame -> DS pixels. 256/320 == 192/240 == 4/5, exactly. */
 #define NDS_CSS_DS(v) (((v) * 4) / 5)
@@ -1869,7 +1934,23 @@ static void ndsMenuShellUpdateCss(u32 held, u32 taps)
         if (sCssStartWait == 0u)
         {
             ndsMenuShellCssCommit();
-            ndsMenuShellGoto((u32)nSCKindVSBattle);
+            /* mnPlayersVSFuncRun:4493 -- P2-1f. The source picks the STAGE
+             * SELECT when `gSCManagerTransferBattleState.is_stage_select` is
+             * set and randomises the ground itself when it is not; the
+             * descriptor's `is_stage_select` IS that field (P2-1a applies it
+             * verbatim), so this is the source's own branch on the source's
+             * own bit. P2-1e went straight to the battle because
+             * `nSCKindMaps` had no screen; it has one now.
+             *
+             * THE ELSE ARM IS STILL NOT THE SOURCE'S. The source randomises
+             * over every unlocked ground there, and eight of the nine are
+             * P2-4; until then a no-stage-select match keeps whatever ground
+             * the descriptor already carries, which is the same narrowing
+             * P2-1e recorded and it is unreachable in every configuration
+             * this build ships (the preset sets the bit). */
+            ndsMenuShellGoto(
+                (gNdsMatchConfig.is_stage_select != FALSE) ?
+                    (u32)nSCKindMaps : (u32)nSCKindVSBattle);
         }
         return;
     }
@@ -2100,6 +2181,511 @@ static void ndsMenuShellPopulateCssScreen(void)
     ndsMenuShellCssMove();
 }
 
+/* --- Screen: VS stage select (P2-1f) --------------------------------------
+ *
+ * mn/mnmaps/mnmaps.c. A GRID screen, not a pointer one: a red frame sits on
+ * one of ten cells -- nine grounds in a 5x2 block plus RANDOM -- and moves a
+ * whole cell at a time. Everything below is transcribed from that file, in the
+ * SOURCE's own 320x240 frame exactly as the character select is, so a probe
+ * reads back the numbers mnmaps.c is written in.
+ *
+ * THE GRID, mnMapsMakeIcons:530 and mnMapsSetCursorPosition:865. Icon i sits
+ * at (i*50 + 30, 30) for i < 5 and (i*50 - 220, 68) for i >= 5, so the columns
+ * are x = 30/80/130/180/230 and the rows y = 30/68; the cursor sits at exactly
+ * (icon - 7, icon - 7). mnMapsGetGroundKind:453 is what a slot MEANS, and slot
+ * 9 is `0xDE` -- the source's own spelling of RANDOM, kept rather than renamed.
+ *
+ * WHAT IS LOCKED, and it is the same substitution the character select makes.
+ * The source's `mnMapsCheckLocked` (mnmaps.c:166) locks exactly one ground --
+ * Mushroom Kingdom, behind `LBBACKUP_UNLOCK_MASK_INISHIE` -- because a retail
+ * cart's other eight are always available. The gate this build needs is which
+ * grounds EXIST: eight of the nine are P2-4, so the mask is Dream Land alone.
+ * Same bitmask over gkind, different bound, and the RANDOM cell is never
+ * locked because the source never locks it.
+ *
+ * THE ONE GENERALISATION, disclosed rather than buried. The source's UP/DOWN
+ * arms test the destination with `mnMapsCheckLocked` and refuse the move; its
+ * LEFT/RIGHT arms do NOT, because the only lockable ground is slot 4 and the
+ * left/right wraps SPECIAL-CASE slot 4 by hand (`case 0: locked(4) ? 3 : 4`,
+ * `case 3: locked(4) ? 0 : 4`). With eight locked cells that hand-written case
+ * stops covering the lock, so left/right here SKIP locked cells in the
+ * direction of travel around the row's own cycle. That reproduces the source's
+ * table exactly on every case it enumerates -- left from 0 reaches 4, finds it
+ * locked and lands on 3; right from 3 reaches 4, finds it locked and wraps to
+ * 0; right from 4 is 0; left from 5 is 9; right from 9 is 5; everything else
+ * is +-1 -- and it extends to a lock set the source never had. The scan is
+ * bounded by the row length so an all-locked row cannot spin.
+ *
+ * DELIBERATE NARROWINGS, each a plan non-goal rather than an omission:
+ *   - THE 3D PREVIEW. mnMapsMakePreview loads the ground's map file into one
+ *     of two model heaps, builds up to four layer GObjs from its own DObj
+ *     descriptors, and orbits a camera over them (mnmaps.c:1096/:1027/:1330).
+ *     That is the RSP/RDP scene graph this target does not have, and it is the
+ *     single most expensive thing on the source's screen. The preview PANEL is
+ *     kept and holds the selected ground's own icon instead.
+ *   - THE PLAQUE AND THE EMBLEM. mnMapsMakePlaque draws an 84x85 CI8 wooden
+ *     circle with a 256-entry TLUT and five bitmap bands, and the emblem on it
+ *     is a per-series FTEmblem sprite (mnmaps.c:245/:790). Main OBJ VRAM has
+ *     8,448 B left after this row's three icons; the circle alone is 8,192 of
+ *     it for one decoration. The words it frames are kept.
+ *   - THE STAGE NAME AND HEADER as SPRITES. The source draws
+ *     `llMNMaps<Ground>TextSprite` and `llMNMapsStageSelectTextSprite`; this
+ *     composes the same words out of the source's own menu font, which is the
+ *     P2-1c kit's whole reason for existing and exactly what P2-1e did with
+ *     the fighter names. REGION_US draws no subtitle at all
+ *     (mnMapsMakeSubtitle is `return;` under REGION_US, mnmaps.c:659).
+ *   - THE 5-MINUTE IDLE RETURN (mnmaps.c:1451) is attract behaviour and
+ *     belongs to P2-7, exactly as it does on the mode select and the CSS.
+ *   - TRAINING MODE. `sMNMapsIsTrainingMode` is set when scene_prev is
+ *     nSCKindPlayers1PTraining (mnmaps.c:1415); that scene is P2-7, so the
+ *     flag is FALSE by construction here and its two branches -- the training
+ *     wallpaper set and the 1PTrainingMode destination -- are absent rather
+ *     than transcribed-and-dead.
+ *
+ * ONE LOCKED CELL IS DRAWN WHERE THE SOURCE DRAWS NOTHING, and it is the row's
+ * only presentation ADDITION. mnMapsMakeIcons simply skips a locked ground, so
+ * a build with eight locked grounds would show two icons floating in an empty
+ * field and the 5x2 grid the cursor moves around would be invisible. The cell
+ * gets the source's own locked plate -- the question-mark sprite
+ * mnPlayersVSMakePortrait draws for a locked FIGHTER, already in the pack from
+ * P2-1e -- so the grid reads as a grid. Zero new bytes, and it is the
+ * precedent the character select already set. */
+
+/* Source frame -> DS pixels, same exact 4/5 the character select uses. */
+#define NDS_SSS_DS(v) NDS_CSS_DS(v)
+
+#define NDS_SSS_SLOTS 10u
+#define NDS_SSS_ROW 5u
+/* mnMapsGetGroundKind:453 -- slot 9's ground kind. */
+#define NDS_SSS_GKIND_RANDOM 0xdeu
+
+/* mnMapsMakeIcons' grid, in source units. */
+#define NDS_SSS_ICON_X0 30
+#define NDS_SSS_ICON_PITCH 50
+#define NDS_SSS_ICON_Y0 30
+#define NDS_SSS_ICON_Y1 68
+/* mnMapsSetCursorPosition: the frame sits 7 px up and left of the icon. */
+#define NDS_SSS_CURSOR_DX (-7)
+#define NDS_SSS_CURSOR_DY (-7)
+/* The 5/8 bake is smaller than the 4/5 footprint the grid is spaced for, so
+ * the artwork is centred in that footprint: (48*4/5 - 30)/2 = 4 and
+ * (36*4/5 - 23)/2 = 2 for an icon, and the cursor frame is centred on the
+ * icon in turn ((39-30)/2 = 4, (31-23)/2 = 4). Arithmetic on the two bakes'
+ * own dimensions, not offsets tuned by eye. */
+#define NDS_SSS_ICON_INSET_X 4
+#define NDS_SSS_ICON_INSET_Y 2
+#define NDS_SSS_CURSOR_INSET_X 4
+#define NDS_SSS_CURSOR_INSET_Y 4
+
+/* mnMapsFuncRun's own input gate and repeat (mnmaps.c:1440/:1523). */
+#define NDS_SSS_INPUT_ARM_TICS 10
+#define NDS_SSS_SCROLL_WAIT 12
+
+/* THE CUES, by the source's own REGION_US FGM ids, derived by the same
+ * gm/gmsound.h parse P2-1c-1/P2-1d-1/P2-1e-1 used and cross-checked against
+ * every id this tree already pins.
+ *   164 MenuScroll2  -- every cursor move (mnmaps.c:1508 and the three arms
+ *                       below it). IN THE PACK since P2-1c-1.
+ *   159 StageSelect  -- the A/START confirm (mnmaps.c:1470). NOT IN THE PACK:
+ *                       the pack carries 158/163/164/165 plus P2-1d-1's 157
+ *                       and P2-1e-1's 121/127/167/512, and 159 is none of
+ *                       them. The seam asks with the real id so the FGM miss
+ *                       ring measures the gap; row P2-1f-1 renders it.
+ * B PLAYS NOTHING. mnMapsFuncRun's B arm transitions silently (mnmaps.c:1483)
+ * -- no `func_800269C0_275C0` call at all -- which is worth saying because
+ * every other screen in this shell cues its back-out. */
+#define NDS_SSS_FGM_SCROLL2 164u    /* nSYAudioFGMMenuScroll2 */
+#define NDS_SSS_FGM_CONFIRM 159u    /* nSYAudioFGMStageSelect */
+
+/* mnMapsFuncStart starts NO music (mnmaps.c:1595 makes cameras and sprites and
+ * nothing else), so the character select's BGM 10 plays straight through this
+ * screen -- which is why mnPlayersVSFuncStart's own track is gated on
+ * `scene_prev != nSCKindMaps` (mnplayersvs.c:4899), the condition P2-1e already
+ * transcribed against a scene that could not yet be scene_prev. It can now. */
+
+/* mnMapsGetGroundKind, mnmaps.c:453. */
+static const u8 kNdsSssSlotGkind[NDS_SSS_SLOTS] = {
+    (u8)nGRKindCastle, (u8)nGRKindJungle, (u8)nGRKindHyrule,
+    (u8)nGRKindZebes, (u8)nGRKindInishie, (u8)nGRKindYoster,
+    (u8)nGRKindPupupu, (u8)nGRKindSector, (u8)nGRKindYamabuki,
+    (u8)NDS_SSS_GKIND_RANDOM
+};
+
+/* Which grounds this build HAS. Same shape as the source's ground_mask
+ * (LBBACKUP_MASK_STAGE, sc/scene.h:107), and it is the whole lock table. */
+#define NDS_SSS_GROUND_MASK LBBACKUP_MASK_STAGE(nGRKindPupupu)
+
+/* The names, by gkind, in the order mnMapsMakeName's own offsets[] holds
+ * them (mnmaps.c:743) -- which is nGRKind order, so this table is indexable by
+ * gkind directly and the locked entries are carried rather than trimmed for
+ * the same reason P2-1e carried all twelve announcer voices. */
+static const char *const kNdsSssGkindName[9] = {
+    "PEACH'S CASTLE", "SECTOR Z", "CONGO JUNGLE", "PLANET ZEBES",
+    "HYRULE CASTLE", "YOSHI'S ISLAND", "DREAM LAND", "SAFFRON CITY",
+    "MUSHROOM KINGDOM"
+};
+
+/* Text slots. */
+#define NDS_SSS_SLOT_HEADER 0u
+#define NDS_SSS_SLOT_NAME 1u
+
+/* Sprite slots, in DEPTH order: the cursor frame draws over the cell it
+ * selects, so it owns the lowest id (see NDS_UI_KIT_SPRITE_SLOTS). */
+#define NDS_SSS_SPRITE_CURSOR 0u
+#define NDS_SSS_SPRITE_PREVIEW 1u
+#define NDS_SSS_SPRITE_CELL0 2u
+
+/* mnMapsMakeLabels' own colours: the STAGE SELECT decal is drawn in 0xAFB1CC
+ * over a 0x576088 bar, and the name plate's text in black on a light plate
+ * (mnmaps.c:404/:415/:757). Black on this build's flat backdrop would be
+ * invisible -- there is no plate under it -- so the name takes the decal's own
+ * light tone, which is the same "keep the source's palette, drop the geometry
+ * that carried it" call P2-1d made for the mode select's bar. */
+#define NDS_SSS_RGB_HEADER 0x00afb1ccu
+#define NDS_SSS_RGB_NAME 0x00ffffffu
+
+static u32 sSssCursorSlot;
+static u32 sSssScrollWait;
+
+static void ndsMenuShellSssCue(u32 id)
+{
+    gNdsMenuShellSssCueCount++;
+    gNdsMenuShellSssCueLastId = id;
+    (void)ndsAudioFgmPlay((u16)id);
+}
+
+/* mnMapsCheckLocked, mnmaps.c:166 -- against this build's ground mask. RANDOM
+ * is never locked, which is the source's own `else return FALSE`. */
+static u32 ndsMenuShellSssGroundLocked(u32 gkind)
+{
+    if (gkind == NDS_SSS_GKIND_RANDOM)
+    {
+        return FALSE;
+    }
+    if (gkind > (u32)nGRKindInishie)
+    {
+        return TRUE;
+    }
+    return ((NDS_SSS_GROUND_MASK & (1u << gkind)) != 0u) ? FALSE : TRUE;
+}
+
+static u32 ndsMenuShellSssSlotLocked(u32 slot)
+{
+    return (slot >= NDS_SSS_SLOTS) ?
+        TRUE : ndsMenuShellSssGroundLocked((u32)kNdsSssSlotGkind[slot]);
+}
+
+/* mnMapsGetSlot, mnmaps.c:471 -- the inverse, used only to restore the cursor
+ * from gSCManagerSceneData.maps_vsmode_gkind on re-entry. */
+static u32 ndsMenuShellSssSlotOfGkind(u32 gkind)
+{
+    u32 i;
+
+    for (i = 0u; i < NDS_SSS_SLOTS; i++)
+    {
+        if ((u32)kNdsSssSlotGkind[i] == gkind)
+        {
+            return i;
+        }
+    }
+    return 6u; /* nGRKindPupupu's slot: the only ground this build has. */
+}
+
+static s32 ndsMenuShellSssIconX(u32 slot)
+{
+    return (slot < NDS_SSS_ROW) ?
+        (s32)((slot * (u32)NDS_SSS_ICON_PITCH)) + NDS_SSS_ICON_X0 :
+        (s32)(((slot - NDS_SSS_ROW) * (u32)NDS_SSS_ICON_PITCH)) +
+            NDS_SSS_ICON_X0;
+}
+
+static s32 ndsMenuShellSssIconY(u32 slot)
+{
+    return (slot < NDS_SSS_ROW) ? NDS_SSS_ICON_Y0 : NDS_SSS_ICON_Y1;
+}
+
+/* Which image a cell draws: the ground's own icon, RANDOM's own icon, or the
+ * locked plate. */
+static u32 ndsMenuShellSssCellImage(u32 slot)
+{
+    u32 gkind = (u32)kNdsSssSlotGkind[slot];
+
+    if (gkind == NDS_SSS_GKIND_RANDOM)
+    {
+        return NDS_MN_UI_KIT_IMAGE_MAP_RANDOM;
+    }
+    if (ndsMenuShellSssGroundLocked(gkind) != FALSE)
+    {
+        return NDS_MN_UI_KIT_IMAGE_PORTRAIT_LOCKED;
+    }
+    return NDS_MN_UI_KIT_IMAGE_MAP_DREAM_LAND;
+}
+
+/* mnMapsMakeNameAndEmblem, mnmaps.c:1015: the name follows the cursor, and
+ * RANDOM has no name (the source draws only the question-mark emblem for it).
+ * The preview panel follows it too -- mnMapsMakePreview:1096. */
+static void ndsMenuShellSssShowSelection(void)
+{
+    u32 gkind = (u32)kNdsSssSlotGkind[sSssCursorSlot];
+
+    if (gkind == NDS_SSS_GKIND_RANDOM)
+    {
+        ndsUiKitSetText(NDS_SSS_SLOT_NAME, "RANDOM", NDS_SSS_RGB_NAME);
+    }
+    else
+    {
+        ndsUiKitSetText(NDS_SSS_SLOT_NAME, kNdsSssGkindName[gkind],
+                        NDS_SSS_RGB_NAME);
+    }
+    /* mnMapsSetNamePosition's REGION_US branch is a CONSTANT (183,196) for
+     * every ground -- the per-ground table above it is the JP layout
+     * (mnmaps.c:717). */
+    ndsUiKitMoveText(NDS_SSS_SLOT_NAME, NDS_SSS_DS(183), NDS_SSS_DS(196));
+    /* mnMapsMakePreviewWallpaper places the panel's content at (40,127). */
+    ndsUiKitSetSprite(NDS_SSS_SPRITE_PREVIEW,
+                      ndsMenuShellSssCellImage(sSssCursorSlot),
+                      NDS_SSS_DS(40) + NDS_SSS_ICON_INSET_X,
+                      NDS_SSS_DS(127) + NDS_SSS_ICON_INSET_Y);
+    ndsUiKitSetSprite(NDS_SSS_SPRITE_CURSOR, NDS_MN_UI_KIT_IMAGE_MAP_CURSOR,
+                      NDS_SSS_DS(ndsMenuShellSssIconX(sSssCursorSlot)) +
+                          NDS_SSS_ICON_INSET_X - NDS_SSS_CURSOR_INSET_X,
+                      NDS_SSS_DS(ndsMenuShellSssIconY(sSssCursorSlot)) +
+                          NDS_SSS_ICON_INSET_Y - NDS_SSS_CURSOR_INSET_Y);
+    gNdsMenuShellSssCursorSlot = sSssCursorSlot;
+    gNdsMenuShellSssCursorGkind = gkind;
+}
+
+static void ndsMenuShellSssPopulate(void)
+{
+    u32 slot;
+
+    ndsUiKitSetText(NDS_SSS_SLOT_HEADER, "STAGE SELECT", NDS_SSS_RGB_HEADER);
+    ndsUiKitMoveText(NDS_SSS_SLOT_HEADER, NDS_SSS_DS(172), NDS_SSS_DS(122));
+
+    for (slot = 0u; slot < NDS_SSS_SLOTS; slot++)
+    {
+        ndsUiKitSetSprite(NDS_SSS_SPRITE_CELL0 + slot,
+                          ndsMenuShellSssCellImage(slot),
+                          NDS_SSS_DS(ndsMenuShellSssIconX(slot)) +
+                              NDS_SSS_ICON_INSET_X,
+                          NDS_SSS_DS(ndsMenuShellSssIconY(slot)) +
+                              NDS_SSS_ICON_INSET_Y);
+    }
+    ndsMenuShellSssShowSelection();
+}
+
+/* One cell of travel, with the source's own wrap. `step` is +1 or -1 and the
+ * scan is bounded by the row length -- see the generalisation note above. */
+static u32 ndsMenuShellSssStepRow(u32 slot, s32 step)
+{
+    u32 base = (slot < NDS_SSS_ROW) ? 0u : NDS_SSS_ROW;
+    u32 index = slot - base;
+    u32 tries;
+
+    for (tries = 0u; tries < NDS_SSS_ROW; tries++)
+    {
+        index = (step > 0) ? ((index + 1u) % NDS_SSS_ROW) :
+                             ((index + NDS_SSS_ROW - 1u) % NDS_SSS_ROW);
+        if (ndsMenuShellSssSlotLocked(base + index) == FALSE)
+        {
+            return base + index;
+        }
+    }
+    return slot;
+}
+
+static void ndsMenuShellSssMoveTo(u32 slot)
+{
+    if (slot == sSssCursorSlot)
+    {
+        gNdsMenuShellSssBlockedCount++;
+        return;
+    }
+    sSssCursorSlot = slot;
+    gNdsMenuShellSssMoveCount++;
+    ndsMenuShellSssCue(NDS_SSS_FGM_SCROLL2);
+    ndsMenuShellSssShowSelection();
+}
+
+/* mnMapsSaveSceneData, mnmaps.c:1367 -- through the P2-1a descriptor, which is
+ * the battle's only input, rather than straight into the scene data. The
+ * descriptor's STAGE FIELD is the only thing this screen writes: the fighters
+ * belong to the character select and the rules to the VS menu, and
+ * ndsMatchConfigApply re-installs the whole struct so the other two halves
+ * survive untouched. */
+static void ndsMenuShellSssCommit(void)
+{
+    u32 slot_gkind = (u32)kNdsSssSlotGkind[sSssCursorSlot];
+    u32 gkind = slot_gkind;
+
+    if (slot_gkind == NDS_SSS_GKIND_RANDOM)
+    {
+        /* The source's own pick: a ground that is neither locked nor the one
+         * already loaded (mnmaps.c:1377). THE SECOND CLAUSE IS UNSATISFIABLE
+         * IN THIS BUILD -- there is exactly one unlocked ground and it is
+         * always the one already loaded -- so the do-while is bounded and
+         * falls back to dropping the no-repeat clause, which is the weaker of
+         * the two and the one with no meaning when there is only one place to
+         * go. With two or more grounds landed (P2-4) the first arm resolves
+         * and the fallback never runs; gNdsMenuShellSssRandomFallbackCount is
+         * what says which one did, rather than a comment claiming it. */
+        u32 tries;
+
+        gkind = NDS_SSS_GKIND_RANDOM; /* "unresolved" -- never a ground id */
+        for (tries = 0u; tries < 32u; tries++)
+        {
+            u32 pick = (u32)syUtilsRandTimeUCharRange((s32)nGRKindInishie + 1);
+
+            if ((ndsMenuShellSssGroundLocked(pick) == FALSE) &&
+                (pick != (u32)gSCManagerSceneData.gkind))
+            {
+                gkind = pick;
+                gNdsMenuShellSssRandomCount++;
+                break;
+            }
+        }
+        if (gkind == NDS_SSS_GKIND_RANDOM)
+        {
+            u32 scan;
+
+            gkind = (u32)nGRKindPupupu;
+            for (scan = 0u; scan <= (u32)nGRKindInishie; scan++)
+            {
+                if (ndsMenuShellSssGroundLocked(scan) == FALSE)
+                {
+                    gkind = scan;
+                    break;
+                }
+            }
+            gNdsMenuShellSssRandomFallbackCount++;
+        }
+    }
+    gNdsMatchConfig.gkind = (u8)gkind;
+    ndsMatchConfigApply(&gNdsMatchConfig);
+    /* mnMapsSaveSceneData's second write: the CURSOR's own ground, 0xde and
+     * all, so a return trip opens on the cell the player last chose
+     * (mnMapsInitVars:1418 reads it back). ndsMatchConfigApply owns
+     * gSCManagerSceneData.gkind and does not touch this field. */
+    gSCManagerSceneData.maps_vsmode_gkind = (u8)slot_gkind;
+    gNdsMenuShellSssCommitGkind = gkind;
+    gNdsMenuShellSssCommitSlotGkind = slot_gkind;
+    gNdsMenuShellSssCommitCount++;
+}
+
+static void ndsMenuShellUpdateSss(u32 held, u32 taps)
+{
+    /* mnMapsFuncRun:1436 gates EVERYTHING on ten tics having passed, which is
+     * what stops the A that left the character select from being read again
+     * here. sMenuTics is this screen's own frame counter. */
+    if (sMenuTics < (u32)NDS_SSS_INPUT_ARM_TICS)
+    {
+        return;
+    }
+    if (sSssScrollWait != 0u)
+    {
+        sSssScrollWait--;
+    }
+    /* mnmaps.c:1450: the wait is forced to zero the moment no direction is
+     * held, so a tap always acts at once. */
+    if ((held & (NDS_INPUT_UP | NDS_INPUT_DOWN | NDS_INPUT_LEFT |
+                 NDS_INPUT_RIGHT)) == 0u)
+    {
+        sSssScrollWait = 0u;
+    }
+
+    /* A or START. mnmaps.c:1464 takes both, and it commits BEFORE it cues. */
+    if ((taps & (NDS_INPUT_A | NDS_INPUT_START)) != 0u)
+    {
+        ndsMenuShellSssCommit();
+        ndsMenuShellSssCue(NDS_SSS_FGM_CONFIRM);
+        gNdsMenuShellSssConfirmCount++;
+#if NDS_P2_MENU_WALK
+        /* A lap is a completed menu pass into the match, counted where the
+         * pass actually ends. P2-1d counted it on the VS screen and P2-1e
+         * moved it to the character select for the same reason: this screen
+         * is now the last stop before the battle. */
+        gNdsMenuShellWalkLoops++;
+#endif
+        ndsMenuShellGoto((u32)nSCKindVSBattle);
+        return;
+    }
+    /* B. mnmaps.c:1481 -- it commits on the way out too, and it plays NOTHING. */
+    if ((taps & NDS_INPUT_B) != 0u)
+    {
+        ndsMenuShellSssCommit();
+        gNdsMenuShellSssBackCount++;
+        ndsMenuShellGoto((u32)nSCKindPlayersVS);
+        return;
+    }
+
+    if (sSssScrollWait != 0u)
+    {
+        return;
+    }
+    /* The four direction arms in the source's own order (mnmaps.c:1494 down):
+     * UP and DOWN change ROW and refuse a locked destination outright; LEFT
+     * and RIGHT cycle within the row. Each arm reloads the wait to twelve and
+     * returns, so exactly one arm runs per frame -- including the arms that
+     * refuse, which is why a blocked press still costs the repeat delay. */
+    if ((held & NDS_INPUT_UP) != 0u)
+    {
+        if ((sSssCursorSlot >= NDS_SSS_ROW) &&
+            (ndsMenuShellSssSlotLocked(sSssCursorSlot - NDS_SSS_ROW) == FALSE))
+        {
+            ndsMenuShellSssMoveTo(sSssCursorSlot - NDS_SSS_ROW);
+        }
+        else
+        {
+            gNdsMenuShellSssBlockedCount++;
+        }
+        sSssScrollWait = (u32)NDS_SSS_SCROLL_WAIT;
+        return;
+    }
+    if ((held & NDS_INPUT_DOWN) != 0u)
+    {
+        if ((sSssCursorSlot < NDS_SSS_ROW) &&
+            (ndsMenuShellSssSlotLocked(sSssCursorSlot + NDS_SSS_ROW) == FALSE))
+        {
+            ndsMenuShellSssMoveTo(sSssCursorSlot + NDS_SSS_ROW);
+        }
+        else
+        {
+            gNdsMenuShellSssBlockedCount++;
+        }
+        sSssScrollWait = (u32)NDS_SSS_SCROLL_WAIT;
+        return;
+    }
+    if ((held & NDS_INPUT_LEFT) != 0u)
+    {
+        ndsMenuShellSssMoveTo(ndsMenuShellSssStepRow(sSssCursorSlot, -1));
+        sSssScrollWait = (u32)NDS_SSS_SCROLL_WAIT;
+        return;
+    }
+    if ((held & NDS_INPUT_RIGHT) != 0u)
+    {
+        ndsMenuShellSssMoveTo(ndsMenuShellSssStepRow(sSssCursorSlot, 1));
+        sSssScrollWait = (u32)NDS_SSS_SCROLL_WAIT;
+    }
+    (void)taps;
+}
+
+/* mnMapsInitVars, mnmaps.c:1404. The cursor opens on the cell the last visit
+ * chose -- `maps_vsmode_gkind`, which is 0xde after a RANDOM pick -- and the
+ * harness seeds that field to nGRKindPupupu for a cold boot
+ * (scene_harness.c:39). The source keys this on `scene_prev` being
+ * nSCKindPlayersVS or nSCKindPlayers1PTraining; only the first exists here. */
+static void ndsMenuShellSssInit(void)
+{
+    sSssCursorSlot =
+        ndsMenuShellSssSlotOfGkind((u32)gSCManagerSceneData.maps_vsmode_gkind);
+    if (ndsMenuShellSssSlotLocked(sSssCursorSlot) != FALSE)
+    {
+        sSssCursorSlot = ndsMenuShellSssSlotOfGkind((u32)nGRKindPupupu);
+    }
+    sSssScrollWait = 0u;
+    sSssEnterCount++;
+}
+
 /* --- The screen loop ----------------------------------------------------- */
 
 static void ndsMenuShellPopulate(u32 screen)
@@ -2117,6 +2703,9 @@ static void ndsMenuShellPopulate(u32 screen)
         break;
     case NDS_MENU_SHELL_SCREEN_CSS:
         ndsMenuShellPopulateCssScreen();
+        break;
+    case NDS_MENU_SHELL_SCREEN_SSS:
+        ndsMenuShellSssPopulate();
         break;
     default:
         ndsMenuShellPopulateVs();
@@ -2139,6 +2728,9 @@ static void ndsMenuShellUpdate(u32 screen, u32 held, u32 taps)
         break;
     case NDS_MENU_SHELL_SCREEN_CSS:
         ndsMenuShellUpdateCss(held, taps);
+        break;
+    case NDS_MENU_SHELL_SCREEN_SSS:
+        ndsMenuShellUpdateSss(held, taps);
         break;
     default:
         ndsMenuShellUpdateVs(held, taps);
@@ -2167,7 +2759,8 @@ static void ndsMenuShellRun(u32 screen)
      * frame, which leaves no cadence window and nothing to capture. The step
      * cursor restarts here too, which is what lets the loop re-enter VS Mode
      * from Results and replay the whole tour. */
-    sMenuWalkTimer = (screen == NDS_MENU_SHELL_SCREEN_CSS) ?
+    sMenuWalkTimer = ((screen == NDS_MENU_SHELL_SCREEN_CSS) ||
+                      (screen == NDS_MENU_SHELL_SCREEN_SSS)) ?
         NDS_MENU_WALK_DWELL_CSS : NDS_MENU_WALK_DWELL;
     sMenuWalkCursor = 0u;
     sMenuWalkHold = 0u;
@@ -2346,6 +2939,15 @@ void ndsMenuShellRunCharSelect(void)
     ndsMenuShellRun(NDS_MENU_SHELL_SCREEN_CSS);
 }
 
+/* mnMapsFuncStart, mnmaps.c:1591: no BGM call anywhere in it, so the character
+ * select's track plays straight through. Nothing to start here, and saying so
+ * is the point -- every other RunX above starts or deliberately skips one. */
+void ndsMenuShellRunStageSelect(void)
+{
+    ndsMenuShellSssInit();
+    ndsMenuShellRun(NDS_MENU_SHELL_SCREEN_SSS);
+}
+
 /* --- The mode-select scene ----------------------------------------------
  *
  * nSCKindModeSelect had no scene in this build at all: src/port/title_backend.c
@@ -2400,6 +3002,36 @@ void mnPlayersVSStartScene(void)
     dMNPlayersVSVideoSetup.zbuffer =
         SYVIDEO_ZBUFFER_START(320, 240, 0, 10, u16);
     syVideoInit(&dMNPlayersVSVideoSetup);
+
+    setup.scene_setup.arena_start = ndsTaskmanArenaStart();
+    setup.scene_setup.arena_size = ndsTaskmanArenaSize();
+    setup.func_start = NULL;
+    syTaskmanStartTask(&setup);
+}
+
+/* --- The stage-select scene ----------------------------------------------
+ *
+ * The second scene this shell REPLACES rather than fills. The imported
+ * `mnMapsStartScene` (src/import/battleship_mnmaps.c) runs the original
+ * `mnMapsFuncStart`, which loads five menu files, allocates TWO model heaps
+ * sized to the largest of the nine stage map files, and builds the wallpaper,
+ * plaque, icon, name, cursor and 3D-preview object graph plus eight cameras
+ * (mnmaps.c:1591) -- all of it for the RSP/RDP pipeline this build does not
+ * have. That definition is compiled out at NDS_P2_MENU_SHELL and this is the
+ * one that runs: the source's own taskman declaration for this scene, with the
+ * arena repointed at the shared taskman arena so every registered scene
+ * rewinds the SAME memory and the high-waters stay comparable, and
+ * `func_start = NULL` because the screen draws through the UI kit. Same shape
+ * as the two above. */
+extern SYTaskmanSetup dMNMapsTaskmanSetup;
+extern SYVideoSetup dMNMapsVideoSetup;
+
+void mnMapsStartScene(void)
+{
+    SYTaskmanSetup setup = dMNMapsTaskmanSetup;
+
+    dMNMapsVideoSetup.zbuffer = SYVIDEO_ZBUFFER_START(320, 240, 0, 10, u16);
+    syVideoInit(&dMNMapsVideoSetup);
 
     setup.scene_setup.arena_start = ndsTaskmanArenaStart();
     setup.scene_setup.arena_size = ndsTaskmanArenaSize();

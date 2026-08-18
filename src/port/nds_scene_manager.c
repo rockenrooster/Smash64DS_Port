@@ -257,9 +257,17 @@ sb32 ndsSceneWalkAdvance(u32 next_kind)
         return FALSE;
     }
     gNdsSceneWalkHopsRemaining--;
-    if (next_kind == (u32)nSCKindVSMode)
+    /* Leaving RESULTS for a menu is what closes a loop, and P2-1f keys it on
+     * that rather than on the destination kind. It used to test
+     * `next_kind == nSCKindVSMode`, which was the same predicate while the
+     * Results leg was the only hop that could name VS Mode; with the shell on,
+     * Results returns to the CHARACTER SELECT (the source's own destination,
+     * mnvsresults.c:3312) and so does the VS menu's own START hop, so a
+     * destination test would either miss every loop or count the first one
+     * twice. `scene_prev` is the scene just left -- ndsSceneManagerRequest
+     * above has already written it -- so this reads "a lap ended" directly. */
+    if ((u32)gSCManagerSceneData.scene_prev == (u32)nSCKindVSResults)
     {
-        /* Arriving back at the menu is what closes a loop. */
         gNdsSceneWalkLoopsCompleted++;
     }
     return TRUE;

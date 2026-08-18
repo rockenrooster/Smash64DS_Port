@@ -44,7 +44,9 @@
 #define NDS_MENU_SHELL_SCREEN_VSMODE 3u
 /* P2-1e, the VS character select (mn/mnplayers/mnplayersvs.c). */
 #define NDS_MENU_SHELL_SCREEN_CSS 4u
-#define NDS_MENU_SHELL_SCREEN_COUNT 5u
+/* P2-1f, the VS stage select (mn/mnmaps/mnmaps.c). */
+#define NDS_MENU_SHELL_SCREEN_SSS 5u
+#define NDS_MENU_SHELL_SCREEN_COUNT 6u
 
 /* Per-screen work histogram: sixteen buckets of 35,012 ARM9 ticks, one
  * sixteenth of the 560,190-tick 60 Hz VBlank budget, so a bucket index is
@@ -66,6 +68,7 @@ void ndsMenuShellRunTitle(void);
 void ndsMenuShellRunModeSelect(void);
 void ndsMenuShellRunVSMode(void);
 void ndsMenuShellRunCharSelect(void);
+void ndsMenuShellRunStageSelect(void);
 
 /* --- Published state. Read by scripts/menus/probe-p2-1d-menus.ps1; none of it
  * is read by gameplay. --- */
@@ -148,5 +151,39 @@ extern volatile u32 gNdsMenuShellCssCommitSlot[4];
 extern volatile u32 gNdsMenuShellCssCueCount;
 extern volatile u32 gNdsMenuShellCssCueLastId;
 extern volatile u32 gNdsMenuShellCssAnnounceCount;
+
+/* --- P2-1f, the stage select. Same rule: none of it is read by gameplay. --- */
+
+/* The cursor's slot, 0..9, in mnMapsGetGroundKind's own numbering (mnmaps.c
+ * :453), and the ground kind that slot names -- 0xde for RANDOM, exactly as
+ * the source spells it. */
+extern volatile u32 gNdsMenuShellSssCursorSlot;
+extern volatile u32 gNdsMenuShellSssCursorGkind;
+/* Cursor moves that CHANGED the slot, and direction presses the lock table
+ * refused. Non-zero `blocked` is the proof the locked cells are inert rather
+ * than absent -- the same role gNdsMenuShellDeniedCount plays on the main
+ * menu. */
+extern volatile u32 gNdsMenuShellSssMoveCount;
+extern volatile u32 gNdsMenuShellSssBlockedCount;
+/* A/START accepted, and B taken back to the character select. */
+extern volatile u32 gNdsMenuShellSssConfirmCount;
+extern volatile u32 gNdsMenuShellSssBackCount;
+/* THE WRITE PATH, which is what makes the stage claim a measurement and not an
+ * assertion. `Commit` counts mnMapsSaveSceneData-equivalents; `Gkind` is the
+ * ground it resolved to; `SlotGkind` is what the CURSOR named, which differs
+ * from `Gkind` on the random path and equals it on the direct one -- one pair,
+ * two code paths, and a control that can fail. */
+extern volatile u32 gNdsMenuShellSssCommitCount;
+extern volatile u32 gNdsMenuShellSssCommitGkind;
+extern volatile u32 gNdsMenuShellSssCommitSlotGkind;
+/* Which arm of mnMapsSaveSceneData's random pick resolved: the source's own
+ * do-while (`Random`), or the bounded fallback it needs while this build has
+ * ONE unlocked ground and its no-repeat clause is unsatisfiable (`Fallback`).
+ * Published because "the loop terminated" is otherwise an assertion. */
+extern volatile u32 gNdsMenuShellSssRandomCount;
+extern volatile u32 gNdsMenuShellSssRandomFallbackCount;
+/* Cue requests this screen made, by the source's own FGM id. */
+extern volatile u32 gNdsMenuShellSssCueCount;
+extern volatile u32 gNdsMenuShellSssCueLastId;
 
 #endif /* NDS_MENU_SHELL_H */

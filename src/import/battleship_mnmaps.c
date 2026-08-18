@@ -21,6 +21,8 @@
 #include <sys/taskman.h>
 #include <sys/video.h>
 
+#include "nds_build_config.h"
+
 extern void *ndsTaskmanArenaStart(void);
 extern size_t ndsTaskmanArenaSize(void);
 extern s32 gcGetGObjsActiveNum(void);
@@ -48,6 +50,9 @@ void ndsBaseMNMapsStartScene(void);
 
 static GObj *sNdsMapsMainGObj;
 
+/* Only the imported StartScene below builds one, and that is compiled out
+ * whenever the P2-1f shell owns this scene. */
+__attribute__((unused))
 static SYTaskmanSetup ndsMNMapsMakeTaskmanSetup(void)
 {
     SYTaskmanSetup setup = dMNMapsTaskmanSetup;
@@ -293,6 +298,12 @@ void ndsMNMapsRunSelectVSBattleProbe(void)
     }
 }
 
+#if !NDS_P2_MENU_SHELL
+/* P2-1f defines the real stage-select scene in src/nds/nds_menu_shell.c. This
+ * one runs the ORIGINAL mnMapsFuncStart, which loads five menu files,
+ * allocates two model heaps sized to the largest stage map file and builds the
+ * whole preview object graph -- the bounded proof path, not a playable
+ * screen. Same split P2-1e made for the character select. */
 void mnMapsStartScene(void)
 {
     dMNMapsVideoSetup.zbuffer =
@@ -306,3 +317,4 @@ void mnMapsStartScene(void)
         scManagerFuncUpdate(&setup);
     }
 }
+#endif

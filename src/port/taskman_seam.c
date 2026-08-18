@@ -7304,6 +7304,19 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
         gNdsSceneBoundaryKind = gSCManagerSceneData.scene_curr;
         gNdsSceneBoundaryResult = NDS_SCENE_BOUNDARY_PASS;
         return;
+    case nSCKindMaps:
+        /* P2-1f, and the same story as PlayersVS above: the imported Maps
+         * branch further down runs the original setup and its own bounded
+         * select-transition probe. That branch is unreachable with the shell
+         * on because this switch runs first, and the imported scene's own
+         * StartScene is compiled out at NDS_P2_MENU_SHELL so the heavy
+         * original func_start (five menu files, two stage-sized model heaps,
+         * the 3D preview graph) cannot run either. */
+        ndsMenuShellRunStageSelect();
+        ndsFinishTaskmanRun();
+        gNdsSceneBoundaryKind = gSCManagerSceneData.scene_curr;
+        gNdsSceneBoundaryResult = NDS_SCENE_BOUNDARY_PASS;
+        return;
     default:
         break;
     }
@@ -7378,9 +7391,23 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
 #if NDS_R2_SCENE_LOOP_WALK
         /* Results leg. Closing the loop back to the menu is what makes the
          * high-water ring an N-loop reading instead of a two-entry one; the
-         * START rematch above still sends Results straight to VSBattle when a
-         * human presses it, and that path is untouched. */
-        if (ndsSceneWalkAdvance((u32)nSCKindVSMode) != FALSE)
+         * START rematch above still sends Results straight to its own
+         * destination when a human presses it, and that path is untouched.
+         *
+         * P2-1f MOVED THE TARGET. The source's Results exit goes to
+         * `nSCKindPlayersVS` (mnvsresults.c:3312) and `ndsMNVSResultsSetLoadScene`
+         * now transcribes that whenever the shell owns the menus, so the walk's
+         * substitute leg has to arrive at the same place or the two arms of the
+         * evidence would describe different flows. With the shell off there is
+         * no character-select screen to arrive at, so the leg keeps VS Mode --
+         * which is the scene the P2-1b walk was defined against. */
+        if (ndsSceneWalkAdvance(
+#if NDS_P2_MENU_SHELL
+                (u32)nSCKindPlayersVS
+#else
+                (u32)nSCKindVSMode
+#endif
+            ) != FALSE)
         {
             ndsPlatformSetOriginalSpriteOverlayEnabled(FALSE);
             return;

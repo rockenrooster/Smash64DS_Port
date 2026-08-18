@@ -2164,9 +2164,13 @@ endif
 # this list is a second thing to keep in step, and the one measurable difference
 # between the two would be the ROM's filename. `smash64ds-p2-1e-css-hwtri`
 # therefore selects the same block (the pattern NDS_TASK37_DEVICE_TARGETS uses).
+#
+# P2-1f ADDS A NAME FOR THE SAME REASON. The stage select is another screen
+# inside NDS_P2_MENU_SHELL and wants exactly these flags.
 NDS_P2_MENU_SHELL_TARGETS := \
 	smash64ds-p2-1d-menus-hwtri \
-	smash64ds-p2-1e-css-hwtri
+	smash64ds-p2-1e-css-hwtri \
+	smash64ds-p2-1f-sss-hwtri
 ifneq ($(filter $(TARGET),$(NDS_P2_MENU_SHELL_TARGETS)),)
 override NDS_DEV_SCENE_HARNESS := battle_playable_realtime
 override NDS_DEV_LIVE_INPUT_PREVIEW := 1
@@ -2228,7 +2232,8 @@ endif
 # shipping cadence; no tick figure from this target means anything.
 NDS_P2_MENU_WALK_TARGETS := \
 	smash64ds-p2-1d-menu-walk-hwtri \
-	smash64ds-p2-1e-css-walk-hwtri
+	smash64ds-p2-1e-css-walk-hwtri \
+	smash64ds-p2-1f-sss-walk-hwtri
 ifneq ($(filter $(TARGET),$(NDS_P2_MENU_WALK_TARGETS)),)
 override NDS_DEV_SCENE_HARNESS := battle_playable_realtime
 override NDS_DEV_LIVE_INPUT_PREVIEW := 1
