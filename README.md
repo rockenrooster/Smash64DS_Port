@@ -29,11 +29,9 @@ required assets locally, and builds `smash64ds-battle-playable-hwtri.nds`.
 
 ## Current status
 
-The full VS game flow now loops end to end: title, main menu, rules, character
-select, stage select, a one-minute Mario-versus-Fox time match on Dream Land
-(items off, imported level-3 CPU), results, and START straight into a rematch,
-indefinitely. In the shipped demo the Fox CPU climbs one level per Mario win,
-wrapping from 9 back to 1. Menu screens present at a clean 60 Hz.
+The current build passes a full play test on retail Nintendo DS hardware. In
+the shipped demo the Fox CPU climbs one level per Mario win, wrapping from 9
+back to 1.
 
 The game timing is designed around two game updates per displayed frame, with a
 target of steady 30 fps. Stable 30 fps has not been reached: heavy combat
