@@ -8,6 +8,7 @@
 #include <nds/nds_controller.h>
 #include <nds/nds_freeze_diagnostics.h>
 #include <nds/nds_ifcommon_oam.h>
+#include <nds/nds_ui_kit.h>
 #if NDS_R2_HWMATH_BENCH
 #include <nds/nds_r2_hwmath_bench.h>
 #endif
@@ -3447,6 +3448,12 @@ void ndsPlatformEndFrame(void)
 #endif
     ndsRendererHardwareCommitPendingTextureRefreshes();
     ndsIFCommonNativeOamCommit();
+#if NDS_P2_UI_KIT
+    /* P2-1c. After the battle's OBJ tenant, because the two share one shadow
+     * OAM and the later publisher wins; they are never live in the same scene,
+     * so this ordering only decides which one pays for the oamUpdate. */
+    ndsUiKitCommit();
+#endif
 #if NDS_SCENE_MIP_CACHE_LAB
     if (sSceneMipCapturePending != 0u)
     {

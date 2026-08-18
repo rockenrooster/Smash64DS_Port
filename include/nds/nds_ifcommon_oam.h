@@ -17,6 +17,10 @@ s32 ndsIFCommonNativeOamPrepareGameStatus(void *file_data,
                                            size_t file_size);
 s32 ndsIFCommonNativeOamPrepareClouds(void);
 void ndsIFCommonNativeOamDiscardTextures(void);
+/* TRUE while this file's assets occupy main OBJ VRAM and OAM. P2-1c's UI kit
+ * asks before claiming the same bank in a menu scene: the packing here bumps
+ * from offset zero with no cap, so an overlap would be silent. */
+s32 ndsIFCommonNativeOamIsPrepared(void);
 /* Re-entry form: the cloud/traffic atlases only, keeping the prepare latch so
  * ndsIFCommonNativeOamPrepareClouds rebuilds them immediately. See the comment
  * at its definition for why a second battle entry needs the allocation order

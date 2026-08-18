@@ -8,6 +8,7 @@
 #include <nds/nds_reloc_assets.h>
 #include <nds/nds_task10_hardware_calibration.h>
 #include <nds/nds_video.h>
+#include <nds/nds_ui_kit_demo.h>
 #include <port/port_probe.h>
 #include <port/coroutine.h>
 #include <sys/controller.h>
@@ -81,7 +82,16 @@ int main(void)
             ndsPlatformBeginFrame();
             portProbeRender();
             ndsPlatformRenderDebugHud();
+#if NDS_P2_UI_KIT_DEMO
+            /* P2-1c lab demo, and the two halves of its frame bracket. Only
+             * this branch is measured: a frame the scene loop presented for
+             * itself never reaches here. */
+            ndsUiKitDemoUpdate();
+#endif
             ndsPlatformEndFrame();
+#if NDS_P2_UI_KIT_DEMO
+            ndsUiKitDemoAfterPresent();
+#endif
         }
         gNdsFrameCounter++;
     }

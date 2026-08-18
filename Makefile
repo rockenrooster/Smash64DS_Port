@@ -682,6 +682,19 @@ NDS_R2_SECOND_ENTRY_DIAG ?= 0
 # Needs a fast-logic harness: the walk's battle leg is a bounded run, not a
 # match, because this measures the scene BOUNDARY, not gameplay.
 NDS_R2_SCENE_LOOP_WALK ?= 0
+# P2-1c. The VS shell's 2D UI kit: the SSB64 menu font, the hand cursor, the
+# Mario/Fox CSS portraits, menu SFX, and the retained text/sprite slots
+# P2-1d/1e/1f draw their screens out of. 0 compiles the whole thing out --
+# src/nds/nds_ui_kit.c is one #if, the NitroFS pack below is not staged, and
+# both published ROMs are byte-identical to a build without the row. P2-1d
+# turns it on for real.
+NDS_P2_UI_KIT ?= 0
+# The lab demo surface for that kit (src/nds/nds_ui_kit_demo.c). Draws the
+# font, the cursor and both portraits on whichever scene the bounded boot
+# parks in, and publishes the per-frame work-tick and VBlank-interval
+# histograms scripts/menus/probe-p2-1c-ui-kit.ps1 reads. NEVER PUBLISHED: it
+# is deleted with P2-1d, which replaces it with the real screens.
+NDS_P2_UI_KIT_DEMO ?= 0
 # Runtime 2 (docs/Smash64DS_Runtime2_SwitchPlan.md). The whole family defaults
 # to 0 and the published ROMs stay pure Runtime 1 until the switch (plan S5).
 #
@@ -2116,6 +2129,73 @@ override NDS_TASK32_DRAW_HOT_TEXT := 1
 override NDS_TASK39_FX_SPRITES := 1
 override NDS_TASK39_FX_FLASH := 1
 endif
+# P2-1c 2D UI kit lab target. Its own block, and deliberately NOT a copy of the
+# proof block: this row draws a 2D menu surface and touches no part of the
+# battle, so the battle's renderer/gameplay overrides would only add variables
+# to a measurement about OAM.
+#
+# `normal` is the harness on purpose. It runs the source's own scene chain and
+# parks at the Title scene (scripts/verify-title-boundary.ps1 is the verifier
+# that already covers reaching it), and a parked scene leaves the main loop
+# presenting once a VBlank with the scene thread stopped -- which is exactly
+# the 60 Hz menu-screen cadence P2-1's exit criteria budget ~560K ARM9 ticks a
+# frame for. HW_TRIANGLES is required, not stylistic: main OAM is only
+# initialised on that path (nds_platform.c:414), so a framebuffer build has no
+# OBJ layer for the kit to draw on.
+#
+# NEVER PUBLISHED. Its ROM is a UI surface, not a performance arm for the
+# battle; no tick figure from it says anything about a match.
+#
+# The renderer half of the list below is copied from the proof block, not
+# defaulted: bare defaults are not a legal configuration at
+# NDS_RENDERER_HW_TRIANGLES=1 (NDS_R2_FIGHTER_GX_COMPOSE defaults on and
+# `#error`s without NDS_R2_SHADE_SKIP_SOFT_LIGHT), and a target that compiled
+# only by turning the shipping renderer off would be a different program.
+# NDS_R2_PATH and NDS_HARNESS_FAST_LOGIC are the two the proof block carries
+# that this one cannot: both `#error` under any harness but battle_playable.
+ifeq ($(TARGET),smash64ds-p2-1c-ui-kit-hwtri)
+override NDS_DEV_SCENE_HARNESS := normal
+override NDS_RENDERER_HW_TRIANGLES := 1
+override NDS_DEBUG_HUD := 0
+override NDS_RENDERER_PROFILE_LEVEL := 0
+override NDS_TICK_HUD := 0
+override NDS_SHIP_TELEMETRY := 1
+override NDS_RENDERER_FAST_RUN_DEFAULT := 9
+override NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE := 1
+override NDS_TASK36_HW_COMPOSE := 2
+override NDS_R2_FIGHTER_HW_MTX := 1
+override NDS_R2_FIGHTER_GX_COMPOSE := 1
+override NDS_R2_STAGE_VALIDATE_STRIDE := 8
+override NDS_R2_FIGHTER_HW_LIGHT := 1
+override NDS_R2_FIGHTER_SHUFFLE_FOLD := 1
+override NDS_R2_CUBIC_FIXED := 1
+override NDS_R2_DELTA_PATH_ITCM := 1
+override NDS_R2_ANIM_CACHE := 1
+override NDS_R2_AOBJ16_PREBAKE := 1
+override NDS_TASK53_REPLAY_ARENA_FIX := 1
+override NDS_BATTLE_PROFILE := 1
+override NDS_TASK44_STAGE_STEADY := 1
+override NDS_R2_STAGE_DIRECT := 1
+override NDS_R2_STAGE_DMA := 1
+override NDS_R2_STAGE_VIEWPROJ := 1
+override NDS_R2_STAGE_PREFLIGHT := 1
+override NDS_R2_FIGHTER_MTX_DIRECT := 1
+override NDS_R2_FIGHTER_RUN_MEMO := 1
+override NDS_TASK37_ITCM_LEAVES := 7
+override NDS_SCENE_MIP_CACHE_LAB := 0
+override NDS_FAST_WALLPAPER_AFFINE := 1
+override NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT := 1
+override NDS_IFCOMMON_HYBRID_OAM := 0
+override NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS := 0
+override NDS_TASK16_FLOAT_COMPARE := 1
+override NDS_TASK16_FLOAT_I2F := 1
+override NDS_TASK16_FLOAT_ADDSUB := 1
+override NDS_TASK32_DRAW_HOT_TEXT := 1
+override NDS_TASK39_FX_SPRITES := 1
+override NDS_TASK39_FX_FLASH := 1
+override NDS_P2_UI_KIT := 1
+override NDS_P2_UI_KIT_DEMO := 1
+endif
 # Task 49 GX-differ lab target. Its OWN block (appending to the tickhud/proof
 # block breaks the structural pin at check-gbi-decode-fixtures.ps1:1847).
 # Profile 1 (oracle instrumentation), HW_COMPOSE=2 (capture the real shipping
@@ -2727,6 +2807,11 @@ NDS_PARTICLE_QUAD_ASSET := $(PROJECT_ROOT)/assets/particles/efcommon_particle_qu
 # into a subtly wrong binary rather than an error").
 NDS_BATTLE_STATIC_TEXTURE_INC := $(PROJECT_ROOT)/src/nds/generated/battle_playable_static_textures.generated.inc
 NDS_BATTLE_STATIC_TEXTURE_ASSET := $(PROJECT_ROOT)/assets/renderer/battle_playable_static_textures.rgb5a1.bin
+# P2-1c. Same shape and the same reason: the manifest is compiled in and the
+# texel/intensity payload ships in NitroFS, both written by one generator so a
+# stale pair cannot link.
+NDS_MN_UI_KIT_INC := $(PROJECT_ROOT)/src/nds/generated/mn_ui_kit.generated.inc
+NDS_MN_UI_KIT_ASSET := $(PROJECT_ROOT)/assets/menus/mn_ui_kit.bin
 LDFLAGS := -specs=$(NDS_HOT_TEXT_SPECS) -g $(ARCH) \
 	-Wl,-Map,$(notdir $*.map),--gc-sections \
 	-Wl,-T,$(NDS_HOT_TEXT_LINKER_SCRIPT)
@@ -3030,6 +3115,12 @@ endif
 ifeq ($(NDS_FREEZE_DIAGNOSTICS),1)
 CFILES += nds_freeze_diagnostics.c
 SFILES += nds_freeze_diagnostics_irq.s
+endif
+ifeq ($(NDS_P2_UI_KIT),1)
+CFILES += nds_ui_kit.c
+endif
+ifeq ($(NDS_P2_UI_KIT_DEMO),1)
+CFILES += nds_ui_kit_demo.c
 endif
 
 export LD := $(CC)
@@ -3538,6 +3629,15 @@ NDS_NITROFS_BATTLE_STATIC_TEXTURE_FILES := \
 endif
 endif
 
+# P2-1c's UI pack ships only with the runtime that reads it. Empty by default,
+# so a ROM built without NDS_P2_UI_KIT does not carry 24,384 bytes nothing
+# opens -- which is what makes the published ROMs byte-identical across this
+# row.
+export NDS_NITROFS_MN_UI_KIT_FILES :=
+ifeq ($(NDS_P2_UI_KIT),1)
+NDS_NITROFS_MN_UI_KIT_FILES := $(NITROFS_DIR)/menus/mn_ui_kit.bin
+endif
+
 # The efcommon payloads only ship with the interpreter that reads them; without
 # the runtime they are 200,896 bytes of ROM nothing opens. Two files, two
 # encodings of the same texels: the .ds.bin is per-texture DS formats with
@@ -3745,6 +3845,8 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_FTR_PLAN_VERIFY $(NDS_FTR_PLAN_VERIFY)u'; \
 		echo '#define NDS_R2_SECOND_ENTRY_DIAG $(NDS_R2_SECOND_ENTRY_DIAG)'; \
 		echo '#define NDS_R2_SCENE_LOOP_WALK $(NDS_R2_SCENE_LOOP_WALK)u'; \
+		echo '#define NDS_P2_UI_KIT $(NDS_P2_UI_KIT)'; \
+		echo '#define NDS_P2_UI_KIT_DEMO $(NDS_P2_UI_KIT_DEMO)'; \
 		echo '#define NDS_R2_PATH $(NDS_R2_PATH)'; \
 		echo '#define NDS_R2_STAGE_DIRECT $(NDS_R2_STAGE_DIRECT)'; \
 		echo '#define NDS_R2_FIXED_SQRT $(NDS_R2_FIXED_SQRT)'; \
@@ -4015,11 +4117,12 @@ $(NITROFS_DIR)/particles/grpupupu_whispy_native.ds.bin: $(NDS_WHISPY_NATIVE_ASSE
 prune-obsolete-audio:
 	@rm -f $(foreach file,$(NDS_AUDIO_OBSOLETE_DERIVED_FILES),$(NITROFS_DIR)/$(file))
 
-$(OUTPUT).nds: prune-obsolete-audio $(OUTPUT).elf $(NDS_NITROFS_RELOC_FILES) $(NDS_NITROFS_RELOCDATA_FILES) $(NDS_NITROFS_AUDIO_FILES) $(NDS_NITROFS_BATTLE_STATIC_TEXTURE_FILES) $(NDS_NITROFS_PARTICLE_FILES) $(NDS_NITROFS_EFFECT_FILES) $(NDS_NITROFS_FTANIM_FILES) $(NDS_NITROFS_BATTLEPACK_FILES)
+$(OUTPUT).nds: prune-obsolete-audio $(OUTPUT).elf $(NDS_NITROFS_RELOC_FILES) $(NDS_NITROFS_RELOCDATA_FILES) $(NDS_NITROFS_AUDIO_FILES) $(NDS_NITROFS_BATTLE_STATIC_TEXTURE_FILES) $(NDS_NITROFS_PARTICLE_FILES) $(NDS_NITROFS_EFFECT_FILES) $(NDS_NITROFS_FTANIM_FILES) $(NDS_NITROFS_BATTLEPACK_FILES) $(NDS_NITROFS_MN_UI_KIT_FILES)
 $(OUTPUT).elf: $(OFILES) $(NDS_PRIVATE_CHECK_OFILES) \
 	$(NDS_HOT_TEXT_SPECS) $(NDS_HOT_TEXT_LINKER_SCRIPT) \
 	$(NDS_TASK32_DRAW_HOT_FRAGMENT) $(NDS_PARTICLE_BANKS_INC) \
-	$(NDS_BATTLE_STATIC_TEXTURE_INC)
+	$(NDS_BATTLE_STATIC_TEXTURE_INC) \
+	$(if $(filter 1,$(NDS_P2_UI_KIT)),$(NDS_MN_UI_KIT_INC))
 $(OFILES) $(NDS_PRIVATE_CHECK_OFILES): $(PROJECT_ROOT)/Makefile $(NDS_BUILD_CONFIG) $(NDS_FTANIM_TRACK_PREREQ)
 ifeq ($(NDS_TASK9_FLOAT_ITCM),1)
 NDS_TASK9_FLOAT_LIBGCC := $(shell $(CC) $(ARCH) -print-libgcc-file-name)
@@ -4245,6 +4348,21 @@ $(NDS_BATTLE_STATIC_TEXTURE_INC) $(NDS_BATTLE_STATIC_TEXTURE_ASSET) &: \
 	@touch $(NDS_BATTLE_STATIC_TEXTURE_INC) $(NDS_BATTLE_STATIC_TEXTURE_ASSET)
 
 $(NITROFS_DIR)/renderer/battle_playable_static_textures.rgb5a1.bin: $(NDS_BATTLE_STATIC_TEXTURE_ASSET)
+	@mkdir -p $(dir $@)
+	@cp $< $@
+
+# P2-1c. Grouped and touched for the same two reasons as the block above: one
+# invocation writes both outputs, and it is write-if-changed. `include/
+# reloc_data.h` is a real prerequisite -- the generator reads every sprite
+# offset out of it rather than carrying a second copy, so a moved offset must
+# re-bake.
+$(NDS_MN_UI_KIT_INC) $(NDS_MN_UI_KIT_ASSET) &: \
+		$(PROJECT_ROOT)/scripts/menus/generate_mn_ui_kit.py \
+		$(PROJECT_ROOT)/include/reloc_data.h
+	python "$(PROJECT_ROOT)/scripts/menus/generate_mn_ui_kit.py" --repo-root "$(PROJECT_ROOT)"
+	@touch $(NDS_MN_UI_KIT_INC) $(NDS_MN_UI_KIT_ASSET)
+
+$(NITROFS_DIR)/menus/mn_ui_kit.bin: $(NDS_MN_UI_KIT_ASSET)
 	@mkdir -p $(dir $@)
 	@cp $< $@
 
