@@ -40,7 +40,7 @@ BASEROM_US_SHA1=e2929e10fccc0aa84e5776227e798abc07cedabf
 # 843fe40f4d2 is the switch commit; 83978bb4ed8 is what the verifying build ran
 # at, and the two differ only under artifacts/performance/ -- no build input.
 # Re-pin whenever the published ROM is rebuilt for release.
-OUTPUT_BUILT_AT_COMMIT=843fe40f4d2d5e8fdcd38210ce2e65ab4870e519
+OUTPUT_BUILT_AT_COMMIT=48a11f518bc
 OUTPUT_NAME=smash64ds-battle-playable-hwtri.nds
 OUTPUT_BYTES=12530688
-OUTPUT_SHA256=2F47C8AC0730B0DAC6AA1B7A482B8599F33CA3E831B3AB6A7B0AA974A6ACCB2F
+OUTPUT_SHA256=576F51ED69CA21B137FA24F9433F2B56DEC4F2FDB258E2197D0BDE0F9B50E723
