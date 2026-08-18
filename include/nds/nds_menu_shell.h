@@ -42,7 +42,9 @@
 #define NDS_MENU_SHELL_SCREEN_TITLE 1u
 #define NDS_MENU_SHELL_SCREEN_MODE 2u
 #define NDS_MENU_SHELL_SCREEN_VSMODE 3u
-#define NDS_MENU_SHELL_SCREEN_COUNT 4u
+/* P2-1e, the VS character select (mn/mnplayers/mnplayersvs.c). */
+#define NDS_MENU_SHELL_SCREEN_CSS 4u
+#define NDS_MENU_SHELL_SCREEN_COUNT 5u
 
 /* Per-screen work histogram: sixteen buckets of 35,012 ARM9 ticks, one
  * sixteenth of the 560,190-tick 60 Hz VBlank budget, so a bucket index is
@@ -63,6 +65,7 @@ void ndsMenuShellRunSplash(void);
 void ndsMenuShellRunTitle(void);
 void ndsMenuShellRunModeSelect(void);
 void ndsMenuShellRunVSMode(void);
+void ndsMenuShellRunCharSelect(void);
 
 /* --- Published state. Read by scripts/menus/probe-p2-1d-menus.ps1; none of it
  * is read by gameplay. --- */
@@ -108,5 +111,42 @@ extern volatile u32 gNdsMenuShellCommitStocks;
 /* Scripted-walk state (NDS_P2_MENU_WALK). Steps injected and loops closed. */
 extern volatile u32 gNdsMenuShellWalkSteps;
 extern volatile u32 gNdsMenuShellWalkLoops;
+
+/* --- P2-1e, the character select. Everything below is the CSS's own seam
+ * state; none of it is read by gameplay. --- */
+
+/* Cursor position in the SOURCE's own 320x240 frame -- the frame every hit
+ * test below is written in -- so a probe reads the same numbers
+ * mnplayersvs.c's constants are expressed in. */
+extern volatile s32 gNdsMenuShellCssCursorX;
+extern volatile s32 gNdsMenuShellCssCursorY;
+/* nMNPlayersCursorStatus{Pointer,Grab,Hover} = 0/1/2. */
+extern volatile u32 gNdsMenuShellCssCursorStatus;
+/* Token picked up, token dropped onto a portrait, token refused (dropped where
+ * no unlocked fighter is), and token recalled with B. */
+extern volatile u32 gNdsMenuShellCssGrabCount;
+extern volatile u32 gNdsMenuShellCssDropCount;
+extern volatile u32 gNdsMenuShellCssDropRefuseCount;
+extern volatile u32 gNdsMenuShellCssRecallCount;
+/* HMN/CP/NA button presses, and CPU-level arrow presses that changed a value. */
+extern volatile u32 gNdsMenuShellCssKindToggleCount;
+extern volatile u32 gNdsMenuShellCssLevelChangeCount;
+/* START while READY TO FIGHT is up, START while it is not (the source's own
+ * MenuDenied refusal), and the frame count the accepted START waits out. */
+extern volatile u32 gNdsMenuShellCssStartCount;
+extern volatile u32 gNdsMenuShellCssStartDeniedCount;
+/* Back to the VS menu -- by the BACK button or by holding B. */
+extern volatile u32 gNdsMenuShellCssBackCount;
+/* The descriptor the CSS committed, and what it put in it. One entry a slot,
+ * ((fkind << 16) | (pkind << 8) | cpu level), so the probe can read the match
+ * the player built without walking the battle state. */
+extern volatile u32 gNdsMenuShellCssCommitCount;
+extern volatile u32 gNdsMenuShellCssCommitSlot[4];
+/* Cue requests this screen made, by the SOURCE's own FGM id, plus the last id.
+ * Paired with the FGM miss ring this separates "the seam never asked" from
+ * "the pack has no sample" -- the split P2-1c/P2-1c-1 established. */
+extern volatile u32 gNdsMenuShellCssCueCount;
+extern volatile u32 gNdsMenuShellCssCueLastId;
+extern volatile u32 gNdsMenuShellCssAnnounceCount;
 
 #endif /* NDS_MENU_SHELL_H */

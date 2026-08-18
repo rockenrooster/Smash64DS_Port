@@ -25,6 +25,7 @@
 
 #include <nds/nds_audio_assets.h>
 #include <nds/nds_audio_bgm.h>
+#include <nds/nds_audio_fgm.h>
 #include <nds/nds_match_config.h>
 #include <nds/nds_menu_shell.h>
 #include <nds/nds_platform.h>
@@ -144,6 +145,23 @@ NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellCommitTime;
 NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellCommitStocks;
 NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellWalkSteps;
 NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellWalkLoops;
+NDS_MENU_PUBLISHED volatile s32 gNdsMenuShellCssCursorX;
+NDS_MENU_PUBLISHED volatile s32 gNdsMenuShellCssCursorY;
+NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellCssCursorStatus;
+NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellCssGrabCount;
+NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellCssDropCount;
+NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellCssDropRefuseCount;
+NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellCssRecallCount;
+NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellCssKindToggleCount;
+NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellCssLevelChangeCount;
+NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellCssStartCount;
+NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellCssStartDeniedCount;
+NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellCssBackCount;
+NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellCssCommitCount;
+NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellCssCommitSlot[4];
+NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellCssCueCount;
+NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellCssCueLastId;
+NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellCssAnnounceCount;
 
 /* --- Per-screen frame accounting ----------------------------------------- */
 
@@ -227,8 +245,23 @@ static u32 sMenuChangeWait;
  * manager: every step below is a button the player could press, so a walk that
  * reaches the battle is proof the handlers reached it, not proof that a hop
  * counter did. `gNdsMenuShellInputRing` pairs each acted-on tap with the
- * screen that consumed it. */
+ * screen that consumed it.
+ *
+ * A STEP CARRIES A HOLD LENGTH (P2-1e). The row screens only ever needed taps,
+ * because one tap moves one row; the character select is a POINTER screen whose
+ * cursor moves 4 px a frame while a direction is HELD, so reaching a portrait
+ * takes tens of frames of the same input. `hold` is that count in frames, and
+ * it is 1 for every step the row screens use, so their behaviour and their
+ * banked figures are unchanged. */
 #define NDS_MENU_WALK_DWELL 150u
+/* The CSS script is fifteen steps and its holds already spend 172 frames, so
+ * it takes the shorter gap between steps; the row screens keep theirs. */
+#define NDS_MENU_WALK_DWELL_CSS 40u
+
+typedef struct NdsMenuWalkStep {
+    u16 button;
+    u16 hold;
+} NdsMenuWalkStep;
 
 /* ONE SCRIPT PER SCREEN, reset on that screen's entry. A single flat script
  * would only work on the first pass: the loop re-enters at VS Mode from
@@ -240,40 +273,96 @@ static u32 sMenuChangeWait;
  * ends on VS START. Its value moves are deliberately NET ZERO, so the match
  * every lap enters is still the canonical one-minute Time match and the laps
  * stay comparable. */
-static const u16 kNdsMenuWalkTitle[] = { (u16)NDS_INPUT_START };
-static const u16 kNdsMenuWalkMode[] = {
-    (u16)NDS_INPUT_DOWN, (u16)NDS_INPUT_A
+static const NdsMenuWalkStep kNdsMenuWalkTitle[] = {
+    { (u16)NDS_INPUT_START, 1u }
 };
-static const u16 kNdsMenuWalkVs[] = {
-    (u16)NDS_INPUT_DOWN,  /* cursor: VS START -> RULE            */
-    (u16)NDS_INPUT_RIGHT, /* rule: TIME -> STOCK                 */
-    (u16)NDS_INPUT_LEFT,  /* rule: STOCK -> TIME (net zero)      */
-    (u16)NDS_INPUT_DOWN,  /* cursor: RULE -> TIME/STOCK value    */
-    (u16)NDS_INPUT_RIGHT, /* value: 1 -> 2                       */
-    (u16)NDS_INPUT_LEFT,  /* value: 2 -> 1 (net zero)            */
-    (u16)NDS_INPUT_DOWN,  /* cursor: value -> VS OPTIONS         */
-    (u16)NDS_INPUT_A,     /* refusal: VS OPTIONS is not built    */
-    (u16)NDS_INPUT_UP, (u16)NDS_INPUT_UP, (u16)NDS_INPUT_UP,
-    (u16)NDS_INPUT_A      /* VS START -> the match               */
+static const NdsMenuWalkStep kNdsMenuWalkMode[] = {
+    { (u16)NDS_INPUT_DOWN, 1u }, { (u16)NDS_INPUT_A, 1u }
+};
+static const NdsMenuWalkStep kNdsMenuWalkVs[] = {
+    { (u16)NDS_INPUT_DOWN, 1u },  /* cursor: VS START -> RULE          */
+    { (u16)NDS_INPUT_RIGHT, 1u }, /* rule: TIME -> STOCK               */
+    { (u16)NDS_INPUT_LEFT, 1u },  /* rule: STOCK -> TIME (net zero)    */
+    { (u16)NDS_INPUT_DOWN, 1u },  /* cursor: RULE -> TIME/STOCK value  */
+    { (u16)NDS_INPUT_RIGHT, 1u }, /* value: 1 -> 2                     */
+    { (u16)NDS_INPUT_LEFT, 1u },  /* value: 2 -> 1 (net zero)          */
+    { (u16)NDS_INPUT_DOWN, 1u },  /* cursor: value -> VS OPTIONS       */
+    { (u16)NDS_INPUT_A, 1u },     /* refusal: VS OPTIONS is not built  */
+    { (u16)NDS_INPUT_UP, 1u }, { (u16)NDS_INPUT_UP, 1u },
+    { (u16)NDS_INPUT_UP, 1u },
+    { (u16)NDS_INPUT_A, 1u }      /* VS START -> the character select  */
 };
 
-static const u16 *kNdsMenuWalkScripts[NDS_MENU_SHELL_SCREEN_COUNT] = {
-    NULL, kNdsMenuWalkTitle, kNdsMenuWalkMode, kNdsMenuWalkVs
+/* THE CHARACTER-SELECT TOUR. Every position below is worked in the SOURCE's
+ * 320x240 frame at 4 px a held frame from the cursor's own seat (40,170), and
+ * every landing spot is one of mnplayersvs.c's own rectangles:
+ *
+ *   (40,170) -up 30-> y=50  -right 9-> x=76   cursor hotspot (101,53) is inside
+ *                                             Mario's token box (81..107,46..70)
+ *   A                                         GRAB
+ *   -right 10-> x=116  token centre (140,48)  column 2 = Donkey = LOCKED
+ *   A                                         REFUSED, token stays in hand
+ *   -left 10-> x=76    token centre (100,48)  column 1 = Mario
+ *   A                                         DROP + announce
+ *   -down 19-> y=126   -right 43-> x=248      slot 4's HMN/CP/NA box
+ *                                             (x+20 in 267..295, y+3 in 127..145)
+ *   A, A                                      NA -> CP -> NA, net zero
+ *   -down 17-> y=194   -left 32-> x=120       slot 2's CP-LEVEL right arrow
+ *                                             (x+20 in 137..159, y+3 in 197..216)
+ *   A                                         Fox's level +1
+ *   START                                     READY TO FIGHT -> the match
+ *
+ * The two kind-button presses are deliberately ADJACENT and net zero: the first
+ * makes slot 4 a CPU with a random fighter and the second empties it again, so
+ * the match this walk enters is still the two-fighter one the battle supports.
+ * The CPU-level step is NOT net zero, on purpose -- it is the descriptor proof,
+ * and Fox's level in the battle state is expected to read one above the
+ * preset's. */
+static const NdsMenuWalkStep kNdsMenuWalkCss[] = {
+    { (u16)NDS_INPUT_UP, 30u },
+    { (u16)NDS_INPUT_RIGHT, 9u },
+    { (u16)NDS_INPUT_A, 1u },
+    { (u16)NDS_INPUT_RIGHT, 10u },
+    { (u16)NDS_INPUT_A, 1u },
+    { (u16)NDS_INPUT_LEFT, 10u },
+    { (u16)NDS_INPUT_A, 1u },
+    { (u16)NDS_INPUT_DOWN, 19u },
+    { (u16)NDS_INPUT_RIGHT, 43u },
+    { (u16)NDS_INPUT_A, 1u },
+    { (u16)NDS_INPUT_A, 1u },
+    { (u16)NDS_INPUT_DOWN, 17u },
+    { (u16)NDS_INPUT_LEFT, 32u },
+    { (u16)NDS_INPUT_A, 1u },
+    { (u16)NDS_INPUT_START, 1u }
+};
+
+static const NdsMenuWalkStep *const
+    kNdsMenuWalkScripts[NDS_MENU_SHELL_SCREEN_COUNT] = {
+    NULL, kNdsMenuWalkTitle, kNdsMenuWalkMode, kNdsMenuWalkVs, kNdsMenuWalkCss
 };
 static const u8 kNdsMenuWalkLengths[NDS_MENU_SHELL_SCREEN_COUNT] = {
     0u,
     (u8)(sizeof(kNdsMenuWalkTitle) / sizeof(kNdsMenuWalkTitle[0])),
     (u8)(sizeof(kNdsMenuWalkMode) / sizeof(kNdsMenuWalkMode[0])),
-    (u8)(sizeof(kNdsMenuWalkVs) / sizeof(kNdsMenuWalkVs[0]))
+    (u8)(sizeof(kNdsMenuWalkVs) / sizeof(kNdsMenuWalkVs[0])),
+    (u8)(sizeof(kNdsMenuWalkCss) / sizeof(kNdsMenuWalkCss[0]))
 };
 
 static u32 sMenuWalkCursor;
 static u32 sMenuWalkTimer;
+static u32 sMenuWalkHold;
+static u32 sMenuWalkHeld;
 
-static u32 ndsMenuShellWalkTap(u32 screen)
+/* Returns the button to HOLD this frame, and writes the button to report as a
+ * fresh TAP into *out_tap -- which is only the first frame of a step. Without
+ * that split a 43-frame hold would post 43 entries into the input ring and the
+ * ring would stop being a record of what the player pressed. */
+static u32 ndsMenuShellWalkTap(u32 screen, u32 *out_tap)
 {
     u32 length;
+    u32 dwell;
 
+    *out_tap = 0u;
     if (gNdsMenuShellWalkLoops >= (u32)NDS_P2_MENU_WALK)
     {
         /* Budget spent: stop driving and leave the shell to the player. The
@@ -285,27 +374,44 @@ static u32 ndsMenuShellWalkTap(u32 screen)
     {
         return 0u;
     }
+    /* A held step keeps injecting the SAME button until its frames run out.
+     * The steps counter still counts one step, not one frame -- a hold is one
+     * press a player makes, and counting frames would make the two arms of the
+     * walk incomparable. */
+    if (sMenuWalkHold != 0u)
+    {
+        sMenuWalkHold--;
+        return sMenuWalkHeld;
+    }
     length = (u32)kNdsMenuWalkLengths[screen];
     if ((length == 0u) || (sMenuWalkCursor >= length))
     {
         return 0u;
     }
+    dwell = (screen == NDS_MENU_SHELL_SCREEN_CSS) ? NDS_MENU_WALK_DWELL_CSS :
+                                                    NDS_MENU_WALK_DWELL;
     if (sMenuWalkTimer != 0u)
     {
         sMenuWalkTimer--;
         return 0u;
     }
-    sMenuWalkTimer = NDS_MENU_WALK_DWELL;
+    sMenuWalkTimer = dwell;
     gNdsMenuShellWalkSteps++;
     sMenuWalkCursor++;
-    if ((screen == NDS_MENU_SHELL_SCREEN_VSMODE) &&
-        (sMenuWalkCursor == length))
+    if ((screen == NDS_MENU_SHELL_SCREEN_CSS) && (sMenuWalkCursor == length))
     {
         /* A lap is a completed menu pass into the match, counted where the
-         * pass actually ends rather than where a ring happens to wrap. */
+         * pass actually ends rather than where a ring happens to wrap. P2-1d
+         * counted it on the VS screen because that screen was the last stop
+         * before the battle; the character select is now that stop. */
         gNdsMenuShellWalkLoops++;
     }
-    return (u32)kNdsMenuWalkScripts[screen][sMenuWalkCursor - 1u];
+    sMenuWalkHeld =
+        (u32)kNdsMenuWalkScripts[screen][sMenuWalkCursor - 1u].button;
+    sMenuWalkHold =
+        (u32)kNdsMenuWalkScripts[screen][sMenuWalkCursor - 1u].hold - 1u;
+    *out_tap = sMenuWalkHeld;
+    return sMenuWalkHeld;
 }
 #endif /* NDS_P2_MENU_WALK */
 
@@ -317,9 +423,10 @@ static u32 ndsMenuShellReadTaps(u32 *out_held)
     sMenuHeldPrev = held;
 #if NDS_P2_MENU_WALK
     {
-        u32 injected = ndsMenuShellWalkTap(sMenuScreen);
+        u32 tap = 0u;
+        u32 injected = ndsMenuShellWalkTap(sMenuScreen, &tap);
 
-        taps |= injected;
+        taps |= tap;
         held |= injected;
     }
 #endif
@@ -427,11 +534,11 @@ static void ndsMenuShellHideRows(void)
 {
     u32 slot;
 
-    for (slot = 0u; slot < 6u; slot++)
+    for (slot = 0u; slot < NDS_UI_KIT_TEXT_SLOTS; slot++)
     {
         ndsUiKitHideText(slot);
     }
-    for (slot = 0u; slot < 8u; slot++)
+    for (slot = 0u; slot < NDS_UI_KIT_SPRITE_SLOTS; slot++)
     {
         ndsUiKitHideSprite(slot);
     }
@@ -650,8 +757,8 @@ static void ndsMenuShellUpdateMode(u32 held, u32 taps)
  *
  * The rules this screen commits are the descriptor fields it owns -- rule,
  * time limit, stock count -- written into gNdsMatchConfig and installed with
- * ndsMatchConfigApply. The fighters stay the preset's until P2-1e's character
- * select fills them. */
+ * ndsMatchConfigApply. The FIGHTER half of the same descriptor belongs to the
+ * character select below (P2-1e), which this screen's VS START now leads to. */
 #define NDS_MENU_VS_ENTRIES 4u
 #define NDS_MENU_VS_START 0u
 #define NDS_MENU_VS_RULE 1u
@@ -882,13 +989,23 @@ static void ndsMenuShellUpdateVs(u32 held, u32 taps)
         {
             ndsUiKitSfx(NDS_UI_KIT_SFX_CONFIRM);
             ndsMenuShellVsSaveRules();
-            /* The walk spends its hop here when it is armed, so the P2-1b
-             * loop budget still counts two hops a loop; with the walk off it
-             * returns FALSE and the screen makes the transition itself. Both
-             * arms request the same scene. */
-            if (ndsSceneWalkAdvance((u32)nSCKindVSBattle) == FALSE)
+            /* VS START goes to the CHARACTER SELECT, which is where it goes in
+             * the source too (mnvsmode.c's VS START leads to nSCKindPlayersVS,
+             * and the imported scene's own transition probe asserts exactly
+             * that pair). P2-1d sent it straight to the battle because there
+             * was no character select yet; P2-1e is that screen, and it is now
+             * the only route from this menu into a match.
+             *
+             * The walk spends its hop here when it is armed, so the P2-1b loop
+             * budget still counts TWO hops a loop -- Results -> VS Mode and
+             * VS Mode -> here. The CSS -> battle leg is the screen's own
+             * transition and deliberately spends no hop, which is what keeps
+             * that budget the same shape as when P2-1b defined it. With the
+             * walk off this returns FALSE and the screen makes the transition
+             * itself; both arms request the same scene. */
+            if (ndsSceneWalkAdvance((u32)nSCKindPlayersVS) == FALSE)
             {
-                ndsMenuShellGoto((u32)nSCKindVSBattle);
+                ndsMenuShellGoto((u32)nSCKindPlayersVS);
             }
             else
             {
@@ -897,7 +1014,7 @@ static void ndsMenuShellUpdateVs(u32 held, u32 taps)
 
                 gNdsMenuShellTransitionRing[slot] =
                     ((sMenuScreen & 0xffu) << 8) |
-                    ((u32)nSCKindVSBattle & 0xffu);
+                    ((u32)nSCKindPlayersVS & 0xffu);
                 gNdsMenuShellTransitionCount++;
                 sMenuNextScene = 0xffffffffu;
                 sMenuLeaving = TRUE;
@@ -915,6 +1032,1074 @@ static void ndsMenuShellUpdateVs(u32 held, u32 taps)
     }
 }
 
+/* --- Screen: VS character select (P2-1e) ---------------------------------
+ *
+ * mn/mnplayers/mnplayersvs.c. A pointer screen, not a row screen: a hand
+ * cursor roams the frame, picks a player's TOKEN up off its portrait, carries
+ * it, and drops it on the fighter that player will use. Everything below is
+ * transcribed from that file; what is NOT transcribed is named where it is
+ * dropped, and there is exactly one mechanism substitution, disclosed here:
+ *
+ * THE STICK. mnPlayersVSAdjustCursor moves the cursor by
+ * `stick_range / 20` per frame with a deadzone of 8 (mnplayersvs.c:3090/:3113).
+ * The DS has no analog stick, and the port already fixed the exchange rate:
+ * `ndsControllerMapPad` gives a held D-pad direction `stick_range = +-80`
+ * (src/port/controller_backend.c:60). 80/20 is 4, so a held direction moves the
+ * cursor at exactly the speed a fully deflected N64 stick moves it, and the
+ * only expression the DS loses is partial deflection. That is the port's own
+ * established mapping composed with the source's own divisor, not a number
+ * chosen here.
+ *
+ * THE FRAME. Every hit test, clamp and layout constant below is in the
+ * SOURCE's 320x240 frame, unaltered -- the portrait pitch of 45, the row bands
+ * (35,79) and (78,122), the 69 px panel pitch, the button rectangles at
+ * y 127..145 and y 197..216, the BACK box at x 244..292. The DS screen is
+ * exactly 0.8 of that frame on BOTH axes (256/320 = 192/240), so drawing is
+ * one multiply: NDS_CSS_DS(v) = v * 4 / 5. Keeping the logic in source units
+ * means no constant here had to be re-derived, and a probe reads back the same
+ * numbers mnplayersvs.c is written in.
+ *
+ * WHAT IS LOCKED. The source gates a portrait on `gSCManagerBackupData
+ * .fighter_mask` (mnplayersvs.c:296), which the harness sets to ALL because
+ * this build's save data is a fully unlocked cart. The gate this build needs is
+ * a different one with the same mechanism: which fighters EXIST. Ten of the
+ * twelve are P2-3, so the mask is Mario|Fox and the other ten portraits draw
+ * the source's own question-mark plate -- the thing it draws for a locked
+ * fighter (mnplayersvs.c:374). Same bitmask over fkind, different bound.
+ *
+ * DELIBERATE NARROWINGS, each a plan non-goal rather than an omission:
+ *   - TEAMS. The team-select buttons and `mnPlayersVSGetShade` exist only in a
+ *     team battle, which needs the four-fighter engine (P2-2); the descriptor's
+ *     `is_team_battle` is FALSE here and the source's own code is already
+ *     branchless in that case.
+ *   - COSTUMES. C-buttons pick a costume (mnplayersvs.c:3372); the DS pad has
+ *     no C-buttons and the two fighters ship one costume each, so the
+ *     descriptor keeps costume 0. P2-3 owns alternate costumes.
+ *   - THE TIME/STOCK ARROWS at the top of the source's CSS duplicate the VS
+ *     menu P2-1d already transcribed, so the rules stay that screen's.
+ *   - THE 5-MINUTE IDLE RETURN (mnplayersvs.c:4470) is attract behaviour and
+ *     belongs to P2-7, exactly as it does on the mode select.
+ *   - THE RECALL TOSS. mnPlayersVSPuckAdjustRecall arcs the token back over 11
+ *     frames and re-grabs it at tic 11 (mnplayersvs.c:3927). The END STATE is
+ *     transcribed -- the token is back in the cursor's hand -- and the arc is
+ *     not; it is presentation, and this screen has no SObj velocity model.
+ *   - STAGE SELECT. mnPlayersVSFuncRun sends a ready START to `nSCKindMaps`
+ *     when `is_stage_select` is set (mnplayersvs.c:4497). That scene is P2-1f,
+ *     so until it lands the CSS goes straight to the battle and keeps the
+ *     descriptor's stage. It deliberately does NOT take the source's other
+ *     branch either, which randomises the stage over every unlocked ground --
+ *     eight of the nine are P2-4. */
+
+/* Source frame -> DS pixels. 256/320 == 192/240 == 4/5, exactly. */
+#define NDS_CSS_DS(v) (((v) * 4) / 5)
+
+#define NDS_CSS_SLOTS 4
+#define NDS_CSS_PORTRAITS 12
+
+/* mnPlayersVSAdjustCursor's clamps and its full-deflection step. */
+#define NDS_CSS_CURSOR_X_MIN 0
+#define NDS_CSS_CURSOR_X_MAX 280
+#define NDS_CSS_CURSOR_Y_MIN 10
+#define NDS_CSS_CURSOR_Y_MAX 205
+#define NDS_CSS_CURSOR_STEP 4
+
+/* nMNPlayersCursorStatus*, in the order mnPlayersVSUpdateCursor's own
+ * cursor_offsets[] indexes them (mnplayersvs.c:1723). */
+#define NDS_CSS_STATUS_POINTER 0u
+#define NDS_CSS_STATUS_GRAB 1u
+#define NDS_CSS_STATUS_HOVER 2u
+
+/* mnPlayersVSMakeCursor's player-0 seat, mnplayersvs.c:3684. */
+#define NDS_CSS_CURSOR_HOME_X 40
+#define NDS_CSS_CURSOR_HOME_Y 170
+/* mnPlayersVSMakePuck's parking spot for a slot with no fighter yet. */
+#define NDS_CSS_PUCK_HOME_X 51
+#define NDS_CSS_PUCK_HOME_Y 161
+/* The offset a carried token keeps from the cursor, mnplayersvs.c:3529. */
+#define NDS_CSS_PUCK_CARRY_DX 11
+#define NDS_CSS_PUCK_CARRY_DY (-14)
+/* mnPlayersVSSelectFighter's re-grab lockout, mnplayersvs.c:2837. */
+#define NDS_CSS_REGRAB_TICS 30
+/* mnPlayersVSFuncRun's ready-START delay and its one-second input guard. */
+#define NDS_CSS_START_WAIT 30
+#define NDS_CSS_START_ARM_TICS 60
+/* mnPlayersVSDetectBack: B held for forty tics leaves, mnplayersvs.c:3247. */
+#define NDS_CSS_BACK_HOLD_TICS 40
+/* mnPlayersVSReadyProcUpdate: a 40-tic cycle, lit for the first 30. */
+#define NDS_CSS_READY_BLINK 40
+#define NDS_CSS_READY_LIT 30
+
+/* THE CUES, by the source's own REGION_US FGM ids. Derived by parsing
+ * gm/gmsound.h's gmFGMVoiceID enum with REGION_US honoured and cross-checked
+ * against every id this tree already pins -- Escape 11, GuardOn 13, FoxLanding
+ * 74, MarioLanding 77, UnkGrind4 85, AltitudeWarn 153, DeadExplodeL 154,
+ * MenuSelect 158, MenuScroll1 163, MenuScroll2 164, MenuDenied 165,
+ * TitlePressStart 157, GamePause 278 -- all thirteen landing where the tree
+ * already has them before any new id was trusted.
+ *
+ * FIVE OF THESE ARE IN THE FGM PACK AND THREE ARE NOT, which the miss ring
+ * proves rather than this comment asserting it: 164/165 came in with P2-1c-1,
+ * 157 with P2-1d-1, and 486/499 (the Fox and Mario announcer names) and 618
+ * (the crowd cheer) were already packed for the Results sequence. 121, 127 and
+ * 167 -- the two dash sounds the CSS reuses as its grab/announce whooshes and
+ * the player-slot whoosh -- are NOT packed, and neither is 512
+ * (FREE-FOR-ALL). Row P2-1e-1 renders them; this seam asks with the real ids so
+ * the gap is measured. */
+#define NDS_CSS_FGM_ANNOUNCE_WHOOSH 121u /* nSYAudioFGMMarioDash        */
+#define NDS_CSS_FGM_GRAB 127u            /* nSYAudioFGMSamusDash        */
+#define NDS_CSS_FGM_PRESS_START 157u     /* nSYAudioFGMTitlePressStart  */
+#define NDS_CSS_FGM_SCROLL2 164u         /* nSYAudioFGMMenuScroll2      */
+#define NDS_CSS_FGM_DENIED 165u          /* nSYAudioFGMMenuDenied       */
+#define NDS_CSS_FGM_SLOT_WHOOSH 167u     /* nSYAudioFGMPlayerSlotWhoosh */
+#define NDS_CSS_VOICE_FREE_FOR_ALL 512u  /* nSYAudioVoiceAnnounceFreeForAll */
+#define NDS_CSS_VOICE_CHEER 618u         /* nSYAudioVoicePublicCheer    */
+/* nSYAudioBGMBattleSelect, mnplayersvs.c:4899. Not one of the five tracks the
+ * BGM pack carries (0/12/16/22/44), so ndsAudioBgmPlay counts it in
+ * gNdsAudioBgmUnsupportedTrackCount -- the same measured gap, on the BGM side.
+ * P2-1e-1 renders it. */
+#define NDS_CSS_BGM_BATTLE_SELECT 10
+
+/* mnPlayersVSAnnounceFighter's own table, indexed by fkind (mnplayersvs.c:2547
+ * -- twelve entries, transcribed whole rather than trimmed to the two fighters
+ * that exist, because it is the SOURCE's array and trimming it would make P2-3
+ * edit this file again for no benefit). */
+static const u16 kNdsCssAnnounceVoice[NDS_CSS_PORTRAITS] = {
+    499u, 486u, 483u, 513u, 498u, 497u,
+    535u, 485u, 496u, 507u, 508u, 501u
+};
+
+/* mnPlayersVSGetFighterKind: which fighter each of the twelve portrait cells
+ * holds (mnplayersvs.c:2120). Cells 0-5 are the top row, 6-11 the bottom. */
+static const u8 kNdsCssPortraitFighter[NDS_CSS_PORTRAITS] = {
+    (u8)nFTKindLuigi, (u8)nFTKindMario, (u8)nFTKindDonkey,
+    (u8)nFTKindLink, (u8)nFTKindSamus, (u8)nFTKindCaptain,
+    (u8)nFTKindNess, (u8)nFTKindYoshi, (u8)nFTKindKirby,
+    (u8)nFTKindFox, (u8)nFTKindPikachu, (u8)nFTKindPurin
+};
+
+/* mnPlayersVSGetPortrait, the inverse (mnplayersvs.c:2168). */
+static const u8 kNdsCssFighterPortrait[NDS_CSS_PORTRAITS] = {
+    1u, 9u, 2u, 4u, 0u, 3u, 7u, 5u, 8u, 10u, 11u, 6u
+};
+
+/* Which fighters this build HAS. Same shape as the source's fighter_mask. */
+#define NDS_CSS_FIGHTER_MASK \
+    (LBBACKUP_MASK_FIGHTER(nFTKindMario) | LBBACKUP_MASK_FIGHTER(nFTKindFox))
+
+static u8 sCssPkind[NDS_CSS_SLOTS];
+static u8 sCssFkind[NDS_CSS_SLOTS];
+static u8 sCssLevel[NDS_CSS_SLOTS];
+static u8 sCssSelected[NDS_CSS_SLOTS]; /* is_fighter_selected */
+static s16 sCssPuckX[NDS_CSS_SLOTS];
+static s16 sCssPuckY[NDS_CSS_SLOTS];
+static s32 sCssCursorX;
+static s32 sCssCursorY;
+static u32 sCssStatus;
+static s32 sCssHeld;      /* slot whose token the cursor carries, -1 = none */
+static u32 sCssRegrabTic;
+static u32 sCssBackTics;
+static u32 sCssStartWait;
+static u32 sCssReadyBlink;
+static u32 sCssReadyShown;
+
+/* One cursor: the DS has one keypad, so exactly one player has a controller.
+ * mnPlayersVSUpdateControllerOrders would report orders[0] = 0 and -1 for the
+ * rest, and every branch below that reads a controller order is written from
+ * that fact rather than from a general N-cursor model. */
+#define NDS_CSS_CURSOR_SLOT 0
+
+/* --- Audio seam ---------------------------------------------------------- */
+
+static void ndsMenuShellCssCue(u32 id)
+{
+    gNdsMenuShellCssCueCount++;
+    gNdsMenuShellCssCueLastId = id;
+    /* Unguarded, like the kit's own seam: NDS_IMPORT_BATTLESHIP_AUDIO_FGM is an
+     * unconditional Makefile override, so this symbol always exists. */
+    (void)ndsAudioFgmPlay((u16)id);
+}
+
+/* mnPlayersVSAnnounceFighter, mnplayersvs.c:2545: the whoosh then the name. */
+static void ndsMenuShellCssAnnounce(u32 slot)
+{
+    u32 fkind = (u32)sCssFkind[slot];
+
+    if (fkind >= NDS_CSS_PORTRAITS)
+    {
+        return;
+    }
+    ndsMenuShellCssCue(NDS_CSS_FGM_ANNOUNCE_WHOOSH);
+    ndsMenuShellCssCue((u32)kNdsCssAnnounceVoice[fkind]);
+    gNdsMenuShellCssAnnounceCount++;
+}
+
+/* --- Source geometry ----------------------------------------------------- */
+
+static u32 ndsMenuShellCssFighterLocked(u32 fkind)
+{
+    if (fkind >= NDS_CSS_PORTRAITS)
+    {
+        return TRUE;
+    }
+    return ((NDS_CSS_FIGHTER_MASK & (1u << fkind)) != 0u) ? FALSE : TRUE;
+}
+
+/* mnPlayersVSMakePortraitShadow's own placement, mnplayersvs.c:2412. */
+static s32 ndsMenuShellCssPortraitX(u32 portrait)
+{
+    return (s32)(((portrait >= 6u) ? (portrait - 6u) : portrait) * 45u) + 25;
+}
+
+static s32 ndsMenuShellCssPortraitY(u32 portrait)
+{
+    return (s32)(((portrait >= 6u) ? 1u : 0u) * 43u) + 36;
+}
+
+/* mnPlayersVSCenterPuckInPortrait, mnplayersvs.c:3454. */
+static void ndsMenuShellCssCenterPuck(u32 slot, u32 fkind)
+{
+    u32 portrait;
+
+    if (fkind >= NDS_CSS_PORTRAITS)
+    {
+        sCssPuckX[slot] = (s16)NDS_CSS_PUCK_HOME_X;
+        sCssPuckY[slot] = (s16)NDS_CSS_PUCK_HOME_Y;
+        return;
+    }
+    portrait = (u32)kNdsCssFighterPortrait[fkind];
+    if (portrait >= 6u)
+    {
+        sCssPuckX[slot] = (s16)((portrait * 45u) - (6u * 45u) + 36u);
+        sCssPuckY[slot] = (s16)89;
+    }
+    else
+    {
+        sCssPuckX[slot] = (s16)((portrait * 45u) + 36u);
+        sCssPuckY[slot] = (s16)46;
+    }
+}
+
+/* mnPlayersVSGetPuckFighterKind, mnplayersvs.c:3001 -- which fighter the
+ * token's CENTRE is over, or nFTKindNull. */
+static u32 ndsMenuShellCssPuckFighterKind(u32 slot)
+{
+    s32 x = (s32)sCssPuckX[slot] + 13;
+    s32 y = (s32)sCssPuckY[slot] + 12;
+    u32 fkind;
+
+    if ((x <= 24) || (x >= 295))
+    {
+        return (u32)nFTKindNull;
+    }
+    if ((y > 35) && (y < 79))
+    {
+        fkind = (u32)kNdsCssPortraitFighter[(x - 25) / 45];
+    }
+    else if ((y > 78) && (y < 122))
+    {
+        fkind = (u32)kNdsCssPortraitFighter[((x - 25) / 45) + 6];
+    }
+    else
+    {
+        return (u32)nFTKindNull;
+    }
+    return (ndsMenuShellCssFighterLocked(fkind) != FALSE) ?
+        (u32)nFTKindNull : fkind;
+}
+
+/* mnPlayersVSCheckPuckInRange, mnplayersvs.c:2157 -- the cursor's puck hotspot
+ * is (+25, +3) and a token is 26x24. */
+static u32 ndsMenuShellCssPuckInRange(u32 slot)
+{
+    s32 x = sCssCursorX + 25;
+    s32 y = sCssCursorY + 3;
+
+    if ((x < (s32)sCssPuckX[slot]) || (x > ((s32)sCssPuckX[slot] + 26)))
+    {
+        return FALSE;
+    }
+    if ((y < (s32)sCssPuckY[slot]) || (y > ((s32)sCssPuckY[slot] + 24)))
+    {
+        return FALSE;
+    }
+    return TRUE;
+}
+
+/* The BUTTON hotspot is (+20, +3), a different offset from the token one --
+ * mnPlayersVSCheckPlayerKindSelectInRange:2138 against :2163. */
+static u32 ndsMenuShellCssBoxHit(s32 x0, s32 x1, s32 y0, s32 y1)
+{
+    s32 x = sCssCursorX + 20;
+    s32 y = sCssCursorY + 3;
+
+    return ((x >= x0) && (x <= x1) && (y >= y0) && (y <= y1)) ? TRUE : FALSE;
+}
+
+/* --- Drawing ------------------------------------------------------------- */
+
+/* Text slots. Eight, and every one is spoken for. */
+#define NDS_CSS_SLOT_MODE 0u
+#define NDS_CSS_SLOT_BACK 1u
+#define NDS_CSS_SLOT_READY 2u
+#define NDS_CSS_SLOT_PRESS 3u
+#define NDS_CSS_SLOT_NAME0 4u
+
+/* Sprite slots, in DEPTH order: a lower OAM id draws in front, so the cursor
+ * owns id 0 and the twelve portrait cells own the last twelve. */
+#define NDS_CSS_SPRITE_CURSOR 0u
+#define NDS_CSS_SPRITE_PUCK0 1u
+#define NDS_CSS_SPRITE_KIND0 5u
+#define NDS_CSS_SPRITE_LEVEL0 9u
+#define NDS_CSS_SPRITE_DIGIT0 13u
+#define NDS_CSS_SPRITE_PORTRAIT0 17u
+
+static const char *const kNdsCssFighterName[NDS_CSS_PORTRAITS] = {
+    "MARIO", "FOX", "DK", "SAMUS", "LUIGI", "LINK",
+    "YOSHI", "CAPTAIN", "KIRBY", "PIKACHU", "PURIN", "NESS"
+};
+
+/* mnPlayersVSMakeLabels' own colours, mnplayersvs.c:1391. */
+#define NDS_CSS_RGB_MODE 0x00e3ac04u
+/* mnPlayersVSMakeReady's ready-text primitive, mnplayersvs.c:4128. */
+#define NDS_CSS_RGB_READY 0x00ffff9du
+#define NDS_CSS_RGB_PRESS 0x00d6ddc6u
+#define NDS_CSS_RGB_NAME 0x00ffffffu
+
+static u32 ndsMenuShellCssKindImage(u32 pkind)
+{
+    /* LABEL_HMN/CP/NA are baked as three consecutive entries in nFTPlayerKind
+     * order, which the generator asserts (check_kind_label_block), so this is
+     * the source's own offsets[pkind] indexing (mnplayersvs.c:934). */
+    if (pkind > (u32)nFTPlayerKindNot)
+    {
+        pkind = (u32)nFTPlayerKindNot;
+    }
+    return NDS_MN_UI_KIT_IMAGE_LABEL_HMN + pkind;
+}
+
+static void ndsMenuShellCssPopulate(void)
+{
+    u32 i;
+
+    ndsUiKitSetText(NDS_CSS_SLOT_MODE, "FREE FOR ALL", NDS_CSS_RGB_MODE);
+    ndsUiKitMoveText(NDS_CSS_SLOT_MODE, NDS_CSS_DS(27), NDS_CSS_DS(24));
+    ndsUiKitSetText(NDS_CSS_SLOT_BACK, "BACK", NDS_MENU_RGB_WHITE);
+    ndsUiKitMoveText(NDS_CSS_SLOT_BACK, NDS_CSS_DS(244), NDS_CSS_DS(23));
+
+    for (i = 0u; i < NDS_CSS_PORTRAITS; i++)
+    {
+        u32 fkind = (u32)kNdsCssPortraitFighter[i];
+        u32 image;
+
+        if (ndsMenuShellCssFighterLocked(fkind) != FALSE)
+        {
+            image = NDS_MN_UI_KIT_IMAGE_PORTRAIT_LOCKED;
+        }
+        else
+        {
+            image = (fkind == (u32)nFTKindMario) ?
+                NDS_MN_UI_KIT_IMAGE_PORTRAIT_MARIO :
+                NDS_MN_UI_KIT_IMAGE_PORTRAIT_FOX;
+        }
+        ndsUiKitSetSprite(NDS_CSS_SPRITE_PORTRAIT0 + i, image,
+                          NDS_CSS_DS(ndsMenuShellCssPortraitX(i)),
+                          NDS_CSS_DS(ndsMenuShellCssPortraitY(i)));
+    }
+
+    for (i = 0u; i < (u32)NDS_CSS_SLOTS; i++)
+    {
+        s32 panel = (s32)(i * 69u);
+        u32 fkind = (u32)sCssFkind[i];
+
+        /* The player-kind button, mnplayersvs.c:963. */
+        ndsUiKitSetSprite(NDS_CSS_SPRITE_KIND0 + i,
+                          ndsMenuShellCssKindImage((u32)sCssPkind[i]),
+                          NDS_CSS_DS(panel + 64), NDS_CSS_DS(131));
+
+        /* The fighter's name. The source draws a per-fighter name SPRITE
+         * (llMNPlayersCommon<X>TextSprite); those are IA8 strips up to 66 px
+         * wide and this composes the same words out of the menu font instead,
+         * which is the P2-1c kit's whole reason for existing. */
+        if ((sCssSelected[i] != 0u) && (fkind < NDS_CSS_PORTRAITS))
+        {
+            ndsUiKitSetText(NDS_CSS_SLOT_NAME0 + i,
+                            kNdsCssFighterName[fkind], NDS_CSS_RGB_NAME);
+            ndsUiKitMoveText(NDS_CSS_SLOT_NAME0 + i, NDS_CSS_DS(panel + 22),
+                             NDS_CSS_DS(146));
+        }
+        else
+        {
+            ndsUiKitHideText(NDS_CSS_SLOT_NAME0 + i);
+        }
+
+        /* CP LEVEL and its value, mnplayersvs.c:2762/:2790. The source shows
+         * this row when the slot is a selected CPU, or when handicap is on for
+         * the cursor's own human slot -- handicap is Off in every configuration
+         * this build reaches (the descriptor's handicap_mode), so only the CPU
+         * arm can run and only it is drawn. */
+        if ((sCssPkind[i] == (u8)nFTPlayerKindCom) && (sCssSelected[i] != 0u))
+        {
+            ndsUiKitSetSprite(NDS_CSS_SPRITE_LEVEL0 + i,
+                              NDS_MN_UI_KIT_IMAGE_CP_LEVEL,
+                              NDS_CSS_DS(panel + 34), NDS_CSS_DS(201));
+            (void)ndsUiKitSetNumber(NDS_CSS_SPRITE_DIGIT0 + i, 1u,
+                                    (s32)sCssLevel[i],
+                                    NDS_CSS_DS(panel + 67) +
+                                        NDS_UI_KIT_DIGIT_PITCH,
+                                    NDS_CSS_DS(200));
+        }
+        else
+        {
+            ndsUiKitHideSprite(NDS_CSS_SPRITE_LEVEL0 + i);
+            ndsUiKitHideSprite(NDS_CSS_SPRITE_DIGIT0 + i);
+        }
+
+        /* The token. mnPlayersVSUpdatePuckDisplay hides it for an empty slot
+         * (mnplayersvs.c:2310) and draws the CP token for a CPU one. */
+        if (sCssPkind[i] == (u8)nFTPlayerKindNot)
+        {
+            ndsUiKitHideSprite(NDS_CSS_SPRITE_PUCK0 + i);
+        }
+        else
+        {
+            ndsUiKitSetSprite(NDS_CSS_SPRITE_PUCK0 + i,
+                              (sCssPkind[i] == (u8)nFTPlayerKindCom) ?
+                                  NDS_MN_UI_KIT_IMAGE_PUCK_CP :
+                                  NDS_MN_UI_KIT_IMAGE_PUCK_1P,
+                              NDS_CSS_DS((s32)sCssPuckX[i]),
+                              NDS_CSS_DS((s32)sCssPuckY[i]));
+        }
+    }
+}
+
+/* Per frame, and deliberately separate from the populate above: the cursor and
+ * a carried token move every frame while the screen's CONTENT changes only on
+ * an action, so composing text every frame would show up as a climbing
+ * gNdsUiKitTextComposeCount for a screen that is not changing. */
+static void ndsMenuShellCssMove(void)
+{
+    u32 image = NDS_MN_UI_KIT_IMAGE_CSS_CURSOR_POINT;
+    u32 i;
+
+    if (sCssStatus == NDS_CSS_STATUS_GRAB)
+    {
+        image = NDS_MN_UI_KIT_IMAGE_CSS_CURSOR_GRAB;
+    }
+    else if (sCssStatus == NDS_CSS_STATUS_HOVER)
+    {
+        image = NDS_MN_UI_KIT_IMAGE_CSS_CURSOR_HOVER;
+    }
+    ndsUiKitSetSprite(NDS_CSS_SPRITE_CURSOR, image, NDS_CSS_DS(sCssCursorX),
+                      NDS_CSS_DS(sCssCursorY));
+    for (i = 0u; i < (u32)NDS_CSS_SLOTS; i++)
+    {
+        if (sCssPkind[i] != (u8)nFTPlayerKindNot)
+        {
+            ndsUiKitMoveSprite(NDS_CSS_SPRITE_PUCK0 + i,
+                               NDS_CSS_DS((s32)sCssPuckX[i]),
+                               NDS_CSS_DS((s32)sCssPuckY[i]));
+        }
+    }
+}
+
+/* --- Ready ---------------------------------------------------------------- */
+
+/* mnPlayersVSGetReadyPlayerCount + mnPlayersVSCheckNoPuckOnPortraitAll +
+ * mnPlayersVSCheckReady, mnplayersvs.c:4268/:4337/:4352. The team clause is
+ * absent because is_team_battle is FALSE (see the narrowings above). */
+static u32 ndsMenuShellCssCheckReady(void)
+{
+    u32 ready = 0u;
+    u32 i;
+
+    for (i = 0u; i < (u32)NDS_CSS_SLOTS; i++)
+    {
+        if ((sCssPkind[i] != (u8)nFTPlayerKindNot) && (sCssSelected[i] != 0u))
+        {
+            ready++;
+        }
+    }
+    if (ready < 2u)
+    {
+        return FALSE;
+    }
+    /* A token in the hand is not a choice yet. */
+    return (sCssStatus == NDS_CSS_STATUS_GRAB) ? FALSE : TRUE;
+}
+
+static void ndsMenuShellCssShowReady(u32 lit)
+{
+    if (lit != FALSE)
+    {
+        ndsUiKitSetText(NDS_CSS_SLOT_READY, "READY TO FIGHT",
+                        NDS_CSS_RGB_READY);
+        ndsUiKitMoveText(NDS_CSS_SLOT_READY,
+                         ndsMenuShellCentre("READY TO FIGHT"),
+                         NDS_CSS_DS(76));
+        ndsUiKitSetText(NDS_CSS_SLOT_PRESS, "PRESS START", NDS_CSS_RGB_PRESS);
+        ndsUiKitMoveText(NDS_CSS_SLOT_PRESS,
+                         ndsMenuShellCentre("PRESS START"), NDS_CSS_DS(219));
+    }
+    else
+    {
+        ndsUiKitHideText(NDS_CSS_SLOT_READY);
+        ndsUiKitHideText(NDS_CSS_SLOT_PRESS);
+    }
+    sCssReadyShown = (lit != FALSE) ? 1u : 0u;
+}
+
+/* --- Actions -------------------------------------------------------------- */
+
+/* mnPlayersVSSetCursorGrab, mnplayersvs.c:2932. */
+static void ndsMenuShellCssGrab(u32 slot)
+{
+    sCssHeld = (s32)slot;
+    sCssStatus = NDS_CSS_STATUS_GRAB;
+    sCssSelected[slot] = 0u;
+    sCssPuckX[slot] = (s16)(sCssCursorX + NDS_CSS_PUCK_CARRY_DX);
+    sCssPuckY[slot] = (s16)(sCssCursorY + NDS_CSS_PUCK_CARRY_DY);
+    ndsMenuShellCssCue(NDS_CSS_FGM_GRAB);
+    gNdsMenuShellCssGrabCount++;
+    ndsMenuShellCssPopulate();
+}
+
+/* mnPlayersVSSelectFighterPuck, mnplayersvs.c:167. */
+static void ndsMenuShellCssDrop(u32 slot)
+{
+    sCssSelected[slot] = 1u;
+    sCssHeld = -1;
+    sCssStatus = NDS_CSS_STATUS_HOVER;
+    sCssRegrabTic = sMenuTics + (u32)NDS_CSS_REGRAB_TICS;
+    ndsMenuShellCssAnnounce(slot);
+    gNdsMenuShellCssDropCount++;
+    ndsMenuShellCssPopulate();
+}
+
+/* mnPlayersVSSelectFighter, mnplayersvs.c:2825. */
+static u32 ndsMenuShellCssSelectFighter(void)
+{
+    if (sCssStatus != NDS_CSS_STATUS_GRAB)
+    {
+        return FALSE;
+    }
+    if (sCssHeld < 0)
+    {
+        return FALSE;
+    }
+    if (sCssFkind[sCssHeld] != (u8)nFTKindNull)
+    {
+        ndsMenuShellCssDrop((u32)sCssHeld);
+        return TRUE;
+    }
+    /* The token is over a locked cell or off the grid: the source refuses with
+     * the cue it spends on every refusal, and the token stays in hand. */
+    ndsMenuShellCssCue(NDS_CSS_FGM_DENIED);
+    gNdsMenuShellCssDropRefuseCount++;
+    return FALSE;
+}
+
+/* mnPlayersVSCheckCursorPuckGrab, mnplayersvs.c:2957. Its loop runs 3 -> 0 so
+ * a higher slot's token wins an overlap, and a slot that is NOT the cursor's
+ * own is grabbable only when it is a CPU. */
+static u32 ndsMenuShellCssCheckGrab(void)
+{
+    s32 i;
+
+    if (sMenuTics < sCssRegrabTic)
+    {
+        return FALSE;
+    }
+    if (sCssStatus != NDS_CSS_STATUS_HOVER)
+    {
+        return FALSE;
+    }
+    for (i = NDS_CSS_SLOTS - 1; i >= 0; i--)
+    {
+        u32 slot = (u32)i;
+
+        if (ndsMenuShellCssPuckInRange(slot) == FALSE)
+        {
+            continue;
+        }
+        if (slot == (u32)NDS_CSS_CURSOR_SLOT)
+        {
+            if (sCssPkind[slot] != (u8)nFTPlayerKindNot)
+            {
+                ndsMenuShellCssGrab(slot);
+                return TRUE;
+            }
+        }
+        else if (sCssPkind[slot] == (u8)nFTPlayerKindCom)
+        {
+            ndsMenuShellCssGrab(slot);
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+
+/* mnPlayersVSUpdatePlayerKind, mnplayersvs.c:2181, reduced to the one-cursor
+ * case this hardware has. Its three arms all begin the same way: whatever the
+ * cursor was carrying is DROPPED (selected) before the slot changes kind. */
+static void ndsMenuShellCssApplyKind(u32 slot)
+{
+    if ((sCssHeld >= 0) && ((u32)sCssHeld == slot))
+    {
+        sCssHeld = -1;
+        sCssStatus = NDS_CSS_STATUS_HOVER;
+    }
+    switch (sCssPkind[slot])
+    {
+    case (u8)nFTPlayerKindMan:
+        /* The slot goes back to holding its own token, which for the cursor's
+         * own slot means the cursor picks it up again. */
+        sCssSelected[slot] = 0u;
+        sCssFkind[slot] = (u8)nFTKindNull;
+        if (slot == (u32)NDS_CSS_CURSOR_SLOT)
+        {
+            sCssHeld = (s32)slot;
+            sCssStatus = NDS_CSS_STATUS_GRAB;
+            sCssPuckX[slot] = (s16)(sCssCursorX + NDS_CSS_PUCK_CARRY_DX);
+            sCssPuckY[slot] = (s16)(sCssCursorY + NDS_CSS_PUCK_CARRY_DY);
+        }
+        ndsMenuShellCssCue(NDS_CSS_FGM_SLOT_WHOOSH);
+        break;
+
+    case (u8)nFTPlayerKindCom:
+        sCssSelected[slot] = 1u;
+        if (sCssFkind[slot] == (u8)nFTKindNull)
+        {
+            /* mnPlayersVSRandFighterKind rerolls until it lands on an unlocked
+             * fighter (mnplayersvs.c:3471). With two unlocked, the parity of
+             * the frame counter is the same uniform choice over them and needs
+             * no RNG the menu does not already have. */
+            sCssFkind[slot] = ((sMenuTics & 1u) != 0u) ?
+                (u8)nFTKindFox : (u8)nFTKindMario;
+        }
+        ndsMenuShellCssCenterPuck(slot, (u32)sCssFkind[slot]);
+        ndsMenuShellCssAnnounce(slot);
+        break;
+
+    default:
+        sCssSelected[slot] = 0u;
+        sCssFkind[slot] = (u8)nFTKindNull;
+        ndsMenuShellCssCue(NDS_CSS_FGM_SLOT_WHOOSH);
+        break;
+    }
+    /* mnPlayersVSCheckPlayerKindSelect spends this on EVERY kind change, after
+     * the per-kind cue above (mnplayersvs.c:2513). */
+    ndsMenuShellCssCue(NDS_CSS_FGM_PRESS_START);
+}
+
+/* mnPlayersVSCheckPlayerKindSelectAllPlayer, mnplayersvs.c:2521. */
+static u32 ndsMenuShellCssCheckKindButton(void)
+{
+    u32 slot;
+
+    for (slot = 0u; slot < (u32)NDS_CSS_SLOTS; slot++)
+    {
+        s32 panel = (s32)(slot * 69u);
+        u32 next;
+
+        if (ndsMenuShellCssBoxHit(panel + 60, panel + 88, 127, 145) == FALSE)
+        {
+            continue;
+        }
+        next = (u32)sCssPkind[slot] + 1u;
+        if (next > (u32)nFTPlayerKindNot)
+        {
+            /* The wrap depends on whether the slot HAS a controller
+             * (mnplayersvs.c:2477): with one, HUMAN is in the cycle; without
+             * one, it is not, so an unmanned slot alternates CP and NA. */
+            next = (slot == (u32)NDS_CSS_CURSOR_SLOT) ?
+                (u32)nFTPlayerKindMan : (u32)nFTPlayerKindCom;
+        }
+        sCssPkind[slot] = (u8)next;
+        ndsMenuShellCssApplyKind(slot);
+        gNdsMenuShellCssKindToggleCount++;
+        ndsMenuShellCssPopulate();
+        return TRUE;
+    }
+    return FALSE;
+}
+
+/* mnPlayersVSCheckHandicapArrowInRangeAll, mnplayersvs.c:2027 -- clamped 1..9
+ * both ways, and the cue only fires when the value actually moves. */
+static u32 ndsMenuShellCssCheckLevelArrows(void)
+{
+    u32 slot;
+
+    for (slot = 0u; slot < (u32)NDS_CSS_SLOTS; slot++)
+    {
+        s32 panel = (s32)(slot * 69u);
+
+        if ((sCssPkind[slot] != (u8)nFTPlayerKindCom) ||
+            (sCssSelected[slot] == 0u))
+        {
+            continue;
+        }
+        if (ndsMenuShellCssBoxHit(panel + 68, panel + 90, 197, 216) != FALSE)
+        {
+            if (sCssLevel[slot] < 9u)
+            {
+                sCssLevel[slot]++;
+                ndsMenuShellCssCue(NDS_CSS_FGM_SCROLL2);
+                gNdsMenuShellCssLevelChangeCount++;
+                ndsMenuShellCssPopulate();
+            }
+            return TRUE;
+        }
+        if (ndsMenuShellCssBoxHit(panel + 21, panel + 43, 197, 216) != FALSE)
+        {
+            if (sCssLevel[slot] > 1u)
+            {
+                sCssLevel[slot]--;
+                ndsMenuShellCssCue(NDS_CSS_FGM_SCROLL2);
+                gNdsMenuShellCssLevelChangeCount++;
+                ndsMenuShellCssPopulate();
+            }
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+
+/* mnPlayersVSRecallPuck, mnplayersvs.c:3198 -- B with your own fighter placed
+ * pulls the token back. The END STATE is what is transcribed: the token is in
+ * the hand again (mnPlayersVSPuckAdjustRecall re-grabs it at recall tic 11). */
+static void ndsMenuShellCssRecall(void)
+{
+    u32 slot = (u32)NDS_CSS_CURSOR_SLOT;
+
+    if ((sCssSelected[slot] == 0u) || (sCssHeld >= 0) ||
+        (sCssPkind[slot] != (u8)nFTPlayerKindMan))
+    {
+        return;
+    }
+    sCssSelected[slot] = 0u;
+    sCssHeld = (s32)slot;
+    sCssStatus = NDS_CSS_STATUS_GRAB;
+    sCssPuckX[slot] = (s16)(sCssCursorX + NDS_CSS_PUCK_CARRY_DX);
+    sCssPuckY[slot] = (s16)(sCssCursorY + NDS_CSS_PUCK_CARRY_DY);
+    gNdsMenuShellCssRecallCount++;
+    ndsMenuShellCssPopulate();
+}
+
+/* mnPlayersVSSetSceneData, mnplayersvs.c:4379 -- through the P2-1a descriptor,
+ * which is the battle's only input, rather than straight into the battle
+ * state. The rules half stays whatever the VS menu committed. */
+static void ndsMenuShellCssCommit(void)
+{
+    u32 i;
+
+    for (i = 0u; i < (u32)NDS_MATCH_FIGHTERS_MAX; i++)
+    {
+        NdsMatchFighterConfig *slot = &gNdsMatchConfig.fighters[i];
+
+        slot->fkind = sCssFkind[i];
+        slot->pkind = sCssPkind[i];
+        slot->level = sCssLevel[i];
+        slot->team = (u8)i;
+        slot->costume = 0u;
+        slot->shade = 0u;
+        gNdsMenuShellCssCommitSlot[i] =
+            (((u32)sCssFkind[i] & 0xffu) << 16) |
+            (((u32)sCssPkind[i] & 0xffu) << 8) | ((u32)sCssLevel[i] & 0xffu);
+    }
+    ndsMatchConfigApply(&gNdsMatchConfig);
+    gNdsMenuShellCssCommitCount++;
+}
+
+/* mnPlayersVSSetIdlePlayerNotAll, mnplayersvs.c:4294. */
+static void ndsMenuShellCssIdleSlotsNot(void)
+{
+    u32 i;
+
+    for (i = 0u; i < (u32)NDS_CSS_SLOTS; i++)
+    {
+        if (sCssSelected[i] == 0u)
+        {
+            sCssPkind[i] = (u8)nFTPlayerKindNot;
+            sCssFkind[i] = (u8)nFTKindNull;
+        }
+    }
+}
+
+/* mnPlayersVSBackToVSMode, mnplayersvs.c:3227: the CSS commits on the way out
+ * too, so a return trip shows what the last visit chose. */
+static void ndsMenuShellCssBack(void)
+{
+    ndsMenuShellCssCommit();
+    gNdsMenuShellCssBackCount++;
+    ndsMenuShellGoto((u32)nSCKindVSMode);
+}
+
+/* mnPlayersVSUpdateCursorNoRecall, mnplayersvs.c:3128. The band is 38..124 --
+ * NOT the 36..122 the grid itself uses, which is the source's own two-pixel
+ * asymmetry and is kept. */
+static void ndsMenuShellCssUpdateStatus(void)
+{
+    if ((sCssCursorY > 124) || (sCssCursorY < 38))
+    {
+        sCssStatus = NDS_CSS_STATUS_POINTER;
+    }
+    else if (sCssHeld < 0)
+    {
+        sCssStatus = NDS_CSS_STATUS_HOVER;
+    }
+    else
+    {
+        sCssStatus = NDS_CSS_STATUS_GRAB;
+    }
+    /* The source has one more branch here -- a POINTER cursor over a placed
+     * token becomes a HOVER one -- gated on the CURSOR PLAYER's own
+     * `is_selected`, which mnPlayersVSUpdatePuckDisplay clears every frame for
+     * a human slot (mnplayersvs.c:2320). It can therefore never run for a human
+     * cursor, which is the only kind this hardware has, so it is absent rather
+     * than transcribed-and-dead. */
+}
+
+static void ndsMenuShellUpdateCss(u32 held, u32 taps)
+{
+    /* mnPlayersVSFuncRun's start delay: once START is accepted the screen stops
+     * taking input and counts down before the scene changes. */
+    if (sCssStartWait != 0u)
+    {
+        sCssStartWait--;
+        if (sCssStartWait == 0u)
+        {
+            ndsMenuShellCssCommit();
+            ndsMenuShellGoto((u32)nSCKindVSBattle);
+        }
+        return;
+    }
+
+    /* 1. The cursor. */
+    if ((held & NDS_INPUT_RIGHT) != 0u)
+    {
+        sCssCursorX += NDS_CSS_CURSOR_STEP;
+    }
+    if ((held & NDS_INPUT_LEFT) != 0u)
+    {
+        sCssCursorX -= NDS_CSS_CURSOR_STEP;
+    }
+    if ((held & NDS_INPUT_DOWN) != 0u)
+    {
+        sCssCursorY += NDS_CSS_CURSOR_STEP;
+    }
+    if ((held & NDS_INPUT_UP) != 0u)
+    {
+        sCssCursorY -= NDS_CSS_CURSOR_STEP;
+    }
+    if (sCssCursorX < NDS_CSS_CURSOR_X_MIN)
+    {
+        sCssCursorX = NDS_CSS_CURSOR_X_MIN;
+    }
+    if (sCssCursorX > NDS_CSS_CURSOR_X_MAX)
+    {
+        sCssCursorX = NDS_CSS_CURSOR_X_MAX;
+    }
+    if (sCssCursorY < NDS_CSS_CURSOR_Y_MIN)
+    {
+        sCssCursorY = NDS_CSS_CURSOR_Y_MIN;
+    }
+    if (sCssCursorY > NDS_CSS_CURSOR_Y_MAX)
+    {
+        sCssCursorY = NDS_CSS_CURSOR_Y_MAX;
+    }
+
+    /* 2. A carried token rides the cursor, and while it rides it the fighter
+     * under it is tracked live -- mnPlayersVSPuckProcUpdate:3542 is what makes
+     * the portrait under the token light the name up before you let go. */
+    if (sCssHeld >= 0)
+    {
+        u32 slot = (u32)sCssHeld;
+        u32 fkind;
+
+        sCssPuckX[slot] = (s16)(sCssCursorX + NDS_CSS_PUCK_CARRY_DX);
+        sCssPuckY[slot] = (s16)(sCssCursorY + NDS_CSS_PUCK_CARRY_DY);
+        fkind = ndsMenuShellCssPuckFighterKind(slot);
+        if ((u8)fkind != sCssFkind[slot])
+        {
+            sCssFkind[slot] = (u8)fkind;
+            /* mnPlayersVSPuckProcUpdate's Not -> Man promotion: dropping a
+             * token on a portrait re-mans an empty slot that has a controller
+             * (mnplayersvs.c:3550). */
+            if ((sCssPkind[slot] == (u8)nFTPlayerKindNot) &&
+                (slot == (u32)NDS_CSS_CURSOR_SLOT) &&
+                (fkind != (u32)nFTKindNull))
+            {
+                sCssPkind[slot] = (u8)nFTPlayerKindMan;
+            }
+            ndsMenuShellCssPopulate();
+        }
+    }
+
+    /* 3. A, in mnPlayersVSCursorProcUpdate's own order (mnplayersvs.c:3310):
+     * the player-kind buttons first, then a DROP, then a GRAB, then the frame
+     * furniture. Each returns TRUE only if it consumed the press. */
+    if ((taps & NDS_INPUT_A) != 0u)
+    {
+        if (ndsMenuShellCssCheckKindButton() == FALSE)
+        {
+            if (ndsMenuShellCssSelectFighter() == FALSE)
+            {
+                if (ndsMenuShellCssCheckGrab() == FALSE)
+                {
+                    if (ndsMenuShellCssBoxHit(244, 292, 13, 34) != FALSE)
+                    {
+                        ndsMenuShellCssCue(NDS_CSS_FGM_SCROLL2);
+                        ndsMenuShellCssBack();
+                        return;
+                    }
+                    (void)ndsMenuShellCssCheckLevelArrows();
+                }
+            }
+        }
+    }
+
+    /* 4. B recalls your own placed token (mnplayersvs.c:3411). */
+    if ((taps & NDS_INPUT_B) != 0u)
+    {
+        ndsMenuShellCssRecall();
+    }
+
+    /* 5. mnPlayersVSDetectBack: B HELD for forty tics leaves the screen. */
+    if ((held & NDS_INPUT_B) != 0u)
+    {
+        sCssBackTics++;
+        if (sCssBackTics >= (u32)NDS_CSS_BACK_HOLD_TICS)
+        {
+            ndsMenuShellCssBack();
+            return;
+        }
+    }
+    else
+    {
+        sCssBackTics = 0u;
+    }
+
+    /* 6. The cursor's own state, last, exactly as the source updates it after
+     * every action rather than before them. */
+    ndsMenuShellCssUpdateStatus();
+
+    /* 7. READY TO FIGHT, and the START it invites. */
+    {
+        u32 ready = ndsMenuShellCssCheckReady();
+        u32 lit;
+
+        if (ready != FALSE)
+        {
+            sCssReadyBlink++;
+            if (sCssReadyBlink >= (u32)NDS_CSS_READY_BLINK)
+            {
+                sCssReadyBlink = 0u;
+            }
+            lit = (sCssReadyBlink < (u32)NDS_CSS_READY_LIT) ? TRUE : FALSE;
+        }
+        else
+        {
+            sCssReadyBlink = 0u;
+            lit = FALSE;
+        }
+        if (lit != sCssReadyShown)
+        {
+            ndsMenuShellCssShowReady(lit);
+        }
+
+        if (((taps & NDS_INPUT_START) != 0u) &&
+            (sMenuTics > (u32)NDS_CSS_START_ARM_TICS))
+        {
+            if (ready != FALSE)
+            {
+                ndsMenuShellCssCue(NDS_CSS_VOICE_CHEER);
+                ndsMenuShellCssIdleSlotsNot();
+                sCssStartWait = (u32)NDS_CSS_START_WAIT;
+                gNdsMenuShellCssStartCount++;
+                ndsMenuShellCssPopulate();
+            }
+            else
+            {
+                ndsMenuShellCssCue(NDS_CSS_FGM_DENIED);
+                gNdsMenuShellCssStartDeniedCount++;
+            }
+        }
+    }
+
+    ndsMenuShellCssMove();
+    gNdsMenuShellCssCursorX = sCssCursorX;
+    gNdsMenuShellCssCursorY = sCssCursorY;
+    gNdsMenuShellCssCursorStatus = sCssStatus;
+}
+
+/* mnPlayersVSInitVars + mnPlayersVSInitPlayer + mnPlayersVSInitSlot,
+ * mnplayersvs.c:4670/:4579/:4698, reading the P2-1a descriptor instead of
+ * gSCManagerTransferBattleState: the descriptor is what the battle consumes, so
+ * it is also what the screen that fills it should open from. */
+static void ndsMenuShellCssInit(void)
+{
+    u32 i;
+
+    sCssCursorX = NDS_CSS_CURSOR_HOME_X;
+    sCssCursorY = NDS_CSS_CURSOR_HOME_Y;
+    sCssStatus = NDS_CSS_STATUS_POINTER;
+    sCssHeld = -1;
+    sCssRegrabTic = 0u;
+    sCssBackTics = 0u;
+    sCssStartWait = 0u;
+    sCssReadyBlink = 0u;
+    sCssReadyShown = 0xffffffffu; /* forces the first ShowReady to publish */
+
+    for (i = 0u; i < (u32)NDS_CSS_SLOTS; i++)
+    {
+        const NdsMatchFighterConfig *cfg = &gNdsMatchConfig.fighters[i];
+
+        sCssPkind[i] = cfg->pkind;
+        sCssFkind[i] = cfg->fkind;
+        sCssLevel[i] = (cfg->level < 1u) ? 1u : ((cfg->level > 9u) ? 9u :
+                                                 cfg->level);
+        /* mnPlayersVSUpdateGate, mnplayersvs.c:4193: a slot with no controller
+         * cannot be HUMAN. Only slot 0 has one here, so any other slot the
+         * descriptor calls human arrives as empty -- which is the same
+         * correction the source makes, one frame later, in its gate pass. */
+        if ((sCssPkind[i] == (u8)nFTPlayerKindMan) &&
+            (i != (u32)NDS_CSS_CURSOR_SLOT))
+        {
+            sCssPkind[i] = (u8)nFTPlayerKindNot;
+            sCssFkind[i] = (u8)nFTKindNull;
+        }
+        if (sCssPkind[i] == (u8)nFTPlayerKindNot)
+        {
+            sCssFkind[i] = (u8)nFTKindNull;
+        }
+        if (ndsMenuShellCssFighterLocked((u32)sCssFkind[i]) != FALSE)
+        {
+            sCssFkind[i] = (u8)nFTKindNull;
+        }
+        sCssSelected[i] = (sCssFkind[i] != (u8)nFTKindNull) ? 1u : 0u;
+        ndsMenuShellCssCenterPuck(i, (u32)sCssFkind[i]);
+        gNdsMenuShellCssCommitSlot[i] = 0u;
+    }
+    /* A human slot with no fighter yet holds its own token, so the screen opens
+     * with the token already in the cursor's hand (mnplayersvs.c:4604). */
+    if ((sCssPkind[NDS_CSS_CURSOR_SLOT] == (u8)nFTPlayerKindMan) &&
+        (sCssFkind[NDS_CSS_CURSOR_SLOT] == (u8)nFTKindNull))
+    {
+        sCssHeld = NDS_CSS_CURSOR_SLOT;
+        sCssPuckX[NDS_CSS_CURSOR_SLOT] =
+            (s16)(sCssCursorX + NDS_CSS_PUCK_CARRY_DX);
+        sCssPuckY[NDS_CSS_CURSOR_SLOT] =
+            (s16)(sCssCursorY + NDS_CSS_PUCK_CARRY_DY);
+    }
+}
+
+static void ndsMenuShellPopulateCssScreen(void)
+{
+    ndsMenuShellCssPopulate();
+    ndsMenuShellCssShowReady(FALSE);
+    ndsMenuShellCssMove();
+}
+
 /* --- The screen loop ----------------------------------------------------- */
 
 static void ndsMenuShellPopulate(u32 screen)
@@ -929,6 +2114,9 @@ static void ndsMenuShellPopulate(u32 screen)
         break;
     case NDS_MENU_SHELL_SCREEN_MODE:
         ndsMenuShellPopulateMode();
+        break;
+    case NDS_MENU_SHELL_SCREEN_CSS:
+        ndsMenuShellPopulateCssScreen();
         break;
     default:
         ndsMenuShellPopulateVs();
@@ -948,6 +2136,9 @@ static void ndsMenuShellUpdate(u32 screen, u32 held, u32 taps)
         break;
     case NDS_MENU_SHELL_SCREEN_MODE:
         ndsMenuShellUpdateMode(held, taps);
+        break;
+    case NDS_MENU_SHELL_SCREEN_CSS:
+        ndsMenuShellUpdateCss(held, taps);
         break;
     default:
         ndsMenuShellUpdateVs(held, taps);
@@ -976,8 +2167,11 @@ static void ndsMenuShellRun(u32 screen)
      * frame, which leaves no cadence window and nothing to capture. The step
      * cursor restarts here too, which is what lets the loop re-enter VS Mode
      * from Results and replay the whole tour. */
-    sMenuWalkTimer = NDS_MENU_WALK_DWELL;
+    sMenuWalkTimer = (screen == NDS_MENU_SHELL_SCREEN_CSS) ?
+        NDS_MENU_WALK_DWELL_CSS : NDS_MENU_WALK_DWELL;
     sMenuWalkCursor = 0u;
+    sMenuWalkHold = 0u;
+    sMenuWalkHeld = 0u;
 #endif
 
     gNdsMenuShellScreen = screen;
@@ -1127,6 +2321,31 @@ void ndsMenuShellRunVSMode(void)
     ndsMenuShellRun(NDS_MENU_SHELL_SCREEN_VSMODE);
 }
 
+/* mnPlayersVSFuncStart's tail, mnplayersvs.c:4896: the CSS starts its own track
+ * unless it was entered FROM the stage select, and announces the game mode.
+ * Both ids are the source's, and neither is in a pack yet -- BGM 10 is not one
+ * of the five tracks the BGM assets carry and FGM 512 is not in the FGM pack --
+ * so the requests land in gNdsAudioBgmUnsupportedTrackCount and the FGM miss
+ * ring respectively, which is what makes row P2-1e-1's scope a measurement
+ * rather than a guess. The `scene_prev != nSCKindMaps` condition is transcribed
+ * even though the stage select is P2-1f and cannot be scene_prev yet, for the
+ * same reason P2-1d-1 transcribed all four of the mode select's exclusions. */
+static void ndsMenuShellCssPlayBgm(void)
+{
+    if ((u8)gSCManagerSceneData.scene_prev != (u8)nSCKindMaps)
+    {
+        ndsAudioBgmPlay(0, NDS_CSS_BGM_BATTLE_SELECT);
+    }
+    ndsMenuShellCssCue(NDS_CSS_VOICE_FREE_FOR_ALL);
+}
+
+void ndsMenuShellRunCharSelect(void)
+{
+    ndsMenuShellCssInit();
+    ndsMenuShellCssPlayBgm();
+    ndsMenuShellRun(NDS_MENU_SHELL_SCREEN_CSS);
+}
+
 /* --- The mode-select scene ----------------------------------------------
  *
  * nSCKindModeSelect had no scene in this build at all: src/port/title_backend.c
@@ -1150,6 +2369,37 @@ void mnModeSelectStartScene(void)
 
     dMNVSModeVideoSetup.zbuffer = SYVIDEO_ZBUFFER_START(320, 240, 0, 10, u16);
     syVideoInit(&dMNVSModeVideoSetup);
+
+    setup.scene_setup.arena_start = ndsTaskmanArenaStart();
+    setup.scene_setup.arena_size = ndsTaskmanArenaSize();
+    setup.func_start = NULL;
+    syTaskmanStartTask(&setup);
+}
+
+/* --- The character-select scene ------------------------------------------
+ *
+ * This one REPLACES an imported scene rather than filling an empty stub:
+ * src/import/battleship_mnplayersvs.c compiles the original scene and its
+ * `mnPlayersVSStartScene` runs the original `mnPlayersVSFuncStart`, which loads
+ * seven menu files, calls ftManagerSetupFilesAllKind for all TWELVE fighters
+ * and allocates four figatree heaps out of the scene arena (mnplayersvs.c:4750)
+ * -- everything the RSP/RDP scene graph this build does not have would need.
+ * That definition is compiled out at NDS_P2_MENU_SHELL and this is the one that
+ * runs: the source's own taskman declaration for this scene, with the arena
+ * repointed at the shared taskman arena so every registered scene rewinds the
+ * SAME memory and the high-waters stay comparable, and `func_start = NULL`
+ * because the screen draws through the UI kit. Same shape as the mode select
+ * above, and the same shape P2-1d recorded as the template. */
+extern SYTaskmanSetup dMNPlayersVSTaskmanSetup;
+extern SYVideoSetup dMNPlayersVSVideoSetup;
+
+void mnPlayersVSStartScene(void)
+{
+    SYTaskmanSetup setup = dMNPlayersVSTaskmanSetup;
+
+    dMNPlayersVSVideoSetup.zbuffer =
+        SYVIDEO_ZBUFFER_START(320, 240, 0, 10, u16);
+    syVideoInit(&dMNPlayersVSVideoSetup);
 
     setup.scene_setup.arena_start = ndsTaskmanArenaStart();
     setup.scene_setup.arena_size = ndsTaskmanArenaSize();

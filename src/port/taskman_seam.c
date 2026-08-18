@@ -7292,6 +7292,18 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
         gNdsSceneBoundaryKind = gSCManagerSceneData.scene_curr;
         gNdsSceneBoundaryResult = NDS_SCENE_BOUNDARY_PASS;
         return;
+    case nSCKindPlayersVS:
+        /* P2-1e. Unlike the four above, this branch replaces a scene that was
+         * not a park: the imported PlayersVS branch further down runs the
+         * original setup and its transition probe. That branch is unreachable
+         * with the shell on, because this switch runs first -- and the imported
+         * scene's own StartScene is compiled out at NDS_P2_MENU_SHELL so the
+         * heavy original func_start cannot run either. */
+        ndsMenuShellRunCharSelect();
+        ndsFinishTaskmanRun();
+        gNdsSceneBoundaryKind = gSCManagerSceneData.scene_curr;
+        gNdsSceneBoundaryResult = NDS_SCENE_BOUNDARY_PASS;
+        return;
     default:
         break;
     }

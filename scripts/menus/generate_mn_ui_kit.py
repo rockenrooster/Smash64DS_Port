@@ -285,6 +285,25 @@ def decode_ia16(fileobj: RelocFile, bitmap: Bitmap, sprite: Sprite,
     return rows
 
 
+def decode_ia8(fileobj: RelocFile, bitmap: Bitmap, sprite: Sprite,
+               width: int, height: int) -> list[list[tuple[int, int]]]:
+    """8-bit IA (4 intensity + 4 alpha in one byte) -> rows of (i, a).
+
+    One byte a texel, so the LoadBlock granule is the narrow one (8) exactly as
+    I4 and IA16 use -- only the 32-bit path needs 16 (see deswizzle_row).
+    """
+    stride = max(1, bitmap.width_img)
+    rows = []
+    for y in range(height):
+        raw = read_row(fileobj, bitmap, sprite, y, stride)
+        row = []
+        for x in range(width):
+            packed = raw[bitmap.s + x]
+            row.append((((packed >> 4) & 0xF) * 17, (packed & 0xF) * 17))
+        rows.append(row)
+    return rows
+
+
 def decode_rgba32(fileobj: RelocFile, bitmap: Bitmap, sprite: Sprite,
                   width: int, height: int) -> list[list[tuple[int, int, int, int]]]:
     """32-bit RGBA -> rows of (r, g, b, a)."""
@@ -407,16 +426,66 @@ class Image:
     texels: list[int]  # cell_w * cell_h DS BGR5551 halfwords
 
 
-def convert_image(fileobj: RelocFile, symbol: str, token: str,
-                  offset: int) -> Image:
+def box_scale(raster: list[list[tuple[int, int, int, int]]],
+              dst_w: int, dst_h: int) -> list[list[tuple[int, int, int, int]]]:
+    """Area-average downscale of an RGBA raster.
+
+    Colour is averaged PREMULTIPLIED by alpha and alpha is averaged on its own,
+    so a transparent texel contributes its transparency but not its (undefined)
+    colour.  Averaging straight RGB instead pulls the container's black fringe
+    into every edge -- the classic downscale halo -- and on a 45x43 portrait
+    that reads as a dark outline the original does not have.
+    """
+    src_h = len(raster)
+    src_w = len(raster[0]) if src_h else 0
+    if (src_w == 0) or (src_h == 0):
+        raise ConvertError("box_scale: empty raster")
+    out = []
+    for dy in range(dst_h):
+        y0 = (dy * src_h) // dst_h
+        y1 = max(y0 + 1, ((dy + 1) * src_h) // dst_h)
+        row = []
+        for dx in range(dst_w):
+            x0 = (dx * src_w) // dst_w
+            x1 = max(x0 + 1, ((dx + 1) * src_w) // dst_w)
+            count = 0
+            acc_r = acc_g = acc_b = acc_a = 0
+            for sy in range(y0, y1):
+                for sx in range(x0, x1):
+                    r, g, b, a = raster[sy][sx]
+                    acc_r += r * a
+                    acc_g += g * a
+                    acc_b += b * a
+                    acc_a += a
+                    count += 1
+            if acc_a == 0:
+                row.append((0, 0, 0, 0))
+            else:
+                row.append((acc_r // acc_a, acc_g // acc_a, acc_b // acc_a,
+                            acc_a // count))
+        out.append(row)
+    return out
+
+
+def convert_image(fileobj: RelocFile, symbol: str, token: str, offset: int,
+                  scale: tuple[int, int] | None = None) -> Image:
+    """Decode one sprite to an RGBA raster, optionally rescale it, then pack it
+    into the smallest DS OBJ cell that holds the result.
+
+    THE SCALE IS THE FRAME RATIO, NOT A TASTE CALL.  The DS screen is 256x192
+    and the N64 frame these menus are laid out in is 320x240 -- exactly 0.8 on
+    both axes -- so `4/5` reproduces a source sprite at its own relative size on
+    the smaller screen.  The CSS portraits take a further step down (32/45) for
+    a hardware reason and not an aesthetic one: 45x43 lands in a 64x64 OBJ cell
+    (8,192 B) and 32x31 lands in a 32x32 one (2,048 B), and twelve portrait
+    cells at the larger size do not fit main OBJ VRAM beside the text budget.
+    """
     sprite = fileobj.sprite(offset)
     if sprite.nbitmaps < 1:
         raise ConvertError(f"{symbol}: no bitmaps")
-    bitmap = fileobj.bitmap(sprite.bitmap)
     width = sprite.width
     height = sprite.height
-    cell_w, cell_h = choose_cell(width, height)
-    texels = [0] * (cell_w * cell_h)
+    raster = [[(0, 0, 0, 0)] * width for _ in range(height)]
 
     # Multi-bitmap sprites stack vertically: bitmap i covers rows
     # [i * bmheight, ...).  Walk them in order and stop at the sprite height.
@@ -431,27 +500,46 @@ def convert_image(fileobj: RelocFile, symbol: str, token: str,
             for y, pixels in enumerate(
                     decode_i4(fileobj, piece, sprite, piece_w, piece_h)):
                 for x, i in enumerate(pixels):
-                    texels[(row + y) * cell_w + x] = rgba8_to_ds(
+                    raster[row + y][x] = (
                         (sprite.red * i) // 255, (sprite.green * i) // 255,
                         (sprite.blue * i) // 255, 255 if i else 0)
+        elif sprite.bmfmt == G_IM_FMT_IA and sprite.bmsiz == G_IM_SIZ_8b:
+            for y, pixels in enumerate(
+                    decode_ia8(fileobj, piece, sprite, piece_w, piece_h)):
+                for x, (i, a) in enumerate(pixels):
+                    raster[row + y][x] = (
+                        (sprite.red * i) // 255, (sprite.green * i) // 255,
+                        (sprite.blue * i) // 255, a)
         elif sprite.bmfmt == G_IM_FMT_IA and sprite.bmsiz == G_IM_SIZ_16b:
             for y, pixels in enumerate(
                     decode_ia16(fileobj, piece, sprite, piece_w, piece_h)):
                 for x, (i, a) in enumerate(pixels):
-                    texels[(row + y) * cell_w + x] = rgba8_to_ds(
+                    raster[row + y][x] = (
                         (sprite.red * i) // 255, (sprite.green * i) // 255,
                         (sprite.blue * i) // 255, a)
         elif sprite.bmfmt == G_IM_FMT_RGBA and sprite.bmsiz == G_IM_SIZ_32b:
             for y, pixels in enumerate(
                     decode_rgba32(fileobj, piece, sprite, piece_w, piece_h)):
                 for x, (r, g, b, a) in enumerate(pixels):
-                    texels[(row + y) * cell_w + x] = rgba8_to_ds(r, g, b, a)
+                    raster[row + y][x] = (r, g, b, a)
         else:
             raise ConvertError(
                 f"{symbol}: unsupported fmt={sprite.bmfmt} siz={sprite.bmsiz}")
         row += piece_h
         if row >= height:
             break
+
+    if scale is not None:
+        num, den = scale
+        width = max(1, (sprite.width * num + den // 2) // den)
+        height = max(1, (sprite.height * num + den // 2) // den)
+        raster = box_scale(raster, width, height)
+
+    cell_w, cell_h = choose_cell(width, height)
+    texels = [0] * (cell_w * cell_h)
+    for y in range(height):
+        for x in range(width):
+            texels[y * cell_w + x] = rgba8_to_ds(*raster[y][x])
     return Image(symbol, token, width, height, cell_w, cell_h, texels)
 
 
@@ -554,14 +642,21 @@ def write_bytes_if_changed(path: Path, data: bytes) -> None:
 # ---------------------------------------------------------------------------
 
 IMAGE_SOURCES = [
-    # (o2r file, reloc_data.h symbol, NDS_MN_UI_KIT_IMAGE_<token>)
+    # (o2r file, reloc_data.h symbol, NDS_MN_UI_KIT_IMAGE_<token>[, scale])
+    # `scale` is an exact (numerator, denominator); absent means 1:1.
     ("MNPlayersCommon", "llMNPlayersCommonCursorHandPointSprite",
      "CURSOR_HAND_POINT"),
     ("MNPlayersCommon", "llMNPlayersCommonCursorHandGrabSprite",
      "CURSOR_HAND_GRAB"),
+    # P2-1e. The CSS draws twelve 45x43 portraits across a 256 px screen, which
+    # the source does across 320, so these two come down to 32/45 -- the ratio
+    # that lands them in a 32x32 OBJ cell.  Nothing else in the tree drew them
+    # (P2-1c baked them for its demo, P2-1d drew none), so this is a resize of
+    # an unused asset rather than a change to a shipped screen.
     ("MNPlayersPortraits", "llMNPlayersPortraitsMarioSprite",
-     "PORTRAIT_MARIO"),
-    ("MNPlayersPortraits", "llMNPlayersPortraitsFoxSprite", "PORTRAIT_FOX"),
+     "PORTRAIT_MARIO", (32, 45)),
+    ("MNPlayersPortraits", "llMNPlayersPortraitsFoxSprite", "PORTRAIT_FOX",
+     (32, 45)),
     # P2-1d. The menu font has NO digits: mnMapsGetCharacterID maps A-Z ' % .
     # and nothing else, and '0'-'9' are the source's kerning ESCAPES, which
     # advance the cursor by their digit value and draw nothing (mnmaps.c:308).
@@ -584,6 +679,50 @@ IMAGE_SOURCES = [
     # SCBATTLE_TIMELIMIT_INFINITE draws this instead of a number
     # (mnvsmode.c:1206).
     ("MNCommon", "llMNCommonInfinitySprite", "INFINITY"),
+    # ---- P2-1e, the character-select screen. -----------------------------
+    # THE LOCKED SLOT.  mnPlayersVSMakePortrait branches on
+    # mnPlayersVSCheckFighterLocked and draws the shadow/question-mark stack
+    # instead of the portrait (mnplayersvs.c:429/:374); the question mark is
+    # the part a player reads as "locked", so it is the one this bakes.  It is
+    # IA8, which is why decode_ia8 exists.
+    ("MNPlayersPortraits", "llMNPlayersPortraitsPortraitQuestionMarkSprite",
+     "PORTRAIT_LOCKED", (32, 45)),
+    # THE THREE CURSOR STATES.  mnPlayersVSUpdateCursor indexes exactly these
+    # three sprites by cursor_status (mnplayersvs.c:1723): Pointer=0, Grab=1,
+    # Hover=2.  They are baked at the 4/5 frame ratio because the CSS hand has
+    # to read as a hand ON a 32 px portrait cell; the unscaled pair above stays
+    # untouched because P2-1d's mode-select and VS screens draw it at 1:1 and
+    # their cursor offsets are tuned to that cell.
+    ("MNPlayersCommon", "llMNPlayersCommonCursorHandPointSprite",
+     "CSS_CURSOR_POINT", (4, 5)),
+    ("MNPlayersCommon", "llMNPlayersCommonCursorHandGrabSprite",
+     "CSS_CURSOR_GRAB", (4, 5)),
+    ("MNPlayersCommon", "llMNPlayersCommonCursorHandHoverSprite",
+     "CSS_CURSOR_HOVER", (4, 5)),
+    # THE TOKENS.  mnPlayersVSUpdatePuck indexes 1P..4P then CP
+    # (mnplayersvs.c:3434); this build fills two slots, so it bakes the first
+    # player's token and the CP one.  P2-2 adds 2P/3P/4P with the fourth slot.
+    ("MNPlayersCommon", "llMNPlayersCommon1PPuckSprite", "PUCK_1P", (4, 5)),
+    ("MNPlayersCommon", "llMNPlayersCommonCPPuckSprite", "PUCK_CP", (4, 5)),
+    # THE PLAYER-KIND BUTTON.  mnPlayersVSMakePlayerKindSelect indexes these
+    # three by pkind (mnplayersvs.c:934), so the block order is
+    # Man/Com/Not exactly as nFTPlayerKind* is ordered.
+    #
+    # THESE FOUR STAY 1:1 while everything around them takes the 4/5 frame
+    # ratio, and that is a legibility call made against the preview PNGs, not
+    # an oversight: they are 8-to-11-pixel-tall LETTERFORMS, already the
+    # smallest text the original menus draw, and at 4/5 "CP LEVEL" loses its
+    # first word and "HMN" closes up.  `PROJECT_GOAL.md` asks for a result that
+    # stays READABLE, and a fixed-size label is exactly the element a uniform
+    # layout scale should not carry.  The cells are the same size either way
+    # for CP LEVEL, so the whole cost of the decision is 2,304 bytes.
+    ("MNPlayersCommon", "llMNPlayersCommonHmnLabelSprite", "LABEL_HMN"),
+    ("MNPlayersCommon", "llMNPlayersCommonCPLabelSprite", "LABEL_CP"),
+    ("MNPlayersCommon", "llMNPlayersCommonNALabelSprite", "LABEL_NA"),
+    # THE CPU-LEVEL LABEL, mnplayersvs.c:2762.  The handicap twin is not baked:
+    # handicap is off in every configuration this build reaches and the row it
+    # would draw belongs to P2-5/P2-7's options work.
+    ("MNPlayersCommon", "llMNPlayersCommonCPLevelTextSprite", "CP_LEVEL"),
 ]
 
 # The digit block must stay contiguous and in ascending order: the runtime
@@ -601,6 +740,23 @@ def check_digit_block(images: list[Image]) -> None:
         raise ConvertError(
             "DIGIT_0..9 must be ten consecutive entries in ascending order; "
             f"got {tokens[first:first + 10]}")
+
+
+# The player-kind labels must stay contiguous and in nFTPlayerKind order: the
+# runtime indexes them as NDS_MN_UI_KIT_IMAGE_LABEL_HMN + pkind, exactly as
+# mnPlayersVSMakePlayerKindSelect indexes its own offsets[] by pkind.
+KIND_LABEL_TOKENS = ["LABEL_HMN", "LABEL_CP", "LABEL_NA"]
+
+
+def check_kind_label_block(images: list[Image]) -> None:
+    tokens = [image.token for image in images]
+    if not all(token in tokens for token in KIND_LABEL_TOKENS):
+        raise ConvertError("the player-kind labels are missing from the pack")
+    first = tokens.index("LABEL_HMN")
+    if tokens[first:first + 3] != KIND_LABEL_TOKENS:
+        raise ConvertError(
+            "LABEL_HMN/CP/NA must be three consecutive entries in "
+            f"nFTPlayerKind order; got {tokens[first:first + 3]}")
 
 
 def write_png(path: Path, width: int, height: int, rgb: bytes) -> None:
@@ -653,9 +809,11 @@ def write_previews(out_dir: Path, glyphs: list[Glyph],
         pixels = bytearray()
         for texel in image.texels:
             pixels += bytes(ds_texel_to_rgb(texel, backdrop))
-        name = image.name.replace("ll", "", 1)
-        write_png(out_dir / f"mn_ui_kit_{name}.png", image.cell_w, image.cell_h,
-                  bytes(pixels))
+        # By TOKEN, not by symbol: one sprite can be baked twice at different
+        # scales (the CSS cursor set) and a symbol-named file would silently
+        # overwrite the other bake instead of showing both.
+        write_png(out_dir / f"mn_ui_kit_{image.token}.png", image.cell_w,
+                  image.cell_h, bytes(pixels))
 
 
 def preview_glyphs(glyphs: list[Glyph]) -> None:
@@ -708,7 +866,9 @@ def main(argv: list[str] | None = None) -> int:
 
     images: list[Image] = []
     cache: dict[str, RelocFile] = {}
-    for o2r_name, symbol, token in IMAGE_SOURCES:
+    for entry in IMAGE_SOURCES:
+        o2r_name, symbol, token = entry[0], entry[1], entry[2]
+        scale = entry[3] if len(entry) > 3 else None
         if symbol not in offsets:
             raise ConvertError(f"{symbol} missing from include/reloc_data.h")
         if o2r_name not in cache:
@@ -716,8 +876,9 @@ def main(argv: list[str] | None = None) -> int:
                 repo_root / "decomp" / "BattleShip-main" / "BattleShip_o2r" /
                 "reloc_menus" / o2r_name)
         images.append(convert_image(cache[o2r_name], symbol, token,
-                                    offsets[symbol]))
+                                    offsets[symbol], scale))
     check_digit_block(images)
+    check_kind_label_block(images)
 
     pack, image_table = build_pack(glyphs, images)
 

@@ -45,19 +45,32 @@
 #define NDS_UI_KIT_ENGINE_MAIN 0u
 #define NDS_UI_KIT_ENGINE_SUB 1u
 
-/* Text fields, and the 32x8 bitmap-OBJ cells each is composed of.  Six fields
- * of four cells is 128 px of text a field, which is wider than any label the
- * SSB64 menus draw in this font, and 24 cells is 12 KiB -- the budget bank I
- * can hold, so both engines run the same layout. */
-#define NDS_UI_KIT_TEXT_SLOTS 6u
+/* Text fields, and the 32x8 bitmap-OBJ cells each is composed of.  A field of
+ * four cells is 128 px of text, which is wider than any label the SSB64 menus
+ * draw in this font.
+ *
+ * EIGHT IS THE BANK-I CEILING, not a round number.  32 cells is exactly 16 KiB
+ * and bank I is exactly 16 KiB, so eight fields is the largest layout both
+ * engines can run -- which is what keeps one code path for the top-screen menus
+ * and P2-2's bottom-screen HUD.  P2-1c needed six; P2-1e's character select
+ * needs eight (FREE FOR ALL, BACK, READY TO FIGHT, PRESS START, and one
+ * fighter-name field per slot), and the static assert in nds_ui_kit.c is what
+ * stops a ninth from silently running bank I off its end. */
+#define NDS_UI_KIT_TEXT_SLOTS 8u
 #define NDS_UI_KIT_TEXT_CHUNKS 4u
 #define NDS_UI_KIT_TEXT_CHUNK_W 32u
 #define NDS_UI_KIT_TEXT_CHUNK_H 8u
 #define NDS_UI_KIT_TEXT_MAX_PX \
     (NDS_UI_KIT_TEXT_CHUNKS * NDS_UI_KIT_TEXT_CHUNK_W)
 
-/* Whole-image slots: cursor and portraits. */
-#define NDS_UI_KIT_SPRITE_SLOTS 8u
+/* Whole-image slots: cursor, portraits, tokens, panel labels, digits.
+ *
+ * LOW ID DRAWS ON TOP (OBJ priority ties break on OAM index), so the order a
+ * screen assigns these in is its depth order.  The character select needs the
+ * most: one cursor, four tokens, four player-kind labels, four CPU-level
+ * labels, four CPU-level digits and twelve portrait cells -- 29, and the
+ * digits a rules screen draws are the same slots reused. */
+#define NDS_UI_KIT_SPRITE_SLOTS 29u
 
 #define NDS_UI_KIT_OAM_IDS \
     ((NDS_UI_KIT_TEXT_SLOTS * NDS_UI_KIT_TEXT_CHUNKS) + \

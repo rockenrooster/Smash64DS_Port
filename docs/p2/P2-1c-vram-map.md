@@ -62,16 +62,29 @@ The kit draws on **main OBJ (bank E) in menu scenes** and on **sub OBJ (bank
 I) whenever a bottom-screen surface is entered**. It takes no BG bank on
 either engine, so it cannot collide with the battle compositor or the console.
 
-Main bank E, allocated top-down (`src/nds/nds_ui_kit.c`):
+Main bank E, allocated top-down (`src/nds/nds_ui_kit.c`). Sizes as of **P2-1e**,
+which grew the image block from 28,416 to 32,512 bytes and the text budget from
+six fields to eight:
 
 | Range | Bytes | Content |
 |---|---:|---|
-| 61,440 – 65,536 | 4,096 | cursor, hand point (32x64 cell) |
-| 59,392 – 61,440 | 2,048 | cursor, hand grab (32x32 cell) |
-| 51,200 – 59,392 | 8,192 | Mario portrait (64x64 cell) |
-| 43,008 – 51,200 | 8,192 | Fox portrait (64x64 cell) |
-| 30,720 – 43,008 | 12,288 | 6 text fields x 4 cells of 32x8 |
-| 0 – 30,720 | 30,720 | **left for the battle's OBJ tenant** |
+| 33,024 – 65,536 | 32,512 | 25 baked images (below) |
+| 16,640 – 33,024 | 16,384 | 8 text fields x 4 cells of 32x8 |
+| 0 – 16,640 | 16,640 | **left for the battle's OBJ tenant** |
+
+The image block, in the generator's own order
+(`scripts/menus/generate_mn_ui_kit.py`): the two 1:1 menu cursors (4,096 +
+2,048), Mario and Fox portraits at 32/45 in 32x32 cells (2,048 each, down from
+8,192 at 1:1 — twelve portrait CELLS have to fit a 256 px screen), the ten
+digits and the infinity glyph (5,888), and P2-1e's character-select set: the
+locked-slot question mark (2,048), three 4/5-scaled cursor states (6,144), the
+1P and CP tokens (4,096), the three player-kind labels at 1:1 (3,072) and the
+CP LEVEL label (1,024).
+
+**EIGHT TEXT FIELDS IS THE CEILING, not a choice**: 8 x 4 x 512 is exactly
+16,384 and bank I is exactly 16,384, so a ninth field would take the sub engine
+off the end of its bank. `_Static_assert(NDS_UI_KIT_TEXT_BYTES <=
+NDS_UI_KIT_OBJ_BYTES_SUB)` is what stops that silently.
 
 The battle tenant needs ~42 KB, so the two do **not** fit together, and the
 top-down layout is a mitigation rather than a proof. The actual guarantee is
@@ -82,12 +95,16 @@ future overlay that genuinely needs both must shrink one side first.
 
 OAM ids are split the same way and in the opposite direction: IFCommon
 allocates downward from 127 (`sNdsIFCommonNextOamID`), the kit upward from 0
-and never past `NDS_UI_KIT_OAM_IDS` (32). They grow away from each other.
+and never past `NDS_UI_KIT_OAM_IDS` — 61 since P2-1e (8 text fields x 4 cells,
+plus 29 sprite slots: a cursor, four tokens, four player-kind labels, four
+CPU-level labels, four CPU-level digits and twelve portrait cells). They grow
+away from each other.
 
-Sub bank I: `VRAM_I_SUB_SPRITE`, the same 12,288-byte text layout, 4,096 bytes
-spare. The 64x64 portrait cells do **not** fit beside it, which is why the
-sub-engine surface is text-only. That is the whole main/sub difference, and it
-is a capacity fact — the P2-2 bottom-screen HUD is text and small sprites.
+Sub bank I: `VRAM_I_SUB_SPRITE`, the same 16,384-byte text layout, and since
+P2-1e that is the WHOLE bank with nothing spare. The image cells do **not**
+fit beside it, which is why the sub-engine surface is text-only. That is the
+whole main/sub difference, and it is a capacity fact — the P2-2 bottom-screen
+HUD is text and small sprites.
 
 ## Open items for later phases
 

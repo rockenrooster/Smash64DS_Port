@@ -2158,7 +2158,16 @@ endif
 #
 # NEVER PUBLISHED. The boot scene differs from the shipped ROM's, so no tick
 # figure from it is a Boundary figure.
-ifeq ($(TARGET),smash64ds-p2-1d-menus-hwtri)
+#
+# P2-1e ADDS A NAME, NOT A BLOCK. The character select is another screen inside
+# NDS_P2_MENU_SHELL, so its lab arm wants exactly these flags; a second copy of
+# this list is a second thing to keep in step, and the one measurable difference
+# between the two would be the ROM's filename. `smash64ds-p2-1e-css-hwtri`
+# therefore selects the same block (the pattern NDS_TASK37_DEVICE_TARGETS uses).
+NDS_P2_MENU_SHELL_TARGETS := \
+	smash64ds-p2-1d-menus-hwtri \
+	smash64ds-p2-1e-css-hwtri
+ifneq ($(filter $(TARGET),$(NDS_P2_MENU_SHELL_TARGETS)),)
 override NDS_DEV_SCENE_HARNESS := battle_playable_realtime
 override NDS_DEV_LIVE_INPUT_PREVIEW := 1
 override NDS_HARNESS_FAST_LOGIC := 0
@@ -2217,7 +2226,10 @@ endif
 #
 # NEVER PUBLISHED AND NEVER A PERFORMANCE SURFACE. Fast logic is not the
 # shipping cadence; no tick figure from this target means anything.
-ifeq ($(TARGET),smash64ds-p2-1d-menu-walk-hwtri)
+NDS_P2_MENU_WALK_TARGETS := \
+	smash64ds-p2-1d-menu-walk-hwtri \
+	smash64ds-p2-1e-css-walk-hwtri
+ifneq ($(filter $(TARGET),$(NDS_P2_MENU_WALK_TARGETS)),)
 override NDS_DEV_SCENE_HARNESS := battle_playable_realtime
 override NDS_DEV_LIVE_INPUT_PREVIEW := 1
 override NDS_HARNESS_FAST_LOGIC := 1
