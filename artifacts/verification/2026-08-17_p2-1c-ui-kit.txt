@@ -1,0 +1,249 @@
+0x020ac5ec in mutexUnlock (m=0x20afbe1 <lseek+28>) at /home/davem/projects/devkitpro/pacman-packages/calico/src/calico-1.2.0/source/system/mutex.c:143
+Breakpoint 1 at 0x20a097c: file D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_ui_kit.c, line 629.
+UKSTATE 1 entered=1 scene=1 engine=0 enters=1 rej=0 exits=absent
+UKPACK 1 bytes=24384 hash=9c27e2c8 mismatch=0 readfail=0
+UKDRAW 1 compose=6 skip=0 overflow=0 commit=63 idle=0 visible=14
+UKSFX 1 move=0 confirm=0 back=0 lastid=0
+UKFRAME 1 frames=0 enterticks=12393664 last=0 max=0 vbmax=0
+UKWORK 1 63 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+UKVB 1 0 0 0 0
+UKMISS 1 ring=0 id0=0 c0=0 id1=0 c1=0
+UKSTATE 2 entered=1 scene=1 engine=0 enters=1 rej=0 exits=absent
+UKPACK 2 bytes=24384 hash=9c27e2c8 mismatch=0 readfail=0
+UKDRAW 2 compose=6 skip=0 overflow=0 commit=127 idle=0 visible=14
+UKSFX 2 move=1 confirm=0 back=0 lastid=164
+UKFRAME 2 frames=0 enterticks=12393664 last=0 max=0 vbmax=0
+UKWORK 2 123 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+UKVB 2 0 0 0 0
+UKMISS 2 ring=1 id0=164 c0=1 id1=0 c1=0
+UKSTATE 3 entered=1 scene=1 engine=0 enters=1 rej=0 exits=absent
+UKPACK 3 bytes=24384 hash=9c27e2c8 mismatch=0 readfail=0
+UKDRAW 3 compose=6 skip=0 overflow=0 commit=160 idle=0 visible=14
+UKSFX 3 move=2 confirm=0 back=0 lastid=164
+UKFRAME 3 frames=129 enterticks=12393664 last=4736 max=7104 vbmax=1
+UKWORK 3 159 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+UKVB 3 128 0 0 0
+UKMISS 3 ring=1 id0=164 c0=1 id1=0 c1=0
+UKSTATE 4 entered=1 scene=1 engine=0 enters=1 rej=0 exits=absent
+UKPACK 4 bytes=24384 hash=9c27e2c8 mismatch=0 readfail=0
+UKDRAW 4 compose=6 skip=0 overflow=0 commit=192 idle=0 visible=14
+UKSFX 4 move=2 confirm=0 back=1 lastid=165
+UKFRAME 4 frames=129 enterticks=12393664 last=4736 max=7104 vbmax=1
+UKWORK 4 190 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+UKVB 4 164 0 0 0
+UKMISS 4 ring=2 id0=164 c0=2 id1=0 c1=1
+UKSTATE 5 entered=1 scene=1 engine=0 enters=1 rej=0 exits=absent
+UKPACK 5 bytes=24384 hash=9c27e2c8 mismatch=0 readfail=0
+UKDRAW 5 compose=6 skip=0 overflow=0 commit=256 idle=0 visible=14
+UKSFX 5 move=3 confirm=0 back=1 lastid=164
+UKFRAME 5 frames=194 enterticks=12393664 last=4096 max=7104 vbmax=1
+UKWORK 5 255 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+UKVB 5 191 0 0 0
+UKMISS 5 ring=2 id0=164 c0=3 id1=165 c1=1
+UKSTATE 6 entered=1 scene=1 engine=0 enters=1 rej=0 exits=absent
+UKPACK 6 bytes=24384 hash=9c27e2c8 mismatch=0 readfail=0
+UKDRAW 6 compose=6 skip=0 overflow=0 commit=320 idle=0 visible=14
+UKSFX 6 move=3 confirm=1 back=1 lastid=158
+UKFRAME 6 frames=261 enterticks=12393664 last=3840 max=7104 vbmax=1
+UKWORK 6 319 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+UKVB 6 258 0 0 0
+UKMISS 6 ring=3 id0=164 c0=3 id1=165 c1=1
+UKSTATE 7 entered=1 scene=1 engine=0 enters=1 rej=0 exits=absent
+UKPACK 7 bytes=24384 hash=9c27e2c8 mismatch=0 readfail=0
+UKDRAW 7 compose=6 skip=0 overflow=0 commit=384 idle=0 visible=14
+UKSFX 7 move=4 confirm=1 back=1 lastid=164
+UKFRAME 7 frames=319 enterticks=12393664 last=3584 max=7104 vbmax=1
+UKWORK 7 382 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+UKVB 7 258 0 0 0
+UKMISS 7 ring=3 id0=164 c0=4 id1=165 c1=1
+UKSTATE 8 entered=1 scene=1 engine=0 enters=1 rej=0 exits=absent
+UKPACK 8 bytes=24384 hash=9c27e2c8 mismatch=0 readfail=0
+UKDRAW 8 compose=6 skip=0 overflow=0 commit=416 idle=0 visible=14
+UKSFX 8 move=5 confirm=1 back=1 lastid=164
+UKFRAME 8 frames=385 enterticks=12393664 last=4608 max=7104 vbmax=1
+UKWORK 8 414 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+UKVB 8 386 0 0 0
+UKMISS 8 ring=3 id0=164 c0=4 id1=165 c1=1
+UKSTATE 9 entered=1 scene=1 engine=0 enters=1 rej=0 exits=absent
+UKPACK 9 bytes=24384 hash=9c27e2c8 mismatch=0 readfail=0
+UKDRAW 9 compose=6 skip=0 overflow=0 commit=448 idle=0 visible=14
+UKSFX 9 move=5 confirm=1 back=2 lastid=165
+UKFRAME 9 frames=415 enterticks=12393664 last=3904 max=7104 vbmax=1
+UKWORK 9 445 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+UKVB 9 416 0 0 0
+UKMISS 9 ring=3 id0=164 c0=4 id1=165 c1=1
+UKSTATE 10 entered=1 scene=1 engine=0 enters=1 rej=0 exits=absent
+UKPACK 10 bytes=24384 hash=9c27e2c8 mismatch=0 readfail=0
+UKDRAW 10 compose=6 skip=0 overflow=0 commit=512 idle=0 visible=14
+UKSFX 10 move=6 confirm=1 back=2 lastid=164
+UKFRAME 10 frames=448 enterticks=12393664 last=3584 max=7104 vbmax=1
+UKWORK 10 511 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+UKVB 10 448 0 0 0
+UKMISS 10 ring=3 id0=164 c0=6 id1=165 c1=2
+UKSTATE 11 entered=1 scene=1 engine=0 enters=1 rej=0 exits=absent
+UKPACK 11 bytes=24384 hash=9c27e2c8 mismatch=0 readfail=0
+UKDRAW 11 compose=6 skip=0 overflow=0 commit=576 idle=0 visible=14
+UKSFX 11 move=6 confirm=2 back=2 lastid=158
+UKFRAME 11 frames=511 enterticks=12393664 last=3712 max=7104 vbmax=1
+UKWORK 11 573 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+UKVB 11 511 0 0 0
+UKMISS 11 ring=3 id0=164 c0=6 id1=165 c1=2
+UKSTATE 12 entered=1 scene=1 engine=0 enters=1 rej=0 exits=absent
+UKPACK 12 bytes=24384 hash=9c27e2c8 mismatch=0 readfail=0
+UKDRAW 12 compose=6 skip=0 overflow=0 commit=639 idle=0 visible=14
+UKSFX 12 move=7 confirm=2 back=2 lastid=164
+UKFRAME 12 frames=575 enterticks=12393664 last=3648 max=7104 vbmax=1
+UKWORK 12 638 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+UKVB 12 577 0 0 0
+UKMISS 12 ring=3 id0=164 c0=6 id1=165 c1=2
+UKSTATE 13 entered=1 scene=1 engine=0 enters=1 rej=0 exits=absent
+UKPACK 13 bytes=24384 hash=9c27e2c8 mismatch=0 readfail=0
+UKDRAW 13 compose=6 skip=0 overflow=0 commit=671 idle=0 visible=14
+UKSFX 13 move=8 confirm=2 back=2 lastid=164
+UKFRAME 13 frames=642 enterticks=12393664 last=3968 max=7104 vbmax=1
+UKWORK 13 670 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+UKVB 13 640 0 0 0
+UKMISS 13 ring=3 id0=164 c0=6 id1=165 c1=2
+UKSTATE 14 entered=1 scene=1 engine=0 enters=1 rej=0 exits=absent
+UKPACK 14 bytes=24384 hash=9c27e2c8 mismatch=0 readfail=0
+UKDRAW 14 compose=6 skip=0 overflow=0 commit=704 idle=0 visible=14
+UKSFX 14 move=8 confirm=2 back=3 lastid=165
+UKFRAME 14 frames=673 enterticks=12393664 last=4352 max=7104 vbmax=1
+UKWORK 14 701 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+UKVB 14 673 0 0 0
+UKMISS 14 ring=3 id0=164 c0=8 id1=165 c1=2
+UKSTATE 15 entered=1 scene=1 engine=0 enters=1 rej=0 exits=absent
+UKPACK 15 bytes=24384 hash=9c27e2c8 mismatch=0 readfail=0
+UKDRAW 15 compose=6 skip=0 overflow=0 commit=768 idle=0 visible=14
+UKSFX 15 move=9 confirm=2 back=3 lastid=164
+UKFRAME 15 frames=709 enterticks=12393664 last=3968 max=7104 vbmax=1
+UKWORK 15 767 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+UKVB 15 703 0 0 0
+UKMISS 15 ring=3 id0=164 c0=9 id1=165 c1=3
+UKSTATE 16 entered=1 scene=1 engine=0 enters=1 rej=0 exits=absent
+UKPACK 16 bytes=24384 hash=9c27e2c8 mismatch=0 readfail=0
+UKDRAW 16 compose=6 skip=0 overflow=0 commit=832 idle=0 visible=14
+UKSFX 16 move=9 confirm=3 back=3 lastid=158
+UKFRAME 16 frames=771 enterticks=12393664 last=3968 max=7104 vbmax=1
+UKWORK 16 830 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+UKVB 16 767 0 0 0
+UKMISS 16 ring=3 id0=164 c0=9 id1=165 c1=3
+UKSTATE 17 entered=1 scene=1 engine=0 enters=1 rej=0 exits=absent
+UKPACK 17 bytes=24384 hash=9c27e2c8 mismatch=0 readfail=0
+UKDRAW 17 compose=6 skip=0 overflow=0 commit=894 idle=0 visible=14
+UKSFX 17 move=10 confirm=3 back=3 lastid=164
+UKFRAME 17 frames=832 enterticks=12393664 last=3648 max=7104 vbmax=1
+UKWORK 17 895 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+UKVB 17 832 0 0 0
+UKMISS 17 ring=3 id0=164 c0=10 id1=165 c1=3
+UKSTATE 18 entered=1 scene=1 engine=0 enters=1 rej=0 exits=absent
+UKPACK 18 bytes=24384 hash=9c27e2c8 mismatch=0 readfail=0
+UKDRAW 18 compose=6 skip=0 overflow=0 commit=928 idle=0 visible=14
+UKSFX 18 move=11 confirm=3 back=3 lastid=164
+UKFRAME 18 frames=832 enterticks=12393664 last=3648 max=7104 vbmax=1
+UKWORK 18 927 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+UKVB 18 897 0 0 0
+UKMISS 18 ring=3 id0=164 c0=10 id1=165 c1=3
+UKSTATE 19 entered=1 scene=1 engine=0 enters=1 rej=0 exits=absent
+UKPACK 19 bytes=24384 hash=9c27e2c8 mismatch=0 readfail=0
+UKDRAW 19 compose=6 skip=0 overflow=0 commit=959 idle=0 visible=14
+UKSFX 19 move=11 confirm=3 back=4 lastid=165
+UKFRAME 19 frames=929 enterticks=12393664 last=4800 max=7104 vbmax=1
+UKWORK 19 959 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+UKVB 19 927 0 0 0
+UKMISS 19 ring=3 id0=164 c0=10 id1=165 c1=3
+UKSTATE 20 entered=1 scene=1 engine=0 enters=1 rej=0 exits=absent
+UKPACK 20 bytes=24384 hash=9c27e2c8 mismatch=0 readfail=0
+UKDRAW 20 compose=6 skip=0 overflow=0 commit=1024 idle=0 visible=14
+UKSFX 20 move=12 confirm=3 back=4 lastid=164
+UKFRAME 20 frames=961 enterticks=12393664 last=4672 max=7104 vbmax=1
+UKWORK 20 1022 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+UKVB 20 960 0 0 0
+UKMISS 20 ring=3 id0=164 c0=12 id1=165 c1=4
+UKSTATE 21 entered=1 scene=1 engine=0 enters=1 rej=0 exits=absent
+UKPACK 21 bytes=24384 hash=9c27e2c8 mismatch=0 readfail=0
+UKDRAW 21 compose=6 skip=0 overflow=0 commit=1088 idle=0 visible=14
+UKSFX 21 move=12 confirm=4 back=4 lastid=158
+UKFRAME 21 frames=961 enterticks=12393664 last=4672 max=7104 vbmax=1
+UKWORK 21 1084 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+UKVB 21 1026 0 0 0
+UKMISS 21 ring=3 id0=164 c0=12 id1=165 c1=4
+UKSTATE 22 entered=1 scene=1 engine=0 enters=1 rej=0 exits=absent
+UKPACK 22 bytes=24384 hash=9c27e2c8 mismatch=0 readfail=0
+UKDRAW 22 compose=6 skip=0 overflow=0 commit=1152 idle=0 visible=14
+UKSFX 22 move=13 confirm=4 back=4 lastid=164
+UKFRAME 22 frames=961 enterticks=12393664 last=4672 max=7104 vbmax=1
+UKWORK 22 1150 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+UKVB 22 1087 0 0 0
+UKMISS 22 ring=3 id0=164 c0=13 id1=165 c1=4
+UKSTATE 23 entered=1 scene=1 engine=0 enters=1 rej=0 exits=absent
+UKPACK 23 bytes=24384 hash=9c27e2c8 mismatch=0 readfail=0
+UKDRAW 23 compose=6 skip=0 overflow=0 commit=1184 idle=0 visible=14
+UKSFX 23 move=14 confirm=4 back=4 lastid=164
+UKFRAME 23 frames=1152 enterticks=12393664 last=3904 max=7104 vbmax=1
+UKWORK 23 1182 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+UKVB 23 1151 0 0 0
+UKMISS 23 ring=3 id0=164 c0=13 id1=165 c1=4
+UKSTATE 24 entered=1 scene=1 engine=0 enters=1 rej=0 exits=absent
+UKPACK 24 bytes=24384 hash=9c27e2c8 mismatch=0 readfail=0
+UKDRAW 24 compose=6 skip=0 overflow=0 commit=1216 idle=0 visible=14
+UKSFX 24 move=14 confirm=4 back=5 lastid=165
+UKFRAME 24 frames=1185 enterticks=12393664 last=4864 max=7104 vbmax=1
+UKWORK 24 1215 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+UKVB 24 1184 0 0 0
+UKMISS 24 ring=3 id0=164 c0=14 id1=165 c1=4
+UKSTATE 25 entered=1 scene=1 engine=0 enters=1 rej=0 exits=absent
+UKPACK 25 bytes=24384 hash=9c27e2c8 mismatch=0 readfail=0
+UKDRAW 25 compose=6 skip=0 overflow=0 commit=1280 idle=0 visible=14
+UKSFX 25 move=15 confirm=4 back=5 lastid=164
+UKFRAME 25 frames=1215 enterticks=12393664 last=3904 max=7104 vbmax=1
+UKWORK 25 1278 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+UKVB 25 1215 0 0 0
+UKMISS 25 ring=3 id0=164 c0=14 id1=165 c1=4
+UKSTATE 26 entered=1 scene=1 engine=0 enters=1 rej=0 exits=absent
+UKPACK 26 bytes=24384 hash=9c27e2c8 mismatch=0 readfail=0
+UKDRAW 26 compose=6 skip=0 overflow=0 commit=1344 idle=0 visible=14
+UKSFX 26 move=15 confirm=5 back=5 lastid=158
+UKFRAME 26 frames=1282 enterticks=12393664 last=4416 max=7104 vbmax=1
+UKWORK 26 1340 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+UKVB 26 1280 0 0 0
+UKMISS 26 ring=3 id0=164 c0=15 id1=165 c1=5
+UKSTATE 27 entered=1 scene=1 engine=0 enters=1 rej=0 exits=absent
+UKPACK 27 bytes=24384 hash=9c27e2c8 mismatch=0 readfail=0
+UKDRAW 27 compose=6 skip=0 overflow=0 commit=1407 idle=0 visible=14
+UKSFX 27 move=16 confirm=5 back=5 lastid=164
+UKFRAME 27 frames=1344 enterticks=12393664 last=3712 max=7104 vbmax=1
+UKWORK 27 1407 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+UKVB 27 1344 0 0 0
+UKMISS 27 ring=3 id0=164 c0=15 id1=165 c1=5
+UKSTATE 28 entered=1 scene=1 engine=0 enters=1 rej=0 exits=absent
+UKPACK 28 bytes=24384 hash=9c27e2c8 mismatch=0 readfail=0
+UKDRAW 28 compose=6 skip=0 overflow=0 commit=1440 idle=0 visible=14
+UKSFX 28 move=17 confirm=5 back=5 lastid=164
+UKFRAME 28 frames=1409 enterticks=12393664 last=4736 max=7104 vbmax=1
+UKWORK 28 1439 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+UKVB 28 1409 0 0 0
+UKMISS 28 ring=3 id0=164 c0=15 id1=165 c1=5
+UKSTATE 29 entered=1 scene=1 engine=0 enters=1 rej=0 exits=absent
+UKPACK 29 bytes=24384 hash=9c27e2c8 mismatch=0 readfail=0
+UKDRAW 29 compose=6 skip=0 overflow=0 commit=1472 idle=0 visible=14
+UKSFX 29 move=17 confirm=5 back=6 lastid=165
+UKFRAME 29 frames=1444 enterticks=12393664 last=3776 max=7104 vbmax=1
+UKWORK 29 1471 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+UKVB 29 1439 0 0 0
+UKMISS 29 ring=3 id0=164 c0=17 id1=165 c1=5
+UKSTATE 30 entered=1 scene=1 engine=0 enters=1 rej=0 exits=absent
+UKPACK 30 bytes=24384 hash=9c27e2c8 mismatch=0 readfail=0
+UKDRAW 30 compose=6 skip=0 overflow=0 commit=1536 idle=0 visible=14
+UKSFX 30 move=18 confirm=5 back=6 lastid=164
+UKFRAME 30 frames=1471 enterticks=12393664 last=3840 max=7104 vbmax=1
+UKWORK 30 1534 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+UKVB 30 1473 0 0 0
+UKMISS 30 ring=3 id0=164 c0=17 id1=165 c1=6
+UKSTOP n=30 pc=020a097c cpsr=2000003f
+ndsUiKitSfx in section .main
+$1 = {1534, 0 <repeats 15 times>}
+$2 = {1473, 0, 0, 0}
+$3 = {18, 5, 6}
+[Inferior 1 (Remote target) detached]
+
