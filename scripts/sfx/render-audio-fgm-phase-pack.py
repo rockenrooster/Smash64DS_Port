@@ -146,6 +146,23 @@ FULL_COVERAGE_IDS = (
     # among the swings (18 LightSwingLw1, 19 Catch), not with the crowd cues the
     # open BUGS.md row is about -- that row's cut-off was the release window, and
     # nds_audio_fgm.c:1014 already holds the fix.
+    #
+    # P2-1c-1. The 2D UI kit's SFX seam (src/nds/nds_ui_kit.c:ndsUiKitSfx,
+    # sNdsUiKitSfxIds = {164, 158, 165}) already asks for these with the
+    # source's own ids and the pack did not carry them -- proven by the miss
+    # ring, not inferred (2026-08-17 P2-1c evidence:
+    # `UKMISS ring=3 id0=164 c0=17 id1=165 c1=6`). Ids re-verified by fully
+    # parsing gm/gmsound.h's gmFGMVoiceID enum with REGION_US honored (the
+    # enum is not a line count -- REGION_US conditionals shift it by ten
+    # entries before this run of names) and cross-checked against every id
+    # this file already pins: Escape 11, GuardOn 13, GamePause 278,
+    # FoxLanding 74, MarioLanding 77, UnkGrind4 85, AltitudeWarn 153,
+    # DeadExplodeL 154 all land exactly where this file already has them,
+    # then MenuSelect 158, MenuScroll1 163, MenuScroll2 164, MenuDenied 165
+    # follow in the same parse. 163 MenuScroll1 has no live caller yet (the
+    # kit only wires move/confirm/back to 164/158/165); packed anyway per the
+    # board row's exact id list, for whichever P2-1d direction wires it.
+    158, 163, 164, 165,
 )
 FULL_PROGRAM_AOT_IDS = frozenset((
     154, 40, 38, 37, 34, 32, 31,
@@ -2607,6 +2624,128 @@ SELECTED += (
             "a974ed1ff5e44afae9c6dc701e489ed7836dcb70a11b36c244b171782a5f26e5",
         "articulation_program_sha256":
             "a58c3cff3972a3140b9a507942634ac9d2df4eb6b310e9e01c0db0797ef852ae",
+        "fidelity_debt": (),
+    },
+)
+
+# P2-1c-1. All four fields (articulation/sound/notes/wave) came out of
+# `--derive 158,163,164,165`, not a guess. 158/163/164 share wave_base 119296
+# (the same short UI click, pitch/volume-varied per context by articulation
+# 18/17/17) and each note schedule's ceiling reach exceeds the 2,752-sample
+# source by a wide margin, so all three retain the full untrimmed source --
+# the same shape as every other flat single-wave UI/voice cue in this file.
+SELECTED += (
+    {
+        "id": 158,
+        "name": "nSYAudioFGMMenuSelect",
+        "kind": "menu",
+        "articulation": 18,
+        "sound": 10,
+        "notes": ((4, 7, 4), (11, 7, 3), (18, 7, 5), (20, 7, 12)),
+        "duration_ticks": 24,
+        "ucd_volume": 130,
+        "articulation_pitch_cents": 320,
+        "loop": False,
+        "wave_base": 119296,
+        "wave_length": 1548,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 2752,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "6c3209b1777b82cf3f5d6a889fa44acccc074061b4ace5b0839abfd970ad9b95",
+        "render_program_sha256":
+            "6c3209b1777b82cf3f5d6a889fa44acccc074061b4ace5b0839abfd970ad9b95",
+        "articulation_program_sha256":
+            "ede797dd2729ec039339e9c53f2afa1007769693deb1ecdc76ace3547d178e30",
+        "fidelity_debt": (),
+    },
+    {
+        "id": 163,
+        "name": "nSYAudioFGMMenuScroll1",
+        "kind": "menu",
+        "articulation": 17,
+        "sound": 10,
+        "notes": ((7, 7, 8), (7, 7, 25)),
+        "duration_ticks": 33,
+        "ucd_volume": 170,
+        "articulation_pitch_cents": 550,
+        "loop": False,
+        "wave_base": 119296,
+        "wave_length": 1548,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 2752,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "191531a69a863630319ef40c5b12e0ccb48cf4d5eb3c88c442201884122acd1b",
+        "render_program_sha256":
+            "191531a69a863630319ef40c5b12e0ccb48cf4d5eb3c88c442201884122acd1b",
+        "articulation_program_sha256":
+            "f014df4f7f920736f102d2844f1a79c4d86896f0e5d9b6ba7fb786c1765a3f0a",
+        "fidelity_debt": (),
+    },
+    {
+        "id": 164,
+        "name": "nSYAudioFGMMenuScroll2",
+        "kind": "menu",
+        "articulation": 17,
+        "sound": 10,
+        "notes": ((3, 7, 8), (3, 7, 16)),
+        "duration_ticks": 24,
+        "ucd_volume": 135,
+        "articulation_pitch_cents": 550,
+        "loop": False,
+        "wave_base": 119296,
+        "wave_length": 1548,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 2752,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "64032b63e43dc958035b0870994f7dab79157ec7e5f4b405bb76ec644f2f7ea9",
+        "render_program_sha256":
+            "64032b63e43dc958035b0870994f7dab79157ec7e5f4b405bb76ec644f2f7ea9",
+        "articulation_program_sha256":
+            "f014df4f7f920736f102d2844f1a79c4d86896f0e5d9b6ba7fb786c1765a3f0a",
+        "fidelity_debt": (),
+    },
+    {
+        # Two notes bracket a rest, not one held note -- (13,7,7) blip,
+        # (0,7,5) rest, (13,7,70) hold -- the same shape as 216 and 28 above,
+        # and like them this cannot use the pitch_code/duration_ticks
+        # shorthand. The 70-tick final note (402 ms) far outlives the raw
+        # 1,664-sample source (~52 ms at its own rate); the source wave
+        # itself declares a loop (loop_start=2, loop_end=1652), which is what
+        # the N64 replays for the note's full hold. Rendered on the same
+        # `render_source_loop` software path as 216 MarioSpecialHiCoin and 28
+        # BurnS -- a proven pattern, and simpler and lower-risk than a DS
+        # hardware repeat (285/153's path): no hand-derived IMA predictor/
+        # index seed, just the source loop region replayed to the note's
+        # proven reach before a normal one-shot IMA encode.
+        "id": 165,
+        "name": "nSYAudioFGMMenuDenied",
+        "kind": "menu",
+        "articulation": 15,
+        "sound": 8,
+        "notes": ((13, 7, 7), (0, 7, 5), (13, 7, 70)),
+        "duration_ticks": 82,
+        "ucd_volume": 180,
+        "articulation_pitch_cents": 0,
+        "loop": True,
+        "wave_base": 112584,
+        "wave_length": 936,
+        "loop_start": 2,
+        "loop_end": 1652,
+        "render_source_loop": True,
+        "expected_retained_samples": 15089,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "a2bd6c78a59eff2844cd0ce7d39ad1b14bac6fde08f66ea1da945ee542ede099",
+        "render_program_sha256":
+            "a2bd6c78a59eff2844cd0ce7d39ad1b14bac6fde08f66ea1da945ee542ede099",
+        "articulation_program_sha256":
+            "feb1bdd0f1134b0cb6081f033e16d0721619c2cd7aa1b0736d5191de7db95076",
         "fidelity_debt": (),
     },
 )

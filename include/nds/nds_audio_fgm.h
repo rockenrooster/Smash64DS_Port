@@ -5,7 +5,7 @@
 #include <sys/audio.h>
 
 #define NDS_AUDIO_FGM_PASS 0x46474d31u /* FGM1 */
-#define NDS_AUDIO_FGM_ENTRY_COUNT 88u
+#define NDS_AUDIO_FGM_ENTRY_COUNT 92u
 #define NDS_AUDIO_FGM_PHASE_COUNT 5u
 #define NDS_AUDIO_FGM_PHASE_COMPLETE_MASK 0x1fu
 #define NDS_AUDIO_FGM_KO_COUNT 5u
@@ -38,8 +38,14 @@
  * schedule the flat path cannot express -- it renders one one-shot and every
  * note after the first is silence.  617 1,138 -> 1,437 ms, 622 1,441 -> 2,185
  * ms, each now matching its own note total exactly. */
-#define NDS_AUDIO_FGM_PACK_BYTES 938996u
-#define NDS_AUDIO_FGM_PACK_MAPPING_SHA256_LO 0x885657f4u
+/* 938996 -> 948068 and 0x885657f4 -> 0xe4b8921c on 2026-08-18 (P2-1c-1): the
+ * UI kit's four menu SFX (158 MenuSelect, 163 MenuScroll1, 164 MenuScroll2,
+ * 165 MenuDenied) joined SELECTED, 88 -> 92 entries.  The kit's seam already
+ * asked for 164/158/165 and missed -- UKMISS id0=164 c0=17 id1=165 c1=6,
+ * 2026-08-17 P2-1c evidence -- so this is the same silent-miss class as every
+ * prior repin here, not a new one. */
+#define NDS_AUDIO_FGM_PACK_BYTES 948068u
+#define NDS_AUDIO_FGM_PACK_MAPPING_SHA256_LO 0xe4b8921cu
 #define NDS_AUDIO_FGM_CACHE_BYTES 204800u
 #define NDS_AUDIO_FGM_HANDLE_CAPACITY 8u
 #define NDS_AUDIO_FGM_FIDELITY_DEBT_PITCH_AUTOMATION (1u << 2)

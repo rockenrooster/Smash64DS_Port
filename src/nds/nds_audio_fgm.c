@@ -354,6 +354,14 @@ static s32 ndsAudioFgmIDIsIncluded(u16 id)
     case nSYAudioFGMLightSwingLw1:
     case nSYAudioVoiceFoxSelected:
     case nSYAudioVoiceAnnounceSuddenDeath:
+    /* P2-1c-1: the UI kit's SFX seam (ndsUiKitSfx, nds_ui_kit.c) already asks
+     * for 164/158/165 with the source's own ids -- move/confirm/back -- and
+     * missed for want of a pack entry, same as every case above. 163 has no
+     * live caller yet; packed and declared together with the other three. */
+    case nSYAudioFGMMenuSelect:
+    case nSYAudioFGMMenuScroll1:
+    case nSYAudioFGMMenuScroll2:
+    case nSYAudioFGMMenuDenied:
         return TRUE;
     default:
         return FALSE;
