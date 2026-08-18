@@ -41,7 +41,7 @@ P1 board is archived at `docs/archive/P1_EXECUTION_BOARD.md`.
 | P2-6 1P Game | queued | Campaign start-to-credits |
 | P2-7 Modes & meta | queued | Fresh-cart parity; P2 close gate |
 
-## Queue — P2-1 VS shell (all unowned; 1a/1b/1b-1/1c green, 1d-1g red)
+## Queue — P2-1 VS shell (all unowned; 1a/1b/1b-1/1c/1c-1 green, 1d-1g red)
 
 | ID | Slice | Status | Notes |
 |---|---|---|---|
