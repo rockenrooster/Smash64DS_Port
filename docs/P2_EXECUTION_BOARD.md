@@ -72,7 +72,13 @@ None is P2-1 work; each is a one-line fix in the checker that already exists.
 
 ## Decisions pending
 
-*(none — owner decisions of 2026-08-17 are logged in `P2_PLAN.md`)*
+- **`smash64ds_P1.nds` at repo root** (untracked, gitignored, byte-identical
+  to the frozen P1 artifact `576F51ED…E723`, created 2026-08-17 19:47,
+  referenced by no doc or script): `check-published-roms.ps1` rejects any
+  third ROM at root, turning every Boundary run red. Owner chooses: (a)
+  allowlist the name in the checker, or (b) keep it under `builds/`. Until
+  ruled, Boundary runs relocate it to `builds/` for the run and restore it
+  hash-verified (try/finally pattern from the P2-1a landing).
 
 ## Closed
 
