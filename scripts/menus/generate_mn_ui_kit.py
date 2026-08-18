@@ -57,7 +57,7 @@ import argparse
 import re
 import struct
 import sys
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 
 # ---------------------------------------------------------------------------
@@ -542,6 +542,15 @@ class Surface:
     dst_y: int
     opaque: bool  # no transparent texel, so the runtime may DMA whole rows
     texels: list[int]  # width * height DS BGR5551 halfwords, row-major
+    # P2-1i. Where each placement LANDED, in absolute DS screen pixels, keyed
+    # by its source symbol. A composited surface is otherwise opaque to the
+    # runtime, and the main menu needs one number the surface already knows:
+    # exactly where each dark entry icon sits, so the bright OBJ that lights
+    # it up can be drawn over it rather than near it. Publishing the bake's
+    # own answer is what stops the two from drifting apart -- the alternative
+    # is a hand-computed constant that silently rots the next time a scale or
+    # a centring rule changes.
+    sites: dict[str, tuple[int, int, int, int]] = field(default_factory=dict)
 
 
 def box_scale(raster: list[list[tuple[int, int, int, int]]],
@@ -991,8 +1000,12 @@ def convert_surface(cache: dict[str, RelocFile], offsets: dict[str, int],
             texels[y * width + x] = texel
             if texel == 0:
                 opaque = False
+    sites = {
+        part.symbol: (x0, y0, len(raster[0]), len(raster))
+        for part, (x0, y0, raster) in zip(spec.parts, placed)
+    }
     return Surface(spec.token, spec.token, width, height, left, top, opaque,
-                   texels)
+                   texels, sites)
 
 
 # ---------------------------------------------------------------------------
@@ -1134,6 +1147,34 @@ def emit_manifest(path: Path, glyphs: list[Glyph], images: list[Image],
     lines.append(f"#define NDS_MN_UI_KIT_FIRE_PA {FIRE_PA}")
     lines.append(f"#define NDS_MN_UI_KIT_FIRE_PD {FIRE_PD}")
     lines.append("")
+    # P2-1i -- the main menu's four entry sites, taken from where the DARK
+    # twins actually landed inside MODE_SELECT. The runtime draws the bright
+    # icon at exactly these pixels, so lighting an entry up is a recolour in
+    # place; the order is mnModeSelectOption order, which is also the order
+    # NDS_MN_UI_KIT_IMAGE_MODE_ICON_1P..DATA are packed in.
+    mode_select = next((s for s in surfaces if s.token == "MODE_SELECT"), None)
+    if mode_select is not None:
+        icons = ("llMNMainControllerIconDarkSprite",
+                 "llMNMainConsoleIconDarkSprite",
+                 "llMNMainSettingsIconDarkSprite",
+                 "llMNMainDataIconDarkSprite")
+        missing = [s for s in icons if s not in mode_select.sites]
+        if missing:
+            raise ConvertError(
+                f"MODE_SELECT is missing entry-icon sites: {missing}")
+        lines.append("/* P2-1i -- {x, y} of each main-menu entry icon, in DS")
+        lines.append(" * screen pixels, as the dark twin was composited. */")
+        lines.append("#define NDS_MN_UI_KIT_MODE_ENTRY_COUNT "
+                     f"{len(icons)}u")
+        rows = ", ".join(
+            "{ %d, %d }" % (mode_select.sites[s][0], mode_select.sites[s][1])
+            for s in icons)
+        lines.append("static const s16 kNdsUiKitModeEntrySite"
+                     "[NDS_MN_UI_KIT_MODE_ENTRY_COUNT][2] "
+                     "__attribute__((unused)) = {")
+        lines.append(f"    {rows},")
+        lines.append("};")
+        lines.append("")
     lines.append("#endif /* NDS_MN_UI_KIT_GENERATED_INC */")
     write_if_changed(path, "\n".join(lines) + "\n")
 
@@ -1619,6 +1660,26 @@ def check_kind_label_block(images: list[Image]) -> None:
             f"nFTPlayerKind order; got {tokens[first:first + 3]}")
 
 
+# The four bright entry icons must stay contiguous and in mnModeSelectOption
+# order: the main menu indexes them as NDS_MN_UI_KIT_IMAGE_MODE_ICON_1P +
+# cursor, against kNdsUiKitModeEntrySite[cursor], so a reordered IMAGE_SOURCES
+# would light the wrong entry -- and it would look deliberate, because every
+# icon is a plausible thing to see lit.
+MODE_ICON_TOKENS = ["MODE_ICON_1P", "MODE_ICON_VS", "MODE_ICON_OPTION",
+                    "MODE_ICON_DATA"]
+
+
+def check_mode_icon_block(images: list[Image]) -> None:
+    tokens = [image.token for image in images]
+    if not all(token in tokens for token in MODE_ICON_TOKENS):
+        raise ConvertError("the main-menu entry icons are missing from the pack")
+    first = tokens.index("MODE_ICON_1P")
+    if tokens[first:first + 4] != MODE_ICON_TOKENS:
+        raise ConvertError(
+            "MODE_ICON_1P/VS/OPTION/DATA must be four consecutive entries in "
+            f"mnModeSelectOption order; got {tokens[first:first + 4]}")
+
+
 def write_png(path: Path, width: int, height: int, rgb: bytes) -> None:
     """Minimal RGB8 PNG so a human can look at the bake without a ROM."""
     import zlib
@@ -1805,6 +1866,7 @@ def main(argv: list[str] | None = None) -> int:
                                     offsets[symbol], scale, tint))
     check_digit_block(images)
     check_kind_label_block(images)
+    check_mode_icon_block(images)
 
     surfaces = [convert_surface(cache, offsets, repo_root, spec)
                 for spec in SURFACE_SOURCES]

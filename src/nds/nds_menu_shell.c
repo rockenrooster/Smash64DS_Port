@@ -821,10 +821,15 @@ static void ndsMenuShellUpdateTitle(u32 held, u32 taps)
      * of 12, so the pair has exactly thirty states and state k is the atlas's
      * cell k. Enable happened at entry, so this is the whole per-frame cost:
      * an affine matrix+scroll write, four registers and no texels.
-     * `gNdsMenuShellFrames` lags the presented frame by one here (RecordFrame
-     * increments after Update), hence +1 to name it in 1-based frames. */
-    ndsMenuShellTitleFireFrame(
-        gNdsMenuShellFrames[NDS_MENU_SHELL_SCREEN_TITLE] + 1u);
+     *
+     * THE COUNTER IS sMenuTics, this screen's own tic. `gNdsMenuShellFrames`
+     * was the obvious choice and is the wrong one: `ndsMenuShellRecordFrame`
+     * returns before incrementing it on a scene's first frame (the load frame
+     * is deliberately outside the work distribution), so the first cell was
+     * held for three presents before the advance became one-per-frame.
+     * sMenuTics increments unconditionally, once per loop iteration, which is
+     * exactly the source's own per-tic advance. */
+    ndsMenuShellTitleFireFrame(sMenuTics);
     if ((taps & (NDS_INPUT_A | NDS_INPUT_START)) != 0u)
     {
         ndsUiKitSfx(NDS_UI_KIT_SFX_START);
@@ -839,62 +844,53 @@ static void ndsMenuShellUpdateTitle(u32 held, u32 taps)
  * increments and wraps End -> Start (mnmodeselect.c:806/:826); the move cue is
  * MenuScroll2 and the confirm cue is MenuSelect; B returns to the title, and
  * the source spends no cue on it. Only VS MODE is built, so the other three
- * are drawn locked and refuse with MenuDenied -- the id the source itself
- * spends on a refused selection.
+ * refuse with MenuDenied -- the id the source itself spends on a refused
+ * selection. P2-1i stopped GREYING them: the source draws all four entries
+ * identically and distinguishes only the selected one, so a locked colour
+ * would be invented state on top of the source's own art. The refusal cue is
+ * what says "not built", and it says it at the moment it is true.
  *
  * The five-minute idle return to the title (mnmodeselect.c:702) is attract
  * behaviour and belongs to P2-7; it is deliberately absent rather than
  * stubbed. */
-#define NDS_MENU_MODE_ENTRIES 4u
+/* The entry count is the BAKE'S, not a second opinion: the four sites the
+ * generator recorded and the four bright icons it packed are the same four
+ * entries this screen moves between, so a fifth entry has to arrive in both
+ * places or in neither. */
+#define NDS_MENU_MODE_ENTRIES NDS_MN_UI_KIT_MODE_ENTRY_COUNT
 #define NDS_MENU_MODE_VS 1u
-
-static const char *const kNdsMenuModeLabels[NDS_MENU_MODE_ENTRIES] = {
-    "P GAME", "VS MODE", "OPTION", "DATA"
-};
+/* Slot 0 held the invented hand; it now holds the lit entry icon. */
+#define NDS_MENU_SPRITE_MODE_LIT NDS_MENU_SPRITE_CURSOR
 
 static u32 sMenuModeCursor;
 
 static void ndsMenuShellPopulateMode(void)
 {
-    u32 i;
-
-    ndsUiKitSetText(NDS_MENU_SLOT_HEADER, "MODE SELECT", NDS_MENU_RGB_HEADER);
-    ndsUiKitMoveText(NDS_MENU_SLOT_HEADER, NDS_MENU_HEADER_X,
-                     NDS_MENU_HEADER_Y);
-
-    for (i = 0u; i < NDS_MENU_MODE_ENTRIES; i++)
-    {
-        s32 x = NDS_MENU_MODE_X0 + ((s32)i * NDS_MENU_MODE_DX);
-        s32 y = NDS_MENU_MODE_Y0 + ((s32)i * NDS_MENU_MODE_DY);
-        u32 rgb;
-
-        if (i != NDS_MENU_MODE_VS)
-        {
-            rgb = NDS_MENU_RGB_LOCKED;
-        }
-        else
-        {
-            rgb = (i == sMenuModeCursor) ? NDS_MENU_RGB_WHITE :
-                                           NDS_MENU_RGB_RED;
-        }
-        ndsUiKitSetText(NDS_MENU_SLOT_ROW0 + i, kNdsMenuModeLabels[i], rgb);
-        ndsUiKitMoveText(NDS_MENU_SLOT_ROW0 + i, x, y);
-    }
-
-    /* "1P GAME" carries a digit the menu font does not have; the source drew
-     * the whole label as one sprite. The 1 is the digit sprite and the rest is
-     * text, which is why row 0's string starts at "P". */
-    (void)ndsUiKitSetNumber(NDS_MENU_SPRITE_NUM0, 1u, 1,
-                            NDS_MENU_MODE_X0, NDS_MENU_MODE_Y0 - 4);
-
-    ndsUiKitSetSprite(NDS_MENU_SPRITE_CURSOR,
-                      NDS_MN_UI_KIT_IMAGE_CSS_CURSOR_POINT,
-                      NDS_MENU_MODE_X0 +
-                          ((s32)sMenuModeCursor * NDS_MENU_MODE_DX) +
-                          NDS_MENU_CURSOR_DX_DIGIT,
-                      NDS_MENU_MODE_Y0 +
-                          ((s32)sMenuModeCursor * NDS_MENU_MODE_DY) +
-                          NDS_MENU_CURSOR_DY);
+    /* P2-1i, owner finding (2). THE WHOLE PLATE IS THE SOURCE'S OWN ART now:
+     * the MODE SELECT heading, both decal bars, the SMASH emblem, the four
+     * entry icons in their unselected form and the four red English labels are
+     * one baked MODE_SELECT surface (mnModeSelectMakeDecals/MakeLabels and
+     * mnModeSelectMake<Entry>, mnmodeselect.c:151-579), blitted into BG2 once
+     * at entry. The font-composed "MODE SELECT"/"P GAME"/"VS MODE"/"OPTION"/
+     * "DATA" rows and the digit-sprite "1" that used to stand in for them are
+     * gone.
+     *
+     * THE ONLY THING THE CURSOR CHANGES is which entry is lit, and the source
+     * does that by swapping that one entry's sprite: `...IconSprite` at white
+     * with a black env colour when selected (:161-175), `...IconDarkSprite` at
+     * grey 0x96 otherwise (:213-223). The dark four are already in the
+     * surface, so this is ONE OBJ drawn over the selected one -- at the exact
+     * pixels the bake recorded for its dark twin, which is why the light-up is
+     * a recolour in place and not a sprite that lands near it.
+     *
+     * AND THERE IS NO CURSOR ON THIS SCREEN. `mnmodeselect.c` contains no
+     * cursor of any kind -- not a hand, not a frame; the light-up IS the
+     * selection feedback. P2-1d's hand here was invented, and it is removed
+     * rather than kept beside the source's own mechanism. */
+    ndsUiKitSetSprite(NDS_MENU_SPRITE_MODE_LIT,
+                      NDS_MN_UI_KIT_IMAGE_MODE_ICON_1P + sMenuModeCursor,
+                      kNdsUiKitModeEntrySite[sMenuModeCursor][0],
+                      kNdsUiKitModeEntrySite[sMenuModeCursor][1]);
 }
 
 static void ndsMenuShellUpdateMode(u32 held, u32 taps)
@@ -2850,6 +2846,25 @@ static const u8 kNdsMenuTitleSurfaces[] = {
 static const u8 kNdsMenuCollageSurfaces[] = {
     (u8)NDS_MN_UI_KIT_SURFACE_MENU_COLLAGE
 };
+/* P2-1i, owner finding (2). The main menu's own plate: one surface carrying
+ * everything mnModeSelectMake* composes that the cursor does not change --
+ * the collage, both decal bars, the MODE SELECT text, the SMASH emblem, the
+ * four dark entry icons and the four red labels. The VS menu above still
+ * takes the bare collage because its own button art (mnVSModeMakeButton's
+ * highlight/not states) is not baked yet; when it is, it gets a plate here
+ * the same way. */
+static const u8 kNdsMenuModeSelectSurfaces[] = {
+    (u8)NDS_MN_UI_KIT_SURFACE_MODE_SELECT
+};
+/* P2-1i, owner finding (1). The character and stage selects sat on a flat
+ * blue field; the source sits both of them on the SAME stone tile --
+ * `llMNSelectCommonStoneBackgroundSprite` wrapped at its own 64x32 period
+ * (masks 6, maskt 5) over a 300x220 rect at (10, 10), from mnplayersvs.c:1370
+ * and mnmaps.c:356. The two calls differ in nothing a bake can see, so one
+ * surface serves both. */
+static const u8 kNdsMenuStoneSurfaces[] = {
+    (u8)NDS_MN_UI_KIT_SURFACE_MENU_STONE
+};
 
 static void ndsMenuShellEnterBackdrop(u32 screen)
 {
@@ -2873,15 +2888,28 @@ static void ndsMenuShellEnterBackdrop(u32 screen)
         (void)ndsUiKitBlitFireAtlas();
         ndsPlatformSetTitleFireEnabled(TRUE, (s32)NDS_MN_UI_KIT_FIRE_PA,
                                        (s32)NDS_MN_UI_KIT_FIRE_PD);
-        ndsMenuShellTitleFireFrame(1u);
+        /* Cell 0, matching what the loop's first update will select from
+         * sMenuTics == 0 -- so the reference point never shows a cell the
+         * timeline has not reached. */
+        ndsMenuShellTitleFireFrame(0u);
         gNdsTitleFireRevealFrame =
             gNdsMenuShellFrames[NDS_MENU_SHELL_SCREEN_TITLE] + 1u;
         break;
     case NDS_MENU_SHELL_SCREEN_MODE:
+        (void)ndsUiKitBlitSurfaces(kNdsMenuModeSelectSurfaces,
+                                   (u32)(sizeof(kNdsMenuModeSelectSurfaces) /
+                                         sizeof(kNdsMenuModeSelectSurfaces[0])));
+        break;
     case NDS_MENU_SHELL_SCREEN_VSMODE:
         (void)ndsUiKitBlitSurfaces(kNdsMenuCollageSurfaces,
                                    (u32)(sizeof(kNdsMenuCollageSurfaces) /
                                          sizeof(kNdsMenuCollageSurfaces[0])));
+        break;
+    case NDS_MENU_SHELL_SCREEN_CSS:
+    case NDS_MENU_SHELL_SCREEN_SSS:
+        (void)ndsUiKitBlitSurfaces(kNdsMenuStoneSurfaces,
+                                   (u32)(sizeof(kNdsMenuStoneSurfaces) /
+                                         sizeof(kNdsMenuStoneSurfaces[0])));
         break;
     default:
         break;

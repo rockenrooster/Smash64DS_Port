@@ -592,12 +592,17 @@ if ($null -ne $surf) {
         foreach ($m in [regex]::Matches($screens, '(\w+)=(\d+)')) {
             $e[$m.Groups[1].Value] = [int64]$m.Groups[2].Value
         }
-        # e0 title, e1 mode select, e2 VS mode -- the three backdrop screens.
-        $expected = $e['e0'] + $e['e1'] + $e['e2']
+        # e0 title, e1 mode select, e2 VS mode, and since P2-1i's finding (1)
+        # e3 character select and e4 stage select too -- both now sit on the
+        # source's own stone tile instead of a flat blue field, so ALL FIVE
+        # screens are backdrop screens and the two looped ones make this an
+        # assertion about 21 entries apiece rather than one.
+        $expected = $e['e0'] + $e['e1'] + $e['e2'] + $e['e3'] + $e['e4']
         Assert-Loop ([int64]$s['blit'] -eq $expected) (
             "BACKDROP SURFACES: blit=$($s['blit']) against " +
-            "e0+e1+e2=$expected backdrop-screen entries; every entry of the " +
-            'title, the mode select and the VS menu draws exactly one.')
+            "e0+e1+e2+e3+e4=$expected backdrop-screen entries; every entry " +
+            'of the title, the mode select, the VS menu, the character ' +
+            'select and the stage select draws exactly one.')
         # P2-1i. The title's BG3 fire sheet, asserted on its own rather than
         # folded into the backdrop count above -- one atlas blit per title
         # entry. A run that stopped blitting it would still draw a correct
