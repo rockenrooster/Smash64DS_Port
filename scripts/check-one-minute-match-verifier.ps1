@@ -5,6 +5,10 @@ $lifecyclePath = Join-Path $PSScriptRoot 'verify-battle-playable-match-lifecycle
 $battlePath = Join-Path $PSScriptRoot 'verify-battle-playable-harness.ps1'
 $ownerPath = Join-Path $PSScriptRoot 'verify-battle-mariofox-gcrunall-loop-harness.ps1'
 $scenePath = Join-Path $root 'src\port\scene_harness.c'
+# P2-1a moved the mode-163 match configuration out of scene_harness.c and into
+# the match descriptor's preset. The pin below follows it; the scene file is
+# still read for the obsolete-switch check, which is about what must NOT exist.
+$matchConfigPath = Join-Path $root 'src\port\nds_match_config.c'
 $taskmanPath = Join-Path $root 'src\port\taskman_seam.c'
 $melonPath = Join-Path $PSScriptRoot 'lib\melonds.ps1'
 $gdbPath = Join-Path $PSScriptRoot 'lib\gdb-markers.ps1'
@@ -36,6 +40,7 @@ $lifecycle = Get-Content -LiteralPath $lifecyclePath -Raw
 $battle = Get-Content -LiteralPath $battlePath -Raw
 $owner = Get-Content -LiteralPath $ownerPath -Raw
 $scene = Get-Content -LiteralPath $scenePath -Raw
+$matchConfig = Get-Content -LiteralPath $matchConfigPath -Raw
 $taskman = Get-Content -LiteralPath $taskmanPath -Raw
 $melon = Get-Content -LiteralPath $melonPath -Raw
 $gdb = Get-Content -LiteralPath $gdbPath -Raw
@@ -106,8 +111,16 @@ Assert-Text $battle '-IFCommonHybridOamMode \$IFCommonHybridOamMode' `
 Assert-Text $battle '-RequireZeroPostGoTextureFence:\$RequireZeroPostGoTextureFence' `
     'One-minute verifier no longer forwards the strict M4 texture fence.'
 
-Assert-Text $scene 'gSCManagerTransferBattleState\.game_rules = SCBATTLE_GAMERULE_TIME;\s*gSCManagerTransferBattleState\.time_limit = 1;' `
-    'Canonical mode 163 is not configured for the one-minute timed rule.'
+# Three pins, because P2-1a split one statement into a descriptor and its
+# consumer and a pin on either half alone can pass while the match is wrong:
+# the preset must DECLARE the one-minute Time rule, the apply step must INSTALL
+# it, and mode 163 must actually go through both.
+Assert-Text $matchConfig 'cfg->game_rules = SCBATTLE_GAMERULE_TIME;\s*cfg->time_limit = 1;' `
+    'Canonical mode 163 preset is not configured for the one-minute timed rule.'
+Assert-Text $matchConfig '(?s)gSCManagerTransferBattleState\.game_rules = cfg->game_rules;\s*gSCManagerTransferBattleState\.time_limit = cfg->time_limit;' `
+    'Match descriptor no longer installs its game rule and time limit into the battle state.'
+Assert-Text $scene '(?s)ndsSceneHarnessSeedBattlePlayableDefaults\(void\).*?ndsMatchConfigLoadMarioFoxDreamLand\(&gNdsMatchConfig\);\s*ndsMatchConfigApply\(&gNdsMatchConfig\);' `
+    'Mode 163 no longer takes its configuration from the match descriptor.'
 if (($scene -match 'NDS_DEV_RESULTS_VISUAL_SMOKE') -or ($make -match 'NDS_DEV_RESULTS_VISUAL_SMOKE')) {
     throw 'Obsolete verifier-only timer-rule switch still exists.'
 }

@@ -45,13 +45,30 @@ P1 board is archived at `docs/archive/P1_EXECUTION_BOARD.md`.
 
 | ID | Slice | Status | Notes |
 |---|---|---|---|
-| P2-1a | Match-config seam: descriptor struct (4 slots), mode 163 becomes a preset; battle consumes descriptor only | red | First — everything plugs into this. Prereq reading: `sc/`+`gm/` in BattleShip for VS settings flow |
+| P2-1a | Match-config seam: descriptor struct (4 slots), mode 163 becomes a preset; battle consumes descriptor only | **green** | `NdsMatchConfig` in `include/nds/nds_match_config.h`; preset + apply in `src/port/nds_match_config.c`. Mode 163's seeder writes zero battle-state fields now. Boundary green; `CPU_CONFIG=0,1,1,1,1,1,0,0,1` is the descriptor read back out of the live battle state. P2-1e replaces the preset with CSS output |
 | P2-1b | Scene manager: menu scenes + transitions + per-scene arena reset discipline | red | Teardown correctness is the phase's core risk |
 | P2-1c | 2D UI kit: SSB64 font/text, cursors, menu SFX, portrait conversion (Mario/Fox), dual-screen aware | red | Groundwork for P2-2 bottom-screen HUD |
 | P2-1d | Title screen + main menu + VS menu + rules screen (greyed stubs for unbuilt modes) | red | After 1b/1c |
 | P2-1e | Character select: hand cursor, tokens, CPU toggle/level, 12-slot layout (10 locked) | red | Reference `mn/mnplayers` |
 | P2-1f | Stage select (Dream Land + locked slots + random) → load → battle → results → CSS loop | red | Reference `mn/mnmaps` |
 | P2-1g | Loop verifier: scripted full-loop walk ×N, heap watermarks, cadence, Boundary equivalence; becomes new Boundary at phase close | red | Closes the phase; owner visual pass rides here |
+
+## Inherited reds — hand-run checkers, none on the Boundary path
+
+Found while landing P2-1a, all pre-existing at `82f7f2fd54a` and all unowned.
+None is P2-1 work; each is a one-line fix in the checker that already exists.
+
+- `check-docs.ps1` and `check-architecture.ps1` still require docs the P2
+  restructure archived (`P1_EXECUTION_BOARD.md`,
+  `Smash64DS_Runtime2_SwitchPlan.md`) and fail on tracked `artifacts/bugs/**`.
+- `check-one-minute-match-verifier.ps1` (DevFast) pins
+  `$bp[2] -eq (2 * $bp[3])` in `verify-battle-mariofox-gcrunall-loop-harness.ps1`;
+  that spelling does not exist there and did not at HEAD.
+- `Makefile:3748` holds a literal `\n` instead of a recipe continuation, so
+  `#define NDS_R2_COLLISION_L7_ORACLE` is never written to
+  `nds_build_config.h`. Harmless today (default 0, undefined reads as 0 in
+  `#if`) but `make NDS_R2_COLLISION_L7_ORACLE=1` silently does nothing. Repair
+  with Read/Edit only.
 
 ## Decisions pending
 
