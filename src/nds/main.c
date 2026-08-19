@@ -29,8 +29,14 @@ int main(void)
     ndsRelocAssetsInit();
     portCoroutineInitMain();
     os_test = ndsOsSelfTest();
+#if NDS_BOOT_DIAG_TEXT
+    /* P2-1L (11). The result itself is published below in
+     * gNdsBootSelfTestResult and read by every verifier over gdb; this is the
+     * human-readable copy on the sub console, which a ROM handed to the owner
+     * does not want under its menus. */
     iprintf("OS queues/threads: %s", os_test == 0 ? "PASS\n" : "FAIL ");
     if (os_test != 0) iprintf("%d\n", os_test);
+#endif
     sniprintf(debug_message, sizeof(debug_message),
              "SSB64DS: OS SELFTEST %s (%d)\n",
              os_test == 0 ? "PASS" : "FAIL", os_test);
@@ -40,8 +46,10 @@ int main(void)
         : (0xFA110000u | (u32)os_test);
 
     syMainLoop();
+#if NDS_BOOT_DIAG_TEXT
     iprintf("Original boot: %s\n",
             gNdsOriginalBootStage == NDS_BOOT_EXPECTED ? "PASS" : "PARTIAL");
+#endif
     ndsVideoBootstrapStart();
     portProbeInit();
 

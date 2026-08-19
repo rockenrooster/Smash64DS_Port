@@ -710,6 +710,18 @@ NDS_P2_UI_KIT ?= 0
 # battle exactly as it always has, no menu symbol is linked, and the NitroFS
 # pack is not staged.
 NDS_P2_MENU_SHELL ?= 0
+# P2-1L item (11). The BOOT SELF-TEST TEXT -- "NitroFS: PASS", "OS
+# queues/threads: PASS", "Original boot: PARTIAL" -- printed to the sub
+# engine's libnds console during `main`. It is a lab instrument: every one of
+# those lines is also a published global (gNdsRelocAssetInitResult,
+# gNdsBootSelfTestResult, gNdsOriginalBootStage) that the verifiers read over
+# gdb, so the console copy exists for a human watching a boot, not for any
+# check. On a ROM handed to the OWNER it is three lines of diagnostic text
+# sitting on the bottom screen under every menu, which is what item (11)
+# reports. 1 everywhere (lab and verifier targets keep it); 0 in the free-play
+# block below. The console itself still initialises -- this gates the three
+# prints, not the sub engine's setup, so nothing else that writes there moves.
+NDS_BOOT_DIAG_TEXT ?= 1
 # Scripted menu walk, lab only, N loops. Feeds the SCREENS' OWN input handlers
 # a fixed button script -- title START, main menu down/confirm, then every VS
 # row, both value directions and the refusal, then VS START -- with a dwell
@@ -2299,6 +2311,10 @@ override NDS_TASK39_FX_SPRITES := 1
 override NDS_TASK39_FX_FLASH := 1
 override NDS_P2_UI_KIT := 1
 override NDS_P2_MENU_SHELL := 1
+# P2-1L item (11): the one line that separates the OWNER's ROM from its lab
+# siblings besides the walk. Nothing reads the console copy; the three globals
+# behind it are unchanged and every verifier still reads them over gdb.
+override NDS_BOOT_DIAG_TEXT := 0
 endif
 # P2-1g LOOP-VERIFIER TARGET: the same shell, walked twenty times, and the ROM
 # the Boundary profile's loop arm runs. P2-1d/1e/1f each had their own name for
@@ -4043,6 +4059,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_P2_UI_KIT $(NDS_P2_UI_KIT)'; \
 		echo '#define NDS_P2_MENU_SHELL $(NDS_P2_MENU_SHELL)'; \
 		echo '#define NDS_P2_MENU_WALK $(NDS_P2_MENU_WALK)u'; \
+		echo '#define NDS_BOOT_DIAG_TEXT $(NDS_BOOT_DIAG_TEXT)'; \
 		echo '#define NDS_R2_PATH $(NDS_R2_PATH)'; \
 		echo '#define NDS_R2_STAGE_DIRECT $(NDS_R2_STAGE_DIRECT)'; \
 		echo '#define NDS_R2_FIXED_SQRT $(NDS_R2_FIXED_SQRT)'; \

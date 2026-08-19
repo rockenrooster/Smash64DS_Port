@@ -21,6 +21,14 @@
     {
       "screen": "title",
       "kind": "missing",
+      "key": "llMNTitleLogoAnimFullSprite",
+      "reason": "The resting emblem. mnTitleMakeLogoNoOpening (mntitle.c:1051) sets its primitive to pure red with SP_TRANSPARENT and mnTitleLogoProcDisplay (:1011) draws it through gDPSetCombineLERP(0,0,0,PRIMITIVE, TEXEL0,0,PRIMITIVE,0, ...) -- a FLAT primitive colour whose only texture contribution is alpha -- at sMNTitleLogoAlpha 0x4C from tic 170 (:374). On an N64 that is a 30% red wash over its whole silhouette, fire included. A DS 16-bit BG bitmap carries ONE alpha bit, so that wash cannot exist in the layer this art lives in: composited at bake time it survived only where an opaque texel lay beneath it -- measured 2026-08-19, 1,243 texels of TITLE_SCREEN, of which 179 are rows 0..6 of the (f2) upper border band at x 202..236, turning near-black RGB5 (2,1,0) into (11,1,0). That 179-texel block is what the owner reported as a transparent RED artifact on the right of the title, and it is the emblem's shadow on whatever happened to be behind it rather than a rendition of the emblem. Bake and runtime evidence: artifacts/visibility/2026-08-19_p2-1L-title-before-pose38.png (412 red pixels in the band, window x 324..370) against 2026-08-19_p2-1L-title-after-settled.png (0).",
+      "ruling": "P2-1L (1) omitted it and recorded the delta; reinstating it faithfully needs a second layer the DS can alpha-blend (a semi-transparent OBJ, DS OBJ mode 1 with BLDALPHA, over the 102x99 silhouette) which is a new mechanism on a screen already inside its cadence -- OWNER RULING REQUESTED on whether the wash is worth that",
+      "status": "open"
+    },
+    {
+      "screen": "title",
+      "kind": "missing",
       "key": "re:llMNTitleLogoAnim(Cutout|StrikeH|StrikeV)Sprite",
       "reason": "The emblem's own animation cels, and P2-1k (d) re-read who draws them: they are dMNTitleLogoAnimSprites, referenced ONLY inside mnTitleMakeLogo's opening-cinematic arm (mntitle.c:1096-1155, gated on scene_prev == nSCKindOpeningNewcomers). This shell always takes mnTitleMakeLogoNoOpening (:1051), which builds the resting FULL sprite alone -- the one this bake ships. They are therefore the INTRO's cels, not the label animation's: P2-1k (d) built the label pop (mnTitleMakeLabels' five animated pieces) from a baked pose table and it needs none of them.",
       "ruling": "PROJECT_GOAL.md Current Milestone step 7 -- the intro cinematic is deferred by owner decision, and these cels arrive with it; re-read and re-ruled by P2-1k (d), which landed the label animation these were previously attributed to",

@@ -1138,6 +1138,7 @@ NDS_UI_KIT_PUBLISHED volatile u32 gNdsUiKitTitleAnimEraseTexels;
 NDS_UI_KIT_PUBLISHED volatile u32 gNdsUiKitTitleAnimTicks;
 NDS_UI_KIT_PUBLISHED volatile u32 gNdsUiKitTitleAnimMaxTicks;
 NDS_UI_KIT_PUBLISHED volatile u32 gNdsUiKitTitleAnimMaxPose;
+NDS_UI_KIT_PUBLISHED volatile u32 gNdsUiKitTitleAnimEmptyPoseCount;
 
 u32 ndsUiKitTitleAnimBytes(void)
 {
@@ -1248,128 +1249,299 @@ void ndsUiKitTitleAnimEnd(void)
     sNdsUiKitTitleAnimSettled = NULL;
 }
 
-/* Transparent, over the band only. Word stores because the layer is 16-bit and
- * two texels are one aligned write; the odd edges fall out as halfwords. */
-static void ndsUiKitTitleAnimErase(u16 *layer, u32 pitch,
-                                   const NdsUiKitTitleAnimRect *rect)
+/* P2-1L (3). ONE STORE PER DESTINATION TEXEL, PER FRAME -- and that is a
+ * correctness requirement here, not a speed choice.
+ *
+ * THE MEASUREMENT THAT FORCED IT (2026-08-19, free-play ROM
+ * `smash64ds-p2-shell-freeplay-hwtri`, presents 28..38): a gdb dump of BG2's
+ * bitmap taken at `ndsPlatformEndFrame` is BIT-IDENTICAL to an offline
+ * evaluation of the same pose from the same table and the same rasters -- band
+ * rows 8..157, zero differing texels at presents 28 and 30 -- while the
+ * PHOTOGRAPH of the very same stop shows the black drop-shadow cutout alone,
+ * with no letters at all. The blit was never wrong. The panel was showing a
+ * state the blit passes through.
+ *
+ * It passes through it because this layer is BG2's bitmap and the LCD scans it
+ * out LIVE, one row every ~2,130 ticks, while the CPU writes it. The old shape
+ * was: erase the whole dirty rectangle, then paint five pieces in five
+ * top-to-bottom passes, the first of them the unkeyed drop-shadow cutout. Both
+ * the beam and each pass sweep downward, so for every band row there is a
+ * window in which the beam has already passed the row that the cutout pass
+ * reached but the letter passes have not -- that row is displayed BLACK -- and
+ * an earlier window, between the erase and the cutout, in which it is displayed
+ * EMPTY. "Some poses render invisible/black" is exactly those two windows, and
+ * no pose table can avoid them: the animation's own peak frame costs 712,704
+ * ticks against a 560,190-tick sweep.
+ *
+ * So a destination row is now composed WHOLE in `sNdsUiKitTitleAnimLine` --
+ * cleared, then the pieces that cover it, in the source's own draw order -- and
+ * reaches the layer in a single left-to-right run. Whatever the beam catches is
+ * either the previous pose's row or this pose's row; never a half-built one.
+ * It is also less work than what it replaces: the union rectangle is stored
+ * once instead of an erase plus five overlapping piece rectangles.
+ */
+static u32 sNdsUiKitTitleAnimSrcRow[NDS_MN_TITLE_ANIM_PIECES];
+
+static u32 ndsUiKitTitleAnimComposeRow(const NdsUiKitTitleAnimPose *frame,
+                                       u32 y, u32 x0, u32 width)
 {
-    u32 row;
+    u32 sampled = 0u;
+    u32 row[NDS_MN_TITLE_ANIM_PIECES];
+    u32 same = 1u;
+    u32 i;
 
-    for (row = 0u; row < rect->height; row++)
+    /* THE ROW CACHE, KEPT. Every pose upscales somewhere -- the peak frame runs
+     * to 3.5x -- so consecutive destination rows keep landing on the same
+     * source row of every piece that covers them. When none of the five moved,
+     * the composed line is the one already in the buffer and the only work left
+     * is the store. This is the same saving the per-piece loop used to take;
+     * composing a whole row at a time just moves the test up one level. */
+    for (i = 0u; i < NDS_MN_TITLE_ANIM_PIECES; i++)
     {
-        u16 *dst = layer + (((u32)rect->y + row) * pitch) + rect->x;
-        u32 count = rect->width;
+        const NdsUiKitTitleAnimPose *piece = &frame[i];
 
-        if ((count != 0u) && ((((uintptr_t)dst) & 3u) != 0u))
+        if ((piece->width == 0u) || (y < (u32)piece->y) ||
+            (y >= ((u32)piece->y + piece->height)))
         {
-            *dst++ = 0u;
-            count--;
+            row[i] = 0xffffffffu;
         }
-        while (count >= 2u)
+        else
         {
-            *(u32 *)dst = 0u;
-            dst += 2;
-            count -= 2u;
+            /* The same walk the pose table is baked against, expressed
+             * closed-form because the row loop no longer carries an accumulator
+             * per piece: src_y + row * step_y is what `sy += step_y` reaches,
+             * exactly, and the largest product a 149-row pose can make is under
+             * 2^24. */
+            row[i] = (((u32)piece->src_y +
+                       ((y - (u32)piece->y) * piece->step_y)) >> 8);
         }
-        if (count != 0u)
+        if (row[i] != sNdsUiKitTitleAnimSrcRow[i])
         {
-            *dst = 0u;
+            same = 0u;
         }
     }
-    gNdsUiKitTitleAnimEraseTexels += (u32)rect->width * rect->height;
-}
-
-static void ndsUiKitTitleAnimPiece(const NdsUiKitTitleAnimPose *pose,
-                                   const u16 *raster, u32 raster_w,
-                                   u16 *layer, u32 pitch, s32 keyed)
-{
-    u32 sy = pose->src_y;
-    u32 cached = 0xffffffffu;
-    u16 *dst = layer + ((u32)pose->y * pitch) + (u32)pose->x;
-    u32 row;
-
-    for (row = 0u; row < pose->height; row++)
+    if (same != 0u)
     {
-        u32 src_row = sy >> 8;
-        u32 i;
+        return 0u;
+    }
+    for (i = 0u; i < width; i += 2u)
+    {
+        *(u32 *)&sNdsUiKitTitleAnimLine[i] = 0u;
+    }
+    for (i = 0u; i < NDS_MN_TITLE_ANIM_PIECES; i++)
+    {
+        const NdsUiKitTitleAnimPose *piece = &frame[i];
+        const u16 *src;
+        u32 base;
+        u32 sx;
+        u32 j;
 
-        sy += pose->step_y;
-        if (src_row != cached)
+        sNdsUiKitTitleAnimSrcRow[i] = row[i];
+        if (row[i] == 0xffffffffu)
         {
-            const u16 *src = raster + (src_row * raster_w);
-            u32 sx = pose->src_x;
-
-            for (i = 0u; i < pose->width; i++)
-            {
-                sNdsUiKitTitleAnimLine[i] = src[sx >> 8];
-                sx += pose->step_x;
-            }
-            cached = src_row;
+            continue;
         }
-        if (keyed != FALSE)
+        src = sNdsUiKitTitleAnimPiece[i] +
+              (row[i] *
+               kNdsUiKitSurfaceMetrics[kNdsUiKitTitleAnimSurfaces[i]].width);
+        base = (u32)piece->x - x0;
+        sx = piece->src_x;
+        if (i == 0u)
         {
-            for (i = 0u; i < pose->width; i++)
+            /* THE FIRST PIECE NEEDS NO KEY, and it is an invariant rather than
+             * a guess: the line was just cleared, so its own transparent texels
+             * write zero over zero. The drop-shadow cutout is the largest of
+             * the five and carries roughly a third of the peak frame. */
+            for (j = 0u; j < piece->width; j++)
             {
-                u16 texel = sNdsUiKitTitleAnimLine[i];
-
-                if (texel != 0u)
-                {
-                    dst[i] = texel;
-                }
+                sNdsUiKitTitleAnimLine[base + j] = src[sx >> 8];
+                sx += piece->step_x;
             }
         }
         else
         {
-            /* THE FIRST PIECE NEEDS NO KEY, and that is an invariant rather
-             * than an optimisation guess: the erase above clears the whole
-             * dirty rectangle, and every piece of the previous pose was inside
-             * it, so the band is transparent when this runs. Writing this
-             * piece's own transparent texels therefore writes zero over zero.
-             * It is worth having: the drop-shadow cutout is the largest of the
-             * five and carries roughly a third of the peak frame's texels. */
-            for (i = 0u; i < pose->width; i++)
+            for (j = 0u; j < piece->width; j++)
             {
-                dst[i] = sNdsUiKitTitleAnimLine[i];
+                u16 texel = src[sx >> 8];
+
+                sx += piece->step_x;
+                if (texel != 0u)
+                {
+                    sNdsUiKitTitleAnimLine[base + j] = texel;
+                }
             }
         }
-        dst += pitch;
+        sampled += piece->width;
     }
-    gNdsUiKitTitleAnimDrawTexels += (u32)pose->width * pose->height;
+    return sampled;
 }
 
-static void ndsUiKitTitleAnimBlitSettled(u16 *layer, u32 pitch)
+/* The composed run, into the layer. `x0` and `width` are both even and the line
+ * buffer is 4-aligned, so every texel pair is one aligned word store; the OR is
+ * what lets the caller assert the pose put something on the screen without a
+ * second pass over the row. */
+static u32 ndsUiKitTitleAnimStoreRow(u16 *layer, u32 pitch, u32 y, u32 x0,
+                                     u32 width)
+{
+    u32 *dst = (u32 *)(layer + (y * pitch) + x0);
+    const u32 *src = (const u32 *)sNdsUiKitTitleAnimLine;
+    u32 words = width >> 1;
+    u32 seen = 0u;
+    u32 i;
+
+    for (i = 0u; i < words; i++)
+    {
+        u32 pair = src[i];
+
+        seen |= pair;
+        dst[i] = pair;
+    }
+    return seen;
+}
+
+/* The union of what the previous pose left dirty and what this pose covers,
+ * clamped to the band and rounded out to an even column so the store above is
+ * word-aligned at both ends. Composing the union in one pass is what folds the
+ * separate erase away: a row of it that no piece covers composes to zeros, and
+ * zero IS the erase. */
+static void ndsUiKitTitleAnimUnion(const NdsUiKitTitleAnimRect *a,
+                                   const NdsUiKitTitleAnimRect *b,
+                                   u32 *out_x, u32 *out_y,
+                                   u32 *out_w, u32 *out_h)
+{
+    u32 left = 256u;
+    u32 top = (u32)NDS_MN_TITLE_ANIM_BOTTOM;
+    u32 right = 0u;
+    u32 bottom = 0u;
+    const NdsUiKitTitleAnimRect *rects[2];
+    u32 i;
+
+    rects[0] = a;
+    rects[1] = b;
+    for (i = 0u; i < 2u; i++)
+    {
+        const NdsUiKitTitleAnimRect *r = rects[i];
+
+        /* AN EMPTY RECTANGLE IS NOT A RECTANGLE AT THE ORIGIN, and the
+         * distinction is load-bearing: `kNdsUiKitTitleAnimRects[0]` is
+         * `{0,0,0,0}` because pose 1 shows no label yet, and folding that into
+         * a min/max union drags the union's top-left to (0,0) -- which reaches
+         * rows 0..7, where the (f2) upper border band lives, and clears it.
+         * That is exactly what the first draft of this composer did: the band
+         * was gone from the layer at every present, 1,702 texels, while every
+         * band row still matched the reference. */
+        if ((r->width == 0u) || (r->height == 0u))
+        {
+            continue;
+        }
+        if ((u32)r->x < left) { left = (u32)r->x; }
+        if ((u32)r->y < top) { top = (u32)r->y; }
+        if (((u32)r->x + r->width) > right) { right = (u32)r->x + r->width; }
+        if (((u32)r->y + r->height) > bottom)
+        {
+            bottom = (u32)r->y + r->height;
+        }
+    }
+    left &= ~1u;
+    right = (right + 1u) & ~1u;
+    if (right > 256u)
+    {
+        right = 256u;
+    }
+    /* THE BAND IS THE ANIMATION'S WHOLE WORLD (P2-1k (f2)): rows outside it
+     * belong to the two edge-anchored bands, which nothing here may write. The
+     * pose table is already clipped to it; clamping here as well is what makes
+     * a future table or dirty-rectangle mistake unable to destroy them. */
+    if (top < (u32)NDS_MN_TITLE_ANIM_TOP) { top = (u32)NDS_MN_TITLE_ANIM_TOP; }
+    if (bottom > (u32)NDS_MN_TITLE_ANIM_BOTTOM)
+    {
+        bottom = (u32)NDS_MN_TITLE_ANIM_BOTTOM;
+    }
+    *out_x = left;
+    *out_y = top;
+    *out_w = (right > left) ? (right - left) : 0u;
+    *out_h = (bottom > top) ? (bottom - top) : 0u;
+}
+
+/* Pose 51. Same contract as the animated poses -- one whole-row store inside
+ * the band -- with the settled composite standing in for the five pieces. The
+ * rows ABOVE the band are the exception and stay a keyed write: they hold the
+ * (f2) border band, nothing erased them, so there is no partial state for the
+ * beam to catch and an unkeyed run would destroy art the animation does not
+ * own. */
+static u32 ndsUiKitTitleAnimBlitSettled(u16 *layer, u32 pitch,
+                                        const NdsUiKitTitleAnimRect *dirty)
 {
     const NdsUiKitSurfaceMetric *metric =
         &kNdsUiKitSurfaceMetrics[NDS_MN_UI_KIT_SURFACE_TITLE_WORDMARK];
+    NdsUiKitTitleAnimRect rest;
+    u32 x0, y0, width, height;
+    u32 stored = 0u;
+    u32 seen = 0u;
     u32 row;
 
     for (row = 0u; row < (u32)metric->height; row++)
     {
-        const u16 *src = sNdsUiKitTitleAnimSettled + (row * metric->width);
-        s32 dy = (s32)metric->y + (s32)row;
+        const u16 *src;
         u16 *dst;
         u32 i;
+        s32 dy = (s32)metric->y + (s32)row;
 
-        if (dy < 0)
+        if ((dy < 0) || (dy >= NDS_MN_TITLE_ANIM_TOP))
         {
             continue;
         }
+        src = sNdsUiKitTitleAnimSettled + (row * metric->width);
         dst = layer + ((u32)dy * pitch) + (u32)metric->x;
         for (i = 0u; i < (u32)metric->width; i++)
         {
-            /* Keyed, and the rows above the band matter: this rectangle starts
-             * at y 0 because the emblem does, and those rows hold the (f2)
-             * border band. Every texel of the settled composite there is
-             * transparent -- the emblem alone falls under rgba8_to_ds's alpha
-             * threshold -- so a keyed write cannot disturb the band, while an
-             * opaque one would erase it. */
             if (src[i] != 0u)
             {
                 dst[i] = src[i];
+                seen |= src[i];
             }
         }
     }
+
+    {
+        s32 rest_top = ((s32)metric->y > NDS_MN_TITLE_ANIM_TOP) ?
+                       (s32)metric->y : NDS_MN_TITLE_ANIM_TOP;
+        s32 rest_bottom = (s32)metric->y + (s32)metric->height;
+
+        rest.x = (u16)metric->x;
+        rest.y = (u16)rest_top;
+        rest.width = (u16)metric->width;
+        rest.height = (u16)((rest_bottom > rest_top) ?
+                            (rest_bottom - rest_top) : 0);
+    }
+    ndsUiKitTitleAnimUnion(dirty, &rest, &x0, &y0, &width, &height);
+    for (row = 0u; row < height; row++)
+    {
+        u32 y = y0 + row;
+        s32 sy = (s32)y - (s32)metric->y;
+        u32 i;
+
+        for (i = 0u; i < width; i += 2u)
+        {
+            *(u32 *)&sNdsUiKitTitleAnimLine[i] = 0u;
+        }
+        if ((sy >= 0) && (sy < (s32)metric->height))
+        {
+            const u16 *src = sNdsUiKitTitleAnimSettled +
+                             ((u32)sy * metric->width);
+            u32 base = (u32)metric->x - x0;
+
+            for (i = 0u; i < (u32)metric->width; i++)
+            {
+                sNdsUiKitTitleAnimLine[base + i] = src[i];
+            }
+        }
+        seen |= ndsUiKitTitleAnimStoreRow(layer, pitch, y, x0, width);
+        stored += width;
+    }
     gNdsUiKitTitleAnimDrawTexels += (u32)metric->width * metric->height;
+    gNdsUiKitTitleAnimEraseTexels += stored;
+    return seen;
 }
 
 void ndsUiKitTitleAnimDraw(u32 pose)
@@ -1380,6 +1552,7 @@ void ndsUiKitTitleAnimDraw(u32 pose)
     u32 layer_h = 0u;
     u16 *layer;
     u32 i;
+    u32 seen = 0u;
     u32 elapsed;
 
     if (sNdsUiKitTitleAnimReady == 0u)
@@ -1401,7 +1574,6 @@ void ndsUiKitTitleAnimDraw(u32 pose)
         gNdsUiKitSurfaceNoLayerCount++;
         return;
     }
-    ndsUiKitTitleAnimErase(layer, pitch, &sNdsUiKitTitleAnimDirty);
     if (pose >= NDS_MN_TITLE_ANIM_SETTLE)
     {
         /* mnTitleSetEndLayout, tic 220. The five SObjs go back to their desc
@@ -1409,7 +1581,8 @@ void ndsUiKitTitleAnimDraw(u32 pose)
          * bake proves identical to the static title lands, and the animation
          * stops owning the screen. */
         pose = NDS_MN_TITLE_ANIM_SETTLE;
-        ndsUiKitTitleAnimBlitSettled(layer, pitch);
+        seen = ndsUiKitTitleAnimBlitSettled(layer, pitch,
+                                            &sNdsUiKitTitleAnimDirty);
         sNdsUiKitTitleAnimReady = 0u;
         gNdsUiKitTitleAnimSettleCount++;
     }
@@ -1417,19 +1590,34 @@ void ndsUiKitTitleAnimDraw(u32 pose)
     {
         const NdsUiKitTitleAnimPose *frame =
             &kNdsUiKitTitleAnimPoses[(pose - 1u) * NDS_MN_TITLE_ANIM_PIECES];
+        u32 x0, y0, width, height;
+        u32 sampled = 0u;
 
+        ndsUiKitTitleAnimUnion(&sNdsUiKitTitleAnimDirty,
+                               &kNdsUiKitTitleAnimRects[pose - 1u],
+                               &x0, &y0, &width, &height);
+        /* INVALIDATE THE ROW CACHE PER POSE, not per row: the union's origin
+         * and width move between poses, so a line composed for the previous
+         * pose's x0 is the wrong line even when every source row matches. */
         for (i = 0u; i < NDS_MN_TITLE_ANIM_PIECES; i++)
         {
-            if (frame[i].width == 0u)
-            {
-                continue;
-            }
-            ndsUiKitTitleAnimPiece(
-                &frame[i], sNdsUiKitTitleAnimPiece[i],
-                kNdsUiKitSurfaceMetrics[kNdsUiKitTitleAnimSurfaces[i]].width,
-                layer, pitch, (i == 0u) ? FALSE : TRUE);
+            sNdsUiKitTitleAnimSrcRow[i] = 0xfffffffeu;
         }
+        for (i = 0u; i < height; i++)
+        {
+            sampled += ndsUiKitTitleAnimComposeRow(frame, y0 + i, x0, width);
+            seen |= ndsUiKitTitleAnimStoreRow(layer, pitch, y0 + i, x0, width);
+        }
+        gNdsUiKitTitleAnimDrawTexels += sampled;
+        gNdsUiKitTitleAnimEraseTexels += width * height;
         sNdsUiKitTitleAnimDirty = kNdsUiKitTitleAnimRects[pose - 1u];
+    }
+    /* Pose 1's five table entries are all zero-width -- the source has shown no
+     * label yet -- so it is the one pose that legitimately stores nothing. Any
+     * other is the defect this counter exists to fail on. */
+    if ((seen == 0u) && (pose > 1u))
+    {
+        gNdsUiKitTitleAnimEmptyPoseCount++;
     }
     gNdsUiKitTitleAnimPose = pose;
     gNdsUiKitTitleAnimFrameCount++;

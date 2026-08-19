@@ -1739,11 +1739,45 @@ TITLE_PARTS = (
               (0xB7, 0xAE, 0x7C), dest=(DS_SCREEN_W, 35), edge="bottom"),
     Placement("MNTitle", "llMNTitleBorderUpperSprite", 0, 10, False,
               (0x14, 0x12, 0x06), dest=(DS_SCREEN_W, 8), edge="top"),
-    # The emblem sets its own primitive (mntitle.c:1073) and draws through its
-    # own flat combiner at the resting alpha the title fades it to.
-    Placement("MNTitle", "llMNTitleLogoAnimFullSprite", 260, 60, True,
-              (0xFF, 0x00, 0x00), alpha=0x4C, flat=True),
 )
+
+# P2-1L (1), OWNER BUG: "a transparent RED overlay artifact on the title
+# screen, only on a small part of the right side".
+#
+# THE ELEMENT IS REAL AND THE PLACEMENT WAS RIGHT.  `mnTitleMakeLogoNoOpening`
+# (mntitle.c:1051) is the branch this build takes, it sets the SObj's primitive
+# to pure red with `SP_TRANSPARENT`, `mnTitleLogoProcDisplay` (:1011) draws it
+# through `gDPSetCombineLERP(0,0,0,PRIMITIVE, TEXEL0,0,PRIMITIVE,0, ...)` -- a
+# FLAT primitive colour whose only texture contribution is alpha -- and
+# `mnTitleSetEndLogoPosition` (:374) leaves it at scale 1 and
+# `sMNTitleLogoAlpha = 0x4C` from tic 170 on.  Its desc centre is (260, 60)
+# (:91).  On an N64 that is a 30% red wash over its whole silhouette: over the
+# fire, over the border band, over the wordmark, all of it.
+#
+# A DS 16-BIT BG BITMAP CARRIES ONE ALPHA BIT, so that wash cannot exist in the
+# layer this art lives in.  Composited at bake time it survived only where an
+# OPAQUE texel happened to lie beneath it -- measured, 2026-08-19: 1,243 texels
+# of TITLE_SCREEN, of which 179 are rows 0..6 of the (f2) border band at x
+# 202..236 (near-black RGB5 (2,1,0) turned to (11,1,0)) and the other 1,064 are
+# scattered tint on the wordmark.  That 179-texel block IS the owner's report:
+# a dark red rectangle sitting on the black band on the right.  It is not a
+# rendition of the emblem; it is the emblem's shadow on whatever was behind it,
+# and the (f2) edge anchoring slid the band under a different part of the
+# silhouette than the source has it under, so it is not even the source's
+# shadow.
+#
+# SO IT IS OMITTED, and this is a recorded fidelity delta rather than a
+# deletion: source `llMNTitleLogoAnimFullSprite` at (260,60) alpha 0x4C; visible
+# delta, no red wash on the title's right side; reason, the destination layer
+# has no alpha to blend with, and the surviving fragment reads as corruption
+# rather than as the element.  Reinstating it faithfully needs a second layer
+# the DS can alpha-blend -- a semi-transparent OBJ (DS OBJ mode 1 with
+# BLDALPHA) over the 102x99 silhouette, four 64x64 bitmap sprites -- which is a
+# new mechanism on a screen that is already inside its cadence, and therefore
+# an owner call, not a bake call.
+TITLE_EMBLEM_OMITTED = Placement("MNTitle", "llMNTitleLogoAnimFullSprite",
+                                 260, 60, True, (0xFF, 0x00, 0x00),
+                                 alpha=0x4C, flat=True)
 
 # P2-1k (d).  THE POP ANIMATION'S OWN PAYLOAD, and the source says which of
 # the seven label pieces move.  `mnTitleMakeLabels` (mntitle.c:1180) builds
@@ -1760,7 +1794,6 @@ TITLE_PARTS = (
 # furniture from the first tic -- which is also why (f2)'s edge anchoring needs
 # no pose offset at all: the animation cannot move what it does not drive.
 TITLE_ANIM_PARTS = TITLE_PARTS[:5]
-TITLE_EMBLEM_PART = TITLE_PARTS[7]
 
 SURFACE_SOURCES = [
     SurfaceSpec("TITLE_SCREEN", TITLE_PARTS, TITLE_FIELD),
@@ -1785,20 +1818,22 @@ SURFACE_SOURCES = [
     # quantised pieces is NOT the composite the kit bakes.  A DS texel carries
     # one alpha bit, so where an antialiased `Smash` edge blends over an opaque
     # `Cutout` texel, TITLE_SCREEN holds the BLEND; five separate rasters, each
-    # quantised alone, hold neither.  The emblem is the same argument twice
-    # over: at its resting 0x4C primitive alpha every one of its own texels
-    # falls under `rgba8_to_ds`'s 128 threshold, so it survives the bake ONLY
-    # as a tint on the opaque art beneath it -- 1,243 texels of TITLE_SCREEN,
-    # of which just 23 exist without the wordmark under them.
+    # quantised alone, hold neither.
+    #
+    # P2-1L (1) took the emblem back out of both title surfaces -- see
+    # TITLE_EMBLEM_OMITTED above for the source citation, the 1,243-texel
+    # measurement and the delta record -- so this composite is now exactly the
+    # five animated pieces, and its rectangle shrinks with them from 238x111 at
+    # (18,0) to 219x72 at (18,39): 21,300 fewer resident bytes in the title
+    # scene's arena block, and the settled rectangle no longer reaches rows the
+    # (f2) border band owns.
     #
     # `mnTitleSetEndLayout` snaps at tic 220, so this is the frame the screen
     # then holds: the runtime blits THIS at pose 51 and the resting title is
-    # bit-identical to what (f2) shipped.  `check_title_anim_block` proves
-    # that rather than asserting it.  No `box`: the union of these six IS the
-    # rectangle wanted, and the emblem's overhang past x=256 clips exactly as
-    # it does in TITLE_SCREEN.
-    SurfaceSpec("TITLE_WORDMARK", TITLE_ANIM_PARTS + (TITLE_EMBLEM_PART,),
-                TITLE_FIELD),
+    # bit-identical to the static title.  `check_title_anim_block` proves that
+    # rather than asserting it.  No `box`: the union of these five IS the
+    # rectangle wanted.
+    SurfaceSpec("TITLE_WORDMARK", TITLE_ANIM_PARTS, TITLE_FIELD),
     # THE MENU COLLAGE.  300x220 CI4 with a 16-entry TLUT, 44 bands of 6 rows
     # stepping 5 -- the asset that forced decode_sprite_raster to transcribe
     # spDraw's band policy.  Both screens that show it place it identically at

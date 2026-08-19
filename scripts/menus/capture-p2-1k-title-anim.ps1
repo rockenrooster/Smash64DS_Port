@@ -9,7 +9,15 @@ param(
     # animation: one early pose, the peak-cost pose the bake names (19), one
     # late pose, and one well past the tic-220 snap so the settled screen is in
     # the same run as the moving ones.
-    [int[]]$Presents = @(10, 19, 34, 60, 140)
+    [int[]]$Presents = @(10, 19, 34, 60, 140),
+    # P2-1L (3). Also dump the animation's DESTINATION -- BG2's 256x192x16-bit
+    # bitmap, `bgInit(2, BgType_Bmp16, BgSize_B16_256x256, 0, 0)` in
+    # nds_platform.c, so the base is VRAM+0 -- beside every photograph. A
+    # screenshot alone cannot separate "the blit drew the wrong thing" from
+    # "the blit drew the right thing and the panel showed something else",
+    # because the layer is scanned out LIVE while the CPU writes it. The dump
+    # is the blit's own output; the PNG is what reached the panel.
+    [switch]$DumpLayer
 )
 
 # P2-1k (d) visibility. Photographs the title's pop animation MID-FLIGHT, which
@@ -51,6 +59,7 @@ if ([string]::IsNullOrWhiteSpace($OutputPrefix)) {
 }
 
 $required = @('ndsPlatformEndFrame', 'ndsMenuShellRunTitle',
+              'gNdsUiKitTitleAnimEmptyPoseCount',
               'gNdsUiKitTitleAnimPose', 'gNdsUiKitTitleAnimArmCount',
               'gNdsUiKitTitleAnimSettleCount',
               'gNdsUiKitTitleAnimLoadFailCount',
@@ -119,11 +128,13 @@ try {
         $commands += @(
             ('printf "ANIMCAP present=' + $present +
              ' pose=%u shot=%u arm=%u settle=%u fail=%u frames=%u ' +
-             'maxticks=%u maxpose=%u fire=%u\n", gNdsUiKitTitleAnimPose, ' +
+             'maxticks=%u maxpose=%u fire=%u empty=%u\n", ' +
+             'gNdsUiKitTitleAnimPose, ' +
              'gNdsUiKitTitleAnimPose - 1, gNdsUiKitTitleAnimArmCount, ' +
              'gNdsUiKitTitleAnimSettleCount, gNdsUiKitTitleAnimLoadFailCount, ' +
              'gNdsUiKitTitleAnimFrameCount, gNdsUiKitTitleAnimMaxTicks, ' +
-             'gNdsUiKitTitleAnimMaxPose, gNdsTitleFireFrameCount'),
+             'gNdsUiKitTitleAnimMaxPose, gNdsTitleFireFrameCount, ' +
+             'gNdsUiKitTitleAnimEmptyPoseCount'),
             # PRESS START shares the animation's row band, so it is redrawn
             # from the kit's cache after every animated frame. `pdraw` climbing
             # with the frame count is what separates "the redraw ran" from "the
@@ -150,6 +161,14 @@ try {
              '" -EmulatorProcessId ' + $emulator.Id + ' -Output "' +
              ($OutputPrefix + '-present' + $present + '.png') + '"')
         )
+        if ($DumpLayer) {
+            # FORWARD SLASHES, UNQUOTED: gdb's `dump binary memory` takes the
+            # filename as a raw token, so a quoted Windows path comes back
+            # "Invalid argument" and a backslash one eats its own separators.
+            $bin = ($OutputPrefix + '-present' + $present +
+                    '-bg2.bin') -replace '\\', '/'
+            $commands += @("dump binary memory $bin 0x06000000 0x06018000")
+        }
         $reached = $present
     }
     $commands += @('detach', 'quit')

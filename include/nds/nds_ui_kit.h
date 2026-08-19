@@ -355,5 +355,12 @@ extern volatile u32 gNdsUiKitTitleAnimEraseTexels;
 extern volatile u32 gNdsUiKitTitleAnimTicks;
 extern volatile u32 gNdsUiKitTitleAnimMaxTicks;
 extern volatile u32 gNdsUiKitTitleAnimMaxPose;
+/* P2-1L (3). A POSE THAT STORED NOTHING, counted so "every pose draws" is an
+ * assertion rather than a screenshot. Pose 1 is legitimately empty -- its five
+ * table entries are all zero-width, because the source has not shown a label
+ * yet -- so it is excluded; any other empty pose is a defect and the loop
+ * verifier reads this as 0. It is free: the composer already ORs every word it
+ * stores, so the test is one compare per pose. */
+extern volatile u32 gNdsUiKitTitleAnimEmptyPoseCount;
 
 #endif /* NDS_UI_KIT_H */

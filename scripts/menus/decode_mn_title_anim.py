@@ -520,10 +520,14 @@ def bake(repo_root: Path):
                                 kit.SurfaceSpec("TITLE_SCREEN",
                                                 kit.TITLE_PARTS,
                                                 kit.TITLE_FIELD))
+    # P2-1L (1) took the emblem out of both title surfaces (see
+    # `TITLE_EMBLEM_OMITTED` in the kit), so the settled composite is the five
+    # animated pieces and nothing else -- which is also what makes it the
+    # union of the five rest rectangles rather than a rectangle the emblem
+    # stretched to the screen edge.
     settled = kit.convert_surface(
         cache, offsets, repo_root,
-        kit.SurfaceSpec("TITLE_WORDMARK",
-                        kit.TITLE_ANIM_PARTS + (kit.TITLE_EMBLEM_PART,),
+        kit.SurfaceSpec("TITLE_WORDMARK", kit.TITLE_ANIM_PARTS,
                         kit.TITLE_FIELD))
     top, bottom = kit.title_anim_band([title])
     return pieces, settled, top, bottom

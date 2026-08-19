@@ -298,12 +298,19 @@ void ndsRelocAssetsInit(void)
     if (nitroFSInit(NULL))
     {
         gNdsRelocAssetInitResult = NDS_RELOC_ASSET_INIT_PASS;
+#if NDS_BOOT_DIAG_TEXT
+        /* P2-1L (11). gNdsRelocAssetInitResult is what every verifier reads;
+         * the console line is the human copy, and the owner's free-play ROM
+         * builds with NDS_BOOT_DIAG_TEXT := 0 so its bottom screen is clean. */
         iprintf("NitroFS: PASS\n");
+#endif
     }
     else
     {
         gNdsRelocAssetInitResult = 0;
+#if NDS_BOOT_DIAG_TEXT
         iprintf("NitroFS: FAIL\n");
+#endif
     }
 }
 

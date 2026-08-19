@@ -235,7 +235,13 @@ if (-not [string]::IsNullOrWhiteSpace($AnalyzeOnly)) {
         # for the same reason the fire sheet is: the blit equality below is an
         # equality, and these frames are neither a backdrop nor a state change.
         'gNdsUiKitTitleAnimArmCount', 'gNdsUiKitTitleAnimSettleCount',
-        'gNdsUiKitTitleAnimLoadFailCount', 'gNdsUiKitTitleAnimPose'
+        'gNdsUiKitTitleAnimLoadFailCount', 'gNdsUiKitTitleAnimPose',
+        # P2-1L (3). The empty-pose guard's counter. It is listed here for the
+        # reason the rest of this block exists: --gc-sections has dropped a
+        # diagnostic global before, and a MISSING symbol must fail the run
+        # loudly rather than let a gdb printf produce a number nobody can
+        # attribute.
+        'gNdsUiKitTitleAnimEmptyPoseCount'
     )
     $symbols = & $nm $elf | ForEach-Object { ($_ -split '\s+')[-1] }
     $missing = @($required | Where-Object { $symbols -notcontains $_ })
@@ -467,13 +473,15 @@ if (-not [string]::IsNullOrWhiteSpace($AnalyzeOnly)) {
             # and the tick pair are reported for the board, not asserted --
             # cadence is measured beside the profile, never inside it.
             ('printf "LOOPANIM arm=%u settle=%u fail=%u pose=%u frames=%u ' +
-             'ticks=%u maxticks=%u maxpose=%u bytes=%u draw=%u erase=%u\n", ' +
+             'ticks=%u maxticks=%u maxpose=%u bytes=%u draw=%u erase=%u ' +
+             'empty=%u\n", ' +
              'gNdsUiKitTitleAnimArmCount, gNdsUiKitTitleAnimSettleCount, ' +
              'gNdsUiKitTitleAnimLoadFailCount, gNdsUiKitTitleAnimPose, ' +
              'gNdsUiKitTitleAnimFrameCount, gNdsUiKitTitleAnimTicks, ' +
              'gNdsUiKitTitleAnimMaxTicks, gNdsUiKitTitleAnimMaxPose, ' +
              'gNdsUiKitTitleAnimBytes32, gNdsUiKitTitleAnimDrawTexels, ' +
-             'gNdsUiKitTitleAnimEraseTexels'),
+             'gNdsUiKitTitleAnimEraseTexels, ' +
+             'gNdsUiKitTitleAnimEmptyPoseCount'),
             ('printf "LOOPARENA base=%08x size=%u\n", ' +
              'gNdsSceneManagerArenaBase, gNdsSceneManagerArenaSize'),
             ('printf "LOOPINPUTRING ' + $ringFmt + '\n", ' + $inputRing),
@@ -701,6 +709,17 @@ if ($null -ne $surf) {
             Assert-Loop ($a['pose'] -eq 51) (
                 "TITLE ANIM: pose=$($a['pose']), expected 51 -- the snap the " +
                 'source takes at tic 220.')
+            # P2-1L (3). EVERY POSE PUTS SOMETHING ON THE SCREEN. The composer
+            # ORs every word it stores, so a pose that stored nothing but zeros
+            # counts here; pose 1 is excluded in the runtime because its five
+            # table entries are legitimately all zero-width. This is the cheap
+            # standing guard for the class of defect the row fixed -- a pose
+            # that renders blank -- which arm/settle/pose bookkeeping alone
+            # cannot see.
+            Assert-Loop ($a['empty'] -eq 0) (
+                "TITLE ANIM: empty=$($a['empty']), expected 0 -- every pose " +
+                'after the first must store at least one non-transparent ' +
+                'texel into the band.')
         }
         Assert-Loop ($e['startup'] -eq 1) (
             "BOOT SCENE: startup=$($e['startup']), expected exactly 1 -- the " +
