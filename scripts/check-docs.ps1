@@ -7,7 +7,11 @@ param(
     # is hand-run, so the overage went unnoticed. Raised rather than trimmed:
     # the cap exists to stop AGENTS.md accumulating derived detail, not to
     # bound what the owner puts in it.
-    [int]$AgentsMaxLines = 170,
+    # 170 -> 200 (P2-1M, 2026-08-19), same rationale a third time: the file sits
+    # at 184 authored lines of owner-authored rules -- the DS Visual Fidelity
+    # section and the subagent-switch modes are both the owner's own text, and
+    # this row has no licence to trim them.
+    [int]$AgentsMaxLines = 200,
     # 45 -> 55 (cycle 79, 2026-08-05): Hard Rules sat at 49 lines of owner
     # rules; same rationale as the file cap above.
     [int]$AgentsMaxSectionLines = 55,
@@ -32,8 +36,13 @@ $required = @(
     'docs/HANDOFF.md',
     'docs/HARNESSES.md',
     'docs/KNOWN_ISSUES.md',
-    'docs/Smash64DS_Runtime2_SwitchPlan.md',
-    'docs/P1_EXECUTION_BOARD.md',
+    # P2-1M (2026-08-19). This list named the two P1-era planning surfaces --
+    # `Smash64DS_Runtime2_SwitchPlan.md` and `P1_EXECUTION_BOARD.md` -- long
+    # after the P2 restructure archived both, so the checker threw on its very
+    # first loop and every assertion below it had been dead since. It now
+    # requires the surfaces P2 actually runs on.
+    'docs/P2_EXECUTION_BOARD.md',
+    'docs/P2_PLAN.md',
     'docs/PERF_LEDGER.md',
     'docs/PORTING.md',
     'docs/VERIFYING.md'
@@ -104,47 +113,48 @@ foreach ($file in Get-ChildItem (Join-Path $root 'docs') -File -Filter '*.md') {
     }
 }
 
-$board = Read-RepoText 'docs/P1_EXECUTION_BOARD.md'
+$board = Read-RepoText 'docs/P2_EXECUTION_BOARD.md'
 $handoff = Read-RepoText 'docs/HANDOFF.md'
 $harnesses = Read-RepoText 'docs/HARNESSES.md'
-$runtime2 = Read-RepoText 'docs/Smash64DS_Runtime2_SwitchPlan.md'
 $known = Read-RepoText 'docs/KNOWN_ISSUES.md'
 $porting = Read-RepoText 'docs/PORTING.md'
 $agents = $agentsLines -join "`n"
 
+# The P2 board's own load-bearing sections. `## Standing rules` carries the
+# measurement law, `## Queue` the only dynamic queue, and the two match/publish
+# laws are the ones a row is most likely to quietly soften.
 foreach ($token in @(
-    'battle_playable_realtime', '## Red Queue', '## Acceptance Matrix',
-    'one-minute', 'SHA-256'
+    '## Standing rules', '## Queue', 'one-minute', 'SHA-256', 'Publish law'
 )) {
     if (-not $board.Contains($token)) {
-        Fail-Docs "P1 board is missing '$token'"
+        Fail-Docs "P2 board is missing '$token'"
     }
 }
-# The board dates by cycle, not wall clock: `Updated: YYYY-MM-DD (cycle N)`.
-# The old `HH:MM Central` regex matched nothing on the board for many cycles --
-# this checker is hand-run, so the drift went unnoticed until the cycle-79
-# board rewrite audited every pin.
-if ($board -notmatch '(?m)^Updated:\s*\d{4}-\d{2}-\d{2}\s+\(cycle\s+\d+\)') {
-    Fail-Docs 'P1 board update stamp is not parseable (want: Updated: YYYY-MM-DD (cycle N))'
+if ($board -notmatch '(?m)^Updated:\s*\d{4}-\d{2}-\d{2}') {
+    Fail-Docs 'P2 board update stamp is not parseable (want: Updated: YYYY-MM-DD)'
 }
+# The canonical published-ROM hash, in the one line format both this checker and
+# a reader can find. P2-1M republished `smash64ds.nds` as the base ROM, so this
+# pin now guards the P2 baseline rather than P1's.
 if ($board -notmatch '(?m)^SHA-256\s+[0-9A-F]{64}\s*$') {
-    Fail-Docs 'P1 board lacks the canonical SHA-256'
-}
-foreach ($token in @(
-    'P95', '1.12M', 'src/nds/r2/', 'NDS_R2_', 'Switch acceptance',
-    'P1_EXECUTION_BOARD.md'
-)) {
-    if (-not $runtime2.Contains($token)) {
-        Fail-Docs "Runtime 2 plan is missing '$token'"
-    }
+    Fail-Docs 'P2 board lacks the canonical published-ROM SHA-256'
 }
 if ($harnesses -notmatch 'HARNESS_INDEX_SOURCE:\s*scripts/lib/harness-registry\.ps1' -or
     $harnesses -notmatch 'verify-all\.ps1 -Profile Boundary -List' -or
     $harnesses -notmatch 'verify-all\.ps1 -Profile Latest -List') {
     Fail-Docs 'Harness registry authority is missing'
 }
+# P2-1M (2026-08-19): the first token was
+# 'cosmetic exactness to one measured experiment' and AGENTS.md has not said
+# that since the owner rewrote DS Visual Fidelity -- it now reads "Timebox
+# exactness-polish to one measured experiment", because "cosmetic" was exactly
+# the framing the round-1 visual-pass failure came from. Pin the sentence that
+# is actually load-bearing, not the retired adjective.
+# Tokens must not span a line wrap: `$agents` is the file joined with "`n", so
+# 'exactness-polish to one measured experiment' cannot match text that wraps
+# after "measured". Keep every token inside one source line.
 foreach ($token in @(
-    'cosmetic exactness to one measured experiment',
+    'Timebox exactness-polish to one measured',
     'artifacts/visibility', 'mechanically equivalent',
     'third A', 'ticks, FPS'
 )) {

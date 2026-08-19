@@ -56,7 +56,7 @@ $modeDupes = @($registry |
     Where-Object { $_.Count -gt 1 })
 foreach ($dupe in $modeDupes) {
     $names = @($dupe.Group | ForEach-Object { $_.Name } | Sort-Object)
-    if (($dupe.Name -ne '163') -or (($names -join ',') -ne 'battle_playable,battle_playable_match_lifecycle,battle_playable_realtime')) {
+    if (($dupe.Name -ne '163') -or (($names -join ',') -ne 'battle_playable,battle_playable_match_lifecycle,p2_battle_realtime')) {
         Fail-Check "duplicate Mode value '$($dupe.Name)' for unexpected aliases: $($names -join ', ')"
     }
 }
@@ -204,8 +204,27 @@ if (($battleLoopText -notmatch 'R2_TEXMEMO=%u,%u,%u,%u,%u') -or
     ($battleLoopText -notmatch '\$lookupLive -or \(\$rth\[0\] -eq 0 -and \$memoLive\)')) {
     Fail-Check 'battle verifier no longer proves texture coverage through either a live hash lookup or a live E12 memo'
 }
-if ($verifyAllText -notmatch '(?s)\(\$record\.Name -eq ''battle_playable_realtime''\).*?\$arguments \+= ''-FastIteration''') {
+if ($verifyAllText -notmatch '(?s)\(\$record\.Name -eq ''p2_battle_realtime''\).*?\$arguments \+= ''-FastIteration''') {
     Fail-Check 'verify-all does not select the one-capture canonical fast path for realtime records'
+}
+# P2-1M: and it must hand the battle arm the shell flow, or the arm silently
+# falls back to the retired P1-named proof ROM and the gate stops measuring the
+# configuration the owner plays.
+if ($verifyAllText -notmatch '(?s)\(\$record\.Name -eq ''p2_battle_realtime''\).*?\$arguments \+= ''-P2ShellFlow''') {
+    Fail-Check 'verify-all does not route the Boundary battle arm through the P2 shell'
+}
+$realtimeShellRoutes =
+    ($realtimeText -match '\[switch\]\$P2ShellFlow') -and
+    ($realtimeText -match "if \(\`$P2ShellFlow\) \{ \`$harnessArgs \+= '-P2ShellFlow' \}") -and
+    ($realtimeText -match 'build-p2-shell\\smash64ds-p2-shell-hwtri\.nds')
+if (-not $realtimeShellRoutes) {
+    Fail-Check 'realtime verifier no longer forwards the shell flow or still screenshots the frozen P1 artifact'
+}
+$battleVerifierText = Get-Content -LiteralPath (
+    Join-Path $PSScriptRoot 'verify-battle-playable-harness.ps1') -Raw
+if (($battleVerifierText -notmatch "\`$target = 'smash64ds-p2-shell-hwtri'") -or
+    ($battleVerifierText -notmatch "\`$build = 'build-p2-shell'")) {
+    Fail-Check 'battle verifier no longer selects the P2 shell lab pair for the shell flow'
 }
 if ($battleLoopText -notmatch '\[int64\]\$aobj32\.Groups\[4\]\.Value -eq 0') {
     Fail-Check 'battle lifecycle verifier does not parse unsigned AObj32 failure count safely'
@@ -252,7 +271,7 @@ if ($sceneConfigViolations.Count -gt 0) {
     Fail-Check "scene harness macro reference(s) missing nds_scene_harness_config.h include: $($sceneConfigViolations -join ', ')"
 }
 $latestExpect = @{
-    battle_playable_realtime = 163
+    p2_battle_realtime = 163
 }
 foreach ($name in $latestExpect.Keys) {
     $record = $registry | Where-Object { $_.Name -eq $name } | Select-Object -First 1
@@ -263,8 +282,8 @@ foreach ($name in $latestExpect.Keys) {
 }
 $latestRecords = @($registry | Where-Object { $_.Tags -contains 'latest' })
 $latestMode163 = @($latestRecords | Where-Object { $_.Mode -eq 163 })
-if (($latestMode163.Count -ne 1) -or ($latestMode163[0].Name -ne 'battle_playable_realtime')) {
-    Fail-Check "mode 163 latest metadata must name only battle_playable_realtime: $(@($latestMode163.Name) -join ', ')"
+if (($latestMode163.Count -ne 1) -or ($latestMode163[0].Name -ne 'p2_battle_realtime')) {
+    Fail-Check "mode 163 latest metadata must name only p2_battle_realtime: $(@($latestMode163.Name) -join ', ')"
 }
 $legacyRecords = @($registry | Where-Object {
     $null -ne $_.Mode -and $_.Mode -ge 1 -and $_.Mode -le 162
@@ -278,12 +297,12 @@ if ($legacyRecords.Count -gt 0) {
 # as the regression guard, so a change that drops it has to fail here.
 Assert-ProfilePlan 'Boundary' @(
     'p2_shell_loop',
-    'battle_playable_realtime'
+    'p2_battle_realtime'
 )
 Assert-ProfilePlan 'Latest' @(
     'runtime',
     'p2_shell_loop',
-    'battle_playable_realtime'
+    'p2_battle_realtime'
 )
 # The loop arm's own contract, pinned so it cannot be softened into a shorter
 # walk or into the P2-1b substitute hop that closed a lap WITHOUT running

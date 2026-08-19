@@ -56,8 +56,12 @@ Ordering rationale (owner-ratified 2026-08-17):
 4. **Boundary evolution**: the registry stays Latest + Boundary only. The
    Boundary *definition* upgrades at each phase close (P2-1: full-loop soak;
    P2-2: 4-CPU stress arm; …). Each upgrade is a board row with owner
-   visibility, and the 2-fighter P1 configuration stays green throughout
-   (regression guard for shipped behavior).
+   visibility, and the 2-fighter regression battle stays green throughout
+   (regression guard for shipped behavior) — carried since P2-1M (owner,
+   2026-08-19) by the `p2_battle_realtime` arm, which runs that same match
+   (Mario human vs level-3 CPU Fox, Dream Land, one-minute Time) **through the
+   P2 shell** on a P2-named lab artifact rather than out of a P1-named
+   boot-into-battle proof ROM.
 5. **Publish law**: P2 publishes `smash64ds.nds` only from verifier-covered
    configurations. `smash64ds-battle-playable-hwtri.nds` stays frozen as the
    P1 artifact.
@@ -115,6 +119,24 @@ Ordering rationale (owner-ratified 2026-08-17):
   conflicts**. Asset inspection before implementation and side-by-side
   **asset-dump comparison** are now unit-DoD requirements (laws 6/7). Rework
   row P2-1i re-opens the phase.
+
+## Owner decisions log (2026-08-19)
+
+- **The Boundary battle arm rebases onto the shell.** The regression battle
+  (law 4) runs through the P2 shell configuration and builds P2-named lab
+  artifacts; the P1-named proof target `smash64ds-battle-playable-proof-hwtri`
+  leaves the routine gate. It stays in the Makefile for the dozen specialized
+  probes that legitimately still boot straight into a battle. The frozen P1
+  artifact `smash64ds-battle-playable-hwtri.nds` is untouched.
+- **`smash64ds` is the base ROM now.** P2 publishes it from the shipping shell
+  configuration and the owner plays it; the free-play lab name retires into it,
+  so "what the owner plays" and "what the gate publishes" are one flag set.
+- **Workflow**: the free-play ROM is rebuilt and delivered after each fix
+  batch, and owner questions are batched *before* any ROM-affecting build.
+  Recorded in `docs/VERIFYING.md` ("How A P2 Row Runs") rather than in a new
+  document, per `docs/README.md`'s no-new-workflow-doc rule.
+- Board row P2-1M carries all of the above, plus the docs modernization and the
+  four inherited checker reds.
 
 ## Top risks
 

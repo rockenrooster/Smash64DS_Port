@@ -21,7 +21,12 @@ param(
     [ValidateRange(1,1000000)][int]$FastCaptureFirstFrame = 438,
     [ValidateRange(1,1000000)][int]$FastCaptureSecondFrame = 439,
     [ValidateRange(0,1)][int]$FoxCpuMode = 1,
-    [switch]$FastIteration
+    [switch]$FastIteration,
+    # P2-1M (owner, 2026-08-19): reach the mode-163 regression battle through
+    # the VS shell, on the P2-named lab build of the shipping shell
+    # configuration. Boundary's battle arm passes this; the P1-named proof ROM
+    # is off the routine gate.
+    [switch]$P2ShellFlow
 )
 $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
@@ -265,6 +270,7 @@ $harnessArgs = @(
     '-ImportBattleShipFTComputer',
     '-FoxCpuMode', "$FoxCpuMode"
 )
+if ($P2ShellFlow) { $harnessArgs += '-P2ShellFlow' }
 if ($NoBuild) { $harnessArgs += '-NoBuild' }
 if ($RequireLocked30Pacing) { $harnessArgs += '-RequireLocked30Pacing' }
 if ($OneMinuteMatchProof) {
@@ -313,7 +319,21 @@ if (-not $SkipScreenshot) {
         $captureMelonDS = $captureContext.MelonDSPath
         Write-Output "Using melonDS runner slot $RunnerSlot for capture: $captureMelonDS"
     }
-    $battleRom = Join-Path $root 'smash64ds-battle-playable-hwtri.nds'
+    # P2-1M: the visual half follows the GDB half onto the shell ROM. It used to
+    # capture the FROZEN P1 ARTIFACT at the repo root while the GDB half ran a
+    # different build entirely -- two ROMs, one verdict -- so the picture the
+    # gate accepted was never the program it had just asserted about. Both
+    # halves are now the same P2 lab ROM.
+    #
+    # The crops are unchanged and still valid: capture-melonds.ps1 anchors on
+    # `tbreak scVSBattleStartBattle` (it is passed -Gdb/-GdbPort here), so it
+    # waits out the menu walk and samples battle-start + delay exactly as
+    # before -- the same fight, the same camera, reached a different way.
+    $battleRom = if ($P2ShellFlow) {
+        Join-Path $root 'builds\build-p2-shell\smash64ds-p2-shell-hwtri.nds'
+    } else {
+        Join-Path $root 'smash64ds-battle-playable-hwtri.nds'
+    }
     # The preceding GDB verifier hard-proves both source-selected fighter
     # display contracts. Moving fighters therefore cannot make any realtime
     # visual gate fail merely by leaving its historical fixed crops.

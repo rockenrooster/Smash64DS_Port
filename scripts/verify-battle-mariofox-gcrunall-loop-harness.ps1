@@ -83,35 +83,56 @@ param(
     [Parameter(Mandatory = $true)][string]$HarnessSelectMessage
 )
 $ErrorActionPreference = 'Stop'
+# P2-1M (2026-08-19): `smash64ds-p2-shell-hwtri` joins every intrinsic list
+# below because its Makefile block sets the same flags with `override`, and that
+# is VERIFIED from the generated config rather than assumed --
+# builds/build-p2-shell/nds_build_config.h carries profile 0, telemetry 1, tick
+# HUD 0, fast run 9, HW compose 2, static textures 1, hybrid OAM 0, fast
+# wallpaper 1, Task 16 1/1/1, DS mesh 0. Omitting it here would make the verifier
+# try to POKE those modes at runtime on a build that already has them compiled
+# in, which is the failure the `override` blocks exist to prevent.
 $usesPublishedIntrinsicRendererDefaults = $Target -in @(
     'smash64ds-battle-playable-hwtri',
-    'smash64ds-battle-playable-proof-hwtri'
+    'smash64ds-battle-playable-proof-hwtri',
+    'smash64ds-p2-shell-hwtri'
 )
 $usesIntrinsicTask36Replay = $usesPublishedIntrinsicRendererDefaults
 $usesIntrinsicTask16FloatHelpers = $Target -in @(
     'smash64ds-battle-playable-hwtri',
     'smash64ds-battle-playable-proof-hwtri',
+    'smash64ds-p2-shell-hwtri',
     'smash64ds-battle-playable-freeze-diagnostics-on-hwtri',
     'smash64ds-battle-playable-freeze-diagnostics-off-hwtri'
 )
 $usesIntrinsicNativeStageGeneratedSegment0 = $Target -in @(
     'smash64ds-battle-playable-hwtri',
     'smash64ds-battle-playable-proof-hwtri',
+    'smash64ds-p2-shell-hwtri',
     'smash64ds-battle-playable-freeze-diagnostics-on-hwtri',
     'smash64ds-battle-playable-freeze-diagnostics-off-hwtri'
 )
 $usesIntrinsicFastWallpaper = $Target -in @(
     'smash64ds-battle-playable-hwtri',
     'smash64ds-battle-playable-proof-hwtri',
+    'smash64ds-p2-shell-hwtri',
     'smash64ds-battle-playable-freeze-diagnostics-on-hwtri',
     'smash64ds-battle-playable-freeze-diagnostics-off-hwtri'
 )
 $usesIntrinsicTask32DrawHotText = $Target -in @(
     'smash64ds-battle-playable-hwtri',
     'smash64ds-battle-playable-proof-hwtri',
+    'smash64ds-p2-shell-hwtri',
     'smash64ds-battle-playable-freeze-diagnostics-on-hwtri',
     'smash64ds-battle-playable-freeze-diagnostics-off-hwtri'
 )
+# The shell walks five menu screens before the match starts. Measured from the
+# banked shipping-configuration probe (artifacts/verification/2026-08-19_p2-
+# shell.txt): title 150 + mode select 301 + VS mode 1,811 + character select
+# 1,612 + stage select 244 = 4,118 presented frames, about 69 s at 60 Hz, all of
+# it spent inside `tbreak scVSBattleStartBattle; continue`. Every wait in this
+# verifier is a GUEST anchor rather than wall-clock, so the flow needs no new
+# synchronisation -- only a ceiling that can accommodate it.
+$usesP2ShellFlow = $Target -in @('smash64ds-p2-shell-hwtri')
 $effectiveTask16FloatCompareMode = if (
     $usesIntrinsicTask16FloatHelpers) { 1 } else { $Task16FloatCompareMode }
 $effectiveTask16FloatI2fMode = if (
@@ -1386,6 +1407,11 @@ try {
     # wins, and the benchmark's own budget is left alone.
     $gdbCaptureTimeoutSeconds = if ($OneMinuteMatchProof) {
         300
+    } elseif ($usesP2ShellFlow) {
+        # 120 s does not cover a run that spends ~69 s walking menus before the
+        # battle even starts. A timeout is a ceiling, not a sleep (see the note
+        # above), so a passing run pays nothing for the headroom.
+        [Math]::Max($RendererBenchmarkTimeoutSeconds, 600)
     } else {
         [Math]::Max($RendererBenchmarkTimeoutSeconds, 120)
     }

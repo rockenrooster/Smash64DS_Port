@@ -30,6 +30,14 @@ param(
     [ValidateRange(0,1)][int]$IFCommonHybridOamMode = 0,
     [ValidateRange(0,1)][int]$FastWallpaperAffineMode = 0,
     [ValidateRange(0,1)][int]$FoxCpuMode = 1,
+    # P2-1M (owner, 2026-08-19). Run the same mode-163 regression battle, but
+    # REACH IT THROUGH THE VS SHELL: title -> main menu -> VS rules -> character
+    # select -> stage select -> battle. The match is identical -- the shell's own
+    # character/stage select commits Mario HUMAN vs Fox CPU level 3 on Dream
+    # Land in Time mode, read back out of the live battle state as
+    # `CSSLIVE s0=0/0/1 s1=1/1/3 pl=1 cp=1 time=1 gkind=06` -- so this switch
+    # changes the ROM the gate runs, not the fight it verifies.
+    [switch]$P2ShellFlow,
     [switch]$RequireZeroPostGoTextureFence,
     [switch]$RendererM2DetailedLedger,
     [ValidateRange(0,1)][int]$Task9FloatItcmMode = 1,
@@ -88,8 +96,25 @@ if ($OneMinuteMatchProof) {
 } elseif ($RealtimePresentation) {
     if ($RendererProfileLevel -lt 0) { $RendererProfileLevel = 0 }
     if ($RendererProfileLevel -eq 0) {
-        $target = 'smash64ds-battle-playable-proof-hwtri'
-        $build = 'build-battle-playable-proof-hwtri-harness'
+        # THE BOUNDARY ARM'S ROM MOVED TO THE SHELL AT P2-1M; the P1-named proof
+        # target below stays for the dozen specialized probes and metric
+        # verifiers that legitimately still boot straight into a battle
+        # (probe-ko-blast, verify-battle-playable-camera-containment, ...), and
+        # for archival rebuilds. Nothing routine builds it any more.
+        #
+        # The shell target is the SHIPPING configuration plus one flag: its
+        # generated config matches the published intrinsic renderer defaults
+        # exactly (profile 0, telemetry 1, tick HUD 0, fast run 9, HW compose 2,
+        # static textures 1, hybrid OAM 0, fast wallpaper 1, DS mesh 0), and the
+        # one addition is NDS_P2_MENU_WALK, which scripts one pass through the
+        # screens so the run is unattended.
+        if ($P2ShellFlow) {
+            $target = 'smash64ds-p2-shell-hwtri'
+            $build = 'build-p2-shell'
+        } else {
+            $target = 'smash64ds-battle-playable-proof-hwtri'
+            $build = 'build-battle-playable-proof-hwtri-harness'
+        }
     } elseif ($RendererProfileLevel -eq 1) {
         $target = 'smash64ds-battle-playable-coarse-hwtri'
         $build = 'build-battle-playable-coarse-hwtri-harness'
@@ -109,7 +134,8 @@ if ($RendererProfileLevel -lt 0) {
     $RendererProfileLevel = if ($OneMinuteMatchProof) { 0 } else { 2 }
 }
 if (($target -in @('smash64ds-battle-playable-hwtri',
-                   'smash64ds-battle-playable-proof-hwtri')) -and
+                   'smash64ds-battle-playable-proof-hwtri',
+                   'smash64ds-p2-shell-hwtri')) -and
     -not $PSBoundParameters.ContainsKey('RendererFastRunMode')) {
     $RendererFastRunMode = 9
 }
@@ -119,6 +145,27 @@ if ($MatchLifecycleProof) {
     # Profiles 0/1 share the latency-optimized mode-163 realtime variant;
     # profile 2 retains the size-optimized forensic build variant.
     $harness = 'battle_playable_realtime'
+}
+# WHAT THE HARNESS SELECTED, WHICH IS NOT WHAT IS RUNNING. `gNdsSceneHarness
+# SceneCurr/ScenePrev` record the BOOT scene the harness stamped, and
+# `src/port/scene_harness.c:544-559` stamps a different one under the shell --
+# by design, and it says so: "The VS shell boots the GAME, not the match ...
+# ONLY the boot scene moves". So a shell build reads nSCKindStartup/
+# nSCKindStartup (27/27) here while a boot-into-battle build reads
+# nSCKindVSBattle/nSCKindMaps (22/21). The seeding either way is the same
+# mode-163 preset, which is what fills the match descriptor.
+#
+# The assertion that proves the RIGHT MATCH IS RUNNING is the live-scene one in
+# the owner verifier -- `SCENE=22,21,6`, VSBattle from Maps on Dream Land -- and
+# it is unchanged, passes on the shell arm, and under the shell it finally means
+# what it says: that `21` is the stage select the walk actually just left, not a
+# fabricated default.
+$expectedHarnessSceneCurr = if ($P2ShellFlow) { 27 } else { 22 }
+$expectedHarnessScenePrev = if ($P2ShellFlow) { 27 } else { 21 }
+$harnessSelectMessage = if ($P2ShellFlow) {
+    'battle_playable harness did not seed the shell boot scene (expect Startup/Startup; the shell selects VSBattle itself).'
+} else {
+    'battle_playable harness did not select Pupupu VSBattle from Maps.'
 }
 $hardwareTriangles = $target -like '*-hwtri'
 $rendererMakeEnvironment = if ($OneMinuteMatchProof) {
@@ -191,10 +238,10 @@ try {
     -Target $target `
     -Build $build `
     -ExpectedMode 163 `
-    -ExpectedHarnessSceneCurr 22 `
-    -ExpectedHarnessScenePrev 21 `
+    -ExpectedHarnessSceneCurr $expectedHarnessSceneCurr `
+    -ExpectedHarnessScenePrev $expectedHarnessScenePrev `
     -Label 'battle_playable Pupupu' `
-    -HarnessSelectMessage 'battle_playable harness did not select Pupupu VSBattle from Maps.'
+    -HarnessSelectMessage $harnessSelectMessage
 $ownerExitCode = $LASTEXITCODE
 } finally {
     foreach ($name in $rendererMakeEnvironment.Keys) {

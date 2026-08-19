@@ -30,7 +30,7 @@ historical detail stays in `PORTING.md` and `PERF_LEDGER.md`. P1 surfaces
 | `../scripts/README.md` | scripts/ directory layout, area-folder workflow, and Python path convention |
 | `DECOMP_MAP.md` | Read-only upstream map |
 | `FTSTRUCT_PARITY.md` | BattleShip/DS fighter ABI parity |
-| `AUDIO_BACKEND_SCOUT.md` | Dated audio reference |
+| `archive/AUDIO_BACKEND_SCOUT.md` | (archived) Dated audio reference |
 | `HW_RENDERER_VISIBILITY_FINDINGS.md` | Dated renderer visibility reference |
 
 Do not add a new planning or workflow document. Extend the existing owner or

@@ -36,8 +36,10 @@ rule below exists because an Opus agent broke it at least once.
 
 - **Builds:** never pass `-j`, never touch `MAKEFLAGS`, one build at a time.
   Published target names (`smash64ds-battle-playable-hwtri`, `smash64ds`)
-  hardcode output to the project root whatever `BUILD=` says — lab work uses
-  `smash64ds-battle-playable-proof-hwtri`. `make <target-name>` without
+  hardcode output to the project root whatever `BUILD=` says — battle lab work
+  uses `smash64ds-p2-shell-hwtri` (P2-1M, 2026-08-19; the P1-named
+  `smash64ds-battle-playable-proof-hwtri` is off the routine gate and kept only
+  for the boot-straight-into-battle probes). `make <target-name>` without
   `TARGET=` silently falls back to `TARGET=smash64ds`. Hash the two root ROMs
   before and after any cycle that builds; state they are unchanged (or state
   the new baseline if publishing was the assignment).

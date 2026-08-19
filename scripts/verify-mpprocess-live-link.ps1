@@ -192,15 +192,19 @@ function Assert-LiveConfig {
     }
 }
 
+# P2-1M (2026-08-19): the registry ROW is `p2_battle_realtime` now and its
+# target is the P2 shell lab pair; the SCENE it selects is still
+# `battle_playable_realtime` mode 163, which is what the assertion below and
+# this verifier's build-config checks actually care about.
 $records = @(Get-Smash64DSHarnessRegistry | Where-Object {
-    $_.Name -ceq 'battle_playable_realtime'
+    $_.Name -ceq 'p2_battle_realtime'
 })
 Assert-Verification ($records.Count -eq 1) `
-    'registry must contain exactly one battle_playable_realtime record'
+    'registry must contain exactly one p2_battle_realtime record'
 $record = $records[0]
 Assert-Verification ($record.Target -ceq
-    'smash64ds-battle-playable-hwtri') `
-    "battle_playable_realtime target is not the published P1 target: $($record.Target)"
+    'smash64ds-p2-shell-hwtri') `
+    "p2_battle_realtime target is not the P2 shell lab target: $($record.Target)"
 Assert-Verification ($record.Harness -ceq 'battle_playable_realtime') `
     "battle_playable_realtime registry harness drifted: $($record.Harness)"
 

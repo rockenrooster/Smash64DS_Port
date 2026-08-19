@@ -309,7 +309,12 @@ try {
         if ($NoBuild -and (Test-ScriptParameter -ScriptPath $scriptPath -Name 'NoBuild')) {
             $arguments += '-NoBuild'
         }
-        if (($record.Name -eq 'battle_playable_realtime') -and
+        if (($record.Name -eq 'p2_battle_realtime') -and
+            (Test-ScriptParameter -ScriptPath $scriptPath -Name 'P2ShellFlow')) {
+            # P2-1M: the battle arm reaches mode 163 through the VS shell.
+            $arguments += '-P2ShellFlow'
+        }
+        if (($record.Name -eq 'p2_battle_realtime') -and
             (Test-ScriptParameter -ScriptPath $scriptPath -Name 'FastIteration')) {
             $arguments += '-FastIteration'
             # Every profile compares the same completed Cut G frame pair. This

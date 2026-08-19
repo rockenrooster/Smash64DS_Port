@@ -18,6 +18,12 @@ when it covers a narrower risk.
 ## What “Mode” Means
 
 - Harness mode `163` selects the canonical `battle_playable_realtime` scene.
+  **That is the SCENE name, and it is not the registry ENTRY name.** The
+  registry's `Harness` field names the scene the header and Makefile agree on
+  (`nds_scene_harness.h`); its `Name` field names the verifier row. Since P2-1M
+  the row that runs mode 163 is called `p2_battle_realtime`, because it reaches
+  that scene through the VS shell rather than booting into it — the scene, its
+  header constant and its Makefile mapping are all unchanged.
 - Renderer modes are internal implementation selectors: generic control `0`,
   AOT fighters `8`, and complete-stage owner `9`.
 - Harness modes `1`-`162` are retired and absent from the executable fleet.

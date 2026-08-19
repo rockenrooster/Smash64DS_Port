@@ -31,10 +31,27 @@ if (Test-Path -LiteralPath (Join-Path $root '.git')) {
         Add-Failure ("decomp/ has working-tree changes, but it is read-only: {0}" -f ($decompStatus -join '; '))
     }
     $tracked = Invoke-GitLines @('ls-files')
+    # P2-1M (2026-08-19): `artifacts/` WAS blanket-forbidden here, and that
+    # contradicted the repository's own standing rule -- AGENTS.md: "`artifacts/
+    # performance` and `artifacts/visibility` are permanent evidence" -- so this
+    # check has been red against 1,830 deliberately tracked evidence files
+    # (performance 1,208, visibility 462, bugs 20, verification 85, task37 55).
+    # `/artifacts/` is gitignored wholesale; anything tracked under it was
+    # force-added as cited evidence and is meant to survive. What must still
+    # never be tracked is genuinely ephemeral run output -- the verifier's own
+    # temp/log trees -- and any binary build product, which the extension rule
+    # below already covers wherever it lands.
+    # `decomp/` is read-only upstream reference (AGENTS.md hard rule) and
+    # `decomp/sm64/` is tracked in-tree, all 26,260 files of it. Two of them --
+    # an IDO `crt1.o` and an asm-processor `.d` fixture -- are upstream's own
+    # files that happen to match the build-product extensions below. This rule
+    # polices OUR generated output; `check-decomp-pristine.ps1` owns that tree.
     $forbiddenTracked = @($tracked | Where-Object {
-        ($_ -match '^(build|artifacts)/') -or
+        ($_ -notmatch '^decomp/') -and (
+        ($_ -match '^build/') -or
+        ($_ -match '^artifacts/(verifier-temp|verifier-logs|logs)/') -or
         ($_ -match '\.(nds|elf|map|sym|sav|o|d)$') -or
-        (($_ -match '^emulators/') -and ($_ -notin @('emulators/README.md', 'emulators/melonds/.gitkeep', 'emulators/nogba/.gitkeep')))
+        (($_ -match '^emulators/') -and ($_ -notin @('emulators/README.md', 'emulators/melonds/.gitkeep', 'emulators/nogba/.gitkeep'))))
     })
     if ($forbiddenTracked.Count -gt 0) {
         Add-Failure ("generated/local output is tracked: {0}" -f (($forbiddenTracked | Select-Object -First 20) -join ', '))
@@ -73,10 +90,22 @@ Get-ChildItem -LiteralPath (Join-Path $root 'src/import') -Filter '*.c' -File | 
         # inactive/map/physics seams for not-yet-imported status dependencies.
         'src/import/battleship_ftstatus_callback_aliases.c',
         'src/import/battleship_ftstatus_inactive_stubs.c',
-        'src/import/battleship_ftstatus_map_physics_shims.c'
+        'src/import/battleship_ftstatus_map_physics_shims.c',
+        # DS-side STORAGE for two original symbols, not wrappers around original
+        # code: both replace an N64 software buffer the DS rasterizes in
+        # hardware, so there is no decomp translation unit for them to include.
+        # Their derivations live on the externs they pair with.
+        'src/import/battleship_sys_framebuffer.c',
+        'src/import/battleship_sys_zbuffer.c'
     )
     $text = Get-Content -LiteralPath $_.FullName -Raw
+    # P2-1M (2026-08-19): `decomp/BattleShip-main` is no longer the only correct
+    # spelling. Import wrappers now include the overlay copy the build applies
+    # its patches to -- `<battleship_overlay/src/...>`, materialised into
+    # $(BUILD)/battleship_overlay/ (CLAUDE.md) -- and eight wrappers had moved to
+    # it, so this rule reds on the modern form while passing the legacy one.
     if (($text -notmatch 'decomp/BattleShip-main') -and
+        ($text -notmatch 'battleship_overlay/') -and
         ($allowedImportHelpers -notcontains $relative)) {
         Add-Failure "import wrapper lacks original BattleShip source path: $relative"
     }

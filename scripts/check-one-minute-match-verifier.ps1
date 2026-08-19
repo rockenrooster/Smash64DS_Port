@@ -167,8 +167,24 @@ Assert-Text $owner '(?s)\$m4FenceFinalValues\[4\] -eq 24.*?\$m4FenceFinalValues\
     'One-minute verifier lost the exact M4 residency and zero post-GO work assertions.'
 Assert-Text $owner '\$expectedM4ResidencyBytes = \[int64\]\$staticTextureFixture\.residency_bytes' `
     'One-minute verifier stopped deriving M4 residency bytes from the generator.'
-Assert-Text $owner '\$bp\[2\] -eq \(2 \* \$bp\[3\]\)' `
+# P2-1M (2026-08-19). THIS PINNED A SPELLING THAT WAS CORRECTLY DELETED, and
+# had therefore been red since. `$bp[2] -eq (2 * $bp[3])` asserts where the
+# marker sits as well as what the ratio is: a stop taken in the :4888 -> :7890
+# window and a genuinely dropped update pair produce the identical tuple, so the
+# equality reds a healthy run whose stop landed mid-phase. It was replaced by
+# the stop-phase model (Test-BattlePlayablePacingStopPhase) plus taskman's
+# independent present lead, which separates the two cases -- the same reasoning
+# check-harness-registry.ps1 records for the Task 25R trace. Pin the model that
+# replaced it, and pin the equality OUT so it cannot return.
+Assert-Text $owner ('(?s)\$pacingStop = Test-BattlePlayablePacingStopPhase -Pacing \$bp' +
+    '.*?\$pacingStop\.Valid -and \$bp\[3\] -gt 0 -and' +
+    '.*?\$taskmanPresentLead -ge 0 -and \$taskmanPresentLead -le 2' +
+    '.*?exactly two committed source ') `
     'One-minute verifier lost the hard exact-two-updates-per-present ratio gate.'
+if ($owner -match '\$bp\[2\] -eq \(2 \* \$bp\[3\]\)') {
+    throw ('One-minute verifier reintroduced the raw update/present equality; ' +
+        'it asserts the stop phase as well as the ratio and reds healthy runs.')
+}
 Assert-Text $owner 'gNdsBattlePlayablePacingRestartRequested = 1' `
     'One-minute verifier no longer excludes its synchronized MATCH_START pause from natural pacing evidence.'
 Assert-Text $owner '-MuteAudio:\$OneMinuteMatchProof' `

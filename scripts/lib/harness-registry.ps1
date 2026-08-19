@@ -26,7 +26,19 @@ function Get-Smash64DSHarnessRegistry {
     @(
         New-HarnessRecord 'runtime' $null $null 'verify-runtime.ps1' $null $null @('latest','normal_runtime')
         New-HarnessRecord 'battle_playable' 163 'battle_playable' 'verify-battle-playable-harness.ps1' 'smash64ds-battle-playable-fast-hwtri' 'build-battle-playable-hwtri-harness' @('battle_playable','hardware','fast_logic')
-        New-HarnessRecord 'battle_playable_realtime' 163 'battle_playable_realtime' 'verify-battle-playable-realtime-harness.ps1' 'smash64ds-battle-playable-hwtri' 'build-battle-playable-canonical-hwtri-harness' @('latest','battle_playable','hardware','live_input','realtime')
+        # P2-1M (owner, 2026-08-19). THE ROW WAS `battle_playable_realtime` AND
+        # THE SCENE STILL IS -- `Harness` is the scene name the header and
+        # Makefile agree on (mode 163) and is deliberately unchanged; `Name` is
+        # the verifier row, and the row now reaches that scene THROUGH the VS
+        # shell instead of booting into it. The match is identical (Mario human
+        # vs level-3 CPU Fox, Dream Land, one-minute Time), so this stays the
+        # P1 regression guard docs/P2_PLAN.md law 4 requires.
+        #
+        # Target/Build moved off the P1 names onto the P2 shell lab pair. The
+        # old Target metadata named `smash64ds-battle-playable-hwtri` -- the
+        # FROZEN P1 artifact -- which this arm never built and only screenshotted;
+        # the pair below is the ROM both halves of the arm now actually use.
+        New-HarnessRecord 'p2_battle_realtime' 163 'battle_playable_realtime' 'verify-battle-playable-realtime-harness.ps1' 'smash64ds-p2-shell-hwtri' 'build-p2-shell' @('latest','boundary','battle_playable','hardware','live_input','realtime','p2_shell')
         New-HarnessRecord 'battle_playable_match_lifecycle' 163 'battle_playable_match_lifecycle' 'verify-battle-playable-match-lifecycle-harness.ps1' 'smash64ds-battle-playable-cpu-proof' 'build-battle-playable-cpu-proof-harness' @('battle_playable','cpu','timer','match_end','results')
         # P2-1g. The VS shell's full-loop walk, and the second arm of Boundary
         # from the P2-1 phase close (docs/P2_PLAN.md law 4). It has no
@@ -70,9 +82,9 @@ function Get-Smash64DSVerifyPlan {
     # still exposes only Latest and Boundary; the retired diagnostic fleet does
     # not return.
     $names = if ($Profile -eq 'Latest') {
-        @('runtime', 'p2_shell_loop', 'battle_playable_realtime')
+        @('runtime', 'p2_shell_loop', 'p2_battle_realtime')
     } else {
-        @('p2_shell_loop', 'battle_playable_realtime')
+        @('p2_shell_loop', 'p2_battle_realtime')
     }
     $plan = @(Select-Smash64DSRegistryEntriesByName $registry $names)
 

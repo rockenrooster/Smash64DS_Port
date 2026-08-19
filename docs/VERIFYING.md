@@ -105,22 +105,57 @@ zero gap, no swap, nearest filtering, and OSD off. Ports `3333/3334` are manual-
 `4323/4324`, phase-FGM slot 1 uses `3343/3344`, and slot 2 uses `4463/4464`.
 Lab outputs stay under `builds/`; exactly two ROMs publish at the repo root.
 
-## Building For P1
+## Building For P2
 
-P1 ships `smash64ds-battle-playable-hwtri.nds` and is measured on its
-flag-identical tick-HUD sibling. `make p1-tick` builds the measuring ROM (the
-cheap compile check during iteration); `make p1` also rebuilds the published
-battle ROM and its root pair. Bare `make` builds the P2 `smash64ds.nds` the
-milestone does not ship — the Makefile says so when TARGET was defaulted. The
-harnesses still build for themselves; the aliases use their exact TARGET/BUILD
-pairs, so alias and harness builds stay incremental with each other. One build
-at a time, never `-j`, never touch `MAKEFLAGS`.
+**`smash64ds.nds` is the base ROM now** (owner, 2026-08-19, board row P2-1M).
+Bare `make` builds it, it is what the owner plays, and it is the configuration
+the gate measures. The P1-era reflex — "`smash64ds.nds` is not part of P1, do
+not `-Build` it" — is retired; the section below that used to say so is
+corrected in place.
 
-The realtime profile's GDB arm builds an isolated proof target; it does not
-refresh the root P1 ROM before the later visual check. For a promotion or
-release, run `make p1` explicitly before treating that root visual check as
-evidence, then confirm the canonical `nds_build_config.h` contains the promoted
-flags. Otherwise a green profile can have inspected an older root ROM.
+| ROM | Target / BUILD | What it is |
+|---|---|---|
+| `smash64ds.nds` (root) | `smash64ds` / `build` | **Published.** The shipping VS shell: title → menus → CSS → SSS → battle → results → loop, human input only, no walk, no fast logic, boot-diag text off. |
+| `smash64ds-p2-shell-hwtri` | `build-p2-shell` | Boundary arm 2 and the cadence probe. The published flag set **plus one flag**, `NDS_P2_MENU_WALK := 1`, which scripts one pass through the screens so a run is unattended. Never published. |
+| `smash64ds-p2-shell-loop-hwtri` | `build-p2-shell-loop` | Boundary arm 1. The same shell walked twenty times at `NDS_HARNESS_FAST_LOGIC := 1`. A scene-boundary instrument: **no tick figure from it is a cadence figure.** Never published. |
+| `smash64ds-battle-playable-hwtri.nds` (root) | — | The **frozen P1 artifact**, 12,530,688 B, SHA-256 `576F51ED…E723`. Nothing routine rebuilds it. Do not touch it. |
+
+The free-play lab name `smash64ds-p2-shell-freeplay-hwtri` **retired at P2-1M**:
+it existed only to give the owner a walk-free shell ROM, and the published
+`smash64ds` now *is* that configuration by construction — the same flag block
+serves both names, so "what the owner plays" and "what the gate publishes"
+cannot drift apart again.
+
+One build at a time, never `-j`, never touch `MAKEFLAGS`. A clean checkout
+builds through `build.ps1`, not bare `make` (four of six `.inc` are gitignored
+and `build.ps1`'s generator is not run by `make`).
+
+Boundary's battle arm builds its own P2 lab ROM; it does not refresh the root
+`smash64ds.nds`. For a publish, build the published target explicitly and then
+confirm the canonical `nds_build_config.h` carries the intended flags —
+otherwise a green profile can have inspected an older root ROM.
+
+## How A P2 Row Runs
+
+The row workflow the owner set out (2026-08-19). It is here, not in a new
+document, because `docs/README.md` forbids adding another workflow doc.
+
+1. **Batch the owner's questions BEFORE any ROM-affecting build.** A build is
+   the expensive unit. Collect every decision a row needs — fidelity calls,
+   default flips, sacrifice-order questions — and ask them in one block while
+   nothing is compiling. A question discovered mid-build costs the build.
+2. **Verify** with the one widest relevant profile (`Checkpoint Choice`
+   below). Do not stack DevFast, Boundary and Latest over the same runtime.
+3. **Measure** in the configuration that ships. `nds_build_config.h` in the
+   build directory is the truth about what was measured; every figure states
+   its cadence and its window.
+4. **Capture** the evidence into `artifacts/visibility` (screens) and
+   `artifacts/performance` (numbers). Both are permanent; they are cited from
+   the board row that closes on them.
+5. **Deliver free play after each fix batch.** Rebuild the published
+   `smash64ds.nds` and hand it to the owner once a batch of fixes is verified —
+   not once per fix, and not saved up until the phase closes. The owner plays
+   the base ROM, so a batch that is not delivered has not been seen.
 
 ## Fast Iteration
 
@@ -498,13 +533,13 @@ Choose one widest relevant wrapper:
 .\scripts\verify-current.ps1 -Build -DelaySeconds 3 -RunnerSlot 2
 ```
 
-**`smash64ds.nds` is not part of P1** (owner, 2026-08-02), so `-Build` is the
-wrong default reflex. P1 ships `smash64ds-battle-playable-hwtri.nds`, and
-Boundary above exercises it. Use `verify-current.ps1 -Build` only when a change
-genuinely touches normal or shared startup: it rebuilds the default
-configuration, which costs a full cycle on a ROM the milestone does not ship.
-Several consecutive cycles went to it during the 2026-08-02 `BUGS.md` queue
-before that was caught.
+**RETRACTED AT P2-1M (2026-08-19).** This paragraph said "`smash64ds.nds` is
+not part of P1 (owner, 2026-08-02), so `-Build` is the wrong default reflex",
+and that was correct for exactly as long as P1 was the milestone. It is now
+inverted: `smash64ds.nds` is the base ROM the owner plays and the configuration
+Boundary's battle arm measures. `-Build` is still not free — it rebuilds the
+default configuration and costs a full cycle — so choose it deliberately, but
+choose it because of *cost*, never because the ROM "is not shipped".
 
 TWO GATES IN ONE SESSION FAILED FROM WINDOW OCCLUSION, NOT FROM THE ROM
 (2026-08-02). `assert-melonds-horizontal-detail` threw on `left_bush`, and
@@ -593,9 +628,9 @@ Use the one-minute gate only for timer/lifecycle/CPU/memory/M4-residency work or
 release qualification. Use renderer forensic checks only when renderer semantics
 changed. The retired profiles and modes no longer exist.
 
-`verify-all.ps1 -Profile Boundary -List` is the membership authority. **Since
-the P2-1 phase close (row P2-1g, 2026-08-18) Boundary has TWO arms, in this
-order:**
+`verify-all.ps1 -Profile Boundary -List` is the membership authority. **Boundary
+has TWO arms** (two since the P2-1 phase close, row P2-1g; the second arm
+rebased onto the shell at row P2-1M, 2026-08-19), in this order:
 
 1. **`p2_shell_loop`** — `scripts/verify-p2-shell-loop.ps1`, target
    `smash64ds-p2-shell-loop-hwtri`. Twenty full laps of the VS shell (title →
@@ -605,20 +640,47 @@ order:**
    pattern out of the scene ring, and no CPU abort. It is a **scene-boundary**
    instrument at `NDS_HARNESS_FAST_LOGIC=1`: **no tick figure from it is a
    cadence or performance figure**, and it never publishes one.
-2. **`battle_playable_realtime`**, mode `163` — unchanged, and it stays. It is
-   the P1 regression guard `docs/P2_PLAN.md` law 4 requires to be green through
-   all of P2, and it remains the only gameplay/performance arm of the profile.
+2. **`p2_battle_realtime`**, mode `163` — the one-minute Mario-vs-CPU-Fox
+   regression battle, and still the only gameplay/performance arm. It is the
+   regression guard `docs/P2_PLAN.md` law 4 requires green through all of P2.
+   **The match is unchanged; how it is reached is not.** It now runs on
+   `smash64ds-p2-shell-hwtri` — the shipping shell configuration plus the walk
+   flag — and the scripted walk drives title → menus → character select → stage
+   select → battle, so the gate measures the program the owner plays instead of
+   a P1-named ROM that booted straight into a fight.
+
+   Two consequences worth knowing:
+
+   - **Both halves of the arm now run the same ROM.** They did not before: the
+     GDB half built `smash64ds-battle-playable-proof-hwtri` while the screenshot
+     half captured the *frozen P1 artifact* at the repo root, so the picture the
+     gate accepted was never the program it had asserted about.
+   - **`SCENE=22,21` finally means what it says.** The verifier has always
+     asserted "live scene is Pupupu VSBattle **from Maps**"; under the old ROM
+     that `21` was a fabricated default, and under the shell it is the stage
+     select the walk actually just left.
+
+   Every wait in the arm is a **guest** anchor (`tbreak scVSBattleStartBattle`,
+   then a frame-complete breakpoint conditioned on the pacing result), never
+   wall-clock — which is why the shell's extra ~69 s of menus costs the arm only
+   time. Its GDB capture ceiling is raised to 600 s for exactly that reason.
 
 The registry still exposes exactly Latest and Boundary; Latest is `runtime` +
-both of the above. The retired diagnostic fleet does not return.
+both of the above. The retired diagnostic fleet does not return. The P1-named
+`smash64ds-battle-playable-proof-hwtri` remains in the Makefile for the dozen
+specialized probes and metric verifiers that legitimately still boot straight
+into a battle (`probe-ko-blast.ps1`,
+`verify-battle-playable-camera-containment.ps1`, …); nothing routine builds it.
 
 Two surfaces belong beside the profile rather than in it, because they are
 measurements rather than gates:
 
-- **Menu cadence and the realtime pass through the menus**:
-  `scripts/menus/probe-p2-shell.ps1`, target `smash64ds-p2-shell-hwtri`
-  (`NDS_HARNESS_FAST_LOGIC=0`) — one scripted pass through all six screens and
-  the real one-minute match. This is the arm every menu tick figure comes from.
+- **Menu cadence**: `scripts/menus/probe-p2-shell.ps1`, same target
+  `smash64ds-p2-shell-hwtri` (`NDS_HARNESS_FAST_LOGIC=0`) — one scripted pass
+  through all six screens and the real one-minute match, printing counters
+  rather than asserting them. This is the arm every menu tick figure comes
+  from. Since P2-1M it shares its ROM with Boundary's battle arm, so a menu
+  cadence figure and a gate verdict describe one build.
 - **Shell screenshots**: `scripts/menus/capture-p2-shell.ps1`, same target, one
   run for every screen, locked on each screen's own `ndsMenuShellRun<X>` entry
   point because a wall-clock delay cannot target a screen that presents at

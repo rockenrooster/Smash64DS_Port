@@ -157,18 +157,21 @@ and `verify-all.ps1 -Profile Boundary -List` is the membership authority:
    high-waters flat, the arena free floor, one input entry per step, the exact
    lap pattern, and no CPU abort. It is a **scene-boundary** instrument at
    `NDS_HARNESS_FAST_LOGIC=1`: no tick figure from it is a cadence figure.
-2. `battle_playable_realtime`, mode `163`: Mario human versus the imported
-   level-3 Fox CPU on Dream Land, items off, one-minute (`3600` tick) Time
-   mode — unchanged, and the **P1 regression guard** `docs/P2_PLAN.md` law 4
-   keeps green throughout P2. It stays the only gameplay/performance arm.
+2. `p2_battle_realtime`, mode `163`: Mario human versus the imported level-3
+   Fox CPU on Dream Land, items off, one-minute (`3600` tick) Time mode — the
+   **regression guard** `docs/P2_PLAN.md` law 4 keeps green throughout P2, and
+   still the only gameplay/performance arm. Since row P2-1M (owner,
+   2026-08-19) it reaches that match **through the shell**, on
+   `smash64ds-p2-shell-hwtri`: same fight, same descriptor, measured on the
+   configuration the owner plays. The P1-named proof target is off the routine
+   gate; the frozen P1 artifact is untouched.
 
 A diagnostic ROM may pause Fox decision/input only; proof runs and milestone
 acceptance enable it. Never launch the obsolete five-minute configuration, except for specific instruction to do so.
-Menu cadence and the realtime pass through the menus are measured beside the
-profile, not inside it: `scripts/menus/probe-p2-shell.ps1`
-(`smash64ds-p2-shell-hwtri`, fast logic 0). The Boundary definition evolves at
-P2 phase closes by board row (`docs/P2_PLAN.md` law 4); this section is updated
-when it does.
+Menu cadence is measured beside the profile, not inside it:
+`scripts/menus/probe-p2-shell.ps1` — same ROM, fast logic 0. The Boundary
+definition evolves at P2 phase closes by board row (`docs/P2_PLAN.md` law 4);
+this section is updated when it does.
 
 **Both gate arms run the one-minute match** (owner, 2026-08-05: *"the soak was
 only meant to catch freezes, boundary and both cpu gates should be the 60 sec
