@@ -929,6 +929,29 @@ class Placement:
     # taste.  Deriving `dst_y` from the band's own baked HEIGHT rather than
     # writing 0 and 157 keeps it true if the artwork or the ratio ever change.
     edge: str | None = None
+    # P2-1L (8), the SAME ruling on the two remaining edges: which of this
+    # placement's own FAR edges sit flush against the active area's, `"right"`
+    # and/or `"bottom"`.  Unlike `edge` it moves nothing -- the placement keeps
+    # its 4/5 origin, so every discrete sprite composited on top of it stays
+    # registered exactly where it was -- and only grows the destination to the
+    # panel edge.
+    #
+    # The VS rules screen's yellow menu-name plaque is what forces it.  Its
+    # three pieces are `gDPFillRectangle(225, 143, 310, 230)`
+    # (mnvsmode.c:916) and two `llMNCommonDecalPaperSprite` at (225,56) and
+    # (140,143) (:2963/:2971), each 85x87 -- so the assembly's right column is
+    # 309/310 and its bottom row 229/230 against a viewport of exactly
+    # 10..310 x 10..230 (`syRdpSetViewport`).  Both ARE the active area's own
+    # edges, the same relationship (f2) found in the title's bands.  At the
+    # strict 4/5 they land at DS x 248 and y 183, leaving a 7 px strip of
+    # collage down the right of the plaque and an 8 px one under it -- measured
+    # on the shipped bake, yellow bbox x 113..248 y 46..183 -- which is exactly
+    # the owner's "stops short of the corner".
+    #
+    # Deriving the growth from DS_SCREEN_W/H rather than writing `dest=(76,78)`
+    # keeps it true if the artwork or the ratio ever change, which is the same
+    # reason (f2) derives its `dst_y` from the band's baked height.
+    bleed: tuple[str, ...] = ()
     # `scale` overrides the frame's own 4/5 for this placement's ARTWORK, and
     # `centre_in` is the ratio whose footprint the smaller artwork is centred
     # inside, so the source's LAYOUT is untouched.  This is the P2-1f map-icon
@@ -1079,6 +1102,16 @@ def place_raster(fileobj: RelocFile | None, part: Placement, offset: int,
             raise ConvertError(
                 f"{part.symbol}: edge must be 'top' or 'bottom', "
                 f"not {part.edge!r}")
+    for side in part.bleed:
+        # P2-1L (8).  The far edge reaches the panel; the origin does not move.
+        if side == "right":
+            width = max(width, DS_SCREEN_W - dst_x)
+        elif side == "bottom":
+            height = max(height, DS_SCREEN_H - dst_y)
+        else:
+            raise ConvertError(
+                f"{part.symbol}: bleed must be 'right' or 'bottom', "
+                f"not {side!r}")
     return (dst_x, dst_y, box_scale(combined, width, height))
 
 
@@ -1463,15 +1496,13 @@ IMAGE_SOURCES = [
     # is the only hand the source draws anywhere in this shell
     # (mnplayersvs.c:1723). That frees the 6,144 bytes of main OBJ the four
     # mode-select icons below need.
-    # P2-1e. The CSS draws twelve 45x43 portraits across a 256 px screen, which
-    # the source does across 320, so these two come down to 32/45 -- the ratio
-    # that lands them in a 32x32 OBJ cell.  Nothing else in the tree drew them
-    # (P2-1c baked them for its demo, P2-1d drew none), so this is a resize of
-    # an unused asset rather than a change to a shipped screen.
-    ("MNPlayersPortraits", "llMNPlayersPortraitsMarioSprite",
-     "PORTRAIT_MARIO", (32, 45)),
-    ("MNPlayersPortraits", "llMNPlayersPortraitsFoxSprite", "PORTRAIT_FOX",
-     (32, 45)),
+    # P2-1L (5). THE TWO FIGHTER PORTRAITS ARE GONE FROM THE OBJ PACK. P2-1e
+    # brought them down to 32/45 so a 45x43 sprite would land in a 32x32 cell
+    # rather than a 64x64 one, and that is exactly what stopped them filling
+    # the 4/5 box the backdrop draws behind them (see `CSS_PORTRAIT_SYMBOL`).
+    # They are composited into `CSS_SCREEN` at the frame's own 4/5 now, where
+    # the cell size is not a constraint, and the 4,096 bytes the two cells held
+    # pay for the stage-select cursor's own 4/5 in finding (6).
     # P2-1d. The menu font has NO digits: mnMapsGetCharacterID maps A-Z ' % .
     # and nothing else, and '0'-'9' are the source's kerning ESCAPES, which
     # advance the cursor by their digit value and draw nothing (mnmaps.c:308).
@@ -1539,27 +1570,30 @@ IMAGE_SOURCES = [
     # would draw belongs to P2-5/P2-7's options work.
     ("MNPlayersCommon", "llMNPlayersCommonCPLevelTextSprite", "CP_LEVEL"),
     # ---- P2-1f, the stage select. ----------------------------------------
-    # THE SCALE IS 5/8, AND IT IS A CELL FACT, not a taste call.  mnMapsMakeIcons
-    # draws 48x36 icons on a 50 px pitch and mnMapsMakeCursor a 62x50 frame
-    # around them (mnmaps.c:530/:865); at the frame's own 4/5 the cursor is
-    # 50x40 and lands in a 64x64 OBJ cell (8,192 B), while at 5/8 it is 39x31
-    # and lands in a 64x32 one (4,096 B) with the icons at 30x23 in 32x32
-    # cells.  5/8 is the largest exact ratio at which the SOURCE'S OWN cursor
-    # fits a single 64x32 cell, and main OBJ VRAM has 16,640 B free after the
-    # P2-1e pack -- so 4/5 for this set would have cost 16,384 of it for three
-    # sprites.  The icons keep the source's own 4/5 GRID positions and are
-    # centred in the 4/5 footprint, so the layout is the source's and only the
-    # artwork inside each cell is smaller.
+    # THE GRID IS NOT HERE ANY MORE -- P2-1L (6) composited it into the
+    # SSS_SCREEN surface at the frame's own 4/5 so each icon fills its cell
+    # the way the source's 48x36 fills its 50x38 one (`sss_icon_parts`).  These
+    # two stay in the pack for the PREVIEW panel, which is still an OBJ and is
+    # still the placeholder owner finding (9) names; they keep 5/8 because that
+    # is a decision (9) owns, not this one.
     #
-    # Two new pixel formats arrive with these, and both are the sprite's own:
+    # Two pixel formats arrive with these, and both are the sprite's own:
     # the map icons are RGBA16 (fmt=0 siz=2) and the RANDOM icon is CI4 with a
     # 256-entry TLUT (fmt=2 siz=0).  decode_rgba16/decode_ci4 above.
     ("MNMaps", "llMNMapsDreamLandSprite", "MAP_DREAM_LAND", (5, 8)),
     ("MNMaps", "llMNMapsRandomSmallSprite", "MAP_RANDOM", (5, 8)),
-    # The cursor is I4 -- shape only -- and mnMapsMakeCursor modulates it by
-    # pure RED (mnmaps.c:876: red 0xFF, green 0x00, blue 0x00).  Baked in,
-    # because the kit's image path draws a cell as it is packed.
-    ("MNMaps", "llMNMapsCursorSprite", "MAP_CURSOR", (5, 8), (0xFF, 0, 0)),
+    # THE CURSOR IS THE ONE THING ON THIS GRID THAT MOVES, so it is the one
+    # thing still in a cell -- and it takes the frame's own 4/5 now (50x40 in a
+    # 64x64 cell, 8,192 B) because it has to FRAME a 4/5 icon: at P2-1f's 5/8
+    # it is 39x31, which is smaller than the 38x29 icon it surrounds on one
+    # axis and one pixel larger on the other.  mnMapsMakeCursor puts it 7 px up
+    # and left of the icon (mnmaps.c:845/:851) over a 62x50 frame around a
+    # 48x36 icon, and 4/5 is the only ratio that keeps that relationship.  The
+    # 4,096 extra bytes are exactly the two portrait cells finding (5) freed.
+    # It is I4 -- shape only -- and mnMapsMakeCursor modulates it by pure RED
+    # (mnmaps.c:868).  Baked in, because the kit's image path draws a cell as
+    # it is packed.
+    ("MNMaps", "llMNMapsCursorSprite", "MAP_CURSOR", (4, 5), (0xFF, 0, 0)),
     # ---- P2-1i, the main menu's SELECTED entry. --------------------------
     # `mnModeSelectMake<Entry>` draws a DIFFERENT sprite for the entry the
     # cursor is on: the bright IA8 icon at white (mnmodeselect.c:161/:238/
@@ -1954,19 +1988,29 @@ VS_TAB_NOT = ((0x00, 0x00, 0x00), (0x82, 0x82, 0xAA))
 # mnVSModeMakeBackground (:965) then mnVSModeRenderMenuName (:909), in the
 # source's own construction order -- background link 2 / display 0 first, then
 # the menu-name GObj's fill rectangle and its three plaque sprites.
+# P2-1L, owner finding (8): THE PLAQUE REACHES THE PANEL'S CORNER.  The three
+# yellow pieces below are one assembly whose right column and bottom row are
+# the source viewport's own edges, so each carries the `bleed` that puts that
+# edge on the DS panel -- see `Placement.bleed` for the geometry and the
+# measurement.  Nothing else on this screen moves: every piece keeps its 4/5
+# origin, so the SMASH logo, the VS text and the GAME MODE text composited on
+# top of them stay exactly where they were.
 VS_BACKGROUND = (
     COLLAGE_FULL_BLEED,
     Placement("MNCommon", "llMNCommonDecalPaperSprite", 140, 143, False,
-              (0xA0, 0x78, 0x14)),
+              (0xA0, 0x78, 0x14), bleed=("bottom",)),
     Placement("MNCommon", "llMNCommonDecalPaperSprite", 225, 56, False,
-              (0xA0, 0x78, 0x14)),
+              (0xA0, 0x78, 0x14), bleed=("right",)),
     Placement("MNVSMode", "llMNVSModeConsoleIconDarkSprite", 10, 10, False,
               (0x99, 0x99, 0x99)),
     # gDPFillRectangle(225, 143, 310, 230) at PRIM A0/78/14 alpha E6, drawn
     # G_RM_AA_XLU_SURF -- a translucent plate, so it is composited here at its
-    # own alpha rather than thresholded (mnvsmode.c:916).
+    # own alpha rather than thresholded (mnvsmode.c:916).  It is the corner
+    # itself, so it bleeds on both axes -- and being a flat fill, growing it is
+    # exact rather than a resample.
     Placement("MNCommon", "", 225, 143, False,
-              fill=(0xA0, 0x78, 0x14, 0xE6), size=(86, 88)),
+              fill=(0xA0, 0x78, 0x14, 0xE6), size=(86, 88),
+              bleed=("right", "bottom")),
     Placement("MNCommon", "llMNCommonSmashLogoSprite", 235, 158, False,
               (0x00, 0x00, 0x00)),
     Placement("MNVSMode", "llMNVSModeVSTextSprite", 158, 192, False,
@@ -2062,6 +2106,25 @@ CSS_SHADOW = {
 # Which fighters this build HAS (nFTKindMario, nFTKindFox).  Same bound the
 # shell's NDS_CSS_FIGHTER_MASK carries.
 CSS_BUILT_FKIND = (0, 1)
+# P2-1L, owner finding (5): THE PORTRAIT IS THE SAME 45x43 AS THE BOX BEHIND
+# IT, and `mnPlayersVSMakePortrait` draws the two at the SAME (x, y)
+# (mnplayersvs.c:2437/:2503) -- so in the source the artwork covers its frame
+# edge to edge and no fire shows around it.  The shipped bake did not: the box
+# is a surface at the frame's own 4/5 (36x34) while the portrait was an OBJ
+# cell at P2-1e's 32/45 (32x31), which is the ratio that lands a 45x43 sprite
+# in a 32x32 cell instead of a 64x64 one.  Four columns and three rows of box
+# showed through on every built fighter.
+#
+# THE FIX IS THE ONE P2-1j ALREADY MADE FOR THE LOCKED CELLS: a portrait never
+# changes for the life of the screen, so it belongs in the backdrop, where it
+# is baked at the frame's own 4/5 like everything else and the OBJ cell size
+# stops being a constraint at all.  It also GIVES BACK 4,096 bytes of main OBJ
+# (the two 32x32 cells), which is what pays for the stage select's cursor
+# growing to 4/5 in finding (6) -- see `docs/p2/P2-1c-vram-map.md`.
+CSS_PORTRAIT_SYMBOL = {
+    0: "llMNPlayersPortraitsMarioSprite",
+    1: "llMNPlayersPortraitsFoxSprite",
+}
 # mnPlayersVSPortraitProcDisplay's primitive, :361.
 CSS_SHADOW_NOISE = 0x30
 
@@ -2082,6 +2145,10 @@ def css_screen_parts() -> tuple[Placement, ...]:
                                "llMNPlayersPortraitsPortraitFireBgSprite",
                                x, y, False))
         if fkind in CSS_BUILT_FKIND:
+            # The fighter's own portrait, at the box's own position and the
+            # box's own scale -- finding (5).
+            parts.append(Placement("MNPlayersPortraits",
+                                   CSS_PORTRAIT_SYMBOL[fkind], x, y, False))
             continue
         shadow = CSS_SHADOW.get(fkind)
         if shadow is not None:
@@ -2276,6 +2343,74 @@ SSS_EMBLEM_SYMBOL = (
 # Pupupu->DreamLand=6, Sector->SectorZ=1, Yamabuki->SaffronCity=7.
 SSS_SLOT_GKIND = (0, 2, 4, 3, 8, 5, 6, 1, 7, 0xDE)
 
+# ---------------------------------------------------------------------------
+# P2-1L, owner finding (6): THE STAGE ICONS FILL THEIR CELL.
+# ---------------------------------------------------------------------------
+#
+# `mnMapsMakeIcons` (:528) draws a 48x36 icon on a 50 px column pitch and a
+# 38 px row pitch -- `x = slot * 50 + 30`, `y = 30 | 68`, :540-:548 -- so the
+# source's grid is a near-continuous mosaic with a 2 px gutter on both axes.
+# P2-1f baked the icons at 5/8 instead (30x23) and centred them in the 4/5
+# footprint, which is 8 columns and 6 rows of stone showing inside every cell
+# and a grid that reads as small pictures floating far apart.  5/8 was a CELL
+# fact, not a layout one: at the frame's own 4/5 the 62x50 cursor frame lands
+# in a 64x64 OBJ cell (8,192 B) against a 64x32 one (4,096 B) at 5/8.
+#
+# The icons stop being OBJs, exactly as P2-1j's locked portrait cells did: the
+# grid is fixed for the life of the screen (the lock set is a compile-time
+# constant), so it belongs in the backdrop, where 4/5 costs no cell at all.
+# Only the CURSOR still has to be an OBJ, and its own 4/5 is paid for by the
+# 4,096 bytes finding (5) gave back.
+#
+# mnMapsMakeIcons' own offsets[], :513 -- gkind order, exactly the order
+# SSS_NAME_SYMBOL and SSS_EMBLEM_SYMBOL are in.
+SSS_ICON_SYMBOL = (
+    "llMNMapsPeachsCastleSprite", "llMNMapsSectorZSprite",
+    "llMNMapsCongoJungleSprite", "llMNMapsPlanetZebesSprite",
+    "llMNMapsHyruleCastleSprite", "llMNMapsYoshisIslandSprite",
+    "llMNMapsDreamLandSprite", "llMNMapsSaffronCitySprite",
+    "llMNMapsMushroomKingdomSprite")
+# Which grounds this build HAS. Same bound the shell's NDS_SSS_GROUND_MASK
+# carries (`LBBACKUP_MASK_STAGE(nGRKindPupupu)`).
+SSS_BUILT_GKIND = (6,)
+# THE LOCKED CELL IS THE ONE THING HERE THE SOURCE DOES NOT DRAW.
+# `mnMapsMakeIcons` simply SKIPS a locked ground (:534), which on a build with
+# one ground would leave nine empty cells and an invisible grid, so P2-1f put
+# the character select's own locked plate in them instead.  It is a substitute
+# for an icon, not source art for this position, and it is therefore given the
+# ICON's cell rather than its own 45x43 proportions -- a 4/5 bake would be
+# 36x34 and overlap the next row (the DS row pitch is 30), and any aspect-
+# preserving fit would leave the two kinds of cell on different rows.  The
+# distortion is entirely inside our own addition; no source artwork is
+# stretched by it.
+SSS_LOCKED_SYMBOL = "llMNPlayersPortraitsPortraitQuestionMarkSprite"
+SSS_ICON_DEST = (38, 29)
+
+
+def sss_icon_pos(slot: int) -> tuple[int, int]:
+    """mnMapsMakeIcons, :540/:546 -- `slot * 50 + 30` folded per row."""
+    return (((slot % 5) * 50) + 30, 30 if slot < 5 else 68)
+
+
+def sss_icon_parts() -> tuple[Placement, ...]:
+    parts = []
+    for slot in range(10):
+        gkind = SSS_SLOT_GKIND[slot]
+        x, y = sss_icon_pos(slot)
+        if gkind == 0xDE:
+            # mnMapsMakeIcons' own slot-9 branch (:542): RANDOM draws its own
+            # icon.  The shell's cursor still cannot land on it.
+            parts.append(Placement("MNMaps", "llMNMapsRandomSmallSprite",
+                                   x, y, False))
+        elif gkind in SSS_BUILT_GKIND:
+            parts.append(Placement("MNMaps", SSS_ICON_SYMBOL[gkind],
+                                   x, y, False))
+        else:
+            parts.append(Placement("MNPlayersPortraits", SSS_LOCKED_SYMBOL,
+                                   x, y, False, dest=SSS_ICON_DEST))
+    return tuple(parts)
+
+
 SSS_BACKGROUND = (
     # mnMapsMakeWallpaper, :364, full-bleed per the P2-1k ruling.
     STONE_FULL_BLEED,
@@ -2288,6 +2423,8 @@ SSS_BACKGROUND = (
               size=(109, 81)),
     *(Placement("MNMaps", "llMNMapsTilesSprite", x, 130, False)
       for x in range(43, 155, 16)),
+    # ICONS, camera 60 -- in front of both wallpapers, behind the cursor.
+    *sss_icon_parts(),
     # PLAQUE, camera 40 -- behind the labels.
     Placement("MNMaps", "llMNMapsWoodenCircleSprite", 189, 124, False),
     # LABELS, camera 30 -- both fills first (mnMapsLabelsProcDisplay draws them
@@ -2299,8 +2436,23 @@ SSS_BACKGROUND = (
     Placement("MNMaps", "llMNMapsStageSelectTextSprite", 172, 122, False,
               (0xAF, 0xB1, 0xCC), env=(0x00, 0x00, 0x00)),
     Placement("MNMaps", "llMNMapsPlateLeftSprite", 174, 191, False),
-    *(Placement("MNMaps", "llMNMapsPlateMiddleSprite", x, 191, False)
-      for x in range(186, 262, 4)),
+    # P2-1L, owner finding (7): THE MIDDLE IS ONE TILED RUN, NOT NINETEEN
+    # PLACEMENTS, and that is what closes the black breaks the owner reported.
+    # `mnMapsMakeLabels` (:439) draws `llMNMapsPlateMiddleSprite` -- 4x20 --
+    # at every x from 186 to 258 inclusive, so the middle spans source
+    # 186..261 exactly: 174..185 left cap, 186..261 middle, 262..285 right cap,
+    # contiguous to the pixel with no overlap.  Placing nineteen 4 px tiles
+    # SEPARATELY at the frame's 4/5 rounds each one to 3 px while the step
+    # between them is 3.2, so the art falls a pixel behind the layout every
+    # five tiles: measured on the shipped bake, DS columns 161, 177, 193 and
+    # 209 of rows 153..168 were byte-identical to the plateless backdrop --
+    # four one-pixel holes straight through to the stone.  Resampling the
+    # WHOLE 76 px run once lands it at 149..209, flush against the left cap's
+    # 139..148 and the right cap's 210..228.  Same `tile`/`period` the VS
+    # menu's option-tab middle already uses, and the same reason: an RDP wrap
+    # is a continuous fill, not a row of stamps.
+    Placement("MNMaps", "llMNMapsPlateMiddleSprite", 186, 191, False,
+              tile=(76, 20), period=(4, None)),
     Placement("MNMaps", "llMNMapsPlateRightSprite", 262, 191, False),
 )
 

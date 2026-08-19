@@ -1834,15 +1834,6 @@ static u32 ndsMenuShellCssBoxHit(s32 x0, s32 x1, s32 y0, s32 y1)
 #define NDS_CSS_LEVEL_MIN 1u
 #define NDS_CSS_LEVEL_MAX 9u
 
-/* THE PORTRAIT ARTWORK IS SMALLER THAN ITS BOX, and these two numbers are that
- * difference rather than an offset tuned by eye: the box bakes at the frame's
- * own 4/5 (45x43 -> 36x34, so the twelve cells tile contiguously exactly as
- * the source's 45 px grid does) and the portrait at P2-1e's 32/45 (-> 32x31,
- * which is what lands it in one 32x32 OBJ cell). Centring is (36-32)/2 and
- * (34-31)/2. */
-#define NDS_CSS_PORTRAIT_INSET_X 2
-#define NDS_CSS_PORTRAIT_INSET_Y 1
-
 /* mnPlayersVSMakeLabels' own colours, mnplayersvs.c:1391. */
 #define NDS_CSS_RGB_MODE 0x00e3ac04u
 /* mnPlayersVSMakeReady's ready-text primitive, mnplayersvs.c:4128. */
@@ -2059,28 +2050,18 @@ static void ndsMenuShellCssPopulate(void)
     ndsUiKitSetText(NDS_CSS_SLOT_BACK, "BACK", NDS_MENU_RGB_WHITE);
     ndsUiKitMoveText(NDS_CSS_SLOT_BACK, NDS_CSS_DS(244), NDS_CSS_DS(23));
 
+    /* P2-1L (5): EVERY portrait cell is backdrop art now. P2-1j had already
+     * baked the locked ones -- box, noise-dithered shadow, question-mark plate
+     * -- because none of it changes while the screen is up; the two BUILT
+     * fighters kept an OBJ cell, and that cell is exactly why they did not
+     * fill their box. `mnPlayersVSMakePortrait` draws portrait and box at the
+     * same (x,y) and both are 45x43 (mnplayersvs.c:2437/:2503), so the source
+     * covers its frame edge to edge, while a 45x43 sprite only fits a 32x32
+     * OBJ cell at 32/45 against the box's 4/5. In the backdrop the cell size
+     * stops being a constraint and the two are baked at one ratio. */
     for (i = 0u; i < NDS_CSS_PORTRAITS; i++)
     {
-        u32 fkind = (u32)kNdsCssPortraitFighter[i];
-
-        /* P2-1j (c)/(d): a LOCKED cell is drawn by the backdrop now -- box,
-         * noise-dithered shadow where the source has one, question-mark plate
-         * -- because none of it changes while the screen is up. The two built
-         * fighters keep their OBJ cell, centred in the box the backdrop drew
-         * under them. */
-        if (ndsMenuShellCssFighterLocked(fkind) != FALSE)
-        {
-            ndsUiKitHideSprite(NDS_CSS_SPRITE_PORTRAIT0 + i);
-            continue;
-        }
-        ndsUiKitSetSprite(NDS_CSS_SPRITE_PORTRAIT0 + i,
-                          (fkind == (u32)nFTKindMario) ?
-                              NDS_MN_UI_KIT_IMAGE_PORTRAIT_MARIO :
-                              NDS_MN_UI_KIT_IMAGE_PORTRAIT_FOX,
-                          NDS_CSS_DS(ndsMenuShellCssPortraitX(i)) +
-                              NDS_CSS_PORTRAIT_INSET_X,
-                          NDS_CSS_DS(ndsMenuShellCssPortraitY(i)) +
-                              NDS_CSS_PORTRAIT_INSET_Y);
+        ndsUiKitHideSprite(NDS_CSS_SPRITE_PORTRAIT0 + i);
     }
 
     for (i = 0u; i < (u32)NDS_CSS_SLOTS; i++)
@@ -2932,18 +2913,20 @@ static void ndsMenuShellPopulateCssScreen(void)
 #define NDS_SSS_ICON_PITCH 50
 #define NDS_SSS_ICON_Y0 30
 #define NDS_SSS_ICON_Y1 68
-/* mnMapsSetCursorPosition: the frame sits 7 px up and left of the icon. */
+/* mnMapsSetCursorPosition (mnmaps.c:845/:851): the frame sits 7 px up and
+ * left of the icon -- `slot * 50 + 23` against the icon's `slot * 50 + 30`.
+ * P2-1L (6) applies it directly: with the grid and the cursor both at the
+ * frame's own 4/5, the source's own offset is the only one that keeps a 50x40
+ * frame around a 38x29 icon. */
 #define NDS_SSS_CURSOR_DX (-7)
 #define NDS_SSS_CURSOR_DY (-7)
-/* The 5/8 bake is smaller than the 4/5 footprint the grid is spaced for, so
- * the artwork is centred in that footprint: (48*4/5 - 30)/2 = 4 and
- * (36*4/5 - 23)/2 = 2 for an icon, and the cursor frame is centred on the
- * icon in turn ((39-30)/2 = 4, (31-23)/2 = 4). Arithmetic on the two bakes'
- * own dimensions, not offsets tuned by eye. */
+/* THE PREVIEW PANEL'S PLACEHOLDER, and nothing else, still carries these.
+ * They centred P2-1f's 5/8 icon inside the 4/5 grid footprint; the grid is
+ * baked at 4/5 into the backdrop now (P2-1L (6)), so the only remaining 5/8
+ * draw is the preview panel -- which owner finding (9) owns and this row does
+ * not move a pixel of. */
 #define NDS_SSS_ICON_INSET_X 4
 #define NDS_SSS_ICON_INSET_Y 2
-#define NDS_SSS_CURSOR_INSET_X 4
-#define NDS_SSS_CURSOR_INSET_Y 4
 
 /* mnMapsFuncRun's own input gate and repeat (mnmaps.c:1440/:1523). */
 #define NDS_SSS_INPUT_ARM_TICS 10
@@ -3124,10 +3107,10 @@ static void ndsMenuShellSssShowSelection(void)
                       NDS_SSS_DS(40) + NDS_SSS_ICON_INSET_X,
                       NDS_SSS_DS(127) + NDS_SSS_ICON_INSET_Y);
     ndsUiKitSetSprite(NDS_SSS_SPRITE_CURSOR, NDS_MN_UI_KIT_IMAGE_MAP_CURSOR,
-                      NDS_SSS_DS(ndsMenuShellSssIconX(sSssCursorSlot)) +
-                          NDS_SSS_ICON_INSET_X - NDS_SSS_CURSOR_INSET_X,
-                      NDS_SSS_DS(ndsMenuShellSssIconY(sSssCursorSlot)) +
-                          NDS_SSS_ICON_INSET_Y - NDS_SSS_CURSOR_INSET_Y);
+                      NDS_SSS_DS(ndsMenuShellSssIconX(sSssCursorSlot) +
+                                 NDS_SSS_CURSOR_DX),
+                      NDS_SSS_DS(ndsMenuShellSssIconY(sSssCursorSlot) +
+                                 NDS_SSS_CURSOR_DY));
     gNdsMenuShellSssCursorSlot = sSssCursorSlot;
     gNdsMenuShellSssCursorGkind = gkind;
 }
@@ -3136,14 +3119,19 @@ static void ndsMenuShellSssPopulate(void)
 {
     u32 slot;
 
+    /* P2-1L (6): THE GRID IS BACKDROP ART NOW. `mnMapsMakeIcons` draws a 48x36
+     * icon on a 50x38 pitch (mnmaps.c:540/:546), which is a near-continuous
+     * mosaic; P2-1f's OBJ cells were 30x23 at 5/8 inside that 4/5 footprint,
+     * so eight columns and six rows of stone showed inside every cell. The
+     * lock set is a compile-time constant, so the whole grid is fixed for the
+     * life of the screen and belongs in the surface -- where 4/5 costs no OBJ
+     * cell. The ten cells give back OAM slots rather than bytes (their two map
+     * images stay in the pack for the preview panel, finding (9)); the 4,096
+     * bytes that pay for the cursor's own 4/5 are the two CSS portrait cells
+     * finding (5) released. */
     for (slot = 0u; slot < NDS_SSS_SLOTS; slot++)
     {
-        ndsUiKitSetSprite(NDS_SSS_SPRITE_CELL0 + slot,
-                          ndsMenuShellSssCellImage(slot),
-                          NDS_SSS_DS(ndsMenuShellSssIconX(slot)) +
-                              NDS_SSS_ICON_INSET_X,
-                          NDS_SSS_DS(ndsMenuShellSssIconY(slot)) +
-                              NDS_SSS_ICON_INSET_Y);
+        ndsUiKitHideSprite(NDS_SSS_SPRITE_CELL0 + slot);
     }
     ndsMenuShellSssShowSelection();
 }

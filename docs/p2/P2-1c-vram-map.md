@@ -75,7 +75,7 @@ eight fields since P2-1e and is at its ceiling:
 | 6,400 – 22,784 | 16,384 | 8 text fields x 4 cells of 32x8 |
 | 0 – 6,400 | 6,400 | **left for the battle's OBJ tenant** |
 
-**P2-1j spent 2,944 of that floor and left 3,456.** The image block is now
+**P2-1j spent 2,944 of that floor and left 3,456.** The image block was then
 **45,696 bytes over 37 images** (19,840 – 65,536), the text budget is
 unchanged, and the floor is **3,456 bytes**. What it bought is the four
 elements the owner's round-3 pass found missing that are small enough to be
@@ -93,34 +93,45 @@ frame's own 4/5 is 34 px wide, lands in a 64x32 cell and costs 4,096 B, while
 its 39 px 1P twin at 4/5 is 31 and fits a 32x16 one for 1,024. 3/4 is the
 largest exact ratio that lands CP in the SAME cell as 1P (43 x 3/4 = 32).
 
-**THE FLOOR IS NOW 3,456 BYTES.** The next row that wants main OBJ space has
-to evict something, and the first candidate is `PORTRAIT_LOCKED` (2,048 B):
-the character select stopped drawing it when P2-1j baked the locked stack into
-its backdrop, and only the stage select's borrowed locked cell still does.
+**THE FLOOR IS 3,456 BYTES, AND P2-1L DID NOT MOVE IT.** The next row that
+wants main OBJ space has to evict something, and the first candidate is
+`PORTRAIT_LOCKED` (2,048 B): the character select stopped drawing it when
+P2-1j baked the locked stack into its backdrop, and after P2-1L only the stage
+select's *preview panel* still names it, through an unreachable branch of
+`ndsMenuShellSssCellImage` — owner finding (9) owns that panel.
 
 The image block, in the generator's own order
-(`scripts/menus/generate_mn_ui_kit.py`): Mario and Fox portraits at 32/45 in
-32x32 cells (2,048 each, down from 8,192 at 1:1 — twelve portrait CELLS have
-to fit a 256 px screen), the ten digits and the infinity glyph (5,888), P2-1e's
-character-select set — the locked-slot question mark (2,048), three 4/5-scaled
-cursor states (6,144), the 1P and CP tokens (4,096), the three player-kind
-labels at 1:1 (3,072) and the CP LEVEL label (1,024) — P2-1f's stage-select
-set: the Dream Land and RANDOM map icons (2,048 each) and the cursor frame
-(4,096), all three at **5/8** — and P2-1i's four main-menu mode icons at 5/8
-(2,048 each), the bright selected-state sprites `mnModeSelectMake1PMode`
-swaps to.
+(`scripts/menus/generate_mn_ui_kit.py`): the ten digits and the infinity glyph
+(5,888), P2-1e's character-select set — the locked-slot question mark (2,048),
+three 4/5-scaled cursor states (6,144), the 1P and CP tokens (4,096), the three
+player-kind labels at 1:1 (3,072) and the CP LEVEL label (1,024) — P2-1f's
+stage-select set: the Dream Land and RANDOM map icons at **5/8** (2,048 each,
+kept only for the preview panel) and the cursor frame at **4/5** (8,192) — and
+P2-1i's four main-menu mode icons at 5/8 (2,048 each), the bright
+selected-state sprites `mnModeSelectMake1PMode` swaps to. **35 images,
+45,696 bytes**, unchanged in total across P2-1L.
 
-**5/8 IS A CELL FACT.** At the frame's own 4/5 the source's 62x50 cursor frame
-becomes 50x40 and lands in a 64x64 cell (8,192 B); at 5/8 it is 39x31 and lands
-in a 64x32 one (4,096 B), with the 48x36 icons at 30x23 in 32x32 cells instead
-of 38x29 in 64x32 ones. 5/8 is the largest exact ratio at which the source's own
-cursor fits one 64x32 cell, and it halved this row's cost from 16,384 to 8,192
-bytes of the 16,640 that were free. The icons keep the source's own 4/5 GRID
-positions and are centred inside the 4/5 footprint, so only the artwork inside
-each cell is smaller than the source's.
+**P2-1L (5)/(6) TRADED TWO PORTRAIT CELLS FOR ONE CURSOR CELL, NET ZERO.** The
+owner's round-5 pass found the CSS portraits and the SSS stage icons both
+smaller than the cell they sit in, and both were the same defect: an OBJ-cell
+ratio applied to *layout* art. `mnPlayersVSMakePortrait` draws a 45x43 portrait
+at the same site as its 45x43 box, and `mnMapsMakeIcons` a 48x36 icon on a
+50x38 pitch — so in the source each fills its cell, while the bake had the
+portraits at 32/45 (32x31 in a 36x34 box) and the icons at 5/8 (30x23 in a
+38x29 cell). Both are STATIC for the life of their screen, so both moved into
+their screen's BG2 surface at the frame's own 4/5, where the cell size is not
+a constraint and the cost is zero bank E. That released the two portrait cells
+(**−4,096 B**) and the ten icon draws, and the only OBJ left on the stage
+select's grid is the cursor — which had to go to 4/5 (50x40 in a 64x64 cell,
+**+4,096 B**) because a 39x31 frame cannot frame a 38x29 icon.
 
-**THE FLOOR IS NOW 6,400 BYTES** (three 32x32 cells and change), and the next
-row that wants main OBJ space has to say what it evicts.
+**5/8 WAS A CELL FACT AND IT NO LONGER APPLIES TO THE GRID.** P2-1f chose it
+because the source's 62x50 cursor frame is 50x40 at 4/5 and lands in a 64x64
+cell (8,192 B) against a 64x32 one (4,096 B) at 5/8, and at the time all three
+stage-select sprites were OBJs — 16,384 B against 8,192. With the grid in the
+surface only the cursor pays, so the 4/5 that keeps the source's own
+frame-around-icon relationship costs 8,192 total instead of 16,384. The two
+map icons stay at 5/8 for the preview panel alone.
 
 **EIGHT TEXT FIELDS IS THE CEILING, not a choice**: 8 x 4 x 512 is exactly
 16,384 and bank I is exactly 16,384, so a ninth field would take the sub engine
@@ -139,7 +150,11 @@ allocates downward from 127 (`sNdsIFCommonNextOamID`), the kit upward from 0
 and never past `NDS_UI_KIT_OAM_IDS` — 61 since P2-1e (8 text fields x 4 cells,
 plus 29 sprite slots: a cursor, four tokens, four player-kind labels, four
 CPU-level labels, four CPU-level digits and twelve portrait cells). They grow
-away from each other.
+away from each other. **P2-1L left 22 of those slots permanently hidden** —
+the character select's twelve portrait cells and the stage select's ten grid
+cells are backdrop art now — so the ceiling has that much slack in it; the ids
+themselves cost nothing while unused, and renumbering them is a P2-2 job (the
+four-slot HUD is the next thing that wants them), not a bake row's.
 
 Sub bank I: `VRAM_I_SUB_SPRITE`, the same 16,384-byte text layout, and since
 P2-1e that is the WHOLE bank with nothing spare. The image cells do **not**
