@@ -2627,6 +2627,42 @@ FIRE_TEX = 32            # every frame sprite is 32x32
 FIRE_PA = (FIRE_CELL_W * 256) // DS_SCREEN_W
 FIRE_PD = (FIRE_CELL_H * 256) // DS_SCREEN_H
 
+# P2-1L (2), OWNER BUG: "a title overlay not spanning the screen -- gaps on the
+# left and even more on the right".  THE ELEMENT IS THE FIRE ITSELF, and the
+# gap is this table's own mapping rather than anything drawn over it.  (Round 5
+# first attributed this to the animation's torn poses; the owner re-checked on
+# the repaired ROM and it was still there, which is what sent the search here.)
+#
+# THE SOURCE HAS NO GAP, and its own camera is why.  The fire SObjs are display
+# link 0 (`gcAddGObjDisplay(fire_gobj, mnTitleFireProcDisplay, 0, ...)`,
+# mntitle.c:945), and the camera that renders links 0 and 1 is the sprite
+# camera in `mnTitleMakeCameras`, whose viewport is `syRdpSetViewport(
+# &cobj->viewport, 10, 10, 310, 230)` (:1413).  So the fire is drawn through
+# the SAME 300x220 active area at (10,10) that P2-1k (f) established for every
+# other background in this shell -- and the nearer fire SObj's own texture
+# rectangle, source x [8, 8 + 32*9.5) = [8, 312) and y [8, 8 + 32*7) = [8, 232),
+# CONTAINS that viewport on all four sides.
+#
+# This atlas was mapping the whole 320x240 FRAME instead (step = 320/51), which
+# drags the frame's out-of-viewport margin -- source x < 10 and x >= 310, which
+# the source's camera never shows -- onto a DS panel that has no overscan to
+# eat it.  Measured on the shipped ROM, three separate captures: the only two
+# column steps that reproduce across all of them are x=5|6 and x=240|241.  The
+# nearer layer was absent from screen columns 0..5 and 241..255, leaving those
+# strips as the far layer alone over the white fill -- 25 to 56 luma brighter
+# than the interior.  Left 6 px, right 15 px: the owner's "gaps on the left,
+# even more on the right", to the column.
+#
+# Mapping the active area instead puts every atlas texel inside BOTH layers'
+# rectangles, so the fire reaches all four panel edges with no invented
+# content.  Same 255x252 atlas, same four affine registers, no runtime change:
+# FIRE_PA/FIRE_PD still map the screen onto the whole cell, and only what each
+# texel SAMPLES moves.  The fire is ~7% larger against the foreground art than
+# it was, which is the same resampling P2-1k (f) accepted for the collage and
+# for the same reason -- nothing is registered to a flame.
+FIRE_VIEW_X, FIRE_VIEW_Y = 10.0, 10.0
+FIRE_VIEW_W, FIRE_VIEW_H = 300.0, 220.0
+
 # `sobj->pos`, `sprite.scalex/scaley` for the two layers, in the source's frame.
 FIRE_LAYERS = ((-32.0, -16.0, 12.0, 8.5), (8.0, 8.0, 9.5, 7.0))
 
@@ -2635,12 +2671,24 @@ def _fire_sample(raster, u: float, v: float) -> tuple[int, int, int, int]:
     """Bilinear tap of one 32x32 fire texture.
 
     The atlas is an UPSAMPLE of the source on both axes (a 51-wide cell spans
-    the 256 px screen, which spans about 21 of the layer's 32 texels), so
-    bilinear is the reconstruction that matches what an N64 texture rectangle
-    at G_TF_BILERP puts on the television -- and point sampling here would
-    bake in blocks the hardware upscale would then magnify again.
+    the source's 300 px active width, which is about 31.6 of the nearer layer's
+    32 texels), so bilinear is the reconstruction that matches what an N64
+    texture rectangle at G_TF_BILERP puts on the television -- and point
+    sampling here would bake in blocks the hardware upscale would then magnify
+    again.
+
+    P2-1L (2).  THE COVERAGE TEST IS THE RECTANGLE'S, NOT THE LAST TEXEL
+    CENTRE'S.  spDraw draws each fire SObj as a texture rectangle 32 texels
+    wide, so the sprite covers `u` in [0, 32): the final texel is a whole texel
+    of coverage, not a zero-width edge.  Rejecting `u > 31` dropped that last
+    texel column and row of every layer, which on the nearer layer (scale
+    9.5/7.0) is 9.5 source px of missing fire down the right edge and 7 px
+    along the bottom -- it TRIPLED the right gap, 5 screen px to 15, while
+    leaving the left one at 6, and that asymmetry is what the owner reported.
+    Taps past the last centre clamp to it, which is the G_TX_CLAMP the source's
+    own tile descriptor asks for and what `x1`/`y1` below already did.
     """
-    if (u < 0.0) or (v < 0.0) or (u > (FIRE_TEX - 1)) or (v > (FIRE_TEX - 1)):
+    if (u < 0.0) or (v < 0.0) or (u >= FIRE_TEX) or (v >= FIRE_TEX):
         return (0, 0, 0, 0)
     x0 = int(u)
     y0 = int(v)
@@ -2679,20 +2727,21 @@ def build_fire_atlas(cache: dict[str, RelocFile], offsets: dict[str, int],
     width = FIRE_COLS * FIRE_CELL_W
     height = FIRE_ROWS * FIRE_CELL_H
     texels = [0] * (width * height)
-    # One atlas texel spans this many source-frame pixels on each axis; the
-    # inverse of the affine the hardware will run.
-    step_x = (DS_SCREEN_W / FIRE_CELL_W) * (FRAME_SCALE[1] / FRAME_SCALE[0])
-    step_y = (DS_SCREEN_H / FIRE_CELL_H) * (FRAME_SCALE[1] / FRAME_SCALE[0])
+    # One atlas texel spans this many source pixels on each axis, across the
+    # fire camera's own ACTIVE AREA (see FIRE_VIEW_*); the inverse of the
+    # affine the hardware will run.
+    step_x = FIRE_VIEW_W / FIRE_CELL_W
+    step_y = FIRE_VIEW_H / FIRE_CELL_H
     for t in range(FIRE_FRAMES):
         col = t % FIRE_COLS
         row = t // FIRE_COLS
         layers = ((frames[(FIRE_PHASE + t) % FIRE_FRAMES], FIRE_LAYERS[0]),
                   (frames[t % FIRE_FRAMES], FIRE_LAYERS[1]))
         for ay in range(FIRE_CELL_H):
-            fy = (ay + 0.5) * step_y
+            fy = FIRE_VIEW_Y + ((ay + 0.5) * step_y)
             base = ((row * FIRE_CELL_H) + ay) * width + (col * FIRE_CELL_W)
             for ax in range(FIRE_CELL_W):
-                fx = (ax + 0.5) * step_x
+                fx = FIRE_VIEW_X + ((ax + 0.5) * step_x)
                 # The fire camera's FILL is the starting colour, not black:
                 # see FIRE_FILL.  Both layers then alpha-composite over it in
                 # mnTitleFireProcDisplay's own draw order (base SObj, then

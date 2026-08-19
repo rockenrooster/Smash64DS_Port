@@ -28,6 +28,18 @@ not `powershell`, for the reason in the paragraph above — spelling it
 `powershell` inside the `cmd` line reintroduces 5.1 and fails at
 `melonds.ps1:349`.
 
+**`pwsh -File` CANNOT BIND AN ARRAY PARAMETER, AND IT MISBINDS SILENTLY**
+(2026-08-19). `-File script.ps1 -Presents 10,19,34` throws a *type conversion*
+error naming `Presents`, which is honest; the "fix" of spelling it
+`-Presents 10 19 34` is the dangerous one — `-File` binds only `10` to
+`-Presents` and hands `19 34 …` to the next POSITIONAL parameter, so the run
+died on `TimeoutSeconds` being out of range and the message named neither
+`-Presents` nor `-File`. A harness with a permissive positional parameter would
+have accepted the misbinding and run the wrong measurement. **Pass an array
+only through `pwsh -Command`, or call the script directly from a PowerShell
+session** (`& '…\script.ps1' -Presents 10,19,34`), which binds arrays
+correctly; reserve the `cmd`/`-File` redirect form for scalar arguments.
+
 **`verify-all.ps1` used to be able to return exit 0 after a child build died.
 It now refuses to start in that environment, and refuses to print its pass line
 without one success per planned verifier (fixed 2026-08-16).** The failure was a
