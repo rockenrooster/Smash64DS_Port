@@ -207,6 +207,29 @@ R2-07 iteration rules (cycle 79):
   gdb). Wait on the **writer's process handle** (`Wait-Process -Id`), never on
   the result file — `Test-Path` on a result JSON has already read one mid-write
   and flipped a KEEP verdict.
+- **THIS IS STRUCTURAL, NOT JUST A HABIT TO REMEMBER: `Invoke-GdbMarkerScript`
+  (`scripts/lib/gdb-markers.ps1`) writes its `.gdb.out` capture file exactly
+  ONCE, via `Set-Content` after `$gdbProcess.WaitForExit()` returns — there is
+  no incremental flush during the run (2026-08-18).** A probe that stops on a
+  frequent breakpoint (e.g. once per presented frame) and gets killed or
+  re-launched mid-run leaves that file holding the PREVIOUS invocation's
+  content, byte-for-byte, with no timestamp cue short of `Get-Item` — reading
+  it while a new run is still in flight is reading stale data, not "no
+  progress yet". This cost a cycle diagnosing the P2-1k (g2) BGM-loop probe:
+  a killed prior run's 18.7 MB buffered capture (flushed only because the
+  force-kill triggered the one `Set-Content`) was mistaken for live output
+  from the run that replaced it. There is no live-progress signal to poll for
+  a single `-x scriptfile` batch invocation; either let it run to completion
+  or its own `-TimeoutSeconds` (the thrown exception on timeout still carries
+  the accumulated `$stdout`, so a deliberate timeout is a valid way to see
+  partial progress), or use the `-MiInteractive`/`-InteractiveSteps`/
+  `-ReadyFile` form (`verify-battle-playable-down-air-stall.ps1`'s
+  `-ObserverFreeSnapshot` arm) if genuinely free execution between a start and
+  a timed stop is needed — which is also the fix for a DIFFERENT trap the same
+  cycle found: a breakpoint that stops the CPU on every presented frame can
+  starve a hardware-timer-driven mechanism of the free-running time it needs
+  to fire (BGM's seam refills stalled at `elapsed=0`/`refills=0` under a
+  per-frame breakpoint and only engaged once the hold ran genuinely free).
 - **GATE AN ALLOCATOR ARM ON THE SOAK BEFORE THE GATE RUN (2026-08-15).** A
   2,400 s gate run was spent on an arm a 5-minute `soak-freeze-watch.ps1` would
   have refused: it reported `NEVER-STARTED`, zero presented battle frames, and

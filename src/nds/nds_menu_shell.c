@@ -3545,6 +3545,28 @@ static void ndsMenuShellRun(u32 screen)
         ndsMenuShellTickInput(held);
         sMenuTics++;
 
+        /* P2-1k (g2). `ndsAudioBgmUpdate` has exactly two callers in the whole
+         * tree before this one -- the battle's own per-frame update
+         * (`ndsRunMarioFoxProofUpdate`, taskman_seam.c:4488) and the VS
+         * Results dev-harness loop (taskman_seam.c:7364) -- so no menu shell
+         * screen ever served a BGM refill: `ndsAudioBgmPlay` synchronously
+         * preloads two packets (~1.5 s at 16,384 samples/22,050 Hz) and the
+         * hardware-timer-driven worker thread (`ndsAudioBgmHandleSeam`,
+         * nds_audio_bgm.c) can swap between those two once, but nothing ever
+         * called `ndsAudioBgmServiceRefills` to load a third -- the seam miss
+         * that follows sets `gNdsAudioBgmSeamMissCount`/`OverrunCount` and
+         * `sNdsAudioBgmErrorPending` from the worker thread, but only
+         * `ndsAudioBgmUpdate` (main thread) ever reads that flag and turns it
+         * into `ndsAudioBgmFailPlayback`, so `gNdsAudioBgmPlaying` never even
+         * dropped to 0 -- track 44/10 looked "stuck playing" while the
+         * hardware channel had already gone silent underneath it. Menus are
+         * the ONLY screens this file drives that need it: title never plays
+         * BGM (P2-1k (g)) and every other native screen (mode select, VS
+         * mode, character select, stage select) funnels through this one
+         * loop. Matches the battle's own placement -- logic update before the
+         * frame's render/present calls. */
+        ndsAudioBgmUpdate();
+
         ndsPlatformRenderDebugHud();
         ndsMenuShellRecordFrame();
         ndsPlatformEndFrame();
