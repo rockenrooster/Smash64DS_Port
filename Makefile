@@ -2923,6 +2923,13 @@ NDS_MN_UI_KIT_ASSET := $(PROJECT_ROOT)/assets/menus/mn_ui_kit.bin
 # pack is read and hashed on every kit entry, so a title screen living in it
 # would cost the character select bytes it never draws.
 NDS_MN_UI_SURFACE_ASSET := $(PROJECT_ROOT)/assets/menus/mn_surfaces.bin
+# P2-1k (d). The title pop animation's pose table. A SECOND generator writes it
+# -- `decode_mn_title_anim.py` owns the animation, transcribes objanim.c and
+# carries the oracles -- but it reads the kit generator as a module, so the two
+# agree on every raster size by construction rather than by convention. It
+# depends on the kit's source as well as its own for exactly that reason.
+NDS_MN_TITLE_ANIM_INC := \
+	$(PROJECT_ROOT)/src/nds/generated/mn_title_anim.generated.inc
 LDFLAGS := -specs=$(NDS_HOT_TEXT_SPECS) -g $(ARCH) \
 	-Wl,-Map,$(notdir $*.map),--gc-sections \
 	-Wl,-T,$(NDS_HOT_TEXT_LINKER_SCRIPT)
@@ -4240,7 +4247,8 @@ $(OUTPUT).elf: $(OFILES) $(NDS_PRIVATE_CHECK_OFILES) \
 	$(NDS_HOT_TEXT_SPECS) $(NDS_HOT_TEXT_LINKER_SCRIPT) \
 	$(NDS_TASK32_DRAW_HOT_FRAGMENT) $(NDS_PARTICLE_BANKS_INC) \
 	$(NDS_BATTLE_STATIC_TEXTURE_INC) \
-	$(if $(filter 1,$(NDS_P2_UI_KIT)),$(NDS_MN_UI_KIT_INC))
+	$(if $(filter 1,$(NDS_P2_UI_KIT)),$(NDS_MN_UI_KIT_INC) \
+		$(NDS_MN_TITLE_ANIM_INC))
 $(OFILES) $(NDS_PRIVATE_CHECK_OFILES): $(PROJECT_ROOT)/Makefile $(NDS_BUILD_CONFIG) $(NDS_FTANIM_TRACK_PREREQ)
 ifeq ($(NDS_TASK9_FLOAT_ITCM),1)
 NDS_TASK9_FLOAT_LIBGCC := $(shell $(CC) $(ARCH) -print-libgcc-file-name)
@@ -4487,6 +4495,18 @@ $(NDS_MN_UI_KIT_INC) $(NDS_MN_UI_KIT_ASSET) $(NDS_MN_UI_SURFACE_ASSET) &: \
 		$(PROJECT_ROOT)/include/reloc_data.h
 	python "$(PROJECT_ROOT)/scripts/menus/generate_mn_ui_kit.py" --repo-root "$(PROJECT_ROOT)"
 	@touch $(NDS_MN_UI_KIT_INC) $(NDS_MN_UI_KIT_ASSET) $(NDS_MN_UI_SURFACE_ASSET)
+
+# P2-1k (d). Ordered after the kit's own rule by the surface-pack prerequisite:
+# the pose table's oracles compare against the composite the kit bakes, so a
+# stale pack would be checked instead of the one that ships.
+$(NDS_MN_TITLE_ANIM_INC): \
+		$(PROJECT_ROOT)/scripts/menus/decode_mn_title_anim.py \
+		$(PROJECT_ROOT)/scripts/menus/generate_mn_ui_kit.py \
+		$(NDS_MN_UI_SURFACE_ASSET) \
+		$(PROJECT_ROOT)/include/reloc_data.h
+	python "$(PROJECT_ROOT)/scripts/menus/decode_mn_title_anim.py" \
+		--repo-root "$(PROJECT_ROOT)" --emit
+	@touch $(NDS_MN_TITLE_ANIM_INC)
 
 $(NITROFS_DIR)/menus/mn_ui_kit.bin: $(NDS_MN_UI_KIT_ASSET)
 	@mkdir -p $(dir $@)

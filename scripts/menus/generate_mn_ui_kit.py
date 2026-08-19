@@ -1380,6 +1380,14 @@ def emit_manifest(path: Path, glyphs: list[Glyph], images: list[Image],
         lines.append(
             f"#define NDS_MN_UI_KIT_SURFACE_{surface.token} {index}u")
     lines.append("")
+    lines.append("/* P2-1k (d) -- the rows the title's pop animation owns, i.e.")
+    lines.append(" * below the border band and above the copyright band. Both")
+    lines.append(" * bands are (f2)-anchored static art the animation must")
+    lines.append(" * never erase; see title_anim_band(). */")
+    anim_top, anim_bottom = title_anim_band(surfaces)
+    lines.append(f"#define NDS_MN_UI_KIT_TITLE_ANIM_TOP {anim_top}")
+    lines.append(f"#define NDS_MN_UI_KIT_TITLE_ANIM_BOTTOM {anim_bottom}")
+    lines.append("")
     lines.append("/* P2-1i -- mnTitleMakeFire's thirty states, tiled into the")
     lines.append(" * BG3 bitmap. A frame is selected by the affine reference")
     lines.append(" * point alone; PA/PD are the hardware upscale. */")
@@ -1737,6 +1745,23 @@ TITLE_PARTS = (
               (0xFF, 0x00, 0x00), alpha=0x4C, flat=True),
 )
 
+# P2-1k (d).  THE POP ANIMATION'S OWN PAYLOAD, and the source says which of
+# the seven label pieces move.  `mnTitleMakeLabels` (mntitle.c:1180) builds
+# TWO display GObjs off one animation DObj tree: kinds 0..4 go on the GObj that
+# carries `mnTitleProcUpdate` -> `mnTitlePlayAnim`, and kinds 5..6 (the
+# copyright FOOTER and the border HEADER) go on a second GObj whose process is
+# `mnTitleUpdateLabelsPosition` (:772) -- which sets each of those two from
+# `dMNTitleCommonSpriteDescs` every tic and NEVER reads its DObj.  Their anim
+# streams exist and advance; nothing consumes them on this branch.
+# `mnTitleSetEndLayout` (:397) confirms the split from the other side: it snaps
+# the GObj with `id == 8`, and that GObj's SObj list is exactly five long.
+#
+# So FIVE pieces animate, not seven, and the two BANDS are static frame
+# furniture from the first tic -- which is also why (f2)'s edge anchoring needs
+# no pose offset at all: the animation cannot move what it does not drive.
+TITLE_ANIM_PARTS = TITLE_PARTS[:5]
+TITLE_EMBLEM_PART = TITLE_PARTS[7]
+
 SURFACE_SOURCES = [
     SurfaceSpec("TITLE_SCREEN", TITLE_PARTS, TITLE_FIELD),
     # PRESS START blinks, so it is its own surface: the runtime caches these
@@ -1747,6 +1772,33 @@ SURFACE_SOURCES = [
                 (Placement("MNTitle", "llMNTitlePressStartSprite", 162, 177,
                            True, (0xFF, 0xFF, 0xFF)),),
                 TITLE_FIELD, cacheable=True),
+    # P2-1k (d).  One surface per animated piece, at the frame's own 4/5, so
+    # the runtime has a raster it can re-blit at that frame's scale.  They are
+    # NOT cacheable: the kit's single cache buffer is PRESS START's, and these
+    # six live in a title-scene arena block instead (`ndsUiKitTitleAnimLoad`).
+    SurfaceSpec("TITLE_ANIM_CUTOUT", (TITLE_ANIM_PARTS[0],), TITLE_FIELD),
+    SurfaceSpec("TITLE_ANIM_SMASH", (TITLE_ANIM_PARTS[1],), TITLE_FIELD),
+    SurfaceSpec("TITLE_ANIM_SUPER", (TITLE_ANIM_PARTS[2],), TITLE_FIELD),
+    SurfaceSpec("TITLE_ANIM_BROS", (TITLE_ANIM_PARTS[3],), TITLE_FIELD),
+    SurfaceSpec("TITLE_ANIM_TM", (TITLE_ANIM_PARTS[4],), TITLE_FIELD),
+    # THE SETTLED FRAME, and it exists because a stack of independently
+    # quantised pieces is NOT the composite the kit bakes.  A DS texel carries
+    # one alpha bit, so where an antialiased `Smash` edge blends over an opaque
+    # `Cutout` texel, TITLE_SCREEN holds the BLEND; five separate rasters, each
+    # quantised alone, hold neither.  The emblem is the same argument twice
+    # over: at its resting 0x4C primitive alpha every one of its own texels
+    # falls under `rgba8_to_ds`'s 128 threshold, so it survives the bake ONLY
+    # as a tint on the opaque art beneath it -- 1,243 texels of TITLE_SCREEN,
+    # of which just 23 exist without the wordmark under them.
+    #
+    # `mnTitleSetEndLayout` snaps at tic 220, so this is the frame the screen
+    # then holds: the runtime blits THIS at pose 51 and the resting title is
+    # bit-identical to what (f2) shipped.  `check_title_anim_block` proves
+    # that rather than asserting it.  No `box`: the union of these six IS the
+    # rectangle wanted, and the emblem's overhang past x=256 clips exactly as
+    # it does in TITLE_SCREEN.
+    SurfaceSpec("TITLE_WORDMARK", TITLE_ANIM_PARTS + (TITLE_EMBLEM_PART,),
+                TITLE_FIELD),
     # THE MENU COLLAGE.  300x220 CI4 with a 16-entry TLUT, 44 bands of 6 rows
     # stepping 5 -- the asset that forced decode_sprite_raster to transcribe
     # spDraw's band policy.  Both screens that show it place it identically at
@@ -2457,6 +2509,95 @@ def check_mode_icon_block(images: list[Image]) -> None:
             f"mnModeSelectOption order; got {tokens[first:first + 4]}")
 
 
+def title_anim_band(surfaces: list[Surface]) -> tuple[int, int]:
+    """The rows the pop animation owns, read out of the bake's own placements.
+
+    Below the border band and above the copyright band.  Those two are the only
+    static art the animation's dirty rectangle could reach, and the reason it
+    must not is (f2): both are anchored flush with the panel edges, and an
+    erase that clipped either would undo that ruling one frame into the
+    animation.  Taking the bound from `TITLE_SCREEN.sites` rather than writing
+    8 and 157 is what keeps it true if the band artwork or the frame ratio
+    move -- the numbers exist only in the bake.
+    """
+    title = next(s for s in surfaces if s.token == "TITLE_SCREEN")
+    _bx, by, _bw, bh = title.sites["llMNTitleBorderUpperSprite"]
+    _cx, cy, _cw, _ch = title.sites["llMNTitleCopyrightSprite"]
+    top = by + bh
+    bottom = cy
+    if not (0 < top < bottom <= DS_SCREEN_H):
+        raise ConvertError(
+            f"title anim band ({top},{bottom}) is not a usable row range")
+    return top, bottom
+
+
+def check_title_anim_block(surfaces: list[Surface]) -> None:
+    """Two oracles the pop animation's correctness rests on.
+
+    1. TITLE_WORDMARK is TITLE_SCREEN, exactly, over its own rectangle from the
+       band's top row down.  This is what makes the SETTLED frame the animation
+       lands on bit-identical to the static title (f2) shipped -- the runtime
+       blits this one surface at pose 51 and stops.
+    2. Inside the animation's row band, TITLE_SCREEN carries NO art outside that
+       rectangle.  The runtime erases its dirty rectangle to transparent every
+       frame and only ever restores the wordmark rectangle, so a texel that
+       failed this would be erased mid-animation and never come back.
+    """
+    title = next(s for s in surfaces if s.token == "TITLE_SCREEN")
+    mark = next(s for s in surfaces if s.token == "TITLE_WORDMARK")
+    top, bottom = title_anim_band(surfaces)
+
+    mismatch = 0
+    for y in range(mark.height):
+        ty = mark.dst_y + y - title.dst_y
+        if (mark.dst_y + y) < top:
+            continue
+        for x in range(mark.width):
+            tx = mark.dst_x + x - title.dst_x
+            if mark.texels[y * mark.width + x] != \
+                    title.texels[ty * title.width + tx]:
+                mismatch += 1
+    if mismatch != 0:
+        raise ConvertError(
+            f"TITLE_WORDMARK differs from TITLE_SCREEN in {mismatch} texels; "
+            "the settled animation frame would not be the static title")
+
+    stray = 0
+    for y in range(top, bottom):
+        for x in range(title.width):
+            if title.texels[y * title.width + x] == 0:
+                continue
+            if (mark.dst_x <= x < mark.dst_x + mark.width) and \
+                    (mark.dst_y <= y < mark.dst_y + mark.height):
+                continue
+            stray += 1
+    if stray != 0:
+        raise ConvertError(
+            f"{stray} TITLE_SCREEN texels sit inside the animation band "
+            f"(rows {top}..{bottom}) but outside TITLE_WORDMARK; the "
+            "animation's erase would destroy them permanently")
+
+    # 3. PRESS START is the other thing on this screen's BG2, and it lands
+    #    INSIDE the band -- (91,134)..(168,148) against rows 8..157 -- so the
+    #    animation's erase reaches it on sixteen of the fifty-one poses.  The
+    #    runtime's answer is the source's: the label is off the panel for the
+    #    fifty-one animated tics and revealed at the snap (`mnTitleMakePressStart`
+    #    leaves it hidden, mntitle.c:1261, and it is not shown until tic 280).
+    #    Assert the containment that makes ONE erase enough: a label straddling
+    #    the band's edge would leave the outside half on screen with the inside
+    #    half erased, and no later frame would put either right.
+    start = next(s for s in surfaces if s.token == "TITLE_PRESS_START")
+    inside = ((start.dst_y >= top) and
+              ((start.dst_y + start.height) <= bottom))
+    outside = ((start.dst_y + start.height) <= top) or (start.dst_y >= bottom)
+    if not (inside or outside):
+        raise ConvertError(
+            f"TITLE_PRESS_START rows {start.dst_y}.."
+            f"{start.dst_y + start.height} straddle the animation band "
+            f"({top}..{bottom}); it would be erased in part and restored in "
+            "part on every animated frame")
+
+
 def write_png(path: Path, width: int, height: int, rgb: bytes) -> None:
     """Minimal RGB8 PNG so a human can look at the bake without a ROM."""
     import zlib
@@ -2666,6 +2807,7 @@ def main(argv: list[str] | None = None) -> int:
     # blit path.  It rides in the same payload because that is one NitroFS
     # open the title screen already pays for.
     surfaces.append(build_fire_atlas(cache, offsets, repo_root))
+    check_title_anim_block(surfaces)
 
     pack, image_table = build_pack(glyphs, images)
     surface_pack, surface_table = build_surface_pack(surfaces)

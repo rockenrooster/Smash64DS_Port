@@ -230,7 +230,12 @@ if (-not [string]::IsNullOrWhiteSpace($AnalyzeOnly)) {
         # the character select's four player panels. They are the reason the
         # backdrop assertion below is no longer "one blit per entry": these
         # count the rest of it exactly, so the invariant stays an equality.
-        'gNdsMenuShellVsButtonBlitCount', 'gNdsMenuShellCssPanelBlitCount'
+        'gNdsMenuShellVsButtonBlitCount', 'gNdsMenuShellCssPanelBlitCount',
+        # P2-1k (d). The title pop animation. Counted apart from the backdrops
+        # for the same reason the fire sheet is: the blit equality below is an
+        # equality, and these frames are neither a backdrop nor a state change.
+        'gNdsUiKitTitleAnimArmCount', 'gNdsUiKitTitleAnimSettleCount',
+        'gNdsUiKitTitleAnimLoadFailCount', 'gNdsUiKitTitleAnimPose'
     )
     $symbols = & $nm $elf | ForEach-Object { ($_ -split '\s+')[-1] }
     $missing = @($required | Where-Object { $symbols -notcontains $_ })
@@ -457,6 +462,18 @@ if (-not [string]::IsNullOrWhiteSpace($AnalyzeOnly)) {
              'gNdsUiKitFireAtlasBlitCount, gNdsMenuShellVsButtonBlitCount, ' +
              'gNdsMenuShellCssPanelBlitCount, ' +
              'gNdsMenuShellSssPlaqueBlitCount'),
+            # P2-1k (d). The title pop animation: one arm and one settle per
+            # title entry, ending on mnTitleSetEndLayout's own snap. `frames`
+            # and the tick pair are reported for the board, not asserted --
+            # cadence is measured beside the profile, never inside it.
+            ('printf "LOOPANIM arm=%u settle=%u fail=%u pose=%u frames=%u ' +
+             'ticks=%u maxticks=%u maxpose=%u bytes=%u draw=%u erase=%u\n", ' +
+             'gNdsUiKitTitleAnimArmCount, gNdsUiKitTitleAnimSettleCount, ' +
+             'gNdsUiKitTitleAnimLoadFailCount, gNdsUiKitTitleAnimPose, ' +
+             'gNdsUiKitTitleAnimFrameCount, gNdsUiKitTitleAnimTicks, ' +
+             'gNdsUiKitTitleAnimMaxTicks, gNdsUiKitTitleAnimMaxPose, ' +
+             'gNdsUiKitTitleAnimBytes32, gNdsUiKitTitleAnimDrawTexels, ' +
+             'gNdsUiKitTitleAnimEraseTexels'),
             ('printf "LOOPARENA base=%08x size=%u\n", ' +
              'gNdsSceneManagerArenaBase, gNdsSceneManagerArenaSize'),
             ('printf "LOOPINPUTRING ' + $ringFmt + '\n", ' + $inputRing),
@@ -657,6 +674,34 @@ if ($null -ne $surf) {
                 "e0=$($e['e0']) title entries; every title entry blits the " +
                 'thirty-state fire sheet into BG3 exactly once.')
         }
+        # P2-1k (d). THE POP ANIMATION RAN, AND IT FINISHED. One arm per title
+        # entry proves it was set up; one settle per entry proves it reached
+        # `mnTitleSetEndLayout`'s tic-220 snap, which is the only state in which
+        # the title is the layout every later screenshot and the owner's own
+        # pass is taken against. An animation that armed and stalled mid-pose
+        # would leave a half-scaled wordmark on screen and would otherwise close
+        # green on scene bookkeeping alone.
+        $anim = $lines | Where-Object { $_ -match '^LOOPANIM ' } |
+            Select-Object -Last 1
+        if ($null -ne $anim) {
+            $a = @{}
+            foreach ($m in [regex]::Matches($anim, '(\w+)=(\d+)')) {
+                $a[$m.Groups[1].Value] = [int64]$m.Groups[2].Value
+            }
+            Assert-Loop ($a['fail'] -eq 0) (
+                "TITLE ANIM: fail=$($a['fail']), expected 0 -- every title " +
+                'entry must load the six baked rasters.')
+            Assert-Loop ($a['arm'] -eq $e['e0']) (
+                "TITLE ANIM: arm=$($a['arm']) against e0=$($e['e0']) title " +
+                'entries; the pop animation arms exactly once per entry.')
+            Assert-Loop ($a['settle'] -eq $e['e0']) (
+                "TITLE ANIM: settle=$($a['settle']) against e0=$($e['e0']) " +
+                'title entries; every armed animation must reach ' +
+                'mnTitleSetEndLayout''s snap before the screen is left.')
+            Assert-Loop ($a['pose'] -eq 51) (
+                "TITLE ANIM: pose=$($a['pose']), expected 51 -- the snap the " +
+                'source takes at tic 220.')
+        }
         Assert-Loop ($e['startup'] -eq 1) (
             "BOOT SCENE: startup=$($e['startup']), expected exactly 1 -- the " +
             'frameless boot scene runs once and carries the menu audio load.')
@@ -664,7 +709,7 @@ if ($null -ne $surf) {
 }
 
 foreach ($tag in @('LOOPINPUT', 'LOOPCFG', 'LOOPXFER', 'LOOPSCREENS', 'LOOPSURF',
-                   'LOOPARENA')) {
+                   'LOOPANIM', 'LOOPARENA')) {
     $line = $lines | Where-Object { $_ -match ("^$tag ") } | Select-Object -Last 1
     if ($null -ne $line) { Write-Output $line }
 }

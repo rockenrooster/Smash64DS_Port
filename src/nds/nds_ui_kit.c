@@ -1097,6 +1097,351 @@ void ndsUiKitEraseCachedSurface(u16 field_texel)
     ndsUiKitToggleCachedSurface(field_texel, FALSE);
 }
 
+/* --- P2-1k (d): the title's pop animation -------------------------------- */
+
+#include "generated/mn_title_anim.generated.inc"
+
+/* The two generators derive the band independently -- the kit from
+ * TITLE_SCREEN's own placements, the decoder from the same function on the same
+ * bake -- so a disagreement means one of them ran against a stale tree. Free to
+ * check, and the alternative is a mismatch that only shows as art vanishing at
+ * one edge. */
+_Static_assert(NDS_MN_TITLE_ANIM_TOP == NDS_MN_UI_KIT_TITLE_ANIM_TOP &&
+                   NDS_MN_TITLE_ANIM_BOTTOM == NDS_MN_UI_KIT_TITLE_ANIM_BOTTOM,
+               "the pose table and the surface bake disagree about the band");
+_Static_assert(NDS_MN_TITLE_ANIM_SETTLED_W <= 256u,
+               "the settled rectangle must fit the destination row");
+_Static_assert(NDS_MN_TITLE_ANIM_MAX_WIDTH <= 256u,
+               "a pose is wider than the scaled-row buffer");
+
+/* One destination row, scaled out of a piece's raster before it reaches the
+ * layer. It exists for the ROW CACHE: every pose here upscales vertically at
+ * some point (the peak frame's pieces run to 3.5x), so consecutive destination
+ * rows keep landing on the same source row, and scaling it once instead of per
+ * row is the difference between ~10 and ~6 cycles a texel on the frame that
+ * decides the cadence. */
+static u16 sNdsUiKitTitleAnimLine[256] __attribute__((aligned(4)));
+
+static const u16 *sNdsUiKitTitleAnimPiece[NDS_MN_TITLE_ANIM_PIECES];
+static const u16 *sNdsUiKitTitleAnimSettled;
+static NdsUiKitTitleAnimRect sNdsUiKitTitleAnimDirty;
+static u32 sNdsUiKitTitleAnimReady;
+
+NDS_UI_KIT_PUBLISHED volatile u32 gNdsUiKitTitleAnimArmCount;
+NDS_UI_KIT_PUBLISHED volatile u32 gNdsUiKitTitleAnimLoadFailCount;
+NDS_UI_KIT_PUBLISHED volatile u32 gNdsUiKitTitleAnimFrameCount;
+NDS_UI_KIT_PUBLISHED volatile u32 gNdsUiKitTitleAnimSettleCount;
+NDS_UI_KIT_PUBLISHED volatile u32 gNdsUiKitTitleAnimPose;
+NDS_UI_KIT_PUBLISHED volatile u32 gNdsUiKitTitleAnimBytes32;
+NDS_UI_KIT_PUBLISHED volatile u32 gNdsUiKitTitleAnimDrawTexels;
+NDS_UI_KIT_PUBLISHED volatile u32 gNdsUiKitTitleAnimEraseTexels;
+NDS_UI_KIT_PUBLISHED volatile u32 gNdsUiKitTitleAnimTicks;
+NDS_UI_KIT_PUBLISHED volatile u32 gNdsUiKitTitleAnimMaxTicks;
+NDS_UI_KIT_PUBLISHED volatile u32 gNdsUiKitTitleAnimMaxPose;
+
+u32 ndsUiKitTitleAnimBytes(void)
+{
+    u32 total = kNdsUiKitSurfaceMetrics[
+        NDS_MN_UI_KIT_SURFACE_TITLE_WORDMARK].bytes;
+    u32 i;
+
+    for (i = 0u; i < NDS_MN_TITLE_ANIM_PIECES; i++)
+    {
+        total += kNdsUiKitSurfaceMetrics[kNdsUiKitTitleAnimSurfaces[i]].bytes;
+    }
+    return total;
+}
+
+static const u16 *ndsUiKitTitleAnimRead(NdsRelocAssetStream *stream,
+                                        u32 surface, u8 *dst)
+{
+    const NdsUiKitSurfaceMetric *metric = &kNdsUiKitSurfaceMetrics[surface];
+    u32 hash;
+
+    /* Straight into the caller's block, not through sNdsUiKitStaging: that
+     * buffer exists because VRAM drops 8-bit writes, and this destination is
+     * main RAM. */
+    if (ndsRelocAssetStreamRead(stream, metric->offset, dst,
+                                metric->bytes) == FALSE)
+    {
+        gNdsUiKitSurfaceReadFailCount++;
+        return NULL;
+    }
+    hash = ndsUiKitHashFold(0x811C9DC5u, dst, metric->bytes);
+    gNdsUiKitSurfaceLastHash = hash;
+    if (hash != metric->fnv32)
+    {
+        gNdsUiKitSurfaceHashMismatchCount++;
+        return NULL;
+    }
+    gNdsUiKitSurfaceBytes += metric->bytes;
+    return (const u16 *)dst;
+}
+
+s32 ndsUiKitTitleAnimLoad(void *block, u32 bytes)
+{
+    NdsRelocAssetStream stream;
+    u8 *cursor = (u8 *)block;
+    u32 need = ndsUiKitTitleAnimBytes();
+    u32 i;
+
+    sNdsUiKitTitleAnimReady = 0u;
+    if ((block == NULL) || (bytes < need))
+    {
+        gNdsUiKitTitleAnimLoadFailCount++;
+        return FALSE;
+    }
+    if (ndsRelocAssetStreamOpen(&stream, NDS_UI_KIT_SURFACE_PATH) == FALSE)
+    {
+        gNdsUiKitSurfaceReadFailCount++;
+        gNdsUiKitTitleAnimLoadFailCount++;
+        return FALSE;
+    }
+    gNdsUiKitSurfaceOpenCount++;
+    for (i = 0u; i < NDS_MN_TITLE_ANIM_PIECES; i++)
+    {
+        u32 surface = kNdsUiKitTitleAnimSurfaces[i];
+
+        sNdsUiKitTitleAnimPiece[i] =
+            ndsUiKitTitleAnimRead(&stream, surface, cursor);
+        if (sNdsUiKitTitleAnimPiece[i] == NULL)
+        {
+            ndsRelocAssetStreamClose(&stream);
+            gNdsUiKitTitleAnimLoadFailCount++;
+            return FALSE;
+        }
+        cursor += kNdsUiKitSurfaceMetrics[surface].bytes;
+    }
+    sNdsUiKitTitleAnimSettled = ndsUiKitTitleAnimRead(
+        &stream, NDS_MN_UI_KIT_SURFACE_TITLE_WORDMARK, cursor);
+    ndsRelocAssetStreamClose(&stream);
+    if (sNdsUiKitTitleAnimSettled == NULL)
+    {
+        gNdsUiKitTitleAnimLoadFailCount++;
+        return FALSE;
+    }
+    /* WHAT POSE 1 ERASES. The screen entry has already blitted the whole static
+     * title, settled wordmark included, so the first thing the animation owes
+     * the screen is the removal of a layout the source has not reached yet. */
+    sNdsUiKitTitleAnimDirty.x = (u16)NDS_MN_TITLE_ANIM_SETTLED_X;
+    sNdsUiKitTitleAnimDirty.y = (u16)NDS_MN_TITLE_ANIM_SETTLED_Y;
+    sNdsUiKitTitleAnimDirty.width = (u16)NDS_MN_TITLE_ANIM_SETTLED_W;
+    sNdsUiKitTitleAnimDirty.height = (u16)NDS_MN_TITLE_ANIM_SETTLED_H;
+    sNdsUiKitTitleAnimReady = 1u;
+    gNdsUiKitTitleAnimBytes32 = need;
+    gNdsUiKitTitleAnimPose = 0u;
+    gNdsUiKitTitleAnimArmCount++;
+    return TRUE;
+}
+
+s32 ndsUiKitTitleAnimActive(void)
+{
+    return (sNdsUiKitTitleAnimReady != 0u) ? TRUE : FALSE;
+}
+
+void ndsUiKitTitleAnimEnd(void)
+{
+    /* The arena block belongs to the scene, and the scene teardown rewinds it.
+     * Dropping the pointers is what stops a stale block being drawn out of on
+     * the next entry if a load ever fails after a success. */
+    sNdsUiKitTitleAnimReady = 0u;
+    sNdsUiKitTitleAnimSettled = NULL;
+}
+
+/* Transparent, over the band only. Word stores because the layer is 16-bit and
+ * two texels are one aligned write; the odd edges fall out as halfwords. */
+static void ndsUiKitTitleAnimErase(u16 *layer, u32 pitch,
+                                   const NdsUiKitTitleAnimRect *rect)
+{
+    u32 row;
+
+    for (row = 0u; row < rect->height; row++)
+    {
+        u16 *dst = layer + (((u32)rect->y + row) * pitch) + rect->x;
+        u32 count = rect->width;
+
+        if ((count != 0u) && ((((uintptr_t)dst) & 3u) != 0u))
+        {
+            *dst++ = 0u;
+            count--;
+        }
+        while (count >= 2u)
+        {
+            *(u32 *)dst = 0u;
+            dst += 2;
+            count -= 2u;
+        }
+        if (count != 0u)
+        {
+            *dst = 0u;
+        }
+    }
+    gNdsUiKitTitleAnimEraseTexels += (u32)rect->width * rect->height;
+}
+
+static void ndsUiKitTitleAnimPiece(const NdsUiKitTitleAnimPose *pose,
+                                   const u16 *raster, u32 raster_w,
+                                   u16 *layer, u32 pitch, s32 keyed)
+{
+    u32 sy = pose->src_y;
+    u32 cached = 0xffffffffu;
+    u16 *dst = layer + ((u32)pose->y * pitch) + (u32)pose->x;
+    u32 row;
+
+    for (row = 0u; row < pose->height; row++)
+    {
+        u32 src_row = sy >> 8;
+        u32 i;
+
+        sy += pose->step_y;
+        if (src_row != cached)
+        {
+            const u16 *src = raster + (src_row * raster_w);
+            u32 sx = pose->src_x;
+
+            for (i = 0u; i < pose->width; i++)
+            {
+                sNdsUiKitTitleAnimLine[i] = src[sx >> 8];
+                sx += pose->step_x;
+            }
+            cached = src_row;
+        }
+        if (keyed != FALSE)
+        {
+            for (i = 0u; i < pose->width; i++)
+            {
+                u16 texel = sNdsUiKitTitleAnimLine[i];
+
+                if (texel != 0u)
+                {
+                    dst[i] = texel;
+                }
+            }
+        }
+        else
+        {
+            /* THE FIRST PIECE NEEDS NO KEY, and that is an invariant rather
+             * than an optimisation guess: the erase above clears the whole
+             * dirty rectangle, and every piece of the previous pose was inside
+             * it, so the band is transparent when this runs. Writing this
+             * piece's own transparent texels therefore writes zero over zero.
+             * It is worth having: the drop-shadow cutout is the largest of the
+             * five and carries roughly a third of the peak frame's texels. */
+            for (i = 0u; i < pose->width; i++)
+            {
+                dst[i] = sNdsUiKitTitleAnimLine[i];
+            }
+        }
+        dst += pitch;
+    }
+    gNdsUiKitTitleAnimDrawTexels += (u32)pose->width * pose->height;
+}
+
+static void ndsUiKitTitleAnimBlitSettled(u16 *layer, u32 pitch)
+{
+    const NdsUiKitSurfaceMetric *metric =
+        &kNdsUiKitSurfaceMetrics[NDS_MN_UI_KIT_SURFACE_TITLE_WORDMARK];
+    u32 row;
+
+    for (row = 0u; row < (u32)metric->height; row++)
+    {
+        const u16 *src = sNdsUiKitTitleAnimSettled + (row * metric->width);
+        s32 dy = (s32)metric->y + (s32)row;
+        u16 *dst;
+        u32 i;
+
+        if (dy < 0)
+        {
+            continue;
+        }
+        dst = layer + ((u32)dy * pitch) + (u32)metric->x;
+        for (i = 0u; i < (u32)metric->width; i++)
+        {
+            /* Keyed, and the rows above the band matter: this rectangle starts
+             * at y 0 because the emblem does, and those rows hold the (f2)
+             * border band. Every texel of the settled composite there is
+             * transparent -- the emblem alone falls under rgba8_to_ds's alpha
+             * threshold -- so a keyed write cannot disturb the band, while an
+             * opaque one would erase it. */
+            if (src[i] != 0u)
+            {
+                dst[i] = src[i];
+            }
+        }
+    }
+    gNdsUiKitTitleAnimDrawTexels += (u32)metric->width * metric->height;
+}
+
+void ndsUiKitTitleAnimDraw(u32 pose)
+{
+    u32 start = cpuGetTiming();
+    u32 pitch = 0u;
+    u32 layer_w = 0u;
+    u32 layer_h = 0u;
+    u16 *layer;
+    u32 i;
+    u32 elapsed;
+
+    if (sNdsUiKitTitleAnimReady == 0u)
+    {
+        return;
+    }
+    if (pose < 1u)
+    {
+        pose = 1u;
+    }
+    if (pose == gNdsUiKitTitleAnimPose)
+    {
+        return;
+    }
+    layer = ndsPlatformGetOriginalSpriteOverlayLayer(FALSE, &pitch, &layer_w,
+                                                     &layer_h, NULL);
+    if ((layer == NULL) || (pitch == 0u))
+    {
+        gNdsUiKitSurfaceNoLayerCount++;
+        return;
+    }
+    ndsUiKitTitleAnimErase(layer, pitch, &sNdsUiKitTitleAnimDirty);
+    if (pose >= NDS_MN_TITLE_ANIM_SETTLE)
+    {
+        /* mnTitleSetEndLayout, tic 220. The five SObjs go back to their desc
+         * positions at scale 1 and the process ends; here the one composite the
+         * bake proves identical to the static title lands, and the animation
+         * stops owning the screen. */
+        pose = NDS_MN_TITLE_ANIM_SETTLE;
+        ndsUiKitTitleAnimBlitSettled(layer, pitch);
+        sNdsUiKitTitleAnimReady = 0u;
+        gNdsUiKitTitleAnimSettleCount++;
+    }
+    else
+    {
+        const NdsUiKitTitleAnimPose *frame =
+            &kNdsUiKitTitleAnimPoses[(pose - 1u) * NDS_MN_TITLE_ANIM_PIECES];
+
+        for (i = 0u; i < NDS_MN_TITLE_ANIM_PIECES; i++)
+        {
+            if (frame[i].width == 0u)
+            {
+                continue;
+            }
+            ndsUiKitTitleAnimPiece(
+                &frame[i], sNdsUiKitTitleAnimPiece[i],
+                kNdsUiKitSurfaceMetrics[kNdsUiKitTitleAnimSurfaces[i]].width,
+                layer, pitch, (i == 0u) ? FALSE : TRUE);
+        }
+        sNdsUiKitTitleAnimDirty = kNdsUiKitTitleAnimRects[pose - 1u];
+    }
+    gNdsUiKitTitleAnimPose = pose;
+    gNdsUiKitTitleAnimFrameCount++;
+    elapsed = cpuGetTiming() - start;
+    gNdsUiKitTitleAnimTicks += elapsed;
+    if (elapsed > gNdsUiKitTitleAnimMaxTicks)
+    {
+        gNdsUiKitTitleAnimMaxTicks = elapsed;
+        gNdsUiKitTitleAnimMaxPose = pose;
+    }
+}
+
 /* --- Audio --------------------------------------------------------------- */
 
 void ndsUiKitSfx(u32 cue)

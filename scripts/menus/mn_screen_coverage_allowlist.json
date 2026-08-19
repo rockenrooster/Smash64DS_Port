@@ -22,9 +22,9 @@
       "screen": "title",
       "kind": "missing",
       "key": "re:llMNTitleLogoAnim(Cutout|StrikeH|StrikeV)Sprite",
-      "reason": "The emblem's own animation cels. mnTitleMakeLogo builds the resting FULL sprite this shell bakes; the cutout and the two strike frames belong to the logo/label animation, which is the parked slide-in decision -- mnTitlePlayAnim gives every piece its own translate AND scale, which a BG2 affine cannot express.",
-      "ruling": "docs/P2_EXECUTION_BOARD.md Decisions pending: 'Title label slide-in', BLOCKED(decision) raised by P2-1i round 2",
-      "status": "open"
+      "reason": "The emblem's own animation cels, and P2-1k (d) re-read who draws them: they are dMNTitleLogoAnimSprites, referenced ONLY inside mnTitleMakeLogo's opening-cinematic arm (mntitle.c:1096-1155, gated on scene_prev == nSCKindOpeningNewcomers). This shell always takes mnTitleMakeLogoNoOpening (:1051), which builds the resting FULL sprite alone -- the one this bake ships. They are therefore the INTRO's cels, not the label animation's: P2-1k (d) built the label pop (mnTitleMakeLabels' five animated pieces) from a baked pose table and it needs none of them.",
+      "ruling": "PROJECT_GOAL.md Current Milestone step 7 -- the intro cinematic is deferred by owner decision, and these cels arrive with it; re-read and re-ruled by P2-1k (d), which landed the label animation these were previously attributed to",
+      "status": "ruled"
     },
     {
       "screen": "title",

@@ -325,6 +325,12 @@ try {
         # do nothing. `draw`/`erase` are the title blink, which must climb on
         # the title and stay flat everywhere else.
         'printf "MSSURF %d open=%u blit=%u bytes=%u hash=%08x mismatch=%u readfail=%u nolayer=%u cache=%u draw=%u erase=%u ticks=%u\n", $n, gNdsUiKitSurfaceOpenCount, gNdsUiKitSurfaceBlitCount, gNdsUiKitSurfaceBytes, gNdsUiKitSurfaceLastHash, gNdsUiKitSurfaceHashMismatchCount, gNdsUiKitSurfaceReadFailCount, gNdsUiKitSurfaceNoLayerCount, gNdsUiKitSurfaceCacheCount, gNdsUiKitSurfaceDrawCachedCount, gNdsUiKitSurfaceEraseCachedCount, gNdsUiKitSurfaceTicks',
+        # P2-1k (d) THE TITLE POP ANIMATION. `arm`/`settle` must both equal the
+        # title entry count and `pose` must end at 51 -- the tic-220 snap. The
+        # tick pair is what prices the animation window against the budget:
+        # `maxticks` is its worst single pose and `maxpose` names which, so a
+        # cadence figure can be attributed to a frame rather than to a screen.
+        'printf "MSANIM %d arm=%u settle=%u fail=%u pose=%u frames=%u ticks=%u maxticks=%u maxpose=%u bytes=%u draw=%u erase=%u\n", $n, gNdsUiKitTitleAnimArmCount, gNdsUiKitTitleAnimSettleCount, gNdsUiKitTitleAnimLoadFailCount, gNdsUiKitTitleAnimPose, gNdsUiKitTitleAnimFrameCount, gNdsUiKitTitleAnimTicks, gNdsUiKitTitleAnimMaxTicks, gNdsUiKitTitleAnimMaxPose, gNdsUiKitTitleAnimBytes32, gNdsUiKitTitleAnimDrawTexels, gNdsUiKitTitleAnimEraseTexels',
         'printf "MSSFX %d move=%u confirm=%u back=%u value=%u start=%u lastid=%u\n", $n, gNdsUiKitSfxRequestCount[0], gNdsUiKitSfxRequestCount[1], gNdsUiKitSfxRequestCount[2], gNdsUiKitSfxRequestCount[3], gNdsUiKitSfxRequestCount[4], gNdsUiKitSfxLastId',
         $(if ($hasMissRing) {
             'printf "MSMISS %d ring=%u id0=%u c0=%u id1=%u c1=%u id2=%u c2=%u id3=%u c3=%u\n", $n, gNdsAudioFgmMissRingCount, gNdsAudioFgmMissRingIDs[0], gNdsAudioFgmMissRingCounts[0], gNdsAudioFgmMissRingIDs[1], gNdsAudioFgmMissRingCounts[1], gNdsAudioFgmMissRingIDs[2], gNdsAudioFgmMissRingCounts[2], gNdsAudioFgmMissRingIDs[3], gNdsAudioFgmMissRingCounts[3]'

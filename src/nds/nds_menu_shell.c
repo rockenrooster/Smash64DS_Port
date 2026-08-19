@@ -735,9 +735,13 @@ static void ndsMenuShellHideRows(void)
  * :1329); a 16bpp DS BG layer has no per-channel modulator, so the bake pins
  * entry 0 rather than cycling.
  *
- * The label slide-in (`mnTitleMakeLabels`' anim joints, ended and snapped to
- * rest by mnTitleSetEndLayout at tic 220) is still a later slice; the wordmark
- * sits at its resting position from frame 0.
+ * The label pop (`mnTitleMakeLabels`' anim joints, ended and snapped to rest by
+ * mnTitleSetEndLayout at tic 220) LANDED in P2-1k (d): the entry blit puts the
+ * settled layout up, `ndsUiKitTitleAnimLoad` arms the baked pose table, and the
+ * update below drives it to that same snap. Only the FIVE wordmark pieces move
+ * -- the copyright and border bands are pinned by `mnTitleUpdateLabelsPosition`
+ * on this branch (mntitle.c:772) -- which is why (f2)'s edge anchoring needs no
+ * reconciliation with the animation at all.
  *
  * It still plays no BGM: mnTitleInitVars calls syAudioStopBGMAll when the
  * previous scene is not the opening movie (mntitle.c:352), because the music
@@ -790,14 +794,62 @@ static void ndsMenuShellTitleFireFrame(u32 presented_frame)
                                        NDS_MN_UI_KIT_FIRE_CELL_H));
 }
 
+/* P2-1k (d). THE TITLE'S TIC IS A VBLANK COUNT, not an iteration count, and
+ * the animation is why. Everything `mnTitle` does is per tic at 60 Hz; this
+ * loop's iteration was per PRESENT, which is the same thing only while every
+ * present costs one VBlank. The pop animation's peak pose moves 66,183 texels,
+ * so some of its presents cost two (the owner's round-4 30 Hz latitude,
+ * `docs/P2_EXECUTION_BOARD.md` Decisions) -- and an iteration counter would
+ * then run the animation, and the fire beside it, at half the source's speed.
+ * Counting VBlanks keeps both at the source's own rate and lets the cadence be
+ * whatever the frame costs; the sampling is what drops, not the timeline.
+ * Outside the animation window every present is a single VBlank, so this is
+ * identical to the count it replaces. */
+static u32 sMenuTitleVBlankBase;
+
+static u32 ndsMenuShellTitleTic(void)
+{
+    return ndsPlatformVBlankCount() - sMenuTitleVBlankBase;
+}
+
 static void ndsMenuShellUpdateTitle(u32 held, u32 taps)
 {
-    u32 phase = ((sMenuTics / NDS_MENU_TITLE_BLINK) & 1u);
+    u32 tic = ndsMenuShellTitleTic();
+    u32 phase = ((tic / NDS_MENU_TITLE_BLINK) & 1u);
+    u32 animating = (u32)(ndsUiKitTitleAnimActive() != FALSE);
 
     (void)held;
     /* Toggle on the EDGE only. Redrawing every frame would put a 77x14 blit in
      * the steady-state frame cost of a screen that is not changing, which is
-     * exactly what the kit's compose/commit discipline exists to avoid. */
+     * exactly what the kit's compose/commit discipline exists to avoid.
+     *
+     * P2-1k (d): AND NOT AT ALL WHILE THE POP ANIMATION RUNS. PRESS START bakes
+     * to (91,134)..(168,148), inside the row band the animation erases and
+     * redraws every frame, and sixteen of the fifty-one poses have a dirty
+     * rectangle that reaches it. Two attempts at coexistence both failed, and
+     * the second failed for a reason worth writing down: redrawing the label
+     * from its cache AFTER each animated frame is correct in the buffer and
+     * still WRONG ON THE PANEL, because BG2 is scanned out live -- there is no
+     * back buffer and none to be had (main C and D are one 256x256 Bmp16 each
+     * with zero slack, docs/p2/P2-1c-vram-map.md). A pose costing 850,240 ticks
+     * is longer than the beam takes to reach row 134, so whether the frame the
+     * panel shows contains the label depends on where the beam was; two
+     * captures at the same blink phase, poses 24 and 30, disagreed. That is a
+     * flicker, and this project does not ship one.
+     *
+     * The source does not have the problem because it does not have the label:
+     * `mnTitleMakePressStart` leaves the GObj HIDDEN (mntitle.c:1261) and
+     * `mnTitleShowGObjLinkID(9)` reveals it at tic 280 (:697) -- sixty tics
+     * AFTER the tic-220 snap this animation ends on. Suppressing it for the
+     * fifty-one animated tics is therefore the source's own behaviour on the
+     * only interval where the two collide; the shell keeps its existing early
+     * reveal from the snap onward rather than moving to tic 280, because that
+     * arrives paired with the source's input gate (`is_title_anim_viewed`,
+     * :533/:644) and that pair is the owner's to rule on. */
+    if (animating != FALSE)
+    {
+        phase = 0xffffffffu;
+    }
     if (phase != sMenuTitleBlinkPhase)
     {
         sMenuTitleBlinkPhase = phase;
@@ -805,8 +857,16 @@ static void ndsMenuShellUpdateTitle(u32 held, u32 taps)
         {
             ndsUiKitDrawCachedSurface();
         }
+        else if (phase != 0xffffffffu)
+        {
+            ndsUiKitEraseCachedSurface(NDS_MENU_TITLE_FIELD_TEXEL);
+        }
         else
         {
+            /* Entering the animation window: the entry blit drew the label, so
+             * take it off the panel once rather than fight the animation for
+             * those rows. The sentinel makes the first frame after the snap an
+             * edge again, whichever half of the blink cycle it lands in. */
             ndsUiKitEraseCachedSurface(NDS_MENU_TITLE_FIELD_TEXEL);
         }
     }
@@ -823,8 +883,22 @@ static void ndsMenuShellUpdateTitle(u32 held, u32 taps)
      * is deliberately outside the work distribution), so the first cell was
      * held for three presents before the advance became one-per-frame.
      * sMenuTics increments unconditionally, once per loop iteration, which is
-     * exactly the source's own per-tic advance. */
-    ndsMenuShellTitleFireFrame(sMenuTics);
+     * exactly the source's own per-tic advance -- and P2-1k (d) replaced it
+     * with the VBlank tic above for the reason stated there. */
+    ndsMenuShellTitleFireFrame(tic);
+    /* P2-1k (d). The pop animation, driven by the same tic and therefore by
+     * the same clock as the fire: `ndsUiKitTitleAnimDraw` samples the pose the
+     * source would be showing after `tic` tics and settles itself at
+     * mnTitleSetEndLayout's own snap, after which this stops being called. */
+    if (ndsUiKitTitleAnimActive() != FALSE)
+    {
+        /* Pose 1 is the FIRST tic, not the zeroth: on this branch
+         * `mnTitleInitVars` seeds the counter at 169 and
+         * `mnTitleTransitionsFuncRun` increments before it switches, so tic 170
+         * -- `mnTitleShowGObjLinkID(8)`, the labels appearing -- is elapsed 0.
+         * The snap at tic 220 is therefore elapsed 50, pose 51. */
+        ndsUiKitTitleAnimDraw(tic + 1u);
+    }
     if ((taps & (NDS_INPUT_A | NDS_INPUT_START)) != 0u)
     {
         ndsUiKitSfx(NDS_UI_KIT_SFX_START);
@@ -3386,6 +3460,34 @@ static void ndsMenuShellEnterBackdrop(u32 screen)
         ndsMenuShellTitleFireFrame(0u);
         gNdsTitleFireRevealFrame =
             gNdsMenuShellFrames[NDS_MENU_SHELL_SCREEN_TITLE] + 1u;
+        /* P2-1k (d). THE POP ANIMATION IS ARMED HERE, after the static title is
+         * on the screen, because pose 1 is defined as the removal of it: the
+         * source hides the label GObj until tic 170 and shows it already at
+         * scale 0, so the first thing the animation owes the panel is the
+         * settled wordmark's absence.
+         *
+         * ARENA, NOT .bss. The six rasters are 98,920 bytes and the binary's
+         * size comes straight out of the taskman arena, one for one -- a
+         * static buffer this size would cost every scene in the game, battle
+         * included, for a screen that shows it for 0.85 s. `syTaskmanMalloc`
+         * takes it out of the TITLE scene's own arena, which the scene
+         * teardown rewinds, so the cost lands on the one screen that has it to
+         * spare (title high-water 416,828 of 1,548,288 bytes).
+         *
+         * A refusal is not a failure path worth branching on: the animation
+         * simply does not arm, the entry blit's settled layout stays, and the
+         * screen still reads input and still reaches the mode select. The
+         * counter is what tells the two apart. */
+        {
+            u32 anim_bytes = ndsUiKitTitleAnimBytes();
+            void *anim_block = syTaskmanMalloc((size_t)anim_bytes, 4u);
+
+            sMenuTitleVBlankBase = ndsPlatformVBlankCount();
+            if (ndsUiKitTitleAnimLoad(anim_block, anim_bytes) != FALSE)
+            {
+                ndsUiKitTitleAnimDraw(1u);
+            }
+        }
         break;
     case NDS_MENU_SHELL_SCREEN_MODE:
         (void)ndsUiKitBlitSurfaces(kNdsMenuModeSelectSurfaces,
@@ -3581,6 +3683,9 @@ static void ndsMenuShellRun(u32 screen)
     if (screen == NDS_MENU_SHELL_SCREEN_TITLE)
     {
         ndsPlatformSetTitleFireEnabled(FALSE, 0, 0);
+        /* P2-1k (d). Drops the pose table's view of the arena block; the block
+         * itself belongs to the scene the teardown below rewinds. */
+        ndsUiKitTitleAnimEnd();
     }
 
     ndsUiKitExit();

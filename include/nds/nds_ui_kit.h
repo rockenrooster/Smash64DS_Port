@@ -222,6 +222,64 @@ s32 ndsUiKitCacheSurface(u32 surface);
 void ndsUiKitDrawCachedSurface(void);
 void ndsUiKitEraseCachedSurface(u16 field_texel);
 
+/* --- P2-1k (d). The title's pop animation. ------------------------------
+ *
+ * `mnTitlePlayAnim` (mntitle.c:729) gives each of the five animated wordmark
+ * pieces its OWN scale and translate every tic, so no single BG affine can
+ * express it and the DS answer is a per-frame scaled re-blit into the same BG2
+ * bitmap the static title already lives on.
+ *
+ * NOTHING IS INTERPRETED AT RUNTIME. `scripts/menus/decode_mn_title_anim.py`
+ * transcribes `gcParseDObjAnimJoint`/`gcPlayDObjAnimJoint` offline and bakes
+ * the 51 poses as clipped destination rectangles with an 8.8 nearest-neighbour
+ * walk -- which is the project's own "precomputed animation data" rule, and
+ * also the only safe form: the source's `End` opcode leaves
+ * `anim_wait = AOBJ_ANIM_END` and a sixth step would drive every cubic to NaN.
+ *
+ * THE POSE IS A VBLANK COUNT, not a frame count. The source advances one pose
+ * per tic at 60 Hz; the peak frame here moves 66,183 texels and may take two
+ * VBlanks (the owner's round-4 30 Hz latitude, `docs/P2_EXECUTION_BOARD.md`
+ * Decisions), so the caller passes elapsed VBlanks and the animation samples
+ * itself. That keeps the wall-clock length the source's 51 tics whatever the
+ * cadence turns out to be, instead of running at half speed when it slips.
+ *
+ * MEMORY. Six rasters -- five pieces and the settled composite -- are streamed
+ * into ONE caller-provided block at title entry, because the kit's single
+ * surface cache belongs to PRESS START. The caller owns the block's lifetime;
+ * in the shell it is a `syTaskmanMalloc` out of the title scene's own arena,
+ * which the scene teardown rewinds. */
+typedef struct NdsUiKitTitleAnimPose {
+    s16 x;        /* destination top-left, already clipped to the band */
+    s16 y;
+    u16 width;    /* clipped extent; 0 means this piece draws nothing */
+    u16 height;
+    u16 src_x;    /* 8.8 source texel sampled by the first destination column */
+    u16 src_y;
+    u16 step_x;   /* 8.8 source texels per destination texel */
+    u16 step_y;
+} NdsUiKitTitleAnimPose;
+
+typedef struct NdsUiKitTitleAnimRect {
+    u16 x;
+    u16 y;
+    u16 width;
+    u16 height;
+} NdsUiKitTitleAnimRect;
+
+/* Bytes the caller must hand `ndsUiKitTitleAnimLoad`. */
+u32 ndsUiKitTitleAnimBytes(void);
+/* Streams the six rasters into `block` and arms pose 1. FALSE leaves the
+ * screen exactly as the static bake drew it -- a title that cannot animate
+ * still reads input and still reaches the mode select. */
+s32 ndsUiKitTitleAnimLoad(void *block, u32 bytes);
+/* `pose` is 1-based elapsed source tics. At or past the snap it draws the
+ * settled composite once and goes inactive; further calls do nothing. */
+void ndsUiKitTitleAnimDraw(u32 pose);
+/* TRUE while the animation still owes the screen a frame. */
+s32 ndsUiKitTitleAnimActive(void);
+/* Drops the block reference on title exit. Does not free: the arena does. */
+void ndsUiKitTitleAnimEnd(void);
+
 /* --- Audio. One of NDS_UI_KIT_SFX_*. --- */
 void ndsUiKitSfx(u32 cue);
 
@@ -279,5 +337,23 @@ extern volatile u32 gNdsUiKitSurfaceCacheCount;
 extern volatile u32 gNdsUiKitSurfaceDrawCachedCount;
 extern volatile u32 gNdsUiKitSurfaceEraseCachedCount;
 extern volatile u32 gNdsUiKitSurfaceTicks;
+/* P2-1k (d). The pop animation, counted so "it ran" is a number. `Arm` and
+ * `Settle` must both equal the title entry count over a loop -- one arm per
+ * entry, and every armed animation reaching `mnTitleSetEndLayout`'s own snap --
+ * and `Pose` must end at that snap. They are DELIBERATELY not folded into
+ * gNdsUiKitSurfaceBlitCount, whose loop-verifier invariant is an equality over
+ * backdrop and state blits; the fire atlas made the same choice for the same
+ * reason. */
+extern volatile u32 gNdsUiKitTitleAnimArmCount;
+extern volatile u32 gNdsUiKitTitleAnimLoadFailCount;
+extern volatile u32 gNdsUiKitTitleAnimFrameCount;
+extern volatile u32 gNdsUiKitTitleAnimSettleCount;
+extern volatile u32 gNdsUiKitTitleAnimPose;
+extern volatile u32 gNdsUiKitTitleAnimBytes32;
+extern volatile u32 gNdsUiKitTitleAnimDrawTexels;
+extern volatile u32 gNdsUiKitTitleAnimEraseTexels;
+extern volatile u32 gNdsUiKitTitleAnimTicks;
+extern volatile u32 gNdsUiKitTitleAnimMaxTicks;
+extern volatile u32 gNdsUiKitTitleAnimMaxPose;
 
 #endif /* NDS_UI_KIT_H */
