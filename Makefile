@@ -2229,6 +2229,77 @@ override NDS_P2_UI_KIT := 1
 override NDS_P2_MENU_SHELL := 1
 override NDS_P2_MENU_WALK := 1
 endif
+# P2-1L item (10) FREE-PLAY lab target: the shipping-configuration shell
+# above, minus the one flag that makes that ROM scripted. It is a full copy
+# of the NDS_P2_MENU_SHELL_TARGETS block rather than a delta on it, on
+# purpose -- P2-1b's own comment (above) already ruled out appending a name
+# to a shared filter list, and the loop-verifier block below is the
+# precedent for "a distinct shell variant gets its own full block".
+#
+# NDS_P2_MENU_WALK IS NOT OVERRIDDEN, so it stays the Makefile default (0)
+# -- and 0 is not merely inert, it is ABSENT. Every walk site is
+# `#if NDS_P2_MENU_WALK`: the dwell scripts (kNdsMenuWalk*), the tap
+# injector (ndsMenuShellWalkTap, nds_menu_shell.c:485), and the Results
+# auto-START (ndsMenuShellWalkWantsResultsStart, :580, and its
+# NDS_P2_MENU_SHELL && NDS_P2_MENU_WALK call site in
+# nds_platform.c:503) all fail to exist in this translation unit rather than
+# merely reading zero. What is left in `ndsMenuShellReadTaps` is
+# `ndsPlatformReadInput()` calling `scanKeys()`/`keysHeld()` -- the same live
+# keypad read controller_backend.c's `osContGetReadData` uses for the battle
+# this shell opens into -- so the whole shell, menus through the match, runs
+# on nothing but a human DS pad. NDS_HARNESS_FAST_LOGIC stays 0 and
+# NDS_DEV_SCENE_HARNESS stays battle_playable_realtime, so the match is the
+# real realtime one, not a bounded proof run.
+#
+# NEVER PUBLISHED, exactly like its shell siblings: the boot scene differs
+# from the shipped ROM's, so no tick figure from it is a Boundary figure.
+NDS_P2_MENU_SHELL_FREEPLAY_TARGETS := \
+	smash64ds-p2-shell-freeplay-hwtri
+ifneq ($(filter $(TARGET),$(NDS_P2_MENU_SHELL_FREEPLAY_TARGETS)),)
+override NDS_DEV_SCENE_HARNESS := battle_playable_realtime
+override NDS_DEV_LIVE_INPUT_PREVIEW := 1
+override NDS_HARNESS_FAST_LOGIC := 0
+override NDS_RENDERER_HW_TRIANGLES := 1
+override NDS_DEBUG_HUD := 0
+override NDS_RENDERER_PROFILE_LEVEL := 0
+override NDS_TICK_HUD := 0
+override NDS_SHIP_TELEMETRY := 1
+override NDS_RENDERER_FAST_RUN_DEFAULT := 9
+override NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE := 1
+override NDS_TASK36_HW_COMPOSE := 2
+override NDS_R2_FIGHTER_HW_MTX := 1
+override NDS_R2_FIGHTER_GX_COMPOSE := 1
+override NDS_R2_STAGE_VALIDATE_STRIDE := 8
+override NDS_R2_FIGHTER_HW_LIGHT := 1
+override NDS_R2_FIGHTER_SHUFFLE_FOLD := 1
+override NDS_R2_CUBIC_FIXED := 1
+override NDS_R2_DELTA_PATH_ITCM := 1
+override NDS_R2_ANIM_CACHE := 1
+override NDS_R2_AOBJ16_PREBAKE := 1
+override NDS_TASK53_REPLAY_ARENA_FIX := 1
+override NDS_BATTLE_PROFILE := 1
+override NDS_TASK44_STAGE_STEADY := 1
+override NDS_R2_STAGE_DIRECT := 1
+override NDS_R2_STAGE_DMA := 1
+override NDS_R2_STAGE_VIEWPROJ := 1
+override NDS_R2_STAGE_PREFLIGHT := 1
+override NDS_R2_FIGHTER_MTX_DIRECT := 1
+override NDS_R2_FIGHTER_RUN_MEMO := 1
+override NDS_TASK37_ITCM_LEAVES := 7
+override NDS_SCENE_MIP_CACHE_LAB := 0
+override NDS_FAST_WALLPAPER_AFFINE := 1
+override NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT := 1
+override NDS_IFCOMMON_HYBRID_OAM := 0
+override NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS := 0
+override NDS_TASK16_FLOAT_COMPARE := 1
+override NDS_TASK16_FLOAT_I2F := 1
+override NDS_TASK16_FLOAT_ADDSUB := 1
+override NDS_TASK32_DRAW_HOT_TEXT := 1
+override NDS_TASK39_FX_SPRITES := 1
+override NDS_TASK39_FX_FLASH := 1
+override NDS_P2_UI_KIT := 1
+override NDS_P2_MENU_SHELL := 1
+endif
 # P2-1g LOOP-VERIFIER TARGET: the same shell, walked twenty times, and the ROM
 # the Boundary profile's loop arm runs. P2-1d/1e/1f each had their own name for
 # this too; the phase is closed and one name replaces the three.
