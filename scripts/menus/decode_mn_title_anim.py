@@ -440,14 +440,13 @@ def simulate(container, descs, joints, sizes, frames):
 # Reports
 # ---------------------------------------------------------------------------
 
-def report_disasm(container, offsets, descs, joints) -> None:
+def report_disasm(container, descs, joints) -> None:
     for index in range(1, len(descs)):
         off = joints[index]
         if off is None:
             print(f"--- joint[{index}] {LABELS[index - 1][0]}: no stream ---")
             continue
         print(f"--- joint[{index}] {LABELS[index - 1][0]} @ {off:#x} ---")
-        _ = offsets
         while True:
             word = struct.unpack_from(">I", container.payload, off)[0]
             opcode = (word >> 25) & 0x7F
@@ -577,7 +576,7 @@ def main(argv=None) -> int:
     poses, ended = simulate(container, descs, joints, sizes, frames)
 
     if args.disasm:
-        report_disasm(container, offsets, descs, joints)
+        report_disasm(container, descs, joints)
     if args.pose:
         report_pose(poses, args.frames)
     if args.cost:
