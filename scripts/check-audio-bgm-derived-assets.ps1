@@ -37,8 +37,8 @@ $tracks = @(
     # (LoopSample/LoopPacket/LoopRecord unchanged both times).
     [PSCustomObject]@{
         Name = 'Results'; File = 'bgm_results_ima.bin'; Sequence = 22
-        Bytes = 396588; Sha256 = '476f66508bd498f88c62a479f7f29e334137436550de45c92fcbaf42be577d04'
-        SourceBytes = 1583786; SourceSha256 = 'ad0234ea446e6c2587079a40226a7e34d411c18ae05392796c2349d7a6528884'
+        Bytes = 396588; Sha256 = '1373632644f9bb953ec63d5265543fd1d2a91dcf23252303a9fba9f16ba054c1'
+        SourceBytes = 1583786; SourceSha256 = 'ca5b86b13606edb95e4c2e35dae068937d98382979227e47e1dc4d4eadc651d4'
         Packets = 50; Looping = $true; LoopSample = 17456; LoopPacket = 2; LoopRecord = 8792
     },
     # P2-1d-1: nSYAudioBGMModeSelect (id 44), rendered through the same script
@@ -53,8 +53,8 @@ $tracks = @(
     # Pupupu above -- LoopSample/LoopPacket/LoopRecord unchanged this time.
     [PSCustomObject]@{
         Name = 'Mode select'; File = 'bgm_mode_select_ima.bin'; Sequence = 44
-        Bytes = 718212; Sha256 = '140ae20c342e70810d37b9176eaf0e3d60361ef746a9509a721e6b7c8e0fc895'
-        SourceBytes = 2868410; SourceSha256 = 'a79c75dadd9a25f8ef03896116b129330c0fa286439c5d476e6d4ba7a6883d9e'
+        Bytes = 718212; Sha256 = '4d4f400a2668555ab1c88fd7376214aa899fc5d41350e982c2d654138c7ac2c6'
+        SourceBytes = 2868410; SourceSha256 = 'c1df61e1d1359af01ab908418e2982d9f0365914262f72b037bb99e51d34cae1'
         Packets = 89; Looping = $true; LoopSample = 1151965; LoopPacket = 71; LoopRecord = 576876
     },
     # P2-1e-1: nSYAudioBGMBattleSelect (id 10), rendered through the same script
@@ -73,8 +73,8 @@ $tracks = @(
     # LoopPacket/LoopRecord unchanged again.
     [PSCustomObject]@{
         Name = 'Battle select'; File = 'bgm_battle_select_ima.bin'; Sequence = 10
-        Bytes = 157372; Sha256 = '043459ff9a78d6e1cbcc41c370dbbcae746068ef0c1c0993f3092ffa60c50b7e'
-        SourceBytes = 628352; SourceSha256 = '53f26e8d9e574ef5e1587575076e8ea48411c240a3a0fd9bafaa6be9c6497abf'
+        Bytes = 157372; Sha256 = '127c5a6bdf2f4eb3162952850ca6ac1e65c48988491cd72622700dafb38a7cff'
+        SourceBytes = 628352; SourceSha256 = '338d528263d926cc5c43bed1c822865ba1da6689edd43b5e3377cd1f546a98c4'
         Packets = 20; Looping = $true; LoopSample = 46228; LoopPacket = 3; LoopRecord = 23192
     }
 )

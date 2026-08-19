@@ -280,6 +280,92 @@ def collect_loop_metadata(cseq_to_mid, seq: bytes, tempo_us: int, notes: list):
     }
 
 
+def unroll_channel_loops(cseq_to_mid, seq: bytes, notes: list, loop: dict,
+                          tempo_us: int) -> list:
+    """P2-1L (b2 round 2). Replicate each channel's looped notes out to the
+    mix's loop_end, the way the real engine plays them.
+
+    n_env.c loops EVERY channel independently and forever (loop_ct=0xFF):
+    when a channel reaches its own AL_CMIDI_LOOPEND_CODE it jumps back and
+    keeps playing. `collect_notes` walks the converted event stream ONCE, so
+    each channel's notes exist only up to its own loopend tick -- and
+    `collect_loop_metadata` anchors the mix region on the LATEST-entering
+    agreeing channel, which guarantees every earlier-entering channel runs
+    dry inside the region by exactly its entry stagger. Measured on Battle
+    Select (owner recording, RMS/100ms): channels 0-4 fall silent 1.51 s
+    before every wrap -- the recurring "quiet patch" -- while the N64
+    reference holds full energy there, because on hardware those channels
+    have wrapped and are replaying their own material under channel 14's
+    longer tail.
+
+    For each channel with one (loopstart, loopend) marker pair, every note
+    with loopstart <= tick < loopend is replicated at +k*(loopend-loopstart)
+    for k = 1, 2, ... while the replica starts before the mix's loop_end.
+    Channels whose period matches the shared mix period land phase-aligned
+    at the wrap (region length is a whole multiple of their period, whatever
+    their entry stagger). A channel with a different period (Mode Select's
+    near-silent outliers) wraps mid-phrase -- a per-channel phase jump on a
+    quiet ornament, priced against a 1.5 s hole in the whole band."""
+    if not loop.get("looping"):
+        return notes
+
+    ticks_per_quarter = struct.unpack_from(">I", seq, 64)[0]
+    per_track = {}
+    for tick, _sort_key, track_id, event in iter_midi_events(cseq_to_mid, seq):
+        if event[0] != "marker":
+            continue
+        if event[1] == "loopstart":
+            per_track.setdefault(track_id, {})["start"] = int(tick)
+        elif event[1].startswith("loopend"):
+            per_track.setdefault(track_id, {})["end"] = int(tick)
+
+    def tick_to_sample(tick: int) -> int:
+        seconds = (tick * tempo_us) / (ticks_per_quarter * 1000000.0)
+        return int(seconds * OUTPUT_SAMPLE_RATE)
+
+    loop_end_sample = loop["loop_end_byte"] // 2
+    out = list(notes)
+    replicas = 0
+    for track_id, marks in per_track.items():
+        if "start" not in marks or "end" not in marks:
+            continue
+        period = marks["end"] - marks["start"]
+        if period <= 0:
+            continue
+        body = [n for n in notes
+                if n["channel"] == track_id
+                and marks["start"] <= n["tick"] < marks["end"]]
+        if not body:
+            continue
+        k = 1
+        while True:
+            shift = k * period
+            first_start = tick_to_sample(body[0]["tick"] + shift)
+            if first_start >= loop_end_sample:
+                break
+            added = False
+            for n in body:
+                tick = n["tick"] + shift
+                start = tick_to_sample(tick)
+                if start >= loop_end_sample:
+                    continue
+                replica = dict(n)
+                replica["tick"] = tick
+                replica["end_tick"] = n["end_tick"] + shift
+                replica["start"] = start
+                replica["end"] = max(start + 80,
+                                      tick_to_sample(n["end_tick"] + shift))
+                out.append(replica)
+                added = True
+                replicas += 1
+            if not added:
+                break
+            k += 1
+    if replicas:
+        print(f"unrolled {replicas} replica notes across channel loops")
+    return out
+
+
 def resolve_instrument(bank, program: int):
     offsets = bank.get("instArray_offs", [])
     if 0 <= program < len(offsets) and offsets[program] != 0:
@@ -631,6 +717,7 @@ def main() -> int:
     seq = read_seq(sbk, args.sequence_index)
     notes, tempo_us = collect_notes(cseq_to_mid, seq)
     loop = collect_loop_metadata(cseq_to_mid, seq, tempo_us, notes)
+    notes = unroll_channel_loops(cseq_to_mid, seq, notes, loop, tempo_us)
     decoded = decode_ctl.walk(ctl)
     by_off = {item["offset"]: item for item in decoded}
     bank = next(item for item in decoded if item.get("kind") == "ALBank")
