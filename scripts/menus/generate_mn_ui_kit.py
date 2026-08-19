@@ -905,6 +905,30 @@ class Placement:
     # STATED rather than hidden: 300 -> 256 is 0.8533 and 220 -> 192 is 0.8727
     # where both were 0.8, a 2.3% aspect change on the artwork alone.
     dest: tuple[int, int] | None = None
+    # P2-1k (f2), the SAME ruling on the OTHER axis: the panel edge this
+    # placement's own edge sits flush against, `"top"` or `"bottom"`.
+    #
+    # (f) removed the viewport's 10 px LEFT/RIGHT margin from the two title
+    # bands by widening them to the full 256; their TOP and BOTTOM margins
+    # survived it, which is what the owner's screenshot caught.  The source
+    # says both bands are frame furniture flush with the active area's own
+    # horizontal edges, not artwork at a place inside it:
+    # `dMNTitleCommonSpriteDescs` (mntitle.c:70/:87) centres the copyright at
+    # y 208 over a 44-row sprite -- 186..230 -- and the upper border at y 15
+    # over a 10-row one -- 10..20 -- against a viewport of exactly 10..230
+    # (`syRdpSetViewport(..., 10, 10, 310, 230)`).  So each band's outer edge
+    # IS the active area's edge, to the row.
+    #
+    # At the strict 4/5 those two edges land at DS y 8 and 184, leaving 8 rows
+    # of not-art at the top of the panel and 8 at the bottom -- on an N64 that
+    # is overscan the television eats, on a DS panel it is a strip of fire
+    # above the border and a bright strip below the copyright, which is
+    # exactly what the owner reported.  Anchoring restores the source's own
+    # relationship (band edge == active-area edge) on hardware that has no
+    # overscan to hide it; it is derived from the viewport, not nudged to
+    # taste.  Deriving `dst_y` from the band's own baked HEIGHT rather than
+    # writing 0 and 157 keeps it true if the artwork or the ratio ever change.
+    edge: str | None = None
     # `scale` overrides the frame's own 4/5 for this placement's ARTWORK, and
     # `centre_in` is the ratio whose footprint the smaller artwork is centred
     # inside, so the source's LAYOUT is untouched.  This is the P2-1f map-icon
@@ -1044,6 +1068,17 @@ def place_raster(fileobj: RelocFile | None, part: Placement, offset: int,
         foot_h = max(1, (src_h * cnum + cden // 2) // cden)
         dst_x += (foot_w - width) // 2
         dst_y += (foot_h - height) // 2
+    if part.edge is not None:
+        # P2-1k (f2).  The panel edge replaces the source's own viewport inset
+        # on this axis; see `Placement.edge`.
+        if part.edge == "top":
+            dst_y = 0
+        elif part.edge == "bottom":
+            dst_y = DS_SCREEN_H - height
+        else:
+            raise ConvertError(
+                f"{part.symbol}: edge must be 'top' or 'bottom', "
+                f"not {part.edge!r}")
     return (dst_x, dst_y, box_scale(combined, width, height))
 
 
@@ -1682,10 +1717,20 @@ TITLE_PARTS = (
     # They are re-expressed as top-left placements because `dest` sizes the
     # artwork and `centred` would still put the origin at frame_pos(10) = 8:
     # copyright top = 208 - 44/2 = 186, border top = 15 - 10/2 = 10.
+    #
+    # P2-1k (f2), owner screenshot: the SAME ruling on the vertical axis.  (f)
+    # took the left/right margin off these two and left the top/bottom one on,
+    # so the border band sat 8 rows below the panel's top edge with fire above
+    # it and the copyright band stopped 8 rows above the bottom with a bright
+    # strip below.  Both bands are flush with the source's own active area
+    # (10..230) -- see `Placement.edge` for the citation -- so on a DS panel,
+    # which has no overscan, each anchors to the panel edge its source edge
+    # already touches.  `y` stays the source's own top-left because it is what
+    # the derivation is checked against; `edge` is what the bake places by.
     Placement("MNTitle", "llMNTitleCopyrightSprite", 0, 186, False,
-              (0xB7, 0xAE, 0x7C), dest=(DS_SCREEN_W, 35)),
+              (0xB7, 0xAE, 0x7C), dest=(DS_SCREEN_W, 35), edge="bottom"),
     Placement("MNTitle", "llMNTitleBorderUpperSprite", 0, 10, False,
-              (0x14, 0x12, 0x06), dest=(DS_SCREEN_W, 8)),
+              (0x14, 0x12, 0x06), dest=(DS_SCREEN_W, 8), edge="top"),
     # The emblem sets its own primitive (mntitle.c:1073) and draws through its
     # own flat combiner at the resting alpha the title fades it to.
     Placement("MNTitle", "llMNTitleLogoAnimFullSprite", 260, 60, True,
