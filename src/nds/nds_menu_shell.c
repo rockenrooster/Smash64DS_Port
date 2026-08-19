@@ -2920,13 +2920,10 @@ static void ndsMenuShellPopulateCssScreen(void)
  * frame around a 38x29 icon. */
 #define NDS_SSS_CURSOR_DX (-7)
 #define NDS_SSS_CURSOR_DY (-7)
-/* THE PREVIEW PANEL'S PLACEHOLDER, and nothing else, still carries these.
- * They centred P2-1f's 5/8 icon inside the 4/5 grid footprint; the grid is
- * baked at 4/5 into the backdrop now (P2-1L (6)), so the only remaining 5/8
- * draw is the preview panel -- which owner finding (9) owns and this row does
- * not move a pixel of. */
-#define NDS_SSS_ICON_INSET_X 4
-#define NDS_SSS_ICON_INSET_Y 2
+/* P2-1L (9) DELETED `NDS_SSS_ICON_INSET_X/Y` with the placeholder that needed
+ * them: they centred P2-1f's 5/8 icon inside the 4/5 grid footprint, and the
+ * preview panel was the last draw on this screen still at 5/8. Nothing on the
+ * stage select is at any ratio but the frame's own 4/5 now. */
 
 /* mnMapsFuncRun's own input gate and repeat (mnmaps.c:1440/:1523). */
 #define NDS_SSS_INPUT_ARM_TICS 10
@@ -2989,13 +2986,36 @@ static const u8 kNdsSssPlaqueSurface[NDS_SSS_SLOTS] = {
     (u8)NDS_MN_UI_KIT_SURFACE_SSS_PLAQUE_9
 };
 
-static u8 sSssPlaqueSurface;
+/* P2-1L (9). THE PREVIEW PANEL'S ART, on the same terms as the plaque above.
+ * `mnMapsMakePreviewWallpaper` (mnmaps.c:909) draws the SELECTED ground's own
+ * 300x220 background at scale 0.37 -- or RANDOM's own 110x82 plate unscaled --
+ * over the fill and the seven tiles SSS_SCREEN already carries, and
+ * `mnMapsMakePreview` (:1100) rebuilds it on every cursor move exactly as
+ * `mnMapsMakeNameAndEmblem` rebuilds the plaque.  So it is a per-state surface
+ * sharing one declared box, blitted on a change, for the plaque's own reasons.
+ *
+ * INDEXED BY SLOT and TOTAL: a locked slot has no preview because the cursor
+ * cannot land on it (`mnMapsCheckLocked` refuses the move, mnmaps.c:166), so
+ * its entry is the NONE sentinel and the sync leaves the panel alone rather
+ * than blitting art for a stage this build does not have. */
+static const u8 kNdsSssPreviewSurface[NDS_SSS_SLOTS] = {
+    (u8)NDS_MENU_VS_SURFACE_NONE, (u8)NDS_MENU_VS_SURFACE_NONE,
+    (u8)NDS_MENU_VS_SURFACE_NONE, (u8)NDS_MENU_VS_SURFACE_NONE,
+    (u8)NDS_MENU_VS_SURFACE_NONE, (u8)NDS_MENU_VS_SURFACE_NONE,
+    (u8)NDS_MN_UI_KIT_SURFACE_SSS_PREVIEW_DREAM_LAND,
+    (u8)NDS_MENU_VS_SURFACE_NONE, (u8)NDS_MENU_VS_SURFACE_NONE,
+    (u8)NDS_MN_UI_KIT_SURFACE_SSS_PREVIEW_RANDOM
+};
 
-/* Sprite slots, in DEPTH order: the cursor frame draws over the cell it
- * selects, so it owns the lowest id (see NDS_UI_KIT_SPRITE_SLOTS). */
+static u8 sSssPlaqueSurface;
+static u8 sSssPreviewSurface;
+
+/* THE CURSOR IS THE ONLY OBJ LEFT ON THIS SCREEN. P2-1L (6) moved the ten grid
+ * cells into the backdrop surface and (9) moved the preview panel into two
+ * surfaces of its own, so the depth-ordered slot list this once needed is one
+ * entry -- and it keeps id 0 because the cursor frame draws over the cell it
+ * selects (see NDS_UI_KIT_SPRITE_SLOTS). */
 #define NDS_SSS_SPRITE_CURSOR 0u
-#define NDS_SSS_SPRITE_PREVIEW 1u
-#define NDS_SSS_SPRITE_CELL0 2u
 
 /* P2-1f's two colour constants are DELETED with this row, and the reason they
  * existed is the thing P2-1k fixed: the name plate's text is BLACK in the
@@ -3064,48 +3084,65 @@ static s32 ndsMenuShellSssIconY(u32 slot)
     return (slot < NDS_SSS_ROW) ? NDS_SSS_ICON_Y0 : NDS_SSS_ICON_Y1;
 }
 
-/* Which image a cell draws: the ground's own icon, RANDOM's own icon, or the
- * locked plate. */
-static u32 ndsMenuShellSssCellImage(u32 slot)
+/* THE TWO SURFACES THE CURSOR OWNS, at most `budget` of them a frame.
+ *
+ * Shaped exactly like `ndsMenuShellVsSyncButtons`, and for the reason P2-1j
+ * MEASURED there: re-blitting every changed surface on the frame the change
+ * happens put 12,328 B of NitroFS inside one 60 Hz frame and priced it at
+ * 606,336 ticks against a 560,190-tick budget. A move between Dream Land and
+ * RANDOM changes BOTH surfaces (8,162 B of plaque and 11,748 B of preview), so
+ * the same burst is available here; spending one a frame retires it in two
+ * frames against a 12-tic scroll wait, and the CURSOR still moves on the press
+ * because OAM costs nothing.
+ *
+ * A refused blit leaves the tracker alone so the next frame retries, rather
+ * than recording a state the screen is not showing. */
+static void ndsMenuShellSssSyncSurfaces(u32 budget)
 {
-    u32 gkind = (u32)kNdsSssSlotGkind[slot];
+    u8 list[2];
+    u8 *tracker[2];
+    u32 count = 0u;
+    u32 i;
+    u8 wanted;
 
-    if (gkind == NDS_SSS_GKIND_RANDOM)
+    wanted = kNdsSssPlaqueSurface[sSssCursorSlot];
+    if ((wanted != sSssPlaqueSurface) && (count < budget))
     {
-        return NDS_MN_UI_KIT_IMAGE_MAP_RANDOM;
+        list[count] = wanted;
+        tracker[count] = &sSssPlaqueSurface;
+        count++;
     }
-    if (ndsMenuShellSssGroundLocked(gkind) != FALSE)
+    wanted = kNdsSssPreviewSurface[sSssCursorSlot];
+    if ((wanted != (u8)NDS_MENU_VS_SURFACE_NONE) &&
+        (wanted != sSssPreviewSurface) && (count < budget))
     {
-        return NDS_MN_UI_KIT_IMAGE_PORTRAIT_LOCKED;
+        list[count] = wanted;
+        tracker[count] = &sSssPreviewSurface;
+        count++;
     }
-    return NDS_MN_UI_KIT_IMAGE_MAP_DREAM_LAND;
+    if (count == 0u)
+    {
+        return;
+    }
+    if (ndsUiKitBlitSurfaces(list, count) == FALSE)
+    {
+        return;
+    }
+    for (i = 0u; i < count; i++)
+    {
+        *tracker[i] = list[i];
+    }
+    gNdsMenuShellSssPlaqueBlitCount += count;
 }
 
 /* mnMapsMakeNameAndEmblem, mnmaps.c:1015: the name follows the cursor, and
  * RANDOM has no name (the source draws only the question-mark emblem for it).
  * The preview panel follows it too -- mnMapsMakePreview:1096. */
-static void ndsMenuShellSssShowSelection(void)
+static void ndsMenuShellSssShowSelection(u32 budget)
 {
     u32 gkind = (u32)kNdsSssSlotGkind[sSssCursorSlot];
-    u8 wanted = kNdsSssPlaqueSurface[sSssCursorSlot];
 
-    /* P2-1k (c): the name and the emblem are the source's own sprites, blitted
-     * as one surface. Guarded on a CHANGE so a blocked move (the cursor
-     * refusing to leave its cell) costs no NitroFS read, exactly as the VS
-     * menu's button sync and the character select's gate sync are. */
-    if (wanted != sSssPlaqueSurface)
-    {
-        if (ndsUiKitBlitSurfaces(&wanted, 1u) != FALSE)
-        {
-            sSssPlaqueSurface = wanted;
-            gNdsMenuShellSssPlaqueBlitCount++;
-        }
-    }
-    /* mnMapsMakePreviewWallpaper places the panel's content at (40,127). */
-    ndsUiKitSetSprite(NDS_SSS_SPRITE_PREVIEW,
-                      ndsMenuShellSssCellImage(sSssCursorSlot),
-                      NDS_SSS_DS(40) + NDS_SSS_ICON_INSET_X,
-                      NDS_SSS_DS(127) + NDS_SSS_ICON_INSET_Y);
+    ndsMenuShellSssSyncSurfaces(budget);
     ndsUiKitSetSprite(NDS_SSS_SPRITE_CURSOR, NDS_MN_UI_KIT_IMAGE_MAP_CURSOR,
                       NDS_SSS_DS(ndsMenuShellSssIconX(sSssCursorSlot) +
                                  NDS_SSS_CURSOR_DX),
@@ -3117,23 +3154,22 @@ static void ndsMenuShellSssShowSelection(void)
 
 static void ndsMenuShellSssPopulate(void)
 {
-    u32 slot;
-
     /* P2-1L (6): THE GRID IS BACKDROP ART NOW. `mnMapsMakeIcons` draws a 48x36
      * icon on a 50x38 pitch (mnmaps.c:540/:546), which is a near-continuous
      * mosaic; P2-1f's OBJ cells were 30x23 at 5/8 inside that 4/5 footprint,
      * so eight columns and six rows of stone showed inside every cell. The
      * lock set is a compile-time constant, so the whole grid is fixed for the
      * life of the screen and belongs in the surface -- where 4/5 costs no OBJ
-     * cell. The ten cells give back OAM slots rather than bytes (their two map
-     * images stay in the pack for the preview panel, finding (9)); the 4,096
-     * bytes that pay for the cursor's own 4/5 are the two CSS portrait cells
-     * finding (5) released. */
-    for (slot = 0u; slot < NDS_SSS_SLOTS; slot++)
-    {
-        ndsUiKitHideSprite(NDS_SSS_SPRITE_CELL0 + slot);
-    }
-    ndsMenuShellSssShowSelection();
+     * cell. P2-1L (9) took the preview panel the same way, so the CURSOR is
+     * the only OBJ this screen still owns and `ndsMenuShellHideRows` (called by
+     * the screen entry, before this) is the only thing that has to clear the
+     * previous screen's slots.
+     *
+     * The ENTRY frame spends both surfaces at once, as the VS menu's entry
+     * does: it is already the frame that blits 98,304 B of SSS_SCREEN, and a
+     * screen whose first present had no stage name or preview on it would show
+     * the panel empty for two frames. */
+    ndsMenuShellSssShowSelection(2u);
 }
 
 /* One cell of travel, with the source's own wrap. `step` is +1 or -1 and the
@@ -3166,7 +3202,11 @@ static void ndsMenuShellSssMoveTo(u32 slot)
     sSssCursorSlot = slot;
     gNdsMenuShellSssMoveCount++;
     ndsMenuShellSssCue(NDS_SSS_FGM_SCROLL2);
-    ndsMenuShellSssShowSelection();
+    /* Budget ZERO: the cursor moves on the press, the surfaces follow from the
+     * next frame's sync. This frame already carries the FGM cue's own sample
+     * read, and P2-1j's measurement is that a cue frame is exactly the wrong
+     * one to hang a NitroFS blit on. */
+    ndsMenuShellSssShowSelection(0u);
 }
 
 /* mnMapsSaveSceneData, mnmaps.c:1367 -- through the P2-1a descriptor, which is
@@ -3236,6 +3276,12 @@ static void ndsMenuShellSssCommit(void)
 
 static void ndsMenuShellUpdateSss(u32 held, u32 taps)
 {
+    /* ONE surface a frame, and never more (see ndsMenuShellSssSyncSurfaces).
+     * Ahead of the input gate on purpose: a move made on the frame before the
+     * gate closes still has its surfaces retired. A frame on which nothing
+     * changed compares two bytes and returns. */
+    ndsMenuShellSssSyncSurfaces(1u);
+
     /* mnMapsFuncRun:1436 gates EVERYTHING on ten tics having passed, which is
      * what stops the A that left the character select from being read again
      * here. sMenuTics is this screen's own frame counter. */
@@ -3351,6 +3397,7 @@ static void ndsMenuShellSssInit(void)
      * would skip the blit and show a stage select with no name on it. Same
      * reason NDS_MENU_VS_SURFACE_NONE exists for the gates and the buttons. */
     sSssPlaqueSurface = (u8)NDS_MENU_VS_SURFACE_NONE;
+    sSssPreviewSurface = (u8)NDS_MENU_VS_SURFACE_NONE;
     sSssEnterCount++;
 }
 

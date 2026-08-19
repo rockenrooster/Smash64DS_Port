@@ -93,23 +93,38 @@ frame's own 4/5 is 34 px wide, lands in a 64x32 cell and costs 4,096 B, while
 its 39 px 1P twin at 4/5 is 31 and fits a 32x16 one for 1,024. 3/4 is the
 largest exact ratio that lands CP in the SAME cell as 1P (43 x 3/4 = 32).
 
-**THE FLOOR IS 3,456 BYTES, AND P2-1L DID NOT MOVE IT.** The next row that
-wants main OBJ space has to evict something, and the first candidate is
-`PORTRAIT_LOCKED` (2,048 B): the character select stopped drawing it when
-P2-1j baked the locked stack into its backdrop, and after P2-1L only the stage
-select's *preview panel* still names it, through an unreachable branch of
-`ndsMenuShellSssCellImage` — owner finding (9) owns that panel.
+**THE FLOOR IS 9,600 BYTES AFTER P2-1L (9), UP FROM 3,456.** The preview panel
+was the last consumer of three cells, and losing it evicted all three at once:
+`PORTRAIT_LOCKED` (2,048 B — the candidate this section named at P2-1j, whose
+only remaining namer was `ndsMenuShellSssCellImage`'s unreachable locked
+branch) and `MAP_DREAM_LAND`/`MAP_RANDOM` (2,048 B each, which P2-1L (6) kept
+in the pack *only* for that panel). **−6,144 B, and the 5/8 ratio those three
+carried leaves the tree with them** — nothing on the character or stage select
+is at any ratio but the frame's own 4/5 now.
+
+| Range | Bytes | Content |
+|---|---:|---|
+| 25,984 – 65,536 | 39,552 | 32 baked images (below) |
+| 9,600 – 25,984 | 16,384 | 8 text fields x 4 cells of 32x8 |
+| 0 – 9,600 | 9,600 | **left for the battle's OBJ tenant** |
 
 The image block, in the generator's own order
 (`scripts/menus/generate_mn_ui_kit.py`): the ten digits and the infinity glyph
-(5,888), P2-1e's character-select set — the locked-slot question mark (2,048),
-three 4/5-scaled cursor states (6,144), the 1P and CP tokens (4,096), the three
-player-kind labels at 1:1 (3,072) and the CP LEVEL label (1,024) — P2-1f's
-stage-select set: the Dream Land and RANDOM map icons at **5/8** (2,048 each,
-kept only for the preview panel) and the cursor frame at **4/5** (8,192) — and
-P2-1i's four main-menu mode icons at 5/8 (2,048 each), the bright
-selected-state sprites `mnModeSelectMake1PMode` swaps to. **35 images,
-45,696 bytes**, unchanged in total across P2-1L.
+(5,888), P2-1e's character-select set — three 4/5-scaled cursor states (6,144),
+the 1P and CP tokens (4,096), the three player-kind labels at 1:1 (3,072) and
+the CP LEVEL label (1,024) — P2-1f's stage-select set, now the cursor frame at
+**4/5** (8,192) alone — P2-1i's four main-menu mode icons at 5/8 (2,048 each),
+the bright selected-state sprites `mnModeSelectMake1PMode` swaps to — and
+P2-1j's four small additions (2,944: two VS arrows at 128, two CSS arrows at
+256, the colon at 128, the 1P/CP tags at 1,024). **32 images, 39,552 bytes**,
+and that enumeration now sums to the total, which the pre-P2-1L one did not.
+
+**WHY THE PREVIEW PANEL COST NO BANK E AT ALL.** `mnMapsMakePreviewWallpaper`
+(mnmaps.c:909) draws the selected ground's own 300x220 background at scale
+0.37 — 89x66 DS texels at the frame's 4/5, which is past every OBJ cell the
+hardware has — so it is two BG2 surfaces (`SSS_PREVIEW_DREAM_LAND`,
+`SSS_PREVIEW_RANDOM`, 11,748 B each of NitroFS), blitted on a cursor move
+beside the plaque. Same trade the option tab and the gate card already took.
 
 **P2-1L (5)/(6) TRADED TWO PORTRAIT CELLS FOR ONE CURSOR CELL, NET ZERO.** The
 owner's round-5 pass found the CSS portraits and the SSS stage icons both
@@ -130,8 +145,9 @@ because the source's 62x50 cursor frame is 50x40 at 4/5 and lands in a 64x64
 cell (8,192 B) against a 64x32 one (4,096 B) at 5/8, and at the time all three
 stage-select sprites were OBJs — 16,384 B against 8,192. With the grid in the
 surface only the cursor pays, so the 4/5 that keeps the source's own
-frame-around-icon relationship costs 8,192 total instead of 16,384. The two
-map icons stay at 5/8 for the preview panel alone.
+frame-around-icon relationship costs 8,192 total instead of 16,384. P2-1L (9)
+took the last two 5/8 cells with the preview panel, so **the stage select owns
+exactly one OBJ image and it is the cursor**.
 
 **EIGHT TEXT FIELDS IS THE CEILING, not a choice**: 8 x 4 x 512 is exactly
 16,384 and bank I is exactly 16,384, so a ninth field would take the sub engine

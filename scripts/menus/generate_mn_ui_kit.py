@@ -471,7 +471,14 @@ def load_reloc_offsets(repo_root: Path) -> dict[str, int]:
 # FIGHTER-common file -- `dMNPlayersVSFileIDs[2]` and `dMNMapsFileIDs[0]` are
 # both `llFTEmblemSpritesFileID`.  Resolved by search rather than by a
 # per-entry directory column so a table row stays one name.
-O2R_DIRS = ("reloc_menus", "reloc_fighters_common")
+# P2-1L (9) adds the third: the stage select's PREVIEW panel draws the selected
+# ground's own background image -- `sMNMapsGroundInfo->wallpaper`
+# (mnmaps.c:956), which for Dream Land is `llStageDreamLandSprite` in
+# `reloc_stages/StageDreamLand`.  Note that `reloc_stages/GRPupupuMap` is a
+# 290-byte header stub whose payload lives in that sibling container, which is
+# why the symbol is reached by its own name rather than by walking the
+# MPGroundData struct.
+O2R_DIRS = ("reloc_menus", "reloc_fighters_common", "reloc_stages")
 
 
 def o2r_path(repo_root: Path, name: str) -> Path:
@@ -1526,13 +1533,13 @@ IMAGE_SOURCES = [
     # (mnvsmode.c:1206).
     ("MNCommon", "llMNCommonInfinitySprite", "INFINITY"),
     # ---- P2-1e, the character-select screen. -----------------------------
-    # THE LOCKED SLOT.  mnPlayersVSMakePortrait branches on
-    # mnPlayersVSCheckFighterLocked and draws the shadow/question-mark stack
-    # instead of the portrait (mnplayersvs.c:429/:374); the question mark is
-    # the part a player reads as "locked", so it is the one this bakes.  It is
-    # IA8, which is why decode_ia8 exists.
-    ("MNPlayersPortraits", "llMNPlayersPortraitsPortraitQuestionMarkSprite",
-     "PORTRAIT_LOCKED", (32, 45)),
+    # P2-1L (9) EVICTED `PORTRAIT_LOCKED` (2,048 B), the eviction candidate
+    # `docs/p2/P2-1c-vram-map.md` named at P2-1j.  Its last consumer was the
+    # stage select's preview placeholder; the preview is the stage's own
+    # background art now, and every remaining draw of
+    # `llMNPlayersPortraitsPortraitQuestionMarkSprite` -- the CSS locked stack
+    # and the stage select's locked cells -- is a SURFACE placement, which
+    # needs no OBJ cell at all.
     # THE THREE CURSOR STATES.  mnPlayersVSUpdateCursor indexes exactly these
     # three sprites by cursor_status (mnplayersvs.c:1723): Pointer=0, Grab=1,
     # Hover=2.  They are baked at the 4/5 frame ratio because the CSS hand has
@@ -1570,18 +1577,14 @@ IMAGE_SOURCES = [
     # would draw belongs to P2-5/P2-7's options work.
     ("MNPlayersCommon", "llMNPlayersCommonCPLevelTextSprite", "CP_LEVEL"),
     # ---- P2-1f, the stage select. ----------------------------------------
-    # THE GRID IS NOT HERE ANY MORE -- P2-1L (6) composited it into the
-    # SSS_SCREEN surface at the frame's own 4/5 so each icon fills its cell
-    # the way the source's 48x36 fills its 50x38 one (`sss_icon_parts`).  These
-    # two stay in the pack for the PREVIEW panel, which is still an OBJ and is
-    # still the placeholder owner finding (9) names; they keep 5/8 because that
-    # is a decision (9) owns, not this one.
-    #
-    # Two pixel formats arrive with these, and both are the sprite's own:
-    # the map icons are RGBA16 (fmt=0 siz=2) and the RANDOM icon is CI4 with a
-    # 256-entry TLUT (fmt=2 siz=0).  decode_rgba16/decode_ci4 above.
-    ("MNMaps", "llMNMapsDreamLandSprite", "MAP_DREAM_LAND", (5, 8)),
-    ("MNMaps", "llMNMapsRandomSmallSprite", "MAP_RANDOM", (5, 8)),
+    # NO MAP ICON IS AN OBJ ANY MORE.  P2-1L (6) composited the grid into the
+    # SSS_SCREEN surface at the frame's own 4/5 so each icon fills its cell the
+    # way the source's 48x36 fills its 50x38 one (`sss_icon_parts`), and left
+    # `MAP_DREAM_LAND`/`MAP_RANDOM` (2,048 B each) in the pack only because the
+    # preview panel still drew the small icon as its placeholder.  P2-1L (9)
+    # replaced that with the stage's own background art as a surface, so both
+    # cells are evicted: 4,096 B back to bank E, and the 5/8 ratio those two
+    # carried leaves the tree with them.
     # THE CURSOR IS THE ONE THING ON THIS GRID THAT MOVES, so it is the one
     # thing still in a cell -- and it takes the frame's own 4/5 now (50x40 in a
     # 64x64 cell, 8,192 B) because it has to FRAME a 4/5 icon: at P2-1f's 5/8
@@ -2488,9 +2491,76 @@ def sss_plaque(slot: int) -> SurfaceSpec:
                        under=SSS_BACKGROUND, box=SSS_PLAQUE_BOX)
 
 
+# ---------------------------------------------------------------------------
+# P2-1L, owner finding (9): THE PREVIEW PANEL HOLDS THE STAGE'S OWN BACKGROUND.
+# ---------------------------------------------------------------------------
+#
+# `mnMapsMakePreviewWallpaper` (:909) builds the panel out of three things, and
+# only the third is per-stage:
+#
+#   :899  gDPFillRectangle(43, 130, 152, 211) at black alpha 0x73 -- the plate
+#   :919  llMNMapsTilesSprite (16x82) at every x from 43 to 139 -- the pattern
+#   :956  sMNMapsGroundInfo->wallpaper at scale 0.37, at (40, 127)
+#         -- or :931 llMNMapsRandomBigSprite (110x82) at (40, 127) for RANDOM,
+#            unscaled, because that sprite is already the panel's own size
+#
+# The first two are the SAME for every stage and have been in SSS_BACKGROUND
+# since P2-1k.  The third is what P2-1f substituted the 48x36 GRID ICON for at
+# 5/8 -- a 30x23 picture in an 89x66 box -- which is the owner's "a placeholder
+# not filling its box, distinct from the icon".
+#
+# THE ART IS THE STAGE'S OWN 300x220 BACKGROUND IMAGE.  `sMNMapsGroundInfo` is
+# the MPGroundData at `llGRPupupuMapMapHeader`, whose `wallpaper` field
+# (mptypes.h:182) is for Dream Land the RGBA16 `llStageDreamLandSprite` -- 44
+# bands of 6 rows stepping 5, exactly the band geometry the menu collage taught
+# `decode_sprite_raster` -- and the runtime already resolves that same symbol
+# for the battle (`reloc_backend_assets.c:8268`).
+#
+# THE RATIO IS ONE EXACT FRACTION, not a scale followed by a rounding.  The
+# source draws the wallpaper at 0.37 and this bake maps the source frame at
+# 4/5, so the composite is 37/100 * 4/5 = 37/125 and the artwork is resampled
+# ONCE: 300x220 -> 89x65.  Doing it in two steps would round twice.
+#
+# RANDOM takes the frame's plain 4/5, because `mnMapsMakePreviewWallpaper`'s
+# RANDOM arm sets no scale at all -- it is the one branch that does not touch
+# `sobj->sprite.scalex` -- so 110x82 -> 88x66.  It is also why the panel's
+# `sobj->sprite.attr &= ~SP_FASTCOPY` (:958) sits on the OTHER branch only: a
+# fast-copy blit cannot scale, and only the stage art is scaled.
+#
+# THE BOX IS THE UNION OF THE TWO STATES IN SOURCE UNITS -- 111 = 300 * 0.37,
+# the stage art's own scaled width, and 82 = the RANDOM sprite's own height --
+# so a move between Dream Land and RANDOM overwrites the previous state
+# exactly, which is the invariant `SurfaceSpec.box` exists to hold.
+SSS_PREVIEW_BOX = (40, 127, 111, 82)
+SSS_PREVIEW_WALLPAPER_SCALE = (37, 125)
+
+# One row per ground this build HAS, keyed by the token the shell names it by.
+# A ground the shell cannot reach needs no preview: `mnMapsCheckLocked` refuses
+# the cursor the cell (mnmaps.c:166) and `mnMapsMakePreview` is only ever
+# called for the cell the cursor is on, so a locked stage's preview is
+# unreachable rather than missing.  P2-4 adds a row here per stage it lands.
+SSS_PREVIEW_WALLPAPER = (
+    # token suffix, gkind, o2r container, wallpaper symbol
+    ("DREAM_LAND", 6, "StageDreamLand", "llStageDreamLandSprite"),
+)
+
+
+def sss_preview(token: str, part: Placement) -> SurfaceSpec:
+    return SurfaceSpec(token, (part,), None,
+                       under=SSS_BACKGROUND, box=SSS_PREVIEW_BOX)
+
+
 SURFACE_SOURCES.append(SurfaceSpec("SSS_SCREEN", SSS_BACKGROUND, MENU_FIELD))
 for _slot in range(10):
     SURFACE_SOURCES.append(sss_plaque(_slot))
+for _name, _gkind, _o2r, _symbol in SSS_PREVIEW_WALLPAPER:
+    SURFACE_SOURCES.append(sss_preview(
+        f"SSS_PREVIEW_{_name}",
+        Placement(_o2r, _symbol, 40, 127, False,
+                  scale=SSS_PREVIEW_WALLPAPER_SCALE)))
+SURFACE_SOURCES.append(sss_preview(
+    "SSS_PREVIEW_RANDOM",
+    Placement("MNMaps", "llMNMapsRandomBigSprite", 40, 127, False)))
 
 
 # ---------------------------------------------------------------------------

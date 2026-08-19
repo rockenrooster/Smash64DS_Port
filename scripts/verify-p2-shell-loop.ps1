@@ -641,6 +641,11 @@ if ($null -ne $surf) {
         # P2-1k adds the THIRD state source: the stage select's per-stage
         # plaque, re-blitted on a cursor move exactly as a VS button is on a
         # cursor move (mnMapsMakeNameAndEmblem re-makes the pair every time).
+        # P2-1L (9) puts the PREVIEW PANEL on the same counter, because
+        # mnMapsMakePreview re-makes it on exactly the same event
+        # (mnmaps.c:1100) and both are spent through ndsMenuShellSssSyncSurfaces
+        # one a frame -- so `sssplaque` is "the stage select's per-cursor
+        # surfaces", up to two per cursor move rather than one.
         $state = [int64]$s['vsbtn'] + [int64]$s['csspanel'] +
                  [int64]$s['sssplaque']
         $expected = $e['e0'] + $e['e1'] + $e['e2'] + $e['e3'] + $e['e4'] + $state
@@ -663,15 +668,16 @@ if ($null -ne $surf) {
             "CSS PANELS: csspanel=$($s['csspanel']) is below the 4 per " +
             "character-select entry ($($e['e3']) entries) the screen writes " +
             'on entry alone.')
-        # P2-1k. ONE plaque per stage-select entry is the floor, not four: the
-        # screen draws exactly one name-and-emblem pair at a time
+        # P2-1k/P2-1L (9). TWO surfaces per stage-select entry is the floor:
+        # the screen draws exactly one name-and-emblem pair at a time
         # (mnMapsMakeNameAndEmblem ejects the previous GObj before making the
-        # next, mnmaps.c:822), so entry writes one and every cursor move that
-        # actually changes cell writes one more.
-        Assert-Loop ([int64]$s['sssplaque'] -ge $e['e4']) (
-            "SSS PLAQUE: sssplaque=$($s['sssplaque']) is below the 1 per " +
-            "stage-select entry ($($e['e4']) entries) the screen writes on " +
-            'entry alone.')
+        # next, mnmaps.c:822) and exactly one preview panel beside it
+        # (mnMapsMakePreview, mnmaps.c:1100), and the entry spends both. Every
+        # cursor move that actually changes cell writes up to two more.
+        Assert-Loop ([int64]$s['sssplaque'] -ge (2 * $e['e4'])) (
+            "SSS PLAQUE+PREVIEW: sssplaque=$($s['sssplaque']) is below the 2 " +
+            "per stage-select entry ($($e['e4']) entries) the screen writes " +
+            'on entry alone.')
         # P2-1i. The title's BG3 fire sheet, asserted on its own rather than
         # folded into the backdrop count above -- one atlas blit per title
         # entry. A run that stopped blitting it would still draw a correct

@@ -185,10 +185,10 @@
     },
     {
       "screen": "sss",
-      "kind": "missing",
-      "key": "llMNMapsRandomBigSprite",
-      "reason": "The RANDOM cell's LARGE icon, drawn in the PREVIEW panel for a random pick (mnMapsMakePreviewWallpaper :931). This build's preview panel holds the selected ground's own small icon instead of the 3D preview. Its sibling llMNMapsQuestionMarkSprite is no longer here: P2-1k ships it, at mnMapsMakeEmblem's own RANDOM site (223,144) in its own 5C/22/00 tint, as the RANDOM plaque's emblem.",
-      "ruling": "P2-1f (board row) deliberate narrowing: the 3D stage preview is not converted",
+      "kind": "extra",
+      "key": "SURFACE_SSS_PREVIEW_DREAM_LAND",
+      "reason": "THE PREVIEW PANEL'S PER-STAGE ART, and the source draws it -- this audit's lexical rule simply cannot see it. mnMapsMakePreviewWallpaper (:956) draws sMNMapsGroundInfo->wallpaper, a POINTER FIELD of the MPGroundData at llGRPupupuMapMapHeader (mptypes.h:182), not a '&ll<Name>Sprite' reference in any mn* source. For Dream Land that field resolves to llStageDreamLandSprite in reloc_stages/StageDreamLand -- the same symbol reloc_backend_assets.c:8268 already resolves for the battle -- so this 'extra' is the audit reporting the indirection, not an element we added.",
+      "ruling": "P2-1L (9): the source's own preview art, read out of mnmaps.c:956 + mptypes.h:182",
       "status": "ruled"
     },
     {
@@ -197,14 +197,6 @@
       "key": "llGRWallpaperTrainingBlueSprite",
       "reason": "mnMapsMakePreviewWallpaper's training-mode backdrop. sMNMapsIsTrainingMode is set only when scene_prev is nSCKindPlayers1PTraining, which is P2-7, so this branch is FALSE by construction here.",
       "ruling": "P2-1f (board row): training mode is P2-7 and the flag is FALSE by construction",
-      "status": "ruled"
-    },
-    {
-      "screen": "sss",
-      "kind": "extra",
-      "key": "IMAGE_PORTRAIT_LOCKED",
-      "reason": "ONE LOCKED CELL DRAWN WHERE THE SOURCE DRAWS NOTHING, and the row that added it said so: mnMapsMakeIcons simply skips a locked ground, so a build with eight locked grounds would show two icons in an empty field and the 5x2 grid the cursor moves around would be invisible. The cell borrows the character select's own locked plate.",
-      "ruling": "P2-1f (board row): the shell's only deliberate presentation ADDITION, disclosed at landing",
       "status": "ruled"
     }
   ]
