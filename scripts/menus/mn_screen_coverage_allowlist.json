@@ -61,20 +61,11 @@
     },
     {
       "screen": "css",
-      "kind": "substituted",
-      "key": "re:llMNPlayersCommon(Mario|Fox)TextSprite",
-      "substitute": "the same words composed from the source's own menu font (kNdsCssFighterName through ndsUiKitSetText)",
-      "reason": "The two built fighters' name art. P2-1e composes the words from the source's own menu font -- the P2-1c kit's whole reason for existing -- rather than baking two IA8 strips up to 66 px wide. P2-1i finding (2) asks for source sprite art on BUTTONS and PANELS; whether it also binds a plain name string has not been ruled.",
-      "ruling": "P2-1e (board row) disclosed narrowing; P2-1i finding (2) scope not ruled for text",
-      "status": "open"
-    },
-    {
-      "screen": "css",
       "kind": "missing",
       "key": "re:llFTEmblemSprites\\w+Sprite",
-      "reason": "The series emblem mnPlayersVSMakeNameAndEmblem draws beside a selected fighter's name (:592). Never converted -- P2-1e shipped the name and not the emblem, and did not say so. Ten of the twelve belong to fighters P2-3 owns; Mario's and Fox's do not, and are a real gap on this screen today.",
-      "ruling": "P2-1j audit finding, beyond the owner's four -- ruling requested",
-      "status": "open"
+      "reason": "The series emblem mnPlayersVSMakeNameAndEmblem draws beside a selected fighter's name (:613). Mario's and Fox's SHIP as source art since P2-1k, baked into the gate surface at the source's own (p*69+24, 143) with its own per-player-kind tint (0x1E human / 0x44 otherwise); the eight left here belong to fighters P2-3 owns, and no slot in this build can hold one, so nothing would draw them.",
+      "ruling": "P2-1k (board row) owner ruling (a): the CSS series emblems ship as source art. The residue is docs/P2_PLAN.md phase P2-3 (fighter production)",
+      "status": "ruled"
     },
     {
       "screen": "css",
@@ -187,32 +178,8 @@
     {
       "screen": "sss",
       "kind": "missing",
-      "key": "re:llMNMaps\\w+TextSprite",
-      "reason": "The per-stage name art and the STAGE SELECT header. P2-1f composes the same words from the source's own menu font, exactly as P2-1e does with the fighter names; the eight unbuilt stages' names could not be drawn at all.",
-      "ruling": "P2-1f (board row) deliberate narrowing; P2-1i finding (2) scope not ruled for text",
-      "status": "open"
-    },
-    {
-      "screen": "sss",
-      "kind": "missing",
-      "key": "re:llFTEmblemSprites\\w+Sprite",
-      "reason": "The series emblem on the stage-name plaque (mnMapsMakeEmblem :786), one per stage.",
-      "ruling": "P2-1f (board row): the plaque and its emblem are a disclosed narrowing -- an 84x85 CI8 circle plus a per-series emblem for one decoration, against 8,448 B of free main OBJ at the time",
-      "status": "ruled"
-    },
-    {
-      "screen": "sss",
-      "kind": "missing",
-      "key": "re:llMNMaps(WoodenCircle|Plate(Left|Middle|Right)|Tiles)Sprite",
-      "reason": "The stage-name plaque's own furniture -- the wooden circle the emblem sits in, the three-part name plate and the tile field behind the grid.",
-      "ruling": "P2-1f (board row) deliberate narrowing (the plaque); P2-1i finding (2) applies to the plate -- ruling requested",
-      "status": "open"
-    },
-    {
-      "screen": "sss",
-      "kind": "missing",
-      "key": "re:llMNMaps(RandomBig|QuestionMark)Sprite",
-      "reason": "The RANDOM cell's large icon and its question mark, drawn in the PREVIEW panel for a random pick. This build's preview panel holds the selected ground's own small icon instead of the 3D preview.",
+      "key": "llMNMapsRandomBigSprite",
+      "reason": "The RANDOM cell's LARGE icon, drawn in the PREVIEW panel for a random pick (mnMapsMakePreviewWallpaper :931). This build's preview panel holds the selected ground's own small icon instead of the 3D preview. Its sibling llMNMapsQuestionMarkSprite is no longer here: P2-1k ships it, at mnMapsMakeEmblem's own RANDOM site (223,144) in its own 5C/22/00 tint, as the RANDOM plaque's emblem.",
       "ruling": "P2-1f (board row) deliberate narrowing: the 3D stage preview is not converted",
       "status": "ruled"
     },

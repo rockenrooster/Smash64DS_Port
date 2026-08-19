@@ -260,6 +260,15 @@ void ndsMNVSResultsSetLoadScene(void)
      * The demo ladder above still runs: it is a build flag, it advances
      * `gNdsDemoFoxCpuLevel` only, and the descriptor is what the character
      * select re-reads on entry. */
+    /* P2-1k (g), and the probe is what found it: `mnVSResultsFuncRun`'s exit
+     * block calls `syAudioStopBGMAll()` immediately before
+     * `syTaskmanSetLoadScene()` (mnvsresults.c:3315), and this branch did not.
+     * The measured symptom was `MSBGM playing=1 track=22` still true at the
+     * character select's own entry stop, so the Results theme played on under
+     * the CSS until `ndsMenuShellCssPlayBgm` started BGM 10 over the top of it
+     * instead of after it. The source's order is stop, then the next scene's
+     * own start. */
+    syAudioStopBGMAll();
     gNdsVSResultsRematchCount++;
     ndsSceneManagerRequest((u32)nSCKindPlayersVS, (u32)nSCKindVSResults);
 #else

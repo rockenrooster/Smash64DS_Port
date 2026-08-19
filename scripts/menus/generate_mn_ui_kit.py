@@ -464,6 +464,26 @@ def load_reloc_offsets(repo_root: Path) -> dict[str, int]:
     return out
 
 
+# P2-1k.  The o2r containers this bake reads live in two sibling directories,
+# and the split is the source tree's own: the menu art is `reloc_menus`, while
+# the series emblems `mnPlayersVSMakeNameAndEmblem` (mnplayersvs.c:613) and
+# `mnMapsMakeEmblem` (mnmaps.c:806) draw come from `FTEmblemSprites`, a
+# FIGHTER-common file -- `dMNPlayersVSFileIDs[2]` and `dMNMapsFileIDs[0]` are
+# both `llFTEmblemSpritesFileID`.  Resolved by search rather than by a
+# per-entry directory column so a table row stays one name.
+O2R_DIRS = ("reloc_menus", "reloc_fighters_common")
+
+
+def o2r_path(repo_root: Path, name: str) -> Path:
+    base = repo_root / "decomp" / "BattleShip-main" / "BattleShip_o2r"
+    for folder in O2R_DIRS:
+        candidate = base / folder / name
+        if candidate.exists():
+            return candidate
+    raise ConvertError(
+        f"o2r container '{name}' is in none of {list(O2R_DIRS)} under {base}")
+
+
 # ---------------------------------------------------------------------------
 # Font
 # ---------------------------------------------------------------------------
@@ -864,6 +884,27 @@ class Placement:
     # `period` is (2^masks, 2^maskt), or None on an axis the source clamps.
     tile: tuple[int, int] | None = None
     period: tuple[int | None, int | None] | None = None
+    # P2-1k, owner ruling (f): BACKGROUNDS SPAN THE WHOLE DS SCREEN.  A TILED
+    # background needs no resampling to fill the screen -- only a bigger
+    # rectangle -- but the tile's PHASE is part of the artwork, so growing the
+    # rect must not slide the pattern.  `tile_anchor` is the source coordinate
+    # at which texture texel (0,0) sits; it defaults to the placement's own
+    # (x, y), which is what every pre-P2-1k tile relied on implicitly.  The
+    # stone keeps `(10, 10)` -- the position mnPlayersVSMakeWallpaper
+    # (:1370) and mnMapsMakeWallpaper (:367) actually draw it at -- while its
+    # rect grows to the whole 320x240 frame, so every texel inside the source's
+    # own 300x220 rectangle is bit-identical to the pre-P2-1k bake and the new
+    # ones simply continue the same pattern outward.  EXACT, not resampled.
+    tile_anchor: tuple[int, int] | None = None
+    # P2-1k, same ruling, for a background that is ONE artwork rather than a
+    # tile: an explicit destination size in DS pixels, replacing the frame's
+    # 4/5.  The collage is a fixed 300x220 plate the source draws at (10,10)
+    # and lets the frame's own 10 px margin show around (mnmodeselect.c:527,
+    # mnvsmode.c:974); on the DS that margin is the 8 px backdrop border the
+    # owner asked to remove, so the plate is resampled to the whole screen.
+    # STATED rather than hidden: 300 -> 256 is 0.8533 and 220 -> 192 is 0.8727
+    # where both were 0.8, a 2.3% aspect change on the artwork alone.
+    dest: tuple[int, int] | None = None
     # `scale` overrides the frame's own 4/5 for this placement's ARTWORK, and
     # `centre_in` is the ratio whose footprint the smaller artwork is centred
     # inside, so the source's LAYOUT is untouched.  This is the P2-1f map-icon
@@ -965,22 +1006,32 @@ def place_raster(fileobj: RelocFile | None, part: Placement, offset: int,
         tile_w, tile_h = part.tile
         wrap_s = part.period[0] if part.period is not None else src_w
         wrap_t = part.period[1] if part.period is not None else src_h
+        # Where texture texel (0,0) sits, in the source frame: the placement's
+        # own origin unless the rect was widened past it (see `tile_anchor`).
+        anchor_x, anchor_y = (part.tile_anchor if part.tile_anchor is not None
+                              else (part.x, part.y))
+        phase_x = part.x - anchor_x
+        phase_y = part.y - anchor_y
         tiled = []
         for y in range(tile_h):
-            sy = (y % wrap_t) if wrap_t else y
-            if sy >= src_h:
+            sy = ((y + phase_y) % wrap_t) if wrap_t else (y + phase_y)
+            if not (0 <= sy < src_h):
                 tiled.append([(0, 0, 0, 0)] * tile_w)
                 continue
             row = combined[sy]
-            tiled.append([
-                row[(x % wrap_s) if wrap_s else x]
-                if ((x % wrap_s) if wrap_s else x) < src_w else (0, 0, 0, 0)
-                for x in range(tile_w)])
+            out_row = []
+            for x in range(tile_w):
+                sx = ((x + phase_x) % wrap_s) if wrap_s else (x + phase_x)
+                out_row.append(row[sx] if (0 <= sx < src_w) else (0, 0, 0, 0))
+            tiled.append(out_row)
         combined = tiled
         src_w, src_h = tile_w, tile_h
-    num, den = part.scale if part.scale is not None else FRAME_SCALE
-    width = max(1, (src_w * num + den // 2) // den)
-    height = max(1, (src_h * num + den // 2) // den)
+    if part.dest is not None:
+        width, height = part.dest
+    else:
+        num, den = part.scale if part.scale is not None else FRAME_SCALE
+        width = max(1, (src_w * num + den // 2) // den)
+        height = max(1, (src_h * num + den // 2) // den)
     left = part.x - (src_w // 2) if part.centred else part.x
     top = part.y - (src_h // 2) if part.centred else part.y
     dst_x = frame_pos(left)
@@ -1020,6 +1071,19 @@ class SurfaceSpec:
     # texel opaque, so a state change is a whole-row DMA that overwrites the
     # old state exactly, with no runtime memory of what was there.
     under: tuple[Placement, ...] = ()
+    # P2-1k.  AN EXPLICIT CANVAS in the source's own frame, `(x, y, w, h)`,
+    # replacing the union-of-placements box.
+    #
+    # It exists because "overwrites the old state exactly" is only true when
+    # every state of the same element has the SAME box, and deriving the box
+    # from each variant's own contents silently breaks that.  The character
+    # select already shipped that bug: `CSS_PANEL_*_NA` came out 53x74 (its
+    # shutter doors are 92 source rows) while the MAN/COM variants came out
+    # 53x73 (the card is 91), so re-occupying an empty slot left one stale row
+    # of door art under the new panel.  A declared box makes the invariant a
+    # bake-time fact -- and `convert_surface` REFUSES a placement that escapes
+    # it, so the wrong form cannot be written rather than merely avoided.
+    box: tuple[int, int, int, int] | None = None
 
 
 def convert_surface(cache: dict[str, RelocFile], offsets: dict[str, int],
@@ -1047,9 +1111,7 @@ def convert_surface(cache: dict[str, RelocFile], offsets: dict[str, int],
                     f"{part.symbol} missing from include/reloc_data.h and "
                     "reloc_data.us.h")
             if part.o2r not in cache:
-                cache[part.o2r] = RelocFile(
-                    repo_root / "decomp" / "BattleShip-main" /
-                    "BattleShip_o2r" / "reloc_menus" / part.o2r)
+                cache[part.o2r] = RelocFile(o2r_path(repo_root, part.o2r))
             lut = None
             if part.lut_symbol is not None:
                 if part.lut_symbol not in offsets:
@@ -1063,10 +1125,33 @@ def convert_surface(cache: dict[str, RelocFile], offsets: dict[str, int],
     placed = place_all(spec.parts)
     beneath = place_all(spec.under)
 
-    left = min(x for x, _, _ in placed)
-    top = min(y for _, y, _ in placed)
-    right = max(x + len(raster[0]) for x, _, raster in placed)
-    bottom = max(y + len(raster) for _, y, raster in placed)
+    content_left = min(x for x, _, _ in placed)
+    content_top = min(y for _, y, _ in placed)
+    content_right = max(x + len(raster[0]) for x, _, raster in placed)
+    content_bottom = max(y + len(raster) for _, y, raster in placed)
+    if spec.box is not None:
+        # A DECLARED canvas: every variant of the same element gets the same
+        # rectangle, so a re-blit overwrites the previous state exactly.  The
+        # declaration is checked against what actually landed, because a box
+        # that silently CROPS a state is the same defect it exists to prevent.
+        box_x, box_y, box_w, box_h = spec.box
+        left = frame_pos(box_x)
+        top = frame_pos(box_y)
+        right = left + max(1, (box_w * FRAME_SCALE[0] + FRAME_SCALE[1] // 2) //
+                           FRAME_SCALE[1])
+        bottom = top + max(1, (box_h * FRAME_SCALE[0] + FRAME_SCALE[1] // 2) //
+                           FRAME_SCALE[1])
+        if ((content_left < left) or (content_top < top) or
+                (content_right > right) or (content_bottom > bottom)):
+            raise ConvertError(
+                f"{spec.token}: a placement escapes the declared box -- "
+                f"content ({content_left},{content_top}).."
+                f"({content_right},{content_bottom}) against box "
+                f"({left},{top})..({right},{bottom}). Widen `box`, or the "
+                "surface would crop one of its own states.")
+    else:
+        left, top = content_left, content_top
+        right, bottom = content_right, content_bottom
     left = max(left, 0)
     top = max(top, 0)
     right = min(right, DS_SCREEN_W)
@@ -1512,6 +1597,46 @@ TITLE_FIELD = None
 # no seam AND may move by whole-row DMA.
 MENU_FIELD = (0x08, 0x33, 0x65)
 
+# P2-1k, OWNER RULING (f): THE BACKGROUNDS SPAN THE WHOLE DS SCREEN.
+#
+# Every menu scene in this shell draws inside one rectangle, and it is the
+# scene camera's own viewport -- `syRdpSetViewport(&cobj->viewport, 10.0F,
+# 10.0F, 310.0F, 230.0F)` in every `mn*Make*Camera` (mnplayersvs.c:764/:789/
+# :814/:839/:864, mnmaps.c:1145, mnvsmode.c).  The source's ACTIVE AREA is
+# therefore 300x220 at (10,10), and the two screens that carry a real
+# background say so twice: `mnPlayersVSMakeWallpaper` (:1370) and
+# `mnMapsMakeWallpaper` (:364) both wrap the stone over `lrs`/`lrt` = 300x220
+# at exactly that origin.
+#
+# At the strict 4/5 the whole 320x240 FRAME maps to the screen, so that
+# viewport lands at (8,8)..(248,184) and the source's own 10 px border becomes
+# 8 px of flat DS backdrop on all four sides -- 15,360 of the panel's 49,152
+# pixels showing the field instead of art.  On an N64 that border is overscan
+# the television eats; a DS panel has no overscan, so it is simply a frame
+# around the picture, which is what the owner reported.
+#
+# THE CHOICE, PER SCREEN, AND IT IS THE SAME ONE EVERYWHERE: the BACKGROUND
+# reaches the edges, and every element drawn OVER it keeps the source's own 4/5
+# position.  The alternative -- remapping the whole layout so the viewport
+# fills the screen -- was rejected because it moves every element on the mode
+# select and the VS menu, and those two are owner-PASSED; a background that
+# runs to the edge is what the ruling asks for and it is achievable without
+# touching one foreground coordinate.
+#
+# The two mechanisms differ because the two background kinds differ:
+#   a TILE needs no resampling, only a bigger rectangle (`tile_anchor` keeps
+#     its phase), so the stone is EXACT -- every texel the source's own
+#     rectangle covers is bit-identical to the pre-P2-1k bake;
+#   a single PLATE has to be resampled, so the collage is stretched 300->256
+#     and 220->192 (0.8533 / 0.8727 against 0.8 / 0.8), a 2.3% aspect change on
+#     a montage nothing is registered to.
+COLLAGE_FULL_BLEED = Placement("MNCommon", "llMNCommonSmashBrosCollageSprite",
+                               0, 0, False, dest=(DS_SCREEN_W, DS_SCREEN_H))
+STONE_FULL_BLEED = Placement("MNSelectCommon",
+                             "llMNSelectCommonStoneBackgroundSprite",
+                             0, 0, False, tile=(320, 240), period=(64, 32),
+                             tile_anchor=(10, 10))
+
 # THE TITLE, in the source's own draw order.  `mnTitleMakeLabels` builds kinds
 # 0..4 into one GObj -- which is what puts the black drop-shadow cutout BEHIND
 # the wordmark -- then 5..6; `mnTitleMakePressStart` adds 7 and
@@ -1536,10 +1661,31 @@ TITLE_PARTS = (
               (0xFF, 0xFE, 0x2A)),
     Placement("MNTitle", "llMNTitleTMUnkSprite", 270, 132, True,
               (0x00, 0x00, 0x00)),
-    Placement("MNTitle", "llMNTitleCopyrightSprite", 160, 208, True,
-              (0xB7, 0xAE, 0x7C)),
-    Placement("MNTitle", "llMNTitleBorderUpperSprite", 160, 15, True,
-              (0x14, 0x12, 0x06)),
+    # P2-1k (f), THE TITLE'S OWN ANSWER, stated because this screen is the one
+    # where "the background" is not on BG2 at all.  The title's background is
+    # the FIRE, and it has spanned the whole screen since P2-1i -- it is a BG3
+    # extended-rotscale bitmap whose affine blows one 51x42 cell up to 256x192,
+    # so there is no border behind it to remove.  What is on BG2 here is keyed
+    # foreground, and it splits in two:
+    #
+    #   the WORDMARK pieces, the TM and the emblem are discrete artwork at a
+    #     place, and they keep the frame's own 4/5 exactly as the VS menu's
+    #     plaque and the character select's portrait boxes do;
+    #   the UPPER BORDER and the COPYRIGHT BAND are the title's FRAME
+    #     FURNITURE -- both are 300 px wide, i.e. the source's whole active
+    #     width (10..310), and both are centred on x = 160.  At 4/5 they stop
+    #     8 px short of each panel edge while the fire behind them runs to it,
+    #     which is exactly the inset look the ruling removes.  So these two --
+    #     and only these two -- are stretched across the full 256, keeping
+    #     their own 4/5 height and y.
+    #
+    # They are re-expressed as top-left placements because `dest` sizes the
+    # artwork and `centred` would still put the origin at frame_pos(10) = 8:
+    # copyright top = 208 - 44/2 = 186, border top = 15 - 10/2 = 10.
+    Placement("MNTitle", "llMNTitleCopyrightSprite", 0, 186, False,
+              (0xB7, 0xAE, 0x7C), dest=(DS_SCREEN_W, 35)),
+    Placement("MNTitle", "llMNTitleBorderUpperSprite", 0, 10, False,
+              (0x14, 0x12, 0x06), dest=(DS_SCREEN_W, 8)),
     # The emblem sets its own primitive (mntitle.c:1073) and draws through its
     # own flat combiner at the resting alpha the title fades it to.
     Placement("MNTitle", "llMNTitleLogoAnimFullSprite", 260, 60, True,
@@ -1577,12 +1723,12 @@ SURFACE_SOURCES = [
     # 10, 310, 230)`), which is what proves lrs/lrt are the rect's SIZE and
     # not its lower-right corner.  One surface, blitted by both screens: the
     # two calls differ in nothing a bake can see.
-    SurfaceSpec("MENU_STONE",
-                (Placement("MNSelectCommon",
-                           "llMNSelectCommonStoneBackgroundSprite",
-                           10, 10, False,
-                           tile=(300, 220), period=(64, 32)),),
-                None),
+    #
+    # P2-1k RETIRES the standalone stone for the same reason P2-1j retired the
+    # standalone collage: the character select already composes it into
+    # CSS_SCREEN and the stage select now composes it into SSS_SCREEN, so the
+    # bare tile has no consumer and baking it would ship dead bytes.  It
+    # survives as `STONE_FULL_BLEED`, the first placement of both plates.
     # P2-1i, owner finding (2), the MAIN MENU.  Everything `mnModeSelectMake*`
     # composes that does not change with the cursor, in the source's own draw
     # order: the collage and both decal bars first (link 2 / display 0), then
@@ -1602,8 +1748,7 @@ SURFACE_SOURCES = [
     # the dark one at the same 5/8 artwork size so the swap is a light-up and
     # not a resize.
     SurfaceSpec("MODE_SELECT",
-                (Placement("MNCommon", "llMNCommonSmashBrosCollageSprite",
-                           10, 10, False),
+                (COLLAGE_FULL_BLEED,
                  Placement("MNMain", "llMNMainDecalBarMiddleSprite",
                            0, 37, False, (0x08, 0x33, 0x65),
                            tile=(96, 38), period=(16, None)),
@@ -1678,7 +1823,7 @@ VS_TAB_NOT = ((0x00, 0x00, 0x00), (0x82, 0x82, 0xAA))
 # source's own construction order -- background link 2 / display 0 first, then
 # the menu-name GObj's fill rectangle and its three plaque sprites.
 VS_BACKGROUND = (
-    Placement("MNCommon", "llMNCommonSmashBrosCollageSprite", 10, 10, False),
+    COLLAGE_FULL_BLEED,
     Placement("MNCommon", "llMNCommonDecalPaperSprite", 140, 143, False,
               (0xA0, 0x78, 0x14)),
     Placement("MNCommon", "llMNCommonDecalPaperSprite", 225, 56, False,
@@ -1795,9 +1940,8 @@ def css_portrait_pos(portrait: int) -> tuple[int, int]:
 
 def css_screen_parts() -> tuple[Placement, ...]:
     parts = [
-        # mnPlayersVSMakeWallpaper, :1370 -- the same stone MENU_STONE carries.
-        Placement("MNSelectCommon", "llMNSelectCommonStoneBackgroundSprite",
-                  10, 10, False, tile=(300, 220), period=(64, 32)),
+        # mnPlayersVSMakeWallpaper, :1370, full-bleed per the P2-1k ruling.
+        STONE_FULL_BLEED,
     ]
     for portrait in range(12):
         x, y = css_portrait_pos(portrait)
@@ -1832,12 +1976,76 @@ SURFACE_SOURCES.append(
 # Three surfaces per slot, blitted on a kind change, is what a palette swap
 # costs on a direct-colour DS bitmap; the alternative was twelve more OBJ cells
 # of 53x73, which does not fit a 64x64 cell OR the free bank.
-CSS_PANEL_KINDS = (("MAN", "GateMan%dPLUT", False),
-                   ("COM", "GateCom%dPLUT", False),
-                   ("NA", "GateCom%dPLUT", True))
+#
+# ---------------------------------------------------------------------------
+# P2-1k, owner findings (a) and (b): WHAT AN OCCUPIED GATE ACTUALLY DRAWS.
+# ---------------------------------------------------------------------------
+#
+# The owner's report is "the preview boxes aren't rendering the fighter", and
+# the source's answer is `mnPlayersVSMakeNameAndEmblem` (mnplayersvs.c:578),
+# which `mnPlayersVSMakeGate` builds onto its own GObj (:1110-1113) and
+# `mnPlayersVSUpdateNameAndEmblem` (:2397) re-makes every time the slot's
+# fighter or kind changes.  It is two sprites and nothing else:
+#
+#   the SERIES EMBLEM `llFTEmblemSprites<Series>Sprite` at `(p*69+24, 143)`,
+#     modulated 0x1E1E1E when the slot is `nFTPlayerKindMan` and 0x444444
+#     otherwise (:619-630) -- so the tint is per PLAYER KIND, not per fighter;
+#   the FIGHTER NAME `llMNPlayersCommon<Fighter>TextSprite` at `(p*69+22, 201)`,
+#     with no primitive set at its draw site, so it keeps the sprite's own white.
+#
+# THE NAME AND THE CP LEVEL ROW ARE THE SAME ROW, and that is what makes three
+# fighter states rather than two.  `mnPlayersVSUpdateHandicapLevel` opens with
+# `mnPlayersVSHideFighterName` (:2788), which hides the name_emblem GObj's
+# SECOND SObj -- the name (:2575-2585) -- and then puts CP LEVEL at y 201 and
+# its colon at y 202, exactly where the name was.  That row is built only when
+# handicap is on or the slot is a CPU (:1115), and
+# `mnPlayersVSHandicapLevelProcUpdate` DESTROYS it the moment the slot stops
+# being a settled fighter (:2689).  So a human slot shows its name; a settled
+# CPU slot shows CP LEVEL instead; and a CPU slot whose token is in the
+# cursor's hand shows the name again.
+#
+# WHY SURFACES AND NOT OBJ CELLS.  The emblem is 64x48 and a name up to 47x16,
+# so one fighter's pair at the frame's own 4/5 is a 64x64 cell plus a 64x16 one
+# = 10,240 B for ONE fighter, against the 3,456 B of free main OBJ P2-1j left
+# (`docs/p2/P2-1c-vram-map.md`).  As part of the gate SURFACE they cost bank E
+# nothing, and folding them into the card rather than giving them their own
+# surface keeps the runtime a single "which surface does this slot want" choice:
+# every state of a slot is ONE blit that overwrites the last exactly.
+#
+# EVERY STATE SHARES ONE DECLARED BOX (`box=` below), which is P2-1k fixing a
+# defect the pre-P2-1k bake shipped: the NA variant's shutter doors are 92
+# source rows against the card's 91, so its canvas came out 53x74 while
+# MAN/COM came out 53x73 and re-occupying an empty slot left a stale row of
+# door art.  The box is the union -- the card's own x span (66) and the doors'
+# own y span (92) -- and `convert_surface` refuses any placement that escapes
+# it.
+CSS_GATE_BOX = (22, 126, 66, 92)
+CSS_EMBLEM_SYMBOL = ("llFTEmblemSpritesMarioSprite",
+                     "llFTEmblemSpritesFoxSprite")
+CSS_NAME_SYMBOL = ("llMNPlayersCommonMarioTextSprite",
+                   "llMNPlayersCommonFoxTextSprite")
+CSS_FIGHTER_TOKEN = ("MARIO", "FOX")
+CSS_TINT_MAN = (0x1E, 0x1E, 0x1E)
+CSS_TINT_COM = (0x44, 0x44, 0x44)
+# (token suffix, gate LUT, doors shut, fighter index or None, emblem tint,
+#  draws the name)
+CSS_GATE_STATES = [
+    ("NA", "GateCom%dPLUT", True, None, None, False),
+    ("MAN", "GateMan%dPLUT", False, None, None, False),
+    ("COM", "GateCom%dPLUT", False, None, None, False),
+]
+for _f in range(len(CSS_FIGHTER_TOKEN)):
+    _name = CSS_FIGHTER_TOKEN[_f]
+    CSS_GATE_STATES.append(
+        (f"MAN_{_name}", "GateMan%dPLUT", False, _f, CSS_TINT_MAN, True))
+    CSS_GATE_STATES.append(
+        (f"COM_{_name}", "GateCom%dPLUT", False, _f, CSS_TINT_COM, False))
+    CSS_GATE_STATES.append(
+        (f"HOLD_{_name}", "GateCom%dPLUT", False, _f, CSS_TINT_COM, True))
 
 
-def css_panel(player: int, kind: str, lut: str, shut: bool) -> SurfaceSpec:
+def css_gate(player: int, state: str, lut: str, shut: bool,
+             fighter: int | None, tint, with_name: bool) -> SurfaceSpec:
     start = player * 69
     parts = [Placement("MNPlayersCommon", "llMNPlayersCommonRedCardSprite",
                        start + 22, 126, False,
@@ -1849,13 +2057,156 @@ def css_panel(player: int, kind: str, lut: str, shut: bool) -> SurfaceSpec:
         parts.append(Placement("MNPlayersCommon",
                                "llMNPlayersCommonSmashLogoCardRightSprite",
                                start + 47, 126, False))
-    return SurfaceSpec(f"CSS_PANEL_{player}_{kind}", tuple(parts), None,
-                       under=css_screen_parts())
+    if fighter is not None:
+        parts.append(Placement("FTEmblemSprites", CSS_EMBLEM_SYMBOL[fighter],
+                               start + 24, 143, False, tint))
+        if with_name:
+            parts.append(Placement("MNPlayersCommon",
+                                   CSS_NAME_SYMBOL[fighter],
+                                   start + 22, 201, False))
+    box = (start + CSS_GATE_BOX[0], CSS_GATE_BOX[1],
+           CSS_GATE_BOX[2], CSS_GATE_BOX[3])
+    return SurfaceSpec(f"CSS_GATE_{player}_{state}", tuple(parts), None,
+                       under=css_screen_parts(), box=box)
 
 
 for _player in range(4):
-    for _kind, _lut, _shut in CSS_PANEL_KINDS:
-        SURFACE_SOURCES.append(css_panel(_player, _kind, _lut, _shut))
+    for _state, _lut, _shut, _fighter, _tint, _name in CSS_GATE_STATES:
+        SURFACE_SOURCES.append(
+            css_gate(_player, _state, _lut, _shut, _fighter, _tint, _name))
+
+
+# ---------------------------------------------------------------------------
+# P2-1k, owner finding (c): THE STAGE SELECT'S PLAQUE, PLATE AND NAME ART.
+# ---------------------------------------------------------------------------
+#
+# P2-1f shipped this screen's wallpaper, its ten icons and its cursor, and
+# composed the two TEXT elements out of the menu font.  Everything else on the
+# right-hand third -- the wooden circle the emblem sits in, the three-part name
+# plate, the two decal fills, the tiled preview field -- was never converted,
+# which is what "still needs lots of work" names.  `mnMapsFuncStart` builds the
+# screen at :1654-1660 and the sites are:
+#
+#   mnMapsMakePreviewWallpaper (:919) llMNMapsTilesSprite every 16 px from 43
+#                              to 139 at y 130 (7 copies, 16x82 each)
+#   mnMapsMakePlaque   (:372)  llMNMapsWoodenCircleSprite at (189,124)
+#   mnMapsLabelsProcDisplay (:389) gDPFillRectangle 160,128..320,134 at prim
+#                              57/60/88 alpha FF, then 194,189..268,193 at black
+#                              alpha 33 -- both G_RM_AA_XLU_SURF, so both are
+#                              composited here at their own alpha
+#   mnMapsMakeLabels   (:409)  llMNMapsStageSelectTextSprite at (172,122)
+#                              through the IA lerp ENV 00/00/00 PRIM AF/B1/CC,
+#                              then PlateLeft at (174,191), PlateMiddle every
+#                              4 px from 186 to 258, PlateRight at (262,191)
+#   mnMapsMakeEmblem   (:780)  llFTEmblemSprites<Series>Sprite at (189,124) +
+#                              mnMapsSetLogoPosition's own per-gkind offset,
+#                              tinted 5C/22/00; RANDOM instead draws
+#                              llMNMapsQuestionMarkSprite at (223,144)
+#   mnMapsMakeName     (:578)  llMNMaps<Ground>TextSprite at (183,196) in BLACK
+#                              -- mnMapsSetNamePosition's REGION_US branch is a
+#                              CONSTANT for every ground (:568), the per-ground
+#                              table above it being the JP layout
+#
+# DRAW ORDER IS THE CAMERAS', AND IT RUNS THE OPPOSITE WAY TO INTUITION.  Each
+# `mnMapsMake*Camera` passes its own `dl_link_priority` (objhelper.c:513) and a
+# HIGHER value is drawn EARLIER, i.e. further back.  Two unambiguous cases in
+# this same file prove the direction rather than assuming it: the WALLPAPER is
+# 80 and must be the backmost thing on the screen, and the CURSOR is 50 against
+# the ICONS' 60 and must draw over the icon it frames.  So the order is
+# wallpaper 80, preview wallpaper 70, icons 60, cursor 50, PLAQUE 40, LABELS
+# 30, name+emblem 20 -- which puts the STAGE SELECT text and the name plate IN
+# FRONT of the wooden circle, not behind it.  They overlap: the circle spans
+# (189,124)..(273,209) and the text (172,122)..(284,141).
+SSS_EMBLEM_TINT = (0x5C, 0x22, 0x00)
+# mnMapsSetLogoPosition, :752 -- indexed by gkind.  The tenth entry {34,20} is
+# unreachable: gkind 0xDE takes the other branch and gets its own fixed site.
+SSS_LOGO_POS = ((3, 19), (3, 19), (3, 20), (2, 20), (3, 17),
+                (-1, 19), (1, 20), (1, 20), (3, 19))
+# mnMapsMakeName's own offsets[], :581 -- gkind order.
+SSS_NAME_SYMBOL = (
+    "llMNMapsPeachsCastleTextSprite", "llMNMapsSectorZTextSprite",
+    "llMNMapsCongoJungleTextSprite", "llMNMapsPlanetZebesTextSprite",
+    "llMNMapsHyruleCastleTextSprite", "llMNMapsYoshisIslandTextSprite",
+    "llMNMapsDreamLandTextSprite", "llMNMapsSaffronCityTextSprite",
+    "llMNMapsMushroomKingdomTextSprite")
+# mnMapsMakeEmblem's own offsets[], :784 -- gkind order, Mario twice.
+SSS_EMBLEM_SYMBOL = (
+    "llFTEmblemSpritesMarioSprite", "llFTEmblemSpritesFoxSprite",
+    "llFTEmblemSpritesDonkeySprite", "llFTEmblemSpritesMetroidSprite",
+    "llFTEmblemSpritesZeldaSprite", "llFTEmblemSpritesYoshiSprite",
+    "llFTEmblemSpritesKirbySprite", "llFTEmblemSpritesPMonstersSprite",
+    "llFTEmblemSpritesMarioSprite")
+# mnMapsGetGroundKind, :455.  DERIVED, not copied from mnMapsGetSlot: that
+# function is slot-of-gkind, and the numeric gkind values come from
+# mnMapsMakeIcons indexing its icon table BY GKIND (:537) -- Castle->
+# PeachsCastle=0, Jungle->CongoJungle=2, Hyrule->HyruleCastle=4,
+# Zebes->PlanetZebes=3, Inishie->MushroomKingdom=8, Yoster->YoshisIsland=5,
+# Pupupu->DreamLand=6, Sector->SectorZ=1, Yamabuki->SaffronCity=7.
+SSS_SLOT_GKIND = (0, 2, 4, 3, 8, 5, 6, 1, 7, 0xDE)
+
+SSS_BACKGROUND = (
+    # mnMapsMakeWallpaper, :364, full-bleed per the P2-1k ruling.
+    STONE_FULL_BLEED,
+    # mnMapsPreviewWallpaperProcDisplay's own fill, :899 -- the dark plate the
+    # tiles sit on.  SHIPPED rather than dropped even though the seven opaque
+    # tiles cover 43..155 x 130..212 and the fill only 43..152 x 130..211: a
+    # fill the source draws is composited, and letting the tiles "probably"
+    # cover it is exactly the reasoning that loses an element.
+    Placement("MNMaps", "", 43, 130, False, fill=(0x00, 0x00, 0x00, 0x73),
+              size=(109, 81)),
+    *(Placement("MNMaps", "llMNMapsTilesSprite", x, 130, False)
+      for x in range(43, 155, 16)),
+    # PLAQUE, camera 40 -- behind the labels.
+    Placement("MNMaps", "llMNMapsWoodenCircleSprite", 189, 124, False),
+    # LABELS, camera 30 -- both fills first (mnMapsLabelsProcDisplay draws them
+    # before its own SObj list), then the text and the three-part plate.
+    Placement("MNMaps", "", 160, 128, False, fill=(0x57, 0x60, 0x88, 0xFF),
+              size=(160, 6)),
+    Placement("MNMaps", "", 194, 189, False, fill=(0x00, 0x00, 0x00, 0x33),
+              size=(74, 4)),
+    Placement("MNMaps", "llMNMapsStageSelectTextSprite", 172, 122, False,
+              (0xAF, 0xB1, 0xCC), env=(0x00, 0x00, 0x00)),
+    Placement("MNMaps", "llMNMapsPlateLeftSprite", 174, 191, False),
+    *(Placement("MNMaps", "llMNMapsPlateMiddleSprite", x, 191, False)
+      for x in range(186, 262, 4)),
+    Placement("MNMaps", "llMNMapsPlateRightSprite", 262, 191, False),
+)
+
+# The name+emblem pair is camera 20 -- the frontmost thing on the screen -- and
+# `mnMapsMakeNameAndEmblem` (:818) ejects and re-makes it on every cursor move,
+# so it is its own surface per slot, composited over the furniture above and
+# sharing ONE declared box so a move is a single overwriting blit.  The box is
+# the union of every variant: x from the name's own 183 to 183+96 (all nine
+# name sprites are 96 wide), y from the highest emblem top (124+17) to the
+# name's bottom (196+10).  All nine names are baked, not just Dream Land's:
+# the cursor shows a name over whichever cell it is on, and P2-1f's
+# font-composed version did the same for all nine.
+SSS_PLAQUE_BOX = (183, 141, 96, 66)
+
+
+def sss_plaque(slot: int) -> SurfaceSpec:
+    gkind = SSS_SLOT_GKIND[slot]
+    if gkind == 0xDE:
+        # mnMapsMakeEmblem's RANDOM arm (:793): the question mark at its own
+        # fixed site (mnMapsSetLogoPosition, :767), and NO name -- :831 skips
+        # mnMapsMakeName for slot 9.
+        parts = (Placement("MNMaps", "llMNMapsQuestionMarkSprite",
+                           223, 144, False, SSS_EMBLEM_TINT),)
+    else:
+        dx, dy = SSS_LOGO_POS[gkind]
+        parts = (
+            Placement("FTEmblemSprites", SSS_EMBLEM_SYMBOL[gkind],
+                      189 + dx, 124 + dy, False, SSS_EMBLEM_TINT),
+            Placement("MNMaps", SSS_NAME_SYMBOL[gkind], 183, 196, False,
+                      (0x00, 0x00, 0x00)),
+        )
+    return SurfaceSpec(f"SSS_PLAQUE_{slot}", parts, None,
+                       under=SSS_BACKGROUND, box=SSS_PLAQUE_BOX)
+
+
+SURFACE_SOURCES.append(SurfaceSpec("SSS_SCREEN", SSS_BACKGROUND, MENU_FIELD))
+for _slot in range(10):
+    SURFACE_SOURCES.append(sss_plaque(_slot))
 
 
 # ---------------------------------------------------------------------------
@@ -1956,9 +2307,7 @@ def build_fire_atlas(cache: dict[str, RelocFile], offsets: dict[str, int],
     """The thirty composited states, packed 5x6 into one 255x252 BG3 bitmap."""
     o2r = "MNTitleFireAnim"
     if o2r not in cache:
-        cache[o2r] = RelocFile(
-            repo_root / "decomp" / "BattleShip-main" / "BattleShip_o2r" /
-            "reloc_menus" / o2r)
+        cache[o2r] = RelocFile(o2r_path(repo_root, o2r))
     fileobj = cache[o2r]
     frames = []
     for i in range(FIRE_FRAMES):
@@ -2228,9 +2577,7 @@ def main(argv: list[str] | None = None) -> int:
     offsets = load_reloc_offsets(repo_root)
 
     if args.list_images:
-        path = (repo_root / "decomp" / "BattleShip-main" / "BattleShip_o2r" /
-                "reloc_menus" / args.o2r_file)
-        fileobj = RelocFile(path)
+        fileobj = RelocFile(o2r_path(repo_root, args.o2r_file))
         prefix = "ll" + args.o2r_file
         for name, offset in sorted(offsets.items(), key=lambda kv: kv[1]):
             if not name.startswith(prefix) or not name.endswith("Sprite"):
@@ -2259,9 +2606,7 @@ def main(argv: list[str] | None = None) -> int:
         if symbol not in offsets:
             raise ConvertError(f"{symbol} missing from include/reloc_data.h")
         if o2r_name not in cache:
-            cache[o2r_name] = RelocFile(
-                repo_root / "decomp" / "BattleShip-main" / "BattleShip_o2r" /
-                "reloc_menus" / o2r_name)
+            cache[o2r_name] = RelocFile(o2r_path(repo_root, o2r_name))
         images.append(convert_image(cache[o2r_name], symbol, token,
                                     offsets[symbol], scale, tint))
     check_digit_block(images)

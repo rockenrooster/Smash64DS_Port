@@ -189,6 +189,13 @@ NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellWalkResultsHoldFrames;
  * exactly this number against the screen's presented-frame count. */
 NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellVsButtonBlitCount;
 NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellCssPanelBlitCount;
+/* P2-1k (c). The stage select's per-stage plaque is the THIRD source of a
+ * non-entry surface blit, after the VS menu's buttons and the character
+ * select's gates. It gets its own counter for the same reason those two do:
+ * the loop verifier asserts `blit` equals one backdrop per screen entry PLUS
+ * every state blit, and a state blit with no counter behind it makes that
+ * assertion fail on arithmetic rather than on a defect. */
+NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellSssPlaqueBlitCount;
 NDS_MENU_PUBLISHED volatile s32 gNdsMenuShellCssCursorX;
 NDS_MENU_PUBLISHED volatile s32 gNdsMenuShellCssCursorY;
 NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellCssCursorStatus;
@@ -918,6 +925,11 @@ static void ndsMenuShellUpdateMode(u32 held, u32 taps)
     }
     else if ((taps & NDS_INPUT_B) != 0u)
     {
+        /* P2-1k (g). mnmodeselect.c:774 -- the main menu's B arm stops all BGM
+         * before it requests the title. The title's own mnTitleInitVars stop
+         * would cover it, but both are the source's and transcribing only one
+         * would leave the other's absence looking deliberate. */
+        ndsAudioBgmStopAll();
         ndsMenuShellGoto((u32)nSCKindTitle);
     }
 }
@@ -1715,12 +1727,13 @@ static u32 ndsMenuShellCssBoxHit(s32 x0, s32 x1, s32 y0, s32 y1)
 
 /* --- Drawing ------------------------------------------------------------- */
 
-/* Text slots. Eight, and every one is spoken for. */
+/* Text slots. P2-1k gave the four per-slot fighter names back: they are source
+ * art baked into the gate surface now, so this screen holds four of the eight
+ * and the other four are free for the next element that needs one. */
 #define NDS_CSS_SLOT_MODE 0u
 #define NDS_CSS_SLOT_BACK 1u
 #define NDS_CSS_SLOT_READY 2u
 #define NDS_CSS_SLOT_PRESS 3u
-#define NDS_CSS_SLOT_NAME0 4u
 
 /* Sprite slots, in DEPTH order: a lower OAM id draws in front, so the cursor
  * owns id 0 and the twelve portrait cells own the last twelve. */
@@ -1756,17 +1769,11 @@ static u32 ndsMenuShellCssBoxHit(s32 x0, s32 x1, s32 y0, s32 y1)
 #define NDS_CSS_PORTRAIT_INSET_X 2
 #define NDS_CSS_PORTRAIT_INSET_Y 1
 
-static const char *const kNdsCssFighterName[NDS_CSS_PORTRAITS] = {
-    "MARIO", "FOX", "DK", "SAMUS", "LUIGI", "LINK",
-    "YOSHI", "CAPTAIN", "KIRBY", "PIKACHU", "PURIN", "NESS"
-};
-
 /* mnPlayersVSMakeLabels' own colours, mnplayersvs.c:1391. */
 #define NDS_CSS_RGB_MODE 0x00e3ac04u
 /* mnPlayersVSMakeReady's ready-text primitive, mnplayersvs.c:4128. */
 #define NDS_CSS_RGB_READY 0x00ffff9du
 #define NDS_CSS_RGB_PRESS 0x00d6ddc6u
-#define NDS_CSS_RGB_NAME 0x00ffffffu
 
 static u32 ndsMenuShellCssKindImage(u32 pkind)
 {
@@ -1780,31 +1787,114 @@ static u32 ndsMenuShellCssKindImage(u32 pkind)
     return NDS_MN_UI_KIT_IMAGE_LABEL_HMN + pkind;
 }
 
-/* P2-1j, owner finding (e). THE PANEL IS ONE CARD AND EIGHT PALETTES in the
- * source -- `mnPlayersVSSetGateLUT` (mnplayersvs.c:900) swaps the CI4 gate
- * card's TLUT between `GateMan<N>PLUT` and `GateCom<N>PLUT` -- and an EMPTY
- * slot additionally has its two shutter doors closed over it (door_offset 41,
- * :640). A direct-colour DS bitmap has no palette to swap, so the bake resolves
- * the three reachable results per slot and the runtime blits the one the slot's
- * pkind names. Indexed [slot][pkind] in nFTPlayerKind order, which is the same
- * order the HMN/CP/NA labels above are indexed in. */
-static const u8 kNdsCssPanelSurface[NDS_CSS_SLOTS][3] = {
-    { (u8)NDS_MN_UI_KIT_SURFACE_CSS_PANEL_0_MAN,
-      (u8)NDS_MN_UI_KIT_SURFACE_CSS_PANEL_0_COM,
-      (u8)NDS_MN_UI_KIT_SURFACE_CSS_PANEL_0_NA },
-    { (u8)NDS_MN_UI_KIT_SURFACE_CSS_PANEL_1_MAN,
-      (u8)NDS_MN_UI_KIT_SURFACE_CSS_PANEL_1_COM,
-      (u8)NDS_MN_UI_KIT_SURFACE_CSS_PANEL_1_NA },
-    { (u8)NDS_MN_UI_KIT_SURFACE_CSS_PANEL_2_MAN,
-      (u8)NDS_MN_UI_KIT_SURFACE_CSS_PANEL_2_COM,
-      (u8)NDS_MN_UI_KIT_SURFACE_CSS_PANEL_2_NA },
-    { (u8)NDS_MN_UI_KIT_SURFACE_CSS_PANEL_3_MAN,
-      (u8)NDS_MN_UI_KIT_SURFACE_CSS_PANEL_3_COM,
-      (u8)NDS_MN_UI_KIT_SURFACE_CSS_PANEL_3_NA }
+/* P2-1j, owner finding (e), EXTENDED BY P2-1k (a)/(b). THE PANEL IS ONE CARD
+ * AND EIGHT PALETTES in the source -- `mnPlayersVSSetGateLUT`
+ * (mnplayersvs.c:900) swaps the CI4 gate card's TLUT between `GateMan<N>PLUT`
+ * and `GateCom<N>PLUT` -- and an EMPTY slot additionally has its two shutter
+ * doors closed over it (door_offset 41, :640). A direct-colour DS bitmap has no
+ * palette to swap, so the bake resolves each reachable result per slot and the
+ * runtime blits the one the slot's state names.
+ *
+ * P2-1k adds the two sprites `mnPlayersVSMakeGate` builds that this shell had
+ * never drawn -- the owner's "the preview boxes aren't rendering the fighter".
+ * `mnPlayersVSMakeNameAndEmblem` (:578) puts the SERIES EMBLEM at (p*69+24,
+ * 143), tinted 0x1E for a human slot and 0x44 otherwise, and the FIGHTER NAME
+ * at (p*69+22, 201). They are baked INTO the card rather than drawn as OBJ
+ * cells because one fighter's pair needs 10,240 B of main OBJ against the
+ * 3,456 B P2-1j left free, and because folding them in keeps every state of a
+ * slot exactly one overwriting blit.
+ *
+ * NINE STATES, and the third fighter state is the source's, not an invention:
+ * the NAME and the CP LEVEL row occupy the SAME row (y 201), and
+ * `mnPlayersVSUpdateHandicapLevel` opens by hiding the name (:2788) while
+ * `mnPlayersVSHandicapLevelProcUpdate` destroys the level row the moment the
+ * slot stops being a settled fighter (:2689). So a settled CPU shows CP LEVEL
+ * (drawn as OBJ over this surface) and a CPU whose token is in the cursor's
+ * hand shows its name again. */
+#define NDS_CSS_GATE_NA 0u
+#define NDS_CSS_GATE_MAN 1u
+#define NDS_CSS_GATE_COM 2u
+#define NDS_CSS_GATE_MAN_F0 3u   /* + fighter index (Mario 0, Fox 1) */
+#define NDS_CSS_GATE_COM_F0 5u
+#define NDS_CSS_GATE_HOLD_F0 7u
+#define NDS_CSS_GATE_STATES 9u
+
+static const u8 kNdsCssGateSurface[NDS_CSS_SLOTS][NDS_CSS_GATE_STATES] = {
+    { (u8)NDS_MN_UI_KIT_SURFACE_CSS_GATE_0_NA,
+      (u8)NDS_MN_UI_KIT_SURFACE_CSS_GATE_0_MAN,
+      (u8)NDS_MN_UI_KIT_SURFACE_CSS_GATE_0_COM,
+      (u8)NDS_MN_UI_KIT_SURFACE_CSS_GATE_0_MAN_MARIO,
+      (u8)NDS_MN_UI_KIT_SURFACE_CSS_GATE_0_MAN_FOX,
+      (u8)NDS_MN_UI_KIT_SURFACE_CSS_GATE_0_COM_MARIO,
+      (u8)NDS_MN_UI_KIT_SURFACE_CSS_GATE_0_COM_FOX,
+      (u8)NDS_MN_UI_KIT_SURFACE_CSS_GATE_0_HOLD_MARIO,
+      (u8)NDS_MN_UI_KIT_SURFACE_CSS_GATE_0_HOLD_FOX },
+    { (u8)NDS_MN_UI_KIT_SURFACE_CSS_GATE_1_NA,
+      (u8)NDS_MN_UI_KIT_SURFACE_CSS_GATE_1_MAN,
+      (u8)NDS_MN_UI_KIT_SURFACE_CSS_GATE_1_COM,
+      (u8)NDS_MN_UI_KIT_SURFACE_CSS_GATE_1_MAN_MARIO,
+      (u8)NDS_MN_UI_KIT_SURFACE_CSS_GATE_1_MAN_FOX,
+      (u8)NDS_MN_UI_KIT_SURFACE_CSS_GATE_1_COM_MARIO,
+      (u8)NDS_MN_UI_KIT_SURFACE_CSS_GATE_1_COM_FOX,
+      (u8)NDS_MN_UI_KIT_SURFACE_CSS_GATE_1_HOLD_MARIO,
+      (u8)NDS_MN_UI_KIT_SURFACE_CSS_GATE_1_HOLD_FOX },
+    { (u8)NDS_MN_UI_KIT_SURFACE_CSS_GATE_2_NA,
+      (u8)NDS_MN_UI_KIT_SURFACE_CSS_GATE_2_MAN,
+      (u8)NDS_MN_UI_KIT_SURFACE_CSS_GATE_2_COM,
+      (u8)NDS_MN_UI_KIT_SURFACE_CSS_GATE_2_MAN_MARIO,
+      (u8)NDS_MN_UI_KIT_SURFACE_CSS_GATE_2_MAN_FOX,
+      (u8)NDS_MN_UI_KIT_SURFACE_CSS_GATE_2_COM_MARIO,
+      (u8)NDS_MN_UI_KIT_SURFACE_CSS_GATE_2_COM_FOX,
+      (u8)NDS_MN_UI_KIT_SURFACE_CSS_GATE_2_HOLD_MARIO,
+      (u8)NDS_MN_UI_KIT_SURFACE_CSS_GATE_2_HOLD_FOX },
+    { (u8)NDS_MN_UI_KIT_SURFACE_CSS_GATE_3_NA,
+      (u8)NDS_MN_UI_KIT_SURFACE_CSS_GATE_3_MAN,
+      (u8)NDS_MN_UI_KIT_SURFACE_CSS_GATE_3_COM,
+      (u8)NDS_MN_UI_KIT_SURFACE_CSS_GATE_3_MAN_MARIO,
+      (u8)NDS_MN_UI_KIT_SURFACE_CSS_GATE_3_MAN_FOX,
+      (u8)NDS_MN_UI_KIT_SURFACE_CSS_GATE_3_COM_MARIO,
+      (u8)NDS_MN_UI_KIT_SURFACE_CSS_GATE_3_COM_FOX,
+      (u8)NDS_MN_UI_KIT_SURFACE_CSS_GATE_3_HOLD_MARIO,
+      (u8)NDS_MN_UI_KIT_SURFACE_CSS_GATE_3_HOLD_FOX }
 };
 
 static u8 sCssPanelSurface[NDS_CSS_SLOTS];
 static u32 sCssArrowsShown;
+
+/* Which of the nine the slot is in, transcribed from the two source predicates
+ * above: the GObj is hidden entirely for an empty slot
+ * (`mnPlayersVSUpdateNameAndEmblem`, :2401) and draws nothing when the fighter
+ * is Null (`mnPlayersVSMakeNameAndEmblem`, :609); a settled CPU has its name
+ * hidden by the level row and an unsettled one has it back. */
+static u32 ndsMenuShellCssGateState(u32 slot)
+{
+    u32 fkind = (u32)sCssFkind[slot];
+    u32 fighter;
+
+    if (sCssPkind[slot] == (u8)nFTPlayerKindNot)
+    {
+        return NDS_CSS_GATE_NA;
+    }
+    if (fkind == (u32)nFTKindMario)
+    {
+        fighter = 0u;
+    }
+    else if (fkind == (u32)nFTKindFox)
+    {
+        fighter = 1u;
+    }
+    else
+    {
+        return (sCssPkind[slot] == (u8)nFTPlayerKindCom) ?
+            NDS_CSS_GATE_COM : NDS_CSS_GATE_MAN;
+    }
+    if (sCssPkind[slot] != (u8)nFTPlayerKindCom)
+    {
+        return NDS_CSS_GATE_MAN_F0 + fighter;
+    }
+    return ((sCssSelected[slot] != 0u) ? NDS_CSS_GATE_COM_F0 :
+                                         NDS_CSS_GATE_HOLD_F0) + fighter;
+}
 
 /* Only the panels whose kind changed, at most `budget` of them, in one call.
  * The VS menu's rule, for the VS menu's measured reason: a panel is 7,738 B of
@@ -1823,13 +1913,7 @@ static void ndsMenuShellCssSyncPanels(u32 budget)
 
     for (i = 0u; i < (u32)NDS_CSS_SLOTS; i++)
     {
-        u32 pkind = (u32)sCssPkind[i];
-
-        if (pkind > (u32)nFTPlayerKindNot)
-        {
-            pkind = (u32)nFTPlayerKindNot;
-        }
-        wanted[i] = kNdsCssPanelSurface[i][pkind];
+        wanted[i] = kNdsCssGateSurface[i][ndsMenuShellCssGateState(i)];
         if ((wanted[i] != sCssPanelSurface[i]) && (count < budget))
         {
             list[count] = wanted[i];
@@ -1928,7 +2012,6 @@ static void ndsMenuShellCssPopulate(void)
     for (i = 0u; i < (u32)NDS_CSS_SLOTS; i++)
     {
         s32 panel = (s32)(i * 69u);
-        u32 fkind = (u32)sCssFkind[i];
 
         /* The player-kind button, mnplayersvs.c:963. */
         ndsUiKitSetSprite(NDS_CSS_SPRITE_KIND0 + i,
@@ -1957,21 +2040,14 @@ static void ndsMenuShellCssPopulate(void)
             ndsUiKitHideSprite(NDS_CSS_SPRITE_TAG0 + i);
         }
 
-        /* The fighter's name. The source draws a per-fighter name SPRITE
-         * (llMNPlayersCommon<X>TextSprite); those are IA8 strips up to 66 px
-         * wide and this composes the same words out of the menu font instead,
-         * which is the P2-1c kit's whole reason for existing. */
-        if ((sCssSelected[i] != 0u) && (fkind < NDS_CSS_PORTRAITS))
-        {
-            ndsUiKitSetText(NDS_CSS_SLOT_NAME0 + i,
-                            kNdsCssFighterName[fkind], NDS_CSS_RGB_NAME);
-            ndsUiKitMoveText(NDS_CSS_SLOT_NAME0 + i, NDS_CSS_DS(panel + 22),
-                             NDS_CSS_DS(146));
-        }
-        else
-        {
-            ndsUiKitHideText(NDS_CSS_SLOT_NAME0 + i);
-        }
+        /* P2-1k (a)/(b): THE FIGHTER'S NAME AND SERIES EMBLEM ARE SOURCE ART
+         * NOW, and they are not drawn here -- they are baked into the gate
+         * surface `ndsMenuShellCssSyncPanels` blits, at the source's own sites
+         * (emblem (p*69+24,143), name (p*69+22,201) -- mnplayersvs.c:614/:632),
+         * because one fighter's pair is 10,240 B of OBJ against 3,456 B free.
+         * The font-composed name P2-1e drew at (p*69+22,146) is deleted with
+         * this row; that position was the EMBLEM's row, not the name's, so the
+         * substitution was in the wrong place as well as the wrong medium. */
 
         /* CP LEVEL and its value, mnplayersvs.c:2762/:2790. The source shows
          * this row when the slot is a selected CPU, or when handicap is on for
@@ -2389,6 +2465,12 @@ static void ndsMenuShellCssBack(void)
 {
     ndsMenuShellCssCommit();
     gNdsMenuShellCssBackCount++;
+    /* P2-1k (g). mnPlayersVSBackToVSMode, mnplayersvs.c:3234: the character
+     * select STOPS all BGM on its way out, and the VS menu it returns to
+     * starts the mode-select track again from its own func_start. Without the
+     * stop, BGM 10 would keep playing under a VS menu that then starts 44 over
+     * the top of it. */
+    ndsAudioBgmStopAll();
     ndsMenuShellGoto((u32)nSCKindVSMode);
 }
 
@@ -2827,19 +2909,30 @@ static const u8 kNdsSssSlotGkind[NDS_SSS_SLOTS] = {
  * (LBBACKUP_MASK_STAGE, sc/scene.h:107), and it is the whole lock table. */
 #define NDS_SSS_GROUND_MASK LBBACKUP_MASK_STAGE(nGRKindPupupu)
 
-/* The names, by gkind, in the order mnMapsMakeName's own offsets[] holds
- * them (mnmaps.c:743) -- which is nGRKind order, so this table is indexable by
- * gkind directly and the locked entries are carried rather than trimmed for
- * the same reason P2-1e carried all twelve announcer voices. */
-static const char *const kNdsSssGkindName[9] = {
-    "PEACH'S CASTLE", "SECTOR Z", "CONGO JUNGLE", "PLANET ZEBES",
-    "HYRULE CASTLE", "YOSHI'S ISLAND", "DREAM LAND", "SAFFRON CITY",
-    "MUSHROOM KINGDOM"
+/* P2-1k (c). THE STAGE SELECT'S TEXT IS SOURCE ART NOW and this screen draws
+ * no kit text at all: the STAGE SELECT header is `llMNMapsStageSelectTextSprite`
+ * baked into SSS_SCREEN, and the per-stage name is
+ * `llMNMaps<Ground>TextSprite` baked into one of the ten SSS_PLAQUE surfaces.
+ *
+ * The plaque is its own surface for the reason the VS menu's buttons are:
+ * `mnMapsMakeNameAndEmblem` (mnmaps.c:818) ejects and re-makes the pair on
+ * every cursor move, and all ten share one declared box composited over the
+ * furniture beneath them, so a move is a single blit that overwrites the last
+ * state exactly. Indexed by SLOT, which is what the cursor holds. */
+static const u8 kNdsSssPlaqueSurface[NDS_SSS_SLOTS] = {
+    (u8)NDS_MN_UI_KIT_SURFACE_SSS_PLAQUE_0,
+    (u8)NDS_MN_UI_KIT_SURFACE_SSS_PLAQUE_1,
+    (u8)NDS_MN_UI_KIT_SURFACE_SSS_PLAQUE_2,
+    (u8)NDS_MN_UI_KIT_SURFACE_SSS_PLAQUE_3,
+    (u8)NDS_MN_UI_KIT_SURFACE_SSS_PLAQUE_4,
+    (u8)NDS_MN_UI_KIT_SURFACE_SSS_PLAQUE_5,
+    (u8)NDS_MN_UI_KIT_SURFACE_SSS_PLAQUE_6,
+    (u8)NDS_MN_UI_KIT_SURFACE_SSS_PLAQUE_7,
+    (u8)NDS_MN_UI_KIT_SURFACE_SSS_PLAQUE_8,
+    (u8)NDS_MN_UI_KIT_SURFACE_SSS_PLAQUE_9
 };
 
-/* Text slots. */
-#define NDS_SSS_SLOT_HEADER 0u
-#define NDS_SSS_SLOT_NAME 1u
+static u8 sSssPlaqueSurface;
 
 /* Sprite slots, in DEPTH order: the cursor frame draws over the cell it
  * selects, so it owns the lowest id (see NDS_UI_KIT_SPRITE_SLOTS). */
@@ -2847,14 +2940,12 @@ static const char *const kNdsSssGkindName[9] = {
 #define NDS_SSS_SPRITE_PREVIEW 1u
 #define NDS_SSS_SPRITE_CELL0 2u
 
-/* mnMapsMakeLabels' own colours: the STAGE SELECT decal is drawn in 0xAFB1CC
- * over a 0x576088 bar, and the name plate's text in black on a light plate
- * (mnmaps.c:404/:415/:757). Black on this build's flat backdrop would be
- * invisible -- there is no plate under it -- so the name takes the decal's own
- * light tone, which is the same "keep the source's palette, drop the geometry
- * that carried it" call P2-1d made for the mode select's bar. */
-#define NDS_SSS_RGB_HEADER 0x00afb1ccu
-#define NDS_SSS_RGB_NAME 0x00ffffffu
+/* P2-1f's two colour constants are DELETED with this row, and the reason they
+ * existed is the thing P2-1k fixed: the name plate's text is BLACK in the
+ * source (mnmaps.c:600) and P2-1f had no plate to put it on, so it borrowed the
+ * header's light tone. The plate is baked now (llMNMapsPlate{Left,Middle,Right}
+ * over mnMapsLabelsProcDisplay's own drop-shadow fill), so the name is the
+ * source's own sprite in the source's own black. */
 
 static u32 sSssCursorSlot;
 static u32 sSssScrollWait;
@@ -2939,20 +3030,20 @@ static u32 ndsMenuShellSssCellImage(u32 slot)
 static void ndsMenuShellSssShowSelection(void)
 {
     u32 gkind = (u32)kNdsSssSlotGkind[sSssCursorSlot];
+    u8 wanted = kNdsSssPlaqueSurface[sSssCursorSlot];
 
-    if (gkind == NDS_SSS_GKIND_RANDOM)
+    /* P2-1k (c): the name and the emblem are the source's own sprites, blitted
+     * as one surface. Guarded on a CHANGE so a blocked move (the cursor
+     * refusing to leave its cell) costs no NitroFS read, exactly as the VS
+     * menu's button sync and the character select's gate sync are. */
+    if (wanted != sSssPlaqueSurface)
     {
-        ndsUiKitSetText(NDS_SSS_SLOT_NAME, "RANDOM", NDS_SSS_RGB_NAME);
+        if (ndsUiKitBlitSurfaces(&wanted, 1u) != FALSE)
+        {
+            sSssPlaqueSurface = wanted;
+            gNdsMenuShellSssPlaqueBlitCount++;
+        }
     }
-    else
-    {
-        ndsUiKitSetText(NDS_SSS_SLOT_NAME, kNdsSssGkindName[gkind],
-                        NDS_SSS_RGB_NAME);
-    }
-    /* mnMapsSetNamePosition's REGION_US branch is a CONSTANT (183,196) for
-     * every ground -- the per-ground table above it is the JP layout
-     * (mnmaps.c:717). */
-    ndsUiKitMoveText(NDS_SSS_SLOT_NAME, NDS_SSS_DS(183), NDS_SSS_DS(196));
     /* mnMapsMakePreviewWallpaper places the panel's content at (40,127). */
     ndsUiKitSetSprite(NDS_SSS_SPRITE_PREVIEW,
                       ndsMenuShellSssCellImage(sSssCursorSlot),
@@ -2970,9 +3061,6 @@ static void ndsMenuShellSssShowSelection(void)
 static void ndsMenuShellSssPopulate(void)
 {
     u32 slot;
-
-    ndsUiKitSetText(NDS_SSS_SLOT_HEADER, "STAGE SELECT", NDS_SSS_RGB_HEADER);
-    ndsUiKitMoveText(NDS_SSS_SLOT_HEADER, NDS_SSS_DS(172), NDS_SSS_DS(122));
 
     for (slot = 0u; slot < NDS_SSS_SLOTS; slot++)
     {
@@ -3195,6 +3283,12 @@ static void ndsMenuShellSssInit(void)
         sSssCursorSlot = ndsMenuShellSssSlotOfGkind((u32)nGRKindPupupu);
     }
     sSssScrollWait = 0u;
+    /* The screen entry re-blits SSS_SCREEN over BG2, which erases whatever
+     * plaque the last visit left there -- so the cached "which plaque is on
+     * screen" must be invalidated with it, or a re-entry on the same slot
+     * would skip the blit and show a stage select with no name on it. Same
+     * reason NDS_MENU_VS_SURFACE_NONE exists for the gates and the buttons. */
+    sSssPlaqueSurface = (u8)NDS_MENU_VS_SURFACE_NONE;
     sSssEnterCount++;
 }
 
@@ -3229,14 +3323,13 @@ static const u8 kNdsMenuModeSelectSurfaces[] = {
 /* P2-1i, owner finding (1). The character and stage selects sat on a flat
  * blue field; the source sits both of them on the SAME stone tile --
  * `llMNSelectCommonStoneBackgroundSprite` wrapped at its own 64x32 period
- * (masks 6, maskt 5) over a 300x220 rect at (10, 10), from mnplayersvs.c:1370
- * and mnmaps.c:356. The two calls differ in nothing a bake can see, so one
- * surface serves both. */
-static const u8 kNdsMenuStoneSurfaces[] = {
-    (u8)NDS_MN_UI_KIT_SURFACE_MENU_STONE
-};
-
-/* P2-1j. The VS rules screen's own plate -- collage, both decal papers, the
+ * (masks 6, maskt 5), from mnplayersvs.c:1370 and mnmaps.c:356.
+ *
+ * P2-1k RETIRED the shared bare-stone surface: the stage select now has its
+ * own composed plate exactly as the character select has, so the stone is the
+ * first placement of each rather than a surface either has to blit.
+ *
+ * P2-1j. The VS rules screen's own plate -- collage, both decal papers, the
  * console-icon watermark, the menu-name fill rectangle and its three plaque
  * sprites (mnvsmode.c:965 and :909) -- with the four buttons blitted over it
  * by ndsMenuShellVsSyncButtons in whichever state the cursor puts them.
@@ -3253,6 +3346,16 @@ static const u8 kNdsMenuVsSurfaces[] = {
 
 static const u8 kNdsMenuCssSurfaces[] = {
     (u8)NDS_MN_UI_KIT_SURFACE_CSS_SCREEN
+};
+
+/* P2-1k (c). The stage select's own plate: the full-bleed stone, the preview
+ * panel's fill and its seven tiles, the wooden plaque, both of
+ * mnMapsLabelsProcDisplay's fills, the STAGE SELECT decal and the three-part
+ * name plate -- everything mnMapsFuncStart composes that the cursor does not
+ * change. The per-stage name and emblem ride the SSS_PLAQUE surfaces instead,
+ * blitted by ndsMenuShellSssShowSelection. */
+static const u8 kNdsMenuSssSurfaces[] = {
+    (u8)NDS_MN_UI_KIT_SURFACE_SSS_SCREEN
 };
 
 static void ndsMenuShellEnterBackdrop(u32 screen)
@@ -3300,9 +3403,9 @@ static void ndsMenuShellEnterBackdrop(u32 screen)
                                          sizeof(kNdsMenuCssSurfaces[0])));
         break;
     case NDS_MENU_SHELL_SCREEN_SSS:
-        (void)ndsUiKitBlitSurfaces(kNdsMenuStoneSurfaces,
-                                   (u32)(sizeof(kNdsMenuStoneSurfaces) /
-                                         sizeof(kNdsMenuStoneSurfaces[0])));
+        (void)ndsUiKitBlitSurfaces(kNdsMenuSssSurfaces,
+                                   (u32)(sizeof(kNdsMenuSssSurfaces) /
+                                         sizeof(kNdsMenuSssSurfaces[0])));
         break;
     default:
         break;
@@ -3534,8 +3637,25 @@ void ndsMenuShellRunStartup(void)
                            (u32)gSCManagerSceneData.scene_curr);
 }
 
+/* P2-1k (g), OWNER FINDING: "the background music is always playing".
+ *
+ * `mnTitleInitVars` (mntitle.c:340) is the source's answer and it is
+ * unconditional on our branch: `scene_prev` can only be `nSCKindOpeningNewcomers`
+ * when the opening cinematic ran, which is P2-7, so the `else` arm is the one
+ * this build always takes and its first statement is `syAudioStopBGMAll()`
+ * (:352). THE TITLE IS SILENT. This shell had no BGM call on the title at all,
+ * so a track started downstream simply kept playing over it -- boot reached the
+ * title with nothing playing and looked correct, but the main menu's own B
+ * (mode select -> title) left BGM 44 running under the title screen, which is
+ * exactly what the owner heard.
+ *
+ * Placed in the RunTitle wrapper rather than inside ndsMenuShellRun for the
+ * same reason the mode select's play is: this is the title's func_start
+ * equivalent, it runs once per entry, and it runs after
+ * ndsSceneManagerRequest has written scene_prev. */
 void ndsMenuShellRunTitle(void)
 {
+    ndsAudioBgmStopAll();
     ndsMenuShellRun(NDS_MENU_SHELL_SCREEN_TITLE);
 }
 
@@ -3568,8 +3688,20 @@ void ndsMenuShellRunModeSelect(void)
     ndsMenuShellRun(NDS_MENU_SHELL_SCREEN_MODE);
 }
 
+/* P2-1k (g). mnVSModeFuncStart's tail, mnvsmode.c:1645: the VS menu starts the
+ * mode-select track when -- and only when -- it was entered FROM the character
+ * select. Arriving from the mode select it starts nothing, because that track
+ * is already playing and restarting it would re-cue the intro; arriving back
+ * from the CSS it must start, because `mnPlayersVSBackToVSMode` stopped all BGM
+ * on the way out (mnplayersvs.c:3234, transcribed in ndsMenuShellCssBack). The
+ * pair is what makes the music continuous across mode -> VS and restart across
+ * VS -> CSS -> VS, and this shell had neither half. */
 void ndsMenuShellRunVSMode(void)
 {
+    if ((u8)gSCManagerSceneData.scene_prev == (u8)nSCKindPlayersVS)
+    {
+        ndsAudioBgmPlay(0, (s32)nSYAudioBGMModeSelect);
+    }
     ndsMenuShellVsLoadRules();
     ndsMenuShellRun(NDS_MENU_SHELL_SCREEN_VSMODE);
 }

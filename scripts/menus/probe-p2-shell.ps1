@@ -342,7 +342,15 @@ try {
         # NDS_RENDERER_PROFILE_LEVEL >= 1, which the shipping shell arm sets
         # to 0 -- so the split here is by PRESENCE, not by price.
         'printf "MSAUDIOWORK %d refills=%u streamed=%u bps=%u elapsed=%u loops=%u fgmcalls=%u fgmfail=%u fgmloaded=%u\n", $n, gNdsAudioBgmRefillCount, gNdsAudioBgmStreamedBytes, gNdsAudioBgmStreamBytesPerSecond, gNdsAudioBgmElapsedFrames, gNdsAudioBgmLoopCount, gNdsAudioFgmPlayCalls, gNdsAudioFgmPlayFailCount, gNdsAudioFgmLoaded',
-        'printf "MSBGM %d playing=%u track=%u calls=%u looping=%u streambytes=%u modesel=%u pupupu=%u winmario=%u winfox=%u results=%u unsupported=%u\n", $n, gNdsAudioBgmPlaying, gNdsAudioBgmTrackID, gNdsAudioBgmPlayCalls, gNdsAudioBgmIsLooping, gNdsAudioBgmStreamBytes, gNdsAudioBgmModeSelectPlayCount, gNdsAudioBgmPupupuPlayCount, gNdsAudioBgmWinMarioPlayCount, gNdsAudioBgmWinFoxPlayCount, gNdsAudioBgmResultsPlayCount, gNdsAudioBgmUnsupportedTrackCount',
+        # P2-1k (g) ADDED `stops` AND `bsel`, and both are load-bearing rather
+        # than decorative. The row transcribes four BGM STOPS the shell did not
+        # have (mntitle.c:352, mnmodeselect.c:774, mnplayersvs.c:3234,
+        # mnvsresults.c:3315), and `playing` alone cannot tell "the stop never
+        # ran" from "the stop ran and something re-armed the stream" -- which is
+        # exactly the question the Results handoff raised. `bsel` completes the
+        # per-track set so the character select's own BGM 10 is counted like the
+        # other five.
+        'printf "MSBGM %d playing=%u track=%u calls=%u stops=%u looping=%u streambytes=%u modesel=%u pupupu=%u winmario=%u winfox=%u results=%u bsel=%u unsupported=%u\n", $n, gNdsAudioBgmPlaying, gNdsAudioBgmTrackID, gNdsAudioBgmPlayCalls, gNdsAudioBgmStopCalls, gNdsAudioBgmIsLooping, gNdsAudioBgmStreamBytes, gNdsAudioBgmModeSelectPlayCount, gNdsAudioBgmPupupuPlayCount, gNdsAudioBgmWinMarioPlayCount, gNdsAudioBgmWinFoxPlayCount, gNdsAudioBgmResultsPlayCount, gNdsAudioBgmBattleSelectPlayCount, gNdsAudioBgmUnsupportedTrackCount',
         # The arena BASE and SIZE, which P2-1d's probe did not print and which a
         # cross-build high-water comparison is uninterpretable without: the
         # shared arena starts after the binary's bss, so a build that grew moves

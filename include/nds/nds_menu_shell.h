@@ -208,6 +208,7 @@ extern volatile u32 gNdsMenuShellCssAnnounceCount;
  * presented-frame count: a screen holding still must hold these still. */
 extern volatile u32 gNdsMenuShellVsButtonBlitCount;
 extern volatile u32 gNdsMenuShellCssPanelBlitCount;
+extern volatile u32 gNdsMenuShellSssPlaqueBlitCount;
 
 /* --- P2-1f, the stage select. Same rule: none of it is read by gameplay. --- */
 

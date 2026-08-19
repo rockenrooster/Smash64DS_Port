@@ -1,0 +1,38 @@
+make: Entering directory '/d/Stuff/DevFolder/Smash64DS_Port'
+bash: line 179: n: command not found
+Nintendo DS rom tool 2.3.1 - Jan  8 2024
+by Rafael Vuijk, Dave Murphy, Alexei Karpenko
+built ... smash64ds-p2-shell-loop-hwtri.nds
+make: Leaving directory '/d/Stuff/DevFolder/Smash64DS_Port'
+build config: NDS_P2_UI_KIT=1
+build config: NDS_P2_MENU_SHELL=1
+build config: NDS_P2_MENU_WALK=20
+build config: NDS_R2_SCENE_LOOP_WALK=0
+walk budget: compiled=20 requested=3
+GDB marker capture: 163.3s elapsed of 3000s ceiling (5% used).
+loop capture: D:\Stuff\DevFolder\Smash64DS_Port\artifacts\verification\2026-08-18_p2-shell-loop.txt
+stops: 19
+LOOPDONE: budget=3 denied=1 enters=18 exits=18 input=87 mism=0 press=156 rej=0 rematch=3 resb=16392 sd=0 steps=87 trans=11 unreg=1 walkloops=3 winf=3 winm=0
+LOOPKIT hash=6b06b3d9 mismatch=0 readfail=0 overflow=0 rej=0 csscommit=4 cssstart=4 ssscommit=4 sssconfirm=3 sssback=1 fallback=2
+LOOPINPUT pad=0000 seen=1000 tap=1000 poll=1233
+LOOPCFG s0=0/0/1 s1=1/1/5 s2=28/2/1 s3=28/2/1 gkind=06 rule=1 time=1 stagesel=1
+LOOPXFER s0=0/0/1 s1=1/1/5 pl=1 cp=1 gkind=06
+LOOPSCREENS startup=1 f0=150 f1=301 f2=1811 f3=3224 f4=488 e0=1 e1=1 e2=1 e3=4 e4=4 x0=1 x1=1 x2=1 x3=4 x4=4
+LOOPSURF blit=71 mismatch=0 readfail=0 nolayer=0 fireblit=1 vsbtn=20 csspanel=32 sssplaque=8
+LOOPARENA base=0226f180 size=1548288
+entries reconstructed: 18
+HIGHWATER Title      kind= 1 n=  1 min=416828 max=416828 spread=0
+HIGHWATER ModeSelect kind= 7 n=  1 min=253600 max=253600 spread=0
+HIGHWATER VSMode     kind= 9 n=  1 min=392536 max=392536 spread=0
+HIGHWATER PlayersVS  kind=16 n=  4 min=126704 max=126704 spread=0
+HIGHWATER Maps       kind=21 n=  4 min=159408 max=159408 spread=0
+HIGHWATER VSBattle   kind=22 n=  3 min=1481496 max=1481912 spread=416
+HIGHWATER VSBattle series: 1481496,1481632,1481912
+HIGHWATER VSResults  kind=24 n=  3 min=1322828 max=1322828 spread=0
+HIGHWATER VSResults series: 1322828,1322828,1322828
+HIGHWATER Startup    kind=27 n=  1 min=164892 max=164892 spread=0
+ARENA FREE FLOOR: 66376 B (minimum required 32768)
+LAP PATTERN: 12 looped entries from entry 6, exact; 0 Sudden Death re-entries
+SUDDEN DEATH: ring=0 prepared=0
+
+P2 shell loop verifier passed: 3 laps, 18 scene entries, per-kind high-waters flat, free floor 66376 B, zero faults.

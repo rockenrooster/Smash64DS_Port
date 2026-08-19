@@ -451,11 +451,12 @@ if (-not [string]::IsNullOrWhiteSpace($AnalyzeOnly)) {
             # counter must stay 0. A lap that stopped drawing the collage would
             # otherwise close green on scene bookkeeping alone.
             ('printf "LOOPSURF blit=%u mismatch=%u readfail=%u nolayer=%u ' +
-             'fireblit=%u vsbtn=%u csspanel=%u\n", ' +
+             'fireblit=%u vsbtn=%u csspanel=%u sssplaque=%u\n", ' +
              'gNdsUiKitSurfaceBlitCount, gNdsUiKitSurfaceHashMismatchCount, ' +
              'gNdsUiKitSurfaceReadFailCount, gNdsUiKitSurfaceNoLayerCount, ' +
              'gNdsUiKitFireAtlasBlitCount, gNdsMenuShellVsButtonBlitCount, ' +
-             'gNdsMenuShellCssPanelBlitCount'),
+             'gNdsMenuShellCssPanelBlitCount, ' +
+             'gNdsMenuShellSssPlaqueBlitCount'),
             ('printf "LOOPARENA base=%08x size=%u\n", ' +
              'gNdsSceneManagerArenaBase, gNdsSceneManagerArenaSize'),
             ('printf "LOOPINPUTRING ' + $ringFmt + '\n", ' + $inputRing),
@@ -612,16 +613,20 @@ if ($null -ne $surf) {
         # exactly those blits, so the total stays an EQUALITY: every surface
         # blit is either a backdrop (one per screen entry) or a state change
         # that named itself.
-        $state = [int64]$s['vsbtn'] + [int64]$s['csspanel']
+        # P2-1k adds the THIRD state source: the stage select's per-stage
+        # plaque, re-blitted on a cursor move exactly as a VS button is on a
+        # cursor move (mnMapsMakeNameAndEmblem re-makes the pair every time).
+        $state = [int64]$s['vsbtn'] + [int64]$s['csspanel'] +
+                 [int64]$s['sssplaque']
         $expected = $e['e0'] + $e['e1'] + $e['e2'] + $e['e3'] + $e['e4'] + $state
         Assert-Loop ([int64]$s['blit'] -eq $expected) (
             "BACKDROP SURFACES: blit=$($s['blit']) against " +
             "e0+e1+e2+e3+e4=$($expected - $state) backdrop-screen entries " +
             "plus $state state blits (vsbtn=$($s['vsbtn']) " +
-            "csspanel=$($s['csspanel'])); every entry of the title, the mode " +
-            'select, the VS menu, the character select and the stage select ' +
-            'draws exactly one backdrop, and every other blit is a button or ' +
-            'panel state change.')
+            "csspanel=$($s['csspanel']) sssplaque=$($s['sssplaque'])); every " +
+            'entry of the title, the mode select, the VS menu, the character ' +
+            'select and the stage select draws exactly one backdrop, and ' +
+            'every other blit is a button, panel or plaque state change.')
         # The state blits must also be BOUNDED: four buttons and four panels
         # are written on every entry of their screen, and everything above that
         # is a scripted input. A run whose state blits scaled with FRAMES
@@ -633,6 +638,15 @@ if ($null -ne $surf) {
             "CSS PANELS: csspanel=$($s['csspanel']) is below the 4 per " +
             "character-select entry ($($e['e3']) entries) the screen writes " +
             'on entry alone.')
+        # P2-1k. ONE plaque per stage-select entry is the floor, not four: the
+        # screen draws exactly one name-and-emblem pair at a time
+        # (mnMapsMakeNameAndEmblem ejects the previous GObj before making the
+        # next, mnmaps.c:822), so entry writes one and every cursor move that
+        # actually changes cell writes one more.
+        Assert-Loop ([int64]$s['sssplaque'] -ge $e['e4']) (
+            "SSS PLAQUE: sssplaque=$($s['sssplaque']) is below the 1 per " +
+            "stage-select entry ($($e['e4']) entries) the screen writes on " +
+            'entry alone.')
         # P2-1i. The title's BG3 fire sheet, asserted on its own rather than
         # folded into the backdrop count above -- one atlas blit per title
         # entry. A run that stopped blitting it would still draw a correct
