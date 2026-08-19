@@ -153,30 +153,66 @@ def collect_notes(cseq_to_mid, seq: bytes):
     return notes, tempo_us
 
 
-def collect_loop_metadata(cseq_to_mid, seq: bytes, tempo_us: int):
-    """Return a conservative shared loop interval for a rendered mix.
+def collect_loop_metadata(cseq_to_mid, seq: bytes, tempo_us: int, notes: list):
+    """Return a shared loop interval for a rendered mix.
 
-    BattleShip's CSEQ stores loop commands per channel.  All looping channels
-    use the same loop length, but some enter the loop a few ticks apart.  A
-    single mixed PCM stream cannot reproduce those independent channel cursors;
-    using the latest loop start preserves the complete intro and is the closest
-    common stream loop point.  The metadata records the spread so that this
-    remaining fidelity debt stays measurable.
+    BattleShip's CSEQ stores an independent AL_CMIDI_LOOPEND_CODE loop on
+    EACH channel (n_env.c's __n_alCSeqGetTrackEvent: loop_ct=0xFF means
+    "loop forever", jumping back by the event's own encoded byte offset).
+    The previous version of this function assumed every channel's loop
+    covers the same duration, just entered "a few ticks apart", and took
+    an unconditional max() of every channel's raw loopstart/loopend tick
+    regardless of that channel's own loop length. That assumption holds
+    for Pupupu/Results/Battle Select (every channel agrees on one shared
+    period) but broke for Mode Select: P2-1L bug (b1) found 3 channels
+    sharing a 7680-tick period and 4 near-silent outlier channels with
+    four different, much longer periods (12018/19887/39876/39321 ticks).
+    The outlier with the longest period dominated max(), producing a
+    loop_start ~14 seconds from the tune's own repeating phrase, stitched
+    to a stream end sharing no musical relationship with it -- measured
+    offline as a hard cut from a loud, unrelated moment in the piece
+    straight into dead silence every single loop. That is exactly "ends,
+    then begins again" instead of a continuous loop.
+
+    Fix: take the loop PERIOD (loopend_tick - loopstart_tick) the most
+    channels agree on (the mode; ties broken toward the shortest period),
+    and anchor the loop phase on the latest-entering agreeing channel's
+    own loopstart (preserving the previous function's "keep everyone's
+    complete intro" intent, and empirically -- offline PCM seam RMS --
+    the best of the candidate anchors: it lands the loop restart on live
+    signal with 0 ms of dead air, where the other agreeing channels' own
+    anchors each left ~600 ms of silence before their content resumed).
+    Then walk forward in whole periods from that anchor until covering the
+    mix's actual last rendered note, so the loop is always long enough to
+    include every note and never longer than one extra period past it.
+
+    When every channel already agrees (Pupupu, Results, Battle Select)
+    this is provably the same loop_start as the old max()/max() reading:
+    with one shared period P, max(end_i) == max(start_i) + P for every
+    channel i, which is exactly what walking one period from
+    max(start_i) computes. The remaining difference for those tracks is
+    letting the caller trim the flat trailing render pad down to this
+    same period boundary instead of a further arbitrary second of
+    silence baked inside the loop (loop_end_byte, below) -- P2-1L bug
+    (b1) also measured that flat pad as true digital silence
+    (offline RMS 0.0) sitting right before the wrap on Battle Select's
+    short ~13 s loop, audible as the same "ends, then begins again"
+    defect at smaller scale.
     """
 
-    starts = []
-    ends = []
+    per_track_starts: dict = {}
+    per_track_ends: dict = {}
     ticks_per_quarter = struct.unpack_from(">I", seq, 64)[0]
 
-    for tick, _sort_key, _track_id, event in iter_midi_events(cseq_to_mid, seq):
+    for tick, _sort_key, track_id, event in iter_midi_events(cseq_to_mid, seq):
         if event[0] != "marker":
             continue
         if event[1] == "loopstart":
-            starts.append(int(tick))
+            per_track_starts.setdefault(track_id, []).append(int(tick))
         elif event[1].startswith("loopend"):
-            ends.append(int(tick))
+            per_track_ends.setdefault(track_id, []).append(int(tick))
 
-    if not starts or not ends:
+    if not per_track_starts or not per_track_ends:
         return {
             "looping": False,
             "loop_start_tick": 0,
@@ -184,21 +220,63 @@ def collect_loop_metadata(cseq_to_mid, seq: bytes, tempo_us: int):
             "loop_start_tick_min": 0,
             "loop_end_tick_min": 0,
             "loop_start_byte": 0,
+            "loop_end_byte": 0,
         }
 
-    loop_start_tick = max(starts)
-    loop_end_tick = max(ends)
-    loop_start_sample = int(
-        (loop_start_tick * tempo_us * OUTPUT_SAMPLE_RATE)
-        / (ticks_per_quarter * 1000000)
-    )
+    starts = [tick for ticks in per_track_starts.values() for tick in ticks]
+    ends = [tick for ticks in per_track_ends.values() for tick in ticks]
+
+    # One (loopstart, loopend) pair per channel is what every BattleShip
+    # menu/results/battle BGM track rendered so far actually has. A track
+    # with more than one of either isn't a "shared master loop" case this
+    # per-channel-period grouping covers, so fall back to the flat
+    # max()/max() reading rather than guessing which pair belongs together.
+    track_periods = {
+        track_id: (starts_[0], ends_[0] - starts_[0])
+        for track_id, starts_ in per_track_starts.items()
+        if len(starts_) == 1 and len(ends_ := per_track_ends.get(track_id, [])) == 1
+    }
+
+    def tick_to_sample_duration(ticks: int) -> int:
+        return (ticks * tempo_us * OUTPUT_SAMPLE_RATE) // (ticks_per_quarter * 1000000)
+
+    if track_periods:
+        period_counts: dict = {}
+        for _start, period in track_periods.values():
+            period_counts[period] = period_counts.get(period, 0) + 1
+        best_count = max(period_counts.values())
+        # Deterministic tie-break (never hit by the 4 tracks rendered so
+        # far -- each has a clear single majority period): the shortest
+        # agreeing period.
+        shared_period = min(p for p, c in period_counts.items() if c == best_count)
+        agreeing_starts = [s for s, p in track_periods.values() if p == shared_period]
+        base_start_tick = max(agreeing_starts)
+        period_samples = tick_to_sample_duration(shared_period)
+    else:
+        base_start_tick = max(starts)
+        period_samples = tick_to_sample_duration(max(ends) - base_start_tick)
+
+    if period_samples > 0:
+        base_start_sample = tick_to_sample_duration(base_start_tick)
+        last_note_sample = max((n["end"] for n in notes), default=base_start_sample)
+        remaining = last_note_sample - base_start_sample
+        periods_needed = max(1, -(-remaining // period_samples))  # ceil, at least 1
+        loop_end_sample = base_start_sample + periods_needed * period_samples
+        loop_start_sample = loop_end_sample - period_samples
+    else:
+        # Degenerate CSEQ (loopend at/before loopstart) -- keep the old
+        # flat reading rather than divide by zero.
+        loop_start_sample = tick_to_sample_duration(max(starts))
+        loop_end_sample = tick_to_sample_duration(max(ends))
+
     return {
         "looping": True,
-        "loop_start_tick": loop_start_tick,
-        "loop_end_tick": loop_end_tick,
+        "loop_start_tick": base_start_tick,
+        "loop_end_tick": max(ends),
         "loop_start_tick_min": min(starts),
         "loop_end_tick_min": min(ends),
         "loop_start_byte": loop_start_sample * 2,
+        "loop_end_byte": loop_end_sample * 2,
     }
 
 
@@ -462,11 +540,27 @@ def main() -> int:
 
     seq = read_seq(sbk, args.sequence_index)
     notes, tempo_us = collect_notes(cseq_to_mid, seq)
-    loop = collect_loop_metadata(cseq_to_mid, seq, tempo_us)
+    loop = collect_loop_metadata(cseq_to_mid, seq, tempo_us, notes)
     decoded = decode_ctl.walk(ctl)
     by_off = {item["offset"]: item for item in decoded}
     bank = next(item for item in decoded if item.get("kind") == "ALBank")
     pcm = render(notes, decode_ctl, audio_codec, by_off, bank, tbl, args.gain)
+
+    if loop["looping"]:
+        # The loop must wrap at loop_end_byte (a period boundary of the
+        # majority-agreeing channels, computed above), never at whatever
+        # the note-driven render happened to extend to -- P2-1L bug (b1):
+        # wrapping at the old flat "last note + 1 second" pad instead
+        # measured as true digital silence sitting inside every loop
+        # (offline RMS 0.0), audible as "ends, then begins again". Pad
+        # with silence if the period boundary falls past the rendered
+        # notes (nothing but silence lives there anyway); truncate if it
+        # falls inside the old flat pad.
+        target_bytes = loop["loop_end_byte"]
+        if target_bytes > len(pcm):
+            pcm = pcm + bytes(target_bytes - len(pcm))
+        else:
+            pcm = pcm[:target_bytes]
 
     output = (repo / args.output).resolve() if not args.output.is_absolute() else args.output
     output.parent.mkdir(parents=True, exist_ok=True)

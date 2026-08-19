@@ -40,6 +40,18 @@ typedef struct NDSAudioBgmTrack {
     s32 is_looping;
 } NDSAudioBgmTrack;
 
+/* P2-1L bug (b1), 2026-08-19: [loop_start_bytes, stream_bytes) is played
+ * forever once the file runs out of packets (ndsAudioBgmReadPacket()
+ * below seeks to loop_record/loop_packet). Both fields, and every derived
+ * *_LOOP_PACKET/*_LOOP_RECORD/*_PACKET_COUNT constant below, come only
+ * from scripts/sfx/bgm/render-audio-bgm-pupupu.py's collect_loop_metadata()
+ * -- see its docstring for why a naive max() over every CSEQ channel's
+ * raw loop marker is wrong (Mode Select had an outlier channel dominate
+ * it) and why the render used to leave up to a second of true digital
+ * silence inside the loop for every track (measured offline, RMS 0.0
+ * right before the wrap). Never hand-adjust these constants; re-render
+ * and re-pin (include/nds/nds_audio_bgm.h,
+ * scripts/check-audio-bgm-derived-assets.ps1) instead. */
 static const NDSAudioBgmTrack sNdsAudioBgmTracks[] = {
     {
         nSYAudioBGMPupupu,

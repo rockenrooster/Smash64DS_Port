@@ -4,11 +4,16 @@ param(
 $ErrorActionPreference = 'Stop'
 
 $tracks = @(
+    # P2-1L bug (b1), 2026-08-19: re-rendered after fixing
+    # collect_loop_metadata() to stop leaving a flat ~1s trailing-silence
+    # render pad inside the loop region (LoopSample/LoopPacket/LoopRecord
+    # unchanged -- this track's channels already agreed on one loop
+    # period, so only the stream length changed).
     [PSCustomObject]@{
         Name = 'Pupupu'; File = 'bgm_pupupu_ima.bin'; Sequence = 0
-        Bytes = 722788; Sha256 = '4433613d3f765fe75e1e0e4b89ffc8eecdff9441305285edeeaaca973a9ad956'
-        SourceBytes = 2886710; SourceSha256 = '581191127a00c8ddbd4395cc00b5d4722bbeca734a0990e778a2ea5e9138effa'
-        Packets = 89; Looping = $true; LoopSample = 4399; LoopPacket = 1; LoopRecord = 2252
+        Bytes = 711920; Sha256 = '4bedaa9f2fe62b4b28b0a75b389b0e9ccc6ce705930d63797dc73f2cb8c7b32c'
+        SourceBytes = 2843290; SourceSha256 = '0cf096444de1bbf14c8da498697365bc36ae5b0d9c091356be065aa844dad8ea'
+        Packets = 88; Looping = $true; LoopSample = 4399; LoopPacket = 1; LoopRecord = 2252
     },
     [PSCustomObject]@{
         Name = 'Mario winner'; File = 'bgm_win_mario_ima.bin'; Sequence = 12
@@ -22,31 +27,41 @@ $tracks = @(
         SourceBytes = 291154; SourceSha256 = '3e7beea06b921ca8aaa9af55969d0deddb0aaef4e23805ce45f78485b784d66c'
         Packets = 9; Looping = $false; LoopSample = [uint32]::MaxValue; LoopPacket = [uint32]::MaxValue; LoopRecord = 0
     },
+    # P2-1L bug (b1): same re-render as Pupupu above, same reason
+    # (LoopSample/LoopPacket/LoopRecord unchanged).
     [PSCustomObject]@{
         Name = 'Results'; File = 'bgm_results_ima.bin'; Sequence = 22
-        Bytes = 406840; Sha256 = 'f28bdca56febe893cf27bbeaca044a8699c66b0a50b0aa9530a222aaf27c7e0c'
-        SourceBytes = 1624750; SourceSha256 = 'a96c3e5b0c0348ce0a35baf7b1d29c38f9f771edaaf82ff51d6101a668d32bd8'
-        Packets = 51; Looping = $true; LoopSample = 17456; LoopPacket = 2; LoopRecord = 8792
+        Bytes = 396588; Sha256 = 'fd963304d0c2f37d30023be2cf3d2ea3af7f329619a0eb52c4ead317f3833ed6'
+        SourceBytes = 1583786; SourceSha256 = '895367c302e620a13447c170e783ae3849c5fad894b763993fc980969e8a2567'
+        Packets = 50; Looping = $true; LoopSample = 17456; LoopPacket = 2; LoopRecord = 8792
     },
     # P2-1d-1: nSYAudioBGMModeSelect (id 44), rendered through the same script
     # (--sequence-index 44) as every track above -- the source's own S1_music_sbk
     # sequence index for the main menu track. mnmodeselect.c:882 plays it on
     # arrival at ModeSelect from a non-menu scene.
+    # P2-1L bug (b1), 2026-08-19: LoopSample moved from 238691 to 1151965
+    # (the old max()-over-every-channel reading was dominated by a
+    # near-silent outlier channel with a much longer loop period than the
+    # tune's own majority-agreeing channels -- see nds_audio_bgm.h).
     [PSCustomObject]@{
         Name = 'Mode select'; File = 'bgm_mode_select_ima.bin'; Sequence = 44
-        Bytes = 708564; Sha256 = '1ed52a352886327cc0c178dcbb37308c254804d1378e12d9bcfa97a3a32dd435'
-        SourceBytes = 2829896; SourceSha256 = '53a7e2ffdabab17a0126b7d86056b39c082aba480c314ec0c5d506428a623e38'
-        Packets = 87; Looping = $true; LoopSample = 238691; LoopPacket = 15; LoopRecord = 119568
+        Bytes = 718212; Sha256 = '209c92cda3d9fa45089249977f3c655d0ff225971cc4947e5de89334f568fce0'
+        SourceBytes = 2868410; SourceSha256 = '019718b2485ee609d7785caeb5d064e90c7d842811990f2379dfae583b800e8b'
+        Packets = 89; Looping = $true; LoopSample = 1151965; LoopPacket = 71; LoopRecord = 576876
     },
     # P2-1e-1: nSYAudioBGMBattleSelect (id 10), rendered through the same script
     # (--sequence-index 10) as every track above -- the source's own S1_music_sbk
     # sequence index for the CSS's own track. mnplayersvs.c:4899 plays it on
     # arrival at PlayersVS unless scene_prev is the stage select (nSCKindMaps).
+    # P2-1L bug (b1): LoopSample/LoopPacket/LoopRecord unchanged -- this
+    # track's channels already agreed on one loop period, so only the
+    # stream length changed (the flat trailing-silence pad that was
+    # sitting inside the loop is gone, see nds_audio_bgm.h).
     [PSCustomObject]@{
         Name = 'Battle select'; File = 'bgm_battle_select_ima.bin'; Sequence = 10
-        Bytes = 168304; Sha256 = '4a8e0be2dec6c373c0615d2d18cbf1abdfb81ec73879a9c39732db18295c8d26'
-        SourceBytes = 672034; SourceSha256 = '7c399c8aa2bd6a88be4d4c3f86fc0a61ba0153c0846f3469bdd4a0a7bd0e222d'
-        Packets = 21; Looping = $true; LoopSample = 46228; LoopPacket = 3; LoopRecord = 23192
+        Bytes = 157372; Sha256 = 'f4627806d2f1f9f3f34bd2933ccf59f2a72e9f459092bf3a4a2a20f6331b75d7'
+        SourceBytes = 628352; SourceSha256 = '33658ec31440001346099ca8e9945f376e3f9202dab5e49364d037ab1bec162b'
+        Packets = 20; Looping = $true; LoopSample = 46228; LoopPacket = 3; LoopRecord = 23192
     }
 )
 
@@ -142,19 +157,19 @@ $required = @(
     'NDS_AUDIO_BGM_PACKET_SAMPLES 16384u',
     'NDS_AUDIO_BGM_PACKET_BYTES 8196u',
     'NDS_AUDIO_BGM_BUFFER_COUNT 2u',
-    'NDS_AUDIO_BGM_PUPUPU_ASSET_BYTES 722788u',
+    'NDS_AUDIO_BGM_PUPUPU_ASSET_BYTES 711920u',
     'NDS_AUDIO_BGM_WIN_MARIO_ASSET_BYTES 81860u',
     'NDS_AUDIO_BGM_WIN_FOX_ASSET_BYTES 72940u',
-    'NDS_AUDIO_BGM_RESULTS_ASSET_BYTES 406840u',
-    'NDS_AUDIO_BGM_MODE_SELECT_ASSET_BYTES 708564u',
-    'NDS_AUDIO_BGM_BATTLE_SELECT_ASSET_BYTES 168304u'
+    'NDS_AUDIO_BGM_RESULTS_ASSET_BYTES 396588u',
+    'NDS_AUDIO_BGM_MODE_SELECT_ASSET_BYTES 718212u',
+    'NDS_AUDIO_BGM_BATTLE_SELECT_ASSET_BYTES 157372u'
 )
 foreach ($needle in $required) {
     if (-not $header.Contains($needle)) {
         throw "BGM runtime header is missing exact ADPCM constant: $needle"
     }
 }
-if ($compressedTotal -ne 2161296) {
+if ($compressedTotal -ne 2138892) {
     throw "ADPCM asset total changed: $compressedTotal"
 }
 if (-not $runtime.Contains('#define NDS_AUDIO_BGM_TIMER 0u') -or
@@ -173,4 +188,4 @@ if ($makefile -notmatch '(?s)prune-obsolete-audio:\s*@rm -f .*NDS_AUDIO_OBSOLETE
     throw 'Incremental builds can repack removed PCM BGM assets.'
 }
 
-Write-Output 'BattleShip-derived BGM ADPCM assets passed: tracks=0/12/16/22/44/10 compressed=2161296 source_pcm=8631344 resident=16392 packets=267.'
+Write-Output 'BattleShip-derived BGM ADPCM assets passed: tracks=0/12/16/22/44/10 compressed=2138892 source_pcm=8541792 resident=16392 packets=266.'
