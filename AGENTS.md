@@ -151,7 +151,7 @@ Examples of inefficiencies:
 Boundary has **two arms** since the P2-1 phase close (row P2-1g, 2026-08-18),
 and `verify-all.ps1 -Profile Boundary -List` is the membership authority:
 
-1. `p2_shell_loop` — twenty full laps of the VS shell (title → main menu → VS
+1. `p2_shell_loop` — one full lap of the VS shell (owner, 2026-08-19; `-Loops` raises it for a soak) (title → main menu → VS
    rules → character select → stage select → battle → results → START →
    character select) under scripted input, asserting per-scene-kind arena
    high-waters flat, the arena free floor, one input entry per step, the exact

@@ -16,7 +16,11 @@ param(
     # THE PHASE-CLOSE GATE IS 20 (docs/p2/P2-1-vs-shell.md, exit criterion 1).
     # The ROM is compiled with that budget; a smaller value is poked into
     # gNdsMenuShellWalkBudget at the first stop and costs no build.
-    [ValidateRange(1,64)][int]$Loops = 20,
+    # P2-1M amendment (owner, 2026-08-19): "twenty battle legs is excessive
+    # ... 1 lap is fine for everything." One full lap exercises every scene
+    # transition, the rematch START press, and the arena rewind exactly once;
+    # the lap count stays a parameter for anyone who wants a soak.
+    [ValidateRange(1,64)][int]$Loops = 1,
     [ValidateRange(60,7200)][int]$TimeoutSeconds = 3000,
     # The battle arena high-water is not exactly flat across laps and never was:
     # P2-1f measured 1,400 B of NON-MONOTONIC spread over three entries (the

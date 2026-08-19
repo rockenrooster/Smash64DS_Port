@@ -633,7 +633,7 @@ has TWO arms** (two since the P2-1 phase close, row P2-1g; the second arm
 rebased onto the shell at row P2-1M, 2026-08-19), in this order:
 
 1. **`p2_shell_loop`** — `scripts/verify-p2-shell-loop.ps1`, target
-   `smash64ds-p2-shell-loop-hwtri`. Twenty full laps of the VS shell (title →
+   `smash64ds-p2-shell-loop-hwtri`. One full lap of the VS shell by default (owner amendment 2026-08-19: twenty was excessive; `-Loops` raises it for a deliberate soak) (title →
    main menu → VS rules → character select → stage select → battle → results →
    START → character select), asserting per-scene-kind arena high-waters flat,
    the arena free floor, one input-ring entry per scripted step, the exact lap

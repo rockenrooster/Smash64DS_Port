@@ -310,13 +310,13 @@ Assert-ProfilePlan 'Latest' @(
 # exercise.
 $shellLoopText = Get-Content -LiteralPath (
     Join-Path $PSScriptRoot 'verify-p2-shell-loop.ps1') -Raw
-if (($shellLoopText -notmatch '\[ValidateRange\(1,64\)\]\[int\]\$Loops = 20') -or
+if (($shellLoopText -notmatch '\[ValidateRange\(1,64\)\]\[int\]\$Loops = 1') -or
     ($shellLoopText -notmatch 'NDS_R2_SCENE_LOOP_WALK') -or
     ($shellLoopText -notmatch "\`$sceneWalk -ne 0") -or
     ($shellLoopText -notmatch 'gNdsVSResultsRematchCount') -or
     ($shellLoopText -notmatch 'gNdsMenuShellWalkResultsPressCount') -or
     ($shellLoopText -notmatch '__excpt_entry')) {
-    Fail-Check 'P2 shell loop verifier lost its 20-lap default, its scene-walk refusal, its Results-rematch proof, or its abort breakpoint'
+    Fail-Check 'P2 shell loop verifier lost its 1-lap default (owner, 2026-08-19), its scene-walk refusal, its Results-rematch proof, or its abort breakpoint'
 }
  $harnessCount = $harnessRecords.Count
 $harnessCount = $harnessRecords.Count
