@@ -28,33 +28,51 @@
  * clean loop-period boundary instead of leaving it inside the loop as
  * measured true digital silence (offline RMS 0.0) right before the wrap.
  * loop_start_byte is unchanged -- the fix is a proven no-op there for a
- * track where every channel already agrees on one shared loop period. */
+ * track where every channel already agrees on one shared loop period.
+ *
+ * P2-1L bug (b2), 2026-08-19: the owner re-tested (b1) by ear and found
+ * two further defects, both fixed at the render seam (render()/
+ * decode_wave() in render-audio-bgm-pupupu.py), so every *_SHA256_LO
+ * below moved again even though byte counts/loop points did not:
+ * (i) notes held longer than one straight ADPCM decode pass of their
+ * wavetable rendered silence for the remainder instead of looping the
+ * wavetable's own authored ALADPCMloop sustain region (n_env.c's
+ * n_alAdpcmPull) -- this was the surviving "quiet patch" on Battle
+ * Select, located to the exact sample range of that track's one long
+ * sustained note by cross-correlating the owner's DS.wav re-recording
+ * against our own decoded output; (ii) every note used a flat "+2200
+ * samples, 700-sample fade" release regardless of its authored envelope,
+ * where this bank's own ALEnvelope data (attackTime/decayTime/
+ * releaseTime/attackVolume/decayVolume, always present but previously
+ * unread) gives most instruments a 25-30 ms release -- a fraction of the
+ * old ~100 ms tail, and the measured mechanism behind the "smeared/
+ * legato vs the N64 reference's staccato" comparison. */
 #define NDS_AUDIO_BGM_PUPUPU_STREAM_BYTES 2843290u
 #define NDS_AUDIO_BGM_PUPUPU_LOOP_START_BYTES 8798u
-#define NDS_AUDIO_BGM_PUPUPU_STREAM_SHA256_LO 0x44dad8eau
+#define NDS_AUDIO_BGM_PUPUPU_STREAM_SHA256_LO 0xbad487f5u
 #define NDS_AUDIO_BGM_PUPUPU_ASSET_BYTES 711920u
-#define NDS_AUDIO_BGM_PUPUPU_ASSET_SHA256_LO 0xb8c7b32cu
+#define NDS_AUDIO_BGM_PUPUPU_ASSET_SHA256_LO 0x26f98d91u
 #define NDS_AUDIO_BGM_PUPUPU_PACKET_COUNT 88u
 #define NDS_AUDIO_BGM_PUPUPU_LOOP_PACKET 1u
 #define NDS_AUDIO_BGM_PUPUPU_LOOP_RECORD 2252u
 #define NDS_AUDIO_BGM_WIN_MARIO_STREAM_BYTES 326800u
-#define NDS_AUDIO_BGM_WIN_MARIO_STREAM_SHA256_LO 0xa9239018u
+#define NDS_AUDIO_BGM_WIN_MARIO_STREAM_SHA256_LO 0xca3f0a9bu
 #define NDS_AUDIO_BGM_WIN_MARIO_ASSET_BYTES 81860u
-#define NDS_AUDIO_BGM_WIN_MARIO_ASSET_SHA256_LO 0x31d45e75u
+#define NDS_AUDIO_BGM_WIN_MARIO_ASSET_SHA256_LO 0xbfd3eebbu
 #define NDS_AUDIO_BGM_WIN_MARIO_PACKET_COUNT 10u
 #define NDS_AUDIO_BGM_WIN_FOX_STREAM_BYTES 291154u
-#define NDS_AUDIO_BGM_WIN_FOX_STREAM_SHA256_LO 0xb784d66cu
+#define NDS_AUDIO_BGM_WIN_FOX_STREAM_SHA256_LO 0x65075ffbu
 #define NDS_AUDIO_BGM_WIN_FOX_ASSET_BYTES 72940u
-#define NDS_AUDIO_BGM_WIN_FOX_ASSET_SHA256_LO 0xfe2501e9u
+#define NDS_AUDIO_BGM_WIN_FOX_ASSET_SHA256_LO 0xe9e3f999u
 #define NDS_AUDIO_BGM_WIN_FOX_PACKET_COUNT 9u
-/* P2-1L bug (b1). Same regeneration as Pupupu above -- loop_start_byte
- * unchanged (proven no-op), stream truncated at the loop-period boundary
- * instead of a further second of dead air baked inside the loop. */
+/* P2-1L bug (b1)+(b2). Same regenerations as Pupupu above -- loop_start
+ * unchanged both times (proven no-op), only the rendered content and
+ * (in b1) the stream truncation point changed. */
 #define NDS_AUDIO_BGM_RESULTS_STREAM_BYTES 1583786u
 #define NDS_AUDIO_BGM_RESULTS_LOOP_START_BYTES 34912u
-#define NDS_AUDIO_BGM_RESULTS_STREAM_SHA256_LO 0x9e8a2567u
+#define NDS_AUDIO_BGM_RESULTS_STREAM_SHA256_LO 0xa6528884u
 #define NDS_AUDIO_BGM_RESULTS_ASSET_BYTES 396588u
-#define NDS_AUDIO_BGM_RESULTS_ASSET_SHA256_LO 0xf3833ed6u
+#define NDS_AUDIO_BGM_RESULTS_ASSET_SHA256_LO 0xbe577d04u
 #define NDS_AUDIO_BGM_RESULTS_PACKET_COUNT 50u
 #define NDS_AUDIO_BGM_RESULTS_LOOP_PACKET 2u
 #define NDS_AUDIO_BGM_RESULTS_LOOP_RECORD 8792u
@@ -78,12 +96,16 @@
  * majority-period channels' own latest loop entry instead, which also
  * moved the loop to 12.8s of tail material rather than the old 53.3s of
  * cross-channel-incoherent middle. See the render script's
- * collect_loop_metadata() docstring for the full mechanism. */
+ * collect_loop_metadata() docstring for the full mechanism.
+ *
+ * P2-1L bug (b2): wavetable-loop + ADSR-envelope render fix, same as
+ * Pupupu above -- loop_start/loop_end/packet layout unchanged this time,
+ * only the rendered content. */
 #define NDS_AUDIO_BGM_MODE_SELECT_STREAM_BYTES 2868410u
 #define NDS_AUDIO_BGM_MODE_SELECT_LOOP_START_BYTES 2303930u
-#define NDS_AUDIO_BGM_MODE_SELECT_STREAM_SHA256_LO 0x3b800e8bu
+#define NDS_AUDIO_BGM_MODE_SELECT_STREAM_SHA256_LO 0xa6883d9eu
 #define NDS_AUDIO_BGM_MODE_SELECT_ASSET_BYTES 718212u
-#define NDS_AUDIO_BGM_MODE_SELECT_ASSET_SHA256_LO 0xf568fce0u
+#define NDS_AUDIO_BGM_MODE_SELECT_ASSET_SHA256_LO 0x8e0fc895u
 #define NDS_AUDIO_BGM_MODE_SELECT_PACKET_COUNT 89u
 #define NDS_AUDIO_BGM_MODE_SELECT_LOOP_PACKET 71u
 #define NDS_AUDIO_BGM_MODE_SELECT_LOOP_RECORD 576876u
@@ -103,12 +125,28 @@
  * the wrap, RMS 691 right after) -- audible as "ends, then begins
  * again" on this track's short ~13 s loop even though the loop point
  * itself was fine. The regenerated stream truncates at the loop-period
- * boundary instead. */
+ * boundary instead.
+ *
+ * P2-1L bug (b2), 2026-08-19: the owner's DS.wav re-recording still had
+ * a quiet patch and sounded legato against the n64.wav reference.
+ * Located the quiet patch by cross-correlating DS.wav against our own
+ * decoded container (0.91 match at a +1.48 s offset -- the recording's
+ * own lead-in) to map its RMS dip onto container samples 280718-313967
+ * exactly: channel 14's one long sustained note (program 18, note 101),
+ * whose wavetable has an authored ALADPCMloop (start=15367 end=26688
+ * count=0xFFFFFFFF, i.e. loop forever) that decode_wave() was not
+ * honoring, so the note ran out of source samples at 13958 of its
+ * 33249-sample duration and rendered silence for the remaining ~0.87 s.
+ * Same render fix as Pupupu above also replaced the flat release tail
+ * with this bank's authored ALEnvelope releases (this track's are
+ * mostly 25-30 ms, some instruments carry multi-hundred-ms decays to
+ * decayVolume=0 -- a natural fade, not a cliff). loop_start/loop_end/
+ * packet layout unchanged. */
 #define NDS_AUDIO_BGM_BATTLE_SELECT_STREAM_BYTES 628352u
 #define NDS_AUDIO_BGM_BATTLE_SELECT_LOOP_START_BYTES 92456u
-#define NDS_AUDIO_BGM_BATTLE_SELECT_STREAM_SHA256_LO 0x1bec162bu
+#define NDS_AUDIO_BGM_BATTLE_SELECT_STREAM_SHA256_LO 0xc6497abfu
 #define NDS_AUDIO_BGM_BATTLE_SELECT_ASSET_BYTES 157372u
-#define NDS_AUDIO_BGM_BATTLE_SELECT_ASSET_SHA256_LO 0x331b75d7u
+#define NDS_AUDIO_BGM_BATTLE_SELECT_ASSET_SHA256_LO 0x60c50b7eu
 #define NDS_AUDIO_BGM_BATTLE_SELECT_PACKET_COUNT 20u
 #define NDS_AUDIO_BGM_BATTLE_SELECT_LOOP_PACKET 3u
 #define NDS_AUDIO_BGM_BATTLE_SELECT_LOOP_RECORD 23192u

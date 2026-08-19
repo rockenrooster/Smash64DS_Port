@@ -314,15 +314,27 @@ def select_sound(decode_ctl, by_off, bank, program: int, note: int, velocity: in
 
 
 def decode_wave(audio_codec, by_off, tbl: bytes, wave_off: int):
+    """Return (pcm, source_rate, loop_start, loop_end). loop_start/loop_end
+    are None unless the ALWaveTable carries an ALADPCMloop with a nonzero
+    count -- n_env.c's n_alLoadParam reads exactly this struct (count==0
+    means "no loop" even when the pointer is non-null; -1/0xFFFFFFFF means
+    loop forever, the only count this bank's own data ever uses) and
+    n_alAdpcmPull loops [start, end) in the source ADPCM stream for as
+    long as the voice is held. P2-1L bug (b2) root cause: this function
+    used to decode the table once and hand back nothing but the straight
+    PCM, so any note held longer than one straight decode pass (a real,
+    authored case -- see render()'s sustain notes) ran out of source
+    samples and rendered silence for the remainder instead of looping.
+    """
     wave = by_off.get(wave_off)
     if not wave or wave.get("kind") != "ALWaveTable":
-        return [], 32000
+        return [], 32000, None, None
     if wave.get("type") != 0:
-        return [], 32000
+        return [], 32000, None, None
 
     book = by_off.get(wave.get("book_off"))
     if not book:
-        return [], 32000
+        return [], 32000, None, None
     encoded = tbl[wave["base"] : wave["base"] + wave["length"]]
     pcm = audio_codec.adpcm_decode(
         encoded,
@@ -331,16 +343,66 @@ def decode_wave(audio_codec, by_off, tbl: bytes, wave_off: int):
         book["npredictors"],
         initial_state=[0] * book["order"],
     )
-    return pcm, 32000
+    loop_start = loop_end = None
+    loop = by_off.get(wave.get("loop_off")) if wave.get("loop_off") else None
+    if loop and loop.get("kind") == "ALADPCMloop" and loop.get("count", 0) != 0:
+        if 0 <= loop["start"] < loop["end"] <= len(pcm):
+            loop_start, loop_end = loop["start"], loop["end"]
+    return pcm, 32000, loop_start, loop_end
+
+
+def envelope_level(t: int, attack_samples: int, decay_samples: int,
+                    attack_level: float, decay_level: float) -> float:
+    """ALEnvelope's held (pre-release) shape at t samples after note-on:
+    linear ramp 0 -> attackVolume over attackTime, then attackVolume ->
+    decayVolume over decayTime, then held at decayVolume (the sustain
+    level) until note-off. Matches ALEnvelope's own two-segment model
+    (libaudio.h: attackTime/decayTime/releaseTime + attackVolume/
+    decayVolume) -- there is no separate "sustain time" field because
+    decayVolume IS the sustain level, held until key-off."""
+    if t < attack_samples:
+        return attack_level * (t / attack_samples) if attack_samples > 0 else attack_level
+    t2 = t - attack_samples
+    if t2 < decay_samples:
+        frac = t2 / decay_samples if decay_samples > 0 else 1.0
+        return attack_level + (decay_level - attack_level) * frac
+    return decay_level
 
 
 def render(notes, decode_ctl, audio_codec, by_off, bank, tbl: bytes, gain: float):
+    """P2-1L bug (b2). Two fixes against the real engine's own semantics
+    (decomp/BattleShip-main/decomp/src/libultra/n_audio/n_env.c):
+
+    1. Wavetable sustain looping (decode_wave, above) -- a held note whose
+       gate exceeds one straight decode pass now loops [loop_start,
+       loop_end) in the already-decoded PCM instead of running out of
+       source and rendering silence. That silence, at the position of
+       this song's own longest sustained note, was the "quiet patch" the
+       owner's DS.wav re-test located inside the loop body.
+
+    2. Per-instrument ADSR envelope (envelope_level, above) instead of a
+       flat "+2200 samples, 700-sample linear fade" tail on every note
+       regardless of its authored release. This bank's ALEnvelope data
+       (read by select_sound's ALSound -> env_off, unused before this
+       fix) gives most of Battle Select's instruments a 25-30 ms release
+       -- a fraction of the old fixed ~100 ms tail -- which is the
+       measured mechanism behind the owner's "smeared/legato vs the N64's
+       staccato" comparison (cross-correlated onset/offset envelopes
+       against the owner's n64.wav reference): our notes rang roughly
+       3x longer past their own note-off than the source instrument was
+       ever authored to.
+    """
     if not notes:
         raise RuntimeError("sequence did not produce any notes")
 
     total_samples = max(note["end"] for note in notes) + OUTPUT_SAMPLE_RATE
     mix = [0.0] * total_samples
     wave_cache = {}
+    # Fallback for the (unseen in this bank, but not guaranteed absent)
+    # case of a sound with no envelope reference: instant attack, no
+    # decay stage, and a release matching the old fixed tail so a missing
+    # envelope never regresses into a dropped or clicking note.
+    DEFAULT_RELEASE_SAMPLES = 2200
 
     for note in notes:
         sound = select_sound(
@@ -357,7 +419,7 @@ def render(notes, decode_ctl, audio_codec, by_off, bank, tbl: bytes, gain: float
         wave_off = sound.get("wavetable_off")
         if wave_off not in wave_cache:
             wave_cache[wave_off] = decode_wave(audio_codec, by_off, tbl, wave_off)
-        pcm, source_rate = wave_cache[wave_off]
+        pcm, source_rate, loop_start, loop_end = wave_cache[wave_off]
         if not pcm:
             continue
 
@@ -371,25 +433,53 @@ def render(notes, decode_ctl, audio_codec, by_off, bank, tbl: bytes, gain: float
             * (note["volume"] / 127.0)
             * (sound.get("sampleVolume", 127) / 127.0)
         )
+
+        env = by_off.get(sound.get("env_off"))
+        if env:
+            attack_samples = round(env["attackTime"] * OUTPUT_SAMPLE_RATE / 1_000_000)
+            decay_samples = round(env["decayTime"] * OUTPUT_SAMPLE_RATE / 1_000_000)
+            release_samples = round(env["releaseTime"] * OUTPUT_SAMPLE_RATE / 1_000_000)
+            attack_level = env["attackVolume"] / 127.0
+            decay_level = env["decayVolume"] / 127.0
+        else:
+            attack_samples = decay_samples = 0
+            release_samples = DEFAULT_RELEASE_SAMPLES
+            attack_level = decay_level = 1.0
+
         start = note["start"]
         requested = max(1, note["end"] - note["start"])
-        max_out = min(requested + 2200, int(len(pcm) / max(source_step, 0.001)))
-        fade_start = max(0, max_out - 700)
+        looping = loop_start is not None
+        raw_len_limit = requested + release_samples
+        if not looping:
+            raw_len_limit = min(raw_len_limit, int(len(pcm) / max(source_step, 0.001)))
+        max_out = max(1, raw_len_limit)
+        level_at_off = envelope_level(requested, attack_samples, decay_samples,
+                                       attack_level, decay_level)
         source_pos = 0.0
 
         for out_i in range(max_out):
             src_i = int(source_pos)
-            frac = source_pos - src_i
-            if src_i + 1 >= len(pcm):
+            src_j = src_i + 1
+            if looping and src_i >= loop_end:
+                span = loop_end - loop_start
+                src_i = loop_start + (src_i - loop_start) % span
+                src_j = src_i + 1
+                if src_j >= loop_end:
+                    src_j = loop_start
+            if src_j >= len(pcm):
                 break
-            sample = pcm[src_i] * (1.0 - frac) + pcm[src_i + 1] * frac
-            env = 1.0
-            if out_i >= fade_start:
-                env = max(0.0, (max_out - out_i) / max(1, max_out - fade_start))
+            sample = pcm[src_i] * (1.0 - (source_pos - int(source_pos))) + pcm[src_j] * (source_pos - int(source_pos))
+            if out_i < requested:
+                env_level = envelope_level(out_i, attack_samples, decay_samples,
+                                            attack_level, decay_level)
+            elif release_samples > 0:
+                env_level = level_at_off * max(0.0, 1.0 - (out_i - requested) / release_samples)
+            else:
+                env_level = 0.0
             dest = start + out_i
             if dest >= len(mix):
                 break
-            mix[dest] += (sample / 32768.0) * scale * env
+            mix[dest] += (sample / 32768.0) * scale * env_level
             source_pos += source_step
 
     pcm16 = bytearray()

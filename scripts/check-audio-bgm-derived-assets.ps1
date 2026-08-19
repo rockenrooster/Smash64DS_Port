@@ -9,30 +9,36 @@ $tracks = @(
     # render pad inside the loop region (LoopSample/LoopPacket/LoopRecord
     # unchanged -- this track's channels already agreed on one loop
     # period, so only the stream length changed).
+    # P2-1L bug (b2), 2026-08-19: re-rendered again after fixing render()/
+    # decode_wave() to honor each wavetable's own ALADPCMloop sustain
+    # region and this bank's ALEnvelope attack/decay/release data instead
+    # of a flat "+2200 samples, 700-sample fade" tail on every note (see
+    # nds_audio_bgm.h) -- Bytes/SourceBytes/Packets/LoopSample/LoopPacket/
+    # LoopRecord unchanged, only content.
     [PSCustomObject]@{
         Name = 'Pupupu'; File = 'bgm_pupupu_ima.bin'; Sequence = 0
-        Bytes = 711920; Sha256 = '4bedaa9f2fe62b4b28b0a75b389b0e9ccc6ce705930d63797dc73f2cb8c7b32c'
-        SourceBytes = 2843290; SourceSha256 = '0cf096444de1bbf14c8da498697365bc36ae5b0d9c091356be065aa844dad8ea'
+        Bytes = 711920; Sha256 = '431298f12745f3bde9801fb010e76fe5bc658c570267b4d2ba08703426f98d91'
+        SourceBytes = 2843290; SourceSha256 = '52e7bc862cd0ce96b276b2f9bce3fd082d18493e6b9919f602b18bfdbad487f5'
         Packets = 88; Looping = $true; LoopSample = 4399; LoopPacket = 1; LoopRecord = 2252
     },
     [PSCustomObject]@{
         Name = 'Mario winner'; File = 'bgm_win_mario_ima.bin'; Sequence = 12
-        Bytes = 81860; Sha256 = '630d6cd4aaeef0972dbf7d8b0cf0a265c242055bf25e43578a689db631d45e75'
-        SourceBytes = 326800; SourceSha256 = '3baf58e4dea713badfe257f42fa0057bd76e481d4792f4ddf18600c0a9239018'
+        Bytes = 81860; Sha256 = '24880278ce38f9e0998296859320f526cb8128cfd94e4fad5779e67bbfd3eebb'
+        SourceBytes = 326800; SourceSha256 = '9993f4ae91982df72e055f4c73019aa27c94b63f2c009cc88238cd99ca3f0a9b'
         Packets = 10; Looping = $false; LoopSample = [uint32]::MaxValue; LoopPacket = [uint32]::MaxValue; LoopRecord = 0
     },
     [PSCustomObject]@{
         Name = 'Fox winner'; File = 'bgm_win_fox_ima.bin'; Sequence = 16
-        Bytes = 72940; Sha256 = '8c513904a1d10642d6a27a6d92adb7e0688e5f43c89c8baf2f183080fe2501e9'
-        SourceBytes = 291154; SourceSha256 = '3e7beea06b921ca8aaa9af55969d0deddb0aaef4e23805ce45f78485b784d66c'
+        Bytes = 72940; Sha256 = '5880a4df609df643f406321a337db9fdd63c2efe8b20460799b7f5c1e9e3f999'
+        SourceBytes = 291154; SourceSha256 = 'e97553d21148711a73d7d6c2f8e70d356b119d9070213f1f707fb9a065075ffb'
         Packets = 9; Looping = $false; LoopSample = [uint32]::MaxValue; LoopPacket = [uint32]::MaxValue; LoopRecord = 0
     },
-    # P2-1L bug (b1): same re-render as Pupupu above, same reason
-    # (LoopSample/LoopPacket/LoopRecord unchanged).
+    # P2-1L bug (b1)+(b2): same re-renders as Pupupu above, same reasons
+    # (LoopSample/LoopPacket/LoopRecord unchanged both times).
     [PSCustomObject]@{
         Name = 'Results'; File = 'bgm_results_ima.bin'; Sequence = 22
-        Bytes = 396588; Sha256 = 'fd963304d0c2f37d30023be2cf3d2ea3af7f329619a0eb52c4ead317f3833ed6'
-        SourceBytes = 1583786; SourceSha256 = '895367c302e620a13447c170e783ae3849c5fad894b763993fc980969e8a2567'
+        Bytes = 396588; Sha256 = '476f66508bd498f88c62a479f7f29e334137436550de45c92fcbaf42be577d04'
+        SourceBytes = 1583786; SourceSha256 = 'ad0234ea446e6c2587079a40226a7e34d411c18ae05392796c2349d7a6528884'
         Packets = 50; Looping = $true; LoopSample = 17456; LoopPacket = 2; LoopRecord = 8792
     },
     # P2-1d-1: nSYAudioBGMModeSelect (id 44), rendered through the same script
@@ -43,10 +49,12 @@ $tracks = @(
     # (the old max()-over-every-channel reading was dominated by a
     # near-silent outlier channel with a much longer loop period than the
     # tune's own majority-agreeing channels -- see nds_audio_bgm.h).
+    # P2-1L bug (b2): wavetable-loop + ADSR-envelope render fix, same as
+    # Pupupu above -- LoopSample/LoopPacket/LoopRecord unchanged this time.
     [PSCustomObject]@{
         Name = 'Mode select'; File = 'bgm_mode_select_ima.bin'; Sequence = 44
-        Bytes = 718212; Sha256 = '209c92cda3d9fa45089249977f3c655d0ff225971cc4947e5de89334f568fce0'
-        SourceBytes = 2868410; SourceSha256 = '019718b2485ee609d7785caeb5d064e90c7d842811990f2379dfae583b800e8b'
+        Bytes = 718212; Sha256 = '140ae20c342e70810d37b9176eaf0e3d60361ef746a9509a721e6b7c8e0fc895'
+        SourceBytes = 2868410; SourceSha256 = 'a79c75dadd9a25f8ef03896116b129330c0fa286439c5d476e6d4ba7a6883d9e'
         Packets = 89; Looping = $true; LoopSample = 1151965; LoopPacket = 71; LoopRecord = 576876
     },
     # P2-1e-1: nSYAudioBGMBattleSelect (id 10), rendered through the same script
@@ -57,10 +65,16 @@ $tracks = @(
     # track's channels already agreed on one loop period, so only the
     # stream length changed (the flat trailing-silence pad that was
     # sitting inside the loop is gone, see nds_audio_bgm.h).
+    # P2-1L bug (b2): the surviving quiet patch was channel 14's one long
+    # sustained note running out of un-looped wavetable samples at 13958
+    # of its 33249-sample duration; decode_wave()/render() now honor the
+    # wavetable's own ALADPCMloop and this bank's ALEnvelope releases
+    # (mostly 25-30 ms here) instead of the old flat tail. LoopSample/
+    # LoopPacket/LoopRecord unchanged again.
     [PSCustomObject]@{
         Name = 'Battle select'; File = 'bgm_battle_select_ima.bin'; Sequence = 10
-        Bytes = 157372; Sha256 = 'f4627806d2f1f9f3f34bd2933ccf59f2a72e9f459092bf3a4a2a20f6331b75d7'
-        SourceBytes = 628352; SourceSha256 = '33658ec31440001346099ca8e9945f376e3f9202dab5e49364d037ab1bec162b'
+        Bytes = 157372; Sha256 = '043459ff9a78d6e1cbcc41c370dbbcae746068ef0c1c0993f3092ffa60c50b7e'
+        SourceBytes = 628352; SourceSha256 = '53f26e8d9e574ef5e1587575076e8ea48411c240a3a0fd9bafaa6be9c6497abf'
         Packets = 20; Looping = $true; LoopSample = 46228; LoopPacket = 3; LoopRecord = 23192
     }
 )
