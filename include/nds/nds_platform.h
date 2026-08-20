@@ -156,6 +156,7 @@ extern volatile u32 gNdsBattleTextHudShowDamageMask;
 extern volatile u32 gNdsBattleTextHudClearCount;
 extern volatile u32 gNdsHardwareRendererSubmittedFrameCount;
 extern volatile u32 gNdsHardwareRendererFlushCount;
+extern volatile u32 gNdsHardwareRendererOverlayOnlyFlushCount;
 extern volatile u32 gNdsHardwareRendererPolyRamCount;
 extern volatile u32 gNdsHardwareRendererVertexRamCount;
 extern volatile u32 gNdsHardwareRendererStatus;

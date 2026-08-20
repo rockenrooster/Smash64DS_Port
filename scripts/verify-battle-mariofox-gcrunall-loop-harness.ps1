@@ -403,6 +403,15 @@ if ((Test-Path -LiteralPath $ladderConfigPath) -and
      '#define\s+NDS_DEMO_FOX_CPU_LADDER\s+1')) {
     $expectedFoxLevel = 1
 }
+# P2-1M gate catch (2026-08-19): on the shell arm the battle's level is the
+# CHARACTER SELECT's commit, not the preset's seed. The walk's CPU-level tour
+# is clamp-normalized (eight decrements to the source's 1 floor, then one
+# increment), so it commits exactly 2 from any entry level -- deliberately
+# distinct from the preset's 3: the battle state reading 2 is the standing
+# proof that the descriptor, not the preset, decides the match.
+if ($usesP2ShellFlow) {
+    $expectedFoxLevel = 2
+}
 $melonDsPath = $verifierContext.MelonDSPath
 $melonDsDir = Split-Path -Parent $melonDsPath
 $logDir = Get-MelonDSVerifierLogDir -Root $root -RunnerSlot (Get-MelonDSActiveRunnerSlot)
@@ -2046,6 +2055,16 @@ try {
             'tbreak scVSBattleStartBattle',
             'continue'
         )
+        if ($usesP2ShellFlow) {
+            # P2-1M: the shell's menus legitimately drive the BG2/BG3 staging
+            # counters before battle (a 128 KiB BG2 clear per screen entry,
+            # the title fire atlas on BG3), so the battle-window ownership
+            # pins below assert on FINAL-minus-BASE deltas, not absolutes.
+            # Same 12 fields, same order as SOBJ_WALL_FINAL.
+            $preBattleSetupCommands += @(
+                'printf "SOBJ_WALL_BASE=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsSObjWallpaperFinalDirectCount, gNdsSObjWallpaperFinalSkipCount, gNdsSObjWallpaperFinalKeyChangeCount, gNdsSObjWallpaperFinalPixelWriteCount, gNdsSObjBackgroundStagingClearBytes, gNdsSObjForegroundStagingClearBytes, gNdsOriginalSpriteBg2ClearBytes, gNdsOriginalSpriteBg2CopyBytes, gNdsOriginalSpriteBg2FinalWriteBytes, gNdsOriginalSpriteBg3ClearBytes, gNdsOriginalSpriteBg3CopyBytes, gNdsOriginalSpriteBg3FinalWriteBytes'
+            )
+        }
         if ($Task34StageStreamCensus) {
             $preBattleSetupCommands += @(
                 'printf "TASK34_ARENA_BOOT=%u,%u\n", gNdsTaskmanArenaChosenSize, gNdsTaskmanArenaAllocFailCount',
@@ -2762,6 +2781,10 @@ try {
     $r2TexMemo = [regex]::Match($gdbStdout, 'R2_TEXMEMO=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $wallpaperCache = [regex]::Match($gdbStdout, 'SOBJ_WALL_CACHE=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $wallpaperFinal = [regex]::Match($gdbStdout, 'SOBJ_WALL_FINAL=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
+    # P2-1M: the shell arm prints the same tuple at the battle-start stop so
+    # the ownership pins can assert on battle-window deltas (the menus drive
+    # these counters legitimately before battle). Absent on direct-boot arms.
+    $wallpaperBase = [regex]::Match($gdbStdout, 'SOBJ_WALL_BASE=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $wallpaperOracle = [regex]::Match($gdbStdout, 'SOBJ_WALL_ORACLE=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $fastWallpaper = [regex]::Match($gdbStdout, 'FAST_WALLPAPER=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+)')
     $ifCommonOamFieldPattern = ((0..30 | ForEach-Object {
@@ -3482,6 +3505,18 @@ try {
                 $rth = Get-Ints $renderTexHash
                 $wc = Get-Ints $wallpaperCache
                 $wf = Get-Ints $wallpaperFinal
+                if ($usesP2ShellFlow) {
+                    # P2-1M: battle-window deltas — the menus legitimately
+                    # drive the BG2/BG3 staging counters before battle (one
+                    # 128 KiB BG2 clear per screen entry, the title fire's
+                    # BG3 atlas). The pins below keep their exact meaning
+                    # over the battle window on both arms.
+                    Assert-Condition $wallpaperBase.Success ('P2 shell arm did not print the SOBJ_WALL_BASE battle-start baseline.') $gdbStdout
+                    $wb = Get-Ints $wallpaperBase
+                    for ($wfi = 0; $wfi -lt $wf.Count; $wfi++) {
+                        $wf[$wfi] = $wf[$wfi] - $wb[$wfi]
+                    }
+                }
                 $wo = Get-Ints $wallpaperOracle
                 if ($usesFastWallpaper) {
                     $fw = Get-Ints $fastWallpaper

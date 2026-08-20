@@ -349,6 +349,13 @@ volatile u32 gNdsBattleTextHudShowDamageMask;
 volatile u32 gNdsBattleTextHudClearCount;
 volatile u32 gNdsHardwareRendererSubmittedFrameCount;
 volatile u32 gNdsHardwareRendererFlushCount;
+/* P2-1M gate catch (2026-08-19): a flush fired for the menu overlay's queued
+ * transform commit (sOriginalSpriteOverlayNeedsFlush) with no submitted 3D
+ * frame is not a hardware FRAME flush -- counting it in FlushCount made
+ * flushed read submitted+1 forever on the shell path (the gcrunall gate's
+ * "submitted -eq flushed stays exact" invariant), while direct-boot never
+ * queued one. It gets its own counter so nothing is hidden. */
+__attribute__((used)) volatile u32 gNdsHardwareRendererOverlayOnlyFlushCount;
 volatile u32 gNdsHardwareRendererPolyRamCount;
 volatile u32 gNdsHardwareRendererVertexRamCount;
 volatile u32 gNdsHardwareRendererStatus;
@@ -3524,7 +3531,17 @@ void ndsPlatformEndFrame(void)
         gNdsRendererProfileFlushTicks = cpuGetTiming() - profile_start;
         gNdsRendererProfileGXStatusAfterFlush = GFX_STATUS;
 #endif
-        gNdsHardwareRendererFlushCount++;
+        if (submitted != 0u)
+        {
+            gNdsHardwareRendererFlushCount++;
+        }
+        else
+        {
+            /* Overlay-transform-only flush: no 3D frame was submitted, so
+             * this is not a hardware frame flush (see the counter's own
+             * comment at its definition). */
+            gNdsHardwareRendererOverlayOnlyFlushCount++;
+        }
         sOriginalSpriteOverlayNeedsFlush = FALSE;
     }
 #if NDS_TASK29_GX_CENSUS

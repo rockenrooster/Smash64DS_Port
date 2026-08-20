@@ -2240,6 +2240,11 @@ override NDS_TASK39_FX_FLASH := 1
 override NDS_P2_UI_KIT := 1
 override NDS_P2_MENU_SHELL := 1
 override NDS_P2_MENU_WALK := 1
+# P2-1M gate catch (2026-08-19): the P1 demo ladder is direct-boot demo
+# behaviour. In the shell game the CHARACTER SELECT decides Fox's level, so
+# the ladder must not ride any shell configuration; the gcrunall pin derives
+# its expected level from this define and the CSS commits 3.
+override NDS_DEMO_FOX_CPU_LADDER := 0
 endif
 # P2-1L item (10) FREE-PLAY lab target: the shipping-configuration shell
 # above, minus the one flag that makes that ROM scripted. It is a full copy
@@ -2263,10 +2268,18 @@ endif
 # NDS_DEV_SCENE_HARNESS stays battle_playable_realtime, so the match is the
 # real realtime one, not a bounded proof run.
 #
-# NEVER PUBLISHED, exactly like its shell siblings: the boot scene differs
-# from the shipped ROM's, so no tick figure from it is a Boundary figure.
+# P2-1M (owner, 2026-08-19): "smash64ds is the base now." The published base
+# ROM and the free-play lab ROM are the SAME configuration by construction --
+# one flag block, two output names. `smash64ds` hardcodes its output to the
+# project root like every published name; the lab twin stays in builds/ for
+# side-by-side testing without touching the published artifact. The gate's
+# battle arm runs this configuration plus NDS_P2_MENU_WALK (unattended pass),
+# so the published ROM is verifier-covered per the publish law. No tick
+# figure from the free-play name is a Boundary figure; the gate measures its
+# own walk arm.
 NDS_P2_MENU_SHELL_FREEPLAY_TARGETS := \
-	smash64ds-p2-shell-freeplay-hwtri
+	smash64ds-p2-shell-freeplay-hwtri \
+	smash64ds
 ifneq ($(filter $(TARGET),$(NDS_P2_MENU_SHELL_FREEPLAY_TARGETS)),)
 override NDS_DEV_SCENE_HARNESS := battle_playable_realtime
 override NDS_DEV_LIVE_INPUT_PREVIEW := 1
@@ -2311,6 +2324,9 @@ override NDS_TASK39_FX_SPRITES := 1
 override NDS_TASK39_FX_FLASH := 1
 override NDS_P2_UI_KIT := 1
 override NDS_P2_MENU_SHELL := 1
+# P2-1M gate catch: same rule as the walk block above — the CSS decides
+# Fox's level in the shell game; the P1 demo ladder never rides it.
+override NDS_DEMO_FOX_CPU_LADDER := 0
 # P2-1L item (11): the one line that separates the OWNER's ROM from its lab
 # siblings besides the walk. Nothing reads the console copy; the three globals
 # behind it are unchanged and every verifier still reads them over gdb.

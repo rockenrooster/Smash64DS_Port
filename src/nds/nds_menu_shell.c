@@ -341,8 +341,9 @@ static u32 sSssEnterCount;
  * it is 1 for every step the row screens use, so their behaviour and their
  * banked figures are unchanged. */
 #define NDS_MENU_WALK_DWELL 150u
-/* The CSS script is fifteen steps and its holds already spend 172 frames, so
- * it takes the shorter gap between steps; the row screens keep theirs. */
+/* The CSS script is twenty-four steps (fifteen before the P2-1M clamp
+ * normalization) and its holds spend 193 frames, so it takes the shorter gap
+ * between steps; the row screens keep theirs. */
 #define NDS_MENU_WALK_DWELL_CSS 40u
 
 typedef struct NdsMenuWalkStep {
@@ -394,17 +395,26 @@ static const NdsMenuWalkStep kNdsMenuWalkVs[] = {
  *   -down 19-> y=126   -right 43-> x=248      slot 4's HMN/CP/NA box
  *                                             (x+20 in 267..295, y+3 in 127..145)
  *   A, A                                      NA -> CP -> NA, net zero
- *   -down 17-> y=194   -left 32-> x=120       slot 2's CP-LEVEL right arrow
- *                                             (x+20 in 137..159, y+3 in 197..216)
- *   A                                         Fox's level +1
+ *   -down 17-> y=194   -left 44-> x=72        slot 2's CP-LEVEL LEFT arrow
+ *                                             (x+20 in 90..112, y+3 in 197..216)
+ *   A x8                                      clamp Fox's level to the 1 floor
+ *                                             (source clamps 1..9), whatever it
+ *                                             was on entry
+ *   -right 12-> x=120                         the RIGHT arrow (x+20 in 137..159)
+ *   A                                         1 -> 2
  *   START                                     READY TO FIGHT -> the match
  *
  * The two kind-button presses are deliberately ADJACENT and net zero: the first
  * makes slot 4 a CPU with a random fighter and the second empties it again, so
  * the match this walk enters is still the two-fighter one the battle supports.
- * The CPU-level step is NOT net zero, on purpose -- it is the descriptor proof,
- * and Fox's level in the battle state is expected to read one above the
- * preset's. */
+ * The CPU-level tour is CLAMP-NORMALIZED, on purpose (P2-1M gate catch,
+ * 2026-08-19): a bare +1 drifted with the entry level -- the loop arm's laps
+ * re-enter the CSS, so the committed level climbed a lap at a time until the
+ * source's 9 clamp (LOOPCFG read s1=1/1/9; the one-pass arm read 5 after the
+ * round-4 arrow re-geometry). Eight decrements floor the level at 1 from ANY
+ * start, one increment commits exactly 2 -- deterministic, lap-stable, and
+ * still distinct from the preset's 3, so the battle state reading 2 remains
+ * the proof that the DESCRIPTOR, not the preset, decides the match. */
 static const NdsMenuWalkStep kNdsMenuWalkCss[] = {
     { (u16)NDS_INPUT_UP, 30u },
     { (u16)NDS_INPUT_RIGHT, 9u },
@@ -418,7 +428,12 @@ static const NdsMenuWalkStep kNdsMenuWalkCss[] = {
     { (u16)NDS_INPUT_A, 1u },
     { (u16)NDS_INPUT_A, 1u },
     { (u16)NDS_INPUT_DOWN, 17u },
-    { (u16)NDS_INPUT_LEFT, 32u },
+    { (u16)NDS_INPUT_LEFT, 44u },
+    { (u16)NDS_INPUT_A, 1u }, { (u16)NDS_INPUT_A, 1u },
+    { (u16)NDS_INPUT_A, 1u }, { (u16)NDS_INPUT_A, 1u },
+    { (u16)NDS_INPUT_A, 1u }, { (u16)NDS_INPUT_A, 1u },
+    { (u16)NDS_INPUT_A, 1u }, { (u16)NDS_INPUT_A, 1u },
+    { (u16)NDS_INPUT_RIGHT, 12u },
     { (u16)NDS_INPUT_A, 1u },
     { (u16)NDS_INPUT_START, 1u }
 };
