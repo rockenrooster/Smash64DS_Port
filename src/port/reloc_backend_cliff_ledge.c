@@ -5380,7 +5380,7 @@ void ndsFighterMarioFoxStageMPDamageRecoverLoopFinalize(void)
         mask |= 1u << 3;
     }
 
-    if ((sNdsFighterStructPoolUsedMask & 0x3u) == 0x3u)
+    if ((ndsFighterStructUsedMask() & 0x3u) == 0x3u)
     {
         gNdsStageMPDamageRecoverLoopContactSeedCount = 1u;
         gNdsStageMPDamageRecoverLoopAttackerSlot =
@@ -9129,7 +9129,7 @@ void ndsFighterMarioFoxStageMPLiveHitDamageLoopFinalize(void)
         mask |= 1u << 1;
     }
 
-    if ((sNdsFighterStructPoolUsedMask & 0x3u) == 0x3u)
+    if ((ndsFighterStructUsedMask() & 0x3u) == 0x3u)
     {
         attacker_slot = gNdsFighterDashRunAttackEventLastPlayer & 1u;
         victim_slot = (attacker_slot == 0u) ? 1u : 0u;

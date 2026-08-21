@@ -16,14 +16,45 @@ static void *sNdsFighterFoxModelFile;
 static void *sNdsFighterFoxShieldPoseFile;
 static void *sNdsFighterFoxSpecial4File;
 static void *sNdsFighterFoxSpecial2File;
+#if NDS_IMPORT_BATTLESHIP_FTMANAGER
+/* The imported manager owns these pools (ftmanager.c:25/:31, allocated at
+ * :144/:154).  Keep the historical DS proof names as source-storage aliases so
+ * the old bounded probes still compile without reserving a second FTStruct or
+ * FTParts image.  The parts allocation is flat in BattleShip but is laid out as
+ * player-major [player][joint], exactly what the old 2-D declaration encoded. */
+extern FTStruct *sFTManagerStructsAllocBuf;
+extern FTParts *sFTManagerPartsAllocBuf;
+#define sNdsFighterStructPool sFTManagerStructsAllocBuf
+#define sNdsFighterPartsPool \
+    ((FTParts (*)[nFTPartsJointNumMax])sFTManagerPartsAllocBuf)
+/* BattleShip's VS battle allocates/iterates all GMCOMMON_PLAYERS_MAX slots.
+ * Keep the DS live registry at the same capacity: this registry is the bridge
+ * used by DS-native render/collision helpers to recover the source fighter
+ * GObj for a player number.  A two-entry registry made source-created players
+ * 2/3 disappear at that bridge even though scVSBattleStartBattle had created
+ * them correctly. */
+static GObj *sNdsFighterManagerLiveGObjs[GMCOMMON_PLAYERS_MAX];
+#else
+/* The compatibility-only fighter constructor predates the imported BattleShip
+ * manager and needs its own structs.  Do NOT keep a second FTStruct array in an
+ * imported-manager build: BattleShip already allocates the authoritative
+ * `sFTManagerStructsAllocBuf` from the taskman arena, so a four-entry static
+ * mirror is 12,048 bytes of duplicate fighter state.  P2-2's four-fighter RAM
+ * audit found that duplicate while the real source structs were already the
+ * values returned by ftGetStruct(). */
 static FTStruct sNdsFighterStructPool[GMCOMMON_PLAYERS_MAX];
 static FTParts sNdsFighterPartsPool[GMCOMMON_PLAYERS_MAX]
                                    [nFTPartsJointNumMax];
 static u32 sNdsFighterStructPoolUsedMask;
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
-static GObj *sNdsFighterManagerLiveGObjs[2];
 #endif
 extern u16 gMPCollisionUpdateTic;
+
+static void ndsFighterManagerClearLiveGObjs(void)
+{
+#if NDS_IMPORT_BATTLESHIP_FTMANAGER
+    bzero(sNdsFighterManagerLiveGObjs, sizeof(sNdsFighterManagerLiveGObjs));
+#endif
+}
 
 #define NDS_FIGHTER_MOTION_DESC_SEED_COUNT 256
 
@@ -63,10 +94,7 @@ static FTData *ndsFighterGetDataSeed(void)
 
 static void ndsFighterMarioFoxResetFileSlots(void)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
-    sNdsFighterManagerLiveGObjs[0] = NULL;
-    sNdsFighterManagerLiveGObjs[1] = NULL;
-#endif
+    ndsFighterManagerClearLiveGObjs();
     sNdsFighterFTManagerCommonFile = NULL;
     sNdsFighterMarioMainMotionFile = NULL;
     sNdsFighterMarioMainFile = NULL;
@@ -1459,9 +1487,11 @@ static sb32 ndsFighterMarioFoxLivePreviewProofEnabled(void)
 
 static void ndsFighterStructResetPool(void)
 {
+#if !NDS_IMPORT_BATTLESHIP_FTMANAGER
     bzero(sNdsFighterStructPool, sizeof(sNdsFighterStructPool));
     bzero(sNdsFighterPartsPool, sizeof(sNdsFighterPartsPool));
     sNdsFighterStructPoolUsedMask = 0u;
+#endif
 }
 
 /* DO NOT ADD AN ACCESSOR FOR sNdsFighterPartsPool. R2-07 L7's first draft did,
@@ -1482,6 +1512,10 @@ static void ndsFighterStructResetPool(void)
 
 static FTStruct *ndsFighterStructAlloc(u32 player)
 {
+#if NDS_IMPORT_BATTLESHIP_FTMANAGER
+    (void)player;
+    return NULL;
+#else
     FTStruct *fp;
 
     if (player >= GMCOMMON_PLAYERS_MAX)
@@ -1495,10 +1529,15 @@ static FTStruct *ndsFighterStructAlloc(u32 player)
     fp->nds_slot = player;
     sNdsFighterStructPoolUsedMask |= 1u << player;
     return fp;
+#endif
 }
 
 static sb32 ndsFighterStructIsPoolPointer(const void *ptr)
 {
+#if NDS_IMPORT_BATTLESHIP_FTMANAGER
+    (void)ptr;
+    return FALSE;
+#else
     const FTStruct *fp = ptr;
 
     if ((fp >= &sNdsFighterStructPool[0]) &&
@@ -1508,6 +1547,7 @@ static sb32 ndsFighterStructIsPoolPointer(const void *ptr)
         return TRUE;
     }
     return FALSE;
+#endif
 }
 
 #if NDS_IMPORT_BATTLESHIP_FTMANAGER
@@ -1531,9 +1571,16 @@ void ndsFighterManagerRegisterDisplayFighter(GObj *fighter_gobj, u32 slot)
 {
     FTStruct *fp;
 
-    if ((fighter_gobj == NULL) ||
-        (slot >= ARRAY_COUNT(sNdsFighterManagerLiveGObjs)))
+    if (slot >= ARRAY_COUNT(sNdsFighterManagerLiveGObjs))
     {
+        return;
+    }
+    /* Scene-local fighters live in taskman arenas. A menu/results owner must
+     * clear its registration before that arena is rewound or the next scene
+     * can mistake a stale FTStruct address for a live fighter. */
+    if (fighter_gobj == NULL)
+    {
+        sNdsFighterManagerLiveGObjs[slot] = NULL;
         return;
     }
     fp = ftGetStruct(fighter_gobj);
@@ -1561,24 +1608,20 @@ static u32 ndsFighterManagerLiveMask(void)
     return mask;
 }
 
-static FTStruct *ndsFighterManagerSnapshotLiveStruct(FTStruct *fp, u32 player)
-{
-    FTStruct *snapshot;
-
-    if ((fp == NULL) || (player >= GMCOMMON_PLAYERS_MAX))
-    {
-        return NULL;
-    }
-
-    snapshot = &sNdsFighterStructPool[player];
-    *snapshot = *fp;
-    snapshot->nds_magic = NDS_FTSTRUCT_MAGIC;
-    snapshot->nds_slot = player;
-    sNdsFighterStructPoolUsedMask |= 1u << player;
-    return snapshot;
-}
-
 #endif
+
+/* Legacy proof reads ask "which player slots hold a live FTStruct".  The
+ * imported manager owns that answer (live registry -> ftGetStruct); the old
+ * compatibility pool tracked it with a static mask.  Branch-unified so the
+ * remaining proof sites compile against either owner. */
+static u32 ndsFighterStructUsedMask(void)
+{
+#if NDS_IMPORT_BATTLESHIP_FTMANAGER
+    return ndsFighterManagerLiveMask();
+#else
+    return sNdsFighterStructPoolUsedMask;
+#endif
+}
 
 static sb32 ndsFighterStructIsTrackedPointer(const void *ptr)
 {
@@ -1592,7 +1635,7 @@ static sb32 ndsFighterStructIsTrackedPointer(const void *ptr)
         return TRUE;
     }
 #if NDS_IMPORT_BATTLESHIP_FTMANAGER
-    for (i = 0u; i < 2u; i++)
+    for (i = 0u; i < ARRAY_COUNT(sNdsFighterManagerLiveGObjs); i++)
     {
         if ((fp == ndsFighterManagerLiveStruct(i)) &&
             (fp != NULL) &&
@@ -1608,51 +1651,47 @@ static sb32 ndsFighterStructIsTrackedPointer(const void *ptr)
 static FTStruct *ndsFighterMarioFoxProofStructForSlot(u32 slot)
 {
 #if NDS_IMPORT_BATTLESHIP_FTMANAGER
-    FTStruct *live_fp = ndsFighterManagerLiveStruct(slot);
-
-    if (live_fp != NULL)
-    {
-        return live_fp;
-    }
-#endif
+    return ndsFighterManagerLiveStruct(slot);
+#else
     return (slot < GMCOMMON_PLAYERS_MAX) ? &sNdsFighterStructPool[slot] : NULL;
+#endif
 }
 
 static GObj *ndsFighterMarioFoxProofGObjForSlot(u32 slot)
 {
 #if NDS_IMPORT_BATTLESHIP_FTMANAGER
-    GObj *live_gobj = ndsFighterManagerLiveGObj(slot);
-
-    if (live_gobj != NULL)
-    {
-        return live_gobj;
-    }
-#endif
+    return ndsFighterManagerLiveGObj(slot);
+#else
     return (slot < GMCOMMON_PLAYERS_MAX) ?
         sNdsFighterStructPool[slot].fighter_gobj : NULL;
+#endif
 }
 
 static GObj *ndsFighterGetPlayerNumGObj(s32 player_num)
 {
-    if ((player_num < 0) || (player_num >= GMCOMMON_PLAYERS_MAX))
-    {
-        return NULL;
-    }
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
-    {
-        GObj *fighter_gobj = ndsFighterManagerLiveGObj((u32)player_num);
+    GObj *fighter_gobj = gGCCommonLinks[nGCCommonLinkIDFighter];
 
-        if (fighter_gobj != NULL)
+    /* BattleShip ftparam.c:186-200. `player_num` is NOT the battle player
+     * index: ftManagerGetNextStructAlloc seeds gFTManagerPlayersNum at 1 and
+     * assigns a monotonically increasing instance number to every created
+     * fighter.  The old DS helper accidentally treated it as slot 0..3, which
+     * resolves the wrong attacker as soon as creation order differs from battle
+     * slot order (and can never resolve player_num 4 in a four-fighter match).
+     *
+     * Keep the source's linked-list lookup exactly.  Damage/public-call paths
+     * pass attacker_player_num here, and that field is the fighter instance
+     * number recorded by the source hitlog rather than FTStruct::player. */
+    while (fighter_gobj != NULL)
+    {
+        FTStruct *fp = ftGetStruct(fighter_gobj);
+
+        if ((fp != NULL) && (fp->player_num == player_num))
         {
             return fighter_gobj;
         }
+        fighter_gobj = fighter_gobj->link_next;
     }
-#endif
-    if ((sNdsFighterStructPoolUsedMask & (1u << player_num)) == 0u)
-    {
-        return NULL;
-    }
-    return sNdsFighterStructPool[player_num].fighter_gobj;
+    return NULL;
 }
 
 static void ndsFighterPartsSetIdentity(Mtx44f mtx)
@@ -1934,13 +1973,16 @@ static void ndsFighterRecordModelGObj(FTDesc *desc, GObj *fighter_gobj,
 }
 
 static void ndsFighterManagerRecordCreatedFighter(GObj *fighter_gobj,
-                                                  s32 player)
+                                                   s32 player)
 {
 #if NDS_IMPORT_BATTLESHIP_FTMANAGER
     FTStruct *fp;
     u32 bit;
+    u32 live_mask;
+    u32 live_count = 0u;
 
-    if ((fighter_gobj == NULL) || (player < 0) || (player > 1))
+    if ((fighter_gobj == NULL) || (player < 0) ||
+        (player >= GMCOMMON_PLAYERS_MAX))
     {
         return;
     }
@@ -1953,7 +1995,10 @@ static void ndsFighterManagerRecordCreatedFighter(GObj *fighter_gobj,
     sNdsFighterManagerLiveGObjs[player] = fighter_gobj;
     fp->nds_magic = NDS_FTSTRUCT_MAGIC;
     fp->nds_slot = (u32)player;
-    ndsFighterManagerSnapshotLiveStruct(fp, (u32)player);
+    /* The imported BattleShip FTStruct is authoritative.  Earlier port proof
+     * code copied all 3,012 bytes into a second static pool here; no gameplay
+     * reader consumed that copy, while it permanently reduced the DS heap that
+     * can back taskman.  Keep only the live GObj registry and DS identity tags. */
 
     if (fp->joints[nFTPartsJointTopN] != NULL)
     {
@@ -1968,7 +2013,7 @@ static void ndsFighterManagerRecordCreatedFighter(GObj *fighter_gobj,
             gNdsFighterInitP0RootTranslateYBits =
                 ndsFloatBits(root_dobj->translate.vec.f.y);
         }
-        else
+        else if (player == 1)
         {
             gNdsFighterInitP1GA = (u32)fp->ga;
             gNdsFighterInitP1FloorLineID = (u32)fp->coll_data.floor_line_id;
@@ -1979,8 +2024,12 @@ static void ndsFighterManagerRecordCreatedFighter(GObj *fighter_gobj,
         }
     }
 
-    if (((player == 0) && (fp->fkind == nFTKindMario)) ||
-        ((player == 1) && (fp->fkind == nFTKindFox)))
+    /* P2-2 uses Mario/Fox mirrors in any of the four source player slots.
+     * Do not let the old P0=Mario/P1=Fox proof convention define runtime
+     * capacity.  The existing P0/P1 diagnostic fields below remain intentionally
+     * slot-specific, but these masks/counts describe every supported live
+     * battle fighter. */
+    if ((fp->fkind == nFTKindMario) || (fp->fkind == nFTKindFox))
     {
         gNdsFighterManagerFighterMask |= bit;
         gNdsSCVSBattleOriginalActivePlayerMask |= bit;
@@ -2000,9 +2049,13 @@ static void ndsFighterManagerRecordCreatedFighter(GObj *fighter_gobj,
         gNdsFighterManagerEntryMask |= bit;
     }
 
-    gNdsFighterManagerFighterCount =
-        (gNdsFighterManagerFighterMask & 1u) +
-        ((gNdsFighterManagerFighterMask >> 1) & 1u);
+    live_mask = gNdsFighterManagerFighterMask;
+    while (live_mask != 0u)
+    {
+        live_count += live_mask & 1u;
+        live_mask >>= 1;
+    }
+    gNdsFighterManagerFighterCount = live_count;
     gNdsSCVSBattleOriginalFighterGObjCount =
         gNdsFighterManagerFighterCount;
     gNdsSCVSBattleOriginalFighterCreateCount =
@@ -2014,7 +2067,7 @@ static void ndsFighterManagerRecordCreatedFighter(GObj *fighter_gobj,
         gNdsSCVSBattleOriginalP0FKind = (u32)fp->fkind;
         gNdsSCVSBattleOriginalP0LR = (u32)fp->lr;
     }
-    else
+    else if (player == 1)
     {
         gNdsSCVSBattleOriginalP1FKind = (u32)fp->fkind;
         gNdsSCVSBattleOriginalP1LR = (u32)fp->lr;
@@ -2031,7 +2084,11 @@ static void ndsFighterManagerRecordCreatedFighter(GObj *fighter_gobj,
 static u32 ndsFighterStructPoolCount(void)
 {
     u32 count = 0;
+#if NDS_IMPORT_BATTLESHIP_FTMANAGER
+    u32 mask = ndsFighterManagerLiveMask();
+#else
     u32 mask = sNdsFighterStructPoolUsedMask;
+#endif
 
     while (mask != 0u)
     {
@@ -2110,8 +2167,16 @@ static void ndsFighterStructPopulateJoints(FTStruct *fp, DObj *root_dobj)
 static void ndsFighterStructRefreshProofMask(void)
 {
     u32 mask = 0u;
+#if NDS_IMPORT_BATTLESHIP_FTMANAGER
+    u32 struct_mask = ndsFighterManagerLiveMask();
+#else
+    u32 struct_mask = sNdsFighterStructPoolUsedMask;
+#endif
 
-    gNdsFighterMarioFoxStructPoolUsedMask = sNdsFighterStructPoolUsedMask;
+    /* Historical diagnostic name retained for scripts.  With the source manager
+     * imported it now means the equivalent live BattleShip slot mask rather
+     * than a mask over a redundant DS copy. */
+    gNdsFighterMarioFoxStructPoolUsedMask = struct_mask;
     gNdsFighterMarioFoxStructCount = ndsFighterStructPoolCount();
 
     if ((ndsFighterMarioFoxStructProofEnabled() != FALSE) &&
@@ -3138,7 +3203,7 @@ static void ndsFighterMarioFoxRunWaitGroundProof(void)
 
     for (i = 0u; i < 2u; i++)
     {
-        FTStruct *fp = &sNdsFighterStructPool[i];
+        FTStruct *fp = ndsFighterMarioFoxProofStructForSlot(i);
         GObj *probe_gobj;
         DObj *root;
         u32 status_before;
@@ -3149,7 +3214,7 @@ static void ndsFighterMarioFoxRunWaitGroundProof(void)
         s32 vel_before;
         s32 vel_after;
 
-        if ((ndsFighterStructIsPoolPointer(fp) == FALSE) ||
+        if ((ndsFighterStructIsTrackedPointer(fp) == FALSE) ||
             (fp->fighter_gobj == NULL) ||
             (fp->status_id != nFTCommonStatusWait) ||
             (fp->motion_id != nFTCommonMotionWait) ||
@@ -3420,10 +3485,10 @@ static void ndsFighterMarioFoxRunDisplayProbe(void)
 
     for (i = 0u; i < 2u; i++)
     {
-        FTStruct *fp = &sNdsFighterStructPool[i];
+        FTStruct *fp = ndsFighterMarioFoxProofStructForSlot(i);
         DObj *root;
 
-        if ((ndsFighterStructIsPoolPointer(fp) == FALSE) ||
+        if ((ndsFighterStructIsTrackedPointer(fp) == FALSE) ||
             (fp->fighter_gobj == NULL) ||
             (fp->status_id != nFTCommonStatusWait) ||
             (fp->motion_id != nFTCommonMotionWait) ||
@@ -3455,10 +3520,12 @@ static void ndsFighterMarioFoxRunDisplayProbe(void)
     {
         mask |= 1u << 1;
     }
-    if ((ndsFighterStructIsPoolPointer(&sNdsFighterStructPool[0]) != FALSE) &&
-        (ndsFighterStructIsPoolPointer(&sNdsFighterStructPool[1]) != FALSE) &&
-        (sNdsFighterStructPool[0].fighter_gobj != NULL) &&
-        (sNdsFighterStructPool[1].fighter_gobj != NULL))
+    if ((ndsFighterStructIsTrackedPointer(
+             ndsFighterMarioFoxProofStructForSlot(0u)) != FALSE) &&
+        (ndsFighterStructIsTrackedPointer(
+             ndsFighterMarioFoxProofStructForSlot(1u)) != FALSE) &&
+        (ndsFighterMarioFoxProofGObjForSlot(0u) != NULL) &&
+        (ndsFighterMarioFoxProofGObjForSlot(1u) != NULL))
     {
         mask |= 1u << 2;
     }
@@ -3472,8 +3539,12 @@ static void ndsFighterMarioFoxRunDisplayProbe(void)
     {
         mask |= 1u << 4;
     }
-    if ((sNdsFighterStructPool[0].joints[nFTPartsJointTopN] != NULL) &&
-        (sNdsFighterStructPool[1].joints[nFTPartsJointTopN] != NULL))
+    if ((ndsFighterMarioFoxProofStructForSlot(0u) != NULL) &&
+        (ndsFighterMarioFoxProofStructForSlot(1u) != NULL) &&
+        (ndsFighterMarioFoxProofStructForSlot(0u)
+             ->joints[nFTPartsJointTopN] != NULL) &&
+        (ndsFighterMarioFoxProofStructForSlot(1u)
+             ->joints[nFTPartsJointTopN] != NULL))
     {
         mask |= 1u << 5;
     }

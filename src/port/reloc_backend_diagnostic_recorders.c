@@ -9438,9 +9438,9 @@ static sb32 ndsFighterDashRunProbeDamageStatusSetup(GObj *target_gobj,
         u32 voice_count_total = 0u;
         u32 damage_kind_mask = 0u;
 
-        if ((sNdsFighterStructPoolUsedMask & (1u << 1)) != 0u)
+        if ((ndsFighterStructUsedMask() & (1u << 1)) != 0u)
         {
-            attacker_fp = &sNdsFighterStructPool[1];
+            attacker_fp = ndsFighterMarioFoxProofStructForSlot(1);
             saved_attacker = *attacker_fp;
             attacker_player = attacker_fp->player;
             attack_count_before = attacker_fp->attack_count;
