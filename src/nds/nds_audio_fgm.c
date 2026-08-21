@@ -304,6 +304,8 @@ static s32 ndsAudioFgmIDIsIncluded(u16 id)
     case nSYAudioVoiceAnnounceWinnerIs:
     case nSYAudioVoiceAnnounceMario:
     case nSYAudioVoiceAnnounceFox:
+    case nSYAudioVoiceAnnounceLuigi:
+    case nSYAudioVoiceLuigiFuraFura:
     /* And the two the miss ring surfaced only once the five above stopped
      * filling it: the countdown announces FIVE and FOUR before the THREE that
      * was already here. */

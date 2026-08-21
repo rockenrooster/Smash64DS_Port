@@ -37,17 +37,25 @@
     {
       "screen": "css",
       "kind": "missing",
-      "key": "re:llMNPlayersPortraits(Luigi|Donkey|Link|Samus|Captain|Ness|Yoshi|Kirby|Pikachu|Purin)Sprite",
-      "reason": "The unlocked portrait art for the ten fighters this build does not have. Their cells draw the source's own locked stack instead (box + shadow where the source has one + question-mark plate), which is exactly what mnPlayersVSMakePortrait draws for a fighter the mask excludes.",
+      "key": "re:llMNPlayersPortraits(Donkey|Link|Samus|Captain|Ness|Yoshi|Kirby|Pikachu|Purin)Sprite",
+      "reason": "The unlocked portrait art for the nine fighters P2-3 has not produced yet. Their cells draw the source's own locked stack instead (box + shadow where the source has one + question-mark plate), exactly as mnPlayersVSMakePortrait does for a fighter the mask excludes. Luigi left this residue when P2-3 produced him.",
       "ruling": "docs/P2_PLAN.md phase P2-3 (fighter production); P2-1e's fighter-mask bound",
       "status": "ruled"
     },
     {
       "screen": "css",
       "kind": "missing",
-      "key": "re:llMNPlayersCommon(CaptainFalcon|DK|Jigglypuff|Kirby|Link|Luigi|Ness|Pikachu|Samus|Yoshi)TextSprite",
-      "reason": "The fighter-name art for the ten fighters this build does not have. No slot can hold them, so nothing would draw them.",
+      "key": "re:llMNPlayersCommon(CaptainFalcon|DK|Jigglypuff|Kirby|Link|Ness|Pikachu|Samus|Yoshi)TextSprite",
+      "reason": "The fighter-name art for the nine fighters P2-3 has not produced yet. No slot can hold them, so nothing would draw them. Luigi's source name art ships in his gate states.",
       "ruling": "docs/P2_PLAN.md phase P2-3 (fighter production)",
+      "status": "ruled"
+    },
+    {
+      "screen": "css",
+      "kind": "missing",
+      "key": "llMNPlayersPortraitsLuigiShadowSprite",
+      "reason": "This sprite is only constructed by mnPlayersVSMakePortraitShadow on the locked-fighter branch. P2-3 now includes Luigi in the production fighter mask, so his cell takes the source unlocked portrait branch and the old locked shadow is unreachable.",
+      "ruling": "docs/P2_PLAN.md P2-3 Luigi production; BattleShip mnPlayersVSMakePortrait locked/unlocked branch",
       "status": "ruled"
     },
     {

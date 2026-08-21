@@ -224,6 +224,14 @@ FULL_COVERAGE_IDS = (
     # single-voice articulations -- no forks, no loops.
     166,
     526,
+    # P2-3 Luigi CSS: mnPlayersVSAnnounceFighter indexes fkind 4 to the source
+    # announcer id 498. `--derive 498` proves this is a single 220-tick voice,
+    # no forks/loops; append so every prior pack entry keeps its order.
+    498,
+    # P2-3 Luigi selected animation: dFTLuigiSubMotionDescs[1] runs
+    # D_ovl1_80391754, which plays LuigiFuraFura twice. The focused CSS walk
+    # reached this exact source command and the runtime miss ring named 421.
+    421,
 )
 FULL_PROGRAM_AOT_IDS = frozenset((
     154, 40, 38, 37, 34, 32, 31,
@@ -243,6 +251,9 @@ FULL_PROGRAM_AOT_IDS = frozenset((
     # P2-1N (3). 166 nSYAudioFGMPlayerSlotClose: six notes, no forks -- the
     # same multi-note no-fork class as Escape/GuardOn above.
     166,
+    # P2-3 LuigiFuraFura: four notes, no forks. Preserve the source note
+    # schedule AOT instead of holding the first note for the whole cue.
+    421,
     18, 365,
     # 153 AltitudeWarn -- the cue the owner picked out BY NAME as "a new SFX I
     # don't recognise". Articulation 150 sweeps pitch 550 -> 2390 cents inside
@@ -3099,6 +3110,48 @@ SELECTED += (
         "articulation_program_sha256":
             "e2205989f924ca5f43cc26512d2abea3af6e66c77674c3a44742a41a589f293b",
         "expected_retained_samples": 20112,
+    },
+    {
+        "id": 498,
+        "name": "nSYAudioVoiceAnnounceLuigi",
+        "kind": "announcer",
+        "articulation": 317,
+        "sound": 194,
+        "notes": ((13, 7, 220),),
+        "duration_ticks": 220,
+        "ucd_volume": 230,
+        "articulation_pitch_cents": -1200,
+        "loop": False,
+        "wave_base": 1601296,
+        "wave_length": 11088,
+        "loop_start": 0,
+        "loop_end": 0,
+        "root_program_sha256":
+            "87ed4ceb641645f10af0936cc459b2417e8e53a59fb798f0337b45fb3f4ee273",
+        "articulation_program_sha256":
+            "57fd6dcf6df6d48967db76007f23fbc593f186d368802dbaaa71ab4bc62d577f",
+        "expected_retained_samples": 19712,
+    },
+    {
+        "id": 421,
+        "name": "nSYAudioVoiceLuigiFuraFura",
+        "kind": "voice",
+        "articulation": 301,
+        "sound": 178,
+        "notes": ((14, 7, 6), (15, 7, 20), (15, 7, 30), (14, 7, 40)),
+        "duration_ticks": 96,
+        "ucd_volume": 165,
+        "articulation_pitch_cents": -1199,
+        "loop": False,
+        "wave_base": 1477440,
+        "wave_length": 5248,
+        "loop_start": 0,
+        "loop_end": 0,
+        "root_program_sha256":
+            "92f7f0ac4370beb29c1cedb5262a3156eb82a3905fdf78050ae26305cc693dae",
+        "articulation_program_sha256":
+            "2643fb1b244b6e4e4deb64b3c4180213b2703cd2cd7fa52facb47cde3d4ab705",
+        "expected_retained_samples": 9328,
     },
 )
 

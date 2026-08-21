@@ -4566,7 +4566,9 @@ static void ndsBattlePlayablePacingStart(u32 fast_logic)
         (fast_logic != 0u) ? NDS_BUILD_MODE_FAST_WORD : 0u;
     gNdsBattlePlayablePacingLogicFrames = 0;
     gNdsBattlePlayablePacingPresentedFrames = 0;
+#if NDS_TICK_HUD
     ndsPlatformTickHudReset();
+#endif
     gNdsBattlePlayablePacingDrawCalls = 0;
     gNdsBattlePlayablePacingTimerTicks = 0;
     gNdsBattlePlayablePacingPresentFpsX10 = 0;

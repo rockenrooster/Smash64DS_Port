@@ -158,6 +158,11 @@ typedef struct NdsUiKitSurfaceMetric {
     u32 fnv32; /* this surface's own FNV-1a, so one blit is verifiable alone */
 } NdsUiKitSurfaceMetric;
 
+/* Surface catalogs grow with source-derived menu/fighter states. P2-3 crosses
+ * 256 entries as soon as Luigi gains the same FFA/Team/flash states as the
+ * existing Mario/Fox pair, so the catalog id is deliberately 16-bit. */
+typedef u16 NdsUiKitSurfaceId;
+
 /* --- Lifetime. Enter claims the engine's OBJ surface and loads the pack;
  * Exit hides everything the kit owns and releases the claim.  Both are
  * idempotent, and both are safe to call on a scene that never draws UI. --- */
@@ -213,11 +218,12 @@ u32 ndsUiKitNumberWidth(s32 value);
  * `ndsUiKitEraseCachedSurface` toggle it in place. Erase writes the field the
  * surface was composited over, which is why that field is a bake-time
  * constant rather than something the runtime has to remember. --- */
-s32 ndsUiKitBlitSurfaces(const u8 *surfaces, u32 count);
+s32 ndsUiKitBlitSurfaces(const NdsUiKitSurfaceId *surfaces, u32 count);
 /* Same baked-surface path, but to the main-engine foreground bitmap (BG3).
  * Character Select uses this for the source team selector, whose display link
  * is in front of the fighter preview. */
-s32 ndsUiKitBlitForegroundSurfaces(const u8 *surfaces, u32 count);
+s32 ndsUiKitBlitForegroundSurfaces(const NdsUiKitSurfaceId *surfaces,
+                                   u32 count);
 /* Clear a small rectangle of BG3 to transparent before replacing/removing a
  * keyed foreground surface. Coordinates are already in DS screen pixels. */
 void ndsUiKitClearForegroundRect(s32 x, s32 y, u32 width, u32 height);

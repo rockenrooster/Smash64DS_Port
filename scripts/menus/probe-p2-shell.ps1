@@ -193,7 +193,14 @@ $required = @(
     'gNdsUiKitSurfaceHashMismatchCount', 'gNdsUiKitSurfaceReadFailCount',
     'gNdsUiKitSurfaceNoLayerCount', 'gNdsUiKitSurfaceCacheCount',
     'gNdsUiKitSurfaceDrawCachedCount', 'gNdsUiKitSurfaceEraseCachedCount',
-    'gNdsUiKitSurfaceTicks'
+    'gNdsUiKitSurfaceTicks',
+    # P2-3 fighter-production history. Per-kind rather than Luigi-specific so
+    # every later roster row can prove its selected demo status after the CSS
+    # has already restored the canonical fighter before the next scene stop.
+    'gNdsPlayersVSPreviewSelectedKindMask',
+    'gNdsPlayersVSPreviewSelectedKindFrames',
+    'gNdsPlayersVSPreviewSelectedKindStatus',
+    'gNdsPlayersVSPreviewSelectedKindMotion'
 )
 $nm_lines = & $nm $elf
 $symbols = $nm_lines | ForEach-Object { ($_ -split '\s+')[-1] }
@@ -297,6 +304,7 @@ try {
         # direct slot.player dereference would be stale by construction.
         'printf "CSSFTR %d frames=%u draws=%u sel=%x vis=%x exit=%u p0=%f/%d/%d p1=%f/%d/%d renderframe=%u\n", $n, gNdsPlayersVSPreviewFrameCount, gNdsPlayersVSPreviewDrawCount, gNdsPlayersVSPreviewSelectedMask, gNdsPlayersVSPreviewVisibleMask, gNdsPlayersVSPreviewExitCount, gNdsPlayersVSPreviewRotationY[0], gNdsPlayersVSPreviewStatus[0], gNdsPlayersVSPreviewMotion[0], gNdsPlayersVSPreviewRotationY[1], gNdsPlayersVSPreviewStatus[1], gNdsPlayersVSPreviewMotion[1], gNdsRendererProfileFrameCount',
         'printf "CSSFTRFREE %d p0=%u/%f/%d/%d p1=%u/%f/%d/%d\n", $n, gNdsPlayersVSPreviewFreeRotateFrames[0], gNdsPlayersVSPreviewLastFreeRotationY[0], gNdsPlayersVSPreviewLastFreeStatus[0], gNdsPlayersVSPreviewLastFreeMotion[0], gNdsPlayersVSPreviewFreeRotateFrames[1], gNdsPlayersVSPreviewLastFreeRotationY[1], gNdsPlayersVSPreviewLastFreeStatus[1], gNdsPlayersVSPreviewLastFreeMotion[1]',
+        'printf "CSSFTRKIND %d mask=%x mario=%u/%d/%d fox=%u/%d/%d luigi=%u/%d/%d\n", $n, gNdsPlayersVSPreviewSelectedKindMask, gNdsPlayersVSPreviewSelectedKindFrames[0], gNdsPlayersVSPreviewSelectedKindStatus[0], gNdsPlayersVSPreviewSelectedKindMotion[0], gNdsPlayersVSPreviewSelectedKindFrames[1], gNdsPlayersVSPreviewSelectedKindStatus[1], gNdsPlayersVSPreviewSelectedKindMotion[1], gNdsPlayersVSPreviewSelectedKindFrames[4], gNdsPlayersVSPreviewSelectedKindStatus[4], gNdsPlayersVSPreviewSelectedKindMotion[4]',
         'printf "CSSCOMMIT %d n=%u s0=%06x s1=%06x s2=%06x s3=%06x\n", $n, gNdsMenuShellCssCommitCount, gNdsMenuShellCssCommitSlot[0], gNdsMenuShellCssCommitSlot[1], gNdsMenuShellCssCommitSlot[2], gNdsMenuShellCssCommitSlot[3]',
         'printf "CSSCFG %d s0=%u/%u/%u s1=%u/%u/%u s2=%u/%u/%u s3=%u/%u/%u\n", $n, gNdsMatchConfig.fighters[0].fkind, gNdsMatchConfig.fighters[0].pkind, gNdsMatchConfig.fighters[0].level, gNdsMatchConfig.fighters[1].fkind, gNdsMatchConfig.fighters[1].pkind, gNdsMatchConfig.fighters[1].level, gNdsMatchConfig.fighters[2].fkind, gNdsMatchConfig.fighters[2].pkind, gNdsMatchConfig.fighters[2].level, gNdsMatchConfig.fighters[3].fkind, gNdsMatchConfig.fighters[3].pkind, gNdsMatchConfig.fighters[3].level',
         'printf "CSSXFER %d s0=%u/%u/%u s1=%u/%u/%u s2=%u/%u/%u s3=%u/%u/%u pl=%u cp=%u\n", $n, gSCManagerTransferBattleState.players[0].fkind, gSCManagerTransferBattleState.players[0].pkind, gSCManagerTransferBattleState.players[0].level, gSCManagerTransferBattleState.players[1].fkind, gSCManagerTransferBattleState.players[1].pkind, gSCManagerTransferBattleState.players[1].level, gSCManagerTransferBattleState.players[2].fkind, gSCManagerTransferBattleState.players[2].pkind, gSCManagerTransferBattleState.players[2].level, gSCManagerTransferBattleState.players[3].fkind, gSCManagerTransferBattleState.players[3].pkind, gSCManagerTransferBattleState.players[3].level, gSCManagerTransferBattleState.pl_count, gSCManagerTransferBattleState.cp_count',

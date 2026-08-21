@@ -897,7 +897,8 @@ static s32 ndsUiKitBlitOneSurface(NdsRelocAssetStream *stream, u32 index,
     return TRUE;
 }
 
-static s32 ndsUiKitBlitSurfacesLayer(const u8 *surfaces, u32 count,
+static s32 ndsUiKitBlitSurfacesLayer(const NdsUiKitSurfaceId *surfaces,
+                                     u32 count,
                                      sb32 is_foreground)
 {
     NdsRelocAssetStream stream;
@@ -948,12 +949,13 @@ static s32 ndsUiKitBlitSurfacesLayer(const u8 *surfaces, u32 count,
     return ok;
 }
 
-s32 ndsUiKitBlitSurfaces(const u8 *surfaces, u32 count)
+s32 ndsUiKitBlitSurfaces(const NdsUiKitSurfaceId *surfaces, u32 count)
 {
     return ndsUiKitBlitSurfacesLayer(surfaces, count, FALSE);
 }
 
-s32 ndsUiKitBlitForegroundSurfaces(const u8 *surfaces, u32 count)
+s32 ndsUiKitBlitForegroundSurfaces(const NdsUiKitSurfaceId *surfaces,
+                                   u32 count)
 {
     return ndsUiKitBlitSurfacesLayer(surfaces, count, TRUE);
 }

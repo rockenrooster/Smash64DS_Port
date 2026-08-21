@@ -93,6 +93,16 @@ volatile s32 gNdsPlayersVSPreviewLastFreeMotion[GMCOMMON_PLAYERS_MAX];
 volatile u32 gNdsPlayersVSPreviewSelectedMask;
 volatile u32 gNdsPlayersVSPreviewVisibleMask;
 volatile u32 gNdsPlayersVSPreviewExitCount;
+volatile u32 gNdsPlayersVSPreviewSelectedKindMask;
+volatile u32
+    gNdsPlayersVSPreviewSelectedKindFrames[NDS_MENU_SHELL_FIGHTER_KINDS];
+volatile s32
+    gNdsPlayersVSPreviewSelectedKindStatus[NDS_MENU_SHELL_FIGHTER_KINDS];
+volatile s32
+    gNdsPlayersVSPreviewSelectedKindMotion[NDS_MENU_SHELL_FIGHTER_KINDS];
+
+_Static_assert((nFTKindPlayableEnd + 1) == NDS_MENU_SHELL_FIGHTER_KINDS,
+               "PlayersVS production telemetry must cover every playable kind");
 
 /* P2-1N Stage D: the native shell owns the 2D CSS, but its fighter previews
  * remain the source's real fighter objects. This is the smallest faithful
@@ -114,6 +124,7 @@ void ndsMNPlayersVSPreviewInit(void)
     gNdsPlayersVSPreviewDrawCount = 0u;
     gNdsPlayersVSPreviewSelectedMask = 0u;
     gNdsPlayersVSPreviewVisibleMask = 0u;
+    gNdsPlayersVSPreviewSelectedKindMask = 0u;
     for (i = 0; i < ARRAY_COUNT(sMNPlayersVSSlots); i++)
     {
         gNdsPlayersVSPreviewRotationY[i] = 0.0F;
@@ -123,6 +134,12 @@ void ndsMNPlayersVSPreviewInit(void)
         gNdsPlayersVSPreviewLastFreeRotationY[i] = 0.0F;
         gNdsPlayersVSPreviewLastFreeStatus[i] = -1;
         gNdsPlayersVSPreviewLastFreeMotion[i] = -1;
+    }
+    for (i = 0; i <= nFTKindPlayableEnd; i++)
+    {
+        gNdsPlayersVSPreviewSelectedKindFrames[i] = 0u;
+        gNdsPlayersVSPreviewSelectedKindStatus[i] = -1;
+        gNdsPlayersVSPreviewSelectedKindMotion[i] = -1;
     }
 
     rl_setup.table_addr = (uintptr_t)&lLBRelocTableAddr;
@@ -136,12 +153,17 @@ void ndsMNPlayersVSPreviewInit(void)
     lbRelocInitSetup(&rl_setup);
 
     ftManagerAllocFighter(FTDATA_FLAG_SUBMOTION, 4);
-    /* P2-2 intentionally stress-tests four fighter INSTANCES with the two
-     * fighter KINDS currently ported, Mario/Fox mirrors. Loading future kinds
-     * here would spend menu-entry RAM/I/O before their P2-3 asset/data work;
-     * every one of the four current CSS slots can already preview and launch. */
+    /* P2-2 intentionally stress-tests four fighter INSTANCES independently of
+     * fighter KIND. Keep the shipping Mario/Fox preload unchanged, then admit
+     * each P2-3 production kind only with the same build flag that stages its
+     * generated reloc closure. BattleShip's PlayersVS source calls
+     * ftManagerSetupFilesAllKind for every fighter allowed by its fighter mask;
+     * this is the DS equivalent without paying RAM/I/O for unproduced kinds. */
     ftManagerSetupFilesAllKind(nFTKindMario);
     ftManagerSetupFilesAllKind(nFTKindFox);
+#if NDS_P2_LUIGI
+    ftManagerSetupFilesAllKind(nFTKindLuigi);
+#endif
 
     for (i = 0; i < ARRAY_COUNT(sMNPlayersVSSlots); i++)
     {
@@ -264,7 +286,11 @@ void ndsMNPlayersVSPreviewSync(u32 slot, s32 pkind, s32 fkind,
     {
         return;
     }
-    if ((fkind != nFTKindMario) && (fkind != nFTKindFox))
+    if ((fkind != nFTKindMario) && (fkind != nFTKindFox)
+#if NDS_P2_LUIGI
+        && (fkind != nFTKindLuigi)
+#endif
+    )
     {
         fkind = nFTKindNull;
     }
@@ -381,6 +407,17 @@ void ndsMNPlayersVSPreviewFrame(void)
             {
                 gNdsPlayersVSPreviewStatus[slot] = fp->status_id;
                 gNdsPlayersVSPreviewMotion[slot] = fp->motion_id;
+                if ((sMNPlayersVSSlots[slot].is_fighter_selected != FALSE) &&
+                    (sMNPlayersVSSlots[slot].fkind >= nFTKindPlayableStart) &&
+                    (sMNPlayersVSSlots[slot].fkind <= nFTKindPlayableEnd))
+                {
+                    u32 fkind = (u32)sMNPlayersVSSlots[slot].fkind;
+
+                    gNdsPlayersVSPreviewSelectedKindMask |= 1u << fkind;
+                    gNdsPlayersVSPreviewSelectedKindFrames[fkind]++;
+                    gNdsPlayersVSPreviewSelectedKindStatus[fkind] = fp->status_id;
+                    gNdsPlayersVSPreviewSelectedKindMotion[fkind] = fp->motion_id;
+                }
                 if (sMNPlayersVSSlots[slot].is_fighter_selected == FALSE)
                 {
                     gNdsPlayersVSPreviewFreeRotateFrames[slot]++;

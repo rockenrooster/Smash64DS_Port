@@ -37,11 +37,8 @@
 
 _Static_assert(NDS_MENU_SHELL_PLAYERS == GMCOMMON_PLAYERS_MAX,
                "native CSS player bound must match BattleShip");
-/* CSS panel surface ids are retained in u8 state. P2-2 adds the 108 exact
- * Team-Battle panel variants below; keep the representation honest if future
- * menu art ever pushes the generated manifest past one byte. */
-_Static_assert(NDS_MN_UI_KIT_SURFACE_COUNT <= 256u,
-               "menu surface ids stored in u8 must fit the generated pack");
+_Static_assert(NDS_MN_UI_KIT_SURFACE_COUNT <= 65536u,
+               "menu surface ids must fit NdsUiKitSurfaceId");
 
 extern void *ndsTaskmanArenaStart(void);
 extern size_t ndsTaskmanArenaSize(void);
@@ -432,7 +429,23 @@ static const NdsMenuWalkStep kNdsMenuWalkCss[] = {
     { (u16)NDS_INPUT_UP, 30u },
     { (u16)NDS_INPUT_RIGHT, 9u },
     { (u16)NDS_INPUT_A, 1u },
+#if NDS_P2_LUIGI
+    /* P2-3 production proof. Luigi is portrait column 0 in the source table.
+     * Move the held 1P token from Mario to Luigi, drop it, and give the source
+     * selected-fighter process more than the 30-tic regrab delay to complete
+     * its +20 degree/tic spin into nFTDemoStatusWin1. Then grab Luigi again,
+     * continue to the same locked Donkey negative control, and return the token
+     * to Mario before the canonical match starts. Thus the Luigi lab exercises
+     * portrait/announce/flash/live-3D selected state without changing the
+     * battle that the standing P2 shell probe measures. */
+    { (u16)NDS_INPUT_LEFT, 11u },
+    { (u16)NDS_INPUT_A, 1u },
+    { 0u, 32u },
+    { (u16)NDS_INPUT_A, 1u },
+    { (u16)NDS_INPUT_RIGHT, 21u },
+#else
     { (u16)NDS_INPUT_RIGHT, 10u },
+#endif
     { (u16)NDS_INPUT_A, 1u },
     { (u16)NDS_INPUT_LEFT, 10u },
     { (u16)NDS_INPUT_A, 1u },
@@ -1116,7 +1129,7 @@ static void ndsMenuShellUpdateMode(u32 held, u32 taps)
  * pairs toggle on a 30-tic cycle while the cursor is on their row
  * (`mnVSModeAnimateRuleArrows` :466, `...TimeStockArrows` :539), and hiding an
  * OBJ is free where re-blitting a surface is a NitroFS read. */
-#define NDS_MENU_VS_SURFACE_NONE 0xffu
+#define NDS_MENU_VS_SURFACE_NONE 0xffffu
 /* mnVSModeAnimateRuleArrows' own blink period (30 tics on, 30 off). */
 #define NDS_MENU_VS_ARROW_BLINK 30u
 /* This screen's layout is now kept in the SOURCE's own 320x240 units, exactly
@@ -1129,7 +1142,7 @@ static u32 sMenuVsCursor;
 static u32 sMenuVsRule;
 static s32 sMenuVsTime;
 static s32 sMenuVsStock;
-static u8 sMenuVsButtonSurface[NDS_MENU_VS_ENTRIES];
+static NdsUiKitSurfaceId sMenuVsButtonSurface[NDS_MENU_VS_ENTRIES];
 static u32 sMenuVsArrowsShown;
 
 static u32 ndsMenuShellVsIsTime(void)
@@ -1152,50 +1165,51 @@ static s32 ndsMenuShellVsValue(void)
  * source's own branches: the rule button carries its VALUE word and the
  * time/stock button its PERIOD word, both of which change with the rule
  * (mnvsmode.c:337/:679), so those two buttons have a TIME and a STOCK bake. */
-static u8 ndsMenuShellVsWantSurface(u32 button)
+static NdsUiKitSurfaceId ndsMenuShellVsWantSurface(u32 button)
 {
     u32 lit = (sMenuVsCursor == button) ? TRUE : FALSE;
 
     switch (button)
     {
     case NDS_MENU_VS_START:
-        return (u8)((lit != FALSE) ? NDS_MN_UI_KIT_SURFACE_VS_BTN_START_HI :
-                                     NDS_MN_UI_KIT_SURFACE_VS_BTN_START_NOT);
+        return (NdsUiKitSurfaceId)((lit != FALSE) ?
+            NDS_MN_UI_KIT_SURFACE_VS_BTN_START_HI :
+            NDS_MN_UI_KIT_SURFACE_VS_BTN_START_NOT);
     case NDS_MENU_VS_RULE:
         if (sMenuVsRule == NDS_MENU_RULE_TIME)
         {
-            return (u8)((lit != FALSE) ?
+            return (NdsUiKitSurfaceId)((lit != FALSE) ?
                         NDS_MN_UI_KIT_SURFACE_VS_BTN_RULE_TIME_HI :
                         NDS_MN_UI_KIT_SURFACE_VS_BTN_RULE_TIME_NOT);
         }
         if (sMenuVsRule == NDS_MENU_RULE_STOCK)
         {
-            return (u8)((lit != FALSE) ?
+            return (NdsUiKitSurfaceId)((lit != FALSE) ?
                         NDS_MN_UI_KIT_SURFACE_VS_BTN_RULE_STOCK_HI :
                         NDS_MN_UI_KIT_SURFACE_VS_BTN_RULE_STOCK_NOT);
         }
         if (sMenuVsRule == NDS_MENU_RULE_TIME_TEAM)
         {
-            return (u8)((lit != FALSE) ?
+            return (NdsUiKitSurfaceId)((lit != FALSE) ?
                         NDS_MN_UI_KIT_SURFACE_VS_BTN_RULE_TIME_TEAM_HI :
                         NDS_MN_UI_KIT_SURFACE_VS_BTN_RULE_TIME_TEAM_NOT);
         }
-        return (u8)((lit != FALSE) ?
+        return (NdsUiKitSurfaceId)((lit != FALSE) ?
                     NDS_MN_UI_KIT_SURFACE_VS_BTN_RULE_STOCK_TEAM_HI :
                     NDS_MN_UI_KIT_SURFACE_VS_BTN_RULE_STOCK_TEAM_NOT);
     case NDS_MENU_VS_VALUE:
         if (ndsMenuShellVsIsTime() != FALSE)
         {
-            return (u8)((lit != FALSE) ?
+            return (NdsUiKitSurfaceId)((lit != FALSE) ?
                         NDS_MN_UI_KIT_SURFACE_VS_BTN_TIME_HI :
                         NDS_MN_UI_KIT_SURFACE_VS_BTN_TIME_NOT);
         }
-        return (u8)((lit != FALSE) ? NDS_MN_UI_KIT_SURFACE_VS_BTN_STOCK_HI :
+        return (NdsUiKitSurfaceId)((lit != FALSE) ? NDS_MN_UI_KIT_SURFACE_VS_BTN_STOCK_HI :
                                      NDS_MN_UI_KIT_SURFACE_VS_BTN_STOCK_NOT);
     default:
         break;
     }
-    return (u8)((lit != FALSE) ? NDS_MN_UI_KIT_SURFACE_VS_BTN_OPTIONS_HI :
+    return (NdsUiKitSurfaceId)((lit != FALSE) ? NDS_MN_UI_KIT_SURFACE_VS_BTN_OPTIONS_HI :
                                  NDS_MN_UI_KIT_SURFACE_VS_BTN_OPTIONS_NOT);
 }
 
@@ -1219,8 +1233,8 @@ static u8 ndsMenuShellVsWantSurface(u32 button)
  * the following frame. */
 static void ndsMenuShellVsSyncButtons(u32 budget)
 {
-    u8 list[NDS_MENU_VS_ENTRIES];
-    u8 wanted[NDS_MENU_VS_ENTRIES];
+    NdsUiKitSurfaceId list[NDS_MENU_VS_ENTRIES];
+    NdsUiKitSurfaceId wanted[NDS_MENU_VS_ENTRIES];
     u32 index[NDS_MENU_VS_ENTRIES];
     u32 count = 0u;
     u32 i;
@@ -1373,7 +1387,7 @@ static void ndsMenuShellVsLoadRules(void)
     {
         /* Nothing is on the screen yet, so every button differs from what the
          * freshly cleared BG2 shows and all four blit on the entry frame. */
-        sMenuVsButtonSurface[i] = (u8)NDS_MENU_VS_SURFACE_NONE;
+        sMenuVsButtonSurface[i] = NDS_MENU_VS_SURFACE_NONE;
     }
     sMenuVsArrowsShown = TRUE;
     sMenuVsCursor = NDS_MENU_VS_START;
@@ -1716,9 +1730,17 @@ static const u8 kNdsCssFighterPortrait[NDS_CSS_PORTRAITS] = {
     1u, 9u, 2u, 4u, 0u, 3u, 7u, 5u, 8u, 10u, 11u, 6u
 };
 
-/* Which fighters this build HAS. Same shape as the source's fighter_mask. */
+/* Which fighters this build HAS. Same shape as the source's fighter_mask; a
+ * production fighter is admitted here only after its renderer/CSS/audio seams
+ * all exist in the same configuration. */
+#if NDS_P2_LUIGI
+#define NDS_CSS_FIGHTER_MASK \
+    (LBBACKUP_MASK_FIGHTER(nFTKindMario) | LBBACKUP_MASK_FIGHTER(nFTKindFox) | \
+     LBBACKUP_MASK_FIGHTER(nFTKindLuigi))
+#else
 #define NDS_CSS_FIGHTER_MASK \
     (LBBACKUP_MASK_FIGHTER(nFTKindMario) | LBBACKUP_MASK_FIGHTER(nFTKindFox))
+#endif
 
 static u8 sCssPkind[NDS_CSS_SLOTS];
 static u8 sCssFkind[NDS_CSS_SLOTS];
@@ -1753,7 +1775,7 @@ static u32 sCssReadyShown;
 static u8 sCssFlashRemain[NDS_CSS_SLOTS];
 static u8 sCssFlashVisible[NDS_CSS_SLOTS];
 static u8 sCssFlashKind[NDS_CSS_SLOTS];
-static u8 sCssFlashShown[2];
+static u8 sCssFlashShown[3];
 
 /* One cursor: the DS has one keypad, so exactly one player has a controller.
  * mnPlayersVSUpdateControllerOrders would report orders[0] = 0 and -1 for the
@@ -1977,48 +1999,61 @@ static u32 ndsMenuShellCssKindImage(u32 pkind)
 #define NDS_CSS_GATE_NA 0u
 #define NDS_CSS_GATE_MAN 1u
 #define NDS_CSS_GATE_COM 2u
-#define NDS_CSS_GATE_MAN_F0 3u   /* + fighter index (Mario 0, Fox 1) */
-#define NDS_CSS_GATE_COM_F0 5u
-#define NDS_CSS_GATE_HOLD_F0 7u
-#define NDS_CSS_GATE_STATES 9u
+#define NDS_CSS_GATE_MAN_F0 3u   /* + fighter index (Mario 0, Fox 1, Luigi 2) */
+#define NDS_CSS_GATE_COM_F0 6u
+#define NDS_CSS_GATE_HOLD_F0 9u
+#define NDS_CSS_GATE_STATES 12u
 
-static const u8 kNdsCssGateSurface[NDS_CSS_SLOTS][NDS_CSS_GATE_STATES] = {
-    { (u8)NDS_MN_UI_KIT_SURFACE_CSS_GATE_0_NA,
-      (u8)NDS_MN_UI_KIT_SURFACE_CSS_GATE_0_MAN,
-      (u8)NDS_MN_UI_KIT_SURFACE_CSS_GATE_0_COM,
-      (u8)NDS_MN_UI_KIT_SURFACE_CSS_GATE_0_MAN_MARIO,
-      (u8)NDS_MN_UI_KIT_SURFACE_CSS_GATE_0_MAN_FOX,
-      (u8)NDS_MN_UI_KIT_SURFACE_CSS_GATE_0_COM_MARIO,
-      (u8)NDS_MN_UI_KIT_SURFACE_CSS_GATE_0_COM_FOX,
-      (u8)NDS_MN_UI_KIT_SURFACE_CSS_GATE_0_HOLD_MARIO,
-      (u8)NDS_MN_UI_KIT_SURFACE_CSS_GATE_0_HOLD_FOX },
-    { (u8)NDS_MN_UI_KIT_SURFACE_CSS_GATE_1_NA,
-      (u8)NDS_MN_UI_KIT_SURFACE_CSS_GATE_1_MAN,
-      (u8)NDS_MN_UI_KIT_SURFACE_CSS_GATE_1_COM,
-      (u8)NDS_MN_UI_KIT_SURFACE_CSS_GATE_1_MAN_MARIO,
-      (u8)NDS_MN_UI_KIT_SURFACE_CSS_GATE_1_MAN_FOX,
-      (u8)NDS_MN_UI_KIT_SURFACE_CSS_GATE_1_COM_MARIO,
-      (u8)NDS_MN_UI_KIT_SURFACE_CSS_GATE_1_COM_FOX,
-      (u8)NDS_MN_UI_KIT_SURFACE_CSS_GATE_1_HOLD_MARIO,
-      (u8)NDS_MN_UI_KIT_SURFACE_CSS_GATE_1_HOLD_FOX },
-    { (u8)NDS_MN_UI_KIT_SURFACE_CSS_GATE_2_NA,
-      (u8)NDS_MN_UI_KIT_SURFACE_CSS_GATE_2_MAN,
-      (u8)NDS_MN_UI_KIT_SURFACE_CSS_GATE_2_COM,
-      (u8)NDS_MN_UI_KIT_SURFACE_CSS_GATE_2_MAN_MARIO,
-      (u8)NDS_MN_UI_KIT_SURFACE_CSS_GATE_2_MAN_FOX,
-      (u8)NDS_MN_UI_KIT_SURFACE_CSS_GATE_2_COM_MARIO,
-      (u8)NDS_MN_UI_KIT_SURFACE_CSS_GATE_2_COM_FOX,
-      (u8)NDS_MN_UI_KIT_SURFACE_CSS_GATE_2_HOLD_MARIO,
-      (u8)NDS_MN_UI_KIT_SURFACE_CSS_GATE_2_HOLD_FOX },
-    { (u8)NDS_MN_UI_KIT_SURFACE_CSS_GATE_3_NA,
-      (u8)NDS_MN_UI_KIT_SURFACE_CSS_GATE_3_MAN,
-      (u8)NDS_MN_UI_KIT_SURFACE_CSS_GATE_3_COM,
-      (u8)NDS_MN_UI_KIT_SURFACE_CSS_GATE_3_MAN_MARIO,
-      (u8)NDS_MN_UI_KIT_SURFACE_CSS_GATE_3_MAN_FOX,
-      (u8)NDS_MN_UI_KIT_SURFACE_CSS_GATE_3_COM_MARIO,
-      (u8)NDS_MN_UI_KIT_SURFACE_CSS_GATE_3_COM_FOX,
-      (u8)NDS_MN_UI_KIT_SURFACE_CSS_GATE_3_HOLD_MARIO,
-      (u8)NDS_MN_UI_KIT_SURFACE_CSS_GATE_3_HOLD_FOX }
+static const NdsUiKitSurfaceId
+kNdsCssGateSurface[NDS_CSS_SLOTS][NDS_CSS_GATE_STATES] = {
+    { NDS_MN_UI_KIT_SURFACE_CSS_GATE_0_NA,
+      NDS_MN_UI_KIT_SURFACE_CSS_GATE_0_MAN,
+      NDS_MN_UI_KIT_SURFACE_CSS_GATE_0_COM,
+      NDS_MN_UI_KIT_SURFACE_CSS_GATE_0_MAN_MARIO,
+      NDS_MN_UI_KIT_SURFACE_CSS_GATE_0_MAN_FOX,
+      NDS_MN_UI_KIT_SURFACE_CSS_GATE_0_MAN_LUIGI,
+      NDS_MN_UI_KIT_SURFACE_CSS_GATE_0_COM_MARIO,
+      NDS_MN_UI_KIT_SURFACE_CSS_GATE_0_COM_FOX,
+      NDS_MN_UI_KIT_SURFACE_CSS_GATE_0_COM_LUIGI,
+      NDS_MN_UI_KIT_SURFACE_CSS_GATE_0_HOLD_MARIO,
+      NDS_MN_UI_KIT_SURFACE_CSS_GATE_0_HOLD_FOX,
+      NDS_MN_UI_KIT_SURFACE_CSS_GATE_0_HOLD_LUIGI },
+    { NDS_MN_UI_KIT_SURFACE_CSS_GATE_1_NA,
+      NDS_MN_UI_KIT_SURFACE_CSS_GATE_1_MAN,
+      NDS_MN_UI_KIT_SURFACE_CSS_GATE_1_COM,
+      NDS_MN_UI_KIT_SURFACE_CSS_GATE_1_MAN_MARIO,
+      NDS_MN_UI_KIT_SURFACE_CSS_GATE_1_MAN_FOX,
+      NDS_MN_UI_KIT_SURFACE_CSS_GATE_1_MAN_LUIGI,
+      NDS_MN_UI_KIT_SURFACE_CSS_GATE_1_COM_MARIO,
+      NDS_MN_UI_KIT_SURFACE_CSS_GATE_1_COM_FOX,
+      NDS_MN_UI_KIT_SURFACE_CSS_GATE_1_COM_LUIGI,
+      NDS_MN_UI_KIT_SURFACE_CSS_GATE_1_HOLD_MARIO,
+      NDS_MN_UI_KIT_SURFACE_CSS_GATE_1_HOLD_FOX,
+      NDS_MN_UI_KIT_SURFACE_CSS_GATE_1_HOLD_LUIGI },
+    { NDS_MN_UI_KIT_SURFACE_CSS_GATE_2_NA,
+      NDS_MN_UI_KIT_SURFACE_CSS_GATE_2_MAN,
+      NDS_MN_UI_KIT_SURFACE_CSS_GATE_2_COM,
+      NDS_MN_UI_KIT_SURFACE_CSS_GATE_2_MAN_MARIO,
+      NDS_MN_UI_KIT_SURFACE_CSS_GATE_2_MAN_FOX,
+      NDS_MN_UI_KIT_SURFACE_CSS_GATE_2_MAN_LUIGI,
+      NDS_MN_UI_KIT_SURFACE_CSS_GATE_2_COM_MARIO,
+      NDS_MN_UI_KIT_SURFACE_CSS_GATE_2_COM_FOX,
+      NDS_MN_UI_KIT_SURFACE_CSS_GATE_2_COM_LUIGI,
+      NDS_MN_UI_KIT_SURFACE_CSS_GATE_2_HOLD_MARIO,
+      NDS_MN_UI_KIT_SURFACE_CSS_GATE_2_HOLD_FOX,
+      NDS_MN_UI_KIT_SURFACE_CSS_GATE_2_HOLD_LUIGI },
+    { NDS_MN_UI_KIT_SURFACE_CSS_GATE_3_NA,
+      NDS_MN_UI_KIT_SURFACE_CSS_GATE_3_MAN,
+      NDS_MN_UI_KIT_SURFACE_CSS_GATE_3_COM,
+      NDS_MN_UI_KIT_SURFACE_CSS_GATE_3_MAN_MARIO,
+      NDS_MN_UI_KIT_SURFACE_CSS_GATE_3_MAN_FOX,
+      NDS_MN_UI_KIT_SURFACE_CSS_GATE_3_MAN_LUIGI,
+      NDS_MN_UI_KIT_SURFACE_CSS_GATE_3_COM_MARIO,
+      NDS_MN_UI_KIT_SURFACE_CSS_GATE_3_COM_FOX,
+      NDS_MN_UI_KIT_SURFACE_CSS_GATE_3_COM_LUIGI,
+      NDS_MN_UI_KIT_SURFACE_CSS_GATE_3_HOLD_MARIO,
+      NDS_MN_UI_KIT_SURFACE_CSS_GATE_3_HOLD_FOX,
+      NDS_MN_UI_KIT_SURFACE_CSS_GATE_3_HOLD_LUIGI }
 };
 
 /* P2-2a: the generated Team-Battle panel variants are intentionally contiguous
@@ -2039,10 +2074,10 @@ _Static_assert(NDS_MN_UI_KIT_SURFACE_CSS_GATE_TEAM_GREEN_0_NA ==
                    NDS_MN_UI_KIT_SURFACE_CSS_GATE_TEAM_RED_0_NA +
                        (2u * NDS_CSS_TEAM_GATE_STRIDE),
                "team gate surfaces must stay contiguous by team");
-_Static_assert(NDS_MN_UI_KIT_SURFACE_CSS_GATE_TEAM_GREEN_3_HOLD_FOX ==
+_Static_assert(NDS_MN_UI_KIT_SURFACE_CSS_GATE_TEAM_GREEN_3_HOLD_LUIGI ==
                    NDS_MN_UI_KIT_SURFACE_CSS_GATE_TEAM_RED_0_NA +
                        (NDS_CSS_TEAM_COUNT * NDS_CSS_TEAM_GATE_STRIDE) - 1u,
-               "team gate surface block must contain 3x4x9 variants");
+               "team gate surface block must contain 3x4x12 variants");
 
 #define NDS_CSS_TEAM_SELECT_STRIDE NDS_CSS_SLOTS
 _Static_assert(NDS_MN_UI_KIT_SURFACE_CSS_TEAM_SELECT_BLUE_0 ==
@@ -2054,12 +2089,12 @@ _Static_assert(NDS_MN_UI_KIT_SURFACE_CSS_TEAM_SELECT_GREEN_3 ==
                        (NDS_CSS_TEAM_COUNT * NDS_CSS_TEAM_SELECT_STRIDE) - 1u,
                "team selector surface block must contain 3x4 variants");
 
-static u8 sCssPanelSurface[NDS_CSS_SLOTS];
+static NdsUiKitSurfaceId sCssPanelSurface[NDS_CSS_SLOTS];
 static u32 sCssArrowsShown;
 
 static u32 ndsMenuShellCssGateState(u32 slot);
 
-static u8 ndsMenuShellCssGateSurfaceForState(u32 slot, u32 state)
+static NdsUiKitSurfaceId ndsMenuShellCssGateSurfaceForState(u32 slot, u32 state)
 {
     u32 team;
 
@@ -2072,12 +2107,13 @@ static u8 ndsMenuShellCssGateSurfaceForState(u32 slot, u32 state)
     {
         team = (u32)nSCBattleTeamIDRed;
     }
-    return (u8)(NDS_MN_UI_KIT_SURFACE_CSS_GATE_TEAM_RED_0_NA +
-                (team * NDS_CSS_TEAM_GATE_STRIDE) +
-                (slot * NDS_CSS_GATE_STATES) + state);
+    return (NdsUiKitSurfaceId)(
+        NDS_MN_UI_KIT_SURFACE_CSS_GATE_TEAM_RED_0_NA +
+        (team * NDS_CSS_TEAM_GATE_STRIDE) +
+        (slot * NDS_CSS_GATE_STATES) + state);
 }
 
-static u8 ndsMenuShellCssGateSurface(u32 slot)
+static NdsUiKitSurfaceId ndsMenuShellCssGateSurface(u32 slot)
 {
     return ndsMenuShellCssGateSurfaceForState(
         slot, ndsMenuShellCssGateState(slot));
@@ -2088,7 +2124,7 @@ static s32 ndsMenuShellCssRoundSource(s32 value)
     return (value * 4 + 2) / 5;
 }
 
-static u8 ndsMenuShellCssTeamSelectSurface(u32 slot)
+static NdsUiKitSurfaceId ndsMenuShellCssTeamSelectSurface(u32 slot)
 {
     u32 team = (u32)sCssTeam[slot];
 
@@ -2096,8 +2132,8 @@ static u8 ndsMenuShellCssTeamSelectSurface(u32 slot)
     {
         team = (u32)nSCBattleTeamIDRed;
     }
-    return (u8)(NDS_MN_UI_KIT_SURFACE_CSS_TEAM_SELECT_RED_0 +
-                (team * NDS_CSS_TEAM_SELECT_STRIDE) + slot);
+    return (NdsUiKitSurfaceId)(NDS_MN_UI_KIT_SURFACE_CSS_TEAM_SELECT_RED_0 +
+                               (team * NDS_CSS_TEAM_SELECT_STRIDE) + slot);
 }
 
 static void ndsMenuShellCssClearTeamSelect(u32 slot)
@@ -2116,7 +2152,7 @@ static void ndsMenuShellCssClearTeamSelect(u32 slot)
 
 static void ndsMenuShellCssDrawTeamSelect(u32 slot)
 {
-    u8 surface;
+    NdsUiKitSurfaceId surface;
 
     ndsMenuShellCssClearTeamSelect(slot);
     if (sCssIsTeamBattle == FALSE)
@@ -2162,6 +2198,12 @@ static u32 ndsMenuShellCssGateState(u32 slot)
     {
         fighter = 1u;
     }
+#if NDS_P2_LUIGI
+    else if (fkind == (u32)nFTKindLuigi)
+    {
+        fighter = 2u;
+    }
+#endif
     else
     {
         return (sCssPkind[slot] == (u8)nFTPlayerKindCom) ?
@@ -2193,7 +2235,7 @@ static void ndsMenuShellCssStepDoors(void)
         s32 start = (s32)(i * 69u);
         u32 target = (sCssPkind[i] == (u8)nFTPlayerKindNot) ? 41u : 0u;
         u32 offset = (u32)sCssDoorOffset[i];
-        u8 blit;
+        NdsUiKitSurfaceId blit;
 
         if (offset == target)
         {
@@ -2269,8 +2311,8 @@ static void ndsMenuShellCssStepDoors(void)
  * next row adds a reason for two. */
 static void ndsMenuShellCssSyncPanels(u32 budget)
 {
-    u8 list[NDS_CSS_SLOTS];
-    u8 wanted[NDS_CSS_SLOTS];
+    NdsUiKitSurfaceId list[NDS_CSS_SLOTS];
+    NdsUiKitSurfaceId wanted[NDS_CSS_SLOTS];
     u32 index[NDS_CSS_SLOTS];
     u32 count = 0u;
     u32 i;
@@ -2361,12 +2403,12 @@ static void ndsMenuShellCssPopulate(void)
      * states over the base. The mode label is a two-state surface so the
      * FFA/Team toggle is a swap; BACK is static and blits once here. */
     {
-        u8 entry_states[2];
+        NdsUiKitSurfaceId entry_states[2];
 
         entry_states[0] = (sCssIsTeamBattle != FALSE) ?
-            (u8)NDS_MN_UI_KIT_SURFACE_CSS_MODE_TEAM :
-            (u8)NDS_MN_UI_KIT_SURFACE_CSS_MODE_FFA;
-        entry_states[1] = (u8)NDS_MN_UI_KIT_SURFACE_CSS_BACK;
+            NDS_MN_UI_KIT_SURFACE_CSS_MODE_TEAM :
+            NDS_MN_UI_KIT_SURFACE_CSS_MODE_FFA;
+        entry_states[1] = NDS_MN_UI_KIT_SURFACE_CSS_BACK;
         if (ndsUiKitBlitSurfaces(entry_states, 2u) != FALSE)
         {
             gNdsMenuShellCssPanelBlitCount += 2u;
@@ -2526,7 +2568,8 @@ static void ndsMenuShellCssMove(void)
 #define NDS_CSS_FLASH_KIND_NONE 0xffu
 #define NDS_CSS_FLASH_KIND_MARIO 0u
 #define NDS_CSS_FLASH_KIND_FOX 1u
-#define NDS_CSS_FLASH_KIND_COUNT 2u
+#define NDS_CSS_FLASH_KIND_LUIGI 2u
+#define NDS_CSS_FLASH_KIND_COUNT 3u
 
 static u32 ndsMenuShellCssFlashKindFromFighter(u32 fkind)
 {
@@ -2538,10 +2581,16 @@ static u32 ndsMenuShellCssFlashKindFromFighter(u32 fkind)
     {
         return NDS_CSS_FLASH_KIND_FOX;
     }
+#if NDS_P2_LUIGI
+    if (fkind == (u32)nFTKindLuigi)
+    {
+        return NDS_CSS_FLASH_KIND_LUIGI;
+    }
+#endif
     return NDS_CSS_FLASH_KIND_NONE;
 }
 
-static u8 ndsMenuShellCssFlashSurface(u32 kind, u32 visible)
+static NdsUiKitSurfaceId ndsMenuShellCssFlashSurface(u32 kind, u32 visible)
 {
     u32 ready = (sCssReadyShown == 1u) ? 1u : 0u;
 
@@ -2550,22 +2599,34 @@ static u8 ndsMenuShellCssFlashSurface(u32 kind, u32 visible)
         if (ready != 0u)
         {
             return (visible != FALSE) ?
-                (u8)NDS_MN_UI_KIT_SURFACE_CSS_FLASH_MARIO_ON_READY1 :
-                (u8)NDS_MN_UI_KIT_SURFACE_CSS_FLASH_MARIO_OFF_READY1;
+                NDS_MN_UI_KIT_SURFACE_CSS_FLASH_MARIO_ON_READY1 :
+                NDS_MN_UI_KIT_SURFACE_CSS_FLASH_MARIO_OFF_READY1;
         }
         return (visible != FALSE) ?
-            (u8)NDS_MN_UI_KIT_SURFACE_CSS_FLASH_MARIO_ON_READY0 :
-            (u8)NDS_MN_UI_KIT_SURFACE_CSS_FLASH_MARIO_OFF_READY0;
+            NDS_MN_UI_KIT_SURFACE_CSS_FLASH_MARIO_ON_READY0 :
+            NDS_MN_UI_KIT_SURFACE_CSS_FLASH_MARIO_OFF_READY0;
+    }
+    if (kind == NDS_CSS_FLASH_KIND_FOX)
+    {
+        if (ready != 0u)
+        {
+            return (visible != FALSE) ?
+                NDS_MN_UI_KIT_SURFACE_CSS_FLASH_FOX_ON_READY1 :
+                NDS_MN_UI_KIT_SURFACE_CSS_FLASH_FOX_OFF_READY1;
+        }
+        return (visible != FALSE) ?
+            NDS_MN_UI_KIT_SURFACE_CSS_FLASH_FOX_ON_READY0 :
+            NDS_MN_UI_KIT_SURFACE_CSS_FLASH_FOX_OFF_READY0;
     }
     if (ready != 0u)
     {
         return (visible != FALSE) ?
-            (u8)NDS_MN_UI_KIT_SURFACE_CSS_FLASH_FOX_ON_READY1 :
-            (u8)NDS_MN_UI_KIT_SURFACE_CSS_FLASH_FOX_OFF_READY1;
+            NDS_MN_UI_KIT_SURFACE_CSS_FLASH_LUIGI_ON_READY1 :
+            NDS_MN_UI_KIT_SURFACE_CSS_FLASH_LUIGI_OFF_READY1;
     }
     return (visible != FALSE) ?
-        (u8)NDS_MN_UI_KIT_SURFACE_CSS_FLASH_FOX_ON_READY0 :
-        (u8)NDS_MN_UI_KIT_SURFACE_CSS_FLASH_FOX_OFF_READY0;
+        NDS_MN_UI_KIT_SURFACE_CSS_FLASH_LUIGI_ON_READY0 :
+        NDS_MN_UI_KIT_SURFACE_CSS_FLASH_LUIGI_OFF_READY0;
 }
 
 static u32 ndsMenuShellCssFlashAggregate(u32 kind)
@@ -2586,7 +2647,7 @@ static u32 ndsMenuShellCssFlashAggregate(u32 kind)
 
 static void ndsMenuShellCssDrawFlashKind(u32 kind, u32 visible)
 {
-    u8 surface;
+    NdsUiKitSurfaceId surface;
 
     if (kind >= NDS_CSS_FLASH_KIND_COUNT)
     {
@@ -2758,9 +2819,9 @@ static void ndsMenuShellCssShowReady(u32 lit)
      * the priority-50 player-kind camera. Keep the existing BG2 state swap for
      * the flash-overlap restoration, then mirror only the link-38 band onto
      * transparent foreground BG3 so it also has the source's depth over OBJ. */
-    u8 state = (lit != FALSE) ?
-        (u8)NDS_MN_UI_KIT_SURFACE_CSS_READY_ON :
-        (u8)NDS_MN_UI_KIT_SURFACE_CSS_READY_OFF;
+    NdsUiKitSurfaceId state = (lit != FALSE) ?
+        NDS_MN_UI_KIT_SURFACE_CSS_READY_ON :
+        NDS_MN_UI_KIT_SURFACE_CSS_READY_OFF;
 
     if (ndsUiKitBlitSurfaces(&state, 1u) != FALSE)
     {
@@ -2771,7 +2832,8 @@ static void ndsMenuShellCssShowReady(u32 lit)
                                 18u); /* baked 22-source-row box -> 18 DS rows */
     if (lit != FALSE)
     {
-        u8 foreground = (u8)NDS_MN_UI_KIT_SURFACE_CSS_READY_FOREGROUND;
+        NdsUiKitSurfaceId foreground =
+            NDS_MN_UI_KIT_SURFACE_CSS_READY_FOREGROUND;
 
         if (ndsUiKitBlitForegroundSurfaces(&foreground, 1u) != FALSE)
         {
@@ -3021,7 +3083,7 @@ static u32 ndsMenuShellCssCheckTeamSelect(void)
          * the clicked team. This direct one-surface replacement is the exact
          * DS equivalent of UpdateTeamSelect + SetGateLUT. */
         {
-            u8 panel_surface = ndsMenuShellCssGateSurface(slot);
+            NdsUiKitSurfaceId panel_surface = ndsMenuShellCssGateSurface(slot);
 
             if (ndsUiKitBlitSurfaces(&panel_surface, 1u) != FALSE)
             {
@@ -3312,13 +3374,13 @@ static void ndsMenuShellUpdateCss(u32 held, u32 taps)
                      * the team selectors in exactly this order (:3356-3367). */
                     if (ndsMenuShellCssBoxHit(27, 137, 14, 35) != FALSE)
                     {
-                        u8 label;
+                        NdsUiKitSurfaceId label;
 
                         sCssIsTeamBattle = (sCssIsTeamBattle != FALSE) ?
                             0u : 1u;
                         label = (sCssIsTeamBattle != FALSE) ?
-                            (u8)NDS_MN_UI_KIT_SURFACE_CSS_MODE_TEAM :
-                            (u8)NDS_MN_UI_KIT_SURFACE_CSS_MODE_FFA;
+                            NDS_MN_UI_KIT_SURFACE_CSS_MODE_TEAM :
+                            NDS_MN_UI_KIT_SURFACE_CSS_MODE_FFA;
                         if (ndsUiKitBlitSurfaces(&label, 1u) != FALSE)
                         {
                             gNdsMenuShellCssPanelBlitCount++;
@@ -3445,6 +3507,7 @@ static void ndsMenuShellCssInit(void)
     sCssArrowsShown = TRUE;
     sCssFlashShown[NDS_CSS_FLASH_KIND_MARIO] = 0u;
     sCssFlashShown[NDS_CSS_FLASH_KIND_FOX] = 0u;
+    sCssFlashShown[NDS_CSS_FLASH_KIND_LUIGI] = 0u;
     /* P2-1N (4): seeded from the transfer state exactly as the source seeds
      * sMNPlayersVSIsTeamBattle on scene entry (mnplayersvs.c:4679). */
     sCssIsTeamBattle = (gSCManagerTransferBattleState.is_team_battle != 0) ?
@@ -3455,7 +3518,7 @@ static void ndsMenuShellCssInit(void)
         /* Nothing of this screen is on BG2 yet, so every panel differs and all
          * four blit on the entry frame -- the same tracker reset the VS menu's
          * buttons take in ndsMenuShellVsLoadRules. */
-        sCssPanelSurface[i] = (u8)NDS_MENU_VS_SURFACE_NONE;
+        sCssPanelSurface[i] = NDS_MENU_VS_SURFACE_NONE;
         sCssFlashRemain[i] = 0u;
         sCssFlashVisible[i] = 0u;
         sCssFlashKind[i] = (u8)NDS_CSS_FLASH_KIND_NONE;
@@ -3693,17 +3756,17 @@ static const u8 kNdsSssSlotGkind[NDS_SSS_SLOTS] = {
  * every cursor move, and all ten share one declared box composited over the
  * furniture beneath them, so a move is a single blit that overwrites the last
  * state exactly. Indexed by SLOT, which is what the cursor holds. */
-static const u8 kNdsSssPlaqueSurface[NDS_SSS_SLOTS] = {
-    (u8)NDS_MN_UI_KIT_SURFACE_SSS_PLAQUE_0,
-    (u8)NDS_MN_UI_KIT_SURFACE_SSS_PLAQUE_1,
-    (u8)NDS_MN_UI_KIT_SURFACE_SSS_PLAQUE_2,
-    (u8)NDS_MN_UI_KIT_SURFACE_SSS_PLAQUE_3,
-    (u8)NDS_MN_UI_KIT_SURFACE_SSS_PLAQUE_4,
-    (u8)NDS_MN_UI_KIT_SURFACE_SSS_PLAQUE_5,
-    (u8)NDS_MN_UI_KIT_SURFACE_SSS_PLAQUE_6,
-    (u8)NDS_MN_UI_KIT_SURFACE_SSS_PLAQUE_7,
-    (u8)NDS_MN_UI_KIT_SURFACE_SSS_PLAQUE_8,
-    (u8)NDS_MN_UI_KIT_SURFACE_SSS_PLAQUE_9
+static const NdsUiKitSurfaceId kNdsSssPlaqueSurface[NDS_SSS_SLOTS] = {
+    NDS_MN_UI_KIT_SURFACE_SSS_PLAQUE_0,
+    NDS_MN_UI_KIT_SURFACE_SSS_PLAQUE_1,
+    NDS_MN_UI_KIT_SURFACE_SSS_PLAQUE_2,
+    NDS_MN_UI_KIT_SURFACE_SSS_PLAQUE_3,
+    NDS_MN_UI_KIT_SURFACE_SSS_PLAQUE_4,
+    NDS_MN_UI_KIT_SURFACE_SSS_PLAQUE_5,
+    NDS_MN_UI_KIT_SURFACE_SSS_PLAQUE_6,
+    NDS_MN_UI_KIT_SURFACE_SSS_PLAQUE_7,
+    NDS_MN_UI_KIT_SURFACE_SSS_PLAQUE_8,
+    NDS_MN_UI_KIT_SURFACE_SSS_PLAQUE_9
 };
 
 /* P2-1L (9). THE PREVIEW PANEL'S ART, on the same terms as the plaque above.
@@ -3718,17 +3781,17 @@ static const u8 kNdsSssPlaqueSurface[NDS_SSS_SLOTS] = {
  * cannot land on it (`mnMapsCheckLocked` refuses the move, mnmaps.c:166), so
  * its entry is the NONE sentinel and the sync leaves the panel alone rather
  * than blitting art for a stage this build does not have. */
-static const u8 kNdsSssPreviewSurface[NDS_SSS_SLOTS] = {
-    (u8)NDS_MENU_VS_SURFACE_NONE, (u8)NDS_MENU_VS_SURFACE_NONE,
-    (u8)NDS_MENU_VS_SURFACE_NONE, (u8)NDS_MENU_VS_SURFACE_NONE,
-    (u8)NDS_MENU_VS_SURFACE_NONE, (u8)NDS_MENU_VS_SURFACE_NONE,
-    (u8)NDS_MN_UI_KIT_SURFACE_SSS_PREVIEW_DREAM_LAND,
-    (u8)NDS_MENU_VS_SURFACE_NONE, (u8)NDS_MENU_VS_SURFACE_NONE,
-    (u8)NDS_MN_UI_KIT_SURFACE_SSS_PREVIEW_RANDOM
+static const NdsUiKitSurfaceId kNdsSssPreviewSurface[NDS_SSS_SLOTS] = {
+    NDS_MENU_VS_SURFACE_NONE, NDS_MENU_VS_SURFACE_NONE,
+    NDS_MENU_VS_SURFACE_NONE, NDS_MENU_VS_SURFACE_NONE,
+    NDS_MENU_VS_SURFACE_NONE, NDS_MENU_VS_SURFACE_NONE,
+    NDS_MN_UI_KIT_SURFACE_SSS_PREVIEW_DREAM_LAND,
+    NDS_MENU_VS_SURFACE_NONE, NDS_MENU_VS_SURFACE_NONE,
+    NDS_MN_UI_KIT_SURFACE_SSS_PREVIEW_RANDOM
 };
 
-static u8 sSssPlaqueSurface;
-static u8 sSssPreviewSurface;
+static NdsUiKitSurfaceId sSssPlaqueSurface;
+static NdsUiKitSurfaceId sSssPreviewSurface;
 
 /* THE CURSOR IS THE ONLY OBJ LEFT ON THIS SCREEN. P2-1L (6) moved the ten grid
  * cells into the backdrop surface and (9) moved the preview panel into two
@@ -3819,11 +3882,11 @@ static s32 ndsMenuShellSssIconY(u32 slot)
  * than recording a state the screen is not showing. */
 static void ndsMenuShellSssSyncSurfaces(u32 budget)
 {
-    u8 list[2];
-    u8 *tracker[2];
+    NdsUiKitSurfaceId list[2];
+    NdsUiKitSurfaceId *tracker[2];
     u32 count = 0u;
     u32 i;
-    u8 wanted;
+    NdsUiKitSurfaceId wanted;
 
     wanted = kNdsSssPlaqueSurface[sSssCursorSlot];
     if ((wanted != sSssPlaqueSurface) && (count < budget))
@@ -3833,7 +3896,7 @@ static void ndsMenuShellSssSyncSurfaces(u32 budget)
         count++;
     }
     wanted = kNdsSssPreviewSurface[sSssCursorSlot];
-    if ((wanted != (u8)NDS_MENU_VS_SURFACE_NONE) &&
+    if ((wanted != NDS_MENU_VS_SURFACE_NONE) &&
         (wanted != sSssPreviewSurface) && (count < budget))
     {
         list[count] = wanted;
@@ -4116,8 +4179,8 @@ static void ndsMenuShellSssInit(void)
      * screen" must be invalidated with it, or a re-entry on the same slot
      * would skip the blit and show a stage select with no name on it. Same
      * reason NDS_MENU_VS_SURFACE_NONE exists for the gates and the buttons. */
-    sSssPlaqueSurface = (u8)NDS_MENU_VS_SURFACE_NONE;
-    sSssPreviewSurface = (u8)NDS_MENU_VS_SURFACE_NONE;
+    sSssPlaqueSurface = NDS_MENU_VS_SURFACE_NONE;
+    sSssPreviewSurface = NDS_MENU_VS_SURFACE_NONE;
     sSssEnterCount++;
 }
 
@@ -4135,8 +4198,8 @@ static void ndsMenuShellSssInit(void)
  * `mnModeSelectMakeDecals` (mnmodeselect.c:525) and `mnVSModeMakeBackground`
  * (mnvsmode.c:972), both at (10, 10). The character and stage selects have
  * their own source backgrounds and are not this row's. */
-static const u8 kNdsMenuTitleSurfaces[] = {
-    (u8)NDS_MN_UI_KIT_SURFACE_TITLE_SCREEN
+static const NdsUiKitSurfaceId kNdsMenuTitleSurfaces[] = {
+    NDS_MN_UI_KIT_SURFACE_TITLE_SCREEN
 };
 /* P2-1i, owner finding (2). The main menu's own plate: one surface carrying
  * everything mnModeSelectMake* composes that the cursor does not change --
@@ -4146,8 +4209,8 @@ static const u8 kNdsMenuTitleSurfaces[] = {
  * P2-1j gave the VS menu the same treatment, so the BARE collage surface no
  * longer has a consumer and is no longer baked: both screens that show it now
  * show it inside their own composed plate. */
-static const u8 kNdsMenuModeSelectSurfaces[] = {
-    (u8)NDS_MN_UI_KIT_SURFACE_MODE_SELECT
+static const NdsUiKitSurfaceId kNdsMenuModeSelectSurfaces[] = {
+    NDS_MN_UI_KIT_SURFACE_MODE_SELECT
 };
 /* P2-1i, owner finding (1). The character and stage selects sat on a flat
  * blue field; the source sits both of them on the SAME stone tile --
@@ -4169,12 +4232,12 @@ static const u8 kNdsMenuModeSelectSurfaces[] = {
  * cell (mnplayersvs.c:2437/:2503) and, for a locked one, the fighter's noise-
  * dithered shadow and the question-mark plate over it (:2404). The stage
  * select keeps the plain stone -- it draws no portrait grid. */
-static const u8 kNdsMenuVsSurfaces[] = {
-    (u8)NDS_MN_UI_KIT_SURFACE_VS_MODE
+static const NdsUiKitSurfaceId kNdsMenuVsSurfaces[] = {
+    NDS_MN_UI_KIT_SURFACE_VS_MODE
 };
 
-static const u8 kNdsMenuCssSurfaces[] = {
-    (u8)NDS_MN_UI_KIT_SURFACE_CSS_SCREEN
+static const NdsUiKitSurfaceId kNdsMenuCssSurfaces[] = {
+    NDS_MN_UI_KIT_SURFACE_CSS_SCREEN
 };
 
 /* P2-1k (c). The stage select's own plate: the full-bleed stone, the preview
@@ -4183,8 +4246,8 @@ static const u8 kNdsMenuCssSurfaces[] = {
  * name plate -- everything mnMapsFuncStart composes that the cursor does not
  * change. The per-stage name and emblem ride the SSS_PLAQUE surfaces instead,
  * blitted by ndsMenuShellSssShowSelection. */
-static const u8 kNdsMenuSssSurfaces[] = {
-    (u8)NDS_MN_UI_KIT_SURFACE_SSS_SCREEN
+static const NdsUiKitSurfaceId kNdsMenuSssSurfaces[] = {
+    NDS_MN_UI_KIT_SURFACE_SSS_SCREEN
 };
 
 static void ndsMenuShellEnterBackdrop(u32 screen)

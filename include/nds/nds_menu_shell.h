@@ -9,6 +9,10 @@
  * port sys/malloc.h and defines SYMallocRegion twice. The CSS's source bound is
  * four and nds_menu_shell.c statically checks this against GMCOMMON_PLAYERS_MAX. */
 #define NDS_MENU_SHELL_PLAYERS 4u
+/* Same leaf-header rule for the source's twelve playable fighter kinds. The
+ * implementation statically checks this against nFTKindPlayableEnd once the
+ * fighter headers are available. */
+#define NDS_MENU_SHELL_FIGHTER_KINDS 12u
 
 /* P2-1d -- the VS shell's real screens: title, main menu, VS menu and its
  * rules, plus P2-1e/1f's character and stage selects.
@@ -238,6 +242,13 @@ extern volatile s32
 extern volatile u32 gNdsPlayersVSPreviewSelectedMask;
 extern volatile u32 gNdsPlayersVSPreviewVisibleMask;
 extern volatile u32 gNdsPlayersVSPreviewExitCount;
+extern volatile u32 gNdsPlayersVSPreviewSelectedKindMask;
+extern volatile u32
+    gNdsPlayersVSPreviewSelectedKindFrames[NDS_MENU_SHELL_FIGHTER_KINDS];
+extern volatile s32
+    gNdsPlayersVSPreviewSelectedKindStatus[NDS_MENU_SHELL_FIGHTER_KINDS];
+extern volatile s32
+    gNdsPlayersVSPreviewSelectedKindMotion[NDS_MENU_SHELL_FIGHTER_KINDS];
 
 /* --- P2-1j/P2-1N, state-dependent menu surfaces. -------------------------
  *

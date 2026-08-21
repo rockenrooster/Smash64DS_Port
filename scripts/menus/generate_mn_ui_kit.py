@@ -2196,9 +2196,10 @@ CSS_SHADOW = {
     10: "llMNPlayersPortraitsPurinShadowSprite",
     11: "llMNPlayersPortraitsNessShadowSprite",
 }
-# Which fighters this build HAS (nFTKindMario, nFTKindFox).  Same bound the
-# shell's NDS_CSS_FIGHTER_MASK carries.
-CSS_BUILT_FKIND = (0, 1)
+# Which fighter portraits have reached P2 production. Same source fkind values
+# the shell's NDS_CSS_FIGHTER_MASK carries when the corresponding fighter is
+# enabled: Mario, Fox, Luigi.
+CSS_BUILT_FKIND = (0, 1, 4)
 # P2-1L, owner finding (5): THE PORTRAIT IS THE SAME 45x43 AS THE BOX BEHIND
 # IT, and `mnPlayersVSMakePortrait` draws the two at the SAME (x, y)
 # (mnplayersvs.c:2437/:2503) -- so in the source the artwork covers its frame
@@ -2217,6 +2218,7 @@ CSS_BUILT_FKIND = (0, 1)
 CSS_PORTRAIT_SYMBOL = {
     0: "llMNPlayersPortraitsMarioSprite",
     1: "llMNPlayersPortraitsFoxSprite",
+    4: "llMNPlayersPortraitsLuigiSprite",
 }
 # mnPlayersVSPortraitProcDisplay's primitive, :361.
 CSS_SHADOW_NOISE = 0x30
@@ -2322,10 +2324,14 @@ SURFACE_SOURCES.append(
 # it.
 CSS_GATE_BOX = (22, 126, 66, 92)
 CSS_EMBLEM_SYMBOL = ("llFTEmblemSpritesMarioSprite",
-                     "llFTEmblemSpritesFoxSprite")
+                     "llFTEmblemSpritesFoxSprite",
+                     # mnPlayersVSMakeNameAndEmblem indexes Luigi (fkind 4)
+                     # to the Mario-series emblem in the source table.
+                     "llFTEmblemSpritesMarioSprite")
 CSS_NAME_SYMBOL = ("llMNPlayersCommonMarioTextSprite",
-                   "llMNPlayersCommonFoxTextSprite")
-CSS_FIGHTER_TOKEN = ("MARIO", "FOX")
+                   "llMNPlayersCommonFoxTextSprite",
+                   "llMNPlayersCommonLuigiTextSprite")
+CSS_FIGHTER_TOKEN = ("MARIO", "FOX", "LUIGI")
 CSS_TINT_MAN = (0x1E, 0x1E, 0x1E)
 CSS_TINT_COM = (0x44, 0x44, 0x44)
 # (token suffix, gate LUT, doors shut, fighter index or None, emblem tint,
@@ -2335,14 +2341,18 @@ CSS_GATE_STATES = [
     ("MAN", "GateMan%dPLUT", False, None, None, False),
     ("COM", "GateCom%dPLUT", False, None, None, False),
 ]
-for _f in range(len(CSS_FIGHTER_TOKEN)):
-    _name = CSS_FIGHTER_TOKEN[_f]
-    CSS_GATE_STATES.append(
-        (f"MAN_{_name}", "GateMan%dPLUT", False, _f, CSS_TINT_MAN, True))
-    CSS_GATE_STATES.append(
-        (f"COM_{_name}", "GateCom%dPLUT", False, _f, CSS_TINT_COM, False))
-    CSS_GATE_STATES.append(
-        (f"HOLD_{_name}", "GateCom%dPLUT", False, _f, CSS_TINT_COM, True))
+# Runtime state ids are state-major (`all MAN`, then `all COM`, then `all
+# HOLD`). P2-2's Team-Battle path indexes the generated [team][player][state]
+# block arithmetically, so generate in that same order. The old fighter-major
+# ordering happened to be hidden by the explicit FFA lookup table and made
+# Team panels select the wrong Mario/Fox state for several indices.
+for _prefix, _lut, _tint, _with_name in (
+        ("MAN", "GateMan%dPLUT", CSS_TINT_MAN, True),
+        ("COM", "GateCom%dPLUT", CSS_TINT_COM, False),
+        ("HOLD", "GateCom%dPLUT", CSS_TINT_COM, True)):
+    for _f, _name in enumerate(CSS_FIGHTER_TOKEN):
+        CSS_GATE_STATES.append(
+            (f"{_prefix}_{_name}", _lut, False, _f, _tint, _with_name))
 
 
 def css_gate(player: int, state: str, lut: str, shut: bool,
@@ -2467,7 +2477,7 @@ SURFACE_SOURCES.append(SurfaceSpec(
 # rectangles for both flash states and both READY states.  Multiple players can
 # select the same mirror fighter; runtime ORs their visible flash GObjs per
 # portrait and chooses one of these four exact outcomes.
-for _token, _portrait in (("MARIO", 1), ("FOX", 9)):
+for _token, _portrait in (("MARIO", 1), ("FOX", 9), ("LUIGI", 0)):
     _x, _y = css_portrait_pos(_portrait)
     _box = (_x + 1, _y + 1, 43, 41)
     for _ready in (0, 1):
@@ -2489,7 +2499,7 @@ for _token, _portrait in (("MARIO", 1), ("FOX", 9)):
 AUDIT_TOKEN_SYMBOLS = {
     f"SURFACE_CSS_FLASH_{fighter}_{state}_READY{ready}":
         {"llMNPlayersPortraitsWhiteSquareSprite"}
-    for fighter in ("MARIO", "FOX")
+    for fighter in ("MARIO", "FOX", "LUIGI")
     for state in ("OFF", "ON")
     for ready in (0, 1)
 }

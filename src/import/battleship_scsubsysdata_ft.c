@@ -32,12 +32,13 @@
 #include "../../decomp/BattleShip-main/decomp/src/sc/scsubsys/scsubsysdatasamus.c"
 #include "../../decomp/BattleShip-main/decomp/src/sc/scsubsys/scsubsysdatayoshi.c"
 
-/* PlayersVS selection uses demo submotions outside Mario/Fox's contiguous
- * gameplay animation banks. `mnPlayersVSGetStatusSelected` chooses the generic
- * demo Win3/Win4 STATUS, and `ftMainSetStatus` maps those through
- * D_ovl1_80390BE8 to submotion 3/4 respectively: Mario -> Selected (reloc 359),
- * Fox -> Selected (reloc 372). The decomp contains their complete AObjEvent16
- * FIGATREEs. Keep
+/* PlayersVS selection uses demo submotions outside the contiguous gameplay
+ * animation banks. `mnPlayersVSGetStatusSelected` chooses Win3 for Mario,
+ * Win4 for Fox and Win1 for Luigi; `ftMainSetStatus` maps those through the
+ * identity D_ovl1_80390BE8 table to submotion 3/4/1 respectively. Those are
+ * Mario Selected (reloc 359), Fox Selected (372), and Luigi Selected (462) --
+ * importantly NOT Luigi's separate Win1 victory clip (463). The decomp
+ * contains their complete AObjEvent16 FIGATREEs. Keep
  * these exact source tables resident and let the reloc seam copy only the
  * top-level joint-pointer array into each fighter's normal figatree heap. */
 /* relocdata_types.h also pulls the decomp's full mp/mptypes.h, which this port
@@ -86,6 +87,9 @@ _Static_assert(_FT_ANIM_CMD(5, FT_ANIM_ROTZ, 0) == 0x0085,
 #define ftAnimSetValAfter(flags) _FT_ANIM_CMD(10, flags, 0)
 #include "../../decomp/BattleShip-main/decomp/src/relocData/359_FTMarioAnimSelected.c"
 #include "../../decomp/BattleShip-main/decomp/src/relocData/372_FTFoxAnimSelected.c"
+#if NDS_P2_LUIGI
+#include "../../decomp/BattleShip-main/decomp/src/relocData/462_FTLuigiAnimSelected.c"
+#endif
 #undef ftAnimSetValAfter
 #undef ftAnimSetValAfterBlock
 #undef ftAnimSetVal0Rate
@@ -127,6 +131,12 @@ size_t ndsBattleShipCSSSelectedFigatreeSize(const void *file_id)
     {
         return sizeof(dFTFoxAnimSelected_joints);
     }
+#if NDS_P2_LUIGI
+    if (file_id == &llFTLuigiAnimSelectedFileID)
+    {
+        return sizeof(dFTLuigiAnimSelected_joints);
+    }
+#endif
     return 0u;
 }
 
@@ -145,6 +155,13 @@ void *ndsBattleShipLoadCSSSelectedFigatree(const void *file_id, void *heap)
         source = dFTFoxAnimSelected_joints;
         size = sizeof(dFTFoxAnimSelected_joints);
     }
+#if NDS_P2_LUIGI
+    else if (file_id == &llFTLuigiAnimSelectedFileID)
+    {
+        source = dFTLuigiAnimSelected_joints;
+        size = sizeof(dFTLuigiAnimSelected_joints);
+    }
+#endif
     else
     {
         return NULL;
@@ -179,5 +196,14 @@ sb32 ndsBattleShipIsCSSSelectedFigatreeJoint(const void *ptr)
             return TRUE;
         }
     }
+#if NDS_P2_LUIGI
+    for (i = 0u; i < ARRAY_COUNT(dFTLuigiAnimSelected_joints); i++)
+    {
+        if ((const void *)dFTLuigiAnimSelected_joints[i] == ptr)
+        {
+            return TRUE;
+        }
+    }
+#endif
     return FALSE;
 }
