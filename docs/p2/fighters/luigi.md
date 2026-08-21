@@ -21,6 +21,21 @@ nine-entry table rather than the historical 16-entry compatibility stub. A
 Luigi-enabled P2 shell build is green. Luigi is still not selectable until the
 native-owner, CSS/audio, move-inventory and four-CPU budget slices pass.
 
+The native-renderer input is source-derived too now, without changing the
+qualified Mario/Fox program. The existing AOT display-list decoder independently
+walks `LuigiModel` (`0x143`, SHA-256
+`793c2f3ae89aa8925f4cd715b40a79b3fe9236c033d84a4e270f09bc88dd4247`)
+and proves both BattleShip JointTrees: High `0x2410` and Low `0x49e8`, 25 live
+joints / 14 drawable bindings each. High decodes to 320 triangles, 32 runs and
+264 dense DS vertices; Low to 200 triangles, 20 runs and 181 dense vertices.
+Both preserve the source hierarchy (5 pushes / 5 pops), the same eight
+cross-matrix logical bindings as Mario, and the exact 44 root-prefix + 8
+intra-root light commands. The generator also proves 70 High / 46 Low GX
+restores from the decoded corner stream. These facts are emitted into
+`fighter_production_manifest.json`; the next slice consumes them to add owner
+kind Luigi to the production renderer instead of hand-copying model topology
+into `nds_renderer.c`.
+
 ## Role
 
 First new fighter on purpose: shares Mario's skeleton/kit shape, so he proves

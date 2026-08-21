@@ -14020,7 +14020,334 @@
           "bytes": 4448,
           "sha256": "ca0e140fed34dc0ac981598174051f22c6766e7412eb05a352275fbcba96cc6c"
         }
-      ]
+      ],
+      "native_model": {
+        "owner": "luigi",
+        "model_file_id": "0x143",
+        "model_path": "decomp/BattleShip-main/BattleShip_o2r/reloc_fighters_main/LuigiModel",
+        "model_sha256": "793c2f3ae89aa8925f4cd715b40a79b3fe9236c033d84a4e270f09bc88dd4247",
+        "model_bytes": 32616,
+        "setup_parts": [
+          "0xffffff00",
+          "0x00000000"
+        ],
+        "details": {
+          "high": {
+            "source_ir": {
+              "state_deltas": 23,
+              "state_sequence": 56,
+              "vertex_actions": 42,
+              "triangles": 320,
+              "runs": 32,
+              "epochs": 20,
+              "roots": 14,
+              "roots_sha256": "155d8739df68091e4b3ce1ca4e99a5417bf5b3f5f37db947ebcebb19af1b6aaf"
+            },
+            "dense_geometry": {
+              "vertices": 264,
+              "corners": 960
+            },
+            "root_offsets": [
+              "0x1830",
+              "0x1990",
+              "0x1a10",
+              "0x1ab0",
+              "0x1b50",
+              "0x1ea0",
+              "0x1f20",
+              "0x1fc0",
+              "0x2060",
+              "0x20f0",
+              "0x21a8",
+              "0x2238",
+              "0x22c8",
+              "0x2380"
+            ],
+            "hierarchy": {
+              "joints": 25,
+              "bindings": 14,
+              "camera_seeds": 1,
+              "pushes": 5,
+              "pops": 5,
+              "max_source_depth": 8,
+              "binding_parents": [
+                255,
+                0,
+                1,
+                2,
+                0,
+                0,
+                5,
+                6,
+                255,
+                8,
+                9,
+                255,
+                11,
+                12
+              ],
+              "binding_joints": [
+                3,
+                5,
+                6,
+                7,
+                9,
+                11,
+                12,
+                13,
+                16,
+                17,
+                19,
+                21,
+                22,
+                24
+              ]
+            },
+            "cross_matrix": {
+              "runs": 9,
+              "bindings": [
+                1,
+                2,
+                5,
+                6,
+                8,
+                9,
+                11,
+                12
+              ],
+              "physical_slots": [
+                [
+                  1,
+                  16
+                ],
+                [
+                  2,
+                  17
+                ],
+                [
+                  5,
+                  18
+                ],
+                [
+                  6,
+                  19
+                ],
+                [
+                  8,
+                  20
+                ],
+                [
+                  9,
+                  21
+                ],
+                [
+                  11,
+                  22
+                ],
+                [
+                  12,
+                  23
+                ]
+              ],
+              "stores": 8,
+              "restores": 70
+            },
+            "lights": {
+              "root_prefix_commands": 44,
+              "intra_root_commands": 8,
+              "preambles": [
+                [
+                  "0x83271400",
+                  "0x240f1100"
+                ],
+                [
+                  "0xffffff00",
+                  "0x4c4c4c00"
+                ]
+              ]
+            },
+            "direct_epoch_policies": [
+              "0x00",
+              "0x01",
+              "0x01",
+              "0x01",
+              "0x00",
+              "0x00",
+              "0x01",
+              "0x01",
+              "0x01",
+              "0x01",
+              "0x03",
+              "0x01",
+              "0x01",
+              "0x01",
+              "0x01",
+              "0x01",
+              "0x02",
+              "0x01",
+              "0x01",
+              "0x02"
+            ]
+          },
+          "low": {
+            "source_ir": {
+              "state_deltas": 25,
+              "state_sequence": 61,
+              "vertex_actions": 32,
+              "triangles": 200,
+              "runs": 20,
+              "epochs": 20,
+              "roots": 14,
+              "roots_sha256": "4bb6edcd0ded78b38e9b2e33636ec4b62aa97ff334cd97a3510bc534841375dd"
+            },
+            "dense_geometry": {
+              "vertices": 181,
+              "corners": 600
+            },
+            "root_offsets": [
+              "0x4020",
+              "0x4150",
+              "0x41c8",
+              "0x4248",
+              "0x42c8",
+              "0x45c0",
+              "0x4638",
+              "0x46b8",
+              "0x4738",
+              "0x47a0",
+              "0x4820",
+              "0x4890",
+              "0x48f8",
+              "0x4978"
+            ],
+            "hierarchy": {
+              "joints": 25,
+              "bindings": 14,
+              "camera_seeds": 1,
+              "pushes": 5,
+              "pops": 5,
+              "max_source_depth": 8,
+              "binding_parents": [
+                255,
+                0,
+                1,
+                2,
+                0,
+                0,
+                5,
+                6,
+                255,
+                8,
+                9,
+                255,
+                11,
+                12
+              ],
+              "binding_joints": [
+                3,
+                5,
+                6,
+                7,
+                9,
+                11,
+                12,
+                13,
+                16,
+                17,
+                19,
+                21,
+                22,
+                24
+              ]
+            },
+            "cross_matrix": {
+              "runs": 4,
+              "bindings": [
+                1,
+                2,
+                5,
+                6,
+                8,
+                9,
+                11,
+                12
+              ],
+              "physical_slots": [
+                [
+                  1,
+                  16
+                ],
+                [
+                  2,
+                  17
+                ],
+                [
+                  5,
+                  18
+                ],
+                [
+                  6,
+                  19
+                ],
+                [
+                  8,
+                  20
+                ],
+                [
+                  9,
+                  21
+                ],
+                [
+                  11,
+                  22
+                ],
+                [
+                  12,
+                  23
+                ]
+              ],
+              "stores": 8,
+              "restores": 46
+            },
+            "lights": {
+              "root_prefix_commands": 44,
+              "intra_root_commands": 8,
+              "preambles": [
+                [
+                  "0x83271400",
+                  "0x240f1100"
+                ],
+                [
+                  "0xffffff00",
+                  "0x4c4c4c00"
+                ]
+              ]
+            },
+            "direct_epoch_policies": [
+              "0x00",
+              "0x01",
+              "0x01",
+              "0x01",
+              "0x81",
+              "0x01",
+              "0x81",
+              "0x01",
+              "0x00",
+              "0x00",
+              "0x03",
+              "0x01",
+              "0x01",
+              "0x01",
+              "0x01",
+              "0x01",
+              "0x02",
+              "0x01",
+              "0x01",
+              "0x02"
+            ]
+          }
+        }
+      }
     }
   ]
 }

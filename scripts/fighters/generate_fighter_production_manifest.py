@@ -34,6 +34,8 @@ from collections import Counter
 from pathlib import Path
 from typing import Iterable
 
+import generate_nds_native_owners as native_owner
+
 
 BOOTSTRAP_FIGHTERS = ("Mario", "Fox", "Luigi")
 CORE_SLOT_NAMES = (
@@ -444,6 +446,17 @@ def build_manifest(repo_root: Path) -> dict[str, object]:
         raise ValueError("Luigi local animation census changed from the source 12")
     if not all(row["was_stubbed_in_port"] for row in luigi["local_animation_aliases"]):
         raise ValueError("Luigi bootstrap expected all 12 local aliases to be unresolved")
+
+    # Native model admission is sourced from the same O2R display-list decoder
+    # that produced Mario/Fox's shipping AOT owner.  Keep this attached to the
+    # fighter manifest so the next runtime slice consumes an already-reviewed
+    # high/low topology instead of rediscovering or hand-copying it in C.
+    for fighter in fighters:
+        owner_name = str(fighter["fighter"]).lower()
+        if owner_name in native_owner.P2_OWNER_MODEL_CENSUS:
+            fighter["native_model"] = native_owner.build_p2_owner_model_inventory(
+                repo_root, owner_name
+            )
 
     return {
         "schema": "smash64ds.p2-fighter-production-manifest.v1",

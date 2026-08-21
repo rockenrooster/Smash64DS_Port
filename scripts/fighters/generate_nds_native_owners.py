@@ -274,6 +274,19 @@ O2R_ASSETS = {
     ),
 }
 
+# P2-3 grows the source decoder one owner at a time without perturbing the
+# frozen Mario/Fox export above.  Keep O2R_ASSETS as the qualified P2-2 set --
+# several historical checks deliberately iterate it -- and use this superset
+# only for explicitly requested production-pipeline owners.
+P2_O2R_ASSETS = {
+    **O2R_ASSETS,
+    "luigi": (
+        Path("decomp/BattleShip-main/BattleShip_o2r/reloc_fighters_main/LuigiModel"),
+        0x0143,
+        "793c2f3ae89aa8925f4cd715b40a79b3fe9236c033d84a4e270f09bc88dd4247",
+    ),
+}
+
 # These are the primary JointTree DObjDesc arrays in the exact hashed O2R
 # resources above.  BattleShip's source declarations are
 # dMarioModel_JointTree (file offset 0x2200) and dFoxModel_JointTree (0x2938).
@@ -287,6 +300,8 @@ O2R_ASSETS = {
 OWNER_JOINT_TREES = {
     "mario": (0x2200, 26),
     "fox": (0x2938, 28),
+    # decomp dLuigiModel_JointTree (323_LuigiModel.c:1032)
+    "luigi": (0x2410, 26),
 }
 
 # The SECOND JointTree array in each hashed O2R resource is the low-detail
@@ -300,6 +315,8 @@ OWNER_JOINT_TREES_LOW = {
     "mario": (0x4590, 26),
     # decomp dFoxModel_JointTree_0x5510 (313_FoxModel.c:2078)
     "fox": (0x5510, 28),
+    # decomp dLuigiModel_JointTree_0x49E8 (323_LuigiModel.c:2284)
+    "luigi": (0x49e8, 26),
 }
 
 # Canonical export hashes for the low-detail program, pinned from the same
@@ -358,6 +375,8 @@ LOW_DIRECT_EPOCH_POLICIES: tuple[int, ...] = (
 OWNER_SETUP_PARTS = {
     "mario": (0xffffff00, 0x00000000),
     "fox": (0xffffffc0, 0x00000000),
+    # dLuigiMain_setup_parts (221_LuigiMain.c:87)
+    "luigi": (0xffffff00, 0x00000000),
 }
 
 # Slots 0..15 remain reserved for the camera seed and live GX hierarchy stack.
@@ -372,11 +391,20 @@ OWNER_CROSS_BINDING_SLOTS = {
         (8, 20), (9, 21), (11, 22), (12, 23),
     ),
     "fox": ((16, 16), (17, 17)),
+    # Luigi's source JointTree has Mario's topology.  The independent Luigi
+    # O2R decode finds the same eight logical bindings in cross-matrix runs;
+    # keep the physical mapping identical so the DS hierarchy namespace stays
+    # stable across the variant pair.
+    "luigi": (
+        (1, 16), (2, 17), (5, 18), (6, 19),
+        (8, 20), (9, 21), (11, 22), (12, 23),
+    ),
 }
 
 OWNER_PLAN_COUNTS = {
     "mario": (25, 14),
     "fox": (27, 18),
+    "luigi": (25, 14),
 }
 
 # camera seeds, hierarchy pushes, hierarchy pops, cross-binding stores, and
@@ -384,6 +412,7 @@ OWNER_PLAN_COUNTS = {
 OWNER_GX_PLAN_COUNTS = {
     "mario": (1, 5, 5, 8, 70),
     "fox": (1, 6, 6, 2, 14),
+    "luigi": (1, 5, 5, 8, 70),
 }
 
 # The low-detail program shares the high skeleton (same pushes/pops/stores);
@@ -393,6 +422,7 @@ DETAIL_GX_PLAN_COUNTS = {
     "low": {
         "mario": (1, 5, 5, 8, 46),
         "fox": (1, 6, 6, 2, 10),
+        "luigi": (1, 5, 5, 8, 46),
     },
 }
 
@@ -522,7 +552,8 @@ def _discover_owner_roots(payload: bytes, owner_name: str,
         offset for _, offset in descriptors[:len(selected)]
         if offset is not None
     ]
-    if len(roots) != OWNER_PLAN_COUNTS[owner_name][1]:
+    if (owner_name in OWNER_PLAN_COUNTS and
+            len(roots) != OWNER_PLAN_COUNTS[owner_name][1]):
         raise ValueError(f"{owner_name} drawable root cardinality changed")
     return roots
 
@@ -627,13 +658,20 @@ def _pack_rows(fmt: str, rows) -> bytes:
     return b"".join(struct.pack(fmt, *row) for row in rows)
 
 
-def build_source_export(repo_root: Path, detail: str = "high"
-                        ) -> dict[str, bytes]:
-    """Rebuild the former profile export directly from Mario/Fox O2R data."""
+def _build_source_export_for_owners(
+        repo_root: Path, owner_names: tuple[str, ...], detail: str
+        ) -> dict[str, bytes]:
+    """Decode one ordered owner set into the shared source-order IR.
+
+    Owner order is part of the ABI: actions/runs/epochs append in that order.
+    P2-2 calls this with (Mario, Fox), preserving the frozen export byte for
+    byte. P2-3 can ask for a new owner independently, or append one after the
+    frozen prefix, without teaching the decoder another fighter-specific path.
+    """
     states, sequence, actions, triangles, runs, epochs = [], [], [], [], [], []
     state_lookup = {}
     owner_roots = {}
-    for owner_name in ("mario", "fox"):
+    for owner_name in owner_names:
         payload = load_o2r_payload(repo_root, owner_name)
         roots = []
         slots = [None] * VERTEX_CACHE_SIZE
@@ -758,9 +796,20 @@ def build_source_export(repo_root: Path, detail: str = "high"
         "triangles": _pack_rows("<H", ((value,) for value in triangles)),
         "runs": _pack_rows("<HBBI", runs),
         "epochs": _pack_rows("<HHHHBBBBBBBB", epochs),
-        "mario_roots": _pack_rows("<IHHHBBBB2x", owner_roots["mario"]),
-        "fox_roots": _pack_rows("<IHHHBBBB2x", owner_roots["fox"]),
     }
+    for owner_name in owner_names:
+        data[f"{owner_name}_roots"] = _pack_rows(
+            "<IHHHBBBB2x", owner_roots[owner_name]
+        )
+    return data
+
+
+def build_source_export(repo_root: Path, detail: str = "high"
+                        ) -> dict[str, bytes]:
+    """Rebuild the frozen Mario/Fox export directly from BattleShip O2R."""
+    data = _build_source_export_for_owners(
+        repo_root, ("mario", "fox"), detail
+    )
     hashes = (SOURCE_EXPORT_HASHES if detail == "high"
               else LOW_SOURCE_EXPORT_HASHES)
     for name, expected_hash in hashes.items():
@@ -769,6 +818,189 @@ def build_source_export(repo_root: Path, detail: str = "high"
             raise ValueError(
                 f"{detail} {name}: SHA256 {actual_hash} != {expected_hash}")
     return data
+
+
+def build_p2_owner_source_export(
+        repo_root: Path, owner_name: str, detail: str = "high"
+        ) -> dict[str, bytes]:
+    """Decode a P2-3 owner without changing the frozen Mario/Fox program."""
+    if owner_name not in P2_O2R_ASSETS:
+        raise ValueError(f"unknown P2 native owner {owner_name}")
+    return _build_source_export_for_owners(repo_root, (owner_name,), detail)
+
+
+# P2-3 source-derived admission census.  These pins are intentionally at the
+# *output* of the generic decoder: they protect the production pipeline from a
+# reloc/source-layout drift while leaving Mario/Fox's older byte-hash oracle
+# untouched.  The fields are source IR + DS topology facts, not hand-authored
+# gameplay parameters.
+P2_OWNER_MODEL_CENSUS = {
+    "luigi": {
+        "high": (23, 56, 42, 320, 32, 20, 14, 264, 960, 9, 44, 8, 70),
+        "low": (25, 61, 32, 200, 20, 20, 14, 181, 600, 4, 44, 8, 46),
+    },
+}
+
+
+def build_p2_owner_model_inventory(
+        repo_root: Path, owner_name: str) -> dict[str, object]:
+    """Return a compact, adversarially checked native-model inventory.
+
+    This is the seam P2-3 needs before emitting a runtime owner.  It proves the
+    exact BattleShip high/low JointTrees, display-list IR, hierarchy, cross-
+    matrix bindings, light commands and dense DS geometry using the same
+    decoder that produced the shipping Mario/Fox owner.  It deliberately does
+    not mutate or append to the frozen P2-2 generated program.
+    """
+    if owner_name not in P2_OWNER_MODEL_CENSUS:
+        raise ValueError(f"no P2 native-owner census for {owner_name}")
+
+    relative_path, file_id, expected_hash = P2_O2R_ASSETS[owner_name]
+    source_path = repo_root / relative_path
+    if hashlib.sha256(source_path.read_bytes()).hexdigest() != expected_hash:
+        raise ValueError(f"{owner_name} model O2R changed before inventory")
+
+    details: dict[str, object] = {}
+    for detail in ("high", "low"):
+        data = build_p2_owner_source_export(repo_root, owner_name, detail)
+        state = unpack_many("<IIB3x", data["state"])
+        sequence = list(data["sequence"])
+        vertex = unpack_many("<BBBBIhh", data["vertex"])
+        triangles = [
+            item[0] for item in unpack_many("<H", data["triangles"])
+        ]
+        runs = unpack_many("<HBBI", data["runs"])
+        epochs = unpack_many("<HHHHBBBBBBBB", data["epochs"])
+        roots = unpack_many(
+            "<IHHHBBBB2x", data[f"{owner_name}_roots"]
+        )
+        payload = load_o2r_payload(repo_root, owner_name)
+        topology = decode_joint_topology(
+            payload, owner_name, roots, detail
+        )
+        (joint_schedule, binding_parents, binding_joints,
+         cross_slots, hierarchy_counts) = topology
+        (_light_state, light_preambles,
+         root_prefix_light_count, intra_root_light_count) = \
+            decode_epoch_light_color_state(
+                payload, owner_name, roots, epochs
+            )
+        direct_policies = derive_direct_epoch_policies(
+            state, sequence, epochs, ((owner_name, roots),),
+            expected_policies=None,
+        )
+        (dense_vertices, dense_color_sources, _dense_owners,
+         dense_corners, action_dense_first, run_first_corner,
+         run_owners, run_root_bindings,
+         run_binding_sets) = build_dense_geometry(
+            vertex, triangles, runs, epochs,
+            ((owner_name, roots),), repo_root
+        )
+
+        # This call is a validator as much as a builder: it proves every cross
+        # binding is assigned a legal physical GX slot and independently counts
+        # the required restores against DETAIL_GX_PLAN_COUNTS.
+        build_direct_dense_tables(
+            vertex, runs, dense_vertices, dense_color_sources,
+            dense_corners, action_dense_first, run_first_corner,
+            run_owners, run_root_bindings, run_binding_sets,
+            [cross_slots], detail, (owner_name,),
+        )
+
+        observed_cross_bindings: set[int] = set()
+        cross_run_count = 0
+        for run_index, run in enumerate(runs):
+            if run[2] == 1:
+                cross_run_count += 1
+                observed_cross_bindings.update(run_binding_sets[run_index])
+        expected_cross_bindings = {
+            binding for binding, _slot
+            in OWNER_CROSS_BINDING_SLOTS[owner_name]
+        }
+        if observed_cross_bindings != expected_cross_bindings:
+            raise ValueError(
+                f"{owner_name} {detail} cross bindings "
+                f"{sorted(observed_cross_bindings)} != "
+                f"{sorted(expected_cross_bindings)}"
+            )
+
+        restore_count = DETAIL_GX_PLAN_COUNTS[detail][owner_name][4]
+        census = (
+            len(state), len(sequence), len(vertex), len(triangles),
+            len(runs), len(epochs), len(roots), len(dense_vertices),
+            len(dense_corners), cross_run_count,
+            root_prefix_light_count, intra_root_light_count, restore_count,
+        )
+        if census != P2_OWNER_MODEL_CENSUS[owner_name][detail]:
+            raise ValueError(
+                f"{owner_name} {detail} native-model census {census} != "
+                f"{P2_OWNER_MODEL_CENSUS[owner_name][detail]}"
+            )
+
+        unique_light_preambles = sorted({
+            (int(w0), int(w1)) for preamble in light_preambles
+            if preamble is not None for w0, w1 in (preamble,)
+        })
+        details[detail] = {
+            "source_ir": {
+                "state_deltas": len(state),
+                "state_sequence": len(sequence),
+                "vertex_actions": len(vertex),
+                "triangles": len(triangles),
+                "runs": len(runs),
+                "epochs": len(epochs),
+                "roots": len(roots),
+                "roots_sha256": hashlib.sha256(
+                    data[f"{owner_name}_roots"]
+                ).hexdigest(),
+            },
+            "dense_geometry": {
+                "vertices": len(dense_vertices),
+                "corners": len(dense_corners),
+            },
+            "root_offsets": [f"0x{root[0]:x}" for root in roots],
+            "hierarchy": {
+                "joints": len(joint_schedule),
+                "bindings": len(binding_joints),
+                "camera_seeds": hierarchy_counts[0],
+                "pushes": hierarchy_counts[1],
+                "pops": hierarchy_counts[2],
+                "max_source_depth": hierarchy_counts[3],
+                "binding_parents": list(binding_parents),
+                "binding_joints": list(binding_joints),
+            },
+            "cross_matrix": {
+                "runs": cross_run_count,
+                "bindings": sorted(observed_cross_bindings),
+                "physical_slots": [
+                    [binding, slot]
+                    for binding, slot in OWNER_CROSS_BINDING_SLOTS[owner_name]
+                ],
+                "stores": DETAIL_GX_PLAN_COUNTS[detail][owner_name][3],
+                "restores": restore_count,
+            },
+            "lights": {
+                "root_prefix_commands": root_prefix_light_count,
+                "intra_root_commands": intra_root_light_count,
+                "preambles": [
+                    [f"0x{w0:08x}", f"0x{w1:08x}"]
+                    for w0, w1 in unique_light_preambles
+                ],
+            },
+            "direct_epoch_policies": [
+                f"0x{value:02x}" for value in direct_policies
+            ],
+        }
+
+    return {
+        "owner": owner_name,
+        "model_file_id": f"0x{file_id:x}",
+        "model_path": str(relative_path).replace("\\", "/"),
+        "model_sha256": expected_hash,
+        "model_bytes": source_path.stat().st_size,
+        "setup_parts": [f"0x{value:08x}" for value in OWNER_SETUP_PARTS[owner_name]],
+        "details": details,
+    }
 
 
 def decode_export(repo_root: Path | None = None) -> dict[str, bytes]:
@@ -786,7 +1018,7 @@ def unpack_many(fmt: str, payload: bytes):
 
 
 def load_o2r_payload(repo_root: Path, owner_name: str) -> bytes:
-    relative_path, expected_file_id, expected_hash = O2R_ASSETS[owner_name]
+    relative_path, expected_file_id, expected_hash = P2_O2R_ASSETS[owner_name]
     path = repo_root / relative_path
     source = path.read_bytes()
     actual_hash = hashlib.sha256(source).hexdigest()
@@ -1620,7 +1852,16 @@ def build_direct_dense_tables(
         vertex, runs, dense_vertices, dense_color_sources, dense_corners,
         action_dense_first, run_first_corner, run_owners,
         run_root_bindings, run_binding_sets, owner_cross_slots,
-        detail: str = "high"):
+        detail: str = "high", owner_names: tuple[str, ...] | None = None):
+    if owner_names is None:
+        # P2-2's frozen program is Mario/Fox.  P2-3 callers pass their explicit
+        # ordered owner set so adding a fighter cannot silently change this
+        # validation universe.
+        owner_names = tuple(O2R_ASSETS)
+    if len(owner_names) != len(owner_cross_slots):
+        raise ValueError(
+            "direct-table owner names do not match cross-slot table count"
+        )
     if len(dense_vertices) >= PACKED_DENSE_ID_LIMIT:
         raise ValueError(
             f"{len(dense_vertices)} dense IDs exceed the 10-bit direct ABI"
@@ -1728,7 +1969,7 @@ def build_direct_dense_tables(
     if len(packed_corners) != len(dense_corners):
         raise ValueError("packed direct corner cardinality mismatch")
     gx_plan_counts = DETAIL_GX_PLAN_COUNTS[detail]
-    for owner_index, (owner_name, _) in enumerate(O2R_ASSETS.items()):
+    for owner_index, owner_name in enumerate(owner_names):
         expected = {
             binding
             for binding, _ in OWNER_CROSS_BINDING_SLOTS[owner_name]
@@ -3305,7 +3546,10 @@ def build_consumed_fields_manifest(repo_root: Path) -> dict[str, object]:
             "triangles": len(triangles),
             "corners": len(triangles) * 3,
             "joint_schedule": {
-                "count": sum(counts[0] for counts in OWNER_PLAN_COUNTS.values()),
+                # Describe THIS generated program, not every future P2 owner
+                # whose source topology metadata the module knows about.
+                "count": sum(len(topology[0])
+                             for topology in context["owner_topologies"]),
                 "field_bytes": 2,
                 "packed_fields": [
                     "parent:5", "binding:5", "cross_palette_slot:5",
@@ -3313,7 +3557,8 @@ def build_consumed_fields_manifest(repo_root: Path) -> dict[str, object]:
                 ],
             },
             "binding_joints": {
-                "count": sum(counts[1] for counts in OWNER_PLAN_COUNTS.values()),
+                "count": sum(len(topology[2])
+                             for topology in context["owner_topologies"]),
                 "field_bytes": 1,
                 "consumer": "Task 27 generated fighter program",
                 "lookup": "checked direct indices in exact source order",

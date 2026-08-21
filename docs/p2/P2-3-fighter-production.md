@@ -67,6 +67,19 @@ This is still pipeline infrastructure, not fighter admission: CSS, native
 renderer owner, audio/UI and focused runtime move coverage remain before Luigi
 becomes selectable.
 
+The third bootstrap slice makes native-model conversion part of that same
+source contract instead of a second manual renderer inventory. The shipping
+Mario/Fox native-owner generator keeps its frozen two-owner export and hashes,
+but its decoder can now inspect an additional P2 owner independently. For Luigi
+it proves the exact `LuigiModel` O2R identity, High/Low JointTrees, setup-parts
+mask, hierarchy, display-list state/epoch/run streams, dense DS geometry,
+cross-matrix GX slots/restores and light preambles, and writes that compact
+inventory into the fighter production manifest. The frozen Mario/Fox generated
+include and consumed-fields manifest remain byte-identical. Runtime owner-slot
+generalization is therefore the next implementation step and consumes
+source-derived data already checked here; it must not introduce a Luigi-only
+renderer fork.
+
 ## Roster order (owner-ratified engineering order)
 
 | # | Fighter | File | Archetype / why this slot |
