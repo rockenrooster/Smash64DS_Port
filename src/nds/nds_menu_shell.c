@@ -2432,21 +2432,26 @@ static void ndsMenuShellCssPopulate(void)
          * (:969) -- a CPU slot draws the shared CP art at `p*69+26` and a
          * human one its own `<N>P` art at `pos_x[p] + p*69 + 22`, both black
          * on the card at y 131. Team Battle does NOT remove this object; its
-         * later DL-34 team selector simply draws over it. Keep the tag live and
-         * let foreground BG3 reproduce that source ordering. */
+         * later DL-34 team selector simply draws over it. Keep the tag live
+         * and let foreground BG3 reproduce that source ordering.
+         *
+         * OBJ priority 2 is the owner-ratified CSS stack (2026-08-21): the
+         * 3D fighters are BG0 priority 1 and the team selector is BG3
+         * priority 0, so a priority-2 tag stays above its BG2 gate card (OBJ
+         * wins the tie) while BOTH the fighters and the team plate draw in
+         * front of it. The old 0/1 tag stood on the fighter model and over
+         * the team plate. */
         if (sCssPkind[i] == (u8)nFTPlayerKindCom)
         {
             (void)ndsUiKitSetSpriteBlend(
                 NDS_CSS_SPRITE_TAG0 + i, NDS_MN_UI_KIT_IMAGE_PANEL_CP,
-                NDS_CSS_DS(panel + 26), NDS_CSS_DS(131), 15u, 0u,
-                (sCssIsTeamBattle != FALSE) ? 1u : 0u);
+                NDS_CSS_DS(panel + 26), NDS_CSS_DS(131), 15u, 0u, 2u);
         }
         else if (sCssPkind[i] == (u8)nFTPlayerKindMan)
         {
             (void)ndsUiKitSetSpriteBlend(
                 NDS_CSS_SPRITE_TAG0 + i, NDS_MN_UI_KIT_IMAGE_PANEL_1P,
-                NDS_CSS_DS(panel + 30), NDS_CSS_DS(131), 15u, 0u,
-                (sCssIsTeamBattle != FALSE) ? 1u : 0u);
+                NDS_CSS_DS(panel + 30), NDS_CSS_DS(131), 15u, 0u, 2u);
         }
         else
         {
@@ -2492,19 +2497,22 @@ static void ndsMenuShellCssPopulate(void)
         }
 
         /* The token. mnPlayersVSUpdatePuckDisplay hides it for an empty slot
-         * (mnplayersvs.c:2310) and draws the CP token for a CPU one. */
+         * (mnplayersvs.c:2310) and draws the CP token for a CPU one. Priority
+         * 0 with the cursor (owner, 2026-08-21): the carried badge is part of
+         * the interaction layer and must stay readable above the previews. */
         if (sCssPkind[i] == (u8)nFTPlayerKindNot)
         {
             ndsUiKitHideSprite(NDS_CSS_SPRITE_PUCK0 + i);
         }
         else
         {
-            ndsUiKitSetSprite(NDS_CSS_SPRITE_PUCK0 + i,
-                              (sCssPkind[i] == (u8)nFTPlayerKindCom) ?
-                                  NDS_MN_UI_KIT_IMAGE_PUCK_CP :
-                                  NDS_MN_UI_KIT_IMAGE_PUCK_1P,
-                              NDS_CSS_DS((s32)sCssPuckX[i]),
-                              NDS_CSS_DS((s32)sCssPuckY[i]));
+            (void)ndsUiKitSetSpriteBlend(
+                NDS_CSS_SPRITE_PUCK0 + i,
+                (sCssPkind[i] == (u8)nFTPlayerKindCom) ?
+                    NDS_MN_UI_KIT_IMAGE_PUCK_CP :
+                    NDS_MN_UI_KIT_IMAGE_PUCK_1P,
+                NDS_CSS_DS((s32)sCssPuckX[i]),
+                NDS_CSS_DS((s32)sCssPuckY[i]), 15u, 0u, 0u);
         }
     }
     ndsMenuShellCssDrawArrows();
@@ -2544,13 +2552,19 @@ static void ndsMenuShellCssMove(void)
     }
     /* mnPlayersVSUpdateCursor appends the player's gradient tag after the hand
      * at offsets {7,15}/{9,10}/{9,15}.  Only the 1P cursor is reachable on a
-     * single DS, and its source PRIM/ENV IA gradient is baked into this image. */
-    ndsUiKitSetSprite(NDS_CSS_SPRITE_CURSOR_TAG,
-                      NDS_MN_UI_KIT_IMAGE_CSS_CURSOR_1P,
-                      NDS_CSS_DS(sCssCursorX + tag_dx),
-                      NDS_CSS_DS(sCssCursorY + tag_dy));
-    ndsUiKitSetSprite(NDS_CSS_SPRITE_CURSOR, image, NDS_CSS_DS(sCssCursorX),
-                      NDS_CSS_DS(sCssCursorY));
+     * single DS, and its source PRIM/ENV IA gradient is baked into this image.
+     * Owner ruling 2026-08-21: the hand cursor and the carried token are the
+     * INTERACTION layer and stay topmost (priority 0), above the preview
+     * fighters and every panel furniture; the source's cursor camera (25) sits
+     * below the fighter camera (30), but a hand hidden behind a preview model
+     * is unreadable on the DS's smaller panel. */
+    (void)ndsUiKitSetSpriteBlend(
+        NDS_CSS_SPRITE_CURSOR_TAG, NDS_MN_UI_KIT_IMAGE_CSS_CURSOR_1P,
+        NDS_CSS_DS(sCssCursorX + tag_dx), NDS_CSS_DS(sCssCursorY + tag_dy),
+        15u, 0u, 0u);
+    (void)ndsUiKitSetSpriteBlend(
+        NDS_CSS_SPRITE_CURSOR, image, NDS_CSS_DS(sCssCursorX),
+        NDS_CSS_DS(sCssCursorY), 15u, 0u, 0u);
     for (i = 0u; i < (u32)NDS_CSS_SLOTS; i++)
     {
         if (sCssPkind[i] != (u8)nFTPlayerKindNot)
@@ -4019,7 +4033,11 @@ static void ndsMenuShellSssCommit(void)
         gkind = NDS_SSS_GKIND_RANDOM; /* "unresolved" -- never a ground id */
         for (tries = 0u; tries < 32u; tries++)
         {
-            u32 pick = (u32)syUtilsRandTimeUCharRange((s32)nGRKindInishie + 1);
+            /* mnmaps.c:1383 rolls syUtilsRandTimeUCharRange(9) -- every ground
+             * id 0..8, not just the first five. The old Inishie+1 bound could
+             * never roll Pupupu itself, which with one unlocked ground made
+             * every try fail and left the fallback to pick Dream Land. */
+            u32 pick = (u32)syUtilsRandTimeUCharRange(9);
 
             if ((ndsMenuShellSssGroundLocked(pick) == FALSE) &&
                 (pick != (u32)gSCManagerSceneData.gkind))
