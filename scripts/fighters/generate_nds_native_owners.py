@@ -289,6 +289,70 @@ OWNER_JOINT_TREES = {
     "fox": (0x2938, 28),
 }
 
+# The SECOND JointTree array in each hashed O2R resource is the low-detail
+# model the source itself draws for 3+ fighter matches (scvsbattle.c:188:
+# detail = (pl_count + cp_count < 3) ? High : Low).  Same descriptor counts,
+# same depth-18 sentinels, same setup_parts selection -- only the display
+# targets move deeper into the file.  Runtime proof: the four-CPU stress match
+# resolves Mario roots at 0x3c78.. and Fox at 0x4720.., exactly these arrays.
+OWNER_JOINT_TREES_LOW = {
+    # decomp dMarioModel_JointTree_0x4590 (296_MarioModel.c:1951)
+    "mario": (0x4590, 26),
+    # decomp dFoxModel_JointTree_0x5510 (313_FoxModel.c:2078)
+    "fox": (0x5510, 28),
+}
+
+# Canonical export hashes for the low-detail program, pinned from the same
+# pipeline that produced SOURCE_EXPORT_HASHES with only the JointTree offset
+# changed.  Regeneration drift fails here exactly as the high set does.
+LOW_SOURCE_EXPORT_HASHES = {
+    "state":
+        "08518517688c89c3afc003208e1575b7c7f1d9731946750d3e16830842d44de2",
+    "sequence":
+        "db432b3467a7c60f95e9b516f8227dfb9f3741b8f3668ef4886de51c5e86b65a",
+    "vertex":
+        "c15714bb3c9bfbd8129ed5ae2123ca5bde3c72b314f298c27e48f47f5bb09833",
+    "triangles":
+        "1ee27200df9a6ae38131be108be263c6fef9421b4768fc4d960e00762a2a57e5",
+    "runs":
+        "0ed2dd1bf4eae27a5d457073791a22b0004d2e37d50cdab4e65a7ea4eea5800c",
+    "epochs":
+        "edb010b7ae03c14a303792b235179d31e471ad0579f863c5c7218cc03d4b4801",
+    "mario_roots":
+        "4d052e3b488b9dc6306fdcde3bbb7ea7beb1d6177e1945efe47669622dcdf584",
+    "fox_roots":
+        "f433d638ae9c7f5a59e08ea83f7f6d7512681a7b81cf23216262cae32578279f",
+}
+
+# Canonical cardinalities per detail level, asserted in
+# build_owner_source_context.  High is the historical frozen export; low is
+# the same decoder over the low JointTrees.
+DETAIL_EXPORT_CARDINALITIES = {
+    "high": (54, 168, 76, 626, 67, 49, 14, 18),
+    "low": (54, 171, 70, 393, 53, 50, 14, 18),
+}
+DETAIL_SUBMIT_CLASS_CENSUS = {
+    "high": [582, 44],
+    "low": [363, 30],
+}
+DETAIL_LIGHT_CENSUS = {
+    "high": (120, 28),
+    "low": (104, 24),
+}
+
+# Frozen low-detail direct policies.  derive_direct_epoch_policies()
+# reproduces the frozen HIGH sets exactly (families from combine pairs,
+# cull-none from the geometry word's bit 0x400 at runs time) before it is
+# trusted; this is its low-detail output, pinned so regeneration cannot
+# silently drift.
+LOW_DIRECT_EPOCH_POLICIES: tuple[int, ...] = (
+    0x00, 0x01, 0x01, 0x02, 0x00, 0x00, 0x01, 0x03, 0x83, 0x03,
+    0x01, 0x01, 0x02, 0x01, 0x01, 0x02, 0x01, 0x01, 0x02, 0x01,
+    0x00, 0x81, 0x81, 0x00, 0x01, 0x02, 0x01, 0x02, 0x03, 0x02,
+    0x03, 0x00, 0x00, 0x02, 0x03, 0x03, 0x01, 0x02, 0x03, 0x02,
+    0x01, 0x01, 0x01, 0x02, 0x01, 0x01, 0x01, 0x02, 0x00, 0x00,
+)
+
 # dMarioMain_setup_parts / dFoxMain_setup_parts, consumed MSB-first by
 # BattleShip lbCommonSetupFighterPartsDObjs.
 OWNER_SETUP_PARTS = {
@@ -320,6 +384,16 @@ OWNER_PLAN_COUNTS = {
 OWNER_GX_PLAN_COUNTS = {
     "mario": (1, 5, 5, 8, 70),
     "fox": (1, 6, 6, 2, 14),
+}
+
+# The low-detail program shares the high skeleton (same pushes/pops/stores);
+# only the per-corner restore count tracks the smaller corner population.
+DETAIL_GX_PLAN_COUNTS = {
+    "high": OWNER_GX_PLAN_COUNTS,
+    "low": {
+        "mario": (1, 5, 5, 8, 46),
+        "fox": (1, 6, 6, 2, 10),
+    },
 }
 
 DIRECT_POLICY_CULL_NONE = 0x80
@@ -410,8 +484,12 @@ SOURCE_MATERIAL_DL = 0xde
 SOURCE_END_DL = 0xdf
 
 
-def _discover_owner_roots(payload: bytes, owner_name: str) -> list[int]:
-    joint_tree_offset, descriptor_count = OWNER_JOINT_TREES[owner_name]
+def _discover_owner_roots(payload: bytes, owner_name: str,
+                          detail: str = "high") -> list[int]:
+    joint_tree_offset, descriptor_count = (
+        OWNER_JOINT_TREES[owner_name] if detail == "high"
+        else OWNER_JOINT_TREES_LOW[owner_name]
+    )
     if joint_tree_offset + descriptor_count * DOBJ_DESC_SIZE > len(payload):
         raise ValueError(f"{owner_name} JointTree is out of range")
     descriptors = []
@@ -549,7 +627,8 @@ def _pack_rows(fmt: str, rows) -> bytes:
     return b"".join(struct.pack(fmt, *row) for row in rows)
 
 
-def build_source_export(repo_root: Path) -> dict[str, bytes]:
+def build_source_export(repo_root: Path, detail: str = "high"
+                        ) -> dict[str, bytes]:
     """Rebuild the former profile export directly from Mario/Fox O2R data."""
     states, sequence, actions, triangles, runs, epochs = [], [], [], [], [], []
     state_lookup = {}
@@ -559,7 +638,7 @@ def build_source_export(repo_root: Path) -> dict[str, bytes]:
         roots = []
         slots = [None] * VERTEX_CACHE_SIZE
         for root_index, root_offset in enumerate(
-                _discover_owner_roots(payload, owner_name)):
+                _discover_owner_roots(payload, owner_name, detail)):
             commands = _source_commands(payload, owner_name, root_offset)
             triangle_blocks = []
             command_index = 0
@@ -682,10 +761,13 @@ def build_source_export(repo_root: Path) -> dict[str, bytes]:
         "mario_roots": _pack_rows("<IHHHBBBB2x", owner_roots["mario"]),
         "fox_roots": _pack_rows("<IHHHBBBB2x", owner_roots["fox"]),
     }
-    for name, expected_hash in SOURCE_EXPORT_HASHES.items():
+    hashes = (SOURCE_EXPORT_HASHES if detail == "high"
+              else LOW_SOURCE_EXPORT_HASHES)
+    for name, expected_hash in hashes.items():
         actual_hash = hashlib.sha256(data[name]).hexdigest()
         if actual_hash != expected_hash:
-            raise ValueError(f"{name}: SHA256 {actual_hash} != {expected_hash}")
+            raise ValueError(
+                f"{detail} {name}: SHA256 {actual_hash} != {expected_hash}")
     return data
 
 
@@ -868,7 +950,7 @@ def decode_epoch_light_color_state(
 
 
 def restore_epoch_light_color_state(
-        state, sequence, epochs, root_groups, additions):
+        state, sequence, epochs, root_groups, additions, detail: str = "high"):
     """Fold recovered light words into the existing before/after state ABI."""
     state = list(state)
     rebuilt_sequence = []
@@ -906,10 +988,12 @@ def restore_epoch_light_color_state(
         rebuilt_root_groups.append(rebuilt_roots)
     if len(state) > 0x100 or len(rebuilt_sequence) > 0xffff:
         raise ValueError("recovered light state exceeds the compact state ABI")
-    if len(rebuilt_sequence) != len(sequence) + 28:
+    expected_light_additions = DETAIL_LIGHT_CENSUS[detail][1]
+    if len(rebuilt_sequence) != len(sequence) + expected_light_additions:
         raise ValueError(
             "recovered light state sequence changed size: "
-            f"{len(rebuilt_sequence)} != {len(sequence) + 28}"
+            f"{len(rebuilt_sequence)} != "
+            f"{len(sequence) + expected_light_additions}"
         )
     return state, rebuilt_sequence, rebuilt_epochs, rebuilt_root_groups
 
@@ -926,36 +1010,106 @@ def decode_source_vertex(payload: bytes, source_offset: int):
     return x, y, z, s, t, rgba
 
 
-def build_direct_epoch_policies(epoch_count: int) -> list[int]:
-    if epoch_count != 49:
-        raise ValueError(f"direct policy expects 49 epochs, got {epoch_count}")
-    classified = (
-        DIRECT_POLICY_TEXTURED_EPOCHS |
-        DIRECT_POLICY_LIT_ONLY_EPOCHS |
-        DIRECT_POLICY_ALT_ALPHA_EPOCHS
-    )
-    if max(classified | DIRECT_POLICY_CULL_NONE_EPOCHS) >= epoch_count:
-        raise ValueError("direct policy names an out-of-range epoch")
-    if ((DIRECT_POLICY_TEXTURED_EPOCHS & DIRECT_POLICY_LIT_ONLY_EPOCHS) or
-            (DIRECT_POLICY_TEXTURED_EPOCHS &
-             DIRECT_POLICY_ALT_ALPHA_EPOCHS) or
-            (DIRECT_POLICY_LIT_ONLY_EPOCHS &
-             DIRECT_POLICY_ALT_ALPHA_EPOCHS)):
-        raise ValueError("direct policy families overlap")
+def build_direct_epoch_policies(epoch_count: int, detail: str = "high"
+                                ) -> list[int]:
+    if detail == "high":
+        if epoch_count != 49:
+            raise ValueError(
+                f"direct policy expects 49 epochs, got {epoch_count}")
+        classified = (
+            DIRECT_POLICY_TEXTURED_EPOCHS |
+            DIRECT_POLICY_LIT_ONLY_EPOCHS |
+            DIRECT_POLICY_ALT_ALPHA_EPOCHS
+        )
+        if max(classified | DIRECT_POLICY_CULL_NONE_EPOCHS) >= epoch_count:
+            raise ValueError("direct policy names an out-of-range epoch")
+        if ((DIRECT_POLICY_TEXTURED_EPOCHS & DIRECT_POLICY_LIT_ONLY_EPOCHS) or
+                (DIRECT_POLICY_TEXTURED_EPOCHS &
+                 DIRECT_POLICY_ALT_ALPHA_EPOCHS) or
+                (DIRECT_POLICY_LIT_ONLY_EPOCHS &
+                 DIRECT_POLICY_ALT_ALPHA_EPOCHS)):
+            raise ValueError("direct policy families overlap")
 
-    result = []
-    for epoch_index in range(epoch_count):
-        if epoch_index in DIRECT_POLICY_TEXTURED_EPOCHS:
-            family = 0
-        elif epoch_index in DIRECT_POLICY_LIT_ONLY_EPOCHS:
-            family = 2
-        elif epoch_index in DIRECT_POLICY_ALT_ALPHA_EPOCHS:
-            family = 3
-        else:
-            family = 1
-        if epoch_index in DIRECT_POLICY_CULL_NONE_EPOCHS:
-            family |= DIRECT_POLICY_CULL_NONE
-        result.append(family)
+        result = []
+        for epoch_index in range(epoch_count):
+            if epoch_index in DIRECT_POLICY_TEXTURED_EPOCHS:
+                family = 0
+            elif epoch_index in DIRECT_POLICY_LIT_ONLY_EPOCHS:
+                family = 2
+            elif epoch_index in DIRECT_POLICY_ALT_ALPHA_EPOCHS:
+                family = 3
+            else:
+                family = 1
+            if epoch_index in DIRECT_POLICY_CULL_NONE_EPOCHS:
+                family |= DIRECT_POLICY_CULL_NONE
+            result.append(family)
+        return result
+
+    if epoch_count != len(LOW_DIRECT_EPOCH_POLICIES):
+        raise ValueError(
+            f"low direct policy expects {len(LOW_DIRECT_EPOCH_POLICIES)} "
+            f"epochs, got {epoch_count}")
+    return list(LOW_DIRECT_EPOCH_POLICIES)
+
+
+def derive_direct_epoch_policies(state, sequence, epochs, owner_roots,
+                                 expected_policies=None):
+    """Derive per-epoch direct-policy families by replaying state spans.
+
+    The frozen high-detail sets classify specific epoch indices; the low
+    program needs the same classification for different indices.  Both
+    properties are functions of the state an epoch's runs see, which the
+    runtime builds as before-span -> material -> after-span -> runs with
+    carryover across epochs: the family from the last G_SETCOMBINE delta
+    (effect 3), the cull-none flag from the geometry word (effect 5) having
+    bit 0x400 clear at runs time -- that is exactly how the frozen high sets
+    behave (epoch 20 clears the bit in its after-span, epoch 21 inherits it
+    through empty spans, epoch 22 restores it).  Pass expected_policies to
+    demand an exact match against a known-good table; the high context must
+    reproduce its frozen table before the low output is trusted.
+    """
+    combine_pairs = {
+        (combine_w0, combine_w1): family
+        for family, (combine_w0, combine_w1, _flags, _textured) in enumerate(
+            DIRECT_POLICY_FAMILIES)
+    }
+    result = [None] * len(epochs)
+    for _owner_name, roots in owner_roots:
+        combine = None
+        cull_on = True
+        for root in roots:
+            _offset, first_epoch, _tail, _commands, epoch_count = root[:5]
+            for epoch_index in range(first_epoch, first_epoch + epoch_count):
+                epoch = epochs[epoch_index]
+                (before_first, after_first, _first_action, _first_run,
+                 before_count, after_count) = epoch[:6]
+                for first, count in ((before_first, before_count),
+                                     (after_first, after_count)):
+                    for i in range(count):
+                        delta_index = sequence[first + i]
+                        w0, w1, effect = state[delta_index]
+                        if effect == 3:  # NDS_NATIVE_STATE_COMBINE
+                            combine = (w0, w1)
+                        elif effect == 5:  # NDS_NATIVE_STATE_GEOMETRY
+                            cull_on = (w1 & 0x400) != 0
+                if combine is None or combine not in combine_pairs:
+                    raise ValueError(
+                        f"epoch {epoch_index}: effective combine "
+                        f"{combine} matches no direct-policy family")
+                family = combine_pairs[combine]
+                if not cull_on:
+                    family |= DIRECT_POLICY_CULL_NONE
+                result[epoch_index] = family
+    if any(family is None for family in result):
+        raise ValueError("an epoch was never reached by the root walk")
+    if expected_policies is not None and result != list(expected_policies):
+        for index, (derived, expected) in enumerate(
+                zip(result, expected_policies)):
+            if derived != expected:
+                print(f"epoch {index}: derived 0x{derived:02x} "
+                      f"expected 0x{expected:02x}")
+        raise ValueError("derived direct policies disagree with the "
+                         "expected table")
     return result
 
 
@@ -1034,8 +1188,12 @@ def build_joint_push_flags(owner_name: str, parents: list[int]):
 
 
 def decode_joint_topology(
-        payload: bytes, owner_name: str, roots: list[tuple]):
-    joint_tree_offset, descriptor_count = OWNER_JOINT_TREES[owner_name]
+        payload: bytes, owner_name: str, roots: list[tuple],
+        detail: str = "high"):
+    joint_tree_offset, descriptor_count = (
+        OWNER_JOINT_TREES[owner_name] if detail == "high"
+        else OWNER_JOINT_TREES_LOW[owner_name]
+    )
     tree_end = joint_tree_offset + descriptor_count * DOBJ_DESC_SIZE
     if tree_end > len(payload):
         raise ValueError(f"{owner_name} JointTree is out of range")
@@ -1461,7 +1619,8 @@ def build_dense_geometry(
 def build_direct_dense_tables(
         vertex, runs, dense_vertices, dense_color_sources, dense_corners,
         action_dense_first, run_first_corner, run_owners,
-        run_root_bindings, run_binding_sets, owner_cross_slots):
+        run_root_bindings, run_binding_sets, owner_cross_slots,
+        detail: str = "high"):
     if len(dense_vertices) >= PACKED_DENSE_ID_LIMIT:
         raise ValueError(
             f"{len(dense_vertices)} dense IDs exceed the 10-bit direct ABI"
@@ -1568,6 +1727,7 @@ def build_direct_dense_tables(
 
     if len(packed_corners) != len(dense_corners):
         raise ValueError("packed direct corner cardinality mismatch")
+    gx_plan_counts = DETAIL_GX_PLAN_COUNTS[detail]
     for owner_index, (owner_name, _) in enumerate(O2R_ASSETS.items()):
         expected = {
             binding
@@ -1578,7 +1738,7 @@ def build_direct_dense_tables(
                 f"{owner_name} cross-binding census changed: "
                 f"{sorted(observed_cross_bindings[owner_index])}"
             )
-        expected_restore_count = OWNER_GX_PLAN_COUNTS[owner_name][4]
+        expected_restore_count = gx_plan_counts[owner_name][4]
         if owner_restore_counts[owner_index] != expected_restore_count:
             raise ValueError(
                 f"{owner_name} GX restore count "
@@ -1716,6 +1876,7 @@ def build_packed_fifo_owner_plan(
         run_first_corner: list[int],
         direct_epoch_policies: list[int],
         cross_slots: list[int],
+        detail: str = "high",
 ):
     """Build one immutable whole-fighter FIFO template.
 
@@ -1946,16 +2107,22 @@ def build_packed_fifo_owner_plan(
         color_cursor += color_count
         texcoord_cursor += texcoord_count
 
-    expected_store = OWNER_GX_PLAN_COUNTS[owner_name][3]
-    expected_restore = OWNER_GX_PLAN_COUNTS[owner_name][4]
+    expected_store = DETAIL_GX_PLAN_COUNTS[detail][owner_name][3]
+    expected_restore = DETAIL_GX_PLAN_COUNTS[detail][owner_name][4]
     if (store_count, restore_count) != (expected_store, expected_restore):
         raise ValueError(
             f"{owner_name} packet store/restore {store_count}/{restore_count} "
             f"!= {expected_store}/{expected_restore}"
         )
-    expected_triangles = 320 if owner_name == "mario" else 306
+    expected_triangles = {
+        ("high", "mario"): 320, ("high", "fox"): 306,
+        ("low", "mario"): 200, ("low", "fox"): 193,
+    }[(detail, owner_name)]
     expected_corners = expected_triangles * 3
-    expected_textured_corners = 192 if owner_name == "mario" else 189
+    expected_textured_corners = {
+        ("high", "mario"): 192, ("high", "fox"): 189,
+        ("low", "mario"): 150, ("low", "fox"): 111,
+    }[(detail, owner_name)]
     if (triangle_count, corner_count, textured_corner_count) != (
             expected_triangles, expected_corners, expected_textured_corners):
         raise ValueError(
@@ -2195,9 +2362,10 @@ def emit_rows(
     return result
 
 
-def build_owner_source_context(repo_root: Path) -> dict[str, object]:
+def build_owner_source_context(repo_root: Path, detail: str = "high"
+                               ) -> dict[str, object]:
     """Recover the exact shared Mario/Fox source-order program inputs."""
-    data = build_source_export(repo_root)
+    data = build_source_export(repo_root, detail)
     state = unpack_many("<IIB3x", data["state"])
     sequence = list(data["sequence"])
     vertex = unpack_many("<BBBBIhh", data["vertex"])
@@ -2207,19 +2375,29 @@ def build_owner_source_context(repo_root: Path) -> dict[str, object]:
     mario_roots = unpack_many("<IHHHBBBB2x", data["mario_roots"])
     fox_roots = unpack_many("<IHHHBBBB2x", data["fox_roots"])
     if (len(state), len(sequence), len(vertex), len(triangles), len(runs),
-            len(epochs), len(mario_roots), len(fox_roots)) != (
-            54, 168, 76, 626, 67, 49, 14, 18):
-        raise ValueError("canonical native-fighter IR cardinality changed")
+            len(epochs), len(mario_roots), len(fox_roots)) != \
+            DETAIL_EXPORT_CARDINALITIES[detail]:
+        raise ValueError(
+            f"canonical native-fighter IR cardinality changed ({detail})")
     class_triangles = [0, 0]
     for _, triangle_count, submit_class, _ in runs:
         if submit_class >= len(class_triangles):
             raise ValueError(f"unsupported submit class {submit_class}")
         class_triangles[submit_class] += triangle_count
-    if class_triangles != [582, 44]:
-        raise ValueError(f"submit-class census changed: {class_triangles}")
+    if class_triangles != DETAIL_SUBMIT_CLASS_CENSUS[detail]:
+        raise ValueError(
+            f"submit-class census changed ({detail}): {class_triangles}")
 
-    direct_epoch_policies = build_direct_epoch_policies(len(epochs))
     owner_roots = (("mario", mario_roots), ("fox", fox_roots))
+    if detail == "high":
+        direct_epoch_policies = build_direct_epoch_policies(
+            len(epochs), "high")
+    else:
+        # Derive, then verify against the frozen pin once it is filled in.
+        direct_epoch_policies = derive_direct_epoch_policies(
+            state, sequence, epochs, owner_roots,
+            expected_policies=(list(LOW_DIRECT_EPOCH_POLICIES)
+                               if LOW_DIRECT_EPOCH_POLICIES else None))
     owner_topologies = []
     light_state_additions = {index: ([], []) for index in range(len(epochs))}
     light_preambles = [(0, 0)]
@@ -2230,7 +2408,7 @@ def build_owner_source_context(repo_root: Path) -> dict[str, object]:
     for owner_name, roots in owner_roots:
         payload = load_o2r_payload(repo_root, owner_name)
         owner_topologies.append(
-            decode_joint_topology(payload, owner_name, roots)
+            decode_joint_topology(payload, owner_name, roots, detail)
         )
         (owner_light_state, owner_light_preambles,
          owner_prefix_command_count, owner_intra_command_count) = \
@@ -2254,11 +2432,12 @@ def build_owner_source_context(repo_root: Path) -> dict[str, object]:
         root_prefix_light_command_count += owner_prefix_command_count
         intra_root_light_command_count += owner_intra_command_count
     if (root_prefix_light_command_count, intra_root_light_command_count) != \
-            (120, 28):
+            DETAIL_LIGHT_CENSUS[detail]:
         raise ValueError(
-            "native-owner source light command census changed: "
+            f"native-owner source light command census changed ({detail}): "
             f"prefix={root_prefix_light_command_count}, "
-            f"intra-root={intra_root_light_command_count} != 120,28"
+            f"intra-root={intra_root_light_command_count} != "
+            f"{DETAIL_LIGHT_CENSUS[detail]}"
         )
     if (len(light_preambles) != 3 or
             light_preambles[1][0] != light_preambles[2][0]):
@@ -2268,7 +2447,7 @@ def build_owner_source_context(repo_root: Path) -> dict[str, object]:
     state, sequence, epochs, rebuilt_root_groups = \
         restore_epoch_light_color_state(
             state, sequence, epochs, (mario_roots, fox_roots),
-            light_state_additions)
+            light_state_additions, detail)
     mario_roots, fox_roots = rebuilt_root_groups
 
     return {
@@ -2559,6 +2738,51 @@ def generate(repo_root: Path | None = None) -> str:
             run_first_corner, direct_epoch_policies, topology[3],
         ))
         owner_root_first += len(roots)
+
+    # Low-detail program: the same pipeline over the second JointTree arrays.
+    # The source draws these models for pl_count+cp_count >= 3
+    # (scvsbattle.c:188), so 3+ fighter matches need this IR to keep the
+    # native fighter owner path.
+    low_context = build_owner_source_context(repo_root, "low")
+    low_state = low_context["state"]
+    low_sequence = low_context["sequence"]
+    low_vertex = low_context["vertex"]
+    low_triangles = low_context["triangles"]
+    low_runs = low_context["runs"]
+    low_epochs = low_context["epochs"]
+    low_owner_roots = low_context["owner_roots"]
+    (low_dense_vertices, low_dense_color_sources, low_dense_owners,
+     low_dense_corners, low_action_dense_first, low_run_first_corner,
+     low_run_owners, low_run_root_bindings,
+     low_run_binding_sets) = build_dense_geometry(
+        low_vertex, low_triangles, low_runs, low_epochs, low_owner_roots,
+        repo_root)
+    if (len(low_dense_vertices), len(low_dense_corners)) != (420, 1179):
+        raise ValueError(
+            "canonical low-detail dense geometry cardinality changed: "
+            f"{len(low_dense_vertices)} vertices, "
+            f"{len(low_dense_corners)} corners"
+        )
+    if (low_dense_owners.count(0) != 187 or
+            low_dense_owners.count(1) != 233):
+        raise ValueError("canonical low-detail owner census changed")
+    low_owner_cross_slots = [
+        topology[3] for topology in low_context["owner_topologies"]
+    ]
+    (low_action_dense_spans, low_packed_corners, _low_run_first_unique,
+     _low_run_unique_count, _low_run_unique_dense) = \
+        build_direct_dense_tables(
+            low_vertex, low_runs, low_dense_vertices,
+            low_dense_color_sources, low_dense_corners,
+            low_action_dense_first, low_run_first_corner,
+            low_run_owners, low_run_root_bindings, low_run_binding_sets,
+            low_owner_cross_slots, "low")
+    low_fighter_primitive_streams = {
+        1: build_fighter_primitive_streams(
+            low_runs, low_packed_corners, low_run_first_corner, 1),
+        2: build_fighter_primitive_streams(
+            low_runs, low_packed_corners, low_run_first_corner, 2),
+    }
 
     lines = [
         "/* Generated by scripts/generate_nds_native_owners.py. */",
@@ -2865,6 +3089,169 @@ def generate(repo_root: Path | None = None) -> str:
          for row, light_preamble in zip(
              fox_roots, owner_light_preamble_indices["fox"])],
     )
+    # ---- Low-detail table set (3+ fighter matches). ----
+    # Mirrors the high tables with Low-suffixed names.  Nothing references
+    # these yet in the same emitted order as the high set so a runtime
+    # detail switch is a name swap, not a re-layout.  Unreferenced static
+    # const arrays are dropped by gc-sections, so a runtime without the
+    # detail switch pays nothing for them.
+    lines += [
+        "/* Low-detail program: 32 roots, 50 epochs, 53 runs, 393 triangles. */",
+        "/* Dense geometry: 420 immutable vertices, 1179 indexed corners. */",
+        "/* Light preambles are shared with the high set (identical words). */",
+        "",
+    ]
+    lines += emit_rows(
+        "NDSNativeStateDelta", "sNdsNativeFighterStateDeltasLow",
+        [f"{{ 0x{w0:08x}u, 0x{w1:08x}u, {effect}u, {{ 0u, 0u, 0u }} }}"
+         for w0, w1, effect in low_state],
+    )
+    lines += emit_rows(
+        "u8", "sNdsNativeFighterStateSequenceLow",
+        [f"{value}u" for value in low_sequence],
+    )
+    lines += emit_rows(
+        "NDSNativeVertexAction", "sNdsNativeFighterVertexActionsLow",
+        [f"{{ {kind}u, {command}u, {index}u, {count}u, 0x{offset:08x}u, {s}, {t} }}"
+         for kind, command, index, count, offset, s, t in low_vertex],
+    )
+    lines += ["#if NDS_RENDERER_HW_TRIANGLES", ""]
+    lines += emit_rows(
+        "u8", "sNdsNativeFighterEpochDirectPolicyLow",
+        [f"0x{value:02x}u" for value in low_context["direct_epoch_policies"]],
+    )
+    lines += emit_rows(
+        "NDSNativeDenseVertex", "sNdsNativeFighterDenseVerticesLow",
+        ["{{ 0x{:08x}u, {}, {}, {}u, {}u, 0u }}".format(
+             rgba, s, t, binding, cache_slot)
+         for dense_id, (x, y, z, s, t, binding, cache_slot, rgba)
+         in enumerate(low_dense_vertices)],
+    )
+    lines += ["#if NDS_RENDERER_PROFILE_LEVEL < 2", ""]
+    lines += emit_rows(
+        "NDSNativePreparedDenseVertex", "sNdsNativeFighterPreparedDenseLow",
+        ["{{ .gx_xy = 0x{:08x}u, .gx_z = 0x{:04x}u }}".format(
+             *pack_fifo_vertex16(x, y, z, f"low dense vertex {dense_id}"))
+         for dense_id, (x, y, z, _s, _t, _binding, _cache_slot, _rgba)
+         in enumerate(low_dense_vertices)],
+        const=False,
+        # Main RAM, deliberately NOT .dtcm.fighter: DTCM has ~7 KB free and
+        # the low set would not fit beside the high residents.  Cached main
+        # RAM for the 4-player path beats the generic-interpreter fallback
+        # by an order of magnitude either way.
+    )
+    lines += ["#endif", ""]
+    lines += emit_rows(
+        "u16", "sNdsNativeFighterActionDenseFirstLow",
+        [f"{value}u" for value in low_action_dense_first],
+    )
+    lines += emit_rows(
+        "u16", "sNdsNativeFighterActionDenseSpansLow",
+        [f"0x{value:04x}u" for value in low_action_dense_spans],
+    )
+    lines += emit_rows(
+        "u16", "sNdsNativeFighterDenseColorSourceLow",
+        [f"{value}u" for value in low_dense_color_sources],
+    )
+    lines += emit_rows(
+        "u16", "sNdsNativeFighterDenseCornersLow",
+        [f"{value}u" for value in low_dense_corners],
+    )
+    lines += emit_rows(
+        "u16", "sNdsNativeFighterPackedCornersLow",
+        [f"0x{value:04x}u" for value in low_packed_corners],
+    )
+    lines += emit_rows(
+        "u16", "sNdsNativeFighterRunFirstCornerLow",
+        [f"{value}u" for value in low_run_first_corner],
+    )
+    lines += emit_rows(
+        "u16", "sNdsNativeFighterRunFirstUniqueLow",
+        [f"{value}u" for value in _low_run_first_unique],
+    )
+    lines += emit_rows(
+        "u8", "sNdsNativeFighterRunUniqueCountLow",
+        [f"{value}u" for value in _low_run_unique_count],
+    )
+    lines += emit_rows(
+        "u16", "sNdsNativeFighterRunUniqueDenseLow",
+        [f"{value}u" for value in _low_run_unique_dense],
+    )
+    for owner_index, ((owner_name, _roots), _topology) in enumerate(
+            zip(low_owner_roots, low_context["owner_topologies"])):
+        owner_title = owner_name.title()
+        lines += emit_rows(
+            "u8", f"sNdsNative{owner_title}CrossPaletteSlotsLow",
+            [f"{value}u" for value in low_owner_cross_slots[owner_index]],
+        )
+    lines += emit_rows(
+        "u16", "sNdsNativeFighterTrianglesLow",
+        [f"0x{value:04x}u" for value in low_triangles],
+    )
+    lines += emit_rows(
+        "NDSNativeRun", "sNdsNativeFighterRunsLow",
+        [f"{{ {first}u, {count}u, {submit_class}u, 0x{mask:08x}u }}"
+         for first, count, submit_class, mask in low_runs],
+    )
+    for _task56_mode in (1, 2):
+        (run_group_first, run_group_count, group_type,
+         group_first_vertex, group_vertex_count,
+         primitive_vertices) = low_fighter_primitive_streams[_task56_mode]
+        lines += [
+            f"#if NDS_TASK56_FIGHTER_PRIMITIVES == {_task56_mode}",
+        ]
+        lines += emit_rows(
+            "u16", "sNdsNativeFighterPrimitiveGroupFirstLow",
+            [f"{value}u" for value in run_group_first],
+        )
+        lines += emit_rows(
+            "u8", "sNdsNativeFighterPrimitiveGroupCountLow",
+            [f"{value}u" for value in run_group_count],
+        )
+        lines += emit_rows(
+            "u8", "sNdsNativeFighterPrimitiveGroupTypeLow",
+            [f"{value}u" for value in group_type],
+        )
+        lines += emit_rows(
+            "u16", "sNdsNativeFighterPrimitiveGroupFirstVertexLow",
+            [f"{value}u" for value in group_first_vertex],
+        )
+        lines += emit_rows(
+            "u8", "sNdsNativeFighterPrimitiveGroupVertexCountLow",
+            [f"{value}u" for value in group_vertex_count],
+        )
+        lines += emit_rows(
+            "u16", "sNdsNativeFighterPrimitiveVerticesLow",
+            [f"0x{value:04x}u" for value in primitive_vertices],
+        )
+        lines += [
+            f"#define NDS_NATIVE_FIGHTER_PRIMITIVE_GROUP_COUNT_LOW_"
+            f"{_task56_mode}_{len(group_type)}",
+            f"#define NDS_NATIVE_FIGHTER_PRIMITIVE_VERTEX_COUNT_LOW_"
+            f"{_task56_mode}_{len(primitive_vertices)}",
+            "#endif",
+            "",
+        ]
+    lines += emit_rows(
+        "NDSNativeEpoch", "sNdsNativeFighterEpochsLow",
+        ["{{ {}u, {}u, {}u, {}u, {}u, {}u, {}u, {}u, {}u, {}u, {}u, {}u }}".format(*row)
+         for row in low_epochs],
+    )
+    lines += emit_rows(
+        "NDSNativeRoot", "sNdsNativeMarioRootsLow",
+        [root_format.format(*row[:7], light_preamble)
+         for row, light_preamble in zip(
+             low_context["mario_roots"],
+             low_context["owner_light_preamble_indices"]["mario"])],
+    )
+    lines += emit_rows(
+        "NDSNativeRoot", "sNdsNativeFoxRootsLow",
+        [root_format.format(*row[:7], light_preamble)
+         for row, light_preamble in zip(
+             low_context["fox_roots"],
+             low_context["owner_light_preamble_indices"]["fox"])],
+    )
+    lines += ["#endif", ""]
     return "\n".join(lines)
 
 
