@@ -13,6 +13,8 @@
 #include <gm/gmsound.h>
 #include <if/interface.h>
 #include <mn/menu.h>
+#include <nds/nds_menu_shell.h>
+#include <nds/nds_platform.h>
 #include <nds/nds_startup.h>
 #include <sc/scene.h>
 #include <sys/controller.h>
@@ -31,6 +33,11 @@ extern u32 sGCSpritesActiveNum;
 extern s32 sSYTaskmanStatus;
 extern sb32 (*dLBCommonFuncMatrixList[])(void);
 extern void efManagerInitEffects(void);
+extern void ndsFighterManagerRegisterDisplayFighter(GObj *fighter_gobj,
+                                                     u32 slot);
+#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+extern void ndsFighterRendererInvalidateMaterialCaches(void);
+#endif
 
 extern void mnPlayersVSFuncLights(Gfx **dls);
 void mnPlayersVSFuncStart(void);
@@ -71,6 +78,374 @@ void ndsBaseMNPlayersVSStartScene(void);
 #undef mnPlayersVSStartScene
 
 static GObj *sNdsPlayersVSMainGObj;
+static sb32 sNdsPlayersVSPreviewActive;
+static sb32 sNdsPlayersVSPreviewRulesReady;
+static u32 sNdsPlayersVSPreviewDrawPhase;
+volatile u32 gNdsPlayersVSPreviewFrameCount;
+volatile u32 gNdsPlayersVSPreviewDrawCount;
+volatile f32 gNdsPlayersVSPreviewRotationY[GMCOMMON_PLAYERS_MAX];
+volatile s32 gNdsPlayersVSPreviewStatus[GMCOMMON_PLAYERS_MAX];
+volatile s32 gNdsPlayersVSPreviewMotion[GMCOMMON_PLAYERS_MAX];
+volatile u32 gNdsPlayersVSPreviewFreeRotateFrames[GMCOMMON_PLAYERS_MAX];
+volatile f32 gNdsPlayersVSPreviewLastFreeRotationY[GMCOMMON_PLAYERS_MAX];
+volatile s32 gNdsPlayersVSPreviewLastFreeStatus[GMCOMMON_PLAYERS_MAX];
+volatile s32 gNdsPlayersVSPreviewLastFreeMotion[GMCOMMON_PLAYERS_MAX];
+volatile u32 gNdsPlayersVSPreviewSelectedMask;
+volatile u32 gNdsPlayersVSPreviewVisibleMask;
+volatile u32 gNdsPlayersVSPreviewExitCount;
+
+/* P2-1N Stage D: the native shell owns the 2D CSS, but its fighter previews
+ * remain the source's real fighter objects. This is the smallest faithful
+ * subset of mnPlayersVSFuncStart: the same reloc context, fighter manager,
+ * figatree heaps, fighter camera, light, mnPlayersVSMakeFighter and preview
+ * process. The source portrait/cursor/gate GObjs are intentionally omitted
+ * because the UI kit already owns those layers. */
+void ndsMNPlayersVSPreviewInit(void)
+{
+    LBRelocSetup rl_setup;
+    s32 i;
+
+    if (sNdsPlayersVSPreviewActive != FALSE)
+    {
+        return;
+    }
+
+    gNdsPlayersVSPreviewFrameCount = 0u;
+    gNdsPlayersVSPreviewDrawCount = 0u;
+    gNdsPlayersVSPreviewSelectedMask = 0u;
+    gNdsPlayersVSPreviewVisibleMask = 0u;
+    for (i = 0; i < ARRAY_COUNT(sMNPlayersVSSlots); i++)
+    {
+        gNdsPlayersVSPreviewRotationY[i] = 0.0F;
+        gNdsPlayersVSPreviewStatus[i] = -1;
+        gNdsPlayersVSPreviewMotion[i] = -1;
+        gNdsPlayersVSPreviewFreeRotateFrames[i] = 0u;
+        gNdsPlayersVSPreviewLastFreeRotationY[i] = 0.0F;
+        gNdsPlayersVSPreviewLastFreeStatus[i] = -1;
+        gNdsPlayersVSPreviewLastFreeMotion[i] = -1;
+    }
+
+    rl_setup.table_addr = (uintptr_t)&lLBRelocTableAddr;
+    rl_setup.table_files_num = (u32)&llRelocFileCount;
+    rl_setup.file_heap = NULL;
+    rl_setup.file_heap_size = 0;
+    rl_setup.status_buffer = sMNPlayersVSStatusBuffer;
+    rl_setup.status_buffer_size = ARRAY_COUNT(sMNPlayersVSStatusBuffer);
+    rl_setup.force_status_buffer = sMNPlayersVSForceStatusBuffer;
+    rl_setup.force_status_buffer_size = ARRAY_COUNT(sMNPlayersVSForceStatusBuffer);
+    lbRelocInitSetup(&rl_setup);
+
+    ftManagerAllocFighter(FTDATA_FLAG_SUBMOTION, 4);
+    /* P2-2 intentionally stress-tests four fighter INSTANCES with the two
+     * fighter KINDS currently ported, Mario/Fox mirrors. Loading future kinds
+     * here would spend menu-entry RAM/I/O before their P2-3 asset/data work;
+     * every one of the four current CSS slots can already preview and launch. */
+    ftManagerSetupFilesAllKind(nFTKindMario);
+    ftManagerSetupFilesAllKind(nFTKindFox);
+
+    for (i = 0; i < ARRAY_COUNT(sMNPlayersVSSlots); i++)
+    {
+        sMNPlayersVSSlots[i].player = NULL;
+        sMNPlayersVSSlots[i].figatree_heap =
+            syTaskmanMalloc(gFTManagerFigatreeHeapSize, 0x10);
+        sMNPlayersVSSlots[i].pkind = nFTPlayerKindNot;
+        sMNPlayersVSSlots[i].fkind = nFTKindNull;
+        sMNPlayersVSSlots[i].costume = 0;
+        sMNPlayersVSSlots[i].shade = 0;
+        sMNPlayersVSSlots[i].is_selected = FALSE;
+        sMNPlayersVSSlots[i].is_fighter_selected = FALSE;
+        sMNPlayersVSSlots[i].is_status_selected = FALSE;
+    }
+    /* The native shell seeds the actual rule/team values immediately after its
+     * descriptor is loaded.  Start from a deterministic neutral state so a
+     * second CSS entry cannot inherit this file-global from the prior scene. */
+    sMNPlayersVSIsTeamBattle = FALSE;
+    sNdsPlayersVSPreviewRulesReady = FALSE;
+    mnPlayersVSMakeFighterCamera();
+    scSubsysFighterSetLightParams(45.0F, 45.0F, 0xFF, 0xFF, 0xFF, 0xFF);
+    sNdsPlayersVSPreviewDrawPhase = 0u;
+    sNdsPlayersVSPreviewActive = TRUE;
+}
+
+/* P2-2a: the shell owns the 2D controls, but costume/shade behavior stays in
+ * BattleShip.  This mirrors mnPlayersVSUpdateGameMode + mnPlayersVSUpdateGateAll
+ * and mnPlayersVSCheckTeamSelectInRangeAll rather than inventing DS-side team
+ * appearance rules.  In particular, entering Team Battle first parks every
+ * live shade at 4, then recomputes each fighter in slot order so duplicate
+ * same-character teammates get the same shade allocation as the source. */
+void ndsMNPlayersVSPreviewSyncRules(sb32 is_team_battle, const u8 *teams,
+                                    u32 team_count)
+{
+    sb32 new_team_battle;
+    sb32 mode_changed;
+    u32 changed_mask = 0u;
+    u32 i;
+
+    if (sNdsPlayersVSPreviewActive == FALSE)
+    {
+        return;
+    }
+    new_team_battle = (is_team_battle != FALSE) ? TRUE : FALSE;
+    mode_changed = ((sNdsPlayersVSPreviewRulesReady != FALSE) &&
+                    (sMNPlayersVSIsTeamBattle != new_team_battle)) ? TRUE :
+                                                                       FALSE;
+
+    for (i = 0u; i < ARRAY_COUNT(sMNPlayersVSSlots); i++)
+    {
+        s32 team = (i < team_count && teams != NULL) ? (s32)teams[i] :
+                                                       nSCBattleTeamIDRed;
+
+        if ((team < nSCBattleTeamIDRed) || (team > nSCBattleTeamIDGreen))
+        {
+            team = nSCBattleTeamIDRed;
+        }
+        if ((sNdsPlayersVSPreviewRulesReady != FALSE) &&
+            (sMNPlayersVSSlots[i].team != team))
+        {
+            changed_mask |= 1u << i;
+        }
+        sMNPlayersVSSlots[i].team = team;
+    }
+
+    if ((mode_changed != FALSE) && (new_team_battle != FALSE))
+    {
+        /* mnPlayersVSUpdateGameMode:1940-1946. Shade 4 is a temporary sentinel
+         * so UpdateGateAll's sequential mnPlayersVSGetShade calls do not see a
+         * stale 0..3 shade from the previous FFA arrangement. */
+        for (i = 0u; i < ARRAY_COUNT(sMNPlayersVSSlots); i++)
+        {
+            if (sMNPlayersVSSlots[i].fkind != nFTKindNull)
+            {
+                sMNPlayersVSSlots[i].shade = 4;
+            }
+        }
+    }
+    sMNPlayersVSIsTeamBattle = new_team_battle;
+
+    if (sNdsPlayersVSPreviewRulesReady != FALSE)
+    {
+        for (i = 0u; i < ARRAY_COUNT(sMNPlayersVSSlots); i++)
+        {
+            GObj *fighter_gobj = sMNPlayersVSSlots[i].player;
+
+            if ((sMNPlayersVSSlots[i].fkind == nFTKindNull) ||
+                (fighter_gobj == NULL) ||
+                ((mode_changed == FALSE) &&
+                 (((changed_mask >> i) & 1u) == 0u)))
+            {
+                continue;
+            }
+            sMNPlayersVSSlots[i].costume = mnPlayersVSGetFreeCostume(
+                sMNPlayersVSSlots[i].fkind, (s32)i);
+            sMNPlayersVSSlots[i].shade = mnPlayersVSGetShade((s32)i);
+            ftParamInitAllParts(fighter_gobj,
+                                sMNPlayersVSSlots[i].costume,
+                                sMNPlayersVSSlots[i].shade);
+        }
+    }
+    sNdsPlayersVSPreviewRulesReady = TRUE;
+}
+
+void ndsMNPlayersVSPreviewSync(u32 slot, s32 pkind, s32 fkind,
+                               sb32 is_selected)
+{
+    s32 old_pkind;
+    s32 old_fkind;
+    sb32 old_selected;
+    GObj *fighter_gobj;
+    sb32 update_fighter;
+
+    /* BattleShip's PlayersVS state is four independent player slots. P2-2's
+     * renderer now separates that INSTANCE slot from the generated Mario/Fox
+     * owner kind, so Mario/Fox mirrors in slots 2/3 use exactly the same source
+     * preview path rather than disappearing at a DS-only two-slot guard. */
+    if ((sNdsPlayersVSPreviewActive == FALSE) ||
+        (slot >= ARRAY_COUNT(sMNPlayersVSSlots)))
+    {
+        return;
+    }
+    if ((fkind != nFTKindMario) && (fkind != nFTKindFox))
+    {
+        fkind = nFTKindNull;
+    }
+    if (pkind == nFTPlayerKindNot)
+    {
+        fkind = nFTKindNull;
+        is_selected = FALSE;
+    }
+
+    old_pkind = sMNPlayersVSSlots[slot].pkind;
+    old_fkind = sMNPlayersVSSlots[slot].fkind;
+    old_selected = sMNPlayersVSSlots[slot].is_fighter_selected;
+    fighter_gobj = sMNPlayersVSSlots[slot].player;
+
+    sMNPlayersVSSlots[slot].pkind = pkind;
+    sMNPlayersVSSlots[slot].fkind = fkind;
+    sMNPlayersVSSlots[slot].is_selected = is_selected;
+    sMNPlayersVSSlots[slot].is_fighter_selected = is_selected;
+
+    /* Mirror exactly the source events that call mnPlayersVSUpdateFighter:
+     * - a player-kind change (mnPlayersVSCheckPlayerKindSelect),
+     * - a puck crossing onto another fighter (mnPlayersVSPuckProcUpdate),
+     * - grabbing a selected puck (mnPlayersVSSetCursorGrab), and
+     * - initial creation when no preview object exists.
+     *
+     * This matters even when the fighter KIND did not change. The source
+     * rebuild on grab returns a selected-pose fighter to its ordinary preview
+     * status while preserving Y rotation; it also recomputes the source's free
+     * costume/shade and lets mnPlayersVSMakeFighter apply the CPU-player color
+     * animation. Merely flipping is_fighter_selected leaves the wrong pose.
+     * A FALSE->TRUE selection is intentionally absent: the source drop path
+     * only flips is_fighter_selected and lets mnPlayersVSFighterProcUpdate turn
+     * into the selected pose. */
+    update_fighter = ((fighter_gobj == NULL) ||
+                      (old_pkind != pkind) ||
+                      (old_fkind != fkind) ||
+                      ((old_selected != FALSE) &&
+                       (is_selected == FALSE))) ? TRUE : FALSE;
+
+    if (update_fighter != FALSE)
+    {
+        /* The source updater hides an existing object for NA/null and otherwise
+         * calls mnPlayersVSMakeFighter, which destroys/replaces it, preserves Y
+         * rotation, chooses a free costume and recomputes shade. Clear the DS
+         * registration around that operation so neither branch can expose a
+         * stale taskman-arena fighter pointer. */
+        ndsFighterManagerRegisterDisplayFighter(NULL, slot);
+#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+        if (fighter_gobj != NULL)
+        {
+            /* mnPlayersVSMakeFighter may destroy this fighter and allocate the
+             * replacement from the same DObj/MObj free lists. The source is
+             * allowed to reuse those addresses; the DS material cache must not
+             * interpret that address reuse as an unchanged costume. */
+            ndsFighterRendererInvalidateMaterialCaches();
+        }
+#endif
+        mnPlayersVSUpdateFighter((s32)slot);
+        fighter_gobj = sMNPlayersVSSlots[slot].player;
+        if ((fighter_gobj != NULL) &&
+            ((fighter_gobj->flags & GOBJ_FLAG_HIDDEN) == 0u))
+        {
+            ndsFighterManagerRegisterDisplayFighter(fighter_gobj, slot);
+        }
+    }
+}
+
+u32 ndsMNPlayersVSPreviewGetAppearance(u32 slot)
+{
+    if ((sNdsPlayersVSPreviewActive == FALSE) ||
+        (slot >= ARRAY_COUNT(sMNPlayersVSSlots)))
+    {
+        return 0u;
+    }
+    return ((u32)sMNPlayersVSSlots[slot].costume & 0xffu) |
+           (((u32)sMNPlayersVSSlots[slot].shade & 0xffu) << 8);
+}
+
+void ndsMNPlayersVSPreviewFrame(void)
+{
+    u32 slot;
+
+    if (sNdsPlayersVSPreviewActive == FALSE)
+    {
+        return;
+    }
+    /* This is the renderer/cache SOURCE-FRAME epoch, not a count of GX
+     * presents. State below advances every 60 Hz tic even when this tic's 3D
+     * image is retained, so per-frame caches must see a fresh epoch too. */
+    gNdsRendererProfileFrameCount++;
+    /* With the shell's func_start NULL, these are only the fighter camera and
+     * fighter GObjs created above. Thus the source object manager can run and
+     * draw the preview without resurrecting the source CSS input/UI graph. */
+    gcRunAll();
+
+    gNdsPlayersVSPreviewFrameCount++;
+    gNdsPlayersVSPreviewSelectedMask = 0u;
+    gNdsPlayersVSPreviewVisibleMask = 0u;
+    for (slot = 0u; slot < ARRAY_COUNT(sMNPlayersVSSlots); slot++)
+    {
+        GObj *fighter_gobj = sMNPlayersVSSlots[slot].player;
+
+        if (sMNPlayersVSSlots[slot].is_fighter_selected != FALSE)
+        {
+            gNdsPlayersVSPreviewSelectedMask |= 1u << slot;
+        }
+        if (fighter_gobj != NULL)
+        {
+            FTStruct *fp = ftGetStruct(fighter_gobj);
+
+            gNdsPlayersVSPreviewRotationY[slot] =
+                DObjGetStruct(fighter_gobj)->rotate.vec.f.y;
+            if (fp != NULL)
+            {
+                gNdsPlayersVSPreviewStatus[slot] = fp->status_id;
+                gNdsPlayersVSPreviewMotion[slot] = fp->motion_id;
+                if (sMNPlayersVSSlots[slot].is_fighter_selected == FALSE)
+                {
+                    gNdsPlayersVSPreviewFreeRotateFrames[slot]++;
+                    gNdsPlayersVSPreviewLastFreeRotationY[slot] =
+                        gNdsPlayersVSPreviewRotationY[slot];
+                    gNdsPlayersVSPreviewLastFreeStatus[slot] = fp->status_id;
+                    gNdsPlayersVSPreviewLastFreeMotion[slot] = fp->motion_id;
+                }
+            }
+            if ((fighter_gobj->flags & GOBJ_FLAG_HIDDEN) == 0u)
+            {
+                gNdsPlayersVSPreviewVisibleMask |= 1u << slot;
+            }
+        }
+    }
+    /* BattleShip hides an NA/null fighter object immediately. The DS 3D layer
+     * is retained, however, so when that was the last visible preview the
+     * previously completed geometry frame stayed on BG0 even though the source
+     * GObj was correctly hidden. Make BG0 visibility follow the source live
+     * fighter set; another visible fighter will naturally replace the old frame
+     * on the next 30 Hz preview draw. */
+    ndsPlatformSet3DLayerEnabled(
+        (gNdsPlayersVSPreviewVisibleMask != 0u) ? TRUE : FALSE);
+    /* Source state remains a 60 Hz process: rotation, figatree evaluation and
+     * the selected-status transition above all advance every CSS tic. The
+     * owner-ratified DS presentation is a 30 Hz 3D pass under a 60 Hz 2D menu,
+     * so submit GX on alternating tics and let retained BG0 hold the preceding
+     * 3D image between them. The renderer dedup token advances only when a real
+     * source draw occurs, exactly as it does at the battle/Results draw seam. */
+    if (sNdsPlayersVSPreviewDrawPhase == 0u)
+    {
+        /* mnPlayersVSMakeFighterCamera uses (10,10)-(310,230) inside the
+         * source's 320x240 frame. Using the whole DS viewport stretched that
+         * 300x220 window to 320x240 equivalent, which moved the outer 1P/4P
+         * previews away from their source panel centres. */
+        ndsPlatformSet3DViewportSource(10, 10, 310, 230);
+        gcDrawAll();
+        ndsPlatformReset3DViewport();
+        gNdsPlayersVSPreviewDrawCount++;
+    }
+    sNdsPlayersVSPreviewDrawPhase ^= 1u;
+}
+
+void ndsMNPlayersVSPreviewExit(void)
+{
+    u32 slot;
+
+    if (sNdsPlayersVSPreviewActive == FALSE)
+    {
+        return;
+    }
+    for (slot = 0u; slot < ARRAY_COUNT(sMNPlayersVSSlots); slot++)
+    {
+        GObj *fighter_gobj = sMNPlayersVSSlots[slot].player;
+
+        ndsFighterManagerRegisterDisplayFighter(NULL, slot);
+        if (fighter_gobj != NULL)
+        {
+            ftManagerDestroyFighter(fighter_gobj);
+        }
+        sMNPlayersVSSlots[slot].player = NULL;
+    }
+    sNdsPlayersVSPreviewActive = FALSE;
+    gNdsPlayersVSPreviewExitCount++;
+}
 
 /* Only mnPlayersVSStartScene below uses this, and that is compiled out with the
  * P2-1e menu shell on -- marked rather than bracketed so the guard stays one

@@ -12,6 +12,7 @@
 #include <mn/menu.h>
 #include <nds/nds_audio_assets.h>
 #include <nds/nds_ifcommon_oam.h>
+#include <nds/nds_platform.h>
 #include <nds/nds_reloc_assets.h>
 #include <nds/nds_renderer.h>
 #include <nds/nds_startup.h>
@@ -69,17 +70,10 @@ static void ndsSCVSBattleStartPlayBGM(void);
 #define scVSBattleFuncUpdate ndsBaseSCVSBattleFuncUpdate
 #define scManagerFuncUpdate ndsSCVSBattleManagerFuncUpdate
 #define mpCollisionSetPlayBGM ndsSCVSBattleStartPlayBGM
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
-#define ftManagerMakeFighter ndsSCVSBattleFTManagerMakeFighter
-#endif
-
 void ndsBaseSCVSBattleStartScene(void);
 void ndsBaseSCVSBattleStartBattle(void);
 void ndsBaseSCVSBattleStartSuddenDeath(void);
 void ndsBaseSCVSBattleFuncUpdate(void);
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
-GObj *ndsSCVSBattleFTManagerMakeFighter(FTDesc *desc);
-#endif
 
 #include "../../decomp/BattleShip-main/decomp/src/sc/sccommon/scvsbattle.c"
 #include "../../decomp/BattleShip-main/decomp/src/sc/sccommon/scvsbattlefiles.c"
@@ -90,9 +84,6 @@ GObj *ndsSCVSBattleFTManagerMakeFighter(FTDesc *desc);
 #undef scVSBattleFuncUpdate
 #undef scManagerFuncUpdate
 #undef mpCollisionSetPlayBGM
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
-#undef ftManagerMakeFighter
-#endif
 
 /* Defined below, next to `scVSBattleStartBattle`. Declared here because the
  * adapter remaps `func_start` onto it and runs first in this file. */
@@ -122,18 +113,6 @@ void ndsSCVSBattleManagerFuncUpdate(SYTaskmanSetup *setup)
     gNdsSCVSBattleLifecycleArenaAdapterCount++;
     scManagerFuncUpdate(&ds_setup);
 }
-
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
-GObj *ndsSCVSBattleFTManagerMakeFighter(FTDesc *desc)
-{
-    if (desc != NULL)
-    {
-        /* BattleShip scVSBattleFuncStart sets this before ftManagerMakeFighter. */
-        desc->is_skip_entry = TRUE;
-    }
-    return ftManagerMakeFighter(desc);
-}
-#endif
 
 #if !NDS_DEV_LIVE_INPUT_PREVIEW
 static SYTaskmanSetup ndsSCVSBattleMakeTaskmanSetup(void)
@@ -437,11 +416,40 @@ void scVSBattleFuncUpdate(void)
 #define NDS_R2_VSBATTLE_DL_BUFFER1_BYTES (sizeof(Gfx) * 512u)
 #define NDS_R2_VSBATTLE_GRAPHICS_ARENA_BYTES 0xD000u
 
+/* 45,056 MORE RESERVED BYTES OF THE SAME CLASS, returned 2026-08-20: the RDP
+ * OUTPUT BUFFER. The source sizes it 0xC000 (decomp scvsbattle.c:41) for the
+ * N64 RDP's span-output capture, and nothing on the DS writes or reads one
+ * byte of it -- the buffer's only CPU appearances are pointer pass-through
+ * (decomp scheduler.c:790/:918) and an osInvalDCache of the separate 8-byte
+ * sSYSchedulerRdpCache variable. The hardware-triangle renderer replaced that
+ * pipeline exactly as it replaced the DL buffers above; this is the one field
+ * the 2026-08-02 rebate missed.
+ *
+ * The bytes became owed the day P2-2 restored the source battle capacities
+ * (particle pools 112/80 and EFFECT_ALLOC_NUM 38: +18,456 general-heap bytes
+ * at efParticleInitAll/efManagerInitEffects). Measured on the first battle
+ * entry of the shell loop: general-heap free 21,508, under the 25,600 margin
+ * ifCommonSetMaxNumGObj latches at, so the latch capped the GObj pool at 46
+ * before the countdown interface existed; ifCommonCountdownMakeInterface then
+ * took NULL from gcMakeGObjSPAfter and the pristine decomp body stored
+ * through it (decomp ifcommon.c:2222, LOOPABORT n=9). 0x1000 is not a tuned
+ * number -- it is the source's own floor for a scene that leaves the size
+ * unset (decomp taskman.c:1199-1201 defaults 0 to 0x1000), so this field now
+ * carries the source's minimum instead of its maximum and the countdown
+ * margin reads ~66,500 with every restored pool intact.
+ *
+ * The graphics heap KEEPS its 0xD000 above: unlike the RDP buffer it has a
+ * live CPU writer on this port (decomp ftdisplaymain.c:457 parks afterimage
+ * vertices at gSYTaskmanGraphicsHeap.ptr), so shrinking it is a measured
+ * draw-depth question this rebate does not answer. */
+#define NDS_R2_VSBATTLE_RDP_OUTPUT_BYTES 0x1000u
+
 /* Engagement proof: the re-budget must be visible without a debugger, because
  * "the setup struct says X" and "the scene was built with X" have already
  * differed once in this campaign. */
 volatile u32 gNdsSCVSBattleRebudgetCount;
 volatile u32 gNdsSCVSBattleRebudgetGraphicsBytes;
+volatile u32 gNdsSCVSBattleRebudgetRdpOutputBytes;
 
 static void ndsSCVSBattleRebudgetSceneArena(void)
 {
@@ -451,13 +459,21 @@ static void ndsSCVSBattleRebudgetSceneArena(void)
         NDS_R2_VSBATTLE_DL_BUFFER1_BYTES;
     dSCVSBattleTaskmanSetup.scene_setup.graphics_arena_size =
         NDS_R2_VSBATTLE_GRAPHICS_ARENA_BYTES;
+    dSCVSBattleTaskmanSetup.scene_setup.rdp_output_buffer_size =
+        NDS_R2_VSBATTLE_RDP_OUTPUT_BYTES;
     gNdsSCVSBattleRebudgetCount++;
     gNdsSCVSBattleRebudgetGraphicsBytes =
         (u32)dSCVSBattleTaskmanSetup.scene_setup.graphics_arena_size;
+    gNdsSCVSBattleRebudgetRdpOutputBytes =
+        (u32)dSCVSBattleTaskmanSetup.scene_setup.rdp_output_buffer_size;
 }
 
 void scVSBattleStartScene(void)
 {
+    /* Native menu scenes hide the retained MODE_5_3D BG0 when they own no 3D
+     * content. VSBattle owns the geometry engine again from this boundary on,
+     * so reclaim the layer before either taskman entry path can draw. */
+    ndsPlatformSet3DLayerEnabled(TRUE);
 #if NDS_DEV_LIVE_INPUT_PREVIEW
     gNdsSCVSBattleOriginalStartResult =
         NDS_SCVSBATTLE_ORIGINAL_START_PASS;

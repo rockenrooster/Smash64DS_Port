@@ -47,6 +47,14 @@ function Get-Smash64DSHarnessRegistry {
         # null and check-harness-registry's header/Makefile mode cross-check
         # skips it by design, the same way the `runtime` record is skipped.
         New-HarnessRecord 'p2_shell_loop' $null $null 'verify-p2-shell-loop.ps1' 'smash64ds-p2-shell-loop-hwtri' 'build-p2-shell-loop' @('latest','boundary','p2_shell','scene_loop','menus')
+        # P2-2 phase close. This is a configuration verifier, not a new scene
+        # harness: it boots source VSBattle directly with the dedicated
+        # NDS_P2_FOUR_CPU_STRESS target, proves 0 humans / 4 level-3 CPUs / four
+        # live fighter GObjs, covers the complete one-minute guest clock, and
+        # carries the memory/effect/particle/AObj hard-failure pins. Timing is
+        # reported as debt by P2-2; it is not silently converted into a looser
+        # version of P1's 1.12M target. See docs/p2/P2-2-four-fighters.md.
+        New-HarnessRecord 'p2_fourcpu_stress' $null $null 'verify-p2-four-fighter-stress.ps1' 'smash64ds-p2-fourcpu-tickhud-hwtri' 'build-p2-fourcpu-tickhud' @('latest','boundary','p2','four_cpu','stress','hardware','realtime','memory')
     )
 }
 
@@ -74,17 +82,14 @@ function Get-Smash64DSVerifyPlan {
     )
 
     $registry = @(Get-Smash64DSHarnessRegistry)
-    # BOUNDARY AT THE P2-1 PHASE CLOSE (P2-1g). Two arms, and the order is the
-    # cheap-first order: the shell loop walk proves the game's own flow -- every
-    # menu screen, twenty full laps, the Results rematch -- and the mode-163
-    # realtime arm stays exactly as it was, as the P1 regression guard
-    # `docs/P2_PLAN.md` law 4 requires it to be through all of P2. The registry
-    # still exposes only Latest and Boundary; the retired diagnostic fleet does
-    # not return.
+    # BOUNDARY AFTER P2-2. The P2-1 shell loop and 2-fighter realtime regression
+    # guard stay intact; P2-2 adds the standing 4-CPU stress configuration as
+    # law 4 requires. The registry still exposes only Latest and Boundary; the
+    # retired diagnostic fleet does not return.
     $names = if ($Profile -eq 'Latest') {
-        @('runtime', 'p2_shell_loop', 'p2_battle_realtime')
+        @('runtime', 'p2_shell_loop', 'p2_battle_realtime', 'p2_fourcpu_stress')
     } else {
-        @('p2_shell_loop', 'p2_battle_realtime')
+        @('p2_shell_loop', 'p2_battle_realtime', 'p2_fourcpu_stress')
     }
     $plan = @(Select-Smash64DSRegistryEntriesByName $registry $names)
 

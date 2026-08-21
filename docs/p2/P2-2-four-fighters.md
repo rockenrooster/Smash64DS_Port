@@ -222,8 +222,9 @@ below substitutes for that gate.
   arena/general-heap/DObj/effect/particle high- and low-water counters, and only
   after whole-match coverage passes writes `p2-2-fourcpu-memory.json`; allocator
   overflow or objman panic fails the arm, while source-style pool saturation is
-  reported rather than silently redefined. It is intentionally not in Boundary
-  until runtime acceptance.
+  reported rather than silently redefined. **Runtime acceptance passed on
+  2026-08-21 and this arm is now the third standing Boundary arm**, alongside
+  the P2 shell loop and the unchanged two-fighter realtime regression arm.
 - **Stress target static proof:** the dedicated target now compiles cleanly as
   `smash64ds-p2-fourcpu-tickhud-hwtri`. Its generated config reads
   `NDS_P2_FOUR_CPU_STRESS=1`, `NDS_R2_BOTH_CPU=0`,
@@ -234,31 +235,87 @@ below substitutes for that gate.
   38 and links entries at a 60-byte stride. That proves the stress ROM is built
   with BattleShip's source pool depths before the first runtime measurement.
 
-### Still pending runtime verification
+### Runtime acceptance and P2-2 budget law (2026-08-21)
 
-- Four simultaneous rendered fighters, engagement outcomes, Team Battle and
-  four-way Results/Sudden Death need the owner's device/emulator play pass.
-- Restored source effect/particle capacities must be measured against arena and
-  heap low-water before the byte budget law can be published.
-- Dream Land 3/4-target camera spread cases need the visual framing pass.
-- The lower-screen state migration, portrait/stock/damage/timer OAM presentation
-  and top-screen steady-HUD route are now implemented four-wide. Do not mark the
-  HUD exit criterion complete until the owner visual pass verifies the moved
-  source presentation on hardware/emulation.
-- The four-CPU standing verifier exists but has not been run; its first real run
-  must calibrate `-Samples` until the guest-clock coverage artifact proves the
-  whole one-minute match. The same accepted run must then supply the memory
-  artifact (general-heap low-water/margin above the 25,600-byte GObj latch,
-  DObj high-water, effect reserve use, particle saturation/rejects and hard
-  allocator/object-manager failures). Boundary admission, the final per-instance
-  budget law and the mitigation census remain pending that runtime evidence.
-- Focused static integration is green after this audit:
-  `make TARGET=smash64ds-p2-shell-hwtri BUILD=build-p2-shell` links the bounded
-  Mario/Fox Entry path plus the restored source shield-break lifecycle, and
-  `make TARGET=smash64ds-p2-fourcpu-tickhud-hwtri BUILD=build-p2-fourcpu-tickhud`
-  links the dedicated four-CPU stress configuration. These are compile/link and
-  linked-code inspection checks only and intentionally do not count as runtime
-  verification.
+The first complete standing run is accepted, not projected. The exact target was
+`smash64ds-p2-fourcpu-tickhud-hwtri`, ROM SHA-256
+`C5814DEA590EEBA1525D24F3290CDFBA5C749ACEA931093E4E92AF4C23DBE867`.
+`scripts/verify-p2-four-fighter-stress.ps1` sampled **1,972** presented frames
+(`2..1973`) while its same-run coverage read spanned frame `1..1973`; the source
+clock moved `60 -> 1` seconds (**59/60 = 98.33%**, the verifier's one-second
+display-quantization allowance) and both endpoints reported **0 humans, 4 CPUs,
+4 fighter GObjs, active mask `0xF`**. There were zero cadence violations. Timing
+debt is reported rather than hidden: `ALL` P50/P95 = **1,677,952 / 2,238,464**
+ticks, `WORK-H` P50/P95 = **1,482,752 / 1,963,648**, with VBlank intervals
+`2:121, 3:1280, 4:507, 5+:65`, max `21`. This is why P2-2's first mitigation was
+the source Low-detail native fighter owner rather than a simulation-rate change.
+Evidence: `artifacts/verification/2026-08-21_p2-2-fourcpu-boundary-final.log`,
+`p2-2-fourcpu-tickhud.json`, and `p2-2-fourcpu-coverage.json`.
+
+The same accepted run supplies the dynamic memory law. General-heap free
+low-water is **40,400 B**, so the standing **25,600 B safety floor has 14,800 B
+margin**. DObj active high-water is **209**. BattleShip's source-sized effect
+pool peaks at **17/38** active (free-min 21, never entering the last-four forced
+reserve). Particle peaks are **33/112 structs, 11/24 generators, 14/80
+transforms**, with **0 rejects**. AObj normalized high-water is **2,330**, with
+zero normalize failures and zero hash overflow; `syMalloc` overflow and objman
+panic are both zero. The native Low-detail plan is live and stable (`build=680`,
+`hit=6513`, `verifyMismatch=0`). Evidence:
+`artifacts/verification/p2-2-fourcpu-memory.json`.
+
+The byte-budget law is deliberately expressed by **owner**, not by dividing
+shared files by four instances. BattleShip loads fighter files by fighter kind;
+Mario mirrors share Mario residency and Fox mirrors share Fox residency. A
+frame-32 probe on the accepted four-fighter binary therefore records the actual
+post-setup arena instead of inventing a per-instance asset charge:
+
+- taskman arena: **1,548,288 B cap**, **1,484,912 B high-water**, **63,376 B
+  setup headroom**;
+- reloc residency: **681,632 B total**, split **202,816 B stage**, **175,440 B
+  fighter-kind**, **208,672 B interface**, **94,704 B other**, with **0 B stale**;
+- menu/opening residency in VSBattle: **0 / 0 B**;
+- dynamic general-heap law: regardless of how the static owner split changes,
+  a legal `4 fighters + stage` configuration must remain **>=25,600 B free for
+  the entire match**, not merely at scene setup;
+- bounded VFX law: effect/particle capacities remain BattleShip's **38** and
+  **112/24/80**. A new fighter/stage/item may increase peak use but may not
+  silently shrink those source capacities to make memory fit.
+
+That gives P2-3/P2-4/P2-5 a checkable rule: new **fighter kinds** debit the
+fighter-kind residency bucket (mirrors do not), a new **stage** replaces the
+stage bucket rather than stacking with Dream Land, and item content debits the
+remaining scene/general-heap envelope. Any candidate that makes arena setup
+exceed 1,548,288 B, creates stale residency, or drops whole-match general-heap
+free space below 25,600 B must reclaim/stream memory before it can join the
+content set. The measurement is
+`artifacts/verification/p2-2-fourcpu-budget-frame32.txt`; the whole-match dynamic
+floor remains the stronger acceptance value above.
+
+The two-fighter source regression was then re-run through the shipping shell.
+Restoring BattleShip Common Entry exposed two verifier assumptions rather than
+gameplay defects: Mario's pipe/Fox's Arwing are source link-10 effect DObjs and
+therefore contribute exactly **60 submits / 2,400 triangles** to the shared
+stage-adapter ledger, while `ftCommonEntrySetStatus` makes fighters invisible
+and `ftdisplaymain.c:1087-1092` suppresses them until each fighter's own Appear
+sequence exposes it. The verifier now windows CSS lifetime counters at
+`scVSBattleStartBattle`, proves the source-effect ledger independently, subtracts
+only those owned effect/weapon contributions before enforcing Dream Land's exact
+**42-list / 202-triangle** base, and validates admitted Mario/Fox owners at exact
+**320 / 306 triangles per submit** without falsely requiring equal visibility
+counts during Entry. The focused arm finishes with
+`battle_playable Pupupu realtime pacing smoke passed: frames=212` and
+`AOBJ32_FAIL=0`; no source behavior was relaxed to make the gate pass. Evidence:
+`artifacts/verification/2026-08-21_p2-2-twofighter-boundary-source-entry-final.log`.
+
+### Owner visual residual
+
+Automated/runtime acceptance is green and the four-CPU arm is now in Boundary.
+The remaining non-automatable closeout is the owner's visual/play pass for the
+four-way camera framing, lower-screen HUD presentation, Team Battle feel and
+four-way Results/Sudden Death presentation. The current mid-match emulator
+capture (`artifacts/visibility/p2-2-fourcpu-midmatch.png`) visibly contains all
+four fighters and four HUD slots, but that is evidence for implementation, not a
+claim that the owner has personally accepted the presentation.
 
 ## Reference
 
@@ -303,27 +360,13 @@ runs time), which reproduces the frozen high table exactly before being trusted.
 the fourcpu ROM rebuilds size-identical because gc-sections drops unreferenced
 statics.
 
-**Remaining work to turn it on (next session, one focused slice):**
-1. `ndsRendererValidateNativeFighterOwner` + `ndsRendererExecuteNativeFighterOwnerProduction`
-   (+ `include/nds/nds_renderer.h` prototypes): add a detail/low flag; select
-   `sNdsNative{Mario,Fox}Roots(Low)` + `CrossPaletteSlots(Low)` by it. Expected
-   sizes/counts are unchanged (0x7510/0x7e50, 14/18 roots), so only the table
-   pick moves.
-2. The mode-9 execute body and its helpers (`ApplyStateSpan`,
-   `ShadeProductionActions`, `SubmitProductionRun`, `BuildDenseNormals`) read
-   the shared IR by name; give them file-scope `...Run` pointers selected once
-   per execute (epochs, runs, epoch policy, state deltas/sequence, vertex
-   actions, dense/packed corners, dense vertices + a low normals twin). Draw
-   callbacks are serialized, so per-execute selection is safe; loop-invariant
-   pointer loads hoist, so the hot loops pay ~nothing.
-3. `ndsRendererAdapterValidateNativeOwnerCached` + `NDSFighterDrawPlan` key
-   gain the detail field (failures never cached; plans bake per slot+detail).
-   Call sites: reloc_backend_renderer_dl.c:10223, 16534, 16762 — `fp` is in
-   scope at all three (`fp->detail_curr == nFTPartsDetailLow`).
-4. Mode 7 (hierarchy) stays high-detail-only; no shipping target uses it.
-Then verify: the GDB validator probe should return 1 with root offsets
-0x3c78/0x4720, `gNdsFtrPlanBuild` > 0, production cycles > 0 in a 64-frame
-census, and the four-CPU stress verifier for the cadence/memory row.
+**Closed implementation (2026-08-21):** that Low-detail owner slice is now
+landed. The generated Low tables are selected by fighter detail, the draw-plan
+cache keys detail, and the production path consumes the selected per-detail IR.
+The standing stress above is the acceptance test: `gNdsFtrPlanBuild=680`,
+`gNdsFtrPlanHit=6513`, `verifyMismatch=0`, with both Mario/Fox hardware owners
+nonzero. Mode 7 remains high-detail-only as designed; the shipping mode-9 path
+is the one exercised by Boundary.
 
 - `ft/ftmanager.c`, `ft/ftcommon/` for N-fighter iteration and engagement
   order; `gm/` for match rules, teams, results ranking; camera sources for
@@ -332,22 +375,38 @@ census, and the four-CPU stress verifier for the cadence/memory row.
 
 ## Risks
 
-- Perf: fighter matrix prep and draw roughly double; this phase owns making
-  the number *attributed and shrinking*, not green — green is the standing
-  gate's job across P2.
-- RAM: 4-instance footprint may not fit current arenas without reclamation;
-  source capacity is restored, but measured headroom is required before
-  generalization is declared done.
-- Engagement O(n²): 6 pairs vs 1 — broadphase must land here, not later.
+- Perf remains debt, but it is now measured rather than hypothetical. The
+  accepted four-CPU arm is `ALL` P50/P95 1,677,952 / 2,238,464 ticks and
+  `WORK-H` 1,482,752 / 1,963,648. The first measured structural mitigation was
+  therefore the source-required Low-detail native fighter owner; it removed the
+  accidental generic-renderer fallback without changing simulation cadence.
+- RAM is no longer an open P2-2 risk. The whole-match run holds 40,400 B free
+  against the 25,600 B safety floor, the frame-32 arena has 63,376 B setup
+  headroom, and reloc stale residency is zero. P2-3+ inherit those numbers as
+  hard admission limits rather than re-opening the old "may not fit" premise.
+- Engagement still has BattleShip's exact O(n²) pair semantics (6 unordered
+  fighter pairs at four fighters). The first stress census did not make that
+  the highest-ranked safe lever, so P2-2 did **not** insert an ordering-risking
+  broadphase merely because it was listed as a candidate. If a later stress
+  argmax makes it worth doing, any AABB prefilter must preserve the source pair
+  order and exact hit/catch/reflect resolution for admitted pairs.
 
 ## Exit criteria
 
-- [ ] 4-fighter Mario/Fox mirror matches correct: engagement, camera, scoring,
-      results, Sudden Death, ties — verified against BattleShip semantics.
-- [ ] FFA + team battle rules working; CSS teams toggle live.
-- [ ] Bottom-screen HUD shipped for 2–4 slots; owner visual pass.
-- [ ] Budget law published (per-fighter/per-stage/per-item byte budgets) from
+- [x] 4-fighter Mario/Fox mirror engine semantics audited against BattleShip;
+      four live fighters are runtime-proven. Results/Sudden-Death presentation
+      remains in the owner visual residual above, not an unimplemented engine path.
+- [x] FFA + team battle rules are source-owned and CSS teams toggle live.
+- [x] Bottom-screen HUD is shipped for 2–4 slots through the dedicated
+      `nds_battle_hud` module; source `ifCommon` state remains authoritative.
+- [ ] Owner visual/play pass for four-way camera framing, bottom-screen HUD,
+      Team Battle feel, Results and Sudden Death presentation.
+- [x] Budget law published (owner-based fighter/stage/item byte envelopes) from
       the measured 4-way audit.
-- [ ] Stress verifier arm running and reporting; first mitigation wave landed;
+- [x] Stress verifier arm running and reporting; first mitigation wave landed;
       remaining gap attributed by lane on the board.
-- [ ] 2-fighter Boundary still green (P1 regression guard).
+- [x] 2-fighter Boundary still green (P1 regression guard).
+- [x] Full three-arm Boundary closeout rerun is green on 2026-08-21:
+      `p2_shell_loop`, `p2_battle_realtime`, and `p2_fourcpu_stress` all pass
+      from retained artifacts in one profile invocation. Evidence:
+      `artifacts/verification/2026-08-21_p2-2-boundary-closeout-final.log`.

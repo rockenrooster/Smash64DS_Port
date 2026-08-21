@@ -3619,6 +3619,7 @@ void ftParamSetKey(GObj *fighter_gobj, FTKeyEvent *script);
 s32 ftParamGetCostumeCommonID(s32 fkind, s32 color);
 s32 ftParamGetCostumeTeamID(s32 fkind, s32 color);
 void ftParamInitAllParts(GObj *fighter_gobj, s32 costume, s32 shade);
+void ftParamInitTexturePartAll(GObj *fighter_gobj);
 sb32 ftParamCheckSetFighterColAnimID(GObj *fighter_gobj, s32 colanim_id,
                                      s32 unused);
 sb32 ftParamCheckSetSkeletonColAnimID(GObj *fighter_gobj, s32 damage_level);
@@ -3630,6 +3631,7 @@ void ftParamSetHitStatusPartAll(GObj *fighter_gobj, s32 hitstatus);
 void ftParamSetHitStatusPartID(GObj *fighter_gobj, s32 joint_id,
                                s32 hitstatus);
 void ftParamSetHitStatusAll(GObj *fighter_gobj, s32 hitstatus);
+s32 ftParamGetBestHitStatusPart(GObj *fighter_gobj);
 void ftParamResetFighterDamageCollsAll(GObj *fighter_gobj);
 void ftParamModifyDamageCollID(GObj *fighter_gobj, s32 joint_id,
                                Vec3f *offset, Vec3f *size);
@@ -4254,16 +4256,33 @@ s32 efParticleGetLoadBankID(uintptr_t script_lo, uintptr_t script_hi,
 enum {
     nGMColAnimCommonNull = 0,
     nGMColAnimFighterComPlayer = 1,
+    nGMColAnimFighterHitStatusNormal = 2,
+    nGMColAnimFighterHitStatusIntangible = 3,
+    nGMColAnimFighterHitStatusInvincible = 4,
     nGMColAnimFighterDamageCommon = 5,
     nGMColAnimFighterFallSpecial = 7,
     nGMColAnimFighterFastFall = 8,
     nGMColAnimFighterHeal = 9,
+    nGMColAnimFighterNoDamage = 10,
     nGMColAnimFighterRebirth = 11,
     nGMColAnimFighterDamageFireStart = 12,
+    nGMColAnimFighterDamageElectricCommonStart = 16,
+    nGMColAnimFighterDamageElectricSkeletonStart = 20,
+    nGMColAnimFighterDamageElectricSamusStart = 24,
+    nGMColAnimFighterDamageElectricBalloonStart = 28,
     nGMColAnimFighterDamageIceStart = 32,
     nGMColAnimFighterShieldBreakFly = 36,
     nGMColAnimFighterFuraFura = 37,
     nGMColAnimFighterFuraSleep = 38,
+    nGMColAnimFighterMarioSpecialN = 39,
+    nGMColAnimFighterMarioAppeal = 40,
+    nGMColAnimFighterDonkeySpecialNLoop = 41,
+    nGMColAnimFighterDonkeySpecialNEnd = 42,
+    nGMColAnimFighterUnknown1 = 43,
+    nGMColAnimFighterFoxSpecialLw = 46,
+    nGMColAnimFighterFoxSpecialHiStart = 47,
+    nGMColAnimFighterFoxSpecialHi = 48,
+    nGMColAnimFighterHammer = 73,
     nGMColAnimFighterStar = 74,
     nGMColAnimScreenFlashDeadExplode = 81,
     nGMColAnimScreenFlashDamageNormal = 82,

@@ -108,6 +108,27 @@ is at any ratio but the frame's own 4/5 now.
 | 9,600 – 25,984 | 16,384 | 8 text fields x 4 cells of 32x8 |
 | 0 – 9,600 | 9,600 | **left for the battle's OBJ tenant** |
 
+**P2-1 CLOSEOUT RECLAIMS THE MAIN TEXT SLAB AND LEAVES 16,512 BYTES.** The
+table above is the P2-1L historical state. The final source-art passes added
+the 8,192-byte half-resolution title emblem plus three small CSS OBJ images
+(1P cursor gradient 256 B, PRESS 512 B, START 512 B), so the generated pack's
+36 image metrics now occupy **49,024 B** of OBJ cells. (`PACK_BYTES=50,880`
+also contains the 1,856-byte glyph block; it is not all VRAM image data.) At
+the same time the last reachable main-screen `ndsUiKitSetText` caller was
+removed: every main menu label is now converted source art. `ndsUiKitEnter`
+therefore reserves text VRAM only for the SUB engine. Current main Bank E is:
+
+| Range | Bytes | Content |
+|---|---:|---|
+| 16,512 – 65,536 | 49,024 | 36 baked source-art images |
+| 0 – 16,512 | 16,512 | **free main OBJ headroom** |
+
+This is a reclamation, not a hidden feature cut: `ndsUiKitSetText` and
+`ndsUiKitMoveText` have no linked caller in the P2 shell, while the sub-engine
+path still maps Bank I and reserves the full 16,384-byte text layout. Thus the
+main menu no longer pays 16 KiB for a runtime conversion path it does not use,
+and the bottom-screen text capability remains available independently.
+
 The image block, in the generator's own order
 (`scripts/menus/generate_mn_ui_kit.py`): the ten digits and the infinity glyph
 (5,888), P2-1e's character-select set — three 4/5-scaled cursor states (6,144),
@@ -149,10 +170,11 @@ frame-around-icon relationship costs 8,192 total instead of 16,384. P2-1L (9)
 took the last two 5/8 cells with the preview panel, so **the stage select owns
 exactly one OBJ image and it is the cursor**.
 
-**EIGHT TEXT FIELDS IS THE CEILING, not a choice**: 8 x 4 x 512 is exactly
-16,384 and bank I is exactly 16,384, so a ninth field would take the sub engine
-off the end of its bank. `_Static_assert(NDS_UI_KIT_TEXT_BYTES <=
-NDS_UI_KIT_OBJ_BYTES_SUB)` is what stops that silently.
+**EIGHT SUB-ENGINE TEXT FIELDS IS THE CEILING, not a choice**: 8 x 4 x 512 is
+exactly 16,384 and bank I is exactly 16,384, so a ninth field would take the
+sub engine off the end of its bank. `_Static_assert(NDS_UI_KIT_TEXT_BYTES <=
+NDS_UI_KIT_OBJ_BYTES_SUB)` is what stops that silently. Main menu scenes no
+longer reserve this slab after P2-1 closeout.
 
 The battle tenant needs ~42 KB, so the two do **not** fit together, and the
 top-down layout is a mitigation rather than a proof. The actual guarantee is
@@ -162,11 +184,12 @@ scene exclusivity, enforced rather than asserted: `ndsUiKitEnter` calls
 future overlay that genuinely needs both must shrink one side first.
 
 OAM ids are split the same way and in the opposite direction: IFCommon
-allocates downward from 127 (`sNdsIFCommonNextOamID`), the kit upward from 0
-and never past `NDS_UI_KIT_OAM_IDS` — 61 since P2-1e (8 text fields x 4 cells,
-plus 29 sprite slots: a cursor, four tokens, four player-kind labels, four
-CPU-level labels, four CPU-level digits and twelve portrait cells). They grow
-away from each other. **P2-1L left 22 of those slots permanently hidden** —
+allocates downward from 127 (`sNdsIFCommonNextOamID`), the kit upward from 0.
+The shared compile-time ceiling still covers 32 text chunks plus 45 sprite
+slots, but P2-1 closeout made those tenants engine-exclusive: main starts its
+45 sprite slots at id 0 because text is nonresident; sub retains the 32 text
+chunks while image residency is disabled. **P2-1L left 22 main sprite slots
+permanently hidden** —
 the character select's twelve portrait cells and the stage select's ten grid
 cells are backdrop art now — so the ceiling has that much slack in it; the ids
 themselves cost nothing while unused, and renumbering them is a P2-2 job (the

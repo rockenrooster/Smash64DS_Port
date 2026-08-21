@@ -1055,6 +1055,14 @@ static size_t ndsEFManagerFileSpan(void **file_head)
     {
         return ndsRelocGetLoadedFileSize(&llFoxSpecial2FileID);
     }
+    if (file_head == &gFTMarioFileSpecial2)
+    {
+        return ndsRelocGetLoadedFileSize(&llMarioSpecial2FileID);
+    }
+    if (file_head == &gFTDataFoxSpecial3)
+    {
+        return ndsRelocGetLoadedFileSize(&llFoxSpecial3FileID);
+    }
     return 0u;
 }
 
@@ -1071,14 +1079,38 @@ static size_t ndsEFManagerFileSpan(void **file_head)
  * file_head at all. So a desc whose file cannot back it produces an effect GObj
  * with no DObj tree -- nothing drawn, nothing walked -- and the guarded
  * accessors downstream see a NULL DObjGetStruct and return cleanly. */
-/* Descs whose file was not resident at efManagerInitEffects time. Four slots
- * covers the P1 set with room to spare; overflow is counted rather than
- * silently dropped, because "the retry table was full" and "the file never
- * loaded" are different failures and must not read alike. */
+/* Descs whose file was not resident at efManagerInitEffects time. P2-2 adds
+ * Mario's pipe and Fox's Arwing to the existing Fox-reflector case, so four
+ * slots still cover the closed Mario/Fox battle set with one spare. Overflow is
+ * counted rather than silently dropped, because "the retry table was full" and
+ * "the file never loaded" are different failures and must not read alike. */
 #define NDS_EF_DEFERRED_MAX 4u
 static EFDesc *sNdsEFDeferredDescs[NDS_EF_DEFERRED_MAX];
 static void (*sNdsEFDeferredProcs[NDS_EF_DEFERRED_MAX])(GObj *);
 static u32 sNdsEFDeferredCount;
+
+static void ndsEFManagerResetDeferredDescs(void)
+{
+    u32 i;
+
+    /* EFDesc globals outlive the taskman arena. If a previous match never
+     * loaded the fighter file for one deferred desc, that desc still has its
+     * display callback cleared here. Restore the source definition before the
+     * new match sweeps residency again; otherwise "Mario-only match, then Fox"
+     * permanently disables Fox's entry effect. Recovered entries are already
+     * restored and their table slot is NULL, so this is idempotent. */
+    for (i = 0u; i < sNdsEFDeferredCount; i++)
+    {
+        if ((sNdsEFDeferredDescs[i] != NULL) &&
+            (sNdsEFDeferredProcs[i] != NULL))
+        {
+            sNdsEFDeferredDescs[i]->proc_display = sNdsEFDeferredProcs[i];
+        }
+        sNdsEFDeferredDescs[i] = NULL;
+        sNdsEFDeferredProcs[i] = NULL;
+    }
+    sNdsEFDeferredCount = 0u;
+}
 
 static void ndsEFManagerDeferDesc(EFDesc *desc)
 {
@@ -1258,6 +1290,8 @@ static void ndsEFManagerResolveDescOffsets(EFDesc *desc)
     X(dEFManagerShieldEffectDesc) \
     X(dEFManagerCatchSwirlEffectDesc) \
     X(dEFManagerReflectBreakEffectDesc) \
+    X(dEFManagerMarioEntryDokanEffectDesc) \
+    X(dEFManagerFoxEntryArwingEffectDesc) \
     X(dEFManagerRebirthHaloEffectDesc) \
     X(dEFManagerFoxReflectorEffectDesc)
 
@@ -1525,6 +1559,7 @@ static void ndsEFManagerShieldQuadProcDisplay(GObj *effect_gobj)
 
 void efManagerInitEffects(void)
 {
+    ndsEFManagerResetDeferredDescs();
     ndsTask39EffectCensusReset();
     gNdsVisualEffectCreateCount = 0u;
     gNdsVisualEffectDestroyCount = 0u;

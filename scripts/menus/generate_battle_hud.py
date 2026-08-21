@@ -1,0 +1,417 @@
+#!/usr/bin/env python3
+"""Bake the P2-2 lower-screen battle HUD into DS 4bpp OBJ cells.
+
+The runtime HUD is a presentation sink only.  BattleShip's imported ifCommon
+objects remain authoritative for timer, damage and stock state; this bake merely
+turns their source artwork into a format the DS sub 2D engine can consume with
+no runtime decode/conversion.
+
+All normal interface/menu sprites are decoded through the same RELO reader used
+by generate_mn_ui_kit.py.  Mario/Fox model files use the older 0x58-byte RELO
+header variant in the checked BattleShip_o2r corpus, so their tiny CI4 stock
+icons are read through a deliberately bounded legacy reader with source offsets
+cross-checked against the decomp's Sprite declarations.
+"""
+
+from __future__ import annotations
+
+import argparse
+import importlib.util
+import re
+import struct
+import sys
+from pathlib import Path
+
+
+DAMAGE_SYMBOLS = [f"llIFCommonPlayerDamageDigit{i}Sprite" for i in range(10)] + [
+    "llIFCommonPlayerDamageSymbolPercentSprite"
+]
+TIMER_SYMBOLS = [f"llIFCommonTimerDigit{i}Sprite" for i in range(10)] + [
+    "llIFCommonTimerSymbolColonSprite"
+]
+STOCK_DIGIT_SYMBOLS = [f"llIFCommonDigits{i}Sprite" for i in range(10)] + [
+    "llIFCommonDigitsCrossSprite"
+]
+PORTRAIT_SYMBOLS = [
+    "llMNPlayersPortraitsMarioSprite",
+    "llMNPlayersPortraitsFoxSprite",
+]
+
+MODEL_HEADER_BYTES = 0x58
+MODEL_STOCK = {
+    "MARIO": {
+        "file": "MarioModel",
+        "sprite": 0x72D0,
+        "texture": 0x71A8,
+        "palettes": [0x7200, 0x7228, 0x7250, 0x7278, 0x72A0],
+    },
+    "FOX": {
+        "file": "FoxModel",
+        "sprite": 0x7C28,
+        "texture": 0x7B28,
+        "palettes": [0x7B80, 0x7BA8, 0x7BD0, 0x7BF8],
+    },
+}
+
+
+class BakeError(RuntimeError):
+    pass
+
+
+def load_ui_generator(repo_root: Path):
+    path = repo_root / "scripts" / "menus" / "generate_mn_ui_kit.py"
+    spec = importlib.util.spec_from_file_location("nds_mn_ui_bake", path)
+    if spec is None or spec.loader is None:
+        raise BakeError(f"cannot import {path}")
+    module = importlib.util.module_from_spec(spec)
+    # Python 3.13's dataclass resolver expects the module to be registered
+    # while decorators execute.
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def scale_raster(ui, raster, num: int = 4, den: int = 5):
+    src_h = len(raster)
+    src_w = len(raster[0]) if src_h else 0
+    dst_w = max(1, (src_w * num + den // 2) // den)
+    dst_h = max(1, (src_h * num + den // 2) // den)
+    return ui.box_scale(raster, dst_w, dst_h), dst_w, dst_h
+
+
+def intensity_indices(raster, content_w: int, content_h: int,
+                      cell_w: int, cell_h: int,
+                      origin_x: int = 0, origin_y: int = 0) -> list[int]:
+    out = [0] * (cell_w * cell_h)
+    for y in range(content_h):
+        for x in range(content_w):
+            r, g, b, a = raster[y][x]
+            if a == 0:
+                continue
+            # The source I/IA sprites are intensity masks.  Preserve every
+            # non-zero-alpha texel (OBJ4 has only transparent/opaque) and keep
+            # fifteen intensity levels so the runtime can reproduce the source
+            # primitive-colour modulation by changing only the palette.
+            luma = max(r, g, b)
+            out[(origin_y + y) * cell_w + origin_x + x] = \
+                max(1, min(15, (luma * 15 + 127) // 255))
+    return out
+
+
+def pack_obj4(indices: list[int], width: int, height: int) -> bytes:
+    if width % 8 or height % 8 or len(indices) != width * height:
+        raise BakeError(f"OBJ4 cell must be 8x8 tiled, got {width}x{height}")
+    blob = bytearray()
+    for tile_y in range(0, height, 8):
+        for tile_x in range(0, width, 8):
+            for y in range(8):
+                for x in range(0, 8, 2):
+                    lo = indices[(tile_y + y) * width + tile_x + x] & 0xF
+                    hi = indices[(tile_y + y) * width + tile_x + x + 1] & 0xF
+                    blob.append(lo | (hi << 4))
+    return bytes(blob)
+
+
+def quantize_portrait(ui, raster, width: int, height: int):
+    """Deterministic weighted median-cut: transparent + at most 15 colours."""
+    counts: dict[tuple[int, int, int], int] = {}
+    for y in range(height):
+        for x in range(width):
+            r, g, b, a = raster[y][x]
+            if a < 32:
+                continue
+            key = (r, g, b)
+            counts[key] = counts.get(key, 0) + max(1, a)
+
+    if not counts:
+        raise BakeError("portrait became fully transparent")
+
+    boxes = [list(counts.keys())]
+    while len(boxes) < 15:
+        split_at = -1
+        split_channel = 0
+        split_span = -1
+        split_weight = -1
+        for i, box in enumerate(boxes):
+            if len(box) < 2:
+                continue
+            spans = [max(c[ch] for c in box) - min(c[ch] for c in box)
+                     for ch in range(3)]
+            channel = max(range(3), key=lambda ch: spans[ch])
+            weight = sum(counts[c] for c in box)
+            if (spans[channel], weight) > (split_span, split_weight):
+                split_at = i
+                split_channel = channel
+                split_span = spans[channel]
+                split_weight = weight
+        if split_at < 0:
+            break
+
+        box = sorted(boxes.pop(split_at), key=lambda c: (c[split_channel], c))
+        total = sum(counts[c] for c in box)
+        accum = 0
+        cut = 1
+        for j, color in enumerate(box[:-1], 1):
+            accum += counts[color]
+            if accum * 2 >= total:
+                cut = j
+                break
+        boxes.append(box[:cut])
+        boxes.append(box[cut:])
+
+    palette_rgb = []
+    for box in boxes:
+        weight = sum(counts[c] for c in box)
+        palette_rgb.append(tuple(
+            sum(c[ch] * counts[c] for c in box) // weight for ch in range(3)
+        ))
+
+    palette = [0] + [ui.rgba8_to_ds(r, g, b, 255) for r, g, b in palette_rgb]
+    palette += [0] * (16 - len(palette))
+    indices = [0] * (16 * 16)
+    for y in range(height):
+        for x in range(width):
+            r, g, b, a = raster[y][x]
+            if a < 32:
+                continue
+            best = min(range(len(palette_rgb)),
+                       key=lambda i: ((r - palette_rgb[i][0]) ** 2 +
+                                      (g - palette_rgb[i][1]) ** 2 +
+                                      (b - palette_rgb[i][2]) ** 2))
+            indices[y * 16 + x] = best + 1
+    return pack_obj4(indices, 16, 16), palette
+
+
+def read_model_payload(path: Path) -> bytes:
+    raw = path.read_bytes()
+    if len(raw) < MODEL_HEADER_BYTES:
+        raise BakeError(f"{path.name}: legacy RELO too short")
+    if struct.unpack_from("<I", raw, 4)[0] != 0x52454C4F:
+        raise BakeError(f"{path.name}: missing RELO magic")
+    size = struct.unpack_from("<I", raw, 0x54)[0]
+    if MODEL_HEADER_BYTES + size > len(raw):
+        raise BakeError(f"{path.name}: legacy payload {size:#x} exceeds file")
+    return raw[MODEL_HEADER_BYTES:MODEL_HEADER_BYTES + size]
+
+
+def stock_asset(ui, repo_root: Path, spec: dict):
+    path = (repo_root / "decomp" / "BattleShip-main" / "BattleShip_o2r" /
+            "reloc_fighters_main" / spec["file"])
+    payload = read_model_payload(path)
+    sprite = spec["sprite"]
+    if sprite + 68 > len(payload):
+        raise BakeError(f"{spec['file']}: stock Sprite out of range")
+    width, height = struct.unpack_from(">hh", payload, sprite + 4)
+    attr = struct.unpack_from(">H", payload, sprite + 20)[0]
+    bmfmt, bmsiz = payload[sprite + 48], payload[sprite + 49]
+    if (width, height, bmfmt, bmsiz) != (8, 10, ui.G_IM_FMT_CI, ui.G_IM_SIZ_4b):
+        raise BakeError(
+            f"{spec['file']}: stock Sprite drifted: {width}x{height} "
+            f"fmt={bmfmt} siz={bmsiz}")
+    if (attr & ui.SP_TEXSHUF) == 0:
+        raise BakeError(f"{spec['file']}: source stock sprite lost SP_TEXSHUF")
+
+    tex = spec["texture"]
+    # Bitmap width_img is 16: eight visible pixels plus eight padded pixels.
+    # Undo the exact SP_TEXSHUF odd-row qword swap before sampling x=0..7.
+    source = []
+    for y in range(10):
+        row = bytes(payload[tex + y * 8:tex + (y + 1) * 8])
+        row = ui.deswizzle_row(row, y, True, 8)
+        pixels = []
+        for byte in row:
+            pixels.extend([(byte >> 4) & 0xF, byte & 0xF])
+        source.append(pixels[:8])
+
+    # 320x240 -> 256x192.  The 8x10 source icon becomes 6x8, but lives in an
+    # 8x8 DS cell.  Nearest sampling preserves CI4 index identity so every
+    # costume palette remains valid for the one shared glyph.
+    dst_w, dst_h = 6, 8
+    indices = [0] * 64
+    for y in range(dst_h):
+        sy = min(9, (y * 10) // dst_h)
+        for x in range(dst_w):
+            sx = min(7, (x * 8) // dst_w)
+            indices[y * 8 + x] = source[sy][sx]
+
+    palettes = []
+    for pal_off in spec["palettes"]:
+        if pal_off + 32 > len(payload):
+            raise BakeError(f"{spec['file']}: stock palette out of range")
+        palette = []
+        for i in range(16):
+            n64 = struct.unpack_from(">H", payload, pal_off + i * 2)[0]
+            palette.append(ui.rgba8_to_ds(*ui.rgba16_to_rgba8(n64)))
+        # DS 4bpp OBJ always treats index 0 as transparent, matching these CI4
+        # source assets' transparent palette entry.
+        palette[0] &= 0x7FFF
+        palettes.append(palette)
+    return pack_obj4(indices, 8, 8), palettes
+
+
+def c_array_u8(name: str, rows: list[bytes]) -> list[str]:
+    width = len(rows[0]) if rows else 0
+    lines = [f"static const u8 {name}[{len(rows)}][{width}] = {{"]
+    for row in rows:
+        values = ", ".join(f"0x{v:02x}" for v in row)
+        lines.append(f"    {{ {values} }},")
+    lines.append("};")
+    return lines
+
+
+def c_array_u16(name: str, rows: list[list[int]]) -> list[str]:
+    width = len(rows[0]) if rows else 0
+    lines = [f"static const u16 {name}[{len(rows)}][{width}] = {{"]
+    for row in rows:
+        values = ", ".join(f"0x{v:04x}" for v in row)
+        lines.append(f"    {{ {values} }},")
+    lines.append("};")
+    return lines
+
+
+def c_metric_u8(name: str, rows: list[tuple[int, int]]) -> list[str]:
+    lines = [f"static const u8 {name}[{len(rows)}][2] = {{"]
+    for width, height in rows:
+        lines.append(f"    {{ {width}u, {height}u }},")
+    lines.append("};")
+    return lines
+
+
+def bake(repo_root: Path, output: Path) -> None:
+    ui = load_ui_generator(repo_root)
+    offsets = ui.load_reloc_offsets(repo_root)
+    o2r = repo_root / "decomp" / "BattleShip-main" / "BattleShip_o2r"
+
+    interface_sets = [
+        ("reloc_interface/IFCommonPlayerDamage", DAMAGE_SYMBOLS),
+        ("reloc_interface/IFCommonTimer", TIMER_SYMBOLS),
+        ("reloc_interface/IFCommonDigits", STOCK_DIGIT_SYMBOLS),
+    ]
+    glyph_groups: list[list[bytes]] = []
+    glyph_metrics: list[list[tuple[int, int]]] = []
+    for group_index, (rel_path, symbols) in enumerate(interface_sets):
+        fileobj = ui.RelocFile(o2r / rel_path)
+        rows = []
+        metrics = []
+        for symbol in symbols:
+            if symbol not in offsets:
+                raise BakeError(f"missing reloc offset for {symbol}")
+            _, raster = ui.decode_sprite_raster(fileobj, symbol, offsets[symbol])
+            raster, width, height = scale_raster(ui, raster)
+            if width > 16 or height > 16:
+                raise BakeError(f"{symbol}: scaled glyph {width}x{height} exceeds 16x16")
+            if group_index == 0:
+                # Damage digits are the one animated glyph family.  BattleShip
+                # scales them around their per-character centre during damage
+                # bounce; centring the AOT art in a transparent 32x32 OBJ cell
+                # gives the DS affine unit enough bounds for the complete
+                # source scale range used by normal attacks without a runtime
+                # resample or a per-glyph pivot correction.
+                cell_w = cell_h = 32
+                origin_x = (cell_w - width) // 2
+                origin_y = (cell_h - height) // 2
+            else:
+                cell_w = cell_h = 16
+                origin_x = origin_y = 0
+            rows.append(pack_obj4(
+                intensity_indices(raster, width, height, cell_w, cell_h,
+                                  origin_x, origin_y),
+                cell_w, cell_h))
+            metrics.append((width, height))
+        glyph_groups.append(rows)
+        glyph_metrics.append(metrics)
+
+    portrait_file = ui.RelocFile(o2r / "reloc_menus" / "MNPlayersPortraits")
+    portrait_gfx = []
+    portrait_palettes = []
+    for symbol in PORTRAIT_SYMBOLS:
+        _, raster = ui.decode_sprite_raster(portrait_file, symbol, offsets[symbol])
+        # 45x43 -> 16x15.  This is the smallest square OBJ cell that keeps a
+        # recognizable portrait while leaving enough sub OBJ budget for the
+        # four-player damage/stock presentation.
+        raster = ui.box_scale(raster, 16, 15)
+        gfx, palette = quantize_portrait(ui, raster, 16, 15)
+        portrait_gfx.append(gfx)
+        portrait_palettes.append(palette)
+
+    mario_gfx, mario_palettes = stock_asset(ui, repo_root, MODEL_STOCK["MARIO"])
+    fox_gfx, fox_palettes = stock_asset(ui, repo_root, MODEL_STOCK["FOX"])
+
+    # Shared intensity palette for timer/stock-count glyphs.  Damage gets the
+    # same fifteen intensity indices but its four palettes are generated live
+    # from BattleShip's per-player damage colour curve.
+    white_palette = [0]
+    for i in range(1, 16):
+        c = (i * 255 + 7) // 15
+        white_palette.append(ui.rgba8_to_ds(c, c, c, 255))
+
+    lines = [
+        "/* GENERATED by scripts/menus/generate_battle_hud.py -- do not edit. */",
+        "#ifndef NDS_BATTLE_HUD_GENERATED_INC",
+        "#define NDS_BATTLE_HUD_GENERATED_INC",
+        "",
+        "#define NDS_BATTLE_HUD_DAMAGE_GLYPHS 11u",
+        "#define NDS_BATTLE_HUD_TIMER_GLYPHS 11u",
+        "#define NDS_BATTLE_HUD_STOCK_DIGIT_GLYPHS 11u",
+        "#define NDS_BATTLE_HUD_PORTRAITS 2u",
+        "#define NDS_BATTLE_HUD_DAMAGE_GFX_BYTES 512u",
+        "#define NDS_BATTLE_HUD_TIMER_GFX_BYTES 128u",
+        "#define NDS_BATTLE_HUD_STOCK_DIGIT_GFX_BYTES 128u",
+        "#define NDS_BATTLE_HUD_PORTRAIT_GFX_BYTES 128u",
+        "#define NDS_BATTLE_HUD_STOCK_GFX_BYTES 32u",
+        "#define NDS_BATTLE_HUD_STOCK_CONTENT_W 6u",
+        "#define NDS_BATTLE_HUD_STOCK_CONTENT_H 8u",
+        "",
+    ]
+    lines += c_array_u8("kNdsBattleHudDamageGfx", glyph_groups[0])
+    lines += [""]
+    lines += c_array_u8("kNdsBattleHudTimerGfx", glyph_groups[1])
+    lines += [""]
+    lines += c_array_u8("kNdsBattleHudStockDigitGfx", glyph_groups[2])
+    lines += [""]
+    lines += c_metric_u8("kNdsBattleHudDamageMetric", glyph_metrics[0])
+    lines += [""]
+    lines += c_metric_u8("kNdsBattleHudTimerMetric", glyph_metrics[1])
+    lines += [""]
+    lines += c_metric_u8("kNdsBattleHudStockDigitMetric", glyph_metrics[2])
+    lines += [""]
+    lines += c_array_u8("kNdsBattleHudPortraitGfx", portrait_gfx)
+    lines += [""]
+    lines += c_array_u8("kNdsBattleHudStockGfx", [mario_gfx, fox_gfx])
+    lines += [""]
+    lines += c_array_u16("kNdsBattleHudPortraitPalette", portrait_palettes)
+    lines += [""]
+    lines += c_array_u16("kNdsBattleHudMarioStockPalette", mario_palettes)
+    lines += [""]
+    lines += c_array_u16("kNdsBattleHudFoxStockPalette", fox_palettes)
+    lines += [""]
+    lines += c_array_u16("kNdsBattleHudWhitePalette", [white_palette])
+    lines += ["", "#endif /* NDS_BATTLE_HUD_GENERATED_INC */", ""]
+
+    text = "\n".join(lines)
+    output.parent.mkdir(parents=True, exist_ok=True)
+    if not output.exists() or output.read_text(errors="replace") != text:
+        output.write_text(text)
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--repo-root", type=Path,
+                        default=Path(__file__).resolve().parents[2])
+    parser.add_argument("--output", type=Path, default=None)
+    args = parser.parse_args()
+    root = args.repo_root.resolve()
+    output = args.output or (root / "src" / "nds" / "generated" /
+                             "battle_hud.generated.inc")
+    try:
+        bake(root, output)
+    except (BakeError, Exception) as exc:
+        # Keep one concise line in make output; ConvertError from the shared UI
+        # decoder is intentionally surfaced here too.
+        print(f"generate_battle_hud: {exc}", file=sys.stderr)
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

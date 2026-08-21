@@ -329,6 +329,7 @@ Goal. Execution order (operational detail lives in `docs/P2_PLAN.md`):
 Every step includes its applicable menu/UI work. Wireless multiplayer is P3
 (`docs/P3_Multiplayer/Multiplayer.md`); single-console VS play is 1 human plus
 CPUs and is delivered by step 2. P2 publishes `smash64ds.nds`.
+Menu/UI is also 30hz 2 VBlanks.
 
 ---
 
@@ -391,7 +392,7 @@ and flower animation, camera bounds, moving background, lighting, music):
 * recognizable lighting/presentation
 * stage music
 
-A stage's visual implementation may differ from the N64 version.
+A stage's visual implementation may differ from the N64 version (example: DS Dreamland vs N64 Dreamland).
 
 ---
 

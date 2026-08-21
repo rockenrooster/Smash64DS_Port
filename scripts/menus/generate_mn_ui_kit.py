@@ -792,7 +792,9 @@ def decode_band(fileobj: RelocFile, sprite: Sprite, piece: Bitmap, symbol: str,
 
 def convert_image(fileobj: RelocFile, symbol: str, token: str, offset: int,
                   scale: tuple[int, int] | None = None,
-                  tint: tuple[int, int, int] | None = None) -> Image:
+                  tint: tuple[int, int, int] | None = None,
+                  crop_rows: tuple[int, int] | None = None,
+                  env: tuple[int, int, int] | None = None) -> Image:
     """Decode one sprite to an RGBA raster, optionally rescale it, then pack it
     into the smallest DS OBJ cell that holds the result.
 
@@ -811,15 +813,45 @@ def convert_image(fileobj: RelocFile, symbol: str, token: str, offset: int,
     # source that sets it, and it is baked in because the kit's image path has
     # no per-slot tint -- unlike its text path, which takes the colour as an
     # argument exactly because a string IS re-tinted per use.
-    sprite, raster = decode_sprite_raster(fileobj, symbol, offset, tint)
+    if env is not None and tint is None:
+        raise ConvertError(f"{symbol}: OBJ env colour requires a primitive tint")
+    # Most OBJ images use the normal TEXEL * PRIM path.  The CSS hand's 1P
+    # gradient tag is IA and the source explicitly supplies BOTH colours in
+    # mnPlayersVSUpdateCursor, so bake its IA lerp exactly once here:
+    #   colour = (PRIM - ENV) * TEXEL0 + ENV.
+    # The DS bitmap-OBJ path has no per-object ENV register, and only player 1
+    # has a cursor on this single-console screen, so AOT resolving that fixed
+    # source combiner is the hardware-native equivalent rather than a runtime
+    # approximation.
+    sprite, raster = decode_sprite_raster(
+        fileobj, symbol, offset,
+        (255, 255, 255) if env is not None else tint)
+    if env is not None:
+        prim = tint
+        raster = [[(
+            env[0] + (((prim[0] - env[0]) * r) // 255),
+            env[1] + (((prim[1] - env[1]) * r) // 255),
+            env[2] + (((prim[2] - env[2]) * r) // 255),
+            a)
+            for (r, _g, _b, a) in row] for row in raster]
     width = sprite.width
     height = sprite.height
 
+    if crop_rows is not None:
+        # P2-1N (3): SOURCE-space row crop, before the scale, so two stacked
+        # cells of one sprite split on the exact same source row.
+        crop_y0, crop_h = crop_rows
+        if (crop_y0 < 0) or (crop_h < 1) or (crop_y0 + crop_h > height):
+            raise ConvertError(
+                f"{symbol}: crop rows ({crop_y0},{crop_h}) escape the "
+                f"sprite's {height} rows")
+        raster = raster[crop_y0:crop_y0 + crop_h]
+        height = crop_h
 
     if scale is not None:
         num, den = scale
-        width = max(1, (sprite.width * num + den // 2) // den)
-        height = max(1, (sprite.height * num + den // 2) // den)
+        width = max(1, (width * num + den // 2) // den)
+        height = max(1, (height * num + den // 2) // den)
         raster = box_scale(raster, width, height)
 
     cell_w, cell_h = choose_cell(width, height)
@@ -1200,10 +1232,26 @@ def convert_surface(cache: dict[str, RelocFile], offsets: dict[str, int],
     placed = place_all(spec.parts)
     beneath = place_all(spec.under)
 
-    content_left = min(x for x, _, _ in placed)
-    content_top = min(y for _, y, _ in placed)
-    content_right = max(x + len(raster[0]) for x, _, raster in placed)
-    content_bottom = max(y + len(raster) for _, y, raster in placed)
+    if placed:
+        content_left = min(x for x, _, _ in placed)
+        content_top = min(y for _, y, _ in placed)
+        content_right = max(x + len(raster[0]) for x, _, raster in placed)
+        content_bottom = max(y + len(raster) for _, y, raster in placed)
+    elif spec.box is not None:
+        # P2-1N: a state with NO placements is a legitimate base-only render
+        # (CSS_READY_OFF -- the blink's dark phase re-blits the base inside
+        # the declared box). Content bounds are the box itself, expressed in
+        # the SAME frame-converted space placed bounds live in.
+        content_left = frame_pos(spec.box[0])
+        content_top = frame_pos(spec.box[1])
+        content_right = content_left + max(
+            1, (spec.box[2] * FRAME_SCALE[0] + FRAME_SCALE[1] // 2) //
+            FRAME_SCALE[1])
+        content_bottom = content_top + max(
+            1, (spec.box[3] * FRAME_SCALE[0] + FRAME_SCALE[1] // 2) //
+            FRAME_SCALE[1])
+    else:
+        raise ValueError(f"{spec.token}: empty parts need a declared box")
     if spec.box is not None:
         # A DECLARED canvas: every variant of the same element gets the same
         # rectangle, so a re-blit overwrites the previous state exactly.  The
@@ -1552,9 +1600,25 @@ IMAGE_SOURCES = [
      "CSS_CURSOR_GRAB", (4, 5)),
     ("MNPlayersCommon", "llMNPlayersCommonCursorHandHoverSprite",
      "CSS_CURSOR_HOVER", (4, 5)),
+    # mnPlayersVSUpdateCursor appends this tag to the hand on every cursor
+    # state.  Single-console P2 has exactly the source player-0 cursor, so bake
+    # its source PRIM/ENV pair into the IA artwork AOT; P3 wireless owns the
+    # 2P/3P/4P variants.  Tuple field 6 is the RDP ENV colour (field 5 remains
+    # the optional crop used by the shutter cells below).
+    ("MNPlayersCommon", "llMNPlayersCommon1PTextGradientSprite",
+     "CSS_CURSOR_1P", (4, 5), (0xE0, 0x15, 0x15), None,
+     (0x5B, 0x00, 0x00)),
+    # mnPlayersVSMakeReady's REGION_US lower prompt is two source sprites, not
+    # menu-font text. They share the READY 40/30 blink and stay tiny OBJ cells,
+    # avoiding another streamed surface on every blink edge.
+    ("MNPlayersCommon", "llMNPlayersCommonPressTextSprite",
+     "CSS_READY_PRESS", (4, 5), (0xD6, 0xDD, 0xC6)),
+    ("MNPlayersCommon", "llMNPlayersCommonStartTextSprite",
+     "CSS_READY_START", (4, 5), (0xFF, 0x56, 0x92)),
     # THE TOKENS.  mnPlayersVSUpdatePuck indexes 1P..4P then CP
-    # (mnplayersvs.c:3434); this build fills two slots, so it bakes the first
-    # player's token and the CP one.  P2-2 adds 2P/3P/4P with the fourth slot.
+    # (mnplayersvs.c:3434).  P2-2 is single-console VS -- one local human plus
+    # up to three CPUs -- so 1P and CP are still the only reachable token art.
+    # P3 wireless is what makes 2P/3P/4P reachable.
     ("MNPlayersCommon", "llMNPlayersCommon1PPuckSprite", "PUCK_1P", (4, 5)),
     ("MNPlayersCommon", "llMNPlayersCommonCPPuckSprite", "PUCK_CP", (4, 5)),
     # THE PLAYER-KIND BUTTON.  mnPlayersVSMakePlayerKindSelect indexes these
@@ -1569,6 +1633,16 @@ IMAGE_SOURCES = [
     # stays READABLE, and a fixed-size label is exactly the element a uniform
     # layout scale should not carry.  The cells are the same size either way
     # for CP LEVEL, so the whole cost of the decision is 2,304 bytes.
+    # P2-1N (5), owner re-ruling 2026-08-19: the title emblem SHIPS, as the
+    # priced alternative the omission record below describes — a
+    # semi-transparent bitmap OBJ. Baked at HALF the frame ratio (2/5) so the
+    # 102x99 silhouette lands in one 64x64 cell (8,192 B against bank E's
+    # 9,600 free) and rendered 2x through OBJ affine double-size; the ~30%
+    # wash is the OBJ's own per-sprite alpha (5/16), which the BG bake's one
+    # alpha bit provably cannot carry. Flat red per the source's primitive
+    # (mnTitleMakeLogoNoOpening).
+    ("MNTitle", "llMNTitleLogoAnimFullSprite", "TITLE_EMBLEM", (2, 5),
+     (0xFF, 0x00, 0x00)),
     ("MNPlayersCommon", "llMNPlayersCommonHmnLabelSprite", "LABEL_HMN"),
     ("MNPlayersCommon", "llMNPlayersCommonCPLabelSprite", "LABEL_CP"),
     ("MNPlayersCommon", "llMNPlayersCommonNALabelSprite", "LABEL_NA"),
@@ -1641,9 +1715,10 @@ IMAGE_SOURCES = [
     ("MNCommon", "llMNCommonColonSprite", "COLON", (4, 5)),
     # THE PANEL'S OWN PLAYER TAG, mnPlayersVSMakePlayerKind :2003.  A human
     # slot draws `llMNPlayersCommon<N>PTextSprite` and a CPU one the shared
-    # `CPTextSprite`, both in BLACK on the card.  Only 1P exists here because
-    # this build fills one human slot; 2P/3P/4P arrive with P2-2's fourth
-    # fighter, exactly as the puck block above.
+    # `CPTextSprite`, both in BLACK on the card. Only 1P exists here because
+    # P2-2 is still single-console: P3/P4 can now be live fighters, but they are
+    # CPUs and therefore use CP. 2P/3P/4P human tags arrive only with additional
+    # controller ownership, exactly as the puck block above.
     ("MNPlayersCommon", "llMNPlayersCommon1PTextSprite", "PANEL_1P", (4, 5),
      (0x00, 0x00, 0x00)),
     # 3/4 rather than the frame's 4/5, and it is a CELL fact exactly as P2-1f's
@@ -2060,6 +2135,21 @@ VS_BUTTONS = (
      (vs_text("MNVSMode", "llMNVSModeRulePeriodTextSprite", 108, 75),
       vs_text("MNVSMode", "llMNVSModeStockTextSprite", 183, 78,
               (0xFF, 0xFF, 0xFF)))),
+    # mnVSModeMakeRuleValue, mnvsmode.c:368-405.  Team rules are distinct
+    # entries in the source's clamped four-value rule enum, not a CSS-only
+    # presentation state: the TIME/STOCK word shifts left and TEAM follows it.
+    ("RULE_TIME_TEAM", 97, 70,
+     (vs_text("MNVSMode", "llMNVSModeRulePeriodTextSprite", 108, 75),
+      vs_text("MNVSMode", "llMNVSModeTimeTextSprite", 168, 78,
+              (0xFF, 0xFF, 0xFF)),
+      vs_text("MNVSMode", "llMNVSModeTeamTextSprite", 212, 78,
+              (0xFF, 0xFF, 0xFF)))),
+    ("RULE_STOCK_TEAM", 97, 70,
+     (vs_text("MNVSMode", "llMNVSModeRulePeriodTextSprite", 108, 75),
+      vs_text("MNVSMode", "llMNVSModeStockTextSprite", 165, 78,
+              (0xFF, 0xFF, 0xFF)),
+      vs_text("MNVSMode", "llMNVSModeTeamTextSprite", 212, 78,
+              (0xFF, 0xFF, 0xFF)))),
     ("TIME", 74, 109,
      (vs_text("MNVSMode", "llMNVSModeTimePeriodTextSprite", 97, 113),
       vs_text("MNVSMode", "llMNVSModeMinTextSprite", 197, 120))),
@@ -2136,7 +2226,7 @@ def css_portrait_pos(portrait: int) -> tuple[int, int]:
     return (((portrait % 6) * 45) + 25, ((1 if portrait >= 6 else 0) * 43) + 36)
 
 
-def css_screen_parts() -> tuple[Placement, ...]:
+def css_screen_parts(flash_portrait: int | None = None) -> tuple[Placement, ...]:
     parts = [
         # mnPlayersVSMakeWallpaper, :1370, full-bleed per the P2-1k ruling.
         STONE_FULL_BLEED,
@@ -2147,6 +2237,15 @@ def css_screen_parts() -> tuple[Placement, ...]:
         parts.append(Placement("MNPlayersPortraits",
                                "llMNPlayersPortraitsPortraitFireBgSprite",
                                x, y, False))
+        # mnPlayersVSMakePortraitFlash is camera priority 73: after the
+        # portrait-wallpaper camera (75) but BEFORE the portrait camera (70).
+        # The white plate therefore sits behind the fighter portrait, not on
+        # top of it.  Insert it at that exact layer and exact +1,+1 source
+        # offset; the ordinary CSS_SCREEN passes None and is byte-identical.
+        if portrait == flash_portrait:
+            parts.append(Placement(
+                "MNPlayersPortraits", "llMNPlayersPortraitsWhiteSquareSprite",
+                x + 1, y + 1, False))
         if fkind in CSS_BUILT_FKIND:
             # The fighter's own portrait, at the box's own position and the
             # box's own scale -- finding (5).
@@ -2247,11 +2346,15 @@ for _f in range(len(CSS_FIGHTER_TOKEN)):
 
 
 def css_gate(player: int, state: str, lut: str, shut: bool,
-             fighter: int | None, tint, with_name: bool) -> SurfaceSpec:
+             fighter: int | None, tint, with_name: bool,
+             gate_color: int | None = None,
+             team_label: str | None = None,
+             token_prefix: str = "CSS_GATE") -> SurfaceSpec:
     start = player * 69
+    lut_player = (player + 1) if gate_color is None else (gate_color + 1)
     parts = [Placement("MNPlayersCommon", "llMNPlayersCommonRedCardSprite",
                        start + 22, 126, False,
-                       lut_symbol="llMNPlayersCommon" + (lut % (player + 1)))]
+                       lut_symbol="llMNPlayersCommon" + (lut % lut_player))]
     if shut:
         parts.append(Placement("MNPlayersCommon",
                                "llMNPlayersCommonSmashLogoCardLeftSprite",
@@ -2264,11 +2367,18 @@ def css_gate(player: int, state: str, lut: str, shut: bool,
                                start + 24, 143, False, tint))
         if with_name:
             parts.append(Placement("MNPlayersCommon",
-                                   CSS_NAME_SYMBOL[fighter],
-                                   start + 22, 201, False))
+                                    CSS_NAME_SYMBOL[fighter],
+                                    start + 22, 201, False))
+    if team_label is not None:
+        # mnPlayersVSMakeTeamSelect, mnplayersvs.c:487: RED/BLUE/GREEN is a
+        # 24x10 source sprite at (player*69+34, 131), above the card.  It is
+        # folded into the panel surface instead of consuming scarce main OBJ
+        # VRAM; changing team already re-blits this same panel in the source.
+        parts.append(Placement("MNPlayersCommon", team_label,
+                               start + 34, 131, False))
     box = (start + CSS_GATE_BOX[0], CSS_GATE_BOX[1],
            CSS_GATE_BOX[2], CSS_GATE_BOX[3])
-    return SurfaceSpec(f"CSS_GATE_{player}_{state}", tuple(parts), None,
+    return SurfaceSpec(f"{token_prefix}_{player}_{state}", tuple(parts), None,
                        under=css_screen_parts(), box=box)
 
 
@@ -2276,6 +2386,160 @@ for _player in range(4):
     for _state, _lut, _shut, _fighter, _tint, _name in CSS_GATE_STATES:
         SURFACE_SOURCES.append(
             css_gate(_player, _state, _lut, _shut, _fighter, _tint, _name))
+
+# P2-2a. Team Battle uses the SAME card sprite with a TEAM color instead of the
+# physical player color (`mnPlayersVSUpdateGateAll`, mnplayersvs.c:1847): red
+# selects color id 0 / Gate*1P, blue id 1 / Gate*2P, green id 3 / Gate*4P.
+# The team selector itself is the source's RED/BLUE/GREEN sprite at y=131.
+# Direct-color BG2 has no runtime TLUT, so bake the three exact outcomes per
+# panel state.  These cost ROM only; they consume no additional OBJ VRAM.
+CSS_TEAM_GATE = (
+    ("RED", 0, "llMNPlayersCommonRedLabelSprite"),
+    ("BLUE", 1, "llMNPlayersCommonBlueLabelSprite"),
+    ("GREEN", 3, "llMNPlayersCommonGreenLabelSprite"),
+)
+for _team_name, _gate_color, _team_label in CSS_TEAM_GATE:
+    for _player in range(4):
+        for _state, _lut, _shut, _fighter, _tint, _name in CSS_GATE_STATES:
+            SURFACE_SOURCES.append(css_gate(
+                _player, _state, _lut, _shut, _fighter, _tint, _name,
+                gate_color=_gate_color,
+                token_prefix=f"CSS_GATE_TEAM_{_team_name}"))
+
+# The source's RED/BLUE/GREEN selector is a separate display object on DL link
+# 34 (mnplayersvs.c:487-507), one layer in front of the fighter camera's link 33.
+# Folding it into the BG2 gate made the 3D fighter cover it. Keep the palette
+# variants above label-free and bake the twelve tiny selector rasters separately;
+# runtime places them on foreground BG3, which costs ROM rather than OBJ VRAM.
+# Keep this block contiguous in [team][player] order for cheap runtime indexing.
+for _team_name, _gate_color, _team_label in CSS_TEAM_GATE:
+    for _player in range(4):
+        SURFACE_SOURCES.append(SurfaceSpec(
+            f"CSS_TEAM_SELECT_{_team_name}_{_player}",
+            (Placement("MNPlayersCommon", _team_label,
+                       (_player * 69) + 34, 131, False),),
+            None))
+
+# P2-1N (owner round 7, 2026-08-19). Three formerly font-composed elements
+# ship the source's own sprites, as toggleable surface states over the CSS
+# base — the same state machinery as the gates above.
+#
+# (1) READY TO FIGHT: `mnPlayersVSMakeReady` draws the 320x17 banner band
+# (`ReadyBannerSprite`, PRIM F4/56/7F over ENV black) at (0,71) and the
+# `ReadyToFightTextSprite` (ENV FF/CA/13, PRIM FF/FF/9D) at (50,76); the
+# blink is 40/30 (`mnPlayersVSReadyProcUpdate`), already transcribed in the
+# shell. ON composites both over the base; OFF is the base alone, so the
+# blink is a two-state swap exactly like a gate's.
+CSS_READY_BOX = (0, 71, 320, 22)
+CSS_READY_PARTS = (
+    Placement("MNPlayersCommon", "llMNPlayersCommonReadyBannerSprite",
+              0, 71, False, (0xF4, 0x56, 0x7F),
+              tile=(320, 17), period=(8, None)),
+    Placement("MNPlayersCommon", "llMNPlayersCommonReadyToFightTextSprite",
+              50, 76, False, (0xFF, 0xFF, 0x9D)),
+)
+SURFACE_SOURCES.append(SurfaceSpec(
+    "CSS_READY_ON",
+    # The band WRAPS: the source draws the banner with masks=3 (an 8-texel
+    # horizontal period) and lrs=320, so the red gradient lines repeat across
+    # the whole screen (owner finding, 2026-08-19 — placing the sprite once
+    # left the lines off everywhere past its native width).
+    CSS_READY_PARTS,
+    None, under=css_screen_parts(), box=CSS_READY_BOX))
+SURFACE_SOURCES.append(SurfaceSpec(
+    "CSS_READY_OFF", (), None, under=css_screen_parts(), box=CSS_READY_BOX))
+
+# The band GObj above is display link 38 through mnPlayersVSMakeReadyCamera
+# (priority 10), whereas PRESS/START below it is display link 28 through the
+# player-kind camera (priority 50). BG2 carries the state/restoration copy used
+# by the portrait-flash patch family, but cannot sit in front of OBJ on DS.
+# Ship a keyed foreground-only copy of the link-38 GObj as well; runtime clears
+# this exact rectangle when the blink turns off. That preserves the source's
+# split depth without promoting the link-28 PRESS/START sprites over the hand.
+SURFACE_SOURCES.append(SurfaceSpec(
+    "CSS_READY_FOREGROUND", CSS_READY_PARTS, None, box=CSS_READY_BOX))
+
+# P2-1 closeout: source portrait-flash layering, including its overlap with the
+# READY camera.  The flash camera priority is 73, portrait 70, READY 10; camera
+# rendering runs back-to-front by that priority, so READY wins where its band
+# crosses either Mario or Fox's flash.  A moving DS OBJ cannot be inserted
+# between two pieces already composited in BG2, so bake the tiny 43x41 affected
+# rectangles for both flash states and both READY states.  Multiple players can
+# select the same mirror fighter; runtime ORs their visible flash GObjs per
+# portrait and chooses one of these four exact outcomes.
+for _token, _portrait in (("MARIO", 1), ("FOX", 9)):
+    _x, _y = css_portrait_pos(_portrait)
+    _box = (_x + 1, _y + 1, 43, 41)
+    for _ready in (0, 1):
+        _ready_parts = CSS_READY_PARTS if _ready else ()
+        for _on in (0, 1):
+            _under = css_screen_parts(_portrait if _on else None) + _ready_parts
+            SURFACE_SOURCES.append(SurfaceSpec(
+                f"CSS_FLASH_{_token}_{'ON' if _on else 'OFF'}_READY{_ready}",
+                (), None, under=_under, box=_box))
+
+# The screen-coverage audit normally derives a surface's source ownership from
+# `SurfaceSpec.parts`.  These flash surfaces are the one deliberate exception:
+# WhiteSquare has to sit BETWEEN the portrait wallpaper and portrait cameras,
+# so it lives inside the pre-composited `under` tree rather than `parts` (which
+# are drawn last).  `under` also contains many clipped/restoration sprites that
+# a token must NOT claim wholesale.  Name only the source symbol this token
+# genuinely adds so the audit can prove the shipped flash without weakening its
+# normal lexical falsifier.
+AUDIT_TOKEN_SYMBOLS = {
+    f"SURFACE_CSS_FLASH_{fighter}_{state}_READY{ready}":
+        {"llMNPlayersPortraitsWhiteSquareSprite"}
+    for fighter in ("MARIO", "FOX")
+    for state in ("OFF", "ON")
+    for ready in (0, 1)
+}
+
+# (4) FREE FOR ALL / TEAM BATTLE: `mnPlayersVSMakeLabels` draws the mode
+# label at (27,24); the toggle handler tints FFA E3/AC/04 and Team Battle
+# 61/AD/49 and swaps the sprite. Two states, same box.
+CSS_MODE_BOX = (27, 24, 150, 22)
+SURFACE_SOURCES.append(SurfaceSpec(
+    "CSS_MODE_FFA",
+    (Placement("MNPlayersGameModes",
+               "llMNPlayersGameModesFreeForAllTextSprite",
+               27, 24, False, (0xE3, 0xAC, 0x04)),),
+    None, under=css_screen_parts(), box=CSS_MODE_BOX))
+SURFACE_SOURCES.append(SurfaceSpec(
+    "CSS_MODE_TEAM",
+    (Placement("MNPlayersGameModes",
+               "llMNPlayersGameModesTeamBattleTextSprite",
+               27, 24, False, (0x61, 0xAD, 0x49)),),
+    None, under=css_screen_parts(), box=CSS_MODE_BOX))
+
+# (2) BACK: `llMNPlayersCommonBackButtonSprite` at (244,23) — static, so it
+# joins the CSS base rather than being a state. The old font composition of
+# "BACK" leaves the shell with this landing.
+CSS_BACK_BOX = (244, 23, 50, 24)
+SURFACE_SOURCES.append(SurfaceSpec(
+    "CSS_BACK",
+    (Placement("MNPlayersCommon", "llMNPlayersCommonBackButtonSprite",
+               244, 23, False),),
+    None, under=css_screen_parts(), box=CSS_BACK_BOX))
+
+# (3) The slot doors, for the shutter slide (`mnPlayersVSShutterProcUpdate`:
+# 2/tic between 0 = open at the panel edges and 41 = shut meeting at +22/+47;
+# the terminal states stay the baked gates). OBJ cells were measured and
+# rejected — cell padding costs ~24 KiB against bank E's 9,600 free — so both
+# halves bake side by side into ONE keyed, cacheable strip and the animator
+# draws two sub-rectangles of the cached raster at the slid positions over
+# the open-state underlay. BOTH source sprites are 41x92. They overlap by 16
+# source pixels when shut (left x=22..62, right x=47..87); that overlap is the
+# zigzag interlock. Keep each whole 41-pixel mask in the cache and let the
+# runtime positions recreate the overlap -- slicing at the closed seam would
+# throw away the left sprite's interlocking teeth and turn it into a straight
+# vertical split.
+SURFACE_SOURCES.append(SurfaceSpec(
+    "CSS_DOORS",
+    (Placement("MNPlayersCommon", "llMNPlayersCommonSmashLogoCardLeftSprite",
+               0, 0, False),
+     Placement("MNPlayersCommon", "llMNPlayersCommonSmashLogoCardRightSprite",
+               41, 0, False)),
+    None, cacheable=True))
 
 
 # ---------------------------------------------------------------------------
@@ -3095,12 +3359,18 @@ def main(argv: list[str] | None = None) -> int:
         o2r_name, symbol, token = entry[0], entry[1], entry[2]
         scale = entry[3] if len(entry) > 3 else None
         tint = entry[4] if len(entry) > 4 else None
+        # P2-1N (3): optional SOURCE-space row crop (y0, h) so a sprite taller
+        # than a 64-texel OBJ cell can ship as stacked cells (the slot doors
+        # are 92 source rows). Cropping happens on the decoded raster before
+        # the scale, so the split line is exact and shared.
+        crop_rows = entry[5] if len(entry) > 5 else None
+        env = entry[6] if len(entry) > 6 else None
         if symbol not in offsets:
             raise ConvertError(f"{symbol} missing from include/reloc_data.h")
         if o2r_name not in cache:
             cache[o2r_name] = RelocFile(o2r_path(repo_root, o2r_name))
         images.append(convert_image(cache[o2r_name], symbol, token,
-                                    offsets[symbol], scale, tint))
+                                    offsets[symbol], scale, tint, crop_rows, env))
     check_digit_block(images)
     check_kind_label_block(images)
     check_mode_icon_block(images)

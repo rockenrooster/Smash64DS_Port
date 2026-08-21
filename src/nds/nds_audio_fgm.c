@@ -379,6 +379,10 @@ static s32 ndsAudioFgmIDIsIncluded(u16 id)
      * missing for want of a pack entry, same as every case above. */
     case nSYAudioFGMTitlePressStart:
     case nSYAudioFGMStageSelect:
+    /* P2-1N (3)+(4): the shutter's arrival cue and the mode toggle's
+     * announcer line, packed 2026-08-19 with the shell already asking. */
+    case nSYAudioFGMPlayerSlotClose:
+    case nSYAudioVoiceAnnounceTeamBattle:
         return TRUE;
     default:
         return FALSE;

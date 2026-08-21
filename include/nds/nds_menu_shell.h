@@ -3,6 +3,13 @@
 
 #include <PR/ultratypes.h>
 
+/* Keep this leaf header free of the BattleShip scene/fighter include graph.
+ * `nds_platform.c` includes libnds first, whose ARM9 linked-list header reaches
+ * the decomp sys/malloc.h; pulling our mirrored scene.h in here then reaches the
+ * port sys/malloc.h and defines SYMallocRegion twice. The CSS's source bound is
+ * four and nds_menu_shell.c statically checks this against GMCOMMON_PLAYERS_MAX. */
+#define NDS_MENU_SHELL_PLAYERS 4u
+
 /* P2-1d -- the VS shell's real screens: title, main menu, VS menu and its
  * rules, plus P2-1e/1f's character and stage selects.
  * `docs/p2/P2-1-vs-shell.md` work item 4.
@@ -81,6 +88,19 @@ void ndsMenuShellRunModeSelect(void);
 void ndsMenuShellRunVSMode(void);
 void ndsMenuShellRunCharSelect(void);
 void ndsMenuShellRunStageSelect(void);
+
+/* The shell's 2D CSS owns source fighter previews through a deliberately
+ * bounded PlayersVS subset; these are implemented by the imported source TU.
+ * P2-2 restores the source's full four-slot preview capacity while keeping the
+ * available character set bounded to the Mario/Fox assets this build ships. */
+void ndsMNPlayersVSPreviewInit(void);
+void ndsMNPlayersVSPreviewSyncRules(sb32 is_team_battle, const u8 *teams,
+                                    u32 team_count);
+void ndsMNPlayersVSPreviewSync(u32 slot, s32 pkind, s32 fkind,
+                               sb32 is_selected);
+u32 ndsMNPlayersVSPreviewGetAppearance(u32 slot);
+void ndsMNPlayersVSPreviewFrame(void);
+void ndsMNPlayersVSPreviewExit(void);
 
 /* --- Published state. Read by scripts/menus/probe-p2-1d-menus.ps1; none of it
  * is read by gameplay. --- */
@@ -197,15 +217,35 @@ extern volatile u32 gNdsMenuShellCssCommitSlot[4];
 extern volatile u32 gNdsMenuShellCssCueCount;
 extern volatile u32 gNdsMenuShellCssCueLastId;
 extern volatile u32 gNdsMenuShellCssAnnounceCount;
+extern volatile u32 gNdsMenuShellCssModeToggleCount;
+extern volatile u32 gNdsMenuShellCssDoorSlideFrames;
+/* Live source-fighter preview proof. Updated after the source process step and
+ * before its display callbacks each CSS frame; retained across CSS teardown so
+ * the scene-entry probe can inspect the last real preview state safely. */
+extern volatile u32 gNdsPlayersVSPreviewFrameCount;
+extern volatile u32 gNdsPlayersVSPreviewDrawCount;
+extern volatile f32 gNdsPlayersVSPreviewRotationY[NDS_MENU_SHELL_PLAYERS];
+extern volatile s32 gNdsPlayersVSPreviewStatus[NDS_MENU_SHELL_PLAYERS];
+extern volatile s32 gNdsPlayersVSPreviewMotion[NDS_MENU_SHELL_PLAYERS];
+extern volatile u32
+    gNdsPlayersVSPreviewFreeRotateFrames[NDS_MENU_SHELL_PLAYERS];
+extern volatile f32
+    gNdsPlayersVSPreviewLastFreeRotationY[NDS_MENU_SHELL_PLAYERS];
+extern volatile s32
+    gNdsPlayersVSPreviewLastFreeStatus[NDS_MENU_SHELL_PLAYERS];
+extern volatile s32
+    gNdsPlayersVSPreviewLastFreeMotion[NDS_MENU_SHELL_PLAYERS];
+extern volatile u32 gNdsPlayersVSPreviewSelectedMask;
+extern volatile u32 gNdsPlayersVSPreviewVisibleMask;
+extern volatile u32 gNdsPlayersVSPreviewExitCount;
 
-/* --- P2-1j, the state-dependent backdrop art. ----------------------------
+/* --- P2-1j/P2-1N, state-dependent menu surfaces. -------------------------
  *
- * The VS menu's four buttons and the character select's four player panels are
- * BG2 surfaces rather than OBJ cells (a 168x29 option tab and a 66x91 gate
- * card both exceed a 64x64 bitmap-OBJ cell, and their two/three states would
- * cost more main OBJ than the bank has left), so changing one costs a re-blit.
- * These count them, and their whole purpose is to be READ AGAINST the screen's
- * presented-frame count: a screen holding still must hold these still. */
+ * The VS menu buttons and CSS gates are BG2 surfaces rather than oversized OBJ
+ * cells. P2-1N also added source-ordered CSS overlays/animations (team labels,
+ * READY and portrait flashes), so the CSS counter names every non-backdrop CSS
+ * surface blit across BG2 and BG3. These counters are read against the global
+ * UI-kit surface count by the loop verifier; no unowned blit is allowed. */
 extern volatile u32 gNdsMenuShellVsButtonBlitCount;
 extern volatile u32 gNdsMenuShellCssPanelBlitCount;
 extern volatile u32 gNdsMenuShellSssPlaqueBlitCount;

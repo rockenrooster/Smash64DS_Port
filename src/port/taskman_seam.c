@@ -957,36 +957,63 @@ void ndsResetStartupDiagnostics(void)
     gNdsIFCommonHUDObjectMask = 0;
     gNdsIFCommonHUDP0DamageCurrent = 0;
     gNdsIFCommonHUDP1DamageCurrent = 0;
+    gNdsIFCommonHUDP2DamageCurrent = 0;
+    gNdsIFCommonHUDP3DamageCurrent = 0;
     gNdsIFCommonHUDP0DamageMax = 0;
     gNdsIFCommonHUDP1DamageMax = 0;
+    gNdsIFCommonHUDP2DamageMax = 0;
+    gNdsIFCommonHUDP3DamageMax = 0;
     gNdsIFCommonHUDP0DigitCount = 0;
     gNdsIFCommonHUDP1DigitCount = 0;
+    gNdsIFCommonHUDP2DigitCount = 0;
+    gNdsIFCommonHUDP3DigitCount = 0;
     gNdsIFCommonHUDP0Digits = 0;
     gNdsIFCommonHUDP1Digits = 0;
+    gNdsIFCommonHUDP2Digits = 0;
+    gNdsIFCommonHUDP3Digits = 0;
     gNdsIFCommonHUDP0StockCurrent = 0;
     gNdsIFCommonHUDP1StockCurrent = 0;
+    gNdsIFCommonHUDP2StockCurrent = 0;
+    gNdsIFCommonHUDP3StockCurrent = 0;
     gNdsIFCommonHUDP0StockMin = 0;
     gNdsIFCommonHUDP1StockMin = 0;
+    gNdsIFCommonHUDP2StockMin = 0;
+    gNdsIFCommonHUDP3StockMin = 0;
     gNdsIFCommonHUDP0StockMax = 0;
     gNdsIFCommonHUDP1StockMax = 0;
+    gNdsIFCommonHUDP2StockMax = 0;
+    gNdsIFCommonHUDP3StockMax = 0;
     gNdsIFCommonHUDActivePlayerMask = 0;
     gNdsIFCommonHUDShowDamageMask = 0;
+    gNdsIFCommonHUDDamageFlashMask = 0;
     gNdsIFCommonHUDSingleStockMask = 0;
     gNdsIFCommonHUDCPUPlayerMask = 0;
     gNdsIFCommonHUDP0FighterKind = 0;
     gNdsIFCommonHUDP1FighterKind = 0;
+    gNdsIFCommonHUDP2FighterKind = 0;
+    gNdsIFCommonHUDP3FighterKind = 0;
     gNdsIFCommonHUDP0Level = 0;
     gNdsIFCommonHUDP1Level = 0;
+    gNdsIFCommonHUDP2Level = 0;
+    gNdsIFCommonHUDP3Level = 0;
+    gNdsIFCommonHUDP0Costume = 0;
+    gNdsIFCommonHUDP1Costume = 0;
+    gNdsIFCommonHUDP2Costume = 0;
+    gNdsIFCommonHUDP3Costume = 0;
     gNdsIFCommonHUDP0LowerStock = 0;
     gNdsIFCommonHUDP1LowerStock = 0;
+    gNdsIFCommonHUDP2LowerStock = 0;
+    gNdsIFCommonHUDP3LowerStock = 0;
     gNdsIFCommonHUDTimeRemain = 0;
     gNdsIFCommonHUDTimerLimit = 0;
     gNdsIFCommonHUDTimerStarted = 0;
+    gNdsIFCommonHUDTimerVisible = 0;
     gNdsIFCommonHUDGameStatus = 0;
     gNdsIFCommonHUDLowerRouteMask = 0;
     gNdsIFCommonHUDLowerRouteCount = 0;
     gNdsIFCommonHUDLowerTimerRouteCount = 0;
     gNdsIFCommonHUDLowerStockRouteCount = 0;
+    gNdsIFCommonHUDLowerDamageRouteCount = 0;
     gNdsIFCommonHUDTopGenericPassCount = 0;
     gNdsFighterMarioFoxModelResult = 0;
     gNdsFighterMarioFoxGObjResult = 0;
@@ -4539,6 +4566,7 @@ static void ndsBattlePlayablePacingStart(u32 fast_logic)
         (fast_logic != 0u) ? NDS_BUILD_MODE_FAST_WORD : 0u;
     gNdsBattlePlayablePacingLogicFrames = 0;
     gNdsBattlePlayablePacingPresentedFrames = 0;
+    ndsPlatformTickHudReset();
     gNdsBattlePlayablePacingDrawCalls = 0;
     gNdsBattlePlayablePacingTimerTicks = 0;
     gNdsBattlePlayablePacingPresentFpsX10 = 0;
@@ -4646,6 +4674,21 @@ void __attribute__((noinline, used)) ndsBattlePlayableFrameCompleteMarker(void)
 {
     __asm__ volatile("" ::: "memory");
 }
+
+#if NDS_P2_FOUR_CPU_STRESS && NDS_TICK_HUD
+/* The four-CPU whole-match tick sampler consumes the in-guest 128-entry ring,
+ * so the debugger only needs to wake often enough to drain that ring before it
+ * wraps. Breaking on FrameComplete every presented frame makes GDB dominate
+ * the measurement run. Keep that universal marker unchanged for all existing
+ * harnesses, and expose a stress-only drain point every 32 presents instead.
+ * 32 divides the sampler's 96-frame stop stride, leaves 4x ring-wrap margin,
+ * and is compiled out of shipping and the non-stress Boundary regression
+ * configurations. The P2-2 four-CPU Boundary arm is its only gate owner. */
+void __attribute__((noinline, used)) ndsBattlePlayableTickHudSparseMarker(void)
+{
+    __asm__ volatile("" ::: "memory");
+}
+#endif
 
 static void ndsBattlePlayablePresentFrame(void)
 {
@@ -5250,6 +5293,12 @@ static void ndsBattlePlayableFinalizePresentedIteration(void)
      * count have all advanced. See NDS_PUBLISH_DEBUGGER_GROUP in
      * nds_platform.h. */
     ndsPlatformPublishBattleFrameCompleteGroups();
+#if NDS_P2_FOUR_CPU_STRESS && NDS_TICK_HUD
+    if ((gNdsBattlePlayablePacingPresentedFrames & 31u) == 0u)
+    {
+        ndsBattlePlayableTickHudSparseMarker();
+    }
+#endif
     ndsBattlePlayableFrameCompleteMarker();
     NDS_FREEZE_DIAGNOSTICS_HEARTBEAT();
 }

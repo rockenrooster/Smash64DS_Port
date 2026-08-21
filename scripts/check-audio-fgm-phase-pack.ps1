@@ -72,7 +72,12 @@ $expectedIDs = @(626,470,469,467,490,74,363,364,372,373,374,430,439,292,
     # could be measured. Proven by the miss ring, not inferred: 2026-08-18
     # P2-1f evidence read `MSMISS ring=1 id0=159 c0=1` one-pass, `c0=3`
     # three-lap.
-    159)
+    159,
+    # P2-1N (3)+(4), 2026-08-19: the shutter arrival cue and the mode
+    # toggle's announcer line -- the shell asked, the miss ring proved the
+    # gap on the owner's own build, and both derive as simple single-voice
+    # articulations (166 six notes no forks, 526 one note).
+    166, 526)
 $actualIDs = @($metadata.entries | ForEach-Object { [int]$_.id })
 if (($actualIDs -join ',') -ne ($expectedIDs -join ',')) {
     throw "Unexpected FGM mapping: $($actualIDs -join ',')"
@@ -127,7 +132,7 @@ if (([int]$metadata.format_version -ne 4) -or
     # MenuScroll1, 6 UnkSmallPing1), so it joins FULL_PROGRAM_AOT_IDS to
     # render all three voices fused -- 33,120 samples at FGM_OUTPUT_RATE,
     # +16,596 bytes (16,564-byte IMA body + 32-byte entry header).
-    ([int64]$metadata.resident_bytes -ne 990120) -or
+    ([int64]$metadata.resident_bytes -ne 1003932) -or
     ([int64]$metadata.resident_limit_bytes -ne 204800) -or
     # ROM, not RAM: the runtime streams cues into resident_limit_bytes and never
     # holds the pack. 512 KiB blocked the five announcer lines and 768 KiB then
@@ -150,7 +155,9 @@ if (([int]$metadata.format_version -ne 4) -or
     # joining SELECTED -- same reason, the selector table changed.
     # 0xcb181af6 -> 0x3d9a9ac2 on 2026-08-18 (P2-1f-1) for FGM 159 joining
     # SELECTED -- same reason, the selector table changed.
-    ($metadata.mapping_sha256_lo -ne '0x3d9a9ac2') -or
+    # 0x3d9a9ac2 -> 0xf6b94a48 on 2026-08-19 (P2-1N) for FGM 166 and voice 526
+    # joining SELECTED -- same reason, the selector table changed.
+    ($metadata.mapping_sha256_lo -ne '0xf6b94a48') -or
     # Repinned 2026-08-02: FGM 11 (the rolling dodge) dropped 127 -> 96 -> 68 ->
     # 48 on the owner's ear via FGM_OWNER_VOLUME_TRIM, -8.4 dB total against the
     # source; the 68 pin was
@@ -183,7 +190,7 @@ if (([int]$metadata.format_version -ne 4) -or
     # pin was
     # 6cc5f91c35a82833d23bf3001c0c108225615e03a04ccc49eda800812f86c0b7.
     ($metadata.pack_sha256 -ne
-        '91ef45107ee0126b6b44b385e485ab3f6987250585c067b4d1abadcedec2a325')) {
+        '9897d7d6f9a094058780f337b2271aa1d0ed4e38aef4bb5330311a2007fcda2d')) {
     throw 'FGM pack format, budget, mapping, or binary identity changed.'
 }
 if ((@($metadata.excluded_entries).Count -ne 0) -or
@@ -307,7 +314,7 @@ if (($fgm218.acoustic_oracle.source_custom_fx_dry_only -ne $true) -or
 $header = Get-Content -LiteralPath $headerPath -Raw
 $runtime = Get-Content -LiteralPath $runtimePath -Raw
 foreach ($token in @(
-    '#define NDS_AUDIO_FGM_ENTRY_COUNT 98u',
+    '#define NDS_AUDIO_FGM_ENTRY_COUNT 100u',
     '#define NDS_AUDIO_FGM_CACHE_BYTES 204800u')) {
     if (-not $header.Contains($token)) { throw "Runtime header lost: $token" }
 }

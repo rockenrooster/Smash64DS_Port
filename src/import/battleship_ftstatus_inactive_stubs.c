@@ -18,7 +18,9 @@ NDS_INACTIVE_STATUS_STUB(ftCommonDeadUpStarProcUpdate)
 NDS_INACTIVE_STATUS_STUB(ftCommonDeadUpFallProcUpdate)
 #endif
 NDS_INACTIVE_STATUS_STUB(ftCommonSleepProcUpdate)
+#if !NDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE
 NDS_INACTIVE_STATUS_STUB(ftCommonEntryNullProcUpdate)
+#endif
 #if !NDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE
 NDS_INACTIVE_STATUS_STUB(ftCommonRebirthDownProcUpdate)
 NDS_INACTIVE_STATUS_STUB(ftCommonRebirthCommonProcMap)
@@ -64,12 +66,10 @@ NDS_INACTIVE_STATUS_STUB(ftCommonHammerKneeBendProcInterrupt)
 NDS_INACTIVE_STATUS_STUB(ftCommonHammerFallProcInterrupt)
 NDS_INACTIVE_STATUS_STUB(ftCommonHammerFallProcMap)
 NDS_INACTIVE_STATUS_STUB(ftCommonHammerLandingProcUpdate)
-NDS_INACTIVE_STATUS_STUB(ftCommonShieldBreakFlyProcUpdate)
-NDS_INACTIVE_STATUS_STUB(ftCommonShieldBreakFlyProcMap)
-NDS_INACTIVE_STATUS_STUB(ftCommonShieldBreakFallProcMap)
-NDS_INACTIVE_STATUS_STUB(ftCommonShieldBreakDownProcUpdate)
-NDS_INACTIVE_STATUS_STUB(ftCommonShieldBreakStandProcUpdate)
-NDS_INACTIVE_STATUS_STUB(ftCommonFuraFuraProcUpdate)
+/* P2-2 source-parity audit: these six callbacks are battle-reachable for
+ * Mario/Fox through the normal guard-break path, so they may not be inert
+ * fallbacks.  The source TUs are linked beside this file and own the complete
+ * Fly -> Fall -> Down -> Stand -> FuraFura lifecycle. */
 NDS_INACTIVE_STATUS_STUB(ftCommonCaptureKirbyProcPhysics)
 NDS_INACTIVE_STATUS_STUB(ftCommonCaptureWaitKirbyProcInterrupt)
 NDS_INACTIVE_STATUS_STUB(ftCommonCaptureWaitKirbyProcMap)
@@ -85,8 +85,10 @@ NDS_INACTIVE_STATUS_STUB(ftCommonYoshiEggProcPhysics)
 NDS_INACTIVE_STATUS_STUB(ftCommonYoshiEggProcMap)
 NDS_INACTIVE_STATUS_STUB(ftCommonCaptureCaptainProcPhysics)
 NDS_INACTIVE_STATUS_STUB(ftCommonCaptureShoulderedProcInterrupt)
+#if !NDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE
 NDS_INACTIVE_STATUS_STUB(ftCommonAppearProcUpdate)
 NDS_INACTIVE_STATUS_STUB(ftCommonAppearProcPhysics)
+#endif
 #if !NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_HI
 NDS_INACTIVE_STATUS_STUB(ftMarioSpecialHiProcUpdate)
 NDS_INACTIVE_STATUS_STUB(ftMarioSpecialHiProcInterrupt)

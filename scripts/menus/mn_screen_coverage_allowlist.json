@@ -21,14 +21,6 @@
     {
       "screen": "title",
       "kind": "missing",
-      "key": "llMNTitleLogoAnimFullSprite",
-      "reason": "The resting emblem. mnTitleMakeLogoNoOpening (mntitle.c:1051) sets its primitive to pure red with SP_TRANSPARENT and mnTitleLogoProcDisplay (:1011) draws it through gDPSetCombineLERP(0,0,0,PRIMITIVE, TEXEL0,0,PRIMITIVE,0, ...) -- a FLAT primitive colour whose only texture contribution is alpha -- at sMNTitleLogoAlpha 0x4C from tic 170 (:374). On an N64 that is a 30% red wash over its whole silhouette, fire included. A DS 16-bit BG bitmap carries ONE alpha bit, so that wash cannot exist in the layer this art lives in: composited at bake time it survived only where an opaque texel lay beneath it -- measured 2026-08-19, 1,243 texels of TITLE_SCREEN, of which 179 are rows 0..6 of the (f2) upper border band at x 202..236, turning near-black RGB5 (2,1,0) into (11,1,0). That 179-texel block is what the owner reported as a transparent RED artifact on the right of the title, and it is the emblem's shadow on whatever happened to be behind it rather than a rendition of the emblem. Bake and runtime evidence: artifacts/visibility/2026-08-19_p2-1L-title-before-pose38.png (412 red pixels in the band, window x 324..370) against 2026-08-19_p2-1L-title-after-settled.png (0).",
-      "ruling": "P2-1L (1) omitted it and recorded the delta; reinstating it faithfully needs a second layer the DS can alpha-blend (a semi-transparent OBJ, DS OBJ mode 1 with BLDALPHA, over the 102x99 silhouette) which is a new mechanism on a screen already inside its cadence -- OWNER RULING REQUESTED on whether the wash is worth that",
-      "status": "open"
-    },
-    {
-      "screen": "title",
-      "kind": "missing",
       "key": "re:llMNTitleLogoAnim(Cutout|StrikeH|StrikeV)Sprite",
       "reason": "The emblem's own animation cels, and P2-1k (d) re-read who draws them: they are dMNTitleLogoAnimSprites, referenced ONLY inside mnTitleMakeLogo's opening-cinematic arm (mntitle.c:1096-1155, gated on scene_prev == nSCKindOpeningNewcomers). This shell always takes mnTitleMakeLogoNoOpening (:1051), which builds the resting FULL sprite alone -- the one this bake ships. They are therefore the INTRO's cels, not the label animation's: P2-1k (d) built the label pop (mnTitleMakeLabels' five animated pieces) from a baked pose table and it needs none of them.",
       "ruling": "PROJECT_GOAL.md Current Milestone step 7 -- the intro cinematic is deferred by owner decision, and these cels arrive with it; re-read and re-ruled by P2-1k (d), which landed the label animation these were previously attributed to",
@@ -42,15 +34,6 @@
       "ruling": "P2-1h (board row): source-read finding, transcribed rather than omitted",
       "status": "ruled"
     },
-    {
-      "screen": "vs_mode",
-      "kind": "missing",
-      "key": "llMNVSModeTeamTextSprite",
-      "reason": "The TEAM word in the rule value, drawn only for nMNVSModeRuleStockTeam/TimeTeam. Team battles are P2-2; this build's rule set is {Time, Stock} and is_team_battle is FALSE by construction.",
-      "ruling": "docs/P2_PLAN.md phase P2-2 (teams); P2-1e deliberate narrowing",
-      "status": "ruled"
-    },
-
     {
       "screen": "css",
       "kind": "missing",
@@ -95,42 +78,17 @@
       "screen": "css",
       "kind": "missing",
       "key": "re:llMNPlayersCommon[2-4]P(Puck|Text)Sprite",
-      "reason": "The tokens and panel tags for players 2-4. This build fills one human slot and one CPU slot; the fourth slot arrives with the four-fighter engine, and the source's own tables are indexed by player so nothing else has to change.",
-      "ruling": "docs/P2_PLAN.md phase P2-2 (four-fighter engine); P2-1e's own puck bound",
+      "reason": "The human tokens and panel tags for players 2-4. P2-2 is a single-console shell with one controller/cursor; extra occupied slots are CPUs, so the source never selects 2P/3P/4P human art. Those assets become reachable only when additional controller ownership exists.",
+      "ruling": "P2-2 single-console scope; BattleShip mnPlayersVSUpdateControllerOrders / player-kind behavior",
       "status": "ruled"
     },
     {
       "screen": "css",
       "kind": "missing",
-      "key": "re:llMNPlayersCommon[1-4]PTextGradientSprite",
-      "reason": "The player tag mnPlayersVSUpdateCursor (:1719) hangs on a cursor so four players can tell whose hand is whose. The DS has one keypad and this shell draws exactly one cursor, so three of the four could never appear -- but the 1P tag on OUR cursor is a real element we do not draw.",
-      "ruling": "P2-1j audit finding, beyond the owner's four -- ruling requested",
-      "status": "open"
-    },
-    {
-      "screen": "css",
-      "kind": "missing",
-      "key": "re:llMNPlayersCommon(Red|Blue|Green)LabelSprite",
-      "reason": "The team-colour buttons (mnPlayersVSMakeTeamSelect :494). is_team_battle is FALSE in every configuration this build reaches, so the source's own code is already branchless here.",
-      "ruling": "docs/P2_PLAN.md phase P2-2 (teams); P2-1e deliberate narrowing",
+      "key": "re:llMNPlayersCommon[2-4]PTextGradientSprite",
+      "reason": "mnPlayersVSUpdateCursor hangs one gradient player tag on each controller-owned cursor. Single-console P2 has exactly the source 1P cursor, whose 1P tag now ships; 2P/3P/4P cursors and their tags become reachable only when P3 adds additional controller ownership.",
+      "ruling": "P2-2 single-console scope; BattleShip mnPlayersVSUpdateControllerOrders / mnPlayersVSUpdateCursor",
       "status": "ruled"
-    },
-    {
-      "screen": "css",
-      "kind": "missing",
-      "key": "llMNPlayersGameModesTeamBattleTextSprite",
-      "reason": "The TEAM BATTLE mode label, the other half of the FREE FOR ALL label above.",
-      "ruling": "docs/P2_PLAN.md phase P2-2 (teams)",
-      "status": "ruled"
-    },
-    {
-      "screen": "css",
-      "kind": "substituted",
-      "key": "llMNPlayersGameModesFreeForAllTextSprite",
-      "substitute": "\"FREE FOR ALL\" composed from the source's own menu font",
-      "reason": "The mode label above the portrait grid.",
-      "ruling": "P2-1e (board row); P2-1i finding (2) scope not ruled for text",
-      "status": "open"
     },
     {
       "screen": "css",
@@ -142,39 +100,12 @@
     },
     {
       "screen": "css",
-      "kind": "substituted",
-      "key": "llMNPlayersCommonBackButtonSprite",
-      "substitute": "\"BACK\" composed from the source's own menu font, on the source's own hit box (244..292, 13..34)",
-      "reason": "The BACK button's own art. Its geometry is transcribed and its behaviour is the source's; only the artwork is font-composed.",
-      "ruling": "P2-1e (board row); P2-1i finding (2) asks for source art on buttons -- ruling requested for this one",
-      "status": "open"
-    },
-    {
-      "screen": "css",
-      "kind": "substituted",
-      "key": "re:llMNPlayersCommon(ReadyBanner|ReadyToFight|Press|Start)(Text)?Sprite",
-      "substitute": "\"READY TO FIGHT\" and \"PRESS START\" composed from the source's own menu font, on the source's own 40/30 blink",
-      "reason": "The READY TO FIGHT banner and its PRESS START line. The gate that shows them is mnPlayersVSCheckNoPuckOnPortraitAll's, transcribed; the artwork is font-composed.",
-      "ruling": "P2-1e (board row); P2-1i finding (2) scope not ruled for text -- ruling requested",
-      "status": "open"
-    },
-    {
-      "screen": "css",
       "kind": "missing",
       "key": "llMNPlayersPortraitsCrossSprite",
       "reason": "NOT DRAWN BY THE SOURCE EITHER. mnPlayersVSPortraitAddCross's only caller is gated on mnPlayersVSCheckFighterCrossed, which is `return FALSE;` -- an unconditional constant (mnplayersvs.c:236). The audit's reachability walk sees the call; the guard is what makes it dead.",
       "ruling": "Source-read fact, mnplayersvs.c:236",
       "status": "ruled"
     },
-    {
-      "screen": "css",
-      "kind": "missing",
-      "key": "llMNPlayersPortraitsWhiteSquareSprite",
-      "reason": "mnPlayersVSMakePortraitFlash's white plate -- the flash a portrait gives when a token lands on it (:2464). A one-shot animation on a cell whose artwork is otherwise static; not converted.",
-      "ruling": "P2-1j audit finding, beyond the owner's four -- ruling requested",
-      "status": "open"
-    },
-
     {
       "screen": "sss",
       "kind": "missing",

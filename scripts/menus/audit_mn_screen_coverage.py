@@ -75,9 +75,11 @@ OUR SIDE -- two sources, both machine-read, neither transcribed:
      neither).
 
 Two runtime expansions are declared rather than inferred, because they are
-arithmetic on a token id: `ndsUiKitSetNumber` draws `DIGIT_0..DIGIT_9`, and
+arithmetic on a token id: `ndsUiKitSetNumber` draws `DIGIT_0..DIGIT_9`;
 `IMAGE_MODE_ICON_1P + i` / `IMAGE_LABEL_HMN + pkind` walk their own consecutive
-blocks.  See `TOKEN_FAMILIES` / `HELPER_TOKENS`.
+blocks; and the CSS team selector walks the twelve consecutive
+`SURFACE_CSS_TEAM_SELECT_*` rasters from `RED_0`.  See `TOKEN_FAMILIES` /
+`HELPER_TOKENS`.
 
 THE THREE DELTA CLASSES
   MISSING      the source draws it on this screen and we draw nothing from it
@@ -143,12 +145,23 @@ HELPER_TOKENS = {
 }
 
 # A token the shell indexes with `+ <expr>`: the whole consecutive block is
-# reachable from that one reference.  Keyed by the block's FIRST token.
+# reachable from that one reference.  Keyed by the block's FIRST token; the
+# prefix (IMAGE_/SURFACE_) is kept from the reference, so one declaration
+# serves both kinds.
 TOKEN_FAMILIES = {
     "MODE_ICON_1P": ("MODE_ICON_1P", "MODE_ICON_VS", "MODE_ICON_OPTION",
                      "MODE_ICON_DATA"),
     "LABEL_HMN": ("LABEL_HMN", "LABEL_CP", "LABEL_NA"),
     "DIGIT_0": tuple(f"DIGIT_{d}" for d in range(10)),
+    # nds_menu_shell.c reaches the twelve team-selector rasters as
+    # CSS_TEAM_SELECT_RED_0 + (team * NDS_CSS_TEAM_SELECT_STRIDE) + slot.
+    # Contiguity in [team][player] order is compile-time proven there by the
+    # _Static_asserts on BLUE_0/GREEN_3 and by the generator's contiguous
+    # emit loop, so the family is declared rather than inferred.
+    "CSS_TEAM_SELECT_RED_0": tuple(
+        f"CSS_TEAM_SELECT_{team}_{player}"
+        for team in ("RED", "BLUE", "GREEN")
+        for player in range(4)),
 }
 
 SHELL_PATH = Path("src/nds/nds_menu_shell.c")
@@ -476,6 +489,16 @@ def bake_token_symbols(module) -> dict[str, set[str]]:
         target = out.setdefault(f"SURFACE_{spec.token}", set())
         for part in spec.parts:
             target.add(part.symbol)
+    # A surface can exceptionally contain a source element in its composited
+    # `under` tree when draw ordering requires that element to sit between two
+    # already-baked layers.  Recursing through `under` would be wrong: it also
+    # carries restoration pixels and clipped base art outside the token's box,
+    # causing a tiny patch to claim an entire screen.  The bake therefore may
+    # publish only the extra symbols it intentionally contributes.  Keeping the
+    # declaration beside the bake makes this the same machine-read provenance
+    # as IMAGE_SOURCES/SURFACE_SOURCES, not an acceptance allowlist.
+    for token, symbols in getattr(module, "AUDIT_TOKEN_SYMBOLS", {}).items():
+        out.setdefault(token, set()).update(symbols)
     # The title fire atlas is not a surface record: it is a BG3 sheet the
     # runtime enables directly, so its thirty frame symbols are attached to the
     # token the shell actually names for it.
@@ -526,10 +549,15 @@ def scan_shell(repo_root: Path) -> ShellInventory:
 
     def record(screen_key: str, token: str, site: str) -> None:
         expanded = set()
-        family = TOKEN_FAMILIES.get(token[len("IMAGE_"):]
-                                    if token.startswith("IMAGE_") else "")
+        prefix = None
+        if token.startswith("IMAGE_"):
+            prefix = "IMAGE_"
+        elif token.startswith("SURFACE_"):
+            prefix = "SURFACE_"
+        family = (TOKEN_FAMILIES.get(token[len(prefix):])
+                  if prefix is not None else None)
         if family:
-            expanded.update(f"IMAGE_{name}" for name in family)
+            expanded.update(f"{prefix}{name}" for name in family)
         else:
             expanded.add(token)
         for name in expanded:

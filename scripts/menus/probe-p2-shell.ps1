@@ -148,7 +148,8 @@ $required = @(
     'gNdsMenuShellCssStartDeniedCount', 'gNdsMenuShellCssBackCount',
     'gNdsMenuShellCssCommitCount', 'gNdsMenuShellCssCommitSlot',
     'gNdsMenuShellCssCueCount', 'gNdsMenuShellCssCueLastId',
-    'gNdsMenuShellCssAnnounceCount',
+    'gNdsMenuShellCssAnnounceCount', 'gNdsMenuShellCssModeToggleCount',
+    'gNdsMenuShellCssDoorSlideFrames',
     # P2-1f.
     'gNdsMenuShellSssCursorSlot', 'gNdsMenuShellSssCursorGkind',
     'gNdsMenuShellSssMoveCount', 'gNdsMenuShellSssBlockedCount',
@@ -165,7 +166,6 @@ $required = @(
     'gNdsUiKitEnterCount', 'gNdsUiKitEnterRejectCount', 'gNdsUiKitExitCount',
     'gNdsUiKitPackOpenCount', 'gNdsUiKitPackBytesLoaded', 'gNdsUiKitPackHash',
     'gNdsUiKitPackHashMismatchCount', 'gNdsUiKitPackReadFailCount',
-    'gNdsUiKitTextComposeCount', 'gNdsUiKitTextOverflowCount',
     'gNdsUiKitCommitCount', 'gNdsUiKitVisibleObjectCount',
     'gNdsUiKitSfxRequestCount', 'gNdsUiKitSfxLastId',
     'gNdsSceneManagerEnterCount', 'gNdsSceneManagerExitCount',
@@ -291,7 +291,12 @@ try {
         # alone makes fifteen inputs, so half a ring would show half a screen.
         'printf "MSINPUT %d %06x %06x %06x %06x %06x %06x %06x %06x %06x %06x %06x %06x %06x %06x %06x %06x\n", $n, gNdsMenuShellInputRing[0], gNdsMenuShellInputRing[1], gNdsMenuShellInputRing[2], gNdsMenuShellInputRing[3], gNdsMenuShellInputRing[4], gNdsMenuShellInputRing[5], gNdsMenuShellInputRing[6], gNdsMenuShellInputRing[7], gNdsMenuShellInputRing[8], gNdsMenuShellInputRing[9], gNdsMenuShellInputRing[10], gNdsMenuShellInputRing[11], gNdsMenuShellInputRing[12], gNdsMenuShellInputRing[13], gNdsMenuShellInputRing[14], gNdsMenuShellInputRing[15]',
         'printf "CSSPOS %d x=%d y=%d status=%u\n", $n, gNdsMenuShellCssCursorX, gNdsMenuShellCssCursorY, gNdsMenuShellCssCursorStatus',
-        'printf "CSSACT %d grab=%u drop=%u refuse=%u recall=%u kind=%u level=%u start=%u denied=%u back=%u\n", $n, gNdsMenuShellCssGrabCount, gNdsMenuShellCssDropCount, gNdsMenuShellCssDropRefuseCount, gNdsMenuShellCssRecallCount, gNdsMenuShellCssKindToggleCount, gNdsMenuShellCssLevelChangeCount, gNdsMenuShellCssStartCount, gNdsMenuShellCssStartDeniedCount, gNdsMenuShellCssBackCount',
+        'printf "CSSACT %d grab=%u drop=%u refuse=%u recall=%u kind=%u mode=%u doors=%u level=%u start=%u denied=%u back=%u\n", $n, gNdsMenuShellCssGrabCount, gNdsMenuShellCssDropCount, gNdsMenuShellCssDropRefuseCount, gNdsMenuShellCssRecallCount, gNdsMenuShellCssKindToggleCount, gNdsMenuShellCssModeToggleCount, gNdsMenuShellCssDoorSlideFrames, gNdsMenuShellCssLevelChangeCount, gNdsMenuShellCssStartCount, gNdsMenuShellCssStartDeniedCount, gNdsMenuShellCssBackCount',
+        # Read the adapter's retained telemetry rather than PlayersVS pointers:
+        # by the next scene-entry stop the CSS arena has been torn down, so a
+        # direct slot.player dereference would be stale by construction.
+        'printf "CSSFTR %d frames=%u draws=%u sel=%x vis=%x exit=%u p0=%f/%d/%d p1=%f/%d/%d renderframe=%u\n", $n, gNdsPlayersVSPreviewFrameCount, gNdsPlayersVSPreviewDrawCount, gNdsPlayersVSPreviewSelectedMask, gNdsPlayersVSPreviewVisibleMask, gNdsPlayersVSPreviewExitCount, gNdsPlayersVSPreviewRotationY[0], gNdsPlayersVSPreviewStatus[0], gNdsPlayersVSPreviewMotion[0], gNdsPlayersVSPreviewRotationY[1], gNdsPlayersVSPreviewStatus[1], gNdsPlayersVSPreviewMotion[1], gNdsRendererProfileFrameCount',
+        'printf "CSSFTRFREE %d p0=%u/%f/%d/%d p1=%u/%f/%d/%d\n", $n, gNdsPlayersVSPreviewFreeRotateFrames[0], gNdsPlayersVSPreviewLastFreeRotationY[0], gNdsPlayersVSPreviewLastFreeStatus[0], gNdsPlayersVSPreviewLastFreeMotion[0], gNdsPlayersVSPreviewFreeRotateFrames[1], gNdsPlayersVSPreviewLastFreeRotationY[1], gNdsPlayersVSPreviewLastFreeStatus[1], gNdsPlayersVSPreviewLastFreeMotion[1]',
         'printf "CSSCOMMIT %d n=%u s0=%06x s1=%06x s2=%06x s3=%06x\n", $n, gNdsMenuShellCssCommitCount, gNdsMenuShellCssCommitSlot[0], gNdsMenuShellCssCommitSlot[1], gNdsMenuShellCssCommitSlot[2], gNdsMenuShellCssCommitSlot[3]',
         'printf "CSSCFG %d s0=%u/%u/%u s1=%u/%u/%u s2=%u/%u/%u s3=%u/%u/%u\n", $n, gNdsMatchConfig.fighters[0].fkind, gNdsMatchConfig.fighters[0].pkind, gNdsMatchConfig.fighters[0].level, gNdsMatchConfig.fighters[1].fkind, gNdsMatchConfig.fighters[1].pkind, gNdsMatchConfig.fighters[1].level, gNdsMatchConfig.fighters[2].fkind, gNdsMatchConfig.fighters[2].pkind, gNdsMatchConfig.fighters[2].level, gNdsMatchConfig.fighters[3].fkind, gNdsMatchConfig.fighters[3].pkind, gNdsMatchConfig.fighters[3].level',
         'printf "CSSXFER %d s0=%u/%u/%u s1=%u/%u/%u s2=%u/%u/%u s3=%u/%u/%u pl=%u cp=%u\n", $n, gSCManagerTransferBattleState.players[0].fkind, gSCManagerTransferBattleState.players[0].pkind, gSCManagerTransferBattleState.players[0].level, gSCManagerTransferBattleState.players[1].fkind, gSCManagerTransferBattleState.players[1].pkind, gSCManagerTransferBattleState.players[1].level, gSCManagerTransferBattleState.players[2].fkind, gSCManagerTransferBattleState.players[2].pkind, gSCManagerTransferBattleState.players[2].level, gSCManagerTransferBattleState.players[3].fkind, gSCManagerTransferBattleState.players[3].pkind, gSCManagerTransferBattleState.players[3].level, gSCManagerTransferBattleState.pl_count, gSCManagerTransferBattleState.cp_count',
@@ -316,7 +321,13 @@ try {
         # carries the preset while `maps` stays at its seed.
         'printf "SSSCFG %d cfg=%02x scene=%02x default=%02x maps=%02x stagesel=%u\n", $n, gNdsMatchConfig.gkind, gSCManagerSceneData.gkind, dSCManagerDefaultSceneData.gkind, gSCManagerSceneData.maps_vsmode_gkind, gNdsMatchConfig.is_stage_select',
         'printf "MSKIT %d enters=%u rej=%u exits=%u opens=%u bytes=%u hash=%08x mismatch=%u readfail=%u\n", $n, gNdsUiKitEnterCount, gNdsUiKitEnterRejectCount, gNdsUiKitExitCount, gNdsUiKitPackOpenCount, gNdsUiKitPackBytesLoaded, gNdsUiKitPackHash, gNdsUiKitPackHashMismatchCount, gNdsUiKitPackReadFailCount',
-        'printf "MSDRAW %d compose=%u overflow=%u commit=%u visible=%u\n", $n, gNdsUiKitTextComposeCount, gNdsUiKitTextOverflowCount, gNdsUiKitCommitCount, gNdsUiKitVisibleObjectCount',
+        # P2-1 closeout removed the shell's final runtime text composition
+        # (font-composed CSS PRESS START). With no caller, --gc-sections drops
+        # ndsUiKitSetText and its compose/overflow writers, so those diagnostic
+        # globals correctly disappear from the linked shell. Keep the artifact
+        # schema stable and state that stronger fact as literal zeroes rather
+        # than retaining dead runtime code solely for a probe.
+        'printf "MSDRAW %d compose=%u overflow=%u commit=%u visible=%u\n", $n, 0, 0, gNdsUiKitCommitCount, gNdsUiKitVisibleObjectCount',
         # P2-1h BACKDROP SURFACES. `blit` is surfaces drawn and `open` the
         # NitroFS opens they cost, so one open per backdrop screen stays
         # measured. `mismatch` is checked per surface against the bake's own

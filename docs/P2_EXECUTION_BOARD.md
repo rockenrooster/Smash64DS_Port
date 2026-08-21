@@ -51,15 +51,21 @@ SHA-256 54C07FAC80C50418949908701F7C2BDBF27512C5F96AC09086FABBB0DF6AC68A
 
 | Phase | State | Gate summary |
 |---|---|---|
-| P2-1 VS shell | **OPEN — round 4 findings (P2-1k) (a)(b)(c)(d)(f)(f2)(g)(g2) all fixed, awaiting the owner re-pass; nothing from round 4 is outstanding** | Loop soak green (20 laps), cadence holds, Boundary re-defined; presentation fidelity short of the owner ruling |
-| P2-2 Four-fighter engine | queued | 4-CPU stress arm stands up; budgets published |
+| P2-1 VS shell | **IMPLEMENTATION + AUTOMATED GATE GREEN (2026-08-21) — owner visual acceptance pending** | All planned implementation and the final decomp-parity corrections are in-tree. The post-audit phase-close run is green: one complete shell lap, the shell-driven two-fighter realtime regression, and the four-CPU standing arm all passed in the same three-arm Boundary profile with zero faults. The phase remains visually open only because the owner has not yet re-accepted the final shell presentation. |
+| P2-2 Four-fighter engine | **IMPLEMENTATION + AUTOMATED GATE GREEN (2026-08-21) — owner visual acceptance pending** | Core BattleShip VSBattle creation, engagement/catch/hit walks, projectile ownership, CPU targeting, camera interests, KO scoring, Results and Sudden Death remain N-player source imports; the adversarial audit restored source `ftparam`, Common Entry/Appear, shield-break, hit-status, hitlag, team/costume and four-way state semantics rather than approximating them. Port-owned seams carry four live instances while generated owners stay Mario/Fox-kind based. The lower-screen HUD is four-wide, Bank-I/DMA safe, and still consumes source `ifCommon` state. **Standing stress is now real and admitted to Boundary:** four level-3 CPUs, 1,972 timing samples / 59 of 60 guest seconds, 0 humans / 4 CPUs / 4 GObjs / mask `0xF`, zero cadence violations, zero allocator/object/AObj failures; heap free low-water **40,400 B** (14,800 B over the 25,600 floor), effects **17/38**, particles **33/112, 11/24, 14/80**, zero rejects. First mitigation is landed: the source-required Low-detail 3+ fighter path now uses generated native owners (`plan build=680`, hit=6513, mismatch=0). Budget law is published in `docs/p2/P2-2-four-fighters.md`: arena 1,548,288 B cap / 1,484,912 B setup high-water, reloc 681,632 B split stage 202,816 / fighter-kind 175,440 / interface 208,672 / other 94,704, no stale residency, whole-match heap floor >=25,600 B. The unchanged shell-driven 2-fighter regression is green after verifier ownership was corrected for source Entry effects/invisibility; exact Dream Land base remains 42 lists / 202 triangles and admitted Mario/Fox owners remain 320/306 triangles each. `p2_fourcpu_stress` is the third Boundary arm. Only the owner's visual/play acceptance of four-way camera/HUD/team/results/Sudden-Death presentation remains; automated implementation/runtime acceptance is closed. |
 | P2-3 Fighter production | queued | 10 fighters, pipeline reproducible |
 | P2-4 Stage production | queued | 8 VS stages |
 | P2-5 Items | queued | System + 20 items + 13 Pokémon; stress = items ON |
 | P2-6 1P Game | queued | Campaign start-to-credits |
 | P2-7 Modes & meta | queued | Fresh-cart parity; P2 close gate |
 
-## Queue — P2-1 VS shell (1a…1h green; P2-1i green — the label pop landed in P2-1k (d); P2-1j green; P2-1k all deliverables green pending the owner re-pass)
+## Queue — P2-1 VS shell (implementation complete; final verification deferred by owner)
+
+Closure note (2026-08-19): later visual rounds and the final decomp audit closed
+the remaining implementation from the historical P2-1i/P2-1L notes below,
+including live CSS fighters, title emblem/blending, source shutters, and Team/FFA
+state semantics. Do not schedule those historical findings as implementation
+work; only the phase-level verification/owner acceptance above remains.
 
 | ID | Slice | Status | Notes |
 |---|---|---|---|

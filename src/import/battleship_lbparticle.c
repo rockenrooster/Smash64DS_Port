@@ -250,11 +250,23 @@ LBGenerator *ndsBaseLbParticleMakeGenerator(s32 bank_id, s32 script_id);
  * battleship_mnvsresults.c:236 and never from this define. Two equal counters
  * are only saturation when the second one is the bound. The bump is reverted.
  *
- * Structs stay 48 / generators 24 / transforms 24 for the battle scene;
- * Results overrides all three to 384/48/24 for its own frame. */
+ * The old P1 battle therefore kept 48 / 24 / 24. P2-2 changes the contract:
+ * the shipping shell can run four simultaneous fighters, and the source's own
+ * efParticleInitAll sizes (efparticle.c:30-33) are 112 / 24 / 80 specifically
+ * for the full game. Restore those exact capacities for the P2 shell and its
+ * dedicated four-fighter stress target; direct-boot P1/perf targets keep the
+ * measured smaller pools.
+ * Results still uses the Wanted seam below, which currently resolves back to
+ * source sizing before its own func_start. */
+#if NDS_P2_MENU_SHELL || NDS_P2_FOUR_CPU_STRESS
+#define NDS_R2_PARTICLE_POOL_STRUCTS 112
+#define NDS_R2_PARTICLE_POOL_GENERATORS 24
+#define NDS_R2_PARTICLE_POOL_TRANSFORMS 80
+#else
 #define NDS_R2_PARTICLE_POOL_STRUCTS 48
 #define NDS_R2_PARTICLE_POOL_GENERATORS 24
 #define NDS_R2_PARTICLE_POOL_TRANSFORMS 24
+#endif
 
 #if NDS_R2_FOX_BLASTER_GLOW_AOT
 /* EFCommon script 0x62, decoded from the pinned bank:

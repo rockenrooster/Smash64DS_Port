@@ -5,7 +5,7 @@
 #include <sys/audio.h>
 
 #define NDS_AUDIO_FGM_PASS 0x46474d31u /* FGM1 */
-#define NDS_AUDIO_FGM_ENTRY_COUNT 98u
+#define NDS_AUDIO_FGM_ENTRY_COUNT 100u
 #define NDS_AUDIO_FGM_PHASE_COUNT 5u
 #define NDS_AUDIO_FGM_PHASE_COMPLETE_MASK 0x1fu
 #define NDS_AUDIO_FGM_KO_COUNT 5u
@@ -70,8 +70,8 @@
  * tick 0, so it joins FULL_PROGRAM_AOT_IDS to render all three voices fused
  * -- the same mechanism 154/616-625/121 above already use, extended to two
  * simultaneous forks instead of one or zero. */
-#define NDS_AUDIO_FGM_PACK_BYTES 990120u
-#define NDS_AUDIO_FGM_PACK_MAPPING_SHA256_LO 0x3d9a9ac2u
+#define NDS_AUDIO_FGM_PACK_BYTES 1003932u
+#define NDS_AUDIO_FGM_PACK_MAPPING_SHA256_LO 0xf6b94a48u
 #define NDS_AUDIO_FGM_CACHE_BYTES 204800u
 #define NDS_AUDIO_FGM_HANDLE_CAPACITY 8u
 #define NDS_AUDIO_FGM_FIDELITY_DEBT_PITCH_AUTOMATION (1u << 2)

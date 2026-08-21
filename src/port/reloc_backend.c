@@ -363,6 +363,7 @@ static GObj *ndsFighterMarioFoxMakeFighter(FTDesc *desc);
 static void ndsFighterMarioFoxRecordStubFighter(FTDesc *desc,
                                                 GObj *fighter_gobj);
 static void ndsFighterMarioFoxResetFileSlots(void);
+static void ndsFighterManagerClearLiveGObjs(void);
 static void ndsFighterStructResetPool(void);
 static sb32 ndsFighterStructIsPoolPointer(const void *ptr);
 static sb32 ndsFighterStructIsTrackedPointer(const void *ptr);

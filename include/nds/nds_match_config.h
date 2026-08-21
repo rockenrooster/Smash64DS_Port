@@ -26,23 +26,24 @@
  * WHAT IS *NOT* IN HERE, ON PURPOSE. Every field below is one the canonical
  * configuration actually sets. Anything the original derives at commit time is
  * derived by `ndsMatchConfigApply` instead of being stored twice: the slot's
- * `player` index, `stock_count` (initialised from `stocks`),
- * `is_single_stockicon` (a restatement of the Time rule), and `pl_count` /
- * `cp_count` (a census of `pkind`). Two representations of one fact drift.
+ * `player` identity, `is_single_stockicon` (a restatement of the Time rule), and
+ * `pl_count` / `cp_count` (a census of `pkind`). Per-player `stock_count` is
+ * later battle-owned state: scVSBattle puts the match-wide `stocks` value in
+ * each fighter descriptor and ftManagerMakeFighter publishes it, exactly as the
+ * source does. Two representations of one fact drift.
  */
 
 #include <ssb_types.h>
 #include <sc/scene.h>
 
-/* Four slots NOW even though battle accepts two until P2-2: the descriptor is
- * what menus and the HUD will be written against, and a struct that has to grow
- * later is a second migration. GMCOMMON_PLAYERS_MAX is the engine's own bound,
- * so the two can never disagree. */
+/* BattleShip's VS engine is four slots wide, and P2-2 now carries that same
+ * bound through the DS match/menu/renderer bridges. GMCOMMON_PLAYERS_MAX is the
+ * engine's own bound, so the descriptor and source battle can never disagree. */
 #define NDS_MATCH_FIGHTERS_MAX GMCOMMON_PLAYERS_MAX
 
-/* One slot. An empty slot is `pkind == nFTPlayerKindNot`; every other field is
- * then ignored by the apply step, which still clears it so a stale slot from a
- * previous match cannot leak into the next one. */
+/* One slot. An empty slot is `pkind == nFTPlayerKindNot` (normally paired with
+ * `nFTKindNull`). The commit still copies the source CSS selection fields for
+ * every slot; VSBattle is what skips Not slots when it creates fighters. */
 typedef struct NdsMatchFighterConfig {
     u8 fkind;    /* character: nFTKind*, nFTKindNull when the slot is empty */
     u8 pkind;    /* nFTPlayerKindMan / nFTPlayerKindCom / nFTPlayerKindNot */

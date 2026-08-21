@@ -220,8 +220,17 @@ if (-not [string]::IsNullOrWhiteSpace($AnalyzeOnly)) {
         'gNdsVSResultsInputSeenMask', 'gNdsVSResultsInputTapMask',
         'gNdsMatchConfig',
         'gNdsUiKitPackHash', 'gNdsUiKitPackHashMismatchCount',
-        'gNdsUiKitPackReadFailCount', 'gNdsUiKitTextOverflowCount',
+        'gNdsUiKitPackReadFailCount',
         'gNdsUiKitEnterRejectCount',
+        # P2-1 closeout: the shell now owns live CSS fighters before VSBattle.
+        # Keep the source fighter-file/effect seam in the capture so an entry
+        # crash distinguishes "file never became resident" from "resident file
+        # built the wrong tree" without a second, bespoke emulator lap.
+        'gFTDataFoxSpecial2', 'gFTDataFoxSpecial3',
+        'gNdsFighterManagerStatusBufferMask', 'gNdsRelocHeapDeclineCount',
+        'gNdsEFDescResolveCount', 'gNdsEFDescDisabledCount',
+        'gNdsEFDescUnknownFileCount', 'gNdsEFDescDeferRecoverCount',
+        'gNdsEFDescDeferOverflowCount', 'dEFManagerFoxEntryArwingEffectDesc',
         # P2-1h. The frameless boot scene, and the backdrop surfaces' own
         # failure counters -- a lap that silently stopped drawing the collage
         # would otherwise close green.
@@ -453,11 +462,11 @@ if (-not [string]::IsNullOrWhiteSpace($AnalyzeOnly)) {
              'gNdsMenuShellExitCount[0], gNdsMenuShellExitCount[1], ' +
              'gNdsMenuShellExitCount[2], gNdsMenuShellExitCount[3], ' +
              'gNdsMenuShellExitCount[4]'),
-            ('printf "LOOPKIT hash=%08x mismatch=%u readfail=%u overflow=%u rej=%u ' +
+            ('printf "LOOPKIT hash=%08x mismatch=%u readfail=%u overflow=0 rej=%u ' +
              'csscommit=%u cssstart=%u ssscommit=%u sssconfirm=%u sssback=%u fallback=%u\n", ' +
              'gNdsUiKitPackHash, gNdsUiKitPackHashMismatchCount, ' +
-             'gNdsUiKitPackReadFailCount, gNdsUiKitTextOverflowCount, ' +
-             'gNdsUiKitEnterRejectCount, gNdsMenuShellCssCommitCount, ' +
+             'gNdsUiKitPackReadFailCount, gNdsUiKitEnterRejectCount, ' +
+             'gNdsMenuShellCssCommitCount, ' +
              'gNdsMenuShellCssStartCount, gNdsMenuShellSssCommitCount, ' +
              'gNdsMenuShellSssConfirmCount, gNdsMenuShellSssBackCount, ' +
              'gNdsMenuShellSssRandomFallbackCount'),
@@ -488,6 +497,16 @@ if (-not [string]::IsNullOrWhiteSpace($AnalyzeOnly)) {
              'gNdsUiKitTitleAnimEmptyPoseCount'),
             ('printf "LOOPARENA base=%08x size=%u\n", ' +
              'gNdsSceneManagerArenaBase, gNdsSceneManagerArenaSize'),
+            ('printf "LOOPEF fox2=%08x fox3=%08x fstat=%08x heapdecl=%u ' +
+             'resolve=%u disabled=%u unknown=%u recover=%u deferovf=%u ' +
+             'arwingproc=%08x arwingoff=%08x\n", ' +
+             'gFTDataFoxSpecial2, gFTDataFoxSpecial3, ' +
+             'gNdsFighterManagerStatusBufferMask, gNdsRelocHeapDeclineCount, ' +
+             'gNdsEFDescResolveCount, gNdsEFDescDisabledCount, ' +
+             'gNdsEFDescUnknownFileCount, gNdsEFDescDeferRecoverCount, ' +
+             'gNdsEFDescDeferOverflowCount, ' +
+             'dEFManagerFoxEntryArwingEffectDesc.proc_display, ' +
+             'dEFManagerFoxEntryArwingEffectDesc.o_dobjsetup'),
             ('printf "LOOPINPUTRING ' + $ringFmt + '\n", ' + $inputRing),
             'detach',
             'quit'

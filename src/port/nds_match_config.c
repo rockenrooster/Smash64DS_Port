@@ -25,6 +25,7 @@
  */
 
 #include <ft/fighter.h>
+#include <if/interface.h>
 #include <nds/nds_match_config.h>
 #include <nds/nds_scene_harness.h>
 #include <sc/scene.h>
@@ -134,6 +135,68 @@ void ndsMatchConfigLoadMarioFoxDreamLand(NdsMatchConfig *cfg)
     cfg->fighters[0].pkind = nFTPlayerKindCom;
     cfg->fighters[0].level = 3;
     cfg->fighters[1].level = 3;
+#if NDS_P2_MENU_SHELL
+    /* P2-2 standing stress seed.  Keep the old direct-boot R2 arm byte-for-byte
+     * two-fighter so its banked measurements remain comparable, but when that
+     * same stress switch is used on the P2 shell it means what the phase plan
+     * now says: FOUR level-3 CPUs, using only the two ported fighter kinds.
+     *
+     * Mario/Fox/Mario/Fox deliberately exercises same-kind mirror instances in
+     * P3/P4.  The CSS is still the source-of-truth appearance owner: on entry
+     * mnPlayersVSGetFreeCostume assigns distinct FFA costumes in slot order, and
+     * Team Battle reassigns team costumes/shades through the imported source
+     * helpers.  RRBB is BattleShip mnPlayersVSResetPlayer's default team split.
+     * No shipping shell target enables NDS_R2_BOTH_CPU by default. */
+    cfg->fighters[0].team = nSCBattleTeamIDRed;
+    cfg->fighters[1].team = nSCBattleTeamIDRed;
+
+    cfg->fighters[2].fkind = nFTKindMario;
+    cfg->fighters[2].pkind = nFTPlayerKindCom;
+    cfg->fighters[2].level = 3;
+    cfg->fighters[2].team = nSCBattleTeamIDBlue;
+
+    cfg->fighters[3].fkind = nFTKindFox;
+    cfg->fighters[3].pkind = nFTPlayerKindCom;
+    cfg->fighters[3].level = 3;
+    cfg->fighters[3].team = nSCBattleTeamIDBlue;
+#endif
+#endif
+#if NDS_P2_FOUR_CPU_STRESS
+    /* P2-2 standing gate: four source VSBattle instances, not four renderer
+     * owners. The content set is still only Mario/Fox, so mirrors deliberately
+     * occupy P3/P4 and exercise every instance-indexed fighter/render path.
+     *
+     * This direct-battle target bypasses PlayersVS, so reproduce the state that
+     * the source CSS would have committed rather than inventing a stress-only
+     * appearance policy: FFA shade is 0; the second Mario/Fox each take common
+     * costume 1 after slots 0/1 already occupy common costume 0; reset teams are
+     * Red/Red/Blue/Blue (mnPlayersVSResetPlayer). Team fields are dormant in FFA
+     * but remain source-valid if this descriptor is inspected before apply. */
+    cfg->fighters[0].pkind = nFTPlayerKindCom;
+    cfg->fighters[0].level = 3;
+    cfg->fighters[0].team = nSCBattleTeamIDRed;
+    cfg->fighters[0].costume = (u8)ftParamGetCostumeCommonID(nFTKindMario, 0);
+    cfg->fighters[0].shade = 0;
+
+    cfg->fighters[1].pkind = nFTPlayerKindCom;
+    cfg->fighters[1].level = 3;
+    cfg->fighters[1].team = nSCBattleTeamIDRed;
+    cfg->fighters[1].costume = (u8)ftParamGetCostumeCommonID(nFTKindFox, 0);
+    cfg->fighters[1].shade = 0;
+
+    cfg->fighters[2].fkind = nFTKindMario;
+    cfg->fighters[2].pkind = nFTPlayerKindCom;
+    cfg->fighters[2].level = 3;
+    cfg->fighters[2].team = nSCBattleTeamIDBlue;
+    cfg->fighters[2].costume = (u8)ftParamGetCostumeCommonID(nFTKindMario, 1);
+    cfg->fighters[2].shade = 0;
+
+    cfg->fighters[3].fkind = nFTKindFox;
+    cfg->fighters[3].pkind = nFTPlayerKindCom;
+    cfg->fighters[3].level = 3;
+    cfg->fighters[3].team = nSCBattleTeamIDBlue;
+    cfg->fighters[3].costume = (u8)ftParamGetCostumeCommonID(nFTKindFox, 1);
+    cfg->fighters[3].shade = 0;
 #endif
 #if NDS_R2_SOAK_MATCH_MINUTES
     /* THE FREEZE SOAK'S LONG MATCH, on its own flag, off by default.
@@ -191,23 +254,55 @@ void ndsMatchConfigApply(const NdsMatchConfig *cfg)
         const NdsMatchFighterConfig *slot = &cfg->fighters[i];
         SCPlayerData *player = &gSCManagerTransferBattleState.players[i];
 
-        /* `player` is the slot index while teams are off; the team-battle form
-         * (source: mnplayersvs.c:4396) belongs to P2-2, which is when teams
-         * become selectable. */
-        player->player = (u8)i;
+        /* BattleShip mnplayersvs.c:4388-4423. `player` is the slot in FFA and
+         * the team in Team Battle.  The source only rewrites `team` in the team
+         * branch, and only rewrites the field that is meaningful for the
+         * selected player kind: CPU level for COM, handicap otherwise.  Keeping
+         * those branches matters on a reused transfer block -- writing both
+         * fields here made the descriptor a subtly different commit contract. */
+        if (cfg->is_team_battle == FALSE)
+        {
+            player->player = (u8)i;
+        }
+        else
+        {
+            player->player = slot->team;
+            player->team = slot->team;
+        }
         player->fkind = slot->fkind;
         player->pkind = slot->pkind;
-        player->level = slot->level;
-        player->handicap = slot->handicap;
-        player->team = slot->team;
         player->costume = slot->costume;
         player->shade = slot->shade;
-        player->color = slot->color;
+        if (slot->pkind == nFTPlayerKindMan)
+        {
+            player->color = (cfg->is_team_battle == FALSE) ? (u8)i :
+                dIFCommonPlayerTeamColorIDs[slot->team];
+        }
+        else if (cfg->is_team_battle == FALSE)
+        {
+            player->color = GMCOMMON_PLAYERS_MAX;
+        }
+        else
+        {
+            player->color = dIFCommonPlayerTeamColorIDs[slot->team];
+        }
+        player->tag = (slot->pkind == nFTPlayerKindMan) ?
+            (u8)i : (u8)GMCOMMON_PLAYERS_MAX;
         player->is_single_stockicon = is_single_stockicon;
-        /* Derived, never stored twice: an occupied slot starts on the match's
-         * stock count, an empty one on nothing. */
-        player->stock_count =
-            (s8)((slot->pkind != nFTPlayerKindNot) ? cfg->stocks : 0);
+        if (slot->pkind == nFTPlayerKindCom)
+        {
+            player->level = slot->level;
+        }
+        else
+        {
+            player->handicap = slot->handicap;
+        }
+
+        /* Do not seed player->stock_count here. The CSS source does not touch
+         * it. scVSBattleStartBattle passes the match-wide `stocks` value in the
+         * FTDesc for each occupied slot, and ftManagerMakeFighter publishes that
+         * value to gSCManagerBattleState->players[player].stock_count
+         * (ftmanager.c:702). Sudden Death likewise owns its explicit zero. */
 
         /* Derived, as the source derives it (mnplayersvs.c:4425-4439): the
          * counts are a census of the slots, not an independent setting. */

@@ -155,8 +155,13 @@ if (($foxRecoveryText -notmatch 'assert-melonds-top-visible\.ps1') -or
 }
 if (($realtimeText -match 'MinFighterRegionFraction|MinRegionFighterFraction|MinRequiredRegionFighterFraction') -or
     ($battleLoopText -notmatch 'FTR_DISPLAY_CONTRACT=') -or
-    ($battleLoopText -notmatch '(?s)Assert-Condition\s*\(\$stageHardwareFighter\.Success.*?\$shwf\[2\]\s*-eq\s*\(320\s*\*\s*\$fighterDrawnFrames\).*?\$shwf\[3\]\s*-eq\s*\(306\s*\*\s*\$fighterDrawnFrames\).*?\$fighterOwnerSkew\s*-le\s*2') -or
-    ($battleLoopText -notmatch '\$drawnFrames = \$hw\[0\]') -or
+    ($battleLoopText -notmatch 'STAGE_GCDRAWALL_HW_FTR_BASE=') -or
+    ($battleLoopText -notmatch '\$marioTrianglesInBattle = \$shwf\[2\] - \$shwfBase\[2\]') -or
+    ($battleLoopText -notmatch '\$foxTrianglesInBattle = \$shwf\[3\] - \$shwfBase\[3\]') -or
+    ($battleLoopText -notmatch '\$marioOwnerIntegral = \(\$marioTrianglesInBattle % 320\) -eq 0') -or
+    ($battleLoopText -notmatch '\$foxOwnerIntegral = \(\$foxTrianglesInBattle % 306\) -eq 0') -or
+    ($battleLoopText -notmatch '(?s)\$fighterTrianglesInBattle -eq\s*\(\$marioTrianglesInBattle \+ \$foxTrianglesInBattle\).*?\$fighterSubmitInBattle -eq\s*\(\$marioOwnerCount \+ \$foxOwnerCount\)') -or
+    ($battleLoopText -notmatch '\$drawnFrames = \$submittedInBattle') -or
     ($battleLoopText -notmatch '(?s)Assert-Condition\s*\(\$fighterDisplayContract\.Success.*?\$fdc\[0\]\s*-gt\s*0.*?\$fdc\[3\]\s*-gt\s*0.*?\$fdc\[7\]\s*-gt\s*0.*?\$fdc\[8\]\s*-eq\s*0')) {
     Fail-Check 'canonical realtime verifier must use selected/submitted/in-bounds GDB fighter contracts without fixed fighter crops'
 }
@@ -166,8 +171,11 @@ if (($battleLoopText -notmatch
     ($battleLoopText -notmatch '\$phaseLag -eq 0 -or \$phaseLag -eq 1') -or
     ($battleLoopText -notmatch '\$taskmanPresentLead = \$tmPace\[1\] - \(2 \* \$bp\[4\]\)') -or
     ($battleLoopText -notmatch '\$taskmanPresentLead -ge 0 -and \$taskmanPresentLead -le 2') -or
-    ($battleLoopText -notmatch '\$hardwareSnapshotSkew = \[Math\]::Abs\(\$bp\[4\] - \$hw\[0\]\)') -or
-    ($battleLoopText -notmatch '\$hw\[0\] -eq \$hw\[1\]') -or
+    ($battleLoopText -notmatch 'PLATFORM_HW_BASE=') -or
+    ($battleLoopText -notmatch '\$submittedInBattle = \$hw\[0\] - \$hwBase\[0\]') -or
+    ($battleLoopText -notmatch '\$flushedInBattle = \$hw\[1\] - \$hwBase\[1\]') -or
+    ($battleLoopText -notmatch '\$hardwareSnapshotSkew =\s*\[Math\]::Abs\(\$bp\[4\] - \$submittedInBattle\)') -or
+    ($battleLoopText -notmatch '\$submittedInBattle -eq \$flushedInBattle') -or
     ($battleLoopText -notmatch '\$hardwareSnapshotSkew -le 1')) {
     Fail-Check 'battle verifier lost its fresh taskman/draw cross-check or bounded pacing/platform cache-lag guard'
 }
@@ -212,6 +220,14 @@ if ($verifyAllText -notmatch '(?s)\(\$record\.Name -eq ''p2_battle_realtime''\).
 # configuration the owner plays.
 if ($verifyAllText -notmatch '(?s)\(\$record\.Name -eq ''p2_battle_realtime''\).*?\$arguments \+= ''-P2ShellFlow''') {
     Fail-Check 'verify-all does not route the Boundary battle arm through the P2 shell'
+}
+# P2-2 made Boundary's retained artifacts entirely diagnostic-build outputs.
+# -NoBuild must resolve them with the shared output-path law instead of looking
+# for diagnostic target names at repo root (which made the profile fail before
+# its first runtime arm despite all three retained ROMs being present).
+if ((-not $verifyAllText.Contains('build-output.ps1')) -or
+    ([regex]::Matches($verifyAllText, 'Resolve-Smash64DSBuildOutput').Count -lt 2)) {
+    Fail-Check 'verify-all NoBuild preflight no longer uses the shared retained-artifact resolver'
 }
 $realtimeShellRoutes =
     ($realtimeText -match '\[switch\]\$P2ShellFlow') -and
@@ -291,18 +307,21 @@ $legacyRecords = @($registry | Where-Object {
 if ($legacyRecords.Count -gt 0) {
     Fail-Check "retired mode 1-162 record(s) remain: $(@($legacyRecords.Name) -join ', ')"
 }
-# P2-1g moved Boundary from one arm to two at the P2-1 phase close. The
-# mode-163 realtime arm is pinned as the SECOND entry rather than merely
-# present: P2_PLAN.md law 4 keeps the P1 configuration green through all of P2
-# as the regression guard, so a change that drops it has to fail here.
+# P2-2 upgrades Boundary to three arms. The mode-163 realtime arm remains the
+# SECOND entry rather than merely present: P2_PLAN.md law 4 keeps the P1
+# configuration green through all of P2 as the regression guard. The new
+# four-CPU standing stress configuration is pinned as the third arm rather than
+# replacing either P2-1 proof.
 Assert-ProfilePlan 'Boundary' @(
     'p2_shell_loop',
-    'p2_battle_realtime'
+    'p2_battle_realtime',
+    'p2_fourcpu_stress'
 )
 Assert-ProfilePlan 'Latest' @(
     'runtime',
     'p2_shell_loop',
-    'p2_battle_realtime'
+    'p2_battle_realtime',
+    'p2_fourcpu_stress'
 )
 # The loop arm's own contract, pinned so it cannot be softened into a shorter
 # walk or into the P2-1b substitute hop that closed a lap WITHOUT running

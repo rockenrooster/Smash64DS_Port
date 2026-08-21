@@ -1,14 +1,18 @@
 # Handoff
 
-Current: 2026-08-19 — **BOUNDARY'S BATTLE ARM RUNS THROUGH THE SHELL, AND
-`smash64ds.nds` IS THE BASE ROM.** (Board row P2-1M.)
+Current: 2026-08-21 — **P2-1/P2-2 AUTOMATED ACCEPTANCE IS GREEN; BOUNDARY HAS
+THREE ARMS.** The full phase-close profile was rerun after the final decomp and
+verifier audit; all three arms passed. The remaining closeout on both phases is
+owner visual/play acceptance, not unverified engine work.
 
 ## State
 
-- **Boundary is two arms.** `verify-all.ps1 -Profile Boundary -List` is the
+- **Boundary is three arms.** `verify-all.ps1 -Profile Boundary -List` is the
   membership authority; `docs/VERIFYING.md` owns the definition.
   1. `p2_shell_loop` — `scripts/verify-p2-shell-loop.ps1`, target
-     `smash64ds-p2-shell-loop-hwtri`. Twenty full laps of the VS shell.
+     `smash64ds-p2-shell-loop-hwtri`. The phase-close default is one complete
+     VS-shell lap (the owner retired the historical 20-lap requirement on
+     2026-08-19); higher loop counts remain available only for an explicit soak.
      Scene-boundary instrument at `NDS_HARNESS_FAST_LOGIC=1`; **no tick figure
      from it is a cadence figure.**
   2. `p2_battle_realtime` — `scripts/verify-battle-playable-realtime-harness.ps1`
@@ -17,6 +21,12 @@ Current: 2026-08-19 — **BOUNDARY'S BATTLE ARM RUNS THROUGH THE SHELL, AND
      one-minute Time, items off — **reached through the shell** (title → menus →
      character select → stage select → battle). Renamed and rebased from
      `battle_playable_realtime` at row P2-1M (owner, 2026-08-19).
+  3. `p2_fourcpu_stress` — `scripts/verify-p2-four-fighter-stress.ps1`, target
+     `smash64ds-p2-fourcpu-tickhud-hwtri`, build `build-p2-fourcpu-tickhud`.
+     Four level-3 CPUs, Dream Land, one-minute Time. The accepted run covers
+     frames 1..1973 / guest clock 60→1, proves 0 humans / 4 CPUs / 4 fighter
+     GObjs / active mask `0xF`, and owns the P2-2 memory + native-Low-detail
+     budget gate.
 - **The registry `Harness` field is still `battle_playable_realtime`, and that
   is deliberate.** `Harness` names the *scene* (mode 163, `nds_scene_harness.h`,
   the Makefile mapping) and is unchanged; `Name` names the *verifier row*, and
@@ -42,47 +52,66 @@ Current: 2026-08-19 — **BOUNDARY'S BATTLE ARM RUNS THROUGH THE SHELL, AND
 
 ## Next
 
-1. **Publish `smash64ds.nds` from the shell configuration — NOT DONE, and it
-   has a prerequisite this row found.** The owner ruled `smash64ds` is the base
-   ROM; the Makefile change is small (`smash64ds` joins the free-play shell
-   flag block, which retires into it). **But `smash64ds` today builds
-   `NDS_DEV_SCENE_HARNESS ?= normal` with the shell flags off, and
-   `scripts/verify-runtime.ps1` — 3,026 lines, the whole `runtime` arm of the
-   Latest profile — asserts the original opening-movie → Title boot chain in
-   that normal scene against the root `smash64ds.nds`/`.elf`.** Publishing the
-   shell from that name without re-homing `verify-runtime.ps1` onto its own
-   non-published `normal` target would leave the published ROM covered by a
-   verifier that no longer describes it, which the publish law forbids. Do that
-   slice first, then publish. Scene kind 27 (Startup) *is* still entered by the
-   shell (`MSSCENE 1 curr=27`), so part of that verifier's premise survives —
-   measure which part rather than assuming.
-2. **Free-play delivery cadence is now standing** (owner, 2026-08-19): rebuild
-   and hand the owner `smash64ds.nds` after each verified fix batch, and batch
-   owner questions *before* any ROM-affecting build. Recorded in
-   `docs/VERIFYING.md` → "How A P2 Row Runs".
-3. **P2-1L round-5 visual findings** remain the open presentation work; P2-2
-   (four-fighter engine) is the next phase. `P2-2a` (fighter array
-   generalization) first — everything else in the phase depends on the
-   2-fighter assumptions being gone. `P2-2f` (the 4-CPU stress arm) is the row
-   that joins Boundary at the P2-2 close, exactly as `P2-1g` did.
-4. **One decision stays parked on the board** — the untracked
+1. **P2-1 implementation and automated phase-close verification are green.**
+   The 2026-08-21 Boundary closeout completed one exact shell lap and the
+   shell-driven two-fighter regression without faults; the same profile also
+   retained the four-CPU arm green. Only the owner's visual re-check remains.
+   The implementation plan is `docs/p2/P2-1-vs-shell.md`; do not reopen
+   historical P2-1i/P2-1L findings as coding work unless verification finds a
+   regression.
+2. **P2-2 implementation and automated acceptance are green; owner visual/play
+   acceptance remains.** BattleShip's VSBattle creation,
+   fighter-vs-fighter engagement/catch/hit walks, CPU targeting, multi-target
+   camera, KO scoring and Sudden Death are already N-player source imports. The
+   DS-owned bridge now keeps player instance 0..3 separate from generated
+   Mario/Fox owner kind 0/1, and the audit has also restored source `ftparam`
+   battle-stat/stale/damage attribution semantics, source grounded damage-
+   velocity projection for DownBounce/Passive/PassiveStand, source effective
+   hit-status aggregation (hurtboxes + star + timed special), the source
+   hit-status/colour-animation lifecycle and common Mario/Fox VS colanim table,
+   source centered-stick facing semantics and hitlag truncation/order, source `player_num` lookup,
+   battle-entry registry lifetime, four-way Results registration and all four
+   live CSS preview slots. The lower-screen HUD is now four-wide and consumes
+   live source `ifCommon` timer/damage/stock state while routing only those
+   steady display GObjs off the gameplay screen; its sub-OBJ Bank-I palette and
+   graphics writes use DMA-safe hardware widths. Source effect/particle pool
+   capacities are restored. The standing four-CPU run is accepted and is now
+   Boundary arm 3: `ALL` P50/P95 1,677,952/2,238,464 ticks, heap free low-water
+   40,400 B, effects 17/38 active, particles 33/112 + 11/24 + 14/80, no rejects
+   or hard allocation/AObj failures. The source Low-detail native fighter owner
+   is the first mitigation (`plan build=680`, `hit=6513`, mismatch 0). The
+   measured owner-based byte law is in `docs/p2/P2-2-four-fighters.md`. The
+   remaining item is explicitly visual: four-way camera framing, lower-screen
+   HUD presentation, Team Battle feel and Results/Sudden Death presentation.
+   Do not claim the owner accepted those until they actually do.
+3. **One decision stays parked on the board** — the untracked
    `smash64ds_P1.nds` at the repo root. It makes every Boundary run red until
    it is ruled on: `check-published-roms.ps1` enforces the two-ROM contract, so
    a run relocates that file to `builds/` and restores it hash-verified in a
    `try`/`finally`. Do not delete it; it is the owner's file.
+
+The phase-close run also fixed verifier drift rather than bypassing it:
+`verify-all.ps1 -NoBuild` now resolves retained per-harness artifacts through
+the shared build-output resolver, the wallpaper fixture recognizes exact
+repeated source rows instead of scratch-buffer pointer identity, the native
+fighter owner fixture pins both High and Low BattleShip light-command censuses,
+and the four-CPU sparse marker is proven to observe the same published
+frame-complete tuple as the universal marker. `DECOMP_PRISTINE=PASS` remained
+green throughout.
 
 ## Standing operational facts
 
 - Clean checkout builds through `build.ps1`, not bare `make` (four of six
   `.inc` are gitignored and `build.ps1`'s generator is not run by `make`).
   Never pass `-j`, never override `MAKEFLAGS`, one build at a time.
-- The three P2 shell targets, and the single flag between them:
-  `smash64ds-p2-shell-hwtri` (Boundary arm 2 + the cadence probe; shipping
-  flags **plus** `NDS_P2_MENU_WALK := 1`), `smash64ds-p2-shell-loop-hwtri` (the
-  twenty-lap arm; adds `NDS_HARNESS_FAST_LOGIC := 1`), and
-  `smash64ds-p2-shell-freeplay-hwtri` (walk-free, `NDS_BOOT_DIAG_TEXT := 0` —
-  this is the one that retires into `smash64ds` when item 1 above lands).
-  None of them publishes.
+- `smash64ds` is already in the free-play shell target block and the current
+  published root ROM is the P2 shell baseline; the old P2-1M "publish not done"
+  restart item is closed by the later P2-1N publish work.
+- Shell target relationship: `smash64ds` is the published walk-free shell
+  configuration. `smash64ds-p2-shell-freeplay-hwtri` is its non-published lab
+  twin; `smash64ds-p2-shell-hwtri` adds the scripted realtime shell walk used
+  by Boundary arm 2/cadence probing; `smash64ds-p2-shell-loop-hwtri` is the
+  fast-logic loop arm. The diagnostic names do not publish.
 - `gNdsMenuShellWalkBudget` makes the lap count a runtime poke, so a three-lap
   smoke and the twenty-lap gate come from ONE linked ROM.
 - **The shell walk costs ~69 s before the battle starts** — title 150 + mode
@@ -99,7 +128,8 @@ Current: 2026-08-19 — **BOUNDARY'S BATTLE ARM RUNS THROUGH THE SHELL, AND
   countdown, Dream Land water frame 0, Task 16 `1/1/1`. Never edit `decomp/`.
 - Push hygiene: owner-name scan is `git grep -l -i -e <owner-given-name> HEAD`;
   the single surviving hit (sm64 IDO `usr/lib/copt`) is a false positive.
-- Run `New-Smash64DSSnapshot.ps1` after verified progress.
+- **Current P2 owner directive is no snapshot.** Do not run
+  `New-Smash64DSSnapshot.ps1` unless the owner explicitly re-enables snapshots.
 
 ## Start-of-cycle commands
 

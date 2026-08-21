@@ -2062,7 +2062,27 @@ try {
             # pins below assert on FINAL-minus-BASE deltas, not absolutes.
             # Same 12 fields, same order as SOBJ_WALL_FINAL.
             $preBattleSetupCommands += @(
-                'printf "SOBJ_WALL_BASE=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsSObjWallpaperFinalDirectCount, gNdsSObjWallpaperFinalSkipCount, gNdsSObjWallpaperFinalKeyChangeCount, gNdsSObjWallpaperFinalPixelWriteCount, gNdsSObjBackgroundStagingClearBytes, gNdsSObjForegroundStagingClearBytes, gNdsOriginalSpriteBg2ClearBytes, gNdsOriginalSpriteBg2CopyBytes, gNdsOriginalSpriteBg2FinalWriteBytes, gNdsOriginalSpriteBg3ClearBytes, gNdsOriginalSpriteBg3CopyBytes, gNdsOriginalSpriteBg3FinalWriteBytes'
+                'printf "SOBJ_WALL_BASE=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsSObjWallpaperFinalDirectCount, gNdsSObjWallpaperFinalSkipCount, gNdsSObjWallpaperFinalKeyChangeCount, gNdsSObjWallpaperFinalPixelWriteCount, gNdsSObjBackgroundStagingClearBytes, gNdsSObjForegroundStagingClearBytes, gNdsOriginalSpriteBg2ClearBytes, gNdsOriginalSpriteBg2CopyBytes, gNdsOriginalSpriteBg2FinalWriteBytes, gNdsOriginalSpriteBg3ClearBytes, gNdsOriginalSpriteBg3CopyBytes, gNdsOriginalSpriteBg3FinalWriteBytes',
+                # The hardware-frame counters are process-lifetime counters.
+                # A shell boot has already submitted menu/CSS preview frames
+                # before VSBattle, unlike the historical direct-boot arm. Take
+                # the same battle-entry baseline as the BG ownership counters
+                # so the renderer invariant remains exact over the fight rather
+                # than comparing a process total to battle-only DrawCalls.
+                'printf "PLATFORM_HW_BASE=%u,%u\n", gNdsHardwareRendererSubmittedFrameCount, gNdsHardwareRendererFlushCount',
+                # The stage renderer diagnostics are process-lifetime too. Live
+                # CSS fighters legitimately exercise the same adapter before
+                # VSBattle, so capture every additive field needed by the exact
+                # 42-list / 202-triangle Dream Land contract at the same scene
+                # boundary. This does not relax the contract; it removes only
+                # work that provably happened before scVSBattleStartBattle.
+                'printf "STAGE_GCDRAWALL_HW_BASE=%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsStageGCDrawAllLoopHardwareSubmitCount, gNdsStageGCDrawAllLoopHardwareTriangleCount, gNdsStageGCDrawAllLoopHardwareZBufferTriangleCount, gNdsStageGCDrawAllLoopHardwareProjectedDepthTriangleCount, gNdsStageGCDrawAllLoopHardwareDecalDepthTriangleCount, gNdsStageGCDrawAllLoopHardwareTextureBindCount, gNdsStageGCDrawAllLoopHardwareTextureUploadCount, gNdsStageGCDrawAllLoopHardwareTextureReadyCount, gNdsStageGCDrawAllLoopHardwareTextureRejectCount',
+                # The owner-specific fighter triangle counters do not share the
+                # stage diagnostic reset. CSS live previews therefore remain in
+                # P0/P1 even though the VSBattle stage-fighter totals start at
+                # zero. Window all four so the battle proof compares like with
+                # like and still catches a single missing Mario/Fox list.
+                'printf "STAGE_GCDRAWALL_HW_FTR_BASE=%u,%u,%u,%u\n", gNdsStageGCDrawAllLoopHardwareFighterSubmitCount, gNdsStageGCDrawAllLoopHardwareFighterTriangleCount, gNdsFighterDLAllDrawP0HardwareTriangleCount, gNdsFighterDLAllDrawP1HardwareTriangleCount'
             )
         }
         if ($Task34StageStreamCensus) {
@@ -2127,6 +2147,12 @@ try {
             'printf "RENDER_STAGE_CARRY=%u,%u,%u,%u,%u,%u,%u\n", (gNdsStageGCDrawAllLoopHardwareCarrySeedCount < gNdsStageGCDrawAllLoopHardwareCarryCaptureCount) ? gNdsStageGCDrawAllLoopHardwareCarrySeedCount : gNdsStageGCDrawAllLoopHardwareCarryCaptureCount, (gNdsStageGCDrawAllLoopHardwareCarrySeedCount < gNdsStageGCDrawAllLoopHardwareCarryCaptureCount) ? gNdsStageGCDrawAllLoopHardwareCarrySeedCount : gNdsStageGCDrawAllLoopHardwareCarryCaptureCount, gNdsStageGCDrawAllLoopHardwareCarryTextureSeedCount, gNdsStageGCDrawAllLoopHardwareCarryTileSeedCount, gNdsStageGCDrawAllLoopHardwareCarryShortTextureSeedCount, gNdsStageGCDrawAllLoopHardwareCarryShortTileSeedCount, gNdsStageGCDrawAllLoopHardwareCarrySegmentSeedCount',
             'printf "STAGE_GCDRAWALL_HW_FTR=%u,%u,%u,%u\n", gNdsStageGCDrawAllLoopHardwareFighterSubmitCount, gNdsStageGCDrawAllLoopHardwareFighterTriangleCount, gNdsFighterDLAllDrawP0HardwareTriangleCount, gNdsFighterDLAllDrawP1HardwareTriangleCount',
             'printf "WEAPON_RENDER=%u,%u,%u,%u,%u,%u,%u,%#x,%u,%u,%u,%#x,%#x,%u,%u,%u,%u\n", gNdsWeaponRendererCaptureCount, gNdsWeaponRendererDObjDrawCount, gNdsWeaponRendererSubmitCount, gNdsWeaponRendererVisibleDrawCount, gNdsWeaponRendererTriangleCount, gNdsWeaponRendererTextureReadyCount, gNdsWeaponRendererTextureRejectCount, gNdsWeaponRendererKindMask, gNdsWeaponRendererCallbackKind, gNdsWeaponRendererNoZCount, gNdsWeaponRendererMovingDrawCount, gNdsWeaponRendererLastXBits, gNdsWeaponRendererLastYBits, gNdsWeaponRendererFireballSubmitCount, gNdsWeaponRendererFireballTriangleCount, gNdsWeaponRendererFireballVisibleDrawCount, gNdsWeaponRendererRejectedDrawCount',
+            # Source Entry restored by P2-2 puts Mario's pipe and Fox's Arwing
+            # on effect link 10. Their native DObj renderer deliberately shares
+            # the stage adapter counters, so publish its ownership ledger beside
+            # the weapon ledger instead of pretending those source triangles are
+            # part of Dream Land's immutable 42-list / 202-triangle base.
+            'printf "EFFECT_RENDER=%u,%u,%u,%u,%#x,%#x,%#x,%#x,%u,%u,%u,%u,%u\n", gNdsEffectRendererCaptureCount, gNdsEffectRendererDObjDrawCount, gNdsEffectRendererSubmitCount, gNdsEffectRendererSourceModelAdmitCount, gNdsEffectRendererCallbackKindMask, gNdsEffectRendererRejectedKindMask, gNdsEffectRendererDObjFlagsMask, gNdsEffectRendererDObjFieldMask, gNdsEffectRendererTriangleCount, gNdsEffectRendererTextureReadyCount, gNdsEffectRendererTextureRejectCount, gNdsEffectRendererRejectedDrawCount, gNdsEffectRendererLink15DrawCount',
         'printf "FTR_DISPLAY_CONTRACT=%u,%u,%u,%u,%#x,%u,%u,%u,%u,%#x,%#x,%u,%u,%#x,%#x\n", gNdsFighterDisplayContractSelectedCount, gNdsFighterDisplayContractHiddenCount, gNdsFighterDisplayContractNoTextureCount, gNdsFighterDisplayContractSubmittedCount, gNdsFighterDisplayContractGeometryMode, gNdsFighterDisplayContractLightCount, gNdsFighterDisplayContractLightDirectionCount, gNdsFighterDisplayContractBoundsPassCount, gNdsFighterDisplayContractBoundsFailCount, gNdsFighterDisplayContractBoundsXBits, gNdsFighterDisplayContractBoundsYBits, gNdsFighterDLAllDrawP0SelectedCount, gNdsFighterDLAllDrawP1SelectedCount, gNdsFighterDisplayContractCycleType, gNdsFighterDisplayContractRenderMode',
             'printf "FTR_LIGHT_SEED=%u,%#x,%#x\n", gNdsFighterDisplayContractMaterialLightSeedCount, gNdsFighterDisplayContractMaterialLight1, gNdsFighterDisplayContractMaterialLight2',
             'printf "DLALL_SCREEN=%d,%d,%d,%d,%d,%d,%d,%d,%#x,%#x,%#x,%#x\n", gNdsFighterDLAllDrawP0ScreenMinX, gNdsFighterDLAllDrawP0ScreenMaxX, gNdsFighterDLAllDrawP0ScreenMinY, gNdsFighterDLAllDrawP0ScreenMaxY, gNdsFighterDLAllDrawP1ScreenMinX, gNdsFighterDLAllDrawP1ScreenMaxX, gNdsFighterDLAllDrawP1ScreenMinY, gNdsFighterDLAllDrawP1ScreenMaxY, gNdsFighterDLAllDrawP0RootXBeforeBits, gNdsFighterDLAllDrawP0RootXAfterBits, gNdsFighterDLAllDrawP1RootXBeforeBits, gNdsFighterDLAllDrawP1RootXAfterBits',
@@ -2253,7 +2279,13 @@ try {
         $hudCommands = @(
             'printf "IFHUD=%u,%#x,%u,%u,%u,%u,%u,%u,%#x,%#x,%u,%u,%u,%u,%u,%u\n", gNdsIFCommonHUDRecordCount, gNdsIFCommonHUDObjectMask, gNdsIFCommonHUDP0DamageCurrent, gNdsIFCommonHUDP1DamageCurrent, gNdsIFCommonHUDP0DamageMax, gNdsIFCommonHUDP1DamageMax, gNdsIFCommonHUDP0DigitCount, gNdsIFCommonHUDP1DigitCount, gNdsIFCommonHUDP0Digits, gNdsIFCommonHUDP1Digits, gNdsIFCommonHUDP0StockCurrent, gNdsIFCommonHUDP1StockCurrent, gNdsIFCommonHUDP0StockMin, gNdsIFCommonHUDP1StockMin, gNdsIFCommonHUDP0StockMax, gNdsIFCommonHUDP1StockMax',
             'printf "IFHUD_LOWER=%#x,%#x,%#x,%#x,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsIFCommonHUDActivePlayerMask, gNdsIFCommonHUDShowDamageMask, gNdsIFCommonHUDSingleStockMask, gNdsIFCommonHUDCPUPlayerMask, gNdsIFCommonHUDP0FighterKind, gNdsIFCommonHUDP1FighterKind, gNdsIFCommonHUDP0Level, gNdsIFCommonHUDP1Level, gNdsIFCommonHUDP0LowerStock, gNdsIFCommonHUDP1LowerStock, gNdsIFCommonHUDTimeRemain, gNdsIFCommonHUDTimerLimit, gNdsIFCommonHUDTimerStarted, gNdsIFCommonHUDGameStatus, gNdsIFCommonHUDLowerRouteCount, gNdsIFCommonHUDLowerTimerRouteCount',
-            'printf "IFHUD_ROUTE=%u,%#x,%u,%u\n", gNdsIFCommonHUDLowerTextMode, gNdsIFCommonHUDLowerRouteMask, gNdsIFCommonHUDLowerStockRouteCount, gNdsIFCommonHUDTopGenericPassCount'
+            'printf "IFHUD_ROUTE=%u,%#x,%u,%u,%u\n", gNdsIFCommonHUDLowerTextMode, gNdsIFCommonHUDLowerRouteMask, gNdsIFCommonHUDLowerStockRouteCount, gNdsIFCommonHUDLowerDamageRouteCount, gNdsIFCommonHUDTopGenericPassCount',
+            # Damage is not a generic SObj display in BattleShip: its source
+            # proc calls lbCommonPrepSObj* directly (ifcommon.c:786-866), while
+            # timer/stock reach lbCommonDrawSObjAttr.  Prove the DS adaptation
+            # at its actual sink instead of inventing a route count the source
+            # callback can never produce.
+            'printf "BATTLE_HUD_OAM=%u,%u,%u,%u,%#x\n", gNdsBattleHudPrepareCount, gNdsBattleHudRenderCount, gNdsBattleHudChangeCount, gNdsBattleHudOamCount, gNdsBattleHudActiveMask'
         )
         $gdbCommands = @($beforeDetach + $hudCommands + $afterDetach)
     }
@@ -2555,6 +2587,9 @@ try {
     $safe = [regex]::Match($gdbStdout, 'GCRUNALL_SAFE=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $platform = [regex]::Match($gdbStdout, 'PLATFORM_DL_PREVIEW=([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $platformHw = [regex]::Match($gdbStdout, 'PLATFORM_HW=([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0)')
+    $platformHwBase = [regex]::Match($gdbStdout, 'PLATFORM_HW_BASE=([0-9]+),([0-9]+)')
+    $stageHardwareBase = [regex]::Match($gdbStdout, 'STAGE_GCDRAWALL_HW_BASE=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
+    $stageHardwareFighterBase = [regex]::Match($gdbStdout, 'STAGE_GCDRAWALL_HW_FTR_BASE=([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $rendererProfileMarker = [regex]::Match($gdbStdout, 'RENDER_PROFILE_LEVEL=([0-9]+)')
     $rendererM2DetailedLedgerMarker = [regex]::Match(
         $gdbStdout, 'RENDER_M2_DETAILED_LEDGER=([0-9]+)')
@@ -2572,6 +2607,7 @@ try {
     # BUGS.md #10 needs: Mario's High joint tree is 320 source triangles.
     $stageHardwareFighter = [regex]::Match($gdbStdout, 'STAGE_GCDRAWALL_HW_FTR=([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $weaponRenderer = [regex]::Match($gdbStdout, 'WEAPON_RENDER=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
+    $effectRenderer = [regex]::Match($gdbStdout, 'EFFECT_RENDER=([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $weaponFrame = [regex]::Match($gdbStdout, 'WEAPON_FRAME=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $fighterDisplayContract = [regex]::Match($gdbStdout, 'FTR_DISPLAY_CONTRACT=([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0)')
     $renderProfile = [regex]::Match($gdbStdout, 'RENDER_PROFILE=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
@@ -2820,7 +2856,8 @@ try {
     $fighterLightSeed = [regex]::Match($gdbStdout, 'FTR_LIGHT_SEED=([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0)')
     $ifHud = [regex]::Match($gdbStdout, 'IFHUD=([0-9]+),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $ifHudLower = [regex]::Match($gdbStdout, 'IFHUD_LOWER=(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
-    $ifHudRoute = [regex]::Match($gdbStdout, 'IFHUD_ROUTE=([0-9]+),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+)')
+    $ifHudRoute = [regex]::Match($gdbStdout, 'IFHUD_ROUTE=([0-9]+),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+)')
+    $battleHudOam = [regex]::Match($gdbStdout, 'BATTLE_HUD_OAM=([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0)')
     $projectile = [regex]::Match($gdbStdout, 'PROJECTILE=(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0)')
     $reflector = [regex]::Match($gdbStdout, 'REFLECTOR=(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(-?[0-9]+),([0-9]+),([0-9]+),([0-9]+),(-?[0-9]+),(-?[0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(-?[0-9]+),(-?[0-9]+),([0-9]+),([0-9]+)')
     $specials = [regex]::Match($gdbStdout, 'SPECIALS=(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(-?[0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(-?[0-9]+)')
@@ -3379,6 +3416,7 @@ try {
                 $sourceHud = Get-Ints $ifHud
                 $sourceLower = Get-Ints $ifHudLower
                 $sourceRoute = Get-Ints $ifHudRoute
+                $lowerOam = Get-Ints $battleHudOam
                 $sourceStart = Get-Ints $battlePlayableStart
                 $routeOam = Get-Ints $ifCommonOam
                 $expectedHudSeconds = if ($sourceLower[10] -eq 0) {
@@ -3389,11 +3427,34 @@ try {
                     [Math]::Floor(($sourceLower[10] + 59) / 60)
                 }
                 $lowerRoutingOk = if ($sourceRoute[0] -eq 1) {
-                    $sourceRoute[1] -eq 0x3 -and
-                    $sourceLower[14] -eq
-                        ($sourceLower[15] + $sourceRoute[2]) -and
-                    $sourceLower[15] -gt 0 -and
-                    $sourceRoute[2] -gt 0
+                    # Timer and stock are generic SObj display callbacks and
+                    # must be explicitly intercepted by the lower-screen route.
+                    $genericRouteOk =
+                        $sourceLower[15] -gt 0 -and $sourceRoute[2] -gt 0
+
+                    # BattleShip's damage display is different: it never calls
+                    # lbCommonDrawSObjAttr, but prepares its SObjs itself. The DS
+                    # sprite-prep seam is intentionally a no-op and the sub-OAM
+                    # HUD consumes the exact source damage state. Accept either
+                    # a future explicit damage interception OR today's native
+                    # sink, but prove whichever architecture is actually live.
+                    if ($sourceRoute[3] -gt 0) {
+                        $damageRouteOk =
+                            $sourceRoute[1] -eq 0x7 -and
+                            $sourceLower[14] -eq
+                                ($sourceLower[15] + $sourceRoute[2] +
+                                 $sourceRoute[3])
+                    } else {
+                        $damageRouteOk =
+                            $sourceRoute[1] -eq 0x3 -and
+                            $sourceLower[14] -eq
+                                ($sourceLower[15] + $sourceRoute[2]) -and
+                            $battleHudOam.Success -and
+                            $lowerOam[0] -gt 0 -and $lowerOam[1] -gt 0 -and
+                            $lowerOam[2] -gt 0 -and $lowerOam[3] -gt 0 -and
+                            $lowerOam[4] -eq $sourceLower[0]
+                    }
+                    $genericRouteOk -and $damageRouteOk
                 } else {
                     $sourceRoute[0] -eq 0
                 }
@@ -3420,7 +3481,7 @@ try {
                     $sourceStart[2] -eq 3600 -and $sourceStart[3] -eq 0 -and
                     $sourceStart[4] -eq 0 -and $sourceStart[5] -eq 1 -and
                     $sourceStart[6] -eq 1 -and $sourceStart[7] -le 90 -and
-                    $sourceRoute[3] -eq 0 -and $ifCommonOam.Success -and
+                    $sourceRoute[4] -eq 0 -and $ifCommonOam.Success -and
                     $routeOam[0] -eq 1 -and $routeOam[1] -eq 1 -and
                     $routeOam[2] -eq 1 -and $routeOam[3] -eq 0 -and
                     $routeOam[10] -eq 0 -and $routeOam[11] -eq 0 -and
@@ -3431,7 +3492,7 @@ try {
                     $routeOam[24] -eq 0x49464f41 -and
                     $routeOam[25] -eq 0 -and $routeOam[26] -eq 0
                 $topPresentationRouteOk =
-                    ($sourceRoute[3] -gt 0) -or $preCountdownNativeIdle
+                    ($sourceRoute[4] -gt 0) -or $preCountdownNativeIdle
                 Assert-Condition (
                     $ifHudLower.Success -and $ifHudRoute.Success -and
                     $sourceLower[0] -eq 0x3 -and
@@ -3447,7 +3508,7 @@ try {
                     $lowerTimerStateOk -and
                     $sourceRoute[0] -eq $LowerTextHudMode -and
                     $lowerRoutingOk -and $topPresentationRouteOk
-                ) "BattleShip timer/stock callbacks were not routed narrowly below at Fox CPU level $expectedFoxLevel, or countdown/GO lacked top-interface evidence outside the exact pre-update-91 native-OAM idle window." $gdbStdout
+                ) "BattleShip timer/stock/damage callbacks were not routed narrowly below at Fox CPU level $expectedFoxLevel, or countdown/GO lacked top-interface evidence outside the exact pre-update-91 native-OAM idle window." $gdbStdout
                 Assert-Condition (
                     $battleTextHud.Success -and
                     $textHud[0] -gt 0 -and $textHud[1] -gt 0 -and
@@ -3488,8 +3549,21 @@ try {
                 # the wrong reference for those: a stop anywhere in the draw
                 # reads them one frame apart. hw[0] is the count the draw path
                 # itself keeps, so the exact per-frame contracts below stay
-                # exact instead of needing a tolerance.
-                $drawnFrames = $hw[0]
+                # exact instead of needing a tolerance. On the shell flow the
+                # process counter already includes CSS preview frames, so make
+                # this one canonical battle-window value up front and reuse it
+                # everywhere below.
+                if ($usesP2ShellFlow) {
+                    Assert-Condition $platformHwBase.Success `
+                        'P2 shell flow did not publish the pre-battle hardware-frame baseline.' $gdbStdout
+                    $hwBase = Get-Ints $platformHwBase
+                    $submittedInBattle = $hw[0] - $hwBase[0]
+                    $flushedInBattle = $hw[1] - $hwBase[1]
+                } else {
+                    $submittedInBattle = $hw[0]
+                    $flushedInBattle = $hw[1]
+                }
+                $drawnFrames = $submittedInBattle
                 $shw = Get-Ints $stageHardware
                 $scarry = Get-Ints $stageCarry
                 $shwf = Get-Ints $stageHardwareFighter
@@ -5539,10 +5613,12 @@ try {
                 # one whenever the stop lands in between. The skew is bounded
                 # in both directions, not signed: what this gate is for is
                 # submitted -eq flushed, which stays exact.
-                $hardwareSnapshotSkew = [Math]::Abs($bp[4] - $hw[0])
+                $hardwareSnapshotSkew =
+                    [Math]::Abs($bp[4] - $submittedInBattle)
                 Assert-Condition (
                     $platformHw.Success -and $hw[0] -gt 0 -and
-                    $hw[0] -eq $hw[1] -and
+                    $submittedInBattle -gt 0 -and
+                    $submittedInBattle -eq $flushedInBattle -and
                     $hardwareSnapshotSkew -le 1
                 ) 'Canonical realtime HW build did not flush submitted DS 3D frames or its cached platform snapshot skewed by more than one frame.' $gdbStdout
                 Assert-Condition ($hw[2] -gt 0 -and $hw[3] -gt 0) 'Canonical realtime HW build submitted CPU-side triangles but DS GX polygon/vertex RAM stayed empty.' $gdbStdout
@@ -5572,8 +5648,24 @@ try {
                 $stageFrameCount = if ($usesRetainedWallpaper) {
                     $smc[6] + $smc[7]
                 } else {
-                    $hw[0]
+                    $submittedInBattle
                 }
+                if ($usesP2ShellFlow) {
+                    Assert-Condition $stageHardwareBase.Success `
+                        'P2 shell flow did not publish the pre-battle stage-renderer baseline.' $gdbStdout
+                    $shwBase = Get-Ints $stageHardwareBase
+                } else {
+                    $shwBase = @(0, 0, 0, 0, 0, 0, 0, 0, 0)
+                }
+                $stageSubmitInBattle = $shw[0] - $shwBase[0]
+                $stageTriangleInBattle = $shw[1] - $shwBase[1]
+                $stageZInBattle = $shw[2] - $shwBase[2]
+                $stageProjectedInBattle = $shw[3] - $shwBase[3]
+                $stageDecalInBattle = $shw[4] - $shwBase[4]
+                $stageTextureBindInBattle = $shw[5] - $shwBase[5]
+                $stageTextureUploadInBattle = $shw[6] - $shwBase[6]
+                $stageTextureReadyInBattle = $shw[7] - $shwBase[7]
+                $stageTextureRejectInBattle = $shw[8] - $shwBase[8]
                 $nonFireballSubmitCount = $wr[2] - $wr[13]
                 $expectedWeaponKindMask =
                     $(if ($wr[13] -gt 0) { 0x1 } else { 0x0 }) -bor
@@ -5596,25 +5688,41 @@ try {
                         $wr[8] -eq 0x444c4831
                 }
                 Assert-Condition $weaponLedgerValid 'Canonical realtime HW build published an incoherent source weapon display ledger.' $gdbStdout
+                $er = Get-Ints $effectRenderer
+                $effectLedgerValid =
+                    $effectRenderer.Success -and
+                    $er[0] -ge $er[1] -and
+                    $er[1] -ge $er[2] -and
+                    $er[3] -gt 0 -and
+                    $er[5] -eq 0 -and
+                    $er[10] -eq 0 -and
+                    (($er[2] -eq 0 -and $er[8] -eq 0) -or
+                     ($er[2] -gt 0 -and $er[8] -gt 0))
+                Assert-Condition $effectLedgerValid 'Canonical realtime HW build published an incoherent source effect display ledger.' $gdbStdout
                 # Every completed source traversal contributes the exact
                 # 42-list / 202-triangle Dream Land base. Link-14 source
-                # weapons are additive two-triangle quads. Do not admit the old
+                # weapons and source effect DObjs are additive owners. Do not
+                # admit the old
                 # unmarked 22/44 setup traversal: aggregate tolerance could hide
                 # an equal loss in a later gameplay frame.
                 if ($RendererFastRunMode -eq 9) {
                     # The complete-stage owner bypasses these generic counters.
                     # They retain one pre-arm 42/202 startup traversal plus the
                     # lifetime source-weapon ledger.
-                    $stageBaseSubmitCount = $shw[0] - $wr[2]
-                    $stageBaseTriangleCount = $shw[1] - $wr[4]
+                    $stageBaseSubmitCount =
+                        $stageSubmitInBattle - $wr[2] - $er[2]
+                    $stageBaseTriangleCount =
+                        $stageTriangleInBattle - $wr[4] - $er[8]
                     $stageStartupSubmitCount = 0
                     $stageStartupTriangleCount = 0
                     $stageStartupValid =
                         $stageBaseSubmitCount -eq 42 -and
                         $stageBaseTriangleCount -eq 202
                 } else {
-                    $stageBaseSubmitCount = $shw[0] - $wr[2]
-                    $stageBaseTriangleCount = $shw[1] - $wr[4]
+                    $stageBaseSubmitCount =
+                        $stageSubmitInBattle - $wr[2] - $er[2]
+                    $stageBaseTriangleCount =
+                        $stageTriangleInBattle - $wr[4] - $er[8]
                     $stageStartupSubmitCount =
                         $stageBaseSubmitCount - (42 * $stageFrameCount)
                     $stageStartupTriangleCount =
@@ -5623,7 +5731,7 @@ try {
                         $stageStartupSubmitCount -eq 0 -and
                         $stageStartupTriangleCount -eq 0
                 }
-                Assert-Condition ($stageHardware.Success -and $stageStartupValid -and $shw[1] -eq ($shw[2] + $shw[3]) -and $shw[5] -gt 0 -and $shw[6] -gt 0 -and $shw[7] -gt 0 -and $shw[8] -eq 0) 'Canonical realtime HW build drifted from the exact base + source-weapon stage contract or retained an unmarked setup traversal.' $gdbStdout
+                Assert-Condition ($stageHardware.Success -and $stageStartupValid -and $stageTriangleInBattle -eq ($stageZInBattle + $stageProjectedInBattle + $stageDecalInBattle) -and $stageTextureBindInBattle -gt 0 -and $stageTextureUploadInBattle -gt 0 -and $stageTextureReadyInBattle -gt 0 -and $stageTextureRejectInBattle -eq 0) 'Canonical realtime HW build drifted from the exact battle-window base + source-weapon stage contract or retained an unmarked setup traversal.' $gdbStdout
                 Assert-Condition ($stageCarry.Success -and $scarry[0] -eq $scarry[1] -and $scarry[0] -gt 8 -and $scarry[2] -gt 0 -and $scarry[3] -gt 0 -and $scarry[4] -gt 0 -and $scarry[5] -gt 0) 'Canonical realtime HW build did not prove persistent stage DObj texture/tile carry.' $gdbStdout
                 if ($RendererBenchmarkStartEvent -ne 'None') {
                     Assert-Condition (
@@ -5668,9 +5776,52 @@ try {
                     # Fox's is 306 across 18, counted out of the decomp.
                     # Anything that silently drops one fighter's geometry moves
                     # one of these and leaves the 313 average alone.
-                    $fighterOwnerSkew = [Math]::Abs($shwf[0] - (2 * $drawnFrames))
-                    $fighterDrawnFrames = [int]($shwf[0] / 2)
-                    Assert-Condition ($stageHardwareFighter.Success -and ($shwf[0] % 2) -eq 0 -and $shwf[1] -eq ($shwf[2] + $shwf[3]) -and $shwf[2] -eq (320 * $fighterDrawnFrames) -and $shwf[3] -eq (306 * $fighterDrawnFrames) -and $fighterOwnerSkew -le 2) 'Canonical realtime HW build drifted from the exact per-frame Mario-320/Fox-306 source fighter triangle contract.' $gdbStdout
+                    if ($usesP2ShellFlow) {
+                        Assert-Condition $stageHardwareFighterBase.Success `
+                            'P2 shell flow did not publish the pre-battle fighter-renderer baseline.' $gdbStdout
+                        $shwfBase = Get-Ints $stageHardwareFighterBase
+                    } else {
+                        $shwfBase = @(0, 0, 0, 0)
+                    }
+                    # Stage-fighter totals are reset when VSBattle arms its
+                    # renderer; P0/P1 owner totals are intentionally lifetime
+                    # diagnostics and still contain the CSS previews. The
+                    # battle-start marker proves this asymmetry directly:
+                    # stage totals later become smaller than their marker while
+                    # owner totals only increase. Window only the lifetime pair.
+                    $fighterSubmitInBattle = $shwf[0]
+                    $fighterTrianglesInBattle = $shwf[1]
+                    $marioTrianglesInBattle = $shwf[2] - $shwfBase[2]
+                    $foxTrianglesInBattle = $shwf[3] - $shwfBase[3]
+                    $marioOwnerIntegral = ($marioTrianglesInBattle % 320) -eq 0
+                    $foxOwnerIntegral = ($foxTrianglesInBattle % 306) -eq 0
+                    $marioOwnerCount = if ($marioOwnerIntegral) {
+                        [int]($marioTrianglesInBattle / 320)
+                    } else { -1 }
+                    $foxOwnerCount = if ($foxOwnerIntegral) {
+                        [int]($foxTrianglesInBattle / 306)
+                    } else { -1 }
+                    # Do NOT require one Mario + one Fox on every submitted
+                    # frame. BattleShip ftCommonEntrySetStatus makes both
+                    # fighters invisible, and ftdisplaymain.c:1087-1092 skips
+                    # an invisible master-display fighter. Mario/Fox then run
+                    # different source Appear sequences. The strict invariant
+                    # is therefore per admitted owner: every Mario submit is
+                    # exactly 320 triangles, every Fox submit exactly 306, and
+                    # the two owner ledgers must exactly reconstruct the shared
+                    # stage-fighter totals. Requiring equal counts would reject
+                    # source-correct entry behavior.
+                    Assert-Condition (
+                        $stageHardwareFighter.Success -and
+                        $fighterSubmitInBattle -gt 0 -and
+                        $marioOwnerCount -gt 0 -and $foxOwnerCount -gt 0 -and
+                        $marioOwnerIntegral -and $foxOwnerIntegral -and
+                        $fighterTrianglesInBattle -eq
+                            ($marioTrianglesInBattle + $foxTrianglesInBattle) -and
+                        $fighterSubmitInBattle -eq
+                            ($marioOwnerCount + $foxOwnerCount) -and
+                        $fighterSubmitInBattle -le (2 * $drawnFrames)
+                    ) 'Canonical realtime HW build drifted from the exact battle-window Mario-320/Fox-306 source fighter triangle contract.' $gdbStdout
                 }
                 # ftdisplaymain.c:1164-1242 sets this preamble and traverses only
                 # source-selected, visible, textured fighter part display lists.

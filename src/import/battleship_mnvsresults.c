@@ -50,9 +50,12 @@ volatile u32 gNdsVSResultsKind;
 volatile u32 gNdsVSResultsCameraProcCount;
 volatile u32 gNdsVSResultsFighterDisplayCount;
 volatile u32 gNdsVSResultsFighterSubmitCount;
-volatile u32 gNdsVSResultsFighterPlace[2];
-volatile u32 gNdsVSResultsFighterStatus[2];
-volatile s32 gNdsVSResultsFighterMotion[2];
+/* P2-2: Results itself has always been source N-player. Keep the observation
+ * surface the same width so a four-way result can be inspected without
+ * pretending slots 2/3 do not exist. P0/P1 readers remain ABI-compatible. */
+volatile u32 gNdsVSResultsFighterPlace[GMCOMMON_PLAYERS_MAX];
+volatile u32 gNdsVSResultsFighterStatus[GMCOMMON_PLAYERS_MAX];
+volatile s32 gNdsVSResultsFighterMotion[GMCOMMON_PLAYERS_MAX];
 /* R2-07 R1. The Battle -> Results hand-off is ~30 s of dead air with the last
  * battle frame still on screen, and the board's first step is to split it rather
  * than assume the loader owns it. These three price the scene's task-start:
@@ -490,14 +493,19 @@ void ndsMNVSResultsRecordFrame(void)
             {
                 ftParamMoveDLLink(sMNVSResultsFighterGObjs[i], 9);
             }
-            if ((i < 2u) && (fp != NULL))
+            if (fp != NULL)
             {
+                /* Results is N-player in BattleShip: all four entries of
+                 * sMNVSResultsFighterGObjs are source-owned and the source
+                 * fighter camera renders all present entries. Register every
+                 * live Results fighter with the DS renderer and publish the
+                 * same four entries for later P2-2 verification. */
+                ndsFighterManagerRegisterDisplayFighter(
+                    sMNVSResultsFighterGObjs[i], i);
                 gNdsVSResultsFighterPlace[i] =
                     (u32)sMNVSResultsPlaces[i];
                 gNdsVSResultsFighterStatus[i] = fp->status_id;
                 gNdsVSResultsFighterMotion[i] = fp->motion_id;
-                ndsFighterManagerRegisterDisplayFighter(
-                    sMNVSResultsFighterGObjs[i], i);
             }
         }
     }
@@ -538,6 +546,8 @@ void ndsMNVSResultsRecordFrame(void)
 
 void mnVSResultsStartScene(void)
 {
+    u32 i;
+
     gNdsVSResultsResult = 0;
     gNdsVSResultsMask = 0;
     gNdsVSResultsTickCount = 0;
@@ -585,6 +595,15 @@ void mnVSResultsStartScene(void)
      * display-list heads: state that outlives a scene boundary must be
      * re-derived from something the boundary moves, never trusted because it
      * still looks like a pointer. */
+    /* The source recreates its full four-entry Results fighter array on every
+     * scene entry.  Mirror that lifetime in the DS live registry before the
+     * arena is reused.  Without this, a 4-way Results -> 2-way rematch could
+     * leave slots 2/3 pointing into the previous Results arena, and the now
+     * four-slot battle renderer would treat them as current fighters. */
+    for (i = 0u; i < GMCOMMON_PLAYERS_MAX; i++)
+    {
+        ndsFighterManagerRegisterDisplayFighter(NULL, i);
+    }
     memset(sMNVSResultsFighterGObjs, 0, sizeof(sMNVSResultsFighterGObjs));
     gNdsVSResultsStartCount++;
     ndsBaseMNVSResultsStartScene();

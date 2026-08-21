@@ -37,8 +37,7 @@ $hotFunctions = @(
     'ndsRendererNativeStageEmitNoZVertex',
     'ndsRendererHardwareEndBatch',
     'ndsRendererHardwareApplyTextureParams',
-    'ndsRendererR2MaterialColor15',
-    'ndsRendererNativeApplyProductionPreamble'
+    'ndsRendererR2MaterialColor15'
 )
 $evictedFunctions = @(
     'ndsRendererScanList',
@@ -46,7 +45,18 @@ $evictedFunctions = @(
     'ndsRendererHardwareSubmitVertex',
     'ndsRendererHardwareLitShadeColorPrepared',
     'ndsRendererMtxMulAffine20p12',
-    'ndsRendererLoadHardwareSplitMatrices'
+    'ndsRendererLoadHardwareSplitMatrices',
+    # P2-2: BattleShip uses Low-detail JointTrees for every 3+ fighter match.
+    # The generated High/Low owner view grows the native production path, so
+    # the 152-byte root-level preamble was deliberately returned to main RAM.
+    # It runs once per root and was the lowest-value retained admission in the
+    # 2026-08-17 knapsack (1,123 rank-80 I-cache-fill ticks/frame, 7.4/byte).
+    # Keep this as a TWO-WAY placement rule instead of merely deleting it from
+    # $hotFunctions: a later layout shift must not silently spend those bytes
+    # again and crowd the four-CPU tick-HUD ELF, whose current ITCM headroom is
+    # smaller than this function. The per-run prepare/shade/emit loops remain
+    # pinned above and carry the higher-value zero-wait work.
+    'ndsRendererNativeApplyProductionPreamble'
 )
 $requiredEmittedFunctions = if ($BenchmarkAblation) {
     @('ndsRendererSubmitHardwareTriangle', 'ndsRendererScanList')

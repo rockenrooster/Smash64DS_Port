@@ -567,10 +567,12 @@ static NDSFighterDLDrawState
     sNdsFighterDLAllDrawStates[NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED];
 #if !NDS_RENDERER_HW_TRIANGLES || (NDS_RENDERER_PROFILE_LEVEL >= 2)
 static NDSRendererStats
-    sNdsFighterDLAllDrawStats[2][NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED];
+    sNdsFighterDLAllDrawStats[GMCOMMON_PLAYERS_MAX]
+                            [NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED];
 #endif
 static u8
-    sNdsFighterDLAllDrawClean[2][NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED];
+    sNdsFighterDLAllDrawClean[GMCOMMON_PLAYERS_MAX]
+                            [NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED];
 
 typedef struct NDSRelocSymbolProbe {
     const void *marker;
@@ -1204,6 +1206,13 @@ static u32 ndsRelocFileID(const void *file_id)
 {
     return (u32)(uintptr_t)file_id;
 }
+
+#if NDS_IMPORT_BATTLESHIP_FTMANAGER
+extern size_t ndsBattleShipCSSSelectedFigatreeSize(const void *file_id);
+extern void *ndsBattleShipLoadCSSSelectedFigatree(const void *file_id,
+                                                  void *heap);
+extern sb32 ndsBattleShipIsCSSSelectedFigatreeJoint(const void *ptr);
+#endif
 
 static u32 ndsFighterManagerExternBit(u32 token)
 {
@@ -2072,6 +2081,7 @@ static s32 ndsRelocIsOpeningRoomAsset(u32 asset_id)
 }
 
 extern void ndsAObjEvent32ResetNormalizedScripts(void);
+extern void ndsAObjEvent32ForgetRange(const void *base, size_t size);
 
 #if NDS_TASK44_STAGE_STEADY
 /* Task 44 item 3: the Dream Land stage-asset mutation generation.
@@ -2902,6 +2912,29 @@ void *ndsRelocResolvePointerFromFileBase(const void *file_base,
     align_mask = (size >= sizeof(u32)) ? (sizeof(u32) - 1u)
                                        : ((size >= sizeof(u16)) ? 1u : 0u);
 
+#if NDS_IMPORT_BATTLESHIP_FTMANAGER
+    /* PlayersVS' two resident Selected clips are compiled directly from the
+     * decomp's AObjEvent16 tables. Their top-level pointer table is copied into
+     * the fighter's ordinary figatree heap (the source lifetime), but each
+     * entry intentionally remains an absolute pointer to that immutable ROM
+     * table. It therefore is neither a loaded reloc-file range nor a file-
+     * relative offset, and the generic resolver below must not reject/rebase
+     * it. The source parser consumes u16 commands, so two-byte alignment is the
+     * actual contract here even though this legacy caller carries an
+     * AObjEvent32-typed pointer. Keep this exemption exact to those 50 source
+     * table entries; every normal gameplay clip still takes the reloc path. */
+    if (ndsBattleShipIsCSSSelectedFigatreeJoint(ptr) != FALSE)
+    {
+        if (((uintptr_t)ptr & (sizeof(u16) - 1u)) != 0u)
+        {
+            gNdsRelocResolveMisalignCount++;
+            gNdsRelocResolveMisalignValue = (u32)(uintptr_t)ptr;
+            return NULL;
+        }
+        return (void *)ptr;
+    }
+#endif
+
     /* THE PACK'S SLOT WORDS ARE OFFSETS BY CONSTRUCTION, SO ASK THAT QUESTION
      * FIRST -- measured, this ordering was 92.4% of the resident pack's whole
      * P95 excess (`artifacts/performance/2026-08-15_battlepack-mechanism/`).
@@ -3168,6 +3201,25 @@ s32 ndsRelocPointerIsFighterAObj16(const void *ptr)
 {
     NDSRelocLoadedFile *loaded;
 
+#if NDS_IMPORT_BATTLESHIP_FTMANAGER
+    /* PlayersVS' Mario/Fox Selected clips are compiled directly from the
+     * BattleShip relocData AObjEvent16 tables (359/372).  The force-load seam
+     * copies only their joint-pointer array into figatree_heap, so each joint
+     * deliberately remains an absolute pointer to that immutable source table.
+     *
+     * The generic Event32 admission wrapper asks this predicate before it tries
+     * to normalize a script.  Treating these source AObj16 joints as Event32
+     * made the shell-driven battle reject the Selected pose (reason 2: not a
+     * loaded reloc-file range), even though the pointer resolver immediately
+     * below already carries the same exact 50-entry exemption.  Keep the type
+     * decision at this one parser boundary: Selected is still the source's u16
+     * FIGATREE, just resident in ROM instead of DMA-loaded into N64 RAM. */
+    if (ndsBattleShipIsCSSSelectedFigatreeJoint(ptr) != FALSE)
+    {
+        return TRUE;
+    }
+#endif
+
     /* THE ADMISSION GATE, and the reason a resident clip has to be named here.
      *
      * `gcAddDObjAnimJoint` (`battleship_sys_objanim.c:1710`) admits a script
@@ -3252,10 +3304,10 @@ static void ndsRelocRemoveStatusNodeAt(LBFileNode *nodes, s32 *count, s32 index)
     (*count)--;
 }
 
-static void ndsRelocRemoveFighterAObj16StatusAliases(LBFileNode *nodes,
-                                                     s32 *count,
-                                                     u32 asset_id,
-                                                     void *data)
+static void ndsRelocRemoveFighterAnimStatusAliases(LBFileNode *nodes,
+                                                   s32 *count,
+                                                   u32 asset_id,
+                                                   void *data)
 {
     s32 i = 0;
 
@@ -3299,7 +3351,7 @@ static void ndsRelocRemoveFighterAObj16StatusAliases(LBFileNode *nodes,
 
                 gNdsR2RelocAliasResolves++;
                 if ((node_asset_id != asset_id) &&
-                    (ndsRelocIsFighterAObj16Asset(node_asset_id) != FALSE))
+                    (ndsRelocIsMarioFoxAnimID(node_asset_id) != FALSE))
                 {
                     ndsRelocRemoveStatusNodeAt(nodes, count, i);
                     continue;
@@ -3313,7 +3365,7 @@ static void ndsRelocRemoveFighterAObj16StatusAliases(LBFileNode *nodes,
             gNdsR2RelocAliasVisits++;
             gNdsR2RelocAliasResolves++;
             if ((nodes[i].addr == data) && (node_asset_id != asset_id) &&
-                (ndsRelocIsFighterAObj16Asset(node_asset_id) != FALSE))
+                (ndsRelocIsMarioFoxAnimID(node_asset_id) != FALSE))
             {
                 ndsRelocRemoveStatusNodeAt(nodes, count, i);
                 continue;
@@ -3323,9 +3375,20 @@ static void ndsRelocRemoveFighterAObj16StatusAliases(LBFileNode *nodes,
     }
 }
 
-static void ndsRelocRemoveFighterAObj16LoadedAliases(u32 asset_id, void *data)
+/* BattleShip's force loader treats `data` as an animation scratch heap and
+ * overwrites it on every action change (lbreloc.c:363-369, ftmain.c:4621-4624).
+ * The DS loaded-file table and Event32 normalization ledger are metadata the N64
+ * source did not have, so both must retire the OLD occupant before those bytes
+ * are replaced.  Do this from the one writer rather than teaching every parser
+ * about heap generations.
+ *
+ * This intentionally covers AObj16 AND the four AObj32 Mario/Fox clips.  The old
+ * helper removed only AObj16 aliases, which let an AObj32 loaded-file record and
+ * its normalized-command addresses survive reuse of the same fighter heap. */
+static void ndsRelocPrepareFighterAnimHeapOverwrite(u32 asset_id, void *data)
 {
     u32 i = 0;
+    size_t old_bytes = 0u;
 
     if (data == NULL)
     {
@@ -3336,9 +3399,18 @@ static void ndsRelocRemoveFighterAObj16LoadedAliases(u32 asset_id, void *data)
     {
         NDSRelocLoadedFile *loaded = &sNdsRelocLoadedFiles[i];
 
-        if ((loaded->data == data) && (loaded->asset_id != asset_id) &&
-            (ndsRelocIsFighterAObj16Asset(loaded->asset_id) != FALSE))
+        if ((loaded->data == data) &&
+            (ndsRelocIsMarioFoxAnimID(loaded->asset_id) != FALSE))
         {
+            if (loaded->data_size > old_bytes)
+            {
+                old_bytes = loaded->data_size;
+            }
+            if (loaded->asset_id == asset_id)
+            {
+                i++;
+                continue;
+            }
             u32 remaining = (sNdsRelocLoadedFileCount - i) - 1u;
 
             if (remaining > 0u)
@@ -3353,12 +3425,16 @@ static void ndsRelocRemoveFighterAObj16LoadedAliases(u32 asset_id, void *data)
         i++;
     }
 
-    ndsRelocRemoveFighterAObj16StatusAliases(sNdsRelocStatusBuffer,
-                                             &sNdsRelocStatusBufferCount,
-                                             asset_id, data);
-    ndsRelocRemoveFighterAObj16StatusAliases(sNdsRelocForceStatusBuffer,
-                                             &sNdsRelocForceStatusBufferCount,
-                                             asset_id, data);
+    if (old_bytes != 0u)
+    {
+        ndsAObjEvent32ForgetRange(data, old_bytes);
+    }
+    ndsRelocRemoveFighterAnimStatusAliases(sNdsRelocStatusBuffer,
+                                           &sNdsRelocStatusBufferCount,
+                                           asset_id, data);
+    ndsRelocRemoveFighterAnimStatusAliases(sNdsRelocForceStatusBuffer,
+                                           &sNdsRelocForceStatusBufferCount,
+                                           asset_id, data);
 }
 
 /* Task 85, same reasoning as ndsRelocReadNative32 above. */
@@ -6198,6 +6274,8 @@ size_t lbRelocGetFileSize(const void *file_id)
     u32 token = ndsRelocFileID(file_id);
     u32 asset_id = ndsRelocAssetIDForToken(token);
 #if NDS_IMPORT_BATTLESHIP_FTMANAGER
+    size_t css_selected_size =
+        ndsBattleShipCSSSelectedFigatreeSize(file_id);
     u32 seen[NDS_RELOC_EXTERN_FILE_ID_CAPACITY];
     u32 seen_count = 0;
     size_t asset_size = ndsRelocExternTreeAllocSize(asset_id, seen,
@@ -6206,6 +6284,12 @@ size_t lbRelocGetFileSize(const void *file_id)
     size_t asset_size = ndsRelocAssetAllocSize(asset_id);
 #endif
 
+#if NDS_IMPORT_BATTLESHIP_FTMANAGER
+    if (css_selected_size != 0u)
+    {
+        return css_selected_size;
+    }
+#endif
     if (asset_size != 0)
     {
         return asset_size;
@@ -7741,10 +7825,10 @@ static void *ndsRelocForceLoadFighterAObj16File(u32 token, u32 asset_id,
         {
             /* K0 line 6, "raw animation-file cache copies". */
             NDS_K0_MARK(gNdsK0AfterGoCacheCopies, asset_id);
+            ndsRelocPrepareFighterAnimHeapOverwrite(asset_id, heap);
             memcpy(heap, cached->payload, cached->size);
             asset_size = cached->size;
             header = cached->header;
-            ndsRelocRemoveFighterAObj16LoadedAliases(asset_id, heap);
             loaded = ndsRelocRegisterLoadedFile(asset_id, 0, heap, &header);
 #if NDS_R2_AOBJ16_PREBAKE
             /* R2-06 E13. The script region of this copy already carries the
@@ -7781,13 +7865,12 @@ static void *ndsRelocForceLoadFighterAObj16File(u32 token, u32 asset_id,
      * the move. The callee zeroes heap over the aligned payload size before
      * reading, which is the memset that used to stand here, and reports that
      * size back for the failure path below. */
+    ndsRelocPrepareFighterAnimHeapOverwrite(asset_id, heap);
     if (ndsRelocAssetLoadIntoZeroedHeap(asset_id, heap, NDS_RELOC_ALIGN_BYTES,
                                         &asset_size, &header) == FALSE)
     {
         goto fail;
     }
-
-    ndsRelocRemoveFighterAObj16LoadedAliases(asset_id, heap);
     loaded = ndsRelocRegisterLoadedFile(asset_id, 0, heap, &header);
     if (loaded == NULL)
     {
@@ -7881,6 +7964,12 @@ void *lbRelocGetForceExternHeapFile(const void *file_id, void *heap)
 #if NDS_IMPORT_BATTLESHIP_FTMANAGER
     u32 asset_id = ndsRelocAssetIDForToken(token);
     NDSRelocLoadedFile *loaded;
+
+    file = ndsBattleShipLoadCSSSelectedFigatree(file_id, heap);
+    if (file != NULL)
+    {
+        return file;
+    }
 
     if ((heap != NULL) &&
         (ndsRelocIsMarioFoxAnimID(asset_id) != FALSE))

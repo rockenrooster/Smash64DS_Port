@@ -496,9 +496,13 @@ NDS_R2_RELOC_FIXUP_TIMING ?= 0
 # (gcAddDObjAnimJoint, gcAddAnimJointAll), splitting the O2R script normalization
 # from the decomp's own setup. Instrument only, lab default off.
 NDS_R2_LOADFRAME_TIMING ?= 0
-# Switch plan R2-06 harness prerequisite, owner-requested 2026-07-29. Makes
-# player 0 a level-3 CPU as well, so both fighters attack continuously with no
-# recorded input stream. A deliberate STRESS case: it maximises the live hitbox
+# Switch plan R2-06 harness prerequisite, owner-requested 2026-07-29. On the
+# historical direct-boot R2 targets it makes player 0 a level-3 CPU as well, so
+# both existing fighters attack continuously with no recorded input stream. P2-2
+# reuses the switch on MENU-SHELL builds as the four-CPU seed instead: the match
+# descriptor adds Mario/Fox mirrors in P3/P4 at level 3. The direct-boot meaning
+# is deliberately unchanged so its banked measurements remain comparable.
+# Either form is a deliberate STRESS case: it maximises the live hitbox
 # population that R2-03 E35 named as the owner of the SRC P95 excursion, which
 # also makes it the configuration that most exercises E64b's Q12 cubic (more hit
 # decisions to flip) and E32's hitlag fallback (more bursts).
@@ -507,6 +511,11 @@ NDS_R2_LOADFRAME_TIMING ?= 0
 # defines the shipped Boundary as Mario human vs level-3 Fox CPU at mode 163 and
 # PROJECT_GOAL.md's gate as representative gameplay; this is harder than either.
 NDS_R2_BOTH_CPU ?= 0
+# P2-2's direct-battle standing gate. Unlike NDS_R2_BOTH_CPU this has no
+# historical two-player meaning to preserve: it seeds four level-3 CPU fighter
+# INSTANCES (Mario/Fox/Mario/Fox) while the generated renderer owners remain the
+# two fighter KINDS. Only the dedicated P2 stress target below enables it.
+NDS_P2_FOUR_CPU_STRESS ?= 0
 # THE FREEZE SOAK'S MATCH LENGTH IN MINUTES, and nothing else's. 0 = leave the
 # harness seeding alone, which is the canonical one-minute Time match; non-zero
 # overrides scene_harness.c's time_limit.
@@ -1959,7 +1968,7 @@ override NDS_TASK32_DRAW_HOT_TEXT := 1
 override NDS_TASK39_FX_SPRITES := 1
 override NDS_TASK39_FX_FLASH := 1
 endif
-ifneq ($(filter $(TARGET),smash64ds-battle-playable-tickhud-hwtri smash64ds-battle-playable-proof-hwtri smash64ds-results-lab-hwtri),)
+ifneq ($(filter $(TARGET),smash64ds-battle-playable-tickhud-hwtri smash64ds-p2-fourcpu-tickhud-hwtri smash64ds-battle-playable-proof-hwtri smash64ds-results-lab-hwtri),)
 # Profile-0 shipping path plus either the lightweight Task 41 timers or the
 # full diagnostic publications required by GDB proof runs.
 #
@@ -1978,7 +1987,7 @@ override NDS_HARNESS_FAST_LOGIC := 0
 override NDS_RENDERER_HW_TRIANGLES := 1
 override NDS_DEBUG_HUD := 0
 override NDS_RENDERER_PROFILE_LEVEL := 0
-ifneq ($(filter $(TARGET),smash64ds-battle-playable-tickhud-hwtri smash64ds-results-lab-hwtri),)
+ifneq ($(filter $(TARGET),smash64ds-battle-playable-tickhud-hwtri smash64ds-p2-fourcpu-tickhud-hwtri smash64ds-results-lab-hwtri),)
 override NDS_SHIP_TELEMETRY := 0
 override NDS_TICK_HUD := 1
 else
@@ -2093,6 +2102,15 @@ override NDS_TASK16_FLOAT_ADDSUB := 1
 override NDS_TASK32_DRAW_HOT_TEXT := 1
 override NDS_TASK39_FX_SPRITES := 1
 override NDS_TASK39_FX_FLASH := 1
+ifeq ($(TARGET),smash64ds-p2-fourcpu-tickhud-hwtri)
+# P2-2 standing stress arm. It deliberately boots straight into the source
+# VSBattle path instead of walking the CSS: the gate is measuring four-fighter
+# gameplay, not menu automation. Restore the source effect capacity too; a
+# four-way burst measured through P1's reduced 12-entry pool would be a different
+# game-state policy, not merely a tighter memory budget.
+override NDS_P2_FOUR_CPU_STRESS := 1
+override NDS_R2_EFFECT_POOL := 38
+endif
 endif
 # P2-1b scene-loop-walk lab target. Its OWN block for the same reason the Task
 # 49 differ has one: appending a member to the tickhud/proof filter above
@@ -2239,6 +2257,11 @@ override NDS_TASK39_FX_SPRITES := 1
 override NDS_TASK39_FX_FLASH := 1
 override NDS_P2_UI_KIT := 1
 override NDS_P2_MENU_SHELL := 1
+## P2-2 source parity. BattleShip's efmanager.c owns 38 EFStructs and keeps its
+## own last-four forced-effect reserve. The old 12-entry P1 cap changes which
+## cosmetic effects survive a four-way burst, so the four-fighter shell restores
+## the source depth; the P1 direct-boot/perf targets keep their measured cap.
+override NDS_R2_EFFECT_POOL := 38
 override NDS_P2_MENU_WALK := 1
 # P2-1M gate catch (2026-08-19): the P1 demo ladder is direct-boot demo
 # behaviour. In the shell game the CHARACTER SELECT decides Fox's level, so
@@ -2324,6 +2347,7 @@ override NDS_TASK39_FX_SPRITES := 1
 override NDS_TASK39_FX_FLASH := 1
 override NDS_P2_UI_KIT := 1
 override NDS_P2_MENU_SHELL := 1
+override NDS_R2_EFFECT_POOL := 38
 # P2-1M gate catch: same rule as the walk block above — the CSS decides
 # Fox's level in the shell game; the P1 demo ladder never rides it.
 override NDS_DEMO_FOX_CPU_LADDER := 0
@@ -2405,6 +2429,7 @@ override NDS_TASK39_FX_SPRITES := 1
 override NDS_TASK39_FX_FLASH := 1
 override NDS_P2_UI_KIT := 1
 override NDS_P2_MENU_SHELL := 1
+override NDS_R2_EFFECT_POOL := 38
 endif
 # Task 49 GX-differ lab target. Its OWN block (appending to the tickhud/proof
 # block breaks the structural pin at check-gbi-decode-fixtures.ps1:1847).
@@ -3022,6 +3047,10 @@ NDS_BATTLE_STATIC_TEXTURE_ASSET := $(PROJECT_ROOT)/assets/renderer/battle_playab
 # stale pair cannot link.
 NDS_MN_UI_KIT_INC := $(PROJECT_ROOT)/src/nds/generated/mn_ui_kit.generated.inc
 NDS_MN_UI_KIT_ASSET := $(PROJECT_ROOT)/assets/menus/mn_ui_kit.bin
+# P2-2. The lower battle HUD is AOT-only: source IFCommon digits, Mario/Fox
+# portraits and stock icons are baked straight into tiled 4bpp sub-OBJ cells.
+# There is deliberately no NitroFS payload or runtime decoder for this asset.
+NDS_BATTLE_HUD_INC := $(PROJECT_ROOT)/src/nds/generated/battle_hud.generated.inc
 # P2-1h. The backdrop art is a SECOND payload from the same generator: the OBJ
 # pack is read and hashed on every kit entry, so a title screen living in it
 # would cost the character select bytes it never draws.
@@ -3222,14 +3251,20 @@ NDS_PRIVATE_CHECK_CFILES += $(NDS_MPPROCESS_SOURCE_CFILES)
 endif
 CFILES += battleship_ftstatus_callback_aliases.c \
 	battleship_ftstatus_map_physics_shims.c \
-	battleship_ftstatus_inactive_stubs.c
+	battleship_ftstatus_inactive_stubs.c \
+	battleship_ftcommon_shieldbreakfly.c \
+	battleship_ftcommon_shieldbreakfall.c \
+	battleship_ftcommon_shieldbreakdown.c \
+	battleship_ftcommon_shieldbreakstand.c \
+	battleship_ftcommon_furafura.c
 endif
 ifeq ($(NDS_IMPORT_BATTLESHIP_FTCOMPUTER),1)
 CFILES += battleship_ftcomputer.c
 endif
 ifeq ($(NDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE),1)
 CFILES += battleship_gmcamera.c battleship_ftcommon_dead.c \
-	battleship_ftcommon_rebirth.c battleship_grwallpaper.c \
+	battleship_ftcommon_rebirth.c battleship_ftcommon_entry.c \
+	battleship_grwallpaper.c \
 	battle_playable_compat_stubs.c
 endif
 ifeq ($(NDS_IMPORT_BATTLESHIP_VS_RESULTS),1)
@@ -3239,6 +3274,7 @@ endif
 CFILES += battleship_ifscreenflash.c
 ifeq ($(NDS_IMPORT_BATTLESHIP_IFCOMMON),1)
 CFILES += battleship_ifcommon.c
+CFILES += nds_battle_hud.c
 endif
 ifeq ($(NDS_IMPORT_BATTLESHIP_WEAPON_MANAGER),1)
 CFILES += battleship_wpmanager_core.c
@@ -4056,6 +4092,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_R2_RELOC_FIXUP_TIMING $(NDS_R2_RELOC_FIXUP_TIMING)'; \
 		echo '#define NDS_R2_LOADFRAME_TIMING $(NDS_R2_LOADFRAME_TIMING)'; \
 		echo '#define NDS_R2_BOTH_CPU $(NDS_R2_BOTH_CPU)'; \
+		echo '#define NDS_P2_FOUR_CPU_STRESS $(NDS_P2_FOUR_CPU_STRESS)'; \
 		echo '#define NDS_R2_SOAK_MATCH_MINUTES $(NDS_R2_SOAK_MATCH_MINUTES)'; \
 		echo '#define NDS_ANIM_JOINT_AUDIT $(NDS_ANIM_JOINT_AUDIT)'; \
 		echo '#define NDS_AOBJ_EVENT32_HASH_ORACLE $(NDS_AOBJ_EVENT32_HASH_ORACLE)'; \
@@ -4352,6 +4389,7 @@ $(OUTPUT).elf: $(OFILES) $(NDS_PRIVATE_CHECK_OFILES) \
 	$(NDS_HOT_TEXT_SPECS) $(NDS_HOT_TEXT_LINKER_SCRIPT) \
 	$(NDS_TASK32_DRAW_HOT_FRAGMENT) $(NDS_PARTICLE_BANKS_INC) \
 	$(NDS_BATTLE_STATIC_TEXTURE_INC) \
+	$(if $(filter 1,$(NDS_IMPORT_BATTLESHIP_IFCOMMON)),$(NDS_BATTLE_HUD_INC)) \
 	$(if $(filter 1,$(NDS_P2_UI_KIT)),$(NDS_MN_UI_KIT_INC) \
 		$(NDS_MN_TITLE_ANIM_INC))
 $(OFILES) $(NDS_PRIVATE_CHECK_OFILES): $(PROJECT_ROOT)/Makefile $(NDS_BUILD_CONFIG) $(NDS_FTANIM_TRACK_PREREQ)
@@ -4600,6 +4638,21 @@ $(NDS_MN_UI_KIT_INC) $(NDS_MN_UI_KIT_ASSET) $(NDS_MN_UI_SURFACE_ASSET) &: \
 		$(PROJECT_ROOT)/include/reloc_data.h
 	python "$(PROJECT_ROOT)/scripts/menus/generate_mn_ui_kit.py" --repo-root "$(PROJECT_ROOT)"
 	@touch $(NDS_MN_UI_KIT_INC) $(NDS_MN_UI_KIT_ASSET) $(NDS_MN_UI_SURFACE_ASSET)
+
+# P2-2 lower-screen HUD.  Keep every source container the bake reads on the
+# dependency edge so an o2r refresh cannot silently leave a stale C include.
+$(NDS_BATTLE_HUD_INC): \
+		$(PROJECT_ROOT)/scripts/menus/generate_battle_hud.py \
+		$(PROJECT_ROOT)/scripts/menus/generate_mn_ui_kit.py \
+		$(PROJECT_ROOT)/include/reloc_data.h \
+		$(BATTLESHIP_O2R)/reloc_interface/IFCommonPlayerDamage \
+		$(BATTLESHIP_O2R)/reloc_interface/IFCommonTimer \
+		$(BATTLESHIP_O2R)/reloc_interface/IFCommonDigits \
+		$(BATTLESHIP_O2R)/reloc_menus/MNPlayersPortraits \
+		$(BATTLESHIP_O2R)/reloc_fighters_main/MarioModel \
+		$(BATTLESHIP_O2R)/reloc_fighters_main/FoxModel
+	python "$(PROJECT_ROOT)/scripts/menus/generate_battle_hud.py" --repo-root "$(PROJECT_ROOT)"
+	@touch $(NDS_BATTLE_HUD_INC)
 
 # P2-1k (d). Ordered after the kit's own rule by the surface-pack prerequisite:
 # the pose table's oracles compare against the composite the kit bakes, so a

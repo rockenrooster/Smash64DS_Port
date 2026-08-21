@@ -113,6 +113,15 @@ typedef struct NdsUiKitSpriteSlot {
     s16 y;
     u8 image;
     u8 visible;
+    /* P2-1N (5): bitmap-OBJ blend coefficient (1..15; 15 = opaque, the
+     * default every plain SetSprite keeps) and the affine double-size flag
+     * (the emblem bakes at half resolution and renders 2x). */
+    u8 alpha;
+    u8 scale2x;
+    /* Main-engine OBJ priority, 0 (front) through 3 (back). Plain sprites
+     * stay at 0; the title emblem uses 3 so the source wordmark layer draws
+     * over it while the title fire remains behind it. */
+    u8 priority;
 } NdsUiKitSpriteSlot;
 
 static u8 sNdsUiKitGlyphs[NDS_MN_UI_KIT_GLYPH_BLOCK_BYTES];
@@ -121,6 +130,7 @@ static NdsUiKitTextSlot sNdsUiKitText[NDS_UI_KIT_TEXT_SLOTS];
 static NdsUiKitSpriteSlot sNdsUiKitSprites[NDS_UI_KIT_SPRITE_SLOTS];
 static u32 sNdsUiKitImageVram[NDS_MN_UI_KIT_IMAGE_COUNT];
 static u32 sNdsUiKitTextVramBase;
+static u32 sNdsUiKitTextResident;
 static u32 sNdsUiKitActive;
 static u32 sNdsUiKitImagesResident;
 static u32 sNdsUiKitDirty;
@@ -348,9 +358,22 @@ static s32 ndsUiKitLoadPack(u32 objbytes)
 
     ndsRelocAssetStreamClose(&stream);
 
-    sNdsUiKitTextVramBase = cursor - NDS_UI_KIT_TEXT_BYTES;
-    dmaFillHalfWords(0u, ndsUiKitObjAt(sNdsUiKitTextVramBase),
-                     NDS_UI_KIT_TEXT_BYTES);
+    /* P2-1 closeout: every MAIN-screen menu label now ships as converted
+     * source sprite/surface art. Reserving the historical 16 KiB text slab in
+     * Bank E therefore bought no reachable behavior and left almost no gap
+     * between the menu and battle OBJ tenants. Preserve the text path on the
+     * sub engine, where Bank I was explicitly budgeted for it, but reclaim the
+     * dead main-engine reservation. */
+    if (sNdsUiKitTextResident != FALSE)
+    {
+        sNdsUiKitTextVramBase = cursor - NDS_UI_KIT_TEXT_BYTES;
+        dmaFillHalfWords(0u, ndsUiKitObjAt(sNdsUiKitTextVramBase),
+                         NDS_UI_KIT_TEXT_BYTES);
+    }
+    else
+    {
+        sNdsUiKitTextVramBase = 0xffffffffu;
+    }
 
     gNdsUiKitPackHash = hash;
     /* The hash covers only the bytes this engine actually loaded, so a
@@ -396,6 +419,7 @@ s32 ndsUiKitEnter(u32 engine)
     {
         objbytes = NDS_UI_KIT_OBJ_BYTES_SUB;
         sNdsUiKitImagesResident = FALSE;
+        sNdsUiKitTextResident = TRUE;
         vramSetBankI(VRAM_I_SUB_SPRITE);
         oamInit(&oamSub, SpriteMapping_Bmp_1D_128, false);
         REG_DISPCNT_SUB |= DISPLAY_SPR_ACTIVE;
@@ -404,6 +428,7 @@ s32 ndsUiKitEnter(u32 engine)
     {
         objbytes = NDS_UI_KIT_OBJ_BYTES_MAIN;
         sNdsUiKitImagesResident = TRUE;
+        sNdsUiKitTextResident = FALSE;
         oamInit(&oamMain, SpriteMapping_Bmp_1D_128, false);
         REG_DISPCNT |= DISPLAY_SPR_ACTIVE;
     }
@@ -471,7 +496,8 @@ s32 ndsUiKitSetText(u32 slot, const char *text, u32 rgb)
     s32 i;
     u32 n;
 
-    if ((sNdsUiKitActive == FALSE) || (slot >= NDS_UI_KIT_TEXT_SLOTS) ||
+    if ((sNdsUiKitActive == FALSE) || (sNdsUiKitTextResident == FALSE) ||
+        (slot >= NDS_UI_KIT_TEXT_SLOTS) ||
         (text == NULL))
     {
         return FALSE;
@@ -599,7 +625,8 @@ s32 ndsUiKitSetText(u32 slot, const char *text, u32 rgb)
 
 void ndsUiKitMoveText(u32 slot, s32 x, s32 y)
 {
-    if ((sNdsUiKitActive == FALSE) || (slot >= NDS_UI_KIT_TEXT_SLOTS))
+    if ((sNdsUiKitActive == FALSE) || (sNdsUiKitTextResident == FALSE) ||
+        (slot >= NDS_UI_KIT_TEXT_SLOTS))
     {
         return;
     }
@@ -610,7 +637,8 @@ void ndsUiKitMoveText(u32 slot, s32 x, s32 y)
 
 void ndsUiKitHideText(u32 slot)
 {
-    if ((sNdsUiKitActive == FALSE) || (slot >= NDS_UI_KIT_TEXT_SLOTS))
+    if ((sNdsUiKitActive == FALSE) || (sNdsUiKitTextResident == FALSE) ||
+        (slot >= NDS_UI_KIT_TEXT_SLOTS))
     {
         return;
     }
@@ -632,6 +660,39 @@ s32 ndsUiKitSetSprite(u32 slot, u32 image, s32 x, s32 y)
     sNdsUiKitSprites[slot].x = (s16)x;
     sNdsUiKitSprites[slot].y = (s16)y;
     sNdsUiKitSprites[slot].visible = 1u;
+    sNdsUiKitSprites[slot].alpha = 15u;
+    sNdsUiKitSprites[slot].scale2x = 0u;
+    sNdsUiKitSprites[slot].priority = 0u;
+    sNdsUiKitDirty = TRUE;
+    return TRUE;
+}
+
+/* P2-1N (5): a bitmap OBJ drawn semi-transparent (the DS blends a bitmap OBJ
+ * by its per-OBJ alpha attribute, 1..15) and optionally through affine
+ * double-size, for art baked at half resolution. Built for the title emblem:
+ * a ~30% flat red wash the 1-bit-alpha BG bake provably cannot carry. */
+s32 ndsUiKitSetSpriteBlend(u32 slot, u32 image, s32 x, s32 y, u32 alpha,
+                           u32 scale2x, u32 priority)
+{
+    if (ndsUiKitSetSprite(slot, image, x, y) == FALSE)
+    {
+        return FALSE;
+    }
+    if (alpha < 1u)
+    {
+        alpha = 1u;
+    }
+    if (alpha > 15u)
+    {
+        alpha = 15u;
+    }
+    sNdsUiKitSprites[slot].alpha = (u8)alpha;
+    sNdsUiKitSprites[slot].scale2x = (scale2x != 0u) ? 1u : 0u;
+    if (priority > 3u)
+    {
+        priority = 3u;
+    }
+    sNdsUiKitSprites[slot].priority = (u8)priority;
     sNdsUiKitDirty = TRUE;
     return TRUE;
 }
@@ -836,7 +897,8 @@ static s32 ndsUiKitBlitOneSurface(NdsRelocAssetStream *stream, u32 index,
     return TRUE;
 }
 
-s32 ndsUiKitBlitSurfaces(const u8 *surfaces, u32 count)
+static s32 ndsUiKitBlitSurfacesLayer(const u8 *surfaces, u32 count,
+                                     sb32 is_foreground)
 {
     NdsRelocAssetStream stream;
     u32 start = cpuGetTiming();
@@ -851,7 +913,8 @@ s32 ndsUiKitBlitSurfaces(const u8 *surfaces, u32 count)
     {
         return FALSE;
     }
-    layer = ndsPlatformGetOriginalSpriteOverlayLayer(FALSE, &pitch, &layer_w,
+    layer = ndsPlatformGetOriginalSpriteOverlayLayer(is_foreground,
+                                                     &pitch, &layer_w,
                                                      &layer_h, NULL);
     if ((layer == NULL) || (pitch == 0u))
     {
@@ -883,6 +946,48 @@ s32 ndsUiKitBlitSurfaces(const u8 *surfaces, u32 count)
     ndsRelocAssetStreamClose(&stream);
     gNdsUiKitSurfaceTicks += cpuGetTiming() - start;
     return ok;
+}
+
+s32 ndsUiKitBlitSurfaces(const u8 *surfaces, u32 count)
+{
+    return ndsUiKitBlitSurfacesLayer(surfaces, count, FALSE);
+}
+
+s32 ndsUiKitBlitForegroundSurfaces(const u8 *surfaces, u32 count)
+{
+    return ndsUiKitBlitSurfacesLayer(surfaces, count, TRUE);
+}
+
+void ndsUiKitClearForegroundRect(s32 x, s32 y, u32 width, u32 height)
+{
+    u32 pitch = 0u;
+    u32 layer_w = 0u;
+    u32 layer_h = 0u;
+    u16 *layer = ndsPlatformGetOriginalSpriteOverlayLayer(
+        TRUE, &pitch, &layer_w, &layer_h, NULL);
+    s32 x0 = x;
+    s32 y0 = y;
+    s32 x1 = x + (s32)width;
+    s32 y1 = y + (s32)height;
+    s32 row;
+
+    if ((layer == NULL) || (pitch == 0u) || (width == 0u) || (height == 0u))
+    {
+        return;
+    }
+    if (x0 < 0) { x0 = 0; }
+    if (y0 < 0) { y0 = 0; }
+    if (x1 > (s32)layer_w) { x1 = (s32)layer_w; }
+    if (y1 > (s32)layer_h) { y1 = (s32)layer_h; }
+    if ((x0 >= x1) || (y0 >= y1))
+    {
+        return;
+    }
+    for (row = y0; row < y1; row++)
+    {
+        dmaFillHalfWords(0, &layer[(u32)row * pitch + (u32)x0],
+                         (u32)(x1 - x0) * sizeof(u16));
+    }
 }
 
 /* P2-1i -- the title's fire atlas. NOT a screen-space backdrop: it is the
@@ -1090,6 +1195,86 @@ static void ndsUiKitToggleCachedSurface(u16 field_texel, s32 draw)
 void ndsUiKitDrawCachedSurface(void)
 {
     ndsUiKitToggleCachedSurface(0u, TRUE);
+}
+
+/* P2-1N (3): draw a keyed SUB-RECTANGLE of the cached surface at an arbitrary
+ * destination, clipped horizontally to [clip_x0, clip_x1). Purpose-built for
+ * the CSS slot doors — the cached CSS_DOORS strip holds both card halves and
+ * the shutter draws each at its slid position inside the gate box, so a
+ * sliding frame costs no NitroFS work for the doors at all. Key texel 0 is
+ * skipped exactly as ndsUiKitSurfaceRow's keyed branch skips it. */
+s32 ndsUiKitDrawCachedSub(u32 src_x, u32 src_w, s32 dest_x, s32 dest_y,
+                          s32 clip_x0, s32 clip_x1)
+{
+    const NdsUiKitSurfaceMetric *metric;
+    u32 pitch = 0u;
+    u32 layer_w = 0u;
+    u32 layer_h = 0u;
+    u16 *layer;
+    u32 row;
+
+    if (sNdsUiKitSurfaceCached >= NDS_MN_UI_KIT_SURFACE_COUNT)
+    {
+        return FALSE;
+    }
+    layer = ndsPlatformGetOriginalSpriteOverlayLayer(FALSE, &pitch, &layer_w,
+                                                     &layer_h, NULL);
+    if ((layer == NULL) || (pitch == 0u))
+    {
+        gNdsUiKitSurfaceNoLayerCount++;
+        return FALSE;
+    }
+    metric = &kNdsUiKitSurfaceMetrics[sNdsUiKitSurfaceCached];
+    if ((src_x >= (u32)metric->width) ||
+        ((src_x + src_w) > (u32)metric->width))
+    {
+        return FALSE;
+    }
+    if (clip_x0 < 0)
+    {
+        clip_x0 = 0;
+    }
+    if (clip_x1 > (s32)layer_w)
+    {
+        clip_x1 = (s32)layer_w;
+    }
+    for (row = 0u; row < (u32)metric->height; row++)
+    {
+        const u16 *src = (const u16 *)(sNdsUiKitSurfaceCache +
+                                       ((row * (u32)metric->width) +
+                                        src_x) * sizeof(u16));
+        s32 dy = dest_y + (s32)row;
+        s32 dx = dest_x;
+        s32 sx = 0;
+        s32 count = (s32)src_w;
+        s32 i;
+
+        if ((dy < 0) || (dy >= (s32)layer_h))
+        {
+            continue;
+        }
+        if (dx < clip_x0)
+        {
+            sx = clip_x0 - dx;
+            dx = clip_x0;
+            count -= sx;
+        }
+        if (count > (clip_x1 - dx))
+        {
+            count = clip_x1 - dx;
+        }
+        for (i = 0; i < count; i++)
+        {
+            u16 texel = src[sx + i];
+
+            if (texel != 0u)
+            {
+                layer[((u32)dy * pitch) + (u32)dx + (u32)i] = texel;
+            }
+        }
+    }
+    gNdsUiKitSurfaceDrawCachedCount++;
+    return TRUE;
 }
 
 void ndsUiKitEraseCachedSurface(u16 field_texel)
@@ -1651,6 +1836,7 @@ void ndsUiKitCommit(void)
     u32 visible = 0u;
     u32 id = 0u;
     u32 slot;
+    u32 affine_programmed = 0u;
 
     if (sNdsUiKitActive == FALSE)
     {
@@ -1667,30 +1853,35 @@ void ndsUiKitCommit(void)
     }
     oam = ndsUiKitOam();
 
-    for (slot = 0u; slot < NDS_UI_KIT_TEXT_SLOTS; slot++)
+    if (sNdsUiKitTextResident != FALSE)
     {
-        const NdsUiKitTextSlot *state = &sNdsUiKitText[slot];
-        u32 base = sNdsUiKitTextVramBase +
-                   (slot * NDS_UI_KIT_TEXT_CHUNKS * NDS_UI_KIT_TEXT_CHUNK_BYTES);
-        u32 chunk;
-
-        for (chunk = 0u; chunk < NDS_UI_KIT_TEXT_CHUNKS; chunk++, id++)
+        for (slot = 0u; slot < NDS_UI_KIT_TEXT_SLOTS; slot++)
         {
-            s32 show = ((state->visible != 0u) &&
-                        (chunk < state->chunks)) ? TRUE : FALSE;
+            const NdsUiKitTextSlot *state = &sNdsUiKitText[slot];
+            u32 base = sNdsUiKitTextVramBase +
+                       (slot * NDS_UI_KIT_TEXT_CHUNKS *
+                        NDS_UI_KIT_TEXT_CHUNK_BYTES);
+            u32 chunk;
 
-            oamSet(oam, (int)id,
-                   (int)state->x +
-                       (int)(chunk * NDS_UI_KIT_TEXT_CHUNK_W),
-                   (int)state->y, 0, 15,
-                   ndsUiKitSpriteSize(NDS_UI_KIT_TEXT_CHUNK_W,
-                                      NDS_UI_KIT_TEXT_CHUNK_H),
-                   SpriteColorFormat_Bmp,
-                   ndsUiKitObjAt(base + (chunk * NDS_UI_KIT_TEXT_CHUNK_BYTES)),
-                   -1, false, (show == FALSE), false, false, false);
-            if (show != FALSE)
+            for (chunk = 0u; chunk < NDS_UI_KIT_TEXT_CHUNKS; chunk++, id++)
             {
-                visible++;
+                s32 show = ((state->visible != 0u) &&
+                            (chunk < state->chunks)) ? TRUE : FALSE;
+
+                oamSet(oam, (int)id,
+                       (int)state->x +
+                           (int)(chunk * NDS_UI_KIT_TEXT_CHUNK_W),
+                       (int)state->y, 0, 15,
+                       ndsUiKitSpriteSize(NDS_UI_KIT_TEXT_CHUNK_W,
+                                          NDS_UI_KIT_TEXT_CHUNK_H),
+                       SpriteColorFormat_Bmp,
+                       ndsUiKitObjAt(base +
+                                     (chunk * NDS_UI_KIT_TEXT_CHUNK_BYTES)),
+                       -1, false, (show == FALSE), false, false, false);
+                if (show != FALSE)
+                {
+                    visible++;
+                }
             }
         }
     }
@@ -1705,11 +1896,35 @@ void ndsUiKitCommit(void)
             oamSetHidden(oam, (int)id, true);
             continue;
         }
-        oamSet(oam, (int)id, (int)state->x, (int)state->y, 0, 15,
-               ndsUiKitSpriteSize(metric->cell_w, metric->cell_h),
-               SpriteColorFormat_Bmp,
-               ndsUiKitObjAt(sNdsUiKitImageVram[state->image]),
-               -1, false, false, false, false, false);
+        /* P2-1N (5): a half-resolution sprite renders through affine matrix
+         * 0 at 0.5 source-step (= 2x on screen) with double-size coverage;
+         * everything else keeps the plain identity path. The matrix is
+         * programmed once per commit only when someone needs it. */
+        if (state->scale2x != 0u)
+        {
+            if (affine_programmed == 0u)
+            {
+                oamRotateScale(oam, 0, 0, 1 << 7, 1 << 7);
+                affine_programmed = 1u;
+            }
+            oamSet(oam, (int)id, (int)state->x, (int)state->y,
+                   (int)state->priority,
+                   (int)state->alpha,
+                   ndsUiKitSpriteSize(metric->cell_w, metric->cell_h),
+                   SpriteColorFormat_Bmp,
+                   ndsUiKitObjAt(sNdsUiKitImageVram[state->image]),
+                   0, true, false, false, false, false);
+        }
+        else
+        {
+            oamSet(oam, (int)id, (int)state->x, (int)state->y,
+                   (int)state->priority,
+                   (int)state->alpha,
+                   ndsUiKitSpriteSize(metric->cell_w, metric->cell_h),
+                   SpriteColorFormat_Bmp,
+                   ndsUiKitObjAt(sNdsUiKitImageVram[state->image]),
+                   -1, false, false, false, false, false);
+        }
         visible++;
     }
 

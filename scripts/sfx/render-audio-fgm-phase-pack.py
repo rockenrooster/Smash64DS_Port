@@ -212,6 +212,18 @@ FULL_COVERAGE_IDS = (
     # there from earlier curation, unused for packing until this row) -- a
     # second, independent corroboration.
     159,
+    # P2-1N (3)+(4). Two more cues the shell already ASKS for with the
+    # source's own ids, gaps proven by the miss ring on the owner's own
+    # build (2026-08-19): 166 nSYAudioFGMPlayerSlotClose -- the shutter's
+    # arrival cue (mnPlayersVSShutterProcUpdate) -- and 526
+    # nSYAudioVoiceAnnounceTeamBattle, the mode toggle's announcer line
+    # (the FFA half, 512, has been packed since P2-1e-1). Both ids
+    # re-verified against the port's hand-curated include/gm/gmsound.h
+    # (nSYAudioFGMPlayerSlotClose = 166 one below the packed whoosh 167;
+    # nSYAudioVoiceAnnounceTeamBattle = 526), and both derive as simple
+    # single-voice articulations -- no forks, no loops.
+    166,
+    526,
 )
 FULL_PROGRAM_AOT_IDS = frozenset((
     154, 40, 38, 37, 34, 32, 31,
@@ -228,6 +240,9 @@ FULL_PROGRAM_AOT_IDS = frozenset((
     # which is the whole reason a schedule gets baked rather than approximated.
     271,
     # LightSwingLw1 and FoxSelected: two and three notes, no forks.
+    # P2-1N (3). 166 nSYAudioFGMPlayerSlotClose: six notes, no forks -- the
+    # same multi-note no-fork class as Escape/GuardOn above.
+    166,
     18, 365,
     # 153 AltitudeWarn -- the cue the owner picked out BY NAME as "a new SFX I
     # don't recognise". Articulation 150 sweeps pitch 550 -> 2390 cents inside
@@ -3041,6 +3056,49 @@ SELECTED += (
         "articulation_program_sha256":
             "dac41667edc35bfd590f9d30dda62096c6c84242fdb03775c7e1a63a96b4b249",
         "fidelity_debt": ("omitted_fork_voice_163", "omitted_fork_voice_6"),
+    },
+    {
+        "id": 166,
+        "name": "nSYAudioFGMPlayerSlotClose",
+        "kind": "menu",
+        "articulation": 19,
+        "sound": 11,
+        "notes": ((3, 7, 2), (8, 7, 2), (15, 7, 10), (13, 7, 8), (13, 7, 8),
+                  (13, 7, 10)),
+        "duration_ticks": 40,
+        "ucd_volume": 130,
+        "articulation_pitch_cents": -800,
+        "loop": False,
+        "wave_base": 120848,
+        "wave_length": 9234,
+        "loop_start": 0,
+        "loop_end": 0,
+        "root_program_sha256":
+            "e598004d903a1a7c5acabc234217c89a5f9141bfbca036d2343384edcc516068",
+        "articulation_program_sha256":
+            "9df0c9055565421b5124b395c6f65991176a6bb51243be0aa757d14c3fcdfef6",
+        "expected_retained_samples": 0,
+    },
+    {
+        "id": 526,
+        "name": "nSYAudioVoiceAnnounceTeamBattle",
+        "kind": "announcer",
+        "articulation": 325,
+        "sound": 202,
+        "notes": ((13, 7, 222),),
+        "duration_ticks": 222,
+        "ucd_volume": 220,
+        "articulation_pitch_cents": -1200,
+        "loop": False,
+        "wave_base": 1696672,
+        "wave_length": 11314,
+        "loop_start": 0,
+        "loop_end": 0,
+        "root_program_sha256":
+            "4762734b18b6214f15f17c5b651e4e61c6ca721a8ea16573e922ad975b7b394f",
+        "articulation_program_sha256":
+            "e2205989f924ca5f43cc26512d2abea3af6e66c77674c3a44742a41a589f293b",
+        "expected_retained_samples": 20112,
     },
 )
 

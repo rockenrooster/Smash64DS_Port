@@ -4,6 +4,11 @@ param(
     [string]$Gdb = 'C:\devkitPro\devkitARM\bin\arm-none-eabi-gdb.exe',
     [int]$GdbPort = 4613,
     [int]$RunnerSlot = -1,
+    # Normally the flag-identical P1/Boundary instrument. P2-2's standing
+    # four-fighter arm supplies its dedicated tick-HUD target here instead of
+    # cloning this collector (and inevitably drifting its percentile/cadence
+    # accounting).
+    [string]$Target = 'smash64ds-battle-playable-tickhud-hwtri',
     [string]$Build = 'build-tick-hud-buckets',
     [switch]$NoBuild,
     # Requires a ROM built NDS_TASK68_FALLBACK_CENSUS=1. Off by default because
@@ -76,6 +81,19 @@ param(
     # only consumer is a debugger gets collected by --gc-sections, so a NEW one
     # needs a marker-block reader added in the same change.
     [string[]]$PerStopGlobals = @(),
+    # Read -PerStopGlobals once at the exact first requested frame before the
+    # sparse repeated-ring drains begin.  This is intentionally restricted to
+    # StartFrame=1 below: a conditional breakpoint installed hundreds of frames
+    # early would wake GDB on every frame and defeat -RingDump's purpose. P2-2
+    # uses this to carry the guest match clock + source identity in the SAME run
+    # as the four-CPU timing evidence.
+    [switch]$RingStartRead,
+    # Optional exact frame for -RingStartRead. Zero means StartFrame (the old
+    # behavior). P2-2 uses frame 1 for source identity/clock while timing the
+    # ring's actually-populated window beginning at frame 2. Keep this near
+    # boot: an exact conditional breakpoint much later would wake GDB on every
+    # preceding frame and defeat RingDump's sparse-stop design.
+    [ValidateRange(0,32)][int]$RingStartReadFrame = 0,
     # Per-frame rows as CSV, one line per presented sample. The percentile table
     # answers "how big is P95"; it cannot answer "which frames are the P95", and
     # every excursion investigation this campaign has run needed the second
@@ -219,6 +237,29 @@ $PerStopGlobals = @($PerStopGlobals |
     ForEach-Object { $_ -split ',' } |
     ForEach-Object { $_.Trim() } |
     Where-Object { $_ -ne '' })
+$resolvedRingStartReadFrame = if ($RingStartReadFrame -eq 0) {
+    $StartFrame
+} else {
+    $RingStartReadFrame
+}
+if ($RingStartRead) {
+    if (-not $RingDump) {
+        throw '-RingStartRead requires -RingDump.'
+    }
+    if ($PerStopGlobals.Count -eq 0) {
+        throw '-RingStartRead requires at least one -PerStopGlobals expression.'
+    }
+    if (($resolvedRingStartReadFrame -gt $StartFrame) -or
+        ($resolvedRingStartReadFrame -gt 32)) {
+        throw ('-RingStartReadFrame must be at or before -StartFrame and no later ' +
+            'than frame 32. Installing an exact conditional start breakpoint ' +
+            'later in the match would stop GDB on every preceding frame and ' +
+            'invalidate RingDump timing.')
+    }
+    if ($FallbackCensus) {
+        throw '-RingStartRead and -FallbackCensus both own the exact start stop; do not combine them.'
+    }
+}
 # -RingDump reads ONE ring of bucket words out of the ROM at a single stop
 # ($ringBytes = bucketNames * 128 * 4). Per-frame globals are not in that ring
 # -- they ride the per-frame printf, which -RingDump does not execute -- so the
@@ -234,7 +275,7 @@ if ($RingDump -and ($PerFrameGlobals.Count -ne 0)) {
 }
 
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
-$target = 'smash64ds-battle-playable-tickhud-hwtri'
+$target = $Target
 # MUST match enum NDSTickHudBucket in include/nds/nds_startup.h, in order and in
 # count -- this list sizes the ring read ($ringBytes = count * 128 * 4), so a
 # mismatch does not fail, it returns ADJACENT MEMORY as plausible columns. Cycle
@@ -323,6 +364,7 @@ try {
     # only check available. Found 2026-08-03 while diagnosing a run that
     # exhausted its budget; these four were in fact present, but proving that
     # took a separate nm pass the harness should have done itself.
+    $ringMarker = 'ndsBattlePlayableFrameCompleteMarker'
     $alwaysRead = @('ndsBattlePlayableFrameCompleteMarker',
                     'gNdsBattlePlayablePacingPresentedFrames',
                     'sBattleTickHudRing', 'sBattleTickHudRingHead',
@@ -366,6 +408,14 @@ try {
                         '`retain` attribute that would (verified 2026-08-13), so the only ' +
                         'fixes are a writer that is compiled on this arm or a linker KEEP.')
                 }
+            }
+            # The dedicated four-CPU stress arm publishes a marker only every
+            # 32 presented frames. RingDump never needs a per-frame debugger
+            # stop: its 128-entry guest ring is the sample source, and the
+            # normal stop stride is 96. Prefer the sparse marker when the exact
+            # ELF provides it; all other targets retain the universal marker.
+            if ($RingDump -and $symbols.Contains('ndsBattlePlayableTickHudSparseMarker')) {
+                $ringMarker = 'ndsBattlePlayableTickHudSparseMarker'
             }
         }
     }
@@ -421,7 +471,11 @@ try {
     $fbRingPath = Join-Path $temp 'tick-hud-fallback-ring.bin'
     $ringWindow = 128
     $ringBytes = $bucketNames.Count * $ringWindow * 4
-    $ringEndFrame = $StartFrame + $Samples
+    # Inclusive frame window, matching the per-frame collector: StartFrame=1,
+    # Samples=1973 means rows 1..1973, not 1..1974. The old +Samples form was
+    # one frame long and only appeared to work because sparse-marker overshoot
+    # plus lazy ring reset happened to cancel in one P2-2 capture.
+    $ringEndFrame = $StartFrame + $Samples - 1
     # REPEATED RING STOPS. One stop yields at most $ringWindow samples, so a
     # whole-match window needs several, each taken before the ring can wrap.
     # The last target is always $ringEndFrame so the requested window still ends
@@ -456,7 +510,16 @@ try {
     # shape the -FallbackCensus baseline stop already uses and is known to work
     # in batch mode.
     $ringStopLines = @(for ($i = 0; $i -lt $ringStopTargets.Count; $i++) {
-        'break ndsBattlePlayableFrameCompleteMarker'
+        # Intermediate drains may use the stress-only sparse marker. The final
+        # stop is exact on the universal marker; it is installed only after the
+        # previous drain, so at most one stride of per-frame stops is paid and
+        # the requested inclusive end frame is not rounded up to a multiple of
+        # 32. This keeps the stitched row set exactly aligned to the guest frame
+        # window while retaining sparse GDB overhead for the rest of the match.
+        $stopMarker = if ($i -eq ($ringStopTargets.Count - 1)) {
+            'ndsBattlePlayableFrameCompleteMarker'
+        } else { $ringMarker }
+        "break $stopMarker"
         'commands'
         'silent'
         "if gNdsBattlePlayablePacingPresentedFrames < $($ringStopTargets[$i])"
@@ -480,6 +543,24 @@ try {
             "&sBattleTickHudRing[$($bucketNames.Count)][0]")
         'delete'
     })
+    $ringStartLines = @()
+    if ($RingDump -and $RingStartRead) {
+        $startFormat = (, '%u' * ($PerStopGlobals.Count + 1)) -join ','
+        $ringStartLines = @(
+            'break ndsBattlePlayableFrameCompleteMarker',
+            'commands',
+            'silent',
+            "if gNdsBattlePlayablePacingPresentedFrames < $resolvedRingStartReadFrame",
+            'continue',
+            'end',
+            'end',
+            'continue',
+            ("printf `"TICKSTART=$startFormat\n`", " +
+                'gNdsBattlePlayablePacingPresentedFrames, ' +
+                ($PerStopGlobals -join ', ')),
+            'delete'
+        )
+    }
     $gdbLines = if ($RingDump) {
         @(
         'set pagination off',
@@ -491,7 +572,7 @@ try {
         # charge the census window with every fallback taken during boot, the
         # menu and the seeding presents. Stop once at the start frame to take a
         # baseline and difference it. Two stops, not 128.
-        $(if ($FallbackCensus) { 'break ndsBattlePlayableFrameCompleteMarker' }),
+        $(if ($FallbackCensus) { "break $ringMarker" }),
         $(if ($FallbackCensus) { 'commands' }),
         $(if ($FallbackCensus) { 'silent' }),
         $(if ($FallbackCensus) {
@@ -506,7 +587,7 @@ try {
                     "gNdsTickHudNativeOwnerFallbackByReason[$_]" }) -join ', ')
         }),
         $(if ($FallbackCensus) { 'delete' })
-        ) + $ringStopLines + @(
+        ) + $ringStartLines + $ringStopLines + @(
         $(if ($FallbackCensus) {
             "dump binary memory $fbRingPath &sBattleTickHudFallbackRing[0] " +
                 "&sBattleTickHudFallbackRing[$ringWindow]" }),
@@ -699,8 +780,35 @@ try {
         $stopRowStart = New-Object 'System.Collections.Generic.List[int]'
         $stopSkew = New-Object 'System.Collections.Generic.List[int]'
         $ringStopReads = New-Object 'System.Collections.Generic.List[object]'
+        # PowerShell variable names are case-insensitive. Do NOT call this
+        # `$ringStartRead`: that aliases the -RingStartRead switch parameter and
+        # turns the parse branch off immediately after assignment. The bug was
+        # exposed by P2-2's first whole-match 4-CPU run: GDB printed TICKSTART,
+        # but the JSON serialized ringStartRead=null and the wrapper quite
+        # correctly refused to call timing + source identity same-run evidence.
+        $ringStartReadRecord = $null
         $prevStopValues = @(0..([Math]::Max($PerStopGlobals.Count - 1, 0)) |
             ForEach-Object { [uint64]0 })
+        if ($RingStartRead) {
+            $sm = [regex]::Match($output,
+                "TICKSTART=([0-9]+(?:,[0-9]+){$($PerStopGlobals.Count)})")
+            if (-not $sm.Success) {
+                throw ("-RingStartRead produced no TICKSTART line for the " +
+                    "$($PerStopGlobals.Count) requested globals. GDB output:`n$output")
+            }
+            $vals = @($sm.Groups[1].Value -split ',' |
+                ForEach-Object { [uint64]$_ })
+            if ($vals[0] -ne [uint64]$resolvedRingStartReadFrame) {
+                throw ("-RingStartRead attached too late: first exact stop read " +
+                    "presented frame $($vals[0]), expected $resolvedRingStartReadFrame.")
+            }
+            $rec = [ordered]@{ frame = $vals[0] }
+            for ($g = 0; $g -lt $PerStopGlobals.Count; $g++) {
+                $rec[$PerStopGlobals[$g]] = $vals[$g + 1]
+                $prevStopValues[$g] = $vals[$g + 1]
+            }
+            $ringStartReadRecord = [pscustomobject]$rec
+        }
         $prevHead = -1
         $prevFrame = [uint64]0
         for ($k = 0; $k -lt $ringStopTargets.Count; $k++) {
@@ -1318,6 +1426,8 @@ try {
             $ringStopSkews.ToArray() } else { @() }
         ringStopReads = if ($RingDump -and ($null -ne $ringStopReads)) {
             $ringStopReads.ToArray() } else { @() }
+        ringStartRead = if ($RingDump -and $RingStartRead) {
+            $ringStartReadRecord } else { $null }
         capturedUtc = (Get-Date).ToUniversalTime().ToString('o')
     }
 

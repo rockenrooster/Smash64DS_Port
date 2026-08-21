@@ -18,6 +18,7 @@ $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $powerShellExe = (Get-Process -Id $PID).Path
 . (Join-Path $PSScriptRoot 'lib\harness-registry.ps1')
 . (Join-Path $PSScriptRoot 'lib\melonds.ps1')
+. (Join-Path $PSScriptRoot 'lib\build-output.ps1')
 function Test-ScriptParameter {
     param(
         [string]$ScriptPath,
@@ -289,8 +290,16 @@ try {
         Write-Output "Running verifier: $($record.Name) [$($record.Script)]"
         if ($NoBuild) {
             $targetName = if ($record.Target) { $record.Target } else { 'smash64ds' }
-            $rom = Join-Path $root "$targetName.nds"
-            $elf = Join-Path $root "$targetName.elf"
+            $buildName = if ($record.Build) { $record.Build } else { 'build' }
+            # Diagnostic targets live under builds/<BUILD>; only the two
+            # published targets live at repo root. Use the same resolver every
+            # child verifier uses instead of assuming every retained artifact
+            # is published. That assumption made -NoBuild impossible as soon as
+            # P2-2 admitted its first diagnostic Boundary arm.
+            $rom = Resolve-Smash64DSBuildOutput `
+                -Root $root -Target $targetName -Build $buildName -Extension '.nds'
+            $elf = Resolve-Smash64DSBuildOutput `
+                -Root $root -Target $targetName -Build $buildName -Extension '.elf'
             if (-not (Test-Path -LiteralPath $rom) -or -not (Test-Path -LiteralPath $elf)) {
                 throw "NoBuild requested, but verifier output is missing for '$($record.Name)'. Build the retained ROM first."
             }

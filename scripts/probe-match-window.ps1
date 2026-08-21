@@ -4,12 +4,22 @@ param(
     [string]$Gdb = 'C:\devkitPro\devkitARM\bin\arm-none-eabi-gdb.exe',
     [int]$GdbPort = 4660,
     [int]$RunnerSlot = 6,
+    [string]$Target = 'smash64ds-battle-playable-tickhud-hwtri',
     [Parameter(Mandatory=$true)][string]$Build,
     [Parameter(Mandatory=$true)][string]$Arm,
     [ValidateRange(1,60)][int]$TimeLimitMinutes = 1,
     [ValidateRange(1,1000000)][int]$StartFrame = 440,
     [ValidateRange(1,1000000)][int]$EndFrame = 2040,
     [ValidateRange(30,3600)][int]$TimeoutSeconds = 900,
+    # Optional source-state identity checks for specialized arms. The ordinary
+    # coverage probe leaves these at -1 and remains exactly a clock-window
+    # measurement; P2-2 uses them to prove that its timing window is actually a
+    # four-CPU VSBattle rather than a four-CPU-named build that silently seeded
+    # the old two-fighter match.
+    [ValidateRange(-1,4)][int]$ExpectedPlayerCount = -1,
+    [ValidateRange(-1,4)][int]$ExpectedCpuCount = -1,
+    [ValidateRange(-1,4)][int]$ExpectedFighterCount = -1,
+    [ValidateRange(-1,15)][int]$ExpectedActivePlayerMask = -1,
     [string]$JsonOut = ''
 )
 
@@ -50,7 +60,7 @@ $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'lib\build-output.ps1')
 
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
-$target = 'smash64ds-battle-playable-tickhud-hwtri'
+$target = $Target
 
 $counters = @(
     'gNdsBattleTextHudTimeSeconds',
@@ -63,7 +73,14 @@ $counters = @(
     # value is a global struct field, so read it. -TimeLimitMinutes is now only
     # a cross-check and disagreeing with the guest is an error, not a silent
     # override.
-    'gSCManagerTransferBattleState.time_limit'
+    'gSCManagerTransferBattleState.time_limit',
+    # P2-2 reuses the probe as an identity check. These are published from the
+    # source VSBattle start / fighter creation path, not reconstructed from a DS
+    # stress seed, so they prove what the source engine actually instantiated.
+    'gNdsSCVSBattleOriginalPlayerCount',
+    'gNdsSCVSBattleOriginalCpuCount',
+    'gNdsSCVSBattleOriginalFighterGObjCount',
+    'gNdsSCVSBattleOriginalActivePlayerMask'
 )
 
 $context = Initialize-MelonDSVerifierContext `
@@ -185,6 +202,33 @@ try {
     $dPres = $presB - $presA
     $dLogic = $logicB - $logicA
 
+    $identity = [ordered]@{
+        playerCount = [int]$samples['A']['gNdsSCVSBattleOriginalPlayerCount']
+        cpuCount = [int]$samples['A']['gNdsSCVSBattleOriginalCpuCount']
+        fighterCount = [int]$samples['A']['gNdsSCVSBattleOriginalFighterGObjCount']
+        activePlayerMask = [int]$samples['A']['gNdsSCVSBattleOriginalActivePlayerMask']
+    }
+    # All four values are scene identity, not evolving match counters. Check
+    # both ends whenever a specialized arm asks for an expectation so a later
+    # scene transition cannot satisfy the first stop and silently invalidate the
+    # second half of the timing window.
+    $identityExpectations = @(
+        @{ Name = 'player count'; Param = $ExpectedPlayerCount; Counter = 'gNdsSCVSBattleOriginalPlayerCount' },
+        @{ Name = 'CPU count'; Param = $ExpectedCpuCount; Counter = 'gNdsSCVSBattleOriginalCpuCount' },
+        @{ Name = 'fighter count'; Param = $ExpectedFighterCount; Counter = 'gNdsSCVSBattleOriginalFighterGObjCount' },
+        @{ Name = 'active-player mask'; Param = $ExpectedActivePlayerMask; Counter = 'gNdsSCVSBattleOriginalActivePlayerMask' }
+    )
+    foreach ($expectation in $identityExpectations) {
+        if ($expectation.Param -lt 0) { continue }
+        foreach ($tag in 'A', 'B') {
+            $actual = [int]$samples[$tag][$expectation.Counter]
+            if ($actual -ne $expectation.Param) {
+                throw ("Match-window source identity mismatch at sample ${tag}: " +
+                       "$($expectation.Name)=$actual, expected $($expectation.Param).")
+            }
+        }
+    }
+
     Write-Host ""
     Write-Host ("MATCH WINDOW -- arm $Arm, build $Build, frames $StartFrame..$EndFrame")
     Write-Host ("  match timer      {0,8} min (read from the guest, not assumed)" -f $seededMinutes)
@@ -192,6 +236,12 @@ try {
     Write-Host ("  presented frames {0,8:N0}  ->{1,8:N0}   (delta {2:N0})" -f $presA, $presB, $dPres)
     Write-Host ("  logic frames     {0,8:N0}  ->{1,8:N0}   (delta {2:N0})" -f $logicA, $logicB, $dLogic)
     Write-Host ("  logic : presented = {0:N3}" -f $(if ($dPres) { $dLogic / $dPres } else { 0 }))
+    if (($ExpectedPlayerCount -ge 0) -or ($ExpectedCpuCount -ge 0) -or
+        ($ExpectedFighterCount -ge 0) -or ($ExpectedActivePlayerMask -ge 0)) {
+        Write-Host ("  source identity players={0} CPUs={1} fighters={2} active=0x{3:x}" -f
+            $identity.playerCount, $identity.cpuCount, $identity.fighterCount,
+            $identity.activePlayerMask)
+    }
     Write-Host ("  WINDOW COVERS {0:P1} OF THE CONFIGURED MATCH" -f $(if ($matchSeconds) { $elapsed / $matchSeconds } else { 0 }))
     Write-Host ""
 
@@ -206,6 +256,7 @@ try {
             presentedDelta = $dPres; logicDelta = $dLogic
             logicPerPresented = $(if ($dPres) { $dLogic / $dPres } else { 0 })
             fractionOfMatch = $(if ($matchSeconds) { $elapsed / $matchSeconds } else { 0 })
+            sourceIdentity = $identity
             capturedUtc = (Get-Date).ToUniversalTime().ToString('o')
             sampleA = $samples['A']; sampleB = $samples['B']
         }

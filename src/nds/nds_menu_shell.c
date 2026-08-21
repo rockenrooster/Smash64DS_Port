@@ -35,6 +35,14 @@
 
 #include "generated/mn_ui_kit.generated.inc"
 
+_Static_assert(NDS_MENU_SHELL_PLAYERS == GMCOMMON_PLAYERS_MAX,
+               "native CSS player bound must match BattleShip");
+/* CSS panel surface ids are retained in u8 state. P2-2 adds the 108 exact
+ * Team-Battle panel variants below; keep the representation honest if future
+ * menu art ever pushes the generated manifest past one byte. */
+_Static_assert(NDS_MN_UI_KIT_SURFACE_COUNT <= 256u,
+               "menu surface ids stored in u8 must fit the generated pack");
+
 extern void *ndsTaskmanArenaStart(void);
 extern size_t ndsTaskmanArenaSize(void);
 /* sys/utils.c's own time-seeded pick, which mnMapsSaveSceneData uses for the
@@ -182,11 +190,12 @@ NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellWalkBudget =
  * scene-routing failure without guessing. */
 NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellWalkResultsPressCount;
 NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellWalkResultsHoldFrames;
-/* P2-1j. Every re-blit of a STATE-dependent backdrop element, counted where it
- * is spent. A menu's steady state must show these flat: they climb only on a
- * cursor move, a rule change or a player-kind change, and the difference
- * between "the art follows the state" and "the art is recomposed per frame" is
- * exactly this number against the screen's presented-frame count. */
+/* P2-1j/P2-1N. Every re-blit of a STATE-dependent menu element, counted where
+ * it is spent. `csspanel` includes both BG2 gate/READY/flash states and the
+ * source-ordered BG3 READY/team overlays: they are all CSS surfaces, and the
+ * loop verifier's exact surface arithmetic needs every one named. A steady
+ * screen still holds these flat except for source-owned animations (READY's
+ * 40/30 blink and portrait flash's per-tic visibility toggle). */
 NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellVsButtonBlitCount;
 NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellCssPanelBlitCount;
 /* P2-1k (c). The stage select's per-stage plaque is the THIRD source of a
@@ -213,6 +222,10 @@ NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellCssCommitSlot[4];
 NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellCssCueCount;
 NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellCssCueLastId;
 NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellCssAnnounceCount;
+/* P2-1N (4): mode-label toggle engagements — the walk and probes read it. */
+NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellCssModeToggleCount;
+/* P2-1N (3): frames a slot's doors spent mid-slide -- engagement proof. */
+NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellCssDoorSlideFrames;
 NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellSssCursorSlot;
 NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellSssCursorGkind;
 NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellSssMoveCount;
@@ -790,9 +803,19 @@ static void ndsMenuShellHideRows(void)
 
 static void ndsMenuShellPopulateTitle(void)
 {
-    /* Nothing. The title's whole presentation is its backdrop surface, drawn
-     * once by ndsMenuShellEnterBackdrop; this function exists because populate
-     * is re-run on every content change and a backdrop must not be. */
+    /* P2-1N (5). mnTitleMakeLogoNoOpening puts llMNTitleLogoAnimFullSprite at
+     * source centre (260,60), primitive red, alpha 0x4C, on DL link 0.
+     * mnTitleMakeSprites draws the title words/labels on link 1, so the emblem
+     * is BEHIND the words; the title fire is farther back still. The source
+     * sprite CONTAINER is 128x124, therefore mnTitleSetPosition puts its
+     * top-left at (196,-2), which maps to (157,-2) on the DS. The previous
+     * placement used the visible silhouette's inset as the OBJ origin and
+     * applied that transparent margin twice, shifting the logo down/right.
+     * Bitmap-OBJ alpha 5/16 is the nearest DS coefficient to 0x4C/0xFF, and
+     * priority 3 puts it behind BG2 title art while remaining over BG3 fire. */
+    (void)ndsUiKitSetSpriteBlend(0u,
+                                 (u32)NDS_MN_UI_KIT_IMAGE_TITLE_EMBLEM,
+                                 157, -2, 5u, TRUE, 3u);
 }
 
 /* The fire's cell for a presented frame: pair-state (frame % 30), with the
@@ -1042,12 +1065,11 @@ static void ndsMenuShellUpdateMode(u32 held, u32 taps)
  *   B       saves the settings and returns to the mode select
  *           (mnvsmode.c:1347), and the source spends no cue.
  *
- * TWO DELIBERATE NARROWINGS, both plan non-goals rather than omissions:
- * the rule range stops at STOCK instead of continuing to TIME TEAM and STOCK
- * TEAM, because teams need the four-fighter engine (P2-2) -- the source
- * already clamps this range, so the narrowing is a different bound and not a
- * different mechanism; and VS OPTIONS keeps its row and its place in the
- * cursor cycle but refuses, because handicap/damage/item-switch are P2-5/P2-7.
+ * The source's full four-value rule range is live here: TIME, STOCK, TIME TEAM,
+ * STOCK TEAM.  P2-2 made Team Battle a real engine mode, so keeping the former
+ * P2-1 two-value clamp would now be a behavior difference. VS OPTIONS is the
+ * one deliberate narrowing left: it keeps its row and its place in the cursor
+ * cycle but refuses, because handicap/damage/item-switch are P2-5/P2-7.
  *
  * The rules this screen commits are the descriptor fields it owns -- rule,
  * time limit, stock count -- written into gNdsMatchConfig and installed with
@@ -1061,7 +1083,9 @@ static void ndsMenuShellUpdateMode(u32 held, u32 taps)
 
 #define NDS_MENU_RULE_TIME 0u
 #define NDS_MENU_RULE_STOCK 1u
-#define NDS_MENU_RULE_MAX NDS_MENU_RULE_STOCK
+#define NDS_MENU_RULE_TIME_TEAM 2u
+#define NDS_MENU_RULE_STOCK_TEAM 3u
+#define NDS_MENU_RULE_MAX NDS_MENU_RULE_STOCK_TEAM
 
 #define NDS_MENU_TIME_MAX 100 /* SCBATTLE_TIMELIMIT_INFINITE */
 #define NDS_MENU_STOCK_MAX 98
@@ -1110,7 +1134,13 @@ static u32 sMenuVsArrowsShown;
 
 static u32 ndsMenuShellVsIsTime(void)
 {
-    return (sMenuVsRule == NDS_MENU_RULE_TIME) ? TRUE : FALSE;
+    return ((sMenuVsRule == NDS_MENU_RULE_TIME) ||
+            (sMenuVsRule == NDS_MENU_RULE_TIME_TEAM)) ? TRUE : FALSE;
+}
+
+static u32 ndsMenuShellVsIsTeam(void)
+{
+    return (sMenuVsRule >= NDS_MENU_RULE_TIME_TEAM) ? TRUE : FALSE;
 }
 
 static s32 ndsMenuShellVsValue(void)
@@ -1132,15 +1162,27 @@ static u8 ndsMenuShellVsWantSurface(u32 button)
         return (u8)((lit != FALSE) ? NDS_MN_UI_KIT_SURFACE_VS_BTN_START_HI :
                                      NDS_MN_UI_KIT_SURFACE_VS_BTN_START_NOT);
     case NDS_MENU_VS_RULE:
-        if (ndsMenuShellVsIsTime() != FALSE)
+        if (sMenuVsRule == NDS_MENU_RULE_TIME)
         {
             return (u8)((lit != FALSE) ?
                         NDS_MN_UI_KIT_SURFACE_VS_BTN_RULE_TIME_HI :
                         NDS_MN_UI_KIT_SURFACE_VS_BTN_RULE_TIME_NOT);
         }
+        if (sMenuVsRule == NDS_MENU_RULE_STOCK)
+        {
+            return (u8)((lit != FALSE) ?
+                        NDS_MN_UI_KIT_SURFACE_VS_BTN_RULE_STOCK_HI :
+                        NDS_MN_UI_KIT_SURFACE_VS_BTN_RULE_STOCK_NOT);
+        }
+        if (sMenuVsRule == NDS_MENU_RULE_TIME_TEAM)
+        {
+            return (u8)((lit != FALSE) ?
+                        NDS_MN_UI_KIT_SURFACE_VS_BTN_RULE_TIME_TEAM_HI :
+                        NDS_MN_UI_KIT_SURFACE_VS_BTN_RULE_TIME_TEAM_NOT);
+        }
         return (u8)((lit != FALSE) ?
-                    NDS_MN_UI_KIT_SURFACE_VS_BTN_RULE_STOCK_HI :
-                    NDS_MN_UI_KIT_SURFACE_VS_BTN_RULE_STOCK_NOT);
+                    NDS_MN_UI_KIT_SURFACE_VS_BTN_RULE_STOCK_TEAM_HI :
+                    NDS_MN_UI_KIT_SURFACE_VS_BTN_RULE_STOCK_TEAM_NOT);
     case NDS_MENU_VS_VALUE:
         if (ndsMenuShellVsIsTime() != FALSE)
         {
@@ -1245,9 +1287,8 @@ static void ndsMenuShellVsDrawValue(void)
 /* The two arrow pairs, at their own source positions. Only the pair belonging
  * to the row the cursor is on is ever shown (`else ... GOBJ_FLAG_HIDDEN` in
  * both animate threads), the rule pair drops its LEFT arrow at the first rule
- * and its RIGHT at the last (:487/:501 -- our rule set is {Time, Stock}, so
- * that is Time and Stock exactly), and the pair blinks on the source's own
- * 30-tic cycle. */
+ * and its RIGHT at the last (:487/:501 -- Time and Stock Team respectively),
+ * and the pair blinks on the source's own 30-tic cycle. */
 static void ndsMenuShellVsDrawArrows(void)
 {
     s32 x_left;
@@ -1259,8 +1300,8 @@ static void ndsMenuShellVsDrawArrows(void)
     {
         x_left = 165;
         y = 70;
-        show_left = (ndsMenuShellVsIsTime() != FALSE) ? FALSE : TRUE;
-        show_right = (ndsMenuShellVsIsTime() != FALSE) ? TRUE : FALSE;
+        show_left = (sMenuVsRule == NDS_MENU_RULE_TIME) ? FALSE : TRUE;
+        show_right = (sMenuVsRule == NDS_MENU_RULE_STOCK_TEAM) ? FALSE : TRUE;
     }
     else if (sMenuVsCursor == NDS_MENU_VS_VALUE)
     {
@@ -1336,9 +1377,18 @@ static void ndsMenuShellVsLoadRules(void)
     }
     sMenuVsArrowsShown = TRUE;
     sMenuVsCursor = NDS_MENU_VS_START;
-    sMenuVsRule = (gSCManagerTransferBattleState.game_rules ==
-                   SCBATTLE_GAMERULE_TIME) ? NDS_MENU_RULE_TIME :
-                                             NDS_MENU_RULE_STOCK;
+    if (gSCManagerTransferBattleState.is_team_battle == FALSE)
+    {
+        sMenuVsRule = (gSCManagerTransferBattleState.game_rules ==
+                       SCBATTLE_GAMERULE_TIME) ? NDS_MENU_RULE_TIME :
+                                                 NDS_MENU_RULE_STOCK;
+    }
+    else
+    {
+        sMenuVsRule = (gSCManagerTransferBattleState.game_rules ==
+                       SCBATTLE_GAMERULE_TIME) ? NDS_MENU_RULE_TIME_TEAM :
+                                                 NDS_MENU_RULE_STOCK_TEAM;
+    }
     sMenuVsTime = (s32)gSCManagerTransferBattleState.time_limit;
     sMenuVsStock = (s32)gSCManagerTransferBattleState.stocks;
 }
@@ -1352,7 +1402,11 @@ static void ndsMenuShellVsSaveRules(void)
         (u8)SCBATTLE_GAMERULE_TIME : (u8)SCBATTLE_GAMERULE_STOCK;
     gNdsMatchConfig.time_limit = (u8)sMenuVsTime;
     gNdsMatchConfig.stocks = (u8)sMenuVsStock;
-    gNdsMatchConfig.is_team_battle = FALSE;
+    /* mnVSModeSaveSettings, mnvsmode.c:1144-1162: the rule itself carries the
+     * FFA/Team bit. CSS exposes the same state through its source mode toggle;
+     * whichever screen changes it last becomes the descriptor's one truth. */
+    gNdsMatchConfig.is_team_battle =
+        (ndsMenuShellVsIsTeam() != FALSE) ? TRUE : FALSE;
     ndsMatchConfigApply(&gNdsMatchConfig);
 
     gNdsMenuShellCommitCount++;
@@ -1547,13 +1601,14 @@ static void ndsMenuShellUpdateVs(u32 held, u32 taps)
  * fighter (mnplayersvs.c:374). Same bitmask over fkind, different bound.
  *
  * DELIBERATE NARROWINGS, each a plan non-goal rather than an omission:
- *   - TEAMS. The team-select buttons and `mnPlayersVSGetShade` exist only in a
- *     team battle, which needs the four-fighter engine (P2-2); the descriptor's
- *     `is_team_battle` is FALSE here and the source's own code is already
- *     branchless in that case.
- *   - COSTUMES. C-buttons pick a costume (mnplayersvs.c:3372); the DS pad has
- *     no C-buttons and the two fighters ship one costume each, so the
- *     descriptor keeps costume 0. P2-3 owns alternate costumes.
+ *   - TEAMS ARE NO LONGER A NARROWING. P2-2 adds the source RED/BLUE/GREEN
+ *     selector on all four panels, team gate palettes, team costume/shade
+ *     updates and READY same-team rejection. Single-console still has only one
+ *     human cursor; additional human cursors belong to P3 wireless.
+ *   - FREE-FOR-ALL COSTUME BUTTONS. C-buttons pick alternate costumes
+ *     (mnplayersvs.c:3372); the DS pad has no C-buttons and P2-3 owns alternate
+ *     costume input. Team costumes are not optional presentation: P2-2 applies
+ *     the source's team costume IDs automatically when Team Battle is active.
  *   - THE TIME/STOCK ARROWS at the top of the source's CSS duplicate the VS
  *     menu P2-1d already transcribed, so the rules stay that screen's.
  *   - THE 5-MINUTE IDLE RETURN (mnplayersvs.c:4470) is attract behaviour and
@@ -1668,6 +1723,7 @@ static const u8 kNdsCssFighterPortrait[NDS_CSS_PORTRAITS] = {
 static u8 sCssPkind[NDS_CSS_SLOTS];
 static u8 sCssFkind[NDS_CSS_SLOTS];
 static u8 sCssLevel[NDS_CSS_SLOTS];
+static u8 sCssTeam[NDS_CSS_SLOTS];
 static u8 sCssSelected[NDS_CSS_SLOTS]; /* is_fighter_selected */
 static s16 sCssPuckX[NDS_CSS_SLOTS];
 static s16 sCssPuckY[NDS_CSS_SLOTS];
@@ -1677,9 +1733,27 @@ static u32 sCssStatus;
 static s32 sCssHeld;      /* slot whose token the cursor carries, -1 = none */
 static u32 sCssRegrabTic;
 static u32 sCssBackTics;
+/* The FFA/Team-Battle mode, seeded from the transfer state on CSS entry the way
+ * the source seeds sMNPlayersVSIsTeamBattle (mnplayersvs.c:4679), flipped by
+ * the mode-label toggle, and written back through the descriptor on commit.
+ * P2-2 also makes sCssTeam[] live through the source RED/BLUE/GREEN controls. */
+static u8 sCssIsTeamBattle;
+/* P2-1N (3): the shutter, in the source's own units. door_offset slides
+ * 2/tic between 0 (open — halves parked at the panel edges, hidden by the
+ * frame) and 41 (shut — halves meeting at +22/+47, which is exactly the
+ * baked NA gate). mnPlayersVSShutterProcUpdate/mnPlayersVSUpdateShutter. */
+static u8 sCssDoorOffset[NDS_CSS_SLOTS];
 static u32 sCssStartWait;
 static u32 sCssReadyBlink;
 static u32 sCssReadyShown;
+/* mnPlayersVSMakePortraitFlash owns one independently-timed flash GObj per
+ * player.  The GObj's position is fixed when it is created, so keep the
+ * Mario/Fox content id separately from sCssFkind[]: a later kind/holder change
+ * must not drag an already-live flash to a different portrait. */
+static u8 sCssFlashRemain[NDS_CSS_SLOTS];
+static u8 sCssFlashVisible[NDS_CSS_SLOTS];
+static u8 sCssFlashKind[NDS_CSS_SLOTS];
+static u8 sCssFlashShown[2];
 
 /* One cursor: the DS has one keypad, so exactly one player has a controller.
  * mnPlayersVSUpdateControllerOrders would report orders[0] = 0 and -1 for the
@@ -1696,6 +1770,13 @@ static void ndsMenuShellCssCue(u32 id)
     /* Unguarded, like the kit's own seam: NDS_IMPORT_BATTLESHIP_AUDIO_FGM is an
      * unconditional Makefile override, so this symbol always exists. */
     (void)ndsAudioFgmPlay((u16)id);
+}
+
+/* P2-1N (4): the mode announcer voice, shared by the source's entry tail and
+ * mode-toggle handler — FREE FOR ALL (512) or TEAM BATTLE (526). */
+static void ndsMenuShellCssAnnounceMode(void)
+{
+    ndsMenuShellCssCue((sCssIsTeamBattle != FALSE) ? 526u : 512u);
 }
 
 /* mnPlayersVSAnnounceFighter, mnplayersvs.c:2545: the whoosh then the name. */
@@ -1822,26 +1903,30 @@ static u32 ndsMenuShellCssBoxHit(s32 x0, s32 x1, s32 y0, s32 y1)
 #define NDS_CSS_SLOT_MODE 0u
 #define NDS_CSS_SLOT_BACK 1u
 #define NDS_CSS_SLOT_READY 2u
-#define NDS_CSS_SLOT_PRESS 3u
 
-/* Sprite slots, in DEPTH order: a lower OAM id draws in front, so the cursor
- * owns id 0 and the twelve portrait cells own the last twelve. */
-#define NDS_CSS_SPRITE_CURSOR 0u
-#define NDS_CSS_SPRITE_PUCK0 1u
-#define NDS_CSS_SPRITE_KIND0 5u
-#define NDS_CSS_SPRITE_LEVEL0 9u
-#define NDS_CSS_SPRITE_DIGIT0 13u
+/* Sprite slots, in DEPTH order: lower OAM ids draw in front. The source's
+ * REGION_US PRESS/START GObj is display link 28 (player-kind camera priority
+ * 50), not the link-38 READY banner GObj. It therefore stays behind cursor 20
+ * and puck 25 just like the other link-28 panel art. The banner itself is
+ * reinforced on foreground BG3 below so its separate camera-10 depth is kept. */
+#define NDS_CSS_SPRITE_CURSOR_TAG 0u
+#define NDS_CSS_SPRITE_CURSOR 1u
+#define NDS_CSS_SPRITE_PUCK0 2u
+#define NDS_CSS_SPRITE_KIND0 6u
+#define NDS_CSS_SPRITE_LEVEL0 10u
+#define NDS_CSS_SPRITE_DIGIT0 14u
 /* P2-1j, owner finding (e): the player panel's own art. The tag is the
  * mnPlayersVSMakePlayerKind sprite (1P / CP, :2003), the colon and the two
  * blinking arrows are mnPlayersVSMakeHandicapLevel's and
  * mnPlayersVSArrowThreadUpdate's (:2696/:2626). All four are behind the
  * tokens and the cursor in id order, which is the depth the source draws them
  * at (display 35 under the puck's 37). */
-#define NDS_CSS_SPRITE_PORTRAIT0 17u
-#define NDS_CSS_SPRITE_TAG0 29u
-#define NDS_CSS_SPRITE_COLON0 33u
-#define NDS_CSS_SPRITE_ARROWL0 37u
-#define NDS_CSS_SPRITE_ARROWR0 41u
+#define NDS_CSS_SPRITE_READY_PRESS 18u
+#define NDS_CSS_SPRITE_READY_START 19u
+#define NDS_CSS_SPRITE_TAG0 20u
+#define NDS_CSS_SPRITE_COLON0 24u
+#define NDS_CSS_SPRITE_ARROWL0 28u
+#define NDS_CSS_SPRITE_ARROWR0 32u
 
 /* mnPlayersVSArrowThreadUpdate's own blink (10 tics on, 10 off) and the two
  * values at which an arrow is EJECTED rather than blinked (:2643/:2660). */
@@ -1852,8 +1937,6 @@ static u32 ndsMenuShellCssBoxHit(s32 x0, s32 x1, s32 y0, s32 y1)
 /* mnPlayersVSMakeLabels' own colours, mnplayersvs.c:1391. */
 #define NDS_CSS_RGB_MODE 0x00e3ac04u
 /* mnPlayersVSMakeReady's ready-text primitive, mnplayersvs.c:4128. */
-#define NDS_CSS_RGB_READY 0x00ffff9du
-#define NDS_CSS_RGB_PRESS 0x00d6ddc6u
 
 static u32 ndsMenuShellCssKindImage(u32 pkind)
 {
@@ -1938,8 +2021,124 @@ static const u8 kNdsCssGateSurface[NDS_CSS_SLOTS][NDS_CSS_GATE_STATES] = {
       (u8)NDS_MN_UI_KIT_SURFACE_CSS_GATE_3_HOLD_FOX }
 };
 
+/* P2-2a: the generated Team-Battle panel variants are intentionally contiguous
+ * in [team][player][state] order. BattleShip maps team ids Red/Blue/Green to
+ * gate color ids 0/1/3. The RED/BLUE/GREEN selector itself is a SEPARATE source
+ * display object on DL 34, in front of the fighter camera on DL 33, so its
+ * twelve exact baked rasters live in a separate foreground block below. */
+#define NDS_CSS_TEAM_COUNT 3u
+#define NDS_CSS_TEAM_GATE_STRIDE (NDS_CSS_SLOTS * NDS_CSS_GATE_STATES)
+_Static_assert(nSCBattleTeamIDRed == 0 && nSCBattleTeamIDBlue == 1 &&
+                   nSCBattleTeamIDGreen == 2,
+               "CSS team surface arithmetic follows BattleShip team ids");
+_Static_assert(NDS_MN_UI_KIT_SURFACE_CSS_GATE_TEAM_BLUE_0_NA ==
+                   NDS_MN_UI_KIT_SURFACE_CSS_GATE_TEAM_RED_0_NA +
+                       NDS_CSS_TEAM_GATE_STRIDE,
+               "team gate surfaces must stay contiguous by team");
+_Static_assert(NDS_MN_UI_KIT_SURFACE_CSS_GATE_TEAM_GREEN_0_NA ==
+                   NDS_MN_UI_KIT_SURFACE_CSS_GATE_TEAM_RED_0_NA +
+                       (2u * NDS_CSS_TEAM_GATE_STRIDE),
+               "team gate surfaces must stay contiguous by team");
+_Static_assert(NDS_MN_UI_KIT_SURFACE_CSS_GATE_TEAM_GREEN_3_HOLD_FOX ==
+                   NDS_MN_UI_KIT_SURFACE_CSS_GATE_TEAM_RED_0_NA +
+                       (NDS_CSS_TEAM_COUNT * NDS_CSS_TEAM_GATE_STRIDE) - 1u,
+               "team gate surface block must contain 3x4x9 variants");
+
+#define NDS_CSS_TEAM_SELECT_STRIDE NDS_CSS_SLOTS
+_Static_assert(NDS_MN_UI_KIT_SURFACE_CSS_TEAM_SELECT_BLUE_0 ==
+                   NDS_MN_UI_KIT_SURFACE_CSS_TEAM_SELECT_RED_0 +
+                       NDS_CSS_TEAM_SELECT_STRIDE,
+               "team selector surfaces must stay contiguous by team");
+_Static_assert(NDS_MN_UI_KIT_SURFACE_CSS_TEAM_SELECT_GREEN_3 ==
+                   NDS_MN_UI_KIT_SURFACE_CSS_TEAM_SELECT_RED_0 +
+                       (NDS_CSS_TEAM_COUNT * NDS_CSS_TEAM_SELECT_STRIDE) - 1u,
+               "team selector surface block must contain 3x4 variants");
+
 static u8 sCssPanelSurface[NDS_CSS_SLOTS];
 static u32 sCssArrowsShown;
+
+static u32 ndsMenuShellCssGateState(u32 slot);
+
+static u8 ndsMenuShellCssGateSurfaceForState(u32 slot, u32 state)
+{
+    u32 team;
+
+    if (sCssIsTeamBattle == FALSE)
+    {
+        return kNdsCssGateSurface[slot][state];
+    }
+    team = (u32)sCssTeam[slot];
+    if (team >= NDS_CSS_TEAM_COUNT)
+    {
+        team = (u32)nSCBattleTeamIDRed;
+    }
+    return (u8)(NDS_MN_UI_KIT_SURFACE_CSS_GATE_TEAM_RED_0_NA +
+                (team * NDS_CSS_TEAM_GATE_STRIDE) +
+                (slot * NDS_CSS_GATE_STATES) + state);
+}
+
+static u8 ndsMenuShellCssGateSurface(u32 slot)
+{
+    return ndsMenuShellCssGateSurfaceForState(
+        slot, ndsMenuShellCssGateState(slot));
+}
+
+static s32 ndsMenuShellCssRoundSource(s32 value)
+{
+    return (value * 4 + 2) / 5;
+}
+
+static u8 ndsMenuShellCssTeamSelectSurface(u32 slot)
+{
+    u32 team = (u32)sCssTeam[slot];
+
+    if (team >= NDS_CSS_TEAM_COUNT)
+    {
+        team = (u32)nSCBattleTeamIDRed;
+    }
+    return (u8)(NDS_MN_UI_KIT_SURFACE_CSS_TEAM_SELECT_RED_0 +
+                (team * NDS_CSS_TEAM_SELECT_STRIDE) + slot);
+}
+
+static void ndsMenuShellCssClearTeamSelect(u32 slot)
+{
+    s32 source_x = (s32)(slot * 69u) + 30;
+
+    /* The source sprite sits at x+34,y=131 and its hit rectangle ends at
+     * x+58,y=141. Clear a deliberately slightly wider transparent BG3 pocket
+     * so antialiased/keyed edge pixels from the previous team cannot survive a
+     * color change. No other CSS foreground owner occupies this rectangle. */
+    ndsUiKitClearForegroundRect(ndsMenuShellCssRoundSource(source_x),
+                                ndsMenuShellCssRoundSource(128),
+                                (u32)ndsMenuShellCssRoundSource(34),
+                                (u32)ndsMenuShellCssRoundSource(16));
+}
+
+static void ndsMenuShellCssDrawTeamSelect(u32 slot)
+{
+    u8 surface;
+
+    ndsMenuShellCssClearTeamSelect(slot);
+    if (sCssIsTeamBattle == FALSE)
+    {
+        return;
+    }
+    surface = ndsMenuShellCssTeamSelectSurface(slot);
+    if (ndsUiKitBlitForegroundSurfaces(&surface, 1u) != FALSE)
+    {
+        gNdsMenuShellCssPanelBlitCount++;
+    }
+}
+
+static void ndsMenuShellCssSyncTeamSelectAll(void)
+{
+    u32 slot;
+
+    for (slot = 0u; slot < (u32)NDS_CSS_SLOTS; slot++)
+    {
+        ndsMenuShellCssDrawTeamSelect(slot);
+    }
+}
 
 /* Which of the nine the slot is in, transcribed from the two source predicates
  * above: the GObj is hidden entirely for an empty slot
@@ -1976,6 +2175,91 @@ static u32 ndsMenuShellCssGateState(u32 slot)
                                          NDS_CSS_GATE_HOLD_F0) + fighter;
 }
 
+/* P2-1N (3): mnPlayersVSShutterProcUpdate + mnPlayersVSUpdateShutter,
+ * transcribed. door_offset walks 2/tic toward 41 (shut) for an empty slot and
+ * 0 (open) otherwise; the close cue fires on arrival at 41
+ * (nSYAudioFGMPlayerSlotClose = 166 — asks; the miss ring reports it until a
+ * pack row lands). Mid-slide, the slot's current gate surface re-blits as the
+ * underlay and both card halves draw from the cached CSS_DOORS strip at their
+ * slid positions, clipped to the gate box exactly as the source's frame art
+ * masks the pocketed part. Terminal frames land the baked gate, so steady
+ * state costs nothing. */
+static void ndsMenuShellCssStepDoors(void)
+{
+    u32 i;
+
+    for (i = 0u; i < (u32)NDS_CSS_SLOTS; i++)
+    {
+        s32 start = (s32)(i * 69u);
+        u32 target = (sCssPkind[i] == (u8)nFTPlayerKindNot) ? 41u : 0u;
+        u32 offset = (u32)sCssDoorOffset[i];
+        u8 blit;
+
+        if (offset == target)
+        {
+            continue;
+        }
+        if (offset < target)
+        {
+            offset += 2u;
+            if (offset >= 41u)
+            {
+                offset = 41u;
+                ndsMenuShellCssCue(166u);
+            }
+        }
+        else
+        {
+            offset = (offset >= 2u) ? (offset - 2u) : 0u;
+        }
+        sCssDoorOffset[i] = (u8)offset;
+        if ((offset == 41u) || (offset == 0u))
+        {
+            blit = ndsMenuShellCssGateSurface(i);
+            if (ndsUiKitBlitSurfaces(&blit, 1u) != FALSE)
+            {
+                sCssPanelSurface[i] = blit;
+                gNdsMenuShellCssPanelBlitCount++;
+            }
+            continue;
+        }
+        blit = sCssPanelSurface[i];
+        if (ndsUiKitBlitSurfaces(&blit, 1u) != FALSE)
+        {
+            gNdsMenuShellCssPanelBlitCount++;
+        }
+        {
+            /* THE BAKE'S OWN ROUNDING, not NDS_CSS_DS: frame_pos rounds half
+             * up while the plain macro truncates, and the two disagree by a
+             * pixel exactly where it shows — the right half drew 32 of its
+             * 33 columns and the pair sat one row above the gate (owner
+             * screenshot, 2026-08-19). One rule for every door number. */
+            #define NDS_CSS_DSR(v) (((v) * 4 + 2) / 5)
+            s32 clip0 = NDS_CSS_DSR(start + 22);
+            s32 clip1 = NDS_CSS_DSR(start + 88);
+            s32 dy = NDS_CSS_DSR(126);
+            /* Both source door sprites are 41x92. Closed, the left occupies
+             * source x=22..62 and the right x=47..87, overlapping by 16 px;
+             * their alpha masks form the source's zigzag seam. The cache keeps
+             * both complete masks side-by-side (41+41) and these destination
+             * positions recreate that overlap. Cutting the cache at x=25 was
+             * the old straight-seam defect: it discarded those 16 left-door
+             * pixels before the two source masks could interlock. */
+            u32 split = (u32)NDS_CSS_DSR(41);
+            u32 strip_w = (u32)NDS_CSS_DSR(41 + 41);
+
+            (void)ndsUiKitDrawCachedSub(0u, split,
+                                        NDS_CSS_DSR(start - 19 + (s32)offset),
+                                        dy, clip0, clip1);
+            (void)ndsUiKitDrawCachedSub(split, strip_w - split,
+                                        NDS_CSS_DSR(start + 88 - (s32)offset),
+                                        dy, clip0, clip1);
+            gNdsMenuShellCssDoorSlideFrames++;
+            #undef NDS_CSS_DSR
+        }
+    }
+}
+
 /* Only the panels whose kind changed, at most `budget` of them, in one call.
  * The VS menu's rule, for the VS menu's measured reason: a panel is 7,738 B of
  * NitroFS and the character select's own worst frame already sits at 71% of
@@ -1993,7 +2277,18 @@ static void ndsMenuShellCssSyncPanels(u32 budget)
 
     for (i = 0u; i < (u32)NDS_CSS_SLOTS; i++)
     {
-        wanted[i] = kNdsCssGateSurface[i][ndsMenuShellCssGateState(i)];
+        wanted[i] = ndsMenuShellCssGateSurface(i);
+        /* P2-1N (3): while a slot is closing (pkind Not, doors mid-slide),
+         * the card must stay visible UNDER the sliding halves — the shut NA
+         * bake lands only when the doors arrive (the animator blits it and
+         * cues the close). The open underlay for an emptying slot is its
+         * COM-lut card with no fighter, which is exactly the COM state. */
+        if ((sCssPkind[i] == (u8)nFTPlayerKindNot) &&
+            (sCssDoorOffset[i] < 41u))
+        {
+            wanted[i] = ndsMenuShellCssGateSurfaceForState(
+                i, NDS_CSS_GATE_COM);
+        }
         if ((wanted[i] != sCssPanelSurface[i]) && (count < budget))
         {
             list[count] = wanted[i];
@@ -2060,24 +2355,27 @@ static void ndsMenuShellCssPopulate(void)
 {
     u32 i;
 
-    ndsUiKitSetText(NDS_CSS_SLOT_MODE, "FREE FOR ALL", NDS_CSS_RGB_MODE);
-    ndsUiKitMoveText(NDS_CSS_SLOT_MODE, NDS_CSS_DS(27), NDS_CSS_DS(24));
-    ndsUiKitSetText(NDS_CSS_SLOT_BACK, "BACK", NDS_MENU_RGB_WHITE);
-    ndsUiKitMoveText(NDS_CSS_SLOT_BACK, NDS_CSS_DS(244), NDS_CSS_DS(23));
-
-    /* P2-1L (5): EVERY portrait cell is backdrop art now. P2-1j had already
-     * baked the locked ones -- box, noise-dithered shadow, question-mark plate
-     * -- because none of it changes while the screen is up; the two BUILT
-     * fighters kept an OBJ cell, and that cell is exactly why they did not
-     * fill their box. `mnPlayersVSMakePortrait` draws portrait and box at the
-     * same (x,y) and both are 45x43 (mnplayersvs.c:2437/:2503), so the source
-     * covers its frame edge to edge, while a 45x43 sprite only fits a 32x32
-     * OBJ cell at 32/45 against the box's 4/5. In the backdrop the cell size
-     * stops being a constraint and the two are baked at one ratio. */
-    for (i = 0u; i < NDS_CSS_PORTRAITS; i++)
+    /* P2-1N (2)+(4): the mode label and BACK ship the source's own sprites
+     * (`mnPlayersVSMakeLabels` at (27,24) with the toggle's FFA tint;
+     * `llMNPlayersCommonBackButtonSprite` at (244,23)), blitted as baked
+     * states over the base. The mode label is a two-state surface so the
+     * FFA/Team toggle is a swap; BACK is static and blits once here. */
     {
-        ndsUiKitHideSprite(NDS_CSS_SPRITE_PORTRAIT0 + i);
+        u8 entry_states[2];
+
+        entry_states[0] = (sCssIsTeamBattle != FALSE) ?
+            (u8)NDS_MN_UI_KIT_SURFACE_CSS_MODE_TEAM :
+            (u8)NDS_MN_UI_KIT_SURFACE_CSS_MODE_FFA;
+        entry_states[1] = (u8)NDS_MN_UI_KIT_SURFACE_CSS_BACK;
+        if (ndsUiKitBlitSurfaces(entry_states, 2u) != FALSE)
+        {
+            gNdsMenuShellCssPanelBlitCount += 2u;
+        }
     }
+
+    /* P2-1L (5): EVERY portrait cell is backdrop art now. The old twelve OBJ
+     * slots were dead after that migration and are no longer reserved; P2-1
+     * closeout reuses the resulting OAM id space for source cursor/READY art. */
 
     for (i = 0u; i < (u32)NDS_CSS_SLOTS; i++)
     {
@@ -2089,21 +2387,24 @@ static void ndsMenuShellCssPopulate(void)
                           NDS_CSS_DS(panel + 64), NDS_CSS_DS(131));
 
         /* P2-1j (e): the panel's own player tag, mnPlayersVSMakePlayerKind
-         * (:2003) -- a CPU slot draws the shared CP art at `p*69+26` and a
+         * (:969) -- a CPU slot draws the shared CP art at `p*69+26` and a
          * human one its own `<N>P` art at `pos_x[p] + p*69 + 22`, both black
-         * on the card at y 131. An empty slot draws neither, because the
-         * source only builds this GObj from mnPlayersVSMakeGate. */
+         * on the card at y 131. Team Battle does NOT remove this object; its
+         * later DL-34 team selector simply draws over it. Keep the tag live and
+         * let foreground BG3 reproduce that source ordering. */
         if (sCssPkind[i] == (u8)nFTPlayerKindCom)
         {
-            ndsUiKitSetSprite(NDS_CSS_SPRITE_TAG0 + i,
-                              NDS_MN_UI_KIT_IMAGE_PANEL_CP,
-                              NDS_CSS_DS(panel + 26), NDS_CSS_DS(131));
+            (void)ndsUiKitSetSpriteBlend(
+                NDS_CSS_SPRITE_TAG0 + i, NDS_MN_UI_KIT_IMAGE_PANEL_CP,
+                NDS_CSS_DS(panel + 26), NDS_CSS_DS(131), 15u, 0u,
+                (sCssIsTeamBattle != FALSE) ? 1u : 0u);
         }
         else if (sCssPkind[i] == (u8)nFTPlayerKindMan)
         {
-            ndsUiKitSetSprite(NDS_CSS_SPRITE_TAG0 + i,
-                              NDS_MN_UI_KIT_IMAGE_PANEL_1P,
-                              NDS_CSS_DS(panel + 30), NDS_CSS_DS(131));
+            (void)ndsUiKitSetSpriteBlend(
+                NDS_CSS_SPRITE_TAG0 + i, NDS_MN_UI_KIT_IMAGE_PANEL_1P,
+                NDS_CSS_DS(panel + 30), NDS_CSS_DS(131), 15u, 0u,
+                (sCssIsTeamBattle != FALSE) ? 1u : 0u);
         }
         else
         {
@@ -2174,6 +2475,8 @@ static void ndsMenuShellCssPopulate(void)
 static void ndsMenuShellCssMove(void)
 {
     u32 image = NDS_MN_UI_KIT_IMAGE_CSS_CURSOR_POINT;
+    s32 tag_dx = 7;
+    s32 tag_dy = 15;
     u32 i;
     /* mnPlayersVSArrowThreadUpdate's 10-tic toggle, recomputed from the
      * screen's tic count for the same reason the VS menu's 30-tic one is. */
@@ -2188,11 +2491,22 @@ static void ndsMenuShellCssMove(void)
     if (sCssStatus == NDS_CSS_STATUS_GRAB)
     {
         image = NDS_MN_UI_KIT_IMAGE_CSS_CURSOR_GRAB;
+        tag_dx = 9;
+        tag_dy = 10;
     }
     else if (sCssStatus == NDS_CSS_STATUS_HOVER)
     {
         image = NDS_MN_UI_KIT_IMAGE_CSS_CURSOR_HOVER;
+        tag_dx = 9;
+        tag_dy = 15;
     }
+    /* mnPlayersVSUpdateCursor appends the player's gradient tag after the hand
+     * at offsets {7,15}/{9,10}/{9,15}.  Only the 1P cursor is reachable on a
+     * single DS, and its source PRIM/ENV IA gradient is baked into this image. */
+    ndsUiKitSetSprite(NDS_CSS_SPRITE_CURSOR_TAG,
+                      NDS_MN_UI_KIT_IMAGE_CSS_CURSOR_1P,
+                      NDS_CSS_DS(sCssCursorX + tag_dx),
+                      NDS_CSS_DS(sCssCursorY + tag_dy));
     ndsUiKitSetSprite(NDS_CSS_SPRITE_CURSOR, image, NDS_CSS_DS(sCssCursorX),
                       NDS_CSS_DS(sCssCursorY));
     for (i = 0u; i < (u32)NDS_CSS_SLOTS; i++)
@@ -2206,14 +2520,207 @@ static void ndsMenuShellCssMove(void)
     }
 }
 
+/* --- Portrait flash ------------------------------------------------------- */
+
+#define NDS_CSS_FLASH_TICS 16u
+#define NDS_CSS_FLASH_KIND_NONE 0xffu
+#define NDS_CSS_FLASH_KIND_MARIO 0u
+#define NDS_CSS_FLASH_KIND_FOX 1u
+#define NDS_CSS_FLASH_KIND_COUNT 2u
+
+static u32 ndsMenuShellCssFlashKindFromFighter(u32 fkind)
+{
+    if (fkind == (u32)nFTKindMario)
+    {
+        return NDS_CSS_FLASH_KIND_MARIO;
+    }
+    if (fkind == (u32)nFTKindFox)
+    {
+        return NDS_CSS_FLASH_KIND_FOX;
+    }
+    return NDS_CSS_FLASH_KIND_NONE;
+}
+
+static u8 ndsMenuShellCssFlashSurface(u32 kind, u32 visible)
+{
+    u32 ready = (sCssReadyShown == 1u) ? 1u : 0u;
+
+    if (kind == NDS_CSS_FLASH_KIND_MARIO)
+    {
+        if (ready != 0u)
+        {
+            return (visible != FALSE) ?
+                (u8)NDS_MN_UI_KIT_SURFACE_CSS_FLASH_MARIO_ON_READY1 :
+                (u8)NDS_MN_UI_KIT_SURFACE_CSS_FLASH_MARIO_OFF_READY1;
+        }
+        return (visible != FALSE) ?
+            (u8)NDS_MN_UI_KIT_SURFACE_CSS_FLASH_MARIO_ON_READY0 :
+            (u8)NDS_MN_UI_KIT_SURFACE_CSS_FLASH_MARIO_OFF_READY0;
+    }
+    if (ready != 0u)
+    {
+        return (visible != FALSE) ?
+            (u8)NDS_MN_UI_KIT_SURFACE_CSS_FLASH_FOX_ON_READY1 :
+            (u8)NDS_MN_UI_KIT_SURFACE_CSS_FLASH_FOX_OFF_READY1;
+    }
+    return (visible != FALSE) ?
+        (u8)NDS_MN_UI_KIT_SURFACE_CSS_FLASH_FOX_ON_READY0 :
+        (u8)NDS_MN_UI_KIT_SURFACE_CSS_FLASH_FOX_OFF_READY0;
+}
+
+static u32 ndsMenuShellCssFlashAggregate(u32 kind)
+{
+    u32 slot;
+
+    for (slot = 0u; slot < (u32)NDS_CSS_SLOTS; slot++)
+    {
+        if ((sCssFlashRemain[slot] != 0u) &&
+            (sCssFlashVisible[slot] != 0u) &&
+            ((u32)sCssFlashKind[slot] == kind))
+        {
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+
+static void ndsMenuShellCssDrawFlashKind(u32 kind, u32 visible)
+{
+    u8 surface;
+
+    if (kind >= NDS_CSS_FLASH_KIND_COUNT)
+    {
+        return;
+    }
+    surface = ndsMenuShellCssFlashSurface(kind, visible);
+    if (ndsUiKitBlitSurfaces(&surface, 1u) != FALSE)
+    {
+        gNdsMenuShellCssPanelBlitCount++;
+    }
+}
+
+static void ndsMenuShellCssSyncFlashKind(u32 kind)
+{
+    u32 visible;
+
+    if (kind >= NDS_CSS_FLASH_KIND_COUNT)
+    {
+        return;
+    }
+    visible = ndsMenuShellCssFlashAggregate(kind);
+    if (visible == (u32)sCssFlashShown[kind])
+    {
+        return;
+    }
+    ndsMenuShellCssDrawFlashKind(kind, visible);
+    sCssFlashShown[kind] = (u8)((visible != FALSE) ? 1u : 0u);
+}
+
+static void ndsMenuShellCssFlashStart(u32 slot)
+{
+    u32 old_kind;
+    u32 kind;
+
+    if (slot >= (u32)NDS_CSS_SLOTS)
+    {
+        return;
+    }
+    kind = ndsMenuShellCssFlashKindFromFighter((u32)sCssFkind[slot]);
+    if (kind >= NDS_CSS_FLASH_KIND_COUNT)
+    {
+        return;
+    }
+    old_kind = (u32)sCssFlashKind[slot];
+    sCssFlashRemain[slot] = (u8)NDS_CSS_FLASH_TICS;
+    sCssFlashVisible[slot] = 1u;
+    sCssFlashKind[slot] = (u8)kind;
+    if ((old_kind < NDS_CSS_FLASH_KIND_COUNT) && (old_kind != kind))
+    {
+        ndsMenuShellCssSyncFlashKind(old_kind);
+    }
+    ndsMenuShellCssSyncFlashKind(kind);
+}
+
+static void ndsMenuShellCssFlashCancel(u32 slot)
+{
+    u32 kind;
+
+    if (slot >= (u32)NDS_CSS_SLOTS)
+    {
+        return;
+    }
+    kind = (u32)sCssFlashKind[slot];
+    sCssFlashRemain[slot] = 0u;
+    sCssFlashVisible[slot] = 0u;
+    sCssFlashKind[slot] = (u8)NDS_CSS_FLASH_KIND_NONE;
+    if (kind < NDS_CSS_FLASH_KIND_COUNT)
+    {
+        ndsMenuShellCssSyncFlashKind(kind);
+    }
+}
+
+static void ndsMenuShellCssStepFlashes(void)
+{
+    u32 dirty = 0u;
+    u32 slot;
+    u32 kind;
+
+    for (slot = 0u; slot < (u32)NDS_CSS_SLOTS; slot++)
+    {
+        if (sCssFlashRemain[slot] == 0u)
+        {
+            continue;
+        }
+        kind = (u32)sCssFlashKind[slot];
+        if (kind < NDS_CSS_FLASH_KIND_COUNT)
+        {
+            dirty |= (1u << kind);
+        }
+        sCssFlashRemain[slot]--;
+        if (sCssFlashRemain[slot] == 0u)
+        {
+            sCssFlashVisible[slot] = 0u;
+            sCssFlashKind[slot] = (u8)NDS_CSS_FLASH_KIND_NONE;
+        }
+        else
+        {
+            /* mnPlayersVSPortraitFlashThreadUpdate toggles hidden every tic. */
+            sCssFlashVisible[slot] = (sCssFlashVisible[slot] != 0u) ? 0u : 1u;
+        }
+    }
+    for (kind = 0u; kind < NDS_CSS_FLASH_KIND_COUNT; kind++)
+    {
+        if ((dirty & (1u << kind)) != 0u)
+        {
+            ndsMenuShellCssSyncFlashKind(kind);
+        }
+    }
+}
+
+static void ndsMenuShellCssRedrawVisibleFlashes(void)
+{
+    u32 kind;
+
+    for (kind = 0u; kind < NDS_CSS_FLASH_KIND_COUNT; kind++)
+    {
+        if (ndsMenuShellCssFlashAggregate(kind) != FALSE)
+        {
+            ndsMenuShellCssDrawFlashKind(kind, TRUE);
+            sCssFlashShown[kind] = 1u;
+        }
+    }
+}
+
 /* --- Ready ---------------------------------------------------------------- */
 
-/* mnPlayersVSGetReadyPlayerCount + mnPlayersVSCheckNoPuckOnPortraitAll +
- * mnPlayersVSCheckReady, mnplayersvs.c:4268/:4337/:4352. The team clause is
- * absent because is_team_battle is FALSE (see the narrowings above). */
+/* mnPlayersVSGetReadyPlayerCount + mnPlayersVSCheckSingleTeam +
+ * mnPlayersVSCheckNoPuckOnPortraitAll + mnPlayersVSCheckReady,
+ * mnplayersvs.c:4268/:4314/:4337/:4352. */
 static u32 ndsMenuShellCssCheckReady(void)
 {
     u32 ready = 0u;
+    s32 ready_team = -1;
+    u32 has_other_team = FALSE;
     u32 i;
 
     for (i = 0u; i < (u32)NDS_CSS_SLOTS; i++)
@@ -2221,9 +2728,21 @@ static u32 ndsMenuShellCssCheckReady(void)
         if ((sCssPkind[i] != (u8)nFTPlayerKindNot) && (sCssSelected[i] != 0u))
         {
             ready++;
+            if (ready_team < 0)
+            {
+                ready_team = (s32)sCssTeam[i];
+            }
+            else if (ready_team != (s32)sCssTeam[i])
+            {
+                has_other_team = TRUE;
+            }
         }
     }
     if (ready < 2u)
+    {
+        return FALSE;
+    }
+    if ((sCssIsTeamBattle != FALSE) && (has_other_team == FALSE))
     {
         return FALSE;
     }
@@ -2233,23 +2752,48 @@ static u32 ndsMenuShellCssCheckReady(void)
 
 static void ndsMenuShellCssShowReady(u32 lit)
 {
+    /* mnPlayersVSMakeReady owns TWO GObjs on the same 40/30 blink but on
+     * DIFFERENT display links. The banner + READY TO FIGHT is link 38 through
+     * the priority-10 Ready camera; REGION_US PRESS + START is link 28 through
+     * the priority-50 player-kind camera. Keep the existing BG2 state swap for
+     * the flash-overlap restoration, then mirror only the link-38 band onto
+     * transparent foreground BG3 so it also has the source's depth over OBJ. */
+    u8 state = (lit != FALSE) ?
+        (u8)NDS_MN_UI_KIT_SURFACE_CSS_READY_ON :
+        (u8)NDS_MN_UI_KIT_SURFACE_CSS_READY_OFF;
+
+    if (ndsUiKitBlitSurfaces(&state, 1u) != FALSE)
+    {
+        gNdsMenuShellCssPanelBlitCount++;
+    }
+    ndsUiKitClearForegroundRect(NDS_CSS_DS(0), NDS_CSS_DS(71),
+                                (u32)NDS_CSS_DS(320),
+                                18u); /* baked 22-source-row box -> 18 DS rows */
     if (lit != FALSE)
     {
-        ndsUiKitSetText(NDS_CSS_SLOT_READY, "READY TO FIGHT",
-                        NDS_CSS_RGB_READY);
-        ndsUiKitMoveText(NDS_CSS_SLOT_READY,
-                         ndsMenuShellCentre("READY TO FIGHT"),
-                         NDS_CSS_DS(76));
-        ndsUiKitSetText(NDS_CSS_SLOT_PRESS, "PRESS START", NDS_CSS_RGB_PRESS);
-        ndsUiKitMoveText(NDS_CSS_SLOT_PRESS,
-                         ndsMenuShellCentre("PRESS START"), NDS_CSS_DS(219));
+        u8 foreground = (u8)NDS_MN_UI_KIT_SURFACE_CSS_READY_FOREGROUND;
+
+        if (ndsUiKitBlitForegroundSurfaces(&foreground, 1u) != FALSE)
+        {
+            gNdsMenuShellCssPanelBlitCount++;
+        }
+        ndsUiKitSetSprite(NDS_CSS_SPRITE_READY_PRESS,
+                          NDS_MN_UI_KIT_IMAGE_CSS_READY_PRESS,
+                          NDS_CSS_DS(133), NDS_CSS_DS(219));
+        ndsUiKitSetSprite(NDS_CSS_SPRITE_READY_START,
+                          NDS_MN_UI_KIT_IMAGE_CSS_READY_START,
+                          NDS_CSS_DS(162), NDS_CSS_DS(219));
     }
     else
     {
-        ndsUiKitHideText(NDS_CSS_SLOT_READY);
-        ndsUiKitHideText(NDS_CSS_SLOT_PRESS);
+        ndsUiKitHideSprite(NDS_CSS_SPRITE_READY_PRESS);
+        ndsUiKitHideSprite(NDS_CSS_SPRITE_READY_START);
     }
     sCssReadyShown = (lit != FALSE) ? 1u : 0u;
+    /* READY is source camera priority 10, in front of the priority-73 portrait
+     * flash.  Its state surface overwrites the overlap, so re-apply only live
+     * flash rectangles using the matching READY-aware baked variant. */
+    ndsMenuShellCssRedrawVisibleFlashes();
 }
 
 /* --- Actions -------------------------------------------------------------- */
@@ -2257,6 +2801,8 @@ static void ndsMenuShellCssShowReady(u32 lit)
 /* mnPlayersVSSetCursorGrab, mnplayersvs.c:2932. */
 static void ndsMenuShellCssGrab(u32 slot)
 {
+    /* mnPlayersVSSetCursorGrab destroys this slot's existing portrait flash. */
+    ndsMenuShellCssFlashCancel(slot);
     sCssHeld = (s32)slot;
     sCssStatus = NDS_CSS_STATUS_GRAB;
     sCssSelected[slot] = 0u;
@@ -2275,6 +2821,7 @@ static void ndsMenuShellCssDrop(u32 slot)
     sCssStatus = NDS_CSS_STATUS_HOVER;
     sCssRegrabTic = sMenuTics + (u32)NDS_CSS_REGRAB_TICS;
     ndsMenuShellCssAnnounce(slot);
+    ndsMenuShellCssFlashStart(slot);
     gNdsMenuShellCssDropCount++;
     ndsMenuShellCssPopulate();
 }
@@ -2349,6 +2896,9 @@ static void ndsMenuShellCssApplyKind(u32 slot)
 {
     if ((sCssHeld >= 0) && ((u32)sCssHeld == slot))
     {
+        /* mnPlayersVSUpdatePlayerKind flashes a token it is about to release
+         * before changing that slot's ownership/kind state. */
+        ndsMenuShellCssFlashStart(slot);
         sCssHeld = -1;
         sCssStatus = NDS_CSS_STATUS_HOVER;
     }
@@ -2373,15 +2923,27 @@ static void ndsMenuShellCssApplyKind(u32 slot)
         sCssSelected[slot] = 1u;
         if (sCssFkind[slot] == (u8)nFTKindNull)
         {
-            /* mnPlayersVSRandFighterKind rerolls until it lands on an unlocked
-             * fighter (mnplayersvs.c:3471). With two unlocked, the parity of
-             * the frame counter is the same uniform choice over them and needs
-             * no RNG the menu does not already have. */
-            sCssFkind[slot] = ((sMenuTics & 1u) != 0u) ?
-                (u8)nFTKindFox : (u8)nFTKindMario;
+            u32 fkind;
+
+            /* mnPlayersVSRandFighterKind, mnplayersvs.c:3471, samples the full
+             * playable range with syUtilsRandTimeUCharRange and rerolls crossed
+             * / locked fighters. FighterCrossed is a source stub returning
+             * FALSE; this build's EXISTENCE mask is the locked predicate. Do
+             * not substitute frame parity: it is distribution-equivalent for
+             * two choices but not the source RNG state/sequence. */
+            do
+            {
+                fkind = (u32)syUtilsRandTimeUCharRange(
+                    (s32)nFTKindPlayableEnd + 1);
+            }
+            while (ndsMenuShellCssFighterLocked(fkind) != FALSE);
+            sCssFkind[slot] = (u8)fkind;
         }
         ndsMenuShellCssCenterPuck(slot, (u32)sCssFkind[slot]);
         ndsMenuShellCssAnnounce(slot);
+        /* mnPlayersVSCheckPlayerKindSelect makes a fresh flash after the COM
+         * transition, replacing any one UpdatePlayerKind just created. */
+        ndsMenuShellCssFlashStart(slot);
         break;
 
     default:
@@ -2422,6 +2984,53 @@ static u32 ndsMenuShellCssCheckKindButton(void)
         ndsMenuShellCssApplyKind(slot);
         gNdsMenuShellCssKindToggleCount++;
         ndsMenuShellCssPopulate();
+        return TRUE;
+    }
+    return FALSE;
+}
+
+/* mnPlayersVSCheckTeamSelectInRangeAll, mnplayersvs.c:1985. The source draws a
+ * selector for every panel in Team Battle but only lets an occupied panel
+ * consume A. Each press cycles Red -> Blue -> Green -> Red, recolors the gate,
+ * switches the fighter to its team costume/shade, and spends TitlePressStart.
+ * The appearance mutation itself remains in the imported PlayersVS helper so
+ * mnPlayersVSGetShade/ftParamGetCostumeTeamID stay the behavioral authority. */
+static u32 ndsMenuShellCssCheckTeamSelect(void)
+{
+    u32 slot;
+
+    if (sCssIsTeamBattle == FALSE)
+    {
+        return FALSE;
+    }
+    for (slot = 0u; slot < (u32)NDS_CSS_SLOTS; slot++)
+    {
+        s32 panel = (s32)(slot * 69u);
+
+        if ((sCssPkind[slot] == (u8)nFTPlayerKindNot) ||
+            (ndsMenuShellCssBoxHit(panel + 34, panel + 58, 131, 141) == FALSE))
+        {
+            continue;
+        }
+        sCssTeam[slot] =
+            (sCssTeam[slot] == (u8)nSCBattleTeamIDGreen) ?
+                (u8)nSCBattleTeamIDRed : (u8)(sCssTeam[slot] + 1u);
+        /* The source swaps THIS panel's LUT + team selector immediately. Do not
+         * route it through SyncPanels(1): if an older panel update were pending,
+         * that budget could spend itself on an earlier slot and visibly delay
+         * the clicked team. This direct one-surface replacement is the exact
+         * DS equivalent of UpdateTeamSelect + SetGateLUT. */
+        {
+            u8 panel_surface = ndsMenuShellCssGateSurface(slot);
+
+            if (ndsUiKitBlitSurfaces(&panel_surface, 1u) != FALSE)
+            {
+                sCssPanelSurface[slot] = panel_surface;
+                gNdsMenuShellCssPanelBlitCount++;
+            }
+        }
+        ndsMenuShellCssDrawTeamSelect(slot);
+        ndsMenuShellCssCue(NDS_CSS_FGM_PRESS_START);
         return TRUE;
     }
     return FALSE;
@@ -2485,6 +3094,9 @@ static void ndsMenuShellCssRecall(void)
     sCssStatus = NDS_CSS_STATUS_GRAB;
     sCssPuckX[slot] = (s16)(sCssCursorX + NDS_CSS_PUCK_CARRY_DX);
     sCssPuckY[slot] = (s16)(sCssCursorY + NDS_CSS_PUCK_CARRY_DY);
+    /* This shell jumps directly to mnPlayersVSPuckAdjustRecall's tic-11 end
+     * state, whose SetCursorGrab call destroys the portrait flash. */
+    ndsMenuShellCssFlashCancel(slot);
     gNdsMenuShellCssRecallCount++;
     ndsMenuShellCssPopulate();
 }
@@ -2503,13 +3115,28 @@ static void ndsMenuShellCssCommit(void)
         slot->fkind = sCssFkind[i];
         slot->pkind = sCssPkind[i];
         slot->level = sCssLevel[i];
-        slot->team = (u8)i;
-        slot->costume = 0u;
-        slot->shade = 0u;
+        /* mnPlayersVSSetSceneData writes the slot's selected team. The old
+         * array-index assignment even produced team id 3 for slot 4, outside
+         * the source's Red/Blue/Green enum. */
+        slot->team = sCssTeam[i];
+        /* The source CSS commits the appearance it is actually showing. Ask
+         * the imported PlayersVS state instead of re-deriving team/free-color
+         * allocation here; this preserves mnPlayersVSGetShade's slot-order
+         * behavior for mirrored Mario/Fox fighters. */
+        {
+            u32 appearance = ndsMNPlayersVSPreviewGetAppearance(i);
+
+            slot->costume = (u8)(appearance & 0xffu);
+            slot->shade = (u8)((appearance >> 8) & 0xffu);
+        }
         gNdsMenuShellCssCommitSlot[i] =
             (((u32)sCssFkind[i] & 0xffu) << 16) |
             (((u32)sCssPkind[i] & 0xffu) << 8) | ((u32)sCssLevel[i] & 0xffu);
     }
+    /* P2-2a: mode and all four source slot-team selectors are live. The
+     * descriptor therefore carries the same CSS state mnPlayersVSSetSceneData
+     * commits for FFA and Team Battle. */
+    gNdsMatchConfig.is_team_battle = (sCssIsTeamBattle != FALSE) ? 1u : 0u;
     ndsMatchConfigApply(&gNdsMatchConfig);
     gNdsMenuShellCssCommitCount++;
 }
@@ -2553,6 +3180,7 @@ static void ndsMenuShellCssUpdateStatus(void)
     {
         sCssStatus = NDS_CSS_STATUS_POINTER;
     }
+
     else if (sCssHeld < 0)
     {
         sCssStatus = NDS_CSS_STATUS_HOVER;
@@ -2576,6 +3204,8 @@ static void ndsMenuShellUpdateCss(u32 held, u32 taps)
      * frame -- which is also the frame the source spends an FGM cue on. See
      * ndsMenuShellCssSyncPanels for the measurement behind the budget. */
     ndsMenuShellCssSyncPanels(1u);
+    ndsMenuShellCssStepDoors();
+    ndsMenuShellCssStepFlashes();
 
     /* mnPlayersVSFuncRun's start delay: once START is accepted the screen stops
      * taking input and counts down before the scene changes. */
@@ -2678,13 +3308,44 @@ static void ndsMenuShellUpdateCss(u32 held, u32 taps)
             {
                 if (ndsMenuShellCssCheckGrab() == FALSE)
                 {
+                    /* mnPlayersVSCursorProcUpdate checks game mode, BACK, then
+                     * the team selectors in exactly this order (:3356-3367). */
+                    if (ndsMenuShellCssBoxHit(27, 137, 14, 35) != FALSE)
+                    {
+                        u8 label;
+
+                        sCssIsTeamBattle = (sCssIsTeamBattle != FALSE) ?
+                            0u : 1u;
+                        label = (sCssIsTeamBattle != FALSE) ?
+                            (u8)NDS_MN_UI_KIT_SURFACE_CSS_MODE_TEAM :
+                            (u8)NDS_MN_UI_KIT_SURFACE_CSS_MODE_FFA;
+                        if (ndsUiKitBlitSurfaces(&label, 1u) != FALSE)
+                        {
+                            gNdsMenuShellCssPanelBlitCount++;
+                        }
+                        /* mnPlayersVSUpdateGameMode:1918 stops every current FGM
+                         * before the scroll and new mode announcement. */
+                        ndsAudioFgmStopAll();
+                        ndsMenuShellCssCue(NDS_CSS_FGM_SCROLL2);
+                        ndsMenuShellCssAnnounceMode();
+                        /* UpdateGateAll and Make/DestroyTeamSelectAll are same-
+                         * frame source operations. Gate palettes are BG2; the
+                         * source DL-34 selectors are foreground BG3. */
+                        ndsMenuShellCssSyncPanels((u32)NDS_CSS_SLOTS);
+                        ndsMenuShellCssSyncTeamSelectAll();
+                        gNdsMenuShellCssModeToggleCount++;
+                        return;
+                    }
                     if (ndsMenuShellCssBoxHit(244, 292, 13, 34) != FALSE)
                     {
                         ndsMenuShellCssCue(NDS_CSS_FGM_SCROLL2);
                         ndsMenuShellCssBack();
                         return;
                     }
-                    (void)ndsMenuShellCssCheckLevelArrows();
+                    if (ndsMenuShellCssCheckTeamSelect() == FALSE)
+                    {
+                        (void)ndsMenuShellCssCheckLevelArrows();
+                    }
                 }
             }
         }
@@ -2782,6 +3443,12 @@ static void ndsMenuShellCssInit(void)
     sCssReadyBlink = 0u;
     sCssReadyShown = 0xffffffffu; /* forces the first ShowReady to publish */
     sCssArrowsShown = TRUE;
+    sCssFlashShown[NDS_CSS_FLASH_KIND_MARIO] = 0u;
+    sCssFlashShown[NDS_CSS_FLASH_KIND_FOX] = 0u;
+    /* P2-1N (4): seeded from the transfer state exactly as the source seeds
+     * sMNPlayersVSIsTeamBattle on scene entry (mnplayersvs.c:4679). */
+    sCssIsTeamBattle = (gSCManagerTransferBattleState.is_team_battle != 0) ?
+        1u : 0u;
 
     for (i = 0u; i < (u32)NDS_CSS_SLOTS; i++)
     {
@@ -2789,6 +3456,9 @@ static void ndsMenuShellCssInit(void)
          * four blit on the entry frame -- the same tracker reset the VS menu's
          * buttons take in ndsMenuShellVsLoadRules. */
         sCssPanelSurface[i] = (u8)NDS_MENU_VS_SURFACE_NONE;
+        sCssFlashRemain[i] = 0u;
+        sCssFlashVisible[i] = 0u;
+        sCssFlashKind[i] = (u8)NDS_CSS_FLASH_KIND_NONE;
     }
 
     for (i = 0u; i < (u32)NDS_CSS_SLOTS; i++)
@@ -2799,6 +3469,8 @@ static void ndsMenuShellCssInit(void)
         sCssFkind[i] = cfg->fkind;
         sCssLevel[i] = (cfg->level < 1u) ? 1u : ((cfg->level > 9u) ? 9u :
                                                  cfg->level);
+        sCssTeam[i] = (cfg->team <= (u8)nSCBattleTeamIDGreen) ? cfg->team :
+            (u8)((i < 2u) ? nSCBattleTeamIDRed : nSCBattleTeamIDBlue);
         /* mnPlayersVSUpdateGate, mnplayersvs.c:4193: a slot with no controller
          * cannot be HUMAN. Only slot 0 has one here, so any other slot the
          * descriptor calls human arrives as empty -- which is the same
@@ -2832,6 +3504,38 @@ static void ndsMenuShellCssInit(void)
         sCssPuckY[NDS_CSS_CURSOR_SLOT] =
             (s16)(sCssCursorY + NDS_CSS_PUCK_CARRY_DY);
     }
+    /* P2-1N (3): mnPlayersVSMakeGate seeds EVERY slot at door_offset=41
+     * (closed), then mnPlayersVSShutterProcUpdate opens each occupied slot by
+     * 2/tic. Do not shortcut occupied slots to zero on entry: that deletes the
+     * source's entrance shutter animation. The CSS_DOORS strip is cached here
+     * for those slides. */
+    for (i = 0u; i < (u32)NDS_CSS_SLOTS; i++)
+    {
+        sCssDoorOffset[i] = 41u;
+    }
+    (void)ndsUiKitCacheSurface((u32)NDS_MN_UI_KIT_SURFACE_CSS_DOORS);
+}
+
+static void ndsMenuShellCssSyncPreviews(void)
+{
+    u32 slot;
+
+    /* The source's mode/team state must be visible to mnPlayersVSUpdateFighter
+     * BEFORE any slot can ask mnPlayersVSGetFreeCostume/GetShade. This call also
+     * performs UpdateGameMode/TeamSelect's in-place material changes for
+     * fighters whose kind did not change. */
+    ndsMNPlayersVSPreviewSyncRules(
+        (sCssIsTeamBattle != FALSE) ? TRUE : FALSE,
+        sCssTeam, (u32)NDS_CSS_SLOTS);
+    /* Source mnPlayersVSInitSlotAll explicitly initializes 0,1,2,3 and every
+     * player-kind / puck update can rebuild that slot's fighter. Mirror all
+     * four here now that the native owner path is instance-safe for mirrors. */
+    for (slot = 0u; slot < (u32)NDS_CSS_SLOTS; slot++)
+    {
+        ndsMNPlayersVSPreviewSync(slot, (s32)sCssPkind[slot],
+                                  (s32)sCssFkind[slot],
+                                  (sCssSelected[slot] != 0u) ? TRUE : FALSE);
+    }
 }
 
 /* Screen ENTRY, on a load frame: the only place all four panels are written at
@@ -2841,6 +3545,7 @@ static void ndsMenuShellPopulateCssScreen(void)
 {
     ndsMenuShellCssSyncPanels((u32)NDS_CSS_SLOTS);
     ndsMenuShellCssPopulate();
+    ndsMenuShellCssSyncTeamSelectAll();
     ndsMenuShellCssShowReady(FALSE);
     ndsMenuShellCssMove();
 }
@@ -3598,6 +4303,8 @@ static void ndsMenuShellUpdate(u32 screen, u32 held, u32 taps)
         break;
     case NDS_MENU_SHELL_SCREEN_CSS:
         ndsMenuShellUpdateCss(held, taps);
+        ndsMenuShellCssSyncPreviews();
+        ndsMNPlayersVSPreviewFrame();
         break;
     case NDS_MENU_SHELL_SCREEN_SSS:
         ndsMenuShellUpdateSss(held, taps);
@@ -3639,6 +4346,14 @@ static void ndsMenuShellRun(u32 screen)
 
     gNdsMenuShellScreen = screen;
     gNdsMenuShellEnterCount[screen]++;
+
+    /* Main BG0 is the retained 3D surface in MODE_5_3D. Only the character
+     * select owns 3D inside this native menu shell; every other screen hides
+     * it so CSS's last fighter frame cannot remain composited over Stage
+     * Select or a VS/menu screen after the source GObjs are gone. Battle
+     * explicitly reclaims BG0 at its own scene entry. */
+    ndsPlatformSet3DLayerEnabled(
+        (screen == NDS_MENU_SHELL_SCREEN_CSS) ? TRUE : FALSE);
 
     /* The battle's sprite compositor owns BG2/BG3, and a menu must not inherit
      * whatever the last battle frame left in them -- so both layers are
@@ -3736,6 +4451,14 @@ static void ndsMenuShellRun(u32 screen)
         /* P2-1k (d). Drops the pose table's view of the arena block; the block
          * itself belongs to the scene the teardown below rewinds. */
         ndsUiKitTitleAnimEnd();
+    }
+    if (screen == NDS_MENU_SHELL_SCREEN_CSS)
+    {
+        /* Clear the renderer's scene-local fighter registrations while the
+         * PlayersVS arena is still valid; gcEjectAll below owns the camera and
+         * every remaining GObj. */
+        ndsMNPlayersVSPreviewExit();
+        ndsPlatformSet3DLayerEnabled(FALSE);
     }
 
     ndsUiKitExit();
@@ -3883,27 +4606,25 @@ void ndsMenuShellRunVSMode(void)
     ndsMenuShellRun(NDS_MENU_SHELL_SCREEN_VSMODE);
 }
 
-/* mnPlayersVSFuncStart's tail, mnplayersvs.c:4896: the CSS starts its own track
- * unless it was entered FROM the stage select, and announces the game mode.
- * Both ids are the source's, and neither is in a pack yet -- BGM 10 is not one
- * of the five tracks the BGM assets carry and FGM 512 is not in the FGM pack --
- * so the requests land in gNdsAudioBgmUnsupportedTrackCount and the FGM miss
- * ring respectively, which is what makes row P2-1e-1's scope a measurement
- * rather than a guess. The `scene_prev != nSCKindMaps` condition is transcribed
- * even though the stage select is P2-1f and cannot be scene_prev yet, for the
- * same reason P2-1d-1 transcribed all four of the mode select's exclusions. */
+/* mnPlayersVSFuncStart's tail, mnplayersvs.c:4790-4798: the CSS starts its own
+ * track unless it was entered FROM the stage select, then announces the mode
+ * already carried by the transfer state.  Do not hard-code FREE FOR ALL here:
+ * returning from Maps while Team Battle is selected must say TEAM BATTLE just
+ * as the source does. */
 static void ndsMenuShellCssPlayBgm(void)
 {
     if ((u8)gSCManagerSceneData.scene_prev != (u8)nSCKindMaps)
     {
         ndsAudioBgmPlay(0, NDS_CSS_BGM_BATTLE_SELECT);
     }
-    ndsMenuShellCssCue(NDS_CSS_VOICE_FREE_FOR_ALL);
+    ndsMenuShellCssAnnounceMode();
 }
 
 void ndsMenuShellRunCharSelect(void)
 {
+    ndsMNPlayersVSPreviewInit();
     ndsMenuShellCssInit();
+    ndsMenuShellCssSyncPreviews();
     ndsMenuShellCssPlayBgm();
     ndsMenuShellRun(NDS_MENU_SHELL_SCREEN_CSS);
 }

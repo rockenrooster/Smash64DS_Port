@@ -887,12 +887,20 @@ void gcPlayDObjAnimJoint(DObj *dobj)
  * The repack (source opcode[31:25] flags[24:15] payload[14:0] -> native
  * opcode[6:0] flags[16:7] payload[31:17]) is a bit permutation with no spare
  * bit, so a word cannot say which layout it is in. This table is the only
- * record. Evicting an entry, or overflowing and re-normalizing later, applies
- * the permutation TWICE to a live script, which is unrecoverable corruption --
- * so no LRU, no reclaim, and reclaiming at file unload cannot help a long
- * match, because a match unloads nothing. `ndsAObjEvent32ResetNormalizedScripts`
- * is called from `ndsRelocResetLoadedFiles` (`reloc_backend_assets.c:2093`) and
- * is the ONLY correct discard point.
+ * record. Evicting an entry while its bytes are still live, or overflowing and
+ * re-normalizing later, applies the permutation TWICE to a live script, which
+ * is unrecoverable corruption -- so there is no LRU or speculative reclaim.
+ *
+ * Fighter figatrees have a narrower SOURCE lifetime than a scene, though.
+ * ftMainSetStatus calls lbRelocGetForceExternHeapFile for every ordinary action
+ * and overwrites that fighter's SAME `figatree_heap` in place (decomp
+ * ftmain.c:4621-4624, lbreloc.c:363-369). P2-2's four-CPU mirror stress exposed
+ * the old assumption: by 00:55 the ledger had 7,467 reason-3 rejects (same
+ * command address, different word), then a stale translate-interp binding
+ * reached syInterpGetFracFrame as 0x38000000 and data-aborted. The reloc owner
+ * therefore calls `ndsAObjEvent32ForgetRange` immediately BEFORE it overwrites
+ * that source-owned heap. Other fighters/files remain indexed; scene teardown
+ * still uses `ndsAObjEvent32ResetNormalizedScripts` for the full reset.
  *
  * 1024 was too small, measured, not estimated
  * (`artifacts/performance/2026-08-13_c-anim-anomalies/ANOMALIES.md`):
@@ -923,8 +931,24 @@ void gcPlayDObjAnimJoint(DObj *dobj)
  * on both lengths and the ledger index did not move this number (it removed
  * repeated FINDING, not repeated normalizing), so capacity remains the open
  * question at exactly 1,598 of 2,048. Re-derive it from the high-water counter
- * rather than from this comment. */
-#define NDS_AOBJ_EVENT32_NORMALIZED_MAX 2048u
+ * rather than from this comment.
+ *
+ * P2-2 DID re-derive it. The source-correct four-CPU M/F/M/F one-minute stress
+ * match reaches all 2,048 slots and records 8 reason-12 normalization failures.
+ * Reason 12 is a DS-only capacity failure: BattleShip has no policy that drops
+ * an animation attach after an arbitrary number of previously-normalized event
+ * words. The wrapper therefore cancels source behavior when this table fills.
+ *
+ * Raise the ledger by 1,024 entries rather than weakening the atomic attach or
+ * evicting live pointer keys. Each entry is exactly {pointer,native_word} = 8 B,
+ * so this costs 8,192 B. The P2-2 wallpaper-row reclamation recovered 131,552 B
+ * of .main.bss first; the same four-CPU run measured 40,400 B general-heap
+ * low-water against the 25,600 B hard floor, leaving 6,608 B even under the
+ * conservative 1:1 static-RAM exchange. The existing 4,096-slot hash remains
+ * strictly larger than the ledger and needs no extra RAM. The standing stress
+ * arm is the proof that 3,072 covers the finite four-fighter corpus with zero
+ * NormalizeFailCount before this row may close. */
+#define NDS_AOBJ_EVENT32_NORMALIZED_MAX 3072u
 #define NDS_AOBJ_EVENT32_PLAN_MAX 128u
 #define NDS_AOBJ_EVENT32_BRANCH_DEPTH_MAX 16u
 
@@ -1081,6 +1105,88 @@ static void ndsAObjEvent32IndexNormalized(u32 index)
      * that if it ever does happen the lookup below degrades to the scan it
      * replaced instead of dropping an entry. */
     gNdsAObjEvent32HashOverflowCount++;
+}
+
+/* Rebuild the pointer index after an owning buffer is retired.  This is not a
+ * normal lookup/insert operation, so deliberately do not charge the rebuild to
+ * the hash engagement counters: those counters price parser work, while this is
+ * relocation-lifetime maintenance at the force-load seam. */
+static void ndsAObjEvent32RebuildNormalizedIndex(void)
+{
+    u32 i;
+
+    for (i = 0u; i < NDS_AOBJ_EVENT32_NORMALIZED_HASH_SLOTS; i++)
+    {
+        sNdsAObjEvent32NormalizedHash[i] = 0u;
+    }
+    for (i = 0u; i < sNdsAObjEvent32NormalizedCount; i++)
+    {
+        u32 slot = ndsAObjEvent32HashSlot(sNdsAObjEvent32Normalized[i].command);
+        u32 probes;
+
+        for (probes = 0u; probes < NDS_AOBJ_EVENT32_NORMALIZED_HASH_SLOTS;
+             probes++)
+        {
+            if (sNdsAObjEvent32NormalizedHash[slot] == 0u)
+            {
+                sNdsAObjEvent32NormalizedHash[slot] = (u16)(i + 1u);
+                break;
+            }
+            slot = (slot + 1u) &
+                   (NDS_AOBJ_EVENT32_NORMALIZED_HASH_SLOTS - 1u);
+        }
+        if (probes == NDS_AOBJ_EVENT32_NORMALIZED_HASH_SLOTS)
+        {
+            /* The static load-factor assertion makes this unreachable.  Keep
+             * the same fail-open diagnostic as ordinary index insertion if a
+             * future capacity edit violates that invariant. */
+            gNdsAObjEvent32HashOverflowCount++;
+        }
+    }
+}
+
+void ndsAObjEvent32ForgetRange(const void *base, size_t size)
+{
+    uintptr_t range_start;
+    uintptr_t range_end;
+    u32 read_index;
+    u32 write_index = 0u;
+
+    if ((base == NULL) || (size == 0u))
+    {
+        return;
+    }
+    range_start = (uintptr_t)base;
+    range_end = range_start + size;
+    if (range_end < range_start)
+    {
+        return;
+    }
+
+    for (read_index = 0u; read_index < sNdsAObjEvent32NormalizedCount;
+         read_index++)
+    {
+        uintptr_t command =
+            (uintptr_t)sNdsAObjEvent32Normalized[read_index].command;
+
+        if ((command >= range_start) && (command < range_end))
+        {
+            continue;
+        }
+        if (write_index != read_index)
+        {
+            sNdsAObjEvent32Normalized[write_index] =
+                sNdsAObjEvent32Normalized[read_index];
+        }
+        write_index++;
+    }
+    if (write_index == sNdsAObjEvent32NormalizedCount)
+    {
+        return;
+    }
+
+    sNdsAObjEvent32NormalizedCount = write_index;
+    ndsAObjEvent32RebuildNormalizedIndex();
 }
 
 /* sNdsAObjEvent32NormalizedCount is reset on every scene teardown, so reading

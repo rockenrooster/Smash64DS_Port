@@ -66,6 +66,11 @@ $states = @(
     @{ Name = 'main-menu';   Break = 'ndsMenuShellRunModeSelect' },
     @{ Name = 'vs-rules';    Break = 'ndsMenuShellRunVSMode' },
     @{ Name = 'css-default'; Break = 'ndsMenuShellRunCharSelect' },
+    # The first CSS commit in the walk is reached only after accepted START and
+    # its source 30-tic proceed wait. Input/update is parked for that wait, so
+    # the last presented frame is the READY TO FIGHT state the player started
+    # from. Unlike the tiny ShowReady helper, this seam survives optimization.
+    @{ Name = 'css-ready';   Break = 'ndsMenuShellCssCommit'; Presents = 0 },
     @{ Name = 'sss-default'; Break = 'ndsMenuShellSssShowSelection' },
     # Hit 2 of the same symbol: the scripted RIGHT has moved the cursor. Slots
     # 7 and 8 are locked, so the move lands on 9 -- RANDOM.
@@ -124,9 +129,22 @@ try {
         ("target remote 127.0.0.1:{0}" -f $context.GdbPort)
     )
     foreach ($state in $states) {
+        $statePresents = if ($state.ContainsKey('Presents')) {
+            [int]$state.Presents
+        } else {
+            $PresentsAfterState
+        }
         $commands += @(
             'delete',
-            ('break ' + $state.Break),
+            ('break ' + $state.Break)
+        )
+        if ($state.ContainsKey('Condition')) {
+            # `$bpnum` is GDB's last-created breakpoint number. Breakpoint IDs
+            # keep increasing across `delete`, so hard-coding `condition 1`
+            # would silently condition only the first state in this sequence.
+            $commands += ('condition $bpnum ' + $state.Condition)
+        }
+        $commands += @(
             'continue',
             ('printf "SHELLCAP ' + $state.Name +
              ' screen=%u sss_slot=%u sss_gkind=%02x\n", gNdsMenuShellScreen, ' +
@@ -152,7 +170,9 @@ try {
         # IGNORE COUNT of the breakpoint that last stopped, and the one that
         # last stopped was just deleted, so gdb would continue exactly once and
         # say nothing.
-        $commands += @(1..$PresentsAfterState | ForEach-Object { 'continue' })
+        if ($statePresents -gt 0) {
+            $commands += @(1..$statePresents | ForEach-Object { 'continue' })
+        }
         $commands += @(
             ('printf "SHELLFIRE ' + $state.Name + ' shot' + $fire_args))
         $commands += @(

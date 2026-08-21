@@ -49,13 +49,13 @@
  * four cells is 128 px of text, which is wider than any label the SSB64 menus
  * draw in this font.
  *
- * EIGHT IS THE BANK-I CEILING, not a round number.  32 cells is exactly 16 KiB
- * and bank I is exactly 16 KiB, so eight fields is the largest layout both
- * engines can run -- which is what keeps one code path for the top-screen menus
- * and P2-2's bottom-screen HUD.  P2-1c needed six; P2-1e's character select
- * needs eight (FREE FOR ALL, BACK, READY TO FIGHT, PRESS START, and one
- * fighter-name field per slot), and the static assert in nds_ui_kit.c is what
- * stops a ninth from silently running bank I off its end. */
+ * EIGHT IS THE BANK-I CEILING, not a round number. 32 cells is exactly 16 KiB
+ * and bank I is exactly 16 KiB. P2-1 closeout converted the last main-screen
+ * composed label to source art, so MAIN no longer reserves or emits these text
+ * cells at all; the implementation is retained for the SUB engine, where the
+ * full 16 KiB text-only layout is still the declared capacity. The static
+ * assert in nds_ui_kit.c stops a ninth field from silently running bank I off
+ * its end. */
 #define NDS_UI_KIT_TEXT_SLOTS 8u
 #define NDS_UI_KIT_TEXT_CHUNKS 4u
 #define NDS_UI_KIT_TEXT_CHUNK_W 32u
@@ -75,7 +75,10 @@
  * elements the source draws on it that this shell had never converted -- the
  * 1P/CP player tag, the CP LEVEL colon and the two blinking level arrows, one
  * of each per slot. A slot costs an OAM id and a shadow entry, not VRAM, and
- * 45 plus the 32 text chunks is 77 of an engine's 128 OAM entries. */
+ * The compile-time OAM ceiling remains 45 + 32 = 77 for the shared code path,
+ * but the tenants are now engine-exclusive in practice: main emits sprite
+ * slots from id 0 with text nonresident, while sub can emit the 32 text chunks
+ * with image residency disabled. */
 #define NDS_UI_KIT_SPRITE_SLOTS 45u
 
 #define NDS_UI_KIT_OAM_IDS \
@@ -178,6 +181,8 @@ u32 ndsUiKitTextWidth(const char *text);
 /* --- Images. `image` indexes the generated manifest
  * (NDS_MN_UI_KIT_IMAGE_*). (x, y) is the top-left of the source sprite. --- */
 s32 ndsUiKitSetSprite(u32 slot, u32 image, s32 x, s32 y);
+s32 ndsUiKitSetSpriteBlend(u32 slot, u32 image, s32 x, s32 y, u32 alpha,
+                           u32 scale2x, u32 priority);
 void ndsUiKitMoveSprite(u32 slot, s32 x, s32 y);
 void ndsUiKitHideSprite(u32 slot);
 
@@ -209,6 +214,13 @@ u32 ndsUiKitNumberWidth(s32 value);
  * surface was composited over, which is why that field is a bake-time
  * constant rather than something the runtime has to remember. --- */
 s32 ndsUiKitBlitSurfaces(const u8 *surfaces, u32 count);
+/* Same baked-surface path, but to the main-engine foreground bitmap (BG3).
+ * Character Select uses this for the source team selector, whose display link
+ * is in front of the fighter preview. */
+s32 ndsUiKitBlitForegroundSurfaces(const u8 *surfaces, u32 count);
+/* Clear a small rectangle of BG3 to transparent before replacing/removing a
+ * keyed foreground surface. Coordinates are already in DS screen pixels. */
+void ndsUiKitClearForegroundRect(s32 x, s32 y, u32 width, u32 height);
 
 /* P2-1i -- the title's fire ATLAS. Its own entry point because it is the one
  * surface that is not a screen-space backdrop: it is a 255x252 sheet of the
@@ -220,6 +232,12 @@ s32 ndsUiKitBlitSurfaces(const u8 *surfaces, u32 count);
 s32 ndsUiKitBlitFireAtlas(void);
 s32 ndsUiKitCacheSurface(u32 surface);
 void ndsUiKitDrawCachedSurface(void);
+/* P2-1N (3): draw a keyed sub-rectangle of the cached surface at an arbitrary
+ * destination, clipped horizontally to [clip_x0, clip_x1) and to the layer.
+ * Built for the CSS slot doors (the cached CSS_DOORS strip carries both card
+ * halves); the shutter positions each half per frame at zero NitroFS cost. */
+s32 ndsUiKitDrawCachedSub(u32 src_x, u32 src_w, s32 dest_x, s32 dest_y,
+                          s32 clip_x0, s32 clip_x1);
 void ndsUiKitEraseCachedSurface(u16 field_texel);
 
 /* --- P2-1k (d). The title's pop animation. ------------------------------
