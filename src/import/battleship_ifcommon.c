@@ -375,6 +375,25 @@ u32 ndsIFCommonGetBattleHudDamageState(u32 player,
     return TRUE;
 }
 
+s32 ndsIFCommonBattleHudInterfaceVisible(void)
+{
+    /* Source visibility of the whole interface link.  The meters/timer/stocks
+     * hide exactly when ifCommonInterfaceSetGObjFlagsAll(GOBJ_FLAG_HIDDEN) has
+     * run -- at game end via ifCommonBattleInterfaceProcSet (which then sets
+     * game_status = Set, ifcommon.c:2974/:3305) and from pause (:2884, status
+     * Pause; Unpause restores the flags before returning to Go, :3089).  The
+     * announce window between End and Set still shows the meters, so only
+     * Set and Pause are hidden.  Outside VSBattle the native sub HUD must
+     * never render: its mirrors freeze once the interface gobjs stop drawing,
+     * which is what used to redraw the battle HUD over the Results screen. */
+    return ((gSCManagerSceneData.scene_curr == nSCKindVSBattle) &&
+            (gSCManagerBattleState != NULL) &&
+            (gSCManagerBattleState->game_status != nSCBattleGameStatusSet) &&
+            (gSCManagerBattleState->game_status != nSCBattleGameStatusPause))
+               ? TRUE
+               : FALSE;
+}
+
 void ndsIFCommonRecordHUDState(void)
 {
     u32 active_mask = 0u;

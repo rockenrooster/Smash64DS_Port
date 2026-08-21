@@ -154,6 +154,10 @@ static u32 sBattleCameraArmPrinted = 0xffffffffu;
 #endif
 static u32 sBattleTextHudReady;
 static u32 sBattleTextHudFingerprint = 0xffffffffu;
+/* Defined in src/import/battleship_ifcommon.c, beside the HUD mirrors it
+ * guards. Declared here rather than in a header because this file must stay
+ * out of the BattleShip scene include graph (nds_menu_shell.h's rule). */
+extern s32 ndsIFCommonBattleHudInterfaceVisible(void);
 #if NDS_BATTLE_PHASE_HUD_ENABLED
 static u32 sBattlePhaseHudLastSlipCount;
 #endif
@@ -181,6 +185,10 @@ __attribute__((used)) volatile u32 gNdsTitleFireDisableCount;
 __attribute__((used)) volatile u32 gNdsTitleFireFrameCount;
 static u32 sOriginalSpriteOverlayLayerMask;
 static s32 sOriginalSpriteOverlayNeedsFlush;
+/* See ndsPlatformSet3DLayerEnabled: an enable is ARMED here and committed by
+ * ndsPlatformEndFrame only after a real GX frame was submitted, so BG0 can
+ * never composite the previous 3D owner's retained frame. */
+static s32 s3dLayerEnableOnNextPresent;
 static u32 sOriginalSpriteOverlayEpoch[2] = { 1u, 1u };
 #if NDS_FAST_WALLPAPER_AFFINE
 typedef struct NDSFastWallpaperTransform
@@ -1066,15 +1074,24 @@ void ndsPlatformSet3DLayerEnabled(s32 is_enabled)
     /* MODE_5_3D presents the geometry engine through main BG0. Unlike a
      * software framebuffer, that layer retains the last completed 3D frame
      * when a scene submits no new geometry. Hide the display owner rather than
-     * manufacturing a dummy GX frame just to erase stale pixels. */
+     * manufacturing a dummy GX frame just to erase stale pixels.
+     *
+     * ENABLING IS DEFERRED TO THE NEXT PRESENTED FRAME (2026-08-21). Showing
+     * BG0 the moment a scene asks exposes whatever the PREVIOUS 3D owner last
+     * rendered: VSBattle reclaimed the layer at scene entry, so the whole
+     * asset-load window composited the character select's retained fighter
+     * previews -- the owner's "fighters appear the instant a stage is chosen".
+     * Arming here and committing in ndsPlatformEndFrame, only after a real GX
+     * frame was submitted and flushed, means every enable shows that scene's
+     * own first frame or nothing at all. A scene that never presents keeps the
+     * layer hidden, which is also the safer failure. */
     if (is_enabled != FALSE)
     {
-        REG_DISPCNT |= DISPLAY_BG0_ACTIVE;
+        s3dLayerEnableOnNextPresent = TRUE;
+        return;
     }
-    else
-    {
-        REG_DISPCNT &= ~DISPLAY_BG0_ACTIVE;
-    }
+    s3dLayerEnableOnNextPresent = FALSE;
+    REG_DISPCNT &= ~DISPLAY_BG0_ACTIVE;
 #else
     (void)is_enabled;
 #endif
@@ -3061,8 +3078,29 @@ static void ndsPlatformRenderBattleTextHud(void)
     /* P2-2: IFCommon still owns every timer/damage/stock update, but the steady
      * presentation now belongs to the sub 2D engine.  Run that sink before the
      * legacy text-telemetry early-outs: costume/flash state is intentionally
-     * richer than the old console fingerprint and must not be starved by it. */
-    ndsBattleHudRender();
+     * richer than the old console fingerprint and must not be starved by it.
+     *
+     * The source hides the whole interface link once the match ends
+     * (ifCommonBattleInterfaceProcSet -> ifCommonInterfaceSetGObjFlagsAll(
+     * GOBJ_FLAG_HIDDEN), ifcommon.c:2974, and the same call from pause at
+     * :2884).  Those hidden gobjs stop running their display callbacks, which
+     * is what feeds ndsIFCommonRecordHUDState -- so from game end onward the
+     * mirror masks freeze nonzero, and an unconditional render here would
+     * first keep the last battle frame through the victory window and then,
+     * after the Results seam's clear un-prepared the HUD, re-prepare and
+     * redraw it over the Results screen.  Render only while the source
+     * interface is visible, and clear on every other frame so the last drawn
+     * frame cannot survive.  The predicate lives in the ifCommon bridge; this
+     * file stays out of the BattleShip scene include graph
+     * (nds_menu_shell.h's header rule). */
+    if (ndsIFCommonBattleHudInterfaceVisible() != FALSE)
+    {
+        ndsBattleHudRender();
+    }
+    else
+    {
+        ndsBattleHudClear();
+    }
 
 #if NDS_SHIP_TELEMETRY
     gNdsBattleTextHudRenderCount++;
@@ -3601,6 +3639,14 @@ void ndsPlatformEndFrame(void)
         if (submitted != 0u)
         {
             gNdsHardwareRendererFlushCount++;
+            /* Commit a deferred 3D-layer enable only now, with this scene's
+             * own frame completed: the retained-image hazard this guards is
+             * documented at s3dLayerEnableOnNextPresent. */
+            if (s3dLayerEnableOnNextPresent != FALSE)
+            {
+                REG_DISPCNT |= DISPLAY_BG0_ACTIVE;
+                s3dLayerEnableOnNextPresent = FALSE;
+            }
         }
         else
         {
