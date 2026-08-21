@@ -1182,7 +1182,8 @@ def decode_epoch_light_color_state(
 
 
 def restore_epoch_light_color_state(
-        state, sequence, epochs, root_groups, additions, detail: str = "high"):
+        state, sequence, epochs, root_groups, additions, detail: str = "high",
+        expected_light_additions: int | None = None):
     """Fold recovered light words into the existing before/after state ABI."""
     state = list(state)
     rebuilt_sequence = []
@@ -1220,7 +1221,8 @@ def restore_epoch_light_color_state(
         rebuilt_root_groups.append(rebuilt_roots)
     if len(state) > 0x100 or len(rebuilt_sequence) > 0xffff:
         raise ValueError("recovered light state exceeds the compact state ABI")
-    expected_light_additions = DETAIL_LIGHT_CENSUS[detail][1]
+    if expected_light_additions is None:
+        expected_light_additions = DETAIL_LIGHT_CENSUS[detail][1]
     if len(rebuilt_sequence) != len(sequence) + expected_light_additions:
         raise ValueError(
             "recovered light state sequence changed size: "
@@ -2603,6 +2605,200 @@ def emit_rows(
     return result
 
 
+def render_p2_owner_runtime_program(
+        context: dict[str, object]) -> list[str]:
+    """Emit one independent P2-3 owner using the production table ABI."""
+    owner_name = str(context["owner_name"])
+    detail = str(context["detail"])
+    owner_title = owner_name.title()
+    suffix = "Low" if detail == "low" else ""
+    stem = f"sNdsNative{owner_title}Fighter"
+    state = context["state"]
+    sequence = context["sequence"]
+    vertex = context["vertex"]
+    triangles = context["triangles"]
+    runs = context["runs"]
+    epochs = context["epochs"]
+    roots = context["roots"]
+    dense_vertices = context["dense_vertices"]
+    dense_color_sources = context["dense_color_sources"]
+    action_dense_spans = context["action_dense_spans"]
+    packed_corners = context["packed_corners"]
+    run_first_corner = context["run_first_corner"]
+    run_first_unique = context["run_first_unique"]
+    run_unique_count = context["run_unique_count"]
+    run_unique_dense = context["run_unique_dense"]
+    direct_policies = context["direct_epoch_policies"]
+    topology = context["topology"]
+    joint_schedule, binding_parents, binding_joints, cross_slots, _ = topology
+    primitive_streams = context["primitive_streams"]
+    light_preambles = context["light_preambles"]
+    light_indices = context["light_preamble_indices"]
+    asset_data_size = int(context["asset_data_size"])
+
+    lines = [
+        f"/* P2-3 {owner_title} {detail} native-owner program. */",
+        f"/* Source triangles={len(triangles)}, runs={len(runs)}, "
+        f"dense={len(dense_vertices)}, roots={len(roots)}. */",
+        "",
+    ]
+    lines += emit_rows(
+        "NDSNativeStateDelta", f"{stem}StateDeltas{suffix}",
+        [f"{{ 0x{w0:08x}u, 0x{w1:08x}u, {effect}u, {{ 0u, 0u, 0u }} }}"
+         for w0, w1, effect in state],
+    )
+    lines += emit_rows(
+        "u8", f"{stem}StateSequence{suffix}",
+        [f"{value}u" for value in sequence],
+    )
+    lines += emit_rows(
+        "NDSNativeVertexAction", f"{stem}VertexActions{suffix}",
+        [f"{{ {kind}u, {command}u, {index}u, {count}u, "
+         f"0x{offset:08x}u, {s}, {t} }}"
+         for kind, command, index, count, offset, s, t in vertex],
+    )
+    lines += ["#if NDS_RENDERER_HW_TRIANGLES", ""]
+    lines += emit_rows(
+        "u8", f"{stem}EpochDirectPolicy{suffix}",
+        [f"0x{value:02x}u" for value in direct_policies],
+    )
+    lines += emit_rows(
+        "NDSNativeDenseVertex", f"{stem}DenseVertices{suffix}",
+        ["{{ 0x{:08x}u, {}, {}, {}u, {}u, 0u }}".format(
+             rgba, s, t, binding, cache_slot)
+         for x, y, z, s, t, binding, cache_slot, rgba in dense_vertices],
+    )
+    lines += ["#if NDS_RENDERER_PROFILE_LEVEL < 2", ""]
+    lines += emit_rows(
+        "NDSNativePreparedDenseVertex", f"{stem}PreparedDense{suffix}",
+        ["{{ .gx_xy = 0x{:08x}u, .gx_z = 0x{:04x}u }}".format(
+             *pack_fifo_vertex16(x, y, z,
+                                 f"{owner_name} {detail} dense vertex"))
+         for x, y, z, _s, _t, _binding, _cache_slot, _rgba in dense_vertices],
+        const=False,
+    )
+    lines += ["#endif", ""]
+    lines += emit_rows(
+        "u16", f"{stem}ActionDenseSpans{suffix}",
+        [f"0x{value:04x}u" for value in action_dense_spans],
+    )
+    lines += emit_rows(
+        "u16", f"{stem}DenseColorSource{suffix}",
+        [f"{value}u" for value in dense_color_sources],
+    )
+    lines += emit_rows(
+        "u16", f"{stem}PackedCorners{suffix}",
+        [f"0x{value:04x}u" for value in packed_corners],
+    )
+    lines += emit_rows(
+        "u16", f"{stem}RunFirstCorner{suffix}",
+        [f"{value}u" for value in run_first_corner],
+    )
+    lines += emit_rows(
+        "u16", f"{stem}RunFirstUnique{suffix}",
+        [f"{value}u" for value in run_first_unique],
+    )
+    lines += emit_rows(
+        "u8", f"{stem}RunUniqueCount{suffix}",
+        [f"{value}u" for value in run_unique_count],
+    )
+    lines += emit_rows(
+        "u16", f"{stem}RunUniqueDense{suffix}",
+        [f"{value}u" for value in run_unique_dense],
+    )
+    lines += emit_rows(
+        "u16", f"{stem}Triangles{suffix}",
+        [f"0x{value:04x}u" for value in triangles],
+    )
+    lines += emit_rows(
+        "NDSNativeRun", f"{stem}Runs{suffix}",
+        [f"{{ {first}u, {count}u, {submit_class}u, 0x{mask:08x}u }}"
+         for first, count, submit_class, mask in runs],
+    )
+    for primitive_mode in (1, 2):
+        (run_group_first, run_group_count, group_type,
+         group_first_vertex, group_vertex_count,
+         primitive_vertices) = primitive_streams[primitive_mode]
+        lines += [f"#if NDS_TASK56_FIGHTER_PRIMITIVES == {primitive_mode}"]
+        lines += emit_rows(
+            "u16", f"{stem}PrimitiveGroupFirst{suffix}",
+            [f"{value}u" for value in run_group_first],
+        )
+        lines += emit_rows(
+            "u8", f"{stem}PrimitiveGroupCount{suffix}",
+            [f"{value}u" for value in run_group_count],
+        )
+        lines += emit_rows(
+            "u8", f"{stem}PrimitiveGroupType{suffix}",
+            [f"{value}u" for value in group_type],
+        )
+        lines += emit_rows(
+            "u16", f"{stem}PrimitiveGroupFirstVertex{suffix}",
+            [f"{value}u" for value in group_first_vertex],
+        )
+        lines += emit_rows(
+            "u8", f"{stem}PrimitiveGroupVertexCount{suffix}",
+            [f"{value}u" for value in group_vertex_count],
+        )
+        lines += emit_rows(
+            "u16", f"{stem}PrimitiveVertices{suffix}",
+            [f"0x{value:04x}u" for value in primitive_vertices],
+        )
+        lines += ["#endif", ""]
+    lines += emit_rows(
+        "NDSNativeEpoch", f"{stem}Epochs{suffix}",
+        ["{{ {}u, {}u, {}u, {}u, {}u, {}u, {}u, {}u, {}u, {}u, {}u, {}u }}".format(*row)
+         for row in epochs],
+    )
+    # High and Low have the same topology for admitted BattleShip fighters, but
+    # emitting the cross-slot table with each program keeps the runtime table
+    # self-contained and makes a future topology difference a generated diff.
+    lines += emit_rows(
+        "u8", f"sNdsNative{owner_title}CrossPaletteSlots{suffix}",
+        [f"{value}u" for value in cross_slots],
+    )
+    if detail == "high":
+        lines += [
+            f"#define NDS_NATIVE_{owner_name.upper()}_MODEL_DATA_SIZE "
+            f"0x{asset_data_size:x}u",
+            "",
+        ]
+        lines += emit_rows(
+            "u8", f"sNdsNative{owner_title}BindingParents",
+            [f"{value}u" for value in binding_parents],
+        )
+        lines += emit_rows(
+            "u8", f"sNdsNative{owner_title}BindingJoints",
+            [f"{value}u" for value in binding_joints],
+        )
+        lines += emit_rows(
+            "u16", f"sNdsNative{owner_title}JointSchedule",
+            [f"0x{value:04x}u" for value in joint_schedule],
+        )
+        lines += [
+            f"static const u32 sNdsNative{owner_title}RootLightPreambles"
+            f"[{len(light_preambles)}][2] =",
+            "{",
+        ]
+        lines += [
+            f"    {{ 0x{w0:08x}u, 0x{w1:08x}u }},"
+            for w0, w1 in light_preambles
+        ]
+        lines += ["};", ""]
+    elif light_preambles != context.get("high_light_preambles", light_preambles):
+        # Currently unreachable; documents the ABI expectation for callers that
+        # elect to share a preamble table between detail levels.
+        raise ValueError(f"{owner_name}: High/Low root light preambles differ")
+    root_format = "{{ 0x{:08x}u, {}u, {}u, {}u, {}u, {}u, {}u, {}u }}"
+    lines += emit_rows(
+        "NDSNativeRoot", f"sNdsNative{owner_title}Roots{suffix}",
+        [root_format.format(*row[:7], light_index)
+         for row, light_index in zip(roots, light_indices)],
+    )
+    lines += ["#endif", ""]
+    return lines
+
+
 def build_owner_source_context(repo_root: Path, detail: str = "high"
                                ) -> dict[str, object]:
     """Recover the exact shared Mario/Fox source-order program inputs."""
@@ -2707,6 +2903,135 @@ def build_owner_source_context(repo_root: Path, detail: str = "high"
         "light_preambles": light_preambles,
         "owner_light_preamble_indices": owner_light_preamble_indices,
         "owner_light_command_counts": owner_light_command_counts,
+    }
+
+
+def build_p2_owner_runtime_context(
+        repo_root: Path, owner_name: str, detail: str = "high"
+        ) -> dict[str, object]:
+    """Build the complete independent runtime IR for one P2-3 owner.
+
+    Mario/Fox predate the production pipeline and share one combined table set.
+    New owners deliberately get an independent table set instead: this keeps
+    the frozen P2-2 arrays byte-identical, makes per-fighter ROM/RAM cost
+    reviewable, and lets variant-specific source state (notably Luigi's second
+    root-light preamble) remain exact rather than being forced through the old
+    two-owner compact assumptions.
+    """
+    data = build_p2_owner_source_export(repo_root, owner_name, detail)
+    state = unpack_many("<IIB3x", data["state"])
+    sequence = list(data["sequence"])
+    vertex = unpack_many("<BBBBIhh", data["vertex"])
+    triangles = [item[0] for item in unpack_many("<H", data["triangles"])]
+    runs = unpack_many("<HBBI", data["runs"])
+    epochs = unpack_many("<HHHHBBBBBBBB", data["epochs"])
+    roots = unpack_many("<IHHHBBBB2x", data[f"{owner_name}_roots"])
+    owner_roots = ((owner_name, roots),)
+
+    direct_epoch_policies = derive_direct_epoch_policies(
+        state, sequence, epochs, owner_roots, expected_policies=None
+    )
+    payload = load_o2r_payload(repo_root, owner_name)
+    topology = decode_joint_topology(payload, owner_name, roots, detail)
+    (light_state, owner_preambles,
+     prefix_light_count, intra_light_count) = decode_epoch_light_color_state(
+        payload, owner_name, roots, epochs
+    )
+
+    # Unlike Mario/Fox, no assumption is made that all non-zero root preambles
+    # share the same first light word.  The runtime table carries the exact pair
+    # and roots keep the compact u8 index.
+    light_preambles = [(0, 0)]
+    light_indices = []
+    for preamble in owner_preambles:
+        if preamble is None:
+            light_indices.append(0)
+            continue
+        if preamble not in light_preambles:
+            light_preambles.append(preamble)
+        light_indices.append(light_preambles.index(preamble))
+    if len(light_preambles) > 0xff:
+        raise ValueError(f"{owner_name}: root-light preamble index exceeds u8")
+
+    additions = {index: ([], []) for index in range(len(epochs))}
+    for epoch_index, (before, after) in light_state.items():
+        additions[epoch_index][0].extend(before)
+        additions[epoch_index][1].extend(after)
+    state, sequence, epochs, rebuilt_roots = restore_epoch_light_color_state(
+        state, sequence, epochs, (roots,), additions, detail,
+        expected_light_additions=intra_light_count,
+    )
+    roots = rebuilt_roots[0]
+    owner_roots = ((owner_name, roots),)
+
+    (dense_vertices, dense_color_sources, dense_owners, dense_corners,
+     action_dense_first, run_first_corner, run_owners, run_root_bindings,
+     run_binding_sets) = build_dense_geometry(
+        vertex, triangles, runs, epochs, owner_roots, repo_root
+    )
+    owner_cross_slots = [topology[3]]
+    (action_dense_spans, packed_corners, run_first_unique,
+     run_unique_count, run_unique_dense) = build_direct_dense_tables(
+        vertex, runs, dense_vertices, dense_color_sources, dense_corners,
+        action_dense_first, run_first_corner, run_owners,
+        run_root_bindings, run_binding_sets, owner_cross_slots,
+        detail, (owner_name,),
+    )
+    primitive_streams = {
+        mode: build_fighter_primitive_streams(
+            runs, packed_corners, run_first_corner, mode
+        )
+        for mode in (1, 2)
+    }
+
+    expected = P2_OWNER_MODEL_CENSUS[owner_name][detail]
+    observed = (
+        # Inventory pins are on the source IR before recovered light deltas.
+        len(unpack_many("<IIB3x", data["state"])),
+        len(data["sequence"]),
+        len(vertex), len(triangles), len(runs),
+        len(unpack_many("<HHHHBBBBBBBB", data["epochs"])),
+        len(roots), len(dense_vertices), len(dense_corners),
+        sum(1 for run in runs if run[2] == 1),
+        prefix_light_count, intra_light_count,
+        DETAIL_GX_PLAN_COUNTS[detail][owner_name][4],
+    )
+    if observed != expected:
+        raise ValueError(
+            f"{owner_name} {detail} runtime context census {observed} != {expected}"
+        )
+
+    return {
+        "owner_name": owner_name,
+        "detail": detail,
+        # Runtime bounds are against the decoded O2R payload, not the outer
+        # resource container. Keep this source-derived so renderer admission
+        # cannot drift onto a hand-copied byte count.
+        "asset_data_size": len(payload),
+        "state": state,
+        "sequence": sequence,
+        "vertex": vertex,
+        "triangles": triangles,
+        "runs": runs,
+        "epochs": epochs,
+        "roots": roots,
+        "topology": topology,
+        "direct_epoch_policies": direct_epoch_policies,
+        "light_preambles": light_preambles,
+        "light_preamble_indices": light_indices,
+        "light_command_counts": (prefix_light_count, intra_light_count),
+        "dense_vertices": dense_vertices,
+        "dense_color_sources": dense_color_sources,
+        "dense_owners": dense_owners,
+        "dense_corners": dense_corners,
+        "action_dense_first": action_dense_first,
+        "action_dense_spans": action_dense_spans,
+        "packed_corners": packed_corners,
+        "run_first_corner": run_first_corner,
+        "run_first_unique": run_first_unique,
+        "run_unique_count": run_unique_count,
+        "run_unique_dense": run_unique_dense,
+        "primitive_streams": primitive_streams,
     }
 
 
@@ -3024,6 +3349,20 @@ def generate(repo_root: Path | None = None) -> str:
         2: build_fighter_primitive_streams(
             low_runs, low_packed_corners, low_run_first_corner, 2),
     }
+    # P2-3 keeps new owners as independent programs so the qualified Mario/Fox
+    # arrays above are not reindexed.  They are emitted behind the admission
+    # flag and therefore have zero code/data cost in the standing P2-2 build.
+    luigi_high_context = build_p2_owner_runtime_context(
+        repo_root, "luigi", "high"
+    )
+    luigi_low_context = build_p2_owner_runtime_context(
+        repo_root, "luigi", "low"
+    )
+    if (luigi_high_context["light_preambles"] !=
+            luigi_low_context["light_preambles"]):
+        raise ValueError("Luigi High/Low root light preambles differ")
+    luigi_low_context["high_light_preambles"] = \
+        luigi_high_context["light_preambles"]
 
     lines = [
         "/* Generated by scripts/generate_nds_native_owners.py. */",
@@ -3494,6 +3833,14 @@ def generate(repo_root: Path | None = None) -> str:
              low_context["owner_light_preamble_indices"]["fox"])],
     )
     lines += ["#endif", ""]
+    lines += [
+        "#if NDS_P2_LUIGI",
+        "/* P2-3: independent source-derived Luigi runtime owner. */",
+        "",
+    ]
+    lines += render_p2_owner_runtime_program(luigi_high_context)
+    lines += render_p2_owner_runtime_program(luigi_low_context)
+    lines += ["#endif  /* NDS_P2_LUIGI */", ""]
     return "\n".join(lines)
 
 

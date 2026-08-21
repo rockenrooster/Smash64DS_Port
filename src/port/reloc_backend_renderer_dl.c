@@ -16024,10 +16024,11 @@ static void ndsFighterDrawPlanVerify(
 
 /* P2-2 separates two values that were accidentally identical in the old
  * two-fighter match: the battle PLAYER slot (0..3) and the generated native
- * OWNER slot (0 Mario, 1 Fox).  Instance caches use the former; generated
- * topology/material tables and native renderer entry points use the latter. */
-static sb32 ndsFighterMarioFoxGetNativeOwnerSlot(const FTStruct *fp,
-                                                 u32 *owner_slot)
+ * OWNER slot (0 Mario, 1 Fox, then P2-3 roster owners). Instance caches use
+ * the former; generated topology/material tables and native renderer entry
+ * points use the latter. Keep fighter-kind admission here so adding a source
+ * inventory cannot silently make a half-integrated owner drawable. */
+static sb32 ndsFighterGetNativeOwnerSlot(const FTStruct *fp, u32 *owner_slot)
 {
     if ((fp == NULL) || (owner_slot == NULL))
     {
@@ -16043,7 +16044,52 @@ static sb32 ndsFighterMarioFoxGetNativeOwnerSlot(const FTStruct *fp,
         *owner_slot = 1u;
         return TRUE;
     }
+#if NDS_P2_LUIGI
+    if (fp->fkind == nFTKindLuigi)
+    {
+        *owner_slot = 2u;
+        return TRUE;
+    }
+#endif
     return FALSE;
+}
+
+static u32 ndsFighterNativeOwnerModelAssetId(u32 owner_slot)
+{
+    if (owner_slot == 0u)
+    {
+        return 0x128u; /* llMarioModelFileID */
+    }
+    if (owner_slot == 1u)
+    {
+        return 0x139u; /* llFoxModelFileID */
+    }
+#if NDS_P2_LUIGI
+    if (owner_slot == 2u)
+    {
+        return 0x143u; /* llLuigiModelFileID, BattleShip dFTLuigiData */
+    }
+#endif
+    return 0u;
+}
+
+static NDSRendererProfileOwner ndsFighterNativeOwnerProfileId(u32 owner_slot)
+{
+    if (owner_slot == 0u)
+    {
+        return NDS_RENDERER_PROFILE_OWNER_MARIO;
+    }
+    if (owner_slot == 1u)
+    {
+        return NDS_RENDERER_PROFILE_OWNER_FOX;
+    }
+#if NDS_P2_LUIGI
+    if (owner_slot == 2u)
+    {
+        return NDS_RENDERER_PROFILE_OWNER_LUIGI;
+    }
+#endif
+    return NDS_RENDERER_PROFILE_OWNER_NONE;
 }
 
 static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
@@ -16080,6 +16126,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
     u32 i;
 #if NDS_RENDERER_HW_TRIANGLES
     NDSRendererProfileOwner owner_id;
+    u32 expected_asset_id;
 #if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
     NDS_RENDERER_M2_DETAILED_LEDGER
     volatile NDSRendererOwnerProfile *m2_owner;
@@ -16133,7 +16180,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
     if ((slot >= GMCOMMON_PLAYERS_MAX) ||
         (ndsFighterStructIsTrackedPointer(fp) == FALSE) ||
         (fp->fighter_gobj == NULL) ||
-        (ndsFighterMarioFoxGetNativeOwnerSlot(fp, &owner_slot) == FALSE) ||
+        (ndsFighterGetNativeOwnerSlot(fp, &owner_slot) == FALSE) ||
         ((pixels != NULL) &&
          ((fp->status_id != nFTCommonStatusWait) ||
           (fp->motion_id != nFTCommonMotionWait) ||
@@ -16152,8 +16199,8 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
         0u;
 
 #if NDS_RENDERER_HW_TRIANGLES
-    owner_id = (owner_slot == 0u) ? NDS_RENDERER_PROFILE_OWNER_MARIO :
-                                    NDS_RENDERER_PROFILE_OWNER_FOX;
+    owner_id = ndsFighterNativeOwnerProfileId(owner_slot);
+    expected_asset_id = ndsFighterNativeOwnerModelAssetId(owner_slot);
 #if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
     NDS_RENDERER_M2_DETAILED_LEDGER
     m2_owner = &gNdsRendererProfileOwners[(u32)owner_id];
@@ -16372,7 +16419,6 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
     ndsRendererProfileSetOwner(owner_id);
     if (native_owner_enabled != FALSE)
     {
-        u32 expected_asset_id = (owner_slot == 0u) ? 0x128u : 0x139u;
 #if NDS_TASK91_DRAW_PHASE_CENSUS
         task91_phase_start = cpuGetTiming();
 #endif
@@ -16965,8 +17011,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
 #if NDS_RENDERER_HW_TRIANGLES
         if ((native_owner_enabled != FALSE) && (loaded != NULL) &&
             (loaded->data != NULL) &&
-            (((owner_slot == 0u) && (loaded->asset_id == 0x128u)) ||
-             ((owner_slot == 1u) && (loaded->asset_id == 0x139u))) &&
+            (loaded->asset_id == expected_asset_id) &&
             (loaded->data_size >= sizeof(*dl)) &&
             ((uintptr_t)dl >= (uintptr_t)loaded->data) &&
             (((uintptr_t)dl - (uintptr_t)loaded->data) <=
@@ -17484,7 +17529,7 @@ void ndsFighterDisplayContractSubmit(GObj *fighter_gobj)
     fp = ftGetStruct(fighter_gobj);
     if ((ndsFighterStructIsTrackedPointer(fp) == FALSE) ||
         ((u32)fp->nds_slot >= GMCOMMON_PLAYERS_MAX) ||
-        (ndsFighterMarioFoxGetNativeOwnerSlot(fp, &owner_slot) == FALSE))
+        (ndsFighterGetNativeOwnerSlot(fp, &owner_slot) == FALSE))
     {
         return;
     }
@@ -17496,8 +17541,7 @@ void ndsFighterDisplayContractSubmit(GObj *fighter_gobj)
     sNdsFighterDisplayContractLastFrame[(u32)fp->nds_slot] =
         gNdsRendererProfileFrameCount;
 #if NDS_TICK_HUD || (NDS_RENDERER_PROFILE_LEVEL >= 1)
-    owner_id = (owner_slot == 0u) ?
-        NDS_RENDERER_PROFILE_OWNER_MARIO : NDS_RENDERER_PROFILE_OWNER_FOX;
+    owner_id = ndsFighterNativeOwnerProfileId(owner_slot);
     owner_start = cpuGetTiming();
 #if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
     NDS_RENDERER_M2_DETAILED_LEDGER

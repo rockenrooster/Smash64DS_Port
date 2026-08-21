@@ -623,7 +623,8 @@ def main() -> int:
     total_cross_corner_samples = 0
     commits = []
     mutations = task27_mutations
-    for owner_name in ("mario", "fox"):
+    qualified_owners = ("mario", "fox")
+    for owner_name in qualified_owners:
         payload = native.load_o2r_payload(source_root, owner_name)
         (
             schedule,
@@ -791,12 +792,30 @@ def main() -> int:
             "commit trace cardinality changed")
     # This is the generated logical matrix/root payload gate, not linked BSS.
     # Actual candidate reserve is enforced by the ROM verifier/map evidence.
+    # This gate predates P2-3 and intentionally prices the always-qualified
+    # Mario/Fox program only. New roster owners are emitted independently
+    # behind their admission flag; including every known source inventory here
+    # would make a default-off fighter fail the P2-2 workspace contract without
+    # adding a byte to that build. The Luigi variant should still cost exactly
+    # Mario's logical hierarchy payload because its source skeleton/root shape
+    # is identical; pin that separately so the exclusion cannot hide drift.
     logical_workspace_bytes = (
-        sum(counts[0] for counts in native.OWNER_PLAN_COUNTS.values()) * 64 +
-        sum(counts[1] for counts in native.OWNER_PLAN_COUNTS.values()) * 12
+        sum(native.OWNER_PLAN_COUNTS[name][0] for name in qualified_owners) * 64 +
+        sum(native.OWNER_PLAN_COUNTS[name][1] for name in qualified_owners) * 12
     )
     require(logical_workspace_bytes <= 4160,
             "logical owner payload exceeds the 4160-byte gate")
+    if "luigi" in native.OWNER_PLAN_COUNTS:
+        mario_workspace_bytes = (
+            native.OWNER_PLAN_COUNTS["mario"][0] * 64 +
+            native.OWNER_PLAN_COUNTS["mario"][1] * 12
+        )
+        luigi_workspace_bytes = (
+            native.OWNER_PLAN_COUNTS["luigi"][0] * 64 +
+            native.OWNER_PLAN_COUNTS["luigi"][1] * 12
+        )
+        require(luigi_workspace_bytes == mario_workspace_bytes,
+                "Luigi variant hierarchy payload diverged from Mario")
     print(
         "combined: push/pop=11/11 stores=10 restores=84 "
         f"crossTriangles=44 states/corners={total_states}/{total_corners} "
