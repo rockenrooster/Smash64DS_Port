@@ -339,14 +339,14 @@ void ndsMNPlayersVSPreviewSync(u32 slot, s32 pkind, s32 fkind,
          * stale taskman-arena fighter pointer. */
         ndsFighterManagerRegisterDisplayFighter(NULL, slot);
 #if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
-        if (fighter_gobj != NULL)
-        {
-            /* mnPlayersVSMakeFighter may destroy this fighter and allocate the
-             * replacement from the same DObj/MObj free lists. The source is
-             * allowed to reuse those addresses; the DS material cache must not
-             * interpret that address reuse as an unchanged costume. */
-            ndsFighterRendererInvalidateMaterialCaches();
-        }
+        /* Unconditional (2026-08-21): mnPlayersVSUpdateFighter may destroy and
+         * rebuild this slot's fighter even when the slot was previously EMPTY,
+         * and the replacement MObjs can reuse addresses freed by ANOTHER
+         * slot's earlier rebuild. The old fighter_gobj != NULL guard left that
+         * reuse able to inherit another fighter's converted costume colors --
+         * the owner's "mixed colors on the second same-kind fighter". The
+         * clear is a 32x4 row wipe at menu-action rate; always pay it. */
+        ndsFighterRendererInvalidateMaterialCaches();
 #endif
         mnPlayersVSUpdateFighter((s32)slot);
         fighter_gobj = sMNPlayersVSSlots[slot].player;
