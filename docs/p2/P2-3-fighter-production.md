@@ -29,6 +29,32 @@ Luigi proves the pipeline (variant path); DK proves it on a structurally
 different archetype. If either needs manual one-offs, fix the pipeline before
 fighter 3.
 
+### Bootstrap status (2026-08-21)
+
+The first pipeline slice is source-derived inventory rather than another
+fighter-specific loader table. `scripts/fighters/generate_fighter_production_manifest.py`
+reads BattleShip `ftdata.c`, generated `relocData` source names, the US reloc
+symbol table, and O2R headers/extern tables and writes the tracked
+`fighter_production_manifest.json`. `make p2-fighter-production-manifest`
+rebuilds it and `check-fighter-production-manifest.ps1` is a standing static
+gate.
+
+The bootstrap proves its extraction against the already-shipping Mario/Fox
+content: the source-derived closure is **321 files, exactly the 321 files in
+`NDS_MARIOFOX_FIGHTER_RELOC_FILES`**. Luigi is then derived as a variant rather
+than described by hand: its core owns Main/MainMotion/Model/Special1, shares
+Mario ShieldPose/Special2/Special3, has 12 Luigi-local animation files, and its
+motion table still reaches **19 shared Mario item-related animation files**.
+That last point is the P2-5 requirement in this plan becoming a build-visible
+fact rather than a future retrofit note.
+
+The audit also records six historical Fox semantic FileID mappings that differ
+from BattleShip's generated relocData semantic filenames. They predate this
+pipeline and remain untouched while P2-2's Boundary is green; the production
+pipeline uses the generated source binding rather than copying those values.
+Any behavior correction to an already-shipping fighter must be its own
+source-reviewed regression slice, not a side effect of landing Luigi.
+
 ## Roster order (owner-ratified engineering order)
 
 | # | Fighter | File | Archetype / why this slot |

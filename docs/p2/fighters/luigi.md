@@ -2,6 +2,20 @@
 
 Status: not started · Reference: `decomp/BattleShip-main/decomp/src/ft/ftchar/ftluigi/`
 
+## Pipeline inventory (2026-08-21)
+
+The P2-3 manifest now derives Luigi directly from BattleShip's `dFTLuigiData`
+and `dFTLuigiMotionDescs`. Core ownership is exact: Luigi owns
+`LuigiMain` (`0xDD`), `LuigiMainMotion` (`0xDC`), `LuigiModel` (`0x143`) and
+`LuigiSpecial1` (`0xDE`); he shares Mario's ShieldPose, Special2 and Special3,
+and has no Special4. The 12 Luigi-local animation resources are recovered from
+BattleShip's generated `1103_FTLuigiAnimEggLay.c` …
+`1114_FTLuigiAnimFSmashLow.c` provenance, not hand-assigned IDs. His full
+motion inventory is 143 files and includes 19 source-shared Mario item motions.
+
+This is inventory only: Luigi is not selectable until the following runtime,
+native-owner, CSS/audio/asset, move-inventory and four-CPU budget slices pass.
+
 ## Role
 
 First new fighter on purpose: shares Mario's skeleton/kit shape, so he proves

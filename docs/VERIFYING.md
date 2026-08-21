@@ -430,15 +430,18 @@ Run only the relevant group:
 .\scripts\check-docs.ps1
 .\scripts\check-harness-registry.ps1
 .\scripts\check-melonds-policy.ps1
+.\scripts\check-fighter-production-manifest.ps1
 ```
 
 Do not run all groups merely because they are cheap. `verify-dev-fast.ps1` is a
 cross-domain checkpoint helper, not an every-edit command.
 
-`verify-all.ps1` runs four of the forty-eight `check-*.ps1` scripts itself:
-`check-gbi-decode-fixtures`, `check-harness-registry`, (since 2026-08-01)
-`check-nds-particle-banks`, and (since 2026-08-18) `check-mn-screen-coverage`.
-The other forty-four are hand-run, which on 2026-08-01 meant the particle-bank
+`verify-all.ps1` deliberately runs the source/generator checks whose output is
+part of the standing gate: `check-gbi-decode-fixtures`,
+`check-harness-registry`, (since 2026-08-01) `check-nds-particle-banks`,
+(since 2026-08-18) `check-mn-screen-coverage`, and (since 2026-08-21)
+`check-fighter-production-manifest`. The remaining focused checks are hand-run,
+which on 2026-08-01 meant the particle-bank
 pins sat stale across a commit and cost seven failing runs of arrears to clear.
 **Actionable:** when a checker pins numbers that a generator can move, wire it
 into `verify-all.ps1` at the point of the change rather than trusting anyone to

@@ -261,7 +261,7 @@ try {
         & make -C $root TARGET=smash64ds BUILD=build NDS_DEV_SCENE_HARNESS=normal NDS_HARNESS_FAST_LOGIC=0 -B
         if ($LASTEXITCODE -ne 0) { exit (Get-Smash64DSFailureExitCode -Code $LASTEXITCODE) }
     }
-    $expectedVerifiers = 3 + $plan.Count + $(if ($SkipRegistryCheck) { 0 } else { 1 })
+    $expectedVerifiers = 4 + $plan.Count + $(if ($SkipRegistryCheck) { 0 } else { 1 })
     Invoke-VerifyScript `
         -Script (Join-Path $PSScriptRoot 'check-gbi-decode-fixtures.ps1') `
         -Arguments @()
@@ -280,6 +280,12 @@ try {
     # one we ship. ~1 s, static, no ROM.
     Invoke-VerifyScript `
         -Script (Join-Path $PSScriptRoot 'check-mn-screen-coverage.ps1') `
+        -Arguments @()
+    # P2-3 fighter production starts from a source-derived file/motion manifest.
+    # Catch FTData/relocData/O2R drift before a later fighter silently uses a
+    # stale hand-maintained file list.
+    Invoke-VerifyScript `
+        -Script (Join-Path $PSScriptRoot 'check-fighter-production-manifest.ps1') `
         -Arguments @()
     if (-not $SkipRegistryCheck) {
         Invoke-VerifyScript `

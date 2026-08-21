@@ -3942,7 +3942,7 @@ NDS_NITROFS_EFFECT_FILES := \
 	$(NITROFS_DIR)/effects/task39_hit_sparks.rgb5a1.bin
 endif
 
-.PHONY: all clean clean-generated distclean run $(BUILD) prune-obsolete-audio
+.PHONY: all clean clean-generated distclean run $(BUILD) prune-obsolete-audio p2-fighter-production-manifest
 
 all: $(BUILD)
 
@@ -3961,6 +3961,12 @@ distclean: clean-generated
 
 run: $(BUILD)
 	@echo "ROM ready: $(NDS_OUTPUT_ROOT)/$(NDS_OUTPUT_BASENAME).nds"
+
+# P2-3 source inventory. This is deliberately explicit rather than an implicit
+# ROM prerequisite: updating the tracked manifest is a reviewable fighter-
+# production step, not a side effect of every ordinary build.
+p2-fighter-production-manifest:
+	@python scripts/fighters/generate_fighter_production_manifest.py --repo-root .
 
 # P1 convenience goals. P1 ships smash64ds-battle-playable-hwtri.nds and is
 # measured on its flag-identical tick-HUD sibling; bare `make` builds the P2
