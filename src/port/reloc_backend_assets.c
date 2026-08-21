@@ -13,6 +13,7 @@
  * and are reported separately. */
 #include "nds_scene_harness_config.h"
 
+#include <nds/generated/nds_fighter_production.generated.h>
 #include <nds/nds_battlepack_anim.h>
 #include <nds/nds_ifcommon_oam.h>
 #include <nds/nds_reloc_assets.h>
@@ -1534,6 +1535,32 @@ static s32 ndsRelocIsMarioFoxAnimID(u32 asset_id)
         FALSE;
 }
 
+/* P2-3 widens the generic fighter-animation ownership without widening P2-2's
+ * Mario/Fox diagnostics.  In particular, K0 and the old 301-id R2-04 census
+ * intentionally keep their original two-fighter universe; callers that care
+ * about parser type, scratch-heap lifetime or relocation ownership use this
+ * predicate instead. */
+#if NDS_P2_LUIGI
+static s32 ndsRelocIsFighterAnimID(u32 asset_id)
+{
+    if (ndsRelocIsMarioFoxAnimID(asset_id) != FALSE)
+    {
+        return TRUE;
+    }
+    if ((asset_id >= NDS_P2_LUIGI_ANIM_FIRST) &&
+        (asset_id <= NDS_P2_LUIGI_ANIM_LAST))
+    {
+        return TRUE;
+    }
+    return FALSE;
+}
+#else
+/* Keep the P2-2 binary on its already-qualified predicate when no new fighter
+ * is admitted.  Besides making the ownership intent explicit, this avoids
+ * pricing an extra wrapper/branch against the standing four-CPU Boundary. */
+#define ndsRelocIsFighterAnimID ndsRelocIsMarioFoxAnimID
+#endif
+
 /* BattleShip's Mario battle animation files are one contiguous reloc bank.
  * The imported motion descriptors retain the addresses of the original
  * llFTMarioAnim*FileID symbols, so bridge each symbol to its exact source file
@@ -1930,6 +1957,18 @@ static u32 ndsRelocFoxAnimAssetIDForToken(u32 token)
  * instead of shuffling where the code sits. */
 static u32 ndsRelocAssetIDForToken(u32 token)
 {
+#if NDS_P2_LUIGI
+    /* BattleShip passes the ADDRESS of ll...FileID, not the integer stored in
+     * it.  Luigi's twelve semantic animation globals are still zero-stubbed in
+     * the decomp-derived port table, so the source-derived catalog bridges the
+     * address directly to the O2R id.  Numeric ids are accepted too because
+     * O2R external-dependency tables contain file ids, not symbol addresses. */
+#define NDS_P2_FIGHTER_TOKEN_ROW(symbol_, id_, path_) \
+    if ((token == ndsRelocFileID(&symbol_)) || (token == (id_))) return (id_);
+    NDS_P2_LUIGI_CORE_ASSET_ROWS(NDS_P2_FIGHTER_TOKEN_ROW)
+    NDS_P2_LUIGI_ANIM_ASSET_ROWS(NDS_P2_FIGHTER_TOKEN_ROW)
+#undef NDS_P2_FIGHTER_TOKEN_ROW
+#endif
     if (token == ndsRelocFileID(&llN64LogoFileID)) return NDS_RELOC_ASSET_N64_LOGO;
     if (token == ndsRelocFileID(&llIFCommonPlayerFileID)) return NDS_RELOC_ASSET_IF_COMMON_PLAYER;
     if (token == ndsRelocFileID(&llIFCommonGameStatusFileID)) return NDS_RELOC_ASSET_IF_COMMON_GAME_STATUS;
@@ -2307,6 +2346,12 @@ static s32 ndsRelocAssetIsStage(u32 asset_id)
 
 static s32 ndsRelocAssetIsFighter(u32 asset_id)
 {
+#if NDS_P2_LUIGI
+#define NDS_P2_FIGHTER_ASSET_TEST(symbol_, id_, path_) \
+    if (asset_id == (id_)) return TRUE;
+    NDS_P2_LUIGI_CORE_ASSET_ROWS(NDS_P2_FIGHTER_ASSET_TEST)
+#undef NDS_P2_FIGHTER_ASSET_TEST
+#endif
     switch (asset_id)
     {
     case NDS_RELOC_ASSET_FT_MANAGER_COMMON:
@@ -2333,7 +2378,7 @@ static s32 ndsRelocAssetIsFighter(u32 asset_id)
     default:
         break;
     }
-    return ndsRelocIsMarioFoxAnimID(asset_id);
+    return ndsRelocIsFighterAnimID(asset_id);
 }
 
 static s32 ndsRelocAssetIsMenu(u32 asset_id)
@@ -3182,7 +3227,7 @@ static s32 ndsRelocApplyInternalPointerFixups(NDSRelocLoadedFile *loaded)
 
 static s32 ndsRelocIsFighterAObj16Asset(u32 asset_id)
 {
-    return ((ndsRelocIsMarioFoxAnimID(asset_id) != FALSE) &&
+    return ((ndsRelocIsFighterAnimID(asset_id) != FALSE) &&
             (asset_id != NDS_RELOC_ASSET_MARIO_ANIM_APPEAR1) &&
             (asset_id != NDS_RELOC_ASSET_MARIO_ANIM_APPEAR2) &&
             (asset_id != NDS_RELOC_ASSET_FOX_ANIM_APPEAR) &&
@@ -3351,7 +3396,7 @@ static void ndsRelocRemoveFighterAnimStatusAliases(LBFileNode *nodes,
 
                 gNdsR2RelocAliasResolves++;
                 if ((node_asset_id != asset_id) &&
-                    (ndsRelocIsMarioFoxAnimID(node_asset_id) != FALSE))
+                    (ndsRelocIsFighterAnimID(node_asset_id) != FALSE))
                 {
                     ndsRelocRemoveStatusNodeAt(nodes, count, i);
                     continue;
@@ -3365,7 +3410,7 @@ static void ndsRelocRemoveFighterAnimStatusAliases(LBFileNode *nodes,
             gNdsR2RelocAliasVisits++;
             gNdsR2RelocAliasResolves++;
             if ((nodes[i].addr == data) && (node_asset_id != asset_id) &&
-                (ndsRelocIsMarioFoxAnimID(node_asset_id) != FALSE))
+                (ndsRelocIsFighterAnimID(node_asset_id) != FALSE))
             {
                 ndsRelocRemoveStatusNodeAt(nodes, count, i);
                 continue;
@@ -3400,7 +3445,7 @@ static void ndsRelocPrepareFighterAnimHeapOverwrite(u32 asset_id, void *data)
         NDSRelocLoadedFile *loaded = &sNdsRelocLoadedFiles[i];
 
         if ((loaded->data == data) &&
-            (ndsRelocIsMarioFoxAnimID(loaded->asset_id) != FALSE))
+            (ndsRelocIsFighterAnimID(loaded->asset_id) != FALSE))
         {
             if (loaded->data_size > old_bytes)
             {
@@ -7708,7 +7753,7 @@ static void *ndsRelocForceLoadFighterAObj16File(u32 token, u32 asset_id,
     void *packed;
 
     if ((heap == NULL) ||
-        (ndsRelocIsMarioFoxAnimID(asset_id) == FALSE))
+        (ndsRelocIsFighterAnimID(asset_id) == FALSE))
     {
         return NULL;
     }
@@ -7726,7 +7771,15 @@ static void *ndsRelocForceLoadFighterAObj16File(u32 token, u32 asset_id,
      * shape the gMPCollisionGeometry fix settled on. */
     ndsR2AnimCacheValidateGeneration();
 #endif
+    /* The resident battlepack is still the measured Mario/Fox P2-2 feature.
+     * P2-3 fighters use the same generic force-loader/cache semantics but are
+     * not counted as misses against a pack that cannot contain them. */
+#if NDS_P2_LUIGI
+    packed = (ndsRelocIsMarioFoxAnimID(asset_id) != FALSE) ?
+        ndsBattlePackFindFigatree(asset_id) : NULL;
+#else
     packed = ndsBattlePackFindFigatree(asset_id);
+#endif
 
     /* SLICE 1 PHASE 5 -- the acquisition path, deleted.
      *
@@ -7752,7 +7805,14 @@ static void *ndsRelocForceLoadFighterAObj16File(u32 token, u32 asset_id,
         NDS_K0_MARK(gNdsK0AfterGoPackHits, asset_id);
         return packed;
     }
+#if NDS_P2_LUIGI
+    if (ndsRelocIsMarioFoxAnimID(asset_id) != FALSE)
+    {
+        gNdsBattlePackMisses++;
+    }
+#else
     gNdsBattlePackMisses++;
+#endif
 
     /* Existence check without I/O. This used to be ndsRelocAssetAllocSize,
      * which answers it by opening the file and parsing the header -- a full
@@ -7793,6 +7853,9 @@ static void *ndsRelocForceLoadFighterAObj16File(u32 token, u32 asset_id,
      * Bitmap over the 301 Mario+Fox animation IDs: total loads, distinct assets,
      * repeats. repeats/total is exactly the fraction a cache would remove, and
      * distinct sizes the cache. Lab counters, tick-HUD builds only. */
+#if NDS_P2_LUIGI
+    if (ndsRelocIsMarioFoxAnimID(asset_id) != FALSE)
+#endif
     {
         u32 anim_index = asset_id - NDS_RELOC_ASSET_MARIO_ANIM_WAIT;
 
@@ -7972,7 +8035,7 @@ void *lbRelocGetForceExternHeapFile(const void *file_id, void *heap)
     }
 
     if ((heap != NULL) &&
-        (ndsRelocIsMarioFoxAnimID(asset_id) != FALSE))
+        (ndsRelocIsFighterAnimID(asset_id) != FALSE))
     {
         /* K0 line 7's other half, and it is the one the pack does NOT delete:
          * the token -> asset-id resolution above runs BEFORE the pack is

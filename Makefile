@@ -516,6 +516,12 @@ NDS_R2_BOTH_CPU ?= 0
 # INSTANCES (Mario/Fox/Mario/Fox) while the generated renderer owners remain the
 # two fighter KINDS. Only the dedicated P2 stress target below enables it.
 NDS_P2_FOUR_CPU_STRESS ?= 0
+# P2-3 fighter-production admission flag.  A fighter is staged behind its own
+# flag until the source-derived asset graph, source status table, native owner,
+# CSS/audio surfaces and focused runtime proof are all green.  This prevents a
+# half-imported fighter from changing the P2-2 standing Boundary merely because
+# its files exist in the tree.  Luigi is the first pipeline prover.
+NDS_P2_LUIGI ?= 0
 # THE FREEZE SOAK'S MATCH LENGTH IN MINUTES, and nothing else's. 0 = leave the
 # harness seeding alone, which is the canonical one-minute Time match; non-zero
 # overrides scene_harness.c's time_limit.
@@ -3779,6 +3785,15 @@ NDS_MARIOFOX_FIGHTER_RELOC_FILES := \
 	reloc_animations/FTFoxAnim156 \
 	reloc_animations/FTFoxAnim157
 
+# P2-3 appends only the files a new fighter adds beyond Mario/Fox.  The fragment
+# is generated from BattleShip FTData + generated relocData names + O2R headers;
+# no fighter file inventory belongs in this Makefile from this point forward.
+include $(PROJECT_ROOT)/scripts/fighters/fighter_production_files.mk
+NDS_P2_FIGHTER_RELOC_FILES :=
+ifeq ($(NDS_P2_LUIGI),1)
+NDS_P2_FIGHTER_RELOC_FILES += $(NDS_P2_LUIGI_FIGHTER_RELOC_FILES)
+endif
+
 NDS_EFFECT_RELOC_FILES := \
 	reloc_effects/EFCommonEffects1 \
 	reloc_effects/EFCommonEffects2 \
@@ -3869,6 +3884,7 @@ export NDS_NITROFS_RELOC_FILES := \
 	$(foreach file,$(NDS_PUPUPU_STAGE_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
 	$(foreach file,$(NDS_STAGE_SCOUT_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
 	$(foreach file,$(NDS_MARIOFOX_FIGHTER_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
+	$(foreach file,$(NDS_P2_FIGHTER_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
 	$(foreach file,$(NDS_EFFECT_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
 	$(foreach file,$(NDS_VSBATTLE_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
 	$(foreach file,$(NDS_VS_RESULTS_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file))
@@ -4099,6 +4115,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_R2_LOADFRAME_TIMING $(NDS_R2_LOADFRAME_TIMING)'; \
 		echo '#define NDS_R2_BOTH_CPU $(NDS_R2_BOTH_CPU)'; \
 		echo '#define NDS_P2_FOUR_CPU_STRESS $(NDS_P2_FOUR_CPU_STRESS)'; \
+		echo '#define NDS_P2_LUIGI $(NDS_P2_LUIGI)'; \
 		echo '#define NDS_R2_SOAK_MATCH_MINUTES $(NDS_R2_SOAK_MATCH_MINUTES)'; \
 		echo '#define NDS_ANIM_JOINT_AUDIT $(NDS_ANIM_JOINT_AUDIT)'; \
 		echo '#define NDS_AOBJ_EVENT32_HASH_ORACLE $(NDS_AOBJ_EVENT32_HASH_ORACLE)'; \

@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <nds/generated/nds_fighter_production.generated.h>
 #include <nds/nds_reloc_assets.h>
 
 /* sniprintf, NOT snprintf, in this file and in main.c -- the only two places the
@@ -120,6 +121,16 @@ static const NDSRelocAssetEntry sNdsRelocAssets[] = {
     { 0x12b, 0x12b, "nitro:/reloc/reloc_extern_data/MiscData299" },
     { 0x13b, 0x13b, "nitro:/reloc/reloc_extern_data/MiscData315" },
     { 0x6d, 0x6d, "nitro:/reloc/reloc_extern_data/ExternDataBank109" },
+#if NDS_P2_LUIGI
+    /* P2-3: these rows are generated from BattleShip FTData / relocData and
+     * O2R headers.  Keeping the path table generated is the first production
+     * pipeline invariant: admitting another fighter must not grow a second
+     * hand-maintained asset manifest here. */
+#define NDS_P2_FIGHTER_ASSET_ENTRY(symbol_, id_, path_) { id_, id_, path_ },
+    NDS_P2_LUIGI_CORE_ASSET_ROWS(NDS_P2_FIGHTER_ASSET_ENTRY)
+    NDS_P2_LUIGI_ANIM_ASSET_ROWS(NDS_P2_FIGHTER_ASSET_ENTRY)
+#undef NDS_P2_FIGHTER_ASSET_ENTRY
+#endif
 };
 
 static u16 ndsReadLe16(const u8 *bytes)

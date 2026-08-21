@@ -1,6 +1,6 @@
 # Luigi — P2-3 fighter 1 (pipeline prover, Mario variant)
 
-Status: not started · Reference: `decomp/BattleShip-main/decomp/src/ft/ftchar/ftluigi/`
+Status: pipeline/runtime asset bootstrap in progress · Reference: `decomp/BattleShip-main/decomp/src/ft/ftchar/ftluigi/`
 
 ## Pipeline inventory (2026-08-21)
 
@@ -13,8 +13,13 @@ BattleShip's generated `1103_FTLuigiAnimEggLay.c` …
 `1114_FTLuigiAnimFSmashLow.c` provenance, not hand-assigned IDs. His full
 motion inventory is 143 files and includes 19 source-shared Mario item motions.
 
-This is inventory only: Luigi is not selectable until the following runtime,
-native-owner, CSS/audio/asset, move-inventory and four-CPU budget slices pass.
+The inventory now also drives a default-off runtime bootstrap. With
+`NDS_P2_LUIGI=1`, the generated Make fragment stages all 16 incremental O2R
+resources and the generated runtime catalog binds BattleShip's semantic symbol
+addresses to those exact source IDs. The Luigi status table is the source
+nine-entry table rather than the historical 16-entry compatibility stub. A
+Luigi-enabled P2 shell build is green. Luigi is still not selectable until the
+native-owner, CSS/audio, move-inventory and four-CPU budget slices pass.
 
 ## Role
 

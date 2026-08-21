@@ -36,8 +36,9 @@ fighter-specific loader table. `scripts/fighters/generate_fighter_production_man
 reads BattleShip `ftdata.c`, generated `relocData` source names, the US reloc
 symbol table, and O2R headers/extern tables and writes the tracked
 `fighter_production_manifest.json`. `make p2-fighter-production-manifest`
-rebuilds it and `check-fighter-production-manifest.ps1` is a standing static
-gate.
+rebuilds it, the incremental fighter NitroFS make fragment, and the runtime
+symbol-address→O2R catalog; `check-fighter-production-manifest.ps1` is the
+standing static gate for all three generated products.
 
 The bootstrap proves its extraction against the already-shipping Mario/Fox
 content: the source-derived closure is **321 files, exactly the 321 files in
@@ -54,6 +55,17 @@ pipeline and remain untouched while P2-2's Boundary is green; the production
 pipeline uses the generated source binding rather than copying those values.
 Any behavior correction to an already-shipping fighter must be its own
 source-reviewed regression slice, not a side effect of landing Luigi.
+
+The second bootstrap slice proves that inventory can drive the actual DS load
+seam without changing P2-2: `NDS_P2_LUIGI=1` stages Luigi's 4 unique core files
+and 12 local animation files, admits those generated IDs to the relocation
+backend, and uses BattleShip's real nine-entry Luigi status table. The flag is
+default-off and the non-Luigi compile path retains the already-qualified
+Mario/Fox predicates/status stub verbatim. A Luigi-enabled shipping-shell
+configuration builds cleanly with all 16 incremental NitroFS resources staged.
+This is still pipeline infrastructure, not fighter admission: CSS, native
+renderer owner, audio/UI and focused runtime move coverage remain before Luigi
+becomes selectable.
 
 ## Roster order (owner-ratified engineering order)
 
