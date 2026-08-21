@@ -377,6 +377,8 @@ u32 ndsIFCommonGetBattleHudDamageState(u32 player,
 
 s32 ndsIFCommonBattleHudInterfaceVisible(void)
 {
+    u32 player;
+
     /* Source visibility of the whole interface link.  The meters/timer/stocks
      * hide exactly when ifCommonInterfaceSetGObjFlagsAll(GOBJ_FLAG_HIDDEN) has
      * run -- at game end via ifCommonBattleInterfaceProcSet (which then sets
@@ -385,13 +387,32 @@ s32 ndsIFCommonBattleHudInterfaceVisible(void)
      * announce window between End and Set still shows the meters, so only
      * Set and Pause are hidden.  Outside VSBattle the native sub HUD must
      * never render: its mirrors freeze once the interface gobjs stop drawing,
-     * which is what used to redraw the battle HUD over the Results screen. */
-    return ((gSCManagerSceneData.scene_curr == nSCKindVSBattle) &&
-            (gSCManagerBattleState != NULL) &&
-            (gSCManagerBattleState->game_status != nSCBattleGameStatusSet) &&
-            (gSCManagerBattleState->game_status != nSCBattleGameStatusPause))
-               ? TRUE
-               : FALSE;
+     * which is what used to redraw the battle HUD over the Results screen.
+     *
+     * And the meters enter WITH THE FIGHTERS.  The battle scene flips to
+     * nSCKindVSBattle while the stage-select presentation is still on screen
+     * (the same load window that used to composite the CSS preview's retained
+     * 3D frame), and the mirror masks still hold the previous match there --
+     * an unconditional VSBattle gate drew the old HUD over stage select.  No
+     * spawned fighter means no interface: the owner's "start it during the
+     * character intros". */
+    if ((gSCManagerSceneData.scene_curr != nSCKindVSBattle) ||
+        (gSCManagerBattleState == NULL) ||
+        (gSCManagerBattleState->game_status == nSCBattleGameStatusSet) ||
+        (gSCManagerBattleState->game_status == nSCBattleGameStatusPause))
+    {
+        return FALSE;
+    }
+    for (player = 0u; player < (u32)GMCOMMON_PLAYERS_MAX; player++)
+    {
+        if ((gSCManagerBattleState->players[player].pkind !=
+             nFTPlayerKindNot) &&
+            (gSCManagerBattleState->players[player].fighter_gobj != NULL))
+        {
+            return TRUE;
+        }
+    }
+    return FALSE;
 }
 
 void ndsIFCommonRecordHUDState(void)

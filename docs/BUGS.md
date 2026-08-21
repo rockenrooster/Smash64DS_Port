@@ -2,6 +2,50 @@
 AI Agent should mark fixed items with **FIXED** prefix or a 20 word summary if not fixed yet.
 These bugs should be fixed for P1 delivery:
 
+- **REPRODUCED (fix parked) — MIRROR rosters crash; mixed Mario/Fox runs clean (2026-08-21).** Direct-battle
+  proof-target sweep (TEMP `NDS_PROBE_FIGHTER1` slot-1 selector, one-minute Time match): Mario P1 + Mario CPU
+  crashes with **SIGILL** in the stage-2 window; Fox P1 + Fox CPU crashes with SIGILL BEFORE frame ~1800
+  (presented frames still 0); Fox P1 + Mario CPU runs the whole match through Results clean (stages 1+2 OK);
+  Mario+Fox (the shipped default) is Boundary-proven. The SIGILL stop lands in/near
+  `ndsBaseLbParticleDrawTextures` (lbparticle.c:1942, the `gSYTaskmanDLHeads` DL-head write), i.e. graphics-heap
+  exhaustion or corruption under a DOUBLED same-kind asset residency (two identical fighter-kind files, models,
+  particle/texture pools). Likely the same same-kind aliasing family as the costume row below. Repro: build
+  `smash64ds-battle-playable-proof-hwtri` with `NDS_PROBE_FIGHTER1=0` (Mario mirror) or
+  `NDS_P2_PROOF_FIGHTER0=1` (Fox mirror), run ~30 s under gdb, watch for SIGILL. The owner's freeplay CSS
+  mirror picks are the same class.
+
+- **RED (owner, 2026-08-21) — character intros still show no fighters (pipe/Arwing without the fighter).** Owner
+  re-verified after the appear-motion admission and the round-4 walk captures: no fighters visible during the
+  entry window. What IS established, state-level (gdb, walk ROM = same shell code path as freeplay): both fighters
+  reach `ftCommonAppearSetStatus` (fkind 0/1, status=5, motion=4, is_invisible=1 at transition), so the Entry ->
+  Appear state machine and motion admission run; the gap is between Appear running and fighter GEOMETRY being
+  visible on the shell/freeplay path. The appear file IDs (0x279/0x27a/0x309) are admitted and the clips are in
+  the dense bank. Do NOT trust prior screenshot-based claims of "Mario mid-rise"/"Arwing visible" — the owner has
+  rejected them (walk-fox-entry.png shows no fighters). Next agent: start from the Appear proc's render path
+  (is_invisible clear timing at ftmain.c:4462 vs the native owner's first submitted frame on the SHELL entry —
+  the fourcpu direct-boot path may differ from the shell-seeded battle), and verify with on-screen captures the
+  owner confirms. Skipped this cycle per owner instruction.
+
+- **ROOT-CAUSED (fix parked) — duplicate-fighter costume colors mix per part (2026-08-21).** The
+  second+ same-kind fighter shows the first costume's colors on SOME parts (yellow Mario's cap
+  front red; c2/c3 default red/blue), and the mix CHANGES when paused. Proven NOT the bake: a
+  3-Mario probe dump shows every MObj's `sub.primcolor` correct per costume, and the
+  costume-tinted texture bakes are prim-keyed in the hardware texture cache. The contamination is
+  the **draw memo's branch-DL replay**: per-material branch DLs are bump-allocated per frame from
+  `gSYTaskmanGraphicsHeap` (`ndsRendererAdapterPrepareMaterialSegment`), so on a memo HIT the
+  saved `event->dl` pointers address heap that another same-kind fighter's segment now occupies;
+  the replayed branch's `gDPSetPrimColor` sets the LIVE prim (stats->prim_color) to that fighter's
+  costume during this fighter's material binds. Memo preambles stay white (`prim=ffffffff`,
+  dumped) because the contract's SetPrimColor hook is wired only in `battleship_ftdisplaymain.c`,
+  never in the objdisplay branch emission, so nothing corrects the stale live prim; pause/detail
+  changes shuffle which fighter's segment owns the addresses, flipping the mix. Fix direction
+  (next cycle, needs its own A/B): on memo hit, re-derive each event's material segment from its
+  live `material_dobj` mobj chain into a fresh graphics-heap allocation (restoring the exact
+  per-frame heap profile the non-memo path has), or capture per-event prim into the preamble at
+  the objdisplay emission seam and force it at bind. Evidence:
+  `artifacts/visibility/2026-08-21_intro-costume-hud/3mario-f2.png` + the MObj/memo dumps in the
+  session log.
+
 - **FIXED — Fox pistol texture lifetime + Results visibility (2026-08-16).** The dedicated Fox gun
   sidecar kept a stale GL name after the generic texture cache deleted it, explaining the intermittent
   solid-white pistol; cache discard now invalidates both together. Results uses Demo fighters, so the
