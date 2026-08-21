@@ -270,12 +270,64 @@ static NDSRendererAdapterMaterialKey sNdsRendererAdapterNativeOwnerMaterialKeys[
 _Static_assert((1u << NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED_LOG2) ==
                    NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED,
                "material row hash assumes a power-of-two row count");
+_Static_assert(NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED <= 32u,
+               "material row claim mask must cover every material row");
 
 static DObj *sNdsRendererAdapterMaterialRowOwner[
     NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED];
 static u32 sNdsRendererAdapterMaterialRowGeneration;
+/* Rows are a persistent per-DObj cache across fighter draws, but one native
+ * owner submission must never alias two DIFFERENT live material DObjs onto the
+ * same row.  Once Mario/Fox mirrors made more than one instance of a kind live,
+ * the persistent table could become completely occupied by older fighters; the
+ * old full-table fallback then returned the hashed row even when another root
+ * in the CURRENT fighter had already claimed it.  Material preparation happens
+ * for every root before submission, so the later root overwrote the earlier
+ * root's material block and produced the mixed-costume colours seen on mirrors.
+ *
+ * Keep the cache (and its measured gameplay win), but track the rows claimed by
+ * this one owner preparation.  A full table may evict an OLD fighter's row; it
+ * may not evict a row the current fighter still needs for this submission. */
+static u32 sNdsRendererAdapterMaterialRowClaimMask;
 static u8 sNdsRendererAdapterNativeOwnerMaterialRows[
     NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED];
+
+/* Costume / parts replacement is a materially different lifetime from the
+ * ordinary per-frame material animation the key below was designed for.
+ *
+ * BattleShip's ftParamInitAllParts removes every MObj and immediately creates
+ * replacement MObjs from the newly selected costume. objman.c returns removed
+ * MObjs to a free list, so the replacement is allowed to receive the SAME MObj
+ * address in the SAME taskman heap generation. The hot material key deliberately
+ * hashes only the nine fields that animate during a match; if those happen to
+ * match too, `(mobj, heap_generation, anim_hash)` cannot distinguish the old
+ * costume from the new one and would replay the old immutable texture/material
+ * block. Fighter destruction/recreation on the CSS has the same address-reuse
+ * lifetime.
+ *
+ * These events are menu/setup-time rare. Clear the tiny stable-row table and
+ * the key identities at that authoritative lifetime seam instead of adding a
+ * generation compare to every material on every gameplay frame. This also
+ * reclaims rows owned by DObjs from a fighter that the CSS just destroyed. */
+void ndsFighterRendererInvalidateMaterialCaches(void)
+{
+    u32 row;
+
+    for (row = 0u; row < NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED; row++)
+    {
+        u32 material;
+
+        sNdsRendererAdapterMaterialRowOwner[row] = NULL;
+        for (material = 0u;
+             material < NDS_RENDERER_ADAPTER_NATIVE_MATERIAL_MAX;
+             material++)
+        {
+            sNdsRendererAdapterNativeOwnerMaterialKeys[row][material].mobj = NULL;
+        }
+    }
+    sNdsRendererAdapterMaterialRowGeneration = gNdsTaskmanHeapGeneration;
+    sNdsRendererAdapterMaterialRowClaimMask = 0u;
+}
 static NDSRendererMatrix20p12
     sNdsRendererAdapterNativeOwnerProjection;
 static NDSRendererMatrix20p12
@@ -446,6 +498,7 @@ typedef struct NDSRendererAdapterNativeOwnerValidationCache
     u32 owner_generation;
     u32 data_size;
     u32 root_count;
+    u32 use_low_detail;
     u32 root_offsets[NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED];
     u32 material_counts[NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED];
     u32 valid;
@@ -9797,6 +9850,7 @@ static u32 ndsRendererAdapterMaterialRow(DObj *dobj, u32 fallback_row)
 
     if (dobj == NULL)
     {
+        sNdsRendererAdapterMaterialRowClaimMask |= 1u << fallback_row;
         return fallback_row;
     }
     if (sNdsRendererAdapterMaterialRowGeneration != gNdsTaskmanHeapGeneration)
@@ -9808,6 +9862,7 @@ static u32 ndsRendererAdapterMaterialRow(DObj *dobj, u32 fallback_row)
             sNdsRendererAdapterMaterialRowOwner[j] = NULL;
         }
         sNdsRendererAdapterMaterialRowGeneration = gNdsTaskmanHeapGeneration;
+        sNdsRendererAdapterMaterialRowClaimMask = 0u;
     }
     /* Multiplicative, not `>> 4`: DObjs are allocated contiguously and a shift
      * hash strided them onto a handful of rows, so the probe loop ran several
@@ -9821,17 +9876,37 @@ static u32 ndsRendererAdapterMaterialRow(DObj *dobj, u32 fallback_row)
 
         if (sNdsRendererAdapterMaterialRowOwner[row] == dobj)
         {
+            /* The display contract can reference the same material DObj more
+             * than once. Sharing in that case is source-equivalent and safe. */
+            sNdsRendererAdapterMaterialRowClaimMask |= 1u << row;
             return row;
         }
-        if (sNdsRendererAdapterMaterialRowOwner[row] == NULL)
+        if ((sNdsRendererAdapterMaterialRowOwner[row] == NULL) &&
+            ((sNdsRendererAdapterMaterialRowClaimMask & (1u << row)) == 0u))
         {
             sNdsRendererAdapterMaterialRowOwner[row] = dobj;
+            sNdsRendererAdapterMaterialRowClaimMask |= 1u << row;
             return row;
         }
     }
-    /* Every row owned by a different live DObj. Take the hashed one and let the
-     * input key catch the mismatch, which is exactly the old behaviour. */
-    return base;
+    /* Every row is owned by some persistent DObj. Reclaim one that this CURRENT
+     * owner has not claimed. The input key catches the changed identity and
+     * rebuilds that row. selected_count cannot exceed the row count, so unless
+     * duplicate DObjs reduced the number of claims, an unclaimed row is always
+     * available here. */
+    for (probe = 0u; probe < NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED; probe++)
+    {
+        u32 row = (base + probe) & (NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED - 1u);
+
+        if ((sNdsRendererAdapterMaterialRowClaimMask & (1u << row)) == 0u)
+        {
+            sNdsRendererAdapterMaterialRowOwner[row] = dobj;
+            sNdsRendererAdapterMaterialRowClaimMask |= 1u << row;
+            return row;
+        }
+    }
+    /* Defensive only: the collection bound above makes this unreachable. */
+    return fallback_row;
 }
 
 /* The nine words that actually move during a match, in the two contiguous runs
@@ -10093,6 +10168,7 @@ static void ndsRendererAdapterRestoreNativeOwnerMaterialTextureIds(
 static sb32 __attribute__((noinline, cold, optimize("Os")))
 ndsRendererAdapterValidateNativeOwnerCached(
     u32 slot,
+    u32 use_low_detail,
     const NDSRelocLoadedFile *owner_file,
     u32 root_count,
     const u32 *root_offsets,
@@ -10118,7 +10194,8 @@ ndsRendererAdapterValidateNativeOwnerCached(
          (cache->asset_id == owner_file->asset_id) &&
          (cache->owner_generation == owner_file->owner_generation) &&
          (cache->data_size == owner_file->data_size) &&
-         (cache->root_count == root_count)) ? TRUE : FALSE;
+         (cache->root_count == root_count) &&
+         (cache->use_low_detail == use_low_detail)) ? TRUE : FALSE;
     if (identity_matches != FALSE)
     {
         for (i = 0u; i < root_count; i++)
@@ -10147,7 +10224,7 @@ ndsRendererAdapterValidateNativeOwnerCached(
 #endif
     cache->valid = FALSE;
     if (ndsRendererValidateNativeFighterOwner(
-            slot, owner_file->data_size, root_count,
+            slot, use_low_detail, owner_file->data_size, root_count,
             root_offsets, material_counts) == FALSE)
     {
         return FALSE;
@@ -10157,6 +10234,7 @@ ndsRendererAdapterValidateNativeOwnerCached(
     cache->owner_generation = owner_file->owner_generation;
     cache->data_size = owner_file->data_size;
     cache->root_count = root_count;
+    cache->use_low_detail = use_low_detail;
     for (i = 0u; i < root_count; i++)
     {
         cache->root_offsets[i] = root_offsets[i];
@@ -13404,8 +13482,8 @@ typedef struct NDSFighterDLAllDrawCollection {
  * unchanged but whose display lists have been re-pointed is NOT a constant for
  * any purpose a baked collection order would serve, and hashing only the DObj
  * pointers would report it as one. */
-static u32 sNdsFtrPreWalkHash[2];
-static u32 sNdsFtrPreWalkSeen[2];
+static u32 sNdsFtrPreWalkHash[GMCOMMON_PLAYERS_MAX];
+static u32 sNdsFtrPreWalkSeen[GMCOMMON_PLAYERS_MAX];
 
 static void ndsFtrPreWalkCensus(
     u32 slot, const NDSFighterDLAllDrawCollection *collection)
@@ -13413,7 +13491,7 @@ static void ndsFtrPreWalkCensus(
     u32 hash = 2166136261u;
     u32 i;
 
-    if ((slot > 1u) || (collection == NULL))
+    if ((slot >= GMCOMMON_PLAYERS_MAX) || (collection == NULL))
     {
         return;
     }
@@ -13554,8 +13632,8 @@ static NDSRendererNativeFighterPreamble sNdsFighterDisplayContractPreambles[
  * backend's preflight rejects, exactly as before. */
 static const NDSRendererNativeFighterPreamble sNdsRendererAdapterZeroPreamble;
 static sb32 sNdsFighterDisplayContractPlayback;
-static u32 sNdsFighterDisplayContractLastFrame[2] = {
-    0xffffffffu, 0xffffffffu
+static u32 sNdsFighterDisplayContractLastFrame[GMCOMMON_PLAYERS_MAX] = {
+    0xffffffffu, 0xffffffffu, 0xffffffffu, 0xffffffffu
 };
 
 #if NDS_R2_FTR_CONTRACT_CENSUS
@@ -13587,9 +13665,10 @@ static u32 sNdsFighterDisplayContractLastFrame[2] = {
 #define NDS_FTR_CONTRACT_H_COUNT 5
 #define NDS_FTR_CONTRACT_HASH_SEED 2166136261u
 
-static u32 sNdsFtrContractCensusPrev[2][NDS_FTR_CONTRACT_H_COUNT];
-static u32 sNdsFtrContractCensusSeen[2];
-static u32 sNdsFtrContractCensusRun[2];
+static u32 sNdsFtrContractCensusPrev[GMCOMMON_PLAYERS_MAX]
+                                     [NDS_FTR_CONTRACT_H_COUNT];
+static u32 sNdsFtrContractCensusSeen[GMCOMMON_PLAYERS_MAX];
+static u32 sNdsFtrContractCensusRun[GMCOMMON_PLAYERS_MAX];
 static u32 sNdsFtrContractCensusKey = NDS_FTR_CONTRACT_HASH_SEED;
 
 static u32 ndsFtrContractCensusMix(u32 hash, u32 word)
@@ -13604,7 +13683,7 @@ static void ndsFtrContractCensusRecord(u32 slot)
     u32 i;
     u32 same_all;
 
-    if (slot > 1u)
+    if (slot >= GMCOMMON_PLAYERS_MAX)
     {
         return;
     }
@@ -14094,7 +14173,7 @@ typedef struct NDSFtrDrawMemoSlot {
     u32 valid;
 } NDSFtrDrawMemoSlot;
 
-static NDSFtrDrawMemoSlot sNdsFtrDrawMemo[2];
+static NDSFtrDrawMemoSlot sNdsFtrDrawMemo[GMCOMMON_PLAYERS_MAX];
 /* The empty tree the walk gets on a hit. Zeroed: no child, no siblings, no
  * FTParts. Only flags and parent_gobj are ever written. */
 static DObj sNdsFtrDrawMemoStub;
@@ -14111,7 +14190,7 @@ static u32 sNdsFtrDrawMemoSlotIndex;
  * bumps this after every authoritative source status change. Besides the
  * display-contract memo below, the later Cycle-99 draw plan stores DObj pointers
  * too, so both caches share the same writer-side invalidation generation. */
-static u32 sNdsFighterStatusGeneration[2];
+static u32 sNdsFighterStatusGeneration[GMCOMMON_PLAYERS_MAX];
 /* 0 = not a candidate, 1 = armed and awaiting the head boundary, 2 = the
  * boundary fired and the key is built, so the result is cacheable. */
 static u32 sNdsFtrDrawMemoState;
@@ -14133,7 +14212,7 @@ void ndsFighterRendererInvalidateStatusCachesOnSetStatus(GObj *fighter_gobj)
         return;
     }
     fp = ftGetStruct(fighter_gobj);
-    if ((fp == NULL) || ((u32)fp->nds_slot > 1u))
+    if ((fp == NULL) || ((u32)fp->nds_slot >= GMCOMMON_PLAYERS_MAX))
     {
         return;
     }
@@ -14355,8 +14434,8 @@ static void ndsFighterDisplayContractCapture(GObj *fighter_gobj)
     sNdsFtrDrawMemoHit = 0u;
     sNdsFtrDrawMemoState =
         ((gNdsFtrDrawMemoRoute.route != 0u) && (fp != NULL) &&
-         ((u32)fp->nds_slot <= 1u)) ? 1u : 0u;
-    sNdsFtrDrawMemoSlotIndex = (fp != NULL) ? ((u32)fp->nds_slot & 1u) : 0u;
+         ((u32)fp->nds_slot < GMCOMMON_PLAYERS_MAX)) ? 1u : 0u;
+    sNdsFtrDrawMemoSlotIndex = (fp != NULL) ? (u32)fp->nds_slot : 0u;
     ndsBaseFTDisplayMainProcDisplay(fighter_gobj);
     ndsFtrDrawMemoFinish();
     sNdsFighterDisplayContract.active = FALSE;
@@ -14877,7 +14956,8 @@ static sb32 ndsRendererAdapterBuildNativeHierarchyInputs(
         *root = (NDSRendererNativeFighterRoot){0};
         root->root_offset = workspace->root_offsets[i];
         root->material_count = workspace->material_counts[i];
-        root->materials = sNdsRendererAdapterNativeOwnerMaterials[i];
+        root->materials = sNdsRendererAdapterNativeOwnerMaterials[
+            sNdsRendererAdapterNativeOwnerMaterialRows[i]];
         root->config = config;
         root->preamble = (event != NULL) ?
             &sNdsFighterDisplayContractPreambles[collection->indices[i]] :
@@ -15754,23 +15834,28 @@ typedef struct NDSFighterDrawPlan
     u32 key_owner_generation;
     u32 key_data_size;
     u32 key_status_generation;
+    u32 key_use_low_detail;
     u32 valid;
 } NDSFighterDrawPlan;
 
-static NDSFighterDrawPlan sNdsFighterDrawPlan[2];
+static NDSFighterDrawPlan sNdsFighterDrawPlan[GMCOMMON_PLAYERS_MAX];
 
 static void ndsFighterDrawPlanInvalidate(void)
 {
-    sNdsFighterDrawPlan[0].valid = 0u;
-    sNdsFighterDrawPlan[1].valid = 0u;
+    u32 slot;
+
+    for (slot = 0u; slot < GMCOMMON_PLAYERS_MAX; slot++)
+    {
+        sNdsFighterDrawPlan[slot].valid = 0u;
+    }
 }
 
-static sb32 ndsFighterDrawPlanHit(u32 slot)
+static sb32 ndsFighterDrawPlanHit(u32 slot, u32 use_low_detail)
 {
     const NDSFighterDrawPlan *plan;
     const NDSRelocLoadedFile *file;
 
-    if ((gNdsFtrPlanRoute == 0u) || (slot > 1u))
+    if ((gNdsFtrPlanRoute == 0u) || (slot >= GMCOMMON_PLAYERS_MAX))
     {
         return FALSE;
     }
@@ -15784,6 +15869,7 @@ static sb32 ndsFighterDrawPlanHit(u32 slot)
             (file->asset_id == plan->key_asset_id) &&
             (file->owner_generation == plan->key_owner_generation) &&
             (file->data_size == plan->key_data_size) &&
+            (plan->key_use_low_detail == use_low_detail) &&
             (plan->key_status_generation ==
              sNdsFighterStatusGeneration[slot])) ? TRUE : FALSE;
 }
@@ -15936,6 +16022,30 @@ static void ndsFighterDrawPlanVerify(
 #endif
 #endif
 
+/* P2-2 separates two values that were accidentally identical in the old
+ * two-fighter match: the battle PLAYER slot (0..3) and the generated native
+ * OWNER slot (0 Mario, 1 Fox).  Instance caches use the former; generated
+ * topology/material tables and native renderer entry points use the latter. */
+static sb32 ndsFighterMarioFoxGetNativeOwnerSlot(const FTStruct *fp,
+                                                 u32 *owner_slot)
+{
+    if ((fp == NULL) || (owner_slot == NULL))
+    {
+        return FALSE;
+    }
+    if (fp->fkind == nFTKindMario)
+    {
+        *owner_slot = 0u;
+        return TRUE;
+    }
+    if (fp->fkind == nFTKindFox)
+    {
+        *owner_slot = 1u;
+        return TRUE;
+    }
+    return FALSE;
+}
+
 static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
                                                u16 *pixels, u32 pitch)
 {
@@ -15965,6 +16075,8 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
     u32 root_x_before;
     u32 root_x_after;
     u32 color_modulate;
+    u32 owner_slot;
+    u32 use_low_detail;
     u32 i;
 #if NDS_RENDERER_HW_TRIANGLES
     NDSRendererProfileOwner owner_id;
@@ -16011,15 +16123,17 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
      * divides internally, this says what the frame costs without it at all.
      * Engagement is self-proving -- the slot's hardware triangle count and its
      * half of gNdsTask91DrawCalls both go to zero. */
-    if ((slot <= 1u) && (((NDS_R2_DRAW_SUPPRESS_MASK >> slot) & 1u) != 0u))
+    if ((slot < GMCOMMON_PLAYERS_MAX) &&
+        (((NDS_R2_DRAW_SUPPRESS_MASK >> slot) & 1u) != 0u))
     {
         return;
     }
 #endif
 
-    if ((slot > 1u) ||
+    if ((slot >= GMCOMMON_PLAYERS_MAX) ||
         (ndsFighterStructIsTrackedPointer(fp) == FALSE) ||
         (fp->fighter_gobj == NULL) ||
+        (ndsFighterMarioFoxGetNativeOwnerSlot(fp, &owner_slot) == FALSE) ||
         ((pixels != NULL) &&
          ((fp->status_id != nFTCommonStatusWait) ||
           (fp->motion_id != nFTCommonMotionWait) ||
@@ -16028,14 +16142,18 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
         return;
     }
 
+    /* BattleShip selects the Low JointTree for every 3+ fighter VSBattle
+     * descriptor (scvsbattle.c:188/:460).  Carry that source decision into the
+     * AOT renderer rather than inferring it from battle slot/count here. */
+    use_low_detail = (fp->detail_curr == nFTPartsDetailLow) ? TRUE : FALSE;
     root = fp->joints[nFTPartsJointTopN];
     color_modulate = ndsRendererAdapterFighterColorModulate(fp);
     root_x_before = (root != NULL) ? ndsFloatBits(root->translate.vec.f.x) :
         0u;
 
 #if NDS_RENDERER_HW_TRIANGLES
-    owner_id = (slot == 0u) ? NDS_RENDERER_PROFILE_OWNER_MARIO :
-                              NDS_RENDERER_PROFILE_OWNER_FOX;
+    owner_id = (owner_slot == 0u) ? NDS_RENDERER_PROFILE_OWNER_MARIO :
+                                    NDS_RENDERER_PROFILE_OWNER_FOX;
 #if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
     NDS_RENDERER_M2_DETAILED_LEDGER
     m2_owner = &gNdsRendererProfileOwners[(u32)owner_id];
@@ -16048,7 +16166,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
     task91_phase_start = task91_total_start;
 #endif
 #if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
-    native_owner_plan_hit = ndsFighterDrawPlanHit(slot);
+    native_owner_plan_hit = ndsFighterDrawPlanHit(slot, use_low_detail);
     if (native_owner_plan_hit != FALSE)
     {
         /* The walk is deleted here, not memoised: the collection is a
@@ -16071,7 +16189,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
     m2_owner->m2_collection_ticks += cpuGetTiming() - m2_phase_start;
     m2_phase_start = cpuGetTiming();
     ndsRendererAdapterM2CensusFighter(
-        slot, fp, root, &collection, m2_owner);
+        owner_slot, fp, root, &collection, m2_owner);
     m2_owner->m2_census_ticks += cpuGetTiming() - m2_phase_start;
 #endif
     if (slot == 0u)
@@ -16081,7 +16199,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
         gNdsFighterDLAllDrawP0SelectedIndexMask =
             collection.selected_index_mask;
     }
-    else
+    else if (slot == 1u)
     {
         gNdsFighterDLAllDrawP1CandidateCount = collection.total_count;
         gNdsFighterDLAllDrawP1SelectedCount = collection.selected_count;
@@ -16171,9 +16289,9 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
 #if NDS_RENDERER_HW_TRIANGLES
     native_owner_enabled =
         (((gNdsRendererFastRunMode ==
-           NDS_RENDERER_FAST_RUN_NATIVE_MARIO) && (slot == 0u)) ||
+           NDS_RENDERER_FAST_RUN_NATIVE_MARIO) && (owner_slot == 0u)) ||
          ((gNdsRendererFastRunMode ==
-           NDS_RENDERER_FAST_RUN_NATIVE_FOX) && (slot == 1u)) ||
+           NDS_RENDERER_FAST_RUN_NATIVE_FOX) && (owner_slot == 1u)) ||
           (gNdsRendererFastRunMode ==
            NDS_RENDERER_FAST_RUN_NATIVE_FIGHTERS) ||
           (gNdsRendererFastRunMode ==
@@ -16191,6 +16309,15 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
     native_owner_hierarchy_mode =
         (gNdsRendererFastRunMode ==
          NDS_RENDERER_FAST_RUN_NATIVE_FIGHTERS) ? TRUE : FALSE;
+    if ((native_owner_hierarchy_mode != FALSE) && (use_low_detail != 0u))
+    {
+        /* Mode 7's hierarchy schedule is generated only from the high-detail
+         * JointTree.  A 3+ fighter source match is Low, so fail closed to the
+         * ordinary renderer instead of combining mismatched source geometry and
+         * a high-detail hierarchy experiment.  Shipping mode 9 has a Low AOT
+         * program and does not take this branch. */
+        native_owner_enabled = FALSE;
+    }
 #if NDS_TICK_HUD
 #if NDS_TASK91_DRAW_PHASE_CENSUS
     /* Closing Reset also re-arms the mark, so OwnerPrep is well defined even on
@@ -16245,7 +16372,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
     ndsRendererProfileSetOwner(owner_id);
     if (native_owner_enabled != FALSE)
     {
-        u32 expected_asset_id = (slot == 0u) ? 0x128u : 0x139u;
+        u32 expected_asset_id = (owner_slot == 0u) ? 0x128u : 0x139u;
 #if NDS_TASK91_DRAW_PHASE_CENSUS
         task91_phase_start = cpuGetTiming();
 #endif
@@ -16309,10 +16436,10 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
             if ((native_owner_enabled != FALSE) &&
                 ((native_owner_file == NULL) ||
                  (ndsRendererAdapterValidateNativeOwnerCached(
-                      slot, native_owner_file,
-                      collection.selected_count,
-                      native_owner_root_offsets,
-                      native_owner_material_counts) == FALSE)))
+                       owner_slot, use_low_detail, native_owner_file,
+                       collection.selected_count,
+                       native_owner_root_offsets,
+                       native_owner_material_counts) == FALSE)))
             {
                 native_owner_enabled = FALSE;
 #if NDS_TICK_HUD
@@ -16321,7 +16448,8 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
 #endif
             }
             else if ((native_owner_enabled != FALSE) &&
-                     (gNdsFtrPlanRoute != 0u) && (slot <= 1u))
+                     (gNdsFtrPlanRoute != 0u) &&
+                     (slot < GMCOMMON_PLAYERS_MAX))
             {
                 /* Bake. The derivation and the validator have both just
                  * succeeded, so key the result on the same loaded-file
@@ -16338,6 +16466,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
                 plan->key_data_size = native_owner_file->data_size;
                 plan->key_status_generation =
                     sNdsFighterStatusGeneration[slot];
+                plan->key_use_low_detail = use_low_detail;
                 plan->valid = 1u;
 #if NDS_TICK_HUD
                 gNdsFtrPlanBuild++;
@@ -16424,7 +16553,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
         if ((native_owner_enabled != FALSE) &&
             ((native_owner_file == NULL) ||
             (ndsRendererValidateNativeFighterOwner(
-                 slot, native_owner_file->data_size,
+                 owner_slot, use_low_detail, native_owner_file->data_size,
                  collection.selected_count,
                  native_owner_root_offsets,
                  native_owner_material_counts) == FALSE)))
@@ -16463,7 +16592,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
 #endif
             if (((native_owner_hierarchy_mode != FALSE) &&
                  (ndsRendererAdapterPrepareNativeOwnerHierarchy(
-                    slot, fp, root, native_owner_matrix_bindings,
+                    owner_slot, fp, root, native_owner_matrix_bindings,
                     collection.selected_count,
                     (gGCCurrentCamera != NULL) ?
                         CObjGetStruct(gGCCurrentCamera) : NULL,
@@ -16475,7 +16604,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
                     ) == FALSE)) ||
                 ((native_owner_hierarchy_mode == FALSE) &&
                  (ndsRendererAdapterPrepareNativeOwnerMatrices(
-                    slot, root, native_owner_matrix_bindings,
+                    owner_slot, root, native_owner_matrix_bindings,
                     collection.selected_count,
                     (gGCCurrentCamera != NULL) ?
                         CObjGetStruct(gGCCurrentCamera) : NULL,
@@ -16516,6 +16645,10 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
             task91_mark = cpuGetTiming();
 #endif
             native_owner_material_saved_root_count = 0u;
+            /* One claim set per fighter submission. Persistent row ownership is
+             * retained for cache hits, but no stale fighter may make two roots
+             * of this fighter alias the same mutable material row. */
+            sNdsRendererAdapterMaterialRowClaimMask = 0u;
             for (i = 0u; i < collection.selected_count; i++)
             {
                 u32 prepared_material_count = 0u;
@@ -16599,12 +16732,12 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
 #endif
         if (((native_owner_hierarchy_mode != FALSE) &&
              (ndsRendererAdapterBuildNativeHierarchyInputs(
-                slot, color_modulate, native_owner_file, &collection,
+                owner_slot, color_modulate, native_owner_file, &collection,
                 &persistent_state,
                 &sNdsRendererAdapterNativeOwnerWorkspace) == FALSE)) ||
             ((native_owner_hierarchy_mode == FALSE) &&
              (ndsRendererAdapterBuildNativeProductionInputs(
-                slot, color_modulate, native_owner_file, &collection,
+                owner_slot, color_modulate, native_owner_file, &collection,
                 native_owner_projection, native_owner_modelviews,
                 &persistent_state,
                 &sNdsRendererAdapterNativeOwnerWorkspace
@@ -16643,12 +16776,12 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
             native_owner_production_attempted = TRUE;
             production_result = (native_owner_hierarchy_mode != FALSE) ?
                 ndsRendererExecuteNativeFighterOwnerHierarchy(
-                    slot, native_owner_file->data,
+                    owner_slot, native_owner_file->data,
                     &sNdsRendererAdapterNativeOwnerWorkspace.hierarchy,
                     NULL, NULL, &persistent_stats,
                     &production_hardware_started) :
                 ndsRendererExecuteNativeFighterOwnerProduction(
-                    slot, native_owner_file->data,
+                    owner_slot, use_low_detail, native_owner_file->data,
                     sNdsRendererAdapterNativeOwnerWorkspace.production_roots,
                     collection.selected_count,
                     NULL, NULL, &persistent_stats,
@@ -16753,7 +16886,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
         (native_owner_production_attempted == FALSE))
     {
         if (ndsRendererBeginNativeFighterOwner(
-                slot, &persistent_stats,
+                owner_slot, &persistent_stats,
                 &persistent_renderer_vertices) != FALSE)
         {
             native_owner_started = TRUE;
@@ -16832,8 +16965,8 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
 #if NDS_RENDERER_HW_TRIANGLES
         if ((native_owner_enabled != FALSE) && (loaded != NULL) &&
             (loaded->data != NULL) &&
-            (((slot == 0u) && (loaded->asset_id == 0x128u)) ||
-             ((slot == 1u) && (loaded->asset_id == 0x139u))) &&
+            (((owner_slot == 0u) && (loaded->asset_id == 0x128u)) ||
+             ((owner_slot == 1u) && (loaded->asset_id == 0x139u))) &&
             (loaded->data_size >= sizeof(*dl)) &&
             ((uintptr_t)dl >= (uintptr_t)loaded->data) &&
             (((uintptr_t)dl - (uintptr_t)loaded->data) <=
@@ -16849,7 +16982,8 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
         if (native_root_enabled != FALSE)
         {
             native_materials =
-                sNdsRendererAdapterNativeOwnerMaterials[i];
+                sNdsRendererAdapterNativeOwnerMaterials[
+                    sNdsRendererAdapterNativeOwnerMaterialRows[i]];
             native_material_count = native_owner_material_counts[i];
         }
 #endif
@@ -16862,7 +16996,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
         current_state = &states[i];
 #endif
         current_state->primary_file = loaded;
-        current_state->slot = slot;
+        current_state->slot = owner_slot;
         if (contract_event != NULL)
         {
             const NDSRendererNativeFighterPreamble *contract_preamble =
@@ -17064,7 +17198,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
         {
             if ((native_root_enabled == FALSE) ||
                 (ndsRendererExecuteNativeFighterRoot(
-                     slot, i, loaded->data, native_root_offset,
+                     owner_slot, i, loaded->data, native_root_offset,
                      native_materials, native_material_count,
                      &config,
                      (no_oracle != FALSE) ?
@@ -17098,7 +17232,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
 #else
         if ((native_root_enabled == FALSE) ||
             (ndsRendererExecuteNativeFighterRoot(
-                 slot, i, loaded->data, native_root_offset,
+                 owner_slot, i, loaded->data, native_root_offset,
                  native_materials, native_material_count,
                  &config,
                  (no_oracle != FALSE) ?
@@ -17172,7 +17306,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
     if (native_owner_started != FALSE)
     {
         if (ndsRendererEndNativeFighterOwner(
-                slot, &persistent_stats,
+                owner_slot, &persistent_stats,
                 &persistent_renderer_vertices) == FALSE)
         {
             persistent_stats.blocker =
@@ -17200,7 +17334,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
             gNdsFighterDLAllDrawP0BlockerMask |=
                 1u << (failure_index & 31u);
         }
-        else
+        else if (slot == 1u)
         {
             if (gNdsFighterDLAllDrawP1FirstBlocker == 0u)
             {
@@ -17235,7 +17369,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
             gNdsFighterDLAllDrawP0HardwareTriangleCount +=
                 runtime_hardware_triangle_count;
         }
-        else
+        else if (slot == 1u)
         {
             gNdsFighterDLAllDrawP1HardwareTriangleCount +=
                 runtime_hardware_triangle_count;
@@ -17260,7 +17394,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
         gNdsFighterDLAllDrawP0RootXBeforeBits = root_x_before;
         gNdsFighterDLAllDrawP0RootXAfterBits = root_x_after;
     }
-    else
+    else if (slot == 1u)
     {
         gNdsFighterDLAllDrawP1StatusAfter = (u32)fp->status_id;
         gNdsFighterDLAllDrawP1MotionAfter = (u32)fp->motion_id;
@@ -17321,6 +17455,7 @@ void ndsFighterDisplayContractSubmit(GObj *fighter_gobj)
     extern volatile u32 gNdsVSResultsFighterSubmitCount;
 #endif
     FTStruct *fp;
+    u32 owner_slot;
     u32 submitted_before;
     u32 triangles_before;
     u32 triangles_after;
@@ -17348,7 +17483,8 @@ void ndsFighterDisplayContractSubmit(GObj *fighter_gobj)
 #endif
     fp = ftGetStruct(fighter_gobj);
     if ((ndsFighterStructIsTrackedPointer(fp) == FALSE) ||
-        ((u32)fp->nds_slot > 1u))
+        ((u32)fp->nds_slot >= GMCOMMON_PLAYERS_MAX) ||
+        (ndsFighterMarioFoxGetNativeOwnerSlot(fp, &owner_slot) == FALSE))
     {
         return;
     }
@@ -17360,7 +17496,7 @@ void ndsFighterDisplayContractSubmit(GObj *fighter_gobj)
     sNdsFighterDisplayContractLastFrame[(u32)fp->nds_slot] =
         gNdsRendererProfileFrameCount;
 #if NDS_TICK_HUD || (NDS_RENDERER_PROFILE_LEVEL >= 1)
-    owner_id = ((u32)fp->nds_slot == 0u) ?
+    owner_id = (owner_slot == 0u) ?
         NDS_RENDERER_PROFILE_OWNER_MARIO : NDS_RENDERER_PROFILE_OWNER_FOX;
     owner_start = cpuGetTiming();
 #if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
@@ -17472,16 +17608,24 @@ static void ndsFighterDisplayContractSubmitStageFighters(void)
 #endif
 
     gGCCurrentCamera = ndsBattleCompatMainCameraGObj();
-    for (slot = 0u; slot < 2u; slot++)
+    for (slot = 0u; slot < GMCOMMON_PLAYERS_MAX; slot++)
     {
-        FTStruct *fp = &sNdsFighterStructPool[slot];
+#if NDS_IMPORT_BATTLESHIP_FTMANAGER
+        GObj *fighter_gobj = ndsFighterManagerLiveGObj(slot);
+#else
+        GObj *fighter_gobj = ndsFighterMarioFoxProofGObjForSlot(slot);
+#endif
 
-        if ((ndsFighterStructIsTrackedPointer(fp) == FALSE) ||
-            (fp->fighter_gobj == NULL))
+        if (fighter_gobj == NULL)
         {
             continue;
         }
-        ndsFighterDisplayContractSubmit(fp->fighter_gobj);
+        /* P2-2: submit the source-created LIVE fighter, not the historical
+         * sNdsFighterStructPool snapshot. The pool fallback remains only for
+         * non-import proof builds; production must never resurrect an empty
+         * player slot from old pool state after a rematch / Sudden Death arena
+         * rewind. */
+        ndsFighterDisplayContractSubmit(fighter_gobj);
     }
     gGCCurrentCamera = saved_camera;
 #if NDS_RENDERER_M3_PHASE0_PROFILE

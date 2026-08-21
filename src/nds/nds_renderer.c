@@ -5046,6 +5046,148 @@ _Static_assert(sizeof(NDSNativeDirectPolicy) == 12u,
 #include "nds_native_stage_owner.generated.inc"
 #include "dreamland_ds_mesh.generated.inc"
 
+#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+/* P2-2: BattleShip switches every VS fighter to the Low JointTree when three
+ * or more fighters are present (scvsbattle.c:188/:460).  The generated owner
+ * therefore has two immutable programs with the same ABI but different roots
+ * and cardinalities.  Keep one file-scope view selected once per owner execute;
+ * draw callbacks are serialized, so the hot inner loops can consume the view
+ * without carrying a detail argument through every call.
+ *
+ * This is deliberately a view over generated constants, not a second runtime
+ * representation.  High-detail remains the default for the legacy/root and
+ * hierarchy entry points; mode 9 selects the view from FTStruct::detail_curr. */
+typedef struct NDSNativeFighterRuntimeTables
+{
+    const NDSNativeStateDelta *state_deltas;
+    u32 state_delta_count;
+    const u8 *state_sequence;
+    u32 state_sequence_count;
+    const NDSNativeVertexAction *vertex_actions;
+    u32 vertex_action_count;
+    const u8 *epoch_direct_policy;
+    const NDSNativeDenseVertex *dense_vertices;
+    u32 dense_count;
+    NDSNativePreparedDenseVertex *prepared_dense;
+    const u16 *action_dense_spans;
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+    const u16 *dense_color_source;
+#endif
+    const u16 *packed_corners;
+    u32 packed_corner_count;
+    const u16 *run_first_corner;
+    u32 run_first_corner_count;
+    const u16 *run_first_unique;
+    const u8 *run_unique_count;
+    const u16 *run_unique_dense;
+    const u16 *triangles;
+    u32 triangle_count;
+    const NDSNativeRun *runs;
+    u32 run_count;
+#if NDS_TASK56_FIGHTER_PRIMITIVES >= 1
+    const u16 *primitive_group_first;
+    const u8 *primitive_group_count;
+    const u8 *primitive_group_type;
+    const u16 *primitive_group_first_vertex;
+    const u8 *primitive_group_vertex_count;
+    const u16 *primitive_vertices;
+#endif
+    const NDSNativeEpoch *epochs;
+    u32 epoch_count;
+    const NDSNativeRoot *roots[2];
+    u32 root_count[2];
+    const u8 *cross_palette_slots[2];
+} NDSNativeFighterRuntimeTables;
+
+#define NDS_FTR_COUNT(a) ((u32)(sizeof(a) / sizeof((a)[0])))
+
+static const NDSNativeFighterRuntimeTables sNdsNativeFighterHighTables =
+{
+    sNdsNativeFighterStateDeltas, NDS_FTR_COUNT(sNdsNativeFighterStateDeltas),
+    sNdsNativeFighterStateSequence, NDS_FTR_COUNT(sNdsNativeFighterStateSequence),
+    sNdsNativeFighterVertexActions, NDS_FTR_COUNT(sNdsNativeFighterVertexActions),
+    sNdsNativeFighterEpochDirectPolicy,
+    sNdsNativeFighterDenseVertices, NDS_FTR_COUNT(sNdsNativeFighterDenseVertices),
+    sNdsNativeFighterPreparedDense,
+    sNdsNativeFighterActionDenseSpans,
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+    sNdsNativeFighterDenseColorSource,
+#endif
+    sNdsNativeFighterPackedCorners, NDS_FTR_COUNT(sNdsNativeFighterPackedCorners),
+    sNdsNativeFighterRunFirstCorner,
+    NDS_FTR_COUNT(sNdsNativeFighterRunFirstCorner),
+    sNdsNativeFighterRunFirstUnique,
+    sNdsNativeFighterRunUniqueCount,
+    sNdsNativeFighterRunUniqueDense,
+    sNdsNativeFighterTriangles, NDS_FTR_COUNT(sNdsNativeFighterTriangles),
+    sNdsNativeFighterRuns, NDS_FTR_COUNT(sNdsNativeFighterRuns),
+#if NDS_TASK56_FIGHTER_PRIMITIVES >= 1
+    sNdsNativeFighterPrimitiveGroupFirst,
+    sNdsNativeFighterPrimitiveGroupCount,
+    sNdsNativeFighterPrimitiveGroupType,
+    sNdsNativeFighterPrimitiveGroupFirstVertex,
+    sNdsNativeFighterPrimitiveGroupVertexCount,
+    sNdsNativeFighterPrimitiveVertices,
+#endif
+    sNdsNativeFighterEpochs, NDS_FTR_COUNT(sNdsNativeFighterEpochs),
+    { sNdsNativeMarioRoots, sNdsNativeFoxRoots },
+    { NDS_FTR_COUNT(sNdsNativeMarioRoots), NDS_FTR_COUNT(sNdsNativeFoxRoots) },
+    { sNdsNativeMarioCrossPaletteSlots, sNdsNativeFoxCrossPaletteSlots }
+};
+
+static const NDSNativeFighterRuntimeTables sNdsNativeFighterLowTables =
+{
+    sNdsNativeFighterStateDeltasLow,
+    NDS_FTR_COUNT(sNdsNativeFighterStateDeltasLow),
+    sNdsNativeFighterStateSequenceLow,
+    NDS_FTR_COUNT(sNdsNativeFighterStateSequenceLow),
+    sNdsNativeFighterVertexActionsLow,
+    NDS_FTR_COUNT(sNdsNativeFighterVertexActionsLow),
+    sNdsNativeFighterEpochDirectPolicyLow,
+    sNdsNativeFighterDenseVerticesLow,
+    NDS_FTR_COUNT(sNdsNativeFighterDenseVerticesLow),
+    sNdsNativeFighterPreparedDenseLow,
+    sNdsNativeFighterActionDenseSpansLow,
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+    sNdsNativeFighterDenseColorSourceLow,
+#endif
+    sNdsNativeFighterPackedCornersLow,
+    NDS_FTR_COUNT(sNdsNativeFighterPackedCornersLow),
+    sNdsNativeFighterRunFirstCornerLow,
+    NDS_FTR_COUNT(sNdsNativeFighterRunFirstCornerLow),
+    sNdsNativeFighterRunFirstUniqueLow,
+    sNdsNativeFighterRunUniqueCountLow,
+    sNdsNativeFighterRunUniqueDenseLow,
+    sNdsNativeFighterTrianglesLow, NDS_FTR_COUNT(sNdsNativeFighterTrianglesLow),
+    sNdsNativeFighterRunsLow, NDS_FTR_COUNT(sNdsNativeFighterRunsLow),
+#if NDS_TASK56_FIGHTER_PRIMITIVES >= 1
+    sNdsNativeFighterPrimitiveGroupFirstLow,
+    sNdsNativeFighterPrimitiveGroupCountLow,
+    sNdsNativeFighterPrimitiveGroupTypeLow,
+    sNdsNativeFighterPrimitiveGroupFirstVertexLow,
+    sNdsNativeFighterPrimitiveGroupVertexCountLow,
+    sNdsNativeFighterPrimitiveVerticesLow,
+#endif
+    sNdsNativeFighterEpochsLow, NDS_FTR_COUNT(sNdsNativeFighterEpochsLow),
+    { sNdsNativeMarioRootsLow, sNdsNativeFoxRootsLow },
+    { NDS_FTR_COUNT(sNdsNativeMarioRootsLow),
+      NDS_FTR_COUNT(sNdsNativeFoxRootsLow) },
+    { sNdsNativeMarioCrossPaletteSlotsLow, sNdsNativeFoxCrossPaletteSlotsLow }
+};
+
+static const NDSNativeFighterRuntimeTables *sNdsNativeFighterActiveTables =
+    &sNdsNativeFighterHighTables;
+
+static const NDSNativeFighterRuntimeTables *
+ndsRendererNativeFighterTablesForDetail(u32 use_low_detail)
+{
+    return (use_low_detail != 0u) ?
+        &sNdsNativeFighterLowTables : &sNdsNativeFighterHighTables;
+}
+
+#undef NDS_FTR_COUNT
+#endif
+
 #if NDS_TASK93_TEXKEY_CENSUS
 /* Task 93 E0. Sizes the texture-key rebuild in
  * ndsRendererHardwareResolveOrBindTexture, the largest renderer symbol left in
@@ -5265,7 +5407,7 @@ static s32 ndsRendererM2ShadeOutputsResident(
          action_offset++)
     {
         u32 action_index = epoch->first_action + action_offset;
-        u32 span = sNdsNativeFighterActionDenseSpans[action_index];
+        u32 span = sNdsNativeFighterActiveTables->action_dense_spans[action_index];
         u32 dense_first = span & NDS_NATIVE_DENSE_ID_MASK;
         u32 dense_count = span >> NDS_NATIVE_DENSE_SPAN_COUNT_SHIFT;
         u32 dense_offset;
@@ -5298,7 +5440,7 @@ static void __attribute__((noinline)) ndsRendererM2ShadeCensusEpoch(
     const NDSRendererStats *stats)
 {
     const u32 epoch_policy =
-        sNdsNativeFighterEpochDirectPolicy[epoch_index];
+        sNdsNativeFighterActiveTables->epoch_direct_policy[epoch_index];
     const NDSNativeDirectPolicy *policy =
         &sNdsNativeFighterDirectPolicies[
             epoch_policy & NDS_NATIVE_DIRECT_POLICY_FAMILY_MASK];
@@ -5382,7 +5524,7 @@ static void __attribute__((noinline)) ndsRendererM2ShadeRecordProduced(
          action_offset++)
     {
         u32 action_index = epoch->first_action + action_offset;
-        u32 span = sNdsNativeFighterActionDenseSpans[action_index];
+        u32 span = sNdsNativeFighterActiveTables->action_dense_spans[action_index];
         u32 dense_first = span & NDS_NATIVE_DENSE_ID_MASK;
         u32 dense_count = span >> NDS_NATIVE_DENSE_SPAN_COUNT_SHIFT;
         u32 dense_offset;
@@ -5398,7 +5540,8 @@ static void __attribute__((noinline)) ndsRendererM2ShadeRecordProduced(
         {
             u32 dense_id = dense_first + dense_offset;
 
-            if (sNdsNativeFighterDenseColorSource[dense_id] != dense_id)
+            if (sNdsNativeFighterActiveTables->dense_color_source[dense_id] !=
+                dense_id)
             {
                 sNdsRendererM2ShadeAliasCopyCount++;
             }
@@ -8933,7 +9076,7 @@ static void ndsRendererScreenSpaceCensusFighterRun(
     {
         return;
     }
-    run_index = (u32)(run - sNdsNativeFighterRuns);
+    run_index = (u32)(run - sNdsNativeFighterActiveTables->runs);
     for (triangle_offset = 0u;
          triangle_offset < run->triangle_count;
          triangle_offset++)
@@ -8943,14 +9086,14 @@ static void ndsRendererScreenSpaceCensusFighterRun(
 
         for (corner_offset = 0u; corner_offset < 3u; corner_offset++)
         {
-            u32 packed = sNdsNativeFighterPackedCorners[
-                sNdsNativeFighterRunFirstCorner[run_index] +
+            u32 packed = sNdsNativeFighterActiveTables->packed_corners[
+                sNdsNativeFighterActiveTables->run_first_corner[run_index] +
                 triangle_offset * 3u + corner_offset];
             u32 dense_id = packed & NDS_NATIVE_DENSE_ID_MASK;
             const NDSNativeDenseVertex *dense =
-                &sNdsNativeFighterDenseVertices[dense_id];
+                &sNdsNativeFighterActiveTables->dense_vertices[dense_id];
             const NDSNativePreparedDenseVertex *prepared =
-                &sNdsNativeFighterPreparedDense[dense_id];
+                &sNdsNativeFighterActiveTables->prepared_dense[dense_id];
             u32 matrix_binding = dense->matrix_binding;
             NDSRendererInputVertex input = {0};
 
@@ -22709,8 +22852,11 @@ static u32 sNdsR2DeltaLastW1[NDS_R2_DELTA_EFFECT_MAX];
 static u8 sNdsR2DeltaLastValid[NDS_R2_DELTA_EFFECT_MAX];
 #endif
 
+/* P2-2 placement-only reclaim: this 72-byte root preamble is the companion to
+ * the 152-byte production preamble moved out above.  Both execute at root
+ * granularity; keeping the per-run prepare/emit loops resident is the higher
+ * value use of the fixed 32 KiB ITCM budget. */
 static void __attribute__((noinline, optimize("Os")))
-NDS_TASK82_ITCM_CODE
 ndsRendererNativeApplyRootLightPreamble(
     const NDSNativeRoot *root, NDSRendererStats *stats)
 {
@@ -22891,7 +23037,8 @@ ndsRendererNativeApplyStateSpan(
 #endif
     for (i = 0u; i < count; i++)
     {
-        u32 delta_index = sNdsNativeFighterStateSequence[first + i];
+        u32 delta_index =
+            sNdsNativeFighterActiveTables->state_sequence[first + i];
 
 #if NDS_R2_DELTA_CENSUS
         {
@@ -22912,7 +23059,7 @@ ndsRendererNativeApplyStateSpan(
         }
 #endif
         ndsRendererNativeApplyStateDelta(
-            &sNdsNativeFighterStateDeltas[delta_index],
+            &sNdsNativeFighterActiveTables->state_deltas[delta_index],
             asset_base, stats, state);
     }
 }
@@ -25058,16 +25205,14 @@ static inline void ndsRendererNativeBeginDirectBatch(
     (void)stats;
 }
 
-/* GX-compose's owner-approved shipping arm grows the production owner by 32 B.
- * The c235 knapsack had only 16 B free, so the tick-HUD linker overflowed once
- * that accepted arm became the default. This was the lowest-value retained
- * admission (152 B / 1,074.9 marginal-80 I-cache ceiling); return it to main
- * RAM rather than evicting a higher-value leaf or overcommitting ITCM.
- *
- * 2026-08-17: re-admitted. The re-knapsack frees 13,416 B, so the 152 B is no
- * longer contested, and the shipping census prices it at 1,123 I-cache-fill
- * tk/fr on the gate's own rank-80 frames (7.4 per byte). */
-static void NDS_R2_ITCM_PACK2_CODE ndsRendererNativeApplyProductionPreamble(
+/* GX-compose's owner-approved shipping arm once re-admitted this 152-byte
+ * root-level helper after the 2026-08-17 re-knapsack. P2-2's source-required
+ * High/Low owner selection needs a little of that space back. This is the
+ * lowest-value retained admission with a recorded price (1,123 I-cache-fill
+ * tk/fr at rank-80, 7.4/byte), and moving it changes placement only: the exact
+ * same helper still runs once per root from main RAM. Keep the per-run prepare,
+ * shade and emit loops in zero-wait ITCM instead. */
+static void ndsRendererNativeApplyProductionPreamble(
     const NDSRendererNativeFighterPreamble *preamble,
     NDSRendererStats *stats)
 {
@@ -25185,18 +25330,8 @@ static s32 ndsRendererNativePreflightProductionOwner(
     {
         return FALSE;
     }
-    if (slot == 0u)
-    {
-        roots = sNdsNativeMarioRoots;
-        root_count = sizeof(sNdsNativeMarioRoots) /
-            sizeof(sNdsNativeMarioRoots[0]);
-    }
-    else
-    {
-        roots = sNdsNativeFoxRoots;
-        root_count = sizeof(sNdsNativeFoxRoots) /
-            sizeof(sNdsNativeFoxRoots[0]);
-    }
+    roots = sNdsNativeFighterActiveTables->roots[slot];
+    root_count = sNdsNativeFighterActiveTables->root_count[slot];
     if (input_count != root_count)
     {
         return FALSE;
@@ -25233,7 +25368,8 @@ static s32 ndsRendererNativePreflightProductionOwner(
              epoch_index++)
         {
             const NDSNativeEpoch *epoch =
-                &sNdsNativeFighterEpochs[root->first_epoch + epoch_index];
+                &sNdsNativeFighterActiveTables->epochs[
+                    root->first_epoch + epoch_index];
 
             if ((epoch->material_slot != NDS_NATIVE_MATERIAL_NONE) &&
                 ((input->materials == NULL) ||
@@ -25282,25 +25418,24 @@ static void ndsRendererR2FighterShadeProofFrame(void)
     u32 output = 2166136261u;
     u32 i;
 
-    for (i = 0u;
-         i < (sizeof(sNdsNativeFighterPreparedDense) /
-              sizeof(sNdsNativeFighterPreparedDense[0]));
-         i++)
+    for (i = 0u; i < sNdsNativeFighterActiveTables->dense_count; i++)
     {
         /* R2-03 E29 removed both fields under NDS_R2_FIGHTER_HW_LIGHT. The
          * output hash covers what the per-vertex loop writes, and under that
          * flag the loop is compiled out, so the hash falls back to the vertex
          * words the emit does read. Only comparable within one build. */
 #if NDS_R2_FIGHTER_HW_LIGHT
-        NDS_R2_SHADE_HASH(output,
-                          sNdsNativeFighterPreparedDense[i].gx_xy);
-        NDS_R2_SHADE_HASH(output,
-                          sNdsNativeFighterPreparedDense[i].gx_z);
+        NDS_R2_SHADE_HASH(
+            output, sNdsNativeFighterActiveTables->prepared_dense[i].gx_xy);
+        NDS_R2_SHADE_HASH(
+            output, sNdsNativeFighterActiveTables->prepared_dense[i].gx_z);
 #else
-        NDS_R2_SHADE_HASH(output,
-                          sNdsNativeFighterPreparedDense[i].shaded_rgba);
-        NDS_R2_SHADE_HASH(output,
-                          sNdsNativeFighterPreparedDense[i].packed_color);
+        NDS_R2_SHADE_HASH(
+            output,
+            sNdsNativeFighterActiveTables->prepared_dense[i].shaded_rgba);
+        NDS_R2_SHADE_HASH(
+            output,
+            sNdsNativeFighterActiveTables->prepared_dense[i].packed_color);
 #endif
     }
     if (gNdsR2ShadeFrameCount != 0u)
@@ -25430,7 +25565,41 @@ static u32 sNdsNativeFighterDenseNormals[
     sizeof(sNdsNativeFighterDenseVertices) /
         sizeof(sNdsNativeFighterDenseVertices[0])]
     __attribute__((section(".dtcm.fighter")));
+/* The low-detail prepared table is intentionally main-RAM because the DTCM
+ * budget cannot hold both detail sets.  Keep its equally cold one-time normal
+ * bake beside it in main RAM too; the hot emit sees only the selected pointer. */
+static u32 sNdsNativeFighterDenseNormalsLow[
+    sizeof(sNdsNativeFighterDenseVerticesLow) /
+        sizeof(sNdsNativeFighterDenseVerticesLow[0])];
 static u8 sNdsNativeFighterDenseNormalsBuilt;
+static u8 sNdsNativeFighterDenseNormalsBuiltLow;
+static u32 *sNdsNativeFighterActiveDenseNormals =
+    sNdsNativeFighterDenseNormals;
+static u8 *sNdsNativeFighterActiveDenseNormalsBuilt =
+    &sNdsNativeFighterDenseNormalsBuilt;
+
+/* Selection is one owner-level operation, never an inner-loop operation.  Keep
+ * it out of `.itcm.native_fighter`: inlining the table/normal pointer fan-out
+ * into the production owner wastes scarce ITCM on a once-per-draw branch. */
+static void __attribute__((noinline, optimize("Os"),
+                           section(".text.native_fighter_select")))
+ndsRendererNativeSelectFighterRuntimeTables(u32 use_low_detail)
+{
+    sNdsNativeFighterActiveTables =
+        ndsRendererNativeFighterTablesForDetail(use_low_detail);
+    if (use_low_detail != 0u)
+    {
+        sNdsNativeFighterActiveDenseNormals = sNdsNativeFighterDenseNormalsLow;
+        sNdsNativeFighterActiveDenseNormalsBuilt =
+            &sNdsNativeFighterDenseNormalsBuiltLow;
+    }
+    else
+    {
+        sNdsNativeFighterActiveDenseNormals = sNdsNativeFighterDenseNormals;
+        sNdsNativeFighterActiveDenseNormalsBuilt =
+            &sNdsNativeFighterDenseNormalsBuilt;
+    }
+}
 
 /* libnds's NORMAL_PACK does not mask its z argument -- it is
  * `(x & 0x3FF) | ((y & 0x3FF) << 10) | (z << 20)` -- so a negative z sign-
@@ -25457,21 +25626,20 @@ static s32 ndsRendererR2NormalComponent(s32 source)
 
 static void __attribute__((noinline)) ndsRendererR2BuildDenseNormals(void)
 {
-    u32 count = sizeof(sNdsNativeFighterDenseNormals) /
-        sizeof(sNdsNativeFighterDenseNormals[0]);
+    u32 count = sNdsNativeFighterActiveTables->dense_count;
     u32 index;
 
     for (index = 0u; index < count; index++)
     {
-        u32 rgba = sNdsNativeFighterDenseVertices[index].rgba;
+        u32 rgba = sNdsNativeFighterActiveTables->dense_vertices[index].rgba;
         s32 nx = ndsRendererR2NormalComponent((s32)(s8)(rgba >> 24));
         s32 ny = ndsRendererR2NormalComponent((s32)(s8)(rgba >> 16));
         s32 nz = ndsRendererR2NormalComponent((s32)(s8)(rgba >> 8));
 
-        sNdsNativeFighterDenseNormals[index] =
+        sNdsNativeFighterActiveDenseNormals[index] =
             NDS_R2_NORMAL_PACK((int)nx, (int)ny, (int)nz);
     }
-    sNdsNativeFighterDenseNormalsBuilt = 1u;
+    *sNdsNativeFighterActiveDenseNormalsBuilt = 1u;
 }
 
 /* One channel of the material term, reproducing the software path's arithmetic
@@ -25507,7 +25675,7 @@ static u8 sNdsR2EpochUnlitVertexColor;
  * its no-material route, so the two paths cannot drift. */
 static inline u16 ndsRendererR2DenseVertexColor15(u32 dense_id)
 {
-    u32 rgba = sNdsNativeFighterDenseVertices[dense_id].rgba;
+    u32 rgba = sNdsNativeFighterActiveTables->dense_vertices[dense_id].rgba;
 
     return RGB15((u8)((rgba >> 27) & 0x1fu),
                  (u8)((rgba >> 19) & 0x1fu),
@@ -25918,11 +26086,14 @@ ndsRendererNativeShadeProductionActions(
     {
         u32 action_index = epoch->first_action + action_offset;
         const NDSNativeVertexAction *action =
-            &sNdsNativeFighterVertexActions[action_index];
-        u32 span = sNdsNativeFighterActionDenseSpans[action_index];
+            &sNdsNativeFighterActiveTables->vertex_actions[action_index];
+#if !NDS_R2_FIGHTER_HW_LIGHT
+        u32 span =
+            sNdsNativeFighterActiveTables->action_dense_spans[action_index];
         u32 dense_first = span & NDS_NATIVE_DENSE_ID_MASK;
         u32 dense_count = span >> NDS_NATIVE_DENSE_SPAN_COUNT_SHIFT;
         u32 dense_offset;
+#endif
 
         if (action->kind == NDS_NATIVE_VERTEX_BLOCK)
         {
@@ -25938,15 +26109,11 @@ ndsRendererNativeShadeProductionActions(
             }
         }
 #if NDS_R2_FIGHTER_HW_LIGHT
-        /* R2-03 E29. The loop below is compiled out, not merely skipped: under
-         * this flag the emit writes GFX_NORMAL unconditionally and never reads
-         * packed_color, so the loop's outputs have no consumer even on an unlit
-         * epoch, and E29 removes the two fields it writes from the struct. */
+        /* R2-03 E29 / P2-2. The software shade span has no consumer in the
+         * hardware-light owner. Do not even retain its generated Low-detail
+         * alias/span tables in this configuration; the action itself remains
+         * because source vertex-count accounting is part of the contract. */
         (void)hardware_lit;
-        (void)span;
-        (void)dense_first;
-        (void)dense_count;
-        (void)dense_offset;
 #else
         for (dense_offset = 0u;
              dense_offset < dense_count;
@@ -25954,15 +26121,17 @@ ndsRendererNativeShadeProductionActions(
         {
             u32 dense_id = dense_first + dense_offset;
             u32 color_source =
-                sNdsNativeFighterDenseColorSource[dense_id];
+                sNdsNativeFighterActiveTables->dense_color_source[dense_id];
 
             if (color_source != dense_id)
             {
 #if NDS_TASK91_DRAW_PHASE_CENSUS
                 gNdsR2ShadeVerticesCopied++;
 #endif
-                sNdsNativeFighterPreparedDense[dense_id].shaded_rgba =
-                    sNdsNativeFighterPreparedDense[color_source].shaded_rgba;
+                sNdsNativeFighterActiveTables->prepared_dense[
+                    dense_id].shaded_rgba =
+                    sNdsNativeFighterActiveTables->prepared_dense[
+                        color_source].shaded_rgba;
             }
             else
             {
@@ -25970,7 +26139,7 @@ ndsRendererNativeShadeProductionActions(
                 gNdsR2ShadeVerticesLit++;
 #endif
                 const NDSNativeDenseVertex *dense =
-                    &sNdsNativeFighterDenseVertices[dense_id];
+                    &sNdsNativeFighterActiveTables->dense_vertices[dense_id];
                 NDSRendererInputVertex input;
 
                 input.r = (u8)(dense->rgba >> 24);
@@ -25979,20 +26148,22 @@ ndsRendererNativeShadeProductionActions(
                 input.a = (u8)dense->rgba;
                 if (shade_lut != NULL)
                 {
-                    sNdsNativeFighterPreparedDense[dense_id].shaded_rgba =
+                    sNdsNativeFighterActiveTables->prepared_dense[
+                        dense_id].shaded_rgba =
                         ndsRendererHardwareLitShadeColorLut(
                             &input, prepared_direction, shade_lut);
                 }
                 else
                 {
-                    sNdsNativeFighterPreparedDense[dense_id].shaded_rgba =
+                    sNdsNativeFighterActiveTables->prepared_dense[
+                        dense_id].shaded_rgba =
                         ndsRendererHardwareLitShadeColorPrepared(
                             stats, &input, prepared_direction);
                 }
             }
             {
                 NDSNativePreparedDenseVertex *prepared =
-                    &sNdsNativeFighterPreparedDense[dense_id];
+                    &sNdsNativeFighterActiveTables->prepared_dense[dense_id];
                 u32 color = prepared->shaded_rgba;
 
                 if (use_material != 0u)
@@ -26521,6 +26692,11 @@ typedef struct NDSNativeFighterRunUvInputs
     u32 origin_s;
     u32 origin_t;
     s32 offset;
+    /* High and low programs reuse run indices but do not reuse dense IDs.  The
+     * source can cross that detail boundary between a 2-player and 3+ player
+     * scene without changing the texture metrics, so table identity is part of
+     * the memo key. */
+    const NDSNativeFighterRuntimeTables *tables;
     /* The arena fence, same key the fighter material block uses. A restart
      * rewinds the taskman heap and could reload a different dense table behind
      * the same run index with the same texture metrics; without this the stamp
@@ -26557,12 +26733,12 @@ ndsRendererNativeRebuildProductionRunUv(
          unique_offset < unique_count;
          unique_offset++)
     {
-        u32 dense_id = sNdsNativeFighterRunUniqueDense[
+        u32 dense_id = sNdsNativeFighterActiveTables->run_unique_dense[
             unique_first + unique_offset];
         const NDSNativeDenseVertex *dense =
-            &sNdsNativeFighterDenseVertices[dense_id];
+            &sNdsNativeFighterActiveTables->dense_vertices[dense_id];
         NDSNativePreparedDenseVertex *prepared =
-            &sNdsNativeFighterPreparedDense[dense_id];
+            &sNdsNativeFighterActiveTables->prepared_dense[dense_id];
         s32 scaled_s =
             ((s32)dense->s *
              (s32)state->texture_prepare_scale_s) >> 17;
@@ -26590,6 +26766,7 @@ ndsRendererNativeRebuildProductionRunUv(
         uv->origin_s = state->texture_prepare_origin_s;
         uv->origin_t = state->texture_prepare_origin_t;
         uv->offset = state->texture_prepare_offset;
+        uv->tables = sNdsNativeFighterActiveTables;
         uv->heap_generation = gNdsTaskmanHeapGeneration;
         sNdsNativeFighterRunUvValid[run_index] = 1u;
     }
@@ -26869,8 +27046,8 @@ ndsRendererNativePrepareProductionRunCore(
     }
     t_r2e11_phase = cpuGetTiming();
 #endif
-    unique_first = sNdsNativeFighterRunFirstUnique[run_index];
-    unique_count = sNdsNativeFighterRunUniqueCount[run_index];
+    unique_first = sNdsNativeFighterActiveTables->run_first_unique[run_index];
+    unique_count = sNdsNativeFighterActiveTables->run_unique_count[run_index];
     /* Hierarchy preflight records immutable UV policy only; commit evaluates
      * the live dense UVs once.  Mode-8 keeps its original immediate path. */
     if ((policy->textured != 0u) && (hierarchy_run == NULL))
@@ -26889,6 +27066,7 @@ ndsRendererNativePrepareProductionRunCore(
             (uv->origin_s == state->texture_prepare_origin_s) &&
             (uv->origin_t == state->texture_prepare_origin_t) &&
             (uv->offset == state->texture_prepare_offset) &&
+            (uv->tables == sNdsNativeFighterActiveTables) &&
             (uv->heap_generation == gNdsTaskmanHeapGeneration))
         {
 #if NDS_TICK_HUD
@@ -26994,15 +27172,15 @@ ndsRendererNativeEmitProductionRawTexturedRun(
     u32 corner_count)
 {
     const u16 *corner =
-        &sNdsNativeFighterPackedCorners[
-            sNdsNativeFighterRunFirstCorner[run_index]];
+        &sNdsNativeFighterActiveTables->packed_corners[
+            sNdsNativeFighterActiveTables->run_first_corner[run_index]];
     u32 remaining = corner_count;
 
     while (remaining-- != 0u)
     {
         u32 dense_id = *corner++;
         const NDSNativePreparedDenseVertex *prepared =
-            &sNdsNativeFighterPreparedDense[dense_id];
+            &sNdsNativeFighterActiveTables->prepared_dense[dense_id];
 
 #if NDS_LAB_CULL_PROBE
         ndsRendererHardwareWriteColorWord(
@@ -27019,7 +27197,7 @@ ndsRendererNativeEmitProductionRawTexturedRun(
         else
         #endif
         ndsRendererHardwareWriteNormalWord(
-            sNdsNativeFighterDenseNormals[dense_id]);
+            sNdsNativeFighterActiveDenseNormals[dense_id]);
 #else
         ndsRendererHardwareWriteFighterColorWord(prepared->packed_color);
 #endif
@@ -27037,15 +27215,15 @@ ndsRendererNativeEmitProductionRawUntexturedRun(
     u32 corner_count)
 {
     const u16 *corner =
-        &sNdsNativeFighterPackedCorners[
-            sNdsNativeFighterRunFirstCorner[run_index]];
+        &sNdsNativeFighterActiveTables->packed_corners[
+            sNdsNativeFighterActiveTables->run_first_corner[run_index]];
     u32 remaining = corner_count;
 
     while (remaining-- != 0u)
     {
         u32 dense_id = *corner++;
         const NDSNativePreparedDenseVertex *prepared =
-            &sNdsNativeFighterPreparedDense[dense_id];
+            &sNdsNativeFighterActiveTables->prepared_dense[dense_id];
 
 #if NDS_LAB_CULL_PROBE
         ndsRendererHardwareWriteFighterColorWord(
@@ -27060,7 +27238,7 @@ ndsRendererNativeEmitProductionRawUntexturedRun(
         else
 #endif
         ndsRendererHardwareWriteNormalWord(
-            sNdsNativeFighterDenseNormals[dense_id]);
+            sNdsNativeFighterActiveDenseNormals[dense_id]);
 #else
         ndsRendererHardwareWriteFighterColorWord(prepared->packed_color);
 #endif
@@ -27118,16 +27296,18 @@ ndsRendererNativeEmitProductionPrimitiveGroups(
     u32 run_index,
     u32 textured)
 {
-    u32 g = sNdsNativeFighterPrimitiveGroupFirst[run_index];
-    u32 remaining_groups = sNdsNativeFighterPrimitiveGroupCount[run_index];
+    u32 g = sNdsNativeFighterActiveTables->primitive_group_first[run_index];
+    u32 remaining_groups =
+        sNdsNativeFighterActiveTables->primitive_group_count[run_index];
     u32 current_type = (u32)GL_TRIANGLE;
 
     while (remaining_groups-- != 0u)
     {
-        u32 gtype = sNdsNativeFighterPrimitiveGroupType[g];
-        const u16 *vref = &sNdsNativeFighterPrimitiveVertices[
-            sNdsNativeFighterPrimitiveGroupFirstVertex[g]];
-        u32 remaining = sNdsNativeFighterPrimitiveGroupVertexCount[g];
+        u32 gtype = sNdsNativeFighterActiveTables->primitive_group_type[g];
+        const u16 *vref = &sNdsNativeFighterActiveTables->primitive_vertices[
+            sNdsNativeFighterActiveTables->primitive_group_first_vertex[g]];
+        u32 remaining =
+            sNdsNativeFighterActiveTables->primitive_group_vertex_count[g];
 
         g++;
         /* A new group needs its own BEGIN unless it is a GL_TRIANGLE group
@@ -27154,7 +27334,7 @@ ndsRendererNativeEmitProductionPrimitiveGroups(
             {
                 u32 dense_id = *vref++;
                 const NDSNativePreparedDenseVertex *prepared =
-                    &sNdsNativeFighterPreparedDense[dense_id];
+                    &sNdsNativeFighterActiveTables->prepared_dense[dense_id];
 
 #if NDS_LAB_CULL_PROBE
                 /* BUGS.md #10 probe, same arm the raw emitters carry. It was
@@ -27172,7 +27352,7 @@ ndsRendererNativeEmitProductionPrimitiveGroups(
                 else
                 #endif
                 ndsRendererHardwareWriteNormalWord(
-                    sNdsNativeFighterDenseNormals[dense_id]);
+                    sNdsNativeFighterActiveDenseNormals[dense_id]);
 #else
                 ndsRendererHardwareWriteFighterColorWord(
                     prepared->packed_color);
@@ -27190,7 +27370,7 @@ ndsRendererNativeEmitProductionPrimitiveGroups(
             {
                 u32 dense_id = *vref++;
                 const NDSNativePreparedDenseVertex *prepared =
-                    &sNdsNativeFighterPreparedDense[dense_id];
+                    &sNdsNativeFighterActiveTables->prepared_dense[dense_id];
 
 #if NDS_LAB_CULL_PROBE
                 /* BUGS.md #10 probe, same arm the raw emitters carry. It was
@@ -27208,7 +27388,7 @@ ndsRendererNativeEmitProductionPrimitiveGroups(
                 else
                 #endif
                 ndsRendererHardwareWriteNormalWord(
-                    sNdsNativeFighterDenseNormals[dense_id]);
+                    sNdsNativeFighterActiveDenseNormals[dense_id]);
 #else
                 ndsRendererHardwareWriteFighterColorWord(
                     prepared->packed_color);
@@ -27234,8 +27414,8 @@ ndsRendererNativeEmitProductionCrossRun(
     const u8 *binding_palette_slots)
 {
     const u16 *corner =
-        &sNdsNativeFighterPackedCorners[
-            sNdsNativeFighterRunFirstCorner[run_index]];
+        &sNdsNativeFighterActiveTables->packed_corners[
+            sNdsNativeFighterActiveTables->run_first_corner[run_index]];
     u32 active_palette_slot = current_palette_slot;
     u32 remaining = corner_count;
 
@@ -27244,9 +27424,9 @@ ndsRendererNativeEmitProductionCrossRun(
         u32 packed = *corner++;
         u32 dense_id = packed & NDS_NATIVE_DENSE_ID_MASK;
         const NDSNativeDenseVertex *dense =
-            &sNdsNativeFighterDenseVertices[dense_id];
+            &sNdsNativeFighterActiveTables->dense_vertices[dense_id];
         const NDSNativePreparedDenseVertex *prepared =
-            &sNdsNativeFighterPreparedDense[dense_id];
+            &sNdsNativeFighterActiveTables->prepared_dense[dense_id];
         u32 palette_slot;
 
         if (binding_palette_slots != NULL)
@@ -27277,7 +27457,7 @@ ndsRendererNativeEmitProductionCrossRun(
         else
         #endif
         ndsRendererHardwareWriteNormalWord(
-            sNdsNativeFighterDenseNormals[dense_id]);
+            sNdsNativeFighterActiveDenseNormals[dense_id]);
 #else
         ndsRendererHardwareWriteFighterColorWord(prepared->packed_color);
 #endif
@@ -27391,7 +27571,7 @@ static s32 ndsRendererNativeSubmitProductionRun(
     e15_mark = e15_t0;
     gNdsR2SubmitCalls++;
 #endif
-    run_index = (u32)(run - sNdsNativeFighterRuns);
+    run_index = (u32)(run - sNdsNativeFighterActiveTables->runs);
 #if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_TRIANGLE_NOOP
     (void)epoch_policy;
     (void)current_palette_slot;
@@ -28014,6 +28194,12 @@ static s32 ndsRendererExecuteNativeFighterRootHardware(
     {
         return FALSE;
     }
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    /* This legacy root entry point predates P2-2 and has no detail argument.
+     * Keep its historical contract explicitly high-detail so a preceding low
+     * owner cannot leave the shared serialized table view pointed elsewhere. */
+    ndsRendererNativeSelectFighterRuntimeTables(FALSE);
+#endif
     if (slot == 0u)
     {
         roots = sNdsNativeMarioRoots;
@@ -28972,6 +29158,10 @@ s32 ndsRendererExecuteNativeFighterOwnerHierarchy(
         return FALSE;
     }
     *out_hardware_started = FALSE;
+    /* Mode 7 is intentionally high-detail-only.  No shipping P2 target uses it;
+     * forcing the historical view here is safer than silently feeding low
+     * tables into a hierarchy schedule generated only for the high JointTree. */
+    ndsRendererNativeSelectFighterRuntimeTables(FALSE);
     if (ndsRendererNativePreflightFighterHierarchy(
             slot, asset_base, hierarchy, callback, stats, &tables) == FALSE)
     {
@@ -33133,6 +33323,7 @@ void ndsRendererResetNativeStageValidationCache(void)
 s32 NDS_RENDERER_NATIVE_FIGHTER_CODE
 ndsRendererExecuteNativeFighterOwnerProduction(
     u32 slot,
+    u32 use_low_detail,
     const void *asset_base_ptr,
     const NDSRendererNativeFighterRoot *inputs,
     u32 input_count,
@@ -33175,6 +33366,7 @@ ndsRendererExecuteNativeFighterOwnerProduction(
         return FALSE;
     }
     *out_hardware_started = FALSE;
+    ndsRendererNativeSelectFighterRuntimeTables(use_low_detail);
 #if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
     NDS_RENDERER_M2_DETAILED_LEDGER
     m2_owner = ndsRendererProfileM2Owner();
@@ -33208,20 +33400,9 @@ ndsRendererExecuteNativeFighterOwnerProduction(
 #if NDS_TASK91_DRAW_PHASE_CENSUS
     gNdsR2ExecPreflightTicks += cpuGetTiming() - e15b_mark;
 #endif
-    if (slot == 0u)
-    {
-        roots = sNdsNativeMarioRoots;
-        root_count = sizeof(sNdsNativeMarioRoots) /
-            sizeof(sNdsNativeMarioRoots[0]);
-        palette_slots = sNdsNativeMarioCrossPaletteSlots;
-    }
-    else
-    {
-        roots = sNdsNativeFoxRoots;
-        root_count = sizeof(sNdsNativeFoxRoots) /
-            sizeof(sNdsNativeFoxRoots[0]);
-        palette_slots = sNdsNativeFoxCrossPaletteSlots;
-    }
+    roots = sNdsNativeFighterActiveTables->roots[slot];
+    root_count = sNdsNativeFighterActiveTables->root_count[slot];
+    palette_slots = sNdsNativeFighterActiveTables->cross_palette_slots[slot];
 
     ndsRendererInitTraversalState(
         state, NULL, stats, NULL, NULL, 0u);
@@ -33232,7 +33413,7 @@ ndsRendererExecuteNativeFighterOwnerProduction(
      * itself cannot be written here -- stats->light_dir_* is only populated by
      * the epoch state deltas -- so ndsRendererR2WriteLightVector does it on the
      * first epoch of this execute that has a direction. */
-    if (sNdsNativeFighterDenseNormalsBuilt == 0u)
+    if (*sNdsNativeFighterActiveDenseNormalsBuilt == 0u)
     {
         ndsRendererR2BuildDenseNormals();
     }
@@ -33322,7 +33503,7 @@ ndsRendererExecuteNativeFighterOwnerProduction(
         {
             u32 epoch_index = root->first_epoch + epoch_offset;
             const NDSNativeEpoch *epoch =
-                &sNdsNativeFighterEpochs[epoch_index];
+                &sNdsNativeFighterActiveTables->epochs[epoch_index];
             u32 run_offset;
 
 #if NDS_TASK91_DRAW_PHASE_CENSUS
@@ -33403,7 +33584,7 @@ ndsRendererExecuteNativeFighterOwnerProduction(
 #endif
             (void)ndsRendererNativeShadeProductionActions(
                 epoch,
-                sNdsNativeFighterEpochDirectPolicy[epoch_index],
+                sNdsNativeFighterActiveTables->epoch_direct_policy[epoch_index],
                 FALSE,
                 stats, state);
 #if NDS_TASK91_DRAW_PHASE_CENSUS
@@ -33427,7 +33608,8 @@ ndsRendererExecuteNativeFighterOwnerProduction(
                 state->prepared_light_direction_valid, stats);
             ndsRendererM2ShadeRecordProduced(
                 slot, inputs[0].owner_generation, epoch_index, epoch,
-                sNdsNativeFighterEpochDirectPolicy[epoch_index], stats);
+                sNdsNativeFighterActiveTables->epoch_direct_policy[epoch_index],
+                stats);
 #endif
 
             for (run_offset = 0u;
@@ -33435,7 +33617,8 @@ ndsRendererExecuteNativeFighterOwnerProduction(
                  run_offset++)
             {
                 const NDSNativeRun *run =
-                    &sNdsNativeFighterRuns[epoch->first_run + run_offset];
+                    &sNdsNativeFighterActiveTables->runs[
+                        epoch->first_run + run_offset];
 
 #if NDS_RENDERER_SCREEN_SPACE_CENSUS
                 ndsRendererScreenSpaceCensusFighterRun(
@@ -33443,7 +33626,8 @@ ndsRendererExecuteNativeFighterOwnerProduction(
 #endif
                 if (ndsRendererNativeSubmitProductionRun(
                         run,
-                        sNdsNativeFighterEpochDirectPolicy[epoch_index],
+                        sNdsNativeFighterActiveTables->epoch_direct_policy[
+                            epoch_index],
                         palette_slot, binding_palette_slots,
                         input->config,
                         stats, state,
@@ -33510,6 +33694,7 @@ ndsRendererExecuteNativeFighterOwnerProduction(
     return TRUE;
 #else
     (void)slot;
+    (void)use_low_detail;
     (void)asset_base_ptr;
     (void)inputs;
     (void)input_count;
@@ -33660,34 +33845,35 @@ static s32 ndsRendererNativeAssetSpanFits(
 }
 
 static s32 ndsRendererValidateNativeStateSpan(
+    const NDSNativeFighterRuntimeTables *tables,
     u16 first, u32 count, u32 asset_data_size)
 {
-    u32 sequence_count = sizeof(sNdsNativeFighterStateSequence) /
-        sizeof(sNdsNativeFighterStateSequence[0]);
-    u32 delta_count = sizeof(sNdsNativeFighterStateDeltas) /
-        sizeof(sNdsNativeFighterStateDeltas[0]);
     u32 i;
 
+    if (tables == NULL)
+    {
+        return FALSE;
+    }
     if (count == 0u)
     {
         return TRUE;
     }
     if ((first == NDS_NATIVE_STATE_NONE) ||
         (ndsRendererNativeArraySpanFits(
-             first, count, sequence_count) == FALSE))
+             first, count, tables->state_sequence_count) == FALSE))
     {
         return FALSE;
     }
     for (i = 0u; i < count; i++)
     {
-        u32 delta_index = sNdsNativeFighterStateSequence[first + i];
+        u32 delta_index = tables->state_sequence[first + i];
         const NDSNativeStateDelta *delta;
 
-        if (delta_index >= delta_count)
+        if (delta_index >= tables->state_delta_count)
         {
             return FALSE;
         }
-        delta = &sNdsNativeFighterStateDeltas[delta_index];
+        delta = &tables->state_deltas[delta_index];
         switch (delta->effect)
         {
         case NDS_NATIVE_STATE_OTHERMODE:
@@ -33732,37 +33918,27 @@ static s32 ndsRendererValidateNativeStateSpan(
 }
 
 static s32 ndsRendererValidateNativeVertexAction(
+    const NDSNativeFighterRuntimeTables *tables,
     u32 action_index,
     const NDSNativeRoot *root,
     u32 asset_data_size)
 {
-    u32 action_count = sizeof(sNdsNativeFighterVertexActions) /
-        sizeof(sNdsNativeFighterVertexActions[0]);
-#if NDS_RENDERER_PROFILE_LEVEL < 2
-    u32 dense_first_count =
-        sizeof(sNdsNativeFighterActionDenseFirst) /
-        sizeof(sNdsNativeFighterActionDenseFirst[0]);
-#endif
     const NDSNativeVertexAction *action;
-#if NDS_RENDERER_PROFILE_LEVEL < 2
     u32 dense_first;
     u32 i;
-#endif
 
-    if ((root == NULL) || (action_index >= action_count)
-#if NDS_RENDERER_PROFILE_LEVEL < 2
-        ||
-        (action_index >= dense_first_count))
-#else
-        )
-#endif
+    if ((tables == NULL) || (root == NULL) ||
+        (action_index >= tables->vertex_action_count))
     {
         return FALSE;
     }
-    action = &sNdsNativeFighterVertexActions[action_index];
-#if NDS_RENDERER_PROFILE_LEVEL < 2
-    dense_first = sNdsNativeFighterActionDenseFirst[action_index];
-#endif
+    action = &tables->vertex_actions[action_index];
+    /* P2-2: the first dense id is already baked into the low bits of the span
+     * consumed by production shading. The historical action_dense_first table
+     * duplicated that value solely for validation; validate the executable
+     * representation itself. */
+    dense_first =
+        tables->action_dense_spans[action_index] & NDS_NATIVE_DENSE_ID_MASK;
     if (action->command_index >= root->source_command_count)
     {
         return FALSE;
@@ -33776,22 +33952,17 @@ static s32 ndsRendererValidateNativeVertexAction(
             (ndsRendererNativeAssetSpanFits(
                  action->source_offset, action->count, 16u,
                  asset_data_size) == FALSE)
-#if NDS_RENDERER_PROFILE_LEVEL < 2
             ||
             (ndsRendererNativeArraySpanFits(
                  dense_first, action->count,
-                 NDS_NATIVE_DENSE_VERTEX_COUNT) == FALSE))
-#else
-            )
-#endif
+                 tables->dense_count) == FALSE))
         {
             return FALSE;
         }
-#if NDS_RENDERER_PROFILE_LEVEL < 2
         for (i = 0u; i < action->count; i++)
         {
             const NDSNativeDenseVertex *dense =
-                &sNdsNativeFighterDenseVertices[dense_first + i];
+                &tables->dense_vertices[dense_first + i];
 
             if ((dense->cache_slot != ((u32)action->index + i)) ||
                 (dense->matrix_binding >=
@@ -33800,22 +33971,16 @@ static s32 ndsRendererValidateNativeVertexAction(
                 return FALSE;
             }
         }
-#endif
         return TRUE;
     }
     if (action->kind == NDS_NATIVE_MODIFY_ST)
     {
-        if ((action->index >= NDS_RENDERER_MAX_VTX)
-#if NDS_RENDERER_PROFILE_LEVEL < 2
-            ||
-            (dense_first >= NDS_NATIVE_DENSE_VERTEX_COUNT) ||
-            (sNdsNativeFighterDenseVertices[dense_first].cache_slot !=
+        if ((action->index >= NDS_RENDERER_MAX_VTX) ||
+            (dense_first >= tables->dense_count) ||
+            (tables->dense_vertices[dense_first].cache_slot !=
              action->index) ||
-            (sNdsNativeFighterDenseVertices[dense_first].matrix_binding >=
+            (tables->dense_vertices[dense_first].matrix_binding >=
              NDS_NATIVE_ROOT_BINDING_COUNT))
-#else
-            )
-#endif
         {
             return FALSE;
         }
@@ -33825,78 +33990,56 @@ static s32 ndsRendererValidateNativeVertexAction(
 }
 
 static s32 ndsRendererValidateNativeRun(
+    const NDSNativeFighterRuntimeTables *tables,
     u32 run_index,
     const NDSNativeRoot *root,
     u32 *source_command_index,
     u32 *tri2_half)
 {
-    u32 run_count = sizeof(sNdsNativeFighterRuns) /
-        sizeof(sNdsNativeFighterRuns[0]);
-    u32 triangle_count = sizeof(sNdsNativeFighterTriangles) /
-        sizeof(sNdsNativeFighterTriangles[0]);
-#if NDS_RENDERER_PROFILE_LEVEL < 2
-    u32 run_corner_count = sizeof(sNdsNativeFighterRunFirstCorner) /
-        sizeof(sNdsNativeFighterRunFirstCorner[0]);
-    u32 dense_corner_count = sizeof(sNdsNativeFighterDenseCorners) /
-        sizeof(sNdsNativeFighterDenseCorners[0]);
-#endif
     const NDSNativeRun *run;
-#if NDS_RENDERER_PROFILE_LEVEL < 2
     u32 first_corner;
     u32 corner_count;
-#endif
     u32 i;
 
-    if ((root == NULL) || (source_command_index == NULL) ||
-        (tri2_half == NULL) || (run_index >= run_count)
-#if NDS_RENDERER_PROFILE_LEVEL < 2
-        ||
-        (run_index >= run_corner_count))
-#else
-        )
-#endif
+    if ((tables == NULL) || (root == NULL) ||
+        (source_command_index == NULL) || (tri2_half == NULL) ||
+        (run_index >= tables->run_count) ||
+        (run_index >= tables->run_first_corner_count))
     {
         return FALSE;
     }
-    run = &sNdsNativeFighterRuns[run_index];
-#if NDS_RENDERER_PROFILE_LEVEL < 2
+    run = &tables->runs[run_index];
     corner_count = (u32)run->triangle_count * 3u;
-    first_corner = sNdsNativeFighterRunFirstCorner[run_index];
-#endif
+    first_corner = tables->run_first_corner[run_index];
     if ((run->triangle_count == 0u) ||
         (run->submit_class > NDS_NATIVE_RUN_CROSS_MATRIX) ||
         (ndsRendererNativeArraySpanFits(
              run->first_triangle, run->triangle_count,
-             triangle_count) == FALSE)
-#if NDS_RENDERER_PROFILE_LEVEL < 2
-        ||
+             tables->triangle_count) == FALSE) ||
         (ndsRendererNativeArraySpanFits(
-             first_corner, corner_count, dense_corner_count) == FALSE))
-#else
-        )
-#endif
+             first_corner, corner_count, tables->packed_corner_count) == FALSE))
     {
         return FALSE;
     }
-#if NDS_RENDERER_PROFILE_LEVEL < 2
     for (i = 0u; i < corner_count; i++)
     {
-        u32 dense_id = sNdsNativeFighterDenseCorners[first_corner + i];
+        /* Production consumes packed_corners. Its low bits are exactly the
+         * dense id formerly mirrored in validation-only dense_corners. */
+        u32 dense_id =
+            tables->packed_corners[first_corner + i] & NDS_NATIVE_DENSE_ID_MASK;
 
-        if ((dense_id >= NDS_NATIVE_DENSE_VERTEX_COUNT) ||
-            (sNdsNativeFighterDenseVertices[dense_id].cache_slot >=
+        if ((dense_id >= tables->dense_count) ||
+            (tables->dense_vertices[dense_id].cache_slot >=
              NDS_RENDERER_MAX_VTX) ||
-            (sNdsNativeFighterDenseVertices[dense_id].matrix_binding >=
+            (tables->dense_vertices[dense_id].matrix_binding >=
              NDS_NATIVE_ROOT_BINDING_COUNT))
         {
             return FALSE;
         }
     }
-#endif
     for (i = 0u; i < run->triangle_count; i++)
     {
-        u32 encoded =
-            sNdsNativeFighterTriangles[run->first_triangle + i];
+        u32 encoded = tables->triangles[run->first_triangle + i];
         u32 compact = encoded & 0x7fffu;
         u32 required =
             (1u << ((compact >> 10) & 31u)) |
@@ -34008,6 +34151,7 @@ void ndsRendererProfileCensusNativeFighterSchedule(
 
 s32 ndsRendererValidateNativeFighterOwner(
     u32 slot,
+    u32 use_low_detail,
     u32 asset_data_size,
     u32 root_count,
     const u32 *root_offsets,
@@ -34015,15 +34159,15 @@ s32 ndsRendererValidateNativeFighterOwner(
 {
 #if NDS_RENDERER_HW_TRIANGLES
     const NDSNativeRoot *roots;
+    const NDSNativeEpoch *epochs;
     u32 expected_count;
     u32 expected_asset_data_size;
 #if NDS_RENDERER_PROFILE_LEVEL < 2
-    u32 epoch_count = sizeof(sNdsNativeFighterEpochs) /
-        sizeof(sNdsNativeFighterEpochs[0]);
-    u32 action_count = sizeof(sNdsNativeFighterVertexActions) /
-        sizeof(sNdsNativeFighterVertexActions[0]);
-    u32 run_count = sizeof(sNdsNativeFighterRuns) /
-        sizeof(sNdsNativeFighterRuns[0]);
+    const NDSNativeFighterRuntimeTables *tables =
+        ndsRendererNativeFighterTablesForDetail(use_low_detail);
+    u32 epoch_count = tables->epoch_count;
+    u32 action_count = tables->vertex_action_count;
+    u32 run_count = tables->run_count;
 #endif
     u32 root_index;
 
@@ -34034,18 +34178,38 @@ s32 ndsRendererValidateNativeFighterOwner(
     }
     if (slot == 0u)
     {
-        roots = sNdsNativeMarioRoots;
         expected_asset_data_size = 0x7510u;
-        expected_count = sizeof(sNdsNativeMarioRoots) /
-            sizeof(sNdsNativeMarioRoots[0]);
     }
     else
     {
-        roots = sNdsNativeFoxRoots;
         expected_asset_data_size = 0x7e50u;
-        expected_count = sizeof(sNdsNativeFoxRoots) /
-            sizeof(sNdsNativeFoxRoots[0]);
     }
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    roots = tables->roots[slot];
+    expected_count = tables->root_count[slot];
+    epochs = tables->epochs;
+#else
+    if (use_low_detail != 0u)
+    {
+        roots = (slot == 0u) ? sNdsNativeMarioRootsLow : sNdsNativeFoxRootsLow;
+        expected_count = (slot == 0u) ?
+            (u32)(sizeof(sNdsNativeMarioRootsLow) /
+                  sizeof(sNdsNativeMarioRootsLow[0])) :
+            (u32)(sizeof(sNdsNativeFoxRootsLow) /
+                  sizeof(sNdsNativeFoxRootsLow[0]));
+        epochs = sNdsNativeFighterEpochsLow;
+    }
+    else
+    {
+        roots = (slot == 0u) ? sNdsNativeMarioRoots : sNdsNativeFoxRoots;
+        expected_count = (slot == 0u) ?
+            (u32)(sizeof(sNdsNativeMarioRoots) /
+                  sizeof(sNdsNativeMarioRoots[0])) :
+            (u32)(sizeof(sNdsNativeFoxRoots) /
+                  sizeof(sNdsNativeFoxRoots[0]));
+        epochs = sNdsNativeFighterEpochs;
+    }
+#endif
     if ((asset_data_size != expected_asset_data_size) ||
         (root_count != expected_count))
     {
@@ -34069,6 +34233,7 @@ s32 ndsRendererValidateNativeFighterOwner(
                  root->first_epoch, root->epoch_count,
                  epoch_count) == FALSE) ||
             (ndsRendererValidateNativeStateSpan(
+                 tables,
                  root->tail_state_first, root->tail_state_count,
                  asset_data_size) == FALSE))
         {
@@ -34080,8 +34245,7 @@ s32 ndsRendererValidateNativeFighterOwner(
              epoch_index++)
         {
             const NDSNativeEpoch *epoch =
-                &sNdsNativeFighterEpochs[
-                    root->first_epoch + epoch_index];
+                &epochs[root->first_epoch + epoch_index];
 #if NDS_RENDERER_PROFILE_LEVEL < 2
             u32 action_index;
             u32 run_index;
@@ -34097,10 +34261,12 @@ s32 ndsRendererValidateNativeFighterOwner(
             }
 #if NDS_RENDERER_PROFILE_LEVEL < 2
             if ((ndsRendererValidateNativeStateSpan(
+                     tables,
                      epoch->before_state_first,
                      epoch->before_state_count,
                      asset_data_size) == FALSE) ||
                 (ndsRendererValidateNativeStateSpan(
+                     tables,
                      epoch->after_state_first,
                      epoch->after_state_count,
                      asset_data_size) == FALSE) ||
@@ -34118,6 +34284,7 @@ s32 ndsRendererValidateNativeFighterOwner(
                  action_index++)
             {
                 if (ndsRendererValidateNativeVertexAction(
+                        tables,
                         (u32)epoch->first_action + action_index,
                         root, asset_data_size) == FALSE)
                 {
@@ -34129,6 +34296,7 @@ s32 ndsRendererValidateNativeFighterOwner(
                  run_index++)
             {
                 if (ndsRendererValidateNativeRun(
+                        tables,
                         (u32)epoch->first_run + run_index,
                         root, &source_command_index,
                         &tri2_half) == FALSE)
@@ -34146,6 +34314,7 @@ s32 ndsRendererValidateNativeFighterOwner(
     return TRUE;
 #else
     (void)slot;
+    (void)use_low_detail;
     (void)asset_data_size;
     (void)root_count;
     (void)root_offsets;

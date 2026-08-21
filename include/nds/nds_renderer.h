@@ -1291,6 +1291,7 @@ s32 ndsRendererExecuteNativeFighterRoot(
     NDSRendererVertexCache *vertex_cache);
 s32 ndsRendererExecuteNativeFighterOwnerProduction(
     u32 slot,
+    u32 use_low_detail,
     const void *asset_base,
     const NDSRendererNativeFighterRoot *roots,
     u32 root_count,
@@ -1330,6 +1331,7 @@ s32 ndsRendererEndNativeFighterOwner(
 void ndsRendererAbortNativeFighterOwner(void);
 s32 ndsRendererValidateNativeFighterOwner(
     u32 slot,
+    u32 use_low_detail,
     u32 asset_data_size,
     u32 root_count,
     const u32 *root_offsets,
