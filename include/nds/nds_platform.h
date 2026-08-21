@@ -37,13 +37,6 @@ typedef enum NDSFastWallpaperState {
  * rows leave 1,500 u16 scratch pixels; the renderer statically proves its map
  * requirement fits this capacity. Software builds keep their legacy 320x240
  * retained display surface and do not use this decode-cache API. */
-#define NDS_ORIGINAL_SPRITE_DECODE_CACHE_WIDTH 300u
-#define NDS_ORIGINAL_SPRITE_DECODE_CACHE_CONTENT_HEIGHT 220u
-#define NDS_ORIGINAL_SPRITE_DECODE_CACHE_HEIGHT 225u
-#define NDS_ORIGINAL_SPRITE_DECODE_CACHE_SCRATCH_PIXELS \
-    ((NDS_ORIGINAL_SPRITE_DECODE_CACHE_HEIGHT - \
-      NDS_ORIGINAL_SPRITE_DECODE_CACHE_CONTENT_HEIGHT) * \
-     NDS_ORIGINAL_SPRITE_DECODE_CACHE_WIDTH)
 
 void ndsPlatformInit(void);
 u32 ndsPlatformReadInput(void);
@@ -52,9 +45,7 @@ void ndsPlatformDrawRect(s32 x, s32 y, s32 width, s32 height, u16 color);
 u16 *ndsPlatformBeginOriginalSpritePreview(u32 width, u32 height,
                                            s32 n64_x, s32 n64_y,
                                            u32 *out_pitch);
-u16 *ndsPlatformGetOriginalSpriteDecodeCache(u32 *out_pitch,
-                                              u32 *out_height,
-                                              u32 *out_epoch);
+u32 ndsPlatformGetOriginalSpritePreviewEpoch(void);
 u16 *ndsPlatformGetOriginalSpriteOverlayLayer(s32 is_foreground,
                                                u32 *out_pitch,
                                                u32 *out_width,
@@ -68,6 +59,16 @@ void ndsPlatformClearOriginalSpriteOverlayLayer(s32 is_foreground);
 void ndsPlatformClearOriginalSpritePreview(void);
 void ndsPlatformSetOriginalSpriteOverlayLayerMask(u32 layer_mask);
 void ndsPlatformSetOriginalSpriteOverlayEnabled(s32 is_enabled);
+/* BG0 is the main engine's 3D display layer in MODE_5_3D. Menu scenes that
+ * own no 3D content hide it so a retained previous 3D frame cannot bleed
+ * through; CSS/battle/Results show it when they own 3D again. */
+void ndsPlatformSet3DLayerEnabled(s32 is_enabled);
+/* Map the source engine's 320x240 viewport edge coordinates to the DS GX
+ * viewport. CSS uses the source PlayersVS camera's (10,10)-(310,230) window;
+ * restoring the full viewport afterwards prevents that menu camera from
+ * leaking into the next 3D owner. */
+void ndsPlatformSet3DViewportSource(s32 ulx, s32 uly, s32 lrx, s32 lry);
+void ndsPlatformReset3DViewport(void);
 /* Applies BG2's queued affine transform immediately rather than at the next
  * present. A caller that draws into the overlay bitmap between a clear and
  * the first present of a scene needs this, or one frame renders under the
@@ -149,8 +150,12 @@ extern volatile u32 gNdsBattleTextHudFingerprint;
 extern volatile u32 gNdsBattleTextHudTimeSeconds;
 extern volatile u32 gNdsBattleTextHudP0Damage;
 extern volatile u32 gNdsBattleTextHudP1Damage;
+extern volatile u32 gNdsBattleTextHudP2Damage;
+extern volatile u32 gNdsBattleTextHudP3Damage;
 extern volatile u32 gNdsBattleTextHudP0Stock;
 extern volatile u32 gNdsBattleTextHudP1Stock;
+extern volatile u32 gNdsBattleTextHudP2Stock;
+extern volatile u32 gNdsBattleTextHudP3Stock;
 extern volatile u32 gNdsBattleTextHudActiveMask;
 extern volatile u32 gNdsBattleTextHudShowDamageMask;
 extern volatile u32 gNdsBattleTextHudClearCount;
@@ -188,6 +193,7 @@ void ndsPlatformClearBattleTextHud(void);
  * itself only runs about twice a second, so sampling there would build the
  * distribution out of half-second-spaced single frames. No-op unless the tick
  * HUD is compiled in. */
+void ndsPlatformTickHudReset(void);
 void ndsPlatformTickHudSample(void);
 u32 ndsPlatformVBlankCount(void);
 void ndsPlatformSchedulePresentAtVBlank(u32 vblank);

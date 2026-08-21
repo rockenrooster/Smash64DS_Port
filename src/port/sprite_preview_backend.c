@@ -388,6 +388,9 @@ typedef struct NDSSObjWallpaperDecodeCache
      * and keeping it a FLAG rather than an assumption is what stops a cache
      * MISS from silently drawing the wallpaper uncombined. */
     u32 combine_baked;
+    /* Retain the sixteen exact Results colours instead of 300x220 expanded
+     * RGB555 pixels. Dream Land leaves combine_baked zero and never reads it. */
+    u16 combine_palette[16];
 } NDSSObjWallpaperDecodeCache;
 
 static NDSSObjWallpaperDecodeCache sNdsSObjWallpaperDecodeCache;
@@ -402,11 +405,18 @@ static NDSSObjWallpaperDecodeCache sNdsSObjWallpaperDecodeCache;
      (NDS_SOBJ_WALLPAPER_FINAL_Y_MAP_COUNT * \
       NDS_SOBJ_WALLPAPER_FINAL_MAP_SLOT_COUNT) + \
      (NDS_SOBJ_WALLPAPER_FINAL_X_MAP_COUNT * 2u))
+#define NDS_SOBJ_WALLPAPER_SOURCE_ROW_PIXELS 300u
 
-_Static_assert(
-    NDS_SOBJ_WALLPAPER_FINAL_MAP_SCRATCH_PIXELS <=
-        NDS_ORIGINAL_SPRITE_DECODE_CACHE_SCRATCH_PIXELS,
-    "wallpaper map scratch exceeds retained decode-cache tail");
+/* P2-2 RAM reclaim. The old hardware path retained a 300x220 RGB555 decode
+ * (132 KiB) only so the destination mapper could sample one source row at a
+ * time. Keep exactly what the mapper actually needs: its two map generations,
+ * changed-X / expanded DMA row scratch, and one decoded 300-pixel source row.
+ * Source pixels remain in the already-loaded BattleShip asset and are decoded
+ * from the validated strip layout on demand. */
+static u16 sNdsSObjWallpaperMapScratch[
+    NDS_SOBJ_WALLPAPER_FINAL_MAP_SCRATCH_PIXELS];
+static u16 sNdsSObjWallpaperSourceRow[
+    NDS_SOBJ_WALLPAPER_SOURCE_ROW_PIXELS];
 
 typedef struct NDSSObjWallpaperFinalCache
 {
@@ -523,39 +533,34 @@ static s32 ndsSObjWallpaperCacheKeyMatches(
                                                                     FALSE;
 }
 
-/* `combine_palette` is NULL for the RGBA/16b battle wallpaper and sixteen baked
- * entries for the I/4b Results wallpaper. It selects the decode, so the two
- * formats share every other line of this function -- the strip walk, the overlap
- * rule, the opacity census and the whole cache key. */
-static s32 ndsSObjBuildWallpaperDecodeCache(
-    const NDSRelocLoadedFile *loaded, const Sprite *sprite,
-    u16 *cache_pixels, u32 cache_pitch, u32 cache_height,
-    u32 platform_epoch, u32 layout_fingerprint,
-    const u16 *combine_palette)
+/* Decode one source row directly from the source sprite's bitmap strips.
+ * This is the exact old full-cache pixel loop, just scoped to one Y. Later
+ * strips overwrite only with opaque RGBA pixels, preserving BattleShip's SObj
+ * overlap semantics; Results I4 is fully opaque after the exact palette bake. */
+static u32 ndsSObjDecodeWallpaperSourceRow(
+    const Sprite *sprite, u32 source_y, const u16 *combine_palette,
+    u16 *dst, u32 dst_width)
 {
-    const Bitmap *bitmap = sprite->bitmap;
-    u32 width = (u32)(u16)sprite->width;
-    u32 height = (u32)(u16)sprite->height;
-    u32 bitmap_count = (u32)(u16)sprite->nbitmaps;
-    u32 is_texshuf = ((sprite->attr & SP_TEXSHUF) != 0u) ? 1u : 0u;
+    const Bitmap *bitmap;
+    u32 width;
+    u32 height;
+    u32 bitmap_count;
+    u32 is_texshuf;
     u32 out_y = 0u;
     u32 drawn_pixels = 0u;
-    u32 opaque_pixels = 0u;
     u32 bitmap_index;
-    u32 row;
-    u32 build_start = cpuGetTiming();
 
-    if ((loaded == NULL) || (cache_pixels == NULL) ||
-        (cache_pitch < width) || (cache_height < height))
+    if ((sprite == NULL) || (dst == NULL))
     {
-        return FALSE;
+        return 0u;
     }
-    sNdsSObjWallpaperDecodeCache.valid = FALSE;
-    for (row = 0u; row < height; row++)
-    {
-        memset(&cache_pixels[row * cache_pitch], 0,
-               width * sizeof(cache_pixels[0]));
-    }
+    bitmap = sprite->bitmap;
+    width = (u32)(u16)sprite->width;
+    height = (u32)(u16)sprite->height;
+    bitmap_count = (u32)(u16)sprite->nbitmaps;
+    is_texshuf = ((sprite->attr & SP_TEXSHUF) != 0u) ? 1u : 0u;
+    if ((source_y >= height) || (dst_width < width)) { return 0u; }
+    memset(dst, 0, width * sizeof(dst[0]));
     for (bitmap_index = 0u;
          (bitmap_index < bitmap_count) && (out_y < height);
          bitmap_index++)
@@ -566,7 +571,6 @@ static s32 ndsSObjBuildWallpaperDecodeCache(
         u32 src_draw_width = (u32)(u16)current->width;
         u32 src_height = (u32)(u16)current->actualHeight;
         u32 row_advance = (u32)(u16)sprite->bmheight;
-        size_t src_bytes;
         size_t src_row_bytes;
 
         if (src_draw_width == 0u)
@@ -584,17 +588,10 @@ static s32 ndsSObjBuildWallpaperDecodeCache(
         src_row_bytes = (combine_palette != NULL) ?
             (((size_t)src_width + 1u) / 2u) :
             ((size_t)src_width * sizeof(u16));
-        src_bytes = src_row_bytes * src_height;
-        if (ndsRelocPointerRangeInLoadedFile(loaded, src, src_bytes) == FALSE)
+        if ((source_y >= out_y) && (source_y < (out_y + src_height)))
         {
-            return FALSE;
-        }
-        for (row = 0u;
-             (row < src_height) && ((out_y + row) < height);
-             row++)
-        {
+            u32 row = source_y - out_y;
             u32 x;
-            u16 *dst = &cache_pixels[(out_y + row) * cache_pitch];
 
             if (combine_palette != NULL)
             {
@@ -627,40 +624,107 @@ static s32 ndsSObjBuildWallpaperDecodeCache(
                     dst[src_draw_width - 1u] = combine_palette[packed >> 4];
                 }
                 drawn_pixels += src_draw_width;
-                continue;
             }
-            for (x = 0u; x < src_draw_width; x++)
+            else
             {
-                u16 color = ndsStartupLogoConvertRgba16(
-                    ndsStartupLogoReadRgba16Pixel(
-                        src, src_width, row, x, is_texshuf));
-
-                /* Transparent later strips do not erase earlier overlap rows
-                 * in the source sprite pipeline. */
-                if (color != 0u)
+                for (x = 0u; x < src_draw_width; x++)
                 {
-                    dst[x] = color;
-                    drawn_pixels++;
+                    u16 color = ndsStartupLogoConvertRgba16(
+                        ndsStartupLogoReadRgba16Pixel(
+                            src, src_width, row, x, is_texshuf));
+
+                    /* Transparent later strips do not erase earlier overlap
+                     * rows in the source sprite pipeline. */
+                    if (color != 0u)
+                    {
+                        dst[x] = color;
+                        drawn_pixels++;
+                    }
                 }
             }
         }
         out_y += row_advance;
     }
-    if (drawn_pixels == 0u)
+    return drawn_pixels;
+}
+
+/* `combine_palette` is NULL for the RGBA/16b battle wallpaper and sixteen baked
+ * entries for the I/4b Results wallpaper. Rather than expanding either asset to
+ * a retained 300x220 RGB555 duplicate, validate every source strip once and run
+ * the old decode over one scratch row at a time to prove final opacity. */
+static s32 ndsSObjBuildWallpaperDecodeCache(
+    const NDSRelocLoadedFile *loaded, const Sprite *sprite,
+    u32 platform_epoch, u32 layout_fingerprint,
+    const u16 *combine_palette)
+{
+    const Bitmap *bitmap = sprite->bitmap;
+    u32 width = (u32)(u16)sprite->width;
+    u32 height = (u32)(u16)sprite->height;
+    u32 bitmap_count = (u32)(u16)sprite->nbitmaps;
+    u32 is_texshuf = ((sprite->attr & SP_TEXSHUF) != 0u) ? 1u : 0u;
+    u32 out_y = 0u;
+    u32 drawn_pixels = 0u;
+    u32 opaque_pixels = 0u;
+    u32 bitmap_index;
+    u32 row;
+    u32 build_start = cpuGetTiming();
+
+    if ((loaded == NULL) || (sprite == NULL) ||
+        (width > NDS_SOBJ_WALLPAPER_SOURCE_ROW_PIXELS))
     {
         return FALSE;
+    }
+    sNdsSObjWallpaperDecodeCache.valid = FALSE;
+    /* Preserve the old fail-closed pointer/range proof. The row decoder can
+     * then sample without repeating relocation range checks for every screen
+     * row on every affine-key change. */
+    for (bitmap_index = 0u;
+         (bitmap_index < bitmap_count) && (out_y < height);
+         bitmap_index++)
+    {
+        const Bitmap *current = &bitmap[bitmap_index];
+        const u16 *src = current->buf;
+        u32 src_width = (u32)(u16)current->width_img;
+        u32 src_draw_width = (u32)(u16)current->width;
+        u32 src_height = (u32)(u16)current->actualHeight;
+        u32 row_advance = (u32)(u16)sprite->bmheight;
+        size_t src_row_bytes;
+        size_t src_bytes;
+
+        if (src_draw_width == 0u) { break; }
+        if (src_width == 0u) { src_width = src_draw_width; }
+        if (src_height == 0u) { src_height = row_advance; }
+        if (row_advance == 0u) { row_advance = src_height; }
+        if ((src_width == 0u) || (src_height == 0u))
+        {
+            continue;
+        }
+        src_row_bytes = (combine_palette != NULL) ?
+            (((size_t)src_width + 1u) / 2u) :
+            ((size_t)src_width * sizeof(u16));
+        src_bytes = src_row_bytes * src_height;
+        if (ndsRelocPointerRangeInLoadedFile(loaded, src, src_bytes) == FALSE)
+        {
+            return FALSE;
+        }
+        out_y += row_advance;
     }
     for (row = 0u; row < height; row++)
     {
         u32 x;
-        const u16 *src = &cache_pixels[row * cache_pitch];
 
+        drawn_pixels += ndsSObjDecodeWallpaperSourceRow(
+            sprite, row, combine_palette, sNdsSObjWallpaperSourceRow,
+            NDS_SOBJ_WALLPAPER_SOURCE_ROW_PIXELS);
         for (x = 0u; x < width; x++)
         {
-            if (src[x] != 0u) { opaque_pixels++; }
+            if (sNdsSObjWallpaperSourceRow[x] != 0u) { opaque_pixels++; }
         }
     }
-
+    if (drawn_pixels == 0u)
+    {
+        return FALSE;
+    }
     sNdsSObjWallpaperDecodeCache.asset_id = loaded->asset_id;
     sNdsSObjWallpaperDecodeCache.owner_scene = loaded->owner_scene;
     sNdsSObjWallpaperDecodeCache.owner_generation = loaded->owner_generation;
@@ -679,6 +743,11 @@ static s32 ndsSObjBuildWallpaperDecodeCache(
     sNdsSObjWallpaperDecodeCache.opaque_pixels = opaque_pixels;
     sNdsSObjWallpaperDecodeCache.combine_baked =
         (combine_palette != NULL) ? 1u : 0u;
+    if (combine_palette != NULL)
+    {
+        memcpy(sNdsSObjWallpaperDecodeCache.combine_palette, combine_palette,
+               sizeof(sNdsSObjWallpaperDecodeCache.combine_palette));
+    }
     gNdsSObjWallpaperCacheBuildCount++;
     gNdsSObjWallpaperCacheWidth = width;
     gNdsSObjWallpaperCacheHeight = height;
@@ -711,8 +780,7 @@ static void ndsSObjWallpaperRecordOracleMismatch(
 #endif
 
 static s32 ndsSObjDrawOpaqueWallpaperCache(
-    const u16 *cache_pixels, u32 cache_pitch,
-    u16 *source_x_map,
+    const Sprite *sprite, const u16 *combine_palette, u16 *source_x_map,
     u32 width, u32 height, u32 scale_x_q16, u32 scale_y_q16,
     u16 *preview, u32 preview_pitch, u32 preview_width, u32 preview_height,
     s32 origin_x, s32 origin_y)
@@ -746,11 +814,13 @@ static s32 ndsSObjDrawOpaqueWallpaperCache(
     {
         u32 relative = (u32)(dst_y - origin_y);
         u32 source_y = ndsSObjWallpaperLastSource(relative, scale_y_q16);
-        const u16 *src;
+        const u16 *src = sNdsSObjWallpaperSourceRow;
         u16 *dst;
 
         if (source_y >= height) { source_y = height - 1u; }
-        src = &cache_pixels[source_y * cache_pitch];
+        (void)ndsSObjDecodeWallpaperSourceRow(
+            sprite, source_y, combine_palette, sNdsSObjWallpaperSourceRow,
+            NDS_SOBJ_WALLPAPER_SOURCE_ROW_PIXELS);
         dst = &preview[(u32)dst_y * preview_pitch];
         for (dst_x = dst_x_start; dst_x < dst_x_end; dst_x++)
         {
@@ -868,23 +938,18 @@ static s32 ndsSObjWallpaperCombinePaletteFor(
 static s32 ndsSObjGetOpaqueWallpaperCache(
     const NDSRelocLoadedFile *loaded, const Sprite *sprite,
     u32 scale_x_q16, u32 scale_y_q16, u32 scratch_pixels,
-    u16 **out_cache_pixels, u32 *out_cache_pitch,
     const u16 *combine_palette)
 {
-    u16 *cache_pixels;
-    u32 cache_pitch = 0u;
-    u32 cache_height = 0u;
-    u32 platform_epoch = 0u;
+    u32 platform_epoch;
     u32 layout_fingerprint;
     u32 shape_ok;
+    u32 palette_changed = FALSE;
 
-    if (out_cache_pixels != NULL) { *out_cache_pixels = NULL; }
-    if (out_cache_pitch != NULL) { *out_cache_pitch = 0u; }
-    cache_pixels = ndsPlatformGetOriginalSpriteDecodeCache(
-        &cache_pitch, &cache_height, &platform_epoch);
-    if ((cache_pixels == NULL) || (loaded == NULL) ||
+    platform_epoch = ndsPlatformGetOriginalSpritePreviewEpoch();
+    if ((loaded == NULL) || (sprite == NULL) ||
         ((u32)(u16)sprite->width != 300u) ||
-        ((u32)(u16)sprite->height != 220u))
+        ((u32)(u16)sprite->height != 220u) ||
+        (scratch_pixels > NDS_SOBJ_WALLPAPER_FINAL_MAP_SCRATCH_PIXELS))
     {
         return FALSE;
     }
@@ -911,17 +976,26 @@ static s32 ndsSObjGetOpaqueWallpaperCache(
     }
     layout_fingerprint = ndsSObjWallpaperLayoutFingerprint(
         loaded, sprite->bitmap, (u32)(u16)sprite->nbitmaps);
+    if ((combine_palette != NULL) &&
+        (sNdsSObjWallpaperDecodeCache.combine_baked != 0u) &&
+        (memcmp(sNdsSObjWallpaperDecodeCache.combine_palette,
+                combine_palette,
+                sizeof(sNdsSObjWallpaperDecodeCache.combine_palette)) != 0))
+    {
+        palette_changed = TRUE;
+    }
     /* A cache built for one of the two wallpapers must not be reused for the
-     * other, and the key alone cannot tell them apart on a scene where both
-     * shapes could hash the same -- so the bake flag is part of the match. */
+     * other. Results also keys the sixteen baked colours now that the expanded
+     * RGB image is no longer retained. */
     if ((ndsSObjWallpaperCacheKeyMatches(
              loaded, sprite, platform_epoch, layout_fingerprint) == FALSE) ||
         (sNdsSObjWallpaperDecodeCache.combine_baked !=
-         ((combine_palette != NULL) ? 1u : 0u)))
+         ((combine_palette != NULL) ? 1u : 0u)) ||
+        (palette_changed != FALSE))
     {
         if (ndsSObjBuildWallpaperDecodeCache(
-                loaded, sprite, cache_pixels, cache_pitch, cache_height,
-                platform_epoch, layout_fingerprint, combine_palette) == FALSE)
+                loaded, sprite, platform_epoch, layout_fingerprint,
+                combine_palette) == FALSE)
         {
             sNdsSObjWallpaperDecodeCache.valid = FALSE;
             return FALSE;
@@ -939,15 +1013,10 @@ static s32 ndsSObjGetOpaqueWallpaperCache(
          sNdsSObjWallpaperDecodeCache.width *
              sNdsSObjWallpaperDecodeCache.height) ||
         (scale_x_q16 < (1u << 16)) ||
-        (scale_y_q16 < (1u << 16)) ||
-        (cache_height <= sNdsSObjWallpaperDecodeCache.height) ||
-        (((cache_height - sNdsSObjWallpaperDecodeCache.height) *
-          cache_pitch) < scratch_pixels))
+        (scale_y_q16 < (1u << 16)))
     {
         return FALSE;
     }
-    if (out_cache_pixels != NULL) { *out_cache_pixels = cache_pixels; }
-    if (out_cache_pitch != NULL) { *out_cache_pitch = cache_pitch; }
     return TRUE;
 }
 
@@ -964,10 +1033,8 @@ static u32 ndsSObjDrawCachedWallpaper(
     u16 *preview, u32 preview_pitch, u32 preview_width, u32 preview_height,
     s32 origin_x, s32 origin_y, u32 scale_x_q16, u32 scale_y_q16)
 {
-    u16 *cache_pixels;
-    u32 cache_pitch;
     u32 draw_start;
-    u16 *source_x_map;
+    u16 *source_x_map = sNdsSObjWallpaperMapScratch;
     u16 combine_palette[16];
     const u16 *palette =
         (ndsSObjWallpaperCombinePaletteFor(sobj, sprite, combine_palette) !=
@@ -975,15 +1042,16 @@ static u32 ndsSObjDrawCachedWallpaper(
 
     if (ndsSObjGetOpaqueWallpaperCache(
             loaded, sprite, scale_x_q16, scale_y_q16, preview_width,
-            &cache_pixels, &cache_pitch, palette) == FALSE)
+            palette) == FALSE)
     {
         return 0u;
     }
     draw_start = cpuGetTiming();
-    source_x_map = &cache_pixels[
-        sNdsSObjWallpaperDecodeCache.height * cache_pitch];
     if (ndsSObjDrawOpaqueWallpaperCache(
-            cache_pixels, cache_pitch, source_x_map,
+            sprite,
+            (sNdsSObjWallpaperDecodeCache.combine_baked != 0u) ?
+                sNdsSObjWallpaperDecodeCache.combine_palette : NULL,
+            source_x_map,
             sNdsSObjWallpaperDecodeCache.width,
             sNdsSObjWallpaperDecodeCache.height,
             scale_x_q16, scale_y_q16, preview, preview_pitch,
@@ -1070,7 +1138,7 @@ static void ndsSObjWallpaperStoreFinalKey(
 
 static s32 __attribute__((hot, optimize("O3")))
 ndsSObjDrawOpaqueWallpaperFinal(
-    const u16 *cache_pixels, u32 cache_pitch, u16 *map_scratch,
+    const Sprite *sprite, const u16 *combine_palette, u16 *map_scratch,
     u32 current_map_slot, u32 incremental_valid, u32 row_dma_enabled,
     u32 width, u32 height, u32 scale_x_q16, u32 scale_y_q16,
     u16 *overlay, u32 overlay_pitch, u32 overlay_width, u32 overlay_height,
@@ -1085,7 +1153,7 @@ ndsSObjDrawOpaqueWallpaperFinal(
     const u16 *previous_source_y_map;
     u16 *changed_x_indices;
     u16 *expanded_row;
-    const u16 *expanded_row_source = NULL;
+    u16 expanded_row_source_y = no_source;
     u32 expanded_row_valid = FALSE;
     u32 previous_map_slot;
     u32 changed_x_count = 0u;
@@ -1104,7 +1172,7 @@ ndsSObjDrawOpaqueWallpaperFinal(
     u32 source_y_recurrence_valid = FALSE;
     u32 source_x_map_complete = TRUE;
     u32 packed_rows;
-    const u16 *previous_src = NULL;
+    u16 previous_source_y = no_source;
     u16 *previous_dst = NULL;
     s32 dst_x_end;
     s32 dst_y_end;
@@ -1116,7 +1184,7 @@ ndsSObjDrawOpaqueWallpaperFinal(
 #endif
 
     if (out_pixel_write_count != NULL) { *out_pixel_write_count = 0u; }
-    if ((cache_pixels == NULL) || (map_scratch == NULL) ||
+    if ((sprite == NULL) || (map_scratch == NULL) ||
         (overlay == NULL) || (overlay_pitch < overlay_width) ||
         (overlay_width != NDS_SOBJ_WALLPAPER_FINAL_X_MAP_COUNT) ||
         (overlay_height != NDS_SOBJ_WALLPAPER_FINAL_Y_MAP_COUNT) ||
@@ -1334,7 +1402,14 @@ ndsSObjDrawOpaqueWallpaperFinal(
 
             if (source_y >= height) { source_y = height - 1u; }
             source_y_map_value = (u16)source_y;
-            src = &cache_pixels[source_y * cache_pitch];
+            if (source_y_map_value != previous_source_y)
+            {
+                (void)ndsSObjDecodeWallpaperSourceRow(
+                    sprite, source_y, combine_palette,
+                    sNdsSObjWallpaperSourceRow,
+                    NDS_SOBJ_WALLPAPER_SOURCE_ROW_PIXELS);
+            }
+            src = sNdsSObjWallpaperSourceRow;
         }
         source_y_map[y] = source_y_map_value;
         full_row = ((incremental_valid == FALSE) ||
@@ -1360,7 +1435,7 @@ ndsSObjDrawOpaqueWallpaperFinal(
         if ((full_row != FALSE) && (row_dma_enabled != FALSE))
         {
             if ((expanded_row_valid == FALSE) ||
-                (expanded_row_source != src))
+                (expanded_row_source_y != source_y_map_value))
             {
                 if ((src != NULL) && (packed_rows != FALSE))
                 {
@@ -1402,7 +1477,7 @@ ndsSObjDrawOpaqueWallpaperFinal(
                 }
                 DC_FlushRange(
                     expanded_row, overlay_width * sizeof(expanded_row[0]));
-                expanded_row_source = src;
+                expanded_row_source_y = source_y_map_value;
                 expanded_row_valid = TRUE;
             }
             dmaCopyHalfWords(
@@ -1414,7 +1489,8 @@ ndsSObjDrawOpaqueWallpaperFinal(
 #endif
         }
         else if ((full_row != FALSE) &&
-                 (src != NULL) && (src == previous_src) &&
+                 (src != NULL) &&
+                 (source_y_map_value == previous_source_y) &&
                  (previous_dst != NULL) && (packed_rows != FALSE))
         {
             memcpy(dst, previous_dst,
@@ -1517,7 +1593,7 @@ ndsSObjDrawOpaqueWallpaperFinal(
             }
         }
 #endif
-        previous_src = src;
+        previous_source_y = source_y_map_value;
         previous_dst = dst;
         preview_y_q16 += step_y;
     }
@@ -1536,13 +1612,11 @@ static s32 ndsSObjDrawCachedWallpaperFinal(SObj *sobj, u32 combine_mode)
     Sprite *sprite;
     NDSRelocLoadedFile *loaded;
     u16 *overlay;
-    u16 *cache_pixels;
-    u16 *map_scratch;
+    u16 *map_scratch = sNdsSObjWallpaperMapScratch;
     u32 overlay_pitch;
     u32 overlay_width;
     u32 overlay_height;
     u32 overlay_epoch;
-    u32 cache_pitch;
     u32 scale_x_q16;
     u32 scale_y_q16;
     u32 draw_start;
@@ -1634,7 +1708,7 @@ static s32 ndsSObjDrawCachedWallpaperFinal(SObj *sobj, u32 combine_mode)
     if (ndsSObjGetOpaqueWallpaperCache(
             loaded, sprite, scale_x_q16, scale_y_q16,
             NDS_SOBJ_WALLPAPER_FINAL_MAP_SCRATCH_PIXELS,
-            &cache_pixels, &cache_pitch, palette) == FALSE)
+            palette) == FALSE)
     {
 #if NDS_RENDERER_M3_PHASE0_PROFILE
         NDS_RENDERER_PHASE05_FINISH(
@@ -1695,14 +1769,15 @@ static s32 ndsSObjDrawCachedWallpaperFinal(SObj *sobj, u32 combine_mode)
         current_map_slot = sNdsSObjWallpaperFinalCache.map_slot ^ 1u;
         incremental_valid = TRUE;
     }
-    map_scratch = &cache_pixels[
-        sNdsSObjWallpaperDecodeCache.height * cache_pitch];
 #if NDS_RENDERER_M3_PHASE0_PROFILE
     NDS_RENDERER_PHASE05_FINISH(
         gNdsRendererPhase05WallpaperSetupTicks, phase05_start);
 #endif
     if (ndsSObjDrawOpaqueWallpaperFinal(
-            cache_pixels, cache_pitch, map_scratch,
+            sprite,
+            (sNdsSObjWallpaperDecodeCache.combine_baked != 0u) ?
+                sNdsSObjWallpaperDecodeCache.combine_palette : NULL,
+            map_scratch,
             current_map_slot, incremental_valid,
             incremental_mode,
             sNdsSObjWallpaperDecodeCache.width,

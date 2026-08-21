@@ -5,6 +5,7 @@
 
 #include <nds/nds_boot.h>
 #include <nds/nds_audio_bgm.h>
+#include <nds/nds_battle_hud.h>
 #include <nds/nds_controller.h>
 #include <nds/nds_freeze_diagnostics.h>
 #include <nds/nds_ifcommon_oam.h>
@@ -249,15 +250,11 @@ static u32 sSceneWallpaperAffinePending;
 static u32 sSceneWallpaperAffineResetPending;
 #endif
 #endif
-#if NDS_RENDERER_HW_TRIANGLES
-/* HW owns no retained frame copy: this storage is only the 300x220 immutable
- * wallpaper decode plus the renderer's scratch tail. Keep the larger legacy
- * extent on software builds, whose diagnostic display path still writes it as
- * a 320x240 retained image. */
-static u16 sOriginalSpriteDisplayPreview[
-    NDS_ORIGINAL_SPRITE_DECODE_CACHE_WIDTH *
-    NDS_ORIGINAL_SPRITE_DECODE_CACHE_HEIGHT];
-#else
+#if !NDS_RENDERER_HW_TRIANGLES
+/* Software builds retain the complete 320x240 diagnostic image. Hardware
+ * builds commit the staging layer directly to BG VRAM and no longer carry a
+ * second full RGB555 wallpaper decode; that DS-only source view belongs to the
+ * SObj backend that consumes it. */
 static u16 sOriginalSpriteDisplayPreview[
     NDS_ORIGINAL_SPRITE_PREVIEW_MAX_WIDTH *
     NDS_ORIGINAL_SPRITE_PREVIEW_MAX_HEIGHT];
@@ -342,8 +339,12 @@ volatile u32 gNdsBattleTextHudFingerprint;
 volatile u32 gNdsBattleTextHudTimeSeconds;
 volatile u32 gNdsBattleTextHudP0Damage;
 volatile u32 gNdsBattleTextHudP1Damage;
+volatile u32 gNdsBattleTextHudP2Damage;
+volatile u32 gNdsBattleTextHudP3Damage;
 volatile u32 gNdsBattleTextHudP0Stock;
 volatile u32 gNdsBattleTextHudP1Stock;
+volatile u32 gNdsBattleTextHudP2Stock;
+volatile u32 gNdsBattleTextHudP3Stock;
 volatile u32 gNdsBattleTextHudActiveMask;
 volatile u32 gNdsBattleTextHudShowDamageMask;
 volatile u32 gNdsBattleTextHudClearCount;
@@ -624,30 +625,9 @@ u16 *ndsPlatformBeginOriginalSpritePreview(u32 width, u32 height,
     return sOriginalSpritePreview;
 }
 
-u16 *ndsPlatformGetOriginalSpriteDecodeCache(u32 *out_pitch,
-                                              u32 *out_height,
-                                              u32 *out_epoch)
+u32 ndsPlatformGetOriginalSpritePreviewEpoch(void)
 {
-#if NDS_RENDERER_HW_TRIANGLES
-    if (out_pitch != NULL)
-    {
-        *out_pitch = NDS_ORIGINAL_SPRITE_DECODE_CACHE_WIDTH;
-    }
-    if (out_height != NULL)
-    {
-        *out_height = NDS_ORIGINAL_SPRITE_DECODE_CACHE_HEIGHT;
-    }
-    if (out_epoch != NULL)
-    {
-        *out_epoch = sOriginalSpriteDecodeCacheEpoch;
-    }
-    return sOriginalSpriteDisplayPreview;
-#else
-    if (out_pitch != NULL) { *out_pitch = 0u; }
-    if (out_height != NULL) { *out_height = 0u; }
-    if (out_epoch != NULL) { *out_epoch = sOriginalSpriteDecodeCacheEpoch; }
-    return NULL;
-#endif
+    return sOriginalSpriteDecodeCacheEpoch;
 }
 
 #if NDS_RENDERER_HW_TRIANGLES
@@ -1080,6 +1060,83 @@ void ndsPlatformSetOriginalSpriteOverlayEnabled(s32 is_enabled)
         (is_enabled != FALSE) ? NDS_ORIGINAL_SPRITE_OVERLAY_ALL : 0u);
 }
 
+void ndsPlatformSet3DLayerEnabled(s32 is_enabled)
+{
+#if NDS_RENDERER_HW_TRIANGLES
+    /* MODE_5_3D presents the geometry engine through main BG0. Unlike a
+     * software framebuffer, that layer retains the last completed 3D frame
+     * when a scene submits no new geometry. Hide the display owner rather than
+     * manufacturing a dummy GX frame just to erase stale pixels. */
+    if (is_enabled != FALSE)
+    {
+        REG_DISPCNT |= DISPLAY_BG0_ACTIVE;
+    }
+    else
+    {
+        REG_DISPCNT &= ~DISPLAY_BG0_ACTIVE;
+    }
+#else
+    (void)is_enabled;
+#endif
+}
+
+#if NDS_RENDERER_HW_TRIANGLES
+static s32 ndsPlatformScaleSourceViewportEdge(s32 value, s32 limit)
+{
+    s32 scaled = (value * 4 + 2) / 5;
+
+    if (scaled < 0)
+    {
+        scaled = 0;
+    }
+    if (scaled > limit)
+    {
+        scaled = limit;
+    }
+    return scaled;
+}
+#endif
+
+void ndsPlatformSet3DViewportSource(s32 ulx, s32 uly, s32 lrx, s32 lry)
+{
+#if NDS_RENDERER_HW_TRIANGLES
+    s32 x0 = ndsPlatformScaleSourceViewportEdge(ulx, SCREEN_WIDTH);
+    s32 y0 = ndsPlatformScaleSourceViewportEdge(uly, SCREEN_HEIGHT);
+    s32 x1 = ndsPlatformScaleSourceViewportEdge(lrx, SCREEN_WIDTH) - 1;
+    s32 y1 = ndsPlatformScaleSourceViewportEdge(lry, SCREEN_HEIGHT) - 1;
+
+    if (x1 < x0)
+    {
+        x1 = x0;
+    }
+    if (y1 < y0)
+    {
+        y1 = y0;
+    }
+    if (x1 >= SCREEN_WIDTH)
+    {
+        x1 = SCREEN_WIDTH - 1;
+    }
+    if (y1 >= SCREEN_HEIGHT)
+    {
+        y1 = SCREEN_HEIGHT - 1;
+    }
+    glViewport(x0, y0, x1, y1);
+#else
+    (void)ulx;
+    (void)uly;
+    (void)lrx;
+    (void)lry;
+#endif
+}
+
+void ndsPlatformReset3DViewport(void)
+{
+#if NDS_RENDERER_HW_TRIANGLES
+    glViewport(0, 0, SCREEN_WIDTH - 1, SCREEN_HEIGHT - 1);
+#endif
+}
+
 /* P2-1h. Apply BG2's queued affine NOW instead of at the next present.
  *
  * The fast wallpaper leaves BG2 under the battle's own 4/5 transform, and
@@ -1110,10 +1167,16 @@ void ndsPlatformSetTitleFireEnabled(s32 is_enabled, s32 pa, s32 pd)
     }
     if (is_enabled != FALSE)
     {
-        /* BEHIND BG2, which is where the fire belongs: the title's wordmark,
-         * emblem and copyright line are BG2 surfaces and the source draws
-         * them over the fire, not under it. */
+        /* BEHIND BG2, which is where the fire belongs: the title's wordmark
+         * and copyright line are BG2 surfaces. The translucent red emblem is
+         * a priority-3 bitmap OBJ between those words and this BG3 fire, which
+         * mirrors the source's link-0 emblem / link-1 words ordering. */
         bgSetPriority(sOriginalSpriteOverlayForegroundBg, 3);
+        /* Bitmap-OBJ alpha only blends against an admitted second target.
+         * The standing battle blend admits BG2 for translucent BG0; the title
+         * emblem sits over BG3 instead. Without this, OAM still contains alpha
+         * 5 but the red logo composites opaquely over the fire. */
+        REG_BLDCNT |= BLEND_DST_BG3;
         /* WRAP IS DELIBERATELY NOT TOUCHED. It would be a reasonable safety
          * net, but there is no bgGetWrap to restore it with, and the affine
          * provably cannot sample outside the sheet: the largest source
@@ -1135,6 +1198,8 @@ void ndsPlatformSetTitleFireEnabled(s32 is_enabled, s32 pa, s32 pd)
         bgSetAffineMatrixScroll(sOriginalSpriteOverlayForegroundBg,
                                 1 << 8, 0, 0, 1 << 8, 0, 0);
         bgSetPriority(sOriginalSpriteOverlayForegroundBg, 0);
+        /* BG3 is a title-only blend destination; restore the battle contract. */
+        REG_BLDCNT &= (u16)~BLEND_DST_BG3;
         gNdsTitleFireDisableCount++;
     }
 #else
@@ -1997,8 +2062,10 @@ void ndsPlatformClearOriginalSpritePreview(void)
     sOriginalSpriteDisplayPreviewHeight = 0;
     gNdsOriginalSpritePreviewReady = 0;
     memset(sOriginalSpritePreview, 0, sizeof(sOriginalSpritePreview));
+#if !NDS_RENDERER_HW_TRIANGLES
     memset(sOriginalSpriteDisplayPreview, 0,
            sizeof(sOriginalSpriteDisplayPreview));
+#endif
     sOriginalSpriteDecodeCacheEpoch++;
     if (sOriginalSpriteDecodeCacheEpoch == 0u)
     {
@@ -2383,6 +2450,26 @@ static u32 ndsPlatformTickHudPercentile(const u32 *sorted, u32 count,
  * likewise under NDS_TICK_HUD. The inner guard keeps the symbol resolvable when
  * NDS_TICK_HUD is set but the FPS HUD it draws into is not enabled. */
 #if NDS_TICK_HUD
+void ndsPlatformTickHudReset(void)
+{
+#if NDS_BATTLE_TICK_HUD_ENABLED
+    /* The sampling epoch starts in ndsBattlePlayablePacingStart(), before the
+     * first presented iteration.  This used to be cleared lazily by the first
+     * FPS-HUD refresh instead, after ndsPlatformTickHudSample() had already
+     * written several real battle frames.  The repeated-ring verifier then
+     * asked for frame 1 but its oldest surviving row began around frame 12.
+     * Reset at the pacing boundary so ring identity and the guest's published
+     * PresentedFrames counter have the same lifetime. */
+    sBattleTickHudRingHead = 0u;
+    sBattleTickHudRingCount = 0u;
+    memset(sBattleTickHudP50, 0, sizeof(sBattleTickHudP50));
+    memset(sBattleTickHudP95, 0, sizeof(sBattleTickHudP95));
+#if NDS_TASK68_FALLBACK_CENSUS || NDS_TASK75_LOAD_CENSUS
+    sBattleTickHudFallbackPrev = NDS_TICK_HUD_CENSUS_RING_SOURCE;
+#endif
+#endif
+}
+
 void ndsPlatformTickHudSample(void)
 {
 #if NDS_BATTLE_TICK_HUD_ENABLED
@@ -2407,6 +2494,10 @@ void ndsPlatformTickHudSample(void)
         sBattleTickHudRingCount++;
     }
 #endif
+}
+#else
+void ndsPlatformTickHudReset(void)
+{
 }
 #endif
 
@@ -2524,10 +2615,9 @@ static void ndsPlatformRenderBattleFpsHud(void)
 #endif
 #endif
 #if NDS_BATTLE_TICK_HUD_ENABLED
-        sBattleTickHudRingHead = 0u;
-        sBattleTickHudRingCount = 0u;
-        memset(sBattleTickHudP50, 0, sizeof(sBattleTickHudP50));
-        memset(sBattleTickHudP95, 0, sizeof(sBattleTickHudP95));
+        /* Ring lifetime is owned by ndsBattlePlayablePacingStart(), before the
+         * first sample can be written.  Do not clear it here: this HUD path is
+         * lazy and may first run several presented frames into the match. */
         {
             u32 bucket;
 
@@ -2855,21 +2945,56 @@ static u32 ndsPlatformMixDebugValue(u32 hash, u32 value)
 }
 
 #if NDS_BATTLE_FPS_HUD_ENABLED
-static const char *ndsPlatformBattleHudFighterName(u32 fighter_kind)
-{
-    static const char *const names[] = {
-        "MARIO", "FOX", "DK", "SAMUS", "LUIGI", "LINK",
-        "YOSHI", "CAPTAIN", "KIRBY", "PIKACHU", "JIGGLYPUFF",
-        "NESS"
-    };
-
-    return (fighter_kind < (sizeof(names) / sizeof(names[0]))) ?
-        names[fighter_kind] : "FIGHTER";
-}
-
 static u32 ndsPlatformBattleHudDisplayDamage(u32 damage)
 {
     return (damage > 999u) ? 999u : damage;
+}
+
+/* P2-2. The BattleShip HUD state is four-player; the DS lower-screen text HUD
+ * is only a presentation sink. Keep these accessors dumb so player identity
+ * stays the source slot (0..3), not the Mario/Fox native-render owner (0..1). */
+static u32 ndsPlatformBattleHudDamage(u32 player)
+{
+    switch (player)
+    {
+    case 0u: return gNdsIFCommonHUDP0DamageCurrent;
+    case 1u: return gNdsIFCommonHUDP1DamageCurrent;
+    case 2u: return gNdsIFCommonHUDP2DamageCurrent;
+    default: return gNdsIFCommonHUDP3DamageCurrent;
+    }
+}
+
+static u32 ndsPlatformBattleHudStock(u32 player)
+{
+    switch (player)
+    {
+    case 0u: return gNdsIFCommonHUDP0LowerStock;
+    case 1u: return gNdsIFCommonHUDP1LowerStock;
+    case 2u: return gNdsIFCommonHUDP2LowerStock;
+    default: return gNdsIFCommonHUDP3LowerStock;
+    }
+}
+
+static u32 ndsPlatformBattleHudFighterKind(u32 player)
+{
+    switch (player)
+    {
+    case 0u: return gNdsIFCommonHUDP0FighterKind;
+    case 1u: return gNdsIFCommonHUDP1FighterKind;
+    case 2u: return gNdsIFCommonHUDP2FighterKind;
+    default: return gNdsIFCommonHUDP3FighterKind;
+    }
+}
+
+static u32 ndsPlatformBattleHudLevel(u32 player)
+{
+    switch (player)
+    {
+    case 0u: return gNdsIFCommonHUDP0Level;
+    case 1u: return gNdsIFCommonHUDP1Level;
+    case 2u: return gNdsIFCommonHUDP2Level;
+    default: return gNdsIFCommonHUDP3Level;
+    }
 }
 
 static u32 ndsPlatformBattleHudDisplaySeconds(void)
@@ -2895,85 +3020,25 @@ static u32 ndsPlatformBattleHudDisplaySeconds(void)
 static u32 ndsPlatformBattleTextHudStateFingerprint(void)
 {
     u32 hash = 2166136261u;
+    u32 player;
 
     hash = ndsPlatformMixDebugValue(hash, gNdsIFCommonHUDRecordCount != 0u);
     hash = ndsPlatformMixDebugValue(hash, gNdsIFCommonHUDActivePlayerMask);
     hash = ndsPlatformMixDebugValue(hash, gNdsIFCommonHUDShowDamageMask);
     hash = ndsPlatformMixDebugValue(hash, gNdsIFCommonHUDCPUPlayerMask);
-    hash = ndsPlatformMixDebugValue(hash, gNdsIFCommonHUDP0FighterKind);
-    hash = ndsPlatformMixDebugValue(hash, gNdsIFCommonHUDP1FighterKind);
-    hash = ndsPlatformMixDebugValue(hash, gNdsIFCommonHUDP0Level);
-    hash = ndsPlatformMixDebugValue(hash, gNdsIFCommonHUDP1Level);
-    hash = ndsPlatformMixDebugValue(
-        hash, ndsPlatformBattleHudDisplayDamage(
-                  gNdsIFCommonHUDP0DamageCurrent));
-    hash = ndsPlatformMixDebugValue(
-        hash, ndsPlatformBattleHudDisplayDamage(
-                  gNdsIFCommonHUDP1DamageCurrent));
-    hash = ndsPlatformMixDebugValue(hash, gNdsIFCommonHUDP0LowerStock);
-    hash = ndsPlatformMixDebugValue(hash, gNdsIFCommonHUDP1LowerStock);
+    for (player = 0u; player < 4u; player++)
+    {
+        hash = ndsPlatformMixDebugValue(
+            hash, ndsPlatformBattleHudFighterKind(player));
+        hash = ndsPlatformMixDebugValue(hash, ndsPlatformBattleHudLevel(player));
+        hash = ndsPlatformMixDebugValue(
+            hash, ndsPlatformBattleHudDisplayDamage(
+                      ndsPlatformBattleHudDamage(player)));
+        hash = ndsPlatformMixDebugValue(hash, ndsPlatformBattleHudStock(player));
+    }
     hash = ndsPlatformMixDebugValue(hash,
                                     ndsPlatformBattleHudDisplaySeconds());
     return hash;
-}
-
-static void ndsPlatformRenderBattlePlayerText(u32 player, u32 row,
-                                               u32 fighter_kind,
-                                               u32 damage, u32 stock)
-{
-    u32 player_bit = 1u << player;
-
-    if ((gNdsIFCommonHUDActivePlayerMask & player_bit) == 0u)
-    {
-        ndsPlatformPrintDebugLine(row, "");
-        ndsPlatformPrintDebugLine(row + 1u, "");
-        return;
-    }
-
-    if ((gNdsIFCommonHUDCPUPlayerMask & player_bit) != 0u)
-    {
-        u32 level = (player == 0u) ? gNdsIFCommonHUDP0Level :
-                                     gNdsIFCommonHUDP1Level;
-
-        ndsPlatformPrintDebugLine(row, "CPU L%lu [%s]",
-                                  (unsigned long)level,
-                                  ndsPlatformBattleHudFighterName(
-                                      fighter_kind));
-    }
-    else
-    {
-        ndsPlatformPrintDebugLine(row, "P%lu [%s]",
-                                  (unsigned long)(player + 1u),
-                                  ndsPlatformBattleHudFighterName(
-                                      fighter_kind));
-    }
-    if ((gNdsIFCommonHUDShowDamageMask & player_bit) == 0u)
-    {
-        if (stock == 0x7fu)
-        {
-            ndsPlatformPrintDebugLine(row + 1u,
-                                      "DMG --    STOCK --");
-        }
-        else
-        {
-            ndsPlatformPrintDebugLine(row + 1u,
-                                      "DMG --    STOCK x%lu",
-                                      (unsigned long)stock);
-        }
-    }
-    else if (stock == 0x7fu)
-    {
-        ndsPlatformPrintDebugLine(row + 1u,
-                                  "DMG %lu%%   STOCK --",
-                                  (unsigned long)damage);
-    }
-    else
-    {
-        ndsPlatformPrintDebugLine(row + 1u,
-                                  "DMG %lu%%   STOCK x%lu",
-                                  (unsigned long)damage,
-                                  (unsigned long)stock);
-    }
 }
 
 static void ndsPlatformRenderBattleTextHud(void)
@@ -2982,10 +3047,22 @@ static void ndsPlatformRenderBattleTextHud(void)
     u32 fingerprint = ndsPlatformBattleTextHudStateFingerprint();
 #endif
     u32 seconds = ndsPlatformBattleHudDisplaySeconds();
-    u32 p0_damage = ndsPlatformBattleHudDisplayDamage(
-        gNdsIFCommonHUDP0DamageCurrent);
-    u32 p1_damage = ndsPlatformBattleHudDisplayDamage(
-        gNdsIFCommonHUDP1DamageCurrent);
+    u32 damage[4];
+    u32 stock[4];
+    u32 player;
+
+    for (player = 0u; player < 4u; player++)
+    {
+        damage[player] = ndsPlatformBattleHudDisplayDamage(
+            ndsPlatformBattleHudDamage(player));
+        stock[player] = ndsPlatformBattleHudStock(player);
+    }
+
+    /* P2-2: IFCommon still owns every timer/damage/stock update, but the steady
+     * presentation now belongs to the sub 2D engine.  Run that sink before the
+     * legacy text-telemetry early-outs: costume/flash state is intentionally
+     * richer than the old console fingerprint and must not be starved by it. */
+    ndsBattleHudRender();
 
 #if NDS_SHIP_TELEMETRY
     gNdsBattleTextHudRenderCount++;
@@ -3001,10 +3078,14 @@ static void ndsPlatformRenderBattleTextHud(void)
 #else
     if ((sBattleTextHudReady != FALSE) &&
         (gNdsBattleTextHudTimeSeconds == seconds) &&
-        (gNdsBattleTextHudP0Damage == p0_damage) &&
-        (gNdsBattleTextHudP1Damage == p1_damage) &&
-        (gNdsBattleTextHudP0Stock == gNdsIFCommonHUDP0LowerStock) &&
-        (gNdsBattleTextHudP1Stock == gNdsIFCommonHUDP1LowerStock) &&
+        (gNdsBattleTextHudP0Damage == damage[0]) &&
+        (gNdsBattleTextHudP1Damage == damage[1]) &&
+        (gNdsBattleTextHudP2Damage == damage[2]) &&
+        (gNdsBattleTextHudP3Damage == damage[3]) &&
+        (gNdsBattleTextHudP0Stock == stock[0]) &&
+        (gNdsBattleTextHudP1Stock == stock[1]) &&
+        (gNdsBattleTextHudP2Stock == stock[2]) &&
+        (gNdsBattleTextHudP3Stock == stock[3]) &&
         (gNdsBattleTextHudActiveMask == gNdsIFCommonHUDActivePlayerMask) &&
         (gNdsBattleTextHudShowDamageMask ==
             gNdsIFCommonHUDShowDamageMask))
@@ -3012,39 +3093,25 @@ static void ndsPlatformRenderBattleTextHud(void)
         return;
     }
     sBattleTextHudReady = TRUE;
-#endif
+    #endif
     gNdsBattleTextHudTimeSeconds = seconds;
-    gNdsBattleTextHudP0Damage = p0_damage;
-    gNdsBattleTextHudP1Damage = p1_damage;
-    gNdsBattleTextHudP0Stock = gNdsIFCommonHUDP0LowerStock;
-    gNdsBattleTextHudP1Stock = gNdsIFCommonHUDP1LowerStock;
+    gNdsBattleTextHudP0Damage = damage[0];
+    gNdsBattleTextHudP1Damage = damage[1];
+    gNdsBattleTextHudP2Damage = damage[2];
+    gNdsBattleTextHudP3Damage = damage[3];
+    gNdsBattleTextHudP0Stock = stock[0];
+    gNdsBattleTextHudP1Stock = stock[1];
+    gNdsBattleTextHudP2Stock = stock[2];
+    gNdsBattleTextHudP3Stock = stock[3];
     gNdsBattleTextHudActiveMask = gNdsIFCommonHUDActivePlayerMask;
     gNdsBattleTextHudShowDamageMask = gNdsIFCommonHUDShowDamageMask;
-
-    if (gNdsIFCommonHUDRecordCount == 0u)
-    {
-        ndsPlatformPrintDebugLine(2u, "TIME  --:--");
-    }
-    else
-    {
-        ndsPlatformPrintDebugLine(2u, "TIME  %02lu:%02lu",
-                                  (unsigned long)(seconds / 60u),
-                                  (unsigned long)(seconds % 60u));
-    }
-    ndsPlatformRenderBattlePlayerText(
-        0u, 5u, gNdsIFCommonHUDP0FighterKind,
-        p0_damage,
-        gNdsIFCommonHUDP0LowerStock);
-    ndsPlatformRenderBattlePlayerText(
-        1u, 9u, gNdsIFCommonHUDP1FighterKind,
-        p1_damage,
-        gNdsIFCommonHUDP1LowerStock);
 }
 #endif
 
 void ndsPlatformClearBattleTextHud(void)
 {
     gNdsBattleTextHudClearCount++;
+    ndsBattleHudClear();
 #if NDS_BATTLE_FPS_HUD_ENABLED
     if ((sBattleFpsHudSampleReady != 0u) ||
         (sBattleTextHudReady != FALSE))
