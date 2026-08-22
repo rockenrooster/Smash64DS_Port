@@ -1991,15 +1991,16 @@ override NDS_TASK32_DRAW_HOT_TEXT := 1
 override NDS_TASK39_FX_SPRITES := 1
 override NDS_TASK39_FX_FLASH := 1
 endif
-ifneq ($(filter $(TARGET),smash64ds-battle-playable-tickhud-hwtri smash64ds-p2-fourcpu-tickhud-hwtri smash64ds-battle-playable-proof-hwtri smash64ds-results-lab-hwtri),)
+ifneq ($(filter $(TARGET),smash64ds-battle-playable-tickhud-hwtri smash64ds-p2-fourcpu-tickhud-hwtri smash64ds-battle-playable-proof-hwtri smash64ds-battle-playable-audio-fgm-hwtri smash64ds-results-lab-hwtri),)
 # Profile-0 shipping path plus either the lightweight Task 41 timers or the
 # full diagnostic publications required by GDB proof runs.
 #
-# smash64ds-results-lab-hwtri rides this block deliberately: R2-07's Results
-# numbers have to be comparable with the battle ones, so it must differ from
-# the tick-HUD ROM in the scene it boots and in NOTHING else. Adding it to the
-# filter rather than cloning the block is what guarantees that -- a copied
-# block would drift the moment either half was edited.
+# smash64ds-results-lab-hwtri and the focused audio-FGM proof target ride this
+# block deliberately. Results must differ only in the scene it boots; audio-FGM
+# must differ only in what its verifier observes. Both therefore compile the
+# same accepted renderer/gameplay path as the shipping/proof ROM rather than
+# inheriting stale generic defaults. Adding them to the filter instead of
+# cloning the block is what keeps future accepted-path flags from drifting.
 ifeq ($(TARGET),smash64ds-results-lab-hwtri)
 override NDS_DEV_SCENE_HARNESS := results_playable
 else

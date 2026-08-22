@@ -31,6 +31,7 @@
 #define NDS_AUDIO_FGM_RELEASE_MICROSECONDS (NDS_AUDIO_FGM_TIMER_MICROSECONDS * 10u)
 #define NDS_AUDIO_FGM_CACHE_SLOT_COUNT 8u
 #define NDS_AUDIO_FGM_CACHE_MAX_ENVELOPE_POINTS 32u
+#define NDS_AUDIO_FGM_EVENT_RESTART_SAMPLE (1u << 0)
 
 #define NDS_AUDIO_FGM_MASK_PACK_LOADED (1u << 0)
 #define NDS_AUDIO_FGM_MASK_SUPPORTED_PLAY (1u << 1)
@@ -306,6 +307,26 @@ static s32 ndsAudioFgmIDIsIncluded(u16 id)
     case nSYAudioVoiceAnnounceFox:
     case nSYAudioVoiceAnnounceLuigi:
     case nSYAudioVoiceLuigiFuraFura:
+    /* P2-3 Donkey Kong production bank. These are the exact BattleShip IDs
+     * reachable from DonkeyMain/MainMotion, DK's CSS selected clip, the CSS
+     * announcer table and ftpublic's fighter-call table. Keep the complete
+     * fighter bank together so newly admitted source states do not silently
+     * become audio stubs. */
+    case nSYAudioVoiceDonkeyFuraSleep:
+    case nSYAudioVoiceDonkeyAppeal:
+    case nSYAudioVoiceDonkeySmash1:
+    case nSYAudioVoiceDonkeySmash2:
+    case nSYAudioVoiceDonkeySmash3:
+    case nSYAudioVoiceDonkeySpecialN:
+    case nSYAudioVoiceDonkeyDeadUp:
+    case nSYAudioVoiceDonkeyFuraFura:
+    case nSYAudioVoiceDonkeyDamage:
+    case nSYAudioVoiceDonkeyDead1:
+    case nSYAudioVoiceDonkeyHeavyGet:
+    case nSYAudioVoiceDonkeyHeavyUnk:
+    case nSYAudioVoiceDonkeyDead2:
+    case nSYAudioVoiceAnnounceDonkey:
+    case nSYAudioVoicePublicDonkey:
     /* And the two the miss ring surfaced only once the five above stopped
      * filling it: the countdown announces FIVE and FOUR before the THREE that
      * was already here. */
@@ -677,6 +698,91 @@ static NDSAudioFgmHandle *ndsAudioFgmHandleFromEffect(alSoundEffect *effect)
     return (NDSAudioFgmHandle *)effect;
 }
 
+/* P2-3 DK 324 (FuraSleep) is a source sequencer cue: three long notes restart
+ * the SAME wave at ticks 0/400/810. Baking seven seconds of timeline into one
+ * sample exceeds the real 52 KiB cache slot, while retaining the source wave
+ * once is only ~19 KiB. Replay the N64 note boundary on DS hardware instead.
+ *
+ * This is deliberately a rare event path (two calls over a seven-second cue),
+ * not per-frame synthesis. It keeps the compressed source wave resident and
+ * spends one ARM7 play command at each source retrigger. */
+static s32 __attribute__((noinline, cold)) ndsAudioFgmRestartHandleSample(
+    NDSAudioFgmHandle *handle, u8 volume, u32 now)
+{
+    NDSAudioFgmPackEntry *entry;
+    NDSAudioFgmHandle *completed_handle;
+    s32 old_channel;
+    s32 channel;
+
+    if ((handle == NULL) || (handle->live == FALSE) ||
+        (handle->cache_slot < 0) ||
+        (handle->cache_slot >= (s8)NDS_AUDIO_FGM_CACHE_SLOT_COUNT))
+    {
+        return FALSE;
+    }
+    entry = ndsAudioFgmFindEntry(handle->fgm_id);
+    if (entry == NULL)
+    {
+        return FALSE;
+    }
+    old_channel = handle->channel;
+    if ((old_channel < 0) ||
+        (old_channel >= (s32)NDS_AUDIO_FGM_CHANNEL_COUNT) ||
+        (sNdsAudioFgmChannelOwners[old_channel] != handle) ||
+        (sNdsAudioFgmChannelGenerations[old_channel] != handle->generation))
+    {
+        return FALSE;
+    }
+
+    soundKill(old_channel);
+    sNdsAudioFgmChannelOwners[old_channel] = NULL;
+    sNdsAudioFgmChannelGenerations[old_channel] = 0u;
+    handle->channel = -1;
+
+    channel = soundPlaySample(
+        sNdsAudioFgmCacheSlots[(u32)handle->cache_slot].data,
+        SoundFormat_ADPCM,
+        entry->data_bytes - ((u32)entry->loop_point_words * 4u),
+        entry->frequency, volume, handle->effect.balance,
+        ((entry->flags & 1u) != 0u), entry->loop_point_words);
+    if ((channel < 0) || (channel >= (s32)NDS_AUDIO_FGM_CHANNEL_COUNT))
+    {
+        return FALSE;
+    }
+
+    /* soundPlaySample chooses an inactive hardware channel. Its software owner
+     * may still be alive because the DS one-shot ended before the source note
+     * duration; retire that stale owner without killing the sample just started. */
+    completed_handle = sNdsAudioFgmChannelOwners[channel];
+    if ((completed_handle != NULL) && (completed_handle != handle))
+    {
+        if ((completed_handle->allocated == FALSE) ||
+            (completed_handle->live == FALSE) ||
+            (completed_handle->channel != channel) ||
+            (sNdsAudioFgmChannelGenerations[channel] !=
+             completed_handle->generation))
+        {
+            soundKill(channel);
+            return FALSE;
+        }
+        ndsAudioFgmReleaseHandle(
+            completed_handle, FALSE
+            NDS_AUDIO_FGM_ACK_RELEASE_ARGS(
+                NDS_AUDIO_FGM_RELEASE_REASON_DURATION, now));
+        gNdsAudioFgmDurationStopCount++;
+    }
+
+    handle->channel = (s8)channel;
+    handle->volume = volume;
+    handle->audible_end_tick =
+        now + (u32)(((u64)BUS_CLOCK * entry->sample_count) / entry->frequency);
+    sNdsAudioFgmChannelOwners[channel] = handle;
+    sNdsAudioFgmChannelGenerations[channel] = handle->generation;
+    gNdsAudioFgmChannelMask |= 1u << channel;
+    gNdsAudioFgmLastChannel = (u32)channel;
+    return TRUE;
+}
+
 static s32 ndsAudioFgmValidateCachedEntry(u32 index, const u8 *raw)
 {
     NDSAudioFgmPackEntry *entry = &sNdsAudioFgmEntries[index];
@@ -970,10 +1076,35 @@ void ndsAudioFgmUpdate(void)
                     (u32)handle->envelope_index *
                     NDS_AUDIO_FGM_ENVELOPE_POINT_BYTES];
                 u16 point_tick = ndsAudioFgmReadLe16(point);
+                u8 event_flags = point[3];
 
                 if (elapsed_fgm_ticks < point_tick)
                 {
                     break;
+                }
+                if ((event_flags & ~NDS_AUDIO_FGM_EVENT_RESTART_SAMPLE) != 0u)
+                {
+                    gNdsAudioFgmFormatFailCount++;
+                    gNdsAudioFgmPlayFailCount++;
+                    ndsAudioFgmReleaseHandle(
+                        handle, TRUE
+                        NDS_AUDIO_FGM_ACK_RELEASE_ARGS(
+                            NDS_AUDIO_FGM_RELEASE_REASON_DURATION, now));
+                    break;
+                }
+                if ((event_flags & NDS_AUDIO_FGM_EVENT_RESTART_SAMPLE) != 0u)
+                {
+                    if (ndsAudioFgmRestartHandleSample(handle, point[2], now) ==
+                        FALSE)
+                    {
+                        gNdsAudioFgmPlayFailCount++;
+                        ndsAudioFgmReleaseHandle(
+                            handle, FALSE
+                            NDS_AUDIO_FGM_ACK_RELEASE_ARGS(
+                                NDS_AUDIO_FGM_RELEASE_REASON_GENERATION_LOST,
+                                now));
+                        break;
+                    }
                 }
                 if ((handle->channel < 0) ||
                     (sNdsAudioFgmChannelOwners[(u32)handle->channel] !=

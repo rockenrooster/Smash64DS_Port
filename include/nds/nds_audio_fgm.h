@@ -5,7 +5,7 @@
 #include <sys/audio.h>
 
 #define NDS_AUDIO_FGM_PASS 0x46474d31u /* FGM1 */
-#define NDS_AUDIO_FGM_ENTRY_COUNT 102u
+#define NDS_AUDIO_FGM_ENTRY_COUNT 117u
 #define NDS_AUDIO_FGM_PHASE_COUNT 5u
 #define NDS_AUDIO_FGM_PHASE_COMPLETE_MASK 0x1fu
 #define NDS_AUDIO_FGM_KO_COUNT 5u
@@ -70,11 +70,12 @@
  * tick 0, so it joins FULL_PROGRAM_AOT_IDS to render all three voices fused
  * -- the same mechanism 154/616-625/121 above already use, extended to two
  * simultaneous forks instead of one or zero. */
-/* P2-3: Luigi's source announcer (498) and selected-animation FuraFura voice
- * (421) are appended as entries 101/102. The runtime streams the pack through
- * the unchanged 200 KiB cache; this is ROM growth, not resident-RAM growth. */
-#define NDS_AUDIO_FGM_PACK_BYTES 1022692u
-#define NDS_AUDIO_FGM_PACK_MAPPING_SHA256_LO 0x393e86e8u
+/* P2-3: Luigi's 498/421 plus DK's complete 324..336 bank, announcer 483 and
+ * crowd chant 603 are now source-backed. DK 324 uses compact timed retriggers
+ * of one cached source wave instead of a 112 KiB baked timeline, so the runtime
+ * still streams through the unchanged 200 KiB cache and 52 KiB largest slot. */
+#define NDS_AUDIO_FGM_PACK_BYTES 1201060u
+#define NDS_AUDIO_FGM_PACK_MAPPING_SHA256_LO 0x476d5727u
 #define NDS_AUDIO_FGM_CACHE_BYTES 204800u
 #define NDS_AUDIO_FGM_HANDLE_CAPACITY 8u
 #define NDS_AUDIO_FGM_FIDELITY_DEBT_PITCH_AUTOMATION (1u << 2)

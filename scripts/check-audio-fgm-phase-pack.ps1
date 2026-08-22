@@ -80,7 +80,10 @@ $expectedIDs = @(626,470,469,467,490,74,363,364,372,373,374,430,439,292,
     166, 526,
     # P2-3 Luigi CSS announcer and the selected-animation FuraFura voice
     # reached from dFTLuigiSubMotionDescs[1].
-    498, 421)
+    498, 421,
+    # P2-3 Donkey Kong production bank, announcer and crowd chant.
+    324, 325, 326, 327, 328, 329, 330, 331, 332, 333, 334, 335, 336,
+    483, 603)
 $actualIDs = @($metadata.entries | ForEach-Object { [int]$_.id })
 if (($actualIDs -join ',') -ne ($expectedIDs -join ',')) {
     throw "Unexpected FGM mapping: $($actualIDs -join ',')"
@@ -137,14 +140,17 @@ if (([int]$metadata.format_version -ne 4) -or
     # +16,596 bytes (16,564-byte IMA body + 32-byte entry header).
     # 1003932 -> 1013824 -> 1022692 on 2026-08-21 (P2-3): source Luigi
     # announcer 498 and selected-animation FuraFura 421 joined SELECTED,
-    # 100 -> 101 -> 102 entries. Runtime cache remains 204800.
-    ([int64]$metadata.resident_bytes -ne 1022692) -or
+    # 100 -> 101 -> 102 entries. 1022692 -> 1201060 on 2026-08-22 for DK's
+    # 324..336 voice bank, announcer 483 and crowd chant 603. 324 is compact
+    # source-note replay (18,564-byte wave, two timed retriggers), not its
+    # impossible 112 KiB baked timeline. Runtime cache remains 204800.
+    ([int64]$metadata.resident_bytes -ne 1201060) -or
     ([int64]$metadata.resident_limit_bytes -ne 204800) -or
     # ROM, not RAM: the runtime streams cues into resident_limit_bytes and never
     # holds the pack. 512 KiB blocked the five announcer lines and 768 KiB then
     # blocked the seven crowd cues, both for no runtime reason; the bound that
     # is real is the 53,248-byte cache-slot gate below.
-    ([int64]$metadata.pack_limit_bytes -ne 1048576) -or
+    ([int64]$metadata.pack_limit_bytes -ne 2097152) -or
     # 0x984c7da6 -> 0x4fb97922 -> 0xb6be788e on 2026-08-02: this hash covers the
     # cue SELECTOR table. 430/439 gained "aot_source_schedule", then the seven
     # crowd cues gained the full-program AOT render. A mapping change is
@@ -164,8 +170,9 @@ if (([int]$metadata.format_version -ne 4) -or
     # 0x3d9a9ac2 -> 0xf6b94a48 on 2026-08-19 (P2-1N) for FGM 166 and voice 526
     # joining SELECTED -- same reason, the selector table changed.
     # 0xf6b94a48 -> 0xdf21d357 -> 0x393e86e8 on 2026-08-21 (P2-3) for
-    # Luigi's source announcer 498 and selected-animation voice 421.
-    ($metadata.mapping_sha256_lo -ne '0x393e86e8') -or
+    # Luigi's source announcer 498 and selected-animation voice 421;
+    # -> 0x476d5727 on 2026-08-22 for DK's source bank/announcer/crowd set.
+    ($metadata.mapping_sha256_lo -ne '0x476d5727') -or
     # Repinned 2026-08-02: FGM 11 (the rolling dodge) dropped 127 -> 96 -> 68 ->
     # 48 on the owner's ear via FGM_OWNER_VOLUME_TRIM, -8.4 dB total against the
     # source; the 68 pin was
@@ -199,8 +206,10 @@ if (([int]$metadata.format_version -ne 4) -or
     # 6cc5f91c35a82833d23bf3001c0c108225615e03a04ccc49eda800812f86c0b7.
     # P2-3 Luigi selected-animation voice 421 repin; prior 101-entry pin was
     # ffdeefd578da5dfe99f715b7f10aeaea9fcc9c2b75f1c3d269c9480ab0b837e3.
+    # DK's complete source voice admission, including compact 324 replay, moves
+    # the binary identity again while leaving the resident cache unchanged.
     ($metadata.pack_sha256 -ne
-        'e55d06101beea53b65cb4aa3fad616b0ce8d537ddff29790285a9cea01d17454')) {
+        'f2b1f76941488171fa4399dd2da9b44545aebab5f3e9d8ba0844ed0694f503b2')) {
     throw 'FGM pack format, budget, mapping, or binary identity changed.'
 }
 if ((@($metadata.excluded_entries).Count -ne 0) -or
@@ -324,7 +333,7 @@ if (($fgm218.acoustic_oracle.source_custom_fx_dry_only -ne $true) -or
 $header = Get-Content -LiteralPath $headerPath -Raw
 $runtime = Get-Content -LiteralPath $runtimePath -Raw
 foreach ($token in @(
-    '#define NDS_AUDIO_FGM_ENTRY_COUNT 102u',
+    '#define NDS_AUDIO_FGM_ENTRY_COUNT 117u',
     '#define NDS_AUDIO_FGM_CACHE_BYTES 204800u')) {
     if (-not $header.Contains($token)) { throw "Runtime header lost: $token" }
 }
@@ -359,7 +368,8 @@ foreach ($pair in @(
 foreach ($voice in @('nSYAudioVoiceAnnounceTimeUp', 'nSYAudioVoiceAnnounceGameSet',
     'nSYAudioVoiceAnnounceWinnerIs', 'nSYAudioVoiceAnnounceMario',
     'nSYAudioVoiceAnnounceFox', 'nSYAudioVoiceAnnounceLuigi',
-    'nSYAudioVoiceLuigiFuraFura',
+    'nSYAudioVoiceLuigiFuraFura', 'nSYAudioVoiceAnnounceDonkey',
+    'nSYAudioVoicePublicDonkey',
     'nSYAudioVoiceAnnounceFive',
     'nSYAudioVoiceAnnounceFour', 'nSYAudioVoicePublicWin',
     'nSYAudioVoicePublicFox', 'nSYAudioVoicePublicMario',

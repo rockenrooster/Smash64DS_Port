@@ -52,7 +52,13 @@ FGM_OUTPUT_RATE = 32000
 # does not fit one can never be played, and until 2026-07-31 nothing checked it
 # -- the pack cap was standing in for a bound it does not actually express.
 # MAX_CUE_IMA_BYTES does now.
-MAX_PACK_BYTES = 1024 * 1024
+# P2-3 adds complete per-fighter voice banks.  This is a ROM-file ceiling, NOT
+# the runtime cache: nds_audio_fgm continues to stream into the independently
+# capped 200 KiB resident cache.  The old 1 MiB P1-era ceiling left only ~26 KiB
+# after Luigi and could not admit DK's source voice bank without either dropping
+# source cues or making a fake resident-RAM tradeoff.  Give the roster room to
+# grow while keeping the real cache/slot gates unchanged and checked below.
+MAX_PACK_BYTES = 2 * 1024 * 1024
 RUNTIME_CACHE_BYTES = (52 * 1024) + (3 * 28 * 1024) + (4 * 16 * 1024)
 MAX_CUE_IMA_BYTES = 52 * 1024
 MAX_RESIDENT_BYTES = 128 * 1024  # historical Phase-C comparison only
@@ -232,6 +238,12 @@ FULL_COVERAGE_IDS = (
     # D_ovl1_80391754, which plays LuigiFuraFura twice. The focused CSS walk
     # reached this exact source command and the runtime miss ring named 421.
     421,
+    # P2-3 Donkey Kong. BattleShip's DonkeyMain/MainMotion, CSS selected clip,
+    # announcer table and ftpublic fighter-call table can reach the complete DK
+    # voice run 324..336, announcer 483 and crowd chant 603. Keep the bank
+    # contiguous and source-named rather than waiting for each omitted cue to
+    # surface independently in the miss ring.
+    324, 325, 326, 327, 328, 329, 330, 331, 332, 333, 334, 335, 336, 483, 603,
 )
 FULL_PROGRAM_AOT_IDS = frozenset((
     154, 40, 38, 37, 34, 32, 31,
@@ -329,6 +341,16 @@ FULL_PROGRAM_AOT_IDS = frozenset((
     # just the first. Full-program AOT keeps the confirm chime complete
     # instead of shipping a shorter, quieter partial of it.
     159,
+    # P2-3 DK's fighter voices are multi-note source programs. The
+    # flat pack path holds only the first note/rate; full-program AOT preserves
+    # every note, reset, source loop and articulation change at the 32 kHz DS
+    # output rate.  324 is deliberately NOT in this set: its three 400/410-tick
+    # retriggers bake to 112 KiB of ADPCM, larger than the real 52 KiB runtime
+    # cache slot.  Its selector below uses compact source-note replay instead --
+    # one source sample plus two timed hardware retriggers -- so ROM and RAM do
+    # not scale with the 7.0-second source schedule. Announcer 483 and crowd
+    # chant 603 are single-note and stay on the cheaper flat path.
+    325, 326, 327, 328, 329, 330, 331, 332, 333, 334, 335, 336,
 ))
 
 ATTACK_ACTION_AUDIT_SHA256 = (
@@ -3155,6 +3177,346 @@ SELECTED += (
     },
 )
 
+# P2-3 Donkey Kong voice bank. Every field below is source-derived by
+# `--derive 324,...,336,483,603`; the expected sample extents for the thirteen
+# fighter voices are the full-program AOT extents (184 DS output samples per
+# source program tick), while the announcer and crowd chant are single-note
+# source decodes. This is deliberately explicit so an upstream BattleShip audio
+# program change fails the hash pins instead of silently changing DK's voice.
+SELECTED += (
+    {
+        "id": 324,
+        "name": "nSYAudioVoiceDonkeyFuraSleep",
+        "kind": "voice",
+        "articulation": 115,
+        "sound": 48,
+        "notes": ((14, 7, 400), (14, 7, 410), (14, 7, 410)),
+        "duration_ticks": 1220,
+        "ucd_volume": 220,
+        "articulation_pitch_cents": -1200,
+        "loop": False,
+        "wave_base": 394080,
+        "wave_length": 20880,
+        "loop_start": 0,
+        "loop_end": 0,
+        # Three source notes all use the same pitch/sample and each explicitly
+        # starts a new voice (set_unk1E has bit 7 set).  Keep one decoded source
+        # wave in the DS cache and replay it at ticks 400 and 810 instead of
+        # baking 1,220 * 184 samples into ROM.  This is the DS-native equivalent
+        # of BattleShip's sequencer and keeps the cue below the 52 KiB slot.
+        "runtime_note_replay": True,
+        "expected_retained_samples": 37120,
+        "root_program_sha256":
+            "b498a7a70268fcd1bd1273b0ff905eb1b341c0e0d730bf0cfeffcc460a1dc1ef",
+        "articulation_program_sha256":
+            "81f1d1099acf6377a38e8caa3b02572dc6b8572bc6e657dee23e3198e21cf88d",
+    },
+    {
+        "id": 325,
+        "name": "nSYAudioVoiceDonkeyAppeal",
+        "kind": "voice",
+        "articulation": 193,
+        "sound": 76,
+        "notes": ((4, 7, 15), (3, 7, 5), (2, 7, 30), (1, 7, 30),
+                  (24, 7, 30), (23, 7, 70)),
+        "duration_ticks": 180,
+        "ucd_volume": 240,
+        "articulation_pitch_cents": 0,
+        "loop": False,
+        "wave_base": 729896,
+        "wave_length": 5824,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 33120,
+        "root_program_sha256":
+            "ce7c2716d064f99196d6184f483af3b398cf8ee8f740d9b7d2719d7f77f2c829",
+        "articulation_program_sha256":
+            "f58e7ea2e9d9594fa5050f912f10fdb573b9766e761142d67aded0cd220e3518",
+    },
+    {
+        "id": 326,
+        "name": "nSYAudioVoiceDonkeySmash1",
+        "kind": "voice",
+        "articulation": 194,
+        "sound": 77,
+        "notes": ((5, 7, 5), (4, 7, 5), (3, 7, 20), (2, 7, 30),
+                  (1, 7, 15)),
+        "duration_ticks": 75,
+        "ucd_volume": 250,
+        "articulation_pitch_cents": -400,
+        "loop": False,
+        "wave_base": 735720,
+        "wave_length": 3870,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 13800,
+        "root_program_sha256":
+            "6fdc5fbce631b8b0e95e8b4c92d9945a2d290dbbcfc5fc801b8350566af35cb4",
+        "articulation_program_sha256":
+            "979e2d77304292bcdf12962e7ed8e4842a337a5f7b2e175b58bcde6f23f9d5b4",
+    },
+    {
+        "id": 327,
+        "name": "nSYAudioVoiceDonkeySmash2",
+        "kind": "voice",
+        "articulation": 195,
+        "sound": 78,
+        "notes": ((3, 7, 10), (2, 7, 10), (1, 7, 20), (1, 7, 20),
+                  (24, 7, 20)),
+        "duration_ticks": 80,
+        "ucd_volume": 240,
+        "articulation_pitch_cents": -360,
+        "loop": False,
+        "wave_base": 739592,
+        "wave_length": 4302,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 14720,
+        "root_program_sha256":
+            "10996c15c2ec7eb8220e715d66d8780eb0efb9325e0d00745ce5eacb6829c1fa",
+        "articulation_program_sha256":
+            "c14b911dbfd3f2b63b64c014e2674d05a65c8a6c0bbb8aa64af4e136e81a429b",
+    },
+    {
+        "id": 328,
+        "name": "nSYAudioVoiceDonkeySmash3",
+        "kind": "voice",
+        "articulation": 195,
+        "sound": 78,
+        "notes": ((3, 7, 5), (1, 7, 5), (24, 7, 6), (1, 7, 7),
+                  (20, 7, 10), (18, 7, 9)),
+        "duration_ticks": 42,
+        "ucd_volume": 236,
+        "articulation_pitch_cents": -360,
+        "loop": False,
+        "wave_base": 739592,
+        "wave_length": 4302,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 7728,
+        "root_program_sha256":
+            "cc3df5ce11159998e51c62f81f237200bd7d4fc5e064cbf6ccd293f1ec4fb82e",
+        "articulation_program_sha256":
+            "c14b911dbfd3f2b63b64c014e2674d05a65c8a6c0bbb8aa64af4e136e81a429b",
+    },
+    {
+        "id": 329,
+        "name": "nSYAudioVoiceDonkeySpecialN",
+        "kind": "voice",
+        "articulation": 193,
+        "sound": 76,
+        "notes": ((15, 7, 5), (17, 7, 75), (17, 7, 15), (16, 7, 30),
+                  (15, 7, 15), (14, 7, 15), (13, 7, 30)),
+        "duration_ticks": 185,
+        "ucd_volume": 250,
+        "articulation_pitch_cents": 0,
+        "loop": False,
+        "wave_base": 729896,
+        "wave_length": 5824,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 34040,
+        "root_program_sha256":
+            "2b75c25bc26ab8f6829a711a900d57cf45943461159ff6501abf2665ad00a234",
+        "articulation_program_sha256":
+            "f58e7ea2e9d9594fa5050f912f10fdb573b9766e761142d67aded0cd220e3518",
+    },
+    {
+        "id": 330,
+        "name": "nSYAudioVoiceDonkeyDeadUp",
+        "kind": "voice",
+        "articulation": 196,
+        "sound": 79,
+        "notes": ((6, 7, 10), (22, 7, 30), (2, 7, 60), (1, 7, 90)),
+        "duration_ticks": 190,
+        "ucd_volume": 222,
+        "articulation_pitch_cents": 0,
+        "loop": False,
+        "wave_base": 743896,
+        "wave_length": 10090,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 34960,
+        "root_program_sha256":
+            "1725716f0132da1ccad8703e90d389fd465f22e7d3d913ce3cb9e9073e459636",
+        "articulation_program_sha256":
+            "fc739f21cce8b4f4718baa48559da57c19a1f3b2f4ef4a3804599531ae920749",
+    },
+    {
+        "id": 331,
+        "name": "nSYAudioVoiceDonkeyFuraFura",
+        "kind": "voice",
+        "articulation": 197,
+        "sound": 80,
+        "notes": ((15, 7, 20), (11, 7, 30), (14, 7, 50), (11, 7, 100)),
+        "duration_ticks": 200,
+        "ucd_volume": 200,
+        "articulation_pitch_cents": 50,
+        "loop": True,
+        "wave_base": 753992,
+        "wave_length": 6526,
+        "loop_start": 977,
+        "loop_end": 11541,
+        "expected_retained_samples": 36800,
+        "root_program_sha256":
+            "168595dc7323ef5ea22a72da43c5674543ea308bc0d74e42a803a557d0f7eff7",
+        "articulation_program_sha256":
+            "cf529ecdf00d25043aa39b4dffa969129dd64e3e6cd578f54292bac37487b591",
+    },
+    {
+        "id": 332,
+        "name": "nSYAudioVoiceDonkeyDamage",
+        "kind": "voice",
+        "articulation": 198,
+        "sound": 76,
+        "notes": ((2, 7, 10), (24, 7, 15), (22, 7, 15), (21, 7, 30),
+                  (22, 7, 20)),
+        "duration_ticks": 90,
+        "ucd_volume": 249,
+        "articulation_pitch_cents": 0,
+        "loop": False,
+        "wave_base": 729896,
+        "wave_length": 5824,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 16560,
+        "root_program_sha256":
+            "5ca95ed8b284c6dc348cc9d9404b6c87b3da6834e115b4e84f1f74875bf9f5d8",
+        "articulation_program_sha256":
+            "5ca6fa2dd66001e076163a11620ef4ff8c24124d9fbbdc180a964d12ba795fa4",
+    },
+    {
+        "id": 333,
+        "name": "nSYAudioVoiceDonkeyDead1",
+        "kind": "voice",
+        "articulation": 199,
+        "sound": 81,
+        "notes": ((1, 7, 10), (1, 7, 20), (24, 7, 20), (23, 7, 20),
+                  (22, 7, 20), (21, 7, 20), (20, 7, 20)),
+        "duration_ticks": 130,
+        "ucd_volume": 245,
+        "articulation_pitch_cents": 0,
+        "loop": False,
+        "wave_base": 760520,
+        "wave_length": 5562,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 23920,
+        "root_program_sha256":
+            "1d68628baf350be5972b9b72dd6b762ae6513d76f263fe0af69db1fe9d51a7a6",
+        "articulation_program_sha256":
+            "2140c615c31d140dd24f9874de8b4cc4a7bb79f6193198494258597b4fb20a07",
+    },
+    {
+        "id": 334,
+        "name": "nSYAudioVoiceDonkeyHeavyGet",
+        "kind": "voice",
+        "articulation": 200,
+        "sound": 82,
+        "notes": ((7, 7, 6), (7, 7, 20), (7, 7, 30), (7, 7, 40)),
+        "duration_ticks": 96,
+        "ucd_volume": 246,
+        "articulation_pitch_cents": -600,
+        "loop": False,
+        "wave_base": 766088,
+        "wave_length": 13096,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 17664,
+        "root_program_sha256":
+            "75981d057f2844a2889534db23be32a5bb45f28a4913c35fd12305b0f96bd7cf",
+        "articulation_program_sha256":
+            "0b3bd31de449f30351704d43bb21e8c7dee86de05de277f3efe9fd08268e10b4",
+    },
+    {
+        "id": 335,
+        "name": "nSYAudioVoiceDonkeyHeavyUnk",
+        "kind": "voice",
+        "articulation": 200,
+        "sound": 82,
+        "notes": ((14, 7, 6), (18, 7, 20), (9, 7, 30), (10, 7, 10),
+                  (2, 7, 10)),
+        "duration_ticks": 76,
+        "ucd_volume": 250,
+        "articulation_pitch_cents": -600,
+        "loop": False,
+        "wave_base": 766088,
+        "wave_length": 13096,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 13984,
+        "root_program_sha256":
+            "5bf84c5bfc2a855a816a0dff8589750c29ab5f87f0484edbbba1335b90d2ecdb",
+        "articulation_program_sha256":
+            "0b3bd31de449f30351704d43bb21e8c7dee86de05de277f3efe9fd08268e10b4",
+    },
+    {
+        "id": 336,
+        "name": "nSYAudioVoiceDonkeyDead2",
+        "kind": "voice",
+        "articulation": 199,
+        "sound": 81,
+        "notes": ((22, 7, 8), (2, 7, 10), (5, 7, 12), (1, 7, 14),
+                  (23, 7, 16), (22, 7, 9), (21, 7, 9), (20, 7, 7),
+                  (19, 7, 7), (18, 7, 10), (17, 7, 12), (16, 7, 12)),
+        "duration_ticks": 126,
+        "ucd_volume": 190,
+        "articulation_pitch_cents": 0,
+        "loop": False,
+        "wave_base": 760520,
+        "wave_length": 5562,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 23184,
+        "root_program_sha256":
+            "5d8d7bc65b3bdcd39f5aa246d9568bab240e568d1a8fb578e718580e63351e8b",
+        "articulation_program_sha256":
+            "2140c615c31d140dd24f9874de8b4cc4a7bb79f6193198494258597b4fb20a07",
+    },
+    {
+        "id": 483,
+        "name": "nSYAudioVoiceAnnounceDonkey",
+        "kind": "announcer",
+        "articulation": 310,
+        "sound": 187,
+        "notes": ((13, 7, 200),),
+        "duration_ticks": 200,
+        "ucd_volume": 230,
+        "articulation_pitch_cents": -1200,
+        "loop": False,
+        "wave_base": 1533752,
+        "wave_length": 11728,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 18401,
+        "root_program_sha256":
+            "5532aec38f6b3ef52436ffaa9263f9be47039bf1ebdb3b8a9cf89e078f106d28",
+        "articulation_program_sha256":
+            "aaa497bd93f13ff026792103afc157a25117ebbde86ba0c6099f215ce8cd8a65",
+    },
+    {
+        "id": 603,
+        "name": "nSYAudioVoicePublicDonkey",
+        "kind": "crowd",
+        "articulation": 120,
+        "sound": 51,
+        "notes": ((13, 7, 320),),
+        "duration_ticks": 320,
+        "ucd_volume": 255,
+        "articulation_pitch_cents": -1190,
+        "loop": False,
+        "wave_base": 424040,
+        "wave_length": 18918,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 29613,
+        "root_program_sha256":
+            "f8465bca110ef46023a8e3682e8974ab74c2c83854fc9352ab5be36b32a1b0d1",
+        "articulation_program_sha256":
+            "ad771315bcc763d9730edf9e9004099211c71c2615ee87df330035e9ba638791",
+    },
+)
+
 IMA_INDEX_TABLE = (
     -1, -1, -1, -1, 2, 4, 6, 8,
     -1, -1, -1, -1, 2, 4, 6, 8,
@@ -3231,7 +3593,7 @@ def validate_ucd(root_program: list[list], program: list[list],
     if len(omitted_forks) != len(omitted_hashes):
         raise ValueError(f"FGM {selector['id']} omitted-fork fixture mismatch")
 
-    if expected_render_hash is None:
+    if expected_render_hash is None and not selector.get("aot_full_program", False):
         forbidden = {"fork_voice", "mark_loop", "jump_loop", "vol_delta",
                      "pan_delta", "set_t5_neg2400", "set_t5_neg4800"}
         present = {row[0] for row in program}
@@ -3326,9 +3688,13 @@ def fgm_voice_source_audit(program_id: int, ucd: dict,
     previous_cut_before_note_end = False
     articulation_pitches = [int(row[1]) for row in articulation
                             if row[0] == "pitch"]
-    if not articulation_pitches:
-        raise ValueError(f"FGM voice {program_id} has no articulation pitch")
-    initial_articulation_pitch = articulation_pitches[0]
+    # The source articulation VM starts from a zero-cent pitch offset.  Several
+    # DK voice articulations (193/198/199) simply never issue `pitch`; that is
+    # the same valid zero-offset case validate_articulation already accepts for
+    # FGM 96, not a malformed voice.  Keeping the audit's initial state aligned
+    # with the VM lets the full-program AOT renderer preserve DK's note schedule
+    # instead of forcing those cues onto the lossy first-note fallback.
+    initial_articulation_pitch = articulation_pitches[0] if articulation_pitches else 0
     note_schedule = []
     root_volume_schedule = []
     root_pan_schedule = []
@@ -5826,7 +6192,93 @@ def build_pack(repo_root: Path) -> tuple[bytes, dict]:
         frequency = note_frequency_hz(
             selector["articulation_pitch_cents"], first_pitch_code)
         envelope = articulation_envelope(art_program, selector)
-        if selector.get("aot_full_program"):
+        if selector.get("runtime_note_replay"):
+            # P2-3 DK FuraSleep (324) is three long notes which all retrigger the
+            # same source wave at the same pitch. Baking the whole 1,220-tick
+            # timeline costs 112 KiB of IMA and can never fit the real 52 KiB
+            # streaming slot. Preserve the source sequencer shape instead: one
+            # cached wave plus timed restart/volume events in the existing 4-byte
+            # envelope stream. The fourth byte was reserved/zero in pack v4;
+            # bit0 now means "restart this entry's sample before applying volume".
+            notes, forks = fgm_program_notes(ucd_program)
+            if forks:
+                raise ValueError(
+                    f"FGM {selector['id']} compact replay gained fork voices")
+            if source_loop_infinite:
+                raise ValueError(
+                    f"FGM {selector['id']} compact replay gained a source loop")
+            if (not notes or not all(note["starts_new_voice"] for note in notes) or
+                    len({note["pitch_code"] for note in notes}) != 1):
+                raise ValueError(
+                    f"FGM {selector['id']} compact replay note contract changed")
+            pitch_ops = [int(row[1]) for row in art_program if row[0] == "pitch"]
+            if pitch_ops != [selector["articulation_pitch_cents"]]:
+                raise ValueError(
+                    f"FGM {selector['id']} compact replay pitch automation changed")
+            art_points = articulation_envelope(art_program, selector)
+            if not art_points or art_points[0]["tick"] != 0:
+                raise ValueError(
+                    f"FGM {selector['id']} compact replay lost initial volume")
+            packed_envelope = []
+            initial_art_volume = art_points[0]["articulation_volume"]
+            volume = ds_volume(notes[0]["root_volume"], initial_art_volume)
+            for note_index, note in enumerate(notes):
+                note_start = int(note["start_tick"])
+                note_end = note_start + int(note["duration_ticks"])
+                if note_index != 0:
+                    packed_envelope.append({
+                        "tick": note_start,
+                        "articulation_volume": initial_art_volume,
+                        "source_pre_mixer_target": source_volume_target(
+                            note["root_volume"], initial_art_volume),
+                        "source_quadratic_target": source_quadratic_target(
+                            note["root_volume"], initial_art_volume),
+                        "ds_volume": ds_volume(
+                            note["root_volume"], initial_art_volume),
+                        "event_flags": 1,
+                    })
+                for point in art_points[1:]:
+                    point_tick = note_start + int(point["tick"])
+                    if point_tick >= note_end:
+                        break
+                    art_volume = int(point["articulation_volume"])
+                    packed_envelope.append({
+                        "tick": point_tick,
+                        "articulation_volume": art_volume,
+                        "source_pre_mixer_target": source_volume_target(
+                            note["root_volume"], art_volume),
+                        "source_quadratic_target": source_quadratic_target(
+                            note["root_volume"], art_volume),
+                        "ds_volume": ds_volume(note["root_volume"], art_volume),
+                        "event_flags": 0,
+                    })
+            packed_envelope.sort(key=lambda point: int(point["tick"]))
+            if len(pcm) != selector["expected_retained_samples"]:
+                raise ValueError(
+                    f"FGM {selector['id']} compact source extent changed: {len(pcm)}")
+            runtime_pcm = pcm
+            loop_strategy = "source_note_retrigger_metadata"
+            flags = 0
+            loop_point_words = 0
+            acoustic_oracle = {
+                "aot_strategy": "source_sample_plus_timed_note_retriggers",
+                "runtime_retrigger_count": len(notes) - 1,
+                "runtime_note_starts": [int(note["start_tick"]) for note in notes],
+                "runtime_note_root_volumes": [int(note["root_volume"]) for note in notes],
+                "runtime_note_pitch_code": int(notes[0]["pitch_code"]),
+                "runtime_event_count": len(packed_envelope),
+            }
+            trim = {
+                "trim_strategy": "full_source_wave_runtime_note_replay",
+                "trim_source_samples_removed": 0,
+                "trim_applied": False,
+                "trim_retained_source_prefix_pcm_sha256": ima_pcm_sha256(pcm),
+                "trim_retained_prefix_exact": True,
+                "trim_proven_reachable_samples": len(runtime_pcm),
+                "trim_one_sample_ceiling": 1,
+            }
+            old_loop_ima = b""
+        elif selector.get("aot_full_program"):
             root_duration_ticks = selector["duration_ticks"]
             # P2-1e-1: render_program_id, not selector["id"] -- 121 MarioDash's
             # own UCD program is a pure fork_voice with zero local notes (no
@@ -6168,7 +6620,8 @@ def build_pack(repo_root: Path) -> tuple[bytes, dict]:
         record["envelope_offset"] = envelope_cursor if envelope else 0
         for point in envelope:
             envelope_body += PACK_ENVELOPE_POINT.pack(
-                point["tick"], point["ds_volume"], 0)
+                point["tick"], point["ds_volume"],
+                int(point.get("event_flags", 0)))
             envelope_cursor += PACK_ENVELOPE_POINT.size
         entries_blob += PACK_ENTRY.pack(
             record["id"], record["flags"], record["data_offset"],

@@ -112,7 +112,19 @@ typedef enum gmFGMID
 
 typedef enum gmVoiceID
 {
+    nSYAudioVoiceDonkeyFuraSleep = 324,
+    nSYAudioVoiceDonkeyAppeal = 325,
     nSYAudioVoiceDonkeySmash1 = 326,
+    nSYAudioVoiceDonkeySmash2 = 327,
+    nSYAudioVoiceDonkeySmash3 = 328,
+    nSYAudioVoiceDonkeySpecialN = 329,
+    nSYAudioVoiceDonkeyDeadUp = 330,
+    nSYAudioVoiceDonkeyFuraFura = 331,
+    nSYAudioVoiceDonkeyDamage = 332,
+    nSYAudioVoiceDonkeyDead1 = 333,
+    nSYAudioVoiceDonkeyHeavyGet = 334,
+    nSYAudioVoiceDonkeyHeavyUnk = 335,
+    nSYAudioVoiceDonkeyDead2 = 336,
     nSYAudioVoiceCaptainAttackS4 = 345,
     nSYAudioVoiceCaptainJumpAerial = 353,
     nSYAudioVoiceCaptainHeavyGet = 354,

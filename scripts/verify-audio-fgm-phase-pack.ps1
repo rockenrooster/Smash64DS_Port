@@ -26,6 +26,9 @@ if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 & (Join-Path $PSScriptRoot 'check-audio-runtime-fixtures.ps1')
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 $metadata = Get-Content -LiteralPath $metadataPath -Raw | ConvertFrom-Json
+$runtimeMetadataBytes = 16L + ([int64]$metadata.entry_count * 32L)
+$runtimeResidentExpected =
+    [int64]$metadata.resident_limit_bytes + $runtimeMetadataBytes
 $peakMin = [int](($metadata.entries | Measure-Object decoded_peak -Minimum).Minimum)
 $rmsMin = [double](($metadata.entries | Measure-Object decoded_rms -Minimum).Minimum)
 if (($peakMin -le 0) -or ($rmsMin -le 0.0)) {
@@ -94,11 +97,20 @@ $sectionTotals = @{
     }
 }
 # Text budget raised 3584 -> 4096 for the Task 38 on-demand cache + baked
-# schedule code (measured 3876 on 2026-07-21; nds_audio_fgm.h cache constants).
-if (($sectionTotals.text -gt 4096) -or
+# schedule code (measured 3876 on 2026-07-21). P2-3 adds the source-faithful DK
+# 324 compact note-replay path: two timed hardware retriggers replace an
+# impossible 112 KiB baked sample while the runtime cache remains exactly
+# 200 KiB. The production object measures 4,920 B of .text with that path
+# noinline/cold from the ordinary update loop, so 5 KiB is the new hard ceiling;
+# this is a bounded code-size trade, not a resident-RAM or per-frame allowance.
+# BSS is also bounded from the REAL resident cache + generated metadata, not the
+# full NitroFS pack size. The extra 8 KiB covers parsed entries, 8 handles/cache
+# slots, channel ownership and counters; using metadata.resident_bytes here used
+# to make the BSS check looser every time ROM-only audio content grew.
+if (($sectionTotals.text -gt 5120) -or
     ($sectionTotals.rodata -gt 576) -or
     ($sectionTotals.data -gt 16) -or
-    ($sectionTotals.bss -gt ([int64]$metadata.resident_bytes + 1856L)) -or
+    ($sectionTotals.bss -gt ($runtimeResidentExpected + 8192L)) -or
     ($sectionTotals.itcm -ne 0)) {
     throw (('FGM backend binary budget failed: text={0} rodata={1} data={2} ' +
         'bss={3} itcm={4}.') -f
@@ -150,7 +162,11 @@ try {
     Wait-MelonDSGdbListener `
         -Process $emulator `
         -Port $verifierContext.GdbPort | Out-Null
-    Start-Sleep -Seconds ([Math]::Max($DelaySeconds, 30))
+    # DelaySeconds is an explicit probe knob. The verifier's >=300-update HARN
+    # assertion below is the correctness floor, so silently forcing every
+    # focused run back to 30 seconds only wastes edit-cycle time; the default
+    # remains 30 for unattended/standing verification.
+    Start-Sleep -Seconds $DelaySeconds
 
     $gdbCommands = @(
         'set pagination off',
@@ -205,10 +221,10 @@ try {
     if (-not $load.Success -or
         (Convert-MarkerUInt32 $load.Groups[1].Value) -ne 0x46474d31 -or
         [int]$load.Groups[3].Value -ne 1 -or
-        # Cache-era resident bytes: NDS_AUDIO_FGM_CACHE_BYTES (204800) +
-        # NDS_AUDIO_FGM_PACK_DATA_OFFSET (1584), nds_audio_fgm.c:942-943.
-        # metadata.resident_bytes still names the FULL pack size (415432).
-        [int]$load.Groups[4].Value -ne 206384 -or
+        # Cache-era resident bytes are derived from the fixed streaming cache +
+        # 16-byte header + one 32-byte metadata row per generated entry. The
+        # full pack is NitroFS/ROM and must never be confused with resident RAM.
+        [int64]$load.Groups[4].Value -ne $runtimeResidentExpected -or
         [int]$load.Groups[5].Value -ne [int]$metadata.entry_count -or
         [int]$load.Groups[6].Value -ne 0 -or
         [int]$load.Groups[7].Value -ne 0 -or
@@ -223,7 +239,13 @@ try {
         [int]$play.Groups[4].Value -ne 0 -or
         [int]$play.Groups[5].Value -ne 0 -or
         (Convert-MarkerUInt32 $play.Groups[6].Value) -ne 0x1f -or
-        [int]$play.Groups[7].Value -ne 0 -or
+        # The focused target now compiles the accepted shipping/proof renderer
+        # path. With the standing deterministic Dream Land seed it reaches one
+        # source Whispy blow during this window. FGM 285 is the pack's ONLY
+        # hardware-loop entry, and BattleShip grPupupuWhispyUpdateOpen starts
+        # nSYAudioFGMPupupuWhispyWind exactly once here, so require that source
+        # event instead of preserving the stale generic-target expectation 0.
+        [int]$play.Groups[7].Value -ne 1 -or
         ([int]$play.Groups[1].Value -ne
          ([int]$play.Groups[2].Value + [int]$play.Groups[3].Value))) {
         throw "Natural FGM play accounting failed.`n$gdbStdout"
@@ -283,8 +305,13 @@ try {
         (($fgmChannelMask -band 0xc000) -ne 0)) {
         throw "FGM playback did not coexist on channels distinct from BGM.`n$gdbStdout"
     }
-    if (-not $memory.Success -or [uint64]$memory.Groups[1].Value -lt 131072) {
-        throw "FGM runtime left less than 128 KiB arena headroom.`n$gdbStdout"
+    # This verifier now rides the same accepted battle configuration as the P2
+    # proof target. The old 128 KiB threshold described the retired generic
+    # audio target, not the shipping battle. Keep the P2 shell/battle reserve
+    # law here (32 KiB); Boundary owns the stronger whole-match/four-CPU memory
+    # regression check.
+    if (-not $memory.Success -or [uint64]$memory.Groups[1].Value -lt 32768) {
+        throw "FGM runtime left less than the 32 KiB P2 arena reserve.`n$gdbStdout"
     }
 
     Write-Output (
