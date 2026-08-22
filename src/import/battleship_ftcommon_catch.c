@@ -148,6 +148,54 @@ sb32 ndsBaseFTCommonThrowCheckInterruptCatchWait(GObj *fighter_gobj);
 #undef ftCommonThrowCheckInterruptCatchWait
 #undef nFTKirbyStatusThrowF
 
+#if NDS_P2_DONKEY
+/*
+ * Donkey's cargo victim is nFTCommonStatusShouldered.  The normal P1/P2 catch
+ * slice never reaches that status, so it historically left the shouldered
+ * set/interrupt callbacks inert in the compatibility seam.  Once DK is a
+ * production fighter that is no longer a dead branch: ftCommonThrowProcUpdate
+ * moves the caught fighter into Shouldered and the victim's interrupt owns the
+ * source mash-out timer/knockback release.
+ *
+ * Import the complete BattleShip ftcommoncapture.c body under base names.  The
+ * public wrappers remain in reloc_backend_compat_shims.c so existing diagnostic
+ * seams keep one ABI owner, but every cargo behavior call below is the source
+ * implementation rather than a DS-local reconstruction.
+ */
+/* BattleShip fttypes.h:532-538.  Keep this source-only ABI mirror local to the
+ * import TU instead of pulling the decomp's full ftdef/fttypes universe into
+ * project-owned headers. */
+typedef struct NDSFTThrowReleaseDesc
+{
+    s32 angle;
+    s32 knockback_scale;
+    s32 knockback_weight;
+    s32 knockback_base;
+} FTThrowReleaseDesc;
+
+#define dFTCommonCaptureKnockbackCatch dNDSBaseFTCommonCaptureKnockbackCatch
+#define dFTCommonCaptureKnockbackCapture dNDSBaseFTCommonCaptureKnockbackCapture
+#define ftCommonCaptureApplyCatchKnockback ndsBaseFTCommonCaptureApplyCatchKnockback
+#define ftCommonCaptureApplyCaptureKnockback ndsBaseFTCommonCaptureApplyCaptureKnockback
+#define ftCommonCaptureTrappedInitBreakoutVars ndsBaseFTCommonCaptureTrappedInitBreakoutVars
+#define ftCommonCaptureTrappedUpdateBreakoutVars ndsBaseFTCommonCaptureTrappedUpdateBreakoutVars
+#define ftCommonCaptureShoulderedProcInterrupt ndsBaseFTCommonCaptureShoulderedProcInterrupt
+#define ftCommonCaptureShoulderedSetStatus ndsBaseFTCommonCaptureShoulderedSetStatus
+#define ftCommonThrownSetStatusImmediate ndsBaseFTCommonThrownSetStatusImmediate
+
+#include "../../decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommoncapture.c"
+
+#undef dFTCommonCaptureKnockbackCatch
+#undef dFTCommonCaptureKnockbackCapture
+#undef ftCommonCaptureApplyCatchKnockback
+#undef ftCommonCaptureApplyCaptureKnockback
+#undef ftCommonCaptureTrappedInitBreakoutVars
+#undef ftCommonCaptureTrappedUpdateBreakoutVars
+#undef ftCommonCaptureShoulderedProcInterrupt
+#undef ftCommonCaptureShoulderedSetStatus
+#undef ftCommonThrownSetStatusImmediate
+#endif
+
 #define ftCommonThrownReleaseFighterLoseGrip \
     ndsBaseFTCommonThrownReleaseFighterLoseGrip
 #define ftCommonThrownDecideFighterLoseGrip \

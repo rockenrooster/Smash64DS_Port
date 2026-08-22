@@ -84,7 +84,9 @@ NDS_INACTIVE_STATUS_STUB(ftCommonYoshiEggProcInterrupt)
 NDS_INACTIVE_STATUS_STUB(ftCommonYoshiEggProcPhysics)
 NDS_INACTIVE_STATUS_STUB(ftCommonYoshiEggProcMap)
 NDS_INACTIVE_STATUS_STUB(ftCommonCaptureCaptainProcPhysics)
+#if !NDS_P2_DONKEY
 NDS_INACTIVE_STATUS_STUB(ftCommonCaptureShoulderedProcInterrupt)
+#endif
 #if !NDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE
 NDS_INACTIVE_STATUS_STUB(ftCommonAppearProcUpdate)
 NDS_INACTIVE_STATUS_STUB(ftCommonAppearProcPhysics)

@@ -143,6 +143,10 @@ void ndsBaseFTCommonCapturePulledProcCapture(GObj *fighter_gobj, GObj *capture_g
 void ndsBaseFTCommonThrownSetStatusDamageRelease(GObj *fighter_gobj);
 void ndsBaseFTCommonThrownUpdateDamageStats(FTStruct *this_fp);
 void ndsBaseFTCommonThrownSetStatusNoDamageRelease(GObj *fighter_gobj);
+#if NDS_P2_DONKEY
+void ndsBaseFTCommonCaptureShoulderedProcInterrupt(GObj *fighter_gobj);
+void ndsBaseFTCommonCaptureShoulderedSetStatus(GObj *fighter_gobj);
+#endif
 void ndsBaseFTCommonThrownDecideFighterLoseGrip(GObj *fighter_gobj, GObj *interact_gobj);
 void ndsBaseFTCommonThrownDecideDeadResult(GObj *fighter_gobj);
 sb32 ndsBaseFTCommonThrowCheckInterruptCatchWait(GObj *fighter_gobj);
@@ -7644,8 +7648,19 @@ void ftCommonThrownReleaseThrownUpdateStats(GObj *fighter_gobj, s32 lr,
 
 void ftCommonCaptureShoulderedSetStatus(GObj *fighter_gobj)
 {
+#if NDS_P2_DONKEY
+    ndsBaseFTCommonCaptureShoulderedSetStatus(fighter_gobj);
+#else
     (void)fighter_gobj;
+#endif
 }
+
+#if NDS_P2_DONKEY
+void ftCommonCaptureShoulderedProcInterrupt(GObj *fighter_gobj)
+{
+    ndsBaseFTCommonCaptureShoulderedProcInterrupt(fighter_gobj);
+}
+#endif
 
 #if !NDS_P2_DONKEY
 void ftDonkeyThrowFWaitSetStatus(GObj *fighter_gobj)

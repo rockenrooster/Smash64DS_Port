@@ -232,6 +232,8 @@ $p2ProductionNativeOwnerSlot = if ($P2ProofFighter0Kind -eq 2) { 3 } else { 2 }
 $p2ProductionProfileOwnerIndex = if ($P2ProofFighter0Kind -eq 2) { 4 } else { 3 }
 $p2ProductionOwnerTriangles = if ($P2ProofFighter0Kind -eq 2) { 318 } else { 320 }
 $p2ProductionOwnerRuns = if ($P2ProofFighter0Kind -eq 2) { 62 } else { 32 }
+$p2ProductionOwnerRawTriangles = if ($P2ProofFighter0Kind -eq 2) { 274 } else { 284 }
+$p2ProductionOwnerCrossTriangles = if ($P2ProofFighter0Kind -eq 2) { 44 } else { 36 }
 if ($Task9StateHashExportPath -and ($Task9StateHashMode -ne 1)) {
     throw 'Task9StateHashExportPath requires Task9StateHashMode 1.'
 }
@@ -2110,15 +2112,13 @@ try {
         )
         if ($isP2ProductionProof) {
             # P2-3 production proof. FAST_FINAL is a frame-local publication,
-            # so an AI-driven fight can legitimately sample the staged fighter on a source
-            # visibility-off frame. Count successful native submissions across
-            # the capture instead. Resolve the return line from its unique source
-            # text instead of pinning a numeric line number: P2-3 is actively
-            # extending this function and a harmless comment/edit must not move
-            # the breakpoint onto a statement where GCC has already killed
-            # owner_slot. The condition deliberately uses the caller's
-            # owner_slot rather than the production executor's optimized `slot`
-            # parameter: GDB proved the former live at this return branch.
+            # so an AI-driven fight can legitimately sample the staged fighter on a
+            # source visibility-off frame. Census the caller's observable native
+            # outcomes instead of optimized executor entries: successful native
+            # completion and post-GX failure. A pre-GX rejection necessarily drops
+            # into the generic-fallback branch already censused below. This covers
+            # every way a production attempt can leave its native path without
+            # depending on GCC's parameter-location metadata.
             $nativeProductionAttempt = @(
                 Select-String -LiteralPath (Join-Path $root 'src/port/reloc_backend_renderer_dl.c') -SimpleMatch 'native_owner_production_attempted = TRUE;'
             )
@@ -2135,6 +2135,16 @@ try {
             Assert-Condition ($nativeProductionSuccess.Count -eq 1) `
                 "Could not resolve the unique native-production success site for the $p2ProductionName census." `
                 ($nativeProductionSuccess | Out-String)
+            $nativeProductionPostGxFailure = @(
+                Select-String -LiteralPath (Join-Path $root 'src/port/reloc_backend_renderer_dl.c') -SimpleMatch 'native_owner_failed = TRUE;' |
+                    Where-Object {
+                        $_.LineNumber -gt $nativeProductionAttempt[0].LineNumber -and
+                        $_.LineNumber -lt ($nativeProductionAttempt[0].LineNumber + 150)
+                    }
+            )
+            Assert-Condition ($nativeProductionPostGxFailure.Count -eq 1) `
+                "Could not resolve the unique post-GX native-production failure site for the $p2ProductionName census." `
+                ($nativeProductionPostGxFailure | Out-String)
             $nativeProductionFallback = @(
                 Select-String -LiteralPath (Join-Path $root 'src/port/reloc_backend_renderer_dl.c') -SimpleMatch 'if (native_owner_production_attempted == FALSE)'
             )
@@ -2142,8 +2152,8 @@ try {
                 "Could not resolve the unique generic-fallback branch for the $p2ProductionName census." `
                 ($nativeProductionFallback | Out-String)
             $preBattleSetupCommands += @(
-                'set $p2_prod_returns = 0',
                 'set $p2_prod_success = 0',
+                'set $p2_prod_postgx_fail = 0',
                 'set $p2_prod_last_frame = 0',
                 'set $p2_prod_last_hw = 0',
                 'set $p2_prod_last_fast = 0',
@@ -2158,13 +2168,6 @@ try {
                 'set $p2_generic_shuffle = 0',
                 'set $p2_generic_low = 0',
                 ('break src/port/reloc_backend_renderer_dl.c:{0} if owner_slot == {1}' -f
-                    $nativeProductionAttempt[0].LineNumber, $p2ProductionNativeOwnerSlot),
-                'commands',
-                'silent',
-                'set $p2_prod_returns = $p2_prod_returns + 1',
-                'continue',
-                'end',
-                ('break src/port/reloc_backend_renderer_dl.c:{0} if owner_slot == {1}' -f
                     $nativeProductionSuccess[0].LineNumber, $p2ProductionNativeOwnerSlot),
                 'commands',
                 'silent',
@@ -2173,6 +2176,13 @@ try {
                 'set $p2_prod_last_hw = persistent_stats.hardware_triangle_count',
                 'set $p2_prod_last_fast = sNdsRendererFastTriangleCount',
                 ('set $p2_prod_last_owner = sNdsRendererFastOwnerTriangleCount[{0}]' -f $p2ProductionProfileOwnerIndex),
+                'continue',
+                'end',
+                ('break src/port/reloc_backend_renderer_dl.c:{0} if owner_slot == {1}' -f
+                    $nativeProductionPostGxFailure[0].LineNumber, $p2ProductionNativeOwnerSlot),
+                'commands',
+                'silent',
+                'set $p2_prod_postgx_fail = $p2_prod_postgx_fail + 1',
                 'continue',
                 'end',
                 ('break src/port/reloc_backend_renderer_dl.c:{0} if owner_slot == {1}' -f
@@ -2342,7 +2352,7 @@ try {
             # the long-standing Boundary marker shape for the shipping roster.
             $hardwareCommands += ('printf "FAST_P2_FIGHTER=%u\n", gNdsRendererFastOwnerTriangleCount[{0}]' -f $p2ProductionProfileOwnerIndex)
             $hardwareCommands += 'printf "P2_FIGHTER_GX=%u,%u,%u\n", gNdsR2GxComposeCaptures, gNdsR2GxComposeLocals, gNdsR2GxComposeDeclines'
-            $hardwareCommands += 'printf "P2_FIGHTER_PROD=%u,%u\n", $p2_prod_returns, $p2_prod_success'
+            $hardwareCommands += 'printf "P2_FIGHTER_PROD=%u,%u\n", $p2_prod_success, $p2_prod_postgx_fail'
             $hardwareCommands += 'printf "P2_FIGHTER_PROD_LAST=%u,%u,%u,%u\n", $p2_prod_last_frame, $p2_prod_last_hw, $p2_prod_last_fast, $p2_prod_last_owner'
             $hardwareCommands += 'printf "P2_FIGHTER_GENERIC=%u,%u,%u,%u,%u,%u,%u,%u,%u\n", $p2_generic, $p2_generic_enabled, $p2_generic_plan, $p2_generic_detailed, $p2_generic_oracle, $p2_generic_selected, $p2_generic_animlock, $p2_generic_shuffle, $p2_generic_low'
         }
@@ -2853,6 +2863,10 @@ try {
         @(Get-UnsignedMarkerMatches -Text $gdbStdout `
             -Name 'P2_FIGHTER_PROD' -FieldCount 2)
     } else { @() }
+    $p2FighterGeneric = if ($isP2ProductionProof) {
+        @(Get-UnsignedMarkerMatches -Text $gdbStdout `
+            -Name 'P2_FIGHTER_GENERIC' -FieldCount 9)
+    } else { @() }
     $m4WaterStillFinal = @(Get-UnsignedMarkerMatches -Text $gdbStdout `
         -Name 'M4_WATER_STILL_FINAL' -FieldCount 3)
     if (($RendererProfileLevel -ge 1) -and ($RendererBenchmarkSamples -gt 0)) {
@@ -3127,17 +3141,22 @@ try {
             Assert-Condition ($p2FighterProd.Count -eq 1) `
                 "Staged $p2ProductionName captured $($p2FighterProd.Count) native-production census records instead of one." `
                 $gdbStdout
+            Assert-Condition ($p2FighterGeneric.Count -eq 1) `
+                "Staged $p2ProductionName captured $($p2FighterGeneric.Count) generic-fallback census records instead of one." `
+                $gdbStdout
             Assert-Condition ($p2FighterGX.Count -eq 1) `
                 "Staged $p2ProductionName captured $($p2FighterGX.Count) GX-compose census records instead of one." `
                 $gdbStdout
             $publishedP2Triangles = (Get-Ints $fastP2Fighter[0])[0]
             $p2Prod = Get-Ints $p2FighterProd[0]
             $p2GX = Get-Ints $p2FighterGX[0]
+            $p2Generic = Get-Ints $p2FighterGeneric[0]
             # FAST_FINAL is the renderer's last *frame*, not a match aggregate.
             # Source visibility may therefore make the owner exact or absent
             # from this particular frame. P2_FIGHTER_PROD is the cross-frame
-            # debugger census: every observed staged owner must have returned
-            # native success after touching GX.
+            # debugger census: native completions must occur, post-GX failures
+            # must not occur, and no pre-GX rejection may fall through to the
+            # ordinary renderer.
             $p2Visible = ($publishedP2Triangles -eq $p2ProductionOwnerTriangles)
             $expectedPublishedFastRuns = if ($p2Visible) { 91 + $p2ProductionOwnerRuns } else { 91 }
             $expectedPublishedFastTriangles = if ($p2Visible) { 508 + $p2ProductionOwnerTriangles } else { 508 }
@@ -3155,8 +3174,9 @@ try {
             ) "Staged $p2ProductionName final-frame M3 ownership was not the exact source-visibility variant (FAST_FINAL=$($publishedFast -join ',') owner=$publishedP2Triangles)." $gdbStdout
             Assert-Condition (
                 $p2Prod[0] -gt 0 -and
-                $p2Prod[1] -eq $p2Prod[0]
-            ) "Staged $p2ProductionName did not keep every observed owner submission on the native production path (returns/success=$($p2Prod -join ','))." $gdbStdout
+                $p2Prod[1] -eq 0 -and
+                $p2Generic[0] -eq 0
+            ) "Staged $p2ProductionName left the native production path (success/postgx-fail=$($p2Prod -join ',') generic=$($p2Generic -join ','))." $gdbStdout
             Assert-Condition (
                 $p2GX[0] -gt 0 -and
                 $p2GX[1] -gt 0 -and
@@ -6070,12 +6090,18 @@ try {
                     # owner totals only increase. Window only the lifetime pair.
                     $fighterSubmitInBattle = $shwf[0]
                     $fighterTrianglesInBattle = $shwf[1]
-                    $marioTrianglesInBattle = $shwf[2] - $shwfBase[2]
+                    $p0TrianglesInBattle = $shwf[2] - $shwfBase[2]
                     $foxTrianglesInBattle = $shwf[3] - $shwfBase[3]
-                    $marioOwnerIntegral = ($marioTrianglesInBattle % 320) -eq 0
+                    $p0OwnerTriangles = if ($isP2ProductionProof) {
+                        $p2ProductionOwnerTriangles
+                    } else { 320 }
+                    $p0OwnerName = if ($isP2ProductionProof) {
+                        $p2ProductionName
+                    } else { 'Mario' }
+                    $p0OwnerIntegral = ($p0TrianglesInBattle % $p0OwnerTriangles) -eq 0
                     $foxOwnerIntegral = ($foxTrianglesInBattle % 306) -eq 0
-                    $marioOwnerCount = if ($marioOwnerIntegral) {
-                        [int]($marioTrianglesInBattle / 320)
+                    $p0OwnerCount = if ($p0OwnerIntegral) {
+                        [int]($p0TrianglesInBattle / $p0OwnerTriangles)
                     } else { -1 }
                     $foxOwnerCount = if ($foxOwnerIntegral) {
                         [int]($foxTrianglesInBattle / 306)
@@ -6085,22 +6111,24 @@ try {
                     # fighters invisible, and ftdisplaymain.c:1087-1092 skips
                     # an invisible master-display fighter. Mario/Fox then run
                     # different source Appear sequences. The strict invariant
-                    # is therefore per admitted owner: every Mario submit is
-                    # exactly 320 triangles, every Fox submit exactly 306, and
-                    # the two owner ledgers must exactly reconstruct the shared
-                    # stage-fighter totals. Requiring equal counts would reject
-                    # source-correct entry behavior.
+                    # is therefore per admitted owner: every P0 submit is the
+                    # exact source triangle count for the selected production
+                    # fighter (Mario 320 in Boundary, staged owner in P2-3), every
+                    # Fox submit is exactly 306, and the two owner ledgers must
+                    # exactly reconstruct the shared stage-fighter totals.
+                    # Requiring equal counts would reject source-correct entry
+                    # behavior.
                     Assert-Condition (
                         $stageHardwareFighter.Success -and
                         $fighterSubmitInBattle -gt 0 -and
-                        $marioOwnerCount -gt 0 -and $foxOwnerCount -gt 0 -and
-                        $marioOwnerIntegral -and $foxOwnerIntegral -and
+                        $p0OwnerCount -gt 0 -and $foxOwnerCount -gt 0 -and
+                        $p0OwnerIntegral -and $foxOwnerIntegral -and
                         $fighterTrianglesInBattle -eq
-                            ($marioTrianglesInBattle + $foxTrianglesInBattle) -and
+                            ($p0TrianglesInBattle + $foxTrianglesInBattle) -and
                         $fighterSubmitInBattle -eq
-                            ($marioOwnerCount + $foxOwnerCount) -and
+                            ($p0OwnerCount + $foxOwnerCount) -and
                         $fighterSubmitInBattle -le (2 * $drawnFrames)
-                    ) 'Canonical realtime HW build drifted from the exact battle-window Mario-320/Fox-306 source fighter triangle contract.' $gdbStdout
+                    ) "Canonical realtime HW build drifted from the exact battle-window $p0OwnerName-$p0OwnerTriangles/Fox-306 source fighter triangle contract." $gdbStdout
                 }
                 # ftdisplaymain.c:1164-1242 sets this preamble and traverses only
                 # source-selected, visible, textured fighter part display lists.
@@ -6144,7 +6172,12 @@ try {
                         $rp[16] -ge 202 -and $rp[17] -eq 0
                     ) 'Natural-event terminal frame lost triangle/vertex conservation or renderer synchronization.' $gdbStdout
                 } else {
-                    Assert-Condition ($renderProfile.Success -and $terminalWeaponFrameValid -and $rp[15] -eq (2484 + (6 * $terminalWeaponQuadCount)) -and $rp[16] -eq (828 + (2 * $terminalWeaponQuadCount)) -and $rp[17] -eq 0) 'Canonical realtime HW build drifted from the exact base plus source-weapon renderer geometry contract.' $gdbStdout
+                    $realtimeP0Triangles = if ($isP2ProductionProof) {
+                        $p2ProductionOwnerTriangles
+                    } else { 320 }
+                    $realtimeBaseTriangles = 202 + 306 + $realtimeP0Triangles
+                    $realtimeBaseVertices = 3 * $realtimeBaseTriangles
+                    Assert-Condition ($renderProfile.Success -and $terminalWeaponFrameValid -and $rp[15] -eq ($realtimeBaseVertices + (6 * $terminalWeaponQuadCount)) -and $rp[16] -eq ($realtimeBaseTriangles + (2 * $terminalWeaponQuadCount)) -and $rp[17] -eq 0) 'Canonical realtime HW build drifted from the exact base plus source-weapon renderer geometry contract.' $gdbStdout
                 }
                 if ($effectiveStaticTextureAotMode -eq 1) {
                     Assert-Condition ($rp[12] -eq 0 -and $rp[13] -eq 0) 'Static-resident realtime HW build performed a gameplay texture upload.' $gdbStdout
@@ -6398,7 +6431,17 @@ try {
                         $rs[6] -eq $rrm[1]
                     })
                 $expectedRawSubmitCount = if ($RendererFastRunMode -eq 9) { 658 } else { 648 }
+                $expectedCrossSubmitCount = 44
                 $expectedRangeSubmitCount = if ($RendererFastRunMode -eq 9) { 0 } else { 10 }
+                if ($isP2ProductionProof -and ($RendererFastRunMode -eq 9)) {
+                    # Source-program partition, not a sampled relaxation. Mario's
+                    # high owner contributes raw/cross 284/36. Luigi is identical
+                    # in this partition; Donkey's generated high owner is 274/44,
+                    # so replacing Mario moves ten triangles out of raw and eight
+                    # into cross while preserving DK's exact 318-triangle total.
+                    $expectedRawSubmitCount += $p2ProductionOwnerRawTriangles - 284
+                    $expectedCrossSubmitCount += $p2ProductionOwnerCrossTriangles - 36
+                }
                 if ($RendererBenchmarkStartEvent -ne 'None') {
                     Assert-Condition (
                         $renderSubmit.Success -and
@@ -6410,7 +6453,7 @@ try {
                         $submitTotal -eq $rp[16]
                     ) 'Natural-event terminal frame lost hybrid submit-class conservation or reported a rejected triangle.' $gdbStdout
                 } else {
-                    Assert-Condition ($renderSubmit.Success -and $rs[0] -eq $expectedRawSubmitCount -and $rs[1] -eq 0 -and $rs[2] -eq 44 -and $rs[3] -eq (126 + (2 * $terminalWeaponQuadCount)) -and $rs[4] -eq 0 -and $rs[5] -eq 0 -and $rs[6] -eq $expectedRangeSubmitCount -and $rs[7] -eq 0 -and $rawMatrixPartitionValid -and $submitTotal -eq $rp[16]) 'Canonical realtime HW build drifted from the exact base plus source-weapon hybrid submit-class partition.' $gdbStdout
+                    Assert-Condition ($renderSubmit.Success -and $rs[0] -eq $expectedRawSubmitCount -and $rs[1] -eq 0 -and $rs[2] -eq $expectedCrossSubmitCount -and $rs[3] -eq (126 + (2 * $terminalWeaponQuadCount)) -and $rs[4] -eq 0 -and $rs[5] -eq 0 -and $rs[6] -eq $expectedRangeSubmitCount -and $rs[7] -eq 0 -and $rawMatrixPartitionValid -and $submitTotal -eq $rp[16]) 'Canonical realtime HW build drifted from the exact base plus source-weapon hybrid submit-class partition.' $gdbStdout
                 }
                 Assert-Condition ($rs[8] -eq $expectedProjectedDivisions -and ($rs[8] * 4) -lt $preCutoverProjectedDivisions) 'Canonical realtime HW build did not sharply reduce and exactly account projected division demand.' $gdbStdout
                 $hardwareDivideEvaluations = $rhdiv[0] + $rhdiv[1] + $rhdiv[2]
