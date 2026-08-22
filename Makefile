@@ -4035,6 +4035,14 @@ p1-tick:
 
 else
 
+# The outer make exports the full NitroFS reloc prerequisite inventory so this
+# recursive make can inherit it without rebuilding the list.  P2-3 fighter
+# staging makes that inventory large enough to overflow the Windows/MSYS child
+# process environment even though Make itself can still consume the value.
+# Retain it as Make dependency metadata, but keep it out of every recipe's
+# environment; native devkitARM tools otherwise fail to launch with ENOENT.
+unexport NDS_NITROFS_RELOC_FILES
+
 DEPENDS := $(OFILES:.o=.d) $(NDS_PRIVATE_CHECK_OFILES:.o=.d)
 NDS_BUILD_CONFIG := $(PROJECT_ROOT)/$(BUILD)/nds_build_config.h
 NDS_SCENE_HARNESS_CONFIG := $(PROJECT_ROOT)/$(BUILD)/nds_scene_harness_config.h
