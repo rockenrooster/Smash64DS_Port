@@ -68,9 +68,8 @@ param(
     [switch]$RequireZeroPostGoTextureFence,
     [ValidateRange(0,1)][int]$FoxCpuMode = 0,
     # P2-3 focused roster proof. -1 preserves the canonical Mario/Fox match;
-    # 0/1/4 select Mario/Fox/Luigi in fighter slot 0 through the match
-    # descriptor. Luigi also enables its staged production assets for this
-    # build. Keep this narrow until later fighter production rows are admitted.
+    # 0/1/2/4 select Mario/Fox/Donkey/Luigi in fighter slot 0 through the match
+    # descriptor. Staged fighters also enable their production asset prefix.
     [ValidateRange(-1,11)][int]$P2ProofFighter0Kind = -1,
     [ValidateRange(0,1)][int]$WallpaperIncrementalMode = 0,
     [ValidateRange(0,1)][int]$LowerTextHudMode = 1,
@@ -224,9 +223,15 @@ if ($OneMinuteMatchProof -and
 if (($Task9StateHashMode -eq 1) -and -not $MatchLifecycleProof) {
     throw 'Task9StateHashMode requires the deterministic match-lifecycle proof.'
 }
-if ($P2ProofFighter0Kind -notin @(-1, 0, 1, 4)) {
-    throw 'P2ProofFighter0Kind currently supports only -1, Mario(0), Fox(1), or Luigi(4).'
+if ($P2ProofFighter0Kind -notin @(-1, 0, 1, 2, 4)) {
+    throw 'P2ProofFighter0Kind currently supports only -1, Mario(0), Fox(1), Donkey(2), or Luigi(4).'
 }
+$isP2ProductionProof = $P2ProofFighter0Kind -in @(2, 4)
+$p2ProductionName = if ($P2ProofFighter0Kind -eq 2) { 'Donkey' } else { 'Luigi' }
+$p2ProductionNativeOwnerSlot = if ($P2ProofFighter0Kind -eq 2) { 3 } else { 2 }
+$p2ProductionProfileOwnerIndex = if ($P2ProofFighter0Kind -eq 2) { 4 } else { 3 }
+$p2ProductionOwnerTriangles = if ($P2ProofFighter0Kind -eq 2) { 318 } else { 320 }
+$p2ProductionOwnerRuns = if ($P2ProofFighter0Kind -eq 2) { 62 } else { 32 }
 if ($Task9StateHashExportPath -and ($Task9StateHashMode -ne 1)) {
     throw 'Task9StateHashExportPath requires Task9StateHashMode 1.'
 }
@@ -1034,6 +1039,11 @@ if ($P2ProofFighter0Kind -ge 0) {
     $makeArgs += "NDS_P2_PROOF_FIGHTER0=$P2ProofFighter0Kind"
     if ($P2ProofFighter0Kind -eq 4) {
         $makeArgs += 'NDS_P2_LUIGI=1'
+    } elseif ($P2ProofFighter0Kind -eq 2) {
+        # Donkey is owner slot 3 and therefore keeps the already-admitted Luigi
+        # slot 2 in the dense P2 owner ABI even though Luigi is not in the match.
+        $makeArgs += 'NDS_P2_LUIGI=1'
+        $makeArgs += 'NDS_P2_DONKEY=1'
     }
 }
 if ($ImportBattleShipFTManager) {
@@ -1119,6 +1129,12 @@ if ($P2ProofFighter0Kind -ge 0) {
         Assert-Condition ($bg0BuildConfigText -match
             '(?m)^#define NDS_P2_LUIGI 1$') `
             'Luigi proof build did not enable the staged Luigi production assets.' `
+            $bg0BuildConfigText
+    } elseif ($P2ProofFighter0Kind -eq 2) {
+        Assert-Condition (($bg0BuildConfigText -match
+            '(?m)^#define NDS_P2_LUIGI 1$') -and ($bg0BuildConfigText -match
+            '(?m)^#define NDS_P2_DONKEY 1$')) `
+            'Donkey proof build did not enable the dense Luigi+Donkey production owner prefix.' `
             $bg0BuildConfigText
     }
 }
@@ -2092,9 +2108,9 @@ try {
             'tbreak scVSBattleStartBattle',
             'continue'
         )
-        if ($P2ProofFighter0Kind -eq 4) {
+        if ($isP2ProductionProof) {
             # P2-3 production proof. FAST_FINAL is a frame-local publication,
-            # so an AI-driven fight can legitimately sample Luigi on a source
+            # so an AI-driven fight can legitimately sample the staged fighter on a source
             # visibility-off frame. Count successful native submissions across
             # the capture instead. Resolve the return line from its unique source
             # text instead of pinning a numeric line number: P2-3 is actively
@@ -2107,7 +2123,7 @@ try {
                 Select-String -LiteralPath (Join-Path $root 'src/port/reloc_backend_renderer_dl.c') -SimpleMatch 'native_owner_production_attempted = TRUE;'
             )
             Assert-Condition ($nativeProductionAttempt.Count -eq 1) `
-                'Could not resolve the unique native-production attempt site for the Luigi census.' `
+                "Could not resolve the unique native-production attempt site for the $p2ProductionName census." `
                 ($nativeProductionAttempt | Out-String)
             $nativeProductionSuccess = @(
                 Select-String -LiteralPath (Join-Path $root 'src/port/reloc_backend_renderer_dl.c') -SimpleMatch 'runtime_hardware_triangle_count =' |
@@ -2117,62 +2133,62 @@ try {
                     }
             )
             Assert-Condition ($nativeProductionSuccess.Count -eq 1) `
-                'Could not resolve the unique native-production success site for the Luigi census.' `
+                "Could not resolve the unique native-production success site for the $p2ProductionName census." `
                 ($nativeProductionSuccess | Out-String)
             $nativeProductionFallback = @(
                 Select-String -LiteralPath (Join-Path $root 'src/port/reloc_backend_renderer_dl.c') -SimpleMatch 'if (native_owner_production_attempted == FALSE)'
             )
             Assert-Condition ($nativeProductionFallback.Count -eq 1) `
-                'Could not resolve the unique generic-fallback branch for the Luigi census.' `
+                "Could not resolve the unique generic-fallback branch for the $p2ProductionName census." `
                 ($nativeProductionFallback | Out-String)
             $preBattleSetupCommands += @(
-                'set $p2_luigi_prod_returns = 0',
-                'set $p2_luigi_prod_success = 0',
-                'set $p2_luigi_prod_last_frame = 0',
-                'set $p2_luigi_prod_last_hw = 0',
-                'set $p2_luigi_prod_last_fast = 0',
-                'set $p2_luigi_prod_last_owner = 0',
-                'set $p2_luigi_generic = 0',
-                'set $p2_luigi_generic_enabled = 0',
-                'set $p2_luigi_generic_plan = 0',
-                'set $p2_luigi_generic_detailed = 0',
-                'set $p2_luigi_generic_oracle = 0',
-                'set $p2_luigi_generic_selected = 0',
-                'set $p2_luigi_generic_animlock = 0',
-                'set $p2_luigi_generic_shuffle = 0',
-                'set $p2_luigi_generic_low = 0',
-                ('break src/port/reloc_backend_renderer_dl.c:{0} if owner_slot == 2' -f
-                    $nativeProductionAttempt[0].LineNumber),
+                'set $p2_prod_returns = 0',
+                'set $p2_prod_success = 0',
+                'set $p2_prod_last_frame = 0',
+                'set $p2_prod_last_hw = 0',
+                'set $p2_prod_last_fast = 0',
+                'set $p2_prod_last_owner = 0',
+                'set $p2_generic = 0',
+                'set $p2_generic_enabled = 0',
+                'set $p2_generic_plan = 0',
+                'set $p2_generic_detailed = 0',
+                'set $p2_generic_oracle = 0',
+                'set $p2_generic_selected = 0',
+                'set $p2_generic_animlock = 0',
+                'set $p2_generic_shuffle = 0',
+                'set $p2_generic_low = 0',
+                ('break src/port/reloc_backend_renderer_dl.c:{0} if owner_slot == {1}' -f
+                    $nativeProductionAttempt[0].LineNumber, $p2ProductionNativeOwnerSlot),
                 'commands',
                 'silent',
-                'set $p2_luigi_prod_returns = $p2_luigi_prod_returns + 1',
+                'set $p2_prod_returns = $p2_prod_returns + 1',
                 'continue',
                 'end',
-                ('break src/port/reloc_backend_renderer_dl.c:{0} if owner_slot == 2' -f
-                    $nativeProductionSuccess[0].LineNumber),
+                ('break src/port/reloc_backend_renderer_dl.c:{0} if owner_slot == {1}' -f
+                    $nativeProductionSuccess[0].LineNumber, $p2ProductionNativeOwnerSlot),
                 'commands',
                 'silent',
-                'set $p2_luigi_prod_success = $p2_luigi_prod_success + 1',
-                'set $p2_luigi_prod_last_frame = gNdsRendererProfileFrameCount',
-                'set $p2_luigi_prod_last_hw = persistent_stats.hardware_triangle_count',
-                'set $p2_luigi_prod_last_fast = sNdsRendererFastTriangleCount',
-                'set $p2_luigi_prod_last_owner = sNdsRendererFastOwnerTriangleCount[3]',
+                'set $p2_prod_success = $p2_prod_success + 1',
+                'set $p2_prod_last_frame = gNdsRendererProfileFrameCount',
+                'set $p2_prod_last_hw = persistent_stats.hardware_triangle_count',
+                'set $p2_prod_last_fast = sNdsRendererFastTriangleCount',
+                ('set $p2_prod_last_owner = sNdsRendererFastOwnerTriangleCount[{0}]' -f $p2ProductionProfileOwnerIndex),
                 'continue',
                 'end',
-                ('break src/port/reloc_backend_renderer_dl.c:{0} if owner_slot == 2' -f
-                    $nativeProductionFallback[0].LineNumber),
+                ('break src/port/reloc_backend_renderer_dl.c:{0} if owner_slot == {1}' -f
+                    $nativeProductionFallback[0].LineNumber, $p2ProductionNativeOwnerSlot),
                 'commands',
                 'silent',
-                'set $p2_luigi_generic = $p2_luigi_generic + 1',
-                'if $p2_luigi_generic == 1',
-                'set $p2_luigi_generic_enabled = native_owner_enabled',
-                'set $p2_luigi_generic_plan = native_owner_plan_hit',
-                'set $p2_luigi_generic_detailed = detailed_output',
-                'set $p2_luigi_generic_oracle = no_oracle',
-                'set $p2_luigi_generic_selected = collection.selected_count',
-                'set $p2_luigi_generic_animlock = fp->is_use_animlocks',
-                'set $p2_luigi_generic_shuffle = fp->shuffle_tics',
-                'set $p2_luigi_generic_low = use_low_detail',
+                'set $p2_generic = $p2_generic + 1',
+                'if $p2_generic == 1',
+                'set $p2_generic_enabled = native_owner_enabled',
+                'set $p2_generic_plan = native_owner_plan_hit',
+                'set $p2_generic_detailed = detailed_output',
+                'set $p2_generic_oracle = no_oracle',
+                'set $p2_generic_selected = collection.selected_count',
+                'set $p2_generic_animlock = fp->is_use_animlocks',
+                'set $p2_generic_shuffle = fp->shuffle_tics',
+                'set $p2_generic_low = use_low_detail',
                 'end',
                 'continue',
                 'end'
@@ -2319,16 +2335,16 @@ try {
             'printf "FAST_FINAL=%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererFastRunMode, gNdsRendererFastRunCount, gNdsRendererFastTriangleCount, gNdsRendererFastOwnerTriangleCount[0], gNdsRendererFastOwnerTriangleCount[1], gNdsRendererFastOwnerTriangleCount[2], gNdsRendererFastFallbackCount[0], gNdsRendererFastFallbackCount[1], gNdsRendererFastFallbackCount[2]',
             'printf "M4_WATER_STILL_FINAL=%u,%u,%u\n", gNdsPupupuWaterStillFreezeCount, gNdsPupupuWaterStillFreezeFailCount, gNdsPupupuWaterStillFreezeResult'
         )
-        if ($P2ProofFighter0Kind -eq 4) {
+        if ($isP2ProductionProof) {
             # P2-3: the canonical FAST_FINAL schema deliberately remains the
-            # published stage/Mario/Fox contract. A staged Luigi build adds one
+            # published stage/Mario/Fox contract. A staged fighter adds one
             # profile-owner bucket, so sample it separately instead of changing
             # the long-standing Boundary marker shape for the shipping roster.
-            $hardwareCommands += 'printf "FAST_P2_FIGHTER=%u\n", gNdsRendererFastOwnerTriangleCount[3]'
+            $hardwareCommands += ('printf "FAST_P2_FIGHTER=%u\n", gNdsRendererFastOwnerTriangleCount[{0}]' -f $p2ProductionProfileOwnerIndex)
             $hardwareCommands += 'printf "P2_FIGHTER_GX=%u,%u,%u\n", gNdsR2GxComposeCaptures, gNdsR2GxComposeLocals, gNdsR2GxComposeDeclines'
-            $hardwareCommands += 'printf "P2_LUIGI_PROD=%u,%u\n", $p2_luigi_prod_returns, $p2_luigi_prod_success'
-            $hardwareCommands += 'printf "P2_LUIGI_PROD_LAST=%u,%u,%u,%u\n", $p2_luigi_prod_last_frame, $p2_luigi_prod_last_hw, $p2_luigi_prod_last_fast, $p2_luigi_prod_last_owner'
-            $hardwareCommands += 'printf "P2_LUIGI_GENERIC=%u,%u,%u,%u,%u,%u,%u,%u,%u\n", $p2_luigi_generic, $p2_luigi_generic_enabled, $p2_luigi_generic_plan, $p2_luigi_generic_detailed, $p2_luigi_generic_oracle, $p2_luigi_generic_selected, $p2_luigi_generic_animlock, $p2_luigi_generic_shuffle, $p2_luigi_generic_low'
+            $hardwareCommands += 'printf "P2_FIGHTER_PROD=%u,%u\n", $p2_prod_returns, $p2_prod_success'
+            $hardwareCommands += 'printf "P2_FIGHTER_PROD_LAST=%u,%u,%u,%u\n", $p2_prod_last_frame, $p2_prod_last_hw, $p2_prod_last_fast, $p2_prod_last_owner'
+            $hardwareCommands += 'printf "P2_FIGHTER_GENERIC=%u,%u,%u,%u,%u,%u,%u,%u,%u\n", $p2_generic, $p2_generic_enabled, $p2_generic_plan, $p2_generic_detailed, $p2_generic_oracle, $p2_generic_selected, $p2_generic_animlock, $p2_generic_shuffle, $p2_generic_low'
         }
         if ($m4CandidateEvidence) {
             $hardwareCommands += 'printf "VRAM_BANKS=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", *(volatile unsigned char *)0x04000240, *(volatile unsigned char *)0x04000241, *(volatile unsigned char *)0x04000242, *(volatile unsigned char *)0x04000243, *(volatile unsigned char *)0x04000244, *(volatile unsigned char *)0x04000245, *(volatile unsigned char *)0x04000246, *(volatile unsigned char *)0x04000248, gNdsRendererBattleStaticTextureFirstAddress, gNdsRendererBattleStaticTextureEndAddress, gNdsRendererBattleStaticTextureAllocationSpanBytes, gNdsRendererBattleStaticTextureBankMask'
@@ -2825,17 +2841,17 @@ try {
         -Name 'M4_FENCE_FINAL' -FieldCount 24)
     $fastFinal = @(Get-UnsignedMarkerMatches -Text $gdbStdout `
         -Name 'FAST_FINAL' -FieldCount 9)
-    $fastP2Fighter = if ($P2ProofFighter0Kind -eq 4) {
+    $fastP2Fighter = if ($isP2ProductionProof) {
         @(Get-UnsignedMarkerMatches -Text $gdbStdout `
             -Name 'FAST_P2_FIGHTER' -FieldCount 1)
     } else { @() }
-    $p2FighterGX = if ($P2ProofFighter0Kind -eq 4) {
+    $p2FighterGX = if ($isP2ProductionProof) {
         @(Get-UnsignedMarkerMatches -Text $gdbStdout `
             -Name 'P2_FIGHTER_GX' -FieldCount 3)
     } else { @() }
-    $p2LuigiProd = if ($P2ProofFighter0Kind -eq 4) {
+    $p2FighterProd = if ($isP2ProductionProof) {
         @(Get-UnsignedMarkerMatches -Text $gdbStdout `
-            -Name 'P2_LUIGI_PROD' -FieldCount 2)
+            -Name 'P2_FIGHTER_PROD' -FieldCount 2)
     } else { @() }
     $m4WaterStillFinal = @(Get-UnsignedMarkerMatches -Text $gdbStdout `
         -Name 'M4_WATER_STILL_FINAL' -FieldCount 3)
@@ -3104,29 +3120,29 @@ try {
         foreach ($fenceCount in $publishedM4[14..23]) {
             $publishedFenceCountSum += $fenceCount
         }
-        if ($P2ProofFighter0Kind -eq 4) {
+        if ($isP2ProductionProof) {
             Assert-Condition ($fastP2Fighter.Count -eq 1) `
-                "Staged Luigi captured $($fastP2Fighter.Count) FAST_P2_FIGHTER records instead of one." `
+                "Staged $p2ProductionName captured $($fastP2Fighter.Count) FAST_P2_FIGHTER records instead of one." `
                 $gdbStdout
-            Assert-Condition ($p2LuigiProd.Count -eq 1) `
-                "Staged Luigi captured $($p2LuigiProd.Count) native-production census records instead of one." `
+            Assert-Condition ($p2FighterProd.Count -eq 1) `
+                "Staged $p2ProductionName captured $($p2FighterProd.Count) native-production census records instead of one." `
                 $gdbStdout
             Assert-Condition ($p2FighterGX.Count -eq 1) `
-                "Staged Luigi captured $($p2FighterGX.Count) GX-compose census records instead of one." `
+                "Staged $p2ProductionName captured $($p2FighterGX.Count) GX-compose census records instead of one." `
                 $gdbStdout
-            $publishedLuigiTriangles = (Get-Ints $fastP2Fighter[0])[0]
-            $luigiProd = Get-Ints $p2LuigiProd[0]
-            $luigiGX = Get-Ints $p2FighterGX[0]
+            $publishedP2Triangles = (Get-Ints $fastP2Fighter[0])[0]
+            $p2Prod = Get-Ints $p2FighterProd[0]
+            $p2GX = Get-Ints $p2FighterGX[0]
             # FAST_FINAL is the renderer's last *frame*, not a match aggregate.
-            # Source visibility may therefore make Luigi either one exact
-            # 32-run/320-triangle owner or absent from this particular frame.
-            # P2_LUIGI_PROD is the cross-frame debugger census: every observed
-            # Luigi owner must have returned native success after touching GX.
-            $luigiVisible = ($publishedLuigiTriangles -eq 320)
-            $expectedPublishedFastRuns = if ($luigiVisible) { 123 } else { 91 }
-            $expectedPublishedFastTriangles = if ($luigiVisible) { 828 } else { 508 }
+            # Source visibility may therefore make the owner exact or absent
+            # from this particular frame. P2_FIGHTER_PROD is the cross-frame
+            # debugger census: every observed staged owner must have returned
+            # native success after touching GX.
+            $p2Visible = ($publishedP2Triangles -eq $p2ProductionOwnerTriangles)
+            $expectedPublishedFastRuns = if ($p2Visible) { 91 + $p2ProductionOwnerRuns } else { 91 }
+            $expectedPublishedFastTriangles = if ($p2Visible) { 508 + $p2ProductionOwnerTriangles } else { 508 }
             Assert-Condition (
-                ($publishedLuigiTriangles -eq 0 -or $luigiVisible) -and
+                ($publishedP2Triangles -eq 0 -or $p2Visible) -and
                 $publishedFast[0] -eq 9 -and
                 $publishedFast[1] -eq $expectedPublishedFastRuns -and
                 $publishedFast[2] -eq $expectedPublishedFastTriangles -and
@@ -3136,16 +3152,16 @@ try {
                 $publishedFast[6] -eq 0 -and
                 $publishedFast[7] -eq 0 -and
                 $publishedFast[8] -eq 0
-            ) "Staged Luigi final-frame M3 ownership was not the exact source-visibility variant (FAST_FINAL=$($publishedFast -join ',') Luigi=$publishedLuigiTriangles)." $gdbStdout
+            ) "Staged $p2ProductionName final-frame M3 ownership was not the exact source-visibility variant (FAST_FINAL=$($publishedFast -join ',') owner=$publishedP2Triangles)." $gdbStdout
             Assert-Condition (
-                $luigiProd[0] -gt 0 -and
-                $luigiProd[1] -eq $luigiProd[0]
-            ) "Staged Luigi did not keep every observed owner submission on the native production path (returns/success=$($luigiProd -join ','))." $gdbStdout
+                $p2Prod[0] -gt 0 -and
+                $p2Prod[1] -eq $p2Prod[0]
+            ) "Staged $p2ProductionName did not keep every observed owner submission on the native production path (returns/success=$($p2Prod -join ','))." $gdbStdout
             Assert-Condition (
-                $luigiGX[0] -gt 0 -and
-                $luigiGX[1] -gt 0 -and
-                $luigiGX[2] -eq 0
-            ) "Staged Luigi GX matrix composition declined a live owner (captures/locals/declines=$($luigiGX -join ','))." $gdbStdout
+                $p2GX[0] -gt 0 -and
+                $p2GX[1] -gt 0 -and
+                $p2GX[2] -eq 0
+            ) "Staged $p2ProductionName GX matrix composition declined a live owner (captures/locals/declines=$($p2GX -join ','))." $gdbStdout
         } else {
             Assert-Condition (
                 $publishedFast[0] -eq 9 -and
@@ -6160,6 +6176,16 @@ try {
                     $expectedBatchBegin = 105
                     $expectedBatchReuse = 723
                     $expectedBatchEnd = 105
+                } elseif (($P2ProofFighter0Kind -eq 2) -and
+                    ($RendererProfileLevel -lt 2) -and
+                    ($RendererFastRunMode -eq 9)) {
+                    # Source-derived DK high owner: replacing Mario's measured
+                    # 18 begin / 302 reuse / 18 texture-prepare contribution
+                    # with DK's 34 / 284 / 28 (and 290 texture reuses) yields
+                    # the exact two-fighter terminal-frame totals below.
+                    $expectedBatchBegin = 119
+                    $expectedBatchReuse = 707
+                    $expectedBatchEnd = 119
                 }
                 $expectedBatchBegin += $terminalWeaponQuadCount
                 $expectedBatchReuse += $terminalWeaponQuadCount
@@ -6167,12 +6193,16 @@ try {
                 $expectedTexturePrepareBegin =
                     $(if (($P2ProofFighter0Kind -eq 4) -and
                            ($RendererFastRunMode -eq 9)) { 51 }
+                      elseif (($P2ProofFighter0Kind -eq 2) -and
+                              ($RendererFastRunMode -eq 9)) { 59 }
                       elseif ($RendererFastRunMode -eq 9) { 49 }
                       else { 98 }) +
                     $terminalWeaponQuadCount
                 $expectedTexturePrepareReuse =
                     $(if (($P2ProofFighter0Kind -eq 4) -and
                            ($RendererFastRunMode -eq 9)) { 723 }
+                      elseif (($P2ProofFighter0Kind -eq 2) -and
+                              ($RendererFastRunMode -eq 9)) { 713 }
                       elseif ($RendererFastRunMode -eq 9) { 725 }
                       else { 730 }) +
                     $terminalWeaponQuadCount

@@ -12,6 +12,7 @@
 
 GObj *efManagerMarioEntryDokanMakeEffect(Vec3f *pos, s32 fkind);
 GObj *efManagerFoxEntryArwingMakeEffect(Vec3f *pos, s32 lr);
+GObj *efManagerDonkeyEntryTaruMakeEffect(Vec3f *pos);
 void ndsEFManagerRetryDeferredDescs(void);
 
 /* P2-2 normal-match entry parity.
@@ -161,6 +162,17 @@ void ftCommonAppearSetStatus(GObj *fighter_gobj)
         efManagerFoxEntryArwingMakeEffect(
             &fp->entry_pos, fp->status_vars.common.entry.lr);
     }
+#if NDS_P2_DONKEY
+    else if (fp->fkind == nFTKindDonkey)
+    {
+        /* BattleShip ftcommonentry.c:15,204-207. DK owns distinct Appear
+         * statuses and the Special2 barrel entry; using EntryNull here leaves
+         * the source's initial invisibility latched for the whole match. */
+        status_id = (entry_id == 0) ? nFTDonkeyStatusAppearR :
+                                      nFTDonkeyStatusAppearL;
+        efManagerDonkeyEntryTaruMakeEffect(&fp->entry_pos);
+    }
+#endif
     else
     {
         /* Unsupported in P2-2. Source uses EntryNull for polygon fighters;

@@ -164,6 +164,9 @@ void ndsMNPlayersVSPreviewInit(void)
 #if NDS_P2_LUIGI
     ftManagerSetupFilesAllKind(nFTKindLuigi);
 #endif
+#if NDS_P2_DONKEY
+    ftManagerSetupFilesAllKind(nFTKindDonkey);
+#endif
 
     for (i = 0; i < ARRAY_COUNT(sMNPlayersVSSlots); i++)
     {
@@ -289,6 +292,9 @@ void ndsMNPlayersVSPreviewSync(u32 slot, s32 pkind, s32 fkind,
     if ((fkind != nFTKindMario) && (fkind != nFTKindFox)
 #if NDS_P2_LUIGI
         && (fkind != nFTKindLuigi)
+#endif
+#if NDS_P2_DONKEY
+        && (fkind != nFTKindDonkey)
 #endif
     )
     {

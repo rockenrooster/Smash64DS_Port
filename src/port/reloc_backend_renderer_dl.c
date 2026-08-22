@@ -16252,6 +16252,13 @@ static sb32 ndsFighterGetNativeOwnerSlot(const FTStruct *fp, u32 *owner_slot)
         return TRUE;
     }
 #endif
+#if NDS_P2_DONKEY
+    if (fp->fkind == nFTKindDonkey)
+    {
+        *owner_slot = 3u;
+        return TRUE;
+    }
+#endif
     return FALSE;
 }
 
@@ -16271,6 +16278,12 @@ static u32 ndsFighterNativeOwnerModelAssetId(u32 owner_slot)
         return 0x143u; /* llLuigiModelFileID, BattleShip dFTLuigiData */
     }
 #endif
+#if NDS_P2_DONKEY
+    if (owner_slot == 3u)
+    {
+        return 0x13du; /* llDonkeyModelFileID, BattleShip dFTDonkeyData */
+    }
+#endif
     return 0u;
 }
 
@@ -16288,6 +16301,12 @@ static NDSRendererProfileOwner ndsFighterNativeOwnerProfileId(u32 owner_slot)
     if (owner_slot == 2u)
     {
         return NDS_RENDERER_PROFILE_OWNER_LUIGI;
+    }
+#endif
+#if NDS_P2_DONKEY
+    if (owner_slot == 3u)
+    {
+        return NDS_RENDERER_PROFILE_OWNER_DONKEY;
     }
 #endif
     return NDS_RENDERER_PROFILE_OWNER_NONE;

@@ -285,6 +285,11 @@ P2_O2R_ASSETS = {
         0x0143,
         "793c2f3ae89aa8925f4cd715b40a79b3fe9236c033d84a4e270f09bc88dd4247",
     ),
+    "donkey": (
+        Path("decomp/BattleShip-main/BattleShip_o2r/reloc_fighters_main/DonkeyModel"),
+        0x013d,
+        "bced84a9d8aa1a2c08ed9f87994bb06a836dfb8b7a797fec365dd68655f9e2f8",
+    ),
 }
 
 # These are the primary JointTree DObjDesc arrays in the exact hashed O2R
@@ -302,6 +307,8 @@ OWNER_JOINT_TREES = {
     "fox": (0x2938, 28),
     # decomp dLuigiModel_JointTree (323_LuigiModel.c:1032)
     "luigi": (0x2410, 26),
+    # decomp dDonkeyModel_JointTree (317_DonkeyModel.c:1646)
+    "donkey": (0x39a8, 27),
 }
 
 # The SECOND JointTree array in each hashed O2R resource is the low-detail
@@ -317,6 +324,8 @@ OWNER_JOINT_TREES_LOW = {
     "fox": (0x5510, 28),
     # decomp dLuigiModel_JointTree_0x49E8 (323_LuigiModel.c:2284)
     "luigi": (0x49e8, 26),
+    # decomp dDonkeyModel_JointTree_0x6EC0 (317_DonkeyModel.c:3379)
+    "donkey": (0x6ec0, 27),
 }
 
 # Canonical export hashes for the low-detail program, pinned from the same
@@ -377,6 +386,8 @@ OWNER_SETUP_PARTS = {
     "fox": (0xffffffc0, 0x00000000),
     # dLuigiMain_setup_parts (221_LuigiMain.c:87)
     "luigi": (0xffffff00, 0x00000000),
+    # dDonkeyMain_setup_parts (213_DonkeyMain.c:103)
+    "donkey": (0xffffff80, 0x00000000),
 }
 
 # Slots 0..15 remain reserved for the camera seed and live GX hierarchy stack.
@@ -399,12 +410,19 @@ OWNER_CROSS_BINDING_SLOTS = {
         (1, 16), (2, 17), (5, 18), (6, 19),
         (8, 20), (9, 21), (11, 22), (12, 23),
     ),
+    # Derived from Donkey's own high/low O2R triangle binding sets. Both detail
+    # levels use this exact set; slots 16..25 remain outside the hierarchy stack.
+    "donkey": (
+        (0, 16), (1, 17), (2, 18), (3, 19), (6, 20),
+        (7, 21), (10, 22), (11, 23), (13, 24), (14, 25),
+    ),
 }
 
 OWNER_PLAN_COUNTS = {
     "mario": (25, 14),
     "fox": (27, 18),
     "luigi": (25, 14),
+    "donkey": (26, 16),
 }
 
 # camera seeds, hierarchy pushes, hierarchy pops, cross-binding stores, and
@@ -413,6 +431,7 @@ OWNER_GX_PLAN_COUNTS = {
     "mario": (1, 5, 5, 8, 70),
     "fox": (1, 6, 6, 2, 14),
     "luigi": (1, 5, 5, 8, 70),
+    "donkey": (1, 6, 6, 10, 80),
 }
 
 # The low-detail program shares the high skeleton (same pushes/pops/stores);
@@ -423,6 +442,7 @@ DETAIL_GX_PLAN_COUNTS = {
         "mario": (1, 5, 5, 8, 46),
         "fox": (1, 6, 6, 2, 10),
         "luigi": (1, 5, 5, 8, 46),
+        "donkey": (1, 6, 6, 10, 74),
     },
 }
 
@@ -839,7 +859,19 @@ P2_OWNER_MODEL_CENSUS = {
         "high": (23, 56, 42, 320, 32, 20, 14, 264, 960, 9, 44, 8, 70),
         "low": (25, 61, 32, 200, 20, 20, 14, 181, 600, 4, 44, 8, 46),
     },
+    "donkey": {
+        "high": (60, 259, 57, 318, 62, 34, 16, 315, 954, 22, 64, 0, 80),
+        "low": (50, 202, 44, 200, 42, 25, 16, 201, 600, 14, 64, 0, 74),
+    },
 }
+
+# Admission order is the native-owner slot ABI after frozen Mario/Fox. Keep the
+# build flag beside the owner name so generation and runtime selection cannot
+# silently disagree about which independent table set owns a slot.
+P2_RUNTIME_OWNERS = (
+    ("luigi", "NDS_P2_LUIGI"),
+    ("donkey", "NDS_P2_DONKEY"),
+)
 
 
 def build_p2_owner_model_inventory(
@@ -1298,7 +1330,12 @@ def derive_direct_epoch_policies(state, sequence, epochs, owner_roots,
     (effect 3), the cull-none flag from the geometry word (effect 5) having
     bit 0x400 clear at runs time -- that is exactly how the frozen high sets
     behave (epoch 20 clears the bit in its after-span, epoch 21 inherits it
-    through empty spans, epoch 22 restores it).  Pass expected_policies to
+    through empty spans, epoch 22 restores it).  Root tail spans are replayed
+    too, because the runtime applies `root->tail_state_*` after the last epoch
+    and before the next display list. Donkey makes that ordering observable:
+    root 0x30d8 clears culling for its triangle at command 21 and restores it
+    in the tail at command 26, so carrying the pre-tail no-cull state into root
+    0x31c0 rejects a source-correct live preamble. Pass expected_policies to
     demand an exact match against a known-good table; the high context must
     reproduce its frozen table before the low output is trusted.
     """
@@ -1312,7 +1349,8 @@ def derive_direct_epoch_policies(state, sequence, epochs, owner_roots,
         combine = None
         cull_on = True
         for root in roots:
-            _offset, first_epoch, _tail, _commands, epoch_count = root[:5]
+            (_offset, first_epoch, tail_first, _commands, epoch_count,
+             tail_count) = root[:6]
             for epoch_index in range(first_epoch, first_epoch + epoch_count):
                 epoch = epochs[epoch_index]
                 (before_first, after_first, _first_action, _first_run,
@@ -1334,6 +1372,14 @@ def derive_direct_epoch_policies(state, sequence, epochs, owner_roots,
                 if not cull_on:
                     family |= DIRECT_POLICY_CULL_NONE
                 result[epoch_index] = family
+            if tail_count:
+                for i in range(tail_count):
+                    delta_index = sequence[tail_first + i]
+                    w0, w1, effect = state[delta_index]
+                    if effect == 3:  # NDS_NATIVE_STATE_COMBINE
+                        combine = (w0, w1)
+                    elif effect == 5:  # NDS_NATIVE_STATE_GEOMETRY
+                        cull_on = (w1 & 0x400) != 0
     if any(family is None for family in result):
         raise ValueError("an epoch was never reached by the root walk")
     if expected_policies is not None and result != list(expected_policies):
@@ -3350,19 +3396,24 @@ def generate(repo_root: Path | None = None) -> str:
             low_runs, low_packed_corners, low_run_first_corner, 2),
     }
     # P2-3 keeps new owners as independent programs so the qualified Mario/Fox
-    # arrays above are not reindexed.  They are emitted behind the admission
-    # flag and therefore have zero code/data cost in the standing P2-2 build.
-    luigi_high_context = build_p2_owner_runtime_context(
-        repo_root, "luigi", "high"
-    )
-    luigi_low_context = build_p2_owner_runtime_context(
-        repo_root, "luigi", "low"
-    )
-    if (luigi_high_context["light_preambles"] !=
-            luigi_low_context["light_preambles"]):
-        raise ValueError("Luigi High/Low root light preambles differ")
-    luigi_low_context["high_light_preambles"] = \
-        luigi_high_context["light_preambles"]
+    # arrays above are not reindexed. They are emitted behind per-owner admission
+    # flags and therefore have zero code/data cost in the standing P2-2 build.
+    p2_runtime_contexts = {}
+    for owner_name, _flag in P2_RUNTIME_OWNERS:
+        p2_high_context = build_p2_owner_runtime_context(
+            repo_root, owner_name, "high"
+        )
+        p2_low_context = build_p2_owner_runtime_context(
+            repo_root, owner_name, "low"
+        )
+        if (p2_high_context["light_preambles"] !=
+                p2_low_context["light_preambles"]):
+            raise ValueError(
+                f"{owner_name}: High/Low root light preambles differ"
+            )
+        p2_low_context["high_light_preambles"] = \
+            p2_high_context["light_preambles"]
+        p2_runtime_contexts[owner_name] = (p2_high_context, p2_low_context)
 
     lines = [
         "/* Generated by scripts/generate_nds_native_owners.py. */",
@@ -3833,14 +3884,16 @@ def generate(repo_root: Path | None = None) -> str:
              low_context["owner_light_preamble_indices"]["fox"])],
     )
     lines += ["#endif", ""]
-    lines += [
-        "#if NDS_P2_LUIGI",
-        "/* P2-3: independent source-derived Luigi runtime owner. */",
-        "",
-    ]
-    lines += render_p2_owner_runtime_program(luigi_high_context)
-    lines += render_p2_owner_runtime_program(luigi_low_context)
-    lines += ["#endif  /* NDS_P2_LUIGI */", ""]
+    for owner_name, flag in P2_RUNTIME_OWNERS:
+        high_context, low_context = p2_runtime_contexts[owner_name]
+        lines += [
+            f"#if {flag}",
+            f"/* P2-3: independent source-derived {owner_name.title()} runtime owner. */",
+            "",
+        ]
+        lines += render_p2_owner_runtime_program(high_context)
+        lines += render_p2_owner_runtime_program(low_context)
+        lines += [f"#endif  /* {flag} */", ""]
     return "\n".join(lines)
 
 

@@ -121,14 +121,22 @@ static const NDSRelocAssetEntry sNdsRelocAssets[] = {
     { 0x12b, 0x12b, "nitro:/reloc/reloc_extern_data/MiscData299" },
     { 0x13b, 0x13b, "nitro:/reloc/reloc_extern_data/MiscData315" },
     { 0x6d, 0x6d, "nitro:/reloc/reloc_extern_data/ExternDataBank109" },
-#if NDS_P2_LUIGI
+#if NDS_P2_LUIGI || NDS_P2_DONKEY
     /* P2-3: these rows are generated from BattleShip FTData / relocData and
      * O2R headers.  Keeping the path table generated is the first production
      * pipeline invariant: admitting another fighter must not grow a second
      * hand-maintained asset manifest here. */
 #define NDS_P2_FIGHTER_ASSET_ENTRY(symbol_, id_, path_) { id_, id_, path_ },
+#define NDS_P2_FIGHTER_DEPENDENCY_ENTRY(id_, path_) { id_, id_, path_ },
+#if NDS_P2_LUIGI
     NDS_P2_LUIGI_CORE_ASSET_ROWS(NDS_P2_FIGHTER_ASSET_ENTRY)
-    NDS_P2_LUIGI_ANIM_ASSET_ROWS(NDS_P2_FIGHTER_ASSET_ENTRY)
+    NDS_P2_LUIGI_DEPENDENCY_ASSET_ROWS(NDS_P2_FIGHTER_DEPENDENCY_ENTRY)
+#endif
+#if NDS_P2_DONKEY
+    NDS_P2_DONKEY_CORE_ASSET_ROWS(NDS_P2_FIGHTER_ASSET_ENTRY)
+    NDS_P2_DONKEY_DEPENDENCY_ASSET_ROWS(NDS_P2_FIGHTER_DEPENDENCY_ENTRY)
+#endif
+#undef NDS_P2_FIGHTER_DEPENDENCY_ENTRY
 #undef NDS_P2_FIGHTER_ASSET_ENTRY
 #endif
 };
@@ -268,6 +276,56 @@ static const NDSRelocAssetEntry *ndsRelocAssetFoxAnimEntry(u32 asset_id)
     return &entry;
 }
 
+#if NDS_P2_LUIGI || NDS_P2_DONKEY
+/* P2-3 fighter-local animation O2Rs are generated as contiguous numbered files.
+ * Do not retain one pointer + one path string per motion in ARM9 RAM merely to
+ * rediscover that numbering at runtime.  The production manifest validates the
+ * complete id/path sequence before emitting *_ANIM_PATH_STEM, so this is an AOT
+ * representation of the same source catalog rather than a naming guess. */
+static const NDSRelocAssetEntry *ndsRelocAssetP2FighterAnimEntry(u32 asset_id)
+{
+    static NDSRelocAssetEntry entry;
+    static char path[NDS_RELOC_MARIO_ANIM_PATH_CAPACITY];
+    const char *stem = NULL;
+    u32 first = 0u;
+    int written;
+
+#if NDS_P2_LUIGI
+    if ((asset_id >= NDS_P2_LUIGI_ANIM_FIRST) &&
+        (asset_id <= NDS_P2_LUIGI_ANIM_LAST))
+    {
+        stem = NDS_P2_LUIGI_ANIM_PATH_STEM;
+        first = NDS_P2_LUIGI_ANIM_FIRST;
+    }
+#endif
+#if NDS_P2_DONKEY
+    if ((stem == NULL) &&
+        (asset_id >= NDS_P2_DONKEY_ANIM_FIRST) &&
+        (asset_id <= NDS_P2_DONKEY_ANIM_LAST))
+    {
+        stem = NDS_P2_DONKEY_ANIM_PATH_STEM;
+        first = NDS_P2_DONKEY_ANIM_FIRST;
+    }
+#endif
+    if (stem == NULL)
+    {
+        return NULL;
+    }
+
+    written = sniprintf(path, sizeof(path),
+                        "nitro:/reloc/reloc_animations/%s%03lu",
+                        stem, (unsigned long)(asset_id - first));
+    if ((written < 0) || ((size_t)written >= sizeof(path)))
+    {
+        return NULL;
+    }
+    entry.asset_id = asset_id;
+    entry.file_id = asset_id;
+    entry.path = path;
+    return &entry;
+}
+#endif
+
 static const NDSRelocAssetEntry *ndsRelocAssetFindEntry(u32 asset_id)
 {
     size_t i;
@@ -286,6 +344,17 @@ static const NDSRelocAssetEntry *ndsRelocAssetFindEntry(u32 asset_id)
     {
         return ndsRelocAssetFoxAnimEntry(asset_id);
     }
+#if NDS_P2_LUIGI || NDS_P2_DONKEY
+    {
+        const NDSRelocAssetEntry *p2_anim =
+            ndsRelocAssetP2FighterAnimEntry(asset_id);
+
+        if (p2_anim != NULL)
+        {
+            return p2_anim;
+        }
+    }
+#endif
 
     for (i = 0; i < (sizeof(sNdsRelocAssets) / sizeof(sNdsRelocAssets[0])); i++)
     {
@@ -421,7 +490,7 @@ s32 ndsRelocAssetReadHeader(u32 asset_id, NDSRelocAssetHeader *out_header)
     return ok;
 }
 
-s32 ndsRelocAssetReadExternFileIDs(u32 asset_id, u32 *out_file_ids,
+s32 ndsRelocAssetReadExternFileIDs(u32 asset_id, u16 *out_file_ids,
                                    u32 capacity, u32 *out_count)
 {
     const NDSRelocAssetEntry *entry;

@@ -300,6 +300,13 @@ static void ndsBattleHudStockPalette(u32 player, u32 fkind, u32 costume)
         if (costume >= 4u) costume = 0u;
         source = kNdsBattleHudLuigiStockPalette[costume];
     }
+    else if (fkind == (u32)nFTKindDonkey)
+    {
+        /* BattleShip dFTParamCostumeIDs maps royal colours to 0..3 and team
+         * green to costume 4.  DkIcon carries all five source LUTs. */
+        if (costume >= 5u) costume = 0u;
+        source = kNdsBattleHudDonkeyStockPalette[costume];
+    }
     else
     {
         if (costume >= 5u) costume = 0u;
@@ -436,6 +443,7 @@ static void ndsBattleHudDrawStock(u32 player, u32 fkind, u32 *next_id)
     if (fkind == (u32)nFTKindMario) owner = 0u;
     else if (fkind == (u32)nFTKindFox) owner = 1u;
     else if (fkind == (u32)nFTKindLuigi) owner = 2u;
+    else if (fkind == (u32)nFTKindDonkey) owner = 3u;
     else return;
 
     if (stock == 0x7fu)
@@ -499,6 +507,7 @@ static void ndsBattleHudDrawPortrait(u32 player, u32 fkind, u32 *next_id)
     if (fkind == (u32)nFTKindMario) owner = 0u;
     else if (fkind == (u32)nFTKindFox) owner = 1u;
     else if (fkind == (u32)nFTKindLuigi) owner = 2u;
+    else if (fkind == (u32)nFTKindDonkey) owner = 3u;
     else return;
 
     ndsBattleHudSetOam(next_id, sNdsBattleHudPlayerCenterX[player] - 8,

@@ -522,6 +522,16 @@ NDS_P2_FOUR_CPU_STRESS ?= 0
 # half-imported fighter from changing the P2-2 standing Boundary merely because
 # its files exist in the tree.  Luigi is the first pipeline prover.
 NDS_P2_LUIGI ?= 0
+# Donkey is the first structurally different P2-3 owner.  Keep admission
+# sequential: native-owner slots are a dense ABI (Mario/Fox/Luigi/Donkey), so a
+# Donkey build also carries the already-qualified Luigi owner instead of
+# inventing a hole or a build-dependent owner number.
+NDS_P2_DONKEY ?= 0
+ifeq ($(NDS_P2_DONKEY),1)
+ifneq ($(NDS_P2_LUIGI),1)
+$(error NDS_P2_DONKEY=1 requires NDS_P2_LUIGI=1 so native-owner slots stay dense)
+endif
+endif
 # P2-3 focused fighter-production proof selector. -1 leaves the canonical
 # Mario-vs-Fox descriptor byte-for-byte unchanged; a non-negative value is an
 # nFTKind* integer used only for fighter slot 0 in direct-battle proof builds.
@@ -3263,6 +3273,12 @@ CFILES += battleship_ftchar_data_slots.c battleship_scsubsysdata_ft.c \
 CFILES += battleship_ftanim.c battleship_ftanimend.c battleship_ftkey.c
 ifeq ($(NDS_IMPORT_BATTLESHIP_FTMANAGER),1)
 CFILES += battleship_ftmanager.c
+ifeq ($(NDS_P2_DONKEY),1)
+# P2-3 DK is the first non-Mario archetype.  Compile BattleShip's own special
+# and cargo state machines as one port TU rather than re-implementing their
+# update/interrupt/physics/map ordering in DS glue.
+CFILES += battleship_donkey.c battleship_ftcommon_itemthrow.c
+endif
 ifeq ($(NDS_IMPORT_BATTLESHIP_MPPROCESS_LIVE),1)
 CFILES += $(NDS_MPPROCESS_SOURCE_CFILES) \
 	battleship_mpprocess_live_bridge.c
@@ -3807,6 +3823,9 @@ NDS_P2_FIGHTER_RELOC_FILES :=
 ifeq ($(NDS_P2_LUIGI),1)
 NDS_P2_FIGHTER_RELOC_FILES += $(NDS_P2_LUIGI_FIGHTER_RELOC_FILES)
 endif
+ifeq ($(NDS_P2_DONKEY),1)
+NDS_P2_FIGHTER_RELOC_FILES += $(NDS_P2_DONKEY_FIGHTER_RELOC_FILES)
+endif
 
 NDS_EFFECT_RELOC_FILES := \
 	reloc_effects/EFCommonEffects1 \
@@ -4130,6 +4149,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_R2_BOTH_CPU $(NDS_R2_BOTH_CPU)'; \
 		echo '#define NDS_P2_FOUR_CPU_STRESS $(NDS_P2_FOUR_CPU_STRESS)'; \
 		echo '#define NDS_P2_LUIGI $(NDS_P2_LUIGI)'; \
+		echo '#define NDS_P2_DONKEY $(NDS_P2_DONKEY)'; \
 		echo '#define NDS_P2_PROOF_FIGHTER0 $(NDS_P2_PROOF_FIGHTER0)'; \
 		echo '#define NDS_R2_SOAK_MATCH_MINUTES $(NDS_R2_SOAK_MATCH_MINUTES)'; \
 		echo '#define NDS_ANIM_JOINT_AUDIT $(NDS_ANIM_JOINT_AUDIT)'; \

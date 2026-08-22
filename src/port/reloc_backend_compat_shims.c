@@ -7647,10 +7647,12 @@ void ftCommonCaptureShoulderedSetStatus(GObj *fighter_gobj)
     (void)fighter_gobj;
 }
 
+#if !NDS_P2_DONKEY
 void ftDonkeyThrowFWaitSetStatus(GObj *fighter_gobj)
 {
     (void)fighter_gobj;
 }
+#endif
 
 void ftCommonThrownReleaseFighterLoseGrip(GObj *fighter_gobj)
 {
@@ -15058,13 +15060,14 @@ s32 ftParamGetCostumeCommonID(s32 fkind, s32 color)
 
 s32 ftParamGetCostumeTeamID(s32 fkind, s32 color)
 {
-    /* BattleShip ftparam.c:56-59 / :2648-2651. Team colour is NOT the team ID:
+    /* BattleShip ftparam.c:56-62 / :2648-2651. Team colour is NOT the team ID:
      * the model's costume table maps Red/Blue/Green to a fighter-specific
-     * costume. The old identity shim happened to make Mario red correct but
-     * made Mario blue/green and every Fox team colour wrong. These are the two
-     * source rows this build ships; P2-3 extends the table with each new kind. */
+     * costume. Keep the admitted P2 prefix source-exact rather than letting a
+     * newly selectable fighter inherit the old identity approximation. */
     static const u8 mario_team[3] = { 0u, 3u, 4u };
     static const u8 fox_team[3] = { 1u, 2u, 3u };
+    static const u8 donkey_team[3] = { 2u, 3u, 4u };
+    static const u8 luigi_team[3] = { 3u, 2u, 0u };
 
     if ((color < 0) || (color >= (s32)ARRAY_COUNT(mario_team)))
     {
@@ -15077,6 +15080,14 @@ s32 ftParamGetCostumeTeamID(s32 fkind, s32 color)
     if (fkind == nFTKindFox)
     {
         return fox_team[color];
+    }
+    if (fkind == nFTKindDonkey)
+    {
+        return donkey_team[color];
+    }
+    if (fkind == nFTKindLuigi)
+    {
+        return luigi_team[color];
     }
     return color;
 }

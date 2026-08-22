@@ -90,6 +90,13 @@ _Static_assert(_FT_ANIM_CMD(5, FT_ANIM_ROTZ, 0) == 0x0085,
 #if NDS_P2_LUIGI
 #include "../../decomp/BattleShip-main/decomp/src/relocData/462_FTLuigiAnimSelected.c"
 #endif
+#if NDS_P2_DONKEY
+/* PlayersVS maps Donkey to Demo Win1 exactly like Luigi.  File 381 is the
+ * source Selected clip; despite its historical AObjEvent32 pointer typedef the
+ * generated payload is the same u16 FIGATREE command stream normalized by the
+ * compile-time command encoders above. */
+#include "../../decomp/BattleShip-main/decomp/src/relocData/381_FTDonkeyAnimSelected.c"
+#endif
 #undef ftAnimSetValAfter
 #undef ftAnimSetValAfterBlock
 #undef ftAnimSetVal0Rate
@@ -137,6 +144,12 @@ size_t ndsBattleShipCSSSelectedFigatreeSize(const void *file_id)
         return sizeof(dFTLuigiAnimSelected_joints);
     }
 #endif
+#if NDS_P2_DONKEY
+    if (file_id == &llFTDonkeyAnimSelectedFileID)
+    {
+        return sizeof(dFTDonkeyAnimSelected_joints);
+    }
+#endif
     return 0u;
 }
 
@@ -160,6 +173,13 @@ void *ndsBattleShipLoadCSSSelectedFigatree(const void *file_id, void *heap)
     {
         source = dFTLuigiAnimSelected_joints;
         size = sizeof(dFTLuigiAnimSelected_joints);
+    }
+#endif
+#if NDS_P2_DONKEY
+    else if (file_id == &llFTDonkeyAnimSelectedFileID)
+    {
+        source = dFTDonkeyAnimSelected_joints;
+        size = sizeof(dFTDonkeyAnimSelected_joints);
     }
 #endif
     else
@@ -200,6 +220,15 @@ sb32 ndsBattleShipIsCSSSelectedFigatreeJoint(const void *ptr)
     for (i = 0u; i < ARRAY_COUNT(dFTLuigiAnimSelected_joints); i++)
     {
         if ((const void *)dFTLuigiAnimSelected_joints[i] == ptr)
+        {
+            return TRUE;
+        }
+    }
+#endif
+#if NDS_P2_DONKEY
+    for (i = 0u; i < ARRAY_COUNT(dFTDonkeyAnimSelected_joints); i++)
+    {
+        if ((const void *)dFTDonkeyAnimSelected_joints[i] == ptr)
         {
             return TRUE;
         }

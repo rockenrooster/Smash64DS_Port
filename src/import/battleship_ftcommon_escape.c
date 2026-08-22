@@ -38,3 +38,13 @@ sb32 ndsBaseFTCommonEscapeCheckInterruptGuard(GObj *fighter_gobj);
 #undef ftCommonEscapeCheckInterruptSpecialNDonkey
 #undef ftCommonEscapeCheckInterruptDash
 #undef ftCommonEscapeCheckInterruptGuard
+
+#if NDS_P2_DONKEY
+/* Giant Punch charge cancellation is source-owned by the common Escape helper.
+ * Re-export the already imported body for DK instead of cloning its stick/button
+ * test in fighter-local code. */
+sb32 ftCommonEscapeCheckInterruptSpecialNDonkey(GObj *fighter_gobj)
+{
+    return ndsBaseFTCommonEscapeCheckInterruptSpecialNDonkey(fighter_gobj);
+}
+#endif

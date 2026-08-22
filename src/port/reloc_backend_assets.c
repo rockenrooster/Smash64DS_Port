@@ -196,7 +196,12 @@ _Static_assert(NDS_RELOC_ASSET_FOX_ANIM_LAST == NDS_K0_FOX_ANIM_LAST,
 #define NDS_FIGHTER_MANAGER_STATUS_FOX_SPECIAL4 (1u << 12)
 #define NDS_FIGHTER_MANAGER_STATUS_REQUIRED_MASK 0x1fffu
 
-#define NDS_RELOC_EXTERN_FILE_ID_CAPACITY 64u
+/* O2R stores each external file id as u16.  Keep that native width here too:
+ * it lets the loader cover the full source roster without turning every loaded
+ * file record into a u32-padded dependency table.  An offline census of the US
+ * fighter mains puts the maximum at KirbyMain's 144 ids (DonkeyMain is 81;
+ * Mario/Fox/Luigi are 48/51/62). */
+#define NDS_RELOC_EXTERN_FILE_ID_CAPACITY 144u
 
 #define NDS_RELOC_SYMBOL_MVCOMMON_BACKGROUND_MOBJ 0x042f8u
 #define NDS_RELOC_SYMBOL_MVCOMMON_BACKGROUND_DOBJ 0x07e98u
@@ -347,6 +352,10 @@ _Static_assert(NDS_RELOC_ASSET_FOX_ANIM_LAST == NDS_K0_FOX_ANIM_LAST,
 #define NDS_RELOC_SYMBOL_GR_INISHIE_MAP_HEADER 0x14u
 #define NDS_RELOC_SYMBOL_MARIO_MAIN_ATTRIBUTES 0x428u
 #define NDS_RELOC_SYMBOL_FOX_MAIN_ATTRIBUTES 0x46cu
+#if NDS_P2_DONKEY
+#define NDS_RELOC_SYMBOL_DONKEY_MAIN_ATTRIBUTES 0x4a4u
+#define NDS_RELOC_ASSET_DONKEY_MAIN 0xd5u
+#endif
 /* Both weapon attribute structs sit at file offset 0: the fireball's in file
  * 204 (llMarioSpecial1FireballWeaponAttributes = 0x0) and the blaster's in
  * file 210 (llFoxSpecial1BlasterWeaponAttributes = 0x0), per
@@ -470,7 +479,7 @@ typedef struct NDSRelocLoadedFile {
     u16 reloc_intern_offset;
     u16 reloc_extern_offset;
     u32 extern_count;
-    u32 extern_file_ids[NDS_RELOC_EXTERN_FILE_ID_CAPACITY];
+    u16 extern_file_ids[NDS_RELOC_EXTERN_FILE_ID_CAPACITY];
     u32 external_fixup_count;
     u32 external_fixup_fail_count;
     u32 internal_fixup_count;
@@ -1542,18 +1551,27 @@ static s32 ndsRelocIsMarioFoxAnimID(u32 asset_id)
  * intentionally keep their original two-fighter universe; callers that care
  * about parser type, scratch-heap lifetime or relocation ownership use this
  * predicate instead. */
-#if NDS_P2_LUIGI
+#if NDS_P2_LUIGI || NDS_P2_DONKEY
 static s32 ndsRelocIsFighterAnimID(u32 asset_id)
 {
     if (ndsRelocIsMarioFoxAnimID(asset_id) != FALSE)
     {
         return TRUE;
     }
+#if NDS_P2_LUIGI
     if ((asset_id >= NDS_P2_LUIGI_ANIM_FIRST) &&
         (asset_id <= NDS_P2_LUIGI_ANIM_LAST))
     {
         return TRUE;
     }
+#endif
+#if NDS_P2_DONKEY
+    if ((asset_id >= NDS_P2_DONKEY_ANIM_FIRST) &&
+        (asset_id <= NDS_P2_DONKEY_ANIM_LAST))
+    {
+        return TRUE;
+    }
+#endif
     return FALSE;
 }
 #else
@@ -1957,18 +1975,89 @@ static u32 ndsRelocFoxAnimAssetIDForToken(u32 token)
  * remove this work in one change large enough to clear ~16,000 of tail movement,
  * or move it off the gameplay frame entirely, which changes WHEN the work happens
  * instead of shuffling where the code sits. */
+#if NDS_P2_LUIGI || NDS_P2_DONKEY
+typedef struct NDSP2FighterAnimTokenRow
+{
+    const void *token;
+    u16 asset_id;
+} NDSP2FighterAnimTokenRow;
+
+/* BattleShip's reloc ABI passes &llFT*Anim*FileID. P2-3 aliases that were not
+ * named in the historical port symbol table are zero-valued, so their ADDRESS
+ * is the identity we must preserve. A giant generated if-chain made DK alone
+ * add ~5.9 KiB of executable code. Store the exact generated address->u16 id
+ * relation instead: O2R file ids are u16, the table is cold load-time data, and
+ * numeric external-dependency ids take the O(1) range path below. */
+static const NDSP2FighterAnimTokenRow sNdsP2FighterAnimTokens[] =
+{
+#define NDS_P2_FIGHTER_ANIM_TOKEN_ROW(symbol_, id_, path_) \
+    { &symbol_, (u16)(id_) },
+#if NDS_P2_LUIGI
+    NDS_P2_LUIGI_ANIM_ASSET_ROWS(NDS_P2_FIGHTER_ANIM_TOKEN_ROW)
+#endif
+#if NDS_P2_DONKEY
+    NDS_P2_DONKEY_ANIM_ASSET_ROWS(NDS_P2_FIGHTER_ANIM_TOKEN_ROW)
+#endif
+#undef NDS_P2_FIGHTER_ANIM_TOKEN_ROW
+};
+
+static u32 ndsRelocP2FighterAnimAssetIDForToken(u32 token)
+{
+    u32 i;
+
+#if NDS_P2_LUIGI
+    if ((token >= NDS_P2_LUIGI_ANIM_FIRST) &&
+        (token <= NDS_P2_LUIGI_ANIM_LAST))
+    {
+        return token;
+    }
+#endif
+#if NDS_P2_DONKEY
+    if ((token >= NDS_P2_DONKEY_ANIM_FIRST) &&
+        (token <= NDS_P2_DONKEY_ANIM_LAST))
+    {
+        return token;
+    }
+#endif
+    for (i = 0u;
+         i < (sizeof(sNdsP2FighterAnimTokens) /
+              sizeof(sNdsP2FighterAnimTokens[0]));
+         i++)
+    {
+        if (token == ndsRelocFileID(sNdsP2FighterAnimTokens[i].token))
+        {
+            return (u32)sNdsP2FighterAnimTokens[i].asset_id;
+        }
+    }
+    return NDS_RELOC_ASSET_INVALID;
+}
+#endif
+
 static u32 ndsRelocAssetIDForToken(u32 token)
 {
-#if NDS_P2_LUIGI
-    /* BattleShip passes the ADDRESS of ll...FileID, not the integer stored in
-     * it.  Luigi's twelve semantic animation globals are still zero-stubbed in
-     * the decomp-derived port table, so the source-derived catalog bridges the
-     * address directly to the O2R id.  Numeric ids are accepted too because
-     * O2R external-dependency tables contain file ids, not symbol addresses. */
+#if NDS_P2_LUIGI || NDS_P2_DONKEY
+    u32 p2_anim_asset_id = ndsRelocP2FighterAnimAssetIDForToken(token);
+
+    if (p2_anim_asset_id != NDS_RELOC_ASSET_INVALID)
+    {
+        return p2_anim_asset_id;
+    }
+    /* Core P2-3 symbols have real source IDs in the decomp-derived port table,
+     * but keep this generated bridge beside the animation table so the
+     * admission catalog remains the authority. */
 #define NDS_P2_FIGHTER_TOKEN_ROW(symbol_, id_, path_) \
     if ((token == ndsRelocFileID(&symbol_)) || (token == (id_))) return (id_);
+#define NDS_P2_FIGHTER_DEPENDENCY_TOKEN_ROW(id_, path_) \
+    if (token == (id_)) return (id_);
+#if NDS_P2_LUIGI
     NDS_P2_LUIGI_CORE_ASSET_ROWS(NDS_P2_FIGHTER_TOKEN_ROW)
-    NDS_P2_LUIGI_ANIM_ASSET_ROWS(NDS_P2_FIGHTER_TOKEN_ROW)
+    NDS_P2_LUIGI_DEPENDENCY_ASSET_ROWS(NDS_P2_FIGHTER_DEPENDENCY_TOKEN_ROW)
+#endif
+#if NDS_P2_DONKEY
+    NDS_P2_DONKEY_CORE_ASSET_ROWS(NDS_P2_FIGHTER_TOKEN_ROW)
+    NDS_P2_DONKEY_DEPENDENCY_ASSET_ROWS(NDS_P2_FIGHTER_DEPENDENCY_TOKEN_ROW)
+#endif
+#undef NDS_P2_FIGHTER_DEPENDENCY_TOKEN_ROW
 #undef NDS_P2_FIGHTER_TOKEN_ROW
 #endif
     if (token == ndsRelocFileID(&llN64LogoFileID)) return NDS_RELOC_ASSET_N64_LOGO;
@@ -2325,10 +2414,20 @@ static s32 ndsRelocAssetIsStage(u32 asset_id)
 
 static s32 ndsRelocAssetIsFighter(u32 asset_id)
 {
-#if NDS_P2_LUIGI
+#if NDS_P2_LUIGI || NDS_P2_DONKEY
 #define NDS_P2_FIGHTER_ASSET_TEST(symbol_, id_, path_) \
     if (asset_id == (id_)) return TRUE;
+#define NDS_P2_FIGHTER_DEPENDENCY_TEST(id_, path_) \
+    if (asset_id == (id_)) return TRUE;
+#if NDS_P2_LUIGI
     NDS_P2_LUIGI_CORE_ASSET_ROWS(NDS_P2_FIGHTER_ASSET_TEST)
+    NDS_P2_LUIGI_DEPENDENCY_ASSET_ROWS(NDS_P2_FIGHTER_DEPENDENCY_TEST)
+#endif
+#if NDS_P2_DONKEY
+    NDS_P2_DONKEY_CORE_ASSET_ROWS(NDS_P2_FIGHTER_ASSET_TEST)
+    NDS_P2_DONKEY_DEPENDENCY_ASSET_ROWS(NDS_P2_FIGHTER_DEPENDENCY_TEST)
+#endif
+#undef NDS_P2_FIGHTER_DEPENDENCY_TEST
 #undef NDS_P2_FIGHTER_ASSET_TEST
 #endif
     switch (asset_id)
@@ -3204,13 +3303,18 @@ static s32 ndsRelocApplyInternalPointerFixups(NDSRelocLoadedFile *loaded)
     return TRUE;
 }
 
-static s32 ndsRelocIsFighterAObj16Asset(u32 asset_id)
+static s32 ndsRelocIsGeneratedP2FighterAObj32Asset(u32 asset_id)
 {
-    return ((ndsRelocIsFighterAnimID(asset_id) != FALSE) &&
-            (asset_id != NDS_RELOC_ASSET_MARIO_ANIM_APPEAR1) &&
-            (asset_id != NDS_RELOC_ASSET_MARIO_ANIM_APPEAR2) &&
-            (asset_id != NDS_RELOC_ASSET_FOX_ANIM_APPEAR) &&
-            (asset_id != NDS_RELOC_ASSET_FOX_ANIM_ARWING)) ? TRUE : FALSE;
+#define NDS_P2_FIGHTER_AOBJ32_TEST(symbol_, id_) \
+    if (asset_id == (id_)) return TRUE;
+#if NDS_P2_LUIGI
+    NDS_P2_LUIGI_AOBJ32_ASSET_ROWS(NDS_P2_FIGHTER_AOBJ32_TEST)
+#endif
+#if NDS_P2_DONKEY
+    NDS_P2_DONKEY_AOBJ32_ASSET_ROWS(NDS_P2_FIGHTER_AOBJ32_TEST)
+#endif
+#undef NDS_P2_FIGHTER_AOBJ32_TEST
+    return FALSE;
 }
 
 static s32 ndsRelocIsFighterAObj32Asset(u32 asset_id)
@@ -3218,7 +3322,15 @@ static s32 ndsRelocIsFighterAObj32Asset(u32 asset_id)
     return ((asset_id == NDS_RELOC_ASSET_MARIO_ANIM_APPEAR1) ||
             (asset_id == NDS_RELOC_ASSET_MARIO_ANIM_APPEAR2) ||
             (asset_id == NDS_RELOC_ASSET_FOX_ANIM_APPEAR) ||
-            (asset_id == NDS_RELOC_ASSET_FOX_ANIM_ARWING)) ? TRUE : FALSE;
+            (asset_id == NDS_RELOC_ASSET_FOX_ANIM_ARWING) ||
+            (ndsRelocIsGeneratedP2FighterAObj32Asset(asset_id) != FALSE)) ?
+               TRUE : FALSE;
+}
+
+static s32 ndsRelocIsFighterAObj16Asset(u32 asset_id)
+{
+    return ((ndsRelocIsFighterAnimID(asset_id) != FALSE) &&
+            (ndsRelocIsFighterAObj32Asset(asset_id) == FALSE)) ? TRUE : FALSE;
 }
 
 s32 ndsRelocPointerIsFighterAObj16(const void *ptr)
@@ -3781,6 +3893,27 @@ static s32 ndsRelocFighterAttributesMatchSource(
             (attr->itemthrow_damage_scale == 0x64u) &&
             (attr->heavyget_sfx == nSYAudioFGMVoiceEnd);
     }
+#if NDS_P2_DONKEY
+    if (asset_id == NDS_RELOC_ASSET_DONKEY_MAIN)
+    {
+        /* BattleShip US gmsound.h: Donkey dead-slam is 0x11f and the voice
+         * run Smash1..Dead2 is 326..336.  Keep the validation numeric here:
+         * the port's compact gmsound shadow intentionally names only sounds
+         * that production code calls directly, while these are source data
+         * values used to prove the mixed-u16 FTAttributes lanes were restored. */
+        return
+            (attr->dead_fgm_ids[0] == 336u) &&
+            (attr->dead_fgm_ids[1] == 0x11fu) &&
+            (attr->deadup_sfx == 330u) &&
+            (attr->damage_sfx == 332u) &&
+            (attr->smash_sfx[0] == 326u) &&
+            (attr->smash_sfx[1] == 327u) &&
+            (attr->smash_sfx[2] == 328u) &&
+            (attr->itemthrow_vel_scale == 0x64u) &&
+            (attr->itemthrow_damage_scale == 0x64u) &&
+            (attr->heavyget_sfx == 334u);
+    }
+#endif
     return FALSE;
 }
 
@@ -3803,6 +3936,12 @@ static s32 ndsRelocNormalizeFighterAttributesFile(
     {
         attr_offset = NDS_RELOC_SYMBOL_FOX_MAIN_ATTRIBUTES;
     }
+#if NDS_P2_DONKEY
+    else if (loaded->asset_id == NDS_RELOC_ASSET_DONKEY_MAIN)
+    {
+        attr_offset = NDS_RELOC_SYMBOL_DONKEY_MAIN_ATTRIBUTES;
+    }
+#endif
     else
     {
         return TRUE;
@@ -6141,7 +6280,7 @@ static size_t ndsRelocExternTreeAllocSize(u32 asset_id, u32 *seen,
                                           u32 *seen_count)
 {
     NDSRelocAssetHeader header;
-    u32 extern_ids[NDS_RELOC_EXTERN_FILE_ID_CAPACITY];
+    u16 extern_ids[NDS_RELOC_EXTERN_FILE_ID_CAPACITY];
     u32 extern_count = 0;
     size_t total;
     u32 i;
@@ -6293,6 +6432,111 @@ void lbRelocInitSetup(LBRelocSetup *setup)
     }
 }
 
+#if NDS_IMPORT_BATTLESHIP_FTMANAGER
+typedef struct NDSP2FighterAllocSizeRow
+{
+    u16 asset_id;
+    u16 alloc_units_16;
+} NDSP2FighterAllocSizeRow;
+
+#define NDS_P2_ALLOC_SIZE_ROW(id_, bytes_) \
+    { (u16)(id_), (u16)((bytes_) >> 4) },
+static const NDSP2FighterAllocSizeRow sNdsP2BaseFighterAllocSizes[] =
+{
+    NDS_P2_BASE_FIGHTER_ALLOC_SIZE_ROWS(NDS_P2_ALLOC_SIZE_ROW)
+};
+#if NDS_P2_LUIGI
+static const NDSP2FighterAllocSizeRow sNdsP2LuigiAllocSizes[] =
+{
+    NDS_P2_LUIGI_ALLOC_SIZE_ROWS(NDS_P2_ALLOC_SIZE_ROW)
+};
+#endif
+#if NDS_P2_DONKEY
+static const NDSP2FighterAllocSizeRow sNdsP2DonkeyAllocSizes[] =
+{
+    NDS_P2_DONKEY_ALLOC_SIZE_ROWS(NDS_P2_ALLOC_SIZE_ROW)
+};
+#endif
+#undef NDS_P2_ALLOC_SIZE_ROW
+
+static size_t ndsRelocP2FindGeneratedAllocSize(
+    const NDSP2FighterAllocSizeRow *rows, u32 count, u32 asset_id)
+{
+    u32 lo = 0u;
+    u32 hi = count;
+
+    while (lo < hi)
+    {
+        u32 mid = lo + ((hi - lo) >> 1);
+        u32 row_id = (u32)rows[mid].asset_id;
+
+        if (asset_id < row_id)
+        {
+            hi = mid;
+        }
+        else if (asset_id > row_id)
+        {
+            lo = mid + 1u;
+        }
+        else
+        {
+            return (size_t)rows[mid].alloc_units_16 << 4;
+        }
+    }
+    return 0u;
+}
+
+static size_t ndsRelocP2GeneratedAllocSize(u32 asset_id)
+{
+    size_t size;
+
+    /* P2-3: BattleShip's ftManagerSetupFileSize asks the immutable reloc table
+     * for every fighter motion's transitive allocation size before allocating
+     * any of them.  The N64 implementation gets that answer from its ROM table;
+     * opening a NitroFS path/header for every motion is a DS port artifact, not
+     * source behavior.  These generated values are the same 16-byte-aligned,
+     * dependency-deduplicated answer computed offline from the pinned US O2R
+     * headers.  Only use them when the status buffer is empty: once a caller has
+     * resident dependencies, the source size routine deliberately subtracts
+     * those and the generic recursive path remains authoritative.
+     *
+     * Sizes are stored in 16-byte units because every source allocation is
+     * reloc-aligned.  The sorted u16/u16 table is ~half the linked footprint of
+     * the compiler's sparse switch table and binary search is still tiny beside
+     * the NitroFS metadata walk it replaces. */
+    size = ndsRelocP2FindGeneratedAllocSize(
+        sNdsP2BaseFighterAllocSizes,
+        sizeof(sNdsP2BaseFighterAllocSizes) /
+            sizeof(sNdsP2BaseFighterAllocSizes[0]),
+        asset_id);
+    if (size != 0u)
+    {
+        return size;
+    }
+#if NDS_P2_LUIGI
+    size = ndsRelocP2FindGeneratedAllocSize(
+        sNdsP2LuigiAllocSizes,
+        sizeof(sNdsP2LuigiAllocSizes) / sizeof(sNdsP2LuigiAllocSizes[0]),
+        asset_id);
+    if (size != 0u)
+    {
+        return size;
+    }
+#endif
+#if NDS_P2_DONKEY
+    size = ndsRelocP2FindGeneratedAllocSize(
+        sNdsP2DonkeyAllocSizes,
+        sizeof(sNdsP2DonkeyAllocSizes) / sizeof(sNdsP2DonkeyAllocSizes[0]),
+        asset_id);
+    if (size != 0u)
+    {
+        return size;
+    }
+#endif
+    return 0u;
+}
+#endif
+
 size_t lbRelocGetFileSize(const void *file_id)
 {
     u32 token = ndsRelocFileID(file_id);
@@ -6300,10 +6544,10 @@ size_t lbRelocGetFileSize(const void *file_id)
 #if NDS_IMPORT_BATTLESHIP_FTMANAGER
     size_t css_selected_size =
         ndsBattleShipCSSSelectedFigatreeSize(file_id);
+    size_t generated_alloc_size = 0u;
     u32 seen[NDS_RELOC_EXTERN_FILE_ID_CAPACITY];
     u32 seen_count = 0;
-    size_t asset_size = ndsRelocExternTreeAllocSize(asset_id, seen,
-                                                    &seen_count);
+    size_t asset_size;
 #else
     size_t asset_size = ndsRelocAssetAllocSize(asset_id);
 #endif
@@ -6313,6 +6557,15 @@ size_t lbRelocGetFileSize(const void *file_id)
     {
         return css_selected_size;
     }
+    if (sNdsRelocStatusBufferCount == 0)
+    {
+        generated_alloc_size = ndsRelocP2GeneratedAllocSize(asset_id);
+        if (generated_alloc_size != 0u)
+        {
+            return generated_alloc_size;
+        }
+    }
+    asset_size = ndsRelocExternTreeAllocSize(asset_id, seen, &seen_count);
 #endif
     if (asset_size != 0)
     {
@@ -7753,7 +8006,7 @@ static void *ndsRelocForceLoadFighterAObj16File(u32 token, u32 asset_id,
     /* The resident battlepack is still the measured Mario/Fox P2-2 feature.
      * P2-3 fighters use the same generic force-loader/cache semantics but are
      * not counted as misses against a pack that cannot contain them. */
-#if NDS_P2_LUIGI
+#if NDS_P2_LUIGI || NDS_P2_DONKEY
     packed = (ndsRelocIsMarioFoxAnimID(asset_id) != FALSE) ?
         ndsBattlePackFindFigatree(asset_id) : NULL;
 #else
@@ -7784,7 +8037,7 @@ static void *ndsRelocForceLoadFighterAObj16File(u32 token, u32 asset_id,
         NDS_K0_MARK(gNdsK0AfterGoPackHits, asset_id);
         return packed;
     }
-#if NDS_P2_LUIGI
+#if NDS_P2_LUIGI || NDS_P2_DONKEY
     if (ndsRelocIsMarioFoxAnimID(asset_id) != FALSE)
     {
         gNdsBattlePackMisses++;
@@ -7832,7 +8085,7 @@ static void *ndsRelocForceLoadFighterAObj16File(u32 token, u32 asset_id,
      * Bitmap over the 301 Mario+Fox animation IDs: total loads, distinct assets,
      * repeats. repeats/total is exactly the fraction a cache would remove, and
      * distinct sizes the cache. Lab counters, tick-HUD builds only. */
-#if NDS_P2_LUIGI
+#if NDS_P2_LUIGI || NDS_P2_DONKEY
     if (ndsRelocIsMarioFoxAnimID(asset_id) != FALSE)
 #endif
     {
@@ -8061,8 +8314,6 @@ void *lbRelocGetStatusBufferFile(const void *file_id)
     u32 token = ndsRelocFileID(file_id);
     u32 asset_id = ndsRelocAssetIDForToken(token);
     void *file;
-    size_t asset_size;
-    void *heap;
 
     ndsRelocPrepareSceneCache();
 
@@ -8078,40 +8329,18 @@ void *lbRelocGetStatusBufferFile(const void *file_id)
     if (file != NULL)
     {
         ndsFighterManagerRecordStatusToken(token, file);
-        return file;
     }
 
-    asset_size = ndsRelocAssetAllocSize(asset_id);
-    if ((asset_id == NDS_RELOC_ASSET_INVALID) || (asset_size == 0u))
-    {
-        return NULL;
-    }
-
-    /* THE SHIELD FREEZE. This is the on-demand status-animation load, reached
-     * from a gameplay frame whenever a fighter enters a status whose asset is
-     * not resident -- and a shield hit drives rebound into damage-fall, which
-     * is one of the commonest routes there. syTaskmanMalloc does not fail, it
-     * HANGS (syMallocSet's `while (TRUE);`), so once the general heap is full
-     * this call never returns and the match freezes with no error. The NULL
-     * test under it could never fire.
-     *
-     * The 2026-07-29 freeze root-cause fixed ndsR2AnimCacheStore by giving the
-     * cache its own arena, but the loader underneath it kept allocating from
-     * the shared heap, which is why the class came back as "hitting Fox's
-     * shield freezes sometimes". Declining costs a missing animation for one
-     * status, which the caller already handles; hanging costs the match. */
-    if (ndsSyMallocWouldFit(&gSYTaskmanGeneralHeap, asset_size, 0x10) == FALSE)
-    {
-        gNdsRelocHeapDeclineCount++;
-        return NULL;
-    }
-    heap = syTaskmanMalloc(asset_size, 0x10);
-    if (heap == NULL)
-    {
-        return NULL;
-    }
-    file = lbRelocGetExternHeapFile(file_id, heap);
-    ndsFighterManagerRecordStatusToken(token, file);
+    /* BattleShip's lbRelocGetStatusBufferFile is a pure residency query:
+     * lbreloc.c:63-66 delegates directly to lbRelocFindStatusBufferFile and
+     * never allocates or loads on a miss.  Fighter setup relies on the selected
+     * fighter's Main-file external closure having populated the status buffer;
+     * ftManagerSetupFilesPlayablesAll intentionally leaves absent, unselected
+     * fighters as NULL.  The old DS fallback turned those harmless misses into
+     * taskman allocations, which both diverged from the source contract and
+     * made roster admission consume RAM for fighters that were not in the
+     * match.  Keep the DS-only symbol-address -> numeric-id fallback above, but
+     * preserve the source's lookup-only behavior after that translation. */
     return file;
 }
 

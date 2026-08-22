@@ -1063,6 +1063,16 @@ static size_t ndsEFManagerFileSpan(void **file_head)
     {
         return ndsRelocGetLoadedFileSize(&llFoxSpecial3FileID);
     }
+#if NDS_P2_DONKEY
+    if (file_head == &gFTDataDonkeySpecial2)
+    {
+        /* BattleShip dEFManagerDonkeyEntryTaruEffectDesc owns DonkeySpecial2.
+         * Keep the same deferred-file validation used by Mario's pipe and
+         * Fox's Arwing/reflector; otherwise the source descriptor's linker
+         * symbol addresses remain unresolved DS RAM tokens. */
+        return ndsRelocGetLoadedFileSize(&llDonkeySpecial2FileID);
+    }
+#endif
     return 0u;
 }
 
@@ -1310,6 +1320,13 @@ static void ndsEFManagerResolveAllDescOffsets(void)
 #define NDS_EF_RESOLVE_ONE(name) ndsEFManagerResolveDescOffsets(&name);
     NDS_EF_MANAGER_DESCS(NDS_EF_RESOLVE_ONE)
 #undef NDS_EF_RESOLVE_ONE
+#if NDS_P2_DONKEY
+    /* P2-3 admits DK's source barrel entry effect at the same seam as the
+     * already-qualified Mario/Fox entry descriptors.  The decomp initializer
+     * stores &llDonkeySpecial2* linker symbols in offset fields, so this must
+     * run before efManagerMakeEffect performs its source `base + offset` math. */
+    ndsEFManagerResolveDescOffsets(&dEFManagerDonkeyEntryTaruEffectDesc);
+#endif
 }
 
 /* Install NDS_R2_EFFECT_POOL as the effect-instance pool depth by truncating

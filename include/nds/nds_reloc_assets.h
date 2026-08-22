@@ -31,7 +31,7 @@ void ndsR2AnimCachePreloadStep(void);
 s32 ndsR2AnimCachePreloadFinish(void);
 const char *ndsRelocAssetGetPath(u32 asset_id);
 s32 ndsRelocAssetReadHeader(u32 asset_id, NDSRelocAssetHeader *out_header);
-s32 ndsRelocAssetReadExternFileIDs(u32 asset_id, u32 *out_file_ids,
+s32 ndsRelocAssetReadExternFileIDs(u32 asset_id, u16 *out_file_ids,
                                    u32 capacity, u32 *out_count);
 s32 ndsRelocAssetLoadData(u32 asset_id, void *dst, size_t dst_capacity,
                            NDSRelocAssetHeader *out_header);

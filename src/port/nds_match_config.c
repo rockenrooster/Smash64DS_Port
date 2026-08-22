@@ -42,6 +42,11 @@ _Static_assert(NDS_P2_PROOF_FIGHTER0 < nFTKindPlayableEnd,
  * pin the source integer here while the C static assertion above owns range. */
 #error "Luigi proof fighter requires NDS_P2_LUIGI=1"
 #endif
+#if NDS_P2_PROOF_FIGHTER0 == 2 && !NDS_P2_DONKEY
+/* BattleShip fttypes.h: nFTKindDonkey == 2. Keep the proof selector incapable
+ * of creating a fighter whose source assets/native owner were not admitted. */
+#error "Donkey proof fighter requires NDS_P2_DONKEY=1"
+#endif
 #endif
 
 void ndsMatchConfigLoadMarioFoxDreamLand(NdsMatchConfig *cfg)

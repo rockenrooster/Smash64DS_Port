@@ -37,7 +37,7 @@ from typing import Iterable
 import generate_nds_native_owners as native_owner
 
 
-BOOTSTRAP_FIGHTERS = ("Mario", "Fox", "Luigi")
+BOOTSTRAP_FIGHTERS = ("Mario", "Fox", "Luigi", "Donkey")
 CORE_SLOT_NAMES = (
     "main",
     "mainmotion",
@@ -350,14 +350,22 @@ def read_o2r_record(path: Path, root: Path) -> dict[str, object] | None:
     file_id = struct.unpack_from("<I", raw, 0x40)[0]
     extern_count = struct.unpack_from("<I", raw, 0x48)[0]
     extern_end = 0x4C + extern_count * 2
-    if extern_end > len(raw):
+    if extern_end + 4 > len(raw):
         raise ValueError(f"O2R extern table escapes file: {path}")
     extern_ids = list(struct.unpack_from(f"<{extern_count}H", raw, 0x4C)) \
         if extern_count else []
+    data_size = struct.unpack_from("<I", raw, extern_end)[0]
+    data_start = extern_end + 4
+    if data_start + data_size != len(raw):
+        raise ValueError(
+            f"O2R payload size disagrees with file length: {path}: "
+            f"0x{data_start:x}+0x{data_size:x} != 0x{len(raw):x}"
+        )
     return {
         "file_id": file_id,
         "path": path.relative_to(root).as_posix(),
         "bytes": len(raw),
+        "data_bytes": data_size,
         "sha256": hashlib.sha256(raw).hexdigest(),
         "extern_ids": extern_ids,
     }
@@ -396,6 +404,45 @@ def symbol_from_value(value: str) -> str | None:
 def motion_symbols(ftdata_text: str, fighter: str) -> list[str]:
     block = find_initializer(ftdata_text, f"FTMotionDesc dFT{fighter}MotionDescs[]")
     return re.findall(r"&([A-Za-z0-9_]+FileID)", block)
+
+
+def motion_animjoint_symbols(ftdata_text: str, fighter: str) -> list[str]:
+    """Return animation files whose source motion descriptor is AObjEvent32.
+
+    BattleShip does not encode the animation parser kind in the reloc file
+    header.  `ftMainSetStatus` selects it from `FTANIM_FLAG_ANIMJOINT`: flagged
+    motions go through `lbCommonAddFighterPartsFigatree`/`gcParseDObjAnimJoint`
+    (AObjEvent32), while ordinary fighter motions go through
+    `ftAnimParseDObjFigatree` (AObjEvent16).  That distinction therefore has to
+    follow the *source FTMotionDesc table*, not an ID range guessed in the DS
+    loader.
+
+    Keep the result ordered by first source use, matching ``motion_symbols``.
+    A file is Event32 if any source descriptor that references it carries the
+    flag; sharing one file between flagged descriptors is common for appear
+    pairs on variants.
+    """
+    block = find_initializer(ftdata_text, f"FTMotionDesc dFT{fighter}MotionDescs[]")
+    result: list[str] = []
+
+    # Concrete descriptors are brace-enclosed triples.  The table also has a
+    # few scalar zero/0x80000000 placeholder triples; those intentionally have
+    # no file-id symbol and cannot contribute an Event32 asset.
+    for match in re.finditer(r"\{([^{}]*)\}", strip_c_comments(block), re.DOTALL):
+        fields = split_top_level_csv(match.group(1))
+        if len(fields) != 3:
+            raise ValueError(
+                f"{fighter}: malformed FTMotionDesc initializer: {match.group(0)}"
+            )
+        symbol_match = re.fullmatch(r"&([A-Za-z0-9_]+FileID)", fields[0].strip())
+        if symbol_match is None:
+            continue
+        if re.search(r"\bFTANIM_FLAG_ANIMJOINT\b", fields[2]) is None:
+            continue
+        symbol = symbol_match.group(1)
+        if symbol not in result:
+            result.append(symbol)
+    return result
 
 
 def local_animation_alias_map(
@@ -475,6 +522,35 @@ def extern_closure(
     return ordered
 
 
+def extern_alloc_size(
+    root: int, by_id: dict[int, dict[str, object]]
+) -> int:
+    """Mirror BattleShip/lbreloc's transitive allocation size offline.
+
+    The N64 manager asks this question while sizing every fighter animation.
+    On DS the answer is immutable ROM metadata, so publishing it AOT avoids a
+    NitroFS directory/header walk for every motion while preserving the exact
+    source allocation contract (16-byte aligned payloads, dependencies counted
+    once per root).
+    """
+    seen: set[int] = set()
+
+    def visit(file_id: int) -> int:
+        if file_id in seen:
+            return 0
+        seen.add(file_id)
+        record = by_id.get(file_id)
+        if record is None:
+            raise ValueError(f"O2R dependency file id 0x{file_id:x} is missing")
+        total = (int(record["data_bytes"]) + 0xF) & ~0xF
+        for dep in record["extern_ids"]:
+            total = (total + 0xF) & ~0xF
+            total += visit(int(dep))
+        return total
+
+    return visit(root)
+
+
 def asset_summary(file_id: int, by_id: dict[int, dict[str, object]]) -> dict[str, object]:
     record = by_id[file_id]
     return {
@@ -482,6 +558,8 @@ def asset_summary(file_id: int, by_id: dict[int, dict[str, object]]) -> dict[str
         "id_hex": f"0x{file_id:x}",
         "path": record["path"],
         "bytes": record["bytes"],
+        "data_bytes": record["data_bytes"],
+        "alloc_bytes": extern_alloc_size(file_id, by_id),
         "sha256": record["sha256"],
     }
 
@@ -500,6 +578,9 @@ def build_fighter_manifest(
         raise ValueError(f"{fighter}: FTData field count changed: {len(data_values)} != 30")
 
     refs = motion_symbols(ftdata_text, fighter)
+    event32_refs = motion_animjoint_symbols(ftdata_text, fighter)
+    if not set(event32_refs).issubset(refs):
+        raise ValueError(f"{fighter}: Event32 motion census escaped the motion table")
     recovered = local_animation_alias_map(fighter, refs, by_id, semantic_ids)
 
     core: list[dict[str, object]] = []
@@ -536,6 +617,14 @@ def build_fighter_manifest(
             "asset": asset_summary(file_id, by_id),
         })
 
+    event32_motion_files: list[dict[str, object]] = []
+    for symbol in event32_refs:
+        file_id = resolve_symbol(symbol, named_symbols, port_symbols, semantic_ids)
+        event32_motion_files.append({
+            "symbol": symbol,
+            "asset": asset_summary(file_id, by_id),
+        })
+
     local_aliases = [
         {
             "symbol": symbol,
@@ -559,6 +648,8 @@ def build_fighter_manifest(
         "core_extern_closure": [asset_summary(i, by_id) for i in core_closure],
         "local_animation_aliases": local_aliases,
         "motion_files": motion_files,
+        "event32_motion_file_count": len(event32_motion_files),
+        "event32_motion_files": event32_motion_files,
         "item_motion_file_count": sum(1 for row in motion_files if row["item_related"]),
         "nitrofs_file_count": len(nitrofs_ids),
         "nitrofs_files": [asset_summary(i, by_id) for i in nitrofs_ids],
@@ -637,6 +728,11 @@ def build_manifest(repo_root: Path) -> dict[str, object]:
         raise ValueError("Luigi local animation census changed from the source 12")
     if not all(row["was_stubbed_in_port"] for row in luigi["local_animation_aliases"]):
         raise ValueError("Luigi bootstrap expected all 12 local aliases to be unresolved")
+    donkey = fighters[3]
+    if len(donkey["local_animation_aliases"]) != 153:
+        raise ValueError("Donkey local animation census changed from the source 153")
+    if not all(row["was_stubbed_in_port"] for row in donkey["local_animation_aliases"]):
+        raise ValueError("Donkey bootstrap expected all 153 local aliases to be unresolved")
 
     # Native model admission is sourced from the same O2R display-list decoder
     # that produced Mario/Fox's shipping AOT owner.  Keep this attached to the
@@ -706,6 +802,7 @@ def build_manifest(repo_root: Path) -> dict[str, object]:
                 if (not row["was_stubbed_in_port"]) and (not row["port_matches_source"])
             ),
             "luigi_aliases_recovered": len(luigi["local_animation_aliases"]),
+            "donkey_aliases_recovered": len(donkey["local_animation_aliases"]),
         },
         "mariofox_shipping_file_set": verify_mariofox_makefile(
             repo_root, fighters, by_id
@@ -785,6 +882,61 @@ def render_runtime_header(manifest: dict[str, object]) -> str:
         "#define SSB64_NDS_FIGHTER_PRODUCTION_GENERATED_H",
         "",
     ]
+
+    # BattleShip's global fighter-size census visits Mario/Fox too, not only the
+    # incremental P2-3 rows emitted below.  Publish AOT size metadata by
+    # admission group, though: a canonical Mario/Fox build must not pay linked
+    # bytes for DK merely because the generator knows DK exists.  The runtime
+    # selects the incremental macros under the same NDS_P2_* flags as the asset
+    # and native-owner rows.
+    published_alloc_ids: set[int] = set()
+
+    def append_alloc_rows(macro_name: str, names: tuple[str, ...]) -> None:
+        # ftManagerSetupFileSize asks only for a fighter's main file and the
+        # animation file referenced by each motion descriptor.  Models,
+        # shield/special files and main-file dependency closure are loaded later
+        # but are not part of this census; publishing them here only grew the DS
+        # lookup with answers the source never asks at this seam.
+        alloc_by_id: dict[int, int] = {}
+        for fighter_name in names:
+            fighter = fighters[fighter_name]
+            main = next(row for row in fighter["core"] if row["slot"] == "main")
+            assets = [main["asset"]] + [row["asset"] for row in fighter["motion_files"]]
+            for asset in assets:
+                if asset is None:
+                    raise ValueError(f"{fighter_name}: fighter-size source asset is absent")
+                file_id = int(asset["id"])
+                if file_id in published_alloc_ids:
+                    continue
+                alloc_bytes = int(asset["alloc_bytes"])
+                if (alloc_bytes & 0xF) != 0 or (alloc_bytes >> 4) > 0xFFFF:
+                    raise ValueError(
+                        f"asset 0x{file_id:x} allocation size cannot use u16/16 AOT form: "
+                        f"{alloc_bytes}"
+                    )
+                previous = alloc_by_id.get(file_id)
+                if previous is not None and previous != alloc_bytes:
+                    raise ValueError(
+                        f"asset 0x{file_id:x} has conflicting allocation sizes: "
+                        f"{previous} / {alloc_bytes}"
+                    )
+                alloc_by_id[file_id] = alloc_bytes
+        rows = sorted(alloc_by_id.items())
+        published_alloc_ids.update(alloc_by_id)
+        if not rows:
+            lines.append(f"#define {macro_name}(X)")
+            lines.append("")
+            return
+        lines.append(f"#define {macro_name}(X) \\")
+        for index, (file_id, alloc_bytes) in enumerate(rows):
+            suffix = " \\" if index + 1 < len(rows) else ""
+            lines.append(f"    X(0x{file_id:x}u, {alloc_bytes}u){suffix}")
+        lines.append("")
+
+    append_alloc_rows("NDS_P2_BASE_FIGHTER_ALLOC_SIZE_ROWS", ("Mario", "Fox"))
+    for name in BOOTSTRAP_FIGHTERS[2:]:
+        append_alloc_rows(f"NDS_P2_{name.upper()}_ALLOC_SIZE_ROWS", (name,))
+
     for name in BOOTSTRAP_FIGHTERS[2:]:
         fighter = fighters[name]
         prefix = f"NDS_P2_{name.upper()}"
@@ -804,10 +956,20 @@ def render_runtime_header(manifest: dict[str, object]) -> str:
 
         first_id = min(int(row["asset"]["id"]) for row in local_aliases)
         last_id = max(int(row["asset"]["id"]) for row in local_aliases)
+        anim_stem = f"FT{name}Anim"
+        for row in local_aliases:
+            file_id = int(row["asset"]["id"])
+            expected_path = f"reloc_animations/{anim_stem}{file_id - first_id:03d}"
+            if str(row["asset"]["path"]) != expected_path:
+                raise ValueError(
+                    f"{name}: animation path is not contiguous AOT routing: "
+                    f"{row['asset']['path']} != {expected_path}"
+                )
         lines.extend([
             f"#define {prefix}_ANIM_FIRST 0x{first_id:x}u",
             f"#define {prefix}_ANIM_LAST 0x{last_id:x}u",
             f"#define {prefix}_ANIM_COUNT {len(local_aliases)}u",
+            f"#define {prefix}_ANIM_PATH_STEM \"{anim_stem}\"",
             "",
         ])
 
@@ -823,6 +985,52 @@ def render_runtime_header(manifest: dict[str, object]) -> str:
                 lines.append(
                     f"    X({symbol}, 0x{file_id:x}u, \"{nitro_path}\"){suffix}"
                 )
+            lines.append("")
+
+        def append_dependency_rows(
+            macro_name: str, rows: list[tuple[int, str]]
+        ) -> None:
+            """Emit numeric-only O2R dependencies.
+
+            Core/animation rows have an addressable ``ll...FileID`` symbol because
+            BattleShip passes those symbols to lbReloc directly.  Some O2R-only
+            dependencies do not: DK's DkIcon, for example, is a numeric reloc
+            macro in BattleShip and is reached only through DonkeyMain's external
+            relocation table.  It still needs a NitroFS/runtime catalog row, but
+            manufacturing an addressable symbol for it would change the source
+            ABI rather than adapting it.
+            """
+            if not rows:
+                lines.append(f"#define {macro_name}(X)")
+                lines.append("")
+                return
+            lines.append(f"#define {macro_name}(X) \\")
+            for index, (file_id, path) in enumerate(rows):
+                suffix = " \\" if index + 1 < len(rows) else ""
+                nitro_path = f"nitro:/reloc/{path}"
+                lines.append(
+                    f"    X(0x{file_id:x}u, \"{nitro_path}\"){suffix}"
+                )
+            lines.append("")
+
+        def append_symbol_id_rows(
+            macro_name: str, rows: list[tuple[str, int]]
+        ) -> None:
+            """Emit a source-symbol/id classifier table without a runtime path.
+
+            Parser kind is a property of the source FTMotionDesc flag, not of
+            NitroFS routing.  Keeping the semantic symbol beside the numeric
+            O2R id makes the generated classifier auditable without carrying a
+            path string into the C translation unit that consumes it.
+            """
+            if not rows:
+                lines.append(f"#define {macro_name}(X)")
+                lines.append("")
+                return
+            lines.append(f"#define {macro_name}(X) \\")
+            for index, (symbol, file_id) in enumerate(rows):
+                suffix = " \\" if index + 1 < len(rows) else ""
+                lines.append(f"    X({symbol}, 0x{file_id:x}u){suffix}")
             lines.append("")
 
         core_rows = [
@@ -841,8 +1049,29 @@ def render_runtime_header(manifest: dict[str, object]) -> str:
             )
             for row in local_aliases
         ]
+        addressable_paths = {
+            path for _, _, path in core_rows
+        } | {
+            path for _, _, path in anim_rows
+        }
+        dependency_rows = [
+            (int(asset["id"]), str(asset["path"]))
+            for asset in fighter["nitrofs_files"]
+            if str(asset["path"]) in incremental_paths
+            and str(asset["path"]) not in addressable_paths
+        ]
         append_rows(f"{prefix}_CORE_ASSET_ROWS", core_rows)
         append_rows(f"{prefix}_ANIM_ASSET_ROWS", anim_rows)
+        append_dependency_rows(f"{prefix}_DEPENDENCY_ASSET_ROWS", dependency_rows)
+        event32_rows: list[tuple[str, int]] = []
+        seen_event32_ids: set[int] = set()
+        for event32 in fighter["event32_motion_files"]:
+            file_id = int(event32["asset"]["id"])
+            if file_id in seen_event32_ids:
+                continue
+            seen_event32_ids.add(file_id)
+            event32_rows.append((str(event32["symbol"]), file_id))
+        append_symbol_id_rows(f"{prefix}_AOBJ32_ASSET_ROWS", event32_rows)
 
     lines.extend([
         "#endif",

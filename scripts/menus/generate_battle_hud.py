@@ -36,9 +36,19 @@ PORTRAIT_SYMBOLS = [
     "llMNPlayersPortraitsMarioSprite",
     "llMNPlayersPortraitsFoxSprite",
     "llMNPlayersPortraitsLuigiSprite",
+    "llMNPlayersPortraitsDonkeySprite",
 ]
 
-MODEL_HEADER_BYTES = 0x58
+# The checked corpus contains two O2R header revisions.  The original
+# Mario/Fox/Luigi model exports use the legacy 0x58-byte form (data size at
+# +0x54); newer split reloc files such as DkIcon use the compact 0x50-byte form
+# (data size at +0x4c).  Both carry the same RELO magic at +4.  Detect the
+# revision from the self-consistent payload extent instead of making fighter
+# admission depend on a per-file loader fork.
+O2R_PAYLOAD_LAYOUTS = (
+    (0x58, 0x54),
+    (0x50, 0x4C),
+)
 MODEL_STOCK = {
     "MARIO": {
         "file": "MarioModel",
@@ -63,6 +73,18 @@ MODEL_STOCK = {
         "sprite": 0x7CD8,
         "texture": 0x7BD8,
         "palettes": [0x7C30, 0x7C58, 0x7C80, 0x7CA8],
+    },
+    # BattleShip relocData/319_DkIcon.c keeps DK's stock art in the shared
+    # DkIcon dependency rather than in DonkeyModel.  The source layout is
+    # texture@0x08, LUTs@0x60/88/B0/D8/100, bitmap@0x120, Sprite@0x130.
+    # Feeding that ordinary O2R payload through the same stock conversion is
+    # the pipeline fix: future fighters may point `file` at whichever reloc
+    # actually owns their FTSprites without teaching the runtime a new path.
+    "DONKEY": {
+        "file": "DkIcon",
+        "sprite": 0x130,
+        "texture": 0x08,
+        "palettes": [0x60, 0x88, 0xB0, 0xD8, 0x100],
     },
 }
 
@@ -195,22 +217,25 @@ def quantize_portrait(ui, raster, width: int, height: int):
     return pack_obj4(indices, 16, 16), palette
 
 
-def read_model_payload(path: Path) -> bytes:
+def read_o2r_payload(path: Path) -> bytes:
     raw = path.read_bytes()
-    if len(raw) < MODEL_HEADER_BYTES:
-        raise BakeError(f"{path.name}: legacy RELO too short")
+    if len(raw) < min(header for header, _ in O2R_PAYLOAD_LAYOUTS):
+        raise BakeError(f"{path.name}: RELO too short")
     if struct.unpack_from("<I", raw, 4)[0] != 0x52454C4F:
         raise BakeError(f"{path.name}: missing RELO magic")
-    size = struct.unpack_from("<I", raw, 0x54)[0]
-    if MODEL_HEADER_BYTES + size > len(raw):
-        raise BakeError(f"{path.name}: legacy payload {size:#x} exceeds file")
-    return raw[MODEL_HEADER_BYTES:MODEL_HEADER_BYTES + size]
+    for header_bytes, size_offset in O2R_PAYLOAD_LAYOUTS:
+        if size_offset + 4 > len(raw):
+            continue
+        size = struct.unpack_from("<I", raw, size_offset)[0]
+        if header_bytes + size == len(raw):
+            return raw[header_bytes:]
+    raise BakeError(f"{path.name}: unsupported RELO payload extent ({len(raw):#x})")
 
 
 def stock_asset(ui, repo_root: Path, spec: dict):
     path = (repo_root / "decomp" / "BattleShip-main" / "BattleShip_o2r" /
             "reloc_fighters_main" / spec["file"])
-    payload = read_model_payload(path)
+    payload = read_o2r_payload(path)
     sprite = spec["sprite"]
     if sprite + 68 > len(payload):
         raise BakeError(f"{spec['file']}: stock Sprite out of range")
@@ -350,6 +375,7 @@ def bake(repo_root: Path, output: Path) -> None:
     mario_gfx, mario_palettes = stock_asset(ui, repo_root, MODEL_STOCK["MARIO"])
     fox_gfx, fox_palettes = stock_asset(ui, repo_root, MODEL_STOCK["FOX"])
     luigi_gfx, luigi_palettes = stock_asset(ui, repo_root, MODEL_STOCK["LUIGI"])
+    donkey_gfx, donkey_palettes = stock_asset(ui, repo_root, MODEL_STOCK["DONKEY"])
 
     # Shared intensity palette for timer/stock-count glyphs.  Damage gets the
     # same fifteen intensity indices but its four palettes are generated live
@@ -367,8 +393,8 @@ def bake(repo_root: Path, output: Path) -> None:
         "#define NDS_BATTLE_HUD_DAMAGE_GLYPHS 11u",
         "#define NDS_BATTLE_HUD_TIMER_GLYPHS 11u",
         "#define NDS_BATTLE_HUD_STOCK_DIGIT_GLYPHS 11u",
-        "#define NDS_BATTLE_HUD_PORTRAITS 3u",
-        "#define NDS_BATTLE_HUD_STOCK_OWNERS 3u",
+        "#define NDS_BATTLE_HUD_PORTRAITS 4u",
+        "#define NDS_BATTLE_HUD_STOCK_OWNERS 4u",
         "#define NDS_BATTLE_HUD_DAMAGE_GFX_BYTES 512u",
         "#define NDS_BATTLE_HUD_TIMER_GFX_BYTES 128u",
         "#define NDS_BATTLE_HUD_STOCK_DIGIT_GFX_BYTES 128u",
@@ -392,7 +418,9 @@ def bake(repo_root: Path, output: Path) -> None:
     lines += [""]
     lines += c_array_u8("kNdsBattleHudPortraitGfx", portrait_gfx)
     lines += [""]
-    lines += c_array_u8("kNdsBattleHudStockGfx", [mario_gfx, fox_gfx, luigi_gfx])
+    lines += c_array_u8("kNdsBattleHudStockGfx", [
+        mario_gfx, fox_gfx, luigi_gfx, donkey_gfx
+    ])
     lines += [""]
     lines += c_array_u16("kNdsBattleHudPortraitPalette", portrait_palettes)
     lines += [""]
@@ -401,6 +429,8 @@ def bake(repo_root: Path, output: Path) -> None:
     lines += c_array_u16("kNdsBattleHudFoxStockPalette", fox_palettes)
     lines += [""]
     lines += c_array_u16("kNdsBattleHudLuigiStockPalette", luigi_palettes)
+    lines += [""]
+    lines += c_array_u16("kNdsBattleHudDonkeyStockPalette", donkey_palettes)
     lines += [""]
     lines += c_array_u16("kNdsBattleHudWhitePalette", [white_palette])
     lines += ["", "#endif /* NDS_BATTLE_HUD_GENERATED_INC */", ""]

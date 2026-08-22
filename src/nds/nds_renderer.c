@@ -5356,6 +5356,95 @@ NDS_FTR_OWNER_RUNTIME(
     sNdsNativeLuigiRootLightPreambles, NDS_NATIVE_LUIGI_MODEL_DATA_SIZE);
 #endif
 
+#if NDS_P2_DONKEY
+static const NDSNativeFighterRuntimeTables sNdsNativeDonkeyFighterHighTables =
+{
+    sNdsNativeDonkeyFighterStateDeltas,
+    NDS_FTR_COUNT(sNdsNativeDonkeyFighterStateDeltas),
+    sNdsNativeDonkeyFighterStateSequence,
+    NDS_FTR_COUNT(sNdsNativeDonkeyFighterStateSequence),
+    sNdsNativeDonkeyFighterVertexActions,
+    NDS_FTR_COUNT(sNdsNativeDonkeyFighterVertexActions),
+    sNdsNativeDonkeyFighterEpochDirectPolicy,
+    sNdsNativeDonkeyFighterDenseVertices,
+    NDS_FTR_COUNT(sNdsNativeDonkeyFighterDenseVertices),
+    sNdsNativeDonkeyFighterPreparedDense,
+    sNdsNativeDonkeyFighterActionDenseSpans,
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+    sNdsNativeDonkeyFighterDenseColorSource,
+#endif
+    sNdsNativeDonkeyFighterPackedCorners,
+    NDS_FTR_COUNT(sNdsNativeDonkeyFighterPackedCorners),
+    sNdsNativeDonkeyFighterRunFirstCorner,
+    NDS_FTR_COUNT(sNdsNativeDonkeyFighterRunFirstCorner),
+    sNdsNativeDonkeyFighterRunFirstUnique,
+    sNdsNativeDonkeyFighterRunUniqueCount,
+    sNdsNativeDonkeyFighterRunUniqueDense,
+    sNdsNativeDonkeyFighterTriangles,
+    NDS_FTR_COUNT(sNdsNativeDonkeyFighterTriangles),
+    sNdsNativeDonkeyFighterRuns,
+    NDS_FTR_COUNT(sNdsNativeDonkeyFighterRuns),
+#if NDS_TASK56_FIGHTER_PRIMITIVES >= 1
+    sNdsNativeDonkeyFighterPrimitiveGroupFirst,
+    sNdsNativeDonkeyFighterPrimitiveGroupCount,
+    sNdsNativeDonkeyFighterPrimitiveGroupType,
+    sNdsNativeDonkeyFighterPrimitiveGroupFirstVertex,
+    sNdsNativeDonkeyFighterPrimitiveGroupVertexCount,
+    sNdsNativeDonkeyFighterPrimitiveVertices,
+#endif
+    sNdsNativeDonkeyFighterEpochs,
+    NDS_FTR_COUNT(sNdsNativeDonkeyFighterEpochs)
+};
+
+static const NDSNativeFighterRuntimeTables sNdsNativeDonkeyFighterLowTables =
+{
+    sNdsNativeDonkeyFighterStateDeltasLow,
+    NDS_FTR_COUNT(sNdsNativeDonkeyFighterStateDeltasLow),
+    sNdsNativeDonkeyFighterStateSequenceLow,
+    NDS_FTR_COUNT(sNdsNativeDonkeyFighterStateSequenceLow),
+    sNdsNativeDonkeyFighterVertexActionsLow,
+    NDS_FTR_COUNT(sNdsNativeDonkeyFighterVertexActionsLow),
+    sNdsNativeDonkeyFighterEpochDirectPolicyLow,
+    sNdsNativeDonkeyFighterDenseVerticesLow,
+    NDS_FTR_COUNT(sNdsNativeDonkeyFighterDenseVerticesLow),
+    sNdsNativeDonkeyFighterPreparedDenseLow,
+    sNdsNativeDonkeyFighterActionDenseSpansLow,
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+    sNdsNativeDonkeyFighterDenseColorSourceLow,
+#endif
+    sNdsNativeDonkeyFighterPackedCornersLow,
+    NDS_FTR_COUNT(sNdsNativeDonkeyFighterPackedCornersLow),
+    sNdsNativeDonkeyFighterRunFirstCornerLow,
+    NDS_FTR_COUNT(sNdsNativeDonkeyFighterRunFirstCornerLow),
+    sNdsNativeDonkeyFighterRunFirstUniqueLow,
+    sNdsNativeDonkeyFighterRunUniqueCountLow,
+    sNdsNativeDonkeyFighterRunUniqueDenseLow,
+    sNdsNativeDonkeyFighterTrianglesLow,
+    NDS_FTR_COUNT(sNdsNativeDonkeyFighterTrianglesLow),
+    sNdsNativeDonkeyFighterRunsLow,
+    NDS_FTR_COUNT(sNdsNativeDonkeyFighterRunsLow),
+#if NDS_TASK56_FIGHTER_PRIMITIVES >= 1
+    sNdsNativeDonkeyFighterPrimitiveGroupFirstLow,
+    sNdsNativeDonkeyFighterPrimitiveGroupCountLow,
+    sNdsNativeDonkeyFighterPrimitiveGroupTypeLow,
+    sNdsNativeDonkeyFighterPrimitiveGroupFirstVertexLow,
+    sNdsNativeDonkeyFighterPrimitiveGroupVertexCountLow,
+    sNdsNativeDonkeyFighterPrimitiveVerticesLow,
+#endif
+    sNdsNativeDonkeyFighterEpochsLow,
+    NDS_FTR_COUNT(sNdsNativeDonkeyFighterEpochsLow)
+};
+
+NDS_FTR_OWNER_RUNTIME(
+    sNdsNativeDonkeyHighOwner, &sNdsNativeDonkeyFighterHighTables,
+    sNdsNativeDonkeyRoots, sNdsNativeDonkeyCrossPaletteSlots,
+    sNdsNativeDonkeyRootLightPreambles, NDS_NATIVE_DONKEY_MODEL_DATA_SIZE);
+NDS_FTR_OWNER_RUNTIME(
+    sNdsNativeDonkeyLowOwner, &sNdsNativeDonkeyFighterLowTables,
+    sNdsNativeDonkeyRootsLow, sNdsNativeDonkeyCrossPaletteSlotsLow,
+    sNdsNativeDonkeyRootLightPreambles, NDS_NATIVE_DONKEY_MODEL_DATA_SIZE);
+#endif
+
 #undef NDS_FTR_OWNER_RUNTIME
 
 static const NDSNativeFighterRuntimeTables *sNdsNativeFighterActiveTables =
@@ -5381,6 +5470,13 @@ ndsRendererNativeFighterOwnerForDetail(u32 slot, u32 use_low_detail)
     {
         return (use_low_detail != 0u) ?
             &sNdsNativeLuigiLowOwner : &sNdsNativeLuigiHighOwner;
+    }
+#endif
+#if NDS_P2_DONKEY
+    if (slot == 3u)
+    {
+        return (use_low_detail != 0u) ?
+            &sNdsNativeDonkeyLowOwner : &sNdsNativeDonkeyHighOwner;
     }
 #endif
     return NULL;
@@ -25828,11 +25924,26 @@ static u32 sNdsNativeLuigiFighterDenseNormalsLow[
     sizeof(sNdsNativeLuigiFighterDenseVerticesLow) /
         sizeof(sNdsNativeLuigiFighterDenseVerticesLow[0])];
 #endif
+#if NDS_P2_DONKEY
+/* Donkey is another independent dense-ID namespace.  As with Luigi, these are
+ * one-time CPU-built/read-only tables in cached main RAM, never DMA endpoints;
+ * do not consume the already-packed P2-2 DTCM budget to admit a fighter. */
+static u32 sNdsNativeDonkeyFighterDenseNormals[
+    sizeof(sNdsNativeDonkeyFighterDenseVertices) /
+        sizeof(sNdsNativeDonkeyFighterDenseVertices[0])];
+static u32 sNdsNativeDonkeyFighterDenseNormalsLow[
+    sizeof(sNdsNativeDonkeyFighterDenseVerticesLow) /
+        sizeof(sNdsNativeDonkeyFighterDenseVerticesLow[0])];
+#endif
 static u8 sNdsNativeFighterDenseNormalsBuilt;
 static u8 sNdsNativeFighterDenseNormalsBuiltLow;
 #if NDS_P2_LUIGI
 static u8 sNdsNativeLuigiFighterDenseNormalsBuilt;
 static u8 sNdsNativeLuigiFighterDenseNormalsBuiltLow;
+#endif
+#if NDS_P2_DONKEY
+static u8 sNdsNativeDonkeyFighterDenseNormalsBuilt;
+static u8 sNdsNativeDonkeyFighterDenseNormalsBuiltLow;
 #endif
 static u32 *sNdsNativeFighterActiveDenseNormals =
     sNdsNativeFighterDenseNormals;
@@ -25871,6 +25982,26 @@ ndsRendererNativeSelectFighterRuntimeTables(u32 slot, u32 use_low_detail)
                 sNdsNativeLuigiFighterDenseNormals;
             sNdsNativeFighterActiveDenseNormalsBuilt =
                 &sNdsNativeLuigiFighterDenseNormalsBuilt;
+        }
+        return TRUE;
+    }
+#endif
+#if NDS_P2_DONKEY
+    if (slot == 3u)
+    {
+        if (use_low_detail != 0u)
+        {
+            sNdsNativeFighterActiveDenseNormals =
+                sNdsNativeDonkeyFighterDenseNormalsLow;
+            sNdsNativeFighterActiveDenseNormalsBuilt =
+                &sNdsNativeDonkeyFighterDenseNormalsBuiltLow;
+        }
+        else
+        {
+            sNdsNativeFighterActiveDenseNormals =
+                sNdsNativeDonkeyFighterDenseNormals;
+            sNdsNativeFighterActiveDenseNormalsBuilt =
+                &sNdsNativeDonkeyFighterDenseNormalsBuilt;
         }
         return TRUE;
     }
@@ -28982,7 +29113,7 @@ static s32 ndsRendererNativeGetHierarchyTables(
             sizeof(sNdsNativeFoxJointSchedule[0]);
     }
 #if NDS_P2_LUIGI
-    else
+    else if (slot == 2u)
     {
         tables->roots = sNdsNativeLuigiRoots;
         tables->schedule = sNdsNativeLuigiJointSchedule;
@@ -28994,6 +29125,23 @@ static s32 ndsRendererNativeGetHierarchyTables(
             sizeof(sNdsNativeLuigiJointSchedule[0]);
     }
 #endif
+#if NDS_P2_DONKEY
+    else if (slot == 3u)
+    {
+        tables->roots = sNdsNativeDonkeyRoots;
+        tables->schedule = sNdsNativeDonkeyJointSchedule;
+        tables->binding_joints = sNdsNativeDonkeyBindingJoints;
+        tables->cross_slots = sNdsNativeDonkeyCrossPaletteSlots;
+        tables->root_count = sizeof(sNdsNativeDonkeyRoots) /
+            sizeof(sNdsNativeDonkeyRoots[0]);
+        tables->joint_count = sizeof(sNdsNativeDonkeyJointSchedule) /
+            sizeof(sNdsNativeDonkeyJointSchedule[0]);
+    }
+#endif
+    else
+    {
+        return FALSE;
+    }
     return TRUE;
 }
 
@@ -29026,12 +29174,22 @@ const u8 *ndsRendererNativeFighterBindingParents(u32 slot, u32 *count)
         return sNdsNativeFoxBindingParents;
     }
 #if NDS_P2_LUIGI
-    *count = (u32)(sizeof(sNdsNativeLuigiBindingParents) /
-                   sizeof(sNdsNativeLuigiBindingParents[0]));
-    return sNdsNativeLuigiBindingParents;
-#else
-    return NULL;
+    if (slot == 2u)
+    {
+        *count = (u32)(sizeof(sNdsNativeLuigiBindingParents) /
+                       sizeof(sNdsNativeLuigiBindingParents[0]));
+        return sNdsNativeLuigiBindingParents;
+    }
 #endif
+#if NDS_P2_DONKEY
+    if (slot == 3u)
+    {
+        *count = (u32)(sizeof(sNdsNativeDonkeyBindingParents) /
+                       sizeof(sNdsNativeDonkeyBindingParents[0]));
+        return sNdsNativeDonkeyBindingParents;
+    }
+#endif
+    return NULL;
 }
 
 #if NDS_R2_FIGHTER_GX_COMPOSE
@@ -29059,12 +29217,22 @@ const u8 *ndsRendererNativeFighterCrossPaletteSlots(u32 slot, u32 *count)
         return sNdsNativeFoxCrossPaletteSlots;
     }
 #if NDS_P2_LUIGI
-    *count = (u32)(sizeof(sNdsNativeLuigiCrossPaletteSlots) /
-                   sizeof(sNdsNativeLuigiCrossPaletteSlots[0]));
-    return sNdsNativeLuigiCrossPaletteSlots;
-#else
-    return NULL;
+    if (slot == 2u)
+    {
+        *count = (u32)(sizeof(sNdsNativeLuigiCrossPaletteSlots) /
+                       sizeof(sNdsNativeLuigiCrossPaletteSlots[0]));
+        return sNdsNativeLuigiCrossPaletteSlots;
+    }
 #endif
+#if NDS_P2_DONKEY
+    if (slot == 3u)
+    {
+        *count = (u32)(sizeof(sNdsNativeDonkeyCrossPaletteSlots) /
+                       sizeof(sNdsNativeDonkeyCrossPaletteSlots[0]));
+        return sNdsNativeDonkeyCrossPaletteSlots;
+    }
+#endif
+    return NULL;
 }
 #endif
 
