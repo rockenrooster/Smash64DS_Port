@@ -13802,6 +13802,15 @@ static NDSFighterDisplayContract sNdsFighterDisplayContract;
 /* Parallel to sNdsFighterDisplayContract.events, in the consumer's layout. */
 static NDSRendererNativeFighterPreamble sNdsFighterDisplayContractPreambles[
     NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED];
+/* Playback normally consumes the freshly captured arrays above. A draw-memo
+ * hit instead points these two views straight at the immutable per-slot memo.
+ * That removes the old hit-side event+preamble memcpy (up to 1,280 B per
+ * fighter draw) without changing the source capture, key, invalidation, or
+ * event order. Capture writers never use these views. */
+static const NDSFighterDisplayContractEvent *sNdsFighterDisplayReplayEvents =
+    sNdsFighterDisplayContract.events;
+static const NDSRendererNativeFighterPreamble *
+    sNdsFighterDisplayReplayPreambles = sNdsFighterDisplayContractPreambles;
 /* What a root points at when there is no contract event behind it. The roots
  * hold the preamble by reference, so the no-event case needs somewhere real to
  * point rather than a zeroed inline copy; its cleared VALID bit is what the
@@ -14502,13 +14511,8 @@ static void ndsFtrDrawMemoFinish(void)
     if (sNdsFtrDrawMemoHit != 0u)
     {
         n = slot->event_count;
-        if (n != 0u)
-        {
-            memcpy(sNdsFighterDisplayContract.events, slot->events,
-                   n * sizeof(slot->events[0]));
-            memcpy(sNdsFighterDisplayContractPreambles, slot->preambles,
-                   n * sizeof(slot->preambles[0]));
-        }
+        sNdsFighterDisplayReplayEvents = slot->events;
+        sNdsFighterDisplayReplayPreambles = slot->preambles;
         sNdsFighterDisplayContract.event_count = n;
         /* The contract still selected these display lists; only the derivation
          * was replayed. Keeping the counter's meaning is what makes Boundary's
@@ -14547,6 +14551,11 @@ static void ndsFighterDisplayContractCapture(GObj *fighter_gobj)
     extern sb32 gmCameraLookAtFuncMatrix(Mtx *mtx, CObj *cobj, Gfx **dls);
     FTStruct *fp = ftGetStruct(fighter_gobj);
     u32 i;
+
+    /* A miss/bypass consumes this frame's fresh source capture. MemoFinish
+     * changes the views only after proving a hit. */
+    sNdsFighterDisplayReplayEvents = sNdsFighterDisplayContract.events;
+    sNdsFighterDisplayReplayPreambles = sNdsFighterDisplayContractPreambles;
 
     /* Every consumed event field and scratch command is overwritten before
      * use. Reset only the live capture state instead of clearing the 6,240-byte
@@ -14653,12 +14662,12 @@ static void ndsFighterCollectAllDObjsWithDL(
     {
         for (i = 0u; i < sNdsFighterDisplayContract.event_count; i++)
         {
-            if (sNdsFighterDisplayContract.events[i].dobj == NULL)
+            if (sNdsFighterDisplayReplayEvents[i].dobj == NULL)
             {
                 continue;
             }
             collection->dobjs[collection->selected_count] =
-                sNdsFighterDisplayContract.events[i].dobj;
+                sNdsFighterDisplayReplayEvents[i].dobj;
             collection->indices[collection->selected_count] = i;
             collection->selected_count++;
             collection->total_count++;
@@ -14828,7 +14837,7 @@ static void ndsFighterDisplayContractSeedMaterialLights(
     }
     for (i = 0u; i < sNdsFighterDisplayContract.event_count; i++)
     {
-        DObj *dobj = sNdsFighterDisplayContract.events[i].material_dobj;
+        DObj *dobj = sNdsFighterDisplayReplayEvents[i].material_dobj;
         MObj *mobj = (dobj != NULL) ? dobj->mobj : NULL;
 
         if (mobj == NULL)
@@ -14993,13 +15002,13 @@ static sb32 ndsRendererAdapterBuildNativeProductionInputs(
             &workspace->production_roots[i];
         const NDSFighterDisplayContractEvent *event =
             (sNdsFighterDisplayContractPlayback != FALSE) ?
-                &sNdsFighterDisplayContract.events[
+                &sNdsFighterDisplayReplayEvents[
                     collection->indices[i]] : NULL;
 
         config->initial_projection = projection;
         config->initial_modelview = modelviews[i];
         config->initial_geometry_mode = (event != NULL) ?
-            sNdsFighterDisplayContractPreambles[
+            sNdsFighterDisplayReplayPreambles[
                 collection->indices[i]].geometry_mode : 0u;
         config->color_modulate = color_modulate;
         config->user = resolver;
@@ -15082,7 +15091,7 @@ static sb32 ndsRendererAdapterBuildNativeProductionInputs(
 #endif
 
         root->preamble = (event != NULL) ?
-            &sNdsFighterDisplayContractPreambles[collection->indices[i]] :
+            &sNdsFighterDisplayReplayPreambles[collection->indices[i]] :
             &sNdsRendererAdapterZeroPreamble;
     }
     return TRUE;
@@ -15143,7 +15152,7 @@ static sb32 ndsRendererAdapterBuildNativeHierarchyInputs(
             &workspace->production_roots[i];
         const NDSFighterDisplayContractEvent *event =
             (sNdsFighterDisplayContractPlayback != FALSE) ?
-                &sNdsFighterDisplayContract.events[
+                &sNdsFighterDisplayReplayEvents[
                     collection->indices[i]] : NULL;
 
         *root = (NDSRendererNativeFighterRoot){0};
@@ -15153,7 +15162,7 @@ static sb32 ndsRendererAdapterBuildNativeHierarchyInputs(
             sNdsRendererAdapterNativeOwnerMaterialRows[i]];
         root->config = config;
         root->preamble = (event != NULL) ?
-            &sNdsFighterDisplayContractPreambles[collection->indices[i]] :
+            &sNdsFighterDisplayReplayPreambles[collection->indices[i]] :
             &sNdsRendererAdapterZeroPreamble;
     }
     workspace->hierarchy.roots = workspace->production_roots;
@@ -16090,7 +16099,7 @@ static NDSFighterDrawPlanResult ndsFighterDrawPlanResolve(
     {
         const NDSFighterDisplayContractEvent *event =
             (sNdsFighterDisplayContractPlayback != FALSE) ?
-                &sNdsFighterDisplayContract.events[
+                &sNdsFighterDisplayReplayEvents[
                     collection->indices[i]] : NULL;
         const Gfx *native_dl =
             (event != NULL) ? event->dl : collection->dobjs[i]->dl;
@@ -16729,7 +16738,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
         {
             const NDSFighterDisplayContractEvent *event =
                 (sNdsFighterDisplayContractPlayback != FALSE) ?
-                    &sNdsFighterDisplayContract.events[
+                    &sNdsFighterDisplayReplayEvents[
                         collection.indices[i]] : NULL;
             const Gfx *native_dl =
                 (event != NULL) ? event->dl : collection.dobjs[i]->dl;
@@ -17162,7 +17171,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
     {
         const NDSFighterDisplayContractEvent *contract_event =
             (sNdsFighterDisplayContractPlayback != FALSE) ?
-                &sNdsFighterDisplayContract.events[collection.indices[i]] :
+                &sNdsFighterDisplayReplayEvents[collection.indices[i]] :
                 NULL;
         const Gfx *dl = (sNdsFighterDisplayContractPlayback != FALSE) ?
             contract_event->dl :
@@ -17248,7 +17257,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
         if (contract_event != NULL)
         {
             const NDSRendererNativeFighterPreamble *contract_preamble =
-                &sNdsFighterDisplayContractPreambles[collection.indices[i]];
+                &sNdsFighterDisplayReplayPreambles[collection.indices[i]];
 
             persistent_stats.geometry_mode =
 #if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
@@ -17388,7 +17397,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
         config.initial_modelview = initial_modelview_ptr;
         config.initial_geometry_mode =
             (sNdsFighterDisplayContractPlayback != FALSE) ?
-                sNdsFighterDisplayContractPreambles[
+                sNdsFighterDisplayReplayPreambles[
                     collection.indices[i]].geometry_mode : 0u;
         config.color_modulate = color_modulate;
 #if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
