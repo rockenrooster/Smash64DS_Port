@@ -5962,19 +5962,16 @@ try {
                     $postArmWeaponTriangleCount = $wr[4] - $arm[3]
                     $postArmEffectSubmitCount = $er[2] - $arm[4]
                     $postArmEffectTriangleCount = $er[8] - $arm[5]
-                    # Direct boot reaches the arm with only Dream Land's
+                    # Both flows now reach the arm with exactly Dream Land's
                     # historical 42-submit / 202-triangle generic traversal.
-                    # The P2 shell now runs the real fighter-entry window first;
-                    # that source-driven pre-arm display work leaves a stable
-                    # 12-submit / 54-triangle generic residue in addition to the
-                    # stage traversal after the separately-accounted effect
-                    # ledger is removed. Keep the two flow contracts explicit:
-                    # collapsing them is what made fixing the intros look like a
-                    # stage-renderer regression.
-                    $expectedStageStartupSubmitCount =
-                        $(if ($usesP2ShellFlow) { 54 } else { 42 })
-                    $expectedStageStartupTriangleCount =
-                        $(if ($usesP2ShellFlow) { 256 } else { 202 })
+                    # The shell still runs the real fighter-entry window first,
+                    # but Mario's pipe / Fox's Arwing are fully owned by the
+                    # separately-accounted AOT DS-native effect path above.
+                    # Requiring zero generic residue here is intentional: the
+                    # previous 12-submit / 54-triangle shell allowance was the
+                    # interpreted entry tail that P2-3 just removed.
+                    $expectedStageStartupSubmitCount = 42
+                    $expectedStageStartupTriangleCount = 202
                     $stageStartupValid =
                         $stageStartupSubmitCount -eq
                             $expectedStageStartupSubmitCount -and
