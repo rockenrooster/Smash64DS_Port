@@ -804,6 +804,20 @@ GObj *wpMarioFireballMakeWeapon(GObj *fighter_gobj, Vec3f *pos, s32 index)
         WPStruct *wp = wpGetStruct(weapon_gobj);
         gNdsFighterProjectileProofSpawnSuccessCount++;
         ndsMarioFireballRecordCreatedWeapon(weapon_gobj);
+        if (wp != NULL)
+        {
+            /* Source-derived P2-3 variant trace.  Capture immediately after
+             * BattleShip's constructor and before reflector/map callbacks can
+             * change velocity or lifetime.  Luigi must arrive as index 1 with
+             * a straight 36-unit/tic launch; Mario is index 0 and therefore a
+             * useful negative control in the standing proof. */
+            gNdsFighterProjectileProofFireballIndex =
+                (s32)wp->weapon_vars.fireball.index;
+            gNdsFighterProjectileProofFireballInitialVelXMilli =
+                (s32)(wp->physics.vel_air.x * 1000.0F);
+            gNdsFighterProjectileProofFireballInitialVelYMilli =
+                (s32)(wp->physics.vel_air.y * 1000.0F);
+        }
         /* Port-side retune of the fireball's stage-collision diamond. The
          * source values come straight from ROM reloc data (WPAttributes
          * map_coll_*), loaded by wpManagerMakeWeapon above; the port has no

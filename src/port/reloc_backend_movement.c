@@ -9468,6 +9468,30 @@ static sb32 ndsFighterNaturalCombatStatusIsGuard(s32 status_id)
             (status_id <= nFTCommonStatusGuardEnd)) ? TRUE : FALSE;
 }
 
+/* BattleShip's Luigi special-status table deliberately points N/Hi/Lw at the
+ * Mario state-machine callbacks while retaining Luigi motion/event/attribute
+ * data. Treat that source family as one proof-owner selection without aliasing
+ * the status constants themselves: the predicates below still dispatch on the
+ * actual fighter kind and compare that fighter's enum. */
+static sb32 ndsFighterNaturalIsMarioSpecialFamily(const FTStruct *fp)
+{
+    if (fp == NULL)
+    {
+        return FALSE;
+    }
+    if (fp->fkind == nFTKindMario)
+    {
+        return TRUE;
+    }
+#if NDS_P2_LUIGI
+    if (fp->fkind == nFTKindLuigi)
+    {
+        return TRUE;
+    }
+#endif
+    return FALSE;
+}
+
 static u32 ndsFighterNaturalProjectileSelectSlot(FTStruct *fp[2])
 {
     u32 i;
@@ -9475,7 +9499,7 @@ static u32 ndsFighterNaturalProjectileSelectSlot(FTStruct *fp[2])
 #if NDS_IMPORT_BATTLESHIP_FOX_REFLECTOR
     for (i = 0u; i < 2u; i++)
     {
-        if (fp[i]->fkind == nFTKindMario)
+        if (ndsFighterNaturalIsMarioSpecialFamily(fp[i]) != FALSE)
         {
             return i;
         }
@@ -9493,7 +9517,7 @@ static u32 ndsFighterNaturalProjectileSelectSlot(FTStruct *fp[2])
 #if NDS_IMPORT_BATTLESHIP_MARIO_FIREBALL
     for (i = 0u; i < 2u; i++)
     {
-        if (fp[i]->fkind == nFTKindMario)
+        if (ndsFighterNaturalIsMarioSpecialFamily(fp[i]) != FALSE)
         {
             return i;
         }
@@ -9521,7 +9545,7 @@ static u32 ndsFighterNaturalReflectorSelectFoxSlot(FTStruct *fp[2])
 static u32 ndsFighterNaturalProjectileExpectedKind(FTStruct *fp)
 {
 #if NDS_IMPORT_BATTLESHIP_FOX_REFLECTOR
-    if ((fp != NULL) && (fp->fkind == nFTKindMario))
+    if (ndsFighterNaturalIsMarioSpecialFamily(fp) != FALSE)
     {
         return nWPKindFireball;
     }
@@ -9551,6 +9575,55 @@ static sb32 ndsFighterNaturalProjectileStatusIsSpecialN(FTStruct *fp)
         return ((fp->status_id == nFTMarioStatusSpecialN) ||
                 (fp->status_id == nFTMarioStatusSpecialAirN)) ? TRUE : FALSE;
     }
+#if NDS_P2_LUIGI
+    if (fp->fkind == nFTKindLuigi)
+    {
+        return ((fp->status_id == nFTLuigiStatusSpecialN) ||
+                (fp->status_id == nFTLuigiStatusSpecialAirN)) ? TRUE : FALSE;
+    }
+#endif
+    return FALSE;
+}
+
+static sb32 ndsFighterNaturalMarioFamilyStatusIsSpecialHi(FTStruct *fp)
+{
+    if (fp == NULL)
+    {
+        return FALSE;
+    }
+    if (fp->fkind == nFTKindMario)
+    {
+        return ((fp->status_id == nFTMarioStatusSpecialHi) ||
+                (fp->status_id == nFTMarioStatusSpecialAirHi)) ? TRUE : FALSE;
+    }
+#if NDS_P2_LUIGI
+    if (fp->fkind == nFTKindLuigi)
+    {
+        return ((fp->status_id == nFTLuigiStatusSpecialHi) ||
+                (fp->status_id == nFTLuigiStatusSpecialAirHi)) ? TRUE : FALSE;
+    }
+#endif
+    return FALSE;
+}
+
+static sb32 ndsFighterNaturalMarioFamilyStatusIsSpecialLw(FTStruct *fp)
+{
+    if (fp == NULL)
+    {
+        return FALSE;
+    }
+    if (fp->fkind == nFTKindMario)
+    {
+        return ((fp->status_id == nFTMarioStatusSpecialLw) ||
+                (fp->status_id == nFTMarioStatusSpecialAirLw)) ? TRUE : FALSE;
+    }
+#if NDS_P2_LUIGI
+    if (fp->fkind == nFTKindLuigi)
+    {
+        return ((fp->status_id == nFTLuigiStatusSpecialLw) ||
+                (fp->status_id == nFTLuigiStatusSpecialAirLw)) ? TRUE : FALSE;
+    }
+#endif
     return FALSE;
 }
 
@@ -10330,13 +10403,13 @@ void ndsFighterMarioFoxNaturalMotionPrepare(void)
     sNdsNaturalSpecialsButtonPressed = 0u;
     gNdsFighterSpecialsMarioSlot = 0u;
     gNdsFighterSpecialsFoxSlot = 1u;
+    if (ndsFighterNaturalIsMarioSpecialFamily(p1) != FALSE)
+    {
+        gNdsFighterSpecialsMarioSlot = 1u;
+    }
     if (p0->fkind == nFTKindFox)
     {
         gNdsFighterSpecialsFoxSlot = 0u;
-    }
-    if (p1->fkind == nFTKindMario)
-    {
-        gNdsFighterSpecialsMarioSlot = 1u;
     }
     if (p1->fkind == nFTKindFox)
     {
@@ -11128,7 +11201,7 @@ static sb32 ndsFighterNaturalSpecialsStartNext(void)
 }
 
 static void ndsFighterNaturalSpecialsRecordRoot(FTStruct *fp,
-                                                volatile s32 *max_milli)
+                                                 volatile s32 *max_milli)
 {
     DObj *root;
     s32 root_y;
@@ -11146,6 +11219,27 @@ static void ndsFighterNaturalSpecialsRecordRoot(FTStruct *fp,
     if (root_y > *max_milli)
     {
         *max_milli = root_y;
+    }
+}
+
+static void ndsFighterNaturalSpecialsRecordDamageMax(
+    FTStruct *fp, volatile u32 *max_damage)
+{
+    u32 i;
+
+    if ((fp == NULL) || (max_damage == NULL))
+    {
+        return;
+    }
+    for (i = 0u; i < FTATTACKCOLL_NUM_MAX; i++)
+    {
+        const FTAttackColl *attack = &fp->attack_colls[i];
+
+        if ((attack->attack_state != nGMAttackStateOff) &&
+            (attack->damage > 0) && ((u32)attack->damage > *max_damage))
+        {
+            *max_damage = (u32)attack->damage;
+        }
     }
 }
 
@@ -11174,15 +11268,39 @@ static void ndsFighterNaturalSpecialsRecord(FTStruct *fp[2])
         {
             ndsFighterNaturalSpecialsRecordRoot(
                 mario, &gNdsFighterSpecialsMarioHiRootYMilli);
+            ndsFighterNaturalSpecialsRecordDamageMax(
+                mario, &gNdsFighterSpecialsMarioHiDamageMax);
         }
-        if (mario->status_id == nFTMarioStatusSpecialHi)
+        if ((sNdsNaturalSpecialsPhase ==
+                nNDSNaturalSpecialsPhaseMarioLw) ||
+            (sNdsNaturalSpecialsPhase ==
+                nNDSNaturalSpecialsPhaseSettleMarioLw))
+        {
+            ndsFighterNaturalSpecialsRecordDamageMax(
+                mario, &gNdsFighterSpecialsMarioLwDamageMax);
+        }
+        if ((mario->fkind == nFTKindMario) &&
+            (mario->status_id == nFTMarioStatusSpecialHi))
         {
             gNdsFighterSpecialsMarioHiFrames++;
         }
-        else if (mario->status_id == nFTMarioStatusSpecialAirHi)
+        else if ((mario->fkind == nFTKindMario) &&
+                 (mario->status_id == nFTMarioStatusSpecialAirHi))
         {
             gNdsFighterSpecialsMarioAirHiFrames++;
         }
+#if NDS_P2_LUIGI
+        else if ((mario->fkind == nFTKindLuigi) &&
+                 (mario->status_id == nFTLuigiStatusSpecialHi))
+        {
+            gNdsFighterSpecialsMarioHiFrames++;
+        }
+        else if ((mario->fkind == nFTKindLuigi) &&
+                 (mario->status_id == nFTLuigiStatusSpecialAirHi))
+        {
+            gNdsFighterSpecialsMarioAirHiFrames++;
+        }
+#endif
         else if (mario->status_id == nFTCommonStatusFallSpecial)
         {
             gNdsFighterSpecialsMarioFallSpecialFrames++;
@@ -11199,14 +11317,28 @@ static void ndsFighterNaturalSpecialsRecord(FTStruct *fp[2])
             gNdsFighterSpecialsMarioHiWaitFrames++;
         }
 
-        if (mario->status_id == nFTMarioStatusSpecialLw)
+        if ((mario->fkind == nFTKindMario) &&
+            (mario->status_id == nFTMarioStatusSpecialLw))
         {
             gNdsFighterSpecialsMarioLwFrames++;
         }
-        else if (mario->status_id == nFTMarioStatusSpecialAirLw)
+        else if ((mario->fkind == nFTKindMario) &&
+                 (mario->status_id == nFTMarioStatusSpecialAirLw))
         {
             gNdsFighterSpecialsMarioAirLwFrames++;
         }
+#if NDS_P2_LUIGI
+        else if ((mario->fkind == nFTKindLuigi) &&
+                 (mario->status_id == nFTLuigiStatusSpecialLw))
+        {
+            gNdsFighterSpecialsMarioLwFrames++;
+        }
+        else if ((mario->fkind == nFTKindLuigi) &&
+                 (mario->status_id == nFTLuigiStatusSpecialAirLw))
+        {
+            gNdsFighterSpecialsMarioAirLwFrames++;
+        }
+#endif
         if (((gNdsFighterSpecialsMarioLwFrames > 0u) ||
              (gNdsFighterSpecialsMarioAirLwFrames > 0u)) &&
             (mario->status_id == nFTCommonStatusWait) &&
@@ -11895,7 +12027,8 @@ static sb32 ndsFighterNaturalSpecialsApplyInput(FTStruct *fp[2],
     {
     case nNDSNaturalSpecialsPhaseMarioHi:
         if (((gNdsFighterSpecialsMarioHiFrames > 0u) ||
-             (fp[mario_slot]->status_id == nFTMarioStatusSpecialHi)) ||
+             (ndsFighterNaturalMarioFamilyStatusIsSpecialHi(
+                  fp[mario_slot]) != FALSE)) ||
             (ndsFighterNaturalSpecialsBothGroundWait(fp) != FALSE))
         {
             stick_y[mario_slot] = 80;
@@ -11911,8 +12044,8 @@ static sb32 ndsFighterNaturalSpecialsApplyInput(FTStruct *fp[2],
     case nNDSNaturalSpecialsPhaseMarioLw:
         if (((gNdsFighterSpecialsMarioLwFrames > 0u) ||
              (gNdsFighterSpecialsMarioAirLwFrames > 0u) ||
-             (fp[mario_slot]->status_id == nFTMarioStatusSpecialLw) ||
-             (fp[mario_slot]->status_id == nFTMarioStatusSpecialAirLw)) ||
+             (ndsFighterNaturalMarioFamilyStatusIsSpecialLw(
+                  fp[mario_slot]) != FALSE)) ||
             (ndsFighterNaturalSpecialsBothGroundWait(fp) != FALSE))
         {
             stick_y[mario_slot] = -80;
@@ -12845,6 +12978,16 @@ static sb32 ndsStageGCDrawAllLoopIsWeaponDisplay(GObj *gobj, s32 link_id)
  * offered to the hardware at all. Not the atlas, not the camera -- the camera
  * captures 10 in pass 3 and 15 in pass 4 -- and not the tree walk.
  *
+ * Fox's entry Arwing adds the second half of the source contract: its EFDesc
+ * starts on link 10, then efManagerSortZNeg moves the SAME effect GObj to link
+ * 2 or 20 every update according to the animated model Z.  gmCameraDefaultProcDisplay
+ * explicitly captures link 2 in its first pass and link 20 in its final pass.
+ * Restricting a source effect to its descriptor's initial link therefore makes
+ * the Arwing disappear as soon as the source performs its normal depth sort.
+ * Admit those two source-owned sorted-effect links as well; the GObj-kind and
+ * DObj-geometry checks below still prevent stage/ground traffic sharing link 2
+ * from entering the effect submitter.
+ *
  * Behind the second gate sits ndsEFManagerIsVisualEffectGObj (efmanager.c:969),
  * which returns TRUE only when dobj->dl matches a procedural template pointer.
  * A source model carries the ROM asset's list and can never match it, so both
@@ -12863,10 +13006,12 @@ static sb32 ndsStageGCDrawAllLoopIsEffectDisplay(GObj *gobj, s32 link_id)
     {
         return TRUE;
     }
-    /* 10 and 15 carry the four source models; 18 also carries the KO burst,
-     * which reaches here when it is not a template. A display list is required
-     * because the submit below refuses to draw without one anyway. */
-    if ((link_id == 10) || (link_id == 15) ||
+    /* 10 and 15 carry ordinary source effect models; 2 and 20 are the source's
+     * dynamic Z-sort destinations (Fox entry Arwing is the measured owner); 18
+     * also carries the KO burst when it is not a procedural template. A display
+     * list is required because the submit below refuses to draw without one. */
+    if ((link_id == 2) || (link_id == 10) || (link_id == 15) ||
+        (link_id == 20) ||
         (link_id == NDS_EFFECT_DISPLAY_LINK_TEMPLATE))
     {
         DObj *dobj = DObjGetStruct(gobj);

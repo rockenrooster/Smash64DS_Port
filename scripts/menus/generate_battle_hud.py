@@ -35,6 +35,7 @@ STOCK_DIGIT_SYMBOLS = [f"llIFCommonDigits{i}Sprite" for i in range(10)] + [
 PORTRAIT_SYMBOLS = [
     "llMNPlayersPortraitsMarioSprite",
     "llMNPlayersPortraitsFoxSprite",
+    "llMNPlayersPortraitsLuigiSprite",
 ]
 
 MODEL_HEADER_BYTES = 0x58
@@ -50,6 +51,18 @@ MODEL_STOCK = {
         "sprite": 0x7C28,
         "texture": 0x7B28,
         "palettes": [0x7B80, 0x7BA8, 0x7BD0, 0x7BF8],
+    },
+    # BattleShip dLuigiMain_sprites.stock_sprite points to LuigiModel+0x7CD8
+    # and dLuigiMain_stock_luts points to the four 0x28-byte-stride CI4 LUT
+    # frames at 0x7C30/58/80/A8.  The stock texture immediately precedes the
+    # first LUT (0x7BD8..0x7C2F).  Keep these source offsets explicit for the
+    # same bounded legacy-reader reason as Mario/Fox above; the O2R model uses
+    # the old 0x58-byte RELO header and is not handled by RelocFile.
+    "LUIGI": {
+        "file": "LuigiModel",
+        "sprite": 0x7CD8,
+        "texture": 0x7BD8,
+        "palettes": [0x7C30, 0x7C58, 0x7C80, 0x7CA8],
     },
 }
 
@@ -336,6 +349,7 @@ def bake(repo_root: Path, output: Path) -> None:
 
     mario_gfx, mario_palettes = stock_asset(ui, repo_root, MODEL_STOCK["MARIO"])
     fox_gfx, fox_palettes = stock_asset(ui, repo_root, MODEL_STOCK["FOX"])
+    luigi_gfx, luigi_palettes = stock_asset(ui, repo_root, MODEL_STOCK["LUIGI"])
 
     # Shared intensity palette for timer/stock-count glyphs.  Damage gets the
     # same fifteen intensity indices but its four palettes are generated live
@@ -353,7 +367,8 @@ def bake(repo_root: Path, output: Path) -> None:
         "#define NDS_BATTLE_HUD_DAMAGE_GLYPHS 11u",
         "#define NDS_BATTLE_HUD_TIMER_GLYPHS 11u",
         "#define NDS_BATTLE_HUD_STOCK_DIGIT_GLYPHS 11u",
-        "#define NDS_BATTLE_HUD_PORTRAITS 2u",
+        "#define NDS_BATTLE_HUD_PORTRAITS 3u",
+        "#define NDS_BATTLE_HUD_STOCK_OWNERS 3u",
         "#define NDS_BATTLE_HUD_DAMAGE_GFX_BYTES 512u",
         "#define NDS_BATTLE_HUD_TIMER_GFX_BYTES 128u",
         "#define NDS_BATTLE_HUD_STOCK_DIGIT_GFX_BYTES 128u",
@@ -377,13 +392,15 @@ def bake(repo_root: Path, output: Path) -> None:
     lines += [""]
     lines += c_array_u8("kNdsBattleHudPortraitGfx", portrait_gfx)
     lines += [""]
-    lines += c_array_u8("kNdsBattleHudStockGfx", [mario_gfx, fox_gfx])
+    lines += c_array_u8("kNdsBattleHudStockGfx", [mario_gfx, fox_gfx, luigi_gfx])
     lines += [""]
     lines += c_array_u16("kNdsBattleHudPortraitPalette", portrait_palettes)
     lines += [""]
     lines += c_array_u16("kNdsBattleHudMarioStockPalette", mario_palettes)
     lines += [""]
     lines += c_array_u16("kNdsBattleHudFoxStockPalette", fox_palettes)
+    lines += [""]
+    lines += c_array_u16("kNdsBattleHudLuigiStockPalette", luigi_palettes)
     lines += [""]
     lines += c_array_u16("kNdsBattleHudWhitePalette", [white_palette])
     lines += ["", "#endif /* NDS_BATTLE_HUD_GENERATED_INC */", ""]

@@ -522,6 +522,13 @@ NDS_P2_FOUR_CPU_STRESS ?= 0
 # half-imported fighter from changing the P2-2 standing Boundary merely because
 # its files exist in the tree.  Luigi is the first pipeline prover.
 NDS_P2_LUIGI ?= 0
+# P2-3 focused fighter-production proof selector. -1 leaves the canonical
+# Mario-vs-Fox descriptor byte-for-byte unchanged; a non-negative value is an
+# nFTKind* integer used only for fighter slot 0 in direct-battle proof builds.
+# It does NOT admit assets by itself: Luigi is therefore exercised with
+# NDS_P2_LUIGI=1 NDS_P2_PROOF_FIGHTER0=4, and later fighters reuse this same
+# descriptor seam behind their own production flags.
+NDS_P2_PROOF_FIGHTER0 ?= -1
 # THE FREEZE SOAK'S MATCH LENGTH IN MINUTES, and nothing else's. 0 = leave the
 # harness seeding alone, which is the canonical one-minute Time match; non-zero
 # overrides scene_harness.c's time_limit.
@@ -3053,10 +3060,17 @@ NDS_BATTLE_STATIC_TEXTURE_ASSET := $(PROJECT_ROOT)/assets/renderer/battle_playab
 # stale pair cannot link.
 NDS_MN_UI_KIT_INC := $(PROJECT_ROOT)/src/nds/generated/mn_ui_kit.generated.inc
 NDS_MN_UI_KIT_ASSET := $(PROJECT_ROOT)/assets/menus/mn_ui_kit.bin
-# P2-2. The lower battle HUD is AOT-only: source IFCommon digits, Mario/Fox
-# portraits and stock icons are baked straight into tiled 4bpp sub-OBJ cells.
+# P2-2/P2-3. The lower battle HUD is AOT-only: source IFCommon digits and each
+# admitted fighter's portrait/stock icon are baked straight into tiled 4bpp
+# sub-OBJ cells.
 # There is deliberately no NitroFS payload or runtime decoder for this asset.
 NDS_BATTLE_HUD_INC := $(PROJECT_ROOT)/src/nds/generated/battle_hud.generated.inc
+# Match-entry presentation.  Mario's pipe and Fox's Arwing keep BattleShip's
+# live DObj animation but consume an AOT DS-native mesh/texture packet.  Unlike
+# a review-only manifest this include is compiled directly by nds_renderer.c,
+# so its generator belongs on the normal dependency graph: stale generated
+# geometry must never survive an O2R or decoder change into a measured ROM.
+NDS_ENTRY_EFFECT_INC := $(PROJECT_ROOT)/src/nds/nds_entry_effects.generated.inc
 # P2-1h. The backdrop art is a SECOND payload from the same generator: the OBJ
 # pack is read and hashed on every kit entry, so a title screen living in it
 # would cost the character select bytes it never draws.
@@ -4116,6 +4130,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_R2_BOTH_CPU $(NDS_R2_BOTH_CPU)'; \
 		echo '#define NDS_P2_FOUR_CPU_STRESS $(NDS_P2_FOUR_CPU_STRESS)'; \
 		echo '#define NDS_P2_LUIGI $(NDS_P2_LUIGI)'; \
+		echo '#define NDS_P2_PROOF_FIGHTER0 $(NDS_P2_PROOF_FIGHTER0)'; \
 		echo '#define NDS_R2_SOAK_MATCH_MINUTES $(NDS_R2_SOAK_MATCH_MINUTES)'; \
 		echo '#define NDS_ANIM_JOINT_AUDIT $(NDS_ANIM_JOINT_AUDIT)'; \
 		echo '#define NDS_AOBJ_EVENT32_HASH_ORACLE $(NDS_AOBJ_EVENT32_HASH_ORACLE)'; \
@@ -4411,7 +4426,7 @@ $(OUTPUT).nds: prune-obsolete-audio $(OUTPUT).elf $(NDS_NITROFS_RELOC_FILES) $(N
 $(OUTPUT).elf: $(OFILES) $(NDS_PRIVATE_CHECK_OFILES) \
 	$(NDS_HOT_TEXT_SPECS) $(NDS_HOT_TEXT_LINKER_SCRIPT) \
 	$(NDS_TASK32_DRAW_HOT_FRAGMENT) $(NDS_PARTICLE_BANKS_INC) \
-	$(NDS_BATTLE_STATIC_TEXTURE_INC) \
+	$(NDS_BATTLE_STATIC_TEXTURE_INC) $(NDS_ENTRY_EFFECT_INC) \
 	$(if $(filter 1,$(NDS_IMPORT_BATTLESHIP_IFCOMMON)),$(NDS_BATTLE_HUD_INC)) \
 	$(if $(filter 1,$(NDS_P2_UI_KIT)),$(NDS_MN_UI_KIT_INC) \
 		$(NDS_MN_TITLE_ANIM_INC))
@@ -4673,9 +4688,25 @@ $(NDS_BATTLE_HUD_INC): \
 		$(BATTLESHIP_O2R)/reloc_interface/IFCommonDigits \
 		$(BATTLESHIP_O2R)/reloc_menus/MNPlayersPortraits \
 		$(BATTLESHIP_O2R)/reloc_fighters_main/MarioModel \
-		$(BATTLESHIP_O2R)/reloc_fighters_main/FoxModel
+		$(BATTLESHIP_O2R)/reloc_fighters_main/FoxModel \
+		$(BATTLESHIP_O2R)/reloc_fighters_main/LuigiModel
 	python "$(PROJECT_ROOT)/scripts/menus/generate_battle_hud.py" --repo-root "$(PROJECT_ROOT)"
 	@touch $(NDS_BATTLE_HUD_INC)
+
+# Source-entry AOT packet.  The generator imports the same display-list/texture
+# decoders as the static battle bake and SHA-pins all three source containers;
+# list those files explicitly as dependencies as well so a refreshed O2R causes
+# the check to run immediately rather than waiting for somebody to invoke the
+# script by hand.
+$(NDS_ENTRY_EFFECT_INC): \
+		$(PROJECT_ROOT)/scripts/3d_vfx/generate_nds_entry_effects.py \
+		$(PROJECT_ROOT)/scripts/generate_battle_playable_static_textures.py \
+		$(PROJECT_ROOT)/scripts/generate_battle_playable_texture_census.py \
+		$(BATTLESHIP_O2R)/reloc_fighters_main/MarioSpecial2 \
+		$(BATTLESHIP_O2R)/reloc_fighters_main/FoxSpecial3 \
+		$(BATTLESHIP_O2R)/reloc_extern_data/ExternDataBank109
+	python "$(PROJECT_ROOT)/scripts/3d_vfx/generate_nds_entry_effects.py"
+	@touch $(NDS_ENTRY_EFFECT_INC)
 
 # P2-1k (d). Ordered after the kit's own rule by the surface-pack prerequisite:
 # the pose table's oracles compare against the composite the kit bakes, so a

@@ -74,7 +74,22 @@ $states = @(
     @{ Name = 'sss-default'; Break = 'ndsMenuShellSssShowSelection' },
     # Hit 2 of the same symbol: the scripted RIGHT has moved the cursor. Slots
     # 7 and 8 are locked, so the move lands on 9 -- RANDOM.
-    @{ Name = 'sss-random';  Break = 'ndsMenuShellSssShowSelection' }
+    @{ Name = 'sss-random';  Break = 'ndsMenuShellSssShowSelection' },
+    # Match-start presentation boundary. `scVSBattleStartBattle` is reached
+    # only after the stage-select handoff has entered VSBattle. Advancing a
+    # handful of presents from its entry photographs the source fighter-entry
+    # window (Mario pipe / Fox Arwing), and is also the regression image for
+    # the lower HUD: it must be absent from both SSS captures above and become
+    # visible here once the VSBattle interface has actually displayed.
+    @{ Name = 'battle-intro'; Break = 'scVSBattleStartBattle'; Presents = 8 },
+    # The source intentionally waits before starting fighter entries, so a
+    # fixed frame count from scene entry is a poor intro oracle. Capture the
+    # first two actual ftCommonAppearSetStatus calls instead. With the canonical
+    # Mario/Fox match these cover both fighter-specific entry paths regardless
+    # of link-list order, and advancing after the call captures the animation /
+    # effect rather than the pre-status frame at the breakpoint itself.
+    @{ Name = 'fighter-entry-1'; Break = 'ftCommonAppearSetStatus'; Presents = 8 },
+    @{ Name = 'fighter-entry-2'; Break = 'ftCommonAppearSetStatus'; Presents = 8 }
 )
 
 $required = @('ndsPlatformEndFrame', 'gNdsMenuShellScreen') +

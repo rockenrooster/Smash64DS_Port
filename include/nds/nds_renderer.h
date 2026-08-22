@@ -534,6 +534,13 @@ typedef enum NDSRendererProfileOwner
     NDS_RENDERER_PROFILE_OWNER_NONE = NDS_RENDERER_PROFILE_OWNER_COUNT
 } NDSRendererProfileOwner;
 
+/* Native fighter owner slots deliberately exclude the stage profile owner.
+ * Keep the adapter's owner-indexed caches tied to the same roster cardinality
+ * as the renderer instead of baking the original Mario/Fox count into each
+ * consumer.  P2-3 extends this enum one fighter at a time. */
+#define NDS_RENDERER_NATIVE_FIGHTER_OWNER_COUNT \
+    (NDS_RENDERER_PROFILE_OWNER_COUNT - 1u)
+
 #if NDS_TASK29_GX_CENSUS || NDS_TASK34_STAGE_STREAM_CENSUS || \
     (NDS_TASK36_HW_COMPOSE == 2) || NDS_TASK49_GX_DIFFER
 typedef enum NDSRendererTask29GXClass
@@ -1242,6 +1249,18 @@ s32 ndsRendererSubmitNativeRebirthHalo(
     NDSRendererStats *stats);
 s32 ndsRendererHardwarePrepareRebirthHaloTextures(void);
 
+/* Mario pipe / Fox Arwing immutable DS-native presentation. BattleShip keeps
+ * ownership of the live DObj transforms/animation; owner_asset_id selects the
+ * SHA-pinned generated model (356 MarioSpecial2, 161 FoxSpecial3). */
+s32 ndsRendererSubmitNativeEntryEffect(
+    u32 owner_asset_id, u32 root_offset,
+    const NDSRendererConfig *config, NDSRendererStats *stats);
+s32 ndsRendererHardwarePrepareEntryEffectTextures(void);
+extern volatile u32 gNdsEntryEffectNativeDrawCount;
+extern volatile u32 gNdsEntryEffectNativeFallbackCount;
+extern volatile u32 gNdsEntryEffectNativeTexturePrepareCount;
+extern volatile u32 gNdsEntryEffectNativeTextureBindCount;
+
 s32 ndsRendererMtxCellS16p16(const Mtx *mtx, u32 row, u32 col);
 void ndsRendererMtxLoadN64ToDS20p12(const Mtx *src,
                                     NDSRendererMatrix20p12 *dst);
@@ -1299,6 +1318,7 @@ s32 ndsRendererExecuteNativeFighterRoot(
 s32 ndsRendererExecuteNativeFighterOwnerProduction(
     u32 slot,
     u32 use_low_detail,
+    u32 texture_memo_owner_key,
     const void *asset_base,
     const NDSRendererNativeFighterRoot *roots,
     u32 root_count,

@@ -1,5 +1,5 @@
 {
-  "schema": "smash64ds.p2-fighter-production-manifest.v1",
+  "schema": "smash64ds.p2-fighter-production-manifest.v2",
   "generated_by": "scripts/fighters/generate_fighter_production_manifest.py",
   "source": {
     "ftdata": "decomp/BattleShip-main/decomp/src/ft/ftdata.c",
@@ -2094,10 +2094,10 @@
             "bytes": 4816,
             "sha256": "e92557549004015c0f29dff132546baac847388bb083f90a2c9cb976a9731822"
           },
-          "port_value": 0,
-          "port_value_hex": "0x0",
-          "port_matches_source": false,
-          "was_stubbed_in_port": true
+          "port_value": 633,
+          "port_value_hex": "0x279",
+          "port_matches_source": true,
+          "was_stubbed_in_port": false
         },
         {
           "symbol": "llFTMarioAnimAppear2FileID",
@@ -2108,10 +2108,10 @@
             "bytes": 4496,
             "sha256": "2a8e89a0fbd6ad4e48b5b61fdf9996d5dfb3c3cb1bd102d4e1c98073690d59f7"
           },
-          "port_value": 0,
-          "port_value_hex": "0x0",
-          "port_matches_source": false,
-          "was_stubbed_in_port": true
+          "port_value": 634,
+          "port_value_hex": "0x27a",
+          "port_matches_source": true,
+          "was_stubbed_in_port": false
         },
         {
           "symbol": "llFTMarioAnimFireballGroundFileID",
@@ -5112,7 +5112,140 @@
           "bytes": 4448,
           "sha256": "ca0e140fed34dc0ac981598174051f22c6766e7412eb05a352275fbcba96cc6c"
         }
-      ]
+      ],
+      "special_status_contract": {
+        "source": "decomp/BattleShip-main/decomp/src/ft/ftchar/ftmario/ftmariostatus.h",
+        "source_sha256": "d02aea6cd0fa088d2bd569bd0b415b26fe14c119a14faf1ad95a7808a51bea91",
+        "descriptor_count": 9,
+        "descriptors": [
+          {
+            "status": "nFTMarioStatusAttack13",
+            "motion": "nFTMarioMotionAttack13",
+            "motion_attack_id": "nFTMotionAttackIDAttack13",
+            "kinetics": "nMPKineticsGround",
+            "is_projectile": "FALSE",
+            "status_attack_id": "nFTStatusAttackIDAttack13",
+            "callbacks": {
+              "update": "ftAnimEndSetWait",
+              "interrupt": "NULL",
+              "physics": "ftPhysicsApplyGroundVelFriction",
+              "map": "mpCommonSetFighterFallOnEdgeBreak"
+            }
+          },
+          {
+            "status": "nFTMarioStatusAppearR",
+            "motion": "nFTMarioMotionAppearR",
+            "motion_attack_id": "nFTMotionAttackIDNone",
+            "kinetics": "nMPKineticsGround",
+            "is_projectile": "FALSE",
+            "status_attack_id": "nFTMotionAttackIDNone",
+            "callbacks": {
+              "update": "ftCommonAppearProcUpdate",
+              "interrupt": "NULL",
+              "physics": "ftCommonAppearProcPhysics",
+              "map": "mpCommonUpdateFighterProjectFloor"
+            }
+          },
+          {
+            "status": "nFTMarioStatusAppearL",
+            "motion": "nFTMarioMotionAppearL",
+            "motion_attack_id": "nFTMotionAttackIDNone",
+            "kinetics": "nMPKineticsGround",
+            "is_projectile": "FALSE",
+            "status_attack_id": "nFTMotionAttackIDNone",
+            "callbacks": {
+              "update": "ftCommonAppearProcUpdate",
+              "interrupt": "NULL",
+              "physics": "ftCommonAppearProcPhysics",
+              "map": "mpCommonUpdateFighterProjectFloor"
+            }
+          },
+          {
+            "status": "nFTMarioStatusSpecialN",
+            "motion": "nFTMarioMotionSpecialN",
+            "motion_attack_id": "nFTMotionAttackIDSpecialN",
+            "kinetics": "nMPKineticsGround",
+            "is_projectile": "TRUE",
+            "status_attack_id": "nFTMotionAttackIDSpecialN",
+            "callbacks": {
+              "update": "ftMarioSpecialNProcUpdate",
+              "interrupt": "NULL",
+              "physics": "ftPhysicsApplyGroundVelFriction",
+              "map": "ftMarioSpecialNProcMap"
+            }
+          },
+          {
+            "status": "nFTMarioStatusSpecialAirN",
+            "motion": "nFTMarioMotionSpecialAirN",
+            "motion_attack_id": "nFTMotionAttackIDSpecialN",
+            "kinetics": "nMPKineticsAir",
+            "is_projectile": "TRUE",
+            "status_attack_id": "nFTMotionAttackIDSpecialN",
+            "callbacks": {
+              "update": "ftMarioSpecialNProcUpdate",
+              "interrupt": "NULL",
+              "physics": "ftPhysicsApplyAirVelDrift",
+              "map": "ftMarioSpecialAirNProcMap"
+            }
+          },
+          {
+            "status": "nFTMarioStatusSpecialHi",
+            "motion": "nFTMarioMotionSpecialHi",
+            "motion_attack_id": "nFTMotionAttackIDSpecialHi",
+            "kinetics": "nMPKineticsGround",
+            "is_projectile": "FALSE",
+            "status_attack_id": "nFTMotionAttackIDSpecialHi",
+            "callbacks": {
+              "update": "ftMarioSpecialHiProcUpdate",
+              "interrupt": "ftMarioSpecialHiProcInterrupt",
+              "physics": "ftMarioSpecialHiProcPhysics",
+              "map": "ftMarioSpecialHiProcMap"
+            }
+          },
+          {
+            "status": "nFTMarioStatusSpecialAirHi",
+            "motion": "nFTMarioMotionSpecialAirHi",
+            "motion_attack_id": "nFTMotionAttackIDSpecialHi",
+            "kinetics": "nMPKineticsAir",
+            "is_projectile": "FALSE",
+            "status_attack_id": "nFTMotionAttackIDSpecialHi",
+            "callbacks": {
+              "update": "ftMarioSpecialHiProcUpdate",
+              "interrupt": "ftMarioSpecialHiProcInterrupt",
+              "physics": "ftMarioSpecialHiProcPhysics",
+              "map": "ftMarioSpecialHiProcMap"
+            }
+          },
+          {
+            "status": "nFTMarioStatusSpecialLw",
+            "motion": "nFTMarioMotionSpecialLw",
+            "motion_attack_id": "nFTMotionAttackIDSpecialLw",
+            "kinetics": "nMPKineticsGround",
+            "is_projectile": "FALSE",
+            "status_attack_id": "nFTMotionAttackIDSpecialLw",
+            "callbacks": {
+              "update": "ftMarioSpecialLwProcUpdate",
+              "interrupt": "NULL",
+              "physics": "ftMarioSpecialLwProcPhysics",
+              "map": "ftMarioSpecialLwProcMap"
+            }
+          },
+          {
+            "status": "nFTMarioStatusSpecialAirLw",
+            "motion": "nFTMarioMotionSpecialAirLw",
+            "motion_attack_id": "nFTMotionAttackIDSpecialLw",
+            "kinetics": "nMPKineticsAir",
+            "is_projectile": "FALSE",
+            "status_attack_id": "nFTMotionAttackIDSpecialLw",
+            "callbacks": {
+              "update": "ftMarioSpecialAirLwProcUpdate",
+              "interrupt": "NULL",
+              "physics": "ftMarioSpecialAirLwProcPhysics",
+              "map": "ftMarioSpecialAirLwProcMap"
+            }
+          }
+        ]
+      }
     },
     {
       "fighter": "Fox",
@@ -7227,10 +7360,10 @@
             "bytes": 4400,
             "sha256": "26660456efbb5391f55652db5f8246a16a831a5d29a14027a56681c341b4e8e9"
           },
-          "port_value": 0,
-          "port_value_hex": "0x0",
-          "port_matches_source": false,
-          "was_stubbed_in_port": true
+          "port_value": 777,
+          "port_value_hex": "0x309",
+          "port_matches_source": true,
+          "was_stubbed_in_port": false
         },
         {
           "symbol": "llFTFoxAnimArwingFileID",
@@ -7241,10 +7374,10 @@
             "bytes": 4400,
             "sha256": "c4e678517cd950ffac646df07fe7fa17c4e2afd4aa7581fca7c680d153f2a4e0"
           },
-          "port_value": 0,
-          "port_value_hex": "0x0",
-          "port_matches_source": false,
-          "was_stubbed_in_port": true
+          "port_value": 778,
+          "port_value_hex": "0x30a",
+          "port_matches_source": true,
+          "was_stubbed_in_port": false
         },
         {
           "symbol": "llFTFoxAnimLaserFileID",
@@ -10762,7 +10895,378 @@
           "bytes": 1152,
           "sha256": "02bac427c7ee0e9920937b4264bed7a6fa03ee1932d26819f29a1f32aa9c6580"
         }
-      ]
+      ],
+      "special_status_contract": {
+        "source": "decomp/BattleShip-main/decomp/src/ft/ftchar/ftfox/ftfoxstatus.h",
+        "source_sha256": "ac8602239393474a563e5808920aecf59e272767509a522b9bc40e598ccaf3a2",
+        "descriptor_count": 26,
+        "descriptors": [
+          {
+            "status": "nFTFoxStatusAttack100Start",
+            "motion": "nFTFoxMotionAttack100Start",
+            "motion_attack_id": "nFTMotionAttackIDAttack100",
+            "kinetics": "nMPKineticsGround",
+            "is_projectile": "FALSE",
+            "status_attack_id": "nFTStatusAttackIDAttack100",
+            "callbacks": {
+              "update": "ftCommonAttack100StartProcUpdate",
+              "interrupt": "NULL",
+              "physics": "ftPhysicsApplyGroundVelFriction",
+              "map": "mpCommonSetFighterFallOnEdgeBreak"
+            }
+          },
+          {
+            "status": "nFTFoxStatusAttack100Loop",
+            "motion": "nFTFoxMotionAttack100Loop",
+            "motion_attack_id": "nFTMotionAttackIDAttack100",
+            "kinetics": "nMPKineticsGround",
+            "is_projectile": "FALSE",
+            "status_attack_id": "nFTStatusAttackIDAttack100",
+            "callbacks": {
+              "update": "ftCommonAttack100LoopProcUpdate",
+              "interrupt": "ftCommonAttack100LoopProcInterrupt",
+              "physics": "ftPhysicsApplyGroundVelFriction",
+              "map": "mpCommonSetFighterFallOnEdgeBreak"
+            }
+          },
+          {
+            "status": "nFTFoxStatusAttack100End",
+            "motion": "nFTFoxMotionAttack100End",
+            "motion_attack_id": "nFTMotionAttackIDAttack100",
+            "kinetics": "nMPKineticsGround",
+            "is_projectile": "FALSE",
+            "status_attack_id": "nFTStatusAttackIDAttack100",
+            "callbacks": {
+              "update": "ftAnimEndSetWait",
+              "interrupt": "NULL",
+              "physics": "ftPhysicsApplyGroundVelFriction",
+              "map": "mpCommonSetFighterFallOnEdgeBreak"
+            }
+          },
+          {
+            "status": "nFTFoxStatusAppearR",
+            "motion": "nFTFoxMotionAppearR",
+            "motion_attack_id": "nFTMotionAttackIDNone",
+            "kinetics": "nMPKineticsGround",
+            "is_projectile": "FALSE",
+            "status_attack_id": "nFTStatusAttackIDNone",
+            "callbacks": {
+              "update": "ftCommonAppearProcUpdate",
+              "interrupt": "NULL",
+              "physics": "ftCommonAppearProcPhysics",
+              "map": "mpCommonUpdateFighterProjectFloor"
+            }
+          },
+          {
+            "status": "nFTFoxStatusAppearL",
+            "motion": "nFTFoxMotionAppearL",
+            "motion_attack_id": "nFTMotionAttackIDNone",
+            "kinetics": "nMPKineticsGround",
+            "is_projectile": "FALSE",
+            "status_attack_id": "nFTStatusAttackIDNone",
+            "callbacks": {
+              "update": "ftCommonAppearProcUpdate",
+              "interrupt": "NULL",
+              "physics": "ftCommonAppearProcPhysics",
+              "map": "mpCommonUpdateFighterProjectFloor"
+            }
+          },
+          {
+            "status": "nFTFoxStatusSpecialN",
+            "motion": "nFTFoxMotionSpecialN",
+            "motion_attack_id": "nFTMotionAttackIDSpecialN",
+            "kinetics": "nMPKineticsGround",
+            "is_projectile": "TRUE",
+            "status_attack_id": "nFTStatusAttackIDSpecialN",
+            "callbacks": {
+              "update": "ftFoxSpecialNProcUpdate",
+              "interrupt": "ftFoxSpecialNProcInterrupt",
+              "physics": "ftPhysicsApplyGroundVelFriction",
+              "map": "mpCommonSetFighterFallOnEdgeBreak"
+            }
+          },
+          {
+            "status": "nFTFoxStatusSpecialAirN",
+            "motion": "nFTFoxMotionSpecialAirN",
+            "motion_attack_id": "nFTMotionAttackIDSpecialN",
+            "kinetics": "nMPKineticsAir",
+            "is_projectile": "TRUE",
+            "status_attack_id": "nFTStatusAttackIDSpecialN",
+            "callbacks": {
+              "update": "ftFoxSpecialNProcUpdate",
+              "interrupt": "ftFoxSpecialNProcInterrupt",
+              "physics": "ftPhysicsApplyAirVelDrift",
+              "map": "mpCommonProcFighterWaitOrLanding"
+            }
+          },
+          {
+            "status": "nFTFoxStatusSpecialHiStart",
+            "motion": "nFTFoxMotionSpecialHiStart",
+            "motion_attack_id": "nFTMotionAttackIDSpecialHi",
+            "kinetics": "nMPKineticsGround",
+            "is_projectile": "FALSE",
+            "status_attack_id": "nFTStatusAttackIDSpecialHi",
+            "callbacks": {
+              "update": "ftFoxSpecialHiStartProcUpdate",
+              "interrupt": "NULL",
+              "physics": "ftPhysicsApplyGroundVelFriction",
+              "map": "ftFoxSpecialHiStartProcMap"
+            }
+          },
+          {
+            "status": "nFTFoxStatusSpecialAirHiStart",
+            "motion": "nFTFoxMotionSpecialAirHiStart",
+            "motion_attack_id": "nFTMotionAttackIDSpecialHi",
+            "kinetics": "nMPKineticsAir",
+            "is_projectile": "FALSE",
+            "status_attack_id": "nFTStatusAttackIDSpecialHi",
+            "callbacks": {
+              "update": "ftFoxSpecialAirHiStartProcUpdate",
+              "interrupt": "NULL",
+              "physics": "ftFoxSpecialAirHiStartProcPhysics",
+              "map": "ftFoxSpecialAirHiStartProcMap"
+            }
+          },
+          {
+            "status": "nFTFoxStatusSpecialHiHold",
+            "motion": "nFTFoxMotionSpecialHiHold",
+            "motion_attack_id": "nFTMotionAttackIDSpecialHi",
+            "kinetics": "nMPKineticsGround",
+            "is_projectile": "FALSE",
+            "status_attack_id": "nFTStatusAttackIDSpecialHi",
+            "callbacks": {
+              "update": "ftFoxSpecialHiHoldProcUpdate",
+              "interrupt": "NULL",
+              "physics": "ftPhysicsApplyGroundVelFriction",
+              "map": "ftFoxSpecialHiHoldProcMap"
+            }
+          },
+          {
+            "status": "nFTFoxStatusSpecialAirHiHold",
+            "motion": "nFTFoxMotionSpecialAirHiHold",
+            "motion_attack_id": "nFTMotionAttackIDSpecialHi",
+            "kinetics": "nMPKineticsAir",
+            "is_projectile": "FALSE",
+            "status_attack_id": "nFTStatusAttackIDSpecialHi",
+            "callbacks": {
+              "update": "ftFoxSpecialHiHoldProcUpdate",
+              "interrupt": "NULL",
+              "physics": "ftFoxSpecialAirHiStartProcPhysics",
+              "map": "ftFoxSpecialAirHiHoldProcMap"
+            }
+          },
+          {
+            "status": "nFTFoxStatusSpecialHi",
+            "motion": "nFTFoxMotionSpecialHi",
+            "motion_attack_id": "nFTMotionAttackIDSpecialHi",
+            "kinetics": "nMPKineticsGround",
+            "is_projectile": "FALSE",
+            "status_attack_id": "nFTStatusAttackIDSpecialHi",
+            "callbacks": {
+              "update": "ftFoxSpecialHiProcUpdate",
+              "interrupt": "NULL",
+              "physics": "ftFoxSpecialHiProcPhysics",
+              "map": "ftFoxSpecialHiProcMap"
+            }
+          },
+          {
+            "status": "nFTFoxStatusSpecialAirHi",
+            "motion": "nFTFoxMotionSpecialAirHi",
+            "motion_attack_id": "nFTMotionAttackIDSpecialHi",
+            "kinetics": "nMPKineticsAir",
+            "is_projectile": "FALSE",
+            "status_attack_id": "nFTStatusAttackIDSpecialHi",
+            "callbacks": {
+              "update": "ftFoxSpecialHiProcUpdate",
+              "interrupt": "NULL",
+              "physics": "ftFoxSpecialAirHiProcPhysics",
+              "map": "ftFoxSpecialAirHiProcMap"
+            }
+          },
+          {
+            "status": "nFTFoxStatusSpecialHiEnd",
+            "motion": "nFTFoxMotionSpecialHiEnd",
+            "motion_attack_id": "nFTMotionAttackIDSpecialHi",
+            "kinetics": "nMPKineticsGround",
+            "is_projectile": "FALSE",
+            "status_attack_id": "nFTStatusAttackIDSpecialHi",
+            "callbacks": {
+              "update": "ftAnimEndSetWait",
+              "interrupt": "NULL",
+              "physics": "ftFoxSpecialHiEndProcPhysics",
+              "map": "mpCommonSetFighterFallOnGroundBreak"
+            }
+          },
+          {
+            "status": "nFTFoxStatusSpecialAirHiEnd",
+            "motion": "nFTFoxMotionSpecialAirHiEnd",
+            "motion_attack_id": "nFTMotionAttackIDSpecialHi",
+            "kinetics": "nMPKineticsAir",
+            "is_projectile": "FALSE",
+            "status_attack_id": "nFTStatusAttackIDSpecialHi",
+            "callbacks": {
+              "update": "ftFoxSpecialAirHiEndProcUpdate",
+              "interrupt": "NULL",
+              "physics": "ftPhysicsApplyAirVelDrift",
+              "map": "ftFoxSpecialAirHiEndProcMap"
+            }
+          },
+          {
+            "status": "nFTFoxStatusSpecialAirHiBound",
+            "motion": "nFTFoxMotionSpecialAirHiBound",
+            "motion_attack_id": "nFTMotionAttackIDSpecialHi",
+            "kinetics": "nMPKineticsAir",
+            "is_projectile": "FALSE",
+            "status_attack_id": "nFTStatusAttackIDSpecialHi",
+            "callbacks": {
+              "update": "ftFoxSpecialAirHiBoundProcUpdate",
+              "interrupt": "NULL",
+              "physics": "ftFoxSpecialAirHiBoundProcPhysics",
+              "map": "ftFoxSpecialAirHiBoundProcMap"
+            }
+          },
+          {
+            "status": "nFTFoxStatusSpecialLwScopeStart",
+            "motion": "nFTFoxMotionSpecialLwStart",
+            "motion_attack_id": "nFTMotionAttackIDSpecialLw",
+            "kinetics": "nMPKineticsGround",
+            "is_projectile": "FALSE",
+            "status_attack_id": "nFTStatusAttackIDSpecialLw",
+            "callbacks": {
+              "update": "ftFoxSpecialLwStartProcUpdate",
+              "interrupt": "NULL",
+              "physics": "ftPhysicsApplyGroundVelFriction",
+              "map": "mpCommonSetFighterFallOnEdgeBreak"
+            }
+          },
+          {
+            "status": "nFTFoxStatusSpecialLwStart",
+            "motion": "nFTFoxMotionSpecialLwHit",
+            "motion_attack_id": "nFTMotionAttackIDSpecialLw",
+            "kinetics": "nMPKineticsGround",
+            "is_projectile": "FALSE",
+            "status_attack_id": "nFTStatusAttackIDSpecialLw",
+            "callbacks": {
+              "update": "ftFoxSpecialLwHitProcUpdate",
+              "interrupt": "NULL",
+              "physics": "ftPhysicsApplyGroundVelFriction",
+              "map": "mpCommonSetFighterFallOnEdgeBreak"
+            }
+          },
+          {
+            "status": "nFTFoxStatusSpecialLwHit",
+            "motion": "nFTFoxMotionSpecialLwEnd",
+            "motion_attack_id": "nFTMotionAttackIDSpecialLw",
+            "kinetics": "nMPKineticsGround",
+            "is_projectile": "FALSE",
+            "status_attack_id": "nFTStatusAttackIDSpecialLw",
+            "callbacks": {
+              "update": "ftFoxSpecialLwEndProcUpdate",
+              "interrupt": "NULL",
+              "physics": "ftPhysicsApplyGroundVelFriction",
+              "map": "mpCommonSetFighterFallOnEdgeBreak"
+            }
+          },
+          {
+            "status": "nFTFoxStatusSpecialLwEnd",
+            "motion": "nFTFoxMotionSpecialLwLoop",
+            "motion_attack_id": "nFTMotionAttackIDSpecialLw",
+            "kinetics": "nMPKineticsGround",
+            "is_projectile": "FALSE",
+            "status_attack_id": "nFTStatusAttackIDSpecialLw",
+            "callbacks": {
+              "update": "ftFoxSpecialLwLoopProcUpdate",
+              "interrupt": "ftFoxSpecialLwLoopProcInterrupt",
+              "physics": "ftPhysicsApplyGroundVelFriction",
+              "map": "mpCommonSetFighterFallOnEdgeBreak"
+            }
+          },
+          {
+            "status": "nFTFoxStatusSpecialLwLoop",
+            "motion": "nFTFoxMotionSpecialLwLoop",
+            "motion_attack_id": "nFTMotionAttackIDSpecialLw",
+            "kinetics": "nMPKineticsGround",
+            "is_projectile": "FALSE",
+            "status_attack_id": "nFTStatusAttackIDSpecialLw",
+            "callbacks": {
+              "update": "ftFoxSpecialLwTurnProcUpdate",
+              "interrupt": "NULL",
+              "physics": "ftPhysicsApplyGroundVelFriction",
+              "map": "mpCommonSetFighterFallOnEdgeBreak"
+            }
+          },
+          {
+            "status": "nFTFoxStatusSpecialLwTurn",
+            "motion": "nFTFoxMotionSpecialAirLwStart",
+            "motion_attack_id": "nFTMotionAttackIDSpecialLw",
+            "kinetics": "nMPKineticsAir",
+            "is_projectile": "FALSE",
+            "status_attack_id": "nFTStatusAttackIDSpecialLw",
+            "callbacks": {
+              "update": "ftFoxSpecialLwStartProcUpdate",
+              "interrupt": "NULL",
+              "physics": "ftFoxSpecialAirLwCommonProcPhysics",
+              "map": "mpCommonProcFighterWaitOrLanding"
+            }
+          },
+          {
+            "status": "nFTFoxStatusSpecialAirLwStart",
+            "motion": "nFTFoxMotionSpecialAirLwHit",
+            "motion_attack_id": "nFTMotionAttackIDSpecialLw",
+            "kinetics": "nMPKineticsAir",
+            "is_projectile": "FALSE",
+            "status_attack_id": "nFTStatusAttackIDSpecialLw",
+            "callbacks": {
+              "update": "ftFoxSpecialLwHitProcUpdate",
+              "interrupt": "NULL",
+              "physics": "ftFoxSpecialAirLwCommonProcPhysics",
+              "map": "mpCommonProcFighterWaitOrLanding"
+            }
+          },
+          {
+            "status": "nFTFoxStatusSpecialAirLwHit",
+            "motion": "nFTFoxMotionSpecialAirLwEnd",
+            "motion_attack_id": "nFTMotionAttackIDSpecialLw",
+            "kinetics": "nMPKineticsAir",
+            "is_projectile": "FALSE",
+            "status_attack_id": "nFTStatusAttackIDSpecialLw",
+            "callbacks": {
+              "update": "ftFoxSpecialLwEndProcUpdate",
+              "interrupt": "NULL",
+              "physics": "ftFoxSpecialAirLwCommonProcPhysics",
+              "map": "mpCommonProcFighterWaitOrLanding"
+            }
+          },
+          {
+            "status": "nFTFoxStatusSpecialAirLwEnd",
+            "motion": "nFTFoxMotionSpecialAirLwLoop",
+            "motion_attack_id": "nFTMotionAttackIDSpecialLw",
+            "kinetics": "nMPKineticsAir",
+            "is_projectile": "FALSE",
+            "status_attack_id": "nFTStatusAttackIDSpecialLw",
+            "callbacks": {
+              "update": "ftFoxSpecialLwLoopProcUpdate",
+              "interrupt": "ftFoxSpecialLwLoopProcInterrupt",
+              "physics": "ftFoxSpecialAirLwCommonProcPhysics",
+              "map": "mpCommonProcFighterWaitOrLanding"
+            }
+          },
+          {
+            "status": "nFTFoxStatusSpecialAirLwLoop",
+            "motion": "nFTFoxMotionSpecialAirLwLoop",
+            "motion_attack_id": "nFTMotionAttackIDSpecialLw",
+            "kinetics": "nMPKineticsAir",
+            "is_projectile": "FALSE",
+            "status_attack_id": "nFTStatusAttackIDSpecialLw",
+            "callbacks": {
+              "update": "ftFoxSpecialLwTurnProcUpdate",
+              "interrupt": "NULL",
+              "physics": "ftFoxSpecialAirLwCommonProcPhysics",
+              "map": "mpCommonProcFighterWaitOrLanding"
+            }
+          }
+        ]
+      }
     },
     {
       "fighter": "Luigi",
@@ -14345,6 +14849,240 @@
               "0x01",
               "0x02"
             ]
+          }
+        }
+      },
+      "special_status_contract": {
+        "source": "decomp/BattleShip-main/decomp/src/ft/ftchar/ftluigi/ftluigistatus.h",
+        "source_sha256": "b7d2d1e4e992e92cf3c6b54b6fe7f1cd79024220ec9276ef97c4538f72b447a5",
+        "descriptor_count": 9,
+        "descriptors": [
+          {
+            "status": "nFTLuigiStatusAttack13",
+            "motion": "nFTLuigiMotionAttack13",
+            "motion_attack_id": "nFTMotionAttackIDAttack13",
+            "kinetics": "nMPKineticsGround",
+            "is_projectile": "FALSE",
+            "status_attack_id": "nFTStatusAttackIDAttack13",
+            "callbacks": {
+              "update": "ftAnimEndSetWait",
+              "interrupt": "NULL",
+              "physics": "ftPhysicsApplyGroundVelFriction",
+              "map": "mpCommonSetFighterFallOnEdgeBreak"
+            }
+          },
+          {
+            "status": "nFTLuigiStatusAppearR",
+            "motion": "nFTLuigiMotionAppearR",
+            "motion_attack_id": "nFTMotionAttackIDNone",
+            "kinetics": "nMPKineticsGround",
+            "is_projectile": "FALSE",
+            "status_attack_id": "nFTMotionAttackIDNone",
+            "callbacks": {
+              "update": "ftCommonAppearProcUpdate",
+              "interrupt": "NULL",
+              "physics": "ftCommonAppearProcPhysics",
+              "map": "mpCommonUpdateFighterProjectFloor"
+            }
+          },
+          {
+            "status": "nFTLuigiStatusAppearL",
+            "motion": "nFTLuigiMotionAppearL",
+            "motion_attack_id": "nFTMotionAttackIDNone",
+            "kinetics": "nMPKineticsGround",
+            "is_projectile": "FALSE",
+            "status_attack_id": "nFTMotionAttackIDNone",
+            "callbacks": {
+              "update": "ftCommonAppearProcUpdate",
+              "interrupt": "NULL",
+              "physics": "ftCommonAppearProcPhysics",
+              "map": "mpCommonUpdateFighterProjectFloor"
+            }
+          },
+          {
+            "status": "nFTLuigiStatusSpecialN",
+            "motion": "nFTLuigiMotionSpecialN",
+            "motion_attack_id": "nFTMotionAttackIDSpecialN",
+            "kinetics": "nMPKineticsGround",
+            "is_projectile": "TRUE",
+            "status_attack_id": "nFTMotionAttackIDSpecialN",
+            "callbacks": {
+              "update": "ftMarioSpecialNProcUpdate",
+              "interrupt": "NULL",
+              "physics": "ftPhysicsApplyGroundVelFriction",
+              "map": "ftMarioSpecialNProcMap"
+            }
+          },
+          {
+            "status": "nFTLuigiStatusSpecialAirN",
+            "motion": "nFTLuigiMotionSpecialAirN",
+            "motion_attack_id": "nFTMotionAttackIDSpecialN",
+            "kinetics": "nMPKineticsAir",
+            "is_projectile": "TRUE",
+            "status_attack_id": "nFTMotionAttackIDSpecialN",
+            "callbacks": {
+              "update": "ftMarioSpecialNProcUpdate",
+              "interrupt": "NULL",
+              "physics": "ftPhysicsApplyAirVelDrift",
+              "map": "ftMarioSpecialAirNProcMap"
+            }
+          },
+          {
+            "status": "nFTLuigiStatusSpecialHi",
+            "motion": "nFTLuigiMotionSpecialHi",
+            "motion_attack_id": "nFTMotionAttackIDSpecialHi",
+            "kinetics": "nMPKineticsGround",
+            "is_projectile": "FALSE",
+            "status_attack_id": "nFTMotionAttackIDSpecialHi",
+            "callbacks": {
+              "update": "ftMarioSpecialHiProcUpdate",
+              "interrupt": "ftMarioSpecialHiProcInterrupt",
+              "physics": "ftMarioSpecialHiProcPhysics",
+              "map": "ftMarioSpecialHiProcMap"
+            }
+          },
+          {
+            "status": "nFTLuigiStatusSpecialAirHi",
+            "motion": "nFTLuigiMotionSpecialAirHi",
+            "motion_attack_id": "nFTMotionAttackIDSpecialHi",
+            "kinetics": "nMPKineticsAir",
+            "is_projectile": "FALSE",
+            "status_attack_id": "nFTMotionAttackIDSpecialHi",
+            "callbacks": {
+              "update": "ftMarioSpecialHiProcUpdate",
+              "interrupt": "ftMarioSpecialHiProcInterrupt",
+              "physics": "ftMarioSpecialHiProcPhysics",
+              "map": "ftMarioSpecialHiProcMap"
+            }
+          },
+          {
+            "status": "nFTLuigiStatusSpecialLw",
+            "motion": "nFTLuigiMotionSpecialLw",
+            "motion_attack_id": "nFTMotionAttackIDSpecialLw",
+            "kinetics": "nMPKineticsGround",
+            "is_projectile": "FALSE",
+            "status_attack_id": "nFTMotionAttackIDSpecialLw",
+            "callbacks": {
+              "update": "ftMarioSpecialLwProcUpdate",
+              "interrupt": "NULL",
+              "physics": "ftMarioSpecialLwProcPhysics",
+              "map": "ftMarioSpecialLwProcMap"
+            }
+          },
+          {
+            "status": "nFTLuigiStatusSpecialAirLw",
+            "motion": "nFTLuigiMotionSpecialAirLw",
+            "motion_attack_id": "nFTMotionAttackIDSpecialLw",
+            "kinetics": "nMPKineticsAir",
+            "is_projectile": "FALSE",
+            "status_attack_id": "nFTMotionAttackIDSpecialLw",
+            "callbacks": {
+              "update": "ftMarioSpecialAirLwProcUpdate",
+              "interrupt": "NULL",
+              "physics": "ftMarioSpecialAirLwProcPhysics",
+              "map": "ftMarioSpecialAirLwProcMap"
+            }
+          }
+        ]
+      },
+      "variant_contract": {
+        "shares_mario_special_callbacks": true,
+        "shared_status_pairs": [
+          {
+            "luigi": "nFTLuigiStatusSpecialN",
+            "mario": "nFTMarioStatusSpecialN",
+            "callbacks": {
+              "update": "ftMarioSpecialNProcUpdate",
+              "interrupt": "NULL",
+              "physics": "ftPhysicsApplyGroundVelFriction",
+              "map": "ftMarioSpecialNProcMap"
+            }
+          },
+          {
+            "luigi": "nFTLuigiStatusSpecialAirN",
+            "mario": "nFTMarioStatusSpecialAirN",
+            "callbacks": {
+              "update": "ftMarioSpecialNProcUpdate",
+              "interrupt": "NULL",
+              "physics": "ftPhysicsApplyAirVelDrift",
+              "map": "ftMarioSpecialAirNProcMap"
+            }
+          },
+          {
+            "luigi": "nFTLuigiStatusSpecialHi",
+            "mario": "nFTMarioStatusSpecialHi",
+            "callbacks": {
+              "update": "ftMarioSpecialHiProcUpdate",
+              "interrupt": "ftMarioSpecialHiProcInterrupt",
+              "physics": "ftMarioSpecialHiProcPhysics",
+              "map": "ftMarioSpecialHiProcMap"
+            }
+          },
+          {
+            "luigi": "nFTLuigiStatusSpecialAirHi",
+            "mario": "nFTMarioStatusSpecialAirHi",
+            "callbacks": {
+              "update": "ftMarioSpecialHiProcUpdate",
+              "interrupt": "ftMarioSpecialHiProcInterrupt",
+              "physics": "ftMarioSpecialHiProcPhysics",
+              "map": "ftMarioSpecialHiProcMap"
+            }
+          },
+          {
+            "luigi": "nFTLuigiStatusSpecialLw",
+            "mario": "nFTMarioStatusSpecialLw",
+            "callbacks": {
+              "update": "ftMarioSpecialLwProcUpdate",
+              "interrupt": "NULL",
+              "physics": "ftMarioSpecialLwProcPhysics",
+              "map": "ftMarioSpecialLwProcMap"
+            }
+          },
+          {
+            "luigi": "nFTLuigiStatusSpecialAirLw",
+            "mario": "nFTMarioStatusSpecialAirLw",
+            "callbacks": {
+              "update": "ftMarioSpecialAirLwProcUpdate",
+              "interrupt": "NULL",
+              "physics": "ftMarioSpecialAirLwProcPhysics",
+              "map": "ftMarioSpecialAirLwProcMap"
+            }
+          }
+        ],
+        "fireball": {
+          "source": "decomp/BattleShip-main/decomp/src/wp/wpmario/wpmariofireball.c",
+          "source_sha256": "90cb51be21d302c4407362515c41cb0edfe04d4df3b5cd3bc297fb861d4e9b60",
+          "variant_index": 1,
+          "lifetime": 80,
+          "terminal_velocity": 55.0,
+          "map_collision_damage": 30.0,
+          "gravity": 0.0,
+          "collision_rebound": 0.85,
+          "rotate_degrees_per_tick": 25.0,
+          "ground_launch_degrees": 0.0,
+          "air_launch_degrees": 0.0,
+          "base_velocity": 36.0,
+          "fighter_special_file": "&gFTDataLuigiSpecial1",
+          "weapon_attributes_symbol": "&llLuigiSpecial1FireballWeaponAttributes",
+          "animation_start_frame": 1.0,
+          "map_callback": "wpMarioFireballProcMap",
+          "map_rebound_shared_with_mario": true,
+          "hitbox_source": "decomp/BattleShip-main/decomp/src/relocData/222_LuigiSpecial1.c",
+          "hitbox_source_sha256": "cd2e7c61d1114987ec6c4de6624dd63b8446999f761bb4d61b654667315fe32c",
+          "hitbox": {
+            "map_top": 50,
+            "map_center": 0,
+            "map_bottom": -50,
+            "map_width": 50,
+            "size": 200,
+            "angle": 361,
+            "knockback_scale": 25,
+            "damage": 6,
+            "element": 1,
+            "shield_damage": 1,
+            "sfx": 28,
+            "priority": 1,
+            "knockback_base": 10
           }
         }
       }

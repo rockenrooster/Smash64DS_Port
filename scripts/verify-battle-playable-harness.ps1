@@ -30,6 +30,7 @@ param(
     [ValidateRange(0,1)][int]$IFCommonHybridOamMode = 0,
     [ValidateRange(0,1)][int]$FastWallpaperAffineMode = 0,
     [ValidateRange(0,1)][int]$FoxCpuMode = 1,
+    [ValidateRange(-1,11)][int]$P2ProofFighter0Kind = -1,
     # P2-1M (owner, 2026-08-19). Run the same mode-163 regression battle, but
     # REACH IT THROUGH THE VS SHELL: title -> main menu -> VS rules -> character
     # select -> stage select -> battle. The match is identical -- the shell's own
@@ -221,6 +222,7 @@ try {
     -IFCommonHybridOamMode $IFCommonHybridOamMode `
     -FastWallpaperAffineMode $FastWallpaperAffineMode `
     -FoxCpuMode $FoxCpuMode `
+    -P2ProofFighter0Kind $P2ProofFighter0Kind `
     -RequireZeroPostGoTextureFence:$RequireZeroPostGoTextureFence `
     -RendererM2DetailedLedger:$RendererM2DetailedLedger `
     -Task9FloatItcmMode $Task9FloatItcmMode `

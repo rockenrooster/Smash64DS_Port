@@ -584,6 +584,9 @@ void ndsResetStartupDiagnostics(void)
     gNdsFighterProjectileProofDamageMax = 0;
     gNdsFighterProjectileProofLifetimeMax = 0;
     gNdsFighterProjectileProofMapMask = 0;
+    gNdsFighterProjectileProofFireballIndex = -1;
+    gNdsFighterProjectileProofFireballInitialVelXMilli = 0;
+    gNdsFighterProjectileProofFireballInitialVelYMilli = 0;
     ndsCollisionRuntimeDiagnosticsReset();
     gNdsFighterReflectorProofResult = 0;
     gNdsFighterReflectorProofMask = 0;
@@ -623,11 +626,13 @@ void ndsResetStartupDiagnostics(void)
     gNdsFighterSpecialsMarioLandingFallSpecialFrames = 0;
     gNdsFighterSpecialsMarioHiWaitFrames = 0;
     gNdsFighterSpecialsMarioHiRootYMilli = 0;
+    gNdsFighterSpecialsMarioHiDamageMax = 0;
     gNdsFighterSpecialsMarioLwPressFrames = 0;
     gNdsFighterSpecialsMarioLwFrames = 0;
     gNdsFighterSpecialsMarioAirLwFrames = 0;
     gNdsFighterSpecialsMarioLwDustEffectCount = 0;
     gNdsFighterSpecialsMarioLwWaitFrames = 0;
+    gNdsFighterSpecialsMarioLwDamageMax = 0;
     gNdsFighterSpecialsFoxHiPressFrames = 0;
     gNdsFighterSpecialsFoxHiStartFrames = 0;
     gNdsFighterSpecialsFoxHiHoldFrames = 0;

@@ -185,6 +185,13 @@ static void ndsSCVSBattleBeginSceneTextures(void)
      * scene allocation. Rebirth frames therefore bind only resident DS data. */
     (void)ndsRendererHardwarePrepareRebirthHaloTextures();
 #endif
+#if NDS_RENDERER_HW_TRIANGLES
+    /* Mario pipe / Fox Arwing carry 24 small preconverted PAL16/A5I3 images.
+     * Allocate them after every larger scene owner so entry frames perform only
+     * resident DS texture binds -- no N64 texture/TLUT conversion and no hot
+     * allocator traffic while the fighters are appearing. */
+    (void)ndsRendererHardwarePrepareEntryEffectTextures();
+#endif
 }
 
 /* GAME SET never appeared -- owner, 2026-07-31: "No 'Game set' after winning

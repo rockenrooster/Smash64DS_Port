@@ -389,15 +389,16 @@ s32 ndsIFCommonBattleHudInterfaceVisible(void)
      * never render: its mirrors freeze once the interface gobjs stop drawing,
      * which is what used to redraw the battle HUD over the Results screen.
      *
-     * And the meters enter WITH THE FIGHTERS.  The battle scene flips to
-     * nSCKindVSBattle while the stage-select presentation is still on screen
-     * (the same load window that used to composite the CSS preview's retained
-     * 3D frame), and the mirror masks still hold the previous match there --
-     * an unconditional VSBattle gate drew the old HUD over stage select.  No
-     * spawned fighter means no interface: the owner's "start it during the
-     * character intros". */
+     * The meters enter with the SOURCE INTERFACE, not merely with allocated
+     * fighters.  VSBattle creates every fighter during scene setup while the
+     * stage-select frame can still be the last presented image, so fighter_gobj
+     * is deliberately too early a presentation boundary.  The HUD record
+     * counter is reset at scene entry and advances only once a VSBattle source
+     * interface display callback actually runs; that is the first intro frame
+     * on which the lower HUD is allowed to appear. */
     if ((gSCManagerSceneData.scene_curr != nSCKindVSBattle) ||
         (gSCManagerBattleState == NULL) ||
+        (gNdsIFCommonHUDRecordCount == 0u) ||
         (gSCManagerBattleState->game_status == nSCBattleGameStatusSet) ||
         (gSCManagerBattleState->game_status == nSCBattleGameStatusPause))
     {

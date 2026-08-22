@@ -5096,6 +5096,64 @@ typedef struct NDSNativeFighterRuntimeTables
     u32 epoch_count;
 } NDSNativeFighterRuntimeTables;
 
+/* Mario's pipe and Fox's Arwing are short-lived source DObj trees, but their
+ * mesh/display-list/texture payloads are immutable.  Keep BattleShip's live
+ * DObj animation (that is what makes Mario rise from the pipe and Fox leave the
+ * ship) and replace only the expensive presentation half with an AOT packet.
+ * The generated vertices already contain final DS t16 texcoords and every
+ * texture is already PAL16/A5I3, so this owner never decodes an N64 display list
+ * or converts an N64 texture at runtime. */
+typedef struct NDSEntryEffectGroup
+{
+    u16 first_vertex;
+    u16 triangle_count;
+    u8 texture_slot;
+    u8 root_index;
+    u32 geometry_mode;
+    u32 combine_w0;
+    u32 combine_w1;
+    u32 othermode_h;
+    u32 othermode_l;
+    u32 prim_color;
+    u32 env_color;
+    u8 cms;
+    u8 cmt;
+    u8 masks;
+    u8 maskt;
+} NDSEntryEffectGroup;
+
+typedef struct NDSEntryEffectRoot
+{
+    u32 source_offset;
+    u16 first_group;
+    u8 group_count;
+    u8 reserved;
+} NDSEntryEffectRoot;
+
+typedef struct NDSEntryEffectTexture
+{
+    const u8 *texels;
+    u32 texel_bytes;
+    const u16 *palette;
+    u16 palette_entries;
+    u16 width;
+    u16 height;
+    u8 ds_format;
+    u8 reserved;
+} NDSEntryEffectTexture;
+
+#define NDS_ENTRY_EFFECT_TEXTURE_PAL16 0u
+#define NDS_ENTRY_EFFECT_TEXTURE_A5I3 1u
+#define NDS_ENTRY_EFFECT_TEXTURE_NONE 0xffu
+
+#include "nds_entry_effects.generated.inc"
+
+static u32 sNdsRendererEntryEffectTextureName[NDS_ENTRY_EFFECT_TEXTURE_COUNT];
+volatile u32 gNdsEntryEffectNativeDrawCount;
+volatile u32 gNdsEntryEffectNativeFallbackCount;
+volatile u32 gNdsEntryEffectNativeTexturePrepareCount;
+volatile u32 gNdsEntryEffectNativeTextureBindCount;
+
 typedef struct NDSNativeFighterOwnerRuntime
 {
     const NDSNativeFighterRuntimeTables *tables;
@@ -5107,11 +5165,8 @@ typedef struct NDSNativeFighterOwnerRuntime
     u32 asset_data_size;
 } NDSNativeFighterOwnerRuntime;
 
-#if NDS_P2_LUIGI
-#define NDS_NATIVE_FIGHTER_OWNER_COUNT 3u
-#else
-#define NDS_NATIVE_FIGHTER_OWNER_COUNT 2u
-#endif
+#define NDS_NATIVE_FIGHTER_OWNER_COUNT \
+    NDS_RENDERER_NATIVE_FIGHTER_OWNER_COUNT
 
 #define NDS_FTR_COUNT(a) ((u32)(sizeof(a) / sizeof((a)[0])))
 
@@ -5478,6 +5533,20 @@ typedef struct NDSNativeFighterOwnerExecution
     NDSRendererStats *stats;
     NDSRendererVertexCache *vertex_cache;
     u32 slot;
+    /* Battle player slot (0..3), distinct from the generated owner slot above.
+     * The production run texture memo needs this identity because two live
+     * instances of the same fighter execute the same generated run indices but
+     * can carry different source materials/costumes.  `appearance_id` is the
+     * source costume/shade pair for the same reason: CSS reuses one live player
+     * slot while changing costumes, so instance identity alone is not enough.
+     * Owner execution is serialized, just like sNdsNativeFighterActiveTables,
+     * so current values keep the hot run helper ABI unchanged. */
+    /* One hot-path identity word for the run-texture memo.  The resolver's
+     * result can vary by generated owner, high/low detail program, live fighter
+     * instance, costume and shade.  Packing those facts once at owner entry is
+     * materially cheaper than re-reading four independent fences for every run
+     * (four fighters execute this path thousands of times per gate match). */
+    u32 texture_memo_owner_key;
     u32 active;
 } NDSNativeFighterOwnerExecution;
 
@@ -11769,6 +11838,12 @@ void ndsRendererHardwareDiscardTextureCache(void)
         sNdsRendererRebirthHaloTextureName[i] = 0u;
     }
 #endif
+    for (i = 0u; i < NDS_ENTRY_EFFECT_TEXTURE_COUNT; i++)
+    {
+        ndsRendererHardwareReleaseIFCommonCloudAtlas(
+            &sNdsRendererEntryEffectTextureName[i]);
+        sNdsRendererEntryEffectTextureName[i] = 0u;
+    }
     sNdsRendererHardwareTextureCacheNext = 0u;
     sNdsRendererHardwareBoundTextureName = 0u;
     sNdsRendererHardwareActiveTextureEntry = NULL;
@@ -12196,6 +12271,22 @@ static s32 ndsRendererRebirthHaloTextureFill(u8 *pixels, u32 bytes,
     return TRUE;
 }
 #endif
+
+static s32 ndsRendererEntryEffectTextureFill(u8 *pixels, u32 bytes,
+                                              void *user_data)
+{
+    const NDSEntryEffectTexture *texture =
+        (const NDSEntryEffectTexture *)user_data;
+
+    if ((pixels == NULL) || (texture == NULL) ||
+        (texture->texels == NULL) || (bytes < texture->texel_bytes))
+    {
+        return FALSE;
+    }
+    memset(pixels, 0, bytes);
+    memcpy(pixels, texture->texels, texture->texel_bytes);
+    return TRUE;
+}
 
 s32 ndsRendererHardwarePrepareImpactWaveTextures(void)
 {
@@ -25478,7 +25569,6 @@ static s32 ndsRendererNativePreflightProductionOwner(
     const NDSNativeRoot *roots;
     u32 root_count;
     u32 root_index;
-
     if ((slot >= NDS_NATIVE_FIGHTER_OWNER_COUNT) ||
         (asset_base == NULL) || (inputs == NULL) ||
         (stats == NULL) || (callback != NULL) ||
@@ -25798,6 +25888,254 @@ ndsRendererNativeSelectFighterRuntimeTables(u32 slot, u32 use_low_detail)
             &sNdsNativeFighterDenseNormalsBuilt;
     }
     return TRUE;
+}
+
+static const NDSEntryEffectRoot *ndsRendererEntryEffectRoot(
+    u32 owner_asset_id, u32 root_offset)
+{
+    u32 first = (owner_asset_id == 356u) ? 0u :
+                (owner_asset_id == 161u) ? NDS_ENTRY_EFFECT_FOX_ROOT_FIRST :
+                                           NDS_ENTRY_EFFECT_ROOT_COUNT;
+    u32 last = (owner_asset_id == 356u) ? NDS_ENTRY_EFFECT_MARIO_ROOT_COUNT :
+               (owner_asset_id == 161u) ? NDS_ENTRY_EFFECT_ROOT_COUNT : first;
+    u32 i;
+
+    for (i = first; i < last; i++)
+    {
+        if (sNdsEntryEffectRoots[i].source_offset == root_offset)
+        {
+            return &sNdsEntryEffectRoots[i];
+        }
+    }
+    return NULL;
+}
+
+/* DS-native Mario pipe / Fox Arwing immutable presentation owner.
+ *
+ * Source ownership deliberately stops at the DObj: BattleShip continues to
+ * animate/re-parent/sort the live tree, so the pipe rise and Arwing fly-by use
+ * the original timing and transforms.  At each leaf, however, this function
+ * consumes only build-generated DS vertices and resident DS textures.  No N64
+ * command scan, vertex-cache emulation, texture/TLUT conversion, or software
+ * lighting occurs here.  The generator also rejects a packet if any emitted
+ * source triangle has G_LIGHTING set; the explicit mask below is a second
+ * runtime fence against lighting state leaking from a previous fighter draw. */
+s32 ndsRendererSubmitNativeEntryEffect(
+    u32 owner_asset_id, u32 root_offset,
+    const NDSRendererConfig *config, NDSRendererStats *stats)
+{
+#if NDS_RENDERER_HW_TRIANGLES && \
+    (NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE)
+    const NDSEntryEffectRoot *root;
+    u32 group_offset;
+    u32 matrix_generation;
+
+    if ((config == NULL) || (stats == NULL) ||
+        (config->initial_projection == NULL) ||
+        (config->initial_modelview == NULL))
+    {
+        return FALSE;
+    }
+    root = ndsRendererEntryEffectRoot(owner_asset_id, root_offset);
+    if ((root == NULL) || (root->group_count == 0u) ||
+        ((u32)root->first_group + root->group_count >
+         NDS_ENTRY_EFFECT_GROUP_COUNT))
+    {
+        return FALSE;
+    }
+
+    /* Fail closed before the first GX write. A scene-entry prepare is supposed
+     * to make every referenced name resident; seeing zero here means the native
+     * owner cannot satisfy its no-hot-upload contract, so the adapter may use
+     * its generic compatibility fallback instead. */
+    for (group_offset = 0u; group_offset < root->group_count; group_offset++)
+    {
+        const NDSEntryEffectGroup *group =
+            &sNdsEntryEffectGroups[(u32)root->first_group + group_offset];
+
+        if (group->texture_slot == NDS_ENTRY_EFFECT_TEXTURE_NONE)
+        {
+            continue;
+        }
+        if ((group->texture_slot >= NDS_ENTRY_EFFECT_TEXTURE_COUNT) ||
+            (sNdsRendererEntryEffectTextureName[group->texture_slot] == 0u))
+        {
+            return FALSE;
+        }
+    }
+
+    ndsRendererHardwareEndBatch();
+    matrix_generation = ndsRendererNextMatrixGeneration();
+    ndsRendererLoadHardwareSplitMatrices(
+        config->initial_projection, config->initial_modelview,
+        matrix_generation);
+
+    for (group_offset = 0u; group_offset < root->group_count; group_offset++)
+    {
+        const NDSEntryEffectGroup *group =
+            &sNdsEntryEffectGroups[(u32)root->first_group + group_offset];
+        u32 use_texture =
+            (group->texture_slot != NDS_ENTRY_EFFECT_TEXTURE_NONE) ? TRUE : FALSE;
+        u32 texture_name = 0u;
+        u32 material_color;
+        s32 use_material_color;
+        s32 use_vertex_color;
+        u32 poly_fmt;
+        u32 corner_count = (u32)group->triangle_count * 3u;
+        u32 corner;
+
+        stats->geometry_mode =
+            group->geometry_mode & ~NDS_RENDERER_GEOM_LIGHTING;
+        stats->othermode_h = group->othermode_h;
+        stats->othermode_l = group->othermode_l;
+        stats->prim_color = group->prim_color;
+        stats->env_color = group->env_color;
+        ndsRendererRecordSetCombine(stats, group->combine_w0, group->combine_w1);
+
+        if (use_texture != FALSE)
+        {
+            const NDSEntryEffectTexture *texture =
+                &sNdsEntryEffectTextures[group->texture_slot];
+            NDSRendererTileState tile = {0};
+            u32 params;
+
+            texture_name =
+                sNdsRendererEntryEffectTextureName[group->texture_slot];
+            tile.set_seen = TRUE;
+            tile.width = texture->width;
+            tile.height = texture->height;
+            tile.cms = group->cms;
+            tile.cmt = group->cmt;
+            tile.masks = group->masks;
+            tile.maskt = group->maskt;
+            params = ndsRendererHardwareTextureParams(
+                stats, &tile, texture->width, texture->height);
+            ndsRendererHardwareBindTextureName(stats, texture_name);
+            ndsRendererHardwareApplyTextureParams(
+                ndsRendererHardwareMergeTextureParams(params));
+            sNdsRendererHardwareActiveTextureEntry = NULL;
+            stats->hardware_texture_ready_count++;
+            gNdsEntryEffectNativeTextureBindCount++;
+        }
+
+        material_color = ndsRendererHardwareColorSource(stats);
+        use_material_color = ndsRendererHardwareUseMaterialColor(stats);
+        use_vertex_color = ndsRendererHardwareUseVertexColor(stats);
+        poly_fmt = ndsRendererHardwarePolyFmt(stats, 31u);
+        /* The generated corpus is unlit. POLY_FORMAT_LIGHT0 must therefore
+         * remain absent even if a previous hardware-lit fighter/effect left a
+         * light vector in GX state. */
+        poly_fmt &= ~((u32)POLY_FORMAT_LIGHT0);
+        ndsRendererHardwareBeginTriangleBatch(
+            stats, use_texture, texture_name, poly_fmt,
+            sNdsRendererHardwareMatrixMode,
+            sNdsRendererHardwareMatrixGeneration);
+
+        for (corner = 0u; corner < corner_count; corner++)
+        {
+            const NDSRendererInputVertex *vtx =
+                &sNdsEntryEffectVertices[(u32)group->first_vertex + corner];
+            u32 vertex_color =
+                ((u32)vtx->r << 24) | ((u32)vtx->g << 16) |
+                ((u32)vtx->b << 8) | (u32)vtx->a;
+            u16 packed_color = ndsRendererHardwarePackedVertexColor(
+                stats, vtx, material_color,
+                use_material_color, use_vertex_color,
+                vertex_color, TRUE, 0u);
+
+            glColor(packed_color);
+            if (use_texture != FALSE)
+            {
+                /* Already converted from N64 s10.5 + tile/scale state to the
+                 * DS t16 coordinate in the generator. */
+                glTexCoord2t16((t16)vtx->s, (t16)vtx->t);
+            }
+            glVertex3v16(
+                ndsRendererHardwareVertexCoord(vtx->x, TRUE),
+                ndsRendererHardwareVertexCoord(vtx->y, TRUE),
+                ndsRendererHardwareVertexCoord(vtx->z, TRUE));
+        }
+        sNdsRendererHardwareSubmitted = TRUE;
+        stats->triangle_count += group->triangle_count;
+        stats->transformed_triangle_count += group->triangle_count;
+        stats->hardware_triangle_count += group->triangle_count;
+        stats->hardware_vertex_count += corner_count;
+        /* This owner submits ordinary model-space vertices through the live
+         * projection/modelview pair.  They therefore use GX's normal Z-buffer
+         * depth path just like the generic source-DL interpreter.  Keep the
+         * depth census coherent with hardware_triangle_count; omitting this
+         * made a working pipe/Arwing look like thousands of unclassified stage
+         * triangles to the exact realtime verifier. */
+        stats->hardware_zbuffer_triangle_count += group->triangle_count;
+        ndsRendererHardwareEndBatch();
+    }
+    gNdsEntryEffectNativeDrawCount++;
+    return TRUE;
+#else
+    (void)owner_asset_id;
+    (void)root_offset;
+    (void)config;
+    (void)stats;
+    return FALSE;
+#endif
+}
+
+s32 ndsRendererHardwarePrepareEntryEffectTextures(void)
+{
+#if NDS_RENDERER_HW_TRIANGLES && \
+    (NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE)
+    u32 i;
+
+    for (i = 0u; i < NDS_ENTRY_EFFECT_TEXTURE_COUNT; i++)
+    {
+        const NDSEntryEffectTexture *texture = &sNdsEntryEffectTextures[i];
+        s32 prepared;
+
+        if (sNdsRendererEntryEffectTextureName[i] != 0u)
+        {
+            continue;
+        }
+        if ((texture->palette == NULL) || (texture->texels == NULL) ||
+            (texture->width == 0u) || (texture->height == 0u))
+        {
+            return FALSE;
+        }
+        if (texture->ds_format == NDS_ENTRY_EFFECT_TEXTURE_PAL16)
+        {
+            if (texture->palette_entries != 16u)
+            {
+                return FALSE;
+            }
+            prepared = ndsRendererHardwarePrepareIFCommonPal16Atlas(
+                texture->width, texture->height, texture->palette,
+                ndsRendererEntryEffectTextureFill, (void *)texture,
+                &sNdsRendererEntryEffectTextureName[i]);
+        }
+        else if (texture->ds_format == NDS_ENTRY_EFFECT_TEXTURE_A5I3)
+        {
+            if (texture->palette_entries != 8u)
+            {
+                return FALSE;
+            }
+            prepared = ndsRendererHardwarePrepareIFCommonCloudAtlas(
+                texture->width, texture->height, texture->palette,
+                ndsRendererEntryEffectTextureFill, (void *)texture,
+                &sNdsRendererEntryEffectTextureName[i]);
+        }
+        else
+        {
+            return FALSE;
+        }
+        if (prepared == FALSE)
+        {
+            return FALSE;
+        }
+        gNdsEntryEffectNativeTexturePrepareCount++;
+    }
+    return TRUE;
+#else
+    return FALSE;
+#endif
 }
 
 /* libnds's NORMAL_PACK does not mask its z argument -- it is
@@ -26690,6 +27028,16 @@ typedef struct NDSR2RunTextureMemo
     u32 origin_s;
     u32 origin_t;
     s32 offset;
+    /* `run_index` identifies immutable generated geometry, not a live fighter.
+     * Mario/Mario (or Fox/Fox) therefore executes the same run indices twice in
+     * one frame.  The full texture resolver keys costume-sensitive bakes on live
+     * PRIM/ENV state; without the owner key below, the second fighter could reuse
+     * the first fighter's baked texture merely because the cache entry was still
+     * resident.  The key also separates High/Low generated programs and later
+     * roster owners.  Texture-cache `key_generation` below is the scene/VRAM
+     * lifetime fence, so duplicating taskman generation here would add a hot
+     * compare without adding ownership information. */
+    u32 owner_key;
     u8 valid;
 } NDSR2RunTextureMemo;
 
@@ -26716,6 +27064,15 @@ static s32 __attribute__((noinline)) ndsRendererR2RunTextureMemoApply(
     memo = &sNdsR2RunTextureMemo[run_index];
     if (memo->valid == 0u)
     {
+        gNdsR2TexMemoMissCount++;
+        return FALSE;
+    }
+    if (memo->owner_key !=
+        sNdsNativeFighterOwnerExecution.texture_memo_owner_key)
+    {
+        /* This is an identity miss, not a stale hardware-cache entry.  Leave
+         * the resident texture untouched and let the source-equivalent full
+         * resolver below choose the live instance's key, then refill. */
         gNdsR2TexMemoMissCount++;
         return FALSE;
     }
@@ -26807,6 +27164,7 @@ static void __attribute__((noinline)) ndsRendererR2RunTextureMemoFill(
     memo->origin_s = origin_s;
     memo->origin_t = origin_t;
     memo->offset = offset;
+    memo->owner_key = sNdsNativeFighterOwnerExecution.texture_memo_owner_key;
     memo->valid = 1u;
     gNdsR2TexMemoFillCount++;
 }
@@ -26836,6 +27194,14 @@ static void __attribute__((noinline)) ndsRendererR2RunTextureMemoVerify(
     memo = &sNdsR2RunTextureMemo[run_index];
     if (memo->valid == 0u)
     {
+        return;
+    }
+    if (memo->owner_key !=
+        sNdsNativeFighterOwnerExecution.texture_memo_owner_key)
+    {
+        /* A different live instance is not a memo disagreement.  Level 2 runs
+         * the full resolver precisely so the new identity can replace this row
+         * after verification. */
         return;
     }
     entry = &sNdsRendererHardwareTextureCache[memo->slot_plus1 - 1u];
@@ -33562,6 +33928,7 @@ s32 NDS_RENDERER_NATIVE_FIGHTER_CODE
 ndsRendererExecuteNativeFighterOwnerProduction(
     u32 slot,
     u32 use_low_detail,
+    u32 texture_memo_owner_key,
     const void *asset_base_ptr,
     const NDSRendererNativeFighterRoot *inputs,
     u32 input_count,
@@ -33609,6 +33976,12 @@ ndsRendererExecuteNativeFighterOwnerProduction(
     {
         return FALSE;
     }
+    /* The adapter packs generated owner, detail, battle instance and source
+     * costume/shade once before entering this ITCM-resident executor. Keeping
+     * that cold identity construction out of the native run loop preserves the
+     * 32 KiB ITCM boundary while the hot memo still pays one word store here. */
+    sNdsNativeFighterOwnerExecution.texture_memo_owner_key =
+        texture_memo_owner_key;
 #if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
     NDS_RENDERER_M2_DETAILED_LEDGER
     m2_owner = ndsRendererProfileM2Owner();

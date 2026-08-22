@@ -8,6 +8,7 @@
 #include <nds/nds_fox_gun.h>
 #endif
 #include <nds/nds_ifcommon_oam.h>
+#include <ft/ftdata_file_slots.h>
 
 #ifndef NDS_RENDERER_HW_TRIANGLES
 #define NDS_RENDERER_HW_TRIANGLES 0
@@ -32,7 +33,13 @@
 #define NDS_RENDERER_ADAPTER_MTX_FRAC_BITS 12
 #define NDS_RENDERER_ADAPTER_DOBJ_PARENT_MAX 32u
 #define NDS_RENDERER_ADAPTER_MATERIAL_MOBJ_MAX 64u
-#define NDS_RENDERER_ADAPTER_NATIVE_MATERIAL_MAX 4u
+/* Mario/Fox top out at four MObjs on one selected model root. Luigi root 4
+ * carries six: the source-derived AOT program reaches material_slot 5, and the
+ * live BattleShip MObj chain independently counts six nodes. This is renderer
+ * capacity, not a Mario/Fox semantic, so size the generic native-owner
+ * workspace for the largest admitted source root rather than forcing a valid
+ * fighter through the generic display-list interpreter. */
+#define NDS_RENDERER_ADAPTER_NATIVE_MATERIAL_MAX 6u
 #define NDS_RENDERER_ADAPTER_CAMERA_CACHE_COUNT 4u
 #define NDS_RENDERER_ADAPTER_DOBJ_WORLD_CACHE_COUNT 128u
 #define NDS_RENDERER_ADAPTER_DOBJ_WORLD_INDEX_COUNT 256u
@@ -508,7 +515,8 @@ typedef struct NDSRendererAdapterNativeOwnerValidationCache
  * reloc generation.  Prove every selected root/material identity each draw,
  * but do the full generated-array/span walk only when that identity changes. */
 static NDSRendererAdapterNativeOwnerValidationCache
-    sNdsRendererAdapterNativeOwnerValidationCache[2];
+    sNdsRendererAdapterNativeOwnerValidationCache[
+        NDS_RENDERER_NATIVE_FIGHTER_OWNER_COUNT];
 #endif
 
 typedef struct NDSRendererAdapterCameraCacheEntry
@@ -3911,37 +3919,23 @@ u32 gNdsR2GxComposeDeclines;
  * glPushMatrix writes whatever level the stack pointer is at, so the low levels
  * belong to anyone who pushes inside the execute (ndsRendererR2WriteLightVector
  * does, once). Mario needs one new slot and Fox eleven. */
-static u8 sNdsR2GxSlotTable[2][NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED];
-static u8 sNdsR2GxSlotTableValid[2];
-
-static sb32 ndsRendererAdapterGxSlotTaken(
-    const u8 *table, u32 count, u32 candidate)
-{
-    u32 i;
-
-    for (i = 0u; i < count; i++)
-    {
-        if (table[i] == (u8)candidate)
-        {
-            return TRUE;
-        }
-    }
-    return FALSE;
-}
+static u8 sNdsR2GxSlotTable[
+    NDS_RENDERER_NATIVE_FIGHTER_OWNER_COUNT]
+    [NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED];
+static u8 sNdsR2GxSlotTableValid[
+    NDS_RENDERER_NATIVE_FIGHTER_OWNER_COUNT];
 
 static sb32 ndsRendererAdapterBuildGxSlotTable(u32 slot, u32 binding_count)
 {
     const u8 *parents;
-    const u8 *cross;
-    const u8 *cross_other;
     u32 parent_count = 0u;
-    u32 cross_count = 0u;
-    u32 cross_other_count = 0u;
+    u32 cross_reserved_mask = 0u;
     u32 next_free = NDS_RENDERER_FIGHTER_GX_SLOT_NONE - 1u;
     u8 *table;
+    u32 owner_slot;
     u32 i;
 
-    if ((slot > 1u) ||
+    if ((slot >= NDS_RENDERER_NATIVE_FIGHTER_OWNER_COUNT) ||
         (binding_count > NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED))
     {
         return FALSE;
@@ -3952,20 +3946,43 @@ static sb32 ndsRendererAdapterBuildGxSlotTable(u32 slot, u32 binding_count)
         return TRUE;
     }
     parents = ndsRendererNativeFighterBindingParents(slot, &parent_count);
-    cross = ndsRendererNativeFighterCrossPaletteSlots(slot, &cross_count);
-    /* There is one hardware position/vector palette, shared by both fighters.
-     * Parent slots are allocated per fighter, so they must reserve the UNION of
-     * both generated cross-run slot tables. Reserving only this owner's table
-     * let Fox allocate parent worlds into Mario's cross slots 19..23; Mario then
-     * restored Fox matrices from those slots and periodically clipped the whole
-     * fighter for a frame. Parent-vs-parent overlap is safe because every parent
-     * slot is stored before a child restores it within the same owner execute. */
-    cross_other = ndsRendererNativeFighterCrossPaletteSlots(
-        slot ^ 1u, &cross_other_count);
-    if ((parents == NULL) || (cross == NULL) || (cross_other == NULL) ||
-        (parent_count != binding_count) || (cross_count != binding_count))
+    if ((parents == NULL) || (parent_count != binding_count))
     {
         return FALSE;
+    }
+    /* There is one hardware position/vector palette shared by every native
+     * fighter owner. Parent slots are allocated per owner, so reserve the UNION
+     * of every generated cross-run slot table. The original two-owner code used
+     * `slot ^ 1`; admitting Luigi made that both incomplete and an invalid owner
+     * lookup for slot 2. Parent-vs-parent overlap remains safe because every
+     * parent slot is stored before a child restores it within one owner execute. */
+    for (owner_slot = 0u;
+         owner_slot < NDS_RENDERER_NATIVE_FIGHTER_OWNER_COUNT;
+         owner_slot++)
+    {
+        const u8 *cross;
+        u32 cross_count = 0u;
+        u32 cross_index;
+
+        cross = ndsRendererNativeFighterCrossPaletteSlots(
+            owner_slot, &cross_count);
+        if (cross == NULL)
+        {
+            return FALSE;
+        }
+        if ((owner_slot == slot) && (cross_count != binding_count))
+        {
+            return FALSE;
+        }
+        for (cross_index = 0u; cross_index < cross_count; cross_index++)
+        {
+            u32 cross_slot = cross[cross_index];
+
+            if (cross_slot < NDS_RENDERER_FIGHTER_GX_SLOT_NONE)
+            {
+                cross_reserved_mask |= 1u << cross_slot;
+            }
+        }
     }
 
     /* A parent slot may NOT reuse the binding's cross-run slot. The cross-run
@@ -3995,11 +4012,7 @@ static sb32 ndsRendererAdapterBuildGxSlotTable(u32 slot, u32 binding_count)
         {
             continue;
         }
-        while ((ndsRendererAdapterGxSlotTaken(
-                    cross, binding_count, next_free) != FALSE)
-               || (ndsRendererAdapterGxSlotTaken(
-                       cross_other, cross_other_count, next_free) != FALSE)
-              )
+        while ((cross_reserved_mask & (1u << next_free)) != 0u)
         {
             if (next_free == 0u)
             {
@@ -10178,7 +10191,8 @@ ndsRendererAdapterValidateNativeOwnerCached(
     u32 i;
     sb32 identity_matches;
 
-    if ((slot > 1u) || (owner_file == NULL) ||
+    if ((slot >= NDS_RENDERER_NATIVE_FIGHTER_OWNER_COUNT) ||
+        (owner_file == NULL) ||
         (root_offsets == NULL) || (material_counts == NULL) ||
         (root_count > NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED))
     {
@@ -10703,9 +10717,160 @@ static void ndsEffectPacketVerdictRecord(const Gfx *dl)
 }
 #endif
 
+static sb32 ndsRendererAdapterTryNativeEntryEffect(
+    DObj *dobj, const Gfx *dl, GObj *camera_gobj, u32 initial_geometry_mode)
+{
+#if NDS_RENDERER_HW_TRIANGLES
+    const u8 *base = NULL;
+    u32 owner_asset_id = 0u;
+    u32 root_offset = 0u;
+    sb32 candidate = FALSE;
+    NDSRendererConfig config = {0};
+    NDSRendererStats stats;
+    NDSRendererMatrix20p12 projection;
+    NDSRendererMatrix20p12 modelview;
+    const NDSRendererMatrix20p12 *projection_ptr;
+    const NDSRendererMatrix20p12 *modelview_ptr;
+
+    if ((dobj == NULL) || (dl == NULL))
+    {
+        return FALSE;
+    }
+
+    /* Exact source asset + exact generated root is the whole admission test.
+     * Do not classify arbitrary effect lists by shape: this path intentionally
+     * owns only Mario's pipe and Fox's Arwing. */
+    if ((gFTMarioFileSpecial2 != NULL) &&
+        ((const u8 *)dl >= (const u8 *)gFTMarioFileSpecial2))
+    {
+        base = (const u8 *)gFTMarioFileSpecial2;
+        root_offset = (u32)((const u8 *)dl - base);
+        if ((root_offset == 0x03c0u) || (root_offset == 0x04c0u))
+        {
+            owner_asset_id = 356u;
+            candidate = TRUE;
+        }
+    }
+#if NDS_P2_LUIGI
+    /* dFTLuigiData points its Special2 slot at llMarioSpecial2FileID exactly
+     * like Mario, but ftManager owns a separate destination pointer for each
+     * fighter kind.  In a Luigi-vs-Fox match gFTMarioFileSpecial2 is therefore
+     * legitimately NULL while gFTDataLuigiSpecial2 contains the same source
+     * asset.  Admit that second live base explicitly; otherwise Luigi's pipe
+     * falls back to the N64 interpreter even though the AOT packet is already
+     * an exact bake of file 356. */
+    if ((candidate == FALSE) && (gFTDataLuigiSpecial2 != NULL) &&
+        ((const u8 *)dl >= (const u8 *)gFTDataLuigiSpecial2))
+    {
+        base = (const u8 *)gFTDataLuigiSpecial2;
+        root_offset = (u32)((const u8 *)dl - base);
+        if ((root_offset == 0x03c0u) || (root_offset == 0x04c0u))
+        {
+            owner_asset_id = 356u;
+            candidate = TRUE;
+        }
+    }
+#endif
+    if ((candidate == FALSE) && (gFTDataFoxSpecial3 != NULL) &&
+        ((const u8 *)dl >= (const u8 *)gFTDataFoxSpecial3))
+    {
+        base = (const u8 *)gFTDataFoxSpecial3;
+        root_offset = (u32)((const u8 *)dl - base);
+        switch (root_offset)
+        {
+        case 0x1fa0u:
+        case 0x2920u:
+        case 0x29d0u:
+        case 0x29f0u:
+        case 0x2a20u:
+        case 0x2868u:
+        case 0x2a50u:
+        case 0x2b00u:
+            owner_asset_id = 161u;
+            candidate = TRUE;
+            break;
+        default:
+            break;
+        }
+    }
+    if (candidate == FALSE)
+    {
+        return FALSE;
+    }
+
+    ndsRendererAdapterPrepareInitialMatrices(
+        dobj,
+        (camera_gobj != NULL) ? CObjGetStruct(camera_gobj) :
+            ((gGCCurrentCamera != NULL) ? CObjGetStruct(gGCCurrentCamera) : NULL),
+        FALSE, &projection, &projection_ptr, &modelview, &modelview_ptr);
+    /* The default battle camera has one legitimate split shape where the
+     * complete camera transform lives on only one side of the DS pair (the
+     * world-quad bridge handles the same contract above).  The generic DL
+     * interpreter tolerates that because its matrix stream starts from
+     * identity; this fixed owner has no stream to do the implicit fill for it.
+     * Make that identity explicit so Fox's six small Arwing glow lists stay on
+     * the native path instead of falling back solely because their capture pass
+     * supplies one camera half. */
+    if ((projection_ptr == NULL) && (modelview_ptr != NULL))
+    {
+        ndsRendererAdapterMtxIdentity20p12(&projection);
+        projection_ptr = &projection;
+    }
+    if ((modelview_ptr == NULL) && (projection_ptr != NULL))
+    {
+        ndsRendererAdapterMtxIdentity20p12(&modelview);
+        modelview_ptr = &modelview;
+    }
+    if ((projection_ptr == NULL) || (modelview_ptr == NULL))
+    {
+        gNdsEntryEffectNativeFallbackCount++;
+        return FALSE;
+    }
+
+    ndsRendererInitStats(&stats);
+    config.max_depth = 4u;
+    config.max_commands = 1u;
+    config.max_list_commands = 1u;
+    config.initial_projection = projection_ptr;
+    config.initial_modelview = modelview_ptr;
+    config.initial_geometry_mode = initial_geometry_mode;
+    config.texture_data_layout = NDS_RENDERER_TEXTURE_DATA_O2R_WORD_SWAPPED;
+
+    if (ndsRendererSubmitNativeEntryEffect(
+            owner_asset_id, root_offset, &config, &stats) == FALSE)
+    {
+        gNdsEntryEffectNativeFallbackCount++;
+        return FALSE;
+    }
+
+    gNdsStageGCDrawAllLoopHardwareTriangleCount += stats.hardware_triangle_count;
+    gNdsStageGCDrawAllLoopHardwareZBufferTriangleCount +=
+        stats.hardware_zbuffer_triangle_count;
+    gNdsStageGCDrawAllLoopHardwareProjectedDepthTriangleCount +=
+        stats.hardware_projected_depth_triangle_count;
+    gNdsStageGCDrawAllLoopHardwareDecalDepthTriangleCount +=
+        stats.hardware_decal_depth_triangle_count;
+    gNdsStageGCDrawAllLoopHardwareTextureBindCount +=
+        stats.hardware_texture_bind_count;
+    gNdsStageGCDrawAllLoopHardwareTextureUploadCount +=
+        stats.hardware_texture_upload_count;
+    gNdsStageGCDrawAllLoopHardwareTextureReadyCount +=
+        stats.hardware_texture_ready_count;
+    gNdsStageGCDrawAllLoopHardwareTextureRejectCount +=
+        stats.hardware_texture_reject_count;
+    return TRUE;
+#else
+    (void)dobj;
+    (void)dl;
+    (void)camera_gobj;
+    (void)initial_geometry_mode;
+    return FALSE;
+#endif
+}
+
 static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
-                                            GObj *camera_gobj,
-                                            u32 initial_geometry_mode)
+                                             GObj *camera_gobj,
+                                             u32 initial_geometry_mode)
 {
     NDSRelocLoadedFile *loaded;
     NDSRendererConfig config = {0};
@@ -10761,6 +10926,17 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
 #endif
 
     if ((dobj == NULL) || (dl == NULL))
+    {
+        return;
+    }
+
+    /* Entry models are closed generated owners. This sits before the generic
+     * loaded-file scan and N64 interpreter setup on purpose: an accepted pipe or
+     * Arwing leaf executes only live DObj matrix composition plus the DS-native
+     * packet. Compatibility fallback remains available if scene texture prepare
+     * failed, and is counted so production verification can require zero. */
+    if (ndsRendererAdapterTryNativeEntryEffect(
+            dobj, dl, camera_gobj, initial_geometry_mode) != FALSE)
     {
         return;
     }
@@ -14432,9 +14608,24 @@ static void ndsFighterDisplayContractCapture(GObj *fighter_gobj)
     sNdsFtrDrawMemoFp = fp;
     sNdsFtrDrawMemoGObj = fighter_gobj;
     sNdsFtrDrawMemoHit = 0u;
+    /* Do not memoise the source entry-camera walk.  Mario/Fox Appear motions
+     * deliberately mutate DOBJ_FLAG_HIDDEN inside the same status as their
+     * entry animation advances.  The old memo saw the first source-hidden pose
+     * (zero selected DLs), cached that empty contract, then kept substituting
+     * the hidden stub after the animation exposed the fighter -- exactly the
+     * "pipe/Arwing plays, fighter pops in at Wait" regression.
+     *
+     * This is the narrow ownership boundary: the short Entry window keeps the
+     * source DObj visibility walk live, while the resulting fighter display
+     * lists still execute through the DS-native production owner below.  Normal
+     * gameplay retains the memo and its measured hot-path saving.  A live GDB
+     * A/B on 2026-08-21 proved the discriminator: with the memo route enabled
+     * Appear stayed at 0 events; disabling only the memo produced 12 Mario
+     * events before Wait without changing is_invisible or camera bounds. */
     sNdsFtrDrawMemoState =
         ((gNdsFtrDrawMemoRoute.route != 0u) && (fp != NULL) &&
-         ((u32)fp->nds_slot < GMCOMMON_PLAYERS_MAX)) ? 1u : 0u;
+         ((u32)fp->nds_slot < GMCOMMON_PLAYERS_MAX) &&
+         (fp->camera_mode != nFTCameraModeEntry)) ? 1u : 0u;
     sNdsFtrDrawMemoSlotIndex = (fp != NULL) ? (u32)fp->nds_slot : 0u;
     ndsBaseFTDisplayMainProcDisplay(fighter_gobj);
     ndsFtrDrawMemoFinish();
@@ -14774,7 +14965,8 @@ static sb32 ndsRendererAdapterBuildNativeProductionInputs(
 {
     u32 i;
 
-    if ((slot > 1u) || (owner_file == NULL) ||
+    if ((slot >= NDS_RENDERER_NATIVE_FIGHTER_OWNER_COUNT) ||
+        (owner_file == NULL) ||
         (owner_file->data == NULL) || (collection == NULL) ||
         (modelviews == NULL) || (resolver == NULL) ||
         (workspace == NULL) || (collection->selected_count == 0u) ||
@@ -14907,7 +15099,8 @@ static sb32 ndsRendererAdapterBuildNativeHierarchyInputs(
     NDSRendererConfig *config;
     u32 i;
 
-    if ((slot > 1u) || (owner_file == NULL) ||
+    if ((slot >= NDS_RENDERER_NATIVE_FIGHTER_OWNER_COUNT) ||
+        (owner_file == NULL) ||
         (owner_file->data == NULL) || (collection == NULL) ||
         (resolver == NULL) || (workspace == NULL) ||
         (collection->selected_count == 0u) ||
@@ -15887,7 +16080,6 @@ static NDSFighterDrawPlanResult ndsFighterDrawPlanResolve(
 {
     NDSRelocLoadedFile *owner_file = NULL;
     u32 i;
-
     *out_owner_file = NULL;
     if ((collection->selected_count == 0u) ||
         (collection->selected_count > NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED))
@@ -15934,12 +16126,12 @@ static NDSFighterDrawPlanResult ndsFighterDrawPlanResolve(
              mobj = mobj->next)
         {
             material_count++;
-            if (material_count > NDS_RENDERER_ADAPTER_NATIVE_MATERIAL_MAX)
-            {
-                workspace->material_counts[i] = material_count;
-                *out_owner_file = owner_file;
-                return nNDSFighterDrawPlanMaterialCount;
-            }
+        }
+        if (material_count > NDS_RENDERER_ADAPTER_NATIVE_MATERIAL_MAX)
+        {
+            workspace->material_counts[i] = material_count;
+            *out_owner_file = owner_file;
+            return nNDSFighterDrawPlanMaterialCount;
         }
         workspace->material_counts[i] = material_count;
     }
@@ -16827,7 +17019,18 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
                     NULL, NULL, &persistent_stats,
                     &production_hardware_started) :
                 ndsRendererExecuteNativeFighterOwnerProduction(
-                    owner_slot, use_low_detail, native_owner_file->data,
+                    owner_slot, use_low_detail,
+                    /* The domains are disjoint: owner[7:0], detail[8],
+                     * player[10:9], appearance[26:11]. This is source costume
+                     * + shade identity, not a render approximation. Pack it in
+                     * main RAM so the 4-CPU build does not spend another 32 B
+                     * of its already-full ITCM on once-per-owner bookkeeping. */
+                    (owner_slot & 0xffu) |
+                        ((use_low_detail & 1u) << 8) |
+                        ((slot & 3u) << 9) |
+                        ((((u32)fp->costume) |
+                          ((u32)fp->shade << 8)) & 0xffffu) << 11,
+                    native_owner_file->data,
                     sNdsRendererAdapterNativeOwnerWorkspace.production_roots,
                     collection.selected_count,
                     NULL, NULL, &persistent_stats,

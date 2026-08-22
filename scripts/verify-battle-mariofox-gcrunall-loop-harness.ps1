@@ -67,6 +67,11 @@ param(
     [ValidateRange(0,1)][int]$IFCommonHybridOamMode = 0,
     [switch]$RequireZeroPostGoTextureFence,
     [ValidateRange(0,1)][int]$FoxCpuMode = 0,
+    # P2-3 focused roster proof. -1 preserves the canonical Mario/Fox match;
+    # 0/1/4 select Mario/Fox/Luigi in fighter slot 0 through the match
+    # descriptor. Luigi also enables its staged production assets for this
+    # build. Keep this narrow until later fighter production rows are admitted.
+    [ValidateRange(-1,11)][int]$P2ProofFighter0Kind = -1,
     [ValidateRange(0,1)][int]$WallpaperIncrementalMode = 0,
     [ValidateRange(0,1)][int]$LowerTextHudMode = 1,
     [string]$RendererBenchmarkExportPath = '',
@@ -218,6 +223,9 @@ if ($OneMinuteMatchProof -and
 }
 if (($Task9StateHashMode -eq 1) -and -not $MatchLifecycleProof) {
     throw 'Task9StateHashMode requires the deterministic match-lifecycle proof.'
+}
+if ($P2ProofFighter0Kind -notin @(-1, 0, 1, 4)) {
+    throw 'P2ProofFighter0Kind currently supports only -1, Mario(0), Fox(1), or Luigi(4).'
 }
 if ($Task9StateHashExportPath -and ($Task9StateHashMode -ne 1)) {
     throw 'Task9StateHashExportPath requires Task9StateHashMode 1.'
@@ -1022,6 +1030,12 @@ $makeArgs += "NDS_TASK16_FLOAT_ADDSUB=$effectiveTask16FloatAddSubMode"
 $makeArgs += "NDS_TASK9_STATE_HASH=$Task9StateHashMode"
 $makeArgs += "NDS_TASK20_STACK_PROFILE=$Task20StackProfileMode"
 $makeArgs += "NDS_TASK32_DRAW_HOT_TEXT=$effectiveTask32DrawHotTextMode"
+if ($P2ProofFighter0Kind -ge 0) {
+    $makeArgs += "NDS_P2_PROOF_FIGHTER0=$P2ProofFighter0Kind"
+    if ($P2ProofFighter0Kind -eq 4) {
+        $makeArgs += 'NDS_P2_LUIGI=1'
+    }
+}
 if ($ImportBattleShipFTManager) {
     $makeArgs += 'NDS_IMPORT_BATTLESHIP_FTMANAGER=1'
 }
@@ -1096,6 +1110,18 @@ Assert-Condition (
     $bg0BuildConfigText -match '(?m)^#define NDS_TICK_HUD 0$'
 ) 'GDB proof runs require full telemetry and must not use TICKHUD.' `
     $bg0BuildConfigText
+if ($P2ProofFighter0Kind -ge 0) {
+    Assert-Condition ($bg0BuildConfigText -match
+        "(?m)^#define NDS_P2_PROOF_FIGHTER0 $P2ProofFighter0Kind$") `
+        'Built P2 fighter-0 proof selector does not match the requested fighter.' `
+        $bg0BuildConfigText
+    if ($P2ProofFighter0Kind -eq 4) {
+        Assert-Condition ($bg0BuildConfigText -match
+            '(?m)^#define NDS_P2_LUIGI 1$') `
+            'Luigi proof build did not enable the staged Luigi production assets.' `
+            $bg0BuildConfigText
+    }
+}
 Assert-Condition ($bg0BuildConfigText -match
     "(?m)^#define NDS_FAST_WALLPAPER_AFFINE $effectiveFastWallpaperAffineMode$") `
     'Built fast-wallpaper configuration does not match the requested selector.' `
@@ -2013,6 +2039,17 @@ try {
                 @(
                     'tbreak ndsRendererHardwareArmBattleStaticTextures'
                     'continue'
+                    # Mode 9 arms after the source battle-intro graph has begun.
+                    # Snapshot that exact ownership boundary: a working Mario
+                    # pipe / Fox Arwing may legitimately add source-effect work
+                    # before the static stage owner takes over, and that work
+                    # must not be mistaken for an extra Dream Land traversal.
+                    'printf "STAGE_MISC_ARM=%u,%u,%u,%u,%u,%u\n", gNdsStageGCDrawAllLoopHardwareSubmitCount, gNdsStageGCDrawAllLoopHardwareTriangleCount, gNdsWeaponRendererSubmitCount, gNdsWeaponRendererTriangleCount, gNdsEffectRendererSubmitCount, gNdsEffectRendererTriangleCount'
+                    # TEXEL1/cache diagnostics are process-lifetime. CSS fighter
+                    # previews and entry effects can legitimately evict generic
+                    # texture-cache entries before Task 36 begins, so record the
+                    # replay ownership boundary and assert on post-arm deltas.
+                    'printf "RENDER_TEXEL1_ARM=%u,%u,%u,%#x,%u,%#x,%#x,%#x,%#x,%u,%u,%u\n", gNdsRendererProfileTexel1CompositeCount, gNdsRendererProfileTexel1LoadMatchCount, gNdsRendererProfileTexel1RejectCount, gNdsRendererProfileTexel1RejectReasonMask, gNdsRendererProfileTexel1LastFraction, gNdsRendererProfileTexel1LastImage0, gNdsRendererProfileTexel1LastImage1, gNdsRendererProfileTexel1LastTileState, gNdsRendererProfileTexel1LastPrimaryState, gNdsRendererProfileTexel1FractionRefreshCount, gNdsRendererProfileTextureCacheEvictCount, gNdsRendererProfileTextureCi4DirectPixels'
                 )
             } else {
                 @()
@@ -2055,6 +2092,92 @@ try {
             'tbreak scVSBattleStartBattle',
             'continue'
         )
+        if ($P2ProofFighter0Kind -eq 4) {
+            # P2-3 production proof. FAST_FINAL is a frame-local publication,
+            # so an AI-driven fight can legitimately sample Luigi on a source
+            # visibility-off frame. Count successful native submissions across
+            # the capture instead. Resolve the return line from its unique source
+            # text instead of pinning a numeric line number: P2-3 is actively
+            # extending this function and a harmless comment/edit must not move
+            # the breakpoint onto a statement where GCC has already killed
+            # owner_slot. The condition deliberately uses the caller's
+            # owner_slot rather than the production executor's optimized `slot`
+            # parameter: GDB proved the former live at this return branch.
+            $nativeProductionAttempt = @(
+                Select-String -LiteralPath (Join-Path $root 'src/port/reloc_backend_renderer_dl.c') -SimpleMatch 'native_owner_production_attempted = TRUE;'
+            )
+            Assert-Condition ($nativeProductionAttempt.Count -eq 1) `
+                'Could not resolve the unique native-production attempt site for the Luigi census.' `
+                ($nativeProductionAttempt | Out-String)
+            $nativeProductionSuccess = @(
+                Select-String -LiteralPath (Join-Path $root 'src/port/reloc_backend_renderer_dl.c') -SimpleMatch 'runtime_hardware_triangle_count =' |
+                    Where-Object {
+                        $_.LineNumber -gt $nativeProductionAttempt[0].LineNumber -and
+                        $_.LineNumber -lt ($nativeProductionAttempt[0].LineNumber + 100)
+                    }
+            )
+            Assert-Condition ($nativeProductionSuccess.Count -eq 1) `
+                'Could not resolve the unique native-production success site for the Luigi census.' `
+                ($nativeProductionSuccess | Out-String)
+            $nativeProductionFallback = @(
+                Select-String -LiteralPath (Join-Path $root 'src/port/reloc_backend_renderer_dl.c') -SimpleMatch 'if (native_owner_production_attempted == FALSE)'
+            )
+            Assert-Condition ($nativeProductionFallback.Count -eq 1) `
+                'Could not resolve the unique generic-fallback branch for the Luigi census.' `
+                ($nativeProductionFallback | Out-String)
+            $preBattleSetupCommands += @(
+                'set $p2_luigi_prod_returns = 0',
+                'set $p2_luigi_prod_success = 0',
+                'set $p2_luigi_prod_last_frame = 0',
+                'set $p2_luigi_prod_last_hw = 0',
+                'set $p2_luigi_prod_last_fast = 0',
+                'set $p2_luigi_prod_last_owner = 0',
+                'set $p2_luigi_generic = 0',
+                'set $p2_luigi_generic_enabled = 0',
+                'set $p2_luigi_generic_plan = 0',
+                'set $p2_luigi_generic_detailed = 0',
+                'set $p2_luigi_generic_oracle = 0',
+                'set $p2_luigi_generic_selected = 0',
+                'set $p2_luigi_generic_animlock = 0',
+                'set $p2_luigi_generic_shuffle = 0',
+                'set $p2_luigi_generic_low = 0',
+                ('break src/port/reloc_backend_renderer_dl.c:{0} if owner_slot == 2' -f
+                    $nativeProductionAttempt[0].LineNumber),
+                'commands',
+                'silent',
+                'set $p2_luigi_prod_returns = $p2_luigi_prod_returns + 1',
+                'continue',
+                'end',
+                ('break src/port/reloc_backend_renderer_dl.c:{0} if owner_slot == 2' -f
+                    $nativeProductionSuccess[0].LineNumber),
+                'commands',
+                'silent',
+                'set $p2_luigi_prod_success = $p2_luigi_prod_success + 1',
+                'set $p2_luigi_prod_last_frame = gNdsRendererProfileFrameCount',
+                'set $p2_luigi_prod_last_hw = persistent_stats.hardware_triangle_count',
+                'set $p2_luigi_prod_last_fast = sNdsRendererFastTriangleCount',
+                'set $p2_luigi_prod_last_owner = sNdsRendererFastOwnerTriangleCount[3]',
+                'continue',
+                'end',
+                ('break src/port/reloc_backend_renderer_dl.c:{0} if owner_slot == 2' -f
+                    $nativeProductionFallback[0].LineNumber),
+                'commands',
+                'silent',
+                'set $p2_luigi_generic = $p2_luigi_generic + 1',
+                'if $p2_luigi_generic == 1',
+                'set $p2_luigi_generic_enabled = native_owner_enabled',
+                'set $p2_luigi_generic_plan = native_owner_plan_hit',
+                'set $p2_luigi_generic_detailed = detailed_output',
+                'set $p2_luigi_generic_oracle = no_oracle',
+                'set $p2_luigi_generic_selected = collection.selected_count',
+                'set $p2_luigi_generic_animlock = fp->is_use_animlocks',
+                'set $p2_luigi_generic_shuffle = fp->shuffle_tics',
+                'set $p2_luigi_generic_low = use_low_detail',
+                'end',
+                'continue',
+                'end'
+            )
+        }
         if ($usesP2ShellFlow) {
             # P2-1M: the shell's menus legitimately drive the BG2/BG3 staging
             # counters before battle (a 128 KiB BG2 clear per screen entry,
@@ -2077,6 +2200,10 @@ try {
                 # boundary. This does not relax the contract; it removes only
                 # work that provably happened before scVSBattleStartBattle.
                 'printf "STAGE_GCDRAWALL_HW_BASE=%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsStageGCDrawAllLoopHardwareSubmitCount, gNdsStageGCDrawAllLoopHardwareTriangleCount, gNdsStageGCDrawAllLoopHardwareZBufferTriangleCount, gNdsStageGCDrawAllLoopHardwareProjectedDepthTriangleCount, gNdsStageGCDrawAllLoopHardwareDecalDepthTriangleCount, gNdsStageGCDrawAllLoopHardwareTextureBindCount, gNdsStageGCDrawAllLoopHardwareTextureUploadCount, gNdsStageGCDrawAllLoopHardwareTextureReadyCount, gNdsStageGCDrawAllLoopHardwareTextureRejectCount',
+                # Weapon/effect ledgers are process-lifetime counters too. Keep
+                # the same battle-entry base so STAGE_MISC_ARM can partition
+                # pre-arm intro geometry from the one 42/202 stage traversal.
+                'printf "MISC_RENDER_BASE=%u,%u,%u,%u\n", gNdsWeaponRendererSubmitCount, gNdsWeaponRendererTriangleCount, gNdsEffectRendererSubmitCount, gNdsEffectRendererTriangleCount',
                 # The owner-specific fighter triangle counters do not share the
                 # stage diagnostic reset. CSS live previews therefore remain in
                 # P0/P1 even though the VSBattle stage-fighter totals start at
@@ -2153,7 +2280,12 @@ try {
             # the weapon ledger instead of pretending those source triangles are
             # part of Dream Land's immutable 42-list / 202-triangle base.
             'printf "EFFECT_RENDER=%u,%u,%u,%u,%#x,%#x,%#x,%#x,%u,%u,%u,%u,%u\n", gNdsEffectRendererCaptureCount, gNdsEffectRendererDObjDrawCount, gNdsEffectRendererSubmitCount, gNdsEffectRendererSourceModelAdmitCount, gNdsEffectRendererCallbackKindMask, gNdsEffectRendererRejectedKindMask, gNdsEffectRendererDObjFlagsMask, gNdsEffectRendererDObjFieldMask, gNdsEffectRendererTriangleCount, gNdsEffectRendererTextureReadyCount, gNdsEffectRendererTextureRejectCount, gNdsEffectRendererRejectedDrawCount, gNdsEffectRendererLink15DrawCount',
-        'printf "FTR_DISPLAY_CONTRACT=%u,%u,%u,%u,%#x,%u,%u,%u,%u,%#x,%#x,%u,%u,%#x,%#x\n", gNdsFighterDisplayContractSelectedCount, gNdsFighterDisplayContractHiddenCount, gNdsFighterDisplayContractNoTextureCount, gNdsFighterDisplayContractSubmittedCount, gNdsFighterDisplayContractGeometryMode, gNdsFighterDisplayContractLightCount, gNdsFighterDisplayContractLightDirectionCount, gNdsFighterDisplayContractBoundsPassCount, gNdsFighterDisplayContractBoundsFailCount, gNdsFighterDisplayContractBoundsXBits, gNdsFighterDisplayContractBoundsYBits, gNdsFighterDLAllDrawP0SelectedCount, gNdsFighterDLAllDrawP1SelectedCount, gNdsFighterDisplayContractCycleType, gNdsFighterDisplayContractRenderMode',
+            # Source entry presentation is required to stay on the AOT DS-native
+            # packet path.  The aggregate effect ledger cannot distinguish a
+            # correct pipe/Arwing draw from the generic N64-DL fallback because
+            # both ultimately contribute triangles to the shared stage adapter.
+            'printf "ENTRY_NATIVE=%u,%u,%u,%u\n", gNdsEntryEffectNativeDrawCount, gNdsEntryEffectNativeFallbackCount, gNdsEntryEffectNativeTexturePrepareCount, gNdsEntryEffectNativeTextureBindCount',
+            'printf "FTR_DISPLAY_CONTRACT=%u,%u,%u,%u,%#x,%u,%u,%u,%u,%#x,%#x,%u,%u,%#x,%#x\n", gNdsFighterDisplayContractSelectedCount, gNdsFighterDisplayContractHiddenCount, gNdsFighterDisplayContractNoTextureCount, gNdsFighterDisplayContractSubmittedCount, gNdsFighterDisplayContractGeometryMode, gNdsFighterDisplayContractLightCount, gNdsFighterDisplayContractLightDirectionCount, gNdsFighterDisplayContractBoundsPassCount, gNdsFighterDisplayContractBoundsFailCount, gNdsFighterDisplayContractBoundsXBits, gNdsFighterDisplayContractBoundsYBits, gNdsFighterDLAllDrawP0SelectedCount, gNdsFighterDLAllDrawP1SelectedCount, gNdsFighterDisplayContractCycleType, gNdsFighterDisplayContractRenderMode',
             'printf "FTR_LIGHT_SEED=%u,%#x,%#x\n", gNdsFighterDisplayContractMaterialLightSeedCount, gNdsFighterDisplayContractMaterialLight1, gNdsFighterDisplayContractMaterialLight2',
             'printf "DLALL_SCREEN=%d,%d,%d,%d,%d,%d,%d,%d,%#x,%#x,%#x,%#x\n", gNdsFighterDLAllDrawP0ScreenMinX, gNdsFighterDLAllDrawP0ScreenMaxX, gNdsFighterDLAllDrawP0ScreenMinY, gNdsFighterDLAllDrawP0ScreenMaxY, gNdsFighterDLAllDrawP1ScreenMinX, gNdsFighterDLAllDrawP1ScreenMaxX, gNdsFighterDLAllDrawP1ScreenMinY, gNdsFighterDLAllDrawP1ScreenMaxY, gNdsFighterDLAllDrawP0RootXBeforeBits, gNdsFighterDLAllDrawP0RootXAfterBits, gNdsFighterDLAllDrawP1RootXBeforeBits, gNdsFighterDLAllDrawP1RootXAfterBits',
             'printf "RENDER_PROFILE=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileFrameCount, gNdsRendererProfileUpdateTicks, gNdsRendererProfilePresentTicks, gNdsRendererProfileDrawTicks, gNdsRendererProfileHudTicks, gNdsRendererProfileStageAdapterTicks, gNdsRendererProfileMaterialTicks, gNdsRendererProfileMatrixTicks, gNdsRendererProfileDLTicks, gNdsRendererProfileTextureTicks, gNdsRendererProfileTextureConvertTicks, gNdsRendererProfileTextureUploadTicks, gNdsRendererProfileTextureUploads, gNdsRendererProfileTextureUploadBytes, gNdsRendererProfileTextureBinds, gNdsRendererProfileHardwareVertices, gNdsRendererProfileHardwareTriangles, gNdsRendererProfileHardwareOverLimit',
@@ -2187,6 +2319,17 @@ try {
             'printf "FAST_FINAL=%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererFastRunMode, gNdsRendererFastRunCount, gNdsRendererFastTriangleCount, gNdsRendererFastOwnerTriangleCount[0], gNdsRendererFastOwnerTriangleCount[1], gNdsRendererFastOwnerTriangleCount[2], gNdsRendererFastFallbackCount[0], gNdsRendererFastFallbackCount[1], gNdsRendererFastFallbackCount[2]',
             'printf "M4_WATER_STILL_FINAL=%u,%u,%u\n", gNdsPupupuWaterStillFreezeCount, gNdsPupupuWaterStillFreezeFailCount, gNdsPupupuWaterStillFreezeResult'
         )
+        if ($P2ProofFighter0Kind -eq 4) {
+            # P2-3: the canonical FAST_FINAL schema deliberately remains the
+            # published stage/Mario/Fox contract. A staged Luigi build adds one
+            # profile-owner bucket, so sample it separately instead of changing
+            # the long-standing Boundary marker shape for the shipping roster.
+            $hardwareCommands += 'printf "FAST_P2_FIGHTER=%u\n", gNdsRendererFastOwnerTriangleCount[3]'
+            $hardwareCommands += 'printf "P2_FIGHTER_GX=%u,%u,%u\n", gNdsR2GxComposeCaptures, gNdsR2GxComposeLocals, gNdsR2GxComposeDeclines'
+            $hardwareCommands += 'printf "P2_LUIGI_PROD=%u,%u\n", $p2_luigi_prod_returns, $p2_luigi_prod_success'
+            $hardwareCommands += 'printf "P2_LUIGI_PROD_LAST=%u,%u,%u,%u\n", $p2_luigi_prod_last_frame, $p2_luigi_prod_last_hw, $p2_luigi_prod_last_fast, $p2_luigi_prod_last_owner'
+            $hardwareCommands += 'printf "P2_LUIGI_GENERIC=%u,%u,%u,%u,%u,%u,%u,%u,%u\n", $p2_luigi_generic, $p2_luigi_generic_enabled, $p2_luigi_generic_plan, $p2_luigi_generic_detailed, $p2_luigi_generic_oracle, $p2_luigi_generic_selected, $p2_luigi_generic_animlock, $p2_luigi_generic_shuffle, $p2_luigi_generic_low'
+        }
         if ($m4CandidateEvidence) {
             $hardwareCommands += 'printf "VRAM_BANKS=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", *(volatile unsigned char *)0x04000240, *(volatile unsigned char *)0x04000241, *(volatile unsigned char *)0x04000242, *(volatile unsigned char *)0x04000243, *(volatile unsigned char *)0x04000244, *(volatile unsigned char *)0x04000245, *(volatile unsigned char *)0x04000246, *(volatile unsigned char *)0x04000248, gNdsRendererBattleStaticTextureFirstAddress, gNdsRendererBattleStaticTextureEndAddress, gNdsRendererBattleStaticTextureAllocationSpanBytes, gNdsRendererBattleStaticTextureBankMask'
         }
@@ -2293,7 +2436,7 @@ try {
         $beforeDetach = $gdbCommands[0..($gdbCommands.Count - 3)]
         $afterDetach = $gdbCommands[($gdbCommands.Count - 2)..($gdbCommands.Count - 1)]
         $projectileCommands = @(
-            'printf "PROJECTILE=%#x,%#x,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%#x,%#x,%u,%u,%#x\n", gNdsFighterProjectileProofResult, gNdsFighterProjectileProofMask, gNdsFighterProjectileProofActorSlot, gNdsFighterProjectileProofActorKind, gNdsFighterProjectileProofBPressFrames, gNdsFighterProjectileProofSpecialStatusFrames, gNdsFighterProjectileProofSpecialMotion, gNdsFighterProjectileProofAccessoryFrames, gNdsFighterProjectileProofFlag0Frames, gNdsFighterProjectileProofSpawnCallCount, gNdsFighterProjectileProofSpawnSuccessCount, gNdsFighterProjectileProofUpdateDestroyCount, gNdsFighterProjectileProofMapDestroyCount, gNdsFighterProjectileProofHitDestroyCount, gNdsFighterProjectileProofWeaponFrames, gNdsFighterProjectileProofWeaponCountMax, gNdsFighterProjectileProofKindMask, gNdsFighterProjectileProofAttackStateMask, gNdsFighterProjectileProofDamageMax, gNdsFighterProjectileProofLifetimeMax, gNdsFighterProjectileProofMapMask'
+            'printf "PROJECTILE=%#x,%#x,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%#x,%#x,%u,%u,%#x,%d,%d,%d\n", gNdsFighterProjectileProofResult, gNdsFighterProjectileProofMask, gNdsFighterProjectileProofActorSlot, gNdsFighterProjectileProofActorKind, gNdsFighterProjectileProofBPressFrames, gNdsFighterProjectileProofSpecialStatusFrames, gNdsFighterProjectileProofSpecialMotion, gNdsFighterProjectileProofAccessoryFrames, gNdsFighterProjectileProofFlag0Frames, gNdsFighterProjectileProofSpawnCallCount, gNdsFighterProjectileProofSpawnSuccessCount, gNdsFighterProjectileProofUpdateDestroyCount, gNdsFighterProjectileProofMapDestroyCount, gNdsFighterProjectileProofHitDestroyCount, gNdsFighterProjectileProofWeaponFrames, gNdsFighterProjectileProofWeaponCountMax, gNdsFighterProjectileProofKindMask, gNdsFighterProjectileProofAttackStateMask, gNdsFighterProjectileProofDamageMax, gNdsFighterProjectileProofLifetimeMax, gNdsFighterProjectileProofMapMask, gNdsFighterProjectileProofFireballIndex, gNdsFighterProjectileProofFireballInitialVelXMilli, gNdsFighterProjectileProofFireballInitialVelYMilli'
         )
         $gdbCommands = @($beforeDetach + $projectileCommands + $afterDetach)
     }
@@ -2309,7 +2452,7 @@ try {
         $beforeDetach = $gdbCommands[0..($gdbCommands.Count - 3)]
         $afterDetach = $gdbCommands[($gdbCommands.Count - 2)..($gdbCommands.Count - 1)]
         $specialsCommands = @(
-            'printf "SPECIALS=%#x,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%d,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%d\n", gNdsFighterSpecialsProofMask, gNdsFighterSpecialsProofPhase, gNdsFighterSpecialsProofPhaseFrames, gNdsFighterSpecialsMarioSlot, gNdsFighterSpecialsFoxSlot, gNdsFighterSpecialsMarioHiPressFrames, gNdsFighterSpecialsMarioHiFrames, gNdsFighterSpecialsMarioAirHiFrames, gNdsFighterSpecialsMarioFallSpecialFrames, gNdsFighterSpecialsMarioLandingFallSpecialFrames, gNdsFighterSpecialsMarioHiWaitFrames, gNdsFighterSpecialsMarioHiRootYMilli, gNdsFighterSpecialsMarioLwPressFrames, gNdsFighterSpecialsMarioLwFrames, gNdsFighterSpecialsMarioAirLwFrames, gNdsFighterSpecialsMarioLwDustEffectCount, gNdsFighterSpecialsMarioLwWaitFrames, gNdsFighterSpecialsFoxHiPressFrames, gNdsFighterSpecialsFoxHiStartFrames, gNdsFighterSpecialsFoxHiHoldFrames, gNdsFighterSpecialsFoxHiTravelFrames, gNdsFighterSpecialsFoxHiEndFrames, gNdsFighterSpecialsFoxHiBoundFrames, gNdsFighterSpecialsFoxHiWaitFrames, gNdsFighterSpecialsFoxHiRootYMilli'
+            'printf "SPECIALS=%#x,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%d,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%d,%u,%u\n", gNdsFighterSpecialsProofMask, gNdsFighterSpecialsProofPhase, gNdsFighterSpecialsProofPhaseFrames, gNdsFighterSpecialsMarioSlot, gNdsFighterSpecialsFoxSlot, gNdsFighterSpecialsMarioHiPressFrames, gNdsFighterSpecialsMarioHiFrames, gNdsFighterSpecialsMarioAirHiFrames, gNdsFighterSpecialsMarioFallSpecialFrames, gNdsFighterSpecialsMarioLandingFallSpecialFrames, gNdsFighterSpecialsMarioHiWaitFrames, gNdsFighterSpecialsMarioHiRootYMilli, gNdsFighterSpecialsMarioLwPressFrames, gNdsFighterSpecialsMarioLwFrames, gNdsFighterSpecialsMarioAirLwFrames, gNdsFighterSpecialsMarioLwDustEffectCount, gNdsFighterSpecialsMarioLwWaitFrames, gNdsFighterSpecialsFoxHiPressFrames, gNdsFighterSpecialsFoxHiStartFrames, gNdsFighterSpecialsFoxHiHoldFrames, gNdsFighterSpecialsFoxHiTravelFrames, gNdsFighterSpecialsFoxHiEndFrames, gNdsFighterSpecialsFoxHiBoundFrames, gNdsFighterSpecialsFoxHiWaitFrames, gNdsFighterSpecialsFoxHiRootYMilli, gNdsFighterSpecialsMarioHiDamageMax, gNdsFighterSpecialsMarioLwDamageMax'
         )
         $gdbCommands = @($beforeDetach + $specialsCommands + $afterDetach)
     }
@@ -2589,6 +2732,8 @@ try {
     $platformHw = [regex]::Match($gdbStdout, 'PLATFORM_HW=([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0)')
     $platformHwBase = [regex]::Match($gdbStdout, 'PLATFORM_HW_BASE=([0-9]+),([0-9]+)')
     $stageHardwareBase = [regex]::Match($gdbStdout, 'STAGE_GCDRAWALL_HW_BASE=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
+    $miscRenderBase = [regex]::Match($gdbStdout, 'MISC_RENDER_BASE=([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
+    $stageMiscArm = [regex]::Match($gdbStdout, 'STAGE_MISC_ARM=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $stageHardwareFighterBase = [regex]::Match($gdbStdout, 'STAGE_GCDRAWALL_HW_FTR_BASE=([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $rendererProfileMarker = [regex]::Match($gdbStdout, 'RENDER_PROFILE_LEVEL=([0-9]+)')
     $rendererM2DetailedLedgerMarker = [regex]::Match(
@@ -2608,6 +2753,7 @@ try {
     $stageHardwareFighter = [regex]::Match($gdbStdout, 'STAGE_GCDRAWALL_HW_FTR=([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $weaponRenderer = [regex]::Match($gdbStdout, 'WEAPON_RENDER=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $effectRenderer = [regex]::Match($gdbStdout, 'EFFECT_RENDER=([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
+    $entryNative = [regex]::Match($gdbStdout, 'ENTRY_NATIVE=([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $weaponFrame = [regex]::Match($gdbStdout, 'WEAPON_FRAME=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $fighterDisplayContract = [regex]::Match($gdbStdout, 'FTR_DISPLAY_CONTRACT=([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0)')
     $renderProfile = [regex]::Match($gdbStdout, 'RENDER_PROFILE=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
@@ -2679,6 +2825,18 @@ try {
         -Name 'M4_FENCE_FINAL' -FieldCount 24)
     $fastFinal = @(Get-UnsignedMarkerMatches -Text $gdbStdout `
         -Name 'FAST_FINAL' -FieldCount 9)
+    $fastP2Fighter = if ($P2ProofFighter0Kind -eq 4) {
+        @(Get-UnsignedMarkerMatches -Text $gdbStdout `
+            -Name 'FAST_P2_FIGHTER' -FieldCount 1)
+    } else { @() }
+    $p2FighterGX = if ($P2ProofFighter0Kind -eq 4) {
+        @(Get-UnsignedMarkerMatches -Text $gdbStdout `
+            -Name 'P2_FIGHTER_GX' -FieldCount 3)
+    } else { @() }
+    $p2LuigiProd = if ($P2ProofFighter0Kind -eq 4) {
+        @(Get-UnsignedMarkerMatches -Text $gdbStdout `
+            -Name 'P2_LUIGI_PROD' -FieldCount 2)
+    } else { @() }
     $m4WaterStillFinal = @(Get-UnsignedMarkerMatches -Text $gdbStdout `
         -Name 'M4_WATER_STILL_FINAL' -FieldCount 3)
     if (($RendererProfileLevel -ge 1) -and ($RendererBenchmarkSamples -gt 0)) {
@@ -2848,6 +3006,7 @@ try {
     $renderClip = [regex]::Match($gdbStdout, 'RENDER_CLIP=([0-9]+)')
     $renderTexture = [regex]::Match($gdbStdout, 'RENDER_TEXTURE=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+)')
     $renderTexel1 = [regex]::Match($gdbStdout, 'RENDER_TEXEL1=([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+)')
+    $renderTexel1Arm = [regex]::Match($gdbStdout, 'RENDER_TEXEL1_ARM=([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+)')
     $renderTexUse = [regex]::Match($gdbStdout, 'RENDER_TEXUSE=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0)')
     $renderTexFmt = [regex]::Match($gdbStdout, 'RENDER_TEXFMT=(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0)')
     $renderTexLane = [regex]::Match($gdbStdout, 'RENDER_TEXLANE=(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0)')
@@ -2945,17 +3104,61 @@ try {
         foreach ($fenceCount in $publishedM4[14..23]) {
             $publishedFenceCountSum += $fenceCount
         }
-        Assert-Condition (
-            $publishedFast[0] -eq 9 -and
-            $publishedFast[1] -eq 121 -and
-            $publishedFast[2] -eq 828 -and
-            $publishedFast[3] -eq 202 -and
-            $publishedFast[4] -eq 320 -and
-            $publishedFast[5] -eq 306 -and
-            $publishedFast[6] -eq 0 -and
-            $publishedFast[7] -eq 0 -and
-            $publishedFast[8] -eq 0
-        ) "Published ROM did not naturally execute the exact M3 121-run/828-triangle owner (actual=$($publishedFast -join ','))." $gdbStdout
+        if ($P2ProofFighter0Kind -eq 4) {
+            Assert-Condition ($fastP2Fighter.Count -eq 1) `
+                "Staged Luigi captured $($fastP2Fighter.Count) FAST_P2_FIGHTER records instead of one." `
+                $gdbStdout
+            Assert-Condition ($p2LuigiProd.Count -eq 1) `
+                "Staged Luigi captured $($p2LuigiProd.Count) native-production census records instead of one." `
+                $gdbStdout
+            Assert-Condition ($p2FighterGX.Count -eq 1) `
+                "Staged Luigi captured $($p2FighterGX.Count) GX-compose census records instead of one." `
+                $gdbStdout
+            $publishedLuigiTriangles = (Get-Ints $fastP2Fighter[0])[0]
+            $luigiProd = Get-Ints $p2LuigiProd[0]
+            $luigiGX = Get-Ints $p2FighterGX[0]
+            # FAST_FINAL is the renderer's last *frame*, not a match aggregate.
+            # Source visibility may therefore make Luigi either one exact
+            # 32-run/320-triangle owner or absent from this particular frame.
+            # P2_LUIGI_PROD is the cross-frame debugger census: every observed
+            # Luigi owner must have returned native success after touching GX.
+            $luigiVisible = ($publishedLuigiTriangles -eq 320)
+            $expectedPublishedFastRuns = if ($luigiVisible) { 123 } else { 91 }
+            $expectedPublishedFastTriangles = if ($luigiVisible) { 828 } else { 508 }
+            Assert-Condition (
+                ($publishedLuigiTriangles -eq 0 -or $luigiVisible) -and
+                $publishedFast[0] -eq 9 -and
+                $publishedFast[1] -eq $expectedPublishedFastRuns -and
+                $publishedFast[2] -eq $expectedPublishedFastTriangles -and
+                $publishedFast[3] -eq 202 -and
+                $publishedFast[4] -eq 0 -and
+                $publishedFast[5] -eq 306 -and
+                $publishedFast[6] -eq 0 -and
+                $publishedFast[7] -eq 0 -and
+                $publishedFast[8] -eq 0
+            ) "Staged Luigi final-frame M3 ownership was not the exact source-visibility variant (FAST_FINAL=$($publishedFast -join ',') Luigi=$publishedLuigiTriangles)." $gdbStdout
+            Assert-Condition (
+                $luigiProd[0] -gt 0 -and
+                $luigiProd[1] -eq $luigiProd[0]
+            ) "Staged Luigi did not keep every observed owner submission on the native production path (returns/success=$($luigiProd -join ','))." $gdbStdout
+            Assert-Condition (
+                $luigiGX[0] -gt 0 -and
+                $luigiGX[1] -gt 0 -and
+                $luigiGX[2] -eq 0
+            ) "Staged Luigi GX matrix composition declined a live owner (captures/locals/declines=$($luigiGX -join ','))." $gdbStdout
+        } else {
+            Assert-Condition (
+                $publishedFast[0] -eq 9 -and
+                $publishedFast[1] -eq 121 -and
+                $publishedFast[2] -eq 828 -and
+                $publishedFast[3] -eq 202 -and
+                $publishedFast[4] -eq 320 -and
+                $publishedFast[5] -eq 306 -and
+                $publishedFast[6] -eq 0 -and
+                $publishedFast[7] -eq 0 -and
+                $publishedFast[8] -eq 0
+            ) "Published ROM did not naturally execute the exact M3 121-run/828-triangle owner set (actual=$($publishedFast -join ','))." $gdbStdout
+        }
         Assert-Condition (
             $publishedWater[0] -eq 2 -and
             $publishedWater[1] -eq 0 -and
@@ -3419,6 +3622,11 @@ try {
                 $lowerOam = Get-Ints $battleHudOam
                 $sourceStart = Get-Ints $battlePlayableStart
                 $routeOam = Get-Ints $ifCommonOam
+                $expectedP0Fkind = if ($P2ProofFighter0Kind -ge 0) {
+                    $P2ProofFighter0Kind
+                } else {
+                    0
+                }
                 $expectedHudSeconds = if ($sourceLower[10] -eq 0) {
                     0
                 } elseif ($sourceLower[10] -eq $sourceLower[11]) {
@@ -3501,7 +3709,8 @@ try {
                     (($sourceLower[2] -band $sourceLower[0]) -eq
                      $sourceLower[2]) -and
                     $sourceLower[3] -eq 0x2 -and
-                    $sourceLower[4] -eq 0 -and $sourceLower[5] -eq 1 -and
+                    $sourceLower[4] -eq $expectedP0Fkind -and
+                    $sourceLower[5] -eq 1 -and
                     $sourceLower[7] -eq $expectedFoxLevel -and
                     $sourceLower[8] -gt 0 -and $sourceLower[9] -gt 0 -and
                     $sourceLower[11] -eq 3600 -and
@@ -3520,7 +3729,7 @@ try {
                     $textHud[7] -eq $sourceLower[9] -and
                     $textHud[8] -eq $sourceLower[0] -and
                     $textHud[9] -eq $sourceLower[1]
-                ) 'Lower-screen text HUD did not match BattleShip timer, Mario/Fox identity, damage, stock-icon, or visibility state.' $gdbStdout
+                ) 'Lower-screen text HUD did not match BattleShip timer, fighter identity, damage, stock-icon, or visibility state.' $gdbStdout
             }
             if ($usesRetainedWallpaper) {
                 $bs = Get-Ints $battlePlayableStart
@@ -5571,12 +5780,16 @@ try {
                 if ($RendererProfileLevel -lt 2) {
                     # The resident texture cache survives frame boundaries, so a
                     # completed warm frame may legitimately have zero misses.
-                    # Mode 7 resolves every fighter texture through the indexed
-                    # table during whole-owner preflight, then commits prepared
-                    # descriptors without repeating an active-entry lookup.
-                    $activeHitCoverage = ($rth[2] -gt 0) -or
-                        (($RendererFastRunMode -eq 7) -and ($rth[3] -gt 0))
-                    $lookupLive = $rth[0] -gt 0 -and $activeHitCoverage -and
+                    # A successful active-entry hit and a successful indexed
+                    # table hit are both live resident-cache lookups. Native
+                    # owner modes can preflight each texture once and then
+                    # consume prepared descriptors, so they may legitimately
+                    # report only table hits (canonical mode 9 does this now).
+                    # Do not require the optional active-entry fast tier as a
+                    # liveness oracle; the exact hit/miss accounting and probe
+                    # bounds below still prove that every lookup resolved.
+                    $cacheHitCoverage = ($rth[2] -gt 0) -or ($rth[3] -gt 0)
+                    $lookupLive = $rth[0] -gt 0 -and $cacheHitCoverage -and
                         $rth[3] -gt 0 -and
                         ($rth[2] + $rth[3] + $rth[4]) -eq $rth[0] -and
                         $rth[1] -ge ($rth[3] + $rth[4]) -and
@@ -5699,6 +5912,15 @@ try {
                     (($er[2] -eq 0 -and $er[8] -eq 0) -or
                      ($er[2] -gt 0 -and $er[8] -gt 0))
                 Assert-Condition $effectLedgerValid 'Canonical realtime HW build published an incoherent source effect display ledger.' $gdbStdout
+                $entry = Get-Ints $entryNative
+                Assert-Condition (
+                    $entryNative.Success -and
+                    $entry[0] -gt 0 -and
+                    $entry[1] -eq 0 -and
+                    $entry[2] -eq 24 -and
+                    $entry[3] -gt 0
+                ) ("Source fighter-entry presentation left the AOT DS-native " +
+                   "path (draw/fallback/prepare/bind=$($entry -join ',')).") $gdbStdout
                 # Every completed source traversal contributes the exact
                 # 42-list / 202-triangle Dream Land base. Link-14 source
                 # weapons and source effect DObjs are additive owners. Do not
@@ -5706,18 +5928,62 @@ try {
                 # unmarked 22/44 setup traversal: aggregate tolerance could hide
                 # an equal loss in a later gameplay frame.
                 if ($RendererFastRunMode -eq 9) {
-                    # The complete-stage owner bypasses these generic counters.
-                    # They retain one pre-arm 42/202 startup traversal plus the
-                    # lifetime source-weapon ledger.
-                    $stageBaseSubmitCount =
-                        $stageSubmitInBattle - $wr[2] - $er[2]
-                    $stageBaseTriangleCount =
-                        $stageTriangleInBattle - $wr[4] - $er[8]
-                    $stageStartupSubmitCount = 0
-                    $stageStartupTriangleCount = 0
+                    # The complete-stage owner bypasses these generic counters
+                    # after static-texture arm. The arm no longer coincides with
+                    # scVSBattleStartBattle now that source fighter-entry effects
+                    # are live: Mario's pipe / Fox's Arwing can submit between
+                    # those two boundaries. Partition that interval explicitly
+                    # instead of silently requiring the intros to draw nothing.
+                    Assert-Condition $stageMiscArm.Success `
+                        'Mode-9 realtime proof did not publish the static-stage arm ownership boundary.' $gdbStdout
+                    $arm = Get-Ints $stageMiscArm
+                    if ($usesP2ShellFlow) {
+                        Assert-Condition $miscRenderBase.Success `
+                            'P2 shell flow did not publish the battle-entry weapon/effect baseline.' $gdbStdout
+                        $miscBase = Get-Ints $miscRenderBase
+                    } else {
+                        $miscBase = @(0, 0, 0, 0)
+                    }
+                    $stageArmSubmitCount = $arm[0] - $shwBase[0]
+                    $stageArmTriangleCount = $arm[1] - $shwBase[1]
+                    $preArmWeaponSubmitCount = $arm[2] - $miscBase[0]
+                    $preArmWeaponTriangleCount = $arm[3] - $miscBase[1]
+                    $preArmEffectSubmitCount = $arm[4] - $miscBase[2]
+                    $preArmEffectTriangleCount = $arm[5] - $miscBase[3]
+                    $stageStartupSubmitCount = $stageArmSubmitCount -
+                        $preArmWeaponSubmitCount - $preArmEffectSubmitCount
+                    $stageStartupTriangleCount = $stageArmTriangleCount -
+                        $preArmWeaponTriangleCount - $preArmEffectTriangleCount
+                    $postArmStageSubmitCount =
+                        $stageSubmitInBattle - $stageArmSubmitCount
+                    $postArmStageTriangleCount =
+                        $stageTriangleInBattle - $stageArmTriangleCount
+                    $postArmWeaponSubmitCount = $wr[2] - $arm[2]
+                    $postArmWeaponTriangleCount = $wr[4] - $arm[3]
+                    $postArmEffectSubmitCount = $er[2] - $arm[4]
+                    $postArmEffectTriangleCount = $er[8] - $arm[5]
+                    # Direct boot reaches the arm with only Dream Land's
+                    # historical 42-submit / 202-triangle generic traversal.
+                    # The P2 shell now runs the real fighter-entry window first;
+                    # that source-driven pre-arm display work leaves a stable
+                    # 12-submit / 54-triangle generic residue in addition to the
+                    # stage traversal after the separately-accounted effect
+                    # ledger is removed. Keep the two flow contracts explicit:
+                    # collapsing them is what made fixing the intros look like a
+                    # stage-renderer regression.
+                    $expectedStageStartupSubmitCount =
+                        $(if ($usesP2ShellFlow) { 54 } else { 42 })
+                    $expectedStageStartupTriangleCount =
+                        $(if ($usesP2ShellFlow) { 256 } else { 202 })
                     $stageStartupValid =
-                        $stageBaseSubmitCount -eq 42 -and
-                        $stageBaseTriangleCount -eq 202
+                        $stageStartupSubmitCount -eq
+                            $expectedStageStartupSubmitCount -and
+                        $stageStartupTriangleCount -eq
+                            $expectedStageStartupTriangleCount -and
+                        $postArmStageSubmitCount -eq
+                            ($postArmWeaponSubmitCount + $postArmEffectSubmitCount) -and
+                        $postArmStageTriangleCount -eq
+                            ($postArmWeaponTriangleCount + $postArmEffectTriangleCount)
                 } else {
                     $stageBaseSubmitCount =
                         $stageSubmitInBattle - $wr[2] - $er[2]
@@ -5885,14 +6151,33 @@ try {
                     $expectedBatchReuse = 725
                     $expectedBatchEnd = 103
                 }
+                if (($P2ProofFighter0Kind -eq 4) -and
+                    ($RendererProfileLevel -lt 2) -and
+                    ($RendererFastRunMode -eq 9)) {
+                    # Luigi replaces Mario's 320-triangle owner in this staged
+                    # proof, but its source-derived model program has a different
+                    # material/run partition. Keep the accounting exact rather
+                    # than relaxing the Mario/Fox contract: the decoded Luigi
+                    # owner is 105 begin/end batches, 723 reuses and 51 texture
+                    # prepares before any source weapon quad is added.
+                    $expectedBatchBegin = 105
+                    $expectedBatchReuse = 723
+                    $expectedBatchEnd = 105
+                }
                 $expectedBatchBegin += $terminalWeaponQuadCount
                 $expectedBatchReuse += $terminalWeaponQuadCount
                 $expectedBatchEnd += $terminalWeaponQuadCount
                 $expectedTexturePrepareBegin =
-                    $(if ($RendererFastRunMode -eq 9) { 49 } else { 98 }) +
+                    $(if (($P2ProofFighter0Kind -eq 4) -and
+                           ($RendererFastRunMode -eq 9)) { 51 }
+                      elseif ($RendererFastRunMode -eq 9) { 49 }
+                      else { 98 }) +
                     $terminalWeaponQuadCount
                 $expectedTexturePrepareReuse =
-                    $(if ($RendererFastRunMode -eq 9) { 725 } else { 730 }) +
+                    $(if (($P2ProofFighter0Kind -eq 4) -and
+                           ($RendererFastRunMode -eq 9)) { 723 }
+                      elseif ($RendererFastRunMode -eq 9) { 725 }
+                      else { 730 }) +
                     $terminalWeaponQuadCount
                 if ($RendererBenchmarkStartEvent -ne 'None') {
                     Assert-Condition (
@@ -6023,9 +6308,25 @@ try {
                 } elseif ($effectiveStaticTextureAotMode -eq 1) {
                     if ($effectiveTask36HwComposeMode -eq 2) {
                         # Mode 2 replays the already-frozen water words. Any
-                        # live TEXEL0/TEXEL1 work is a Task 36/44 regression.
+                        # post-arm change in the TEXEL1/cache tuple is a Task
+                        # 36/44 regression. The tuple is process-lifetime, so a
+                        # shell flow may already contain generic cache evictions
+                        # from CSS previews / source entry effects before replay
+                        # ownership begins; compare against the exact arm state
+                        # rather than requiring boot-to-battle history to be 0.
                         Assert-Condition ($renderTexel1.Success -and
-                            @($rt1 | Where-Object { $_ -ne 0 }).Count -eq 0) 'Task 36 replay re-entered live frozen-water material evaluation, refresh, eviction, or direct-CI4 gameplay work.' $gdbStdout
+                            $renderTexel1Arm.Success) 'Task 36 replay did not publish its TEXEL1/cache arm baseline.' $gdbStdout
+                        $rt1Arm = Get-Ints $renderTexel1Arm
+                        $task36Texel1Stable = $rt1.Count -eq $rt1Arm.Count
+                        if ($task36Texel1Stable) {
+                            for ($i = 0; $i -lt $rt1.Count; $i++) {
+                                if ($rt1[$i] -ne $rt1Arm[$i]) {
+                                    $task36Texel1Stable = $false
+                                    break
+                                }
+                            }
+                        }
+                        Assert-Condition $task36Texel1Stable 'Task 36 replay re-entered live frozen-water material evaluation, refresh, eviction, or direct-CI4 gameplay work.' $gdbStdout
                     } else {
                         Assert-Condition ($renderTexel1.Success -and $rt1[0] -eq 2 -and $rt1[1] -eq $rt1[0] -and $rt1[2] -eq 0 -and $rt1[9] -eq 0 -and $rt1[10] -eq 0 -and $rt1[11] -eq 0) 'Static-resident Dream Land water drifted from its two live frozen-water TEXEL0/TEXEL1 material matches or performed refresh, eviction, or direct-CI4 gameplay work.' $gdbStdout
                     }
@@ -6309,7 +6610,14 @@ try {
             $expectedKind = if ($ImportBattleShipFoxReflector) { 0 } elseif ($ImportBattleShipFoxBlaster) { 1 } else { 0 }
             $projectileObserved = ($pj[14] -ge 3) -or ($pj[13] -gt 0)
             Assert-Condition ($projectile.Success -and $pj[0] -eq 0x50524f4a -and (($pj[1] -band 0x3f) -eq 0x3f) -and $pj[4] -gt 0 -and $pj[5] -gt 0 -and $projectileObserved -and $pj[15] -gt 0 -and (($pj[16] -band (1 -shl $expectedKind)) -ne 0) -and $pj[17] -ne 0 -and $pj[18] -gt 0) 'Natural projectile special proof failed.' $gdbStdout
-            $projectileSummary = " projectile=actor$($pj[2])/kind$($pj[3]) b=$($pj[4]) status=$($pj[5]) accessory=$($pj[7]) flag0=$($pj[8]) spawn=$($pj[9]) ok=$($pj[10]) destroy=$($pj[11])/$($pj[12])/$($pj[13]) weaponFrames=$($pj[14]) max=$($pj[15]) kindMask=0x$('{0:x}' -f $pj[16]) attackMask=0x$('{0:x}' -f $pj[17]) dmg=$($pj[18]) life=$($pj[19]) map=0x$('{0:x}' -f $pj[20])"
+            if ($P2ProofFighter0Kind -eq 4) {
+                Assert-Condition ($pj[3] -eq 4 -and $pj[18] -eq 6 -and
+                    $pj[19] -eq 80 -and $pj[21] -eq 1 -and
+                    ([Math]::Abs([int64]$pj[22]) -eq 36000) -and $pj[23] -eq 0) `
+                    'Luigi fireball did not consume the source index-1 US attributes/launch vector.' `
+                    $gdbStdout
+            }
+            $projectileSummary = " projectile=actor$($pj[2])/kind$($pj[3]) b=$($pj[4]) status=$($pj[5]) accessory=$($pj[7]) flag0=$($pj[8]) spawn=$($pj[9]) ok=$($pj[10]) destroy=$($pj[11])/$($pj[12])/$($pj[13]) weaponFrames=$($pj[14]) max=$($pj[15]) kindMask=0x$('{0:x}' -f $pj[16]) attackMask=0x$('{0:x}' -f $pj[17]) dmg=$($pj[18]) life=$($pj[19]) map=0x$('{0:x}' -f $pj[20]) fb=$($pj[21])/$($pj[22])/$($pj[23])"
         }
         if ($ImportBattleShipFoxReflector) {
             $rf = Get-Ints $reflector
@@ -6333,7 +6641,12 @@ try {
             if ($ImportBattleShipFoxSpecialHi) {
                 Assert-Condition ($sp[17] -gt 0 -and $sp[18] -gt 0 -and $sp[19] -gt 0 -and $sp[20] -gt 0 -and (($sp[21] -gt 0) -or ($sp[22] -gt 0)) -and $sp[23] -ge 10) 'Natural Fox Fire Fox status ladder proof failed.' $gdbStdout
             }
-            $specialsSummary = " specials=0x$('{0:x}' -f $sp[0]) phase=$($sp[1]) mhi=$($sp[5])/$($sp[6])/$($sp[8])/$($sp[9])/$($sp[10]) y=$($sp[11]) mlw=$($sp[12])/$($sp[13])/$($sp[14]) dust=$($sp[15]) wait=$($sp[16]) foxhi=$($sp[17])/$($sp[18])/$($sp[19])/$($sp[20])/$($sp[21])/$($sp[22])/$($sp[23]) y=$($sp[24])"
+            if ($P2ProofFighter0Kind -eq 4) {
+                Assert-Condition ($sp[25] -eq 25 -and $sp[26] -eq 18) `
+                    'Luigi SJP/Cyclone did not execute the source US 25/18-damage motion-event hitboxes.' `
+                    $gdbStdout
+            }
+            $specialsSummary = " specials=0x$('{0:x}' -f $sp[0]) phase=$($sp[1]) mhi=$($sp[5])/$($sp[6])/$($sp[8])/$($sp[9])/$($sp[10]) y=$($sp[11]) dmg=$($sp[25]) mlw=$($sp[12])/$($sp[13])/$($sp[14]) dust=$($sp[15]) wait=$($sp[16]) dmg=$($sp[26]) foxhi=$($sp[17])/$($sp[18])/$($sp[19])/$($sp[20])/$($sp[21])/$($sp[22])/$($sp[23]) y=$($sp[24])"
         }
         $audioSummary = ''
         $audioBgmSummary = ''

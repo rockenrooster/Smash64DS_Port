@@ -659,9 +659,11 @@ static u32 sNdsRelocSceneGeneration;
 /* The taskman-heap generation the resident reloc set was established under.
  * Ownership authority for the scene cache; see ndsRelocPrepareSceneCache. */
 static u32 sNdsRelocResidentHeapGeneration;
-/* Split so the two eviction causes are never conflated. The generation count
- * should be non-zero on any run that re-enters a scene (Sudden Death,
- * rematch); a zero there means this contract never engaged. */
+/* The generation count should be non-zero on any run that re-enters a scene
+ * (Sudden Death, rematch); a zero there means this contract never engaged.
+ * RangeEvictCount is retained for verifier/backward-compatibility only.  The
+ * old cursor/range heuristic was retired after it proved capable of evicting
+ * live caller-owned reloc files during recursive dependency loading. */
 volatile u32 gNdsRelocSceneReentryGenerationEvictCount;
 volatile u32 gNdsRelocSceneReentryRangeEvictCount;
 static LBFileNode *sNdsRelocStatusBuffer;
@@ -2202,26 +2204,23 @@ static void ndsRelocPrepareSceneCache(void)
      * stage geometry, drawn at a healthy 28.9 FPS with FTR 385,728: not a cost
      * defect, stale bindings replayed against reused memory.
      *
-     * So also treat the resident set as stale when it no longer lives inside the
-     * live taskman heap. A scene load rewinds that heap, so any file whose data
-     * now sits at or above the bump cursor belongs to the previous instance
-     * whatever the kind says. This is the same ownership test
-     * ndsR2AnimCacheArenaStillOwned already uses for the animation arena, which
-     * is why that cache survived this bug and these did not. */
+     * The heap generation below is therefore the ownership test.  Do NOT add a
+     * pointer-vs-cursor fallback here: this reloc table also tracks live files in
+     * fighter-manager intern buffers, caller-provided heaps and static stores.
+     * During Mario/Mario construction the old range heuristic classified one of
+     * those legal residents as stale while an external fixup was recursively
+     * loading a dependency, memset the outer NDSRelocLoadedFile slot, and the
+     * resumed fixup wrote through loaded->data == NULL. */
     if (sNdsRelocOwnerScene == scene)
     {
-        const u8 *heap_start = (const u8 *)gSYTaskmanGeneralHeap.start;
-        const u8 *heap_cursor = (const u8 *)gSYTaskmanGeneralHeap.ptr;
-        sb32 resident_is_stale = FALSE;
-
         /* THE HEAP GENERATION IS THE AUTHORITY, not the cursor.
          *
-         * The cursor test below was this guard's original re-entry fix, and it
+         * The cursor test was this guard's original re-entry fix, and it
          * is unsound for the same reason it was unsound in the animation cache:
          * a rewind does not move our data, it moves the CURSOR, and the new
          * scene's own allocations push that cursor straight back past the stale
          * files. Every one of them is then inside [start, cursor) again, the
-         * scan finds nothing, and this function early-returns having evicted
+         * scan could find nothing, and this function would early-return having evicted
          * nothing, discarded no texture keys or OAM names, and never advanced
          * sNdsRelocSceneGeneration. Whether it fires is a race between when
          * this runs and how much the new scene has allocated -- which is why
@@ -2229,34 +2228,14 @@ static void ndsRelocPrepareSceneCache(void)
          * a second entry rather than as a crash.
          *
          * gNdsTaskmanHeapGeneration cannot be raced: it is bumped at the two
-         * primitives that rewind the heap, before any new-scene allocation. */
-        if (sNdsRelocResidentHeapGeneration != gNdsTaskmanHeapGeneration)
-        {
-            resident_is_stale = TRUE;
-            gNdsRelocSceneReentryGenerationEvictCount++;
-        }
-        else
-        {
-            /* Kept as a SECONDARY corruption check: same generation but a file
-             * outside the live region means something other than a scene
-             * rewind moved it, and that is worth evicting on too. */
-            for (i = 0; i < sNdsRelocLoadedFileCount; i++)
-            {
-                const u8 *data = (const u8 *)sNdsRelocLoadedFiles[i].data;
-
-                if ((data != NULL) &&
-                    ((data < heap_start) || (data >= heap_cursor)))
-                {
-                    resident_is_stale = TRUE;
-                    gNdsRelocSceneReentryRangeEvictCount++;
-                    break;
-                }
-            }
-        }
-        if (resident_is_stale == FALSE)
+         * primitives that rewind the heap, before any new-scene allocation.  It
+         * also does not inspect unrelated caller-owned address ranges, which is
+         * what makes recursive dependency loading safe. */
+        if (sNdsRelocResidentHeapGeneration == gNdsTaskmanHeapGeneration)
         {
             return;
         }
+        gNdsRelocSceneReentryGenerationEvictCount++;
         gNdsRelocSceneReentryEvictCount++;
     }
 

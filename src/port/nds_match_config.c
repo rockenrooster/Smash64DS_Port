@@ -33,6 +33,17 @@
 
 NdsMatchConfig gNdsMatchConfig;
 
+#if NDS_P2_PROOF_FIGHTER0 >= 0
+_Static_assert(NDS_P2_PROOF_FIGHTER0 < nFTKindPlayableEnd,
+               "NDS_P2_PROOF_FIGHTER0 must be a playable fighter kind");
+#if NDS_P2_PROOF_FIGHTER0 == 4 && !NDS_P2_LUIGI
+/* ft/fighter.h / BattleShip fttypes.h: nFTKindLuigi == 4. The preprocessor
+ * cannot compare an enum identifier (an undefined token becomes 0 in #if), so
+ * pin the source integer here while the C static assertion above owns range. */
+#error "Luigi proof fighter requires NDS_P2_LUIGI=1"
+#endif
+#endif
+
 void ndsMatchConfigLoadMarioFoxDreamLand(NdsMatchConfig *cfg)
 {
     s32 i;
@@ -71,6 +82,13 @@ void ndsMatchConfigLoadMarioFoxDreamLand(NdsMatchConfig *cfg)
     cfg->fighters[0].pkind = nFTPlayerKindMan;
     cfg->fighters[0].handicap = 9;
     cfg->fighters[0].team = 0;
+#if NDS_P2_PROOF_FIGHTER0 >= 0
+    /* Focused P2-3 proof only.  Keep this at the descriptor owner instead of
+     * teaching scene_harness or the combat runtime about individual roster
+     * additions: BattleShip still receives an ordinary FTDesc with the chosen
+     * fkind, and all status/motion/attribute dispatch remains source-owned. */
+    cfg->fighters[0].fkind = (u8)NDS_P2_PROOF_FIGHTER0;
+#endif
 
     cfg->fighters[1].fkind = nFTKindFox;
     cfg->fighters[1].pkind = nFTPlayerKindMan;

@@ -66,6 +66,34 @@ def strip_line_comments(text: str) -> str:
     return re.sub(r"//[^\n]*", "", text)
 
 
+def strip_c_comments(text: str) -> str:
+    """Strip both C comment forms before initializer tokenization.
+
+    The production manifest originally only needed line comments because
+    FTData/FTMotionDesc use them.  WPAttributes carries block comments between
+    fields, and leaving those attached to the next token makes a source-derived
+    behavior contract needlessly depend on comment wording.
+    """
+    return re.sub(r"/\*.*?\*/", "", strip_line_comments(text), flags=re.DOTALL)
+
+
+def select_region_us(text: str) -> str:
+    """Resolve the simple US/JP branches present in fighter data initializers."""
+    text = re.sub(
+        r"#if\s+defined\s*\(REGION_US\)\s*\n(.*?)#else\s*\n(.*?)#endif",
+        lambda match: match.group(1),
+        text,
+        flags=re.DOTALL,
+    )
+    text = re.sub(
+        r"#if\s+defined\s*\(REGION_JP\)\s*\n(.*?)#else\s*\n(.*?)#endif",
+        lambda match: match.group(2),
+        text,
+        flags=re.DOTALL,
+    )
+    return text
+
+
 def split_top_level_csv(text: str) -> list[str]:
     values: list[str] = []
     current: list[str] = []
@@ -87,6 +115,169 @@ def split_top_level_csv(text: str) -> list[str]:
     if depth != 0:
         raise ValueError("unterminated initializer while parsing FTData")
     return values
+
+
+def parse_enum_names(text: str, enum_name: str) -> list[str]:
+    match = re.search(
+        rf"typedef\s+enum\s+{re.escape(enum_name)}\s*\{{(.*?)\}}\s*"
+        rf"{re.escape(enum_name)}\s*;",
+        text,
+        re.DOTALL,
+    )
+    if match is None:
+        raise ValueError(f"enum not found: {enum_name}")
+    names: list[str] = []
+    for token in split_top_level_csv(strip_c_comments(match.group(1))):
+        name = token.split("=", 1)[0].strip()
+        if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", name):
+            raise ValueError(f"unexpected {enum_name} enumerator: {token}")
+        names.append(name)
+    return names
+
+
+def build_special_status_contract(repo_root: Path, fighter: str) -> dict[str, object]:
+    """Read a fighter's source special-status table into an audit contract.
+
+    P2-3 variants often share state-machine callbacks but not motion/event data.
+    Recording the actual status descriptors makes that distinction explicit and
+    keeps runtime proofs anchored to BattleShip instead of to hand-maintained
+    assumptions about which fighter should have a bespoke implementation.
+    """
+    stem = fighter.lower()
+    char_root = repo_root / f"decomp/BattleShip-main/decomp/src/ft/ftchar/ft{stem}"
+    status_path = char_root / f"ft{stem}status.h"
+    header_path = char_root / f"ft{stem}.h"
+    status_text = status_path.read_text(encoding="utf-8")
+    header_text = header_path.read_text(encoding="utf-8")
+    declaration = f"FTStatusDesc dFT{fighter}SpecialStatusDescs[/* */]"
+    block = find_initializer(status_text, declaration)
+    entries = split_top_level_csv(strip_c_comments(block))
+    names = parse_enum_names(header_text, f"ft{fighter}Status")
+
+    # Fox has two enum-only sentinels outside the concrete descriptor table.
+    # The first descriptor is always nFTCommonStatusSpecialStart; preserve the
+    # source table length rather than inventing rows for enum values with no
+    # FTStatusDesc storage.
+    if len(names) < len(entries):
+        raise ValueError(
+            f"{fighter}: status enum shorter than descriptor table: "
+            f"{len(names)} < {len(entries)}"
+        )
+    names = names[:len(entries)]
+
+    rows: list[dict[str, object]] = []
+    for name, entry in zip(names, entries):
+        value = entry.strip()
+        if not (value.startswith("{") and value.endswith("}")):
+            raise ValueError(f"{fighter}: malformed status descriptor for {name}")
+        fields = split_top_level_csv(value[1:-1])
+        if len(fields) != 11:
+            raise ValueError(
+                f"{fighter}: {name} FTStatusDesc field count changed: "
+                f"{len(fields)} != 11"
+            )
+        rows.append({
+            "status": name,
+            "motion": fields[0].strip(),
+            "motion_attack_id": fields[1].strip(),
+            "kinetics": fields[4].strip(),
+            "is_projectile": fields[5].strip(),
+            "status_attack_id": fields[6].strip(),
+            "callbacks": {
+                "update": fields[7].strip(),
+                "interrupt": fields[8].strip(),
+                "physics": fields[9].strip(),
+                "map": fields[10].strip(),
+            },
+        })
+    return {
+        "source": status_path.relative_to(repo_root).as_posix(),
+        "source_sha256": sha256(status_path),
+        "descriptor_count": len(rows),
+        "descriptors": rows,
+    }
+
+
+def parse_float_literal(value: str) -> float:
+    token = value.strip()
+    if token.endswith(("F", "f")):
+        token = token[:-1]
+    return float(token)
+
+
+def parse_degree_expression(value: str) -> float:
+    match = re.fullmatch(r"F_CLC_DTOR32\(([-+0-9.eEfF]+)\)", value.strip())
+    if match is None:
+        raise ValueError(f"expected F_CLC_DTOR32 degree expression: {value}")
+    return parse_float_literal(match.group(1))
+
+
+def build_luigi_fireball_contract(repo_root: Path) -> dict[str, object]:
+    """Derive Luigi's shared-fireball variant directly from US source data."""
+    weapon_path = repo_root / "decomp/BattleShip-main/decomp/src/wp/wpmario/wpmariofireball.c"
+    attr_path = repo_root / "decomp/BattleShip-main/decomp/src/relocData/222_LuigiSpecial1.c"
+
+    weapon_text = select_region_us(weapon_path.read_text(encoding="utf-8"))
+    weapon_block = find_initializer(
+        weapon_text,
+        "wpMarioFireballAttributes dWPMarioFireballWeaponAttributes[/* */]",
+    )
+    variants = split_top_level_csv(strip_c_comments(weapon_block))
+    if len(variants) != 2:
+        raise ValueError(f"shared fireball variant count changed: {len(variants)} != 2")
+    luigi_entry = variants[1].strip()
+    if not (luigi_entry.startswith("{") and luigi_entry.endswith("}")):
+        raise ValueError("Luigi fireball variant initializer is malformed")
+    fields = split_top_level_csv(luigi_entry[1:-1])
+    if len(fields) != 12:
+        raise ValueError(f"Luigi fireball variant field count changed: {len(fields)} != 12")
+
+    attr_text = select_region_us(attr_path.read_text(encoding="utf-8"))
+    attr_block = find_initializer(
+        attr_text, "WPAttributes dLuigiSpecial1_Fireball_WeaponAttributes"
+    )
+    attr_fields = split_top_level_csv(strip_c_comments(attr_block))
+    if len(attr_fields) != 29:
+        raise ValueError(
+            f"Luigi fireball WPAttributes field count changed: {len(attr_fields)} != 29"
+        )
+
+    return {
+        "source": weapon_path.relative_to(repo_root).as_posix(),
+        "source_sha256": sha256(weapon_path),
+        "variant_index": 1,
+        "lifetime": int(fields[0], 0),
+        "terminal_velocity": parse_float_literal(fields[1]),
+        "map_collision_damage": parse_float_literal(fields[2]),
+        "gravity": parse_float_literal(fields[3]),
+        "collision_rebound": parse_float_literal(fields[4]),
+        "rotate_degrees_per_tick": parse_degree_expression(fields[5]),
+        "ground_launch_degrees": parse_degree_expression(fields[6]),
+        "air_launch_degrees": parse_degree_expression(fields[7]),
+        "base_velocity": parse_float_literal(fields[8]),
+        "fighter_special_file": fields[9].strip(),
+        "weapon_attributes_symbol": fields[10].strip(),
+        "animation_start_frame": parse_float_literal(fields[11]),
+        "map_callback": "wpMarioFireballProcMap",
+        "map_rebound_shared_with_mario": True,
+        "hitbox_source": attr_path.relative_to(repo_root).as_posix(),
+        "hitbox_source_sha256": sha256(attr_path),
+        "hitbox": {
+            "map_top": int(attr_fields[5], 0),
+            "map_center": int(attr_fields[6], 0),
+            "map_bottom": int(attr_fields[7], 0),
+            "map_width": int(attr_fields[8], 0),
+            "size": int(attr_fields[9], 0),
+            "angle": int(attr_fields[10], 0),
+            "knockback_scale": int(attr_fields[11], 0),
+            "damage": int(attr_fields[12], 0),
+            "element": int(attr_fields[13], 0),
+            "shield_damage": int(attr_fields[15], 0),
+            "sfx": int(attr_fields[18], 0),
+            "priority": int(attr_fields[19], 0),
+            "knockback_base": int(attr_fields[28], 0),
+        },
+    }
 
 
 def find_initializer(text: str, declaration: str) -> str:
@@ -457,9 +648,43 @@ def build_manifest(repo_root: Path) -> dict[str, object]:
             fighter["native_model"] = native_owner.build_p2_owner_model_inventory(
                 repo_root, owner_name
             )
+        fighter["special_status_contract"] = build_special_status_contract(
+            repo_root, str(fighter["fighter"])
+        )
+
+    # Luigi is the first P2-3 variant fighter.  BattleShip deliberately points
+    # his N/Hi/Lw status descriptors at Mario's state-machine callbacks; the
+    # authored differences live in Luigi motion/event data and the fireball's
+    # index-1 weapon data.  Derive that relationship instead of forking three
+    # DS implementations merely because the character name changed.
+    mario_statuses = fighters[0]["special_status_contract"]["descriptors"]
+    luigi_statuses = luigi["special_status_contract"]["descriptors"]
+    mario_specials = mario_statuses[-6:]
+    luigi_specials = luigi_statuses[-6:]
+    shared_callbacks = all(
+        mario_row["callbacks"] == luigi_row["callbacks"]
+        for mario_row, luigi_row in zip(mario_specials, luigi_specials)
+    )
+    if not shared_callbacks:
+        raise ValueError(
+            "Luigi N/Hi/Lw callbacks no longer match Mario; P2-3 variant "
+            "runtime assumptions must be re-reviewed against BattleShip"
+        )
+    luigi["variant_contract"] = {
+        "shares_mario_special_callbacks": True,
+        "shared_status_pairs": [
+            {
+                "luigi": luigi_row["status"],
+                "mario": mario_row["status"],
+                "callbacks": luigi_row["callbacks"],
+            }
+            for mario_row, luigi_row in zip(mario_specials, luigi_specials)
+        ],
+        "fireball": build_luigi_fireball_contract(repo_root),
+    }
 
     return {
-        "schema": "smash64ds.p2-fighter-production-manifest.v1",
+        "schema": "smash64ds.p2-fighter-production-manifest.v2",
         "generated_by": "scripts/fighters/generate_fighter_production_manifest.py",
         "source": {
             "ftdata": str(ftdata_path.relative_to(repo_root)).replace("\\", "/"),

@@ -41,7 +41,7 @@ static u16 *sNdsBattleHudDamageGfx[NDS_BATTLE_HUD_DAMAGE_GLYPHS];
 static u16 *sNdsBattleHudTimerGfx[NDS_BATTLE_HUD_TIMER_GLYPHS];
 static u16 *sNdsBattleHudStockDigitGfx[NDS_BATTLE_HUD_STOCK_DIGIT_GLYPHS];
 static u16 *sNdsBattleHudPortraitGfx[NDS_BATTLE_HUD_PORTRAITS];
-static u16 *sNdsBattleHudStockGfx[2];
+static u16 *sNdsBattleHudStockGfx[NDS_BATTLE_HUD_STOCK_OWNERS];
 static u32 sNdsBattleHudPrepared;
 static u32 sNdsBattleHudStateHash = 0xffffffffu;
 
@@ -232,7 +232,7 @@ static u32 ndsBattleHudPrepare(void)
             NDS_BATTLE_HUD_PORTRAIT_GFX_BYTES);
         if (sNdsBattleHudPortraitGfx[i] == NULL) return FALSE;
     }
-    for (i = 0u; i < 2u; i++)
+    for (i = 0u; i < NDS_BATTLE_HUD_STOCK_OWNERS; i++)
     {
         sNdsBattleHudStockGfx[i] = ndsBattleHudAlloc(
             SpriteSize_8x8, kNdsBattleHudStockGfx[i],
@@ -294,6 +294,11 @@ static void ndsBattleHudStockPalette(u32 player, u32 fkind, u32 costume)
     {
         if (costume >= 4u) costume = 0u;
         source = kNdsBattleHudFoxStockPalette[costume];
+    }
+    else if (fkind == (u32)nFTKindLuigi)
+    {
+        if (costume >= 4u) costume = 0u;
+        source = kNdsBattleHudLuigiStockPalette[costume];
     }
     else
     {
@@ -424,9 +429,14 @@ static void ndsBattleHudDrawDamage(
 static void ndsBattleHudDrawStock(u32 player, u32 fkind, u32 *next_id)
 {
     u32 stock = ndsBattleHudStock(player);
-    u32 owner = (fkind == (u32)nFTKindFox) ? 1u : 0u;
+    u32 owner;
     u32 palette = NDS_BATTLE_HUD_STOCK_PALETTE_BASE + player;
     u32 i;
+
+    if (fkind == (u32)nFTKindMario) owner = 0u;
+    else if (fkind == (u32)nFTKindFox) owner = 1u;
+    else if (fkind == (u32)nFTKindLuigi) owner = 2u;
+    else return;
 
     if (stock == 0x7fu)
     {
@@ -488,6 +498,7 @@ static void ndsBattleHudDrawPortrait(u32 player, u32 fkind, u32 *next_id)
 
     if (fkind == (u32)nFTKindMario) owner = 0u;
     else if (fkind == (u32)nFTKindFox) owner = 1u;
+    else if (fkind == (u32)nFTKindLuigi) owner = 2u;
     else return;
 
     ndsBattleHudSetOam(next_id, sNdsBattleHudPlayerCenterX[player] - 8,
