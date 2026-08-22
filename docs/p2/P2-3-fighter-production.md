@@ -29,7 +29,7 @@ Luigi proves the pipeline (variant path); DK proves it on a structurally
 different archetype. If either needs manual one-offs, fix the pipeline before
 fighter 3.
 
-### Bootstrap status (2026-08-21)
+### Bootstrap status (2026-08-22)
 
 The first pipeline slice is source-derived inventory rather than another
 fighter-specific loader table. `scripts/fighters/generate_fighter_production_manifest.py`
@@ -63,9 +63,8 @@ backend, and uses BattleShip's real nine-entry Luigi status table. The flag is
 default-off and the non-Luigi compile path retains the already-qualified
 Mario/Fox predicates/status stub verbatim. A Luigi-enabled shipping-shell
 configuration builds cleanly with all 16 incremental NitroFS resources staged.
-This is still pipeline infrastructure, not fighter admission: CSS, native
-renderer owner, audio/UI and focused runtime move coverage remain before Luigi
-becomes selectable.
+That loader-only statement is retained as the provenance of the bootstrap; the
+runtime/UI work it listed is now implemented by the fourth slice below.
 
 The third bootstrap slice makes native-model conversion part of that same
 source contract instead of a second manual renderer inventory. The shipping
@@ -76,9 +75,27 @@ mask, hierarchy, display-list state/epoch/run streams, dense DS geometry,
 cross-matrix GX slots/restores and light preambles, and writes that compact
 inventory into the fighter production manifest. The frozen Mario/Fox generated
 include and consumed-fields manifest remain byte-identical. Runtime owner-slot
-generalization is therefore the next implementation step and consumes
-source-derived data already checked here; it must not introduce a Luigi-only
-renderer fork.
+generalization consumes that source-derived data rather than introducing a
+Luigi-only renderer fork.
+
+The fourth slice makes Luigi a real staged production fighter rather than only
+an asset inventory. `NDS_P2_PROOF_FIGHTER0=4` selects Luigi through the normal
+match descriptor, the native-owner tables admit Luigi as a third content owner,
+and the CSS/HUD paths consume the generated Luigi portrait/name/emblem data.
+BattleShip's shared Mario callbacks remain authoritative for Fireball, Super
+Jump Punch and Cyclone; the focused runtime proof additionally pins Luigi's
+source index-1 fireball attributes/launch and the US motion-script 25/18-damage
+SJP/Cyclone events. Entry effects were moved at the same checkpoint to a
+build-time converted DS-native GX path: Mario's pipe and Fox's Arwing keep the
+source DObj animation/visibility timeline while runtime generic-entry fallback
+is required to stay zero. The post-change three-arm Boundary rerun on
+2026-08-22 is green (`p2_shell_loop`, `p2_battle_realtime`,
+`p2_fourcpu_stress`), so P2-2 remains the regression floor while P2-3 advances.
+
+Luigi is therefore the **pipeline prover in qualification**, not the next
+loader implementation target. The next structurally new implementation target
+is Donkey Kong; do not start roster-wide batching until DK proves the same
+manifest/native-owner/status/UI path on a non-Mario archetype.
 
 ## Roster order (owner-ratified engineering order)
 

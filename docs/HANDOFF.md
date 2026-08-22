@@ -1,9 +1,9 @@
 # Handoff
 
-Current: 2026-08-21 — **P2-1/P2-2 AUTOMATED ACCEPTANCE IS GREEN; BOUNDARY HAS
-THREE ARMS.** The full phase-close profile was rerun after the final decomp and
-verifier audit; all three arms passed. The remaining closeout on both phases is
-owner visual/play acceptance, not unverified engine work.
+Current: 2026-08-22 — **P2-1/P2-2 AUTOMATED ACCEPTANCE IS GREEN; P2-3 LUIGI
+PRODUCTION IS LANDED AND BOUNDARY STILL HAS THREE GREEN ARMS.** The fresh
+post-Luigi/source-entry profile passed all three arms. P2-1/P2-2 still have only
+their owner visual/play residuals; P2-3 is the active implementation frontier.
 
 ## State
 
@@ -76,19 +76,27 @@ owner visual/play acceptance, not unverified engine work.
    steady display GObjs off the gameplay screen; its sub-OBJ Bank-I palette and
    graphics writes use DMA-safe hardware widths. Source effect/particle pool
    capacities are restored. The standing four-CPU run is accepted and is now
-   Boundary arm 3: `ALL` P50/P95 1,677,952/2,238,464 ticks, heap free low-water
+   Boundary arm 3: the fresh 2026-08-22 run is `ALL` P50/P95
+   1,678,144/2,797,888 ticks and `WORK-H` P50/P95 1,603,904/2,066,688; heap free low-water
    40,400 B, effects 17/38 active, particles 33/112 + 11/24 + 14/80, no rejects
    or hard allocation/AObj failures. The source Low-detail native fighter owner
-   is the first mitigation (`plan build=680`, `hit=6513`, mismatch 0). The
+   is the first mitigation (fresh plan `build=684`, `hit=6665`, mismatch 0). The
    measured owner-based byte law is in `docs/p2/P2-2-four-fighters.md`. The
    remaining item is explicitly visual: four-way camera framing, lower-screen
    HUD presentation, Team Battle feel and Results/Sudden Death presentation.
    Do not claim the owner accepted those until they actually do.
-3. **One decision stays parked on the board** — the untracked
-   `smash64ds_P1.nds` at the repo root. It makes every Boundary run red until
-   it is ruled on: `check-published-roms.ps1` enforces the two-ROM contract, so
-   a run relocates that file to `builds/` and restores it hash-verified in a
-   `try`/`finally`. Do not delete it; it is the owner's file.
+3. **P2-3 is active.** Luigi's source-derived loader/native-owner/CSS/HUD path
+   and focused special/projectile proof are landed. Mario's pipe and Fox's
+   Arwing now use build-time converted DS-native entry geometry with zero generic
+   entry fallback while keeping BattleShip's live DObj/visibility timeline.
+   The next structurally new fighter is Donkey Kong. Keep admission fighter-by-
+   fighter; do not turn this into a roster mega-import.
+4. **Performance remains debt, not a green claim.** The four-CPU stress arm is
+   correctness/memory green but is nowhere near 1.12m ticks (`ALL` P50
+   1,678,144; `WORK-H` P50 1,603,904). Its largest median lanes are FTR 671,296
+   and SRC 586,368. Measure a structural cut on the current four-CPU basis
+   before spending a build on micro-optimizations; source update/order semantics
+   remain non-negotiable.
 
 The phase-close run also fixed verifier drift rather than bypassing it:
 `verify-all.ps1 -NoBuild` now resolves retained per-harness artifacts through
