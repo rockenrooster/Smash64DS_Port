@@ -111,6 +111,8 @@ typedef struct NdsFtPoseJoint
     u16 last_eval;                      /* pose->tick of the last evaluation:
                                          * the held ticks are caught up from
                                          * here (see ndsFtPosePlay) */
+    s32 wait_q;                         /* the joint's anim_wait, Q12 */
+    s32 frame_q;                        /* the joint's anim_frame, Q12 */
 } NdsFtPoseJoint;
 
 typedef struct NdsFtPose
@@ -125,6 +127,9 @@ typedef struct NdsFtPose
     u32 body_evaluated;                 /* last update evaluated the body */
     u32 tick;                           /* updates since the bind */
     u32 pool_used;                      /* tracks handed out since the bind */
+    s32 speed_q;                        /* this update's anim_speed, Q12 */
+    s32 gobj_frame_q;                   /* the GObj anim_frame to publish */
+    u32 gobj_frame_pending;             /* ... when a joint's clock wrote it */
     NdsFtPoseJoint *joints;             /* capacity entries */
     NdsFtPoseTrack *pool;               /* NDS_FT_POSE_POOL tracks */
 } NdsFtPose;
