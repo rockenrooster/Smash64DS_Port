@@ -156,11 +156,15 @@ if (($foxRecoveryText -notmatch 'assert-melonds-top-visible\.ps1') -or
 if (($realtimeText -match 'MinFighterRegionFraction|MinRegionFighterFraction|MinRequiredRegionFighterFraction') -or
     ($battleLoopText -notmatch 'FTR_DISPLAY_CONTRACT=') -or
     ($battleLoopText -notmatch 'STAGE_GCDRAWALL_HW_FTR_BASE=') -or
-    ($battleLoopText -notmatch '\$marioTrianglesInBattle = \$shwf\[2\] - \$shwfBase\[2\]') -or
+    # P2-3 generalised fighter 0 to the production-proof kind (a0f488256e4):
+    # `$p0*` with `$p0OwnerTriangles` pinned to Mario's 320 outside a P2
+    # production proof. The contract is unchanged; the names are not.
+    ($battleLoopText -notmatch '\$p0TrianglesInBattle = \$shwf\[2\] - \$shwfBase\[2\]') -or
     ($battleLoopText -notmatch '\$foxTrianglesInBattle = \$shwf\[3\] - \$shwfBase\[3\]') -or
-    ($battleLoopText -notmatch '\$marioOwnerIntegral = \(\$marioTrianglesInBattle % 320\) -eq 0') -or
+    ($battleLoopText -notmatch '(?s)\$p0OwnerTriangles = if \(\$isP2ProductionProof\) \{.*?\} else \{ 320 \}') -or
+    ($battleLoopText -notmatch '\$p0OwnerIntegral = \(\$p0TrianglesInBattle % \$p0OwnerTriangles\) -eq 0') -or
     ($battleLoopText -notmatch '\$foxOwnerIntegral = \(\$foxTrianglesInBattle % 306\) -eq 0') -or
-    ($battleLoopText -notmatch '(?s)\$fighterTrianglesInBattle -eq\s*\(\$marioTrianglesInBattle \+ \$foxTrianglesInBattle\).*?\$fighterSubmitInBattle -eq\s*\(\$marioOwnerCount \+ \$foxOwnerCount\)') -or
+    ($battleLoopText -notmatch '(?s)\$fighterTrianglesInBattle -eq\s*\(\$p0TrianglesInBattle \+ \$foxTrianglesInBattle\).*?\$fighterSubmitInBattle -eq\s*\(\$p0OwnerCount \+ \$foxOwnerCount\)') -or
     ($battleLoopText -notmatch '\$drawnFrames = \$submittedInBattle') -or
     ($battleLoopText -notmatch '(?s)Assert-Condition\s*\(\$fighterDisplayContract\.Success.*?\$fdc\[0\]\s*-gt\s*0.*?\$fdc\[3\]\s*-gt\s*0.*?\$fdc\[7\]\s*-gt\s*0.*?\$fdc\[8\]\s*-eq\s*0')) {
     Fail-Check 'canonical realtime verifier must use selected/submitted/in-bounds GDB fighter contracts without fixed fighter crops'

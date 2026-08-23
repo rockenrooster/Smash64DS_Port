@@ -3625,11 +3625,13 @@ void ndsPlatformEndFrame(void)
 #if NDS_TICK_HUD
         tickhud_flush_start = cpuGetTiming();
 #endif
+        /* P2-2p3: a fighter packet DMA may still be draining into the FIFO;
+         * the flush is a FIFO command. Above the Task 29 record on purpose --
+         * check-gbi-decode-fixtures pins the record adjacent to the flush. */
+        ndsRendererFighterPacketDmaWait();
 #if NDS_TASK29_GX_CENSUS
         ndsRendererTask29GXRecordFlush(GL_TRANS_MANUALSORT);
 #endif
-        /* P2-2p3: a fighter packet DMA may still be draining. */
-        ndsRendererFighterPacketDmaWait();
         glFlush(GL_TRANS_MANUALSORT);
 #if NDS_TICK_HUD
         gNdsTickHudFlushTicks += cpuGetTiming() - tickhud_flush_start;

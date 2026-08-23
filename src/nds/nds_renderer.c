@@ -3388,6 +3388,19 @@ typedef struct NDSFighterPacket
     u32 raw_reuse;
     u32 cross_triangles;
     u32 cross_reuse;
+    /* The frame-summary batch and texture-prepare counts the record frame
+     * accrued between the adapter's pre-check and the finish, net of what
+     * the raw/cross credits above already add back. A replay presents the
+     * same batches to the hardware, so a hit credits these too and the
+     * per-frame accounting every verifier reads stays exact. */
+    u32 batch_begin;
+    u32 batch_reuse;
+    u32 batch_end;
+    u32 prepare_begin;
+    u32 prepare_reuse;
+    u32 matrix_loads;
+    u32 texture_binds;
+    u32 vertex_loads;
     u32 site_count;
     /* The prim/modulate the shade sites currently encode. */
     u32 tint_modulate;
@@ -3417,6 +3430,9 @@ typedef struct NDSFighterPacketRecorder
 static NDSFighterPacket sNdsFighterPackets[NDS_FIGHTER_PACKET_SLOTS];
 static NDSFighterPacketRecorder sNdsFighterPacketRecorder;
 static u32 sNdsFighterPacketRecording;
+/* Frame-summary batch/prepare counters at the adapter's pre-check, so a
+ * record frame can store what the slot's draw accrued (see NDSFighterPacket). */
+static u32 sNdsFighterPacketRecordBase[8];
 volatile u32 gNdsFighterPacketHits;
 volatile u32 gNdsFighterPacketRecords;
 volatile u32 gNdsFighterPacketFaults;
@@ -29265,6 +29281,50 @@ static void NDS_FIGHTER_PACKET_COLD_CODE ndsFighterPacketFinishRecord(
     packet->raw_reuse = raw_reuse;
     packet->cross_triangles = cross_triangles;
     packet->cross_reuse = cross_reuse;
+#if NDS_RENDERER_FRAME_SUMMARY_COUNTERS
+    {
+        /* The raw/cross credits add `reuse` to both reuse counters on a hit
+         * as they did during this record, so the stored residual excludes
+         * them (clamped: the window cannot accrue less than it credited). */
+        u32 credited = raw_reuse + cross_reuse;
+        u32 reuse = sNdsRendererRuntimeFrameSummary.hardware_batch_reuse_count -
+            sNdsFighterPacketRecordBase[1];
+        u32 prepare_reuse =
+            sNdsRendererRuntimeFrameSummary.texture_prepare_reuse_count -
+            sNdsFighterPacketRecordBase[4];
+
+        packet->batch_begin =
+            sNdsRendererRuntimeFrameSummary.hardware_batch_begin_count -
+            sNdsFighterPacketRecordBase[0];
+        packet->batch_reuse = (reuse > credited) ? (reuse - credited) : 0u;
+        packet->batch_end =
+            sNdsRendererRuntimeFrameSummary.hardware_batch_end_count -
+            sNdsFighterPacketRecordBase[2];
+        packet->prepare_begin =
+            sNdsRendererRuntimeFrameSummary.texture_prepare_count -
+            sNdsFighterPacketRecordBase[3];
+        packet->prepare_reuse =
+            (prepare_reuse > credited) ? (prepare_reuse - credited) : 0u;
+        packet->matrix_loads =
+            sNdsRendererRuntimeFrameSummary.matrix_load_count -
+            sNdsFighterPacketRecordBase[5];
+        packet->texture_binds =
+            sNdsRendererRuntimeFrameSummary.texture_binds -
+            sNdsFighterPacketRecordBase[6];
+    }
+#else
+    packet->batch_begin = 0u;
+    packet->batch_reuse = 0u;
+    packet->batch_end = 0u;
+    packet->prepare_begin = 0u;
+    packet->prepare_reuse = 0u;
+    packet->matrix_loads = 0u;
+    packet->texture_binds = 0u;
+#endif
+    /* The dense-vertex walk counts one source vertex load per vertex word
+     * it emits; the replay emits the same words. */
+    packet->vertex_loads = sNdsRendererHardwareSourceVertexLoadCount -
+        sNdsFighterPacketRecordBase[7];
     DC_FlushRange(packet->words, packet->word_count * sizeof(u32));
     if (packet->word_count > gNdsFighterPacketWordsMax)
     {
@@ -29303,6 +29363,25 @@ s32 ndsRendererFighterPacketPrecheck(
     u32 battle_slot = (texture_memo_owner_key >> 9) & 3u;
     u32 key[NDS_FIGHTER_PACKET_KEY_WORDS];
 
+#if NDS_RENDERER_FRAME_SUMMARY_COUNTERS
+    /* Window start for a record this frame: everything the slot's draw
+     * accrues from here to the finish is what a replay hit skips. */
+    sNdsFighterPacketRecordBase[0] =
+        sNdsRendererRuntimeFrameSummary.hardware_batch_begin_count;
+    sNdsFighterPacketRecordBase[1] =
+        sNdsRendererRuntimeFrameSummary.hardware_batch_reuse_count;
+    sNdsFighterPacketRecordBase[2] =
+        sNdsRendererRuntimeFrameSummary.hardware_batch_end_count;
+    sNdsFighterPacketRecordBase[3] =
+        sNdsRendererRuntimeFrameSummary.texture_prepare_count;
+    sNdsFighterPacketRecordBase[4] =
+        sNdsRendererRuntimeFrameSummary.texture_prepare_reuse_count;
+    sNdsFighterPacketRecordBase[5] =
+        sNdsRendererRuntimeFrameSummary.matrix_load_count;
+    sNdsFighterPacketRecordBase[6] =
+        sNdsRendererRuntimeFrameSummary.texture_binds;
+#endif
+    sNdsFighterPacketRecordBase[7] = sNdsRendererHardwareSourceVertexLoadCount;
     if ((inputs == NULL) || (input_count == 0u) ||
         (input_count > NDS_FIGHTER_PACKET_ROOT_MAX) ||
         (ndsRendererNativeSelectFighterRuntimeTables(
@@ -29430,6 +29509,25 @@ static s32 __attribute__((noinline)) ndsFighterPacketTryReplay(
             ndsRendererNativeAccountGXCrossTriangles(
                 stats, packet->cross_triangles, packet->cross_reuse);
         }
+#if NDS_RENDERER_FRAME_SUMMARY_COUNTERS
+        /* The replayed stream carries the record frame's BEGIN/END pairs and
+         * texture binds verbatim; credit them as the record frame did. */
+        sNdsRendererRuntimeFrameSummary.hardware_batch_begin_count +=
+            packet->batch_begin;
+        sNdsRendererRuntimeFrameSummary.hardware_batch_reuse_count +=
+            packet->batch_reuse;
+        sNdsRendererRuntimeFrameSummary.hardware_batch_end_count +=
+            packet->batch_end;
+        sNdsRendererRuntimeFrameSummary.texture_prepare_count +=
+            packet->prepare_begin;
+        sNdsRendererRuntimeFrameSummary.texture_prepare_reuse_count +=
+            packet->prepare_reuse;
+        sNdsRendererRuntimeFrameSummary.matrix_load_count +=
+            packet->matrix_loads;
+        sNdsRendererRuntimeFrameSummary.texture_binds +=
+            packet->texture_binds;
+#endif
+        sNdsRendererHardwareSourceVertexLoadCount += packet->vertex_loads;
         stats->triangle_count += packet->triangle_count;
         sNdsRendererFastRunCount += packet->run_count;
         sNdsRendererFastTriangleCount += packet->triangle_count;

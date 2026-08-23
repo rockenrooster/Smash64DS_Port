@@ -95,18 +95,20 @@ their owner visual/play residuals; P2-3 is the active implementation frontier.
    seed; the rise to 420 is the source's own motion), "Luigi has issues" waits
    on specifics, and the stopped DK agent's `NDS_P2_DONKEY` proof work sits
    uncommitted in the tree until compiled under the flag.
-4. **Performance remains debt, not a green claim — the structural cut is in
-   flight (board rows P2-2p1..p4).** Four-CPU arm on the current tree:
-   `WORK-H` P50/P95 1,600,832 / 2,069,824; without any fighter draw 993,792 /
-   1,462,144, so the four draws are 607K at P50. `NDS_R2_FIGHTER_PACKET=1`
-   (lab, default off; DMA replay of each fighter's recorded GX stream, flash
-   tint patch, per-packet texture residency, deferred DMA wait, material
-   pre-check) reads 1,281,728 / 1,866,432 with the FTR lane 665,920 →
-   306,560, gate green, entry-series captures pixel-identical. Next:
-   promotion into the gate/shell targets after the owner's visual pass
-   (packet free-play twin in `builds/build-p2-shell-freeplay-packet/`); the
-   remaining gap is the source lanes (SRC 594K P50 / 1,033K P95, OTHR 360K),
-   parked behind the sacrifice order.
+4. **Performance remains debt; the structural cut is landed and default-on
+   (board rows P2-2p1..p4, promoted 2026-08-23, Boundary GREEN on the
+   promoted tree).** Four-CPU arm before: `WORK-H` P50/P95 1,600,832 /
+   2,069,824; without any fighter draw 993,792 / 1,462,144 (the four draws
+   were 607K at P50). `NDS_R2_FIGHTER_PACKET=1` — DMA replay of each
+   fighter's recorded GX stream, flash tint patch, per-packet texture
+   residency, deferred DMA wait, material pre-check — reads 1,281,728 /
+   1,866,432 with the FTR lane 665,920 → 306,560, entry-series captures
+   pixel-identical; `NDS_R2_FIGHTER_PACKET=0` is the control arm. The
+   published `smash64ds.nds` carries it (owner visual pass pending). The
+   replay credits the record frame's presented-work counters on every hit
+   (batches, prepares, binds, matrix loads, vertex loads), so harness
+   contracts stay exact. The remaining gap is the source lanes (SRC 594K
+   P50 / 1,033K P95, OTHR 360K), parked behind the sacrifice order.
 
 The phase-close run also fixed verifier drift rather than bypassing it:
 `verify-all.ps1 -NoBuild` now resolves retained per-harness artifacts through

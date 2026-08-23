@@ -56,6 +56,11 @@ $ErrorActionPreference = 'Stop'
 
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $target = $Target
+# Through `pwsh -File`, `-Helpers memset,memcpy` binds as ONE string; split
+# each element on commas (the same shape run-task37-profile-census.ps1 and
+# capture-p2-shell.ps1 use for their list parameters).
+$Helpers = @($Helpers | ForEach-Object { "$_" -split '[,; ]+' } |
+    Where-Object { $_ -ne '' })
 
 # The gate, decided by CALLER NAME rather than by source path. addr2line
 # resolves the function reliably but the source column comes back as a bare

@@ -872,8 +872,13 @@ NDS_R2_FIGHTER_RUN_MEMO ?= 0
 # DMA every frame, patching only the projection, the joint-chain matrices and
 # the light vector. The four-CPU stress arm measured the four fighter draws at
 # 607,040 of a 1,600,832-tick median frame (NDS_R2_DRAW_SUPPRESS_MASK=15 A/B,
-# 2026-08-23); this is the structural cut of that lane. 0 = off, lab A/B.
-NDS_R2_FIGHTER_PACKET ?= 0
+# 2026-08-23); this is the structural cut of that lane. Promoted to the default
+# the same day after four gate-green stress runs (WORK-H P50/P95 1,600,832 /
+# 2,069,824 -> 1,281,728 / 1,866,432), pixel-identical entry-series captures
+# and a green shell loop; `NDS_R2_FIGHTER_PACKET=0` on the command line is the
+# control arm. Compiled out by itself where its preconditions are missing
+# (software triangles, profile level 2, no GX compose / HW matrices / HW light).
+NDS_R2_FIGHTER_PACKET ?= 1
 # R2-03 E17. Loads the fighter's projection and modelview separately and lets the
 # geometry engine perform the multiply, instead of composing on the CPU and
 # loading the product. Measured -17,600 FTR P50 / -18,560 WORK P50, and it leaves

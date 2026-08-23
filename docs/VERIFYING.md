@@ -146,6 +146,16 @@ document, because `docs/README.md` forbids adding another workflow doc.
    nothing is compiling. A question discovered mid-build costs the build.
 2. **Verify** with the one widest relevant profile (`Checkpoint Choice`
    below). Do not stack DevFast, Boundary and Latest over the same runtime.
+   When a realtime arm throws on a terminal-frame contract, do not re-run to
+   find the next one: the `Exception:` context carries the whole `KEY=...`
+   counter dump, so extract it (`grep -o -E '\b[A-Z0-9_]+=[-0-9x,a-f:]+'`,
+   keep the last of each key) and diff it against the last green run's dump
+   before rebuilding. Every per-frame counter that moved is a candidate
+   failure in an assertion the run never reached. A lever that bypasses a CPU
+   path (DMA replay, precomputed stream) must credit the presented-work
+   counters that path carried (batches, prepares, binds, matrix loads, vertex
+   loads) and leave the CPU-work ones (uploads, lookups, rejects) at their
+   honest zero — P2-2p1 cost two Boundary runs learning this.
 3. **Measure** in the configuration that ships. `nds_build_config.h` in the
    build directory is the truth about what was measured; every figure states
    its cadence and its window.
