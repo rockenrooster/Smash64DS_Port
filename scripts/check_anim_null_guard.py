@@ -44,8 +44,13 @@ TARGETS = [
     (ROOT / "src" / "import" / "battleship_ftanim.c",
      "ndsR2FtAnimParseDObjFigatree",
      "the shipped port parser the shim selects"),
+    # P2-3r2 (2026-08-23): the shipped player is one always_inline body shared
+    # by gcPlayDObjAnimJoint (tra_scale = NULL) and the port's
+    # lbCommonPlayTranslateScaledDObjAnim; both wrappers are single bare calls,
+    # so the guard that must be total is the shared body's.
     (ROOT / "src" / "import" / "battleship_sys_objanim.c",
-     "gcPlayDObjAnimJoint", "ftParamUpdateAnimKeys play arm"),
+     "ndsPlayDObjAnimJointBody",
+     "ftParamUpdateAnimKeys play arms (shared body of both wrappers)"),
     (DECOMP / "src" / "lb" / "lbcommon.c",
      "lbCommonPlayTranslateScaledDObjAnim",
      "ftParamUpdateAnimKeys play arm when translate_scales is set"),
@@ -73,8 +78,11 @@ GUARD = re.compile(
 def function_body(path: pathlib.Path, name: str):
     """The text between the function's opening and closing brace."""
     text = path.read_text(encoding="utf-8", errors="replace")
-    m = re.search(r"^[A-Za-z_][\w \t\*]*\b%s\s*\(" % re.escape(name), text,
-                  re.MULTILINE)
+    # The optional prefix admits a definition whose name starts its own line
+    # (a multi-line `static inline __attribute__((...))` header puts the
+    # return type on the previous line).
+    m = re.search(r"^(?:[A-Za-z_][\w \t\*]*\b)?%s\s*\(" % re.escape(name),
+                  text, re.MULTILINE)
     if not m:
         return None
     open_brace = text.find("{", m.end())

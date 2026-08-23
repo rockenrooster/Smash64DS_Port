@@ -3114,10 +3114,15 @@ NDS_R2_FTANIM_TRACK_ORACLE ?= 0
 # of each presented frame only (TransN/XRotN/YRotN and the attach tick stay
 # 60 Hz). NDS_FT_POSE_ORACLE is the lab proof: the engine runs on shadow joints
 # beside the generic path and compares every pose/clock field bit for bit
-# (`gNdsFtPoseOracleMismatches` must read 0 over a whole match). Default 0
-# until the oracle and the four-CPU A/B have spoken; flip here, not per ROM.
-NDS_FT_POSE ?= 0
-NDS_FT_POSE_HOLD ?= 0
+# (`gNdsFtPoseOracleMismatches` must read 0 over a whole match).
+#
+# DEFAULT-ON 2026-08-23: the oracle read 0 mismatches over 189,251 joint
+# compares with the hold and the Q12 clock (artifacts/verification/
+# 2026-08-23_ft-pose-oracle.txt), and the four-CPU stress banked
+# WORK-H P50/P95 1,264,512/1,836,800 -> 1,244,608/1,777,408 across the
+# engine+hold+Q12 series (board row P2-2p6). ORACLE stays a lab flag.
+NDS_FT_POSE ?= 1
+NDS_FT_POSE_HOLD ?= 1
 NDS_FT_POSE_ORACLE ?= 0
 
 # Fox Blaster's shared beam/flash/collision bore line (`nds_effects.h`).
