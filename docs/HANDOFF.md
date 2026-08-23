@@ -85,16 +85,18 @@ their owner visual/play residuals; P2-3 is the active implementation frontier.
    remaining item is explicitly visual: four-way camera framing, lower-screen
    HUD presentation, Team Battle feel and Results/Sudden Death presentation.
    Do not claim the owner accepted those until they actually do.
-3. **P2-3 is active.** Luigi's source-derived loader/native-owner/CSS/HUD path
-   and focused special/projectile proof are landed. Mario's pipe and Fox's
-   Arwing now use build-time converted DS-native entry geometry with zero generic
-   entry fallback while keeping BattleShip's live DObj/visibility timeline.
-   The next structurally new fighter is Donkey Kong. Keep admission fighter-by-
-   fighter; do not turn this into a roster mega-import. **Owner review rows
-   P2-3r1..r3 (board, 2026-08-22):** the pipe is fixed (lit normals + light
-   seed; the rise to 420 is the source's own motion), "Luigi has issues" waits
-   on specifics, and the stopped DK agent's `NDS_P2_DONKEY` proof work sits
-   uncommitted in the tree until compiled under the flag.
+3. **P2-3 is active.** Luigi's production path is landed and he ANIMATES
+   (P2-3r2 fixed 2026-08-23: the scaled player was an empty stub; one shared
+   always_inline body now serves both players). The bounded fast proof route
+   is repaired end-to-end and **kind −1 is GREEN** (board row P2-3r3 carries
+   the whole chain: null-page DL-span abort guard, bounded frame-diagnostics
+   publish, battlepack isolation-control pin, grab pass-drive,
+   arrival-by-contact, bounded-scoped verifier arms). **Donkey Kong's two
+   live blockers are precisely rooted on that row:** the bounded route
+   maintains no fighter FTParts transform cache (draw-time-filled; the
+   capture draws no fighters; kind −1 passes by stale-position luck — fix
+   design on the row), and realtime DK parks forever in the Dokan pipe entry
+   (no staged DK entry). Keep admission fighter-by-fighter.
 4. **Performance remains debt; the structural cut is landed and default-on
    (board rows P2-2p1..p4, promoted 2026-08-23, Boundary GREEN on the
    promoted tree).** Four-CPU arm before: `WORK-H` P50/P95 1,600,832 /
@@ -109,10 +111,13 @@ their owner visual/play residuals; P2-3 is the active implementation frontier.
    (batches, prepares, binds, matrix loads, vertex loads), so harness
    contracts stay exact. P2-2p5 (collision getter early-out, in-place
    kind-1 matrix convert, exact scale compare) took the arm to 1,264,512 /
-   1,836,800. The remaining gap is the source lanes (animation evaluation
-   ~170K tk/fr, joint matrices ~65K, collision soft-float ~58K+) — board row
-   P2-2p6 batches the owner decision (precomputed poses vs 30 Hz pose
-   evaluation) the next structural cut needs; no build is spent until then.
+   1,836,800. **P2-2p6 is CLOSED and default-on (owner "do both",
+   2026-08-23):** the fighter pose engine + 30 Hz body hold + Q12 clock —
+   oracle 0 mismatches over 189,251 joint compares, four-CPU arm now
+   `WORK-H` P50/P95 **1,244,608 / 1,777,408**, three-arm Boundary green on
+   the promoted tree, freeplay `smash64ds.nds` republished on it. The
+   remaining gap to 1.12M is the soft-float caller census lanes and walk #1
+   of `ndsFTParamsInvalidateSubtree` (~8K), per the board row.
 
 The phase-close run also fixed verifier drift rather than bypassing it:
 `verify-all.ps1 -NoBuild` now resolves retained per-harness artifacts through
