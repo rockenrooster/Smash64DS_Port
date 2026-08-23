@@ -167,8 +167,10 @@ void ndsMPCollisionInvalidateTopology(void)
 void ndsMPCollisionEnsureLineGroups(void)
 {
     MPGeometryData *geometry = gMPCollisionGeometry;
-    u32 line_counts[nMPLineKindEnumCount] = { 0u };
-    u32 write_counts[nMPLineKindEnumCount] = { 0u };
+    /* Zeroed on the build path below, after the early-outs: the initialisers
+     * were two memsets paid on every call that found the groups ready. */
+    u32 line_counts[nMPLineKindEnumCount];
+    u32 write_counts[nMPLineKindEnumCount];
     u32 yakumono_count;
     u32 i;
     u32 kind;
@@ -201,6 +203,8 @@ void ndsMPCollisionEnsureLineGroups(void)
     {
         gMPCollisionLineGroups[kind].line_count = 0u;
         gMPCollisionLineGroups[kind].line_id = NULL;
+        line_counts[kind] = 0u;
+        write_counts[kind] = 0u;
     }
     sNdsMPLineGroupGeometry = geometry;
     yakumono_count = ndsMPGeometryYakumonoCount(geometry);
@@ -2083,7 +2087,18 @@ static s32 ndsMPGetTopologyEdgeLineID(s32 line_id, sb32 get_next)
     s32 result;
 
     gNdsCollisionRuntimeDiagnostics.topology_getter_calls++;
-    ndsMPCollisionEnsureLineGroups();
+    /* P2-2p5. The ensure ran on every getter call and paid its two
+     * line-count memsets plus ndsStageCollisionLoopGeometryReady before its
+     * own early-out (census 2026-08-23: memset 8.5M cycles, the ready check
+     * 2.9M at 68 bytes). A topology that is valid for the current geometry
+     * is exactly what the ensure would leave in place: the gMPCollisionGeometry
+     * assignment seam (compat_shims) invalidates both pointers, so a stale
+     * equal pointer cannot reach here. Only build when it is not valid. */
+    if ((sNdsMPTopologyGeometry != gMPCollisionGeometry) ||
+        (gMPCollisionVertexInfo == NULL))
+    {
+        ndsMPCollisionEnsureLineGroups();
+    }
     if ((sNdsMPTopologyGeometry != gMPCollisionGeometry) ||
         (sNdsMPTopologyFailedGeometry == gMPCollisionGeometry) ||
         (gMPCollisionVertexInfo == NULL) || (line_id < 0) ||

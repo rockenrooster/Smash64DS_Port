@@ -4,6 +4,7 @@
 #include <nds/nds_effects.h>
 #include <nds/nds_fighter_matrix_index.h>
 #include <nds/nds_r2_camera_fixed.h>
+#include <nds/nds_fcmp.h>
 #if NDS_R2_FOX_GUN_OVERLAY
 #include <nds/nds_fox_gun.h>
 #endif
@@ -1372,10 +1373,12 @@ static sb32 ndsRendererAdapterBuildFighterPartsMtx(
         has_oracle = TRUE;
 #endif
     }
-    else if ((dobj->scale.vec.f.x != 1.0F) ||
-             (dobj->scale.vec.f.y != 1.0F) ||
-             (dobj->scale.vec.f.z != 1.0F))
+    else if (ndsFcmpNeC(dobj->scale.vec.f.x, 1.0F) ||
+             ndsFcmpNeC(dobj->scale.vec.f.y, 1.0F) ||
+             ndsFcmpNeC(dobj->scale.vec.f.z, 1.0F))
     {
+        /* Bit-exact pattern compares (nds_fcmp.h): three __aeabi_fcmpeq
+         * calls per unscaled joint otherwise, 76,616 executions a profile. */
         syMatrixTraRotRpyRSca(&mtx,
                               dobj->translate.vec.f.x,
                               dobj->translate.vec.f.y,
@@ -1672,8 +1675,11 @@ static sb32 ndsRendererAdapterBuildDObjXObjMatrix(
     switch (xobj->kind)
     {
     case 1:
-        mtx = xobj->mtx;
-        break;
+        /* Convert in place: the 64-byte struct copy into `mtx` was the
+         * builder's only memcpy (13,810 calls a profile, 2026-08-23 census)
+         * and the converter reads its source exactly once. */
+        ndsRendererAdapterMtxFromN64(&xobj->mtx, out);
+        return TRUE;
     case 2:
         return FALSE;
     case NDS_RENDERER_ADAPTER_MVP_RECALC_RPY_0X47_KIND:
