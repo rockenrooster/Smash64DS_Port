@@ -8604,6 +8604,16 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
                  (sSYTaskmanStatus != nSYTaskmanStatusLoadScene)))
             {
                 ndsFighterMarioFoxStageGCDrawAllLoopSubmitHardwareFrame();
+#if NDS_SHIP_TELEMETRY || (NDS_RENDERER_PROFILE_LEVEL >= 1)
+                /* This submit is the bounded fast path's whole rendered
+                 * frame; the realtime path publishes the same diagnostics
+                 * from ndsBattlePlayablePresentFrame, which this path never
+                 * calls. Without this the Fast* contract globals are never
+                 * referenced, --gc-sections drops them, and the proof
+                 * harness reads DWARF ghosts (FAST_FINAL poison,
+                 * P2-3r3 2026-08-23). */
+                ndsRendererProfileFramePublish();
+#endif
             }
 #endif
 #else
