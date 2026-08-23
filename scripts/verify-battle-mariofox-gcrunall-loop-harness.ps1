@@ -3212,6 +3212,23 @@ try {
             $p2Visible = ($publishedP2Triangles -eq $p2ProductionOwnerTriangles)
             $expectedPublishedFastRuns = if ($p2Visible) { 91 + $p2ProductionOwnerRuns } else { 91 }
             $expectedPublishedFastTriangles = if ($p2Visible) { 508 + $p2ProductionOwnerTriangles } else { 508 }
+            if ($Target -eq 'smash64ds-battle-playable-fast-hwtri') {
+                # P2-3r3 (2026-08-23): the bounded target never presents, so
+                # the staged fighter's realtime render-production identity
+                # (mode-9 owner runs, native production census, GX compose)
+                # structurally cannot arm here — it is proven on the realtime
+                # route (-RealtimePresentation, green 2026-08-23). The bounded
+                # kind proves the staged fighter's GAMEPLAY: the DONKEY/
+                # specials counters and the natural proof chain below. Require
+                # only that the paths stayed silent-consistent.
+                Assert-Condition (
+                    $publishedFast[0] -eq 9 -and
+                    $publishedFast[1] -eq 0 -and
+                    $publishedFast[2] -eq 0 -and
+                    $p2Prod[1] -eq 0 -and
+                    $p2GX[2] -eq 0
+                ) "Bounded fast staged-$p2ProductionName render paths were not silent-consistent (FAST_FINAL=$($publishedFast -join ',') prod=$($p2Prod -join ',') gx=$($p2GX -join ','))." $gdbStdout
+            } else {
             Assert-Condition (
                 ($publishedP2Triangles -eq 0 -or $p2Visible) -and
                 $publishedFast[0] -eq 9 -and
@@ -3234,6 +3251,7 @@ try {
                 $p2GX[1] -gt 0 -and
                 $p2GX[2] -eq 0
             ) "Staged $p2ProductionName GX matrix composition declined a live owner (captures/locals/declines=$($p2GX -join ','))." $gdbStdout
+            }
         } elseif ($Target -eq 'smash64ds-battle-playable-fast-hwtri') {
             # P2-3r3 (2026-08-23). The bounded source-state target renders
             # every frame through the gcdrawall-loop capture; the realtime

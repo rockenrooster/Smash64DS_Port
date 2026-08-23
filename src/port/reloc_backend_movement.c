@@ -9147,6 +9147,10 @@ static u32 sNdsNaturalCombatAttackFrames;
 static u32 sNdsNaturalCombatAttackPressed;
 static u32 sNdsNaturalCombatPassPressed;
 static f32 sNdsNaturalCombatApproachStopRange;
+/* Arrival-by-contact tracker (P2-3r3): frames the driven approach dx has not
+ * shrunk, and the last |dx| it measured. */
+static u32 sNdsNaturalCombatApproachStagnant;
+static f32 sNdsNaturalCombatApproachLastDX;
 static u32 sNdsNaturalCombatVictimStartPercent;
 static f32 sNdsNaturalCombatVictimHitPosX;
 static u32 sNdsNaturalCombatVictimHitSeen;
@@ -10403,6 +10407,8 @@ void ndsFighterMarioFoxNaturalMotionPrepare(void)
     sNdsNaturalCombatPassPressed = 0u;
     sNdsNaturalCombatApproachStopRange =
         NDS_FIGHTER_NATURAL_COMBAT_APPROACH_STOP_RANGE;
+    sNdsNaturalCombatApproachStagnant = 0u;
+    sNdsNaturalCombatApproachLastDX = 0.0F;
     sNdsNaturalCombatVictimHitSeen = 0u;
     sNdsNaturalCombatVictimHitPosX = 0.0F;
 #if NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET
@@ -11851,8 +11857,38 @@ static void ndsFighterNaturalCombatAdvancePhase(FTStruct *fp[2])
         if ((dx <= sNdsNaturalCombatApproachStopRange) &&
             (dy <= NDS_FIGHTER_NATURAL_COMBAT_APPROACH_FLOOR_Y_RANGE))
         {
+            sNdsNaturalCombatApproachStagnant = 0u;
             ndsFighterNaturalCombatSetPhase(
                 nNDSNaturalCombatPhaseSettleApproach);
+        }
+        else if (dy <= NDS_FIGHTER_NATURAL_COMBAT_APPROACH_FLOOR_Y_RANGE)
+        {
+            /* P2-3r3 (2026-08-23): arrival by body contact. A big fighter's
+             * push radius can exceed the tuned stop range -- Donkey Kong vs
+             * Fox reaches push equilibrium at dx=311.85 against the 240 stop
+             * range, so the approach drove into the body forever (7,601
+             * frames parked). When the drive is active at the same floor
+             * level and dx stops shrinking for a second, the pair is
+             * touching: that IS arrival, for every body size the roster will
+             * ever stage. */
+            f32 addx = (dx < 0.0F) ? -dx : dx;
+
+            if ((sNdsNaturalCombatApproachLastDX - addx) > 0.5F)
+            {
+                sNdsNaturalCombatApproachStagnant = 0u;
+            }
+            else if (++sNdsNaturalCombatApproachStagnant >= 60u)
+            {
+                /* Adopt the contact distance as the pair's stop range so the
+                 * settle and attack checks agree with it; an attack whiff
+                 * retry may still shrink it, and if the pair re-parks the
+                 * stagnation re-adopts it. */
+                sNdsNaturalCombatApproachStagnant = 0u;
+                sNdsNaturalCombatApproachStopRange = addx + 8.0F;
+                ndsFighterNaturalCombatSetPhase(
+                    nNDSNaturalCombatPhaseSettleApproach);
+            }
+            sNdsNaturalCombatApproachLastDX = addx;
         }
         break;
     case nNDSNaturalCombatPhaseSettleApproach:
