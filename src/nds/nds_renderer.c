@@ -29273,6 +29273,49 @@ static void NDS_FIGHTER_PACKET_COLD_CODE ndsFighterPacketFinishRecord(
     packet->valid = 1u;
 }
 
+/* The hit predicate, shared by the replay and the adapter's pre-check so the
+ * two can never disagree about a frame. */
+static s32 ndsFighterPacketMatches(
+    const NDSFighterPacket *packet, const u32 *key, u32 input_count)
+{
+    u32 fence = (packet->needs_fence != 0u) ? key[5] : 0u;
+
+    return ((packet->valid != 0u) && (packet->root_count == input_count) &&
+            (packet->key[0] == key[0]) && (packet->key[1] == key[1]) &&
+            (packet->key[2] == key[2]) && (packet->key[3] == key[3]) &&
+            (packet->key[4] == key[4]) && (packet->key[5] == fence) &&
+            (ndsFighterPacketTexturesResident(packet) != FALSE)) ? TRUE : FALSE;
+}
+
+/* P2-2p4. The adapter asks before it prepares materials: on a hit the replay
+ * reads none of them, and the material rows, snapshots and validation were
+ * 48K ticks a frame of work whose only consumer was the record path. The
+ * answer is exact because the replay evaluates the same predicate on the same
+ * inputs a moment later. */
+s32 ndsRendererFighterPacketPrecheck(
+    u32 slot,
+    u32 use_low_detail,
+    u32 texture_memo_owner_key,
+    u32 packet_key,
+    const NDSRendererNativeFighterRoot *inputs,
+    u32 input_count)
+{
+    u32 battle_slot = (texture_memo_owner_key >> 9) & 3u;
+    u32 key[NDS_FIGHTER_PACKET_KEY_WORDS];
+
+    if ((inputs == NULL) || (input_count == 0u) ||
+        (input_count > NDS_FIGHTER_PACKET_ROOT_MAX) ||
+        (ndsRendererNativeSelectFighterRuntimeTables(
+             slot, use_low_detail) == FALSE))
+    {
+        return FALSE;
+    }
+    ndsFighterPacketBuildKey(texture_memo_owner_key, packet_key,
+                             inputs, input_count, key);
+    return ndsFighterPacketMatches(&sNdsFighterPackets[battle_slot], key,
+                                   input_count);
+}
+
 /* The per-frame path. A hit patches the moving words, flushes, DMAs the
  * packet and leaves every CPU-side GX tracker invalidated so the next writer
  * re-issues its state. A miss arms a record into the slot's arena region and
@@ -29305,15 +29348,7 @@ static s32 __attribute__((noinline)) ndsFighterPacketTryReplay(
     }
     ndsFighterPacketBuildKey(texture_memo_owner_key, packet_key,
                              inputs, input_count, key);
-    if (packet->needs_fence == 0u)
-    {
-        key[5] = 0u;
-    }
-    if ((packet->valid != 0u) && (packet->root_count == input_count) &&
-        (packet->key[0] == key[0]) && (packet->key[1] == key[1]) &&
-        (packet->key[2] == key[2]) && (packet->key[3] == key[3]) &&
-        (packet->key[4] == key[4]) && (packet->key[5] == key[5]) &&
-        (ndsFighterPacketTexturesResident(packet) != FALSE))
+    if (ndsFighterPacketMatches(packet, key, input_count) != FALSE)
     {
         u32 *words = packet->words;
 
@@ -29418,7 +29453,9 @@ static s32 __attribute__((noinline)) ndsFighterPacketTryReplay(
          * re-records every frame costs the record path, not the replay. */
         for (i = 0u; i < NDS_FIGHTER_PACKET_KEY_WORDS; i++)
         {
-            if (packet->key[i] != key[i])
+            u32 want = ((i == 5u) && (packet->needs_fence == 0u)) ? 0u : key[i];
+
+            if (packet->key[i] != want)
             {
                 gNdsFighterPacketMissWord[i]++;
             }
@@ -29520,6 +29557,23 @@ void ndsRendererFighterPacketDmaWait(void)
 
 void ndsRendererFighterPacketRelease(void)
 {
+}
+
+s32 ndsRendererFighterPacketPrecheck(
+    u32 slot,
+    u32 use_low_detail,
+    u32 texture_memo_owner_key,
+    u32 packet_key,
+    const NDSRendererNativeFighterRoot *inputs,
+    u32 input_count)
+{
+    (void)slot;
+    (void)use_low_detail;
+    (void)texture_memo_owner_key;
+    (void)packet_key;
+    (void)inputs;
+    (void)input_count;
+    return FALSE;
 }
 #endif
 

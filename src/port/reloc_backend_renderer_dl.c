@@ -9966,6 +9966,34 @@ _Static_assert(offsetof(MObjSub, light2color) ==
  * material memo computes them per MObj per frame), so this is a few XORs. */
 static u32 sNdsFighterPacketMaterialIdentity;
 
+/* The animation-state hash and identity of every material the selected roots
+ * carry, from the live MObj chains alone -- no rows, no snapshots -- so the
+ * adapter can ask whether the packet will replay before it spends the
+ * preparation on a frame whose replay reads none of it. Taken before any
+ * build on the record path too, so the key means one thing on both paths. */
+static u32 ndsRendererAdapterMaterialIdentity(
+    DObj *const *material_dobjs, u32 count)
+{
+    u32 identity = 2166136261u;
+    u32 i;
+
+    for (i = 0u; i < count; i++)
+    {
+        const DObj *dobj = material_dobjs[i];
+        const MObj *mobj;
+
+        for (mobj = (dobj != NULL) ? dobj->mobj : NULL;
+             mobj != NULL;
+             mobj = mobj->next)
+        {
+            identity = (identity ^ ndsRendererAdapterMaterialAnimHash(mobj)) *
+                       16777619u;
+            identity ^= (u32)(uintptr_t)mobj;
+        }
+    }
+    return identity;
+}
+
 static sb32 ndsRendererAdapterPrepareNativeMaterials(
     DObj *dobj, NDSRendererNativeMaterial *materials,
     u32 capacity, u32 *out_count,
@@ -16447,6 +16475,11 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
     /* Cycle 99. TRUE == this draw replayed the baked plan instead of walking
      * the DObj tree and re-resolving every selected root. */
     sb32 native_owner_plan_hit = FALSE;
+    /* P2-2p4. TRUE == the renderer predicted a packet replay for this draw,
+     * so the material rows/snapshots were skipped and the production inputs
+     * are already built. */
+    sb32 native_owner_packet_predicted = FALSE;
+    u32 native_owner_texture_key = 0u;
 #else
     NDSRendererNativeMaterial *native_materials =
         sNdsRendererAdapterNativeMaterials;
@@ -16984,8 +17017,51 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
              * retained for cache hits, but no stale fighter may make two roots
              * of this fighter alias the same mutable material row. */
             sNdsRendererAdapterMaterialRowClaimMask = 0u;
-            /* The colour modulate is a replay-time tint, not a key input. */
-            sNdsFighterPacketMaterialIdentity = 2166136261u;
+            /* The packet key's material half comes from the live chains alone,
+             * before any row or snapshot work, so the record path and the
+             * replay pre-check below see the same word. The colour modulate is
+             * a replay-time tint, not a key input. */
+            sNdsFighterPacketMaterialIdentity =
+                ndsRendererAdapterMaterialIdentity(
+                    native_owner_material_dobjs, collection.selected_count);
+            /* The domains are disjoint: owner[7:0], detail[8], player[10:9],
+             * appearance[26:11]. This is source costume + shade identity, not a
+             * render approximation. */
+            native_owner_texture_key =
+                (owner_slot & 0xffu) |
+                ((use_low_detail & 1u) << 8) |
+                ((slot & 3u) << 9) |
+                ((((u32)fp->costume) |
+                  ((u32)fp->shade << 8)) & 0xffffu) << 11;
+#if NDS_R2_FIGHTER_PACKET
+            /* P2-2p4. Ask before preparing: on a replay the production owner
+             * reads none of the material rows, snapshots or validation, which
+             * were 48K ticks a frame across four fighters. The inputs built
+             * here are the ones the execute consumes, so a predicted hit is
+             * exact; a predicted miss simply falls through to the preparation
+             * below and rebuilds the inputs once the rows exist. */
+            if ((native_owner_hierarchy_mode == FALSE) &&
+                (detailed_output == FALSE) && (no_oracle != FALSE) &&
+                (ndsRendererAdapterBuildNativeProductionInputs(
+                    owner_slot, color_modulate, native_owner_file, &collection,
+                    native_owner_projection, native_owner_modelviews,
+                    &persistent_state,
+                    &sNdsRendererAdapterNativeOwnerWorkspace
+#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
+    NDS_RENDERER_M2_DETAILED_LEDGER
+                    , m2_owner
+#endif
+                    ) != FALSE) &&
+                (ndsRendererFighterPacketPrecheck(
+                    owner_slot, use_low_detail, native_owner_texture_key,
+                    sNdsFighterPacketMaterialIdentity,
+                    sNdsRendererAdapterNativeOwnerWorkspace.production_roots,
+                    collection.selected_count) != FALSE))
+            {
+                native_owner_packet_predicted = TRUE;
+            }
+            if (native_owner_packet_predicted == FALSE)
+#endif
             for (i = 0u; i < collection.selected_count; i++)
             {
                 u32 prepared_material_count = 0u;
@@ -17010,22 +17086,6 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
                 sNdsRendererAdapterNativeOwnerTextureCounts[i] =
                     prepared_material_count;
                 native_owner_material_saved_root_count = i + 1u;
-#if NDS_R2_FIGHTER_PACKET
-                {
-                    const NDSRendererAdapterMaterialKey *keys =
-                        sNdsRendererAdapterNativeOwnerMaterialKeys[material_row];
-                    u32 m;
-
-                    for (m = 0u; m < prepared_material_count; m++)
-                    {
-                        sNdsFighterPacketMaterialIdentity =
-                            (sNdsFighterPacketMaterialIdentity ^ keys[m].hash) *
-                            16777619u;
-                        sNdsFighterPacketMaterialIdentity ^=
-                            (u32)(uintptr_t)keys[m].mobj;
-                    }
-                }
-#endif
                 if ((prepared == FALSE) ||
                     (prepared_material_count !=
                      native_owner_material_counts[i]) ||
@@ -17089,6 +17149,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
                 &persistent_state,
                 &sNdsRendererAdapterNativeOwnerWorkspace) == FALSE)) ||
             ((native_owner_hierarchy_mode == FALSE) &&
+             (native_owner_packet_predicted == FALSE) &&
              (ndsRendererAdapterBuildNativeProductionInputs(
                 owner_slot, color_modulate, native_owner_file, &collection,
                 native_owner_projection, native_owner_modelviews,
@@ -17135,16 +17196,10 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
                     &production_hardware_started) :
                 ndsRendererExecuteNativeFighterOwnerProduction(
                     owner_slot, use_low_detail,
-                    /* The domains are disjoint: owner[7:0], detail[8],
-                     * player[10:9], appearance[26:11]. This is source costume
-                     * + shade identity, not a render approximation. Pack it in
-                     * main RAM so the 4-CPU build does not spend another 32 B
-                     * of its already-full ITCM on once-per-owner bookkeeping. */
-                    (owner_slot & 0xffu) |
-                        ((use_low_detail & 1u) << 8) |
-                        ((slot & 3u) << 9) |
-                        ((((u32)fp->costume) |
-                          ((u32)fp->shade << 8)) & 0xffffu) << 11,
+                    /* Packed once in the material phase above, in main RAM so
+                     * the 4-CPU build does not spend another 32 B of its
+                     * already-full ITCM on once-per-owner bookkeeping. */
+                    native_owner_texture_key,
                     sNdsFighterPacketMaterialIdentity,
                     native_owner_file->data,
                     sNdsRendererAdapterNativeOwnerWorkspace.production_roots,

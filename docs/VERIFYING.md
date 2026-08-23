@@ -693,7 +693,11 @@ measurements rather than gates:
   `-Only battle-intro,fighter-entry-1` photographs only the named states, and
   `-EntrySeries 12,12,24` adds shots 12/24/48 steps after the first fighter
   entry — a time series of the source entry effect from one run (it consumes
-  the second fighter's entry, so do not list `fighter-entry-2` with it). A
+  the second fighter's entry, so do not list `fighter-entry-2` with it). The
+  parameter is a string split on commas on purpose: through `pwsh -File`, an
+  `[int[]]` given `32,32,64` binds as the single int 323264 and the run steps
+  three hundred thousand logic frames (two runs, 2026-08-23) — keep that
+  shape for any new count-list parameter. A
   boot-into-battle lab ROM (no menu shell) works with `-Only` battle states.
   **A step is one `ndsPlatformEndFrame`, which this target hits once per 60 Hz
   logic frame, not once per presented frame**: `+32` is source frame 32 of the

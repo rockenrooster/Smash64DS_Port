@@ -21,7 +21,12 @@ param(
     # entry effect from one run: `-EntrySeries 16,32,64`. A step is one
     # ndsPlatformEndFrame, which this target reaches once per 60 Hz LOGIC
     # frame (two per presented frame), so +32 is source frame 32.
-    [int[]]$EntrySeries = @()
+    # Strings, not [int[]]: invoked through `pwsh -File`, an [int[]] parameter
+    # given `32,32,64` binds as the single int 323264 (culture-aware parsing
+    # treats the commas as thousands separators), and two runs on 2026-08-23
+    # then stepped three hundred thousand logic frames before their ceiling.
+    # Each element is split on commas below.
+    [string[]]$EntrySeries = @()
 )
 
 # P2-1g visibility, and the phase-level successor to
@@ -102,6 +107,10 @@ $states = @(
     @{ Name = 'fighter-entry-1'; Break = 'ftCommonAppearSetStatus'; Presents = 8 }
 )
 $entryTotal = 8
+$EntrySeries = @($EntrySeries |
+    ForEach-Object { "$_" -split '[,; ]+' } |
+    Where-Object { $_ -ne '' } |
+    ForEach-Object { [int]$_ })
 foreach ($step in $EntrySeries) {
     $entryTotal += $step
     $states += @{ Name = ('fighter-entry-1+' + $entryTotal);

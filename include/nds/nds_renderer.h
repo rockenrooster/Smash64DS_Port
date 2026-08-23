@@ -1331,6 +1331,16 @@ void ndsRendererFighterPacketRelease(void);
  * it before its first FIFO word. A no-op when no DMA is pending or the packet
  * is off. */
 void ndsRendererFighterPacketDmaWait(void);
+/* TRUE when the production execute for these inputs will replay a packet
+ * rather than record one, so the adapter may skip the material preparation
+ * the replay never reads. Exact: the replay evaluates the same predicate. */
+s32 ndsRendererFighterPacketPrecheck(
+    u32 slot,
+    u32 use_low_detail,
+    u32 texture_memo_owner_key,
+    u32 packet_key,
+    const NDSRendererNativeFighterRoot *inputs,
+    u32 input_count);
 /* `packet_key` is the adapter's identity word for everything the fighter
  * packet's static words depend on outside the renderer (live material keys and
  * the colour modulate); the renderer mixes in its own fences. */
