@@ -108,7 +108,9 @@ typedef struct NdsFtPoseJoint
     u8 pad;
     u8 slot_of_track[NDS_FT_POSE_TRACKS];   /* track id -> pool index, or
                                              * NO_SLOT */
-    u16 pad2;
+    u16 last_eval;                      /* pose->tick of the last evaluation:
+                                         * the held ticks are caught up from
+                                         * here (see ndsFtPosePlay) */
 } NdsFtPoseJoint;
 
 typedef struct NdsFtPose
@@ -121,6 +123,7 @@ typedef struct NdsFtPose
     u32 bound;                          /* a figatree is attached */
     u32 attach_pending;                 /* first update after a bind: evaluate */
     u32 body_evaluated;                 /* last update evaluated the body */
+    u32 tick;                           /* updates since the bind */
     u32 pool_used;                      /* tracks handed out since the bind */
     NdsFtPoseJoint *joints;             /* capacity entries */
     NdsFtPoseTrack *pool;               /* NDS_FT_POSE_POOL tracks */
