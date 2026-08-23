@@ -7305,6 +7305,22 @@ static void ndsRendererAdapterFoldDisplayProcOtherModeL(u32 w0, u32 w1)
     sNdsRendererAdapterEffectOtherModeValid = 1u;
 }
 
+/* Both ends of a display-proc span must be real main-RAM DL pointers before
+ * anything walks between them. On the bounded fast target nothing presents,
+ * so `gSYTaskmanDLHeads[]` never receives live DL cursors and holds small
+ * non-NULL residue (the P2-3r3 abort read cursor=0x230 end=0x240: the NULL
+ * guard passed, `ldr [0x230]` took the MPU data abort, and the nested abort
+ * was every "pc=0xfffffffc" corpse the proof harness autopsied). Realtime
+ * builds always carry >= 0x02000000 pointers here, so this is behavior-free
+ * for every shipping configuration. */
+static inline sb32 ndsRendererAdapterDisplayProcSpanValid(const Gfx *cursor,
+                                                          const Gfx *end)
+{
+    return (((uintptr_t)cursor >= 0x02000000u) &&
+            ((uintptr_t)end >= 0x02000000u) &&
+            (cursor < end)) ? TRUE : FALSE;
+}
+
 /* The span one display proc emitted. Folding is idempotent (last writer wins
  * per field), so scanning a span twice -- which the effect path does, once at
  * its own draw and once when the next proc re-marks -- costs nothing. */
@@ -7318,7 +7334,7 @@ static void ndsRendererAdapterScanDisplayProcOtherMode(void)
         const Gfx *end = gSYTaskmanDLHeads[head];
         u32 scanned = 0u;
 
-        if ((cursor == NULL) || (end == NULL) || (cursor >= end))
+        if (ndsRendererAdapterDisplayProcSpanValid(cursor, end) == FALSE)
         {
             continue;
         }
@@ -7364,7 +7380,7 @@ void ndsRendererAdapterCaptureDisplayProcColors(void)
         const Gfx *end = gSYTaskmanDLHeads[head];
         u32 scanned = 0u;
 
-        if ((cursor == NULL) || (end == NULL) || (cursor >= end))
+        if (ndsRendererAdapterDisplayProcSpanValid(cursor, end) == FALSE)
         {
             continue;
         }
