@@ -3309,7 +3309,8 @@ static inline void ndsRendererHardwareBindTextureState(int name)
 #define NDS_FIGHTER_PACKET_LIVE \
     (NDS_R2_FIGHTER_PACKET && NDS_RENDERER_HW_TRIANGLES && \
      (NDS_RENDERER_PROFILE_LEVEL < 2) && \
-     NDS_R2_FIGHTER_GX_COMPOSE && NDS_R2_FIGHTER_HW_MTX)
+     NDS_R2_FIGHTER_GX_COMPOSE && NDS_R2_FIGHTER_HW_MTX && \
+     NDS_R2_FIGHTER_HW_LIGHT)
 #if NDS_FIGHTER_PACKET_LIVE
 #define NDS_FIGHTER_PACKET_SLOTS 4u
 /* 141,440 B of the 147,840-byte framebuffer: stops short of the z-buffer start
@@ -3332,6 +3333,39 @@ typedef struct NDSFighterPacketRoot
     u8 seed_is_identity;
 } NDSFighterPacketRoot;
 
+/* One DIF_AMB word the shade wrote. The churn census (2026-08-23, 480
+ * frames of the four-CPU arm) put 222 of 350 re-records on the hurt flash --
+ * the colour modulate and the root prim move every flash frame -- so the
+ * word is re-derived on replay from the recorded light colours and the live
+ * prim/modulate instead of invalidating the packet: exactly the shade's
+ * ndsRendererR2MaterialColor15 inputs, with `prim_from_root` saying whether
+ * the material colour was the root preamble's prim (follows the flash) or a
+ * material/state-delta override (stays as recorded, as the source does). */
+typedef struct NDSFighterPacketShadeSite
+{
+    u16 index;
+    u8 root;
+    u8 use_material;
+    u8 prim_from_root;
+    u8 reserved[3];
+    u32 light_color_1;
+    u32 light_color_2;
+    u32 material_color;
+} NDSFighterPacketShadeSite;
+
+/* A texture the packet binds, validated on replay against the hardware
+ * cache entry it was recorded from, so an eviction or re-upload of THIS
+ * fighter's textures re-records this packet alone. */
+typedef struct NDSFighterPacketTexture
+{
+    u16 slot_plus1;
+    u16 name;
+    u32 key_generation;
+} NDSFighterPacketTexture;
+
+#define NDS_FIGHTER_PACKET_SITE_MAX 64u
+#define NDS_FIGHTER_PACKET_TEXTURE_MAX 16u
+
 typedef struct NDSFighterPacket
 {
     u32 valid;
@@ -3344,19 +3378,29 @@ typedef struct NDSFighterPacket
     u16 light_index;
     u8 light_root;
     u8 light_valid;
-    u8 reserved[2];
+    /* Set when a textured bind left no cache entry to validate; the packet
+     * then keeps the global texture generation fence in its key. */
+    u8 needs_fence;
+    u8 texture_count;
     u32 triangle_count;
     u32 run_count;
     u32 raw_triangles;
     u32 raw_reuse;
     u32 cross_triangles;
     u32 cross_reuse;
+    u32 site_count;
+    /* The prim/modulate the shade sites currently encode. */
+    u32 tint_modulate;
+    u32 tint_prim_hash;
     NDSFighterPacketRoot roots[NDS_FIGHTER_PACKET_ROOT_MAX];
+    NDSFighterPacketShadeSite sites[NDS_FIGHTER_PACKET_SITE_MAX];
+    NDSFighterPacketTexture textures[NDS_FIGHTER_PACKET_TEXTURE_MAX];
 } NDSFighterPacket;
 
 typedef struct NDSFighterPacketRecorder
 {
     NDSFighterPacket *packet;
+    const NDSRendererNativeFighterRoot *inputs;
     u32 *words;
     u32 count;
     u32 capacity;
@@ -3366,6 +3410,8 @@ typedef struct NDSFighterPacketRecorder
     u32 header_valid;
     u32 fault;
     u32 current_root;
+    /* A material or state delta rewrote prim_color under the current root. */
+    u32 prim_overridden;
 } NDSFighterPacketRecorder;
 
 static NDSFighterPacket sNdsFighterPackets[NDS_FIGHTER_PACKET_SLOTS];
@@ -3376,9 +3422,9 @@ volatile u32 gNdsFighterPacketRecords;
 volatile u32 gNdsFighterPacketFaults;
 volatile u32 gNdsFighterPacketDeclines;
 volatile u32 gNdsFighterPacketWordsMax;
-/* Per key word (plus root count at the end): how often a valid packet was
- * invalidated by that word alone or with others. */
-volatile u32 gNdsFighterPacketMissWord[NDS_FIGHTER_PACKET_KEY_WORDS + 1u];
+/* Per key word (then root count, then texture residency): how often a valid
+ * packet was invalidated by that cause, alone or with others. */
+volatile u32 gNdsFighterPacketMissWord[NDS_FIGHTER_PACKET_KEY_WORDS + 2u];
 
 /* One predictable test at each GX state write the production path makes;
  * zero cost when no packet is being recorded. The ITCM region is full (the
@@ -3518,6 +3564,10 @@ static void NDS_FIGHTER_PACKET_COLD_CODE ndsFighterPacketRecordBoundTexture(void
     }
 }
 
+/* Defined with the replay: it reads the hardware texture cache, which is
+ * declared after this block. */
+static void ndsFighterPacketNoteTextureEntry(void);
+
 /* One hook at the end of a run's texture prepare stands in for the three
  * batch writes the production path makes through shared, ITCM-resident
  * helpers (texture bind, POLYGON_ATTR, BEGIN). Those helpers write only when
@@ -3531,6 +3581,7 @@ ndsFighterPacketRecordPrepare(u32 use_texture, u32 poly_fmt)
     if (use_texture != 0u)
     {
         ndsFighterPacketRecordBoundTexture();
+        ndsFighterPacketNoteTextureEntry();
     }
     else
     {
@@ -3538,6 +3589,37 @@ ndsFighterPacketRecordPrepare(u32 use_texture, u32 poly_fmt)
     }
     ndsFighterPacketCmd1(REG2ID(GFX_POLY_FORMAT), poly_fmt);
     ndsFighterPacketCmd1(FIFO_BEGIN, (u32)GL_TRIANGLE);
+}
+
+/* The shade's DIF_AMB write and the inputs that re-derive it on replay. */
+static void NDS_FIGHTER_PACKET_COLD_CODE
+ndsFighterPacketRecordDiffuseAmbient(
+    u32 word, u32 light_color_1, u32 light_color_2,
+    u32 material_color, u32 use_material)
+{
+    NDSFighterPacketRecorder *rec = &sNdsFighterPacketRecorder;
+    u32 i = ndsFighterPacketCmd(REG2ID(GFX_DIFFUSE_AMBIENT), 1u);
+    NDSFighterPacketShadeSite *site;
+
+    if ((rec->fault != 0u) || (rec->packet == NULL))
+    {
+        return;
+    }
+    rec->words[i] = word;
+    if (rec->packet->site_count >= NDS_FIGHTER_PACKET_SITE_MAX)
+    {
+        rec->fault = 1u;
+        return;
+    }
+    site = &rec->packet->sites[rec->packet->site_count++];
+    site->index = (u16)i;
+    site->root = (u8)rec->current_root;
+    site->use_material = (use_material != 0u) ? 1u : 0u;
+    site->prim_from_root =
+        ((use_material != 0u) && (rec->prim_overridden == 0u)) ? 1u : 0u;
+    site->light_color_1 = light_color_1;
+    site->light_color_2 = light_color_2;
+    site->material_color = material_color;
 }
 
 static void NDS_FIGHTER_PACKET_COLD_CODE ndsFighterPacketBeginRoot(
@@ -3548,6 +3630,7 @@ static void NDS_FIGHTER_PACKET_COLD_CODE ndsFighterPacketBeginRoot(
     u32 j;
 
     rec->current_root = root_index;
+    rec->prim_overridden = 0u;
     if ((rec->packet == NULL) ||
         (root_index >= NDS_FIGHTER_PACKET_ROOT_MAX) ||
         ((u32)input->gx_local_count > NDS_FIGHTER_PACKET_LOCAL_MAX))
@@ -23783,6 +23866,7 @@ ndsRendererNativeApplyStateDelta(
         break;
     case NDS_NATIVE_STATE_PRIM:
         NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(state);
+        NDS_FIGHTER_PACKET_HOOK(sNdsFighterPacketRecorder.prim_overridden = 1u);
         stats->prim_color = delta->w1;
         stats->prim_min_level = (delta->w0 >> 8) & 0xffu;
         stats->prim_lod_fraction = delta->w0 & 0xffu;
@@ -23940,6 +24024,7 @@ static void ndsRendererNativeApplyMaterial(
     if ((effects & NDS_RENDERER_NATIVE_MATERIAL_PRIM) != 0u)
     {
         NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(state);
+        NDS_FIGHTER_PACKET_HOOK(sNdsFighterPacketRecorder.prim_overridden = 1u);
         stats->prim_color = material->prim_w1;
         stats->prim_min_level = (material->prim_w0 >> 8) & 0xffu;
         stats->prim_lod_fraction = material->prim_w0 & 0xffu;
@@ -27242,8 +27327,10 @@ ndsRendererNativeShadeProductionActions(
 
         ndsRendererHardwareWriteDiffuseAmbient(diffuse | (ambient << 16));
         NDS_FIGHTER_PACKET_HOOK(
-            ndsFighterPacketCmd1(REG2ID(GFX_DIFFUSE_AMBIENT),
-                                 diffuse | (ambient << 16)));
+            ndsFighterPacketRecordDiffuseAmbient(
+                diffuse | (ambient << 16),
+                stats->light_color_1, stats->light_color_2,
+                material_color, use_material));
         hardware_lit = TRUE;
     }
 #endif
@@ -28931,15 +29018,13 @@ static void ndsFighterPacketBuildKey(
                                             preamble->cycle_type);
         preamble_hash = ndsFighterPacketMix(preamble_hash,
                                             preamble->render_mode);
-        preamble_hash = ndsFighterPacketMix(preamble_hash,
-                                            preamble->prim_color);
+        /* prim_color and the colour modulate are deliberately NOT here: the
+         * shade sites re-derive their DIF_AMB words from them on replay. */
         preamble_hash = ndsFighterPacketMix(preamble_hash,
                                             preamble->env_color);
         preamble_hash = ndsFighterPacketMix(preamble_hash, preamble->flags);
         preamble_hash = ndsFighterPacketMix(
             preamble_hash, input->config->initial_geometry_mode);
-        preamble_hash = ndsFighterPacketMix(
-            preamble_hash, input->config->color_modulate);
         preamble_hash = ndsFighterPacketMix(preamble_hash,
                                             input->material_count);
         shape_hash = ndsFighterPacketMix(
@@ -28956,8 +29041,116 @@ static void ndsFighterPacketBuildKey(
              (gNdsTaskmanHeapGeneration * 0x9E3779B1u);
     key[3] = preamble_hash;
     key[4] = shape_hash ^ (input_count << 26);
+    /* The global texture fence is only part of the key for a packet whose
+     * textures could not be validated individually (needs_fence). */
     key[5] = sNdsRendererHardwareTextureKeyGeneration ^
              (sNdsRendererRuntimeTextureCacheEvictCount << 16);
+}
+
+static void NDS_FIGHTER_PACKET_COLD_CODE ndsFighterPacketNoteTextureEntry(void)
+{
+    NDSFighterPacketRecorder *rec = &sNdsFighterPacketRecorder;
+    NDSFighterPacket *packet = rec->packet;
+    const NDSRendererHardwareTextureCacheEntry *entry =
+        sNdsRendererHardwareActiveTextureEntry;
+    u32 slot;
+    u32 i;
+
+    if (packet == NULL)
+    {
+        return;
+    }
+    if (entry == NULL)
+    {
+        packet->needs_fence = 1u;
+        return;
+    }
+    slot = (u32)(entry - sNdsRendererHardwareTextureCache);
+    if (slot >= NDS_RENDERER_HW_TEXTURE_CACHE_COUNT)
+    {
+        packet->needs_fence = 1u;
+        return;
+    }
+    for (i = 0u; i < (u32)packet->texture_count; i++)
+    {
+        if (packet->textures[i].slot_plus1 == slot + 1u)
+        {
+            return;
+        }
+    }
+    if ((u32)packet->texture_count >= NDS_FIGHTER_PACKET_TEXTURE_MAX)
+    {
+        packet->needs_fence = 1u;
+        return;
+    }
+    packet->textures[packet->texture_count].slot_plus1 = (u16)(slot + 1u);
+    packet->textures[packet->texture_count].name = (u16)entry->name;
+    packet->textures[packet->texture_count].key_generation =
+        entry->key_generation;
+    packet->texture_count++;
+}
+
+static s32 ndsFighterPacketTexturesResident(const NDSFighterPacket *packet)
+{
+    u32 i;
+
+    for (i = 0u; i < (u32)packet->texture_count; i++)
+    {
+        const NDSFighterPacketTexture *texture = &packet->textures[i];
+        const NDSRendererHardwareTextureCacheEntry *entry =
+            &sNdsRendererHardwareTextureCache[texture->slot_plus1 - 1u];
+
+        if ((entry->ready == FALSE) ||
+            ((u32)(u16)entry->name != (u32)texture->name) ||
+            (entry->key_generation != texture->key_generation))
+        {
+            return FALSE;
+        }
+    }
+    return TRUE;
+}
+
+/* Re-derive every shade site's DIF_AMB word for the live prim/modulate.
+ * Skipped when neither moved since the words were last derived. */
+static void ndsFighterPacketApplyTint(
+    NDSFighterPacket *packet, const NDSRendererNativeFighterRoot *inputs)
+{
+    u32 modulate = inputs[0].config->color_modulate;
+    u32 prim_hash = 2166136261u;
+    u32 i;
+
+    for (i = 0u; i < packet->root_count; i++)
+    {
+        prim_hash = ndsFighterPacketMix(prim_hash,
+                                        inputs[i].preamble->prim_color);
+    }
+    if ((packet->tint_modulate == modulate) &&
+        (packet->tint_prim_hash == prim_hash))
+    {
+        return;
+    }
+    for (i = 0u; i < packet->site_count; i++)
+    {
+        const NDSFighterPacketShadeSite *site = &packet->sites[i];
+        u32 material_color = site->material_color;
+        u32 diffuse;
+        u32 ambient;
+
+        if ((site->prim_from_root != 0u) &&
+            ((u32)site->root < packet->root_count))
+        {
+            material_color = inputs[site->root].preamble->prim_color;
+        }
+        diffuse = ndsRendererR2MaterialColor15(
+            site->light_color_1, material_color, site->use_material,
+            modulate);
+        ambient = ndsRendererR2MaterialColor15(
+            site->light_color_2, material_color, site->use_material,
+            modulate);
+        packet->words[site->index] = diffuse | (ambient << 16);
+    }
+    packet->tint_modulate = modulate;
+    packet->tint_prim_hash = prim_hash;
 }
 
 /* ndsRendererR2WriteLightVector's normalisation, same hardware units. */
@@ -29029,6 +29222,10 @@ static void NDS_FIGHTER_PACKET_COLD_CODE ndsFighterPacketFinishRecord(
         return;
     }
     packet->word_count = rec->count;
+    if (packet->needs_fence == 0u)
+    {
+        packet->key[5] = 0u;
+    }
     packet->run_count = run_count;
     packet->triangle_count = triangle_count;
     packet->raw_triangles = raw_triangles;
@@ -29075,13 +29272,19 @@ static s32 __attribute__((noinline)) ndsFighterPacketTryReplay(
     }
     ndsFighterPacketBuildKey(texture_memo_owner_key, packet_key,
                              inputs, input_count, key);
+    if (packet->needs_fence == 0u)
+    {
+        key[5] = 0u;
+    }
     if ((packet->valid != 0u) && (packet->root_count == input_count) &&
         (packet->key[0] == key[0]) && (packet->key[1] == key[1]) &&
         (packet->key[2] == key[2]) && (packet->key[3] == key[3]) &&
-        (packet->key[4] == key[4]) && (packet->key[5] == key[5]))
+        (packet->key[4] == key[4]) && (packet->key[5] == key[5]) &&
+        (ndsFighterPacketTexturesResident(packet) != FALSE))
     {
         u32 *words = packet->words;
 
+        ndsFighterPacketApplyTint(packet, inputs);
         if (packet->projection_index != NDS_FIGHTER_PACKET_INDEX_NONE)
         {
             ndsFighterPacketStoreMatrix4x4(
@@ -29190,6 +29393,10 @@ static s32 __attribute__((noinline)) ndsFighterPacketTryReplay(
         {
             gNdsFighterPacketMissWord[NDS_FIGHTER_PACKET_KEY_WORDS]++;
         }
+        if (ndsFighterPacketTexturesResident(packet) == FALSE)
+        {
+            gNdsFighterPacketMissWord[NDS_FIGHTER_PACKET_KEY_WORDS + 1u]++;
+        }
     }
     packet->valid = 0u;
     region_words = (use_low_detail != 0u) ?
@@ -29213,7 +29420,19 @@ static s32 __attribute__((noinline)) ndsFighterPacketTryReplay(
     packet->light_index = NDS_FIGHTER_PACKET_INDEX_NONE;
     packet->light_root = 0u;
     packet->light_valid = 0u;
+    packet->needs_fence = 0u;
+    packet->texture_count = 0u;
+    packet->site_count = 0u;
+    packet->tint_modulate = inputs[0].config->color_modulate;
+    packet->tint_prim_hash = 2166136261u;
+    for (i = 0u; i < input_count; i++)
+    {
+        packet->tint_prim_hash = ndsFighterPacketMix(
+            packet->tint_prim_hash, inputs[i].preamble->prim_color);
+    }
     rec->packet = packet;
+    rec->inputs = inputs;
+    rec->prim_overridden = 0u;
     rec->words = packet->words;
     rec->count = 0u;
     rec->capacity = packet->word_capacity;

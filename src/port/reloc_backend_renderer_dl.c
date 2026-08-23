@@ -16984,7 +16984,8 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
              * retained for cache hits, but no stale fighter may make two roots
              * of this fighter alias the same mutable material row. */
             sNdsRendererAdapterMaterialRowClaimMask = 0u;
-            sNdsFighterPacketMaterialIdentity = 2166136261u ^ color_modulate;
+            /* The colour modulate is a replay-time tint, not a key input. */
+            sNdsFighterPacketMaterialIdentity = 2166136261u;
             for (i = 0u; i < collection.selected_count; i++)
             {
                 u32 prepared_material_count = 0u;

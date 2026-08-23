@@ -95,12 +95,15 @@ their owner visual/play residuals; P2-3 is the active implementation frontier.
    seed; the rise to 420 is the source's own motion), "Luigi has issues" waits
    on specifics, and the stopped DK agent's `NDS_P2_DONKEY` proof work sits
    uncommitted in the tree until compiled under the flag.
-4. **Performance remains debt, not a green claim.** The four-CPU stress arm is
-   correctness/memory green but is nowhere near 1.12m ticks (`ALL` P50
-   1,678,144; `WORK-H` P50 1,603,904). Its largest median lanes are FTR 671,296
-   and SRC 586,368. Measure a structural cut on the current four-CPU basis
-   before spending a build on micro-optimizations; source update/order semantics
-   remain non-negotiable.
+4. **Performance remains debt, not a green claim — the structural cut is in
+   flight (board rows P2-2p1..p4).** Four-CPU arm on the current tree:
+   `WORK-H` P50/P95 1,600,832 / 2,069,824; without any fighter draw 993,792 /
+   1,462,144, so the four draws are 607K at P50. `NDS_R2_FIGHTER_PACKET=1`
+   (lab, default off; DMA replay of each fighter's recorded GX stream) reads
+   1,415,552 / 2,022,144 with the FTR lane 665,920 → 414,528, gate green. Next:
+   re-record churn (flash tint patch, per-packet texture residency), DMA
+   overlap, hit-path adapter trimming; then the remaining gap is the source
+   lanes (SRC 586K P50 / 1,009K P95), parked behind the sacrifice order.
 
 The phase-close run also fixed verifier drift rather than bypassing it:
 `verify-all.ps1 -NoBuild` now resolves retained per-harness artifacts through
