@@ -1722,7 +1722,27 @@ static void ndsFighterPartsSyncDObj(FTStruct *fp, DObj *dobj, u32 joint_id)
         return;
     }
     slot = fp->nds_slot;
-    parts = &sNdsFighterPartsPool[slot][joint_id];
+    /* P2-3r3 (2026-08-23). BattleShip hands parts out of ONE free list in
+     * DObj-materialisation order (ftmanager.c:154), so `[slot][joint]`
+     * arithmetic into the flat buffer is only right while every earlier
+     * fighter consumed exactly nFTPartsJointNumMax parts. Mario does; Donkey
+     * Kong consumes 26, so the second fighter's real parts start 11 slots
+     * before where the arithmetic points — the port then synced 37 unrelated
+     * entries and left Fox's actual parts at vec_scale (0,0,0), which the
+     * damage-collide guard reads as "reject every hit" (the kind-2
+     * unhittable-Fox stall). The part the source already assigned to this
+     * DObj is the truth; the arithmetic remains only for the compat
+     * constructor, whose DObjs arrive with no assignment. */
+    {
+        FTParts *assigned = (FTParts *)dobj->user_data.p;
+        FTParts *pool_lo = &sNdsFighterPartsPool[0][0];
+        FTParts *pool_hi = &sNdsFighterPartsPool[GMCOMMON_PLAYERS_MAX][0];
+
+        parts = ((assigned != NULL) &&
+                 (assigned >= pool_lo) && (assigned < pool_hi))
+            ? assigned
+            : &sNdsFighterPartsPool[slot][joint_id];
+    }
     translate = &dobj->translate.vec.f;
     scale = &dobj->scale.vec.f;
 
