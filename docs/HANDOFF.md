@@ -107,8 +107,12 @@ their owner visual/play residuals; P2-3 is the active implementation frontier.
    published `smash64ds.nds` carries it (owner visual pass pending). The
    replay credits the record frame's presented-work counters on every hit
    (batches, prepares, binds, matrix loads, vertex loads), so harness
-   contracts stay exact. The remaining gap is the source lanes (SRC 594K
-   P50 / 1,033K P95, OTHR 360K), parked behind the sacrifice order.
+   contracts stay exact. P2-2p5 (collision getter early-out, in-place
+   kind-1 matrix convert, exact scale compare) took the arm to 1,264,512 /
+   1,836,800. The remaining gap is the source lanes (animation evaluation
+   ~170K tk/fr, joint matrices ~65K, collision soft-float ~58K+) — board row
+   P2-2p6 batches the owner decision (precomputed poses vs 30 Hz pose
+   evaluation) the next structural cut needs; no build is spent until then.
 
 The phase-close run also fixed verifier drift rather than bypassing it:
 `verify-all.ps1 -NoBuild` now resolves retained per-harness artifacts through
