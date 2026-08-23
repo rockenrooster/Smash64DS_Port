@@ -2160,6 +2160,17 @@ ifeq ($(TARGET),smash64ds-battle-playable-fast-hwtri)
 override NDS_DEV_SCENE_HARNESS := battle_playable
 override NDS_DEV_LIVE_INPUT_PREVIEW := 0
 override NDS_HARNESS_FAST_LOGIC := 1
+# The battlepack blob buys gameplay-frame CPU at the price of ~288 KiB of
+# arena residency. This target's charter (above) says no tick figure from it
+# is a performance figure, and with the pack resident the bounded proof's
+# memory ledger ends the run at 95,424 B headroom against its 131,072 B
+# reserve (P2-3r3, 2026-08-23). BATTLEPACK=0 with KEEP_CACHE=1 is the
+# measured isolation-control arm (2026-08-15 BATTLEPACK_ISOLATION.md): the
+# grown arena and raw cache stay exactly as the shipping pair has them, only
+# the blob is absent — headroom returns without changing any address the
+# pack arm measured.
+override NDS_R2_BATTLEPACK := 0
+override NDS_R2_BATTLEPACK_KEEP_CACHE := 1
 override NDS_RENDERER_HW_TRIANGLES := 1
 override NDS_DEBUG_HUD := 0
 override NDS_RENDERER_PROFILE_LEVEL := 0

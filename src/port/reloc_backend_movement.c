@@ -12223,6 +12223,42 @@ static sb32 ndsFighterNaturalMovesetApplyInput(FTStruct *fp[2],
             f32 dx = other_x - self_x;
             f32 adx = (dx < 0.0F) ? -dx : dx;
             sb32 wait_ready = ndsFighterNaturalMovesetBothGroundWait(fp);
+            f32 y0 = fp[0]->coll_data.p_translate->y;
+            f32 y1 = fp[1]->coll_data.p_translate->y;
+            f32 dy = (y0 > y1) ? (y0 - y1) : (y1 - y0);
+            u32 pass_slot = (y0 > y1) ? 0u : 1u;
+
+            /* P2-3r3 (2026-08-23). A post-KO rebirth Fall can land the victim
+             * on a pass-through platform (observed: Dream Land top platform,
+             * y=1542, while the attacker ground-chased at y=0 and sat in
+             * Catch for 6,125 frames). Both fighters are then legitimately in
+             * ground Wait, so the grab drive mashed at an unreachable target
+             * forever. Reuse the Wait-phase Down-tap pass drive: pulse the
+             * elevated fighter down through its floor until the pair shares
+             * a level, then chase and grab as before. Same re-arm latch; the
+             * proof still exercises ftCommonPassCheckInputSuccess and forces
+             * no position, collision, or fighter state. */
+            if ((dy > NDS_FIGHTER_NATURAL_COMBAT_APPROACH_FLOOR_Y_RANGE) &&
+                (fp[pass_slot]->status_id == nFTCommonStatusWait) &&
+                (fp[pass_slot]->ga == nMPKineticsGround) &&
+                ((fp[pass_slot]->coll_data.floor_flags &
+                  MAP_VERTEX_COLL_PASS) != 0))
+            {
+                if (sNdsNaturalCombatPassPressed == 0u)
+                {
+                    stick_y[pass_slot] = -80;
+                    sNdsNaturalCombatPassPressed = 1u;
+                }
+                else if (ABS(fp[pass_slot]->input.pl.stick_range.y) < 20)
+                {
+                    sNdsNaturalCombatPassPressed = 0u;
+                }
+                break;
+            }
+            if (dy <= NDS_FIGHTER_NATURAL_COMBAT_APPROACH_FLOOR_Y_RANGE)
+            {
+                sNdsNaturalCombatPassPressed = 0u;
+            }
 
             if (adx > NDS_FIGHTER_NATURAL_MOVESET_GRAB_STOP_RANGE)
             {
