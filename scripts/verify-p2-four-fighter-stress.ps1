@@ -5,6 +5,10 @@ param(
     [int]$GdbPort = 4613,
     [int]$RunnerSlot = -1,
     [switch]$NoBuild,
+    # Lab A/B only: point at a sizing build of the SAME target (for example one
+    # compiled with NDS_R2_DRAW_SUPPRESS_MASK). The registry gate never passes
+    # this, so the default remains the configuration-exact gate build.
+    [string]$Build = 'build-p2-fourcpu-tickhud',
     # Calibrated from the first crash-free four-CPU source match: source
     # identity/clock are read exactly at presented frame 1, while the tick-HUD
     # ring's first populated timing sample is frame 2. Frames 2..1973 therefore
@@ -23,7 +27,7 @@ param(
 $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $target = 'smash64ds-p2-fourcpu-tickhud-hwtri'
-$build = 'build-p2-fourcpu-tickhud'
+$build = $Build
 $coverageStartFrame = 1
 
 if ([string]::IsNullOrWhiteSpace($JsonOut)) {

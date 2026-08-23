@@ -3294,6 +3294,308 @@ static inline void ndsRendererHardwareBindTextureState(int name)
         NDS_RENDERER_GX_STATE_TEXTURE_PARAMS);
 }
 
+/* P2-2 fighter packet. The four-CPU stress arm measured the four fighter draws
+ * at 607,040 ticks of a 1,600,832-tick median frame (NDS_R2_DRAW_SUPPRESS_MASK
+ * =15 A/B, 2026-08-23), almost all of it CPU work re-deriving and re-pushing a
+ * command stream that is identical from one frame to the next. This captures
+ * the stream once per fighter as packed GXFIFO words -- the format the stage
+ * replay already DMAs -- and replays it by DMA, patching only what moves: the
+ * projection, each root's seed and joint-chain matrices, and the light vector.
+ * Everything else the words depend on is in the key; a key miss re-records
+ * through the ordinary path, with the hooks below teeing into the packet the
+ * words the hardware receives. The words live in gSYFramebufferSets, which
+ * nothing touches during a battle (include/sys/video.h), and the Results entry
+ * restores that buffer's clear through ndsRendererFighterPacketRelease. */
+#define NDS_FIGHTER_PACKET_LIVE \
+    (NDS_R2_FIGHTER_PACKET && NDS_RENDERER_HW_TRIANGLES && \
+     (NDS_RENDERER_PROFILE_LEVEL < 2) && \
+     NDS_R2_FIGHTER_GX_COMPOSE && NDS_R2_FIGHTER_HW_MTX)
+#if NDS_FIGHTER_PACKET_LIVE
+#define NDS_FIGHTER_PACKET_SLOTS 4u
+/* 141,440 B of the 147,840-byte framebuffer: stops short of the z-buffer start
+ * pointer that sys/video.h documents as aliased into the buffer's tail. */
+#define NDS_FIGHTER_PACKET_ARENA_WORDS 35360u
+#define NDS_FIGHTER_PACKET_ROOT_MAX 32u
+#define NDS_FIGHTER_PACKET_LOCAL_MAX 8u
+#define NDS_FIGHTER_PACKET_INDEX_NONE 0xffffu
+#define NDS_FIGHTER_PACKET_KEY_WORDS 6u
+
+typedef struct NDSFighterPacketRoot
+{
+    u16 seed_index;
+    /* One index per MULT4x3: a packed header word can fall between two of
+     * them, so their parameter blocks are not contiguous. */
+    u16 local_index[NDS_FIGHTER_PACKET_LOCAL_MAX];
+    u8 local_count;
+    u8 parent_slot;
+    u8 store_slot;
+    u8 seed_is_identity;
+} NDSFighterPacketRoot;
+
+typedef struct NDSFighterPacket
+{
+    u32 valid;
+    u32 key[NDS_FIGHTER_PACKET_KEY_WORDS];
+    u32 *words;
+    u32 word_count;
+    u32 word_capacity;
+    u32 root_count;
+    u16 projection_index;
+    u16 light_index;
+    u8 light_root;
+    u8 light_valid;
+    u8 reserved[2];
+    u32 triangle_count;
+    u32 run_count;
+    u32 raw_triangles;
+    u32 raw_reuse;
+    u32 cross_triangles;
+    u32 cross_reuse;
+    NDSFighterPacketRoot roots[NDS_FIGHTER_PACKET_ROOT_MAX];
+} NDSFighterPacket;
+
+typedef struct NDSFighterPacketRecorder
+{
+    NDSFighterPacket *packet;
+    u32 *words;
+    u32 count;
+    u32 capacity;
+    u32 cmd_slot;
+    u32 cmd_word;
+    u32 header_params;
+    u32 header_valid;
+    u32 fault;
+    u32 current_root;
+} NDSFighterPacketRecorder;
+
+static NDSFighterPacket sNdsFighterPackets[NDS_FIGHTER_PACKET_SLOTS];
+static NDSFighterPacketRecorder sNdsFighterPacketRecorder;
+static u32 sNdsFighterPacketRecording;
+volatile u32 gNdsFighterPacketHits;
+volatile u32 gNdsFighterPacketRecords;
+volatile u32 gNdsFighterPacketFaults;
+volatile u32 gNdsFighterPacketDeclines;
+volatile u32 gNdsFighterPacketWordsMax;
+/* Per key word (plus root count at the end): how often a valid packet was
+ * invalidated by that word alone or with others. */
+volatile u32 gNdsFighterPacketMissWord[NDS_FIGHTER_PACKET_KEY_WORDS + 1u];
+
+/* One predictable test at each GX state write the production path makes;
+ * zero cost when no packet is being recorded. The ITCM region is full (the
+ * first link of this feature overflowed it by 2,112 bytes), so every record
+ * helper a hook reaches is noinline, cold and size-optimised: the hook leaves
+ * a test and a call in ITCM, nothing else. */
+#define NDS_FIGHTER_PACKET_HOOK(stmt) \
+    do { if (sNdsFighterPacketRecording != 0u) { stmt; } } while (0)
+#define NDS_FIGHTER_PACKET_COLD_CODE \
+    __attribute__((noinline, cold, optimize("Os")))
+/* The hook sites still cost ITCM (496 bytes at the second link), and the
+ * region was full. Four residents the 2026-08-22 four-CPU census ranks at the
+ * bottom of its rent table (ndsRendererSetParticleCamera 320 B at 1,314
+ * cycles/byte, ndsRendererMtxLoadN64ToDS20p12 256 B, ndsRendererRecordSetTileSize
+ * 180 B, ndsRendererRecordLoadBlock 100 B -- under 3,000 ticks/frame between
+ * them) go to main RAM in a packet build only, so the control arm keeps its
+ * exact placement. */
+#define NDS_FIGHTER_PACKET_EVICT(attr)
+
+/* Packed geometry command: a header word carries up to four opcodes and each
+ * opcode's parameters follow in order. A header whose commands take no
+ * parameters at all gets one dummy word, the display-list convention. Returns
+ * the index of the command's first parameter word. */
+static u32 NDS_FIGHTER_PACKET_COLD_CODE
+ndsFighterPacketCmd(u32 opcode, u32 param_count)
+{
+    NDSFighterPacketRecorder *rec = &sNdsFighterPacketRecorder;
+    u32 first;
+
+    if (rec->fault != 0u)
+    {
+        return 0u;
+    }
+    if (rec->cmd_slot >= 4u)
+    {
+        if ((rec->header_valid != 0u) && (rec->header_params == 0u))
+        {
+            if (rec->count >= rec->capacity)
+            {
+                rec->fault = 1u;
+                return 0u;
+            }
+            rec->words[rec->count++] = 0u;
+        }
+        if (rec->count >= rec->capacity)
+        {
+            rec->fault = 1u;
+            return 0u;
+        }
+        rec->cmd_word = rec->count++;
+        rec->words[rec->cmd_word] = 0u;
+        rec->cmd_slot = 0u;
+        rec->header_params = 0u;
+        rec->header_valid = 1u;
+    }
+    if (rec->count + param_count > rec->capacity)
+    {
+        rec->fault = 1u;
+        return 0u;
+    }
+    rec->words[rec->cmd_word] |= opcode << (rec->cmd_slot * 8u);
+    rec->cmd_slot++;
+    rec->header_params += param_count;
+    first = rec->count;
+    rec->count += param_count;
+    return first;
+}
+
+static void NDS_FIGHTER_PACKET_COLD_CODE ndsFighterPacketCmd0(u32 opcode)
+{
+    (void)ndsFighterPacketCmd(opcode, 0u);
+}
+
+static void NDS_FIGHTER_PACKET_COLD_CODE
+ndsFighterPacketCmd1(u32 opcode, u32 word)
+{
+    u32 i = ndsFighterPacketCmd(opcode, 1u);
+
+    if (sNdsFighterPacketRecorder.fault == 0u)
+    {
+        sNdsFighterPacketRecorder.words[i] = word;
+    }
+}
+
+static void NDS_FIGHTER_PACKET_COLD_CODE
+ndsFighterPacketCmd2(u32 opcode, u32 a, u32 b)
+{
+    u32 i = ndsFighterPacketCmd(opcode, 2u);
+
+    if (sNdsFighterPacketRecorder.fault == 0u)
+    {
+        sNdsFighterPacketRecorder.words[i] = a;
+        sNdsFighterPacketRecorder.words[i + 1u] = b;
+    }
+}
+
+static void ndsFighterPacketStoreMatrix4x4(
+    u32 *dst, const NDSRendererMatrix20p12 *m)
+{
+    u32 row;
+
+    for (row = 0u; row < 4u; row++)
+    {
+        *dst++ = (u32)m->m[row][0];
+        *dst++ = (u32)m->m[row][1];
+        *dst++ = (u32)m->m[row][2];
+        *dst++ = (u32)m->m[row][3];
+    }
+}
+
+static void ndsFighterPacketStoreMatrix4x3(
+    u32 *dst, const NDSRendererMatrix20p12 *m)
+{
+    u32 row;
+
+    for (row = 0u; row < 4u; row++)
+    {
+        *dst++ = (u32)m->m[row][0];
+        *dst++ = (u32)m->m[row][1];
+        *dst++ = (u32)m->m[row][2];
+    }
+}
+
+/* The texture the hardware holds right now: libnds keeps the full
+ * TEXIMAGE_PARAM word and the palette base it wrote, so the packet records
+ * exactly the bind the production path just performed. */
+static void NDS_FIGHTER_PACKET_COLD_CODE ndsFighterPacketRecordBoundTexture(void)
+{
+    int palette_format = -1;
+
+    ndsFighterPacketCmd1(REG2ID(GFX_TEX_FORMAT), glGetTexParameter());
+    glGetColorTableParameterEXT(
+        GL_TEXTURE_2D, GL_COLOR_TABLE_FORMAT_EXT, &palette_format);
+    if (palette_format >= 0)
+    {
+        ndsFighterPacketCmd1(REG2ID(GFX_PAL_FORMAT), (u32)palette_format);
+    }
+}
+
+/* One hook at the end of a run's texture prepare stands in for the three
+ * batch writes the production path makes through shared, ITCM-resident
+ * helpers (texture bind, POLYGON_ATTR, BEGIN). Those helpers write only when
+ * their shadow state changes; the packet writes all three at every prepare,
+ * which is the same hardware state because a prepare sits at a primitive
+ * boundary and the first prepare of a record follows a full tracker reset. An
+ * untextured run binds libnds's no-texture object, whose TEXIMAGE_PARAM is 0. */
+static void NDS_FIGHTER_PACKET_COLD_CODE
+ndsFighterPacketRecordPrepare(u32 use_texture, u32 poly_fmt)
+{
+    if (use_texture != 0u)
+    {
+        ndsFighterPacketRecordBoundTexture();
+    }
+    else
+    {
+        ndsFighterPacketCmd1(REG2ID(GFX_TEX_FORMAT), 0u);
+    }
+    ndsFighterPacketCmd1(REG2ID(GFX_POLY_FORMAT), poly_fmt);
+    ndsFighterPacketCmd1(FIFO_BEGIN, (u32)GL_TRIANGLE);
+}
+
+static void NDS_FIGHTER_PACKET_COLD_CODE ndsFighterPacketBeginRoot(
+    u32 root_index, const NDSRendererNativeFighterRoot *input)
+{
+    NDSFighterPacketRecorder *rec = &sNdsFighterPacketRecorder;
+    NDSFighterPacketRoot *root;
+    u32 j;
+
+    rec->current_root = root_index;
+    if ((rec->packet == NULL) ||
+        (root_index >= NDS_FIGHTER_PACKET_ROOT_MAX) ||
+        ((u32)input->gx_local_count > NDS_FIGHTER_PACKET_LOCAL_MAX))
+    {
+        rec->fault = 1u;
+        return;
+    }
+    root = &rec->packet->roots[root_index];
+    root->seed_index = NDS_FIGHTER_PACKET_INDEX_NONE;
+    for (j = 0u; j < NDS_FIGHTER_PACKET_LOCAL_MAX; j++)
+    {
+        root->local_index[j] = NDS_FIGHTER_PACKET_INDEX_NONE;
+    }
+    root->local_count = input->gx_local_count;
+    root->parent_slot = input->gx_parent_slot;
+    root->store_slot = input->gx_store_slot;
+    root->seed_is_identity = input->gx_seed_is_identity;
+}
+
+/* ndsRendererR2WriteLightVector's five commands; the vector word is the
+ * per-frame patch. */
+static void NDS_FIGHTER_PACKET_COLD_CODE
+ndsFighterPacketRecordLightVector(u32 word)
+{
+    NDSFighterPacketRecorder *rec = &sNdsFighterPacketRecorder;
+    u32 i;
+
+    ndsFighterPacketCmd1(REG2ID(MATRIX_CONTROL), (u32)GL_MODELVIEW);
+    ndsFighterPacketCmd0(REG2ID(MATRIX_PUSH));
+    ndsFighterPacketCmd0(REG2ID(MATRIX_IDENTITY));
+    i = ndsFighterPacketCmd(REG2ID(GFX_LIGHT_VECTOR), 1u);
+    if ((rec->fault == 0u) && (rec->packet != NULL))
+    {
+        rec->words[i] = word;
+        if (rec->packet->light_index == NDS_FIGHTER_PACKET_INDEX_NONE)
+        {
+            rec->packet->light_index = (u16)i;
+            rec->packet->light_root = (u8)rec->current_root;
+            rec->packet->light_valid = 1u;
+        }
+    }
+    ndsFighterPacketCmd1(REG2ID(MATRIX_POP), 1u);
+}
+#else
+#define NDS_FIGHTER_PACKET_HOOK(stmt) ((void)0)
+#define NDS_FIGHTER_PACKET_EVICT(attr) attr
+#endif
+
 static inline void ndsRendererHardwareSetMatrixMode(int mode)
 {
 #if NDS_RENDERER_M3_PHASE0_PROFILE
@@ -7248,7 +7550,7 @@ static void ndsRendererMtxStoreDS20p12ToN64(
     }
 }
 
-void NDS_TASK82_ITCM_CODE
+void NDS_FIGHTER_PACKET_EVICT(NDS_TASK82_ITCM_CODE)
 ndsRendererMtxLoadN64ToDS20p12(const Mtx *src,
                                     NDSRendererMatrix20p12 *dst)
 {
@@ -7978,7 +8280,7 @@ static void ndsRendererCaptureTextureLoad(NDSRendererStats *stats)
                    (stats->texture_tiles[tile].set_seen != 0u)) ? TRUE : FALSE;
 }
 
-static void NDS_R2_DELTA_PATH_CODE
+static void NDS_FIGHTER_PACKET_EVICT(NDS_R2_DELTA_PATH_CODE)
 ndsRendererRecordLoadBlock(NDSRendererStats *stats, u32 w0, u32 w1)
 {
     if (stats == NULL)
@@ -8034,7 +8336,7 @@ static void ndsRendererRecordLoadTile(NDSRendererStats *stats,
     ndsRendererCaptureTextureLoad(stats);
 }
 
-static void NDS_R2_DELTA_PATH_CODE
+static void NDS_FIGHTER_PACKET_EVICT(NDS_R2_DELTA_PATH_CODE)
 ndsRendererRecordSetTileSize(NDSRendererStats *stats, u32 w0, u32 w1)
 {
     u32 tile_index;
@@ -14398,7 +14700,7 @@ static NDSRendererMatrix20p12 sNdsRendererParticleProjection;
 static NDSRendererMatrix20p12 sNdsRendererParticleModelview;
 static u32 sNdsRendererParticleCameraValid;
 
-void NDS_R2_ITCM_PACK2_CODE
+void NDS_FIGHTER_PACKET_EVICT(NDS_R2_ITCM_PACK2_CODE)
 ndsRendererSetParticleCamera(const NDSRendererMatrix20p12 *projection,
                                   const NDSRendererMatrix20p12 *modelview)
 {
@@ -19992,6 +20294,83 @@ static inline void ndsRendererHardwareFighterMultMatrixWorldScaled(
  * commands acts on the position and vector matrices together -- which is what
  * NDS_R2_FIGHTER_HW_LIGHT needs, and the scale is a no-op on the 3x3 vector
  * matrix because it only touches row 3. */
+#if NDS_FIGHTER_PACKET_LIVE
+/* Record-frame tees for the loader below. Each records the parameter index the
+ * replay patches every frame; the world-unit scale is a constant. */
+static void ndsFighterPacketRecordProjection(
+    const NDSRendererMatrix20p12 *projection)
+{
+    NDSFighterPacketRecorder *rec = &sNdsFighterPacketRecorder;
+    u32 i;
+
+    ndsFighterPacketCmd1(REG2ID(MATRIX_CONTROL), (u32)GL_PROJECTION);
+    i = ndsFighterPacketCmd(REG2ID(MATRIX_LOAD4x4), 16u);
+    if ((rec->fault == 0u) && (rec->packet != NULL))
+    {
+        ndsFighterPacketStoreMatrix4x4(&rec->words[i], projection);
+        if (rec->packet->projection_index == NDS_FIGHTER_PACKET_INDEX_NONE)
+        {
+            rec->packet->projection_index = (u16)i;
+        }
+    }
+}
+
+static void ndsFighterPacketRecordSeed(const NDSRendererMatrix20p12 *seed)
+{
+    NDSFighterPacketRecorder *rec = &sNdsFighterPacketRecorder;
+    u32 i = ndsFighterPacketCmd(REG2ID(MATRIX_LOAD4x4), 16u);
+
+    if ((rec->fault == 0u) && (rec->packet != NULL) &&
+        (rec->current_root < NDS_FIGHTER_PACKET_ROOT_MAX))
+    {
+        ndsFighterPacketStoreMatrix4x4(&rec->words[i], seed);
+        rec->packet->roots[rec->current_root].seed_index = (u16)i;
+    }
+}
+
+static void ndsFighterPacketRecordLocal(
+    u32 local, const NDSRendererMatrix20p12 *matrix)
+{
+    NDSFighterPacketRecorder *rec = &sNdsFighterPacketRecorder;
+    u32 i = ndsFighterPacketCmd(REG2ID(MATRIX_MULT4x3), 12u);
+
+    if ((rec->fault == 0u) && (rec->packet != NULL) &&
+        (rec->current_root < NDS_FIGHTER_PACKET_ROOT_MAX) &&
+        (local < NDS_FIGHTER_PACKET_LOCAL_MAX))
+    {
+        ndsFighterPacketStoreMatrix4x3(&rec->words[i], matrix);
+        rec->packet->roots[rec->current_root].local_index[local] = (u16)i;
+    }
+}
+
+static void ndsFighterPacketRecordWorldScaled(
+    const NDSRendererMatrix20p12 *matrix)
+{
+    NDSFighterPacketRecorder *rec = &sNdsFighterPacketRecorder;
+    u32 i = ndsFighterPacketCmd(REG2ID(MATRIX_MULT4x4), 16u);
+
+    if (rec->fault == 0u)
+    {
+        u32 *dst = &rec->words[i];
+        u32 row;
+        u32 col;
+
+        for (row = 0u; row < 3u; row++)
+        {
+            *dst++ = (u32)matrix->m[row][0];
+            *dst++ = (u32)matrix->m[row][1];
+            *dst++ = (u32)matrix->m[row][2];
+            *dst++ = (u32)matrix->m[row][3];
+        }
+        for (col = 0u; col < 4u; col++)
+        {
+            *dst++ = (u32)ndsRendererRoundShiftS32Signed(
+                matrix->m[3][col], NDS_RENDERER_HW_WORLD_UNIT_SHIFT);
+        }
+    }
+}
+#endif
+
 static void __attribute__((noinline)) NDS_R2_ITCM_PACK2_CODE
 ndsRendererLoadHardwareGxComposedMatrices(
     const NDSRendererNativeFighterRoot *input, u32 generation)
@@ -20065,6 +20444,83 @@ ndsRendererLoadHardwareGxComposedMatrices(
     sNdsRendererHardwareMatrixGeneration = generation;
     sNdsRendererHardwareMatrixLoaded = FALSE;
 }
+
+#if NDS_FIGHTER_PACKET_LIVE
+/* Record-frame twin of the loader above, selected per root by the production
+ * execute: the hardware receives exactly the words the loader pushes, and the
+ * packet records them with the parameter indices the replay patches. Main RAM
+ * and cold -- it runs only on the frame a packet is recorded -- which is what
+ * keeps the record path out of the full ITCM region. */
+static void NDS_FIGHTER_PACKET_COLD_CODE
+ndsFighterPacketLoadGxComposedRecord(
+    u32 root_index, const NDSRendererNativeFighterRoot *input, u32 generation)
+{
+    u32 i;
+
+    ndsFighterPacketBeginRoot(root_index, input);
+    if ((input->projection_matrix == NULL) || (input->gx_seed == NULL) ||
+        ((input->gx_local_count != 0u) && (input->gx_locals == NULL)))
+    {
+        sNdsFighterPacketRecorder.fault = 1u;
+        return;
+    }
+    ndsRendererHardwareEndBatch();
+    if (input->projection_matrix != sNdsR2GxLastProjection)
+    {
+        ndsRendererHardwareFighterSetMatrixMode(GL_PROJECTION);
+        ndsRendererHardwareFighterLoadMatrix4x4(input->projection_matrix);
+        sNdsR2GxLastProjection = input->projection_matrix;
+        ndsFighterPacketRecordProjection(input->projection_matrix);
+    }
+    else
+    {
+        gNdsR2GxComposeProjectionSkips++;
+    }
+    ndsRendererHardwareFighterSetMatrixMode(GL_MODELVIEW);
+    ndsFighterPacketCmd1(REG2ID(MATRIX_CONTROL), (u32)GL_MODELVIEW);
+    if (input->gx_parent_slot >= NDS_RENDERER_FIGHTER_GX_SLOT_NONE)
+    {
+        if (input->gx_seed_is_identity != 0u)
+        {
+            MATRIX_IDENTITY = 0;
+            ndsFighterPacketCmd0(REG2ID(MATRIX_IDENTITY));
+        }
+        else
+        {
+            ndsRendererHardwareFighterLoadMatrix4x4(input->gx_seed);
+            ndsFighterPacketRecordSeed(input->gx_seed);
+        }
+    }
+    else
+    {
+        MATRIX_RESTORE = input->gx_parent_slot;
+        ndsFighterPacketCmd1(REG2ID(MATRIX_RESTORE),
+                             (u32)input->gx_parent_slot);
+        gNdsR2GxComposeRestores++;
+    }
+    for (i = 0u; i < (u32)input->gx_local_count; i++)
+    {
+        ndsRendererHardwareFighterMultMatrix4x3(&input->gx_locals[i]);
+        ndsFighterPacketRecordLocal(i, &input->gx_locals[i]);
+    }
+    gNdsR2GxComposeMults += (u32)input->gx_local_count;
+    if (input->gx_store_slot < NDS_RENDERER_FIGHTER_GX_SLOT_NONE)
+    {
+        MATRIX_STORE = input->gx_store_slot;
+        ndsFighterPacketCmd1(REG2ID(MATRIX_STORE),
+                             (u32)input->gx_store_slot);
+        gNdsR2GxComposeStores++;
+    }
+    ndsRendererHardwareFighterMultMatrixWorldScaled(&sNdsR2GxIdentity20p12);
+    ndsFighterPacketRecordWorldScaled(&sNdsR2GxIdentity20p12);
+    gNdsR2GxComposeRoots++;
+
+    ndsRendererProfileRecordMatrixLoad();
+    sNdsRendererHardwareMatrixMode = NDS_RENDERER_HW_MATRIX_MODE_RAW_COMPOSED;
+    sNdsRendererHardwareMatrixGeneration = generation;
+    sNdsRendererHardwareMatrixLoaded = FALSE;
+}
+#endif
 #endif
 #endif
 
@@ -26457,6 +26913,8 @@ static void __attribute__((noinline)) ndsRendererR2WriteLightVector(
     glLoadIdentity();
     GFX_LIGHT_VECTOR = NDS_R2_NORMAL_PACK((int)nx, (int)ny, (int)nz);
     glPopMatrix(1);
+    NDS_FIGHTER_PACKET_HOOK(ndsFighterPacketRecordLightVector(
+        NDS_R2_NORMAL_PACK((int)nx, (int)ny, (int)nz)));
     gNdsR2LightVectorWrites++;
     sNdsR2LightVectorWritten = 1u;
 }
@@ -26783,6 +27241,9 @@ ndsRendererNativeShadeProductionActions(
             state->color_modulate);
 
         ndsRendererHardwareWriteDiffuseAmbient(diffuse | (ambient << 16));
+        NDS_FIGHTER_PACKET_HOOK(
+            ndsFighterPacketCmd1(REG2ID(GFX_DIFFUSE_AMBIENT),
+                                 diffuse | (ambient << 16)));
         hardware_lit = TRUE;
     }
 #endif
@@ -27739,6 +28200,12 @@ ndsRendererNativePrepareProductionRunCore(
         state->texture_prepare_origin_s = texture_origin_s;
         state->texture_prepare_origin_t = texture_origin_t;
         state->texture_prepare_offset = texture_offset;
+        /* The bind this block just performed (memo or full resolver) is the
+         * texture the runs under it draw with; record it, the polygon
+         * attributes and the BEGIN after the params are applied so the packet
+         * carries the final TEXIMAGE_PARAM word. */
+        NDS_FIGHTER_PACKET_HOOK(ndsFighterPacketRecordPrepare(
+            use_texture, state->texture_prepare_poly_fmt));
         if (packet_mode == 0u)
         {
             ndsRendererProfileRecordTexturePrepare();
@@ -28218,6 +28685,154 @@ ndsRendererNativeEmitProductionCrossRun(
     }
 }
 
+#if NDS_FIGHTER_PACKET_LIVE && (NDS_TASK56_FIGHTER_PRIMITIVES >= 1)
+#if NDS_LAB_CULL_PROBE
+#error "NDS_R2_FIGHTER_PACKET does not carry the lab cull tint"
+#endif
+/* Record-frame twins of the two production emitters: the hardware receives
+ * exactly the words the plain emitters push, and the packet receives the same
+ * words packed. Main RAM on purpose -- they run only on the frame a packet is
+ * (re)recorded. */
+static inline void ndsFighterPacketEmitCornerShade(u32 dense_id)
+{
+#if NDS_R2_FIGHTER_HW_LIGHT
+#if NDS_R2_UNLIT_VERTEX_EPOCH
+    if (sNdsR2EpochUnlitVertexColor != 0u)
+    {
+        u32 color = ndsRendererR2DenseVertexColor15(dense_id);
+
+        ndsRendererHardwareWriteFighterColorWord(color);
+        ndsFighterPacketCmd1(FIFO_COLOR, color);
+        return;
+    }
+#endif
+    {
+        u32 normal = sNdsNativeFighterActiveDenseNormals[dense_id];
+
+        ndsRendererHardwareWriteNormalWord(normal);
+        ndsFighterPacketCmd1(FIFO_NORMAL, normal);
+    }
+#else
+    {
+        u32 color =
+            sNdsNativeFighterActiveTables->prepared_dense[dense_id].packed_color;
+
+        ndsRendererHardwareWriteFighterColorWord(color);
+        ndsFighterPacketCmd1(FIFO_COLOR, color);
+    }
+#endif
+}
+
+static inline void ndsFighterPacketEmitCornerTail(
+    const NDSNativePreparedDenseVertex *prepared, u32 textured)
+{
+    if (textured != 0u)
+    {
+        u32 st = (u32)(u16)prepared->s | ((u32)(u16)prepared->t << 16);
+
+        ndsRendererHardwareWriteFighterTexCoordWord(st);
+        ndsFighterPacketCmd1(FIFO_TEX_COORD, st);
+    }
+    ndsRendererHardwareWriteFighterVertex16Words(
+        prepared->gx_xy, prepared->gx_z);
+    ndsFighterPacketCmd2(FIFO_VERTEX16, prepared->gx_xy, prepared->gx_z);
+}
+
+static void NDS_RENDERER_NATIVE_FIGHTER_MAIN_CODE
+ndsRendererNativeEmitProductionPrimitiveGroupsPacket(
+    u32 run_index,
+    u32 textured)
+{
+    u32 g = sNdsNativeFighterActiveTables->primitive_group_first[run_index];
+    u32 remaining_groups =
+        sNdsNativeFighterActiveTables->primitive_group_count[run_index];
+    u32 current_type = (u32)GL_TRIANGLE;
+
+    while (remaining_groups-- != 0u)
+    {
+        u32 gtype = sNdsNativeFighterActiveTables->primitive_group_type[g];
+        const u16 *vref = &sNdsNativeFighterActiveTables->primitive_vertices[
+            sNdsNativeFighterActiveTables->primitive_group_first_vertex[g]];
+        u32 remaining =
+            sNdsNativeFighterActiveTables->primitive_group_vertex_count[g];
+
+        g++;
+        if ((gtype != current_type) || (gtype != (u32)GL_TRIANGLE))
+        {
+            glBegin((GL_GLBEGIN_ENUM)gtype);
+            ndsFighterPacketCmd1(FIFO_BEGIN, gtype);
+            current_type = gtype;
+        }
+        while (remaining-- != 0u)
+        {
+            u32 dense_id = *vref++;
+
+            ndsFighterPacketEmitCornerShade(dense_id);
+            ndsFighterPacketEmitCornerTail(
+                &sNdsNativeFighterActiveTables->prepared_dense[dense_id],
+                textured);
+        }
+    }
+    if (current_type != (u32)GL_TRIANGLE)
+    {
+        glBegin(GL_TRIANGLE);
+        ndsFighterPacketCmd1(FIFO_BEGIN, (u32)GL_TRIANGLE);
+    }
+}
+
+static void NDS_RENDERER_NATIVE_FIGHTER_MAIN_CODE
+ndsRendererNativeEmitProductionCrossRunPacket(
+    u32 run_index,
+    u32 corner_count,
+    u32 textured,
+    u32 current_palette_slot,
+    const u8 *binding_palette_slots)
+{
+    const u16 *corner =
+        &sNdsNativeFighterActiveTables->packed_corners[
+            sNdsNativeFighterActiveTables->run_first_corner[run_index]];
+    u32 active_palette_slot = current_palette_slot;
+    u32 remaining = corner_count;
+
+    while (remaining-- != 0u)
+    {
+        u32 packed = *corner++;
+        u32 dense_id = packed & NDS_NATIVE_DENSE_ID_MASK;
+        const NDSNativeDenseVertex *dense =
+            &sNdsNativeFighterActiveTables->dense_vertices[dense_id];
+        u32 palette_slot;
+
+        if (binding_palette_slots != NULL)
+        {
+            palette_slot = binding_palette_slots[dense->matrix_binding];
+        }
+        else
+        {
+            palette_slot = packed >> NDS_NATIVE_PACKED_CORNER_MATRIX_SHIFT;
+        }
+        if (palette_slot == NDS_NATIVE_GX_MATRIX_CURRENT)
+        {
+            palette_slot = current_palette_slot;
+        }
+        if (palette_slot != active_palette_slot)
+        {
+            glRestoreMatrix((int)palette_slot);
+            ndsFighterPacketCmd1(REG2ID(MATRIX_RESTORE), palette_slot);
+            active_palette_slot = palette_slot;
+        }
+        ndsFighterPacketEmitCornerShade(dense_id);
+        ndsFighterPacketEmitCornerTail(
+            &sNdsNativeFighterActiveTables->prepared_dense[dense_id],
+            textured);
+    }
+    if (active_palette_slot != current_palette_slot)
+    {
+        glRestoreMatrix((int)current_palette_slot);
+        ndsFighterPacketCmd1(REG2ID(MATRIX_RESTORE), current_palette_slot);
+    }
+}
+#endif
+
 static inline void ndsRendererNativeAccountGXCrossTriangles(
     NDSRendererStats *stats,
     u32 triangle_count,
@@ -28277,6 +28892,372 @@ u32 gNdsR2ExecRootTicks;
 u32 gNdsR2ExecStateTicks;
 u32 gNdsR2ExecShadeTicks;
 u32 gNdsR2ExecEpochCalls;
+#endif
+
+#if NDS_FIGHTER_PACKET_LIVE
+extern u16 gSYFramebufferSets[1][231][320];
+
+static u32 ndsFighterPacketMix(u32 hash, u32 value)
+{
+    return (hash ^ value) * 16777619u;
+}
+
+/* Every input the packet's static words were derived from, cheap enough to
+ * hash per fighter per frame: the adapter's material identity (live MObj keys
+ * plus the colour modulate), the owner/costume/detail/instance key, the
+ * generated program and arena generation, each root's display preamble minus
+ * the patched light direction, each root's chain shape, and the texture cache
+ * placement fences. */
+static void ndsFighterPacketBuildKey(
+    u32 texture_memo_owner_key,
+    u32 packet_key,
+    const NDSRendererNativeFighterRoot *inputs,
+    u32 input_count,
+    u32 *key)
+{
+    u32 preamble_hash = 2166136261u;
+    u32 shape_hash = 2166136261u;
+    u32 i;
+
+    for (i = 0u; i < input_count; i++)
+    {
+        const NDSRendererNativeFighterRoot *input = &inputs[i];
+        const NDSRendererNativeFighterPreamble *preamble = input->preamble;
+
+        preamble_hash = ndsFighterPacketMix(preamble_hash, input->root_offset);
+        preamble_hash = ndsFighterPacketMix(preamble_hash,
+                                            preamble->geometry_mode);
+        preamble_hash = ndsFighterPacketMix(preamble_hash,
+                                            preamble->cycle_type);
+        preamble_hash = ndsFighterPacketMix(preamble_hash,
+                                            preamble->render_mode);
+        preamble_hash = ndsFighterPacketMix(preamble_hash,
+                                            preamble->prim_color);
+        preamble_hash = ndsFighterPacketMix(preamble_hash,
+                                            preamble->env_color);
+        preamble_hash = ndsFighterPacketMix(preamble_hash, preamble->flags);
+        preamble_hash = ndsFighterPacketMix(
+            preamble_hash, input->config->initial_geometry_mode);
+        preamble_hash = ndsFighterPacketMix(
+            preamble_hash, input->config->color_modulate);
+        preamble_hash = ndsFighterPacketMix(preamble_hash,
+                                            input->material_count);
+        shape_hash = ndsFighterPacketMix(
+            shape_hash,
+            (u32)input->gx_parent_slot |
+                ((u32)input->gx_store_slot << 8) |
+                ((u32)input->gx_local_count << 16) |
+                ((u32)input->gx_seed_is_identity << 24) |
+                ((u32)input->gx_valid << 25));
+    }
+    key[0] = packet_key;
+    key[1] = texture_memo_owner_key;
+    key[2] = (u32)(uintptr_t)sNdsNativeFighterActiveTables ^
+             (gNdsTaskmanHeapGeneration * 0x9E3779B1u);
+    key[3] = preamble_hash;
+    key[4] = shape_hash ^ (input_count << 26);
+    key[5] = sNdsRendererHardwareTextureKeyGeneration ^
+             (sNdsRendererRuntimeTextureCacheEvictCount << 16);
+}
+
+/* ndsRendererR2WriteLightVector's normalisation, same hardware units. */
+static u32 ndsFighterPacketLightWord(s32 x, s32 y, s32 z)
+{
+    s64 length_squared = ((s64)x * x) + ((s64)y * y) + ((s64)z * z);
+    s32 nx = 0;
+    s32 ny = 0;
+    s32 nz = 0;
+
+    if (length_squared > 0)
+    {
+        u32 length = ndsR2HwMathSqrt64((u64)length_squared);
+
+        if (length != 0u)
+        {
+            nx = (s32)ndsR2HwMathDiv64(-(s64)x * 511, (s32)length);
+            ny = (s32)ndsR2HwMathDiv64(-(s64)y * 511, (s32)length);
+            nz = (s32)ndsR2HwMathDiv64(-(s64)z * 511, (s32)length);
+        }
+    }
+    return NDS_R2_NORMAL_PACK((int)nx, (int)ny, (int)nz);
+}
+
+static void NDS_FIGHTER_PACKET_COLD_CODE ndsFighterPacketAbortRecord(void)
+{
+    NDSFighterPacketRecorder *rec = &sNdsFighterPacketRecorder;
+
+    sNdsFighterPacketRecording = 0u;
+    if (rec->packet != NULL)
+    {
+        rec->packet->valid = 0u;
+    }
+    gNdsFighterPacketFaults++;
+}
+
+static void NDS_FIGHTER_PACKET_COLD_CODE ndsFighterPacketFinishRecord(
+    u32 run_count,
+    u32 triangle_count,
+    u32 raw_triangles,
+    u32 raw_reuse,
+    u32 cross_triangles,
+    u32 cross_reuse)
+{
+    NDSFighterPacketRecorder *rec = &sNdsFighterPacketRecorder;
+    NDSFighterPacket *packet = rec->packet;
+
+    sNdsFighterPacketRecording = 0u;
+    if (packet == NULL)
+    {
+        return;
+    }
+    if ((rec->fault == 0u) && (rec->header_valid != 0u) &&
+        (rec->header_params == 0u))
+    {
+        if (rec->count < rec->capacity)
+        {
+            rec->words[rec->count++] = 0u;
+        }
+        else
+        {
+            rec->fault = 1u;
+        }
+    }
+    if ((rec->fault != 0u) || (rec->count == 0u))
+    {
+        packet->valid = 0u;
+        gNdsFighterPacketFaults++;
+        return;
+    }
+    packet->word_count = rec->count;
+    packet->run_count = run_count;
+    packet->triangle_count = triangle_count;
+    packet->raw_triangles = raw_triangles;
+    packet->raw_reuse = raw_reuse;
+    packet->cross_triangles = cross_triangles;
+    packet->cross_reuse = cross_reuse;
+    DC_FlushRange(packet->words, packet->word_count * sizeof(u32));
+    if (packet->word_count > gNdsFighterPacketWordsMax)
+    {
+        gNdsFighterPacketWordsMax = packet->word_count;
+    }
+    packet->valid = 1u;
+}
+
+/* The per-frame path. A hit patches the moving words, flushes, DMAs the
+ * packet and leaves every CPU-side GX tracker invalidated so the next writer
+ * re-issues its state. A miss arms a record into the slot's arena region and
+ * resets the same trackers, so the record frame's first root writes -- and
+ * the packet captures -- every word a self-contained replay needs. Returns 1
+ * on a hit, 0 when the caller must run the ordinary path. */
+static s32 __attribute__((noinline)) ndsFighterPacketTryReplay(
+    u32 use_low_detail,
+    u32 texture_memo_owner_key,
+    u32 packet_key,
+    const NDSRendererNativeFighterRoot *inputs,
+    u32 input_count,
+    NDSRendererStats *stats,
+    u32 *out_hardware_started)
+{
+    u32 battle_slot = (texture_memo_owner_key >> 9) & 3u;
+    NDSFighterPacket *packet = &sNdsFighterPackets[battle_slot];
+    NDSFighterPacketRecorder *rec = &sNdsFighterPacketRecorder;
+    u32 key[NDS_FIGHTER_PACKET_KEY_WORDS];
+    u32 region_words;
+    u32 region_base;
+    u32 i;
+
+    sNdsFighterPacketRecording = 0u;
+    rec->packet = NULL;
+    if ((input_count == 0u) || (input_count > NDS_FIGHTER_PACKET_ROOT_MAX))
+    {
+        gNdsFighterPacketDeclines++;
+        return 0;
+    }
+    ndsFighterPacketBuildKey(texture_memo_owner_key, packet_key,
+                             inputs, input_count, key);
+    if ((packet->valid != 0u) && (packet->root_count == input_count) &&
+        (packet->key[0] == key[0]) && (packet->key[1] == key[1]) &&
+        (packet->key[2] == key[2]) && (packet->key[3] == key[3]) &&
+        (packet->key[4] == key[4]) && (packet->key[5] == key[5]))
+    {
+        u32 *words = packet->words;
+
+        if (packet->projection_index != NDS_FIGHTER_PACKET_INDEX_NONE)
+        {
+            ndsFighterPacketStoreMatrix4x4(
+                &words[packet->projection_index],
+                inputs[0].projection_matrix);
+        }
+        for (i = 0u; i < input_count; i++)
+        {
+            const NDSRendererNativeFighterRoot *input = &inputs[i];
+            const NDSFighterPacketRoot *root = &packet->roots[i];
+            u32 j;
+
+            if (root->seed_index != NDS_FIGHTER_PACKET_INDEX_NONE)
+            {
+                ndsFighterPacketStoreMatrix4x4(
+                    &words[root->seed_index], input->gx_seed);
+            }
+            for (j = 0u; j < (u32)root->local_count; j++)
+            {
+                if (root->local_index[j] != NDS_FIGHTER_PACKET_INDEX_NONE)
+                {
+                    ndsFighterPacketStoreMatrix4x3(
+                        &words[root->local_index[j]], &input->gx_locals[j]);
+                }
+            }
+        }
+        if ((packet->light_index != NDS_FIGHTER_PACKET_INDEX_NONE) &&
+            (packet->light_valid != 0u) &&
+            ((u32)packet->light_root < input_count))
+        {
+            const NDSRendererNativeFighterPreamble *preamble =
+                inputs[packet->light_root].preamble;
+
+            if ((preamble->flags &
+                 NDS_RENDERER_NATIVE_PREAMBLE_LIGHT_VALID) != 0u)
+            {
+                words[packet->light_index] = ndsFighterPacketLightWord(
+                    preamble->light_dir_x, preamble->light_dir_y,
+                    preamble->light_dir_z);
+            }
+        }
+        DC_FlushRange(words, packet->word_count * sizeof(u32));
+
+        ndsRendererHardwareEndBatch();
+        glEnable(GL_TEXTURE_2D);
+        glDisable(GL_ALPHA_TEST);
+        glDisable(GL_FOG);
+        while ((DMA_CR(0) & DMA_BUSY) != 0u) { }
+        DMA_SRC(0) = (u32)(uintptr_t)words;
+        DMA_DEST(0) = (u32)(uintptr_t)&GFX_FIFO;
+        DMA_CR(0) = DMA_FIFO | packet->word_count;
+        while ((DMA_CR(0) & DMA_BUSY) != 0u) { }
+
+        ndsRendererHardwareInvalidateGXState(NDS_RENDERER_GX_STATE_ALL);
+        sNdsRendererHardwareBoundTextureName = 0u;
+        sNdsRendererHardwareActiveTextureEntry = NULL;
+        sNdsR2GxLastProjection = NULL;
+        sNdsRendererHardwareMatrixMode =
+            NDS_RENDERER_HW_MATRIX_MODE_RAW_COMPOSED;
+        sNdsRendererHardwareMatrixGeneration = ndsRendererNextMatrixGeneration();
+        sNdsRendererHardwareMatrixLoaded = FALSE;
+
+        if (stats->first_opcode == 0u)
+        {
+            stats->first_opcode = NDS_RENDERER_OP_RDPPIPESYNC;
+        }
+        if (packet->raw_triangles != 0u)
+        {
+            ndsRendererFastAccountRawTriangles(
+                stats, packet->raw_triangles, packet->raw_reuse);
+        }
+        if (packet->cross_triangles != 0u)
+        {
+            ndsRendererNativeAccountGXCrossTriangles(
+                stats, packet->cross_triangles, packet->cross_reuse);
+        }
+        stats->triangle_count += packet->triangle_count;
+        sNdsRendererFastRunCount += packet->run_count;
+        sNdsRendererFastTriangleCount += packet->triangle_count;
+        if ((u32)sNdsRendererRuntimeOwner <
+            (u32)NDS_RENDERER_PROFILE_OWNER_COUNT)
+        {
+            sNdsRendererFastOwnerTriangleCount[
+                (u32)sNdsRendererRuntimeOwner] += packet->triangle_count;
+        }
+        *out_hardware_started = TRUE;
+        gNdsFighterPacketHits++;
+        return 1;
+    }
+
+    /* Miss: arm a record into this slot's region. Two-fighter (High detail)
+     * matches get half the arena each; three or more (the source's Low
+     * JointTree) a quarter. */
+    if (packet->valid != 0u)
+    {
+        /* Which key words moved, for the churn census: a stale packet that
+         * re-records every frame costs the record path, not the replay. */
+        for (i = 0u; i < NDS_FIGHTER_PACKET_KEY_WORDS; i++)
+        {
+            if (packet->key[i] != key[i])
+            {
+                gNdsFighterPacketMissWord[i]++;
+            }
+        }
+        if (packet->root_count != input_count)
+        {
+            gNdsFighterPacketMissWord[NDS_FIGHTER_PACKET_KEY_WORDS]++;
+        }
+    }
+    packet->valid = 0u;
+    region_words = (use_low_detail != 0u) ?
+        (NDS_FIGHTER_PACKET_ARENA_WORDS / 4u) :
+        (NDS_FIGHTER_PACKET_ARENA_WORDS / 2u);
+    region_base = battle_slot * region_words;
+    if (region_base + region_words > NDS_FIGHTER_PACKET_ARENA_WORDS)
+    {
+        gNdsFighterPacketDeclines++;
+        return 0;
+    }
+    for (i = 0u; i < NDS_FIGHTER_PACKET_KEY_WORDS; i++)
+    {
+        packet->key[i] = key[i];
+    }
+    packet->words = (u32 *)(void *)&gSYFramebufferSets[0][0][0] + region_base;
+    packet->word_capacity = region_words;
+    packet->word_count = 0u;
+    packet->root_count = input_count;
+    packet->projection_index = NDS_FIGHTER_PACKET_INDEX_NONE;
+    packet->light_index = NDS_FIGHTER_PACKET_INDEX_NONE;
+    packet->light_root = 0u;
+    packet->light_valid = 0u;
+    rec->packet = packet;
+    rec->words = packet->words;
+    rec->count = 0u;
+    rec->capacity = packet->word_capacity;
+    rec->cmd_slot = 4u;
+    rec->cmd_word = 0u;
+    rec->header_params = 0u;
+    rec->header_valid = 0u;
+    rec->fault = 0u;
+    rec->current_root = 0u;
+    /* Self-contained stream: forget every GX tracker so the first root
+     * re-issues -- and the packet captures -- its matrix mode, texture and
+     * polygon attributes. */
+    ndsRendererHardwareEndBatch();
+    ndsRendererHardwareInvalidateGXState(NDS_RENDERER_GX_STATE_ALL);
+    sNdsRendererHardwareBoundTextureName = 0u;
+    sNdsRendererHardwareActiveTextureEntry = NULL;
+    sNdsFighterPacketRecording = 1u;
+    gNdsFighterPacketRecords++;
+    return 0;
+}
+
+void ndsRendererFighterPacketRelease(void)
+{
+    u16 *arena = &gSYFramebufferSets[0][0][0];
+    u32 i;
+
+    sNdsFighterPacketRecording = 0u;
+    sNdsFighterPacketRecorder.packet = NULL;
+    for (i = 0u; i < NDS_FIGHTER_PACKET_SLOTS; i++)
+    {
+        sNdsFighterPackets[i].valid = 0u;
+    }
+    /* scmanager.c's boot clear, GPACK_RGBA5551(0, 0, 0, 1), over the words
+     * the packets borrowed, so the Results photo wipe reads what it always
+     * read. */
+    for (i = 0u; i < NDS_FIGHTER_PACKET_ARENA_WORDS * 2u; i++)
+    {
+        arena[i] = 0x0001u;
+    }
+}
+#else
+void ndsRendererFighterPacketRelease(void)
+{
+}
 #endif
 
 static s32 ndsRendererNativeSubmitProductionRun(
@@ -28369,6 +29350,16 @@ static s32 ndsRendererNativeSubmitProductionRun(
 #endif
     if (run->submit_class == NDS_NATIVE_RUN_CROSS_MATRIX)
     {
+#if NDS_FIGHTER_PACKET_LIVE && (NDS_TASK56_FIGHTER_PRIMITIVES >= 1)
+        if (sNdsFighterPacketRecording != 0u)
+        {
+            ndsRendererNativeEmitProductionCrossRunPacket(
+                run_index, (u32)run->triangle_count * 3u,
+                state->texture_prepare_enabled,
+                current_palette_slot, binding_palette_slots);
+        }
+        else
+#endif
         ndsRendererNativeEmitProductionCrossRun(
             run_index, (u32)run->triangle_count * 3u,
             state->texture_prepare_enabled,
@@ -28392,6 +29383,14 @@ static s32 ndsRendererNativeSubmitProductionRun(
          * exactly as the raw emitters read the packed corners unmasked. */
         if (NDS_R2_STRIP_ROUTE_ON())
         {
+#if NDS_FIGHTER_PACKET_LIVE
+            if (sNdsFighterPacketRecording != 0u)
+            {
+                ndsRendererNativeEmitProductionPrimitiveGroupsPacket(
+                    run_index, state->texture_prepare_enabled);
+            }
+            else
+#endif
             ndsRendererNativeEmitProductionPrimitiveGroups(
                 run_index, state->texture_prepare_enabled);
         }
@@ -28399,11 +29398,15 @@ static s32 ndsRendererNativeSubmitProductionRun(
 #endif
         if (state->texture_prepare_enabled != 0u)
         {
+            /* The raw emitters have no packet twin: a record frame that
+             * reaches them faults the packet and keeps drawing. */
+            NDS_FIGHTER_PACKET_HOOK(sNdsFighterPacketRecorder.fault = 1u);
             ndsRendererNativeEmitProductionRawTexturedRun(
                 run_index, (u32)run->triangle_count * 3u);
         }
         else
         {
+            NDS_FIGHTER_PACKET_HOOK(sNdsFighterPacketRecorder.fault = 1u);
             ndsRendererNativeEmitProductionRawUntexturedRun(
                 run_index, (u32)run->triangle_count * 3u);
         }
@@ -34143,6 +35146,7 @@ ndsRendererExecuteNativeFighterOwnerProduction(
     u32 slot,
     u32 use_low_detail,
     u32 texture_memo_owner_key,
+    u32 packet_key,
     const void *asset_base_ptr,
     const NDSRendererNativeFighterRoot *inputs,
     u32 input_count,
@@ -34229,6 +35233,23 @@ ndsRendererExecuteNativeFighterOwnerProduction(
 #if NDS_TASK91_DRAW_PHASE_CENSUS
     gNdsR2ExecPreflightTicks += cpuGetTiming() - e15b_mark;
 #endif
+#if NDS_FIGHTER_PACKET_LIVE
+    if (ndsFighterPacketTryReplay(
+            use_low_detail, texture_memo_owner_key, packet_key,
+            inputs, input_count, stats, out_hardware_started) != 0)
+    {
+#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
+    NDS_RENDERER_M2_DETAILED_LEDGER
+        ndsRendererProfileM2FinishProduction(
+            m2_owner, m2_total_start,
+            m2_lighting_before, m2_root_gx_before,
+            m2_run_prepare_before, m2_emit_account_before, TRUE);
+#endif
+        return TRUE;
+    }
+#else
+    (void)packet_key;
+#endif
     roots = sNdsNativeFighterActiveOwner->roots;
     root_count = sNdsNativeFighterActiveOwner->root_count;
     palette_slots = sNdsNativeFighterActiveOwner->cross_palette_slots;
@@ -34252,6 +35273,9 @@ ndsRendererExecuteNativeFighterOwnerProduction(
      * one test from conflating "the colour never arrived" with "the dot product
      * is zero". */
     GFX_LIGHT_COLOR = (u32)RGB15(31, 31, 31);
+    NDS_FIGHTER_PACKET_HOOK(
+        ndsFighterPacketCmd1(REG2ID(GFX_LIGHT_COLOR),
+                             (u32)RGB15(31, 31, 31)));
 #endif
 #if NDS_R2_FIGHTER_GX_COMPOSE
     /* Nothing outside this loop is known to leave GL_PROJECTION alone, so the
@@ -34282,11 +35306,21 @@ ndsRendererExecuteNativeFighterOwnerProduction(
          * the fail-closed answer for this owner. */
         if (input->gx_valid != 0u)
         {
+#if NDS_FIGHTER_PACKET_LIVE
+            if (sNdsFighterPacketRecording != 0u)
+            {
+                ndsFighterPacketLoadGxComposedRecord(
+                    root_index, input, state->matrix_generation);
+            }
+            else
+#endif
             ndsRendererLoadHardwareGxComposedMatrices(
                 input, state->matrix_generation);
         }
         else
         {
+            /* The split loader has no packet tee; fault the record and draw. */
+            NDS_FIGHTER_PACKET_HOOK(sNdsFighterPacketRecorder.fault = 1u);
             ndsRendererLoadHardwareSplitMatrices(
                 input->projection_matrix, input->modelview_matrix,
                 state->matrix_generation);
@@ -34304,6 +35338,8 @@ ndsRendererExecuteNativeFighterOwnerProduction(
         if (palette_slot <= NDS_NATIVE_GX_MATRIX_SLOT_MAX)
         {
             glStoreMatrix((int)palette_slot);
+            NDS_FIGHTER_PACKET_HOOK(
+                ndsFighterPacketCmd1(REG2ID(MATRIX_STORE), palette_slot));
         }
 #if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
     NDS_RENDERER_M2_DETAILED_LEDGER
@@ -34474,6 +35510,7 @@ ndsRendererExecuteNativeFighterOwnerProduction(
                             stats, cross_triangle_count, cross_reuse_count);
                     }
                     ndsRendererHardwareEndBatch();
+                    NDS_FIGHTER_PACKET_HOOK(ndsFighterPacketAbortRecord());
 #if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
     NDS_RENDERER_M2_DETAILED_LEDGER
                     ndsRendererProfileM2FinishProduction(
@@ -34505,6 +35542,10 @@ ndsRendererExecuteNativeFighterOwnerProduction(
             stats, cross_triangle_count, cross_reuse_count);
     }
     ndsRendererHardwareEndBatch();
+    NDS_FIGHTER_PACKET_HOOK(ndsFighterPacketFinishRecord(
+        native_run_count, native_triangle_count,
+        raw_triangle_count, raw_reuse_count,
+        cross_triangle_count, cross_reuse_count));
     sNdsRendererFastRunCount += native_run_count;
     sNdsRendererFastTriangleCount += native_triangle_count;
     if ((u32)sNdsRendererRuntimeOwner <
@@ -34524,6 +35565,8 @@ ndsRendererExecuteNativeFighterOwnerProduction(
 #else
     (void)slot;
     (void)use_low_detail;
+    (void)texture_memo_owner_key;
+    (void)packet_key;
     (void)asset_base_ptr;
     (void)inputs;
     (void)input_count;

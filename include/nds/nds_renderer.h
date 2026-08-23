@@ -1321,10 +1321,19 @@ s32 ndsRendererExecuteNativeFighterRoot(
     void *callback_user,
     NDSRendererStats *stats,
     NDSRendererVertexCache *vertex_cache);
+/* P2-2 fighter packet: drops every recorded fighter stream and restores the
+ * scene manager's clear over the framebuffer arena the streams borrow. Called
+ * on entering Results, before its photo wipe reads that buffer. A no-op when
+ * NDS_R2_FIGHTER_PACKET is off. */
+void ndsRendererFighterPacketRelease(void);
+/* `packet_key` is the adapter's identity word for everything the fighter
+ * packet's static words depend on outside the renderer (live material keys and
+ * the colour modulate); the renderer mixes in its own fences. */
 s32 ndsRendererExecuteNativeFighterOwnerProduction(
     u32 slot,
     u32 use_low_detail,
     u32 texture_memo_owner_key,
+    u32 packet_key,
     const void *asset_base,
     const NDSRendererNativeFighterRoot *roots,
     u32 root_count,

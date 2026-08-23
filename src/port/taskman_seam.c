@@ -7421,6 +7421,13 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
 #endif
         u32 updates = 0;
 
+        /* The fighter packets borrow gSYFramebufferSets for the battle; give
+         * the Results photo wipe back the clear it reads. */
+        {
+            extern void ndsRendererFighterPacketRelease(void);
+
+            ndsRendererFighterPacketRelease();
+        }
         ndsPlatformClearBattleTextHud();
         ndsPlatformSetOriginalSpriteOverlayEnabled(TRUE);
         while ((tfunc != NULL) && (tfunc->task_update != NULL) &&

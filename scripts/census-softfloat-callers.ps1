@@ -7,6 +7,9 @@ param(
     [int]$GdbPort = 4618,
     [int]$RunnerSlot = -1,
     [string]$Build = 'build-task81-recensus',
+    # Any tick-HUD target whose build carries an ELF; the four-CPU stress
+    # target is the P2 basis (2026-08-23).
+    [string]$Target = 'smash64ds-battle-playable-tickhud-hwtri',
     [ValidateRange(1,1000000)][int]$StartFrame = 439,
     [ValidateRange(10,600)][int]$SampleSeconds = 90,
     [string[]]$Helpers = @('__aeabi_fadd', '__aeabi_fmul'),
@@ -52,7 +55,7 @@ $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'lib\build-output.ps1')
 
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
-$target = 'smash64ds-battle-playable-tickhud-hwtri'
+$target = $Target
 
 # The gate, decided by CALLER NAME rather than by source path. addr2line
 # resolves the function reliably but the source column comes back as a bare

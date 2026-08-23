@@ -867,6 +867,13 @@ NDS_R2_FIGHTER_MTX_DIRECT ?= 0
 #       verify arm caught it each time.
 # Promote 2 -> 1 only on a zero gNdsR2TexMemoVerifyFail run.
 NDS_R2_FIGHTER_RUN_MEMO ?= 0
+# P2-2 fighter packet. Captures each fighter's whole GX command stream once as
+# packed GXFIFO words (in the battle-idle gSYFramebufferSets) and replays it by
+# DMA every frame, patching only the projection, the joint-chain matrices and
+# the light vector. The four-CPU stress arm measured the four fighter draws at
+# 607,040 of a 1,600,832-tick median frame (NDS_R2_DRAW_SUPPRESS_MASK=15 A/B,
+# 2026-08-23); this is the structural cut of that lane. 0 = off, lab A/B.
+NDS_R2_FIGHTER_PACKET ?= 0
 # R2-03 E17. Loads the fighter's projection and modelview separately and lets the
 # geometry engine perform the multiply, instead of composing on the CPU and
 # loading the product. Measured -17,600 FTR P50 / -18,560 WORK P50, and it leaves
@@ -4253,6 +4260,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_R2_FIGHTER_STATESPAN_SKIP $(NDS_R2_FIGHTER_STATESPAN_SKIP)'; \
 		echo '#define NDS_R2_DRAW_SUPPRESS_MASK $(NDS_R2_DRAW_SUPPRESS_MASK)'; \
 		echo '#define NDS_R2_FIGHTER_RUN_MEMO $(NDS_R2_FIGHTER_RUN_MEMO)'; \
+		echo '#define NDS_R2_FIGHTER_PACKET $(NDS_R2_FIGHTER_PACKET)'; \
 		echo '#define NDS_RENDER_ECONOMY $(NDS_RENDER_ECONOMY)'; \
 		echo '#define NDS_RENDER_ECONOMY_OWNER_MASK $(NDS_RENDER_ECONOMY_OWNER_MASK)'; \
 		echo '#define NDS_RENDERER_BENCHMARK_MODE $(NDS_RENDERER_BENCHMARK_MODE)'; \

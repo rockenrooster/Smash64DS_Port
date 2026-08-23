@@ -9959,6 +9959,13 @@ _Static_assert(offsetof(MObjSub, light2color) ==
                "material anim hash assumes primcolor..light2color are six "
                "contiguous words");
 
+/* P2-2 fighter packet: the identity of everything the current fighter's
+ * material rows were built from -- every prepared MObj's animation hash and
+ * pointer plus the colour modulate -- folded into one word per draw and handed
+ * to the production owner as its packet key. The hashes already exist (the
+ * material memo computes them per MObj per frame), so this is a few XORs. */
+static u32 sNdsFighterPacketMaterialIdentity;
+
 static sb32 ndsRendererAdapterPrepareNativeMaterials(
     DObj *dobj, NDSRendererNativeMaterial *materials,
     u32 capacity, u32 *out_count,
@@ -16977,6 +16984,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
              * retained for cache hits, but no stale fighter may make two roots
              * of this fighter alias the same mutable material row. */
             sNdsRendererAdapterMaterialRowClaimMask = 0u;
+            sNdsFighterPacketMaterialIdentity = 2166136261u ^ color_modulate;
             for (i = 0u; i < collection.selected_count; i++)
             {
                 u32 prepared_material_count = 0u;
@@ -17001,6 +17009,22 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
                 sNdsRendererAdapterNativeOwnerTextureCounts[i] =
                     prepared_material_count;
                 native_owner_material_saved_root_count = i + 1u;
+#if NDS_R2_FIGHTER_PACKET
+                {
+                    const NDSRendererAdapterMaterialKey *keys =
+                        sNdsRendererAdapterNativeOwnerMaterialKeys[material_row];
+                    u32 m;
+
+                    for (m = 0u; m < prepared_material_count; m++)
+                    {
+                        sNdsFighterPacketMaterialIdentity =
+                            (sNdsFighterPacketMaterialIdentity ^ keys[m].hash) *
+                            16777619u;
+                        sNdsFighterPacketMaterialIdentity ^=
+                            (u32)(uintptr_t)keys[m].mobj;
+                    }
+                }
+#endif
                 if ((prepared == FALSE) ||
                     (prepared_material_count !=
                      native_owner_material_counts[i]) ||
@@ -17120,6 +17144,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
                         ((slot & 3u) << 9) |
                         ((((u32)fp->costume) |
                           ((u32)fp->shade << 8)) & 0xffffu) << 11,
+                    sNdsFighterPacketMaterialIdentity,
                     native_owner_file->data,
                     sNdsRendererAdapterNativeOwnerWorkspace.production_roots,
                     collection.selected_count,
