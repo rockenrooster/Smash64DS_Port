@@ -350,16 +350,35 @@ void ndsMNVSResultsManagerFuncUpdate(SYTaskmanSetup *setup)
 
 void ndsMNVSResultsSetupFilesKind(s32 fkind)
 {
-    /* The source loops every playable kind (mnvsresults.c:3343); only the two
-     * fighters this milestone builds are wanted, which is already ten kinds of
-     * loading the port does not do. */
-    if ((fkind == nFTKindMario) || (fkind == nFTKindFox))
-    {
-        u32 start = cpuGetTiming();
+    /* The source loops every playable kind (mnvsresults.c:3343); only the
+     * fighters this build can put in a match are wanted, which is still most
+     * kinds of loading the port does not do.
+     *
+     * P2-3r3 (2026-08-23): this list was Mario/Fox only, so a match with Luigi
+     * or Donkey Kong ended in `mnVSResultsMakeFighter` building a fighter whose
+     * files were never loaded -- the ARM9 wandered to pc=0xfffffffc on the
+     * FIRST Results entry, which the board had filed as a battle-setup crash.
+     * `scripts/probe-trace-symbols.ps1` placed it: 213 status changes of a
+     * complete match, then ftManagerAllocFighter from
+     * ndsMNVSResultsSetupFilesKind's caller, then the wander. The rule is now
+     * the kinds that were in the match, read from the transfer state the
+     * Results scene itself is built from, so every admitted fighter -- and
+     * every future one -- loads exactly when it is on the podium. */
+    s32 i;
 
-        ftManagerSetupFilesAllKind(fkind);
-        gNdsVSResultsSetupFilesTicks += cpuGetTiming() - start;
-        gNdsVSResultsSetupFilesCalls++;
+    for (i = 0; i < (s32)ARRAY_COUNT(gSCManagerTransferBattleState.players); i++)
+    {
+        if ((gSCManagerTransferBattleState.players[i].pkind !=
+             nFTPlayerKindNot) &&
+            (gSCManagerTransferBattleState.players[i].fkind == fkind))
+        {
+            u32 start = cpuGetTiming();
+
+            ftManagerSetupFilesAllKind(fkind);
+            gNdsVSResultsSetupFilesTicks += cpuGetTiming() - start;
+            gNdsVSResultsSetupFilesCalls++;
+            return;
+        }
     }
 }
 

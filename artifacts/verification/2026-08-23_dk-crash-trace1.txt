@@ -1,0 +1,261 @@
+0x020c1678 in f_lseek (fp=0x2260a6c, ofs=<optimized out>, ofs@entry=34328876) at /home/davem/projects/devkitpro/pacman-packages/libfat/src/libdvm-2.1.0/fatfs/source/ff.c:4411
+Breakpoint 1 at 0x20862a4: file D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_scvsbattle.c, line 251.
+Breakpoint 2 at 0x2085ff8: file D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sc/sccommon/scvsbattlefiles.c, line 27.
+Breakpoint 3 at 0x2087764: file D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_grpupupu_ground.c, line 488.
+Breakpoint 4 at 0x2090cd8: file D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmanager.c, line 144.
+Breakpoint 5 at 0x2090fd0: file D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmanager.c, line 356.
+Breakpoint 6 at 0x2090ff4: file D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmanager.c, line 368.
+Breakpoint 7 at 0x2091a3c: file D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_ftmanager.c, line 41.
+Breakpoint 8 at 0x205ce50: file D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_compat_shims.c, line 10283.
+Breakpoint 9 at 0x205df0c: file D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_compat_shims.c, line 15017.
+Breakpoint 10 at 0x20bb68c: file D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_ftmain.c, line 127.
+Breakpoint 11 at 0x2090fbc: file D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmanager.c, line 345.
+Breakpoint 12 at 0x20a6b64: file D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/if/ifcommon.c, line 3216.
+Breakpoint 13 at 0x20a6e94: file D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_ifcommon.c, line 115.
+Breakpoint 14 at 0x2067118: file D:/Stuff/DevFolder/Smash64DS_Port/src/port/sprite_preview_backend.c, line 3536.
+TRACE scVSBattleStartBattle hit=1 pc=0x20862a4 lr=0x2069f21 sp=0x2269c98
+TRACE scVSBattleSetupFiles hit=1 pc=0x2085ff8 lr=0x2086071 sp=0x2269c18
+TRACE grCommonSetupInitAll hit=1 pc=0x2087764 lr=0x20860c3 sp=0x2269c18
+TRACE ftManagerAllocFighter hit=1 pc=0x2090cd8 lr=0x20860cb sp=0x2269c18
+TRACE ftManagerSetupFilesAllKind hit=1 pc=0x2090fd0 lr=0x2086113 sp=0x2269c18
+TRACE ftManagerAllocFigatreeHeapKind hit=1 pc=0x2090ff4 lr=0x208618b sp=0x2269c18
+TRACE ftManagerMakeFighter hit=1 pc=0x2091a3c lr=0x2086193 sp=0x2269c18
+TRACE lbCommonSetupFighterPartsDObjs hit=1 pc=0x205ce50 lr=0x209169b sp=0x2269bc0
+TRACE ftMainSetStatus hit=1 pc=0x20bb68c lr=0x209ec73 sp=0x2269ba8
+TRACE ftParamInitPlayerBattleStats hit=1 pc=0x205df0c lr=0x208619b sp=0x2269c18
+TRACE ftManagerSetupFilesAllKind hit=2 pc=0x2090fd0 lr=0x2086113 sp=0x2269c18
+TRACE ftManagerAllocFigatreeHeapKind hit=2 pc=0x2090ff4 lr=0x208618b sp=0x2269c18
+TRACE ftManagerMakeFighter hit=2 pc=0x2091a3c lr=0x2086193 sp=0x2269c18
+TRACE lbCommonSetupFighterPartsDObjs hit=2 pc=0x205ce50 lr=0x209169b sp=0x2269bc0
+TRACE ftMainSetStatus hit=2 pc=0x20bb68c lr=0x209ec73 sp=0x2269ba8
+TRACE ftParamInitPlayerBattleStats hit=2 pc=0x205df0c lr=0x208619b sp=0x2269c18
+TRACE ftManagerSetupFilesPlayablesAll hit=1 pc=0x2090fbc lr=0x20861a7 sp=0x2269c18
+TRACE ifCommonBattleSetGameStatusWait hit=1 pc=0x20a6b64 lr=0x20861ab sp=0x2269c18
+TRACE ifCommonEntryAllMakeInterface hit=1 pc=0x20a6e94 lr=0x20861db sp=0x2269c18
+TRACE lbFadeMakeActor hit=1 pc=0x2067118 lr=0x208620d sp=0x2269c18
+TRACE ftMainSetStatus hit=3 pc=0x20bb68c lr=0x209ee2d sp=0x23dfa60
+TRACE ftMainSetStatus hit=4 pc=0x20bb68c lr=0x209ee2d sp=0x23dfa60
+TRACE ftMainSetStatus hit=5 pc=0x20bb68c lr=0x2087c87 sp=0x2269b60
+TRACE ftMainSetStatus hit=6 pc=0x20bb68c lr=0x2087c87 sp=0x2269b60
+TRACE ftMainSetStatus hit=7 pc=0x20bb68c lr=0x2088103 sp=0x2269b10
+TRACE ftMainSetStatus hit=8 pc=0x20bb68c lr=0x2087c87 sp=0x2269b20
+TRACE ftMainSetStatus hit=9 pc=0x20bb68c lr=0x2087dc9 sp=0x2269b18
+TRACE ftMainSetStatus hit=10 pc=0x20bb68c lr=0x2087c87 sp=0x2269b10
+TRACE ftMainSetStatus hit=11 pc=0x20bb68c lr=0x2088103 sp=0x2269b10
+TRACE ftMainSetStatus hit=12 pc=0x20bb68c lr=0x2087c87 sp=0x2269b20
+TRACE ftMainSetStatus hit=13 pc=0x20bb68c lr=0x2087dc9 sp=0x2269b18
+TRACE ftMainSetStatus hit=14 pc=0x20bb68c lr=0x2087c87 sp=0x2269b10
+TRACE ftMainSetStatus hit=15 pc=0x20bb68c lr=0x2088103 sp=0x2269b10
+TRACE ftMainSetStatus hit=16 pc=0x20bb68c lr=0x2087c87 sp=0x2269b20
+TRACE ftMainSetStatus hit=17 pc=0x20bb68c lr=0x2087dc9 sp=0x2269b18
+TRACE ftMainSetStatus hit=18 pc=0x20bb68c lr=0x2087c87 sp=0x2269b10
+TRACE ftMainSetStatus hit=19 pc=0x20bb68c lr=0x2088103 sp=0x2269b10
+TRACE ftMainSetStatus hit=20 pc=0x20bb68c lr=0x2087c87 sp=0x2269b20
+TRACE ftMainSetStatus hit=21 pc=0x20bb68c lr=0x2087dc9 sp=0x2269b18
+TRACE ftMainSetStatus hit=22 pc=0x20bb68c lr=0x208bdef sp=0x2269b08
+TRACE ftMainSetStatus hit=23 pc=0x20bb68c lr=0x208bafb sp=0x2269b08
+TRACE ftMainSetStatus hit=24 pc=0x20bb68c lr=0x208bfb1 sp=0x2269b20
+TRACE ftMainSetStatus hit=25 pc=0x20bb68c lr=0x208b741 sp=0x2269b10
+TRACE ftMainSetStatus hit=26 pc=0x20bb68c lr=0x208ba5b sp=0x2269b00
+TRACE ftMainSetStatus hit=27 pc=0x20bb68c lr=0x208c163 sp=0x2269b18
+TRACE ftMainSetStatus hit=28 pc=0x20bb68c lr=0x208c4c9 sp=0x2269b28
+TRACE ftMainSetStatus hit=29 pc=0x20bb68c lr=0x2088103 sp=0x2269b00
+TRACE ftMainSetStatus hit=30 pc=0x20bb68c lr=0x2087c87 sp=0x2269b20
+TRACE ftMainSetStatus hit=31 pc=0x20bb68c lr=0x2087da9 sp=0x2269b18
+TRACE ftMainSetStatus hit=32 pc=0x20bb68c lr=0x2087c87 sp=0x2269b10
+TRACE ftMainSetStatus hit=33 pc=0x20bb68c lr=0x208bb7d sp=0x2269b20
+TRACE ftMainSetStatus hit=34 pc=0x20bb68c lr=0x208bceb sp=0x2269b20
+TRACE ftMainSetStatus hit=35 pc=0x20bb68c lr=0x208c163 sp=0x2269b18
+TRACE ftMainSetStatus hit=36 pc=0x20bb68c lr=0x208c4c9 sp=0x2269b28
+TRACE ftMainSetStatus hit=37 pc=0x20bb68c lr=0x2087c87 sp=0x2269b20
+TRACE ftMainSetStatus hit=38 pc=0x20bb68c lr=0x2087dc9 sp=0x2269b18
+TRACE ftMainSetStatus hit=39 pc=0x20bb68c lr=0x2087c87 sp=0x2269b10
+TRACE ftMainSetStatus hit=40 pc=0x20bb68c lr=0x2088103 sp=0x2269b10
+TRACE ftMainSetStatus hit=41 pc=0x20bb68c lr=0x2087c87 sp=0x2269b20
+TRACE ftMainSetStatus hit=42 pc=0x20bb68c lr=0x2087dc9 sp=0x2269b18
+TRACE ftMainSetStatus hit=43 pc=0x20bb68c lr=0x2087c87 sp=0x2269b10
+TRACE ftMainSetStatus hit=44 pc=0x20bb68c lr=0x2088103 sp=0x2269b10
+TRACE ftMainSetStatus hit=45 pc=0x20bb68c lr=0x2087c87 sp=0x2269b20
+TRACE ftMainSetStatus hit=46 pc=0x20bb68c lr=0x2088103 sp=0x2269b10
+TRACE ftMainSetStatus hit=47 pc=0x20bb68c lr=0x2087c87 sp=0x2269b20
+TRACE ftMainSetStatus hit=48 pc=0x20bb68c lr=0x2087dc9 sp=0x2269b18
+TRACE ftMainSetStatus hit=49 pc=0x20bb68c lr=0x2087dc9 sp=0x2269b18
+TRACE ftMainSetStatus hit=50 pc=0x20bb68c lr=0x2087c87 sp=0x2269b10
+TRACE ftMainSetStatus hit=51 pc=0x20bb68c lr=0x2088103 sp=0x2269b10
+TRACE ftMainSetStatus hit=52 pc=0x20bb68c lr=0x2087c87 sp=0x2269b20
+TRACE ftMainSetStatus hit=53 pc=0x20bb68c lr=0x2087dc9 sp=0x2269b18
+TRACE ftMainSetStatus hit=54 pc=0x20bb68c lr=0x2087c87 sp=0x2269b10
+TRACE ftMainSetStatus hit=55 pc=0x20bb68c lr=0x208f5bd sp=0x2269b18
+TRACE ftMainSetStatus hit=56 pc=0x20bb68c lr=0x208dc13 sp=0x2269a68
+TRACE ftMainSetStatus hit=57 pc=0x20bb68c lr=0x2087c87 sp=0x2269b10
+TRACE ftMainSetStatus hit=58 pc=0x20bb68c lr=0x2087c87 sp=0x2269b20
+TRACE ftMainSetStatus hit=59 pc=0x20bb68c lr=0x2087dc9 sp=0x2269b18
+TRACE ftMainSetStatus hit=60 pc=0x20bb68c lr=0x2087c87 sp=0x2269b10
+TRACE ftMainSetStatus hit=61 pc=0x20bb68c lr=0x2087dc9 sp=0x2269b18
+TRACE ftMainSetStatus hit=62 pc=0x20bb68c lr=0x2087c87 sp=0x2269b10
+TRACE ftMainSetStatus hit=63 pc=0x20bb68c lr=0x2088103 sp=0x2269b10
+TRACE ftMainSetStatus hit=64 pc=0x20bb68c lr=0x2087c87 sp=0x2269b20
+TRACE ftMainSetStatus hit=65 pc=0x20bb68c lr=0x2087dc9 sp=0x2269b18
+TRACE ftMainSetStatus hit=66 pc=0x20bb68c lr=0x2087c87 sp=0x2269b10
+TRACE ftMainSetStatus hit=67 pc=0x20bb68c lr=0x2088103 sp=0x2269b10
+TRACE ftMainSetStatus hit=68 pc=0x20bb68c lr=0x2087c87 sp=0x2269b20
+TRACE ftMainSetStatus hit=69 pc=0x20bb68c lr=0x2087dc9 sp=0x2269b18
+TRACE ftMainSetStatus hit=70 pc=0x20bb68c lr=0x2087c87 sp=0x2269b10
+TRACE ftMainSetStatus hit=71 pc=0x20bb68c lr=0x2087dc9 sp=0x2269b18
+TRACE ftMainSetStatus hit=72 pc=0x20bb68c lr=0x208c163 sp=0x2269b28
+TRACE ftMainSetStatus hit=73 pc=0x20bb68c lr=0x2087c87 sp=0x2269b10
+TRACE ftMainSetStatus hit=74 pc=0x20bb68c lr=0x2088103 sp=0x2269b10
+TRACE ftMainSetStatus hit=75 pc=0x20bb68c lr=0x2087c87 sp=0x2269b20
+TRACE ftMainSetStatus hit=76 pc=0x20bb68c lr=0x2087dc9 sp=0x2269b18
+TRACE ftMainSetStatus hit=77 pc=0x20bb68c lr=0x208c72b sp=0x2269b18
+TRACE ftMainSetStatus hit=78 pc=0x20bb68c lr=0x208c63f sp=0x2269b10
+TRACE ftMainSetStatus hit=79 pc=0x20bb68c lr=0x2087c87 sp=0x2269b10
+TRACE ftMainSetStatus hit=80 pc=0x20bb68c lr=0x2087dc9 sp=0x2269b18
+TRACE ftMainSetStatus hit=81 pc=0x20bb68c lr=0x2087c87 sp=0x2269b10
+TRACE ftMainSetStatus hit=82 pc=0x20bb68c lr=0x2088103 sp=0x2269b10
+TRACE ftMainSetStatus hit=83 pc=0x20bb68c lr=0x2087c87 sp=0x2269b20
+TRACE ftMainSetStatus hit=84 pc=0x20bb68c lr=0x2087dc9 sp=0x2269b18
+TRACE ftMainSetStatus hit=85 pc=0x20bb68c lr=0x2087c87 sp=0x2269b10
+TRACE ftMainSetStatus hit=86 pc=0x20bb68c lr=0x2088103 sp=0x2269b10
+TRACE ftMainSetStatus hit=87 pc=0x20bb68c lr=0x2087c87 sp=0x2269b20
+TRACE ftMainSetStatus hit=88 pc=0x20bb68c lr=0x2087dc9 sp=0x2269b18
+TRACE ftMainSetStatus hit=89 pc=0x20bb68c lr=0x2087c87 sp=0x2269b10
+TRACE ftMainSetStatus hit=90 pc=0x20bb68c lr=0x2088103 sp=0x2269b10
+TRACE ftMainSetStatus hit=91 pc=0x20bb68c lr=0x2087c87 sp=0x2269b20
+TRACE ftMainSetStatus hit=92 pc=0x20bb68c lr=0x2087dc9 sp=0x2269b18
+TRACE ftMainSetStatus hit=93 pc=0x20bb68c lr=0x2087c87 sp=0x2269b10
+TRACE ftMainSetStatus hit=94 pc=0x20bb68c lr=0x2087dc9 sp=0x2269b18
+TRACE ftMainSetStatus hit=95 pc=0x20bb68c lr=0x208c341 sp=0x2269b28
+TRACE ftMainSetStatus hit=96 pc=0x20bb68c lr=0x208c1ab sp=0x2269b08
+TRACE ftMainSetStatus hit=97 pc=0x20bb68c lr=0x208b741 sp=0x2269b08
+TRACE ftMainSetStatus hit=98 pc=0x20bb68c lr=0x208ba5b sp=0x2269b00
+TRACE ftMainSetStatus hit=99 pc=0x20bb68c lr=0x208c163 sp=0x2269b18
+TRACE ftMainSetStatus hit=100 pc=0x20bb68c lr=0x208c4c9 sp=0x2269b28
+TRACE ftMainSetStatus hit=101 pc=0x20bb68c lr=0x2087dc9 sp=0x2269b10
+TRACE ftMainSetStatus hit=102 pc=0x20bb68c lr=0x208c341 sp=0x2269b28
+TRACE ftMainSetStatus hit=103 pc=0x20bb68c lr=0x208c1ab sp=0x2269b08
+TRACE ftMainSetStatus hit=104 pc=0x20bb68c lr=0x208b741 sp=0x2269b08
+TRACE ftMainSetStatus hit=105 pc=0x20bb68c lr=0x208ba5b sp=0x2269b00
+TRACE ftMainSetStatus hit=106 pc=0x20bb68c lr=0x208c163 sp=0x2269b18
+TRACE ftMainSetStatus hit=107 pc=0x20bb68c lr=0x208c4c9 sp=0x2269b28
+TRACE ftMainSetStatus hit=108 pc=0x20bb68c lr=0x2087da9 sp=0x2269b10
+TRACE ftMainSetStatus hit=109 pc=0x20bb68c lr=0x208c163 sp=0x2269b28
+TRACE ftMainSetStatus hit=110 pc=0x20bb68c lr=0x2088ec7 sp=0x2269b10
+TRACE ftMainSetStatus hit=111 pc=0x20bb68c lr=0x208df61 sp=0x2269a68
+TRACE ftMainSetStatus hit=112 pc=0x20bb68c lr=0x208c163 sp=0x2269b18
+TRACE ftMainSetStatus hit=113 pc=0x20bb68c lr=0x208f6c7 sp=0x2269b00
+TRACE ftMainSetStatus hit=114 pc=0x20bb68c lr=0x208e599 sp=0x2269b18
+TRACE ftMainSetStatus hit=115 pc=0x20bb68c lr=0x20b6ad9 sp=0x2269b10
+TRACE ftMainSetStatus hit=116 pc=0x20bb68c lr=0x20b637f sp=0x2269b18
+TRACE ftMainSetStatus hit=117 pc=0x20bb68c lr=0x209df0d sp=0x2269af0
+TRACE ftMainSetStatus hit=118 pc=0x20bb68c lr=0x20b6799 sp=0x2269b18
+TRACE ftMainSetStatus hit=119 pc=0x20bb68c lr=0x209e9e1 sp=0x2269ac0
+TRACE ftMainSetStatus hit=120 pc=0x20bb68c lr=0x20b64dd sp=0x2269b38
+TRACE ftMainSetStatus hit=121 pc=0x20bb68c lr=0x20b5b13 sp=0x2269b10
+TRACE ftMainSetStatus hit=122 pc=0x20bb68c lr=0x208c549 sp=0x2269b18
+TRACE ftMainSetStatus hit=123 pc=0x20bb68c lr=0x2087dc9 sp=0x2269b10
+TRACE ftMainSetStatus hit=124 pc=0x20bb68c lr=0x209eb1f sp=0x2269b30
+TRACE ftMainSetStatus hit=125 pc=0x20bb68c lr=0x209e8e5 sp=0x2269b10
+TRACE ftMainSetStatus hit=126 pc=0x20bb68c lr=0x2087c87 sp=0x2269b10
+TRACE ftMainSetStatus hit=127 pc=0x20bb68c lr=0x2088103 sp=0x2269b10
+TRACE ftMainSetStatus hit=128 pc=0x20bb68c lr=0x2087c87 sp=0x2269b20
+TRACE ftMainSetStatus hit=129 pc=0x20bb68c lr=0x2087dc9 sp=0x2269b18
+TRACE ftMainSetStatus hit=130 pc=0x20bb68c lr=0x2087c87 sp=0x2269b10
+TRACE ftMainSetStatus hit=131 pc=0x20bb68c lr=0x2088103 sp=0x2269b10
+TRACE ftMainSetStatus hit=132 pc=0x20bb68c lr=0x2087c87 sp=0x2269b20
+TRACE ftMainSetStatus hit=133 pc=0x20bb68c lr=0x2087dc9 sp=0x2269b18
+TRACE ftMainSetStatus hit=134 pc=0x20bb68c lr=0x2087c87 sp=0x2269b10
+TRACE ftMainSetStatus hit=135 pc=0x20bb68c lr=0x2087dc9 sp=0x2269b18
+TRACE ftMainSetStatus hit=136 pc=0x20bb68c lr=0x208c163 sp=0x2269b18
+TRACE ftMainSetStatus hit=137 pc=0x20bb68c lr=0x208c4c9 sp=0x2269b28
+TRACE ftMainSetStatus hit=138 pc=0x20bb68c lr=0x2087c87 sp=0x2269b20
+TRACE ftMainSetStatus hit=139 pc=0x20bb68c lr=0x2087c87 sp=0x2269b10
+TRACE ftMainSetStatus hit=140 pc=0x20bb68c lr=0x2087dc9 sp=0x2269b18
+TRACE ftMainSetStatus hit=141 pc=0x20bb68c lr=0x208b741 sp=0x2269b08
+TRACE ftMainSetStatus hit=142 pc=0x20bb68c lr=0x208ba5b sp=0x2269b00
+TRACE ftMainSetStatus hit=143 pc=0x20bb68c lr=0x208c163 sp=0x2269b18
+TRACE ftMainSetStatus hit=144 pc=0x20bb68c lr=0x208c4c9 sp=0x2269b28
+TRACE ftMainSetStatus hit=145 pc=0x20bb68c lr=0x2087dc9 sp=0x2269b10
+TRACE ftMainSetStatus hit=146 pc=0x20bb68c lr=0x208b741 sp=0x2269b08
+TRACE ftMainSetStatus hit=147 pc=0x20bb68c lr=0x208ba5b sp=0x2269b00
+TRACE ftMainSetStatus hit=148 pc=0x20bb68c lr=0x208c163 sp=0x2269b18
+TRACE ftMainSetStatus hit=149 pc=0x20bb68c lr=0x208c4c9 sp=0x2269b28
+TRACE ftMainSetStatus hit=150 pc=0x20bb68c lr=0x2088103 sp=0x2269b00
+TRACE ftMainSetStatus hit=151 pc=0x20bb68c lr=0x2087c87 sp=0x2269b20
+TRACE ftMainSetStatus hit=152 pc=0x20bb68c lr=0x2087dc9 sp=0x2269b18
+TRACE ftMainSetStatus hit=153 pc=0x20bb68c lr=0x2087c87 sp=0x2269b10
+TRACE ftMainSetStatus hit=154 pc=0x20bb68c lr=0x2088103 sp=0x2269b10
+TRACE ftMainSetStatus hit=155 pc=0x20bb68c lr=0x2087c87 sp=0x2269b20
+TRACE ftMainSetStatus hit=156 pc=0x20bb68c lr=0x2087dc9 sp=0x2269b18
+TRACE ftMainSetStatus hit=157 pc=0x20bb68c lr=0x2087c87 sp=0x2269b10
+TRACE ftMainSetStatus hit=158 pc=0x20bb68c lr=0x2088103 sp=0x2269b10
+TRACE ftMainSetStatus hit=159 pc=0x20bb68c lr=0x2087c87 sp=0x2269b20
+TRACE ftMainSetStatus hit=160 pc=0x20bb68c lr=0x2087dc9 sp=0x2269b18
+TRACE ftMainSetStatus hit=161 pc=0x20bb68c lr=0x2087c87 sp=0x2269b10
+TRACE ftMainSetStatus hit=162 pc=0x20bb68c lr=0x208b741 sp=0x2269b18
+TRACE ftMainSetStatus hit=163 pc=0x20bb68c lr=0x208ba5b sp=0x2269b00
+TRACE ftMainSetStatus hit=164 pc=0x20bb68c lr=0x2088ec7 sp=0x2269b10
+TRACE ftMainSetStatus hit=165 pc=0x20bb68c lr=0x208df61 sp=0x2269a68
+TRACE ftMainSetStatus hit=166 pc=0x20bb68c lr=0x208c4c9 sp=0x2269b18
+TRACE ftMainSetStatus hit=167 pc=0x20bb68c lr=0x2088103 sp=0x2269b00
+TRACE ftMainSetStatus hit=168 pc=0x20bb68c lr=0x208e8bb sp=0x2269b10
+TRACE ftMainSetStatus hit=169 pc=0x20bb68c lr=0x2087c87 sp=0x2269b20
+TRACE ftMainSetStatus hit=170 pc=0x20bb68c lr=0x2087dc9 sp=0x2269b18
+TRACE ftMainSetStatus hit=171 pc=0x20bb68c lr=0x208e725 sp=0x2269b20
+TRACE ftMainSetStatus hit=172 pc=0x20bb68c lr=0x208b741 sp=0x2269b08
+TRACE ftMainSetStatus hit=173 pc=0x20bb68c lr=0x208ba5b sp=0x2269b00
+TRACE ftMainSetStatus hit=174 pc=0x20bb68c lr=0x208f6c7 sp=0x2269b00
+TRACE ftMainSetStatus hit=175 pc=0x20bb68c lr=0x208c163 sp=0x2269af8
+TRACE ftMainSetStatus hit=176 pc=0x20bb68c lr=0x208c4c9 sp=0x2269b28
+TRACE ftMainSetStatus hit=177 pc=0x20bb68c lr=0x2087dc9 sp=0x2269b10
+TRACE ftMainSetStatus hit=178 pc=0x20bb68c lr=0x2087c87 sp=0x2269b10
+TRACE ftMainSetStatus hit=179 pc=0x20bb68c lr=0x2088103 sp=0x2269b10
+TRACE ftMainSetStatus hit=180 pc=0x20bb68c lr=0x2087c87 sp=0x2269b20
+TRACE ftMainSetStatus hit=181 pc=0x20bb68c lr=0x2087dc9 sp=0x2269b18
+TRACE ftMainSetStatus hit=182 pc=0x20bb68c lr=0x208ea69 sp=0x2269b18
+TRACE ftMainSetStatus hit=183 pc=0x20bb68c lr=0x2087c87 sp=0x2269b20
+TRACE ftMainSetStatus hit=184 pc=0x20bb68c lr=0x2087c87 sp=0x2269b10
+TRACE ftMainSetStatus hit=185 pc=0x20bb68c lr=0x2087dc9 sp=0x2269b18
+TRACE ftMainSetStatus hit=186 pc=0x20bb68c lr=0x208c163 sp=0x2269b28
+TRACE ftMainSetStatus hit=187 pc=0x20bb68c lr=0x2087c87 sp=0x2269b10
+TRACE ftMainSetStatus hit=188 pc=0x20bb68c lr=0x2088103 sp=0x2269b10
+TRACE ftMainSetStatus hit=189 pc=0x20bb68c lr=0x2087c87 sp=0x2269b20
+TRACE ftMainSetStatus hit=190 pc=0x20bb68c lr=0x2087dc9 sp=0x2269b18
+TRACE ftMainSetStatus hit=191 pc=0x20bb68c lr=0x208c4c9 sp=0x2269b28
+TRACE ftMainSetStatus hit=192 pc=0x20bb68c lr=0x2087c87 sp=0x2269b20
+TRACE ftMainSetStatus hit=193 pc=0x20bb68c lr=0x2087c87 sp=0x2269b10
+TRACE ftMainSetStatus hit=194 pc=0x20bb68c lr=0x2088103 sp=0x2269b10
+TRACE ftMainSetStatus hit=195 pc=0x20bb68c lr=0x2087c87 sp=0x2269b20
+TRACE ftMainSetStatus hit=196 pc=0x20bb68c lr=0x2087dc9 sp=0x2269b18
+TRACE ftMainSetStatus hit=197 pc=0x20bb68c lr=0x2087c87 sp=0x2269b10
+TRACE ftMainSetStatus hit=198 pc=0x20bb68c lr=0x208bb7d sp=0x2269b20
+TRACE ftMainSetStatus hit=199 pc=0x20bb68c lr=0x208bceb sp=0x2269b20
+TRACE ftMainSetStatus hit=200 pc=0x20bb68c lr=0x208c163 sp=0x2269b18
+TRACE ftMainSetStatus hit=201 pc=0x20bb68c lr=0x208c4c9 sp=0x2269b28
+TRACE ftMainSetStatus hit=202 pc=0x20bb68c lr=0x2087c87 sp=0x2269b20
+TRACE ftMainSetStatus hit=203 pc=0x20bb68c lr=0x2087dc9 sp=0x2269b18
+TRACE ftMainSetStatus hit=204 pc=0x20bb68c lr=0x2087c87 sp=0x2269b10
+TRACE ftMainSetStatus hit=205 pc=0x20bb68c lr=0x2088103 sp=0x2269b10
+TRACE ftMainSetStatus hit=206 pc=0x20bb68c lr=0x2087c87 sp=0x2269b20
+TRACE ftMainSetStatus hit=207 pc=0x20bb68c lr=0x2087dc9 sp=0x2269b18
+TRACE ftMainSetStatus hit=208 pc=0x20bb68c lr=0x2087c87 sp=0x2269b10
+TRACE ftMainSetStatus hit=209 pc=0x20bb68c lr=0x2087dc9 sp=0x2269b18
+TRACE ftMainSetStatus hit=210 pc=0x20bb68c lr=0x2087c87 sp=0x2269b10
+TRACE ftMainSetStatus hit=211 pc=0x20bb68c lr=0x2088103 sp=0x2269b10
+TRACE ftMainSetStatus hit=212 pc=0x20bb68c lr=0x2087c87 sp=0x2269b20
+TRACE ftMainSetStatus hit=213 pc=0x20bb68c lr=0x2087dc9 sp=0x2269b18
+TRACE ftManagerAllocFighter hit=2 pc=0x2090cd8 lr=0x20a2aff sp=0x2269c50
+TRACE ftManagerSetupFilesAllKind hit=3 pc=0x2090fd0 lr=0x20a2c29 sp=0x2269c50
+TRACE ftManagerSetupFilesAllKind hit=4 pc=0x2090fd0 lr=0x20a2c29 sp=0x2269c50
+TRACE ftManagerMakeFighter hit=3 pc=0x2091a3c lr=0x20a096d sp=0x2269b50
+
+Program received signal SIGILL, Illegal instruction.
+0x00000954 in ndsBaseLbParticleDrawTextures (gobj=<optimized out>) at D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/lb/lbparticle.c:1958
+1958	                                    gDPLoadTextureBlock_4b
+TRACE STOP pc=0x954 lr=0x1fffb68
+#0  0x00000954 in ndsBaseLbParticleDrawTextures (gobj=<optimized out>) at D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/lb/lbparticle.c:1958
+#1  0x01fffb68 in __excpt_entry () at /home/davem/projects/devkitpro/pacman-packages/calico/src/calico-1.2.0/source/nds/arm9/excpt_handler.32.s:86
+#2  0x0000003e in ndsParticleDrawSourceAssetQuad (texture_id=36555616, pos=0x234ac30, size=1.20129259e-37, color=35904432, alpha=0 '\000', depth_bias=4.48415509e-44) at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_lbparticle.c:2409
+Backtrace stopped: previous frame identical to this frame (corrupt stack?)
+[Inferior 1 (Remote target) detached]
+
