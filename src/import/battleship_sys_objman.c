@@ -101,7 +101,22 @@ extern void ndsBaseGcSetupObjman(GCSetup *setup);
  * it at ring stops gives the live peak with no hot-path code and no new bytes
  * on the traversal itself -- 512 is the starting guess against ~360 observed,
  * and it should be trimmed to the measured peak plus margin. */
+#ifndef NDS_FT_POSE
+#define NDS_FT_POSE 0
+#endif
+#if NDS_FT_POSE
+/* P2-2p6: the fighter pose engine keeps its joint tracks in its own pool
+ * (`NDS_FT_POSE_POOL`, 20-byte tracks carved per fighter from this same
+ * general heap), so the figatree joints no longer draw AObjs here. The live
+ * AObj peak on the four-CPU stress arm with the engine on measured 297
+ * (`artifacts/verification/2026-08-23_ft-pose-fourcpu-counters.txt`: MObj
+ * material animations, the event32 shield poses, effects, the stage), so 384
+ * keeps 87 spare and returns 4,608 B of the engine's 13,696 B to the heap.
+ * Undersizing still degrades to the per-AObj fallback, never a failure. */
+#define NDS_R2_AOBJ_POOL_COUNT 384
+#else
 #define NDS_R2_AOBJ_POOL_COUNT 512
+#endif
 
 u32 gNdsR2AObjPoolCount;
 u32 gNdsR2AObjPoolBytes;

@@ -4302,6 +4302,7 @@ extern void ndsMNVSModeRunStartTransitionProbe(void);
 extern void ndsMNPlayersVSRunReadyTransitionProbe(void);
 extern void ndsMNMapsRunSelectVSBattleProbe(void);
 extern void scVSBattleFuncUpdate(void);
+extern volatile u32 gNdsFtPoseEvalTick;
 /* Effect-instance pool free count (efmanager.c:1720), sampled per presented
  * frame for the NDS_R2_EFFECT_POOL low-water. See include/nds/nds_effects.h. */
 extern s32 sEFManagerStructsFreeNum;
@@ -5441,6 +5442,11 @@ u32 ndsR2HostBattleUpdateOnce(u32 update_index)
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
     sNdsR2ProfileInputTicks += cpuGetTiming() - input_start;
 #endif
+    /* P2-2p6: the fighter pose engine evaluates body joints on the LAST source
+     * tick of a presented frame -- the pose the present will draw -- and holds
+     * them on the others. The Runtime 1 loop publishes the same word. */
+    gNdsFtPoseEvalTick =
+        ((update_index + 1u) >= ndsR2HostBattleUpdatesPerPresent()) ? 1u : 0u;
     ndsRunMarioFoxProofUpdate(&gNdsFighterGCRunAllLoopTaskmanUpdateCount);
 #if NDS_R2_POSITION_PROBE
     if ((gSCManagerBattleState != NULL) &&
@@ -8306,6 +8312,12 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
                     profile_input_ticks += cpuGetTiming() - input_start;
 #endif
+                    /* P2-2p6: the fighter pose engine evaluates body joints on
+                     * the LAST source tick of a presented frame -- the pose the
+                     * draw below will show -- and holds them on the others. */
+                    gNdsFtPoseEvalTick =
+                        ((update_in_iteration + 1u) >= updates_this_iteration) ?
+                            1u : 0u;
                     ndsRunMarioFoxProofUpdate(
                         &gNdsFighterGCRunAllLoopTaskmanUpdateCount);
 #if NDS_R2_POSITION_PROBE

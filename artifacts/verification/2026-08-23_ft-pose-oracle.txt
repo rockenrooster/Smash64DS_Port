@@ -1,0 +1,19 @@
+0x020ca37e in _fread_r ()
+Breakpoint 1 at 0x1ffdac4: file D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_compat_shims.c, line 2636.
+
+Breakpoint 1, ftParamUpdateAnimKeys (fighter_gobj=fighter_gobj@entry=0x23c7580) at D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_compat_shims.c:2636
+2636	    FTStruct *fp = (fighter_gobj != NULL) ? ftGetStruct(fighter_gobj) : NULL;
+POSEORACLE sample=0 binds=47 full=0 unbinds=0 updates=2379 jointticks=42047 jointevals=42047 jointholds=0 trackevals=158733 stepped=5273 runaway=0 saturations=0
+POSEORACLE compares=59414 mismatches=0 first: joint=0 field=0 want=0x00000000 got=0x00000000 frame=0x00000000
+
+Breakpoint 1, ftParamUpdateAnimKeys (fighter_gobj=fighter_gobj@entry=0x23c7580) at D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_compat_shims.c:2636
+2636	    FTStruct *fp = (fighter_gobj != NULL) ? ftGetStruct(fighter_gobj) : NULL;
+POSEORACLE sample=1 binds=114 full=0 unbinds=0 updates=4520 jointticks=79522 jointevals=79522 jointholds=0 trackevals=316981 stepped=11762 runaway=0 saturations=0
+POSEORACLE compares=113376 mismatches=0 first: joint=0 field=0 want=0x00000000 got=0x00000000 frame=0x00000000
+
+Breakpoint 1, ftParamUpdateAnimKeys (fighter_gobj=fighter_gobj@entry=0x2336550) at D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_compat_shims.c:2636
+2636	    FTStruct *fp = (fighter_gobj != NULL) ? ftGetStruct(fighter_gobj) : NULL;
+POSEORACLE sample=2 binds=162 full=0 unbinds=0 updates=7021 jointticks=123575 jointevals=123575 jointholds=0 trackevals=481867 stepped=18013 runaway=0 saturations=0
+POSEORACLE compares=176469 mismatches=0 first: joint=0 field=0 want=0x00000000 got=0x00000000 frame=0x00000000
+[Inferior 1 (Remote target) detached]
+

@@ -3096,6 +3096,19 @@ NDS_R2_FTANIM_TRACK ?= 0
 NDS_R2_FTANIM_TRACK_DISPATCH ?= 1
 NDS_R2_FTANIM_TRACK_ORACLE ?= 0
 
+# P2-2p6 (owner ruling 2026-08-23: "do both"). The fighter pose engine,
+# `src/nds/nds_ft_pose.c`: the figatree script machine and the Q12 evaluator
+# over compact per-fighter tracks in place of the per-tick AObj-list parse and
+# play, and -- NDS_FT_POSE_HOLD -- body-joint evaluation on the last source tick
+# of each presented frame only (TransN/XRotN/YRotN and the attach tick stay
+# 60 Hz). NDS_FT_POSE_ORACLE is the lab proof: the engine runs on shadow joints
+# beside the generic path and compares every pose/clock field bit for bit
+# (`gNdsFtPoseOracleMismatches` must read 0 over a whole match). Default 0
+# until the oracle and the four-CPU A/B have spoken; flip here, not per ROM.
+NDS_FT_POSE ?= 0
+NDS_FT_POSE_HOLD ?= 0
+NDS_FT_POSE_ORACLE ?= 0
+
 # Fox Blaster's shared beam/flash/collision bore line (`nds_effects.h`).
 # SETTLED BY THE OWNER 2026-08-15: "bore should be zero, no offset, not needed
 # anymore". The 84 was eye-tuned 2026-08-14 to compensate a gun-joint pose the
@@ -3328,6 +3341,7 @@ endif
 ifeq ($(NDS_R2_FTANIM_TRACK),1)
 CFILES += nds_ftanim_track.c
 endif
+CFILES += nds_ft_pose.c
 ifeq ($(NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET),1)
 CFILES += battleship_ftcommon_normal_moveset.c
 endif
@@ -4205,6 +4219,9 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_R2_FTANIM_TRACK $(NDS_R2_FTANIM_TRACK)'; \
 		echo '#define NDS_R2_FTANIM_TRACK_DISPATCH $(NDS_R2_FTANIM_TRACK_DISPATCH)'; \
 		echo '#define NDS_R2_FTANIM_TRACK_ORACLE $(NDS_R2_FTANIM_TRACK_ORACLE)'; \
+		echo '#define NDS_FT_POSE $(NDS_FT_POSE)'; \
+		echo '#define NDS_FT_POSE_HOLD $(NDS_FT_POSE_HOLD)'; \
+		echo '#define NDS_FT_POSE_ORACLE $(NDS_FT_POSE_ORACLE)'; \
 		echo '#define NDS_FOX_BLASTER_BORE_OFFSET_Y $(NDS_FOX_BLASTER_BORE_OFFSET_Y)'; \
 		echo "#define NDS_R2_BATTLEPACK_BLOB_BYTES $$(test -f '$(NDS_BATTLEPACK_BLOB)' && wc -c < '$(NDS_BATTLEPACK_BLOB)' || echo 0)u"; \
 		echo '#define NDS_R2_AOBJ16_PREBAKE $(NDS_R2_AOBJ16_PREBAKE)'; \

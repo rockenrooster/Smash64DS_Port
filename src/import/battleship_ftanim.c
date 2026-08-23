@@ -528,6 +528,19 @@ void ndsR2FtAnimAdvanceTailQ(DObj *root_dobj)
     ndsR2AnimAdvanceTail(root_dobj, 1u);
 }
 
+/* P2-2p6 exports for the fighter pose engine (`src/nds/nds_ft_pose.c`): the
+ * Q12 target word and the Q30 reciprocal, the same two bodies the parser
+ * above writes into AObjs, so the engine's tracks carry bit-identical values. */
+s32 ndsR2FtAnimTargetQ(s16 arg, s32 track, sb32 value_or_step)
+{
+    return ndsR2AQLoad(ndsR2AnimTargetValue(arg, track, value_or_step, 1u));
+}
+
+s32 ndsR2FtAnimRecipQ30(u32 n)
+{
+    return ndsR2AQLoad(ndsR2AnimRecipSlot(n, 1u));
+}
+
 void ndsR2FtAnimParseDObjFigatree(DObj *root_dobj)
 {
     AObj *track_aobjs[nGCAnimTrackJointEnd - nGCAnimTrackJointStart + 1];

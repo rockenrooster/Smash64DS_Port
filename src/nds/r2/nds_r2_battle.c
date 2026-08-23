@@ -40,6 +40,8 @@
 #include <nds/nds_scene_harness.h>
 #include <nds/nds_r2_battle.h>
 
+extern volatile u32 gNdsFtPoseEvalTick;
+
 #if NDS_R2_PATH
 
 #if NDS_DEV_SCENE_HARNESS != NDS_DEV_SCENE_HARNESS_BATTLE_PLAYABLE
@@ -113,6 +115,9 @@ void ndsR2BattleRun(void)
     }
 
     ndsR2HostBattleFinish();
+    /* P2-2p6: outside this loop every source tick is a presented one for the
+     * fighter pose engine (menu previews, Results), so leave its eval word set. */
+    gNdsFtPoseEvalTick = 1u;
 }
 
 #endif /* NDS_R2_PATH */

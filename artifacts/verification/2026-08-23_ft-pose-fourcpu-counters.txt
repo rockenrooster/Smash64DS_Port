@@ -1,0 +1,14 @@
+armCopyMem32 () at /home/davem/projects/devkitpro/pacman-packages/calico/src/calico-1.2.0/source/arm/arm-copy-fill.32.s:12
+Breakpoint 1 at 0x1ffdd98: file D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_compat_shims.c, line 2636.
+
+Breakpoint 1, ftParamUpdateAnimKeys (fighter_gobj=fighter_gobj@entry=0x23c91c0) at D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_compat_shims.c:2636
+2636	    FTStruct *fp = (fighter_gobj != NULL) ? ftGetStruct(fighter_gobj) : NULL;
+POSEORACLE sample=0 binds=149 full=0 unbinds=4 updates=3808 jointticks=67425 jointevals=67425 jointholds=0 trackevals=262240 stepped=14506 runaway=0 saturations=0 overflow=0 aobjlivemax=170
+POSEORACLE compares=0 mismatches=0 first: joint=0 field=0 want=0x00000000 got=0x00000000 frame=0x00000000
+
+Breakpoint 1, ftParamUpdateAnimKeys (fighter_gobj=fighter_gobj@entry=0x23d1810) at D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_compat_shims.c:2636
+2636	    FTStruct *fp = (fighter_gobj != NULL) ? ftGetStruct(fighter_gobj) : NULL;
+POSEORACLE sample=1 binds=361 full=0 unbinds=15 updates=7520 jointticks=134925 jointevals=134925 jointholds=0 trackevals=531546 stepped=34098 runaway=0 saturations=0 overflow=0 aobjlivemax=297
+POSEORACLE compares=0 mismatches=0 first: joint=0 field=0 want=0x00000000 got=0x00000000 frame=0x00000000
+[Inferior 1 (Remote target) detached]
+

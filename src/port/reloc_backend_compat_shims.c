@@ -6,6 +6,7 @@
 #include <nds/nds_task39_effect_census.h>
 #include <nds/nds_task37_itcm.h>
 #include <nds/nds_ftanim_track.h>
+#include <nds/nds_ft_pose.h>
 #include <sys/vector.h>
 
 #if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
@@ -2662,6 +2663,14 @@ void NDS_R2_ITCM_PACK2_CODE ftParamUpdateAnimKeys(GObj *fighter_gobj)
             ((fp->is_have_translate_scale != FALSE) && (fp->attr != NULL))
                 ? fp->attr->translate_scales
                 : NULL;
+        /* P2-2p6: a figatree-bound fighter animates through the pose engine
+         * (parse + play over compact tracks, body joints at 30 Hz under
+         * NDS_FT_POSE_HOLD). The MObj material animations below are the
+         * source's and still run per joint; only the joint parse/play is
+         * owned. The event32 (`is_anim_joint`) statuses keep the generic path. */
+        const sb32 pose_owned =
+            ((NDS_FT_POSE != 0) && (!fp->anim_desc.flags.is_anim_joint)) ?
+                ndsFtPoseUpdate(fighter_gobj, fp, translate_scales) : FALSE;
 
         for (i = 0; i < joint_limit; i++, p_joint++)
         {
@@ -2673,6 +2682,21 @@ void NDS_R2_ITCM_PACK2_CODE ftParamUpdateAnimKeys(GObj *fighter_gobj)
                 if (translate_scales != NULL)
                 {
                     translate_scales++;
+                }
+                continue;
+            }
+            if (pose_owned != FALSE)
+            {
+                if (translate_scales != NULL)
+                {
+                    translate_scales++;
+                }
+                mobj = joint->mobj;
+                while (mobj != NULL)
+                {
+                    gcParseMObjMatAnimJoint(mobj);
+                    gcPlayMObjMatAnim(mobj);
+                    mobj = mobj->next;
                 }
                 continue;
             }
@@ -2760,6 +2784,14 @@ void NDS_R2_ITCM_PACK2_CODE ftParamUpdateAnimKeys(GObj *fighter_gobj)
                 mobj = mobj->next;
             }
         }
+#if NDS_FT_POSE_ORACLE
+        /* Lab: the engine ran on its shadows before the generic path ran on
+         * the live joints; compare them now, bit for bit. */
+        if (!fp->anim_desc.flags.is_anim_joint)
+        {
+            ndsFtPoseOracleAfter(fighter_gobj);
+        }
+#endif
     }
     else
     {
@@ -2768,6 +2800,12 @@ void NDS_R2_ITCM_PACK2_CODE ftParamUpdateAnimKeys(GObj *fighter_gobj)
                 ? fp->attr->translate_scales
                 : NULL;
 
+        /* P2-2p6: the engine re-applies its own tracks (ft/ftparam.c:430). */
+        if ((NDS_FT_POSE != 0) && (!fp->anim_desc.flags.is_anim_joint) &&
+            (ndsFtPoseReapply(fighter_gobj, fp, translate_scales) != FALSE))
+        {
+            return;
+        }
         for (i = 0; i < joint_limit; i++, p_joint++)
         {
             joint = *p_joint;
@@ -10072,6 +10110,13 @@ void lbCommonAddFighterPartsFigatree(DObj *root_dobj, void *figatree,
 #endif
     void **figatree_entries = figatree;
     DObj *current_dobj = root_dobj;
+    /* P2-2p6: the fighter pose engine takes the attach when it can hold the
+     * walk. Counted first, because the engine's state is carved from the
+     * arena once per fighter at the walk's size plus the three hidden parts
+     * ftMainSetStatus can materialise, and an attach it cannot hold must fall
+     * back to the generic bind as a whole -- never half a fighter. */
+    u32 pose_entries = 0u;
+    sb32 pose_engine;
 #if NDS_R2_FTANIM_TRACK
     /* Stage 3: status/motion selection binds the precompiled rows ONCE, here.
      * This is the only site that attaches a fighter figatree, and the tree walk
@@ -10085,6 +10130,19 @@ void lbCommonAddFighterPartsFigatree(DObj *root_dobj, void *figatree,
     {
         root_dobj->parent_gobj->anim_frame = anim_frame;
     }
+    if (NDS_FT_POSE != 0)
+    {
+        DObj *walk = root_dobj;
+
+        while (walk != NULL)
+        {
+            pose_entries++;
+            walk = ndsLBCommonGetTreeDObjNextFromRoot(walk, root_dobj);
+        }
+    }
+    pose_engine = (figatree_entries != NULL) ?
+        ndsFtPoseBindBegin(root_dobj, pose_entries) : FALSE;
+    pose_entries = 0u;
     while ((current_dobj != NULL) && (figatree_entries != NULL))
     {
         AObjEvent32 *anim_joint = *figatree_entries;
@@ -10095,7 +10153,20 @@ void lbCommonAddFighterPartsFigatree(DObj *root_dobj, void *figatree,
                                                         sizeof(*anim_joint));
         if (anim_joint != NULL)
         {
-            gcAddDObjAnimJoint(current_dobj, anim_joint, anim_frame);
+            if (pose_engine != FALSE)
+            {
+                ndsFtPoseBindEntry(pose_entries, current_dobj,
+                                   (AObjEvent16 *)anim_joint, anim_frame);
+#if NDS_FT_POSE_ORACLE
+                /* The oracle keeps the generic bind on the live joint; the
+                 * engine bound its shadow copy above. */
+                gcAddDObjAnimJoint(current_dobj, anim_joint, anim_frame);
+#endif
+            }
+            else
+            {
+                gcAddDObjAnimJoint(current_dobj, anim_joint, anim_frame);
+            }
 #if NDS_R2_FTANIM_TRACK
             /* AFTER the generic bind, never instead of it: `gcAddDObjAnimJoint`
              * resets every AObj to `nGCAnimKindNone`, sets `anim_wait` to
@@ -10120,6 +10191,11 @@ void lbCommonAddFighterPartsFigatree(DObj *root_dobj, void *figatree,
                 gNdsFighterNaturalMotionFigatreeAnimInvalidCount++;
                 gNdsFighterNaturalMotionUnsafeCount++;
             }
+            if (pose_engine != FALSE)
+            {
+                ndsFtPoseBindEntry(pose_entries, current_dobj, NULL,
+                                   anim_frame);
+            }
             current_dobj->anim_wait = AOBJ_ANIM_NULL;
             if (parts != NULL)
             {
@@ -10127,11 +10203,16 @@ void lbCommonAddFighterPartsFigatree(DObj *root_dobj, void *figatree,
             }
         }
         figatree_entries++;
+        pose_entries++;
 #if NDS_R2_FTANIM_TRACK
         trk_index++;
 #endif
         current_dobj =
             ndsLBCommonGetTreeDObjNextFromRoot(current_dobj, root_dobj);
+    }
+    if (pose_engine != FALSE)
+    {
+        ndsFtPoseBindEnd(pose_entries);
     }
 #else
     (void)figatree;
@@ -10175,6 +10256,9 @@ void lbCommonAddDObjAnimJointAll(DObj *dobj, AObjEvent32 **anim_joint,
     {
         return;
     }
+    /* P2-2p6: an event32 attach re-targets these joints; the pose engine
+     * steps aside until the next figatree attach. */
+    ndsFtPoseUnbind(dobj->parent_gobj);
     if (dobj->parent_gobj != NULL)
     {
         dobj->parent_gobj->anim_frame = anim_frame;

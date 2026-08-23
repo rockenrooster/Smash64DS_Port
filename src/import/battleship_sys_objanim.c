@@ -254,72 +254,9 @@ static inline s32 ndsR2F32MulToFixed(f32 a, f32 b, s32 bits)
     return (sign != 0u) ? -(s32)p : (s32)p;
 }
 
-/* s32 -> f32 bit pattern, without `__aeabi_i2f`.
- *
- * The call was 60,582 executions and 1,017,778 cycles in the cycle-106
- * whole-match profile -- one per cubic evaluation, and after the comparison
- * helpers went it was the last soft-float call left in this kernel apart from
- * the `length * length_invert` multiply. There is nothing to win inside libgcc's
- * routine; the win is not making the call.
- *
- * This is EXACT, not an approximation: it reproduces `__aeabi_i2f` bit for bit
- * including round-to-nearest-even for the |q| >= 2^24 inputs where an s32 does
- * not fit a 24-bit significand. `scripts/check_s32tof32_exact.py` proves it over
- * all 2^32 inputs; it is not argued from this comment.
- *
- * `__builtin_clz` is only free because the sole caller is the `target("arm")`
- * kernel below -- Thumb-1 has no `CLZ` and would turn this into a `__clzsi2`
- * call, which is the trap `thumb-hides-64bit-cost` records. Do not inline this
- * into a Thumb function. */
-static inline u32 ndsR2S32ToF32Bits(s32 q)
-{
-    u32 sign;
-    u32 m;
-    u32 lz;
-    u32 exp;
-    u32 mant;
-    u32 rem;
-
-    if (q == 0)
-    {
-        return 0u;
-    }
-    sign = (q < 0) ? 0x80000000u : 0u;
-    /* Negating INT_MIN in u32 gives 0x80000000, which is the magnitude wanted;
-     * doing it in s32 would be undefined. */
-    m = (q < 0) ? (0u - (u32)q) : (u32)q;
-    lz = (u32)__builtin_clz(m);
-    exp = 31u - lz;
-    m <<= lz;                       /* leading one now at bit 31 */
-    mant = m >> 8;                  /* 24 significant bits, implicit one at 23 */
-    rem = m & 0xffu;                /* the bits that fall off */
-    if ((rem > 0x80u) || ((rem == 0x80u) && ((mant & 1u) != 0u)))
-    {
-        mant++;                     /* round to nearest, ties to even */
-        if ((mant & 0x1000000u) != 0u)
-        {
-            mant >>= 1;             /* rounding carried out of the significand */
-            exp++;
-        }
-    }
-    return sign | ((exp + 127u) << 23) | (mant & 0x7fffffu);
-}
-
-/* Q`bits` -> f32. The integer conversion above plus an exact exponent adjust;
- * subtracting `bits` biased exponents is an exact divide by 2^bits, so no
- * second multiply and no extra rounding. */
-static inline f32 ndsR2FixedToF32(s32 q, s32 bits)
-{
-    f32 f;
-    u32 raw = ndsR2S32ToF32Bits(q);
-
-    if ((raw & 0x7f800000u) != 0u)
-    {
-        raw -= ((u32)bits << 23);
-    }
-    __builtin_memcpy(&f, &raw, sizeof(f));
-    return f;
-}
+/* `ndsR2S32ToF32Bits` / `ndsR2FixedToF32` moved to `nds_anim_fixed.h`
+ * (P2-2p6) so the fighter pose engine shares them; exact, proven over all 2^32
+ * inputs by `scripts/check_s32tof32_exact.py`. */
 
 /* Compile this one function as ARM, not Thumb.
  *
@@ -360,55 +297,9 @@ static inline f32 ndsR2FixedToF32(s32 q, s32 bits)
 #define NDS_R2_ANIM_Q_ITCM
 #endif
 
-/* Both kernels square `t` and then cube it, and t^3 wraps an s32 well before
- * `t` itself does. Inside a block `t` is in [0,1]; outside it the Hermite is
- * extrapolating nonsense either way, so the only question is whether the
- * nonsense is bounded or a wrap -- and a wrapped joint is a visible teleport.
- *
- * This is not theoretical and it is not new. `gNdsR2CubicSaturations` read
- * **337 a match** on the float arm of the cycle-116 A/B: `length_invert` still
- * holding a Step FRAME COUNT when a Cubic event arrives with a zero payload
- * (the parser only overwrites it when the payload is non-zero) makes
- * `t = length * length_invert` enormous, the conversion clamps it to
- * 0x7fffffff, and `t*t` then wraps anyway. Clamping `t` instead of its inputs
- * is what actually bounds the chain, and it costs two compares.
- *
- * With |t| <= 2 and |length| <= 1024 frames (17 seconds -- longer than any
- * block) every intermediate fits an s32 with room: t2 <= 2^18, t3 <= 2^19,
- * omt2 <= 2^19, length*omt2 >> 12 <= 2^29, and the s64 accumulator reaches
- * 2^54 against its 2^63. The result is clamped once on the way out. */
-#define NDS_R2_AQ_T_MAX  (2 * NDS_R2_AQ_BONE)
-#define NDS_R2_AQ_LEN_MAX (1024 << NDS_R2_AQ_LF)
-
-static inline s32 ndsR2AnimClamp(s32 v, s32 limit)
-{
-    if (v > limit)
-    {
-        gNdsR2CubicSaturations++;
-        return limit;
-    }
-    if (v < -limit)
-    {
-        gNdsR2CubicSaturations++;
-        return -limit;
-    }
-    return v;
-}
-
-static inline s32 ndsR2AnimClamp64(s64 v)
-{
-    if (v > (s64)0x7fffffff)
-    {
-        gNdsR2CubicSaturations++;
-        return 0x7fffffff;
-    }
-    if (v < -(s64)0x7fffffff)
-    {
-        gNdsR2CubicSaturations++;
-        return -0x7fffffff;
-    }
-    return (s32)v;
-}
+/* `NDS_R2_AQ_T_MAX`, `NDS_R2_AQ_LEN_MAX`, `ndsR2AnimClamp` and
+ * `ndsR2AnimClamp64` moved to `nds_anim_fixed.h` (P2-2p6) with the field
+ * kernel; the saturation reasoning is kept beside them there. */
 
 static NDS_R2_CUBIC_ATTR f32 ndsR2CubicValueFixed(const AObj *aobj)
 {
@@ -496,67 +387,21 @@ static NDS_R2_CUBIC_ATTR f32 ndsR2CubicValueFixed(const AObj *aobj)
  * mismatch and this TU is built -mthumb. */
 static NDS_R2_ANIM_Q_BODY_ATTR f32 ndsR2AnimValueQBody(const AObj *aobj)
 {
-    s32 len = ndsR2AQLoad(aobj->length);            /* Q12 frames */
-    s32 inv = ndsR2AQLoad(aobj->length_invert);     /* Q30 recip, or Q12 frames */
-    s32 vb = ndsR2AQLoad(aobj->value_base);         /* Q12 */
+    /* P2-2p6: the arithmetic lives in `ndsR2AnimEvalQ` (nds_anim_fixed.h),
+     * ONE body shared with the fighter pose engine. This wrapper only loads the
+     * AObj's Q slots, counts the cubic evaluations and converts the Q12 result
+     * to the f32 the DObj pose vectors still carry. The per-arm narrowing the
+     * cycle-116 comment insisted on is preserved inside the kernel. */
     u32 kind = aobj->kind;
-    s32 out;
+    s32 out = ndsR2AnimEvalQ(ndsR2AQLoad(aobj->length),
+                             ndsR2AQLoad(aobj->length_invert),
+                             ndsR2AQLoad(aobj->value_base),
+                             ndsR2AQLoad(aobj->value_target),
+                             ndsR2AQLoad(aobj->rate_base),
+                             ndsR2AQLoad(aobj->rate_target), kind);
 
-    /* Each arm keeps its OWN result in an s32 and its own `s64` local, and the
-     * cubic tests first so it is the fall-through.
-     *
-     * That shape is load-bearing, not style. Written with one `s64 acc` shared
-     * across the three arms (cycle 116's first cut, measured on the shipped
-     * ROM) GCC sign-extended `length`, `value_base` and `rate_target` to 64 bits
-     * BEFORE the branch, expanded every `(s64)a * b` from one SMLAL into a
-     * mul/mla/umull triple, and spilled 20 bytes to the stack to hold the
-     * doubled register pressure -- 241 ARM instructions where the float kernel
-     * it replaced needed far fewer for the same curve. Narrowing the arms is
-     * worth more than any arithmetic left in them. Check the disassembly for
-     * `umull`/`adc` pairs after touching this. */
-    if (kind == NDS_R2_AQ_KIND_STEP)
+    if (kind == NDS_R2_AQ_KIND_CUBIC)
     {
-        /* `len` unclamped on purpose: Step is a compare and a select, and
-         * clamping it would change which of the two values a block longer than
-         * the clamp selects. Neither value can be out of range -- both were
-         * written by the parser from an s16 -- so no clamp on the way out. */
-        out = (inv <= len) ? ndsR2AQLoad(aobj->value_target) : vb;
-    }
-    else if (kind == NDS_R2_AQ_KIND_LINEAR)
-    {
-        /* Q16 rate, not Q12 -- see NDS_R2_AQ_RF. */
-        s64 lin = (s64)vb + ((((s64)len * ndsR2AQLoad(aobj->rate_base)) +
-            (1 << (NDS_R2_AQ_RF - 1))) >> NDS_R2_AQ_RF);
-
-        out = ndsR2AnimClamp64(lin);
-    }
-    else
-    {
-        /* Q12 length x Q30 reciprocal, requantised to the Q16 basis scale.
-         * The 64-bit product cannot overflow, so the clamp goes on `t` rather
-         * than on its inputs -- see NDS_R2_AQ_T_MAX. */
-        s32 lenc = ndsR2AnimClamp(len, NDS_R2_AQ_LEN_MAX);
-        s32 t = ndsR2AnimClamp(
-            (s32)((((s64)len * inv) + ((s64)1 << (NDS_R2_AQ_TSH - 1))) >>
-                NDS_R2_AQ_TSH), NDS_R2_AQ_T_MAX);
-        s32 t2 = (s32)((((s64)t * t) + (NDS_R2_AQ_BONE / 2)) >> NDS_R2_AQ_BF);
-        s32 t3 = (s32)((((s64)t2 * t) + (NDS_R2_AQ_BONE / 2)) >> NDS_R2_AQ_BF);
-        s32 omt2 = (t2 - (2 * t)) + NDS_R2_AQ_BONE;
-        s32 h_vb = ((2 * t3) - (3 * t2)) + NDS_R2_AQ_BONE;
-        s32 h_vt = (3 * t2) - (2 * t3);
-        s32 h_rb = (s32)((((s64)lenc * omt2) + (1 << (NDS_R2_AQ_VF - 1))) >>
-            NDS_R2_AQ_VF);
-        s32 h_rt = (s32)((((s64)lenc * (t2 - t)) + (1 << (NDS_R2_AQ_VF - 1))) >>
-            NDS_R2_AQ_VF);
-        s64 acc = (s64)vb * h_vb;
-
-        acc += (s64)ndsR2AQLoad(aobj->value_target) * h_vt;
-        acc += (s64)ndsR2AQLoad(aobj->rate_base) * h_rb;
-        acc += (s64)ndsR2AQLoad(aobj->rate_target) * h_rt;
-        /* The float kernel saturated at each of its six conversions and so
-         * could not reach here out of range; with the conversions gone this
-         * accumulator is the only place left that can. */
-        out = ndsR2AnimClamp64((acc + (NDS_R2_AQ_BONE / 2)) >> NDS_R2_AQ_BF);
         gNdsR2CubicEvals++;
     }
     return ndsR2FixedToF32(out, NDS_R2_AQ_VF);
