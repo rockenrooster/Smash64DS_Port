@@ -90,7 +90,11 @@ their owner visual/play residuals; P2-3 is the active implementation frontier.
    Arwing now use build-time converted DS-native entry geometry with zero generic
    entry fallback while keeping BattleShip's live DObj/visibility timeline.
    The next structurally new fighter is Donkey Kong. Keep admission fighter-by-
-   fighter; do not turn this into a roster mega-import.
+   fighter; do not turn this into a roster mega-import. **Owner review rows
+   P2-3r1..r3 (board, 2026-08-22):** the pipe is fixed (lit normals + light
+   seed; the rise to 420 is the source's own motion), "Luigi has issues" waits
+   on specifics, and the stopped DK agent's `NDS_P2_DONKEY` proof work sits
+   uncommitted in the tree until compiled under the flag.
 4. **Performance remains debt, not a green claim.** The four-CPU stress arm is
    correctness/memory green but is nowhere near 1.12m ticks (`ALL` P50
    1,678,144; `WORK-H` P50 1,603,904). Its largest median lanes are FTR 671,296
@@ -109,6 +113,13 @@ green throughout.
 
 ## Standing operational facts
 
+- **Republish the free-play ROM after every fix batch** (owner, 2026-08-22:
+  "periodically create the freeplay ROM so I can help playtest"): a plain
+  `make TARGET=smash64ds` writes the root `smash64ds.nds` (human input, walk
+  compiled out, flag-identical to the gate's shell config). A Luigi-enabled
+  lab twin is `make TARGET=smash64ds-p2-shell-freeplay-hwtri
+  BUILD=builds/build-p2-shell-freeplay-luigi NDS_P2_LUIGI=1`; it is not the
+  gate configuration and stays in `builds/`.
 - Clean checkout builds through `build.ps1`, not bare `make` (four of six
   `.inc` are gitignored and `build.ps1`'s generator is not run by `make`).
   Never pass `-j`, never override `MAKEFLAGS`, one build at a time.

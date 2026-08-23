@@ -10,7 +10,18 @@ param(
     # composes into shadow OAM, so a capture taken at the state's own stop is
     # one state behind -- measured twice, once as a black screen and once as
     # the pre-move cursor.
-    [ValidateRange(1, 32)][int]$PresentsAfterState = 6
+    [ValidateRange(1, 32)][int]$PresentsAfterState = 6,
+    # Capture only these states (names from the table below), in table order.
+    # A direct-battle ROM has no shell symbols, so `-Only battle-intro,
+    # fighter-entry-1,fighter-entry-2` is how a boot-into-battle lab build is
+    # photographed; the symbol check below covers only the selected states.
+    [string[]]$Only = @(),
+    # Extra shots AFTER fighter-entry-1, each N steps after the previous one
+    # (cumulative), named fighter-entry-1+<total>. A time series of the source
+    # entry effect from one run: `-EntrySeries 16,32,64`. A step is one
+    # ndsPlatformEndFrame, which this target reaches once per 60 Hz LOGIC
+    # frame (two per presented frame), so +32 is source frame 32.
+    [int[]]$EntrySeries = @()
 )
 
 # P2-1g visibility, and the phase-level successor to
@@ -88,13 +99,32 @@ $states = @(
     # Mario/Fox match these cover both fighter-specific entry paths regardless
     # of link-list order, and advancing after the call captures the animation /
     # effect rather than the pre-status frame at the breakpoint itself.
-    @{ Name = 'fighter-entry-1'; Break = 'ftCommonAppearSetStatus'; Presents = 8 },
-    @{ Name = 'fighter-entry-2'; Break = 'ftCommonAppearSetStatus'; Presents = 8 }
+    @{ Name = 'fighter-entry-1'; Break = 'ftCommonAppearSetStatus'; Presents = 8 }
 )
+$entryTotal = 8
+foreach ($step in $EntrySeries) {
+    $entryTotal += $step
+    $states += @{ Name = ('fighter-entry-1+' + $entryTotal);
+                  Break = 'ndsPlatformEndFrame'; Presents = $step - 1 }
+}
+$states += @{ Name = 'fighter-entry-2'; Break = 'ftCommonAppearSetStatus'; Presents = 8 }
 
-$required = @('ndsPlatformEndFrame', 'gNdsMenuShellScreen') +
+if ($Only.Count -gt 0) {
+    $unknown = @($Only | Where-Object { $name = $_; -not ($states | Where-Object { $_.Name -eq $name }) })
+    if ($unknown.Count -gt 0) {
+        throw ('Unknown -Only state(s): ' + ($unknown -join ', '))
+    }
+    $states = @($states | Where-Object { ($Only -contains $_.Name) -or ($_.Name -like 'fighter-entry-1+*') })
+}
+$required = @('ndsPlatformEndFrame') +
     @($states | ForEach-Object { $_.Break } | Select-Object -Unique)
 $symbols = & $nm $elf | ForEach-Object { ($_ -split '\s+')[-1] }
+# A boot-into-battle lab ROM links no menu shell; its captures still work,
+# they just cannot report the shell screen/cursor in the marker line.
+$hasShell = $symbols -contains 'gNdsMenuShellScreen'
+if (-not $hasShell -and ($states | Where-Object { $_.Break -like 'ndsMenuShell*' })) {
+    throw ('{0} has no menu shell; select only battle states with -Only' -f $elf)
+}
 $missing = @($required | Where-Object { $symbols -notcontains $_ })
 if ($missing.Count -gt 0) {
     throw ("p2-shell capture symbols absent from {0}: {1}" -f $elf, ($missing -join ', '))
@@ -108,9 +138,15 @@ $emulator = $null
 $capture = Join-Path $scripts 'capture-running-melonds-window.ps1'
 
 try {
+    # BreakOnStartup: the first state's symbol (ndsMenuShellRunTitle) runs
+    # ONCE per screen entry, and an unthrottled guest reaches the title
+    # before gdb has connected -- two 2026-08-22 runs attached inside the
+    # title's own animation and waited the full timeout for a breakpoint
+    # that could no longer fire. Hold ARM9 at reset until the script's
+    # first `continue`, the way the battle proof harness does.
     $config_state = Enable-MelonDSGdbConfig `
         -MelonDSPath $context.MelonDSPath `
-        -GdbPort $context.GdbPort -Persistent -MuteAudio
+        -GdbPort $context.GdbPort -Persistent -BreakOnStartup -MuteAudio
     # WindowStyle: visible-by-design -- this harness photographs the emulator
     # window, and a hidden launch leaves MainWindowHandle at IntPtr.Zero, so
     # the run succeeds and every PNG comes out black. Exactly the case
@@ -161,9 +197,13 @@ try {
         }
         $commands += @(
             'continue',
-            ('printf "SHELLCAP ' + $state.Name +
-             ' screen=%u sss_slot=%u sss_gkind=%02x\n", gNdsMenuShellScreen, ' +
-             'gNdsMenuShellSssCursorSlot, gNdsMenuShellSssCursorGkind'),
+            $(if ($hasShell) {
+                ('printf "SHELLCAP ' + $state.Name +
+                 ' screen=%u sss_slot=%u sss_gkind=%02x\n", gNdsMenuShellScreen, ' +
+                 'gNdsMenuShellSssCursorSlot, gNdsMenuShellSssCursorGkind')
+            } else {
+                ('printf "SHELLCAP ' + $state.Name + '\n"')
+            }),
             'delete',
             'break ndsPlatformEndFrame'
         )
@@ -175,10 +215,12 @@ try {
         # again after them, so the title's delta over a known number of
         # presents is readable rather than inferred.
         # Index 0 is NDS_MENU_SHELL_SCREEN_TITLE (nds_menu_shell.h:48).
-        $fire_args = (' en=%u dis=%u frame=%u reveal=%u titleframes=%u\n", ' +
+        $fire_args = if ($hasShell) {
+            (' en=%u dis=%u frame=%u reveal=%u titleframes=%u\n", ' +
             'gNdsTitleFireEnableCount, gNdsTitleFireDisableCount, ' +
             'gNdsTitleFireFrameCount, gNdsTitleFireRevealFrame, ' +
             'gNdsMenuShellFrames[0]')
+        } else { '\n"' }
         $commands += @(
             ('printf "SHELLFIRE ' + $state.Name + ' enter' + $fire_args))
         # SEPARATE CONTINUES, and that is load-bearing: `continue N` sets the
@@ -197,7 +239,9 @@ try {
         )
     }
     $commands += @(
-        'printf "SHELLCAP done move=%u blocked=%u csscommit=%u ssscommit=%u\n", gNdsMenuShellSssMoveCount, gNdsMenuShellSssBlockedCount, gNdsMenuShellCssCommitCount, gNdsMenuShellSssCommitCount',
+        $(if ($hasShell) {
+            'printf "SHELLCAP done move=%u blocked=%u csscommit=%u ssscommit=%u\n", gNdsMenuShellSssMoveCount, gNdsMenuShellSssBlockedCount, gNdsMenuShellCssCommitCount, gNdsMenuShellSssCommitCount'
+        } else { 'printf "SHELLCAP done\n"' }),
         'detach',
         'quit'
     )

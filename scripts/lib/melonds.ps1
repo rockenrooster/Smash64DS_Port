@@ -416,6 +416,7 @@ function Set-MelonDSAutomationProfile {
         [string]$Text,
         [Parameter(Mandatory=$true)][int]$GdbPort,
         [Parameter(Mandatory=$true)][int]$Arm7Port,
+        [switch]$BreakOnStartup,
         [switch]$MuteAudio
     )
 
@@ -426,7 +427,8 @@ function Set-MelonDSAutomationProfile {
     $Text = Set-MelonDSTomlRootValue -Text $Text -Key 'LimitFPS' -Value 'false'
     $Text = Set-MelonDSTomlValue -Text $Text -Section 'Instance0.Gdb' -Key 'Enable' -Value 'true'
     $Text = Set-MelonDSTomlValue -Text $Text -Section 'Instance0.Gdb' -Key 'Enabled' -Value 'true'
-    $Text = Set-MelonDSTomlValue -Text $Text -Section 'Instance0.Gdb.ARM9' -Key 'BreakOnStartup' -Value 'false'
+    $Text = Set-MelonDSTomlValue -Text $Text -Section 'Instance0.Gdb.ARM9' -Key 'BreakOnStartup' `
+        -Value $(if ($BreakOnStartup) { 'true' } else { 'false' })
     $Text = Set-MelonDSTomlValue -Text $Text -Section 'Instance0.Gdb.ARM9' -Key 'Port' -Value "$GdbPort"
     $Text = Set-MelonDSTomlValue -Text $Text -Section 'Instance0.Gdb.ARM7' -Key 'BreakOnStartup' -Value 'false'
     $Text = Set-MelonDSTomlValue -Text $Text -Section 'Instance0.Gdb.ARM7' -Key 'Port' -Value "$Arm7Port"
@@ -450,6 +452,7 @@ function Set-MelonDSGdbConfig {
         [int]$GdbPort = (Get-MelonDSActiveGdbPort),
         [Nullable[int]]$Arm7Port,
         [switch]$Persistent,
+        [switch]$BreakOnStartup,
         [switch]$MuteAudio
     )
 
@@ -475,7 +478,8 @@ function Set-MelonDSGdbConfig {
     # Every automated launch is unthrottled, interpreter-only, software-rendered,
     # host-muted, and window-normalized. ROM audio remains fully active.
     $text = Set-MelonDSAutomationProfile -Text $text `
-        -GdbPort $GdbPort -Arm7Port $Arm7Port -MuteAudio
+        -GdbPort $GdbPort -Arm7Port $Arm7Port `
+        -BreakOnStartup:$BreakOnStartup -MuteAudio
     Set-Content $config -Value $text -NoNewline
 
     return [PSCustomObject]@{
@@ -483,6 +487,7 @@ function Set-MelonDSGdbConfig {
         OriginalConfig = $originalConfig
         Created = $created
         Persistent = [bool]$Persistent
+        BreakOnStartup = [bool]$BreakOnStartup
         GdbPort = $GdbPort
         Arm7Port = $Arm7Port
     }
@@ -494,6 +499,7 @@ function Enable-MelonDSGdbConfig {
         [int]$GdbPort = (Get-MelonDSActiveGdbPort),
         [Nullable[int]]$Arm7Port,
         [switch]$Persistent,
+        [switch]$BreakOnStartup,
         [switch]$MuteAudio
     )
 
@@ -502,13 +508,28 @@ function Enable-MelonDSGdbConfig {
         -GdbPort $GdbPort `
         -Arm7Port $Arm7Port `
         -Persistent:$Persistent `
+        -BreakOnStartup:$BreakOnStartup `
         -MuteAudio:$MuteAudio
 }
 
 function Restore-MelonDSGdbConfig {
     param([object]$State)
 
-    if ($null -eq $State -or $State.Persistent) {
+    if ($null -eq $State) {
+        return
+    }
+    if ($State.Persistent) {
+        # Runner-slot configs intentionally persist their GDB ports and the
+        # automation profile between invocations. BreakOnStartup is different:
+        # leaving it armed strands the next unattended run before guest startup.
+        # Disarm only that transient latch while preserving the persistent slot.
+        if ($State.BreakOnStartup -and $State.Config -and
+            (Test-Path -LiteralPath $State.Config)) {
+            $text = Get-Content -LiteralPath $State.Config -Raw
+            $text = Set-MelonDSTomlValue -Text $text `
+                -Section 'Instance0.Gdb.ARM9' -Key 'BreakOnStartup' -Value 'false'
+            Set-Content -LiteralPath $State.Config -Value $text -NoNewline
+        }
         return
     }
     if ($null -ne $State.OriginalConfig) {

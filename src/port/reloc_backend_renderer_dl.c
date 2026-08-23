@@ -6418,6 +6418,11 @@ static s32 ndsFighterMarioFoxVisitDLDrawCommand(
 static Light sNdsFighterDisplayCurrentLight;
 static u32 sNdsFighterDisplayCurrentLightCount;
 static u32 sNdsFighterDisplayCurrentLightValid;
+/* NDSRendererStats.light_color_mask bits (nds_renderer.c's private
+ * NDS_RENDERER_LIGHT_COLOR_*_MASK). Declared up here because the entry-effect
+ * owner seeds them long before the fighter display contract is defined. */
+#define NDS_FIGHTER_DISPLAY_LIGHT_COLOR_1_MASK (1u << 0)
+#define NDS_FIGHTER_DISPLAY_LIGHT_COLOR_2_MASK (1u << 1)
 
 #if NDS_RENDERER_HW_TRIANGLES
 #define NDS_RENDERER_STAGE_DL_HEADS 4u
@@ -10828,6 +10833,65 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
     }
 
     ndsRendererInitStats(&stats);
+    /* Light state. Both lists inherit G_LIGHTING from the battle display and
+     * carry their own gSPLightColor words in the packet; what they do not
+     * carry is seeded from what the display left in the RSP: the direction
+     * scVSBattleFuncLights aimed, re-aimed by the fighter's own
+     * ftDisplayLightsDrawReflect when it uses a light (same seed as
+     * ndsRendererAdapterBeginStageTraversal), and for a group before the
+     * first colour word the last colours written: the effect's own MObj
+     * colours when it carries MOBJ_FLAG_LIGHT1/2, otherwise the fighter
+     * material drawn before it. */
+    if ((sNdsFighterDisplayCurrentLightValid != FALSE) &&
+        (sNdsFighterDisplayCurrentLightCount != 0u))
+    {
+        stats.light_dir_x = sNdsFighterDisplayCurrentLight.l.dir[0];
+        stats.light_dir_y = sNdsFighterDisplayCurrentLight.l.dir[1];
+        stats.light_dir_z = sNdsFighterDisplayCurrentLight.l.dir[2];
+        stats.light_dir_mask = 1u;
+    }
+    {
+        MObj *mobj;
+
+        for (mobj = dobj->mobj; mobj != NULL; mobj = mobj->next)
+        {
+            u32 flags = mobj->sub.flags;
+
+            if ((flags & MOBJ_FLAG_LIGHT1) != 0u)
+            {
+                stats.light_color_1 =
+                    ndsRendererAdapterPackColor(&mobj->sub.light1color);
+                stats.light_color_mask |=
+                    NDS_FIGHTER_DISPLAY_LIGHT_COLOR_1_MASK;
+            }
+            if ((flags & MOBJ_FLAG_LIGHT2) != 0u)
+            {
+                stats.light_color_2 =
+                    ndsRendererAdapterPackColor(&mobj->sub.light2color);
+                stats.light_color_mask |=
+                    NDS_FIGHTER_DISPLAY_LIGHT_COLOR_2_MASK;
+            }
+        }
+        if (gNdsFighterDisplayContractMaterialLightSeedCount != 0u)
+        {
+            if ((stats.light_color_mask &
+                 NDS_FIGHTER_DISPLAY_LIGHT_COLOR_1_MASK) == 0u)
+            {
+                stats.light_color_1 =
+                    gNdsFighterDisplayContractMaterialLight1;
+                stats.light_color_mask |=
+                    NDS_FIGHTER_DISPLAY_LIGHT_COLOR_1_MASK;
+            }
+            if ((stats.light_color_mask &
+                 NDS_FIGHTER_DISPLAY_LIGHT_COLOR_2_MASK) == 0u)
+            {
+                stats.light_color_2 =
+                    gNdsFighterDisplayContractMaterialLight2;
+                stats.light_color_mask |=
+                    NDS_FIGHTER_DISPLAY_LIGHT_COLOR_2_MASK;
+            }
+        }
+    }
     config.max_depth = 4u;
     config.max_commands = 1u;
     config.max_list_commands = 1u;
@@ -13773,8 +13837,6 @@ typedef struct NDSFighterDisplayContractEvent {
 } NDSFighterDisplayContractEvent;
 
 #define NDS_FIGHTER_DISPLAY_CYCLETYPE_MASK (3u << 20)
-#define NDS_FIGHTER_DISPLAY_LIGHT_COLOR_1_MASK (1u << 0)
-#define NDS_FIGHTER_DISPLAY_LIGHT_COLOR_2_MASK (1u << 1)
 
 typedef struct NDSFighterDisplayContract {
     NDSFighterDisplayContractEvent events[NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED];

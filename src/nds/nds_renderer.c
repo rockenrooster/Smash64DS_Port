@@ -5102,7 +5102,13 @@ typedef struct NDSNativeFighterRuntimeTables
  * ship) and replace only the expensive presentation half with an AOT packet.
  * The generated vertices already contain final DS t16 texcoords and every
  * texture is already PAL16/A5I3, so this owner never decodes an N64 display list
- * or converts an N64 texture at runtime. */
+ * or converts an N64 texture at runtime.
+ *
+ * geometry_mode/geometry_clear are the bits the list set and cleared; a bit
+ * in neither is inherited from the battle display's state at submit. Both
+ * models inherit G_LIGHTING that way, so a SHADE-combined group's vertex
+ * r,g,b are unit normals. light_color_1/2 (valid per light_mask bit 0/1)
+ * are the lists' own gSPLightColor words; the direction is the battle's. */
 typedef struct NDSEntryEffectGroup
 {
     u16 first_vertex;
@@ -5110,16 +5116,20 @@ typedef struct NDSEntryEffectGroup
     u8 texture_slot;
     u8 root_index;
     u32 geometry_mode;
+    u32 geometry_clear;
     u32 combine_w0;
     u32 combine_w1;
     u32 othermode_h;
     u32 othermode_l;
     u32 prim_color;
     u32 env_color;
+    u32 light_color_1;
+    u32 light_color_2;
     u8 cms;
     u8 cmt;
     u8 masks;
     u8 maskt;
+    u8 light_mask;
 } NDSEntryEffectGroup;
 
 typedef struct NDSEntryEffectRoot
@@ -26114,14 +26124,36 @@ s32 ndsRendererSubmitNativeEntryEffect(
         u32 poly_fmt;
         u32 corner_count = (u32)group->triangle_count * 3u;
         u32 corner;
+        s32 lit;
+        NDSRendererHardwareLightDirection light_direction = { 0, 0, 0 };
 
+        /* A bit the list neither cleared nor set is inherited from the battle
+         * display's state, exactly as the RSP had it. Masking G_LIGHTING off
+         * here drew the pipe's normals as colours: a black pipe body. */
         stats->geometry_mode =
-            group->geometry_mode & ~NDS_RENDERER_GEOM_LIGHTING;
+            (config->initial_geometry_mode & ~group->geometry_clear) |
+            group->geometry_mode;
         stats->othermode_h = group->othermode_h;
         stats->othermode_l = group->othermode_l;
         stats->prim_color = group->prim_color;
         stats->env_color = group->env_color;
         ndsRendererRecordSetCombine(stats, group->combine_w0, group->combine_w1);
+        if ((group->light_mask & 1u) != 0u)
+        {
+            stats->light_color_1 = group->light_color_1;
+            stats->light_color_mask |= NDS_RENDERER_LIGHT_COLOR_1_MASK;
+        }
+        if ((group->light_mask & 2u) != 0u)
+        {
+            stats->light_color_2 = group->light_color_2;
+            stats->light_color_mask |= NDS_RENDERER_LIGHT_COLOR_2_MASK;
+        }
+        lit = ndsRendererHardwareLitShadeCombine(stats);
+        if (lit != FALSE)
+        {
+            ndsRendererHardwarePrepareLitDirection(
+                stats, config->initial_modelview, &light_direction);
+        }
 
         if (use_texture != FALSE)
         {
@@ -26153,9 +26185,9 @@ s32 ndsRendererSubmitNativeEntryEffect(
         use_material_color = ndsRendererHardwareUseMaterialColor(stats);
         use_vertex_color = ndsRendererHardwareUseVertexColor(stats);
         poly_fmt = ndsRendererHardwarePolyFmt(stats, 31u);
-        /* The generated corpus is unlit. POLY_FORMAT_LIGHT0 must therefore
-         * remain absent even if a previous hardware-lit fighter/effect left a
-         * light vector in GX state. */
+        /* Lit groups are shaded on the CPU below, like the native fighter
+         * owner; POLY_FORMAT_LIGHT0 must stay absent even if a previous
+         * hardware-lit owner left a light vector in GX state. */
         poly_fmt &= ~((u32)POLY_FORMAT_LIGHT0);
         ndsRendererHardwareBeginTriangleBatch(
             stats, use_texture, texture_name, poly_fmt,
@@ -26166,14 +26198,28 @@ s32 ndsRendererSubmitNativeEntryEffect(
         {
             const NDSRendererInputVertex *vtx =
                 &sNdsEntryEffectVertices[(u32)group->first_vertex + corner];
-            u32 vertex_color =
-                ((u32)vtx->r << 24) | ((u32)vtx->g << 16) |
-                ((u32)vtx->b << 8) | (u32)vtx->a;
-            u16 packed_color = ndsRendererHardwarePackedVertexColor(
-                stats, vtx, material_color,
-                use_material_color, use_vertex_color,
-                vertex_color, TRUE, 0u);
+            u16 packed_color;
 
+            if (lit != FALSE)
+            {
+                /* r,g,b hold the source normal; shade it against the seeded
+                 * battle light the way the native fighter owner does. */
+                packed_color = ndsRendererHardwarePackedResolvedColor(
+                    ndsRendererHardwareLitShadeColorPrepared(
+                        stats, vtx, &light_direction),
+                    material_color, use_material_color, 0u);
+            }
+            else
+            {
+                u32 vertex_color =
+                    ((u32)vtx->r << 24) | ((u32)vtx->g << 16) |
+                    ((u32)vtx->b << 8) | (u32)vtx->a;
+
+                packed_color = ndsRendererHardwarePackedVertexColor(
+                    stats, vtx, material_color,
+                    use_material_color, use_vertex_color,
+                    vertex_color, TRUE, 0u);
+            }
             glColor(packed_color);
             if (use_texture != FALSE)
             {

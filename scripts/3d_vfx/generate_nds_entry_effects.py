@@ -66,6 +66,10 @@ G_SETTIMG = 0xFD
 G_SETTILESIZE = 0xF2
 
 G_MWO_POINT_ST = 0x14
+G_MOVEMEM = 0xDC
+G_MW_NUMLIGHT = 0x02
+G_MW_LIGHTCOL = 0x0A
+G_MV_LIGHT = 0x0A
 G_TX_DXT_ONE = 2048
 
 FMT_CI = 2
@@ -121,6 +125,10 @@ class Texture:
 class GroupState:
     root_index: int
     geometry_mode: int
+    geometry_clear: int
+    light_color_1: int
+    light_color_2: int
+    light_mask: int
     combine_w0: int
     combine_w1: int
     othermode_h: int
@@ -324,6 +332,14 @@ class Compiler:
         self.display = static.DisplayState()
         self.vertex_cache: dict[int, Vertex] = {}
         self.geometry_mode = 0
+        self.geometry_clear = 0
+        # gSPLightColor state.  RSP state persists across the roots of one
+        # source tree in draw order (MARIO_ROOTS/FOX_ROOTS are listed in that
+        # order), so a root that sets no colour of its own -- the pipe's
+        # second list -- draws with the colours its predecessor left.
+        self.light_color_1 = 0
+        self.light_color_2 = 0
+        self.light_mask = 0
         self.combine_w0 = 0
         self.combine_w1 = 0
         self.othermode_h = 0
@@ -346,7 +362,9 @@ class Compiler:
             origin_s, origin_t = tile.uls, tile.ult
         filter_offset = 8 if (self.othermode_h & 0x00003000) != 0 else 0
         return GroupState(
-            root_index, self.geometry_mode, self.combine_w0, self.combine_w1,
+            root_index, self.geometry_mode, self.geometry_clear,
+            self.light_color_1, self.light_color_2, self.light_mask,
+            self.combine_w0, self.combine_w1,
             self.othermode_h, self.othermode_l, self.prim_color, self.env_color,
             key, self.texture_scale_s, self.texture_scale_t,
             origin_s, origin_t, filter_offset,
@@ -455,7 +473,17 @@ class Compiler:
                 self.texture_scale_s = (w1 >> 16) & 0xFFFF
                 self.texture_scale_t = w1 & 0xFFFF
             elif op == G_GEOMETRYMODE:
+                # w0's low 24 bits are the AND mask (the bits to clear, inverted)
+                # and w1 the bits to set.  Both lists run from whatever geometry
+                # mode the battle display left in place -- scVSBattleFuncLights
+                # sets G_LIGHTING before every display proc -- so a bit neither
+                # cleared nor set here is INHERITED at runtime, not zero.  Mario's
+                # pipe never mentions G_LIGHTING and is lit by exactly that
+                # inheritance (its vertex r,g,b are unit normals).  Carry the
+                # cleared set beside the set one; the runtime resolves
+                # (initial & ~clear) | set per group.
                 self.geometry_mode = (self.geometry_mode & w0) | w1
+                self.geometry_clear = (self.geometry_clear | (~w0 & 0x00FFFFFF)) & (~w1 & 0xFFFFFFFF)
             elif op == G_SETCOMBINE:
                 self.combine_w0, self.combine_w1 = w0, w1
             elif op == G_SETOTHERMODE_H:
@@ -467,9 +495,31 @@ class Compiler:
             elif op == G_SETENVCOLOR:
                 self.env_color = w1
             elif op == G_MOVEWORD:
-                # Light state is irrelevant for this packet: the source geometry
-                # mode at every emitted entry triangle has G_LIGHTING clear.
-                pass
+                # Light COLOURS are the lists' own (pipe: diffuse white over
+                # ambient 0x99; Arwing: white over 0x80) and travel in the
+                # group row.  The light DIRECTION and count are the battle
+                # display's (scVSBattleFuncLights / the fighter's own
+                # ftDisplayLightsDrawReflect), which the runtime seeds, so a
+                # direction or count word here would be silently dropped --
+                # refuse those instead.
+                index = (w0 >> 16) & 0xFF
+                if index == G_MW_LIGHTCOL:
+                    # gSPLightColor writes each colour twice (the a/b copies at
+                    # +0x00/+0x04 for light 1 and +0x18/+0x1c for light 2).
+                    offset = w0 & 0xFFFF
+                    if offset in (0x00, 0x04):
+                        self.light_color_1 = w1
+                        self.light_mask |= 1
+                    elif offset in (0x18, 0x1C):
+                        self.light_color_2 = w1
+                        self.light_mask |= 2
+                    else:
+                        raise SystemExit(f"entry DL light colour offset 0x{offset:x} at 0x{pc:x} is not light 1/2")
+                elif index == G_MW_NUMLIGHT:
+                    raise SystemExit(f"entry DL carries gSPNumLights at 0x{pc:x}; the runtime light seed no longer matches")
+            elif op == G_MOVEMEM:
+                if (w0 & 0xFF) == G_MV_LIGHT:
+                    raise SystemExit(f"entry DL carries gSPLight at 0x{pc:x}; the runtime light seed no longer matches")
             pc += 8
         raise SystemExit(f"entry display-list guard expired at 0x{start:x}")
 
@@ -494,9 +544,14 @@ def emit(mario: Compiler, fox: Compiler) -> str:
     root_groups: list[list[int]] = [[] for _ in roots]
     flat_vertices: list[Vertex] = []
     group_rows = []
+    lit_inherit = lit_clear = lit_set = 0
     for index, group in enumerate(groups):
         if group.state.geometry_mode & 0x00020000:
-            raise SystemExit(f"entry group {index} unexpectedly enables source lighting")
+            lit_set += 1
+        elif group.state.geometry_clear & 0x00020000:
+            lit_clear += 1
+        else:
+            lit_inherit += 1
         if len(group.corners) % 3:
             raise SystemExit("entry group corner count is not triangular")
         root_groups[group.state.root_index].append(index)
@@ -507,6 +562,7 @@ def emit(mario: Compiler, fox: Compiler) -> str:
     lines = [
         "/* Generated by scripts/3d_vfx/generate_nds_entry_effects.py. Do not edit. */",
         "/* Mario pipe + Fox Arwing: no runtime N64 DL/vertex/texture decoding. */",
+        f"/* G_LIGHTING per group: {lit_inherit} inherit the battle display's, {lit_clear} clear it, {lit_set} set it. */",
         "",
         f"#define NDS_ENTRY_EFFECT_ROOT_COUNT {len(roots)}u",
         f"#define NDS_ENTRY_EFFECT_GROUP_COUNT {len(groups)}u",
@@ -534,10 +590,11 @@ def emit(mario: Compiler, fox: Compiler) -> str:
         lines.append(
             "    { "
             f"{first}u, {triangles}u, {slot}u, {s.root_index}u, "
-            f"0x{s.geometry_mode:08x}u, 0x{s.combine_w0:08x}u, 0x{s.combine_w1:08x}u, "
+            f"0x{s.geometry_mode:08x}u, 0x{s.geometry_clear:08x}u, 0x{s.combine_w0:08x}u, 0x{s.combine_w1:08x}u, "
             f"0x{s.othermode_h:08x}u, 0x{s.othermode_l:08x}u, "
             f"0x{s.prim_color:08x}u, 0x{s.env_color:08x}u, "
-            f"{cms}u, {cmt}u, {masks}u, {maskt}u }},"
+            f"0x{s.light_color_1:08x}u, 0x{s.light_color_2:08x}u, "
+            f"{cms}u, {cmt}u, {masks}u, {maskt}u, {s.light_mask}u }},"
         )
     lines.append("};")
     lines.append("")

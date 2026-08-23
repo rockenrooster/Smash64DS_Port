@@ -687,7 +687,18 @@ measurements rather than gates:
 - **Shell screenshots**: `scripts/menus/capture-p2-shell.ps1`, same target, one
   run for every screen, locked on each screen's own `ndsMenuShellRun<X>` entry
   point because a wall-clock delay cannot target a screen that presents at
-  353–738 fps.
+  353–738 fps. The emulator starts with ARM9 held at reset (`BreakOnStartup`)
+  because those entry points run once and an unthrottled guest reached the
+  title before gdb had attached (two full-timeout runs, 2026-08-22).
+  `-Only battle-intro,fighter-entry-1` photographs only the named states, and
+  `-EntrySeries 12,12,24` adds shots 12/24/48 steps after the first fighter
+  entry — a time series of the source entry effect from one run (it consumes
+  the second fighter's entry, so do not list `fighter-entry-2` with it). A
+  boot-into-battle lab ROM (no menu shell) works with `-Only` battle states.
+  **A step is one `ndsPlatformEndFrame`, which this target hits once per 60 Hz
+  logic frame, not once per presented frame**: `+32` is source frame 32 of the
+  entry (measured 2026-08-22 against the pipe's AnimJoint and Mario's Appear
+  motion, both of which hold their peak from frame 25).
 
 **A stray third ROM at the repo root turns Boundary red** and has since
 2026-08-17: `check-published-roms.ps1` (run by the realtime arm) enforces the
