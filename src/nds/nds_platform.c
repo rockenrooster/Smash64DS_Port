@@ -3628,6 +3628,8 @@ void ndsPlatformEndFrame(void)
 #if NDS_TASK29_GX_CENSUS
         ndsRendererTask29GXRecordFlush(GL_TRANS_MANUALSORT);
 #endif
+        /* P2-2p3: a fighter packet DMA may still be draining. */
+        ndsRendererFighterPacketDmaWait();
         glFlush(GL_TRANS_MANUALSORT);
 #if NDS_TICK_HUD
         gNdsTickHudFlushTicks += cpuGetTiming() - tickhud_flush_start;

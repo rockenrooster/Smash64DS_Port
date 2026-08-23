@@ -99,11 +99,12 @@ their owner visual/play residuals; P2-3 is the active implementation frontier.
    flight (board rows P2-2p1..p4).** Four-CPU arm on the current tree:
    `WORK-H` P50/P95 1,600,832 / 2,069,824; without any fighter draw 993,792 /
    1,462,144, so the four draws are 607K at P50. `NDS_R2_FIGHTER_PACKET=1`
-   (lab, default off; DMA replay of each fighter's recorded GX stream) reads
-   1,415,552 / 2,022,144 with the FTR lane 665,920 → 414,528, gate green. Next:
-   re-record churn (flash tint patch, per-packet texture residency), DMA
-   overlap, hit-path adapter trimming; then the remaining gap is the source
-   lanes (SRC 586K P50 / 1,009K P95), parked behind the sacrifice order.
+   (lab, default off; DMA replay of each fighter's recorded GX stream, flash
+   tint patch, per-packet texture residency, deferred DMA wait) reads
+   1,312,384 / 1,870,080 with the FTR lane 665,920 → 366,784, gate green.
+   Next: hit-path adapter trimming (p4), then promotion into the gate targets
+   after the owner's visual pass; the remaining gap is the source lanes (SRC
+   581K P50 / 998K P95), parked behind the sacrifice order.
 
 The phase-close run also fixed verifier drift rather than bypassing it:
 `verify-all.ps1 -NoBuild` now resolves retained per-harness artifacts through

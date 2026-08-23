@@ -1326,6 +1326,11 @@ s32 ndsRendererExecuteNativeFighterRoot(
  * on entering Results, before its photo wipe reads that buffer. A no-op when
  * NDS_R2_FIGHTER_PACKET is off. */
 void ndsRendererFighterPacketRelease(void);
+/* Waits for a fighter packet DMA still draining into the GXFIFO. Every GX
+ * writer outside the renderer's own seams (the end-of-frame flush) must call
+ * it before its first FIFO word. A no-op when no DMA is pending or the packet
+ * is off. */
+void ndsRendererFighterPacketDmaWait(void);
 /* `packet_key` is the adapter's identity word for everything the fighter
  * packet's static words depend on outside the renderer (live material keys and
  * the colour modulate); the renderer mixes in its own fences. */

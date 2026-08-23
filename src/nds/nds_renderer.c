@@ -3435,6 +3435,24 @@ volatile u32 gNdsFighterPacketMissWord[NDS_FIGHTER_PACKET_KEY_WORDS + 2u];
     do { if (sNdsFighterPacketRecording != 0u) { stmt; } } while (0)
 #define NDS_FIGHTER_PACKET_COLD_CODE \
     __attribute__((noinline, cold, optimize("Os")))
+
+/* P2-2p3. The replay no longer waits for its own DMA: the geometry engine
+ * drains the packet while the CPU prepares the next fighter, and whoever
+ * writes the FIFO next waits first. Every GX writer outside the packet path
+ * enters through one of the seams that call this (the production execute,
+ * the stage owner prepare, the particle/effect/gun/halo/entry-effect submits,
+ * the generic display-list executor and the end-of-frame flush); a writer
+ * that bypasses them would interleave its words with the DMA's. */
+static u32 sNdsFighterPacketDmaPending;
+static inline void ndsFighterPacketDmaWait(void)
+{
+    if (sNdsFighterPacketDmaPending != 0u)
+    {
+        while ((DMA_CR(0) & DMA_BUSY) != 0u) { }
+        sNdsFighterPacketDmaPending = 0u;
+    }
+}
+#define NDS_FIGHTER_PACKET_DMA_WAIT() ndsFighterPacketDmaWait()
 /* The hook sites still cost ITCM (496 bytes at the second link), and the
  * region was full. Four residents the 2026-08-22 four-CPU census ranks at the
  * bottom of its rent table (ndsRendererSetParticleCamera 320 B at 1,314
@@ -3677,6 +3695,7 @@ ndsFighterPacketRecordLightVector(u32 word)
 #else
 #define NDS_FIGHTER_PACKET_HOOK(stmt) ((void)0)
 #define NDS_FIGHTER_PACKET_EVICT(attr) attr
+#define NDS_FIGHTER_PACKET_DMA_WAIT() ((void)0)
 #endif
 
 static inline void ndsRendererHardwareSetMatrixMode(int mode)
@@ -14909,6 +14928,7 @@ s32 ndsRendererSubmitParticleQuad(u32 atlas_name, const Vec3f *pos, f32 size,
                                   u32 atlas_x, u32 atlas_y,
                                   u32 atlas_w, u32 atlas_h)
 {
+    NDS_FIGHTER_PACKET_DMA_WAIT();
     f32 rx;
     f32 ry;
     f32 rz;
@@ -15860,6 +15880,7 @@ s32 ndsRendererSubmitWhispyNativeQuad(u32 texture_name,
                                       u32 texture_w, u32 texture_h,
                                       u32 submit_route)
 {
+    NDS_FIGHTER_PACKET_DMA_WAIT();
     s32 center[3];
     s32 right[3];
     s32 up[3];
@@ -16174,6 +16195,7 @@ s32 ndsRendererSubmitWhispyNativeQuad(u32 texture_name,
                                       u32 texture_w, u32 texture_h,
                                       u32 submit_route)
 {
+    NDS_FIGHTER_PACKET_DMA_WAIT();
     (void)texture_name; (void)pos; (void)size; (void)color; (void)alpha;
     (void)fixed_center_q12; (void)fixed_size_q8;
     (void)texture_slot; (void)mirror_mask; (void)texture_w; (void)texture_h;
@@ -16184,6 +16206,7 @@ s32 ndsRendererSubmitWhispyNativeQuad(u32 texture_name,
 
 void ndsRendererEndParticleQuads(void)
 {
+    NDS_FIGHTER_PACKET_DMA_WAIT();
     u32 whispy_packet_popped = FALSE;
 
 #if NDS_R2_WHISPY_NATIVE_AOT
@@ -16320,6 +16343,7 @@ s32 ndsRendererSubmitFoxBlasterQuad(const Vec3f *translate,
                                     f32 scale_x, f32 scale_y,
                                     s32 facing)
 {
+    NDS_FIGHTER_PACKET_DMA_WAIT();
     s32 tx;
     s32 ty;
     s32 tz;
@@ -16606,6 +16630,7 @@ fail:
  */
 s32 ndsRendererSubmitFoxGun(const NDSRendererMatrix20p12 *composed)
 {
+    NDS_FIGHTER_PACKET_DMA_WAIT();
     const NDSFoxGunVertex *vertices;
     const u8 (*triangles)[3];
     u32 vertex_count = 0u;
@@ -16694,6 +16719,7 @@ void ndsRendererSubmitDebugDiamond(f32 cx, f32 cy, f32 cz,
                                    f32 top, f32 center,
                                    f32 bottom, f32 width)
 {
+    NDS_FIGHTER_PACKET_DMA_WAIT();
 #if NDS_R2_WHISPY_NATIVE_AOT
     ndsRendererFlushWhispyNativePacket();
 #endif
@@ -22538,6 +22564,7 @@ void ndsRendererHardwareDiscardParticleAtlas(void)
 void ndsRendererSetParticleCamera(const NDSRendererMatrix20p12 *projection,
                                   const NDSRendererMatrix20p12 *modelview)
 {
+    NDS_FIGHTER_PACKET_DMA_WAIT();
     (void)projection; (void)modelview;
 }
 
@@ -22548,6 +22575,7 @@ s32 ndsRendererSubmitParticleQuad(u32 atlas_name, const Vec3f *pos, f32 size,
                                   u32 atlas_x, u32 atlas_y,
                                   u32 atlas_w, u32 atlas_h)
 {
+    NDS_FIGHTER_PACKET_DMA_WAIT();
     (void)atlas_name; (void)pos; (void)size; (void)color; (void)alpha;
     (void)right; (void)up; (void)mirror_mask;
     (void)atlas_x; (void)atlas_y; (void)atlas_w; (void)atlas_h;
@@ -22577,6 +22605,7 @@ s32 ndsRendererSubmitWhispyNativeQuad(u32 texture_name,
                                       u32 texture_w, u32 texture_h,
                                       u32 submit_route)
 {
+    NDS_FIGHTER_PACKET_DMA_WAIT();
     (void)texture_name; (void)pos; (void)size; (void)color; (void)alpha;
     (void)fixed_center_q12; (void)fixed_size_q8;
     (void)texture_slot; (void)mirror_mask; (void)texture_w; (void)texture_h;
@@ -22586,6 +22615,7 @@ s32 ndsRendererSubmitWhispyNativeQuad(u32 texture_name,
 
 void ndsRendererEndParticleQuads(void)
 {
+    NDS_FIGHTER_PACKET_DMA_WAIT();
 }
 #endif
 
@@ -24181,6 +24211,7 @@ s32 ndsRendererSubmitNativeImpactWave(
     const NDSRendererConfig *config,
     NDSRendererStats *stats)
 {
+    NDS_FIGHTER_PACKET_DMA_WAIT();
 #if NDS_RENDERER_HW_TRIANGLES && NDS_R2_IMPACT_WAVE_NATIVE
     NDSRendererTraversalVertexStorage vertex_storage;
     NDSRendererTraversalState state;
@@ -25323,6 +25354,7 @@ s32 ndsRendererSubmitNativeRebirthHalo(
     const NDSRendererConfig *config,
     NDSRendererStats *stats)
 {
+    NDS_FIGHTER_PACKET_DMA_WAIT();
 #if NDS_RENDERER_HW_TRIANGLES && NDS_R2_REBIRTH_HALO_NATIVE
     NDSRendererTraversalVertexStorage vertex_storage;
     NDSRendererTraversalState state;
@@ -26606,6 +26638,7 @@ s32 ndsRendererSubmitNativeEntryEffect(
     u32 owner_asset_id, u32 root_offset,
     const NDSRendererConfig *config, NDSRendererStats *stats)
 {
+    NDS_FIGHTER_PACKET_DMA_WAIT();
 #if NDS_RENDERER_HW_TRIANGLES && \
     (NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE)
     const NDSEntryEffectRoot *root;
@@ -29336,7 +29369,8 @@ static s32 __attribute__((noinline)) ndsFighterPacketTryReplay(
         DMA_SRC(0) = (u32)(uintptr_t)words;
         DMA_DEST(0) = (u32)(uintptr_t)&GFX_FIFO;
         DMA_CR(0) = DMA_FIFO | packet->word_count;
-        while ((DMA_CR(0) & DMA_BUSY) != 0u) { }
+        /* Not waited here: the next FIFO writer waits (P2-2p3). */
+        sNdsFighterPacketDmaPending = 1u;
 
         ndsRendererHardwareInvalidateGXState(NDS_RENDERER_GX_STATE_ALL);
         sNdsRendererHardwareBoundTextureName = 0u;
@@ -29454,11 +29488,17 @@ static s32 __attribute__((noinline)) ndsFighterPacketTryReplay(
     return 0;
 }
 
+void ndsRendererFighterPacketDmaWait(void)
+{
+    ndsFighterPacketDmaWait();
+}
+
 void ndsRendererFighterPacketRelease(void)
 {
     u16 *arena = &gSYFramebufferSets[0][0][0];
     u32 i;
 
+    ndsFighterPacketDmaWait();
     sNdsFighterPacketRecording = 0u;
     sNdsFighterPacketRecorder.packet = NULL;
     for (i = 0u; i < NDS_FIGHTER_PACKET_SLOTS; i++)
@@ -29474,6 +29514,10 @@ void ndsRendererFighterPacketRelease(void)
     }
 }
 #else
+void ndsRendererFighterPacketDmaWait(void)
+{
+}
+
 void ndsRendererFighterPacketRelease(void)
 {
 }
@@ -34177,6 +34221,7 @@ s32 ndsRendererPrepareNativeStageOwner(
     const NDSRendererNativeStageFrame *frame,
     NDSRendererStats *stats)
 {
+    NDS_FIGHTER_PACKET_DMA_WAIT();
     NDSRendererTraversalState *state =
         &sNdsNativeStageOwnerExecution.traversal;
     NDSNativeStageTopologySummary topology;
@@ -34888,6 +34933,8 @@ s32 NDS_R2_ITCM_PACK2_CODE ndsRendererCommitNativeStageSegment(u32 segment_index
 {
     NDSRendererStats *stats = sNdsNativeStageOwnerExecution.stats;
     const NDSNativeStageSegment *segment;
+
+    NDS_FIGHTER_PACKET_DMA_WAIT();
     u32 run_offset;
     u32 segment_triangles = 0u;
 #if NDS_TASK36_HW_COMPOSE == 2
@@ -35340,6 +35387,7 @@ s32 ndsRendererPrepareNativeStageOwner(
     const NDSRendererNativeStageFrame *frame,
     NDSRendererStats *stats)
 {
+    NDS_FIGHTER_PACKET_DMA_WAIT();
     (void)frame;
     (void)stats;
     return FALSE;
@@ -35347,6 +35395,7 @@ s32 ndsRendererPrepareNativeStageOwner(
 
 s32 ndsRendererCommitNativeStageSegment(u32 segment_index)
 {
+    NDS_FIGHTER_PACKET_DMA_WAIT();
     (void)segment_index;
     return FALSE;
 }
@@ -35374,6 +35423,7 @@ ndsRendererExecuteNativeFighterOwnerProduction(
     NDSRendererStats *stats,
     u32 *out_hardware_started)
 {
+    NDS_FIGHTER_PACKET_DMA_WAIT();
 #if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
     const NDSNativeRoot *roots;
     const u8 *palette_slots;
@@ -35826,6 +35876,7 @@ s32 ndsRendererBeginNativeFighterOwner(
     NDSRendererStats *stats,
     NDSRendererVertexCache *vertex_cache)
 {
+    NDS_FIGHTER_PACKET_DMA_WAIT();
 #if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
     NDSRendererTraversalState *state;
 
@@ -37751,6 +37802,7 @@ void ndsRendererExecuteDisplayListWithVertexCache(
     NDSRendererStats *stats,
     NDSRendererVertexCache *vertex_cache)
 {
+    NDS_FIGHTER_PACKET_DMA_WAIT();
     NDSRendererTraversalState state;
     NDSRendererTraversalVertexStorage vertex_storage;
 #if NDS_RENDERER_HW_TRIANGLES
@@ -37838,6 +37890,7 @@ void ndsRendererExecuteDisplayList(const Gfx *dl,
                                    void *callback_user,
                                    NDSRendererStats *stats)
 {
+    NDS_FIGHTER_PACKET_DMA_WAIT();
     ndsRendererExecuteDisplayListWithVertexCache(dl, config, callback,
                                                  callback_user, stats, NULL);
 }
