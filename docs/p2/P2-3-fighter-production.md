@@ -132,7 +132,7 @@ Metal Mario, Giant DK, Fighting Polygons, Master Hand are P2-6 content
 
 - [ ] Pipeline documented and reproducible (a fighter rebuilds from BattleShip
       data + assets by `make`).
-- [ ] All 10 fighters landed per the unit DoD (each unit file's checklist).
+- [ ] All 10 fighters landed per the unit DoD (each unit file's checklist) with the same level of polish as Mario/Fox.
 - [ ] Any-4-fighter combination fits the P2-2 budgets (spot-audited: heaviest
       4 by measured cost).
 - [ ] Stress config re-argmaxed over the full roster; board updated.
