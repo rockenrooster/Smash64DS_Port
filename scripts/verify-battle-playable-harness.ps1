@@ -130,12 +130,17 @@ if ($OneMinuteMatchProof) {
     $LiveInputPreview = $true
 }
 if ($RendererProfileLevel -lt 0) {
-    # Legacy non-realtime state labs keep profiling off. The dedicated one-
-    # minute release gate selects realtime profile 0 and fixed-two pacing.
-    $RendererProfileLevel = if ($OneMinuteMatchProof) { 0 } else { 2 }
+    # The bounded source-state proof now carries the same accepted native
+    # renderer feature bundle as the shipping proof target (without R2_PATH,
+    # which is structurally realtime-only).  Those features require profile 0;
+    # the old profile-2 default became invalid when Task56 graduated globally.
+    # The one-minute release gate is profile 0 for the same shipping reason.
+    $RendererProfileLevel = if ($OneMinuteMatchProof -or
+        ($target -eq 'smash64ds-battle-playable-fast-hwtri')) { 0 } else { 2 }
 }
 if (($target -in @('smash64ds-battle-playable-hwtri',
                    'smash64ds-battle-playable-proof-hwtri',
+                   'smash64ds-battle-playable-fast-hwtri',
                    'smash64ds-p2-shell-hwtri')) -and
     -not $PSBoundParameters.ContainsKey('RendererFastRunMode')) {
     $RendererFastRunMode = 9

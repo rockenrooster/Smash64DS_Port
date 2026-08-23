@@ -641,6 +641,32 @@ void ndsResetStartupDiagnostics(void)
     gNdsFighterSpecialsFoxHiBoundFrames = 0;
     gNdsFighterSpecialsFoxHiWaitFrames = 0;
     gNdsFighterSpecialsFoxHiRootYMilli = 0;
+#if NDS_P2_DONKEY
+    gNdsFighterDonkeySpecialsSlot = 0;
+    gNdsFighterDonkeySpecialsNChargePressFrames = 0;
+    gNdsFighterDonkeySpecialsNStartFrames = 0;
+    gNdsFighterDonkeySpecialsNLoopFrames = 0;
+    gNdsFighterDonkeySpecialsNStorePressFrames = 0;
+    gNdsFighterDonkeySpecialsNStoredChargeMax = 0;
+    gNdsFighterDonkeySpecialsNStoredWaitFrames = 0;
+    gNdsFighterDonkeySpecialsNResumePressFrames = 0;
+    gNdsFighterDonkeySpecialsNReleaseTapFrames = 0;
+    gNdsFighterDonkeySpecialsNEndFrames = 0;
+    gNdsFighterDonkeySpecialsNReleaseChargeMax = 0;
+    gNdsFighterDonkeySpecialsNPassiveResetFrames = 0;
+    gNdsFighterDonkeySpecialsNReleaseWaitFrames = 0;
+    gNdsFighterDonkeySpecialsHiPressFrames = 0;
+    gNdsFighterDonkeySpecialsHiFrames = 0;
+    gNdsFighterDonkeySpecialsHiGroundGAFrames = 0;
+    gNdsFighterDonkeySpecialsHiWaitFrames = 0;
+    gNdsFighterDonkeySpecialsLwPressFrames = 0;
+    gNdsFighterDonkeySpecialsLwStartFrames = 0;
+    gNdsFighterDonkeySpecialsLwLoopFrames = 0;
+    gNdsFighterDonkeySpecialsLwRepeatPressFrames = 0;
+    gNdsFighterDonkeySpecialsLwLoopFlagFrames = 0;
+    gNdsFighterDonkeySpecialsLwEndFrames = 0;
+    gNdsFighterDonkeySpecialsLwWaitFrames = 0;
+#endif
     gNdsFighterNaturalMovesetMask = 0;
     gNdsFighterNaturalMovesetPhase = 0;
     gNdsFighterNaturalMovesetPhaseFrames = 0;

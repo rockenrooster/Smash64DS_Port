@@ -88,8 +88,11 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 # P2-1M (2026-08-19): `smash64ds-p2-shell-hwtri` joins every intrinsic list
-# below because its Makefile block sets the same flags with `override`, and that
-# is VERIFIED from the generated config rather than assumed --
+# below because its Makefile block sets the same flags with `override`.  P2-3
+# now does the same for `smash64ds-battle-playable-fast-hwtri`: it keeps the
+# bounded source-state loop, but its renderer/backend selectors are intrinsic
+# current DS values rather than stale generic defaults.  Both are VERIFIED from
+# generated config rather than assumed --
 # builds/build-p2-shell/nds_build_config.h carries profile 0, telemetry 1, tick
 # HUD 0, fast run 9, HW compose 2, static textures 1, hybrid OAM 0, fast
 # wallpaper 1, Task 16 1/1/1, DS mesh 0. Omitting it here would make the verifier
@@ -98,12 +101,14 @@ $ErrorActionPreference = 'Stop'
 $usesPublishedIntrinsicRendererDefaults = $Target -in @(
     'smash64ds-battle-playable-hwtri',
     'smash64ds-battle-playable-proof-hwtri',
+    'smash64ds-battle-playable-fast-hwtri',
     'smash64ds-p2-shell-hwtri'
 )
 $usesIntrinsicTask36Replay = $usesPublishedIntrinsicRendererDefaults
 $usesIntrinsicTask16FloatHelpers = $Target -in @(
     'smash64ds-battle-playable-hwtri',
     'smash64ds-battle-playable-proof-hwtri',
+    'smash64ds-battle-playable-fast-hwtri',
     'smash64ds-p2-shell-hwtri',
     'smash64ds-battle-playable-freeze-diagnostics-on-hwtri',
     'smash64ds-battle-playable-freeze-diagnostics-off-hwtri'
@@ -111,6 +116,7 @@ $usesIntrinsicTask16FloatHelpers = $Target -in @(
 $usesIntrinsicNativeStageGeneratedSegment0 = $Target -in @(
     'smash64ds-battle-playable-hwtri',
     'smash64ds-battle-playable-proof-hwtri',
+    'smash64ds-battle-playable-fast-hwtri',
     'smash64ds-p2-shell-hwtri',
     'smash64ds-battle-playable-freeze-diagnostics-on-hwtri',
     'smash64ds-battle-playable-freeze-diagnostics-off-hwtri'
@@ -118,6 +124,7 @@ $usesIntrinsicNativeStageGeneratedSegment0 = $Target -in @(
 $usesIntrinsicFastWallpaper = $Target -in @(
     'smash64ds-battle-playable-hwtri',
     'smash64ds-battle-playable-proof-hwtri',
+    'smash64ds-battle-playable-fast-hwtri',
     'smash64ds-p2-shell-hwtri',
     'smash64ds-battle-playable-freeze-diagnostics-on-hwtri',
     'smash64ds-battle-playable-freeze-diagnostics-off-hwtri'
@@ -125,6 +132,7 @@ $usesIntrinsicFastWallpaper = $Target -in @(
 $usesIntrinsicTask32DrawHotText = $Target -in @(
     'smash64ds-battle-playable-hwtri',
     'smash64ds-battle-playable-proof-hwtri',
+    'smash64ds-battle-playable-fast-hwtri',
     'smash64ds-p2-shell-hwtri',
     'smash64ds-battle-playable-freeze-diagnostics-on-hwtri',
     'smash64ds-battle-playable-freeze-diagnostics-off-hwtri'
@@ -1012,6 +1020,24 @@ function Complete-Task25RPacingTrace {
 }
 if (-not $env:DEVKITPRO) { $env:DEVKITPRO = 'C:/devkitPro' }
 if (-not $env:DEVKITARM) { $env:DEVKITARM = 'C:/devkitPro/devkitARM' }
+# devkitPro's MSYS make inherits this PowerShell process PATH.  Merely setting
+# DEVKITARM/DEVKITPRO is not enough: ds_rules invokes arm-none-eabi-* by basename,
+# and a clean Codex/CI host may not have either tool directory on PATH.  Keep the
+# bootstrap beside the existing devkit environment defaults so every build this
+# owner verifier launches gets the same toolchain lookup contract.
+$devkitPathEntries = @(
+    (Join-Path $env:DEVKITARM 'bin'),
+    (Join-Path $env:DEVKITPRO 'tools\bin')
+)
+$pathSeparator = [IO.Path]::PathSeparator
+$currentPathEntries = @($env:PATH -split [regex]::Escape([string]$pathSeparator))
+$devkitPathPrepend = @($devkitPathEntries | Where-Object {
+    (Test-Path -LiteralPath $_ -PathType Container) -and
+    ($_ -notin $currentPathEntries)
+})
+if ($devkitPathPrepend.Count -gt 0) {
+    $env:PATH = (($devkitPathPrepend + $currentPathEntries) -join $pathSeparator)
+}
 $renderEconomyCompileOwnerMask = if ($RenderEconomyMode -eq 1) { 255 } else { 0 }
 $makeArgs = @('-C', $root, "TARGET=$Target", "BUILD=$Build", "NDS_DEV_SCENE_HARNESS=$Harness")
 $makeArgs += "NDS_RENDERER_PROFILE_LEVEL=$RendererProfileLevel"
@@ -1336,9 +1362,19 @@ if (($RendererBenchmarkSamples -gt 0) -or $Task25RPacingTrace) {
 }
 New-Item -ItemType Directory -Path $logDir -Force | Out-Null
 try {
+    # Focused pre-battle proofs must install their GDB selectors before the ROM
+    # can enter VSBattle. The command file is large enough that "zero sleep"
+    # still gives an unthrottled guest time to race past scVSBattleStartBattle.
+    # Pause ARM9 at startup and let the first GDB `continue` release it; this is
+    # guest-synchronized and independent of host speed or fighter asset size.
+    $breakOnStartup = $preBattleSelectorSelected -or
+        ($RendererBenchmarkStartFrame -gt 0) -or
+        ($RendererBenchmarkStartEvent -ne 'None') -or
+        $OneMinuteMatchProof
     $configState = Enable-MelonDSGdbConfig -MelonDSPath $melonDsPath `
         -GdbPort $verifierContext.GdbPort `
         -Persistent:([bool]$verifierContext.PersistentConfig) `
+        -BreakOnStartup:$breakOnStartup `
         -MuteAudio:$OneMinuteMatchProof
     if (($RendererBenchmarkSamples -gt 0) -or $Task25RPacingTrace) {
         $benchmarkMelonConfigSha256 =
@@ -1422,7 +1458,14 @@ try {
     } elseif ($BattlePlayable -and $RealtimePresentation) {
         12
     } elseif ($BattlePlayable) {
-        3
+        # The bounded source-state proof arms a breakpoint on
+        # scVSBattleStartBattle itself.  P2-3's larger staged fighter closure
+        # made the historical 3 s head start long enough for the guest to enter
+        # that function before GDB attached, leaving the temporary breakpoint
+        # waiting forever for a second battle entry.  The listener wait above
+        # already establishes that the stub is ready, so attach immediately and
+        # let the guest breakpoint provide the synchronization.
+        0
     } else {
         15
     }
@@ -2474,13 +2517,21 @@ try {
         )
         $gdbCommands = @($beforeDetach + $reflectorCommands + $afterDetach)
     }
-    if ($ImportBattleShipMarioSpecialHi -or $ImportBattleShipMarioSpecialLw -or $ImportBattleShipFoxSpecialHi) {
+    if ($ImportBattleShipMarioSpecialHi -or $ImportBattleShipMarioSpecialLw -or $ImportBattleShipFoxSpecialHi -or ($P2ProofFighter0Kind -eq 2)) {
         $beforeDetach = $gdbCommands[0..($gdbCommands.Count - 3)]
         $afterDetach = $gdbCommands[($gdbCommands.Count - 2)..($gdbCommands.Count - 1)]
         $specialsCommands = @(
             'printf "SPECIALS=%#x,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%d,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%d,%u,%u\n", gNdsFighterSpecialsProofMask, gNdsFighterSpecialsProofPhase, gNdsFighterSpecialsProofPhaseFrames, gNdsFighterSpecialsMarioSlot, gNdsFighterSpecialsFoxSlot, gNdsFighterSpecialsMarioHiPressFrames, gNdsFighterSpecialsMarioHiFrames, gNdsFighterSpecialsMarioAirHiFrames, gNdsFighterSpecialsMarioFallSpecialFrames, gNdsFighterSpecialsMarioLandingFallSpecialFrames, gNdsFighterSpecialsMarioHiWaitFrames, gNdsFighterSpecialsMarioHiRootYMilli, gNdsFighterSpecialsMarioLwPressFrames, gNdsFighterSpecialsMarioLwFrames, gNdsFighterSpecialsMarioAirLwFrames, gNdsFighterSpecialsMarioLwDustEffectCount, gNdsFighterSpecialsMarioLwWaitFrames, gNdsFighterSpecialsFoxHiPressFrames, gNdsFighterSpecialsFoxHiStartFrames, gNdsFighterSpecialsFoxHiHoldFrames, gNdsFighterSpecialsFoxHiTravelFrames, gNdsFighterSpecialsFoxHiEndFrames, gNdsFighterSpecialsFoxHiBoundFrames, gNdsFighterSpecialsFoxHiWaitFrames, gNdsFighterSpecialsFoxHiRootYMilli, gNdsFighterSpecialsMarioHiDamageMax, gNdsFighterSpecialsMarioLwDamageMax'
         )
         $gdbCommands = @($beforeDetach + $specialsCommands + $afterDetach)
+    }
+    if ($P2ProofFighter0Kind -eq 2) {
+        $beforeDetach = $gdbCommands[0..($gdbCommands.Count - 3)]
+        $afterDetach = $gdbCommands[($gdbCommands.Count - 2)..($gdbCommands.Count - 1)]
+        $donkeySpecialsCommands = @(
+            'printf "DONKEY_SPECIALS=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsFighterDonkeySpecialsSlot, gNdsFighterDonkeySpecialsNChargePressFrames, gNdsFighterDonkeySpecialsNStartFrames, gNdsFighterDonkeySpecialsNLoopFrames, gNdsFighterDonkeySpecialsNStorePressFrames, gNdsFighterDonkeySpecialsNStoredChargeMax, gNdsFighterDonkeySpecialsNStoredWaitFrames, gNdsFighterDonkeySpecialsNResumePressFrames, gNdsFighterDonkeySpecialsNReleaseTapFrames, gNdsFighterDonkeySpecialsNEndFrames, gNdsFighterDonkeySpecialsNReleaseChargeMax, gNdsFighterDonkeySpecialsNPassiveResetFrames, gNdsFighterDonkeySpecialsNReleaseWaitFrames, gNdsFighterDonkeySpecialsHiPressFrames, gNdsFighterDonkeySpecialsHiFrames, gNdsFighterDonkeySpecialsHiGroundGAFrames, gNdsFighterDonkeySpecialsHiWaitFrames, gNdsFighterDonkeySpecialsLwPressFrames, gNdsFighterDonkeySpecialsLwStartFrames, gNdsFighterDonkeySpecialsLwLoopFrames, gNdsFighterDonkeySpecialsLwRepeatPressFrames, gNdsFighterDonkeySpecialsLwLoopFlagFrames, gNdsFighterDonkeySpecialsLwEndFrames, gNdsFighterDonkeySpecialsLwWaitFrames'
+        )
+        $gdbCommands = @($beforeDetach + $donkeySpecialsCommands + $afterDetach)
     }
     if ($ImportBattleShipAudioAssets) {
         $beforeDetach = $gdbCommands[0..($gdbCommands.Count - 3)]
@@ -3050,6 +3101,7 @@ try {
     $projectile = [regex]::Match($gdbStdout, 'PROJECTILE=(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0)')
     $reflector = [regex]::Match($gdbStdout, 'REFLECTOR=(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(-?[0-9]+),([0-9]+),([0-9]+),([0-9]+),(-?[0-9]+),(-?[0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(-?[0-9]+),(-?[0-9]+),([0-9]+),([0-9]+)')
     $specials = [regex]::Match($gdbStdout, 'SPECIALS=(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(-?[0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(-?[0-9]+)')
+    $donkeySpecials = [regex]::Match($gdbStdout, 'DONKEY_SPECIALS=([0-9]+(?:,[0-9]+){23})')
     $audioAsset = [regex]::Match($gdbStdout, 'AUDIO_ASSET=(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $audioFgmKo = [regex]::Match($gdbStdout, 'AUDIO_FGM_KO=(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $audioFgmMissPairPattern = ((0..15 | ForEach-Object {
@@ -6695,17 +6747,17 @@ try {
             $projectileSummary += " reflector=0x$('{0:x}' -f $rf[1]) fox$($rf[2]) proj$($rf[3]) shine=$($rf[5])/$($rf[6])/$($rf[7]) reflect=$($rf[8]) lr=$($rf[9]) clear=$($rf[10]) proc=$($rf[12]) vx=$($rf[13])->$($rf[14]) owner=$($rf[15]) attrs=ref$($rf[16])/abs$($rf[17])/shield$($rf[18])/count$($rf[19])/dmg$($rf[20])/size$($rf[21]) delta=$($rf[22])/$($rf[23]) special=$($rf[24])/$($rf[25])"
         }
         $specialsSummary = ''
-        if ($ImportBattleShipMarioSpecialHi -or $ImportBattleShipMarioSpecialLw -or $ImportBattleShipFoxSpecialHi) {
+        if ($ImportBattleShipMarioSpecialHi -or $ImportBattleShipMarioSpecialLw -or $ImportBattleShipFoxSpecialHi -or ($P2ProofFighter0Kind -eq 2)) {
             $sp = Get-Ints $specials
             $expectedSpecialMask = 0
-            if ($ImportBattleShipMarioSpecialHi) { $expectedSpecialMask = $expectedSpecialMask -bor 0x000f }
-            if ($ImportBattleShipMarioSpecialLw) { $expectedSpecialMask = $expectedSpecialMask -bor 0x0070 }
+            if (($P2ProofFighter0Kind -ne 2) -and $ImportBattleShipMarioSpecialHi) { $expectedSpecialMask = $expectedSpecialMask -bor 0x000f }
+            if (($P2ProofFighter0Kind -ne 2) -and $ImportBattleShipMarioSpecialLw) { $expectedSpecialMask = $expectedSpecialMask -bor 0x0070 }
             if ($ImportBattleShipFoxSpecialHi) { $expectedSpecialMask = $expectedSpecialMask -bor 0x0f80 }
             Assert-Condition ($specials.Success -and (($sp[0] -band $expectedSpecialMask) -eq $expectedSpecialMask) -and $sp[1] -eq 7) 'Natural remaining-specials proof failed.' $gdbStdout
-            if ($ImportBattleShipMarioSpecialHi) {
+            if (($P2ProofFighter0Kind -ne 2) -and $ImportBattleShipMarioSpecialHi) {
                 Assert-Condition ($sp[5] -gt 0 -and $sp[6] -gt 0 -and $sp[10] -ge 10 -and $sp[11] -gt 1000) 'Natural Mario Super Jump Punch status/launch/fall-special proof failed.' $gdbStdout
             }
-            if ($ImportBattleShipMarioSpecialLw) {
+            if (($P2ProofFighter0Kind -ne 2) -and $ImportBattleShipMarioSpecialLw) {
                 Assert-Condition ($sp[12] -gt 0 -and (($sp[13] -gt 0) -or ($sp[14] -gt 0)) -and $sp[15] -gt 0 -and $sp[16] -ge 10) 'Natural Mario Tornado status/effect/settle proof failed.' $gdbStdout
             }
             if ($ImportBattleShipFoxSpecialHi) {
@@ -6717,6 +6769,28 @@ try {
                     $gdbStdout
             }
             $specialsSummary = " specials=0x$('{0:x}' -f $sp[0]) phase=$($sp[1]) mhi=$($sp[5])/$($sp[6])/$($sp[8])/$($sp[9])/$($sp[10]) y=$($sp[11]) dmg=$($sp[25]) mlw=$($sp[12])/$($sp[13])/$($sp[14]) dust=$($sp[15]) wait=$($sp[16]) dmg=$($sp[26]) foxhi=$($sp[17])/$($sp[18])/$($sp[19])/$($sp[20])/$($sp[21])/$($sp[22])/$($sp[23]) y=$($sp[24])"
+        }
+        if ($P2ProofFighter0Kind -eq 2) {
+            Assert-Condition $donkeySpecials.Success 'Donkey natural-specials marker missing.' $gdbStdout
+            $dk = @($donkeySpecials.Groups[1].Value.Split(',') | ForEach-Object { [int64]$_ })
+            Assert-Condition ($dk.Count -eq 24 -and $dk[0] -eq 0) `
+                'Donkey natural-specials proof did not bind fighter slot 0.' $gdbStdout
+            Assert-Condition ($dk[1] -gt 0 -and $dk[2] -gt 0 -and $dk[3] -gt 0 -and
+                $dk[4] -gt 0 -and $dk[5] -ge 2 -and $dk[6] -ge 10 -and
+                $dk[7] -gt 0 -and $dk[8] -gt 0 -and $dk[9] -gt 0 -and
+                $dk[10] -ge 2 -and $dk[11] -gt 0 -and $dk[12] -ge 10) `
+                'Donkey Giant Punch did not prove source charge/store/resume/release/reset semantics.' `
+                $gdbStdout
+            Assert-Condition ($dk[13] -gt 0 -and $dk[14] -gt 0 -and
+                $dk[15] -gt 0 -and $dk[16] -ge 10) `
+                'Donkey Spinning Kong did not prove the source ground-GA status path and settle.' `
+                $gdbStdout
+            Assert-Condition ($dk[17] -gt 0 -and $dk[18] -gt 0 -and
+                $dk[19] -gt 0 -and $dk[20] -gt 0 -and $dk[21] -gt 0 -and
+                $dk[22] -gt 0 -and $dk[23] -ge 10) `
+                'Donkey Hand Slap did not prove source start/loop/repeat/end/settle semantics.' `
+                $gdbStdout
+            $specialsSummary += " dkN=$($dk[1])/$($dk[2])/$($dk[3]) store=$($dk[4]):$($dk[5])/$($dk[6]) release=$($dk[7])/$($dk[8])/$($dk[9]):$($dk[10]) reset=$($dk[11])/$($dk[12]) dkHi=$($dk[13])/$($dk[14]) ga=$($dk[15]) wait=$($dk[16]) dkLw=$($dk[17])/$($dk[18])/$($dk[19]) repeat=$($dk[20]) flag=$($dk[21]) end=$($dk[22]) wait=$($dk[23])"
         }
         $audioSummary = ''
         $audioBgmSummary = ''

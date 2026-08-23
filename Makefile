@@ -2136,6 +2136,57 @@ override NDS_P2_FOUR_CPU_STRESS := 1
 override NDS_R2_EFFECT_POOL := 38
 endif
 endif
+# Source-state gameplay proof target.  Fast logic cannot use NDS_R2_PATH (the
+# R2 battle loop is the realtime loop), but its renderer must still be a
+# coherent current DS configuration.  This target had been relying on generic
+# defaults and drifted as accepted renderer features graduated globally, first
+# producing an impossible profile-2/Task56 pair and then a partial GX-compose
+# configuration.  Keep the bounded gameplay loop, but pin the same accepted
+# renderer/backend bundle as the scene-boundary fast target below.  No tick
+# figure from this target is a performance figure.
+ifeq ($(TARGET),smash64ds-battle-playable-fast-hwtri)
+override NDS_DEV_SCENE_HARNESS := battle_playable
+override NDS_DEV_LIVE_INPUT_PREVIEW := 0
+override NDS_HARNESS_FAST_LOGIC := 1
+override NDS_RENDERER_HW_TRIANGLES := 1
+override NDS_DEBUG_HUD := 0
+override NDS_RENDERER_PROFILE_LEVEL := 0
+override NDS_SHIP_TELEMETRY := 1
+override NDS_TICK_HUD := 0
+override NDS_RENDERER_FAST_RUN_DEFAULT := 9
+override NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE := 1
+override NDS_TASK36_HW_COMPOSE := 2
+override NDS_R2_FIGHTER_HW_MTX := 1
+override NDS_R2_FIGHTER_GX_COMPOSE := 1
+override NDS_R2_STAGE_VALIDATE_STRIDE := 8
+override NDS_R2_FIGHTER_HW_LIGHT := 1
+override NDS_R2_FIGHTER_SHUFFLE_FOLD := 1
+override NDS_R2_CUBIC_FIXED := 1
+override NDS_R2_DELTA_PATH_ITCM := 1
+override NDS_R2_ANIM_CACHE := 1
+override NDS_R2_AOBJ16_PREBAKE := 1
+override NDS_TASK53_REPLAY_ARENA_FIX := 1
+override NDS_BATTLE_PROFILE := 1
+override NDS_TASK44_STAGE_STEADY := 1
+override NDS_R2_STAGE_DIRECT := 1
+override NDS_R2_STAGE_DMA := 1
+override NDS_R2_STAGE_VIEWPROJ := 1
+override NDS_R2_STAGE_PREFLIGHT := 1
+override NDS_R2_FIGHTER_MTX_DIRECT := 1
+override NDS_R2_FIGHTER_RUN_MEMO := 1
+override NDS_TASK37_ITCM_LEAVES := 7
+override NDS_SCENE_MIP_CACHE_LAB := 0
+override NDS_FAST_WALLPAPER_AFFINE := 1
+override NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT := 1
+override NDS_IFCOMMON_HYBRID_OAM := 0
+override NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS := 0
+override NDS_TASK16_FLOAT_COMPARE := 1
+override NDS_TASK16_FLOAT_I2F := 1
+override NDS_TASK16_FLOAT_ADDSUB := 1
+override NDS_TASK32_DRAW_HOT_TEXT := 1
+override NDS_TASK39_FX_SPRITES := 1
+override NDS_TASK39_FX_FLASH := 1
+endif
 # P2-1b scene-loop-walk lab target. Its OWN block for the same reason the Task
 # 49 differ has one: appending a member to the tickhud/proof filter above
 # breaks the structural pin at check-gbi-decode-fixtures.ps1:1847.
@@ -4460,9 +4511,18 @@ $(OUTPUT).elf: $(OFILES) $(NDS_PRIVATE_CHECK_OFILES) \
 	$(if $(filter 1,$(NDS_P2_UI_KIT)),$(NDS_MN_UI_KIT_INC) \
 		$(NDS_MN_TITLE_ANIM_INC))
 $(OFILES) $(NDS_PRIVATE_CHECK_OFILES): $(PROJECT_ROOT)/Makefile $(NDS_BUILD_CONFIG) $(NDS_FTANIM_TRACK_PREREQ)
+# The outer build exports NDS_NITROFS_RELOC_FILES so the recursive inner make
+# receives the exact ROM prerequisite inventory.  P2-3's staged fighter banks
+# make that one variable roughly 72 KiB; together with the normal build
+# environment it is large enough that MSYS bash can start, but a native
+# devkitARM child spawned *through* bash fails with ENOENT on Windows.  Normal
+# compile recipes do not cross that shell seam.  Keep the prerequisite export
+# intact and scrub only this oversized make-only variable when a shell must
+# launch a native tool for the private ITCM archive work below.
+NDS_SHELL_DEVKIT_ENV := env -u NDS_NITROFS_RELOC_FILES
 ifeq ($(NDS_TASK9_FLOAT_ITCM),1)
-NDS_TASK9_FLOAT_LIBGCC := $(shell $(CC) $(ARCH) -print-libgcc-file-name)
-NDS_TASK9_FLOAT_AR := $(shell $(CC) -print-prog-name=ar)
+NDS_TASK9_FLOAT_LIBGCC := $(shell $(NDS_SHELL_DEVKIT_ENV) $(CC) $(ARCH) -print-libgcc-file-name)
+NDS_TASK9_FLOAT_AR := $(shell $(NDS_SHELL_DEVKIT_ENV) $(CC) -print-prog-name=ar)
 # Keep the installed archive out of Make's prerequisite graph: `make -B` would
 # otherwise try to rebuild that external .a through an implicit archive rule.
 # One grouped recipe makes one verified private copy and extracts only from it.
@@ -4476,7 +4536,7 @@ $(NDS_TASK9_FLOAT_ITCM_OFILES) &: $(PROJECT_ROOT)/Makefile $(NDS_BUILD_CONFIG)
 	@rm -rf ".task9-float-itcm" $(foreach member,$(NDS_TASK9_FLOAT_ITCM_MEMBERS),$(basename $(member)).itcm.o $(basename $(member)).mainram.o)
 	@mkdir -p ".task9-float-itcm"
 	@cp "$(NDS_TASK9_FLOAT_LIBGCC)" ".task9-float-itcm/libgcc.a"
-	@cd ".task9-float-itcm" && $(NDS_TASK9_FLOAT_AR) x "libgcc.a" $(NDS_TASK9_FLOAT_ITCM_MEMBERS)
+	@cd ".task9-float-itcm" && $(NDS_SHELL_DEVKIT_ENV) $(NDS_TASK9_FLOAT_AR) x "libgcc.a" $(NDS_TASK9_FLOAT_ITCM_MEMBERS)
 	@for member in $(NDS_TASK9_FLOAT_ITCM_MEMBERS); do \
 		stem="$${member%.o}"; \
 		phase2_filter=""; \
@@ -4500,15 +4560,15 @@ $(NDS_TASK9_FLOAT_ITCM_OFILES) &: $(PROJECT_ROOT)/Makefile $(NDS_BUILD_CONFIG)
 		case " $(strip $(NDS_TASK9_FLOAT_MAIN_MEMBERS)) " in \
 			*" $$member "*) rename_filter=""; out="$$stem.mainram.o";; \
 		esac; \
-		$(OBJCOPY) $$phase2_filter $$rename_filter \
+		$(NDS_SHELL_DEVKIT_ENV) $(OBJCOPY) $$phase2_filter $$rename_filter \
 			".task9-float-itcm/$$member" "$$out" || exit $$?; \
 	done
 	@rm -rf ".task9-float-itcm"
 endif
 ifneq ($(strip $(NDS_TASK37_ITCM_OFILES)),)
-NDS_TASK37_LIBC := $(shell $(CC) $(ARCH) -print-file-name=libc.a)
-NDS_TASK37_LIBM := $(shell $(CC) $(ARCH) -print-file-name=libm.a)
-NDS_TASK37_AR := $(shell $(CC) -print-prog-name=ar)
+NDS_TASK37_LIBC := $(shell $(NDS_SHELL_DEVKIT_ENV) $(CC) $(ARCH) -print-file-name=libc.a)
+NDS_TASK37_LIBM := $(shell $(NDS_SHELL_DEVKIT_ENV) $(CC) $(ARCH) -print-file-name=libm.a)
+NDS_TASK37_AR := $(shell $(NDS_SHELL_DEVKIT_ENV) $(CC) -print-prog-name=ar)
 # Grouped recipe, one verified private copy per archive, extract only the named
 # members. Same shape as the Task 9 block above and for the same reason: the
 # installed archives must stay out of Make's prerequisite graph.
@@ -4519,11 +4579,11 @@ $(NDS_TASK37_ITCM_OFILES) &: $(PROJECT_ROOT)/Makefile $(NDS_BUILD_CONFIG)
 	@mkdir -p ".task37-itcm"
 	@cp "$(NDS_TASK37_LIBC)" ".task37-itcm/libc.a"
 	@cp "$(NDS_TASK37_LIBM)" ".task37-itcm/libm.a"
-	@test "$(NDS_TASK37_ITCM_LIBC)" != "1" || (cd ".task37-itcm" && $(NDS_TASK37_AR) x "libc.a" $(NDS_TASK37_LIBC_MEMBERS))
-	@test "$(NDS_TASK37_ITCM_LIBM)" != "1" || (cd ".task37-itcm" && $(NDS_TASK37_AR) x "libm.a" $(NDS_TASK37_LIBM_MEMBERS))
+	@test "$(NDS_TASK37_ITCM_LIBC)" != "1" || (cd ".task37-itcm" && $(NDS_SHELL_DEVKIT_ENV) $(NDS_TASK37_AR) x "libc.a" $(NDS_TASK37_LIBC_MEMBERS))
+	@test "$(NDS_TASK37_ITCM_LIBM)" != "1" || (cd ".task37-itcm" && $(NDS_SHELL_DEVKIT_ENV) $(NDS_TASK37_AR) x "libm.a" $(NDS_TASK37_LIBM_MEMBERS))
 	@for member in $(if $(filter 1,$(NDS_TASK37_ITCM_LIBC)),$(NDS_TASK37_LIBC_MEMBERS)) $(if $(filter 1,$(NDS_TASK37_ITCM_LIBM)),$(NDS_TASK37_LIBM_MEMBERS)); do \
 		stem="$${member%.o}"; \
-		$(OBJCOPY) \
+		$(NDS_SHELL_DEVKIT_ENV) $(OBJCOPY) \
 			--rename-section .text=.itcm,alloc,load,readonly,code,contents \
 			".task37-itcm/$$member" "$$stem.itcm.o" || exit $$?; \
 	done
