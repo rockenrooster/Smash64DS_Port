@@ -1,0 +1,112 @@
+0x020bd384 in get_fat (clst=39, obj=<optimized out>) at /home/davem/projects/devkitpro/pacman-packages/libfat/src/libdvm-2.1.0/fatfs/source/ff.c:1181
+Breakpoint 1 at 0x1ffdac4: file D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_compat_shims.c, line 2635.
+
+Breakpoint 1, ftParamUpdateAnimKeys (fighter_gobj=fighter_gobj@entry=0x2334650) at D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_compat_shims.c:2635
+2635	    FTStruct *fp = (fighter_gobj != NULL) ? ftGetStruct(fighter_gobj) : NULL;
+ANIMSTATE sample=0 gobj=0x2334650 flags=0x0 kind=4 player=0 status=10 motion=4 frame=4.000000 joints=0 common=0 desc=0x0 is_anim_joint=0 speed=0.000000
+ANIMSTATE counters attach=103 null=48 invalid=0 parse=8443 nullskip=5463 early=7596 stepped=847
+ANIMJOINT s=0 i=0 dobj=0x23346d8 script=0x0 aobj=0x0 wait=-3.40282e+38 speed=1 frame=0 rot=0,-1.5708,0 tra=0,0,0
+ANIMJOINT s=0 i=1 dobj=0
+ANIMJOINT s=0 i=2 dobj=0
+ANIMJOINT s=0 i=3 dobj=0
+ANIMJOINT s=0 i=4 dobj=0x23347a8 script=0x2332c82 aobj=0x226b854 wait=56 speed=1 frame=4 rot=0,0.435547,0 tra=0,135,0
+ANIMJOINT s=0 i=5 dobj=0x2334878 script=0x2332cae aobj=0x226b92c wait=11 speed=1 frame=4 rot=-0.138672,-1.54297,-0.185547 tra=0,-1.09351,3.97192
+ANIMJOINT s=0 i=6 dobj=0x2334948 script=0x2332cf0 aobj=0x226ba04 wait=11 speed=1 frame=4 rot=0.312256,0.503906,0.214844 tra=0,0,5.85791
+ANIMJOINT s=0 i=7 dobj=0x2334ac0 script=0x0 aobj=0x0 wait=-3.40282e+38 speed=1 frame=0 rot=-1.5708,0,-1.5708 tra=51.0629,86.9682,0
+ANIMJOINT s=0 i=8 dobj=0x2334b90 script=0x2332d2e aobj=0x226ba70 wait=14 speed=1 frame=4 rot=3.37451,-2.58032,-3.63403 tra=0,0,4e-06
+ANIMJOINT s=0 i=9 dobj=0x2334d08 script=0x2332d9c aobj=0x226badc wait=1 speed=1 frame=4 rot=0,0,-0.0625 tra=40.3422,4e-06,1.4e-05
+ANIMJOINT s=0 i=10 dobj=0x2334e80 script=0x2332dea aobj=0x226bbb4 wait=56 speed=1 frame=4 rot=-1.2207,0,0 tra=35.75,0,0
+ANIMJOINT s=0 i=11 dobj=0x2334ff8 script=0x2332e16 aobj=0x226bc8c wait=11 speed=1 frame=4 rot=0.419678,-0.0192871,0.342285 tra=0,89.9136,0
+ANIMJOINT s=0 i=12 dobj=0x23350c8 script=0x2332e5e aobj=0x226bd64 wait=56 speed=1 frame=4 rot=-0.431641,0.271484,-0.408203 tra=0,38.961,-4.25
+ANIMJOINT s=0 i=13 dobj=0x2335588 script=0x0 aobj=0x0 wait=-3.40282e+38 speed=1 frame=0 rot=-1.5708,0,-1.5708 tra=-51.0629,86.9683,0
+ANIMJOINT s=0 i=14 dobj=0x2335658 script=0x2332e86 aobj=0x226bdd0 wait=30 speed=1 frame=4 rot=0.927734,0.948975,0.230713 tra=0,0,4e-06
+ANIMJOINT s=0 i=15 dobj=0x23357d0 script=0x2332f0c aobj=0x226be3c wait=30 speed=1 frame=4 rot=0,0,-1.68677 tra=40.325,-1e-06,-2.3e-05
+ANIMJOINT s=0 i=16 dobj=0x2335948 script=0x2332f3c aobj=0x226bea8 wait=26 speed=1 frame=4 rot=1.24585,0,0 tra=35.993,0.001017,-1.4e-05
+ANIMJOINT s=0 i=17 dobj=0x2335ac0 script=0x2332f5c aobj=0x226bf14 wait=56 speed=1 frame=4 rot=3.14062,-1.57031,0 tra=28.0243,-17.8687,1.40688
+ANIMJOINT s=0 i=18 dobj=0x2335b90 script=0x0 aobj=0x0 wait=-3.40282e+38 speed=1 frame=0 rot=-1.5708,0,-1.5708 tra=31.6803,-20.6533,-3
+ANIMJOINT s=0 i=19 dobj=0x2335c60 script=0x2332f86 aobj=0x226bf80 wait=39 speed=1 frame=4 rot=2.85962,-2.69775,-3.07886 tra=0,0,0
+ANIMJOINT s=0 i=20 dobj=0x2335dd8 script=0x2332fd4 aobj=0x226bfec wait=32 speed=1 frame=4 rot=0,0,0.856445 tra=55.5793,4e-06,0
+ANIMJOINT s=0 i=21 dobj=0x2335f50 script=0x0 aobj=0x0 wait=-3.40282e+38 speed=1 frame=0 rot=0,-9e-06,-1.64181 tra=66.1077,1.36442,2.31619
+
+Breakpoint 1, ftParamUpdateAnimKeys (fighter_gobj=fighter_gobj@entry=0x23c2720) at D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_compat_shims.c:2635
+2635	    FTStruct *fp = (fighter_gobj != NULL) ? ftGetStruct(fighter_gobj) : NULL;
+ANIMSTATE sample=1 gobj=0x23c2720 flags=0x0 kind=1 player=1 status=10 motion=4 frame=42.000000 joints=0 common=0 desc=0x0 is_anim_joint=0 speed=0.000000
+ANIMSTATE counters attach=103 null=48 invalid=0 parse=8460 nullskip=5466 early=7612 stepped=848
+ANIMJOINT s=1 i=0 dobj=0x23c27a8 script=0x0 aobj=0x0 wait=-3.40282e+38 speed=1 frame=0 rot=0,1.5708,0 tra=-1397,904,0
+ANIMJOINT s=1 i=1 dobj=0
+ANIMJOINT s=1 i=2 dobj=0
+ANIMJOINT s=1 i=3 dobj=0
+ANIMJOINT s=1 i=4 dobj=0x23c2878 script=0x233a448 aobj=0x226ccb8 wait=27 speed=1 frame=42 rot=0,0,0 tra=12,228,-5
+ANIMJOINT s=1 i=5 dobj=0x23c2948 script=0x233a4c2 aobj=0x226c34c wait=9 speed=1 frame=42 rot=-0.270264,-0.712646,-0.00585938 tra=-3.92676,-4.10327,-7.07324
+ANIMJOINT s=1 i=6 dobj=0x23c2b68 script=0x233a566 aobj=0x226c3b8 wait=1 speed=1 frame=42 rot=0.598633,0.209473,0.123779 tra=0,0,0
+ANIMJOINT s=1 i=7 dobj=0x23c2ed8 script=0x0 aobj=0x0 wait=-3.40282e+38 speed=1 frame=0 rot=-1.5708,0,-1.5708 tra=88.8494,62.6409,6.85518
+ANIMJOINT s=1 i=8 dobj=0x23c2fa8 script=0x233a612 aobj=0x226c424 wait=1 speed=1 frame=42 rot=2.87109,-2.80444,-2.47876 tra=0,0,0
+ANIMJOINT s=1 i=9 dobj=0x23c3120 script=0x233a6ac aobj=0x226c490 wait=10 speed=1 frame=42 rot=0,0,-0.932617 tra=47.6824,0,2.9e-05
+ANIMJOINT s=1 i=10 dobj=0x23c31f0 script=0x0 aobj=0x0 wait=-3.40282e+38 speed=1 frame=0 rot=0,0,0 tra=67.4215,0.001019,3.6e-05
+ANIMJOINT s=1 i=11 dobj=0x23c32c0 script=0x233a746 aobj=0x226c4fc wait=9 speed=1 frame=42 rot=-0.157715,0.417969,-0.192383 tra=0,84,0
+ANIMJOINT s=1 i=12 dobj=0x23c3390 script=0x0 aobj=0x0 wait=-3.40282e+38 speed=1 frame=0 rot=0,0,0 tra=0,15.75,-4.5
+ANIMJOINT s=1 i=13 dobj=0x23c35b0 script=0x0 aobj=0x0 wait=-3.40282e+38 speed=1 frame=0 rot=-1.5708,0,-1.5708 tra=-88.8494,62.641,6.85518
+ANIMJOINT s=1 i=14 dobj=0x23c3680 script=0x233a7de aobj=0x226c568 wait=7 speed=1 frame=42 rot=-0.0725098,0.659912,0.0629883 tra=0,0,0
+ANIMJOINT s=1 i=15 dobj=0x23c37f8 script=0x233a868 aobj=0x226c5d4 wait=8 speed=1 frame=42 rot=0,0,-1.13086 tra=48.1245,1e-06,-3.2e-05
+ANIMJOINT s=1 i=16 dobj=0x23c38c8 script=0x0 aobj=0x0 wait=-3.40282e+38 speed=1 frame=0 rot=-8e-06,0,0 tra=68.0853,0.001015,-5e-05
+ANIMJOINT s=1 i=17 dobj=0x23c3998 script=0x233a8a6 aobj=0x226c6ac wait=28 speed=1 frame=42 rot=0,-1.57031,3.14062 tra=15,-15,3
+ANIMJOINT s=1 i=18 dobj=0x23c3a68 script=0x0 aobj=0x0 wait=-3.40282e+38 speed=1 frame=0 rot=-1.5708,0,-1.5708 tra=33.2873,-32.3354,11.2154
+ANIMJOINT s=1 i=19 dobj=0x23c3b38 script=0x233a906 aobj=0x226c718 wait=6 speed=1 frame=42 rot=-0.701416,-0.511719,-0.0986328 tra=0,0,-4e-06
+ANIMJOINT s=1 i=20 dobj=0x23c3cb0 script=0x233a988 aobj=0x226c784 wait=15 speed=1 frame=42 rot=0,0,0.751709 tra=106.632,4e-06,4e-06
+ANIMJOINT s=1 i=21 dobj=0x23c3e28 script=0x0 aobj=0x0 wait=-3.40282e+38 speed=1 frame=0 rot=0,-1e-06,-1.59914 tra=97.2032,1.42501,2.43495
+
+Breakpoint 1, ftParamUpdateAnimKeys (fighter_gobj=fighter_gobj@entry=0x2334650) at D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_compat_shims.c:2635
+2635	    FTStruct *fp = (fighter_gobj != NULL) ? ftGetStruct(fighter_gobj) : NULL;
+ANIMSTATE sample=2 gobj=0x2334650 flags=0x0 kind=4 player=0 status=10 motion=4 frame=5.000000 joints=0 common=0 desc=0x0 is_anim_joint=0 speed=0.000000
+ANIMSTATE counters attach=103 null=48 invalid=0 parse=8478 nullskip=5480 early=7628 stepped=850
+ANIMJOINT s=2 i=0 dobj=0x23346d8 script=0x0 aobj=0x0 wait=-3.40282e+38 speed=1 frame=0 rot=0,-1.5708,0 tra=0,0,0
+ANIMJOINT s=2 i=1 dobj=0
+ANIMJOINT s=2 i=2 dobj=0
+ANIMJOINT s=2 i=3 dobj=0
+ANIMJOINT s=2 i=4 dobj=0x23347a8 script=0x2332c82 aobj=0x226b854 wait=55 speed=1 frame=5 rot=0,0.435547,0 tra=0,135,0
+ANIMJOINT s=2 i=5 dobj=0x2334878 script=0x2332cae aobj=0x226b92c wait=10 speed=1 frame=5 rot=-0.138672,-1.54297,-0.185547 tra=0,-1.66675,4.72241
+ANIMJOINT s=2 i=6 dobj=0x2334948 script=0x2332cf0 aobj=0x226ba04 wait=10 speed=1 frame=5 rot=0.294189,0.503906,0.214844 tra=0,0,7.22266
+ANIMJOINT s=2 i=7 dobj=0x2334ac0 script=0x0 aobj=0x0 wait=-3.40282e+38 speed=1 frame=0 rot=-1.5708,0,-1.5708 tra=51.0629,86.9682,0
+ANIMJOINT s=2 i=8 dobj=0x2334b90 script=0x2332d2e aobj=0x226ba70 wait=13 speed=1 frame=5 rot=3.35205,-2.5752,-3.58472 tra=0,0,4e-06
+ANIMJOINT s=2 i=9 dobj=0x2334d08 script=0x2332da4 aobj=0x226badc wait=1 speed=1 frame=5 rot=0,0,-0.169922 tra=40.3422,4e-06,1.4e-05
+ANIMJOINT s=2 i=10 dobj=0x2334e80 script=0x2332dea aobj=0x226bbb4 wait=55 speed=1 frame=5 rot=-1.2207,0,0 tra=35.75,0,0
+ANIMJOINT s=2 i=11 dobj=0x2334ff8 script=0x2332e16 aobj=0x226bc8c wait=10 speed=1 frame=5 rot=0.440186,-0.0266113,0.341797 tra=0,89.9136,0
+ANIMJOINT s=2 i=12 dobj=0x23350c8 script=0x2332e5e aobj=0x226bd64 wait=55 speed=1 frame=5 rot=-0.431641,0.271484,-0.408203 tra=0,38.961,-4.25
+ANIMJOINT s=2 i=13 dobj=0x2335588 script=0x0 aobj=0x0 wait=-3.40282e+38 speed=1 frame=0 rot=-1.5708,0,-1.5708 tra=-51.0629,86.9683,0
+ANIMJOINT s=2 i=14 dobj=0x2335658 script=0x2332e86 aobj=0x226bdd0 wait=29 speed=1 frame=5 rot=0.941895,0.944824,0.245605 tra=0,0,4e-06
+ANIMJOINT s=2 i=15 dobj=0x23357d0 script=0x2332f0c aobj=0x226be3c wait=29 speed=1 frame=5 rot=0,0,-1.6897 tra=40.325,-1e-06,-2.3e-05
+ANIMJOINT s=2 i=16 dobj=0x2335948 script=0x2332f3c aobj=0x226bea8 wait=25 speed=1 frame=5 rot=1.25684,0,0 tra=35.993,0.001017,-1.4e-05
+ANIMJOINT s=2 i=17 dobj=0x2335ac0 script=0x2332f5c aobj=0x226bf14 wait=55 speed=1 frame=5 rot=3.14062,-1.57031,0 tra=28.0243,-17.8687,1.40688
+ANIMJOINT s=2 i=18 dobj=0x2335b90 script=0x0 aobj=0x0 wait=-3.40282e+38 speed=1 frame=0 rot=-1.5708,0,-1.5708 tra=31.6803,-20.6533,-3
+ANIMJOINT s=2 i=19 dobj=0x2335c60 script=0x2332f86 aobj=0x226bf80 wait=38 speed=1 frame=5 rot=2.86035,-2.69873,-3.08716 tra=0,0,0
+ANIMJOINT s=2 i=20 dobj=0x2335dd8 script=0x2332fd4 aobj=0x226bfec wait=31 speed=1 frame=5 rot=0,0,0.877686 tra=55.5793,4e-06,0
+ANIMJOINT s=2 i=21 dobj=0x2335f50 script=0x0 aobj=0x0 wait=-3.40282e+38 speed=1 frame=0 rot=0,-9e-06,-1.64181 tra=66.1077,1.36442,2.31619
+
+Breakpoint 1, ftParamUpdateAnimKeys (fighter_gobj=fighter_gobj@entry=0x23c2720) at D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_compat_shims.c:2635
+2635	    FTStruct *fp = (fighter_gobj != NULL) ? ftGetStruct(fighter_gobj) : NULL;
+ANIMSTATE sample=3 gobj=0x23c2720 flags=0x0 kind=1 player=1 status=10 motion=4 frame=43.000000 joints=0 common=0 desc=0x0 is_anim_joint=0 speed=0.000000
+ANIMSTATE counters attach=103 null=48 invalid=0 parse=8490 nullskip=5482 early=7639 stepped=851
+ANIMJOINT s=3 i=0 dobj=0x23c27a8 script=0x0 aobj=0x0 wait=-3.40282e+38 speed=1 frame=0 rot=0,1.5708,0 tra=-1397,904,0
+ANIMJOINT s=3 i=1 dobj=0
+ANIMJOINT s=3 i=2 dobj=0
+ANIMJOINT s=3 i=3 dobj=0
+ANIMJOINT s=3 i=4 dobj=0x23c2878 script=0x233a448 aobj=0x226ccb8 wait=26 speed=1 frame=43 rot=0,0,0 tra=12,228,-5
+ANIMJOINT s=3 i=5 dobj=0x23c2948 script=0x233a4c2 aobj=0x226c34c wait=8 speed=1 frame=43 rot=-0.274414,-0.719971,-0.00585938 tra=-4.32324,-4.89673,-7.77954
+ANIMJOINT s=3 i=6 dobj=0x23c2b68 script=0x233a572 aobj=0x226c3b8 wait=8 speed=1 frame=43 rot=0.5979,0.201172,0.120117 tra=0,0,0
+ANIMJOINT s=3 i=7 dobj=0x23c2ed8 script=0x0 aobj=0x0 wait=-3.40282e+38 speed=1 frame=0 rot=-1.5708,0,-1.5708 tra=88.8494,62.6409,6.85518
+ANIMJOINT s=3 i=8 dobj=0x23c2fa8 script=0x233a61e aobj=0x226c424 wait=9 speed=1 frame=43 rot=2.87305,-2.7915,-2.48999 tra=0,0,0
+ANIMJOINT s=3 i=9 dobj=0x23c3120 script=0x233a6ac aobj=0x226c490 wait=9 speed=1 frame=43 rot=0,0,-0.924805 tra=47.6824,0,2.9e-05
+ANIMJOINT s=3 i=10 dobj=0x23c31f0 script=0x0 aobj=0x0 wait=-3.40282e+38 speed=1 frame=0 rot=0,0,0 tra=67.4215,0.001019,3.6e-05
+ANIMJOINT s=3 i=11 dobj=0x23c32c0 script=0x233a746 aobj=0x226c4fc wait=8 speed=1 frame=43 rot=-0.161377,0.435791,-0.196777 tra=0,84,0
+ANIMJOINT s=3 i=12 dobj=0x23c3390 script=0x0 aobj=0x0 wait=-3.40282e+38 speed=1 frame=0 rot=0,0,0 tra=0,15.75,-4.5
+ANIMJOINT s=3 i=13 dobj=0x23c35b0 script=0x0 aobj=0x0 wait=-3.40282e+38 speed=1 frame=0 rot=-1.5708,0,-1.5708 tra=-88.8494,62.641,6.85518
+ANIMJOINT s=3 i=14 dobj=0x23c3680 script=0x233a7de aobj=0x226c568 wait=6 speed=1 frame=43 rot=-0.0725098,0.658936,0.0620117 tra=0,0,0
+ANIMJOINT s=3 i=15 dobj=0x23c37f8 script=0x233a868 aobj=0x226c5d4 wait=7 speed=1 frame=43 rot=0,0,-1.1333 tra=48.1245,1e-06,-3.2e-05
+ANIMJOINT s=3 i=16 dobj=0x23c38c8 script=0x0 aobj=0x0 wait=-3.40282e+38 speed=1 frame=0 rot=-8e-06,0,0 tra=68.0853,0.001015,-5e-05
+ANIMJOINT s=3 i=17 dobj=0x23c3998 script=0x233a8a6 aobj=0x226c6ac wait=27 speed=1 frame=43 rot=0,-1.57031,3.14062 tra=15,-15,3
+ANIMJOINT s=3 i=18 dobj=0x23c3a68 script=0x0 aobj=0x0 wait=-3.40282e+38 speed=1 frame=0 rot=-1.5708,0,-1.5708 tra=33.2873,-32.3354,11.2154
+ANIMJOINT s=3 i=19 dobj=0x23c3b38 script=0x233a906 aobj=0x226c718 wait=5 speed=1 frame=43 rot=-0.687256,-0.518311,-0.100342 tra=0,0,-4e-06
+ANIMJOINT s=3 i=20 dobj=0x23c3cb0 script=0x233a988 aobj=0x226c784 wait=14 speed=1 frame=43 rot=0,0,0.765137 tra=106.632,4e-06,4e-06
+ANIMJOINT s=3 i=21 dobj=0x23c3e28 script=0x0 aobj=0x0 wait=-3.40282e+38 speed=1 frame=0 rot=0,-1e-06,-1.59914 tra=97.2032,1.42501,2.43495
+[Inferior 1 (Remote target) detached]
+

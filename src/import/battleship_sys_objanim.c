@@ -605,9 +605,23 @@ ndsR2AnimValueQ(const AObj *aobj)
 /* The original body with the arithmetic replaced twice over: E64's fixed cubic
  * for float AObjs, and Requirement 4's Q dispatch for the fighter ones. The
  * float arms below are still the decomp's own expressions verbatim and still
- * run for every non-fighter DObj this player is called for. */
-void gcPlayDObjAnimJoint(DObj *dobj) __attribute__((section(".itcm")));
-void gcPlayDObjAnimJoint(DObj *dobj)
+ * run for every non-fighter DObj this player is called for.
+ *
+ * One body, two players. `tra_scale` is the per-joint translate scale of
+ * lb/lbcommon.c:1261 `lbCommonPlayTranslateScaledDObjAnim`, whose ONLY
+ * difference from sys/objanim.c:714 `gcPlayDObjAnimJoint` is `*= scale->x/y/z`
+ * on the four translate tracks. `ftParamUpdateAnimKeys` (ft/ftparam.c:364)
+ * selects it for every joint of a fighter whose attributes carry
+ * `translate_scales` -- Luigi, who plays Mario's figatrees at his own limb
+ * lengths. Until 2026-08-23 the port's copy was an empty stub, so Luigi's
+ * joints were parsed (anim_wait counted down) and never played: no pose ever
+ * moved, which the owner reported as "no animations". The unscaled wrapper
+ * passes a constant NULL, so GCC folds the scale arm out of the ITCM-resident
+ * player. `always_inline` is load-bearing: at -O2 GCC outlined the body as one
+ * shared main-RAM copy and left the ITCM symbol a 10-byte tail call, which
+ * would have evicted the player from ITCM without any other symptom. */
+static inline __attribute__((always_inline)) void
+ndsPlayDObjAnimJointBody(DObj *dobj, const Vec3f *tra_scale)
 {
     f32 value = 0.0f;
     AObj *aobj;
@@ -757,11 +771,26 @@ void gcPlayDObjAnimJoint(DObj *dobj)
                         }
                         syInterpCubic(&dobj->translate.vec.f,
                                       aobj->interpolate, value);
+                        if (tra_scale != NULL)
+                        {
+                            dobj->translate.vec.f.x *= tra_scale->x;
+                            dobj->translate.vec.f.y *= tra_scale->y;
+                            dobj->translate.vec.f.z *= tra_scale->z;
+                        }
                         break;
 
-                    case nGCAnimTrackTraX: dobj->translate.vec.f.x = value; break;
-                    case nGCAnimTrackTraY: dobj->translate.vec.f.y = value; break;
-                    case nGCAnimTrackTraZ: dobj->translate.vec.f.z = value; break;
+                    case nGCAnimTrackTraX:
+                        dobj->translate.vec.f.x =
+                            (tra_scale != NULL) ? value * tra_scale->x : value;
+                        break;
+                    case nGCAnimTrackTraY:
+                        dobj->translate.vec.f.y =
+                            (tra_scale != NULL) ? value * tra_scale->y : value;
+                        break;
+                    case nGCAnimTrackTraZ:
+                        dobj->translate.vec.f.z =
+                            (tra_scale != NULL) ? value * tra_scale->z : value;
+                        break;
                     case nGCAnimTrackScaX: dobj->scale.vec.f.x = value; break;
                     case nGCAnimTrackScaY: dobj->scale.vec.f.y = value; break;
                     case nGCAnimTrackScaZ: dobj->scale.vec.f.z = value; break;
@@ -772,6 +801,96 @@ void gcPlayDObjAnimJoint(DObj *dobj)
             aobj = aobj->next;
         }
         if (NDS_FCMP_EQ_C(dobj->anim_wait, AOBJ_ANIM_END))
+        {
+            dobj->anim_wait = AOBJ_ANIM_NULL;
+        }
+    }
+}
+
+void gcPlayDObjAnimJoint(DObj *dobj) __attribute__((section(".itcm")));
+void gcPlayDObjAnimJoint(DObj *dobj)
+{
+    ndsPlayDObjAnimJointBody(dobj, NULL);
+}
+
+/* Main RAM, not ITCM: ITCM is full (census section D reads 168 B free) and
+ * this player only runs for fighters that carry translate scales. */
+void lbCommonPlayTranslateScaledDObjAnim(DObj *dobj, Vec3f *scale)
+{
+    ndsPlayDObjAnimJointBody(dobj, scale);
+}
+#else
+/* lb/lbcommon.c:1261, verbatim, for the NDS_R2_LAB_CUBIC_OFF escape hatch where
+ * the decomp player above is the one in use. */
+void lbCommonPlayTranslateScaledDObjAnim(DObj *dobj, Vec3f *scale)
+{
+    f32 interp;
+
+    if (dobj->anim_wait != AOBJ_ANIM_NULL)
+    {
+        AObj *aobj = dobj->aobj;
+
+        while (aobj != NULL)
+        {
+            if (aobj->kind != nGCAnimKindNone)
+            {
+                if (dobj->anim_wait != AOBJ_ANIM_END)
+                {
+                    aobj->length += dobj->anim_speed;
+                }
+                if (!(dobj->parent_gobj->flags & GOBJ_FLAG_NOANIM))
+                {
+                    switch (aobj->track)
+                    {
+                    case nGCAnimTrackRotX:
+                        dobj->rotate.vec.f.x = gcGetAObjValue(aobj);
+                        break;
+                    case nGCAnimTrackRotY:
+                        dobj->rotate.vec.f.y = gcGetAObjValue(aobj);
+                        break;
+                    case nGCAnimTrackRotZ:
+                        dobj->rotate.vec.f.z = gcGetAObjValue(aobj);
+                        break;
+                    case nGCAnimTrackTraI:
+                        interp = gcGetAObjValue(aobj);
+                        if (interp < 0.0F)
+                        {
+                            interp = 0.0F;
+                        }
+                        else if (interp > 1.0F)
+                        {
+                            interp = 1.0F;
+                        }
+                        syInterpCubic(&dobj->translate.vec.f, aobj->interpolate,
+                                      interp);
+                        dobj->translate.vec.f.x *= scale->x;
+                        dobj->translate.vec.f.y *= scale->y;
+                        dobj->translate.vec.f.z *= scale->z;
+                        break;
+                    case nGCAnimTrackTraX:
+                        dobj->translate.vec.f.x = gcGetAObjValue(aobj) * scale->x;
+                        break;
+                    case nGCAnimTrackTraY:
+                        dobj->translate.vec.f.y = gcGetAObjValue(aobj) * scale->y;
+                        break;
+                    case nGCAnimTrackTraZ:
+                        dobj->translate.vec.f.z = gcGetAObjValue(aobj) * scale->z;
+                        break;
+                    case nGCAnimTrackScaX:
+                        dobj->scale.vec.f.x = gcGetAObjValue(aobj);
+                        break;
+                    case nGCAnimTrackScaY:
+                        dobj->scale.vec.f.y = gcGetAObjValue(aobj);
+                        break;
+                    case nGCAnimTrackScaZ:
+                        dobj->scale.vec.f.z = gcGetAObjValue(aobj);
+                        break;
+                    }
+                }
+            }
+            aobj = aobj->next;
+        }
+        if (dobj->anim_wait == AOBJ_ANIM_END)
         {
             dobj->anim_wait = AOBJ_ANIM_NULL;
         }

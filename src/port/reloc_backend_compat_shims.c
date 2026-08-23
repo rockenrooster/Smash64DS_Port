@@ -3020,12 +3020,6 @@ void lbCommonSetDObjTransformsForTreeDObjs(DObj *root_dobj,
     }
 }
 
-void lbCommonPlayTranslateScaledDObjAnim(DObj *dobj, Vec3f *scale)
-{
-    (void)dobj;
-    (void)scale;
-}
-
 void ftParamResetFighterColAnim(GObj *fighter_gobj)
 {
     FTStruct *fp = (fighter_gobj != NULL) ? ftGetStruct(fighter_gobj) : NULL;
