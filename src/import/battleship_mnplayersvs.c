@@ -93,6 +93,7 @@ volatile s32 gNdsPlayersVSPreviewLastFreeMotion[GMCOMMON_PLAYERS_MAX];
 volatile u32 gNdsPlayersVSPreviewSelectedMask;
 volatile u32 gNdsPlayersVSPreviewVisibleMask;
 volatile u32 gNdsPlayersVSPreviewExitCount;
+volatile u32 gNdsPlayersVSPreviewCostumeChangeCount;
 volatile u32 gNdsPlayersVSPreviewSelectedKindMask;
 volatile u32
     gNdsPlayersVSPreviewSelectedKindFrames[NDS_MENU_SHELL_FIGHTER_KINDS];
@@ -362,6 +363,91 @@ void ndsMNPlayersVSPreviewSync(u32 slot, s32 pkind, s32 fkind,
             ndsFighterManagerRegisterDisplayFighter(fighter_gobj, slot);
         }
     }
+}
+
+/* P2-3 (owner, 2026-08-23: "should be able to change skins by selecting the 3d
+ * preview").  THE SOURCE MECHANISM IS UNCHANGED -- this is only a different
+ * button reaching it.  mnPlayersVSFuncRun gives each of the four C-buttons one
+ * costume id through `ftParamGetCostumeCommonID(fkind, button)`, refuses a
+ * costume another player already holds with `mnPlayersVSCheckCostumeUsed`, and
+ * otherwise assigns costume+shade and re-inits the preview's parts
+ * (mnplayersvs.c:3369-3406/:3287).  The DS pad has no C-buttons, so the shell
+ * asks for the NEXT free id in that same four-entry cycle instead of a
+ * specific one; every id, the used test, the shade and the re-init are the
+ * source's own.
+ *
+ * Returns the new costume id, or -1 when the slot cannot change (no selected
+ * fighter, Team Battle -- where the source takes the costume from the team --
+ * or all four ids already held). */
+s32 ndsMNPlayersVSPreviewCycleCostume(u32 slot)
+{
+    s32 fkind;
+    s32 current;
+    s32 i;
+
+    if ((sNdsPlayersVSPreviewActive == FALSE) ||
+        (slot >= ARRAY_COUNT(sMNPlayersVSSlots)))
+    {
+        return -1;
+    }
+    if (sMNPlayersVSIsTeamBattle != FALSE)
+    {
+        return -1;
+    }
+    if ((sMNPlayersVSSlots[slot].player == NULL) ||
+        (sMNPlayersVSSlots[slot].is_fighter_selected == FALSE))
+    {
+        return -1;
+    }
+    fkind = sMNPlayersVSSlots[slot].fkind;
+    if (fkind == nFTKindNull)
+    {
+        return -1;
+    }
+    current = sMNPlayersVSSlots[slot].costume;
+
+    /* Start one past whichever button id currently matches, so repeated
+     * presses walk the source's own 0,1,2,3 order rather than restarting. */
+    {
+        s32 start = 0;
+
+        for (i = 0; i < 4; i++)
+        {
+            if (ftParamGetCostumeCommonID(fkind, i) == current)
+            {
+                start = i + 1;
+                break;
+            }
+        }
+        for (i = 0; i < 4; i++)
+        {
+            s32 button = (start + i) & 3;
+            s32 costume = ftParamGetCostumeCommonID(fkind, button);
+
+            if (costume == current)
+            {
+                continue;
+            }
+            if (mnPlayersVSCheckCostumeUsed(fkind, (s32)slot, costume) !=
+                FALSE)
+            {
+                continue;
+            }
+            sMNPlayersVSSlots[slot].costume = costume;
+            sMNPlayersVSSlots[slot].shade = mnPlayersVSGetShade((s32)slot);
+            ftParamInitAllParts(sMNPlayersVSSlots[slot].player, costume,
+                                sMNPlayersVSSlots[slot].shade);
+#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+            /* Same reason the preview rebuild clears them: the converted
+             * material rows are keyed by MObj address and this changes what
+             * those addresses mean. */
+            ndsFighterRendererInvalidateMaterialCaches();
+#endif
+            gNdsPlayersVSPreviewCostumeChangeCount++;
+            return costume;
+        }
+    }
+    return -1;
 }
 
 u32 ndsMNPlayersVSPreviewGetAppearance(u32 slot)

@@ -102,6 +102,7 @@ void ndsMNPlayersVSPreviewSyncRules(sb32 is_team_battle, const u8 *teams,
                                     u32 team_count);
 void ndsMNPlayersVSPreviewSync(u32 slot, s32 pkind, s32 fkind,
                                sb32 is_selected);
+s32 ndsMNPlayersVSPreviewCycleCostume(u32 slot);
 u32 ndsMNPlayersVSPreviewGetAppearance(u32 slot);
 void ndsMNPlayersVSPreviewFrame(void);
 void ndsMNPlayersVSPreviewExit(void);
@@ -203,6 +204,7 @@ extern volatile u32 gNdsMenuShellCssDropRefuseCount;
 extern volatile u32 gNdsMenuShellCssRecallCount;
 /* HMN/CP/NA button presses, and CPU-level arrow presses that changed a value. */
 extern volatile u32 gNdsMenuShellCssKindToggleCount;
+extern volatile u32 gNdsMenuShellCssCostumeCycleCount;
 extern volatile u32 gNdsMenuShellCssLevelChangeCount;
 /* START while READY TO FIGHT is up, START while it is not (the source's own
  * MenuDenied refusal), and the frame count the accepted START waits out. */
@@ -242,6 +244,7 @@ extern volatile s32
 extern volatile u32 gNdsPlayersVSPreviewSelectedMask;
 extern volatile u32 gNdsPlayersVSPreviewVisibleMask;
 extern volatile u32 gNdsPlayersVSPreviewExitCount;
+extern volatile u32 gNdsPlayersVSPreviewCostumeChangeCount;
 extern volatile u32 gNdsPlayersVSPreviewSelectedKindMask;
 extern volatile u32
     gNdsPlayersVSPreviewSelectedKindFrames[NDS_MENU_SHELL_FIGHTER_KINDS];

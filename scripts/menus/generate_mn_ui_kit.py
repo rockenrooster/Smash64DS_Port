@@ -2199,7 +2199,24 @@ CSS_SHADOW = {
 # Which fighter portraits have reached P2 production. Same source fkind values
 # the shell's NDS_CSS_FIGHTER_MASK carries when the corresponding fighter is
 # enabled: Mario, Fox, Luigi.
-CSS_BUILT_FKIND = (0, 1, 4)
+# Mario and Fox are complete; Luigi and Donkey Kong are IN PROGRESS -- playable
+# and selectable, but not finished (owner, 2026-08-23: "characters that are in
+# progress should show as selectable with the ? over the top of their
+# icon/portrait to show that they are in progress").  Both sets bake their real
+# portrait; the in-progress set additionally gets the source's own question-mark
+# plate over it at partial alpha, so the fighter stays recognisable underneath
+# and the cell still reads as "not finished".
+CSS_BUILT_FKIND = (0, 1, 4, 2)
+CSS_INPROGRESS_FKIND = (4, 2)
+# The dim laid over an in-progress fighter's portrait before its question mark.
+# The plate is NOT a solid tile -- only the glyph carries intensity, 219 texels
+# of a 45x43 cell -- so blending the glyph alone (measured at alpha 165 and
+# again at 235) tinted the portrait without reading as a mark.  The scrim is
+# what gives the glyph its contrast back.
+CSS_INPROGRESS_SCRIM_ALPHA = 120
+# The source's own portrait cell, mnPlayersVSMakePortrait (:2437).
+CSS_PORTRAIT_W = 45
+CSS_PORTRAIT_H = 43
 # P2-1L, owner finding (5): THE PORTRAIT IS THE SAME 45x43 AS THE BOX BEHIND
 # IT, and `mnPlayersVSMakePortrait` draws the two at the SAME (x, y)
 # (mnplayersvs.c:2437/:2503) -- so in the source the artwork covers its frame
@@ -2219,6 +2236,7 @@ CSS_PORTRAIT_SYMBOL = {
     0: "llMNPlayersPortraitsMarioSprite",
     1: "llMNPlayersPortraitsFoxSprite",
     4: "llMNPlayersPortraitsLuigiSprite",
+    2: "llMNPlayersPortraitsDonkeySprite",
 }
 # mnPlayersVSPortraitProcDisplay's primitive, :361.
 CSS_SHADOW_NOISE = 0x30
@@ -2253,6 +2271,23 @@ def css_screen_parts(flash_portrait: int | None = None) -> tuple[Placement, ...]
             # box's own scale -- finding (5).
             parts.append(Placement("MNPlayersPortraits",
                                    CSS_PORTRAIT_SYMBOL[fkind], x, y, False))
+            if fkind in CSS_INPROGRESS_FKIND:
+                # A SCRIM, THEN THE SOURCE'S OWN PLATE AT FULL STRENGTH.  The
+                # question mark is a thin glyph -- 219 texels of a 45x43 cell,
+                # measured -- so blending it alone over a bright portrait
+                # changed colours without reading as a mark.  Dimming the cell
+                # first gives the same glyph the dark field it has on a locked
+                # cell, and the fighter still shows through the scrim, which is
+                # the whole point: recognisable AND visibly unfinished.
+                parts.append(Placement(
+                    "MNPlayersPortraits", "", x, y, False,
+                    fill=(0x00, 0x00, 0x00, CSS_INPROGRESS_SCRIM_ALPHA),
+                    size=(CSS_PORTRAIT_W, CSS_PORTRAIT_H)))
+                parts.append(Placement(
+                    "MNPlayersPortraits",
+                    "llMNPlayersPortraitsPortraitQuestionMarkSprite", x, y,
+                    False, (0xC4, 0xB9, 0xA9),
+                    env=(0x5B, 0x41, 0x33)))
             continue
         shadow = CSS_SHADOW.get(fkind)
         if shadow is not None:

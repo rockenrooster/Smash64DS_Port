@@ -210,6 +210,7 @@ NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellCssDropCount;
 NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellCssDropRefuseCount;
 NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellCssRecallCount;
 NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellCssKindToggleCount;
+NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellCssCostumeCycleCount;
 NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellCssLevelChangeCount;
 NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellCssStartCount;
 NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellCssStartDeniedCount;
@@ -3255,6 +3256,54 @@ static void ndsMenuShellCssBack(void)
 /* mnPlayersVSUpdateCursorNoRecall, mnplayersvs.c:3128. The band is 38..124 --
  * NOT the 36..122 the grid itself uses, which is the source's own two-pixel
  * asymmetry and is kept. */
+/* P2-3 (owner, 2026-08-23: "should be able to change skins by selecting the 3d
+ * preview").  The DS pad has no C-buttons, which is the input the source spends
+ * on alternate costumes (mnplayersvs.c:3369) and the one narrowing P2-1e
+ * recorded for this screen.  The owner's replacement is the PREVIEW ITSELF: A
+ * on a slot's live fighter cycles that slot to the next costume the source
+ * would allow.  Everything behind it -- the four `ftParamGetCostumeCommonID`
+ * ids, `mnPlayersVSCheckCostumeUsed`, the shade and `ftParamInitAllParts` --
+ * stays the source's, in the imported PlayersVS TU.
+ *
+ * THE BOX is the gate card's own body, minus the two rows that already own
+ * their presses: `mnPlayersVSMakeGate` puts the 66 px card at `p*69+22`, y 126
+ * (mnplayersvs.c:1025-1048), the player-kind button occupies y 127..145
+ * (:963), and the name/CP-level row starts at y 201 (:632).  The fighter
+ * stands between them. */
+static u32 ndsMenuShellCssCheckPreviewCostume(void)
+{
+    u32 slot;
+
+    for (slot = 0u; slot < (u32)NDS_CSS_SLOTS; slot++)
+    {
+        s32 panel = (s32)(slot * 69u);
+        s32 costume;
+
+        if (ndsMenuShellCssBoxHit(panel + 22, panel + 88, 146, 200) == FALSE)
+        {
+            continue;
+        }
+        if ((sCssSelected[slot] == 0u) ||
+            (sCssFkind[slot] == (u8)nFTKindNull))
+        {
+            continue;
+        }
+        costume = ndsMNPlayersVSPreviewCycleCostume(slot);
+        if (costume < 0)
+        {
+            /* mnPlayersVSUpdateCostume's own refusal cue (:3291). */
+            ndsMenuShellCssCue(NDS_CSS_FGM_DENIED);
+        }
+        else
+        {
+            ndsMenuShellCssCue(NDS_CSS_FGM_SCROLL2);
+            gNdsMenuShellCssCostumeCycleCount++;
+        }
+        return TRUE;
+    }
+    return FALSE;
+}
+
 static void ndsMenuShellCssUpdateStatus(void)
 {
     if ((sCssCursorY > 124) || (sCssCursorY < 38))
@@ -3425,7 +3474,10 @@ static void ndsMenuShellUpdateCss(u32 held, u32 taps)
                     }
                     if (ndsMenuShellCssCheckTeamSelect() == FALSE)
                     {
-                        (void)ndsMenuShellCssCheckLevelArrows();
+                        if (ndsMenuShellCssCheckLevelArrows() == FALSE)
+                        {
+                            (void)ndsMenuShellCssCheckPreviewCostume();
+                        }
                     }
                 }
             }

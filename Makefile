@@ -2355,6 +2355,13 @@ override NDS_TASK39_FX_SPRITES := 1
 override NDS_TASK39_FX_FLASH := 1
 override NDS_P2_UI_KIT := 1
 override NDS_P2_MENU_SHELL := 1
+# P2-3 (owner, 2026-08-23: "I want to be able to test out Luigi and DK"). The
+# in-progress roster ships in EVERY shell configuration -- the published ROM,
+# its free-play twin, the gate's realtime arm and the loop arm -- so the
+# playable roster is the verifier-covered one and the CSS marks Luigi/Donkey
+# with the question-mark overlay the generator bakes.
+override NDS_P2_LUIGI := 1
+override NDS_P2_DONKEY := 1
 ## P2-2 source parity. BattleShip's efmanager.c owns 38 EFStructs and keeps its
 ## own last-four forced-effect reserve. The old 12-entry P1 cap changes which
 ## cosmetic effects survive a four-way burst, so the four-fighter shell restores
@@ -2445,6 +2452,13 @@ override NDS_TASK39_FX_SPRITES := 1
 override NDS_TASK39_FX_FLASH := 1
 override NDS_P2_UI_KIT := 1
 override NDS_P2_MENU_SHELL := 1
+# P2-3 (owner, 2026-08-23: "I want to be able to test out Luigi and DK"). The
+# in-progress roster ships in EVERY shell configuration -- the published ROM,
+# its free-play twin, the gate's realtime arm and the loop arm -- so the
+# playable roster is the verifier-covered one and the CSS marks Luigi/Donkey
+# with the question-mark overlay the generator bakes.
+override NDS_P2_LUIGI := 1
+override NDS_P2_DONKEY := 1
 override NDS_R2_EFFECT_POOL := 38
 # P2-1M gate catch: same rule as the walk block above — the CSS decides
 # Fox's level in the shell game; the P1 demo ladder never rides it.
@@ -2527,6 +2541,13 @@ override NDS_TASK39_FX_SPRITES := 1
 override NDS_TASK39_FX_FLASH := 1
 override NDS_P2_UI_KIT := 1
 override NDS_P2_MENU_SHELL := 1
+# P2-3 (owner, 2026-08-23: "I want to be able to test out Luigi and DK"). The
+# in-progress roster ships in EVERY shell configuration -- the published ROM,
+# its free-play twin, the gate's realtime arm and the loop arm -- so the
+# playable roster is the verifier-covered one and the CSS marks Luigi/Donkey
+# with the question-mark overlay the generator bakes.
+override NDS_P2_LUIGI := 1
+override NDS_P2_DONKEY := 1
 override NDS_R2_EFFECT_POOL := 38
 endif
 # Task 49 GX-differ lab target. Its OWN block (appending to the tickhud/proof
