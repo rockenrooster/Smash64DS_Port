@@ -521,6 +521,32 @@ NDS_P2_FOUR_CPU_STRESS ?= 0
 # CSS/audio surfaces and focused runtime proof are all green.  This prevents a
 # half-imported fighter from changing the P2-2 standing Boundary merely because
 # its files exist in the tree.  Luigi is the first pipeline prover.
+# P2-3 shell roster switch (owner, 2026-08-23: "I want to be able to test out
+# Luigi and DK").  How many IN-PROGRESS fighters every shell configuration
+# carries, in admission order: 0 = Mario/Fox only (the control arm for any
+# regression that lands with a wider roster), 1 = + Luigi, 2 = + Donkey Kong.
+#
+# THIS IS A RAM BUDGET, NOT A PREFERENCE.  Each fighter's generated native-owner
+# tables live in the ARM9 binary, and the binary costs the taskman arena 1:1 --
+# the arena is calloc'd from whatever the heap has left.  Measured on the shell
+# target at the battle's own high water (2026-08-23, gdb, one build each):
+#
+#   roster 0  arena 1,548,288  used 1,456,624  headroom 91,664  battle OK
+#   roster 1  arena 1,515,520  used 1,458,384  headroom 57,136  battle OK
+#   roster 2  arena 1,470,464  used 1,456,624  headroom 13,840  ABORT
+#
+# At roster 2 the battle dies at `ifCommonCountdownMakeInterface + 120` (data
+# abort, cpsr ABT) because the countdown interface's taskman allocation comes
+# back NULL.  Donkey Kong's tables are ~45 KB of binary and that is the whole
+# difference, so DK does not fit until those per-fighter tables move out of the
+# ARM9 image (NitroFS, loaded for the fighters a match actually uses).  Until
+# then roster 2 must be asked for deliberately.
+NDS_P2_SHELL_ROSTER ?= 1
+ifeq ($(NDS_P2_SHELL_ROSTER),2)
+ifneq ($(NDS_P2_SHELL_ROSTER_ALLOW_OVERFLOW),1)
+$(error NDS_P2_SHELL_ROSTER=2 does not fit RAM: the battle aborts in ifCommonCountdownMakeInterface with 13840 B of arena headroom. Move the per-fighter native-owner tables to NitroFS first, or pass NDS_P2_SHELL_ROSTER_ALLOW_OVERFLOW=1 to build the known-broken ROM on purpose)
+endif
+endif
 NDS_P2_LUIGI ?= 0
 # Donkey is the first structurally different P2-3 owner.  Keep admission
 # sequential: native-owner slots are a dense ABI (Mario/Fox/Luigi/Donkey), so a
@@ -2360,8 +2386,8 @@ override NDS_P2_MENU_SHELL := 1
 # its free-play twin, the gate's realtime arm and the loop arm -- so the
 # playable roster is the verifier-covered one and the CSS marks Luigi/Donkey
 # with the question-mark overlay the generator bakes.
-override NDS_P2_LUIGI := 1
-override NDS_P2_DONKEY := 1
+override NDS_P2_LUIGI := $(if $(filter 0,$(NDS_P2_SHELL_ROSTER)),0,1)
+override NDS_P2_DONKEY := $(if $(filter 2,$(NDS_P2_SHELL_ROSTER)),1,0)
 ## P2-2 source parity. BattleShip's efmanager.c owns 38 EFStructs and keeps its
 ## own last-four forced-effect reserve. The old 12-entry P1 cap changes which
 ## cosmetic effects survive a four-way burst, so the four-fighter shell restores
@@ -2457,8 +2483,8 @@ override NDS_P2_MENU_SHELL := 1
 # its free-play twin, the gate's realtime arm and the loop arm -- so the
 # playable roster is the verifier-covered one and the CSS marks Luigi/Donkey
 # with the question-mark overlay the generator bakes.
-override NDS_P2_LUIGI := 1
-override NDS_P2_DONKEY := 1
+override NDS_P2_LUIGI := $(if $(filter 0,$(NDS_P2_SHELL_ROSTER)),0,1)
+override NDS_P2_DONKEY := $(if $(filter 2,$(NDS_P2_SHELL_ROSTER)),1,0)
 override NDS_R2_EFFECT_POOL := 38
 # P2-1M gate catch: same rule as the walk block above — the CSS decides
 # Fox's level in the shell game; the P1 demo ladder never rides it.
@@ -2546,8 +2572,8 @@ override NDS_P2_MENU_SHELL := 1
 # its free-play twin, the gate's realtime arm and the loop arm -- so the
 # playable roster is the verifier-covered one and the CSS marks Luigi/Donkey
 # with the question-mark overlay the generator bakes.
-override NDS_P2_LUIGI := 1
-override NDS_P2_DONKEY := 1
+override NDS_P2_LUIGI := $(if $(filter 0,$(NDS_P2_SHELL_ROSTER)),0,1)
+override NDS_P2_DONKEY := $(if $(filter 2,$(NDS_P2_SHELL_ROSTER)),1,0)
 override NDS_R2_EFFECT_POOL := 38
 endif
 # Task 49 GX-differ lab target. Its OWN block (appending to the tickhud/proof
