@@ -182,6 +182,11 @@ volatile u32 gNdsMemoryLedgerGeneration;
  * Sudden Death (VSBattle -> VSBattle) hit the kind-equal early return and kept
  * match one's reloc files, texture keys and generation. */
 volatile u32 gNdsRelocSceneReentryEvictCount;
+/* P2-3: the fighter-animation force load's two arms. A fallback means the
+ * animation was not loaded and the caller parsed the stale heap instead. */
+volatile u32 gNdsRelocForceFighterAnimResolveCount;
+volatile u32 gNdsRelocForceFighterAnimFallbackCount;
+volatile u32 gNdsRelocForceFighterAnimFallbackLastAsset;
 volatile u32 gNdsMemoryLedgerArenaCapacity;
 volatile u32 gNdsMemoryLedgerArenaUsed;
 volatile u32 gNdsMemoryLedgerArenaHighWater;

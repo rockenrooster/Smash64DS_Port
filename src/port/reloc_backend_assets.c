@@ -8281,6 +8281,23 @@ void *lbRelocGetForceExternHeapFile(const void *file_id, void *heap)
         gNdsFighterAnimAuditLoadResolved = (file != NULL) ? 1u : 0u;
         gNdsFighterAnimAuditLoadFallback = (file == NULL) ? 1u : 0u;
 #endif
+        /* P2-3. THE FALLBACK IS SILENT, AND IT COSTS AN ANIMATION.
+         * `ndsRelocForceLoadFighterAObj16File` returning NULL means the
+         * fighter's animation was not loaded, and handing the raw heap back
+         * makes ftMainSetStatus parse whatever the previous motion left there:
+         * the status still changes, the figatree pointer still looks valid, and
+         * the only symptom is an animation that does not play. Count both arms
+         * so the next "the intro does not run" report is one counter read
+         * rather than a hunt. */
+        if (file != NULL)
+        {
+            gNdsRelocForceFighterAnimResolveCount++;
+        }
+        else
+        {
+            gNdsRelocForceFighterAnimFallbackCount++;
+            gNdsRelocForceFighterAnimFallbackLastAsset = asset_id;
+        }
         file = (file != NULL) ? file : heap;
 #if NDS_R2_BATTLEPACK
         ndsRelocRecordAuthoritativeForceFile(heap, file);
