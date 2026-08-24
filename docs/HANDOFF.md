@@ -1,9 +1,9 @@
 # Handoff
 
-Current: 2026-08-23 — **THE IN-PROGRESS ROSTER SHIPS AND BOUNDARY IS GREEN ON
-ALL THREE ARMS.** Luigi is selectable on the character select and marked as
-unfinished, skins cycle off the 3D preview, and the published `smash64ds.nds`
-carries both. Donkey Kong is held out by a measured RAM wall, not by policy.
+Current: 2026-08-24 — **THE FOUR-NAME ROSTER SHIPS AND BOUNDARY IS GREEN ON ALL
+THREE ARMS.** Luigi AND Donkey Kong are selectable on the character select and
+marked unfinished; the per-fighter native-owner tables now live in NitroFS,
+which is what paid for DK. Fighters are no longer drawn before their own intro.
 P2-1/P2-2 still have only their owner visual/play residuals.
 
 ## State
@@ -86,22 +86,28 @@ P2-1/P2-2 still have only their owner visual/play residuals.
    remaining item is explicitly visual: four-way camera framing, lower-screen
    HUD presentation, Team Battle feel and Results/Sudden Death presentation.
    Do not claim the owner accepted those until they actually do.
-3. **P2-3 is active, and the owner's 2026-08-23 batch is half-landed.** The
-   character select carries the in-progress roster (Luigi selectable, his
-   portrait dimmed under the source question-mark plate), A on a slot's 3D
-   preview cycles that slot's costume, pose slots are released when a fighter
-   is destroyed, and a fighter's asset load no longer kills the BGM.
-   `NDS_P2_SHELL_ROSTER` is a MEASURED level, not a preference: roster 1
-   (+Luigi) leaves 57,136 B of arena headroom, roster 2 (+Donkey Kong) leaves
-   13,840 and the battle aborts in `ifCommonCountdownMakeInterface`. DK ships
-   when the per-fighter native-owner tables leave the ARM9 image for NitroFS.
-   **The intro reports are still open, and one wrong lead is already closed:**
-   intros are NOT globally skipped -- fighter A's Appear animation runs
-   (`anim_frame` 21 eleven frames in) and every fighter animation load resolves
-   (23 resolved, 0 fallback). What remains is narrower: `ftCommonWaitSetStatus`
-   lands on the SECOND fighter on the very frame it enters Appear. Both pipe
-   roots submit (m0=50 rim, m1=60 barrel, fallback 0), so the pipe is not a
-   renderer defect. Board row P2-3r3 carries the measurements and the next step.
+3. **P2-3 is active, and the owner's 2026-08-23 batch is now mostly landed.**
+   The character select carries the in-progress roster -- Luigi AND Donkey Kong
+   selectable, portraits dimmed under the source question-mark plate -- A on a
+   slot's 3D preview cycles that slot's costume, pose slots are released when a
+   fighter is destroyed, and a fighter's asset load no longer kills the BGM.
+   `NDS_P2_SHELL_ROSTER` defaults to 2 and is still a MEASURED level: the
+   per-fighter native-owner tables left the ARM9 binary for NitroFS images
+   (P2-3r4), which moved roster-2 arena headroom from 13,840 B (battle aborted
+   in `ifCommonCountdownMakeInterface`) to 44,848 B, worst case 28,772 B for a
+   Luigi-versus-Donkey match with both images resident. **Size the next fighter
+   against 28,772, not 44,848.** The remaining lever is the SHARED Mario/Fox
+   table set, 64,147 B of binary a Luigi-versus-DK match never uses.
+   **Intros are fixed and the last wrong lead is closed:** the port had no
+   invisibility gate at all -- its own `ftDisplayMainProcDisplay` replaces the
+   decomp body that holds one -- so every fighter drew from frame one while
+   `ftCommonEntrySetStatus` was setting `is_invisible` correctly. Reinstated at
+   that seam (P2-3r5); screenshots show an empty stage at battle start and
+   staggered per-fighter presentation after it. The pipe report did NOT
+   reproduce as described (P2-3r6): both roots submit with valid matrices and
+   the barrel is on screen, short and wide as its geometry says. It needs the
+   owner's eyes on `artifacts/visibility/2026-08-24_p2-3-pipeseries-*`, not
+   another cycle of guessing.
 
 4. **P2-3 background.** Luigi's production path is landed and he ANIMATES
    (P2-3r2). The bounded fast proof route is repaired end-to-end and **both
@@ -152,10 +158,7 @@ green throughout.
 - **Republish the free-play ROM after every fix batch** (owner, 2026-08-22:
   "periodically create the freeplay ROM so I can help playtest"): a plain
   `make TARGET=smash64ds` writes the root `smash64ds.nds` (human input, walk
-  compiled out, flag-identical to the gate's shell config). A Luigi-enabled
-  lab twin is `make TARGET=smash64ds-p2-shell-freeplay-hwtri
-  BUILD=builds/build-p2-shell-freeplay-luigi NDS_P2_LUIGI=1`; it is not the
-  gate configuration and stays in `builds/`.
+  compiled out, flag-identical to the gate's shell config, four-name roster).
 - Clean checkout builds through `build.ps1`, not bare `make` (four of six
   `.inc` are gitignored and `build.ps1`'s generator is not run by `make`).
   Never pass `-j`, never override `MAKEFLAGS`, one build at a time.

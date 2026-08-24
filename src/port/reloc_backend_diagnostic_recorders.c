@@ -18998,6 +18998,35 @@ void ftDisplayMainProcDisplay(GObj *fighter_gobj)
         gNdsFighterWalkDisplayProbeCount++;
     }
 #if NDS_RENDERER_HW_TRIANGLES
+    /* THE SOURCE'S INVISIBILITY GATE, WHICH THIS PATH HAD DROPPED.
+     *
+     * Owner, 2026-08-23: "fighters are present before intros. The whole point
+     * of intros is that the fighters are 'presented' during their intros."
+     *
+     * ftManagerMakeFighter puts every non-skip-entry fighter into
+     * nFTCommonStatusEntry via ftCommonEntrySetStatus, which sets
+     * `is_invisible` (ftcommonentry.c:49-56); ifCommonEntryFocusThread then
+     * calls ftCommonAppearSetStatus one fighter at a time, and ftMainSetStatus
+     * clears `is_invisible` as it does (ftmain.c:4462). So in the original a
+     * fighter is UNDRAWN from match setup until its own intro reaches it, and
+     * that is what makes an intro a presentation rather than a flourish over
+     * an already-visible cast.
+     *
+     * The gate lives in ftDisplayMainProcDisplay (ftdisplaymain.c:1087-1092) --
+     * but on this target that function is replaced wholesale by the native
+     * submit below, so the decomp body holding the gate never runs and every
+     * fighter drew from frame one. Reinstated here, at the seam that owns the
+     * decision, rather than by teaching the renderer about fighter status. */
+    {
+        FTStruct *fp = ftGetStruct(fighter_gobj);
+
+        if ((fp != NULL) && (fp->is_invisible) &&
+            (fp->display_mode == nDBDisplayModeMaster))
+        {
+            fp->is_magnify_show = FALSE;
+            return;
+        }
+    }
     ndsFighterDisplayContractSubmit(fighter_gobj);
 #endif
 }
