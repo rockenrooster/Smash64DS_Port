@@ -10803,6 +10803,10 @@ volatile u32 gNdsEntryEffectDObjParentTranslate[2][3];
  * `aobj->length += dobj->anim_speed` advances by, so it is the rate itself. */
 volatile u32 gNdsEntryEffectDObjAnim[2][3];
 volatile u32 gNdsEntryEffectGObjAnimFrame[2];
+/* The DObj address itself, so the AObj track list can be walked from the
+ * HOST. Walking it in guest code inside the draw is what this file tried
+ * first; one word here and gdb does the rest. */
+volatile u32 gNdsEntryEffectDObjPtr[2];
 
 static void ndsEntryEffectDiagRecordDObj(u32 root_offset, DObj *dobj)
 {
@@ -10834,6 +10838,7 @@ static void ndsEntryEffectDiagRecordDObj(u32 root_offset, DObj *dobj)
     gNdsEntryEffectDObjRotate[slot][0] = *(const u32 *)&dobj->rotate.vec.f.x;
     gNdsEntryEffectDObjRotate[slot][1] = *(const u32 *)&dobj->rotate.vec.f.y;
     gNdsEntryEffectDObjRotate[slot][2] = *(const u32 *)&dobj->rotate.vec.f.z;
+    gNdsEntryEffectDObjPtr[slot] = (u32)(uintptr_t)dobj;
     gNdsEntryEffectDObjAnim[slot][0] = *(const u32 *)&dobj->anim_speed;
     gNdsEntryEffectDObjAnim[slot][1] = *(const u32 *)&dobj->anim_wait;
     gNdsEntryEffectDObjAnim[slot][2] = *(const u32 *)&dobj->anim_frame;
