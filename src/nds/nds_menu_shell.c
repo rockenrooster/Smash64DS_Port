@@ -451,12 +451,26 @@ static const NdsMenuWalkStep kNdsMenuWalkCss[] = {
     { (u16)NDS_INPUT_A, 1u },
     { 0u, 32u },
     { (u16)NDS_INPUT_A, 1u },
+#if NDS_P2_DONKEY
+    /* THE NEGATIVE CONTROL HAS TO MOVE WHEN THE ROSTER GROWS. Donkey is a
+     * built fighter in this configuration, so pressing A on column 2 now
+     * DROPS the token there and the match that follows is not the one the
+     * gate measures. Link, column 3, is the nearest cell that is still
+     * locked, so the refusal this leg proves stays a refusal. Column pitch is
+     * 40 px at 4 px a held frame, hence ten frames per column. */
+    { (u16)NDS_INPUT_RIGHT, 31u },
+#else
     { (u16)NDS_INPUT_RIGHT, 21u },
+#endif
 #else
     { (u16)NDS_INPUT_RIGHT, 10u },
 #endif
     { (u16)NDS_INPUT_A, 1u },
+#if NDS_P2_DONKEY
+    { (u16)NDS_INPUT_LEFT, 20u },
+#else
     { (u16)NDS_INPUT_LEFT, 10u },
+#endif
     { (u16)NDS_INPUT_A, 1u },
     { (u16)NDS_INPUT_DOWN, 19u },
     { (u16)NDS_INPUT_RIGHT, 43u },

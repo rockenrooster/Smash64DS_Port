@@ -526,27 +526,37 @@ NDS_P2_FOUR_CPU_STRESS ?= 0
 # carries, in admission order: 0 = Mario/Fox only (the control arm for any
 # regression that lands with a wider roster), 1 = + Luigi, 2 = + Donkey Kong.
 #
-# THIS IS A RAM BUDGET, NOT A PREFERENCE.  Each fighter's generated native-owner
-# tables live in the ARM9 binary, and the binary costs the taskman arena 1:1 --
-# the arena is calloc'd from whatever the heap has left.  Measured on the shell
-# target at the battle's own high water (2026-08-23, gdb, one build each):
+# THIS IS A RAM BUDGET, NOT A PREFERENCE.  A fighter's generated native-owner
+# tables cost the taskman arena, which is calloc'd from whatever the heap has
+# left, so they are charged either to the ARM9 binary (always, for every
+# fighter built) or to the arena (only while a fighter is in the scene).  Board
+# row P2-3r4 moved them to the second: the tables ship as NitroFS images and
+# are loaded for the fighters a match actually uses.
 #
-#   roster 0  arena 1,548,288  used 1,456,624  headroom 91,664  battle OK
-#   roster 1  arena 1,515,520  used 1,458,384  headroom 57,136  battle OK
-#   roster 2  arena 1,470,464  used 1,456,624  headroom 13,840  ABORT
+# Measured on the shell target at the battle's own high water, gdb, one build
+# each.  The first three rows are the pre-P2-3r4 arrangement (tables in the
+# binary) and are kept because they are what makes the fourth row legible:
 #
-# At roster 2 the battle dies at `ifCommonCountdownMakeInterface + 120` (data
-# abort, cpsr ABT) because the countdown interface's taskman allocation comes
-# back NULL.  Donkey Kong's tables are ~45 KB of binary and that is the whole
-# difference, so DK does not fit until those per-fighter tables move out of the
-# ARM9 image (NitroFS, loaded for the fighters a match actually uses).  Until
-# then roster 2 must be asked for deliberately.
-NDS_P2_SHELL_ROSTER ?= 1
-ifeq ($(NDS_P2_SHELL_ROSTER),2)
-ifneq ($(NDS_P2_SHELL_ROSTER_ALLOW_OVERFLOW),1)
-$(error NDS_P2_SHELL_ROSTER=2 does not fit RAM: the battle aborts in ifCommonCountdownMakeInterface with 13840 B of arena headroom. Move the per-fighter native-owner tables to NitroFS first, or pass NDS_P2_SHELL_ROSTER_ALLOW_OVERFLOW=1 to build the known-broken ROM on purpose)
-endif
-endif
+#   2026-08-23, tables in the ARM9 binary
+#     roster 0  arena 1,548,288  used 1,456,624  headroom 91,664  battle OK
+#     roster 1  arena 1,515,520  used 1,458,384  headroom 57,136  battle OK
+#     roster 2  arena 1,470,464  used 1,456,624  headroom 13,840  ABORT
+#   2026-08-24, tables in NitroFS images (P2-3r4)
+#     roster 2  arena 1,503,232  used 1,458,384  headroom 44,848  battle OK
+#
+# At roster 2 the battle used to die at `ifCommonCountdownMakeInterface + 120`
+# (data abort, cpsr ABT) because the countdown interface's taskman allocation
+# came back NULL.  The image move buys back 31,008 B of headroom and the same
+# walk now completes a Donkey Kong match -- that measurement is a DK battle,
+# not a Mario one, because at roster 2 the walk's old "locked" negative control
+# is a BUILT fighter and the token drops on it.  The walk's control moved to
+# Link for exactly that reason; the arena figure above is the DK match it
+# accidentally proved first.
+#
+# WORST CASE IS LUIGI VERSUS DONKEY, both images resident at once: 36,276 B
+# against the 20,200 B the measured run held, so 28,772 B of headroom.  That is
+# the number a future fighter has to be sized against, not the 44,848.
+NDS_P2_SHELL_ROSTER ?= 2
 NDS_P2_LUIGI ?= 0
 # Donkey is the first structurally different P2-3 owner.  Keep admission
 # sequential: native-owner slots are a dense ABI (Mario/Fox/Luigi/Donkey), so a
