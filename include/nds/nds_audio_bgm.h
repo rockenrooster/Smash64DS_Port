@@ -170,6 +170,8 @@
 void ndsAudioBgmDiagnosticsReset(void);
 void ndsAudioBgmUpdate(void);
 void ndsAudioBgmStopAll(void);
+void ndsAudioBgmSuspendForBlockingLoad(void);
+void ndsAudioBgmResumeAfterBlockingLoad(void);
 void ndsAudioBgmPlay(s32 player, s32 bgm_id);
 s32 ndsAudioBgmCheckPlaying(s32 player);
 s32 ndsAudioBgmIsPlaying(void);
@@ -245,6 +247,8 @@ extern volatile u32 gNdsAudioBgmSeamMissCount;
 extern volatile u32 gNdsAudioBgmTimerEventDropCount;
 extern volatile u32 gNdsAudioBgmWorkerWakeCount;
 extern volatile u32 gNdsAudioBgmErrorStopCount;
+extern volatile u32 gNdsAudioBgmBlockingSuspendCount;
+extern volatile u32 gNdsAudioBgmBlockingResumeCount;
 extern volatile u32 gNdsAudioBgmErrorCleanupFailCount;
 
 #endif

@@ -13,6 +13,7 @@
 #include <gm/gmsound.h>
 #include <if/interface.h>
 #include <mn/menu.h>
+#include <nds/nds_audio_bgm.h>
 #include <nds/nds_menu_shell.h>
 #include <nds/nds_platform.h>
 #include <nds/nds_startup.h>
@@ -355,7 +356,16 @@ void ndsMNPlayersVSPreviewSync(u32 slot, s32 pkind, s32 fkind,
          * clear is a 32x4 row wipe at menu-action rate; always pay it. */
         ndsFighterRendererInvalidateMaterialCaches();
 #endif
+        /* P2-3. mnPlayersVSUpdateFighter reads this fighter's model/motion
+         * files off NitroFS synchronously, and that frame is far longer than
+         * one BGM packet -- long enough for the stream's hardware seam to fire
+         * with the next buffer still unprepared, which the streamer correctly
+         * treats as an underrun and stops on. Selecting Luigi on the character
+         * select killed the music for the rest of the screen, deterministically.
+         * Bracket the load so the stall is a known gap instead of a fault. */
+        ndsAudioBgmSuspendForBlockingLoad();
         mnPlayersVSUpdateFighter((s32)slot);
+        ndsAudioBgmResumeAfterBlockingLoad();
         fighter_gobj = sMNPlayersVSSlots[slot].player;
         if ((fighter_gobj != NULL) &&
             ((fighter_gobj->flags & GOBJ_FLAG_HIDDEN) == 0u))

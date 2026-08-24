@@ -167,6 +167,7 @@ extern volatile u32 gNdsMenuShellCommitTime;
 extern volatile u32 gNdsMenuShellCommitStocks;
 /* Scripted-walk state (NDS_P2_MENU_WALK). Steps injected and loops closed. */
 extern volatile u32 gNdsMenuShellWalkSteps;
+extern volatile u32 gNdsMenuShellWalkDwellSteps;
 extern volatile u32 gNdsMenuShellWalkLoops;
 /* P2-1g. Laps the walk will drive, seeded from NDS_P2_MENU_WALK and writable,
  * so one linked ROM covers a three-lap smoke and a twenty-lap phase-close run.

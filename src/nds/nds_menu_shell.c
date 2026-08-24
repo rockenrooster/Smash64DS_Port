@@ -168,6 +168,14 @@ NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellCommitRule;
 NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellCommitTime;
 NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellCommitStocks;
 NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellWalkSteps;
+/* P2-3. A walk step whose button is 0 is a DWELL -- it gives the screen time
+ * without pressing anything, so it posts no input-ring entry by construction.
+ * The Luigi leg of the character-select script has one (the source's selected-
+ * fighter spin needs longer than the 30-tic regrab delay), and it only compiles
+ * when the in-progress roster is built, which is why the ring invariant read
+ * exactly until now. Count them so the invariant stays EXACT -- entries plus
+ * dwells equals steps -- instead of being relaxed to an inequality. */
+NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellWalkDwellSteps;
 NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellWalkLoops;
 /* P2-1g. The budget is a VARIABLE seeded from the compile-time count, not the
  * macro itself, so one linked walk ROM serves a three-lap smoke and a
@@ -584,6 +592,10 @@ static u32 ndsMenuShellWalkTap(u32 screen, u32 *out_tap)
     }
     sMenuWalkHeld = (u32)script[sMenuWalkCursor - 1u].button;
     sMenuWalkHold = (u32)script[sMenuWalkCursor - 1u].hold - 1u;
+    if (sMenuWalkHeld == 0u)
+    {
+        gNdsMenuShellWalkDwellSteps++;
+    }
     *out_tap = sMenuWalkHeld;
     return sMenuWalkHeld;
 }

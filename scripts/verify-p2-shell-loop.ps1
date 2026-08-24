@@ -370,7 +370,7 @@ if (-not [string]::IsNullOrWhiteSpace($AnalyzeOnly)) {
             # track that lap built.
             ('printf "LOOP %d kind=%u prev=%u enters=%u exits=%u rej=%u unreg=%u mism=%u ' +
              'walkloops=%u rematch=%u press=%u steps=%u input=%u trans=%u denied=%u ' +
-             'sd=%u winm=%u winf=%u resb=%u\n", ' +
+             'sd=%u winm=%u winf=%u resb=%u dwell=%u\n", ' +
              '$n, gNdsSceneManagerCurrKind, gNdsSceneManagerPrevKind, ' +
              'gNdsSceneManagerEnterCount, gNdsSceneManagerExitCount, ' +
              'gNdsSceneManagerRejectCount, gNdsSceneManagerUnregisteredEnterCount, ' +
@@ -379,7 +379,8 @@ if (-not [string]::IsNullOrWhiteSpace($AnalyzeOnly)) {
              'gNdsMenuShellWalkSteps, gNdsMenuShellInputCount, ' +
              'gNdsMenuShellTransitionCount, gNdsMenuShellDeniedCount, ' +
              'gNdsSCVSBattleSuddenDeathPrepareCount, gNdsAudioBgmWinMarioPlayCount, ' +
-             'gNdsAudioBgmWinFoxPlayCount, gNdsAudioBgmResidentBytes'),
+             'gNdsAudioBgmWinFoxPlayCount, gNdsAudioBgmResidentBytes, ' +
+             'gNdsMenuShellWalkDwellSteps'),
             ('printf "LOOPK %d ' + $ringFmt + '\n", $n, ' + $ringK),
             ('printf "LOOPH %d ' + $ringFmt + '\n", $n, ' + $ringH),
             ('printf "LOOPF %d ' + $ringFmt + '\n", $n, ' + $ringF),
@@ -404,7 +405,7 @@ if (-not [string]::IsNullOrWhiteSpace($AnalyzeOnly)) {
             'info symbol $pc',
             ('printf "LOOPDONE enters=%u exits=%u rej=%u unreg=%u mism=%u walkloops=%u ' +
              'budget=%u rematch=%u press=%u steps=%u input=%u trans=%u denied=%u ' +
-             'sd=%u winm=%u winf=%u resb=%u\n", ' +
+             'sd=%u winm=%u winf=%u resb=%u dwell=%u\n", ' +
              'gNdsSceneManagerEnterCount, gNdsSceneManagerExitCount, ' +
              'gNdsSceneManagerRejectCount, gNdsSceneManagerUnregisteredEnterCount, ' +
              'gNdsSceneManagerArenaMismatchCount, gNdsMenuShellWalkLoops, ' +
@@ -413,7 +414,7 @@ if (-not [string]::IsNullOrWhiteSpace($AnalyzeOnly)) {
              'gNdsMenuShellInputCount, gNdsMenuShellTransitionCount, ' +
              'gNdsMenuShellDeniedCount, gNdsSCVSBattleSuddenDeathPrepareCount, ' +
              'gNdsAudioBgmWinMarioPlayCount, gNdsAudioBgmWinFoxPlayCount, ' +
-             'gNdsAudioBgmResidentBytes'),
+             'gNdsAudioBgmResidentBytes, gNdsMenuShellWalkDwellSteps'),
             # The Results input chain, split three ways so a refusal names its
             # own half (battleship_mnvsresults.c:376): the pad the port can
             # read, the hold the source pipeline saw, and the rising edge
@@ -595,8 +596,13 @@ if ($null -ne $done) {
     # One entry per scripted step. A held step injects for many frames and must
     # still post ONE ring entry, which is what makes the ring a record of what
     # the player pressed rather than of how long a direction was held.
-    Assert-Loop ($d['input'] -eq $d['steps']) (
-        "INPUT RING: gNdsMenuShellInputCount=$($d['input']) but " +
+    # A DWELL step (button 0) posts no ring entry by construction: it gives a
+    # screen time without pressing anything. The character select's Luigi leg
+    # has one, and that leg only compiles when the in-progress roster is built,
+    # which is why this read exactly until the roster landed. Entries plus
+    # dwells is still an EXACT account of the script, which is the point.
+    Assert-Loop (($d['input'] + $d['dwell']) -eq $d['steps']) (
+        "INPUT RING: gNdsMenuShellInputCount=$($d['input']) + dwell=$($d['dwell']) but " +
         "gNdsMenuShellWalkSteps=$($d['steps']); a step posted no entry, or a " +
         'hold posted more than one.')
     Assert-Loop (($d['enters'] - $d['exits']) -ge 0 -and ($d['enters'] - $d['exits']) -le 1) (

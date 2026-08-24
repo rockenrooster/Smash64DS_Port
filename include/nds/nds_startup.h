@@ -1570,6 +1570,8 @@ extern volatile u32 gNdsSCVSBattleLastFGM;
 void ndsAudioBgmDiagnosticsReset(void);
 void ndsAudioBgmUpdate(void);
 void ndsAudioBgmStopAll(void);
+void ndsAudioBgmSuspendForBlockingLoad(void);
+void ndsAudioBgmResumeAfterBlockingLoad(void);
 void ndsAudioBgmPlay(s32 player, s32 bgm_id);
 s32 ndsAudioBgmCheckPlaying(s32 player);
 void ndsAudioBgmSetVolume(s32 player, u32 vol);

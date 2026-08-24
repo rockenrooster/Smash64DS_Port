@@ -189,6 +189,8 @@ volatile u32 gNdsAudioBgmSeamMissCount;
 volatile u32 gNdsAudioBgmTimerEventDropCount;
 volatile u32 gNdsAudioBgmWorkerWakeCount;
 volatile u32 gNdsAudioBgmErrorStopCount;
+volatile u32 gNdsAudioBgmBlockingSuspendCount;
+volatile u32 gNdsAudioBgmBlockingResumeCount;
 volatile u32 gNdsAudioBgmErrorCleanupFailCount;
 
 static u8 sNdsAudioBgmBuffers[NDS_AUDIO_BGM_BUFFER_COUNT]
@@ -202,6 +204,7 @@ static u8 sNdsAudioBgmWorkerStack[NDS_AUDIO_BGM_WORKER_STACK_BYTES]
     __attribute__((aligned(8)));
 static u32 sNdsAudioBgmWorkerStarted;
 static volatile u32 sNdsAudioBgmTimerArmed;
+static volatile u32 sNdsAudioBgmBlockingSuspend;
 static volatile u32 sNdsAudioBgmGeneration;
 static volatile u32 sNdsAudioBgmWorkerActive;
 static volatile u32 sNdsAudioBgmCurrentBuffer;
@@ -879,6 +882,8 @@ void ndsAudioBgmDiagnosticsReset(void)
     gNdsAudioBgmTimerEventDropCount = 0u;
     gNdsAudioBgmWorkerWakeCount = 0u;
     gNdsAudioBgmErrorStopCount = 0u;
+    gNdsAudioBgmBlockingSuspendCount = 0u;
+    gNdsAudioBgmBlockingResumeCount = 0u;
     gNdsAudioBgmErrorCleanupFailCount = 0u;
 }
 
@@ -1044,6 +1049,107 @@ void ndsAudioBgmSetVolume(s32 player, u32 vol)
         soundChSetVolume(NDS_AUDIO_BGM_CHANNEL_BASE + 1u, volume);
     }
     gNdsAudioBgmMask |= 1u << 3;
+}
+
+/* P2-3. A BLOCKING LOAD MUST NOT KILL THE MUSIC.
+ *
+ * The stream is two hardware-played packets and a worker that refills the one
+ * that just finished; the seam between them is driven by a hardware timer.
+ * That contract assumes frames keep arriving. A NitroFS fighter load does not
+ * honour it -- selecting a fighter on the character select reads its model and
+ * motion files synchronously, the frame that does it is far longer than a
+ * packet, and the seam then fires with the next buffer still unprepared. The
+ * seam handler correctly calls that an underrun and stops the stream
+ * (`gNdsAudioBgmSeamMissCount`, then `ndsAudioBgmFailPlayback`), so the music
+ * was gone for the rest of the screen -- measured on the shell walk the moment
+ * Luigi became selectable: seam misses 1, error stops 1, deterministic.
+ *
+ * The load is legitimate and the stall is known in advance, so BRACKET it.
+ * Suspend tops the stream up, stops the hardware and disarms the timer, which
+ * makes the stall silent instead of fatal; resume restarts playback from the
+ * stream's own current position. The gap is one packet at worst and the file
+ * position, loop state and track are untouched, so the music continues rather
+ * than restarting. Both halves count, so a caller that suspends and forgets to
+ * resume shows up as a resident suspend rather than as silence nobody
+ * attributed. */
+void ndsAudioBgmSuspendForBlockingLoad(void)
+{
+    if ((gNdsAudioBgmPlaying == 0u) || (sNdsAudioBgmFile == NULL) ||
+        (sNdsAudioBgmBlockingSuspend != 0u))
+    {
+        return;
+    }
+    /* Top up first: a buffer that is already pending refill would otherwise
+     * come back from the stall still owing its read. */
+    if (ndsAudioBgmServiceRefills() == FALSE)
+    {
+        ndsAudioBgmFailPlayback();
+        return;
+    }
+    ndsAudioBgmKillSound();
+    sNdsAudioBgmBlockingSuspend = 1u;
+    gNdsAudioBgmBlockingSuspendCount++;
+}
+
+void ndsAudioBgmResumeAfterBlockingLoad(void)
+{
+    s32 second_read;
+    u32 stale_message;
+
+    if (sNdsAudioBgmBlockingSuspend == 0u)
+    {
+        return;
+    }
+    sNdsAudioBgmBlockingSuspend = 0u;
+    gNdsAudioBgmBlockingResumeCount++;
+    if ((gNdsAudioBgmPlaying == 0u) || (sNdsAudioBgmFile == NULL))
+    {
+        return;
+    }
+    /* Re-read from where the stream stands. `ndsAudioBgmReadPacket` advances
+     * the same file cursor the worker uses, so this is a continuation, not a
+     * restart of the track. */
+    sNdsAudioBgmPreparedMask = 0u;
+    sNdsAudioBgmRefillPendingMask = 0u;
+    if (ndsAudioBgmReadPacket(0u) != 1)
+    {
+        ndsAudioBgmFailPlayback();
+        return;
+    }
+    second_read = ndsAudioBgmReadPacket(1u);
+    if (second_read < 0)
+    {
+        ndsAudioBgmFailPlayback();
+        return;
+    }
+    ndsAudioBgmEnsureWorker();
+    while (mailboxTryRecv(&sNdsAudioBgmMailbox, &stale_message))
+    {
+    }
+    ndsAudioBgmPrepareBuffer(0u);
+    if (second_read > 0)
+    {
+        ndsAudioBgmPrepareBuffer(1u);
+    }
+    soundSynchronize();
+    sNdsAudioBgmGeneration++;
+    if (sNdsAudioBgmGeneration == 0u)
+    {
+        sNdsAudioBgmGeneration = 1u;
+    }
+    sNdsAudioBgmCurrentBuffer = 0u;
+    sNdsAudioBgmWorkerActive = 1u;
+    soundStart(1u << NDS_AUDIO_BGM_CHANNEL_BASE);
+    sNdsAudioBgmPreparedMask &= ~1u;
+    gNdsAudioBgmSoundActive = 1u;
+    gNdsAudioBgmChunkBytes = sNdsAudioBgmPacketBytes[0];
+    gNdsAudioBgmPlaybackHalf = 0u;
+    gNdsAudioBgmWriteHalf = 1u;
+    gNdsAudioBgmWritePositionBytes = NDS_AUDIO_BGM_PACKET_BYTES;
+    sNdsAudioBgmLastTimerTick = cpuGetTiming();
+    sNdsAudioBgmNextSeamTick = sNdsAudioBgmTimerTicksTotal +
+        ndsAudioBgmPacketDurationTicks(sNdsAudioBgmPacketSamples[0]);
+    ndsAudioBgmArmTimer(sNdsAudioBgmPacketSamples[0]);
 }
 
 void ndsAudioBgmUpdate(void)
