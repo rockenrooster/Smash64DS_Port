@@ -95,11 +95,13 @@ P2-1/P2-2 still have only their owner visual/play residuals.
    (+Luigi) leaves 57,136 B of arena headroom, roster 2 (+Donkey Kong) leaves
    13,840 and the battle aborts in `ifCommonCountdownMakeInterface`. DK ships
    when the per-fighter native-owner tables leave the ARM9 image for NitroFS.
-   **The intro is skipped, and that is one defect behind two reports:** the
-   Appear motion attaches with `anim_frame = 0`, so the fighter reaches Wait on
-   its first update while the pipe effect plays beside it. Both pipe roots do
-   submit (m0=50 rim, m1=60 barrel, fallback 0), so the pipe is a victim, not
-   the cause. Board row P2-3r3 carries the measurements.
+   **The intro reports are still open, and one wrong lead is already closed:**
+   intros are NOT globally skipped -- fighter A's Appear animation runs
+   (`anim_frame` 21 eleven frames in) and every fighter animation load resolves
+   (23 resolved, 0 fallback). What remains is narrower: `ftCommonWaitSetStatus`
+   lands on the SECOND fighter on the very frame it enters Appear. Both pipe
+   roots submit (m0=50 rim, m1=60 barrel, fallback 0), so the pipe is not a
+   renderer defect. Board row P2-3r3 carries the measurements and the next step.
 
 4. **P2-3 background.** Luigi's production path is landed and he ANIMATES
    (P2-3r2). The bounded fast proof route is repaired end-to-end and **both
