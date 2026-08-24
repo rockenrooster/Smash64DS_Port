@@ -1,9 +1,10 @@
 # Handoff
 
-Current: 2026-08-22 — **P2-1/P2-2 AUTOMATED ACCEPTANCE IS GREEN; P2-3 LUIGI
-PRODUCTION IS LANDED AND BOUNDARY STILL HAS THREE GREEN ARMS.** The fresh
-post-Luigi/source-entry profile passed all three arms. P2-1/P2-2 still have only
-their owner visual/play residuals; P2-3 is the active implementation frontier.
+Current: 2026-08-23 — **THE IN-PROGRESS ROSTER SHIPS AND BOUNDARY IS GREEN ON
+ALL THREE ARMS.** Luigi is selectable on the character select and marked as
+unfinished, skins cycle off the 3D preview, and the published `smash64ds.nds`
+carries both. Donkey Kong is held out by a measured RAM wall, not by policy.
+P2-1/P2-2 still have only their owner visual/play residuals.
 
 ## State
 
@@ -85,7 +86,22 @@ their owner visual/play residuals; P2-3 is the active implementation frontier.
    remaining item is explicitly visual: four-way camera framing, lower-screen
    HUD presentation, Team Battle feel and Results/Sudden Death presentation.
    Do not claim the owner accepted those until they actually do.
-3. **P2-3 is active.** Luigi's production path is landed and he ANIMATES
+3. **P2-3 is active, and the owner's 2026-08-23 batch is half-landed.** The
+   character select carries the in-progress roster (Luigi selectable, his
+   portrait dimmed under the source question-mark plate), A on a slot's 3D
+   preview cycles that slot's costume, pose slots are released when a fighter
+   is destroyed, and a fighter's asset load no longer kills the BGM.
+   `NDS_P2_SHELL_ROSTER` is a MEASURED level, not a preference: roster 1
+   (+Luigi) leaves 57,136 B of arena headroom, roster 2 (+Donkey Kong) leaves
+   13,840 and the battle aborts in `ifCommonCountdownMakeInterface`. DK ships
+   when the per-fighter native-owner tables leave the ARM9 image for NitroFS.
+   **The intro is skipped, and that is one defect behind two reports:** the
+   Appear motion attaches with `anim_frame = 0`, so the fighter reaches Wait on
+   its first update while the pipe effect plays beside it. Both pipe roots do
+   submit (m0=50 rim, m1=60 barrel, fallback 0), so the pipe is a victim, not
+   the cause. Board row P2-3r3 carries the measurements.
+
+4. **P2-3 background.** Luigi's production path is landed and he ANIMATES
    (P2-3r2). The bounded fast proof route is repaired end-to-end and **both
    bounded proofs are GREEN on one tree (`9c412271f0f`, 2026-08-23): kind 2
    (full DK moveset, Giant Punch/Spinning Kong/Hand Slap, blaster
@@ -98,7 +114,7 @@ their owner visual/play residuals; P2-3 is the active implementation frontier.
    misread the enum). Rebuild the realtime DK ROM on this tree and
    re-observe; suspect DK's DownBounce anim-end never fires. Keep admission
    fighter-by-fighter.
-4. **Performance remains debt; the structural cut is landed and default-on
+5. **Performance remains debt; the structural cut is landed and default-on
    (board rows P2-2p1..p4, promoted 2026-08-23, Boundary GREEN on the
    promoted tree).** Four-CPU arm before: `WORK-H` P50/P95 1,600,832 /
    2,069,824; without any fighter draw 993,792 / 1,462,144 (the four draws
