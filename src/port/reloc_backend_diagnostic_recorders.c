@@ -13005,6 +13005,9 @@ static sb32 ndsGMCollisionTestRectangle(Vec3f *pos_curr,
     return ((curr_flags & prev_flags) != 0u) ? FALSE : TRUE;
 }
 
+extern void func_ovl2_800EDE00(DObj *main_dobj);
+extern void func_ovl2_800EDE5C(DObj *main_dobj);
+
 static sb32 ndsFighterDashRunStepAttackDamageRectangle(FTStruct *fp,
                                                        u32 attack_id)
 {
@@ -13041,6 +13044,11 @@ static sb32 ndsFighterDashRunStepAttackDamageRectangle(FTStruct *fp,
         return FALSE;
     }
 
+    /* Same source ensure pair as the Selected damage collide (see the
+     * comment above ndsGMCollisionCheckFighterAttackDamageCollideSelected). */
+    func_ovl2_800EDE00(damage_coll->joint);
+    func_ovl2_800EDE5C(damage_coll->joint);
+
     parts = ftGetParts(damage_coll->joint);
     if ((parts == NULL) || (parts->vec_scale.x == 0.0F) ||
         (parts->vec_scale.y == 0.0F) || (parts->vec_scale.z == 0.0F))
@@ -13069,6 +13077,19 @@ static sb32 ndsFighterDashRunStepAttackDamageRectangle(FTStruct *fp,
     return TRUE;
 }
 
+/* gm/gmcollision.c:1387-1388: the source's damage collide ensures the part's
+ * world matrix chain (800EDE00 inverse latch, then 800EDE5C scale latch, each
+ * rebuilding through func_ovl2_800EDBA4 when unk_dobjtrans_0x5 is clear)
+ * BEFORE reading mtx_translate. The Selected fast path skipped both, which the
+ * realtime targets never noticed -- the fighter draw refreshes the latches
+ * every frame -- but on the bounded no-fighter-draw route every FTParts held
+ * stale CSS-preview state and hits landed only when combat happened to occur
+ * near those stale positions (P2-3r3: DK/Fox at y=1542 vs stale y=1132, 63
+ * driven attack frames, zero hits). Latch-guarded, so on a drawn frame these
+ * are two flag tests. */
+extern void func_ovl2_800EDE00(DObj *main_dobj);
+extern void func_ovl2_800EDE5C(DObj *main_dobj);
+
 static sb32 ndsGMCollisionCheckFighterAttackDamageCollideSelected(
     FTAttackColl *attack_coll, FTDamageColl *damage_coll)
 {
@@ -13086,6 +13107,9 @@ static sb32 ndsGMCollisionCheckFighterAttackDamageCollideSelected(
     {
         return FALSE;
     }
+
+    func_ovl2_800EDE00(dobj);
+    func_ovl2_800EDE5C(dobj);
 
     parts = ftGetParts(dobj);
     if ((parts == NULL) || (parts->vec_scale.x == 0.0F) ||
@@ -16513,6 +16537,11 @@ static sb32 ndsFighterDashRunStepAttackDamageCollide(FTStruct *fp,
     {
         return FALSE;
     }
+
+    /* Same source ensure pair as the Selected damage collide (see the
+     * comment above ndsGMCollisionCheckFighterAttackDamageCollideSelected). */
+    func_ovl2_800EDE00(damage_coll->joint);
+    func_ovl2_800EDE5C(damage_coll->joint);
 
     parts = ftGetParts(damage_coll->joint);
     if (parts == NULL)

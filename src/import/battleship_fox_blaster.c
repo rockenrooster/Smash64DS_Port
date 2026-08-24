@@ -224,6 +224,36 @@ static void ndsFoxBlasterProbeSpawn(GObj *fighter_gobj, Vec3f *pos)
 }
 #endif /* NDS_R2_POSITION_PROBE */
 
+/* P2-3r3: the natural projectile proof samples the weapon list once per
+ * VSBattle update, but a point-blank laser is born and destroyed inside ONE
+ * gcRunAll (probe: spawn at x=-220, one 160-unit step, proc_hit for 6 damage,
+ * destroyed at lifetime 0) -- no sampler cadence can see it. The Mario
+ * fireball credits its own destroy paths for exactly this reason
+ * (battleship_mario_fireball.c:652/689/700); this is the blaster's twin: at
+ * the hit seam the attack coll is live, so record the same kind/state/damage
+ * facts the list walk would have, then run the source hit proc unchanged. */
+static sb32 ndsFoxBlasterProcHitCounted(GObj *weapon_gobj)
+{
+    WPStruct *wp = (WPStruct *)weapon_gobj->user_data.p;
+
+    gNdsFighterProjectileProofHitDestroyCount++;
+    if ((wp->kind >= 0) && (wp->kind < 32))
+    {
+        gNdsFighterProjectileProofKindMask |= 1u << wp->kind;
+    }
+    if ((wp->attack_coll.attack_state >= 0) &&
+        (wp->attack_coll.attack_state < 32))
+    {
+        gNdsFighterProjectileProofAttackStateMask |=
+            1u << wp->attack_coll.attack_state;
+    }
+    if ((u32)wp->attack_coll.damage > gNdsFighterProjectileProofDamageMax)
+    {
+        gNdsFighterProjectileProofDamageMax = (u32)wp->attack_coll.damage;
+    }
+    return wpFoxBlasterProcHit(weapon_gobj);
+}
+
 GObj *wpFoxBlasterMakeWeapon(GObj *fighter_gobj, Vec3f *pos)
 {
     GObj *weapon_gobj;
@@ -252,8 +282,16 @@ GObj *wpFoxBlasterMakeWeapon(GObj *fighter_gobj, Vec3f *pos)
          * Radius remains the source-exact 20 -- no hitbox-thinning guess. */
         ndsFoxBlasterSetBoreAttackOffsets(wp);
         wp->proc_reflector = ndsFoxBlasterProcReflectorBore;
+        wp->proc_hit = ndsFoxBlasterProcHitCounted;
         weapon_gobj->proc_display = ndsFoxBlasterProcDisplay;
         gNdsFighterProjectileProofSpawnSuccessCount++;
+        /* One weapon is provably live right now; the once-per-update list
+         * sampler can miss a same-update lifetime entirely (see the hit
+         * seam above). */
+        if (gNdsFighterProjectileProofWeaponCountMax < 1u)
+        {
+            gNdsFighterProjectileProofWeaponCountMax = 1u;
+        }
     }
     return weapon_gobj;
 }

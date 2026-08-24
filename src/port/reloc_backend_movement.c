@@ -9213,7 +9213,16 @@ static sb32 ndsFighterNaturalProjectileProofEnabled(void)
 #if NDS_IMPORT_BATTLESHIP_FOX_REFLECTOR
 static sb32 ndsFighterNaturalReflectorProofEnabled(void)
 {
-    return ndsFighterNaturalProjectileProofEnabled();
+    /* P2-3r3: the reflector proof needs a second, projectile-capable fighter
+     * to shoot INTO the reflector -- the source arrangement is Mario firing
+     * while Fox shines. On a build with no Mario-family fighter the projectile
+     * actor IS the reflector Fox, the two roles collapse onto one pad, the
+     * down-B hijacks the fire phase, the blaster never fires, and the
+     * projectile stage times out into a stall. With one slot the stage is
+     * structurally impossible, so disable it cleanly rather than half-run it. */
+    return ((ndsFighterNaturalProjectileProofEnabled() != FALSE) &&
+            (sNdsNaturalReflectorFoxSlot !=
+             sNdsNaturalProjectileActorSlot)) ? TRUE : FALSE;
 }
 #endif
 
@@ -10550,12 +10559,31 @@ static sb32 ndsFighterBattlePlayableHasRecoveredKO(void)
 
 static void ndsFighterNaturalCombatStartKOExit(FTStruct *victim)
 {
-    if (ndsFighterBattlePlayableHasRecoveredKO() != FALSE)
+    /* P2-3r3: skip to Recover only when the DRIVEN exit already produced its
+     * own evidence. A victim can be KO'd accidentally mid-flow (DK is thrown
+     * off during the moveset phases and rebirths transparently); that fills
+     * the dead/rebirth counters but never exercises the KO stick drive, and
+     * skipping here left BattlePlayable bit 1 permanently unreachable. */
+    if ((ndsFighterBattlePlayableHasRecoveredKO() != FALSE) &&
+        (gNdsFighterBattlePlayableKOStickFrames > 0u))
     {
         ndsFighterNaturalCombatSetPhase(
             nNDSNaturalCombatPhaseBattlePlayableRecover);
         return;
     }
+    /* An accidental KO leaves the dead/rebirth counters non-zero, and the
+     * KOExit -> Dead -> Rebirth -> Recover ladder keys on exactly those
+     * counters -- stale values would fast-forward the ladder before the
+     * driven KO happens. Clear them so the drive is witnessed for real; the
+     * per-frame mask is rebuilt from these counters, and the stock/falls
+     * delta equality (bit 3) holds for any KO count. */
+    gNdsFighterBattlePlayableDeadFrames = 0u;
+    gNdsFighterBattlePlayableRebirthDownFrames = 0u;
+    gNdsFighterBattlePlayableRebirthStandFrames = 0u;
+    gNdsFighterBattlePlayableRebirthWaitFrames = 0u;
+    gNdsFighterBattlePlayableFallAfterRebirthFrames = 0u;
+    gNdsFighterBattlePlayableWaitAfterRebirthFrames = 0u;
+    sNdsBattlePlayableRebirthSeen = 0u;
     sNdsBattlePlayableKOStickX =
         (ndsFighterNaturalCombatPosX(victim) < 0.0F) ? -80 : 80;
     ndsFighterNaturalCombatSetPhase(
@@ -12654,6 +12682,29 @@ static void ndsFighterNaturalCombatApplyInput(FTStruct *fp[2])
             NDS_FIGHTER_NATURAL_COMBAT_ATTACK_NEUTRAL_FRAMES)
         {
             break;
+        }
+        {
+            FTStruct *attacker = fp[sNdsNaturalCombatAttackerSlot];
+            f32 face_dx = ndsFighterNaturalCombatPosX(
+                fp[sNdsNaturalCombatVictimSlot]) -
+                ndsFighterNaturalCombatPosX(attacker);
+
+            /* P2-3r3: face the victim before pressing A. On the DK proof the
+             * attacker reaches the jostle-contact equilibrium facing away, and
+             * a jab pressed while facing away can never land -- the whiff
+             * retries then re-park the pair until the stall counter gives up.
+             * A 40-unit stick tap in Wait enters the source Turn status and
+             * flips lr; A stays unpressed until the attacker actually faces
+             * the victim (the same gate the projectile phase already uses). */
+            if ((face_dx * attacker->lr) < 0.0F)
+            {
+                if (attacker->status_id == nFTCommonStatusWait)
+                {
+                    stick[sNdsNaturalCombatAttackerSlot] =
+                        (face_dx >= 0.0F) ? 40 : -40;
+                }
+                break;
+            }
         }
         if (sNdsNaturalCombatAttackPressed == 0u)
         {
