@@ -4136,6 +4136,8 @@ endif
 
 all: $(BUILD)
 
+
+
 $(BUILD):
 	@mkdir -p $@
 	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile PROJECT_ROOT=$(PROJECT_ROOT) BUILD=$(BUILD) BUILD_OUTPUT_ROOT=$(BUILD_OUTPUT_ROOT) NDS_OUTPUT_ROOT=$(NDS_OUTPUT_ROOT) NDS_PUBLISH_USER_ROM=$(NDS_PUBLISH_USER_ROM)
@@ -4205,6 +4207,51 @@ SCENE_BACKEND_SLICES := \
 .PHONY: all FORCE prune-obsolete-audio
 
 all: $(OUTPUT).nds
+
+# P2-3r4. THE NATIVE-OWNER TABLE IMAGES.
+#
+# A P2-3 fighter's generated geometry used to be `static const` arrays in the
+# ARM9 binary, and on this hardware that costs the taskman arena one byte for
+# one byte: the arena is calloc'd from whatever the heap has left. Measured, a
+# Luigi+Donkey shell was left with 13,840 B of arena headroom and the battle
+# died in `ifCommonCountdownMakeInterface` when the countdown interface's
+# allocation returned NULL.
+#
+# These objects are compiled for their BYTES, never linked into the ARM9 image:
+# `objcopy -O binary` lifts the `.fighter_image` section into a NitroFS payload
+# the runtime loads for the fighters a match actually uses. The struct layout is
+# the compiler's own, so the image and the runtime's offsetof cannot disagree.
+#
+# Same "ships only with its reader" rule as the UI kit above: no image files are
+# staged unless the owner is built, so a Mario/Fox ROM carries none of them.
+NDS_NATIVE_IMAGE_DIR := $(NITROFS_DIR)/fighters
+NDS_NATIVE_IMAGE_SRC_DIR := $(PROJECT_ROOT)/src/nds/generated
+NDS_NATIVE_IMAGE_GENERATOR := 	$(PROJECT_ROOT)/scripts/fighters/generate_nds_native_owner_images.py
+NDS_NATIVE_IMAGE_HEADER := 	$(PROJECT_ROOT)/include/nds/generated/nds_native_fighter_image.generated.h
+export NDS_NITROFS_NATIVE_IMAGE_FILES :=
+NDS_NATIVE_IMAGE_OWNERS :=
+ifeq ($(NDS_P2_LUIGI),1)
+NDS_NATIVE_IMAGE_OWNERS += luigi
+endif
+ifeq ($(NDS_P2_DONKEY),1)
+NDS_NATIVE_IMAGE_OWNERS += donkey
+endif
+NDS_NITROFS_NATIVE_IMAGE_FILES := $(foreach owner,$(NDS_NATIVE_IMAGE_OWNERS),	$(NDS_NATIVE_IMAGE_DIR)/$(owner)_high.bin 	$(NDS_NATIVE_IMAGE_DIR)/$(owner)_low.bin)
+
+$(NDS_NATIVE_IMAGE_HEADER): $(NDS_NATIVE_IMAGE_GENERATOR)
+	python "$(NDS_NATIVE_IMAGE_GENERATOR)"
+	@touch $(NDS_NATIVE_IMAGE_HEADER)
+
+$(BUILD)/native_image_%.o: $(NDS_NATIVE_IMAGE_SRC_DIR)/nds_native_fighter_%.image.c 		$(NDS_NATIVE_IMAGE_HEADER) 		$(PROJECT_ROOT)/include/nds/nds_native_fighter_tables.h
+	@mkdir -p $(dir $@)
+	# The include paths are explicit here because this rule runs in the OUTER
+	# make, where ds_rules' per-build INCLUDES have not been composed yet.
+	$(CC) -c $(CFLAGS) -I $(PROJECT_ROOT)/include -I $(BUILD) -o $@ $<
+
+$(NDS_NATIVE_IMAGE_DIR)/%.bin: $(BUILD)/native_image_%.o
+	@mkdir -p $(dir $@)
+	$(OBJCOPY) -O binary --only-section=.fighter_image $< $@
+
 
 # The blob must exist before the config is written: the config carries its byte
 # count, and the runtime carves exactly that much at the head of every arena
@@ -4595,7 +4642,7 @@ $(NITROFS_DIR)/particles/grpupupu_whispy_native.ds.bin: $(NDS_WHISPY_NATIVE_ASSE
 prune-obsolete-audio:
 	@rm -f $(foreach file,$(NDS_AUDIO_OBSOLETE_DERIVED_FILES),$(NITROFS_DIR)/$(file))
 
-$(OUTPUT).nds: prune-obsolete-audio $(OUTPUT).elf $(NDS_NITROFS_RELOC_FILES) $(NDS_NITROFS_RELOCDATA_FILES) $(NDS_NITROFS_AUDIO_FILES) $(NDS_NITROFS_BATTLE_STATIC_TEXTURE_FILES) $(NDS_NITROFS_PARTICLE_FILES) $(NDS_NITROFS_EFFECT_FILES) $(NDS_NITROFS_FTANIM_FILES) $(NDS_NITROFS_BATTLEPACK_FILES) $(NDS_NITROFS_MN_UI_KIT_FILES) $(NDS_BANNER_ICON)
+$(OUTPUT).nds: prune-obsolete-audio $(OUTPUT).elf $(NDS_NITROFS_RELOC_FILES) $(NDS_NITROFS_RELOCDATA_FILES) $(NDS_NITROFS_AUDIO_FILES) $(NDS_NITROFS_BATTLE_STATIC_TEXTURE_FILES) $(NDS_NITROFS_PARTICLE_FILES) $(NDS_NITROFS_EFFECT_FILES) $(NDS_NITROFS_FTANIM_FILES) $(NDS_NITROFS_BATTLEPACK_FILES) $(NDS_NITROFS_MN_UI_KIT_FILES) $(NDS_NITROFS_NATIVE_IMAGE_FILES) $(NDS_BANNER_ICON)
 $(OUTPUT).elf: $(OFILES) $(NDS_PRIVATE_CHECK_OFILES) \
 	$(NDS_HOT_TEXT_SPECS) $(NDS_HOT_TEXT_LINKER_SCRIPT) \
 	$(NDS_TASK32_DRAW_HOT_FRAGMENT) $(NDS_PARTICLE_BANKS_INC) \
