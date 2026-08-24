@@ -104,7 +104,17 @@ $states = @(
     # Mario/Fox match these cover both fighter-specific entry paths regardless
     # of link-list order, and advancing after the call captures the animation /
     # effect rather than the pre-status frame at the breakpoint itself.
-    @{ Name = 'fighter-entry-1'; Break = 'ftCommonAppearSetStatus'; Presents = 8 }
+    @{ Name = 'fighter-entry-1'; Break = 'ftCommonAppearSetStatus'; Presents = 8 },
+    # P2-3 (owner, 2026-08-23: "the Mario intro green tube still doesn't render
+    # the full pipe, I just see the rim"). ftCommonAppearSetStatus above is the
+    # FIGHTER's own status change and the camera is not on him yet, so neither
+    # of its frames shows the pipe. Anchor on the effect that IS the pipe --
+    # efManagerMarioEntryDokanMakeEffect, the maker ftCommonAppearSetStatus
+    # calls for a Mario-family fighter (battleship_ftcommon_entry.c:156) -- and
+    # let it play a while: the source raises the pipe over its own animation, so
+    # the frame worth looking at is well after the maker returns.
+    @{ Name = 'mario-pipe'; Break = 'efManagerMarioEntryDokanMakeEffect'; Presents = 20 },
+    @{ Name = 'mario-pipe-late'; Break = 'ndsPlatformEndFrame'; Presents = 24 }
 )
 $entryTotal = 8
 $EntrySeries = @($EntrySeries |

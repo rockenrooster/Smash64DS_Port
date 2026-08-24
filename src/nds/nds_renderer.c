@@ -5583,6 +5583,12 @@ volatile u32 gNdsEntryEffectNativeDrawCount;
 volatile u32 gNdsEntryEffectNativeFallbackCount;
 volatile u32 gNdsEntryEffectNativeTexturePrepareCount;
 volatile u32 gNdsEntryEffectNativeTextureBindCount;
+/* P2-3 (owner: "the Mario intro green tube still doesn't render the full pipe,
+ * I just see the rim"). The aggregate draw count cannot tell a rim from a
+ * body: Mario's pipe is TWO roots -- 0x03c0 is the 12-triangle ring and
+ * 0x04c0 the 32-triangle, 120-tall barrel -- and Fox's Arwing is eight more.
+ * Count per root so a missing piece names itself. */
+volatile u32 gNdsEntryEffectNativeRootDraws[NDS_ENTRY_EFFECT_ROOT_COUNT];
 
 typedef struct NDSNativeFighterOwnerRuntime
 {
@@ -26837,6 +26843,14 @@ s32 ndsRendererSubmitNativeEntryEffect(
         ndsRendererHardwareEndBatch();
     }
     gNdsEntryEffectNativeDrawCount++;
+    {
+        u32 root_index = (u32)(root - &sNdsEntryEffectRoots[0]);
+
+        if (root_index < NDS_ENTRY_EFFECT_ROOT_COUNT)
+        {
+            gNdsEntryEffectNativeRootDraws[root_index]++;
+        }
+    }
     return TRUE;
 #else
     (void)owner_asset_id;

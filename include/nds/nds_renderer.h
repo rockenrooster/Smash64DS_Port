@@ -1266,6 +1266,7 @@ extern volatile u32 gNdsEntryEffectNativeDrawCount;
 extern volatile u32 gNdsEntryEffectNativeFallbackCount;
 extern volatile u32 gNdsEntryEffectNativeTexturePrepareCount;
 extern volatile u32 gNdsEntryEffectNativeTextureBindCount;
+extern volatile u32 gNdsEntryEffectNativeRootDraws[10];
 
 s32 ndsRendererMtxCellS16p16(const Mtx *mtx, u32 row, u32 col);
 void ndsRendererMtxLoadN64ToDS20p12(const Mtx *src,
