@@ -27005,6 +27005,48 @@ static const NDSEntryEffectRoot *ndsRendererEntryEffectRoot(
  * lighting occurs here.  The generator also rejects a packet if any emitted
  * source triangle has G_LIGHTING set; the explicit mask below is a second
  * runtime fence against lighting state leaking from a previous fighter draw. */
+#if NDS_ENTRY_EFFECT_DIAG
+/* P2-3r6 lab instrument. The owner reports Mario's entry pipe draws its rim and
+ * not its body, and every cheap check says the body IS submitted: root 0x04c0
+ * takes 60 draws a match with fallback 0, valid config and matrix pointers, and
+ * the same combine/othermode/texture as the rim. What has never been read
+ * reliably is the MATRIX each root is submitted under -- a gdb read of the
+ * caller's stack matrix returns dcache residue on this fork, which already cost
+ * one wrong "garbage matrix" conclusion. So the renderer records it into
+ * globals, where a stub read is sound, one row per root index.
+ *
+ * Lab only: NDS_ENTRY_EFFECT_DIAG defaults to 0 and the shipped ROM pays
+ * nothing. */
+__attribute__((used)) volatile s32 gNdsEntryEffectRootModelview[2][16];
+__attribute__((used)) volatile s32 gNdsEntryEffectRootProjection[2][4];
+__attribute__((used)) volatile u32 gNdsEntryEffectRootPolyFmt[2];
+__attribute__((used)) volatile u32 gNdsEntryEffectRootGeom[2];
+__attribute__((used)) volatile u32 gNdsEntryEffectRootTriangles[2];
+__attribute__((used)) volatile s32 gNdsEntryEffectRootFirstVertex[2][3];
+
+static void ndsRendererEntryEffectDiagMatrices(u32 root_index,
+                                               const NDSRendererConfig *config)
+{
+    u32 i;
+    u32 j;
+
+    if (root_index >= 2u)
+    {
+        return;
+    }
+    for (i = 0u; i < 4u; i++)
+    {
+        for (j = 0u; j < 4u; j++)
+        {
+            gNdsEntryEffectRootModelview[root_index][(i * 4u) + j] =
+                config->initial_modelview->m[i][j];
+        }
+        gNdsEntryEffectRootProjection[root_index][i] =
+            config->initial_projection->m[3][i];
+    }
+}
+#endif
+
 s32 ndsRendererSubmitNativeEntryEffect(
     u32 owner_asset_id, u32 root_offset,
     const NDSRendererConfig *config, NDSRendererStats *stats)
@@ -27055,6 +27097,10 @@ s32 ndsRendererSubmitNativeEntryEffect(
     ndsRendererLoadHardwareSplitMatrices(
         config->initial_projection, config->initial_modelview,
         matrix_generation);
+#if NDS_ENTRY_EFFECT_DIAG
+    ndsRendererEntryEffectDiagMatrices(
+        (u32)(root - &sNdsEntryEffectRoots[0]), config);
+#endif
 
     for (group_offset = 0u; group_offset < root->group_count; group_offset++)
     {
@@ -27177,6 +27223,28 @@ s32 ndsRendererSubmitNativeEntryEffect(
                 ndsRendererHardwareVertexCoord(vtx->y, TRUE),
                 ndsRendererHardwareVertexCoord(vtx->z, TRUE));
         }
+#if NDS_ENTRY_EFFECT_DIAG
+        {
+            u32 diag_root = (u32)(root - &sNdsEntryEffectRoots[0]);
+
+            if (diag_root < 2u)
+            {
+                const NDSRendererInputVertex *first =
+                    &sNdsEntryEffectVertices[group->first_vertex];
+
+                gNdsEntryEffectRootPolyFmt[diag_root] = poly_fmt;
+                gNdsEntryEffectRootGeom[diag_root] = stats->geometry_mode;
+                gNdsEntryEffectRootTriangles[diag_root] +=
+                    group->triangle_count;
+                gNdsEntryEffectRootFirstVertex[diag_root][0] =
+                    ndsRendererHardwareVertexCoord(first->x, TRUE);
+                gNdsEntryEffectRootFirstVertex[diag_root][1] =
+                    ndsRendererHardwareVertexCoord(first->y, TRUE);
+                gNdsEntryEffectRootFirstVertex[diag_root][2] =
+                    ndsRendererHardwareVertexCoord(first->z, TRUE);
+            }
+        }
+#endif
         sNdsRendererHardwareSubmitted = TRUE;
         stats->triangle_count += group->triangle_count;
         stats->transformed_triangle_count += group->triangle_count;

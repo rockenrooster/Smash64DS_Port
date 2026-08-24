@@ -10779,6 +10779,83 @@ static void ndsEffectPacketVerdictRecord(const Gfx *dl)
 }
 #endif
 
+#if NDS_ENTRY_EFFECT_DIAG
+/* P2-3r6: WHERE THE PIPE BODY'S Y COMES FROM.
+ *
+ * The renderer already records the modelview each entry-effect root is
+ * submitted under, and it says the body (root 0x04c0) sits ~300 units above the
+ * rim (0x03c0, a constant -21) for the whole visible life of the effect. That
+ * is either what the source animation wrote into the DObj, or something this
+ * adapter's matrix build introduced. Recording the DObj's own transform here,
+ * beside the matrix build, separates the two without another guess.
+ *
+ * Floats are stored as their bit patterns: the gdb stub reads globals reliably
+ * and the host can decode, whereas printing a float through the stub has
+ * already produced one misleading 0.000000. */
+volatile u32 gNdsEntryEffectDObjTranslate[2][3];
+volatile u32 gNdsEntryEffectDObjScale[2][3];
+volatile u32 gNdsEntryEffectDObjRotate[2][3];
+volatile u32 gNdsEntryEffectDObjParent[2];
+volatile u32 gNdsEntryEffectDObjParentTranslate[2][3];
+/* The animation clock beside the value it produced: if the body's translate
+ * track is right but its PLAYBACK is twice the source rate, the body leaves in
+ * half the frames and the pipe reads as "body missing". anim_speed is what
+ * `aobj->length += dobj->anim_speed` advances by, so it is the rate itself. */
+volatile u32 gNdsEntryEffectDObjAnim[2][3];
+volatile u32 gNdsEntryEffectGObjAnimFrame[2];
+
+static void ndsEntryEffectDiagRecordDObj(u32 root_offset, DObj *dobj)
+{
+    u32 slot;
+    DObj *parent;
+
+    if (root_offset == 0x03c0u)
+    {
+        slot = 0u;
+    }
+    else if (root_offset == 0x04c0u)
+    {
+        slot = 1u;
+    }
+    else
+    {
+        return;
+    }
+    if (dobj == NULL)
+    {
+        return;
+    }
+    gNdsEntryEffectDObjTranslate[slot][0] = *(const u32 *)&dobj->translate.vec.f.x;
+    gNdsEntryEffectDObjTranslate[slot][1] = *(const u32 *)&dobj->translate.vec.f.y;
+    gNdsEntryEffectDObjTranslate[slot][2] = *(const u32 *)&dobj->translate.vec.f.z;
+    gNdsEntryEffectDObjScale[slot][0] = *(const u32 *)&dobj->scale.vec.f.x;
+    gNdsEntryEffectDObjScale[slot][1] = *(const u32 *)&dobj->scale.vec.f.y;
+    gNdsEntryEffectDObjScale[slot][2] = *(const u32 *)&dobj->scale.vec.f.z;
+    gNdsEntryEffectDObjRotate[slot][0] = *(const u32 *)&dobj->rotate.vec.f.x;
+    gNdsEntryEffectDObjRotate[slot][1] = *(const u32 *)&dobj->rotate.vec.f.y;
+    gNdsEntryEffectDObjRotate[slot][2] = *(const u32 *)&dobj->rotate.vec.f.z;
+    gNdsEntryEffectDObjAnim[slot][0] = *(const u32 *)&dobj->anim_speed;
+    gNdsEntryEffectDObjAnim[slot][1] = *(const u32 *)&dobj->anim_wait;
+    gNdsEntryEffectDObjAnim[slot][2] = *(const u32 *)&dobj->anim_frame;
+    if (dobj->parent_gobj != NULL)
+    {
+        gNdsEntryEffectGObjAnimFrame[slot] =
+            *(const u32 *)&dobj->parent_gobj->anim_frame;
+    }
+    parent = dobj->parent;
+    gNdsEntryEffectDObjParent[slot] = (u32)(uintptr_t)parent;
+    if (parent != NULL)
+    {
+        gNdsEntryEffectDObjParentTranslate[slot][0] =
+            *(const u32 *)&parent->translate.vec.f.x;
+        gNdsEntryEffectDObjParentTranslate[slot][1] =
+            *(const u32 *)&parent->translate.vec.f.y;
+        gNdsEntryEffectDObjParentTranslate[slot][2] =
+            *(const u32 *)&parent->translate.vec.f.z;
+    }
+}
+#endif
+
 static sb32 ndsRendererAdapterTryNativeEntryEffect(
     DObj *dobj, const Gfx *dl, GObj *camera_gobj, u32 initial_geometry_mode)
 {
@@ -10860,6 +10937,9 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
         return FALSE;
     }
 
+#if NDS_ENTRY_EFFECT_DIAG
+    ndsEntryEffectDiagRecordDObj(root_offset, dobj);
+#endif
     ndsRendererAdapterPrepareInitialMatrices(
         dobj,
         (camera_gobj != NULL) ? CObjGetStruct(camera_gobj) :

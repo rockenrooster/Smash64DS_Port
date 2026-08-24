@@ -49,6 +49,10 @@ _Static_assert(NDS_P2_PROOF_FIGHTER0 < nFTKindPlayableEnd,
 #endif
 #endif
 
+#if NDS_P2_FOUR_CPU_ROSTER && !NDS_P2_DONKEY
+#error "NDS_P2_FOUR_CPU_ROSTER=1 needs the four-name roster: NDS_P2_LUIGI=1 NDS_P2_DONKEY=1"
+#endif
+
 void ndsMatchConfigLoadMarioFoxDreamLand(NdsMatchConfig *cfg)
 {
     s32 i;
@@ -220,6 +224,23 @@ void ndsMatchConfigLoadMarioFoxDreamLand(NdsMatchConfig *cfg)
     cfg->fighters[3].team = nSCBattleTeamIDBlue;
     cfg->fighters[3].costume = (u8)ftParamGetCostumeCommonID(nFTKindFox, 1);
     cfg->fighters[3].shade = 0;
+#if NDS_P2_FOUR_CPU_ROSTER
+    /* THE STRESS ARM FOLLOWS THE LANDED ROSTER, which is what PROJECT_GOAL's
+     * P2 gate actually asks for: "the measured hardest fighter set", a measured
+     * argmax over landed content rather than a guess frozen when the content
+     * set was two names. With Luigi and Donkey Kong selectable, four DISTINCT
+     * kinds is both the heaviest CPU/RAM case a player can reach on one console
+     * and the configuration that answers the owner's 2026-08-23 report that
+     * "some combinations of fighters run at really low FPS".
+     *
+     * Slots 2/3 take common costume 0 rather than 1: they are different kinds
+     * now, so they are not competing for an appearance with slots 0/1 and the
+     * source's own duplicate rule does not apply. */
+    cfg->fighters[2].fkind = nFTKindLuigi;
+    cfg->fighters[2].costume = (u8)ftParamGetCostumeCommonID(nFTKindLuigi, 0);
+    cfg->fighters[3].fkind = nFTKindDonkey;
+    cfg->fighters[3].costume = (u8)ftParamGetCostumeCommonID(nFTKindDonkey, 0);
+#endif
 #endif
 #if NDS_R2_SOAK_MATCH_MINUTES
     /* THE FREEZE SOAK'S LONG MATCH, on its own flag, off by default.

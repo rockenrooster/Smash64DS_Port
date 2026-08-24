@@ -516,6 +516,26 @@ NDS_R2_BOTH_CPU ?= 0
 # INSTANCES (Mario/Fox/Mario/Fox) while the generated renderer owners remain the
 # two fighter KINDS. Only the dedicated P2 stress target below enables it.
 NDS_P2_FOUR_CPU_STRESS ?= 0
+# P2 STRESS SET: FOUR DISTINCT LANDED KINDS RATHER THAN FOUR INSTANCES.
+#
+# The four-CPU stress arm seeds four VSBattle INSTANCES of the two kinds the
+# content set had when it was written (Mario/Fox/Mario/Fox). PROJECT_GOAL's P2
+# gate asks for something stricter and content-dependent -- "the measured
+# hardest fighter set", an argmax over LANDED content -- and the roster is now
+# four names. This flag seeds slots 2/3 with Luigi and Donkey Kong instead of
+# the mirrors, which is simultaneously the heaviest single-console case a
+# player can reach and the measurement that answers the owner's 2026-08-23
+# report that "some combinations of fighters run at really low FPS".
+#
+# It is a LAB flag, not a gate change: the stress harness takes `-Build`, so the
+# roster arm is built into its own directory and measured against the gate build
+# as an ordinary A/B. Promoting it into the Boundary arm is a board decision at a
+# phase close (docs/P2_PLAN.md law 4), not a side effect of measuring it.
+#
+# The "needs the four-name roster" check is a `#error` in nds_match_config.c
+# rather than a `$(error)` here, because NDS_P2_DONKEY is not defined until
+# below and a make-time test would read it empty and never fire.
+NDS_P2_FOUR_CPU_ROSTER ?= 0
 # P2-3 fighter-production admission flag.  A fighter is staged behind its own
 # flag until the source-derived asset graph, source status table, native owner,
 # CSS/audio surfaces and focused runtime proof are all green.  This prevents a
@@ -755,6 +775,10 @@ NDS_R2_FTR_DRAW_MEMO ?= 1
 # read -8,832, -2,368 and +5,248 across those same pairs, so P95 is not
 # resolvable for a change this size and no gate figure may be banked from it.
 NDS_FTR_PLAN_ROUTE ?= 1
+# P2-3r6 lab instrument: record the modelview/projection, poly format and
+# emitted triangle count of each Mario entry-pipe root into globals, where a
+# gdb stub read is sound. Default 0; the shipped ROM pays nothing.
+NDS_ENTRY_EFFECT_DIAG ?= 0
 # Cycle 100: arm the baked plan's equivalence check (derive the plan live on
 # every baked draw and memcmp it against the baked one). Build-time for the same
 # cache-line reason as the route above, and the reason is sharper here:
@@ -4377,6 +4401,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_R2_LOADFRAME_TIMING $(NDS_R2_LOADFRAME_TIMING)'; \
 		echo '#define NDS_R2_BOTH_CPU $(NDS_R2_BOTH_CPU)'; \
 		echo '#define NDS_P2_FOUR_CPU_STRESS $(NDS_P2_FOUR_CPU_STRESS)'; \
+		echo '#define NDS_P2_FOUR_CPU_ROSTER $(NDS_P2_FOUR_CPU_ROSTER)'; \
 		echo '#define NDS_P2_LUIGI $(NDS_P2_LUIGI)'; \
 		echo '#define NDS_NATIVE_OWNER_IMAGE_LUIGI $(NDS_NATIVE_OWNER_IMAGE_LUIGI)'; \
 		echo '#define NDS_NATIVE_OWNER_IMAGE_DONKEY $(NDS_NATIVE_OWNER_IMAGE_DONKEY)'; \
@@ -4396,6 +4421,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_R2_FTR_CONTRACT_CENSUS $(NDS_R2_FTR_CONTRACT_CENSUS)'; \
 		echo '#define NDS_R2_FTR_DRAW_MEMO $(NDS_R2_FTR_DRAW_MEMO)u'; \
 		echo '#define NDS_FTR_PLAN_ROUTE $(NDS_FTR_PLAN_ROUTE)u'; \
+		echo '#define NDS_ENTRY_EFFECT_DIAG $(NDS_ENTRY_EFFECT_DIAG)'; \
 		echo '#define NDS_FTR_PLAN_VERIFY $(NDS_FTR_PLAN_VERIFY)u'; \
 		echo '#define NDS_R2_SECOND_ENTRY_DIAG $(NDS_R2_SECOND_ENTRY_DIAG)'; \
 		echo '#define NDS_R2_SCENE_LOOP_WALK $(NDS_R2_SCENE_LOOP_WALK)u'; \

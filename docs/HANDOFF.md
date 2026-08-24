@@ -103,11 +103,14 @@ P2-1/P2-2 still have only their owner visual/play residuals.
    decomp body that holds one -- so every fighter drew from frame one while
    `ftCommonEntrySetStatus` was setting `is_invisible` correctly. Reinstated at
    that seam (P2-3r5); screenshots show an empty stage at battle start and
-   staggered per-fighter presentation after it. The pipe report did NOT
-   reproduce as described (P2-3r6): both roots submit with valid matrices and
-   the barrel is on screen, short and wide as its geometry says. It needs the
-   owner's eyes on `artifacts/visibility/2026-08-24_p2-3-pipeseries-*`, not
-   another cycle of guessing.
+   staggered per-fighter presentation after it. **The pipe is root-caused**
+   (P2-3r6, and an earlier "not reproduced" call in this file was withdrawn):
+   the lip and the barrel are on DIFFERENT entry-effect roots, only the
+   barrel's is animated, and its translate.y ramps to +321 -- 306 units, 2.5x
+   the barrel's own height -- 4 presented frames in, so the pipe is whole for
+   4 frames and a floating lip for the other ~46. Everything else is ruled out
+   with data in the board row. The one open question is whether +321 is the
+   asset's key or this port's AObj decode.
 
 4. **P2-3 background.** Luigi's production path is landed and he ANIMATES
    (P2-3r2). The bounded fast proof route is repaired end-to-end and **both
@@ -155,16 +158,14 @@ green throughout.
 
 ## Standing operational facts
 
-- **Republish the free-play ROM after every fix batch** (owner, 2026-08-22:
-  "periodically create the freeplay ROM so I can help playtest"): a plain
+- **Republish the free-play ROM after every fix batch** (owner, 2026-08-22): a plain
   `make TARGET=smash64ds` writes the root `smash64ds.nds` (human input, walk
   compiled out, flag-identical to the gate's shell config, four-name roster).
 - Clean checkout builds through `build.ps1`, not bare `make` (four of six
-  `.inc` are gitignored and `build.ps1`'s generator is not run by `make`).
-  Never pass `-j`, never override `MAKEFLAGS`, one build at a time.
-- `smash64ds` is already in the free-play shell target block and the current
-  published root ROM is the P2 shell baseline; the old P2-1M "publish not done"
-  restart item is closed by the later P2-1N publish work.
+  `.inc` are gitignored). Never pass `-j`, never override `MAKEFLAGS`, one
+  build at a time.
+- `smash64ds` is the published free-play shell target; the P2-1M "publish not
+  done" restart item is closed by the later P2-1N publish work.
 - Shell target relationship: `smash64ds` is the published walk-free shell
   configuration. `smash64ds-p2-shell-freeplay-hwtri` is its non-published lab
   twin; `smash64ds-p2-shell-hwtri` adds the scripted realtime shell walk used

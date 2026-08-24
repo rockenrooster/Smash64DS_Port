@@ -26,7 +26,17 @@ param(
     # treats the commas as thousands separators), and two runs on 2026-08-23
     # then stepped three hundred thousand logic frames before their ceiling.
     # Each element is split on commas below.
-    [string[]]$EntrySeries = @()
+    [string[]]$EntrySeries = @(),
+    # Override the per-state `Presents` for the SELECTED states. A state that
+    # carries its own Presents (battle-intro, fighter-entry-1, css-ready) sets
+    # it because that is the frame the state is normally worth photographing;
+    # this is how a run photographs it EARLIER instead. -1 leaves each state's
+    # own value alone, which is the default and the calibrated behaviour.
+    #
+    # Added 2026-08-24 for the entry pipe: its body is only on screen for the
+    # first few frames after ftCommonAppearSetStatus, and fighter-entry-1's own
+    # Presents = 8 lands after it has already left.
+    [ValidateRange(-1, 32)][int]$OverridePresents = -1
 )
 
 # P2-1g visibility, and the phase-level successor to
@@ -199,7 +209,9 @@ try {
         ("target remote 127.0.0.1:{0}" -f $context.GdbPort)
     )
     foreach ($state in $states) {
-        $statePresents = if ($state.ContainsKey('Presents')) {
+        $statePresents = if ($OverridePresents -ge 0) {
+            $OverridePresents
+        } elseif ($state.ContainsKey('Presents')) {
             [int]$state.Presents
         } else {
             $PresentsAfterState
