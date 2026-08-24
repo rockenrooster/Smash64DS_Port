@@ -5343,6 +5343,14 @@ typedef struct NDSRendererTraversalState
  * layout. `NDSNativePreparedDenseVertex` stays below: it is build-gated
  * draw scratch, never image content. */
 #include <nds/nds_native_fighter_tables.h>
+#if NDS_P2_LUIGI || NDS_P2_DONKEY
+/* The arena the image buffers come from; the renderer does not otherwise
+ * allocate, so the declaration arrives with the feature that needs it. */
+extern void *syTaskmanMalloc(size_t size, u32 align);
+/* The image types AND the owner-slot ids: one generated ABI, so the
+ * renderer and the fighter manager cannot number owners differently. */
+#include <nds/generated/nds_native_fighter_image.generated.h>
+#endif
 
 
 #if NDS_RENDERER_PROFILE_LEVEL < 2
@@ -5659,6 +5667,15 @@ NDS_FTR_OWNER_RUNTIME(
     sNdsNativeMarioFoxRootLightPreambles, 0x7e50u);
 
 #if NDS_P2_LUIGI
+#if NDS_NATIVE_OWNER_IMAGE_LUIGI
+/* P2-3r4: these tables are FILLED AT LOAD from the owner image, so they are
+ * mutable and start empty.  The arrays that used to initialise them are
+ * guarded out of this binary by the same flag; there is exactly one copy of
+ * the bytes and it is the NitroFS one.  Every reader goes through the owner
+ * runtime, which is only reachable after ndsRendererNativeEnsureOwnerImage
+ * has bound this struct. */
+static NDSNativeFighterRuntimeTables sNdsNativeLuigiFighterHighTables;
+#else
 static const NDSNativeFighterRuntimeTables sNdsNativeLuigiFighterHighTables =
 {
     sNdsNativeLuigiFighterStateDeltas,
@@ -5697,7 +5714,17 @@ static const NDSNativeFighterRuntimeTables sNdsNativeLuigiFighterHighTables =
     sNdsNativeLuigiFighterEpochs,
     NDS_FTR_COUNT(sNdsNativeLuigiFighterEpochs)
 };
+#endif
 
+#if NDS_NATIVE_OWNER_IMAGE_LUIGI
+/* P2-3r4: these tables are FILLED AT LOAD from the owner image, so they are
+ * mutable and start empty.  The arrays that used to initialise them are
+ * guarded out of this binary by the same flag; there is exactly one copy of
+ * the bytes and it is the NitroFS one.  Every reader goes through the owner
+ * runtime, which is only reachable after ndsRendererNativeEnsureOwnerImage
+ * has bound this struct. */
+static NDSNativeFighterRuntimeTables sNdsNativeLuigiFighterLowTables;
+#else
 static const NDSNativeFighterRuntimeTables sNdsNativeLuigiFighterLowTables =
 {
     sNdsNativeLuigiFighterStateDeltasLow,
@@ -5736,6 +5763,7 @@ static const NDSNativeFighterRuntimeTables sNdsNativeLuigiFighterLowTables =
     sNdsNativeLuigiFighterEpochsLow,
     NDS_FTR_COUNT(sNdsNativeLuigiFighterEpochsLow)
 };
+#endif
 
 NDS_FTR_OWNER_RUNTIME(
     sNdsNativeLuigiHighOwner, &sNdsNativeLuigiFighterHighTables,
@@ -5748,6 +5776,15 @@ NDS_FTR_OWNER_RUNTIME(
 #endif
 
 #if NDS_P2_DONKEY
+#if NDS_NATIVE_OWNER_IMAGE_DONKEY
+/* P2-3r4: these tables are FILLED AT LOAD from the owner image, so they are
+ * mutable and start empty.  The arrays that used to initialise them are
+ * guarded out of this binary by the same flag; there is exactly one copy of
+ * the bytes and it is the NitroFS one.  Every reader goes through the owner
+ * runtime, which is only reachable after ndsRendererNativeEnsureOwnerImage
+ * has bound this struct. */
+static NDSNativeFighterRuntimeTables sNdsNativeDonkeyFighterHighTables;
+#else
 static const NDSNativeFighterRuntimeTables sNdsNativeDonkeyFighterHighTables =
 {
     sNdsNativeDonkeyFighterStateDeltas,
@@ -5786,7 +5823,17 @@ static const NDSNativeFighterRuntimeTables sNdsNativeDonkeyFighterHighTables =
     sNdsNativeDonkeyFighterEpochs,
     NDS_FTR_COUNT(sNdsNativeDonkeyFighterEpochs)
 };
+#endif
 
+#if NDS_NATIVE_OWNER_IMAGE_DONKEY
+/* P2-3r4: these tables are FILLED AT LOAD from the owner image, so they are
+ * mutable and start empty.  The arrays that used to initialise them are
+ * guarded out of this binary by the same flag; there is exactly one copy of
+ * the bytes and it is the NitroFS one.  Every reader goes through the owner
+ * runtime, which is only reachable after ndsRendererNativeEnsureOwnerImage
+ * has bound this struct. */
+static NDSNativeFighterRuntimeTables sNdsNativeDonkeyFighterLowTables;
+#else
 static const NDSNativeFighterRuntimeTables sNdsNativeDonkeyFighterLowTables =
 {
     sNdsNativeDonkeyFighterStateDeltasLow,
@@ -5825,6 +5872,7 @@ static const NDSNativeFighterRuntimeTables sNdsNativeDonkeyFighterLowTables =
     sNdsNativeDonkeyFighterEpochsLow,
     NDS_FTR_COUNT(sNdsNativeDonkeyFighterEpochsLow)
 };
+#endif
 
 NDS_FTR_OWNER_RUNTIME(
     sNdsNativeDonkeyHighOwner, &sNdsNativeDonkeyFighterHighTables,
@@ -5842,6 +5890,356 @@ static const NDSNativeFighterRuntimeTables *sNdsNativeFighterActiveTables =
     &sNdsNativeFighterHighTables;
 static const NDSNativeFighterOwnerRuntime *sNdsNativeFighterActiveOwner =
     &sNdsNativeMarioHighOwner;
+
+#if NDS_P2_LUIGI || NDS_P2_DONKEY
+/* --- P2-3r4: image-backed owner tables ------------------------------------
+ *
+ * A P2-3 owner's generated geometry ships as a NitroFS image rather than as
+ * arrays in the ARM9 binary, because on this hardware the binary costs the
+ * taskman arena one byte for one byte and the roster is going to grow by ten
+ * more fighters. The image is one struct, so the layout is the compiler's and
+ * these offsets cannot drift from the bytes.
+ *
+ * The buffer comes from the taskman arena, which the scene manager rewinds
+ * between scenes -- hence the heap generation stamp: a pointer from the
+ * previous scene is not reloaded, it is re-read. Loading happens where a
+ * fighter is CREATED, never inside a draw: a NitroFS read mid-frame is exactly
+ * the stall that cost the BGM its seam on the character select. */
+#define NDS_NATIVE_IMAGE_DETAILS 2u
+
+typedef struct NDSNativeOwnerImageSlot
+{
+    const void *base;
+    u32 heap_generation;
+    u32 bytes;
+} NDSNativeOwnerImageSlot;
+
+static NDSNativeOwnerImageSlot
+    sNdsNativeOwnerImage[NDS_NATIVE_IMAGE_OWNER_SLOTS][NDS_NATIVE_IMAGE_DETAILS];
+
+__attribute__((used)) volatile u32 gNdsNativeOwnerImageLoadCount;
+__attribute__((used)) volatile u32 gNdsNativeOwnerImageFailCount;
+__attribute__((used)) volatile u32 gNdsNativeOwnerImageBytes;
+__attribute__((used)) volatile u32 gNdsNativeOwnerImageMatchCount;
+__attribute__((used)) volatile u32 gNdsNativeOwnerImageMismatchCount;
+
+static const char *ndsRendererNativeOwnerImagePath(u32 owner_slot,
+                                                   u32 use_low_detail)
+{
+#if NDS_P2_LUIGI
+    if (owner_slot == NDS_NATIVE_IMAGE_SLOT_LUIGI)
+    {
+        return (use_low_detail != 0u) ? "nitro:/fighters/luigi_low.bin" :
+                                        "nitro:/fighters/luigi_high.bin";
+    }
+#endif
+#if NDS_P2_DONKEY
+    if (owner_slot == NDS_NATIVE_IMAGE_SLOT_DONKEY)
+    {
+        return (use_low_detail != 0u) ? "nitro:/fighters/donkey_low.bin" :
+                                        "nitro:/fighters/donkey_high.bin";
+    }
+#endif
+    (void)use_low_detail;
+    return NULL;
+}
+
+static u32 ndsRendererNativeOwnerImageBytes(u32 owner_slot, u32 use_low_detail)
+{
+#if NDS_P2_LUIGI
+    if (owner_slot == NDS_NATIVE_IMAGE_SLOT_LUIGI)
+    {
+        return (use_low_detail != 0u) ?
+            (u32)sizeof(NDSNativeLuigiLowImage) :
+            (u32)sizeof(NDSNativeLuigiHighImage);
+    }
+#endif
+#if NDS_P2_DONKEY
+    if (owner_slot == NDS_NATIVE_IMAGE_SLOT_DONKEY)
+    {
+        return (use_low_detail != 0u) ?
+            (u32)sizeof(NDSNativeDonkeyLowImage) :
+            (u32)sizeof(NDSNativeDonkeyHighImage);
+    }
+#endif
+    (void)use_low_detail;
+    return 0u;
+}
+
+/* --- P2-3r4: binding an owner's tables to its loaded image ----------------
+ *
+ * The runtime tables struct is a set of pointers plus counts. Binding is
+ * therefore assigning each pointer into the loaded image and each count from
+ * the generated `_COUNT` macro that produced that array. Both come out of
+ * `nds_native_fighter_image.generated.h`, so a table this ROM reads and the
+ * bytes this ROM loads are described by one file.
+ *
+ * `prepared_dense` is the exception and stays a resident array: it is the
+ * GX-packed vertex scratch the draw path WRITES, not content. */
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_IMG_PRIM(image_, member_) ((image_)->member_##_m1)
+#elif NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_IMG_PRIM(image_, member_) ((image_)->member_##_m2)
+#endif
+
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#define NDS_IMG_BIND_COLOR(tables_, img_)                                      \
+    (tables_).dense_color_source = (img_)->dense_color_source;
+#else
+#define NDS_IMG_BIND_COLOR(tables_, img_)
+#endif
+
+#if NDS_TASK56_FIGHTER_PRIMITIVES >= 1
+#define NDS_IMG_BIND_PRIMITIVES(tables_, img_)                                 \
+    (tables_).primitive_group_first =                                          \
+        NDS_IMG_PRIM(img_, primitive_group_first);                             \
+    (tables_).primitive_group_count =                                          \
+        NDS_IMG_PRIM(img_, primitive_group_count);                             \
+    (tables_).primitive_group_type =                                           \
+        NDS_IMG_PRIM(img_, primitive_group_type);                              \
+    (tables_).primitive_group_first_vertex =                                   \
+        NDS_IMG_PRIM(img_, primitive_group_first_vertex);                      \
+    (tables_).primitive_group_vertex_count =                                   \
+        NDS_IMG_PRIM(img_, primitive_group_vertex_count);                      \
+    (tables_).primitive_vertices =                                             \
+        NDS_IMG_PRIM(img_, primitive_vertices);
+#else
+#define NDS_IMG_BIND_PRIMITIVES(tables_, img_)
+#endif
+
+#define NDS_IMG_BIND(tables_, type_, base_, prefix_, prepared_)                \
+    do                                                                         \
+    {                                                                          \
+        const type_ *img_ = (const type_ *)(base_);                            \
+        (tables_).state_deltas = img_->state_deltas;                           \
+        (tables_).state_delta_count = prefix_##_STATE_DELTAS_COUNT;            \
+        (tables_).state_sequence = img_->state_sequence;                       \
+        (tables_).state_sequence_count = prefix_##_STATE_SEQUENCE_COUNT;       \
+        (tables_).vertex_actions = img_->vertex_actions;                       \
+        (tables_).vertex_action_count = prefix_##_VERTEX_ACTIONS_COUNT;        \
+        (tables_).epoch_direct_policy = img_->epoch_direct_policy;             \
+        (tables_).dense_vertices = img_->dense_vertices;                       \
+        (tables_).dense_count = prefix_##_DENSE_VERTICES_COUNT;                \
+        (tables_).prepared_dense = (prepared_);                                \
+        (tables_).action_dense_spans = img_->action_dense_spans;               \
+        NDS_IMG_BIND_COLOR(tables_, img_)                                      \
+        (tables_).packed_corners = img_->packed_corners;                       \
+        (tables_).packed_corner_count = prefix_##_PACKED_CORNERS_COUNT;        \
+        (tables_).run_first_corner = img_->run_first_corner;                   \
+        (tables_).run_first_corner_count = prefix_##_RUN_FIRST_CORNER_COUNT;   \
+        (tables_).run_first_unique = img_->run_first_unique;                   \
+        (tables_).run_unique_count = img_->run_unique_count;                   \
+        (tables_).run_unique_dense = img_->run_unique_dense;                   \
+        (tables_).triangles = img_->triangles;                                 \
+        (tables_).triangle_count = prefix_##_TRIANGLES_COUNT;                  \
+        (tables_).runs = img_->runs;                                           \
+        (tables_).run_count = prefix_##_RUNS_COUNT;                            \
+        NDS_IMG_BIND_PRIMITIVES(tables_, img_)                                 \
+        (tables_).epochs = img_->epochs;                                       \
+        (tables_).epoch_count = prefix_##_EPOCHS_COUNT;                        \
+    } while (0)
+
+/* Bind every owner whose tables this build takes from an image. Called once
+ * per successful load, with the buffer this scene's arena generation owns. */
+static void ndsRendererNativeBindOwnerImage(u32 owner_slot, u32 use_low_detail,
+                                            const void *base)
+{
+#if NDS_NATIVE_OWNER_IMAGE_LUIGI
+    if (owner_slot == NDS_NATIVE_IMAGE_SLOT_LUIGI)
+    {
+        if (use_low_detail != 0u)
+        {
+            NDS_IMG_BIND(sNdsNativeLuigiFighterLowTables,
+                         NDSNativeLuigiLowImage, base,
+                         NDS_NATIVE_IMAGE_LUIGI_LOW,
+                         sNdsNativeLuigiFighterPreparedDenseLow);
+        }
+        else
+        {
+            NDS_IMG_BIND(sNdsNativeLuigiFighterHighTables,
+                         NDSNativeLuigiHighImage, base,
+                         NDS_NATIVE_IMAGE_LUIGI_HIGH,
+                         sNdsNativeLuigiFighterPreparedDense);
+        }
+        return;
+    }
+#endif
+#if NDS_NATIVE_OWNER_IMAGE_DONKEY
+    if (owner_slot == NDS_NATIVE_IMAGE_SLOT_DONKEY)
+    {
+        if (use_low_detail != 0u)
+        {
+            NDS_IMG_BIND(sNdsNativeDonkeyFighterLowTables,
+                         NDSNativeDonkeyLowImage, base,
+                         NDS_NATIVE_IMAGE_DONKEY_LOW,
+                         sNdsNativeDonkeyFighterPreparedDenseLow);
+        }
+        else
+        {
+            NDS_IMG_BIND(sNdsNativeDonkeyFighterHighTables,
+                         NDSNativeDonkeyHighImage, base,
+                         NDS_NATIVE_IMAGE_DONKEY_HIGH,
+                         sNdsNativeDonkeyFighterPreparedDense);
+        }
+        return;
+    }
+#endif
+    (void)owner_slot;
+    (void)use_low_detail;
+    (void)base;
+}
+
+/* Load one owner image for this scene, or report that it is already resident.
+ * Called from fighter creation; never from a draw. */
+s32 ndsRendererNativeEnsureOwnerImage(u32 owner_slot, u32 use_low_detail)
+{
+    NdsRelocAssetStream stream;
+    NDSNativeOwnerImageSlot *slot;
+    const char *path;
+    u32 bytes;
+    void *buffer;
+
+    if ((owner_slot >= NDS_NATIVE_IMAGE_OWNER_SLOTS) ||
+        (use_low_detail >= NDS_NATIVE_IMAGE_DETAILS))
+    {
+        return FALSE;
+    }
+    slot = &sNdsNativeOwnerImage[owner_slot][use_low_detail];
+    if ((slot->base != NULL) &&
+        (slot->heap_generation == gNdsTaskmanHeapGeneration))
+    {
+        return TRUE;
+    }
+    path = ndsRendererNativeOwnerImagePath(owner_slot, use_low_detail);
+    bytes = ndsRendererNativeOwnerImageBytes(owner_slot, use_low_detail);
+    if ((path == NULL) || (bytes == 0u))
+    {
+        return FALSE;
+    }
+    buffer = syTaskmanMalloc(bytes, 0x10u);
+    if (buffer == NULL)
+    {
+        gNdsNativeOwnerImageFailCount++;
+        return FALSE;
+    }
+    if (ndsRelocAssetStreamOpen(&stream, path) == FALSE)
+    {
+        gNdsNativeOwnerImageFailCount++;
+        return FALSE;
+    }
+    if (ndsRelocAssetStreamRead(&stream, 0u, buffer, bytes) == FALSE)
+    {
+        ndsRelocAssetStreamClose(&stream);
+        gNdsNativeOwnerImageFailCount++;
+        return FALSE;
+    }
+    ndsRelocAssetStreamClose(&stream);
+    slot->base = buffer;
+    slot->heap_generation = gNdsTaskmanHeapGeneration;
+    slot->bytes = bytes;
+    gNdsNativeOwnerImageLoadCount++;
+    gNdsNativeOwnerImageBytes += bytes;
+    ndsRendererNativeBindOwnerImage(owner_slot, use_low_detail, buffer);
+    return TRUE;
+}
+
+#if NDS_NATIVE_OWNER_IMAGE_VERIFY
+/* THE EQUIVALENCE PROOF, RUN ON THE CONSOLE RATHER THAN ARGUED ON PAPER.
+ *
+ * Moving a table out of the binary is only safe if the bytes that arrive are
+ * the bytes that left. This compares the loaded image against the arrays it
+ * replaces, member by member, using the pairing list the image generator emits
+ * from the same description that produced both. It needs a build where BOTH
+ * exist, which is `NDS_NATIVE_OWNER_IMAGE=0 NDS_NATIVE_OWNER_IMAGE_VERIFY=1`:
+ * arrays compiled in, image staged and loaded, nothing reading the image yet.
+ * That build is the proof; the shipping build is the one this proof licenses.
+ *
+ * A size disagreement is reported as a mismatch rather than clamped -- a short
+ * compare that passes is exactly the false green this exists to prevent. */
+static void ndsRendererNativeVerifyMember(const void *image_member,
+                                          u32 image_bytes,
+                                          const void *array, u32 array_bytes)
+{
+    const u8 *a = (const u8 *)image_member;
+    const u8 *b = (const u8 *)array;
+    u32 i;
+
+    if (image_bytes != array_bytes)
+    {
+        gNdsNativeOwnerImageMismatchCount++;
+        return;
+    }
+    for (i = 0u; i < array_bytes; i++)
+    {
+        if (a[i] != b[i])
+        {
+            gNdsNativeOwnerImageMismatchCount++;
+            return;
+        }
+    }
+    gNdsNativeOwnerImageMatchCount++;
+}
+
+#define NDS_IMG_VERIFY(type_, member_, array_)                                 \
+    ndsRendererNativeVerifyMember(&img_->member_, (u32)sizeof(img_->member_),  \
+                                  (array_), (u32)sizeof(array_));
+
+s32 ndsRendererNativeVerifyOwnerImage(u32 owner_slot, u32 use_low_detail)
+{
+    const NDSNativeOwnerImageSlot *slot;
+    u32 before;
+
+    if ((owner_slot >= NDS_NATIVE_IMAGE_OWNER_SLOTS) ||
+        (use_low_detail >= NDS_NATIVE_IMAGE_DETAILS))
+    {
+        return FALSE;
+    }
+    slot = &sNdsNativeOwnerImage[owner_slot][use_low_detail];
+    if (slot->base == NULL)
+    {
+        gNdsNativeOwnerImageMismatchCount++;
+        return FALSE;
+    }
+    before = gNdsNativeOwnerImageMismatchCount;
+#if NDS_P2_LUIGI && !NDS_NATIVE_OWNER_IMAGE_LUIGI
+    if (owner_slot == NDS_NATIVE_IMAGE_SLOT_LUIGI)
+    {
+        if (use_low_detail != 0u)
+        {
+            const NDSNativeLuigiLowImage *img_ =
+                (const NDSNativeLuigiLowImage *)slot->base;
+            NDS_NATIVE_IMAGE_LUIGI_LOW_MEMBERS(NDS_IMG_VERIFY)
+        }
+        else
+        {
+            const NDSNativeLuigiHighImage *img_ =
+                (const NDSNativeLuigiHighImage *)slot->base;
+            NDS_NATIVE_IMAGE_LUIGI_HIGH_MEMBERS(NDS_IMG_VERIFY)
+        }
+    }
+#endif
+#if NDS_P2_DONKEY && !NDS_NATIVE_OWNER_IMAGE_DONKEY
+    if (owner_slot == NDS_NATIVE_IMAGE_SLOT_DONKEY)
+    {
+        if (use_low_detail != 0u)
+        {
+            const NDSNativeDonkeyLowImage *img_ =
+                (const NDSNativeDonkeyLowImage *)slot->base;
+            NDS_NATIVE_IMAGE_DONKEY_LOW_MEMBERS(NDS_IMG_VERIFY)
+        }
+        else
+        {
+            const NDSNativeDonkeyHighImage *img_ =
+                (const NDSNativeDonkeyHighImage *)slot->base;
+            NDS_NATIVE_IMAGE_DONKEY_HIGH_MEMBERS(NDS_IMG_VERIFY)
+        }
+    }
+#endif
+    return (gNdsNativeOwnerImageMismatchCount == before) ? TRUE : FALSE;
+}
+#endif /* NDS_NATIVE_OWNER_IMAGE_VERIFY */
+
+#endif /* NDS_P2_LUIGI || NDS_P2_DONKEY */
 
 static const NDSNativeFighterOwnerRuntime *
 ndsRendererNativeFighterOwnerForDetail(u32 slot, u32 use_low_detail)
@@ -26478,22 +26876,18 @@ static u32 sNdsNativeFighterDenseNormalsLow[
  * bake cannot alias Mario/Fox's dense-ID namespace. Keep both detail tables in
  * cached main RAM; the P2-2 ITCM/DTCM pack has only 96 B of DTCM slack. */
 static u32 sNdsNativeLuigiFighterDenseNormals[
-    sizeof(sNdsNativeLuigiFighterDenseVertices) /
-        sizeof(sNdsNativeLuigiFighterDenseVertices[0])];
+    NDS_NATIVE_IMAGE_LUIGI_HIGH_DENSE_VERTICES_COUNT];
 static u32 sNdsNativeLuigiFighterDenseNormalsLow[
-    sizeof(sNdsNativeLuigiFighterDenseVerticesLow) /
-        sizeof(sNdsNativeLuigiFighterDenseVerticesLow[0])];
+    NDS_NATIVE_IMAGE_LUIGI_LOW_DENSE_VERTICES_COUNT];
 #endif
 #if NDS_P2_DONKEY
 /* Donkey is another independent dense-ID namespace.  As with Luigi, these are
  * one-time CPU-built/read-only tables in cached main RAM, never DMA endpoints;
  * do not consume the already-packed P2-2 DTCM budget to admit a fighter. */
 static u32 sNdsNativeDonkeyFighterDenseNormals[
-    sizeof(sNdsNativeDonkeyFighterDenseVertices) /
-        sizeof(sNdsNativeDonkeyFighterDenseVertices[0])];
+    NDS_NATIVE_IMAGE_DONKEY_HIGH_DENSE_VERTICES_COUNT];
 static u32 sNdsNativeDonkeyFighterDenseNormalsLow[
-    sizeof(sNdsNativeDonkeyFighterDenseVerticesLow) /
-        sizeof(sNdsNativeDonkeyFighterDenseVerticesLow[0])];
+    NDS_NATIVE_IMAGE_DONKEY_LOW_DENSE_VERTICES_COUNT];
 #endif
 static u8 sNdsNativeFighterDenseNormalsBuilt;
 static u8 sNdsNativeFighterDenseNormalsBuiltLow;

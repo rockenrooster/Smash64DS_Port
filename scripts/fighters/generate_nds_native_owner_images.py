@@ -49,6 +49,7 @@ sys.path.insert(0, str(_HERE))
 
 import generate_nds_native_owners as owners  # noqa: E402
 import _paths  # noqa: E402
+from native_owner_image_arrays import NATIVE_OWNER_IMAGE_ARRAYS  # noqa: E402
 
 
 # The P2-3 owners whose tables this tool moves out of the ARM9 image. Mario and
@@ -62,12 +63,21 @@ def _rows(values: list[str]) -> list[str]:
     return [f"    {value}," for value in values]
 
 
-def _member_values(context: dict[str, object]) -> list[tuple[str, str, list[str]]]:
-    """(C type, member name, initializer rows) for every array in the image.
+def _member_values(
+        context: dict[str, object]) -> list[tuple[str, str, list[str], str]]:
+    """(C type, member name, initializer rows, guard) for every array.
 
     The value formats are the ones `render_p2_owner_runtime_program` already
     emits; keeping them identical is what makes the image byte-comparable
     against the arrays it replaces.
+
+    `guard` is a preprocessor condition (or "" for none) copied from the
+    condition the RUNTIME tables struct uses for that same array. It has to be
+    the same condition, not merely a similar one: an array the runtime does not
+    reference must not be in the image either, or the image carries arena bytes
+    nothing reads, and an array the runtime DOES reference must be present or
+    the arrays cannot be deleted. Both sides read these conditions out of
+    `nds_build_config.h`, so there is one answer per build.
     """
     owner_name = str(context["owner_name"])
     detail = str(context["detail"])
@@ -86,46 +96,102 @@ def _member_values(context: dict[str, object]) -> list[tuple[str, str, list[str]
     run_unique_count = context["run_unique_count"]
     run_unique_dense = context["run_unique_dense"]
     direct_policies = context["direct_epoch_policies"]
+    primitive_streams = context["primitive_streams"]
 
-    members: list[tuple[str, str, list[str]]] = [
+    color_guard = ("!NDS_R2_FIGHTER_HW_LIGHT || "
+                   "NDS_RENDERER_M2_DETAILED_LEDGER")
+
+    members: list[tuple[str, str, list[str], str]] = [
         ("NDSNativeStateDelta", "state_deltas",
          [f"{{ 0x{w0:08x}u, 0x{w1:08x}u, {effect}u, {{ 0u, 0u, 0u }} }}"
-          for w0, w1, effect in state]),
-        ("u8", "state_sequence", [f"{value}u" for value in sequence]),
+          for w0, w1, effect in state], ""),
+        ("u8", "state_sequence", [f"{value}u" for value in sequence], ""),
         ("NDSNativeVertexAction", "vertex_actions",
          [f"{{ {kind}u, {command}u, {index}u, {count}u, "
           f"0x{offset:08x}u, {s}, {t} }}"
-          for kind, command, index, count, offset, s, t in vertex]),
+          for kind, command, index, count, offset, s, t in vertex], ""),
         ("u8", "epoch_direct_policy",
-         [f"0x{value:02x}u" for value in direct_policies]),
+         [f"0x{value:02x}u" for value in direct_policies], ""),
         ("NDSNativeDenseVertex", "dense_vertices",
          ["{{ 0x{:08x}u, {}, {}, {}u, {}u, 0u }}".format(
              rgba, s, t, binding, cache_slot)
-          for x, y, z, s, t, binding, cache_slot, rgba in dense_vertices]),
+          for x, y, z, s, t, binding, cache_slot, rgba in dense_vertices], ""),
         ("u16", "action_dense_spans",
-         [f"0x{value:04x}u" for value in action_dense_spans]),
+         [f"0x{value:04x}u" for value in action_dense_spans], ""),
         ("u16", "dense_color_source",
-         [f"{value}u" for value in dense_color_sources]),
+         [f"{value}u" for value in dense_color_sources], color_guard),
         ("u16", "packed_corners",
-         [f"0x{value:04x}u" for value in packed_corners]),
+         [f"0x{value:04x}u" for value in packed_corners], ""),
         ("u16", "run_first_corner",
-         [f"{value}u" for value in run_first_corner]),
+         [f"{value}u" for value in run_first_corner], ""),
         ("u16", "run_first_unique",
-         [f"{value}u" for value in run_first_unique]),
+         [f"{value}u" for value in run_first_unique], ""),
         ("u8", "run_unique_count",
-         [f"{value}u" for value in run_unique_count]),
+         [f"{value}u" for value in run_unique_count], ""),
         ("u16", "run_unique_dense",
-         [f"{value}u" for value in run_unique_dense]),
-        ("u16", "triangles", [f"0x{value:04x}u" for value in triangles]),
+         [f"{value}u" for value in run_unique_dense], ""),
+        ("u16", "triangles", [f"0x{value:04x}u" for value in triangles], ""),
         ("NDSNativeRun", "runs",
          [f"{{ {first}u, {count}u, {submit_class}u, 0x{mask:08x}u }}"
-          for first, count, submit_class, mask in runs]),
+          for first, count, submit_class, mask in runs], ""),
+    ]
+
+    # Task 56 primitive streams. Both compiled modes are emitted under their
+    # own guard, exactly as `render_p2_owner_runtime_program` emits the arrays:
+    # the mode is a build flag, so which stream is in the image is decided by
+    # the same `nds_build_config.h` the renderer reads.
+    for mode in (1, 2):
+        (run_group_first, run_group_count, group_type,
+         group_first_vertex, group_vertex_count,
+         primitive_vertices) = primitive_streams[mode]
+        guard = f"NDS_TASK56_FIGHTER_PRIMITIVES == {mode}"
+        members += [
+            ("u16", f"primitive_group_first_m{mode}",
+             [f"{value}u" for value in run_group_first], guard),
+            ("u8", f"primitive_group_count_m{mode}",
+             [f"{value}u" for value in run_group_count], guard),
+            ("u8", f"primitive_group_type_m{mode}",
+             [f"{value}u" for value in group_type], guard),
+            ("u16", f"primitive_group_first_vertex_m{mode}",
+             [f"{value}u" for value in group_first_vertex], guard),
+            ("u8", f"primitive_group_vertex_count_m{mode}",
+             [f"{value}u" for value in group_vertex_count], guard),
+            ("u16", f"primitive_vertices_m{mode}",
+             [f"0x{value:04x}u" for value in primitive_vertices], guard),
+        ]
+
+    members += [
         ("NDSNativeEpoch", "epochs",
          ["{{ {}u, {}u, {}u, {}u, {}u, {}u, {}u, {}u, {}u, {}u, {}u, {}u }}".format(*row)
-          for row in epochs]),
+          for row in epochs], ""),
     ]
     del owner_name, detail
     return members
+
+
+def _array_symbol(owner_name: str, detail: str, member: str) -> str:
+    """The in-binary array a member is the image copy of.
+
+    Emitted into the header rather than reconstructed in C so the equivalence
+    check names the arrays by the same rule that produced them. `_m1`/`_m2`
+    mode suffixes are stripped: the runtime arrays are already guarded to a
+    single mode and share one name.
+    """
+    suffix = "Low" if detail == "low" else ""
+    return (f"sNdsNative{owner_name.title()}Fighter"
+            f"{_array_stem(member)}{suffix}")
+
+
+def _array_stem(member: str) -> str:
+    """The owner generator's array-name stem for an image member.
+
+    `_m1`/`_m2` mode suffixes are stripped: the runtime arrays are already
+    guarded to a single Task 56 mode and share one name.
+    """
+    stem = member
+    if stem.endswith("_m1") or stem.endswith("_m2"):
+        stem = stem[:-3]
+    return "".join(part.title() for part in stem.split("_"))
 
 
 def _image_type(owner_name: str, detail: str) -> str:
@@ -145,6 +211,22 @@ def render_header(contexts: dict[tuple[str, str], dict[str, object]]) -> str:
         "#ifndef NDS_NATIVE_FIGHTER_IMAGE_GENERATED_H",
         "#define NDS_NATIVE_FIGHTER_IMAGE_GENERATED_H",
         "",
+        "/* The element types this header builds arrays of, and the build",
+        " * config whose flags decide which arrays exist.  Included here so a",
+        " * translation unit can include this one alone and be correct, and so",
+        " * the image TU and the renderer cannot be compiled against different",
+        " * answers to the same question. */",
+        "#include <nds_build_config.h>",
+        "#include <nds/nds_native_fighter_tables.h>",
+        "",
+        "/* Image owner slots. Dense and independent of the renderer's own",
+        " * owner numbering: only P2-3 owners have images. */",
+    ] + [
+        f"#define NDS_NATIVE_IMAGE_SLOT_{name.upper()} {index}u"
+        for index, name in enumerate(P2_IMAGE_OWNERS)
+    ] + [
+        f"#define NDS_NATIVE_IMAGE_OWNER_SLOTS {len(P2_IMAGE_OWNERS)}u",
+        "",
     ]
     for (owner_name, detail), context in sorted(contexts.items()):
         members = _member_values(context)
@@ -154,16 +236,63 @@ def render_header(contexts: dict[tuple[str, str], dict[str, object]]) -> str:
             f"typedef struct {type_name}",
             "{",
         ]
-        for ctype, name, values in members:
+        for ctype, name, values, guard in members:
+            if guard:
+                lines.append(f"#if {guard}")
             lines.append(f"    {ctype} {name}[{len(values)}];")
+            if guard:
+                lines.append("#endif")
         lines += [
             f"}} {type_name};",
             "",
         ]
-        for ctype, name, values in members:
+        for ctype, name, values, guard in members:
             macro = (f"NDS_NATIVE_IMAGE_{owner_name.upper()}_"
                      f"{detail.upper()}_{name.upper()}_COUNT")
+            if guard:
+                lines.append(f"#if {guard}")
             lines.append(f"#define {macro} {len(values)}u")
+            if guard:
+                lines.append("#endif")
+        lines.append("")
+        # The equivalence list: every member paired with the in-binary array
+        # it is a copy of, generated from the same description that generated
+        # the bytes so there is no hand-written second list to fall out of
+        # step when an array is added.
+        #
+        # A preprocessor directive cannot live inside a macro definition, so a
+        # guarded run of members becomes its OWN macro -- defined empty when
+        # its guard is false -- and the top-level list invokes it in place.
+        base_macro = (f"NDS_NATIVE_IMAGE_{owner_name.upper()}_"
+                      f"{detail.upper()}_MEMBERS")
+        segments: list[tuple[str, list[str]]] = []
+        for _ctype, name, _values, guard in members:
+            row = (f"    X({type_name}, {name}, "
+                   f"{_array_symbol(owner_name, detail, name)})")
+            if segments and segments[-1][0] == guard:
+                segments[-1][1].append(row)
+            else:
+                segments.append((guard, [row]))
+
+        top: list[str] = []
+        for index, (guard, rows) in enumerate(segments):
+            if not guard:
+                top.extend(rows)
+                continue
+            sub = f"{base_macro}_G{index}"
+            lines.append(f"#if {guard}")
+            lines.append(f"#define {sub}(X) \\")
+            for row_index, row in enumerate(rows):
+                tail = "" if row_index == len(rows) - 1 else " \\"
+                lines.append(row + tail)
+            lines.append("#else")
+            lines.append(f"#define {sub}(X)")
+            lines.append("#endif")
+            top.append(f"    {sub}(X)")
+        lines.append(f"#define {base_macro}(X) \\")
+        for row_index, row in enumerate(top):
+            tail = "" if row_index == len(top) - 1 else " \\"
+            lines.append(row + tail)
         lines.append("")
     lines += ["#endif /* NDS_NATIVE_FIGHTER_IMAGE_GENERATED_H */", ""]
     return "\n".join(lines)
@@ -192,18 +321,21 @@ def render_image(owner_name: str, detail: str,
         " * disagree. */",
         "",
         "#include <PR/ultratypes.h>",
-        "#include <nds/nds_native_fighter_tables.h>",
         "#include <nds/generated/nds_native_fighter_image.generated.h>",
         "",
         f"const {type_name} gNdsNative{owner_name.title()}{detail.title()}Image"
         " __attribute__((section(\".fighter_image\"), used)) =",
         "{",
     ]
-    for _ctype, name, values in members:
+    for _ctype, name, values, guard in members:
+        if guard:
+            lines.append(f"#if {guard}")
         lines.append(f"    .{name} =")
         lines.append("    {")
         lines += [f"    {row}" for row in _rows(values)]
         lines.append("    },")
+        if guard:
+            lines.append("#endif")
     lines += ["};", ""]
     return "\n".join(lines)
 
@@ -221,6 +353,24 @@ def main() -> int:
             contexts[(owner_name, detail)] = (
                 owners.build_p2_owner_runtime_context(
                     repo_root, owner_name, detail))
+
+    # The owners generator guards exactly `NATIVE_OWNER_IMAGE_ARRAYS` out of
+    # the ARM9 binary. If this tool's member table ever names a different set,
+    # an array is either duplicated (paying arena for nothing) or absent from
+    # both places (a dangling table pointer in a draw path), so the two views
+    # are compared before anything is written.
+    sample = contexts[(P2_IMAGE_OWNERS[0], DETAILS[0])]
+    described = {
+        _array_stem(name) for _ctype, name, _values, _guard
+        in _member_values(sample)
+    }
+    if described != set(NATIVE_OWNER_IMAGE_ARRAYS):
+        raise SystemExit(
+            "image member table and native_owner_image_arrays disagree:"
+            + "\n  only in member table: "
+            + repr(sorted(described - set(NATIVE_OWNER_IMAGE_ARRAYS)))
+            + "\n  only in shared list:  "
+            + repr(sorted(set(NATIVE_OWNER_IMAGE_ARRAYS) - described)))
 
     products: dict[Path, str] = {
         repo_root / "include" / "nds" / "generated"
@@ -246,7 +396,7 @@ def main() -> int:
     if not args.check:
         for (owner_name, detail), context in sorted(contexts.items()):
             total = 0
-            for ctype, _name, values in _member_values(context):
+            for _ctype, _name, values, _guard in _member_values(context):
                 total += len(values)
             print(f"{owner_name} {detail}: {len(_member_values(context))} "
                   f"arrays, {total} elements")

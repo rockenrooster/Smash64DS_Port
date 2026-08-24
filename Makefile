@@ -558,6 +558,26 @@ ifneq ($(NDS_P2_LUIGI),1)
 $(error NDS_P2_DONKEY=1 requires NDS_P2_LUIGI=1 so native-owner slots stay dense)
 endif
 endif
+# P2-3r4. WHERE A P2-3 OWNER'S GENERATED TABLES LIVE.
+#
+# 1 = NitroFS image (the default, and the only thing that scales): the owner's
+# 21 generated arrays are compiled into a standalone object, objcopied into
+# `nitrofs/fighters/<owner>_<detail>.bin`, and guarded OUT of the ARM9 binary,
+# where each byte costs the taskman arena one byte. The runtime loads only the
+# owners a match actually uses.
+#
+# 0 = the pre-P2-3r4 arrangement, arrays in the binary. Kept because it is the
+# control arm for the byte-equality check and the only way to bisect a
+# suspected loader fault against known-good tables -- not because it is a
+# supported shipping configuration. It does not fit a four-name roster.
+NDS_NATIVE_OWNER_IMAGE ?= 1
+# The proof arm for the flag above. 1 keeps the arrays AND loads the image,
+# then compares them member by member at fighter creation. It is only
+# meaningful with NDS_NATIVE_OWNER_IMAGE=0 -- with the arrays guarded out
+# there is nothing to compare against, and the compare compiles to nothing.
+NDS_NATIVE_OWNER_IMAGE_VERIFY ?= 0
+NDS_NATIVE_OWNER_IMAGE_LUIGI = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P2_LUIGI),0)
+NDS_NATIVE_OWNER_IMAGE_DONKEY = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P2_DONKEY),0)
 # P2-3 focused fighter-production proof selector. -1 leaves the canonical
 # Mario-vs-Fox descriptor byte-for-byte unchanged; a non-negative value is an
 # nFTKind* integer used only for fighter slot 0 in direct-battle proof builds.
@@ -4348,6 +4368,9 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_R2_BOTH_CPU $(NDS_R2_BOTH_CPU)'; \
 		echo '#define NDS_P2_FOUR_CPU_STRESS $(NDS_P2_FOUR_CPU_STRESS)'; \
 		echo '#define NDS_P2_LUIGI $(NDS_P2_LUIGI)'; \
+		echo '#define NDS_NATIVE_OWNER_IMAGE_LUIGI $(NDS_NATIVE_OWNER_IMAGE_LUIGI)'; \
+		echo '#define NDS_NATIVE_OWNER_IMAGE_DONKEY $(NDS_NATIVE_OWNER_IMAGE_DONKEY)'; \
+		echo '#define NDS_NATIVE_OWNER_IMAGE_VERIFY $(NDS_NATIVE_OWNER_IMAGE_VERIFY)'; \
 		echo '#define NDS_P2_DONKEY $(NDS_P2_DONKEY)'; \
 		echo '#define NDS_P2_PROOF_FIGHTER0 $(NDS_P2_PROOF_FIGHTER0)'; \
 		echo '#define NDS_R2_SOAK_MATCH_MINUTES $(NDS_R2_SOAK_MATCH_MINUTES)'; \

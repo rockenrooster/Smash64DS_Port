@@ -1267,6 +1267,18 @@ extern volatile u32 gNdsEntryEffectNativeFallbackCount;
 extern volatile u32 gNdsEntryEffectNativeTexturePrepareCount;
 extern volatile u32 gNdsEntryEffectNativeTextureBindCount;
 extern volatile u32 gNdsEntryEffectNativeRootDraws[10];
+/* P2-3r4: NitroFS-resident native-owner tables. Ensure loads one owner's
+ * image for the current scene (call from fighter CREATION, never a draw);
+ * Verify compares it against the arrays while both still exist. */
+s32 ndsRendererNativeEnsureOwnerImage(u32 owner_slot, u32 use_low_detail);
+#if NDS_NATIVE_OWNER_IMAGE_VERIFY
+s32 ndsRendererNativeVerifyOwnerImage(u32 owner_slot, u32 use_low_detail);
+#endif
+extern volatile u32 gNdsNativeOwnerImageLoadCount;
+extern volatile u32 gNdsNativeOwnerImageFailCount;
+extern volatile u32 gNdsNativeOwnerImageBytes;
+extern volatile u32 gNdsNativeOwnerImageMatchCount;
+extern volatile u32 gNdsNativeOwnerImageMismatchCount;
 
 s32 ndsRendererMtxCellS16p16(const Mtx *mtx, u32 row, u32 col);
 void ndsRendererMtxLoadN64ToDS20p12(const Mtx *src,

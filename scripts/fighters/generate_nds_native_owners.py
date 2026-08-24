@@ -25,6 +25,10 @@ if str(_scripts_root) not in _sys.path:
     _sys.path.insert(0, str(_scripts_root))
 import _paths  # noqa: E402  -- puts every scripts/ area folder on sys.path
 
+# The single list of arrays that ship as a NitroFS image, shared with
+# generate_nds_native_owner_images.py so the two cannot disagree.
+from native_owner_image_arrays import NATIVE_OWNER_IMAGE_ARRAYS  # noqa: E402
+
 import generate_nds_native_stage as stage_manifest
 
 
@@ -2681,6 +2685,28 @@ def render_p2_owner_runtime_program(
     light_preambles = context["light_preambles"]
     light_indices = context["light_preamble_indices"]
     asset_data_size = int(context["asset_data_size"])
+
+    # ARRAYS THE IMAGE CARRIES MUST NOT ALSO BE IN THE BINARY.
+    #
+    # Board row P2-3r4 moves a P2-3 owner's generated tables into a NitroFS
+    # image because the ARM9 binary costs the taskman arena one byte for one
+    # byte. Moving them is only a saving if the binary stops containing them,
+    # so every imaged array is emitted under this owner's image guard. The
+    # guard is applied HERE, at the single emission choke point, rather than at
+    # twenty-one call sites: adding an array to the image then means adding one
+    # name to `native_owner_image_arrays`, not remembering twenty-two places.
+    _emit_rows = globals()["emit_rows"]
+    _image_guard = f"NDS_NATIVE_OWNER_IMAGE_{owner_name.upper()}"
+
+    def emit_rows(type_name, name, rows, const=True, attribute=""):
+        out = _emit_rows(type_name, name, rows, const=const,
+                         attribute=attribute)
+        base = name[len(stem):] if name.startswith(stem) else ""
+        if suffix and base.endswith(suffix):
+            base = base[:-len(suffix)]
+        if base in NATIVE_OWNER_IMAGE_ARRAYS:
+            return [f"#if !{_image_guard}"] + out + ["#endif", ""]
+        return out
 
     lines = [
         f"/* P2-3 {owner_title} {detail} native-owner program. */",
