@@ -5338,34 +5338,12 @@ typedef struct NDSRendererTraversalState
 #define NDS_NATIVE_GX_MATRIX_SLOT_MAX 30u
 #define NDS_NATIVE_SOURCE_GEOM_CULL_FRONT 0x00001000u
 #define NDS_NATIVE_SOURCE_GEOM_CULL_BACK 0x00002000u
-typedef struct NDSNativeStateDelta
-{
-    u32 w0;
-    u32 w1;
-    u8 effect;
-    u8 reserved[3];
-} NDSNativeStateDelta;
+/* P2-3r4: the ungated table ELEMENT types moved to a shared header so the
+ * generated owner images and this renderer cannot disagree about their
+ * layout. `NDSNativePreparedDenseVertex` stays below: it is build-gated
+ * draw scratch, never image content. */
+#include <nds/nds_native_fighter_tables.h>
 
-typedef struct NDSNativeVertexAction
-{
-    u8 kind;
-    u8 command_index;
-    u8 index;
-    u8 count;
-    u32 source_offset;
-    s16 s;
-    s16 t;
-} NDSNativeVertexAction;
-
-typedef struct NDSNativeDenseVertex
-{
-    u32 rgba;
-    s16 s;
-    s16 t;
-    u8 matrix_binding;
-    u8 cache_slot;
-    u16 reserved;
-} NDSNativeDenseVertex;
 
 #if NDS_RENDERER_PROFILE_LEVEL < 2
 /* R2-03 E29. Under NDS_R2_FIGHTER_HW_LIGHT the geometry engine lights the
@@ -5392,29 +5370,6 @@ typedef struct NDSNativePreparedDenseVertex
 } NDSNativePreparedDenseVertex;
 #endif
 
-typedef struct NDSNativeRun
-{
-    u16 first_triangle;
-    u8 triangle_count;
-    u8 submit_class;
-    u32 required_mask;
-} NDSNativeRun;
-
-typedef struct NDSNativeEpoch
-{
-    u16 before_state_first;
-    u16 after_state_first;
-    u16 first_action;
-    u16 first_run;
-    u8 before_state_count;
-    u8 after_state_count;
-    u8 before_sync_count;
-    u8 after_sync_count;
-    u8 action_count;
-    u8 run_count;
-    u8 material_slot;
-    u8 first_triangle_command_index;
-} NDSNativeEpoch;
 
 typedef struct NDSNativeRoot
 {
