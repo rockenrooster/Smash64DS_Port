@@ -86,17 +86,18 @@ their owner visual/play residuals; P2-3 is the active implementation frontier.
    HUD presentation, Team Battle feel and Results/Sudden Death presentation.
    Do not claim the owner accepted those until they actually do.
 3. **P2-3 is active.** Luigi's production path is landed and he ANIMATES
-   (P2-3r2 fixed 2026-08-23: the scaled player was an empty stub; one shared
-   always_inline body now serves both players). The bounded fast proof route
-   is repaired end-to-end and **kind −1 is GREEN** (board row P2-3r3 carries
-   the whole chain: null-page DL-span abort guard, bounded frame-diagnostics
-   publish, battlepack isolation-control pin, grab pass-drive,
-   arrival-by-contact, bounded-scoped verifier arms). **Donkey Kong's two
-   live blockers are precisely rooted on that row:** the bounded route
-   maintains no fighter FTParts transform cache (draw-time-filled; the
-   capture draws no fighters; kind −1 passes by stale-position luck — fix
-   design on the row), and realtime DK parks forever in the Dokan pipe entry
-   (no staged DK entry). Keep admission fighter-by-fighter.
+   (P2-3r2). The bounded fast proof route is repaired end-to-end and **both
+   bounded proofs are GREEN on one tree (`9c412271f0f`, 2026-08-23): kind 2
+   (full DK moveset, Giant Punch/Spinning Kong/Hand Slap, blaster
+   projectile, driven KO, mask 0x7ffff, retries 0) and kind −1 (reflector
+   0xff, specials 0xfff).** The stall was never collision (board row P2-3r3
+   has the five-step chain: attacker facing, reflector slot collapse,
+   same-update laser lifetime, accidental-KO skip, frozen top-HUD stock
+   sampling). **DK's one live blocker is realtime:** status 68 re-decoded as
+   nFTCommonStatusDownBounceU (knockdown bounce — NOT Dokan; the old note
+   misread the enum). Rebuild the realtime DK ROM on this tree and
+   re-observe; suspect DK's DownBounce anim-end never fires. Keep admission
+   fighter-by-fighter.
 4. **Performance remains debt; the structural cut is landed and default-on
    (board rows P2-2p1..p4, promoted 2026-08-23, Boundary GREEN on the
    promoted tree).** Four-CPU arm before: `WORK-H` P50/P95 1,600,832 /
