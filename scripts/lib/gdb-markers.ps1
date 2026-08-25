@@ -147,6 +147,30 @@ function Invoke-GdbMarkerScript {
                ($multiline[0] -replace "[`r`n]+", ' | ') + "'")
     }
 
+    # A WATCHPOINT IS A HANG ON THIS TARGET, NOT A SLOW PROBE.
+    #
+    # melonDS's GDB stub exposes no hardware watchpoint. gdb does not refuse
+    # `watch`; it silently falls back to a SOFTWARE watchpoint, which it
+    # implements by single-stepping the guest and re-reading the expression
+    # after every instruction. An ARM9 running a DS frame makes no measurable
+    # progress that way -- the run produces no output at all and dies at its
+    # ceiling, which reads exactly like the DLDI-corruption abort and like an
+    # arm that is merely slow. Cost a 10-minute probe on 2026-08-25 looking for
+    # where gNdsAudioBgmSeamMissCount was incremented.
+    #
+    # Bracket with breakpoints instead: stop either side of the suspect region
+    # and print the counter at each, which is what actually localised that one
+    # (ndsMNPlayersVSPreviewInit enter/exit on both character-select entries).
+    # Rejected here rather than documented, so the wrong form is inexpressible.
+    $watchpoints = @($Commands | Where-Object { $_ -match '^\s*[ar]?watch\s' })
+    if ($watchpoints.Count -gt 0) {
+        throw ("GDB watchpoint '" + $watchpoints[0] + "' cannot be used " +
+               'against melonDS: the stub has no hardware watchpoint, gdb ' +
+               'falls back to a software one, and single-stepping the guest ' +
+               'makes the run exit by timeout with no output. Bracket the ' +
+               'suspect region with breakpoints and print the value at each.')
+    }
+
     $interactive = -not [string]::IsNullOrWhiteSpace($ReadyFile)
     if (($InteractiveSteps.Count -ne 0) -and (-not $interactive)) {
         throw 'Interactive GDB steps require a ready-file path.'
