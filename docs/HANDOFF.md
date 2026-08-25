@@ -1,17 +1,15 @@
 # Handoff
 
-Current: 2026-08-25 — **THE TWO FIGHTER-SHAPED STATIC CHECKERS ARE GREEN AND IN
-BOUNDARY** (rows P2-3f1/f3), and each found a real defect on the way:
-`check-architecture.ps1` was terminating on its FIRST `Write-Error` under
-`$ErrorActionPreference='Stop'`, hiding a second failure behind the one three
-docs recorded; `check-decomp-header-mirror.py` could not fold a single
-per-fighter status enum, which is why Captain's and Link's Attack100 ordinals
-sat one low. **Luigi had no entry at all** (P2-3f2): `ftCommonAppearSetStatus`
-dropped him into `EntryNull` while the renderer's Luigi pipe arm already
-existed. **Captain Falcon pipeline slice 1 is landed** (P2-3f4) — the manifest
-generalised on one tuple entry; his native model is BLOCKED on an alpha-test
-decoder extension, see `docs/p2/fighters/falcon.md`. Earlier: stress arm on the
-four landed kinds (P2-3r15), Stock last-stock (P2-3r14), DK cargo (P2-3r10).
+Current: 2026-08-25 — **CAPTAIN FALCON'S NAMED NATIVE-MODEL BLOCKER IS CLOSED
+AND HIS RUNTIME SLICE IS LANDED** behind `NDS_P2_CAPTAIN` (rows P2-3f5/f6). The
+blocker was two `SOURCE_STATE_EFFECTS` entries: `G_SETOTHERMODE_L` needed no
+runtime code at all (`ndsRendererRecordOtherMode` has always dispatched on the
+opcode byte) and `G_SETBLENDCOLOR` needed one `case`, because the DS answer —
+`glAlphaFunc(blend_color.a >> 4)` on `G_AC_THRESHOLD` — was already wired.
+**He is NOT selectable and no shipped build sets the flag**; `falcon.md` orders
+what is left. `check-docs.ps1` now runs inside `verify-all`. Earlier: the two
+fighter-shaped static checkers greened and entered Boundary (P2-3f1/f3), Luigi
+got his entry back (P2-3f2), stress arm on the four landed kinds (P2-3r15).
 
 ## State
 
@@ -48,9 +46,8 @@ four landed kinds (P2-3r15), Stock last-stock (P2-3r14), DK cargo (P2-3r10).
   shell target is selected by a `-P2ShellFlow` branch beside it, not instead of
   it.
 - **P1 stays frozen.** `smash64ds-battle-playable-hwtri.nds`, 12,530,688 B,
-  SHA-256 `576F51ED…E723`. Nothing routine rebuilds it, and this row did not
-  touch it. (The board's old standing-rule pin of `2F47C8AC…CB2F` named a
-  different build and is retired.)
+  SHA-256 `576F51ED…E723`. Nothing routine rebuilds it. (The board's retired
+  `2F47C8AC…CB2F` pin named a different build.)
 
 ## Next
 
@@ -130,17 +127,20 @@ four landed kinds (P2-3r15), Stock last-stock (P2-3r14), DK cargo (P2-3r10).
    with code placement** — an unrelated few-instruction change flipped this arm
    from green to red and back, which is why it is bracketed, not tuned.
 
-4. **Captain Falcon is roster #3 and slice 1 is landed** (P2-3f4).
-   `docs/p2/fighters/falcon.md` carries the complete law-7 inventory (160
-   NitroFS resources, 152 animations, 19 statuses, 19 item motions, the audio
-   name list, six costume indices) and the remainder in dependency order.
-   **The next step is item 1 there and it is a real pipeline extension, not a
-   fighter task:** Falcon's high-detail model is the first to use
-   `G_SETOTHERMODE_L` (0xE2, one alpha-tested surface) and `G_SETBLENDCOLOR`
-   (0xF9); `generate_nds_native_owners.py` models neither and raises
-   `unsupported control opcode 0xe2`. The low-detail model already decodes
-   clean with the five pins recorded there. Do not start the runtime slice
-   before the model lands — nothing can create him without an owner slot.
+4. **Captain Falcon is roster #3; slices 1 and 2 are landed** (P2-3f4/f5).
+   `docs/p2/fighters/falcon.md` carries the law-7 inventory, what landed, and
+   the remainder in dependency order. Landed: the two model opcodes, the
+   `NDS_P2_CAPTAIN` flag, his status table, `ftcaptainspecialn/lw/hi.c`, Falcon
+   Dive's victim TU, the two `mpcommon` seams, and his two-status entry ladder —
+   all verified strong on the linked ELF, none of it in any shipped build.
+   **Next is falcon.md item 1 (native OWNER: cross-binding slots, GX plan
+   counts, census, images) then item 2 (the ~40 `#if NDS_P2_DONKEY` admission
+   sites + an arena measurement).** Two open questions live there: the port's
+   `mpCommonProcFighterProject` diverges from the source at a SHARED seam, and
+   `gFTDataCaptainMainMotion` is NULL until the admission row loads his assets.
+   **Rail from this row: a weak twin beside a strong body is CORRECT** — the
+   imported dispatch tables name every fighter's setter unconditionally, so the
+   twin must survive for flag-off builds; check `nm`, never `src/`.
    **P2-3 background:** Luigi ANIMATES (P2-3r2) and now enters through his pipe
    (P2-3f2). **DK's one open realtime suspicion:** status 68 is
    nFTCommonStatusDownBounceU (knockdown bounce — NOT Dokan); re-observe on a
@@ -162,12 +162,13 @@ four landed kinds (P2-3r15), Stock last-stock (P2-3r14), DK cargo (P2-3r10).
 
 ## Standing operational facts
 
-- **Republish the free-play ROM after every fix batch** (owner, 2026-08-22): a plain
-  `make TARGET=smash64ds` writes the root `smash64ds.nds` (human input, walk
-  compiled out, flag-identical to the gate's shell config, four-name roster).
-  Current: **17,012,736 B, SHA-256 `5B962053…F579`** (2026-08-25, carries
-  P2-3r14 + P2-3r16). `NDS_P2_FOUR_CPU_ROSTER` is 0 there — the P2-3r15 default
-  applies to the stress target only and does not reach the shipped ROM.
+- **Republish the free-play ROM after every fix batch** (owner, 2026-08-22): plain
+  `make TARGET=smash64ds` writes root `smash64ds.nds` (human input, walk compiled
+  out, flag-identical to the gate's shell config, four-name roster). Current:
+  **17,013,760 B, SHA-256 `069BFD64…9BC4`** (2026-08-25, adds P2-3f5/f6/f7);
+  `NDS_P2_FOUR_CPU_ROSTER` and `NDS_P2_CAPTAIN` are 0 there. **Boundary does NOT
+  build this target** — rebuild by hand, and `rm` the root `.elf`/`.nds` pair
+  first if a lab build wrote them.
 - Clean checkout builds through `build.ps1`, not bare `make` (four of six
   `.inc` are gitignored). Never pass `-j`, never override `MAKEFLAGS`, one
   build at a time.
@@ -179,8 +180,7 @@ four landed kinds (P2-3r15), Stock last-stock (P2-3r14), DK cargo (P2-3r10).
 - `gNdsMenuShellWalkBudget` makes the lap count a runtime poke: one ROM serves a smoke and a soak.
 - **The shell walk costs ~69 s before the battle starts** — 4,118 presented
   frames at 60 Hz (banked: `artifacts/verification/2026-08-19_p2-shell.txt`).
-  Every wait in the battle arm is a *guest* anchor, not wall-clock, so this
-  costs the arm only time; its GDB capture ceiling is 600 s for that reason.
+  Every wait in the battle arm is a *guest* anchor, so this costs only time.
 - The shell's own character/stage select commits the mode-163 descriptor
   (`CSSLIVE`: Mario human, Fox CPU, Time mode, Dream Land), read back out of the
   live battle state — the evidence the rebased arm verifies the same fight.

@@ -1,0 +1,60 @@
+verify-all.ps1 -Profile Boundary -- 2026-08-25, rows P2-3f5/f6/f7. EXIT 0.
+Full driver stream was 2,562 lines / 177,452 B; this is the extract.
+
+CAPTURE: the whole PROCESS was redirected (Start-Process
+-RedirectStandardOutput), not tee'd -- Invoke-VerifyScriptOnce replays each
+child verifier with [Console]::Out.Write, which bypasses the PowerShell
+pipeline, so a Tee-Object capture of this profile is five lines long.
+
+Exception: lines over the whole stream: 0
+
+--- static block (seven now; check-docs.ps1 is new this batch, row P2-3f6) ---
+1:Toolchain usable: recursive make OK, DEVKITPRO=C:/devkitPro DEVKITARM=C:/devkitPro/devkitARM
+3:DECOMP_PRISTINE=PASS pinned_historical_files=10 ds_markers=0 decomp_patch_pipeline=absent
+88:GBI decode fixtures passed: F3DEX2 VTX/TRI/MTX/POPMTX packing, F3DEX MVP-recalc matrix move-word packing, transformed and hardware raw/material triangle readiness, N64 matrix to DS 20.12 modelview-projection/modelview-stack vertex transform, wallpaper inverse/overlap oracle, and source snippets verified.
+89:Docs check passed: docs=24, registryEntries=6, AGENTS.md=197 lines.
+92:Architecture check passed: imports=131, registryEntries=6, warnings=2.
+95:OK: every shared name agrees.
+97:Particle bank pack passed: 93/119 reachable efcommon scripts, 34/47 textures, 262992 B N64 texture -> 175140 B DS, 12195 B linked (10912 script bank + 1283 index) of 210320 B arena headroom (198125 B spare) plus 175264 B NitroFS payload, 9 bit-exact CI4 textures, linear texel order pinned, .inc built, payload built, quad atlas 4x 128x64 A3I5, 34/38 textures in 34 frames (frame cap 1, cell cap 64) built; Whispy native 1520 B A5I3/A3I5/PAL16 (one lossless static leaf frame).
+255:fighter production manifest check passed: D:\Stuff\DevFolder\Smash64DS_Port\scripts\fighters\fighter_production_manifest.json
+256:fighter production make-fragment check passed: D:\Stuff\DevFolder\Smash64DS_Port\scripts\fighters\fighter_production_files.mk
+257:fighter production runtime-header check passed: D:\Stuff\DevFolder\Smash64DS_Port\include\nds\generated\nds_fighter_production.generated.h
+259:Harness registry check passed: 3 harness mappings, 6 verifier scripts, 0 drift.
+260:Running verifier: p2_shell_loop [verify-p2-shell-loop.ps1]
+274:LOOPDONE: budget=1 denied=1 dwell=2 enters=11 exits=11 input=75 mism=0 posefull=0 press=52 rej=0 rematch=1 resb=16392 sd=1 steps=77 trans=7 unreg=1 walkloops=1 winf=1 winm=0
+284:HIGHWATER Title      kind= 1 n=  1 min=506736 max=506736 spread=0
+285:HIGHWATER ModeSelect kind= 7 n=  1 min=248992 max=248992 spread=0
+286:HIGHWATER VSMode     kind= 9 n=  1 min=387928 max=387928 spread=0
+287:HIGHWATER PlayersVS  kind=16 n=  2 min=608380 max=608380 spread=0
+288:HIGHWATER Maps       kind=21 n=  2 min=154800 max=154800 spread=0
+289:HIGHWATER VSBattle   kind=22 n=  2 min=1422760 max=1428984 spread=6224
+291:HIGHWATER VSResults  kind=24 n=  1 min=1365308 max=1365308 spread=0
+293:HIGHWATER Startup    kind=27 n=  1 min=160284 max=160284 spread=0
+294:ARENA FREE FLOOR: 258568 B (minimum required 32768)
+295:LAP PATTERN: 5 looped entries from entry 6, exact; 1 Sudden Death re-entries
+296:SUDDEN DEATH: ring=1 prepared=1
+298:P2 shell loop verifier passed: 1 laps, 11 scene entries, per-kind high-waters flat, free floor 258568 B, zero faults.
+299:Running verifier: p2_battle_realtime [verify-battle-playable-realtime-harness.ps1]
+486:battle_playable Pupupu realtime pacing smoke passed: frames=212 fps=282/561 ticks=251751168 rprof=0 gxram=477/1126 gxstat=0x6000000/ctrl=0x19 ftrContract=49382/49382/geom0x222005/cycle0x100000/rm0xc4112078/light3123/3123/bounds301/0 ftrTri=81270/p0476116/p1474606/own259 oracle=0/0/0 batch=103/725/103/texprep49/725 wallCache=1/0/1/fb0/src300x220/66000/ticks2731584/2243648 wallFinal=direct1/skip0/change1/px49152/stage0/0/bg20/0/98304/bg30/0/0 mtx=load99/scale0/p0,0,0,0/mv0,0,0,0,0,0 submit=raw658/snap0/cross44/noz126/dec0/prim0/range0/rej0/div1152 lazy=load519/xf0/hit0/new0/reuse0/ovf0 rawcand=658/0/44 postest=0/0/e0/w0/c0/mw0/drop0 vraw=0..0/0..0/0..0 vhw=0..0/0..0/0..0 depth=stage0:0..0/p00:0..0/p10:0 clip=0 texProof=0/0/0 sample=0/0/0 alias=0 st=32767..-32768/32767..-32768 texUse=0/0/0/0/0/impl0/first0x0/flags0x0/w0x0/w1x0/geom0x0 texFmt=conv0x0/bind0x0/pal0x0/rej0x0/why0x0 texLane=layout0x0/byte0/half0/bFmt0x0/hFmt0x0/bMap0x0/hMap0x0 stageCarry=42/42/tex32/tile34/short6/6/seg3 stageAcct=frames211/boot42,202/weapon0,0/terminal0 combine=0/0/lit0/mat0/proj126 light=0/0/0 profile=present867584/draw387648/stage0/mat0/dl0/tex0/conv0/upload0 texUploads=0/0 binds=55 vtx=2484 tri=828 texDirect=0 intrinsicM3=9/121/828 intrinsicM4=24/61696/hits646/fence0 water=2/0/1 fastWall=state2/seed1/1/0/degraded0/seedTicks0/queue0/apply0/skip0/clamp0/0/0/invalid0/reuse0/affine0/post0/0/hash0xa2dcc88d/opaque49152/restore0 texHash=0/0/0/0/0 cpu=setup1/proc33/target33/stick4/obj0x4 aobj32=228/2043/reuse208/fail0
+487:Published ROM contract passed: smash64ds-battle-playable-hwtri.nds, smash64ds.nds
+520:Running verifier: p2_fourcpu_stress [verify-p2-four-fighter-stress.ps1]
+2561:P2-2 four-CPU standing stress passed its correctness, cadence, native-owner, and memory gates.
+2562:Boundary verification profile passed.
+
+NOTE on line 487: `check-published-roms.ps1` checks the published ROMs' CONTRACT,
+not their build flags, and at that moment the root smash64ds.nds was still the
+NDS_P2_CAPTAIN=1 lab build this batch made earlier. It passed anyway. Do not read
+that line as "the shipped ROM is verified"; the rebuild below is what does that.
+
+--- published ROM rebuilt afterwards, from the plain target ---
+Boundary builds none of its arms as TARGET=smash64ds, so the published ROM is
+a separate hand-run build on this same verified tree:
+  make TARGET=smash64ds        (root .elf/.nds pair removed first)
+  smash64ds.nds  17,013,760 B
+  SHA-256 069BFD64B4B4FB41DDB645F96D3A2CE2F561C0BF39273E6BD164E85D3C9A9BC4
+  builds/build/nds_build_config.h: NDS_P2_CAPTAIN 0, NDS_P2_LUIGI 1,
+                                   NDS_P2_DONKEY 1, NDS_P2_MENU_WALK 0u,
+                                   NDS_P2_FOUR_CPU_ROSTER 0
+  nm smash64ds.elf: ftCaptainSpecialNSetStatus is 'W' again (weak stub),
+                    ftCommonCaptureCaptainProcPhysics is 'W' again.
+  check-published-roms.ps1: passed.

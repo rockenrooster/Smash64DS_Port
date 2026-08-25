@@ -26,4 +26,3 @@ writes the screen on every transition (nds_menu_shell.c:4511), so the line was
 dirty with the CPU's own pre-poke copy and the next eviction wrote all 32
 bytes back over gdb's word. Nothing else in this run was wrong: arena free
 floor 258,568 B, 11 scene entries, high-waters flat, lap pattern exact.
-
