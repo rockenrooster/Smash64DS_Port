@@ -4834,6 +4834,28 @@ $(OUTPUT).elf: $(OFILES) $(NDS_PRIVATE_CHECK_OFILES) \
 	$(if $(filter 1,$(NDS_P2_UI_KIT)),$(NDS_MN_UI_KIT_INC) \
 		$(NDS_MN_TITLE_ANIM_INC))
 $(OFILES) $(NDS_PRIVATE_CHECK_OFILES): $(PROJECT_ROOT)/Makefile $(NDS_BUILD_CONFIG) $(NDS_FTANIM_TRACK_PREREQ)
+# EVERY OBJECT THAT INCLUDES A GENERATED HEADER NAMES IT HERE, AND THE .d FILE
+# IS NOT A SUBSTITUTE. The rules above spell these paths with $(PROJECT_ROOT),
+# which MSYS make expands to `/d/Stuff/...`, while gcc -MMD writes
+# `D:/Stuff/...` into the .d -- two DIFFERENT nodes in make's graph, so the .d
+# edge carries no ordering. Builds are parallel, so the generator and the
+# compile of its consumer are siblings under $(OUTPUT).elf and race.
+#
+# MEASURED, 2026-08-25 (row P2-3f8): a UI-kit bake change produced
+# mn_surfaces.bin and mn_ui_kit.generated.inc at 12:23 while nds_ui_kit.o
+# stayed at 12:14, and the ROM linked from them failed p2_shell_loop with
+# `BACKDROP SURFACES: mismatch=145` -- the stale metric table's per-surface
+# FNV against the fresh pack. The very next `make` with no source change
+# recompiled the file, which is the proof it was an ordering race and not a
+# bad bake. The failure mode is silent wrong art whenever the runtime does
+# not happen to hash-check the asset, so add a line here with any new
+# generated include rather than trusting -MMD.
+nds_ui_kit.o: $(NDS_MN_UI_KIT_INC) $(NDS_MN_TITLE_ANIM_INC)
+nds_menu_shell.o: $(NDS_MN_UI_KIT_INC)
+nds_battle_hud.o: $(NDS_BATTLE_HUD_INC)
+battle_playable_static_textures.o: $(NDS_BATTLE_STATIC_TEXTURE_INC)
+nds_particle_banks.o: $(NDS_PARTICLE_BANKS_INC)
+nds_renderer.o: $(NDS_ENTRY_EFFECT_INC) $(NDS_PARTICLE_BANKS_INC)
 # The outer build exports NDS_NITROFS_RELOC_FILES so the recursive inner make
 # receives the exact ROM prerequisite inventory.  P2-3's staged fighter banks
 # make that one variable roughly 72 KiB; together with the normal build
