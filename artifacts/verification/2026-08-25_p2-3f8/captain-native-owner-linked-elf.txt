@@ -1,0 +1,73 @@
+P2-3f8 -- Captain Falcon's native owner on the linked ELF, and the byte-identity
+control for the two owners already landed.
+
+Build: make TARGET=smash64ds BUILD=build-p2-3f8-captain NDS_P2_CAPTAIN=1
+       (and later the roster-3 shell targets, which carry the same owner).
+
+--- Owner symbols present and strong (arm-none-eabi-nm -S) ---------------------
+020e82b4 00000011 t sNdsNativeCaptainCrossPaletteSlots
+020e8170 00000011 t sNdsNativeCaptainCrossPaletteSlotsLow
+021a44b8 00000078 b sNdsNativeCaptainFighterHighTables
+021a4440 00000078 b sNdsNativeCaptainFighterLowTables
+021061fc 00000da4 d sNdsNativeCaptainFighterPreparedDense
+02105860 0000099c d sNdsNativeCaptainFighterPreparedDenseLow
+020e0150 0000001c t sNdsNativeCaptainHighOwner
+020e0134 0000001c t sNdsNativeCaptainLowOwner
+020e8294 00000020 t sNdsNativeCaptainRootLightPreambles
+020e8184 00000110 t sNdsNativeCaptainRoots
+020e8060 00000110 t sNdsNativeCaptainRootsLow
+
+  sNdsNativeCaptainRootLightPreambles is 0x20 = 4 entries of 2 u32 -- the UNION
+  of the high and low preamble sets, which is the point: the low model's root 6
+  carries 0xffffff00 / 0x804c3300 and the high model never emits it. The two
+  Tables structs are `b` (bss) because NDS_NATIVE_OWNER_IMAGE_CAPTAIN=1 fills
+  them from the NitroFS image at fighter creation.
+
+  CrossPaletteSlots is 17 bytes of 0x1f (PACKED_GX_SLOT_CURRENT) in BOTH
+  details: Falcon claims no physical palette slot at all.
+
+--- Staged NitroFS images ------------------------------------------------------
+  captain_high.bin  10,908 B
+  captain_low.bin    7,892 B      total 18,800 B
+  donkey_high.bin   12,140 B  donkey_low.bin  8,060 B   (20,200 B)
+  luigi_high.bin     9,552 B  luigi_low.bin   6,524 B   (16,076 B)
+
+--- Control: the landed owners are byte-unchanged ------------------------------
+  Diff of the regenerated src/nds/nds_native_fighter_owner.generated.inc against
+  the pre-change file, restricted to everything before the `#if NDS_P2_CAPTAIN`
+  block: FIVE diff lines, all of them one added blank separator line.
+
+    @@ -51867 +51867,2 @@
+     #endif  /* NDS_P2_DONKEY */
+    +
+
+  So the high/low preamble UNION changed nothing for Luigi or Donkey (their two
+  sets are already equal), and `generate_nds_native_owners.py --check` and
+  `generate_nds_native_owner_images.py --check` both pass.
+
+--- Geometry oracle (scripts/fighters/check_native_owner_geometry_closure.py) --
+captain high:
+  source closure: 17 roots, 319 source triangles, 319 in tables
+  vertex closure: 957 corners carry their own source position, texcoord, normal
+  matrix-routing closure: 957 corners routed to their own joint's GX palette slot
+  facing closure: 319 single-binding triangles face the way their own vertex
+                  normals do        <-- ALL 319: there are no cross-binding ones
+  winding closure: 0 inconsistently wound shared edges
+  primitive closure mode 1: 875 vertex submissions in 278 groups, 319 of 319
+  primitive closure mode 2: 485 vertex submissions in  83 groups, 319 of 319
+captain low:
+  source closure: 17 roots, 200 source triangles, 200 in tables
+  vertex closure: 600 corners carry their own source position, texcoord, normal
+  matrix-routing closure: 600 corners routed to their own joint's GX palette slot
+  facing closure: 200 single-binding triangles face the way their own normals do
+  winding closure: 0 inconsistently wound shared edges
+  primitive closure mode 1: 552 vertex submissions in 176 groups, 200 of 200
+  primitive closure mode 2: 314 vertex submissions in  57 groups, 200 of 200
+NATIVE_OWNER_GEOMETRY_CLOSURE_OK (all five owners, both details)
+
+--- Census pins, 13 fields ------------------------------------------------------
+  high (87, 254, 34, 319, 34, 34, 17, 291, 957, 0, 68, 6, 0)
+  low  (73, 223, 30, 200, 30, 30, 17, 205, 600, 0, 68, 4, 0)
+  = state deltas, sequence, vertex actions, triangles, runs, epochs, roots,
+    dense vertices, dense corners, CROSS RUNS, root-prefix light commands,
+    intra-root light commands, GX restores.

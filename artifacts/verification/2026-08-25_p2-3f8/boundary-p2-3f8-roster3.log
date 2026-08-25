@@ -1,0 +1,2783 @@
+Toolchain usable: recursive make OK, DEVKITPRO=C:/devkitPro DEVKITARM=C:/devkitPro/devkitARM
+BattleShip reference verified: pinned pristine source and ROM-derived payloads all present.
+DECOMP_PRISTINE=PASS pinned_historical_files=10 ds_markers=0 decomp_patch_pipeline=absent
+M3_NATIVE_STAGE_CHECK_OK callbacks=8 dobjs=57 bindings=42 runs=54 epochs=49 triangles=202 cross_matrix_runs=5 cross_matrix_triangles=10 cross_matrix_foreign_corners=15 state_deltas=148 state_events=423 replay_commands=886 fail_closed_perturbations=12 manifest_fields=618 task26_manifest_fields=120 segment0_program_runs=26 segment0_program_bytes=92 segment0_source_checksum=0x47c2c19d segment0_table_checksum=0xcea1ff03 segment0_hot_checksum=0x54327dfb segment0_prepared_dense_checksum=0xf1c6fadc slab_bytes=12663 total_const_max_bytes=12755 sha256=eda2dbd6ee323c3eb33a323be46b61676d2f63057e315e6f288537f76555942c
+R2-03 E64b/E65 fixed-point cubic -- host error bound vs the decomp float
+  gameplay bound 0.0200 world units / radians
+
+  domain          samples   max|err|        rms       bias steepness gate
+  rotation        1689984   0.002842   0.000507  +0.000001       3.0 green
+  translation     2300256   0.006702   0.000679  +0.000002     173.3 green
+  conservative    1597400   0.043198   0.003078  +0.000005    2293.3 (reported)
+  rotation-Q      1689984   0.002842   0.000507  +0.000001       3.0 green
+  translation-Q   2300256   0.006702   0.000679  +0.000002     173.3 green
+  conservative-Q   1597400   0.043198   0.003078  +0.000005    2293.3 (reported)
+  linear-Q          63896   0.000796   0.000160  +0.000013       0.5 green
+  step-Q-exact      66836   0.000000   0.000000  +0.000000       0.0 green
+  parser-Q-exact    393216   0.000000   0.000000  +0.000000       0.0 green
+
+  'steepness' is L*max|rate| at the worst case -- the amplifier on the
+  Q12 basis quantum, and the whole reason the domain is stated.
+GREEN: every gated domain stays inside 0.0200. Worst gated deviation 0.006702.
+ok    div255 exhaustive over [0, 65152]
+ok    div255 cliff is above the reachable range
+ok    lerp channel over all 16.7M reachable inputs
+ok    nibble*255/15 == nibble*17
+ok    R0e I4 pair loop reads the generic loop's nibbles
+
+SPRITE_LERP_EXACT=PASS  three library divisions per pixel removed and R0e's paired row proven equivalent, both bit-exact
+MP floor-crossing kernel -- shipped vs the pre-cycle-117 float body
+  cases 2332800 hits 40417 ret_mismatch 0 hit_mismatch 0
+GREEN: every case returns the same verdict and the same hit BIT PATTERNS.
+cases 400000
+extent_fired 111961 extent_missed_hits 0
+sweep_fired 68993 segments_replayed 295114 sweep_missed_hits 0 sweep_missed_flat 0
+MP_LINE_EXTENT_REJECT_EXACT=PASS  every fired reject was replayed segment by segment and produced no hit and no flat-ascending flag
+opcodes defined in decomp : 15
+opcodes handled by parser : 15
+FTANIM_OPCODE_SURFACE=CLOSED  all 15 opcodes defined in the reference are handled by the runtime parser, and the parser invents none -- an AOT generator has a finite, known surface to cover
+FTANIM_EFFECT_SURFACE=STABLE  func_anim called only from nGCAnimEvent16End+nGCAnimEvent16Loop, root_dobj->flags written only by nGCAnimEvent16SetFlags
+  ok  gcParseDObjAnimJoint               ftParamUpdateAnimKeys parse arm when is_anim_joint
+  ok  ftAnimParseDObjFigatree            ftParamUpdateAnimKeys parse arm otherwise (decomp body)
+  ok  ndsR2FtAnimParseDObjFigatree       the shipped port parser the shim selects
+  ok  ndsPlayDObjAnimJointBody           ftParamUpdateAnimKeys play arms (shared body of both wrappers)
+  ok  lbCommonPlayTranslateScaledDObjAnim ftParamUpdateAnimKeys play arm when translate_scales is set
+ANIM_NULL_GUARD=TOTAL  all 5 per-joint animation entry points are no-ops when anim_wait == AOBJ_ANIM_NULL, so ftParamUpdateAnimKeys may skip the parse and the play together
+AObjEvent16 files : 297
+AObjEvent32 files : 4  (ids 0x279, 0x27a, 0x309, 0x30a -- routed to the other decoder)
+scripts walked    : 5629
+scripts well-formed : 5629 (100.0%)
+
+FTANIM_RELOC_FORMAT=SOLVED  header, u32 big-endian swap, threaded internal fixups, derived table bound, script-region lane unswap, and MSB-first command bits -- every script in all 297 AObj16 files walks to End or a Loop. The generator can read the bank.
+scripts baked   : 5629
+commands        : 77959
+write records   : 146221
+scripts with no state (pure Block/Loop) : 0
+mismatches      : 0
+
+FTANIM_REAL_BAKE=PASS  every script in the shipped Mario/Fox bank resolves to control + write records that reproduce its per-track state timeline and its callback timeline, compared as bit patterns, with no opcode and no flags mask at replay time
+files            : 297
+scripts          : 5629
+records          : 146221
+blob             : 2924420 bytes (2.79 MB)
+same as 36-byte AObj records would be : 5263956 bytes (5.02 MB), so 44.4% smaller
+commands         : 71500
+control stream   : 143000 bytes (0.14 MB)
+index entries    : 5629
+non-integer rate_base (Linear, computed not authored) : 781
+verify           : 0 mismatches
+quantisation against the model (the loss this encoding accepts):
+   rate_base      max abs 7.324e-06  rel 0.001077%  (0.68 -> 0.67999267578125, FTMarioAnim085 script 8)
+   length         max abs 0.000e+00  rel 0.000000%  (0 -> 0, none)
+   length_invert  max abs 4.585e-10  rel 0.000006%  (0.007692307692307693 -> 0.007692307233810425, FTMarioAnim017 script 3)
+
+FTANIM_DENSE_BANK=OK  every record fits its declared encoding, the value fields carry the authored s16 words exactly, and the two fixed-point fields inherit the widths the runtime already uses
+header members  : rate_base:s32, length_invert:s32, value_base:s16, value_target:s16, rate_target:s16, length:s16, kind_track:u8, cmd_index:u8, pad:u16
+emitter format  : <iihhhhBBH (20 bytes)
+Q constants     : {'NDS_ANIM_DENSE_LENGTH_Q': 7, 'NDS_ANIM_DENSE_RATE_BASE_Q': 16, 'NDS_ANIM_DENSE_LENGTH_INVERT_Q': 30}
+
+FTANIM_DENSE_LAYOUT=AGREED  nds_anim_dense.h and generate_ftanim_dense_bank.py describe the same 20-byte record, field for field, with the same Q constants
+ftanim parser fidelity -- per-arm advance sequence + hoist liveness
+GREEN: 12 arms, 25 AObjAnimAdvance reads, sequence and fields identical
+       to the decomp arm-for-arm; 3 hoisted local(s) (flags, len_new, payload) assigned before every
+       read in every arm that reads them.
+ftAnimGetTargetValue replacement -- exhaustive bit-exactness
+checked 524288 (all 65,536 s16 x 8 track ids)
+GREEN: bit-identical on every input, including both signed zeros
+       and the two non-power-of-two TraI ids.
+GBI decode fixtures passed: F3DEX2 VTX/TRI/MTX/POPMTX packing, F3DEX MVP-recalc matrix move-word packing, transformed and hardware raw/material triangle readiness, N64 matrix to DS 20.12 modelview-projection/modelview-stack vertex transform, wallpaper inverse/overlap oracle, and source snippets verified.
+Docs check passed: docs=24, registryEntries=6, AGENTS.md=197 lines.
+WARNING: large file split plan present for: include/nds/nds_startup.h=8786, docs/PORTING.md=22896
+WARNING: generated outputs exist locally; clean before release snapshots if needed: build, smash64ds-battle-playable-hwtri.nds, smash64ds.nds
+Architecture check passed: imports=131, registryEntries=6, warnings=2.
+port constants 5507, decomp constants 3411, shared names 1628, disagreements 0
+enum blocks skipped as unfoldable: port 5, decomp 4 (their names are not checked)
+OK: every shared name agrees.
+NDS_PARTICLE_BANKS=PASS scripts=93/119 textures=34/47 tex_n64=262992 tex_ds=175140 pack=187459 linked=12195 asset=175264 atlas=128x64x4 quads=34/38 34frames cap=1 cell=64 whispy_native=1520 headroom=210320 spare=198125 source=0xa2a1e85f table=0xd22b30b6
+Particle bank pack passed: 93/119 reachable efcommon scripts, 34/47 textures, 262992 B N64 texture -> 175140 B DS, 12195 B linked (10912 script bank + 1283 index) of 210320 B arena headroom (198125 B spare) plus 175264 B NitroFS payload, 9 bit-exact CI4 textures, linear texel order pinned, .inc built, payload built, quad atlas 4x 128x64 A3I5, 34/38 textures in 34 frames (frame cap 1, cell cap 64) built; Whispy native 1520 B A5I3/A3I5/PAL16 (one lossless static leaf frame).
+=== P2-1j screen asset-coverage audit (source -> shipped) ===
+
+-- title: Title screen
+   source sprites reachable from FuncStart: 43  (unreachable, not audited: 0)  fill panels: 0
+   we draw 4 kit tokens covering 39 source sprites
+   [ruled] allowed missing: llMNTitleLogoAnimCutoutSprite
+               The emblem's own animation cels, and P2-1k (d) re-read who draws them: they are dMNTitleLogoAnimSprites, referenced ONLY inside mnTitleMakeLogo's opening-cinematic arm (mntitle.c:1096-1155, gated on scene_prev == nSCKindOpeningNewcomers). This shell always takes mnTitleMakeLogoNoOpening (:1051), which builds the resting FULL sprite alone -- the one this bake ships. They are therefore the INTRO's cels, not the label animation's: P2-1k (d) built the label pop (mnTitleMakeLabels' five animated pieces) from a baked pose table and it needs none of them. [PROJECT_GOAL.md Current Milestone step 7 -- the intro cinematic is deferred by owner decision, and these cels arrive with it; re-read and re-ruled by P2-1k (d), which landed the label animation these were previously attributed to]
+   [ruled] allowed missing: llMNTitleLogoAnimStrikeHSprite
+               The emblem's own animation cels, and P2-1k (d) re-read who draws them: they are dMNTitleLogoAnimSprites, referenced ONLY inside mnTitleMakeLogo's opening-cinematic arm (mntitle.c:1096-1155, gated on scene_prev == nSCKindOpeningNewcomers). This shell always takes mnTitleMakeLogoNoOpening (:1051), which builds the resting FULL sprite alone -- the one this bake ships. They are therefore the INTRO's cels, not the label animation's: P2-1k (d) built the label pop (mnTitleMakeLabels' five animated pieces) from a baked pose table and it needs none of them. [PROJECT_GOAL.md Current Milestone step 7 -- the intro cinematic is deferred by owner decision, and these cels arrive with it; re-read and re-ruled by P2-1k (d), which landed the label animation these were previously attributed to]
+   [ruled] allowed missing: llMNTitleLogoAnimStrikeVSprite
+               The emblem's own animation cels, and P2-1k (d) re-read who draws them: they are dMNTitleLogoAnimSprites, referenced ONLY inside mnTitleMakeLogo's opening-cinematic arm (mntitle.c:1096-1155, gated on scene_prev == nSCKindOpeningNewcomers). This shell always takes mnTitleMakeLogoNoOpening (:1051), which builds the resting FULL sprite alone -- the one this bake ships. They are therefore the INTRO's cels, not the label animation's: P2-1k (d) built the label pop (mnTitleMakeLabels' five animated pieces) from a baked pose table and it needs none of them. [PROJECT_GOAL.md Current Milestone step 7 -- the intro cinematic is deferred by owner decision, and these cels arrive with it; re-read and re-ruled by P2-1k (d), which landed the label animation these were previously attributed to]
+   [ruled] allowed missing: llMNTitleTMSprite
+               Title label kind 9 (TM2). It has a desc entry and a colour case and NOTHING in the US build constructs it -- mnTitleMakeSprites, its only would-be loop, stops before it and is marked unused in the source. The TM that IS drawn is llMNTitleTMUnkSprite, kind 4, which ships. [P2-1h (board row): source-read finding, transcribed rather than omitted]
+
+-- mode_select: Main menu (mode select)
+   source sprites reachable from FuncStart: 17  (unreachable, not audited: 0)  fill panels: 0
+   we draw 5 kit tokens covering 17 source sprites
+   no deltas
+
+-- vs_mode: VS menu (rules)
+   source sprites reachable from FuncStart: 31  (unreachable, not audited: 0)  fill panels: 1
+   we draw 30 kit tokens covering 32 source sprites
+   no deltas
+
+-- css: Character select
+   source sprites reachable from FuncStart: 104  (unreachable, not audited: 0)  fill panels: 0
+   we draw 108 kit tokens covering 55 source sprites
+   [ruled] allowed missing: llFTEmblemSpritesDonkeySprite
+               The series emblem mnPlayersVSMakeNameAndEmblem draws beside a selected fighter's name (:613). Mario's and Fox's SHIP as source art since P2-1k, baked into the gate surface at the source's own (p*69+24, 143) with its own per-player-kind tint (0x1E human / 0x44 otherwise); the eight left here belong to fighters P2-3 owns, and no slot in this build can hold one, so nothing would draw them. [P2-1k (board row) owner ruling (a): the CSS series emblems ship as source art. The residue is docs/P2_PLAN.md phase P2-3 (fighter production)]
+   [ruled] allowed missing: llFTEmblemSpritesFZeroSprite
+               The series emblem mnPlayersVSMakeNameAndEmblem draws beside a selected fighter's name (:613). Mario's and Fox's SHIP as source art since P2-1k, baked into the gate surface at the source's own (p*69+24, 143) with its own per-player-kind tint (0x1E human / 0x44 otherwise); the eight left here belong to fighters P2-3 owns, and no slot in this build can hold one, so nothing would draw them. [P2-1k (board row) owner ruling (a): the CSS series emblems ship as source art. The residue is docs/P2_PLAN.md phase P2-3 (fighter production)]
+   [ruled] allowed missing: llFTEmblemSpritesKirbySprite
+               The series emblem mnPlayersVSMakeNameAndEmblem draws beside a selected fighter's name (:613). Mario's and Fox's SHIP as source art since P2-1k, baked into the gate surface at the source's own (p*69+24, 143) with its own per-player-kind tint (0x1E human / 0x44 otherwise); the eight left here belong to fighters P2-3 owns, and no slot in this build can hold one, so nothing would draw them. [P2-1k (board row) owner ruling (a): the CSS series emblems ship as source art. The residue is docs/P2_PLAN.md phase P2-3 (fighter production)]
+   [ruled] allowed missing: llFTEmblemSpritesMetroidSprite
+               The series emblem mnPlayersVSMakeNameAndEmblem draws beside a selected fighter's name (:613). Mario's and Fox's SHIP as source art since P2-1k, baked into the gate surface at the source's own (p*69+24, 143) with its own per-player-kind tint (0x1E human / 0x44 otherwise); the eight left here belong to fighters P2-3 owns, and no slot in this build can hold one, so nothing would draw them. [P2-1k (board row) owner ruling (a): the CSS series emblems ship as source art. The residue is docs/P2_PLAN.md phase P2-3 (fighter production)]
+   [ruled] allowed missing: llFTEmblemSpritesMotherSprite
+               The series emblem mnPlayersVSMakeNameAndEmblem draws beside a selected fighter's name (:613). Mario's and Fox's SHIP as source art since P2-1k, baked into the gate surface at the source's own (p*69+24, 143) with its own per-player-kind tint (0x1E human / 0x44 otherwise); the eight left here belong to fighters P2-3 owns, and no slot in this build can hold one, so nothing would draw them. [P2-1k (board row) owner ruling (a): the CSS series emblems ship as source art. The residue is docs/P2_PLAN.md phase P2-3 (fighter production)]
+   [ruled] allowed missing: llFTEmblemSpritesPMonstersSprite
+               The series emblem mnPlayersVSMakeNameAndEmblem draws beside a selected fighter's name (:613). Mario's and Fox's SHIP as source art since P2-1k, baked into the gate surface at the source's own (p*69+24, 143) with its own per-player-kind tint (0x1E human / 0x44 otherwise); the eight left here belong to fighters P2-3 owns, and no slot in this build can hold one, so nothing would draw them. [P2-1k (board row) owner ruling (a): the CSS series emblems ship as source art. The residue is docs/P2_PLAN.md phase P2-3 (fighter production)]
+   [ruled] allowed missing: llFTEmblemSpritesYoshiSprite
+               The series emblem mnPlayersVSMakeNameAndEmblem draws beside a selected fighter's name (:613). Mario's and Fox's SHIP as source art since P2-1k, baked into the gate surface at the source's own (p*69+24, 143) with its own per-player-kind tint (0x1E human / 0x44 otherwise); the eight left here belong to fighters P2-3 owns, and no slot in this build can hold one, so nothing would draw them. [P2-1k (board row) owner ruling (a): the CSS series emblems ship as source art. The residue is docs/P2_PLAN.md phase P2-3 (fighter production)]
+   [ruled] allowed missing: llFTEmblemSpritesZeldaSprite
+               The series emblem mnPlayersVSMakeNameAndEmblem draws beside a selected fighter's name (:613). Mario's and Fox's SHIP as source art since P2-1k, baked into the gate surface at the source's own (p*69+24, 143) with its own per-player-kind tint (0x1E human / 0x44 otherwise); the eight left here belong to fighters P2-3 owns, and no slot in this build can hold one, so nothing would draw them. [P2-1k (board row) owner ruling (a): the CSS series emblems ship as source art. The residue is docs/P2_PLAN.md phase P2-3 (fighter production)]
+   [ruled] allowed missing: llMNPlayersCommon0DarkSprite
+               The CSS's OWN time/stock rule display (mnPlayersVSMakeGameRuleNumber :1181, mnPlayersVSMakeTimeSetting :1232). It duplicates the rule the VS menu already sets and commits through the P2-1a descriptor. [P2-1e (board row) deliberate narrowing: the CSS's own TIME/STOCK controls duplicate the VS menu's]
+   [ruled] allowed missing: llMNPlayersCommon1DarkSprite
+               The CSS's OWN time/stock rule display (mnPlayersVSMakeGameRuleNumber :1181, mnPlayersVSMakeTimeSetting :1232). It duplicates the rule the VS menu already sets and commits through the P2-1a descriptor. [P2-1e (board row) deliberate narrowing: the CSS's own TIME/STOCK controls duplicate the VS menu's]
+   [ruled] allowed missing: llMNPlayersCommon2DarkSprite
+               The CSS's OWN time/stock rule display (mnPlayersVSMakeGameRuleNumber :1181, mnPlayersVSMakeTimeSetting :1232). It duplicates the rule the VS menu already sets and commits through the P2-1a descriptor. [P2-1e (board row) deliberate narrowing: the CSS's own TIME/STOCK controls duplicate the VS menu's]
+   [ruled] allowed missing: llMNPlayersCommon2PPuckSprite
+               The human tokens and panel tags for players 2-4. P2-2 is a single-console shell with one controller/cursor; extra occupied slots are CPUs, so the source never selects 2P/3P/4P human art. Those assets become reachable only when additional controller ownership exists. [P2-2 single-console scope; BattleShip mnPlayersVSUpdateControllerOrders / player-kind behavior]
+   [ruled] allowed missing: llMNPlayersCommon2PTextGradientSprite
+               mnPlayersVSUpdateCursor hangs one gradient player tag on each controller-owned cursor. Single-console P2 has exactly the source 1P cursor, whose 1P tag now ships; 2P/3P/4P cursors and their tags become reachable only when P3 adds additional controller ownership. [P2-2 single-console scope; BattleShip mnPlayersVSUpdateControllerOrders / mnPlayersVSUpdateCursor]
+   [ruled] allowed missing: llMNPlayersCommon2PTextSprite
+               The human tokens and panel tags for players 2-4. P2-2 is a single-console shell with one controller/cursor; extra occupied slots are CPUs, so the source never selects 2P/3P/4P human art. Those assets become reachable only when additional controller ownership exists. [P2-2 single-console scope; BattleShip mnPlayersVSUpdateControllerOrders / player-kind behavior]
+   [ruled] allowed missing: llMNPlayersCommon3DarkSprite
+               The CSS's OWN time/stock rule display (mnPlayersVSMakeGameRuleNumber :1181, mnPlayersVSMakeTimeSetting :1232). It duplicates the rule the VS menu already sets and commits through the P2-1a descriptor. [P2-1e (board row) deliberate narrowing: the CSS's own TIME/STOCK controls duplicate the VS menu's]
+   [ruled] allowed missing: llMNPlayersCommon3PPuckSprite
+               The human tokens and panel tags for players 2-4. P2-2 is a single-console shell with one controller/cursor; extra occupied slots are CPUs, so the source never selects 2P/3P/4P human art. Those assets become reachable only when additional controller ownership exists. [P2-2 single-console scope; BattleShip mnPlayersVSUpdateControllerOrders / player-kind behavior]
+   [ruled] allowed missing: llMNPlayersCommon3PTextGradientSprite
+               mnPlayersVSUpdateCursor hangs one gradient player tag on each controller-owned cursor. Single-console P2 has exactly the source 1P cursor, whose 1P tag now ships; 2P/3P/4P cursors and their tags become reachable only when P3 adds additional controller ownership. [P2-2 single-console scope; BattleShip mnPlayersVSUpdateControllerOrders / mnPlayersVSUpdateCursor]
+   [ruled] allowed missing: llMNPlayersCommon3PTextSprite
+               The human tokens and panel tags for players 2-4. P2-2 is a single-console shell with one controller/cursor; extra occupied slots are CPUs, so the source never selects 2P/3P/4P human art. Those assets become reachable only when additional controller ownership exists. [P2-2 single-console scope; BattleShip mnPlayersVSUpdateControllerOrders / player-kind behavior]
+   [ruled] allowed missing: llMNPlayersCommon4DarkSprite
+               The CSS's OWN time/stock rule display (mnPlayersVSMakeGameRuleNumber :1181, mnPlayersVSMakeTimeSetting :1232). It duplicates the rule the VS menu already sets and commits through the P2-1a descriptor. [P2-1e (board row) deliberate narrowing: the CSS's own TIME/STOCK controls duplicate the VS menu's]
+   [ruled] allowed missing: llMNPlayersCommon4PPuckSprite
+               The human tokens and panel tags for players 2-4. P2-2 is a single-console shell with one controller/cursor; extra occupied slots are CPUs, so the source never selects 2P/3P/4P human art. Those assets become reachable only when additional controller ownership exists. [P2-2 single-console scope; BattleShip mnPlayersVSUpdateControllerOrders / player-kind behavior]
+   [ruled] allowed missing: llMNPlayersCommon4PTextGradientSprite
+               mnPlayersVSUpdateCursor hangs one gradient player tag on each controller-owned cursor. Single-console P2 has exactly the source 1P cursor, whose 1P tag now ships; 2P/3P/4P cursors and their tags become reachable only when P3 adds additional controller ownership. [P2-2 single-console scope; BattleShip mnPlayersVSUpdateControllerOrders / mnPlayersVSUpdateCursor]
+   [ruled] allowed missing: llMNPlayersCommon4PTextSprite
+               The human tokens and panel tags for players 2-4. P2-2 is a single-console shell with one controller/cursor; extra occupied slots are CPUs, so the source never selects 2P/3P/4P human art. Those assets become reachable only when additional controller ownership exists. [P2-2 single-console scope; BattleShip mnPlayersVSUpdateControllerOrders / player-kind behavior]
+   [ruled] allowed missing: llMNPlayersCommon5DarkSprite
+               The CSS's OWN time/stock rule display (mnPlayersVSMakeGameRuleNumber :1181, mnPlayersVSMakeTimeSetting :1232). It duplicates the rule the VS menu already sets and commits through the P2-1a descriptor. [P2-1e (board row) deliberate narrowing: the CSS's own TIME/STOCK controls duplicate the VS menu's]
+   [ruled] allowed missing: llMNPlayersCommon6DarkSprite
+               The CSS's OWN time/stock rule display (mnPlayersVSMakeGameRuleNumber :1181, mnPlayersVSMakeTimeSetting :1232). It duplicates the rule the VS menu already sets and commits through the P2-1a descriptor. [P2-1e (board row) deliberate narrowing: the CSS's own TIME/STOCK controls duplicate the VS menu's]
+   [ruled] allowed missing: llMNPlayersCommon7DarkSprite
+               The CSS's OWN time/stock rule display (mnPlayersVSMakeGameRuleNumber :1181, mnPlayersVSMakeTimeSetting :1232). It duplicates the rule the VS menu already sets and commits through the P2-1a descriptor. [P2-1e (board row) deliberate narrowing: the CSS's own TIME/STOCK controls duplicate the VS menu's]
+   [ruled] allowed missing: llMNPlayersCommon8DarkSprite
+               The CSS's OWN time/stock rule display (mnPlayersVSMakeGameRuleNumber :1181, mnPlayersVSMakeTimeSetting :1232). It duplicates the rule the VS menu already sets and commits through the P2-1a descriptor. [P2-1e (board row) deliberate narrowing: the CSS's own TIME/STOCK controls duplicate the VS menu's]
+   [ruled] allowed missing: llMNPlayersCommon9DarkSprite
+               The CSS's OWN time/stock rule display (mnPlayersVSMakeGameRuleNumber :1181, mnPlayersVSMakeTimeSetting :1232). It duplicates the rule the VS menu already sets and commits through the P2-1a descriptor. [P2-1e (board row) deliberate narrowing: the CSS's own TIME/STOCK controls duplicate the VS menu's]
+   [ruled] allowed missing: llMNPlayersCommonCaptainFalconTextSprite
+               The fighter-name art for the nine fighters P2-3 has not produced yet. No slot can hold them, so nothing would draw them. Luigi's source name art ships in his gate states. [docs/P2_PLAN.md phase P2-3 (fighter production)]
+   [ruled] allowed missing: llMNPlayersCommonDKTextSprite
+               The fighter-name art for the nine fighters P2-3 has not produced yet. No slot can hold them, so nothing would draw them. Luigi's source name art ships in his gate states. [docs/P2_PLAN.md phase P2-3 (fighter production)]
+   [ruled] allowed missing: llMNPlayersCommonHandicapTextSprite
+               The HANDICAP twin of the CP LEVEL row. mnPlayersVSMakeHandicapLevel draws one or the other by pkind, and handicap is Off in every configuration this build reaches, so only the CPU arm can run. [P2-1e (board row); handicap belongs to P2-5/P2-7 options work]
+   [ruled] allowed missing: llMNPlayersCommonInfinityDarkSprite
+               The CSS's OWN time/stock rule display (mnPlayersVSMakeGameRuleNumber :1181, mnPlayersVSMakeTimeSetting :1232). It duplicates the rule the VS menu already sets and commits through the P2-1a descriptor. [P2-1e (board row) deliberate narrowing: the CSS's own TIME/STOCK controls duplicate the VS menu's]
+   [ruled] allowed missing: llMNPlayersCommonJigglypuffTextSprite
+               The fighter-name art for the nine fighters P2-3 has not produced yet. No slot can hold them, so nothing would draw them. Luigi's source name art ships in his gate states. [docs/P2_PLAN.md phase P2-3 (fighter production)]
+   [ruled] allowed missing: llMNPlayersCommonKirbyTextSprite
+               The fighter-name art for the nine fighters P2-3 has not produced yet. No slot can hold them, so nothing would draw them. Luigi's source name art ships in his gate states. [docs/P2_PLAN.md phase P2-3 (fighter production)]
+   [ruled] allowed missing: llMNPlayersCommonLinkTextSprite
+               The fighter-name art for the nine fighters P2-3 has not produced yet. No slot can hold them, so nothing would draw them. Luigi's source name art ships in his gate states. [docs/P2_PLAN.md phase P2-3 (fighter production)]
+   [ruled] allowed missing: llMNPlayersCommonNessTextSprite
+               The fighter-name art for the nine fighters P2-3 has not produced yet. No slot can hold them, so nothing would draw them. Luigi's source name art ships in his gate states. [docs/P2_PLAN.md phase P2-3 (fighter production)]
+   [ruled] allowed missing: llMNPlayersCommonPikachuTextSprite
+               The fighter-name art for the nine fighters P2-3 has not produced yet. No slot can hold them, so nothing would draw them. Luigi's source name art ships in his gate states. [docs/P2_PLAN.md phase P2-3 (fighter production)]
+   [ruled] allowed missing: llMNPlayersCommonSamusTextSprite
+               The fighter-name art for the nine fighters P2-3 has not produced yet. No slot can hold them, so nothing would draw them. Luigi's source name art ships in his gate states. [docs/P2_PLAN.md phase P2-3 (fighter production)]
+   [ruled] allowed missing: llMNPlayersCommonStockSelectorSprite
+               The selector frames around that same duplicated time/stock control. [P2-1e (board row) deliberate narrowing: the CSS's own TIME/STOCK controls duplicate the VS menu's]
+   [ruled] allowed missing: llMNPlayersCommonTimeSelectorSprite
+               The selector frames around that same duplicated time/stock control. [P2-1e (board row) deliberate narrowing: the CSS's own TIME/STOCK controls duplicate the VS menu's]
+   [ruled] allowed missing: llMNPlayersCommonYoshiTextSprite
+               The fighter-name art for the nine fighters P2-3 has not produced yet. No slot can hold them, so nothing would draw them. Luigi's source name art ships in his gate states. [docs/P2_PLAN.md phase P2-3 (fighter production)]
+   [ruled] allowed missing: llMNPlayersPortraitsCaptainShadowSprite
+               Same branch as Luigi's shadow above, one fighter later: mnPlayersVSMakePortraitShadow only constructs it on the LOCKED branch, and P2-3f8 puts Captain Falcon in the production fighter mask, so his cell takes the source unlocked portrait branch and the locked shadow is unreachable. Two of CSS_SHADOW's four retail-locked fighters (Purin, Ness) are still locked here and still draw theirs. [docs/P2_PLAN.md P2-3 Captain Falcon production; BattleShip mnPlayersVSMakePortrait locked/unlocked branch]
+   [ruled] allowed missing: llMNPlayersPortraitsCrossSprite
+               NOT DRAWN BY THE SOURCE EITHER. mnPlayersVSPortraitAddCross's only caller is gated on mnPlayersVSCheckFighterCrossed, which is `return FALSE;` -- an unconditional constant (mnplayersvs.c:236). The audit's reachability walk sees the call; the guard is what makes it dead. [Source-read fact, mnplayersvs.c:236]
+   [ruled] allowed missing: llMNPlayersPortraitsKirbySprite
+               The unlocked portrait art for the nine fighters P2-3 has not produced yet. Their cells draw the source's own locked stack instead (box + shadow where the source has one + question-mark plate), exactly as mnPlayersVSMakePortrait does for a fighter the mask excludes. Luigi left this residue when P2-3 produced him. [docs/P2_PLAN.md phase P2-3 (fighter production); P2-1e's fighter-mask bound]
+   [ruled] allowed missing: llMNPlayersPortraitsLinkSprite
+               The unlocked portrait art for the nine fighters P2-3 has not produced yet. Their cells draw the source's own locked stack instead (box + shadow where the source has one + question-mark plate), exactly as mnPlayersVSMakePortrait does for a fighter the mask excludes. Luigi left this residue when P2-3 produced him. [docs/P2_PLAN.md phase P2-3 (fighter production); P2-1e's fighter-mask bound]
+   [ruled] allowed missing: llMNPlayersPortraitsLuigiShadowSprite
+               This sprite is only constructed by mnPlayersVSMakePortraitShadow on the locked-fighter branch. P2-3 now includes Luigi in the production fighter mask, so his cell takes the source unlocked portrait branch and the old locked shadow is unreachable. [docs/P2_PLAN.md P2-3 Luigi production; BattleShip mnPlayersVSMakePortrait locked/unlocked branch]
+   [ruled] allowed missing: llMNPlayersPortraitsNessSprite
+               The unlocked portrait art for the nine fighters P2-3 has not produced yet. Their cells draw the source's own locked stack instead (box + shadow where the source has one + question-mark plate), exactly as mnPlayersVSMakePortrait does for a fighter the mask excludes. Luigi left this residue when P2-3 produced him. [docs/P2_PLAN.md phase P2-3 (fighter production); P2-1e's fighter-mask bound]
+   [ruled] allowed missing: llMNPlayersPortraitsPikachuSprite
+               The unlocked portrait art for the nine fighters P2-3 has not produced yet. Their cells draw the source's own locked stack instead (box + shadow where the source has one + question-mark plate), exactly as mnPlayersVSMakePortrait does for a fighter the mask excludes. Luigi left this residue when P2-3 produced him. [docs/P2_PLAN.md phase P2-3 (fighter production); P2-1e's fighter-mask bound]
+   [ruled] allowed missing: llMNPlayersPortraitsPurinSprite
+               The unlocked portrait art for the nine fighters P2-3 has not produced yet. Their cells draw the source's own locked stack instead (box + shadow where the source has one + question-mark plate), exactly as mnPlayersVSMakePortrait does for a fighter the mask excludes. Luigi left this residue when P2-3 produced him. [docs/P2_PLAN.md phase P2-3 (fighter production); P2-1e's fighter-mask bound]
+   [ruled] allowed missing: llMNPlayersPortraitsSamusSprite
+               The unlocked portrait art for the nine fighters P2-3 has not produced yet. Their cells draw the source's own locked stack instead (box + shadow where the source has one + question-mark plate), exactly as mnPlayersVSMakePortrait does for a fighter the mask excludes. Luigi left this residue when P2-3 produced him. [docs/P2_PLAN.md phase P2-3 (fighter production); P2-1e's fighter-mask bound]
+   [ruled] allowed missing: llMNPlayersPortraitsYoshiSprite
+               The unlocked portrait art for the nine fighters P2-3 has not produced yet. Their cells draw the source's own locked stack instead (box + shadow where the source has one + question-mark plate), exactly as mnPlayersVSMakePortrait does for a fighter the mask excludes. Luigi left this residue when P2-3 produced him. [docs/P2_PLAN.md phase P2-3 (fighter production); P2-1e's fighter-mask bound]
+
+-- sss: Stage select
+   source sprites reachable from FuncStart: 38  (unreachable, not audited: 29)  fill panels: 3
+   we draw 14 kit tokens covering 32 source sprites
+   [ruled] allowed missing: llGRWallpaperTrainingBlueSprite
+               mnMapsMakePreviewWallpaper's training-mode backdrop. sMNMapsIsTrainingMode is set only when scene_prev is nSCKindPlayers1PTraining, which is P2-7, so this branch is FALSE by construction here. [P2-1f (board row): training mode is P2-7 and the flag is FALSE by construction]
+   [ruled] allowed missing: llMNMapsCongoJungleSprite
+               The stage icons for the eight grounds this build does not have. Their cells draw the source's own locked plate instead. [docs/P2_PLAN.md phase P2-4 (stage production); P2-1f's ground-mask bound]
+   [ruled] allowed missing: llMNMapsHyruleCastleSprite
+               The stage icons for the eight grounds this build does not have. Their cells draw the source's own locked plate instead. [docs/P2_PLAN.md phase P2-4 (stage production); P2-1f's ground-mask bound]
+   [ruled] allowed missing: llMNMapsMushroomKingdomSprite
+               The stage icons for the eight grounds this build does not have. Their cells draw the source's own locked plate instead. [docs/P2_PLAN.md phase P2-4 (stage production); P2-1f's ground-mask bound]
+   [ruled] allowed missing: llMNMapsPeachsCastleSprite
+               The stage icons for the eight grounds this build does not have. Their cells draw the source's own locked plate instead. [docs/P2_PLAN.md phase P2-4 (stage production); P2-1f's ground-mask bound]
+   [ruled] allowed missing: llMNMapsPlanetZebesSprite
+               The stage icons for the eight grounds this build does not have. Their cells draw the source's own locked plate instead. [docs/P2_PLAN.md phase P2-4 (stage production); P2-1f's ground-mask bound]
+   [ruled] allowed missing: llMNMapsSaffronCitySprite
+               The stage icons for the eight grounds this build does not have. Their cells draw the source's own locked plate instead. [docs/P2_PLAN.md phase P2-4 (stage production); P2-1f's ground-mask bound]
+   [ruled] allowed missing: llMNMapsSectorZSprite
+               The stage icons for the eight grounds this build does not have. Their cells draw the source's own locked plate instead. [docs/P2_PLAN.md phase P2-4 (stage production); P2-1f's ground-mask bound]
+   [ruled] allowed missing: llMNMapsYoshisIslandSprite
+               The stage icons for the eight grounds this build does not have. Their cells draw the source's own locked plate instead. [docs/P2_PLAN.md phase P2-4 (stage production); P2-1f's ground-mask bound]
+   [ruled] allowed extra: SURFACE_SSS_PREVIEW_DREAM_LAND
+               THE PREVIEW PANEL'S PER-STAGE ART, and the source draws it -- this audit's lexical rule simply cannot see it. mnMapsMakePreviewWallpaper (:956) draws sMNMapsGroundInfo->wallpaper, a POINTER FIELD of the MPGroundData at llGRPupupuMapMapHeader (mptypes.h:182), not a '&ll<Name>Sprite' reference in any mn* source. For Dream Land that field resolves to llStageDreamLandSprite in reloc_stages/StageDreamLand -- the same symbol reloc_backend_assets.c:8268 already resolves for the battle -- so this 'extra' is the audit reporting the indirection, not an element we added. [P2-1L (9): the source's own preview art, read out of mnmaps.c:956 + mptypes.h:182]
+
+allowlist: 16 ruled, 0 open, 0 stale
+unexplained deltas: 0
+
+screen asset coverage: PASS
+check-mn-screen-coverage: PASS
+fighter production manifest check passed: D:\Stuff\DevFolder\Smash64DS_Port\scripts\fighters\fighter_production_manifest.json
+fighter production make-fragment check passed: D:\Stuff\DevFolder\Smash64DS_Port\scripts\fighters\fighter_production_files.mk
+fighter production runtime-header check passed: D:\Stuff\DevFolder\Smash64DS_Port\include\nds\generated\nds_fighter_production.generated.h
+Fighter production manifest: PASS
+Harness registry check passed: 3 harness mappings, 6 verifier scripts, 0 drift.
+Running verifier: p2_shell_loop [verify-p2-shell-loop.ps1]
+make: Entering directory '/d/Stuff/DevFolder/Smash64DS_Port'
+nds_task39_effect_census.c
+nds_platform.c
+nds_ifcommon_oam.c
+main.c
+nds_audio_bgm.c
+nds_audio_fgm.c
+battle_playable_static_textures.c
+nds_renderer.c
+nds_battlepack_anim.c
+nds_audio_assets.c
+nds_reloc_assets.c
+C:/devkitPro/devkitARM/bin/../lib/gcc/arm-none-eabi/15.2.0/../../../../arm-none-eabi/lib/thumb/libc.a: OK
+C:/devkitPro/devkitARM/bin/../lib/gcc/arm-none-eabi/15.2.0/thumb/libgcc.a: OK
+libultra_os.c
+os_selftest.c
+port_probe.c
+n64_stubs.c
+coroutine.c
+battleship_sys_main.c
+scheduler_backend.c
+boot_stubs.c
+battleship_sys_scheduler.c
+controller_backend.c
+C:/devkitPro/devkitARM/bin/../lib/gcc/arm-none-eabi/15.2.0/../../../../arm-none-eabi/lib/thumb/libm.a: OK
+battleship_sys_controller.c
+battleship_sys_maindevice.c
+video_bootstrap.c
+battleship_sys_malloc.c
+battleship_sys_video.c
+battleship_sys_framebuffer.c
+scene_backend.c
+battleship_libultra_gu_mtxcatf.c
+battleship_sys_sintable.c
+battleship_libultra_gu_normalize.c
+battleship_sys_zbuffer.c
+utils.c
+battleship_sys_matrix.c
+battleship_mnstartup.c
+scene_harness.c
+nds_match_config.c
+nds_scene_manager.c
+battleship_scmanager.c
+vector.c
+battleship_sys_objhelper.c
+battleship_sys_taskman.c
+battleship_scsubsyscontroller.c
+battleship_sys_objman.c
+battleship_sys_interp.c
+battleship_mvopeningdonkey.c
+battleship_sys_objanim.c
+battleship_ftdisplaylights.c
+battleship_mvopeninglink.c
+battleship_mvopeningmario.c
+battleship_ftdisplaymain.c
+battleship_mvopeningportraits.c
+battleship_mvopeningroom.c
+battleship_mvopeningsamus.c
+battleship_mvopeningyoshi.c
+battleship_mvopeningkirby.c
+battleship_mvopeningpikachu.c
+battleship_mvopeningfox.c
+battleship_mnvsmode.c
+battleship_mntitle.c
+battleship_mntitlefiles.c
+battleship_grinishie_scale.c
+battleship_scvsbattle.c
+battleship_mnplayersvs.c
+battleship_ftcommon_wait.c
+battleship_grpupupu_ground.c
+battleship_gmcommon.c
+battleship_mnmaps.c
+battleship_gmcollision.c
+battleship_ftcommon_turn.c
+battleship_ftcommon_turnrun.c
+battleship_ftcommon_walk.c
+battleship_ftcommon_dash.c
+battleship_ftcommon_attack100.c
+battleship_ftcommon_attack1.c
+battleship_ftcommon_attackdash.c
+battleship_ftcommon_catch.c
+battleship_ftcommon_appeal.c
+battleship_mariofox_mainmotion.c
+battleship_ftcommon_attackair.c
+battleship_ftcommon_guard.c
+battleship_ftcommon_escape.c
+battleship_ftcommon_runbrake.c
+battleship_ftcommon_run.c
+battleship_ftcommon_ottotto.c
+battleship_ftcommon_kneebend.c
+battleship_ftcommon_jump.c
+battleship_ftcommon_cliffcatchwait.c
+battleship_ftcommon_fall.c
+battleship_ftcommon_rebound.c
+battleship_ftcommon_pass.c
+battleship_ftcommon_landing.c
+battleship_ftcommon_cliffescape.c
+battleship_ftcommon_cliffattack.c
+battleship_ftcommon_cliffclimb.c
+battleship_ftcommon_walldamage.c
+battleship_ftcommon_furasleep.c
+battleship_ftcommon_damage.c
+battleship_ftcommon_twister.c
+battleship_ftcommon_stopceil.c
+battleship_ftcommon_damagefall.c
+battleship_ftcommon_passive.c
+battleship_ftcommon_downwaitbounce.c
+battleship_ftcommon_downattack.c
+battleship_ftcommon_passivestand.c
+battleship_ftcommon_downforwardback.c
+nds_r2_sqrtf.c
+battleship_ftcommon_downstand.c
+battleship_ftdata.c
+battleship_ftcommon_normal_moveset.c
+battleship_ftchar_data_slots.c
+nds_ft_pose.c
+battleship_scsubsysdata_ft.c
+reloc_backend_ftdata_symbols.c
+reloc_backend_ftdata_stubs.c
+battleship_ftanim.c
+battleship_ftanimend.c
+battleship_ftcommon_capturecaptain.c
+battleship_captain.c
+battleship_ftkey.c
+battleship_ftmanager.c
+battleship_donkey.c
+battleship_ftcommon_itemthrow.c
+battleship_ftstatus_callback_aliases.c
+battleship_mpprocess.c
+battleship_mpprocess_edge_support.c
+battleship_mpprocess_live_bridge.c
+battleship_ftstatus_map_physics_shims.c
+battleship_ftcommon_shieldbreakfall.c
+battleship_ftcommon_shieldbreakdown.c
+battleship_ftcommon_shieldbreakstand.c
+battleship_ftcommon_shieldbreakfly.c
+battleship_ftstatus_inactive_stubs.c
+battleship_ftcommon_entry.c
+battleship_ftcommon_furafura.c
+battleship_ftcommon_sleep.c
+battleship_ftcommon_dead.c
+battleship_ftcomputer.c
+battleship_gmcamera.c
+battleship_scsubsysdata.c
+battleship_grwallpaper.c
+battleship_lbtransition.c
+battleship_ftcommon_rebirth.c
+battleship_mnvsresults.c
+battleship_scsubsysfighter.c
+battle_playable_compat_stubs.c
+battleship_ifscreenflash.c
+battleship_ifcommon.c
+nds_battle_hud.c
+battleship_fox_blaster.c
+battleship_wpmanager_core.c
+battleship_libultra_gu_mtxutil.c
+battleship_special_common.c
+battleship_mario_fireball.c
+battleship_lbparticle.c
+nds_particle_banks.c
+battleship_efmanager.c
+battleship_ftpublic.c
+battleship_fox_reflector.c
+battleship_fox_special_hi.c
+battleship_mario_special_hi.c
+nds_firegrind.c
+battleship_mario_special_lw.c
+battleship_ftcommon_fallspecial.c
+nds_fox_gun.c
+nds_task16_float_compare.s
+nds_task9_float_phase2.s
+nds_menu_shell.c
+nds_ui_kit.c
+coroutine_arm.s
+battleship_ftmain.c
+nds_task16_float_i2f.s
+nds_task16_float_addsub.s
+linking smash64ds-p2-shell-loop-hwtri.elf
+Nintendo DS rom tool 2.3.1 - Jan  8 2024
+by Rafael Vuijk, Dave Murphy, Alexei Karpenko
+built ... smash64ds-p2-shell-loop-hwtri.nds
+make: Leaving directory '/d/Stuff/DevFolder/Smash64DS_Port'
+build config: NDS_P2_UI_KIT=1
+build config: NDS_P2_MENU_SHELL=1
+build config: NDS_P2_MENU_WALK=20
+build config: NDS_R2_SCENE_LOOP_WALK=0
+walk budget: compiled=20 requested=1
+GDB marker capture: 95.3s elapsed of 3000s ceiling (3% used).
+loop capture: D:\Stuff\DevFolder\Smash64DS_Port\artifacts\verification\2026-08-25_p2-shell-loop.txt
+stops: 11
+LOOPDONE: budget=1 denied=1 dwell=2 enters=11 exits=11 input=75 mism=0 posefull=0 press=52 rej=0 rematch=1 resb=16392 sd=1 steps=77 trans=7 unreg=1 walkloops=1 winf=1 winm=0
+LOOPKIT hash=c417dfa1 mismatch=0 readfail=0 overflow=0 rej=0 csscommit=2 cssstart=2 ssscommit=2 sssconfirm=1 sssback=1 fallback=1
+LOOPINPUT pad=0000 seen=1000 tap=1000 poll=411
+LOOPCFG s0=0/0/1 s1=1/1/2 s2=28/2/1 s3=28/2/1 gkind=06 rule=1 time=1 stagesel=1
+LOOPXFER s0=0/0/3 s1=1/1/2 pl=1 cp=1 gkind=06
+LOOPSCREENS startup=1 f0=150 f1=301 f2=1811 f3=2868 f4=244 e0=1 e1=1 e2=1 e3=2 e4=2 x0=1 x1=1 x2=1 x3=2 x4=2
+LOOPSURF blit=555 mismatch=0 readfail=0 nolayer=0 fireblit=1 vsbtn=20 csspanel=520 sssplaque=8
+LOOPANIM arm=1 settle=1 fail=0 pose=51 frames=48 ticks=15552448 maxticks=654656 maxpose=19 bytes=77620 draw=1086113 erase=1054446 empty=0
+LOOPARENA base=02253270 size=1667072
+entries reconstructed: 11
+HIGHWATER Title      kind= 1 n=  1 min=506736 max=506736 spread=0
+HIGHWATER ModeSelect kind= 7 n=  1 min=248992 max=248992 spread=0
+HIGHWATER VSMode     kind= 9 n=  1 min=387928 max=387928 spread=0
+HIGHWATER PlayersVS  kind=16 n=  2 min=727348 max=727348 spread=0
+HIGHWATER Maps       kind=21 n=  2 min=154800 max=154800 spread=0
+HIGHWATER VSBattle   kind=22 n=  2 min=1422760 max=1428984 spread=6224
+HIGHWATER VSBattle series: 1428984,1422760
+HIGHWATER VSResults  kind=24 n=  1 min=1365308 max=1365308 spread=0
+HIGHWATER VSResults series: 1365308
+HIGHWATER Startup    kind=27 n=  1 min=160284 max=160284 spread=0
+ARENA FREE FLOOR: 238088 B (minimum required 32768)
+LAP PATTERN: 5 looped entries from entry 6, exact; 1 Sudden Death re-entries
+SUDDEN DEATH: ring=1 prepared=1
+
+P2 shell loop verifier passed: 1 laps, 11 scene entries, per-kind high-waters flat, free floor 238088 B, zero faults.
+Running verifier: p2_battle_realtime [verify-battle-playable-realtime-harness.ps1]
+Attack visual effects passed: 178/178 Mario/Fox motion calls across 17 source kinds plus blaster glow and three fireball routes have bounded DS presentation, and the reflector routes to its source maker.
+make: Entering directory '/d/Stuff/DevFolder/Smash64DS_Port'
+# The include paths are explicit here because this rule runs in the OUTER
+# The include paths are explicit here because this rule runs in the OUTER
+# The include paths are explicit here because this rule runs in the OUTER
+# The include paths are explicit here because this rule runs in the OUTER
+# The include paths are explicit here because this rule runs in the OUTER
+# The include paths are explicit here because this rule runs in the OUTER
+main.c
+nds_platform.c
+nds_ifcommon_oam.c
+nds_audio_bgm.c
+nds_audio_assets.c
+nds_audio_fgm.c
+nds_reloc_assets.c
+nds_task39_effect_census.c
+C:/devkitPro/devkitARM/bin/../lib/gcc/arm-none-eabi/15.2.0/thumb/libgcc.a: OK
+# make, where ds_rules' per-build INCLUDES have not been composed yet.
+# make, where ds_rules' per-build INCLUDES have not been composed yet.
+C:/devkitPro/devkitARM/bin/../lib/gcc/arm-none-eabi/15.2.0/../../../../arm-none-eabi/lib/thumb/libc.a: OK
+# make, where ds_rules' per-build INCLUDES have not been composed yet.
+# make, where ds_rules' per-build INCLUDES have not been composed yet.
+nds_renderer.c
+nds_battlepack_anim.c
+battle_playable_static_textures.c
+port_probe.c
+n64_stubs.c
+coroutine.c
+# make, where ds_rules' per-build INCLUDES have not been composed yet.
+# make, where ds_rules' per-build INCLUDES have not been composed yet.
+libultra_os.c
+arm-none-eabi-gcc -c -std=gnu11 -g -Wall -Wextra -O2 -ffunction-sections -fdata-sections -march=armv5te -mtune=arm946e-s -mthumb -I/d/Stuff/DevFolder/Smash64DS_Port/include -I/d/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src -I/d/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys -I/c/devkitPro/libnds/include -I/d/Stuff/DevFolder/Smash64DS_Port/builds/build-p2-shell -DARM9 -D_LANGUAGE_C -DSSB64_TARGET_NDS -DREGION_US -DAVOID_UB -Wno-error=incompatible-pointer-types -Wno-error=int-conversion -Wno-error=maybe-uninitialized -Wundef -include /d/Stuff/DevFolder/Smash64DS_Port/builds/build-p2-shell/nds_build_config.h -O2 -I /d/Stuff/DevFolder/Smash64DS_Port/include -I builds/build-p2-shell -o builds/build-p2-shell/native_image_donkey_high.o /d/Stuff/DevFolder/Smash64DS_Port/src/nds/generated/nds_native_fighter_donkey_high.image.c
+arm-none-eabi-gcc -c -std=gnu11 -g -Wall -Wextra -O2 -ffunction-sections -fdata-sections -march=armv5te -mtune=arm946e-s -mthumb -I/d/Stuff/DevFolder/Smash64DS_Port/include -I/d/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src -I/d/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys -I/c/devkitPro/libnds/include -I/d/Stuff/DevFolder/Smash64DS_Port/builds/build-p2-shell -DARM9 -D_LANGUAGE_C -DSSB64_TARGET_NDS -DREGION_US -DAVOID_UB -Wno-error=incompatible-pointer-types -Wno-error=int-conversion -Wno-error=maybe-uninitialized -Wundef -include /d/Stuff/DevFolder/Smash64DS_Port/builds/build-p2-shell/nds_build_config.h -O2 -I /d/Stuff/DevFolder/Smash64DS_Port/include -I builds/build-p2-shell -o builds/build-p2-shell/native_image_donkey_low.o /d/Stuff/DevFolder/Smash64DS_Port/src/nds/generated/nds_native_fighter_donkey_low.image.c
+arm-none-eabi-gcc -c -std=gnu11 -g -Wall -Wextra -O2 -ffunction-sections -fdata-sections -march=armv5te -mtune=arm946e-s -mthumb -I/d/Stuff/DevFolder/Smash64DS_Port/include -I/d/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src -I/d/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys -I/c/devkitPro/libnds/include -I/d/Stuff/DevFolder/Smash64DS_Port/builds/build-p2-shell -DARM9 -D_LANGUAGE_C -DSSB64_TARGET_NDS -DREGION_US -DAVOID_UB -Wno-error=incompatible-pointer-types -Wno-error=int-conversion -Wno-error=maybe-uninitialized -Wundef -include /d/Stuff/DevFolder/Smash64DS_Port/builds/build-p2-shell/nds_build_config.h -O2 -I /d/Stuff/DevFolder/Smash64DS_Port/include -I builds/build-p2-shell -o builds/build-p2-shell/native_image_captain_low.o /d/Stuff/DevFolder/Smash64DS_Port/src/nds/generated/nds_native_fighter_captain_low.image.c
+arm-none-eabi-gcc -c -std=gnu11 -g -Wall -Wextra -O2 -ffunction-sections -fdata-sections -march=armv5te -mtune=arm946e-s -mthumb -I/d/Stuff/DevFolder/Smash64DS_Port/include -I/d/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src -I/d/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys -I/c/devkitPro/libnds/include -I/d/Stuff/DevFolder/Smash64DS_Port/builds/build-p2-shell -DARM9 -D_LANGUAGE_C -DSSB64_TARGET_NDS -DREGION_US -DAVOID_UB -Wno-error=incompatible-pointer-types -Wno-error=int-conversion -Wno-error=maybe-uninitialized -Wundef -include /d/Stuff/DevFolder/Smash64DS_Port/builds/build-p2-shell/nds_build_config.h -O2 -I /d/Stuff/DevFolder/Smash64DS_Port/include -I builds/build-p2-shell -o builds/build-p2-shell/native_image_luigi_high.o /d/Stuff/DevFolder/Smash64DS_Port/src/nds/generated/nds_native_fighter_luigi_high.image.c
+arm-none-eabi-gcc -c -std=gnu11 -g -Wall -Wextra -O2 -ffunction-sections -fdata-sections -march=armv5te -mtune=arm946e-s -mthumb -I/d/Stuff/DevFolder/Smash64DS_Port/include -I/d/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src -I/d/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys -I/c/devkitPro/libnds/include -I/d/Stuff/DevFolder/Smash64DS_Port/builds/build-p2-shell -DARM9 -D_LANGUAGE_C -DSSB64_TARGET_NDS -DREGION_US -DAVOID_UB -Wno-error=incompatible-pointer-types -Wno-error=int-conversion -Wno-error=maybe-uninitialized -Wundef -include /d/Stuff/DevFolder/Smash64DS_Port/builds/build-p2-shell/nds_build_config.h -O2 -I /d/Stuff/DevFolder/Smash64DS_Port/include -I builds/build-p2-shell -o builds/build-p2-shell/native_image_captain_high.o /d/Stuff/DevFolder/Smash64DS_Port/src/nds/generated/nds_native_fighter_captain_high.image.c
+C:/devkitPro/devkitARM/bin/../lib/gcc/arm-none-eabi/15.2.0/../../../../arm-none-eabi/lib/thumb/libm.a: OK
+arm-none-eabi-gcc -c -std=gnu11 -g -Wall -Wextra -O2 -ffunction-sections -fdata-sections -march=armv5te -mtune=arm946e-s -mthumb -I/d/Stuff/DevFolder/Smash64DS_Port/include -I/d/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src -I/d/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys -I/c/devkitPro/libnds/include -I/d/Stuff/DevFolder/Smash64DS_Port/builds/build-p2-shell -DARM9 -D_LANGUAGE_C -DSSB64_TARGET_NDS -DREGION_US -DAVOID_UB -Wno-error=incompatible-pointer-types -Wno-error=int-conversion -Wno-error=maybe-uninitialized -Wundef -include /d/Stuff/DevFolder/Smash64DS_Port/builds/build-p2-shell/nds_build_config.h -O2 -I /d/Stuff/DevFolder/Smash64DS_Port/include -I builds/build-p2-shell -o builds/build-p2-shell/native_image_luigi_low.o /d/Stuff/DevFolder/Smash64DS_Port/src/nds/generated/nds_native_fighter_luigi_low.image.c
+boot_stubs.c
+os_selftest.c
+battleship_sys_main.c
+controller_backend.c
+scheduler_backend.c
+battleship_sys_scheduler.c
+battleship_sys_controller.c
+battleship_sys_malloc.c
+battleship_sys_framebuffer.c
+battleship_sys_video.c
+battleship_sys_zbuffer.c
+battleship_sys_maindevice.c
+battleship_sys_sintable.c
+video_bootstrap.c
+battleship_libultra_gu_normalize.c
+battleship_sys_matrix.c
+battleship_libultra_gu_mtxcatf.c
+battleship_scmanager.c
+battleship_mnstartup.c
+scene_harness.c
+nds_match_config.c
+scene_backend.c
+nds_scene_manager.c
+utils.c
+battleship_sys_taskman.c
+battleship_sys_objman.c
+battleship_scsubsyscontroller.c
+vector.c
+battleship_sys_objhelper.c
+battleship_sys_interp.c
+battleship_ftdisplaymain.c
+battleship_mvopeningportraits.c
+battleship_ftdisplaylights.c
+battleship_sys_objanim.c
+battleship_mvopeningroom.c
+battleship_mvopeningmario.c
+battleship_mvopeninglink.c
+battleship_mvopeningsamus.c
+battleship_mvopeningdonkey.c
+battleship_mvopeningpikachu.c
+battleship_mvopeningkirby.c
+battleship_mvopeningyoshi.c
+battleship_mvopeningfox.c
+battleship_mntitlefiles.c
+battleship_mntitle.c
+battleship_mnvsmode.c
+battleship_scvsbattle.c
+battleship_mnplayersvs.c
+battleship_gmcommon.c
+battleship_gmcollision.c
+battleship_mnmaps.c
+battleship_grpupupu_ground.c
+battleship_ftcommon_walk.c
+battleship_grinishie_scale.c
+battleship_ftcommon_wait.c
+battleship_ftcommon_turnrun.c
+battleship_ftcommon_turn.c
+battleship_ftcommon_dash.c
+battleship_ftcommon_attack1.c
+battleship_ftcommon_attack100.c
+battleship_ftcommon_attackdash.c
+battleship_ftcommon_attackair.c
+battleship_mariofox_mainmotion.c
+battleship_ftcommon_appeal.c
+battleship_ftcommon_guard.c
+battleship_ftcommon_catch.c
+battleship_ftcommon_escape.c
+battleship_ftcommon_kneebend.c
+battleship_ftcommon_runbrake.c
+battleship_ftcommon_run.c
+battleship_ftcommon_pass.c
+battleship_ftcommon_jump.c
+battleship_ftcommon_fall.c
+battleship_ftcommon_ottotto.c
+battleship_ftcommon_landing.c
+battleship_ftcommon_stopceil.c
+battleship_ftcommon_cliffclimb.c
+battleship_ftcommon_cliffcatchwait.c
+battleship_ftcommon_rebound.c
+battleship_ftcommon_cliffattack.c
+battleship_ftcommon_cliffescape.c
+battleship_ftcommon_walldamage.c
+battleship_ftcommon_twister.c
+battleship_ftcommon_damage.c
+battleship_ftcommon_furasleep.c
+battleship_ftcommon_damagefall.c
+battleship_ftcommon_passivestand.c
+battleship_ftcommon_downwaitbounce.c
+battleship_ftcommon_passive.c
+battleship_ftcommon_downforwardback.c
+battleship_ftcommon_downattack.c
+battleship_ftcommon_downstand.c
+nds_r2_sqrtf.c
+battleship_ftcommon_normal_moveset.c
+battleship_scsubsysdata_ft.c
+nds_ft_pose.c
+battleship_ftchar_data_slots.c
+battleship_ftkey.c
+battleship_ftdata.c
+reloc_backend_ftdata_symbols.c
+battleship_ftanimend.c
+battleship_ftmanager.c
+reloc_backend_ftdata_stubs.c
+battleship_ftanim.c
+battleship_donkey.c
+battleship_captain.c
+battleship_ftcommon_itemthrow.c
+battleship_ftcommon_capturecaptain.c
+battleship_mpprocess_live_bridge.c
+battleship_mpprocess.c
+battleship_mpprocess_edge_support.c
+battleship_ftstatus_callback_aliases.c
+battleship_ftstatus_map_physics_shims.c
+battleship_ftstatus_inactive_stubs.c
+battleship_ftcommon_shieldbreakfall.c
+battleship_ftcommon_shieldbreakfly.c
+battleship_ftcommon_shieldbreakdown.c
+battleship_ftcommon_shieldbreakstand.c
+battleship_ftcomputer.c
+battleship_gmcamera.c
+battleship_ftcommon_dead.c
+battleship_ftcommon_furafura.c
+battle_playable_compat_stubs.c
+battleship_ftcommon_sleep.c
+battleship_grwallpaper.c
+battleship_ftcommon_rebirth.c
+battleship_ftcommon_entry.c
+battleship_lbtransition.c
+battleship_mnvsresults.c
+battleship_scsubsysfighter.c
+nds_battle_hud.c
+battleship_ifcommon.c
+battleship_scsubsysdata.c
+battleship_ifscreenflash.c
+battleship_wpmanager_core.c
+battleship_special_common.c
+battleship_mario_fireball.c
+nds_particle_banks.c
+battleship_fox_blaster.c
+battleship_efmanager.c
+battleship_libultra_gu_mtxutil.c
+battleship_lbparticle.c
+nds_firegrind.c
+battleship_ftpublic.c
+nds_fox_gun.c
+battleship_fox_reflector.c
+battleship_ftcommon_fallspecial.c
+battleship_mario_special_hi.c
+battleship_mario_special_lw.c
+nds_menu_shell.c
+battleship_ftmain.c
+coroutine_arm.s
+nds_ui_kit.c
+nds_task9_float_phase2.s
+battleship_fox_special_hi.c
+nds_task16_float_i2f.s
+nds_task16_float_compare.s
+nds_task16_float_addsub.s
+arm-none-eabi-objcopy -O binary --only-section=.fighter_image builds/build-p2-shell/native_image_donkey_high.o /d/Stuff/DevFolder/Smash64DS_Port/builds/build-p2-shell/nitrofs/fighters/donkey_high.bin
+arm-none-eabi-objcopy -O binary --only-section=.fighter_image builds/build-p2-shell/native_image_captain_high.o /d/Stuff/DevFolder/Smash64DS_Port/builds/build-p2-shell/nitrofs/fighters/captain_high.bin
+arm-none-eabi-objcopy -O binary --only-section=.fighter_image builds/build-p2-shell/native_image_luigi_low.o /d/Stuff/DevFolder/Smash64DS_Port/builds/build-p2-shell/nitrofs/fighters/luigi_low.bin
+arm-none-eabi-objcopy -O binary --only-section=.fighter_image builds/build-p2-shell/native_image_donkey_low.o /d/Stuff/DevFolder/Smash64DS_Port/builds/build-p2-shell/nitrofs/fighters/donkey_low.bin
+arm-none-eabi-objcopy -O binary --only-section=.fighter_image builds/build-p2-shell/native_image_luigi_high.o /d/Stuff/DevFolder/Smash64DS_Port/builds/build-p2-shell/nitrofs/fighters/luigi_high.bin
+arm-none-eabi-objcopy -O binary --only-section=.fighter_image builds/build-p2-shell/native_image_captain_low.o /d/Stuff/DevFolder/Smash64DS_Port/builds/build-p2-shell/nitrofs/fighters/captain_low.bin
+linking smash64ds-p2-shell-hwtri.elf
+Nintendo DS rom tool 2.3.1 - Jan  8 2024
+by Rafael Vuijk, Dave Murphy, Alexei Karpenko
+built ... smash64ds-p2-shell-hwtri.nds
+rm builds/build-p2-shell/native_image_captain_high.o builds/build-p2-shell/native_image_captain_low.o builds/build-p2-shell/native_image_donkey_high.o builds/build-p2-shell/native_image_donkey_low.o
+make: Leaving directory '/d/Stuff/DevFolder/Smash64DS_Port'
+Task 9 float ITCM passed: phase2=1 task16Compare/I2f/AddSub=1/1/1 stockBytes=1952 phase2Bytes=36 task16RawBytes=732 fillBytes=4 itcm=31968/32768 free=800 omitted=[] libgcc=C:/devkitPro/devkitARM/bin/../lib/gcc/arm-none-eabi/15.2.0/thumb/libgcc.a sha256=C755ADC33ECA252260360327904591B8462CCE5C25E48B0E881AC0B295953F48 code=[_arm_addsubsf3.o=684/E1F79C55786F2323E18924D71A1268945789DD33C3C8C8861042F41A5CCB4A91, _arm_muldivsf3.o=760/C313BBE04B3484CDBE9E6B14BCB14B0828F308B076616D080AA89204FDFD940A, _arm_cmpsf2.o=276/2B656E12FDE0F34CEB17395A5FF8FCC1EF0CEBBF94F8EDA3725BD26C0B3C2884, _arm_unordsf2.o=56/7B4D5CFBE032C0D80470495D888A2598C8D77BD434831B0F28488C0070A60407, _arm_fixsfsi.o=92/73908D204E4625C30FC21DFF9A2F817E26C53D161164A032BD229A9DCDD6EDEE, _arm_fixunssfsi.o=84/1BFBAB489E0E7B2166376F736F04F891A50F7BF04191CFB8731E5294B752D66F, task16-addsub=404/9A74410744210A544CC57EA1323C3C9A896D430E2295718870DA4B827E4139FE, task16-i2f=92/EE6FE8233D98D26A602988362BF014D08515AA477EF493DE55F31B26ED8D0573, phase2-fcmpeq=36/07B3147B9CF599BDD408AF922A4B9F6891734B4C3AB7DE7C3A700DDE92B6FBE2, task16-compare=236/F822244564E6EFF11F3812B241A2E71ED7E013D34905687C4D9E2E8242C1185D]
+Renderer ITCM placement passed: elf=smash64ds-p2-shell-hwtri.elf itcm=31968/32768 renderer=5908 symbols=[ndsRendererCommitNativeStageSegment=2592, ndsRendererNativeStageBeginRun=1676, ndsRendererLoadHardwareGxComposedMatrices=692, ndsRendererNativeStageEmitNoZVertex.isra.0=336, ndsRendererHardwareEndBatch=192, ndsRendererHardwareApplyTextureParams=128, ndsRendererR2MaterialColor15=292] inlineCollapsed=[] evicted=11900 [ndsRendererScanList=.main, ndsRendererSubmitHardwareTriangle=.main, ndsRendererHardwareSubmitVertex.part.0=.main, ndsRendererHardwareSubmitVertex.constprop.0=.main, ndsRendererHardwareLitShadeColorPrepared=.main, ndsRendererMtxMulAffine20p12=.text.hot.draw, ndsRendererLoadHardwareSplitMatrices=.main, ndsRendererNativeApplyProductionPreamble=.main]
+Task 20 DTCM layout passed: elf=smash64ds-p2-shell-hwtri.elf sections=8800/152 owners=[sNdsNativeFighterDenseNormals=0x02ff0000+2164, sNdsNativeFighterPreparedDense=0x02ff0874+6492, sNdsRendererRuntimeFrameSummary=0x02ff21d0+108, sControllerPlaybackEnabled=0x02ff2240+4, sControllerPlaybackConnectedMask=0x02ff2244+4, sControllerPlaybackPads=0x02ff2248+24, __irq_table=0x02ff2260+128, __sched_state=0x02ff22e0+24] sharedGap=0x02ff22f8..0x02ff3e80/7048 stackTops=usr:0x02ff3e80,irq:0x02ff3f80,svc:0x02ff3fc0 reserves=irq:256,svc:64,bios:64 forbiddenDmaRefs=0(applicationOwners=3) stackEvidence=[not-supplied]
+GDB marker capture: 50.7s elapsed of 600s ceiling (8% used).
+WARNING: battle_playable Pupupu locked-30 presentation slipped below its target: present=270 x0.1 fps; holds-30 remains a published metric until renderer cuts fit every two-vblank phase budget.
+battle_playable Pupupu realtime pacing smoke passed: frames=212 fps=270/538 ticks=262788800 rprof=0 gxram=477/1126 gxstat=0x6000000/ctrl=0x19 ftrContract=49382/49382/geom0x222005/cycle0x100000/rm0xc4112078/light3123/3123/bounds301/0 ftrTri=81270/p0476116/p1474606/own259 oracle=0/0/0 batch=103/725/103/texprep49/725 wallCache=1/0/1/fb0/src300x220/66000/ticks2740608/2250432 wallFinal=direct1/skip0/change1/px49152/stage0/0/bg20/0/98304/bg30/0/0 mtx=load99/scale0/p0,0,0,0/mv0,0,0,0,0,0 submit=raw658/snap0/cross44/noz126/dec0/prim0/range0/rej0/div1152 lazy=load519/xf0/hit0/new0/reuse0/ovf0 rawcand=658/0/44 postest=0/0/e0/w0/c0/mw0/drop0 vraw=0..0/0..0/0..0 vhw=0..0/0..0/0..0 depth=stage0:0..0/p00:0..0/p10:0 clip=0 texProof=0/0/0 sample=0/0/0 alias=0 st=32767..-32768/32767..-32768 texUse=0/0/0/0/0/impl0/first0x0/flags0x0/w0x0/w1x0/geom0x0 texFmt=conv0x0/bind0x0/pal0x0/rej0x0/why0x0 texLane=layout0x0/byte0/half0/bFmt0x0/hFmt0x0/bMap0x0/hMap0x0 stageCarry=42/42/tex32/tile34/short6/6/seg3 stageAcct=frames211/boot42,202/weapon0,0/terminal0 combine=0/0/lit0/mat0/proj126 light=0/0/0 profile=present867264/draw608256/stage0/mat0/dl0/tex0/conv0/upload0 texUploads=0/0 binds=55 vtx=2484 tri=828 texDirect=0 intrinsicM3=9/121/828 intrinsicM4=24/61696/hits646/fence0 water=2/0/1 fastWall=state2/seed1/1/0/degraded0/seedTicks0/queue0/apply0/skip0/clamp0/0/0/invalid0/reuse0/affine0/post0/0/hash0xa2dcc88d/opaque49152/restore0 texHash=0/0/0/0/0 cpu=setup1/proc33/target33/stick4/obj0x4 aobj32=228/2043/reuse208/fail0
+Published ROM contract passed: smash64ds-battle-playable-hwtri.nds, smash64ds.nds
+Selected capture runtime modes renderer=-1 fox=0 .
+Captured live melonDS window: D:\Stuff\DevFolder\Smash64DS_Port\artifacts\visibility\2026-08-25_canonical_fast_124522-0061638-p53176_next.png (877x1400)
+Captured live melonDS window: D:\Stuff\DevFolder\Smash64DS_Port\artifacts\visibility\2026-08-25_canonical_fast_124522-0061638-p53176.png (877x1400)
+Top screen camera registration: scale=1.00 dx=0 dy=0 sample=0.000%.
+Top screen visible: 49152/49152 different pixels (100.000%).
+Top screen green content: 22920/49152 dominant-green pixels (46.631%).
+Top screen detail content: 23387/49152 non-white/non-green pixels (47.581%).
+Top screen delta: raw=0/49152 (0.000%) meaningful=0/49152 (0.000%, channel>=25) mean=0.00 overlap=100.000%.
+Region left_bush: non-clear=1750/1750 (100.000%) green=889/1750 (50.800%) detail=839/1750 (47.943%) fighter=584/1750 (33.371%) changed=0/1750 (0.000%)
+Region right_bush: non-clear=1750/1750 (100.000%) green=110/1750 (6.286%) detail=1613/1750 (92.171%) fighter=1001/1750 (57.200%) changed=0/1750 (0.000%)
+Region fox: non-clear=2475/2475 (100.000%) green=503/2475 (20.323%) detail=1953/2475 (78.909%) fighter=1066/2475 (43.071%) changed=0/2475 (0.000%)
+Region mario: non-clear=2475/2475 (100.000%) green=465/2475 (18.788%) detail=1987/2475 (80.283%) fighter=1274/2475 (51.475%) changed=0/2475 (0.000%)
+Region stage_body: non-clear=7425/7425 (100.000%) green=4078/7425 (54.923%) detail=3017/7425 (40.633%) fighter=2187/7425 (29.455%) changed=0/7425 (0.000%)
+Top screen visible: 49152/49152 different pixels (100.000%).
+Top screen green content: 22920/49152 dominant-green pixels (46.631%).
+Top screen detail content: 23387/49152 non-white/non-green pixels (47.581%).
+Region left_bush: non-clear=1750/1750 (100.000%) green=889/1750 (50.800%) detail=839/1750 (47.943%) fighter=584/1750 (33.371%)
+Region right_bush: non-clear=1750/1750 (100.000%) green=110/1750 (6.286%) detail=1613/1750 (92.171%) fighter=1001/1750 (57.200%)
+Region fox: non-clear=2475/2475 (100.000%) green=503/2475 (20.323%) detail=1953/2475 (78.909%) fighter=1066/2475 (43.071%)
+Region mario: non-clear=2475/2475 (100.000%) green=465/2475 (18.788%) detail=1987/2475 (80.283%) fighter=1274/2475 (51.475%)
+Region stage_body: non-clear=7425/7425 (100.000%) green=4078/7425 (54.923%) detail=3017/7425 (40.633%) fighter=2187/7425 (29.455%)
+Horizontal detail left_bush: varied=305/496 (61.492%) max-flat-run=6px (limit=32px).
+Horizontal detail stage_body: varied=2306/4920 (46.870%) max-flat-run=71px (limit=112px).
+Horizontal detail pond: varied=1263/2736 (46.162%) max-flat-run=71px (limit=96px).
+Horizontal detail left_bush: varied=305/496 (61.492%) max-flat-run=6px (limit=32px).
+Horizontal detail stage_body: varied=2306/4920 (46.870%) max-flat-run=71px (limit=112px).
+Horizontal detail pond: varied=1263/2736 (46.162%) max-flat-run=71px (limit=96px).
+Top screen visible: 49152/49152 different pixels (100.000%).
+Top screen green content: 22920/49152 dominant-green pixels (46.631%).
+Top screen detail content: 23387/49152 non-white/non-green pixels (47.581%).
+Top-screen required region detail: 4163/7200 pixels (57.819%).
+Published fast-iteration capture: D:\Stuff\DevFolder\Smash64DS_Port\artifacts\visibility\latest.png (previous: D:\Stuff\DevFolder\Smash64DS_Port\artifacts\visibility\previous.png)
+Running verifier: p2_fourcpu_stress [verify-p2-four-fighter-stress.ps1]
+make: Entering directory '/d/Stuff/DevFolder/Smash64DS_Port'
+# The include paths are explicit here because this rule runs in the OUTER
+# The include paths are explicit here because this rule runs in the OUTER
+main.c
+# The include paths are explicit here because this rule runs in the OUTER
+# The include paths are explicit here because this rule runs in the OUTER
+nds_audio_bgm.c
+nds_task39_effect_census.c
+nds_ifcommon_oam.c
+nds_platform.c
+nds_audio_fgm.c
+nds_audio_assets.c
+nds_renderer.c
+nds_reloc_assets.c
+C:/devkitPro/devkitARM/bin/../lib/gcc/arm-none-eabi/15.2.0/../../../../arm-none-eabi/lib/thumb/libc.a: OK
+C:/devkitPro/devkitARM/bin/../lib/gcc/arm-none-eabi/15.2.0/thumb/libgcc.a: OK
+# make, where ds_rules' per-build INCLUDES have not been composed yet.
+port_probe.c
+battle_playable_static_textures.c
+nds_battlepack_anim.c
+# make, where ds_rules' per-build INCLUDES have not been composed yet.
+coroutine.c
+n64_stubs.c
+# make, where ds_rules' per-build INCLUDES have not been composed yet.
+libultra_os.c
+# make, where ds_rules' per-build INCLUDES have not been composed yet.
+os_selftest.c
+arm-none-eabi-gcc -c -std=gnu11 -g -Wall -Wextra -O2 -ffunction-sections -fdata-sections -march=armv5te -mtune=arm946e-s -mthumb -I/d/Stuff/DevFolder/Smash64DS_Port/include -I/d/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src -I/d/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys -I/c/devkitPro/libnds/include -I/d/Stuff/DevFolder/Smash64DS_Port/builds/build-p2-fourcpu-tickhud -DARM9 -D_LANGUAGE_C -DSSB64_TARGET_NDS -DREGION_US -DAVOID_UB -Wno-error=incompatible-pointer-types -Wno-error=int-conversion -Wno-error=maybe-uninitialized -Wundef -include /d/Stuff/DevFolder/Smash64DS_Port/builds/build-p2-fourcpu-tickhud/nds_build_config.h -O2 -I /d/Stuff/DevFolder/Smash64DS_Port/include -I builds/build-p2-fourcpu-tickhud -o builds/build-p2-fourcpu-tickhud/native_image_luigi_low.o /d/Stuff/DevFolder/Smash64DS_Port/src/nds/generated/nds_native_fighter_luigi_low.image.c
+C:/devkitPro/devkitARM/bin/../lib/gcc/arm-none-eabi/15.2.0/../../../../arm-none-eabi/lib/thumb/libm.a: OK
+boot_stubs.c
+arm-none-eabi-gcc -c -std=gnu11 -g -Wall -Wextra -O2 -ffunction-sections -fdata-sections -march=armv5te -mtune=arm946e-s -mthumb -I/d/Stuff/DevFolder/Smash64DS_Port/include -I/d/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src -I/d/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys -I/c/devkitPro/libnds/include -I/d/Stuff/DevFolder/Smash64DS_Port/builds/build-p2-fourcpu-tickhud -DARM9 -D_LANGUAGE_C -DSSB64_TARGET_NDS -DREGION_US -DAVOID_UB -Wno-error=incompatible-pointer-types -Wno-error=int-conversion -Wno-error=maybe-uninitialized -Wundef -include /d/Stuff/DevFolder/Smash64DS_Port/builds/build-p2-fourcpu-tickhud/nds_build_config.h -O2 -I /d/Stuff/DevFolder/Smash64DS_Port/include -I builds/build-p2-fourcpu-tickhud -o builds/build-p2-fourcpu-tickhud/native_image_luigi_high.o /d/Stuff/DevFolder/Smash64DS_Port/src/nds/generated/nds_native_fighter_luigi_high.image.c
+arm-none-eabi-gcc -c -std=gnu11 -g -Wall -Wextra -O2 -ffunction-sections -fdata-sections -march=armv5te -mtune=arm946e-s -mthumb -I/d/Stuff/DevFolder/Smash64DS_Port/include -I/d/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src -I/d/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys -I/c/devkitPro/libnds/include -I/d/Stuff/DevFolder/Smash64DS_Port/builds/build-p2-fourcpu-tickhud -DARM9 -D_LANGUAGE_C -DSSB64_TARGET_NDS -DREGION_US -DAVOID_UB -Wno-error=incompatible-pointer-types -Wno-error=int-conversion -Wno-error=maybe-uninitialized -Wundef -include /d/Stuff/DevFolder/Smash64DS_Port/builds/build-p2-fourcpu-tickhud/nds_build_config.h -O2 -I /d/Stuff/DevFolder/Smash64DS_Port/include -I builds/build-p2-fourcpu-tickhud -o builds/build-p2-fourcpu-tickhud/native_image_donkey_high.o /d/Stuff/DevFolder/Smash64DS_Port/src/nds/generated/nds_native_fighter_donkey_high.image.c
+battleship_sys_main.c
+arm-none-eabi-gcc -c -std=gnu11 -g -Wall -Wextra -O2 -ffunction-sections -fdata-sections -march=armv5te -mtune=arm946e-s -mthumb -I/d/Stuff/DevFolder/Smash64DS_Port/include -I/d/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src -I/d/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys -I/c/devkitPro/libnds/include -I/d/Stuff/DevFolder/Smash64DS_Port/builds/build-p2-fourcpu-tickhud -DARM9 -D_LANGUAGE_C -DSSB64_TARGET_NDS -DREGION_US -DAVOID_UB -Wno-error=incompatible-pointer-types -Wno-error=int-conversion -Wno-error=maybe-uninitialized -Wundef -include /d/Stuff/DevFolder/Smash64DS_Port/builds/build-p2-fourcpu-tickhud/nds_build_config.h -O2 -I /d/Stuff/DevFolder/Smash64DS_Port/include -I builds/build-p2-fourcpu-tickhud -o builds/build-p2-fourcpu-tickhud/native_image_donkey_low.o /d/Stuff/DevFolder/Smash64DS_Port/src/nds/generated/nds_native_fighter_donkey_low.image.c
+scheduler_backend.c
+controller_backend.c
+battleship_sys_malloc.c
+battleship_sys_maindevice.c
+battleship_sys_framebuffer.c
+battleship_sys_video.c
+battleship_sys_controller.c
+battleship_sys_scheduler.c
+battleship_scmanager.c
+battleship_sys_zbuffer.c
+battleship_mnstartup.c
+battleship_libultra_gu_normalize.c
+video_bootstrap.c
+battleship_libultra_gu_mtxcatf.c
+battleship_sys_matrix.c
+battleship_sys_sintable.c
+nds_match_config.c
+scene_harness.c
+scene_backend.c
+utils.c
+vector.c
+nds_scene_manager.c
+battleship_scsubsyscontroller.c
+battleship_sys_objman.c
+battleship_sys_taskman.c
+battleship_sys_objhelper.c
+battleship_sys_objanim.c
+battleship_ftdisplaylights.c
+battleship_ftdisplaymain.c
+battleship_sys_interp.c
+battleship_mvopeningroom.c
+battleship_mvopeningportraits.c
+battleship_mvopeningmario.c
+battleship_mvopeningdonkey.c
+battleship_mvopeninglink.c
+battleship_mvopeningkirby.c
+battleship_mvopeningsamus.c
+battleship_mvopeningyoshi.c
+battleship_mvopeningfox.c
+battleship_mntitle.c
+battleship_mntitlefiles.c
+battleship_mvopeningpikachu.c
+battleship_mnplayersvs.c
+battleship_gmcollision.c
+battleship_mnmaps.c
+battleship_gmcommon.c
+battleship_mnvsmode.c
+battleship_scvsbattle.c
+battleship_grinishie_scale.c
+battleship_grpupupu_ground.c
+battleship_ftcommon_wait.c
+battleship_ftcommon_walk.c
+battleship_ftcommon_turn.c
+battleship_ftcommon_turnrun.c
+battleship_ftcommon_dash.c
+battleship_ftcommon_attack1.c
+battleship_ftcommon_attack100.c
+battleship_ftcommon_attackdash.c
+battleship_ftcommon_attackair.c
+battleship_ftcommon_catch.c
+battleship_ftcommon_appeal.c
+battleship_mariofox_mainmotion.c
+battleship_ftcommon_guard.c
+battleship_ftcommon_fall.c
+battleship_ftcommon_kneebend.c
+battleship_ftcommon_runbrake.c
+battleship_ftcommon_run.c
+battleship_ftcommon_jump.c
+battleship_ftcommon_escape.c
+battleship_ftcommon_pass.c
+battleship_ftcommon_ottotto.c
+battleship_ftcommon_stopceil.c
+battleship_ftcommon_cliffcatchwait.c
+battleship_ftcommon_landing.c
+battleship_ftcommon_cliffclimb.c
+battleship_ftcommon_cliffattack.c
+battleship_ftcommon_cliffescape.c
+battleship_ftcommon_furasleep.c
+battleship_ftcommon_damagefall.c
+battleship_ftcommon_damage.c
+battleship_ftcommon_walldamage.c
+battleship_ftcommon_passive.c
+battleship_ftcommon_twister.c
+battleship_ftcommon_rebound.c
+battleship_ftcommon_passivestand.c
+battleship_ftcommon_downwaitbounce.c
+battleship_ftcommon_normal_moveset.c
+nds_r2_battle.c
+battleship_ftcommon_downattack.c
+battleship_ftcommon_downstand.c
+battleship_ftcommon_downforwardback.c
+nds_ft_pose.c
+nds_r2_sqrtf.c
+battleship_ftchar_data_slots.c
+battleship_scsubsysdata_ft.c
+reloc_backend_ftdata_stubs.c
+reloc_backend_ftdata_symbols.c
+battleship_ftdata.c
+battleship_ftkey.c
+battleship_ftanimend.c
+battleship_ftanim.c
+battleship_ftmanager.c
+battleship_donkey.c
+battleship_mpprocess.c
+battleship_mpprocess_edge_support.c
+battleship_ftcommon_itemthrow.c
+battleship_ftstatus_callback_aliases.c
+battleship_mpprocess_live_bridge.c
+battleship_ftstatus_inactive_stubs.c
+battleship_ftstatus_map_physics_shims.c
+battleship_ftcommon_shieldbreakfly.c
+battleship_ftcommon_shieldbreakfall.c
+battleship_ftcommon_shieldbreakstand.c
+battleship_ftcomputer.c
+battleship_ftcommon_shieldbreakdown.c
+battleship_ftcommon_dead.c
+battleship_gmcamera.c
+battleship_ftcommon_furafura.c
+battleship_ftcommon_rebirth.c
+battleship_ftcommon_sleep.c
+battle_playable_compat_stubs.c
+battleship_grwallpaper.c
+battleship_ftcommon_entry.c
+battleship_lbtransition.c
+battleship_mnvsresults.c
+battleship_scsubsysfighter.c
+battleship_scsubsysdata.c
+battleship_ifscreenflash.c
+nds_battle_hud.c
+battleship_ifcommon.c
+battleship_wpmanager_core.c
+battleship_special_common.c
+battleship_mario_fireball.c
+battleship_fox_blaster.c
+battleship_efmanager.c
+nds_particle_banks.c
+battleship_libultra_gu_mtxutil.c
+battleship_lbparticle.c
+nds_firegrind.c
+battleship_ftpublic.c
+battleship_fox_reflector.c
+nds_fox_gun.c
+battleship_ftcommon_fallspecial.c
+battleship_mario_special_hi.c
+battleship_mario_special_lw.c
+coroutine_arm.s
+battleship_fox_special_hi.c
+nds_task9_float_phase2.s
+battleship_ftmain.c
+nds_task16_float_compare.s
+nds_task16_float_addsub.s
+nds_task16_float_i2f.s
+arm-none-eabi-objcopy -O binary --only-section=.fighter_image builds/build-p2-fourcpu-tickhud/native_image_donkey_low.o /d/Stuff/DevFolder/Smash64DS_Port/builds/build-p2-fourcpu-tickhud/nitrofs/fighters/donkey_low.bin
+arm-none-eabi-objcopy -O binary --only-section=.fighter_image builds/build-p2-fourcpu-tickhud/native_image_donkey_high.o /d/Stuff/DevFolder/Smash64DS_Port/builds/build-p2-fourcpu-tickhud/nitrofs/fighters/donkey_high.bin
+arm-none-eabi-objcopy -O binary --only-section=.fighter_image builds/build-p2-fourcpu-tickhud/native_image_luigi_low.o /d/Stuff/DevFolder/Smash64DS_Port/builds/build-p2-fourcpu-tickhud/nitrofs/fighters/luigi_low.bin
+arm-none-eabi-objcopy -O binary --only-section=.fighter_image builds/build-p2-fourcpu-tickhud/native_image_luigi_high.o /d/Stuff/DevFolder/Smash64DS_Port/builds/build-p2-fourcpu-tickhud/nitrofs/fighters/luigi_high.bin
+linking smash64ds-p2-fourcpu-tickhud-hwtri.elf
+Nintendo DS rom tool 2.3.1 - Jan  8 2024
+by Rafael Vuijk, Dave Murphy, Alexei Karpenko
+built ... smash64ds-p2-fourcpu-tickhud-hwtri.nds
+rm builds/build-p2-fourcpu-tickhud/native_image_luigi_low.o builds/build-p2-fourcpu-tickhud/native_image_donkey_high.o builds/build-p2-fourcpu-tickhud/native_image_luigi_high.o builds/build-p2-fourcpu-tickhud/native_image_donkey_low.o
+make: Leaving directory '/d/Stuff/DevFolder/Smash64DS_Port'
+WARNING: cpuGetTiming() 2^22 timer-overflow artifact detected and CORRECTED on 1824 of 1972 samples (one subtraction of 4,194,304 per affected bucket). The run's ALL median after correction is 1,965,120; a corrected value far from it would mean the row was a real stall and the correction wrong, so check these against it:
+  frame 2: ALL 11,656,384 -> 7,462,080, 3 bucket(s) corrected
+  frame 110: ALL 6,159,552 -> 1,965,248, 2 bucket(s) corrected
+  frame 111: ALL 7,839,936 -> 3,645,632, 2 bucket(s) corrected
+  frame 112: ALL 5,599,296 -> 1,404,992, 2 bucket(s) corrected
+  frame 113: ALL 8,960,256 -> 4,765,952, 2 bucket(s) corrected
+  frame 114: ALL 5,599,424 -> 1,405,120, 2 bucket(s) corrected
+  frame 115: ALL 6,719,232 -> 2,524,928, 2 bucket(s) corrected
+  frame 116: ALL 6,159,488 -> 1,965,184, 2 bucket(s) corrected
+  frame 117: ALL 6,720,384 -> 2,526,080, 2 bucket(s) corrected
+  frame 118: ALL 5,598,528 -> 1,404,224, 2 bucket(s) corrected
+  frame 119: ALL 6,719,680 -> 2,525,376, 2 bucket(s) corrected
+  frame 120: ALL 5,599,232 -> 1,404,928, 2 bucket(s) corrected
+  frame 121: ALL 6,719,616 -> 2,525,312, 2 bucket(s) corrected
+  frame 122: ALL 6,159,232 -> 1,964,928, 2 bucket(s) corrected
+  frame 123: ALL 6,719,744 -> 2,525,440, 2 bucket(s) corrected
+  frame 124: ALL 5,599,232 -> 1,404,928, 2 bucket(s) corrected
+  frame 125: ALL 6,719,296 -> 2,524,992, 2 bucket(s) corrected
+  frame 126: ALL 5,599,360 -> 1,405,056, 2 bucket(s) corrected
+  frame 127: ALL 6,719,360 -> 2,525,056, 2 bucket(s) corrected
+  frame 128: ALL 6,159,488 -> 1,965,184, 2 bucket(s) corrected
+  frame 129: ALL 6,719,744 -> 2,525,440, 2 bucket(s) corrected
+  frame 130: ALL 5,599,104 -> 1,404,800, 2 bucket(s) corrected
+  frame 131: ALL 6,719,488 -> 2,525,184, 2 bucket(s) corrected
+  frame 132: ALL 5,599,296 -> 1,404,992, 2 bucket(s) corrected
+  frame 133: ALL 6,719,552 -> 2,525,248, 2 bucket(s) corrected
+  frame 134: ALL 6,159,296 -> 1,964,992, 2 bucket(s) corrected
+  frame 135: ALL 6,719,744 -> 2,525,440, 2 bucket(s) corrected
+  frame 136: ALL 5,599,296 -> 1,404,992, 2 bucket(s) corrected
+  frame 137: ALL 7,279,744 -> 3,085,440, 2 bucket(s) corrected
+  frame 138: ALL 5,599,232 -> 1,404,928, 2 bucket(s) corrected
+  frame 139: ALL 6,719,552 -> 2,525,248, 2 bucket(s) corrected
+  frame 140: ALL 6,159,488 -> 1,965,184, 2 bucket(s) corrected
+  frame 141: ALL 6,719,744 -> 2,525,440, 2 bucket(s) corrected
+  frame 142: ALL 5,599,232 -> 1,404,928, 2 bucket(s) corrected
+  frame 143: ALL 6,719,488 -> 2,525,184, 2 bucket(s) corrected
+  frame 144: ALL 5,599,040 -> 1,404,736, 2 bucket(s) corrected
+  frame 145: ALL 6,719,424 -> 2,525,120, 2 bucket(s) corrected
+  frame 146: ALL 5,599,296 -> 1,404,992, 2 bucket(s) corrected
+  frame 147: ALL 6,719,424 -> 2,525,120, 2 bucket(s) corrected
+  frame 148: ALL 5,599,232 -> 1,404,928, 2 bucket(s) corrected
+  frame 149: ALL 6,720,128 -> 2,525,824, 2 bucket(s) corrected
+  frame 150: ALL 5,598,912 -> 1,404,608, 2 bucket(s) corrected
+  frame 151: ALL 6,719,808 -> 2,525,504, 2 bucket(s) corrected
+  frame 152: ALL 6,159,424 -> 1,965,120, 2 bucket(s) corrected
+  frame 153: ALL 6,719,296 -> 2,524,992, 2 bucket(s) corrected
+  frame 154: ALL 5,599,168 -> 1,404,864, 2 bucket(s) corrected
+  frame 155: ALL 6,719,680 -> 2,525,376, 2 bucket(s) corrected
+  frame 156: ALL 5,599,360 -> 1,405,056, 2 bucket(s) corrected
+  frame 157: ALL 6,719,872 -> 2,525,568, 2 bucket(s) corrected
+  frame 158: ALL 6,159,232 -> 1,964,928, 2 bucket(s) corrected
+  frame 159: ALL 6,719,872 -> 2,525,568, 2 bucket(s) corrected
+  frame 160: ALL 5,599,296 -> 1,404,992, 2 bucket(s) corrected
+  frame 161: ALL 6,719,488 -> 2,525,184, 2 bucket(s) corrected
+  frame 162: ALL 5,599,040 -> 1,404,736, 2 bucket(s) corrected
+  frame 163: ALL 6,719,744 -> 2,525,440, 2 bucket(s) corrected
+  frame 164: ALL 6,159,296 -> 1,964,992, 2 bucket(s) corrected
+  frame 165: ALL 6,719,680 -> 2,525,376, 2 bucket(s) corrected
+  frame 166: ALL 5,599,296 -> 1,404,992, 2 bucket(s) corrected
+  frame 167: ALL 7,279,808 -> 3,085,504, 2 bucket(s) corrected
+  frame 168: ALL 5,599,232 -> 1,404,928, 2 bucket(s) corrected
+  frame 169: ALL 6,719,424 -> 2,525,120, 2 bucket(s) corrected
+  frame 170: ALL 5,599,488 -> 1,405,184, 2 bucket(s) corrected
+  frame 171: ALL 6,719,616 -> 2,525,312, 2 bucket(s) corrected
+  frame 172: ALL 5,599,232 -> 1,404,928, 2 bucket(s) corrected
+  frame 173: ALL 6,719,552 -> 2,525,248, 2 bucket(s) corrected
+  frame 174: ALL 5,599,168 -> 1,404,864, 2 bucket(s) corrected
+  frame 175: ALL 6,719,168 -> 2,524,864, 2 bucket(s) corrected
+  frame 176: ALL 6,159,616 -> 1,965,312, 2 bucket(s) corrected
+  frame 177: ALL 6,720,256 -> 2,525,952, 2 bucket(s) corrected
+  frame 178: ALL 5,598,656 -> 1,404,352, 2 bucket(s) corrected
+  frame 179: ALL 6,719,744 -> 2,525,440, 2 bucket(s) corrected
+  frame 180: ALL 5,598,976 -> 1,404,672, 2 bucket(s) corrected
+  frame 181: ALL 6,719,680 -> 2,525,376, 2 bucket(s) corrected
+  frame 182: ALL 6,159,296 -> 1,964,992, 2 bucket(s) corrected
+  frame 183: ALL 6,719,552 -> 2,525,248, 2 bucket(s) corrected
+  frame 184: ALL 5,599,616 -> 1,405,312, 2 bucket(s) corrected
+  frame 185: ALL 6,719,616 -> 2,525,312, 2 bucket(s) corrected
+  frame 186: ALL 5,599,168 -> 1,404,864, 2 bucket(s) corrected
+  frame 187: ALL 6,719,616 -> 2,525,312, 2 bucket(s) corrected
+  frame 188: ALL 6,159,232 -> 1,964,928, 2 bucket(s) corrected
+  frame 189: ALL 6,719,552 -> 2,525,248, 2 bucket(s) corrected
+  frame 190: ALL 5,599,168 -> 1,404,864, 2 bucket(s) corrected
+  frame 191: ALL 6,719,616 -> 2,525,312, 2 bucket(s) corrected
+  frame 192: ALL 5,599,552 -> 1,405,248, 2 bucket(s) corrected
+  frame 193: ALL 6,719,232 -> 2,524,928, 2 bucket(s) corrected
+  frame 194: ALL 6,159,616 -> 1,965,312, 2 bucket(s) corrected
+  frame 195: ALL 6,719,488 -> 2,525,184, 2 bucket(s) corrected
+  frame 196: ALL 5,599,104 -> 1,404,800, 2 bucket(s) corrected
+  frame 197: ALL 7,281,280 -> 3,086,976, 2 bucket(s) corrected
+  frame 198: ALL 5,599,360 -> 1,405,056, 2 bucket(s) corrected
+  frame 199: ALL 6,719,744 -> 2,525,440, 2 bucket(s) corrected
+  frame 200: ALL 6,159,488 -> 1,965,184, 2 bucket(s) corrected
+  frame 201: ALL 6,719,424 -> 2,525,120, 2 bucket(s) corrected
+  frame 202: ALL 5,599,296 -> 1,404,992, 2 bucket(s) corrected
+  frame 203: ALL 7,279,680 -> 3,085,376, 2 bucket(s) corrected
+  frame 204: ALL 5,599,104 -> 1,404,800, 2 bucket(s) corrected
+  frame 205: ALL 6,719,680 -> 2,525,376, 2 bucket(s) corrected
+  frame 206: ALL 6,159,616 -> 1,965,312, 2 bucket(s) corrected
+  frame 207: ALL 6,719,552 -> 2,525,248, 2 bucket(s) corrected
+  frame 208: ALL 5,599,360 -> 1,405,056, 2 bucket(s) corrected
+  frame 209: ALL 7,279,936 -> 3,085,632, 2 bucket(s) corrected
+  frame 210: ALL 5,598,976 -> 1,404,672, 2 bucket(s) corrected
+  frame 211: ALL 6,719,616 -> 2,525,312, 2 bucket(s) corrected
+  frame 212: ALL 6,719,808 -> 2,525,504, 2 bucket(s) corrected
+  frame 213: ALL 6,719,936 -> 2,525,632, 2 bucket(s) corrected
+  frame 214: ALL 6,719,488 -> 2,525,184, 2 bucket(s) corrected
+  frame 215: ALL 7,280,320 -> 3,086,016, 2 bucket(s) corrected
+  frame 216: ALL 5,598,528 -> 1,404,224, 2 bucket(s) corrected
+  frame 217: ALL 6,719,808 -> 2,525,504, 2 bucket(s) corrected
+  frame 218: ALL 6,719,488 -> 2,525,184, 2 bucket(s) corrected
+  frame 219: ALL 6,719,808 -> 2,525,504, 2 bucket(s) corrected
+  frame 220: ALL 5,599,104 -> 1,404,800, 2 bucket(s) corrected
+  frame 221: ALL 7,280,000 -> 3,085,696, 2 bucket(s) corrected
+  frame 222: ALL 5,599,296 -> 1,404,992, 2 bucket(s) corrected
+  frame 223: ALL 6,719,168 -> 2,524,864, 2 bucket(s) corrected
+  frame 224: ALL 6,159,808 -> 1,965,504, 2 bucket(s) corrected
+  frame 225: ALL 6,719,488 -> 2,525,184, 2 bucket(s) corrected
+  frame 226: ALL 5,598,848 -> 1,404,544, 2 bucket(s) corrected
+  frame 227: ALL 7,279,872 -> 3,085,568, 2 bucket(s) corrected
+  frame 228: ALL 5,598,144 -> 1,403,840, 2 bucket(s) corrected
+  frame 229: ALL 6,719,488 -> 2,525,184, 2 bucket(s) corrected
+  frame 230: ALL 6,159,616 -> 1,965,312, 2 bucket(s) corrected
+  frame 231: ALL 6,719,040 -> 2,524,736, 2 bucket(s) corrected
+  frame 232: ALL 6,159,616 -> 1,965,312, 2 bucket(s) corrected
+  frame 233: ALL 7,279,680 -> 3,085,376, 2 bucket(s) corrected
+  frame 234: ALL 5,599,232 -> 1,404,928, 2 bucket(s) corrected
+  frame 235: ALL 6,719,744 -> 2,525,440, 2 bucket(s) corrected
+  frame 236: ALL 6,159,424 -> 1,965,120, 2 bucket(s) corrected
+  frame 237: ALL 6,720,192 -> 2,525,888, 2 bucket(s) corrected
+  frame 238: ALL 6,158,528 -> 1,964,224, 2 bucket(s) corrected
+  frame 239: ALL 7,279,808 -> 3,085,504, 2 bucket(s) corrected
+  frame 240: ALL 5,599,360 -> 1,405,056, 2 bucket(s) corrected
+  frame 241: ALL 6,719,744 -> 2,525,440, 2 bucket(s) corrected
+  frame 242: ALL 6,159,552 -> 1,965,248, 2 bucket(s) corrected
+  frame 243: ALL 6,719,360 -> 2,525,056, 2 bucket(s) corrected
+  frame 244: ALL 5,599,296 -> 1,404,992, 2 bucket(s) corrected
+  frame 245: ALL 7,282,880 -> 3,088,576, 2 bucket(s) corrected
+  frame 246: ALL 5,596,160 -> 1,401,856, 2 bucket(s) corrected
+  frame 247: ALL 6,719,744 -> 2,525,440, 2 bucket(s) corrected
+  frame 248: ALL 6,159,616 -> 1,965,312, 2 bucket(s) corrected
+  frame 249: ALL 6,719,232 -> 2,524,928, 2 bucket(s) corrected
+  frame 250: ALL 6,159,360 -> 1,965,056, 2 bucket(s) corrected
+  frame 251: ALL 7,279,808 -> 3,085,504, 2 bucket(s) corrected
+  frame 252: ALL 5,599,168 -> 1,404,864, 2 bucket(s) corrected
+  frame 253: ALL 6,719,232 -> 2,524,928, 2 bucket(s) corrected
+  frame 254: ALL 6,160,320 -> 1,966,016, 2 bucket(s) corrected
+  frame 255: ALL 6,719,296 -> 2,524,992, 2 bucket(s) corrected
+  frame 256: ALL 6,159,488 -> 1,965,184, 2 bucket(s) corrected
+  frame 257: ALL 7,279,488 -> 3,085,184, 2 bucket(s) corrected
+  frame 258: ALL 5,599,360 -> 1,405,056, 2 bucket(s) corrected
+  frame 259: ALL 6,719,616 -> 2,525,312, 2 bucket(s) corrected
+  frame 260: ALL 6,159,616 -> 1,965,312, 2 bucket(s) corrected
+  frame 261: ALL 6,719,808 -> 2,525,504, 2 bucket(s) corrected
+  frame 262: ALL 5,599,104 -> 1,404,800, 2 bucket(s) corrected
+  frame 263: ALL 7,280,000 -> 3,085,696, 2 bucket(s) corrected
+  frame 264: ALL 5,599,104 -> 1,404,800, 2 bucket(s) corrected
+  frame 265: ALL 6,719,616 -> 2,525,312, 2 bucket(s) corrected
+  frame 266: ALL 6,159,680 -> 1,965,376, 2 bucket(s) corrected
+  frame 267: ALL 6,719,232 -> 2,524,928, 2 bucket(s) corrected
+  frame 268: ALL 5,599,296 -> 1,404,992, 2 bucket(s) corrected
+  frame 269: ALL 7,280,320 -> 3,086,016, 2 bucket(s) corrected
+  frame 270: ALL 6,158,976 -> 1,964,672, 2 bucket(s) corrected
+  frame 271: ALL 6,719,616 -> 2,525,312, 2 bucket(s) corrected
+  frame 272: ALL 6,159,552 -> 1,965,248, 2 bucket(s) corrected
+  frame 273: ALL 6,719,552 -> 2,525,248, 2 bucket(s) corrected
+  frame 274: ALL 6,159,104 -> 1,964,800, 2 bucket(s) corrected
+  frame 275: ALL 6,720,000 -> 2,525,696, 2 bucket(s) corrected
+  frame 276: ALL 6,719,424 -> 2,525,120, 2 bucket(s) corrected
+  frame 277: ALL 5,599,232 -> 1,404,928, 2 bucket(s) corrected
+  frame 278: ALL 7,279,744 -> 3,085,440, 2 bucket(s) corrected
+  frame 279: ALL 6,719,488 -> 2,525,184, 2 bucket(s) corrected
+  frame 280: ALL 6,159,488 -> 1,965,184, 2 bucket(s) corrected
+  frame 281: ALL 6,719,552 -> 2,525,248, 2 bucket(s) corrected
+  frame 282: ALL 6,159,168 -> 1,964,864, 2 bucket(s) corrected
+  frame 283: ALL 5,599,360 -> 1,405,056, 2 bucket(s) corrected
+  frame 284: ALL 6,719,936 -> 2,525,632, 2 bucket(s) corrected
+  frame 285: ALL 6,158,976 -> 1,964,672, 2 bucket(s) corrected
+  frame 286: ALL 6,159,680 -> 1,965,376, 2 bucket(s) corrected
+  frame 287: ALL 6,719,680 -> 2,525,376, 2 bucket(s) corrected
+  frame 288: ALL 6,159,232 -> 1,964,928, 2 bucket(s) corrected
+  frame 289: ALL 6,719,360 -> 2,525,056, 2 bucket(s) corrected
+  frame 290: ALL 6,719,488 -> 2,525,184, 2 bucket(s) corrected
+  frame 291: ALL 6,159,424 -> 1,965,120, 2 bucket(s) corrected
+  frame 292: ALL 6,719,296 -> 2,524,992, 2 bucket(s) corrected
+  frame 293: ALL 6,160,192 -> 1,965,888, 2 bucket(s) corrected
+  frame 294: ALL 7,279,168 -> 3,084,864, 2 bucket(s) corrected
+  frame 295: ALL 5,599,232 -> 1,404,928, 2 bucket(s) corrected
+  frame 296: ALL 7,280,320 -> 3,086,016, 2 bucket(s) corrected
+  frame 297: ALL 5,599,232 -> 1,404,928, 2 bucket(s) corrected
+  frame 298: ALL 6,719,232 -> 2,524,928, 2 bucket(s) corrected
+  frame 299: ALL 6,159,424 -> 1,965,120, 2 bucket(s) corrected
+  frame 300: ALL 6,719,744 -> 2,525,440, 2 bucket(s) corrected
+  frame 301: ALL 5,598,784 -> 1,404,480, 2 bucket(s) corrected
+  frame 302: ALL 6,720,064 -> 2,525,760, 2 bucket(s) corrected
+  frame 303: ALL 5,039,040 -> 844,736, 2 bucket(s) corrected
+  frame 304: ALL 5,598,720 -> 1,404,416, 2 bucket(s) corrected
+  frame 305: ALL 7,280,256 -> 3,085,952, 2 bucket(s) corrected
+  frame 306: ALL 5,599,040 -> 1,404,736, 2 bucket(s) corrected
+  frame 307: ALL 6,719,488 -> 2,525,184, 2 bucket(s) corrected
+  frame 308: ALL 6,719,872 -> 2,525,568, 2 bucket(s) corrected
+  frame 309: ALL 6,719,360 -> 2,525,056, 2 bucket(s) corrected
+  frame 310: ALL 7,280,384 -> 3,086,080, 2 bucket(s) corrected
+  frame 311: ALL 6,159,168 -> 1,964,864, 2 bucket(s) corrected
+  frame 312: ALL 6,719,360 -> 2,525,056, 2 bucket(s) corrected
+  frame 313: ALL 5,599,616 -> 1,405,312, 2 bucket(s) corrected
+  frame 314: ALL 6,159,232 -> 1,964,928, 2 bucket(s) corrected
+  frame 315: ALL 7,279,808 -> 3,085,504, 2 bucket(s) corrected
+  frame 316: ALL 6,159,552 -> 1,965,248, 2 bucket(s) corrected
+  frame 317: ALL 6,159,360 -> 1,965,056, 2 bucket(s) corrected
+  frame 318: ALL 6,159,616 -> 1,965,312, 2 bucket(s) corrected
+  frame 319: ALL 5,598,848 -> 1,404,544, 2 bucket(s) corrected
+  frame 320: ALL 6,159,488 -> 1,965,184, 2 bucket(s) corrected
+  frame 321: ALL 6,159,552 -> 1,965,248, 2 bucket(s) corrected
+  frame 322: ALL 6,159,424 -> 1,965,120, 2 bucket(s) corrected
+  frame 323: ALL 6,719,360 -> 2,525,056, 2 bucket(s) corrected
+  frame 324: ALL 5,599,296 -> 1,404,992, 2 bucket(s) corrected
+  frame 325: ALL 6,719,616 -> 2,525,312, 2 bucket(s) corrected
+  frame 326: ALL 5,599,488 -> 1,405,184, 2 bucket(s) corrected
+  frame 327: ALL 6,159,040 -> 1,964,736, 2 bucket(s) corrected
+  frame 328: ALL 6,159,488 -> 1,965,184, 2 bucket(s) corrected
+  frame 329: ALL 7,279,872 -> 3,085,568, 2 bucket(s) corrected
+  frame 330: ALL 5,599,104 -> 1,404,800, 2 bucket(s) corrected
+  frame 331: ALL 6,720,000 -> 2,525,696, 2 bucket(s) corrected
+  frame 332: ALL 6,159,424 -> 1,965,120, 2 bucket(s) corrected
+  frame 333: ALL 6,719,040 -> 2,524,736, 2 bucket(s) corrected
+  frame 334: ALL 5,599,808 -> 1,405,504, 2 bucket(s) corrected
+  frame 335: ALL 7,279,552 -> 3,085,248, 2 bucket(s) corrected
+  frame 336: ALL 5,598,976 -> 1,404,672, 2 bucket(s) corrected
+  frame 337: ALL 6,719,424 -> 2,525,120, 2 bucket(s) corrected
+  frame 338: ALL 6,159,808 -> 1,965,504, 2 bucket(s) corrected
+  frame 339: ALL 6,719,232 -> 2,524,928, 2 bucket(s) corrected
+  frame 340: ALL 5,599,552 -> 1,405,248, 2 bucket(s) corrected
+  frame 341: ALL 7,279,936 -> 3,085,632, 2 bucket(s) corrected
+  frame 342: ALL 5,599,232 -> 1,404,928, 2 bucket(s) corrected
+  frame 343: ALL 6,719,168 -> 2,524,864, 2 bucket(s) corrected
+  frame 344: ALL 6,159,680 -> 1,965,376, 2 bucket(s) corrected
+  frame 345: ALL 7,279,808 -> 3,085,504, 2 bucket(s) corrected
+  frame 346: ALL 5,599,296 -> 1,404,992, 2 bucket(s) corrected
+  frame 347: ALL 7,279,872 -> 3,085,568, 2 bucket(s) corrected
+  frame 348: ALL 6,159,104 -> 1,964,800, 2 bucket(s) corrected
+  frame 349: ALL 7,279,872 -> 3,085,568, 2 bucket(s) corrected
+  frame 350: ALL 6,159,488 -> 1,965,184, 2 bucket(s) corrected
+  frame 351: ALL 6,159,424 -> 1,965,120, 2 bucket(s) corrected
+  frame 352: ALL 5,598,912 -> 1,404,608, 2 bucket(s) corrected
+  frame 353: ALL 6,159,680 -> 1,965,376, 2 bucket(s) corrected
+  frame 354: ALL 5,038,784 -> 844,480, 2 bucket(s) corrected
+  frame 355: ALL 9,793,600 -> 5,599,296, 3 bucket(s) corrected
+  frame 356: ALL 5,599,232 -> 1,404,928, 2 bucket(s) corrected
+  frame 357: ALL 5,599,360 -> 1,405,056, 2 bucket(s) corrected
+  frame 358: ALL 5,038,144 -> 843,840, 2 bucket(s) corrected
+  frame 359: ALL 5,599,744 -> 1,405,440, 2 bucket(s) corrected
+  frame 360: ALL 5,599,040 -> 1,404,736, 2 bucket(s) corrected
+  frame 361: ALL 6,159,488 -> 1,965,184, 2 bucket(s) corrected
+  frame 362: ALL 5,599,360 -> 1,405,056, 2 bucket(s) corrected
+  frame 363: ALL 6,719,616 -> 2,525,312, 2 bucket(s) corrected
+  frame 364: ALL 5,598,528 -> 1,404,224, 2 bucket(s) corrected
+  frame 365: ALL 6,159,552 -> 1,965,248, 2 bucket(s) corrected
+  frame 366: ALL 6,159,680 -> 1,965,376, 2 bucket(s) corrected
+  frame 367: ALL 6,159,168 -> 1,964,864, 2 bucket(s) corrected
+  frame 368: ALL 5,599,232 -> 1,404,928, 2 bucket(s) corrected
+  frame 369: ALL 7,280,128 -> 3,085,824, 2 bucket(s) corrected
+  frame 370: ALL 5,598,720 -> 1,404,416, 2 bucket(s) corrected
+  frame 371: ALL 6,719,744 -> 2,525,440, 2 bucket(s) corrected
+  frame 372: ALL 6,159,680 -> 1,965,376, 2 bucket(s) corrected
+  frame 373: ALL 6,719,424 -> 2,525,120, 2 bucket(s) corrected
+  frame 374: ALL 6,159,616 -> 1,965,312, 2 bucket(s) corrected
+  frame 375: ALL 5,599,296 -> 1,404,992, 2 bucket(s) corrected
+  frame 376: ALL 5,038,848 -> 844,544, 2 bucket(s) corrected
+  frame 377: ALL 5,599,232 -> 1,404,928, 2 bucket(s) corrected
+  frame 378: ALL 5,039,360 -> 845,056, 2 bucket(s) corrected
+  frame 379: ALL 6,719,552 -> 2,525,248, 2 bucket(s) corrected
+  frame 380: ALL 5,038,976 -> 844,672, 2 bucket(s) corrected
+  frame 381: ALL 6,719,936 -> 2,525,632, 2 bucket(s) corrected
+  frame 382: ALL 5,599,104 -> 1,404,800, 2 bucket(s) corrected
+  frame 383: ALL 5,598,848 -> 1,404,544, 2 bucket(s) corrected
+  frame 384: ALL 5,039,360 -> 845,056, 2 bucket(s) corrected
+  frame 385: ALL 5,599,168 -> 1,404,864, 2 bucket(s) corrected
+  frame 386: ALL 5,599,232 -> 1,404,928, 2 bucket(s) corrected
+  frame 387: ALL 5,599,104 -> 1,404,800, 2 bucket(s) corrected
+  frame 388: ALL 5,038,592 -> 844,288, 2 bucket(s) corrected
+  frame 389: ALL 6,160,000 -> 1,965,696, 2 bucket(s) corrected
+  frame 390: ALL 5,598,976 -> 1,404,672, 2 bucket(s) corrected
+  frame 391: ALL 6,719,808 -> 2,525,504, 2 bucket(s) corrected
+  frame 392: ALL 7,279,680 -> 3,085,376, 2 bucket(s) corrected
+  frame 393: ALL 5,599,232 -> 1,404,928, 2 bucket(s) corrected
+  frame 394: ALL 6,159,360 -> 1,965,056, 2 bucket(s) corrected
+  frame 395: ALL 5,599,552 -> 1,405,248, 2 bucket(s) corrected
+  frame 396: ALL 5,599,168 -> 1,404,864, 2 bucket(s) corrected
+  frame 397: ALL 5,039,104 -> 844,800, 2 bucket(s) corrected
+  frame 398: ALL 6,159,744 -> 1,965,440, 2 bucket(s) corrected
+  frame 399: ALL 5,038,528 -> 844,224, 2 bucket(s) corrected
+  frame 400: ALL 5,599,360 -> 1,405,056, 2 bucket(s) corrected
+  frame 401: ALL 5,599,104 -> 1,404,800, 2 bucket(s) corrected
+  frame 402: ALL 6,719,680 -> 2,525,376, 2 bucket(s) corrected
+  frame 403: ALL 5,039,104 -> 844,800, 2 bucket(s) corrected
+  frame 404: ALL 6,719,488 -> 2,525,184, 2 bucket(s) corrected
+  frame 405: ALL 5,039,296 -> 844,992, 2 bucket(s) corrected
+  frame 406: ALL 5,599,104 -> 1,404,800, 2 bucket(s) corrected
+  frame 407: ALL 5,039,232 -> 844,928, 2 bucket(s) corrected
+  frame 408: ALL 5,038,912 -> 844,608, 2 bucket(s) corrected
+  frame 409: ALL 6,159,680 -> 1,965,376, 2 bucket(s) corrected
+  frame 410: ALL 5,038,848 -> 844,544, 2 bucket(s) corrected
+  frame 411: ALL 5,599,296 -> 1,404,992, 2 bucket(s) corrected
+  frame 412: ALL 5,039,104 -> 844,800, 2 bucket(s) corrected
+  frame 413: ALL 5,599,040 -> 1,404,736, 2 bucket(s) corrected
+  frame 414: ALL 5,038,912 -> 844,608, 2 bucket(s) corrected
+  frame 415: ALL 5,599,296 -> 1,404,992, 2 bucket(s) corrected
+  frame 416: ALL 5,038,912 -> 844,608, 2 bucket(s) corrected
+  frame 417: ALL 5,600,064 -> 1,405,760, 2 bucket(s) corrected
+  frame 418: ALL 5,038,144 -> 843,840, 2 bucket(s) corrected
+  frame 419: ALL 5,038,976 -> 844,672, 2 bucket(s) corrected
+  frame 420: ALL 5,038,848 -> 844,544, 2 bucket(s) corrected
+  frame 421: ALL 5,599,552 -> 1,405,248, 2 bucket(s) corrected
+  frame 422: ALL 5,038,784 -> 844,480, 2 bucket(s) corrected
+  frame 423: ALL 5,599,168 -> 1,404,864, 2 bucket(s) corrected
+  frame 424: ALL 5,039,104 -> 844,800, 2 bucket(s) corrected
+  frame 425: ALL 6,719,744 -> 2,525,440, 2 bucket(s) corrected
+  frame 426: ALL 5,038,592 -> 844,288, 2 bucket(s) corrected
+  frame 427: ALL 5,039,424 -> 845,120, 2 bucket(s) corrected
+  frame 428: ALL 5,038,656 -> 844,352, 2 bucket(s) corrected
+  frame 429: ALL 5,599,616 -> 1,405,312, 2 bucket(s) corrected
+  frame 430: ALL 5,038,592 -> 844,288, 2 bucket(s) corrected
+  frame 431: ALL 6,159,616 -> 1,965,312, 2 bucket(s) corrected
+  frame 432: ALL 5,039,040 -> 844,736, 2 bucket(s) corrected
+  frame 433: ALL 5,599,360 -> 1,405,056, 2 bucket(s) corrected
+  frame 434: ALL 5,038,784 -> 844,480, 2 bucket(s) corrected
+  frame 435: ALL 5,599,168 -> 1,404,864, 2 bucket(s) corrected
+  frame 436: ALL 5,039,232 -> 844,928, 2 bucket(s) corrected
+  frame 437: ALL 6,159,744 -> 1,965,440, 2 bucket(s) corrected
+  frame 438: ALL 5,038,400 -> 844,096, 2 bucket(s) corrected
+  frame 439: ALL 5,599,680 -> 1,405,376, 2 bucket(s) corrected
+  frame 440: ALL 5,038,976 -> 844,672, 2 bucket(s) corrected
+  frame 441: ALL 5,599,296 -> 1,404,992, 2 bucket(s) corrected
+  frame 442: ALL 5,038,912 -> 844,608, 2 bucket(s) corrected
+  frame 443: ALL 5,599,040 -> 1,404,736, 2 bucket(s) corrected
+  frame 444: ALL 5,039,360 -> 845,056, 2 bucket(s) corrected
+  frame 445: ALL 5,599,232 -> 1,404,928, 2 bucket(s) corrected
+  frame 446: ALL 5,038,784 -> 844,480, 2 bucket(s) corrected
+  frame 447: ALL 5,599,616 -> 1,405,312, 2 bucket(s) corrected
+  frame 448: ALL 5,038,592 -> 844,288, 2 bucket(s) corrected
+  frame 449: ALL 5,599,360 -> 1,405,056, 2 bucket(s) corrected
+  frame 450: ALL 5,038,784 -> 844,480, 2 bucket(s) corrected
+  frame 451: ALL 5,598,912 -> 1,404,608, 2 bucket(s) corrected
+  frame 452: ALL 5,039,360 -> 845,056, 2 bucket(s) corrected
+  frame 453: ALL 5,599,424 -> 1,405,120, 2 bucket(s) corrected
+  frame 454: ALL 5,038,656 -> 844,352, 2 bucket(s) corrected
+  frame 455: ALL 5,599,360 -> 1,405,056, 2 bucket(s) corrected
+  frame 456: ALL 5,039,104 -> 844,800, 2 bucket(s) corrected
+  frame 457: ALL 5,599,232 -> 1,404,928, 2 bucket(s) corrected
+  frame 458: ALL 5,038,912 -> 844,608, 2 bucket(s) corrected
+  frame 459: ALL 5,599,104 -> 1,404,800, 2 bucket(s) corrected
+  frame 460: ALL 5,039,168 -> 844,864, 2 bucket(s) corrected
+  frame 461: ALL 6,159,872 -> 1,965,568, 2 bucket(s) corrected
+  frame 462: ALL 5,598,848 -> 1,404,544, 2 bucket(s) corrected
+  frame 463: ALL 7,279,680 -> 3,085,376, 2 bucket(s) corrected
+  frame 464: ALL 6,159,744 -> 1,965,440, 2 bucket(s) corrected
+  frame 465: ALL 6,159,424 -> 1,965,120, 2 bucket(s) corrected
+  frame 466: ALL 5,038,784 -> 844,480, 2 bucket(s) corrected
+  frame 467: ALL 6,159,552 -> 1,965,248, 2 bucket(s) corrected
+  frame 468: ALL 5,038,848 -> 844,544, 2 bucket(s) corrected
+  frame 469: ALL 5,599,424 -> 1,405,120, 2 bucket(s) corrected
+  frame 470: ALL 5,038,848 -> 844,544, 2 bucket(s) corrected
+  frame 471: ALL 6,159,744 -> 1,965,440, 2 bucket(s) corrected
+  frame 472: ALL 6,159,168 -> 1,964,864, 2 bucket(s) corrected
+  frame 473: ALL 5,599,104 -> 1,404,800, 2 bucket(s) corrected
+  frame 474: ALL 6,159,616 -> 1,965,312, 2 bucket(s) corrected
+  frame 475: ALL 6,158,720 -> 1,964,416, 2 bucket(s) corrected
+  frame 476: ALL 5,599,552 -> 1,405,248, 2 bucket(s) corrected
+  frame 477: ALL 6,160,128 -> 1,965,824, 2 bucket(s) corrected
+  frame 478: ALL 5,598,656 -> 1,404,352, 2 bucket(s) corrected
+  frame 479: ALL 6,159,424 -> 1,965,120, 2 bucket(s) corrected
+  frame 480: ALL 6,719,808 -> 2,525,504, 2 bucket(s) corrected
+  frame 481: ALL 6,159,104 -> 1,964,800, 2 bucket(s) corrected
+  frame 482: ALL 6,159,040 -> 1,964,736, 2 bucket(s) corrected
+  frame 483: ALL 5,599,808 -> 1,405,504, 2 bucket(s) corrected
+  frame 484: ALL 5,599,168 -> 1,404,864, 2 bucket(s) corrected
+  frame 485: ALL 5,038,912 -> 844,608, 2 bucket(s) corrected
+  frame 486: ALL 5,599,360 -> 1,405,056, 2 bucket(s) corrected
+  frame 487: ALL 5,599,680 -> 1,405,376, 2 bucket(s) corrected
+  frame 488: ALL 5,599,040 -> 1,404,736, 2 bucket(s) corrected
+  frame 489: ALL 5,038,464 -> 844,160, 2 bucket(s) corrected
+  frame 490: ALL 6,159,872 -> 1,965,568, 2 bucket(s) corrected
+  frame 491: ALL 5,038,848 -> 844,544, 2 bucket(s) corrected
+  frame 492: ALL 5,599,232 -> 1,404,928, 2 bucket(s) corrected
+  frame 493: ALL 5,038,912 -> 844,608, 2 bucket(s) corrected
+  frame 494: ALL 6,159,744 -> 1,965,440, 2 bucket(s) corrected
+  frame 495: ALL 5,038,720 -> 844,416, 2 bucket(s) corrected
+  frame 496: ALL 6,159,424 -> 1,965,120, 2 bucket(s) corrected
+  frame 497: ALL 5,599,360 -> 1,405,056, 2 bucket(s) corrected
+  frame 498: ALL 6,719,936 -> 2,525,632, 2 bucket(s) corrected
+  frame 499: ALL 5,598,784 -> 1,404,480, 2 bucket(s) corrected
+  frame 500: ALL 7,279,936 -> 3,085,632, 2 bucket(s) corrected
+  frame 501: ALL 6,719,552 -> 2,525,248, 2 bucket(s) corrected
+  frame 502: ALL 8,399,872 -> 4,205,568, 2 bucket(s) corrected
+  frame 503: ALL 6,159,616 -> 1,965,312, 2 bucket(s) corrected
+  frame 504: ALL 7,840,192 -> 3,645,888, 2 bucket(s) corrected
+  frame 505: ALL 5,598,912 -> 1,404,608, 2 bucket(s) corrected
+  frame 506: ALL 6,719,616 -> 2,525,312, 2 bucket(s) corrected
+  frame 507: ALL 7,280,320 -> 3,086,016, 2 bucket(s) corrected
+  frame 508: ALL 7,279,424 -> 3,085,120, 2 bucket(s) corrected
+  frame 509: ALL 5,599,168 -> 1,404,864, 2 bucket(s) corrected
+  frame 510: ALL 7,840,320 -> 3,646,016, 2 bucket(s) corrected
+  frame 511: ALL 5,598,784 -> 1,404,480, 2 bucket(s) corrected
+  frame 512: ALL 5,599,360 -> 1,405,056, 2 bucket(s) corrected
+  frame 513: ALL 5,599,360 -> 1,405,056, 2 bucket(s) corrected
+  frame 514: ALL 5,599,040 -> 1,404,736, 2 bucket(s) corrected
+  frame 515: ALL 5,038,976 -> 844,672, 2 bucket(s) corrected
+  frame 516: ALL 5,599,232 -> 1,404,928, 2 bucket(s) corrected
+  frame 517: ALL 5,039,232 -> 844,928, 2 bucket(s) corrected
+  frame 518: ALL 5,038,592 -> 844,288, 2 bucket(s) corrected
+  frame 519: ALL 5,039,040 -> 844,736, 2 bucket(s) corrected
+  frame 520: ALL 5,599,424 -> 1,405,120, 2 bucket(s) corrected
+  frame 521: ALL 5,039,360 -> 845,056, 2 bucket(s) corrected
+  frame 522: ALL 5,039,040 -> 844,736, 2 bucket(s) corrected
+  frame 523: ALL 4,478,464 -> 284,160, 2 bucket(s) corrected
+  frame 524: ALL 6,159,872 -> 1,965,568, 2 bucket(s) corrected
+  frame 525: ALL 5,599,104 -> 1,404,800, 2 bucket(s) corrected
+  frame 526: ALL 6,159,616 -> 1,965,312, 2 bucket(s) corrected
+  frame 527: ALL 5,038,784 -> 844,480, 2 bucket(s) corrected
+  frame 528: ALL 6,159,552 -> 1,965,248, 2 bucket(s) corrected
+  frame 529: ALL 5,598,912 -> 1,404,608, 2 bucket(s) corrected
+  frame 530: ALL 7,839,808 -> 3,645,504, 2 bucket(s) corrected
+  frame 531: ALL 5,599,744 -> 1,405,440, 2 bucket(s) corrected
+  frame 532: ALL 5,599,040 -> 1,404,736, 2 bucket(s) corrected
+  frame 533: ALL 5,599,040 -> 1,404,736, 2 bucket(s) corrected
+  frame 534: ALL 7,280,064 -> 3,085,760, 2 bucket(s) corrected
+  frame 535: ALL 5,599,168 -> 1,404,864, 2 bucket(s) corrected
+  frame 536: ALL 7,839,680 -> 3,645,376, 2 bucket(s) corrected
+  frame 537: ALL 5,600,128 -> 1,405,824, 2 bucket(s) corrected
+  frame 538: ALL 5,598,336 -> 1,404,032, 2 bucket(s) corrected
+  frame 539: ALL 5,039,040 -> 844,736, 2 bucket(s) corrected
+  frame 540: ALL 5,598,912 -> 1,404,608, 2 bucket(s) corrected
+  frame 541: ALL 6,160,000 -> 1,965,696, 2 bucket(s) corrected
+  frame 542: ALL 6,719,360 -> 2,525,056, 2 bucket(s) corrected
+  frame 543: ALL 5,038,592 -> 844,288, 2 bucket(s) corrected
+  frame 544: ALL 7,280,128 -> 3,085,824, 2 bucket(s) corrected
+  frame 545: ALL 5,038,976 -> 844,672, 2 bucket(s) corrected
+  frame 546: ALL 6,719,744 -> 2,525,440, 2 bucket(s) corrected
+  frame 547: ALL 5,599,168 -> 1,404,864, 2 bucket(s) corrected
+  frame 548: ALL 6,719,424 -> 2,525,120, 2 bucket(s) corrected
+  frame 549: ALL 5,039,232 -> 844,928, 2 bucket(s) corrected
+  frame 550: ALL 7,279,808 -> 3,085,504, 2 bucket(s) corrected
+  frame 551: ALL 5,038,656 -> 844,352, 2 bucket(s) corrected
+  frame 552: ALL 6,719,872 -> 2,525,568, 2 bucket(s) corrected
+  frame 553: ALL 5,599,488 -> 1,405,184, 2 bucket(s) corrected
+  frame 554: ALL 6,719,040 -> 2,524,736, 2 bucket(s) corrected
+  frame 555: ALL 5,039,168 -> 844,864, 2 bucket(s) corrected
+  frame 556: ALL 7,840,000 -> 3,645,696, 2 bucket(s) corrected
+  frame 557: ALL 6,159,744 -> 1,965,440, 2 bucket(s) corrected
+  frame 558: ALL 6,719,232 -> 2,524,928, 2 bucket(s) corrected
+  frame 559: ALL 5,599,552 -> 1,405,248, 2 bucket(s) corrected
+  frame 560: ALL 6,719,232 -> 2,524,928, 2 bucket(s) corrected
+  frame 561: ALL 5,039,104 -> 844,800, 2 bucket(s) corrected
+  frame 562: ALL 7,280,128 -> 3,085,824, 2 bucket(s) corrected
+  frame 563: ALL 5,038,528 -> 844,224, 2 bucket(s) corrected
+  frame 564: ALL 6,719,872 -> 2,525,568, 2 bucket(s) corrected
+  frame 565: ALL 6,159,680 -> 1,965,376, 2 bucket(s) corrected
+  frame 566: ALL 6,719,552 -> 2,525,248, 2 bucket(s) corrected
+  frame 567: ALL 5,038,656 -> 844,352, 2 bucket(s) corrected
+  frame 568: ALL 7,280,320 -> 3,086,016, 2 bucket(s) corrected
+  frame 569: ALL 6,159,424 -> 1,965,120, 2 bucket(s) corrected
+  frame 570: ALL 6,719,680 -> 2,525,376, 2 bucket(s) corrected
+  frame 571: ALL 5,599,360 -> 1,405,056, 2 bucket(s) corrected
+  frame 572: ALL 6,719,232 -> 2,524,928, 2 bucket(s) corrected
+  frame 573: ALL 5,039,168 -> 844,864, 2 bucket(s) corrected
+  frame 574: ALL 7,280,000 -> 3,085,696, 2 bucket(s) corrected
+  frame 575: ALL 5,038,848 -> 844,544, 2 bucket(s) corrected
+  frame 576: ALL 6,719,680 -> 2,525,376, 2 bucket(s) corrected
+  frame 577: ALL 5,599,168 -> 1,404,864, 2 bucket(s) corrected
+  frame 578: ALL 6,719,616 -> 2,525,312, 2 bucket(s) corrected
+  frame 579: ALL 5,038,400 -> 844,096, 2 bucket(s) corrected
+  frame 580: ALL 7,280,576 -> 3,086,272, 2 bucket(s) corrected
+  frame 581: ALL 5,038,272 -> 843,968, 2 bucket(s) corrected
+  frame 582: ALL 6,720,128 -> 2,525,824, 2 bucket(s) corrected
+  frame 583: ALL 5,599,552 -> 1,405,248, 2 bucket(s) corrected
+  frame 584: ALL 6,718,784 -> 2,524,480, 2 bucket(s) corrected
+  frame 585: ALL 5,599,808 -> 1,405,504, 2 bucket(s) corrected
+  frame 586: ALL 7,280,064 -> 3,085,760, 2 bucket(s) corrected
+  frame 587: ALL 5,598,656 -> 1,404,352, 2 bucket(s) corrected
+  frame 588: ALL 6,719,808 -> 2,525,504, 2 bucket(s) corrected
+  frame 589: ALL 5,599,168 -> 1,404,864, 2 bucket(s) corrected
+  frame 590: ALL 6,719,296 -> 2,524,992, 2 bucket(s) corrected
+  frame 591: ALL 5,599,360 -> 1,405,056, 2 bucket(s) corrected
+  frame 592: ALL 7,279,936 -> 3,085,632, 2 bucket(s) corrected
+  frame 593: ALL 6,159,040 -> 1,964,736, 2 bucket(s) corrected
+  frame 594: ALL 7,840,192 -> 3,645,888, 2 bucket(s) corrected
+  frame 595: ALL 6,159,552 -> 1,965,248, 2 bucket(s) corrected
+  frame 596: ALL 7,279,616 -> 3,085,312, 2 bucket(s) corrected
+  frame 597: ALL 5,600,000 -> 1,405,696, 2 bucket(s) corrected
+  frame 598: ALL 7,279,232 -> 3,084,928, 2 bucket(s) corrected
+  frame 599: ALL 5,598,976 -> 1,404,672, 2 bucket(s) corrected
+  frame 600: ALL 7,280,064 -> 3,085,760, 2 bucket(s) corrected
+  frame 601: ALL 7,279,808 -> 3,085,504, 2 bucket(s) corrected
+  frame 602: ALL 6,719,488 -> 2,525,184, 2 bucket(s) corrected
+  frame 603: ALL 6,159,424 -> 1,965,120, 2 bucket(s) corrected
+  frame 604: ALL 7,279,872 -> 3,085,568, 2 bucket(s) corrected
+  frame 605: ALL 6,719,552 -> 2,525,248, 2 bucket(s) corrected
+  frame 606: ALL 6,159,232 -> 1,964,928, 2 bucket(s) corrected
+  frame 607: ALL 5,599,744 -> 1,405,440, 2 bucket(s) corrected
+  frame 608: ALL 6,719,296 -> 2,524,992, 2 bucket(s) corrected
+  frame 609: ALL 5,038,528 -> 844,224, 2 bucket(s) corrected
+  frame 610: ALL 7,280,064 -> 3,085,760, 2 bucket(s) corrected
+  frame 611: ALL 5,038,848 -> 844,544, 2 bucket(s) corrected
+  frame 612: ALL 6,720,064 -> 2,525,760, 2 bucket(s) corrected
+  frame 613: ALL 5,599,040 -> 1,404,736, 2 bucket(s) corrected
+  frame 614: ALL 6,719,552 -> 2,525,248, 2 bucket(s) corrected
+  frame 615: ALL 5,599,552 -> 1,405,248, 2 bucket(s) corrected
+  frame 616: ALL 8,399,616 -> 4,205,312, 2 bucket(s) corrected
+  frame 617: ALL 5,599,552 -> 1,405,248, 2 bucket(s) corrected
+  frame 618: ALL 7,840,000 -> 3,645,696, 2 bucket(s) corrected
+  frame 619: ALL 6,159,552 -> 1,965,248, 2 bucket(s) corrected
+  frame 620: ALL 7,279,680 -> 3,085,376, 2 bucket(s) corrected
+  frame 621: ALL 5,599,168 -> 1,404,864, 2 bucket(s) corrected
+  frame 622: ALL 7,279,872 -> 3,085,568, 2 bucket(s) corrected
+  frame 623: ALL 6,159,296 -> 1,964,992, 2 bucket(s) corrected
+  frame 624: ALL 6,719,488 -> 2,525,184, 2 bucket(s) corrected
+  frame 625: ALL 6,159,744 -> 1,965,440, 2 bucket(s) corrected
+  frame 626: ALL 6,719,616 -> 2,525,312, 2 bucket(s) corrected
+  frame 627: ALL 6,159,360 -> 1,965,056, 2 bucket(s) corrected
+  frame 628: ALL 6,159,488 -> 1,965,184, 2 bucket(s) corrected
+  frame 629: ALL 6,159,488 -> 1,965,184, 2 bucket(s) corrected
+  frame 630: ALL 5,599,040 -> 1,404,736, 2 bucket(s) corrected
+  frame 631: ALL 6,719,872 -> 2,525,568, 2 bucket(s) corrected
+  frame 632: ALL 5,598,720 -> 1,404,416, 2 bucket(s) corrected
+  frame 633: ALL 6,159,552 -> 1,965,248, 2 bucket(s) corrected
+  frame 634: ALL 6,159,488 -> 1,965,184, 2 bucket(s) corrected
+  frame 635: ALL 6,719,488 -> 2,525,184, 2 bucket(s) corrected
+  frame 636: ALL 5,599,360 -> 1,405,056, 2 bucket(s) corrected
+  frame 637: ALL 6,719,744 -> 2,525,440, 2 bucket(s) corrected
+  frame 638: ALL 5,598,976 -> 1,404,672, 2 bucket(s) corrected
+  frame 639: ALL 6,159,744 -> 1,965,440, 2 bucket(s) corrected
+  frame 640: ALL 6,159,552 -> 1,965,248, 2 bucket(s) corrected
+  frame 641: ALL 6,159,296 -> 1,964,992, 2 bucket(s) corrected
+  frame 642: ALL 5,598,976 -> 1,404,672, 2 bucket(s) corrected
+  frame 643: ALL 7,280,064 -> 3,085,760, 2 bucket(s) corrected
+  frame 644: ALL 5,599,168 -> 1,404,864, 2 bucket(s) corrected
+  frame 645: ALL 6,159,488 -> 1,965,184, 2 bucket(s) corrected
+  frame 646: ALL 6,159,488 -> 1,965,184, 2 bucket(s) corrected
+  frame 647: ALL 6,159,424 -> 1,965,120, 2 bucket(s) corrected
+  frame 648: ALL 6,159,488 -> 1,965,184, 2 bucket(s) corrected
+  frame 649: ALL 6,719,488 -> 2,525,184, 2 bucket(s) corrected
+  frame 650: ALL 6,159,296 -> 1,964,992, 2 bucket(s) corrected
+  frame 651: ALL 6,719,488 -> 2,525,184, 2 bucket(s) corrected
+  frame 652: ALL 7,279,872 -> 3,085,568, 2 bucket(s) corrected
+  frame 653: ALL 5,599,168 -> 1,404,864, 2 bucket(s) corrected
+  frame 654: ALL 6,159,424 -> 1,965,120, 2 bucket(s) corrected
+  frame 655: ALL 6,159,616 -> 1,965,312, 2 bucket(s) corrected
+  frame 656: ALL 6,159,360 -> 1,965,056, 2 bucket(s) corrected
+  frame 657: ALL 5,599,552 -> 1,405,248, 2 bucket(s) corrected
+  frame 658: ALL 6,719,424 -> 2,525,120, 2 bucket(s) corrected
+  frame 659: ALL 6,719,424 -> 2,525,120, 2 bucket(s) corrected
+  frame 660: ALL 6,159,104 -> 1,964,800, 2 bucket(s) corrected
+  frame 661: ALL 7,280,448 -> 3,086,144, 2 bucket(s) corrected
+  frame 662: ALL 5,598,912 -> 1,404,608, 2 bucket(s) corrected
+  frame 663: ALL 6,159,296 -> 1,964,992, 2 bucket(s) corrected
+  frame 664: ALL 6,719,744 -> 2,525,440, 2 bucket(s) corrected
+  frame 665: ALL 6,159,104 -> 1,964,800, 2 bucket(s) corrected
+  frame 666: ALL 6,159,360 -> 1,965,056, 2 bucket(s) corrected
+  frame 667: ALL 6,159,616 -> 1,965,312, 2 bucket(s) corrected
+  frame 668: ALL 6,159,296 -> 1,964,992, 2 bucket(s) corrected
+  frame 669: ALL 5,599,424 -> 1,405,120, 2 bucket(s) corrected
+  frame 670: ALL 6,719,744 -> 2,525,440, 2 bucket(s) corrected
+  frame 671: ALL 5,599,104 -> 1,404,800, 2 bucket(s) corrected
+  frame 672: ALL 6,159,168 -> 1,964,864, 2 bucket(s) corrected
+  frame 673: ALL 6,159,616 -> 1,965,312, 2 bucket(s) corrected
+  frame 674: ALL 6,159,168 -> 1,964,864, 2 bucket(s) corrected
+  frame 675: ALL 6,159,424 -> 1,965,120, 2 bucket(s) corrected
+  frame 676: ALL 6,719,872 -> 2,525,568, 2 bucket(s) corrected
+  frame 677: ALL 6,159,424 -> 1,965,120, 2 bucket(s) corrected
+  frame 678: ALL 6,159,232 -> 1,964,928, 2 bucket(s) corrected
+  frame 679: ALL 6,719,744 -> 2,525,440, 2 bucket(s) corrected
+  frame 680: ALL 6,719,744 -> 2,525,440, 2 bucket(s) corrected
+  frame 681: ALL 5,038,656 -> 844,352, 2 bucket(s) corrected
+  frame 682: ALL 7,280,256 -> 3,085,952, 2 bucket(s) corrected
+  frame 683: ALL 5,038,528 -> 844,224, 2 bucket(s) corrected
+  frame 684: ALL 6,719,360 -> 2,525,056, 2 bucket(s) corrected
+  frame 685: ALL 6,159,872 -> 1,965,568, 2 bucket(s) corrected
+  frame 686: ALL 6,159,168 -> 1,964,864, 2 bucket(s) corrected
+  frame 687: ALL 6,159,360 -> 1,965,056, 2 bucket(s) corrected
+  frame 688: ALL 6,719,872 -> 2,525,568, 2 bucket(s) corrected
+  frame 689: ALL 6,159,232 -> 1,964,928, 2 bucket(s) corrected
+  frame 690: ALL 6,159,232 -> 1,964,928, 2 bucket(s) corrected
+  frame 691: ALL 6,159,616 -> 1,965,312, 2 bucket(s) corrected
+  frame 692: ALL 6,159,296 -> 1,964,992, 2 bucket(s) corrected
+  frame 693: ALL 5,599,168 -> 1,404,864, 2 bucket(s) corrected
+  frame 694: ALL 6,719,744 -> 2,525,440, 2 bucket(s) corrected
+  frame 695: ALL 5,599,232 -> 1,404,928, 2 bucket(s) corrected
+  frame 696: ALL 6,159,296 -> 1,964,992, 2 bucket(s) corrected
+  frame 697: ALL 6,159,360 -> 1,965,056, 2 bucket(s) corrected
+  frame 698: ALL 6,159,296 -> 1,964,992, 2 bucket(s) corrected
+  frame 699: ALL 5,598,976 -> 1,404,672, 2 bucket(s) corrected
+  frame 700: ALL 6,720,000 -> 2,525,696, 2 bucket(s) corrected
+  frame 701: ALL 5,598,912 -> 1,404,608, 2 bucket(s) corrected
+  frame 702: ALL 6,159,488 -> 1,965,184, 2 bucket(s) corrected
+  frame 703: ALL 6,159,808 -> 1,965,504, 2 bucket(s) corrected
+  frame 704: ALL 6,719,232 -> 2,524,928, 2 bucket(s) corrected
+  frame 705: ALL 6,159,424 -> 1,965,120, 2 bucket(s) corrected
+  frame 706: ALL 7,840,256 -> 3,645,952, 2 bucket(s) corrected
+  frame 707: ALL 5,038,848 -> 844,544, 2 bucket(s) corrected
+  frame 708: ALL 6,719,616 -> 2,525,312, 2 bucket(s) corrected
+  frame 709: ALL 5,599,360 -> 1,405,056, 2 bucket(s) corrected
+  frame 710: ALL 6,719,488 -> 2,525,184, 2 bucket(s) corrected
+  frame 711: ALL 5,039,104 -> 844,800, 2 bucket(s) corrected
+  frame 712: ALL 7,279,872 -> 3,085,568, 2 bucket(s) corrected
+  frame 713: ALL 5,038,848 -> 844,544, 2 bucket(s) corrected
+  frame 714: ALL 6,719,360 -> 2,525,056, 2 bucket(s) corrected
+  frame 715: ALL 6,159,680 -> 1,965,376, 2 bucket(s) corrected
+  frame 716: ALL 6,159,232 -> 1,964,928, 2 bucket(s) corrected
+  frame 717: ALL 5,600,064 -> 1,405,760, 2 bucket(s) corrected
+  frame 718: ALL 6,719,360 -> 2,525,056, 2 bucket(s) corrected
+  frame 719: ALL 6,159,104 -> 1,964,800, 2 bucket(s) corrected
+  frame 720: ALL 6,159,424 -> 1,965,120, 2 bucket(s) corrected
+  frame 721: ALL 6,159,552 -> 1,965,248, 2 bucket(s) corrected
+  frame 722: ALL 6,159,232 -> 1,964,928, 2 bucket(s) corrected
+  frame 723: ALL 6,159,424 -> 1,965,120, 2 bucket(s) corrected
+  frame 724: ALL 6,719,936 -> 2,525,632, 2 bucket(s) corrected
+  frame 725: ALL 6,159,616 -> 1,965,312, 2 bucket(s) corrected
+  frame 726: ALL 6,159,104 -> 1,964,800, 2 bucket(s) corrected
+  frame 727: ALL 6,159,552 -> 1,965,248, 2 bucket(s) corrected
+  frame 728: ALL 6,159,232 -> 1,964,928, 2 bucket(s) corrected
+  frame 729: ALL 7,279,680 -> 3,085,376, 2 bucket(s) corrected
+  frame 730: ALL 6,720,000 -> 2,525,696, 2 bucket(s) corrected
+  frame 731: ALL 6,159,040 -> 1,964,736, 2 bucket(s) corrected
+  frame 732: ALL 6,719,552 -> 2,525,248, 2 bucket(s) corrected
+  frame 733: ALL 7,279,872 -> 3,085,568, 2 bucket(s) corrected
+  frame 734: ALL 6,159,232 -> 1,964,928, 2 bucket(s) corrected
+  frame 735: ALL 5,599,424 -> 1,405,120, 2 bucket(s) corrected
+  frame 736: ALL 6,719,616 -> 2,525,312, 2 bucket(s) corrected
+  frame 737: ALL 5,598,976 -> 1,404,672, 2 bucket(s) corrected
+  frame 738: ALL 6,158,848 -> 1,964,544, 2 bucket(s) corrected
+  frame 739: ALL 6,160,320 -> 1,966,016, 2 bucket(s) corrected
+  frame 740: ALL 6,159,296 -> 1,964,992, 2 bucket(s) corrected
+  frame 741: ALL 6,159,360 -> 1,965,056, 2 bucket(s) corrected
+  frame 742: ALL 6,719,744 -> 2,525,440, 2 bucket(s) corrected
+  frame 743: ALL 6,159,040 -> 1,964,736, 2 bucket(s) corrected
+  frame 744: ALL 6,159,872 -> 1,965,568, 2 bucket(s) corrected
+  frame 745: ALL 6,159,424 -> 1,965,120, 2 bucket(s) corrected
+  frame 746: ALL 6,159,040 -> 1,964,736, 2 bucket(s) corrected
+  frame 747: ALL 5,599,104 -> 1,404,800, 2 bucket(s) corrected
+  frame 748: ALL 6,720,256 -> 2,525,952, 2 bucket(s) corrected
+  frame 749: ALL 5,599,168 -> 1,404,864, 2 bucket(s) corrected
+  frame 750: ALL 6,159,296 -> 1,964,992, 2 bucket(s) corrected
+  frame 751: ALL 6,159,424 -> 1,965,120, 2 bucket(s) corrected
+  frame 752: ALL 6,159,040 -> 1,964,736, 2 bucket(s) corrected
+  frame 753: ALL 5,599,744 -> 1,405,440, 2 bucket(s) corrected
+  frame 754: ALL 6,719,872 -> 2,525,568, 2 bucket(s) corrected
+  frame 755: ALL 5,598,848 -> 1,404,544, 2 bucket(s) corrected
+  frame 756: ALL 6,159,232 -> 1,964,928, 2 bucket(s) corrected
+  frame 757: ALL 6,159,744 -> 1,965,440, 2 bucket(s) corrected
+  frame 758: ALL 6,159,232 -> 1,964,928, 2 bucket(s) corrected
+  frame 759: ALL 6,159,488 -> 1,965,184, 2 bucket(s) corrected
+  frame 760: ALL 6,719,744 -> 2,525,440, 2 bucket(s) corrected
+  frame 761: ALL 6,719,360 -> 2,525,056, 2 bucket(s) corrected
+  frame 762: ALL 6,719,424 -> 2,525,120, 2 bucket(s) corrected
+  frame 763: ALL 7,279,872 -> 3,085,568, 2 bucket(s) corrected
+  frame 764: ALL 7,839,744 -> 3,645,440, 2 bucket(s) corrected
+  frame 765: ALL 5,599,552 -> 1,405,248, 2 bucket(s) corrected
+  frame 766: ALL 7,280,064 -> 3,085,760, 2 bucket(s) corrected
+  frame 767: ALL 5,598,976 -> 1,404,672, 2 bucket(s) corrected
+  frame 768: ALL 6,719,360 -> 2,525,056, 2 bucket(s) corrected
+  frame 769: ALL 5,599,616 -> 1,405,312, 2 bucket(s) corrected
+  frame 770: ALL 6,719,232 -> 2,524,928, 2 bucket(s) corrected
+  frame 771: ALL 5,599,232 -> 1,404,928, 2 bucket(s) corrected
+  frame 772: ALL 7,280,192 -> 3,085,888, 2 bucket(s) corrected
+  frame 773: ALL 5,599,296 -> 1,404,992, 2 bucket(s) corrected
+  frame 774: ALL 6,719,296 -> 2,524,992, 2 bucket(s) corrected
+  frame 775: ALL 6,159,808 -> 1,965,504, 2 bucket(s) corrected
+  frame 776: ALL 6,718,976 -> 2,524,672, 2 bucket(s) corrected
+  frame 777: ALL 5,599,872 -> 1,405,568, 2 bucket(s) corrected
+  frame 778: ALL 7,279,488 -> 3,085,184, 2 bucket(s) corrected
+  frame 779: ALL 5,598,976 -> 1,404,672, 2 bucket(s) corrected
+  frame 780: ALL 6,719,808 -> 2,525,504, 2 bucket(s) corrected
+  frame 781: ALL 5,599,552 -> 1,405,248, 2 bucket(s) corrected
+  frame 782: ALL 6,719,360 -> 2,525,056, 2 bucket(s) corrected
+  frame 783: ALL 7,279,424 -> 3,085,120, 2 bucket(s) corrected
+  frame 784: ALL 7,280,128 -> 3,085,824, 2 bucket(s) corrected
+  frame 785: ALL 6,719,488 -> 2,525,184, 2 bucket(s) corrected
+  frame 786: ALL 6,719,744 -> 2,525,440, 2 bucket(s) corrected
+  frame 787: ALL 7,279,744 -> 3,085,440, 2 bucket(s) corrected
+  frame 788: ALL 6,159,552 -> 1,965,248, 2 bucket(s) corrected
+  frame 789: ALL 7,839,936 -> 3,645,632, 2 bucket(s) corrected
+  frame 790: ALL 6,159,552 -> 1,965,248, 2 bucket(s) corrected
+  frame 791: ALL 7,279,424 -> 3,085,120, 2 bucket(s) corrected
+  frame 792: ALL 6,159,488 -> 1,965,184, 2 bucket(s) corrected
+  frame 793: ALL 7,280,000 -> 3,085,696, 2 bucket(s) corrected
+  frame 794: ALL 5,599,168 -> 1,404,864, 2 bucket(s) corrected
+  frame 795: ALL 6,719,488 -> 2,525,184, 2 bucket(s) corrected
+  frame 796: ALL 6,159,552 -> 1,965,248, 2 bucket(s) corrected
+  frame 797: ALL 7,279,552 -> 3,085,248, 2 bucket(s) corrected
+  frame 798: ALL 5,039,104 -> 844,800, 2 bucket(s) corrected
+  frame 799: ALL 7,280,256 -> 3,085,952, 2 bucket(s) corrected
+  frame 800: ALL 5,598,912 -> 1,404,608, 2 bucket(s) corrected
+  frame 801: ALL 7,279,360 -> 3,085,056, 2 bucket(s) corrected
+  frame 802: ALL 6,159,872 -> 1,965,568, 2 bucket(s) corrected
+  frame 803: ALL 7,279,488 -> 3,085,184, 2 bucket(s) corrected
+  frame 804: ALL 5,599,104 -> 1,404,800, 2 bucket(s) corrected
+  frame 805: ALL 7,840,256 -> 3,645,952, 2 bucket(s) corrected
+  frame 806: ALL 5,598,784 -> 1,404,480, 2 bucket(s) corrected
+  frame 807: ALL 7,280,192 -> 3,085,888, 2 bucket(s) corrected
+  frame 808: ALL 6,159,552 -> 1,965,248, 2 bucket(s) corrected
+  frame 809: ALL 6,719,424 -> 2,525,120, 2 bucket(s) corrected
+  frame 810: ALL 5,599,168 -> 1,404,864, 2 bucket(s) corrected
+  frame 811: ALL 7,279,936 -> 3,085,632, 2 bucket(s) corrected
+  frame 812: ALL 6,719,424 -> 2,525,120, 2 bucket(s) corrected
+  frame 813: ALL 7,279,936 -> 3,085,632, 2 bucket(s) corrected
+  frame 814: ALL 6,159,744 -> 1,965,440, 2 bucket(s) corrected
+  frame 815: ALL 6,159,168 -> 1,964,864, 2 bucket(s) corrected
+  frame 816: ALL 5,599,232 -> 1,404,928, 2 bucket(s) corrected
+  frame 817: ALL 6,719,552 -> 2,525,248, 2 bucket(s) corrected
+  frame 818: ALL 5,599,040 -> 1,404,736, 2 bucket(s) corrected
+  frame 819: ALL 6,719,488 -> 2,525,184, 2 bucket(s) corrected
+  frame 820: ALL 5,599,488 -> 1,405,184, 2 bucket(s) corrected
+  frame 821: ALL 6,719,744 -> 2,525,440, 2 bucket(s) corrected
+  frame 822: ALL 5,038,592 -> 844,288, 2 bucket(s) corrected
+  frame 823: ALL 7,280,064 -> 3,085,760, 2 bucket(s) corrected
+  frame 824: ALL 5,598,912 -> 1,404,608, 2 bucket(s) corrected
+  frame 825: ALL 6,719,680 -> 2,525,376, 2 bucket(s) corrected
+  frame 826: ALL 5,599,168 -> 1,404,864, 2 bucket(s) corrected
+  frame 827: ALL 6,159,360 -> 1,965,056, 2 bucket(s) corrected
+  frame 828: ALL 5,038,976 -> 844,672, 2 bucket(s) corrected
+  frame 829: ALL 7,840,256 -> 3,645,952, 2 bucket(s) corrected
+  frame 830: ALL 6,159,296 -> 1,964,992, 2 bucket(s) corrected
+  frame 831: ALL 6,719,744 -> 2,525,440, 2 bucket(s) corrected
+  frame 832: ALL 6,159,488 -> 1,965,184, 2 bucket(s) corrected
+  frame 833: ALL 7,279,488 -> 3,085,184, 2 bucket(s) corrected
+  frame 834: ALL 6,159,168 -> 1,964,864, 2 bucket(s) corrected
+  frame 835: ALL 7,840,512 -> 3,646,208, 2 bucket(s) corrected
+  frame 836: ALL 6,159,424 -> 1,965,120, 2 bucket(s) corrected
+  frame 837: ALL 7,280,512 -> 3,086,208, 2 bucket(s) corrected
+  frame 838: ALL 6,159,168 -> 1,964,864, 2 bucket(s) corrected
+  frame 839: ALL 7,279,488 -> 3,085,184, 2 bucket(s) corrected
+  frame 840: ALL 6,159,168 -> 1,964,864, 2 bucket(s) corrected
+  frame 841: ALL 7,280,064 -> 3,085,760, 2 bucket(s) corrected
+  frame 842: ALL 6,159,104 -> 1,964,800, 2 bucket(s) corrected
+  frame 843: ALL 6,719,808 -> 2,525,504, 2 bucket(s) corrected
+  frame 844: ALL 6,719,552 -> 2,525,248, 2 bucket(s) corrected
+  frame 845: ALL 6,719,360 -> 2,525,056, 2 bucket(s) corrected
+  frame 846: ALL 6,159,424 -> 1,965,120, 2 bucket(s) corrected
+  frame 847: ALL 6,719,552 -> 2,525,248, 2 bucket(s) corrected
+  frame 848: ALL 5,039,360 -> 845,056, 2 bucket(s) corrected
+  frame 849: ALL 6,159,104 -> 1,964,800, 2 bucket(s) corrected
+  frame 850: ALL 5,599,488 -> 1,405,184, 2 bucket(s) corrected
+  frame 851: ALL 6,159,424 -> 1,965,120, 2 bucket(s) corrected
+  frame 852: ALL 5,599,168 -> 1,404,864, 2 bucket(s) corrected
+  frame 853: ALL 6,719,744 -> 2,525,440, 2 bucket(s) corrected
+  frame 854: ALL 5,038,592 -> 844,288, 2 bucket(s) corrected
+  frame 855: ALL 6,159,616 -> 1,965,312, 2 bucket(s) corrected
+  frame 856: ALL 5,599,232 -> 1,404,928, 2 bucket(s) corrected
+  frame 857: ALL 6,159,168 -> 1,964,864, 2 bucket(s) corrected
+  frame 858: ALL 5,039,104 -> 844,800, 2 bucket(s) corrected
+  frame 859: ALL 6,719,744 -> 2,525,440, 2 bucket(s) corrected
+  frame 860: ALL 5,038,656 -> 844,352, 2 bucket(s) corrected
+  frame 861: ALL 6,719,808 -> 2,525,504, 2 bucket(s) corrected
+  frame 862: ALL 5,599,360 -> 1,405,056, 2 bucket(s) corrected
+  frame 863: ALL 6,159,552 -> 1,965,248, 2 bucket(s) corrected
+  frame 864: ALL 5,599,168 -> 1,404,864, 2 bucket(s) corrected
+  frame 865: ALL 6,719,808 -> 2,525,504, 2 bucket(s) corrected
+  frame 866: ALL 5,599,040 -> 1,404,736, 2 bucket(s) corrected
+  frame 867: ALL 5,599,168 -> 1,404,864, 2 bucket(s) corrected
+  frame 868: ALL 6,159,552 -> 1,965,248, 2 bucket(s) corrected
+  frame 869: ALL 5,598,912 -> 1,404,608, 2 bucket(s) corrected
+  frame 870: ALL 5,599,360 -> 1,405,056, 2 bucket(s) corrected
+  frame 871: ALL 6,159,808 -> 1,965,504, 2 bucket(s) corrected
+  frame 872: ALL 5,598,848 -> 1,404,544, 2 bucket(s) corrected
+  frame 873: ALL 5,599,040 -> 1,404,736, 2 bucket(s) corrected
+  frame 874: ALL 6,159,808 -> 1,965,504, 2 bucket(s) corrected
+  frame 875: ALL 5,599,040 -> 1,404,736, 2 bucket(s) corrected
+  frame 876: ALL 6,159,104 -> 1,964,800, 2 bucket(s) corrected
+  frame 877: ALL 6,159,808 -> 1,965,504, 2 bucket(s) corrected
+  frame 878: ALL 6,159,104 -> 1,964,800, 2 bucket(s) corrected
+  frame 879: ALL 5,599,104 -> 1,404,800, 2 bucket(s) corrected
+  frame 880: ALL 7,279,872 -> 3,085,568, 2 bucket(s) corrected
+  frame 881: ALL 5,599,296 -> 1,404,992, 2 bucket(s) corrected
+  frame 882: ALL 6,159,040 -> 1,964,736, 2 bucket(s) corrected
+  frame 883: ALL 6,159,616 -> 1,965,312, 2 bucket(s) corrected
+  frame 884: ALL 6,719,552 -> 2,525,248, 2 bucket(s) corrected
+  frame 885: ALL 5,599,232 -> 1,404,928, 2 bucket(s) corrected
+  frame 886: ALL 6,719,936 -> 2,525,632, 2 bucket(s) corrected
+  frame 887: ALL 5,599,232 -> 1,404,928, 2 bucket(s) corrected
+  frame 888: ALL 6,158,976 -> 1,964,672, 2 bucket(s) corrected
+  frame 889: ALL 6,720,128 -> 2,525,824, 2 bucket(s) corrected
+  frame 890: ALL 5,599,168 -> 1,404,864, 2 bucket(s) corrected
+  frame 891: ALL 6,159,616 -> 1,965,312, 2 bucket(s) corrected
+  frame 892: ALL 6,159,552 -> 1,965,248, 2 bucket(s) corrected
+  frame 893: ALL 6,158,976 -> 1,964,672, 2 bucket(s) corrected
+  frame 894: ALL 5,599,360 -> 1,405,056, 2 bucket(s) corrected
+  frame 895: ALL 7,279,872 -> 3,085,568, 2 bucket(s) corrected
+  frame 896: ALL 5,598,848 -> 1,404,544, 2 bucket(s) corrected
+  frame 897: ALL 6,160,128 -> 1,965,824, 2 bucket(s) corrected
+  frame 898: ALL 6,158,976 -> 1,964,672, 2 bucket(s) corrected
+  frame 899: ALL 6,159,232 -> 1,964,928, 2 bucket(s) corrected
+  frame 900: ALL 5,598,720 -> 1,404,416, 2 bucket(s) corrected
+  frame 901: ALL 6,720,384 -> 2,526,080, 2 bucket(s) corrected
+  frame 902: ALL 5,598,336 -> 1,404,032, 2 bucket(s) corrected
+  frame 903: ALL 6,160,000 -> 1,965,696, 2 bucket(s) corrected
+  frame 904: ALL 6,159,360 -> 1,965,056, 2 bucket(s) corrected
+  frame 905: ALL 6,159,168 -> 1,964,864, 2 bucket(s) corrected
+  frame 906: ALL 6,159,232 -> 1,964,928, 2 bucket(s) corrected
+  frame 907: ALL 6,720,384 -> 2,526,080, 2 bucket(s) corrected
+  frame 908: ALL 6,159,232 -> 1,964,928, 2 bucket(s) corrected
+  frame 909: ALL 6,719,872 -> 2,525,568, 2 bucket(s) corrected
+  frame 910: ALL 6,159,232 -> 1,964,928, 2 bucket(s) corrected
+  frame 911: ALL 6,159,232 -> 1,964,928, 2 bucket(s) corrected
+  frame 912: ALL 6,719,808 -> 2,525,504, 2 bucket(s) corrected
+  frame 913: ALL 6,719,616 -> 2,525,312, 2 bucket(s) corrected
+  frame 914: ALL 6,159,104 -> 1,964,800, 2 bucket(s) corrected
+  frame 915: ALL 6,159,552 -> 1,965,248, 2 bucket(s) corrected
+  frame 916: ALL 7,279,936 -> 3,085,632, 2 bucket(s) corrected
+  frame 917: ALL 5,599,040 -> 1,404,736, 2 bucket(s) corrected
+  frame 918: ALL 6,159,488 -> 1,965,184, 2 bucket(s) corrected
+  frame 919: ALL 6,159,744 -> 1,965,440, 2 bucket(s) corrected
+  frame 920: ALL 6,158,976 -> 1,964,672, 2 bucket(s) corrected
+  frame 921: ALL 5,599,360 -> 1,405,056, 2 bucket(s) corrected
+  frame 922: ALL 6,719,936 -> 2,525,632, 2 bucket(s) corrected
+  frame 923: ALL 5,598,912 -> 1,404,608, 2 bucket(s) corrected
+  frame 924: ALL 6,159,360 -> 1,965,056, 2 bucket(s) corrected
+  frame 925: ALL 6,159,552 -> 1,965,248, 2 bucket(s) corrected
+  frame 926: ALL 6,159,424 -> 1,965,120, 2 bucket(s) corrected
+  frame 927: ALL 5,599,232 -> 1,404,928, 2 bucket(s) corrected
+  frame 928: ALL 6,719,808 -> 2,525,504, 2 bucket(s) corrected
+  frame 929: ALL 5,599,104 -> 1,404,800, 2 bucket(s) corrected
+  frame 930: ALL 6,159,360 -> 1,965,056, 2 bucket(s) corrected
+  frame 931: ALL 6,159,552 -> 1,965,248, 2 bucket(s) corrected
+  frame 932: ALL 6,159,040 -> 1,964,736, 2 bucket(s) corrected
+  frame 933: ALL 5,599,360 -> 1,405,056, 2 bucket(s) corrected
+  frame 934: ALL 6,719,808 -> 2,525,504, 2 bucket(s) corrected
+  frame 935: ALL 5,598,784 -> 1,404,480, 2 bucket(s) corrected
+  frame 936: ALL 6,719,616 -> 2,525,312, 2 bucket(s) corrected
+  frame 937: ALL 6,159,872 -> 1,965,568, 2 bucket(s) corrected
+  frame 938: ALL 6,159,232 -> 1,964,928, 2 bucket(s) corrected
+  frame 939: ALL 5,599,040 -> 1,404,736, 2 bucket(s) corrected
+  frame 940: ALL 7,280,192 -> 3,085,888, 2 bucket(s) corrected
+  frame 941: ALL 6,159,104 -> 1,964,800, 2 bucket(s) corrected
+  frame 942: ALL 6,719,552 -> 2,525,248, 2 bucket(s) corrected
+  frame 943: ALL 6,159,616 -> 1,965,312, 2 bucket(s) corrected
+  frame 944: ALL 7,279,808 -> 3,085,504, 2 bucket(s) corrected
+  frame 945: ALL 5,599,232 -> 1,404,928, 2 bucket(s) corrected
+  frame 946: ALL 6,719,744 -> 2,525,440, 2 bucket(s) corrected
+  frame 947: ALL 5,599,040 -> 1,404,736, 2 bucket(s) corrected
+  frame 948: ALL 6,159,232 -> 1,964,928, 2 bucket(s) corrected
+  frame 949: ALL 6,159,936 -> 1,965,632, 2 bucket(s) corrected
+  frame 950: ALL 6,159,168 -> 1,964,864, 2 bucket(s) corrected
+  frame 951: ALL 6,159,360 -> 1,965,056, 2 bucket(s) corrected
+  frame 952: ALL 6,719,808 -> 2,525,504, 2 bucket(s) corrected
+  frame 953: ALL 5,598,848 -> 1,404,544, 2 bucket(s) corrected
+  frame 954: ALL 6,159,360 -> 1,965,056, 2 bucket(s) corrected
+  frame 955: ALL 6,159,744 -> 1,965,440, 2 bucket(s) corrected
+  frame 956: ALL 6,159,360 -> 1,965,056, 2 bucket(s) corrected
+  frame 957: ALL 5,600,064 -> 1,405,760, 2 bucket(s) corrected
+  frame 958: ALL 6,719,104 -> 2,524,800, 2 bucket(s) corrected
+  frame 959: ALL 5,599,104 -> 1,404,800, 2 bucket(s) corrected
+  frame 960: ALL 6,159,360 -> 1,965,056, 2 bucket(s) corrected
+  frame 961: ALL 6,159,296 -> 1,964,992, 2 bucket(s) corrected
+  frame 962: ALL 6,159,296 -> 1,964,992, 2 bucket(s) corrected
+  frame 963: ALL 5,599,424 -> 1,405,120, 2 bucket(s) corrected
+  frame 964: ALL 6,719,680 -> 2,525,376, 2 bucket(s) corrected
+  frame 965: ALL 5,598,848 -> 1,404,544, 2 bucket(s) corrected
+  frame 966: ALL 6,159,808 -> 1,965,504, 2 bucket(s) corrected
+  frame 967: ALL 6,159,424 -> 1,965,120, 2 bucket(s) corrected
+  frame 968: ALL 6,719,488 -> 2,525,184, 2 bucket(s) corrected
+  frame 969: ALL 5,599,040 -> 1,404,736, 2 bucket(s) corrected
+  frame 970: ALL 6,719,936 -> 2,525,632, 2 bucket(s) corrected
+  frame 971: ALL 5,599,040 -> 1,404,736, 2 bucket(s) corrected
+  frame 972: ALL 6,719,360 -> 2,525,056, 2 bucket(s) corrected
+  frame 973: ALL 6,159,872 -> 1,965,568, 2 bucket(s) corrected
+  frame 974: ALL 6,159,040 -> 1,964,736, 2 bucket(s) corrected
+  frame 975: ALL 5,599,552 -> 1,405,248, 2 bucket(s) corrected
+  frame 976: ALL 6,719,424 -> 2,525,120, 2 bucket(s) corrected
+  frame 977: ALL 5,598,976 -> 1,404,672, 2 bucket(s) corrected
+  frame 978: ALL 6,719,808 -> 2,525,504, 2 bucket(s) corrected
+  frame 979: ALL 6,159,808 -> 1,965,504, 2 bucket(s) corrected
+  frame 980: ALL 6,159,040 -> 1,964,736, 2 bucket(s) corrected
+  frame 981: ALL 6,159,616 -> 1,965,312, 2 bucket(s) corrected
+  frame 982: ALL 6,719,808 -> 2,525,504, 2 bucket(s) corrected
+  frame 983: ALL 5,599,168 -> 1,404,864, 2 bucket(s) corrected
+  frame 984: ALL 6,159,232 -> 1,964,928, 2 bucket(s) corrected
+  frame 985: ALL 6,159,680 -> 1,965,376, 2 bucket(s) corrected
+  frame 986: ALL 6,159,232 -> 1,964,928, 2 bucket(s) corrected
+  frame 987: ALL 5,598,976 -> 1,404,672, 2 bucket(s) corrected
+  frame 988: ALL 6,719,872 -> 2,525,568, 2 bucket(s) corrected
+  frame 989: ALL 5,599,168 -> 1,404,864, 2 bucket(s) corrected
+  frame 990: ALL 6,159,296 -> 1,964,992, 2 bucket(s) corrected
+  frame 991: ALL 6,159,808 -> 1,965,504, 2 bucket(s) corrected
+  frame 992: ALL 6,159,232 -> 1,964,928, 2 bucket(s) corrected
+  frame 993: ALL 5,599,040 -> 1,404,736, 2 bucket(s) corrected
+  frame 994: ALL 6,719,808 -> 2,525,504, 2 bucket(s) corrected
+  frame 995: ALL 6,159,040 -> 1,964,736, 2 bucket(s) corrected
+  frame 996: ALL 6,159,808 -> 1,965,504, 2 bucket(s) corrected
+  frame 997: ALL 6,159,808 -> 1,965,504, 2 bucket(s) corrected
+  frame 998: ALL 6,158,976 -> 1,964,672, 2 bucket(s) corrected
+  frame 999: ALL 5,039,104 -> 844,800, 2 bucket(s) corrected
+  frame 1000: ALL 7,280,064 -> 3,085,760, 2 bucket(s) corrected
+  frame 1001: ALL 5,038,272 -> 843,968, 2 bucket(s) corrected
+  frame 1002: ALL 6,720,000 -> 2,525,696, 2 bucket(s) corrected
+  frame 1003: ALL 5,599,424 -> 1,405,120, 2 bucket(s) corrected
+  frame 1004: ALL 6,719,424 -> 2,525,120, 2 bucket(s) corrected
+  frame 1005: ALL 5,038,976 -> 844,672, 2 bucket(s) corrected
+  frame 1006: ALL 7,280,128 -> 3,085,824, 2 bucket(s) corrected
+  frame 1007: ALL 5,038,848 -> 844,544, 2 bucket(s) corrected
+  frame 1008: ALL 6,719,424 -> 2,525,120, 2 bucket(s) corrected
+  frame 1009: ALL 6,159,744 -> 1,965,440, 2 bucket(s) corrected
+  frame 1010: ALL 6,719,360 -> 2,525,056, 2 bucket(s) corrected
+  frame 1011: ALL 5,038,720 -> 844,416, 2 bucket(s) corrected
+  frame 1012: ALL 7,840,448 -> 3,646,144, 2 bucket(s) corrected
+  frame 1013: ALL 5,599,104 -> 1,404,800, 2 bucket(s) corrected
+  frame 1014: ALL 6,159,552 -> 1,965,248, 2 bucket(s) corrected
+  frame 1015: ALL 6,159,360 -> 1,965,056, 2 bucket(s) corrected
+  frame 1016: ALL 6,159,360 -> 1,965,056, 2 bucket(s) corrected
+  frame 1017: ALL 6,720,128 -> 2,525,824, 2 bucket(s) corrected
+  frame 1018: ALL 6,719,296 -> 2,524,992, 2 bucket(s) corrected
+  frame 1019: ALL 5,599,360 -> 1,405,056, 2 bucket(s) corrected
+  frame 1020: ALL 6,159,424 -> 1,965,120, 2 bucket(s) corrected
+  frame 1021: ALL 6,159,360 -> 1,965,056, 2 bucket(s) corrected
+  frame 1022: ALL 6,159,232 -> 1,964,928, 2 bucket(s) corrected
+  frame 1023: ALL 5,599,040 -> 1,404,736, 2 bucket(s) corrected
+  frame 1024: ALL 6,719,872 -> 2,525,568, 2 bucket(s) corrected
+  frame 1025: ALL 5,598,784 -> 1,404,480, 2 bucket(s) corrected
+  frame 1026: ALL 6,159,744 -> 1,965,440, 2 bucket(s) corrected
+  frame 1027: ALL 6,159,360 -> 1,965,056, 2 bucket(s) corrected
+  frame 1028: ALL 6,159,104 -> 1,964,800, 2 bucket(s) corrected
+  frame 1029: ALL 5,039,360 -> 845,056, 2 bucket(s) corrected
+  frame 1030: ALL 7,279,808 -> 3,085,504, 2 bucket(s) corrected
+  frame 1031: ALL 5,598,912 -> 1,404,608, 2 bucket(s) corrected
+  frame 1032: ALL 6,159,488 -> 1,965,184, 2 bucket(s) corrected
+  frame 1033: ALL 6,159,488 -> 1,965,184, 2 bucket(s) corrected
+  frame 1034: ALL 6,159,168 -> 1,964,864, 2 bucket(s) corrected
+  frame 1035: ALL 5,038,976 -> 844,672, 2 bucket(s) corrected
+  frame 1036: ALL 6,719,744 -> 2,525,440, 2 bucket(s) corrected
+  frame 1037: ALL 5,599,168 -> 1,404,864, 2 bucket(s) corrected
+  frame 1038: ALL 6,159,616 -> 1,965,312, 2 bucket(s) corrected
+  frame 1039: ALL 5,599,168 -> 1,404,864, 2 bucket(s) corrected
+  frame 1040: ALL 6,159,168 -> 1,964,864, 2 bucket(s) corrected
+  frame 1041: ALL 5,038,912 -> 844,608, 2 bucket(s) corrected
+  frame 1042: ALL 6,719,616 -> 2,525,312, 2 bucket(s) corrected
+  frame 1043: ALL 5,039,360 -> 845,056, 2 bucket(s) corrected
+  frame 1044: ALL 6,159,040 -> 1,964,736, 2 bucket(s) corrected
+  frame 1045: ALL 5,599,552 -> 1,405,248, 2 bucket(s) corrected
+  frame 1046: ALL 6,159,040 -> 1,964,736, 2 bucket(s) corrected
+  frame 1047: ALL 5,039,104 -> 844,800, 2 bucket(s) corrected
+  frame 1048: ALL 6,719,808 -> 2,525,504, 2 bucket(s) corrected
+  frame 1049: ALL 5,039,232 -> 844,928, 2 bucket(s) corrected
+  frame 1050: ALL 6,159,040 -> 1,964,736, 2 bucket(s) corrected
+  frame 1051: ALL 5,599,296 -> 1,404,992, 2 bucket(s) corrected
+  frame 1052: ALL 6,159,360 -> 1,965,056, 2 bucket(s) corrected
+  frame 1053: ALL 5,039,424 -> 845,120, 2 bucket(s) corrected
+  frame 1054: ALL 6,719,296 -> 2,524,992, 2 bucket(s) corrected
+  frame 1055: ALL 5,038,976 -> 844,672, 2 bucket(s) corrected
+  frame 1056: ALL 6,159,552 -> 1,965,248, 2 bucket(s) corrected
+  frame 1057: ALL 5,599,616 -> 1,405,312, 2 bucket(s) corrected
+  frame 1058: ALL 6,158,528 -> 1,964,224, 2 bucket(s) corrected
+  frame 1059: ALL 5,039,104 -> 844,800, 2 bucket(s) corrected
+  frame 1060: ALL 6,720,192 -> 2,525,888, 2 bucket(s) corrected
+  frame 1061: ALL 5,038,784 -> 844,480, 2 bucket(s) corrected
+  frame 1062: ALL 6,158,976 -> 1,964,672, 2 bucket(s) corrected
+  frame 1063: ALL 7,280,064 -> 3,085,760, 2 bucket(s) corrected
+  frame 1064: ALL 7,279,808 -> 3,085,504, 2 bucket(s) corrected
+  frame 1065: ALL 6,159,296 -> 1,964,992, 2 bucket(s) corrected
+  frame 1066: ALL 7,280,128 -> 3,085,824, 2 bucket(s) corrected
+  frame 1067: ALL 6,159,232 -> 1,964,928, 2 bucket(s) corrected
+  frame 1068: ALL 7,279,872 -> 3,085,568, 2 bucket(s) corrected
+  frame 1069: ALL 6,719,936 -> 2,525,632, 2 bucket(s) corrected
+  frame 1070: ALL 7,279,552 -> 3,085,248, 2 bucket(s) corrected
+  frame 1071: ALL 6,159,360 -> 1,965,056, 2 bucket(s) corrected
+  frame 1072: ALL 7,840,128 -> 3,645,824, 2 bucket(s) corrected
+  frame 1073: ALL 6,158,976 -> 1,964,672, 2 bucket(s) corrected
+  frame 1074: ALL 7,279,616 -> 3,085,312, 2 bucket(s) corrected
+  frame 1075: ALL 7,280,064 -> 3,085,760, 2 bucket(s) corrected
+  frame 1076: ALL 7,279,488 -> 3,085,184, 2 bucket(s) corrected
+  frame 1077: ALL 6,160,320 -> 1,966,016, 2 bucket(s) corrected
+  frame 1078: ALL 7,839,296 -> 3,644,992, 2 bucket(s) corrected
+  frame 1079: ALL 6,719,488 -> 2,525,184, 2 bucket(s) corrected
+  frame 1080: ALL 7,280,256 -> 3,085,952, 2 bucket(s) corrected
+  frame 1081: ALL 5,599,296 -> 1,404,992, 2 bucket(s) corrected
+  frame 1082: ALL 6,159,104 -> 1,964,800, 2 bucket(s) corrected
+  frame 1083: ALL 5,599,424 -> 1,405,120, 2 bucket(s) corrected
+  frame 1084: ALL 6,719,744 -> 2,525,440, 2 bucket(s) corrected
+  frame 1085: ALL 5,038,912 -> 844,608, 2 bucket(s) corrected
+  frame 1086: ALL 6,719,616 -> 2,525,312, 2 bucket(s) corrected
+  frame 1087: ALL 5,599,552 -> 1,405,248, 2 bucket(s) corrected
+  frame 1088: ALL 6,159,040 -> 1,964,736, 2 bucket(s) corrected
+  frame 1089: ALL 5,599,168 -> 1,404,864, 2 bucket(s) corrected
+  frame 1090: ALL 6,719,808 -> 2,525,504, 2 bucket(s) corrected
+  frame 1091: ALL 5,599,168 -> 1,404,864, 2 bucket(s) corrected
+  frame 1092: ALL 6,159,232 -> 1,964,928, 2 bucket(s) corrected
+  frame 1093: ALL 5,599,424 -> 1,405,120, 2 bucket(s) corrected
+  frame 1094: ALL 6,719,424 -> 2,525,120, 2 bucket(s) corrected
+  frame 1095: ALL 5,039,168 -> 844,864, 2 bucket(s) corrected
+  frame 1096: ALL 6,719,936 -> 2,525,632, 2 bucket(s) corrected
+  frame 1097: ALL 5,038,784 -> 844,480, 2 bucket(s) corrected
+  frame 1098: ALL 6,159,360 -> 1,965,056, 2 bucket(s) corrected
+  frame 1099: ALL 5,599,360 -> 1,405,056, 2 bucket(s) corrected
+  frame 1100: ALL 6,159,168 -> 1,964,864, 2 bucket(s) corrected
+  frame 1101: ALL 5,039,040 -> 844,736, 2 bucket(s) corrected
+  frame 1102: ALL 6,719,680 -> 2,525,376, 2 bucket(s) corrected
+  frame 1103: ALL 5,039,040 -> 844,736, 2 bucket(s) corrected
+  frame 1104: ALL 6,159,424 -> 1,965,120, 2 bucket(s) corrected
+  frame 1105: ALL 5,599,232 -> 1,404,928, 2 bucket(s) corrected
+  frame 1106: ALL 6,719,360 -> 2,525,056, 2 bucket(s) corrected
+  frame 1107: ALL 5,038,912 -> 844,608, 2 bucket(s) corrected
+  frame 1108: ALL 6,719,936 -> 2,525,632, 2 bucket(s) corrected
+  frame 1109: ALL 5,038,848 -> 844,544, 2 bucket(s) corrected
+  frame 1110: ALL 6,159,488 -> 1,965,184, 2 bucket(s) corrected
+  frame 1111: ALL 5,599,296 -> 1,404,992, 2 bucket(s) corrected
+  frame 1112: ALL 6,159,360 -> 1,965,056, 2 bucket(s) corrected
+  frame 1113: ALL 5,038,592 -> 844,288, 2 bucket(s) corrected
+  frame 1114: ALL 7,280,256 -> 3,085,952, 2 bucket(s) corrected
+  frame 1115: ALL 5,599,104 -> 1,404,800, 2 bucket(s) corrected
+  frame 1116: ALL 6,719,680 -> 2,525,376, 2 bucket(s) corrected
+  frame 1117: ALL 5,599,232 -> 1,404,928, 2 bucket(s) corrected
+  frame 1118: ALL 6,719,488 -> 2,525,184, 2 bucket(s) corrected
+  frame 1119: ALL 5,039,424 -> 845,120, 2 bucket(s) corrected
+  frame 1120: ALL 7,279,616 -> 3,085,312, 2 bucket(s) corrected
+  frame 1121: ALL 5,038,528 -> 844,224, 2 bucket(s) corrected
+  frame 1122: ALL 6,719,936 -> 2,525,632, 2 bucket(s) corrected
+  frame 1123: ALL 5,599,296 -> 1,404,992, 2 bucket(s) corrected
+  frame 1124: ALL 6,719,552 -> 2,525,248, 2 bucket(s) corrected
+  frame 1125: ALL 6,159,232 -> 1,964,928, 2 bucket(s) corrected
+  frame 1126: ALL 7,280,064 -> 3,085,760, 2 bucket(s) corrected
+  frame 1127: ALL 5,599,104 -> 1,404,800, 2 bucket(s) corrected
+  frame 1128: ALL 6,719,424 -> 2,525,120, 2 bucket(s) corrected
+  frame 1129: ALL 5,599,488 -> 1,405,184, 2 bucket(s) corrected
+  frame 1130: ALL 6,719,360 -> 2,525,056, 2 bucket(s) corrected
+  frame 1131: ALL 5,599,424 -> 1,405,120, 2 bucket(s) corrected
+  frame 1132: ALL 7,279,936 -> 3,085,632, 2 bucket(s) corrected
+  frame 1133: ALL 6,159,040 -> 1,964,736, 2 bucket(s) corrected
+  frame 1134: ALL 6,719,680 -> 2,525,376, 2 bucket(s) corrected
+  frame 1135: ALL 5,599,552 -> 1,405,248, 2 bucket(s) corrected
+  frame 1136: ALL 6,719,296 -> 2,524,992, 2 bucket(s) corrected
+  frame 1137: ALL 5,599,680 -> 1,405,376, 2 bucket(s) corrected
+  frame 1138: ALL 7,840,000 -> 3,645,696, 2 bucket(s) corrected
+  frame 1139: ALL 5,038,592 -> 844,288, 2 bucket(s) corrected
+  frame 1140: ALL 6,719,424 -> 2,525,120, 2 bucket(s) corrected
+  frame 1141: ALL 5,599,488 -> 1,405,184, 2 bucket(s) corrected
+  frame 1142: ALL 6,719,104 -> 2,524,800, 2 bucket(s) corrected
+  frame 1143: ALL 5,039,296 -> 844,992, 2 bucket(s) corrected
+  frame 1144: ALL 7,280,192 -> 3,085,888, 2 bucket(s) corrected
+  frame 1145: ALL 5,038,592 -> 844,288, 2 bucket(s) corrected
+  frame 1146: ALL 6,720,000 -> 2,525,696, 2 bucket(s) corrected
+  frame 1147: ALL 5,599,424 -> 1,405,120, 2 bucket(s) corrected
+  frame 1148: ALL 6,719,296 -> 2,524,992, 2 bucket(s) corrected
+  frame 1149: ALL 5,038,848 -> 844,544, 2 bucket(s) corrected
+  frame 1150: ALL 7,280,128 -> 3,085,824, 2 bucket(s) corrected
+  frame 1151: ALL 5,038,720 -> 844,416, 2 bucket(s) corrected
+  frame 1152: ALL 6,719,744 -> 2,525,440, 2 bucket(s) corrected
+  frame 1153: ALL 5,599,296 -> 1,404,992, 2 bucket(s) corrected
+  frame 1154: ALL 6,719,360 -> 2,525,056, 2 bucket(s) corrected
+  frame 1155: ALL 5,038,912 -> 844,608, 2 bucket(s) corrected
+  frame 1156: ALL 6,719,744 -> 2,525,440, 2 bucket(s) corrected
+  frame 1157: ALL 6,159,488 -> 1,965,184, 2 bucket(s) corrected
+  frame 1158: ALL 6,159,552 -> 1,965,248, 2 bucket(s) corrected
+  frame 1159: ALL 6,159,552 -> 1,965,248, 2 bucket(s) corrected
+  frame 1160: ALL 6,158,912 -> 1,964,608, 2 bucket(s) corrected
+  frame 1161: ALL 5,599,104 -> 1,404,800, 2 bucket(s) corrected
+  frame 1162: ALL 6,719,808 -> 2,525,504, 2 bucket(s) corrected
+  frame 1163: ALL 5,599,232 -> 1,404,928, 2 bucket(s) corrected
+  frame 1164: ALL 6,159,232 -> 1,964,928, 2 bucket(s) corrected
+  frame 1165: ALL 5,599,616 -> 1,405,312, 2 bucket(s) corrected
+  frame 1166: ALL 6,719,104 -> 2,524,800, 2 bucket(s) corrected
+  frame 1167: ALL 5,039,360 -> 845,056, 2 bucket(s) corrected
+  frame 1168: ALL 7,279,616 -> 3,085,312, 2 bucket(s) corrected
+  frame 1169: ALL 5,598,976 -> 1,404,672, 2 bucket(s) corrected
+  frame 1170: ALL 6,719,808 -> 2,525,504, 2 bucket(s) corrected
+  frame 1171: ALL 5,599,488 -> 1,405,184, 2 bucket(s) corrected
+  frame 1172: ALL 6,719,488 -> 2,525,184, 2 bucket(s) corrected
+  frame 1173: ALL 5,598,976 -> 1,404,672, 2 bucket(s) corrected
+  frame 1174: ALL 7,280,000 -> 3,085,696, 2 bucket(s) corrected
+  frame 1175: ALL 5,039,040 -> 844,736, 2 bucket(s) corrected
+  frame 1176: ALL 6,719,296 -> 2,524,992, 2 bucket(s) corrected
+  frame 1177: ALL 5,599,616 -> 1,405,312, 2 bucket(s) corrected
+  frame 1178: ALL 6,719,488 -> 2,525,184, 2 bucket(s) corrected
+  frame 1179: ALL 5,038,848 -> 844,544, 2 bucket(s) corrected
+  frame 1180: ALL 7,280,192 -> 3,085,888, 2 bucket(s) corrected
+  frame 1181: ALL 5,038,784 -> 844,480, 2 bucket(s) corrected
+  frame 1182: ALL 6,719,872 -> 2,525,568, 2 bucket(s) corrected
+  frame 1183: ALL 6,159,488 -> 1,965,184, 2 bucket(s) corrected
+  frame 1184: ALL 6,159,040 -> 1,964,736, 2 bucket(s) corrected
+  frame 1185: ALL 5,599,296 -> 1,404,992, 2 bucket(s) corrected
+  frame 1186: ALL 6,719,872 -> 2,525,568, 2 bucket(s) corrected
+  frame 1187: ALL 5,598,720 -> 1,404,416, 2 bucket(s) corrected
+  frame 1188: ALL 6,159,360 -> 1,965,056, 2 bucket(s) corrected
+  frame 1189: ALL 6,160,000 -> 1,965,696, 2 bucket(s) corrected
+  frame 1190: ALL 6,158,912 -> 1,964,608, 2 bucket(s) corrected
+  frame 1191: ALL 6,159,488 -> 1,965,184, 2 bucket(s) corrected
+  frame 1192: ALL 6,160,064 -> 1,965,760, 2 bucket(s) corrected
+  frame 1193: ALL 5,599,040 -> 1,404,736, 2 bucket(s) corrected
+  frame 1194: ALL 6,159,232 -> 1,964,928, 2 bucket(s) corrected
+  frame 1195: ALL 6,159,488 -> 1,965,184, 2 bucket(s) corrected
+  frame 1196: ALL 6,159,296 -> 1,964,992, 2 bucket(s) corrected
+  frame 1197: ALL 5,599,488 -> 1,405,184, 2 bucket(s) corrected
+  frame 1198: ALL 6,719,936 -> 2,525,632, 2 bucket(s) corrected
+  frame 1199: ALL 6,158,784 -> 1,964,480, 2 bucket(s) corrected
+  frame 1200: ALL 6,159,616 -> 1,965,312, 2 bucket(s) corrected
+  frame 1201: ALL 6,159,424 -> 1,965,120, 2 bucket(s) corrected
+  frame 1202: ALL 6,719,808 -> 2,525,504, 2 bucket(s) corrected
+  frame 1203: ALL 5,599,232 -> 1,404,928, 2 bucket(s) corrected
+  frame 1204: ALL 6,719,744 -> 2,525,440, 2 bucket(s) corrected
+  frame 1205: ALL 5,598,720 -> 1,404,416, 2 bucket(s) corrected
+  frame 1206: ALL 6,159,808 -> 1,965,504, 2 bucket(s) corrected
+  frame 1207: ALL 6,159,616 -> 1,965,312, 2 bucket(s) corrected
+  frame 1208: ALL 6,159,360 -> 1,965,056, 2 bucket(s) corrected
+  frame 1209: ALL 6,719,296 -> 2,524,992, 2 bucket(s) corrected
+  frame 1210: ALL 6,159,744 -> 1,965,440, 2 bucket(s) corrected
+  frame 1211: ALL 6,159,296 -> 1,964,992, 2 bucket(s) corrected
+  frame 1212: ALL 5,598,848 -> 1,404,544, 2 bucket(s) corrected
+  frame 1213: ALL 6,720,192 -> 2,525,888, 2 bucket(s) corrected
+  frame 1214: ALL 5,598,848 -> 1,404,544, 2 bucket(s) corrected
+  frame 1215: ALL 6,159,168 -> 1,964,864, 2 bucket(s) corrected
+  frame 1216: ALL 6,160,000 -> 1,965,696, 2 bucket(s) corrected
+  frame 1217: ALL 6,719,360 -> 2,525,056, 2 bucket(s) corrected
+  frame 1218: ALL 5,599,104 -> 1,404,800, 2 bucket(s) corrected
+  frame 1219: ALL 6,719,744 -> 2,525,440, 2 bucket(s) corrected
+  frame 1220: ALL 5,599,232 -> 1,404,928, 2 bucket(s) corrected
+  frame 1221: ALL 6,159,552 -> 1,965,248, 2 bucket(s) corrected
+  frame 1222: ALL 6,159,360 -> 1,965,056, 2 bucket(s) corrected
+  frame 1223: ALL 6,719,552 -> 2,525,248, 2 bucket(s) corrected
+  frame 1224: ALL 6,719,104 -> 2,524,800, 2 bucket(s) corrected
+  frame 1225: ALL 6,720,064 -> 2,525,760, 2 bucket(s) corrected
+  frame 1226: ALL 6,719,424 -> 2,525,120, 2 bucket(s) corrected
+  frame 1227: ALL 6,159,424 -> 1,965,120, 2 bucket(s) corrected
+  frame 1228: ALL 6,159,680 -> 1,965,376, 2 bucket(s) corrected
+  frame 1229: ALL 6,719,936 -> 2,525,632, 2 bucket(s) corrected
+  frame 1230: ALL 5,598,720 -> 1,404,416, 2 bucket(s) corrected
+  frame 1231: ALL 6,719,872 -> 2,525,568, 2 bucket(s) corrected
+  frame 1232: ALL 6,159,040 -> 1,964,736, 2 bucket(s) corrected
+  frame 1233: ALL 6,159,744 -> 1,965,440, 2 bucket(s) corrected
+  frame 1234: ALL 6,159,424 -> 1,965,120, 2 bucket(s) corrected
+  frame 1235: ALL 6,719,616 -> 2,525,312, 2 bucket(s) corrected
+  frame 1236: ALL 5,598,912 -> 1,404,608, 2 bucket(s) corrected
+  frame 1237: ALL 6,719,936 -> 2,525,632, 2 bucket(s) corrected
+  frame 1238: ALL 6,159,296 -> 1,964,992, 2 bucket(s) corrected
+  frame 1239: ALL 6,159,488 -> 1,965,184, 2 bucket(s) corrected
+  frame 1240: ALL 6,159,424 -> 1,965,120, 2 bucket(s) corrected
+  frame 1241: ALL 6,719,616 -> 2,525,312, 2 bucket(s) corrected
+  frame 1242: ALL 5,599,040 -> 1,404,736, 2 bucket(s) corrected
+  frame 1243: ALL 6,719,872 -> 2,525,568, 2 bucket(s) corrected
+  frame 1244: ALL 6,159,488 -> 1,965,184, 2 bucket(s) corrected
+  frame 1245: ALL 6,159,104 -> 1,964,800, 2 bucket(s) corrected
+  frame 1246: ALL 10,353,856 -> 6,159,552, 5 bucket(s) corrected
+  frame 1247: ALL 6,719,680 -> 2,525,376, 2 bucket(s) corrected
+  frame 1248: ALL 5,599,232 -> 1,404,928, 2 bucket(s) corrected
+  frame 1249: ALL 6,719,616 -> 2,525,312, 2 bucket(s) corrected
+  frame 1250: ALL 6,159,104 -> 1,964,800, 2 bucket(s) corrected
+  frame 1251: ALL 6,159,552 -> 1,965,248, 2 bucket(s) corrected
+  frame 1252: ALL 6,159,424 -> 1,965,120, 2 bucket(s) corrected
+  frame 1253: ALL 6,159,104 -> 1,964,800, 2 bucket(s) corrected
+  frame 1254: ALL 5,599,168 -> 1,404,864, 2 bucket(s) corrected
+  frame 1255: ALL 6,720,000 -> 2,525,696, 2 bucket(s) corrected
+  frame 1256: ALL 5,598,720 -> 1,404,416, 2 bucket(s) corrected
+  frame 1257: ALL 6,160,320 -> 1,966,016, 2 bucket(s) corrected
+  frame 1258: ALL 6,158,720 -> 1,964,416, 2 bucket(s) corrected
+  frame 1259: ALL 6,159,488 -> 1,965,184, 2 bucket(s) corrected
+  frame 1260: ALL 5,598,848 -> 1,404,544, 2 bucket(s) corrected
+  frame 1261: ALL 6,720,128 -> 2,525,824, 2 bucket(s) corrected
+  frame 1262: ALL 5,598,912 -> 1,404,608, 2 bucket(s) corrected
+  frame 1263: ALL 6,719,552 -> 2,525,248, 2 bucket(s) corrected
+  frame 1264: ALL 6,159,936 -> 1,965,632, 2 bucket(s) corrected
+  frame 1265: ALL 6,158,848 -> 1,964,544, 2 bucket(s) corrected
+  frame 1266: ALL 6,159,424 -> 1,965,120, 2 bucket(s) corrected
+  frame 1267: ALL 6,719,808 -> 2,525,504, 2 bucket(s) corrected
+  frame 1268: ALL 6,159,296 -> 1,964,992, 2 bucket(s) corrected
+  frame 1269: ALL 6,159,552 -> 1,965,248, 2 bucket(s) corrected
+  frame 1270: ALL 6,159,424 -> 1,965,120, 2 bucket(s) corrected
+  frame 1271: ALL 6,158,784 -> 1,964,480, 2 bucket(s) corrected
+  frame 1272: ALL 6,159,552 -> 1,965,248, 2 bucket(s) corrected
+  frame 1273: ALL 6,719,936 -> 2,525,632, 2 bucket(s) corrected
+  frame 1274: ALL 5,598,784 -> 1,404,480, 2 bucket(s) corrected
+  frame 1275: ALL 6,159,488 -> 1,965,184, 2 bucket(s) corrected
+  frame 1276: ALL 6,720,064 -> 2,525,760, 2 bucket(s) corrected
+  frame 1277: ALL 6,159,168 -> 1,964,864, 2 bucket(s) corrected
+  frame 1278: ALL 6,159,552 -> 1,965,248, 2 bucket(s) corrected
+  frame 1279: ALL 6,719,616 -> 2,525,312, 2 bucket(s) corrected
+  frame 1280: ALL 5,598,912 -> 1,404,608, 2 bucket(s) corrected
+  frame 1281: ALL 6,160,000 -> 1,965,696, 2 bucket(s) corrected
+  frame 1282: ALL 6,159,296 -> 1,964,992, 2 bucket(s) corrected
+  frame 1283: ALL 6,159,232 -> 1,964,928, 2 bucket(s) corrected
+  frame 1284: ALL 5,599,168 -> 1,404,864, 2 bucket(s) corrected
+  frame 1285: ALL 7,280,064 -> 3,085,760, 2 bucket(s) corrected
+  frame 1286: ALL 6,159,616 -> 1,965,312, 2 bucket(s) corrected
+  frame 1287: ALL 6,159,232 -> 1,964,928, 2 bucket(s) corrected
+  frame 1288: ALL 6,719,616 -> 2,525,312, 2 bucket(s) corrected
+  frame 1289: ALL 6,159,040 -> 1,964,736, 2 bucket(s) corrected
+  frame 1290: ALL 6,719,744 -> 2,525,440, 2 bucket(s) corrected
+  frame 1291: ALL 6,159,616 -> 1,965,312, 2 bucket(s) corrected
+  frame 1292: ALL 6,159,296 -> 1,964,992, 2 bucket(s) corrected
+  frame 1293: ALL 5,599,360 -> 1,405,056, 2 bucket(s) corrected
+  frame 1294: ALL 7,279,936 -> 3,085,632, 2 bucket(s) corrected
+  frame 1295: ALL 5,598,912 -> 1,404,608, 2 bucket(s) corrected
+  frame 1296: ALL 6,159,232 -> 1,964,928, 2 bucket(s) corrected
+  frame 1297: ALL 6,159,616 -> 1,965,312, 2 bucket(s) corrected
+  frame 1298: ALL 6,159,104 -> 1,964,800, 2 bucket(s) corrected
+  frame 1299: ALL 6,719,744 -> 2,525,440, 2 bucket(s) corrected
+  frame 1300: ALL 6,719,872 -> 2,525,568, 2 bucket(s) corrected
+  frame 1301: ALL 6,158,912 -> 1,964,608, 2 bucket(s) corrected
+  frame 1302: ALL 7,280,064 -> 3,085,760, 2 bucket(s) corrected
+  frame 1303: ALL 6,159,488 -> 1,965,184, 2 bucket(s) corrected
+  frame 1304: ALL 6,719,488 -> 2,525,184, 2 bucket(s) corrected
+  frame 1305: ALL 6,159,616 -> 1,965,312, 2 bucket(s) corrected
+  frame 1306: ALL 7,279,936 -> 3,085,632, 2 bucket(s) corrected
+  frame 1307: ALL 5,598,976 -> 1,404,672, 2 bucket(s) corrected
+  frame 1308: ALL 6,719,424 -> 2,525,120, 2 bucket(s) corrected
+  frame 1309: ALL 6,159,680 -> 1,965,376, 2 bucket(s) corrected
+  frame 1310: ALL 7,279,936 -> 3,085,632, 2 bucket(s) corrected
+  frame 1311: ALL 6,159,168 -> 1,964,864, 2 bucket(s) corrected
+  frame 1312: ALL 7,280,064 -> 3,085,760, 2 bucket(s) corrected
+  frame 1313: ALL 5,599,104 -> 1,404,800, 2 bucket(s) corrected
+  frame 1314: ALL 6,719,424 -> 2,525,120, 2 bucket(s) corrected
+  frame 1315: ALL 5,599,552 -> 1,405,248, 2 bucket(s) corrected
+  frame 1316: ALL 6,719,488 -> 2,525,184, 2 bucket(s) corrected
+  frame 1317: ALL 5,599,872 -> 1,405,568, 2 bucket(s) corrected
+  frame 1318: ALL 7,839,552 -> 3,645,248, 2 bucket(s) corrected
+  frame 1319: ALL 5,599,296 -> 1,404,992, 2 bucket(s) corrected
+  frame 1320: ALL 6,719,168 -> 2,524,864, 2 bucket(s) corrected
+  frame 1321: ALL 6,159,936 -> 1,965,632, 2 bucket(s) corrected
+  frame 1322: ALL 6,719,232 -> 2,524,928, 2 bucket(s) corrected
+  frame 1323: ALL 5,599,296 -> 1,404,992, 2 bucket(s) corrected
+  frame 1324: ALL 7,280,064 -> 3,085,760, 2 bucket(s) corrected
+  frame 1325: ALL 5,598,976 -> 1,404,672, 2 bucket(s) corrected
+  frame 1326: ALL 6,719,488 -> 2,525,184, 2 bucket(s) corrected
+  frame 1327: ALL 5,599,552 -> 1,405,248, 2 bucket(s) corrected
+  frame 1328: ALL 6,719,488 -> 2,525,184, 2 bucket(s) corrected
+  frame 1329: ALL 5,038,784 -> 844,480, 2 bucket(s) corrected
+  frame 1330: ALL 7,280,000 -> 3,085,696, 2 bucket(s) corrected
+  frame 1331: ALL 5,038,848 -> 844,544, 2 bucket(s) corrected
+  frame 1332: ALL 6,719,488 -> 2,525,184, 2 bucket(s) corrected
+  frame 1333: ALL 5,599,552 -> 1,405,248, 2 bucket(s) corrected
+  frame 1334: ALL 6,719,552 -> 2,525,248, 2 bucket(s) corrected
+  frame 1335: ALL 5,038,656 -> 844,352, 2 bucket(s) corrected
+  frame 1336: ALL 6,720,064 -> 2,525,760, 2 bucket(s) corrected
+  frame 1337: ALL 5,038,848 -> 844,544, 2 bucket(s) corrected
+  frame 1338: ALL 6,719,296 -> 2,524,992, 2 bucket(s) corrected
+  frame 1339: ALL 5,599,808 -> 1,405,504, 2 bucket(s) corrected
+  frame 1340: ALL 6,719,232 -> 2,524,928, 2 bucket(s) corrected
+  frame 1341: ALL 5,039,360 -> 845,056, 2 bucket(s) corrected
+  frame 1342: ALL 6,719,744 -> 2,525,440, 2 bucket(s) corrected
+  frame 1343: ALL 5,039,040 -> 844,736, 2 bucket(s) corrected
+  frame 1344: ALL 6,719,360 -> 2,525,056, 2 bucket(s) corrected
+  frame 1345: ALL 6,159,744 -> 1,965,440, 2 bucket(s) corrected
+  frame 1346: ALL 6,158,976 -> 1,964,672, 2 bucket(s) corrected
+  frame 1347: ALL 5,599,104 -> 1,404,800, 2 bucket(s) corrected
+  frame 1348: ALL 6,159,936 -> 1,965,632, 2 bucket(s) corrected
+  frame 1349: ALL 5,599,232 -> 1,404,928, 2 bucket(s) corrected
+  frame 1350: ALL 6,159,424 -> 1,965,120, 2 bucket(s) corrected
+  frame 1351: ALL 6,159,488 -> 1,965,184, 2 bucket(s) corrected
+  frame 1352: ALL 6,159,296 -> 1,964,992, 2 bucket(s) corrected
+  frame 1353: ALL 5,599,296 -> 1,404,992, 2 bucket(s) corrected
+  frame 1354: ALL 6,719,808 -> 2,525,504, 2 bucket(s) corrected
+  frame 1355: ALL 5,598,784 -> 1,404,480, 2 bucket(s) corrected
+  frame 1356: ALL 6,159,424 -> 1,965,120, 2 bucket(s) corrected
+  frame 1357: ALL 6,159,744 -> 1,965,440, 2 bucket(s) corrected
+  frame 1358: ALL 6,719,168 -> 2,524,864, 2 bucket(s) corrected
+  frame 1359: ALL 5,599,168 -> 1,404,864, 2 bucket(s) corrected
+  frame 1360: ALL 6,720,064 -> 2,525,760, 2 bucket(s) corrected
+  frame 1361: ALL 5,598,976 -> 1,404,672, 2 bucket(s) corrected
+  frame 1362: ALL 6,159,168 -> 1,964,864, 2 bucket(s) corrected
+  frame 1363: ALL 6,719,872 -> 2,525,568, 2 bucket(s) corrected
+  frame 1364: ALL 7,279,488 -> 3,085,184, 2 bucket(s) corrected
+  frame 1365: ALL 5,039,296 -> 844,992, 2 bucket(s) corrected
+  frame 1366: ALL 7,279,616 -> 3,085,312, 2 bucket(s) corrected
+  frame 1367: ALL 5,599,104 -> 1,404,800, 2 bucket(s) corrected
+  frame 1368: ALL 6,159,680 -> 1,965,376, 2 bucket(s) corrected
+  frame 1369: ALL 6,159,040 -> 1,964,736, 2 bucket(s) corrected
+  frame 1370: ALL 6,159,744 -> 1,965,440, 2 bucket(s) corrected
+  frame 1371: ALL 6,719,424 -> 2,525,120, 2 bucket(s) corrected
+  frame 1372: ALL 6,720,000 -> 2,525,696, 2 bucket(s) corrected
+  frame 1373: ALL 6,158,848 -> 1,964,544, 2 bucket(s) corrected
+  frame 1374: ALL 6,159,744 -> 1,965,440, 2 bucket(s) corrected
+  frame 1375: ALL 6,159,808 -> 1,965,504, 2 bucket(s) corrected
+  frame 1376: ALL 6,158,784 -> 1,964,480, 2 bucket(s) corrected
+  frame 1377: ALL 5,600,064 -> 1,405,760, 2 bucket(s) corrected
+  frame 1378: ALL 7,279,360 -> 3,085,056, 2 bucket(s) corrected
+  frame 1379: ALL 5,598,976 -> 1,404,672, 2 bucket(s) corrected
+  frame 1380: ALL 6,159,104 -> 1,964,800, 2 bucket(s) corrected
+  frame 1381: ALL 7,280,640 -> 3,086,336, 2 bucket(s) corrected
+  frame 1382: ALL 6,719,296 -> 2,524,992, 2 bucket(s) corrected
+  frame 1383: ALL 5,599,104 -> 1,404,800, 2 bucket(s) corrected
+  frame 1384: ALL 6,720,064 -> 2,525,760, 2 bucket(s) corrected
+  frame 1385: ALL 5,598,912 -> 1,404,608, 2 bucket(s) corrected
+  frame 1386: ALL 6,159,296 -> 1,964,992, 2 bucket(s) corrected
+  frame 1387: ALL 6,159,744 -> 1,965,440, 2 bucket(s) corrected
+  frame 1388: ALL 6,159,104 -> 1,964,800, 2 bucket(s) corrected
+  frame 1389: ALL 6,159,296 -> 1,964,992, 2 bucket(s) corrected
+  frame 1390: ALL 6,720,064 -> 2,525,760, 2 bucket(s) corrected
+  frame 1391: ALL 5,598,912 -> 1,404,608, 2 bucket(s) corrected
+  frame 1392: ALL 6,159,296 -> 1,964,992, 2 bucket(s) corrected
+  frame 1393: ALL 6,159,360 -> 1,965,056, 2 bucket(s) corrected
+  frame 1394: ALL 6,159,488 -> 1,965,184, 2 bucket(s) corrected
+  frame 1395: ALL 5,599,104 -> 1,404,800, 2 bucket(s) corrected
+  frame 1396: ALL 6,719,936 -> 2,525,632, 2 bucket(s) corrected
+  frame 1397: ALL 5,598,976 -> 1,404,672, 2 bucket(s) corrected
+  frame 1398: ALL 6,719,808 -> 2,525,504, 2 bucket(s) corrected
+  frame 1399: ALL 6,159,680 -> 1,965,376, 2 bucket(s) corrected
+  frame 1400: ALL 6,719,424 -> 2,525,120, 2 bucket(s) corrected
+  frame 1401: ALL 5,598,784 -> 1,404,480, 2 bucket(s) corrected
+  frame 1402: ALL 7,280,320 -> 3,086,016, 2 bucket(s) corrected
+  frame 1403: ALL 5,038,720 -> 844,416, 2 bucket(s) corrected
+  frame 1404: ALL 6,719,936 -> 2,525,632, 2 bucket(s) corrected
+  frame 1405: ALL 5,599,552 -> 1,405,248, 2 bucket(s) corrected
+  frame 1406: ALL 7,279,616 -> 3,085,312, 2 bucket(s) corrected
+  frame 1407: ALL 5,038,848 -> 844,544, 2 bucket(s) corrected
+  frame 1408: ALL 7,280,192 -> 3,085,888, 2 bucket(s) corrected
+  frame 1409: ALL 5,038,720 -> 844,416, 2 bucket(s) corrected
+  frame 1410: ALL 6,719,616 -> 2,525,312, 2 bucket(s) corrected
+  frame 1411: ALL 5,599,232 -> 1,404,928, 2 bucket(s) corrected
+  frame 1412: ALL 6,719,616 -> 2,525,312, 2 bucket(s) corrected
+  frame 1413: ALL 5,039,040 -> 844,736, 2 bucket(s) corrected
+  frame 1414: ALL 7,280,128 -> 3,085,824, 2 bucket(s) corrected
+  frame 1415: ALL 5,038,848 -> 844,544, 2 bucket(s) corrected
+  frame 1416: ALL 6,719,680 -> 2,525,376, 2 bucket(s) corrected
+  frame 1417: ALL 5,599,232 -> 1,404,928, 2 bucket(s) corrected
+  frame 1418: ALL 6,719,552 -> 2,525,248, 2 bucket(s) corrected
+  frame 1419: ALL 5,038,784 -> 844,480, 2 bucket(s) corrected
+  frame 1420: ALL 7,840,576 -> 3,646,272, 2 bucket(s) corrected
+  frame 1421: ALL 5,598,912 -> 1,404,608, 2 bucket(s) corrected
+  frame 1422: ALL 6,719,296 -> 2,524,992, 2 bucket(s) corrected
+  frame 1423: ALL 5,600,000 -> 1,405,696, 2 bucket(s) corrected
+  frame 1424: ALL 6,719,296 -> 2,524,992, 2 bucket(s) corrected
+  frame 1425: ALL 5,599,296 -> 1,404,992, 2 bucket(s) corrected
+  frame 1426: ALL 7,279,872 -> 3,085,568, 2 bucket(s) corrected
+  frame 1427: ALL 5,599,296 -> 1,404,992, 2 bucket(s) corrected
+  frame 1428: ALL 6,718,976 -> 2,524,672, 2 bucket(s) corrected
+  frame 1429: ALL 6,159,744 -> 1,965,440, 2 bucket(s) corrected
+  frame 1430: ALL 6,719,680 -> 2,525,376, 2 bucket(s) corrected
+  frame 1431: ALL 5,038,912 -> 844,608, 2 bucket(s) corrected
+  frame 1432: ALL 7,280,256 -> 3,085,952, 2 bucket(s) corrected
+  frame 1433: ALL 5,038,656 -> 844,352, 2 bucket(s) corrected
+  frame 1434: ALL 7,840,000 -> 3,645,696, 2 bucket(s) corrected
+  frame 1435: ALL 5,599,360 -> 1,405,056, 2 bucket(s) corrected
+  frame 1436: ALL 6,719,296 -> 2,524,992, 2 bucket(s) corrected
+  frame 1437: ALL 5,599,936 -> 1,405,632, 2 bucket(s) corrected
+  frame 1438: ALL 7,279,424 -> 3,085,120, 2 bucket(s) corrected
+  frame 1439: ALL 5,598,912 -> 1,404,608, 2 bucket(s) corrected
+  frame 1440: ALL 6,720,000 -> 2,525,696, 2 bucket(s) corrected
+  frame 1441: ALL 5,599,168 -> 1,404,864, 2 bucket(s) corrected
+  frame 1442: ALL 7,279,488 -> 3,085,184, 2 bucket(s) corrected
+  frame 1443: ALL 5,038,976 -> 844,672, 2 bucket(s) corrected
+  frame 1444: ALL 7,280,000 -> 3,085,696, 2 bucket(s) corrected
+  frame 1445: ALL 5,039,104 -> 844,800, 2 bucket(s) corrected
+  frame 1446: ALL 6,719,488 -> 2,525,184, 2 bucket(s) corrected
+  frame 1447: ALL 5,599,424 -> 1,405,120, 2 bucket(s) corrected
+  frame 1448: ALL 6,719,296 -> 2,524,992, 2 bucket(s) corrected
+  frame 1449: ALL 5,039,040 -> 844,736, 2 bucket(s) corrected
+  frame 1450: ALL 7,280,000 -> 3,085,696, 2 bucket(s) corrected
+  frame 1451: ALL 5,038,912 -> 844,608, 2 bucket(s) corrected
+  frame 1452: ALL 6,719,680 -> 2,525,376, 2 bucket(s) corrected
+  frame 1453: ALL 5,599,360 -> 1,405,056, 2 bucket(s) corrected
+  frame 1454: ALL 6,719,424 -> 2,525,120, 2 bucket(s) corrected
+  frame 1455: ALL 5,038,976 -> 844,672, 2 bucket(s) corrected
+  frame 1456: ALL 7,279,872 -> 3,085,568, 2 bucket(s) corrected
+  frame 1457: ALL 5,039,040 -> 844,736, 2 bucket(s) corrected
+  frame 1458: ALL 6,719,552 -> 2,525,248, 2 bucket(s) corrected
+  frame 1459: ALL 5,599,104 -> 1,404,800, 2 bucket(s) corrected
+  frame 1460: ALL 6,719,744 -> 2,525,440, 2 bucket(s) corrected
+  frame 1461: ALL 5,038,976 -> 844,672, 2 bucket(s) corrected
+  frame 1462: ALL 7,280,128 -> 3,085,824, 2 bucket(s) corrected
+  frame 1463: ALL 5,038,656 -> 844,352, 2 bucket(s) corrected
+  frame 1464: ALL 6,719,488 -> 2,525,184, 2 bucket(s) corrected
+  frame 1465: ALL 5,599,488 -> 1,405,184, 2 bucket(s) corrected
+  frame 1466: ALL 6,719,104 -> 2,524,800, 2 bucket(s) corrected
+  frame 1467: ALL 5,039,360 -> 845,056, 2 bucket(s) corrected
+  frame 1468: ALL 7,280,064 -> 3,085,760, 2 bucket(s) corrected
+  frame 1469: ALL 5,038,720 -> 844,416, 2 bucket(s) corrected
+  frame 1470: ALL 6,719,488 -> 2,525,184, 2 bucket(s) corrected
+  frame 1471: ALL 5,599,360 -> 1,405,056, 2 bucket(s) corrected
+  frame 1472: ALL 6,719,744 -> 2,525,440, 2 bucket(s) corrected
+  frame 1473: ALL 5,599,424 -> 1,405,120, 2 bucket(s) corrected
+  frame 1474: ALL 7,279,744 -> 3,085,440, 2 bucket(s) corrected
+  frame 1475: ALL 5,038,784 -> 844,480, 2 bucket(s) corrected
+  frame 1476: ALL 6,719,552 -> 2,525,248, 2 bucket(s) corrected
+  frame 1477: ALL 5,599,488 -> 1,405,184, 2 bucket(s) corrected
+  frame 1478: ALL 6,719,424 -> 2,525,120, 2 bucket(s) corrected
+  frame 1479: ALL 5,038,848 -> 844,544, 2 bucket(s) corrected
+  frame 1480: ALL 7,280,000 -> 3,085,696, 2 bucket(s) corrected
+  frame 1481: ALL 5,038,912 -> 844,608, 2 bucket(s) corrected
+  frame 1482: ALL 6,719,168 -> 2,524,864, 2 bucket(s) corrected
+  frame 1483: ALL 5,599,680 -> 1,405,376, 2 bucket(s) corrected
+  frame 1484: ALL 6,718,976 -> 2,524,672, 2 bucket(s) corrected
+  frame 1485: ALL 5,599,808 -> 1,405,504, 2 bucket(s) corrected
+  frame 1486: ALL 7,279,808 -> 3,085,504, 2 bucket(s) corrected
+  frame 1487: ALL 5,038,784 -> 844,480, 2 bucket(s) corrected
+  frame 1488: ALL 6,719,424 -> 2,525,120, 2 bucket(s) corrected
+  frame 1489: ALL 6,160,000 -> 1,965,696, 2 bucket(s) corrected
+  frame 1490: ALL 6,719,168 -> 2,524,864, 2 bucket(s) corrected
+  frame 1491: ALL 5,038,976 -> 844,672, 2 bucket(s) corrected
+  frame 1492: ALL 7,280,128 -> 3,085,824, 2 bucket(s) corrected
+  frame 1493: ALL 5,598,912 -> 1,404,608, 2 bucket(s) corrected
+  frame 1494: ALL 6,719,808 -> 2,525,504, 2 bucket(s) corrected
+  frame 1495: ALL 6,159,808 -> 1,965,504, 2 bucket(s) corrected
+  frame 1496: ALL 6,719,424 -> 2,525,120, 2 bucket(s) corrected
+  frame 1497: ALL 5,599,616 -> 1,405,312, 2 bucket(s) corrected
+  frame 1498: ALL 7,279,360 -> 3,085,056, 2 bucket(s) corrected
+  frame 1499: ALL 5,038,784 -> 844,480, 2 bucket(s) corrected
+  frame 1500: ALL 6,719,552 -> 2,525,248, 2 bucket(s) corrected
+  frame 1501: ALL 5,599,488 -> 1,405,184, 2 bucket(s) corrected
+  frame 1502: ALL 7,279,808 -> 3,085,504, 2 bucket(s) corrected
+  frame 1503: ALL 5,038,848 -> 844,544, 2 bucket(s) corrected
+  frame 1504: ALL 7,280,320 -> 3,086,016, 2 bucket(s) corrected
+  frame 1505: ALL 5,038,400 -> 844,096, 2 bucket(s) corrected
+  frame 1506: ALL 6,719,872 -> 2,525,568, 2 bucket(s) corrected
+  frame 1507: ALL 5,599,360 -> 1,405,056, 2 bucket(s) corrected
+  frame 1508: ALL 6,719,488 -> 2,525,184, 2 bucket(s) corrected
+  frame 1509: ALL 5,038,848 -> 844,544, 2 bucket(s) corrected
+  frame 1510: ALL 7,280,128 -> 3,085,824, 2 bucket(s) corrected
+  frame 1511: ALL 5,598,784 -> 1,404,480, 2 bucket(s) corrected
+  frame 1512: ALL 6,719,744 -> 2,525,440, 2 bucket(s) corrected
+  frame 1513: ALL 5,599,232 -> 1,404,928, 2 bucket(s) corrected
+  frame 1514: ALL 6,719,552 -> 2,525,248, 2 bucket(s) corrected
+  frame 1515: ALL 5,038,976 -> 844,672, 2 bucket(s) corrected
+  frame 1516: ALL 7,280,000 -> 3,085,696, 2 bucket(s) corrected
+  frame 1517: ALL 5,599,296 -> 1,404,992, 2 bucket(s) corrected
+  frame 1518: ALL 6,719,552 -> 2,525,248, 2 bucket(s) corrected
+  frame 1519: ALL 5,599,424 -> 1,405,120, 2 bucket(s) corrected
+  frame 1520: ALL 6,719,424 -> 2,525,120, 2 bucket(s) corrected
+  frame 1521: ALL 5,599,040 -> 1,404,736, 2 bucket(s) corrected
+  frame 1522: ALL 7,280,000 -> 3,085,696, 2 bucket(s) corrected
+  frame 1523: ALL 5,038,848 -> 844,544, 2 bucket(s) corrected
+  frame 1524: ALL 6,719,744 -> 2,525,440, 2 bucket(s) corrected
+  frame 1525: ALL 5,599,232 -> 1,404,928, 2 bucket(s) corrected
+  frame 1526: ALL 7,279,872 -> 3,085,568, 2 bucket(s) corrected
+  frame 1527: ALL 5,599,424 -> 1,405,120, 2 bucket(s) corrected
+  frame 1528: ALL 7,279,808 -> 3,085,504, 2 bucket(s) corrected
+  frame 1529: ALL 5,598,976 -> 1,404,672, 2 bucket(s) corrected
+  frame 1530: ALL 6,719,808 -> 2,525,504, 2 bucket(s) corrected
+  frame 1531: ALL 5,599,360 -> 1,405,056, 2 bucket(s) corrected
+  frame 1532: ALL 7,279,552 -> 3,085,248, 2 bucket(s) corrected
+  frame 1533: ALL 5,599,360 -> 1,405,056, 2 bucket(s) corrected
+  frame 1534: ALL 7,279,936 -> 3,085,632, 2 bucket(s) corrected
+  frame 1535: ALL 5,599,104 -> 1,404,800, 2 bucket(s) corrected
+  frame 1536: ALL 6,719,744 -> 2,525,440, 2 bucket(s) corrected
+  frame 1537: ALL 6,159,616 -> 1,965,312, 2 bucket(s) corrected
+  frame 1538: ALL 6,719,616 -> 2,525,312, 2 bucket(s) corrected
+  frame 1539: ALL 5,599,232 -> 1,404,928, 2 bucket(s) corrected
+  frame 1540: ALL 7,279,616 -> 3,085,312, 2 bucket(s) corrected
+  frame 1541: ALL 5,599,168 -> 1,404,864, 2 bucket(s) corrected
+  frame 1542: ALL 7,279,680 -> 3,085,376, 2 bucket(s) corrected
+  frame 1543: ALL 6,159,744 -> 1,965,440, 2 bucket(s) corrected
+  frame 1544: ALL 6,719,104 -> 2,524,800, 2 bucket(s) corrected
+  frame 1545: ALL 5,599,424 -> 1,405,120, 2 bucket(s) corrected
+  frame 1546: ALL 7,280,128 -> 3,085,824, 2 bucket(s) corrected
+  frame 1547: ALL 5,598,720 -> 1,404,416, 2 bucket(s) corrected
+  frame 1548: ALL 6,719,808 -> 2,525,504, 2 bucket(s) corrected
+  frame 1549: ALL 6,159,680 -> 1,965,376, 2 bucket(s) corrected
+  frame 1550: ALL 6,719,168 -> 2,524,864, 2 bucket(s) corrected
+  frame 1551: ALL 5,039,232 -> 844,928, 2 bucket(s) corrected
+  frame 1552: ALL 7,279,744 -> 3,085,440, 2 bucket(s) corrected
+  frame 1553: ALL 5,038,912 -> 844,608, 2 bucket(s) corrected
+  frame 1554: ALL 6,719,424 -> 2,525,120, 2 bucket(s) corrected
+  frame 1555: ALL 6,159,744 -> 1,965,440, 2 bucket(s) corrected
+  frame 1556: ALL 6,719,296 -> 2,524,992, 2 bucket(s) corrected
+  frame 1557: ALL 5,039,808 -> 845,504, 2 bucket(s) corrected
+  frame 1558: ALL 7,279,360 -> 3,085,056, 2 bucket(s) corrected
+  frame 1559: ALL 5,038,848 -> 844,544, 2 bucket(s) corrected
+  frame 1560: ALL 6,719,616 -> 2,525,312, 2 bucket(s) corrected
+  frame 1561: ALL 6,159,424 -> 1,965,120, 2 bucket(s) corrected
+  frame 1562: ALL 7,279,488 -> 3,085,184, 2 bucket(s) corrected
+  frame 1563: ALL 5,599,424 -> 1,405,120, 2 bucket(s) corrected
+  frame 1564: ALL 7,279,936 -> 3,085,632, 2 bucket(s) corrected
+  frame 1565: ALL 5,038,656 -> 844,352, 2 bucket(s) corrected
+  frame 1566: ALL 6,719,552 -> 2,525,248, 2 bucket(s) corrected
+  frame 1567: ALL 5,599,744 -> 1,405,440, 2 bucket(s) corrected
+  frame 1568: ALL 7,279,424 -> 3,085,120, 2 bucket(s) corrected
+  frame 1569: ALL 6,159,680 -> 1,965,376, 2 bucket(s) corrected
+  frame 1570: ALL 8,400,128 -> 4,205,824, 2 bucket(s) corrected
+  frame 1571: ALL 5,599,232 -> 1,404,928, 2 bucket(s) corrected
+  frame 1572: ALL 7,279,936 -> 3,085,632, 2 bucket(s) corrected
+  frame 1573: ALL 5,599,360 -> 1,405,056, 2 bucket(s) corrected
+  frame 1574: ALL 6,159,232 -> 1,964,928, 2 bucket(s) corrected
+  frame 1575: ALL 5,599,168 -> 1,404,864, 2 bucket(s) corrected
+  frame 1576: ALL 6,719,744 -> 2,525,440, 2 bucket(s) corrected
+  frame 1577: ALL 5,599,232 -> 1,404,928, 2 bucket(s) corrected
+  frame 1578: ALL 5,599,424 -> 1,405,120, 2 bucket(s) corrected
+  frame 1579: ALL 6,159,616 -> 1,965,312, 2 bucket(s) corrected
+  frame 1580: ALL 5,598,976 -> 1,404,672, 2 bucket(s) corrected
+  frame 1581: ALL 5,598,848 -> 1,404,544, 2 bucket(s) corrected
+  frame 1582: ALL 6,159,808 -> 1,965,504, 2 bucket(s) corrected
+  frame 1583: ALL 5,598,976 -> 1,404,672, 2 bucket(s) corrected
+  frame 1584: ALL 5,599,552 -> 1,405,248, 2 bucket(s) corrected
+  frame 1585: ALL 6,159,744 -> 1,965,440, 2 bucket(s) corrected
+  frame 1586: ALL 5,598,848 -> 1,404,544, 2 bucket(s) corrected
+  frame 1587: ALL 5,599,168 -> 1,404,864, 2 bucket(s) corrected
+  frame 1588: ALL 6,159,616 -> 1,965,312, 2 bucket(s) corrected
+  frame 1589: ALL 6,159,040 -> 1,964,736, 2 bucket(s) corrected
+  frame 1590: ALL 5,599,552 -> 1,405,248, 2 bucket(s) corrected
+  frame 1591: ALL 6,159,616 -> 1,965,312, 2 bucket(s) corrected
+  frame 1592: ALL 7,279,552 -> 3,085,248, 2 bucket(s) corrected
+  frame 1593: ALL 6,159,552 -> 1,965,248, 2 bucket(s) corrected
+  frame 1594: ALL 6,719,680 -> 2,525,376, 2 bucket(s) corrected
+  frame 1595: ALL 5,598,976 -> 1,404,672, 2 bucket(s) corrected
+  frame 1596: ALL 6,719,680 -> 2,525,376, 2 bucket(s) corrected
+  frame 1597: ALL 6,719,808 -> 2,525,504, 2 bucket(s) corrected
+  frame 1598: ALL 6,719,040 -> 2,524,736, 2 bucket(s) corrected
+  frame 1599: ALL 6,159,680 -> 1,965,376, 2 bucket(s) corrected
+  frame 1600: ALL 6,719,872 -> 2,525,568, 2 bucket(s) corrected
+  frame 1601: ALL 6,159,168 -> 1,964,864, 2 bucket(s) corrected
+  frame 1602: ALL 6,159,616 -> 1,965,312, 2 bucket(s) corrected
+  frame 1603: ALL 6,159,552 -> 1,965,248, 2 bucket(s) corrected
+  frame 1604: ALL 6,719,168 -> 2,524,864, 2 bucket(s) corrected
+  frame 1605: ALL 5,599,360 -> 1,405,056, 2 bucket(s) corrected
+  frame 1606: ALL 6,719,680 -> 2,525,376, 2 bucket(s) corrected
+  frame 1607: ALL 5,599,232 -> 1,404,928, 2 bucket(s) corrected
+  frame 1608: ALL 6,159,296 -> 1,964,992, 2 bucket(s) corrected
+  frame 1609: ALL 6,159,488 -> 1,965,184, 2 bucket(s) corrected
+  frame 1610: ALL 6,159,104 -> 1,964,800, 2 bucket(s) corrected
+  frame 1611: ALL 5,599,232 -> 1,404,928, 2 bucket(s) corrected
+  frame 1612: ALL 6,719,872 -> 2,525,568, 2 bucket(s) corrected
+  frame 1613: ALL 6,159,168 -> 1,964,864, 2 bucket(s) corrected
+  frame 1614: ALL 6,159,424 -> 1,965,120, 2 bucket(s) corrected
+  frame 1615: ALL 7,279,872 -> 3,085,568, 2 bucket(s) corrected
+  frame 1616: ALL 6,719,680 -> 2,525,376, 2 bucket(s) corrected
+  frame 1617: ALL 5,599,360 -> 1,405,056, 2 bucket(s) corrected
+  frame 1618: ALL 7,839,872 -> 3,645,568, 2 bucket(s) corrected
+  frame 1619: ALL 5,598,784 -> 1,404,480, 2 bucket(s) corrected
+  frame 1620: ALL 7,280,320 -> 3,086,016, 2 bucket(s) corrected
+  frame 1621: ALL 6,159,360 -> 1,965,056, 2 bucket(s) corrected
+  frame 1622: ALL 6,719,616 -> 2,525,312, 2 bucket(s) corrected
+  frame 1623: ALL 5,598,976 -> 1,404,672, 2 bucket(s) corrected
+  frame 1624: ALL 7,279,872 -> 3,085,568, 2 bucket(s) corrected
+  frame 1625: ALL 5,599,168 -> 1,404,864, 2 bucket(s) corrected
+  frame 1626: ALL 6,719,680 -> 2,525,376, 2 bucket(s) corrected
+  frame 1627: ALL 6,159,360 -> 1,965,056, 2 bucket(s) corrected
+  frame 1628: ALL 7,279,744 -> 3,085,440, 2 bucket(s) corrected
+  frame 1629: ALL 5,599,360 -> 1,405,056, 2 bucket(s) corrected
+  frame 1630: ALL 7,840,128 -> 3,645,824, 2 bucket(s) corrected
+  frame 1631: ALL 5,599,168 -> 1,404,864, 2 bucket(s) corrected
+  frame 1632: ALL 6,719,552 -> 2,525,248, 2 bucket(s) corrected
+  frame 1633: ALL 5,599,552 -> 1,405,248, 2 bucket(s) corrected
+  frame 1634: ALL 6,719,360 -> 2,525,056, 2 bucket(s) corrected
+  frame 1635: ALL 5,599,168 -> 1,404,864, 2 bucket(s) corrected
+  frame 1636: ALL 7,280,128 -> 3,085,824, 2 bucket(s) corrected
+  frame 1637: ALL 5,599,040 -> 1,404,736, 2 bucket(s) corrected
+  frame 1638: ALL 7,279,552 -> 3,085,248, 2 bucket(s) corrected
+  frame 1639: ALL 6,159,808 -> 1,965,504, 2 bucket(s) corrected
+  frame 1640: ALL 7,279,296 -> 3,084,992, 2 bucket(s) corrected
+  frame 1641: ALL 5,599,424 -> 1,405,120, 2 bucket(s) corrected
+  frame 1642: ALL 7,840,256 -> 3,645,952, 2 bucket(s) corrected
+  frame 1643: ALL 5,038,656 -> 844,352, 2 bucket(s) corrected
+  frame 1644: ALL 6,719,680 -> 2,525,376, 2 bucket(s) corrected
+  frame 1645: ALL 5,599,296 -> 1,404,992, 2 bucket(s) corrected
+  frame 1646: ALL 6,719,488 -> 2,525,184, 2 bucket(s) corrected
+  frame 1647: ALL 5,599,104 -> 1,404,800, 2 bucket(s) corrected
+  frame 1648: ALL 6,719,936 -> 2,525,632, 2 bucket(s) corrected
+  frame 1649: ALL 5,598,848 -> 1,404,544, 2 bucket(s) corrected
+  frame 1650: ALL 6,159,424 -> 1,965,120, 2 bucket(s) corrected
+  frame 1651: ALL 6,159,616 -> 1,965,312, 2 bucket(s) corrected
+  frame 1652: ALL 6,159,360 -> 1,965,056, 2 bucket(s) corrected
+  frame 1653: ALL 5,599,040 -> 1,404,736, 2 bucket(s) corrected
+  frame 1654: ALL 6,159,488 -> 1,965,184, 2 bucket(s) corrected
+  frame 1655: ALL 5,599,040 -> 1,404,736, 2 bucket(s) corrected
+  frame 1656: ALL 6,159,360 -> 1,965,056, 2 bucket(s) corrected
+  frame 1657: ALL 6,159,424 -> 1,965,120, 2 bucket(s) corrected
+  frame 1658: ALL 7,280,064 -> 3,085,760, 2 bucket(s) corrected
+  frame 1700: ALL 5,039,104 -> 844,800, 2 bucket(s) corrected
+  frame 1701: ALL 4,479,040 -> 284,736, 2 bucket(s) corrected
+  frame 1702: ALL 5,038,848 -> 844,544, 2 bucket(s) corrected
+  frame 1703: ALL 6,719,552 -> 2,525,248, 2 bucket(s) corrected
+  frame 1704: ALL 6,720,064 -> 2,525,760, 2 bucket(s) corrected
+  frame 1705: ALL 5,598,784 -> 1,404,480, 2 bucket(s) corrected
+  frame 1706: ALL 6,159,680 -> 1,965,376, 2 bucket(s) corrected
+  frame 1707: ALL 6,159,424 -> 1,965,120, 2 bucket(s) corrected
+  frame 1708: ALL 6,719,104 -> 2,524,800, 2 bucket(s) corrected
+  frame 1709: ALL 5,599,488 -> 1,405,184, 2 bucket(s) corrected
+  frame 1710: ALL 6,719,808 -> 2,525,504, 2 bucket(s) corrected
+  frame 1711: ALL 5,598,976 -> 1,404,672, 2 bucket(s) corrected
+  frame 1712: ALL 7,279,808 -> 3,085,504, 2 bucket(s) corrected
+  frame 1713: ALL 6,159,296 -> 1,964,992, 2 bucket(s) corrected
+  frame 1714: ALL 7,279,680 -> 3,085,376, 2 bucket(s) corrected
+  frame 1715: ALL 5,599,424 -> 1,405,120, 2 bucket(s) corrected
+  frame 1716: ALL 5,599,424 -> 1,405,120, 2 bucket(s) corrected
+  frame 1717: ALL 5,038,976 -> 844,672, 2 bucket(s) corrected
+  frame 1718: ALL 5,599,232 -> 1,404,928, 2 bucket(s) corrected
+  frame 1719: ALL 5,038,912 -> 844,608, 2 bucket(s) corrected
+  frame 1720: ALL 5,599,488 -> 1,405,184, 2 bucket(s) corrected
+  frame 1721: ALL 5,038,784 -> 844,480, 2 bucket(s) corrected
+  frame 1722: ALL 5,039,104 -> 844,800, 2 bucket(s) corrected
+  frame 1723: ALL 5,038,656 -> 844,352, 2 bucket(s) corrected
+  frame 1724: ALL 5,599,488 -> 1,405,184, 2 bucket(s) corrected
+  frame 1725: ALL 5,038,976 -> 844,672, 2 bucket(s) corrected
+  frame 1726: ALL 5,598,976 -> 1,404,672, 2 bucket(s) corrected
+  frame 1727: ALL 6,159,488 -> 1,965,184, 2 bucket(s) corrected
+  frame 1728: ALL 5,599,040 -> 1,404,736, 2 bucket(s) corrected
+  frame 1729: ALL 5,599,360 -> 1,405,056, 2 bucket(s) corrected
+  frame 1730: ALL 6,159,360 -> 1,965,056, 2 bucket(s) corrected
+  frame 1731: ALL 6,159,360 -> 1,965,056, 2 bucket(s) corrected
+  frame 1732: ALL 6,719,552 -> 2,525,248, 2 bucket(s) corrected
+  frame 1733: ALL 6,720,064 -> 2,525,760, 2 bucket(s) corrected
+  frame 1734: ALL 6,158,528 -> 1,964,224, 2 bucket(s) corrected
+  frame 1735: ALL 6,160,000 -> 1,965,696, 2 bucket(s) corrected
+  frame 1736: ALL 6,719,744 -> 2,525,440, 2 bucket(s) corrected
+  frame 1737: ALL 6,719,872 -> 2,525,568, 2 bucket(s) corrected
+  frame 1738: ALL 6,719,168 -> 2,524,864, 2 bucket(s) corrected
+  frame 1739: ALL 7,279,936 -> 3,085,632, 2 bucket(s) corrected
+  frame 1740: ALL 5,598,784 -> 1,404,480, 2 bucket(s) corrected
+  frame 1741: ALL 7,280,256 -> 3,085,952, 2 bucket(s) corrected
+  frame 1742: ALL 6,159,680 -> 1,965,376, 2 bucket(s) corrected
+  frame 1743: ALL 6,718,976 -> 2,524,672, 2 bucket(s) corrected
+  frame 1744: ALL 5,599,296 -> 1,404,992, 2 bucket(s) corrected
+  frame 1745: ALL 7,280,192 -> 3,085,888, 2 bucket(s) corrected
+  frame 1746: ALL 5,598,912 -> 1,404,608, 2 bucket(s) corrected
+  frame 1747: ALL 6,719,552 -> 2,525,248, 2 bucket(s) corrected
+  frame 1748: ALL 7,280,256 -> 3,085,952, 2 bucket(s) corrected
+  frame 1749: ALL 6,719,360 -> 2,525,056, 2 bucket(s) corrected
+  frame 1750: ALL 5,599,296 -> 1,404,992, 2 bucket(s) corrected
+  frame 1751: ALL 7,840,256 -> 3,645,952, 2 bucket(s) corrected
+  frame 1752: ALL 5,598,976 -> 1,404,672, 2 bucket(s) corrected
+  frame 1753: ALL 6,719,744 -> 2,525,440, 2 bucket(s) corrected
+  frame 1754: ALL 6,159,616 -> 1,965,312, 2 bucket(s) corrected
+  frame 1755: ALL 6,719,296 -> 2,524,992, 2 bucket(s) corrected
+  frame 1756: ALL 5,599,040 -> 1,404,736, 2 bucket(s) corrected
+  frame 1757: ALL 7,840,128 -> 3,645,824, 2 bucket(s) corrected
+  frame 1758: ALL 5,599,360 -> 1,405,056, 2 bucket(s) corrected
+  frame 1759: ALL 6,719,424 -> 2,525,120, 2 bucket(s) corrected
+  frame 1760: ALL 6,159,744 -> 1,965,440, 2 bucket(s) corrected
+  frame 1761: ALL 6,719,552 -> 2,525,248, 2 bucket(s) corrected
+  frame 1762: ALL 5,598,976 -> 1,404,672, 2 bucket(s) corrected
+  frame 1763: ALL 7,280,256 -> 3,085,952, 2 bucket(s) corrected
+  frame 1764: ALL 5,598,784 -> 1,404,480, 2 bucket(s) corrected
+  frame 1765: ALL 6,719,744 -> 2,525,440, 2 bucket(s) corrected
+  frame 1766: ALL 6,159,872 -> 1,965,568, 2 bucket(s) corrected
+  frame 1767: ALL 6,719,232 -> 2,524,928, 2 bucket(s) corrected
+  frame 1768: ALL 5,599,424 -> 1,405,120, 2 bucket(s) corrected
+  frame 1769: ALL 7,279,744 -> 3,085,440, 2 bucket(s) corrected
+  frame 1770: ALL 5,599,104 -> 1,404,800, 2 bucket(s) corrected
+  frame 1771: ALL 7,279,680 -> 3,085,376, 2 bucket(s) corrected
+  frame 1772: ALL 6,159,744 -> 1,965,440, 2 bucket(s) corrected
+  frame 1773: ALL 6,719,424 -> 2,525,120, 2 bucket(s) corrected
+  frame 1774: ALL 5,599,424 -> 1,405,120, 2 bucket(s) corrected
+  frame 1775: ALL 7,279,744 -> 3,085,440, 2 bucket(s) corrected
+  frame 1776: ALL 6,159,552 -> 1,965,248, 2 bucket(s) corrected
+  frame 1777: ALL 6,719,424 -> 2,525,120, 2 bucket(s) corrected
+  frame 1778: ALL 6,159,488 -> 1,965,184, 2 bucket(s) corrected
+  frame 1779: ALL 7,279,744 -> 3,085,440, 2 bucket(s) corrected
+  frame 1780: ALL 5,599,296 -> 1,404,992, 2 bucket(s) corrected
+  frame 1781: ALL 7,280,064 -> 3,085,760, 2 bucket(s) corrected
+  frame 1782: ALL 5,598,976 -> 1,404,672, 2 bucket(s) corrected
+  frame 1783: ALL 7,279,616 -> 3,085,312, 2 bucket(s) corrected
+  frame 1784: ALL 6,159,808 -> 1,965,504, 2 bucket(s) corrected
+  frame 1785: ALL 6,719,040 -> 2,524,736, 2 bucket(s) corrected
+  frame 1786: ALL 6,159,488 -> 1,965,184, 2 bucket(s) corrected
+  frame 1787: ALL 7,280,064 -> 3,085,760, 2 bucket(s) corrected
+  frame 1788: ALL 5,599,168 -> 1,404,864, 2 bucket(s) corrected
+  frame 1789: ALL 7,279,616 -> 3,085,312, 2 bucket(s) corrected
+  frame 1790: ALL 6,159,680 -> 1,965,376, 2 bucket(s) corrected
+  frame 1791: ALL 7,279,680 -> 3,085,376, 2 bucket(s) corrected
+  frame 1792: ALL 6,159,104 -> 1,964,800, 2 bucket(s) corrected
+  frame 1793: ALL 6,720,128 -> 2,525,824, 2 bucket(s) corrected
+  frame 1794: ALL 6,159,424 -> 1,965,120, 2 bucket(s) corrected
+  frame 1795: ALL 6,719,232 -> 2,524,928, 2 bucket(s) corrected
+  frame 1796: ALL 6,719,936 -> 2,525,632, 2 bucket(s) corrected
+  frame 1797: ALL 6,719,808 -> 2,525,504, 2 bucket(s) corrected
+  frame 1798: ALL 6,159,104 -> 1,964,800, 2 bucket(s) corrected
+  frame 1799: ALL 7,839,808 -> 3,645,504, 2 bucket(s) corrected
+  frame 1800: ALL 5,599,168 -> 1,404,864, 2 bucket(s) corrected
+  frame 1801: ALL 6,719,552 -> 2,525,248, 2 bucket(s) corrected
+  frame 1802: ALL 6,159,872 -> 1,965,568, 2 bucket(s) corrected
+  frame 1803: ALL 6,719,424 -> 2,525,120, 2 bucket(s) corrected
+  frame 1804: ALL 5,599,040 -> 1,404,736, 2 bucket(s) corrected
+  frame 1805: ALL 7,279,936 -> 3,085,632, 2 bucket(s) corrected
+  frame 1806: ALL 6,159,360 -> 1,965,056, 2 bucket(s) corrected
+  frame 1807: ALL 7,279,616 -> 3,085,312, 2 bucket(s) corrected
+  frame 1808: ALL 6,719,872 -> 2,525,568, 2 bucket(s) corrected
+  frame 1809: ALL 6,719,296 -> 2,524,992, 2 bucket(s) corrected
+  frame 1810: ALL 5,598,912 -> 1,404,608, 2 bucket(s) corrected
+  frame 1811: ALL 6,720,000 -> 2,525,696, 2 bucket(s) corrected
+  frame 1812: ALL 5,599,104 -> 1,404,800, 2 bucket(s) corrected
+  frame 1813: ALL 6,719,616 -> 2,525,312, 2 bucket(s) corrected
+  frame 1814: ALL 6,719,680 -> 2,525,376, 2 bucket(s) corrected
+  frame 1815: ALL 6,719,552 -> 2,525,248, 2 bucket(s) corrected
+  frame 1816: ALL 6,159,424 -> 1,965,120, 2 bucket(s) corrected
+  frame 1817: ALL 7,280,000 -> 3,085,696, 2 bucket(s) corrected
+  frame 1818: ALL 6,159,168 -> 1,964,864, 2 bucket(s) corrected
+  frame 1819: ALL 7,279,872 -> 3,085,568, 2 bucket(s) corrected
+  frame 1820: ALL 6,720,000 -> 2,525,696, 2 bucket(s) corrected
+  frame 1821: ALL 6,719,360 -> 2,525,056, 2 bucket(s) corrected
+  frame 1822: ALL 6,720,064 -> 2,525,760, 2 bucket(s) corrected
+  frame 1823: ALL 7,279,680 -> 3,085,376, 2 bucket(s) corrected
+  frame 1824: ALL 6,159,360 -> 1,965,056, 2 bucket(s) corrected
+  frame 1825: ALL 7,279,616 -> 3,085,312, 2 bucket(s) corrected
+  frame 1826: ALL 6,719,808 -> 2,525,504, 2 bucket(s) corrected
+  frame 1827: ALL 8,399,744 -> 4,205,440, 2 bucket(s) corrected
+  frame 1828: ALL 5,599,552 -> 1,405,248, 2 bucket(s) corrected
+  frame 1829: ALL 7,840,064 -> 3,645,760, 2 bucket(s) corrected
+  frame 1830: ALL 5,598,848 -> 1,404,544, 2 bucket(s) corrected
+  frame 1831: ALL 6,719,808 -> 2,525,504, 2 bucket(s) corrected
+  frame 1832: ALL 6,719,936 -> 2,525,632, 2 bucket(s) corrected
+  frame 1833: ALL 7,279,552 -> 3,085,248, 2 bucket(s) corrected
+  frame 1834: ALL 5,599,040 -> 1,404,736, 2 bucket(s) corrected
+  frame 1835: ALL 7,280,064 -> 3,085,760, 2 bucket(s) corrected
+  frame 1836: ALL 5,598,976 -> 1,404,672, 2 bucket(s) corrected
+  frame 1837: ALL 7,279,936 -> 3,085,632, 2 bucket(s) corrected
+  frame 1838: ALL 6,159,616 -> 1,965,312, 2 bucket(s) corrected
+  frame 1839: ALL 6,719,424 -> 2,525,120, 2 bucket(s) corrected
+  frame 1840: ALL 5,599,040 -> 1,404,736, 2 bucket(s) corrected
+  frame 1841: ALL 7,279,808 -> 3,085,504, 2 bucket(s) corrected
+  frame 1842: ALL 6,719,168 -> 2,524,864, 2 bucket(s) corrected
+  frame 1843: ALL 6,719,680 -> 2,525,376, 2 bucket(s) corrected
+  frame 1844: ALL 6,159,552 -> 1,965,248, 2 bucket(s) corrected
+  frame 1845: ALL 6,719,872 -> 2,525,568, 2 bucket(s) corrected
+  frame 1846: ALL 6,159,680 -> 1,965,376, 2 bucket(s) corrected
+  frame 1847: ALL 7,279,808 -> 3,085,504, 2 bucket(s) corrected
+  frame 1848: ALL 6,159,104 -> 1,964,800, 2 bucket(s) corrected
+  frame 1849: ALL 6,719,680 -> 2,525,376, 2 bucket(s) corrected
+  frame 1850: ALL 6,159,552 -> 1,965,248, 2 bucket(s) corrected
+  frame 1851: ALL 6,719,552 -> 2,525,248, 2 bucket(s) corrected
+  frame 1852: ALL 5,598,976 -> 1,404,672, 2 bucket(s) corrected
+  frame 1853: ALL 7,280,000 -> 3,085,696, 2 bucket(s) corrected
+  frame 1854: ALL 5,598,848 -> 1,404,544, 2 bucket(s) corrected
+  frame 1855: ALL 6,719,552 -> 2,525,248, 2 bucket(s) corrected
+  frame 1856: ALL 6,720,000 -> 2,525,696, 2 bucket(s) corrected
+  frame 1857: ALL 6,719,744 -> 2,525,440, 2 bucket(s) corrected
+  frame 1858: ALL 5,598,720 -> 1,404,416, 2 bucket(s) corrected
+  frame 1859: ALL 7,280,256 -> 3,085,952, 2 bucket(s) corrected
+  frame 1860: ALL 5,599,040 -> 1,404,736, 2 bucket(s) corrected
+  frame 1861: ALL 6,719,680 -> 2,525,376, 2 bucket(s) corrected
+  frame 1862: ALL 6,159,616 -> 1,965,312, 2 bucket(s) corrected
+  frame 1863: ALL 6,719,360 -> 2,525,056, 2 bucket(s) corrected
+  frame 1864: ALL 6,159,424 -> 1,965,120, 2 bucket(s) corrected
+  frame 1865: ALL 7,280,128 -> 3,085,824, 2 bucket(s) corrected
+  frame 1866: ALL 6,159,168 -> 1,964,864, 2 bucket(s) corrected
+  frame 1867: ALL 6,719,744 -> 2,525,440, 2 bucket(s) corrected
+  frame 1868: ALL 7,279,616 -> 3,085,312, 2 bucket(s) corrected
+  frame 1869: ALL 6,719,744 -> 2,525,440, 2 bucket(s) corrected
+  frame 1870: ALL 6,159,168 -> 1,964,864, 2 bucket(s) corrected
+  frame 1871: ALL 6,159,808 -> 1,965,504, 2 bucket(s) corrected
+  frame 1872: ALL 7,279,872 -> 3,085,568, 2 bucket(s) corrected
+  frame 1873: ALL 6,158,656 -> 1,964,352, 2 bucket(s) corrected
+  frame 1874: ALL 6,720,320 -> 2,526,016, 2 bucket(s) corrected
+  frame 1875: ALL 6,719,168 -> 2,524,864, 2 bucket(s) corrected
+  frame 1876: ALL 5,599,360 -> 1,405,056, 2 bucket(s) corrected
+  frame 1877: ALL 7,280,192 -> 3,085,888, 2 bucket(s) corrected
+  frame 1878: ALL 5,598,912 -> 1,404,608, 2 bucket(s) corrected
+  frame 1879: ALL 6,719,552 -> 2,525,248, 2 bucket(s) corrected
+  frame 1880: ALL 6,159,616 -> 1,965,312, 2 bucket(s) corrected
+  frame 1881: ALL 7,839,680 -> 3,645,376, 2 bucket(s) corrected
+  frame 1882: ALL 5,599,360 -> 1,405,056, 2 bucket(s) corrected
+  frame 1883: ALL 7,279,872 -> 3,085,568, 2 bucket(s) corrected
+  frame 1884: ALL 5,598,976 -> 1,404,672, 2 bucket(s) corrected
+  frame 1885: ALL 6,720,000 -> 2,525,696, 2 bucket(s) corrected
+  frame 1886: ALL 6,159,168 -> 1,964,864, 2 bucket(s) corrected
+  frame 1887: ALL 7,279,872 -> 3,085,568, 2 bucket(s) corrected
+  frame 1888: ALL 6,159,168 -> 1,964,864, 2 bucket(s) corrected
+  frame 1889: ALL 7,840,064 -> 3,645,760, 2 bucket(s) corrected
+  frame 1890: ALL 5,599,168 -> 1,404,864, 2 bucket(s) corrected
+  frame 1891: ALL 6,719,424 -> 2,525,120, 2 bucket(s) corrected
+  frame 1892: ALL 6,720,064 -> 2,525,760, 2 bucket(s) corrected
+  frame 1893: ALL 6,719,488 -> 2,525,184, 2 bucket(s) corrected
+  frame 1894: ALL 5,599,296 -> 1,404,992, 2 bucket(s) corrected
+  frame 1895: ALL 7,279,936 -> 3,085,632, 2 bucket(s) corrected
+  frame 1896: ALL 5,599,040 -> 1,404,736, 2 bucket(s) corrected
+  frame 1897: ALL 6,719,296 -> 2,524,992, 2 bucket(s) corrected
+  frame 1898: ALL 6,159,936 -> 1,965,632, 2 bucket(s) corrected
+  frame 1899: ALL 6,719,168 -> 2,524,864, 2 bucket(s) corrected
+  frame 1900: ALL 6,159,424 -> 1,965,120, 2 bucket(s) corrected
+  frame 1901: ALL 7,280,256 -> 3,085,952, 2 bucket(s) corrected
+  frame 1902: ALL 5,599,040 -> 1,404,736, 2 bucket(s) corrected
+  frame 1903: ALL 6,719,488 -> 2,525,184, 2 bucket(s) corrected
+  frame 1904: ALL 6,159,680 -> 1,965,376, 2 bucket(s) corrected
+  frame 1905: ALL 8,399,616 -> 4,205,312, 2 bucket(s) corrected
+  frame 1906: ALL 6,719,936 -> 2,525,632, 2 bucket(s) corrected
+  frame 1907: ALL 6,719,616 -> 2,525,312, 2 bucket(s) corrected
+  frame 1908: ALL 6,719,616 -> 2,525,312, 2 bucket(s) corrected
+  frame 1909: ALL 6,159,360 -> 1,965,056, 2 bucket(s) corrected
+  frame 1910: ALL 6,719,808 -> 2,525,504, 2 bucket(s) corrected
+  frame 1911: ALL 7,839,680 -> 3,645,376, 2 bucket(s) corrected
+  frame 1912: ALL 5,599,232 -> 1,404,928, 2 bucket(s) corrected
+  frame 1913: ALL 7,279,936 -> 3,085,632, 2 bucket(s) corrected
+  frame 1914: ALL 5,599,168 -> 1,404,864, 2 bucket(s) corrected
+  frame 1915: ALL 7,839,808 -> 3,645,504, 2 bucket(s) corrected
+  frame 1916: ALL 6,159,424 -> 1,965,120, 2 bucket(s) corrected
+  frame 1917: ALL 7,280,704 -> 3,086,400, 2 bucket(s) corrected
+  frame 1918: ALL 6,158,592 -> 1,964,288, 2 bucket(s) corrected
+  frame 1919: ALL 7,280,128 -> 3,085,824, 2 bucket(s) corrected
+  frame 1920: ALL 6,159,232 -> 1,964,928, 2 bucket(s) corrected
+  frame 1921: ALL 6,159,168 -> 1,964,864, 2 bucket(s) corrected
+  frame 1922: ALL 7,840,256 -> 3,645,952, 2 bucket(s) corrected
+  frame 1923: ALL 5,599,104 -> 1,404,800, 2 bucket(s) corrected
+  frame 1924: ALL 7,279,680 -> 3,085,376, 2 bucket(s) corrected
+  frame 1925: ALL 6,159,488 -> 1,965,184, 2 bucket(s) corrected
+  frame 1926: ALL 6,719,616 -> 2,525,312, 2 bucket(s) corrected
+  frame 1927: ALL 6,159,360 -> 1,965,056, 2 bucket(s) corrected
+  frame 1928: ALL 7,280,064 -> 3,085,760, 2 bucket(s) corrected
+  frame 1929: ALL 6,159,168 -> 1,964,864, 2 bucket(s) corrected
+  frame 1930: ALL 6,719,488 -> 2,525,184, 2 bucket(s) corrected
+  frame 1931: ALL 6,719,744 -> 2,525,440, 2 bucket(s) corrected
+  frame 1932: ALL 7,839,872 -> 3,645,568, 2 bucket(s) corrected
+  frame 1933: ALL 5,599,232 -> 1,404,928, 2 bucket(s) corrected
+  frame 1934: ALL 7,280,128 -> 3,085,824, 2 bucket(s) corrected
+  frame 1935: ALL 6,158,976 -> 1,964,672, 2 bucket(s) corrected
+  frame 1936: ALL 7,840,000 -> 3,645,696, 2 bucket(s) corrected
+  frame 1937: ALL 6,159,744 -> 1,965,440, 2 bucket(s) corrected
+  frame 1938: ALL 6,719,360 -> 2,525,056, 2 bucket(s) corrected
+  frame 1939: ALL 5,599,040 -> 1,404,736, 2 bucket(s) corrected
+  frame 1940: ALL 7,280,000 -> 3,085,696, 2 bucket(s) corrected
+  frame 1941: ALL 5,599,232 -> 1,404,928, 2 bucket(s) corrected
+  frame 1942: ALL 6,719,552 -> 2,525,248, 2 bucket(s) corrected
+  frame 1943: ALL 6,159,552 -> 1,965,248, 2 bucket(s) corrected
+  frame 1944: ALL 6,719,552 -> 2,525,248, 2 bucket(s) corrected
+  frame 1945: ALL 5,599,040 -> 1,404,736, 2 bucket(s) corrected
+  frame 1946: ALL 7,279,744 -> 3,085,440, 2 bucket(s) corrected
+  frame 1947: ALL 5,598,912 -> 1,404,608, 2 bucket(s) corrected
+  frame 1948: ALL 6,719,872 -> 2,525,568, 2 bucket(s) corrected
+  frame 1949: ALL 6,719,936 -> 2,525,632, 2 bucket(s) corrected
+  frame 1950: ALL 6,159,296 -> 1,964,992, 2 bucket(s) corrected
+  frame 1951: ALL 6,159,296 -> 1,964,992, 2 bucket(s) corrected
+  frame 1952: ALL 7,279,872 -> 3,085,568, 2 bucket(s) corrected
+  frame 1953: ALL 6,158,976 -> 1,964,672, 2 bucket(s) corrected
+  frame 1954: ALL 6,719,616 -> 2,525,312, 2 bucket(s) corrected
+  frame 1955: ALL 6,159,616 -> 1,965,312, 2 bucket(s) corrected
+  frame 1956: ALL 6,719,488 -> 2,525,184, 2 bucket(s) corrected
+  frame 1957: ALL 6,719,616 -> 2,525,312, 2 bucket(s) corrected
+  frame 1958: ALL 6,719,744 -> 2,525,440, 2 bucket(s) corrected
+  frame 1959: ALL 7,279,616 -> 3,085,312, 2 bucket(s) corrected
+  frame 1960: ALL 6,719,744 -> 2,525,440, 2 bucket(s) corrected
+  frame 1961: ALL 7,280,192 -> 3,085,888, 2 bucket(s) corrected
+  frame 1962: ALL 6,719,360 -> 2,525,056, 2 bucket(s) corrected
+  frame 1963: ALL 5,598,912 -> 1,404,608, 2 bucket(s) corrected
+  frame 1964: ALL 8,400,640 -> 4,206,336, 2 bucket(s) corrected
+  frame 1965: ALL 10,353,472 -> 6,159,168, 4 bucket(s) corrected
+  frame 1966: ALL 7,280,064 -> 3,085,760, 2 bucket(s) corrected
+  frame 1967: ALL 6,159,360 -> 1,965,056, 2 bucket(s) corrected
+  frame 1968: ALL 7,279,296 -> 3,084,992, 2 bucket(s) corrected
+  frame 1969: ALL 6,159,808 -> 1,965,504, 2 bucket(s) corrected
+  frame 1970: ALL 7,279,552 -> 3,085,248, 2 bucket(s) corrected
+  frame 1971: ALL 6,719,424 -> 2,525,120, 2 bucket(s) corrected
+  frame 1972: ALL 7,840,192 -> 3,645,888, 2 bucket(s) corrected
+  frame 1973: ALL 5,598,784 -> 1,404,480, 2 bucket(s) corrected
+Wrote D:\Stuff\DevFolder\Smash64DS_Port\artifacts\verification\p2-2-fourcpu-tickhud.csv
+Tick-HUD buckets: target=smash64ds-p2-fourcpu-tickhud-hwtri samples=1972 frames=2..1973 melonDS=1.0 sha=DE80E46BDCF1FD98 git=2802c8a82bd+dirty(24) dldi=ON
+
+bucket p50        p95        spread mean       min        max        %ALLp50
+------ ---        ---        ------ ----       ---        ---        -------
+ALL     1,965,120  3,085,824   1.57  2,005,273    284,160  7,462,080   100.0
+FTR     1,566,720  2,499,904   1.60  1,642,204     16,448  3,846,464    79.7
+STG     3,229,184  3,282,368   1.02  2,943,570    152,128  3,836,480   164.3
+BG          4,288      4,352   1.01      5,432      3,840  2,289,024     0.2
+AUD         2,816    138,048  49.02     29,359      1,472    158,656     0.1
+HUD         6,080    438,528  72.13    141,350      5,312    458,560     0.3
+SRC       538,432  1,086,976   2.02    602,322    245,184  2,134,848    27.4
+MISC      154,624    474,880   3.07    205,307     69,888  1,125,504     7.9
+OTHR      309,120    560,768   1.81    306,738     21,376    618,176    15.7
+WAIT      287,296    539,584   1.88    285,661        832    598,080    14.6
+WORK    1,657,792  2,848,192   1.72  1,719,612     76,096  6,948,736    84.4
+SHDT        9,536    219,712  23.04     45,108        512    989,184     0.5
+SWRM        1,216      1,280   1.05      1,205      1,024      1,344     0.1
+GCRA      532,928  1,081,344   2.03    596,877    240,320  2,129,472    27.1
+SCPU       76,800    180,864   2.35     82,659          0    285,952     3.9
+SCAT        1,792      1,984   1.11      2,658      1,024  1,002,560     0.1
+SPRM        3,200      3,584   1.12     11,289      2,752    793,024     0.2
+SINT      259,136    617,216   2.38    299,318     11,776  1,798,528    13.2
+SPHD      124,544    191,424   1.54    130,113     33,472  1,152,768     6.3
+SPHC        1,088      1,216   1.12      1,441        832     35,200     0.1
+WORK-H  1,505,856  2,605,120   1.73  1,578,261     70,400  6,509,696    76.6
+
+named=5,569,544 (277.7% of ALL)  VBI 2:60 3:63 4:20 5+:1830 max:21 total:1973  slips=0
+extras: gNdsTaskmanGeneralHeapFreeMin=49,196  gNdsTaskmanArenaChosenSize=1,695,744  gNdsTaskmanArenaAllocFailCount=9  gNdsGCDrawsActiveMax=197  gNdsEffectPoolDepth=38  gNdsEffectPoolFreeMin=26  gNdsParticleStructsMax=35  gNdsParticleGeneratorsMax=14  gNdsParticleTransformsMax=17  gNdsParticleRejectCount=0  gNdsAObjEvent32NormalizedHighWater=2,127  gNdsAObjEvent32NormalizeFailCount=0  gNdsAObjEvent32HashOverflowCount=0  gNdsSyMallocOverflowCount=0  gNdsObjmanPanicCount=0  gNdsTaskmanGraphicsHeapHighWater=96  gNdsTaskmanGraphicsHeapCapacity=53,248  gNdsTaskmanGraphicsHeapOverflowCount=0  gNdsRelocSceneFileBufferAllocCount=0  gNdsRelocSceneFileBufferDeclineCount=0  gNdsFtPoseBinds=750  gNdsFtPoseBindFull=0  gNdsR2AnimCacheMisses=156  gNdsR2AnimCacheRejects=146  gNdsFtrPlanBuild=668  gNdsFtrPlanHit=6,645  gNdsFtrPlanVerifyMismatch=0  gNdsFighterDLAllDrawP0HardwareTriangleCount=365,800  gNdsFighterDLAllDrawP1HardwareTriangleCount=354,734  gNdsSCVSBattleOriginalFighterKinds=50,659,841  gNdsFighterDLAllDrawSlotTriangleMask=15
+Wrote D:\Stuff\DevFolder\Smash64DS_Port\artifacts\verification\p2-2-fourcpu-tickhud.json
+
+P2-2 four-fighter stress artifacts:
+  buckets:  D:\Stuff\DevFolder\Smash64DS_Port\artifacts\verification\p2-2-fourcpu-tickhud.json
+  rows:     D:\Stuff\DevFolder\Smash64DS_Port\artifacts\verification\p2-2-fourcpu-tickhud.csv
+  coverage: D:\Stuff\DevFolder\Smash64DS_Port\artifacts\verification\p2-2-fourcpu-coverage.json
+  memory:   D:\Stuff\DevFolder\Smash64DS_Port\artifacts\verification\p2-2-fourcpu-memory.json
+P2-2 four-CPU standing stress passed its correctness, cadence, native-owner, and memory gates.
+Boundary verification profile passed.

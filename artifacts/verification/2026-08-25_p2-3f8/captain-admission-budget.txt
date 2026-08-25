@@ -1,0 +1,67 @@
+P2-3f8 -- what admitting Captain Falcon to the roster costs, measured.
+
+--- ARM9 image (the arena is charged 1:1) --------------------------------------
+arm-none-eabi-size -A on TARGET=smash64ds, same tree, only NDS_P2_SHELL_ROSTER
+differing:
+
+  roster 2 (NDS_P2_CAPTAIN 0)   .main 1,051,192  .main.rw 175,660
+                                .main.bss 1,023,312 @ 34,795,808
+                                image ends 35,819,120
+  roster 3 (NDS_P2_CAPTAIN 1)   .main 1,059,664  .main.rw 186,652
+                                .main.bss 1,023,920 @ 34,815,264
+                                image ends 35,839,184
+
+  DELTA +20,064 B.  Of that, 5,952 B is sNdsNativeCaptainFighterPreparedDense
+  + ...Low, which is mutable GX scratch rather than content and is deliberately
+  NOT in the NitroFS image.
+
+--- Arena, via the loop verifier's own free-floor assertion --------------------
+  roster 2   ARENA FREE FLOOR: 258,568 B
+  roster 3   ARENA FREE FLOOR: 238,088 B      (-20,480, i.e. the image growth)
+  Battle high-water 1,428,984 / 1,422,760 of a 1,667,072 arena, spread 6,224.
+
+--- Owner images resident at once ----------------------------------------------
+  worst pair, roster 2   Luigi + Donkey   = 16,076 + 20,200 = 36,276 B
+  worst pair, roster 3   Donkey + Captain = 20,200 + 18,800 = 39,000 B  (+2,724)
+
+--- Per-kind arena charge at ftManagerSetupFilesMainKind ------------------------
+This is the currency P2-2's byte law is written in: one allocation per distinct
+kind, deduplicated against what is already resident.
+
+  Mario    54,048   (NDS_P2_BASE_FIGHTER_ALLOC_SIZE_ROWS 0xcb)
+  Luigi    41,552   (57,104 standalone, less 15,552 shared with Mario)
+  Donkey   77,360   (79,648 standalone, less the 2,288 MiscData pair)
+  CAPTAIN 100,160   (102,448 standalone @ 0xec, less the same 2,288 pair)
+  Fox     116,752   (119,040 standalone, less 2,288)
+
+The 2,288 B is MiscData201 (2,096) + MiscData299 (192), which every landed kind
+already makes resident -- the same deduction Fox and Donkey take.
+
+--- CONSEQUENCE: THE ARGMAX FOUR-KIND ROSTER IS NO LONGER AFFORDABLE -----------
+  Boundary's p2_fourcpu_stress roster  Mario+Fox+Luigi+Donkey  = 289,712 B
+    -> P2-3r13 measured it at general-heap low-water 49,956 B,
+       margin 24,356 B over the 25,600 B floor.
+  Measured argmax over landed content  Fox+Captain+Donkey+Luigi = 335,824 B
+    -> +46,112 B, roughly twice the whole margin, and that is BEFORE the
+       20,064 B this row already spent on targets that build him.
+
+  This row does not close that. Two things follow and are stated rather than
+  fixed:
+   * the stress arm's roster is no longer the argmax PROJECT_GOAL.md asks for,
+     and re-pointing it needs a byte lever first, not a roster edit;
+   * a user can reach four distinct kinds from the shipped character select
+     (four slots, five kinds), and nobody has measured a four-distinct-kind
+     match driven from the SHELL at any roster, roster 2 included.
+
+  Nearest measured lever, still untaken (P2-3r13): the two graphics-heap
+  contexts hold 96 B of a 106,496 B reservation, overflow 0, over a whole match.
+
+--- The Boundary run's own four-CPU ledger (roster 3 tree) ---------------------
+  target smash64ds-p2-fourcpu-tickhud-hwtri, NDS_P2_CAPTAIN 0 (it does not go
+  through the NDS_P2_SHELL_ROSTER ladder), fighterRoster Mario/Fox/Luigi/Donkey,
+  slot draw mask 0xF, battlePackResident true, ftPoseBindFull 0,
+  graphicsHeapPeakBytes 96 of 53,248, overflow 0,
+  generalHeapFreeMinBytes 49,196 -- margin 23,596 B, i.e. 760 B below P2-3r13's
+  49,956. That 760 B is this row's battle-HUD bake growing to five owners, NOT
+  Falcon, and it is also the control that the 20,064 B is scoped to targets that
+  actually build him.

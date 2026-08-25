@@ -1,8 +1,12 @@
 # Captain Falcon — P2-3 fighter 3
 
-Status: **slice 1 (source inventory + ABI mirror) and slice 2 (the runtime
-state machines, behind `NDS_P2_CAPTAIN`) are landed. Falcon is NOT selectable:
-no native owner, no CSS/HUD/audio surfaces, no arena budget, no roster.**
+Status: **slices 1-3 are landed and Falcon IS SELECTABLE.** Source inventory +
+ABI mirror (P2-3f4), the runtime state machines behind `NDS_P2_CAPTAIN`
+(P2-3f5), and the native owner + roster admission at `NDS_P2_SHELL_ROSTER=3`
+(P2-3f8). **He has NO AUDIO** -- not one of his ten FGM or twenty-three voice
+cues is in the phase pack, so every one of them fails closed and he plays
+silent. That, an owner feel pass, and the four-kind budget question below are
+what remain.
 Reference: `decomp/BattleShip-main/decomp/src/ft/ftchar/ftcaptain/` plus
 `ft/ftcommon/ftcommonentry.c` and `ft/ftcommon/ftcommoncapturecaptain.c`.
 
@@ -252,39 +256,228 @@ gc-sectioned away for want of a caller); the three `ftCommonCaptureCaptain*`
 bodies replaced the weak inactive stub; and the Attack13 aliases disassemble to
 `bl ndsBaseFTCommonAttack13Proc*`.
 
+
+### Row P2-3f8 (the native owner, then admission)
+
+**Falcon is a runtime native owner, slot 4, and TWO of the generator's
+assumptions were his to break.**
+
+- **He has ZERO cross-matrix runs, in either detail.** Every one of his 319
+  high / 200 low source triangles is single-binding and draws under the current
+  root, so `OWNER_CROSS_BINDING_SLOTS["captain"]` is empty, his GX plan is
+  `(1, 6, 6, 0, 0)` in both details, and he claims no physical palette slot at
+  all. That is not a missing pin: the independent geometry oracle reports
+  *"319 single-binding triangles face the way their own vertex normals do"* --
+  all of them. Consequence for the next owner: the reserved cross-run band stays
+  Donkey's 16..25, so the five free levels above it (26..30) that
+  `ndsRendererAdapterBuildGxSlotTable` allocates parent slots downward from are
+  **unchanged** by this landing.
+- **His LOW model carries a root light preamble his HIGH model never emits**
+  (`0xffffff00 / 0x804c3300`, root 6), and the generator asserted they were
+  always equal -- in a comment that called itself *"currently unreachable;
+  documents the ABI expectation"*. It was a false invariant that would have
+  rejected a faithful decode. Both owner runtimes point at the ONE table the
+  high pass emits, so the fix is the **union**: the high table is a prefix of
+  it, every high root index is unchanged, and the low roots are re-indexed
+  through their own table's position in it. `sNdsNativeCaptainRootLightPreambles`
+  is 0x20 bytes = 4 entries on the linked ELF. **Luigi and Donkey are
+  byte-identical after the change** -- the regenerated
+  `nds_native_fighter_owner.generated.inc` differs from the previous one by a
+  single blank separator line before the `#if NDS_P2_CAPTAIN` block, which is
+  the control.
+
+Census pins (`P2_OWNER_MODEL_CENSUS["captain"]`), 13 fields:
+
+| detail | state | seq | vtx | tris | runs | epochs | roots | dense | corners | crossRuns | pfxLight | intraLight | restores |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| high | 87 | 254 | 34 | 319 | 34 | 34 | 17 | 291 | 957 | **0** | 68 | 6 | **0** |
+| low | 73 | 223 | 30 | 200 | 30 | 30 | 17 | 205 | 600 | **0** | 68 | 4 | **0** |
+
+`check_native_owner_geometry_closure.py` now covers him (`OWNERS` gained
+`"captain"`): source/vertex/matrix-routing/facing/winding closure and both
+primitive modes, high and low, 0 failures. NitroFS images
+`captain_high.bin` **10,908 B** + `captain_low.bin` **7,892 B** = **18,800 B**
+resident (Luigi 16,076, Donkey 20,200).
+
+**Admission: `NDS_P2_SHELL_ROSTER` defaults to 3.** Assets (`nds_reloc_assets.c`
+already carried his rows from P2-3f4); `reloc_backend_assets.c` widened at six
+seams; the CSS portrait plus the in-progress question-mark plate, his Selected
+figatree (`relocData/429_FTCaptainAnimSelected.c`), preview residency,
+`ftManagerSetupFilesAllKind`, the fighter mask; the HUD stock icon and
+portrait; and his three `efManager` descriptors resolved. Like Donkey he gets
+no per-fighter CSS gate art and no selection flash -- those cap at three
+fighters, and that cap is P2-1k(b), not this row.
+
+**TWO REAL DEFECTS FOUND ON THE WAY, both fixed at their own seam.**
+
+1. **Falcon's `FTAttributes` mixed-u16 lanes had no normalizer.**
+   `ndsRelocNormalizeFighterAttributesFile` knew Mario, Fox and Donkey only.
+   Without an arm his `dead_fgm_ids` / `deadup_sfx` / `damage_sfx` /
+   `smash_sfx` / `itemthrow_*` / `heavyget_sfx` keep the N64 big-endian lane
+   order inside each word. Offset **0x488** (`236_CaptainMain.c:87`,
+   *"Pre-attributes data (290 words, 0x0488 bytes)"* -- the same shape that
+   gives Donkey 0x4a4). The fail-closed validation values are gmsound.h's
+   REGION_US arm, and the resolver was checked against Donkey's eight already
+   in the file before being trusted. **Falcon's smash triple is
+   `{ Smash3, Smash2, JumpAerial }` = 341/340/353, NOT Smash1..3** --
+   `236_CaptainMain.c` says so, and a copied Donkey pattern would have been
+   wrong. **LUIGI STILL HAS NO ARM AND THAT IS A LIVE GAP** (item 6 below).
+2. **The battle HUD's portrait and stock palette bands overlapped, and Donkey
+   was already paying for it.** Portraits load once at prepare into
+   `PORTRAIT_PALETTE_BASE + i` = 5..8; stock palettes are re-uploaded per
+   player into `STOCK_PALETTE_BASE + player` = 8..11 whenever a costume
+   changes. Slot 8 is both the FOURTH portrait -- Donkey's -- and player 0's
+   stock, so a Donkey HUD portrait drew in whatever colours player 0's stock
+   icon last needed. A fifth portrait would have taken slot 9 as well. Stock
+   base is now 10 (damage 0..3, white 4, portraits 5..9, stock 10..13, 14..15
+   spare) with two `_Static_assert`s, so the next portrait fails the BUILD
+   instead of the screen. Nothing else writes `SPRITE_PALETTE_SUB` -- the UI
+   kit's sub sprites are direct-colour bitmaps.
+
+**A THIRD DEFECT, and it is not Falcon's -- it is every generated header's.**
+The UI-kit bake and its consumer race under the parallel build. `make` spells
+the generated include as `$(PROJECT_ROOT)/src/nds/generated/...`, which MSYS
+expands to `/d/Stuff/...`, while `gcc -MMD` writes `D:/Stuff/...` into the
+`.d`: **two different nodes**, so the recorded edge carries no ordering, and
+the generator and the compile of its consumer are siblings under
+`$(OUTPUT).elf`. Measured here: `mn_surfaces.bin` and
+`mn_ui_kit.generated.inc` at 12:23 against `nds_ui_kit.o` at 12:14, and the ROM
+linked from that pair failed `p2_shell_loop` with **`BACKDROP SURFACES:
+mismatch=145`** -- the stale metric table's per-surface FNV against the fresh
+pack. The next `make` with no source change recompiled the file, which is the
+proof it was ordering and not a bad bake. Six explicit object prerequisites now
+sit beside the existing `$(OFILES): $(PROJECT_ROOT)/Makefile` line. **Rail: a
+generated include needs an explicit prerequisite line; `-MMD` is not a
+substitute here, and the failure mode is silent wrong art wherever the runtime
+does not happen to hash-check the asset.**
+
+
+### The residency proof, and the one cadence cost it exposed
+
+`scripts/menus/probe-p2-shell.ps1` on `smash64ds-p2-shell-hwtri`, fast logic 0,
+against the same probe run at roster 2 the day before
+(`artifacts/verification/2026-08-24_p2-shell.txt` vs `2026-08-25_p2-shell.txt`):
+
+- **`CSSRES ready=0x00000097`, every fail mask 0.** Bits 0/1/2/4/**7** =
+  Mario/Fox/Donkey/Luigi/**Captain**. It was `0x17` at roster 2. That is the
+  direct evidence that Falcon's asset graph AND both native-owner images load
+  at the character select -- `main`, `sub`, `anim` and `owner` fail masks are
+  all zero, so nothing degraded quietly.
+- **`CSSIO ownerload` 8 -> 12, `ownerbytes` 72,552 -> 110,152.** The arithmetic
+  closes exactly: (16,076 + 20,200 + 18,800) x 2 character-select entries =
+  110,152, so the loader really did read Falcon's two images twice and nothing
+  else changed size.
+- **The cost is entirely on the character select and nowhere else.** Per-screen
+  VBlank-interval histograms over the identical 11-stop walk:
+
+| screen | roster 2 (2/3/4/5+) | roster 3 (2/3/4/5+) |
+|---|---|---|
+| Title | 149/1/0/0 max 2 | 149/1/0/0 max 2 |
+| Mode select | 301/0/0/0 max 1 | 301/0/0/0 max 1 |
+| VS mode | 1811/0/0/0 max 1 | 1811/0/0/0 max 1 |
+| **Character select** | **2721/132/9/6 max 5** | **2585/228/47/8 max 5** |
+| Stage select | 244/0/0/0 max 1 | 244/0/0/0 max 1 |
+
+  Four of the five screens are byte-identical. The character select presents the
+  same 2,868 frames but its **two-VBlank share falls 94.87% -> 90.13%**, with 96
+  more three-VBlank frames, 38 more four-VBlank and 2 more five-plus; the max
+  interval is unchanged at 5. **`PROJECT_GOAL.md` asks for >=95% two-VBlank on
+  every screen, so this screen was ALREADY 0.13 points short at roster 2 and is
+  now 4.87 short.** The obvious candidate is the fifth kind's synchronous
+  preparation at `ndsMNPlayersVSPreviewInit` -- `ftManagerSetupFilesAllKind`
+  plus two more NitroFS owner-image reads, and `CSSIO hdr` 733 -> 773 /
+  `payload` 3,102 -> 3,120 moves with it -- but **frame-level placement was not
+  measured, so whether these are entry-load frames or steady-state is not
+  claimed here.** Measure that before sizing a fix; if it is entry load, the
+  answer is the shape P2-3r16 already used on the BGM (bracket/defer the
+  synchronous setup), not a cadence lever.
+- `MSSURF blit=559 mismatch=0 readfail=0 hash=84d499ca` and `MSKIT
+  hash=c417dfa1 mismatch=0`, both identical to roster 2 -- the UI-kit surface
+  pack is consistent on this target too, which is the second confirmation of the
+  build-race fix above.
+
+### Measured budget (P2-3f8)
+
+| figure | roster 2 | roster 3 | delta |
+|---|---|---|---|
+| ARM9 image end (`.main.bss` end) | 35,819,120 | 35,839,184 | **+20,064 B** |
+| `p2_shell_loop` arena free floor | 258,568 | **238,088** | -20,480 |
+| worst resident owner-image pair | Luigi+Donkey 36,276 | Donkey+Captain **39,000** | +2,724 |
+
+**Per-kind arena charge** at `ftManagerSetupFilesMainKind`, the currency P2-2's
+byte law is written in: `NDS_P2_CAPTAIN_ALLOC_SIZE_ROWS(0xec)` is
+**102,448 B** standalone and **100,160 B unique** once the 2,288 B
+`MiscData201`+`MiscData299` pair every landed kind already makes resident is
+deducted -- the same 2,288 Fox and Donkey pay. Against the table:
+
+| kind | unique arena bytes |
+|---|---|
+| Mario | 54,048 |
+| Luigi | 41,552 |
+| Donkey | 77,360 |
+| **Captain** | **100,160** |
+| Fox | 116,752 |
+
+**THE HARDEST FOUR HAS CHANGED, AND IT IS NOT AFFORDABLE TODAY.** Boundary's
+`p2_fourcpu_stress` runs Mario/Fox/Luigi/Donkey = 289,712 B, and P2-3r13
+measured that configuration at a **24,356 B** margin over the 25,600 B floor.
+The measured argmax over landed content is now Fox+Captain+Donkey+Luigi =
+**335,824 B**, i.e. **+46,112 B** -- roughly twice the whole margin, before the
+20,064 B this row already spent. So:
+
+- the stress arm's roster is no longer the argmax `PROJECT_GOAL.md` asks for,
+  and re-pointing it needs a byte lever first, not a roster edit;
+- **a user CAN reach that configuration from the shipped character select** --
+  four slots, five kinds -- and nobody has measured a four-distinct-kind match
+  driven from the shell at ANY roster, roster 2 included. That is a
+  pre-existing hole this row makes deeper, not one it opens.
+
+The nearest measured lever is P2-3r13's own untaken one: the two graphics-heap
+contexts hold **96 B of a 106,496 B reservation**, overflow 0, over a whole VS
+match. Re-read it on Results / Sudden Death / pause zoom, then cut.
+
 ## Remaining, in dependency order
 
-1. **Native owner.** The decode is unblocked, but Falcon is not a runtime owner.
-   That row needs `P2_O2R_ASSETS`, `OWNER_JOINT_TREES{,_LOW}`,
-   `OWNER_SETUP_PARTS`, `OWNER_PLAN_COUNTS` (the five pins below), plus
-   `OWNER_CROSS_BINDING_SLOTS`, `OWNER_GX_PLAN_COUNTS`, a
-   `P2_OWNER_MODEL_CENSUS` row, a `P2_RUNTIME_OWNERS` entry and the two NitroFS
-   owner images. **Do not add the pins as dead dict entries ahead of that row**
-   -- `build_p2_owner_model_inventory` asserts a census that does not exist yet.
-   The pins, re-proved by this row's high-detail decode:
-   - `P2_O2R_ASSETS["captain"]` = (`reloc_fighters_main/CaptainModel`, `0x014c`,
-     sha `bbd56fc89524fc5a5de7d2cb88fdead3c231ad402b6039e1b63e4f1091c4669e`)
-   - `OWNER_JOINT_TREES["captain"]` = `(0x3be0, 27)` -- `332_CaptainModel.c:1888`
-   - `OWNER_JOINT_TREES_LOW["captain"]` = `(0x7900, 27)` -- `:4071`
-   - `OWNER_SETUP_PARTS["captain"]` = `(0xffffff80, 0x00000000)` --
-     `236_CaptainMain.c:103`, the same mask Donkey uses
-   - `OWNER_PLAN_COUNTS["captain"]` = `(26, 17)` -- 25 selected joints + TopN,
-     17 drawable roots, identical in both details
-2. **Admission: make him selectable.** `NDS_P2_SHELL_ROSTER=3`, plus the ~40
-   `#if NDS_P2_DONKEY` sites that gate the CSS/HUD/asset/renderer surfaces
-   (`battleship_mnplayersvs.c`, `battleship_scsubsysdata_ft.c`,
-   `nds_menu_shell.c`, `nds_renderer.c`, `battleship_ftmanager.c`), plus the
-   arena budget: the worst case the roster is sized against is Luigi vs Donkey
-   at 36,276 B of resident owner images with 28,772 B of headroom, so Falcon's
-   images must be measured before he joins the roster, not after.
-3. **Audio.** Ten FGM + 23 voice + announcer/crowd/victory-BGM ordinals
-   (inventory below), re-derived per P2-1e-1.
-4. **Budgets + one measured 4-CPU stress run** under the then-current stress
-   config (P2_PLAN law 2/3). Per-kind unique arena cost to compare against:
-   Mario 54,048 / Fox 116,752 / Luigi 41,552 / Donkey 77,360 B.
-5. **Owner feel pass** on Falcon Dive grab/release/regrab and the speed extremes.
+1. **Audio -- he is completely silent, and this is the largest gap.** Ten FGM
+   (`CaptainLanding` 73, `CaptainFoot` 106, `CaptainDash` 117,
+   `CaptainAppearCar1/2` 180/181, `CaptainSpecialHi` 182,
+   `CaptainSpecialNStart/Punch` 183/184, `CaptainDeadSlam` 0x120,
+   `CaptainDownBounce` 299), twenty-three `nSYAudioVoiceCaptain*`, announcer
+   `nSYAudioVoiceAnnounceCaptain` **485**, crowd `nSYAudioVoicePublicCaptain`
+   **604**, victory BGM `nSYAudioBGMWinFZero` **19**. Every ordinal above was
+   re-derived from `gm/gmsound.h`'s REGION_US arm with a resolver validated
+   against Donkey's eight known values first, per P2-1e-1. **The CSS announcer
+   already works** -- `kNdsCssAnnounceVoice` is the source's own fkind-indexed
+   table and index 7 is already 485. What is missing is the phase pack:
+   `nds_audio_fgm.c`'s admission switch is a fail-closed allowlist and names
+   none of his ids, so each cue is dropped and recorded in the miss ring. No
+   verifier asserts on it, so this is silence rather than a red gate. Shape the
+   work on the Donkey bank (`render-audio-fgm-phase-pack.py` `SELECTED +=`
+   block, `--derive <ids>` for every field, hash pins per cue).
+2. **Owner feel pass** on Falcon Dive grab/release/regrab and the speed
+   extremes (fastest fall + fastest run: traction, landing, edge slips).
+3. **A four-distinct-kind budget answer.** See "Measured budget" above: the
+   argmax roster is now Fox+Captain+Donkey+Luigi at 335,824 B against a
+   measured 24,356 B margin, and a four-kind match driven from the SHELL has
+   never been measured at any roster. Needs a byte lever (the 106,496 B
+   graphics-heap reservation holding 96 B is the nearest measured one), then a
+   re-pointed `p2_fourcpu_stress`.
+4. **`mpCommonProcFighterProject` still diverges from the source** -- see the
+   open questions below; Falcon Dive is a caller and it is a SHARED seam.
+5. **The remaining eight fighters each need `ftCommonAttack13Proc{Update,
+   Interrupt}` aliases** (P2-3f5's finding) and their own
+   `ndsRelocNormalizeFighterAttributesFile` arm (this row's finding 1).
+6. **LUIGI HAS NO `FTAttributes` NORMALIZER ARM AND HE SHIPS.** Mario, Fox,
+   Donkey and now Captain each have one; `NDS_RELOC_SYMBOL_LUIGI_MAIN_
+   ATTRIBUTES` does not exist, so `LuigiMain`'s six mixed-u16 words keep the
+   N64 lane order and his dead/damage/smash/heavy-get FGM ids and item-throw
+   scales are byte-swapped pairs. Not fixed here on purpose: it is a Luigi
+   defect, it wants its own row and its own before/after read of those six
+   fields, and folding it into a Captain landing would make both harder to
+   attribute. **Do read it before the next audio row** -- a wrong `smash_sfx`
+   would look like a missing pack entry.
 
-### Two open questions this row found and did not close
+### Open questions
 
 - **`mpCommonProcFighterProject` diverges from the source, and Falcon Dive is a
   caller.** The source (`mpcommon.c:692`) is
@@ -297,12 +490,14 @@ bodies replaced the weak inactive stub; and the Attack13 aliases disassemble to
   SHARED seam every status table's `ProcMap` can reach, so it wants its own row
   with a regression run rather than a drive-by inside a fighter landing. Falcon
   Dive uses it for a 15-tick window after Up-B starts.
-- `gFTDataCaptainMainMotion` is NULL in every built configuration, because
-  nothing creates a Falcon yet. `ftCommonCaptureCaptainUpdatePositions` would
-  then dereference `ndsRelocGetFileData`'s NULL return. Unreachable today and
-  fixed by item 2 loading the asset graph -- but it is a hard crash the first
-  time a Falcon is spawned without his files, so item 2 must land the assets
-  before it lands the CSS entry.
+- **CLOSED by P2-3f8:** `gFTDataCaptainMainMotion` was NULL in every built
+  configuration, so Falcon Dive's victim tether would have dereferenced
+  `ndsRelocGetFileData`'s NULL return the first time a Falcon spawned without
+  his files. The admission landed the asset graph BEFORE the CSS entry, in the
+  order P2-3f5 required: `NDS_P2_CAPTAIN_CORE_ASSET_ROWS` reach
+  `ndsRelocAssetIDForToken` / `ndsRelocAssetIsFighter` / the alloc-size table,
+  and `ftManagerSetupFilesAllKind(nFTKindCaptain)` runs at
+  `ndsMNPlayersVSPreviewInit` -- i.e. before any slot can hold him.
 
 ## Acceptance
 
@@ -310,9 +505,15 @@ bodies replaced the weak inactive stub; and the Attack13 aliases disassemble to
       160 NitroFS resources, source-derived).
 - [x] Native-model DECODE unblocked (0xE2 + 0xF9 modelled; high detail decodes).
 - [x] Runtime state machines land, link, and are verified strong on the ELF.
-- [ ] Native model ADMITTED as a runtime owner (remaining item 1).
-- [ ] Falcon selectable at all (remaining item 2) -- until then nothing below
-      can be exercised.
+- [x] Native model ADMITTED as a runtime owner: slot 4, zero cross-matrix
+      runs, geometry oracle green in both details, images staged (P2-3f8).
+- [x] Falcon selectable: `NDS_P2_SHELL_ROSTER=3`, portrait + question-mark
+      plate, HUD stock/portrait, Selected clip, preview residency (P2-3f8).
+- [x] Per-kind arena cost measured and banked: 102,448 B standalone /
+      100,160 B unique; +20,064 B of ARM9 image; owner images 18,800 B.
+- [ ] **Audio: nothing at all is packed** (remaining item 1).
 - [ ] Falcon Dive grab/release/regrab semantics equivalent.
 - [ ] Fast-fall/landing/edge behavior spot-checks at speed extremes.
-- [ ] Budgets + stress measurement banked; CSS live; owner feel pass.
+- [ ] Four-distinct-kind stress measurement on the NEW argmax roster
+      (remaining item 3) -- the current one is not affordable.
+- [ ] Owner feel pass.

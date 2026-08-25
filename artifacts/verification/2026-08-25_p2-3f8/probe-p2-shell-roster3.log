@@ -1,0 +1,8 @@
+build config: NDS_P2_UI_KIT=1
+build config: NDS_P2_MENU_SHELL=1
+build config: NDS_P2_MENU_WALK=1
+build config: NDS_R2_SCENE_LOOP_WALK=0
+build config: NDS_HARNESS_FAST_LOGIC=0
+build config: NDS_DEV_SCENE_HARNESS=absent
+GDB marker capture: 126.7s elapsed of 1800s ceiling (7% used).
+probe capture: D:\Stuff\DevFolder\Smash64DS_Port\artifacts\verification\2026-08-25_p2-shell.txt
