@@ -166,7 +166,27 @@ void ftCommonAppearSetStatus(GObj *fighter_gobj)
     fp->lr = 0;
     fp->status_vars.common.entry.floor_line_id = fp->coll_data.floor_line_id;
 
-    if (fp->fkind == nFTKindMario)
+    if ((fp->fkind == nFTKindMario)
+#if NDS_P2_LUIGI
+        /* BattleShip ftcommonentry.c:20 and :192-196. Luigi's row of
+         * `dFTCommonEntryAppearStatusIDs` IS `{ nFTMarioStatusAppearR,
+         * nFTMarioStatusAppearL }` -- those are status INDICES into the
+         * fighter's own special table, and Luigi's real nine-entry table
+         * (`dFTLuigiSpecialStatusDescs`, live under NDS_P2_LUIGI) carries
+         * AppearR/AppearL at exactly those two indices with his own
+         * `nFTLuigiMotionAppearR/L` scripts. The source's Dokan switch arm is
+         * `case nFTKindMario: case nFTKindLuigi: case nFTKindMMario:` and the
+         * maker itself selects the file: `efManagerMarioEntryDokanMakeEffect`
+         * (efmanager.c:5669-5682) points the effect desc at
+         * `gFTDataLuigiSpecial2` for Luigi and `gFTMarioFileSpecial2` for
+         * Mario, which is why it takes fkind at all.
+         *
+         * Metal Mario shares this arm in the source and is deliberately NOT
+         * added: he is P2-6 content with no status table here, so he keeps the
+         * EntryNull fallback below until his row lands. */
+        || (fp->fkind == nFTKindLuigi)
+#endif
+        )
     {
         status_id = (entry_id == 0) ? nFTMarioStatusAppearR :
                                       nFTMarioStatusAppearL;
