@@ -92,7 +92,8 @@ def resolve(expr: str, seen: dict) -> int | None:
     return None
 
 
-def scan(path: Path, unresolved_blocks: list) -> dict[str, tuple[int, str, int]]:
+def scan(path: Path, unresolved_blocks: list,
+         seed: dict[str, int] | None = None) -> dict[str, tuple[int, str, int]]:
     """name -> (value, relative path, line).  Enumerators and object-like macros."""
     try:
         src = blank_comments(path.read_text(encoding="utf-8", errors="replace"))
@@ -100,7 +101,7 @@ def scan(path: Path, unresolved_blocks: list) -> dict[str, tuple[int, str, int]]
         return {}
     rel = path.relative_to(ROOT).as_posix()
     out: dict[str, tuple[int, str, int]] = {}
-    scope: dict[str, int] = {}
+    scope: dict[str, int] = dict(seed) if seed else {}
 
     for m in ENUM_RE.finditer(src):
         depth, i = 1, m.end()
@@ -160,10 +161,37 @@ def scan(path: Path, unresolved_blocks: list) -> dict[str, tuple[int, str, int]]
 
 
 def collect(root: Path) -> tuple[dict[str, tuple[int, str, int]], list]:
+    """Two passes over one tree, because a per-fighter enum anchors elsewhere.
+
+    Pass 1 is file-local, which is all the original revision did -- and it is
+    why every `ft/ftchar/ft<name>/ft<name>.h` status/motion enum was dropped as
+    unfoldable: each one opens with `= nFTCommonStatusSpecialStart`, a name that
+    lives in `ft/ftdef.h`. Twenty-six of the thirty skipped decomp blocks were
+    that single pattern, so the per-fighter ordinals -- exactly the constants a
+    fighter landing gets wrong -- were the one family this checker could not
+    see. It found two of them the moment the seed existed (Captain and Link both
+    had `Attack100Start = nFTCommonStatusSpecialStart`, where the source starts
+    that enum at `Attack13` and leaves Attack100Start implicit, so three
+    ordinals each were one low).
+
+    Pass 2 re-scans with pass 1's whole resolved namespace as the starting
+    scope. Pass-1 entries win on merge (`setdefault`), so no already-resolved
+    value can move -- the seed can only ADD blocks, never rewrite one. The
+    all-or-nothing rule inside `scan` still applies per block, and pass 2's
+    leftovers are what gets reported as unfoldable.
+    """
     merged: dict[str, tuple[int, str, int]] = {}
+    first_pass: list = []
+    paths = sorted(root.rglob("*.h"))
+    for path in paths:
+        for key, entry in scan(path, first_pass).items():
+            merged.setdefault(key, entry)
+    if not first_pass:
+        return merged, first_pass
+    seed = {key: entry[0] for key, entry in merged.items()}
     unresolved: list = []
-    for path in sorted(root.rglob("*.h")):
-        for key, entry in scan(path, unresolved).items():
+    for path in paths:
+        for key, entry in scan(path, unresolved, seed).items():
             merged.setdefault(key, entry)
     return merged, unresolved
 

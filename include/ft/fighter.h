@@ -1419,6 +1419,28 @@ enum {
     nFTFoxMotionSpecialAirLwLoop,
     nFTFoxMotionSpecialAirLwHit,
     nFTFoxMotionSpecialAirLwEnd,
+    /* BattleShip ftcaptain.h:33-54. `dFTCaptainMotionDescs` is indexed by these
+     * ordinals and `dFTCaptainSpecialStatusDescs` names one per status, so the
+     * two windows are the same width and the same order. */
+    nFTCaptainMotionAttack13 = nFTCommonMotionSpecialStart,
+    nFTCaptainMotionAttack100Start,
+    nFTCaptainMotionAttack100Loop,
+    nFTCaptainMotionAttack100End,
+    nFTCaptainMotionAppearRStart,
+    nFTCaptainMotionAppearLStart,
+    nFTCaptainMotionAppearREnd,
+    nFTCaptainMotionAppearLEnd,
+    nFTCaptainMotionSpecialN,
+    nFTCaptainMotionSpecialAirN,
+    nFTCaptainMotionSpecialLw,
+    nFTCaptainMotionSpecialLwAir,
+    nFTCaptainMotionSpecialLwLanding,
+    nFTCaptainMotionSpecialAirLw,
+    nFTCaptainMotionSpecialLwBound,
+    nFTCaptainMotionSpecialHi,
+    nFTCaptainMotionSpecialHiCatch,
+    nFTCaptainMotionSpecialHiThrow,
+    nFTCaptainMotionSpecialAirHi,
     nFTMarioStatusAttack13 = nFTCommonStatusSpecialStart,
     nFTMarioStatusAppearR,
     nFTMarioStatusAppearL,
@@ -1501,12 +1523,40 @@ enum {
     nFTFoxStatusSpecialAirLwLoop,
     nFTFoxStatusSpecialAirLwTurn,
     nFTFoxStatusSpecialLwScopeEnd = nFTFoxStatusSpecialAirLwTurn,
+    /* BattleShip ftcaptain.h:56-79, the complete nineteen-status window.
+     * This block used to be four names with `Attack100Start` re-anchored to
+     * `nFTCommonStatusSpecialStart`, which put Attack100 Start/Loop/End one
+     * ordinal LOW -- the source starts the enum at Attack13 and leaves
+     * Attack100Start implicit. It was unread, and it was invisible to
+     * `check-decomp-header-mirror.py` until that checker learned to seed a
+     * second fold pass with the tree's own namespace (P2-3f3): every
+     * `ft/ftchar/ft<name>/ft<name>.h` enum opens with this same external
+     * anchor, so the per-fighter ordinals were the one family it could not
+     * see. Source-exact now, and checked. */
     nFTCaptainStatusAttack13 = nFTCommonStatusSpecialStart,
-    nFTCaptainStatusAttack100Start = nFTCommonStatusSpecialStart,
+    nFTCaptainStatusAttack100Start,
     nFTCaptainStatusAttack100Loop,
     nFTCaptainStatusAttack100End,
+    nFTCaptainStatusAppearRStart,
+    nFTCaptainStatusAppearLStart,
+    nFTCaptainStatusAppearREnd,
+    nFTCaptainStatusAppearLEnd,
+    nFTCaptainStatusSpecialN,
+    nFTCaptainStatusSpecialAirN,
+    nFTCaptainStatusSpecialLw,          /* grounded Falcon Kick */
+    nFTCaptainStatusSpecialLwAir,       /* grounded -> aerial Falcon Kick */
+    nFTCaptainStatusSpecialLwLanding,   /* landing from aerial Falcon Kick */
+    nFTCaptainStatusSpecialAirLw,       /* aerial Falcon Kick */
+    nFTCaptainStatusSpecialLwBound,     /* wall collision from Falcon Kick */
+    nFTCaptainStatusSpecialHi,
+    nFTCaptainStatusSpecialHiCatch,
+    nFTCaptainStatusSpecialHiThrow,
+    nFTCaptainStatusSpecialAirHi,
+    /* BattleShip ftlink.h:60-... -- same off-by-one, same cause, same fix.
+     * Link is roster slot 5 and unread today; corrected here rather than left
+     * for his row because the checker that found it is now a Boundary gate. */
     nFTLinkStatusAttack13 = nFTCommonStatusSpecialStart,
-    nFTLinkStatusAttack100Start = nFTCommonStatusSpecialStart,
+    nFTLinkStatusAttack100Start,
     nFTLinkStatusAttack100Loop,
     nFTLinkStatusAttack100End,
     nFTKirbyStatusAttack100Start = nFTCommonStatusSpecialStart,

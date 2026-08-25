@@ -116,9 +116,12 @@ void ftParamProcPauseEffect(GObj *effect_gobj);
 void ftParamProcResumeEffect(GObj *fighter_gobj);
 void gmCameraSetVelAt(Vec3f *move);
 
-#ifndef nFTCaptainStatusSpecialAirLw
-#define nFTCaptainStatusSpecialAirLw (nFTCommonStatusSpecialStart + 13)
-#endif
+/* `nFTCaptainStatusSpecialAirLw` used to be stood up here as
+ * `nFTCommonStatusSpecialStart + 13`, because `include/ft/fighter.h` carried
+ * only a four-name Captain placeholder. It now carries the source's complete
+ * nineteen-status window (P2-3f3), and `#ifndef` cannot see an ENUMERATOR, so
+ * leaving this would quietly re-shadow the real enum with a macro that merely
+ * happens to agree today. */
 
 #ifndef nWPNessPKThunderStatusActive
 #define nWPNessPKThunderStatusActive 0
