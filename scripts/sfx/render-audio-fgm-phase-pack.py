@@ -73,9 +73,15 @@ PUBLIC_EXCITED_ID = 626
 # feeds a volume ramp across the loop, which is exactly what a hardware repeat
 # reproduces bit-identically and therefore cannot ramp.
 PUBLIC_WIN_ID = 621
-LOOPED_FANFARE_AOT_IDS = frozenset((PUBLIC_EXCITED_ID, PUBLIC_WIN_ID))
+PUBLIC_NO_CONTEST_ID = 624
+LOOPED_FANFARE_AOT_IDS = frozenset((
+    PUBLIC_EXCITED_ID, PUBLIC_WIN_ID, PUBLIC_NO_CONTEST_ID))
 PUBLIC_EXCITED_SAMPLE_COUNT = 104204
 PUBLIC_WIN_SAMPLE_COUNT = 69369
+# 624 is the third reachable cue on articulation 460 / sound 320. Its source
+# note is pitch 10 for 1200 ticks, so the same source-derived length law used by
+# 621/626 gives ceil(1200 * 5750 us * 13454 Hz) = 92,833 samples.
+PUBLIC_NO_CONTEST_SAMPLE_COUNT = 92833
 PUBLIC_EXCITED_RAMP_SAMPLES = 184
 PUBLIC_EXCITED_MIXER_MINIMUM = 1
 PUBLIC_EXCITED_IMA_PREDICTOR = -4553
@@ -244,6 +250,11 @@ FULL_COVERAGE_IDS = (
     # contiguous and source-named rather than waiting for each omitted cue to
     # surface independently in the miss ring.
     324, 325, 326, 327, 328, 329, 330, 331, 332, 333, 334, 335, 336, 483, 603,
+    # No Contest Results. The source Results announcer reaches both cues when
+    # VSBattle exits through pause-quit (`is_reset`): announcer at tic 2, crowd
+    # response at tic 71. They were previously omitted because only normal timed
+    # results had been audited.
+    502, 624,
 )
 FULL_PROGRAM_AOT_IDS = frozenset((
     154, 40, 38, 37, 34, 32, 31,
@@ -1423,8 +1434,8 @@ SELECTED = (
     # (NDS_IMPORT_BATTLESHIP_FT_PUBLIC): the two chants
     # dFTCommonDataPublicFighterCallFGMs picks for Mario (609) and Fox (605),
     # and the nine reactions ftPublicDecideCall/DecideCommon/PlayCliffReact
-    # choose between.  624 NoContest is deliberately absent -- nothing in a
-    # two-fighter timed match reaches it.
+    # choose between. No Contest is packed separately below because Results
+    # reaches it only on the pause-quit / `is_reset` branch.
     #
     # Every field came out of `--derive`, including the three that used to be
     # unobtainable without running the generator and reading its error
@@ -3514,6 +3525,55 @@ SELECTED += (
             "f8465bca110ef46023a8e3682e8974ab74c2c83854fc9352ab5be36b32a1b0d1",
         "articulation_program_sha256":
             "ad771315bcc763d9730edf9e9004099211c71c2615ee87df330035e9ba638791",
+    },
+)
+
+# No Contest Results audio. Both selectors are direct transcriptions of
+# `--derive 502,624`. 624 shares articulation 460 / sound 320 / source loop with
+# PublicWin/PublicExcited, including the articulation's volume ramp, so it uses
+# the same AOT looped-fanfare renderer rather than a DS hardware repeat.
+SELECTED += (
+    {
+        "id": 502,
+        "name": "nSYAudioVoiceAnnounceNoContest",
+        "kind": "results",
+        "articulation": 339,
+        "sound": 216,
+        "pitch_code": 13,
+        "duration_ticks": 400,
+        "ucd_volume": 245,
+        "articulation_pitch_cents": -1200,
+        "loop": False,
+        "wave_base": 1828048,
+        "wave_length": 15840,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 28160,
+        "root_program_sha256":
+            "25f5a5e89afbb74f1125053cf66b4a81fccf4acee6a7b5b9a5f06db6d839f439",
+        "articulation_program_sha256":
+            "132ea72a8650626b9ad6ce8bc9135b01d550f7e52337eb8f6d36b1d912462c62",
+    },
+    {
+        "id": 624,
+        "name": "nSYAudioVoicePublicNoContest",
+        "kind": "results",
+        "articulation": 460,
+        "sound": 320,
+        "pitch_code": 10,
+        "duration_ticks": 1200,
+        "ucd_volume": 180,
+        "articulation_pitch_cents": -1200,
+        "loop": True,
+        "wave_base": 2966600,
+        "wave_length": 15876,
+        "loop_start": 1,
+        "loop_end": 28215,
+        "expected_retained_samples": PUBLIC_NO_CONTEST_SAMPLE_COUNT,
+        "root_program_sha256":
+            "685511dedc41b987c69ae3fed42c37ee321236aa4e2f7fee9c1fc84406b36623",
+        "articulation_program_sha256":
+            "6539fb2ac7b671fe7f7a0a87282d231e839c417c0cd5c6c9e36a680b8e893a3b",
     },
 )
 

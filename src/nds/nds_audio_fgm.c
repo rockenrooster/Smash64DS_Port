@@ -303,6 +303,7 @@ static s32 ndsAudioFgmIDIsIncluded(u16 id)
     case nSYAudioVoiceAnnounceTimeUp:
     case nSYAudioVoiceAnnounceGameSet:
     case nSYAudioVoiceAnnounceWinnerIs:
+    case nSYAudioVoiceAnnounceNoContest:
     case nSYAudioVoiceAnnounceMario:
     case nSYAudioVoiceAnnounceFox:
     case nSYAudioVoiceAnnounceLuigi:
@@ -335,6 +336,10 @@ static s32 ndsAudioFgmIDIsIncluded(u16 id)
     /* The crowd's win roar, queued at Results scene start 81 ticks ahead of
      * "this game's winner is". Second cue on PublicExcited's wave. */
     case nSYAudioVoicePublicWin:
+    /* No Contest Results has its own source crowd response at tic 71. It is the
+     * same articulation/wave family as PublicWin/PublicExcited and is packed by
+     * the same finite AOT loop renderer. */
+    case nSYAudioVoicePublicNoContest:
     /* BUGS.md crowd row. Every one of these is requested by ft/ftpublic.c --
      * the chant for whichever fighter is being called, and the reaction its
      * knockback thresholds select. Silent until now because the actor was a

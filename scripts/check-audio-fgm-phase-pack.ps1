@@ -83,7 +83,9 @@ $expectedIDs = @(626,470,469,467,490,74,363,364,372,373,374,430,439,292,
     498, 421,
     # P2-3 Donkey Kong production bank, announcer and crowd chant.
     324, 325, 326, 327, 328, 329, 330, 331, 332, 333, 334, 335, 336,
-    483, 603)
+    483, 603,
+    # No Contest Results: source announcer at tic 2 and crowd response at tic 71.
+    502, 624)
 $actualIDs = @($metadata.entries | ForEach-Object { [int]$_.id })
 if (($actualIDs -join ',') -ne ($expectedIDs -join ',')) {
     throw "Unexpected FGM mapping: $($actualIDs -join ',')"
@@ -144,7 +146,8 @@ if (([int]$metadata.format_version -ne 4) -or
     # 324..336 voice bank, announcer 483 and crowd chant 603. 324 is compact
     # source-note replay (18,564-byte wave, two timed retriggers), not its
     # impossible 112 KiB baked timeline. Runtime cache remains 204800.
-    ([int64]$metadata.resident_bytes -ne 1201060) -or
+    # 1201060 -> 1261628 on 2026-08-24 for the two No Contest Results cues.
+    ([int64]$metadata.resident_bytes -ne 1261628) -or
     ([int64]$metadata.resident_limit_bytes -ne 204800) -or
     # ROM, not RAM: the runtime streams cues into resident_limit_bytes and never
     # holds the pack. 512 KiB blocked the five announcer lines and 768 KiB then
@@ -171,8 +174,9 @@ if (([int]$metadata.format_version -ne 4) -or
     # joining SELECTED -- same reason, the selector table changed.
     # 0xf6b94a48 -> 0xdf21d357 -> 0x393e86e8 on 2026-08-21 (P2-3) for
     # Luigi's source announcer 498 and selected-animation voice 421;
-    # -> 0x476d5727 on 2026-08-22 for DK's source bank/announcer/crowd set.
-    ($metadata.mapping_sha256_lo -ne '0x476d5727') -or
+    # -> 0x476d5727 on 2026-08-22 for DK's source bank/announcer/crowd set;
+    # -> 0x63fcb476 on 2026-08-24 for the two No Contest Results cues.
+    ($metadata.mapping_sha256_lo -ne '0x63fcb476') -or
     # Repinned 2026-08-02: FGM 11 (the rolling dodge) dropped 127 -> 96 -> 68 ->
     # 48 on the owner's ear via FGM_OWNER_VOLUME_TRIM, -8.4 dB total against the
     # source; the 68 pin was
@@ -208,8 +212,9 @@ if (([int]$metadata.format_version -ne 4) -or
     # ffdeefd578da5dfe99f715b7f10aeaea9fcc9c2b75f1c3d269c9480ab0b837e3.
     # DK's complete source voice admission, including compact 324 replay, moves
     # the binary identity again while leaving the resident cache unchanged.
+    # No Contest 502/624 move it once more on 2026-08-24.
     ($metadata.pack_sha256 -ne
-        'f2b1f76941488171fa4399dd2da9b44545aebab5f3e9d8ba0844ed0694f503b2')) {
+        '9012a748c88ee15daf3ddc70c6a2dfff60c60fde1f2027d3a2e57fa6f73165b6')) {
     throw 'FGM pack format, budget, mapping, or binary identity changed.'
 }
 if ((@($metadata.excluded_entries).Count -ne 0) -or
@@ -333,25 +338,26 @@ if (($fgm218.acoustic_oracle.source_custom_fx_dry_only -ne $true) -or
 $header = Get-Content -LiteralPath $headerPath -Raw
 $runtime = Get-Content -LiteralPath $runtimePath -Raw
 foreach ($token in @(
-    '#define NDS_AUDIO_FGM_ENTRY_COUNT 117u',
     '#define NDS_AUDIO_FGM_CACHE_BYTES 204800u')) {
     if (-not $header.Contains($token)) { throw "Runtime header lost: $token" }
 }
-# NDS_AUDIO_FGM_PACK_BYTES and NDS_AUDIO_FGM_PACK_MAPPING_SHA256_LO are DERIVED
-# from the pack, never pinned as text. They used to be pinned in two places --
-# the manifest assertions above and a literal #define string here -- and on
-# 2026-08-02 the size was moved in both while the hash was moved in neither, so
-# this check actively REQUIRED the stale hash and passed. The runtime rejects the
-# whole pack on either mismatch, so the ROM booted with all 88 cues silent and
-# gNdsAudioFgmFormatFailCount 1. Comparing against the artifact cannot drift.
+# NDS_AUDIO_FGM_ENTRY_COUNT, NDS_AUDIO_FGM_PACK_BYTES and
+# NDS_AUDIO_FGM_PACK_MAPPING_SHA256_LO are DERIVED from the pack, never pinned as
+# text here. Duplication has caused the same total-silence class twice: on
+# 2026-08-02 size/hash drift rejected all 88 cues; on 2026-08-24 adding No Contest
+# 502/624 produced a 119-entry pack while the runtime still compiled for 117.
+# The loader intentionally rejects the entire pack on ANY mismatch, so compare
+# all three against the binary itself.
 $packBytes = (Get-Item -LiteralPath $packPath).Length
 $packHeaderBlob = [System.IO.File]::ReadAllBytes($packPath)[0..15]
+$packEntryCount = [System.BitConverter]::ToUInt16($packHeaderBlob, 6)
 $packSizeField = [System.BitConverter]::ToUInt32($packHeaderBlob, 8)
 $packMappingLo = '0x{0:x8}' -f [System.BitConverter]::ToUInt32($packHeaderBlob, 12)
 if ($packSizeField -ne $packBytes) {
     throw "Pack header size field $packSizeField disagrees with its own length $packBytes."
 }
 foreach ($pair in @(
+    @{ Name = 'NDS_AUDIO_FGM_ENTRY_COUNT'; Want = "${packEntryCount}u" },
     @{ Name = 'NDS_AUDIO_FGM_PACK_BYTES'; Want = "${packBytes}u" },
     @{ Name = 'NDS_AUDIO_FGM_PACK_MAPPING_SHA256_LO'; Want = "${packMappingLo}u" })) {
     $found = [regex]::Match($header, "#define $($pair.Name)\s+(\S+)")
