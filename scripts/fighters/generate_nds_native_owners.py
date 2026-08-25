@@ -527,9 +527,33 @@ FIFO_PATCH_EPOCH_POLY = "epoch_poly"
 FIFO_PATCH_EPOCH_BEGIN = "epoch_begin"
 FIFO_PATCH_EPOCH_BEGIN_PARAM = "epoch_begin_param"
 
+# Source RDP/RSP control opcode -> NDS_NATIVE_STATE_* effect kind, exactly as
+# `ndsRendererNativeApplyStateDelta` switches on it.
+#
+# 0xe2 (G_SETOTHERMODE_L) and 0xf9 (G_SETBLENDCOLOR) were added for Captain
+# Falcon (P2-3f5) -- his HIGH-detail model is the first of any owner to contain
+# either, and a census over Mario/Fox/Luigi/Donkey in both details is 0/0 for
+# both opcodes, so adding them cannot move a landed owner's export.
+#
+# 0xe2 shares effect 2 (NDS_NATIVE_STATE_OTHERMODE) with 0xe3 rather than
+# needing a kind of its own: the runtime applier passes `delta->w0 >> 24` to
+# `ndsRendererRecordOtherMode`, which already dispatches on the opcode byte and
+# already accumulates othermode_L through the same shift/len bitfield decode the
+# source uses (`sm64-nds` src/nds/nds_renderer.c:725 `g_setothermode_l` is the
+# same four lines). Nothing about the delta row needed to change.
+#
+# 0xf9 becomes effect 12 (NDS_NATIVE_STATE_BLEND), which already existed for the
+# native STAGE program; this row is what gives the FIGHTER program the same
+# case. The DS answer for the pair is the hardware alpha test: with
+# othermode_L's G_AC_THRESHOLD bits set, `ndsRendererHardwareApplyAlphaTest`
+# emits `glEnable(GL_ALPHA_TEST)` + `glAlphaFunc(blend_color.a >> 4)`, so
+# Falcon's blend colour of (0,0,0,0) becomes a reference of 0 -- pass when
+# alpha > 0, the plain binary cutout the source asks for. sm64-nds discards
+# G_SETBLENDCOLOR outright (`case G_SETBLENDCOLOR: break;`, :1017); this port
+# keeps it because it is the alpha reference the threshold compares against.
 SOURCE_STATE_EFFECTS = {
-    0xe3: 2, 0xfc: 3, 0xd7: 4, 0xd9: 5, 0xfd: 6,
-    0xf5: 7, 0xf0: 8, 0xf3: 9, 0xf2: 10, 0xfa: 11,
+    0xe3: 2, 0xe2: 2, 0xfc: 3, 0xd7: 4, 0xd9: 5, 0xfd: 6,
+    0xf5: 7, 0xf0: 8, 0xf3: 9, 0xf2: 10, 0xfa: 11, 0xf9: 12,
 }
 SOURCE_SYNC_OPS = frozenset((0xe6, 0xe7, 0xe8))
 SOURCE_TRIANGLE_OPS = frozenset((0x05, 0x06))

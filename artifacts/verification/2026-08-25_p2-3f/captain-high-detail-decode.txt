@@ -1,0 +1,33 @@
+P2-3f5 -- Captain Falcon HIGH-detail model decode after G_SETOTHERMODE_L (0xE2) and
+G_SETBLENDCOLOR (0xF9) were added to generate_nds_native_owners.py SOURCE_STATE_EFFECTS.
+
+Before this row the same decode raised:
+  ValueError: captain root 6 command 6: unsupported control opcode 0xe2
+
+Pins used (the five recorded in docs/p2/fighters/falcon.md, injected by the probe --
+Falcon is NOT yet admitted as a runtime native owner, that is its own row):
+  P2_O2R_ASSETS       reloc_fighters_main/CaptainModel, 0x014c,
+                      sha256 bbd56fc89524fc5a5de7d2cb88fdead3c231ad402b6039e1b63e4f1091c4669e
+  OWNER_JOINT_TREES         (0x3be0, 27)
+  OWNER_JOINT_TREES_LOW     (0x7900, 27)
+  OWNER_SETUP_PARTS         (0xffffff80, 0x00000000)
+  OWNER_PLAN_COUNTS         (26, 17)
+
+captain high: roots 17  state_deltas 87  sequence 254  vertex_actions 34  triangles 319  runs 34  epochs 34
+   effect census: OTHERMODE=6, COMBINE=3, TEXTURE=17, GEOMETRY=2, IMAGE=16, TILE=15, LOAD_TLUT=1, LOAD_BLOCK=6, TILE_SIZE=20, BLEND=1
+   delta  54: 0xe2001e01 / 0x00000001 -> effect 2 (OTHERMODE)
+   delta  55: 0xe200001c / 0xc4113078 -> effect 2 (OTHERMODE)
+   delta  56: 0xf9000000 / 0x00000000 -> effect 12 (BLEND)
+   delta  60: 0xe2001e01 / 0x00000000 -> effect 2 (OTHERMODE)
+   delta  61: 0xe200001c / 0xc4112078 -> effect 2 (OTHERMODE)
+captain low : roots 17  state_deltas 73  sequence 223  vertex_actions 30  triangles 200  runs 30  epochs 30
+   effect census: OTHERMODE=2, COMBINE=3, TEXTURE=16, GEOMETRY=2, IMAGE=14, TILE=12, LOAD_TLUT=1, LOAD_BLOCK=5, TILE_SIZE=18
+
+The LOW-detail figures (73 state deltas, 223 sequence, 30 vertex actions, 200 triangles,
+30 runs, 30 epochs) reproduce row P2-3f4's pre-change decode EXACTLY, which is the control:
+the two new opcodes changed nothing about the rest of the decoder.
+
+Landed-owner control: generate_nds_native_owners.py --check passes, i.e.
+src/nds/nds_native_fighter_owner.generated.inc and the consumed-fields manifest are
+BYTE-IDENTICAL after the change. Mario/Fox/Luigi/Donkey contain zero 0xE2 and zero 0xF9
+in either detail (census: captain-model-opcode-census.txt).

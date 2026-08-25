@@ -24303,6 +24303,19 @@ ndsRendererNativeApplyStateDelta(
         stats->prim_lod_fraction = delta->w0 & 0xffu;
         stats->color_command_count++;
         break;
+    /* P2-3f5. G_SETBLENDCOLOR on a FIGHTER root. The native stage program has
+     * carried this effect since Task 26 (`NDS_TASK26_BLEND`, and the stage span
+     * applier below); no fighter owner produced one until Captain Falcon, whose
+     * high-detail root 6 brackets its two draws with G_AC_THRESHOLD and a blend
+     * colour. blend_color IS the alpha reference the threshold compares
+     * against -- `ndsRendererHardwareApplyAlphaTest` reads exactly these two
+     * fields -- so dropping it would silently pick up whatever reference the
+     * previous draw left behind. */
+    case NDS_NATIVE_STATE_BLEND:
+        NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(state);
+        stats->blend_color = delta->w1;
+        stats->color_command_count++;
+        break;
     case NDS_NATIVE_STATE_LIGHT_COLOR:
         ndsRendererApplyMatrixMoveWordCommand(
             stats, state, delta->w0, delta->w1);
@@ -36802,6 +36815,10 @@ static s32 ndsRendererValidateNativeStateSpan(
         case NDS_NATIVE_STATE_LOAD_BLOCK:
         case NDS_NATIVE_STATE_TILE_SIZE:
         case NDS_NATIVE_STATE_PRIM:
+        /* P2-3f5: G_SETBLENDCOLOR carries no index and no asset offset, so
+         * there is nothing to bound-check -- but it still has to be admitted
+         * here or the whole span is rejected and the owner falls back. */
+        case NDS_NATIVE_STATE_BLEND:
             break;
         case NDS_NATIVE_STATE_IMAGE:
             if (delta->w1 >= asset_data_size)
