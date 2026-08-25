@@ -228,6 +228,7 @@ if (-not [string]::IsNullOrWhiteSpace($AnalyzeOnly)) {
         # built the wrong tree" without a second, bespoke emulator lap.
         'gFTDataFoxSpecial2', 'gFTDataFoxSpecial3',
         'gNdsFighterManagerStatusBufferMask', 'gNdsRelocHeapDeclineCount',
+        'gNdsFtPoseBindFull',
         'gNdsEFDescResolveCount', 'gNdsEFDescDisabledCount',
         'gNdsEFDescUnknownFileCount', 'gNdsEFDescDeferRecoverCount',
         'gNdsEFDescDeferOverflowCount', 'dEFManagerFoxEntryArwingEffectDesc',
@@ -405,7 +406,7 @@ if (-not [string]::IsNullOrWhiteSpace($AnalyzeOnly)) {
             'info symbol $pc',
             ('printf "LOOPDONE enters=%u exits=%u rej=%u unreg=%u mism=%u walkloops=%u ' +
              'budget=%u rematch=%u press=%u steps=%u input=%u trans=%u denied=%u ' +
-             'sd=%u winm=%u winf=%u resb=%u dwell=%u\n", ' +
+             'sd=%u winm=%u winf=%u resb=%u dwell=%u posefull=%u\n", ' +
              'gNdsSceneManagerEnterCount, gNdsSceneManagerExitCount, ' +
              'gNdsSceneManagerRejectCount, gNdsSceneManagerUnregisteredEnterCount, ' +
              'gNdsSceneManagerArenaMismatchCount, gNdsMenuShellWalkLoops, ' +
@@ -414,7 +415,8 @@ if (-not [string]::IsNullOrWhiteSpace($AnalyzeOnly)) {
              'gNdsMenuShellInputCount, gNdsMenuShellTransitionCount, ' +
              'gNdsMenuShellDeniedCount, gNdsSCVSBattleSuddenDeathPrepareCount, ' +
              'gNdsAudioBgmWinMarioPlayCount, gNdsAudioBgmWinFoxPlayCount, ' +
-             'gNdsAudioBgmResidentBytes, gNdsMenuShellWalkDwellSteps'),
+             'gNdsAudioBgmResidentBytes, gNdsMenuShellWalkDwellSteps, ' +
+             'gNdsFtPoseBindFull'),
             # The Results input chain, split three ways so a refusal names its
             # own half (battleship_mnvsresults.c:376): the pad the port can
             # read, the hold the source pipeline saw, and the rising edge
@@ -590,6 +592,9 @@ if ($null -ne $done) {
         "SCENE REJECT: gNdsSceneManagerRejectCount=$($d['rej']), expected 0.")
     Assert-Loop ($d['mism'] -eq 0) (
         "ARENA MISMATCH: gNdsSceneManagerArenaMismatchCount=$($d['mism']), expected 0.")
+    Assert-Loop ($d['posefull'] -eq 0) (
+        "FIGHTER POSE SLOTS: gNdsFtPoseBindFull=$($d['posefull']), expected 0. " +
+        'A CSS destroy/rebuild exhausted the fixed pose-slot pool.')
     Assert-Loop ($d['unreg'] -eq $expectedUnregistered) (
         "UNREGISTERED ENTRIES: $($d['unreg']), expected $expectedUnregistered " +
         '(nSCKindStartup alone).')
