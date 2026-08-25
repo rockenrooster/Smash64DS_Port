@@ -273,6 +273,34 @@ void ndsMNPlayersVSPreviewInit(void)
         return;
     }
 
+    /* P2-3r16. THE WHOLE OF THIS FUNCTION IS A BLOCKING LOAD BURST, and on a
+     * SECOND character-select entry it runs with menu BGM already playing.
+     *
+     * The note further down used to say "this function runs before
+     * ndsMenuShellCssPlayBgm", which is true of the CSS's own track and false of
+     * the one still playing when the player backs out of the stage select. This
+     * body calls `ftManagerSetupFilesAllKind` for every admitted kind -- four of
+     * them on the landed roster -- and then warms the preview owners, and none
+     * of it was bracketed. MEASURED 2026-08-25 on `build-p2-shell`
+     * (`artifacts/verification/2026-08-25_p2-3r14-bgmseam2.txt`): the shell
+     * walk's SECOND `ndsMenuShellRunCharSelect` entered with
+     * `gNdsAudioBgmSeamMissCount` 0 and `gNdsRelocAssetPayloadReadCount` 1,637,
+     * and `ndsAudioBgmFailPlayback` fired at 1,810 reads with the miss count at
+     * 1 -- before the first `mnPlayersVSUpdateFighter` bracket below was
+     * reached. The music was then gone for the rest of the screen.
+     *
+     * Same remedy as that bracket, for the same reason: the stall is legitimate
+     * and known in advance, so top the stream up and disarm the timer instead of
+     * letting the seam call it an underrun. `ndsAudioBgmSuspendForBlockingLoad`
+     * returns immediately when nothing is playing, so a FIRST entry is
+     * unaffected and the pairing still counts.
+     *
+     * It reads as a flaky arm because it is marginal, not because it is random:
+     * whether one CSS-entry frame overruns one 8,196-byte packet moves with code
+     * placement, so an unrelated few-instruction change can flip it either way.
+     * That is what exposed it. */
+    ndsAudioBgmSuspendForBlockingLoad();
+
     gNdsPlayersVSPreviewFrameCount = 0u;
     gNdsPlayersVSPreviewDrawCount = 0u;
     gNdsPlayersVSPreviewSelectedMask = 0u;
@@ -334,7 +362,10 @@ void ndsMNPlayersVSPreviewInit(void)
         sMNPlayersVSSlots[i].is_fighter_selected = FALSE;
         sMNPlayersVSSlots[i].is_status_selected = FALSE;
     }
-    /* This function runs before ndsMenuShellCssPlayBgm. Load every owner image
+    /* P2-3r16 CORRECTION: this runs before `ndsMenuShellCssPlayBgm` only on a
+     * FIRST entry. A second entry, from the stage select's back-out, still has
+     * menu BGM playing -- which is why the whole function is now bracketed at
+     * the top. Load every owner image
      * admitted by this exact roster here, after the four figatree heaps so the
      * established CSS allocation order stays stable. Fighter creation keeps its
      * ensure call as a fail-safe, but a healthy CSS never reaches disk there. */
@@ -348,6 +379,7 @@ void ndsMNPlayersVSPreviewInit(void)
     scSubsysFighterSetLightParams(45.0F, 45.0F, 0xFF, 0xFF, 0xFF, 0xFF);
     sNdsPlayersVSPreviewDrawPhase = 0u;
     sNdsPlayersVSPreviewActive = TRUE;
+    ndsAudioBgmResumeAfterBlockingLoad();
 }
 
 /* P2-2a: the shell owns the 2D controls, but costume/shade behavior stays in
