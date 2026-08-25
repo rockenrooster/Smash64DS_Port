@@ -1,0 +1,18 @@
+owner    detail  roots  0xE2  0xF9   (SOURCE_STATE_EFFECTS models neither)
+mario    high      14     0     0
+mario    low       14     0     0
+fox      high      18     0     0
+fox      low       18     0     0
+luigi    high      14     0     0
+luigi    low       14     0     0
+donkey   high      16     0     0
+donkey   low       16     0     0
+captain  high      17     4     1
+captain  low       17     0     0
+
+Captain high 0xE2/0xF9 sites (root, command, w0, w1):
+  root  6 cmd   6  op=0xe2  w0=0xe2001e01 w1=0x00000001
+  root  6 cmd   7  op=0xe2  w0=0xe200001c w1=0xc4113078
+  root  6 cmd   9  op=0xf9  w0=0xf9000000 w1=0x00000000
+  root  6 cmd  36  op=0xe2  w0=0xe2001e01 w1=0x00000000
+  root  6 cmd  37  op=0xe2  w0=0xe200001c w1=0xc4112078

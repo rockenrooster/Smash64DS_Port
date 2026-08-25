@@ -1,0 +1,40 @@
+verify-all.ps1 -Profile Boundary -- 2026-08-25, rows P2-3f1..f4. EXIT 0.
+Full driver stream was 644,779 lines / 57,943,103 B and is NOT tracked.
+
+NOTE ON CAPTURE: piping verify-all.ps1 through Tee-Object captures only the
+driver's own five Write-Output lines. Invoke-VerifyScriptOnce replays each
+child verifier with [Console]::Out.Write, which bypasses the PowerShell
+pipeline entirely. Bank a Boundary log by redirecting the whole PROCESS,
+not by teeing the cmdlet.
+
+Exception: lines over the whole stream: 0
+
+--- static block (all six now run unconditionally; two are new this row) ---
+3:DECOMP_PRISTINE=PASS pinned_historical_files=10 ds_markers=0 decomp_patch_pipeline=absent
+91:Architecture check passed: imports=129, registryEntries=6, warnings=2.
+92:port constants 5452, decomp constants 3411, shared names 1628, disagreements 0
+94:OK: every shared name agrees.
+95:NDS_PARTICLE_BANKS=PASS scripts=93/119 textures=34/47 tex_n64=262992 tex_ds=175140 pack=187459 linked=12195 asset=175264 atlas=128x64x4 quads=34/38 34frames cap=1 cell=64 whispy_native=1520 headroom=210320 spare=198125 source=0xa2a1e85f table=0xd22b30b6
+253:check-mn-screen-coverage: PASS
+257:Fighter production manifest: PASS
+258:Harness registry check passed: 3 harness mappings, 6 verifier scripts, 0 drift.
+
+--- arm 1: p2_shell_loop ---
+448:LOOPDONE: budget=1 denied=1 dwell=2 enters=11 exits=11 input=75 mism=0 posefull=0 press=52 rej=0 rematch=1 resb=16392 sd=1 steps=77 trans=7 unreg=1 walkloops=1 winf=1 winm=0
+449:LOOPKIT hash=c417dfa1 mismatch=0 readfail=0 overflow=0 rej=0 csscommit=2 cssstart=2 ssscommit=2 sssconfirm=1 sssback=1 fallback=1
+454:LOOPSURF blit=555 mismatch=0 readfail=0 nolayer=0 fireblit=1 vsbtn=20 csspanel=520 sssplaque=8
+
+--- arm 2: p2_battle_realtime ---
+322706:battle_playable Pupupu realtime pacing smoke passed: frames=212 fps=282/562 ticks=251491392
+
+--- arm 3: p2_fourcpu_stress (four landed kinds since P2-3r15) ---
+646820:P2-2 four-CPU standing stress passed its correctness, cadence, native-owner, and memory gates.
+646811:VBI 2:60 3:64 4:21 5+:1828 max:21 total:1973  slips=0
+646812:gNdsTaskmanGeneralHeapFreeMin=45,100
+646812:gNdsSyMallocOverflowCount=0  gNdsObjmanPanicCount=0
+646812:gNdsFtPoseBinds=750  gNdsFtPoseBindFull=0
+646812:gNdsSCVSBattleOriginalFighterKinds=50,659,841  gNdsFighterDLAllDrawSlotTriangleMask=15
+    (roster word 50,659,841 = 0x03050201; bytes are kind+1 -> Mario 0, Fox 1, Luigi 4, Donkey 2. Slot mask 15 = 0xF, all four drawing.)
+
+--- driver verdict ---
+968849:Boundary verification profile passed.

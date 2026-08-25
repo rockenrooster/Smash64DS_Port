@@ -1,15 +1,17 @@
 # Handoff
 
-Current: 2026-08-25 — **BOUNDARY'S STRESS ARM NOW RUNS THE FOUR LANDED KINDS**
-(row P2-3r15: `NDS_P2_FOUR_CPU_ROSTER` defaults to 1 on the stress target, so
-Mario/Fox/Luigi/Donkey are exercised at runtime for the first time — before
-this, two arms compiled them and none played them. **Every tick figure banked
-against the mirror arm is a different population; name the roster on both sides
-of any comparison.**) **VS Stock's last-stock path is fixed** (row P2-3r14:
-`ftcommonsleep.c` imported; an eliminated fighter had stayed a live camera
-target at the bottom blast zone for the rest of the match). Four distinct kinds
-fit the shipping configuration (P2-3r13) and DK's cargo matrix is verified
-(P2-3r10). P2-1/P2-2 still have only their owner visual/play residuals.
+Current: 2026-08-25 — **THE TWO FIGHTER-SHAPED STATIC CHECKERS ARE GREEN AND IN
+BOUNDARY** (rows P2-3f1/f3), and each found a real defect on the way:
+`check-architecture.ps1` was terminating on its FIRST `Write-Error` under
+`$ErrorActionPreference='Stop'`, hiding a second failure behind the one three
+docs recorded; `check-decomp-header-mirror.py` could not fold a single
+per-fighter status enum, which is why Captain's and Link's Attack100 ordinals
+sat one low. **Luigi had no entry at all** (P2-3f2): `ftCommonAppearSetStatus`
+dropped him into `EntryNull` while the renderer's Luigi pipe arm already
+existed. **Captain Falcon pipeline slice 1 is landed** (P2-3f4) — the manifest
+generalised on one tuple entry; his native model is BLOCKED on an alpha-test
+decoder extension, see `docs/p2/fighters/falcon.md`. Earlier: stress arm on the
+four landed kinds (P2-3r15), Stock last-stock (P2-3r14), DK cargo (P2-3r10).
 
 ## State
 
@@ -64,12 +66,12 @@ fit the shipping configuration (P2-3r13) and DK's cargo matrix is verified
    walks, CPU targeting, multi-target camera, KO scoring and Sudden Death are
    N-player source imports; the DS bridge keeps player instance 0..3 separate
    from generated owner kind, and the audit restored source `ftparam`
-   stat/stale/damage attribution, grounded damage-velocity projection, hit-status
-   aggregation and colanim lifecycle, centered-stick facing, hitlag order,
-   battle-entry registry lifetime, four-way Results and all four live CSS
-   preview slots. The lower-screen HUD is four-wide on live source `ifCommon`
-   state with DMA-safe Bank-I writes. Source effect/particle capacities are
-   restored. **The full audit and the measured owner-based byte law live in
+   stat/stale/damage attribution, grounded damage-velocity projection,
+   hit-status aggregation and colanim lifecycle, centered-stick facing, hitlag
+   order, battle-entry registry lifetime, four-way Results and all four live
+   CSS preview slots. The lower-screen HUD is four-wide on live source
+   `ifCommon` state with DMA-safe Bank-I writes; source effect/particle
+   capacities are restored. **The full audit and the measured byte law live in
    `docs/p2/P2-2-four-fighters.md`; the standing arm's current figures live in
    the board rows, not here — every pre-2026-08-25 number on that arm is the
    MIRROR roster (P2-3r15).** The remaining item is explicitly visual: four-way
@@ -88,28 +90,20 @@ fit the shipping configuration (P2-3r13) and DK's cargo matrix is verified
    is still unspent.
    **Intros are fixed** (P2-3r5, the missing source `is_invisible` gate) and
    **Mario's pipe is fixed end-to-end** (P2-3r6, a four-defect chain ending in a
-   forced DS `COLOR0_TRANSPARENT` on textures whose palette index 0 is opaque
-   green); the board rows carry both. **The CSS preview's disconnected body
-   parts are fixed** (P2-3r7): its CSS-only `glViewport` writes bypassed
-   `ndsRendererFighterPacketDmaWait()` and cut into the last preview fighter's
-   draining packet DMA. **Rail: a GX writer outside `nds_renderer.c` must call
-   that wait first.**
-   **Four distinct kinds run in the SHIPPING configuration** (P2-3r11 +
-   P2-3r13). r11 found the wall: `ftManagerSetupFilesMainKind(Donkey)` asking
-   77,360 B with 8,300 B free, halting in `ndsSyMallocOverflowHalt`; "two
-   fighter GObjs" was an instrument that could only count Mario and Fox. r13
-   paid the ~186 KB out of the ARM9 static image instead of the scene budget:
-   the 185,696 B title/opening/Castle scene file store left `.bss` for a lazy
-   scene-arena allocation (`ndsRelocSceneFileBuffer`), `NDS_TASKMAN_ARENA_SIZE`
-   rose 0x17a000 -> 0x1a7000, and the VSBattle DL buffers gave back 30,720 B
-   against a measured use of 16 bytes. `NDS_R2_BATTLEPACK := 0` and the cache
+   forced DS `COLOR0_TRANSPARENT`); the board rows carry both. **The CSS
+   preview's disconnected body parts are fixed** (P2-3r7): its CSS-only
+   `glViewport` writes bypassed `ndsRendererFighterPacketDmaWait()` and cut into
+   the last preview fighter's draining packet DMA. **Rail: a GX writer outside
+   `nds_renderer.c` must call that wait first.**
+   **Four distinct kinds run in the SHIPPING configuration** (P2-3r11 + r13;
+   full narrative on those board rows). `NDS_R2_BATTLEPACK := 0` and the cache
    trim are gone, so **four-kind tick figures are pack-on and comparable**
-   (`ALL` P50/P95 1,964,992 / 3,085,696 on the promoted gate arm). **Rail: never raise `NDS_TASKMAN_ARENA_SIZE`
-   without returning at least as much static image first** -- the step-down loop
-   cannot tell an ambitious target from an exhausted heap. **Measured and left
-   on the table:** the per-context graphics heap peaks at **96 B of 53,248**
-   (two contexts = 106,496 B of arena), overflow 0; re-read it on Results /
-   Sudden Death / pause zoom before cutting.
+   (`ALL` P50/P95 1,964,992 / 3,085,696 on the promoted gate arm). **Rail:
+   never raise `NDS_TASKMAN_ARENA_SIZE` without returning at least as much
+   static image first** -- the step-down loop cannot tell an ambitious target
+   from an exhausted heap. **Measured and left on the table:** the per-context
+   graphics heap peaks at **96 B of 53,248** (two contexts = 106,496 B of
+   arena), overflow 0; re-read it on Results / Sudden Death / pause zoom.
    **DK's cargo matrix is verified** (P2-3r10, `docs/p2/fighters/dk.md`): grab,
    carry, walk/turn/jump/edge/land, the ONE cargo release (`ThrowFF`/
    `ThrowAirFF`; `HeavyThrow*` are heavy-ITEM throws, P2-5), mash-out,
@@ -120,10 +114,9 @@ fit the shipping configuration (P2-3r13) and DK's cargo matrix is verified
    `--gc-sections`. **Rail: a source function defined in a `battleship_*.o` but
    absent from the linked ELF is stranded unless it has an in-TU caller.**
    **VS Stock's last-stock path is fixed** (P2-3r14): `ftCommonDeadCheckRebirth`
-   reached the weak `ftCommonSleepSetStatus` no-op in a driven Stock match at
-   source frame 645 (`stock=-1`, `rules=2`, RebirthDown 0 hits), and the
-   eliminated fighter then sat in `DeadDown` with `camera_mode` **Default** —
-   the one mode `gmCameraUpdateFighterBounds` does NOT skip — dragging the
+   reached the weak `ftCommonSleepSetStatus` no-op in a driven Stock match, and
+   the eliminated fighter then sat in `DeadDown` with `camera_mode` **Default**
+   — the one mode `gmCameraUpdateFighterBounds` does NOT skip — dragging the
    camera to where it died for the rest of the match. `ftcommonsleep.c` is
    imported; the weak twins are deleted. **Rail: a source TU the port skips
    strands its callees too** — `ifCommonPlayerStockStealMakeInterface` was
@@ -137,14 +130,21 @@ fit the shipping configuration (P2-3r13) and DK's cargo matrix is verified
    with code placement** — an unrelated few-instruction change flipped this arm
    from green to red and back, which is why it is bracketed, not tuned.
 
-4. **P2-3 background.** Luigi's production path is landed and he ANIMATES
-   (P2-3r2). Both bounded proofs are GREEN on one tree (`9c412271f0f`): kind 2
-   (full DK moveset, driven KO, mask 0x7ffff) and kind −1 (reflector 0xff,
-   specials 0xfff); board row P2-3r3 has the five-step chain the stall really
-   was. **DK's one live blocker is realtime:** status 68 is
-   nFTCommonStatusDownBounceU (knockdown bounce — NOT Dokan; the old note
-   misread the enum). Rebuild the realtime DK ROM on this tree and re-observe;
-   suspect DK's DownBounce anim-end never fires. Keep admission
+4. **Captain Falcon is roster #3 and slice 1 is landed** (P2-3f4).
+   `docs/p2/fighters/falcon.md` carries the complete law-7 inventory (160
+   NitroFS resources, 152 animations, 19 statuses, 19 item motions, the audio
+   name list, six costume indices) and the remainder in dependency order.
+   **The next step is item 1 there and it is a real pipeline extension, not a
+   fighter task:** Falcon's high-detail model is the first to use
+   `G_SETOTHERMODE_L` (0xE2, one alpha-tested surface) and `G_SETBLENDCOLOR`
+   (0xF9); `generate_nds_native_owners.py` models neither and raises
+   `unsupported control opcode 0xe2`. The low-detail model already decodes
+   clean with the five pins recorded there. Do not start the runtime slice
+   before the model lands — nothing can create him without an owner slot.
+   **P2-3 background:** Luigi ANIMATES (P2-3r2) and now enters through his pipe
+   (P2-3f2). **DK's one open realtime suspicion:** status 68 is
+   nFTCommonStatusDownBounceU (knockdown bounce — NOT Dokan); re-observe on a
+   realtime DK ROM, suspect DownBounce anim-end never fires. Keep admission
    fighter-by-fighter.
 5. **Performance remains debt; the structural cuts are landed and default-on**
    (board rows P2-2p1..p6, promoted 2026-08-23, Boundary GREEN on the promoted

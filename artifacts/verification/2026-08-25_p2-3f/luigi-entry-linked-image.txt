@@ -1,0 +1,195 @@
+P2-3f2 -- Luigi entry: linked-image evidence, 2026-08-25
+
+=== BEFORE: published smash64ds.nds's own ELF (roster 2, sha 5B962053...F579) ===
+ftCommonAppearSetStatus @ 0x020a19f8
+020a19f8 <ftCommonAppearSetStatus>:
+ 20a19f8:	b5f0      	push	{r4, r5, r6, r7, lr}
+ 20a19fa:	b083      	sub	sp, #12
+ 20a19fc:	0006      	movs	r6, r0
+ 20a19fe:	f75c fa1d 	bl	1ffde3c <ftGetStruct>
+ 20a1a02:	0004      	movs	r4, r0
+ 20a1a04:	f010 f850 	bl	20b1aa8 <ndsEFManagerRetryDeferredDescs>
+ 20a1a08:	4a30      	ldr	r2, [pc, #192]	@ (20a1acc <ftCommonAppearSetStatus+0xd4>)
+ 20a1a0a:	6f73      	ldr	r3, [r6, #116]	@ 0x74
+ 20a1a0c:	4694      	mov	ip, r2
+ 20a1a0e:	44a4      	add	ip, r4
+ 20a1a10:	4662      	mov	r2, ip
+ 20a1a12:	331c      	adds	r3, #28
+ 20a1a14:	6c61      	ldr	r1, [r4, #68]	@ 0x44
+ 20a1a16:	cba1      	ldmia	r3!, {r0, r5, r7}
+ 20a1a18:	c2a1      	stmia	r2!, {r0, r5, r7}
+ 20a1a1a:	2300      	movs	r3, #0
+ 20a1a1c:	4a2c      	ldr	r2, [pc, #176]	@ (20a1ad0 <ftCommonAppearSetStatus+0xd8>)
+ 20a1a1e:	50a3      	str	r3, [r4, r2]
+ 20a1a20:	4a2c      	ldr	r2, [pc, #176]	@ (20a1ad4 <ftCommonAppearSetStatus+0xdc>)
+ 20a1a22:	50a1      	str	r1, [r4, r2]
+ 20a1a24:	6463      	str	r3, [r4, #68]	@ 0x44
+ 20a1a26:	33ec      	adds	r3, #236	@ 0xec
+ 20a1a28:	58e2      	ldr	r2, [r4, r3]
+ 20a1a2a:	23b2      	movs	r3, #178	@ 0xb2
+ 20a1a2c:	011b      	lsls	r3, r3, #4
+ 20a1a2e:	50e2      	str	r2, [r4, r3]
+ 20a1a30:	68a3      	ldr	r3, [r4, #8]
+ 20a1a32:	2b00      	cmp	r3, #0
+ 20a1a34:	d133      	bne.n	20a1a9e <ftCommonAppearSetStatus+0xa6>
+ 20a1a36:	3901      	subs	r1, #1
+ 20a1a38:	1e4b      	subs	r3, r1, #1
+ 20a1a3a:	4199      	sbcs	r1, r3
+ 20a1a3c:	31dd      	adds	r1, #221	@ 0xdd
+ 20a1a3e:	000f      	movs	r7, r1
+ 20a1a40:	4660      	mov	r0, ip
+ 20a1a42:	2100      	movs	r1, #0
+ 20a1a44:	f00f fc58 	bl	20b12f8 <efManagerMarioEntryDokanMakeEffect>
+ 20a1a48:	0020      	movs	r0, r4
+ 20a1a4a:	f7ba f889 	bl	205bb60 <mpCommonSetFighterAir>
+ 20a1a4e:	2500      	movs	r5, #0
+ 20a1a50:	23fe      	movs	r3, #254	@ 0xfe
+ 20a1a52:	0039      	movs	r1, r7
+ 20a1a54:	2200      	movs	r2, #0
+ 20a1a56:	0030      	movs	r0, r6
+ 20a1a58:	059b      	lsls	r3, r3, #22
+ 20a1a5a:	9500      	str	r5, [sp, #0]
+ 20a1a5c:	f01c fdb2 	bl	20be5c4 <ftMainSetStatus>
+ 20a1a60:	0030      	movs	r0, r6
+ 20a1a62:	f75c f9eb 	bl	1ffde3c <ftGetStruct>
+ 20a1a66:	22c7      	movs	r2, #199	@ 0xc7
+ 20a1a68:	2109      	movs	r1, #9
+ 20a1a6a:	0052      	lsls	r2, r2, #1
+ 20a1a6c:	5c83      	ldrb	r3, [r0, r2]
+ 20a1a6e:	438b      	bics	r3, r1
+ 20a1a70:	430b      	orrs	r3, r1
+ 20a1a72:	5483      	strb	r3, [r0, r2]
+ 20a1a74:	2292      	movs	r2, #146	@ 0x92
+ 20a1a76:	230d      	movs	r3, #13
+ 20a1a78:	32ff      	adds	r2, #255	@ 0xff
+ 20a1a7a:	5c81      	ldrb	r1, [r0, r2]
+ 20a1a7c:	400b      	ands	r3, r1
+ 20a1a7e:	2132      	movs	r1, #50	@ 0x32
+ 20a1a80:	430b      	orrs	r3, r1
+ 20a1a82:	5483      	strb	r3, [r0, r2]
+ 20a1a84:	4b14      	ldr	r3, [pc, #80]	@ (20a1ad8 <ftCommonAppearSetStatus+0xe0>)
+ 20a1a86:	3a1a      	subs	r2, #26
+ 20a1a88:	3aff      	subs	r2, #255	@ 0xff
+ 20a1a8a:	50e2      	str	r2, [r4, r3]
+ 20a1a8c:	23c0      	movs	r3, #192	@ 0xc0
+ 20a1a8e:	005b      	lsls	r3, r3, #1
+ 20a1a90:	50e5      	str	r5, [r4, r3]
+ 20a1a92:	3304      	adds	r3, #4
+ 20a1a94:	50e5      	str	r5, [r4, r3]
+ 20a1a96:	3b08      	subs	r3, #8
+ 20a1a98:	50e5      	str	r5, [r4, r3]
+ 20a1a9a:	b003      	add	sp, #12
+ 20a1a9c:	bdf0      	pop	{r4, r5, r6, r7, pc}
+ 20a1a9e:	2b01      	cmp	r3, #1
+ 20a1aa0:	d00b      	beq.n	20a1aba <ftCommonAppearSetStatus+0xc2>
+ 20a1aa2:	2706      	movs	r7, #6
+ 20a1aa4:	2b02      	cmp	r3, #2
+ 20a1aa6:	d1cf      	bne.n	20a1a48 <ftCommonAppearSetStatus+0x50>
+ 20a1aa8:	3901      	subs	r1, #1
+ 20a1aaa:	1e4b      	subs	r3, r1, #1
+ 20a1aac:	4199      	sbcs	r1, r3
+ 20a1aae:	4660      	mov	r0, ip
+
+  fkind ladder: cmp #0 -> Dokan; cmp #1 -> Arwing; cmp #2 -> Taru;
+  ELSE movs r7,#6 (nFTCommonStatusEntryNull) with NO bl efManager*.
+  Luigi is fkind 4 and therefore took the else.
+
+=== AFTER: builds/build-p2-shell-loop/smash64ds-p2-shell-loop-hwtri.elf (this tree) ===
+ftCommonAppearSetStatus @ 0x020a487c
+020a487c <ftCommonAppearSetStatus>:
+ 20a487c:	b5f0      	push	{r4, r5, r6, r7, lr}
+ 20a487e:	b083      	sub	sp, #12
+ 20a4880:	0006      	movs	r6, r0
+ 20a4882:	f759 fadb 	bl	1ffde3c <ftGetStruct>
+ 20a4886:	0004      	movs	r4, r0
+ 20a4888:	f00e ffde 	bl	20b3848 <ndsEFManagerRetryDeferredDescs>
+ 20a488c:	4931      	ldr	r1, [pc, #196]	@ (20a4954 <ftCommonAppearSetStatus+0xd8>)
+ 20a488e:	6f73      	ldr	r3, [r6, #116]	@ 0x74
+ 20a4890:	468c      	mov	ip, r1
+ 20a4892:	44a4      	add	ip, r4
+ 20a4894:	4661      	mov	r1, ip
+ 20a4896:	331c      	adds	r3, #28
+ 20a4898:	6c62      	ldr	r2, [r4, #68]	@ 0x44
+ 20a489a:	cba1      	ldmia	r3!, {r0, r5, r7}
+ 20a489c:	c1a1      	stmia	r1!, {r0, r5, r7}
+ 20a489e:	2300      	movs	r3, #0
+ 20a48a0:	492d      	ldr	r1, [pc, #180]	@ (20a4958 <ftCommonAppearSetStatus+0xdc>)
+ 20a48a2:	5063      	str	r3, [r4, r1]
+ 20a48a4:	492d      	ldr	r1, [pc, #180]	@ (20a495c <ftCommonAppearSetStatus+0xe0>)
+ 20a48a6:	5062      	str	r2, [r4, r1]
+ 20a48a8:	6463      	str	r3, [r4, #68]	@ 0x44
+ 20a48aa:	33ec      	adds	r3, #236	@ 0xec
+ 20a48ac:	58e1      	ldr	r1, [r4, r3]
+ 20a48ae:	23b2      	movs	r3, #178	@ 0xb2
+ 20a48b0:	011b      	lsls	r3, r3, #4
+ 20a48b2:	50e1      	str	r1, [r4, r3]
+ 20a48b4:	68a1      	ldr	r1, [r4, #8]
+ 20a48b6:	2304      	movs	r3, #4
+ 20a48b8:	000d      	movs	r5, r1
+ 20a48ba:	439d      	bics	r5, r3
+ 20a48bc:	d132      	bne.n	20a4924 <ftCommonAppearSetStatus+0xa8>
+ 20a48be:	1e53      	subs	r3, r2, #1
+ 20a48c0:	1e5a      	subs	r2, r3, #1
+ 20a48c2:	4193      	sbcs	r3, r2
+ 20a48c4:	4660      	mov	r0, ip
+ 20a48c6:	33dd      	adds	r3, #221	@ 0xdd
+ 20a48c8:	001f      	movs	r7, r3
+ 20a48ca:	f00e fbe5 	bl	20b3098 <efManagerMarioEntryDokanMakeEffect>
+ 20a48ce:	0020      	movs	r0, r4
+ 20a48d0:	f7b7 f912 	bl	205baf8 <mpCommonSetFighterAir>
+ 20a48d4:	2500      	movs	r5, #0
+ 20a48d6:	23fe      	movs	r3, #254	@ 0xfe
+ 20a48d8:	0039      	movs	r1, r7
+ 20a48da:	2200      	movs	r2, #0
+ 20a48dc:	0030      	movs	r0, r6
+ 20a48de:	059b      	lsls	r3, r3, #22
+ 20a48e0:	9500      	str	r5, [sp, #0]
+ 20a48e2:	f01b fd37 	bl	20c0354 <ftMainSetStatus>
+ 20a48e6:	0030      	movs	r0, r6
+ 20a48e8:	f759 faa8 	bl	1ffde3c <ftGetStruct>
+ 20a48ec:	22c7      	movs	r2, #199	@ 0xc7
+ 20a48ee:	2109      	movs	r1, #9
+ 20a48f0:	0052      	lsls	r2, r2, #1
+ 20a48f2:	5c83      	ldrb	r3, [r0, r2]
+ 20a48f4:	438b      	bics	r3, r1
+ 20a48f6:	430b      	orrs	r3, r1
+ 20a48f8:	5483      	strb	r3, [r0, r2]
+ 20a48fa:	2292      	movs	r2, #146	@ 0x92
+ 20a48fc:	230d      	movs	r3, #13
+ 20a48fe:	32ff      	adds	r2, #255	@ 0xff
+ 20a4900:	5c81      	ldrb	r1, [r0, r2]
+ 20a4902:	400b      	ands	r3, r1
+ 20a4904:	2132      	movs	r1, #50	@ 0x32
+ 20a4906:	430b      	orrs	r3, r1
+ 20a4908:	5483      	strb	r3, [r0, r2]
+ 20a490a:	4b15      	ldr	r3, [pc, #84]	@ (20a4960 <ftCommonAppearSetStatus+0xe4>)
+ 20a490c:	3a1a      	subs	r2, #26
+ 20a490e:	3aff      	subs	r2, #255	@ 0xff
+ 20a4910:	50e2      	str	r2, [r4, r3]
+ 20a4912:	23c0      	movs	r3, #192	@ 0xc0
+ 20a4914:	005b      	lsls	r3, r3, #1
+ 20a4916:	50e5      	str	r5, [r4, r3]
+ 20a4918:	3304      	adds	r3, #4
+ 20a491a:	50e5      	str	r5, [r4, r3]
+ 20a491c:	3b08      	subs	r3, #8
+ 20a491e:	50e5      	str	r5, [r4, r3]
+ 20a4920:	b003      	add	sp, #12
+ 20a4922:	bdf0      	pop	{r4, r5, r6, r7, pc}
+ 20a4924:	2901      	cmp	r1, #1
+ 20a4926:	d00b      	beq.n	20a4940 <ftCommonAppearSetStatus+0xc4>
+ 20a4928:	2706      	movs	r7, #6
+ 20a492a:	2902      	cmp	r1, #2
+ 20a492c:	d1cf      	bne.n	20a48ce <ftCommonAppearSetStatus+0x52>
+ 20a492e:	3a01      	subs	r2, #1
+ 20a4930:	1e53      	subs	r3, r2, #1
+ 20a4932:	419a      	sbcs	r2, r3
+
+  The Dokan test is now 'movs r3,#4 / bics r5,r3 / bne' -- (fkind & ~4) == 0,
+  which is exactly the set {0, 4} = {Mario, Luigi}. GCC folded the two
+  equality tests into one mask. Status is 'adds r3,#221' off the lr test,
+  i.e. nFTMarioStatusAppearR (221) / AppearL (222).
+
+  NEGATIVE CONTROLS, unchanged and visible in the same listing:
+    cmp r1,#1 -> Fox / efManagerFoxEntryArwingMakeEffect
+    movs r7,#6 then cmp r1,#2 -> Donkey / efManagerDonkeyEntryTaruMakeEffect
+    every other fkind still reaches status 6 (EntryNull) with no effect call.
