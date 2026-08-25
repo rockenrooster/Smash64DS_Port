@@ -1,10 +1,11 @@
 # Handoff
 
 Current: 2026-08-25 — **THE SHIPPING CONFIGURATION HOSTS FOUR DISTINCT FIGHTER
-KINDS.** Mario/Fox/Luigi/Donkey play a whole 60 s match at `NDS_R2_BATTLEPACK 1`
-with the shipping animation reservation, general-heap low-water 49,956 B against
-the 25,600 floor (board row P2-3r13). Luigi and Donkey Kong are selectable and
-marked unfinished. P2-1/P2-2 still have only their owner visual/play residuals.
+KINDS** (row P2-3r13: whole 60 s match at `NDS_R2_BATTLEPACK 1`, heap low-water
+49,956 B against the 25,600 floor), **and DK's cargo matrix is verified** (row
+P2-3r10, one defect fixed: hitting DK while he carried a fighter dropped him out
+of the cargo ladder). Luigi and Donkey Kong are selectable and marked
+unfinished. P2-1/P2-2 still have only their owner visual/play residuals.
 
 ## State
 
@@ -113,6 +114,16 @@ marked unfinished. P2-1/P2-2 still have only their owner visual/play residuals.
    on the table:** the per-context graphics heap peaks at **96 B of 53,248**
    (two contexts = 106,496 B of arena), overflow 0; re-read it on Results /
    Sudden Death / pause zoom before cutting.
+   **DK's cargo matrix is verified** (P2-3r10, `docs/p2/fighters/dk.md`): grab,
+   carry, walk/turn/jump/edge/land, the ONE cargo release (`ThrowFF`/
+   `ThrowAirFF`; `HeavyThrow*` are heavy-ITEM throws, P2-5), mash-out,
+   KO-while-carried and Giant Punch charge, each traced to its source owner AND
+   to the linked image. **One defect, fixed at its seam:** a `#define` in
+   `battleship_ftcommon_damage.c` sent `ftDonkeyThrowFDamageSetStatus` to a
+   compat stub, so the source setter was compiled and then dropped by
+   `--gc-sections`. **Rail: a source function defined in a `battleship_*.o` but
+   absent from the linked ELF is stranded unless it has an in-TU caller.** Found
+   and NOT fixed: VS **Stock**'s last-stock path hits a weak no-op — row P2-3r14.
 
 4. **P2-3 background.** Luigi's production path is landed and he ANIMATES
    (P2-3r2). The bounded fast proof route is repaired end-to-end and **both
@@ -149,15 +160,6 @@ marked unfinished. P2-1/P2-2 still have only their owner visual/play residuals.
    remaining gap to 1.12M is the soft-float caller census lanes and walk #1
    of `ndsFTParamsInvalidateSubtree` (~8K), per the board row.
 
-The phase-close run also fixed verifier drift rather than bypassing it:
-`verify-all.ps1 -NoBuild` now resolves retained per-harness artifacts through
-the shared build-output resolver, the wallpaper fixture recognizes exact
-repeated source rows instead of scratch-buffer pointer identity, the native
-fighter owner fixture pins both High and Low BattleShip light-command censuses,
-and the four-CPU sparse marker is proven to observe the same published
-frame-complete tuple as the universal marker. `DECOMP_PRISTINE=PASS` remained
-green throughout.
-
 ## Standing operational facts
 
 - **Republish the free-play ROM after every fix batch** (owner, 2026-08-22): a plain
@@ -166,15 +168,13 @@ green throughout.
 - Clean checkout builds through `build.ps1`, not bare `make` (four of six
   `.inc` are gitignored). Never pass `-j`, never override `MAKEFLAGS`, one
   build at a time.
-- `smash64ds` is the published free-play shell target; the P2-1M "publish not
-  done" restart item is closed by the later P2-1N publish work.
 - Shell target relationship: `smash64ds` is the published walk-free shell
   configuration. `smash64ds-p2-shell-freeplay-hwtri` is its non-published lab
   twin; `smash64ds-p2-shell-hwtri` adds the scripted realtime shell walk used
   by Boundary arm 2/cadence probing; `smash64ds-p2-shell-loop-hwtri` is the
   fast-logic loop arm. The diagnostic names do not publish.
-- `gNdsMenuShellWalkBudget` makes the lap count a runtime poke, so a three-lap
-  smoke and the twenty-lap gate come from ONE linked ROM.
+- `gNdsMenuShellWalkBudget` makes the lap count a runtime poke: one linked ROM
+  serves a smoke and a soak.
 - **The shell walk costs ~69 s before the battle starts** — 4,118 presented
   frames at 60 Hz (banked: `artifacts/verification/2026-08-19_p2-shell.txt`).
   Every wait in the battle arm is a *guest* anchor, not wall-clock, so this

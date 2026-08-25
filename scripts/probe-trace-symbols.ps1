@@ -140,8 +140,19 @@ finally {
         New-Item -ItemType Directory -Force -Path (Split-Path -Parent $Artifact) |
             Out-Null
         Copy-Item -LiteralPath $captured -Destination $Artifact -Force
+        # `Breakpoint N at ...` lines are printed too, and that is not cosmetic.
+        # This probe nm-verifies that a symbol EXISTS and then breaks on it by
+        # NAME, which is a debug-info resolution: gdb can answer with
+        # `Breakpoint 5 at 0x0: <name>. (6 locations)` when the body was inlined
+        # into several callers. A zero hit count on such a breakpoint is not
+        # evidence of absence, and with the summary filtered to TRACE lines
+        # there was nothing on screen to say so (P2-3r10, 2026-08-25, where
+        # ftDonkeyThrowFWaitSetStatus resolved exactly that way). Read the
+        # resolution before you read the counts; prefer a symbol with one
+        # location -- an out-of-line wrapper or a status callback -- as the
+        # indicator for a transition you intend to prove absent.
         Get-Content -LiteralPath $Artifact |
-            Where-Object { $_ -match '^(TRACE|#)' } |
+            Where-Object { $_ -match '^(TRACE|#|Breakpoint )' } |
             ForEach-Object { Write-Output $_ }
         Write-Output "probe capture: $Artifact"
     }

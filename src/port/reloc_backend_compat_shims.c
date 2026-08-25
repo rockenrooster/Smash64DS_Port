@@ -7237,11 +7237,18 @@ void ftParamStopVoiceRunProcDamage(GObj *fighter_gobj)
     }
 }
 
+#if !NDS_P2_DONKEY
+/* Compile seam for builds without Donkey Kong, where `battleship_donkey.c` --
+ * and therefore the source `ftDonkeyThrowFDamageSetStatus` -- is not compiled.
+ * Nothing can reach it there: ftCommonDamageUpdateCatchResist only takes this
+ * arm for a Donkey Kong holding a fighter or a heavy item.  With
+ * NDS_P2_DONKEY=1 the source setter is linked and battleship_ftcommon_damage.c
+ * calls it directly (P2-3r10). */
 void ndsCompatFTDonkeyThrowFDamageSetStatus(GObj *fighter_gobj)
 {
-    /* ponytail: compile seam only; real DK throw-damage runtime is not imported. */
     ftCommonDamageGotoDamageStatus(fighter_gobj);
 }
+#endif
 
 void ftSetupDropItem(FTStruct *fp)
 {

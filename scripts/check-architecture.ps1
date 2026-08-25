@@ -69,9 +69,20 @@ $sourceFiles = @(Get-ChildItem -LiteralPath (Join-Path $root 'src') -Recurse -In
 $allowedDecompHeaderIncludes = @(
     # Runtime slice 2 imports the original descriptor tables through these
     # narrow wrappers; see docs/FT_ANIM_STATUS_SCOUT.md.
+    #
+    # This list is PER FIGHTER and every new production fighter adds one, so it
+    # must be extended when the fighter lands, not later: Luigi and Donkey Kong
+    # shipped their wrappers on 2026-08-22 without it and this checker has been
+    # red ever since (found 2026-08-25, board row P2-3r10). Each wrapper is the
+    # same narrow shape -- forward to the decomp descriptor table under
+    # `NDS_IMPORT_BATTLESHIP_FTMANAGER && NDS_P2_<KIND>`, and supply
+    # NDS_FT_STATUS_STUB16 otherwise -- so a new entry here is only correct if
+    # the file has that shape.
     'include/ft/ftcommon/ftcommonstatus.h',
     'include/ft/ftchar/ftmario/ftmariostatus.h',
-    'include/ft/ftchar/ftfox/ftfoxstatus.h'
+    'include/ft/ftchar/ftfox/ftfoxstatus.h',
+    'include/ft/ftchar/ftluigi/ftluigistatus.h',
+    'include/ft/ftchar/ftdonkey/ftdonkeystatus.h'
 )
 foreach ($file in $sourceFiles) {
     $relative = Get-RelativePath $file.FullName

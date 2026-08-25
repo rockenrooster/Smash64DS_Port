@@ -20,7 +20,15 @@ void ftPublicCommonCheck(GObj *fighter_gobj, f32 knockback,
                          sb32 is_force_curr_knockback);
 void ifScreenFlashSetColAnimID(s32 colanim_id, s32 colanim_duration);
 void ftKirbySpecialNDamageCheckLoseCopy(GObj *fighter_gobj);
+#if NDS_P2_DONKEY
+/* ftdonkeythrowfdamage.c, compiled by src/import/battleship_donkey.c.  Declared
+ * here rather than in include/ft/fighter.h so the DK cargo ABI stays inside the
+ * import TUs that own it, exactly as battleship_ftcommon_catch.c declares
+ * ftDonkeyThrowFWaitSetStatus. */
+void ftDonkeyThrowFDamageSetStatus(GObj *fighter_gobj);
+#else
 void ndsCompatFTDonkeyThrowFDamageSetStatus(GObj *fighter_gobj);
+#endif
 
 #ifndef FTCOMMON_DAMAGE_EFFECT_WAIT_LOW
 #define FTCOMMON_DAMAGE_EFFECT_WAIT_LOW 0
@@ -109,8 +117,22 @@ void ndsCompatFTDonkeyThrowFDamageSetStatus(GObj *fighter_gobj);
 #define ftCommonDamageSetDamageColAnim \
     ndsBaseFTCommonDamageSetDamageColAnim
 #define ftCommonDamageUpdateMain ndsBaseFTCommonDamageUpdateMain
+#if !NDS_P2_DONKEY
+/* Without Donkey Kong in the build `battleship_donkey.c` is not compiled, so
+ * `ftdonkeythrowfdamage.c` supplies no definition and the reference below has
+ * to resolve somewhere: the compat seam keeps the TU linkable. It is NOT a
+ * behavioral fallback -- the only caller, ftCommonDamageUpdateCatchResist, is
+ * reachable with knockback only for a Donkey Kong carrying a fighter or a
+ * heavy item (every other fighter's ftCommonDamageCheckCatchResist arm implies
+ * the zero-knockback/hitlag test that UpdateCatchResist re-applies, which takes
+ * the colour-anim branch instead).  With NDS_P2_DONKEY=1 the source setter is
+ * linked and must be called directly: routing it through
+ * ftCommonDamageGotoDamageStatus dropped DK out of the cargo ladder into an
+ * ordinary Damage status while `catch_gobj` still pointed at the shouldered
+ * victim -- board row P2-3r10. */
 #define ftDonkeyThrowFDamageSetStatus \
     ndsCompatFTDonkeyThrowFDamageSetStatus
+#endif
 
 void ndsBaseFTCommonDamageUpdateCatchResist(GObj *fighter_gobj);
 void ndsBaseFTCommonDamageFlyRollUpdateModelPitch(GObj *fighter_gobj);
