@@ -5343,7 +5343,7 @@ typedef struct NDSRendererTraversalState
  * layout. `NDSNativePreparedDenseVertex` stays below: it is build-gated
  * draw scratch, never image content. */
 #include <nds/nds_native_fighter_tables.h>
-#if NDS_P2_LUIGI || NDS_P2_DONKEY
+#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN
 /* The arena the image buffers come from; the renderer does not otherwise
  * allocate, so the declaration arrives with the feature that needs it. */
 extern void *syTaskmanMalloc(size_t size, u32 align);
@@ -5904,6 +5904,115 @@ NDS_FTR_OWNER_RUNTIME(
     sNdsNativeDonkeyRootLightPreambles, NDS_NATIVE_DONKEY_MODEL_DATA_SIZE);
 #endif
 
+#if NDS_P2_CAPTAIN
+#if NDS_NATIVE_OWNER_IMAGE_CAPTAIN
+/* P2-3r4: these tables are FILLED AT LOAD from the owner image, so they are
+ * mutable and start empty.  The arrays that used to initialise them are
+ * guarded out of this binary by the same flag; there is exactly one copy of
+ * the bytes and it is the NitroFS one.  Every reader goes through the owner
+ * runtime, which is only reachable after ndsRendererNativeEnsureOwnerImage
+ * has bound this struct. */
+static NDSNativeFighterRuntimeTables sNdsNativeCaptainFighterHighTables;
+#else
+static const NDSNativeFighterRuntimeTables sNdsNativeCaptainFighterHighTables =
+{
+    sNdsNativeCaptainFighterStateDeltas,
+    NDS_FTR_COUNT(sNdsNativeCaptainFighterStateDeltas),
+    sNdsNativeCaptainFighterStateSequence,
+    NDS_FTR_COUNT(sNdsNativeCaptainFighterStateSequence),
+    sNdsNativeCaptainFighterVertexActions,
+    NDS_FTR_COUNT(sNdsNativeCaptainFighterVertexActions),
+    sNdsNativeCaptainFighterEpochDirectPolicy,
+    sNdsNativeCaptainFighterDenseVertices,
+    NDS_FTR_COUNT(sNdsNativeCaptainFighterDenseVertices),
+    sNdsNativeCaptainFighterPreparedDense,
+    sNdsNativeCaptainFighterActionDenseSpans,
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+    sNdsNativeCaptainFighterDenseColorSource,
+#endif
+    sNdsNativeCaptainFighterPackedCorners,
+    NDS_FTR_COUNT(sNdsNativeCaptainFighterPackedCorners),
+    sNdsNativeCaptainFighterRunFirstCorner,
+    NDS_FTR_COUNT(sNdsNativeCaptainFighterRunFirstCorner),
+    sNdsNativeCaptainFighterRunFirstUnique,
+    sNdsNativeCaptainFighterRunUniqueCount,
+    sNdsNativeCaptainFighterRunUniqueDense,
+    sNdsNativeCaptainFighterTriangles,
+    NDS_FTR_COUNT(sNdsNativeCaptainFighterTriangles),
+    sNdsNativeCaptainFighterRuns,
+    NDS_FTR_COUNT(sNdsNativeCaptainFighterRuns),
+#if NDS_TASK56_FIGHTER_PRIMITIVES >= 1
+    sNdsNativeCaptainFighterPrimitiveGroupFirst,
+    sNdsNativeCaptainFighterPrimitiveGroupCount,
+    sNdsNativeCaptainFighterPrimitiveGroupType,
+    sNdsNativeCaptainFighterPrimitiveGroupFirstVertex,
+    sNdsNativeCaptainFighterPrimitiveGroupVertexCount,
+    sNdsNativeCaptainFighterPrimitiveVertices,
+#endif
+    sNdsNativeCaptainFighterEpochs,
+    NDS_FTR_COUNT(sNdsNativeCaptainFighterEpochs)
+};
+#endif
+
+#if NDS_NATIVE_OWNER_IMAGE_CAPTAIN
+/* P2-3r4: these tables are FILLED AT LOAD from the owner image, so they are
+ * mutable and start empty.  The arrays that used to initialise them are
+ * guarded out of this binary by the same flag; there is exactly one copy of
+ * the bytes and it is the NitroFS one.  Every reader goes through the owner
+ * runtime, which is only reachable after ndsRendererNativeEnsureOwnerImage
+ * has bound this struct. */
+static NDSNativeFighterRuntimeTables sNdsNativeCaptainFighterLowTables;
+#else
+static const NDSNativeFighterRuntimeTables sNdsNativeCaptainFighterLowTables =
+{
+    sNdsNativeCaptainFighterStateDeltasLow,
+    NDS_FTR_COUNT(sNdsNativeCaptainFighterStateDeltasLow),
+    sNdsNativeCaptainFighterStateSequenceLow,
+    NDS_FTR_COUNT(sNdsNativeCaptainFighterStateSequenceLow),
+    sNdsNativeCaptainFighterVertexActionsLow,
+    NDS_FTR_COUNT(sNdsNativeCaptainFighterVertexActionsLow),
+    sNdsNativeCaptainFighterEpochDirectPolicyLow,
+    sNdsNativeCaptainFighterDenseVerticesLow,
+    NDS_FTR_COUNT(sNdsNativeCaptainFighterDenseVerticesLow),
+    sNdsNativeCaptainFighterPreparedDenseLow,
+    sNdsNativeCaptainFighterActionDenseSpansLow,
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+    sNdsNativeCaptainFighterDenseColorSourceLow,
+#endif
+    sNdsNativeCaptainFighterPackedCornersLow,
+    NDS_FTR_COUNT(sNdsNativeCaptainFighterPackedCornersLow),
+    sNdsNativeCaptainFighterRunFirstCornerLow,
+    NDS_FTR_COUNT(sNdsNativeCaptainFighterRunFirstCornerLow),
+    sNdsNativeCaptainFighterRunFirstUniqueLow,
+    sNdsNativeCaptainFighterRunUniqueCountLow,
+    sNdsNativeCaptainFighterRunUniqueDenseLow,
+    sNdsNativeCaptainFighterTrianglesLow,
+    NDS_FTR_COUNT(sNdsNativeCaptainFighterTrianglesLow),
+    sNdsNativeCaptainFighterRunsLow,
+    NDS_FTR_COUNT(sNdsNativeCaptainFighterRunsLow),
+#if NDS_TASK56_FIGHTER_PRIMITIVES >= 1
+    sNdsNativeCaptainFighterPrimitiveGroupFirstLow,
+    sNdsNativeCaptainFighterPrimitiveGroupCountLow,
+    sNdsNativeCaptainFighterPrimitiveGroupTypeLow,
+    sNdsNativeCaptainFighterPrimitiveGroupFirstVertexLow,
+    sNdsNativeCaptainFighterPrimitiveGroupVertexCountLow,
+    sNdsNativeCaptainFighterPrimitiveVerticesLow,
+#endif
+    sNdsNativeCaptainFighterEpochsLow,
+    NDS_FTR_COUNT(sNdsNativeCaptainFighterEpochsLow)
+};
+#endif
+
+NDS_FTR_OWNER_RUNTIME(
+    sNdsNativeCaptainHighOwner, &sNdsNativeCaptainFighterHighTables,
+    sNdsNativeCaptainRoots, sNdsNativeCaptainCrossPaletteSlots,
+    sNdsNativeCaptainRootLightPreambles, NDS_NATIVE_CAPTAIN_MODEL_DATA_SIZE);
+NDS_FTR_OWNER_RUNTIME(
+    sNdsNativeCaptainLowOwner, &sNdsNativeCaptainFighterLowTables,
+    sNdsNativeCaptainRootsLow, sNdsNativeCaptainCrossPaletteSlotsLow,
+    sNdsNativeCaptainRootLightPreambles, NDS_NATIVE_CAPTAIN_MODEL_DATA_SIZE);
+#endif
+
 #undef NDS_FTR_OWNER_RUNTIME
 
 static const NDSNativeFighterRuntimeTables *sNdsNativeFighterActiveTables =
@@ -5911,7 +6020,7 @@ static const NDSNativeFighterRuntimeTables *sNdsNativeFighterActiveTables =
 static const NDSNativeFighterOwnerRuntime *sNdsNativeFighterActiveOwner =
     &sNdsNativeMarioHighOwner;
 
-#if NDS_P2_LUIGI || NDS_P2_DONKEY
+#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN
 /* --- P2-3r4: image-backed owner tables ------------------------------------
  *
  * A P2-3 owner's generated geometry ships as a NitroFS image rather than as
@@ -5960,6 +6069,13 @@ static const char *ndsRendererNativeOwnerImagePath(u32 owner_slot,
                                         "nitro:/fighters/donkey_high.bin";
     }
 #endif
+#if NDS_P2_CAPTAIN
+    if (owner_slot == NDS_NATIVE_IMAGE_SLOT_CAPTAIN)
+    {
+        return (use_low_detail != 0u) ? "nitro:/fighters/captain_low.bin" :
+                                        "nitro:/fighters/captain_high.bin";
+    }
+#endif
     (void)use_low_detail;
     return NULL;
 }
@@ -5980,6 +6096,14 @@ static u32 ndsRendererNativeOwnerImageBytes(u32 owner_slot, u32 use_low_detail)
         return (use_low_detail != 0u) ?
             (u32)sizeof(NDSNativeDonkeyLowImage) :
             (u32)sizeof(NDSNativeDonkeyHighImage);
+    }
+#endif
+#if NDS_P2_CAPTAIN
+    if (owner_slot == NDS_NATIVE_IMAGE_SLOT_CAPTAIN)
+    {
+        return (use_low_detail != 0u) ?
+            (u32)sizeof(NDSNativeCaptainLowImage) :
+            (u32)sizeof(NDSNativeCaptainHighImage);
     }
 #endif
     (void)use_low_detail;
@@ -6100,6 +6224,26 @@ static void ndsRendererNativeBindOwnerImage(u32 owner_slot, u32 use_low_detail,
                          NDSNativeDonkeyHighImage, base,
                          NDS_NATIVE_IMAGE_DONKEY_HIGH,
                          sNdsNativeDonkeyFighterPreparedDense);
+        }
+        return;
+    }
+#endif
+#if NDS_NATIVE_OWNER_IMAGE_CAPTAIN
+    if (owner_slot == NDS_NATIVE_IMAGE_SLOT_CAPTAIN)
+    {
+        if (use_low_detail != 0u)
+        {
+            NDS_IMG_BIND(sNdsNativeCaptainFighterLowTables,
+                         NDSNativeCaptainLowImage, base,
+                         NDS_NATIVE_IMAGE_CAPTAIN_LOW,
+                         sNdsNativeCaptainFighterPreparedDenseLow);
+        }
+        else
+        {
+            NDS_IMG_BIND(sNdsNativeCaptainFighterHighTables,
+                         NDSNativeCaptainHighImage, base,
+                         NDS_NATIVE_IMAGE_CAPTAIN_HIGH,
+                         sNdsNativeCaptainFighterPreparedDense);
         }
         return;
     }
@@ -6255,11 +6399,28 @@ s32 ndsRendererNativeVerifyOwnerImage(u32 owner_slot, u32 use_low_detail)
         }
     }
 #endif
+#if NDS_P2_CAPTAIN && !NDS_NATIVE_OWNER_IMAGE_CAPTAIN
+    if (owner_slot == NDS_NATIVE_IMAGE_SLOT_CAPTAIN)
+    {
+        if (use_low_detail != 0u)
+        {
+            const NDSNativeCaptainLowImage *img_ =
+                (const NDSNativeCaptainLowImage *)slot->base;
+            NDS_NATIVE_IMAGE_CAPTAIN_LOW_MEMBERS(NDS_IMG_VERIFY)
+        }
+        else
+        {
+            const NDSNativeCaptainHighImage *img_ =
+                (const NDSNativeCaptainHighImage *)slot->base;
+            NDS_NATIVE_IMAGE_CAPTAIN_HIGH_MEMBERS(NDS_IMG_VERIFY)
+        }
+    }
+#endif
     return (gNdsNativeOwnerImageMismatchCount == before) ? TRUE : FALSE;
 }
 #endif /* NDS_NATIVE_OWNER_IMAGE_VERIFY */
 
-#endif /* NDS_P2_LUIGI || NDS_P2_DONKEY */
+#endif /* NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN */
 
 static const NDSNativeFighterOwnerRuntime *
 ndsRendererNativeFighterOwnerForDetail(u32 slot, u32 use_low_detail)
@@ -6286,6 +6447,13 @@ ndsRendererNativeFighterOwnerForDetail(u32 slot, u32 use_low_detail)
     {
         return (use_low_detail != 0u) ?
             &sNdsNativeDonkeyLowOwner : &sNdsNativeDonkeyHighOwner;
+    }
+#endif
+#if NDS_P2_CAPTAIN
+    if (slot == 4u)
+    {
+        return (use_low_detail != 0u) ?
+            &sNdsNativeCaptainLowOwner : &sNdsNativeCaptainHighOwner;
     }
 #endif
     return NULL;

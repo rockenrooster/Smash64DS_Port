@@ -294,6 +294,12 @@ P2_O2R_ASSETS = {
         0x013d,
         "bced84a9d8aa1a2c08ed9f87994bb06a836dfb8b7a797fec365dd68655f9e2f8",
     ),
+    "captain": (
+        Path("decomp/BattleShip-main/BattleShip_o2r"
+             "/reloc_fighters_main/CaptainModel"),
+        0x014c,
+        "bbd56fc89524fc5a5de7d2cb88fdead3c231ad402b6039e1b63e4f1091c4669e",
+    ),
 }
 
 # These are the primary JointTree DObjDesc arrays in the exact hashed O2R
@@ -313,6 +319,8 @@ OWNER_JOINT_TREES = {
     "luigi": (0x2410, 26),
     # decomp dDonkeyModel_JointTree (317_DonkeyModel.c:1646)
     "donkey": (0x39a8, 27),
+    # decomp dCaptainModel_JointTree (332_CaptainModel.c:1888)
+    "captain": (0x3be0, 27),
 }
 
 # The SECOND JointTree array in each hashed O2R resource is the low-detail
@@ -330,6 +338,8 @@ OWNER_JOINT_TREES_LOW = {
     "luigi": (0x49e8, 26),
     # decomp dDonkeyModel_JointTree_0x6EC0 (317_DonkeyModel.c:3379)
     "donkey": (0x6ec0, 27),
+    # decomp dCaptainModel_JointTree_0x7900 (332_CaptainModel.c:4071)
+    "captain": (0x7900, 27),
 }
 
 # Canonical export hashes for the low-detail program, pinned from the same
@@ -392,6 +402,8 @@ OWNER_SETUP_PARTS = {
     "luigi": (0xffffff00, 0x00000000),
     # dDonkeyMain_setup_parts (213_DonkeyMain.c:103)
     "donkey": (0xffffff80, 0x00000000),
+    # dCaptainMain_setup_parts (236_CaptainMain.c:103), the same mask
+    "captain": (0xffffff80, 0x00000000),
 }
 
 # Slots 0..15 remain reserved for the camera seed and live GX hierarchy stack.
@@ -420,6 +432,14 @@ OWNER_CROSS_BINDING_SLOTS = {
         (0, 16), (1, 17), (2, 18), (3, 19), (6, 20),
         (7, 21), (10, 22), (11, 23), (13, 24), (14, 25),
     ),
+    # CAPTAIN FALCON HAS NONE, IN EITHER DETAIL, AND THAT IS THE MODEL'S OWN
+    # ANSWER RATHER THAN A MISSING PIN.  His decode produces zero submit-class-1
+    # runs: every triangle run draws under the current root's own matrix, so no
+    # foreign binding is ever restored and no physical palette slot is claimed.
+    # Donkey's ten slots (16..25) therefore remain the whole reserved band, and
+    # admitting Falcon does not narrow the 26..30 headroom the parent-slot
+    # allocator in ndsRendererAdapterBuildGxSlotTable scans downward from.
+    "captain": (),
 }
 
 OWNER_PLAN_COUNTS = {
@@ -427,6 +447,9 @@ OWNER_PLAN_COUNTS = {
     "fox": (27, 18),
     "luigi": (25, 14),
     "donkey": (26, 16),
+    # 25 selected joints + the synthetic TopN, 17 drawable roots; identical in
+    # both details.
+    "captain": (26, 17),
 }
 
 # camera seeds, hierarchy pushes, hierarchy pops, cross-binding stores, and
@@ -436,6 +459,9 @@ OWNER_GX_PLAN_COUNTS = {
     "fox": (1, 6, 6, 2, 14),
     "luigi": (1, 5, 5, 8, 70),
     "donkey": (1, 6, 6, 10, 80),
+    # Zero cross-binding stores means zero per-corner restores; see
+    # OWNER_CROSS_BINDING_SLOTS above.
+    "captain": (1, 6, 6, 0, 0),
 }
 
 # The low-detail program shares the high skeleton (same pushes/pops/stores);
@@ -447,6 +473,7 @@ DETAIL_GX_PLAN_COUNTS = {
         "fox": (1, 6, 6, 2, 10),
         "luigi": (1, 5, 5, 8, 46),
         "donkey": (1, 6, 6, 10, 74),
+        "captain": (1, 6, 6, 0, 0),
     },
 }
 
@@ -891,6 +918,10 @@ P2_OWNER_MODEL_CENSUS = {
         "high": (60, 259, 57, 318, 62, 34, 16, 315, 954, 22, 64, 0, 80),
         "low": (50, 202, 44, 200, 42, 25, 16, 201, 600, 14, 64, 0, 74),
     },
+    "captain": {
+        "high": (87, 254, 34, 319, 34, 34, 17, 291, 957, 0, 68, 6, 0),
+        "low": (73, 223, 30, 200, 30, 30, 17, 205, 600, 0, 68, 4, 0),
+    },
 }
 
 # Admission order is the native-owner slot ABI after frozen Mario/Fox. Keep the
@@ -899,6 +930,7 @@ P2_OWNER_MODEL_CENSUS = {
 P2_RUNTIME_OWNERS = (
     ("luigi", "NDS_P2_LUIGI"),
     ("donkey", "NDS_P2_DONKEY"),
+    ("captain", "NDS_P2_CAPTAIN"),
 )
 
 
@@ -3456,13 +3488,37 @@ def generate(repo_root: Path | None = None) -> str:
         p2_low_context = build_p2_owner_runtime_context(
             repo_root, owner_name, "low"
         )
-        if (p2_high_context["light_preambles"] !=
-                p2_low_context["light_preambles"]):
+        # ONE PREAMBLE TABLE PER OWNER, BUT IT IS THE UNION OF BOTH DETAILS.
+        #
+        # Both owner runtimes point at the single table emitted by the HIGH
+        # pass, so the low program's root indices have to address that table.
+        # Luigi and Donkey happen to carry identical high/low preamble sets
+        # and the original code asserted that they always would.  Captain
+        # Falcon does not: his LOW model's root 6 carries
+        # `0xffffff00 / 0x804c3300`, a preamble the HIGH model never emits, so
+        # the assertion was a false invariant that would have rejected a
+        # faithful decode.  Take the UNION instead.  The high table is a prefix
+        # of the union, so every high root index is unchanged; the low roots
+        # are re-indexed through their own table's position in it.
+        merged_preambles = list(p2_high_context["light_preambles"])
+        for preamble in p2_low_context["light_preambles"]:
+            if preamble not in merged_preambles:
+                merged_preambles.append(preamble)
+        if len(merged_preambles) > 0xff:
             raise ValueError(
-                f"{owner_name}: High/Low root light preambles differ"
+                f"{owner_name}: merged root-light preamble index exceeds u8"
             )
-        p2_low_context["high_light_preambles"] = \
-            p2_high_context["light_preambles"]
+        low_remap = [
+            merged_preambles.index(preamble)
+            for preamble in p2_low_context["light_preambles"]
+        ]
+        p2_low_context["light_preamble_indices"] = [
+            low_remap[index]
+            for index in p2_low_context["light_preamble_indices"]
+        ]
+        p2_high_context["light_preambles"] = merged_preambles
+        p2_low_context["light_preambles"] = merged_preambles
+        p2_low_context["high_light_preambles"] = merged_preambles
         p2_runtime_contexts[owner_name] = (p2_high_context, p2_low_context)
 
     lines = [

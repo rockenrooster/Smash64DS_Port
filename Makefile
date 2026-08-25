@@ -681,6 +681,7 @@ NDS_NATIVE_OWNER_IMAGE ?= 1
 NDS_NATIVE_OWNER_IMAGE_VERIFY ?= 0
 NDS_NATIVE_OWNER_IMAGE_LUIGI = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P2_LUIGI),0)
 NDS_NATIVE_OWNER_IMAGE_DONKEY = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P2_DONKEY),0)
+NDS_NATIVE_OWNER_IMAGE_CAPTAIN = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P2_CAPTAIN),0)
 # P2-3 focused fighter-production proof selector. -1 leaves the canonical
 # Mario-vs-Fox descriptor byte-for-byte unchanged; a non-negative value is an
 # nFTKind* integer used only for fighter slot 0 in direct-battle proof builds.
@@ -4408,6 +4409,9 @@ endif
 ifeq ($(NDS_P2_DONKEY),1)
 NDS_NATIVE_IMAGE_OWNERS += donkey
 endif
+ifeq ($(NDS_P2_CAPTAIN),1)
+NDS_NATIVE_IMAGE_OWNERS += captain
+endif
 NDS_NITROFS_NATIVE_IMAGE_FILES := $(foreach owner,$(NDS_NATIVE_IMAGE_OWNERS),	$(NDS_NATIVE_IMAGE_DIR)/$(owner)_high.bin 	$(NDS_NATIVE_IMAGE_DIR)/$(owner)_low.bin)
 
 $(NDS_NATIVE_IMAGE_HEADER): $(NDS_NATIVE_IMAGE_GENERATOR)
@@ -4526,6 +4530,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_NATIVE_OWNER_IMAGE_VERIFY $(NDS_NATIVE_OWNER_IMAGE_VERIFY)'; \
 		echo '#define NDS_P2_DONKEY $(NDS_P2_DONKEY)'; \
 		echo '#define NDS_P2_CAPTAIN $(NDS_P2_CAPTAIN)'; \
+		echo '#define NDS_NATIVE_OWNER_IMAGE_CAPTAIN $(NDS_NATIVE_OWNER_IMAGE_CAPTAIN)'; \
 		echo '#define NDS_P2_PROOF_FIGHTER0 $(NDS_P2_PROOF_FIGHTER0)'; \
 		echo '#define NDS_R2_SOAK_MATCH_MINUTES $(NDS_R2_SOAK_MATCH_MINUTES)'; \
 		echo '#define NDS_ANIM_JOINT_AUDIT $(NDS_ANIM_JOINT_AUDIT)'; \

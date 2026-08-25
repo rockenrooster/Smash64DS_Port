@@ -71,7 +71,7 @@ REPO = _paths.REPO_ROOT
 
 # Every owner the runtime can select, in both detail levels. Mario/Fox share one
 # combined table set (P2-2's frozen program); P2-3 owners get independent ones.
-OWNERS = ("mario", "fox", "luigi", "donkey")
+OWNERS = ("mario", "fox", "luigi", "donkey", "captain")
 DETAILS = ("high", "low")
 
 DOBJ_DESC_SIZE = native.DOBJ_DESC_SIZE
