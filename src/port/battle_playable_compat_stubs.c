@@ -105,11 +105,6 @@ NDS_WEAK void sc1PGameSpawnEnemyTeamNext(GObj *fighter_gobj)
     (void)fighter_gobj;
 }
 
-NDS_WEAK void ftCommonSleepSetStatus(GObj *fighter_gobj)
-{
-    (void)fighter_gobj;
-}
-
 NDS_WEAK void itMainDestroyItem(GObj *item_gobj)
 {
     (void)item_gobj;
@@ -194,12 +189,6 @@ NDS_WEAK void ftParamUnlockPlayerControl(GObj *fighter_gobj)
 NDS_WEAK void ftCommonAppearSetStatus(GObj *fighter_gobj)
 {
     (void)fighter_gobj;
-}
-
-NDS_WEAK sb32 ftCommonSleepCheckIgnorePauseMenu(GObj *fighter_gobj)
-{
-    (void)fighter_gobj;
-    return FALSE;
 }
 
 NDS_WEAK void ftPublicDefeatedAddID(u16 sfx_id)

@@ -3524,7 +3524,8 @@ CFILES += battleship_ftcomputer.c
 endif
 ifeq ($(NDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE),1)
 CFILES += battleship_gmcamera.c battleship_ftcommon_dead.c \
-	battleship_ftcommon_rebirth.c battleship_ftcommon_entry.c \
+	battleship_ftcommon_rebirth.c battleship_ftcommon_sleep.c \
+	battleship_ftcommon_entry.c \
 	battleship_grwallpaper.c \
 	battle_playable_compat_stubs.c
 endif

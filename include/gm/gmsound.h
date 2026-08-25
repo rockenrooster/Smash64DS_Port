@@ -98,6 +98,7 @@ typedef enum gmFGMID
     nSYAudioFGMBladeSwing3 = 259,
     nSYAudioFGMBladeDraw = 264,
     nSYAudioFGMPlayerHeal = 274,
+    nSYAudioFGMStockSteal = 276,
     nSYAudioFGMJungleTaruCannShoot = 281,
     nSYAudioFGMJungleTaruCannEnter = 282,
     nSYAudioFGMHyruleTwisterAppear = 283,

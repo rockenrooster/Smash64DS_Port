@@ -171,6 +171,33 @@ function Invoke-GdbMarkerScript {
                'suspect region with breakpoints and print the value at each.')
     }
 
+    # A ONE-BYTE GUEST WRITE TO A 4-BYTE-ALIGNED ADDRESS KILLS melonDS.
+    #
+    # MEASURED 2026-08-25 (board row P2-3r14), five runs on this fork: a probe
+    # that did `set var $fst->stock_count = 0` -- an `s8` at FTStruct+20, i.e. a
+    # 4-byte-aligned address -- took the emulator down every time with host exit
+    # 0xC000001D (ILLEGAL INSTRUCTION). In the SAME loop iteration
+    # `set var $fst->level = ...` (a `u8` at +19, unaligned) succeeded, as did
+    # byte writes to `gSCManagerBattleState->game_rules` (+3) and to
+    # `players[i].stock_count` (+11). Reads at the aligned address were fine
+    # too; only the write is fatal.
+    #
+    # gdb reports it as `Remote communication error. Target disconnected: No
+    # error.` against whatever top-level `continue` was running, which reads
+    # exactly like a slow probe or a guest crash. It cost four runs to localise.
+    #
+    # THE FORM THAT WORKS is a 32-bit read-modify-write, which is aligned by
+    # construction whatever the field offset is:
+    #
+    #   set $wp = (unsigned int *)(((unsigned int)&EXPR) & ~3)
+    #   set $sh = ((((unsigned int)&EXPR) & 3) * 8)
+    #   set var *$wp = ((*$wp) & ~(255 << $sh)) | (VALUE << $sh)
+    #
+    # scripts/probe-stock-lastlife.ps1 carries a worked example. This cannot be
+    # rejected mechanically here -- the alignment is a runtime property of a
+    # guest expression -- so it is documented at the seam every probe already
+    # goes through, and the probe that found it also reports the emulator's exit
+    # code so the next one is diagnosed in a single run.
     $interactive = -not [string]::IsNullOrWhiteSpace($ReadyFile)
     if (($InteractiveSteps.Count -ne 0) -and (-not $interactive)) {
         throw 'Interactive GDB steps require a ready-file path.'

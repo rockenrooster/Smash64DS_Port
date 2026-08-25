@@ -17,7 +17,13 @@ NDS_INACTIVE_STATUS_STUB(ftCommonDeadCommonProcUpdate)
 NDS_INACTIVE_STATUS_STUB(ftCommonDeadUpStarProcUpdate)
 NDS_INACTIVE_STATUS_STUB(ftCommonDeadUpFallProcUpdate)
 #endif
+#if !NDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE
+/* P2-3r14: `battleship_ftcommon_sleep.c` owns this callback wherever the battle
+ * import is on, and it is the real one -- the team-battle stock steal. Leaving a
+ * weak twin beside it would only make a future link-order accident silently
+ * reinstate the no-op that this row was opened to remove. */
 NDS_INACTIVE_STATUS_STUB(ftCommonSleepProcUpdate)
+#endif
 #if !NDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE
 NDS_INACTIVE_STATUS_STUB(ftCommonEntryNullProcUpdate)
 #endif
