@@ -1534,6 +1534,12 @@ extern volatile u32 gNdsSCVSBattleOriginalActivePlayerMask;
 extern volatile u32 gNdsSCVSBattleOriginalPlayerCount;
 extern volatile u32 gNdsSCVSBattleOriginalActivePlayerCount;
 extern volatile u32 gNdsSCVSBattleOriginalFighterCreateCount;
+/* P2-3r15. THE FOUR-SLOT KIND CENSUS. The P0/P1 pair below cannot express a
+ * roster wider than two names, which is how a four-CPU arm ran Mario/Fox
+ * mirrors for a phase while its own artifact said "four fighters". One byte
+ * per player slot, holding `fkind + 1` so an EMPTY slot (0) is distinct from
+ * Mario (nFTKindMario == 0). Slot 0 is the low byte. */
+extern volatile u32 gNdsSCVSBattleOriginalFighterKinds;
 extern volatile u32 gNdsSCVSBattleOriginalP0FKind;
 extern volatile u32 gNdsSCVSBattleOriginalP1FKind;
 extern volatile u32 gNdsSCVSBattleOriginalP0LR;
@@ -2367,6 +2373,11 @@ extern volatile u32 gNdsFighterDLAllDrawP1MatrixMvpRecalcCount;
 extern volatile u32 gNdsFighterDLAllDrawP0MatrixMoveWordCount;
 extern volatile u32 gNdsFighterDLAllDrawP1MatrixMoveWordCount;
 extern volatile u32 gNdsFighterDLAllDrawP0HardwareTriangleCount;
+/* P2-3r15. Bit per fighter slot that actually emitted hardware triangles.
+ * The P0/P1 triangle totals below are slot 0 and slot 1 only, so on a
+ * four-distinct-kind roster they say nothing about whether Luigi and Donkey
+ * Kong drew at all. */
+extern volatile u32 gNdsFighterDLAllDrawSlotTriangleMask;
 extern volatile u32 gNdsFighterDLAllDrawP1HardwareTriangleCount;
 extern volatile u32 gNdsFighterDLAllDrawP0HardwareZBufferTriangleCount;
 extern volatile u32 gNdsFighterDLAllDrawP1HardwareZBufferTriangleCount;

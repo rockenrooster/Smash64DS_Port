@@ -1403,6 +1403,15 @@ GObj *ftManagerMakeFighter(FTDesc *desc)
         gNdsSCVSBattleOriginalFighterCreateCount++;
         gNdsSCVSBattleOriginalActivePlayerCount++;
         gNdsSCVSBattleOriginalActivePlayerMask |= 1u << (desc->player & 3);
+        /* P2-3r15: one byte per slot, `fkind + 1`, so a four-name roster is
+         * readable at all -- the P0/P1 kind pair below stops at two. The
+         * recorder that actually runs in a VSBattle is
+         * ndsFighterManagerRecordCreatedFighter; this path is the compat/proof
+         * twin and writes the same field the same way. */
+        gNdsSCVSBattleOriginalFighterKinds =
+            (gNdsSCVSBattleOriginalFighterKinds &
+             ~(0xffu << ((desc->player & 3u) * 8u))) |
+            ((((u32)desc->fkind + 1u) & 0xffu) << ((desc->player & 3u) * 8u));
         if (desc->player == 0)
         {
             gNdsSCVSBattleOriginalP0FKind = (u32)desc->fkind;

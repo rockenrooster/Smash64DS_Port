@@ -2064,6 +2064,14 @@ static void ndsFighterManagerRecordCreatedFighter(GObj *fighter_gobj,
      * left for a kind list to exclude. */
     gNdsFighterManagerFighterMask |= bit;
     gNdsSCVSBattleOriginalActivePlayerMask |= bit;
+    /* P2-3r15: one byte per player slot, holding `fkind + 1` so an empty
+     * slot (0) stays distinct from Mario (nFTKindMario == 0). Written as a
+     * clear-then-set field rather than an OR, so two creation paths writing
+     * the same slot cannot fuse two kinds into one byte. */
+    gNdsSCVSBattleOriginalFighterKinds =
+        (gNdsSCVSBattleOriginalFighterKinds &
+         ~(0xffu << ((u32)player * 8u))) |
+        ((((u32)fp->fkind + 1u) & 0xffu) << ((u32)player * 8u));
     if ((fp->fkind >= 0) && (fp->fkind < nFTKindEnumCount) &&
         (fp->data == dFTManagerDataFiles[fp->fkind]) &&
         (fp->attr != NULL) && (fp->figatree_heap != NULL))

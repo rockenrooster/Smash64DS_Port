@@ -401,6 +401,7 @@ void ndsResetStartupDiagnostics(void)
     gNdsSCVSBattleOriginalMainGObjID = 0;
     gNdsSCVSBattleOriginalFighterGObjCount = 0;
     gNdsSCVSBattleOriginalActivePlayerMask = 0;
+    gNdsSCVSBattleOriginalFighterKinds = 0;
     gNdsSCVSBattleOriginalPlayerCount = 0;
     gNdsSCVSBattleOriginalActivePlayerCount = 0;
     gNdsSCVSBattleOriginalFighterCreateCount = 0;
@@ -1726,6 +1727,7 @@ void ndsResetStartupDiagnostics(void)
     gNdsFighterDLAllDrawP0MatrixMoveWordCount = 0;
     gNdsFighterDLAllDrawP1MatrixMoveWordCount = 0;
     gNdsFighterDLAllDrawP0HardwareTriangleCount = 0;
+    gNdsFighterDLAllDrawSlotTriangleMask = 0;
     gNdsFighterDLAllDrawP1HardwareTriangleCount = 0;
     gNdsFighterDLAllDrawP0HardwareOracleTriangleCount = 0;
     gNdsFighterDLAllDrawP1HardwareOracleTriangleCount = 0;

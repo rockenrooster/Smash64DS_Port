@@ -107,7 +107,17 @@ $memoryGlobals = @(
     'gNdsFtrPlanHit',
     'gNdsFtrPlanVerifyMismatch',
     'gNdsFighterDLAllDrawP0HardwareTriangleCount',
-    'gNdsFighterDLAllDrawP1HardwareTriangleCount'
+    'gNdsFighterDLAllDrawP1HardwareTriangleCount',
+    # P2-3r15. THE TWO COUNTERS THAT CAN EXPRESS A ROSTER WIDER THAN TWO NAMES.
+    # Everything above stops at P0/P1 -- two triangle totals and two fkind
+    # publications -- which is precisely how this arm ran Mario/Fox mirrors for a
+    # whole phase while its artifact said "four fighters" and how a stranded
+    # `#define` in Donkey Kong's cargo ladder survived to 2026-08-25. The kind
+    # census is one byte per player slot holding `fkind + 1` (0 = empty slot, so
+    # Mario is distinguishable from absent); the draw mask is one bit per slot
+    # that emitted hardware triangles.
+    'gNdsSCVSBattleOriginalFighterKinds',
+    'gNdsFighterDLAllDrawSlotTriangleMask'
 )
 
 $coverageGlobals = @(
@@ -269,9 +279,12 @@ if (($nativePlanBuild -eq 0) -or ($nativePlanHit -eq 0) -or
 }
 if (($extra['gNdsFighterDLAllDrawP0HardwareTriangleCount'] -eq 0) -or
     ($extra['gNdsFighterDLAllDrawP1HardwareTriangleCount'] -eq 0)) {
-    throw ("Four-CPU stress created four source fighters but did not prove both " +
-        "Mario/Fox native hardware owners drew: marioTriangles=" +
-        "$($extra['gNdsFighterDLAllDrawP0HardwareTriangleCount']) foxTriangles=" +
+    # P2-3r15: these two are PLAYER SLOTS 0 and 1, not fighter kinds. They were
+    # the same thing while the roster was Mario/Fox mirrors and are not any
+    # more; slots 2/3 are covered by gNdsFighterDLAllDrawSlotTriangleMask below.
+    throw ("Four-CPU stress created four source fighters but did not prove " +
+        "player slots 0 and 1 drew: slot0Triangles=" +
+        "$($extra['gNdsFighterDLAllDrawP0HardwareTriangleCount']) slot1Triangles=" +
         "$($extra['gNdsFighterDLAllDrawP1HardwareTriangleCount']).")
 }
 
@@ -305,6 +318,31 @@ function Get-StressBuildFlag([string]$Name) {
 $rosterFlag = Get-StressBuildFlag 'NDS_P2_FOUR_CPU_ROSTER'
 $battlePackFlag = Get-StressBuildFlag 'NDS_R2_BATTLEPACK'
 
+# P2-3r15. WHAT THE FOUR FIGHTERS ACTUALLY WERE, decoded from the guest rather
+# than inferred from a build flag. `fkind + 1` per byte, slot 0 in the low byte;
+# 0 means the slot created no fighter. Names are BattleShip's nFTKind ordering
+# (ft/fttypes.h): 0 Mario, 1 Fox, 2 Donkey, 3 Samus, 4 Luigi.
+$kindNames = @('Mario', 'Fox', 'Donkey', 'Samus', 'Luigi', 'Link', 'Yoshi',
+    'Captain', 'Kirby', 'Pikachu', 'Purin', 'Ness')
+$kindWord = [uint32]$extra['gNdsSCVSBattleOriginalFighterKinds']
+$observedRoster = @(0..3 | ForEach-Object {
+    $b = [int](($kindWord -shr ($_ * 8)) -band 0xff)
+    if ($b -eq 0) { 'empty' }
+    elseif (($b - 1) -lt $kindNames.Count) { $kindNames[$b - 1] }
+    else { "kind$($b - 1)" }
+})
+$expectedRoster = if ($rosterFlag -eq 1) {
+    @('Mario', 'Fox', 'Luigi', 'Donkey')
+} else {
+    @('Mario', 'Fox', 'Mario', 'Fox')
+}
+# ...AND WHETHER ALL FOUR OF THEM DREW. The P0/P1 triangle totals are slots 0
+# and 1 only, so on the four-distinct-kind roster they are silent about Luigi
+# and Donkey Kong -- the exact shape of instrument that let a stranded DK setter
+# survive. One bit per slot that emitted hardware triangles. Both are JUDGED
+# after the ledger is written, below.
+$slotDrawMask = [uint32]$extra['gNdsFighterDLAllDrawSlotTriangleMask']
+
 $generalHeapFloor = [uint64]25600
 $effectDepth = $extra['gNdsEffectPoolDepth']
 $effectFreeMin = $extra['gNdsEffectPoolFreeMin']
@@ -318,6 +356,11 @@ $memory = [PSCustomObject]@{
     } elseif ($null -eq $rosterFlag) { 'unknown' } else {
         'Mario/Fox mirrors'
     })
+    # P2-3r15: what the GUEST said, not what the flag implies.
+    fighterRosterObserved = ($observedRoster -join '/')
+    fighterRosterExpected = ($expectedRoster -join '/')
+    fighterKindWord = ('0x{0:X8}' -f $kindWord)
+    fighterSlotDrawMask = ('0x{0:X}' -f $slotDrawMask)
     battlePackResident = $(if ($null -eq $battlePackFlag) { 'unknown' }
         else { [bool]($battlePackFlag -eq 1) })
     ftPoseBinds = $extra['gNdsFtPoseBinds']
@@ -373,6 +416,24 @@ $memoryDir = Split-Path -Parent $MemoryJsonOut
 if ($memoryDir) { New-Item -ItemType Directory -Force -Path $memoryDir | Out-Null }
 $memory | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $MemoryJsonOut
 
+# P2-3r15. THE ROSTER THE GATE ACTUALLY MEASURED, asserted rather than reported.
+# Boundary's stress arm defaults to the four landed kinds since this row; the
+# mirror roster stays reachable as `NDS_P2_FOUR_CPU_ROSTER=0` and is the A/B
+# control. Either way the arm must run the roster its own build config declares.
+if (@(Compare-Object $observedRoster $expectedRoster -SyncWindow 0).Count -ne 0) {
+    throw ("Four-CPU stress ran the wrong roster: slots were " +
+        "$($memory.fighterRosterObserved) but NDS_P2_FOUR_CPU_ROSTER=" +
+        "$rosterFlag asks for $($memory.fighterRosterExpected) (kind word " +
+        "$($memory.fighterKindWord)). A gate that measures a roster nobody " +
+        'declared is not a regression guard.')
+}
+if ($slotDrawMask -ne 0xF) {
+    throw ("Four-CPU stress did not draw all four fighter slots: hardware-" +
+        "triangle slot mask $($memory.fighterSlotDrawMask) (want 0xF) on " +
+        "roster $($memory.fighterRosterObserved). Slots 0/1 have their own " +
+        'triangle totals; this mask is the only thing that speaks for slots ' +
+        '2 and 3.')
+}
 if (($memory.syMallocOverflowCount -ne 0) -or
     ($memory.objmanPanicCount -ne 0) -or
     ($memory.aObjEvent32NormalizeFailCount -ne 0) -or

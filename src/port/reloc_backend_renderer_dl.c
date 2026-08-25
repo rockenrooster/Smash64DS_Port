@@ -17936,6 +17936,13 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
             gNdsFighterDLAllDrawP1HardwareTriangleCount +=
                 runtime_hardware_triangle_count;
         }
+        /* P2-3r15: the two totals above are slots 0 and 1, so on a four-
+         * distinct-kind roster they cannot say whether Luigi and Donkey Kong
+         * drew. One bit per slot that emitted triangles can. */
+        if (runtime_hardware_triangle_count != 0u)
+        {
+            gNdsFighterDLAllDrawSlotTriangleMask |= 1u << (slot & 3u);
+        }
     }
 #endif
     if (pixels != NULL)

@@ -527,15 +527,23 @@ NDS_P2_FOUR_CPU_STRESS ?= 0
 # player can reach and the measurement that answers the owner's 2026-08-23
 # report that "some combinations of fighters run at really low FPS".
 #
-# It is a LAB flag, not a gate change: the stress harness takes `-Build`, so the
-# roster arm is built into its own directory and measured against the gate build
-# as an ordinary A/B. Promoting it into the Boundary arm is a board decision at a
-# phase close (docs/P2_PLAN.md law 4), not a side effect of measuring it.
+# PROMOTED TO THE GATE DEFAULT ON THE STRESS TARGET (board row P2-3r15,
+# 2026-08-25). It was a lab flag until P2-3r13 showed four distinct kinds fit
+# the SHIPPING configuration -- pack resident, cache untrimmed, general-heap
+# low-water 49,956 B against the 25,600 floor -- at which point the mirror
+# roster stopped being an honest argmax over landed content. Boundary's
+# `p2_fourcpu_stress` therefore builds Mario/Fox/Luigi/Donkey.
+#
+# `NDS_P2_FOUR_CPU_ROSTER=0` still builds the mirror arm and is the A/B control;
+# the stress harness stamps which roster produced every figure into
+# `p2-2-fourcpu-memory.json` (`fighterRoster`), because a tick number from one
+# roster is not comparable with a tick number from the other.
 #
 # The "needs the four-name roster" check is a `#error` in nds_match_config.c
 # rather than a `$(error)` here, because NDS_P2_DONKEY is not defined until
 # below and a make-time test would read it empty and never fire.
-NDS_P2_FOUR_CPU_ROSTER ?= 0
+NDS_P2_FOUR_CPU_ROSTER ?= \
+	$(if $(filter smash64ds-p2-fourcpu-tickhud-hwtri,$(TARGET)),1,0)
 # P2-3 fighter-production admission flag.  A fighter is staged behind its own
 # flag until the source-derived asset graph, source status table, native owner,
 # CSS/audio surfaces and focused runtime proof are all green.  This prevents a
@@ -2227,7 +2235,12 @@ ifeq ($(TARGET),smash64ds-p2-fourcpu-tickhud-hwtri)
 override NDS_P2_FOUR_CPU_STRESS := 1
 override NDS_R2_EFFECT_POOL := 38
 ifeq ($(NDS_P2_FOUR_CPU_ROSTER),1)
-# P2-3r13. THE ROSTER ARM IS SHIPPING-SHAPED AGAIN: NOTHING IS OVERRIDDEN HERE
+# P2-3r15: THIS IS NOW THE DEFAULT ARM, not the lab arm -- the flag defaults to
+# 1 on this target (see its declaration above). `NDS_P2_FOUR_CPU_ROSTER=0`
+# rebuilds the Mario/Fox mirror roster and is the control every A/B against a
+# pre-2026-08-25 figure has to use.
+#
+# P2-3r13. THE ROSTER ARM IS SHIPPING-SHAPED: NOTHING IS OVERRIDDEN HERE
 # EXCEPT THE ROSTER ITSELF.
 #
 # P2-3r11 got four distinct kinds through a whole match by setting
