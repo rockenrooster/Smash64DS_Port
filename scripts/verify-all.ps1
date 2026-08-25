@@ -147,15 +147,24 @@ function Invoke-VerifyScriptOnce {
         [string]$Script,
         [string[]]$Arguments
     )
-    $argList = @(
-        '-NoProfile',
-        '-ExecutionPolicy', 'Bypass',
-        '-File', $Script
-    ) + $Arguments
+    # Dispatch on extension so a Python checker can be registered here without a
+    # one-line PowerShell wrapper existing only to shell out to it
+    # (check-decomp-header-mirror.py, added to the static block 2026-08-25).
+    if ([System.IO.Path]::GetExtension($Script) -eq '.py') {
+        $exe = 'python'
+        $argList = @($Script) + $Arguments
+    } else {
+        $exe = $powerShellExe
+        $argList = @(
+            '-NoProfile',
+            '-ExecutionPolicy', 'Bypass',
+            '-File', $Script
+        ) + $Arguments
+    }
     $tempBase = Join-Path ([System.IO.Path]::GetTempPath()) ("smash64ds-verify-{0}" -f ([System.Guid]::NewGuid().ToString('N')))
     $stdoutPath = "$tempBase.out"
     $stderrPath = "$tempBase.err"
-    $process = Start-Process -FilePath $powerShellExe `
+    $process = Start-Process -FilePath $exe `
         -ArgumentList $argList `
         -WorkingDirectory $root `
         -RedirectStandardOutput $stdoutPath `
@@ -261,9 +270,23 @@ try {
         & make -C $root TARGET=smash64ds BUILD=build NDS_DEV_SCENE_HARNESS=normal NDS_HARNESS_FAST_LOGIC=0 -B
         if ($LASTEXITCODE -ne 0) { exit (Get-Smash64DSFailureExitCode -Code $LASTEXITCODE) }
     }
-    $expectedVerifiers = 4 + $plan.Count + $(if ($SkipRegistryCheck) { 0 } else { 1 })
+    $expectedVerifiers = 6 + $plan.Count + $(if ($SkipRegistryCheck) { 0 } else { 1 })
     Invoke-VerifyScript `
         -Script (Join-Path $PSScriptRoot 'check-gbi-decode-fixtures.ps1') `
+        -Arguments @()
+    # Both of these were RED and in NO profile, which is exactly how they stayed
+    # red -- one since 2026-08-22, one for months (board rows P2-3r10, P2-3r14
+    # each recorded "it is in no verify profile" and moved on). A checker nobody
+    # runs protects nothing, and between them they own the two failure shapes a
+    # fighter landing produces: a `src/import` wrapper that reimplements instead
+    # of importing, and a port header constant that silently disagrees with the
+    # decomp header the imported TUs actually compile against. Both are static
+    # and sub-second. Greened and registered 2026-08-25 (row P2-3f1).
+    Invoke-VerifyScript `
+        -Script (Join-Path $PSScriptRoot 'check-architecture.ps1') `
+        -Arguments @()
+    Invoke-VerifyScript `
+        -Script (Join-Path $PSScriptRoot 'check-decomp-header-mirror.py') `
         -Arguments @()
     # 5.8 s, and it is here because a hand-run checker is a checker nobody runs:
     # the A5I3 atlas conversion shipped in cffe9ff with every pinned number in

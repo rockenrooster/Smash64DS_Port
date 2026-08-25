@@ -15,7 +15,17 @@ GObj *efManagerFoxEntryArwingMakeEffect(Vec3f *pos, s32 lr);
 GObj *efManagerDonkeyEntryTaruMakeEffect(Vec3f *pos);
 void ndsEFManagerRetryDeferredDescs(void);
 
-/* P2-2 normal-match entry parity.
+/* NDS_PARTIAL_IMPORT: decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommonentry.c
+ *
+ * Registered in scripts/check-architecture.ps1. Importing the TU whole would
+ * make every unlanded fighter's Appear status enums (nFTSamus*, nFTLink*,
+ * nFTYoshi*, nFTKirby*, nFTPikachu*, nFTPurin*, nFTNess*, nFTBoss*) and nine
+ * entry-effect makers link requirements of a build that has none of them, and
+ * would index status tables that are 16-entry stubs. Landed kinds carry their
+ * exact source branch; every new production fighter adds its branch HERE as it
+ * lands, at the same time as its status table and assets.
+ *
+ * P2-2 normal-match entry parity.
  *
  * The full decomp ftcommonentry.c contains the entry status IDs and helpers for
  * every fighter in SSB64. P2-2 deliberately ships only Mario and Fox fighter

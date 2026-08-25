@@ -93,23 +93,78 @@ foreach ($file in $sourceFiles) {
         Add-Failure "decomp source include outside src/import: $relative"
     }
 }
+$allowedImportHelpers = @(
+    # Weak callback aliases that let original descriptor-table headers link
+    # against macro-renamed imported status callbacks, plus documented
+    # inactive/map/physics seams for not-yet-imported status dependencies.
+    'src/import/battleship_ftstatus_callback_aliases.c',
+    'src/import/battleship_ftstatus_inactive_stubs.c',
+    'src/import/battleship_ftstatus_map_physics_shims.c',
+    # DS-side STORAGE for two original symbols, not wrappers around original
+    # code: both replace an N64 software buffer the DS rasterizes in
+    # hardware, so there is no decomp translation unit for them to include.
+    # Their derivations live on the externs they pair with.
+    'src/import/battleship_sys_framebuffer.c',
+    'src/import/battleship_sys_zbuffer.c'
+)
+# BOUNDED PARTIAL IMPORTS (row P2-3f1, 2026-08-25).
+#
+# A third shape exists that this rule could not express, so it reported it as a
+# defect forever and everyone learned to ignore the checker -- which is how a
+# SECOND, genuinely unreviewed instance sat behind the first without anyone
+# seeing it (the loop stopped at the first `Write-Error` under
+# `$ErrorActionPreference = 'Stop'`; that is fixed at the bottom of this file).
+#
+# The shape: a source TU whose reachable half is transcribed verbatim while the
+# unreachable half is deliberately left to the phase that lands its content,
+# because importing it whole would drag in status enums and effect makers for
+# fighters/items this build does not have. That is a real engineering position,
+# not sloppiness -- but it must be DECLARED, reviewed, and paired with the
+# source TU it narrows.
+#
+# So both halves are required: the path is registered here (a reviewer's
+# signature) AND the file carries `NDS_PARTIAL_IMPORT: <decomp source path>`
+# naming exactly the TU registered below (the code's own signature). A comment
+# alone cannot buy the exception, and a registered file that drops its marker or
+# renames its source reds. An UNregistered file carrying the marker also reds --
+# otherwise the marker would be a self-service opt-out.
+$allowedPartialImports = @{
+    # The entry ladder switches on fkind across all 27 kinds and reaches every
+    # character's Appear status enums and entry-effect makers. Landed kinds get
+    # their exact source branch; the rest fall back to EntryNull rather than
+    # fabricating a sequence for a fighter with no status table. Each new
+    # production fighter adds its source branch here as it lands.
+    'src/import/battleship_ftcommon_entry.c' =
+        'decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommonentry.c'
+    # Items are P2-5. The grounded/aerial throw physics is the source branch
+    # verbatim; the heavy-throw interrupt is pinned false, which is exactly what
+    # the source computes while `item_gobj` is NULL. The item-present arm stays
+    # unwritten on purpose -- an approximation there would make DK's cargo look
+    # qualified the moment items are switched on.
+    'src/import/battleship_ftcommon_itemthrow.c' =
+        'decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommonitemthrow.c'
+}
 Get-ChildItem -LiteralPath (Join-Path $root 'src/import') -Filter '*.c' -File | ForEach-Object {
     $relative = Get-RelativePath $_.FullName
-    $allowedImportHelpers = @(
-        # Weak callback aliases that let original descriptor-table headers link
-        # against macro-renamed imported status callbacks, plus documented
-        # inactive/map/physics seams for not-yet-imported status dependencies.
-        'src/import/battleship_ftstatus_callback_aliases.c',
-        'src/import/battleship_ftstatus_inactive_stubs.c',
-        'src/import/battleship_ftstatus_map_physics_shims.c',
-        # DS-side STORAGE for two original symbols, not wrappers around original
-        # code: both replace an N64 software buffer the DS rasterizes in
-        # hardware, so there is no decomp translation unit for them to include.
-        # Their derivations live on the externs they pair with.
-        'src/import/battleship_sys_framebuffer.c',
-        'src/import/battleship_sys_zbuffer.c'
-    )
     $text = Get-Content -LiteralPath $_.FullName -Raw
+    $declaredPartial = $null
+    if ($text -match 'NDS_PARTIAL_IMPORT:\s*(\S+)') { $declaredPartial = $Matches[1] }
+    $registeredPartial = $allowedPartialImports[$relative]
+    if ($registeredPartial) {
+        if (-not $declaredPartial) {
+            Add-Failure ("registered bounded partial import is missing its in-file " +
+                "'NDS_PARTIAL_IMPORT: $registeredPartial' marker: $relative")
+        } elseif ($declaredPartial -ne $registeredPartial) {
+            Add-Failure ("bounded partial import declares '$declaredPartial' but is " +
+                "registered against '$registeredPartial': $relative")
+        }
+        return
+    }
+    if ($declaredPartial) {
+        Add-Failure ("undeclared bounded partial import: $relative marks itself against " +
+            "'$declaredPartial' but is not registered in check-architecture.ps1")
+        return
+    }
     # P2-1M (2026-08-19): `decomp/BattleShip-main` is no longer the only correct
     # spelling. Import wrappers now include the overlay copy the build applies
     # its patches to -- `<battleship_overlay/src/...>`, materialised into
@@ -164,8 +219,15 @@ if ($warnings.Count -gt 0) {
     }
 }
 if ($failures.Count -gt 0) {
+    # `Write-Error` under this file's `$ErrorActionPreference = 'Stop'` TERMINATES
+    # on the first call, so this loop only ever printed failure #1 and the throw
+    # below never ran. That is how `battleship_ftcommon_itemthrow.c` stayed
+    # invisible behind `battleship_ftcommon_entry.c` while the checker was
+    # described in three separate documents as having "one" failure (found
+    # 2026-08-25). Print the whole list on the normal stream first; the throw is
+    # what fails the run.
     foreach ($failure in $failures) {
-        Write-Error $failure
+        Write-Output "ARCHITECTURE FAILURE: $failure"
     }
     throw "Architecture check failed with $($failures.Count) issue(s)."
 }

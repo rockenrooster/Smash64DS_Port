@@ -13,7 +13,16 @@ typedef struct SYAudioCSPlayerCompat {
 } SYAudioCSPlayerCompat;
 
 enum {
-    nSYAudioBGMExplain = 0
+    /* 34, not the old placeholder 0. `gmMusicID` (decomp gm/gmsound.h:30) has
+     * no region conditionals, so the ordinal is unambiguous: Pupupu 0 ...
+     * Opening 33, Explain 34 -- the same counting that this tree already
+     * banked as ModeSelect 44 (row P2-1d-1) and BattleSelect 10 (P2-1e-1).
+     * 0 collided with nSYAudioBGMPupupu, so the imported
+     * `mnTitleProceedDemoNext` (mntitle.c:469, the nSCKindExplain arm) would
+     * have started Dream Land's music on leaving How-to-Play. That arm needs
+     * the P2-7 attract/demo flow to be reached, so this was latent, not live.
+     * Found by `check-decomp-header-mirror.py`. */
+    nSYAudioBGMExplain = 34
 };
 
 enum {

@@ -1148,7 +1148,15 @@ enum {
 #endif /* SSB64_NDS_FTDEF_MIRROR */
 
 #define FTSTAT_CHARDATA_START 0x20000
-#define FTSTAT_OPENING1_START 0xE0000
+/* 0x1000F, not 0xE0000: decomp ft/ftdef.h:20 is the authority and the imported
+ * `ftmain.c:4554` ladder is the only reader, so the port's own copy was a live
+ * (if currently unreachable) divergence -- with the larger threshold every
+ * Opening-1 status would have fallen into the Opening-2 arm and indexed
+ * `D_ovl1_80390BE8` instead of `D_ovl1_80390D20[fkind]`. Unreachable today
+ * because no live status id survives the CHARDATA subtraction above 0x1000F;
+ * the opening cinematic that sets them is P2-7. Found by
+ * `check-decomp-header-mirror.py`, which had been red on it for months. */
+#define FTSTAT_OPENING1_START 0x1000F
 #define FTSTAT_OPENING2_START 0x10000
 
 #define FTSTATUS_PRESERVE_NONE 0u

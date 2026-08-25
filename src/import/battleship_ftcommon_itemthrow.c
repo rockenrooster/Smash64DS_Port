@@ -1,4 +1,8 @@
 /*
+ * NDS_PARTIAL_IMPORT: decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommonitemthrow.c
+ *
+ * Registered in scripts/check-architecture.ps1.
+ *
  * P2-3 Donkey Kong: the source cargo ladder calls the shared heavy-item
  * interrupt and the DK status table names common item-throw physics.
  *
