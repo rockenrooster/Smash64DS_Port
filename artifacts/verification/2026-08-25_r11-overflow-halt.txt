@@ -1,0 +1,15 @@
+0x020ce844 in fread ()
+Breakpoint 1 at 0x20393e0: file D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_sys_malloc.c, line 129.
+Breakpoint 2 at 0x209585c: file D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmanager.c, line 283.
+TRACE ftManagerSetupFilesMainKind hit=1 pc=0x209585c lr=0x2095981 sp=0x226bd10
+TRACE ftManagerSetupFilesMainKind hit=2 pc=0x209585c lr=0x2095981 sp=0x226bd10
+TRACE ftManagerSetupFilesMainKind hit=3 pc=0x209585c lr=0x2095981 sp=0x226bd10
+TRACE ftManagerSetupFilesMainKind hit=4 pc=0x209585c lr=0x2095981 sp=0x226bd10
+TRACE ndsSyMallocOverflowHalt hit=1 pc=0x20393e0 lr=0x2039449 sp=0x226bce0
+TRACE STOP pc=0x20393e0 lr=0x2039449
+#0  ndsSyMallocOverflowHalt () at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_sys_malloc.c:129
+#1  0x02039448 in syMallocSet (bp=<optimized out>, size=77360, alignment=<optimized out>) at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_sys_malloc.c:151
+#2  0x021bcdfe in gSYControllerDevices ()
+Backtrace stopped: previous frame identical to this frame (corrupt stack?)
+[Inferior 1 (Remote target) detached]
+

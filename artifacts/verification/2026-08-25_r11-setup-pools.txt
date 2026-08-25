@@ -1,0 +1,19 @@
+0x020c031c in _nitroFS_read_r (r=0x21280d8 <_impure_data>, fd=0x2252df4, buf=<optimized out>, len=34341656) at /home/davem/projects/devkitpro/pacman-packages/libfat/src/libdvm-2.1.0/source/nitrofs.c:140
+Breakpoint 1 at 0x20ab648: file D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/if/ifcommon.c, line 3216.
+TRACE ifCommonBattleSetGameStatusWait hit=1 pc=0x20ab648 lr=0x208946f sp=0x226c538
+TRACE GLOBALS sNdsRelocStatusBufferCount=54 sNdsRelocStatusBufferMax=100 gNdsRelocAssetOpenFailCount=0 gNdsNativeOwnerImageLoadCount=4 gNdsNativeOwnerImageBytes=36276 gNdsNativeOwnerImageFailCount=0 gNdsFtPoseBinds=4 gNdsFtPoseBindFull=0 gNdsFtPoseUnbinds=0 gNdsR2AnimCacheMisses=4 gNdsR2AnimCacheRejects=0
+TRACE STOP pc=0x20ab648 lr=0x208946f
+#0  ifCommonBattleSetGameStatusWait () at D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/if/ifcommon.c:3216
+#1  0x0208946e in ndsBaseSCVSBattleStartBattle () at D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sc/sccommon/scvsbattle.c:204
+#2  0x02089574 in scVSBattleStartBattle () at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_scvsbattle.c:254
+#3  0x0206ceb8 in syTaskmanLoadScene (tscene=tscene@entry=0x226c6c4, func_start=0x2089569 <scVSBattleStartBattle>) at D:/Stuff/DevFolder/Smash64DS_Port/builds/build-p2-fourcpu-roster4/battleship_overlay/src/sys/taskman.c:1244
+#4  0x0206d076 in ndsBaseSyTaskmanStartTask (tsetup=tsetup@entry=0x226c6c4) at D:/Stuff/DevFolder/Smash64DS_Port/builds/build-p2-fourcpu-roster4/battleship_overlay/src/sys/taskman.c:1314
+#5  0x0206d19e in syTaskmanStartTask (tsetup=tsetup@entry=0x226c6c4) at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_sys_taskman.c:38
+#6  0x0205bf96 in scManagerFuncUpdate (setup=setup@entry=0x226c6c4) at D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_compat_shims.c:1202
+#7  0x020898d6 in ndsSCVSBattleManagerFuncUpdate (setup=setup@entry=0x2106f68 <dSCVSBattleTaskmanSetup>) at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_scvsbattle.c:114
+#8  0x02089948 in ndsBaseSCVSBattleStartScene () at D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sc/sccommon/scvsbattle.c:528
+#9  0x02089a30 in scVSBattleStartScene () at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_scvsbattle.c:498
+#10 0x0203ba10 in ndsBaseSCManagerRunLoop (arg=arg@entry=0) at D:/Stuff/DevFolder/Smash64DS_Port/builds/build-p2-fourcpu-roster4/battleship_overlay/src/sc/scmanager.c:1016
+#11 0x0203bd8e in scManagerRunLoop (arg=arg@entry=0) at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_scmanager.c:15
+[Inferior 1 (Remote target) detached]
+

@@ -5,6 +5,15 @@ param(
     # Symbols to trace, each hit prints TRACE <symbol> and continues. Optional
     # `symbol=N` stops after N hits of that symbol (the run ends there).
     [Parameter(Mandatory=$true)][string[]]$Symbols,
+    # Optional integer globals to print at every trace stop, as one extra
+    # `TRACE GLOBALS <name>=<value> ...` line. The point is to read a counter AT
+    # a named seam rather than after a free run, which is the difference between
+    # "the pool was full at battle setup" and "the pool was full at some point".
+    # Statics resolve too -- they are in the ELF symbol table -- so a file-local
+    # count is readable by name. Values are printed unsigned; a pointer or a
+    # struct is not expressible here and the ELF check will pass it anyway, so
+    # name scalars.
+    [string[]]$Globals = @(),
     [ValidateRange(1, 8)][int]$RunnerSlot = 7,
     # Wall-clock ceiling. A crash wander never returns to gdb, so the trace is
     # read back from whatever printed before the ceiling.
@@ -59,6 +68,16 @@ foreach ($entry in $Symbols) {
     }
     $specs += @{ Name = $name; Limit = $limit }
 }
+$missingGlobals = @($Globals | Where-Object { $symbolTable -notcontains $_ })
+if ($missingGlobals.Count -gt 0) {
+    throw ("Trace globals absent from ${elf}: " + ($missingGlobals -join ', '))
+}
+$globalsPrintf = ''
+if ($Globals.Count -gt 0) {
+    $globalsPrintf = 'printf "TRACE GLOBALS ' +
+        (($Globals | ForEach-Object { $_ + '=%u' }) -join ' ') + '\n", ' +
+        ($Globals -join ', ')
+}
 
 try {
     $config_state = Enable-MelonDSGdbConfig `
@@ -90,6 +109,7 @@ try {
         $commands.Add('silent')
         $commands.Add(('set $h{0} = $h{0} + 1' -f $index))
         $commands.Add(('printf "TRACE {0} hit=%d pc=0x%x lr=0x%x sp=0x%x\n", $h{1}, $pc, $lr, $sp' -f $spec.Name, $index))
+        if ($globalsPrintf -ne '') { $commands.Add($globalsPrintf) }
         if ($spec.Limit -gt 0) {
             $commands.Add(('if $h{0} < {1}' -f $index, $spec.Limit))
             $commands.Add('continue')

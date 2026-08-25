@@ -6920,7 +6920,32 @@ volatile u32 gNdsR204AnimSeen[(NDS_R204_ANIM_ID_SPAN + 31u) / 32u];
 #define NDS_R2_ANIM_CACHE_ARENA_BYTES (NDS_BATTLEPACK_RESERVE_BYTES + 4096u)
 #endif
 #else
+#if NDS_P2_FOUR_CPU_ROSTER
+/* P2-3r11. THE FOUR-DISTINCT-KIND ARM PAYS FOR ITS TWO EXTRA FIGHTER KINDS OUT
+ * OF THIS CACHE, and the 32,768 is the measured remainder rather than a guess.
+ *
+ * Dropping the battlepack (see the Makefile's NDS_P2_FOUR_CPU_ROSTER block)
+ * returned 189,632 B and took the arm from a permanent halt in
+ * `ftManagerSetupFilesMainKind(nFTKindDonkey)` to a complete 60-second match --
+ * but only to a general-heap low-water of 25,208 B against the standing
+ * 25,600 B floor, i.e. 392 B short
+ * (`artifacts/verification/2026-08-25_p2-3r11-roster4-packoff-only.txt`, the
+ * pack-off arm with this reservation still at the flat 262,144 -- the match
+ * ran, the floor did not hold). This page is where the rest comes from, for
+ * the same reason the pack went: it is the only pot in the arena whose
+ * shortfall is a PERFORMANCE outcome. A warm entry that no longer fits takes
+ * the on-demand load, and `gNdsR2AnimCacheRejects` is the acceptance test -- the
+ * four-CPU stress harness now reads it, so this constant is checked by
+ * measurement and not by this comment.
+ *
+ * 229,376 still exceeds the 194,500 B the measured 87-asset Mario/Fox working
+ * set needs (see the R2-04 E4 block below), and on this arm that list covers
+ * only two of the four fighters anyway: Luigi and Donkey have no warm entries
+ * at all and stream on demand either way. */
+#define NDS_R2_ANIM_CACHE_ARENA_BYTES 229376u
+#else
 #define NDS_R2_ANIM_CACHE_ARENA_BYTES 262144u
+#endif
 #endif
 
 /* R2-04 E4. The match's animation working set, measured rather than guessed:

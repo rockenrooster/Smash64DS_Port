@@ -63,6 +63,22 @@ $memoryGlobals = @(
     'gNdsAObjEvent32HashOverflowCount',
     'gNdsSyMallocOverflowCount',
     'gNdsObjmanPanicCount',
+    # P2-3r11. THE POSE POOL IS EXACTLY FULL ON THIS ARM AND NOWHERE ELSE:
+    # NDS_FT_POSE_FIGHTERS is 4 and this is the only configuration that creates
+    # four fighters, so a fifth bind has no spare slot. A BindFull is not a
+    # saturation statistic like the effect pool's -- it drops that fighter to
+    # the generic AObj path silently, changing how it animates, so it is
+    # asserted below rather than merely reported.
+    'gNdsFtPoseBinds',
+    'gNdsFtPoseBindFull',
+    # The acceptance instrument for whatever animation-arena budget this arm is
+    # built with. `NDS_R2_ANIM_CACHE_ARENA_BYTES` is smaller on the four-distinct
+    # -kind roster because the fighter kinds took the difference (P2-3r11), and a
+    # cache that no longer fits its working set shows up HERE rather than in a
+    # tick figure nobody can attribute. Rejects/Misses are DATA, not a failure:
+    # every miss degrades to the on-demand load.
+    'gNdsR2AnimCacheMisses',
+    'gNdsR2AnimCacheRejects',
     # These are part of the shipping tick-HUD target already. Do not enable
     # Task-68's fallback census here: that flag changes BSS/cache placement and
     # would make the gate measure a different binary. PlanBuild means the live
@@ -242,6 +258,36 @@ if (($extra['gNdsFighterDLAllDrawP0HardwareTriangleCount'] -eq 0) -or
         "$($extra['gNdsFighterDLAllDrawP1HardwareTriangleCount']).")
 }
 
+if ($extra['gNdsFtPoseBindFull'] -ne 0) {
+    throw ("Four-fighter stress exhausted the fighter pose pool: " +
+        "binds=$($extra['gNdsFtPoseBinds']) bindFull=$($extra['gNdsFtPoseBindFull']). " +
+        'NDS_FT_POSE_FIGHTERS has no spare slot on this arm, so a refused bind ' +
+        'silently drops that fighter to the generic AObj path and the run did ' +
+        'not animate four fighters the way the shipped engine does.')
+}
+
+# THE FLAGS THE FIGURES WERE MEASURED UNDER, CARRIED WITH THE FIGURES.
+# `docs/VERIFYING.md` step 3: the build directory's nds_build_config.h is the
+# truth about what was measured. Two of its flags change what a tick figure from
+# this arm MEANS -- the roster decides whether the four fighters are four
+# distinct kinds or Mario/Fox mirrors, and NDS_R2_BATTLEPACK decides whether
+# Fox's clip pack was resident. A pack-off figure is not comparable to a pack-on
+# one, and this project has already banked nine artifacts whose flags differed
+# from the ROM they were attributed to (2026-08-17). Stamp them rather than
+# trusting a reader to go and look.
+$buildConfigPath = Join-Path $root ("builds\{0}\nds_build_config.h" -f $build)
+function Get-StressBuildFlag([string]$Name) {
+    if (-not (Test-Path -LiteralPath $buildConfigPath)) { return $null }
+    foreach ($line in (Get-Content -LiteralPath $buildConfigPath)) {
+        if ($line -match ('^\s*#define\s+' + [regex]::Escape($Name) + '\s+(\d+)')) {
+            return [int]$Matches[1]
+        }
+    }
+    return $null
+}
+$rosterFlag = Get-StressBuildFlag 'NDS_P2_FOUR_CPU_ROSTER'
+$battlePackFlag = Get-StressBuildFlag 'NDS_R2_BATTLEPACK'
+
 $generalHeapFloor = [uint64]25600
 $effectDepth = $extra['gNdsEffectPoolDepth']
 $effectFreeMin = $extra['gNdsEffectPoolFreeMin']
@@ -249,6 +295,18 @@ $memory = [PSCustomObject]@{
     target = $target
     romSha256 = $sample.romSha256
     coverageArtifact = $CoverageJsonOut
+    buildDirectory = $build
+    fighterRoster = $(if ($rosterFlag -eq 1) {
+        'four distinct kinds (Mario/Fox/Luigi/Donkey)'
+    } elseif ($null -eq $rosterFlag) { 'unknown' } else {
+        'Mario/Fox mirrors'
+    })
+    battlePackResident = $(if ($null -eq $battlePackFlag) { 'unknown' }
+        else { [bool]($battlePackFlag -eq 1) })
+    ftPoseBinds = $extra['gNdsFtPoseBinds']
+    ftPoseBindFull = $extra['gNdsFtPoseBindFull']
+    animCacheMisses = $extra['gNdsR2AnimCacheMisses']
+    animCacheRejects = $extra['gNdsR2AnimCacheRejects']
     arenaChosenBytes = $extra['gNdsTaskmanArenaChosenSize']
     arenaSearchAllocationFailures = $extra['gNdsTaskmanArenaAllocFailCount']
     generalHeapFreeMinBytes = $extra['gNdsTaskmanGeneralHeapFreeMin']

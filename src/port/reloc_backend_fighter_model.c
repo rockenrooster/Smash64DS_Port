@@ -2048,12 +2048,22 @@ static void ndsFighterManagerRecordCreatedFighter(GObj *fighter_gobj,
      * Do not let the old P0=Mario/P1=Fox proof convention define runtime
      * capacity.  The existing P0/P1 diagnostic fields below remain intentionally
      * slot-specific, but these masks/counts describe every supported live
-     * battle fighter. */
-    if ((fp->fkind == nFTKindMario) || (fp->fkind == nFTKindFox))
-    {
-        gNdsFighterManagerFighterMask |= bit;
-        gNdsSCVSBattleOriginalActivePlayerMask |= bit;
-    }
+     * battle fighter.
+     *
+     * P2-3r11: the fkind test that used to guard this was that intent written
+     * as the then-complete list of playable kinds, and it went stale the moment
+     * Luigi and Donkey Kong landed.  A Mario/Fox/Luigi/Donkey battle recorded
+     * `gNdsSCVSBattleOriginalFighterGObjCount = 2` and active mask 3 with all
+     * four fighters alive, which read as "two fighters were never created" and
+     * cost a cycle of chasing a creation failure that had not happened.  The
+     * only correct predicate is the one the comment above always described: a
+     * live fighter GObj in a real player slot.  `fp` is non-NULL and `player` is
+     * range-checked above, and the sole caller is
+     * `ftParamInitPlayerBattleStats` out of `scVSBattleStartBattle`'s per-player
+     * loop -- character-select previews never reach here -- so there is nothing
+     * left for a kind list to exclude. */
+    gNdsFighterManagerFighterMask |= bit;
+    gNdsSCVSBattleOriginalActivePlayerMask |= bit;
     if ((fp->fkind >= 0) && (fp->fkind < nFTKindEnumCount) &&
         (fp->data == dFTManagerDataFiles[fp->fkind]) &&
         (fp->attr != NULL) && (fp->figatree_heap != NULL))

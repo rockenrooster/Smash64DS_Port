@@ -1,0 +1,35 @@
+0x0203e13e in ndsRelocFoxAnimAssetIDForToken (token=<optimized out>) at D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_assets.c:1219
+1219	    return (u32)(uintptr_t)file_id;
+Breakpoint 1 at 0x20963d4: file D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_ftmanager.c, line 61.
+Breakpoint 2 at 0x2060630: file D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_compat_shims.c, line 15095.
+Breakpoint 3 at 0x2095968: file D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmanager.c, line 356.
+Breakpoint 4 at 0x209585c: file D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmanager.c, line 283.
+Breakpoint 5 at 0x2095898: file D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmanager.c, line 302.
+Breakpoint 6 at 0x209598c: file D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmanager.c, line 368.
+Breakpoint 7 at 0x2088d44: file D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sc/sccommon/scvsbattle.c, line 94.
+Breakpoint 8 at 0x206a36c: file D:/Stuff/DevFolder/Smash64DS_Port/src/port/opening_movie_backend.c, line 4566.
+Breakpoint 9 at 0x2037364: file D:/Stuff/DevFolder/Smash64DS_Port/src/port/boot_stubs.c, line 93.
+TRACE ftManagerSetupFilesAllKind hit=1 pc=0x2095968 lr=0x20892ff sp=0x226bd18
+TRACE ftManagerSetupFilesMainKind hit=1 pc=0x209585c lr=0x2095981 sp=0x226bd10
+TRACE ftManagerSetupFilesKind hit=1 pc=0x2095898 lr=0x2095987 sp=0x226bd10
+TRACE scVSBattleGetStartPlayerLR hit=1 pc=0x2088d44 lr=0x2089317 sp=0x226bd18
+TRACE ftManagerAllocFigatreeHeapKind hit=1 pc=0x209598c lr=0x2089377 sp=0x226bd18
+TRACE ftManagerMakeFighter hit=1 pc=0x20963d4 lr=0x208937f sp=0x226bd18
+TRACE ftParamInitPlayerBattleStats hit=1 pc=0x2060630 lr=0x2089387 sp=0x226bd18
+TRACE ftManagerSetupFilesAllKind hit=2 pc=0x2095968 lr=0x20892ff sp=0x226bd18
+TRACE ftManagerSetupFilesMainKind hit=2 pc=0x209585c lr=0x2095981 sp=0x226bd10
+TRACE ftManagerSetupFilesKind hit=2 pc=0x2095898 lr=0x2095987 sp=0x226bd10
+TRACE scVSBattleGetStartPlayerLR hit=2 pc=0x2088d44 lr=0x2089317 sp=0x226bd18
+TRACE ftManagerAllocFigatreeHeapKind hit=2 pc=0x209598c lr=0x2089377 sp=0x226bd18
+TRACE ftManagerMakeFighter hit=2 pc=0x20963d4 lr=0x208937f sp=0x226bd18
+TRACE ftParamInitPlayerBattleStats hit=2 pc=0x2060630 lr=0x2089387 sp=0x226bd18
+TRACE ftManagerSetupFilesAllKind hit=3 pc=0x2095968 lr=0x20892ff sp=0x226bd18
+TRACE ftManagerSetupFilesMainKind hit=3 pc=0x209585c lr=0x2095981 sp=0x226bd10
+TRACE ftManagerSetupFilesKind hit=3 pc=0x2095898 lr=0x2095987 sp=0x226bd10
+TRACE scVSBattleGetStartPlayerLR hit=3 pc=0x2088d44 lr=0x2089317 sp=0x226bd18
+TRACE ftManagerAllocFigatreeHeapKind hit=3 pc=0x209598c lr=0x2089377 sp=0x226bd18
+TRACE ftManagerMakeFighter hit=3 pc=0x20963d4 lr=0x208937f sp=0x226bd18
+TRACE ftParamInitPlayerBattleStats hit=3 pc=0x2060630 lr=0x2089387 sp=0x226bd18
+TRACE ftManagerSetupFilesAllKind hit=4 pc=0x2095968 lr=0x20892ff sp=0x226bd18
+TRACE ftManagerSetupFilesMainKind hit=4 pc=0x209585c lr=0x2095981 sp=0x226bd10
+

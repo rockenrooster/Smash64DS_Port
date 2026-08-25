@@ -1,0 +1,15 @@
+ndsIFCommonSamplePrefilteredGoPixel (sprite=0x22aba90, file_data=0x22a1360, file_size=152288, destination_x=4, destination_y=<optimized out>, rgba=0x226b7f4 "\377\210B\377\377>�\377\377=�\377\377Ah�\377>f�") at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_ifcommon_oam.c:574
+574	    u32 source_x_q8 = (destination_x * 320u) + 32u;
+Breakpoint 1 at 0x20393e0: file D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_sys_malloc.c, line 129.
+
+Breakpoint 1, ndsSyMallocOverflowHalt () at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_sys_malloc.c:129
+129	    for (;;)
+ARENA HALT count=0 arena_id=0 request=0 align=16 headroom=8300 caller_lr=0x0206bf89
+ARENA STATE chosen=1515520 allocfail=8 heapgen=1 heap_id=65536 heap_start=0x022787b0 heap_ptr=0x023e8744 heap_end=0x023ea7b0
+syTaskmanMalloc + 13 in section .main
+#0  ndsSyMallocOverflowHalt () at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_sys_malloc.c:129
+#1  0x02039448 in syMallocSet (bp=<optimized out>, size=77360, alignment=<optimized out>) at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_sys_malloc.c:151
+#2  0x021bcdfe in gSYControllerDevices ()
+Backtrace stopped: previous frame identical to this frame (corrupt stack?)
+[Inferior 1 (Remote target) detached]
+

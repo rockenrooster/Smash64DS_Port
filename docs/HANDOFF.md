@@ -1,9 +1,9 @@
 # Handoff
 
-Current: 2026-08-24 — **THE FOUR-NAME ROSTER SHIPS AND BOUNDARY IS GREEN ON ALL
-THREE ARMS.** Luigi AND Donkey Kong are selectable on the character select and
-marked unfinished; the per-fighter native-owner tables now live in NitroFS,
-which is what paid for DK. Fighters are no longer drawn before their own intro.
+Current: 2026-08-25 — **THE FOUR-NAME ROSTER SHIPS, AND FOUR DISTINCT KINDS NOW
+RUN A WHOLE STRESS MATCH — ON A LAB ARM THAT GIVES UP THE FIGATREE PACK TO DO
+IT.** Luigi and Donkey Kong are selectable and marked unfinished; the shipped
+configuration still cannot host four distinct fighters (board row P2-3r13).
 P2-1/P2-2 still have only their owner visual/play residuals.
 
 ## State
@@ -28,11 +28,6 @@ P2-1/P2-2 still have only their owner visual/play residuals.
      frames 1..1973 / guest clock 60→1, proves 0 humans / 4 CPUs / 4 fighter
      GObjs / active mask `0xF`, and owns the P2-2 memory + native-Low-detail
      budget gate.
-- **The registry `Harness` field is still `battle_playable_realtime`, and that
-  is deliberate.** `Harness` names the *scene* (mode 163, `nds_scene_harness.h`,
-  the Makefile mapping) and is unchanged; `Name` names the *verifier row*, and
-  only the row moved. `check-harness-registry.ps1` cross-checks header/Makefile
-  modes against `Harness`, so the rename cost it nothing (0 drift).
 - **The P1-named proof target left the routine gate.**
   `smash64ds-battle-playable-proof-hwtri` is still in the Makefile and still the
   default for the dozen specialized probes and metric verifiers that boot
@@ -46,10 +41,6 @@ P2-1/P2-2 still have only their owner visual/play residuals.
   SHA-256 `576F51ED…E723`. Nothing routine rebuilds it, and this row did not
   touch it. (The board's old standing-rule pin of `2F47C8AC…CB2F` named a
   different build and is retired.)
-- **Both halves of the battle arm now run the same ROM.** They did not before:
-  the GDB half built the proof target while the screenshot half captured the
-  frozen P1 artifact at the repo root, so the picture the gate accepted was
-  never the program it had just asserted about.
 
 ## Next
 
@@ -111,6 +102,15 @@ P2-1/P2-2 still have only their owner visual/play residuals.
    writes bypassed `ndsRendererFighterPacketDmaWait()` and cut into the last
    preview fighter's draining packet DMA. **Rail: a GX writer outside
    `nds_renderer.c` must call that wait first.**
+   **The four-distinct-kind stress arm runs** (P2-3r11): "two fighter GObjs"
+   was an instrument that could only count Mario and Fox, and the wall was
+   `ftManagerSetupFilesMainKind(Donkey)` asking 77,360 B with 8,300 B free and
+   halting in `ndsSyMallocOverflowHalt`. Four distinct kinds need ~175 KB more
+   arena than two mirrored; the lab arm pays it with `NDS_R2_BATTLEPACK := 0`
+   plus a 32,768 B cache trim, so **every tick figure from that arm is pack-off
+   and is not comparable to the mirror roster's.** **The SHIPPED configuration
+   still cannot host four distinct fighters** -- open board row P2-3r13, and the
+   owner's call rather than an implementation detail.
 
 4. **P2-3 background.** Luigi's production path is landed and he ANIMATES
    (P2-3r2). The bounded fast proof route is repaired end-to-end and **both

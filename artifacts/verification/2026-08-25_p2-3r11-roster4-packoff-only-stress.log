@@ -1,0 +1,29 @@
+Tick-HUD buckets: target=smash64ds-p2-fourcpu-tickhud-hwtri samples=1972 frames=2..1973 melonDS=1.0 sha=DE80E46BDCF1FD98 git=374648c2e6e+dirty(4) dldi=ON
+
+bucket p50        p95        spread mean       min        max        %ALLp50
+------ ---        ---        ------ ----       ---        ---        -------
+ALL     1,964,736  3,085,696   1.57  1,930,776    841,280  8,397,312   100.0
+FTR     1,495,104  2,519,488   1.69  1,749,720     17,536  3,858,240    76.1
+STG     3,243,776  3,289,536   1.01  2,854,684    150,144  3,841,280   165.1
+BG          4,224      4,288   1.02      5,360      3,904  2,286,912     0.2
+AUD         2,816    137,728  48.91     29,388      1,472    164,928     0.1
+HUD         5,952    432,960  72.74    134,779      5,120    685,568     0.3
+SRC       561,600  1,113,792   1.98    626,852    245,056  2,635,456    28.6
+MISC      146,560    357,056   2.44    176,952     71,040    713,792     7.5
+OTHR      316,800    563,712   1.78    311,256     21,184    617,792    16.1
+WAIT      296,192    540,352   1.82    290,459        832    598,144    15.1
+WORK    1,537,664  2,904,512   1.89  1,640,317    343,552  8,324,736    78.3
+SHDT        9,024    329,856  36.55     58,924        512    723,264     0.5
+SWRM          704        768   1.09        717        576        896     0.0
+GCRA      556,480  1,108,800   1.99    621,850    240,512  2,630,592    28.3
+SCPU       86,912    174,400   2.01     83,450          0    289,792     4.4
+SCAT        1,856      2,112   1.14      3,383      1,088  1,231,488     0.1
+SPRM        3,328      3,840   1.15     12,604      2,880  1,103,040     0.2
+SINT      263,360    617,024   2.34    303,473     12,224  2,065,600    13.4
+SPHD      130,304    205,568   1.58    135,847     33,600  1,254,912     6.6
+SPHC        1,088     19,520  17.94      2,548        768     36,800     0.1
+WORK-H  1,321,088  2,692,544   2.04  1,505,538    324,928  7,938,688    67.2
+
+named=5,577,735 (288.9% of ALL)  VBI 2:62 3:37 4:8 5+:1866 max:22 total:1973  slips=0
+extras: gNdsTaskmanGeneralHeapFreeMin=25,208  gNdsTaskmanArenaChosenSize=1,511,424  gNdsTaskmanArenaAllocFailCount=9  gNdsGCDrawsActiveMax=193  gNdsEffectPoolDepth=38  gNdsEffectPoolFreeMin=27  gNdsParticleStructsMax=28  gNdsParticleGeneratorsMax=10  gNdsParticleTransformsMax=21  gNdsParticleRejectCount=0  gNdsAObjEvent32NormalizedHighWater=1,666  gNdsAObjEvent32NormalizeFailCount=0  gNdsAObjEvent32HashOverflowCount=0  gNdsSyMallocOverflowCount=0  gNdsObjmanPanicCount=0  gNdsFtrPlanBuild=644  gNdsFtrPlanHit=6,753  gNdsFtrPlanVerifyMismatch=0  gNdsFighterDLAllDrawP0HardwareTriangleCount=367,800  gNdsFighterDLAllDrawP1HardwareTriangleCount=364,191
+Wrote D:\Stuff\DevFolder\Smash64DS_Port\artifacts\verification\2026-08-25_p2-3r11-roster4-tickhud.json

@@ -291,6 +291,24 @@ content set. The measurement is
 `artifacts/verification/p2-2-fourcpu-budget-frame32.txt`; the whole-match dynamic
 floor remains the stronger acceptance value above.
 
+**The law fired for the first time on 2026-08-25 (board row P2-3r11).** Four
+DISTINCT kinds do not fit this arena. Per-kind main-file trees are Mario
+54,048, Fox 119,040, Luigi 57,104, Donkey 79,648
+(`include/nds/generated/nds_fighter_production.generated.h`), so
+Mario/Fox/Luigi/Donkey debits **309,840 B** against the mirror roster's
+173,088 -- exactly the "mirrors do not debit" clause, seen from the other
+side -- plus 36,276 B of native-owner image for the two new kinds, plus the
+36,864 B the larger ARM9 binary costs the arena 1:1 through
+`ndsTaskmanArenaBytes`'s step-down. Total need ~175 KB. Unpaid, it is not a
+degraded run but a permanent silent halt: `ftManagerSetupFilesMainKind` for the
+fourth kind asked for 77,360 B with 8,300 B free and stopped in
+`ndsSyMallocOverflowHalt`. The lab arm pays it out of the animation reservation
+(`NDS_R2_BATTLEPACK := 0` plus a 32,768 B cache trim, +222,400 B). **The
+shipping configuration has not paid it and cannot currently host four distinct
+fighters** -- board row P2-3r13 owns that decision. Every further fighter kind
+repeats the charge, so budget the remaining eight against this number rather
+than against the mirror arm's.
+
 The two-fighter source regression was then re-run through the shipping shell.
 Restoring BattleShip Common Entry exposed two verifier assumptions rather than
 gameplay defects: Mario's pipe/Fox's Arwing are source link-10 effect DObjs and
