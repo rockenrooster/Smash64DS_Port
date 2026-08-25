@@ -13,7 +13,23 @@
 #define NDS_BATTLE_HUD_DAMAGE_PALETTE_BASE 0u
 #define NDS_BATTLE_HUD_WHITE_PALETTE 4u
 #define NDS_BATTLE_HUD_PORTRAIT_PALETTE_BASE 5u
-#define NDS_BATTLE_HUD_STOCK_PALETTE_BASE 8u
+/* THE PORTRAIT AND STOCK BANDS USED TO OVERLAP, AND IT WAS ALREADY LIVE.
+ * Portraits occupy BASE..BASE+NDS_BATTLE_HUD_PORTRAITS-1 and are uploaded once
+ * at prepare; stock palettes are re-uploaded per player whenever a costume
+ * changes. At four portraits (5..8) and stock base 8, player 0's stock palette
+ * overwrote the FOURTH portrait's -- Donkey's -- so a Donkey HUD portrait drew
+ * in whatever colours player 0's stock icon last needed. Admitting Falcon as a
+ * fifth portrait would have taken the fifth slot too. The sub OBJ engine has
+ * sixteen 4bpp palettes: damage 0..3, white 4, portraits 5..9, stock 10..13,
+ * and 14..15 spare. */
+#define NDS_BATTLE_HUD_STOCK_PALETTE_BASE 10u
+_Static_assert(NDS_BATTLE_HUD_STOCK_PALETTE_BASE >=
+                   (NDS_BATTLE_HUD_PORTRAIT_PALETTE_BASE +
+                    NDS_BATTLE_HUD_PORTRAITS),
+               "HUD stock palettes overlap the portrait band");
+_Static_assert((NDS_BATTLE_HUD_STOCK_PALETTE_BASE +
+                NDS_BATTLE_HUD_PLAYERS) <= 16u,
+               "HUD stock palettes run off the sub OBJ palette");
 #define NDS_BATTLE_HUD_MAX_OAM 64u
 #define NDS_BATTLE_HUD_DAMAGE_CELL_SIZE 32
 
@@ -307,6 +323,13 @@ static void ndsBattleHudStockPalette(u32 player, u32 fkind, u32 costume)
         if (costume >= 5u) costume = 0u;
         source = kNdsBattleHudDonkeyStockPalette[costume];
     }
+    else if (fkind == (u32)nFTKindCaptain)
+    {
+        /* dFTParamCostumeIDs[nFTKindCaptain] is { {0,4,1,3}, {1,5,2}, 5 } --
+         * six distinct indices, and CaptainModel carries six stock LUTs. */
+        if (costume >= 6u) costume = 0u;
+        source = kNdsBattleHudCaptainStockPalette[costume];
+    }
     else
     {
         if (costume >= 5u) costume = 0u;
@@ -444,6 +467,7 @@ static void ndsBattleHudDrawStock(u32 player, u32 fkind, u32 *next_id)
     else if (fkind == (u32)nFTKindFox) owner = 1u;
     else if (fkind == (u32)nFTKindLuigi) owner = 2u;
     else if (fkind == (u32)nFTKindDonkey) owner = 3u;
+    else if (fkind == (u32)nFTKindCaptain) owner = 4u;
     else return;
 
     if (stock == 0x7fu)
@@ -508,6 +532,7 @@ static void ndsBattleHudDrawPortrait(u32 player, u32 fkind, u32 *next_id)
     else if (fkind == (u32)nFTKindFox) owner = 1u;
     else if (fkind == (u32)nFTKindLuigi) owner = 2u;
     else if (fkind == (u32)nFTKindDonkey) owner = 3u;
+    else if (fkind == (u32)nFTKindCaptain) owner = 4u;
     else return;
 
     ndsBattleHudSetOam(next_id, sNdsBattleHudPlayerCenterX[player] - 8,

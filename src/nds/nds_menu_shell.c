@@ -1760,7 +1760,13 @@ static const u8 kNdsCssFighterPortrait[NDS_CSS_PORTRAITS] = {
 /* Which fighters this build HAS. Same shape as the source's fighter_mask; a
  * production fighter is admitted here only after its renderer/CSS/audio seams
  * all exist in the same configuration. */
-#if NDS_P2_DONKEY
+#if NDS_P2_CAPTAIN
+#define NDS_CSS_FIGHTER_MASK \
+    (LBBACKUP_MASK_FIGHTER(nFTKindMario) | LBBACKUP_MASK_FIGHTER(nFTKindFox) | \
+     LBBACKUP_MASK_FIGHTER(nFTKindLuigi) | \
+     LBBACKUP_MASK_FIGHTER(nFTKindDonkey) | \
+     LBBACKUP_MASK_FIGHTER(nFTKindCaptain))
+#elif NDS_P2_DONKEY
 #define NDS_CSS_FIGHTER_MASK \
     (LBBACKUP_MASK_FIGHTER(nFTKindMario) | LBBACKUP_MASK_FIGHTER(nFTKindFox) | \
      LBBACKUP_MASK_FIGHTER(nFTKindLuigi) | \

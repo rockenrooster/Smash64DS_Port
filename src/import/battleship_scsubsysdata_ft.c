@@ -97,6 +97,11 @@ _Static_assert(_FT_ANIM_CMD(5, FT_ANIM_ROTZ, 0) == 0x0085,
  * compile-time command encoders above. */
 #include "../../decomp/BattleShip-main/decomp/src/relocData/381_FTDonkeyAnimSelected.c"
 #endif
+#if NDS_P2_CAPTAIN
+/* File 429 is Falcon's source Selected clip, the same u16 FIGATREE command
+ * stream the encoders above normalize for Mario/Fox/Luigi/Donkey. */
+#include "../../decomp/BattleShip-main/decomp/src/relocData/429_FTCaptainAnimSelected.c"
+#endif
 #undef ftAnimSetValAfter
 #undef ftAnimSetValAfterBlock
 #undef ftAnimSetVal0Rate
@@ -150,6 +155,12 @@ size_t ndsBattleShipCSSSelectedFigatreeSize(const void *file_id)
         return sizeof(dFTDonkeyAnimSelected_joints);
     }
 #endif
+#if NDS_P2_CAPTAIN
+    if (file_id == &llFTCaptainAnimSelectedFileID)
+    {
+        return sizeof(dFTCaptainAnimSelected_joints);
+    }
+#endif
     return 0u;
 }
 
@@ -180,6 +191,13 @@ void *ndsBattleShipLoadCSSSelectedFigatree(const void *file_id, void *heap)
     {
         source = dFTDonkeyAnimSelected_joints;
         size = sizeof(dFTDonkeyAnimSelected_joints);
+    }
+#endif
+#if NDS_P2_CAPTAIN
+    else if (file_id == &llFTCaptainAnimSelectedFileID)
+    {
+        source = dFTCaptainAnimSelected_joints;
+        size = sizeof(dFTCaptainAnimSelected_joints);
     }
 #endif
     else
@@ -229,6 +247,15 @@ sb32 ndsBattleShipIsCSSSelectedFigatreeJoint(const void *ptr)
     for (i = 0u; i < ARRAY_COUNT(dFTDonkeyAnimSelected_joints); i++)
     {
         if ((const void *)dFTDonkeyAnimSelected_joints[i] == ptr)
+        {
+            return TRUE;
+        }
+    }
+#endif
+#if NDS_P2_CAPTAIN
+    for (i = 0u; i < ARRAY_COUNT(dFTCaptainAnimSelected_joints); i++)
+    {
+        if ((const void *)dFTCaptainAnimSelected_joints[i] == ptr)
         {
             return TRUE;
         }

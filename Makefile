@@ -620,7 +620,7 @@ NDS_P2_FOUR_CPU_ROSTER ?= \
 # WORST CASE IS LUIGI VERSUS DONKEY, both images resident at once: 36,276 B
 # against the 20,200 B the measured run held, so 28,772 B of headroom.  That is
 # the number a future fighter has to be sized against, not the 44,848.
-NDS_P2_SHELL_ROSTER ?= 2
+NDS_P2_SHELL_ROSTER ?= 3
 NDS_P2_LUIGI ?= 0
 # Donkey is the first structurally different P2-3 owner.  Keep admission
 # sequential: native-owner slots are a dense ABI (Mario/Fox/Luigi/Donkey), so a
@@ -2550,7 +2550,8 @@ override NDS_P2_MENU_SHELL := 1
 # playable roster is the verifier-covered one and the CSS marks Luigi/Donkey
 # with the question-mark overlay the generator bakes.
 override NDS_P2_LUIGI := $(if $(filter 0,$(NDS_P2_SHELL_ROSTER)),0,1)
-override NDS_P2_DONKEY := $(if $(filter 2,$(NDS_P2_SHELL_ROSTER)),1,0)
+override NDS_P2_DONKEY := $(if $(filter 2 3,$(NDS_P2_SHELL_ROSTER)),1,0)
+override NDS_P2_CAPTAIN := $(if $(filter 3,$(NDS_P2_SHELL_ROSTER)),1,0)
 ## P2-2 source parity. BattleShip's efmanager.c owns 38 EFStructs and keeps its
 ## own last-four forced-effect reserve. The old 12-entry P1 cap changes which
 ## cosmetic effects survive a four-way burst, so the four-fighter shell restores
@@ -2647,7 +2648,8 @@ override NDS_P2_MENU_SHELL := 1
 # playable roster is the verifier-covered one and the CSS marks Luigi/Donkey
 # with the question-mark overlay the generator bakes.
 override NDS_P2_LUIGI := $(if $(filter 0,$(NDS_P2_SHELL_ROSTER)),0,1)
-override NDS_P2_DONKEY := $(if $(filter 2,$(NDS_P2_SHELL_ROSTER)),1,0)
+override NDS_P2_DONKEY := $(if $(filter 2 3,$(NDS_P2_SHELL_ROSTER)),1,0)
+override NDS_P2_CAPTAIN := $(if $(filter 3,$(NDS_P2_SHELL_ROSTER)),1,0)
 override NDS_R2_EFFECT_POOL := 38
 # P2-1M gate catch: same rule as the walk block above — the CSS decides
 # Fox's level in the shell game; the P1 demo ladder never rides it.
@@ -2736,7 +2738,8 @@ override NDS_P2_MENU_SHELL := 1
 # playable roster is the verifier-covered one and the CSS marks Luigi/Donkey
 # with the question-mark overlay the generator bakes.
 override NDS_P2_LUIGI := $(if $(filter 0,$(NDS_P2_SHELL_ROSTER)),0,1)
-override NDS_P2_DONKEY := $(if $(filter 2,$(NDS_P2_SHELL_ROSTER)),1,0)
+override NDS_P2_DONKEY := $(if $(filter 2 3,$(NDS_P2_SHELL_ROSTER)),1,0)
+override NDS_P2_CAPTAIN := $(if $(filter 3,$(NDS_P2_SHELL_ROSTER)),1,0)
 override NDS_R2_EFFECT_POOL := 38
 endif
 # Task 49 GX-differ lab target. Its OWN block (appending to the tickhud/proof

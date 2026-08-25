@@ -47,6 +47,10 @@ _Static_assert(NDS_P2_PROOF_FIGHTER0 < nFTKindPlayableEnd,
  * of creating a fighter whose source assets/native owner were not admitted. */
 #error "Donkey proof fighter requires NDS_P2_DONKEY=1"
 #endif
+#if NDS_P2_PROOF_FIGHTER0 == 7 && !NDS_P2_CAPTAIN
+/* BattleShip fttypes.h: nFTKindCaptain == 7. Same rule as the two above. */
+#error "Captain Falcon proof fighter requires NDS_P2_CAPTAIN=1"
+#endif
 #endif
 
 #if NDS_P2_FOUR_CPU_ROSTER && !NDS_P2_DONKEY

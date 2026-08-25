@@ -2198,16 +2198,23 @@ CSS_SHADOW = {
 }
 # Which fighter portraits have reached P2 production. Same source fkind values
 # the shell's NDS_CSS_FIGHTER_MASK carries when the corresponding fighter is
-# enabled: Mario, Fox, Luigi.
-# Mario and Fox are complete; Luigi and Donkey Kong are IN PROGRESS -- playable
-# and selectable, but not finished (owner, 2026-08-23: "characters that are in
-# progress should show as selectable with the ? over the top of their
-# icon/portrait to show that they are in progress").  Both sets bake their real
-# portrait; the in-progress set additionally gets the source's own question-mark
-# plate over it at partial alpha, so the fighter stays recognisable underneath
-# and the cell still reads as "not finished".
-CSS_BUILT_FKIND = (0, 1, 4, 2)
-CSS_INPROGRESS_FKIND = (4, 2)
+# enabled: Mario, Fox, Luigi, Donkey Kong, Captain Falcon.
+# Mario and Fox are complete; Luigi, Donkey Kong and Captain Falcon are IN
+# PROGRESS -- playable and selectable, but not finished (owner, 2026-08-23:
+# "characters that are in progress should show as selectable with the ? over
+# the top of their icon/portrait to show that they are in progress").  Both
+# sets bake their real portrait; the in-progress set additionally gets the
+# source's own question-mark plate over it at partial alpha, so the fighter
+# stays recognisable underneath and the cell still reads as "not finished".
+#
+# ADDING A FKIND HERE RETIRES ITS LOCKED-STACK SHADOW.  CSS_SHADOW is indexed
+# by fkind for the four fighters the retail cart locks, and the built branch
+# below never reaches it -- so Luigi's shadow became unreachable when he landed
+# and Falcon's does now.  Both carry their own entry in
+# mn_screen_coverage_allowlist.json; a future built fighter in CSS_SHADOW needs
+# the same.
+CSS_BUILT_FKIND = (0, 1, 4, 2, 7)
+CSS_INPROGRESS_FKIND = (4, 2, 7)
 # The dim laid over an in-progress fighter's portrait before its question mark.
 # The plate is NOT a solid tile -- only the glyph carries intensity, 219 texels
 # of a 45x43 cell -- so blending the glyph alone (measured at alpha 165 and
@@ -2237,6 +2244,7 @@ CSS_PORTRAIT_SYMBOL = {
     1: "llMNPlayersPortraitsFoxSprite",
     4: "llMNPlayersPortraitsLuigiSprite",
     2: "llMNPlayersPortraitsDonkeySprite",
+    7: "llMNPlayersPortraitsCaptainSprite",
 }
 # mnPlayersVSPortraitProcDisplay's primitive, :361.
 CSS_SHADOW_NOISE = 0x30

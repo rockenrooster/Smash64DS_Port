@@ -1076,6 +1076,21 @@ static size_t ndsEFManagerFileSpan(void **file_head)
         return ndsRelocGetLoadedFileSize(&llDonkeySpecial2FileID);
     }
 #endif
+#if NDS_P2_CAPTAIN
+    if (file_head == &gFTDataCaptainSpecial2)
+    {
+        /* dEFManagerCaptainEntryCarEffectDesc (efmanager.c:1495) and
+         * dEFManagerCaptainFalconKickEffectDesc (:760) both own
+         * CaptainSpecial2 -- the Falcon Flyer AND the Falcon Kick effect are
+         * in that one file. */
+        return ndsRelocGetLoadedFileSize(&llCaptainSpecial2FileID);
+    }
+    if (file_head == &gFTDataCaptainSpecial3)
+    {
+        /* dEFManagerCaptainFalconPunchEffectDesc (efmanager.c:790). */
+        return ndsRelocGetLoadedFileSize(&llCaptainSpecial3FileID);
+    }
+#endif
     return 0u;
 }
 
@@ -1329,6 +1344,16 @@ static void ndsEFManagerResolveAllDescOffsets(void)
      * stores &llDonkeySpecial2* linker symbols in offset fields, so this must
      * run before efManagerMakeEffect performs its source `base + offset` math. */
     ndsEFManagerResolveDescOffsets(&dEFManagerDonkeyEntryTaruEffectDesc);
+#endif
+#if NDS_P2_CAPTAIN
+    /* Falcon's three source descriptors carry &llCaptainSpecial2/3* linker
+     * symbols in their offset fields, the same as DK's barrel above, so they
+     * need the same resolve before efManagerMakeEffect does `base + offset`.
+     * The Flyer is the entry effect; the Kick and Punch descs are reached from
+     * ftcaptainspeciallw.c / ftcaptainspecialn.c. */
+    ndsEFManagerResolveDescOffsets(&dEFManagerCaptainEntryCarEffectDesc);
+    ndsEFManagerResolveDescOffsets(&dEFManagerCaptainFalconKickEffectDesc);
+    ndsEFManagerResolveDescOffsets(&dEFManagerCaptainFalconPunchEffectDesc);
 #endif
 }
 

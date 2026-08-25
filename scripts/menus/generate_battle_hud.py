@@ -37,6 +37,7 @@ PORTRAIT_SYMBOLS = [
     "llMNPlayersPortraitsFoxSprite",
     "llMNPlayersPortraitsLuigiSprite",
     "llMNPlayersPortraitsDonkeySprite",
+    "llMNPlayersPortraitsCaptainSprite",
 ]
 
 # The checked corpus contains two O2R header revisions.  The original
@@ -85,6 +86,19 @@ MODEL_STOCK = {
         "sprite": 0x130,
         "texture": 0x08,
         "palettes": [0x60, 0x88, 0xB0, 0xD8, 0x100],
+    },
+    # Falcon keeps his stock art in CaptainModel like Mario/Fox/Luigi.
+    # reloc_data_symbols.us.txt:4362 gives llCaptainModelStockSprite = 0xc6a8;
+    # 236_CaptainMain.c:215's dCaptainMain_stock_luts names SIX LUTs --
+    # dCaptainModel_palette_0xC5B0 then the five 0x28-stride frames in the
+    # 0xC5D0 gap -- which is the first six-costume stock set on the roster and
+    # matches dFTParamCostumeIDs[nFTKindCaptain]'s six distinct indices.
+    # The 88-byte CI4 texture immediately precedes the first LUT.
+    "CAPTAIN": {
+        "file": "CaptainModel",
+        "sprite": 0xC6A8,
+        "texture": 0xC558,
+        "palettes": [0xC5B0, 0xC5D8, 0xC600, 0xC628, 0xC650, 0xC678],
     },
 }
 
@@ -376,6 +390,8 @@ def bake(repo_root: Path, output: Path) -> None:
     fox_gfx, fox_palettes = stock_asset(ui, repo_root, MODEL_STOCK["FOX"])
     luigi_gfx, luigi_palettes = stock_asset(ui, repo_root, MODEL_STOCK["LUIGI"])
     donkey_gfx, donkey_palettes = stock_asset(ui, repo_root, MODEL_STOCK["DONKEY"])
+    captain_gfx, captain_palettes = stock_asset(
+        ui, repo_root, MODEL_STOCK["CAPTAIN"])
 
     # Shared intensity palette for timer/stock-count glyphs.  Damage gets the
     # same fifteen intensity indices but its four palettes are generated live
@@ -393,8 +409,8 @@ def bake(repo_root: Path, output: Path) -> None:
         "#define NDS_BATTLE_HUD_DAMAGE_GLYPHS 11u",
         "#define NDS_BATTLE_HUD_TIMER_GLYPHS 11u",
         "#define NDS_BATTLE_HUD_STOCK_DIGIT_GLYPHS 11u",
-        "#define NDS_BATTLE_HUD_PORTRAITS 4u",
-        "#define NDS_BATTLE_HUD_STOCK_OWNERS 4u",
+        "#define NDS_BATTLE_HUD_PORTRAITS 5u",
+        "#define NDS_BATTLE_HUD_STOCK_OWNERS 5u",
         "#define NDS_BATTLE_HUD_DAMAGE_GFX_BYTES 512u",
         "#define NDS_BATTLE_HUD_TIMER_GFX_BYTES 128u",
         "#define NDS_BATTLE_HUD_STOCK_DIGIT_GFX_BYTES 128u",
@@ -419,7 +435,7 @@ def bake(repo_root: Path, output: Path) -> None:
     lines += c_array_u8("kNdsBattleHudPortraitGfx", portrait_gfx)
     lines += [""]
     lines += c_array_u8("kNdsBattleHudStockGfx", [
-        mario_gfx, fox_gfx, luigi_gfx, donkey_gfx
+        mario_gfx, fox_gfx, luigi_gfx, donkey_gfx, captain_gfx
     ])
     lines += [""]
     lines += c_array_u16("kNdsBattleHudPortraitPalette", portrait_palettes)
@@ -431,6 +447,8 @@ def bake(repo_root: Path, output: Path) -> None:
     lines += c_array_u16("kNdsBattleHudLuigiStockPalette", luigi_palettes)
     lines += [""]
     lines += c_array_u16("kNdsBattleHudDonkeyStockPalette", donkey_palettes)
+    lines += [""]
+    lines += c_array_u16("kNdsBattleHudCaptainStockPalette", captain_palettes)
     lines += [""]
     lines += c_array_u16("kNdsBattleHudWhitePalette", [white_palette])
     lines += ["", "#endif /* NDS_BATTLE_HUD_GENERATED_INC */", ""]

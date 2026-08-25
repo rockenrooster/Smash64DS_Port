@@ -61,6 +61,14 @@
     {
       "screen": "css",
       "kind": "missing",
+      "key": "llMNPlayersPortraitsCaptainShadowSprite",
+      "reason": "Same branch as Luigi's shadow above, one fighter later: mnPlayersVSMakePortraitShadow only constructs it on the LOCKED branch, and P2-3f8 puts Captain Falcon in the production fighter mask, so his cell takes the source unlocked portrait branch and the locked shadow is unreachable. Two of CSS_SHADOW's four retail-locked fighters (Purin, Ness) are still locked here and still draw theirs.",
+      "ruling": "docs/P2_PLAN.md P2-3 Captain Falcon production; BattleShip mnPlayersVSMakePortrait locked/unlocked branch",
+      "status": "ruled"
+    },
+    {
+      "screen": "css",
+      "kind": "missing",
       "key": "re:llFTEmblemSprites\\w+Sprite",
       "reason": "The series emblem mnPlayersVSMakeNameAndEmblem draws beside a selected fighter's name (:613). Mario's and Fox's SHIP as source art since P2-1k, baked into the gate surface at the source's own (p*69+24, 143) with its own per-player-kind tint (0x1E human / 0x44 otherwise); the eight left here belong to fighters P2-3 owns, and no slot in this build can hold one, so nothing would draw them.",
       "ruling": "P2-1k (board row) owner ruling (a): the CSS series emblems ship as source art. The residue is docs/P2_PLAN.md phase P2-3 (fighter production)",

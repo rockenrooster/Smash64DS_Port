@@ -195,6 +195,21 @@ static sb32 ndsMNPlayersVSPreviewPrepareResidentKind(s32 fkind)
         return TRUE;
     }
 #endif
+#if NDS_P2_CAPTAIN
+    if (fkind == nFTKindCaptain)
+    {
+        if ((ndsRendererNativeEnsureOwnerImage(
+                 NDS_NATIVE_IMAGE_SLOT_CAPTAIN, 0u) == FALSE) ||
+            (ndsRendererNativeEnsureOwnerImage(
+                 NDS_NATIVE_IMAGE_SLOT_CAPTAIN, 1u) == FALSE))
+        {
+            gNdsPlayersVSPreviewResidentOwnerFailMask |= kind_bit;
+            return FALSE;
+        }
+        gNdsPlayersVSPreviewResidentReadyMask |= kind_bit;
+        return TRUE;
+    }
+#endif
     gNdsPlayersVSPreviewResidentReadyMask |= kind_bit;
     return TRUE;
 }
@@ -215,6 +230,9 @@ static void ndsMNPlayersVSPreviewPrepareResidentKinds(void)
 #endif
 #if NDS_P2_DONKEY
     (void)ndsMNPlayersVSPreviewPrepareResidentKind(nFTKindDonkey);
+#endif
+#if NDS_P2_CAPTAIN
+    (void)ndsMNPlayersVSPreviewPrepareResidentKind(nFTKindCaptain);
 #endif
 }
 
@@ -347,6 +365,9 @@ void ndsMNPlayersVSPreviewInit(void)
 #endif
 #if NDS_P2_DONKEY
     ftManagerSetupFilesAllKind(nFTKindDonkey);
+#endif
+#if NDS_P2_CAPTAIN
+    ftManagerSetupFilesAllKind(nFTKindCaptain);
 #endif
 
     for (i = 0; i < ARRAY_COUNT(sMNPlayersVSSlots); i++)
@@ -485,6 +506,9 @@ void ndsMNPlayersVSPreviewSync(u32 slot, s32 pkind, s32 fkind,
 #endif
 #if NDS_P2_DONKEY
         && (fkind != nFTKindDonkey)
+#endif
+#if NDS_P2_CAPTAIN
+        && (fkind != nFTKindCaptain)
 #endif
     )
     {

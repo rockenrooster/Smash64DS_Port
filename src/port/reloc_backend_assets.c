@@ -356,6 +356,12 @@ _Static_assert(NDS_RELOC_ASSET_FOX_ANIM_LAST == NDS_K0_FOX_ANIM_LAST,
 #define NDS_RELOC_SYMBOL_DONKEY_MAIN_ATTRIBUTES 0x4a4u
 #define NDS_RELOC_ASSET_DONKEY_MAIN 0xd5u
 #endif
+#if NDS_P2_CAPTAIN
+/* 236_CaptainMain.c:87 -- "Pre-attributes data (290 words, 0x0488 bytes)",
+ * the same shape that gives Donkey 0x4a4 at 213_DonkeyMain.c:88. */
+#define NDS_RELOC_SYMBOL_CAPTAIN_MAIN_ATTRIBUTES 0x488u
+#define NDS_RELOC_ASSET_CAPTAIN_MAIN 0xecu
+#endif
 /* Both weapon attribute structs sit at file offset 0: the fireball's in file
  * 204 (llMarioSpecial1FireballWeaponAttributes = 0x0) and the blaster's in
  * file 210 (llFoxSpecial1BlasterWeaponAttributes = 0x0), per
@@ -1602,7 +1608,7 @@ static s32 ndsRelocIsMarioFoxAnimID(u32 asset_id)
  * intentionally keep their original two-fighter universe; callers that care
  * about parser type, scratch-heap lifetime or relocation ownership use this
  * predicate instead. */
-#if NDS_P2_LUIGI || NDS_P2_DONKEY
+#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN
 static s32 ndsRelocIsFighterAnimID(u32 asset_id)
 {
     if (ndsRelocIsMarioFoxAnimID(asset_id) != FALSE)
@@ -1619,6 +1625,13 @@ static s32 ndsRelocIsFighterAnimID(u32 asset_id)
 #if NDS_P2_DONKEY
     if ((asset_id >= NDS_P2_DONKEY_ANIM_FIRST) &&
         (asset_id <= NDS_P2_DONKEY_ANIM_LAST))
+    {
+        return TRUE;
+    }
+#endif
+#if NDS_P2_CAPTAIN
+    if ((asset_id >= NDS_P2_CAPTAIN_ANIM_FIRST) &&
+        (asset_id <= NDS_P2_CAPTAIN_ANIM_LAST))
     {
         return TRUE;
     }
@@ -2026,7 +2039,7 @@ static u32 ndsRelocFoxAnimAssetIDForToken(u32 token)
  * remove this work in one change large enough to clear ~16,000 of tail movement,
  * or move it off the gameplay frame entirely, which changes WHEN the work happens
  * instead of shuffling where the code sits. */
-#if NDS_P2_LUIGI || NDS_P2_DONKEY
+#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN
 typedef struct NDSP2FighterAnimTokenRow
 {
     const void *token;
@@ -2049,6 +2062,9 @@ static const NDSP2FighterAnimTokenRow sNdsP2FighterAnimTokens[] =
 #if NDS_P2_DONKEY
     NDS_P2_DONKEY_ANIM_ASSET_ROWS(NDS_P2_FIGHTER_ANIM_TOKEN_ROW)
 #endif
+#if NDS_P2_CAPTAIN
+    NDS_P2_CAPTAIN_ANIM_ASSET_ROWS(NDS_P2_FIGHTER_ANIM_TOKEN_ROW)
+#endif
 #undef NDS_P2_FIGHTER_ANIM_TOKEN_ROW
 };
 
@@ -2070,6 +2086,13 @@ static u32 ndsRelocP2FighterAnimAssetIDForToken(u32 token)
         return token;
     }
 #endif
+#if NDS_P2_CAPTAIN
+    if ((token >= NDS_P2_CAPTAIN_ANIM_FIRST) &&
+        (token <= NDS_P2_CAPTAIN_ANIM_LAST))
+    {
+        return token;
+    }
+#endif
     for (i = 0u;
          i < (sizeof(sNdsP2FighterAnimTokens) /
               sizeof(sNdsP2FighterAnimTokens[0]));
@@ -2086,7 +2109,7 @@ static u32 ndsRelocP2FighterAnimAssetIDForToken(u32 token)
 
 static u32 ndsRelocAssetIDForToken(u32 token)
 {
-#if NDS_P2_LUIGI || NDS_P2_DONKEY
+#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN
     u32 p2_anim_asset_id = ndsRelocP2FighterAnimAssetIDForToken(token);
 
     if (p2_anim_asset_id != NDS_RELOC_ASSET_INVALID)
@@ -2107,6 +2130,10 @@ static u32 ndsRelocAssetIDForToken(u32 token)
 #if NDS_P2_DONKEY
     NDS_P2_DONKEY_CORE_ASSET_ROWS(NDS_P2_FIGHTER_TOKEN_ROW)
     NDS_P2_DONKEY_DEPENDENCY_ASSET_ROWS(NDS_P2_FIGHTER_DEPENDENCY_TOKEN_ROW)
+#endif
+#if NDS_P2_CAPTAIN
+    NDS_P2_CAPTAIN_CORE_ASSET_ROWS(NDS_P2_FIGHTER_TOKEN_ROW)
+    NDS_P2_CAPTAIN_DEPENDENCY_ASSET_ROWS(NDS_P2_FIGHTER_DEPENDENCY_TOKEN_ROW)
 #endif
 #undef NDS_P2_FIGHTER_DEPENDENCY_TOKEN_ROW
 #undef NDS_P2_FIGHTER_TOKEN_ROW
@@ -2465,7 +2492,7 @@ static s32 ndsRelocAssetIsStage(u32 asset_id)
 
 static s32 ndsRelocAssetIsFighter(u32 asset_id)
 {
-#if NDS_P2_LUIGI || NDS_P2_DONKEY
+#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN
 #define NDS_P2_FIGHTER_ASSET_TEST(symbol_, id_, path_) \
     if (asset_id == (id_)) return TRUE;
 #define NDS_P2_FIGHTER_DEPENDENCY_TEST(id_, path_) \
@@ -2477,6 +2504,10 @@ static s32 ndsRelocAssetIsFighter(u32 asset_id)
 #if NDS_P2_DONKEY
     NDS_P2_DONKEY_CORE_ASSET_ROWS(NDS_P2_FIGHTER_ASSET_TEST)
     NDS_P2_DONKEY_DEPENDENCY_ASSET_ROWS(NDS_P2_FIGHTER_DEPENDENCY_TEST)
+#endif
+#if NDS_P2_CAPTAIN
+    NDS_P2_CAPTAIN_CORE_ASSET_ROWS(NDS_P2_FIGHTER_ASSET_TEST)
+    NDS_P2_CAPTAIN_DEPENDENCY_ASSET_ROWS(NDS_P2_FIGHTER_DEPENDENCY_TEST)
 #endif
 #undef NDS_P2_FIGHTER_DEPENDENCY_TEST
 #undef NDS_P2_FIGHTER_ASSET_TEST
@@ -3364,6 +3395,9 @@ static s32 ndsRelocIsGeneratedP2FighterAObj32Asset(u32 asset_id)
 #if NDS_P2_DONKEY
     NDS_P2_DONKEY_AOBJ32_ASSET_ROWS(NDS_P2_FIGHTER_AOBJ32_TEST)
 #endif
+#if NDS_P2_CAPTAIN
+    NDS_P2_CAPTAIN_AOBJ32_ASSET_ROWS(NDS_P2_FIGHTER_AOBJ32_TEST)
+#endif
 #undef NDS_P2_FIGHTER_AOBJ32_TEST
     return FALSE;
 }
@@ -3965,6 +3999,32 @@ static s32 ndsRelocFighterAttributesMatchSource(
             (attr->heavyget_sfx == 334u);
     }
 #endif
+#if NDS_P2_CAPTAIN
+    if (asset_id == NDS_RELOC_ASSET_CAPTAIN_MAIN)
+    {
+        /* 236_CaptainMain.c:330-337 names these; the ordinals are gmsound.h's
+         * REGION_US arm (`nSYAudioVoiceCaptainDead` 355,
+         * `nSYAudioFGMCaptainDeadSlam` 0x120, DeadUp 349, Damage 351,
+         * Smash3/Smash2/JumpAerial 341/340/353, HeavyGet 354). Numeric for the
+         * same reason Donkey's are: the port's gmsound shadow deliberately
+         * names only sounds production code calls directly, while these are
+         * source DATA proving the mixed-u16 lanes were restored.
+         *
+         * NOTE Falcon's smash triple is NOT Smash1..3 -- the source gives him
+         * { Smash3, Smash2, JumpAerial }. */
+        return
+            (attr->dead_fgm_ids[0] == 355u) &&
+            (attr->dead_fgm_ids[1] == 0x120u) &&
+            (attr->deadup_sfx == 349u) &&
+            (attr->damage_sfx == 351u) &&
+            (attr->smash_sfx[0] == 341u) &&
+            (attr->smash_sfx[1] == 340u) &&
+            (attr->smash_sfx[2] == 353u) &&
+            (attr->itemthrow_vel_scale == 0x64u) &&
+            (attr->itemthrow_damage_scale == 0x64u) &&
+            (attr->heavyget_sfx == 354u);
+    }
+#endif
     return FALSE;
 }
 
@@ -3991,6 +4051,12 @@ static s32 ndsRelocNormalizeFighterAttributesFile(
     else if (loaded->asset_id == NDS_RELOC_ASSET_DONKEY_MAIN)
     {
         attr_offset = NDS_RELOC_SYMBOL_DONKEY_MAIN_ATTRIBUTES;
+    }
+#endif
+#if NDS_P2_CAPTAIN
+    else if (loaded->asset_id == NDS_RELOC_ASSET_CAPTAIN_MAIN)
+    {
+        attr_offset = NDS_RELOC_SYMBOL_CAPTAIN_MAIN_ATTRIBUTES;
     }
 #endif
     else
@@ -6511,6 +6577,12 @@ static const NDSP2FighterAllocSizeRow sNdsP2DonkeyAllocSizes[] =
     NDS_P2_DONKEY_ALLOC_SIZE_ROWS(NDS_P2_ALLOC_SIZE_ROW)
 };
 #endif
+#if NDS_P2_CAPTAIN
+static const NDSP2FighterAllocSizeRow sNdsP2CaptainAllocSizes[] =
+{
+    NDS_P2_CAPTAIN_ALLOC_SIZE_ROWS(NDS_P2_ALLOC_SIZE_ROW)
+};
+#endif
 #undef NDS_P2_ALLOC_SIZE_ROW
 
 static size_t ndsRelocP2FindGeneratedAllocSize(
@@ -6581,6 +6653,16 @@ static size_t ndsRelocP2GeneratedAllocSize(u32 asset_id)
     size = ndsRelocP2FindGeneratedAllocSize(
         sNdsP2DonkeyAllocSizes,
         sizeof(sNdsP2DonkeyAllocSizes) / sizeof(sNdsP2DonkeyAllocSizes[0]),
+        asset_id);
+    if (size != 0u)
+    {
+        return size;
+    }
+#endif
+#if NDS_P2_CAPTAIN
+    size = ndsRelocP2FindGeneratedAllocSize(
+        sNdsP2CaptainAllocSizes,
+        sizeof(sNdsP2CaptainAllocSizes) / sizeof(sNdsP2CaptainAllocSizes[0]),
         asset_id);
     if (size != 0u)
     {
@@ -8176,7 +8258,7 @@ static void *ndsRelocForceLoadFighterAObj16File(u32 token, u32 asset_id,
     /* The resident battlepack is still the measured Mario/Fox P2-2 feature.
      * P2-3 fighters use the same generic force-loader/cache semantics but are
      * not counted as misses against a pack that cannot contain them. */
-#if NDS_P2_LUIGI || NDS_P2_DONKEY
+#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN
     packed = (ndsRelocIsMarioFoxAnimID(asset_id) != FALSE) ?
         ndsBattlePackFindFigatree(asset_id) : NULL;
 #else
@@ -8207,7 +8289,7 @@ static void *ndsRelocForceLoadFighterAObj16File(u32 token, u32 asset_id,
         NDS_K0_MARK(gNdsK0AfterGoPackHits, asset_id);
         return packed;
     }
-#if NDS_P2_LUIGI || NDS_P2_DONKEY
+#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN
     if (ndsRelocIsMarioFoxAnimID(asset_id) != FALSE)
     {
         gNdsBattlePackMisses++;
@@ -8255,7 +8337,7 @@ static void *ndsRelocForceLoadFighterAObj16File(u32 token, u32 asset_id,
      * Bitmap over the 301 Mario+Fox animation IDs: total loads, distinct assets,
      * repeats. repeats/total is exactly the fraction a cache would remove, and
      * distinct sizes the cache. Lab counters, tick-HUD builds only. */
-#if NDS_P2_LUIGI || NDS_P2_DONKEY
+#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN
     if (ndsRelocIsMarioFoxAnimID(asset_id) != FALSE)
 #endif
     {
