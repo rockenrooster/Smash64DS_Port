@@ -198,6 +198,16 @@ $hasShell = $symbols -contains 'gNdsMenuShellScreen'
 if (-not $hasShell -and ($states | Where-Object { $_.Break -like 'ndsMenuShell*' })) {
     throw ('{0} has no menu shell; select only battle states with -Only' -f $elf)
 }
+# The SHELLFRAME counters are load-bearing, not decoration -- a run whose
+# frame identity is missing is a run whose shots cannot be matched to another
+# run's, which is the failure this whole marker exists to prevent. A gdb
+# printf naming an absent symbol fails that ONE command and the transcript
+# still looks healthy, so check them here instead.
+$required += 'gNdsRendererProfileFrameCount'
+if ($hasShell) {
+    $required += @('gNdsPlayersVSPreviewFrameCount',
+                   'gNdsPlayersVSPreviewDrawCount')
+}
 $missing = @($required | Where-Object { $symbols -notcontains $_ })
 if ($missing.Count -gt 0) {
     throw ("p2-shell capture symbols absent from {0}: {1}" -f $elf, ($missing -join ', '))
@@ -307,6 +317,27 @@ try {
         }
         $commands += @(
             ('printf "SHELLFIRE ' + $state.Name + ' shot' + $fire_args))
+        # THE SOURCE FRAME THIS SHOT IS OF, printed beside every shot.
+        #
+        # A present count is NOT a frame identity: how many source tics have
+        # elapsed at present N depends on what the frame cost, so present 270
+        # on two different builds -- or on two renderer modes of one build --
+        # is two different poses. On 2026-08-24 that cost this row two wrong
+        # conclusions in one day, one of them a whole cycle: a native capture
+        # was read as "the preview's parts are detached" against a generic
+        # capture at the same present taken from an EARLIER build, and the
+        # figures simply had not reached the same point in Luigi's Selected
+        # clip. The same-build pair at the same source frame was identical.
+        # Match runs on these counters, never on the -p<N> in the filename.
+        $frame_args = if ($hasShell) {
+            (' renderframe=%u cssframe=%u cssdraw=%u\n", ' +
+             'gNdsRendererProfileFrameCount, gNdsPlayersVSPreviewFrameCount, ' +
+             'gNdsPlayersVSPreviewDrawCount')
+        } else {
+            (' renderframe=%u\n", gNdsRendererProfileFrameCount')
+        }
+        $commands += @(
+            ('printf "SHELLFRAME ' + $state.Name + $frame_args))
         $commands += @(
             ('shell pwsh -NoProfile -ExecutionPolicy Bypass -File "' + $capture +
              '" -EmulatorProcessId ' + $emulator.Id + ' -Output "' +
