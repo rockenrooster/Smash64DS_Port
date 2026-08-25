@@ -225,6 +225,14 @@ below substitutes for that gate.
   reported rather than silently redefined. **Runtime acceptance passed on
   2026-08-21 and this arm is now the third standing Boundary arm**, alongside
   the P2 shell loop and the unchanged two-fighter realtime regression arm.
+  **SUPERSEDED IN ONE RESPECT (board row P2-3r15, 2026-08-25): the arm's roster
+  is no longer Mario/Fox mirrors.** `NDS_P2_FOUR_CPU_ROSTER` defaults to 1 on
+  this target, so it runs the four LANDED kinds — Mario/Fox/Luigi/Donkey — which
+  is what `PROJECT_GOAL.md`'s "measured hardest fighter set" asks for once four
+  kinds are landed and fit the shipping configuration (P2-3r13). Everything else
+  in this bullet still holds, and `NDS_P2_FOUR_CPU_ROSTER=0` rebuilds the mirror
+  arm as the A/B control. **Every timing figure in this document is a mirror
+  figure.**
 - **Stress target static proof:** the dedicated target now compiles cleanly as
   `smash64ds-p2-fourcpu-tickhud-hwtri`. Its generated config reads
   `NDS_P2_FOUR_CPU_STRESS=1`, `NDS_R2_BOTH_CPU=0`,

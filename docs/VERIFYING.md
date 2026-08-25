@@ -642,8 +642,9 @@ release qualification. Use renderer forensic checks only when renderer semantics
 changed. The retired profiles and modes no longer exist.
 
 `verify-all.ps1 -Profile Boundary -List` is the membership authority. **Boundary
-has TWO arms** (two since the P2-1 phase close, row P2-1g; the second arm
-rebased onto the shell at row P2-1M, 2026-08-19), in this order:
+has THREE arms** (two at the P2-1 phase close, row P2-1g; the second arm rebased
+onto the shell at row P2-1M, 2026-08-19; the four-CPU stress arm admitted at the
+P2-2 close), in this order:
 
 1. **`p2_shell_loop`** — `scripts/verify-p2-shell-loop.ps1`, target
    `smash64ds-p2-shell-loop-hwtri`. One full lap of the VS shell by default (owner amendment 2026-08-19: twenty was excessive; `-Loops` raises it for a deliberate soak) (title →
@@ -678,8 +679,40 @@ rebased onto the shell at row P2-1M, 2026-08-19), in this order:
    wall-clock — which is why the shell's extra ~69 s of menus costs the arm only
    time. Its GDB capture ceiling is raised to 600 s for exactly that reason.
 
+3. **`p2_fourcpu_stress`** — `scripts/verify-p2-four-fighter-stress.ps1`, target
+   `smash64ds-p2-fourcpu-tickhud-hwtri`, build `build-p2-fourcpu-tickhud`. Four
+   level-3 CPUs, Dream Land, one-minute Time, booted straight into source
+   VSBattle (the gate is four-fighter gameplay, not menu automation). It owns
+   P2-2's memory and native-low-detail budget pins.
+
+   **Since board row P2-3r14 (2026-08-25) it runs the four LANDED kinds —
+   Mario / Fox / Luigi / Donkey — not the Mario/Fox mirrors.**
+   `PROJECT_GOAL.md`'s P2 gate asks for "the measured hardest fighter set", an
+   argmax over landed content, and `P2_PLAN.md` law 2 re-derives the config as
+   content lands; four kinds became expressible in the shipping configuration at
+   row P2-3r13. `NDS_P2_FOUR_CPU_ROSTER` defaults to 1 on this target and `=0`
+   rebuilds the mirror control. **Every tick figure banked against this arm
+   before 2026-08-25 is a different population** — the mirror roster is roughly
+   1.7x cheaper at P50 — so never compare across the change without saying which
+   roster produced each number; the harness stamps `fighterRoster`,
+   `fighterRosterObserved` and `fighterKindWord` into
+   `artifacts/verification/p2-2-fourcpu-memory.json` for exactly that reason.
+
+   **What this arm asserts, and what it deliberately does not.** It asserts
+   correctness and capacity: whole-match window coverage, 0 humans / 4 CPUs / 4
+   fighter GObjs / active mask `0xF`, the observed roster against the build's own
+   flag, hardware triangles from **all four** player slots, a validated
+   low-detail native plan, the 25,600 B general-heap floor, and zero
+   allocator/objman/AObj/graphics-heap failures. It asserts **no tick or cadence
+   gate**, and that is deliberate: four distinct kinds measure roughly 3x outside
+   PROJECT_GOAL's 1.12M budget (`ALL` P95 ≈ 3.09M, 5+ VBlank on ~1,827 of 1,973
+   frames), which is P2's standing performance debt and not a per-run pass/fail.
+   An arm that failed by construction would guard nothing; this one goes red only
+   when four-fighter behaviour or memory regresses, which is what a regression
+   guard is for.
+
 The registry still exposes exactly Latest and Boundary; Latest is `runtime` +
-both of the above. The retired diagnostic fleet does not return. The P1-named
+all three of the above. The retired diagnostic fleet does not return. The P1-named
 `smash64ds-battle-playable-proof-hwtri` remains in the Makefile for the dozen
 specialized probes and metric verifiers that legitimately still boot straight
 into a battle (`probe-ko-blast.ps1`,
