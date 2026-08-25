@@ -7455,6 +7455,13 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
                 syControllerUpdateGlobalData();
 #endif
             }
+            /* P2-2p6 normally evaluates fighter body poses on the final source
+             * tick before a present. Results has exactly one source update per
+             * present, so that update is always the evaluation tick. Without
+             * publishing it here the pose player advances its script clock but
+             * holds the body matrices forever, freezing every victory / loss /
+             * No Contest result animation. */
+            gNdsFtPoseEvalTick = 1u;
             tfunc->task_update(tfunc);
             ndsAudioBackendUpdate();
             dSYTaskmanUpdateCount++;

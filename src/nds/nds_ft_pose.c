@@ -137,6 +137,40 @@ static NdsFtPose *ndsFtPoseOpen(GObj *gobj, u32 count)
     {
         return (count <= pose->capacity) ? pose : NULL;
     }
+
+    /* CSS preview fighters are destroyed and rebuilt repeatedly inside one
+     * taskman arena generation. Reuse a released slot's backing storage before
+     * allocating again, or those rebuilds consume the fixed pose slots and
+     * eventually fall back to the much smaller generic AObj pool. */
+    for (i = 0u; i < NDS_FT_POSE_FIGHTERS; i++)
+    {
+        pose = &sNdsFtPose[i];
+
+        if ((pose->gobj == NULL) &&
+            (pose->heap_generation == gNdsTaskmanHeapGeneration) &&
+            (pose->joints != NULL) && (pose->pool != NULL) &&
+            (count <= pose->capacity))
+        {
+            pose->gobj = gobj;
+#if NDS_FT_POSE_ORACLE
+            if (pose->clock_gobj == NULL)
+            {
+                pose->gobj = NULL;
+                return NULL;
+            }
+            *pose->clock_gobj = *gobj;
+#else
+            pose->clock_gobj = gobj;
+#endif
+            pose->entry_count = 0u;
+            pose->bound = 0u;
+            pose->attach_pending = 0u;
+            pose->body_evaluated = 1u;
+            pose->pool_used = 0u;
+            return pose;
+        }
+    }
+
     /* A free slot, or one whose arena generation has been rewound out from
      * under it: both are reusable, the latter because its joints[] pointer is
      * dangling into a scene that no longer exists. */
@@ -310,6 +344,27 @@ void ndsFtPoseUnbind(GObj *gobj)
         pose->bound = 0u;
         gNdsFtPoseUnbinds++;
     }
+}
+
+void ndsFtPoseRelease(GObj *gobj)
+{
+    NdsFtPose *pose = ndsFtPoseFind(gobj);
+
+    if (pose == NULL)
+    {
+        return;
+    }
+    if (pose->bound != 0u)
+    {
+        pose->bound = 0u;
+        gNdsFtPoseUnbinds++;
+    }
+    pose->entry_count = 0u;
+    pose->attach_pending = 0u;
+    pose->pool_used = 0u;
+    /* `gobj == NULL` is the NdsFtPose free-slot contract. Keep joints/pool and
+     * oracle shadows resident so the next CSS rebuild reuses their arena. */
+    pose->gobj = NULL;
 }
 
 /* ---- the script cursor (ft/ftanim.c:73, in the port's Q form) ------------ */
@@ -1177,6 +1232,11 @@ void ndsFtPoseBindEnd(u32 entry_count)
 }
 
 void ndsFtPoseUnbind(GObj *gobj)
+{
+    (void)gobj;
+}
+
+void ndsFtPoseRelease(GObj *gobj)
 {
     (void)gobj;
 }

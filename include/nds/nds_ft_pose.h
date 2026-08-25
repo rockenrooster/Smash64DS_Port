@@ -183,6 +183,12 @@ void ndsFtPoseBindEnd(u32 entry_count);
  * next figatree bind. */
 void ndsFtPoseUnbind(GObj *gobj);
 
+/* The fighter is being destroyed. Unlike Unbind, which retains ownership for
+ * a live fighter whose joints were temporarily re-targeted, Release returns
+ * the pose slot to the same-scene free pool so CSS destroy/rebuild cycles can
+ * reuse its arena-backed storage. */
+void ndsFtPoseRelease(GObj *gobj);
+
 /* The per-tick update for one fighter. Returns TRUE when the engine owns this
  * fighter's figatree animation this tick (the caller must then skip the
  * generic parse/play and run only the MObj material animations), FALSE when
