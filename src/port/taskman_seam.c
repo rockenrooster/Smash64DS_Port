@@ -4958,6 +4958,9 @@ static void ndsBattlePlayablePresentFrame(void)
      * still readable. Read-only; off in both shipped blocks. */
     ndsR2CollisionOracleSampleFrame();
 #endif
+    /* P2-3r13: last point at which this frame's graphics-heap peak is readable
+     * for everything the fighter draw did not roll back. */
+    ndsTaskmanSampleGraphicsHeap();
     syTaskmanResetGraphicsHeap();
     func_80004AB0();
     ndsPlatformBeginFrame();
@@ -7474,6 +7477,7 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
                 gNdsRendererProfileFrameCount++;
                 /* taskman.c:1093-1100 resets these arenas before every
                  * source scene draw. */
+                ndsTaskmanSampleGraphicsHeap();
                 syTaskmanResetGraphicsHeap();
                 func_80004AB0();
                 ndsSObjPreviewBeginFrame();

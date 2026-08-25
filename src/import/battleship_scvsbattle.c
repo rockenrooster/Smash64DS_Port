@@ -418,9 +418,29 @@ void scVSBattleFuncUpdate(void)
  * Do NOT reduce a DL buffer to zero. syTaskmanCheckBufferLengths tests
  * `start + length < head` for all four and the reset writes into each, so a
  * zero-length buffer hangs at the OTHER `while (TRUE);` on decomp taskman.c:338
- * instead -- the same freeze wearing a different backtrace. */
-#define NDS_R2_VSBATTLE_DL_BUFFER0_BYTES (sizeof(Gfx) * 2048u)
-#define NDS_R2_VSBATTLE_DL_BUFFER1_BYTES (sizeof(Gfx) * 512u)
+ * instead -- the same freeze wearing a different backtrace.
+ *
+ * P2-3r13 TOOK 30,720 MORE OF THE SAME BYTES, and it is the same measurement
+ * being spent twice rather than a new guess. The observed use is still 16 bytes
+ * in buffer 0 and 0 in buffer 1: the fighter draw redirects gSYTaskmanDLHeads
+ * into its own contract scratch, and the stage/effect paths go through the
+ * hardware adapter, so nothing on this port emits a real command stream into
+ * these buffers. 2048 Gfx was "a thousand times its observed use" and 512 Gfx
+ * is still 256 times it -- both allocated per context, so the two together
+ * return 30,720 B to a scene arena that now has to seat four distinct fighter
+ * kinds. The reason to keep any length at all is the buffer-length check
+ * above, not a byte the renderer needs. */
+#define NDS_R2_VSBATTLE_DL_BUFFER0_BYTES (sizeof(Gfx) * 512u)
+#define NDS_R2_VSBATTLE_DL_BUFFER1_BYTES (sizeof(Gfx) * 128u)
+/* KEPT AT THE SOURCE'S OWN 0xD000, AND NOW MEASURED RATHER THAN ASSUMED. The
+ * graphics heap is the one reservation in this block with live CPU writers on
+ * this port -- source Mtx/Light/afterimage-Vtx pushes plus the adapter's
+ * per-DObj material branch table -- so P2-3r13 instrumented it instead of
+ * trimming it blind: gNdsTaskmanGraphicsHeapHighWater / ...OverflowCount
+ * (src/port/diagnostics.c) publish the per-frame peak and any overrun, sampled
+ * at the frame reset AND at every point the fighter draw rolls its own
+ * consumption back. Trim this only against that number, and only with the
+ * overflow count green on a four-fighter match. */
 #define NDS_R2_VSBATTLE_GRAPHICS_ARENA_BYTES 0xD000u
 
 /* 45,056 MORE RESERVED BYTES OF THE SAME CLASS, returned 2026-08-20: the RDP

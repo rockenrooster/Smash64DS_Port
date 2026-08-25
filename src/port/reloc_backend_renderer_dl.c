@@ -11295,12 +11295,14 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
                 gNdsStageGCDrawAllLoopHardwareTextureRejectCount +=
                     rebirth_render_stats->hardware_texture_reject_count;
 #if NDS_RENDERER_HW_TRIANGLES
+                ndsTaskmanSampleGraphicsHeap();
                 gSYTaskmanGraphicsHeap.ptr = rebirth_saved_graphics_heap_ptr;
 #endif
                 return;
             }
             gNdsRebirthHaloNativeFallbackCount++;
 #if NDS_RENDERER_HW_TRIANGLES
+            ndsTaskmanSampleGraphicsHeap();
             gSYTaskmanGraphicsHeap.ptr = rebirth_saved_graphics_heap_ptr;
 #endif
         }
@@ -11794,6 +11796,9 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
         &config,
         &owner_stats_before, render_stats);
 #endif
+    /* P2-3r13: the fighter's own graphics-heap peak, before it is rolled back
+     * and becomes invisible to the end-of-frame sample. */
+    ndsTaskmanSampleGraphicsHeap();
     gSYTaskmanGraphicsHeap.ptr = saved_graphics_heap_ptr;
     if (sNdsRendererAdapterStagePersistentActive != FALSE)
     {
@@ -12749,6 +12754,7 @@ static void ndsFighterMarioFoxDrawDLForSlot(u32 slot, FTStruct *fp,
                                   &state,
                                   &stats);
 #if NDS_RENDERER_HW_TRIANGLES
+    ndsTaskmanSampleGraphicsHeap();
     gSYTaskmanGraphicsHeap.ptr = saved_graphics_heap_ptr;
 #endif
     ndsFighterMarioFoxCopyDLDrawStats(slot, &state, &stats);

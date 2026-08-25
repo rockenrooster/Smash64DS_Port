@@ -14,6 +14,7 @@ static NDSRelocLoadedFile *ndsTitleLoadPreviewFile(void)
 {
     NDSRelocAssetHeader header;
     NDSRelocLoadedFile *loaded;
+    u8 *store;
 
     ndsRelocResetLoadedFiles();
     if (ndsRelocAssetReadHeader(NDS_RELOC_ASSET_MN_TITLE, &header) == FALSE)
@@ -24,16 +25,23 @@ static NDSRelocLoadedFile *ndsTitleLoadPreviewFile(void)
     {
         return NULL;
     }
+    /* P2-3r13: the store is a scene-arena allocation now, so a title entered
+     * with no arena to spare declines instead of scribbling. */
+    store = ndsRelocSceneFileBuffer();
+    if (store == NULL)
+    {
+        return NULL;
+    }
     if (ndsRelocAssetLoadData(NDS_RELOC_ASSET_MN_TITLE,
-                              sNdsTitleFileBuffer,
-                              sizeof(sNdsTitleFileBuffer),
+                              store,
+                              NDS_TITLE_FILE_BUFFER_SIZE,
                               &header) == FALSE)
     {
         return NULL;
     }
 
     loaded = ndsRelocRegisterLoadedFile(NDS_RELOC_ASSET_MN_TITLE, 0,
-                                        sNdsTitleFileBuffer, &header);
+                                        store, &header);
     if (loaded == NULL)
     {
         return NULL;
@@ -253,6 +261,7 @@ static NDSRelocLoadedFile *ndsOpeningActionPreviewLoadFile(
 {
     NDSRelocAssetHeader header;
     NDSRelocLoadedFile *loaded;
+    u8 *store;
 
     if (desc == NULL)
     {
@@ -268,16 +277,22 @@ static NDSRelocLoadedFile *ndsOpeningActionPreviewLoadFile(
     {
         return NULL;
     }
+    /* P2-3r13: scene-arena store; see ndsRelocSceneFileBuffer. */
+    store = ndsRelocSceneFileBuffer();
+    if (store == NULL)
+    {
+        return NULL;
+    }
     if (ndsRelocAssetLoadData(desc->asset_id,
-                              sNdsOpeningActionPreviewFileBuffer,
-                              sizeof(sNdsOpeningActionPreviewFileBuffer),
+                              store,
+                              NDS_OPENING_ACTION_PREVIEW_FILE_BUFFER_SIZE,
                               &header) == FALSE)
     {
         return NULL;
     }
 
     loaded = ndsRelocRegisterLoadedFile(desc->asset_id, 0,
-                                        sNdsOpeningActionPreviewFileBuffer,
+                                        store,
                                         &header);
     if (loaded == NULL)
     {

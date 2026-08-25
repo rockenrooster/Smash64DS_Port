@@ -302,12 +302,31 @@ side -- plus 36,276 B of native-owner image for the two new kinds, plus the
 `ndsTaskmanArenaBytes`'s step-down. Total need ~175 KB. Unpaid, it is not a
 degraded run but a permanent silent halt: `ftManagerSetupFilesMainKind` for the
 fourth kind asked for 77,360 B with 8,300 B free and stopped in
-`ndsSyMallocOverflowHalt`. The lab arm pays it out of the animation reservation
-(`NDS_R2_BATTLEPACK := 0` plus a 32,768 B cache trim, +222,400 B). **The
-shipping configuration has not paid it and cannot currently host four distinct
-fighters** -- board row P2-3r13 owns that decision. Every further fighter kind
-repeats the charge, so budget the remaining eight against this number rather
-than against the mirror arm's.
+`ndsSyMallocOverflowHalt`.
+
+**P2-3r13 PAID IT, AND NOT OUT OF THIS BUDGET.** The lab arm's
+`NDS_R2_BATTLEPACK := 0` plus 32,768 B cache trim (+222,400 B) is withdrawn; the
+shipping configuration now hosts four distinct kinds at `NDS_R2_BATTLEPACK 1`
+with the full 451,776 B animation reservation. The bytes came from the ARM9
+static image and from a reservation the DS renderer does not use: the 185,696 B
+title/opening/Castle scene file store left `.bss` for a lazy scene-arena
+allocation (`ndsRelocSceneFileBuffer`), `NDS_TASKMAN_ARENA_SIZE` rose
+0x17a000 -> 0x1a7000 (+184,320) to spend it, and the VSBattle DL buffers
+returned 30,720 B against a measured use of 16 bytes. Accepted run
+`artifacts/verification/2026-08-25_p2-3r13-ship4-SUMMARY.md`: 4 fighter GObjs,
+mask `0xF`, clock 60 -> 1, **general-heap low-water 49,956 B against the 25,600 B
+floor**, arena 1,695,744 (AllocFail 9 -- the binary's 36,864 B is unchanged, not
+fixed).
+
+**The per-kind charge itself is unchanged, so this law still governs fighter
+#5.** Unique arena bytes per distinct kind: Mario 54,048, Fox 116,752, Luigi
+41,552, Donkey 77,360 (four kinds 289,712; mirror roster 170,800). Model files
+are 149,616 B of that (51.6%), ShieldPose files 31,920 (11.0%), Fox's
+ExternDataBank109 47,120 (16.3%). Every further fighter kind repeats the charge,
+so budget the remaining eight against this number rather than against the mirror
+arm's, and against today's 24,356 B of margin plus the one measured reclaim left
+in the battle arena -- the per-context graphics heap, peak **96 B of 53,248**,
+two contexts.
 
 The two-fighter source regression was then re-run through the shipping shell.
 Restoring BattleShip Common Entry exposed two verifier assumptions rather than

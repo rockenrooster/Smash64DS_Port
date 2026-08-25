@@ -1,10 +1,10 @@
 # Handoff
 
-Current: 2026-08-25 — **THE FOUR-NAME ROSTER SHIPS, AND FOUR DISTINCT KINDS NOW
-RUN A WHOLE STRESS MATCH — ON A LAB ARM THAT GIVES UP THE FIGATREE PACK TO DO
-IT.** Luigi and Donkey Kong are selectable and marked unfinished; the shipped
-configuration still cannot host four distinct fighters (board row P2-3r13).
-P2-1/P2-2 still have only their owner visual/play residuals.
+Current: 2026-08-25 — **THE SHIPPING CONFIGURATION HOSTS FOUR DISTINCT FIGHTER
+KINDS.** Mario/Fox/Luigi/Donkey play a whole 60 s match at `NDS_R2_BATTLEPACK 1`
+with the shipping animation reservation, general-heap low-water 49,956 B against
+the 25,600 floor (board row P2-3r13). Luigi and Donkey Kong are selectable and
+marked unfinished. P2-1/P2-2 still have only their owner visual/play residuals.
 
 ## State
 
@@ -82,35 +82,37 @@ P2-1/P2-2 still have only their owner visual/play residuals.
    selectable, portraits dimmed under the source question-mark plate -- A on a
    slot's 3D preview cycles that slot's costume, pose slots are released when a
    fighter is destroyed, and a fighter's asset load no longer kills the BGM.
-   `NDS_P2_SHELL_ROSTER` defaults to 2 and is still a MEASURED level: the
-   per-fighter native-owner tables left the ARM9 binary for NitroFS images
-   (P2-3r4), which moved roster-2 arena headroom from 13,840 B (battle aborted
-   in `ifCommonCountdownMakeInterface`) to 44,848 B, worst case 28,772 B for a
-   Luigi-versus-Donkey match with both images resident. **Size the next fighter
-   against 28,772, not 44,848.** The remaining lever is the SHARED Mario/Fox
-   table set, 64,147 B of binary a Luigi-versus-DK match never uses.
-   **Intros are fixed** (P2-3r5): the port-owned fighter display had omitted the
-   source `is_invisible` gate. **Mario's pipe is fixed end-to-end** (P2-3r6);
-   see the board row for the four-defect chain. The final leak was not depth:
-   entry PAL16 upload forced DS `COLOR0_TRANSPARENT` although both pipe textures
-   use palette index 0 as opaque green, punching literal holes through the rim
-   and inner wall. Generated entry textures now carry the canonical RGBA5551
-   colour-0 transparency bit. Packet-on +10/+20 captures show a continuous
-   rim/body/opening, +104 has no terminal slab, and the one-lap shell verifier
-   is green (11 entries, zero faults, 39,432 B free). **The CSS preview's
-   disconnected body parts are fixed** (P2-3r7): its CSS-only `glViewport`
-   writes bypassed `ndsRendererFighterPacketDmaWait()` and cut into the last
-   preview fighter's draining packet DMA. **Rail: a GX writer outside
-   `nds_renderer.c` must call that wait first.**
-   **The four-distinct-kind stress arm runs** (P2-3r11): "two fighter GObjs"
-   was an instrument that could only count Mario and Fox, and the wall was
-   `ftManagerSetupFilesMainKind(Donkey)` asking 77,360 B with 8,300 B free and
-   halting in `ndsSyMallocOverflowHalt`. Four distinct kinds need ~175 KB more
-   arena than two mirrored; the lab arm pays it with `NDS_R2_BATTLEPACK := 0`
-   plus a 32,768 B cache trim, so **every tick figure from that arm is pack-off
-   and is not comparable to the mirror roster's.** **The SHIPPED configuration
-   still cannot host four distinct fighters** -- open board row P2-3r13, and the
-   owner's call rather than an implementation detail.
+   `NDS_P2_SHELL_ROSTER` defaults to 2; the per-fighter native-owner tables left
+   the ARM9 binary for NitroFS images (P2-3r4). Roster-2 headroom figures
+   (28,772 / 44,848) predate P2-3r13's arena raise -- resize against the current
+   run, and note the SHARED Mario/Fox table set (64,147 B of binary a
+   Luigi-versus-DK match never uses) is still unspent.
+   **Intros are fixed** (P2-3r5, the missing source `is_invisible` gate) and
+   **Mario's pipe is fixed end-to-end** (P2-3r6, a four-defect chain ending in a
+   forced DS `COLOR0_TRANSPARENT` on textures whose palette index 0 is opaque
+   green); the board rows carry both. **The CSS preview's disconnected body
+   parts are fixed** (P2-3r7): its CSS-only `glViewport` writes bypassed
+   `ndsRendererFighterPacketDmaWait()` and cut into the last preview fighter's
+   draining packet DMA. **Rail: a GX writer outside `nds_renderer.c` must call
+   that wait first.**
+   **Four distinct kinds run in the SHIPPING configuration** (P2-3r11 +
+   P2-3r13). r11 found the wall: `ftManagerSetupFilesMainKind(Donkey)` asking
+   77,360 B with 8,300 B free, halting in `ndsSyMallocOverflowHalt`; "two
+   fighter GObjs" was an instrument that could only count Mario and Fox. r13
+   paid the ~186 KB out of the ARM9 static image instead of the scene budget:
+   the 185,696 B title/opening/Castle scene file store left `.bss` for a lazy
+   scene-arena allocation (`ndsRelocSceneFileBuffer`) -- which is what
+   BattleShip itself does -- `NDS_TASKMAN_ARENA_SIZE` rose 0x17a000 -> 0x1a7000,
+   and the VSBattle DL buffers gave back 30,720 B against a measured use of 16
+   bytes. `NDS_R2_BATTLEPACK := 0` and the cache trim are gone, so **four-kind
+   tick figures are pack-on and comparable again** (`ALL` P50/P95 1,964,928 /
+   3,085,696 -- restoring the pack moved P50 by -64 ticks, because on four kinds
+   it serves one fighter in four). **Rail: never raise `NDS_TASKMAN_ARENA_SIZE`
+   without returning at least as much static image first** -- the step-down loop
+   cannot tell an ambitious target from an exhausted heap. **Measured and left
+   on the table:** the per-context graphics heap peaks at **96 B of 53,248**
+   (two contexts = 106,496 B of arena), overflow 0; re-read it on Results /
+   Sudden Death / pause zoom before cutting.
 
 4. **P2-3 background.** Luigi's production path is landed and he ANIMATES
    (P2-3r2). The bounded fast proof route is repaired end-to-end and **both
@@ -173,12 +175,10 @@ green throughout.
   fast-logic loop arm. The diagnostic names do not publish.
 - `gNdsMenuShellWalkBudget` makes the lap count a runtime poke, so a three-lap
   smoke and the twenty-lap gate come from ONE linked ROM.
-- **The shell walk costs ~69 s before the battle starts** — title 150 + mode
-  select 301 + VS mode 1,811 + character select 1,612 + stage select 244 =
-  4,118 presented frames at 60 Hz (banked:
-  `artifacts/verification/2026-08-19_p2-shell.txt`). Every wait in the battle
-  arm is a *guest* anchor, not wall-clock, so this costs the arm only time; its
-  GDB capture ceiling is 600 s for that reason.
+- **The shell walk costs ~69 s before the battle starts** — 4,118 presented
+  frames at 60 Hz (banked: `artifacts/verification/2026-08-19_p2-shell.txt`).
+  Every wait in the battle arm is a *guest* anchor, not wall-clock, so this
+  costs the arm only time; its GDB capture ceiling is 600 s for that reason.
 - The shell's own character/stage select commits the mode-163 descriptor —
   `CSSLIVE s0=0/0/1 s1=1/1/3 pl=1 cp=1 time=1 gkind=06` (Mario human, Fox CPU
   level 3, Time mode, Dream Land), read back out of the live battle state. That

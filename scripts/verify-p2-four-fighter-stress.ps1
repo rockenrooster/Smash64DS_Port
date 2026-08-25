@@ -63,6 +63,23 @@ $memoryGlobals = @(
     'gNdsAObjEvent32HashOverflowCount',
     'gNdsSyMallocOverflowCount',
     'gNdsObjmanPanicCount',
+    # P2-3r13. THE PER-CONTEXT GRAPHICS HEAP. The source sizes it 0xD000 and the
+    # DS renderer replaced most of what it was for, but unlike the DL and RDP
+    # buffers it still has live writers, so it is measured before it is trimmed.
+    # HighWater is a per-FRAME peak sampled at the reset and at every point the
+    # fighter draw rolls its own consumption back. Overflow is asserted: the
+    # source only warns and keeps writing, so an undersized heap corrupts rather
+    # than fails.
+    'gNdsTaskmanGraphicsHeapHighWater',
+    'gNdsTaskmanGraphicsHeapCapacity',
+    'gNdsTaskmanGraphicsHeapOverflowCount',
+    # P2-3r13. The title/opening/Castle scene file store left ARM9 .bss for the
+    # scene arena, which is what paid for four distinct fighter kinds in the
+    # shipping configuration. A VSBattle must never allocate it: AllocCount 0 on
+    # this arm is the proof the move actually returned the bytes to the battle,
+    # and DeclineCount 0 says no scene was refused it.
+    'gNdsRelocSceneFileBufferAllocCount',
+    'gNdsRelocSceneFileBufferDeclineCount',
     # P2-3r11. THE POSE POOL IS EXACTLY FULL ON THIS ARM AND NOWHERE ELSE:
     # NDS_FT_POSE_FIGHTERS is 4 and this is the only configuration that creates
     # four fighters, so a fifth bind has no spare slot. A BindFull is not a
@@ -309,6 +326,11 @@ $memory = [PSCustomObject]@{
     animCacheRejects = $extra['gNdsR2AnimCacheRejects']
     arenaChosenBytes = $extra['gNdsTaskmanArenaChosenSize']
     arenaSearchAllocationFailures = $extra['gNdsTaskmanArenaAllocFailCount']
+    graphicsHeapCapacityBytes = $extra['gNdsTaskmanGraphicsHeapCapacity']
+    graphicsHeapPeakBytes = $extra['gNdsTaskmanGraphicsHeapHighWater']
+    graphicsHeapOverflowCount = $extra['gNdsTaskmanGraphicsHeapOverflowCount']
+    sceneFileBufferArenaAllocCount = $extra['gNdsRelocSceneFileBufferAllocCount']
+    sceneFileBufferDeclineCount = $extra['gNdsRelocSceneFileBufferDeclineCount']
     generalHeapFreeMinBytes = $extra['gNdsTaskmanGeneralHeapFreeMin']
     generalHeapSafetyFloorBytes = $generalHeapFloor
     generalHeapMarginAboveFloorBytes =
@@ -343,6 +365,14 @@ $memory = [PSCustomObject]@{
     capturedUtc = (Get-Date).ToUniversalTime().ToString('o')
 }
 
+# WRITE THE LEDGER BEFORE JUDGING IT. The assertions below used to run first, so
+# a run that breached the floor threw with its own evidence unwritten and the
+# next question -- "by how much, and which bucket moved" -- needed a whole second
+# 25-minute run to answer (P2-3r13, 2026-08-25).
+$memoryDir = Split-Path -Parent $MemoryJsonOut
+if ($memoryDir) { New-Item -ItemType Directory -Force -Path $memoryDir | Out-Null }
+$memory | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $MemoryJsonOut
+
 if (($memory.syMallocOverflowCount -ne 0) -or
     ($memory.objmanPanicCount -ne 0) -or
     ($memory.aObjEvent32NormalizeFailCount -ne 0) -or
@@ -353,14 +383,29 @@ if (($memory.syMallocOverflowCount -ne 0) -or
         "AObj32NormalizeFail=$($memory.aObjEvent32NormalizeFailCount), " +
         "AObj32HashOverflow=$($memory.aObjEvent32HashOverflowCount).")
 }
+# The graphics heap does not fail when it runs out -- the source prints and keeps
+# writing (decomp taskman.c:330) -- so an overrun is silent corruption and has to
+# be asserted rather than reported.
+if ([uint64]$memory.graphicsHeapOverflowCount -ne 0) {
+    throw ("Four-fighter stress overran the per-context graphics heap " +
+        "$($memory.graphicsHeapOverflowCount) time(s): peak " +
+        "$($memory.graphicsHeapPeakBytes) B of " +
+        "$($memory.graphicsHeapCapacityBytes) B. Raise " +
+        "NDS_R2_VSBATTLE_GRAPHICS_ARENA_BYTES; a silent overrun scribbles past " +
+        "the arena.")
+}
+# P2-3r13: a VSBattle that allocates the scene file store has taken back the
+# 185,696 B the four-distinct-kind roster is standing on.
+if ([uint64]$memory.sceneFileBufferArenaAllocCount -ne 0) {
+    throw ("Four-fighter stress allocated the scene file store inside a battle " +
+        "($($memory.sceneFileBufferArenaAllocCount) time(s)). That store is the " +
+        "arena the four-kind roster was paid for; see ndsRelocSceneFileBuffer.")
+}
 if ([uint64]$memory.generalHeapFreeMinBytes -lt $generalHeapFloor) {
     throw ("Four-fighter stress breached the general-heap safety floor: " +
         "$($memory.generalHeapFreeMinBytes) B < $generalHeapFloor B. " +
         "P2-2 may not trade source-correct four-fighter state for allocator risk.")
 }
-$memoryDir = Split-Path -Parent $MemoryJsonOut
-if ($memoryDir) { New-Item -ItemType Directory -Force -Path $memoryDir | Out-Null }
-$memory | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $MemoryJsonOut
 
 Write-Host ''
 Write-Host 'P2-2 four-fighter stress artifacts:'

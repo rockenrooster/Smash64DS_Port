@@ -1,0 +1,22 @@
+{
+  "probe": "same-run four CPU match window coverage",
+  "target": "smash64ds-p2-fourcpu-tickhud-hwtri",
+  "romSha256": "313B2D1ED33F4374184D1B3886B10DB64A065344D249708D9321B96690CF9510",
+  "startFrame": 1,
+  "timingStartFrame": 2,
+  "endFrame": 1973,
+  "clockStart": 60,
+  "clockEnd": 1,
+  "elapsedSeconds": 59,
+  "matchSeconds": 60,
+  "fractionOfMatch": 0.9833333333333333,
+  "presentedDelta": 1972,
+  "logicDelta": 3944,
+  "sourceIdentity": {
+    "playerCount": 0,
+    "cpuCount": 4,
+    "fighterCount": 4,
+    "activePlayerMask": 15
+  },
+  "capturedUtc": "2026-08-25T07:12:09.2469140Z"
+}

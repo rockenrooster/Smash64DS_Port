@@ -2227,41 +2227,28 @@ ifeq ($(TARGET),smash64ds-p2-fourcpu-tickhud-hwtri)
 override NDS_P2_FOUR_CPU_STRESS := 1
 override NDS_R2_EFFECT_POOL := 38
 ifeq ($(NDS_P2_FOUR_CPU_ROSTER),1)
-# P2-3r11. FOUR DISTINCT KINDS CANNOT AFFORD A ONE-FIGHTER FIGATREE PACK, and
-# that is arithmetic rather than preference. Each distinct fighter kind pays its
-# own main-file tree out of the taskman arena at battle setup -- Mario 54,048,
-# Fox 119,040, Luigi 57,104, Donkey 79,648 (generated alloc-size tables,
-# include/nds/generated/nds_fighter_production.generated.h) -- so the mirror
-# roster's 173,088 becomes 309,840, and the two new kinds also make their
-# native-owner images resident. The mirror arm already ends a match with a
-# general-heap low-water of 31,252 B, i.e. below the 32,768 floor, so there is
-# nothing to take it from.
+# P2-3r13. THE ROSTER ARM IS SHIPPING-SHAPED AGAIN: NOTHING IS OVERRIDDEN HERE
+# EXCEPT THE ROSTER ITSELF.
 #
-# Measured on the roster arm before this line: `ftManagerSetupFilesMainKind`
-# for the fourth fighter asked syTaskmanMalloc for 77,360 B with 8,300 B free in
-# a 1,515,520 B arena and hit `ndsSyMallocOverflowHalt` -- a permanent, silent
-# ARM9 halt at battle setup, which is why the arm "booted but never started a
-# match" (artifacts/verification/2026-08-25_r11-arena-overflow.txt).
+# P2-3r11 got four distinct kinds through a whole match by setting
+# `NDS_R2_BATTLEPACK := 0` on this arm plus a 32,768 B animation-cache trim,
+# because each distinct fighter kind pays its own main-file tree out of the
+# taskman arena at battle setup -- Mario 54,048, Fox 119,040, Luigi 57,104,
+# Donkey 79,648 (generated alloc-size tables,
+# include/nds/generated/nds_fighter_production.generated.h) -- and the arm died
+# in `ftManagerSetupFilesMainKind(nFTKindDonkey)` asking 77,360 B with 8,300 B
+# free (artifacts/verification/2026-08-25_r11-arena-overflow.txt).
 #
-# NDS_R2_BATTLEPACK=0 with KEEP_CACHE=1 is the documented, already-measured
-# isolation-control pair (see the NDS_R2_BATTLEPACK_KEEP_CACHE block above and
-# smash64ds-battle-playable-fast-hwtri): the arena target stays 0x17a000 and the
-# animation reservation falls from 287,936 + 163,840 = 451,776 to the flat
-# BATTLEPACK=0 figure, returning 189,632 B to the scene. Note the raw file cache
-# still GROWS in that move (163,840 -> 262,144); what is given up is only Fox's
-# prebuilt clip pack, whose 287,904 B bought one of two fighters and would now
-# buy one of four. A pack miss degrades to the on-demand load, so this is a
-# performance trade and never a correctness one -- gNdsR2AnimCacheRejects/Misses
-# are its instruments, and any tick figure from this arm must be reported as
-# pack-off.
+# Both overrides are GONE, and the ~186 KB they were paying for came from
+# somewhere that costs no gameplay CPU at all: 185,696 B of ARM9 .bss -- the
+# title / opening-action / Peach's-Castle scene file store, which a VSBattle
+# never touches -- left the static image for the scene arena
+# (`ndsRelocSceneFileBuffer`, src/port/reloc_backend_assets.c), and
+# NDS_TASKMAN_ARENA_SIZE rose 0x17a000 -> 0x1a7000 by 184,320 of it. Fox's
+# prebuilt clip pack and the 262,144 B animation reservation are therefore
+# resident on this arm exactly as they are in builds/build-p2-shell, so a tick
+# figure from here is comparable with the mirror roster's again.
 #
-# THE PACK ALONE WAS 392 B SHORT: that arm ran the whole match but ended at a
-# 25,208 B general-heap low-water against the 25,600 B floor
-# (artifacts/verification/2026-08-25_p2-3r11-roster4-packoff-only.txt). The
-# remainder comes off the same pot, in reloc_backend_assets.c, where this roster
-# takes NDS_R2_ANIM_CACHE_ARENA_BYTES to 229,376. The two changes are one
-# decision and must move together.
-override NDS_R2_BATTLEPACK := 0
 # The roster IS the two admission flags, so derive them instead of making every
 # caller repeat them. `NDS_P2_LUIGI`/`NDS_P2_DONKEY` default at line 580 above,
 # which is why this override is expressible here and the arity check next to the

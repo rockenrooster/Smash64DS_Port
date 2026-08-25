@@ -1,0 +1,5 @@
+Toolchain usable: recursive make OK, DEVKITPRO=C:/devkitPro DEVKITARM=C:/devkitPro/devkitARM
+Running verifier: p2_shell_loop [verify-p2-shell-loop.ps1]
+Running verifier: p2_battle_realtime [verify-battle-playable-realtime-harness.ps1]
+Running verifier: p2_fourcpu_stress [verify-p2-four-fighter-stress.ps1]
+Boundary verification profile passed.

@@ -7925,8 +7925,26 @@ extern void func_80005BFC(void);
  * shipping arm's 1,376,256 - 262,144 = 1,114,112. This arm gives taskman 17,600
  * bytes LESS, which is why its low-water sits below the shipping arm's rather
  * than above it. Size the next change against the RESIDUE, not against the
- * constant on this line. */
-#define NDS_TASKMAN_ARENA_SIZE 0x17a000u
+ * constant on this line.
+ *
+ * P2-3r13 RAISED IT 0x17a000 -> 0x1a7000 (+184,320), AND THE BYTES WERE BOUGHT
+ * BEFORE THEY WERE SPENT. The scene file store -- 185,696 B of ARM9 .bss for
+ * the title / opening-action / Peach's-Castle file destinations -- moved into
+ * the scene arena (see ndsRelocSceneFileBuffer in reloc_backend_assets.c), so
+ * the libnds heap this calloc draws from grew by more than this constant did
+ * and the reserve left after the arena is unchanged. That is the invariant to
+ * preserve on any future raise: NEVER raise this without returning at least as
+ * much static image first, because the step-down loop below cannot tell the
+ * difference between "the target was ambitious" and "the heap is exhausted" --
+ * it just hands back a smaller arena and only gNdsTaskmanArenaChosenSize and
+ * gNdsTaskmanArenaAllocFailCount ever say so.
+ *
+ * The PROVEN GRANTABLE CEILING above (1,564,672) was measured against the old
+ * static image and does not carry across this change; the current ceiling is
+ * whatever ChosenSize reports on the build in hand. It is per-BUILD, not
+ * per-project: the four-distinct-kind roster's larger ARM9 binary already cost
+ * it 36,864 (AllocFail 9) before any of this. */
+#define NDS_TASKMAN_ARENA_SIZE 0x1a7000u
 #else
 #define NDS_TASKMAN_ARENA_SIZE 0x150000u
 #endif
@@ -8039,6 +8057,59 @@ size_t ndsTaskmanArenaSize(void)
 {
     return (ndsTaskmanArenaBytes() != NULL) ?
         (size_t)gNdsTaskmanArenaChosenSize : 0u;
+}
+
+/* P2-3r13. THE PER-CONTEXT GRAPHICS HEAP, MEASURED INSTEAD OF ASSUMED.
+ *
+ * battleship_scvsbattle.c already returned the two reservations of this class
+ * that were provably dead on DS hardware -- 61,440 B of N64 display-list buffer
+ * (16 bytes of 81,920 ever written) and 45,056 B of RDP output buffer (zero) --
+ * and left this one at the source's own 0xD000 with the reason recorded: unlike
+ * those, the graphics heap has live CPU writers on this port, so "shrinking it
+ * is a measured draw-depth question this rebate does not answer". This is that
+ * measurement, and it exists because the arena bought its way to four distinct
+ * fighter kinds and the next kind has to come from somewhere.
+ *
+ * The heap is reset at the top of every present, so the figure that matters is
+ * a per-FRAME peak. It cannot be read at end of frame alone: the fighter draw
+ * saves and restores `gSYTaskmanGraphicsHeap.ptr` around itself (contract
+ * capture, rebirth halo, afterimage), so a fighter's own consumption is rolled
+ * back before the frame ends and an end-of-frame sample reports everything
+ * except the deepest thing in the frame. Sample at the RESTORE points as well;
+ * that is where each rolled-back peak is still readable.
+ *
+ * Overflow is counted rather than trusted: the source only prints a warning
+ * (decomp taskman.c:330) and keeps writing, so an undersized heap corrupts
+ * whatever follows it instead of failing. A non-zero count on any run means the
+ * size below is wrong, and the four-CPU stress harness reads it. */
+__attribute__((used)) volatile u32 gNdsTaskmanGraphicsHeapHighWater;
+__attribute__((used)) volatile u32 gNdsTaskmanGraphicsHeapCapacity;
+__attribute__((used)) volatile u32 gNdsTaskmanGraphicsHeapOverflowCount;
+
+void ndsTaskmanSampleGraphicsHeap(void)
+{
+    uintptr_t start = (uintptr_t)gSYTaskmanGraphicsHeap.start;
+    uintptr_t end = (uintptr_t)gSYTaskmanGraphicsHeap.end;
+    uintptr_t ptr = (uintptr_t)gSYTaskmanGraphicsHeap.ptr;
+    u32 used;
+
+    if ((start == 0u) || (ptr < start))
+    {
+        return;
+    }
+    if (end >= start)
+    {
+        gNdsTaskmanGraphicsHeapCapacity = (u32)(end - start);
+    }
+    if (ptr > end)
+    {
+        gNdsTaskmanGraphicsHeapOverflowCount++;
+    }
+    used = (u32)(ptr - start);
+    if (used > gNdsTaskmanGraphicsHeapHighWater)
+    {
+        gNdsTaskmanGraphicsHeapHighWater = used;
+    }
 }
 
 #define NDS_OVERLAY_LIST(X) \

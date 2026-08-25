@@ -682,22 +682,73 @@ static LBFileNode *sNdsRelocForceStatusBuffer;
 static s32 sNdsRelocForceStatusBufferCount;
 static s32 sNdsRelocForceStatusBufferMax;
 
-typedef union NDSRelocSceneFileBuffer
-{
-    u8 title[NDS_TITLE_FILE_BUFFER_SIZE];
-    u8 opening_action[NDS_OPENING_ACTION_PREVIEW_FILE_BUFFER_SIZE];
-} NDSRelocSceneFileBuffer;
-
 /* BattleShip's scene manager serializes the opening-movie and title scenes.
  * Harness builds cannot enter either scene; their only users of this store are
  * the two exactly bounded static assets in ndsRelocStaticBufferForAsset.
- * Normal startup keeps the full opening extent. Reuse the larger store instead
- * of permanently reserving both buffers in ARM9 main memory. */
-static NDSRelocSceneFileBuffer sNdsRelocSceneFileBuffer
-    __attribute__((aligned(16)));
-#define sNdsTitleFileBuffer sNdsRelocSceneFileBuffer.title
-#define sNdsOpeningActionPreviewFileBuffer \
-    sNdsRelocSceneFileBuffer.opening_action
+ * Normal startup keeps the full opening extent. One store serves both, sized by
+ * the larger. */
+#define NDS_RELOC_SCENE_FILE_BUFFER_SIZE \
+    ((NDS_TITLE_FILE_BUFFER_SIZE > NDS_OPENING_ACTION_PREVIEW_FILE_BUFFER_SIZE) \
+        ? NDS_TITLE_FILE_BUFFER_SIZE \
+        : NDS_OPENING_ACTION_PREVIEW_FILE_BUFFER_SIZE)
+
+/* P2-3r13. THIS STORE LEFT ARM9 .bss FOR THE SCENE ARENA, AND THAT IS WHAT
+ * MAKES FOUR DISTINCT FIGHTER KINDS FIT THE SHIPPING CONFIGURATION.
+ *
+ * It was a 185,696 B static union -- the title file, the opening-action preview
+ * file, and (in harness builds) the Peach's Castle + bank-113 static
+ * destinations -- permanently resident in main memory. A VSBattle touches none
+ * of them, yet every byte of ARM9 .bss costs the taskman arena one for one:
+ * ndsTaskmanArenaBytes steps `calloc` down 4,096 at a time until the libnds
+ * heap grants it, so static growth is subtracted from the scene arena silently
+ * and only gNdsTaskmanArenaChosenSize ever sees it. The four-distinct-kind
+ * roster needed ~186 KB of arena it did not have (board row P2-3r11).
+ *
+ * The scenes that DO use this store are exactly the scenes with an idle arena.
+ * BattleShip's own title/opening scenes load their files with
+ * `lbRelocGetExternHeapFile(id, syTaskmanMalloc(...))`, so an arena allocation
+ * is what the source does here; the static buffer was the port's deviation.
+ * Taking it from the arena is therefore neutral for those scenes, neutral for
+ * Castle (ndsRelocEnsureLoadedAsset's fallback would charge the same arena for
+ * the same bytes) and returns the whole extent to every battle.
+ *
+ * Keyed on gNdsTaskmanHeapGeneration for the reason nds_renderer.c's owner-image
+ * slot is: the general heap is a bump region that every scene entry rewinds, and
+ * a cursor comparison false-positives exactly when a later scene has already
+ * re-allocated over the block. Callers must handle NULL -- an arena that cannot
+ * afford the store declines instead of spinning in syMallocSet. */
+static u8 *sNdsRelocSceneFileBufferPtr;
+static u32 sNdsRelocSceneFileBufferGeneration;
+__attribute__((used)) volatile u32 gNdsRelocSceneFileBufferAllocCount;
+__attribute__((used)) volatile u32 gNdsRelocSceneFileBufferDeclineCount;
+__attribute__((used)) volatile u32 gNdsRelocSceneFileBufferBytes =
+    NDS_RELOC_SCENE_FILE_BUFFER_SIZE;
+
+static u8 *ndsRelocSceneFileBuffer(void)
+{
+    if ((sNdsRelocSceneFileBufferPtr != NULL) &&
+        (sNdsRelocSceneFileBufferGeneration == gNdsTaskmanHeapGeneration))
+    {
+        return sNdsRelocSceneFileBufferPtr;
+    }
+    sNdsRelocSceneFileBufferPtr = NULL;
+    if (ndsSyMallocWouldFit(&gSYTaskmanGeneralHeap,
+                            NDS_RELOC_SCENE_FILE_BUFFER_SIZE,
+                            0x10) == FALSE)
+    {
+        gNdsRelocSceneFileBufferDeclineCount++;
+        return NULL;
+    }
+    sNdsRelocSceneFileBufferPtr =
+        syTaskmanMalloc(NDS_RELOC_SCENE_FILE_BUFFER_SIZE, 0x10);
+    sNdsRelocSceneFileBufferGeneration = gNdsTaskmanHeapGeneration;
+    if (sNdsRelocSceneFileBufferPtr != NULL)
+    {
+        gNdsRelocSceneFileBufferAllocCount++;
+    }
+    return sNdsRelocSceneFileBufferPtr;
+}
+
 static NDSOpeningActionPreviewCache sNdsOpeningActionPreviewCaches[
     NDS_OPENING_ACTION_PREVIEW_CACHE_COUNT];
 
@@ -3993,19 +4044,22 @@ static NDSRelocLoadedFile *ndsRelocLoadExternTreeAsset(u32 asset_id,
 static void *ndsRelocStaticBufferForAsset(u32 asset_id, size_t asset_size)
 {
 #if NDS_DEV_SCENE_HARNESS != 0
+    u8 *store;
+
     if ((asset_id == NDS_RELOC_ASSET_STAGE_CASTLE) &&
         (asset_size <= NDS_RELOC_STAGE_CASTLE_STATIC_SIZE))
     {
-        return sNdsOpeningActionPreviewFileBuffer;
+        return ndsRelocSceneFileBuffer();
     }
     if ((asset_id == NDS_RELOC_ASSET_EXTERN_DATA_BANK_113) &&
         (asset_size <= NDS_RELOC_EXTERN_DATA_BANK_113_STATIC_SIZE) &&
         ((NDS_RELOC_STAGE_CASTLE_STATIC_SIZE +
           NDS_RELOC_EXTERN_DATA_BANK_113_STATIC_SIZE) <=
-         sizeof(sNdsOpeningActionPreviewFileBuffer)))
+         NDS_RELOC_SCENE_FILE_BUFFER_SIZE))
     {
-        return &sNdsOpeningActionPreviewFileBuffer[
-            NDS_RELOC_STAGE_CASTLE_STATIC_SIZE];
+        store = ndsRelocSceneFileBuffer();
+        return (store != NULL) ?
+            &store[NDS_RELOC_STAGE_CASTLE_STATIC_SIZE] : NULL;
     }
 #else
     (void)asset_id;
@@ -6920,32 +6974,13 @@ volatile u32 gNdsR204AnimSeen[(NDS_R204_ANIM_ID_SPAN + 31u) / 32u];
 #define NDS_R2_ANIM_CACHE_ARENA_BYTES (NDS_BATTLEPACK_RESERVE_BYTES + 4096u)
 #endif
 #else
-#if NDS_P2_FOUR_CPU_ROSTER
-/* P2-3r11. THE FOUR-DISTINCT-KIND ARM PAYS FOR ITS TWO EXTRA FIGHTER KINDS OUT
- * OF THIS CACHE, and the 32,768 is the measured remainder rather than a guess.
- *
- * Dropping the battlepack (see the Makefile's NDS_P2_FOUR_CPU_ROSTER block)
- * returned 189,632 B and took the arm from a permanent halt in
- * `ftManagerSetupFilesMainKind(nFTKindDonkey)` to a complete 60-second match --
- * but only to a general-heap low-water of 25,208 B against the standing
- * 25,600 B floor, i.e. 392 B short
- * (`artifacts/verification/2026-08-25_p2-3r11-roster4-packoff-only.txt`, the
- * pack-off arm with this reservation still at the flat 262,144 -- the match
- * ran, the floor did not hold). This page is where the rest comes from, for
- * the same reason the pack went: it is the only pot in the arena whose
- * shortfall is a PERFORMANCE outcome. A warm entry that no longer fits takes
- * the on-demand load, and `gNdsR2AnimCacheRejects` is the acceptance test -- the
- * four-CPU stress harness now reads it, so this constant is checked by
- * measurement and not by this comment.
- *
- * 229,376 still exceeds the 194,500 B the measured 87-asset Mario/Fox working
- * set needs (see the R2-04 E4 block below), and on this arm that list covers
- * only two of the four fighters anyway: Luigi and Donkey have no warm entries
- * at all and stream on demand either way. */
-#define NDS_R2_ANIM_CACHE_ARENA_BYTES 229376u
-#else
+/* P2-3r13 RETIRED THE FOUR-DISTINCT-KIND TRIM THAT STOOD HERE. P2-3r11 took
+ * this reservation to 229,376 on NDS_P2_FOUR_CPU_ROSTER because dropping the
+ * battlepack still left that arm 392 B under the 25,600 B floor. Both the pack
+ * override and this trim are gone: the ~186 KB now comes from ARM9 .bss instead
+ * (the scene file store moved to the arena -- see ndsRelocSceneFileBuffer), so
+ * the roster arm carries the shipping reservation and the shipping pack. */
 #define NDS_R2_ANIM_CACHE_ARENA_BYTES 262144u
-#endif
 #endif
 
 /* R2-04 E4. The match's animation working set, measured rather than guessed:
