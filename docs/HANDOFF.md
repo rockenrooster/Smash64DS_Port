@@ -1,15 +1,15 @@
 # Handoff
 
-Current: 2026-08-25 — **CAPTAIN FALCON'S NAMED NATIVE-MODEL BLOCKER IS CLOSED
-AND HIS RUNTIME SLICE IS LANDED** behind `NDS_P2_CAPTAIN` (rows P2-3f5/f6). The
-blocker was two `SOURCE_STATE_EFFECTS` entries: `G_SETOTHERMODE_L` needed no
-runtime code at all (`ndsRendererRecordOtherMode` has always dispatched on the
-opcode byte) and `G_SETBLENDCOLOR` needed one `case`, because the DS answer —
-`glAlphaFunc(blend_color.a >> 4)` on `G_AC_THRESHOLD` — was already wired.
-**He is NOT selectable and no shipped build sets the flag**; `falcon.md` orders
-what is left. `check-docs.ps1` now runs inside `verify-all`. Earlier: the two
-fighter-shaped static checkers greened and entered Boundary (P2-3f1/f3), Luigi
-got his entry back (P2-3f2), stress arm on the four landed kinds (P2-3r15).
+Current: 2026-08-25 — **P2-3r17 (fighter seams) IS DEFERRED BY THE OWNER; the
+data is exonerated and has one merged oracle.** Culling is FALSIFIED — the
+owner: cull-none fills the holes' colour in without closing them — so never
+judge `NDS_LAB_NO_CULL` by "does it look better". Two traps: the shipped
+fighter draw is a **DMA packet replay** that swallows lab probes (now a build
+error), and wall-clock capture cannot A/B this row (same binary, fixed delay,
+pairs 237k–537k px apart) — use a frame lock. Open lead: vertices getting wrong
+values; next experiment `NDS_R2_FIGHTER_GX_COMPOSE=2`, whose
+`gNdsR2GxComposeVerifyFail` compares the GX and CPU composes with no
+screenshot. Earlier: Falcon's slice (P2-3f5/f6), P2-3f1/f3, P2-3f2, P2-3r15.
 
 ## State
 
