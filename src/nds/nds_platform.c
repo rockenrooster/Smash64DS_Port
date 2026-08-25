@@ -1114,6 +1114,25 @@ static s32 ndsPlatformScaleSourceViewportEdge(s32 value, s32 limit)
 }
 #endif
 
+/* P2-3r7. GFX_VIEWPORT IS A GX COMMAND, SO THESE TWO ARE FIFO WRITERS.
+ *
+ * P2-2p3 made the fighter packet replay start its DMA into GFX_FIFO and return
+ * without waiting, on the contract that "whoever writes the FIFO next waits
+ * first" -- every renderer seam calls ndsRendererFighterPacketDmaWait. These
+ * two helpers were added later, for the character select's source viewport, and
+ * they bypassed that contract: ndsMNPlayersVSPreviewFrame calls
+ * ndsPlatformReset3DViewport IMMEDIATELY after gcDrawAll, so the glViewport
+ * word landed in the FIFO in the middle of the last preview fighter's still-
+ * draining packet. The geometry engine then read it as a parameter of whatever
+ * command was open and every following word shifted, which is why the preview
+ * drew with its head, cap, gloves and legs at other joints' positions -- and
+ * why only the character select was affected: it is the only caller.
+ *
+ * Measured on build-p2-shell, same ROM, one poked bit: holding
+ * sNdsFighterPackets[].valid at 0 (every draw records, nothing replays) drew
+ * the preview assembled, while the replay drew it in pieces; two record frames
+ * one draw apart differed in 105 words, ALL of them the replay's own patch
+ * sites, so the recorded stream was never the problem -- its delivery was. */
 void ndsPlatformSet3DViewportSource(s32 ulx, s32 uly, s32 lrx, s32 lry)
 {
 #if NDS_RENDERER_HW_TRIANGLES
@@ -1138,6 +1157,7 @@ void ndsPlatformSet3DViewportSource(s32 ulx, s32 uly, s32 lrx, s32 lry)
     {
         y1 = SCREEN_HEIGHT - 1;
     }
+    ndsRendererFighterPacketDmaWait();
     glViewport(x0, y0, x1, y1);
 #else
     (void)ulx;
@@ -1150,6 +1170,7 @@ void ndsPlatformSet3DViewportSource(s32 ulx, s32 uly, s32 lrx, s32 lry)
 void ndsPlatformReset3DViewport(void)
 {
 #if NDS_RENDERER_HW_TRIANGLES
+    ndsRendererFighterPacketDmaWait();
     glViewport(0, 0, SCREEN_WIDTH - 1, SCREEN_HEIGHT - 1);
 #endif
 }

@@ -27,6 +27,25 @@ param(
     # then stepped three hundred thousand logic frames before their ceiling.
     # Each element is split on commas below.
     [string[]]$EntrySeries = @(),
+    # The same treatment for the CHARACTER SELECT: extra shots after
+    # css-default, each N presents after the previous one (cumulative), named
+    # css-default+<total>. `-CssSeries 60,60,60,60` photographs one CSS visit
+    # at four points along the scripted walk.
+    #
+    # Added 2026-08-24 because P2-3r7 -- the owner's "character parts are in
+    # the wrong spots when deselecting and selecting a character" -- was
+    # mis-diagnosed for a whole cycle from four single-frame `css-default`
+    # shots, each taken at a different present count on a different build. Four
+    # such shots compare ANIMATION PHASE, not builds; the defect they were
+    # meant to isolate only appears after the walk destroys and rebuilds a
+    # preview fighter, which is ~240 presents into the screen. There was no way
+    # to photograph that from this harness at all.
+    #
+    # Strings, not [int[]]: see -EntrySeries. The same `pwsh -File` binding
+    # trap applies, and a second one bites here -- do NOT assign the parsed
+    # ints back into this [string[]] parameter, or a later numeric sort reads
+    # them as strings and orders "110" before "2".
+    [string[]]$CssSeries = @(),
     # Override the per-state `Presents` for the SELECTED states. A state that
     # carries its own Presents (battle-intro, fighter-entry-1, css-ready) sets
     # it because that is the frame the state is normally worth photographing;
@@ -138,12 +157,37 @@ foreach ($step in $EntrySeries) {
 }
 $states += @{ Name = 'fighter-entry-2'; Break = 'ftCommonAppearSetStatus'; Presents = 8 }
 
+# Splice the character-select series in AFTER css-default, so the run still
+# visits every screen in cold-boot order. css-default has no `Presents` of its
+# own, so its base is -PresentsAfterState and each series entry steps from
+# there; a series state's own ndsPlatformEndFrame stop is one of its presents,
+# hence `$step - 1`, exactly as the entry series does.
+$cssSteps = @($CssSeries |
+    ForEach-Object { "$_" -split '[,; ]+' } |
+    Where-Object { $_ -ne '' } |
+    ForEach-Object { [int]$_ })
+if ($cssSteps.Count -gt 0) {
+    $cssTotal = $PresentsAfterState
+    $cssStates = @()
+    foreach ($step in $cssSteps) {
+        $cssTotal += $step
+        $cssStates += @{ Name = ('css-default+' + $cssTotal);
+                         Break = 'ndsPlatformEndFrame'; Presents = $step - 1 }
+    }
+    $spliced = @()
+    foreach ($state in $states) {
+        $spliced += $state
+        if ($state.Name -eq 'css-default') { $spliced += $cssStates }
+    }
+    $states = $spliced
+}
+
 if ($Only.Count -gt 0) {
     $unknown = @($Only | Where-Object { $name = $_; -not ($states | Where-Object { $_.Name -eq $name }) })
     if ($unknown.Count -gt 0) {
         throw ('Unknown -Only state(s): ' + ($unknown -join ', '))
     }
-    $states = @($states | Where-Object { ($Only -contains $_.Name) -or ($_.Name -like 'fighter-entry-1+*') })
+    $states = @($states | Where-Object { ($Only -contains $_.Name) -or ($_.Name -like 'fighter-entry-1+*') -or ($_.Name -like 'css-default+*') })
 }
 $required = @('ndsPlatformEndFrame') +
     @($states | ForEach-Object { $_.Break } | Select-Object -Unique)
