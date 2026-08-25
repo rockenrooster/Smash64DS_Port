@@ -432,16 +432,39 @@ void scVSBattleFuncUpdate(void)
  * above, not a byte the renderer needs. */
 #define NDS_R2_VSBATTLE_DL_BUFFER0_BYTES (sizeof(Gfx) * 512u)
 #define NDS_R2_VSBATTLE_DL_BUFFER1_BYTES (sizeof(Gfx) * 128u)
-/* KEPT AT THE SOURCE'S OWN 0xD000, AND NOW MEASURED RATHER THAN ASSUMED. The
- * graphics heap is the one reservation in this block with live CPU writers on
- * this port -- source Mtx/Light/afterimage-Vtx pushes plus the adapter's
- * per-DObj material branch table -- so P2-3r13 instrumented it instead of
- * trimming it blind: gNdsTaskmanGraphicsHeapHighWater / ...OverflowCount
- * (src/port/diagnostics.c) publish the per-frame peak and any overrun, sampled
- * at the frame reset AND at every point the fighter draw rolls its own
- * consumption back. Trim this only against that number, and only with the
- * overflow count green on a four-fighter match. */
-#define NDS_R2_VSBATTLE_GRAPHICS_ARENA_BYTES 0xD000u
+/* MEASURED BY P2-3r13, THEN BOUNDED AND CUT BY P2-3f9: 0xD000 -> 0x2000, which
+ * returns 2 x 45,056 = 90,112 B of scene arena.
+ *
+ * P2-3r13 instrumented this reservation instead of trimming it blind, and read
+ * a per-FRAME peak of **96 B of 53,248, overflow 0, over a whole VS match**
+ * (gNdsTaskmanGraphicsHeapHighWater / ...Capacity / ...OverflowCount,
+ * src/port/diagnostics.c, sampled at the frame reset AND at every point the
+ * fighter draw rolls its own consumption back). It declined to cut on that
+ * number alone -- correctly, because one match's sample is not a bound and
+ * three writers were not in it. P2-3f9 needed the bytes, so it bounded the
+ * writers from the SOURCE rather than sampling harder:
+ *
+ *   afterimage vertices (ftdisplaymain.c:457-581) -- `FTAfterImage desc[3]`
+ *     (ft/fighter.h), so `drawstatus` is at most 3. Each of the 3 segments
+ *     writes 2 Vtx; each of the 2 joins writes 2 more per interpolation step,
+ *     and the step count is `angle_diff / 30 degrees` + 1, at most 7 for the
+ *     180-degree worst case, i.e. 6 steps. Worst case 3*2 + 2*12 = 30 Vtx =
+ *     **480 B**, and the fighter draw restores the heap pointer around itself
+ *     so four fighters do not stack (worst case even if they did: 1,920 B).
+ *   the fighter light (ftdisplaylights.c:19-26) -- one Light, 16 B, inside the
+ *     same rollback bracket.
+ *   the adapter's per-DObj material branch table
+ *     (reloc_backend_renderer_dl.c) -- (mobj_count + branch_commands) * 8 B,
+ *     and it is the only unbounded one. It already REFUSES rather than
+ *     overruns, so its failure mode is a missing material branch, not
+ *     corruption; P2-3f9 made that refusal countable
+ *     (gNdsTaskmanGraphicsHeapNoRoomCount) so an undersized heap is loud
+ *     instead of merely visible.
+ *
+ * 0x2000 is 85x the measured peak and 17x the afterimage bound. Trim further
+ * only against a fresh HighWater, and never with a nonzero overflow or no-room
+ * count on a four-fighter match. */
+#define NDS_R2_VSBATTLE_GRAPHICS_ARENA_BYTES 0x2000u
 
 /* 45,056 MORE RESERVED BYTES OF THE SAME CLASS, returned 2026-08-20: the RDP
  * OUTPUT BUFFER. The source sizes it 0xC000 (decomp scvsbattle.c:41) for the

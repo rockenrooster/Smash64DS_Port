@@ -434,6 +434,26 @@ static const NdsMenuWalkStep kNdsMenuWalkVs[] = {
  * start, one increment commits exactly 2 -- deterministic, lap-stable, and
  * still distinct from the preset's 3, so the battle state reading 2 remains
  * the proof that the DESCRIPTOR, not the preset, decides the match. */
+#if NDS_P2_SHELL_ARGMAX_ROSTER
+/* P2-3f9 -- THE ARGMAX TOUR IS THE ONE THAT TOUCHES NOTHING.
+ *
+ * The descriptor already carries the four heaviest landed kinds
+ * (nds_match_config.c), so mnPlayersVSInitPlayer's port -- ndsMenuShellCssInit
+ * -- opens this screen with all four slots occupied and selected, every gate
+ * open and every live preview built. The tour above would DESTROY that: its
+ * first A lands on slot 0's token and its two slot-4 kind presses cycle an
+ * occupied CP slot to NA and back, which re-rolls that slot's fighter through
+ * mnPlayersVSRandFighterKind and makes the roster nondeterministic.
+ *
+ * So this arm waits and presses START. The wait is not padding: the source
+ * refuses START until sMenuTics > NDS_CSS_START_ARM_TICS (60), and the entry
+ * shutters slide 2 px a tic from door_offset 41. One dwell (40) plus a 90-frame
+ * hold clears both with margin, on every lap. */
+static const NdsMenuWalkStep kNdsMenuWalkCss[] = {
+    { 0u, 90u },
+    { (u16)NDS_INPUT_START, 1u }
+};
+#else
 static const NdsMenuWalkStep kNdsMenuWalkCss[] = {
     { (u16)NDS_INPUT_UP, 30u },
     { (u16)NDS_INPUT_RIGHT, 9u },
@@ -486,6 +506,7 @@ static const NdsMenuWalkStep kNdsMenuWalkCss[] = {
     { (u16)NDS_INPUT_A, 1u },
     { (u16)NDS_INPUT_START, 1u }
 };
+#endif /* NDS_P2_SHELL_ARGMAX_ROSTER */
 
 /* THE STAGE-SELECT TOUR (P2-1f), and it is TWO scripts because this screen has
  * two exits and both are the row's deliverable. The cursor opens on the cell

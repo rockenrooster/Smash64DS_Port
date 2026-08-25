@@ -19,6 +19,9 @@
 #include <nds/nds_reloc_assets.h>
 #include <ft/fighter.h>
 #include <gm/gmsound.h>
+/* P2-3f9: gSCManagerBattleState -- the animation cache's BattlePack carve is a
+ * per-match decision and the roster is where that decision comes from. */
+#include <sc/scene.h>
 
 #if NDS_R2_BATTLEPACK && !NDS_R2_ANIM_CACHE
 /* Structural, not documentation. The resident pack IS the animation arena's
@@ -7051,10 +7054,17 @@ volatile u32 gNdsR204AnimSeen[(NDS_R204_ANIM_ID_SPAN + 31u) / 32u];
  * 425,072 of the 451,776 reserved -- i.e. Mario's half used 137,136 of its
  * 163,840, 83.7%, with 26,704 spare. That spare is the real margin on this
  * constant; 163,840 is not a round number to be trimmed casually. */
-#define NDS_R2_ANIM_CACHE_ARENA_BYTES (NDS_BATTLEPACK_RESERVE_BYTES + 163840u)
+#define NDS_R2_ANIM_CACHE_RAW_BYTES 163840u
 #else
-#define NDS_R2_ANIM_CACHE_ARENA_BYTES (NDS_BATTLEPACK_RESERVE_BYTES + 4096u)
+#define NDS_R2_ANIM_CACHE_RAW_BYTES 4096u
 #endif
+/* THE CEILING, NOT THE RESERVATION (P2-3f9). The BattlePack half is carved per
+ * match now -- see ndsR2BattlePackCarveWorthIt -- so what is actually taken is
+ * RAW_BYTES plus, only when the pack can still pay for itself, RESERVE_BYTES.
+ * This name is what the comments around it describe and what the build-time
+ * worst case costs; `gNdsR2AnimCacheArenaReservedBytes` reports the real one. */
+#define NDS_R2_ANIM_CACHE_ARENA_BYTES \
+    (NDS_BATTLEPACK_RESERVE_BYTES + NDS_R2_ANIM_CACHE_RAW_BYTES)
 #else
 /* P2-3r13 RETIRED THE FOUR-DISTINCT-KIND TRIM THAT STOOD HERE. P2-3r11 took
  * this reservation to 229,376 on NDS_P2_FOUR_CPU_ROSTER because dropping the
@@ -7062,7 +7072,8 @@ volatile u32 gNdsR204AnimSeen[(NDS_R204_ANIM_ID_SPAN + 31u) / 32u];
  * override and this trim are gone: the ~186 KB now comes from ARM9 .bss instead
  * (the scene file store moved to the arena -- see ndsRelocSceneFileBuffer), so
  * the roster arm carries the shipping reservation and the shipping pack. */
-#define NDS_R2_ANIM_CACHE_ARENA_BYTES 262144u
+#define NDS_R2_ANIM_CACHE_RAW_BYTES 262144u
+#define NDS_R2_ANIM_CACHE_ARENA_BYTES NDS_R2_ANIM_CACHE_RAW_BYTES
 #endif
 
 /* R2-04 E4. The match's animation working set, measured rather than guessed:
@@ -7353,9 +7364,93 @@ static void ndsR2AnimCacheValidateGeneration(void)
     }
 }
 
+/* P2-3f9 -- THE PACK IS ONE FIGHTER'S CLIPS, AND IT STOPS PAYING AS THE ROSTER
+ * GROWS.
+ *
+ * `battlepack_fox.bin` (Makefile: NDS_BATTLEPACK_BLOB) is Fox's prebuilt
+ * animation set, and its reserve is 287,936 B of the SAME scene arena every
+ * distinct fighter kind in the match has to fit in. On the two-fighter shipping
+ * arm that trade is excellent: measured -34,304 ticks. On four distinct kinds
+ * P2-3r13 measured it at **-64 ticks at P50** -- because the pack serves one
+ * fighter in four and the other three take the on-demand path either way -- for
+ * the same 287,936 B. That is the wrong side of the trade, and it is the reason
+ * the argmax four-kind roster could not be seated: measured 2026-08-25, a shell
+ * -driven Luigi/Fox/Captain/Donkey match halted in ndsSyMallocOverflowHalt with
+ * 5,824 B free.
+ *
+ * So the carve is now a per-match decision taken where the roster is already
+ * known. `gSCManagerBattleState` is populated by ndsMatchConfigApply long before
+ * scVSBattleStartBattle runs, and this reservation is lazy (first pack preload
+ * step, or the first cache store), so both callers read a settled roster.
+ *
+ * THE RULE: carve only when the packed kind is actually in the match AND the
+ * match has at most two distinct kinds. Anything else keeps the raw cache and
+ * returns the reserve to the arena. Declining costs the packed fighter its
+ * prebuilt clips and nothing else -- every path here degrades to the on-demand
+ * load, which is a PERFORMANCE outcome and never a correctness one. An unknown
+ * roster keeps today's behaviour rather than guessing.
+ *
+ * `NDS_BATTLEPACK_FIGHTER_KIND` is pinned to the blob the Makefile builds. If
+ * the pack ever holds a different fighter, this constant moves with it. */
+/* Defined whether or not the pack is built, and `used` so --gc-sections cannot
+ * drop them: a verifier that names a symbol only some configurations carry
+ * fails on "Missing ELF symbol" instead of on the thing it guards. */
+__attribute__((used)) volatile u32 gNdsBattlePackCarveDeclineCount;
+__attribute__((used)) volatile u32 gNdsBattlePackCarveMatchKinds;
+
+#if NDS_R2_BATTLEPACK
+#define NDS_BATTLEPACK_FIGHTER_KIND nFTKindFox
+#define NDS_BATTLEPACK_CARVE_MAX_KINDS 2u
+
+static sb32 ndsR2BattlePackCarveWorthIt(void)
+{
+    s32 i;
+    u32 seen = 0u;
+    u32 distinct = 0u;
+    sb32 has_packed_kind = FALSE;
+
+    if (gSCManagerBattleState == NULL)
+    {
+        return TRUE;
+    }
+    for (i = 0; i < (s32)GMCOMMON_PLAYERS_MAX; i++)
+    {
+        u32 fkind = (u32)gSCManagerBattleState->players[i].fkind;
+
+        if (gSCManagerBattleState->players[i].pkind == nFTPlayerKindNot)
+        {
+            continue;
+        }
+        if (fkind > (u32)nFTKindPlayableEnd)
+        {
+            continue;
+        }
+        if ((seen & (1u << fkind)) == 0u)
+        {
+            seen |= 1u << fkind;
+            distinct++;
+        }
+        if (fkind == (u32)NDS_BATTLEPACK_FIGHTER_KIND)
+        {
+            has_packed_kind = TRUE;
+        }
+    }
+    gNdsBattlePackCarveMatchKinds = distinct;
+    if (distinct == 0u)
+    {
+        /* No roster yet -- do not spend the decision on an empty state. */
+        return TRUE;
+    }
+    return ((has_packed_kind != FALSE) &&
+            (distinct <= NDS_BATTLEPACK_CARVE_MAX_KINDS)) ? TRUE : FALSE;
+}
+#endif /* NDS_R2_BATTLEPACK */
+
 static sb32 ndsR2AnimCacheArenaEnsure(void)
 {
     void *block;
+    u32 reserve = 0u;
+    u32 arena_bytes;
 
     if (ndsR2AnimCacheArenaStillOwned() != FALSE)
     {
@@ -7367,25 +7462,37 @@ static sb32 ndsR2AnimCacheArenaEnsure(void)
          * cached pointer is stale, so drop the whole cache before re-reserving. */
         ndsR2AnimCacheArenaDropForReset();
     }
+#if NDS_R2_BATTLEPACK
+    if (ndsR2BattlePackCarveWorthIt() != FALSE)
+    {
+        reserve = (u32)NDS_BATTLEPACK_RESERVE_BYTES;
+    }
+    else
+    {
+        gNdsBattlePackCarveDeclineCount++;
+    }
+#endif
+    arena_bytes = reserve + (u32)NDS_R2_ANIM_CACHE_RAW_BYTES;
     if (ndsSyMallocWouldFit(&gSYTaskmanGeneralHeap,
-                            (size_t)NDS_R2_ANIM_CACHE_ARENA_BYTES +
+                            (size_t)arena_bytes +
                                 NDS_R2_ANIM_CACHE_ARENA_KEEP_FREE,
                             NDS_RELOC_ALIGN_BYTES) == FALSE)
     {
         gNdsR2AnimCacheArenaReserveFailCount++;
         return FALSE;
     }
-    block = syTaskmanMalloc((size_t)NDS_R2_ANIM_CACHE_ARENA_BYTES,
-                            NDS_RELOC_ALIGN_BYTES);
+    block = syTaskmanMalloc((size_t)arena_bytes, NDS_RELOC_ALIGN_BYTES);
     if (block == NULL)
     {
         gNdsR2AnimCacheArenaReserveFailCount++;
         return FALSE;
     }
     sNdsR2AnimCacheArena = block;
-    sNdsR2AnimCacheArenaBytes = NDS_R2_ANIM_CACHE_ARENA_BYTES;
-    sNdsR2AnimCacheArenaRawOnly = FALSE;
-#if NDS_R2_BATTLEPACK
+    sNdsR2AnimCacheArenaBytes = arena_bytes;
+    /* RawOnly is what tells the pack loader there is no carved region to stream
+     * into; it is TRUE here for exactly the same reason it is TRUE for the
+     * setup arena, and the loader's existing arm handles it. */
+    sNdsR2AnimCacheArenaRawOnly = (reserve == 0u) ? TRUE : FALSE;
     /* CARVE THE PACK'S REGION FIRST, at reservation, not by being the first
      * caller of the bump allocator. Ordering was the first design and it lost:
      * fighter setup stores 3,728 bytes of animation into this arena before the
@@ -7394,16 +7501,16 @@ static sb32 ndsR2AnimCacheArenaEnsure(void)
      * `gNdsR2AnimCacheArenaOverflowLastSize 287936` naming the victim
      * (soak 2026-08-15_015724). Now the blob owns [0, RESERVE) of every arena
      * generation and no store can get in front of it. */
-    sNdsR2AnimCacheArenaUsed = NDS_BATTLEPACK_RESERVE_BYTES;
-#else
-    sNdsR2AnimCacheArenaUsed = 0u;
-#endif
+    sNdsR2AnimCacheArenaUsed = reserve;
     /* Stamp the generation the block was taken under. Must be read AFTER the
      * allocation: syTaskmanMalloc cannot rewind the heap, so this is the same
      * value either way, but taking it here keeps the store adjacent to the
      * pointer it qualifies. */
     sNdsR2AnimCacheArenaGeneration = gNdsTaskmanHeapGeneration;
-    gNdsR2AnimCacheArenaReservedBytes = NDS_R2_ANIM_CACHE_ARENA_BYTES;
+    /* Report what was actually taken, not the build-time maximum: since P2-3f9
+     * this reservation is roster-dependent, and a ledger that always printed
+     * the constant would hide the whole decision. */
+    gNdsR2AnimCacheArenaReservedBytes = arena_bytes;
     gNdsR2AnimCacheArenaUsedBytes = sNdsR2AnimCacheArenaUsed;
     gNdsR2AnimCacheArenaReserveCount++;
     return TRUE;
@@ -7602,6 +7709,22 @@ static sb32 ndsBattlePackResidencyStep(void)
 {
     u32 want;
 
+    /* P2-3f9. ASK BEFORE RESERVING, NOT AFTER. The carve is now a per-match
+     * decision (see ndsR2BattlePackCarveWorthIt), and this function's lazy
+     * `ndsR2AnimCacheArenaEnsure()` below is what takes it. Checking the arena's
+     * RawOnly flag alone is NOT enough here: on the first step the arena does
+     * not exist yet, so RawOnly reads FALSE, Ensure would build a raw-only
+     * arena, and this body would then stream 287,904 bytes of blob into a
+     * 163,840-byte block. Same predicate, asked first, and the load state
+     * latches so the question is answered once per scene. */
+    if (ndsR2BattlePackCarveWorthIt() == FALSE)
+    {
+        if (sNdsBattlePackLoadState != NDS_BATTLEPACK_LOAD_FAILED)
+        {
+            ndsBattlePackResidencyFail();
+        }
+        return FALSE;
+    }
     /* A setup-only arena has no carved BattlePack region.  This can only be
      * reached if a caller starts the full match warm walk in the same scene;
      * fail the optional pack open rather than aliasing raw animation entries.

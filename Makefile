@@ -661,6 +661,26 @@ endif
 # the ladder when Falcon becomes a native owner, and put it where the flags are
 # final.
 NDS_P2_CAPTAIN ?= 0
+# P2-3f9. THE HEAVIEST ROSTER A PLAYER CAN REACH, MEASURED FROM THE SHELL.
+#
+# `NDS_P2_FOUR_CPU_ROSTER` above is a DIRECT-BATTLE arm: its target sets
+# NDS_P2_FOUR_CPU_STRESS and, in nds_match_config.c's own words, "bypasses
+# PlayersVS". The shell is a different entry path -- its character select makes
+# every selectable kind's main files resident for the live previews, and its
+# larger ARM9 binary leaves a SMALLER scene arena -- so a four-kind figure from
+# that arm does not predict one from the shell, and until this flag existed
+# nobody had ever run four distinct kinds through the shipped menus at any
+# roster.
+#
+# 1 seeds the P2-1a descriptor with the measured argmax over landed content
+# (Luigi human + Fox/Captain/Donkey level-3 CPUs) so the character select opens
+# on it, and swaps the CSS walk for one that presses START without disturbing
+# the four seeded slots. It changes nothing else: the whole shell runs, the
+# battle loads whatever the CSS committed, and the arena spends what it spends.
+# Deliberately NOT folded into NDS_P2_FOUR_CPU_ROSTER -- one flag naming two
+# different rosters on two different entry paths is how a measurement gets
+# attributed to the wrong arm.
+NDS_P2_SHELL_ARGMAX_ROSTER ?= 0
 # P2-3r4. WHERE A P2-3 OWNER'S GENERATED TABLES LIVE.
 #
 # 1 = NitroFS image (the default, and the only thing that scales): the owner's
@@ -2327,6 +2347,20 @@ ifeq ($(NDS_P2_FOUR_CPU_ROSTER),1)
 # prebuilt clip pack and the 262,144 B animation reservation are therefore
 # resident on this arm exactly as they are in builds/build-p2-shell, so a tick
 # figure from here is comparable with the mirror roster's again.
+#
+# P2-3f9 TRIED TO RE-POINT THIS ARM TO THE ACTUAL ARGMAX AND BACKED IT OUT.
+# With Captain Falcon landed the four heaviest landed kinds are Fox 116,752 +
+# Captain 100,160 + Donkey 77,360 + Luigi 41,552 = 335,824 B against this
+# roster's 289,712 B, so PROJECT_GOAL's "measured hardest fighter set" is no
+# longer what this arm runs. Swapping slot 0 Mario -> Captain made the arm take
+# **about 30x the wall time for the same guest frames** (100 stops at
+# `ifCommonBattleUpdateInterfaceAll` reached presented frame 45 in 240 s,
+# against frame 49 in 8 s on the pre-change four-kind ROM) and the harness hit
+# its 3600 s ceiling having never reached ring stop 0. Every memory counter was
+# clean and identical to the control -- graphics-heap peak 96 B of 8,192,
+# overflow 0, no-room 0, anim-cache misses 4 / rejects 0, pack hits 0 on BOTH
+# arms -- so the cost is not the P2-3f9 arena work and is not attributed. It is
+# its own row; do not re-point this arm again until it is.
 #
 # The roster IS the two admission flags, so derive them instead of making every
 # caller repeat them. `NDS_P2_LUIGI`/`NDS_P2_DONKEY` default at line 580 above,
@@ -4533,6 +4567,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_NATIVE_OWNER_IMAGE_VERIFY $(NDS_NATIVE_OWNER_IMAGE_VERIFY)'; \
 		echo '#define NDS_P2_DONKEY $(NDS_P2_DONKEY)'; \
 		echo '#define NDS_P2_CAPTAIN $(NDS_P2_CAPTAIN)'; \
+		echo '#define NDS_P2_SHELL_ARGMAX_ROSTER $(NDS_P2_SHELL_ARGMAX_ROSTER)'; \
 		echo '#define NDS_NATIVE_OWNER_IMAGE_CAPTAIN $(NDS_NATIVE_OWNER_IMAGE_CAPTAIN)'; \
 		echo '#define NDS_P2_PROOF_FIGHTER0 $(NDS_P2_PROOF_FIGHTER0)'; \
 		echo '#define NDS_R2_SOAK_MATCH_MINUTES $(NDS_R2_SOAK_MATCH_MINUTES)'; \

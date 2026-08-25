@@ -244,7 +244,68 @@ void ndsMatchConfigLoadMarioFoxDreamLand(NdsMatchConfig *cfg)
     cfg->fighters[2].costume = (u8)ftParamGetCostumeCommonID(nFTKindLuigi, 0);
     cfg->fighters[3].fkind = nFTKindDonkey;
     cfg->fighters[3].costume = (u8)ftParamGetCostumeCommonID(nFTKindDonkey, 0);
+    /* P2-3f9 TRIED `cfg->fighters[0].fkind = nFTKindCaptain` HERE -- the real
+     * argmax over landed content, Fox+Captain+Donkey+Luigi = 335,824 B against
+     * this roster's 289,712 B -- AND BACKED IT OUT. The arm then took about 30x
+     * the wall time for the same guest frames and the harness timed out; every
+     * memory counter matched the control exactly, so the cost is unattributed
+     * and belongs to its own row rather than to the arena work. See the note on
+     * this target's block in the Makefile. */
 #endif
+#endif
+#if NDS_P2_SHELL_ARGMAX_ROSTER
+    /* P2-3f9: THE HEAVIEST ROSTER A PLAYER CAN REACH, SEEDED INTO THE SCREEN
+     * THAT LETS THEM REACH IT.
+     *
+     * PROJECT_GOAL's P2 gate asks for "the measured hardest fighter set", and
+     * with Captain Falcon landed the argmax over landed content is
+     * Fox 116,752 + Captain 100,160 + Donkey 77,360 + Luigi 41,552 =
+     * 335,824 B of unique per-kind arena (falcon.md, "Measured budget").
+     * Mario is the cheapest of the five and drops out.
+     *
+     * This is a DESCRIPTOR seed, not a battle seed: it is what the character
+     * select opens on (ndsMenuShellCssInit reads exactly these fields), so the
+     * whole shell still runs -- four live 3D previews, four gates, the
+     * announcer, the stage select -- and the battle loads whatever the CSS
+     * commits. That is the difference from NDS_P2_FOUR_CPU_STRESS below, which
+     * writes the battle state directly and never enters PlayersVS.
+     *
+     * Slot 0 stays the HUMAN. One console is one controller, so 1 human + 3
+     * CPUs is the configuration P2 actually ships; four distinct kinds cost the
+     * arena the same either way. */
+#if !NDS_P2_MENU_SHELL
+#error "NDS_P2_SHELL_ARGMAX_ROSTER=1 is a shell configuration: needs NDS_P2_MENU_SHELL=1"
+#endif
+#if !NDS_P2_CAPTAIN || !NDS_P2_DONKEY || !NDS_P2_LUIGI
+#error "NDS_P2_SHELL_ARGMAX_ROSTER=1 needs the five-name roster (NDS_P2_SHELL_ROSTER=3)"
+#endif
+    cfg->fighters[0].fkind = nFTKindLuigi;
+    cfg->fighters[0].pkind = nFTPlayerKindMan;
+    cfg->fighters[0].level = 3;
+    cfg->fighters[0].team = nSCBattleTeamIDRed;
+    cfg->fighters[0].costume = (u8)ftParamGetCostumeCommonID(nFTKindLuigi, 0);
+    cfg->fighters[0].shade = 0;
+
+    cfg->fighters[1].fkind = nFTKindFox;
+    cfg->fighters[1].pkind = nFTPlayerKindCom;
+    cfg->fighters[1].level = 3;
+    cfg->fighters[1].team = nSCBattleTeamIDRed;
+    cfg->fighters[1].costume = (u8)ftParamGetCostumeCommonID(nFTKindFox, 0);
+    cfg->fighters[1].shade = 0;
+
+    cfg->fighters[2].fkind = nFTKindCaptain;
+    cfg->fighters[2].pkind = nFTPlayerKindCom;
+    cfg->fighters[2].level = 3;
+    cfg->fighters[2].team = nSCBattleTeamIDBlue;
+    cfg->fighters[2].costume = (u8)ftParamGetCostumeCommonID(nFTKindCaptain, 0);
+    cfg->fighters[2].shade = 0;
+
+    cfg->fighters[3].fkind = nFTKindDonkey;
+    cfg->fighters[3].pkind = nFTPlayerKindCom;
+    cfg->fighters[3].level = 3;
+    cfg->fighters[3].team = nSCBattleTeamIDBlue;
+    cfg->fighters[3].costume = (u8)ftParamGetCostumeCommonID(nFTKindDonkey, 0);
+    cfg->fighters[3].shade = 0;
 #endif
 #if NDS_R2_SOAK_MATCH_MINUTES
     /* THE FREEZE SOAK'S LONG MATCH, on its own flag, off by default.

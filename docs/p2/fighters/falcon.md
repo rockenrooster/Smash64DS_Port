@@ -418,6 +418,25 @@ deducted -- the same 2,288 Fox and Donkey pay. Against the table:
 | **Captain** | **100,160** |
 | Fox | 116,752 |
 
+> **SUPERSEDED BY P2-3f9 (2026-08-25).** The "+46,112 B over" inference below
+> was right in direction and wrong in size, and the reason matters more than the
+> number: it priced the SHELL against a margin measured on the LAB arm, and the
+> shell's scene arena is **36,864–73,728 B smaller** because its ARM9 binary is
+> bigger (`gNdsTaskmanArenaChosenSize` 1,658,880 / AllocFail 18 on the shell,
+> 1,695,744 / 9 on the stress arm, 1,732,608 / 0 on the mirror). Measured from
+> the shell, the argmax roster **halted** — `ndsRendererNativeEnsureOwnerImage`
+> asking 12,140 B with 5,824 B free, deficit **6,316 B**, not 46,112. It is
+> fixed: 90,112 B from the graphics-heap reservation plus 287,936 B from making
+> the BattlePack carve a per-match decision, and the four-kind whole-match
+> low-water is now **419,052 B against the 25,600 B floor**. See board row
+> P2-3f9. **A four-kind margin taken from a lab arm does not transfer to the
+> shell — re-measure on the arm you are shipping.**
+>
+> P2-3f9 also found that **Captain in a four-fighter match costs about 30x the
+> wall time of Mario** for the same guest frames, with every memory counter
+> identical to the control. That is remaining item 7 below, and it is why the
+> argmax roster no longer hangs but is not yet playable.
+
 **THE HARDEST FOUR HAS CHANGED, AND IT IS NOT AFFORDABLE TODAY.** Boundary's
 `p2_fourcpu_stress` runs Mario/Fox/Luigi/Donkey = 289,712 B, and P2-3r13
 measured that configuration at a **24,356 B** margin over the 25,600 B floor.
@@ -456,12 +475,29 @@ match. Re-read it on Results / Sudden Death / pause zoom, then cut.
    block, `--derive <ids>` for every field, hash pins per cue).
 2. **Owner feel pass** on Falcon Dive grab/release/regrab and the speed
    extremes (fastest fall + fastest run: traction, landing, edge slips).
-3. **A four-distinct-kind budget answer.** See "Measured budget" above: the
-   argmax roster is now Fox+Captain+Donkey+Luigi at 335,824 B against a
-   measured 24,356 B margin, and a four-kind match driven from the SHELL has
-   never been measured at any roster. Needs a byte lever (the 106,496 B
-   graphics-heap reservation holding 96 B is the nearest measured one), then a
-   re-pointed `p2_fourcpu_stress`.
+3. **A four-distinct-kind budget answer — CLOSED by board row P2-3f9
+   (2026-08-25).** The shell-driven argmax match was measured, it halted, and
+   the two levers named here were taken: the graphics-heap reservation
+   (0xD000 -> 0x2000, +90,112 B, and its 96 B peak is now proven on a whole
+   four-kind match rather than sampled) plus the BattlePack carve becoming a
+   per-match decision (+287,936 B whenever a match holds more than two distinct
+   kinds). Whole-match low-water **419,052 B** against the 25,600 B floor.
+   `p2_fourcpu_stress` was re-pointed to the argmax and **backed out** — see
+   item 7.
+7. **HE COSTS ABOUT 30x MARIO IN A FOUR-FIGHTER MATCH, and this is now his
+   largest gap after audio.** Moving `p2_fourcpu_stress` slot 0 from Mario to
+   Captain made the arm take about thirty times the wall clock for the same
+   guest frames (100 stops at `ifCommonBattleUpdateInterfaceAll` reached
+   presented frame 45 in 240 s, against frame 49 in 8 s on the pre-change
+   four-kind ROM), and the harness hit its 3600 s ceiling. **It is not memory
+   and it is not the P2-3f9 arena work:** every counter matched the control
+   exactly — graphics-heap peak 96 B of 8,192, overflow 0, no-room 0,
+   anim-cache misses 4 / rejects 0, `gNdsBattlePackHits` 0 on BOTH arms — and
+   rebuilding the arm with Captain removed but every P2-3f9 change still active
+   returns it to frame 49 in 10 s. `gNdsFtrPlanBuild`/`Hit` and the slot
+   triangle mask all read 0 at frame 45 on BOTH arms, so they are not the
+   instrument that will find it; start from a tick-HUD bucket census on a
+   two-fighter Captain match, which is cheap enough to complete.
 4. **`mpCommonProcFighterProject` still diverges from the source** -- see the
    open questions below; Falcon Dive is a caller and it is a SHARED seam.
 5. **The remaining eight fighters each need `ftCommonAttack13Proc{Update,
@@ -514,6 +550,7 @@ match. Re-read it on Results / Sudden Death / pause zoom, then cut.
 - [ ] **Audio: nothing at all is packed** (remaining item 1).
 - [ ] Falcon Dive grab/release/regrab semantics equivalent.
 - [ ] Fast-fall/landing/edge behavior spot-checks at speed extremes.
-- [ ] Four-distinct-kind stress measurement on the NEW argmax roster
-      (remaining item 3) -- the current one is not affordable.
+- [x] Four-distinct-kind budget answered and the hang fixed (P2-3f9): measured
+      from the shell, 378,048 B reclaimed, whole-match low-water 419,052 B.
+- [ ] The argmax roster is affordable but NOT playable: ~30x cost, item 7.
 - [ ] Owner feel pass.

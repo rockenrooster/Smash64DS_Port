@@ -73,6 +73,12 @@ $memoryGlobals = @(
     'gNdsTaskmanGraphicsHeapHighWater',
     'gNdsTaskmanGraphicsHeapCapacity',
     'gNdsTaskmanGraphicsHeapOverflowCount',
+    # P2-3f9 cut that reservation 0xD000 -> 0x2000 (90,112 B back to the scene
+    # arena, which is what let four distinct kinds fit). The overflow counter
+    # above cannot see the one writer that CHECKS before it writes -- the
+    # adapter's material branch table refuses and returns, so the pointer never
+    # passes `end`. This counts that refusal, and it is asserted at 0.
+    'gNdsTaskmanGraphicsHeapNoRoomCount',
     # P2-3r13. The title/opening/Castle scene file store left ARM9 .bss for the
     # scene arena, which is what paid for four distinct fighter kinds in the
     # shipping configuration. A VSBattle must never allocate it: AllocCount 0 on
@@ -80,6 +86,16 @@ $memoryGlobals = @(
     # and DeclineCount 0 says no scene was refused it.
     'gNdsRelocSceneFileBufferAllocCount',
     'gNdsRelocSceneFileBufferDeclineCount',
+    # P2-3f9. THE BATTLEPACK CARVE IS A PER-MATCH DECISION NOW, so the build
+    # flag no longer says whether the pack was resident. 287,936 B of the same
+    # arena the fighter kinds need buys -34,304 ticks on two fighters and -64 on
+    # four (P2-3r13), so a match with more than two distinct kinds declines it.
+    # DeclineCount and MatchKinds are reported, never asserted: which way the
+    # decision went is a property of the roster, not a fault.
+    'gNdsBattlePackCarveDeclineCount',
+    'gNdsBattlePackCarveMatchKinds',
+    'gNdsBattlePackResidentBytes',
+    'gNdsR2AnimCacheArenaReservedBytes',
     # P2-3r11. THE POSE POOL IS EXACTLY FULL ON THIS ARM AND NOWHERE ELSE:
     # NDS_FT_POSE_FIGHTERS is 4 and this is the only configuration that creates
     # four fighters, so a fifth bind has no spare slot. A BindFull is not a
@@ -331,6 +347,10 @@ $observedRoster = @(0..3 | ForEach-Object {
     elseif (($b - 1) -lt $kindNames.Count) { $kindNames[$b - 1] }
     else { "kind$($b - 1)" }
 })
+# P2-3f9 TRIED to re-point this to the measured argmax (slot 0 Mario ->
+# Captain, 289,712 B -> 335,824 B of unique per-kind arena) and backed it out:
+# the arm then took about 30x the wall time for the same guest frames and timed
+# out, with every memory counter matching the control. That is its own row.
 $expectedRoster = if ($rosterFlag -eq 1) {
     @('Mario', 'Fox', 'Luigi', 'Donkey')
 } else {
@@ -361,8 +381,15 @@ $memory = [PSCustomObject]@{
     fighterRosterExpected = ($expectedRoster -join '/')
     fighterKindWord = ('0x{0:X8}' -f $kindWord)
     fighterSlotDrawMask = ('0x{0:X}' -f $slotDrawMask)
-    battlePackResident = $(if ($null -eq $battlePackFlag) { 'unknown' }
+    battlePackBuilt = $(if ($null -eq $battlePackFlag) { 'unknown' }
         else { [bool]($battlePackFlag -eq 1) })
+    # P2-3f9: the RUNTIME answer, which is the one that matters since the carve
+    # became roster-dependent. Resident bytes 0 with a nonzero decline count is
+    # the expected reading on a match with three or more distinct kinds.
+    battlePackResidentBytes = $extra['gNdsBattlePackResidentBytes']
+    battlePackCarveDeclineCount = $extra['gNdsBattlePackCarveDeclineCount']
+    battlePackCarveMatchKinds = $extra['gNdsBattlePackCarveMatchKinds']
+    animCacheArenaReservedBytes = $extra['gNdsR2AnimCacheArenaReservedBytes']
     ftPoseBinds = $extra['gNdsFtPoseBinds']
     ftPoseBindFull = $extra['gNdsFtPoseBindFull']
     animCacheMisses = $extra['gNdsR2AnimCacheMisses']
@@ -372,6 +399,7 @@ $memory = [PSCustomObject]@{
     graphicsHeapCapacityBytes = $extra['gNdsTaskmanGraphicsHeapCapacity']
     graphicsHeapPeakBytes = $extra['gNdsTaskmanGraphicsHeapHighWater']
     graphicsHeapOverflowCount = $extra['gNdsTaskmanGraphicsHeapOverflowCount']
+    graphicsHeapNoRoomCount = $extra['gNdsTaskmanGraphicsHeapNoRoomCount']
     sceneFileBufferArenaAllocCount = $extra['gNdsRelocSceneFileBufferAllocCount']
     sceneFileBufferDeclineCount = $extra['gNdsRelocSceneFileBufferDeclineCount']
     generalHeapFreeMinBytes = $extra['gNdsTaskmanGeneralHeapFreeMin']
@@ -403,8 +431,12 @@ $memory = [PSCustomObject]@{
     nativeOwnerPlanBuild = $nativePlanBuild
     nativeOwnerPlanHit = $nativePlanHit
     nativeOwnerPlanVerifyMismatch = $nativePlanMismatch
-    nativeOwnerMarioHardwareTriangles = $extra['gNdsFighterDLAllDrawP0HardwareTriangleCount']
-    nativeOwnerFoxHardwareTriangles = $extra['gNdsFighterDLAllDrawP1HardwareTriangleCount']
+    # SLOT totals, not kind totals. Named by slot since P2-3f9: they happen to
+    # be Mario and Fox on this roster, and a field name that says so would
+    # quietly relabel a different fighter's triangles the next time slot 0
+    # changes -- which P2-3f9 attempted and backed out.
+    nativeOwnerSlot0HardwareTriangles = $extra['gNdsFighterDLAllDrawP0HardwareTriangleCount']
+    nativeOwnerSlot1HardwareTriangles = $extra['gNdsFighterDLAllDrawP1HardwareTriangleCount']
     capturedUtc = (Get-Date).ToUniversalTime().ToString('o')
 }
 
@@ -454,6 +486,17 @@ if ([uint64]$memory.graphicsHeapOverflowCount -ne 0) {
         "$($memory.graphicsHeapCapacityBytes) B. Raise " +
         "NDS_R2_VSBATTLE_GRAPHICS_ARENA_BYTES; a silent overrun scribbles past " +
         "the arena.")
+}
+# P2-3f9: the other half of the same question. This writer refuses instead of
+# overrunning, so it costs a material branch rather than memory -- which is
+# invisible to the overflow counter and easy to mistake for a DObj that simply
+# had no materials.
+if ([uint64]$memory.graphicsHeapNoRoomCount -ne 0) {
+    throw ("Four-fighter stress refused $($memory.graphicsHeapNoRoomCount) " +
+        "material branch table(s) for want of graphics-heap room: peak " +
+        "$($memory.graphicsHeapPeakBytes) B of " +
+        "$($memory.graphicsHeapCapacityBytes) B. Those DObjs drew without " +
+        "their material branch. Raise NDS_R2_VSBATTLE_GRAPHICS_ARENA_BYTES.")
 }
 # P2-3r13: a VSBattle that allocates the scene file store has taken back the
 # 185,696 B the four-distinct-kind roster is standing on.

@@ -24,6 +24,17 @@ param(
 #
 # It is deliberately configuration-agnostic: any target whose ELF carries the
 # halt symbol can be its patient.
+#
+# READ THE BACKTRACE, NOT ONLY THE `ARENA HALT` LINE (P2-3f9, 2026-08-25).
+# `syMallocSet` writes those six globals immediately before it calls the halt,
+# so they are correct in the guest -- but melonDS's GDB stub reads main RAM
+# behind the ARM9 data cache, and a global the CPU wrote moments earlier is
+# still a dirty line. Measured on a real halt: `count=0 request=0 headroom=0
+# caller_lr=0x00000000` while the very same stop's `bt` read
+# `syMallocSet (bp=gSYTaskmanGeneralHeap, size=12140, alignment=16)`. The frame
+# arguments and `gSYTaskmanGeneralHeap` itself have been reliable; the published
+# globals have not. Treat a row of zeroes as "unreadable", never as "no
+# overflow" -- the breakpoint firing at all IS the overflow.
 
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot

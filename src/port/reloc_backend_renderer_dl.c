@@ -10575,6 +10575,11 @@ static Gfx *ndsRendererAdapterEmitMaterialCommands(Gfx *branch_dl, MObj *mobj)
     return branch_dl;
 }
 
+/* Defined beside the other graphics-heap counters in src/port/diagnostics.c.
+ * Declared here rather than in a header for the same reason the decomp bodies
+ * declare gSYTaskmanGraphicsHeap locally: this file has no startup header. */
+extern volatile u32 gNdsTaskmanGraphicsHeapNoRoomCount;
+
 static sb32 ndsRendererAdapterPrepareMaterialSegment(
     DObj *dobj, NDSFighterDLDrawState *state)
 {
@@ -10613,9 +10618,24 @@ static sb32 ndsRendererAdapterPrepareMaterialSegment(
     heap_end = (uintptr_t)gSYTaskmanGraphicsHeap.end;
     heap_ptr = (uintptr_t)gSYTaskmanGraphicsHeap.ptr;
     heap_bytes = (size_t)(mobj_count + branch_commands) * sizeof(Gfx);
-    if ((heap_ptr < heap_start) || (heap_ptr > heap_end) ||
-        (heap_bytes > (size_t)(heap_end - heap_ptr)))
+    if ((heap_ptr < heap_start) || (heap_ptr > heap_end))
     {
+        return FALSE;
+    }
+    if (heap_bytes > (size_t)(heap_end - heap_ptr))
+    {
+        /* P2-3f9. THE ONE UNBOUNDED GRAPHICS-HEAP WRITER, MADE COUNTABLE.
+         * Every other writer on this port has a source bound (see the note on
+         * NDS_R2_VSBATTLE_GRAPHICS_ARENA_BYTES in battleship_scvsbattle.c);
+         * this table is sized by the DObj's own material chain and so cannot
+         * be bounded from a header. It has always refused rather than
+         * overrun -- which is why an undersized heap shows up here as a
+         * MISSING material branch and not as corruption -- but a refusal that
+         * nothing counts is indistinguishable from a DObj that had no
+         * materials. gNdsTaskmanGraphicsHeapOverflowCount cannot see it: the
+         * pointer never passes `end`, so the sampler has nothing to report.
+         * The four-CPU stress harness asserts this at 0. */
+        gNdsTaskmanGraphicsHeapNoRoomCount++;
         return FALSE;
     }
 

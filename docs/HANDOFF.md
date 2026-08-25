@@ -1,13 +1,18 @@
 # Handoff
 
-Current: 2026-08-25 — **CAPTAIN FALCON IS SELECTABLE** (P2-3f8):
-`NDS_P2_SHELL_ROSTER` defaults to **3**, he is native owner slot 4, and
-Boundary is green on all three arms at that default. **He has NO AUDIO** —
-none of his cues is packed, so he plays silent. **And he changes the argmax
-four-kind roster to one that does not fit**: Fox+Captain+Donkey+Luigi =
-335,824 B against P2-3r13's measured 24,356 B margin. Details and the whole
-remainder: `docs/p2/fighters/falcon.md`. P2-3r17 (fighter seams) stays
-DEFERRED by the owner; its traps are below.
+Current: 2026-08-25 — **THE FOUR HEAVIEST SELECTABLE KINDS NO LONGER HANG THE
+ARM9** (P2-3f9). Picking Luigi+Fox+Captain+Donkey from the shipped character
+select reached `ndsSyMallocOverflowHalt` — a permanent silent halt, measured
+from the shell, not inferred. Fixed with 378,048 B of correctness-safe reclaim
+(graphics heap 0xD000→0x2000 = 90,112 B; the Fox BattlePack carve became a
+per-match decision = 287,936 B when a match holds >2 distinct kinds).
+Whole-match low-water **419,052 B** against the 25,600 B floor. **Rail: a
+four-kind margin measured on the LAB arm does not transfer to the shell** — the
+shell's arena is 36,864–73,728 B smaller (its ARM9 binary is bigger).
+**Captain still has NO AUDIO, and P2-3f9 found he costs ~30x Mario in a
+four-fighter match** (memory counters identical to the control), so the argmax
+roster is affordable but not yet playable — `docs/p2/fighters/falcon.md` items
+1 and 7. P2-3r17 (fighter seams) stays DEFERRED by the owner.
 
 ## State
 
@@ -29,163 +34,158 @@ DEFERRED by the owner; its traps are below.
      `smash64ds-p2-fourcpu-tickhud-hwtri`, build `build-p2-fourcpu-tickhud`.
      Four level-3 CPUs, Dream Land, one-minute Time — **Mario/Fox/Luigi/Donkey
      since row P2-3r15**; `NDS_P2_FOUR_CPU_ROSTER=0` rebuilds the mirror
-     control. Frames 1..1973 / guest clock 60→1, 0 humans / 4 CPUs / 4 fighter
-     GObjs / mask `0xF`, all four slots drawing, plus the P2-2 memory +
-     native-Low-detail budget gate. **It asserts no tick gate on purpose:** four
+     control. **Not the true argmax: P2-3f9 tried Captain in slot 0 and backed
+     it out at ~30x wall time.** Frames 1..1973 / guest clock 60→1, 0 humans /
+     4 CPUs / 4 fighter GObjs / mask `0xF`, all four slots drawing, plus the
+     P2-2 memory + native-Low-detail budget gate. **It asserts no tick gate on purpose:** four
      distinct kinds sit ~3x outside 1.12M, which is P2 debt, not a per-run
      verdict; a guard red by construction protects nothing.
 - **The P1-named proof target left the routine gate.**
   `smash64ds-battle-playable-proof-hwtri` is still in the Makefile and still the
   default for the dozen specialized probes and metric verifiers that boot
   straight into a battle (`probe-ko-blast.ps1`,
-  `verify-battle-playable-camera-containment.ps1`, `verify-battle-playable-
-  down-air-stall.ps1`, …). Nothing routine builds it. `check-gbi-decode-
-  fixtures.ps1`'s pin on that target-selection line is intact by design — the
-  shell target is selected by a `-P2ShellFlow` branch beside it, not instead of
-  it.
+  `verify-battle-playable-camera-containment.ps1`, …). Nothing routine builds
+  it. `check-gbi-decode-fixtures.ps1`'s pin on that target-selection line is
+  intact by design — the shell target is selected by a `-P2ShellFlow` branch
+  beside it, not instead of it.
 - **P1 stays frozen.** `smash64ds-battle-playable-hwtri.nds`, 12,530,688 B,
-  SHA-256 `576F51ED…E723`. Nothing routine rebuilds it. (The board's retired
-  `2F47C8AC…CB2F` pin named a different build.)
+  SHA-256 `576F51ED…E723`. Nothing routine rebuilds it.
 
 ## Next
 
 1. **P2-1 implementation and automated phase-close verification are green.**
-   The 2026-08-21 Boundary closeout completed one exact shell lap and the
-   shell-driven two-fighter regression without faults; the same profile also
-   retained the four-CPU arm green. Only the owner's visual re-check remains.
-   The implementation plan is `docs/p2/P2-1-vs-shell.md`; do not reopen
-   historical P2-1i/P2-1L findings as coding work unless verification finds a
-   regression.
+   Only the owner's visual re-check remains. The implementation plan is
+   `docs/p2/P2-1-vs-shell.md`; do not reopen historical P2-1i/P2-1L findings as
+   coding work unless verification finds a regression.
 2. **P2-2 implementation and automated acceptance are green; owner visual/play
    acceptance remains.** BattleShip's VSBattle creation, engagement/catch/hit
    walks, CPU targeting, multi-target camera, KO scoring and Sudden Death are
    N-player source imports; the DS bridge keeps player instance 0..3 separate
-   from generated owner kind, and the audit restored source `ftparam`
-   stat/stale/damage attribution, grounded damage-velocity projection,
-   hit-status aggregation and colanim lifecycle, centered-stick facing, hitlag
-   order, battle-entry registry lifetime, four-way Results and all four live
-   CSS preview slots. The lower-screen HUD is four-wide on live source
+   from generated owner kind. The lower-screen HUD is four-wide on live source
    `ifCommon` state with DMA-safe Bank-I writes; source effect/particle
    capacities are restored. **The full audit and the measured byte law live in
-   `docs/p2/P2-2-four-fighters.md`; the standing arm's current figures live in
-   the board rows, not here — every pre-2026-08-25 number on that arm is the
-   MIRROR roster (P2-3r15).** The remaining item is explicitly visual: four-way
-   camera framing, lower-screen HUD presentation, Team Battle feel and
-   Results/Sudden Death presentation. Do not claim the owner accepted those
-   until they actually do.
+   `docs/p2/P2-2-four-fighters.md`; the standing arm's figures live in the board
+   rows — every pre-2026-08-25 number on that arm is the MIRROR roster
+   (P2-3r15).** The remaining item is explicitly visual: four-way camera
+   framing, lower-screen HUD, Team Battle feel and Results/Sudden Death
+   presentation. Do not claim the owner accepted those until they actually do.
 3. **P2-3 is active, and the owner's 2026-08-23 batch is now mostly landed.**
    The character select carries the in-progress roster -- Luigi AND Donkey Kong
    selectable, portraits dimmed under the source question-mark plate -- A on a
    slot's 3D preview cycles that slot's costume, pose slots are released when a
    fighter is destroyed, and a fighter's asset load no longer kills the BGM.
-   `NDS_P2_SHELL_ROSTER` defaults to 2; the per-fighter native-owner tables left
-   the ARM9 binary for NitroFS images (P2-3r4). Roster-2 headroom figures
-   (28,772 / 44,848) predate P2-3r13's arena raise -- resize against the current
-   run; the SHARED Mario/Fox table set (64,147 B a Luigi-vs-DK match never uses)
-   is still unspent.
-   **Intros are fixed** (P2-3r5, the missing source `is_invisible` gate) and
-   **Mario's pipe is fixed end-to-end** (P2-3r6, a four-defect chain ending in a
-   forced DS `COLOR0_TRANSPARENT`); the board rows carry both. **The CSS
-   preview's disconnected body parts are fixed** (P2-3r7): its CSS-only
-   `glViewport` writes bypassed `ndsRendererFighterPacketDmaWait()` and cut into
-   the last preview fighter's draining packet DMA. **Rail: a GX writer outside
-   `nds_renderer.c` must call that wait first.**
-   **Four distinct kinds run in the SHIPPING configuration** (P2-3r11 + r13;
-   full narrative on those board rows). `NDS_R2_BATTLEPACK := 0` and the cache
-   trim are gone, so **four-kind tick figures are pack-on and comparable**
-   (`ALL` P50/P95 1,964,992 / 3,085,696 on the promoted gate arm). **Rail:
-   never raise `NDS_TASKMAN_ARENA_SIZE` without returning at least as much
-   static image first** -- the step-down loop cannot tell an ambitious target
-   from an exhausted heap. **Measured and left on the table:** the per-context
-   graphics heap peaks at **96 B of 53,248** (two contexts = 106,496 B of
-   arena), overflow 0; re-read it on Results / Sudden Death / pause zoom.
-   **DK's cargo matrix is verified** (P2-3r10, `docs/p2/fighters/dk.md`): grab,
-   carry, walk/turn/jump/edge/land, the ONE cargo release (`ThrowFF`/
-   `ThrowAirFF`; `HeavyThrow*` are heavy-ITEM throws, P2-5), mash-out,
-   KO-while-carried and Giant Punch charge, each traced to its source owner AND
-   to the linked image. **One defect, fixed at its seam:** a `#define` in
-   `battleship_ftcommon_damage.c` sent `ftDonkeyThrowFDamageSetStatus` to a
-   compat stub, so the source setter was compiled and then dropped by
-   `--gc-sections`. **Rail: a source function defined in a `battleship_*.o` but
-   absent from the linked ELF is stranded unless it has an in-TU caller.**
+   The per-fighter native-owner tables left the ARM9 binary for NitroFS images
+   (P2-3r4); the SHARED Mario/Fox table set (64,147 B a Luigi-vs-DK match never
+   uses) is still unspent.
+   **Intros are fixed** (P2-3r5) and **Mario's pipe is fixed end-to-end**
+   (P2-3r6); the board rows carry both. **The CSS preview's disconnected body
+   parts are fixed** (P2-3r7): its CSS-only `glViewport` writes bypassed
+   `ndsRendererFighterPacketDmaWait()` and cut into the last preview fighter's
+   draining packet DMA. **Rail: a GX writer outside `nds_renderer.c` must call
+   that wait first.**
+   **Four distinct kinds run in the SHIPPING configuration** (P2-3r11 + r13 +
+   f9; full narrative on those board rows). **Rail: never raise
+   `NDS_TASKMAN_ARENA_SIZE` without returning at least as much static image
+   first** -- the step-down loop cannot tell an ambitious target from an
+   exhausted heap. **The graphics-heap and BattlePack levers are SPENT** by
+   P2-3f9; `ALL` P50/P95 on the gate arm is 1,965,184 / 3,085,888, flat within
+   192 ticks across that change.
+   **DK's cargo matrix is verified** (P2-3r10, `docs/p2/fighters/dk.md`), with
+   one defect fixed at its seam: a `#define` sent
+   `ftDonkeyThrowFDamageSetStatus` to a compat stub, so the source setter was
+   compiled and then dropped by `--gc-sections`. **Rail: a source function
+   defined in a `battleship_*.o` but absent from the linked ELF is stranded
+   unless it has an in-TU caller.**
    **VS Stock's last-stock path is fixed** (P2-3r14) and **backing out of the
-   stage select no longer kills the menu BGM** (P2-3r16); both rows carry the
-   full narrative. **Rails from them: a source TU the port skips strands its
-   callees too**, and the CSS preview's synchronous file setup is bracketed
-   with the P2-3r12 audio suspend/resume pair because that ADPCM overrun is
-   marginal enough to move with code placement — bracketed, never tuned.
-   **Not proven yet:** the team stock steal (STOCK+TEAM in the shell).
+   stage select no longer kills the menu BGM** (P2-3r16). **Rails from them: a
+   source TU the port skips strands its callees too**, and the CSS preview's
+   synchronous file setup is bracketed with the P2-3r12 audio suspend/resume
+   pair — bracketed, never tuned. **Not proven yet:** the team stock steal.
 
 4. **Captain Falcon is roster #3 and he is DONE except for audio and feel**
-   (P2-3f4/f5/f8). `docs/p2/fighters/falcon.md` is the authority. Landed:
-   the two model opcodes, his status table, `ftcaptainspecialn/lw/hi.c`,
-   Falcon Dive's victim TU, the two `mpcommon` seams, his two-status entry
-   ladder, the native owner (slot 4) and full CSS/HUD/asset admission at
+   (P2-3f4/f5/f8). `docs/p2/fighters/falcon.md` is the authority. Landed: the
+   two model opcodes, his status table, `ftcaptainspecialn/lw/hi.c`, Falcon
+   Dive's victim TU, the two `mpcommon` seams, his two-status entry ladder, the
+   native owner (slot 4) and full CSS/HUD/asset admission at
    `NDS_P2_SHELL_ROSTER=3`. **NEXT IS HIS AUDIO — nothing at all is packed**;
    ordinals are re-derived in falcon.md, shape the work on the Donkey bank.
-   **He is the first owner with ZERO cross-matrix runs** (so the reserved GX
-   band stays Donkey's 16..25) and **the first whose LOW model carries a root
-   light preamble his HIGH model does not** — the generator's high==low
-   assertion was a false invariant and is now a union.
+   **He is the first owner with ZERO cross-matrix runs** (the reserved GX band
+   stays Donkey's 16..25) and **the first whose LOW model carries a root light
+   preamble his HIGH does not**.
    **Budget:** +20,064 B of ARM9 image, 18,800 B of owner images,
    **100,160 B unique per-kind arena** (Mario 54,048 / Luigi 41,552 /
    Donkey 77,360 / Captain 100,160 / Fox 116,752). **The argmax four-kind
-   roster is now unaffordable — see falcon.md item 3 before re-pointing
-   `p2_fourcpu_stress`.** Two live defects found and fixed at their seams: his
-   `FTAttributes` mixed-u16 lanes had no normalizer arm (**Luigi still has
-   none and he ships**), and the HUD's portrait and stock palette bands
-   overlapped at slot 8, tinting Donkey's portrait with player 0's stock LUT.
+   roster FITS since P2-3f9** (whole-match low-water 419,052 B) but costs ~30x
+   in wall time on Captain's account — falcon.md item 7, and the reason
+   `p2_fourcpu_stress` stays on Mario/Fox/Luigi/Donkey. Two live defects were
+   found and fixed at their seams: his `FTAttributes` mixed-u16 lanes had no
+   normalizer arm (**Luigi still has none and he ships**), and the HUD's
+   portrait and stock palette bands overlapped at slot 8.
    **Rails: a weak twin beside a strong body is CORRECT** (dispatch tables name
    every fighter's setter unconditionally — check `nm`, never `src/`), and **a
    generated include needs an explicit Makefile prerequisite** — `-MMD` writes
    `D:/…` where make expands `/d/…`, so the edge is invisible and the parallel
-   build races (a stale `nds_ui_kit.o` shipped against a fresh surface pack and
-   read as `BACKDROP SURFACES: mismatch=145`).
-   **P2-3 background:** Luigi ANIMATES (P2-3r2) and now enters through his pipe
+   build races.
+   **P2-3 background:** Luigi ANIMATES (P2-3r2) and enters through his pipe
    (P2-3f2). **DK's one open realtime suspicion:** status 68 is
-   nFTCommonStatusDownBounceU (knockdown bounce — NOT Dokan); re-observe on a
-   realtime DK ROM, suspect DownBounce anim-end never fires. Keep admission
-   fighter-by-fighter.
+   nFTCommonStatusDownBounceU (NOT Dokan); re-observe on a realtime DK ROM,
+   suspect DownBounce anim-end never fires. Keep admission fighter-by-fighter.
 5. **Performance remains debt; the structural cuts are landed and default-on**
-   (board rows P2-2p1..p6, promoted 2026-08-23, Boundary GREEN on the promoted
-   tree; per-lever numbers and controls are in those rows). `NDS_R2_FIGHTER_PACKET=1`
-   (DMA replay of each fighter's recorded GX stream, crediting the record
-   frame's presented-work counters so harness contracts stay exact;
-   `=0` is the control) plus P2-2p5's collision/matrix cuts plus P2-2p6's
-   fighter pose engine + 30 Hz body hold + Q12 clock took the MIRROR four-CPU
-   arm from `WORK-H` P50/P95 1,600,832 / 2,069,824 to **1,244,608 / 1,777,408**;
+   (board rows P2-2p1..p6, promoted 2026-08-23; per-lever numbers and controls
+   are in those rows). `NDS_R2_FIGHTER_PACKET=1` (DMA replay of each fighter's
+   recorded GX stream, crediting the record frame's presented-work counters so
+   harness contracts stay exact; `=0` is the control) plus P2-2p5's
+   collision/matrix cuts plus P2-2p6's pose engine + 30 Hz body hold + Q12 clock
+   took the MIRROR four-CPU arm from `WORK-H` P50/P95 1,600,832 / 2,069,824 to
+   **1,244,608 / 1,777,408**;
    the published `smash64ds.nds` carries all of it (owner visual pass pending).
    **The arm is now the four-kind roster (P2-3r15), so the live gap to 1.12M is
-   larger than those figures imply** — re-measure before sizing a lever. The
-   named remainders are the soft-float caller census lanes and walk #1 of
-   `ndsFTParamsInvalidateSubtree` (~8K).
+   larger than those figures imply** — re-measure before sizing a lever. Named
+   remainders: the soft-float caller census lanes, walk #1 of
+   `ndsFTParamsInvalidateSubtree` (~8K), and **Captain's ~30x** (falcon.md 7).
 
 ## Standing operational facts
 
 - **Republish the free-play ROM after every fix batch** (owner, 2026-08-22): plain
   `make TARGET=smash64ds` writes root `smash64ds.nds` (human input, walk compiled
   out, flag-identical to the gate's shell config, **FIVE**-name roster).
-  Current: **17,644,544 B, SHA-256 `C7FF35D7…E171`** (2026-08-25, adds P2-3f8 —
-  Captain Falcon selectable); asserted from `builds/build/nds_build_config.h`:
-  `NDS_P2_CAPTAIN 1`, `NDS_P2_MENU_WALK 0`, `NDS_P2_FOUR_CPU_ROSTER 0`.
-  **Boundary does NOT build this target** — rebuild by hand, and `rm` the root
+  Current: **17,644,544 B, SHA-256 `2FB213CC…CA74`** (2026-08-25, adds P2-3f9 —
+  the four-heaviest-kind hang is gone); asserted from
+  `builds/build/nds_build_config.h`: `NDS_P2_CAPTAIN 1`, `NDS_P2_MENU_WALK 0`,
+  `NDS_P2_FOUR_CPU_ROSTER 0`, `NDS_P2_SHELL_ARGMAX_ROSTER 0`. The previous
+  `C7FF35D7…E171` is the ROM that hangs — do not hand it to the owner.
+  **Boundary does NOT build it** — rebuild by hand, and `rm` the root
   `.elf`/`.nds` pair first if a lab build wrote them.
 - Clean checkout builds through `build.ps1`, not bare `make` (four of six
   `.inc` are gitignored). Never pass `-j`, never override `MAKEFLAGS`, one
   build at a time.
-- Shell target relationship: `smash64ds` is the published walk-free shell
-  configuration (`smash64ds-p2-shell-freeplay-hwtri` retired at P2-1M — the
-  published name IS that configuration). `smash64ds-p2-shell-hwtri` adds the
-  scripted walk used by Boundary arm 2/cadence probing;
-  `smash64ds-p2-shell-loop-hwtri` is the fast-logic loop arm. Neither publishes.
-  `gNdsMenuShellWalkBudget` makes the lap count a runtime poke: one ROM serves a smoke and a soak.
-- **The shell walk costs ~69 s before the battle starts** — 4,118 presented frames
-  at 60 Hz (`artifacts/verification/2026-08-19_p2-shell.txt`); every wait in the battle arm is a *guest* anchor, so this costs only time.
+- Shell targets: `smash64ds` is the published walk-free shell configuration
+  (`smash64ds-p2-shell-freeplay-hwtri` retired at P2-1M).
+  `smash64ds-p2-shell-hwtri` adds the scripted walk used by Boundary arm
+  2/cadence probing; `smash64ds-p2-shell-loop-hwtri` is the fast-logic loop arm.
+  Neither publishes. `NDS_P2_SHELL_ARGMAX_ROSTER=1` (P2-3f9) seeds the shell's
+  CSS with the four heaviest kinds and is how a four-kind shell match is run.
+- **The shell walk costs ~69 s before the battle starts** — 4,118 presented frames at 60 Hz (`artifacts/verification/2026-08-19_p2-shell.txt`); every wait in the battle arm is a *guest* anchor, so this costs only time.
 - The shell's own character/stage select commits the mode-163 descriptor
-  (`CSSLIVE`: Mario human, Fox CPU, Time mode, Dream Land), read back out of the
-  live battle state — the evidence the rebased arm verifies the same fight.
+  (`CSSLIVE`), read back out of the live battle state — the evidence the rebased
+  arm verifies the same fight.
 - Preserve: mode 163, renderer mode 9, mip 0, static textures, source countdown, Dream Land water frame 0, Task 16 `1/1/1`. Never edit `decomp/`.
 - Push hygiene: owner-name scan is `git grep -l -i -e <owner-given-name> HEAD`; the one hit (sm64 IDO `usr/lib/copt`) is a false positive.
+- **A GDB POKE CANNOT DRIVE THIS GAME'S STATE, and gdb READS of hot globals lie
+  the same way** (P2-3f9). melonDS's stub reads and writes main RAM *behind* the
+  ARM9 dcache. A probe wrote the CSS's `sCss*` arrays as aligned 32-bit stores,
+  read them straight back, and the commit one instruction later published the
+  OLD roster. Reads lie too: a real overflow halt published `count=0 request=0
+  headroom=0 caller_lr=0` while the same stop's backtrace read
+  `syMallocSet(size=12140, alignment=16)`. **A poke only sticks where the CPU
+  has not touched the line yet** — why `gNdsMenuShellWalkBudget` works and
+  per-frame state does not. Make the guest's own code write it: a build flag,
+  not a breakpoint. Trust frame args and `gSYTaskmanGeneralHeap`; a row of
+  zeroes means unreadable, never "no overflow".
+- **Long verifier runs must be launched DETACHED** (`Start-Process pwsh
+  -RedirectStandardOutput <log> -WindowStyle Hidden -PassThru`, no `-Wait`): a
+  wrapper held open by an agent tool call is reaped at that tool's lifetime and
+  takes melonDS with it — 40 min into the stress arm (2026-08-25).
 - **Banking a verifier log: `Start-Process pwsh -RedirectStandardOutput <log> -NoNewWindow -Wait`, from a PowerShell host.** `Invoke-VerifyScriptOnce` replays child output with `[Console]::Out.Write`, so `Tee-Object` banks five lines and a `>` redirect INSIDE PowerShell banks two; and run through the Bash tool the recursive-make probe dies `Error 127` before any arm starts.
 - **Current P2 owner directive is no snapshot.** Do not run
   `New-Smash64DSSnapshot.ps1` unless the owner explicitly re-enables snapshots.

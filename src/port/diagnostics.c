@@ -8087,6 +8087,15 @@ size_t ndsTaskmanArenaSize(void)
 __attribute__((used)) volatile u32 gNdsTaskmanGraphicsHeapHighWater;
 __attribute__((used)) volatile u32 gNdsTaskmanGraphicsHeapCapacity;
 __attribute__((used)) volatile u32 gNdsTaskmanGraphicsHeapOverflowCount;
+/* P2-3f9. The counter above cannot see the adapter's material branch table
+ * running out of room: that builder CHECKS first and returns FALSE, so the
+ * pointer never passes `end` and the sampler has nothing to report. Cutting
+ * the reservation from 0xD000 to 0x2000 made that refusal a real possibility
+ * rather than a theoretical one, so it is counted at its own site
+ * (ndsRendererAdapterPrepareMaterialSegment, reloc_backend_renderer_dl.c) and
+ * asserted at 0 by the four-CPU stress harness. A nonzero value means a DObj
+ * drew without its material branch. */
+__attribute__((used)) volatile u32 gNdsTaskmanGraphicsHeapNoRoomCount;
 
 void ndsTaskmanSampleGraphicsHeap(void)
 {
