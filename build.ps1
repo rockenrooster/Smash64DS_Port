@@ -559,14 +559,17 @@ function Main {
     Invoke-Python $python 'generate-native-fighters' `
         @((Join-Path $RepoRoot 'scripts\fighters\generate_nds_native_owners.py'),
           '--source-root', $RepoRoot) $RepoRoot
-    # Task 56 shipped broken on 2026-08-10 and the owner saw missing geometry on
-    # both fighters. This expands every generated primitive group back into
-    # oriented triangles, under the emitter's real BEGIN_VTXS policy, and fails
-    # closed unless each of the 626 source triangles is drawn exactly once with
-    # the source winding. It runs here because it checks the file the step above
-    # just wrote, and because nothing else would ever run it.
-    Invoke-Python $python 'check-fighter-primitive-streams' `
-        @((Join-Path $RepoRoot 'scripts\fighters\check_fighter_primitive_streams.py')) `
+    # THE native fighter owner oracle. Task 56 shipped broken on 2026-08-10 and
+    # the owner saw missing geometry on both fighters; P2-3r17 (2026-08-25) was
+    # opened by a second missing-geometry report and found the checker of the
+    # day could only build the frozen Mario/Fox HIGH context, so Luigi, Donkey
+    # and every LOW program were outside what any gate could express. This one
+    # runs six closures -- source, vertex, matrix routing, facing, winding and
+    # primitive -- for every landed owner in both detail levels, and fails
+    # closed. It runs here because it checks the file the step above just wrote,
+    # and because nothing else would ever run it.
+    Invoke-Python $python 'check-native-owner-geometry-closure' `
+        @((Join-Path $RepoRoot 'scripts\fighters\check_native_owner_geometry_closure.py')) `
         $RepoRoot
     $generatedOutputs = @(
         'assets\audio\bgm_pupupu_pcm16.raw', 'assets\audio\bgm_pupupu_pcm16.json',

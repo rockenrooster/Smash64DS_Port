@@ -2576,7 +2576,7 @@ def _stripify_run(tris, mode):
             # **35.6% of the fighter's 626 triangles**, culled away on
             # hardware with no assert and no counter to say so. That is what
             # made mode 2 unusable, not its runtime submission cost.
-            # scripts/fighters/check_fighter_primitive_streams.py is the
+            # scripts/fighters/check_native_owner_geometry_closure.py is the
             # standing proof; run it after touching this function.
             for ae in ((t0[1], t0[2]), (t0[2], t0[0]), (t0[0], t0[1])):
                 apex = next(v for v in t0 if v not in ae)
