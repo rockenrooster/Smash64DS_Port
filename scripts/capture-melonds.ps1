@@ -10,7 +10,10 @@ param(
     [switch]$Jit,
     [switch]$NoJit,
     [switch]$MaximizeVertical,
-    [ValidateRange(-1,8)][int]$RendererFastRunMode = -1,
+    # 9 is NDS_RENDERER_FAST_RUN_NATIVE_COMPLETE_STAGE, the SHIPPING mode. The
+    # range stopped at 8 until 2026-08-25, so the one mode the owner actually
+    # plays could not be asked for here and P2-3r17 had to poke it by hand.
+    [ValidateRange(-1,9)][int]$RendererFastRunMode = -1,
     [string]$Gdb = 'C:\devkitPro\devkitARM\bin\arm-none-eabi-gdb.exe',
     [int]$GdbPort = 4333,
     [string]$Elf = '',
@@ -58,7 +61,19 @@ param(
     # RIGHT shift key specifically, and SendKeys has no way to say which shift
     # it means -- so this sends the right-shift virtual key with its own
     # scancode through keybd_event instead.
-    [ValidateRange(0,16)][int]$SelectPresses = 0
+    [ValidateRange(0,16)][int]$SelectPresses = 0,
+    # `name=value` pairs written at boot in the SAME GDB session as
+    # -RendererFastRunMode/-FoxCpuMode, then read back and asserted. The melonDS
+    # stub allows one session, so a lab route global had no way into a capture
+    # before this: P2-3r17 had to press SELECT between two captures instead, and
+    # a SELECT A/B costs a second capture at a DIFFERENT animation frame -- on a
+    # match that is not frozen, that drift is larger than the thing being
+    # measured. One poke, one capture, same wall clock, same pose.
+    #
+    # Names must be plain `u32` globals present in the ELF; the read-back is
+    # what turns "the arm did nothing" into "the arm was never set", which is
+    # the distinction this row was created by losing.
+    [string[]]$SetGlobals = @()
 )
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'lib\melonds.ps1')
@@ -84,10 +99,22 @@ $gdbPath = if ([System.IO.Path]::IsPathRooted($Gdb)) {
 $elfPath = $null
 $rendererSelectionEnabled = ($RendererFastRunMode -ge 0)
 $foxSelectionEnabled = ($FoxCpuMode -ge 0)
+$globalWrites = @()
+foreach ($pair in $SetGlobals) {
+    if ([string]::IsNullOrWhiteSpace($pair)) { continue }
+    $split = $pair.Split('=', 2)
+    if (($split.Count -ne 2) -or [string]::IsNullOrWhiteSpace($split[0]) -or
+        [string]::IsNullOrWhiteSpace($split[1])) {
+        throw "-SetGlobals entries must be name=value; got '$pair'."
+    }
+    $globalWrites += ,@($split[0].Trim(), $split[1].Trim())
+}
+$globalSelectionEnabled = ($globalWrites.Count -gt 0)
 $fighterAnimAuditEnabled = -not [string]::IsNullOrWhiteSpace($FighterAnimAudit)
 $pauseCameraEnabled =
     (($PauseCameraPitch -ne 0.0) -or ($PauseCameraYaw -ne 0.0))
-$gdbSelectionEnabled = $rendererSelectionEnabled -or $foxSelectionEnabled
+$gdbSelectionEnabled = $rendererSelectionEnabled -or $foxSelectionEnabled -or
+    $globalSelectionEnabled
 $exactTimeCaptureEnabled = ($ExactTimeRemain -gt 0)
 $exactFrameCaptureEnabled =
     (($ExactFirstFrame -ge 0) -or ($ExactSecondFrame -ge 0) -or
@@ -163,10 +190,23 @@ if (-not (Test-Path $melonDsPath)) {
 if (-not (Test-Path $romPath)) {
     throw "ROM not found: $romPath. Run make first or pass -Build."
 }
-if ($pauseCameraEnabled -and $foxSelectionEnabled) {
-    # The melonDS GDB stub takes one connection. The Fox-mode write already
-    # spends it, and the later orbit write then attaches with no live target.
-    throw '-PauseCameraPitch/-PauseCameraYaw cannot be combined with -FoxCpuMode; the melonDS GDB stub allows a single session.'
+if ($pauseCameraEnabled -and $gdbSelectionEnabled) {
+    # The melonDS GDB stub takes one connection. Set-MelonDSCaptureRuntimeMode
+    # runs at boot and spends it; the later Set-MelonDSPauseCamera then attaches
+    # with no live target. That helper writes BOTH globals in one session, so
+    # the guard has to cover BOTH selectors that reach it -- it named only
+    # -FoxCpuMode until 2026-08-25, and -RendererFastRunNode/-PauseCameraYaw
+    # therefore booted the emulator, ran the whole delay, and died at the orbit
+    # write with "Remote communication error" naming neither switch. P2-3r17.
+    $spent = @()
+    if ($rendererSelectionEnabled) { $spent += '-RendererFastRunMode' }
+    if ($foxSelectionEnabled) { $spent += '-FoxCpuMode' }
+    if ($globalSelectionEnabled) { $spent += '-SetGlobals' }
+    throw ("-PauseCameraPitch/-PauseCameraYaw cannot be combined with " +
+        ($spent -join ' or ') +
+        '; the melonDS GDB stub allows a single session, and that one is ' +
+        'already spent at boot. Bake the run mode into the lab ROM ' +
+        '(NDS_RENDERER_FAST_RUN_DEFAULT) and leave GDB for the orbit.')
 }
 if ($fighterAnimAuditEnabled) {
     if ($exactFrameCaptureEnabled -or $rendererSelectionEnabled -or
@@ -339,12 +379,16 @@ function Set-MelonDSCaptureRuntimeMode {
         [Parameter(Mandatory=$true)][string]$ElfPath,
         [Parameter(Mandatory=$true)][int]$Port,
         [Parameter(Mandatory=$true)][int]$Mode,
-        [Parameter(Mandatory=$true)][int]$FoxMode
+        [Parameter(Mandatory=$true)][int]$FoxMode,
+        [object[]]$GlobalWrites = @()
     )
 
     $expected = @()
     if ($Mode -ge 0) { $expected += "CAPTURE_FAST_MODE=$Mode" }
     if ($FoxMode -ge 0) { $expected += "CAPTURE_FOX_MODE=$FoxMode" }
+    foreach ($write in $GlobalWrites) {
+        $expected += ("CAPTURE_GLOBAL_" + $write[0] + "=" + $write[1])
+    }
     $lastOutput = ''
     for ($attempt = 1; $attempt -le 12; $attempt++) {
         $gdbArgs = @('-q', '-batch', $ElfPath,
@@ -359,6 +403,16 @@ function Set-MelonDSCaptureRuntimeMode {
                           '-ex', "set variable gNdsBattlePlayableFoxCpuEnabled = $FoxMode",
                           '-ex', 'printf "CAPTURE_FOX_MODE=%u\n", gNdsBattlePlayableFoxCpuEnabled')
         }
+        foreach ($write in $GlobalWrites) {
+            # `set variable` on a plain u32 global is enough here, unlike the
+            # pause-camera floats: those are typeless BSS symbols and need the
+            # pointer cast. Read back through the SAME name so a silent no-op
+            # write fails the run instead of producing an unlabelled capture.
+            $gdbArgs += @(
+                '-ex', ("set variable " + $write[0] + " = " + $write[1]),
+                '-ex', ('printf "CAPTURE_GLOBAL_' + $write[0] + '=%u\n", ' +
+                        $write[0]))
+        }
         $gdbArgs += @('-ex', 'detach', '-ex', 'quit')
         $lastOutput = (& $GdbPath @gdbArgs 2>&1 | Out-String)
         $selected = ($LASTEXITCODE -eq 0)
@@ -366,7 +420,8 @@ function Set-MelonDSCaptureRuntimeMode {
             $selected = $selected -and $lastOutput.Contains($marker)
         }
         if ($selected) {
-            Write-Output "Selected capture runtime modes renderer=$Mode fox=$FoxMode."
+            $globalText = ($GlobalWrites | ForEach-Object { $_[0] + '=' + $_[1] }) -join ' '
+            Write-Output "Selected capture runtime modes renderer=$Mode fox=$FoxMode $globalText."
             return
         }
         Start-Sleep -Milliseconds 250
@@ -506,7 +561,8 @@ try {
     }
     if ($gdbSelectionEnabled -and -not $exactFrameCaptureEnabled) {
         Set-MelonDSCaptureRuntimeMode -GdbPath $gdbPath -ElfPath $elfPath `
-            -Port $GdbPort -Mode $RendererFastRunMode -FoxMode $FoxCpuMode
+            -Port $GdbPort -Mode $RendererFastRunMode -FoxMode $FoxCpuMode `
+            -GlobalWrites $globalWrites
     }
     if ($fighterAnimAuditEnabled) {
         Set-MelonDSCaptureWindow -WindowHandle $emulator.MainWindowHandle

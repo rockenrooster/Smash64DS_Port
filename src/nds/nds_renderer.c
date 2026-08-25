@@ -26500,6 +26500,80 @@ static s32 ndsRendererNativeDirectReject(NDSRendererStats *stats)
     return FALSE;
 }
 
+#if NDS_LAB_NO_CULL
+/* BUGS.md #10 / P2-3r17 seam probe. One binary, four arms, cycled by SELECT --
+ * the only DS key the battle input map leaves unbound -- so a single
+ * capture-melonds.ps1 session photographs the CONTROL and a candidate arm at
+ * the same camera, from the same ROM, with the arm printed on the HUD.
+ *
+ * The two failures this shape exists to prevent have both actually happened on
+ * this row. 2026-07-27's "culling REFUTED" was worthless because the probe only
+ * patched ndsRendererNativeBeginHierarchyBatch, which the production owner
+ * (mode 8/9) never calls: it looked exactly like a probe that had run and
+ * found nothing. And comparing two separate builds/captures put a pose and a
+ * camera between the arms. Arm 2 INVERTS the cull, so a probe that is not
+ * reaching the geometry cannot be mistaken for one that is -- the fighter must
+ * render visibly inside-out.
+ *
+ *   0  shipped
+ *   1  POLY_CULL_NONE   -- both faces drawn. Splits "the geometry never
+ *                          reached the GX" from "the GX culled it", which no
+ *                          counter can tell apart.
+ *   2  POLY_CULL_FRONT  -- inverted; the arm that proves the probe fires.
+ *   3  strips off       -- the Task 56 primitive-group emitter is bypassed for
+ *                          the raw corner emitters. Only exists when
+ *                          NDS_R2_STRIP_ROUTE compiled both emitters in.
+ *
+ * AND A CULL ARM IS NOT AN ORACLE FOR MISSING GEOMETRY. Drawing both faces
+ * fills a hole's COLOUR in without closing the hole, so an arm judged on "does
+ * it look better" reports a fix that is not there -- which is how P2-3r17 read
+ * a fix into arm 1 before the owner falsified the whole cull family in one
+ * sentence. Judge only on whether the seam is GONE, and only against a
+ * frame-locked control.
+ *
+ * Fighters only: un-culling the stage as well blows past the polygon limits and
+ * hangs the ROM. */
+#if NDS_FIGHTER_PACKET_LIVE
+/* THE TRAP THIS PROBE EXISTS TO AVOID, AND IT CAUGHT ME TOO (2026-08-25).
+ * With NDS_R2_FIGHTER_PACKET the shipped fighter draw is a DMA replay of a
+ * recorded GX stream: ndsFighterPacketTryReplay returns before the production
+ * execute, so nothing below runs on a hit, and the recorder tees
+ * `state->texture_prepare_poly_fmt` -- the UNPATCHED value -- into the packet
+ * before the begin-batch site the probe patches. Arms 1 and 2 then produce
+ * BYTE-IDENTICAL frames, which reads exactly like "culling makes no
+ * difference". Build the probe with NDS_R2_FIGHTER_PACKET=0. */
+#error "NDS_LAB_NO_CULL needs NDS_R2_FIGHTER_PACKET=0; a packet replay ignores every arm"
+#endif
+#if NDS_R2_STRIP_ROUTE && (NDS_TASK56_FIGHTER_PRIMITIVES >= 1) && \
+    (NDS_RENDERER_PROFILE_LEVEL < 2) && NDS_RENDERER_HW_TRIANGLES
+#define NDS_LAB_SEAM_ARM_COUNT 4u
+#define NDS_LAB_SEAM_STRIP_ARM 3u
+#else
+#define NDS_LAB_SEAM_ARM_COUNT 3u
+#define NDS_LAB_SEAM_STRIP_ARM 0xffu
+#endif
+/* .data and aligned(32) so the word owns its cache line: a gdb poke of a route
+ * global that shares a line with something the ARM9 writes is stamped back on
+ * the next eviction. SELECT is the intended driver, but the poke must work. */
+volatile u32 gNdsLabSeamArm
+    __attribute__((section(".data"), aligned(32))) = 0u;
+
+static inline u32 ndsRendererNativeLabSeamPolyFmt(u32 poly_fmt)
+{
+    u32 arm = gNdsLabSeamArm;
+
+    if (arm == 2u)
+    {
+        return (poly_fmt & ~(u32)POLY_CULL_NONE) | (u32)POLY_CULL_FRONT;
+    }
+    if (arm == 1u)
+    {
+        return (poly_fmt & ~(u32)POLY_CULL_NONE) | (u32)POLY_CULL_NONE;
+    }
+    return poly_fmt;
+}
+#endif
+
 static inline void ndsRendererNativeBeginDirectBatch(
     const NDSRendererStats *stats,
     u32 textured,
@@ -26507,6 +26581,11 @@ static inline void ndsRendererNativeBeginDirectBatch(
     u32 poly_fmt,
     u32 matrix_generation)
 {
+#if NDS_LAB_NO_CULL
+    /* THE production owner's batch. Mode 8 and mode 9 both come here and never
+     * reach the hierarchy batch, so this is the site the probe has to patch. */
+    poly_fmt = ndsRendererNativeLabSeamPolyFmt(poly_fmt);
+#endif
     if ((sNdsRendererHardwareTriangleBatchOpen != 0u) &&
         (sNdsRendererHardwareTriangleBatchTextured == textured) &&
         (sNdsRendererHardwareTriangleBatchTextureName == texture_name) &&
@@ -28954,6 +29033,25 @@ ndsRendererNativePrepareProductionRunCore(
         {
             return ndsRendererNativeDirectReject(stats);
         }
+        /* The cull bits belong to THIS epoch's policy, not to whichever epoch
+         * last did a full prepare. Everything else in texture_prepare_poly_fmt
+         * is a function of state the validity flag already covers; the cull is
+         * not, because it is read from `epoch_policy` two lines into this
+         * function while the flag is keyed on source geometry bits.
+         *
+         * P2-3r17 measured that this cannot currently fire: a cull change
+         * arrives as NDS_NATIVE_STATE_GEOMETRY, which invalidates the prepare,
+         * and every owner's live geometry mode is validated against the same
+         * policy above -- Donkey High has one CULL_NONE epoch (22) and Mario
+         * High none. It is repaired anyway because "unreachable" here is a
+         * property of today's generated tables, not of this function, and one
+         * mask/or per run against ~53 runs a frame is not a price worth
+         * leaving a latent wrong-attribute path for. It is NOT the P2-3r17
+         * seam: the owner falsified the whole cull family by observing that
+         * POLY_CULL_NONE fills the holes' colour in without closing them. */
+        state->texture_prepare_poly_fmt =
+            (state->texture_prepare_poly_fmt & ~(u32)POLY_CULL_NONE) |
+            expected_poly_cull;
         if (packet_mode == 0u)
         {
             ndsRendererProfileRecordTexturePrepareReuse();
@@ -29207,6 +29305,32 @@ volatile u32 gNdsR2FighterStripRoute
 #define NDS_R2_STRIP_ROUTE_ON() (gNdsR2FighterStripRoute != 0u)
 #else
 #define NDS_R2_STRIP_ROUTE_ON() (1)
+#endif
+
+#if NDS_LAB_NO_CULL
+/* The seam probe's one control surface. Defined here because arm 3 drives the
+ * strip route above; the poly-format arms are read at the two begin-batch
+ * sites. Returns the arm now selected so the caller can label the screen -- an
+ * unlabelled arm is how a probe capture becomes unattributable evidence. */
+u32 ndsRendererLabSeamAdvanceArm(void)
+{
+    u32 arm = gNdsLabSeamArm + 1u;
+
+    if (arm >= NDS_LAB_SEAM_ARM_COUNT)
+    {
+        arm = 0u;
+    }
+    gNdsLabSeamArm = arm;
+#if NDS_LAB_SEAM_STRIP_ARM != 0xffu
+    gNdsR2FighterStripRoute = (arm == NDS_LAB_SEAM_STRIP_ARM) ? 0u : 1u;
+#endif
+    return arm;
+}
+
+u32 ndsRendererLabSeamArm(void)
+{
+    return gNdsLabSeamArm;
+}
 #endif
 
 /* Task 56: emit a RAW run's triangles as DS-native primitive groups
@@ -31744,19 +31868,11 @@ static inline void ndsRendererNativeBeginHierarchyBatch(
     u32 texture_name = (prepared_run->textured != 0u) ?
         prepared_run->texture_name : 0u;
 #if NDS_LAB_NO_CULL
-    /* BUGS.md #10 probe, fighters only -- un-culling the stage as well blows
-     * past the polygon limits and hangs the ROM. If the geometry missing from
-     * Mario's underside comes back, it reached the GX and the cull sense is
-     * the defect. If it stays missing, the loss is upstream of the hardware.
-     *
-     * Mode 2 is the control surface this row's history says a cull probe must
-     * carry: it INVERTS the cull, so front faces vanish and Mario must render
-     * visibly inside-out. The 2026-07-27 "culling REFUTED" verdict was worthless
-     * precisely because its probe sat on a path fighters never take and looked
-     * exactly like a probe that never ran. Mode 2 cannot look like that. */
-    u32 poly_fmt =
-        (prepared_run->poly_fmt & ~(u32)POLY_CULL_NONE) |
-        ((NDS_LAB_NO_CULL == 2) ? (u32)POLY_CULL_FRONT : (u32)POLY_CULL_NONE);
+    /* The hierarchy batch is mode 10's; the seam probe patches it too so an arm
+     * means the same thing whichever owner path a capture is on. See
+     * ndsRendererNativeLabSeamPolyFmt for the arm table and the two failures
+     * this shape exists to prevent. */
+    u32 poly_fmt = ndsRendererNativeLabSeamPolyFmt(prepared_run->poly_fmt);
 #else
     u32 poly_fmt = prepared_run->poly_fmt;
 #endif

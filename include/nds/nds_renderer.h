@@ -1641,6 +1641,13 @@ extern volatile u32 gNdsRendererFastTriangleCount;
 extern volatile u32 gNdsRendererFastOwnerTriangleCount[
     NDS_RENDERER_PROFILE_OWNER_COUNT];
 extern volatile u32 gNdsRendererFastFallbackCount[3];
+#if NDS_LAB_NO_CULL
+/* BUGS.md #10 / P2-3r17 seam probe, lab builds only. SELECT advances the arm;
+ * the arm table and its rationale live beside
+ * ndsRendererNativeLabSeamPolyFmt in src/nds/nds_renderer.c. */
+u32 ndsRendererLabSeamAdvanceArm(void);
+u32 ndsRendererLabSeamArm(void);
+#endif
 #if NDS_RENDERER_SCREEN_SPACE_CENSUS
 extern volatile NDSRendererScreenSpaceCensusRow
     gNdsRendererScreenSpaceCensus[NDS_RENDERER_PROFILE_OWNER_COUNT]

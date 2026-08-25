@@ -186,7 +186,7 @@ NDS_TASK55_STAGE_GEOM ?= 0
 # REVERSED WINDING, so a third of the model was culled away on hardware with no
 # assert to say so, and the runtime emitter was `cold`/`Os` in .main branching on
 # `textured` once per vertex while its raw siblings sat in ITCM. Both fixed;
-# scripts/fighters/check_fighter_primitive_streams.py is the standing proof that
+# scripts/fighters/check_native_owner_geometry_closure.py is the standing proof that
 # every source triangle is drawn exactly once with the source winding.
 #
 # The old note here read "NOT A GATE LEVER ... a lever that touches only FTR
@@ -273,8 +273,44 @@ NDS_LAB_CULL_PROBE ?= 0
 # Which bits of the run index the tint probe shows. 0 = low three bits, 3 =
 # next three, so two captures name a run exactly out of the 67 there are.
 NDS_LAB_TINT_SHIFT ?= 0
-# Renders both sides of every polygon. Splits "the geometry never reached the
-# GX" from "the GX culled it", which no counter can tell apart.
+# BUGS.md #10 / P2-3r17 seam probe. At 1 it compiles a four-arm runtime probe
+# into the FIGHTER batch path -- both the production owner's
+# ndsRendererNativeBeginDirectBatch (modes 8/9) and mode 10's hierarchy batch --
+# cycled by SELECT and printed on HUD row 3:
+#
+#   0 shipped   1 POLY_CULL_NONE   2 POLY_CULL_FRONT   3 strips off
+#
+# Arm 1 splits "the geometry never reached the GX" from "the GX culled it",
+# which no counter can tell apart. Arm 2 INVERTS the cull, so a probe that is
+# not reaching the geometry cannot be mistaken for one that is. Arm 3 only
+# exists when NDS_R2_STRIP_ROUTE compiled both fighter emitters in; it drives
+# gNdsR2FighterStripRoute.
+#
+# It is a RUNTIME cycle on purpose. Until 2026-08-25 this flag patched only the
+# hierarchy batch, which the production owner never calls, so the probe sat on a
+# path fighters do not take and a build that found nothing looked exactly like a
+# build that had tested something -- which is how the 2026-07-27 "culling
+# REFUTED" verdict was reached against an arm that never ran. One binary, one
+# camera, SELECT between the arms: pair it with capture-melonds.ps1's
+# -SelectPresses/-SecondOutput, or poke gNdsLabSeamArm with its -SetGlobals.
+#
+# REQUIRES NDS_R2_FIGHTER_PACKET=0 (a build error otherwise). The shipped
+# fighter draw is a DMA replay of a recorded GX stream, which ignores every arm
+# and makes two different arms produce byte-identical frames -- the same
+# "the probe found nothing" shape, one layer further in.
+#
+# AND A CULL ARM IS NOT AN ORACLE FOR MISSING GEOMETRY. Drawing both faces
+# fills a hole's COLOUR in without closing the hole, so an arm judged on "does
+# it look better" reports a fix that is not there (owner, 2026-08-25). Judge
+# only on whether the seam is gone, and only against a FRAME-LOCKED control:
+# capture timing on a live battle drifts pose run to run by far more than the
+# defect (measured 2026-08-25: eight captures at two fixed delays, every pair
+# hundreds of thousands of pixels apart).
+#
+# Fighters only -- un-culling the stage as well blows past the polygon limits
+# and hangs the ROM. Needs the battle FPS HUD for its arm indicator, and owns
+# SELECT, so it cannot be combined with NDS_R2_CAMERA_FIXED_TOGGLE (both are
+# build errors).
 NDS_LAB_NO_CULL ?= 0
 # Task 91 E1 lab probe. Times the generic DObj tree walk and the native-owner
 # revalidation inside the fighter draw, on the tick-HUD ROM -- the split the M2

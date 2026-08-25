@@ -116,6 +116,15 @@ extern volatile u32 gNdsFrameCounter;
  * error, not a silently degraded ROM. */
 #error "NDS_R2_CAMERA_FIXED_TOGGLE needs NDS_BATTLE_FPS_HUD_ENABLED for its arm indicator"
 #endif
+#if NDS_LAB_NO_CULL && !NDS_BATTLE_FPS_HUD_ENABLED
+/* Same rule for the seam probe: an arm nobody can read off the screenshot is
+ * not evidence. */
+#error "NDS_LAB_NO_CULL needs NDS_BATTLE_FPS_HUD_ENABLED for its arm indicator"
+#endif
+#if NDS_LAB_NO_CULL && NDS_R2_CAMERA_FIXED_TOGGLE
+/* Both bind SELECT and both print row 3. One SELECT meaning per build. */
+#error "NDS_LAB_NO_CULL and NDS_R2_CAMERA_FIXED_TOGGLE both own SELECT"
+#endif
 #if !NDS_RENDERER_HW_TRIANGLES
 static u16 *sFramebuffer;
 static u16 *sFramebuffers[2];
@@ -151,6 +160,10 @@ static u32 sBattleFpsHudPrintedUpdatesX10 = 0xffffffffu;
  * repaint until the clock or a damage value happened to change and the owner
  * would press SELECT and watch nothing happen for up to a second. */
 static u32 sBattleCameraArmPrinted = 0xffffffffu;
+#endif
+#if NDS_LAB_NO_CULL
+/* Same gate, same reason, for the seam probe's arm line. */
+static u32 sBattleSeamArmPrinted = 0xffffffffu;
 #endif
 static u32 sBattleTextHudReady;
 static u32 sBattleTextHudFingerprint = 0xffffffffu;
@@ -540,6 +553,15 @@ u32 ndsPlatformReadInput(void)
     if ((keysDown() & KEY_SELECT) != 0)
     {
         gNdsR2CameraFixedEnabled = (gNdsR2CameraFixedEnabled != 0u) ? 0u : 1u;
+    }
+#endif
+#if NDS_LAB_NO_CULL
+    /* BUGS.md #10 / P2-3r17 seam probe. Same key, same read-not-rescan rule as
+     * the camera toggle above; the two are mutually exclusive by the #error in
+     * the HUD block, so SELECT still has exactly one meaning per build. */
+    if ((keysDown() & KEY_SELECT) != 0)
+    {
+        (void)ndsRendererLabSeamAdvanceArm();
     }
 #endif
 
@@ -2602,6 +2624,9 @@ static void ndsPlatformRenderBattleFpsHud(void)
          * of this same call repaints it. */
         sBattleCameraArmPrinted = 0xffffffffu;
 #endif
+#if NDS_LAB_NO_CULL
+        sBattleSeamArmPrinted = 0xffffffffu;
+#endif
         gNdsBattlePlayableHudFpsX10 = 0u;
         gNdsBattlePlayableHudFpsSampleCount = 0u;
         gNdsBattlePlayableHudFpsFrameWindow = 0u;
@@ -2951,6 +2976,24 @@ static void ndsPlatformRenderBattleFpsHud(void)
         }
     }
 #endif
+#if NDS_LAB_NO_CULL
+    /* Row 3, same reasoning as the camera toggle's indicator above. */
+    {
+        static const char *const seam_arm_names[4] = {
+            "SEAM 0 shipped     [SELECT]",
+            "SEAM 1 cull NONE   [SELECT]",
+            "SEAM 2 cull FRONT  [SELECT]",
+            "SEAM 3 strips off  [SELECT]"
+        };
+        u32 arm = ndsRendererLabSeamArm();
+
+        if (arm != sBattleSeamArmPrinted)
+        {
+            sBattleSeamArmPrinted = arm;
+            ndsPlatformPrintDebugLine(3u, "%s", seam_arm_names[arm & 3u]);
+        }
+    }
+#endif
 }
 #endif
 
@@ -3183,6 +3226,9 @@ void ndsPlatformClearBattleTextHud(void)
     sBattleTextHudFingerprint = 0xffffffffu;
 #if NDS_R2_CAMERA_FIXED_TOGGLE
     sBattleCameraArmPrinted = 0xffffffffu;
+#endif
+#if NDS_LAB_NO_CULL
+    sBattleSeamArmPrinted = 0xffffffffu;
 #endif
 #endif
 }
