@@ -29,20 +29,11 @@ void mpCommonUpdateFighterProjectFloor(GObj *fighter_gobj)
 
 void mpCommonProcFighterWaitOrLanding(GObj *fighter_gobj)
 {
-    if (mpCommonCheckFighterLanding(fighter_gobj) != FALSE)
-    {
-        FTStruct *fp = ftGetStruct(fighter_gobj);
-
-        if ((fp != NULL) &&
-            (fp->physics.vel_air.y > FTCOMMON_ATTACKAIR_SKIPLANDING_VEL_Y_MAX))
-        {
-            ftCommonWaitSetStatus(fighter_gobj);
-        }
-        else
-        {
-            ftCommonLandingSetStatus(fighter_gobj);
-        }
-    }
+    /* BattleShip mpcommon.c:684 exactly. This used to carry its own copy of
+     * mpCommonSetFighterWaitOrLanding's body because the port had no such
+     * function; P2-3f5 added it at the mpcommon seam (Falcon Dive needs it as a
+     * proc_map), so the duplicate is gone. */
+    mpCommonProcFighterLanding(fighter_gobj, mpCommonSetFighterWaitOrLanding);
 }
 
 sb32 mpCommonProcFighterOnEdge(GObj *fighter_gobj, void (*proc_map)(GObj *))

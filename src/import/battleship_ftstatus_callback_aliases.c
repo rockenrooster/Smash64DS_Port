@@ -14,6 +14,14 @@ NDS_STATUS_ALIAS(ftCommonAttack11ProcInterrupt, ndsBaseFTCommonAttack11ProcInter
 NDS_STATUS_ALIAS(ftCommonAttack11ProcUpdate, ndsBaseFTCommonAttack11ProcUpdate)
 NDS_STATUS_ALIAS(ftCommonAttack12ProcInterrupt, ndsBaseFTCommonAttack12ProcInterrupt)
 NDS_STATUS_ALIAS(ftCommonAttack12ProcUpdate, ndsBaseFTCommonAttack12ProcUpdate)
+/* P2-3f5. Attack11/12 have been here since the Mario/Fox slice and 13 never
+ * was, because Attack13 is the one jab step SSB64 makes CHARACTER-specific:
+ * it sits in each fighter's own special status table, not in ftcommonstatus.h,
+ * so no landed fighter's table had named it. Falcon's status 0 is exactly
+ * that entry -- his table's first row is `ftCommonAttack13Proc*` -- and the
+ * remaining eight fighters all carry the same pair. */
+NDS_STATUS_ALIAS(ftCommonAttack13ProcInterrupt, ndsBaseFTCommonAttack13ProcInterrupt)
+NDS_STATUS_ALIAS(ftCommonAttack13ProcUpdate, ndsBaseFTCommonAttack13ProcUpdate)
 NDS_STATUS_ALIAS(ftCommonAttackAirLwProcUpdate, ndsBaseFTCommonAttackAirLwProcUpdate)
 NDS_STATUS_ALIAS(ftCommonAttackAirProcMap, ndsBaseFTCommonAttackAirProcMap)
 #if NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET

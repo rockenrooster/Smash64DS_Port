@@ -160,6 +160,8 @@ void ftCommonAttack11ProcUpdate(GObj *fighter_gobj);
 void ftCommonAttack11ProcInterrupt(GObj *fighter_gobj);
 void ftCommonAttack12ProcUpdate(GObj *fighter_gobj);
 void ftCommonAttack12ProcInterrupt(GObj *fighter_gobj);
+void ftCommonAttack13ProcUpdate(GObj *fighter_gobj);
+void ftCommonAttack13ProcInterrupt(GObj *fighter_gobj);
 void ftCommonAttackLw3ProcUpdate(GObj *fighter_gobj);
 void ftCommonAttackLw3ProcInterrupt(GObj *fighter_gobj);
 void ftCommonAttackS4ProcUpdate(GObj *fighter_gobj);
@@ -217,6 +219,31 @@ void ftDonkeyThrowFDamageProcUpdate(GObj *fighter_gobj);
 void ftDonkeyThrowFFProcUpdate(GObj *fighter_gobj);
 void ftDonkeyThrowFFProcMap(GObj *fighter_gobj);
 void ftDonkeyThrowAirFFProcMap(GObj *fighter_gobj);
+/* BattleShip ftcaptainstatus.h callbacks.  Same rule as the DK block above:
+ * only the names the status descriptor table itself references belong here;
+ * every set-status helper and internal step lives in
+ * src/import/battleship_captain.c.  ftCaptainAppearStartProcUpdate is the one
+ * exception -- the source defines it in ftcommonentry.c, not in the ftcaptain
+ * TUs, because Falcon's entry is a two-status ladder no other fighter has. */
+void ftCaptainAppearStartProcUpdate(GObj *fighter_gobj);
+void ftCaptainSpecialNProcPhysics(GObj *fighter_gobj);
+void ftCaptainSpecialNProcMap(GObj *fighter_gobj);
+void ftCaptainSpecialAirNProcPhysics(GObj *fighter_gobj);
+void ftCaptainSpecialAirNProcMap(GObj *fighter_gobj);
+void ftCaptainSpecialLwProcUpdate(GObj *fighter_gobj);
+void ftCaptainSpecialLwProcPhysics(GObj *fighter_gobj);
+void ftCaptainSpecialLwProcMap(GObj *fighter_gobj);
+void ftCaptainSpecialLwAirProcMap(GObj *fighter_gobj);
+void ftCaptainSpecialLwLandingProcPhysics(GObj *fighter_gobj);
+void ftCaptainSpecialAirLwProcPhysics(GObj *fighter_gobj);
+void ftCaptainSpecialAirLwProcMap(GObj *fighter_gobj);
+void ftCaptainSpecialLwBoundProcPhysics(GObj *fighter_gobj);
+void ftCaptainSpecialHiProcUpdate(GObj *fighter_gobj);
+void ftCaptainSpecialHiProcInterrupt(GObj *fighter_gobj);
+void ftCaptainSpecialHiProcPhysics(GObj *fighter_gobj);
+void ftCaptainSpecialHiProcMap(GObj *fighter_gobj);
+void ftCaptainSpecialHiCatchProcUpdate(GObj *fighter_gobj);
+void ftCaptainSpecialHiCatchProcPhysics(GObj *fighter_gobj);
 void ftCommonAttack100StartProcUpdate(GObj *fighter_gobj);
 void ftCommonAttack100LoopProcUpdate(GObj *fighter_gobj);
 void ftCommonAttack100LoopProcInterrupt(GObj *fighter_gobj);

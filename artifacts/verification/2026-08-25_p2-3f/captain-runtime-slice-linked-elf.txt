@@ -1,0 +1,67 @@
+P2-3f5 -- Captain Falcon runtime slice, verified ON THE LINKED ELF.
+
+Build:  make TARGET=smash64ds BUILD=build-p2-3f5-captain NDS_P2_CAPTAIN=1
+ELF:    smash64ds.elf (repo root; a published TARGET name always writes there,
+        so this pair was replaced by the plain rebuild afterwards)
+sha256: d7035b673737931cfac2a2594a0fafbf690b66b4f7d3612f949d1fef5bed7fe4
+
+WHY THE ELF AND NOT src/: the six ftCaptainSpecial*SetStatus names already
+existed as NDS_SPECIAL_COMMON_WEAK_STATUS / NDS_REFLECTOR_WEAK_STATUS no-op
+twins, and ftCommonAttack13Proc* is reached through a #define rename plus a
+weak alias. Grepping src/ cannot tell which body a call actually reaches.
+
+-- The six weak twins are REPLACED. Every one is 'T' (strong), none is 'W':
+020960bc 0000004c T ftCaptainSpecialAirHiSetStatus
+02095db0 00000054 T ftCaptainSpecialAirLwSetStatus
+02095ac4 00000058 T ftCaptainSpecialAirNSetStatus
+02095fd0 00000050 T ftCaptainSpecialHiSetStatus
+02095d48 00000068 T ftCaptainSpecialLwSetStatus
+02095a6c 00000058 T ftCaptainSpecialNSetStatus
+
+   For comparison, the SAME symbols in the previously published ROM
+   (5B962053...F579, NDS_P2_CAPTAIN did not exist) were all weak stubs:
+     020acf30 W ftCaptainSpecialNSetStatus     ... 0x30 bytes of (void)arg;
+
+-- The status table is the REAL 19-entry source table, not NDS_FT_STATUS_STUB16:
+0212c5e8 0000017c D dFTCaptainSpecialStatusDescs
+   0x17c = 380 bytes / 20 B per FTStatusDesc = 19 entries.
+   The stub would be 16 * 20 = 320 = 0x140.
+
+-- The three efmanager makers had been compiled and gc-sectioned away for
+   want of a caller since the P1 slice. They are in now:
+020b2374 000000e4 T efManagerCaptainEntryCarMakeEffect
+020b0624 0000005c T efManagerCaptainEntryCarProcUpdate
+020b2294 00000068 T efManagerCaptainFalconKickMakeEffect
+020b22fc 00000058 T efManagerCaptainFalconPunchMakeEffect
+
+-- The two mpcommon seams Falcon Dive is the first caller of, plus the
+   helper the port had only ever inlined:
+0205eb84 0000003c T mpCommonCheckFighterCeilHeavyCliff
+0205ead4 000000b0 T mpCommonProcFighterCliffWaitOrLanding
+020454d0 00000044 T mpCommonSetFighterWaitOrLanding
+
+-- Falcon Dive's victim side (an ftcommon TU, absent from this port until now).
+   ftCommonCaptureCaptainProcPhysics had been a weak NDS_INACTIVE_STATUS_STUB:
+02096218 000000c4 T ftCommonCaptureCaptainProcCapture
+0209619c 0000007c T ftCommonCaptureCaptainProcPhysics
+02096108 00000094 T ftCommonCaptureCaptainUpdatePositions
+
+-- The entry ladder (ftcommonentry.c bodies, guarded into the bounded import):
+020a2698 00000064 T ftCaptainAppearEndSetStatus
+020a298c 00000074 T ftCaptainAppearStartProcUpdate
+
+-- Attack13: reached through the #define rename, so check the ALIAS TARGET.
+02098878 <ftCommonAttack13ProcInterrupt>:
+ 209887a:	f7f0 ffe7 	bl	208984c <ndsBaseFTCommonAttack13ProcInterrupt>
+02098880 <ftCommonAttack13ProcUpdate>:
+ 2098882:	f7f0 ffc7 	bl	2089814 <ndsBaseFTCommonAttack13ProcUpdate>
+   Both land on the imported ftcommonattack1.c bodies, not on a stub.
+
+-- The victim tether resolves without a registry entry. ndsRelocResolveSymbolOffset
+   (reloc_backend_assets.c:6050) falls back to DEREFERENCING the ll* symbol's
+   address when it is in main RAM, so llCaptainMainMotionSpecialHiVec2h = 0x0
+   (US reloc symbol table :3862) yields offset 0 into gFTDataCaptainMainMotion:
+02223238 00000004 B llCaptainMainMotionSpecialHiVec2h
+
+-- Complete ftCaptain* strong-body count in the ELF:
+42

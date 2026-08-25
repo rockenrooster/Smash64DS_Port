@@ -21,6 +21,11 @@
 #ifndef PI32
 #define PI32 3.1415927F
 #endif
+/* decomp/include/macros.h:14, mirrored exactly. First reader is Falcon Dive's
+ * re-aim (`ftCaptainSpecialHiProcInterrupt` rotates TopN.y by +/-90 degrees). */
+#ifndef HALF_PI32
+#define HALF_PI32 1.5707964F
+#endif
 #ifndef DTOR32
 #define DTOR32 ((float)(3.14159265358979323846 / 180.0))
 #endif

@@ -89,7 +89,14 @@ NDS_INACTIVE_STATUS_STUB(ftCommonYoshiEggProcUpdate)
 NDS_INACTIVE_STATUS_STUB(ftCommonYoshiEggProcInterrupt)
 NDS_INACTIVE_STATUS_STUB(ftCommonYoshiEggProcPhysics)
 NDS_INACTIVE_STATUS_STUB(ftCommonYoshiEggProcMap)
+#if !NDS_P2_CAPTAIN
+/* P2-3f5: battleship_ftcommon_capturecaptain.c owns the real body wherever
+ * Falcon is built. A strong definition wins over this weak twin at link either
+ * way -- DK's four Special setters prove that on the shipped ELF -- but leaving
+ * the twin unguarded would hide a build where the real TU silently did not
+ * compile in, which is exactly the shape that has bitten this queue twice. */
 NDS_INACTIVE_STATUS_STUB(ftCommonCaptureCaptainProcPhysics)
+#endif
 #if !NDS_P2_DONKEY
 NDS_INACTIVE_STATUS_STUB(ftCommonCaptureShoulderedProcInterrupt)
 #endif

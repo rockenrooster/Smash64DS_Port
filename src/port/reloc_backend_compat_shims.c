@@ -14676,6 +14676,60 @@ sb32 mpCommonProcFighterCliff(GObj *fighter_gobj,
     return FALSE;
 }
 
+/* P2-3f5. BattleShip mp/mpcommon.c:668 and :684 and :697, ported at the seam
+ * that reimplements mpcommon.c rather than forked into the fighter that needed
+ * them first.
+ *
+ * `mpCommonSetFighterWaitOrLanding` did not exist here even though its three
+ * lines had been copied inline into `mpCommonProcFighterWaitOrLanding` and
+ * `mpCommonProcFighterCliffFloorCeil`; it is a function in the source because
+ * the source passes it as a proc_map, which is exactly what
+ * `mpCommonProcFighterCliffWaitOrLanding` does with it.
+ *
+ * `mpCommonCheckFighterCeilHeavyCliff` was DECLARED in include/mp/map.h with no
+ * definition anywhere -- a link error waiting for its first caller. Falcon Dive
+ * is that caller (`ftCaptainSpecialHiProcMap` takes the ceiling arm when
+ * vel_air.y >= 0), and Kirby, Link and Yoshi all reach it too, so it belongs
+ * here for all of them. Same collision runner and the same
+ * CEILHEAVY|CLIFF process flags `mpCommonProcFighterCliffFloorCeil` above
+ * already uses. */
+void mpCommonSetFighterWaitOrLanding(GObj *fighter_gobj)
+{
+    FTStruct *fp = (fighter_gobj != NULL) ? ftGetStruct(fighter_gobj) : NULL;
+
+    if (fp == NULL)
+    {
+        return;
+    }
+    if (fp->physics.vel_air.y > FTCOMMON_ATTACKAIR_SKIPLANDING_VEL_Y_MAX)
+    {
+        ftCommonWaitSetStatus(fighter_gobj);
+    }
+    else
+    {
+        ftCommonLandingSetStatus(fighter_gobj);
+    }
+}
+
+void mpCommonProcFighterCliffWaitOrLanding(GObj *fighter_gobj)
+{
+    mpCommonProcFighterCliff(fighter_gobj, mpCommonSetFighterWaitOrLanding);
+}
+
+sb32 mpCommonCheckFighterCeilHeavyCliff(GObj *fighter_gobj)
+{
+    FTStruct *fp = (fighter_gobj != NULL) ? ftGetStruct(fighter_gobj) : NULL;
+
+    if (fp == NULL)
+    {
+        return FALSE;
+    }
+    return mpProcessUpdateMain(&fp->coll_data,
+                               ndsMPCommonRunFighterCliffFloorCeilCollisions,
+                               fighter_gobj,
+                               MAP_PROC_TYPE_CEILHEAVY | MAP_PROC_TYPE_CLIFF);
+}
+
 f32 ftParamGetStickAngleRads(FTStruct *fp)
 {
     if (fp == NULL)

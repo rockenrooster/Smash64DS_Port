@@ -13,6 +13,12 @@
 GObj *efManagerMarioEntryDokanMakeEffect(Vec3f *pos, s32 fkind);
 GObj *efManagerFoxEntryArwingMakeEffect(Vec3f *pos, s32 lr);
 GObj *efManagerDonkeyEntryTaruMakeEffect(Vec3f *pos);
+#if NDS_P2_CAPTAIN
+/* Already compiled in battleship_efmanager.o and dropped by --gc-sections for
+ * want of a caller; it links the moment Falcon's branch below calls it. */
+GObj *efManagerCaptainEntryCarMakeEffect(Vec3f *pos, s32 lr);
+void ftCaptainAppearEndSetStatus(GObj *fighter_gobj);
+#endif
 void ndsEFManagerRetryDeferredDescs(void);
 
 /* NDS_PARTIAL_IMPORT: decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommonentry.c
@@ -73,14 +79,17 @@ void ftCommonEntryNullProcUpdate(GObj *fighter_gobj)
     }
 }
 
-static void ndsFTCommonAppearUpdateEffectsMarioFox(GObj *fighter_gobj)
+static void ndsFTCommonAppearUpdateEffectsNoMBall(GObj *fighter_gobj)
 {
     FTStruct *fp = ftGetStruct(fighter_gobj);
 
     if (fp->motion_vars.flags.flag1 != 0)
     {
-        /* In the source only Pikachu/Purin and their polygon variants spawn
-         * Master-Ball rays for flag1. Mario/Fox therefore only consume it. */
+        /* Source ftCommonAppearUpdateEffects (ftcommonentry.c:91) with its one
+         * fkind test resolved: only Pikachu/Purin and their polygon variants
+         * spawn Master-Ball rays for flag1, so every landed kind -- Mario, Fox,
+         * Luigi, Donkey, Captain -- takes this arm and only consumes it. The
+         * name said MarioFox until P2-3f5; it was never Mario/Fox-specific. */
         fp->motion_vars.flags.flag1 = 0;
     }
     if (fp->motion_vars.flags.flag2 != 0)
@@ -94,7 +103,7 @@ void ftCommonAppearProcUpdate(GObj *fighter_gobj)
 {
     FTStruct *fp = ftGetStruct(fighter_gobj);
 
-    ndsFTCommonAppearUpdateEffectsMarioFox(fighter_gobj);
+    ndsFTCommonAppearUpdateEffectsNoMBall(fighter_gobj);
 
     /* Source-faithful end check. The figatree bind/play seam now publishes the
      * first live Appear frame before this callback runs (measured Mario: 1.0 on
@@ -210,6 +219,31 @@ void ftCommonAppearSetStatus(GObj *fighter_gobj)
         efManagerDonkeyEntryTaruMakeEffect(&fp->entry_pos);
     }
 #endif
+#if NDS_P2_CAPTAIN
+    else if (fp->fkind == nFTKindCaptain)
+    {
+        /* BattleShip ftcommonentry.c:20,231-238,264-267. FALCON IS THE ONLY
+         * FIGHTER WHOSE ENTRY IS A TWO-STATUS LADDER: everyone else gets one
+         * Appear status, `dFTCommonEntryAppearStatusIDs` gives Falcon
+         * AppearRStart/AppearLStart, and ftCaptainAppearStartProcUpdate hands
+         * off to AppearREnd/AppearLEnd below.
+         *
+         * Two more Falcon-only things live in this function, and both are
+         * about the Falcon Flyer arriving from the far side of the stage:
+         * `lr == -1` sets is_rotate, which ftCommonAppearProcPhysics turns into
+         * the 180-degree TopN flip, and the ftParamMoveDLLink(gobj, 1) tail
+         * below moves him to a different display list until the car has passed
+         * z > -1000 (ftCaptainAppearStartProcUpdate moves him back). */
+        status_id = (entry_id == 0) ? nFTCaptainStatusAppearRStart :
+                                      nFTCaptainStatusAppearLStart;
+        if (fp->status_vars.common.entry.lr == -1)
+        {
+            fp->status_vars.common.entry.is_rotate = TRUE;
+        }
+        efManagerCaptainEntryCarMakeEffect(
+            &fp->entry_pos, fp->status_vars.common.entry.lr);
+    }
+#endif
     else
     {
         /* Unsupported in P2-2. Source uses EntryNull for polygon fighters;
@@ -226,4 +260,46 @@ void ftCommonAppearSetStatus(GObj *fighter_gobj)
     fp->motion_vars.flags.flag1 = 0;
     fp->motion_vars.flags.flag2 = 0;
     fp->motion_vars.flags.flag0 = 0;
+#if NDS_P2_CAPTAIN
+    if ((fp->fkind == nFTKindCaptain) &&
+        (fp->status_vars.common.entry.lr == -1))
+    {
+        ftParamMoveDLLink(fighter_gobj, 1);
+    }
+#endif
 }
+
+#if NDS_P2_CAPTAIN
+/* BattleShip ftcommonentry.c:321-343. The Appear-Start half of Falcon's ladder
+ * and the hand-off to his Appear-End statuses. The source puts both here rather
+ * than in ft/ftchar/ftcaptain, so they land with the entry ladder they belong
+ * to and not in battleship_captain.c. */
+void ftCaptainAppearStartProcUpdate(GObj *fighter_gobj)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+
+    ndsFTCommonAppearUpdateEffectsNoMBall(fighter_gobj);
+
+    if ((fp->status_vars.common.entry.lr == -1) &&
+        (fp->dl_link != FTDISPLAY_DLLINK_DEFAULT) &&
+        (DObjGetStruct(fighter_gobj)->translate.vec.f.z > -1000.0F))
+    {
+        ftParamMoveDLLink(fighter_gobj, FTDISPLAY_DLLINK_DEFAULT);
+    }
+    ftAnimEndCheckSetStatus(fighter_gobj, ftCaptainAppearEndSetStatus);
+}
+
+void ftCaptainAppearEndSetStatus(GObj *fighter_gobj)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+
+    ftMainSetStatus(fighter_gobj,
+                    ((fp->status_vars.common.entry.lr == +1) ?
+                         nFTCaptainStatusAppearREnd :
+                         nFTCaptainStatusAppearLEnd),
+                    0.0F, 1.0F, FTSTATUS_PRESERVE_NONE);
+    ndsFTCommonAppearInitStatusVars(fighter_gobj);
+
+    fp->is_shadow_hide = FALSE;
+}
+#endif

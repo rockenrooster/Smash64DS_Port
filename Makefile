@@ -596,6 +596,35 @@ ifneq ($(NDS_P2_LUIGI),1)
 $(error NDS_P2_DONKEY=1 requires NDS_P2_LUIGI=1 so native-owner slots stay dense)
 endif
 endif
+# P2-3f5. Captain Falcon's admission flag.
+#
+# THIS DEFAULTS TO 0 AND NO SHIPPED CONFIGURATION SETS IT YET, and that is an
+# honest statement of how far the fighter has come, not an oversight. The flag
+# turns on his source status table, his three special state machines
+# (ftcaptainspecialn/lw/hi), Falcon Dive's victim side, and his two-status entry
+# ladder -- those are complete and link. What is NOT done is everything that
+# would make him SELECTABLE: the native-owner tables (this row unblocked the
+# decode, but Falcon is not a runtime owner yet), the CSS/HUD surfaces, the
+# audio ordinals, and the arena budget a third in-progress fighter costs. The
+# worst case NDS_P2_SHELL_ROSTER is sized against is still Luigi versus Donkey
+# at 36,276 B of resident owner images; Falcon has none, so admitting him to the
+# roster today would put his model on the N64 interpreter path with no
+# measurement behind it. Build the slice with:
+#
+#   make TARGET=smash64ds BUILD=build-<lab> NDS_P2_CAPTAIN=1
+#
+# THERE IS DELIBERATELY NO "REQUIRES NDS_P2_DONKEY=1" LADDER CHECK HERE, unlike
+# the Donkey/Luigi pair above, and the reason is not laziness in both
+# directions. That check exists because a native-owner SLOT is a dense ABI, and
+# Falcon occupies no slot -- he has no generated owner tables at all. A check
+# would also be unreadable at this point in the file: every shell target sets
+# NDS_P2_LUIGI/NDS_P2_DONKEY by `override` around line 2500, more than 1,900
+# lines BELOW this one, so a test here reads the `?=` defaults and reds on a
+# command line that is in fact correct -- the same evaluation-order trap the
+# NDS_P2_FOUR_CPU_ROSTER comment above had to push into a C `#error`. Reinstate
+# the ladder when Falcon becomes a native owner, and put it where the flags are
+# final.
+NDS_P2_CAPTAIN ?= 0
 # P2-3r4. WHERE A P2-3 OWNER'S GENERATED TABLES LIVE.
 #
 # 1 = NitroFS image (the default, and the only thing that scales): the owner's
@@ -3517,6 +3546,12 @@ ifeq ($(NDS_P2_DONKEY),1)
 # update/interrupt/physics/map ordering in DS glue.
 CFILES += battleship_donkey.c battleship_ftcommon_itemthrow.c
 endif
+ifeq ($(NDS_P2_CAPTAIN),1)
+# P2-3f5. Falcon Punch / Falcon Kick / Falcon Dive as one port TU, plus the
+# VICTIM side of Falcon Dive -- which is an ftcommon TU, not an ftcaptain one,
+# because nFTCommonStatusCaptureCaptain is a status any fighter can end up in.
+CFILES += battleship_captain.c battleship_ftcommon_capturecaptain.c
+endif
 ifeq ($(NDS_IMPORT_BATTLESHIP_MPPROCESS_LIVE),1)
 CFILES += $(NDS_MPPROCESS_SOURCE_CFILES) \
 	battleship_mpprocess_live_bridge.c
@@ -4065,6 +4100,9 @@ endif
 ifeq ($(NDS_P2_DONKEY),1)
 NDS_P2_FIGHTER_RELOC_FILES += $(NDS_P2_DONKEY_FIGHTER_RELOC_FILES)
 endif
+ifeq ($(NDS_P2_CAPTAIN),1)
+NDS_P2_FIGHTER_RELOC_FILES += $(NDS_P2_CAPTAIN_FIGHTER_RELOC_FILES)
+endif
 
 NDS_EFFECT_RELOC_FILES := \
 	reloc_effects/EFCommonEffects1 \
@@ -4451,6 +4489,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_NATIVE_OWNER_IMAGE_DONKEY $(NDS_NATIVE_OWNER_IMAGE_DONKEY)'; \
 		echo '#define NDS_NATIVE_OWNER_IMAGE_VERIFY $(NDS_NATIVE_OWNER_IMAGE_VERIFY)'; \
 		echo '#define NDS_P2_DONKEY $(NDS_P2_DONKEY)'; \
+		echo '#define NDS_P2_CAPTAIN $(NDS_P2_CAPTAIN)'; \
 		echo '#define NDS_P2_PROOF_FIGHTER0 $(NDS_P2_PROOF_FIGHTER0)'; \
 		echo '#define NDS_R2_SOAK_MATCH_MINUTES $(NDS_R2_SOAK_MATCH_MINUTES)'; \
 		echo '#define NDS_ANIM_JOINT_AUDIT $(NDS_ANIM_JOINT_AUDIT)'; \

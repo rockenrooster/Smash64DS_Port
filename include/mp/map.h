@@ -196,5 +196,12 @@ sb32 mpCollisionCheckExistPlatformLineID(s32 line_id);
 sb32 mpCommonCheckFighterOnFloor(GObj *fighter_gobj);
 sb32 mpCommonCheckFighterOnCliffEdge(GObj *fighter_gobj);
 sb32 mpCommonCheckFighterCeilHeavyCliff(GObj *fighter_gobj);
+/* P2-3f5. Both are BattleShip mp/mpcommon.c bodies (:684, :697) that this port
+ * reimplements at the reloc_backend_compat_shims.c seam. `CeilHeavyCliff` was
+ * declared here with nothing behind it; `SetFighterWaitOrLanding` had its body
+ * copied inline into two callers instead of existing. Falcon Dive's map proc is
+ * the first caller of the pair -- port them at the seam, not in the fighter. */
+void mpCommonSetFighterWaitOrLanding(GObj *fighter_gobj);
+void mpCommonProcFighterCliffWaitOrLanding(GObj *fighter_gobj);
 
 #endif
