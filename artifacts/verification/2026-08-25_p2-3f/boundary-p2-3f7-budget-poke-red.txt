@@ -1,0 +1,29 @@
+verify-all.ps1 -Profile Boundary -- 2026-08-25, FIRST attempt of the P2-3f5
+batch. RED, and the failure is board row P2-3f7: a one-shot gdb `set variable`
+undone by the next cache-line write-back. Superseded by
+boundary-p2-3f5-final.log, which is a DIFFERENT run of a DIFFERENT harness
+script -- do not read a figure from this file as current.
+
+Full driver stream was 474 lines / 44,490 B; this is the extract.
+
+260:Running verifier: p2_shell_loop [verify-p2-shell-loop.ps1]
+445:walk budget: compiled=20 requested=1
+446:GDB marker capture: 78.2s elapsed of 3000s ceiling (3% used).
+449:LOOPDONE: budget=20 denied=1 dwell=2 enters=11 exits=11 input=75 mism=0 posefull=0 press=52 rej=0 rematch=1 resb=16392 sd=1 steps=77 trans=7 unreg=1 walkloops=1 winf=1 winm=0
+469:ARENA FREE FLOOR: 258568 B (minimum required 32768)
+470:LAP PATTERN: 5 looped entries from entry 6, exact; 1 Sudden Death re-entries
+473:P2 shell loop verifier FAILED (1 assertion(s)):
+474:  - BUDGET: gNdsMenuShellWalkBudget=20, requested 1. The poke did not land, so the lap count below is not the one asked for.
+
+--- and from the run's own capture artifact, same run ---
+artifacts/verification/2026-08-25_p2-shell-loop.txt:4
+  LOOPBUDGET budget=1
+
+Both readings are correct. gdb wrote main RAM and read main RAM back at the
+first stop (1). gNdsMenuShellWalkBudget is at 0x0212c374 and
+gNdsMenuShellScreen at 0x0212c378 -- one 32-byte cache line -- and the CPU
+writes the screen on every transition (nds_menu_shell.c:4511), so the line was
+dirty with the CPU's own pre-poke copy and the next eviction wrote all 32
+bytes back over gdb's word. Nothing else in this run was wrong: arena free
+floor 258,568 B, 11 scene entries, high-waters flat, lap pattern exact.
+

@@ -354,12 +354,33 @@ if (-not [string]::IsNullOrWhiteSpace($AnalyzeOnly)) {
             'commands',
             'silent',
             'set $n = $n + 1',
-            # The budget poke lands at the FIRST scene entry -- past bss init,
-            # long before any lap can close -- so one linked ROM serves every
-            # lap count. It is echoed so the artifact records which budget ran.
+            # The budget poke lands at EVERY scene entry -- past bss init, long
+            # before any lap can close -- so one linked ROM serves every lap
+            # count. It is echoed once, so the artifact records which budget ran
+            # without a line per stop.
+            #
+            # IT USED TO BE POKED ONCE, AT THE FIRST STOP, AND THAT IS NOT
+            # DURABLE ON A WRITE-BACK-CACHED TARGET. The gdb stub writes main
+            # RAM, not the ARM9 dcache. `gNdsMenuShellWalkBudget` shares its
+            # 32-byte line with `gNdsMenuShellScreen`, which the CPU writes on
+            # every screen transition, so the line is dirty with the CPU's own
+            # copy of the pre-poke value; the next eviction writes all 32 bytes
+            # back and silently restores it. Measured 2026-08-25 (row P2-3f5):
+            # `LOOPBUDGET budget=1` at the first stop -- gdb reading RAM
+            # straight after its own write -- and `LOOPDONE ... budget=20` at
+            # the end of the same run, which is what the BUDGET assertion
+            # caught. The previous run passed only because an unrelated layout
+            # change had put a quiet neighbour in that line. Re-poking at every
+            # stop makes the readback deterministic: the run ENDS at a
+            # breakpoint stop, so the last poke and LOOPDONE's read are
+            # separated by no guest instruction at all.
+            #
+            # RAIL: a one-shot gdb `set variable` on a guest global is only as
+            # durable as its cache line is clean. Re-poke, or poke at the stop
+            # you read at.
+            ('set variable gNdsMenuShellWalkBudget = ' + $Loops),
             'if $budget_set == 0',
             'set $budget_set = 1',
-            ('set variable gNdsMenuShellWalkBudget = ' + $Loops),
             'printf "LOOPBUDGET budget=%u\n", gNdsMenuShellWalkBudget',
             'end',
             # `sd`, `winm`/`winf` and `resb` are the MATCH-SCENE ATTRIBUTION.
