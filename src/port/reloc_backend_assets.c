@@ -7031,6 +7031,12 @@ static u32 sNdsR2AnimCacheCount;
 static u8 *sNdsR2AnimCacheArena;
 static u32 sNdsR2AnimCacheArenaBytes;
 static u32 sNdsR2AnimCacheArenaUsed;
+/* CSS/setup callers only need a handful of imminent fighter clips resident.
+ * Reserving the battle arena there would require ~452 KiB plus KEEP_FREE and
+ * correctly declines in the menu scene.  A raw-only arena is intentionally
+ * small and never owns BattlePack storage; the next scene generation drops it
+ * before battle reserves the normal full arena. */
+static sb32 sNdsR2AnimCacheArenaRawOnly;
 /* The taskman-heap generation this block was reserved under. Ownership is this
  * value matching gNdsTaskmanHeapGeneration; see ndsR2AnimCacheArenaStillOwned. */
 static u32 sNdsR2AnimCacheArenaGeneration;
@@ -7180,6 +7186,7 @@ static void ndsR2AnimCacheArenaDropForReset(void)
     sNdsR2AnimCacheArena = NULL;
     sNdsR2AnimCacheArenaBytes = 0u;
     sNdsR2AnimCacheArenaUsed = 0u;
+    sNdsR2AnimCacheArenaRawOnly = FALSE;
     sNdsR2AnimCacheArenaGeneration = 0u;
     /* Drops every entry, which is what makes the payload pointers unreachable.
      * The entries are the only holders of those pointers. */
@@ -7235,6 +7242,7 @@ static sb32 ndsR2AnimCacheArenaEnsure(void)
     }
     sNdsR2AnimCacheArena = block;
     sNdsR2AnimCacheArenaBytes = NDS_R2_ANIM_CACHE_ARENA_BYTES;
+    sNdsR2AnimCacheArenaRawOnly = FALSE;
 #if NDS_R2_BATTLEPACK
     /* CARVE THE PACK'S REGION FIRST, at reservation, not by being the first
      * caller of the bump allocator. Ordering was the first design and it lost:
@@ -7255,6 +7263,52 @@ static sb32 ndsR2AnimCacheArenaEnsure(void)
     sNdsR2AnimCacheArenaGeneration = gNdsTaskmanHeapGeneration;
     gNdsR2AnimCacheArenaReservedBytes = NDS_R2_ANIM_CACHE_ARENA_BYTES;
     gNdsR2AnimCacheArenaUsedBytes = sNdsR2AnimCacheArenaUsed;
+    gNdsR2AnimCacheArenaReserveCount++;
+    return TRUE;
+}
+
+/* A scene-setup reservation for a few explicitly pinned animations.  This is
+ * deliberately separate from the battle reservation above: the BattlePack
+ * carve alone is ~288 KiB, while the current CSS roster's four submotion-0
+ * payloads total under 16 KiB.  32 KiB keeps >2x measured headroom and still
+ * preserves the same 32 KiB general-heap safety floor.  Entries use the exact
+ * same cache/fixup path; only the backing block is smaller for this generation. */
+#define NDS_R2_ANIM_CACHE_SETUP_ARENA_BYTES 32768u
+static sb32 ndsR2AnimCacheArenaEnsureSetup(void)
+{
+    void *block;
+
+    ndsR2AnimCacheValidateGeneration();
+    if (ndsR2AnimCacheArenaStillOwned() != FALSE)
+    {
+        return TRUE;
+    }
+    if (sNdsR2AnimCacheArena != NULL)
+    {
+        ndsR2AnimCacheArenaDropForReset();
+    }
+    if (ndsSyMallocWouldFit(&gSYTaskmanGeneralHeap,
+                            (size_t)NDS_R2_ANIM_CACHE_SETUP_ARENA_BYTES +
+                                NDS_R2_ANIM_CACHE_ARENA_KEEP_FREE,
+                            NDS_RELOC_ALIGN_BYTES) == FALSE)
+    {
+        gNdsR2AnimCacheArenaReserveFailCount++;
+        return FALSE;
+    }
+    block = syTaskmanMalloc((size_t)NDS_R2_ANIM_CACHE_SETUP_ARENA_BYTES,
+                            NDS_RELOC_ALIGN_BYTES);
+    if (block == NULL)
+    {
+        gNdsR2AnimCacheArenaReserveFailCount++;
+        return FALSE;
+    }
+    sNdsR2AnimCacheArena = block;
+    sNdsR2AnimCacheArenaBytes = NDS_R2_ANIM_CACHE_SETUP_ARENA_BYTES;
+    sNdsR2AnimCacheArenaUsed = 0u;
+    sNdsR2AnimCacheArenaRawOnly = TRUE;
+    sNdsR2AnimCacheArenaGeneration = gNdsTaskmanHeapGeneration;
+    gNdsR2AnimCacheArenaReservedBytes = NDS_R2_ANIM_CACHE_SETUP_ARENA_BYTES;
+    gNdsR2AnimCacheArenaUsedBytes = 0u;
     gNdsR2AnimCacheArenaReserveCount++;
     return TRUE;
 }
@@ -7406,6 +7460,18 @@ static sb32 ndsBattlePackResidencyStep(void)
 {
     u32 want;
 
+    /* A setup-only arena has no carved BattlePack region.  This can only be
+     * reached if a caller starts the full match warm walk in the same scene;
+     * fail the optional pack open rather than aliasing raw animation entries.
+     * A normal scene transition invalidates the arena and restores IDLE. */
+    if (sNdsR2AnimCacheArenaRawOnly != FALSE)
+    {
+        if (sNdsBattlePackLoadState != NDS_BATTLEPACK_LOAD_FAILED)
+        {
+            ndsBattlePackResidencyFail();
+        }
+        return FALSE;
+    }
     if ((sNdsBattlePackLoadState == NDS_BATTLEPACK_LOAD_DONE) ||
         (sNdsBattlePackLoadState == NDS_BATTLEPACK_LOAD_FAILED))
     {
@@ -7825,6 +7891,44 @@ static void ndsR2AnimWarmLoadOne(u32 asset_id)
     gNdsR2AnimCacheBytes += (u32)loaded_size;
 }
 
+/* Scene-setup form of the match warmer.  The CSS creates every demo fighter in
+ * submotion 0 before applying the selected pose; Luigi/Donkey's submotion-0
+ * clips are ordinary reloc animations and were the two remaining live-BGM
+ * NitroFS reads after native-owner images moved to setup.  Reuse the battle
+ * cache rather than inventing a CSS cache: a later force load then follows the
+ * exact cache-hit path already verified for gameplay. */
+s32 ndsR2AnimCachePreloadFighterFile(const void *file_id)
+{
+    u32 token;
+    u32 asset_id;
+
+    if (file_id == NULL)
+    {
+        return FALSE;
+    }
+    token = ndsRelocFileID(file_id);
+    asset_id = ndsRelocAssetIDForToken(token);
+    if ((asset_id == NDS_RELOC_ASSET_INVALID) ||
+        (ndsRelocIsFighterAnimID(asset_id) == FALSE))
+    {
+        return FALSE;
+    }
+
+    ndsR2AnimCacheValidateGeneration();
+    if ((ndsBattlePackFindFigatree(asset_id) != NULL) ||
+        (ndsR2AnimCacheFind(asset_id) != NULL))
+    {
+        return TRUE;
+    }
+    if (ndsR2AnimCacheArenaEnsureSetup() == FALSE)
+    {
+        return FALSE;
+    }
+    ndsR2AnimWarmLoadOne(asset_id);
+    return ((ndsBattlePackFindFigatree(asset_id) != NULL) ||
+            (ndsR2AnimCacheFind(asset_id) != NULL)) ? TRUE : FALSE;
+}
+
 /* R2-04 E5. Arms the warm walk; it does not load anything itself.
  *
  * Historical E4 loaded all 41 in one call AFTER BGM was live and Boundary
@@ -7973,6 +8077,12 @@ s32 ndsR2AnimCachePreloadFinish(void)
     }
     gNdsR2AnimPreloadBarrierCompleteCount++;
     return TRUE;
+}
+#else
+s32 ndsR2AnimCachePreloadFighterFile(const void *file_id)
+{
+    (void)file_id;
+    return FALSE;
 }
 #endif
 

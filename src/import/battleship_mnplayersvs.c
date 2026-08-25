@@ -14,6 +14,9 @@
 #include <if/interface.h>
 #include <mn/menu.h>
 #include <nds/nds_audio_bgm.h>
+#include <nds/nds_reloc_assets.h>
+#include <nds/nds_renderer.h>
+#include <nds/generated/nds_native_fighter_image.generated.h>
 #include <nds/nds_menu_shell.h>
 #include <nds/nds_platform.h>
 #include <nds/nds_startup.h>
@@ -37,7 +40,7 @@ extern void efManagerInitEffects(void);
 extern void ndsFighterManagerRegisterDisplayFighter(GObj *fighter_gobj,
                                                      u32 slot);
 #if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
-extern void ndsFighterRendererInvalidateMaterialCaches(void);
+extern void ndsFighterRendererInvalidateMaterialCachesForSlot(u32 slot);
 #endif
 
 extern void mnPlayersVSFuncLights(Gfx **dls);
@@ -81,6 +84,17 @@ void ndsBaseMNPlayersVSStartScene(void);
 static GObj *sNdsPlayersVSMainGObj;
 static sb32 sNdsPlayersVSPreviewActive;
 static sb32 sNdsPlayersVSPreviewRulesReady;
+/* P2-3r12: the per-kind "this rebuild needs no storage" mask is GONE, not
+ * merely unused. It licensed skipping the BGM fence, and the claim was false
+ * -- a prepared kind still ran +1,054 payload reads on rebuild. The masks
+ * below stay: they are telemetry for what the warming pass achieved, which is
+ * a real effect, and probes read them. */
+volatile u32 gNdsPlayersVSPreviewResidentPrepareMask;
+volatile u32 gNdsPlayersVSPreviewResidentReadyMask;
+volatile u32 gNdsPlayersVSPreviewResidentMainFailMask;
+volatile u32 gNdsPlayersVSPreviewResidentSubmotionFailMask;
+volatile u32 gNdsPlayersVSPreviewResidentAnimFailMask;
+volatile u32 gNdsPlayersVSPreviewResidentOwnerFailMask;
 static u32 sNdsPlayersVSPreviewDrawPhase;
 volatile u32 gNdsPlayersVSPreviewFrameCount;
 volatile u32 gNdsPlayersVSPreviewDrawCount;
@@ -105,6 +119,143 @@ volatile s32
 
 _Static_assert((nFTKindPlayableEnd + 1) == NDS_MENU_SHELL_FIGHTER_KINDS,
                "PlayersVS production telemetry must cover every playable kind");
+_Static_assert(nFTKindPlayableEnd < 32,
+               "PlayersVS resident-kind mask must cover every playable kind");
+
+static sb32 ndsMNPlayersVSPreviewPrepareResidentKind(s32 fkind)
+{
+    FTData *data;
+    const void *initial_anim_file;
+    u32 kind_bit;
+
+    if ((fkind < nFTKindPlayableStart) || (fkind > nFTKindPlayableEnd))
+    {
+        return FALSE;
+    }
+    kind_bit = 1u << fkind;
+    gNdsPlayersVSPreviewResidentPrepareMask |= kind_bit;
+    data = dFTManagerDataFiles[fkind];
+    /* This is the source manager's own residency invariant:
+     * ftManagerSetupFilesAllKind only tests p_file_main, and when it is absent
+     * loads main plus the model/motion/special status-buffer closure together. */
+    if ((data == NULL) || (data->p_file_main == NULL) ||
+        (*data->p_file_main == NULL))
+    {
+        gNdsPlayersVSPreviewResidentMainFailMask |= kind_bit;
+        return FALSE;
+    }
+
+    /* ftManagerMakeFighter gives demo fighters nFTDemoStatusNull before the CSS
+     * applies its Selected status. BattleShip maps that to Opening2/submotion 0.
+     * Mario/Fox already hit resident animation infrastructure there; P2-3
+     * Luigi/Donkey previously read Anim000 synchronously while BGM was live.
+     * Warm the exact source submotion-0 token for every admitted kind so this
+     * predicate proves fighter creation itself is storage-free. */
+    if (data->submotion == NULL)
+    {
+        gNdsPlayersVSPreviewResidentSubmotionFailMask |= kind_bit;
+        return FALSE;
+    }
+    initial_anim_file = (const void *)(uintptr_t)
+        data->submotion->motion_desc[0].anim_file_id;
+    if ((initial_anim_file == NULL) ||
+        (ndsR2AnimCachePreloadFighterFile(initial_anim_file) == FALSE))
+    {
+        gNdsPlayersVSPreviewResidentAnimFailMask |= kind_bit;
+        return FALSE;
+    }
+
+#if NDS_P2_LUIGI
+    if (fkind == nFTKindLuigi)
+    {
+        if ((ndsRendererNativeEnsureOwnerImage(
+                 NDS_NATIVE_IMAGE_SLOT_LUIGI, 0u) == FALSE) ||
+            (ndsRendererNativeEnsureOwnerImage(
+                 NDS_NATIVE_IMAGE_SLOT_LUIGI, 1u) == FALSE))
+        {
+            gNdsPlayersVSPreviewResidentOwnerFailMask |= kind_bit;
+            return FALSE;
+        }
+        gNdsPlayersVSPreviewResidentReadyMask |= kind_bit;
+        return TRUE;
+    }
+#endif
+#if NDS_P2_DONKEY
+    if (fkind == nFTKindDonkey)
+    {
+        if ((ndsRendererNativeEnsureOwnerImage(
+                 NDS_NATIVE_IMAGE_SLOT_DONKEY, 0u) == FALSE) ||
+            (ndsRendererNativeEnsureOwnerImage(
+                 NDS_NATIVE_IMAGE_SLOT_DONKEY, 1u) == FALSE))
+        {
+            gNdsPlayersVSPreviewResidentOwnerFailMask |= kind_bit;
+            return FALSE;
+        }
+        gNdsPlayersVSPreviewResidentReadyMask |= kind_bit;
+        return TRUE;
+    }
+#endif
+    gNdsPlayersVSPreviewResidentReadyMask |= kind_bit;
+    return TRUE;
+}
+
+static void ndsMNPlayersVSPreviewPrepareResidentKinds(void)
+{
+    gNdsPlayersVSPreviewResidentPrepareMask = 0u;
+    gNdsPlayersVSPreviewResidentReadyMask = 0u;
+    gNdsPlayersVSPreviewResidentMainFailMask = 0u;
+    gNdsPlayersVSPreviewResidentSubmotionFailMask = 0u;
+    gNdsPlayersVSPreviewResidentAnimFailMask = 0u;
+    gNdsPlayersVSPreviewResidentOwnerFailMask = 0u;
+
+    (void)ndsMNPlayersVSPreviewPrepareResidentKind(nFTKindMario);
+    (void)ndsMNPlayersVSPreviewPrepareResidentKind(nFTKindFox);
+#if NDS_P2_LUIGI
+    (void)ndsMNPlayersVSPreviewPrepareResidentKind(nFTKindLuigi);
+#endif
+#if NDS_P2_DONKEY
+    (void)ndsMNPlayersVSPreviewPrepareResidentKind(nFTKindDonkey);
+#endif
+}
+
+/* The corrected source viewport maps BattleShip's 840-world-unit fighter-slot
+ * pitch to exactly 64 DS pixels, so the source roots land at x=32/96/160/224.
+ * That is ideal for the ordinary roster, but Donkey's wider silhouette can
+ * cross the physical screen edge from the two 64-pixel outer panels. Keep the
+ * inner pair source-exact and inset only 1P/4P by 80 world units (~6.1 DS px).
+ *
+ * This is presentation-only and deliberately lives after the source rebuild;
+ * gameplay, the source CSS implementation, fighter scale, and joint transforms
+ * remain untouched. Set the exact derived root position instead of accumulating
+ * an offset so repeated player-kind / grab rebuilds are idempotent. */
+#define NDS_CSS_OUTER_PREVIEW_INSET 80.0F
+static void ndsMNPlayersVSPreviewApplyOuterSlotInset(u32 slot,
+                                                      GObj *fighter_gobj)
+{
+    DObj *root;
+    f32 x;
+
+    if ((fighter_gobj == NULL) || (slot >= GMCOMMON_PLAYERS_MAX))
+    {
+        return;
+    }
+    root = DObjGetStruct(fighter_gobj);
+    if (root == NULL)
+    {
+        return;
+    }
+
+    x = ((f32)slot * 840.0F) - 1250.0F;
+    if (slot == 0u)
+    {
+        x += NDS_CSS_OUTER_PREVIEW_INSET;
+    }
+    else if (slot == (GMCOMMON_PLAYERS_MAX - 1u))
+    {
+        x -= NDS_CSS_OUTER_PREVIEW_INSET;
+    }
+    root->translate.vec.f.x = x;
+}
 
 /* P2-1N Stage D: the native shell owns the 2D CSS, but its fighter previews
  * remain the source's real fighter objects. This is the smallest faithful
@@ -183,6 +334,11 @@ void ndsMNPlayersVSPreviewInit(void)
         sMNPlayersVSSlots[i].is_fighter_selected = FALSE;
         sMNPlayersVSSlots[i].is_status_selected = FALSE;
     }
+    /* This function runs before ndsMenuShellCssPlayBgm. Load every owner image
+     * admitted by this exact roster here, after the four figatree heaps so the
+     * established CSS allocation order stays stable. Fighter creation keeps its
+     * ensure call as a fail-safe, but a healthy CSS never reaches disk there. */
+    ndsMNPlayersVSPreviewPrepareResidentKinds();
     /* The native shell seeds the actual rule/team values immediately after its
      * descriptor is loaded.  Start from a deterministic neutral state so a
      * second CSS entry cannot inherit this file-global from the prior scene. */
@@ -331,8 +487,26 @@ void ndsMNPlayersVSPreviewSync(u32 slot, s32 pkind, s32 fkind,
      * animation. Merely flipping is_fighter_selected leaves the wrong pose.
      * A FALSE->TRUE selection is intentionally absent: the source drop path
      * only flips is_fighter_selected and lets mnPlayersVSFighterProcUpdate turn
-     * into the selected pose. */
-    update_fighter = ((fighter_gobj == NULL) ||
+     * into the selected pose.
+     *
+     * `fkind != nFTKindNull` ON THE CREATION TERM, and it is source-exact
+     * rather than an optimisation. `mnPlayersVSMakeFighter` (mnplayersvs.c:
+     * 1624) wraps its ENTIRE body in `if (fkind != nFTKindNull)`, and
+     * `mnPlayersVSUpdateFighter`'s hide-and-skip branch needs a non-NULL
+     * fighter_gobj, so for an empty slot -- pkind NA, fkind Null, no object --
+     * the source updater provably does nothing at all.
+     *
+     * The port calls this sync for ALL FOUR slots on EVERY character-select
+     * tic (ndsMenuShellCssSyncPreviews), so without this term the two N/A
+     * slots take the rebuild path forever: `fighter_gobj == NULL` is true, the
+     * updater makes nothing, and the slot is still NULL next tic. Measured on
+     * 2026-08-25 that was 2,209 no-op rebuilds in ONE character-select visit
+     * -- two per tic -- each one paying a BGM blocking-load fence whose
+     * resume re-primes the stream from the current cursor. That is the whole
+     * of the "audible song lurch" this file's residency work was written to
+     * remove; it was never the fence being expensive, it was the fence
+     * bracketing a call the source would not have made. */
+    update_fighter = (((fighter_gobj == NULL) && (fkind != nFTKindNull)) ||
                       (old_pkind != pkind) ||
                       (old_fkind != fkind) ||
                       ((old_selected != FALSE) &&
@@ -354,19 +528,35 @@ void ndsMNPlayersVSPreviewSync(u32 slot, s32 pkind, s32 fkind,
          * reuse able to inherit another fighter's converted costume colors --
          * the owner's "mixed colors on the second same-kind fighter". The
          * clear is a 32x4 row wipe at menu-action rate; always pay it. */
-        ndsFighterRendererInvalidateMaterialCaches();
+        ndsFighterRendererInvalidateMaterialCachesForSlot(slot);
 #endif
-        /* P2-3. mnPlayersVSUpdateFighter reads this fighter's model/motion
-         * files off NitroFS synchronously, and that frame is far longer than
-         * one BGM packet -- long enough for the stream's hardware seam to fire
-         * with the next buffer still unprepared, which the streamer correctly
-         * treats as an underrun and stops on. Selecting Luigi on the character
-         * select killed the music for the rest of the screen, deterministically.
-         * Bracket the load so the stall is a known gap instead of a fault. */
+        /* P2-3r12. THE FENCE IS BACK ON EVERY GENUINE REBUILD, and it is cheap
+         * now that the creation term above no longer manufactures thousands of
+         * no-op ones.
+         *
+         * It is not optional. The residency predicate this replaces
+         * (ndsMNPlayersVSPreviewCanRebuildWithoutIO) claimed a prepared kind
+         * could rebuild without touching storage, and the claim is false:
+         * measured 2026-08-25 on build-p2-shell, one character-select visit
+         * ran +1,054 gNdsRelocAssetPayloadReadCount with the fence never taken
+         * once, and missed the ADPCM seam (seammiss/error/overrun 1/1/1). Its
+         * self-check could not catch that because it compared HEADER reads,
+         * animation-cache misses and owner-image loads -- all three of which
+         * were unchanged across the burst -- and never the PAYLOAD counter,
+         * which is the one that measures real blocking traffic.
+         *
+         * ndsMNPlayersVSPreviewPrepareResidentKinds stays: it warms the core
+         * files, the submotion-0 figatrees and the P2-3 owner images at scene
+         * entry, and the bracket below shows that burst is clean (seammiss 0
+         * across it on both visits). It reduces what the fence has to cover;
+         * it does not license removing it. Making a rebuild genuinely
+         * storage-free is the follow-up, and the payload counter is how that
+         * work will be judged. */
         ndsAudioBgmSuspendForBlockingLoad();
         mnPlayersVSUpdateFighter((s32)slot);
         ndsAudioBgmResumeAfterBlockingLoad();
         fighter_gobj = sMNPlayersVSSlots[slot].player;
+        ndsMNPlayersVSPreviewApplyOuterSlotInset(slot, fighter_gobj);
         if ((fighter_gobj != NULL) &&
             ((fighter_gobj->flags & GOBJ_FLAG_HIDDEN) == 0u))
         {
@@ -451,7 +641,7 @@ s32 ndsMNPlayersVSPreviewCycleCostume(u32 slot)
             /* Same reason the preview rebuild clears them: the converted
              * material rows are keyed by MObj address and this changes what
              * those addresses mean. */
-            ndsFighterRendererInvalidateMaterialCaches();
+            ndsFighterRendererInvalidateMaterialCachesForSlot(slot);
 #endif
             gNdsPlayersVSPreviewCostumeChangeCount++;
             return costume;

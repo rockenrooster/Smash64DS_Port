@@ -147,6 +147,12 @@ class GroupState:
 class Group:
     state: GroupState
     corners: list[Vertex]
+    # Matrix that was current when each RSP vertex-cache slot was loaded.
+    # Mario's 0x04c0 pipe body deliberately reuses six slots from the 0x03c0
+    # rim after changing DObj/modelview; preserving only the raw vertex makes
+    # those six corners get transformed a second time by the body matrix and
+    # collapses the barrel into a short band.
+    matrix_roots: list[int]
 
 
 def decode_vertex(payload: bytes, offset: int) -> Vertex:
@@ -331,6 +337,7 @@ class Compiler:
         self.resources = resources
         self.display = static.DisplayState()
         self.vertex_cache: dict[int, Vertex] = {}
+        self.vertex_matrix_root: dict[int, int] = {}
         self.geometry_mode = 0
         self.geometry_clear = 0
         # gSPLightColor state.  RSP state persists across the roots of one
@@ -403,6 +410,7 @@ class Compiler:
                 source = self.resources[ref.asset_id]
                 for i in range(count):
                     self.vertex_cache[first + i] = decode_vertex(source.payload, ref.offset + i * 16)
+                    self.vertex_matrix_root[first + i] = root_index
             elif op == G_MODIFYVTX:
                 where = (w0 >> 16) & 0xFF
                 if where != G_MWO_POINT_ST:
@@ -414,14 +422,17 @@ class Compiler:
             elif op in (G_TRI1, G_TRI2):
                 state = self.group_state(root_index)
                 if not self.groups or self.groups[-1].state != state:
-                    self.groups.append(Group(state, []))
+                    self.groups.append(Group(state, [], []))
                 group = self.groups[-1]
                 for tri in triangle_indices(op, w0, w1):
                     for index in tri:
                         if index not in self.vertex_cache:
                             raise SystemExit(f"entry vertex cache miss root={root_index} pc=0x{pc:x} slot={index}")
+                        if index not in self.vertex_matrix_root:
+                            raise SystemExit(f"entry vertex matrix provenance miss root={root_index} pc=0x{pc:x} slot={index}")
                         v = self.vertex_cache[index]
                         group.corners.append(self.final_uv(v, state) if state.texture_key else v)
+                        group.matrix_roots.append(self.vertex_matrix_root[index])
             elif op == G_SETTIMG:
                 self.display.image = source_ref(self.resource, pc, w1)
                 self.display.image_format = (w0 >> 21) & 7
@@ -543,8 +554,10 @@ def emit(mario: Compiler, fox: Compiler) -> str:
     roots = list(MARIO_ROOTS) + list(FOX_ROOTS)
     root_groups: list[list[int]] = [[] for _ in roots]
     flat_vertices: list[Vertex] = []
+    flat_matrix_roots: list[int] = []
     group_rows = []
     lit_inherit = lit_clear = lit_set = 0
+    cross_matrix_corners = 0
     for index, group in enumerate(groups):
         if group.state.geometry_mode & 0x00020000:
             lit_set += 1
@@ -554,9 +567,19 @@ def emit(mario: Compiler, fox: Compiler) -> str:
             lit_inherit += 1
         if len(group.corners) % 3:
             raise SystemExit("entry group corner count is not triangular")
+        if len(group.matrix_roots) != len(group.corners):
+            raise SystemExit("entry group matrix provenance count drifted from corners")
+        for matrix_root in group.matrix_roots:
+            if matrix_root > group.state.root_index:
+                raise SystemExit(
+                    f"entry group root {group.state.root_index} references future matrix root {matrix_root}"
+                )
+            if matrix_root != group.state.root_index:
+                cross_matrix_corners += 1
         root_groups[group.state.root_index].append(index)
         first = len(flat_vertices)
         flat_vertices.extend(group.corners)
+        flat_matrix_roots.extend(group.matrix_roots)
         group_rows.append((first, len(group.corners) // 3, group))
 
     lines = [
@@ -567,6 +590,7 @@ def emit(mario: Compiler, fox: Compiler) -> str:
         f"#define NDS_ENTRY_EFFECT_ROOT_COUNT {len(roots)}u",
         f"#define NDS_ENTRY_EFFECT_GROUP_COUNT {len(groups)}u",
         f"#define NDS_ENTRY_EFFECT_VERTEX_COUNT {len(flat_vertices)}u",
+        f"#define NDS_ENTRY_EFFECT_CROSS_MATRIX_CORNER_COUNT {cross_matrix_corners}u",
         f"#define NDS_ENTRY_EFFECT_TEXTURE_COUNT {len(texture_keys)}u",
         f"#define NDS_ENTRY_EFFECT_MARIO_ROOT_COUNT {len(MARIO_ROOTS)}u",
         f"#define NDS_ENTRY_EFFECT_FOX_ROOT_FIRST {len(MARIO_ROOTS)}u",
@@ -575,6 +599,16 @@ def emit(mario: Compiler, fox: Compiler) -> str:
     lines.append("static const NDSRendererInputVertex sNdsEntryEffectVertices[NDS_ENTRY_EFFECT_VERTEX_COUNT] = {")
     for v in flat_vertices:
         lines.append(f"    {{ {v.x}, {v.y}, {v.z}, {v.s}, {v.t}, {v.r}, {v.g}, {v.b}, {v.a} }},")
+    lines.append("};")
+    lines.append("")
+
+    # RSP vertex-cache matrix lifetime. One byte/corner is only 480 B for both
+    # entry effects and removes all runtime N64-command interpretation: the DS
+    # owner transforms mixed-cache groups from the matrix that was live when
+    # each cache slot was loaded, matching the source RSP lifetime rule.
+    lines.append("static const u8 sNdsEntryEffectVertexMatrixRoot[NDS_ENTRY_EFFECT_VERTEX_COUNT] = {")
+    for i in range(0, len(flat_matrix_roots), 24):
+        lines.append("    " + ", ".join(f"{x}u" for x in flat_matrix_roots[i:i + 24]) + ",")
     lines.append("};")
     lines.append("")
 
@@ -619,11 +653,23 @@ def emit(mario: Compiler, fox: Compiler) -> str:
     lines.append("static const NDSEntryEffectTexture sNdsEntryEffectTextures[NDS_ENTRY_EFFECT_TEXTURE_COUNT] = {")
     for slot, key in enumerate(texture_keys):
         texture = textures_by_key[key]
+        # repack_paletted reserves index 0 for transparency only when the
+        # canonical source image actually contains alpha-0 texels.  Opaque CI4
+        # images are also allowed to use palette slot 0 as a real colour (both
+        # Mario pipe textures do).  Carry that distinction into the runtime --
+        # blindly setting DS COLOR0_TRANSPARENT punches literal holes wherever
+        # an opaque source texture legitimately samples index 0.
+        color0_transparent = (
+            texture.ds_format == TEX_PAL16
+            and len(texture.palette) != 0
+            and texture.palette[0] == 0
+        )
         lines.append(
             "    { "
             f"sNdsEntryEffectTexture{slot}Texels, sizeof(sNdsEntryEffectTexture{slot}Texels), "
             f"sNdsEntryEffectTexture{slot}Palette, {len(texture.palette)}u, "
-            f"{key.upload_width}u, {key.upload_height}u, {texture.ds_format}u, 0u }},"
+            f"{key.upload_width}u, {key.upload_height}u, {texture.ds_format}u, "
+            f"{1 if color0_transparent else 0}u }},"
         )
     lines.append("};")
     lines.append("")

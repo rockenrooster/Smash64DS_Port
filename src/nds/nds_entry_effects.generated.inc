@@ -5,6 +5,7 @@
 #define NDS_ENTRY_EFFECT_ROOT_COUNT 10u
 #define NDS_ENTRY_EFFECT_GROUP_COUNT 30u
 #define NDS_ENTRY_EFFECT_VERTEX_COUNT 480u
+#define NDS_ENTRY_EFFECT_CROSS_MATRIX_CORNER_COUNT 18u
 #define NDS_ENTRY_EFFECT_TEXTURE_COUNT 24u
 #define NDS_ENTRY_EFFECT_MARIO_ROOT_COUNT 2u
 #define NDS_ENTRY_EFFECT_FOX_ROOT_FIRST 2u
@@ -490,6 +491,29 @@ static const NDSRendererInputVertex sNdsEntryEffectVertices[NDS_ENTRY_EFFECT_VER
     { 322, -209, 0, 511, 0, 255, 255, 255, 0 },
     { 322, 209, 0, 511, 511, 255, 255, 255, 0 },
     { -322, -209, 0, 0, 0, 255, 255, 255, 0 },
+};
+
+static const u8 sNdsEntryEffectVertexMatrixRoot[NDS_ENTRY_EFFECT_VERTEX_COUNT] = {
+    0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u,
+    0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 1u, 1u, 0u, 1u, 1u, 0u, 0u, 0u, 0u, 1u,
+    1u, 0u, 1u, 1u, 1u, 0u, 1u, 0u, 0u, 1u, 1u, 0u, 1u, 1u, 0u, 1u, 0u, 0u, 1u, 0u, 0u, 1u, 1u, 0u,
+    1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u,
+    1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u,
+    1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u,
+    2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u,
+    2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u,
+    2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u,
+    2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u,
+    2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u,
+    2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u,
+    2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u,
+    2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u,
+    2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u,
+    2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u,
+    2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u,
+    2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u, 2u,
+    3u, 3u, 3u, 3u, 3u, 3u, 4u, 4u, 4u, 4u, 4u, 4u, 5u, 5u, 5u, 5u, 5u, 5u, 6u, 6u, 6u, 6u, 6u, 6u,
+    7u, 7u, 7u, 7u, 7u, 7u, 7u, 7u, 7u, 7u, 7u, 7u, 8u, 8u, 8u, 8u, 8u, 8u, 9u, 9u, 9u, 9u, 9u, 9u,
 };
 
 static const NDSEntryEffectGroup sNdsEntryEffectGroups[NDS_ENTRY_EFFECT_GROUP_COUNT] = {
@@ -1272,7 +1296,7 @@ static const NDSEntryEffectTexture sNdsEntryEffectTextures[NDS_ENTRY_EFFECT_TEXT
     { sNdsEntryEffectTexture16Texels, sizeof(sNdsEntryEffectTexture16Texels), sNdsEntryEffectTexture16Palette, 16u, 16u, 8u, 0u, 0u },
     { sNdsEntryEffectTexture17Texels, sizeof(sNdsEntryEffectTexture17Texels), sNdsEntryEffectTexture17Palette, 16u, 32u, 32u, 0u, 0u },
     { sNdsEntryEffectTexture18Texels, sizeof(sNdsEntryEffectTexture18Texels), sNdsEntryEffectTexture18Palette, 16u, 16u, 64u, 0u, 0u },
-    { sNdsEntryEffectTexture19Texels, sizeof(sNdsEntryEffectTexture19Texels), sNdsEntryEffectTexture19Palette, 16u, 128u, 16u, 0u, 0u },
+    { sNdsEntryEffectTexture19Texels, sizeof(sNdsEntryEffectTexture19Texels), sNdsEntryEffectTexture19Palette, 16u, 128u, 16u, 0u, 1u },
     { sNdsEntryEffectTexture20Texels, sizeof(sNdsEntryEffectTexture20Texels), sNdsEntryEffectTexture20Palette, 16u, 32u, 32u, 0u, 0u },
     { sNdsEntryEffectTexture21Texels, sizeof(sNdsEntryEffectTexture21Texels), sNdsEntryEffectTexture21Palette, 8u, 32u, 32u, 1u, 0u },
     { sNdsEntryEffectTexture22Texels, sizeof(sNdsEntryEffectTexture22Texels), sNdsEntryEffectTexture22Palette, 16u, 16u, 8u, 0u, 0u },

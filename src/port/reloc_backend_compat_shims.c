@@ -11,6 +11,7 @@
 
 #if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
 void ndsFighterRendererInvalidateMaterialCaches(void);
+void ndsFighterRendererInvalidateMaterialCachesForSlot(u32 slot);
 #endif
 
 /* Shield anim-joint install engagement + the lab dispatch audit; legends in
@@ -1230,15 +1231,119 @@ void ftManagerSetupFileSize(void)
 {
 }
 
+/* THE FIGATREE HEAP IS SIZED FROM THE ASSETS, NOT FROM A CONSTANT.
+ *
+ * Owner, 2026-08-23 and again 2026-08-24: "the Mario intro green tube ... only
+ * the rim renders" and then "the intro animation for mario is broken".
+ *
+ * One fighter animation is loaded at a time, into a single heap whose size the
+ * source computes in `ftManagerAllocFighter` (ft/ftmanager.c:79-206) as the
+ * LARGEST animation file across every fighter it allocates -- it walks each
+ * kind's motion descriptors and takes the max of `lbRelocGetFileSize`. This
+ * port's shim used a flat `0x1000`, so every figatree over 4 KB failed to load:
+ * the pointer resolve in `lbCommonAddFighterPartsFigatree` then handed
+ * `ndsFtPoseBindEntry` a NULL script, the joint bound with
+ * `anim_wait = AOBJ_ANIM_NULL`, and nothing ever published the GObj clock.
+ *
+ * The symptom was character-specific in a way that hid the cause: Wait and the
+ * other short motions fit 4 KB and animate, so fighters looked fine, while
+ * Mario's entry (motion 197, `nFTMarioMotionAppearR`) did not fit and left
+ * `fighter_gobj->anim_frame` at its bind value. `ftCommonAppearProcUpdate` ends
+ * Appear on `anim_frame <= 0.0F`, so both fighters left their entry on the tick
+ * they began it -- measured, Mario `status_id=222 motion_id=197
+ * anim_frame=0x80000000` and Fox `status_id=223 motion_id=198` identically --
+ * and stood in Wait while their own entry effect played on beside them. The
+ * pipe was never the defect; its animation is byte-faithful to the asset.
+ *
+ * This is the source's own computation, restricted to the kinds this build
+ * actually carries (`dFTManagerDataFiles` entries are NULL for the rest) and
+ * floored at the previous constant so a build whose tables are not yet
+ * populated behaves exactly as it did before rather than allocating nothing. */
+#define NDS_FTMANAGER_FIGATREE_HEAP_FLOOR 0x1000u
+
+static size_t ndsFTManagerLargestFigatree(const FTMotionDescArray *array,
+                                          s32 count)
+{
+    size_t largest = 0u;
+    s32 i;
+
+    if ((array == NULL) || (count <= 0))
+    {
+        return 0u;
+    }
+    for (i = 0; i < count; i++)
+    {
+        const FTMotionDesc *motion_desc = &array->motion_desc[i];
+        size_t size;
+
+        if (motion_desc->anim_file_id == 0u)
+        {
+            continue;
+        }
+        /* Shield poses live inside the fighter's own shieldpose file and are
+         * addressed by offset, never loaded into this heap (ftmain.c:4617). */
+        if (motion_desc->anim_desc.flags.is_use_shieldpose != FALSE)
+        {
+            continue;
+        }
+        size = lbRelocGetFileSize((const void *)motion_desc->anim_file_id);
+        if (size > largest)
+        {
+            largest = size;
+        }
+    }
+    return largest;
+}
+
+static size_t ndsFTManagerFigatreeHeapSize(u32 data_flags)
+{
+    size_t largest = NDS_FTMANAGER_FIGATREE_HEAP_FLOOR;
+    s32 kind;
+
+    for (kind = 0; kind < nFTKindEnumCount; kind++)
+    {
+        const FTData *data = dFTManagerDataFiles[kind];
+        size_t size;
+
+        if (data == NULL)
+        {
+            continue;
+        }
+        if ((data_flags & FTDATA_FLAG_MAINMOTION) != 0u)
+        {
+            size = ndsFTManagerLargestFigatree(data->mainmotion,
+                                               data->mainmotion_array_count);
+            if (size > largest)
+            {
+                largest = size;
+            }
+        }
+        if (((data_flags & FTDATA_FLAG_SUBMOTION) != 0u) &&
+            (data->submotion_array_count != NULL))
+        {
+            size = ndsFTManagerLargestFigatree(data->submotion,
+                                               *data->submotion_array_count);
+            if (size > largest)
+            {
+                largest = size;
+            }
+        }
+    }
+    return largest;
+}
+
+__attribute__((used)) volatile u32 gNdsFTManagerFigatreeHeapMeasured;
+
 void ftManagerAllocFighter(u32 data_flags, s32 allocs_num)
 {
-    (void)data_flags;
     (void)allocs_num;
     gNdsSCVSBattleCompatManagerMask |= 1u << 0;
     gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_FIGHTER_MANAGER;
     if (gFTManagerFigatreeHeapSize == 0)
     {
-        gFTManagerFigatreeHeapSize = 0x1000u;
+        gFTManagerFigatreeHeapSize = ndsFTManagerFigatreeHeapSize(data_flags);
+        gNdsFTManagerFigatreeHeapMeasured =
+            (u32)gFTManagerFigatreeHeapSize;
     }
     if (ndsFighterMarioFoxModelProofEnabled() != FALSE)
     {
@@ -1505,7 +1610,7 @@ void ftParamInitAllParts(GObj *fighter_gobj, s32 costume, s32 shade)
      * source allocator may immediately reuse the just-freed MObj address. Tell
      * that cache about the source lifetime boundary so a costume can never
      * inherit the previous costume's converted texture/material block. */
-    ndsFighterRendererInvalidateMaterialCaches();
+    ndsFighterRendererInvalidateMaterialCachesForSlot((u32)fp->player);
 #endif
 }
 
@@ -10140,8 +10245,37 @@ void lbCommonAddFighterPartsFigatree(DObj *root_dobj, void *figatree,
             walk = ndsLBCommonGetTreeDObjNextFromRoot(walk, root_dobj);
         }
     }
-    pose_engine = (figatree_entries != NULL) ?
-        ndsFtPoseBindBegin(root_dobj, pose_entries) : FALSE;
+    /* BIND TO THE ENGINE THAT WILL ACTUALLY PLAY THIS MOTION.
+     *
+     * `ftMainPlayAnim` routes a motion to the pose engine only when
+     * `fp->anim_desc.flags.is_anim_joint` is clear -- an event32 animjoint
+     * status keeps the generic player. This attach did not ask the same
+     * question, so an `is_anim_joint` motion was bound INTO the pose engine and
+     * then played by the generic one: the pose engine holds the only live
+     * script, the generic walk finds `AOBJ_ANIM_NULL` on every joint, and
+     * nothing advances or publishes `parent_gobj->anim_frame`.
+     *
+     * That is what broke the entry. Mario's Appear (motion 197,
+     * `nFTMarioMotionAppearR`) is an `is_anim_joint` motion -- measured,
+     * `aj=1` with `joints[0]->child->anim_wait = AOBJ_ANIM_NULL` and a GObj
+     * clock frozen for the whole status -- so `ftCommonAppearProcUpdate`'s
+     * `anim_frame <= 0.0F` was true on the tick the status began and both
+     * fighters left their entry immediately while their own effect played on.
+     * The owner saw that as "the pipe only renders its rim".
+     *
+     * The two sites now ask the identical question, which is the property that
+     * matters: whichever engine binds a motion is the engine that plays it. */
+    {
+        FTStruct *bind_fp = (root_dobj != NULL) ?
+            ftGetStruct(root_dobj->parent_gobj) : NULL;
+        const sb32 bind_anim_joint =
+            ((bind_fp != NULL) && (bind_fp->anim_desc.flags.is_anim_joint)) ?
+                TRUE : FALSE;
+
+        pose_engine = ((figatree_entries != NULL) &&
+                       (bind_anim_joint == FALSE)) ?
+            ndsFtPoseBindBegin(root_dobj, pose_entries) : FALSE;
+    }
     pose_entries = 0u;
     while ((current_dobj != NULL) && (figatree_entries != NULL))
     {

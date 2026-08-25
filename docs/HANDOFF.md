@@ -98,19 +98,19 @@ P2-1/P2-2 still have only their owner visual/play residuals.
    Luigi-versus-Donkey match with both images resident. **Size the next fighter
    against 28,772, not 44,848.** The remaining lever is the SHARED Mario/Fox
    table set, 64,147 B of binary a Luigi-versus-DK match never uses.
-   **Intros are fixed and the last wrong lead is closed:** the port had no
-   invisibility gate at all -- its own `ftDisplayMainProcDisplay` replaces the
-   decomp body that holds one -- so every fighter drew from frame one while
-   `ftCommonEntrySetStatus` was setting `is_invisible` correctly. Reinstated at
-   that seam (P2-3r5); screenshots show an empty stage at battle start and
-   staggered per-fighter presentation after it. **The pipe is root-caused**
-   (P2-3r6, and an earlier "not reproduced" call in this file was withdrawn):
-   the lip and the barrel are on DIFFERENT entry-effect roots, only the
-   barrel's is animated, and its translate.y ramps to +321 -- 306 units, 2.5x
-   the barrel's own height -- 4 presented frames in, so the pipe is whole for
-   4 frames and a floating lip for the other ~46. Everything else is ruled out
-   with data in the board row. The one open question is whether +321 is the
-   asset's key or this port's AObj decode.
+   **Intros are fixed** (P2-3r5): the port-owned fighter display had omitted the
+   source `is_invisible` gate. **Mario's pipe is fixed end-to-end** (P2-3r6);
+   see the board row for the four-defect chain. The final leak was not depth:
+   entry PAL16 upload forced DS `COLOR0_TRANSPARENT` although both pipe textures
+   use palette index 0 as opaque green, punching literal holes through the rim
+   and inner wall. Generated entry textures now carry the canonical RGBA5551
+   colour-0 transparency bit. Packet-on +10/+20 captures show a continuous
+   rim/body/opening, +104 has no terminal slab, and the one-lap shell verifier
+   is green (11 entries, zero faults, 39,432 B free). **The CSS preview's
+   disconnected body parts are fixed** (P2-3r7): its CSS-only `glViewport`
+   writes bypassed `ndsRendererFighterPacketDmaWait()` and cut into the last
+   preview fighter's draining packet DMA. **Rail: a GX writer outside
+   `nds_renderer.c` must call that wait first.**
 
 4. **P2-3 background.** Luigi's production path is landed and he ANIMATES
    (P2-3r2). The bounded fast proof route is repaired end-to-end and **both

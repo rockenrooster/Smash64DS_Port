@@ -86,6 +86,13 @@ void ftCommonAppearProcUpdate(GObj *fighter_gobj)
 
     ndsFTCommonAppearUpdateEffectsMarioFox(fighter_gobj);
 
+    /* Source-faithful end check. The figatree bind/play seam now publishes the
+     * first live Appear frame before this callback runs (measured Mario: 1.0 on
+     * its first pre-GO update), so no DS-only bind-tick guard belongs here.
+     * `status_total_tics` cannot be such a guard anyway: BattleShip deliberately
+     * leaves it at zero while player control is locked, which is the entire
+     * pre-GO window. Gating on it therefore held Appear until GO and made the
+     * fighters look frozen instead of entering their idle Wait animations. */
     if (fighter_gobj->anim_frame <= 0.0F)
     {
         fp->lr = fp->status_vars.common.entry.lr;

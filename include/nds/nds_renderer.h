@@ -1339,6 +1339,16 @@ s32 ndsRendererExecuteNativeFighterRoot(
  * on entering Results, before its photo wipe reads that buffer. A no-op when
  * NDS_R2_FIGHTER_PACKET is off. */
 void ndsRendererFighterPacketRelease(void);
+/* Drops recorded fighter streams without clearing the borrowed framebuffer
+ * arena.  This is the setup/menu lifetime invalidator: source operations such
+ * as ftParamInitAllParts may destroy/recreate DObjs/MObjs at the same addresses,
+ * so a packet recorded against the old object graph must not survive that
+ * boundary.  Unlike Release(), the next draw is free to re-record immediately. */
+void ndsRendererFighterPacketInvalidateAll(void);
+/* Invalidates the recorded stream owned by one source player slot.  The packet
+ * array is keyed by that same 0..3 slot, so a CSS rebuild can retire exactly
+ * the object graph it replaced.  Invalid slots fail safe to InvalidateAll(). */
+void ndsRendererFighterPacketInvalidateSlot(u32 slot);
 /* Waits for a fighter packet DMA still draining into the GXFIFO. Every GX
  * writer outside the renderer's own seams (the end-of-frame flush) must call
  * it before its first FIFO word. A no-op when no DMA is pending or the packet

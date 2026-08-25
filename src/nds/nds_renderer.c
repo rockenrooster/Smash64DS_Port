@@ -5532,7 +5532,12 @@ typedef struct NDSEntryEffectTexture
     u16 width;
     u16 height;
     u8 ds_format;
-    u8 reserved;
+    /* DS PAL16 has no per-palette-entry alpha.  Index 0 becomes transparent
+     * only when TEXIMAGE_PARAM.COLOR0 is enabled, so this is part of the
+     * converted asset, not a property of the format.  The generator derives it
+     * from the canonical RGBA5551 image: transparent sources are normalized to
+     * palette[0] == 0, while opaque images may use index 0 as a real colour. */
+    u8 color0_transparent;
 } NDSEntryEffectTexture;
 
 #define NDS_ENTRY_EFFECT_TEXTURE_PAL16 0u
@@ -5541,7 +5546,22 @@ typedef struct NDSEntryEffectTexture
 
 #include "nds_entry_effects.generated.inc"
 
+/* The source RSP vertex cache is transformed at gSPVertex load time, not at
+ * triangle emission time. Mario's pipe body reuses six cache slots loaded by
+ * the preceding rim DObj and changes only their ST with gSPModifyVertex; 18
+ * emitted body corners therefore belong to the RIM matrix while the other
+ * corners belong to the BODY matrix. The AOT generator records that load-root
+ * per corner. Keep each root's live modelview/composed matrix so mixed-cache
+ * groups can use the generic renderer's CPU-projected cross-matrix contract. */
+_Static_assert(NDS_ENTRY_EFFECT_CROSS_MATRIX_CORNER_COUNT != 0u,
+               "entry-effect matrix provenance unexpectedly became trivial");
+
 static u32 sNdsRendererEntryEffectTextureName[NDS_ENTRY_EFFECT_TEXTURE_COUNT];
+static NDSRendererMatrix20p12
+    sNdsRendererEntryEffectModelview[NDS_ENTRY_EFFECT_ROOT_COUNT];
+static NDSRendererMatrix20p12
+    sNdsRendererEntryEffectComposed[NDS_ENTRY_EFFECT_ROOT_COUNT];
+static u32 sNdsRendererEntryEffectModelviewValidMask;
 volatile u32 gNdsEntryEffectNativeDrawCount;
 volatile u32 gNdsEntryEffectNativeFallbackCount;
 volatile u32 gNdsEntryEffectNativeTexturePrepareCount;
@@ -12996,7 +13016,8 @@ static s32 ndsRendererHardwareTextureSizeEnum(u32 size, int *out)
 static s32 ndsRendererHardwarePrepareIFCommonAtlas(
     u32 width, u32 height, u32 texture_format,
     const u16 *palette, u32 palette_entries,
-    NDSRendererTextureFillCallback fill, void *user_data, u32 *texture_name)
+    NDSRendererTextureFillCallback fill, void *user_data, u32 *texture_name,
+    u32 color0_transparent)
 {
 #if NDS_RENDERER_HW_TRIANGLES && \
     (NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE)
@@ -13029,7 +13050,11 @@ static s32 ndsRendererHardwarePrepareIFCommonAtlas(
     if (texture_format == GL_RGB16)
     {
         bytes = (width * height) / 2u;
-        param = (u32)TEXGEN_TEXCOORD | (u32)GL_TEXTURE_COLOR0_TRANSPARENT;
+        param = (u32)TEXGEN_TEXCOORD;
+        if (color0_transparent != FALSE)
+        {
+            param |= (u32)GL_TEXTURE_COLOR0_TRANSPARENT;
+        }
     }
     else
     {
@@ -13090,7 +13115,7 @@ s32 ndsRendererHardwarePrepareIFCommonCloudAtlas(
 {
     return ndsRendererHardwarePrepareIFCommonAtlas(
         width, height, GL_RGB8_A5, palette, 8u,
-        fill, user_data, texture_name);
+        fill, user_data, texture_name, FALSE);
 }
 
 s32 ndsRendererHardwarePrepareIFCommonA3I5Atlas(
@@ -13099,7 +13124,7 @@ s32 ndsRendererHardwarePrepareIFCommonA3I5Atlas(
 {
     return ndsRendererHardwarePrepareIFCommonAtlas(
         width, height, GL_RGB32_A3, palette, 32u,
-        fill, user_data, texture_name);
+        fill, user_data, texture_name, FALSE);
 }
 
 /* Source CI4 with an RGBA5551 TLUT whose entry 0 has alpha 0 -- Mario's
@@ -13115,7 +13140,7 @@ s32 ndsRendererHardwarePrepareIFCommonPal16Atlas(
 {
     return ndsRendererHardwarePrepareIFCommonAtlas(
         width, height, GL_RGB16, palette, 16u,
-        fill, user_data, texture_name);
+        fill, user_data, texture_name, TRUE);
 }
 
 #if NDS_R2_IMPACT_WAVE_NATIVE
@@ -21004,6 +21029,7 @@ ndsFighterPacketLoadGxComposedRecord(
     sNdsRendererHardwareMatrixGeneration = generation;
     sNdsRendererHardwareMatrixLoaded = FALSE;
 }
+
 #endif
 #endif
 #endif
@@ -27057,6 +27083,10 @@ s32 ndsRendererSubmitNativeEntryEffect(
     const NDSEntryEffectRoot *root;
     u32 group_offset;
     u32 matrix_generation;
+    u32 root_index;
+    NDSRendererHardwareLightDirection
+        light_direction_by_root[NDS_ENTRY_EFFECT_ROOT_COUNT];
+    u32 light_direction_valid_mask = 0u;
 
     if ((config == NULL) || (stats == NULL) ||
         (config->initial_projection == NULL) ||
@@ -27070,6 +27100,18 @@ s32 ndsRendererSubmitNativeEntryEffect(
          NDS_ENTRY_EFFECT_GROUP_COUNT))
     {
         return FALSE;
+    }
+    root_index = (u32)(root - &sNdsEntryEffectRoots[0]);
+    if (root_index >= NDS_ENTRY_EFFECT_ROOT_COUNT)
+    {
+        return FALSE;
+    }
+    /* The first root of either source effect begins a new synchronous DObj
+     * traversal. Only matrices captured during THIS traversal may satisfy a
+     * later vertex-cache provenance read. */
+    if ((root_index == 0u) || (root_index == NDS_ENTRY_EFFECT_FOX_ROOT_FIRST))
+    {
+        sNdsRendererEntryEffectModelviewValidMask = 0u;
     }
 
     /* Fail closed before the first GX write. A scene-entry prepare is supposed
@@ -27092,7 +27134,44 @@ s32 ndsRendererSubmitNativeEntryEffect(
         }
     }
 
+    /* Validate the generated vertex-cache matrix provenance before the first
+     * GX write. A corner may use the current root or an EARLIER root that this
+     * same native traversal has already stored; anything else must fall back
+     * to the generic source-DL path rather than emit a half-correct model. */
+    for (group_offset = 0u; group_offset < root->group_count; group_offset++)
+    {
+        const NDSEntryEffectGroup *group =
+            &sNdsEntryEffectGroups[(u32)root->first_group + group_offset];
+        u32 corner_count = (u32)group->triangle_count * 3u;
+        u32 corner;
+
+        if ((u32)group->first_vertex + corner_count >
+            NDS_ENTRY_EFFECT_VERTEX_COUNT)
+        {
+            return FALSE;
+        }
+        for (corner = 0u; corner < corner_count; corner++)
+        {
+            u32 source_root = sNdsEntryEffectVertexMatrixRoot[
+                (u32)group->first_vertex + corner];
+
+            if ((source_root >= NDS_ENTRY_EFFECT_ROOT_COUNT) ||
+                (source_root > root_index) ||
+                ((source_root != root_index) &&
+                 ((sNdsRendererEntryEffectModelviewValidMask &
+                   (1u << source_root)) == 0u)))
+            {
+                return FALSE;
+            }
+        }
+    }
+
     ndsRendererHardwareEndBatch();
+    sNdsRendererEntryEffectModelview[root_index] = *config->initial_modelview;
+    ndsRendererMtxMul20p12(
+        config->initial_modelview, config->initial_projection,
+        &sNdsRendererEntryEffectComposed[root_index]);
+    sNdsRendererEntryEffectModelviewValidMask |= 1u << root_index;
     matrix_generation = ndsRendererNextMatrixGeneration();
     ndsRendererLoadHardwareSplitMatrices(
         config->initial_projection, config->initial_modelview,
@@ -27115,8 +27194,29 @@ s32 ndsRendererSubmitNativeEntryEffect(
         u32 poly_fmt;
         u32 corner_count = (u32)group->triangle_count * 3u;
         u32 corner;
+        u32 projected_group = FALSE;
         s32 lit;
-        NDSRendererHardwareLightDirection light_direction = { 0, 0, 0 };
+
+        /* The RSP transforms a vertex when G_VTX loads its cache slot.  A later
+         * display list may then reuse that slot after the modelview changes.
+         * Mario's pipe body does exactly that: its first twelve triangles mix
+         * vertices loaded under the rim and body matrices.  GX cannot reproduce
+         * that by changing its matrix between vertices of one open primitive;
+         * the generic renderer handles the same source shape by CPU-projecting
+         * the mixed-snapshot triangle.  If a generated state group contains any
+         * such corner, project the whole small group from each corner's recorded
+         * load-time matrix.  This keeps primitive submission legal and preserves
+         * the generic path's load-time transform semantics.
+         * Ordinary entry groups remain on the raw split-matrix path. */
+        for (corner = 0u; corner < corner_count; corner++)
+        {
+            if (sNdsEntryEffectVertexMatrixRoot[
+                    (u32)group->first_vertex + corner] != root_index)
+            {
+                projected_group = TRUE;
+                break;
+            }
+        }
 
         /* A bit the list neither cleared nor set is inherited from the battle
          * display's state, exactly as the RSP had it. Masking G_LIGHTING off
@@ -27143,7 +27243,9 @@ s32 ndsRendererSubmitNativeEntryEffect(
         if (lit != FALSE)
         {
             ndsRendererHardwarePrepareLitDirection(
-                stats, config->initial_modelview, &light_direction);
+                stats, config->initial_modelview,
+                &light_direction_by_root[root_index]);
+            light_direction_valid_mask |= 1u << root_index;
         }
 
         if (use_texture != FALSE)
@@ -27180,6 +27282,16 @@ s32 ndsRendererSubmitNativeEntryEffect(
          * owner; POLY_FORMAT_LIGHT0 must stay absent even if a previous
          * hardware-lit owner left a light vector in GX state. */
         poly_fmt &= ~((u32)POLY_FORMAT_LIGHT0);
+        if (projected_group != FALSE)
+        {
+            ndsRendererLoadHardwareMatrices(NULL, FALSE);
+        }
+        else
+        {
+            ndsRendererLoadHardwareSplitMatrices(
+                config->initial_projection, config->initial_modelview,
+                matrix_generation);
+        }
         ndsRendererHardwareBeginTriangleBatch(
             stats, use_texture, texture_name, poly_fmt,
             sNdsRendererHardwareMatrixMode,
@@ -27187,17 +27299,27 @@ s32 ndsRendererSubmitNativeEntryEffect(
 
         for (corner = 0u; corner < corner_count; corner++)
         {
+            u32 vertex_index = (u32)group->first_vertex + corner;
             const NDSRendererInputVertex *vtx =
-                &sNdsEntryEffectVertices[(u32)group->first_vertex + corner];
+                &sNdsEntryEffectVertices[vertex_index];
+            u32 source_root = sNdsEntryEffectVertexMatrixRoot[vertex_index];
             u16 packed_color;
 
             if (lit != FALSE)
             {
+                if ((light_direction_valid_mask & (1u << source_root)) == 0u)
+                {
+                    ndsRendererHardwarePrepareLitDirection(
+                        stats, &sNdsRendererEntryEffectModelview[source_root],
+                        &light_direction_by_root[source_root]);
+                    light_direction_valid_mask |= 1u << source_root;
+                }
                 /* r,g,b hold the source normal; shade it against the seeded
-                 * battle light the way the native fighter owner does. */
+                 * battle light under the matrix that was live when the RSP
+                 * cache slot was loaded, not necessarily this DObj's matrix. */
                 packed_color = ndsRendererHardwarePackedResolvedColor(
                     ndsRendererHardwareLitShadeColorPrepared(
-                        stats, vtx, &light_direction),
+                        stats, vtx, &light_direction_by_root[source_root]),
                     material_color, use_material_color, 0u);
             }
             else
@@ -27218,10 +27340,32 @@ s32 ndsRendererSubmitNativeEntryEffect(
                  * DS t16 coordinate in the generator. */
                 glTexCoord2t16((t16)vtx->s, (t16)vtx->t);
             }
-            glVertex3v16(
-                ndsRendererHardwareVertexCoord(vtx->x, TRUE),
-                ndsRendererHardwareVertexCoord(vtx->y, TRUE),
-                ndsRendererHardwareVertexCoord(vtx->z, TRUE));
+            if (projected_group != FALSE)
+            {
+                NDSRendererClipVertex20p12 clip;
+
+                ndsRendererTransformVertex20p12(
+                    &sNdsRendererEntryEffectComposed[source_root], vtx, &clip);
+                stats->matrix_transform_count++;
+                stats->transformed_vertex_count++;
+                ndsRendererHardwareClipVertex(
+                    &clip, clip.z
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+                    , NULL
+#endif
+                    );
+            }
+            else
+            {
+                glVertex3v16(
+                    ndsRendererHardwareVertexCoord(vtx->x, TRUE),
+                    ndsRendererHardwareVertexCoord(vtx->y, TRUE),
+                    ndsRendererHardwareVertexCoord(vtx->z, TRUE));
+            }
+        }
+        if (projected_group != FALSE)
+        {
+            ndsRendererHardwareEnterProjectedForeground();
         }
 #if NDS_ENTRY_EFFECT_DIAG
         {
@@ -27256,13 +27400,19 @@ s32 ndsRendererSubmitNativeEntryEffect(
          * depth census coherent with hardware_triangle_count; omitting this
          * made a working pipe/Arwing look like thousands of unclassified stage
          * triangles to the exact realtime verifier. */
-        stats->hardware_zbuffer_triangle_count += group->triangle_count;
+        if (projected_group != FALSE)
+        {
+            stats->hardware_projected_depth_triangle_count +=
+                group->triangle_count;
+        }
+        else
+        {
+            stats->hardware_zbuffer_triangle_count += group->triangle_count;
+        }
         ndsRendererHardwareEndBatch();
     }
     gNdsEntryEffectNativeDrawCount++;
     {
-        u32 root_index = (u32)(root - &sNdsEntryEffectRoots[0]);
-
         if (root_index < NDS_ENTRY_EFFECT_ROOT_COUNT)
         {
             gNdsEntryEffectNativeRootDraws[root_index]++;
@@ -27304,10 +27454,16 @@ s32 ndsRendererHardwarePrepareEntryEffectTextures(void)
             {
                 return FALSE;
             }
-            prepared = ndsRendererHardwarePrepareIFCommonPal16Atlas(
-                texture->width, texture->height, texture->palette,
+            /* Unlike IFCommon's PAL16 atlases, an entry texture does not
+             * necessarily reserve index 0 for transparency. Mario's pipe uses
+             * index 0 as opaque green in both CI4 images; forcing COLOR0 there
+             * removes whole texel rows from otherwise valid polygons. */
+            prepared = ndsRendererHardwarePrepareIFCommonAtlas(
+                texture->width, texture->height, GL_RGB16,
+                texture->palette, 16u,
                 ndsRendererEntryEffectTextureFill, (void *)texture,
-                &sNdsRendererEntryEffectTextureName[i]);
+                &sNdsRendererEntryEffectTextureName[i],
+                texture->color0_transparent);
         }
         else if (texture->ds_format == NDS_ENTRY_EFFECT_TEXTURE_A5I3)
         {
@@ -30059,11 +30215,13 @@ void ndsRendererFighterPacketDmaWait(void)
     ndsFighterPacketDmaWait();
 }
 
-void ndsRendererFighterPacketRelease(void)
+void ndsRendererFighterPacketInvalidateAll(void)
 {
-    u16 *arena = &gSYFramebufferSets[0][0][0];
     u32 i;
 
+    /* A preview/costume rebuild happens on the update side, normally between
+     * draws, but wait anyway: the borrowed arena must not be considered free
+     * for a new recording while DMA0 can still be consuming an old stream. */
     ndsFighterPacketDmaWait();
     sNdsFighterPacketRecording = 0u;
     sNdsFighterPacketRecorder.packet = NULL;
@@ -30071,6 +30229,30 @@ void ndsRendererFighterPacketRelease(void)
     {
         sNdsFighterPackets[i].valid = 0u;
     }
+}
+
+void ndsRendererFighterPacketInvalidateSlot(u32 slot)
+{
+    if (slot >= NDS_FIGHTER_PACKET_SLOTS)
+    {
+        ndsRendererFighterPacketInvalidateAll();
+        return;
+    }
+    /* Player-select rebuilds happen on the update side, between draws.  Still
+     * honor the packet arena's DMA lifetime before making one region reusable;
+     * a future caller reaching this seam earlier must not race DMA0. */
+    ndsFighterPacketDmaWait();
+    sNdsFighterPacketRecording = 0u;
+    sNdsFighterPacketRecorder.packet = NULL;
+    sNdsFighterPackets[slot].valid = 0u;
+}
+
+void ndsRendererFighterPacketRelease(void)
+{
+    u16 *arena = &gSYFramebufferSets[0][0][0];
+    u32 i;
+
+    ndsRendererFighterPacketInvalidateAll();
     /* scmanager.c's boot clear, GPACK_RGBA5551(0, 0, 0, 1), over the words
      * the packets borrowed, so the Results photo wipe reads what it always
      * read. */
@@ -30082,6 +30264,15 @@ void ndsRendererFighterPacketRelease(void)
 #else
 void ndsRendererFighterPacketDmaWait(void)
 {
+}
+
+void ndsRendererFighterPacketInvalidateAll(void)
+{
+}
+
+void ndsRendererFighterPacketInvalidateSlot(u32 slot)
+{
+    (void)slot;
 }
 
 void ndsRendererFighterPacketRelease(void)

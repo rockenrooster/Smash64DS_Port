@@ -317,7 +317,7 @@ static u8 sNdsRendererAdapterNativeOwnerMaterialRows[
  * the key identities at that authoritative lifetime seam instead of adding a
  * generation compare to every material on every gameplay frame. This also
  * reclaims rows owned by DObjs from a fighter that the CSS just destroyed. */
-void ndsFighterRendererInvalidateMaterialCaches(void)
+static void ndsFighterRendererInvalidateMaterialRows(void)
 {
     u32 row;
 
@@ -335,6 +335,23 @@ void ndsFighterRendererInvalidateMaterialCaches(void)
     }
     sNdsRendererAdapterMaterialRowGeneration = gNdsTaskmanHeapGeneration;
     sNdsRendererAdapterMaterialRowClaimMask = 0u;
+}
+
+void ndsFighterRendererInvalidateMaterialCaches(void)
+{
+    /* Unknown/global lifetime seam: preserve the conservative contract. */
+    ndsRendererFighterPacketInvalidateAll();
+    ndsFighterRendererInvalidateMaterialRows();
+}
+
+void ndsFighterRendererInvalidateMaterialCachesForSlot(u32 slot)
+{
+    /* Material rows remain global because source free-list reuse can move an
+     * MObj address between fighters.  The recorded GX stream cannot: packets
+     * are keyed by source player slot, so only the fighter whose DObj/MObj graph
+     * was replaced needs to re-record. Invalid slots fail safe in the renderer. */
+    ndsRendererFighterPacketInvalidateSlot(slot);
+    ndsFighterRendererInvalidateMaterialRows();
 }
 static NDSRendererMatrix20p12
     sNdsRendererAdapterNativeOwnerProjection;
@@ -11937,12 +11954,25 @@ static void ndsRendererAdapterSubmitStageDObjTreeDepth(
         gNdsEffectPhaseNodeCount++;
     }
 #endif
-    ndsRendererAdapterSubmitStageDObjNode(dobj, kind, camera_gobj,
-                                          initial_geometry_mode);
-    if (dobj->child != NULL)
+    /* BattleShip gcDrawDObjTree makes HIDDEN a subtree visibility flag: the
+     * node's own draw AND its child walk live inside the same !HIDDEN block.
+     * The sibling walk is outside that block, so a hidden node must not hide
+     * its siblings.  The port used to submit the node through the drawable
+     * gate but recurse into its child unconditionally; Mario's pipe exposes
+     * that at source frame 100, when the rim becomes HIDDEN for the final 20
+     * frames but its barrel child was still emitted as a flat gray/white slab.
+     * Keep NOTEXTURE behavior unchanged: it suppresses only this node's DL,
+     * not descendants. */
+    if ((dobj->flags & DOBJ_FLAG_HIDDEN) == 0u)
     {
-        ndsRendererAdapterSubmitStageDObjTreeDepth(
-            dobj->child, kind, camera_gobj, initial_geometry_mode, depth + 1u);
+        ndsRendererAdapterSubmitStageDObjNode(dobj, kind, camera_gobj,
+                                              initial_geometry_mode);
+        if (dobj->child != NULL)
+        {
+            ndsRendererAdapterSubmitStageDObjTreeDepth(
+                dobj->child, kind, camera_gobj, initial_geometry_mode,
+                depth + 1u);
+        }
     }
     if (dobj->sib_prev == NULL)
     {
