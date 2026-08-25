@@ -270,9 +270,21 @@ try {
         & make -C $root TARGET=smash64ds BUILD=build NDS_DEV_SCENE_HARNESS=normal NDS_HARNESS_FAST_LOGIC=0 -B
         if ($LASTEXITCODE -ne 0) { exit (Get-Smash64DSFailureExitCode -Code $LASTEXITCODE) }
     }
-    $expectedVerifiers = 6 + $plan.Count + $(if ($SkipRegistryCheck) { 0 } else { 1 })
+    $expectedVerifiers = 7 + $plan.Count + $(if ($SkipRegistryCheck) { 0 } else { 1 })
     Invoke-VerifyScript `
         -Script (Join-Path $PSScriptRoot 'check-gbi-decode-fixtures.ps1') `
+        -Arguments @()
+    # P2-3f5, closing the one-liner row P2-3f1 left open. This checker owns the
+    # `HANDOFF.md` 200-line cap, the `docs/README.md` index, the board's
+    # standing-rules/publish-law tokens and the published-ROM SHA-256 line --
+    # and it was invoked by NOTHING, in no profile, hand-run only. It had
+    # already been dead once for exactly that reason: it required two P1-era
+    # planning surfaces that the P2 restructure archived, so it threw on its
+    # first loop and every assertion below that point was unreachable until
+    # P2-1M noticed. An unrun green checker becomes an unrun red one; the fix
+    # is to run it, not to remember it. Static, sub-second, no ROM.
+    Invoke-VerifyScript `
+        -Script (Join-Path $PSScriptRoot 'check-docs.ps1') `
         -Arguments @()
     # Both of these were RED and in NO profile, which is exactly how they stayed
     # red -- one since 2026-08-22, one for months (board rows P2-3r10, P2-3r14
