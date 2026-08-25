@@ -3937,11 +3937,21 @@ u32 gNdsR2GxComposeDeclines;
 /* One palette slot per binding that is some other binding's baked parent, so the
  * backend can RESTORE it instead of the adapter composing into it. A binding that
  * already owns a cross-run slot reuses it -- the root loop stores there anyway --
- * and the rest are allocated DOWNWARD from 30. Downward on purpose: the cross-run
- * range is 16..23, and MTX_STORE/MTX_RESTORE address ABSOLUTE stack levels while
- * glPushMatrix writes whatever level the stack pointer is at, so the low levels
- * belong to anyone who pushes inside the execute (ndsRendererR2WriteLightVector
- * does, once). Mario needs one new slot and Fox eleven. */
+ * and the rest are allocated DOWNWARD from 30. Downward on purpose:
+ * MTX_STORE/MTX_RESTORE address ABSOLUTE stack levels while glPushMatrix writes
+ * whatever level the stack pointer is at, so the low levels belong to anyone who
+ * pushes inside the execute (ndsRendererR2WriteLightVector does, once). Mario
+ * needs one new slot and Fox eleven.
+ *
+ * THE CROSS-RUN RANGE IS 16..25, not the 16..23 this comment claimed until
+ * 2026-08-25: Donkey's generated table reaches slot 25 (P2-3r17 read it off
+ * `decode_joint_topology`, and the loop below takes the real union rather than
+ * a constant, so the code was right while the comment was two owners stale).
+ * That leaves exactly FIVE free levels above the reserved band -- 26..30 -- and
+ * this loop then skips down past the band to 15 and below. Donkey alone needs
+ * ten parent slots, so the next owner is already allocating underneath the
+ * cross-run range; keep an eye on how far down that reaches against the levels
+ * a push can occupy. */
 static u8 sNdsR2GxSlotTable[
     NDS_RENDERER_NATIVE_FIGHTER_OWNER_COUNT]
     [NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED];
