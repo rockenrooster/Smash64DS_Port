@@ -120,6 +120,39 @@ $fixtures = @(
         )
         Audio = [int[]]@(370, 289, 360, 375, 374, 372, 373, 0)
         Heavy = [int[]]@(0x2B7, 0)
+    },
+    # P2-3f12.  Three landed fighters had no fixture here, and Luigi had no
+    # normalizer arm at all -- his six mixed-u16 words shipped lane-reversed
+    # from the day he landed.  Nothing compared his loaded attributes against
+    # the source, so nothing said.  Note two source facts a per-fighter guess
+    # would have got wrong: Luigi's dead-slam is MARIO's (292), and Captain's
+    # smash triple is { Smash3, Smash2, JumpAerial }, not Smash1..3.
+    @{
+        Name = 'LuigiMain'
+        Prefix = [byte[]]@(
+            0x01, 0xAB, 0x01, 0x24, 0x01, 0xA4, 0x01, 0xA6,
+            0x01, 0xA0, 0x01, 0xA1, 0x01, 0xA2, 0x00, 0x00
+        )
+        Audio = [int[]]@(427, 292, 420, 422, 416, 417, 418, 0)
+        Heavy = [int[]]@(426, 0)
+    },
+    @{
+        Name = 'DonkeyMain'
+        Prefix = [byte[]]@(
+            0x01, 0x50, 0x01, 0x1F, 0x01, 0x4A, 0x01, 0x4C,
+            0x01, 0x46, 0x01, 0x47, 0x01, 0x48, 0x00, 0x00
+        )
+        Audio = [int[]]@(336, 287, 330, 332, 326, 327, 328, 0)
+        Heavy = [int[]]@(334, 0)
+    },
+    @{
+        Name = 'CaptainMain'
+        Prefix = [byte[]]@(
+            0x01, 0x63, 0x01, 0x20, 0x01, 0x5D, 0x01, 0x5F,
+            0x01, 0x55, 0x01, 0x54, 0x01, 0x61, 0x00, 0x00
+        )
+        Audio = [int[]]@(355, 288, 349, 351, 341, 340, 353, 0)
+        Heavy = [int[]]@(354, 0)
     }
 )
 
@@ -157,7 +190,10 @@ $ftDataText = Get-Content -LiteralPath (
     Join-Path $BattleShipRoot 'src/ft/ftdata.c') -Raw
 foreach ($sourceOffset in @(
         @{ Fighter = 'Mario'; Offset = '0x00000428' },
-        @{ Fighter = 'Fox'; Offset = '0x0000046C' }
+        @{ Fighter = 'Fox'; Offset = '0x0000046C' },
+        @{ Fighter = 'Luigi'; Offset = '0x00000580' },
+        @{ Fighter = 'Donkey'; Offset = '0x000004A4' },
+        @{ Fighter = 'Captain'; Offset = '0x00000488' }
     )) {
     $dataBlock = [regex]::Match(
         $ftDataText,
@@ -373,6 +409,9 @@ if ($repairCount -ne 6) {
 foreach ($required in @(
         'NDS_RELOC_SYMBOL_MARIO_MAIN_ATTRIBUTES 0x428u',
         'NDS_RELOC_SYMBOL_FOX_MAIN_ATTRIBUTES 0x46cu',
+        'NDS_RELOC_SYMBOL_LUIGI_MAIN_ATTRIBUTES 0x580u',
+        'NDS_RELOC_SYMBOL_DONKEY_MAIN_ATTRIBUTES 0x4a4u',
+        'NDS_RELOC_SYMBOL_CAPTAIN_MAIN_ATTRIBUTES 0x488u',
         'offsetof(FTAttributes, dead_fgm_ids)',
         'offsetof(FTAttributes, deadup_sfx)',
         'offsetof(FTAttributes, smash_sfx)',
@@ -480,7 +519,7 @@ if ($LASTEXITCODE -ne 0) {
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Output (
-    'Audio runtime fixtures passed: 2 source FTAttributes blocks, 6 audited ' +
+    'Audio runtime fixtures passed: 5 source FTAttributes blocks, 6 audited ' +
     'mixed-u16 words each, Mario/Fox motion callsites and all 56 resident ' +
     'battle cues plus the random smash tables/dispatch, ' +
     'exact Mario/Fox down-bounce mapping and ' +

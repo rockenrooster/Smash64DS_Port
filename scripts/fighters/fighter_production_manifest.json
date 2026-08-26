@@ -27,6 +27,7 @@
       "fighter": "Mario",
       "ftdata_symbol": "dFTMarioData",
       "motion_symbol": "dFTMarioMotionDescs",
+      "attributes_offset": 1064,
       "core": [
         {
           "slot": "main",
@@ -6187,6 +6188,7 @@
       "fighter": "Fox",
       "ftdata_symbol": "dFTFoxData",
       "motion_symbol": "dFTFoxMotionDescs",
+      "attributes_offset": 1132,
       "core": [
         {
           "slot": "main",
@@ -13247,6 +13249,7 @@
       "fighter": "Luigi",
       "ftdata_symbol": "dFTLuigiData",
       "motion_symbol": "dFTLuigiMotionDescs",
+      "attributes_offset": 1408,
       "core": [
         {
           "slot": "main",
@@ -17739,6 +17742,7 @@
       "fighter": "Donkey",
       "ftdata_symbol": "dFTDonkeyData",
       "motion_symbol": "dFTDonkeyMotionDescs",
+      "attributes_offset": 1188,
       "core": [
         {
           "slot": "main",
@@ -24937,6 +24941,7 @@
       "fighter": "Captain",
       "ftdata_symbol": "dFTCaptainData",
       "motion_symbol": "dFTCaptainMotionDescs",
+      "attributes_offset": 1160,
       "core": [
         {
           "slot": "main",

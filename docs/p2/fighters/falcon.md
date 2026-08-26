@@ -523,15 +523,20 @@ match. Re-read it on Results / Sudden Death / pause zoom, then cut.
 5. **The remaining eight fighters each need `ftCommonAttack13Proc{Update,
    Interrupt}` aliases** (P2-3f5's finding) and their own
    `ndsRelocNormalizeFighterAttributesFile` arm (this row's finding 1).
-6. **LUIGI HAS NO `FTAttributes` NORMALIZER ARM AND HE SHIPS.** Mario, Fox,
-   Donkey and now Captain each have one; `NDS_RELOC_SYMBOL_LUIGI_MAIN_
-   ATTRIBUTES` does not exist, so `LuigiMain`'s six mixed-u16 words keep the
-   N64 lane order and his dead/damage/smash/heavy-get FGM ids and item-throw
-   scales are byte-swapped pairs. Not fixed here on purpose: it is a Luigi
-   defect, it wants its own row and its own before/after read of those six
-   fields, and folding it into a Captain landing would make both harder to
-   attribute. **Do read it before the next audio row** -- a wrong `smash_sfx`
-   would look like a missing pack entry.
+6. **LUIGI HAS NO `FTAttributes` NORMALIZER ARM AND HE SHIPS — CLOSED by board
+   row P2-3f12 (2026-08-25).** His offset is **0x580** and his arm is landed
+   and verified on the linked ELF. It was **latent**: none of his gameplay
+   voices is packed, so nothing audible changed — but `smash_sfx[2]` read **0**,
+   so one smash-voice roll in three requested FGM id 0 and put a phantom in the
+   miss ring, which is the false signal this note warned the audio row about.
+   Two source facts a copy would have got wrong: Luigi's dead-slam is MARIO's
+   (292), and his smash triple IS Smash1..3 while Falcon's is not. Full
+   before/after in `docs/p2/fighters/luigi.md`. **The recurrence is fixed too:**
+   `generate_fighter_production_manifest.py` now derives every landed fighter's
+   attributes offset from `ftdata.c` field 24 and fails if
+   `reloc_backend_assets.c` has no matching define and no arm — and that
+   generator runs inside `check-fighter-production-manifest.ps1`, i.e. in every
+   `verify-all` profile.
 
 ### Open questions
 

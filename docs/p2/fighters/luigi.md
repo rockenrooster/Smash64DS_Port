@@ -61,6 +61,49 @@ Own model/textures (not a palette of Mario), own voice bank, announcer
 "Luigi!", 4 costumes, CSS portrait/icon. Item-hold anim set baked per P2-3
 pipeline rule.
 
+### `FTAttributes` normalizer — landed 2026-08-25 (row P2-3f12)
+
+He shipped without one from the day he landed. His `FTAttributes` sits at
+**0x580** — `ftdata.c`'s `FTData dFTLuigiData` field 24, the same field that
+gives Mario 0x428 and Fox 0x46c, and `221_LuigiMain.c` agrees twice over. The
+O2R payload is big-endian and the loader's blanket u32 byte swap reverses the
+two u16 lanes inside the six mixed-width attribute words, so with no arm in
+`ndsRelocNormalizeFighterAttributesFile` he loaded:
+
+| lane | shipped (no arm) | source |
+|---|---|---|
+| `dead_fgm_ids[0..1]` | 292, 427 | **427** (`LuigiDead`), **292** (`MarioDeadSlam`) |
+| `deadup_sfx` / `damage_sfx` | 422, 420 | **420**, **422** |
+| `smash_sfx[0..2]` | 417, 416, **0** | **416, 417, 418** |
+| `itemthrow_vel/damage_scale` | 100, 100 | 100, 100 (identity) |
+| `heavyget_sfx` | **0** | **426** |
+
+**"Copy Mario's arm" would have been wrong on nine of the ten values, and
+"substitute Luigi for Mario in the names" would have been wrong on one more:
+his dead-slam is MARIO's `nSYAudioFGMMarioDeadSlam` (292), not a Luigi id.**
+His smash triple *is* the ordinary Smash1..3, unlike Captain Falcon's
+`{Smash3, Smash2, JumpAerial}` — which is exactly why neither fighter's arm can
+be derived from the other's shape.
+
+**What it was costing: nothing audible, and one phantom.** Luigi has exactly
+two cues in the FGM pack (`nSYAudioVoiceAnnounceLuigi`,
+`nSYAudioVoiceLuigiFuraFura`), so 416/417/418/420/422/426/427 all fail closed
+whichever lane they land in. His KO sounds the same either way — both
+`dead_fgm_ids` are queued unconditionally and only 292 is packed. The one
+observable difference is `smash_sfx[2] == 0`: one smash-voice roll in three
+asked the FGM backend for **id 0**, which is not a source cue at all, and it
+entered the miss ring as a phantom — precisely the false "missing pack entry"
+signal the next audio row would have had to explain. `heavyget_sfx == 0` is
+latent the same way and worse: 0 passes the source's `!= nSYAudioFGMVoiceEnd`
+guard, so once `it/itmain.c` lands a heavy pickup would request id 0 instead
+of skipping.
+
+Lanes measured from the staged NitroFS payload with Mario/Donkey/Captain as
+landed-arm controls, ordinals independently re-derived by compiling
+`gm/gmsound.h` with `-DREGION_US`, readers and the landed arm both verified on
+the linked ELF:
+`artifacts/verification/2026-08-25_p2-3f/luigi-ftattributes-lanes.txt`.
+
 ## DS notes / risks
 
 - The pipeline must express "same state machine, divergent data + a few

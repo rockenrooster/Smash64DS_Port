@@ -644,6 +644,11 @@ def build_fighter_manifest(
         "fighter": fighter,
         "ftdata_symbol": f"dFT{fighter}Data",
         "motion_symbol": f"dFT{fighter}MotionDescs",
+        # FTData field 24 is the fighter's FTAttributes offset inside its Main
+        # file.  It is the only source for the port's
+        # NDS_RELOC_SYMBOL_<F>_MAIN_ATTRIBUTES, and the input to the mixed-u16
+        # lane normalizer guarded below.
+        "attributes_offset": int(data_values[24], 0),
         "core": core,
         "core_extern_closure": [asset_summary(i, by_id) for i in core_closure],
         "local_animation_aliases": local_aliases,
@@ -694,6 +699,48 @@ def verify_mariofox_makefile(
     }
 
 
+def verify_attributes_normalizer_coverage(
+    repo_root: Path, fighters: list[dict[str, object]]
+) -> None:
+    """Every landed fighter needs an FTAttributes mixed-u16 normalizer arm.
+
+    The O2R payload is big-endian, and the loader's blanket u32 byte swap
+    reverses the two u16 lanes inside the six FTAttributes words that hold
+    dead/deadup/damage/smash/item-throw/heavy-get FGM ids.  A fighter with no
+    arm in `ndsRelocNormalizeFighterAttributesFile` keeps the reversed lanes:
+    his damage voice is his star-KO voice, one of his three smash-voice slots
+    is FGM id 0, and his heavy-get id is 0 too.
+
+    Luigi shipped for weeks without one, found only as a side effect of
+    Captain Falcon's landing (board row P2-3f8).  Nothing checked, so nothing
+    said.  This is the check.
+    """
+    backend = (repo_root / "src/port/reloc_backend_assets.c").read_text(
+        encoding="utf-8"
+    )
+    missing: list[str] = []
+    for row in fighters:
+        name = str(row["fighter"])
+        upper = name.upper()
+        offset = int(row["attributes_offset"])
+        define = f"#define NDS_RELOC_SYMBOL_{upper}_MAIN_ATTRIBUTES 0x{offset:x}u"
+        if define not in backend:
+            missing.append(
+                f"{name}: reloc_backend_assets.c is missing `{define}` "
+                f"(ftdata.c FTData field 24 = 0x{offset:x})"
+            )
+        if f"NDS_RELOC_ASSET_{upper}_MAIN" not in backend:
+            missing.append(
+                f"{name}: reloc_backend_assets.c names no "
+                f"NDS_RELOC_ASSET_{upper}_MAIN, so "
+                "ndsRelocNormalizeFighterAttributesFile cannot reach him"
+            )
+    if missing:
+        raise ValueError(
+            "FTAttributes normalizer coverage gap:\n  " + "\n  ".join(missing)
+        )
+
+
 def build_manifest(repo_root: Path) -> dict[str, object]:
     ftdata_path = repo_root / "decomp/BattleShip-main/decomp/src/ft/ftdata.c"
     symbols_path = repo_root / "decomp/BattleShip-main/tools/reloc_data_symbols.us.txt"
@@ -733,6 +780,8 @@ def build_manifest(repo_root: Path) -> dict[str, object]:
         raise ValueError("Donkey local animation census changed from the source 153")
     if not all(row["was_stubbed_in_port"] for row in donkey["local_animation_aliases"]):
         raise ValueError("Donkey bootstrap expected all 153 local aliases to be unresolved")
+
+    verify_attributes_normalizer_coverage(repo_root, fighters)
 
     # Native model admission is sourced from the same O2R display-list decoder
     # that produced Mario/Fox's shipping AOT owner.  Keep this attached to the

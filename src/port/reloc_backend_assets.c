@@ -355,6 +355,14 @@ _Static_assert(NDS_RELOC_ASSET_FOX_ANIM_LAST == NDS_K0_FOX_ANIM_LAST,
 #define NDS_RELOC_SYMBOL_GR_INISHIE_MAP_HEADER 0x14u
 #define NDS_RELOC_SYMBOL_MARIO_MAIN_ATTRIBUTES 0x428u
 #define NDS_RELOC_SYMBOL_FOX_MAIN_ATTRIBUTES 0x46cu
+#if NDS_P2_LUIGI
+/* ftdata.c `FTData dFTLuigiData` field 24 is 0x00000580 -- the same field that
+ * gives Mario 0x428 and Fox 0x46c -- and 221_LuigiMain.c agrees twice over
+ * ("Pre-attributes data (352 words, 0x0580 bytes)", and its last pre-attribute
+ * block is `@ 0x0574, 12 bytes` = 0x580). */
+#define NDS_RELOC_SYMBOL_LUIGI_MAIN_ATTRIBUTES 0x580u
+#define NDS_RELOC_ASSET_LUIGI_MAIN 0xddu
+#endif
 #if NDS_P2_DONKEY
 #define NDS_RELOC_SYMBOL_DONKEY_MAIN_ATTRIBUTES 0x4a4u
 #define NDS_RELOC_ASSET_DONKEY_MAIN 0xd5u
@@ -3981,6 +3989,31 @@ static s32 ndsRelocFighterAttributesMatchSource(
             (attr->itemthrow_damage_scale == 0x64u) &&
             (attr->heavyget_sfx == nSYAudioFGMVoiceEnd);
     }
+#if NDS_P2_LUIGI
+    if (asset_id == NDS_RELOC_ASSET_LUIGI_MAIN)
+    {
+        /* 221_LuigiMain.c:331-338, ordinals from gmsound.h's REGION_US arm
+         * (`nSYAudioVoiceLuigiDead` 427, DeadUp 420, Damage 422,
+         * Smash1..3 416/417/418, HeavyGet 426).  Numeric for the same reason
+         * Donkey's and Captain's are.
+         *
+         * NOTE Luigi's dead-slam is MARIO's -- the source spells
+         * dead_fgm_ids[1] `nSYAudioFGMMarioDeadSlam` (292), not a Luigi id, so
+         * a fighter-name substitution would have been wrong here even though
+         * his smash triple IS the ordinary Smash1..3 that Captain's is not. */
+        return
+            (attr->dead_fgm_ids[0] == 427u) &&
+            (attr->dead_fgm_ids[1] == (u16)nSYAudioFGMMarioDeadSlam) &&
+            (attr->deadup_sfx == 420u) &&
+            (attr->damage_sfx == 422u) &&
+            (attr->smash_sfx[0] == 416u) &&
+            (attr->smash_sfx[1] == 417u) &&
+            (attr->smash_sfx[2] == 418u) &&
+            (attr->itemthrow_vel_scale == 0x64u) &&
+            (attr->itemthrow_damage_scale == 0x64u) &&
+            (attr->heavyget_sfx == 426u);
+    }
+#endif
 #if NDS_P2_DONKEY
     if (asset_id == NDS_RELOC_ASSET_DONKEY_MAIN)
     {
@@ -4050,6 +4083,12 @@ static s32 ndsRelocNormalizeFighterAttributesFile(
     {
         attr_offset = NDS_RELOC_SYMBOL_FOX_MAIN_ATTRIBUTES;
     }
+#if NDS_P2_LUIGI
+    else if (loaded->asset_id == NDS_RELOC_ASSET_LUIGI_MAIN)
+    {
+        attr_offset = NDS_RELOC_SYMBOL_LUIGI_MAIN_ATTRIBUTES;
+    }
+#endif
 #if NDS_P2_DONKEY
     else if (loaded->asset_id == NDS_RELOC_ASSET_DONKEY_MAIN)
     {
