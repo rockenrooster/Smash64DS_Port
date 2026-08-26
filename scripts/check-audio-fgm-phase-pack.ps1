@@ -109,7 +109,11 @@ $expectedIDs = @(626,470,469,467,490,74,363,364,372,373,374,430,439,292,
     # scripts name was failing closed -- which is why P2-3f12's normalizer
     # repair was latent. 425 Lets and 428 HereWe are source-marked unused and
     # packed anyway so the bank never has to be reopened.
-    416, 417, 418, 419, 420, 422, 423, 424, 425, 426, 427, 428, 608)
+    416, 417, 418, 419, 420, 422, 423, 424, 425, 426, 427, 428, 608,
+    # P2-3f16 fighter entry audio: Mario/Luigi's shared pipe, Fox's Arwing and
+    # DK's shared container-smash cue. These are the exact source motion-script
+    # calls, and all three render their full multi-note programs AOT.
+    214, 191, 59)
 $actualIDs = @($metadata.entries | ForEach-Object { [int]$_.id })
 if (($actualIDs -join ',') -ne ($expectedIDs -join ',')) {
     throw "Unexpected FGM mapping: $($actualIDs -join ',')"
@@ -184,7 +188,10 @@ if (([int]$metadata.format_version -ne 4) -or
     # +181,800 bytes of ROM. Largest is 420 DeadUp at 32,664 B, inside the
     # 53,248-byte slot; nothing here needs runtime_note_replay and nothing is
     # refused. Runtime cache stays 204800.
-    ([int64]$metadata.resident_bytes -ne 1733284) -or
+    # 1733284 -> 1770008 on 2026-08-26 (P2-3f16) for the three entry cues:
+    # 214 MarioDokan, 191 FoxAppearArwing and 59 ContainerSmash, 178 -> 181
+    # entries, +36,724 bytes of ROM. Runtime cache stays 204800.
+    ([int64]$metadata.resident_bytes -ne 1770008) -or
     ([int64]$metadata.resident_limit_bytes -ne 204800) -or
     # ROM, not RAM: the runtime streams cues into resident_limit_bytes and never
     # holds the pack. 512 KiB blocked the five announcer lines and 768 KiB then
@@ -218,8 +225,9 @@ if (([int]$metadata.format_version -ne 4) -or
     # -> 0xfb3507c6 on 2026-08-25 (P2-3f14) for Donkey Kong's twelve FGM
     # selectors;
     # -> 0x7b3a0107 on 2026-08-25 (P2-3f15) for Luigi's thirteen -- same
-    # reason, the selector table changed.
-    ($metadata.mapping_sha256_lo -ne '0x7b3a0107') -or
+    # reason, the selector table changed;
+    # -> 0xeb6ba1dc on 2026-08-26 (P2-3f16) for the three source entry cues.
+    ($metadata.mapping_sha256_lo -ne '0xeb6ba1dc') -or
     # Repinned 2026-08-02: FGM 11 (the rolling dodge) dropped 127 -> 96 -> 68 ->
     # 48 on the owner's ear via FGM_OWNER_VOLUME_TRIM, -8.4 dB total against the
     # source; the 68 pin was
@@ -264,8 +272,10 @@ if (([int]$metadata.format_version -ne 4) -or
     # bd26c263c895617ccc0c7995d92f2748f2a0d877465369863d9478fc691bb393.
     # Luigi's thirteen move it once more (P2-3f15); the 165-entry pin was
     # 113da5fb91c83ff3b6f4bd4b63f840485ad08185f3967f120c320d9b175377f0.
+    # The three P2-3f16 entry cues move it again; the 178-entry pin was
+    # 5299db705baa652b4fa7d0ee35bd0d18a0bdecb36a35507bd30b35d0cb23353c.
     ($metadata.pack_sha256 -ne
-        '5299db705baa652b4fa7d0ee35bd0d18a0bdecb36a35507bd30b35d0cb23353c')) {
+        '87c0c17bb1a89f2353153e88c188336ba182d5c05a39e2bff5b16e9533e19994')) {
     throw 'FGM pack format, budget, mapping, or binary identity changed.'
 }
 if ((@($metadata.excluded_entries).Count -ne 0) -or

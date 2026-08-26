@@ -498,6 +498,14 @@ static s32 ndsAudioFgmIDIsIncluded(u16 id)
     case nSYAudioVoiceLuigiDead:
     case nSYAudioVoiceLuigiHereWe:
     case nSYAudioVoicePublicLuigi:
+    /* P2-3f16 fighter entry audio. These are not inferred conveniences: the
+     * source entry motion scripts play 214 for Mario/Luigi's pipe, 191 for
+     * Fox's Arwing, and 59 beside DK's BoxSmash effect. The pack generator
+     * bakes each multi-note schedule AOT so the source timing survives the DS
+     * one-shot backend, including 214's two explicit rest spans. */
+    case nSYAudioFGMMarioDokan:
+    case nSYAudioFGMFoxAppearArwing:
+    case nSYAudioFGMContainerSmash:
         return TRUE;
     default:
         return FALSE;

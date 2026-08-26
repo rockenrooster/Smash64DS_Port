@@ -273,6 +273,10 @@ FULL_COVERAGE_IDS = (
     # and every gameplay voice failing closed. Appended so every prior entry
     # keeps its pack order.
     416, 417, 418, 419, 420, 422, 423, 424, 425, 426, 427, 428, 608,
+    # P2-3f16 fighter entry audio. BattleShip's entry motion scripts request
+    # 214 for both Mario and Luigi's pipe, 191 for Fox's Arwing and 59 for DK's
+    # barrel smash. Appended so all previous pack ordinals remain stable.
+    214, 191, 59,
 )
 FULL_PROGRAM_AOT_IDS = frozenset((
     154, 40, 38, 37, 34, 32, 31,
@@ -312,6 +316,10 @@ FULL_PROGRAM_AOT_IDS = frozenset((
     # schedule with no forks -- the same class 421 FuraFura already joined
     # above, and the same class Falcon's twenty-two are in.
     416, 417, 418, 419, 420, 422, 423, 424, 425, 426, 427, 428,
+    # P2-3f16 entry audio. 214's two pitch-code-0 RESTS are the pipe rhythm;
+    # 191 and 59 are also multi-note schedules. Baking all three preserves the
+    # source sequencer exactly instead of holding the first note for the cue.
+    214, 191, 59,
     18, 365,
     # 153 AltitudeWarn -- the cue the owner picked out BY NAME as "a new SFX I
     # don't recognise". Articulation 150 sweeps pitch 550 -> 2390 cents inside
@@ -5185,6 +5193,106 @@ SELECTED += (
             "2927538536aa7ea8801aeead6e933b4899b90b2dffa7ea8db08bdc5bd04c22c8",
         "articulation_program_sha256":
             "7a0b66d03fdd5839200c6126ed36b860a7a3fd934f6e7cd2144a1dc3f0e2f742",
+    },
+)
+
+
+# P2-3f16 fighter entry audio. The miss-ring census after P2-3f15 exposed the
+# first audible inconsistency in four of the five landed fighters: Falcon's
+# Flyer already sounded, while Mario, Luigi, Fox and DK entered silently.
+# BattleShip names the calls directly in the entry motion programs:
+#   dMarioMainMotion_Appear1 / dLuigiMainMotion_Appear1 -> MarioDokan (214)
+#   dFoxMainMotion_Appear                              -> FoxAppearArwing (191)
+#   dDonkeyMainMotion_Appear1                         -> ContainerSmash (59)
+# 59 is intentionally shared with crate/barrel items; it is still DK's entry
+# cue because the source plays it beside nEFKindBoxSmash during his arrival.
+#
+# Every field below comes from `--derive 214,191,59`. All three are multi-note
+# schedules with no forks and therefore use FULL_PROGRAM_AOT_IDS. 214 contains
+# two pitch-code-0 RESTS; they are real silence in the source pipe rhythm, not
+# a playback-rate note. 214 and 191 also report structural WAVE loops, as do
+# existing Falcon entry cues; no hardware_loop key is added because the UCD
+# note schedule owns the finite extent. The AOT PCM extents are 105/133/160
+# ticks at 184 samples per tick; the encoded IMA bodies measure
+# 9,664 / 12,240 / 14,724 bytes after their codec headers/alignment.
+SELECTED += (
+    {
+        "id": 214,
+        "name": "nSYAudioFGMMarioDokan",
+        "kind": "entry",
+        "articulation": 116,
+        "sound": 49,
+        "notes": ((14, 7, 19), (0, 7, 24), (14, 7, 19), (0, 7, 24),
+                  (14, 7, 19)),
+        "duration_ticks": 105,
+        "ucd_volume": 115,
+        "articulation_pitch_cents": 0,
+        "loop": True,
+        "wave_base": 414960,
+        "wave_length": 2412,
+        "loop_start": 2147,
+        "loop_end": 4267,
+        "expected_retained_samples": 1,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "8455f76a40dc63784012e7897b53173916d19bda6f96e6220cf7facd777f44f9",
+        "render_program_sha256":
+            "8455f76a40dc63784012e7897b53173916d19bda6f96e6220cf7facd777f44f9",
+        "articulation_program_sha256":
+            "04e1fb94c40ade67e9d41802007ab8039ffe982df0426e55c7d49928cb23e720",
+    },
+    {
+        "id": 191,
+        "name": "nSYAudioFGMFoxAppearArwing",
+        "kind": "entry",
+        "articulation": 47,
+        "sound": 3,
+        "notes": ((13, 7, 6), (17, 7, 13), (19, 7, 11), (22, 7, 15),
+                  (24, 7, 20), (21, 7, 20), (19, 7, 11), (17, 7, 7),
+                  (15, 7, 15), (12, 7, 15)),
+        "duration_ticks": 133,
+        "ucd_volume": 255,
+        "articulation_pitch_cents": -1200,
+        "loop": True,
+        "wave_base": 21040,
+        "wave_length": 7516,
+        "loop_start": 48,
+        "loop_end": 13348,
+        "expected_retained_samples": 1,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "1e056f5a026eb571c29ae22be6dc3912cec81a313380cbbb82dd7cd351c04709",
+        "render_program_sha256":
+            "1e056f5a026eb571c29ae22be6dc3912cec81a313380cbbb82dd7cd351c04709",
+        "articulation_program_sha256":
+            "fabc35e7e913b76e43150c47794b97bf25d4a3da17e105167c6e51595e685c9f",
+    },
+    {
+        "id": 59,
+        "name": "nSYAudioFGMContainerSmash",
+        "kind": "entry",
+        "articulation": 449,
+        "sound": 16,
+        "notes": ((25, 7, 2), (21, 7, 2), (18, 7, 2), (4, 7, 2),
+                  (21, 7, 2), (15, 7, 10), (17, 7, 10), (16, 7, 10),
+                  (15, 7, 40), (16, 7, 20), (15, 7, 20), (14, 7, 20),
+                  (13, 7, 20)),
+        "duration_ticks": 160,
+        "ucd_volume": 230,
+        "articulation_pitch_cents": -1200,
+        "loop": False,
+        "wave_base": 165960,
+        "wave_length": 6310,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 1,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "4d46f233953fa0b8c2566f9ffe8873c3dfa835814e8d6de569e26f734a85de6d",
+        "render_program_sha256":
+            "4d46f233953fa0b8c2566f9ffe8873c3dfa835814e8d6de569e26f734a85de6d",
+        "articulation_program_sha256":
+            "e27aeab2aef5e00910b9446f09af075be1054b9a652201bead8399cb9ba2c9cc",
     },
 )
 

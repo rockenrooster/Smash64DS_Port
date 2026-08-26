@@ -51,6 +51,10 @@ typedef enum gmFGMID
     nSYAudioFGMHarisenHit = 51,
     nSYAudioFGMBatHit = 52,
     nSYAudioFGMStarGet = 54,
+    /* P2-3f16 entry cues. 59 is the shared crate/barrel smash used by DK's
+     * source entry; 191 is Fox's Arwing fly-by; 214 is the pipe cue shared by
+     * Mario and Luigi. Values are the BattleShip gmFGMVoiceID ordinals. */
+    nSYAudioFGMContainerSmash = 59,
     nSYAudioFGMFoxLanding = 74,
     nSYAudioFGMMarioLanding = 77,
     nSYAudioFGMNessLanding = 78,
@@ -82,8 +86,10 @@ typedef enum gmFGMID
     nSYAudioFGMFoxSpecialHiFly = 187,
     nSYAudioFGMFoxSpecialLwStart = 189,
     nSYAudioFGMFoxAttackAirLw = 190,
+    nSYAudioFGMFoxAppearArwing = 191,
     nSYAudioFGMKirbyStarPing1 = 200,
     nSYAudioFGMKirbySpecialNLoseCopy = 204,
+    nSYAudioFGMMarioDokan = 214,
     nSYAudioFGMMarioSpecialN = 215,
     nSYAudioFGMMarioSpecialHiCoin = 216,
     nSYAudioFGMMarioSpecialHiJump = 217,
