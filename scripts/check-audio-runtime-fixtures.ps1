@@ -345,8 +345,12 @@ Assert-EqualList -Label 'Mario regular-KO source sequence' `
     -Actual $marioRegularKo -Expected ([int[]]@(439, 292, 154))
 Assert-EqualList -Label 'Fox regular-KO source sequence' `
     -Actual $foxRegularKo -Expected ([int[]]@(370, 289, 154))
+# P2-3f13: 288 CaptainDeadSlam joins the set. It is the third fighter to fork
+# program 287 -- Mario's 292 and Fox's 289 are the other two, one shared slam.
+# Donkey Kong's own slam (287) is still not packed under its own id; his
+# dead_fgm_ids[1] names it and nothing has asked for it yet.
 Assert-EqualList -Label 'Resident regular-KO ID set' -Actual $koIDs `
-    -Expected ([int[]]@(439, 292, 370, 289, 154))
+    -Expected ([int[]]@(439, 292, 370, 289, 154, 288))
 $attackIDs = @($metadata.entries | Where-Object {
         $_.entry_kind -eq 'attack'
     } | ForEach-Object { [int]$_.id })

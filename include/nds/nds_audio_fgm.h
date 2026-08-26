@@ -5,7 +5,7 @@
 #include <sys/audio.h>
 
 #define NDS_AUDIO_FGM_PASS 0x46474d31u /* FGM1 */
-#define NDS_AUDIO_FGM_ENTRY_COUNT 119u
+#define NDS_AUDIO_FGM_ENTRY_COUNT 153u
 #define NDS_AUDIO_FGM_PHASE_COUNT 5u
 #define NDS_AUDIO_FGM_PHASE_COMPLETE_MASK 0x1fu
 #define NDS_AUDIO_FGM_KO_COUNT 5u
@@ -74,8 +74,8 @@
  * crowd chant 603 are now source-backed. DK 324 uses compact timed retriggers
  * of one cached source wave instead of a 112 KiB baked timeline, so the runtime
  * still streams through the unchanged 200 KiB cache and 52 KiB largest slot. */
-#define NDS_AUDIO_FGM_PACK_BYTES 1261628u
-#define NDS_AUDIO_FGM_PACK_MAPPING_SHA256_LO 0x63fcb476u
+#define NDS_AUDIO_FGM_PACK_BYTES 1511844u
+#define NDS_AUDIO_FGM_PACK_MAPPING_SHA256_LO 0x17d8f4ffu
 #define NDS_AUDIO_FGM_CACHE_BYTES 204800u
 #define NDS_AUDIO_FGM_HANDLE_CAPACITY 8u
 #define NDS_AUDIO_FGM_FIDELITY_DEBT_PITCH_AUTOMATION (1u << 2)

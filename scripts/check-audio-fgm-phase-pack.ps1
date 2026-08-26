@@ -85,7 +85,15 @@ $expectedIDs = @(626,470,469,467,490,74,363,364,372,373,374,430,439,292,
     324, 325, 326, 327, 328, 329, 330, 331, 332, 333, 334, 335, 336,
     483, 603,
     # No Contest Results: source announcer at tic 2 and crowd response at tic 71.
-    502, 624)
+    502, 624,
+    # P2-3f13 Captain Falcon's production bank: his ten FGM cues, twenty-two of
+    # his twenty-three voices, his announcer line and his crowd chant. He landed
+    # selectable at P2-3f8 with NOTHING packed. 356 FuraSleep is the one
+    # omission and it is measured: its AOT body is 65,324 bytes against the
+    # 53,248-byte largest runtime cache slot, so it can never be played.
+    73, 106, 117, 180, 181, 182, 183, 184, 288, 299,
+    337, 338, 339, 340, 341, 342, 343, 344, 345, 346, 347, 348, 349, 350,
+    351, 352, 353, 354, 355, 357, 358, 359, 485, 604)
 $actualIDs = @($metadata.entries | ForEach-Object { [int]$_.id })
 if (($actualIDs -join ',') -ne ($expectedIDs -join ',')) {
     throw "Unexpected FGM mapping: $($actualIDs -join ',')"
@@ -147,7 +155,10 @@ if (([int]$metadata.format_version -ne 4) -or
     # source-note replay (18,564-byte wave, two timed retriggers), not its
     # impossible 112 KiB baked timeline. Runtime cache remains 204800.
     # 1201060 -> 1261628 on 2026-08-24 for the two No Contest Results cues.
-    ([int64]$metadata.resident_bytes -ne 1261628) -or
+    # 1261628 -> 1511844 on 2026-08-25 (P2-3f13) for Captain Falcon's bank:
+    # ten FGM cues, twenty-two voices, announcer 485 and crowd chant 604,
+    # 119 -> 153 entries, +250,216 bytes of ROM. Runtime cache stays 204800.
+    ([int64]$metadata.resident_bytes -ne 1511844) -or
     ([int64]$metadata.resident_limit_bytes -ne 204800) -or
     # ROM, not RAM: the runtime streams cues into resident_limit_bytes and never
     # holds the pack. 512 KiB blocked the five announcer lines and 768 KiB then
@@ -175,8 +186,10 @@ if (([int]$metadata.format_version -ne 4) -or
     # 0xf6b94a48 -> 0xdf21d357 -> 0x393e86e8 on 2026-08-21 (P2-3) for
     # Luigi's source announcer 498 and selected-animation voice 421;
     # -> 0x476d5727 on 2026-08-22 for DK's source bank/announcer/crowd set;
-    # -> 0x63fcb476 on 2026-08-24 for the two No Contest Results cues.
-    ($metadata.mapping_sha256_lo -ne '0x63fcb476') -or
+    # -> 0x63fcb476 on 2026-08-24 for the two No Contest Results cues;
+    # -> 0x17d8f4ff on 2026-08-25 (P2-3f13) for Captain Falcon's thirty-four
+    # selectors -- same reason, the selector table changed.
+    ($metadata.mapping_sha256_lo -ne '0x17d8f4ff') -or
     # Repinned 2026-08-02: FGM 11 (the rolling dodge) dropped 127 -> 96 -> 68 ->
     # 48 on the owner's ear via FGM_OWNER_VOLUME_TRIM, -8.4 dB total against the
     # source; the 68 pin was
@@ -213,8 +226,11 @@ if (([int]$metadata.format_version -ne 4) -or
     # DK's complete source voice admission, including compact 324 replay, moves
     # the binary identity again while leaving the resident cache unchanged.
     # No Contest 502/624 move it once more on 2026-08-24.
+    # Captain Falcon's thirty-four cues move it again on 2026-08-25 (P2-3f13);
+    # the 119-entry pin was
+    # 9012a748c88ee15daf3ddc70c6a2dfff60c60fde1f2027d3a2e57fa6f73165b6.
     ($metadata.pack_sha256 -ne
-        '9012a748c88ee15daf3ddc70c6a2dfff60c60fde1f2027d3a2e57fa6f73165b6')) {
+        'bd26c263c895617ccc0c7995d92f2748f2a0d877465369863d9478fc691bb393')) {
     throw 'FGM pack format, budget, mapping, or binary identity changed.'
 }
 if ((@($metadata.excluded_entries).Count -ne 0) -or
@@ -238,12 +254,36 @@ foreach ($entry in $metadata.entries) {
     #
     # Nothing caught it because the pack self-checks against its own derivation
     # and the derivation had the same bug, so the guard has to be an external
-    # bound. A rest at the announcer articulation lands on 7,565; the lowest
-    # legitimately packed rate in this set is 15,102 (FGM 285, 626). 12,000 sits
-    # between them with room on both sides.
-    if ([int]$entry.ds_frequency_hz -lt 12000) {
-        throw ("FGM $($entry.id) plays at $($entry.ds_frequency_hz) Hz, below " +
-            'the 12,000 floor -- a rest pitch code most likely set the rate.')
+    # bound.
+    #
+    # P2-3f13: it used to be a 12,000 Hz FLOOR, chosen because a rest at the
+    # announcer articulation lands on 7,565 while the lowest legitimately
+    # packed rate was then 15,102. That bound was a proxy, and Captain Falcon's
+    # Flyer engine (180) falsified it on the first cue that is legitimately
+    # deep: its first note is a real pitch code 6, its articulation drops
+    # another 1,200 cents, and it voices at 10,679 Hz on purpose. Assert the
+    # thing the guard actually means instead -- the rate must come from a NOTE,
+    # never from a REST -- by recomputing the sounding pitch code from the
+    # entry's own program. Strictly stronger than the floor: it catches 488's
+    # defect at any frequency, and it does not reject a deep cue for being deep.
+    $notes = @($entry.ucd_program | Where-Object { $_[0] -eq 'note' })
+    if ($notes.Count -gt 0) {
+        $sounding = @($notes | Where-Object { [int]$_[1] -ne 0 })
+        if ($sounding.Count -eq 0) {
+            throw "FGM $($entry.id) has no sounding note; its rate is a rest."
+        }
+        $artPitch = @($entry.articulation_program |
+            Where-Object { $_[0] -eq 'pitch' })
+        $artCents = if ($artPitch.Count -gt 0) { [int]$artPitch[0][1] } else { 0 }
+        $ratePitchCode = [int](($entry.net_pitch_cents - $artCents + 1300) / 100)
+        if ($ratePitchCode -eq 0) {
+            throw ("FGM $($entry.id) plays at $($entry.ds_frequency_hz) Hz " +
+                'from pitch code 0 -- a REST set its playback rate.')
+        }
+        if ($ratePitchCode -ne [int]$sounding[0][1]) {
+            throw ("FGM $($entry.id) rate pitch code $ratePitchCode is not " +
+                "its first sounding note $([int]$sounding[0][1]).")
+        }
     }
 }
 foreach ($id in @(154,40,38,37,34,32,31)) {
@@ -369,27 +409,28 @@ foreach ($pair in @(
     }
 }
 # A packed cue the allowlist never admits is dead ROM, and an admitted cue with
-# no pack entry fails closed and is silent -- both were live defects. Keep the
-# two lists in step for the announcer set at least.
-foreach ($voice in @('nSYAudioVoiceAnnounceTimeUp', 'nSYAudioVoiceAnnounceGameSet',
-    'nSYAudioVoiceAnnounceWinnerIs', 'nSYAudioVoiceAnnounceMario',
-    'nSYAudioVoiceAnnounceFox', 'nSYAudioVoiceAnnounceLuigi',
-    'nSYAudioVoiceLuigiFuraFura', 'nSYAudioVoiceAnnounceDonkey',
-    'nSYAudioVoicePublicDonkey',
-    'nSYAudioVoiceAnnounceFive',
-    'nSYAudioVoiceAnnounceFour', 'nSYAudioVoicePublicWin',
-    'nSYAudioVoicePublicFox', 'nSYAudioVoicePublicMario',
-    'nSYAudioVoicePublicGaspL', 'nSYAudioVoicePublicGaspM',
-    'nSYAudioVoicePublicGaspS', 'nSYAudioVoicePublicCheer',
-    'nSYAudioVoicePublicAmazed', 'nSYAudioVoicePublicGaspClap',
-    'nSYAudioVoicePublicDamageL', 'nSYAudioVoicePublicDamageM',
-    'nSYAudioVoicePublicDamageS', 'nSYAudioFGMGroundGrind2',
-    'nSYAudioFGMAltitudeWarn', 'nSYAudioFGMMagnify',
-    'nSYAudioVoiceFoxWin',
-    'nSYAudioVoiceAnnounceSuddenDeath')) {
-    if (-not $runtime.Contains("case ${voice}:")) {
-        throw "Runtime allowlist does not admit the packed cue $voice."
-    }
+# no pack entry fails closed and is silent -- both were live defects.
+#
+# P2-3f13: this used to be a HAND-WRITTEN list of 28 names, "the announcer set
+# at least", and a hand list only ever covers what somebody remembered to add.
+# Derive it instead: EVERY entry in the pack must have a case label in
+# ndsAudioFgmIDIsIncluded, by its gmsound name or by its bare numeric id (the
+# switch uses `case 435u:` for two cues the port header does not name). Thirty
+# four cues landed in one row here; nothing would have caught thirty three of
+# them.
+$missingAdmission = @()
+foreach ($entry in $metadata.entries) {
+    $name = [string]$entry.name
+    $id = [int]$entry.id
+    if ($runtime.Contains("case ${name}:")) { continue }
+    if ($runtime -match "case\s+${id}u?:") { continue }
+    $missingAdmission += ('{0} ({1})' -f $name, $id)
+}
+if ($missingAdmission.Count -gt 0) {
+    throw ("Runtime allowlist does not admit {0} packed cue(s): {1}. " -f
+        $missingAdmission.Count, ($missingAdmission -join ', ')) +
+        'ndsAudioFgmIDIsIncluded is fail-closed bookkeeping; a packed cue it ' +
+        'never names is ROM nobody can account for.'
 }
 foreach ($token in @('fread(sNdsAudioFgmCacheSlots[best].data',
     'sNdsAudioFgmCacheSlots[cache_slot].references++',

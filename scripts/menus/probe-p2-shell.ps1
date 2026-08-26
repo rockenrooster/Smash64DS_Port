@@ -102,8 +102,17 @@ $nm = 'C:\devkitPro\devkitARM\bin\arm-none-eabi-nm.exe'
 $rom = Resolve-Smash64DSBuildOutput -Root $root -Target $Target -Build $Build -Extension '.nds'
 $elf = Resolve-Smash64DSBuildOutput -Root $root -Target $Target -Build $Build -Extension '.elf'
 if ([string]::IsNullOrWhiteSpace($Artifact)) {
+    # P2-3f13: the BUILD is in the name. The default used to be date-only, so
+    # two probes of DIFFERENT configurations on the same day silently
+    # overwrote each other -- which is exactly what happened here: an argmax
+    # roster run landed on top of P2-3f8's `build-p2-shell` residency capture
+    # and there is no undo, because artifacts/ is untracked. A capture is
+    # evidence for the configuration it was taken on, so the configuration
+    # belongs in its filename.
+    $stem = if ($Build -eq 'build-p2-shell') { 'p2-shell' }
+        else { 'p2-shell_' + ($Build -replace '^build-', '') }
     $Artifact = Join-Path $root ('artifacts\verification\' +
-        (Get-Date -Format 'yyyy-MM-dd') + '_p2-shell.txt')
+        (Get-Date -Format 'yyyy-MM-dd') + '_' + $stem + '.txt')
 }
 
 $buildConfig = Join-Path (Resolve-Smash64DSBuildPath -Root $root -Build $Build) 'nds_build_config.h'
@@ -213,7 +222,17 @@ if ($missing.Count -gt 0) {
 # Before P2-1e-1, three of the character select's own ids were NOT packed
 # (121 MarioDash, 127 SamusDash, 167 PlayerSlotWhoosh) plus 512 FreeForAll,
 # which is what row P2-1e-1's scope was derived from (MSMISS ring=4). P2-1e-1
-# packed all four, so an EMPTY ring (ring=0) is now the expected reading.
+# packed all four, so an EMPTY ring (ring=0) is now the expected reading on the
+# MENU screens.
+#
+# P2-3f13: it prints all SIXTEEN slots, not the first four. The battle screens
+# are a different population from the menus -- the first run that put a
+# four-fighter match behind this probe read `ring=16`, i.e. the ring at its own
+# NDS_AUDIO_FGM_MISS_RING_CAPACITY, and four slots could not say which sixteen
+# ids they were. A ring that reports a quarter of itself cannot answer "is this
+# fighter's bank complete", which is the question a fighter landing asks it.
+# `ring=16` still means SATURATED (a seventeenth distinct id would evict slot 0
+# and the count would stay 16), so read a full ring as a floor, not a census.
 $hasMissRing = ($symbols -contains 'gNdsAudioFgmMissRingIDs') -and
     ($symbols -contains 'gNdsAudioFgmMissRingCounts') -and
     ($symbols -contains 'gNdsAudioFgmMissRingCount')
@@ -369,7 +388,7 @@ try {
         'printf "MSANIM %d arm=%u settle=%u fail=%u pose=%u frames=%u ticks=%u maxticks=%u maxpose=%u bytes=%u draw=%u erase=%u\n", $n, gNdsUiKitTitleAnimArmCount, gNdsUiKitTitleAnimSettleCount, gNdsUiKitTitleAnimLoadFailCount, gNdsUiKitTitleAnimPose, gNdsUiKitTitleAnimFrameCount, gNdsUiKitTitleAnimTicks, gNdsUiKitTitleAnimMaxTicks, gNdsUiKitTitleAnimMaxPose, gNdsUiKitTitleAnimBytes32, gNdsUiKitTitleAnimDrawTexels, gNdsUiKitTitleAnimEraseTexels',
         'printf "MSSFX %d move=%u confirm=%u back=%u value=%u start=%u lastid=%u\n", $n, gNdsUiKitSfxRequestCount[0], gNdsUiKitSfxRequestCount[1], gNdsUiKitSfxRequestCount[2], gNdsUiKitSfxRequestCount[3], gNdsUiKitSfxRequestCount[4], gNdsUiKitSfxLastId',
         $(if ($hasMissRing) {
-            'printf "MSMISS %d ring=%u id0=%u c0=%u id1=%u c1=%u id2=%u c2=%u id3=%u c3=%u\n", $n, gNdsAudioFgmMissRingCount, gNdsAudioFgmMissRingIDs[0], gNdsAudioFgmMissRingCounts[0], gNdsAudioFgmMissRingIDs[1], gNdsAudioFgmMissRingCounts[1], gNdsAudioFgmMissRingIDs[2], gNdsAudioFgmMissRingCounts[2], gNdsAudioFgmMissRingIDs[3], gNdsAudioFgmMissRingCounts[3]'
+            'printf "MSMISS %d ring=%u id0=%u c0=%u id1=%u c1=%u id2=%u c2=%u id3=%u c3=%u id4=%u c4=%u id5=%u c5=%u id6=%u c6=%u id7=%u c7=%u id8=%u c8=%u id9=%u c9=%u id10=%u c10=%u id11=%u c11=%u id12=%u c12=%u id13=%u c13=%u id14=%u c14=%u id15=%u c15=%u\n", $n, gNdsAudioFgmMissRingCount, gNdsAudioFgmMissRingIDs[0], gNdsAudioFgmMissRingCounts[0], gNdsAudioFgmMissRingIDs[1], gNdsAudioFgmMissRingCounts[1], gNdsAudioFgmMissRingIDs[2], gNdsAudioFgmMissRingCounts[2], gNdsAudioFgmMissRingIDs[3], gNdsAudioFgmMissRingCounts[3], gNdsAudioFgmMissRingIDs[4], gNdsAudioFgmMissRingCounts[4], gNdsAudioFgmMissRingIDs[5], gNdsAudioFgmMissRingCounts[5], gNdsAudioFgmMissRingIDs[6], gNdsAudioFgmMissRingCounts[6], gNdsAudioFgmMissRingIDs[7], gNdsAudioFgmMissRingCounts[7], gNdsAudioFgmMissRingIDs[8], gNdsAudioFgmMissRingCounts[8], gNdsAudioFgmMissRingIDs[9], gNdsAudioFgmMissRingCounts[9], gNdsAudioFgmMissRingIDs[10], gNdsAudioFgmMissRingCounts[10], gNdsAudioFgmMissRingIDs[11], gNdsAudioFgmMissRingCounts[11], gNdsAudioFgmMissRingIDs[12], gNdsAudioFgmMissRingCounts[12], gNdsAudioFgmMissRingIDs[13], gNdsAudioFgmMissRingCounts[13], gNdsAudioFgmMissRingIDs[14], gNdsAudioFgmMissRingCounts[14], gNdsAudioFgmMissRingIDs[15], gNdsAudioFgmMissRingCounts[15]'
         } else {
             'printf "MSMISS %d ring=absent\n", $n'
         }),

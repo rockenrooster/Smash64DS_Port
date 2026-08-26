@@ -104,6 +104,18 @@ landed-arm controls, ordinals independently re-derived by compiling
 the linked ELF:
 `artifacts/verification/2026-08-25_p2-3f/luigi-ftattributes-lanes.txt`.
 
+**Confirmed at runtime by P2-3f13's probe.** A four-kind shell match with Luigi
+as the human reads `nSYAudioVoiceLuigiDamage` **422** in the FGM miss ring,
+three times — 422 is the post-normalizer value of `attr->damage_sfx`, and
+before the arm the same field read 420 (`LuigiDeadUp`), so the ring would have
+named 420. No phantom id 0 appears either.
+
+**His voices are the next gap.** 422 and 427 (`LuigiDead`) are in that ring
+because none of his voice bank is packed — he has exactly two cues
+(`nSYAudioVoiceAnnounceLuigi`, `nSYAudioVoiceLuigiFuraFura`). His down-bounce id
+is unpacked too. Shape the work on the Donkey/Captain banks in
+`scripts/sfx/render-audio-fgm-phase-pack.py`.
+
 ## DS notes / risks
 
 - The pipeline must express "same state machine, divergent data + a few

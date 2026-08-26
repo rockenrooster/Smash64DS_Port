@@ -270,7 +270,7 @@ try {
         & make -C $root TARGET=smash64ds BUILD=build NDS_DEV_SCENE_HARNESS=normal NDS_HARNESS_FAST_LOGIC=0 -B
         if ($LASTEXITCODE -ne 0) { exit (Get-Smash64DSFailureExitCode -Code $LASTEXITCODE) }
     }
-    $expectedVerifiers = 7 + $plan.Count + $(if ($SkipRegistryCheck) { 0 } else { 1 })
+    $expectedVerifiers = 8 + $plan.Count + $(if ($SkipRegistryCheck) { 0 } else { 1 })
     Invoke-VerifyScript `
         -Script (Join-Path $PSScriptRoot 'check-gbi-decode-fixtures.ps1') `
         -Arguments @()
@@ -321,6 +321,19 @@ try {
     # stale hand-maintained file list.
     Invoke-VerifyScript `
         -Script (Join-Path $PSScriptRoot 'check-fighter-production-manifest.ps1') `
+        -Arguments @()
+    # P2-3f13, and it is here for the same reason check-docs and
+    # check-architecture are: it was in NO profile, hand-run only, and the
+    # failure it owns is TOTAL SILENCE. The loader rejects the entire pack on
+    # any entry-count / size / mapping-hash mismatch, and that exact drift has
+    # shipped twice (2026-08-02 rejected all 88 cues, 2026-08-24 built a
+    # 119-entry pack against a runtime compiled for 117). Landing Captain
+    # Falcon's 34 cues moved all three constants again and nothing in Boundary
+    # would have noticed. 18 s, static, no ROM -- it regenerates the pack in
+    # memory and compares, so it also proves the pack still derives from
+    # BattleShip's own audio.
+    Invoke-VerifyScript `
+        -Script (Join-Path $PSScriptRoot 'check-audio-fgm-phase-pack.ps1') `
         -Arguments @()
     if (-not $SkipRegistryCheck) {
         Invoke-VerifyScript `

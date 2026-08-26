@@ -1,21 +1,26 @@
 # Handoff
 
-Current: 2026-08-25 — **CAPTAIN FALCON'S "~30x IN A FOUR-FIGHTER MATCH" WAS A
-CRASH, AND IT IS FIXED** (P2-3f10). Every match he is in — a 1v1 too — took an
-unhandled ARM9 **data abort** ~1.9 s in, at `dobj->child->child->child` in
-`efManagerCaptainEntryCarMakeEffect`: `NDS_EF_DEFERRED_MAX` was 4 and the
-landed roster defers 7 effect descs, so his Flyer overflowed the retry table,
-stayed neutralised, and the source maker walked a NULL DObj. The table is now
-sized from the desc lists with a `_Static_assert`. **Rail: read the emulator's
-own host-FPS readout before ratioing gdb stop times** — melonDS grinding a
-wandering ARM9 (`[1/60]`) is what "30x wall clock" measured, and why every
-memory counter read clean. Falcon then measures identical to Mario in the same
-four-kind match. **He still has NO AUDIO** (falcon.md item 1). TWO new open
-rows came out of it: **P2-3f11** — admitting him to `p2_fourcpu_stress` stops
-the slot-3 fighter drawing (mask 0x7), so that arm is still NOT the argmax —
-and **P2-2p7** — the four-fighter arm presents at ~5 FPS on every roster and
-its sampler subtracts the evidence; read it before trusting any banked
-four-CPU tick figure. P2-3r17 stays DEFERRED.
+Current: 2026-08-25 — **CAPTAIN FALCON HAS A VOICE** (P2-3f13): 34 of his 35
+cues are packed — all ten FGM, twenty-two of twenty-three voices, announcer 485,
+crowd 604 — every field `--derive`d and every extent named by the pack's own
+validator. Pack 1,261,628 → 1,511,844 B, 119 → 153 entries, runtime cache
+unchanged. **One voice is refused by a MEASURED bound**: 356 FuraSleep's AOT
+body is 65,324 B against the 53,248 B largest cache slot, and DK's
+`runtime_note_replay` escape needs one pitch code across all notes where his are
+13/12/13. Seven SHARED cues he reaches (631/10/1/128/95/17/84) are unpacked for
+every fighter — roster-wide, left open. **Also landed: Luigi's `FTAttributes`
+normalizer arm** (P2-3f12), offset 0x580 — latent, but `smash_sfx[2]` read 0, so
+one smash-voice roll in three asked for FGM id 0 and put a phantom in the miss
+ring. **Three checkers were fixed at their seams**: `check-audio-fgm-phase-pack`
+was in NO profile and owns the TOTAL-SILENCE class (now in `verify-all`,
+`$expectedVerifiers` 7→8); its allowlist cross-check was a hand list of 28 names
+and now derives from the pack; and its 12,000 Hz floor was a proxy Falcon's
+10,679 Hz Flyer engine falsified — it now asserts what it means, that a REST
+never sets the rate. Open before these and still open: **P2-3f11** (admitting
+Falcon to `p2_fourcpu_stress` stops the slot-3 fighter drawing, mask 0x7, so
+that arm is NOT the argmax) and **P2-2p7** (the four-fighter arm presents at ~5
+FPS on every roster and its sampler subtracts the evidence — read it before
+trusting any banked four-CPU tick figure). P2-3r17 stays DEFERRED.
 
 ## State
 
@@ -73,19 +78,16 @@ four-CPU tick figure. P2-3r17 stays DEFERRED.
    framing, lower-screen HUD, Team Battle feel and Results/Sudden Death
    presentation. Do not claim the owner accepted those until they actually do.
 3. **P2-3 is active, and the owner's 2026-08-23 batch is now mostly landed.**
-   The character select carries the in-progress roster -- Luigi AND Donkey Kong
-   selectable, portraits dimmed under the source question-mark plate -- A on a
-   slot's 3D preview cycles that slot's costume, pose slots are released when a
-   fighter is destroyed, and a fighter's asset load no longer kills the BGM.
-   The per-fighter native-owner tables left the ARM9 binary for NitroFS images
-   (P2-3r4); the SHARED Mario/Fox table set (64,147 B a Luigi-vs-DK match never
-   uses) is still unspent.
-   **Intros are fixed** (P2-3r5) and **Mario's pipe is fixed end-to-end**
-   (P2-3r6); the board rows carry both. **The CSS preview's disconnected body
-   parts are fixed** (P2-3r7): its CSS-only `glViewport` writes bypassed
-   `ndsRendererFighterPacketDmaWait()` and cut into the last preview fighter's
-   draining packet DMA. **Rail: a GX writer outside `nds_renderer.c` must call
-   that wait first.**
+   The character select carries the in-progress roster, A on a slot's 3D preview
+   cycles its costume, pose slots are released on destroy, and a fighter's asset
+   load no longer kills the BGM. The per-fighter native-owner tables left the
+   ARM9 binary for NitroFS images (P2-3r4); the SHARED Mario/Fox table set
+   (64,147 B a Luigi-vs-DK match never uses) is still unspent.
+   **Intros** (P2-3r5), **Mario's pipe** (P2-3r6) and **the CSS preview's
+   disconnected body parts** (P2-3r7) are fixed; the board rows carry all three.
+   **Rail: a GX writer outside `nds_renderer.c` must call
+   `ndsRendererFighterPacketDmaWait()` first** -- the CSS's own `glViewport`
+   writes cut into the last preview fighter's draining packet DMA.
    **Four distinct kinds run in the SHIPPING configuration** (P2-3r11 + r13 +
    f9; full narrative on those board rows). **Rail: never raise
    `NDS_TASKMAN_ARENA_SIZE` without returning at least as much static image
@@ -93,22 +95,20 @@ four-CPU tick figure. P2-3r17 stays DEFERRED.
    exhausted heap. **The graphics-heap and BattlePack levers are SPENT** by
    P2-3f9; `ALL` P50/P95 on the gate arm is 1,965,184 / 3,085,888, flat within
    192 ticks across that change.
-   **DK's cargo matrix is verified** (P2-3r10, `docs/p2/fighters/dk.md`), with
-   one defect fixed at its seam: a `#define` sent
-   `ftDonkeyThrowFDamageSetStatus` to a compat stub, so the source setter was
-   compiled and then dropped by `--gc-sections`. **Rail: a source function
-   defined in a `battleship_*.o` but absent from the linked ELF is stranded
-   unless it has an in-TU caller.**
+   **DK's cargo matrix is verified** (P2-3r10, `docs/p2/fighters/dk.md`).
+   **Rail: a source function defined in a `battleship_*.o` but absent from the
+   linked ELF is stranded unless it has an in-TU caller** -- a `#define` sent
+   `ftDonkeyThrowFDamageSetStatus` to a compat stub and `--gc-sections` took it.
    **VS Stock's last-stock path is fixed** (P2-3r14) and **backing out of the
    stage select no longer kills the menu BGM** (P2-3r16). **Rails from them: a
    source TU the port skips strands its callees too**, and the CSS preview's synchronous file setup is bracketed with the P2-3r12 audio suspend/resume pair — never tuned. **Not proven yet:** the team stock steal.
 
-4. **Captain Falcon is roster #3 and he is DONE except for audio and feel**
-   (P2-3f4/f5/f8). `docs/p2/fighters/falcon.md` is the authority. Landed: the
+4. **Captain Falcon is roster #3 and only an owner FEEL PASS remains**
+   (P2-3f4/f5/f8/f13). `docs/p2/fighters/falcon.md` is the authority. Landed: the
    two model opcodes, his status table, `ftcaptainspecialn/lw/hi.c`, Falcon
    Dive's victim TU, the two `mpcommon` seams, his two-status entry ladder, the
-   native owner (slot 4) and full CSS/HUD/asset admission at
-   `NDS_P2_SHELL_ROSTER=3`. **NEXT IS HIS AUDIO — nothing at all is packed**; ordinals are re-derived in falcon.md, shape the work on the Donkey bank.
+   native owner (slot 4), full CSS/HUD/asset admission at
+   `NDS_P2_SHELL_ROSTER=3`, and his audio bank.
    **He is the first owner with ZERO cross-matrix runs** (the reserved GX band
    stays Donkey's 16..25) and **the first whose LOW model carries a root light
    preamble his HIGH does not**. **Budget:** +20,064 B of ARM9 image, 18,800 B of owner images,
@@ -117,8 +117,8 @@ four-CPU tick figure. P2-3r17 stays DEFERRED.
    not Mario). **The four-kind roster FITS (P2-3f9, low-water 419,052 B) and
    now RUNS (P2-3f10): the "~30x" was a data abort in his entry effect.**
    Three live defects were found and fixed at their seams: his `FTAttributes`
-   mixed-u16 lanes had no normalizer arm (**Luigi still has none and he
-   ships**), the HUD's portrait and stock palette bands overlapped at slot 8,
+   mixed-u16 lanes had no normalizer arm (**Luigi's landed at P2-3f12**),
+   the HUD's portrait and stock palette bands overlapped at slot 8,
    and the effect-desc deferral table was sized for the Mario/Fox roster.
    **Rails: a weak twin beside a strong body is CORRECT** (dispatch tables name
    every fighter's setter unconditionally — check `nm`, never `src/`), and **a
@@ -148,17 +148,16 @@ four-CPU tick figure. P2-3r17 stays DEFERRED.
 - **Republish the free-play ROM after every fix batch** (owner, 2026-08-22): plain
   `make TARGET=smash64ds` writes root `smash64ds.nds` (human input, walk compiled
   out, flag-identical to the gate's shell config, **FIVE**-name roster).
-  Current: **17,644,544 B, SHA-256 `4D1369BD…B574`** (2026-08-25, adds P2-3f10 —
-  Falcon's entry no longer aborts the ARM9); asserted from
+  Current: **17,895,424 B, SHA-256 `FE66C276…BD87`** (2026-08-25, adds P2-3f12
+  and P2-3f13; the board's `SHA-256` line is the authority — the two had
+  drifted apart before this); asserted from
   `builds/build/nds_build_config.h`: `NDS_P2_CAPTAIN 1`, `NDS_P2_MENU_WALK 0`,
   `NDS_P2_FOUR_CPU_ROSTER 0`, `NDS_P2_SHELL_ARGMAX_ROSTER 0`. `2FB213CC…CA74`
   crashes on Falcon's entry and `C7FF35D7…E171` hangs on four heavy kinds —
   do not hand either to the owner.
   **Boundary does NOT build it** — rebuild by hand, and `rm` the root
   `.elf`/`.nds` pair first if a lab build wrote them.
-- Clean checkout builds through `build.ps1`, not bare `make` (four of six
-  `.inc` are gitignored). Never pass `-j`, never override `MAKEFLAGS`, one
-  build at a time.
+- Clean checkout builds through `build.ps1`, not bare `make` (four of six `.inc` are gitignored). Never pass `-j`, never override `MAKEFLAGS`, one build at a time.
 - Shell targets: `smash64ds` is the published walk-free shell configuration
   (`smash64ds-p2-shell-freeplay-hwtri` retired at P2-1M).
   `smash64ds-p2-shell-hwtri` adds the scripted walk used by Boundary arm

@@ -411,6 +411,50 @@ static s32 ndsAudioFgmIDIsIncluded(u16 id)
      * announcer line, packed 2026-08-19 with the shell already asking. */
     case nSYAudioFGMPlayerSlotClose:
     case nSYAudioVoiceAnnounceTeamBattle:
+    /* P2-3f13 Captain Falcon's production bank. He landed selectable at P2-3f8
+     * with NOTHING packed, so every id below was already being requested by his
+     * motion scripts, his FTAttributes lanes, his CSS clip and the
+     * announcer/crowd tables, and every one of them fell into the miss ring.
+     * The set is gm/gmsound.h's complete `nSYAudio{FGM,Voice}Captain*` run,
+     * minus 356 FuraSleep -- that one cue's AOT body is 65,324 bytes against
+     * the 53,248-byte largest cache slot, so it CANNOT be played and is
+     * deliberately absent from both this list and the pack. Keep the whole
+     * fighter bank together so a newly admitted source state does not silently
+     * become an audio stub. */
+    case nSYAudioFGMCaptainLanding:
+    case nSYAudioFGMCaptainFoot:
+    case nSYAudioFGMCaptainDash:
+    case nSYAudioFGMCaptainAppearCar1:
+    case nSYAudioFGMCaptainAppearCar2:
+    case nSYAudioFGMCaptainSpecialHi:
+    case nSYAudioFGMCaptainSpecialNStart:
+    case nSYAudioFGMCaptainSpecialNPunch:
+    case nSYAudioFGMCaptainDeadSlam:
+    case nSYAudioFGMCaptainDownBounce:
+    case nSYAudioVoiceCaptainAppeal:
+    case nSYAudioVoiceCaptainSpecialHi:
+    case nSYAudioVoiceCaptainSmash1:
+    case nSYAudioVoiceCaptainSmash2:
+    case nSYAudioVoiceCaptainSmash3:
+    case nSYAudioVoiceCaptainSmash4:
+    case nSYAudioVoiceCaptainFinalComeOn:
+    case nSYAudioVoiceCaptainSmash5:
+    case nSYAudioVoiceCaptainAttackS4:
+    case nSYAudioVoiceCaptainSpecialLw:
+    case nSYAudioVoiceCaptainSpecialNPunch:
+    case nSYAudioVoiceCaptainSpecialNFalcon:
+    case nSYAudioVoiceCaptainDeadUp:
+    case nSYAudioVoiceCaptainFuraFura:
+    case nSYAudioVoiceCaptainDamage:
+    case nSYAudioVoiceCaptainUnkPing1:
+    case nSYAudioVoiceCaptainJumpAerial:
+    case nSYAudioVoiceCaptainHeavyGet:
+    case nSYAudioVoiceCaptainDead:
+    case nSYAudioVoiceCaptainUnkQuick:
+    case nSYAudioVoiceCaptainUnkPing2:
+    case nSYAudioVoiceCaptainUnkPing3:
+    case nSYAudioVoiceAnnounceCaptain:
+    case nSYAudioVoicePublicCaptain:
         return TRUE;
     default:
         return FALSE;

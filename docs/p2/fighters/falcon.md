@@ -1,12 +1,14 @@
 # Captain Falcon — P2-3 fighter 3
 
-Status: **slices 1-3 are landed and Falcon IS SELECTABLE.** Source inventory +
-ABI mirror (P2-3f4), the runtime state machines behind `NDS_P2_CAPTAIN`
-(P2-3f5), and the native owner + roster admission at `NDS_P2_SHELL_ROSTER=3`
-(P2-3f8). **He has NO AUDIO** -- not one of his ten FGM or twenty-three voice
-cues is in the phase pack, so every one of them fails closed and he plays
-silent. That, an owner feel pass, and the four-kind budget question below are
-what remain.
+Status: **slices 1-4 are landed, Falcon IS SELECTABLE and HE HAS A VOICE.**
+Source inventory + ABI mirror (P2-3f4), the runtime state machines behind
+`NDS_P2_CAPTAIN` (P2-3f5), the native owner + roster admission at
+`NDS_P2_SHELL_ROSTER=3` (P2-3f8), and his audio bank (P2-3f13): **34 of his 35
+cues are packed** -- all ten FGM, twenty-two of twenty-three voices, his
+announcer line and his crowd chant. **One voice remains, for a measured
+reason** (356 FuraSleep, below), plus seven shared non-fighter cues his motion
+scripts reach that no fighter has packed yet. An owner feel pass is the other
+thing that remains.
 Reference: `decomp/BattleShip-main/decomp/src/ft/ftchar/ftcaptain/` plus
 `ft/ftcommon/ftcommonentry.c` and `ft/ftcommon/ftcommoncapturecaptain.c`.
 
@@ -459,22 +461,59 @@ match. Re-read it on Results / Sudden Death / pause zoom, then cut.
 
 ## Remaining, in dependency order
 
-1. **Audio -- he is completely silent, and this is the largest gap.** Ten FGM
-   (`CaptainLanding` 73, `CaptainFoot` 106, `CaptainDash` 117,
+1. **Audio -- LANDED 2026-08-25 (board row P2-3f13), 34 of 35 cues.** All ten
+   FGM (`CaptainLanding` 73, `CaptainFoot` 106, `CaptainDash` 117,
    `CaptainAppearCar1/2` 180/181, `CaptainSpecialHi` 182,
-   `CaptainSpecialNStart/Punch` 183/184, `CaptainDeadSlam` 0x120,
-   `CaptainDownBounce` 299), twenty-three `nSYAudioVoiceCaptain*`, announcer
-   `nSYAudioVoiceAnnounceCaptain` **485**, crowd `nSYAudioVoicePublicCaptain`
-   **604**, victory BGM `nSYAudioBGMWinFZero` **19**. Every ordinal above was
-   re-derived from `gm/gmsound.h`'s REGION_US arm with a resolver validated
-   against Donkey's eight known values first, per P2-1e-1. **The CSS announcer
-   already works** -- `kNdsCssAnnounceVoice` is the source's own fkind-indexed
-   table and index 7 is already 485. What is missing is the phase pack:
-   `nds_audio_fgm.c`'s admission switch is a fail-closed allowlist and names
-   none of his ids, so each cue is dropped and recorded in the miss ring. No
-   verifier asserts on it, so this is silence rather than a red gate. Shape the
-   work on the Donkey bank (`render-audio-fgm-phase-pack.py` `SELECTED +=`
-   block, `--derive <ids>` for every field, hash pins per cue).
+   `CaptainSpecialNStart/Punch` 183/184, `CaptainDeadSlam` 288,
+   `CaptainDownBounce` 299), twenty-two of the twenty-three
+   `nSYAudioVoiceCaptain*` (337..355, 357..359), announcer
+   `nSYAudioVoiceAnnounceCaptain` **485** and crowd `nSYAudioVoicePublicCaptain`
+   **604**. Pack 1,261,628 -> **1,511,844 B**, 119 -> **153 entries**, runtime
+   cache unchanged at 204,800 (the pack is streamed, never resident). Every
+   selector field came out of `--derive`, and every
+   `expected_retained_samples` was authored by letting the generator's own
+   validator name it rather than by pasting a plausible number. Evidence
+   `artifacts/verification/2026-08-25_p2-3f/captain-audio-bank.txt`.
+
+   **PROVEN AT RUNTIME, not just in the pack.** `smash64ds-p2-shell-hwtri` built
+   `NDS_P2_SHELL_ARGMAX_ROSTER=1` puts him in slot 2 as a level-3 CPU beside
+   Luigi (human), Fox and Donkey; one scripted lap at fast logic 0 reads
+   `fgmloaded=1 fgmcalls=474 fgmfail=0` and a sixteen-slot miss ring holding
+   **not one Captain id** — while Donkey's unpacked FGM bank shows 90 requests
+   in the same match. `fgmloaded=1` is the whole-pack gate: the ARM9 rejects the
+   entire pack on any entry-count/size/mapping mismatch, so it is the 153-entry
+   pack accepted by the console, not by a checker. `ring=16` is the ring's own
+   capacity, so "no Captain id" is a floor rather than a census.
+
+   **STILL OPEN, and each with its reason:**
+
+   - **356 `nSYAudioVoiceCaptainFuraSleep` cannot be played at all today.** Its
+     full-program AOT body is 710 ticks x 184 samples = 130,640 samples =
+     **65,324 IMA bytes against the 53,248-byte largest runtime cache slot**;
+     the generator's own gate says so verbatim. DK's FuraSleep (324) escapes the
+     same wall with `runtime_note_replay`, and Falcon's cannot: that path
+     requires every note to share one pitch code and his are 13 / 12 / 13, so a
+     replay would have to carry a per-note frequency the 4-byte envelope point
+     has no room for. Fixing it means widening the pack's envelope-point format
+     (and its runtime reader) to carry a rate change -- a row of its own, worth
+     doing when a second fighter needs it. Until then his shield-break sleep
+     voice is silent.
+   - **Seven SHARED cues his motion scripts ask for are packed by nobody**:
+     631 `CharacterUnkZip2`, 10 `DonkeySlap2`, 1 `ExplodeL`,
+     128 `GroundBrakeGrind`, 95 `GroundGrind1`, 17 `HeavySwing1`,
+     84 `UnkGrind3`. They fail closed for Mario, Fox, Luigi and Donkey too --
+     17 is the id `FULL_COVERAGE_IDS` already records as deliberately omitted.
+     Roster-wide gap, deliberately not folded into a fighter landing. Three of
+     the seven (1, 95, 84) turned up in the runtime miss ring above, which is
+     the measurement that the list is real and not a source-reading artefact.
+   - **The same run named two LOUDER gaps that are not his.** Donkey Kong's FGM
+     bank is entirely unpacked — 9/72/175/176/177/178/179/298, **90 requests in
+     one match**, `DonkeyCharge` alone 56 times; he got his VOICE bank at P2-3
+     and never his sound effects. Luigi's voices are unpacked too (422, 427).
+     Both are worth more to the owner's ear than anything left in Falcon's.
+   - **Victory BGM `nSYAudioBGMWinFZero` (19) is a music id, not an FGM cue**,
+     so it is the BGM system's, not this pack's. Not checked by this row.
+
 2. **Owner feel pass** on Falcon Dive grab/release/regrab and the speed
    extremes (fastest fall + fastest run: traction, landing, edge slips).
 3. **A four-distinct-kind budget answer — CLOSED by board row P2-3f9
@@ -572,7 +611,10 @@ match. Re-read it on Results / Sudden Death / pause zoom, then cut.
       plate, HUD stock/portrait, Selected clip, preview residency (P2-3f8).
 - [x] Per-kind arena cost measured and banked: 102,448 B standalone /
       100,160 B unique; +20,064 B of ARM9 image; owner images 18,800 B.
-- [ ] **Audio: nothing at all is packed** (remaining item 1).
+- [x] **Audio: 34 of 35 cues packed and verified on the linked ELF** (P2-3f13).
+      356 FuraSleep is over the 53,248 B cache-slot ceiling at 65,324 B and is
+      the one measured omission; seven shared non-fighter cues remain a
+      roster-wide gap.
 - [ ] Falcon Dive grab/release/regrab semantics equivalent.
 - [ ] Fast-fall/landing/edge behavior spot-checks at speed extremes.
 - [x] Four-distinct-kind budget answered and the hang fixed (P2-3f9): measured

@@ -255,6 +255,13 @@ FULL_COVERAGE_IDS = (
     # response at tic 71. They were previously omitted because only normal timed
     # results had been audited.
     502, 624,
+    # P2-3 Captain Falcon. His ten FGM cues, twenty-two of his twenty-three
+    # voices, his announcer line and his crowd chant. 356 FuraSleep is the one
+    # omission and it is a MEASURED one -- see the block comment on his
+    # selectors above. Appended so every prior entry keeps its pack order.
+    73, 106, 117, 180, 181, 182, 183, 184, 288, 299,
+    337, 338, 339, 340, 341, 342, 343, 344, 345, 346, 347, 348, 349, 350,
+    351, 352, 353, 354, 355, 357, 358, 359, 485, 604,
 )
 FULL_PROGRAM_AOT_IDS = frozenset((
     154, 40, 38, 37, 34, 32, 31,
@@ -277,6 +284,13 @@ FULL_PROGRAM_AOT_IDS = frozenset((
     # P2-3 LuigiFuraFura: four notes, no forks. Preserve the source note
     # schedule AOT instead of holding the first note for the whole cue.
     421,
+    # P2-3 Captain Falcon's twenty-two voices and both Falcon Punch halves.
+    # Every one is a multi-note schedule; 183/184 are bare fork roots whose
+    # render program (186/187) carries the schedule, and 187 forks again --
+    # which is exactly what the composite renderer is for.
+    183, 184,
+    337, 338, 339, 340, 341, 342, 343, 344, 345, 346, 347, 348, 349, 350,
+    351, 352, 353, 354, 355, 357, 358, 359,
     18, 365,
     # 153 AltitudeWarn -- the cue the owner picked out BY NAME as "a new SFX I
     # don't recognise". Articulation 150 sweeps pitch 550 -> 2390 cents inside
@@ -3525,6 +3539,891 @@ SELECTED += (
             "f8465bca110ef46023a8e3682e8974ab74c2c83854fc9352ab5be36b32a1b0d1",
         "articulation_program_sha256":
             "ad771315bcc763d9730edf9e9004099211c71c2615ee87df330035e9ba638791",
+    },
+)
+
+
+# P2-3 Captain Falcon voice + FGM bank.  He landed selectable at P2-3f8 with
+# ZERO cues packed -- 0 of 10 FGM and 0 of 23 voices -- so every cue his motion
+# scripts, his FTAttributes lanes, his CSS clip and the announcer/crowd tables
+# asked for failed closed and he played silent.  Every field below is source
+# derived by `--derive 73,105,106,116,117,180,181,182,183,184,186,187,287,288,
+# 298,299,337..355,357,358,359,485,604`, not guessed, and each cue's
+# expected_retained_samples is the extent this file's own renderer computes --
+# authored by letting the validator name it, not by pasting a plausible number.
+#
+# THE INVENTORY IS THE SOURCE'S, NOT A GUESS AT WHAT HE NEEDS.  It is every
+# `nSYAudio{FGM,Voice}Captain*` enumerator in gm/gmsound.h, and the reachability
+# is `235_CaptainMainMotion.c` + `236_CaptainMain.c` + `scsubsysdatacaptain.c` +
+# ft/ftcommondata.c's shared DownBounce table.
+#
+# ONE CUE IS OMITTED, AND THE REASON IS MEASURED, NOT A PREFERENCE.  356
+# nSYAudioVoiceCaptainFuraSleep is three notes over 710 source ticks; the
+# full-program AOT render is 710 * 184 = 130,640 samples = **65,324 IMA bytes**
+# against MAX_CUE_IMA_BYTES = 53,248, the largest runtime cache slot.  The
+# generator's own guard says so in as many words -- "FGM cue body exceeds the
+# largest runtime cache slot (53248 bytes), so it can never be played:
+# 356=65324".  DK's FuraSleep (324) answers the same problem with
+# `runtime_note_replay`, and Falcon's cannot take it: that path requires every
+# note to share one pitch code and his are 13 / 12 / 13, so a replay would have
+# to carry a per-note frequency the 4-byte envelope point has no room for.
+# Extending the pack format is a row of its own; until then this one voice
+# stays silent and is recorded as remaining in docs/p2/fighters/falcon.md.
+SELECTED += (
+    # 73 CaptainLanding is its own root program, byte-identical to 72 --
+    # the program MarioLanding (77) plays through a fork. Same articulation 3,
+    # sound 1 and 14224+2944 wave the whole landing/foot/dash family shares.
+    {
+        "id": 73,
+        "name": "nSYAudioFGMCaptainLanding",
+        "kind": "movement",
+        "articulation": 3,
+        "sound": 1,
+        "notes": ((8, 7, 3),),
+        "duration_ticks": 3,
+        "ucd_volume": 180,
+        "articulation_pitch_cents": 700,
+        "loop": False,
+        "wave_base": 14224,
+        "wave_length": 2944,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 621,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "9b37506dc57cc43b255fa175bfb1e9256fc4c955ae00e4bd600bf4ab123781cf",
+        "render_program_sha256":
+            "9b37506dc57cc43b255fa175bfb1e9256fc4c955ae00e4bd600bf4ab123781cf",
+        "articulation_program_sha256":
+            "300492238b0d3e3b82ac86f63da05c445083fe1aafa2a6d10d7b4bf4f59b7576",
+        "aot_source_schedule": True,
+    },
+    # 106 CaptainFoot and 117 CaptainDash are bare fork_voice roots, like 121
+    # MarioDash: every field below is the FORK's (105 / 116), read via
+    # `--derive 105,116`, exactly as validate_ucd requires for a
+    # render_program entry.
+    {
+        "id": 106,
+        "name": "nSYAudioFGMCaptainFoot",
+        "kind": "movement",
+        "render_program": 105,
+        "articulation": 3,
+        "sound": 1,
+        "notes": ((8, 7, 4),),
+        "duration_ticks": 4,
+        "ucd_volume": 125,
+        "articulation_pitch_cents": 700,
+        "loop": False,
+        "wave_base": 14224,
+        "wave_length": 2944,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 828,
+        "root_fork_programs": (105,),
+        "root_program_sha256":
+            "180ce825a8bb3595a9eeeb5534910063695d34d9784b48d4215cb77e385b8aa6",
+        "render_program_sha256":
+            "6ad3a20c66b60ffe8e20807e64e24beca263293fe724decd005cc5506dcd0c5c",
+        "articulation_program_sha256":
+            "300492238b0d3e3b82ac86f63da05c445083fe1aafa2a6d10d7b4bf4f59b7576",
+    },
+    {
+        "id": 117,
+        "name": "nSYAudioFGMCaptainDash",
+        "kind": "movement",
+        "render_program": 116,
+        "articulation": 3,
+        "sound": 1,
+        "notes": ((15, 7, 4),),
+        "duration_ticks": 4,
+        "ucd_volume": 210,
+        "articulation_pitch_cents": 700,
+        "loop": False,
+        "wave_base": 14224,
+        "wave_length": 2944,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 1239,
+        "root_fork_programs": (116,),
+        "root_program_sha256":
+            "c1866eb8edef1feb61e8d47e75b8b50b54046f309f3cf526155c86f7076345e5",
+        "render_program_sha256":
+            "3f78fcfec264926e5f61cbd71db9b2207ff1fe9814b594c236b788465015460e",
+        "articulation_program_sha256":
+            "300492238b0d3e3b82ac86f63da05c445083fe1aafa2a6d10d7b4bf4f59b7576",
+    },
+    # 180/181 AppearCar1/2 are the Falcon Flyer's engine, and they share the
+    # 21040+7516 wave (source loop 48..13348) with 285 Whispy Wind and 167
+    # PlayerSlotWhoosh. `loop: True` here is honest bookkeeping about the
+    # WAVE's structural loop, not a request for a DS hardware repeat: no
+    # "hardware_loop" key, so each renders on the plain trim path and the
+    # note schedule's own reach decides the extent -- the same call 167 made.
+    {
+        "id": 180,
+        "name": "nSYAudioFGMCaptainAppearCar1",
+        "kind": "entry",
+        "articulation": 40,
+        "sound": 3,
+        "notes": ((6, 7, 5), (8, 7, 5), (10, 7, 5), (13, 7, 10),
+                  (17, 7, 70), (22, 7, 5), (17, 7, 10), (11, 7, 20),
+                  (8, 7, 20), (6, 7, 10), (3, 7, 10)),
+        "duration_ticks": 170,
+        "ucd_volume": 255,
+        "articulation_pitch_cents": -1200,
+        "loop": True,
+        "wave_base": 21040,
+        "wave_length": 7516,
+        "loop_start": 48,
+        "loop_end": 13348,
+        "expected_retained_samples": 13360,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "3e8c2df9c55f36e5d108b00ab845352c842cca79c54f6dfb56eb9c124a6c4f40",
+        "render_program_sha256":
+            "3e8c2df9c55f36e5d108b00ab845352c842cca79c54f6dfb56eb9c124a6c4f40",
+        "articulation_program_sha256":
+            "4def39c266003113eac3f3ee08a985a6a8e300163346206778be85d04f348f48",
+    },
+    {
+        "id": 181,
+        "name": "nSYAudioFGMCaptainAppearCar2",
+        "kind": "entry",
+        "articulation": 102,
+        "sound": 3,
+        "notes": ((6, 7, 10), (3, 7, 10), (1, 7, 10), (24, 7, 10),
+                  (22, 7, 10), (18, 7, 10), (13, 7, 10), (8, 7, 10)),
+        "duration_ticks": 80,
+        "ucd_volume": 200,
+        "articulation_pitch_cents": 0,
+        "loop": True,
+        "wave_base": 21040,
+        "wave_length": 7516,
+        "loop_start": 48,
+        "loop_end": 13348,
+        "expected_retained_samples": 13360,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "d4c0e74733e284a4683a6bbf11ee446b0889bc388e3ea1af883dbc65856f6b1c",
+        "render_program_sha256":
+            "d4c0e74733e284a4683a6bbf11ee446b0889bc388e3ea1af883dbc65856f6b1c",
+        "articulation_program_sha256":
+            "61af1d28697d3014136b390401283372d29363a8410cb8ac1d457236d0244191",
+    },
+    {
+        "id": 182,
+        "name": "nSYAudioFGMCaptainSpecialHi",
+        "kind": "special",
+        "articulation": 41,
+        "sound": 18,
+        "notes": ((4, 7, 25), (13, 7, 26), (15, 7, 18), (11, 7, 30)),
+        "duration_ticks": 99,
+        "ucd_volume": 200,
+        "articulation_pitch_cents": 200,
+        "loop": False,
+        "wave_base": 187792,
+        "wave_length": 3672,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 6528,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "6811b3731892570d1c5e597bde867c5d092f11688a9621f641fed0bf51f1cb61",
+        "render_program_sha256":
+            "6811b3731892570d1c5e597bde867c5d092f11688a9621f641fed0bf51f1cb61",
+        "articulation_program_sha256":
+            "2ef0820111e81fdf63b8137ae0a91b477efd00f048dc3add60e11642132ab2c6",
+    },
+    # 183/184 SpecialNStart/Punch -- FALCON PUNCH -- are fork roots too (186 /
+    # 187), and 187's own program forks again, so they render through
+    # FULL_PROGRAM_AOT_IDS: the composite renderer walks the render program's
+    # schedule AND its forks rather than holding one note.
+    {
+        "id": 183,
+        "name": "nSYAudioFGMCaptainSpecialNStart",
+        "kind": "special",
+        "render_program": 186,
+        "articulation": 147,
+        "sound": 11,
+        "notes": ((2, 7, 20), (3, 7, 20), (5, 7, 100)),
+        "duration_ticks": 140,
+        "ucd_volume": 190,
+        "articulation_pitch_cents": -1199,
+        "loop": False,
+        "wave_base": 120848,
+        "wave_length": 9234,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 1,
+        "root_fork_programs": (186,),
+        "root_program_sha256":
+            "82950305ea95a3994159361277602148a59ebc20d287cbe0b42c6b70917e236d",
+        "render_program_sha256":
+            "d43bbdf6fbb80605811fda12db256d4eddd04915c6344fa277fe9e2a5daf0823",
+        "articulation_program_sha256":
+            "f7113ab8647992854edff34f15d561bafd9e41dbe33e2ef86794583102aaf503",
+    },
+    {
+        "id": 184,
+        "name": "nSYAudioFGMCaptainSpecialNPunch",
+        "kind": "special",
+        "render_program": 187,
+        "articulation": 146,
+        "sound": 11,
+        "notes": ((10, 7, 20), (15, 7, 10), (12, 7, 10), (13, 7, 60),
+                  (10, 7, 200)),
+        "duration_ticks": 300,
+        "ucd_volume": 255,
+        "articulation_pitch_cents": -1199,
+        "loop": False,
+        "wave_base": 120848,
+        "wave_length": 9234,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 1,
+        "root_fork_programs": (187,),
+        "root_program_sha256":
+            "35e6353ebe290f7cbc8fec68c661fafe7da45832dfed604eacfae64cd7384e64",
+        "render_program_sha256":
+            "720103f7048fee9ea9cd24c5383c865de2d063ff7d7eafba659c337027a36b6f",
+        "articulation_program_sha256":
+            "c7e95d11dbb41563050c833c151841c3495e5bae0d53b32f726d57a5c93982b5",
+    },
+    # 288 CaptainDeadSlam forks 287, the SAME program Mario's 292 and Fox's 289
+    # fork -- one shared slam, three fighters. 299 CaptainDownBounce forks 298
+    # the way Fox's 300 and Mario's 303 do.
+    {
+        "id": 288,
+        "name": "nSYAudioFGMCaptainDeadSlam",
+        "kind": "ko",
+        "render_program": 287,
+        "articulation": 187,
+        "sound": 28,
+        "notes": ((13, 7, 33), (13, 7, 20)),
+        "duration_ticks": 53,
+        "ucd_volume": 200,
+        "articulation_pitch_cents": -1100,
+        "loop": False,
+        "wave_base": 251360,
+        "wave_length": 3762,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 5168,
+        "root_fork_programs": (287,),
+        "root_program_sha256":
+            "64523939186fd3d63f5440b5ec78784dac4e10c76456ebaa75671e4bfd9a85c2",
+        "render_program_sha256":
+            "634c9b1217b933f51dde97353d62e908fa1082943114d6dbe72bb188a3f33776",
+        "articulation_program_sha256":
+            "bbcff809d0113bec03d327dd08e85ef84fe10c8b18ba2f922b581416a958de0b",
+    },
+    {
+        "id": 299,
+        "name": "nSYAudioFGMCaptainDownBounce",
+        "kind": "movement",
+        "render_program": 298,
+        "articulation": 187,
+        "sound": 28,
+        "notes": ((12, 7, 10), (12, 7, 15)),
+        "duration_ticks": 25,
+        "ucd_volume": 130,
+        "articulation_pitch_cents": -1100,
+        "loop": False,
+        "wave_base": 251360,
+        "wave_length": 3762,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 2301,
+        "root_fork_programs": (298,),
+        "root_program_sha256":
+            "0a7645ae1249ff5140ddbf80859b52c127b73d2b80e0b97d90cc3b61b0c4b262",
+        "render_program_sha256":
+            "9ed69d587dab562768d6321d349477c4f522c0b65115fb7cb2c1f27d5b27c4c2",
+        "articulation_program_sha256":
+            "bbcff809d0113bec03d327dd08e85ef84fe10c8b18ba2f922b581416a958de0b",
+    },
+    # The twenty-two packed voices. All render through the full source program
+    # (multi-note schedules, no local forks), so each extent is
+    # duration_ticks * 184 DS output samples, the same law DK's bank follows.
+    # 356 FuraSleep is NOT here -- see the note after this block.
+    {
+        "id": 337,
+        "name": "nSYAudioVoiceCaptainAppeal",
+        "kind": "voice",
+        "articulation": 212,
+        "sound": 94,
+        "notes": ((13, 7, 150), (13, 7, 13), (13, 7, 50)),
+        "duration_ticks": 213,
+        "ucd_volume": 170,
+        "articulation_pitch_cents": -1200,
+        "loop": False,
+        "wave_base": 830848,
+        "wave_length": 11476,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 1,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "1660bafe6bcc8b495532d5c2caa1ae3fa733669e6b84373e5018e97f04ae15a0",
+        "render_program_sha256":
+            "1660bafe6bcc8b495532d5c2caa1ae3fa733669e6b84373e5018e97f04ae15a0",
+        "articulation_program_sha256":
+            "b9d90805390fb7e21d5c85cc6ec67512d935ae6deea69d5010c1dc96a183d449",
+    },
+    {
+        "id": 338,
+        "name": "nSYAudioVoiceCaptainSpecialHi",
+        "kind": "voice",
+        "articulation": 213,
+        "sound": 95,
+        "notes": ((13, 7, 50), (13, 7, 50), (13, 7, 20)),
+        "duration_ticks": 120,
+        "ucd_volume": 215,
+        "articulation_pitch_cents": -1200,
+        "loop": False,
+        "wave_base": 842328,
+        "wave_length": 6426,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 1,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "f131291b16337036b7db7f5c444b8123cba3c2d37e431dc50b223aa56084d8e2",
+        "render_program_sha256":
+            "f131291b16337036b7db7f5c444b8123cba3c2d37e431dc50b223aa56084d8e2",
+        "articulation_program_sha256":
+            "490e9fb43ea1389bd91f120ac2684add8c2ffe27680d38f4848007d3aade28d9",
+    },
+    {
+        "id": 339,
+        "name": "nSYAudioVoiceCaptainSmash1",
+        "kind": "voice",
+        "articulation": 204,
+        "sound": 86,
+        "notes": ((13, 7, 49),),
+        "duration_ticks": 49,
+        "ucd_volume": 230,
+        "articulation_pitch_cents": -1200,
+        "loop": False,
+        "wave_base": 790920,
+        "wave_length": 2484,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 1,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "30f6590d05891c1faafc3a15723f1b8123f45ead6c05e36c4a35acf3e6fab326",
+        "render_program_sha256":
+            "30f6590d05891c1faafc3a15723f1b8123f45ead6c05e36c4a35acf3e6fab326",
+        "articulation_program_sha256":
+            "e063a5f2be5a6d555c9400732e4efda28a0cedb9850259d9273a4d6daf94942f",
+    },
+    {
+        "id": 340,
+        "name": "nSYAudioVoiceCaptainSmash2",
+        "kind": "voice",
+        "articulation": 205,
+        "sound": 87,
+        "notes": ((13, 7, 30), (13, 7, 30), (13, 7, 25)),
+        "duration_ticks": 85,
+        "ucd_volume": 235,
+        "articulation_pitch_cents": -1200,
+        "loop": False,
+        "wave_base": 793408,
+        "wave_length": 3448,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 1,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "889d224d5ed9fb900eb7f05757a1c2f6b138b7dfd0cd0c04c25d6a6847023387",
+        "render_program_sha256":
+            "889d224d5ed9fb900eb7f05757a1c2f6b138b7dfd0cd0c04c25d6a6847023387",
+        "articulation_program_sha256":
+            "9de8d492f057b4ad0c4554a895a51826c9feeb8b004281b15fb6fbde0e0367c4",
+    },
+    {
+        "id": 341,
+        "name": "nSYAudioVoiceCaptainSmash3",
+        "kind": "voice",
+        "articulation": 206,
+        "sound": 88,
+        "notes": ((13, 7, 10), (13, 7, 20), (13, 7, 40)),
+        "duration_ticks": 70,
+        "ucd_volume": 223,
+        "articulation_pitch_cents": -1200,
+        "loop": False,
+        "wave_base": 796856,
+        "wave_length": 3654,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 1,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "5b112cfcb5c2a03ce30db34570eff269468facb3c7e16fa899e9efddc08b0f93",
+        "render_program_sha256":
+            "5b112cfcb5c2a03ce30db34570eff269468facb3c7e16fa899e9efddc08b0f93",
+        "articulation_program_sha256":
+            "2177cd5fbc6c97d4166274e8c3a9d6e3f7552606ca2c4c12c04cd788c8f8e676",
+    },
+    {
+        "id": 342,
+        "name": "nSYAudioVoiceCaptainSmash4",
+        "kind": "voice",
+        "articulation": 220,
+        "sound": 99,
+        "notes": ((13, 7, 167),),
+        "duration_ticks": 167,
+        "ucd_volume": 240,
+        "articulation_pitch_cents": -1200,
+        "loop": False,
+        "wave_base": 877800,
+        "wave_length": 3862,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 1,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "19291a461df886a5309ec40a454ce4d1719fdf27006fedd0f4683d8a6b3bb508",
+        "render_program_sha256":
+            "19291a461df886a5309ec40a454ce4d1719fdf27006fedd0f4683d8a6b3bb508",
+        "articulation_program_sha256":
+            "c474df3925b175b4830e473b1f5c992d9fa6bd2ebcb54c77047e1d19bb300da0",
+    },
+    {
+        "id": 343,
+        "name": "nSYAudioVoiceCaptainFinalComeOn",
+        "kind": "voice",
+        "articulation": 219,
+        "sound": 101,
+        "notes": ((13, 7, 105),),
+        "duration_ticks": 105,
+        "ucd_volume": 240,
+        "articulation_pitch_cents": -1200,
+        "loop": False,
+        "wave_base": 897736,
+        "wave_length": 5464,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 1,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "d1aca2a5fbcc4a5654b9ec6d46c35862dc073daea25c57f2086d96d217f2769e",
+        "render_program_sha256":
+            "d1aca2a5fbcc4a5654b9ec6d46c35862dc073daea25c57f2086d96d217f2769e",
+        "articulation_program_sha256":
+            "0b68d6835f062b76e9376eb61041b82b36500a41f2d113a6bbef23c127949610",
+    },
+    {
+        "id": 344,
+        "name": "nSYAudioVoiceCaptainSmash5",
+        "kind": "voice",
+        "articulation": 217,
+        "sound": 99,
+        "notes": ((13, 7, 30), (13, 7, 30), (13, 7, 15)),
+        "duration_ticks": 75,
+        "ucd_volume": 220,
+        "articulation_pitch_cents": -1200,
+        "loop": False,
+        "wave_base": 877800,
+        "wave_length": 3862,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 1,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "39cf5c3fd564b40b4414f2f8fa1ddd414cf06a659e3f9afffc18dffe095809ab",
+        "render_program_sha256":
+            "39cf5c3fd564b40b4414f2f8fa1ddd414cf06a659e3f9afffc18dffe095809ab",
+        "articulation_program_sha256":
+            "6932524dffa812810606477eb006762168a4985726241f04e0ca5da0054ef399",
+    },
+    {
+        "id": 345,
+        "name": "nSYAudioVoiceCaptainAttackS4",
+        "kind": "voice",
+        "articulation": 211,
+        "sound": 93,
+        "notes": ((13, 7, 50), (13, 7, 40), (13, 7, 30)),
+        "duration_ticks": 120,
+        "ucd_volume": 255,
+        "articulation_pitch_cents": -1200,
+        "loop": False,
+        "wave_base": 825288,
+        "wave_length": 5554,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 1,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "9bf603c6f66594aed01cab9f6c53393710fcc5b6d6bb5e4f46cc93a7171727a5",
+        "render_program_sha256":
+            "9bf603c6f66594aed01cab9f6c53393710fcc5b6d6bb5e4f46cc93a7171727a5",
+        "articulation_program_sha256":
+            "9a0cb60eb9482b6fb25bec842db2355ac94904a2ed1ba342896bdda95425d299",
+    },
+    {
+        "id": 346,
+        "name": "nSYAudioVoiceCaptainSpecialLw",
+        "kind": "voice",
+        "articulation": 210,
+        "sound": 92,
+        "notes": ((13, 7, 40), (13, 7, 40), (13, 7, 60)),
+        "duration_ticks": 140,
+        "ucd_volume": 205,
+        "articulation_pitch_cents": -1200,
+        "loop": False,
+        "wave_base": 817824,
+        "wave_length": 7462,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 1,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "961bcf5fcc3f87ee542d865377c5f883855ef9c0a521ced79dc555a855352eba",
+        "render_program_sha256":
+            "961bcf5fcc3f87ee542d865377c5f883855ef9c0a521ced79dc555a855352eba",
+        "articulation_program_sha256":
+            "bac85644a7baa68ac0c999151b2b403e991b6786db8daf1c85c9d377b3d3037f",
+    },
+    {
+        "id": 347,
+        "name": "nSYAudioVoiceCaptainSpecialNPunch",
+        "kind": "voice",
+        "articulation": 209,
+        "sound": 91,
+        "notes": ((13, 7, 50), (13, 7, 50), (13, 7, 60)),
+        "duration_ticks": 160,
+        "ucd_volume": 230,
+        "articulation_pitch_cents": -1200,
+        "loop": False,
+        "wave_base": 809376,
+        "wave_length": 8442,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 1,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "a6919e1a87c02d9c6db9beed394cf37c03e55dc3659dfe0d2b610584f20c152e",
+        "render_program_sha256":
+            "a6919e1a87c02d9c6db9beed394cf37c03e55dc3659dfe0d2b610584f20c152e",
+        "articulation_program_sha256":
+            "adb5d1a7cd9764ac816bb83cd2e1cd372dfaf56e06ae14d31890c2047150ec54",
+    },
+    {
+        "id": 348,
+        "name": "nSYAudioVoiceCaptainSpecialNFalcon",
+        "kind": "voice",
+        "articulation": 208,
+        "sound": 90,
+        "notes": ((13, 7, 95),),
+        "duration_ticks": 95,
+        "ucd_volume": 220,
+        "articulation_pitch_cents": -1200,
+        "loop": False,
+        "wave_base": 804296,
+        "wave_length": 5076,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 1,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "8bbc58ee8289e6e0f75dbb7f830a15e1aecf34eeffd73e82e1296b3a57832442",
+        "render_program_sha256":
+            "8bbc58ee8289e6e0f75dbb7f830a15e1aecf34eeffd73e82e1296b3a57832442",
+        "articulation_program_sha256":
+            "b65d65c1200143e656d0ff3b27f950da3b795cb6cd07163e9ad454e45d958502",
+    },
+    {
+        "id": 349,
+        "name": "nSYAudioVoiceCaptainDeadUp",
+        "kind": "voice",
+        "articulation": 216,
+        "sound": 98,
+        "notes": ((13, 7, 50), (13, 7, 50), (13, 7, 50), (13, 7, 70)),
+        "duration_ticks": 220,
+        "ucd_volume": 190,
+        "articulation_pitch_cents": -1200,
+        "loop": False,
+        "wave_base": 864952,
+        "wave_length": 12844,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 1,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "76f947ab46fde683355bb3cf35b7095bc536b18717634aace607a2449b580604",
+        "render_program_sha256":
+            "76f947ab46fde683355bb3cf35b7095bc536b18717634aace607a2449b580604",
+        "articulation_program_sha256":
+            "06fe64d1c39d7bb72478d52d2093795175bd37caa45e03cf23f7810f1931f518",
+    },
+    {
+        "id": 350,
+        "name": "nSYAudioVoiceCaptainFuraFura",
+        "kind": "voice",
+        "articulation": 214,
+        "sound": 96,
+        "notes": ((13, 7, 50), (13, 7, 50), (13, 7, 80)),
+        "duration_ticks": 180,
+        "ucd_volume": 200,
+        "articulation_pitch_cents": -1200,
+        "loop": False,
+        "wave_base": 848760,
+        "wave_length": 11088,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 1,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "a8806899ca1c8285c0c87b12646c2274c753b272fb68ba732dbf29e74d03632b",
+        "render_program_sha256":
+            "a8806899ca1c8285c0c87b12646c2274c753b272fb68ba732dbf29e74d03632b",
+        "articulation_program_sha256":
+            "5368fb66b5cacd7a9636900fcc67c3551b005d98744cbf8334bbdd8bb78af28f",
+    },
+    {
+        "id": 351,
+        "name": "nSYAudioVoiceCaptainDamage",
+        "kind": "voice",
+        "articulation": 202,
+        "sound": 84,
+        "notes": ((13, 7, 30), (13, 7, 20), (13, 7, 20)),
+        "duration_ticks": 70,
+        "ucd_volume": 245,
+        "articulation_pitch_cents": -1200,
+        "loop": False,
+        "wave_base": 781152,
+        "wave_length": 3772,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 1,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "652e4a9b74397aaa11f8ad7010b7ff31dfbcf336e450e5bdef9fbec5df36b63e",
+        "render_program_sha256":
+            "652e4a9b74397aaa11f8ad7010b7ff31dfbcf336e450e5bdef9fbec5df36b63e",
+        "articulation_program_sha256":
+            "54fde1eebeb0cd6c98a44d20cb45212d006bc5bcc4b63fb22a52cb81351d71d3",
+    },
+    {
+        "id": 352,
+        "name": "nSYAudioVoiceCaptainUnkPing1",
+        "kind": "voice",
+        "articulation": 188,
+        "sound": 10,
+        "notes": ((13, 7, 60),),
+        "duration_ticks": 60,
+        "ucd_volume": 200,
+        "articulation_pitch_cents": 0,
+        "loop": False,
+        "wave_base": 119296,
+        "wave_length": 1548,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 1,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "f776d329bd1202525e4ede61f1129474273ca6d52ab65afaebf8749f9fd71893",
+        "render_program_sha256":
+            "f776d329bd1202525e4ede61f1129474273ca6d52ab65afaebf8749f9fd71893",
+        "articulation_program_sha256":
+            "ff485f899743f05506ab29c92513c24018dc9c8242c0a3edb08724f472ab5c68",
+    },
+    {
+        "id": 353,
+        "name": "nSYAudioVoiceCaptainJumpAerial",
+        "kind": "voice",
+        "articulation": 201,
+        "sound": 83,
+        "notes": ((13, 7, 20), (13, 7, 17)),
+        "duration_ticks": 37,
+        "ucd_volume": 190,
+        "articulation_pitch_cents": -1200,
+        "loop": False,
+        "wave_base": 779184,
+        "wave_length": 1962,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 1,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "58a50a1393e2744da9b6ea688ff76cd50029b619d4776b4fa95763816d521a71",
+        "render_program_sha256":
+            "58a50a1393e2744da9b6ea688ff76cd50029b619d4776b4fa95763816d521a71",
+        "articulation_program_sha256":
+            "9858ddf999a0a858b27d30a6d5d8bcb16f29f6c1063efdf1def272006176eb1a",
+    },
+    {
+        "id": 354,
+        "name": "nSYAudioVoiceCaptainHeavyGet",
+        "kind": "voice",
+        "articulation": 215,
+        "sound": 97,
+        "notes": ((13, 7, 50), (13, 7, 55)),
+        "duration_ticks": 105,
+        "ucd_volume": 180,
+        "articulation_pitch_cents": -1200,
+        "loop": False,
+        "wave_base": 859848,
+        "wave_length": 5104,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 1,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "57ef2fefa9e86c6c418ec952d08a504471346110b5481edd5c3572e68eeed921",
+        "render_program_sha256":
+            "57ef2fefa9e86c6c418ec952d08a504471346110b5481edd5c3572e68eeed921",
+        "articulation_program_sha256":
+            "831a9b393186a47f67415a90d1bcdb8aa4b5dae22258f7e7dedc1e09bbf3791b",
+    },
+    {
+        "id": 355,
+        "name": "nSYAudioVoiceCaptainDead",
+        "kind": "voice",
+        "articulation": 203,
+        "sound": 85,
+        "notes": ((13, 7, 50), (13, 7, 40), (13, 7, 20)),
+        "duration_ticks": 110,
+        "ucd_volume": 230,
+        "articulation_pitch_cents": -1200,
+        "loop": False,
+        "wave_base": 784928,
+        "wave_length": 5986,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 1,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "8aee09ed8ef1edecb1a8ceeef9538669b20f4626d8153bc6783ec5a06c9e7166",
+        "render_program_sha256":
+            "8aee09ed8ef1edecb1a8ceeef9538669b20f4626d8153bc6783ec5a06c9e7166",
+        "articulation_program_sha256":
+            "ef911e71ed250511b1f4286267d0dd7f097ed48dd2d4dba6124f1c64d868ad3d",
+    },
+    {
+        "id": 357,
+        "name": "nSYAudioVoiceCaptainUnkQuick",
+        "kind": "voice",
+        "articulation": 207,
+        "sound": 89,
+        "notes": ((13, 7, 10), (13, 7, 20), (13, 7, 30)),
+        "duration_ticks": 60,
+        "ucd_volume": 160,
+        "articulation_pitch_cents": -1200,
+        "loop": False,
+        "wave_base": 800512,
+        "wave_length": 3780,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 1,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "507fc61380b1b901c4c4daf1cd030a1ce877ed259775c1c5c53528bc2f922dd8",
+        "render_program_sha256":
+            "507fc61380b1b901c4c4daf1cd030a1ce877ed259775c1c5c53528bc2f922dd8",
+        "articulation_program_sha256":
+            "d22909d824d2c6eca192dd372862028a1066a62e269ec48b874b5ee2bb81ea96",
+    },
+    {
+        "id": 358,
+        "name": "nSYAudioVoiceCaptainUnkPing2",
+        "kind": "voice",
+        "articulation": 188,
+        "sound": 10,
+        "notes": ((13, 7, 60),),
+        "duration_ticks": 60,
+        "ucd_volume": 255,
+        "articulation_pitch_cents": 0,
+        "loop": False,
+        "wave_base": 119296,
+        "wave_length": 1548,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 1,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "616495a728197ba769242e986f965837c976bcc5694c0a5f7fdd9fe5e72abb67",
+        "render_program_sha256":
+            "616495a728197ba769242e986f965837c976bcc5694c0a5f7fdd9fe5e72abb67",
+        "articulation_program_sha256":
+            "ff485f899743f05506ab29c92513c24018dc9c8242c0a3edb08724f472ab5c68",
+    },
+    {
+        "id": 359,
+        "name": "nSYAudioVoiceCaptainUnkPing3",
+        "kind": "voice",
+        "articulation": 188,
+        "sound": 10,
+        "notes": ((13, 7, 60),),
+        "duration_ticks": 60,
+        "ucd_volume": 255,
+        "articulation_pitch_cents": 0,
+        "loop": False,
+        "wave_base": 119296,
+        "wave_length": 1548,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 1,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "616495a728197ba769242e986f965837c976bcc5694c0a5f7fdd9fe5e72abb67",
+        "render_program_sha256":
+            "616495a728197ba769242e986f965837c976bcc5694c0a5f7fdd9fe5e72abb67",
+        "articulation_program_sha256":
+            "ff485f899743f05506ab29c92513c24018dc9c8242c0a3edb08724f472ab5c68",
+    },
+    # The announcer line the character select and the Results "winner is"
+    # sequence both index by fkind, and the crowd's Falcon chant from
+    # ft/ftpublic.c's fighter-call table. Single-note source decodes, like
+    # DK's 483/603.
+    {
+        "id": 485,
+        "name": "nSYAudioVoiceAnnounceCaptain",
+        "kind": "announcer",
+        "articulation": 319,
+        "sound": 196,
+        "notes": ((13, 7, 300),),
+        "duration_ticks": 300,
+        "ucd_volume": 240,
+        "articulation_pitch_cents": -1200,
+        "loop": False,
+        "wave_base": 1622680,
+        "wave_length": 11556,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 20544,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "73ad11789f9700012cdc668b6b5208dd8627a69b60abdb5f71a32f91fb07651c",
+        "render_program_sha256":
+            "73ad11789f9700012cdc668b6b5208dd8627a69b60abdb5f71a32f91fb07651c",
+        "articulation_program_sha256":
+            "5b545ce86d7c4c9c8ef14ef9ff9490bd11a1316bfe33c9945242b56dd2414692",
+    },
+    {
+        "id": 604,
+        "name": "nSYAudioVoicePublicCaptain",
+        "kind": "crowd",
+        "articulation": 121,
+        "sound": 52,
+        "notes": ((13, 7, 320),),
+        "duration_ticks": 320,
+        "ucd_volume": 255,
+        "articulation_pitch_cents": -1190,
+        "loop": False,
+        "wave_base": 442960,
+        "wave_length": 17470,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 29613,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "688d03802bd41516278349c5c99f5bc2528b66e4694d075a548c053f2959b9bd",
+        "render_program_sha256":
+            "688d03802bd41516278349c5c99f5bc2528b66e4694d075a548c053f2959b9bd",
+        "articulation_program_sha256":
+            "428eeb95721da6a973bd4b5ebf0cdfebbb9ca8a2c2574045e6d2f518dbe42a96",
     },
 )
 
