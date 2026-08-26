@@ -5,7 +5,7 @@
 #include <sys/audio.h>
 
 #define NDS_AUDIO_FGM_PASS 0x46474d31u /* FGM1 */
-#define NDS_AUDIO_FGM_ENTRY_COUNT 165u
+#define NDS_AUDIO_FGM_ENTRY_COUNT 178u
 #define NDS_AUDIO_FGM_PHASE_COUNT 5u
 #define NDS_AUDIO_FGM_PHASE_COMPLETE_MASK 0x1fu
 #define NDS_AUDIO_FGM_KO_COUNT 5u
@@ -81,8 +81,15 @@
  * carried as somebody else's fork target, so the ROM cost is mostly the six
  * genuinely new bodies; the runtime cache stays 204800 and the largest new
  * body (176 BossUnk1, 10,584 B) is well inside the 53,248-byte slot. */
-#define NDS_AUDIO_FGM_PACK_BYTES 1551484u
-#define NDS_AUDIO_FGM_PACK_MAPPING_SHA256_LO 0xfb3507c6u
+/* P2-3f15: Luigi's voice bank, 165 -> 178 entries and 1,551,484 ->
+ * 1,733,284 bytes. He was selectable with exactly two cues packed -- his
+ * announcer line and his selected-clip FuraFura -- so every gameplay voice
+ * his FTAttributes lanes and motion scripts named failed closed. His twelve
+ * remaining voices plus his crowd chant 608 close it; largest body is 420
+ * DeadUp at 32,664 B, inside the 53,248-byte slot, and the cache stays
+ * 204800. */
+#define NDS_AUDIO_FGM_PACK_BYTES 1733284u
+#define NDS_AUDIO_FGM_PACK_MAPPING_SHA256_LO 0x7b3a0107u
 #define NDS_AUDIO_FGM_CACHE_BYTES 204800u
 #define NDS_AUDIO_FGM_HANDLE_CAPACITY 8u
 #define NDS_AUDIO_FGM_FIDELITY_DEBT_PITCH_AUTOMATION (1u << 2)

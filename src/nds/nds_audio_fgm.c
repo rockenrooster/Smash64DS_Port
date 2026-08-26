@@ -475,6 +475,29 @@ static s32 ndsAudioFgmIDIsIncluded(u16 id)
     case nSYAudioFGMDonkeyCharge:
     case nSYAudioFGMDonkeyDeadSlam:
     case nSYAudioFGMDonkeyDownBounce:
+    /* P2-3f15 Luigi's voice bank. He shipped selectable with exactly TWO cues
+     * packed -- his announcer line 498 and his selected-clip FuraFura 421 --
+     * so every voice his `FTAttributes` lanes and his motion scripts name
+     * failed closed. That is why P2-3f12's normalizer repair was latent:
+     * correcting his mixed-u16 lanes only changed WHICH unpacked id he asked
+     * for. The set is gm/gmsound.h's contiguous run 416..428 plus his row in
+     * ft/ftcommondata.c's fighter-call table, 608. 425 Lets and 428 HereWe are
+     * source-marked unused and packed anyway so the bank is never reopened.
+     * His KO slam and DownBounce are MARIO's own 292/303, already packed --
+     * the source spells them that way, so neither is a Luigi cue. */
+    case nSYAudioVoiceLuigiSmash1:
+    case nSYAudioVoiceLuigiSmash2:
+    case nSYAudioVoiceLuigiSmash3:
+    case nSYAudioVoiceLuigiSpecialLw:
+    case nSYAudioVoiceLuigiDeadUp:
+    case nSYAudioVoiceLuigiDamage:
+    case nSYAudioVoiceLuigiJump:
+    case nSYAudioVoiceLuigiJumpAerial:
+    case nSYAudioVoiceLuigiLets:
+    case nSYAudioVoiceLuigiHeavyGet:
+    case nSYAudioVoiceLuigiDead:
+    case nSYAudioVoiceLuigiHereWe:
+    case nSYAudioVoicePublicLuigi:
         return TRUE;
     default:
         return FALSE;

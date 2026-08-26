@@ -110,11 +110,55 @@ three times — 422 is the post-normalizer value of `attr->damage_sfx`, and
 before the arm the same field read 420 (`LuigiDeadUp`), so the ring would have
 named 420. No phantom id 0 appears either.
 
-**His voices are the next gap.** 422 and 427 (`LuigiDead`) are in that ring
-because none of his voice bank is packed — he has exactly two cues
-(`nSYAudioVoiceAnnounceLuigi`, `nSYAudioVoiceLuigiFuraFura`). His down-bounce id
-is unpacked too. Shape the work on the Donkey/Captain banks in
-`scripts/sfx/render-audio-fgm-phase-pack.py`.
+### Voice bank — what is IN and what REMAINS (P2-3f15, 2026-08-25)
+
+P2-3f12 closed with "his voices are the next gap": 422 and 427 were in that
+ring because he had exactly **two** cues packed. They are packed now.
+
+The inventory is the source's: gm/gmsound.h's contiguous run **416..428**
+(REGION_US honored by a full enum parse, not remembered), plus his row in
+`ft/ftcommondata.c`'s `dFTCommonDataPublicFighterCallFGMs` — 608
+`PublicLuigi`. Reachability is `220_LuigiMainMotion.c` (Smash1, SpecialLw,
+Jump, JumpAerial, FuraFura), the `FTAttributes` block above, and
+`scsubsysdataluigi.c`.
+
+**IN — 15 cues.** 498 announcer and 421 FuraFura landed at P2-3; P2-3f15 adds
+the twelve remaining voices and the crowd chant.
+
+| id | name | body | id | name | body |
+|----|------|------|----|------|------|
+| 416 | Smash1 | 3,408 B | 424 | JumpAerial | 11,044 B |
+| 417 | Smash2 | 20,796 B | 425 | Lets | 18,036 B |
+| 418 | Smash3 | 13,804 B | 426 | HeavyGet | 8,836 B |
+| 419 | SpecialLw | 14,356 B | 427 | Dead | 4,052 B |
+| 420 | DeadUp | 32,664 B | 428 | HereWe | 23,924 B |
+| 422 | Damage | 10,584 B | 608 | PublicLuigi | 15,276 B |
+| 423 | Jump | 4,604 B | | | |
+
+All twelve voices are multi-note schedules with no forks and render through
+`FULL_PROGRAM_AOT_IDS` at `duration_ticks * 184`, the law DK's and Falcon's
+banks already follow; 608 is a single 330-tick note and renders flat like
+every other crowd chant. Largest body is 420 DeadUp at 32,664 B against the
+53,248-byte largest runtime cache slot — **nothing here needed
+`runtime_note_replay` and nothing was refused**, unlike DK's 324 and Falcon's
+356.
+
+Pack 1,551,484 → **1,733,284 B** (cap 2,097,152), entries 165 → **178**,
+runtime cache unchanged at 204,800.
+
+425 `Lets` and 428 `HereWe` are the two the source marks unused — 425 has no
+reference anywhere and 428's only one is `mn/mndata/mnsoundtest.c`, a P2-7
+screen. Both are packed anyway, at a cost of 41,960 B: the run is contiguous
+in the source, ROM is the cheap resource, and a bank that is complete never
+has to be reopened.
+
+**REMAINS — nothing Luigi-specific.** His KO slam is Mario's own
+`nSYAudioFGMMarioDeadSlam` (292) and his DownBounce is Mario's
+`nSYAudioFGMMarioDownBounce` (303) — the source spells both that way and both
+have been packed since P1, so neither is a Luigi gap. What his motion scripts
+still miss is the roster-wide **shared** set, which no fighter has: 214
+`MarioDokan` (his pipe entry, and Mario's), 110 `MarioFoot`, 635
+`CharacterUnkZip6`, 128 `GroundBrakeGrind`, 17 `HeavySwing1`.
 
 ## DS notes / risks
 

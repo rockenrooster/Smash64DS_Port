@@ -268,6 +268,11 @@ FULL_COVERAGE_IDS = (
     # 10 DonkeySlap2 that 175/176 fork and Captain/Kirby/Purin/Yoshi also
     # play. Appended so every prior entry keeps its pack order.
     9, 10, 72, 105, 116, 175, 176, 177, 178, 179, 287, 298,
+    # P2-3f15 Luigi's voice bank -- the contiguous source run 416..428 minus
+    # the already-packed 421, plus his crowd chant 608. He had two cues packed
+    # and every gameplay voice failing closed. Appended so every prior entry
+    # keeps its pack order.
+    416, 417, 418, 419, 420, 422, 423, 424, 425, 426, 427, 428, 608,
 )
 FULL_PROGRAM_AOT_IDS = frozenset((
     154, 40, 38, 37, 34, 32, 31,
@@ -303,6 +308,10 @@ FULL_PROGRAM_AOT_IDS = frozenset((
     # hold each cue's FIRST note for its whole duration -- 179 DonkeyCharge
     # is pitch codes 13/3/12 in nine ticks and would come out monotone.
     9, 10, 175, 176, 177, 178, 179,
+    # P2-3f15 Luigi's twelve unpacked voices. Every one is a multi-note
+    # schedule with no forks -- the same class 421 FuraFura already joined
+    # above, and the same class Falcon's twenty-two are in.
+    416, 417, 418, 419, 420, 422, 423, 424, 425, 426, 427, 428,
     18, 365,
     # 153 AltitudeWarn -- the cue the owner picked out BY NAME as "a new SFX I
     # don't recognise". Articulation 150 sweeps pitch 550 -> 2390 cents inside
@@ -4824,6 +4833,358 @@ SELECTED += (
             "offset": 50.0,
         },
         "aot_source_schedule": True,
+    },
+)
+
+
+# P2-3 Luigi voice bank.  He has been selectable since the CSS carried him, and
+# the only two cues packed for him were his announcer line (498) and his
+# selected-clip FuraFura (421).  Everything his gameplay asks for -- his three
+# smash voices, his damage, his star KO, his dead cry, his jumps, his Down-B
+# and his crowd chant -- failed closed, which is why P2-3f12's normalizer fix
+# was LATENT: reversing his `FTAttributes` lanes changed which unpacked id he
+# asked for.  The P2-3f13 argmax run named 422 and 427 in the miss ring.
+#
+# THE INVENTORY IS THE SOURCE'S.  Every `nSYAudioVoiceLuigi*` enumerator in
+# gm/gmsound.h (REGION_US honored) -- the contiguous run 416..428 -- plus
+# `nSYAudioVoicePublicLuigi` (608), his row in ft/ftcommondata.c's
+# `dFTCommonDataPublicFighterCallFGMs`.  Reachability is `220_LuigiMainMotion.c`
+# (Smash1, SpecialLw, Jump, JumpAerial, FuraFura), `221_LuigiMain.c`'s
+# `FTAttributes` block at 0x580 (dead 427, deadup 420, damage 422, smash
+# 416/417/418, heavyget 426) and `scsubsysdataluigi.c`.  425 Lets and 428
+# HereWe are the two the source marks unused; they are packed anyway, because
+# the bank is contiguous in the source and a fighter whose bank is complete
+# never has to be reopened -- `mnsoundtest.c` already names 428.
+#
+# 421 FuraFura is NOT repeated here: it landed at P2-3 and keeps its pack
+# order.  His KO slam is Mario's own `nSYAudioFGMMarioDeadSlam` (292, already
+# packed) and his DownBounce is Mario's 303 -- the source spells both that way,
+# so neither is a Luigi cue and neither is missing.
+#
+# Every field is `--derive 416,417,418,419,420,422,423,424,425,426,427,428,608`
+# and every extent came out of this file's own renderer.  The twelve voices are
+# multi-note schedules with no forks, so they render through
+# FULL_PROGRAM_AOT_IDS at `duration_ticks * 184` -- the law DK's and Falcon's
+# banks already follow.  608 is a single 330-tick note and renders flat, like
+# every other crowd chant (603/604/605/609).  Largest body is 420 DeadUp at
+# 32,664 B, inside the 53,248-byte largest runtime cache slot; nothing here
+# needs `runtime_note_replay` and nothing is refused.
+SELECTED += (
+    {
+        "id": 416,
+        "name": "nSYAudioVoiceLuigiSmash1",
+        "kind": "voice",
+        "articulation": 274,
+        "sound": 152,
+        "notes": ((13, 7, 10), (14, 7, 12), (14, 7, 15)),
+        "duration_ticks": 37,
+        "ucd_volume": 188,
+        "articulation_pitch_cents": -1199,
+        "loop": False,
+        "wave_base": 1224216,
+        "wave_length": 1882,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 1,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "c864e4f0d7afcdf198c0c99656a49beae4d71c67cc8a5b9fcab0b08772890573",
+        "render_program_sha256":
+            "c864e4f0d7afcdf198c0c99656a49beae4d71c67cc8a5b9fcab0b08772890573",
+        "articulation_program_sha256":
+            "5ba60b029e0195117f862d1e00f0d2b20657f8332d0710d1f8ea420fa215a14f",
+    },
+    {
+        "id": 417,
+        "name": "nSYAudioVoiceLuigiSmash2",
+        "kind": "voice",
+        "articulation": 297,
+        "sound": 174,
+        "notes": ((13, 7, 6), (14, 7, 30), (15, 7, 50), (14, 7, 70),
+                  (13, 7, 70)),
+        "duration_ticks": 226,
+        "ucd_volume": 180,
+        "articulation_pitch_cents": -1170,
+        "loop": False,
+        "wave_base": 1432240,
+        "wave_length": 9694,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 1,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "f241e8a55eee9c80c70821e7bd695c5e078b44407b9542823cafac7c9c624e05",
+        "render_program_sha256":
+            "f241e8a55eee9c80c70821e7bd695c5e078b44407b9542823cafac7c9c624e05",
+        "articulation_program_sha256":
+            "ce7ca7fb5d393e272ce037e6929cb3d29e221112ad53093429b8d0d5808221f1",
+    },
+    {
+        "id": 418,
+        "name": "nSYAudioVoiceLuigiSmash3",
+        "kind": "voice",
+        "articulation": 275,
+        "sound": 153,
+        "notes": ((14, 7, 25), (13, 7, 25), (12, 7, 50), (11, 7, 50)),
+        "duration_ticks": 150,
+        "ucd_volume": 188,
+        "articulation_pitch_cents": -1199,
+        "loop": False,
+        "wave_base": 1226104,
+        "wave_length": 5724,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 1,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "e9d308f227c598743e8b3cb13ddee8064be44a3c26b7d0a96d00feda89673561",
+        "render_program_sha256":
+            "e9d308f227c598743e8b3cb13ddee8064be44a3c26b7d0a96d00feda89673561",
+        "articulation_program_sha256":
+            "50c506394344eefebe421c4cf684e7b3933eccc9eccaf797a02aa6b49dc5e546",
+    },
+    {
+        "id": 419,
+        "name": "nSYAudioVoiceLuigiSpecialLw",
+        "kind": "voice",
+        "articulation": 299,
+        "sound": 176,
+        "notes": ((13, 7, 6), (14, 7, 20), (14, 7, 30), (15, 7, 40),
+                  (14, 7, 30), (13, 7, 30)),
+        "duration_ticks": 156,
+        "ucd_volume": 180,
+        "articulation_pitch_cents": -1199,
+        "loop": False,
+        "wave_base": 1444144,
+        "wave_length": 8524,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 1,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "02e27c3331b07303183dacf0bf65859037abf271a7a72ef28eaf1efda0f5181a",
+        "render_program_sha256":
+            "02e27c3331b07303183dacf0bf65859037abf271a7a72ef28eaf1efda0f5181a",
+        "articulation_program_sha256":
+            "3dadacc3929a34bd0a16a6c73cb8302ef025a6f09d649b1a4b8d2dea1e3eb720",
+    },
+    {
+        "id": 420,
+        "name": "nSYAudioVoiceLuigiDeadUp",
+        "kind": "voice",
+        "articulation": 276,
+        "sound": 154,
+        "notes": ((14, 7, 60), (15, 7, 150), (15, 7, 145)),
+        "duration_ticks": 355,
+        "ucd_volume": 180,
+        "articulation_pitch_cents": -1199,
+        "loop": False,
+        "wave_base": 1231832,
+        "wave_length": 18136,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 1,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "2e59a8393402f81de5350f872d63f292b1c6a5cd246c7e9270ca401d3a1b42de",
+        "render_program_sha256":
+            "2e59a8393402f81de5350f872d63f292b1c6a5cd246c7e9270ca401d3a1b42de",
+        "articulation_program_sha256":
+            "5c37ff15161e2dabdbedf325c4171dc914e3ae41a6a0a85de2765abc3a26af88",
+    },
+    {
+        "id": 422,
+        "name": "nSYAudioVoiceLuigiDamage",
+        "kind": "voice",
+        "articulation": 277,
+        "sound": 155,
+        "notes": ((15, 7, 30), (14, 7, 40), (14, 7, 45)),
+        "duration_ticks": 115,
+        "ucd_volume": 180,
+        "articulation_pitch_cents": -1199,
+        "loop": False,
+        "wave_base": 1249968,
+        "wave_length": 8334,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 1,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "4789844ad3251e15da5b2fa86de5ac82464ff1ccbf8a3c82bdb17d19944b01fc",
+        "render_program_sha256":
+            "4789844ad3251e15da5b2fa86de5ac82464ff1ccbf8a3c82bdb17d19944b01fc",
+        "articulation_program_sha256":
+            "1d9f35bace819a21fbd19254671358c9ea1d1117dfe5e75d0942dab4fd9984e4",
+    },
+    {
+        "id": 423,
+        "name": "nSYAudioVoiceLuigiJump",
+        "kind": "voice",
+        "articulation": 278,
+        "sound": 156,
+        "notes": ((20, 7, 5), (17, 7, 5), (14, 7, 5), (12, 7, 15),
+                  (12, 7, 20)),
+        "duration_ticks": 50,
+        "ucd_volume": 180,
+        "articulation_pitch_cents": -1199,
+        "loop": False,
+        "wave_base": 1258304,
+        "wave_length": 2692,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 1,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "5b465bc5f2357dce2a1f8108575b89fb0764dc70ad7b24e3e4b62962142e3f45",
+        "render_program_sha256":
+            "5b465bc5f2357dce2a1f8108575b89fb0764dc70ad7b24e3e4b62962142e3f45",
+        "articulation_program_sha256":
+            "0014673eb07e69334c5e4485a25f7aa5f878eae9f875713f9c34f3c6a7a8ec49",
+    },
+    {
+        "id": 424,
+        "name": "nSYAudioVoiceLuigiJumpAerial",
+        "kind": "voice",
+        "articulation": 279,
+        "sound": 157,
+        "notes": ((15, 7, 30), (15, 7, 45), (14, 7, 45)),
+        "duration_ticks": 120,
+        "ucd_volume": 180,
+        "articulation_pitch_cents": -1199,
+        "loop": False,
+        "wave_base": 1261000,
+        "wave_length": 6912,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 1,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "f76e561520abaf670da52160bdfeeef62531f8f32319bcb3afc7e49f7486fa83",
+        "render_program_sha256":
+            "f76e561520abaf670da52160bdfeeef62531f8f32319bcb3afc7e49f7486fa83",
+        "articulation_program_sha256":
+            "af4e91e9505d2ebe4091b19ebf66922f006c805cd8327d18612a8f446c7b41f8",
+    },
+    {
+        "id": 425,
+        "name": "nSYAudioVoiceLuigiLets",
+        "kind": "voice",
+        "articulation": 304,
+        "sound": 181,
+        "notes": ((14, 7, 6), (14, 7, 20), (14, 7, 30), (15, 7, 100),
+                  (15, 7, 40)),
+        "duration_ticks": 196,
+        "ucd_volume": 200,
+        "articulation_pitch_cents": -1199,
+        "loop": False,
+        "wave_base": 1490176,
+        "wave_length": 8334,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 1,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "4bb679e01f6835ceb3aa92cd233bc3f89f612e89547a20499ed99b62de83843a",
+        "render_program_sha256":
+            "4bb679e01f6835ceb3aa92cd233bc3f89f612e89547a20499ed99b62de83843a",
+        "articulation_program_sha256":
+            "10a0689e9c3df76051aaa857d41ce266df7bf20ac3d4710484617b1fc00f1ce8",
+    },
+    {
+        "id": 426,
+        "name": "nSYAudioVoiceLuigiHeavyGet",
+        "kind": "voice",
+        "articulation": 305,
+        "sound": 182,
+        "notes": ((15, 7, 6), (15, 7, 20), (15, 7, 30), (15, 7, 40)),
+        "duration_ticks": 96,
+        "ucd_volume": 160,
+        "articulation_pitch_cents": -1199,
+        "loop": False,
+        "wave_base": 1498512,
+        "wave_length": 4474,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 1,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "210b7e0c8addd04e6001f0856b3a3fffd14799887871b0c83daed862ecb9851b",
+        "render_program_sha256":
+            "210b7e0c8addd04e6001f0856b3a3fffd14799887871b0c83daed862ecb9851b",
+        "articulation_program_sha256":
+            "37aca1add9fc14fd789c7d447c8ba113cfc7542f631bd2ec39357e64f9268919",
+    },
+    {
+        "id": 427,
+        "name": "nSYAudioVoiceLuigiDead",
+        "kind": "voice",
+        "articulation": 280,
+        "sound": 158,
+        "notes": ((14, 7, 10), (15, 7, 19), (15, 7, 15)),
+        "duration_ticks": 44,
+        "ucd_volume": 180,
+        "articulation_pitch_cents": -1199,
+        "loop": False,
+        "wave_base": 1267912,
+        "wave_length": 2808,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 1,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "20cd17ea0943a2d223031eea48c250a5ad24b54acddc6bee1f980873e706ee64",
+        "render_program_sha256":
+            "20cd17ea0943a2d223031eea48c250a5ad24b54acddc6bee1f980873e706ee64",
+        "articulation_program_sha256":
+            "0dbbfe112c99753517939bb6ac525683b9b955eacb3704506d651ca9f111ccc9",
+    },
+    {
+        "id": 428,
+        "name": "nSYAudioVoiceLuigiHereWe",
+        "kind": "voice",
+        "articulation": 308,
+        "sound": 185,
+        "notes": ((14, 7, 30), (15, 7, 60), (14, 7, 70), (14, 7, 100)),
+        "duration_ticks": 260,
+        "ucd_volume": 210,
+        "articulation_pitch_cents": -1199,
+        "loop": False,
+        "wave_base": 1513680,
+        "wave_length": 12808,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 1,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "573d0f857793aa3f259481bcb57fe8615bdd8eda39e8747da668688e962f470f",
+        "render_program_sha256":
+            "573d0f857793aa3f259481bcb57fe8615bdd8eda39e8747da668688e962f470f",
+        "articulation_program_sha256":
+            "0e9a36307d5582658fb466b4f3b9ece8b1397f4dea54ea2a93f74c7a53f2c9ea",
+    },
+    {
+        "id": 608,
+        "name": "nSYAudioVoicePublicLuigi",
+        "kind": "crowd",
+        "articulation": 125,
+        "sound": 56,
+        "notes": ((13, 7, 330),),
+        "duration_ticks": 330,
+        "ucd_volume": 255,
+        "articulation_pitch_cents": -1190,
+        "loop": False,
+        "wave_base": 513840,
+        "wave_length": 19234,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 30538,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "2927538536aa7ea8801aeead6e933b4899b90b2dffa7ea8db08bdc5bd04c22c8",
+        "render_program_sha256":
+            "2927538536aa7ea8801aeead6e933b4899b90b2dffa7ea8db08bdc5bd04c22c8",
+        "articulation_program_sha256":
+            "7a0b66d03fdd5839200c6126ed36b860a7a3fd934f6e7cd2144a1dc3f0e2f742",
     },
 )
 

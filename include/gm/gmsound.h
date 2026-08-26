@@ -197,7 +197,24 @@ typedef enum gmVoiceID
     nSYAudioVoiceFoxSmash3 = 374,
     nSYAudioVoiceFoxDamage = 375,
     nSYAudioVoiceLinkSmash1 = 401,
+    /* P2-3f15, Luigi's contiguous source voice run. 421 FuraFura landed at
+     * P2-3 with his announcer line; the rest were failing closed while his
+     * FTAttributes lanes and motion scripts named every one of them. His KO
+     * slam is Mario's own 292 and his DownBounce is Mario's 303 -- the source
+     * spells both that way -- so neither is a Luigi cue. */
+    nSYAudioVoiceLuigiSmash1 = 416,
+    nSYAudioVoiceLuigiSmash2 = 417,
+    nSYAudioVoiceLuigiSmash3 = 418,
+    nSYAudioVoiceLuigiSpecialLw = 419,
+    nSYAudioVoiceLuigiDeadUp = 420,
     nSYAudioVoiceLuigiFuraFura = 421,
+    nSYAudioVoiceLuigiDamage = 422,
+    nSYAudioVoiceLuigiJump = 423,
+    nSYAudioVoiceLuigiJumpAerial = 424,
+    nSYAudioVoiceLuigiLets = 425,
+    nSYAudioVoiceLuigiHeavyGet = 426,
+    nSYAudioVoiceLuigiDead = 427,
+    nSYAudioVoiceLuigiHereWe = 428,
     nSYAudioVoiceMarioSmash1 = 429,
     nSYAudioVoiceMarioSmash2 = 430,
     nSYAudioVoiceMarioSmash3 = 431,

@@ -102,7 +102,14 @@ $expectedIDs = @(626,470,469,467,490,74,363,364,372,373,374,430,439,292,
     # 175/176 fork it, so it closes one of the seven shared cues P2-3f13 left
     # open. 105/116/287/298 were already in the pack as somebody else's fork
     # target, and their extents land on the numbers those entries carry.
-    9, 10, 72, 105, 116, 175, 176, 177, 178, 179, 287, 298)
+    9, 10, 72, 105, 116, 175, 176, 177, 178, 179, 287, 298,
+    # P2-3f15 Luigi's voice bank: the contiguous source run 416..428 minus the
+    # already-packed 421, plus his crowd chant 608. He shipped selectable with
+    # exactly two cues packed, so every voice his FTAttributes lanes and motion
+    # scripts name was failing closed -- which is why P2-3f12's normalizer
+    # repair was latent. 425 Lets and 428 HereWe are source-marked unused and
+    # packed anyway so the bank never has to be reopened.
+    416, 417, 418, 419, 420, 422, 423, 424, 425, 426, 427, 428, 608)
 $actualIDs = @($metadata.entries | ForEach-Object { [int]$_.id })
 if (($actualIDs -join ',') -ne ($expectedIDs -join ',')) {
     throw "Unexpected FGM mapping: $($actualIDs -join ',')"
@@ -172,7 +179,12 @@ if (([int]$metadata.format_version -ne 4) -or
     # +39,640 bytes of ROM. Four of the twelve (105/116/287/298) were already
     # in the pack as somebody else's fork target, so their bodies dedup and the
     # growth is mostly the six genuinely new ones. Runtime cache stays 204800.
-    ([int64]$metadata.resident_bytes -ne 1551484) -or
+    # 1551484 -> 1733284 on 2026-08-25 (P2-3f15) for Luigi's voice bank: his
+    # twelve unpacked voices plus crowd chant 608, 165 -> 178 entries,
+    # +181,800 bytes of ROM. Largest is 420 DeadUp at 32,664 B, inside the
+    # 53,248-byte slot; nothing here needs runtime_note_replay and nothing is
+    # refused. Runtime cache stays 204800.
+    ([int64]$metadata.resident_bytes -ne 1733284) -or
     ([int64]$metadata.resident_limit_bytes -ne 204800) -or
     # ROM, not RAM: the runtime streams cues into resident_limit_bytes and never
     # holds the pack. 512 KiB blocked the five announcer lines and 768 KiB then
@@ -204,8 +216,10 @@ if (([int]$metadata.format_version -ne 4) -or
     # -> 0x17d8f4ff on 2026-08-25 (P2-3f13) for Captain Falcon's thirty-four
     # selectors;
     # -> 0xfb3507c6 on 2026-08-25 (P2-3f14) for Donkey Kong's twelve FGM
-    # selectors -- same reason, the selector table changed.
-    ($metadata.mapping_sha256_lo -ne '0xfb3507c6') -or
+    # selectors;
+    # -> 0x7b3a0107 on 2026-08-25 (P2-3f15) for Luigi's thirteen -- same
+    # reason, the selector table changed.
+    ($metadata.mapping_sha256_lo -ne '0x7b3a0107') -or
     # Repinned 2026-08-02: FGM 11 (the rolling dodge) dropped 127 -> 96 -> 68 ->
     # 48 on the owner's ear via FGM_OWNER_VOLUME_TRIM, -8.4 dB total against the
     # source; the 68 pin was
@@ -248,8 +262,10 @@ if (([int]$metadata.format_version -ne 4) -or
     # Donkey Kong's twelve FGM cues move it again the same day (P2-3f14); the
     # 153-entry pin was
     # bd26c263c895617ccc0c7995d92f2748f2a0d877465369863d9478fc691bb393.
+    # Luigi's thirteen move it once more (P2-3f15); the 165-entry pin was
+    # 113da5fb91c83ff3b6f4bd4b63f840485ad08185f3967f120c320d9b175377f0.
     ($metadata.pack_sha256 -ne
-        '113da5fb91c83ff3b6f4bd4b63f840485ad08185f3967f120c320d9b175377f0')) {
+        '5299db705baa652b4fa7d0ee35bd0d18a0bdecb36a35507bd30b35d0cb23353c')) {
     throw 'FGM pack format, budget, mapping, or binary identity changed.'
 }
 if ((@($metadata.excluded_entries).Count -ne 0) -or
