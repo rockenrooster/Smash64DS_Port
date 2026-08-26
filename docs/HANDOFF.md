@@ -1,26 +1,24 @@
 # Handoff
 
-Current: 2026-08-25 — **THE LANDED ROSTER'S AUDIO IS FINISHED** (P2-3f14 +
-P2-3f15). Donkey Kong got his VOICES at P2-3 and never his sound effects; his
-twelve FGM cues are packed (9/10/72/105/116/175/176/177/178/179/287/298 — 10
-DonkeySlap2 is shared, his 175/176 fork it). Luigi shipped selectable with TWO
-cues; his whole source run 416..428 plus crowd chant 608 are packed — which is
-why P2-3f12's repair was latent. Pack 1,511,844 → **1,733,284 B**, 153 → **178
-entries**, cache 204,800 unchanged, 363,868 B left. **Proven by ONE CONFIG
-MEASURED TWICE** (`build-p2-3f13-audio` vs `build-p2-3f14-audio`, identical
-`nds_build_config.h` bar the git hash): miss ring **16 (saturated) → 8 (a
-census)**, no Donkey/Luigi/Captain id left, `fgmcalls` flat at **474**,
-**`fgmfail=0`**, `fgmloaded=1`. **`fgmfail` is the POSITIVE half** — an
-allowlisted id with no pack entry bumps it, not the ring, and these rows
-allowlisted 25 ids. **The census uncovered two ENTRY cues
-the saturated ring hid: 214 MarioDokan (Mario's AND Luigi's pipe) and 191
-FoxAppearArwing** — Falcon's Flyer roars, the other three are silent. Gap left,
-exhaustively: 95/84/94/1/83/214/191/59 (+128/17/630/631/635/110 from source).
-**Falcon's 356 is SIZED, not fixed** — 14,284 B, not 65,324 (`falcon.md`). Open:
-**P2-3f11** (admitting Falcon to `p2_fourcpu_stress` stops the slot-3 fighter
-drawing, mask 0x7, so that arm is NOT the argmax) and **P2-2p7** (that arm runs
-at ~5 FPS on every roster and its sampler subtracts the evidence — read it
-before trusting a banked four-CPU tick figure). P2-3r17 stays DEFERRED.
+Current: 2026-08-26 — **P2-3f16 LANDED: all five landed fighters now enter with
+their source audio.** BattleShip uses 214 MarioDokan for Mario AND Luigi's pipe,
+191 FoxAppearArwing for Fox, 59 ContainerSmash for DK's barrel, and Falcon's
+180/181 were already packed. The three missing cues are offline AOT renders;
+214 keeps its two rests and 214/191 keep structural wave-loop metadata without
+becoming hardware-looped whole cues. Pack **1,733,284 → 1,770,008 B**, **178 →
+181 entries**, cache 204,800 unchanged, **327,144 B left**. Static pack/id/runtime
+fixtures pass. **Real DS proof:** `2026-08-26_p2-3f16-entry-audio-trace.txt`,
+shipping shell / fast-logic 0 / Luigi+Fox+Falcon+DK. `LastID` reaches 214, 191
+and 59 with `PlayFailCount=0`, `IncludedLookupFailCount=0`, `UnsupportedCallCount=0`
+and an advancing supported-play count. This is the positive half: allowlisted
+pack drift would increment the failure counters instead of the miss ring.
+The measured roster-wide miss census is now only 95/84/94/1/83; source also
+names 128/17/630/631/635/110 outside that lap. **Falcon's 356 is SIZED, not
+fixed** — 14,284 B (`falcon.md`). Open: **P2-3f11** (admitting Falcon to
+`p2_fourcpu_stress` stops the slot-3 fighter drawing, mask 0x7, so that arm is
+NOT the argmax) and **P2-2p7** (that arm runs at ~5 FPS on every roster and its
+sampler subtracts the evidence — read it before trusting a banked four-CPU tick
+figure). P2-3r17 stays DEFERRED.
 
 ## State
 
