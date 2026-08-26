@@ -432,10 +432,12 @@ deducted -- the same 2,288 Fox and Donkey pay. Against the table:
 > P2-3f9. **A four-kind margin taken from a lab arm does not transfer to the
 > shell — re-measure on the arm you are shipping.**
 >
-> P2-3f9 also found that **Captain in a four-fighter match costs about 30x the
-> wall time of Mario** for the same guest frames, with every memory counter
-> identical to the control. That is remaining item 7 below, and it is why the
-> argmax roster no longer hangs but is not yet playable.
+> P2-3f9 also reported that **Captain in a four-fighter match costs about 30x
+> the wall time of Mario** for the same guest frames, with every memory counter
+> identical to the control. **P2-3f10 refuted the cost and found the crash:**
+> it is an ABORT-mode data abort in his entry effect, the memory counters read
+> clean because the ARM9 was already wandering when they were read, and he
+> measures identical to Mario once it is fixed. See item 7 below.
 
 **THE HARDEST FOUR HAS CHANGED, AND IT IS NOT AFFORDABLE TODAY.** Boundary's
 `p2_fourcpu_stress` runs Mario/Fox/Luigi/Donkey = 289,712 B, and P2-3r13
@@ -484,20 +486,38 @@ match. Re-read it on Results / Sudden Death / pause zoom, then cut.
    kinds). Whole-match low-water **419,052 B** against the 25,600 B floor.
    `p2_fourcpu_stress` was re-pointed to the argmax and **backed out** — see
    item 7.
-7. **HE COSTS ABOUT 30x MARIO IN A FOUR-FIGHTER MATCH, and this is now his
-   largest gap after audio.** Moving `p2_fourcpu_stress` slot 0 from Mario to
-   Captain made the arm take about thirty times the wall clock for the same
-   guest frames (100 stops at `ifCommonBattleUpdateInterfaceAll` reached
-   presented frame 45 in 240 s, against frame 49 in 8 s on the pre-change
-   four-kind ROM), and the harness hit its 3600 s ceiling. **It is not memory
-   and it is not the P2-3f9 arena work:** every counter matched the control
-   exactly — graphics-heap peak 96 B of 8,192, overflow 0, no-room 0,
-   anim-cache misses 4 / rejects 0, `gNdsBattlePackHits` 0 on BOTH arms — and
-   rebuilding the arm with Captain removed but every P2-3f9 change still active
-   returns it to frame 49 in 10 s. `gNdsFtrPlanBuild`/`Hit` and the slot
-   triangle mask all read 0 at frame 45 on BOTH arms, so they are not the
-   instrument that will find it; start from a tick-HUD bucket census on a
-   two-fighter Captain match, which is cheap enough to complete.
+7. **"HE COSTS ABOUT 30x MARIO IN A FOUR-FIGHTER MATCH" — CLOSED by board row
+   P2-3f10 (2026-08-25), and it was never a cost.** It is an unhandled ARM9
+   **data abort** in his entry effect, about 1.9 s into every match he is in,
+   including a 1v1. The two-fighter arm freezes with the tick HUD stuck at
+   `n:45` and melonDS falling from `[132/60]` to `[1/60]` host speed — a dead
+   guest and a slow one read alike through a gdb-stop wall clock, which is what
+   P2-3f9 was measuring. `__excpt_entry` catches it with `cpsr=0x60000097`
+   (ABORT mode) and `lr=0x020b4e80`; `__arm_excpt_dabt` does `sub lr, lr, #8`,
+   so that `lr` **is** the fault PC, and it disassembles to `ldr r3, [r4, #16]`
+   — the first load of `node_dobj = dobj->child->child->child`
+   (`efmanager.c:5639`) with `DObjGetStruct(effect_gobj) == NULL`.
+   **The cause is not Falcon's at all:** `NDS_EF_DEFERRED_MAX` in
+   `battleship_efmanager.c` was 4, sized when the descs that defer past
+   `efManagerInitEffects` were Mario's pipe and Fox's Arwing/reflector. The
+   landed roster defers seven (+ DK's barrel + Falcon's Flyer/Kick/Punch), so
+   the last three overflowed the retry table and could never be re-enabled —
+   measured `EFDESC disabled=7 unknownfile=7 recover=2 overflow=3` with
+   `CARDESC proc=(nil)` — and `efManagerMakeEffect` answers a neutralised desc
+   with a bare GObj carrying no DObj tree. The table is now sized from the desc
+   lists (`NDS_EF_ROSTER_DESCS` beside `NDS_EF_MANAGER_DESCS`) with a
+   `_Static_assert`, so fighter #6 gets a build error instead of this.
+   After: `recover=6 overflow=0`. **And he costs nothing over Mario:**
+   Captain/Fox/Luigi/Donkey against the Mario four-kind control on the same
+   target, FPS 5.6 vs 5.4, `ALL` 5,598,464/6,719,680 vs 5,599,104/6,720,128,
+   match clock 00:50 vs 00:51 at the same wall time. The ~5 FPS is a
+   pre-existing four-fighter defect on **both** rosters (board row P2-2p7),
+   not his. **The stress arm is still NOT re-pointed**, for a new reason:
+   admitting him to it (slot 0 and slot 2 both built) makes the slot-3 fighter
+   stop emitting hardware triangles entirely — board row P2-3f11. **And the
+   argmax below is wrong**: Luigi is 41,552 B, Mario 54,048 B, so LUIGI is the
+   cheapest of the five and the real argmax is Mario/Fox/Captain/Donkey =
+   **348,320 B**, not 335,824 B.
 4. **`mpCommonProcFighterProject` still diverges from the source** -- see the
    open questions below; Falcon Dive is a caller and it is a SHARED seam.
 5. **The remaining eight fighters each need `ftCommonAttack13Proc{Update,
@@ -552,5 +572,11 @@ match. Re-read it on Results / Sudden Death / pause zoom, then cut.
 - [ ] Fast-fall/landing/edge behavior spot-checks at speed extremes.
 - [x] Four-distinct-kind budget answered and the hang fixed (P2-3f9): measured
       from the shell, 378,048 B reclaimed, whole-match low-water 419,052 B.
-- [ ] The argmax roster is affordable but NOT playable: ~30x cost, item 7.
+- [x] The four-kind match with Falcon RUNS: the "~30x" was a data abort in his
+      entry effect, fixed at the effect-desc deferral table (P2-3f10). He
+      measures identical to Mario in the same match; the arm's own ~5 FPS is
+      P2-2p7.
+- [ ] `p2_fourcpu_stress` re-pointed to the argmax — blocked by P2-3f11 (the
+      slot-3 fighter stops drawing when Falcon joins that arm), and the argmax
+      is Mario/Fox/Captain/Donkey = 348,320 B, not the 335,824 B above.
 - [ ] Owner feel pass.

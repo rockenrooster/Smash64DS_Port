@@ -1,0 +1,20 @@
+0x020c8214 in f_lseek (fp=0x223ba0c, ofs=157696) at /home/davem/projects/devkitpro/pacman-packages/libfat/src/libdvm-2.1.0/fatfs/source/ff.c:4394
+Breakpoint 1 at 0x20b4e4c: file D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c, line 2063.
+Breakpoint 2 at 0x2072c28: file D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_sys_objanim.c, line 1933.
+Breakpoint 3 at 0x1fffecc: file /home/davem/projects/devkitpro/pacman-packages/calico/src/calico-1.2.0/source/nds/arm9/excpt_handler.32.s, line 71.
+CAR ENTER special2=0x22efea0 special3=0x22ef630 main=0x22ed0b0 mainmotion=0x22ed880
+CAR ARGS pos=0x22c87f4 lr=-1
+EFDESC disabled=7 unknownfile=7 recover=2 overflow=3
+CARDESC proc=(nil) dobjsetup=0x5fc0 animjoint=(nil)
+DKDESC proc=(nil) ARWING proc=(nil) DOKAN proc=(nil) REFL proc=(nil)
+AJA gobj=0x23a1010 joints=0x22f60a0
+TREE d0=(nil) c1=(nil) c2=(nil) c3=(nil) sib1=(nil) sib2=(nil)
+
+Breakpoint 3, __excpt_entry () at /home/davem/projects/devkitpro/pacman-packages/calico/src/calico-1.2.0/source/nds/arm9/excpt_handler.32.s:71
+EXCPT pc=0x1fffecc lr=0x20b4e80 sp=0x2fffd9e cpsr=0x60000097
+STOP pc=0x1fffecc lr=0x20b4e80 cpsr=0x60000097
+#0  __excpt_entry () at /home/davem/projects/devkitpro/pacman-packages/calico/src/calico-1.2.0/source/nds/arm9/excpt_handler.32.s:71
+#1  0x020b4e80 in efManagerCaptainEntryCarMakeEffect (pos=0x22c87f4, lr=32) at D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:5637
+#2  0x00000000 in ?? ()
+[Inferior 1 (Remote target) detached]
+

@@ -1,18 +1,21 @@
 # Handoff
 
-Current: 2026-08-25 — **THE FOUR HEAVIEST SELECTABLE KINDS NO LONGER HANG THE
-ARM9** (P2-3f9). Picking Luigi+Fox+Captain+Donkey from the shipped character
-select reached `ndsSyMallocOverflowHalt` — a permanent silent halt, measured
-from the shell, not inferred. Fixed with 378,048 B of correctness-safe reclaim
-(graphics heap 0xD000→0x2000 = 90,112 B; the Fox BattlePack carve became a
-per-match decision = 287,936 B when a match holds >2 distinct kinds).
-Whole-match low-water **419,052 B** against the 25,600 B floor. **Rail: a
-four-kind margin measured on the LAB arm does not transfer to the shell** — the
-shell's arena is 36,864–73,728 B smaller (its ARM9 binary is bigger).
-**Captain still has NO AUDIO, and P2-3f9 found he costs ~30x Mario in a
-four-fighter match** (memory counters identical to the control), so the argmax
-roster is affordable but not yet playable — `docs/p2/fighters/falcon.md` items
-1 and 7. P2-3r17 (fighter seams) stays DEFERRED by the owner.
+Current: 2026-08-25 — **CAPTAIN FALCON'S "~30x IN A FOUR-FIGHTER MATCH" WAS A
+CRASH, AND IT IS FIXED** (P2-3f10). Every match he is in — a 1v1 too — took an
+unhandled ARM9 **data abort** ~1.9 s in, at `dobj->child->child->child` in
+`efManagerCaptainEntryCarMakeEffect`: `NDS_EF_DEFERRED_MAX` was 4 and the
+landed roster defers 7 effect descs, so his Flyer overflowed the retry table,
+stayed neutralised, and the source maker walked a NULL DObj. The table is now
+sized from the desc lists with a `_Static_assert`. **Rail: read the emulator's
+own host-FPS readout before ratioing gdb stop times** — melonDS grinding a
+wandering ARM9 (`[1/60]`) is what "30x wall clock" measured, and why every
+memory counter read clean. Falcon then measures identical to Mario in the same
+four-kind match. **He still has NO AUDIO** (falcon.md item 1). TWO new open
+rows came out of it: **P2-3f11** — admitting him to `p2_fourcpu_stress` stops
+the slot-3 fighter drawing (mask 0x7), so that arm is still NOT the argmax —
+and **P2-2p7** — the four-fighter arm presents at ~5 FPS on every roster and
+its sampler subtracts the evidence; read it before trusting any banked
+four-CPU tick figure. P2-3r17 stays DEFERRED.
 
 ## State
 
@@ -28,18 +31,18 @@ roster is affordable but not yet playable — `docs/p2/fighters/falcon.md` items
      with `-P2ShellFlow`, target `smash64ds-p2-shell-hwtri`, build
      `build-p2-shell`. Mode `163`: Mario human vs level-3 CPU Fox, Dream Land,
      one-minute Time, items off — **reached through the shell** (title → menus →
-     character select → stage select → battle). Renamed and rebased from
-     `battle_playable_realtime` at row P2-1M (owner, 2026-08-19).
+     character select → stage select → battle). Renamed/rebased at P2-1M.
   3. `p2_fourcpu_stress` — `scripts/verify-p2-four-fighter-stress.ps1`, target
      `smash64ds-p2-fourcpu-tickhud-hwtri`, build `build-p2-fourcpu-tickhud`.
      Four level-3 CPUs, Dream Land, one-minute Time — **Mario/Fox/Luigi/Donkey
-     since row P2-3r15**; `NDS_P2_FOUR_CPU_ROSTER=0` rebuilds the mirror
-     control. **Not the true argmax: P2-3f9 tried Captain in slot 0 and backed
-     it out at ~30x wall time.** Frames 1..1973 / guest clock 60→1, 0 humans /
-     4 CPUs / 4 fighter GObjs / mask `0xF`, all four slots drawing, plus the
-     P2-2 memory + native-Low-detail budget gate. **It asserts no tick gate on purpose:** four
-     distinct kinds sit ~3x outside 1.12M, which is P2 debt, not a per-run
-     verdict; a guard red by construction protects nothing.
+     since P2-3r15**; `NDS_P2_FOUR_CPU_ROSTER=0` rebuilds the mirror control.
+     **Still NOT the argmax** (that is Mario/Fox/Captain/Donkey = 348,320 B —
+     Luigi is the cheapest kind, not Mario); admitting Falcon here costs the
+     slot-3 fighter its triangles, row **P2-3f11**. 0 humans / 4 CPUs
+     / 4 fighter GObjs / mask `0xF`, all four slots drawing, plus the P2-2
+     memory + native-Low-detail budget gate. **It asserts no tick gate on
+     purpose:** four kinds sit far outside 1.12M — P2 debt (row P2-2p7: ~6x,
+     and the sampler's `2^22` correction hides it), not a per-run verdict.
 - **The P1-named proof target left the routine gate.**
   `smash64ds-battle-playable-proof-hwtri` is still in the Makefile and still the
   default for the dozen specialized probes and metric verifiers that boot
@@ -98,29 +101,25 @@ roster is affordable but not yet playable — `docs/p2/fighters/falcon.md` items
    unless it has an in-TU caller.**
    **VS Stock's last-stock path is fixed** (P2-3r14) and **backing out of the
    stage select no longer kills the menu BGM** (P2-3r16). **Rails from them: a
-   source TU the port skips strands its callees too**, and the CSS preview's
-   synchronous file setup is bracketed with the P2-3r12 audio suspend/resume
-   pair — bracketed, never tuned. **Not proven yet:** the team stock steal.
+   source TU the port skips strands its callees too**, and the CSS preview's synchronous file setup is bracketed with the P2-3r12 audio suspend/resume pair — never tuned. **Not proven yet:** the team stock steal.
 
 4. **Captain Falcon is roster #3 and he is DONE except for audio and feel**
    (P2-3f4/f5/f8). `docs/p2/fighters/falcon.md` is the authority. Landed: the
    two model opcodes, his status table, `ftcaptainspecialn/lw/hi.c`, Falcon
    Dive's victim TU, the two `mpcommon` seams, his two-status entry ladder, the
    native owner (slot 4) and full CSS/HUD/asset admission at
-   `NDS_P2_SHELL_ROSTER=3`. **NEXT IS HIS AUDIO — nothing at all is packed**;
-   ordinals are re-derived in falcon.md, shape the work on the Donkey bank.
+   `NDS_P2_SHELL_ROSTER=3`. **NEXT IS HIS AUDIO — nothing at all is packed**; ordinals are re-derived in falcon.md, shape the work on the Donkey bank.
    **He is the first owner with ZERO cross-matrix runs** (the reserved GX band
    stays Donkey's 16..25) and **the first whose LOW model carries a root light
-   preamble his HIGH does not**.
-   **Budget:** +20,064 B of ARM9 image, 18,800 B of owner images,
+   preamble his HIGH does not**. **Budget:** +20,064 B of ARM9 image, 18,800 B of owner images,
    **100,160 B unique per-kind arena** (Mario 54,048 / Luigi 41,552 /
-   Donkey 77,360 / Captain 100,160 / Fox 116,752). **The argmax four-kind
-   roster FITS since P2-3f9** (whole-match low-water 419,052 B) but costs ~30x
-   in wall time on Captain's account — falcon.md item 7, and the reason
-   `p2_fourcpu_stress` stays on Mario/Fox/Luigi/Donkey. Two live defects were
-   found and fixed at their seams: his `FTAttributes` mixed-u16 lanes had no
-   normalizer arm (**Luigi still has none and he ships**), and the HUD's
-   portrait and stock palette bands overlapped at slot 8.
+   Donkey 77,360 / Captain 100,160 / Fox 116,752 — so the argmax drops LUIGI,
+   not Mario). **The four-kind roster FITS (P2-3f9, low-water 419,052 B) and
+   now RUNS (P2-3f10): the "~30x" was a data abort in his entry effect.**
+   Three live defects were found and fixed at their seams: his `FTAttributes`
+   mixed-u16 lanes had no normalizer arm (**Luigi still has none and he
+   ships**), the HUD's portrait and stock palette bands overlapped at slot 8,
+   and the effect-desc deferral table was sized for the Mario/Fox roster.
    **Rails: a weak twin beside a strong body is CORRECT** (dispatch tables name
    every fighter's setter unconditionally — check `nm`, never `src/`), and **a
    generated include needs an explicit Makefile prerequisite** — `-MMD` writes
@@ -139,21 +138,22 @@ roster is affordable but not yet playable — `docs/p2/fighters/falcon.md` items
    took the MIRROR four-CPU arm from `WORK-H` P50/P95 1,600,832 / 2,069,824 to
    **1,244,608 / 1,777,408**;
    the published `smash64ds.nds` carries all of it (owner visual pass pending).
-   **The arm is now the four-kind roster (P2-3r15), so the live gap to 1.12M is
-   larger than those figures imply** — re-measure before sizing a lever. Named
-   remainders: the soft-float caller census lanes, walk #1 of
-   `ndsFTParamsInvalidateSubtree` (~8K), and **Captain's ~30x** (falcon.md 7).
+   **The arm is now the argmax roster (P2-3f10) and P2-2p7 says its banked
+   levels are understated, so re-measure before sizing any lever.** Named
+   remainders: the soft-float caller census lanes and walk #1 of
+   `ndsFTParamsInvalidateSubtree` (~8K).
 
 ## Standing operational facts
 
 - **Republish the free-play ROM after every fix batch** (owner, 2026-08-22): plain
   `make TARGET=smash64ds` writes root `smash64ds.nds` (human input, walk compiled
   out, flag-identical to the gate's shell config, **FIVE**-name roster).
-  Current: **17,644,544 B, SHA-256 `2FB213CC…CA74`** (2026-08-25, adds P2-3f9 —
-  the four-heaviest-kind hang is gone); asserted from
+  Current: **17,644,544 B, SHA-256 `4D1369BD…B574`** (2026-08-25, adds P2-3f10 —
+  Falcon's entry no longer aborts the ARM9); asserted from
   `builds/build/nds_build_config.h`: `NDS_P2_CAPTAIN 1`, `NDS_P2_MENU_WALK 0`,
-  `NDS_P2_FOUR_CPU_ROSTER 0`, `NDS_P2_SHELL_ARGMAX_ROSTER 0`. The previous
-  `C7FF35D7…E171` is the ROM that hangs — do not hand it to the owner.
+  `NDS_P2_FOUR_CPU_ROSTER 0`, `NDS_P2_SHELL_ARGMAX_ROSTER 0`. `2FB213CC…CA74`
+  crashes on Falcon's entry and `C7FF35D7…E171` hangs on four heavy kinds —
+  do not hand either to the owner.
   **Boundary does NOT build it** — rebuild by hand, and `rm` the root
   `.elf`/`.nds` pair first if a lab build wrote them.
 - Clean checkout builds through `build.ps1`, not bare `make` (four of six

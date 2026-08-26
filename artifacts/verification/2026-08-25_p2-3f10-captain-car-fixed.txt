@@ -1,0 +1,42 @@
+armCopyMem32 () at /home/davem/projects/devkitpro/pacman-packages/calico/src/calico-1.2.0/source/arm/arm-copy-fill.32.s:12
+Breakpoint 1 at 0x20b4ee0: file D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c, line 2063.
+Breakpoint 2 at 0x2072cb8: file D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_sys_objanim.c, line 1933.
+Breakpoint 3 at 0x1fffecc: file /home/davem/projects/devkitpro/pacman-packages/calico/src/calico-1.2.0/source/nds/arm9/excpt_handler.32.s, line 71.
+CAR ENTER special2=0x22f4800 special3=0x22f3f90 main=0x22f1a10 mainmotion=0x22f21e0
+CAR ARGS pos=0x22ccb34 lr=1
+EFDESC disabled=7 unknownfile=7 recover=6 overflow=0
+CARDESC proc=(nil) dobjsetup=0x5fc0 animjoint=(nil)
+DKDESC proc=0x2066ee1 ARWING proc=0x2066ef9 DOKAN proc=0x2066ee1 REFL proc=0x2066ee1
+AJA gobj=0x23938b8 joints=0x22faa00
+TREE d0=0x239ad50 c1=(nil) c2=(nil) c3=(nil) sib1=(nil) sib2=(nil)
+AJA gobj=0x2398300 joints=0x22e5e40
+TREE d0=0x239c700 c1=(nil) c2=(nil) c3=(nil) sib1=(nil) sib2=(nil)
+AJA gobj=0x239d418 joints=0x22e5ea0
+TREE d0=0x239c810 c1=(nil) c2=(nil) c3=(nil) sib1=(nil) sib2=(nil)
+AJA gobj=0x2399a58 joints=0x22e5ea0
+TREE d0=(nil) c1=(nil) c2=(nil) c3=(nil) sib1=(nil) sib2=(nil)
+AJA gobj=0x239d258 joints=0x22e5ea0
+TREE d0=(nil) c1=(nil) c2=(nil) c3=(nil) sib1=(nil) sib2=(nil)
+AJA gobj=0x239c678 joints=0x22e5ea0
+TREE d0=(nil) c1=(nil) c2=(nil) c3=(nil) sib1=(nil) sib2=(nil)
+AJA gobj=0x239d258 joints=0x22e5ea0
+TREE d0=(nil) c1=(nil) c2=(nil) c3=(nil) sib1=(nil) sib2=(nil)
+AJA gobj=0x239d258 joints=0x22e5ea0
+TREE d0=(nil) c1=(nil) c2=(nil) c3=(nil) sib1=(nil) sib2=(nil)
+AJA gobj=0x239d050 joints=0x22e5ea0
+TREE d0=0x239b940 c1=(nil) c2=(nil) c3=(nil) sib1=(nil) sib2=(nil)
+AJA gobj=0x239ca20 joints=0x22e5f70
+TREE d0=(nil) c1=(nil) c2=(nil) c3=(nil) sib1=(nil) sib2=(nil)
+AJA gobj=0x239d368 joints=0x22e5e40
+TREE d0=0x239c4b0 c1=(nil) c2=(nil) c3=(nil) sib1=(nil) sib2=(nil)
+AJA gobj=0x22cb330 joints=0x22c7a90
+TREE d0=0x22cb3b8 c1=0x22cb488 c2=0x22cb558 c3=0x22cb628 sib1=0x22cb6f8 sib2=(nil)
+AJA gobj=0x239d050 joints=0x22e5e40
+TREE d0=0x239cb30 c1=(nil) c2=(nil) c3=(nil) sib1=(nil) sib2=(nil)
+AJA gobj=0x22cb990 joints=0x22c82d0
+TREE d0=0x22cba18 c1=0x22cbae8 c2=0x22cbbb8 c3=0x22cbc88 sib1=0x22cbd58 sib2=(nil)
+AJA gobj=0x22cb330 joints=0x22c7ae0
+TREE d0=0x22cb3b8 c1=0x22cb488 c2=0x22cb558 c3=0x22cb628 sib1=0x22cb6f8 sib2=(nil)
+AJA gobj=0x239d368 joints=0x22e5e40
+TREE d0=(nil) c1=(nil) c2=(nil) c3=(nil) sib1=(nil) sib2=(nil)
+

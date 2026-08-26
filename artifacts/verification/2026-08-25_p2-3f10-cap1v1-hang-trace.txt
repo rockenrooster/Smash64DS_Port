@@ -1,0 +1,237 @@
+armCopyMem32 () at /home/davem/projects/devkitpro/pacman-packages/calico/src/calico-1.2.0/source/arm/arm-copy-fill.32.s:12
+Breakpoint 1 at 0x1fffecc: file /home/davem/projects/devkitpro/pacman-packages/calico/src/calico-1.2.0/source/nds/arm9/excpt_handler.32.s, line 71.
+Breakpoint 2 at 0x20ad7a8: file D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_ifcommon.c, line 146.
+TRACE ifCommonBattleUpdateInterfaceAll hit=1 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=0
+TRACE ifCommonBattleUpdateInterfaceAll hit=2 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=0
+TRACE ifCommonBattleUpdateInterfaceAll hit=3 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=1
+TRACE ifCommonBattleUpdateInterfaceAll hit=4 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=1
+TRACE ifCommonBattleUpdateInterfaceAll hit=5 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=2
+TRACE ifCommonBattleUpdateInterfaceAll hit=6 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=2
+TRACE ifCommonBattleUpdateInterfaceAll hit=7 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=3
+TRACE ifCommonBattleUpdateInterfaceAll hit=8 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=3
+TRACE ifCommonBattleUpdateInterfaceAll hit=9 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=4
+TRACE ifCommonBattleUpdateInterfaceAll hit=10 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=4
+TRACE ifCommonBattleUpdateInterfaceAll hit=11 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=5
+TRACE ifCommonBattleUpdateInterfaceAll hit=12 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=5
+TRACE ifCommonBattleUpdateInterfaceAll hit=13 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=6
+TRACE ifCommonBattleUpdateInterfaceAll hit=14 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=6
+TRACE ifCommonBattleUpdateInterfaceAll hit=15 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=7
+TRACE ifCommonBattleUpdateInterfaceAll hit=16 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=7
+TRACE ifCommonBattleUpdateInterfaceAll hit=17 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=8
+TRACE ifCommonBattleUpdateInterfaceAll hit=18 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=8
+TRACE ifCommonBattleUpdateInterfaceAll hit=19 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=9
+TRACE ifCommonBattleUpdateInterfaceAll hit=20 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=9
+TRACE ifCommonBattleUpdateInterfaceAll hit=21 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=10
+TRACE ifCommonBattleUpdateInterfaceAll hit=22 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=10
+TRACE ifCommonBattleUpdateInterfaceAll hit=23 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=11
+TRACE ifCommonBattleUpdateInterfaceAll hit=24 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=11
+TRACE ifCommonBattleUpdateInterfaceAll hit=25 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=12
+TRACE ifCommonBattleUpdateInterfaceAll hit=26 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=12
+TRACE ifCommonBattleUpdateInterfaceAll hit=27 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=13
+TRACE ifCommonBattleUpdateInterfaceAll hit=28 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=13
+TRACE ifCommonBattleUpdateInterfaceAll hit=29 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=14
+TRACE ifCommonBattleUpdateInterfaceAll hit=30 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=14
+TRACE ifCommonBattleUpdateInterfaceAll hit=31 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=15
+TRACE ifCommonBattleUpdateInterfaceAll hit=32 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=15
+TRACE ifCommonBattleUpdateInterfaceAll hit=33 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=16
+TRACE ifCommonBattleUpdateInterfaceAll hit=34 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=16
+TRACE ifCommonBattleUpdateInterfaceAll hit=35 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=17
+TRACE ifCommonBattleUpdateInterfaceAll hit=36 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=17
+TRACE ifCommonBattleUpdateInterfaceAll hit=37 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=18
+TRACE ifCommonBattleUpdateInterfaceAll hit=38 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=18
+TRACE ifCommonBattleUpdateInterfaceAll hit=39 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=19
+TRACE ifCommonBattleUpdateInterfaceAll hit=40 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=19
+TRACE ifCommonBattleUpdateInterfaceAll hit=41 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=20
+TRACE ifCommonBattleUpdateInterfaceAll hit=42 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=20
+TRACE ifCommonBattleUpdateInterfaceAll hit=43 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=21
+TRACE ifCommonBattleUpdateInterfaceAll hit=44 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=21
+TRACE ifCommonBattleUpdateInterfaceAll hit=45 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=22
+TRACE ifCommonBattleUpdateInterfaceAll hit=46 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=22
+TRACE ifCommonBattleUpdateInterfaceAll hit=47 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=23
+TRACE ifCommonBattleUpdateInterfaceAll hit=48 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=23
+TRACE ifCommonBattleUpdateInterfaceAll hit=49 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=24
+TRACE ifCommonBattleUpdateInterfaceAll hit=50 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=24
+TRACE ifCommonBattleUpdateInterfaceAll hit=51 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=25
+TRACE ifCommonBattleUpdateInterfaceAll hit=52 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=25
+TRACE ifCommonBattleUpdateInterfaceAll hit=53 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=26
+TRACE ifCommonBattleUpdateInterfaceAll hit=54 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=26
+TRACE ifCommonBattleUpdateInterfaceAll hit=55 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=27
+TRACE ifCommonBattleUpdateInterfaceAll hit=56 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=27
+TRACE ifCommonBattleUpdateInterfaceAll hit=57 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=28
+TRACE ifCommonBattleUpdateInterfaceAll hit=58 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=28
+TRACE ifCommonBattleUpdateInterfaceAll hit=59 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=29
+TRACE ifCommonBattleUpdateInterfaceAll hit=60 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=29
+TRACE ifCommonBattleUpdateInterfaceAll hit=61 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=30
+TRACE ifCommonBattleUpdateInterfaceAll hit=62 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=30
+TRACE ifCommonBattleUpdateInterfaceAll hit=63 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=31
+TRACE ifCommonBattleUpdateInterfaceAll hit=64 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=31
+TRACE ifCommonBattleUpdateInterfaceAll hit=65 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=32
+TRACE ifCommonBattleUpdateInterfaceAll hit=66 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=32
+TRACE ifCommonBattleUpdateInterfaceAll hit=67 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=33
+TRACE ifCommonBattleUpdateInterfaceAll hit=68 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=33
+TRACE ifCommonBattleUpdateInterfaceAll hit=69 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=34
+TRACE ifCommonBattleUpdateInterfaceAll hit=70 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=34
+TRACE ifCommonBattleUpdateInterfaceAll hit=71 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=35
+TRACE ifCommonBattleUpdateInterfaceAll hit=72 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=35
+TRACE ifCommonBattleUpdateInterfaceAll hit=73 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=36
+TRACE ifCommonBattleUpdateInterfaceAll hit=74 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=36
+TRACE ifCommonBattleUpdateInterfaceAll hit=75 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=37
+TRACE ifCommonBattleUpdateInterfaceAll hit=76 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=37
+TRACE ifCommonBattleUpdateInterfaceAll hit=77 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=38
+TRACE ifCommonBattleUpdateInterfaceAll hit=78 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=38
+TRACE ifCommonBattleUpdateInterfaceAll hit=79 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=39
+TRACE ifCommonBattleUpdateInterfaceAll hit=80 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=39
+TRACE ifCommonBattleUpdateInterfaceAll hit=81 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=40
+TRACE ifCommonBattleUpdateInterfaceAll hit=82 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=40
+TRACE ifCommonBattleUpdateInterfaceAll hit=83 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=41
+TRACE ifCommonBattleUpdateInterfaceAll hit=84 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=41
+TRACE ifCommonBattleUpdateInterfaceAll hit=85 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=42
+TRACE ifCommonBattleUpdateInterfaceAll hit=86 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=42
+TRACE ifCommonBattleUpdateInterfaceAll hit=87 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=43
+TRACE ifCommonBattleUpdateInterfaceAll hit=88 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=43
+TRACE ifCommonBattleUpdateInterfaceAll hit=89 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=44
+TRACE ifCommonBattleUpdateInterfaceAll hit=90 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=44
+TRACE ifCommonBattleUpdateInterfaceAll hit=91 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=45
+TRACE ifCommonBattleUpdateInterfaceAll hit=92 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=45
+TRACE ifCommonBattleUpdateInterfaceAll hit=93 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=46
+TRACE ifCommonBattleUpdateInterfaceAll hit=94 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=46
+TRACE ifCommonBattleUpdateInterfaceAll hit=95 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=47
+TRACE ifCommonBattleUpdateInterfaceAll hit=96 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=47
+TRACE ifCommonBattleUpdateInterfaceAll hit=97 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=48
+TRACE ifCommonBattleUpdateInterfaceAll hit=98 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=48
+TRACE ifCommonBattleUpdateInterfaceAll hit=99 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=49
+TRACE ifCommonBattleUpdateInterfaceAll hit=100 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=49
+TRACE ifCommonBattleUpdateInterfaceAll hit=101 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=50
+TRACE ifCommonBattleUpdateInterfaceAll hit=102 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=50
+TRACE ifCommonBattleUpdateInterfaceAll hit=103 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=51
+TRACE ifCommonBattleUpdateInterfaceAll hit=104 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=51
+TRACE ifCommonBattleUpdateInterfaceAll hit=105 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=52
+TRACE ifCommonBattleUpdateInterfaceAll hit=106 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=52
+TRACE ifCommonBattleUpdateInterfaceAll hit=107 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=53
+TRACE ifCommonBattleUpdateInterfaceAll hit=108 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=53
+TRACE ifCommonBattleUpdateInterfaceAll hit=109 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=54
+TRACE ifCommonBattleUpdateInterfaceAll hit=110 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=54
+TRACE ifCommonBattleUpdateInterfaceAll hit=111 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=55
+TRACE ifCommonBattleUpdateInterfaceAll hit=112 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=55
+TRACE ifCommonBattleUpdateInterfaceAll hit=113 pc=0x20ad7a8 lr=0x2089833 sp=0x22450c0
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=56
+TRACE __excpt_entry hit=1 pc=0x1fffecc lr=0x20b4e80 sp=0x2fffd9e
+TRACE GLOBALS gNdsBattlePlayablePacingPresentedFrames=56
+TRACE STOP pc=0x1fffecc lr=0x20b4e80
+#0  __excpt_entry () at /home/davem/projects/devkitpro/pacman-packages/calico/src/calico-1.2.0/source/nds/arm9/excpt_handler.32.s:71
+#1  0x020b4e80 in efManagerCaptainEntryCarMakeEffect (pos=0x22c87f4, lr=32) at D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:5637
+#2  0x00000000 in ?? ()
+[Inferior 1 (Remote target) detached]
+

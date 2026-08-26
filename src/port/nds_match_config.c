@@ -244,13 +244,25 @@ void ndsMatchConfigLoadMarioFoxDreamLand(NdsMatchConfig *cfg)
     cfg->fighters[2].costume = (u8)ftParamGetCostumeCommonID(nFTKindLuigi, 0);
     cfg->fighters[3].fkind = nFTKindDonkey;
     cfg->fighters[3].costume = (u8)ftParamGetCostumeCommonID(nFTKindDonkey, 0);
-    /* P2-3f9 TRIED `cfg->fighters[0].fkind = nFTKindCaptain` HERE -- the real
-     * argmax over landed content, Fox+Captain+Donkey+Luigi = 335,824 B against
-     * this roster's 289,712 B -- AND BACKED IT OUT. The arm then took about 30x
-     * the wall time for the same guest frames and the harness timed out; every
-     * memory counter matched the control exactly, so the cost is unattributed
-     * and belongs to its own row rather than to the arena work. See the note on
-     * this target's block in the Makefile. */
+    /* THIS IS STILL NOT THE ARGMAX, AND P2-3f10 TRIED TWICE TO MAKE IT ONE.
+     *
+     * The real argmax is Mario/Fox/Captain/Donkey = 348,320 B of unique
+     * per-kind arena against this roster's 289,712 B -- LUIGI is the cheapest
+     * of the five landed kinds at 41,552 B, so he is the one that drops out.
+     * P2-3f8 and P2-3f9 both wrote "Mario is the cheapest of the five", which
+     * is wrong by 12,496 B and is why they proposed Luigi/Fox/Captain/Donkey.
+     *
+     * P2-3f9's reason for backing out is DEAD: its "about 30x the wall time"
+     * was an ABORT-mode data abort in `efManagerCaptainEntryCarMakeEffect`,
+     * fixed at the effect-desc deferral table in battleship_efmanager.c.
+     * A SECOND, UNRELATED DEFECT blocks the re-point, and it is board row
+     * P2-3f11: admitting Captain to THIS arm -- slot 0 or slot 2, measured
+     * both ways -- makes the slot-3 fighter stop emitting hardware triangles
+     * for the whole match (`gNdsFighterDLAllDrawSlotTriangleMask` 0x7, which
+     * the harness throws on). It is not memory (heap 282,776 B over floor),
+     * not owner-image residency (all loaded, 0 failures), not a native-owner
+     * abort (never fires) and not packet declines (0). The SHELL argmax build
+     * runs the same four kinds and reads 0xF, so it is this arm. */
 #endif
 #endif
 #if NDS_P2_SHELL_ARGMAX_ROSTER

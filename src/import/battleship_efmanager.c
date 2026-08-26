@@ -1107,12 +1107,28 @@ static size_t ndsEFManagerFileSpan(void **file_head)
  * file_head at all. So a desc whose file cannot back it produces an effect GObj
  * with no DObj tree -- nothing drawn, nothing walked -- and the guarded
  * accessors downstream see a NULL DObjGetStruct and return cleanly. */
-/* Descs whose file was not resident at efManagerInitEffects time. P2-2 adds
- * Mario's pipe and Fox's Arwing to the existing Fox-reflector case, so four
- * slots still cover the closed Mario/Fox battle set with one spare. Overflow is
- * counted rather than silently dropped, because "the retry table was full" and
- * "the file never loaded" are different failures and must not read alike. */
-#define NDS_EF_DEFERRED_MAX 4u
+/* Descs whose file was not resident at efManagerInitEffects time.
+ *
+ * THE TABLE MUST HOLD EVERY DESC THE RESOLVER CAN HAND IT. A desc it cannot
+ * remember is a desc it can never re-enable, and the paragraph above is then
+ * false in the one way that matters: `efManagerMakeEffect` answers a
+ * permanently-neutralised desc with a GObj carrying NO DObj tree, and the
+ * source makers do NOT all guard that. `efManagerCaptainEntryCarMakeEffect`
+ * walks `DObjGetStruct(effect_gobj)->child->child->child` (efmanager.c:5639)
+ * on the very next line, so a lost slot is a data abort, not a missing effect.
+ *
+ * Four slots covered the closed Mario/Fox set with one spare. With Donkey and
+ * Captain landed the resolver visits SEVEN deferrable descs -- Mario's pipe,
+ * Fox's Arwing and reflector, DK's barrel, and Falcon's Flyer/Kick/Punch --
+ * so the last three overflowed and stayed disabled for the whole match. Board
+ * row P2-3f10 measured exactly that at Falcon's entry: `EFDESC disabled=7
+ * unknownfile=7 recover=2 overflow=3`, `CARDESC proc=(nil)`, then an
+ * ABORT-mode (`cpsr` 0x…97) data abort on `dobj->child`. The size is asserted
+ * against the two desc lists below, so fighter #6 cannot re-open this by
+ * adding a desc and forgetting a number. Overflow stays counted rather than
+ * silently dropped, because "the retry table was full" and "the file never
+ * loaded" are different failures and must not read alike. */
+#define NDS_EF_DEFERRED_MAX 24u
 static EFDesc *sNdsEFDeferredDescs[NDS_EF_DEFERRED_MAX];
 static void (*sNdsEFDeferredProcs[NDS_EF_DEFERRED_MAX])(GObj *);
 static u32 sNdsEFDeferredCount;
@@ -1323,6 +1339,48 @@ static void ndsEFManagerResolveDescOffsets(EFDesc *desc)
     X(dEFManagerRebirthHaloEffectDesc) \
     X(dEFManagerFoxReflectorEffectDesc)
 
+/* THE PER-ROSTER DESCS, as a list rather than a run of hand-written calls, so
+ * the deferral table's size assertion below counts them. A fighter landing an
+ * effect desc adds one line here and nothing else -- which is what P2-3f10
+ * needed and did not have: Falcon's three descs were resolved by name, so
+ * nothing tied them to NDS_EF_DEFERRED_MAX and the table silently overflowed. */
+#if NDS_P2_DONKEY
+/* P2-3 admits DK's source barrel entry effect at the same seam as the
+ * already-qualified Mario/Fox entry descriptors.  The decomp initializer
+ * stores &llDonkeySpecial2* linker symbols in offset fields, so this must
+ * run before efManagerMakeEffect performs its source `base + offset` math. */
+#define NDS_EF_ROSTER_DESCS_DONKEY(X) \
+    X(dEFManagerDonkeyEntryTaruEffectDesc)
+#else
+#define NDS_EF_ROSTER_DESCS_DONKEY(X)
+#endif
+#if NDS_P2_CAPTAIN
+/* Falcon's three source descriptors carry &llCaptainSpecial2/3* linker symbols
+ * in their offset fields, the same as DK's barrel above, so they need the same
+ * resolve before efManagerMakeEffect does `base + offset`. The Flyer is the
+ * entry effect; the Kick and Punch descs are reached from
+ * ftcaptainspeciallw.c / ftcaptainspecialn.c. */
+#define NDS_EF_ROSTER_DESCS_CAPTAIN(X) \
+    X(dEFManagerCaptainEntryCarEffectDesc) \
+    X(dEFManagerCaptainFalconKickEffectDesc) \
+    X(dEFManagerCaptainFalconPunchEffectDesc)
+#else
+#define NDS_EF_ROSTER_DESCS_CAPTAIN(X)
+#endif
+#define NDS_EF_ROSTER_DESCS(X) \
+    NDS_EF_ROSTER_DESCS_DONKEY(X) \
+    NDS_EF_ROSTER_DESCS_CAPTAIN(X)
+
+/* Every desc the resolver visits can reach ndsEFManagerDeferDesc, so the table
+ * has to be at least this big. Asserted here rather than derived at the table,
+ * because NDS_EF_DEFERRED_MAX sizes an array declared above these lists. */
+#define NDS_EF_DESC_COUNT_ONE(name) + 1u
+_Static_assert((0u NDS_EF_MANAGER_DESCS(NDS_EF_DESC_COUNT_ONE)
+                   NDS_EF_ROSTER_DESCS(NDS_EF_DESC_COUNT_ONE)) <=
+                   NDS_EF_DEFERRED_MAX,
+               "NDS_EF_DEFERRED_MAX must cover every desc "
+               "ndsEFManagerResolveAllDescOffsets visits");
+
 static void ndsEFManagerResolveAllDescOffsets(void)
 {
     /* Recorded so a soak can tell "the effect is disabled because its file
@@ -1337,24 +1395,8 @@ static void ndsEFManagerResolveAllDescOffsets(void)
 
 #define NDS_EF_RESOLVE_ONE(name) ndsEFManagerResolveDescOffsets(&name);
     NDS_EF_MANAGER_DESCS(NDS_EF_RESOLVE_ONE)
+    NDS_EF_ROSTER_DESCS(NDS_EF_RESOLVE_ONE)
 #undef NDS_EF_RESOLVE_ONE
-#if NDS_P2_DONKEY
-    /* P2-3 admits DK's source barrel entry effect at the same seam as the
-     * already-qualified Mario/Fox entry descriptors.  The decomp initializer
-     * stores &llDonkeySpecial2* linker symbols in offset fields, so this must
-     * run before efManagerMakeEffect performs its source `base + offset` math. */
-    ndsEFManagerResolveDescOffsets(&dEFManagerDonkeyEntryTaruEffectDesc);
-#endif
-#if NDS_P2_CAPTAIN
-    /* Falcon's three source descriptors carry &llCaptainSpecial2/3* linker
-     * symbols in their offset fields, the same as DK's barrel above, so they
-     * need the same resolve before efManagerMakeEffect does `base + offset`.
-     * The Flyer is the entry effect; the Kick and Punch descs are reached from
-     * ftcaptainspeciallw.c / ftcaptainspecialn.c. */
-    ndsEFManagerResolveDescOffsets(&dEFManagerCaptainEntryCarEffectDesc);
-    ndsEFManagerResolveDescOffsets(&dEFManagerCaptainFalconKickEffectDesc);
-    ndsEFManagerResolveDescOffsets(&dEFManagerCaptainFalconPunchEffectDesc);
-#endif
 }
 
 /* Install NDS_R2_EFFECT_POOL as the effect-instance pool depth by truncating

@@ -1,0 +1,3 @@
+0x01fffe30 in armWaitForIrq () at /home/davem/projects/devkitpro/pacman-packages/calico/src/calico-1.2.0/include/calico/arm/common.h:117
+Breakpoint 1 at 0x2023fd8: ndsRendererAbortNativeFighterOwner. (2 locations)
+

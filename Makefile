@@ -2348,19 +2348,31 @@ ifeq ($(NDS_P2_FOUR_CPU_ROSTER),1)
 # resident on this arm exactly as they are in builds/build-p2-shell, so a tick
 # figure from here is comparable with the mirror roster's again.
 #
-# P2-3f9 TRIED TO RE-POINT THIS ARM TO THE ACTUAL ARGMAX AND BACKED IT OUT.
-# With Captain Falcon landed the four heaviest landed kinds are Fox 116,752 +
-# Captain 100,160 + Donkey 77,360 + Luigi 41,552 = 335,824 B against this
-# roster's 289,712 B, so PROJECT_GOAL's "measured hardest fighter set" is no
-# longer what this arm runs. Swapping slot 0 Mario -> Captain made the arm take
-# **about 30x the wall time for the same guest frames** (100 stops at
-# `ifCommonBattleUpdateInterfaceAll` reached presented frame 45 in 240 s,
-# against frame 49 in 8 s on the pre-change four-kind ROM) and the harness hit
-# its 3600 s ceiling having never reached ring stop 0. Every memory counter was
-# clean and identical to the control -- graphics-heap peak 96 B of 8,192,
-# overflow 0, no-room 0, anim-cache misses 4 / rejects 0, pack hits 0 on BOTH
-# arms -- so the cost is not the P2-3f9 arena work and is not attributed. It is
-# its own row; do not re-point this arm again until it is.
+# THIS ARM IS STILL NOT THE ARGMAX, AND P2-3f10 MEASURED WHY TWICE.
+#
+# The real argmax over landed content is Mario/Fox/Captain/Donkey = 348,320 B
+# of unique per-kind arena against this roster's 289,712 B: LUIGI (41,552 B) is
+# the cheapest of the five, not Mario (54,048 B), so he is the kind that drops
+# out. P2-3f8 and P2-3f9 both had that backwards and proposed
+# Luigi/Fox/Captain/Donkey, which is 12,496 B lighter than the real thing.
+#
+# P2-3f9's stated blocker is GONE. It put Captain in slot 0, saw **about 30x
+# the wall time for the same guest frames**, and backed out. P2-3f10 attributed
+# that to an ABORT-mode data abort in `efManagerCaptainEntryCarMakeEffect` --
+# the effect-desc deferral table in battleship_efmanager.c held four slots and
+# the landed roster defers seven descs, so Falcon's Flyer was neutralised with
+# no way back and the source maker walked a NULL DObj. What the wall clock
+# measured afterwards was melonDS grinding through a wandering ARM9, which is
+# why every memory counter read clean and identical to the control. Fixed and
+# asserted.
+#
+# A SECOND, UNRELATED DEFECT now blocks the re-point, and it is board row
+# P2-3f11: admitting Captain to THIS arm -- slot 0 and slot 2 both built and
+# measured -- makes the slot-3 fighter stop emitting hardware triangles for the
+# whole match (`gNdsFighterDLAllDrawSlotTriangleMask` 0x7, which the harness
+# throws on). Not memory, not owner-image residency, not a native-owner abort,
+# not packet declines; and the SHELL argmax build runs the same four kinds at
+# 0xF. Do not re-point this arm again until P2-3f11 is closed.
 #
 # The roster IS the two admission flags, so derive them instead of making every
 # caller repeat them. `NDS_P2_LUIGI`/`NDS_P2_DONKEY` default at line 580 above,

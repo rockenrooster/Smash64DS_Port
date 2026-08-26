@@ -1,0 +1,73 @@
+P2-3f10 / P2-3f11 -- the RED four-CPU stress run, Captain Falcon in slot 0.
+
+Transcribed from artifacts/verification/p2-2-fourcpu-memory.json as the harness
+wrote it on this run, before the subsequent GREEN run on the Mario/Fox/Luigi/
+Donkey roster overwrote that path. The run ended in
+`verify-p2-four-fighter-stress.ps1:465`:
+
+  Four-CPU stress did not draw all four fighter slots: hardware-triangle slot
+  mask 0x7 (want 0xF) on roster Captain/Fox/Luigi/Donkey.
+
+The ledger is written BEFORE the assertions are judged (P2-3r13), so every
+field below is from the completed one-minute match, not from a partial run.
+
+{
+  "target": "smash64ds-p2-fourcpu-tickhud-hwtri",
+  "romSha256": "361E449833E2EA94AF951C67E776DBF45F93164F0CBC00BFDA86BCB3963A3939",
+  "buildDirectory": "build-p2-fourcpu-tickhud",
+  "fighterRoster": "argmax over landed kinds (Captain/Fox/Luigi/Donkey)",
+  "fighterRosterObserved": "Captain/Fox/Luigi/Donkey",
+  "fighterRosterExpected": "Captain/Fox/Luigi/Donkey",
+  "fighterKindWord": "0x03050208",
+  "fighterSlotDrawMask": "0x7",
+  "battlePackBuilt": true,
+  "battlePackResidentBytes": 0,
+  "battlePackCarveDeclineCount": 1,
+  "battlePackCarveMatchKinds": 4,
+  "animCacheArenaReservedBytes": 163840,
+  "ftPoseBinds": 675,
+  "ftPoseBindFull": 0,
+  "animCacheMisses": 395,
+  "animCacheRejects": 391,
+  "arenaChosenBytes": 1667072,
+  "arenaSearchAllocationFailures": 16,
+  "graphicsHeapCapacityBytes": 8192,
+  "graphicsHeapPeakBytes": 96,
+  "graphicsHeapOverflowCount": 0,
+  "graphicsHeapNoRoomCount": 0,
+  "sceneFileBufferArenaAllocCount": 0,
+  "sceneFileBufferDeclineCount": 0,
+  "generalHeapFreeMinBytes": 308376,
+  "generalHeapSafetyFloorBytes": 25600,
+  "generalHeapMarginAboveFloorBytes": 282776,
+  "dObjActiveMax": 207,
+  "effectPoolCapacity": 38,
+  "effectPoolFreeMin": 25,
+  "effectPoolActiveMax": 13,
+  "particleStructCapacity": 112,
+  "particleStructMax": 32,
+  "particleGeneratorCapacity": 24,
+  "particleGeneratorMax": 11,
+  "particleTransformCapacity": 80,
+  "particleTransformMax": 21,
+  "particleStructRejects": 0,
+  "aObjEvent32NormalizedHighWater": 2335,
+  "aObjEvent32NormalizeFailCount": 0,
+  "aObjEvent32HashOverflowCount": 0,
+  "syMallocOverflowCount": 0,
+  "objmanPanicCount": 0,
+  "nativeOwnerPlanBuild": 576,
+  "nativeOwnerPlanHit": 6401,
+  "nativeOwnerPlanVerifyMismatch": 0,
+  "nativeOwnerSlot0HardwareTriangles": 366800,
+  "nativeOwnerSlot1HardwareTriangles": 336013,
+  "capturedUtc": "2026-08-25T23:57:55.1724766Z"
+}
+
+Read against the GREEN Mario/Fox/Luigi/Donkey run of the same harness:
+generalHeapFreeMin 419,052 (this run 308,376 -- Captain's 100,160 B kind tree
+replacing Mario's 54,048 B accounts for it), animCacheMisses/Rejects 283/279
+(here 395/391), plan build/hit 680/6,513 on the Mario roster at P2-2 against
+576/6,401 here -- i.e. all four fighters are still taking the plan path. What
+is NOT here is slot 3's triangles: there is no per-slot total past P1, and the
+mask is the only instrument that speaks for slots 2 and 3.
