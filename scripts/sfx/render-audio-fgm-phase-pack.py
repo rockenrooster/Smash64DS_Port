@@ -262,6 +262,12 @@ FULL_COVERAGE_IDS = (
     73, 106, 117, 180, 181, 182, 183, 184, 288, 299,
     337, 338, 339, 340, 341, 342, 343, 344, 345, 346, 347, 348, 349, 350,
     351, 352, 353, 354, 355, 357, 358, 359, 485, 604,
+    # P2-3f14 Donkey Kong's FGM bank -- his voices landed at P2-3 and his
+    # sound effects never did. Every FGM cue 212_DonkeyMainMotion.c,
+    # 213_DonkeyMain.c and the shared DownBounce table reach, plus the shared
+    # 10 DonkeySlap2 that 175/176 fork and Captain/Kirby/Purin/Yoshi also
+    # play. Appended so every prior entry keeps its pack order.
+    9, 10, 72, 105, 116, 175, 176, 177, 178, 179, 287, 298,
 )
 FULL_PROGRAM_AOT_IDS = frozenset((
     154, 40, 38, 37, 34, 32, 31,
@@ -291,6 +297,12 @@ FULL_PROGRAM_AOT_IDS = frozenset((
     183, 184,
     337, 338, 339, 340, 341, 342, 343, 344, 345, 346, 347, 348, 349, 350,
     351, 352, 353, 354, 355, 357, 358, 359,
+    # P2-3f14 Donkey Kong. Nine of his eleven FGM cues are multi-note
+    # schedules; 175 BossSlam and 176 BossUnk1 additionally fork 10
+    # DonkeySlap2, which the composite renderer fuses. The flat path would
+    # hold each cue's FIRST note for its whole duration -- 179 DonkeyCharge
+    # is pitch codes 13/3/12 in nine ticks and would come out monotone.
+    9, 10, 175, 176, 177, 178, 179,
     18, 365,
     # 153 AltitudeWarn -- the cue the owner picked out BY NAME as "a new SFX I
     # don't recognise". Articulation 150 sweeps pitch 550 -> 2390 cents inside
@@ -4473,6 +4485,345 @@ SELECTED += (
             "685511dedc41b987c69ae3fed42c37ee321236aa4e2f7fee9c1fc84406b36623",
         "articulation_program_sha256":
             "6539fb2ac7b671fe7f7a0a87282d231e839c417c0cd5c6c9e36a680b8e893a3b",
+    },
+)
+
+
+# P2-3 Donkey Kong FGM bank.  He received his VOICE bank at P2-3 (324..336,
+# announcer 483, crowd 603) and never his SOUND EFFECTS: every FGM cue his
+# motion scripts, his `dead_fgm_ids[1]` and ft/ftcommondata.c's shared
+# DownBounce table ask for fell into the miss ring.  Measured, not assumed --
+# the P2-3f13 argmax shell run counted 90 DK FGM requests in one minute with
+# `DonkeyCharge` alone asked for 56 times, every one of them missing.
+#
+# THE INVENTORY IS THE SOURCE'S.  Every `nSYAudioFGMDonkey*` enumerator in
+# gm/gmsound.h (REGION_US honored) plus the three `nSYAudioFGMBoss*` cues his
+# own motion arrays play, with reachability read out of
+# `212_DonkeyMainMotion.c` + `213_DonkeyMain.c` + `scsubsysdatadonkey.c` +
+# ft/ftcommondata.c's DownBounce table: 9 Slap1, 72 Landing, 105 Foot,
+# 116 Dash, 175 BossSlam, 176 BossUnk1, 177 BossUnk2, 178 Spin, 179 Charge,
+# 287 DeadSlam (his `dead_fgm_ids[1]`, 0x11f) and 298 DownBounce.  10
+# DonkeySlap2 rides with them: it is not DK's -- Captain/Kirby/Purin/Yoshi
+# play it and 175/176 fork it -- and it is one of the seven roster-wide shared
+# cues P2-3f13 left open, so packing it here closes a Falcon gap too.
+#
+# THREE OF THESE ARE ALREADY IN THE PACK AS SOMEBODY ELSE'S RENDER PROGRAM,
+# which is the strongest possible cross-check on this block: 287 is the slam
+# program Mario's 292, Fox's 289 and Captain's 288 all fork, and its
+# `root_program_sha256` here is byte-for-byte the `render_program_sha256`
+# those three already pin; 298 is the DownBounce program 299/300/303 fork;
+# 105 and 116 are the programs Captain's 106 Foot and 117 Dash fork.  Their
+# extents (5,168 / 2,301 / 828 / 1,239) came out of the generator's own
+# validator and land exactly on the numbers those entries carry.
+#
+# Every field is `--derive 9,10,72,105,116,175,176,177,178,179,287,298`, and
+# every `expected_retained_samples` was authored by letting this file's own
+# renderer name it.  Nine cues carry multi-note schedules with no fork or a
+# fork of 10, so they render through FULL_PROGRAM_AOT_IDS -- the flat path
+# would hold DonkeyCharge's first note for all nine ticks and drop the pitch
+# codes 3 and 12 that make it a charge.  Largest new body is 176 BossUnk1 at
+# 10,584 B, well inside the 53,248-byte largest runtime cache slot; the pack
+# grows 39,640 B and the runtime cache is untouched.
+SELECTED += (
+    {
+        "id": 9,
+        "name": "nSYAudioFGMDonkeySlap1",
+        "kind": "attack",
+        "articulation": 458,
+        "sound": 4,
+        "notes": ((12, 7, 10), (12, 7, 30), (10, 7, 30)),
+        "duration_ticks": 70,
+        "ucd_volume": 255,
+        "articulation_pitch_cents": -1200,
+        "loop": False,
+        "wave_base": 28560,
+        "wave_length": 17046,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 1,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "4ce14a1ea9876c41c96b817b4e182b96aec1f1675f26aba3c04d398c70bd9093",
+        "render_program_sha256":
+            "4ce14a1ea9876c41c96b817b4e182b96aec1f1675f26aba3c04d398c70bd9093",
+        "articulation_program_sha256":
+            "99589e4ed1453dc1a2be2e29bd56e79f6c65e65c4bab19fda79bb8c88a45c406",
+    },
+    {
+        "id": 10,
+        "name": "nSYAudioFGMDonkeySlap2",
+        "kind": "attack",
+        "articulation": 458,
+        "sound": 4,
+        "notes": ((8, 7, 20), (5, 7, 20)),
+        "duration_ticks": 40,
+        "ucd_volume": 255,
+        "articulation_pitch_cents": -1200,
+        "loop": False,
+        "wave_base": 28560,
+        "wave_length": 17046,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 1,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "4188a8eff23ac1e13dec40ec806d3a815e5a5688c4a582c5c93bf6f0d68d117b",
+        "render_program_sha256":
+            "4188a8eff23ac1e13dec40ec806d3a815e5a5688c4a582c5c93bf6f0d68d117b",
+        "articulation_program_sha256":
+            "99589e4ed1453dc1a2be2e29bd56e79f6c65e65c4bab19fda79bb8c88a45c406",
+    },
+    {
+        "id": 72,
+        "name": "nSYAudioFGMDonkeyLanding",
+        "kind": "movement",
+        "articulation": 3,
+        "sound": 1,
+        "notes": ((8, 7, 3),),
+        "duration_ticks": 3,
+        "ucd_volume": 180,
+        "articulation_pitch_cents": 700,
+        "loop": False,
+        "wave_base": 14224,
+        "wave_length": 2944,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 621,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "9b37506dc57cc43b255fa175bfb1e9256fc4c955ae00e4bd600bf4ab123781cf",
+        "render_program_sha256":
+            "9b37506dc57cc43b255fa175bfb1e9256fc4c955ae00e4bd600bf4ab123781cf",
+        "articulation_program_sha256":
+            "300492238b0d3e3b82ac86f63da05c445083fe1aafa2a6d10d7b4bf4f59b7576",
+        "aot_source_schedule": True,
+    },
+    {
+        "id": 105,
+        "name": "nSYAudioFGMDonkeyFoot",
+        "kind": "movement",
+        "articulation": 3,
+        "sound": 1,
+        "notes": ((8, 7, 4),),
+        "duration_ticks": 4,
+        "ucd_volume": 125,
+        "articulation_pitch_cents": 700,
+        "loop": False,
+        "wave_base": 14224,
+        "wave_length": 2944,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 828,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "6ad3a20c66b60ffe8e20807e64e24beca263293fe724decd005cc5506dcd0c5c",
+        "render_program_sha256":
+            "6ad3a20c66b60ffe8e20807e64e24beca263293fe724decd005cc5506dcd0c5c",
+        "articulation_program_sha256":
+            "300492238b0d3e3b82ac86f63da05c445083fe1aafa2a6d10d7b4bf4f59b7576",
+    },
+    {
+        "id": 116,
+        "name": "nSYAudioFGMDonkeyDash",
+        "kind": "movement",
+        "articulation": 3,
+        "sound": 1,
+        "notes": ((15, 7, 4),),
+        "duration_ticks": 4,
+        "ucd_volume": 210,
+        "articulation_pitch_cents": 700,
+        "loop": False,
+        "wave_base": 14224,
+        "wave_length": 2944,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 1239,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "3f78fcfec264926e5f61cbd71db9b2207ff1fe9814b594c236b788465015460e",
+        "render_program_sha256":
+            "3f78fcfec264926e5f61cbd71db9b2207ff1fe9814b594c236b788465015460e",
+        "articulation_program_sha256":
+            "300492238b0d3e3b82ac86f63da05c445083fe1aafa2a6d10d7b4bf4f59b7576",
+    },
+    {
+        "id": 175,
+        "name": "nSYAudioFGMBossSlam",
+        "kind": "attack",
+        "articulation": 458,
+        "sound": 4,
+        "notes": ((12, 7, 10), (12, 7, 30), (10, 7, 30)),
+        "duration_ticks": 70,
+        "ucd_volume": 235,
+        "articulation_pitch_cents": -1200,
+        "loop": False,
+        "wave_base": 28560,
+        "wave_length": 17046,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 1,
+        "root_fork_programs": (10,),
+        "root_program_sha256":
+            "d4d37f393645b0140c7f821b31cfbfeca4536bf6de1fecb5c6f609b014692f1d",
+        "render_program_sha256":
+            "d4d37f393645b0140c7f821b31cfbfeca4536bf6de1fecb5c6f609b014692f1d",
+        "articulation_program_sha256":
+            "99589e4ed1453dc1a2be2e29bd56e79f6c65e65c4bab19fda79bb8c88a45c406",
+    },
+    {
+        "id": 176,
+        "name": "nSYAudioFGMBossUnk1",
+        "kind": "attack",
+        "articulation": 108,
+        "sound": 26,
+        "notes": ((15, 7, 10), (13, 7, 20), (10, 7, 35), (8, 7, 50)),
+        "duration_ticks": 115,
+        "ucd_volume": 230,
+        "articulation_pitch_cents": 0,
+        "loop": False,
+        "wave_base": 225728,
+        "wave_length": 10008,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 1,
+        "root_fork_programs": (10,),
+        "root_program_sha256":
+            "7838e2b3c2e95c8399d332c403456c5b218a5c5ac68cb8bcfbe239ea237fecf3",
+        "render_program_sha256":
+            "7838e2b3c2e95c8399d332c403456c5b218a5c5ac68cb8bcfbe239ea237fecf3",
+        "articulation_program_sha256":
+            "509d63083feddf8b69ee3ffbb5cdde510e1a081444dcd0d8b56a7ea2b8621736",
+    },
+    {
+        "id": 177,
+        "name": "nSYAudioFGMBossUnk2",
+        "kind": "attack",
+        "articulation": 7,
+        "sound": 4,
+        "notes": ((17, 7, 5), (15, 7, 10), (12, 7, 30), (5, 7, 50)),
+        "duration_ticks": 95,
+        "ucd_volume": 240,
+        "articulation_pitch_cents": 300,
+        "loop": False,
+        "wave_base": 28560,
+        "wave_length": 17046,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 1,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "d62c53393cb191541ce49c80ba21c3c802ceb55b6bf7be4fdf73a44a794c0f35",
+        "render_program_sha256":
+            "d62c53393cb191541ce49c80ba21c3c802ceb55b6bf7be4fdf73a44a794c0f35",
+        "articulation_program_sha256":
+            "25baf51195b0172ac10261cc3368f6fac20147a94e42f2ca777aab29ab13a6b3",
+    },
+    {
+        "id": 178,
+        "name": "nSYAudioFGMDonkeySpin",
+        "kind": "attack",
+        "articulation": 174,
+        "sound": 71,
+        "notes": ((2, 7, 3), (3, 7, 4), (12, 7, 5), (6, 7, 5), (2, 7, 10)),
+        "duration_ticks": 27,
+        "ucd_volume": 160,
+        "articulation_pitch_cents": 550,
+        "loop": False,
+        "wave_base": 691264,
+        "wave_length": 2916,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 1,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "83bc6862155f8d5a4a506ea431f12e07c2b378be3c19b9d966dc9fe18e14e286",
+        "render_program_sha256":
+            "83bc6862155f8d5a4a506ea431f12e07c2b378be3c19b9d966dc9fe18e14e286",
+        "articulation_program_sha256":
+            "7a17a55c4ba3daec625c6334dcb9189080b82bfea648864c1042b1d861f4e69f",
+    },
+    {
+        "id": 179,
+        "name": "nSYAudioFGMDonkeyCharge",
+        "kind": "attack",
+        "articulation": 174,
+        "sound": 71,
+        "notes": ((13, 7, 2), (3, 7, 2), (12, 7, 5)),
+        "duration_ticks": 9,
+        "ucd_volume": 145,
+        "articulation_pitch_cents": 550,
+        "loop": False,
+        "wave_base": 691264,
+        "wave_length": 2916,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 1,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "2ae0eb3e067d97456a1c95f1bea047e0dcddfbd559e83a71d5f9ee865bae2cc7",
+        "render_program_sha256":
+            "2ae0eb3e067d97456a1c95f1bea047e0dcddfbd559e83a71d5f9ee865bae2cc7",
+        "articulation_program_sha256":
+            "7a17a55c4ba3daec625c6334dcb9189080b82bfea648864c1042b1d861f4e69f",
+    },
+    {
+        "id": 287,
+        "name": "nSYAudioFGMDonkeyDeadSlam",
+        "kind": "ko",
+        "articulation": 187,
+        "sound": 28,
+        "notes": ((13, 7, 33), (13, 7, 20)),
+        "duration_ticks": 53,
+        "ucd_volume": 200,
+        "articulation_pitch_cents": -1100,
+        "loop": False,
+        "wave_base": 251360,
+        "wave_length": 3762,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 5168,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "634c9b1217b933f51dde97353d62e908fa1082943114d6dbe72bb188a3f33776",
+        "render_program_sha256":
+            "634c9b1217b933f51dde97353d62e908fa1082943114d6dbe72bb188a3f33776",
+        "articulation_program_sha256":
+            "bbcff809d0113bec03d327dd08e85ef84fe10c8b18ba2f922b581416a958de0b",
+    },
+    {
+        "id": 298,
+        "name": "nSYAudioFGMDonkeyDownBounce",
+        "kind": "movement",
+        "articulation": 187,
+        "sound": 28,
+        "notes": ((12, 7, 10), (12, 7, 15)),
+        "duration_ticks": 25,
+        "ucd_volume": 130,
+        "articulation_pitch_cents": -1100,
+        "loop": False,
+        "wave_base": 251360,
+        "wave_length": 3762,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 2301,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "9ed69d587dab562768d6321d349477c4f522c0b65115fb7cb2c1f27d5b27c4c2",
+        "render_program_sha256":
+            "9ed69d587dab562768d6321d349477c4f522c0b65115fb7cb2c1f27d5b27c4c2",
+        "articulation_program_sha256":
+            "bbcff809d0113bec03d327dd08e85ef84fe10c8b18ba2f922b581416a958de0b",
+        "aot_modulator_index": 22,
+        "aot_modulator": {
+            "shape": 0,
+            "target": 11,
+            "postproc": 0,
+            "init_phase": 49,
+            "period": 100.0,
+            "amplitude": 50.0,
+            "offset": 50.0,
+        },
+        "aot_source_schedule": True,
     },
 )
 

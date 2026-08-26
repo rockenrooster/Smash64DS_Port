@@ -347,16 +347,22 @@ Assert-EqualList -Label 'Fox regular-KO source sequence' `
     -Actual $foxRegularKo -Expected ([int[]]@(370, 289, 154))
 # P2-3f13: 288 CaptainDeadSlam joins the set. It is the third fighter to fork
 # program 287 -- Mario's 292 and Fox's 289 are the other two, one shared slam.
-# Donkey Kong's own slam (287) is still not packed under its own id; his
-# dead_fgm_ids[1] names it and nothing has asked for it yet.
+# P2-3f14: and 287 itself joins, as Donkey Kong's own KO slam rather than as
+# the others' fork target. His `dead_fgm_ids[1]` is 0x11f and has named it
+# since he landed; it had no pack entry, so every DK KO played the star and
+# the explosion with a hole where the slam is.
 Assert-EqualList -Label 'Resident regular-KO ID set' -Actual $koIDs `
-    -Expected ([int[]]@(439, 292, 370, 289, 154, 288))
+    -Expected ([int[]]@(439, 292, 370, 289, 154, 288, 287))
 $attackIDs = @($metadata.entries | Where-Object {
         $_.entry_kind -eq 'attack'
     } | ForEach-Object { [int]$_.id })
+# P2-3f14 appends Donkey Kong's seven attack-kind FGM cues: 9 Slap1 and the
+# three Boss-named cues 212_DonkeyMainMotion.c plays from ordinary DK actions,
+# 178 Spin, 179 Charge, and the shared 10 Slap2 that 175/176 fork.
 Assert-EqualList -Label 'Resident attack/activation ID set' `
     -Actual $attackIDs -Expected ([int[]]@(215, 19, 41, 42, 43, 185, 186,
-            187, 189, 190, 217, 218, 219, 18))
+            187, 189, 190, 217, 218, 219, 18,
+            9, 10, 175, 176, 177, 178, 179))
 $qualification = $metadata.attack_activation_qualification
 Assert-EqualList -Label 'Source-qualified attack/activation ID set' `
     -Actual ([int[]]@($qualification.qualified_ids)) `

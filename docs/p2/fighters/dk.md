@@ -33,6 +33,65 @@ that shares almost nothing with Mario/Fox beyond `ftcommon`.
 Big model — watch the polygon/texture budget (largest fighter silhouette);
 bongo/jungle voice set, announcer clip, 4 costumes.
 
+### Audio bank — what is IN and what REMAINS (P2-3f14, 2026-08-25)
+
+The inventory is the source's: every `nSYAudio*` enumerator
+`212_DonkeyMainMotion.c` and `213_DonkeyMain.c` name (35 of them), plus
+`scsubsysdatadonkey.c`'s selected-clip voice, `ft/ftcommondata.c`'s shared
+DownBounce and fighter-call tables, and `mnPlayersVSAnnounceFighter`'s
+announcer index.
+
+**IN — voices, landed at P2-3 (15 cues).** The complete run 324..336
+(FuraSleep, Appeal, Smash1/2/3, SpecialN, DeadUp, FuraFura, Damage, Dead1,
+HeavyGet, HeavyUnk, Dead2), announcer 483, crowd chant 603. 324 FuraSleep
+ships as `runtime_note_replay` — one cached source wave plus two timed
+retriggers — because its baked timeline is 112 KiB against the 53,248-byte
+largest cache slot.
+
+**IN — FGM, landed at P2-3f14 (12 cues).** He got voices at P2-3 and never
+sound effects, so every one of these was failing closed: a measured minute of
+the argmax shell match counted **90 DK FGM requests, all missing**, 56 of
+them `DonkeyCharge` alone.
+
+| id | name | render | body |
+|----|------|--------|------|
+| 9 | DonkeySlap1 | full-program AOT | 6,444 B |
+| 10 | DonkeySlap2 (shared) | full-program AOT | 3,684 B |
+| 72 | DonkeyLanding | source-schedule AOT | 316 B |
+| 105 | DonkeyFoot | flat trim | 420 B |
+| 116 | DonkeyDash | flat trim | 624 B |
+| 175 | BossSlam (forks 10) | full-program AOT | 6,444 B |
+| 176 | BossUnk1 (forks 10) | full-program AOT | 10,584 B |
+| 177 | BossUnk2 | full-program AOT | 8,744 B |
+| 178 | DonkeySpin | full-program AOT | 2,488 B |
+| 179 | DonkeyCharge | full-program AOT | 832 B |
+| 287 | DonkeyDeadSlam | flat trim | 2,588 B |
+| 298 | DonkeyDownBounce | source-schedule AOT | 1,156 B |
+
+10 DonkeySlap2 is not his — Captain/Kirby/Purin/Yoshi play it and 175/176
+fork it — and it is one of the seven roster-wide shared cues P2-3f13 left
+open, so it closes there too. The three Boss-named cues are **not Giant DK's**:
+`212_DonkeyMainMotion.c` plays all three from ordinary DK actions.
+
+Four of the twelve were already in the pack as somebody else's fork target,
+which is the strongest cross-check on the block: 287 is the slam program
+Mario's 292, Fox's 289 and Captain's 288 all fork, 298 is the DownBounce
+program 299/300/303 fork, and 105/116 are the programs Captain's 106 Foot and
+117 Dash fork. Their pinned root hashes here are byte-for-byte the
+`render_program_sha256` those entries already carry, and their extents
+(5,168 / 2,301 / 828 / 1,239) came out of this pack's own validator and land
+exactly on the numbers those entries declare.
+
+Pack 1,511,844 → **1,551,484 B** (cap 2,097,152), entries 153 → **165**,
+runtime cache unchanged at 204,800 — the pack is streamed, never resident.
+
+**REMAINS — six SHARED cues, roster-wide, not DK-specific.** 630
+CharacterUnkZip1, 83 UnkGrind2, 94 KirbyPurinJump, 59 ContainerSmash, 17
+HeavySwing1, 128 GroundBrakeGrind. Every one belongs to the shared library
+rather than to a fighter, and Captain Falcon's row left the same class open
+(1 ExplodeL, 84 UnkGrind3, 95 GroundGrind1, 128, 17, 631 CharacterUnkZip2).
+Nothing DK-specific is unpacked.
+
 ## DS notes / risks
 
 - Carry state must interact correctly with platforms, edges (walking off

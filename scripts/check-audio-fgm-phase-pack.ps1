@@ -93,7 +93,16 @@ $expectedIDs = @(626,470,469,467,490,74,363,364,372,373,374,430,439,292,
     # 53,248-byte largest runtime cache slot, so it can never be played.
     73, 106, 117, 180, 181, 182, 183, 184, 288, 299,
     337, 338, 339, 340, 341, 342, 343, 344, 345, 346, 347, 348, 349, 350,
-    351, 352, 353, 354, 355, 357, 358, 359, 485, 604)
+    351, 352, 353, 354, 355, 357, 358, 359, 485, 604,
+    # P2-3f14 Donkey Kong's FGM bank. He received his VOICE bank at P2-3 and
+    # never his sound effects, so every cue 212_DonkeyMainMotion.c, his
+    # dead_fgm_ids[1] (0x11f) and the shared DownBounce table reach was failing
+    # closed -- 90 requests in one measured minute, 56 of them DonkeyCharge.
+    # 10 DonkeySlap2 rides with them: Captain/Kirby/Purin/Yoshi play it and
+    # 175/176 fork it, so it closes one of the seven shared cues P2-3f13 left
+    # open. 105/116/287/298 were already in the pack as somebody else's fork
+    # target, and their extents land on the numbers those entries carry.
+    9, 10, 72, 105, 116, 175, 176, 177, 178, 179, 287, 298)
 $actualIDs = @($metadata.entries | ForEach-Object { [int]$_.id })
 if (($actualIDs -join ',') -ne ($expectedIDs -join ',')) {
     throw "Unexpected FGM mapping: $($actualIDs -join ',')"
@@ -158,7 +167,12 @@ if (([int]$metadata.format_version -ne 4) -or
     # 1261628 -> 1511844 on 2026-08-25 (P2-3f13) for Captain Falcon's bank:
     # ten FGM cues, twenty-two voices, announcer 485 and crowd chant 604,
     # 119 -> 153 entries, +250,216 bytes of ROM. Runtime cache stays 204800.
-    ([int64]$metadata.resident_bytes -ne 1511844) -or
+    # 1511844 -> 1551484 on 2026-08-25 (P2-3f14) for Donkey Kong's FGM bank:
+    # his eleven cues plus the shared 10 DonkeySlap2, 153 -> 165 entries,
+    # +39,640 bytes of ROM. Four of the twelve (105/116/287/298) were already
+    # in the pack as somebody else's fork target, so their bodies dedup and the
+    # growth is mostly the six genuinely new ones. Runtime cache stays 204800.
+    ([int64]$metadata.resident_bytes -ne 1551484) -or
     ([int64]$metadata.resident_limit_bytes -ne 204800) -or
     # ROM, not RAM: the runtime streams cues into resident_limit_bytes and never
     # holds the pack. 512 KiB blocked the five announcer lines and 768 KiB then
@@ -188,8 +202,10 @@ if (([int]$metadata.format_version -ne 4) -or
     # -> 0x476d5727 on 2026-08-22 for DK's source bank/announcer/crowd set;
     # -> 0x63fcb476 on 2026-08-24 for the two No Contest Results cues;
     # -> 0x17d8f4ff on 2026-08-25 (P2-3f13) for Captain Falcon's thirty-four
+    # selectors;
+    # -> 0xfb3507c6 on 2026-08-25 (P2-3f14) for Donkey Kong's twelve FGM
     # selectors -- same reason, the selector table changed.
-    ($metadata.mapping_sha256_lo -ne '0x17d8f4ff') -or
+    ($metadata.mapping_sha256_lo -ne '0xfb3507c6') -or
     # Repinned 2026-08-02: FGM 11 (the rolling dodge) dropped 127 -> 96 -> 68 ->
     # 48 on the owner's ear via FGM_OWNER_VOLUME_TRIM, -8.4 dB total against the
     # source; the 68 pin was
@@ -229,8 +245,11 @@ if (([int]$metadata.format_version -ne 4) -or
     # Captain Falcon's thirty-four cues move it again on 2026-08-25 (P2-3f13);
     # the 119-entry pin was
     # 9012a748c88ee15daf3ddc70c6a2dfff60c60fde1f2027d3a2e57fa6f73165b6.
+    # Donkey Kong's twelve FGM cues move it again the same day (P2-3f14); the
+    # 153-entry pin was
+    # bd26c263c895617ccc0c7995d92f2748f2a0d877465369863d9478fc691bb393.
     ($metadata.pack_sha256 -ne
-        'bd26c263c895617ccc0c7995d92f2748f2a0d877465369863d9478fc691bb393')) {
+        '113da5fb91c83ff3b6f4bd4b63f840485ad08185f3967f120c320d9b175377f0')) {
     throw 'FGM pack format, budget, mapping, or binary identity changed.'
 }
 if ((@($metadata.excluded_entries).Count -ne 0) -or

@@ -40,6 +40,15 @@ else {
 }
 
 $localText = Get-Content -LiteralPath $localHeader -Raw
+# Strip comments before harvesting names. This scan is looking for the header's
+# DECLARATIONS, and a comment is prose: P2-3f14's DK block wrote "the three
+# nSYAudioFGMBoss* cues" and the harvester lifted `nSYAudioFGMBoss` out of it,
+# then failed the whole fixture on a static assert about an identifier that
+# exists in neither header. A checker that a comment can break does not check
+# what it claims to.
+$localText = [regex]::Replace($localText, '/\*.*?\*/', ' ',
+    [System.Text.RegularExpressions.RegexOptions]::Singleline)
+$localText = [regex]::Replace($localText, '//[^\r\n]*', ' ')
 $audioNames = @(
     [regex]::Matches(
         $localText,

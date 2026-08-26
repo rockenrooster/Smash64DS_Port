@@ -121,7 +121,26 @@ typedef enum gmFGMID
     nSYAudioFGMFoxDeadSlam = 289,
     nSYAudioFGMMarioDeadSlam = 292,
     nSYAudioFGMFoxDownBounce = 300,
-    nSYAudioFGMMarioDownBounce = 303
+    nSYAudioFGMMarioDownBounce = 303,
+    /* P2-3f14, Donkey Kong's eleven FGM cues plus the shared slap his
+     * BossSlam/BossUnk1 fork. 105/116 are the programs Captain's Foot and
+     * Dash already fork; 287 is the slam program 288/289/292 fork and 298 the
+     * DownBounce program 299/300/303 fork -- packing DK's roots costs almost
+     * nothing because the pack already carries those bodies. The three
+     * Boss-named cues below are not Giant DK's: 212_DonkeyMainMotion.c plays
+     * all three from ordinary DK actions. */
+    nSYAudioFGMDonkeySlap1 = 9,
+    nSYAudioFGMDonkeySlap2 = 10,
+    nSYAudioFGMDonkeyLanding = 72,
+    nSYAudioFGMDonkeyFoot = 105,
+    nSYAudioFGMDonkeyDash = 116,
+    nSYAudioFGMBossSlam = 175,
+    nSYAudioFGMBossUnk1 = 176,
+    nSYAudioFGMBossUnk2 = 177,
+    nSYAudioFGMDonkeySpin = 178,
+    nSYAudioFGMDonkeyCharge = 179,
+    nSYAudioFGMDonkeyDeadSlam = 287,
+    nSYAudioFGMDonkeyDownBounce = 298
 } gmFGMID;
 
 typedef enum gmVoiceID

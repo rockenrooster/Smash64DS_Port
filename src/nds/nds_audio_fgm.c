@@ -455,6 +455,26 @@ static s32 ndsAudioFgmIDIsIncluded(u16 id)
     case nSYAudioVoiceCaptainUnkPing3:
     case nSYAudioVoiceAnnounceCaptain:
     case nSYAudioVoicePublicCaptain:
+    /* P2-3f14 Donkey Kong's FGM bank. He received his VOICE bank at P2-3
+     * (324..336 plus announcer 483 and crowd 603) and never his sound
+     * effects, so every id below was already being asked for by
+     * 212_DonkeyMainMotion.c, his `dead_fgm_ids[1]` and ft/ftcommondata.c's
+     * shared DownBounce table -- 90 requests in one measured minute, 56 of
+     * them nSYAudioFGMDonkeyCharge, every one missing. 10 DonkeySlap2 is not
+     * his: Captain/Kirby/Purin/Yoshi play it and his 175/176 fork it, and it
+     * is one of the seven roster-wide shared cues P2-3f13 left open. */
+    case nSYAudioFGMDonkeySlap1:
+    case nSYAudioFGMDonkeySlap2:
+    case nSYAudioFGMDonkeyLanding:
+    case nSYAudioFGMDonkeyFoot:
+    case nSYAudioFGMDonkeyDash:
+    case nSYAudioFGMBossSlam:
+    case nSYAudioFGMBossUnk1:
+    case nSYAudioFGMBossUnk2:
+    case nSYAudioFGMDonkeySpin:
+    case nSYAudioFGMDonkeyCharge:
+    case nSYAudioFGMDonkeyDeadSlam:
+    case nSYAudioFGMDonkeyDownBounce:
         return TRUE;
     default:
         return FALSE;

@@ -5,7 +5,7 @@
 #include <sys/audio.h>
 
 #define NDS_AUDIO_FGM_PASS 0x46474d31u /* FGM1 */
-#define NDS_AUDIO_FGM_ENTRY_COUNT 153u
+#define NDS_AUDIO_FGM_ENTRY_COUNT 165u
 #define NDS_AUDIO_FGM_PHASE_COUNT 5u
 #define NDS_AUDIO_FGM_PHASE_COMPLETE_MASK 0x1fu
 #define NDS_AUDIO_FGM_KO_COUNT 5u
@@ -74,8 +74,15 @@
  * crowd chant 603 are now source-backed. DK 324 uses compact timed retriggers
  * of one cached source wave instead of a 112 KiB baked timeline, so the runtime
  * still streams through the unchanged 200 KiB cache and 52 KiB largest slot. */
-#define NDS_AUDIO_FGM_PACK_BYTES 1511844u
-#define NDS_AUDIO_FGM_PACK_MAPPING_SHA256_LO 0x17d8f4ffu
+/* P2-3f14: Donkey Kong's FGM bank, 153 -> 165 entries and 1,511,844 ->
+ * 1,551,484 bytes. He got his voices at P2-3 and never his sound effects, so
+ * his eleven cues plus the shared 10 DonkeySlap2 his BossSlam/BossUnk1 fork
+ * were all failing closed. 105/116/287/298 are programs the pack ALREADY
+ * carried as somebody else's fork target, so the ROM cost is mostly the six
+ * genuinely new bodies; the runtime cache stays 204800 and the largest new
+ * body (176 BossUnk1, 10,584 B) is well inside the 53,248-byte slot. */
+#define NDS_AUDIO_FGM_PACK_BYTES 1551484u
+#define NDS_AUDIO_FGM_PACK_MAPPING_SHA256_LO 0xfb3507c6u
 #define NDS_AUDIO_FGM_CACHE_BYTES 204800u
 #define NDS_AUDIO_FGM_HANDLE_CAPACITY 8u
 #define NDS_AUDIO_FGM_FIDELITY_DEBT_PITCH_AUTOMATION (1u << 2)
