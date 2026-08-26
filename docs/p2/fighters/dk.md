@@ -85,12 +85,24 @@ exactly on the numbers those entries declare.
 Pack 1,511,844 → **1,551,484 B** (cap 2,097,152), entries 153 → **165**,
 runtime cache unchanged at 204,800 — the pack is streamed, never resident.
 
-**REMAINS — six SHARED cues, roster-wide, not DK-specific.** 630
-CharacterUnkZip1, 83 UnkGrind2, 94 KirbyPurinJump, 59 ContainerSmash, 17
-HeavySwing1, 128 GroundBrakeGrind. Every one belongs to the shared library
-rather than to a fighter, and Captain Falcon's row left the same class open
-(1 ExplodeL, 84 UnkGrind3, 95 GroundGrind1, 128, 17, 631 CharacterUnkZip2).
-Nothing DK-specific is unpacked.
+**REMAINS — six library cues, and ONE of them is his entry.** 630
+CharacterUnkZip1 (his shield drop), 83 UnkGrind2, 94 KirbyPurinJump, 17
+HeavySwing1, 128 GroundBrakeGrind — all genuine shared-library cues, and
+Captain Falcon's row left the same class open (1 ExplodeL, 84 UnkGrind3,
+95 GroundGrind1, 128, 17, 631 CharacterUnkZip2).
+
+**The sixth is not really shared, and it is the loudest thing left for him:
+59 `nSYAudioFGMContainerSmash` is DONKEY KONG'S ENTRY CUE.**
+`dDonkeyMainMotion_Appear1` plays it beside its own `nEFKindBoxSmash` effect,
+because his entry *is* a barrel smash. It is also the item crate/barrel cue
+(`it/itcommon/itbox.c`, `ittaru.c`), which is why P2-3f15 first filed it as
+roster-wide — it is both. So "nothing DK-specific is unpacked" is true of his
+NAMED cues and misleading about what a player hears when he arrives: **DK
+enters silent today**, as do Mario, Luigi and Fox, while Captain Falcon's
+entry sounds. That is row **P2-3f16**, sized at 14,720 B for 59 and ~36,616 B
+for all three entry ids together.
+
+Nothing carrying a `Donkey` name is unpacked.
 
 ## DS notes / risks
 

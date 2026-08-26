@@ -498,14 +498,42 @@ match. Re-read it on Results / Sudden Death / pause zoom, then cut.
      (and its runtime reader) to carry a rate change -- a row of its own, worth
      doing when a second fighter needs it. Until then his shield-break sleep
      voice is silent.
-   - **Seven SHARED cues his motion scripts ask for are packed by nobody**:
-     631 `CharacterUnkZip2`, 10 `DonkeySlap2`, 1 `ExplodeL`,
-     128 `GroundBrakeGrind`, 95 `GroundGrind1`, 17 `HeavySwing1`,
-     84 `UnkGrind3`. They fail closed for Mario, Fox, Luigi and Donkey too --
-     17 is the id `FULL_COVERAGE_IDS` already records as deliberately omitted.
-     Roster-wide gap, deliberately not folded into a fighter landing. Three of
-     the seven (1, 95, 84) turned up in the runtime miss ring above, which is
-     the measurement that the list is real and not a source-reading artefact.
+
+     **P2-3f14 sized the fix, and it is smaller than it looked.** His three
+     notes are pitch codes 13 / 12 / 13 -- **two distinct codes one semitone
+     apart**, not three arbitrary rates. The envelope point is
+     `<u16 tick, u8 volume, u8 flags>` and `flags` uses exactly **one** bit
+     (`NDS_AUDIO_FGM_EVENT_RESTART_SAMPLE`); the runtime's own guard at
+     `nds_audio_fgm.c:1177` fails closed on every other bit, which is what
+     makes the format safe to widen. Four of those seven spare bits carry a
+     signed semitone offset applied to the entry frequency at the restart, plus
+     a 16-entry Q16 ratio table (32 B of `.rodata`) and one extra argument to
+     `ndsAudioFgmRestartHandleSample`. **356 then costs its source wave --
+     28,560 samples = 14,284 IMA bytes -- instead of 65,324**, landing in the
+     16 KiB slot class rather than overflowing the 52 KiB one, and the source
+     note schedule is preserved exactly rather than approximated. That is a
+     78% reduction and it generalises `runtime_note_replay` to any cue whose
+     notes differ only in pitch. A **cheaper but non-equivalent** alternative
+     exists -- render the AOT body at 16,000 Hz instead of 32,000, which halves
+     it to 32,662 B and fits -- but that is an audio-fidelity sacrifice and
+     `PROJECT_GOAL.md` requires owner approval for a permanent one, so it is
+     recorded, not taken.
+   - **SIX SHARED cues his motion scripts ask for are packed by nobody**
+     (seven when this was written; **10 `DonkeySlap2` landed at P2-3f14**,
+     because DK's 175/176 fork it and his bank needed it anyway):
+     631 `CharacterUnkZip2`, 1 `ExplodeL`, 128 `GroundBrakeGrind`,
+     95 `GroundGrind1`, 17 `HeavySwing1`, 84 `UnkGrind3`. They fail closed for
+     Mario, Fox, Luigi and Donkey too -- 17 is the id `FULL_COVERAGE_IDS`
+     already records as deliberately omitted. Roster-wide gap, deliberately not
+     folded into a fighter landing. Three of the six (1, 95, 84) turned up in
+     the runtime miss ring above, which is the measurement that the list is
+     real and not a source-reading artefact.
+
+     **P2-3f15's census added one thing in his favour and it is worth knowing:
+     his 180/181 AppearCar pair is the ONLY packed entry cue on the roster.**
+     Mario's and Luigi's pipe (214), Fox's Arwing (191) and DK's barrel (59)
+     are all unpacked, so Falcon's is the only fighter whose arrival makes a
+     sound. That inconsistency is row **P2-3f16**, not his.
    - **The same run named two LOUDER gaps that are not his.** Donkey Kong's FGM
      bank is entirely unpacked — 9/72/175/176/177/178/179/298, **90 requests in
      one match**, `DonkeyCharge` alone 56 times; he got his VOICE bank at P2-3

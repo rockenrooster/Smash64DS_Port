@@ -1,26 +1,26 @@
 # Handoff
 
-Current: 2026-08-25 — **CAPTAIN FALCON HAS A VOICE** (P2-3f13): 34 of his 35
-cues are packed — all ten FGM, twenty-two of twenty-three voices, announcer 485,
-crowd 604 — every field `--derive`d and every extent named by the pack's own
-validator. Pack 1,261,628 → 1,511,844 B, 119 → 153 entries, runtime cache
-unchanged. **One voice is refused by a MEASURED bound**: 356 FuraSleep's AOT
-body is 65,324 B against the 53,248 B largest cache slot, and DK's
-`runtime_note_replay` escape needs one pitch code across all notes where his are
-13/12/13. Seven SHARED cues he reaches (631/10/1/128/95/17/84) are unpacked for
-every fighter — roster-wide, left open. **Also landed: Luigi's `FTAttributes`
-normalizer arm** (P2-3f12), offset 0x580 — latent, but `smash_sfx[2]` read 0, so
-one smash-voice roll in three asked for FGM id 0 and put a phantom in the miss
-ring. **Three checkers were fixed at their seams**: `check-audio-fgm-phase-pack`
-was in NO profile and owns the TOTAL-SILENCE class (now in `verify-all`,
-`$expectedVerifiers` 7→8); its allowlist cross-check was a hand list of 28 names
-and now derives from the pack; and its 12,000 Hz floor was a proxy Falcon's
-10,679 Hz Flyer engine falsified — it now asserts what it means, that a REST
-never sets the rate. Open before these and still open: **P2-3f11** (admitting
-Falcon to `p2_fourcpu_stress` stops the slot-3 fighter drawing, mask 0x7, so
-that arm is NOT the argmax) and **P2-2p7** (the four-fighter arm presents at ~5
-FPS on every roster and its sampler subtracts the evidence — read it before
-trusting any banked four-CPU tick figure). P2-3r17 stays DEFERRED.
+Current: 2026-08-25 — **THE LANDED ROSTER'S AUDIO IS FINISHED** (P2-3f14 +
+P2-3f15). Donkey Kong got his VOICES at P2-3 and never his sound effects; his
+twelve FGM cues are packed (9/10/72/105/116/175/176/177/178/179/287/298 — 10
+DonkeySlap2 is shared, his 175/176 fork it). Luigi shipped selectable with TWO
+cues; his whole source run 416..428 plus crowd chant 608 are packed — which is
+why P2-3f12's repair was latent. Pack 1,511,844 → **1,733,284 B**, 153 → **178
+entries**, cache 204,800 unchanged, 363,868 B left. **Proven by ONE CONFIG
+MEASURED TWICE** (`build-p2-3f13-audio` vs `build-p2-3f14-audio`, identical
+`nds_build_config.h` bar the git hash): miss ring **16 (saturated) → 8 (a
+census)**, no Donkey/Luigi/Captain id left, `fgmcalls` flat at **474**,
+**`fgmfail=0`**, `fgmloaded=1`. **`fgmfail` is the POSITIVE half** — an
+allowlisted id with no pack entry bumps it, not the ring, and these rows
+allowlisted 25 ids. **The census uncovered two ENTRY cues
+the saturated ring hid: 214 MarioDokan (Mario's AND Luigi's pipe) and 191
+FoxAppearArwing** — Falcon's Flyer roars, the other three are silent. Gap left,
+exhaustively: 95/84/94/1/83/214/191/59 (+128/17/630/631/635/110 from source).
+**Falcon's 356 is SIZED, not fixed** — 14,284 B, not 65,324 (`falcon.md`). Open:
+**P2-3f11** (admitting Falcon to `p2_fourcpu_stress` stops the slot-3 fighter
+drawing, mask 0x7, so that arm is NOT the argmax) and **P2-2p7** (that arm runs
+at ~5 FPS on every roster and its sampler subtracts the evidence — read it
+before trusting a banked four-CPU tick figure). P2-3r17 stays DEFERRED.
 
 ## State
 
@@ -148,13 +148,14 @@ trusting any banked four-CPU tick figure). P2-3r17 stays DEFERRED.
 - **Republish the free-play ROM after every fix batch** (owner, 2026-08-22): plain
   `make TARGET=smash64ds` writes root `smash64ds.nds` (human input, walk compiled
   out, flag-identical to the gate's shell config, **FIVE**-name roster).
-  Current: **17,895,424 B, SHA-256 `FE66C276…BD87`** (2026-08-25, adds P2-3f12
-  and P2-3f13; the board's `SHA-256` line is the authority — the two had
-  drifted apart before this); asserted from
+  Current: **18,116,608 B, SHA-256 `457F5D0A…C91A`** (2026-08-25, adds P2-3f14
+  and P2-3f15 — DK's and Luigi's banks, +221,184 B of pack; the board's
+  `SHA-256` line is the authority); asserted from
   `builds/build/nds_build_config.h`: `NDS_P2_CAPTAIN 1`, `NDS_P2_MENU_WALK 0`,
-  `NDS_P2_FOUR_CPU_ROSTER 0`, `NDS_P2_SHELL_ARGMAX_ROSTER 0`. `2FB213CC…CA74`
-  crashes on Falcon's entry and `C7FF35D7…E171` hangs on four heavy kinds —
-  do not hand either to the owner.
+  `NDS_P2_FOUR_CPU_ROSTER 0`, `NDS_P2_SHELL_ARGMAX_ROSTER 0`, and its staged
+  `nitrofs/audio/fgm_phase_pack_ima.bin` byte-identical to `assets/`.
+  `2FB213CC…CA74` crashes on Falcon's entry and `C7FF35D7…E171` hangs on four
+  heavy kinds — do not hand either to the owner.
   **Boundary does NOT build it** — rebuild by hand, and `rm` the root
   `.elf`/`.nds` pair first if a lab build wrote them.
 - Clean checkout builds through `build.ps1`, not bare `make` (four of six `.inc` are gitignored). Never pass `-j`, never override `MAKEFLAGS`, one build at a time.

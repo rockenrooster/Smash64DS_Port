@@ -152,13 +152,23 @@ screen. Both are packed anyway, at a cost of 41,960 B: the run is contiguous
 in the source, ROM is the cheap resource, and a bank that is complete never
 has to be reopened.
 
-**REMAINS — nothing Luigi-specific.** His KO slam is Mario's own
-`nSYAudioFGMMarioDeadSlam` (292) and his DownBounce is Mario's
+**REMAINS — no Luigi-named cue, but HIS ENTRY IS SILENT.** His KO slam is
+Mario's own `nSYAudioFGMMarioDeadSlam` (292) and his DownBounce is Mario's
 `nSYAudioFGMMarioDownBounce` (303) — the source spells both that way and both
-have been packed since P1, so neither is a Luigi gap. What his motion scripts
-still miss is the roster-wide **shared** set, which no fighter has: 214
-`MarioDokan` (his pipe entry, and Mario's), 110 `MarioFoot`, 635
-`CharacterUnkZip6`, 128 `GroundBrakeGrind`, 17 `HeavySwing1`.
+have been packed since P1, so neither is a Luigi gap.
+
+The one that matters is **214 `nSYAudioFGMMarioDokan`**: `dLuigiMainMotion_Appear1`
+plays it, so it is the sound of his pipe — the same cue `dMarioMainMotion_Appear1`
+plays, shared by the source rather than duplicated. It is unpacked, so **Luigi
+enters silent**, as do Mario, Fox and Donkey; only Captain Falcon's entry
+sounds. That is row **P2-3f16**, and 214 is sized at 9,660 B there. Note for
+whoever takes it: 214's note program carries two **rests** (pitch code 0) that
+give the pipe its rhythm, so it needs the AOT render — the flat path would hold
+the first note for all 105 ticks and lose both gaps.
+
+The rest is the ordinary shared library, which no fighter has: 110 `MarioFoot`,
+635 `CharacterUnkZip6` (his shield drop), 128 `GroundBrakeGrind`,
+17 `HeavySwing1`.
 
 ## DS notes / risks
 
