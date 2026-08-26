@@ -17483,6 +17483,95 @@ static u16 ndsRendererHardwareConvertIA(u8 intensity, u8 alpha)
     return (u16)((1u << 15) | v | (v << 5) | (v << 10));
 }
 
+/* Losslessly repack a resolved RGB5A1 image into the DS's native 16-colour
+ * format when the final image actually uses at most sixteen visible colours.
+ *
+ * This is the runtime twin of generate_battle_playable_static_textures.py's
+ * repack_paletted(): the renderer has already resolved every N64 texture,
+ * palette, material and combiner contribution into canonical RGB5A1 pixels, so
+ * this changes representation only. Alpha-zero RGB is intentionally collapsed
+ * to palette index 0 because those colour bits are not visible; every opaque
+ * halfword remains exact. GL_RGB16 then stores two texels per byte instead of
+ * one 16-bit halfword per texel, returning 75% of the texture-VRAM footprint.
+ *
+ * `pixels` is packed in place. The packed write cursor is always behind the
+ * unread u16 cursor, so a separate scratch allocation is unnecessary. Returns
+ * the palette entry count, or zero when the image needs direct colour. */
+static u32 ndsRendererHardwarePackResolvedPal16(
+    u16 *pixels, u32 pixel_count, u16 palette[16], u32 *color0_transparent)
+{
+    u8 *packed = (u8 *)pixels;
+    u32 palette_count = 0u;
+    u32 i;
+
+    if ((pixels == NULL) || (palette == NULL) ||
+        (color0_transparent == NULL) || (pixel_count == 0u))
+    {
+        return 0u;
+    }
+
+    for (i = 0u; i < pixel_count; i++)
+    {
+        u16 color = ((pixels[i] & 0x8000u) != 0u) ? pixels[i] : 0u;
+        u32 index;
+
+        for (index = 0u; index < palette_count; index++)
+        {
+            if (palette[index] == color)
+            {
+                break;
+            }
+        }
+        if (index == palette_count)
+        {
+            if (palette_count >= 16u)
+            {
+                return 0u;
+            }
+            palette[palette_count++] = color;
+        }
+    }
+
+    /* COLOR0_TRANSPARENT applies to index zero only. Keep the generator's
+     * invariant that a transparent image has canonical 0 in that slot. */
+    *color0_transparent = FALSE;
+    for (i = 0u; i < palette_count; i++)
+    {
+        if (palette[i] == 0u)
+        {
+            u16 first = palette[0];
+
+            palette[0] = 0u;
+            palette[i] = first;
+            *color0_transparent = TRUE;
+            break;
+        }
+    }
+
+    for (i = 0u; i < pixel_count; i++)
+    {
+        u16 color = ((pixels[i] & 0x8000u) != 0u) ? pixels[i] : 0u;
+        u32 index;
+
+        for (index = 0u; index < palette_count; index++)
+        {
+            if (palette[index] == color)
+            {
+                break;
+            }
+        }
+        if ((i & 1u) != 0u)
+        {
+            packed[i >> 1] |= (u8)(index << 4);
+        }
+        else
+        {
+            packed[i >> 1] = (u8)index;
+        }
+    }
+    return palette_count;
+}
+
 static u32 ndsRendererHardwareTextureLinePixels(u32 size, u32 line)
 {
     switch (size)
@@ -19336,6 +19425,7 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
     u32 upload_width;
     u32 upload_height;
     u32 upload_bytes;
+    u32 resident_upload_bytes;
     u32 staged_bytes;
 #if NDS_RENDERER_PROFILE_LEVEL < 2
     u32 staged_row_bytes = 0u;
@@ -19390,6 +19480,10 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
     const NDSRendererTileState *render_tile;
     u32 green_texels = 0u;
     u32 nonwhite_texels = 0u;
+    u16 resident_palette[16];
+    u32 resident_palette_entries = 0u;
+    u32 resident_color0_transparent = FALSE;
+    GL_TEXTURE_TYPE_ENUM resident_texture_type = GL_RGBA;
     int size_x;
     int size_y;
     u32 x;
@@ -20101,6 +20195,7 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
     convert_start = cpuGetTiming();
 #endif
     upload_bytes = upload_width * upload_height * sizeof(u16);
+    resident_upload_bytes = upload_bytes;
     staged_bytes = upload_bytes;
 #if (NDS_RENDERER_PROFILE_LEVEL < 2) && \
     (NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE)
@@ -20258,6 +20353,32 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
     ndsRendererProfileTextureFormat(
         &gNdsRendererProfileTextureConvertFormatMask, format, size);
 #endif
+
+    /* TEXEL1 is the one path that may refresh an existing direct-colour
+     * allocation in place when only the blend fraction changes. Keep that
+     * refresh representation unchanged. Every other miss is immutable for its
+     * exact 236-byte key, so compact the already-resolved final image whenever
+     * it fits losslessly in PAL16. This is especially important in 3+/4-player
+     * battles: BattleShip correctly selects Low fighter detail there, and the
+     * fourth owner's late material must not fail merely because earlier dynamic
+     * images consumed texture VRAM as 16bpp direct colour. */
+    if ((use_texel1 == FALSE) &&
+        (upload_buffer == sNdsRendererHardwareTextureScratch))
+    {
+        resident_palette_entries = ndsRendererHardwarePackResolvedPal16(
+            sNdsRendererHardwareTextureScratch,
+            upload_width * upload_height,
+            resident_palette, &resident_color0_transparent);
+        if (resident_palette_entries != 0u)
+        {
+            resident_texture_type = GL_RGB16;
+            resident_upload_bytes = (upload_width * upload_height + 1u) >> 1;
+            if (resident_color0_transparent != FALSE)
+            {
+                params |= (u32)GL_TEXTURE_COLOR0_TRANSPARENT;
+            }
+        }
+    }
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
     gNdsRendererProfileTextureConvertTicks += cpuGetTiming() - convert_start;
 
@@ -20357,7 +20478,7 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
         ndsRendererHardwareBindTextureName(stats, (u32)entry->name);
         upload_attempts = 0u;
         while (ndsRendererHardwareFencedGlTexImage2D(
-                   GL_TEXTURE_2D, 0, GL_RGBA, size_x, size_y, 0,
+                   GL_TEXTURE_2D, 0, resident_texture_type, size_x, size_y, 0,
                    params, sNdsRendererHardwareTextureScratch) == 0)
         {
             (void)ndsRendererHardwareReleaseTexture(entry);
@@ -20379,6 +20500,11 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
                 return FALSE;
             }
             ndsRendererHardwareBindTextureName(stats, (u32)entry->name);
+        }
+        if (resident_palette_entries != 0u)
+        {
+            glColorTableEXT(GL_TEXTURE_2D, 0, (int)resident_palette_entries,
+                            0, 0, resident_palette);
         }
     }
     ndsRendererHardwareBindTextureName(stats, (u32)entry->name);
@@ -20424,8 +20550,7 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
         &gNdsRendererProfileTextureBindFormatMask, format, size);
 #endif
     ndsRendererHardwareApplyTextureParams(entry->params);
-    ndsRendererProfileRecordTextureUpload(
-        upload_width * upload_height * sizeof(u16));
+    ndsRendererProfileRecordTextureUpload(resident_upload_bytes);
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
     ndsRendererProfileTextureCacheEntry(entry);
 #endif

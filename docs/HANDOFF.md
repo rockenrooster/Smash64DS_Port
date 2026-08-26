@@ -1,18 +1,18 @@
 # Handoff
 
-Current: 2026-08-26 — **P2-3r8 CLOSED: CSS pose slots do not leak.** The old
-15 binds / 10 unbinds per visit was comparing motion lifecycle counters and was
-never a slot-ownership count. New ownership telemetry (`7ace489f21e`) measures
-two complete CSS visits: **claims/releases/live = 10/10/0, then 20/20/0**,
-`livemax=3` of 4 and `BindFull=0`, while the old counters still read 15/10 then
-30/20. The 2026-08-25 `ndsFtPoseRelease` fix remains real; only the residual
-“five more slots leak” diagnosis is withdrawn. Proof:
-`2026-08-26_p2-3r8-pose-ownership.txt`. **Rail:** binds/unbinds describe motion
-attachment; claim/release/live describe the fixed pool. P2-3f16 is also landed:
-all five current fighters have source entry audio; pack 1,770,008 B / 181 cues,
-cache 204,800 B. Open: **P2-3f11** (Falcon in the direct four-CPU arm leaves
-slot 3 at triangle mask 0x7), **P2-2p7** (four-CPU cadence/sampler debt), and
-Falcon 356 FuraSleep remains sized but unpacked. P2-3r17 stays DEFERRED.
+Current: 2026-08-26 — **P2-3f11 CLOSED: the four-CPU gate is the real landed
+argmax, Mario/Fox/Captain/Donkey, and all four slots draw.** The missing Donkey
+was a GX-started texture admission failure, not geometry: slot 3 reached the
+production owner, blocker 4 led to `NDS_RENDERER_HW_TEXREJECT_TEXIMAGE`, and
+the failure census had 56 live texture-cache entries (32 pinned + 24 used this
+frame) with **0 evictable**. Final resolved images with <=16 exact RGB5A1 colors
+now use DS `GL_RGB16` PAL16 losslessly; TEXEL1 refreshes remain direct-color.
+The one-minute argmax stress run finishes with draw mask **0xF**, 324,192 B
+general-heap low-water and zero allocator/object/graphics failures; the
+post-probe-cleanup frame-129 check is also 0xF. BattleShip's source rule remains
+intact: every 3+ fighter VS match selects the Low JointTree. Open:
+**P2-2p7** (four-CPU cadence/sampler debt) and Falcon 356 FuraSleep remains
+sized but unpacked. P2-3r17 stays DEFERRED.
 
 ## State
 
@@ -31,11 +31,10 @@ Falcon 356 FuraSleep remains sized but unpacked. P2-3r17 stays DEFERRED.
      character select → stage select → battle). Renamed/rebased at P2-1M.
   3. `p2_fourcpu_stress` — `scripts/verify-p2-four-fighter-stress.ps1`, target
      `smash64ds-p2-fourcpu-tickhud-hwtri`, build `build-p2-fourcpu-tickhud`.
-     Four level-3 CPUs, Dream Land, one-minute Time — **Mario/Fox/Luigi/Donkey
-     since P2-3r15**; `NDS_P2_FOUR_CPU_ROSTER=0` rebuilds the mirror control.
-     **Still NOT the argmax** (that is Mario/Fox/Captain/Donkey = 348,320 B —
-     Luigi is the cheapest kind, not Mario); admitting Falcon here costs the
-     slot-3 fighter its triangles, row **P2-3f11**. 0 humans / 4 CPUs
+     Four level-3 CPUs, Dream Land, one-minute Time — **Mario/Fox/Captain/Donkey
+     since P2-3f11**, the landed-content argmax at 348,320 B; Luigi is the
+     cheapest kind, not Mario. `NDS_P2_FOUR_CPU_ROSTER=0` rebuilds the mirror
+     control. 0 humans / 4 CPUs
      / 4 fighter GObjs / mask `0xF`, all four slots drawing, plus the P2-2
      memory + native-Low-detail budget gate. **It asserts no tick gate on
      purpose:** four kinds sit far outside 1.12M — P2 debt (row P2-2p7: ~6x,

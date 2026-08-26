@@ -347,15 +347,8 @@ $observedRoster = @(0..3 | ForEach-Object {
     elseif (($b - 1) -lt $kindNames.Count) { $kindNames[$b - 1] }
     else { "kind$($b - 1)" }
 })
-# STILL NOT THE ARGMAX. That would be Mario/Fox/Captain/Donkey = 348,320 B
-# (LUIGI is the cheapest landed kind at 41,552 B, not Mario at 54,048 -- P2-3f8
-# and P2-3f9 both had it backwards). P2-3f9's blocker, "about 30x the wall
-# time", was an ABORT-mode data abort in Falcon's entry effect and is FIXED in
-# battleship_efmanager.c. What blocks the re-point now is row P2-3f11: Captain
-# in this arm, slot 0 or slot 2, makes the slot-3 fighter stop emitting
-# hardware triangles and the draw-mask assertion below throws on 0x7.
 $expectedRoster = if ($rosterFlag -eq 1) {
-    @('Mario', 'Fox', 'Luigi', 'Donkey')
+    @('Mario', 'Fox', 'Captain', 'Donkey')
 } else {
     @('Mario', 'Fox', 'Mario', 'Fox')
 }
@@ -375,7 +368,7 @@ $memory = [PSCustomObject]@{
     coverageArtifact = $CoverageJsonOut
     buildDirectory = $build
     fighterRoster = $(if ($rosterFlag -eq 1) {
-        'four distinct kinds (Mario/Fox/Luigi/Donkey)'
+        'four distinct kinds (Mario/Fox/Captain/Donkey)'
     } elseif ($null -eq $rosterFlag) { 'unknown' } else {
         'Mario/Fox mirrors'
     })

@@ -2366,20 +2366,13 @@ ifeq ($(NDS_P2_FOUR_CPU_ROSTER),1)
 # why every memory counter read clean and identical to the control. Fixed and
 # asserted.
 #
-# A SECOND, UNRELATED DEFECT now blocks the re-point, and it is board row
-# P2-3f11: admitting Captain to THIS arm -- slot 0 and slot 2 both built and
-# measured -- makes the slot-3 fighter stop emitting hardware triangles for the
-# whole match (`gNdsFighterDLAllDrawSlotTriangleMask` 0x7, which the harness
-# throws on). Not memory, not owner-image residency, not a native-owner abort,
-# not packet declines; and the SHELL argmax build runs the same four kinds at
-# 0xF. Do not re-point this arm again until P2-3f11 is closed.
-#
-# The roster IS the two admission flags, so derive them instead of making every
-# caller repeat them. `NDS_P2_LUIGI`/`NDS_P2_DONKEY` default at line 580 above,
-# which is why this override is expressible here and the arity check next to the
-# flag had to be a `#error` in nds_match_config.c.
+# P2-3f11 re-points this arm to the measured landed-content argmax:
+# Mario/Fox/Captain/Donkey. Luigi remains admitted because native-owner slots are
+# a dense ABI (Donkey and Captain build on the already-qualified Luigi slot), but
+# the direct battle descriptor below does not instantiate him.
 override NDS_P2_LUIGI := 1
 override NDS_P2_DONKEY := 1
+override NDS_P2_CAPTAIN := 1
 endif
 endif
 endif

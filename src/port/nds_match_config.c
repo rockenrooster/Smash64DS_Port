@@ -53,8 +53,8 @@ _Static_assert(NDS_P2_PROOF_FIGHTER0 < nFTKindPlayableEnd,
 #endif
 #endif
 
-#if NDS_P2_FOUR_CPU_ROSTER && !NDS_P2_DONKEY
-#error "NDS_P2_FOUR_CPU_ROSTER=1 needs the four-name roster: NDS_P2_LUIGI=1 NDS_P2_DONKEY=1"
+#if NDS_P2_FOUR_CPU_ROSTER && (!NDS_P2_LUIGI || !NDS_P2_DONKEY || !NDS_P2_CAPTAIN)
+#error "NDS_P2_FOUR_CPU_ROSTER=1 needs landed owner admission: NDS_P2_LUIGI=1 NDS_P2_DONKEY=1 NDS_P2_CAPTAIN=1"
 #endif
 
 void ndsMatchConfigLoadMarioFoxDreamLand(NdsMatchConfig *cfg)
@@ -240,29 +240,15 @@ void ndsMatchConfigLoadMarioFoxDreamLand(NdsMatchConfig *cfg)
      * Slots 2/3 take common costume 0 rather than 1: they are different kinds
      * now, so they are not competing for an appearance with slots 0/1 and the
      * source's own duplicate rule does not apply. */
-    cfg->fighters[2].fkind = nFTKindLuigi;
-    cfg->fighters[2].costume = (u8)ftParamGetCostumeCommonID(nFTKindLuigi, 0);
+    cfg->fighters[2].fkind = nFTKindCaptain;
+    cfg->fighters[2].costume = (u8)ftParamGetCostumeCommonID(nFTKindCaptain, 0);
     cfg->fighters[3].fkind = nFTKindDonkey;
     cfg->fighters[3].costume = (u8)ftParamGetCostumeCommonID(nFTKindDonkey, 0);
-    /* THIS IS STILL NOT THE ARGMAX, AND P2-3f10 TRIED TWICE TO MAKE IT ONE.
-     *
-     * The real argmax is Mario/Fox/Captain/Donkey = 348,320 B of unique
-     * per-kind arena against this roster's 289,712 B -- LUIGI is the cheapest
-     * of the five landed kinds at 41,552 B, so he is the one that drops out.
-     * P2-3f8 and P2-3f9 both wrote "Mario is the cheapest of the five", which
-     * is wrong by 12,496 B and is why they proposed Luigi/Fox/Captain/Donkey.
-     *
-     * P2-3f9's reason for backing out is DEAD: its "about 30x the wall time"
-     * was an ABORT-mode data abort in `efManagerCaptainEntryCarMakeEffect`,
-     * fixed at the effect-desc deferral table in battleship_efmanager.c.
-     * A SECOND, UNRELATED DEFECT blocks the re-point, and it is board row
-     * P2-3f11: admitting Captain to THIS arm -- slot 0 or slot 2, measured
-     * both ways -- makes the slot-3 fighter stop emitting hardware triangles
-     * for the whole match (`gNdsFighterDLAllDrawSlotTriangleMask` 0x7, which
-     * the harness throws on). It is not memory (heap 282,776 B over floor),
-     * not owner-image residency (all loaded, 0 failures), not a native-owner
-     * abort (never fires) and not packet declines (0). The SHELL argmax build
-     * runs the same four kinds and reads 0xF, so it is this arm. */
+    /* P2-3f11. This is the measured landed-content argmax: Luigi is the
+     * cheapest of the five landed kinds, so Mario/Fox/Captain/Donkey are the
+     * four kinds that maximize the source-loaded per-kind arena. BattleShip's
+     * scvsbattle.c selects Low detail for every 3+ fighter match; the ordinary
+     * fighter creation path carries that policy into all four instances. */
 #endif
 #endif
 #if NDS_P2_SHELL_ARGMAX_ROSTER
