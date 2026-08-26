@@ -15,6 +15,10 @@ NDS_FT_POSE_COUNTER(gNdsFtPoseJointHolds);
 NDS_FT_POSE_COUNTER(gNdsFtPoseTrackEvals);
 NDS_FT_POSE_COUNTER(gNdsFtPoseStepped);
 NDS_FT_POSE_COUNTER(gNdsFtPoseUnbinds);
+NDS_FT_POSE_COUNTER(gNdsFtPoseSlotClaims);
+NDS_FT_POSE_COUNTER(gNdsFtPoseSlotReleases);
+NDS_FT_POSE_COUNTER(gNdsFtPoseSlotLive);
+NDS_FT_POSE_COUNTER(gNdsFtPoseSlotLiveMax);
 NDS_FT_POSE_COUNTER(gNdsFtPoseTrackOverflow);
 NDS_FT_POSE_COUNTER(gNdsFtPoseAObjLiveMax);
 NDS_FT_POSE_COUNTER(gNdsFtPoseOracleCompares);
@@ -106,6 +110,31 @@ static const u8 sNdsFtPoseStoreOffset[NDS_FT_POSE_TRACKS] =
 
 /* ---- lookup -------------------------------------------------------------- */
 
+static void ndsFtPosePublishSlotOwnership(void)
+{
+    u32 live = 0u;
+    u32 i;
+
+    /* Arena generations retire the backing store wholesale.  Only slots whose
+     * owner belongs to the CURRENT generation count as live; stale entries are
+     * reusable by ndsFtPoseOpen and are not a leak. */
+    for (i = 0u; i < NDS_FT_POSE_FIGHTERS; i++)
+    {
+        const NdsFtPose *pose = &sNdsFtPose[i];
+
+        if ((pose->gobj != NULL) &&
+            (pose->heap_generation == gNdsTaskmanHeapGeneration))
+        {
+            live++;
+        }
+    }
+    gNdsFtPoseSlotLive = live;
+    if (live > gNdsFtPoseSlotLiveMax)
+    {
+        gNdsFtPoseSlotLiveMax = live;
+    }
+}
+
 static NdsFtPose *ndsFtPoseFind(const GObj *gobj)
 {
     u32 i;
@@ -133,6 +162,9 @@ static NdsFtPose *ndsFtPoseOpen(GObj *gobj, u32 count)
     u32 capacity;
     u32 i;
 
+    /* Also refresh the published live count after a scene-generation change,
+     * before any stale slot is recycled below. */
+    ndsFtPosePublishSlotOwnership();
     if (pose != NULL)
     {
         return (count <= pose->capacity) ? pose : NULL;
@@ -167,6 +199,8 @@ static NdsFtPose *ndsFtPoseOpen(GObj *gobj, u32 count)
             pose->attach_pending = 0u;
             pose->body_evaluated = 1u;
             pose->pool_used = 0u;
+            gNdsFtPoseSlotClaims++;
+            ndsFtPosePublishSlotOwnership();
             return pose;
         }
     }
@@ -231,6 +265,8 @@ static NdsFtPose *ndsFtPoseOpen(GObj *gobj, u32 count)
         pose->clock_gobj = shadow_gobj;
     }
 #endif
+    gNdsFtPoseSlotClaims++;
+    ndsFtPosePublishSlotOwnership();
     return pose;
 }
 
@@ -365,6 +401,8 @@ void ndsFtPoseRelease(GObj *gobj)
     /* `gobj == NULL` is the NdsFtPose free-slot contract. Keep joints/pool and
      * oracle shadows resident so the next CSS rebuild reuses their arena. */
     pose->gobj = NULL;
+    gNdsFtPoseSlotReleases++;
+    ndsFtPosePublishSlotOwnership();
 }
 
 /* ---- the script cursor (ft/ftanim.c:73, in the port's Q form) ------------ */

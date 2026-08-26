@@ -150,6 +150,14 @@ extern volatile u32 gNdsFtPoseJointHolds;
 extern volatile u32 gNdsFtPoseTrackEvals;
 extern volatile u32 gNdsFtPoseStepped;
 extern volatile u32 gNdsFtPoseUnbinds;
+/* Slot ownership is deliberately separate from motion bind/unbind activity.
+ * One live fighter can bind many motions into the same slot, and Release can
+ * return an already-unbound slot.  These counters answer the fixed-pool
+ * question directly instead of treating binds-unbinds as an ownership count. */
+extern volatile u32 gNdsFtPoseSlotClaims;
+extern volatile u32 gNdsFtPoseSlotReleases;
+extern volatile u32 gNdsFtPoseSlotLive;
+extern volatile u32 gNdsFtPoseSlotLiveMax;
 extern volatile u32 gNdsFtPoseTrackOverflow;
 extern volatile u32 gNdsFtPoseAObjLiveMax;
 extern volatile u32 gNdsFtPoseOracleCompares;

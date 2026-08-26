@@ -192,6 +192,12 @@ $required = @(
     'gNdsAudioBgmStreamBytesPerSecond', 'gNdsAudioBgmElapsedFrames',
     'gNdsAudioBgmLoopCount', 'gNdsAudioFgmPlayCalls',
     'gNdsAudioFgmPlayFailCount', 'gNdsAudioFgmLoaded',
+    # P2-3r8. A bind is a motion attach, NOT a fixed-pool claim. Keep the
+    # ownership counters beside the shell timeline so a CSS rebuild can prove
+    # its slots are returned rather than inferring that from binds-unbinds.
+    'gNdsFtPoseBinds', 'gNdsFtPoseUnbinds', 'gNdsFtPoseBindFull',
+    'gNdsFtPoseSlotClaims', 'gNdsFtPoseSlotReleases',
+    'gNdsFtPoseSlotLive', 'gNdsFtPoseSlotLiveMax',
     # P2-1h. The frameless boot scene and the backdrop-surface seam. Listed
     # here for the reason P2-1g listed the rest: --gc-sections has dropped a
     # diagnostic global before now and the failure showed up as a red gate
@@ -403,6 +409,7 @@ try {
         # NDS_RENDERER_PROFILE_LEVEL >= 1, which the shipping shell arm sets
         # to 0 -- so the split here is by PRESENCE, not by price.
         'printf "MSAUDIOWORK %d refills=%u streamed=%u bps=%u elapsed=%u loops=%u fgmcalls=%u fgmfail=%u fgmloaded=%u\n", $n, gNdsAudioBgmRefillCount, gNdsAudioBgmStreamedBytes, gNdsAudioBgmStreamBytesPerSecond, gNdsAudioBgmElapsedFrames, gNdsAudioBgmLoopCount, gNdsAudioFgmPlayCalls, gNdsAudioFgmPlayFailCount, gNdsAudioFgmLoaded',
+        'printf "MSPOSE %d binds=%u unbinds=%u full=%u claims=%u releases=%u live=%u livemax=%u\n", $n, gNdsFtPoseBinds, gNdsFtPoseUnbinds, gNdsFtPoseBindFull, gNdsFtPoseSlotClaims, gNdsFtPoseSlotReleases, gNdsFtPoseSlotLive, gNdsFtPoseSlotLiveMax',
         # P2-1k (g) ADDED `stops` AND `bsel`, and both are load-bearing rather
         # than decorative. The row transcribes four BGM STOPS the shell did not
         # have (mntitle.c:352, mnmodeselect.c:774, mnplayersvs.c:3234,
