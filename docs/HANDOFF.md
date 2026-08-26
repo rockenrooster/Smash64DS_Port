@@ -1,24 +1,18 @@
 # Handoff
 
-Current: 2026-08-26 — **P2-3f16 LANDED: all five landed fighters now enter with
-their source audio.** BattleShip uses 214 MarioDokan for Mario AND Luigi's pipe,
-191 FoxAppearArwing for Fox, 59 ContainerSmash for DK's barrel, and Falcon's
-180/181 were already packed. The three missing cues are offline AOT renders;
-214 keeps its two rests and 214/191 keep structural wave-loop metadata without
-becoming hardware-looped whole cues. Pack **1,733,284 → 1,770,008 B**, **178 →
-181 entries**, cache 204,800 unchanged, **327,144 B left**. Static pack/id/runtime
-fixtures pass. **Real DS proof:** `2026-08-26_p2-3f16-entry-audio-trace.txt`,
-shipping shell / fast-logic 0 / Luigi+Fox+Falcon+DK. `LastID` reaches 214, 191
-and 59 with `PlayFailCount=0`, `IncludedLookupFailCount=0`, `UnsupportedCallCount=0`
-and an advancing supported-play count. This is the positive half: allowlisted
-pack drift would increment the failure counters instead of the miss ring.
-The measured roster-wide miss census is now only 95/84/94/1/83; source also
-names 128/17/630/631/635/110 outside that lap. **Falcon's 356 is SIZED, not
-fixed** — 14,284 B (`falcon.md`). Open: **P2-3f11** (admitting Falcon to
-`p2_fourcpu_stress` stops the slot-3 fighter drawing, mask 0x7, so that arm is
-NOT the argmax) and **P2-2p7** (that arm runs at ~5 FPS on every roster and its
-sampler subtracts the evidence — read it before trusting a banked four-CPU tick
-figure). P2-3r17 stays DEFERRED.
+Current: 2026-08-26 — **P2-3r8 CLOSED: CSS pose slots do not leak.** The old
+15 binds / 10 unbinds per visit was comparing motion lifecycle counters and was
+never a slot-ownership count. New ownership telemetry (`7ace489f21e`) measures
+two complete CSS visits: **claims/releases/live = 10/10/0, then 20/20/0**,
+`livemax=3` of 4 and `BindFull=0`, while the old counters still read 15/10 then
+30/20. The 2026-08-25 `ndsFtPoseRelease` fix remains real; only the residual
+“five more slots leak” diagnosis is withdrawn. Proof:
+`2026-08-26_p2-3r8-pose-ownership.txt`. **Rail:** binds/unbinds describe motion
+attachment; claim/release/live describe the fixed pool. P2-3f16 is also landed:
+all five current fighters have source entry audio; pack 1,770,008 B / 181 cues,
+cache 204,800 B. Open: **P2-3f11** (Falcon in the direct four-CPU arm leaves
+slot 3 at triangle mask 0x7), **P2-2p7** (four-CPU cadence/sampler debt), and
+Falcon 356 FuraSleep remains sized but unpacked. P2-3r17 stays DEFERRED.
 
 ## State
 
