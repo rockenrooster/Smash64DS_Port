@@ -1,18 +1,18 @@
 # Handoff
 
-Current: 2026-08-26 — **P2-3f11 CLOSED: the four-CPU gate is the real landed
-argmax, Mario/Fox/Captain/Donkey, and all four slots draw.** The missing Donkey
-was a GX-started texture admission failure, not geometry: slot 3 reached the
-production owner, blocker 4 led to `NDS_RENDERER_HW_TEXREJECT_TEXIMAGE`, and
-the failure census had 56 live texture-cache entries (32 pinned + 24 used this
-frame) with **0 evictable**. Final resolved images with <=16 exact RGB5A1 colors
-now use DS `GL_RGB16` PAL16 losslessly; TEXEL1 refreshes remain direct-color.
-The one-minute argmax stress run finishes with draw mask **0xF**, 324,192 B
-general-heap low-water and zero allocator/object/graphics failures; the
-post-probe-cleanup frame-129 check is also 0xF. BattleShip's source rule remains
-intact: every 3+ fighter VS match selects the Low JointTree. Open:
-**P2-2p7** (four-CPU cadence/sampler debt) and Falcon 356 FuraSleep remains
-sized but unpacked. P2-3r17 stays DEFERRED.
+Current: 2026-08-26 — **P2-2p7 CLOSED: the four-CPU sampler no longer subtracts
+`2^22` from honest long frames, and the real argmax level is banked.** The
+1,972-sample Mario/Fox/Captain/Donkey run is `ALL` P50/P95
+**6,719,552 / 8,400,128** and `WORK-H` **6,313,728 / 7,906,176**, histogram
+2:60 / 3:3 / 4:2 / 5+:1908 / max 25. Only seven rows need the proven wrap
+correction. Same-run identity is four CPUs / four fighters / mask 0xF, clock
+60->1; heap low-water 325,240 B and allocator/object/graphics failures zero.
+A 128-frame no-build sizing probe on the same ROM records **60 native-stage
+owner rejects, first/last reason 6 (`ndsRendererPrepareNativeStageOwner`)**,
+abort/post-arm rejects zero. That stage seam is the next performance lead.
+P2-3f11's PAL16 admission fix remains landed and the stress arm remains the real
+argmax. Open product work: Falcon 356 FuraSleep + his owner feel pass and the
+shared `mpCommonProcFighterProject` source divergence. P2-3r17 stays DEFERRED.
 
 ## State
 
@@ -37,8 +37,8 @@ sized but unpacked. P2-3r17 stays DEFERRED.
      control. 0 humans / 4 CPUs
      / 4 fighter GObjs / mask `0xF`, all four slots drawing, plus the P2-2
      memory + native-Low-detail budget gate. **It asserts no tick gate on
-     purpose:** four kinds sit far outside 1.12M — P2 debt (row P2-2p7: ~6x,
-     and the sampler's `2^22` correction hides it), not a per-run verdict.
+     purpose:** four kinds sit far outside 1.12M — P2 debt (row P2-2p7 now
+     measures `ALL` P50/P95 6,719,552 / 8,400,128), not a per-run verdict.
 - **The P1-named proof target left the routine gate.**
   `smash64ds-battle-playable-proof-hwtri` is still in the Makefile and still the
   default for the dozen specialized probes and metric verifiers that boot
@@ -84,8 +84,9 @@ sized but unpacked. P2-3r17 stays DEFERRED.
    `NDS_TASKMAN_ARENA_SIZE` without returning at least as much static image
    first** -- the step-down loop cannot tell an ambitious target from an
    exhausted heap. **The graphics-heap and BattlePack levers are SPENT** by
-   P2-3f9; `ALL` P50/P95 on the gate arm is 1,965,184 / 3,085,888, flat within
-   192 ticks across that change.
+   P2-3f9. The old `ALL` 1,965,184 / 3,085,888 absolute level is INVALIDATED by
+   P2-2p7's false-wrap finding; the corrected argmax absolute is
+   **6,719,552 / 8,400,128**.
    **DK's cargo matrix is verified** (P2-3r10, `docs/p2/fighters/dk.md`).
    **Rail: a source function defined in a `battleship_*.o` but absent from the
    linked ELF is stranded unless it has an in-TU caller** -- a `#define` sent
@@ -129,10 +130,11 @@ sized but unpacked. P2-3r17 stays DEFERRED.
    took the MIRROR four-CPU arm from `WORK-H` P50/P95 1,600,832 / 2,069,824 to
    **1,244,608 / 1,777,408**;
    the published `smash64ds.nds` carries all of it (owner visual pass pending).
-   **The arm is now the argmax roster (P2-3f10) and P2-2p7 says its banked
-   levels are understated, so re-measure before sizing any lever.** Named
-   remainders: the soft-float caller census lanes and walk #1 of
-   `ndsFTParamsInvalidateSubtree` (~8K).
+   **The arm is now the argmax roster and P2-2p7 has re-measured it correctly.**
+   Before another fighter micro-cut, investigate the measured stage-owner
+   rejection seam (reason 6, `ndsRendererPrepareNativeStageOwner`). Named
+   fighter-side remainders remain the soft-float caller census lanes and walk #1
+   of `ndsFTParamsInvalidateSubtree` (~8K).
 
 ## Standing operational facts
 

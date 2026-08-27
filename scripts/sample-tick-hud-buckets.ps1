@@ -1077,12 +1077,15 @@ try {
     # 2^16 tick units << 6 = 2^22. The artifact lands in whichever span is open
     # and therefore in that span's parents and in ALL.
     #
-    # ALL contains every span, so `ALL >= 2^22` detects it COMPLETELY -- the
-    # test is complete by construction, not by calibration. Two independent
-    # proofs that the residual is the real frame: subtracting 2^22 lands within
-    # +-260 of the run's own ALL median on four of the five frames it was first
-    # found on, and the raw value is not a whole number of VBlanks (5,311,744 is
-    # 9.505 of them) while every clean ALL is.
+    # ALL contains every span, but `ALL >= 2^22` is only a candidate test. It was
+    # complete on the two-fighter runs where no honest frame reached 2^22; the
+    # four-fighter arm legitimately does. The invariant that actually separates
+    # the timer artifact is VBlank quantisation: the raw ALL is NOT a whole
+    # VBlank span while ALL-2^22 IS. The project budget pins one VBlank at
+    # 560,190 ticks (1,120,380 / 2). Allow 2,048 ticks per interval for the
+    # observed timer/presentation skew; this admits the historical clean values
+    # (including 1,117,440..1,117,888 at two VBlanks) while remaining orders of
+    # magnitude tighter than the ~half-VBlank error of a false correction.
     # See artifacts/performance/2026-08-16_match-io-audit/IO_AUDIT.md section 2.
     #
     # It was present in 8 of the 13 whole-match runs surveyed on 2026-08-16 and
@@ -1099,12 +1102,31 @@ try {
     # long enough for the heuristic to miss. The magnitude, the site and the
     # arithmetic that produces exactly 2^22 are.
     $timerWrap = [uint64]4194304
+    $vblankTicks = [uint64]560190
+    $vblankTolerancePerInterval = [uint64]2048
     $allIndex = [array]::IndexOf($bucketNames, 'ALL') + 1
     $wrapFix = New-Object 'int[]' $rows.Count
     $wrapReport = @()
     for ($i = 0; $i -lt $rows.Count; $i++) {
-        if ([uint64]$rows[$i][$allIndex] -lt $timerWrap) { continue }
         $rawAll = [uint64]$rows[$i][$allIndex]
+        if ($rawAll -lt $timerWrap) { continue }
+
+        $residualAll = $rawAll - $timerWrap
+        $rawVBlanks = [uint64][Math]::Max(1.0, [Math]::Round([double]$rawAll / [double]$vblankTicks))
+        $residualVBlanks = [uint64][Math]::Max(1.0, [Math]::Round([double]$residualAll / [double]$vblankTicks))
+        $rawGridError = [uint64][Math]::Abs([int64]$rawAll - [int64]($rawVBlanks * $vblankTicks))
+        $residualGridError = [uint64][Math]::Abs([int64]$residualAll - [int64]($residualVBlanks * $vblankTicks))
+        $rawGridTolerance = $rawVBlanks * $vblankTolerancePerInterval
+        $residualGridTolerance = $residualVBlanks * $vblankTolerancePerInterval
+
+        # A long real frame stays on the VBlank grid and must never be shortened.
+        # Correct only the signature actually proven by the 2026-08-16 audit:
+        # raw ALL off-grid, residual ALL on-grid after one 2^22 subtraction.
+        if (($rawGridError -le $rawGridTolerance) -or
+            ($residualGridError -gt $residualGridTolerance)) {
+            continue
+        }
+
         $fixed = 0
         for ($b = 0; $b -lt $bucketNames.Count; $b++) {
             if ([uint64]$rows[$i][$b + 1] -ge $timerWrap) {
