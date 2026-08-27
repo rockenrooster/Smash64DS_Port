@@ -585,8 +585,11 @@ match. Re-read it on Results / Sudden Death / pause zoom, then cut.
    argmax below is wrong**: Luigi is 41,552 B, Mario 54,048 B, so LUIGI is the
    cheapest of the five and the real argmax is Mario/Fox/Captain/Donkey =
    **348,320 B**, not 335,824 B.
-4. **`mpCommonProcFighterProject` still diverges from the source** -- see the
-   open questions below; Falcon Dive is a caller and it is a SHARED seam.
+4. **`mpCommonProcFighterProject` source divergence — CLOSED by board row
+   P2-3f17 (2026-08-26).** The wrapper now calls the already-landed
+   `mpCommonCheckFighterProject`, exactly as BattleShip does, so Falcon Dive's
+   15-tick projection window reaches `MAP_PROC_TYPE_PROJECT` instead of the
+   generic default collision path.
 5. **The remaining eight fighters each need `ftCommonAttack13Proc{Update,
    Interrupt}` aliases** (P2-3f5's finding) and their own
    `ndsRelocNormalizeFighterAttributesFile` arm (this row's finding 1).
@@ -607,17 +610,13 @@ match. Re-read it on Results / Sudden Death / pause zoom, then cut.
 
 ### Open questions
 
-- **`mpCommonProcFighterProject` diverges from the source, and Falcon Dive is a
-  caller.** The source (`mpcommon.c:692`) is
-  `mpCommonCheckFighterProject(fighter_gobj)`, i.e.
-  `mpProcessUpdateMain(..., MAP_PROC_TYPE_PROJECT)`; the port's
-  (`battleship_ftstatus_map_physics_shims.c:68`) calls
-  `mpCommonRunFighterCollisionDefault` instead. The source-faithful
-  `mpCommonCheckFighterProject` already exists at
-  `reloc_backend_compat_shims.c:14615`, so the fix is one line -- but it is a
-  SHARED seam every status table's `ProcMap` can reach, so it wants its own row
-  with a regression run rather than a drive-by inside a fighter landing. Falcon
-  Dive uses it for a 15-tick window after Up-B starts.
+- **CLOSED by P2-3f17:** `mpCommonProcFighterProject` now matches BattleShip's
+  one-line wrapper exactly. The DS-owned `mpCommonCheckFighterProject` keeps the
+  source `MAP_PROC_TYPE_PROJECT` flag while using the port's DS collision
+  backend. A full Falcon-enabled build links the wrapper as an 8-byte function;
+  object disassembly is `bl mpCommonCheckFighterProject`, with no generic
+  collision call left in the wrapper. This closes only the shared map seam —
+  the grab/release/regrab owner feel pass below is still open.
 - **CLOSED by P2-3f8:** `gFTDataCaptainMainMotion` was NULL in every built
   configuration, so Falcon Dive's victim tether would have dereferenced
   `ndsRelocGetFileData`'s NULL return the first time a Falcon spawned without
@@ -644,6 +643,8 @@ match. Re-read it on Results / Sudden Death / pause zoom, then cut.
       the one measured omission; seven shared non-fighter cues remain a
       roster-wide gap.
 - [ ] Falcon Dive grab/release/regrab semantics equivalent.
+- [x] Falcon Dive's 15-tick projected-collision window uses BattleShip's
+      `mpCommonProcFighterProject -> mpCommonCheckFighterProject` seam (P2-3f17).
 - [ ] Fast-fall/landing/edge behavior spot-checks at speed extremes.
 - [x] Four-distinct-kind budget answered and the hang fixed (P2-3f9): measured
       from the shell, 378,048 B reclaimed, whole-match low-water 419,052 B.

@@ -58,18 +58,11 @@ sb32 mpCommonProcFighterLanding(GObj *fighter_gobj, void (*proc_map)(GObj *))
 
 void mpCommonProcFighterProject(GObj *fighter_gobj)
 {
-    FTStruct *fp = ftGetStruct(fighter_gobj);
-    Vec3f *pos = NULL;
-
-    if (fp == NULL)
-    {
-        return;
-    }
-    if ((fp != NULL) && (fp->coll_data.p_translate != NULL))
-    {
-        pos = fp->coll_data.p_translate;
-    }
-    mpCommonRunFighterCollisionDefault(fighter_gobj, pos, &fp->coll_data);
+    /* BattleShip mpcommon.c:691 exactly. The DS implementation of
+     * mpCommonCheckFighterProject already owns MAP_PROC_TYPE_PROJECT and its
+     * hardware-adapted collision backend; bypassing it changed Falcon Dive's
+     * 15-tick projection window into ordinary collision semantics. */
+    mpCommonCheckFighterProject(fighter_gobj);
 }
 
 void mpCommonUpdateFighterKinetics(GObj *fighter_gobj)

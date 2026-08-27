@@ -11,8 +11,9 @@ A 128-frame no-build sizing probe on the same ROM records **60 native-stage
 owner rejects, first/last reason 6 (`ndsRendererPrepareNativeStageOwner`)**,
 abort/post-arm rejects zero. That stage seam is the next performance lead.
 P2-3f11's PAL16 admission fix remains landed and the stress arm remains the real
-argmax. Open product work: Falcon 356 FuraSleep + his owner feel pass and the
-shared `mpCommonProcFighterProject` source divergence. P2-3r17 stays DEFERRED.
+argmax. Open product work: Falcon 356 FuraSleep + his owner feel pass.
+P2-3f17 closed the shared `mpCommonProcFighterProject` source divergence;
+P2-3r17 stays DEFERRED.
 
 ## State
 
