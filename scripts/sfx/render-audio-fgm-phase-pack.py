@@ -6555,17 +6555,27 @@ def _fgm_modulator_value(state: dict, sine_table: list[int]) -> float:
     if shape == 1:
         return amplitude if f32(period / f32(2.0)) < phase else offset
     if shape in (2, 6):
+        # Shipped FGM programs intentionally instantiate a dependent saw with
+        # period 0 and let a lower-priority modulator fill that period in later
+        # on the same voice.  The N64 float divide produces +/-Inf on the first
+        # tick and the target clamp below turns that into an ordinary endpoint;
+        # Python raises ZeroDivisionError instead, so model the hardware result
+        # explicitly rather than rejecting valid source data (Samus Charge0-6).
+        if period == 0.0:
+            numerator = f32(amplitude * phase)
+            return float("inf") if numerator >= 0.0 else float("-inf")
         return f32(f32(amplitude * phase) / period + offset)
     if shape in (3, 7):
+        if period == 0.0:
+            numerator = f32(amplitude * f32(period - phase))
+            return float("inf") if numerator >= 0.0 else float("-inf")
         return f32(f32(amplitude * f32(period - phase)) / period + offset)
     raise ValueError(f"unsupported deterministic FGM modulator shape {shape}")
 
 
 def articulation_program_states(program: list[list], modulators: dict,
                                 sine_table: list[int],
-                                tick_count: int,
-                                cross_voice_mod_is_inert: bool = False
-                                ) -> list[dict]:
+                                tick_count: int) -> list[dict]:
     pc = 0
     loop_pc = 0
     next_tick = 0
@@ -6592,7 +6602,11 @@ def articulation_program_states(program: list[list], modulators: dict,
                 fx_mix = _fgm_relative_u7(int(row[1]), fx_mix)
             elif op == "spawn_mod":
                 slot = int(row[1])
-                modulator = modulators["entries"][int(row[2])]
+                # n_env.c copies the table row into a per-voice modulator
+                # instance.  It must not alias the immutable decoded table:
+                # targets 16+ can rewrite period/amplitude/offset/phase of this
+                # instance (or another active instance) at runtime.
+                modulator = dict(modulators["entries"][int(row[2])])
                 active_modulators[slot] = {
                     "modulator": modulator,
                     "phase": f32(f32(f32(modulator["period"]) *
@@ -6618,31 +6632,6 @@ def articulation_program_states(program: list[list], modulators: dict,
         for slot in sorted(active_modulators):
             modulator = active_modulators[slot]["modulator"]
             target = int(modulator["target"])
-            # `target` 24+ is "cross-mod ANOTHER voice" -- the field notes in
-            # decomp/tools/extract_fgm.py say so, and 0..9 scratch / 10-15
-            # vol/pitch/pan / 16..23 self-mod are the ones that reach the voice
-            # being rendered here. A cross-voice modulator has no destination in
-            # a single-voice render, so evaluating it would be inventing an
-            # effect rather than reproducing one. Skipped BEFORE evaluation, so
-            # its shape never has to be interpreted either -- FGM 85's is
-            # shape 7 (ramp_down_oneshot).
-            #
-            # That skip is NOT why shape 7 renders correctly, and reading it
-            # that way costs real time: _fgm_modulator_value implements 7
-            # directly, in the `shape in (3, 7)` arm. FGM 11's modulator 94 is
-            # shape 7 on target 12, which is not cross-voice and so must be and
-            # is evaluated -- a -93 -> -350 cent pitch ramp across the escape
-            # roll. Do not infer an unimplemented shape from this branch.
-            #
-            # Only inert when the cue has no fork voices. With forks "another
-            # voice" exists and dropping the modulation would be a real fidelity
-            # loss, so that case stays a hard error. No cue packed before 85
-            # reaches this branch at all.
-            if target >= 24:
-                if not cross_voice_mod_is_inert:
-                    raise ValueError(
-                        f"cross-voice FGM modulator target {target} with forks")
-                continue
             value = _fgm_modulator_value(active_modulators[slot], sine_table)
             if target == 10:
                 volume = int(min(127.0, max(0.0, value)))
@@ -6652,6 +6641,48 @@ def articulation_program_states(program: list[list], modulators: dict,
                 pitch = int(min(1200.0, max(-1200.0, value)))
             elif target == 13:
                 pitch = int(min(1200.0, max(-1200.0, value + pitch)))
+            elif target >= 16:
+                # n_env.c:4215-4308. Targets 16..23 rewrite THIS active
+                # modulator. Targets 24+ select another active modulator by
+                # `(target - 24) / 8`, then map the low three bits back onto
+                # fields 16..23.  Despite the old extractor comment calling
+                # this "cross-mod another voice", arg0->unk44 is the sorted
+                # linked list of active MODULATORS on the same FGM voice. This
+                # is observable source behavior: Samus Charge0-6 use target 32
+                # to drive modulator #1's period, and Screw Attack uses target
+                # 28 to drive modulator #0's offset.
+                if target < 24:
+                    target_state = active_modulators[slot]
+                    field = target
+                else:
+                    encoded = target - 24
+                    target_slot = encoded // 8
+                    field = 16 + (encoded % 8)
+                    target_state = active_modulators.get(target_slot)
+                    if target_state is None:
+                        # Source walks arg0->unk44 and simply drops the write
+                        # when that id is not active.
+                        continue
+                target_modulator = target_state["modulator"]
+                if field == 16:
+                    target_modulator["period"] = f32(value)
+                elif field == 17:
+                    target_modulator["period"] = f32(
+                        target_modulator["period"] + value)
+                elif field == 18:
+                    target_modulator["amplitude"] = f32(value)
+                elif field == 19:
+                    target_modulator["amplitude"] = f32(
+                        target_modulator["amplitude"] + value)
+                elif field == 20:
+                    target_modulator["offset"] = f32(value)
+                elif field == 21:
+                    target_modulator["offset"] = f32(
+                        target_modulator["offset"] + value)
+                elif field == 22:
+                    target_state["phase"] = f32(value)
+                elif field == 23:
+                    target_state["phase"] = f32(target_state["phase"] + value)
             else:
                 raise ValueError(f"unsupported FGM AOT modulator target {target}")
         states.append({"volume": volume, "pitch": pitch,
@@ -6736,8 +6767,7 @@ def render_fgm_program_voice_aot(program_id: int, ucd: dict,
     notes, forks = fgm_program_notes(audit["ucd_program"])
     tick_count = max(note["end_tick"] for note in notes)
     articulation_states = articulation_program_states(
-        audit["articulation_program"], modulators, sine_table, tick_count,
-        cross_voice_mod_is_inert=not forks)
+        audit["articulation_program"], modulators, sine_table, tick_count)
     loop = audit["source_loop"]
     output = []
     source_phase = 0.0

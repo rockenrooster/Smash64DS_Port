@@ -294,8 +294,13 @@ if (([int]$metadata.format_version -ne 4) -or
     # 5299db705baa652b4fa7d0ee35bd0d18a0bdecb36a35507bd30b35d0cb23353c.
     # Samus's two CSS cues move it once more; the 181-entry pin was
     # 87c0c17bb1a89f2353153e88c188336ba182d5c05a39e2bff5b16e9533e19994.
+    # 2026-08-27: no selector, extent or mapping changed here. The payload hash
+    # moved because the AOT source model now implements n_env.c's active-
+    # modulator targets 24+ instead of dropping them. Five already-packed cues
+    # (11/85/92/251/639) therefore changed acoustically while entry count,
+    # resident bytes and mapping stay exactly 213 / 2014020 / 0xa1f3ba41.
     ($metadata.pack_sha256 -ne
-        'e9ebb4d54eeae03512fb23a2af9947e746c761b8b349867f50e11d5d96ec5ec3')) {
+        '0f62d3b2f280fc260a46161c1ba86aebf321a1994df4ba3e22f05ea4ef89aa7a')) {
     throw 'FGM pack format, budget, mapping, or binary identity changed.'
 }
 if ((@($metadata.excluded_entries).Count -ne 0) -or
@@ -434,6 +439,29 @@ if (([int]$fgm85.ds_frequency_hz -ne 32000) -or
     ([int]$fgm85.acoustic_oracle.aot_output_frequency_hz -ne 32000) -or
     ([int]$fgm85.acoustic_oracle.aot_output_samples -ne 2576)) {
     throw 'FGM 85 no longer renders its above-u16 note schedule AOT.'
+}
+# BattleShip n_env.c's modulator targets 24+ do NOT mean "ignore this because
+# it belongs to another audio voice". They select another ACTIVE MODULATOR on
+# the same FGM voice: `(target - 24) / 8` chooses its id and the low three bits
+# choose period/amplitude/offset/phase. That distinction is audible and was
+# previously dropped by the AOT model. Pin representative outputs from every
+# packed source shape that uses it: target28 rewrites modulator-0 offset in
+# Escape/UnkGrind4/SamusJumpAerial/CharacterUnkZip10; target36 rewrites
+# modulator-1 offset in SamusUnkCharge. These are PCM hashes before IMA encoding,
+# so this gate is about source sequencer semantics rather than codec bytes.
+$crossModPcm = @{
+    11  = 'c1405a6a9b1538f53abccd4b7c6d13d16cfae78a7c9139f72305810b3de4147c'
+    85  = '9634dc51a4e585abd4f9860aa43fbecdc833ef69d1d071aba44c4e3298c45b51'
+    92  = 'a22d1068dd0328e1b7ccfd38bd9f467928ea6899ba9bdc52f0f9273a71263616'
+    251 = '02e4e4107151a69619eb17bd9f47af53f41d0ab16dcd4e7e1b4f5da6baef30d4'
+    639 = 'b4081a1480bb03e9a0c1739777bebe112176d67c01bd7188962dc1016fa8532a'
+}
+foreach ($id in $crossModPcm.Keys) {
+    $entry = $metadata.entries | Where-Object { [int]$_.id -eq [int]$id }
+    if (($null -eq $entry) -or
+        ($entry.acoustic_oracle.aot_rendered_pcm_sha256 -ne $crossModPcm[$id])) {
+        throw "FGM $id lost BattleShip active-modulator cross-target semantics."
+    }
 }
 $fgm218 = $metadata.entries | Where-Object { [int]$_.id -eq 218 }
 if (($fgm218.acoustic_oracle.source_custom_fx_dry_only -ne $true) -or
