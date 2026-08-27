@@ -115,6 +115,53 @@ WHISPY_WIND_IMA_INDEX = 56
 SOURCE_SINE_TABLE_SHA256 = (
     "bc184c0dbd76adecf7ff264d39cc58456546173beba727f189d2716dd8eabf16")
 
+# P2-3 Samus gameplay audio that can already be represented exactly by the
+# source-program AOT path.  Keep the genuinely harder sequencer cases OUT of
+# this list: Charge0..7 loop forever with live articulation/modulator state,
+# ShootF's one-pass AOT body exceeds the largest cache slot, and SpecialHi has
+# a cross-voice modulator.  Those are separate representation work, not cues to
+# flatten until they happen to fit.
+SAMUS_NON_CHARGE_AUDIO = (
+    (17, "nSYAudioFGMHeavySwing1"),
+    (22, "nSYAudioFGMShockL"),
+    (23, "nSYAudioFGMShockM"),
+    (24, "nSYAudioFGMShockS"),
+    (81, "nSYAudioFGMSamusLanding"),
+    (92, "nSYAudioFGMSamusJumpAerial"),
+    (103, "nSYAudioFGMGroundGrind4"),
+    (114, "nSYAudioFGMSamusFoot"),
+    (128, "nSYAudioFGMGroundBrakeGrind"),
+    (236, "nSYAudioFGMSamusSpecialNShootL"),
+    (237, "nSYAudioFGMSamusSpecialNShootM"),
+    (238, "nSYAudioFGMSamusSpecialNShootS"),
+    (247, "nSYAudioFGMSamusSpecialLw"),
+    (248, "nSYAudioFGMSamusCatchGrappleBeam"),
+    (250, "nSYAudioFGMSamusUnkSwing"),
+    (251, "nSYAudioFGMSamusUnkCharge"),
+    (296, "nSYAudioFGMSamusDeadSlam"),
+    (307, "nSYAudioFGMSamusDownBounce"),
+    (573, "nSYAudioVoiceSamusSmash1"),
+    (574, "nSYAudioVoiceSamusSmash2"),
+    (575, "nSYAudioVoiceSamusSmash3"),
+    (576, "nSYAudioVoiceSamusDeadUp"),
+    (577, "nSYAudioVoiceSamusFura"),
+    (578, "nSYAudioVoiceSamusAttackHi4"),
+    (579, "nSYAudioVoiceSamusUnkSlash"),
+    (580, "nSYAudioVoiceSamusAppeal"),
+    (581, "nSYAudioVoiceSamusDamage"),
+    (582, "nSYAudioVoiceSamusDead"),
+    (613, "nSYAudioVoicePublicSamus"),
+    (639, "nSYAudioFGMCharacterUnkZip10"),
+)
+SAMUS_NON_CHARGE_RENDER_PROGRAMS = {
+    114: 105,   # bare fork -> DonkeyFoot program
+    296: 287,   # bare fork -> shared DeadSlam program
+    307: 298,   # bare fork -> shared DownBounce program
+    639: 630,   # bare CharacterUnkZip10 fork -> its actual voiced program
+}
+SAMUS_NON_CHARGE_SELECTOR_SHA256 = (
+    "3bd0dabb33f7fb4df3944d807f169b297cac294c23f33b3ad5400d3a11d9ead4")
+
 FULL_COVERAGE_IDS = (
     626, 470, 469, 467, 490, 74, 363, 364, 372, 373, 374, 430, 439,
     292, 370, 289, 300, 303, 154, 77, 215, 40, 38, 37, 34, 32, 31,
@@ -285,6 +332,11 @@ FULL_COVERAGE_IDS = (
     # stable. Gameplay-bank closure follows in the Samus fighter row rather
     # than hiding these two menu failures behind a silent fallback.
     513, 264,
+    # P2-3 Samus gameplay bank, excluding only the five representation classes
+    # named above (Charge0..7 is one class).  Appending preserves every previous
+    # pack ordinal and makes the roster addition complete by source inventory,
+    # rather than waiting for random CPU play to discover each miss.
+    *(fgm_id for fgm_id, _name in SAMUS_NON_CHARGE_AUDIO),
 )
 FULL_PROGRAM_AOT_IDS = frozenset((
     154, 40, 38, 37, 34, 32, 31,
@@ -333,6 +385,10 @@ FULL_PROGRAM_AOT_IDS = frozenset((
     # that source sequencer/control-field transition by baking the full 100-tick
     # program AOT; it is far below the cache-slot ceiling.
     264,
+    # Samus's bounded gameplay cues. The source-program renderer preserves note
+    # changes, wavetable loops used inside finite notes, deterministic
+    # articulation modulation, and forked voices before producing DS IMA.
+    *(fgm_id for fgm_id, _name in SAMUS_NON_CHARGE_AUDIO),
     18, 365,
     # 153 AltitudeWarn -- the cue the owner picked out BY NAME as "a new SFX I
     # don't recognise". Articulation 150 sweeps pitch 550 -> 2390 cents inside
@@ -7794,6 +7850,62 @@ def build_attack_cue_audit(ucd: dict, articulations: dict,
     }
 
 
+def build_samus_non_charge_selectors(
+        ucd: dict, articulations: dict, modulators: dict,
+        ctl_by_offset: dict, instrument: dict, source_tbl: bytes,
+        audio_codec, sine_table: list[int]) -> list[dict]:
+    """Derive and hash-pin the bounded Samus gameplay audio inventory."""
+    selectors = []
+    for fgm_id, name in SAMUS_NON_CHARGE_AUDIO:
+        root_program = ucd["entries"][fgm_id]["program"]
+        render_program_id = SAMUS_NON_CHARGE_RENDER_PROGRAMS.get(fgm_id, fgm_id)
+        program = ucd["entries"][render_program_id]["program"]
+        articulation_id = first_program_arg(program, "set_articulation")
+        art_program = articulations["entries"][articulation_id]["program"]
+        sound_id = first_program_arg(art_program, "trigger")
+        sound = ctl_by_offset[instrument["soundArray_offs"][sound_id]]
+        wave = ctl_by_offset[sound["wavetable_off"]]
+        loop = ctl_by_offset[wave["loop_off"]] if wave["loop_off"] else None
+        notes = tuple(tuple(int(value) for value in row[1:])
+                      for row in program if row[0] == "note")
+        volumes = [int(row[1]) for row in program if row[0] == "set_volume"]
+        pitches = [int(row[1]) for row in art_program if row[0] == "pitch"]
+        root_forks = tuple(int(row[1]) for row in root_program
+                           if row[0] == "fork_voice")
+        rendered, _metadata = render_fgm_composite_aot(
+            render_program_id, ucd, articulations, modulators, instrument,
+            ctl_by_offset, source_tbl, audio_codec, sine_table)
+        selector = {
+            "id": fgm_id,
+            "name": name,
+            "kind": "samus",
+            "articulation": articulation_id,
+            "sound": sound_id,
+            "notes": notes,
+            "duration_ticks": sum(note[2] for note in notes),
+            "ucd_volume": volumes[0],
+            "articulation_pitch_cents": pitches[0] if pitches else 0,
+            "loop": loop is not None,
+            "wave_base": wave["base"],
+            "wave_length": wave["length"],
+            "loop_start": loop["start"] if loop else 0,
+            "loop_end": loop["end"] if loop else 0,
+            "expected_retained_samples": len(rendered),
+            "root_fork_programs": root_forks,
+            "root_program_sha256": json_sha256(root_program),
+            "render_program_sha256": json_sha256(program),
+            "articulation_program_sha256": json_sha256(art_program),
+            "fidelity_debt": (),
+        }
+        if render_program_id != fgm_id:
+            selector["render_program"] = render_program_id
+        selectors.append(selector)
+    digest = json_sha256(selectors)
+    if digest != SAMUS_NON_CHARGE_SELECTOR_SHA256:
+        raise ValueError(f"Samus non-Charge selector audit changed: {digest}")
+    return selectors
+
+
 def build_pack(repo_root: Path) -> tuple[bytes, dict]:
     tools_dir = repo_root / "decomp/BattleShip-main/decomp/tools"
     extract_fgm = load_module(tools_dir / "extract_fgm.py", "extract_fgm")
@@ -7916,6 +8028,13 @@ def build_pack(repo_root: Path) -> tuple[bytes, dict]:
         int(selector["id"]): dict(selector)
         for selector in (*SELECTED, *EXCLUDED_SOURCE_CUES)
     }
+    for selector in build_samus_non_charge_selectors(
+            ucd, articulations, modulators, ctl_by_offset, instrument,
+            source_raw["B1_sounds2_tbl"], audio_codec, sine_table):
+        fgm_id = int(selector["id"])
+        if fgm_id in declared_selectors:
+            raise ValueError(f"Samus FGM {fgm_id} is already declared")
+        declared_selectors[fgm_id] = selector
     attack_cue_by_id = {int(cue["id"]): cue for cue in ATTACK_CUE_AUDIT}
     runtime_selected = []
     for fgm_id in FULL_COVERAGE_IDS:

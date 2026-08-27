@@ -30,6 +30,7 @@ typedef enum gmFGMID
     nSYAudioFGMGuardOn = 13,
     nSYAudioFGMGuardOff = 14,
     nSYAudioFGMShieldBreak = 15,
+    nSYAudioFGMHeavySwing1 = 17,
     nSYAudioFGMCatch = 19,
     nSYAudioFGMDeadUpStar = 12,
     nSYAudioFGMShockL = 22,
@@ -58,6 +59,7 @@ typedef enum gmFGMID
     nSYAudioFGMFoxLanding = 74,
     nSYAudioFGMMarioLanding = 77,
     nSYAudioFGMNessLanding = 78,
+    nSYAudioFGMSamusLanding = 81,
     /* The dodge. GuardOn/GuardOff (13/14) and GamePause (278) were already
      * declared above and below; only this one was missing. All four are core
      * P1 cues a BOTH-CPU stress match asks for and a single-CPU one never
@@ -66,11 +68,15 @@ typedef enum gmFGMID
     /* The light swing, reached only once every fireball spawned. */
     nSYAudioFGMLightSwingLw1 = 18,
     nSYAudioFGMUnkGrind4 = 85,
+    nSYAudioFGMSamusJumpAerial = 92,
     nSYAudioFGMGroundGrind2 = 96,
     nSYAudioFGMGroundGrind3 = 98,
     nSYAudioFGMNessJump = 100,
+    nSYAudioFGMGroundGrind4 = 103,
+    nSYAudioFGMSamusFoot = 114,
     nSYAudioFGMMarioDash = 121,
     nSYAudioFGMSamusDash = 127,
+    nSYAudioFGMGroundBrakeGrind = 128,
     nSYAudioFGMMenuSelect = 158,
     nSYAudioFGMStageSelect = 159,
     nSYAudioFGMMenuScroll1 = 163,
@@ -167,7 +173,10 @@ typedef enum gmFGMID
     nSYAudioFGMSamusUnkSwing = 250,
     nSYAudioFGMSamusUnkCharge = 251,
     nSYAudioFGMDonkeyDeadSlam = 287,
-    nSYAudioFGMDonkeyDownBounce = 298
+    nSYAudioFGMDonkeyDownBounce = 298,
+    nSYAudioFGMSamusDeadSlam = 296,
+    nSYAudioFGMSamusDownBounce = 307,
+    nSYAudioFGMCharacterUnkZip10 = 639
 } gmFGMID;
 
 typedef enum gmVoiceID
@@ -290,6 +299,15 @@ typedef enum gmVoiceID
     nSYAudioVoiceAnnounceWins = 533,
     nSYAudioVoiceAnnounceWinnerIs = 534,
     nSYAudioVoiceSamusSmash1 = 573,
+    nSYAudioVoiceSamusSmash2 = 574,
+    nSYAudioVoiceSamusSmash3 = 575,
+    nSYAudioVoiceSamusDeadUp = 576,
+    nSYAudioVoiceSamusFura = 577,
+    nSYAudioVoiceSamusAttackHi4 = 578,
+    nSYAudioVoiceSamusUnkSlash = 579,
+    nSYAudioVoiceSamusAppeal = 580,
+    nSYAudioVoiceSamusDamage = 581,
+    nSYAudioVoiceSamusDead = 582,
     nSYAudioVoiceYoshiAppeal = 583,
     nSYAudioVoiceYoshiSmash1 = 584,
     nSYAudioVoiceYoshiSmash2 = 585,

@@ -415,6 +415,42 @@ static s32 ndsAudioFgmIDIsIncluded(u16 id)
      * motion command are both source-owned and both live in the shell. */
     case nSYAudioVoiceAnnounceSamus:
     case nSYAudioFGMBladeDraw:
+    /* P2-3 Samus bounded gameplay bank. These are the exact source IDs from
+     * SamusMainMotion/SamusMain, the shared DownBounce/public tables and the
+     * Charge Shot/Bomb weapon code. The generator bakes their complete bounded
+     * source programs AOT; the harder unbounded Charge0..7 sequencer plus
+     * ShootF/SpecialHi remain deliberately absent until their DS-native
+     * representation is source-equivalent. */
+    case nSYAudioFGMHeavySwing1:
+    case nSYAudioFGMShockL:
+    case nSYAudioFGMShockM:
+    case nSYAudioFGMShockS:
+    case nSYAudioFGMSamusLanding:
+    case nSYAudioFGMSamusJumpAerial:
+    case nSYAudioFGMGroundGrind4:
+    case nSYAudioFGMSamusFoot:
+    case nSYAudioFGMGroundBrakeGrind:
+    case nSYAudioFGMSamusSpecialNShootL:
+    case nSYAudioFGMSamusSpecialNShootM:
+    case nSYAudioFGMSamusSpecialNShootS:
+    case nSYAudioFGMSamusSpecialLw:
+    case nSYAudioFGMSamusCatchGrappleBeam:
+    case nSYAudioFGMSamusUnkSwing:
+    case nSYAudioFGMSamusUnkCharge:
+    case nSYAudioFGMSamusDeadSlam:
+    case nSYAudioFGMSamusDownBounce:
+    case nSYAudioVoiceSamusSmash1:
+    case nSYAudioVoiceSamusSmash2:
+    case nSYAudioVoiceSamusSmash3:
+    case nSYAudioVoiceSamusDeadUp:
+    case nSYAudioVoiceSamusFura:
+    case nSYAudioVoiceSamusAttackHi4:
+    case nSYAudioVoiceSamusUnkSlash:
+    case nSYAudioVoiceSamusAppeal:
+    case nSYAudioVoiceSamusDamage:
+    case nSYAudioVoiceSamusDead:
+    case nSYAudioVoicePublicSamus:
+    case nSYAudioFGMCharacterUnkZip10:
     /* P2-3f13 Captain Falcon's production bank. He landed selectable at P2-3f8
      * with NOTHING packed, so every id below was already being requested by his
      * motion scripts, his FTAttributes lanes, his CSS clip and the
