@@ -25,11 +25,12 @@
   symbol table and full disassembly are byte-identical.
 - Phase 4 complete: `nds_renderer.c` is an ordered textual-slice aggregator and
   still produces one executable-equivalent `nds_renderer.o` (`dd340c70da2`).
-- Phase 5 remains deliberately opportunistic: no semantic renderer ownership
+- Phase 5 complete for the verified safe scope: no semantic renderer ownership
   change is required merely to complete the structural refactor. The retired
   renderer proof paths proven absent from accepted builds were removed in
   `ad2b2742a6f`; native-stage preparation and other conditionally live renderer
-  paths remain intact.
+  paths remain intact because they have real conditional callers and are not
+  obsolete infrastructure.
 - Phase 6 complete for `taskman_seam.c` and `diagnostics.c`
   (`f7b8160d88b`) and for `nds_menu_shell.c` (`33ff8b4e476`). The menu shell
   split preserves one `nds_menu_shell.o`; its pre/post symbol table and full
