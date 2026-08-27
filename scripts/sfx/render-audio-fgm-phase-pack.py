@@ -118,9 +118,10 @@ SOURCE_SINE_TABLE_SHA256 = (
 # P2-3 Samus gameplay audio that can already be represented exactly by the
 # source-program AOT path.  Keep the genuinely harder sequencer cases OUT of
 # this list: Charge0..7 loop forever with live articulation/modulator state,
-# ShootF's one-pass AOT body exceeds the largest cache slot, and SpecialHi has
-# a cross-voice modulator.  Those are separate representation work, not cues to
-# flatten until they happen to fit.
+# and ShootF's one-pass AOT body exceeds the largest cache slot. SpecialHi used
+# to be blocked by target28 because the AOT model misread n_env.c's active-
+# modulator cross-target as another audio voice; that source behavior is now
+# reproduced, so Screw Attack belongs in the exact bounded set below.
 SAMUS_NON_CHARGE_AUDIO = (
     (17, "nSYAudioFGMHeavySwing1"),
     (22, "nSYAudioFGMShockL"),
@@ -136,6 +137,7 @@ SAMUS_NON_CHARGE_AUDIO = (
     (238, "nSYAudioFGMSamusSpecialNShootS"),
     (247, "nSYAudioFGMSamusSpecialLw"),
     (248, "nSYAudioFGMSamusCatchGrappleBeam"),
+    (249, "nSYAudioFGMSamusSpecialHi"),
     (250, "nSYAudioFGMSamusUnkSwing"),
     (251, "nSYAudioFGMSamusUnkCharge"),
     (296, "nSYAudioFGMSamusDeadSlam"),
@@ -160,7 +162,7 @@ SAMUS_NON_CHARGE_RENDER_PROGRAMS = {
     639: 630,   # bare CharacterUnkZip10 fork -> its actual voiced program
 }
 SAMUS_NON_CHARGE_SELECTOR_SHA256 = (
-    "3bd0dabb33f7fb4df3944d807f169b297cac294c23f33b3ad5400d3a11d9ead4")
+    "4f69fbb258ba8989404065689afaac1142a396ae70996a5cfe0ef6a9687d858d")
 
 FULL_COVERAGE_IDS = (
     626, 470, 469, 467, 490, 74, 363, 364, 372, 373, 374, 430, 439,

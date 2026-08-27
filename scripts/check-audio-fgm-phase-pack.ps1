@@ -118,10 +118,10 @@ $expectedIDs = @(626,470,469,467,490,74,363,364,372,373,374,430,439,292,
     # cue from scsubsysdatasamus.c. BladeDraw's two-note one-voice program is
     # rendered AOT so the mid-program control change is preserved.
     513, 264,
-    # P2-3 Samus bounded gameplay bank. These thirty are source-program AOT;
-    # Charge0..7, ShootF and SpecialHi stay out until their harder source
+    # P2-3 Samus bounded gameplay bank. These thirty-one are source-program
+    # AOT; Charge0..7 and oversized ShootF stay out until their harder source
     # sequencer/cache semantics are represented rather than approximated.
-    17, 22, 23, 24, 81, 92, 103, 114, 128, 236, 237, 238, 247, 248, 250,
+    17, 22, 23, 24, 81, 92, 103, 114, 128, 236, 237, 238, 247, 248, 249, 250,
     251, 296, 307, 573, 574, 575, 576, 577, 578, 579, 580, 581, 582, 613,
     639)
 $actualIDs = @($metadata.entries | ForEach-Object { [int]$_.id })
@@ -207,7 +207,10 @@ if (([int]$metadata.format_version -ne 4) -or
     # 1785424 -> 2014020 on 2026-08-27 for Samus's thirty bounded gameplay
     # cues, 183 -> 213 entries, +228,596 bytes of ROM. Every cue is rendered by
     # the source-program AOT path; the 200 KiB streaming cache is unchanged.
-    ([int64]$metadata.resident_bytes -ne 2014020) -or
+    # 2014020 -> 2035676 later on 2026-08-27 for Samus SpecialHi / Screw Attack,
+    # 213 -> 214 entries. n_env.c's target28 semantics make its root+fork AOT
+    # render exact and only 21,624 bytes, well inside the 53,248-byte slot.
+    ([int64]$metadata.resident_bytes -ne 2035676) -or
     ([int64]$metadata.resident_limit_bytes -ne 204800) -or
     # ROM, not RAM: the runtime streams cues into resident_limit_bytes and never
     # holds the pack. 512 KiB blocked the five announcer lines and 768 KiB then
@@ -244,8 +247,9 @@ if (([int]$metadata.format_version -ne 4) -or
     # reason, the selector table changed;
     # -> 0xeb6ba1dc on 2026-08-26 (P2-3f16) for the three source entry cues;
     # -> 0x64710073 for Samus's source announcer + selected BladeDraw pair;
-    # -> 0xa1f3ba41 for her thirty bounded gameplay selectors.
-    ($metadata.mapping_sha256_lo -ne '0xa1f3ba41') -or
+    # -> 0xa1f3ba41 for her thirty bounded gameplay selectors;
+    # -> 0xae1c13f9 when SpecialHi/Screw Attack joins that exact bounded bank.
+    ($metadata.mapping_sha256_lo -ne '0xae1c13f9') -or
     # Repinned 2026-08-02: FGM 11 (the rolling dodge) dropped 127 -> 96 -> 68 ->
     # 48 on the owner's ear via FGM_OWNER_VOLUME_TRIM, -8.4 dB total against the
     # source; the 68 pin was
@@ -299,8 +303,10 @@ if (([int]$metadata.format_version -ne 4) -or
     # modulator targets 24+ instead of dropping them. Five already-packed cues
     # (11/85/92/251/639) therefore changed acoustically while entry count,
     # resident bytes and mapping stay exactly 213 / 2014020 / 0xa1f3ba41.
+    # SpecialHi is the next intentional selector change: root 249 + one-time
+    # fork 683 render together for 235 source ticks / 43,240 PCM samples.
     ($metadata.pack_sha256 -ne
-        '0f62d3b2f280fc260a46161c1ba86aebf321a1994df4ba3e22f05ea4ef89aa7a')) {
+        'f7b2053ec274470f8dd0a6c3257dd53376f02c2f2a63cb8b0699a5f6b65be516')) {
     throw 'FGM pack format, budget, mapping, or binary identity changed.'
 }
 if ((@($metadata.excluded_entries).Count -ne 0) -or
@@ -462,6 +468,24 @@ foreach ($id in $crossModPcm.Keys) {
         ($entry.acoustic_oracle.aot_rendered_pcm_sha256 -ne $crossModPcm[$id])) {
         throw "FGM $id lost BattleShip active-modulator cross-target semantics."
     }
+}
+# Samus Screw Attack is the first formerly-blocked forked cue admitted because
+# of that correction. BattleShip's ground and air motion scripts both play 249
+# at tic 4; root 249 carries the rise/fall note sequence and forks 683 once for
+# its simultaneous layer. Pin the fused source-program result so it cannot
+# regress to the old "cross voice unsupported" exclusion or a root-only render.
+$fgm249 = $metadata.entries | Where-Object { [int]$_.id -eq 249 }
+if (($null -eq $fgm249) -or
+    ($fgm249.ds_loop_strategy -ne 'source_program_aot') -or
+    ([int]$fgm249.ds_frequency_hz -ne 32000) -or
+    ([int]$fgm249.ds_sample_count -ne 43240) -or
+    ([int]$fgm249.ima_adpcm_bytes -ne 21624) -or
+    ((@($fgm249.root_fork_programs) -join ',') -ne '683') -or
+    (@($fgm249.omitted_fork_programs).Count -ne 0) -or
+    ((@($fgm249.acoustic_oracle.voice_program_ids) -join ',') -ne '249,683') -or
+    ($fgm249.acoustic_oracle.aot_rendered_pcm_sha256 -ne
+        'ce5695bd782346e162346433c421a54bb90f69de17dafd31350f5fdd40f7424f')) {
+    throw 'FGM 249 Samus SpecialHi lost its exact root+fork source-program render.'
 }
 $fgm218 = $metadata.entries | Where-Object { [int]$_.id -eq 218 }
 if (($fgm218.acoustic_oracle.source_custom_fx_dry_only -ne $true) -or

@@ -5,7 +5,7 @@
 #include <sys/audio.h>
 
 #define NDS_AUDIO_FGM_PASS 0x46474d31u /* FGM1 */
-#define NDS_AUDIO_FGM_ENTRY_COUNT 213u
+#define NDS_AUDIO_FGM_ENTRY_COUNT 214u
 #define NDS_AUDIO_FGM_PHASE_COUNT 5u
 #define NDS_AUDIO_FGM_PHASE_COMPLETE_MASK 0x1fu
 #define NDS_AUDIO_FGM_KO_COUNT 5u
@@ -93,11 +93,12 @@
  * FoxAppearArwing 191 and DK's barrel arrival uses the shared ContainerSmash
  * 59. All three multi-note schedules are baked AOT; the runtime cache remains
  * 204800. */
-/* P2-3 Samus bounded gameplay bank: +30 source-program AOT cues. Charge0..7,
- * ShootF and SpecialHi remain separate representation work; none are replaced
- * by a placeholder or lossy first-note approximation. */
-#define NDS_AUDIO_FGM_PACK_BYTES 2014020u
-#define NDS_AUDIO_FGM_PACK_MAPPING_SHA256_LO 0xa1f3ba41u
+/* P2-3 Samus bounded gameplay bank: 31 source-program AOT cues including
+ * SpecialHi/Screw Attack. Charge0..7 and oversized ShootF remain separate
+ * representation work; none are replaced by a placeholder or lossy first-note
+ * approximation. */
+#define NDS_AUDIO_FGM_PACK_BYTES 2035676u
+#define NDS_AUDIO_FGM_PACK_MAPPING_SHA256_LO 0xae1c13f9u
 #define NDS_AUDIO_FGM_CACHE_BYTES 204800u
 #define NDS_AUDIO_FGM_HANDLE_CAPACITY 8u
 #define NDS_AUDIO_FGM_FIDELITY_DEBT_PITCH_AUTOMATION (1u << 2)

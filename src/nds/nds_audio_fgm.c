@@ -419,8 +419,9 @@ static s32 ndsAudioFgmIDIsIncluded(u16 id)
      * SamusMainMotion/SamusMain, the shared DownBounce/public tables and the
      * Charge Shot/Bomb weapon code. The generator bakes their complete bounded
      * source programs AOT; the harder unbounded Charge0..7 sequencer plus
-     * ShootF/SpecialHi remain deliberately absent until their DS-native
-     * representation is source-equivalent. */
+     * oversized ShootF remain deliberately absent until their DS-native
+     * representation is source-equivalent. Screw Attack / SpecialHi is in the
+     * bounded set now that its n_env active-modulator target is reproduced. */
     case nSYAudioFGMHeavySwing1:
     case nSYAudioFGMShockL:
     case nSYAudioFGMShockM:
@@ -435,6 +436,7 @@ static s32 ndsAudioFgmIDIsIncluded(u16 id)
     case nSYAudioFGMSamusSpecialNShootS:
     case nSYAudioFGMSamusSpecialLw:
     case nSYAudioFGMSamusCatchGrappleBeam:
+    case nSYAudioFGMSamusSpecialHi:
     case nSYAudioFGMSamusUnkSwing:
     case nSYAudioFGMSamusUnkCharge:
     case nSYAudioFGMSamusDeadSlam:
