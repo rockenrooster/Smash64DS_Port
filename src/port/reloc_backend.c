@@ -253,8 +253,6 @@ static sb32 ndsStageMPStaleFloorLoopChoosePair(FTStruct *fp,
 static void ndsStageMPWallCopyFloorLoopGObjProc(GObj *fighter_gobj);
 static void ndsStageMPPassFloorLoopGObjProc(GObj *fighter_gobj);
 static void ndsStageMPPlatformFloorLoopGObjProc(GObj *fighter_gobj);
-static void ndsFighterMarioFoxRunWaitStatusProbe(GObj *fighter_gobj,
-                                                 FTDesc *desc);
 static void ndsFighterMarioFoxRunWaitCallbackTickProbe(void);
 static void ndsFighterMarioFoxRunWaitGroundProof(void);
 static void ndsFighterMarioFoxRunDisplayProbe(void);
@@ -359,9 +357,6 @@ static sb32 ndsMPCommonCheckFighterOnCliffEdgeBounded(GObj *fighter_gobj);
 static sb32 ndsStageFloorFollowLoopUpdateFighter(GObj *fighter_gobj);
 static void ndsFighterMarioFoxSetupManagerFiles(void);
 static void ndsFighterMarioFoxSetupFilesKind(s32 fkind);
-static GObj *ndsFighterMarioFoxMakeFighter(FTDesc *desc);
-static void ndsFighterMarioFoxRecordStubFighter(FTDesc *desc,
-                                                GObj *fighter_gobj);
 static void ndsFighterMarioFoxResetFileSlots(void);
 static void ndsFighterManagerClearLiveGObjs(void);
 static void ndsFighterStructResetPool(void);

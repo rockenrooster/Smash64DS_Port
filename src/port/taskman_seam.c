@@ -4309,7 +4309,6 @@ extern volatile u32 gNdsFtPoseEvalTick;
  * frame for the NDS_R2_EFFECT_POOL low-water. See include/nds/nds_effects.h. */
 extern s32 sEFManagerStructsFreeNum;
 extern volatile u32 gNdsEffectPoolFreeMin;
-extern void ndsFighterMarioFoxRunImmediateProofChain(void);
 extern void ndsFighterMarioFoxSchedulerLoopPrepare(void);
 extern void ndsFighterMarioFoxControllerLoopPrepare(void);
 extern void ndsFighterMarioFoxPreviewLoopPrepare(void);
@@ -5527,76 +5526,6 @@ u32 ndsR2HostBattleUpdateMax(void)
         NDS_FIGHTER_BATTLE_PLAYABLE_REALTIME_SMOKE_UPDATE_MAX;
 }
 #endif /* NDS_R2_PATH */
-
-static void ndsRunMarioFoxProcessPrerequisiteLoop(void)
-{
-    u32 i;
-
-    ndsRunMarioFoxProofUpdate(NULL);
-    ndsFighterMarioFoxRunImmediateProofChain();
-
-    for (i = 1u; i < 8u; i++)
-    {
-        if (gNdsFighterMarioFoxProcessLoopResult ==
-            NDS_FIGHTER_MARIOFOX_PROCESS_LOOP_PASS)
-        {
-            break;
-        }
-        ndsRunMarioFoxProofUpdate(NULL);
-        ndsFighterMarioFoxRunImmediateProofChain();
-    }
-}
-
-static void __attribute__((unused)) ndsRunMarioFoxGCRunAllPrerequisiteLoops(void)
-{
-    u32 i;
-
-    ndsRunMarioFoxProcessPrerequisiteLoop();
-
-    ndsFighterMarioFoxSchedulerLoopPrepare();
-    for (i = 0u; i < NDS_FIGHTER_SCHEDULER_LOOP_UPDATE_MAX; i++)
-    {
-        ndsRunMarioFoxProofUpdate(&gNdsFighterSchedulerLoopTaskmanUpdateCount);
-        if (gNdsFighterMarioFoxSchedulerLoopResult ==
-            NDS_FIGHTER_MARIOFOX_SCHEDULER_LOOP_PASS)
-        {
-            break;
-        }
-    }
-
-    ndsFighterMarioFoxControllerLoopPrepare();
-    for (i = 0u; i < NDS_FIGHTER_CONTROLLER_LOOP_UPDATE_MAX; i++)
-    {
-        ndsRunMarioFoxProofUpdate(&gNdsFighterControllerLoopTaskmanUpdateCount);
-        if (gNdsFighterMarioFoxControllerLoopResult ==
-            NDS_FIGHTER_MARIOFOX_CONTROLLER_LOOP_PASS)
-        {
-            break;
-        }
-    }
-
-    ndsFighterMarioFoxPreviewLoopPrepare();
-    for (i = 0u; i < NDS_FIGHTER_PREVIEW_LOOP_UPDATE_MAX; i++)
-    {
-        ndsRunMarioFoxProofUpdate(&gNdsFighterPreviewLoopTaskmanUpdateCount);
-        if (gNdsFighterMarioFoxPreviewLoopResult ==
-            NDS_FIGHTER_MARIOFOX_PREVIEW_LOOP_PASS)
-        {
-            break;
-        }
-    }
-
-    ndsFighterMarioFoxGCRunAllLoopPrepare();
-    for (i = 0u; i < NDS_FIGHTER_GCRUNALL_LOOP_UPDATE_MAX; i++)
-    {
-        ndsRunMarioFoxProofUpdate(&gNdsFighterGCRunAllLoopTaskmanUpdateCount);
-        if (gNdsFighterMarioFoxGCRunAllLoopResult ==
-            NDS_FIGHTER_MARIOFOX_GCRUNALL_LOOP_PASS)
-        {
-            break;
-        }
-    }
-}
 
 /* Diagnostic snapshot of the real object-manager state after
  * mnStartupFuncStart ran. Every value here is read from the original object

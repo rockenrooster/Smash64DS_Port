@@ -3251,7 +3251,6 @@ extern volatile u32 gNdsFighterProcessLoopDrawCallCount;
 extern volatile u32 gNdsFighterProcessLoopMatrixCallCount;
 extern volatile u32 gNdsFighterProcessLoopRootYDriftCount;
 extern volatile u32 gNdsFighterProcessLoopGADriftCount;
-void ndsFighterMarioFoxRunImmediateProofChain(void);
 extern volatile u32 gNdsFighterMarioFoxSchedulerLoopResult;
 extern volatile u32 gNdsFighterMarioFoxSchedulerLoopSafeResult;
 extern volatile u32 gNdsFighterMarioFoxSchedulerLoopMask;
