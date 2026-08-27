@@ -1476,16 +1476,6 @@ static u32 ndsFloatBits(f32 value)
     return bits.u;
 }
 
-static f32 ndsFloatFromBits(u32 value)
-{
-    union {
-        f32 f;
-        u32 u;
-    } bits;
-
-    bits.u = value;
-    return bits.f;
-}
 
 static u32 ndsPupupuStageAssetBit(u32 asset_id)
 {

@@ -14,7 +14,6 @@ extern void syUtilsSetRandomSeed(s32 seed);
 extern s32 syUtilsRandSeed(void);
 
 static u32 ndsFloatBits(f32 value);
-static f32 ndsFloatFromBits(u32 value);
 static s32 ndsFloatToMilliSigned(f32 value);
 static f32 ndsVectorAngleDiff3D(const Vec3f *a, const Vec3f *b);
 static void ndsFTPhysicsSetGroundVelTransferAirOriginal(GObj *fighter_gobj,
@@ -249,20 +248,9 @@ static sb32 ndsStageMPStaleFloorLoopChoosePair(FTStruct *fp,
 static void ndsStageMPWallCopyFloorLoopGObjProc(GObj *fighter_gobj);
 static void ndsStageMPPassFloorLoopGObjProc(GObj *fighter_gobj);
 static void ndsStageMPPlatformFloorLoopGObjProc(GObj *fighter_gobj);
-static void ndsFighterMarioFoxRunWaitCallbackTickProbe(void);
-static void ndsFighterMarioFoxRunWalkInputProof(void);
-static void ndsFighterMarioFoxRunWalkLoopProof(void);
-static void ndsFighterMarioFoxRunDashRunProof(void);
 static void ndsFighterManagerRefreshProof(void);
 static void ndsFighterManagerRecordCreatedFighter(GObj *fighter_gobj,
                                                   s32 player);
-static void ndsFighterJumpAttackAirProbeMapLanding(GObj *fighter_gobj,
-                                                    FTStruct *fp, DObj *root);
-static void ndsFighterJumpAttackAirProbeDirections(GObj *fighter_gobj,
-                                                   FTStruct *fp, DObj *root);
-static void ndsFighterMarioFoxRunJumpLoopProof(void);
-static void ndsFighterMarioFoxRunLandingLoopProof(void);
-static void ndsFighterMarioFoxRunProcessLoopProof(void);
 static void ndsFighterSchedulerLoopGObjProc(GObj *fighter_gobj);
 static void ndsFighterSchedulerLoopRunSlotProcess(u32 slot, FTStruct *fp);
 static void ndsFighterSchedulerLoopApplyPhaseInput(u32 slot, FTStruct *fp,
@@ -308,8 +296,6 @@ static void ndsFighterLivePreviewRecordState(u32 slot, FTStruct *fp,
                                              s32 previous_ga);
 static void ndsFighterLivePreviewDrawKeyframe(void);
 static void ndsFighterLivePreviewCopyDrawFromPreview(void);
-static void ndsFighterProcessLoopApplyScriptInput(
-    u32 slot, FTStruct *fp, const NDSFighterScriptInput *input);
 static void ndsFighterProcessLoopRunFrame(u32 slot, FTStruct *fp);
 static void ndsFighterProcessLoopRunUpdate(u32 slot, FTStruct *fp);
 static void ndsFighterProcessLoopRunInterrupt(u32 slot, FTStruct *fp);
@@ -320,21 +306,6 @@ static void ndsFTMainApplyCommonStatusReset(FTStruct *fp, u32 flags);
 static void ndsFighterProcessLoopSetStatus(FTStruct *fp, GObj *fighter_gobj,
                                            s32 status_id, f32 frame_begin,
                                            f32 anim_speed, u32 flags);
-static void ndsFighterProcessLoopRecordState(u32 slot, FTStruct *fp,
-                                             s32 previous_status,
-                                             s32 previous_ga);
-static void ndsFighterWalkLoopRunHeldFrame(u32 slot, FTStruct *fp);
-static void ndsFighterWalkLoopRunReleaseToWait(u32 slot, FTStruct *fp);
-static void ndsFighterWalkLoopRunWaitSettleFrame(u32 slot, FTStruct *fp);
-static void ndsFighterWalkLoopRecordStart(u32 slot, FTStruct *fp,
-                                           DObj *root);
-static void ndsFighterWalkLoopRecordAfterHeld(u32 slot, FTStruct *fp,
-                                              DObj *root);
-static void ndsFighterWalkLoopRecordAfterRelease(u32 slot, FTStruct *fp,
-                                                 DObj *root);
-static void ndsFighterWalkLoopRecordAfterSettle(u32 slot, FTStruct *fp,
-                                                DObj *root);
-static void ndsFighterDashRunRunGuardProof(u32 slot, FTStruct *fp);
 static void ndsFighterMarioFoxRecordDisplayProbe(GObj *fighter_gobj);
 static void ndsFighterMarioFoxRecordDLAllDrawFromDisplayCallback(
     GObj *fighter_gobj);
@@ -382,7 +353,6 @@ static sb32 sNdsFighterDashRunAttackDashUpdateActive;
 static sb32 sNdsFighterDashRunAttackDashPhysicsActive;
 static sb32 sNdsFighterDashRunAttackDashMapActive;
 static sb32 sNdsFighterDashRunTurnRunActive;
-static sb32 sNdsFighterDashRunTurnRunUpdateActive;
 static sb32 sNdsFighterDashRunDashPhysicsActive;
 static sb32 sNdsFighterDashRunRunPhysicsActive;
 static sb32 sNdsFighterDashRunRunBrakePhysicsActive;
