@@ -243,14 +243,9 @@
 #define NDS_DAMAGE_UPDATE_CATCH_RESIST_ORIGINAL 0x10u
 #define NDS_FTMAIN_HITLOG_NUM_MAX 10u
 
-static u32 sNdsFighterDashRunProcParamsHitCount;
-static u32 sNdsFighterDashRunProcParamsShieldCount;
 static u32 sNdsFighterDashRunProcParamsLagStartCount;
-static u32 sNdsFighterDashRunProcParamsTrapCount;
-static u32 sNdsFighterDashRunDamageLagEndCount;
 static FTHitLog sNdsFighterDashRunHitLogs[NDS_FTMAIN_HITLOG_NUM_MAX];
 static u32 sNdsFighterDashRunHitLogID;
-static void ndsFighterDashRunDamageLagEnd(GObj *fighter_gobj);
 static const u16 sNdsFighterDashRunHitCollisionFGMs[8][3] = {
     { 40u, 38u, 37u },    /* Punch: S/M/L */
     { 34u, 32u, 31u },    /* Kick: S/M/L */
