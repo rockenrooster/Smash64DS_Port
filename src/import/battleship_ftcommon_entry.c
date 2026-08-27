@@ -13,6 +13,9 @@
 GObj *efManagerMarioEntryDokanMakeEffect(Vec3f *pos, s32 fkind);
 GObj *efManagerFoxEntryArwingMakeEffect(Vec3f *pos, s32 lr);
 GObj *efManagerDonkeyEntryTaruMakeEffect(Vec3f *pos);
+#if NDS_P2_SAMUS
+GObj *efManagerSamusEntryPointMakeEffect(Vec3f *pos);
+#endif
 #if NDS_P2_CAPTAIN
 /* Already compiled in battleship_efmanager.o and dropped by --gc-sections for
  * want of a caller; it links the moment Falcon's branch below calls it. */
@@ -89,7 +92,8 @@ static void ndsFTCommonAppearUpdateEffectsNoMBall(GObj *fighter_gobj)
          * fkind test resolved: only Pikachu/Purin and their polygon variants
          * spawn Master-Ball rays for flag1, so every landed kind -- Mario, Fox,
          * Luigi, Donkey, Captain -- takes this arm and only consumes it. The
-         * name said MarioFox until P2-3f5; it was never Mario/Fox-specific. */
+         * name said MarioFox until P2-3f5; it was never Mario/Fox-specific.
+         * Samus also takes this exact consume-only arm. */
         fp->motion_vars.flags.flag1 = 0;
     }
     if (fp->motion_vars.flags.flag2 != 0)
@@ -217,6 +221,18 @@ void ftCommonAppearSetStatus(GObj *fighter_gobj)
         status_id = (entry_id == 0) ? nFTDonkeyStatusAppearR :
                                       nFTDonkeyStatusAppearL;
         efManagerDonkeyEntryTaruMakeEffect(&fp->entry_pos);
+    }
+#endif
+#if NDS_P2_SAMUS
+    else if (fp->fkind == nFTKindSamus)
+    {
+        /* BattleShip ftcommonentry.c:16,209-211. Samus owns her own
+         * AppearR/AppearL status pair and the Special2 entry-point effect.
+         * EntryNull is not source-equivalent here: it suppresses both the
+         * status motion and the entry-point effect. */
+        status_id = (entry_id == 0) ? nFTSamusStatusAppearR :
+                                      nFTSamusStatusAppearL;
+        efManagerSamusEntryPointMakeEffect(&fp->entry_pos);
     }
 #endif
 #if NDS_P2_CAPTAIN

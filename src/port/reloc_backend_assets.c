@@ -3872,10 +3872,13 @@ static s32 ndsRelocNormalizeFighterAObj16File(NDSRelocLoadedFile *loaded)
      * That half-swapped already-relocated pointers (0x022ed664 -> 0xd664022e)
      * and crashed syInterpGetFracFrame when RollB evaluated TraI.
      *
-     * Keep the two boundaries distinct: table_bytes is the contiguous source
-     * pointer array, while script_bytes is the earliest joint script it names.
-     * The bytes between them are 32-bit interpolation data and stay exactly as
-     * the common word-byte-swap/internal-reloc passes produced them. */
+     * Keep the two boundaries semantically distinct: table_bytes is the
+     * contiguous source pointer array, while script_bytes is the earliest joint
+     * script it names.  They may be equal when the first script follows the
+     * pointer table immediately (1099_FTSamusAnimBomb is the source example).
+     * When script_bytes is greater, the bytes between them are 32-bit
+     * interpolation data and stay exactly as the common word-byte-swap/internal-
+     * reloc passes produced them. */
     for (i = 0; (((i + 1u) * sizeof(u32)) <= loaded->data_size); i++)
     {
         uintptr_t value =
@@ -3901,7 +3904,7 @@ static s32 ndsRelocNormalizeFighterAObj16File(NDSRelocLoadedFile *loaded)
         break;
     }
     if ((table_bytes == 0u) || (table_bytes >= loaded->data_size) ||
-        (script_bytes <= table_bytes) ||
+        (script_bytes < table_bytes) ||
         (script_bytes >= loaded->data_size) ||
         ((table_bytes % sizeof(u32)) != 0u) ||
         ((script_bytes % sizeof(u32)) != 0u))

@@ -1076,6 +1076,18 @@ static size_t ndsEFManagerFileSpan(void **file_head)
         return ndsRelocGetLoadedFileSize(&llDonkeySpecial2FileID);
     }
 #endif
+#if NDS_P2_SAMUS
+    if (file_head == &gFTDataSamusSpecial2)
+    {
+        /* BattleShip dEFManagerSamusEntryPointEffectDesc owns SamusSpecial2.
+         * Like the already-landed entry descriptors, these offsets are
+         * linker-symbol addresses until this resolver sees the real file
+         * span, and the file is not resident when efManagerInitEffects first
+         * walks the table. Charge Shot itself is a WPDesc backed by
+         * SamusSpecial1, not an EFDesc. */
+        return ndsRelocGetLoadedFileSize(&llSamusSpecial2FileID);
+    }
+#endif
 #if NDS_P2_CAPTAIN
     if (file_head == &gFTDataCaptainSpecial2)
     {
@@ -1354,6 +1366,16 @@ static void ndsEFManagerResolveDescOffsets(EFDesc *desc)
 #else
 #define NDS_EF_ROSTER_DESCS_DONKEY(X)
 #endif
+#if NDS_P2_SAMUS
+/* SamusSpecial2 backs her source entry-point effect. Keep that descriptor in
+ * the same resolve/defer contract as the already-landed Mario/Fox/DK/Falcon
+ * fighter-file effects. Charge Shot is a weapon owner, so it does not belong
+ * in this EFDesc list. */
+#define NDS_EF_ROSTER_DESCS_SAMUS(X) \
+    X(dEFManagerSamusEntryPointEffectDesc)
+#else
+#define NDS_EF_ROSTER_DESCS_SAMUS(X)
+#endif
 #if NDS_P2_CAPTAIN
 /* Falcon's three source descriptors carry &llCaptainSpecial2/3* linker symbols
  * in their offset fields, the same as DK's barrel above, so they need the same
@@ -1369,6 +1391,7 @@ static void ndsEFManagerResolveDescOffsets(EFDesc *desc)
 #endif
 #define NDS_EF_ROSTER_DESCS(X) \
     NDS_EF_ROSTER_DESCS_DONKEY(X) \
+    NDS_EF_ROSTER_DESCS_SAMUS(X) \
     NDS_EF_ROSTER_DESCS_CAPTAIN(X)
 
 /* Every desc the resolver visits can reach ndsEFManagerDeferDesc, so the table

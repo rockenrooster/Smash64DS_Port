@@ -45,11 +45,22 @@ public static class Smash64DSSamusOwnerInput
 $VK_S = [byte]0x53
 $VK_Q = [byte]0x51
 $VK_DOWN = [byte]0x28
+$SCAN_DOWN = [byte]0x50
+$KEYEVENTF_EXTENDEDKEY = [uint32]1
 $KEYEVENTF_KEYUP = [uint32]2
 
 $gdb = 'C:\devkitPro\devkitARM\bin\arm-none-eabi-gdb.exe'
 $rom = Resolve-Smash64DSBuildOutput -Root $root -Target $Target -Build $Build -Extension '.nds'
 $elf = Resolve-Smash64DSBuildOutput -Root $root -Target $Target -Build $Build -Extension '.elf'
+$buildConfig = Join-Path (Split-Path -Parent $rom) 'nds_build_config.h'
+if (-not (Test-Path -LiteralPath $buildConfig -PathType Leaf)) {
+    throw "Samus owner proof requires generated build config: $buildConfig"
+}
+$buildConfigText = Get-Content -LiteralPath $buildConfig -Raw
+if (($buildConfigText -notmatch '(?m)^#define NDS_P2_SAMUS 1$') -or
+    ($buildConfigText -notmatch '(?m)^#define NDS_P2_PROOF_FIGHTER0 3$')) {
+    throw 'Samus owner proof requires a build made with NDS_P2_SAMUS=1 NDS_P2_PROOF_FIGHTER0=3.'
+}
 if ([string]::IsNullOrWhiteSpace($Artifact)) {
     $Artifact = Join-Path $root ('artifacts\verification\' +
         (Get-Date -Format 'yyyy-MM-dd') + '_p2-samus-owner.txt')
@@ -160,7 +171,10 @@ function Send-MelonDownB {
         [ValidateRange(80, 1000)][int]$HoldMilliseconds = 250
     )
     Focus-MelonWindow -Window $Window
-    [Smash64DSSamusOwnerInput]::keybd_event($VK_DOWN, 0, 0, [UIntPtr]::Zero)
+    # Cursor keys are extended Win32 keys. Without the extended flag Qt sees a
+    # keypad-family key instead of the configured Qt::Key_Down binding.
+    [Smash64DSSamusOwnerInput]::keybd_event(
+        $VK_DOWN, $SCAN_DOWN, $KEYEVENTF_EXTENDEDKEY, [UIntPtr]::Zero)
     [Smash64DSSamusOwnerInput]::keybd_event($VK_S, 0, 0, [UIntPtr]::Zero)
     try {
         Start-Sleep -Milliseconds $HoldMilliseconds
@@ -169,7 +183,8 @@ function Send-MelonDownB {
         [Smash64DSSamusOwnerInput]::keybd_event(
             $VK_S, 0, $KEYEVENTF_KEYUP, [UIntPtr]::Zero)
         [Smash64DSSamusOwnerInput]::keybd_event(
-            $VK_DOWN, 0, $KEYEVENTF_KEYUP, [UIntPtr]::Zero)
+            $VK_DOWN, $SCAN_DOWN,
+            ($KEYEVENTF_EXTENDEDKEY -bor $KEYEVENTF_KEYUP), [UIntPtr]::Zero)
     }
 }
 
@@ -178,12 +193,23 @@ set pagination off
 set confirm off
 set remotetimeout 20
 target remote 127.0.0.1:__PORT__
-tbreak scVSBattleStartBattle
+break efManagerSamusEntryPointMakeEffect
+commands
+silent
+printf "TRACE ENTRY_EFFECT pos=(%f,%f,%f)\n", pos->x, pos->y, pos->z
+disable $_hit_bpnum
 continue
-set gNdsBattlePlayableFoxCpuEnabled = 0
-tbreak ftCommonWaitProcInterrupt if ((FTStruct *)fighter_gobj->user_data.p)->fkind == 3
+end
+break ftCommonWaitProcInterrupt
+commands
+silent
+if ((((FTStruct *)fighter_gobj->user_data.p)->fkind != 3) || (((FTStruct *)fighter_gobj->user_data.p)->is_control_disable != 0))
 continue
-printf "TRACE INPUT_READY status=%d fkind=%d pkind=%d\n", ((FTStruct *)fighter_gobj->user_data.p)->status_id, ((FTStruct *)fighter_gobj->user_data.p)->fkind, ((FTStruct *)fighter_gobj->user_data.p)->pkind
+end
+disable $_hit_bpnum
+end
+continue
+printf "TRACE INPUT_READY status=%d fkind=%d pkind=%d control_disable=%d\n", ((FTStruct *)fighter_gobj->user_data.p)->status_id, ((FTStruct *)fighter_gobj->user_data.p)->fkind, ((FTStruct *)fighter_gobj->user_data.p)->pkind, ((FTStruct *)fighter_gobj->user_data.p)->is_control_disable
 tbreak ftSamusSpecialNStartSetStatus
 shell cmd /c echo ready>__CHARGE__
 continue
@@ -193,23 +219,38 @@ continue
 set $sam = (FTStruct *)fighter_gobj->user_data.p
 set $stored = $sam->passive_vars.samus.charge_level
 printf "TRACE CHARGE_STORED level=%d charge_gobj=%p\n", $stored, $sam->status_vars.samus.specialn.charge_gobj
-tbreak ftCommonWaitSetStatus
+break ftCommonWaitSetStatus
+commands
+silent
+if ((FTStruct *)fighter_gobj->user_data.p)->fkind != 3
+continue
+end
+disable $_hit_bpnum
+end
 shell cmd /c echo ready>__CANCEL__
 continue
 set $sam = (FTStruct *)fighter_gobj->user_data.p
-printf "TRACE CHARGE_CANCEL level=%d stored=%d\n", $sam->passive_vars.samus.charge_level, $stored
+set $cancel = $sam->passive_vars.samus.charge_level
+printf "TRACE CHARGE_CANCEL level=%d pre=%d preserved=%d\n", $cancel, $stored, ($cancel >= $stored)
 finish
-tbreak ftCommonWaitProcInterrupt if ((FTStruct *)fighter_gobj->user_data.p)->fkind == 3
+break ftCommonWaitProcInterrupt
+commands
+silent
+if ((((FTStruct *)fighter_gobj->user_data.p)->fkind != 3) || (((FTStruct *)fighter_gobj->user_data.p)->is_control_disable != 0))
+continue
+end
+disable $_hit_bpnum
+end
 continue
 tbreak ftSamusSpecialNStartSetStatus
 shell cmd /c echo ready>__RESUME__
 continue
-printf "TRACE CHARGE_RESUME_START level=%d stored=%d\n", ((FTStruct *)fighter_gobj->user_data.p)->passive_vars.samus.charge_level, $stored
+printf "TRACE CHARGE_RESUME_START level=%d cancel=%d preserved=%d\n", ((FTStruct *)fighter_gobj->user_data.p)->passive_vars.samus.charge_level, $cancel, (((FTStruct *)fighter_gobj->user_data.p)->passive_vars.samus.charge_level >= $cancel)
 tbreak ftSamusSpecialNLoopSetStatus
 continue
 set $sam = (FTStruct *)fighter_gobj->user_data.p
 finish
-printf "TRACE CHARGE_RESUME level=%d stored=%d charge_gobj=%p\n", $sam->passive_vars.samus.charge_level, $stored, $sam->status_vars.samus.specialn.charge_gobj
+printf "TRACE CHARGE_RESUME level=%d cancel=%d preserved=%d charge_gobj=%p\n", $sam->passive_vars.samus.charge_level, $cancel, ($sam->passive_vars.samus.charge_level >= $cancel), $sam->status_vars.samus.specialn.charge_gobj
 tbreak ftSamusSpecialNEndSetStatus
 shell cmd /c echo ready>__RELEASE__
 continue
@@ -220,28 +261,37 @@ set $shot = (WPStruct *)weapon_gobj->user_data.p
 printf "TRACE CHARGE_LAUNCH size=%d owner_pre=%p full=%d\n", $shot->weapon_vars.charge_shot.charge_size, $shot->weapon_vars.charge_shot.owner_gobj, $shot->weapon_vars.charge_shot.is_full_charge
 finish
 printf "TRACE CHARGE_LAUNCHED owner_post=%p damage=%d\n", $shot->weapon_vars.charge_shot.owner_gobj, $shot->attack_coll.damage
-tbreak ftCommonWaitProcInterrupt if ((FTStruct *)fighter_gobj->user_data.p)->fkind == 3
+break ftCommonWaitProcInterrupt
+commands
+silent
+if ((((FTStruct *)fighter_gobj->user_data.p)->fkind != 3) || (((FTStruct *)fighter_gobj->user_data.p)->is_control_disable != 0))
+continue
+end
+disable $_hit_bpnum
+end
 continue
 tbreak ftSamusSpecialLwSetStatus
 shell cmd /c echo ready>__BOMB__
 continue
 set $sam = (FTStruct *)fighter_gobj->user_data.p
 finish
-printf "TRACE BOMB_STATUS status=%d ga=%d\n", $sam->status_id, $sam->ga
+printf "TRACE BOMB_STATUS status=%d ga=%d anim=%f figatree=%p resolves=%u fallbacks=%u fallback_last=%#x\n", $sam->status_id, $sam->ga, fighter_gobj->anim_frame, $sam->figatree, gNdsRelocForceFighterAnimResolveCount, gNdsRelocForceFighterAnimFallbackCount, gNdsRelocForceFighterAnimFallbackLastAsset
 tbreak wpSamusBombMakeWeapon
 continue
 printf "TRACE BOMB_MAKE pos_y=%f\n", pos->y
 finish
 printf "TRACE BOMB_CREATED gobj=%p\n", $r0
-break ftSamusSpecialLwTransferStatusAir
+break ftSamusSpecialAirLwProcUpdate
 commands
 silent
-printf "TRACE BOMB_AIR_TRANSFER status=%d ga=%d\n", ((FTStruct *)fighter_gobj->user_data.p)->status_id, ((FTStruct *)fighter_gobj->user_data.p)->ga
+printf "TRACE BOMB_JUMP status=%d ga=%d vel_y=%f\n", ((FTStruct *)fighter_gobj->user_data.p)->status_id, ((FTStruct *)fighter_gobj->user_data.p)->ga, ((FTStruct *)fighter_gobj->user_data.p)->physics.vel_air.y
+disable $_hit_bpnum
 continue
 end
-tbreak wpSamusBombExplodeInitVars
+tbreak wpSamusBombExplodeProcUpdate
 continue
-printf "TRACE BOMB_EXPLODE gobj=%p\n", weapon_gobj
+set $bomb = (WPStruct *)weapon_gobj->user_data.p
+printf "TRACE BOMB_EXPLODE gobj=%p lifetime=%d size=%f\n", weapon_gobj, $bomb->lifetime, $bomb->attack_coll.size
 detach
 quit
 '@
@@ -331,15 +381,18 @@ Get-Content -LiteralPath $gdbOut | Add-Content -LiteralPath $Artifact
 
 $text = Get-Content -LiteralPath $Artifact -Raw
 foreach ($required in @(
-    'TRACE INPUT_READY status=0 fkind=3 pkind=0',
+    'TRACE ENTRY_EFFECT pos=\(',
+    'TRACE INPUT_READY status=10 fkind=3 pkind=0 control_disable=0',
     'TRACE CHARGE_STORED level=([2-7])',
-    'TRACE CHARGE_CANCEL level=([2-7]) stored=\1',
-    'TRACE CHARGE_RESUME level=([2-7]) stored=\1 charge_gobj=0x[1-9a-fA-F]',
-    'TRACE CHARGE_LAUNCHED owner_post=0x0 damage=[1-9][0-9]*',
-    'TRACE BOMB_STATUS ',
+    'TRACE CHARGE_CANCEL level=[2-7] pre=[2-7] preserved=1',
+    'TRACE CHARGE_RESUME_START level=[2-7] cancel=[2-7] preserved=1',
+    'TRACE CHARGE_RESUME level=[2-7] cancel=[2-7] preserved=1 charge_gobj=0x[1-9a-fA-F]',
+    'TRACE CHARGE_LAUNCHED owner_post=(?:0x0|\(nil\)) damage=[1-9][0-9]*',
+    'TRACE BOMB_STATUS status=229 ga=0 .*fallbacks=0 ',
     'TRACE BOMB_MAKE ',
     'TRACE BOMB_CREATED gobj=0x[1-9a-fA-F]',
-    'TRACE BOMB_EXPLODE gobj=0x[1-9a-fA-F]'
+    'TRACE BOMB_JUMP status=230 ga=1 vel_y=[1-9][0-9]*\.[0-9]+',
+    'TRACE BOMB_EXPLODE gobj=0x[1-9a-fA-F][0-9a-fA-F]* lifetime=6 size=180\.000000'
 )) {
     if ($text -notmatch $required) {
         throw "Samus owner proof missing required marker: $required"

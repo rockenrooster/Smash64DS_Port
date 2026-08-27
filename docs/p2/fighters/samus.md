@@ -3,9 +3,10 @@
 Status: integration in progress · Reference: `decomp/BattleShip-main/decomp/src/ft/ftchar/ftsamus/`
 
 The source gameplay slice is now linked and the real shell can select Samus.
-This is **not** a completion claim: Bomb/bomb-jump and the full Charge Shot
-persistence matrix still need runtime acceptance, and the rest of Samus's
-source-specific gameplay audio bank is still being closed.
+This is **not** a completion claim: Charge Shot store/cancel/resume/release and
+Bomb/bomb-jump are runtime-accepted, but the remaining source-defined Charge
+Shot damage/KO/respawn lifecycle cases and the rest of Samus's source-specific
+gameplay audio bank still need closure.
 
 ## Role
 
@@ -29,8 +30,12 @@ beam/bomb SFX from source set, announcer clip.
 
 ## DS notes / risks
 
-- Charge persistence across hitstun/KO/respawn per source (players know the
-  rules; verify, don't guess).
+- Charge lifecycle across damage/KO/respawn must follow the source, not a blanket
+  "persistent" rule. BattleShip installs `ftSamusSpecialNProcDamage` while the
+  neutral-special owner is active (it clears `charge_level` and destroys the
+  held charge object), while `ftManagerInitFighter` resets Samus charge on
+  rebirth. The stored-charge cases outside that active status still need a
+  runtime matrix rather than inference.
 - Bomb article: physics + owner attribution through the projectile seam
   (`wp/`/`it/itfighter` — check where BattleShip keeps it).
 - Charge Shot at full size is a big translucent projectile — effect-pool and
@@ -69,12 +74,35 @@ beam/bomb SFX from source set, announcer clip.
   The pack is 183 entries / 1,785,424 B with zero exclusions and a 204,800 B
   runtime cache.
 
+### Source-owner acceptance — 2026-08-27
+
+- `1099_FTSamusAnimBomb` exposed the second half of the generic AObj16 boundary
+  rule. Its 92-byte joint-pointer table is followed *immediately* by the first
+  script, so `script_bytes == table_bytes` is valid. The DS normalizer now
+  rejects only `script_bytes < table_bytes`; RollB's larger interpolation gap is
+  still preserved by the same source-derived split.
+- `artifacts/verification/2026-08-27_p2-samus-owner-entry-charge-bomb.txt` is a
+  real-input melonDS proof built with `NDS_P2_SAMUS=1` and
+  `NDS_P2_PROOF_FIGHTER0=3`. It reaches BattleShip's
+  `efManagerSamusEntryPointMakeEffect`, then stores Charge Shot to level 2,
+  cancels at level 3 without losing it, resumes from level 3, releases a level-4
+  shot through `wpSamusChargeShotLaunch` (15 damage), and leaves the held-owner
+  pointer clear after launch.
+- The same run enters source status 229 for Bomb with **zero** fighter-animation
+  fallbacks, creates the real `wpSamusBomb` weapon, reaches source aerial Bomb
+  status 230 with positive upward bomb-jump velocity, then reaches the natural
+  explosion update at source lifetime 6 / size 180.0.
+- The focused proof now refuses to run against an accidental Mario/Fox build:
+  it verifies the generated build config admits Samus and selects her as P1
+  before launching melonDS.
+
 ## Acceptance
 
 - [ ] Move inventory sweep vs `ftsamus` data.
-- [ ] Charge store/cancel/resume/release matrix equivalent; persistence rules
-      verified.
-- [ ] Bomb-jump reproduces (scripted input replay).
+- [ ] Charge lifecycle matrix equivalent. Store/cancel/resume/release is banked;
+      source-defined damage/KO/respawn cases remain.
+- [x] Bomb-jump reproduces through real keyboard input -> DS controller path,
+      with source Bomb creation and natural explosion lifecycle.
 - [x] CSS selectable with source portrait, live 3D selected preview, stock art,
       source announcer/selected-pose audio, and rematch return path.
 - [ ] Full Samus-specific gameplay audio bank closed with no runtime misses.
