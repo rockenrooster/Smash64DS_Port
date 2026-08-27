@@ -250,8 +250,6 @@ static void ndsStageMPWallCopyFloorLoopGObjProc(GObj *fighter_gobj);
 static void ndsStageMPPassFloorLoopGObjProc(GObj *fighter_gobj);
 static void ndsStageMPPlatformFloorLoopGObjProc(GObj *fighter_gobj);
 static void ndsFighterMarioFoxRunWaitCallbackTickProbe(void);
-static void ndsFighterMarioFoxRunWaitGroundProof(void);
-static void ndsFighterMarioFoxRunDisplayProbe(void);
 static void ndsFighterMarioFoxRunWalkInputProof(void);
 static void ndsFighterMarioFoxRunWalkLoopProof(void);
 static void ndsFighterMarioFoxRunDashRunProof(void);
@@ -354,7 +352,6 @@ static void ndsFighterStructResetPool(void);
 static sb32 ndsFighterStructIsPoolPointer(const void *ptr);
 static sb32 ndsFighterStructIsTrackedPointer(const void *ptr);
 static GObj *ndsFighterGetPlayerNumGObj(s32 player_num);
-static void ndsFighterPartsSyncDObj(FTStruct *fp, DObj *dobj, u32 joint_id);
 
 static sb32 sNdsFighterWaitGroundPassActive;
 static sb32 sNdsFighterDisplayProbeActive;
