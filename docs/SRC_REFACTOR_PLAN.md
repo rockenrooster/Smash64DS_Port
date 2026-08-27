@@ -1,8 +1,30 @@
 # Source Refactor Plan
 
-**Status:** Planning complete; ready for implementation
+**Status:** Core safe implementation complete; dirty-file phases deferred
 **Date:** 2026-08-27
 **Primary scope:** `src/port/*` and `src/nds/nds_renderer.c`
+
+## Implementation Status
+
+- Phase 1 complete: `reloc_backend_diagnostic_recorders.c` is an ordered
+  same-translation-unit aggregator (`4da64a9c795`).
+- Phase 2 complete for the proven-retired immediate Mario/Fox proof chain;
+  current accepted builds did not link that surface (`767475779cc`). Further
+  proof deletion remains evidence-driven rather than a refactor requirement.
+- Phase 3 deferred: `reloc_backend_renderer_dl.c` still contains unrelated
+  active work, so mechanically splitting it now would fold that work into the
+  refactor and violate this plan's isolation rule.
+- Phase 4 complete: `nds_renderer.c` is an ordered textual-slice aggregator and
+  still produces one executable-equivalent `nds_renderer.o` (`dd340c70da2`).
+- Phase 5 remains deliberately opportunistic: no semantic renderer ownership
+  change is required merely to complete the structural refactor.
+- Phase 6 complete for clean `taskman_seam.c` and `diagnostics.c`
+  (`f7b8160d88b`). `nds_menu_shell.c` remains deferred while unrelated active
+  roster/UI work is present.
+
+The two deferred files should be revisited only after their active changes are
+settled. Do not mechanically redistribute a dirty file across new slices just
+to mark a phase complete.
 
 ## Purpose
 
@@ -421,10 +443,14 @@ Do **not**:
 - change GX/DMA ownership as incidental cleanup,
 - claim a performance improvement without measurement.
 
-## First Implementation Task
+## Next Deferred Work
 
-The first task is intentionally narrow:
+No additional structural work should be forced into the current dirty files.
+When their active changes are settled:
 
-> Mechanically decompose `src/port/reloc_backend_diagnostic_recorders.c` into ordered textual implementation slices, preserve `scene_backend.o` as the compilation unit, and prove executable equivalence before doing any semantic cleanup.
-
-No additional architecture decision is required before beginning that work.
+1. mechanically split `src/port/reloc_backend_renderer_dl.c` while preserving
+   `scene_backend.o`, then prove object/code equivalence;
+2. mechanically split `src/nds/nds_menu_shell.c` only if it is still large
+   enough to justify the change after the active roster/UI work lands;
+3. perform further semantic cleanup only where current-build reachability and
+   verifier coverage prove an old path obsolete.

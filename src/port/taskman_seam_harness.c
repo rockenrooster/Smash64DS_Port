@@ -2402,3 +2402,4 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
     gNdsStartupTaskmanMallocCount = gNdsTaskmanMallocCount;
     ndsFinishTaskmanRun();
 }
+#include "nds_scene_harness_config.h"
