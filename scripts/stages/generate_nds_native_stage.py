@@ -4017,6 +4017,32 @@ def validate_observed_field_policy(
         raise falsify(f"{context}: classified fields are no longer read {missing}")
 
 
+def read_source_closure_unit(repo_root: Path, path: str) -> str:
+    """Read the source text that the named-closure manifest reasons about.
+
+    Several large port translation units are intentionally assembled from local
+    implementation slices.  SOURCE_CLOSURE_POLICIES keeps the compiled wrapper
+    path, so expand its direct local `.c` includes in source order.  This mirrors
+    the compiler's textual ownership well enough for named-closure inspection
+    without pretending to be a C preprocessor.
+    """
+    source_path = repo_root / path
+    source = source_path.read_text(encoding="utf-8")
+    pieces: list[str] = []
+    for line in source.splitlines():
+        match = re.fullmatch(r'#include\s+"([^"]+\.c)"', line.strip())
+        if match is None:
+            pieces.append(line)
+            continue
+        include_path = source_path.parent / match.group(1)
+        if not include_path.is_file():
+            raise falsify(
+                f"renderer implementation include is absent: {match.group(1)}"
+            )
+        pieces.append(include_path.read_text(encoding="utf-8"))
+    return "\n".join(pieces)
+
+
 def build_consumed_closure_rows(
     repo_root: Path,
     specs: Sequence[dict[str, object]],
@@ -4026,7 +4052,7 @@ def build_consumed_closure_rows(
     for spec in specs:
         path = str(spec["path"])
         if path not in source_cache:
-            source_cache[path] = (repo_root / path).read_text(encoding="utf-8")
+            source_cache[path] = read_source_closure_unit(repo_root, path)
         name = str(spec["closure"])
         policy = dict(spec["fields"])
         observed = observed_arrow_fields(

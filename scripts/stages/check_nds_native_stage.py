@@ -31,6 +31,10 @@ import _paths  # noqa: E402  -- puts every scripts/ area folder on sys.path
 import generate_nds_native_stage as generator
 
 
+def read_renderer_translation_unit(repo_root: Path) -> str:
+    return generator.read_source_closure_unit(repo_root, "src/nds/nds_renderer.c")
+
+
 EXPECTED_ROOTS = (
     0x06C0, 0x0798, 0x0820, 0x08A8, 0x0928, 0x0950, 0x0980,
     0x0A18, 0x0A38, 0x0A58, 0x0A78, 0x0B18, 0x0B40, 0x0C38,
@@ -373,7 +377,7 @@ def verify_consumed_fields_manifest(repo_root: Path) -> tuple[int, int]:
 
 
 def verify_task26_execution_shape(repo_root: Path) -> None:
-    renderer = (repo_root / "src/nds/nds_renderer.c").read_text(encoding="utf-8")
+    renderer = read_renderer_translation_unit(repo_root)
     closure = generator.named_c_closure(
         renderer, "ndsRendererNativeStagePrepareGeneratedSegment0"
     )

@@ -1372,6 +1372,32 @@ $rawTriMask = (1 -shl $decodedRawTri.V0) -bor
     (1 -shl $decodedRawTri.V1) -bor
     (1 -shl $decodedRawTri.V2)
 Assert-True (($rawValidMask -band $rawTriMask) -eq $rawTriMask) 'Hardware raw triangle readiness fixture failed.'
+
+function Get-CTranslationUnitSource {
+    param(
+        [Parameter(Mandatory=$true)][string]$Root,
+        [Parameter(Mandatory=$true)][string]$RelativePath
+    )
+
+    $entryPath = Join-Path $Root $RelativePath
+    $entryDir = Split-Path -Parent $entryPath
+    $builder = [System.Text.StringBuilder]::new()
+    foreach ($line in Get-Content -LiteralPath $entryPath) {
+        if ($line -match '^\s*#include\s+"([^"]+\.c)"\s*$') {
+            $includePath = Join-Path $entryDir $Matches[1]
+            if (-not (Test-Path -LiteralPath $includePath -PathType Leaf)) {
+                throw "Renderer implementation include is absent: $($Matches[1])"
+            }
+            [void]$builder.AppendLine((Get-Content -LiteralPath $includePath -Raw))
+        }
+        else {
+            [void]$builder.AppendLine($line)
+        }
+    }
+    return $builder.ToString()
+}
+
+$renderer = Get-CTranslationUnitSource -Root $root -RelativePath 'src/nds/nds_renderer.c'
 $forbiddenSnippets = @(
     'u32 v0 = ((w0 >> 16) & 0xFFu) / 2u;',
     'u32 count = (w0 & 0xFFu) / 2u;',
@@ -1386,14 +1412,18 @@ $files = @(
     'src/port/reloc_backend.c'
 )
 foreach ($file in $files) {
-    $content = Get-Content (Join-Path $root $file) -Raw
+    $content = if ($file -eq 'src/nds/nds_renderer.c') {
+        $renderer
+    }
+    else {
+        Get-Content (Join-Path $root $file) -Raw
+    }
     foreach ($snippet in $forbiddenSnippets) {
         if ($content.Contains($snippet)) {
             throw "Old non-F3DEX2 decode snippet remains in ${file}: ${snippet}"
         }
     }
 }
-$renderer = Get-Content (Join-Path $root 'src/nds/nds_renderer.c') -Raw
 $itcmHeader = Get-Content (Join-Path $root 'include/nds/nds_task37_itcm.h') -Raw
 $nativeStageFullValidation = [regex]::Match(
     $renderer,
@@ -1408,12 +1438,12 @@ $nativeStagePrepareRun = [regex]::Match(
     '(?s)static s32 ndsRendererNativeStagePrepareRun\(.*?(?=\r?\nstatic void ndsRendererNativeStageAccountRun\()'
 ).Value
 $rendererHeader = Get-Content (Join-Path $root 'include/nds/nds_renderer.h') -Raw
-$taskmanSeam = Get-Content (Join-Path $root 'src/port/taskman_seam.c') -Raw
+$taskmanSeam = Get-CTranslationUnitSource -Root $root -RelativePath 'src/port/taskman_seam.c'
 $nativeOwnerGenerator = Get-Content (Join-Path $root 'scripts/fighters/generate_nds_native_owners.py') -Raw
 $nativeOwnerGenerated = Get-Content (Join-Path $root 'src/nds/nds_native_fighter_owner.generated.inc') -Raw
 $relocAssets = Get-Content (Join-Path $root 'src/port/reloc_backend_assets.c') -Raw
 $titleBackend = Get-Content (Join-Path $root 'src/port/title_backend.c') -Raw
-$relocRendererDL = Get-Content (Join-Path $root 'src/port/reloc_backend_renderer_dl.c') -Raw
+$relocRendererDL = Get-CTranslationUnitSource -Root $root -RelativePath 'src/port/reloc_backend_renderer_dl.c'
 $relocMPCollision = Get-Content (Join-Path $root 'src/port/reloc_backend_mp_collision.c') -Raw
 $objAnimImport = Get-Content (Join-Path $root 'src/import/battleship_sys_objanim.c') -Raw
 $scVSBattleImport = Get-Content (Join-Path $root 'src/import/battleship_scvsbattle.c') -Raw
@@ -1792,7 +1822,7 @@ Assert-True ($spritePreview.Contains('static s32 __attribute__((hot, optimize("O
 $platform = Get-Content (Join-Path $root 'src/nds/nds_platform.c') -Raw
 Assert-True ($platform.Contains('ndsPlatformGetOriginalSpriteOverlayLayer')) 'DS platform no longer exposes bounded final-layer ownership for direct wallpaper composition.'
 Assert-True ($platform.Contains('ndsPlatformCommitOriginalSpriteFinalLayer')) 'DS platform no longer publishes direct final-layer commits and ownership epochs.'
-$taskman = Get-Content (Join-Path $root 'src/port/taskman_seam.c') -Raw
+$taskman = Get-CTranslationUnitSource -Root $root -RelativePath 'src/port/taskman_seam.c'
 $harnessScript = Get-Content (Join-Path $root 'scripts/verify-battle-mariofox-gcrunall-loop-harness.ps1') -Raw
 $fireballVerifier = Get-Content (Join-Path $root 'scripts/verify-battle-playable-fireball-render.ps1') -Raw
 $rendererUploadPair = [regex]::Match(
@@ -2261,7 +2291,7 @@ function Get-LitShadeFixtureChannel {
 Assert-Equal (Get-LitShadeFixtureChannel 131 36 0) 36 'Mario shoe LUT ambient endpoint drifted.'
 Assert-Equal (Get-LitShadeFixtureChannel 131 36 64) 102 'Mario shoe LUT midpoint drifted.'
 Assert-Equal (Get-LitShadeFixtureChannel 131 36 127) 167 'Mario shoe LUT diffuse endpoint drifted.'
-$rendererAdapter = Get-Content (Join-Path $root 'src/port/reloc_backend_renderer_dl.c') -Raw
+$rendererAdapter = Get-CTranslationUnitSource -Root $root -RelativePath 'src/port/reloc_backend_renderer_dl.c'
 Assert-True ($rendererAdapter.Contains('ndsRendererAdapterPackColor(&mobj->sub.light1color)')) 'Fighter material light 1 still depends on host-endian SYColorPack.pack layout.'
 Assert-True ($rendererAdapter.Contains('ndsRendererAdapterPackColor(&mobj->sub.light2color)')) 'Fighter material light 2 still depends on host-endian SYColorPack.pack layout.'
 Assert-True ($rendererAdapter.Contains('((u32)color->s.r << 24)')) 'Fighter material color repack does not place R in the N64 high byte.'
@@ -2535,7 +2565,7 @@ Assert-True ($groupLawHarness.Contains('$taskmanPresentLead = $tmPace[1] - (2 * 
 # the unchanged universal stop. Pin the complete ordering rather than requiring
 # lexical adjacency that would forbid the bounded sparse sampler.
 Assert-True ($taskman -match '(?s)ndsPlatformPublishBattleFrameCompleteGroups\(\);\s*#if NDS_P2_FOUR_CPU_STRESS && NDS_TICK_HUD\s*if \(\(gNdsBattlePlayablePacingPresentedFrames & 31u\) == 0u\)\s*\{\s*ndsBattlePlayableTickHudSparseMarker\(\);\s*\}\s*#endif\s*ndsBattlePlayableFrameCompleteMarker\(\);') 'The frame-complete counter groups are not published before both the sparse stress marker and the universal frame-complete marker.'
-$rendererAdapter = Get-Content (Join-Path $root 'src/port/reloc_backend_renderer_dl.c') -Raw
+$rendererAdapter = Get-CTranslationUnitSource -Root $root -RelativePath 'src/port/reloc_backend_renderer_dl.c'
 Assert-True ($rendererAdapter.Contains('ndsRendererAdapterPrepareInitialMatrices')) 'Battle DL renderer matrix adapter is missing.'
 Assert-True ($rendererAdapter.Contains('syMatrixTraRotRpyRSca')) 'Battle DL renderer does not route DObj prep through original matrix helpers.'
 Assert-True ($rendererAdapter.Contains('ndsRendererAdapterBuildDefaultBattleCameraMatrices')) 'Battle DL renderer default battle camera seed is missing.'
@@ -2737,9 +2767,13 @@ Assert-Equal ([math]::Truncate(($projectedForegroundStart - 1) / $projectedDepth
 $modifyVtxW0 = 0x02140002
 Assert-Equal (($modifyVtxW0 -shr 16) -band 0xff) 0x14 'G_MODIFYVTX fixture no longer decodes G_MWO_POINT_ST.'
 Assert-Equal (($modifyVtxW0 -band 0xffff) / 2) 1 'G_MODIFYVTX fixture no longer targets cached vertex 1.'
-Assert-True ($rendererAdapter.Contains('NDS_RENDERER_ADAPTER_G_MWO_POINT_ST')) 'Battle DL adapter G_MWO_POINT_ST target is missing.'
-Assert-True ($rendererAdapter.Contains('state->vertices[index].s = (s16)(command->w1 >> 16)')) 'Battle DL adapter diagnostics do not replace cached vertex S.'
-Assert-True ($rendererAdapter.Contains('state->vertices[index].t = (s16)(command->w1 & 0xffffu)')) 'Battle DL adapter diagnostics do not replace cached vertex T.'
+# The retired Mario/Fox execute probe used to duplicate G_MODIFYVTX decoding in
+# renderer_adapter_legacy_dl_probes.c.  ad2b274 removed that proof-only decoder;
+# the production renderer owns the operation and is already pinned above by the
+# state->input_vertices S/T assertions.  Keep the cleanup from regressing by
+# requiring the duplicate execute visitor to remain absent instead of requiring
+# its dead cached-vertex implementation.
+Assert-True (-not $rendererAdapter.Contains('ndsFighterMarioFoxVisitDLExecuteCommand')) 'Retired Battle DL execute probe was reintroduced.'
 Assert-True ($rendererAdapter.Contains('NDSRendererVertexCache sNdsRendererAdapterStageVertexCache')) 'Stage traversal renderer vertex cache is missing.'
 Assert-True ($rendererAdapter -match '(?s)ndsRendererAdapterBeginStageTraversal\(void\).*?sNdsFighterDisplayCurrentLightValid.*?sNdsFighterDisplayCurrentLight\.l\.dir\[0\].*?light_dir_mask = 1u;.*?ndsRendererInitVertexCache\(&sNdsRendererAdapterStageVertexCache\)') 'Stage traversal does not seed the source-captured VS light direction before resetting source RSP vertex-cache validity and snapshot ownership.'
 Assert-True ($rendererAdapter -match '(?s)ndsRendererExecuteDisplayListWithVertexCache\(.*?&sNdsRendererAdapterStageVertexCache') 'Stage DObjs do not share the source RSP vertex cache.'
