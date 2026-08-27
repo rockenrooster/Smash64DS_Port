@@ -3,10 +3,10 @@
 Status: integration in progress · Reference: `decomp/BattleShip-main/decomp/src/ft/ftchar/ftsamus/`
 
 The source gameplay slice is now linked and the real shell can select Samus.
-This is **not** a completion claim: Charge Shot store/cancel/resume/release and
-Bomb/bomb-jump are runtime-accepted, but the remaining source-defined Charge
-Shot damage/KO/respawn lifecycle cases and the rest of Samus's source-specific
-gameplay audio bank still need closure.
+This is **not** a completion claim: Charge Shot's source lifecycle and
+Bomb/bomb-jump are runtime-accepted, but the rest of Samus's source-specific
+gameplay audio bank, move inventory, and budget/stress acceptance still need
+closure.
 
 ## Role
 
@@ -30,12 +30,12 @@ beam/bomb SFX from source set, announcer clip.
 
 ## DS notes / risks
 
-- Charge lifecycle across damage/KO/respawn must follow the source, not a blanket
+- Charge lifecycle across damage/KO/respawn follows the source, not a blanket
   "persistent" rule. BattleShip installs `ftSamusSpecialNProcDamage` while the
   neutral-special owner is active (it clears `charge_level` and destroys the
-  held charge object), while `ftManagerInitFighter` resets Samus charge on
-  rebirth. The stored-charge cases outside that active status still need a
-  runtime matrix rather than inference.
+  held charge object); stored charge outside that active status survives an
+  ordinary hit and the dead state; `ftManagerInitFighter` resets charge/recoil
+  when rebirth reconstructs the fighter.
 - Bomb article: physics + owner attribution through the projectile seam
   (`wp/`/`it/itfighter` — check where BattleShip keeps it).
 - Charge Shot at full size is a big translucent projectile — effect-pool and
@@ -95,12 +95,26 @@ beam/bomb SFX from source set, announcer clip.
 - The focused proof now refuses to run against an accidental Mario/Fox build:
   it verifies the generated build config admits Samus and selects her as P1
   before launching melonDS.
+- `artifacts/verification/2026-08-27_p2-samus-charge-lifecycle.txt` closes the
+  source-defined Charge Shot lifecycle matrix. The real-input setup stores and
+  cancels a shot, then a bounded queued-damage lever is consumed by the normal
+  `ftMainProcParams` path: in common Wait, `proc_damage` is null and level 3 is
+  preserved through damage; while Charge Shot is active, the same source damage
+  path reaches `ftSamusSpecialNProcDamage`, calls the real
+  `wpMainDestroyWeapon`, and clears `charge_level` to zero. A fresh stored level
+  3 then survives source DeadDown, enters `ftCommonRebirthDownSetStatus` still at
+  level 3, and `ftManagerInitFighter` resets `charge_level` and
+  `charge_recoil` to zero. The proof deliberately does not use an immediate raw
+  GDB read of `charge_gobj` as its null-store oracle because that read can lag
+  ARM9 cached stores; it proves the actual destroy call plus zero charge level,
+  while the source and compiled instruction stream retain the following null
+  store.
 
 ## Acceptance
 
 - [ ] Move inventory sweep vs `ftsamus` data.
-- [ ] Charge lifecycle matrix equivalent. Store/cancel/resume/release is banked;
-      source-defined damage/KO/respawn cases remain.
+- [x] Charge store/cancel/resume/release and source-defined damage/death/rebirth
+      lifecycle matrix equivalent.
 - [x] Bomb-jump reproduces through real keyboard input -> DS controller path,
       with source Bomb creation and natural explosion lifecycle.
 - [x] CSS selectable with source portrait, live 3D selected preview, stock art,

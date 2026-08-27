@@ -9,15 +9,18 @@ param(
 
 # P2-3 Samus owner proof.
 #
-# GDB is observation-only with respect to fighter/gameplay state. The player
-# actions are real host key events delivered to melonDS using its checked-in
-# keyboard mapping:
+# The player actions are real host key events delivered to melonDS using its
+# checked-in keyboard mapping:
 #   S         -> DS B -> source B_BUTTON
 #   Q         -> DS L -> port Z_TRIG mapping
 #   Down + S  -> DS Down + B -> source stick_y=-80 + B_BUTTON
 #
-# This avoids both remote writes into ARM9 DTCM and GDB inferior function
-# calls. BattleShip owns every fighter status transition observed below.
+# Charge/Bomb ownership never uses GDB function calls or direct status writes.
+# The lifecycle tail uses two bounded state levers after those real-input paths:
+# it publishes the same queued-damage fields that ftMainProcParams consumes and
+# later puts TopN below the source blast-zone bound, exactly like the established
+# stock-lastlife proof. BattleShip still owns the damage, death and rebirth
+# transitions and every charge mutation being asserted.
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
 . (Join-Path $PSScriptRoot 'lib\melonds.ps1')
@@ -209,6 +212,7 @@ end
 disable $_hit_bpnum
 end
 continue
+set $sam_gobj = fighter_gobj
 printf "TRACE INPUT_READY status=%d fkind=%d pkind=%d control_disable=%d\n", ((FTStruct *)fighter_gobj->user_data.p)->status_id, ((FTStruct *)fighter_gobj->user_data.p)->fkind, ((FTStruct *)fighter_gobj->user_data.p)->pkind, ((FTStruct *)fighter_gobj->user_data.p)->is_control_disable
 tbreak ftSamusSpecialNStartSetStatus
 shell cmd /c echo ready>__CHARGE__
@@ -292,6 +296,186 @@ tbreak wpSamusBombExplodeProcUpdate
 continue
 set $bomb = (WPStruct *)weapon_gobj->user_data.p
 printf "TRACE BOMB_EXPLODE gobj=%p lifetime=%d size=%f\n", weapon_gobj, $bomb->lifetime, $bomb->attack_coll.size
+
+# Lifecycle matrix, still source-owned. First prove a stored shot survives
+# ordinary damage after Samus has cancelled back to a common status.
+tbreak ftCommonWaitProcInterrupt if (fighter_gobj == $sam_gobj) && (((FTStruct *)fighter_gobj->user_data.p)->is_control_disable == 0)
+continue
+set $sam = (FTStruct *)$sam_gobj->user_data.p
+printf "TRACE LIFE_READY status=%d level=%d\n", $sam->status_id, $sam->passive_vars.samus.charge_level
+tbreak ftSamusSpecialNStartSetStatus
+shell cmd /c echo ready>__LIFE_CHARGE1__
+continue
+tbreak ftSamusSpecialNLoopProcUpdate if ((FTStruct *)fighter_gobj->user_data.p)->passive_vars.samus.charge_level >= 2
+continue
+set $sam = (FTStruct *)$sam_gobj->user_data.p
+set $life_stored = $sam->passive_vars.samus.charge_level
+printf "TRACE LIFE_STORE level=%d charge_gobj=%p\n", $life_stored, $sam->status_vars.samus.specialn.charge_gobj
+break ftCommonWaitSetStatus
+commands
+silent
+if (fighter_gobj != $sam_gobj)
+continue
+end
+disable $_hit_bpnum
+end
+shell cmd /c echo ready>__LIFE_CANCEL1__
+continue
+set $sam = (FTStruct *)$sam_gobj->user_data.p
+set $life_cancel = $sam->passive_vars.samus.charge_level
+printf "TRACE LIFE_CANCEL level=%d stored=%d preserved=%d\n", $life_cancel, $life_stored, ($life_cancel >= $life_stored)
+finish
+
+# Publish one ordinary queued hit at the same owner seam that consumes collision
+# results. No damage/status function is called from GDB; ftMainProcParams owns
+# the proc_damage dispatch and the common damage transition.
+break ftMainProcParams
+commands
+silent
+if (fighter_gobj != $sam_gobj)
+continue
+end
+disable $_hit_bpnum
+end
+continue
+set $sam = (FTStruct *)$sam_gobj->user_data.p
+set $stored_damage_level = $sam->passive_vars.samus.charge_level
+printf "TRACE STORED_DAMAGE_ARM status=%d level=%d proc_damage=%p\n", $sam->status_id, $sam->passive_vars.samus.charge_level, $sam->proc_damage
+set $sam->damage_queue = 1
+set $sam->damage_knockback = 50.0
+set $sam->damage_kind = 1
+set $sam->damage_angle = 0
+set $sam->damage_lr = 1
+set $sam->damage_index = 0
+set $sam->damage_element = 0
+set $sam->damage_player_num = 1
+set $sam->hitlag_mul = 1.0
+tbreak ndsBaseFTCommonDamageInitDamageVars
+continue
+set $sam = (FTStruct *)$sam_gobj->user_data.p
+printf "TRACE STORED_DAMAGE_ENTER level=%d proc_damage=%p\n", $sam->passive_vars.samus.charge_level, $sam->proc_damage
+break ftCommonWaitSetStatus
+commands
+silent
+if (fighter_gobj != $sam_gobj)
+continue
+end
+disable $_hit_bpnum
+end
+continue
+set $sam = (FTStruct *)$sam_gobj->user_data.p
+printf "TRACE STORED_DAMAGE_RECOVER level=%d expected=%d preserved=%d\n", $sam->passive_vars.samus.charge_level, $stored_damage_level, ($sam->passive_vars.samus.charge_level == $stored_damage_level)
+finish
+
+# Re-enter Charge Shot and take the same queued hit while the source neutral-
+# special status owns proc_damage. BattleShip must destroy the held weapon and
+# clear charge_level through ftSamusSpecialNProcDamage before common damage.
+tbreak ftSamusSpecialNStartSetStatus
+shell cmd /c echo ready>__LIFE_CHARGE2__
+continue
+tbreak ftSamusSpecialNLoopSetStatus
+continue
+finish
+set $sam = (FTStruct *)$sam_gobj->user_data.p
+printf "TRACE ACTIVE_DAMAGE_ARM level=%d proc_damage=%p charge_gobj=%p\n", $sam->passive_vars.samus.charge_level, $sam->proc_damage, $sam->status_vars.samus.specialn.charge_gobj
+break ftMainProcParams
+commands
+silent
+if (fighter_gobj != $sam_gobj)
+continue
+end
+disable $_hit_bpnum
+end
+continue
+set $sam = (FTStruct *)$sam_gobj->user_data.p
+set $sam->damage_queue = 1
+set $sam->damage_knockback = 50.0
+set $sam->damage_kind = 1
+set $sam->damage_angle = 0
+set $sam->damage_lr = 1
+set $sam->damage_index = 0
+set $sam->damage_element = 0
+set $sam->damage_player_num = 1
+set $sam->hitlag_mul = 1.0
+tbreak ftSamusSpecialNProcDamage
+continue
+set $sam = (FTStruct *)$sam_gobj->user_data.p
+set $active_pre = $sam->passive_vars.samus.charge_level
+printf "TRACE ACTIVE_DAMAGE_CALLBACK level=%d charge_gobj=%p\n", $active_pre, $sam->status_vars.samus.specialn.charge_gobj
+tbreak wpMainDestroyWeapon
+continue
+printf "TRACE ACTIVE_DAMAGE_DESTROY weapon_gobj=%p\n", weapon_gobj
+finish
+set $sam = (FTStruct *)$sam_gobj->user_data.p
+printf "TRACE ACTIVE_DAMAGE_RESET level=%d destroy_return=1 cleared=%d\n", $sam->passive_vars.samus.charge_level, (($active_pre > 0) && ($sam->passive_vars.samus.charge_level == 0))
+break ftCommonWaitSetStatus
+commands
+silent
+if (fighter_gobj != $sam_gobj)
+continue
+end
+disable $_hit_bpnum
+end
+continue
+set $sam = (FTStruct *)$sam_gobj->user_data.p
+printf "TRACE ACTIVE_DAMAGE_RECOVER level=%d status=%d\n", $sam->passive_vars.samus.charge_level, $sam->status_id
+finish
+
+# Finally store a fresh shot, cancel it, and let the source blast-zone/death/
+# rebirth ladder run. Death itself leaves the passive value alone here; the
+# reset belongs to ftManagerInitFighter inside ftCommonRebirthDownSetStatus.
+tbreak ftSamusSpecialNStartSetStatus
+shell cmd /c echo ready>__LIFE_CHARGE3__
+continue
+tbreak ftSamusSpecialNLoopProcUpdate if ((FTStruct *)fighter_gobj->user_data.p)->passive_vars.samus.charge_level >= 2
+continue
+set $sam = (FTStruct *)$sam_gobj->user_data.p
+set $ko_charge = $sam->passive_vars.samus.charge_level
+printf "TRACE KO_STORE level=%d\n", $ko_charge
+break ftCommonWaitSetStatus
+commands
+silent
+if (fighter_gobj != $sam_gobj)
+continue
+end
+disable $_hit_bpnum
+end
+shell cmd /c echo ready>__LIFE_CANCEL3__
+continue
+set $sam = (FTStruct *)$sam_gobj->user_data.p
+set $ko_stored = $sam->passive_vars.samus.charge_level
+printf "TRACE KO_CANCEL level=%d pre=%d preserved=%d\n", $ko_stored, $ko_charge, ($ko_stored >= $ko_charge)
+finish
+tbreak ifCommonBattleUpdateInterfaceAll
+continue
+set $sam = (FTStruct *)$sam_gobj->user_data.p
+set $sam->joints[0]->translate.vec.f.y = gMPCollisionGroundData->map_bound_bottom - 3000.0
+printf "TRACE KO_ARM level=%d y=%f bound=%f\n", $sam->passive_vars.samus.charge_level, $sam->joints[0]->translate.vec.f.y, gMPCollisionGroundData->map_bound_bottom
+tbreak ftCommonDeadDownSetStatus
+continue
+set $sam = (FTStruct *)$sam_gobj->user_data.p
+printf "TRACE KO_DEAD_ENTER level=%d stock=%d\n", $sam->passive_vars.samus.charge_level, $sam->stock_count
+finish
+set $sam = (FTStruct *)$sam_gobj->user_data.p
+printf "TRACE KO_DEAD_POST level=%d status=%d\n", $sam->passive_vars.samus.charge_level, $sam->status_id
+tbreak ftCommonRebirthDownSetStatus
+continue
+set $sam = (FTStruct *)$sam_gobj->user_data.p
+printf "TRACE REBIRTH_ENTER level=%d recoil=%d\n", $sam->passive_vars.samus.charge_level, $sam->passive_vars.samus.charge_recoil
+break ftManagerInitFighter
+commands
+silent
+if (fighter_gobj != $sam_gobj)
+continue
+end
+disable $_hit_bpnum
+end
+continue
+set $sam = (FTStruct *)$sam_gobj->user_data.p
+printf "TRACE REBIRTH_INIT_BEFORE level=%d recoil=%d\n", $sam->passive_vars.samus.charge_level, $sam->passive_vars.samus.charge_recoil
+finish
+set $sam = (FTStruct *)$sam_gobj->user_data.p
+printf "TRACE REBIRTH_INIT_AFTER level=%d recoil=%d cleared=%d\n", $sam->passive_vars.samus.charge_level, $sam->passive_vars.samus.charge_recoil, (($sam->passive_vars.samus.charge_level == 0) && ($sam->passive_vars.samus.charge_recoil == 0))
 detach
 quit
 '@
@@ -301,6 +485,11 @@ $commands = $commands.Replace('__CANCEL__', (Get-GdbStagePath 'cancel'))
 $commands = $commands.Replace('__RESUME__', (Get-GdbStagePath 'resume'))
 $commands = $commands.Replace('__RELEASE__', (Get-GdbStagePath 'release'))
 $commands = $commands.Replace('__BOMB__', (Get-GdbStagePath 'bomb'))
+$commands = $commands.Replace('__LIFE_CHARGE1__', (Get-GdbStagePath 'life-charge1'))
+$commands = $commands.Replace('__LIFE_CANCEL1__', (Get-GdbStagePath 'life-cancel1'))
+$commands = $commands.Replace('__LIFE_CHARGE2__', (Get-GdbStagePath 'life-charge2'))
+$commands = $commands.Replace('__LIFE_CHARGE3__', (Get-GdbStagePath 'life-charge3'))
+$commands = $commands.Replace('__LIFE_CANCEL3__', (Get-GdbStagePath 'life-cancel3'))
 Set-Content -LiteralPath $gdbScript -Value $commands
 
 $configState = $null
@@ -339,6 +528,26 @@ try {
     Start-Sleep -Milliseconds 100
     Send-MelonDownB -Window $window
 
+    Wait-Stage -Name 'life-charge1' -GdbProcess $gdbProcess -Deadline $deadline
+    Start-Sleep -Milliseconds 100
+    Send-MelonKey -Window $window -Key $VK_S
+
+    Wait-Stage -Name 'life-cancel1' -GdbProcess $gdbProcess -Deadline $deadline
+    Start-Sleep -Milliseconds 100
+    Send-MelonKey -Window $window -Key $VK_Q
+
+    Wait-Stage -Name 'life-charge2' -GdbProcess $gdbProcess -Deadline $deadline
+    Start-Sleep -Milliseconds 100
+    Send-MelonKey -Window $window -Key $VK_S
+
+    Wait-Stage -Name 'life-charge3' -GdbProcess $gdbProcess -Deadline $deadline
+    Start-Sleep -Milliseconds 100
+    Send-MelonKey -Window $window -Key $VK_S
+
+    Wait-Stage -Name 'life-cancel3' -GdbProcess $gdbProcess -Deadline $deadline
+    Start-Sleep -Milliseconds 100
+    Send-MelonKey -Window $window -Key $VK_Q
+
     while ((Get-Date) -lt $deadline) {
         $gdbProcess.Refresh()
         if ($gdbProcess.HasExited) { break }
@@ -373,6 +582,7 @@ New-Item -ItemType Directory -Force -Path (Split-Path -Parent $Artifact) | Out-N
 $hash = (Get-FileHash -LiteralPath $rom -Algorithm SHA256).Hash
 @(
     "SAMUS_OWNER_HOST_INPUT=melonDS keyboard S/Q/Down+S",
+    "SAMUS_OWNER_LIFECYCLE_LEVERS=ftMainProcParams queued damage + source blast-zone TopN",
     "ROM_SHA256=$hash",
     "BUILD=$Build",
     "TARGET=$Target"
@@ -392,7 +602,20 @@ foreach ($required in @(
     'TRACE BOMB_MAKE ',
     'TRACE BOMB_CREATED gobj=0x[1-9a-fA-F]',
     'TRACE BOMB_JUMP status=230 ga=1 vel_y=[1-9][0-9]*\.[0-9]+',
-    'TRACE BOMB_EXPLODE gobj=0x[1-9a-fA-F][0-9a-fA-F]* lifetime=6 size=180\.000000'
+    'TRACE BOMB_EXPLODE gobj=0x[1-9a-fA-F][0-9a-fA-F]* lifetime=6 size=180\.000000',
+    'TRACE LIFE_STORE level=[2-7] charge_gobj=0x[1-9a-fA-F]',
+    'TRACE LIFE_CANCEL level=[2-7] stored=[2-7] preserved=1',
+    'TRACE STORED_DAMAGE_ARM status=10 level=[2-7] proc_damage=(?:0x0|\(nil\))',
+    'TRACE STORED_DAMAGE_RECOVER level=[2-7] expected=[2-7] preserved=1',
+    'TRACE ACTIVE_DAMAGE_ARM level=[2-7] proc_damage=0x[1-9a-fA-F][0-9a-fA-F]* charge_gobj=0x[1-9a-fA-F]',
+    'TRACE ACTIVE_DAMAGE_CALLBACK level=[2-7] charge_gobj=0x[1-9a-fA-F]',
+    'TRACE ACTIVE_DAMAGE_DESTROY weapon_gobj=0x[1-9a-fA-F]',
+    'TRACE ACTIVE_DAMAGE_RESET level=0 destroy_return=1 cleared=1',
+    'TRACE KO_CANCEL level=[2-7] pre=[2-7] preserved=1',
+    'TRACE KO_DEAD_ENTER level=[2-7] stock=',
+    'TRACE KO_DEAD_POST level=[2-7] status=',
+    'TRACE REBIRTH_ENTER level=[2-7] recoil=',
+    'TRACE REBIRTH_INIT_AFTER level=0 recoil=0 cleared=1'
 )) {
     if ($text -notmatch $required) {
         throw "Samus owner proof missing required marker: $required"
