@@ -1,6 +1,6 @@
 # Source Refactor Plan
 
-**Status:** Structural implementation complete; further semantic cleanup is evidence-driven
+**Status:** Structural implementation complete; current evidence-driven semantic cleanup sweep complete
 **Date:** 2026-08-27
 **Primary scope:** `src/port/*`, `src/nds/nds_renderer.c`, and `src/nds/nds_menu_shell.c`
 
@@ -11,6 +11,14 @@
 - Phase 2 complete for the proven-retired immediate Mario/Fox proof chain;
   current accepted builds did not link that surface (`767475779cc`). Further
   proof deletion remains evidence-driven rather than a refactor requirement.
+  The follow-on evidence-driven sweep removed additional retired renderer,
+  fighter-model, movement, FTMain collision/hit-pipeline, and damage proof
+  surfaces in independently verified checkpoints (`ad2b2742a6f`,
+  `fb92ede6f26`, `e25f20c2f6d`, `1d2d969efcf`, `cd488d1d7a2`, and
+  `d323758e639`). The retained diagnostic/proof slices now have no further
+  whole-source-unreachable functions under the conservative reachability
+  sweep; conditionally live renderer/gameplay/import compatibility paths were
+  deliberately retained.
 - Phase 3 complete: after the unrelated active work was settled separately,
   `reloc_backend_renderer_dl.c` was split into five ordered same-TU owner
   slices while preserving `scene_backend.o` (`ad6caa9d829`). The pre/post
@@ -18,7 +26,10 @@
 - Phase 4 complete: `nds_renderer.c` is an ordered textual-slice aggregator and
   still produces one executable-equivalent `nds_renderer.o` (`dd340c70da2`).
 - Phase 5 remains deliberately opportunistic: no semantic renderer ownership
-  change is required merely to complete the structural refactor.
+  change is required merely to complete the structural refactor. The retired
+  renderer proof paths proven absent from accepted builds were removed in
+  `ad2b2742a6f`; native-stage preparation and other conditionally live renderer
+  paths remain intact.
 - Phase 6 complete for `taskman_seam.c` and `diagnostics.c`
   (`f7b8160d88b`) and for `nds_menu_shell.c` (`33ff8b4e476`). The menu shell
   split preserves one `nds_menu_shell.o`; its pre/post symbol table and full
@@ -454,8 +465,26 @@ Do **not**:
 
 ## Completion / Future Cleanup
 
-The planned structural decomposition is complete. No additional translation-
+The planned structural decomposition is complete, and the current semantic
+cleanup sweep has reached the evidence boundary. No additional translation-
 unit or ownership split is required to finish this refactor.
+
+The final semantic sweep rechecked the large port/backend slices after the
+deletions. The remaining apparent unused-function warnings are backed by real
+source callers in conditional configurations (for example native-stage,
+fighter-renderer, collision, natural-combat, and imported-manager paths), so
+they are not treated as obsolete merely because the current focused build does
+not instantiate them.
+
+Focused aggregate compilation of `scene_backend.o` continues to succeed after
+the cleanup. The normal `build.ps1` wrapper cannot currently reach project
+compilation because the pre-existing vendored BattleShip validation fails for
+`src/mn/mncommon/mnstartup.c`: expected SHA-256
+`72D93CFD77F1F640A4CC1CD3D4A49C56336C9D605C9EC3CA8690BCCEF6079803`,
+actual SHA-256
+`269DC61008AA367030A020D6226D2E9115625A9801087BD97ABE2B74114D91C5`.
+The NTSC-U v1.0 ROM validation passes before that point. Do not modify the
+read-only `decomp/` tree merely to unblock this refactor verification.
 
 Future cleanup is intentionally evidence-driven rather than part of structural
 completion:
