@@ -11282,32 +11282,6 @@ static void ndsFTMainProcPhysicsLagUpdateSlice(GObj *fighter_gobj)
     }
 }
 
-static void ndsFTMainProcUpdateInterruptPassiveSlice(GObj *fighter_gobj)
-{
-    FTStruct *fp = ftGetStruct(fighter_gobj);
-
-    if (fp == NULL)
-    {
-        return;
-    }
-
-    // ponytail: passive/update/interrupt slice only; full ftmain.c is later.
-    if (fp->proc_passive != NULL)
-    {
-        fp->proc_passive(fighter_gobj);
-    }
-    if (fp->hitlag_tics == 0)
-    {
-        if (fp->proc_update != NULL)
-        {
-            fp->proc_update(fighter_gobj);
-        }
-        if (fp->proc_interrupt != NULL)
-        {
-            fp->proc_interrupt(fighter_gobj);
-        }
-    }
-}
 
 static sb32 ndsMPCommonProcFighterDamageFloorOnly(MPCollData *coll_data,
                                                   GObj *fighter_gobj,

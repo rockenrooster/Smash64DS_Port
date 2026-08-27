@@ -1519,14 +1519,6 @@ static sb32 ndsFighterStructIsTrackedPointer(const void *ptr)
     return FALSE;
 }
 
-static FTStruct *ndsFighterMarioFoxProofStructForSlot(u32 slot)
-{
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
-    return ndsFighterManagerLiveStruct(slot);
-#else
-    return (slot < GMCOMMON_PLAYERS_MAX) ? &sNdsFighterStructPool[slot] : NULL;
-#endif
-}
 
 static GObj *ndsFighterMarioFoxProofGObjForSlot(u32 slot)
 {
