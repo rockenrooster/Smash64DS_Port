@@ -11,11 +11,11 @@ A 128-frame no-build sizing probe on the same ROM records **60 native-stage
 owner rejects, first/last reason 6 (`ndsRendererPrepareNativeStageOwner`)**,
 abort/post-arm rejects zero. That stage seam is the next performance lead.
 P2-3f11's PAL16 admission fix remains landed and the stress arm remains the real
-argmax. P2-3f17 closed Falcon Dive's shared `mpCommonProcFighterProject` source
-divergence; **P2-3f18 now proves the live grab -> capture -> throw -> release ->
-regrab chain twice**, with both immunity masks cleared and capture pointers NULL
-between grabs. Open Falcon work is 356 FuraSleep plus the speed-extreme
-traction/landing/edge spot-check. P2-3r17 stays DEFERRED.
+argmax. P2-3f17/f18 close Falcon Dive's shared project seam and live
+grab/release/regrab chain. **P2-3f19 closes Falcon's movement owner pass too:**
+Run 75, RunBrake 75->72.75, fast-fall -100 -> Heavy landing, and Run(16) ->
+Fall(26) at Dream Land's ledge all execute through source common code. Falcon's
+only fighter-specific open gap is audio 356 FuraSleep. P2-3r17 stays DEFERRED.
 
 ## State
 

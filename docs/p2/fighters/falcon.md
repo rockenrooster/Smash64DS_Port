@@ -552,8 +552,16 @@ match. Re-read it on Results / Sudden Death / pause zoom, then cut.
    and both catch/capture pointers are NULL. The same Falcon then repeats that
    whole chain a second time in the same match, proving regrab. Artifact:
    `artifacts/verification/2026-08-26_p2-3f18-falcon-dive-owner.txt`.
-   **Still open:** the speed extremes (fastest fall + fastest run: traction,
-   landing, edge slips).
+   **Speed extremes are CLOSED by P2-3f19 (2026-08-26).** REGION_US source
+   attributes are `traction=1.8`, `run_speed=75`, `gravity=3.4`,
+   `tvel_base=66`, `tvel_fast=100`, `air_accel=0.04`, `air_speed_max_x=31`.
+   Three fresh live proofs exercise those values through the source common
+   movement code: Run enters at 75 and RunBrake steps 75 -> 72.75 (the exact
+   `1.8 * 1.25 = 2.25` friction); a C-button jump reaches FallAerial, fast-fall
+   sets `vel_air.y=-100`, and the source landing chooser selects Heavy (32);
+   a separate full-speed run reaches Run (16) then Dream Land's ground-break
+   map path transitions it to Fall (26) at the ledge. No status was injected
+   and no gameplay code changed.
 3. **A four-distinct-kind budget answer — CLOSED by board row P2-3f9
    (2026-08-25).** The shell-driven argmax match was measured, it halted, and
    the two levers named here were taken: the graphics-heap reservation
@@ -656,7 +664,9 @@ match. Re-read it on Results / Sudden Death / pause zoom, then cut.
       status chain, including release cleanup + immediate regrab (P2-3f18).
 - [x] Falcon Dive's 15-tick projected-collision window uses BattleShip's
       `mpCommonProcFighterProject -> mpCommonCheckFighterProject` seam (P2-3f17).
-- [ ] Fast-fall/landing/edge behavior spot-checks at speed extremes.
+- [x] Fast-fall/landing/edge behavior spot-checks at source speed extremes
+      (P2-3f19): Run 75, brake step 2.25, fast-fall -100, Heavy landing,
+      Run(16) -> Fall(26) at Dream Land's edge.
 - [x] Four-distinct-kind budget answered and the hang fixed (P2-3f9): measured
       from the shell, 378,048 B reclaimed, whole-match low-water 419,052 B.
 - [x] The four-kind match with Falcon RUNS: the "~30x" was a data abort in his
@@ -666,4 +676,6 @@ match. Re-read it on Results / Sudden Death / pause zoom, then cut.
 - [ ] `p2_fourcpu_stress` re-pointed to the argmax — blocked by P2-3f11 (the
       slot-3 fighter stops drawing when Falcon joins that arm), and the argmax
       is Mario/Fox/Captain/Donkey = 348,320 B, not the 335,824 B above.
-- [ ] Owner feel pass.
+- [x] Non-audio owner feel pass: Falcon Dive grab/regrab (P2-3f18) plus
+      movement extremes (P2-3f19). The remaining Falcon-specific gap is audio
+      cue 356 `FuraSleep`.
