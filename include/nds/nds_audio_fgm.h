@@ -5,7 +5,7 @@
 #include <sys/audio.h>
 
 #define NDS_AUDIO_FGM_PASS 0x46474d31u /* FGM1 */
-#define NDS_AUDIO_FGM_ENTRY_COUNT 181u
+#define NDS_AUDIO_FGM_ENTRY_COUNT 183u
 #define NDS_AUDIO_FGM_PHASE_COUNT 5u
 #define NDS_AUDIO_FGM_PHASE_COMPLETE_MASK 0x1fu
 #define NDS_AUDIO_FGM_KO_COUNT 5u
@@ -93,8 +93,8 @@
  * FoxAppearArwing 191 and DK's barrel arrival uses the shared ContainerSmash
  * 59. All three multi-note schedules are baked AOT; the runtime cache remains
  * 204800. */
-#define NDS_AUDIO_FGM_PACK_BYTES 1770008u
-#define NDS_AUDIO_FGM_PACK_MAPPING_SHA256_LO 0xeb6ba1dcu
+#define NDS_AUDIO_FGM_PACK_BYTES 1785424u
+#define NDS_AUDIO_FGM_PACK_MAPPING_SHA256_LO 0x64710073u
 #define NDS_AUDIO_FGM_CACHE_BYTES 204800u
 #define NDS_AUDIO_FGM_HANDLE_CAPACITY 8u
 #define NDS_AUDIO_FGM_FIDELITY_DEBT_PITCH_AUTOMATION (1u << 2)

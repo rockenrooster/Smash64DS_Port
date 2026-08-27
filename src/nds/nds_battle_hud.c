@@ -19,10 +19,10 @@
  * changes. At four portraits (5..8) and stock base 8, player 0's stock palette
  * overwrote the FOURTH portrait's -- Donkey's -- so a Donkey HUD portrait drew
  * in whatever colours player 0's stock icon last needed. Admitting Falcon as a
- * fifth portrait would have taken the fifth slot too. The sub OBJ engine has
- * sixteen 4bpp palettes: damage 0..3, white 4, portraits 5..9, stock 10..13,
- * and 14..15 spare. */
-#define NDS_BATTLE_HUD_STOCK_PALETTE_BASE 10u
+ * fifth portrait would have taken the fifth slot too. Samus is the sixth
+ * source portrait, so the current sub OBJ split is damage 0..3, white 4,
+ * portraits 5..10, stock 11..14, and palette 15 spare. */
+#define NDS_BATTLE_HUD_STOCK_PALETTE_BASE 11u
 _Static_assert(NDS_BATTLE_HUD_STOCK_PALETTE_BASE >=
                    (NDS_BATTLE_HUD_PORTRAIT_PALETTE_BASE +
                     NDS_BATTLE_HUD_PORTRAITS),
@@ -330,6 +330,12 @@ static void ndsBattleHudStockPalette(u32 player, u32 fkind, u32 costume)
         if (costume >= 6u) costume = 0u;
         source = kNdsBattleHudCaptainStockPalette[costume];
     }
+    else if (fkind == (u32)nFTKindSamus)
+    {
+        /* 217_SamusMain.c exposes five source stock LUTs. */
+        if (costume >= 5u) costume = 0u;
+        source = kNdsBattleHudSamusStockPalette[costume];
+    }
     else
     {
         if (costume >= 5u) costume = 0u;
@@ -468,6 +474,7 @@ static void ndsBattleHudDrawStock(u32 player, u32 fkind, u32 *next_id)
     else if (fkind == (u32)nFTKindLuigi) owner = 2u;
     else if (fkind == (u32)nFTKindDonkey) owner = 3u;
     else if (fkind == (u32)nFTKindCaptain) owner = 4u;
+    else if (fkind == (u32)nFTKindSamus) owner = 5u;
     else return;
 
     if (stock == 0x7fu)
@@ -533,6 +540,7 @@ static void ndsBattleHudDrawPortrait(u32 player, u32 fkind, u32 *next_id)
     else if (fkind == (u32)nFTKindLuigi) owner = 2u;
     else if (fkind == (u32)nFTKindDonkey) owner = 3u;
     else if (fkind == (u32)nFTKindCaptain) owner = 4u;
+    else if (fkind == (u32)nFTKindSamus) owner = 5u;
     else return;
 
     ndsBattleHudSetOam(next_id, sNdsBattleHudPlayerCenterX[player] - 8,

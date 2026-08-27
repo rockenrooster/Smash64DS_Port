@@ -1395,6 +1395,19 @@ enum {
     nFTDonkeyMotionHeavyThrowB,
     nFTDonkeyMotionHeavyThrowF4,
     nFTDonkeyMotionHeavyThrowB4,
+    /* BattleShip ftsam​us.h:40-56. Samus's complete special-motion window is
+     * eleven contiguous entries at the common special boundary. */
+    nFTSamusMotionAppearR = nFTCommonMotionSpecialStart,
+    nFTSamusMotionAppearL,
+    nFTSamusMotionSpecialNStart,
+    nFTSamusMotionSpecialNLoop,
+    nFTSamusMotionSpecialNEnd,
+    nFTSamusMotionSpecialAirNStart,
+    nFTSamusMotionSpecialAirNEnd,
+    nFTSamusMotionSpecialHi,
+    nFTSamusMotionSpecialAirHi,
+    nFTSamusMotionSpecialLw,
+    nFTSamusMotionSpecialAirLw,
     nFTFoxMotionAttack100Start = nFTCommonMotionSpecialStart,
     nFTFoxMotionAttack100Loop,
     nFTFoxMotionAttack100End,
@@ -1495,6 +1508,19 @@ enum {
     nFTDonkeyStatusHeavyThrowF4,
     nFTDonkeyStatusHeavyThrowB4,
     nFTDonkeyStatusHeavyThrowEnd = nFTDonkeyStatusHeavyThrowB4,
+    /* BattleShip ftsam​us.h:58-72. Keep the status window source-exact for
+     * both the source special bodies and ftcomputer's Samus state tests. */
+    nFTSamusStatusAppearR = nFTCommonStatusSpecialStart,
+    nFTSamusStatusAppearL,
+    nFTSamusStatusSpecialNStart,
+    nFTSamusStatusSpecialNLoop,
+    nFTSamusStatusSpecialNEnd,
+    nFTSamusStatusSpecialAirNStart,
+    nFTSamusStatusSpecialAirNEnd,
+    nFTSamusStatusSpecialHi,
+    nFTSamusStatusSpecialAirHi,
+    nFTSamusStatusSpecialLw,
+    nFTSamusStatusSpecialAirLw,
     nFTFoxStatusAttack100Start = nFTCommonStatusSpecialStart,
     nFTFoxStatusAttack100Loop,
     nFTFoxStatusAttack100End,
@@ -4263,6 +4289,7 @@ sb32 ftMainCheckAddGroundObstacle(GObj *gobj,
                                   sb32 (*proc_update)(GObj *, GObj *, s32 *));
 void ftMainClearGroundObstacle(GObj *gobj);
 void ftPhysicsSetGroundVelAbsStickRange(FTStruct *fp, f32 vel, f32 friction);
+void ftPhysicsSetGroundVelStickRange(FTStruct *fp, f32 vel, f32 friction);
 void ftPhysicsSetGroundVelFriction(FTStruct *fp, f32 friction);
 void ftPhysicsSetGroundVelTransferAir(GObj *fighter_gobj);
 void ftPhysicsApplyAirVelDrift(GObj *fighter_gobj);

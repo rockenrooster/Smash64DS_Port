@@ -635,6 +635,159 @@
     X(0x67eu, 512u) \
     X(0x67fu, 2400u)
 
+#define NDS_P2_SAMUS_ALLOC_SIZE_ROWS(X) \
+    X(0xd9u, 85296u) \
+    X(0x3b9u, 1088u) \
+    X(0x3bau, 1072u) \
+    X(0x3bbu, 1344u) \
+    X(0x3bcu, 1296u) \
+    X(0x3bdu, 848u) \
+    X(0x3beu, 2192u) \
+    X(0x3bfu, 1760u) \
+    X(0x3c0u, 1552u) \
+    X(0x3c1u, 1280u) \
+    X(0x3c2u, 2512u) \
+    X(0x3c3u, 1056u) \
+    X(0x3c4u, 2224u) \
+    X(0x3c5u, 2768u) \
+    X(0x3c6u, 2368u) \
+    X(0x3c7u, 832u) \
+    X(0x3c8u, 832u) \
+    X(0x3c9u, 1008u) \
+    X(0x3cau, 1056u) \
+    X(0x3cbu, 848u) \
+    X(0x3ccu, 1136u) \
+    X(0x3cdu, 2432u) \
+    X(0x3ceu, 1408u) \
+    X(0x3cfu, 752u) \
+    X(0x3d0u, 6640u) \
+    X(0x3d1u, 1792u) \
+    X(0x3d2u, 2480u) \
+    X(0x3d3u, 2368u) \
+    X(0x3d4u, 1872u) \
+    X(0x3d5u, 2192u) \
+    X(0x3d6u, 3456u) \
+    X(0x3d7u, 1680u) \
+    X(0x3d8u, 2656u) \
+    X(0x3d9u, 2336u) \
+    X(0x3dau, 1664u) \
+    X(0x3dbu, 2288u) \
+    X(0x3dcu, 3136u) \
+    X(0x3ddu, 2192u) \
+    X(0x3deu, 2336u) \
+    X(0x3dfu, 2784u) \
+    X(0x3e0u, 3536u) \
+    X(0x3e1u, 1136u) \
+    X(0x3e2u, 1424u) \
+    X(0x3e3u, 752u) \
+    X(0x3e4u, 1248u) \
+    X(0x3e5u, 2048u) \
+    X(0x3e6u, 2144u) \
+    X(0x3e7u, 1840u) \
+    X(0x3e8u, 1824u) \
+    X(0x3e9u, 2576u) \
+    X(0x3eau, 2880u) \
+    X(0x3ebu, 2624u) \
+    X(0x3ecu, 2352u) \
+    X(0x3edu, 2512u) \
+    X(0x3eeu, 2448u) \
+    X(0x3efu, 3456u) \
+    X(0x3f0u, 3280u) \
+    X(0x3f1u, 2512u) \
+    X(0x3f2u, 1472u) \
+    X(0x3f3u, 736u) \
+    X(0x3f4u, 1136u) \
+    X(0x3f5u, 2624u) \
+    X(0x3f6u, 2832u) \
+    X(0x3f7u, 4288u) \
+    X(0x3f8u, 992u) \
+    X(0x3f9u, 4416u) \
+    X(0x3fau, 4416u) \
+    X(0x3fbu, 832u) \
+    X(0x3fcu, 2496u) \
+    X(0x3fdu, 912u) \
+    X(0x3feu, 848u) \
+    X(0x3ffu, 1296u) \
+    X(0x400u, 1072u) \
+    X(0x401u, 848u) \
+    X(0x402u, 1184u) \
+    X(0x403u, 960u) \
+    X(0x404u, 2480u) \
+    X(0x405u, 816u) \
+    X(0x406u, 1120u) \
+    X(0x407u, 1136u) \
+    X(0x408u, 784u) \
+    X(0x409u, 1056u) \
+    X(0x40au, 1872u) \
+    X(0x40bu, 832u) \
+    X(0x40cu, 1360u) \
+    X(0x40du, 816u) \
+    X(0x40eu, 2704u) \
+    X(0x40fu, 1024u) \
+    X(0x410u, 1872u) \
+    X(0x411u, 784u) \
+    X(0x412u, 2992u) \
+    X(0x413u, 912u) \
+    X(0x414u, 2608u) \
+    X(0x415u, 1168u) \
+    X(0x416u, 1664u) \
+    X(0x417u, 1920u) \
+    X(0x418u, 1680u) \
+    X(0x419u, 2384u) \
+    X(0x41au, 1104u) \
+    X(0x41bu, 1840u) \
+    X(0x41cu, 1968u) \
+    X(0x41du, 1936u) \
+    X(0x41eu, 2688u) \
+    X(0x41fu, 2352u) \
+    X(0x420u, 2352u) \
+    X(0x421u, 2688u) \
+    X(0x422u, 3312u) \
+    X(0x423u, 2336u) \
+    X(0x424u, 1648u) \
+    X(0x425u, 1872u) \
+    X(0x426u, 2784u) \
+    X(0x427u, 2016u) \
+    X(0x428u, 2416u) \
+    X(0x429u, 2304u) \
+    X(0x42au, 2096u) \
+    X(0x42bu, 1920u) \
+    X(0x42cu, 1904u) \
+    X(0x42du, 1984u) \
+    X(0x42eu, 2080u) \
+    X(0x42fu, 3888u) \
+    X(0x430u, 5232u) \
+    X(0x431u, 3024u) \
+    X(0x432u, 3184u) \
+    X(0x433u, 3104u) \
+    X(0x434u, 3120u) \
+    X(0x435u, 3152u) \
+    X(0x436u, 3920u) \
+    X(0x437u, 3632u) \
+    X(0x438u, 2272u) \
+    X(0x439u, 2368u) \
+    X(0x43au, 2752u) \
+    X(0x43bu, 2320u) \
+    X(0x43cu, 1664u) \
+    X(0x43du, 2736u) \
+    X(0x43eu, 1376u) \
+    X(0x43fu, 1680u) \
+    X(0x440u, 1920u) \
+    X(0x441u, 1360u) \
+    X(0x442u, 5376u) \
+    X(0x443u, 5920u) \
+    X(0x444u, 1216u) \
+    X(0x445u, 768u) \
+    X(0x446u, 1440u) \
+    X(0x447u, 1072u) \
+    X(0x448u, 1632u) \
+    X(0x449u, 2144u) \
+    X(0x44au, 2128u) \
+    X(0x44bu, 2672u) \
+    X(0x44cu, 2992u) \
+    X(0x44du, 384u) \
+    X(0x44eu, 2080u)
+
 #define NDS_P2_LUIGI_ANIM_FIRST 0x44fu
 #define NDS_P2_LUIGI_ANIM_LAST 0x45au
 #define NDS_P2_LUIGI_ANIM_COUNT 12u
@@ -1014,5 +1167,177 @@
     X(llFTCaptainAnimAppearAirFileID, 0x670u) \
     X(llFTCaptainAnimBlueFalcon2FileID, 0x673u) \
     X(llFTCaptainAnimBlueFalcon1FileID, 0x672u)
+
+#define NDS_P2_SAMUS_ANIM_FIRST 0x3b9u
+#define NDS_P2_SAMUS_ANIM_LAST 0x44eu
+#define NDS_P2_SAMUS_ANIM_COUNT 150u
+#define NDS_P2_SAMUS_ANIM_PATH_STEM "FTSamusAnim"
+
+#define NDS_P2_SAMUS_CORE_ASSET_ROWS(X) \
+    X(llSamusMainFileID, 0xd9u, "nitro:/reloc/reloc_fighters_main/SamusMain") \
+    X(llSamusMainMotionFileID, 0xd8u, "nitro:/reloc/reloc_fighters_main/SamusMainMotion") \
+    X(llSamusModelFileID, 0x140u, "nitro:/reloc/reloc_fighters_main/SamusModel") \
+    X(llSamusShieldPoseFileID, 0x142u, "nitro:/reloc/reloc_fighters_main/SamusShieldPose") \
+    X(llSamusSpecial1FileID, 0xdau, "nitro:/reloc/reloc_fighters_main/SamusSpecial1") \
+    X(llSamusSpecial2FileID, 0x15du, "nitro:/reloc/reloc_fighters_main/SamusSpecial2") \
+    X(llSamusSpecial3FileID, 0x141u, "nitro:/reloc/reloc_fighters_main/SamusSpecial3")
+
+#define NDS_P2_SAMUS_ANIM_ASSET_ROWS(X) \
+    X(llFTSamusAnimEggLayFileID, 0x3b9u, "nitro:/reloc/reloc_animations/FTSamusAnim000") \
+    X(llFTSamusAnimStunLandDFileID, 0x3e5u, "nitro:/reloc/reloc_animations/FTSamusAnim044") \
+    X(llFTSamusAnimStunStartDFileID, 0x3e7u, "nitro:/reloc/reloc_animations/FTSamusAnim046") \
+    X(llFTSamusAnimWalk1FileID, 0x3bau, "nitro:/reloc/reloc_animations/FTSamusAnim001") \
+    X(llFTSamusAnimWalk2FileID, 0x3bbu, "nitro:/reloc/reloc_animations/FTSamusAnim002") \
+    X(llFTSamusAnimWalk3FileID, 0x3bcu, "nitro:/reloc/reloc_animations/FTSamusAnim003") \
+    X(llFTSamusAnimWalkEndFileID, 0x3bdu, "nitro:/reloc/reloc_animations/FTSamusAnim004") \
+    X(llFTSamusAnimDashFileID, 0x3beu, "nitro:/reloc/reloc_animations/FTSamusAnim005") \
+    X(llFTSamusAnimRunFileID, 0x3bfu, "nitro:/reloc/reloc_animations/FTSamusAnim006") \
+    X(llFTSamusAnimRunBrakeFileID, 0x3c0u, "nitro:/reloc/reloc_animations/FTSamusAnim007") \
+    X(llFTSamusAnimTurnFileID, 0x3c1u, "nitro:/reloc/reloc_animations/FTSamusAnim008") \
+    X(llFTSamusAnimTurnRunFileID, 0x3c2u, "nitro:/reloc/reloc_animations/FTSamusAnim009") \
+    X(llFTSamusAnimLandingAirXFileID, 0x3ccu, "nitro:/reloc/reloc_animations/FTSamusAnim019") \
+    X(llFTSamusAnimJumpFFileID, 0x3c3u, "nitro:/reloc/reloc_animations/FTSamusAnim010") \
+    X(llFTSamusAnimJumpBFileID, 0x3c4u, "nitro:/reloc/reloc_animations/FTSamusAnim011") \
+    X(llFTSamusAnimJumpAerialFFileID, 0x3c5u, "nitro:/reloc/reloc_animations/FTSamusAnim012") \
+    X(llFTSamusAnimJumpAerialBFileID, 0x3c6u, "nitro:/reloc/reloc_animations/FTSamusAnim013") \
+    X(llFTSamusAnimFallFileID, 0x3c7u, "nitro:/reloc/reloc_animations/FTSamusAnim014") \
+    X(llFTSamusAnimFallAerialFileID, 0x3c8u, "nitro:/reloc/reloc_animations/FTSamusAnim015") \
+    X(llFTSamusAnimCrouchFileID, 0x3c9u, "nitro:/reloc/reloc_animations/FTSamusAnim016") \
+    X(llFTSamusAnimCrouchIdleFileID, 0x3cau, "nitro:/reloc/reloc_animations/FTSamusAnim017") \
+    X(llFTSamusAnimCrouchEndFileID, 0x3cbu, "nitro:/reloc/reloc_animations/FTSamusAnim018") \
+    X(llFTSamusAnimShieldDropFileID, 0x3cdu, "nitro:/reloc/reloc_animations/FTSamusAnim020") \
+    X(llFTSamusAnimTeeterFileID, 0x3ceu, "nitro:/reloc/reloc_animations/FTSamusAnim021") \
+    X(llFTSamusAnimTeeterstartFileID, 0x3cfu, "nitro:/reloc/reloc_animations/FTSamusAnim022") \
+    X(llFTSamusAnimDamaged1FileID, 0x3d1u, "nitro:/reloc/reloc_animations/FTSamusAnim024") \
+    X(llFTSamusAnimDamaged2FileID, 0x3d2u, "nitro:/reloc/reloc_animations/FTSamusAnim025") \
+    X(llFTSamusAnimFalconDivePulledFileID, 0x3d3u, "nitro:/reloc/reloc_animations/FTSamusAnim026") \
+    X(llFTSamusAnimDamageX1FileID, 0x3d4u, "nitro:/reloc/reloc_animations/FTSamusAnim027") \
+    X(llFTSamusAnimDamageX2FileID, 0x3d5u, "nitro:/reloc/reloc_animations/FTSamusAnim028") \
+    X(llFTSamusAnimDamageX3FileID, 0x3d6u, "nitro:/reloc/reloc_animations/FTSamusAnim029") \
+    X(llFTSamusAnimDamaged3FileID, 0x3d7u, "nitro:/reloc/reloc_animations/FTSamusAnim030") \
+    X(llFTSamusAnimDamaged4FileID, 0x3d8u, "nitro:/reloc/reloc_animations/FTSamusAnim031") \
+    X(llFTSamusAnimDamaged5FileID, 0x3d9u, "nitro:/reloc/reloc_animations/FTSamusAnim032") \
+    X(llFTSamusAnimDamaged6FileID, 0x3dau, "nitro:/reloc/reloc_animations/FTSamusAnim033") \
+    X(llFTSamusAnimDamageAirFileID, 0x3dbu, "nitro:/reloc/reloc_animations/FTSamusAnim034") \
+    X(llFTSamusAnimDamaged7FileID, 0x3dcu, "nitro:/reloc/reloc_animations/FTSamusAnim035") \
+    X(llFTSamusAnimDamageFileID, 0x44du, "nitro:/reloc/reloc_animations/FTSamusAnim148") \
+    X(llFTSamusAnimDamageFlyX1FileID, 0x3ddu, "nitro:/reloc/reloc_animations/FTSamusAnim036") \
+    X(llFTSamusAnimDamageFlyX2FileID, 0x3deu, "nitro:/reloc/reloc_animations/FTSamusAnim037") \
+    X(llFTSamusAnimDamage2FileID, 0x3dfu, "nitro:/reloc/reloc_animations/FTSamusAnim038") \
+    X(llFTSamusAnimShieldBreakFileID, 0x3e0u, "nitro:/reloc/reloc_animations/FTSamusAnim039") \
+    X(llFTSamusAnimDamageFlyTopFileID, 0x3e1u, "nitro:/reloc/reloc_animations/FTSamusAnim040") \
+    X(llFTSamusAnimDamagedFileID, 0x3e2u, "nitro:/reloc/reloc_animations/FTSamusAnim041") \
+    X(llFTSamusAnimFallSpecialFileID, 0x3e3u, "nitro:/reloc/reloc_animations/FTSamusAnim042") \
+    X(llFTSamusAnimEnterPipeFileID, 0x43fu, "nitro:/reloc/reloc_animations/FTSamusAnim134") \
+    X(llFTSamusAnimExitPipeFileID, 0x440u, "nitro:/reloc/reloc_animations/FTSamusAnim135") \
+    X(llFTSamusAnimExitPipeWalkFileID, 0x441u, "nitro:/reloc/reloc_animations/FTSamusAnim136") \
+    X(llFTSamusAnimCeilingBonkFileID, 0x3e4u, "nitro:/reloc/reloc_animations/FTSamusAnim043") \
+    X(llFTSamusAnimStunLandUFileID, 0x3e6u, "nitro:/reloc/reloc_animations/FTSamusAnim045") \
+    X(llFTSamusAnimStunStartUFileID, 0x3e8u, "nitro:/reloc/reloc_animations/FTSamusAnim047") \
+    X(llFTSamusAnimTechFFileID, 0x3e9u, "nitro:/reloc/reloc_animations/FTSamusAnim048") \
+    X(llFTSamusAnimTechBFileID, 0x3eau, "nitro:/reloc/reloc_animations/FTSamusAnim049") \
+    X(llFTSamusAnimDownForwardDFileID, 0x3ebu, "nitro:/reloc/reloc_animations/FTSamusAnim050") \
+    X(llFTSamusAnimDownForwardUFileID, 0x3ecu, "nitro:/reloc/reloc_animations/FTSamusAnim051") \
+    X(llFTSamusAnimDownBackDFileID, 0x3edu, "nitro:/reloc/reloc_animations/FTSamusAnim052") \
+    X(llFTSamusAnimDownBackUFileID, 0x3eeu, "nitro:/reloc/reloc_animations/FTSamusAnim053") \
+    X(llFTSamusAnimDownAttackDFileID, 0x3efu, "nitro:/reloc/reloc_animations/FTSamusAnim054") \
+    X(llFTSamusAnimDownAttackUFileID, 0x3f0u, "nitro:/reloc/reloc_animations/FTSamusAnim055") \
+    X(llFTSamusAnimTechFileID, 0x3f1u, "nitro:/reloc/reloc_animations/FTSamusAnim056") \
+    X(llFTSamusAnimClangRecoilFileID, 0x3f2u, "nitro:/reloc/reloc_animations/FTSamusAnim057") \
+    X(llFTSamusAnimCliffCatchFileID, 0x405u, "nitro:/reloc/reloc_animations/FTSamusAnim076") \
+    X(llFTSamusAnimCliffWaitFileID, 0x406u, "nitro:/reloc/reloc_animations/FTSamusAnim077") \
+    X(llFTSamusAnimCliffQuickFileID, 0x407u, "nitro:/reloc/reloc_animations/FTSamusAnim078") \
+    X(llFTSamusAnimCliffClimbQuick1FileID, 0x408u, "nitro:/reloc/reloc_animations/FTSamusAnim079") \
+    X(llFTSamusAnimCliffClimbQuick2FileID, 0x409u, "nitro:/reloc/reloc_animations/FTSamusAnim080") \
+    X(llFTSamusAnimCliffSlowFileID, 0x40au, "nitro:/reloc/reloc_animations/FTSamusAnim081") \
+    X(llFTSamusAnimCliffClimbSlow1FileID, 0x40bu, "nitro:/reloc/reloc_animations/FTSamusAnim082") \
+    X(llFTSamusAnimCliffClimbSlow2FileID, 0x40cu, "nitro:/reloc/reloc_animations/FTSamusAnim083") \
+    X(llFTSamusAnimCliffAttackQuick1FileID, 0x40du, "nitro:/reloc/reloc_animations/FTSamusAnim084") \
+    X(llFTSamusAnimCliffAttackQuick2FileID, 0x40eu, "nitro:/reloc/reloc_animations/FTSamusAnim085") \
+    X(llFTSamusAnimCliffAttackSlow1FileID, 0x40fu, "nitro:/reloc/reloc_animations/FTSamusAnim086") \
+    X(llFTSamusAnimCliffAttackSlow2FileID, 0x410u, "nitro:/reloc/reloc_animations/FTSamusAnim087") \
+    X(llFTSamusAnimCliffEscapeQuick1FileID, 0x411u, "nitro:/reloc/reloc_animations/FTSamusAnim088") \
+    X(llFTSamusAnimCliffEscapeQuick2FileID, 0x412u, "nitro:/reloc/reloc_animations/FTSamusAnim089") \
+    X(llFTSamusAnimCliffEscapeSlow1FileID, 0x413u, "nitro:/reloc/reloc_animations/FTSamusAnim090") \
+    X(llFTSamusAnimCliffEscapeSlow2FileID, 0x414u, "nitro:/reloc/reloc_animations/FTSamusAnim091") \
+    X(llFTSamusAnimLightItemPickupFileID, 0x415u, "nitro:/reloc/reloc_animations/FTSamusAnim092") \
+    X(llFTSamusAnimHeavyItemPickupFileID, 0x41eu, "nitro:/reloc/reloc_animations/FTSamusAnim101") \
+    X(llFTSamusAnimItemDropFileID, 0x41au, "nitro:/reloc/reloc_animations/FTSamusAnim097") \
+    X(llFTSamusAnimItemThrowDashFileID, 0x419u, "nitro:/reloc/reloc_animations/FTSamusAnim096") \
+    X(llFTSamusAnimItemThrowSmashBFileID, 0x416u, "nitro:/reloc/reloc_animations/FTSamusAnim093") \
+    X(llFTSamusAnimItemThrowSmashUFileID, 0x417u, "nitro:/reloc/reloc_animations/FTSamusAnim094") \
+    X(llFTSamusAnimItemThrowSmashDFileID, 0x418u, "nitro:/reloc/reloc_animations/FTSamusAnim095") \
+    X(llFTSamusAnimItemThrowAirSmashBFileID, 0x41bu, "nitro:/reloc/reloc_animations/FTSamusAnim098") \
+    X(llFTSamusAnimItemThrowAirSmashUFileID, 0x41cu, "nitro:/reloc/reloc_animations/FTSamusAnim099") \
+    X(llFTSamusAnimItemThrowAirSmashFFileID, 0x41du, "nitro:/reloc/reloc_animations/FTSamusAnim100") \
+    X(llFTSamusAnimHeavyItemThrowSmashBFileID, 0x41fu, "nitro:/reloc/reloc_animations/FTSamusAnim102") \
+    X(llFTSamusAnimStarRodNeutralFileID, 0x420u, "nitro:/reloc/reloc_animations/FTSamusAnim103") \
+    X(llFTSamusAnimStarRodTiltFileID, 0x421u, "nitro:/reloc/reloc_animations/FTSamusAnim104") \
+    X(llFTSamusAnimStarRodSmashFileID, 0x422u, "nitro:/reloc/reloc_animations/FTSamusAnim105") \
+    X(llFTSamusAnimStarRodDashFileID, 0x423u, "nitro:/reloc/reloc_animations/FTSamusAnim106") \
+    X(llFTSamusAnimFireFlowerShootFileID, 0x426u, "nitro:/reloc/reloc_animations/FTSamusAnim109") \
+    X(llFTSamusAnimFireFlowerShootAirFileID, 0x44eu, "nitro:/reloc/reloc_animations/FTSamusAnim149") \
+    X(llFTSamusAnimHammerIdleFileID, 0x424u, "nitro:/reloc/reloc_animations/FTSamusAnim107") \
+    X(llFTSamusAnimHammerLandingFileID, 0x425u, "nitro:/reloc/reloc_animations/FTSamusAnim108") \
+    X(llFTSamusAnimShieldOnFileID, 0x3f3u, "nitro:/reloc/reloc_animations/FTSamusAnim058") \
+    X(llFTSamusAnimShieldOffFileID, 0x3f4u, "nitro:/reloc/reloc_animations/FTSamusAnim059") \
+    X(llFTSamusAnimRollFFileID, 0x3f5u, "nitro:/reloc/reloc_animations/FTSamusAnim060") \
+    X(llFTSamusAnimRollBFileID, 0x3f6u, "nitro:/reloc/reloc_animations/FTSamusAnim061") \
+    X(llFTSamusAnimSleepFileID, 0x3d0u, "nitro:/reloc/reloc_animations/FTSamusAnim023") \
+    X(llFTSamusAnimCatchFileID, 0x3f7u, "nitro:/reloc/reloc_animations/FTSamusAnim062") \
+    X(llFTSamusAnimCatchPullFileID, 0x3f8u, "nitro:/reloc/reloc_animations/FTSamusAnim063") \
+    X(llFTSamusAnimThrowFFileID, 0x3f9u, "nitro:/reloc/reloc_animations/FTSamusAnim064") \
+    X(llFTSamusAnimThrowBFileID, 0x3fau, "nitro:/reloc/reloc_animations/FTSamusAnim065") \
+    X(llFTSamusAnimEggLayPulledFileID, 0x3fbu, "nitro:/reloc/reloc_animations/FTSamusAnim066") \
+    X(llFTSamusAnimThrownDKPulledFileID, 0x3fcu, "nitro:/reloc/reloc_animations/FTSamusAnim067") \
+    X(llFTSamusAnimThrownMarioBrosFileID, 0x3fdu, "nitro:/reloc/reloc_animations/FTSamusAnim068") \
+    X(llFTSamusAnimThrownFoxFStartFileID, 0x3feu, "nitro:/reloc/reloc_animations/FTSamusAnim069") \
+    X(llFTSamusAnimThrownDKFileID, 0x3ffu, "nitro:/reloc/reloc_animations/FTSamusAnim070") \
+    X(llFTSamusAnimThrown1FileID, 0x400u, "nitro:/reloc/reloc_animations/FTSamusAnim071") \
+    X(llFTSamusAnimThrown2FileID, 0x402u, "nitro:/reloc/reloc_animations/FTSamusAnim073") \
+    X(llFTSamusAnimThrown3FileID, 0x401u, "nitro:/reloc/reloc_animations/FTSamusAnim072") \
+    X(llFTSamusAnimThrownFoxBFileID, 0x403u, "nitro:/reloc/reloc_animations/FTSamusAnim074") \
+    X(llFTSamusAnimTauntFileID, 0x404u, "nitro:/reloc/reloc_animations/FTSamusAnim075") \
+    X(llFTSamusAnimJab1FileID, 0x427u, "nitro:/reloc/reloc_animations/FTSamusAnim110") \
+    X(llFTSamusAnimJab2FileID, 0x428u, "nitro:/reloc/reloc_animations/FTSamusAnim111") \
+    X(llFTSamusAnimDashAttackFileID, 0x429u, "nitro:/reloc/reloc_animations/FTSamusAnim112") \
+    X(llFTSamusAnimFTiltHighFileID, 0x42au, "nitro:/reloc/reloc_animations/FTSamusAnim113") \
+    X(llFTSamusAnimFTiltMidHighFileID, 0x42bu, "nitro:/reloc/reloc_animations/FTSamusAnim114") \
+    X(llFTSamusAnimFTiltFileID, 0x42cu, "nitro:/reloc/reloc_animations/FTSamusAnim115") \
+    X(llFTSamusAnimFTiltMidLowFileID, 0x42du, "nitro:/reloc/reloc_animations/FTSamusAnim116") \
+    X(llFTSamusAnimFTiltLowFileID, 0x42eu, "nitro:/reloc/reloc_animations/FTSamusAnim117") \
+    X(llFTSamusAnimUTiltFileID, 0x42fu, "nitro:/reloc/reloc_animations/FTSamusAnim118") \
+    X(llFTSamusAnimDTiltFileID, 0x430u, "nitro:/reloc/reloc_animations/FTSamusAnim119") \
+    X(llFTSamusAnimFSmashHighFileID, 0x431u, "nitro:/reloc/reloc_animations/FTSamusAnim120") \
+    X(llFTSamusAnimFSmashMidHighFileID, 0x432u, "nitro:/reloc/reloc_animations/FTSamusAnim121") \
+    X(llFTSamusAnimFSmashFileID, 0x433u, "nitro:/reloc/reloc_animations/FTSamusAnim122") \
+    X(llFTSamusAnimFSmashMidLowFileID, 0x434u, "nitro:/reloc/reloc_animations/FTSamusAnim123") \
+    X(llFTSamusAnimFSmashLowFileID, 0x435u, "nitro:/reloc/reloc_animations/FTSamusAnim124") \
+    X(llFTSamusAnimUSmashFileID, 0x436u, "nitro:/reloc/reloc_animations/FTSamusAnim125") \
+    X(llFTSamusAnimDSmashFileID, 0x437u, "nitro:/reloc/reloc_animations/FTSamusAnim126") \
+    X(llFTSamusAnimAttackAirNFileID, 0x438u, "nitro:/reloc/reloc_animations/FTSamusAnim127") \
+    X(llFTSamusAnimAttackAirFFileID, 0x439u, "nitro:/reloc/reloc_animations/FTSamusAnim128") \
+    X(llFTSamusAnimAttackAirBFileID, 0x43au, "nitro:/reloc/reloc_animations/FTSamusAnim129") \
+    X(llFTSamusAnimAttackAirUFileID, 0x43bu, "nitro:/reloc/reloc_animations/FTSamusAnim130") \
+    X(llFTSamusAnimAttackAirDFileID, 0x43cu, "nitro:/reloc/reloc_animations/FTSamusAnim131") \
+    X(llFTSamusAnimLandingAirBFileID, 0x43du, "nitro:/reloc/reloc_animations/FTSamusAnim132") \
+    X(llFTSamusAnimLandingAirUFileID, 0x43eu, "nitro:/reloc/reloc_animations/FTSamusAnim133") \
+    X(llFTSamusAnimAppear1FileID, 0x442u, "nitro:/reloc/reloc_animations/FTSamusAnim137") \
+    X(llFTSamusAnimAppear2FileID, 0x443u, "nitro:/reloc/reloc_animations/FTSamusAnim138") \
+    X(llFTSamusAnimStartingChargeShotFileID, 0x444u, "nitro:/reloc/reloc_animations/FTSamusAnim139") \
+    X(llFTSamusAnimChargingNeutralSpecialFileID, 0x445u, "nitro:/reloc/reloc_animations/FTSamusAnim140") \
+    X(llFTSamusAnimShootingFileID, 0x446u, "nitro:/reloc/reloc_animations/FTSamusAnim141") \
+    X(llFTSamusAnimStartingChargeShotAirFileID, 0x447u, "nitro:/reloc/reloc_animations/FTSamusAnim142") \
+    X(llFTSamusAnimShootingAirFileID, 0x448u, "nitro:/reloc/reloc_animations/FTSamusAnim143") \
+    X(llFTSamusAnimScrewAttackGroundFileID, 0x449u, "nitro:/reloc/reloc_animations/FTSamusAnim144") \
+    X(llFTSamusAnimScrewAttackAirFileID, 0x44au, "nitro:/reloc/reloc_animations/FTSamusAnim145") \
+    X(llFTSamusAnimBombFileID, 0x44bu, "nitro:/reloc/reloc_animations/FTSamusAnim146") \
+    X(llFTSamusAnimBombAirFileID, 0x44cu, "nitro:/reloc/reloc_animations/FTSamusAnim147")
+
+#define NDS_P2_SAMUS_DEPENDENCY_ASSET_ROWS(X)
+
+#define NDS_P2_SAMUS_AOBJ32_ASSET_ROWS(X) \
+    X(llFTSamusAnimAppear1FileID, 0x442u) \
+    X(llFTSamusAnimAppear2FileID, 0x443u)
 
 #endif

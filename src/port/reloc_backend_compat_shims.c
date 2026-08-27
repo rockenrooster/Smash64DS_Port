@@ -13462,6 +13462,50 @@ void ftPhysicsSetGroundVelAbsStickRange(FTStruct *fp, f32 vel, f32 friction)
     }
 }
 
+/* BattleShip ftphysics.c:113-151. Samus's grounded Bomb physics is the first
+ * promoted fighter path that needs the signed-stick form; keep the original
+ * branch/order rather than substituting the absolute-stick helper. */
+void ftPhysicsSetGroundVelStickRange(FTStruct *fp, f32 vel, f32 friction)
+{
+    f32 target;
+
+    if (fp == NULL)
+    {
+        return;
+    }
+    target = fp->input.pl.stick_range.x * vel * fp->lr;
+    if (fp->physics.vel_ground.x >= 0.0F)
+    {
+        if (fp->physics.vel_ground.x < target)
+        {
+            fp->physics.vel_ground.x = target;
+        }
+        else
+        {
+            fp->physics.vel_ground.x -= friction;
+            if (fp->physics.vel_ground.x < target)
+            {
+                fp->physics.vel_ground.x = target;
+            }
+        }
+    }
+    else
+    {
+        if (fp->physics.vel_ground.x > target)
+        {
+            fp->physics.vel_ground.x = target;
+        }
+        else
+        {
+            fp->physics.vel_ground.x += friction;
+            if (target < fp->physics.vel_ground.x)
+            {
+                fp->physics.vel_ground.x = target;
+            }
+        }
+    }
+}
+
 void ftPhysicsSetGroundVelFriction(FTStruct *fp, f32 friction)
 {
     if ((fp == NULL) || (friction < 0.0F))

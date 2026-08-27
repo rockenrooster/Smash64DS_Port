@@ -219,6 +219,29 @@ void ftDonkeyThrowFDamageProcUpdate(GObj *fighter_gobj);
 void ftDonkeyThrowFFProcUpdate(GObj *fighter_gobj);
 void ftDonkeyThrowFFProcMap(GObj *fighter_gobj);
 void ftDonkeyThrowAirFFProcMap(GObj *fighter_gobj);
+/* BattleShip ftsamusstatus.h callbacks. Samus's descriptor table is promoted
+ * wholesale under NDS_P2_SAMUS; keep only the names that table references at
+ * this ABI seam and leave set-status/internal helpers in battleship_samus.c. */
+void ftSamusSpecialNStartProcUpdate(GObj *fighter_gobj);
+void ftSamusSpecialNStartProcInterrupt(GObj *fighter_gobj);
+void ftSamusSpecialNStartProcMap(GObj *fighter_gobj);
+void ftSamusSpecialAirNStartProcMap(GObj *fighter_gobj);
+void ftSamusSpecialNLoopProcUpdate(GObj *fighter_gobj);
+void ftSamusSpecialNLoopProcInterrupt(GObj *fighter_gobj);
+void ftSamusSpecialNLoopProcMap(GObj *fighter_gobj);
+void ftSamusSpecialNEndProcUpdate(GObj *fighter_gobj);
+void ftSamusSpecialNEndProcMap(GObj *fighter_gobj);
+void ftSamusSpecialAirNEndProcMap(GObj *fighter_gobj);
+void ftSamusSpecialHiProcUpdate(GObj *fighter_gobj);
+void ftSamusSpecialHiProcPhysics(GObj *fighter_gobj);
+void ftSamusSpecialAirHiProcPhysics(GObj *fighter_gobj);
+void ftSamusSpecialHiProcMap(GObj *fighter_gobj);
+void ftSamusSpecialLwProcUpdate(GObj *fighter_gobj);
+void ftSamusSpecialLwProcPhysics(GObj *fighter_gobj);
+void ftSamusSpecialLwProcMap(GObj *fighter_gobj);
+void ftSamusSpecialAirLwProcUpdate(GObj *fighter_gobj);
+void ftSamusSpecialAirLwProcPhysics(GObj *fighter_gobj);
+void ftSamusSpecialAirLwProcMap(GObj *fighter_gobj);
 /* BattleShip ftcaptainstatus.h callbacks.  Same rule as the DK block above:
  * only the names the status descriptor table itself references belong here;
  * every set-status helper and internal step lives in
@@ -276,6 +299,9 @@ void ftFoxSpecialLwLoopProcInterrupt(GObj *fighter_gobj);
 void ftFoxSpecialLwTurnProcUpdate(GObj *fighter_gobj);
 void ftFoxSpecialAirLwCommonProcPhysics(GObj *fighter_gobj);
 void ftHammerProcMap(GObj *fighter_gobj);
+void ftPhysicsApplyGroundVelFriction(GObj *fighter_gobj);
+void ftPhysicsApplyAirVelDrift(GObj *fighter_gobj);
+void ftPhysicsApplyAirVelFriction(GObj *fighter_gobj);
 void ftPhysicsApplyGroundFrictionOrTransN(GObj *fighter_gobj);
 void ftPhysicsApplyGroundVelTransferAir(GObj *fighter_gobj);
 void mpCommonProcFighterProject(GObj *fighter_gobj);

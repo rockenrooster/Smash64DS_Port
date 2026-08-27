@@ -471,7 +471,25 @@ static const NdsMenuWalkStep kNdsMenuWalkCss[] = {
     { (u16)NDS_INPUT_A, 1u },
     { 0u, 32u },
     { (u16)NDS_INPUT_A, 1u },
-#if NDS_P2_DONKEY
+#if NDS_P2_SAMUS
+    /* P2-3 Samus production proof. BattleShip's portrait table is
+     * Luigi/Mario/Donkey/Link/Samus/Captain on the top row
+     * (mnplayersvs.c:338-346), with 45 source pixels between cells. After the
+     * Luigi regrab above the carried token centre is x=56. The DS D-pad is the
+     * source's full-deflection stick at 4 source px/frame (see THE STICK
+     * contract above), so 43 RIGHT frames put that centre at x=228 -- the exact
+     * centre of Samus's portrait-4 [205,250) cell. Drop, leave more than the
+     * source's 30-tic regrab delay so the selected 3D process/announcer run,
+     * regrab, then 11 LEFT frames return to Link's portrait-3 cell for the same
+     * locked negative control the DK/Falcon roster already uses. The later
+     * 20-frame LEFT leg still returns the token to Mario before the canonical
+     * Mario/Fox regression match starts. */
+    { (u16)NDS_INPUT_RIGHT, 43u },
+    { (u16)NDS_INPUT_A, 1u },
+    { 0u, 32u },
+    { (u16)NDS_INPUT_A, 1u },
+    { (u16)NDS_INPUT_LEFT, 11u },
+#elif NDS_P2_DONKEY
     /* THE NEGATIVE CONTROL HAS TO MOVE WHEN THE ROSTER GROWS. Donkey is a
      * built fighter in this configuration, so pressing A on column 2 now
      * DROPS the token there and the match that follows is not the one the
@@ -1781,7 +1799,14 @@ static const u8 kNdsCssFighterPortrait[NDS_CSS_PORTRAITS] = {
 /* Which fighters this build HAS. Same shape as the source's fighter_mask; a
  * production fighter is admitted here only after its renderer/CSS/audio seams
  * all exist in the same configuration. */
-#if NDS_P2_CAPTAIN
+#if NDS_P2_SAMUS
+#define NDS_CSS_FIGHTER_MASK \
+    (LBBACKUP_MASK_FIGHTER(nFTKindMario) | LBBACKUP_MASK_FIGHTER(nFTKindFox) | \
+     LBBACKUP_MASK_FIGHTER(nFTKindLuigi) | \
+     LBBACKUP_MASK_FIGHTER(nFTKindDonkey) | \
+     LBBACKUP_MASK_FIGHTER(nFTKindCaptain) | \
+     LBBACKUP_MASK_FIGHTER(nFTKindSamus))
+#elif NDS_P2_CAPTAIN
 #define NDS_CSS_FIGHTER_MASK \
     (LBBACKUP_MASK_FIGHTER(nFTKindMario) | LBBACKUP_MASK_FIGHTER(nFTKindFox) | \
      LBBACKUP_MASK_FIGHTER(nFTKindLuigi) | \

@@ -620,7 +620,7 @@ NDS_P2_FOUR_CPU_ROSTER ?= \
 # WORST CASE IS LUIGI VERSUS DONKEY, both images resident at once: 36,276 B
 # against the 20,200 B the measured run held, so 28,772 B of headroom.  That is
 # the number a future fighter has to be sized against, not the 44,848.
-NDS_P2_SHELL_ROSTER ?= 3
+NDS_P2_SHELL_ROSTER ?= 4
 NDS_P2_LUIGI ?= 0
 # Donkey is the first structurally different P2-3 owner.  Keep admission
 # sequential: native-owner slots are a dense ABI (Mario/Fox/Luigi/Donkey), so a
@@ -661,6 +661,11 @@ endif
 # the ladder when Falcon becomes a native owner, and put it where the flags are
 # final.
 NDS_P2_CAPTAIN ?= 0
+# P2-3 Samus source-gameplay admission.  Her first landing deliberately uses
+# the correct generic renderer: unlike the landed native owners, Samus's source
+# setup_parts mask is non-contiguous, so native-owner topology is a separate
+# renderer optimization after her gameplay/assets are live.
+NDS_P2_SAMUS ?= 0
 # P2-3f9. THE HEAVIEST ROSTER A PLAYER CAN REACH, MEASURED FROM THE SHELL.
 #
 # `NDS_P2_FOUR_CPU_ROSTER` above is a DIRECT-BATTLE arm: its target sets
@@ -2586,11 +2591,12 @@ override NDS_P2_MENU_SHELL := 1
 # P2-3 (owner, 2026-08-23: "I want to be able to test out Luigi and DK"). The
 # in-progress roster ships in EVERY shell configuration -- the published ROM,
 # its free-play twin, the gate's realtime arm and the loop arm -- so the
-# playable roster is the verifier-covered one and the CSS marks Luigi/Donkey
-# with the question-mark overlay the generator bakes.
+# playable roster is the verifier-covered one and the CSS marks every unfinished
+# production fighter with the question-mark overlay the generator bakes.
 override NDS_P2_LUIGI := $(if $(filter 0,$(NDS_P2_SHELL_ROSTER)),0,1)
-override NDS_P2_DONKEY := $(if $(filter 2 3,$(NDS_P2_SHELL_ROSTER)),1,0)
-override NDS_P2_CAPTAIN := $(if $(filter 3,$(NDS_P2_SHELL_ROSTER)),1,0)
+override NDS_P2_DONKEY := $(if $(filter 2 3 4,$(NDS_P2_SHELL_ROSTER)),1,0)
+override NDS_P2_CAPTAIN := $(if $(filter 3 4,$(NDS_P2_SHELL_ROSTER)),1,0)
+override NDS_P2_SAMUS := $(if $(filter 4,$(NDS_P2_SHELL_ROSTER)),1,0)
 ## P2-2 source parity. BattleShip's efmanager.c owns 38 EFStructs and keeps its
 ## own last-four forced-effect reserve. The old 12-entry P1 cap changes which
 ## cosmetic effects survive a four-way burst, so the four-fighter shell restores
@@ -2684,11 +2690,12 @@ override NDS_P2_MENU_SHELL := 1
 # P2-3 (owner, 2026-08-23: "I want to be able to test out Luigi and DK"). The
 # in-progress roster ships in EVERY shell configuration -- the published ROM,
 # its free-play twin, the gate's realtime arm and the loop arm -- so the
-# playable roster is the verifier-covered one and the CSS marks Luigi/Donkey
-# with the question-mark overlay the generator bakes.
+# playable roster is the verifier-covered one and the CSS marks every unfinished
+# production fighter with the question-mark overlay the generator bakes.
 override NDS_P2_LUIGI := $(if $(filter 0,$(NDS_P2_SHELL_ROSTER)),0,1)
-override NDS_P2_DONKEY := $(if $(filter 2 3,$(NDS_P2_SHELL_ROSTER)),1,0)
-override NDS_P2_CAPTAIN := $(if $(filter 3,$(NDS_P2_SHELL_ROSTER)),1,0)
+override NDS_P2_DONKEY := $(if $(filter 2 3 4,$(NDS_P2_SHELL_ROSTER)),1,0)
+override NDS_P2_CAPTAIN := $(if $(filter 3 4,$(NDS_P2_SHELL_ROSTER)),1,0)
+override NDS_P2_SAMUS := $(if $(filter 4,$(NDS_P2_SHELL_ROSTER)),1,0)
 override NDS_R2_EFFECT_POOL := 38
 # P2-1M gate catch: same rule as the walk block above — the CSS decides
 # Fox's level in the shell game; the P1 demo ladder never rides it.
@@ -2774,11 +2781,12 @@ override NDS_P2_MENU_SHELL := 1
 # P2-3 (owner, 2026-08-23: "I want to be able to test out Luigi and DK"). The
 # in-progress roster ships in EVERY shell configuration -- the published ROM,
 # its free-play twin, the gate's realtime arm and the loop arm -- so the
-# playable roster is the verifier-covered one and the CSS marks Luigi/Donkey
-# with the question-mark overlay the generator bakes.
+# playable roster is the verifier-covered one and the CSS marks every unfinished
+# production fighter with the question-mark overlay the generator bakes.
 override NDS_P2_LUIGI := $(if $(filter 0,$(NDS_P2_SHELL_ROSTER)),0,1)
-override NDS_P2_DONKEY := $(if $(filter 2 3,$(NDS_P2_SHELL_ROSTER)),1,0)
-override NDS_P2_CAPTAIN := $(if $(filter 3,$(NDS_P2_SHELL_ROSTER)),1,0)
+override NDS_P2_DONKEY := $(if $(filter 2 3 4,$(NDS_P2_SHELL_ROSTER)),1,0)
+override NDS_P2_CAPTAIN := $(if $(filter 3 4,$(NDS_P2_SHELL_ROSTER)),1,0)
+override NDS_P2_SAMUS := $(if $(filter 4,$(NDS_P2_SHELL_ROSTER)),1,0)
 override NDS_R2_EFFECT_POOL := 38
 endif
 # Task 49 GX-differ lab target. Its OWN block (appending to the tickhud/proof
@@ -3631,6 +3639,11 @@ ifeq ($(NDS_P2_CAPTAIN),1)
 # because nFTCommonStatusCaptureCaptain is a status any fighter can end up in.
 CFILES += battleship_captain.c battleship_ftcommon_capturecaptain.c
 endif
+ifeq ($(NDS_P2_SAMUS),1)
+# BattleShip owns Charge Shot storage/cancel/release, Screw Attack and Bomb
+# behavior; the companion TU owns the source Charge Shot/Bomb weapons.
+CFILES += battleship_samus.c battleship_samus_weapons.c
+endif
 ifeq ($(NDS_IMPORT_BATTLESHIP_MPPROCESS_LIVE),1)
 CFILES += $(NDS_MPPROCESS_SOURCE_CFILES) \
 	battleship_mpprocess_live_bridge.c
@@ -4182,6 +4195,9 @@ endif
 ifeq ($(NDS_P2_CAPTAIN),1)
 NDS_P2_FIGHTER_RELOC_FILES += $(NDS_P2_CAPTAIN_FIGHTER_RELOC_FILES)
 endif
+ifeq ($(NDS_P2_SAMUS),1)
+NDS_P2_FIGHTER_RELOC_FILES += $(NDS_P2_SAMUS_FIGHTER_RELOC_FILES)
+endif
 
 NDS_EFFECT_RELOC_FILES := \
 	reloc_effects/EFCommonEffects1 \
@@ -4572,6 +4588,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_NATIVE_OWNER_IMAGE_VERIFY $(NDS_NATIVE_OWNER_IMAGE_VERIFY)'; \
 		echo '#define NDS_P2_DONKEY $(NDS_P2_DONKEY)'; \
 		echo '#define NDS_P2_CAPTAIN $(NDS_P2_CAPTAIN)'; \
+		echo '#define NDS_P2_SAMUS $(NDS_P2_SAMUS)'; \
 		echo '#define NDS_P2_SHELL_ARGMAX_ROSTER $(NDS_P2_SHELL_ARGMAX_ROSTER)'; \
 		echo '#define NDS_NATIVE_OWNER_IMAGE_CAPTAIN $(NDS_NATIVE_OWNER_IMAGE_CAPTAIN)'; \
 		echo '#define NDS_P2_PROOF_FIGHTER0 $(NDS_P2_PROOF_FIGHTER0)'; \

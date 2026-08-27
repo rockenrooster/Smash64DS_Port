@@ -113,7 +113,11 @@ $expectedIDs = @(626,470,469,467,490,74,363,364,372,373,374,430,439,292,
     # P2-3f16 fighter entry audio: Mario/Luigi's shared pipe, Fox's Arwing and
     # DK's shared container-smash cue. These are the exact source motion-script
     # calls, and all three render their full multi-note programs AOT.
-    214, 191, 59)
+    214, 191, 59,
+    # P2-3 Samus CSS: source announcer line plus the selected-motion BladeDraw
+    # cue from scsubsysdatasamus.c. BladeDraw's two-note one-voice program is
+    # rendered AOT so the mid-program control change is preserved.
+    513, 264)
 $actualIDs = @($metadata.entries | ForEach-Object { [int]$_.id })
 if (($actualIDs -join ',') -ne ($expectedIDs -join ',')) {
     throw "Unexpected FGM mapping: $($actualIDs -join ',')"
@@ -191,7 +195,10 @@ if (([int]$metadata.format_version -ne 4) -or
     # 1733284 -> 1770008 on 2026-08-26 (P2-3f16) for the three entry cues:
     # 214 MarioDokan, 191 FoxAppearArwing and 59 ContainerSmash, 178 -> 181
     # entries, +36,724 bytes of ROM. Runtime cache stays 204800.
-    ([int64]$metadata.resident_bytes -ne 1770008) -or
+    # 1770008 -> 1785424 on 2026-08-26 for Samus CSS audio: announcer 513 and
+    # selected-pose BladeDraw 264, 181 -> 183 entries, +15,416 bytes of ROM.
+    # BladeDraw is full-program AOT; runtime cache stays 204800.
+    ([int64]$metadata.resident_bytes -ne 1785424) -or
     ([int64]$metadata.resident_limit_bytes -ne 204800) -or
     # ROM, not RAM: the runtime streams cues into resident_limit_bytes and never
     # holds the pack. 512 KiB blocked the five announcer lines and 768 KiB then
@@ -226,8 +233,9 @@ if (([int]$metadata.format_version -ne 4) -or
     # selectors;
     # -> 0x7b3a0107 on 2026-08-25 (P2-3f15) for Luigi's thirteen -- same
     # reason, the selector table changed;
-    # -> 0xeb6ba1dc on 2026-08-26 (P2-3f16) for the three source entry cues.
-    ($metadata.mapping_sha256_lo -ne '0xeb6ba1dc') -or
+    # -> 0xeb6ba1dc on 2026-08-26 (P2-3f16) for the three source entry cues;
+    # -> 0x64710073 for Samus's source announcer + selected BladeDraw pair.
+    ($metadata.mapping_sha256_lo -ne '0x64710073') -or
     # Repinned 2026-08-02: FGM 11 (the rolling dodge) dropped 127 -> 96 -> 68 ->
     # 48 on the owner's ear via FGM_OWNER_VOLUME_TRIM, -8.4 dB total against the
     # source; the 68 pin was
@@ -274,8 +282,10 @@ if (([int]$metadata.format_version -ne 4) -or
     # 113da5fb91c83ff3b6f4bd4b63f840485ad08185f3967f120c320d9b175377f0.
     # The three P2-3f16 entry cues move it again; the 178-entry pin was
     # 5299db705baa652b4fa7d0ee35bd0d18a0bdecb36a35507bd30b35d0cb23353c.
+    # Samus's two CSS cues move it once more; the 181-entry pin was
+    # 87c0c17bb1a89f2353153e88c188336ba182d5c05a39e2bff5b16e9533e19994.
     ($metadata.pack_sha256 -ne
-        '87c0c17bb1a89f2353153e88c188336ba182d5c05a39e2bff5b16e9533e19994')) {
+        '9c19734a7eda9fd1ee2e3d354fd7c840729b45976a87609dd854ec1e9392760d')) {
     throw 'FGM pack format, budget, mapping, or binary identity changed.'
 }
 if ((@($metadata.excluded_entries).Count -ne 0) -or

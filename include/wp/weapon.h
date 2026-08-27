@@ -130,6 +130,33 @@ typedef struct wpMarioFireballAttributes {
     f32 anim_frame;
 } wpMarioFireballAttributes;
 
+/* BattleShip wpvars.h. Samus is the first P2-3 fighter whose source weapon
+ * logic needs character-owned weapon vars in the shared WPStruct. Keep these
+ * exact narrow ABI views here rather than importing the decomp's broad wpdef
+ * header into the port. */
+typedef struct wpSamusChargeShotAttributes {
+    f32 gfx_size;
+    f32 vel_x;
+    s32 damage;
+    s32 attack_size;
+    s32 coll_size;
+    u32 shoot_fgm_id;
+    u32 charge_fgm_id;
+    u32 attack_fgm_id;
+    s32 priority;
+} wpSamusChargeShotAttributes;
+
+typedef struct wpSamusWeaponVarsBomb {
+    s32 bomb_blink_timer;
+} wpSamusWeaponVarsBomb;
+
+typedef struct wpSamusWeaponVarsChargeShot {
+    sb32 is_release;
+    sb32 is_full_charge;
+    s32 charge_size;
+    GObj *owner_gobj;
+} wpSamusWeaponVarsChargeShot;
+
 #ifndef SSB64_NDS_WP_ATTACK_COLL_DECLARED
 #define SSB64_NDS_WP_ATTACK_COLL_DECLARED
 typedef struct WPAttackPos {
@@ -222,6 +249,8 @@ typedef struct WPStruct {
         struct {
             s32 index;
         } fireball;
+        wpSamusWeaponVarsChargeShot charge_shot;
+        wpSamusWeaponVarsBomb samus_bomb;
         struct {
             s32 status;
             f32 angle;

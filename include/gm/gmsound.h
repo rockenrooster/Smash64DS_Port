@@ -145,6 +145,27 @@ typedef enum gmFGMID
     nSYAudioFGMBossUnk2 = 177,
     nSYAudioFGMDonkeySpin = 178,
     nSYAudioFGMDonkeyCharge = 179,
+    /* Samus source weapon/motion cues. These are the BattleShip gmFGMID
+     * ordinals immediately following CharacterUnk2/3 (233/234). Keeping the
+     * real IDs here lets Charge Shot select its level-specific source SFX
+     * table instead of collapsing every level onto a placeholder. */
+    nSYAudioFGMSamusSpecialNShootF = 235,
+    nSYAudioFGMSamusSpecialNShootL = 236,
+    nSYAudioFGMSamusSpecialNShootM = 237,
+    nSYAudioFGMSamusSpecialNShootS = 238,
+    nSYAudioFGMSamusSpecialNCharge0 = 239,
+    nSYAudioFGMSamusSpecialNCharge1 = 240,
+    nSYAudioFGMSamusSpecialNCharge2 = 241,
+    nSYAudioFGMSamusSpecialNCharge3 = 242,
+    nSYAudioFGMSamusSpecialNCharge4 = 243,
+    nSYAudioFGMSamusSpecialNCharge5 = 244,
+    nSYAudioFGMSamusSpecialNCharge6 = 245,
+    nSYAudioFGMSamusSpecialNCharge7 = 246,
+    nSYAudioFGMSamusSpecialLw = 247,
+    nSYAudioFGMSamusCatchGrappleBeam = 248,
+    nSYAudioFGMSamusSpecialHi = 249,
+    nSYAudioFGMSamusUnkSwing = 250,
+    nSYAudioFGMSamusUnkCharge = 251,
     nSYAudioFGMDonkeyDeadSlam = 287,
     nSYAudioFGMDonkeyDownBounce = 298
 } gmFGMID;

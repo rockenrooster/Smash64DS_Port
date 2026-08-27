@@ -234,6 +234,9 @@ static void ndsMNPlayersVSPreviewPrepareResidentKinds(void)
 #if NDS_P2_CAPTAIN
     (void)ndsMNPlayersVSPreviewPrepareResidentKind(nFTKindCaptain);
 #endif
+#if NDS_P2_SAMUS
+    (void)ndsMNPlayersVSPreviewPrepareResidentKind(nFTKindSamus);
+#endif
 }
 
 /* The corrected source viewport maps BattleShip's 840-world-unit fighter-slot
@@ -246,7 +249,7 @@ static void ndsMNPlayersVSPreviewPrepareResidentKinds(void)
  * gameplay, the source CSS implementation, fighter scale, and joint transforms
  * remain untouched. Set the exact derived root position instead of accumulating
  * an offset so repeated player-kind / grab rebuilds are idempotent. */
-#define NDS_CSS_OUTER_PREVIEW_INSET 80.0F
+#define NDS_CSS_OUTER_PREVIEW_INSET 40.0F
 static void ndsMNPlayersVSPreviewApplyOuterSlotInset(u32 slot,
                                                       GObj *fighter_gobj)
 {
@@ -368,6 +371,9 @@ void ndsMNPlayersVSPreviewInit(void)
 #endif
 #if NDS_P2_CAPTAIN
     ftManagerSetupFilesAllKind(nFTKindCaptain);
+#endif
+#if NDS_P2_SAMUS
+    ftManagerSetupFilesAllKind(nFTKindSamus);
 #endif
 
     for (i = 0; i < ARRAY_COUNT(sMNPlayersVSSlots); i++)
@@ -509,6 +515,9 @@ void ndsMNPlayersVSPreviewSync(u32 slot, s32 pkind, s32 fkind,
 #endif
 #if NDS_P2_CAPTAIN
         && (fkind != nFTKindCaptain)
+#endif
+#if NDS_P2_SAMUS
+        && (fkind != nFTKindSamus)
 #endif
     )
     {

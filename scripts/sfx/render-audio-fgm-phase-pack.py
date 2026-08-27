@@ -277,6 +277,14 @@ FULL_COVERAGE_IDS = (
     # 214 for both Mario and Luigi's pipe, 191 for Fox's Arwing and 59 for DK's
     # barrel smash. Appended so all previous pack ordinals remain stable.
     214, 191, 59,
+    # P2-3 Samus CSS. The real shell walk reaches both source-owned cues as
+    # soon as Samus becomes resident/selectable: mnPlayersVSAnnounceFighter
+    # asks for 513 (AnnounceSamus), while dFTSamusSubMotionDescs[3]/[4] run
+    # scsubsysdatasamus.c's selected script and play 264 (BladeDraw) at tic 100.
+    # Both were named by the runtime miss ring; append so prior ordinals stay
+    # stable. Gameplay-bank closure follows in the Samus fighter row rather
+    # than hiding these two menu failures behind a silent fallback.
+    513, 264,
 )
 FULL_PROGRAM_AOT_IDS = frozenset((
     154, 40, 38, 37, 34, 32, 31,
@@ -320,6 +328,11 @@ FULL_PROGRAM_AOT_IDS = frozenset((
     # 191 and 59 are also multi-note schedules. Baking all three preserves the
     # source sequencer exactly instead of holding the first note for the cue.
     214, 191, 59,
+    # P2-3 Samus CSS selected pose. 264 BladeDraw is two consecutive 50-tick
+    # notes on one voice (the second does NOT set starts_new_voice). Preserve
+    # that source sequencer/control-field transition by baking the full 100-tick
+    # program AOT; it is far below the cache-slot ceiling.
+    264,
     18, 365,
     # 153 AltitudeWarn -- the cue the owner picked out BY NAME as "a new SFX I
     # don't recognise". Articulation 150 sweeps pitch 550 -> 2390 cents inside
@@ -5293,6 +5306,58 @@ SELECTED += (
             "4d46f233953fa0b8c2566f9ffe8873c3dfa835814e8d6de569e26f734a85de6d",
         "articulation_program_sha256":
             "e27aeab2aef5e00910b9446f09af075be1054b9a652201bead8399cb9ba2c9cc",
+    },
+)
+
+# P2-3 Samus CSS audio. Every field is source-derived by `--derive 513,264`.
+# 513 is a single held announcer note. 264 is two consecutive 50-tick notes on
+# one source voice; FULL_PROGRAM_AOT_IDS preserves the mid-program control-field
+# transition rather than flattening the pair into one 100-tick hold.
+SELECTED += (
+    {
+        "id": 513,
+        "name": "nSYAudioVoiceAnnounceSamus",
+        "kind": "announcer",
+        "articulation": 311,
+        "sound": 188,
+        "notes": ((13, 7, 150),),
+        "duration_ticks": 150,
+        "ucd_volume": 230,
+        "articulation_pitch_cents": -1200,
+        "loop": False,
+        "wave_base": 1545480,
+        "wave_length": 6912,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 12288,
+        "root_program_sha256":
+            "18ffab3684f165eb8443f995428542fc3192c64a994b49994f4b4fb42582c665",
+        "articulation_program_sha256":
+            "56bca0c22f851c499fc0f2c58af9a80a3ea33ab9f6dbba34a4ae649814c66a61",
+    },
+    {
+        "id": 264,
+        "name": "nSYAudioFGMBladeDraw",
+        "kind": "menu",
+        "articulation": 91,
+        "sound": 44,
+        "notes": ((12, 7, 50), (12, 7, 50)),
+        "duration_ticks": 100,
+        "ucd_volume": 190,
+        "articulation_pitch_cents": 0,
+        "loop": False,
+        "wave_base": 366640,
+        "wave_length": 12708,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 1,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "e97b2e29073ec2b2309fcb14486c3394930cca74470a722316afadb1b1893b38",
+        "render_program_sha256":
+            "e97b2e29073ec2b2309fcb14486c3394930cca74470a722316afadb1b1893b38",
+        "articulation_program_sha256":
+            "4ccf4ee03d7a8846351770b97019b2d3fd4fca37d7fb77e61380ddc0d63215cd",
     },
 )
 

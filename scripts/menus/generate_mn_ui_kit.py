@@ -2198,8 +2198,8 @@ CSS_SHADOW = {
 }
 # Which fighter portraits have reached P2 production. Same source fkind values
 # the shell's NDS_CSS_FIGHTER_MASK carries when the corresponding fighter is
-# enabled: Mario, Fox, Luigi, Donkey Kong, Captain Falcon.
-# Mario and Fox are complete; Luigi, Donkey Kong and Captain Falcon are IN
+# enabled: Mario, Fox, Luigi, Donkey Kong, Captain Falcon, Samus.
+# Mario and Fox are complete; Luigi, Donkey Kong, Captain Falcon and Samus are IN
 # PROGRESS -- playable and selectable, but not finished (owner, 2026-08-23:
 # "characters that are in progress should show as selectable with the ? over
 # the top of their icon/portrait to show that they are in progress").  Both
@@ -2213,8 +2213,8 @@ CSS_SHADOW = {
 # and Falcon's does now.  Both carry their own entry in
 # mn_screen_coverage_allowlist.json; a future built fighter in CSS_SHADOW needs
 # the same.
-CSS_BUILT_FKIND = (0, 1, 4, 2, 7)
-CSS_INPROGRESS_FKIND = (4, 2, 7)
+CSS_BUILT_FKIND = (0, 1, 4, 2, 7, 3)
+CSS_INPROGRESS_FKIND = (4, 2, 7, 3)
 # The dim laid over an in-progress fighter's portrait before its question mark.
 # The plate is NOT a solid tile -- only the glyph carries intensity, 219 texels
 # of a 45x43 cell -- so blending the glyph alone (measured at alpha 165 and
@@ -2245,6 +2245,7 @@ CSS_PORTRAIT_SYMBOL = {
     4: "llMNPlayersPortraitsLuigiSprite",
     2: "llMNPlayersPortraitsDonkeySprite",
     7: "llMNPlayersPortraitsCaptainSprite",
+    3: "llMNPlayersPortraitsSamusSprite",
 }
 # mnPlayersVSPortraitProcDisplay's primitive, :361.
 CSS_SHADOW_NOISE = 0x30

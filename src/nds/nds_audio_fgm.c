@@ -411,6 +411,10 @@ static s32 ndsAudioFgmIDIsIncluded(u16 id)
      * announcer line, packed 2026-08-19 with the shell already asking. */
     case nSYAudioFGMPlayerSlotClose:
     case nSYAudioVoiceAnnounceTeamBattle:
+    /* P2-3 Samus CSS: the announcer line and the selected-pose BladeDraw
+     * motion command are both source-owned and both live in the shell. */
+    case nSYAudioVoiceAnnounceSamus:
+    case nSYAudioFGMBladeDraw:
     /* P2-3f13 Captain Falcon's production bank. He landed selectable at P2-3f8
      * with NOTHING packed, so every id below was already being requested by his
      * motion scripts, his FTAttributes lanes, his CSS clip and the

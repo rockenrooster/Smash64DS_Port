@@ -51,6 +51,12 @@ _Static_assert(NDS_P2_PROOF_FIGHTER0 < nFTKindPlayableEnd,
 /* BattleShip fttypes.h: nFTKindCaptain == 7. Same rule as the two above. */
 #error "Captain Falcon proof fighter requires NDS_P2_CAPTAIN=1"
 #endif
+#if NDS_P2_PROOF_FIGHTER0 == 3 && !NDS_P2_SAMUS
+/* BattleShip fttypes.h: nFTKindSamus == 3. Samus's first production landing
+ * uses the generic renderer, but the source assets/status/weapon TUs must still
+ * be admitted before the direct proof descriptor can instantiate her. */
+#error "Samus proof fighter requires NDS_P2_SAMUS=1"
+#endif
 #endif
 
 #if NDS_P2_FOUR_CPU_ROSTER && (!NDS_P2_LUIGI || !NDS_P2_DONKEY || !NDS_P2_CAPTAIN)

@@ -373,6 +373,17 @@ _Static_assert(NDS_RELOC_ASSET_FOX_ANIM_LAST == NDS_K0_FOX_ANIM_LAST,
 #define NDS_RELOC_SYMBOL_CAPTAIN_MAIN_ATTRIBUTES 0x488u
 #define NDS_RELOC_ASSET_CAPTAIN_MAIN 0xecu
 #endif
+#if NDS_P2_SAMUS
+/* dFTSamusData field 24 is 0x610; 217_SamusMain.c places the final 12-byte
+ * skeleton pointer block at 0x604, so dSamusMain_attr begins at 0x610. */
+#define NDS_RELOC_SYMBOL_SAMUS_MAIN_ATTRIBUTES 0x610u
+#define NDS_RELOC_ASSET_SAMUS_MAIN 0xd9u
+/* reloc_data_symbols.us.txt:3844/:3846. Bomb's WPAttributes starts at byte
+ * 0x0c of SamusMain; Charge Shot's starts at byte 0 of SamusSpecial1. */
+#define NDS_RELOC_SYMBOL_SAMUS_MAIN_BOMB_WEAPON_ATTRIBUTES 0x0cu
+#define NDS_RELOC_SYMBOL_SAMUS_SPECIAL1_CHARGE_SHOT_WEAPON_ATTRIBUTES 0x00u
+#define NDS_RELOC_ASSET_SAMUS_SPECIAL1 0xdau
+#endif
 /* Both weapon attribute structs sit at file offset 0: the fireball's in file
  * 204 (llMarioSpecial1FireballWeaponAttributes = 0x0) and the blaster's in
  * file 210 (llFoxSpecial1BlasterWeaponAttributes = 0x0), per
@@ -1619,7 +1630,7 @@ static s32 ndsRelocIsMarioFoxAnimID(u32 asset_id)
  * intentionally keep their original two-fighter universe; callers that care
  * about parser type, scratch-heap lifetime or relocation ownership use this
  * predicate instead. */
-#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN
+#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS
 static s32 ndsRelocIsFighterAnimID(u32 asset_id)
 {
     if (ndsRelocIsMarioFoxAnimID(asset_id) != FALSE)
@@ -1643,6 +1654,13 @@ static s32 ndsRelocIsFighterAnimID(u32 asset_id)
 #if NDS_P2_CAPTAIN
     if ((asset_id >= NDS_P2_CAPTAIN_ANIM_FIRST) &&
         (asset_id <= NDS_P2_CAPTAIN_ANIM_LAST))
+    {
+        return TRUE;
+    }
+#endif
+#if NDS_P2_SAMUS
+    if ((asset_id >= NDS_P2_SAMUS_ANIM_FIRST) &&
+        (asset_id <= NDS_P2_SAMUS_ANIM_LAST))
     {
         return TRUE;
     }
@@ -2050,7 +2068,7 @@ static u32 ndsRelocFoxAnimAssetIDForToken(u32 token)
  * remove this work in one change large enough to clear ~16,000 of tail movement,
  * or move it off the gameplay frame entirely, which changes WHEN the work happens
  * instead of shuffling where the code sits. */
-#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN
+#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS
 typedef struct NDSP2FighterAnimTokenRow
 {
     const void *token;
@@ -2075,6 +2093,9 @@ static const NDSP2FighterAnimTokenRow sNdsP2FighterAnimTokens[] =
 #endif
 #if NDS_P2_CAPTAIN
     NDS_P2_CAPTAIN_ANIM_ASSET_ROWS(NDS_P2_FIGHTER_ANIM_TOKEN_ROW)
+#endif
+#if NDS_P2_SAMUS
+    NDS_P2_SAMUS_ANIM_ASSET_ROWS(NDS_P2_FIGHTER_ANIM_TOKEN_ROW)
 #endif
 #undef NDS_P2_FIGHTER_ANIM_TOKEN_ROW
 };
@@ -2104,6 +2125,13 @@ static u32 ndsRelocP2FighterAnimAssetIDForToken(u32 token)
         return token;
     }
 #endif
+#if NDS_P2_SAMUS
+    if ((token >= NDS_P2_SAMUS_ANIM_FIRST) &&
+        (token <= NDS_P2_SAMUS_ANIM_LAST))
+    {
+        return token;
+    }
+#endif
     for (i = 0u;
          i < (sizeof(sNdsP2FighterAnimTokens) /
               sizeof(sNdsP2FighterAnimTokens[0]));
@@ -2120,7 +2148,7 @@ static u32 ndsRelocP2FighterAnimAssetIDForToken(u32 token)
 
 static u32 ndsRelocAssetIDForToken(u32 token)
 {
-#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN
+#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS
     u32 p2_anim_asset_id = ndsRelocP2FighterAnimAssetIDForToken(token);
 
     if (p2_anim_asset_id != NDS_RELOC_ASSET_INVALID)
@@ -2145,6 +2173,10 @@ static u32 ndsRelocAssetIDForToken(u32 token)
 #if NDS_P2_CAPTAIN
     NDS_P2_CAPTAIN_CORE_ASSET_ROWS(NDS_P2_FIGHTER_TOKEN_ROW)
     NDS_P2_CAPTAIN_DEPENDENCY_ASSET_ROWS(NDS_P2_FIGHTER_DEPENDENCY_TOKEN_ROW)
+#endif
+#if NDS_P2_SAMUS
+    NDS_P2_SAMUS_CORE_ASSET_ROWS(NDS_P2_FIGHTER_TOKEN_ROW)
+    NDS_P2_SAMUS_DEPENDENCY_ASSET_ROWS(NDS_P2_FIGHTER_DEPENDENCY_TOKEN_ROW)
 #endif
 #undef NDS_P2_FIGHTER_DEPENDENCY_TOKEN_ROW
 #undef NDS_P2_FIGHTER_TOKEN_ROW
@@ -2503,7 +2535,7 @@ static s32 ndsRelocAssetIsStage(u32 asset_id)
 
 static s32 ndsRelocAssetIsFighter(u32 asset_id)
 {
-#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN
+#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS
 #define NDS_P2_FIGHTER_ASSET_TEST(symbol_, id_, path_) \
     if (asset_id == (id_)) return TRUE;
 #define NDS_P2_FIGHTER_DEPENDENCY_TEST(id_, path_) \
@@ -2519,6 +2551,10 @@ static s32 ndsRelocAssetIsFighter(u32 asset_id)
 #if NDS_P2_CAPTAIN
     NDS_P2_CAPTAIN_CORE_ASSET_ROWS(NDS_P2_FIGHTER_ASSET_TEST)
     NDS_P2_CAPTAIN_DEPENDENCY_ASSET_ROWS(NDS_P2_FIGHTER_DEPENDENCY_TEST)
+#endif
+#if NDS_P2_SAMUS
+    NDS_P2_SAMUS_CORE_ASSET_ROWS(NDS_P2_FIGHTER_ASSET_TEST)
+    NDS_P2_SAMUS_DEPENDENCY_ASSET_ROWS(NDS_P2_FIGHTER_DEPENDENCY_TEST)
 #endif
 #undef NDS_P2_FIGHTER_DEPENDENCY_TEST
 #undef NDS_P2_FIGHTER_ASSET_TEST
@@ -3409,6 +3445,9 @@ static s32 ndsRelocIsGeneratedP2FighterAObj32Asset(u32 asset_id)
 #if NDS_P2_CAPTAIN
     NDS_P2_CAPTAIN_AOBJ32_ASSET_ROWS(NDS_P2_FIGHTER_AOBJ32_TEST)
 #endif
+#if NDS_P2_SAMUS
+    NDS_P2_SAMUS_AOBJ32_ASSET_ROWS(NDS_P2_FIGHTER_AOBJ32_TEST)
+#endif
 #undef NDS_P2_FIGHTER_AOBJ32_TEST
     return FALSE;
 }
@@ -3805,6 +3844,7 @@ static s32 ndsRelocNormalizeFighterAObj16File(NDSRelocLoadedFile *loaded)
 {
     uintptr_t base;
     uintptr_t table_bytes;
+    uintptr_t script_bytes;
     u32 i;
 #if NDS_R2_RELOC_FIXUP_TIMING
     u32 fixup_sub;
@@ -3826,21 +3866,55 @@ static s32 ndsRelocNormalizeFighterAObj16File(NDSRelocLoadedFile *loaded)
     NDS_K0_MARK(gNdsK0AfterGoNormalizes, loaded->asset_id);
 
     base = (uintptr_t)loaded->data;
-    table_bytes = loaded->data_size;
-    for (i = 0; ((i * sizeof(u32)) < table_bytes) &&
-                (((i + 1u) * sizeof(u32)) <= loaded->data_size); i++)
+    table_bytes = 0u;
+    script_bytes = loaded->data_size;
+    /* Fighter AObj16 files begin with the joint-script pointer array.  Stop at
+     * its first non-pointer/non-NULL word instead of searching the entire
+     * prefix for the smallest pointer.
+     *
+     * Samus RollB (1014_FTSamusAnimRollB.c) is the case that makes this a
+     * correctness rule rather than a nicer parser.  Its 0x00..0x5f top-level
+     * pointer table is followed by interpolation keyframes + an SYInterpDesc
+     * and a SECOND pointer array at 0x120; the actual AObj16 joint scripts do
+     * not begin until 0x130.  The old minimum-pointer scan wandered through the
+     * interpolation block, found that second array's pointer back to 0x60, and
+     * then lane-swapped every u32 from 0x60 onward as though it were AObj16.
+     * That half-swapped already-relocated pointers (0x022ed664 -> 0xd664022e)
+     * and crashed syInterpGetFracFrame when RollB evaluated TraI.
+     *
+     * Keep the two boundaries distinct: table_bytes is the contiguous source
+     * pointer array, while script_bytes is the earliest joint script it names.
+     * The bytes between them are 32-bit interpolation data and stay exactly as
+     * the common word-byte-swap/internal-reloc passes produced them. */
+    for (i = 0; (((i + 1u) * sizeof(u32)) <= loaded->data_size); i++)
     {
         uintptr_t value =
             (uintptr_t)ndsRelocReadNative32((u8 *)loaded->data +
                                             (i * sizeof(u32)));
 
-        if ((value >= base) && ((value - base) < table_bytes))
+        if (value == 0u)
         {
-            table_bytes = value - base;
+            table_bytes += sizeof(u32);
+            continue;
         }
+        if ((value >= base) && ((value - base) < loaded->data_size))
+        {
+            uintptr_t offset = value - base;
+
+            table_bytes += sizeof(u32);
+            if (offset < script_bytes)
+            {
+                script_bytes = offset;
+            }
+            continue;
+        }
+        break;
     }
     if ((table_bytes == 0u) || (table_bytes >= loaded->data_size) ||
-        ((table_bytes % sizeof(u32)) != 0u))
+        (script_bytes <= table_bytes) ||
+        (script_bytes >= loaded->data_size) ||
+        ((table_bytes % sizeof(u32)) != 0u) ||
+        ((script_bytes % sizeof(u32)) != 0u))
     {
         ndsRelocRecordExternalFixupFail(loaded->asset_id);
         return FALSE;
@@ -3849,16 +3923,16 @@ static s32 ndsRelocNormalizeFighterAObj16File(NDSRelocLoadedFile *loaded)
 #if NDS_R2_RELOC_FIXUP_TIMING
     /* R2-06 E8/E9. This function is 88.4% of the in-frame relocation, and it has
      * THREE candidate costs that had never been separated: the lane swap over the
-     * whole payload, the O(n^2) successor scan, and the per-script normalize
+     * joint-script suffix, the O(n^2) successor scan, and the per-script normalize
      * (which walks the payload a second time). Splitting them is what decides
      * which loop E9 should attack -- naming the O(n^2) from reading the code was
      * an inference, and 23,491 ticks/call is far more than a table of a few tens
      * of entries can spend on compares. */
     gNdsR2FixupAObj16TableBytes += (u32)table_bytes;
-    gNdsR2FixupAObj16DataBytes += (u32)loaded->data_size;
+    gNdsR2FixupAObj16DataBytes += (u32)(loaded->data_size - script_bytes);
     fixup_sub = cpuGetTiming();
 #endif
-    for (i = (u32)table_bytes; (i + sizeof(u32)) <= loaded->data_size;
+    for (i = (u32)script_bytes; (i + sizeof(u32)) <= loaded->data_size;
          i += sizeof(u32))
     {
         u16 first = ndsRelocReadNative16((u8 *)loaded->data + i);
@@ -4061,8 +4135,28 @@ static s32 ndsRelocFighterAttributesMatchSource(
             (attr->heavyget_sfx == 354u);
     }
 #endif
+#if NDS_P2_SAMUS
+    if (asset_id == NDS_RELOC_ASSET_SAMUS_MAIN)
+    {
+        /* 217_SamusMain.c:354-362. The US voice block is contiguous from
+         * Smash1=573 through Dead=582; Samus dead-slam is source FGM 0x128. */
+        return
+            (attr->dead_fgm_ids[0] == 582u) &&
+            (attr->dead_fgm_ids[1] == 0x128u) &&
+            (attr->deadup_sfx == 576u) &&
+            (attr->damage_sfx == 581u) &&
+            (attr->smash_sfx[0] == 573u) &&
+            (attr->smash_sfx[1] == 574u) &&
+            (attr->smash_sfx[2] == 575u) &&
+            (attr->itemthrow_vel_scale == 0x64u) &&
+            (attr->itemthrow_damage_scale == 0x64u) &&
+            (attr->heavyget_sfx == nSYAudioFGMVoiceEnd);
+    }
+#endif
     return FALSE;
 }
+
+static void ndsRelocNormalizeWeaponAttributes(WPAttributes *attr);
 
 static s32 ndsRelocNormalizeFighterAttributesFile(
     NDSRelocLoadedFile *loaded)
@@ -4070,6 +4164,9 @@ static s32 ndsRelocNormalizeFighterAttributesFile(
     u32 attr_offset;
     u8 *attr_bytes;
     FTAttributes *attr;
+#if NDS_P2_SAMUS
+    WPAttributes *samus_bomb_attr;
+#endif
 
     if ((loaded == NULL) || (loaded->data == NULL))
     {
@@ -4101,6 +4198,12 @@ static s32 ndsRelocNormalizeFighterAttributesFile(
         attr_offset = NDS_RELOC_SYMBOL_CAPTAIN_MAIN_ATTRIBUTES;
     }
 #endif
+#if NDS_P2_SAMUS
+    else if (loaded->asset_id == NDS_RELOC_ASSET_SAMUS_MAIN)
+    {
+        attr_offset = NDS_RELOC_SYMBOL_SAMUS_MAIN_ATTRIBUTES;
+    }
+#endif
     else
     {
         return TRUE;
@@ -4116,6 +4219,29 @@ static s32 ndsRelocNormalizeFighterAttributesFile(
     attr = (FTAttributes *)attr_bytes;
     if (loaded->format_fixups_applied == FALSE)
     {
+#if NDS_P2_SAMUS
+        /* SamusMain is unusual: its first 0x4c bytes are also Bomb's
+         * WPAttributes (llSamusMainBombWeaponAttributes = 0x0c), while the
+         * fighter FTAttributes live at 0x610. The generic word swap reverses
+         * the two s16 lanes in BOTH mixed-width structs. Normalize Bomb before
+         * this file-wide flag is set, or the weapon pass immediately after
+         * this one will correctly assume the file is already converted and
+         * leave the source { 75, 0, -75, 75 } collision box swapped. */
+        if (loaded->asset_id == NDS_RELOC_ASSET_SAMUS_MAIN)
+        {
+            if (ndsRelocRangeInLoadedFile(
+                    loaded,
+                    NDS_RELOC_SYMBOL_SAMUS_MAIN_BOMB_WEAPON_ATTRIBUTES,
+                    sizeof(WPAttributes)) == FALSE)
+            {
+                ndsRelocRecordExternalFixupFail(loaded->asset_id);
+                return FALSE;
+            }
+            samus_bomb_attr = (WPAttributes *)((u8 *)loaded->data +
+                NDS_RELOC_SYMBOL_SAMUS_MAIN_BOMB_WEAPON_ATTRIBUTES);
+            ndsRelocNormalizeWeaponAttributes(samus_bomb_attr);
+        }
+#endif
         ndsRelocSwapNativeU16WordLanes(
             attr_bytes + offsetof(FTAttributes, dead_fgm_ids));
         ndsRelocSwapNativeU16WordLanes(
@@ -4603,6 +4729,26 @@ static s32 ndsRelocWeaponAttributesMatchSource(u32 asset_id,
                (attr->map_coll_bottom == -10) &&
                (attr->map_coll_width == 10);
     }
+#if NDS_P2_SAMUS
+    if (asset_id == NDS_RELOC_ASSET_SAMUS_MAIN)
+    {
+        /* 217_SamusMain.c bytes 0x28..0x2f, viewed from Bomb's 0x0c base. */
+        return (attr->map_coll_top == 75) &&
+               (attr->map_coll_center == 0) &&
+               (attr->map_coll_bottom == -75) &&
+               (attr->map_coll_width == 75);
+    }
+    if (asset_id == NDS_RELOC_ASSET_SAMUS_SPECIAL1)
+    {
+        /* 218_SamusSpecial1.c: Charge Shot's source collision extents are
+         * level-dependent and installed by wpSamusChargeShotLaunch; the base
+         * WPAttributes carries a zero map box. */
+        return (attr->map_coll_top == 0) &&
+               (attr->map_coll_center == 0) &&
+               (attr->map_coll_bottom == 0) &&
+               (attr->map_coll_width == 0);
+    }
+#endif
     return TRUE;
 }
 
@@ -4625,6 +4771,17 @@ static s32 ndsRelocNormalizeWeaponAttributesFile(
     {
         attr_offset = NDS_RELOC_SYMBOL_FOX_SPECIAL1_BLASTER_WEAPON_ATTRIBUTES;
     }
+#if NDS_P2_SAMUS
+    else if (loaded->asset_id == NDS_RELOC_ASSET_SAMUS_MAIN)
+    {
+        attr_offset = NDS_RELOC_SYMBOL_SAMUS_MAIN_BOMB_WEAPON_ATTRIBUTES;
+    }
+    else if (loaded->asset_id == NDS_RELOC_ASSET_SAMUS_SPECIAL1)
+    {
+        attr_offset =
+            NDS_RELOC_SYMBOL_SAMUS_SPECIAL1_CHARGE_SHOT_WEAPON_ATTRIBUTES;
+    }
+#endif
     else
     {
         return TRUE;
@@ -6625,6 +6782,12 @@ static const NDSP2FighterAllocSizeRow sNdsP2CaptainAllocSizes[] =
     NDS_P2_CAPTAIN_ALLOC_SIZE_ROWS(NDS_P2_ALLOC_SIZE_ROW)
 };
 #endif
+#if NDS_P2_SAMUS
+static const NDSP2FighterAllocSizeRow sNdsP2SamusAllocSizes[] =
+{
+    NDS_P2_SAMUS_ALLOC_SIZE_ROWS(NDS_P2_ALLOC_SIZE_ROW)
+};
+#endif
 #undef NDS_P2_ALLOC_SIZE_ROW
 
 static size_t ndsRelocP2FindGeneratedAllocSize(
@@ -6705,6 +6868,16 @@ static size_t ndsRelocP2GeneratedAllocSize(u32 asset_id)
     size = ndsRelocP2FindGeneratedAllocSize(
         sNdsP2CaptainAllocSizes,
         sizeof(sNdsP2CaptainAllocSizes) / sizeof(sNdsP2CaptainAllocSizes[0]),
+        asset_id);
+    if (size != 0u)
+    {
+        return size;
+    }
+#endif
+#if NDS_P2_SAMUS
+    size = ndsRelocP2FindGeneratedAllocSize(
+        sNdsP2SamusAllocSizes,
+        sizeof(sNdsP2SamusAllocSizes) / sizeof(sNdsP2SamusAllocSizes[0]),
         asset_id);
     if (size != 0u)
     {
@@ -8420,7 +8593,7 @@ static void *ndsRelocForceLoadFighterAObj16File(u32 token, u32 asset_id,
     /* The resident battlepack is still the measured Mario/Fox P2-2 feature.
      * P2-3 fighters use the same generic force-loader/cache semantics but are
      * not counted as misses against a pack that cannot contain them. */
-#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN
+#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS
     packed = (ndsRelocIsMarioFoxAnimID(asset_id) != FALSE) ?
         ndsBattlePackFindFigatree(asset_id) : NULL;
 #else
@@ -8451,7 +8624,7 @@ static void *ndsRelocForceLoadFighterAObj16File(u32 token, u32 asset_id,
         NDS_K0_MARK(gNdsK0AfterGoPackHits, asset_id);
         return packed;
     }
-#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN
+#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS
     if (ndsRelocIsMarioFoxAnimID(asset_id) != FALSE)
     {
         gNdsBattlePackMisses++;
@@ -8499,7 +8672,7 @@ static void *ndsRelocForceLoadFighterAObj16File(u32 token, u32 asset_id,
      * Bitmap over the 301 Mario+Fox animation IDs: total loads, distinct assets,
      * repeats. repeats/total is exactly the fraction a cache would remove, and
      * distinct sizes the cache. Lab counters, tick-HUD builds only. */
-#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN
+#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS
     if (ndsRelocIsMarioFoxAnimID(asset_id) != FALSE)
 #endif
     {
