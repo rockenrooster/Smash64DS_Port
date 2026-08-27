@@ -30,6 +30,9 @@
  * the measured peak is six of eight handles with PoolExhaustCount 0. */
 #define NDS_AUDIO_FGM_RELEASE_MICROSECONDS (NDS_AUDIO_FGM_TIMER_MICROSECONDS * 10u)
 #define NDS_AUDIO_FGM_CACHE_SLOT_COUNT 8u
+#define NDS_AUDIO_FGM_CACHE_SLOT_LARGE_BYTES (60u * 1024u)
+#define NDS_AUDIO_FGM_CACHE_SLOT_MEDIUM_BYTES (28u * 1024u)
+#define NDS_AUDIO_FGM_CACHE_SLOT_SMALL_BYTES (16u * 1024u)
 #define NDS_AUDIO_FGM_CACHE_MAX_ENVELOPE_POINTS 32u
 #define NDS_AUDIO_FGM_EVENT_RESTART_SAMPLE (1u << 0)
 
@@ -191,8 +194,13 @@ _Static_assert(NDS_AUDIO_FGM_PACK_ENTRY_BYTES == 32u,
 _Static_assert(NDS_AUDIO_FGM_PACK_DATA_OFFSET ==
                    (16u + (NDS_AUDIO_FGM_ENTRY_COUNT * 32u)),
                "FGM pack header layout changed");
-_Static_assert(NDS_AUDIO_FGM_CACHE_BYTES == (200u * 1024u),
+_Static_assert(NDS_AUDIO_FGM_CACHE_BYTES == (208u * 1024u),
                "FGM cache budget changed");
+_Static_assert(NDS_AUDIO_FGM_CACHE_BYTES ==
+                   (NDS_AUDIO_FGM_CACHE_SLOT_LARGE_BYTES +
+                    (3u * NDS_AUDIO_FGM_CACHE_SLOT_MEDIUM_BYTES) +
+                    (4u * NDS_AUDIO_FGM_CACHE_SLOT_SMALL_BYTES)),
+               "FGM cache slots no longer cover the resident cache exactly");
 _Static_assert(offsetof(NDSAudioFgmHandle, effect) == 0u,
                "BattleShip audio handle must be the backend handle prefix");
 _Static_assert(offsetof(alSoundEffect, sfx_id) == 0x26u,
@@ -418,10 +426,12 @@ static s32 ndsAudioFgmIDIsIncluded(u16 id)
     /* P2-3 Samus bounded gameplay bank. These are the exact source IDs from
      * SamusMainMotion/SamusMain, the shared DownBounce/public tables and the
      * Charge Shot/Bomb weapon code. The generator bakes their complete bounded
-     * source programs AOT; the harder unbounded Charge0..7 sequencer plus
-     * oversized ShootF remain deliberately absent until their DS-native
-     * representation is source-equivalent. Screw Attack / SpecialHi is in the
-     * bounded set now that its n_env active-modulator target is reproduced. */
+     * source programs AOT; the harder unbounded Charge0..7 sequencer remains
+     * deliberately absent until its DS-native representation is source-
+     * equivalent. Full-charge ShootF is exact now: the cache grew by 8 KiB
+     * rather than truncating its 57,596-byte AOT body. Screw Attack / SpecialHi
+     * is in the bounded set now that its n_env active-modulator target is
+     * reproduced. */
     case nSYAudioFGMHeavySwing1:
     case nSYAudioFGMShockL:
     case nSYAudioFGMShockM:
@@ -431,6 +441,7 @@ static s32 ndsAudioFgmIDIsIncluded(u16 id)
     case nSYAudioFGMGroundGrind4:
     case nSYAudioFGMSamusFoot:
     case nSYAudioFGMGroundBrakeGrind:
+    case nSYAudioFGMSamusSpecialNShootF:
     case nSYAudioFGMSamusSpecialNShootL:
     case nSYAudioFGMSamusSpecialNShootM:
     case nSYAudioFGMSamusSpecialNShootS:
@@ -632,8 +643,14 @@ static NDSAudioFgmPackEntry *ndsAudioFgmFindEntry(u16 id)
 static void ndsAudioFgmCacheReset(void)
 {
     static const u32 capacities[NDS_AUDIO_FGM_CACHE_SLOT_COUNT] = {
-        53248u, 28672u, 28672u, 28672u,
-        16384u, 16384u, 16384u, 16384u
+        NDS_AUDIO_FGM_CACHE_SLOT_LARGE_BYTES,
+        NDS_AUDIO_FGM_CACHE_SLOT_MEDIUM_BYTES,
+        NDS_AUDIO_FGM_CACHE_SLOT_MEDIUM_BYTES,
+        NDS_AUDIO_FGM_CACHE_SLOT_MEDIUM_BYTES,
+        NDS_AUDIO_FGM_CACHE_SLOT_SMALL_BYTES,
+        NDS_AUDIO_FGM_CACHE_SLOT_SMALL_BYTES,
+        NDS_AUDIO_FGM_CACHE_SLOT_SMALL_BYTES,
+        NDS_AUDIO_FGM_CACHE_SLOT_SMALL_BYTES
     };
     u32 offset = 0u;
     u32 i;

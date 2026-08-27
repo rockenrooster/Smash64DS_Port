@@ -54,13 +54,17 @@ FGM_OUTPUT_RATE = 32000
 # MAX_CUE_IMA_BYTES does now.
 # P2-3 adds complete per-fighter voice banks.  This is a ROM-file ceiling, NOT
 # the runtime cache: nds_audio_fgm continues to stream into the independently
-# capped 200 KiB resident cache.  The old 1 MiB P1-era ceiling left only ~26 KiB
+# capped resident cache.  The old 1 MiB P1-era ceiling left only ~26 KiB
 # after Luigi and could not admit DK's source voice bank without either dropping
 # source cues or making a fake resident-RAM tradeoff.  Give the roster room to
-# grow while keeping the real cache/slot gates unchanged and checked below.
+# grow while keeping the real cache/slot gates checked below.
 MAX_PACK_BYTES = 2 * 1024 * 1024
-RUNTIME_CACHE_BYTES = (52 * 1024) + (3 * 28 * 1024) + (4 * 16 * 1024)
-MAX_CUE_IMA_BYTES = 52 * 1024
+# Samus's full-charge release (FGM 235) is the first exact one-shot whose AOT
+# body is larger than the old 52 KiB slot: 57,596 bytes. Spend a bounded 8 KiB
+# of ARM9 RAM rather than truncating/downsampling it. The other seven slot
+# classes stay byte-identical, so no existing cue loses a cache home.
+RUNTIME_CACHE_BYTES = (60 * 1024) + (3 * 28 * 1024) + (4 * 16 * 1024)
+MAX_CUE_IMA_BYTES = 60 * 1024
 MAX_RESIDENT_BYTES = 128 * 1024  # historical Phase-C comparison only
 PUBLIC_EXCITED_ID = 626
 # 621 PublicWin is the SECOND cue on this wave, and it is the reason the
@@ -117,8 +121,9 @@ SOURCE_SINE_TABLE_SHA256 = (
 
 # P2-3 Samus gameplay audio that can already be represented exactly by the
 # source-program AOT path.  Keep the genuinely harder sequencer cases OUT of
-# this list: Charge0..7 loop forever with live articulation/modulator state,
-# and ShootF's one-pass AOT body exceeds the largest cache slot. SpecialHi used
+# this list: Charge0..7 loop forever with live articulation/modulator state.
+# ShootF used to exceed the largest cache slot; the 208 KiB cache now gives its
+# exact 57,596-byte one-shot a 60 KiB home. SpecialHi used
 # to be blocked by target28 because the AOT model misread n_env.c's active-
 # modulator cross-target as another audio voice; that source behavior is now
 # reproduced, so Screw Attack belongs in the exact bounded set below.
@@ -132,6 +137,7 @@ SAMUS_NON_CHARGE_AUDIO = (
     (103, "nSYAudioFGMGroundGrind4"),
     (114, "nSYAudioFGMSamusFoot"),
     (128, "nSYAudioFGMGroundBrakeGrind"),
+    (235, "nSYAudioFGMSamusSpecialNShootF"),
     (236, "nSYAudioFGMSamusSpecialNShootL"),
     (237, "nSYAudioFGMSamusSpecialNShootM"),
     (238, "nSYAudioFGMSamusSpecialNShootS"),
@@ -162,7 +168,7 @@ SAMUS_NON_CHARGE_RENDER_PROGRAMS = {
     639: 630,   # bare CharacterUnkZip10 fork -> its actual voiced program
 }
 SAMUS_NON_CHARGE_SELECTOR_SHA256 = (
-    "4f69fbb258ba8989404065689afaac1142a396ae70996a5cfe0ef6a9687d858d")
+    "d2855b5654760fdd458cd230d107a610133f7a133a6c55ed494af152bd106843")
 
 FULL_COVERAGE_IDS = (
     626, 470, 469, 467, 490, 74, 363, 364, 372, 373, 374, 430, 439,

@@ -118,10 +118,9 @@ $expectedIDs = @(626,470,469,467,490,74,363,364,372,373,374,430,439,292,
     # cue from scsubsysdatasamus.c. BladeDraw's two-note one-voice program is
     # rendered AOT so the mid-program control change is preserved.
     513, 264,
-    # P2-3 Samus bounded gameplay bank. These thirty-one are source-program
-    # AOT; Charge0..7 and oversized ShootF stay out until their harder source
-    # sequencer/cache semantics are represented rather than approximated.
-    17, 22, 23, 24, 81, 92, 103, 114, 128, 236, 237, 238, 247, 248, 249, 250,
+    # P2-3 Samus bounded gameplay bank. ShootF 235 now has its complete AOT body
+    # too; Charge0..7 remain the only harder source-sequencer class.
+    17, 22, 23, 24, 81, 92, 103, 114, 128, 235, 236, 237, 238, 247, 248, 249, 250,
     251, 296, 307, 573, 574, 575, 576, 577, 578, 579, 580, 581, 582, 613,
     639)
 $actualIDs = @($metadata.entries | ForEach-Object { [int]$_.id })
@@ -209,9 +208,13 @@ if (([int]$metadata.format_version -ne 4) -or
     # the source-program AOT path; the 200 KiB streaming cache is unchanged.
     # 2014020 -> 2035676 later on 2026-08-27 for Samus SpecialHi / Screw Attack,
     # 213 -> 214 entries. n_env.c's target28 semantics make its root+fork AOT
-    # render exact and only 21,624 bytes, well inside the 53,248-byte slot.
-    ([int64]$metadata.resident_bytes -ne 2035676) -or
-    ([int64]$metadata.resident_limit_bytes -ne 204800) -or
+    # render exact and only 21,624 bytes.
+    # 2035676 -> 2093304 for full-charge ShootF 235, 214 -> 215 entries.
+    # Its complete source-program AOT body is 57,596 bytes, so the bounded
+    # runtime cache grows 200 -> 208 KiB and only the large slot moves 52 -> 60
+    # KiB. The other seven slot classes remain byte-identical.
+    ([int64]$metadata.resident_bytes -ne 2093304) -or
+    ([int64]$metadata.resident_limit_bytes -ne 212992) -or
     # ROM, not RAM: the runtime streams cues into resident_limit_bytes and never
     # holds the pack. 512 KiB blocked the five announcer lines and 768 KiB then
     # blocked the seven crowd cues, both for no runtime reason; the bound that
@@ -248,8 +251,9 @@ if (([int]$metadata.format_version -ne 4) -or
     # -> 0xeb6ba1dc on 2026-08-26 (P2-3f16) for the three source entry cues;
     # -> 0x64710073 for Samus's source announcer + selected BladeDraw pair;
     # -> 0xa1f3ba41 for her thirty bounded gameplay selectors;
-    # -> 0xae1c13f9 when SpecialHi/Screw Attack joins that exact bounded bank.
-    ($metadata.mapping_sha256_lo -ne '0xae1c13f9') -or
+    # -> 0xae1c13f9 when SpecialHi/Screw Attack joins that exact bounded bank;
+    # -> 0x8e881b72 when full-charge ShootF 235 joins it.
+    ($metadata.mapping_sha256_lo -ne '0x8e881b72') -or
     # Repinned 2026-08-02: FGM 11 (the rolling dodge) dropped 127 -> 96 -> 68 ->
     # 48 on the owner's ear via FGM_OWNER_VOLUME_TRIM, -8.4 dB total against the
     # source; the 68 pin was
@@ -305,8 +309,9 @@ if (([int]$metadata.format_version -ne 4) -or
     # resident bytes and mapping stay exactly 213 / 2014020 / 0xa1f3ba41.
     # SpecialHi is the next intentional selector change: root 249 + one-time
     # fork 683 render together for 235 source ticks / 43,240 PCM samples.
+    # ShootF 235 then adds the complete 626-tick / 115,184-sample one-shot.
     ($metadata.pack_sha256 -ne
-        'f7b2053ec274470f8dd0a6c3257dd53376f02c2f2a63cb8b0699a5f6b65be516')) {
+        '63d6f9235d20cb7b59d51c00c350625174b6874d2ecb99b5d152d4214a002e27')) {
     throw 'FGM pack format, budget, mapping, or binary identity changed.'
 }
 if ((@($metadata.excluded_entries).Count -ne 0) -or
@@ -317,7 +322,7 @@ foreach ($entry in $metadata.entries) {
     if (([double]$entry.decoded_rms -le 0.0) -or
         ([int64]$entry.decoded_peak -le 0) -or
         ([double]$entry.ima_snr_db -lt 14.0) -or
-        ([int64]$entry.ima_adpcm_bytes -gt 53248) -or
+        ([int64]$entry.ima_adpcm_bytes -gt 61440) -or
         ([int]$entry.packed_envelope_count -gt 32)) {
         throw "FGM $($entry.id) failed its acoustic/cache gate."
     }
@@ -487,6 +492,29 @@ if (($null -eq $fgm249) -or
         'ce5695bd782346e162346433c421a54bb90f69de17dafd31350f5fdd40f7424f')) {
     throw 'FGM 249 Samus SpecialHi lost its exact root+fork source-program render.'
 }
+# Samus full-charge release is a bounded one-shot, not a sequencer loop. The
+# source program is 626 FGM ticks and renders to 115,184 samples / 57,596 IMA
+# bytes. That is why the DS cache's one large slot grew from 52 -> 60 KiB; the
+# complete source schedule fits without truncation or downsampling. The source
+# also requests custom FX on this cue, which this dry AOT pack still does not
+# synthesize; pin that debt explicitly rather than describing the cue as fully
+# acoustically exact.
+$fgm235 = $metadata.entries | Where-Object { [int]$_.id -eq 235 }
+if (($null -eq $fgm235) -or
+    ($fgm235.ds_loop_strategy -ne 'source_program_aot') -or
+    ([int]$fgm235.ds_frequency_hz -ne 32000) -or
+    ([int]$fgm235.ds_sample_count -ne 115184) -or
+    ([int]$fgm235.ima_adpcm_bytes -ne 57596) -or
+    ($fgm235.ima_adpcm_sha256 -ne
+        'c0ad3bec98dd263e34b3de9e7e394518dcf0bd847ae7074df61c4fef101be886') -or
+    (@($fgm235.root_fork_programs).Count -ne 0) -or
+    (@($fgm235.omitted_fork_programs).Count -ne 0) -or
+    ($fgm235.acoustic_oracle.aot_rendered_pcm_sha256 -ne
+        '9f6fc77e5d648b221e647b8a0ce2d8c7280d63e6f037bfb058b0f4b3f41a7d21') -or
+    ([int]$fgm235.acoustic_oracle.duration_ticks -ne 626) -or
+    ($fgm235.acoustic_oracle.source_custom_fx_dry_only -ne $true)) {
+    throw 'FGM 235 Samus ShootF lost its complete bounded source-program render.'
+}
 $fgm218 = $metadata.entries | Where-Object { [int]$_.id -eq 218 }
 if (($fgm218.acoustic_oracle.source_custom_fx_dry_only -ne $true) -or
     ([int]$metadata.attack_activation_qualification.fgm_218_feasibility.source_effective_fx_mix -ne 25)) {
@@ -495,7 +523,7 @@ if (($fgm218.acoustic_oracle.source_custom_fx_dry_only -ne $true) -or
 $header = Get-Content -LiteralPath $headerPath -Raw
 $runtime = Get-Content -LiteralPath $runtimePath -Raw
 foreach ($token in @(
-    '#define NDS_AUDIO_FGM_CACHE_BYTES 204800u')) {
+    '#define NDS_AUDIO_FGM_CACHE_BYTES 212992u')) {
     if (-not $header.Contains($token)) { throw "Runtime header lost: $token" }
 }
 # NDS_AUDIO_FGM_ENTRY_COUNT, NDS_AUDIO_FGM_PACK_BYTES and
