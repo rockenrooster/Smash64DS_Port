@@ -542,8 +542,18 @@ match. Re-read it on Results / Sudden Death / pause zoom, then cut.
    - **Victory BGM `nSYAudioBGMWinFZero` (19) is a music id, not an FGM cue**,
      so it is the BGM system's, not this pack's. Not checked by this row.
 
-2. **Owner feel pass** on Falcon Dive grab/release/regrab and the speed
-   extremes (fastest fall + fastest run: traction, landing, edge slips).
+2. **Falcon Dive grab/release/regrab — CLOSED by board row P2-3f18
+   (2026-08-26).** A live Falcon-vs-Fox proof drives ordinary Up+B through
+   `ftCommonWaitProcInterrupt`; no status or guest function is injected. The
+   source motion turns both Dive attack collisions on at physics tick 13 with
+   `is_catchstatus=1` and the source `proc_catch` / `proc_capture` installed.
+   The observed chain is `SpecialHi -> catch -> CaptureCaptain -> HiCatch ->
+   HiThrow -> victim release`; after release both capture-immune masks are zero
+   and both catch/capture pointers are NULL. The same Falcon then repeats that
+   whole chain a second time in the same match, proving regrab. Artifact:
+   `artifacts/verification/2026-08-26_p2-3f18-falcon-dive-owner.txt`.
+   **Still open:** the speed extremes (fastest fall + fastest run: traction,
+   landing, edge slips).
 3. **A four-distinct-kind budget answer — CLOSED by board row P2-3f9
    (2026-08-25).** The shell-driven argmax match was measured, it halted, and
    the two levers named here were taken: the graphics-heap reservation
@@ -615,8 +625,8 @@ match. Re-read it on Results / Sudden Death / pause zoom, then cut.
   source `MAP_PROC_TYPE_PROJECT` flag while using the port's DS collision
   backend. A full Falcon-enabled build links the wrapper as an 8-byte function;
   object disassembly is `bl mpCommonCheckFighterProject`, with no generic
-  collision call left in the wrapper. This closes only the shared map seam —
-  the grab/release/regrab owner feel pass below is still open.
+  collision call left in the wrapper. P2-3f18 separately proves the complete
+  live grab/release/regrab owner chain through this status family.
 - **CLOSED by P2-3f8:** `gFTDataCaptainMainMotion` was NULL in every built
   configuration, so Falcon Dive's victim tether would have dereferenced
   `ndsRelocGetFileData`'s NULL return the first time a Falcon spawned without
@@ -642,7 +652,8 @@ match. Re-read it on Results / Sudden Death / pause zoom, then cut.
       356 FuraSleep is over the 53,248 B cache-slot ceiling at 65,324 B and is
       the one measured omission; seven shared non-fighter cues remain a
       roster-wide gap.
-- [ ] Falcon Dive grab/release/regrab semantics equivalent.
+- [x] Falcon Dive grab/release/regrab semantics equivalent in the live source
+      status chain, including release cleanup + immediate regrab (P2-3f18).
 - [x] Falcon Dive's 15-tick projected-collision window uses BattleShip's
       `mpCommonProcFighterProject -> mpCommonCheckFighterProject` seam (P2-3f17).
 - [ ] Fast-fall/landing/edge behavior spot-checks at speed extremes.
