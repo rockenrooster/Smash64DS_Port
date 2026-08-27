@@ -1,8 +1,8 @@
 # Source Refactor Plan
 
-**Status:** Core safe implementation complete; dirty-file phases deferred
+**Status:** Structural implementation complete; further semantic cleanup is evidence-driven
 **Date:** 2026-08-27
-**Primary scope:** `src/port/*` and `src/nds/nds_renderer.c`
+**Primary scope:** `src/port/*`, `src/nds/nds_renderer.c`, and `src/nds/nds_menu_shell.c`
 
 ## Implementation Status
 
@@ -11,20 +11,18 @@
 - Phase 2 complete for the proven-retired immediate Mario/Fox proof chain;
   current accepted builds did not link that surface (`767475779cc`). Further
   proof deletion remains evidence-driven rather than a refactor requirement.
-- Phase 3 deferred: `reloc_backend_renderer_dl.c` still contains unrelated
-  active work, so mechanically splitting it now would fold that work into the
-  refactor and violate this plan's isolation rule.
+- Phase 3 complete: after the unrelated active work was settled separately,
+  `reloc_backend_renderer_dl.c` was split into five ordered same-TU owner
+  slices while preserving `scene_backend.o` (`ad6caa9d829`). The pre/post
+  symbol table and full disassembly are byte-identical.
 - Phase 4 complete: `nds_renderer.c` is an ordered textual-slice aggregator and
   still produces one executable-equivalent `nds_renderer.o` (`dd340c70da2`).
 - Phase 5 remains deliberately opportunistic: no semantic renderer ownership
   change is required merely to complete the structural refactor.
-- Phase 6 complete for clean `taskman_seam.c` and `diagnostics.c`
-  (`f7b8160d88b`). `nds_menu_shell.c` remains deferred while unrelated active
-  roster/UI work is present.
-
-The two deferred files should be revisited only after their active changes are
-settled. Do not mechanically redistribute a dirty file across new slices just
-to mark a phase complete.
+- Phase 6 complete for `taskman_seam.c` and `diagnostics.c`
+  (`f7b8160d88b`) and for `nds_menu_shell.c` (`33ff8b4e476`). The menu shell
+  split preserves one `nds_menu_shell.o`; its pre/post symbol table and full
+  disassembly are byte-identical.
 
 ## Purpose
 
@@ -202,9 +200,10 @@ Do not combine large deletion work with the original mechanical split.
 
 ## Phase 3: Decompose `reloc_backend_renderer_dl.c`
 
-This file is another major monolith, but it currently contains unrelated active work. Do not make it the first target and do not fold those existing changes into the refactor.
-
-Once the active work is settled, keep it inside `scene_backend.o` and decompose it textually by owner.
+This file was another major monolith. Its unrelated active work was settled in
+a separate checkpoint before the refactor touched it, preserving the isolation
+rule. It remains inside `scene_backend.o` and is now decomposed textually by
+owner.
 
 Provisional structure:
 
@@ -374,7 +373,17 @@ Possible ownership slices:
 - character select screen,
 - stage select screen.
 
-This file currently participates in active roster/UI work, so defer it until that work is settled.
+The active roster/UI work was settled separately before this refactor resumed.
+The implemented same-TU slices are:
+
+```text
+nds_menu_shell.c                 (outer guard + aggregator)
+  nds_menu_shell_core.c          (shared state/input/text + title)
+  nds_menu_shell_mode_vs.c       (mode select + VS rules)
+  nds_menu_shell_css.c           (character select)
+  nds_menu_shell_sss.c           (stage select)
+  nds_menu_shell_router.c        (screen loop + scene entrypoints)
+```
 
 ## Verification Policy by Change Type
 
@@ -443,14 +452,17 @@ Do **not**:
 - change GX/DMA ownership as incidental cleanup,
 - claim a performance improvement without measurement.
 
-## Next Deferred Work
+## Completion / Future Cleanup
 
-No additional structural work should be forced into the current dirty files.
-When their active changes are settled:
+The planned structural decomposition is complete. No additional translation-
+unit or ownership split is required to finish this refactor.
 
-1. mechanically split `src/port/reloc_backend_renderer_dl.c` while preserving
-   `scene_backend.o`, then prove object/code equivalence;
-2. mechanically split `src/nds/nds_menu_shell.c` only if it is still large
-   enough to justify the change after the active roster/UI work lands;
-3. perform further semantic cleanup only where current-build reachability and
-   verifier coverage prove an old path obsolete.
+Future cleanup is intentionally evidence-driven rather than part of structural
+completion:
+
+1. remove additional legacy proof infrastructure only after current-build
+   reachability and verifier coverage prove it obsolete;
+2. narrow renderer interfaces only when the resulting codegen and GX/DMA
+   ownership remain demonstrably equivalent;
+3. consider independent translation units only when there is a real ownership
+   benefit and measured codegen/performance evidence supports the change.
