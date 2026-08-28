@@ -1,21 +1,24 @@
 # Handoff
 
-Current: 2026-08-26 — **P2-2p7 CLOSED: the four-CPU sampler no longer subtracts
-`2^22` from honest long frames, and the real argmax level is banked.** The
-1,972-sample Mario/Fox/Captain/Donkey run is `ALL` P50/P95
-**6,719,552 / 8,400,128** and `WORK-H` **6,313,728 / 7,906,176**, histogram
-2:60 / 3:3 / 4:2 / 5+:1908 / max 25. Only seven rows need the proven wrap
-correction. Same-run identity is four CPUs / four fighters / mask 0xF, clock
-60->1; heap low-water 325,240 B and allocator/object/graphics failures zero.
-A 128-frame no-build sizing probe on the same ROM records **60 native-stage
-owner rejects, first/last reason 6 (`ndsRendererPrepareNativeStageOwner`)**,
-abort/post-arm rejects zero. That stage seam is the next performance lead.
-P2-3f11's PAL16 admission fix remains landed and the stress arm remains the real
-argmax. P2-3f17/f18 close Falcon Dive's shared project seam and live
-grab/release/regrab chain. **P2-3f19 closes Falcon's movement owner pass too:**
-Run 75, RunBrake 75->72.75, fast-fall -100 -> Heavy landing, and Run(16) ->
-Fall(26) at Dream Land's ledge all execute through source common code. Falcon's
-only fighter-specific open gap is audio 356 FuraSleep. P2-3r17 stays DEFERRED.
+Current: 2026-08-27 — **P2-3f22 CLOSED: Samus is a source-derived native owner
+and the six-kind argmax stress is green.** BattleShip's real non-contiguous
+`dSamusMain_setup_parts = {0xFFF803FF,0}` invalidated the generator's old
+prefix-only assumption; it now mirrors `lbCommonSetupFighterPartsDObjs`'s
+per-descriptor bit walk and Low->High display-list fallback. The exact
+`SamusModel` yields High/Low JointTrees at 0x3520/0x69D0, 24 live joints
+including TopN, 14 bindings, GX seed/push/pop 1/5/5 and zero cross-matrix runs.
+Static geometry closure is exact: 322/322 High and 199/199 Low source triangles.
+The same standing one-minute arm now instantiates **Samus/Fox/Captain/Donkey**,
+the six-kind arena argmax (**377,280 B unique fighter-kind charge**): roster
+exact, draw mask 0xF, Samus slot-0 hardware triangles **354,021**, native-plan
+build/hit/mismatch **630/6,661/0**, source clock 60->1, heap low-water
+**213,188 B** (187,588 above the 25,600 floor), graphics overflow/no-room 0/0,
+pose BindFull 0. Exact ROM SHA-256
+`3985F5A61B6A6DBD877ABBE86633744ACF8EB4BA232F633D7CB441C719861155`.
+Artifacts are `2026-08-27_p2-3f22-samus-native-{stress,coverage,memory}.json`.
+Samus now owes only the P2-3 scripted every-state visit, CPU determinism replay
+and owner-feel acceptance. P2-2's native-stage rejection performance lead
+(reason 6, `ndsRendererPrepareNativeStageOwner`) remains separate debt.
 
 ## State
 
@@ -34,14 +37,15 @@ only fighter-specific open gap is audio 356 FuraSleep. P2-3r17 stays DEFERRED.
      character select → stage select → battle). Renamed/rebased at P2-1M.
   3. `p2_fourcpu_stress` — `scripts/verify-p2-four-fighter-stress.ps1`, target
      `smash64ds-p2-fourcpu-tickhud-hwtri`, build `build-p2-fourcpu-tickhud`.
-     Four level-3 CPUs, Dream Land, one-minute Time — **Mario/Fox/Captain/Donkey
-     since P2-3f11**, the landed-content argmax at 348,320 B; Luigi is the
-     cheapest kind, not Mario. `NDS_P2_FOUR_CPU_ROSTER=0` rebuilds the mirror
+     Four level-3 CPUs, Dream Land, one-minute Time — **Samus/Fox/Captain/Donkey
+     since P2-3f22**, the six-kind landed-content argmax at **377,280 B**;
+     Luigi and Mario both fall below the top four. `NDS_P2_FOUR_CPU_ROSTER=0` rebuilds the mirror
      control. 0 humans / 4 CPUs
      / 4 fighter GObjs / mask `0xF`, all four slots drawing, plus the P2-2
      memory + native-Low-detail budget gate. **It asserts no tick gate on
-     purpose:** four kinds sit far outside 1.12M — P2 debt (row P2-2p7 now
-     measures `ALL` P50/P95 6,719,552 / 8,400,128), not a per-run verdict.
+     purpose:** four kinds sit far outside 1.12M — P2 debt, not a per-run
+     verdict. P2-3f22's current Samus argmax run measures `ALL` P50/P95
+     **7,279,616 / 8,960,512** and `WORK-H` **6,681,984 / 8,601,856**.
 - **The P1-named proof target left the routine gate.**
   `smash64ds-battle-playable-proof-hwtri` is still in the Makefile and still the
   default for the dozen specialized probes and metric verifiers that boot

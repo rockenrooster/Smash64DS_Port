@@ -661,10 +661,9 @@ endif
 # the ladder when Falcon becomes a native owner, and put it where the flags are
 # final.
 NDS_P2_CAPTAIN ?= 0
-# P2-3 Samus source-gameplay admission.  Her first landing deliberately uses
-# the correct generic renderer: unlike the landed native owners, Samus's source
-# setup_parts mask is non-contiguous, so native-owner topology is a separate
-# renderer optimization after her gameplay/assets are live.
+# P2-3 Samus source-gameplay admission. Her native owner is source-derived from
+# the non-contiguous setup_parts mask; the generator mirrors BattleShip's
+# per-descriptor bit walk instead of requiring the older prefix-shaped masks.
 NDS_P2_SAMUS ?= 0
 # P2-3f9. THE HEAVIEST ROSTER A PLAYER CAN REACH, MEASURED FROM THE SHELL.
 #
@@ -677,11 +676,12 @@ NDS_P2_SAMUS ?= 0
 # nobody had ever run four distinct kinds through the shipped menus at any
 # roster.
 #
-# 1 seeds the P2-1a descriptor with the measured argmax over landed content
-# (Luigi human + Fox/Captain/Donkey level-3 CPUs) so the character select opens
-# on it, and swaps the CSS walk for one that presses START without disturbing
-# the four seeded slots. It changes nothing else: the whole shell runs, the
-# battle loads whatever the CSS committed, and the arena spends what it spends.
+# 1 seeds the P2-1a descriptor with the measured argmax over landed content.
+# Since P2-3f22 that is Samus human + Fox/Captain/Donkey level-3 CPUs, so the
+# character select opens on the same four kinds the direct stress arm measures.
+# The CSS walk presses START without disturbing the four seeded slots. It changes
+# nothing else: the whole shell runs, the battle loads whatever the CSS committed,
+# and the arena spends what it spends.
 # Deliberately NOT folded into NDS_P2_FOUR_CPU_ROSTER -- one flag naming two
 # different rosters on two different entry paths is how a measurement gets
 # attributed to the wrong arm.
@@ -707,6 +707,7 @@ NDS_NATIVE_OWNER_IMAGE_VERIFY ?= 0
 NDS_NATIVE_OWNER_IMAGE_LUIGI = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P2_LUIGI),0)
 NDS_NATIVE_OWNER_IMAGE_DONKEY = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P2_DONKEY),0)
 NDS_NATIVE_OWNER_IMAGE_CAPTAIN = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P2_CAPTAIN),0)
+NDS_NATIVE_OWNER_IMAGE_SAMUS = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P2_SAMUS),0)
 # P2-3 focused fighter-production proof selector. -1 leaves the canonical
 # Mario-vs-Fox descriptor byte-for-byte unchanged; a non-negative value is an
 # nFTKind* integer used only for fighter slot 0 in direct-battle proof builds.
@@ -2371,13 +2372,17 @@ ifeq ($(NDS_P2_FOUR_CPU_ROSTER),1)
 # why every memory counter read clean and identical to the control. Fixed and
 # asserted.
 #
-# P2-3f11 re-points this arm to the measured landed-content argmax:
-# Mario/Fox/Captain/Donkey. Luigi remains admitted because native-owner slots are
+# P2-3f11 re-pointed this arm to the then-measured landed-content argmax,
+# Mario/Fox/Captain/Donkey. P2-3f22 moves it again now that Samus is landed:
+# SamusMain is 85,296 B standalone / 83,008 B unique after the same 2,288 B
+# shared pair, so Samus replaces Mario and the six-kind argmax is
+# Samus/Fox/Captain/Donkey. Luigi remains admitted because native-owner slots are
 # a dense ABI (Donkey and Captain build on the already-qualified Luigi slot), but
-# the direct battle descriptor below does not instantiate him.
+# neither Luigi nor Mario is instantiated by the direct battle descriptor.
 override NDS_P2_LUIGI := 1
 override NDS_P2_DONKEY := 1
 override NDS_P2_CAPTAIN := 1
+override NDS_P2_SAMUS := 1
 endif
 endif
 endif
@@ -4470,6 +4475,9 @@ endif
 ifeq ($(NDS_P2_CAPTAIN),1)
 NDS_NATIVE_IMAGE_OWNERS += captain
 endif
+ifeq ($(NDS_P2_SAMUS),1)
+NDS_NATIVE_IMAGE_OWNERS += samus
+endif
 NDS_NITROFS_NATIVE_IMAGE_FILES := $(foreach owner,$(NDS_NATIVE_IMAGE_OWNERS),	$(NDS_NATIVE_IMAGE_DIR)/$(owner)_high.bin 	$(NDS_NATIVE_IMAGE_DIR)/$(owner)_low.bin)
 
 $(NDS_NATIVE_IMAGE_HEADER): $(NDS_NATIVE_IMAGE_GENERATOR)
@@ -4591,6 +4599,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_P2_SAMUS $(NDS_P2_SAMUS)'; \
 		echo '#define NDS_P2_SHELL_ARGMAX_ROSTER $(NDS_P2_SHELL_ARGMAX_ROSTER)'; \
 		echo '#define NDS_NATIVE_OWNER_IMAGE_CAPTAIN $(NDS_NATIVE_OWNER_IMAGE_CAPTAIN)'; \
+		echo '#define NDS_NATIVE_OWNER_IMAGE_SAMUS $(NDS_NATIVE_OWNER_IMAGE_SAMUS)'; \
 		echo '#define NDS_P2_PROOF_FIGHTER0 $(NDS_P2_PROOF_FIGHTER0)'; \
 		echo '#define NDS_R2_SOAK_MATCH_MINUTES $(NDS_R2_SOAK_MATCH_MINUTES)'; \
 		echo '#define NDS_ANIM_JOINT_AUDIT $(NDS_ANIM_JOINT_AUDIT)'; \

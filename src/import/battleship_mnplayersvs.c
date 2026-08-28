@@ -210,6 +210,21 @@ static sb32 ndsMNPlayersVSPreviewPrepareResidentKind(s32 fkind)
         return TRUE;
     }
 #endif
+#if NDS_P2_SAMUS
+    if (fkind == nFTKindSamus)
+    {
+        if ((ndsRendererNativeEnsureOwnerImage(
+                 NDS_NATIVE_IMAGE_SLOT_SAMUS, 0u) == FALSE) ||
+            (ndsRendererNativeEnsureOwnerImage(
+                 NDS_NATIVE_IMAGE_SLOT_SAMUS, 1u) == FALSE))
+        {
+            gNdsPlayersVSPreviewResidentOwnerFailMask |= kind_bit;
+            return FALSE;
+        }
+        gNdsPlayersVSPreviewResidentReadyMask |= kind_bit;
+        return TRUE;
+    }
+#endif
     gNdsPlayersVSPreviewResidentReadyMask |= kind_bit;
     return TRUE;
 }

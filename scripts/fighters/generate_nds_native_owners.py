@@ -300,6 +300,11 @@ P2_O2R_ASSETS = {
         0x014c,
         "bbd56fc89524fc5a5de7d2cb88fdead3c231ad402b6039e1b63e4f1091c4669e",
     ),
+    "samus": (
+        Path("decomp/BattleShip-main/BattleShip_o2r/reloc_fighters_main/SamusModel"),
+        0x0140,
+        "67f9646c0a019704dcae5e3307df2cf8e4e7846339537a70a64f77d42284bbf5",
+    ),
 }
 
 # These are the primary JointTree DObjDesc arrays in the exact hashed O2R
@@ -321,6 +326,8 @@ OWNER_JOINT_TREES = {
     "donkey": (0x39a8, 27),
     # decomp dCaptainModel_JointTree (332_CaptainModel.c:1888)
     "captain": (0x3be0, 27),
+    # decomp dSamusModel_JointTree (320_SamusModel.c:1427)
+    "samus": (0x3520, 34),
 }
 
 # The SECOND JointTree array in each hashed O2R resource is the low-detail
@@ -340,6 +347,8 @@ OWNER_JOINT_TREES_LOW = {
     "donkey": (0x6ec0, 27),
     # decomp dCaptainModel_JointTree_0x7900 (332_CaptainModel.c:4071)
     "captain": (0x7900, 27),
+    # decomp dSamusModel_JointTree_0x69D0 (320_SamusModel.c:3109)
+    "samus": (0x69d0, 34),
 }
 
 # Canonical export hashes for the low-detail program, pinned from the same
@@ -404,6 +413,10 @@ OWNER_SETUP_PARTS = {
     "donkey": (0xffffff80, 0x00000000),
     # dCaptainMain_setup_parts (236_CaptainMain.c:103), the same mask
     "captain": (0xffffff80, 0x00000000),
+    # dSamusMain_setup_parts (217_SamusMain.c:117). Unlike the earlier owners
+    # this deliberately skips descriptors 13..21, so the decoder must follow
+    # BattleShip's bit-walk rather than assuming one selected prefix.
+    "samus": (0xfff803ff, 0x00000000),
 }
 
 # Slots 0..15 remain reserved for the camera seed and live GX hierarchy stack.
@@ -440,6 +453,8 @@ OWNER_CROSS_BINDING_SLOTS = {
     # admitting Falcon does not narrow the 26..30 headroom the parent-slot
     # allocator in ndsRendererAdapterBuildGxSlotTable scans downward from.
     "captain": (),
+    # Samus also has no cross-matrix run in either source detail level.
+    "samus": (),
 }
 
 OWNER_PLAN_COUNTS = {
@@ -450,6 +465,8 @@ OWNER_PLAN_COUNTS = {
     # 25 selected joints + the synthetic TopN, 17 drawable roots; identical in
     # both details.
     "captain": (26, 17),
+    # 23 source-selected parts + the synthetic TopN, 14 drawable roots.
+    "samus": (24, 14),
 }
 
 # camera seeds, hierarchy pushes, hierarchy pops, cross-binding stores, and
@@ -462,6 +479,7 @@ OWNER_GX_PLAN_COUNTS = {
     # Zero cross-binding stores means zero per-corner restores; see
     # OWNER_CROSS_BINDING_SLOTS above.
     "captain": (1, 6, 6, 0, 0),
+    "samus": (1, 5, 5, 0, 0),
 }
 
 # The low-detail program shares the high skeleton (same pushes/pops/stores);
@@ -474,6 +492,7 @@ DETAIL_GX_PLAN_COUNTS = {
         "luigi": (1, 5, 5, 8, 46),
         "donkey": (1, 6, 6, 10, 74),
         "captain": (1, 6, 6, 0, 0),
+        "samus": (1, 5, 5, 0, 0),
     },
 }
 
@@ -589,20 +608,55 @@ SOURCE_MATERIAL_DL = 0xde
 SOURCE_END_DL = 0xdf
 
 
-def _discover_owner_roots(payload: bytes, owner_name: str,
-                          detail: str = "high") -> list[int]:
+def _owner_selected_descriptor_indices(owner_name: str,
+                                       descriptor_count: int) -> list[int]:
+    """Return BattleShip's exact setup_parts selection in source order."""
+    if descriptor_count > 64:
+        raise ValueError(
+            f"{owner_name} JointTree has {descriptor_count} raw descriptors; "
+            "setup_parts carries only 64 bits"
+        )
+    setup_words = OWNER_SETUP_PARTS[owner_name]
+    return [
+        index for index in range(descriptor_count)
+        if setup_words[index // 32] & (1 << (31 - (index & 31)))
+    ]
+
+
+def _owner_joint_descriptors(payload: bytes, owner_name: str,
+                             detail: str = "high") -> list[tuple[int, int | None]]:
+    """Decode one JointTree with BattleShip's Low-detail DL fallback.
+
+    lbCommonSetupFighterPartsDObjs always takes id/transform from the selected
+    detail's descriptor. For Low detail only, a NULL Low display list selects
+    the corresponding High display list instead. Keep that source rule here so
+    root discovery and topology cannot disagree about which DObj is drawable.
+    """
     joint_tree_offset, descriptor_count = (
         OWNER_JOINT_TREES[owner_name] if detail == "high"
         else OWNER_JOINT_TREES_LOW[owner_name]
     )
     if joint_tree_offset + descriptor_count * DOBJ_DESC_SIZE > len(payload):
         raise ValueError(f"{owner_name} JointTree is out of range")
+    high_tree_offset, high_descriptor_count = OWNER_JOINT_TREES[owner_name]
+    if high_descriptor_count != descriptor_count:
+        raise ValueError(
+            f"{owner_name} High/Low JointTree cardinality changed: "
+            f"{high_descriptor_count}/{descriptor_count}"
+        )
     descriptors = []
     for descriptor_index in range(descriptor_count):
         offset = joint_tree_offset + descriptor_index * DOBJ_DESC_SIZE
         depth, reloc_pointer = struct.unpack_from(">II", payload, offset)
         display_offset = None if reloc_pointer == 0 else \
             (reloc_pointer & 0xffff) * 4
+        if (detail == "low") and (display_offset is None):
+            high_offset = high_tree_offset + descriptor_index * DOBJ_DESC_SIZE
+            _high_depth, high_reloc_pointer = struct.unpack_from(
+                ">II", payload, high_offset
+            )
+            if high_reloc_pointer != 0:
+                display_offset = (high_reloc_pointer & 0xffff) * 4
         if display_offset is not None and display_offset >= len(payload):
             raise ValueError(
                 f"{owner_name} JointTree entry {descriptor_index}: "
@@ -611,21 +665,16 @@ def _discover_owner_roots(payload: bytes, owner_name: str,
         descriptors.append((depth, display_offset))
     if descriptors[-1] != (18, None):
         raise ValueError(f"{owner_name} JointTree lost its depth-18 sentinel")
-    descriptors = descriptors[:-1]
-    setup_words = OWNER_SETUP_PARTS[owner_name]
-    selected = [
-        index for index in range(len(descriptors))
-        if setup_words[index // 32] & (1 << (31 - (index & 31)))
-    ]
-    if selected != list(range(len(selected))):
-        raise ValueError(f"{owner_name} setup_parts is not a contiguous prefix")
-    if len(selected) + 1 != len(descriptors):
-        raise ValueError(f"{owner_name} selected JointTree cardinality changed")
-    if any(offset is not None for _, offset in descriptors[len(selected):]):
-        raise ValueError(f"{owner_name} setup_parts dropped a drawable descriptor")
+    return descriptors
+
+
+def _discover_owner_roots(payload: bytes, owner_name: str,
+                          detail: str = "high") -> list[int]:
+    descriptors = _owner_joint_descriptors(payload, owner_name, detail)[:-1]
+    selected = _owner_selected_descriptor_indices(owner_name, len(descriptors))
     roots = [
-        offset for _, offset in descriptors[:len(selected)]
-        if offset is not None
+        descriptors[index][1] for index in selected
+        if descriptors[index][1] is not None
     ]
     if (owner_name in OWNER_PLAN_COUNTS and
             len(roots) != OWNER_PLAN_COUNTS[owner_name][1]):
@@ -922,6 +971,10 @@ P2_OWNER_MODEL_CENSUS = {
         "high": (87, 254, 34, 319, 34, 34, 17, 291, 957, 0, 68, 6, 0),
         "low": (73, 223, 30, 200, 30, 30, 17, 205, 600, 0, 68, 4, 0),
     },
+    "samus": {
+        "high": (48, 209, 30, 322, 26, 26, 14, 294, 966, 0, 56, 8, 0),
+        "low": (48, 203, 23, 199, 23, 23, 14, 174, 597, 0, 56, 0, 0),
+    },
 }
 
 # Admission order is the native-owner slot ABI after frozen Mario/Fox. Keep the
@@ -931,6 +984,7 @@ P2_RUNTIME_OWNERS = (
     ("luigi", "NDS_P2_LUIGI"),
     ("donkey", "NDS_P2_DONKEY"),
     ("captain", "NDS_P2_CAPTAIN"),
+    ("samus", "NDS_P2_SAMUS"),
 )
 
 
@@ -1530,69 +1584,20 @@ def build_joint_push_flags(owner_name: str, parents: list[int]):
 def decode_joint_topology(
         payload: bytes, owner_name: str, roots: list[tuple],
         detail: str = "high"):
-    joint_tree_offset, descriptor_count = (
-        OWNER_JOINT_TREES[owner_name] if detail == "high"
-        else OWNER_JOINT_TREES_LOW[owner_name]
-    )
-    tree_end = joint_tree_offset + descriptor_count * DOBJ_DESC_SIZE
-    if tree_end > len(payload):
-        raise ValueError(f"{owner_name} JointTree is out of range")
-
-    depths = []
-    display_offsets = []
-    for descriptor_index in range(descriptor_count):
-        descriptor_offset = joint_tree_offset + descriptor_index * DOBJ_DESC_SIZE
-        depth, reloc_pointer = struct.unpack_from(
-            ">II", payload, descriptor_offset
-        )
-        if reloc_pointer == 0:
-            display_offset = None
-        else:
-            # O2R internal reloc words carry the next relocation word in the
-            # high half and the pointer target word offset in the low half.
-            display_offset = (reloc_pointer & 0xffff) * 4
-            if display_offset >= len(payload):
-                raise ValueError(
-                    f"{owner_name} JointTree entry {descriptor_index}: "
-                    f"display target 0x{display_offset:x} is out of range"
-                )
-        depths.append(depth)
-        display_offsets.append(display_offset)
-
-    if ((depths[-1] != 18) or (display_offsets[-1] is not None)):
-        raise ValueError(f"{owner_name} JointTree lost its depth-18 sentinel")
-    depths = depths[:-1]
-    display_offsets = display_offsets[:-1]
-    raw_descriptor_count = descriptor_count - 1
-    if (len(depths) != raw_descriptor_count) or (depths[0] != 0):
+    descriptors = _owner_joint_descriptors(payload, owner_name, detail)
+    descriptors = descriptors[:-1]
+    raw_descriptor_count = len(descriptors)
+    if (raw_descriptor_count == 0) or (descriptors[0][0] != 0):
         raise ValueError(f"{owner_name} JointTree topology cardinality changed")
 
-    setup_words = OWNER_SETUP_PARTS[owner_name]
-    selected_indices = []
-    for descriptor_index in range(raw_descriptor_count):
-        word_index = descriptor_index // 32
-        bit_index = 31 - (descriptor_index & 31)
-        if setup_words[word_index] & (1 << bit_index):
-            selected_indices.append(descriptor_index)
-    if selected_indices != list(range(len(selected_indices))):
-        raise ValueError(
-            f"{owner_name} setup_parts is no longer one contiguous prefix"
-        )
-    selected_count = len(selected_indices)
-    if selected_count + 1 != raw_descriptor_count:
-        raise ValueError(
-            f"{owner_name} synthetic-TopN live cardinality changed"
-        )
-    if any(offset is not None for offset in display_offsets[selected_count:]):
-        raise ValueError(
-            f"{owner_name} setup_parts dropped a drawable raw descriptor"
-        )
-    depths = depths[:selected_count]
-    display_offsets = display_offsets[:selected_count]
+    selected_indices = _owner_selected_descriptor_indices(
+        owner_name, raw_descriptor_count
+    )
 
     root_offsets = [root[0] for root in roots]
     selected_display_offsets = [
-        offset for offset in display_offsets if offset is not None
+        descriptors[index][1] for index in selected_indices
+        if descriptors[index][1] is not None
     ]
     if selected_display_offsets != root_offsets:
         raise ValueError(
@@ -1603,50 +1608,37 @@ def decode_joint_topology(
         offset: binding for binding, offset in enumerate(root_offsets)
     }
 
-    raw_parents = []
-    raw_bindings = []
-    depth_stack = []
-    for joint_index, (depth, display_offset) in enumerate(
-            zip(depths, display_offsets)):
+    # Mirror lbCommonSetupFighterPartsDObjs exactly: source array_dobjs[id]
+    # retains the most recently CREATED DObj at each source id/depth. An
+    # unselected descriptor advances the source walk but does not replace that
+    # parent. Samus is the first landed owner whose mask exercises this.
+    parents = [INVALID_U8]
+    bindings = [INVALID_U8]
+    active_by_depth: list[int | None] = [None] * 18
+    for descriptor_index in selected_indices:
+        depth, display_offset = descriptors[descriptor_index]
         if depth >= 18:
             raise ValueError(
-                f"{owner_name} joint {joint_index}: invalid live depth {depth}"
+                f"{owner_name} descriptor {descriptor_index}: "
+                f"invalid live depth {depth}"
             )
-        if joint_index == 0:
-            if depth != 0:
-                raise ValueError(f"{owner_name} JointTree has no depth-zero root")
-            parent = INVALID_U8
+        if depth == 0:
+            parent = 0
         else:
-            if (depth == 0) or (depth > (depths[joint_index - 1] + 1)):
+            parent = active_by_depth[depth - 1]
+            if parent is None:
                 raise ValueError(
-                    f"{owner_name} joint {joint_index}: discontinuous depth {depth}"
-                )
-            if depth - 1 >= len(depth_stack):
-                raise ValueError(
-                    f"{owner_name} joint {joint_index}: missing parent at "
+                    f"{owner_name} descriptor {descriptor_index}: missing "
+                    f"selected parent at "
                     f"depth {depth - 1}"
                 )
-            parent = depth_stack[depth - 1]
-        if len(depth_stack) <= depth:
-            depth_stack.append(joint_index)
-        else:
-            depth_stack[depth] = joint_index
-            del depth_stack[depth + 1:]
-        raw_parents.append(parent)
-        raw_bindings.append(
+        joint_index = len(parents)
+        parents.append(parent)
+        bindings.append(
             INVALID_U8 if display_offset is None else
             root_by_offset[display_offset]
         )
-
-    # ftManagerMakeFighter creates TopN before the selected JointTree prefix.
-    # Shift every raw index by one and parent raw roots directly to TopN.
-    parents = [INVALID_U8]
-    bindings = [INVALID_U8]
-    parents.extend(
-        0 if parent == INVALID_U8 else parent + 1
-        for parent in raw_parents
-    )
-    bindings.extend(raw_bindings)
+        active_by_depth[depth] = joint_index
 
     expected_joint_count, expected_binding_count = OWNER_PLAN_COUNTS[owner_name]
     if len(parents) != expected_joint_count:

@@ -348,12 +348,12 @@ $observedRoster = @(0..3 | ForEach-Object {
     else { "kind$($b - 1)" }
 })
 $expectedRoster = if ($rosterFlag -eq 1) {
-    @('Mario', 'Fox', 'Captain', 'Donkey')
+    @('Samus', 'Fox', 'Captain', 'Donkey')
 } else {
     @('Mario', 'Fox', 'Mario', 'Fox')
 }
 # ...AND WHETHER ALL FOUR OF THEM DREW. The P0/P1 triangle totals are slots 0
-# and 1 only, so on the four-distinct-kind roster they are silent about Luigi
+# and 1 only, so on the four-distinct-kind roster they are silent about Captain
 # and Donkey Kong -- the exact shape of instrument that let a stranded DK setter
 # survive. One bit per slot that emitted hardware triangles. Both are JUDGED
 # after the ledger is written, below.
@@ -368,7 +368,7 @@ $memory = [PSCustomObject]@{
     coverageArtifact = $CoverageJsonOut
     buildDirectory = $build
     fighterRoster = $(if ($rosterFlag -eq 1) {
-        'four distinct kinds (Mario/Fox/Captain/Donkey)'
+        'four distinct kinds (Samus/Fox/Captain/Donkey)'
     } elseif ($null -eq $rosterFlag) { 'unknown' } else {
         'Mario/Fox mirrors'
     })
@@ -428,7 +428,7 @@ $memory = [PSCustomObject]@{
     nativeOwnerPlanHit = $nativePlanHit
     nativeOwnerPlanVerifyMismatch = $nativePlanMismatch
     # SLOT totals, not kind totals. Named by slot since P2-3f9: they happen to
-    # be Mario and Fox on this roster, and a field name that says so would
+    # be Samus and Fox on the landed-content roster, and a field name that says so would
     # quietly relabel a different fighter's triangles the next time slot 0
     # changes -- which P2-3f9 attempted and backed out.
     nativeOwnerSlot0HardwareTriangles = $extra['gNdsFighterDLAllDrawP0HardwareTriangleCount']

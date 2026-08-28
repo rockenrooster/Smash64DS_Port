@@ -38174,6 +38174,250 @@
           "sha256": "bc27f535a3dfb6eb5a00bf2b4bfcbc92015fe6d192af8b6cf68ed7cb7ac8fa66"
         }
       ],
+      "native_model": {
+        "owner": "samus",
+        "model_file_id": "0x140",
+        "model_path": "decomp/BattleShip-main/BattleShip_o2r/reloc_fighters_main/SamusModel",
+        "model_sha256": "67f9646c0a019704dcae5e3307df2cf8e4e7846339537a70a64f77d42284bbf5",
+        "model_bytes": 58784,
+        "setup_parts": [
+          "0xfff803ff",
+          "0x00000000"
+        ],
+        "details": {
+          "high": {
+            "source_ir": {
+              "state_deltas": 48,
+              "state_sequence": 209,
+              "vertex_actions": 30,
+              "triangles": 322,
+              "runs": 26,
+              "epochs": 26,
+              "roots": 14,
+              "roots_sha256": "4f87c6dc295044ca09392705dda0d3e648a4b697f633c756811ae30128df0efa"
+            },
+            "dense_geometry": {
+              "vertices": 294,
+              "corners": 966
+            },
+            "root_offsets": [
+              "0x1f18",
+              "0x20c8",
+              "0x2310",
+              "0x24d8",
+              "0x2608",
+              "0x2758",
+              "0x2950",
+              "0x2b18",
+              "0x2db0",
+              "0x2f38",
+              "0x3060",
+              "0x3168",
+              "0x32f0",
+              "0x3418"
+            ],
+            "hierarchy": {
+              "joints": 24,
+              "bindings": 14,
+              "camera_seeds": 1,
+              "pushes": 5,
+              "pops": 5,
+              "max_source_depth": 8,
+              "binding_parents": [
+                255,
+                0,
+                1,
+                2,
+                3,
+                1,
+                1,
+                6,
+                0,
+                8,
+                9,
+                0,
+                11,
+                12
+              ],
+              "binding_joints": [
+                2,
+                3,
+                5,
+                6,
+                7,
+                10,
+                12,
+                13,
+                15,
+                16,
+                18,
+                20,
+                21,
+                23
+              ]
+            },
+            "cross_matrix": {
+              "runs": 0,
+              "bindings": [],
+              "physical_slots": [],
+              "stores": 0,
+              "restores": 0
+            },
+            "lights": {
+              "root_prefix_commands": 56,
+              "intra_root_commands": 8,
+              "preambles": [
+                [
+                  "0xffffff00",
+                  "0x4c4c4c00"
+                ]
+              ]
+            },
+            "direct_epoch_policies": [
+              "0x00",
+              "0x00",
+              "0x00",
+              "0x00",
+              "0x00",
+              "0x00",
+              "0x00",
+              "0x00",
+              "0x00",
+              "0x00",
+              "0x00",
+              "0x00",
+              "0x00",
+              "0x00",
+              "0x00",
+              "0x00",
+              "0x00",
+              "0x01",
+              "0x02",
+              "0x00",
+              "0x00",
+              "0x00",
+              "0x01",
+              "0x02",
+              "0x00",
+              "0x00"
+            ]
+          },
+          "low": {
+            "source_ir": {
+              "state_deltas": 48,
+              "state_sequence": 203,
+              "vertex_actions": 23,
+              "triangles": 199,
+              "runs": 23,
+              "epochs": 23,
+              "roots": 14,
+              "roots_sha256": "7e1b4093ca892b7629e9dd74aae126ed27418baa5e76bba5e0ec844bc70c18ff"
+            },
+            "dense_geometry": {
+              "vertices": 174,
+              "corners": 597
+            },
+            "root_offsets": [
+              "0x57d8",
+              "0x5960",
+              "0x5b70",
+              "0x5d08",
+              "0x5e00",
+              "0x5f00",
+              "0x60f8",
+              "0x6290",
+              "0x6380",
+              "0x64a0",
+              "0x65a8",
+              "0x66a8",
+              "0x67c8",
+              "0x68d0"
+            ],
+            "hierarchy": {
+              "joints": 24,
+              "bindings": 14,
+              "camera_seeds": 1,
+              "pushes": 5,
+              "pops": 5,
+              "max_source_depth": 8,
+              "binding_parents": [
+                255,
+                0,
+                1,
+                2,
+                3,
+                1,
+                1,
+                6,
+                0,
+                8,
+                9,
+                0,
+                11,
+                12
+              ],
+              "binding_joints": [
+                2,
+                3,
+                5,
+                6,
+                7,
+                10,
+                12,
+                13,
+                15,
+                16,
+                18,
+                20,
+                21,
+                23
+              ]
+            },
+            "cross_matrix": {
+              "runs": 0,
+              "bindings": [],
+              "physical_slots": [],
+              "stores": 0,
+              "restores": 0
+            },
+            "lights": {
+              "root_prefix_commands": 56,
+              "intra_root_commands": 0,
+              "preambles": [
+                [
+                  "0xffffff00",
+                  "0x4c4c4c00"
+                ]
+              ]
+            },
+            "direct_epoch_policies": [
+              "0x00",
+              "0x00",
+              "0x00",
+              "0x00",
+              "0x00",
+              "0x00",
+              "0x00",
+              "0x00",
+              "0x00",
+              "0x00",
+              "0x00",
+              "0x00",
+              "0x00",
+              "0x00",
+              "0x00",
+              "0x00",
+              "0x01",
+              "0x00",
+              "0x00",
+              "0x00",
+              "0x01",
+              "0x00",
+              "0x00"
+            ]
+          }
+        }
+      },
       "special_status_contract": {
         "source": "decomp/BattleShip-main/decomp/src/ft/ftchar/ftsamus/ftsamusstatus.h",
         "source_sha256": "1ed7910ff9a5e62ccf275012eda93a867ffb12566ac4f38ba0f3c615fc2dd624",

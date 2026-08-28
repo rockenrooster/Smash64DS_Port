@@ -71,7 +71,7 @@ REPO = _paths.REPO_ROOT
 
 # Every owner the runtime can select, in both detail levels. Mario/Fox share one
 # combined table set (P2-2's frozen program); P2-3 owners get independent ones.
-OWNERS = ("mario", "fox", "luigi", "donkey", "captain")
+OWNERS = ("mario", "fox", "luigi", "donkey", "captain", "samus")
 DETAILS = ("high", "low")
 
 DOBJ_DESC_SIZE = native.DOBJ_DESC_SIZE
@@ -123,11 +123,21 @@ def walk_root_triangles(payload: bytes, offset: int) -> list[tuple[int, int, int
 def joint_tree(payload: bytes, owner: str, detail: str):
     offset, count = (native.OWNER_JOINT_TREES[owner] if detail == "high"
                      else native.OWNER_JOINT_TREES_LOW[owner])
+    high_offset, high_count = native.OWNER_JOINT_TREES[owner]
+    if high_count != count:
+        raise ValueError(
+            f"{owner}: High/Low JointTree cardinality {high_count}/{count}")
     out = []
     for i in range(count):
         depth, pointer = struct.unpack_from(
             ">II", payload, offset + i * DOBJ_DESC_SIZE)
-        out.append((depth, None if pointer == 0 else (pointer & 0xFFFF) * 4))
+        display = None if pointer == 0 else (pointer & 0xFFFF) * 4
+        if detail == "low" and display is None:
+            _high_depth, high_pointer = struct.unpack_from(
+                ">II", payload, high_offset + i * DOBJ_DESC_SIZE)
+            if high_pointer != 0:
+                display = (high_pointer & 0xFFFF) * 4
+        out.append((depth, display))
     return out
 
 
@@ -494,15 +504,9 @@ def source_closure(owner: str, detail: str, program: dict) -> list[str]:
     setup = native.OWNER_SETUP_PARTS[owner]
     selected = [i for i in range(len(descriptors) - 1)
                 if setup[i // 32] & (1 << (31 - (i & 31)))]
-    drawable_anywhere = [i for i, (_d, o) in enumerate(descriptors[:-1])
-                         if o is not None]
     roots = [descriptors[i][1] for i in selected
              if descriptors[i][1] is not None]
     failures: list[str] = []
-    dropped = [i for i in drawable_anywhere if i not in selected]
-    if dropped:
-        failures.append(
-            f"{owner} {detail}: setup_parts excludes drawable descriptors {dropped}")
 
     runs = program["runs"]
     epochs = program["epochs"]

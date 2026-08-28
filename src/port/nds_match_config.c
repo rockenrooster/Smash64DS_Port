@@ -59,8 +59,8 @@ _Static_assert(NDS_P2_PROOF_FIGHTER0 < nFTKindPlayableEnd,
 #endif
 #endif
 
-#if NDS_P2_FOUR_CPU_ROSTER && (!NDS_P2_LUIGI || !NDS_P2_DONKEY || !NDS_P2_CAPTAIN)
-#error "NDS_P2_FOUR_CPU_ROSTER=1 needs landed owner admission: NDS_P2_LUIGI=1 NDS_P2_DONKEY=1 NDS_P2_CAPTAIN=1"
+#if NDS_P2_FOUR_CPU_ROSTER && (!NDS_P2_LUIGI || !NDS_P2_DONKEY || !NDS_P2_CAPTAIN || !NDS_P2_SAMUS)
+#error "NDS_P2_FOUR_CPU_ROSTER=1 needs landed owner admission: NDS_P2_LUIGI=1 NDS_P2_DONKEY=1 NDS_P2_CAPTAIN=1 NDS_P2_SAMUS=1"
 #endif
 
 void ndsMatchConfigLoadMarioFoxDreamLand(NdsMatchConfig *cfg)
@@ -238,34 +238,35 @@ void ndsMatchConfigLoadMarioFoxDreamLand(NdsMatchConfig *cfg)
     /* THE STRESS ARM FOLLOWS THE LANDED ROSTER, which is what PROJECT_GOAL's
      * P2 gate actually asks for: "the measured hardest fighter set", a measured
      * argmax over landed content rather than a guess frozen when the content
-     * set was two names. With Luigi and Donkey Kong selectable, four DISTINCT
-     * kinds is both the heaviest CPU/RAM case a player can reach on one console
-     * and the configuration that answers the owner's 2026-08-23 report that
-     * "some combinations of fighters run at really low FPS".
+     * set was two names. P2-3f22 adds Samus to that calculation. Her source
+     * SamusMain allocation is 85,296 B, or 83,008 B unique after the same
+     * 2,288 B already-resident pair used by the earlier budget rows. That is
+     * heavier than Mario's 54,048 B and lighter than Captain/Fox, so the new
+     * six-kind argmax is Samus/Fox/Captain/Donkey. Luigi and Mario remain
+     * admitted/compiled where their dense-owner ABI requires it; neither is
+     * instantiated by this stress descriptor.
      *
-     * Slots 2/3 take common costume 0 rather than 1: they are different kinds
-     * now, so they are not competing for an appearance with slots 0/1 and the
-     * source's own duplicate rule does not apply. */
+     * All four are distinct, so common costume 0 is source-legal for every
+     * slot and no duplicate-costume rule is involved. */
+    cfg->fighters[0].fkind = nFTKindSamus;
+    cfg->fighters[0].costume = (u8)ftParamGetCostumeCommonID(nFTKindSamus, 0);
     cfg->fighters[2].fkind = nFTKindCaptain;
     cfg->fighters[2].costume = (u8)ftParamGetCostumeCommonID(nFTKindCaptain, 0);
     cfg->fighters[3].fkind = nFTKindDonkey;
     cfg->fighters[3].costume = (u8)ftParamGetCostumeCommonID(nFTKindDonkey, 0);
-    /* P2-3f11. This is the measured landed-content argmax: Luigi is the
-     * cheapest of the five landed kinds, so Mario/Fox/Captain/Donkey are the
-     * four kinds that maximize the source-loaded per-kind arena. BattleShip's
-     * scvsbattle.c selects Low detail for every 3+ fighter match; the ordinary
-     * fighter creation path carries that policy into all four instances. */
+    /* BattleShip's scvsbattle.c selects Low detail for every 3+ fighter match;
+     * the ordinary fighter creation path carries that policy into all four. */
 #endif
 #endif
 #if NDS_P2_SHELL_ARGMAX_ROSTER
-    /* P2-3f9: THE HEAVIEST ROSTER A PLAYER CAN REACH, SEEDED INTO THE SCREEN
-     * THAT LETS THEM REACH IT.
+    /* P2-3f9/f22: THE HEAVIEST ROSTER A PLAYER CAN REACH, SEEDED INTO THE
+     * SCREEN THAT LETS THEM REACH IT.
      *
      * PROJECT_GOAL's P2 gate asks for "the measured hardest fighter set", and
-     * with Captain Falcon landed the argmax over landed content is
-     * Fox 116,752 + Captain 100,160 + Donkey 77,360 + Luigi 41,552 =
-     * 335,824 B of unique per-kind arena (falcon.md, "Measured budget").
-     * Mario is the cheapest of the five and drops out.
+     * with Samus landed the source main-file charges put her at 83,008 B unique
+     * (85,296 B standalone minus the 2,288 B pair already resident in a
+     * multi-kind match). That makes the six-kind argmax
+     * Fox/Captain/Samus/Donkey: Samus displaces Mario from the P2-3f11 roster.
      *
      * This is a DESCRIPTOR seed, not a battle seed: it is what the character
      * select opens on (ndsMenuShellCssInit reads exactly these fields), so the
@@ -280,14 +281,14 @@ void ndsMatchConfigLoadMarioFoxDreamLand(NdsMatchConfig *cfg)
 #if !NDS_P2_MENU_SHELL
 #error "NDS_P2_SHELL_ARGMAX_ROSTER=1 is a shell configuration: needs NDS_P2_MENU_SHELL=1"
 #endif
-#if !NDS_P2_CAPTAIN || !NDS_P2_DONKEY || !NDS_P2_LUIGI
-#error "NDS_P2_SHELL_ARGMAX_ROSTER=1 needs the five-name roster (NDS_P2_SHELL_ROSTER=3)"
+#if !NDS_P2_CAPTAIN || !NDS_P2_DONKEY || !NDS_P2_LUIGI || !NDS_P2_SAMUS
+#error "NDS_P2_SHELL_ARGMAX_ROSTER=1 needs the six-name roster (NDS_P2_SHELL_ROSTER=4)"
 #endif
-    cfg->fighters[0].fkind = nFTKindLuigi;
+    cfg->fighters[0].fkind = nFTKindSamus;
     cfg->fighters[0].pkind = nFTPlayerKindMan;
     cfg->fighters[0].level = 3;
     cfg->fighters[0].team = nSCBattleTeamIDRed;
-    cfg->fighters[0].costume = (u8)ftParamGetCostumeCommonID(nFTKindLuigi, 0);
+    cfg->fighters[0].costume = (u8)ftParamGetCostumeCommonID(nFTKindSamus, 0);
     cfg->fighters[0].shade = 0;
 
     cfg->fighters[1].fkind = nFTKindFox;

@@ -3972,6 +3972,22 @@ static u32 sNdsNativeDonkeyFighterDenseNormals[
 static u32 sNdsNativeDonkeyFighterDenseNormalsLow[
     NDS_NATIVE_IMAGE_DONKEY_LOW_DENSE_VERTICES_COUNT];
 #endif
+#if NDS_P2_CAPTAIN
+/* Every P2-3 owner has an independent dense-ID namespace. Falcon used to
+ * alias Mario/Fox's normal cache because his first owner landing never added
+ * this pair; that makes the cache's contents depend on which kind drew first.
+ * Keep the one-time table owner-local just like the geometry it indexes. */
+static u32 sNdsNativeCaptainFighterDenseNormals[
+    NDS_NATIVE_IMAGE_CAPTAIN_HIGH_DENSE_VERTICES_COUNT];
+static u32 sNdsNativeCaptainFighterDenseNormalsLow[
+    NDS_NATIVE_IMAGE_CAPTAIN_LOW_DENSE_VERTICES_COUNT];
+#endif
+#if NDS_P2_SAMUS
+static u32 sNdsNativeSamusFighterDenseNormals[
+    NDS_NATIVE_IMAGE_SAMUS_HIGH_DENSE_VERTICES_COUNT];
+static u32 sNdsNativeSamusFighterDenseNormalsLow[
+    NDS_NATIVE_IMAGE_SAMUS_LOW_DENSE_VERTICES_COUNT];
+#endif
 static u8 sNdsNativeFighterDenseNormalsBuilt;
 static u8 sNdsNativeFighterDenseNormalsBuiltLow;
 #if NDS_P2_LUIGI
@@ -3981,6 +3997,14 @@ static u8 sNdsNativeLuigiFighterDenseNormalsBuiltLow;
 #if NDS_P2_DONKEY
 static u8 sNdsNativeDonkeyFighterDenseNormalsBuilt;
 static u8 sNdsNativeDonkeyFighterDenseNormalsBuiltLow;
+#endif
+#if NDS_P2_CAPTAIN
+static u8 sNdsNativeCaptainFighterDenseNormalsBuilt;
+static u8 sNdsNativeCaptainFighterDenseNormalsBuiltLow;
+#endif
+#if NDS_P2_SAMUS
+static u8 sNdsNativeSamusFighterDenseNormalsBuilt;
+static u8 sNdsNativeSamusFighterDenseNormalsBuiltLow;
 #endif
 static u32 *sNdsNativeFighterActiveDenseNormals =
     sNdsNativeFighterDenseNormals;
@@ -4039,6 +4063,46 @@ ndsRendererNativeSelectFighterRuntimeTables(u32 slot, u32 use_low_detail)
                 sNdsNativeDonkeyFighterDenseNormals;
             sNdsNativeFighterActiveDenseNormalsBuilt =
                 &sNdsNativeDonkeyFighterDenseNormalsBuilt;
+        }
+        return TRUE;
+    }
+#endif
+#if NDS_P2_CAPTAIN
+    if (slot == 4u)
+    {
+        if (use_low_detail != 0u)
+        {
+            sNdsNativeFighterActiveDenseNormals =
+                sNdsNativeCaptainFighterDenseNormalsLow;
+            sNdsNativeFighterActiveDenseNormalsBuilt =
+                &sNdsNativeCaptainFighterDenseNormalsBuiltLow;
+        }
+        else
+        {
+            sNdsNativeFighterActiveDenseNormals =
+                sNdsNativeCaptainFighterDenseNormals;
+            sNdsNativeFighterActiveDenseNormalsBuilt =
+                &sNdsNativeCaptainFighterDenseNormalsBuilt;
+        }
+        return TRUE;
+    }
+#endif
+#if NDS_P2_SAMUS
+    if (slot == 5u)
+    {
+        if (use_low_detail != 0u)
+        {
+            sNdsNativeFighterActiveDenseNormals =
+                sNdsNativeSamusFighterDenseNormalsLow;
+            sNdsNativeFighterActiveDenseNormalsBuilt =
+                &sNdsNativeSamusFighterDenseNormalsBuiltLow;
+        }
+        else
+        {
+            sNdsNativeFighterActiveDenseNormals =
+                sNdsNativeSamusFighterDenseNormals;
+            sNdsNativeFighterActiveDenseNormalsBuilt =
+                &sNdsNativeSamusFighterDenseNormalsBuilt;
         }
         return TRUE;
     }

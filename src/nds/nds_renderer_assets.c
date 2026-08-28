@@ -121,7 +121,7 @@ typedef struct NDSRendererTraversalState
  * layout. `NDSNativePreparedDenseVertex` stays below: it is build-gated
  * draw scratch, never image content. */
 #include <nds/nds_native_fighter_tables.h>
-#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN
+#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS
 /* The arena the image buffers come from; the renderer does not otherwise
  * allocate, so the declaration arrives with the feature that needs it. */
 extern void *syTaskmanMalloc(size_t size, u32 align);
@@ -791,6 +791,103 @@ NDS_FTR_OWNER_RUNTIME(
     sNdsNativeCaptainRootLightPreambles, NDS_NATIVE_CAPTAIN_MODEL_DATA_SIZE);
 #endif
 
+#if NDS_P2_SAMUS
+#if NDS_NATIVE_OWNER_IMAGE_SAMUS
+static NDSNativeFighterRuntimeTables sNdsNativeSamusFighterHighTables;
+#else
+static const NDSNativeFighterRuntimeTables sNdsNativeSamusFighterHighTables =
+{
+    sNdsNativeSamusFighterStateDeltas,
+    NDS_FTR_COUNT(sNdsNativeSamusFighterStateDeltas),
+    sNdsNativeSamusFighterStateSequence,
+    NDS_FTR_COUNT(sNdsNativeSamusFighterStateSequence),
+    sNdsNativeSamusFighterVertexActions,
+    NDS_FTR_COUNT(sNdsNativeSamusFighterVertexActions),
+    sNdsNativeSamusFighterEpochDirectPolicy,
+    sNdsNativeSamusFighterDenseVertices,
+    NDS_FTR_COUNT(sNdsNativeSamusFighterDenseVertices),
+    sNdsNativeSamusFighterPreparedDense,
+    sNdsNativeSamusFighterActionDenseSpans,
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+    sNdsNativeSamusFighterDenseColorSource,
+#endif
+    sNdsNativeSamusFighterPackedCorners,
+    NDS_FTR_COUNT(sNdsNativeSamusFighterPackedCorners),
+    sNdsNativeSamusFighterRunFirstCorner,
+    NDS_FTR_COUNT(sNdsNativeSamusFighterRunFirstCorner),
+    sNdsNativeSamusFighterRunFirstUnique,
+    sNdsNativeSamusFighterRunUniqueCount,
+    sNdsNativeSamusFighterRunUniqueDense,
+    sNdsNativeSamusFighterTriangles,
+    NDS_FTR_COUNT(sNdsNativeSamusFighterTriangles),
+    sNdsNativeSamusFighterRuns,
+    NDS_FTR_COUNT(sNdsNativeSamusFighterRuns),
+#if NDS_TASK56_FIGHTER_PRIMITIVES >= 1
+    sNdsNativeSamusFighterPrimitiveGroupFirst,
+    sNdsNativeSamusFighterPrimitiveGroupCount,
+    sNdsNativeSamusFighterPrimitiveGroupType,
+    sNdsNativeSamusFighterPrimitiveGroupFirstVertex,
+    sNdsNativeSamusFighterPrimitiveGroupVertexCount,
+    sNdsNativeSamusFighterPrimitiveVertices,
+#endif
+    sNdsNativeSamusFighterEpochs,
+    NDS_FTR_COUNT(sNdsNativeSamusFighterEpochs)
+};
+#endif
+
+#if NDS_NATIVE_OWNER_IMAGE_SAMUS
+static NDSNativeFighterRuntimeTables sNdsNativeSamusFighterLowTables;
+#else
+static const NDSNativeFighterRuntimeTables sNdsNativeSamusFighterLowTables =
+{
+    sNdsNativeSamusFighterStateDeltasLow,
+    NDS_FTR_COUNT(sNdsNativeSamusFighterStateDeltasLow),
+    sNdsNativeSamusFighterStateSequenceLow,
+    NDS_FTR_COUNT(sNdsNativeSamusFighterStateSequenceLow),
+    sNdsNativeSamusFighterVertexActionsLow,
+    NDS_FTR_COUNT(sNdsNativeSamusFighterVertexActionsLow),
+    sNdsNativeSamusFighterEpochDirectPolicyLow,
+    sNdsNativeSamusFighterDenseVerticesLow,
+    NDS_FTR_COUNT(sNdsNativeSamusFighterDenseVerticesLow),
+    sNdsNativeSamusFighterPreparedDenseLow,
+    sNdsNativeSamusFighterActionDenseSpansLow,
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+    sNdsNativeSamusFighterDenseColorSourceLow,
+#endif
+    sNdsNativeSamusFighterPackedCornersLow,
+    NDS_FTR_COUNT(sNdsNativeSamusFighterPackedCornersLow),
+    sNdsNativeSamusFighterRunFirstCornerLow,
+    NDS_FTR_COUNT(sNdsNativeSamusFighterRunFirstCornerLow),
+    sNdsNativeSamusFighterRunFirstUniqueLow,
+    sNdsNativeSamusFighterRunUniqueCountLow,
+    sNdsNativeSamusFighterRunUniqueDenseLow,
+    sNdsNativeSamusFighterTrianglesLow,
+    NDS_FTR_COUNT(sNdsNativeSamusFighterTrianglesLow),
+    sNdsNativeSamusFighterRunsLow,
+    NDS_FTR_COUNT(sNdsNativeSamusFighterRunsLow),
+#if NDS_TASK56_FIGHTER_PRIMITIVES >= 1
+    sNdsNativeSamusFighterPrimitiveGroupFirstLow,
+    sNdsNativeSamusFighterPrimitiveGroupCountLow,
+    sNdsNativeSamusFighterPrimitiveGroupTypeLow,
+    sNdsNativeSamusFighterPrimitiveGroupFirstVertexLow,
+    sNdsNativeSamusFighterPrimitiveGroupVertexCountLow,
+    sNdsNativeSamusFighterPrimitiveVerticesLow,
+#endif
+    sNdsNativeSamusFighterEpochsLow,
+    NDS_FTR_COUNT(sNdsNativeSamusFighterEpochsLow)
+};
+#endif
+
+NDS_FTR_OWNER_RUNTIME(
+    sNdsNativeSamusHighOwner, &sNdsNativeSamusFighterHighTables,
+    sNdsNativeSamusRoots, sNdsNativeSamusCrossPaletteSlots,
+    sNdsNativeSamusRootLightPreambles, NDS_NATIVE_SAMUS_MODEL_DATA_SIZE);
+NDS_FTR_OWNER_RUNTIME(
+    sNdsNativeSamusLowOwner, &sNdsNativeSamusFighterLowTables,
+    sNdsNativeSamusRootsLow, sNdsNativeSamusCrossPaletteSlotsLow,
+    sNdsNativeSamusRootLightPreambles, NDS_NATIVE_SAMUS_MODEL_DATA_SIZE);
+#endif
+
 #undef NDS_FTR_OWNER_RUNTIME
 
 static const NDSNativeFighterRuntimeTables *sNdsNativeFighterActiveTables =
@@ -798,7 +895,7 @@ static const NDSNativeFighterRuntimeTables *sNdsNativeFighterActiveTables =
 static const NDSNativeFighterOwnerRuntime *sNdsNativeFighterActiveOwner =
     &sNdsNativeMarioHighOwner;
 
-#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN
+#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS
 /* --- P2-3r4: image-backed owner tables ------------------------------------
  *
  * A P2-3 owner's generated geometry ships as a NitroFS image rather than as
@@ -854,6 +951,13 @@ static const char *ndsRendererNativeOwnerImagePath(u32 owner_slot,
                                         "nitro:/fighters/captain_high.bin";
     }
 #endif
+#if NDS_P2_SAMUS
+    if (owner_slot == NDS_NATIVE_IMAGE_SLOT_SAMUS)
+    {
+        return (use_low_detail != 0u) ? "nitro:/fighters/samus_low.bin" :
+                                        "nitro:/fighters/samus_high.bin";
+    }
+#endif
     (void)use_low_detail;
     return NULL;
 }
@@ -882,6 +986,14 @@ static u32 ndsRendererNativeOwnerImageBytes(u32 owner_slot, u32 use_low_detail)
         return (use_low_detail != 0u) ?
             (u32)sizeof(NDSNativeCaptainLowImage) :
             (u32)sizeof(NDSNativeCaptainHighImage);
+    }
+#endif
+#if NDS_P2_SAMUS
+    if (owner_slot == NDS_NATIVE_IMAGE_SLOT_SAMUS)
+    {
+        return (use_low_detail != 0u) ?
+            (u32)sizeof(NDSNativeSamusLowImage) :
+            (u32)sizeof(NDSNativeSamusHighImage);
     }
 #endif
     (void)use_low_detail;
@@ -1022,6 +1134,26 @@ static void ndsRendererNativeBindOwnerImage(u32 owner_slot, u32 use_low_detail,
                          NDSNativeCaptainHighImage, base,
                          NDS_NATIVE_IMAGE_CAPTAIN_HIGH,
                          sNdsNativeCaptainFighterPreparedDense);
+        }
+        return;
+    }
+#endif
+#if NDS_NATIVE_OWNER_IMAGE_SAMUS
+    if (owner_slot == NDS_NATIVE_IMAGE_SLOT_SAMUS)
+    {
+        if (use_low_detail != 0u)
+        {
+            NDS_IMG_BIND(sNdsNativeSamusFighterLowTables,
+                         NDSNativeSamusLowImage, base,
+                         NDS_NATIVE_IMAGE_SAMUS_LOW,
+                         sNdsNativeSamusFighterPreparedDenseLow);
+        }
+        else
+        {
+            NDS_IMG_BIND(sNdsNativeSamusFighterHighTables,
+                         NDSNativeSamusHighImage, base,
+                         NDS_NATIVE_IMAGE_SAMUS_HIGH,
+                         sNdsNativeSamusFighterPreparedDense);
         }
         return;
     }
@@ -1194,11 +1326,28 @@ s32 ndsRendererNativeVerifyOwnerImage(u32 owner_slot, u32 use_low_detail)
         }
     }
 #endif
+#if NDS_P2_SAMUS && !NDS_NATIVE_OWNER_IMAGE_SAMUS
+    if (owner_slot == NDS_NATIVE_IMAGE_SLOT_SAMUS)
+    {
+        if (use_low_detail != 0u)
+        {
+            const NDSNativeSamusLowImage *img_ =
+                (const NDSNativeSamusLowImage *)slot->base;
+            NDS_NATIVE_IMAGE_SAMUS_LOW_MEMBERS(NDS_IMG_VERIFY)
+        }
+        else
+        {
+            const NDSNativeSamusHighImage *img_ =
+                (const NDSNativeSamusHighImage *)slot->base;
+            NDS_NATIVE_IMAGE_SAMUS_HIGH_MEMBERS(NDS_IMG_VERIFY)
+        }
+    }
+#endif
     return (gNdsNativeOwnerImageMismatchCount == before) ? TRUE : FALSE;
 }
 #endif /* NDS_NATIVE_OWNER_IMAGE_VERIFY */
 
-#endif /* NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN */
+#endif /* NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS */
 
 static const NDSNativeFighterOwnerRuntime *
 ndsRendererNativeFighterOwnerForDetail(u32 slot, u32 use_low_detail)
@@ -1232,6 +1381,13 @@ ndsRendererNativeFighterOwnerForDetail(u32 slot, u32 use_low_detail)
     {
         return (use_low_detail != 0u) ?
             &sNdsNativeCaptainLowOwner : &sNdsNativeCaptainHighOwner;
+    }
+#endif
+#if NDS_P2_SAMUS
+    if (slot == 5u)
+    {
+        return (use_low_detail != 0u) ?
+            &sNdsNativeSamusLowOwner : &sNdsNativeSamusHighOwner;
     }
 #endif
     return NULL;
