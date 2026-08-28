@@ -1,24 +1,24 @@
 # Handoff
 
-Current: 2026-08-27 — **P2-3f22 CLOSED: Samus is a source-derived native owner
-and the six-kind argmax stress is green.** BattleShip's real non-contiguous
-`dSamusMain_setup_parts = {0xFFF803FF,0}` invalidated the generator's old
-prefix-only assumption; it now mirrors `lbCommonSetupFighterPartsDObjs`'s
-per-descriptor bit walk and Low->High display-list fallback. The exact
-`SamusModel` yields High/Low JointTrees at 0x3520/0x69D0, 24 live joints
-including TopN, 14 bindings, GX seed/push/pop 1/5/5 and zero cross-matrix runs.
-Static geometry closure is exact: 322/322 High and 199/199 Low source triangles.
-The same standing one-minute arm now instantiates **Samus/Fox/Captain/Donkey**,
-the six-kind arena argmax (**377,280 B unique fighter-kind charge**): roster
-exact, draw mask 0xF, Samus slot-0 hardware triangles **354,021**, native-plan
-build/hit/mismatch **630/6,661/0**, source clock 60->1, heap low-water
-**213,188 B** (187,588 above the 25,600 floor), graphics overflow/no-room 0/0,
-pose BindFull 0. Exact ROM SHA-256
-`3985F5A61B6A6DBD877ABBE86633744ACF8EB4BA232F633D7CB441C719861155`.
-Artifacts are `2026-08-27_p2-3f22-samus-native-{stress,coverage,memory}.json`.
-Samus now owes only the P2-3 scripted every-state visit, CPU determinism replay
-and owner-feel acceptance. P2-2's native-stage rejection performance lead
-(reason 6, `ndsRendererPrepareNativeStageOwner`) remains separate debt.
+Current: 2026-08-27 — **P2-3f23 CLOSED: Samus's controller-driven common
+combat segment is green, and Captain/Samus now use the same native GX hierarchy
+path as the earlier owners.** With Samus as P0, the existing mode-163 natural
+driver reaches `NAT_MOVESET=0x7ff` through controller input only: S3/Hi3/Lw3,
+S4, aerial/landing, Catch/CatchWait, Throw/Thrown/recovery and throw damage
+21->33, alongside Wait/Walk/Dash/Run/RunBrake/Turn, live hit/damage/hitlag and
+guard. BattleShip remains the state owner; notably `ftcommonthrow.c` itself
+attaches Samus's grapple-beam effect during Throw. This pass found a real DS
+integration omission: Captain/Samus hierarchy/binding/cross-slot tables were
+generated but the runtime dispatchers stopped at Donkey. Slots 4/5 are wired
+now and the host checker pins all three lookup surfaces. Samus changes from GX
+capture/local/decline **0/0/2** to **32/49/0**, still emits exactly **322**
+High triangles, native production is 1/0 and generic fallback is zero. The
+bounded final fighter capture is exactly **63 runs / 628 triangles = Samus 322
++ Fox 306**. Artifact: `2026-08-27_p2-3f23-samus-common-moveset-gxfix3.log`.
+P2-3f22 remains the budget/stress/native-owner close. Samus still owes the
+exhaustive attack-variant plus ledge/tumble portion of the scripted tour, CPU
+determinism replay and owner-feel acceptance. P2-2's native-stage rejection
+performance lead remains separate debt.
 
 ## State
 

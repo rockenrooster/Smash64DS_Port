@@ -8390,6 +8390,32 @@ static s32 ndsRendererNativeGetHierarchyTables(
             sizeof(sNdsNativeDonkeyJointSchedule[0]);
     }
 #endif
+#if NDS_P2_CAPTAIN
+    else if (slot == 4u)
+    {
+        tables->roots = sNdsNativeCaptainRoots;
+        tables->schedule = sNdsNativeCaptainJointSchedule;
+        tables->binding_joints = sNdsNativeCaptainBindingJoints;
+        tables->cross_slots = sNdsNativeCaptainCrossPaletteSlots;
+        tables->root_count = sizeof(sNdsNativeCaptainRoots) /
+            sizeof(sNdsNativeCaptainRoots[0]);
+        tables->joint_count = sizeof(sNdsNativeCaptainJointSchedule) /
+            sizeof(sNdsNativeCaptainJointSchedule[0]);
+    }
+#endif
+#if NDS_P2_SAMUS
+    else if (slot == 5u)
+    {
+        tables->roots = sNdsNativeSamusRoots;
+        tables->schedule = sNdsNativeSamusJointSchedule;
+        tables->binding_joints = sNdsNativeSamusBindingJoints;
+        tables->cross_slots = sNdsNativeSamusCrossPaletteSlots;
+        tables->root_count = sizeof(sNdsNativeSamusRoots) /
+            sizeof(sNdsNativeSamusRoots[0]);
+        tables->joint_count = sizeof(sNdsNativeSamusJointSchedule) /
+            sizeof(sNdsNativeSamusJointSchedule[0]);
+    }
+#endif
     else
     {
         return FALSE;
@@ -8441,6 +8467,22 @@ const u8 *ndsRendererNativeFighterBindingParents(u32 slot, u32 *count)
         return sNdsNativeDonkeyBindingParents;
     }
 #endif
+#if NDS_P2_CAPTAIN
+    if (slot == 4u)
+    {
+        *count = (u32)(sizeof(sNdsNativeCaptainBindingParents) /
+                       sizeof(sNdsNativeCaptainBindingParents[0]));
+        return sNdsNativeCaptainBindingParents;
+    }
+#endif
+#if NDS_P2_SAMUS
+    if (slot == 5u)
+    {
+        *count = (u32)(sizeof(sNdsNativeSamusBindingParents) /
+                       sizeof(sNdsNativeSamusBindingParents[0]));
+        return sNdsNativeSamusBindingParents;
+    }
+#endif
     return NULL;
 }
 
@@ -8482,6 +8524,22 @@ const u8 *ndsRendererNativeFighterCrossPaletteSlots(u32 slot, u32 *count)
         *count = (u32)(sizeof(sNdsNativeDonkeyCrossPaletteSlots) /
                        sizeof(sNdsNativeDonkeyCrossPaletteSlots[0]));
         return sNdsNativeDonkeyCrossPaletteSlots;
+    }
+#endif
+#if NDS_P2_CAPTAIN
+    if (slot == 4u)
+    {
+        *count = (u32)(sizeof(sNdsNativeCaptainCrossPaletteSlots) /
+                       sizeof(sNdsNativeCaptainCrossPaletteSlots[0]));
+        return sNdsNativeCaptainCrossPaletteSlots;
+    }
+#endif
+#if NDS_P2_SAMUS
+    if (slot == 5u)
+    {
+        *count = (u32)(sizeof(sNdsNativeSamusCrossPaletteSlots) /
+                       sizeof(sNdsNativeSamusCrossPaletteSlots[0]));
+        return sNdsNativeSamusCrossPaletteSlots;
     }
 #endif
     return NULL;

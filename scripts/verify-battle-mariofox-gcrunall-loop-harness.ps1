@@ -68,8 +68,9 @@ param(
     [switch]$RequireZeroPostGoTextureFence,
     [ValidateRange(0,1)][int]$FoxCpuMode = 0,
     # P2-3 focused roster proof. -1 preserves the canonical Mario/Fox match;
-    # 0/1/2/4 select Mario/Fox/Donkey/Luigi in fighter slot 0 through the match
-    # descriptor. Staged fighters also enable their production asset prefix.
+    # 0/1/2/3/4 select Mario/Fox/Donkey/Samus/Luigi in fighter slot 0 through
+    # the match descriptor. Staged fighters also enable their production asset
+    # prefix.
     [ValidateRange(-1,11)][int]$P2ProofFighter0Kind = -1,
     [ValidateRange(0,1)][int]$WallpaperIncrementalMode = 0,
     [ValidateRange(0,1)][int]$LowerTextHudMode = 1,
@@ -231,17 +232,41 @@ if ($OneMinuteMatchProof -and
 if (($Task9StateHashMode -eq 1) -and -not $MatchLifecycleProof) {
     throw 'Task9StateHashMode requires the deterministic match-lifecycle proof.'
 }
-if ($P2ProofFighter0Kind -notin @(-1, 0, 1, 2, 4)) {
-    throw 'P2ProofFighter0Kind currently supports only -1, Mario(0), Fox(1), Donkey(2), or Luigi(4).'
+if ($P2ProofFighter0Kind -notin @(-1, 0, 1, 2, 3, 4)) {
+    throw 'P2ProofFighter0Kind currently supports only -1, Mario(0), Fox(1), Donkey(2), Samus(3), or Luigi(4).'
 }
-$isP2ProductionProof = $P2ProofFighter0Kind -in @(2, 4)
-$p2ProductionName = if ($P2ProofFighter0Kind -eq 2) { 'Donkey' } else { 'Luigi' }
-$p2ProductionNativeOwnerSlot = if ($P2ProofFighter0Kind -eq 2) { 3 } else { 2 }
-$p2ProductionProfileOwnerIndex = if ($P2ProofFighter0Kind -eq 2) { 4 } else { 3 }
-$p2ProductionOwnerTriangles = if ($P2ProofFighter0Kind -eq 2) { 318 } else { 320 }
-$p2ProductionOwnerRuns = if ($P2ProofFighter0Kind -eq 2) { 62 } else { 32 }
-$p2ProductionOwnerRawTriangles = if ($P2ProofFighter0Kind -eq 2) { 274 } else { 284 }
-$p2ProductionOwnerCrossTriangles = if ($P2ProofFighter0Kind -eq 2) { 44 } else { 36 }
+$isP2ProductionProof = $P2ProofFighter0Kind -in @(2, 3, 4)
+$p2Production = switch ($P2ProofFighter0Kind) {
+    2 {
+        [PSCustomObject]@{
+            Name = 'Donkey'; NativeOwnerSlot = 3; ProfileOwnerIndex = 4
+            Triangles = 318; Runs = 62; RawTriangles = 274; CrossTriangles = 44
+        }
+    }
+    3 {
+        # P2-3f22 source-derived Samus High owner: 322 triangles in 26 runs,
+        # all single-binding/current-root. No cross-matrix run exists in the
+        # exact hashed model, so the raw/cross partition is 322/0.
+        [PSCustomObject]@{
+            Name = 'Samus'; NativeOwnerSlot = 5; ProfileOwnerIndex = 6
+            Triangles = 322; Runs = 26; RawTriangles = 322; CrossTriangles = 0
+        }
+    }
+    4 {
+        [PSCustomObject]@{
+            Name = 'Luigi'; NativeOwnerSlot = 2; ProfileOwnerIndex = 3
+            Triangles = 320; Runs = 32; RawTriangles = 284; CrossTriangles = 36
+        }
+    }
+    default { $null }
+}
+$p2ProductionName = if ($p2Production) { $p2Production.Name } else { '' }
+$p2ProductionNativeOwnerSlot = if ($p2Production) { $p2Production.NativeOwnerSlot } else { 0 }
+$p2ProductionProfileOwnerIndex = if ($p2Production) { $p2Production.ProfileOwnerIndex } else { 0 }
+$p2ProductionOwnerTriangles = if ($p2Production) { $p2Production.Triangles } else { 0 }
+$p2ProductionOwnerRuns = if ($p2Production) { $p2Production.Runs } else { 0 }
+$p2ProductionOwnerRawTriangles = if ($p2Production) { $p2Production.RawTriangles } else { 0 }
+$p2ProductionOwnerCrossTriangles = if ($p2Production) { $p2Production.CrossTriangles } else { 0 }
 if ($Task9StateHashExportPath -and ($Task9StateHashMode -ne 1)) {
     throw 'Task9StateHashExportPath requires Task9StateHashMode 1.'
 }
@@ -1072,6 +1097,13 @@ if ($P2ProofFighter0Kind -ge 0) {
         # slot 2 in the dense P2 owner ABI even though Luigi is not in the match.
         $makeArgs += 'NDS_P2_LUIGI=1'
         $makeArgs += 'NDS_P2_DONKEY=1'
+    } elseif ($P2ProofFighter0Kind -eq 3) {
+        # Samus is owner slot 5. Keep the complete already-qualified dense
+        # native-owner prefix so the hard owner-slot ABI remains 0..5.
+        $makeArgs += 'NDS_P2_LUIGI=1'
+        $makeArgs += 'NDS_P2_DONKEY=1'
+        $makeArgs += 'NDS_P2_CAPTAIN=1'
+        $makeArgs += 'NDS_P2_SAMUS=1'
     }
 }
 if ($ImportBattleShipFTManager) {
@@ -1163,6 +1195,14 @@ if ($P2ProofFighter0Kind -ge 0) {
             '(?m)^#define NDS_P2_LUIGI 1$') -and ($bg0BuildConfigText -match
             '(?m)^#define NDS_P2_DONKEY 1$')) `
             'Donkey proof build did not enable the dense Luigi+Donkey production owner prefix.' `
+            $bg0BuildConfigText
+    } elseif ($P2ProofFighter0Kind -eq 3) {
+        Assert-Condition (($bg0BuildConfigText -match
+            '(?m)^#define NDS_P2_LUIGI 1$') -and ($bg0BuildConfigText -match
+            '(?m)^#define NDS_P2_DONKEY 1$') -and ($bg0BuildConfigText -match
+            '(?m)^#define NDS_P2_CAPTAIN 1$') -and ($bg0BuildConfigText -match
+            '(?m)^#define NDS_P2_SAMUS 1$')) `
+            'Samus proof build did not enable the dense Luigi+Donkey+Captain+Samus production owner prefix.' `
             $bg0BuildConfigText
     }
 }
@@ -2162,14 +2202,18 @@ try {
             # into the generic-fallback branch already censused below. This covers
             # every way a production attempt can leave its native path without
             # depending on GCC's parameter-location metadata.
+            # The fighter renderer left reloc_backend_renderer_dl.c in the
+            # source split; keep this debugger census attached to the file that
+            # now owns the native-production branch rather than a stale TU name.
+            $fighterRendererSource = Join-Path $root 'src/port/renderer_adapter_fighter.c'
             $nativeProductionAttempt = @(
-                Select-String -LiteralPath (Join-Path $root 'src/port/reloc_backend_renderer_dl.c') -SimpleMatch 'native_owner_production_attempted = TRUE;'
+                Select-String -LiteralPath $fighterRendererSource -SimpleMatch 'native_owner_production_attempted = TRUE;'
             )
             Assert-Condition ($nativeProductionAttempt.Count -eq 1) `
                 "Could not resolve the unique native-production attempt site for the $p2ProductionName census." `
                 ($nativeProductionAttempt | Out-String)
             $nativeProductionSuccess = @(
-                Select-String -LiteralPath (Join-Path $root 'src/port/reloc_backend_renderer_dl.c') -SimpleMatch 'runtime_hardware_triangle_count =' |
+                Select-String -LiteralPath $fighterRendererSource -SimpleMatch 'runtime_hardware_triangle_count =' |
                     Where-Object {
                         $_.LineNumber -gt $nativeProductionAttempt[0].LineNumber -and
                         $_.LineNumber -lt ($nativeProductionAttempt[0].LineNumber + 100)
@@ -2179,7 +2223,7 @@ try {
                 "Could not resolve the unique native-production success site for the $p2ProductionName census." `
                 ($nativeProductionSuccess | Out-String)
             $nativeProductionPostGxFailure = @(
-                Select-String -LiteralPath (Join-Path $root 'src/port/reloc_backend_renderer_dl.c') -SimpleMatch 'native_owner_failed = TRUE;' |
+                Select-String -LiteralPath $fighterRendererSource -SimpleMatch 'native_owner_failed = TRUE;' |
                     Where-Object {
                         $_.LineNumber -gt $nativeProductionAttempt[0].LineNumber -and
                         $_.LineNumber -lt ($nativeProductionAttempt[0].LineNumber + 150)
@@ -2189,7 +2233,7 @@ try {
                 "Could not resolve the unique post-GX native-production failure site for the $p2ProductionName census." `
                 ($nativeProductionPostGxFailure | Out-String)
             $nativeProductionFallback = @(
-                Select-String -LiteralPath (Join-Path $root 'src/port/reloc_backend_renderer_dl.c') -SimpleMatch 'if (native_owner_production_attempted == FALSE)'
+                Select-String -LiteralPath $fighterRendererSource -SimpleMatch 'if (native_owner_production_attempted == FALSE)'
             )
             Assert-Condition ($nativeProductionFallback.Count -eq 1) `
                 "Could not resolve the unique generic-fallback branch for the $p2ProductionName census." `
@@ -2210,7 +2254,7 @@ try {
                 'set $p2_generic_animlock = 0',
                 'set $p2_generic_shuffle = 0',
                 'set $p2_generic_low = 0',
-                ('break src/port/reloc_backend_renderer_dl.c:{0} if owner_slot == {1}' -f
+                ('break src/port/renderer_adapter_fighter.c:{0} if owner_slot == {1}' -f
                     $nativeProductionSuccess[0].LineNumber, $p2ProductionNativeOwnerSlot),
                 'commands',
                 'silent',
@@ -2221,14 +2265,14 @@ try {
                 ('set $p2_prod_last_owner = sNdsRendererFastOwnerTriangleCount[{0}]' -f $p2ProductionProfileOwnerIndex),
                 'continue',
                 'end',
-                ('break src/port/reloc_backend_renderer_dl.c:{0} if owner_slot == {1}' -f
+                ('break src/port/renderer_adapter_fighter.c:{0} if owner_slot == {1}' -f
                     $nativeProductionPostGxFailure[0].LineNumber, $p2ProductionNativeOwnerSlot),
                 'commands',
                 'silent',
                 'set $p2_prod_postgx_fail = $p2_prod_postgx_fail + 1',
                 'continue',
                 'end',
-                ('break src/port/reloc_backend_renderer_dl.c:{0} if owner_slot == {1}' -f
+                ('break src/port/renderer_adapter_fighter.c:{0} if owner_slot == {1}' -f
                     $nativeProductionFallback[0].LineNumber, $p2ProductionNativeOwnerSlot),
                 'commands',
                 'silent',
@@ -3213,21 +3257,35 @@ try {
             $expectedPublishedFastRuns = if ($p2Visible) { 91 + $p2ProductionOwnerRuns } else { 91 }
             $expectedPublishedFastTriangles = if ($p2Visible) { 508 + $p2ProductionOwnerTriangles } else { 508 }
             if ($Target -eq 'smash64ds-battle-playable-fast-hwtri') {
-                # P2-3r3 (2026-08-23): the bounded target never presents, so
-                # the staged fighter's realtime render-production identity
-                # (mode-9 owner runs, native production census, GX compose)
-                # structurally cannot arm here — it is proven on the realtime
-                # route (-RealtimePresentation, green 2026-08-23). The bounded
-                # kind proves the staged fighter's GAMEPLAY: the DONKEY/
-                # specials counters and the natural proof chain below. Require
-                # only that the paths stayed silent-consistent.
+                # P2-3f23 (2026-08-27): this assumption changed when the
+                # source-state renderer path was split/promoted. The bounded
+                # target still PRESENTS zero frames, but its final gcDrawAll
+                # capture now executes the same native fighter owners. That is
+                # why Samus first exposed the missing slot-4/5 GX lookup: the
+                # old zero assertion hid a real CPU-compose fallback. Pin the
+                # exact two-fighter floor instead: Fox is the generated 37-run,
+                # 306-triangle owner and P0 is the selected source-derived P2
+                # owner. Stage is intentionally absent in this bounded capture.
+                $expectedBoundedFastRuns = 37 + $p2ProductionOwnerRuns
+                $expectedBoundedFastTriangles = 306 + $p2ProductionOwnerTriangles
                 Assert-Condition (
                     $publishedFast[0] -eq 9 -and
-                    $publishedFast[1] -eq 0 -and
-                    $publishedFast[2] -eq 0 -and
+                    $publishedFast[1] -eq $expectedBoundedFastRuns -and
+                    $publishedFast[2] -eq $expectedBoundedFastTriangles -and
+                    $publishedFast[3] -eq 0 -and
+                    $publishedFast[4] -eq 0 -and
+                    $publishedFast[5] -eq 306 -and
+                    $publishedFast[6] -eq 0 -and
+                    $publishedFast[7] -eq 0 -and
+                    $publishedFast[8] -eq 0 -and
+                    $publishedP2Triangles -eq $p2ProductionOwnerTriangles -and
+                    $p2Prod[0] -gt 0 -and
                     $p2Prod[1] -eq 0 -and
+                    $p2Generic[0] -eq 0 -and
+                    $p2GX[0] -gt 0 -and
+                    $p2GX[1] -gt 0 -and
                     $p2GX[2] -eq 0
-                ) "Bounded fast staged-$p2ProductionName render paths were not silent-consistent (FAST_FINAL=$($publishedFast -join ',') prod=$($p2Prod -join ',') gx=$($p2GX -join ','))." $gdbStdout
+                ) "Bounded fast staged-$p2ProductionName render path drifted from the exact P2-owner + Fox native floor (FAST_FINAL=$($publishedFast -join ',') owner=$publishedP2Triangles prod=$($p2Prod -join ',') generic=$($p2Generic -join ',') gx=$($p2GX -join ','))." $gdbStdout
             } else {
             Assert-Condition (
                 ($publishedP2Triangles -eq 0 -or $p2Visible) -and
@@ -6784,14 +6842,24 @@ try {
                 Assert-Condition ($naturalGuard.Success -and $ng[0] -gt 0 -and $ng[1] -ge 10 -and $ng[2] -gt 0) 'Natural guard on/hold/off proof failed.' $gdbStdout
             }
         }
+        # The focused P2 selector replaces P0. Only default/Mario and Luigi
+        # preserve a Mario-family fighter in the two-fighter proof roster.
+        # Every roster-dependent projectile/special expectation below derives
+        # from this identity rather than assuming P0 is Mario.
+        $p2ProofHasMarioFamily = ($P2ProofFighter0Kind -in @(-1, 0, 4))
         $projectileSummary = ''
         if ($ImportBattleShipMarioFireball -or $ImportBattleShipFoxBlaster) {
             $pj = Get-Ints $projectile
-            # P2-3r3: the projectile actor is the Mario-family fighter when one
-            # exists (fireball, kind bit 0). The DK build has none, so the
-            # attacker Fox fires his own blaster (kind bit 1) regardless of the
-            # reflector import.
-            $expectedKind = if ($P2ProofFighter0Kind -eq 2) { 1 } elseif ($ImportBattleShipFoxReflector) { 0 } elseif ($ImportBattleShipFoxBlaster) { 1 } else { 0 }
+            # The projectile actor is the Mario-family fighter when one exists
+            # (Mario/default or Luigi, fireball kind bit 0). Donkey, Samus and a
+            # Fox-selected P0 contain no Mario-family fighter, so P1 Fox owns
+            # the projectile phase and naturally fires his blaster (kind bit 1).
+            # This is roster identity, not a fighter-specific proof shortcut.
+            $p2ProjectileActorIsFox =
+                (-not $p2ProofHasMarioFamily) -and $ImportBattleShipFoxBlaster
+            $expectedKind = if ($p2ProofHasMarioFamily -and
+                $ImportBattleShipMarioFireball) { 0 } elseif (
+                $ImportBattleShipFoxBlaster) { 1 } else { 0 }
             $projectileObserved = ($pj[14] -ge 3) -or ($pj[13] -gt 0)
             Assert-Condition ($projectile.Success -and $pj[0] -eq 0x50524f4a -and (($pj[1] -band 0x3f) -eq 0x3f) -and $pj[4] -gt 0 -and $pj[5] -gt 0 -and $projectileObserved -and $pj[15] -gt 0 -and (($pj[16] -band (1 -shl $expectedKind)) -ne 0) -and $pj[17] -ne 0 -and $pj[18] -gt 0) 'Natural projectile special proof failed.' $gdbStdout
             if ($P2ProofFighter0Kind -eq 4) {
@@ -6805,9 +6873,9 @@ try {
         }
         if ($ImportBattleShipFoxReflector) {
             $rf = Get-Ints $reflector
-            if ($P2ProofFighter0Kind -eq 2) {
-                # P2-3r3: with no Mario-family fighter the projectile actor IS
-                # the reflector Fox, so the guest cleanly disables the reflector
+            if ($p2ProjectileActorIsFox) {
+                # With no Mario-family fighter the projectile actor IS the
+                # reflector Fox, so the guest cleanly disables the reflector
                 # stage (nothing exists to shoot into the shine). A zero mask
                 # proves the disable took; any partial mask means the down-B
                 # hijacked the fire phase again.
@@ -6822,14 +6890,14 @@ try {
         if ($ImportBattleShipMarioSpecialHi -or $ImportBattleShipMarioSpecialLw -or $ImportBattleShipFoxSpecialHi -or ($P2ProofFighter0Kind -eq 2)) {
             $sp = Get-Ints $specials
             $expectedSpecialMask = 0
-            if (($P2ProofFighter0Kind -ne 2) -and $ImportBattleShipMarioSpecialHi) { $expectedSpecialMask = $expectedSpecialMask -bor 0x000f }
-            if (($P2ProofFighter0Kind -ne 2) -and $ImportBattleShipMarioSpecialLw) { $expectedSpecialMask = $expectedSpecialMask -bor 0x0070 }
+            if ($p2ProofHasMarioFamily -and $ImportBattleShipMarioSpecialHi) { $expectedSpecialMask = $expectedSpecialMask -bor 0x000f }
+            if ($p2ProofHasMarioFamily -and $ImportBattleShipMarioSpecialLw) { $expectedSpecialMask = $expectedSpecialMask -bor 0x0070 }
             if ($ImportBattleShipFoxSpecialHi) { $expectedSpecialMask = $expectedSpecialMask -bor 0x0f80 }
             Assert-Condition ($specials.Success -and (($sp[0] -band $expectedSpecialMask) -eq $expectedSpecialMask) -and $sp[1] -eq 7) 'Natural remaining-specials proof failed.' $gdbStdout
-            if (($P2ProofFighter0Kind -ne 2) -and $ImportBattleShipMarioSpecialHi) {
+            if ($p2ProofHasMarioFamily -and $ImportBattleShipMarioSpecialHi) {
                 Assert-Condition ($sp[5] -gt 0 -and $sp[6] -gt 0 -and $sp[10] -ge 10 -and $sp[11] -gt 1000) 'Natural Mario Super Jump Punch status/launch/fall-special proof failed.' $gdbStdout
             }
-            if (($P2ProofFighter0Kind -ne 2) -and $ImportBattleShipMarioSpecialLw) {
+            if ($p2ProofHasMarioFamily -and $ImportBattleShipMarioSpecialLw) {
                 Assert-Condition ($sp[12] -gt 0 -and (($sp[13] -gt 0) -or ($sp[14] -gt 0)) -and $sp[15] -gt 0 -and $sp[16] -ge 10) 'Natural Mario Tornado status/effect/settle proof failed.' $gdbStdout
             }
             if ($ImportBattleShipFoxSpecialHi) {

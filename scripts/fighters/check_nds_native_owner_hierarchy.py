@@ -571,7 +571,62 @@ def main() -> int:
     task27_mutations = check_generated_mario_program(
         source_root, manifest, generated)
 
-    renderer = (source_root / "src/nds/nds_renderer.c").read_text()
+    renderer_path = source_root / "src/nds/nds_renderer.c"
+    renderer_aggregator = renderer_path.read_text()
+    renderer_sources = [renderer_aggregator]
+    for relative in re.findall(
+        r'^#include\s+"([^"\n]+\.c)"', renderer_aggregator, re.MULTILINE
+    ):
+        include_path = renderer_path.parent / relative
+        require(include_path.is_file(),
+                f"renderer translation-unit include is absent: {relative}")
+        renderer_sources.append(include_path.read_text())
+    require(len(renderer_sources) > 1,
+            "nds_renderer.c has no implementation includes")
+    renderer = "\n".join(renderer_sources)
+    native_common = (
+        source_root / "src/nds/nds_renderer_native_common.c"
+    ).read_text()
+    hierarchy_dispatch = re.search(
+        r"static s32 ndsRendererNativeGetHierarchyTables\(.*?\n}\n",
+        native_common,
+        re.DOTALL,
+    )
+    binding_dispatch = re.search(
+        r"const u8 \*ndsRendererNativeFighterBindingParents\(.*?\n}\n",
+        native_common,
+        re.DOTALL,
+    )
+    cross_dispatch = re.search(
+        r"const u8 \*ndsRendererNativeFighterCrossPaletteSlots\(.*?\n}\n",
+        native_common,
+        re.DOTALL,
+    )
+    require(hierarchy_dispatch is not None,
+            "native hierarchy runtime dispatcher is absent")
+    require(binding_dispatch is not None,
+            "native binding-parent runtime dispatcher is absent")
+    require(cross_dispatch is not None,
+            "native cross-palette runtime dispatcher is absent")
+    # P2-3f23: the generated tables are useless if the runtime slot dispatcher
+    # stops at an older roster prefix. Captain and Samus both landed after the
+    # original Mario/Fox/Luigi/Donkey GX-compose implementation; pin all three
+    # lookup surfaces so a new owner cannot silently fall back to CPU compose.
+    for title in ("Captain", "Samus"):
+        require(
+            f"sNdsNative{title}JointSchedule" in hierarchy_dispatch.group(0)
+            and f"sNdsNative{title}BindingJoints" in hierarchy_dispatch.group(0)
+            and f"sNdsNative{title}CrossPaletteSlots" in hierarchy_dispatch.group(0),
+            f"{title}: native hierarchy runtime dispatch is absent",
+        )
+        require(
+            f"sNdsNative{title}BindingParents" in binding_dispatch.group(0),
+            f"{title}: native binding-parent runtime dispatch is absent",
+        )
+        require(
+            f"sNdsNative{title}CrossPaletteSlots" in cross_dispatch.group(0),
+            f"{title}: native cross-palette runtime dispatch is absent",
+        )
     for record, width in (
         ("NDSNativeRun", 8), ("NDSNativeEpoch", 16), ("NDSNativeRoot", 16),
     ):

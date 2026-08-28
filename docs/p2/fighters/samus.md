@@ -5,9 +5,10 @@ Status: integration in progress · Reference: `decomp/BattleShip-main/decomp/src
 The source gameplay slice is now linked and the real shell can select Samus.
 This is **not** a completion claim: Charge Shot's source lifecycle,
 Bomb/bomb-jump, and the source-specific gameplay audio bank are now accepted,
-and the structural move inventory is now source-audited; the broader scripted
-every-state tour plus budget/stress/determinism/owner-feel acceptance still need
-closure.
+and the structural move inventory is now source-audited. The controller-driven
+common movement/combat/grab/throw segment and budget/stress gates are also
+accepted; exhaustive attack variants plus ledge/tumble, determinism replay and
+owner-feel acceptance still need closure.
 
 ## Role
 
@@ -207,7 +208,43 @@ ownership, grounded/aerial down-B plus bomb-jump/explosion, and Screw Attack's
 source status/audio entry all execute through the strong source owners. This
 closes the structural **move inventory sweep** used by the fighter-unit docs;
 it does **not** claim the P2-3 plan's broader scripted every-state tour,
-determinism replay, budget/stress gate or owner-feel acceptance is complete.
+determinism replay or owner-feel acceptance is complete.
+
+### Controller-driven common combat tour — 2026-08-27
+
+The first runtime-equivalence segment now reuses the established mode-163
+natural input driver with `NDS_P2_PROOF_FIGHTER0=3`. It never writes a fighter
+status. The driver supplies the same controller fields a player/CPU would, and
+BattleShip selects every resulting common state. This matters for Samus's grab
+in particular: `ftcommoncatch1.c` owns the Z-hold + A-tap Catch interrupt, while
+`ftcommonthrow.c` owns forward/back throw selection, the Samus grapple-beam
+effect attachment, and victim thrown-status dispatch.
+
+`artifacts/verification/2026-08-27_p2-3f23-samus-common-moveset-gxfix3.log`
+passes with `NAT_MOVESET=0x7ff`, phase 15 Done: S3/Hi3/Lw3 17/15/19 frames,
+20 active tilt-hitbox frames, S4 26 / hitbox 6, aerial 17 / hitbox 14, landing
+16, Catch/CatchWait 3/1, Throw/Thrown/recovery 17/5/131, and throw damage
+21->33. The surrounding natural chain also reaches Wait/Walk/Dash/Run/
+RunBrake/Turn, live attack/damage/hitlag and guard. Because this focused roster
+is Samus/Fox rather than Mario/Fox, Fox correctly owns the auxiliary projectile
+and recovery-special phases: blaster kind 1 / mask `0x2`, Fire Fox mask
+`0xf80`, and the reflector stage cleanly disables because the projectile actor
+is Fox himself.
+
+The tour also caught a DS-only native-render integration omission. Captain and
+Samus already had generated hierarchy schedules, binding-parent tables and
+cross-palette slots, but the runtime lookup functions stopped at Donkey. Slots
+4/5 now dispatch those generated tables. On the identical Samus proof, native
+GX compose changes from capture/local/decline **0/0/2** to **32/49/0** while
+the source-derived High owner remains exactly **322** triangles; native
+production succeeds, generic fallback remains zero, and the bounded final
+capture is 63 runs / 628 triangles = Samus 322 + Fox 306. The hierarchy checker
+now fails closed if Captain/Samus disappear from any of those runtime lookup
+surfaces.
+
+This is deliberately **not** the whole P2-3 every-state claim. The production
+gate still needs an exhaustive runtime pass over the full attack variants and
+the ledge/tumble families, then CPU-vs-CPU determinism and owner feel.
 
 ## Acceptance
 
@@ -224,4 +261,8 @@ determinism replay, budget/stress gate or owner-feel acceptance is complete.
 - [x] Full source-reachable Samus-specific gameplay audio bank closed; the
       source-unreachable held Charge7 program is explicitly audited, not
       approximated or packed as dead content.
-- [ ] Budgets + stress measurement banked; owner feel pass.
+- [x] Native-owner budget + one-minute six-kind stress measurement banked.
+- [x] Controller-driven common movement/combat/grab/throw segment reaches
+      `NAT_MOVESET=0x7ff` with source-owned transitions and no native GX fallback.
+- [ ] Exhaustive attack-variant + ledge/tumble scripted tour; CPU determinism
+      replay; owner feel pass.
