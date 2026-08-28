@@ -31,10 +31,16 @@
 #define NDS_AUDIO_FGM_RELEASE_MICROSECONDS (NDS_AUDIO_FGM_TIMER_MICROSECONDS * 10u)
 #define NDS_AUDIO_FGM_CACHE_SLOT_COUNT 8u
 #define NDS_AUDIO_FGM_CACHE_SLOT_LARGE_BYTES (60u * 1024u)
-#define NDS_AUDIO_FGM_CACHE_SLOT_MEDIUM_BYTES (28u * 1024u)
+#define NDS_AUDIO_FGM_CACHE_SLOT_MEDIUM_BYTES (40u * 1024u)
+#define NDS_AUDIO_FGM_CACHE_SLOT_COMPACT_BYTES (28u * 1024u)
 #define NDS_AUDIO_FGM_CACHE_SLOT_SMALL_BYTES (16u * 1024u)
 #define NDS_AUDIO_FGM_CACHE_MAX_ENVELOPE_POINTS 32u
 #define NDS_AUDIO_FGM_EVENT_RESTART_SAMPLE (1u << 0)
+#define NDS_AUDIO_FGM_FLAG_LOOP (1u << 0)
+#define NDS_AUDIO_FGM_FLAG_PAUSE_WITH_GAME (1u << 1)
+#define NDS_AUDIO_FGM_SAMUS_CHARGE_FIRST nSYAudioFGMSamusSpecialNCharge0
+#define NDS_AUDIO_FGM_SAMUS_CHARGE_LAST nSYAudioFGMSamusSpecialNCharge6
+#define NDS_AUDIO_FGM_SAMUS_CHARGE_AUX_ID 673u
 
 #define NDS_AUDIO_FGM_MASK_PACK_LOADED (1u << 0)
 #define NDS_AUDIO_FGM_MASK_SUPPORTED_PLAY (1u << 1)
@@ -97,6 +103,20 @@ typedef struct NDSAudioFgmHandle {
      * something to ramp down FROM. Seeded with the pack entry's volume and
      * followed along the envelope, because an envelope point changes it. */
     u8 volume;
+    /* BattleShip's D9 fork_voice creates a child voice whose lifetime is owned
+     * by the root handle. Samus Charge0-6 use exactly one such child (program
+     * 673). Keep generation pairs on both sides so a naturally completed child
+     * can never alias a later recycled pool slot when the root is stopped. */
+    struct NDSAudioFgmHandle *child_handle;
+    u32 child_generation;
+    struct NDSAudioFgmHandle *parent_handle;
+    u32 parent_generation;
+    /* UCD set_unk1F bit 7 is the source game-pause membership bit. The packed
+     * Charge0-6 roots carry it; their fork 673 deliberately does not. */
+    u32 pause_tick;
+    u8 pause_with_game;
+    u8 paused;
+    u8 pause_hardware;
 } NDSAudioFgmHandle;
 
 typedef struct NDSAudioFgmCacheSlot {
@@ -158,6 +178,12 @@ volatile u32 gNdsAudioFgmHandleRecycleCount;
 volatile u32 gNdsAudioFgmHandleCapacity;
 volatile u32 gNdsAudioFgmEnvelopeStepCount;
 volatile u32 gNdsAudioFgmFidelityDebtMask;
+volatile u32 gNdsAudioFgmPauseCalls;
+volatile u32 gNdsAudioFgmResumeCalls;
+volatile u32 gNdsAudioFgmPauseHandleCount;
+volatile u32 gNdsAudioFgmResumeHandleCount;
+volatile u32 gNdsAudioFgmChildStartCount;
+volatile u32 gNdsAudioFgmChildStartFailCount;
 #if NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS
 volatile NDSAudioFgmArm7AckTrace gNdsAudioFgmArm7AckTrace;
 #endif
@@ -194,11 +220,12 @@ _Static_assert(NDS_AUDIO_FGM_PACK_ENTRY_BYTES == 32u,
 _Static_assert(NDS_AUDIO_FGM_PACK_DATA_OFFSET ==
                    (16u + (NDS_AUDIO_FGM_ENTRY_COUNT * 32u)),
                "FGM pack header layout changed");
-_Static_assert(NDS_AUDIO_FGM_CACHE_BYTES == (208u * 1024u),
+_Static_assert(NDS_AUDIO_FGM_CACHE_BYTES == (232u * 1024u),
                "FGM cache budget changed");
 _Static_assert(NDS_AUDIO_FGM_CACHE_BYTES ==
                    (NDS_AUDIO_FGM_CACHE_SLOT_LARGE_BYTES +
-                    (3u * NDS_AUDIO_FGM_CACHE_SLOT_MEDIUM_BYTES) +
+                    (2u * NDS_AUDIO_FGM_CACHE_SLOT_MEDIUM_BYTES) +
+                    NDS_AUDIO_FGM_CACHE_SLOT_COMPACT_BYTES +
                     (4u * NDS_AUDIO_FGM_CACHE_SLOT_SMALL_BYTES)),
                "FGM cache slots no longer cover the resident cache exactly");
 _Static_assert(offsetof(NDSAudioFgmHandle, effect) == 0u,
@@ -445,6 +472,13 @@ static s32 ndsAudioFgmIDIsIncluded(u16 id)
     case nSYAudioFGMSamusSpecialNShootL:
     case nSYAudioFGMSamusSpecialNShootM:
     case nSYAudioFGMSamusSpecialNShootS:
+    case nSYAudioFGMSamusSpecialNCharge0:
+    case nSYAudioFGMSamusSpecialNCharge1:
+    case nSYAudioFGMSamusSpecialNCharge2:
+    case nSYAudioFGMSamusSpecialNCharge3:
+    case nSYAudioFGMSamusSpecialNCharge4:
+    case nSYAudioFGMSamusSpecialNCharge5:
+    case nSYAudioFGMSamusSpecialNCharge6:
     case nSYAudioFGMSamusSpecialLw:
     case nSYAudioFGMSamusCatchGrappleBeam:
     case nSYAudioFGMSamusSpecialHi:
@@ -626,6 +660,12 @@ static s32 ndsAudioFgmPhaseIndex(u16 id)
     }
 }
 
+static s32 ndsAudioFgmIsSamusChargeRoot(u16 id)
+{
+    return ((id >= NDS_AUDIO_FGM_SAMUS_CHARGE_FIRST) &&
+            (id <= NDS_AUDIO_FGM_SAMUS_CHARGE_LAST)) ? TRUE : FALSE;
+}
+
 static NDSAudioFgmPackEntry *ndsAudioFgmFindEntry(u16 id)
 {
     u32 i;
@@ -646,7 +686,7 @@ static void ndsAudioFgmCacheReset(void)
         NDS_AUDIO_FGM_CACHE_SLOT_LARGE_BYTES,
         NDS_AUDIO_FGM_CACHE_SLOT_MEDIUM_BYTES,
         NDS_AUDIO_FGM_CACHE_SLOT_MEDIUM_BYTES,
-        NDS_AUDIO_FGM_CACHE_SLOT_MEDIUM_BYTES,
+        NDS_AUDIO_FGM_CACHE_SLOT_COMPACT_BYTES,
         NDS_AUDIO_FGM_CACHE_SLOT_SMALL_BYTES,
         NDS_AUDIO_FGM_CACHE_SLOT_SMALL_BYTES,
         NDS_AUDIO_FGM_CACHE_SLOT_SMALL_BYTES,
@@ -774,12 +814,45 @@ static void ndsAudioFgmReleaseHandle(
     NDSAudioFgmHandle *handle, s32 kill_channel
     NDS_AUDIO_FGM_ACK_RELEASE_PARAMS)
 {
+    NDSAudioFgmHandle *child;
+    NDSAudioFgmHandle *parent;
     s32 channel = handle->channel;
 
     if (handle->allocated == FALSE)
     {
         return;
     }
+
+    /* BattleShip's fork_voice child is owned by the root sound object. Stop it
+     * with the root, but only when both generation links still agree; otherwise
+     * the pool slot has already completed/recycled and must not be touched. */
+    child = handle->child_handle;
+    if ((child != NULL) && (child->allocated != FALSE) &&
+        (child->live != FALSE) &&
+        (child->generation == handle->child_generation) &&
+        (child->parent_handle == handle) &&
+        (child->parent_generation == handle->generation))
+    {
+        ndsAudioFgmReleaseHandle(
+            child, TRUE
+            NDS_AUDIO_FGM_ACK_RELEASE_ARGS(release_reason, service_tick));
+    }
+    handle->child_handle = NULL;
+    handle->child_generation = 0u;
+
+    /* A child that ends naturally detaches itself from its parent immediately,
+     * so a later parent stop cannot alias this pool slot after reuse. */
+    parent = handle->parent_handle;
+    if ((parent != NULL) && (parent->allocated != FALSE) &&
+        (parent->generation == handle->parent_generation) &&
+        (parent->child_handle == handle) &&
+        (parent->child_generation == handle->generation))
+    {
+        parent->child_handle = NULL;
+        parent->child_generation = 0u;
+    }
+    handle->parent_handle = NULL;
+    handle->parent_generation = 0u;
 
     if ((channel >= 0) && (channel < (s32)NDS_AUDIO_FGM_CHANNEL_COUNT) &&
         (sNdsAudioFgmChannelOwners[channel] == handle) &&
@@ -839,6 +912,10 @@ static void ndsAudioFgmReleaseHandle(
     handle->cache_slot = -1;
     handle->effect.sfx_id = 0u;
     handle->fgm_id = 0u;
+    handle->pause_tick = 0u;
+    handle->pause_with_game = FALSE;
+    handle->paused = FALSE;
+    handle->pause_hardware = FALSE;
     handle->allocated = FALSE;
     gNdsAudioFgmHandleReleaseCount++;
 }
@@ -960,7 +1037,9 @@ static s32 ndsAudioFgmValidateCachedEntry(u32 index, const u8 *raw)
     entry->envelope_offset = ndsAudioFgmReadLe32(&raw[24]);
     entry->envelope_count = ndsAudioFgmReadLe16(&raw[28]);
     entry->loop_point_words = ndsAudioFgmReadLe16(&raw[30]);
-    if ((entry->flags & ~1u) || (entry->data_bytes < 4u) ||
+    if ((entry->flags & ~(NDS_AUDIO_FGM_FLAG_LOOP |
+                          NDS_AUDIO_FGM_FLAG_PAUSE_WITH_GAME)) ||
+        (entry->data_bytes < 4u) ||
         ((entry->data_bytes & 3u) != 0u) ||
         (entry->data_offset < NDS_AUDIO_FGM_PACK_DATA_OFFSET) ||
         (entry->data_offset > NDS_AUDIO_FGM_PACK_BYTES) ||
@@ -973,7 +1052,8 @@ static s32 ndsAudioFgmValidateCachedEntry(u32 index, const u8 *raw)
          * from loop_point_words either way, and a set bit with PNT at the IMA
          * header repeats the state word as audio.  Reject the mismatched
          * halves rather than play one. */
-        (((entry->flags & 1u) != 0u) != (entry->loop_point_words != 0u)) ||
+        (((entry->flags & NDS_AUDIO_FGM_FLAG_LOOP) != 0u) !=
+         (entry->loop_point_words != 0u)) ||
         ((u32)entry->loop_point_words * 4u >= entry->data_bytes))
     {
         return FALSE;
@@ -1082,6 +1162,12 @@ void ndsAudioFgmDiagnosticsReset(void)
     gNdsAudioFgmHandleCapacity = NDS_AUDIO_FGM_HANDLE_COUNT;
     gNdsAudioFgmEnvelopeStepCount = 0u;
     gNdsAudioFgmFidelityDebtMask = 0u;
+    gNdsAudioFgmPauseCalls = 0u;
+    gNdsAudioFgmResumeCalls = 0u;
+    gNdsAudioFgmPauseHandleCount = 0u;
+    gNdsAudioFgmResumeHandleCount = 0u;
+    gNdsAudioFgmChildStartCount = 0u;
+    gNdsAudioFgmChildStartFailCount = 0u;
 }
 
 void ndsAudioFgmLoadFenced(void)
@@ -1224,6 +1310,13 @@ void ndsAudioFgmUpdate(void)
 
         if (handle->live != FALSE)
         {
+            /* Source pause removes only set_unk1F bit-7 voices from the active
+             * audio list. Their sequencer clock is frozen until resume; the
+             * non-pauseable Samus charge fork keeps running through this. */
+            if (handle->paused != FALSE)
+            {
+                continue;
+            }
             u32 elapsed_cpu_ticks = now - handle->start_tick;
             u32 elapsed_fgm_ticks = (u32)(
                 ((u64)elapsed_cpu_ticks * 1000000u) /
@@ -1363,6 +1456,88 @@ void ndsAudioFgmUpdate(void)
                 }
             }
         }
+    }
+}
+
+void ndsAudioFgmPauseGame(void)
+{
+    u32 active_channels;
+    u32 now;
+    u32 i;
+
+    gNdsAudioFgmPauseCalls++;
+    if (gNdsAudioFgmActiveHandles == 0u)
+    {
+        return;
+    }
+    now = cpuGetTiming();
+    active_channels = (u32)soundGetActiveChannels();
+    for (i = 0u; i < NDS_AUDIO_FGM_HANDLE_COUNT; i++)
+    {
+        NDSAudioFgmHandle *handle = &sNdsAudioFgmHandles[i];
+
+        if ((handle->allocated == FALSE) || (handle->live == FALSE) ||
+            (handle->pause_with_game == FALSE) || (handle->paused != FALSE))
+        {
+            continue;
+        }
+        handle->pause_tick = now;
+        handle->pause_hardware = FALSE;
+        if ((handle->channel >= 0) &&
+            (handle->channel < (s8)NDS_AUDIO_FGM_CHANNEL_COUNT) &&
+            (sNdsAudioFgmChannelOwners[(u32)handle->channel] == handle) &&
+            (sNdsAudioFgmChannelGenerations[(u32)handle->channel] ==
+             handle->generation) &&
+            ((active_channels & (1u << (u32)handle->channel)) != 0u))
+        {
+            soundPause(handle->channel);
+            handle->pause_hardware = TRUE;
+        }
+        handle->paused = TRUE;
+        gNdsAudioFgmPauseHandleCount++;
+    }
+}
+
+void ndsAudioFgmResumeGame(void)
+{
+    u32 now;
+    u32 i;
+
+    gNdsAudioFgmResumeCalls++;
+    if (gNdsAudioFgmActiveHandles == 0u)
+    {
+        return;
+    }
+    now = cpuGetTiming();
+    for (i = 0u; i < NDS_AUDIO_FGM_HANDLE_COUNT; i++)
+    {
+        NDSAudioFgmHandle *handle = &sNdsAudioFgmHandles[i];
+        u32 paused_cpu_ticks;
+
+        if ((handle->allocated == FALSE) || (handle->live == FALSE) ||
+            (handle->paused == FALSE))
+        {
+            continue;
+        }
+        paused_cpu_ticks = now - handle->pause_tick;
+        handle->start_tick += paused_cpu_ticks;
+        handle->end_tick += paused_cpu_ticks;
+        if (handle->audible_end_tick != 0u)
+        {
+            handle->audible_end_tick += paused_cpu_ticks;
+        }
+        if ((handle->pause_hardware != FALSE) && (handle->channel >= 0) &&
+            (handle->channel < (s8)NDS_AUDIO_FGM_CHANNEL_COUNT) &&
+            (sNdsAudioFgmChannelOwners[(u32)handle->channel] == handle) &&
+            (sNdsAudioFgmChannelGenerations[(u32)handle->channel] ==
+             handle->generation))
+        {
+            soundResume(handle->channel);
+        }
+        handle->pause_tick = 0u;
+        handle->pause_hardware = FALSE;
+        handle->paused = FALSE;
+        gNdsAudioFgmResumeHandleCount++;
     }
 }
 
@@ -1572,11 +1747,22 @@ alSoundEffect *ndsAudioFgmPlayAtPan(u16 fgm_id, u8 pan)
         handle->start_tick +
         (u32)(((u64)BUS_CLOCK * entry->sample_count) / entry->frequency);
     handle->volume = entry->volume;
-    handle->loops = (((entry->flags & 1u) != 0u) ? TRUE : FALSE);
+    handle->loops = (((entry->flags & NDS_AUDIO_FGM_FLAG_LOOP) != 0u) ?
+                     TRUE : FALSE);
     handle->envelope_count = entry->envelope_count;
     handle->envelope_index = 0u;
     handle->channel = (s8)channel;
     handle->cache_slot = (s8)cache_slot;
+    handle->child_handle = NULL;
+    handle->child_generation = 0u;
+    handle->parent_handle = NULL;
+    handle->parent_generation = 0u;
+    handle->pause_tick = 0u;
+    handle->pause_with_game =
+        (((entry->flags & NDS_AUDIO_FGM_FLAG_PAUSE_WITH_GAME) != 0u) ?
+         TRUE : FALSE);
+    handle->paused = FALSE;
+    handle->pause_hardware = FALSE;
     sNdsAudioFgmCacheSlots[cache_slot].references++;
     if (handle->ever_allocated != FALSE)
     {
@@ -1641,6 +1827,40 @@ alSoundEffect *ndsAudioFgmPlayAtPan(u16 fgm_id, u8 pan)
         {
             gNdsAudioFgmKoTrace[gNdsAudioFgmKoTraceCount++] = fgm_id;
         }
+    }
+
+    if (ndsAudioFgmIsSamusChargeRoot(fgm_id) != FALSE)
+    {
+        alSoundEffect *child_effect = ndsAudioFgmPlayAtPan(
+            NDS_AUDIO_FGM_SAMUS_CHARGE_AUX_ID, pan);
+        NDSAudioFgmHandle *child_handle =
+            ndsAudioFgmHandleFromEffect(child_effect);
+
+        if ((child_handle != NULL) && (child_handle->allocated != FALSE) &&
+            (child_handle->live != FALSE))
+        {
+            handle->child_handle = child_handle;
+            handle->child_generation = child_handle->generation;
+            child_handle->parent_handle = handle;
+            child_handle->parent_generation = handle->generation;
+            gNdsAudioFgmChildStartCount++;
+        }
+        else
+        {
+            if (child_effect != NULL)
+            {
+                ndsAudioFgmStop(child_effect);
+            }
+            gNdsAudioFgmChildStartFailCount++;
+        }
+
+        /* The child is an implementation detail of the source D9 fork, not a
+         * new source-level FGM call. Restore the externally visible last-play
+         * diagnostics to the root returned to BattleShip. */
+        gNdsAudioFgmLastID = fgm_id;
+        gNdsAudioFgmLastChannel = (u32)handle->channel;
+        gNdsAudioFgmLastGeneration = handle->generation;
+        gNdsAudioFgmLastInstanceToken = handle->effect.sfx_id;
     }
     return &handle->effect;
 }

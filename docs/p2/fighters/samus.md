@@ -3,10 +3,9 @@
 Status: integration in progress · Reference: `decomp/BattleShip-main/decomp/src/ft/ftchar/ftsamus/`
 
 The source gameplay slice is now linked and the real shell can select Samus.
-This is **not** a completion claim: Charge Shot's source lifecycle and
-Bomb/bomb-jump are runtime-accepted, but the rest of Samus's source-specific
-gameplay audio bank, move inventory, and budget/stress acceptance still need
-closure.
+This is **not** a completion claim: Charge Shot's source lifecycle,
+Bomb/bomb-jump, and the source-specific gameplay audio bank are now accepted,
+but the move inventory sweep and budget/stress acceptance still need closure.
 
 ## Role
 
@@ -110,6 +109,41 @@ beam/bomb SFX from source set, announcer clip.
   while the source and compiled instruction stream retain the following null
   store.
 
+### Charge audio closure — 2026-08-27
+
+- BattleShip's held Charge Shot hum is not a flat sample loop. FGM 239..245
+  (`Charge0..6`) are infinite UCD programs with changing notes plus a D9 child
+  voice (private program 673). The source fighter state supplies the bound the
+  audio program itself does not: charge advances once every 20 source updates
+  until level 7, and a level-7 Start goes directly to release instead of
+  entering the held loop. The DS generator therefore renders only the exact
+  gameplay-reachable root prefixes — **409/351/293/235/177/119/61 FGM ticks**
+  for levels 0..6 — and asserts every prefix ends before the source program's
+  first `jump_loop`. FGM 246 (`Charge7`) is pinned as source-unreachable for
+  the held path rather than packed as dead ROM.
+- Program 673 stays a separate DS handle instead of being fused into the root.
+  That is required by the source pause contract: the root's `set_unk1F 226`
+  carries the pause bit while 673's own values do not. Parent/child generation
+  links make root stop/recycle safe; a naturally completed child detaches before
+  its slot can be reused.
+- The BattleShip pause/unpause seams now call the DS FGM backend. Only handles
+  carrying the source pause bit freeze their source-duration clock and hardware
+  channel; non-pauseable children continue. Resume shifts the root's start/end
+  clocks by the paused interval and resumes the same hardware channel.
+- `artifacts/verification/2026-08-27_p2-samus-owner-charge-audio.txt` proves the
+  real path with melonDS keyboard input: root **239** and child **673** are live
+  together; root pauseable=1 / child pauseable=0; source pause reaches
+  `soundPause` on the root channel; after 700 ms of real paused run time the
+  child has naturally completed and detached while the root remains paused;
+  source unpause reaches `soundResume` on that same root channel. The same run
+  then completes store/cancel/resume/release, Bomb/bomb-jump/explosion, active
+  and stored damage ownership, KO persistence and rebirth reset.
+- Generated pack/checker state is **223 entries / 2,253,212 B**, streaming into
+  a **237,568 B (232 KiB)** eight-slot cache. The pack fixture SHA-256 is
+  `7153da9f4986c3aac0c206e0f8329e0bc93d45b014ff35e153e72f8b4557b579`;
+  all expected entries are covered with zero exclusions. REGION_US audio-ID
+  fixtures pass 295 constants and the runtime audio fixtures stay green.
+
 ## Acceptance
 
 - [ ] Move inventory sweep vs `ftsamus` data.
@@ -119,5 +153,7 @@ beam/bomb SFX from source set, announcer clip.
       with source Bomb creation and natural explosion lifecycle.
 - [x] CSS selectable with source portrait, live 3D selected preview, stock art,
       source announcer/selected-pose audio, and rematch return path.
-- [ ] Full Samus-specific gameplay audio bank closed with no runtime misses.
+- [x] Full source-reachable Samus-specific gameplay audio bank closed; the
+      source-unreachable held Charge7 program is explicitly audited, not
+      approximated or packed as dead content.
 - [ ] Budgets + stress measurement banked; owner feel pass.

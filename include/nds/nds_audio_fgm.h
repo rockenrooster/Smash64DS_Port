@@ -5,7 +5,7 @@
 #include <sys/audio.h>
 
 #define NDS_AUDIO_FGM_PASS 0x46474d31u /* FGM1 */
-#define NDS_AUDIO_FGM_ENTRY_COUNT 215u
+#define NDS_AUDIO_FGM_ENTRY_COUNT 223u
 #define NDS_AUDIO_FGM_PHASE_COUNT 5u
 #define NDS_AUDIO_FGM_PHASE_COMPLETE_MASK 0x1fu
 #define NDS_AUDIO_FGM_KO_COUNT 5u
@@ -93,15 +93,18 @@
  * FoxAppearArwing 191 and DK's barrel arrival uses the shared ContainerSmash
  * 59. All three multi-note schedules are baked AOT; the runtime cache remains
  * 204800. */
-/* P2-3 Samus bounded gameplay bank: source-program AOT cues including
- * SpecialHi/Screw Attack and the full 57,596-byte ShootF program. Charge0..7
- * remain separate sequencer work; none are replaced by a placeholder or lossy
- * first-note approximation. ShootF moves the cache 200 -> 208 KiB so all seven
- * pre-existing smaller slots stay intact while the large slot grows 52 -> 60 KiB. */
-#define NDS_AUDIO_FGM_PACK_BYTES 2093304u
-#define NDS_AUDIO_FGM_PACK_MAPPING_SHA256_LO 0x8e881b72u
-#define NDS_AUDIO_FGM_CACHE_BYTES 212992u
-#define NDS_AUDIO_FGM_HANDLE_CAPACITY 8u
+/* P2-3 Samus Charge0-6: BattleShip's infinite UCD loops are bounded by the
+ * fighter owner's 20-update charge progression before their first jump_loop,
+ * so the DS stores the exact gameplay-reachable root prefixes and private fork
+ * 673 separately. The root remains pauseable while 673 is not, matching the
+ * source set_unk1F bit. Charge7 is source-unreachable as a held loop: level 7
+ * enters immediate release. The streaming cache is 232 KiB (60/40/40/28 + four
+ * 16 KiB slots); the handle pool grows to 12 so four roots + four children do
+ * not consume every source sound handle during a four-fighter startup burst. */
+#define NDS_AUDIO_FGM_PACK_BYTES 2253212u
+#define NDS_AUDIO_FGM_PACK_MAPPING_SHA256_LO 0x9303ae95u
+#define NDS_AUDIO_FGM_CACHE_BYTES 237568u
+#define NDS_AUDIO_FGM_HANDLE_CAPACITY 12u
 #define NDS_AUDIO_FGM_FIDELITY_DEBT_PITCH_AUTOMATION (1u << 2)
 #define NDS_AUDIO_FGM_FIDELITY_DEBT_FORK_VOICE (1u << 3)
 #define NDS_AUDIO_FGM_FIDELITY_DEBT_VOLUME_AUTOMATION (1u << 4)
@@ -144,6 +147,8 @@ typedef struct NDSAudioFgmArm7AckTrace {
 void ndsAudioFgmDiagnosticsReset(void);
 void ndsAudioFgmLoadFenced(void);
 void ndsAudioFgmUpdate(void);
+void ndsAudioFgmPauseGame(void);
+void ndsAudioFgmResumeGame(void);
 void ndsAudioFgmStopAll(void);
 void ndsAudioFgmStop(alSoundEffect *effect);
 alSoundEffect *ndsAudioFgmPlay(u16 fgm_id);
@@ -199,6 +204,12 @@ extern volatile u32 gNdsAudioFgmHandleRecycleCount;
 extern volatile u32 gNdsAudioFgmHandleCapacity;
 extern volatile u32 gNdsAudioFgmEnvelopeStepCount;
 extern volatile u32 gNdsAudioFgmFidelityDebtMask;
+extern volatile u32 gNdsAudioFgmPauseCalls;
+extern volatile u32 gNdsAudioFgmResumeCalls;
+extern volatile u32 gNdsAudioFgmPauseHandleCount;
+extern volatile u32 gNdsAudioFgmResumeHandleCount;
+extern volatile u32 gNdsAudioFgmChildStartCount;
+extern volatile u32 gNdsAudioFgmChildStartFailCount;
 #if NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS
 extern volatile NDSAudioFgmArm7AckTrace gNdsAudioFgmArm7AckTrace;
 #endif

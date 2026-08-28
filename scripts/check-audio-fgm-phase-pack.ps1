@@ -118,11 +118,13 @@ $expectedIDs = @(626,470,469,467,490,74,363,364,372,373,374,430,439,292,
     # cue from scsubsysdatasamus.c. BladeDraw's two-note one-voice program is
     # rendered AOT so the mid-program control change is preserved.
     513, 264,
-    # P2-3 Samus bounded gameplay bank. ShootF 235 now has its complete AOT body
-    # too; Charge0..7 remain the only harder source-sequencer class.
+    # P2-3 Samus bounded gameplay bank. ShootF 235 now has its complete AOT body.
+    # Charge0..6 then use their source-proven gameplay-reachable root prefixes;
+    # private program 673 is the D9 child voice. Charge7 cannot enter the held
+    # loop at source max charge and is intentionally not a public pack entry.
     17, 22, 23, 24, 81, 92, 103, 114, 128, 235, 236, 237, 238, 247, 248, 249, 250,
     251, 296, 307, 573, 574, 575, 576, 577, 578, 579, 580, 581, 582, 613,
-    639)
+    639, 239, 240, 241, 242, 243, 244, 245, 673)
 $actualIDs = @($metadata.entries | ForEach-Object { [int]$_.id })
 if (($actualIDs -join ',') -ne ($expectedIDs -join ',')) {
     throw "Unexpected FGM mapping: $($actualIDs -join ',')"
@@ -212,14 +214,16 @@ if (([int]$metadata.format_version -ne 4) -or
     # 2035676 -> 2093304 for full-charge ShootF 235, 214 -> 215 entries.
     # Its complete source-program AOT body is 57,596 bytes, so the bounded
     # runtime cache grows 200 -> 208 KiB and only the large slot moves 52 -> 60
-    # KiB. The other seven slot classes remain byte-identical.
-    ([int64]$metadata.resident_bytes -ne 2093304) -or
-    ([int64]$metadata.resident_limit_bytes -ne 212992) -or
+    # KiB. Charge0..6 + private fork 673 then move 215 -> 223 entries and the
+    # pack to 2,253,212 bytes. Their two largest distinct root bodies need 40
+    # KiB slots, so the streaming cache is 232 KiB (60/40/40/28 + 4x16).
+    ([int64]$metadata.resident_bytes -ne 2253212) -or
+    ([int64]$metadata.resident_limit_bytes -ne 237568) -or
     # ROM, not RAM: the runtime streams cues into resident_limit_bytes and never
     # holds the pack. 512 KiB blocked the five announcer lines and 768 KiB then
     # blocked the seven crowd cues, both for no runtime reason; the bound that
     # is real is the 53,248-byte cache-slot gate below.
-    ([int64]$metadata.pack_limit_bytes -ne 2097152) -or
+    ([int64]$metadata.pack_limit_bytes -ne 3145728) -or
     # 0x984c7da6 -> 0x4fb97922 -> 0xb6be788e on 2026-08-02: this hash covers the
     # cue SELECTOR table. 430/439 gained "aot_source_schedule", then the seven
     # crowd cues gained the full-program AOT render. A mapping change is
@@ -252,8 +256,9 @@ if (([int]$metadata.format_version -ne 4) -or
     # -> 0x64710073 for Samus's source announcer + selected BladeDraw pair;
     # -> 0xa1f3ba41 for her thirty bounded gameplay selectors;
     # -> 0xae1c13f9 when SpecialHi/Screw Attack joins that exact bounded bank;
-    # -> 0x8e881b72 when full-charge ShootF 235 joins it.
-    ($metadata.mapping_sha256_lo -ne '0x8e881b72') -or
+    # -> 0x8e881b72 when full-charge ShootF 235 joins it;
+    # -> 0x9303ae95 for Charge0..6 plus private fork program 673.
+    ($metadata.mapping_sha256_lo -ne '0x9303ae95') -or
     # Repinned 2026-08-02: FGM 11 (the rolling dodge) dropped 127 -> 96 -> 68 ->
     # 48 on the owner's ear via FGM_OWNER_VOLUME_TRIM, -8.4 dB total against the
     # source; the 68 pin was
@@ -311,7 +316,7 @@ if (([int]$metadata.format_version -ne 4) -or
     # fork 683 render together for 235 source ticks / 43,240 PCM samples.
     # ShootF 235 then adds the complete 626-tick / 115,184-sample one-shot.
     ($metadata.pack_sha256 -ne
-        '63d6f9235d20cb7b59d51c00c350625174b6874d2ecb99b5d152d4214a002e27')) {
+        '7153da9f4986c3aac0c206e0f8329e0bc93d45b014ff35e153e72f8b4557b579')) {
     throw 'FGM pack format, budget, mapping, or binary identity changed.'
 }
 if ((@($metadata.excluded_entries).Count -ne 0) -or
@@ -515,6 +520,40 @@ if (($null -eq $fgm235) -or
     ($fgm235.acoustic_oracle.source_custom_fx_dry_only -ne $true)) {
     throw 'FGM 235 Samus ShootF lost its complete bounded source-program render.'
 }
+$chargeAudit = $metadata.samus_charge_audit
+if (($null -eq $chargeAudit) -or
+    ($chargeAudit.sha256 -ne
+        '23b8fc2828bc8866ba09bf0789f530f4ffbce8847fb38b576e9c5ef0634190df') -or
+    ([int]$chargeAudit.unreachable_full_charge.id -ne 246) -or
+    ($chargeAudit.unreachable_full_charge.reason -ne
+        'source_start_releases_full_charge_without_entering_loop')) {
+    throw 'Samus Charge source-lifetime audit changed.'
+}
+$expectedChargeTicks = @(409, 351, 293, 235, 177, 119, 61)
+for ($level = 0; $level -lt 7; $level++) {
+    $id = 239 + $level
+    $entry = $metadata.entries | Where-Object { [int]$_.id -eq $id }
+    $proof = @($chargeAudit.lifetime_proof)[$level]
+    if (($null -eq $entry) -or
+        ($entry.ds_loop_strategy -ne
+            'source_program_gameplay_reachable_prefix_aot') -or
+        ($entry.ds_pause_with_game -ne $true) -or
+        ((@($entry.runtime_auxiliary_fork_programs) -join ',') -ne '673') -or
+        ([int]$entry.source_duration_ticks -ne $expectedChargeTicks[$level]) -or
+        ([int]$proof.reachable_fgm_ticks -ne $expectedChargeTicks[$level]) -or
+        ([int]$proof.first_jump_tick -le [int]$proof.reachable_fgm_ticks) -or
+        (@($entry.runtime_fidelity_debt).Count -ne 0)) {
+        throw "Samus Charge$id lost its source-proven DS reachable-prefix contract."
+    }
+}
+$chargeFork = $metadata.entries | Where-Object { [int]$_.id -eq 673 }
+if (($null -eq $chargeFork) -or
+    ($chargeFork.entry_kind -ne 'internal_fork') -or
+    ($chargeFork.ds_pause_with_game -ne $false) -or
+    ([int]$chargeFork.source_duration_ticks -ne 90) -or
+    (@($chargeFork.runtime_fidelity_debt).Count -ne 0)) {
+    throw 'Samus Charge private fork 673 lost its independent source contract.'
+}
 $fgm218 = $metadata.entries | Where-Object { [int]$_.id -eq 218 }
 if (($fgm218.acoustic_oracle.source_custom_fx_dry_only -ne $true) -or
     ([int]$metadata.attack_activation_qualification.fgm_218_feasibility.source_effective_fx_mix -ne 25)) {
@@ -523,7 +562,8 @@ if (($fgm218.acoustic_oracle.source_custom_fx_dry_only -ne $true) -or
 $header = Get-Content -LiteralPath $headerPath -Raw
 $runtime = Get-Content -LiteralPath $runtimePath -Raw
 foreach ($token in @(
-    '#define NDS_AUDIO_FGM_CACHE_BYTES 212992u')) {
+    '#define NDS_AUDIO_FGM_CACHE_BYTES 237568u',
+    '#define NDS_AUDIO_FGM_HANDLE_CAPACITY 12u')) {
     if (-not $header.Contains($token)) { throw "Runtime header lost: $token" }
 }
 # NDS_AUDIO_FGM_ENTRY_COUNT, NDS_AUDIO_FGM_PACK_BYTES and
@@ -567,6 +607,13 @@ $missingAdmission = @()
 foreach ($entry in $metadata.entries) {
     $name = [string]$entry.name
     $id = [int]$entry.id
+    if ($entry.entry_kind -eq 'internal_fork') {
+        if (($id -ne 673) -or
+            (-not $runtime.Contains('#define NDS_AUDIO_FGM_SAMUS_CHARGE_AUX_ID 673u'))) {
+            throw "Unaccounted private FGM program: $name ($id)."
+        }
+        continue
+    }
     if ($runtime.Contains("case ${name}:")) { continue }
     if ($runtime -match "case\s+${id}u?:") { continue }
     $missingAdmission += ('{0} ({1})' -f $name, $id)
@@ -579,7 +626,11 @@ if ($missingAdmission.Count -gt 0) {
 }
 foreach ($token in @('fread(sNdsAudioFgmCacheSlots[best].data',
     'sNdsAudioFgmCacheSlots[cache_slot].references++',
-    'sNdsAudioFgmCacheSlots[(u32)handle->cache_slot].references--')) {
+    'sNdsAudioFgmCacheSlots[(u32)handle->cache_slot].references--',
+    'ndsAudioFgmPauseGame(void)',
+    'ndsAudioFgmResumeGame(void)',
+    'handle->child_handle = child_handle;',
+    'child_handle->parent_handle = handle;')) {
     if (-not $runtime.Contains($token)) { throw "Runtime cache lost: $token" }
 }
 
@@ -589,7 +640,8 @@ foreach ($token in @('fread(sNdsAudioFgmCacheSlots[best].data',
 # a second copy of a fact and it rots.
 $fusedForks = @($metadata.entries | Where-Object {
     @($_.root_fork_programs).Count -gt 0 -and
-    @($_.omitted_fork_programs).Count -eq 0 }).Count
+    @($_.omitted_fork_programs).Count -eq 0 -and
+    @($_.runtime_auxiliary_fork_programs).Count -eq 0 }).Count
 $stillOmitting = @($metadata.entries | Where-Object {
     @($_.omitted_fork_programs).Count -gt 0 }).Count
 Write-Output (("Audio FGM full coverage passed: $($metadata.entries.Count) IDs, " +

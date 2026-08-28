@@ -3,6 +3,7 @@
 #include <gm/generic.h>
 #include <if/interface.h>
 #include <it/item.h>
+#include <nds/nds_audio_fgm.h>
 #include <nds/nds_effects.h>
 #include <nds/nds_task39_effect_census.h>
 #include <sc/scene.h>
@@ -147,11 +148,13 @@ NDS_WEAK void sc1PGameSetCameraZoom(void)
 
 NDS_WEAK s32 func_800264A4_270A4(void)
 {
+    ndsAudioFgmResumeGame();
     return 0;
 }
 
 NDS_WEAK s32 func_80026594_27194(void)
 {
+    ndsAudioFgmPauseGame();
     return 0;
 }
 

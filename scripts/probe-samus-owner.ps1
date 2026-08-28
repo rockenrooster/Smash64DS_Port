@@ -47,6 +47,7 @@ public static class Smash64DSSamusOwnerInput
 
 $VK_S = [byte]0x53
 $VK_Q = [byte]0x51
+$VK_RETURN = [byte]0x0D
 $VK_DOWN = [byte]0x28
 $SCAN_DOWN = [byte]0x50
 $KEYEVENTF_EXTENDEDKEY = [uint32]1
@@ -218,6 +219,37 @@ tbreak ftSamusSpecialNStartSetStatus
 shell cmd /c echo ready>__CHARGE__
 continue
 printf "TRACE CHARGE_START level=%d\n", ((FTStruct *)fighter_gobj->user_data.p)->passive_vars.samus.charge_level
+tbreak ftSamusSpecialNLoopSetStatus
+continue
+finish
+set $audio_root = -1
+set $audio_child = -1
+set $audio_i = 0
+while $audio_i < 12
+if ((sNdsAudioFgmHandles[$audio_i].live != 0) && (sNdsAudioFgmHandles[$audio_i].fgm_id >= 239) && (sNdsAudioFgmHandles[$audio_i].fgm_id <= 245))
+set $audio_root = $audio_i
+end
+if ((sNdsAudioFgmHandles[$audio_i].live != 0) && (sNdsAudioFgmHandles[$audio_i].fgm_id == 673))
+set $audio_child = $audio_i
+end
+set $audio_i = $audio_i + 1
+end
+printf "TRACE AUDIO_CHARGE_START root=%d root_id=%d child=%d child_id=%d active=%u root_pauseable=%d child_pauseable=%d\n", $audio_root, sNdsAudioFgmHandles[$audio_root].fgm_id, $audio_child, sNdsAudioFgmHandles[$audio_child].fgm_id, gNdsAudioFgmActiveHandles, sNdsAudioFgmHandles[$audio_root].pause_with_game, sNdsAudioFgmHandles[$audio_child].pause_with_game
+tbreak func_80026594_27194
+shell cmd /c echo ready>__AUDIO_PAUSE__
+continue
+tbreak soundPause
+continue
+printf "TRACE AUDIO_SOUND_PAUSE channel=%d root_channel=%d\n", soundId, sNdsAudioFgmHandles[$audio_root].channel
+finish
+tbreak func_800264A4_270A4
+shell cmd /c echo ready>__AUDIO_RESUME__
+continue
+printf "TRACE AUDIO_BEFORE_RESUME root_paused=%d root_hw=%d child_link=%p child_live=%d\n", sNdsAudioFgmHandles[$audio_root].paused, sNdsAudioFgmHandles[$audio_root].pause_hardware, sNdsAudioFgmHandles[$audio_root].child_handle, sNdsAudioFgmHandles[$audio_child].live
+tbreak soundResume
+continue
+printf "TRACE AUDIO_SOUND_RESUME channel=%d root_channel=%d\n", soundId, sNdsAudioFgmHandles[$audio_root].channel
+finish
 tbreak ftSamusSpecialNLoopProcUpdate if ((FTStruct *)fighter_gobj->user_data.p)->passive_vars.samus.charge_level >= 2
 continue
 set $sam = (FTStruct *)fighter_gobj->user_data.p
@@ -481,6 +513,8 @@ quit
 '@
 $commands = $commands.Replace('__PORT__', [string]$context.GdbPort)
 $commands = $commands.Replace('__CHARGE__', (Get-GdbStagePath 'charge'))
+$commands = $commands.Replace('__AUDIO_PAUSE__', (Get-GdbStagePath 'audio-pause'))
+$commands = $commands.Replace('__AUDIO_RESUME__', (Get-GdbStagePath 'audio-resume'))
 $commands = $commands.Replace('__CANCEL__', (Get-GdbStagePath 'cancel'))
 $commands = $commands.Replace('__RESUME__', (Get-GdbStagePath 'resume'))
 $commands = $commands.Replace('__RELEASE__', (Get-GdbStagePath 'release'))
@@ -511,6 +545,17 @@ try {
     Wait-Stage -Name 'charge' -GdbProcess $gdbProcess -Deadline $deadline
     Start-Sleep -Milliseconds 100
     Send-MelonKey -Window $window -Key $VK_S
+
+    Wait-Stage -Name 'audio-pause' -GdbProcess $gdbProcess -Deadline $deadline
+    Start-Sleep -Milliseconds 50
+    Send-MelonKey -Window $window -Key $VK_RETURN
+
+    # Fork 673 is a 90-FGM-tick (~0.52 s source-clock) non-pauseable child.
+    # Give it real emulator run time while the source battle is paused; the root
+    # must remain frozen while the child is allowed to complete.
+    Wait-Stage -Name 'audio-resume' -GdbProcess $gdbProcess -Deadline $deadline
+    Start-Sleep -Milliseconds 700
+    Send-MelonKey -Window $window -Key $VK_RETURN
 
     Wait-Stage -Name 'cancel' -GdbProcess $gdbProcess -Deadline $deadline
     Start-Sleep -Milliseconds 100
@@ -563,7 +608,7 @@ try {
     }
 }
 finally {
-    foreach ($key in @($VK_S, $VK_Q, $VK_DOWN)) {
+    foreach ($key in @($VK_S, $VK_Q, $VK_RETURN, $VK_DOWN)) {
         [Smash64DSSamusOwnerInput]::keybd_event(
             [byte]$key, 0, $KEYEVENTF_KEYUP, [UIntPtr]::Zero)
     }
@@ -593,6 +638,10 @@ $text = Get-Content -LiteralPath $Artifact -Raw
 foreach ($required in @(
     'TRACE ENTRY_EFFECT pos=\(',
     'TRACE INPUT_READY status=10 fkind=3 pkind=0 control_disable=0',
+    'TRACE AUDIO_CHARGE_START root=[0-9]+ root_id=239 child=[0-9]+ child_id=673 active=[1-9][0-9]* root_pauseable=1 child_pauseable=0',
+    'TRACE AUDIO_SOUND_PAUSE channel=[0-9]+ root_channel=[0-9]+',
+    'TRACE AUDIO_BEFORE_RESUME root_paused=1 root_hw=1 child_link=(?:0x0|\(nil\)) child_live=0',
+    'TRACE AUDIO_SOUND_RESUME channel=[0-9]+ root_channel=[0-9]+',
     'TRACE CHARGE_STORED level=([2-7])',
     'TRACE CHARGE_CANCEL level=[2-7] pre=[2-7] preserved=1',
     'TRACE CHARGE_RESUME_START level=[2-7] cancel=[2-7] preserved=1',

@@ -58,12 +58,17 @@ FGM_OUTPUT_RATE = 32000
 # after Luigi and could not admit DK's source voice bank without either dropping
 # source cues or making a fake resident-RAM tradeoff.  Give the roster room to
 # grow while keeping the real cache/slot gates checked below.
-MAX_PACK_BYTES = 2 * 1024 * 1024
+MAX_PACK_BYTES = 3 * 1024 * 1024
 # Samus's full-charge release (FGM 235) is the first exact one-shot whose AOT
 # body is larger than the old 52 KiB slot: 57,596 bytes. Spend a bounded 8 KiB
 # of ARM9 RAM rather than truncating/downsampling it. The other seven slot
 # classes stay byte-identical, so no existing cue loses a cache home.
-RUNTIME_CACHE_BYTES = (60 * 1024) + (3 * 28 * 1024) + (4 * 16 * 1024)
+# Charge0/1's gameplay-reachable AOT prefixes need ~38/32 KiB. Keep the same
+# eight-slot topology and the same four >=28 KiB homes as before, but upgrade
+# two old 28 KiB slots to 40 KiB. That permits full-charge ShootF plus Charge0,
+# Charge1 and Charge2 to coexist in a four-fighter match, while fork 673 shares
+# one of the four unchanged 16 KiB slots.
+RUNTIME_CACHE_BYTES = ((60 + 40 + 40 + 28 + 16 + 16 + 16 + 16) * 1024)
 MAX_CUE_IMA_BYTES = 60 * 1024
 MAX_RESIDENT_BYTES = 128 * 1024  # historical Phase-C comparison only
 PUBLIC_EXCITED_ID = 626
@@ -169,6 +174,38 @@ SAMUS_NON_CHARGE_RENDER_PROGRAMS = {
 }
 SAMUS_NON_CHARGE_SELECTOR_SHA256 = (
     "d2855b5654760fdd458cd230d107a610133f7a133a6c55ed494af152bd106843")
+
+# Charge Shot's held hums are infinite SOURCE sequencers, but the gameplay
+# owner gives them a much tighter lifetime. Samus and copied-Samus Kirby both
+# increment charge_level every 20 gameplay updates and force the charge state
+# out at level 7. At 60 updates/s the longest level-0 invocation is therefore
+# 140 updates. The root UCD does not reach its first jump_loop until FGM tick
+# 600 (500 for levels 1-6), while even a one-update phase margin ends level 0
+# at FGM tick 409. Pre-rendering only that reachable prefix is exact gameplay
+# behavior, not a shortened approximation, and keeps the DS cache bounded.
+#
+# The one fork is deliberately NOT fused. UCD 239-245 keeps set_unk1F=226
+# (pause-on-game-pause bit set), while fork 673 uses 70/54/20 (bit clear).
+# BattleShip's pause walker moves those voices independently, and stopping the
+# root also stops its child. The DS runtime reproduces that with a parented
+# internal 673 one-shot plus a pauseable root handle.
+SAMUS_CHARGE_AUDIO = (
+    (239, "nSYAudioFGMSamusSpecialNCharge0"),
+    (240, "nSYAudioFGMSamusSpecialNCharge1"),
+    (241, "nSYAudioFGMSamusSpecialNCharge2"),
+    (242, "nSYAudioFGMSamusSpecialNCharge3"),
+    (243, "nSYAudioFGMSamusSpecialNCharge4"),
+    (244, "nSYAudioFGMSamusSpecialNCharge5"),
+    (245, "nSYAudioFGMSamusSpecialNCharge6"),
+)
+SAMUS_CHARGE_UNREACHABLE_FULL_ID = 246
+SAMUS_CHARGE_AUX_PROGRAM_ID = 673
+SAMUS_CHARGE_MAX_LEVEL = 7
+SAMUS_CHARGE_GAME_TICKS_PER_LEVEL = 20
+SAMUS_CHARGE_GAME_HZ = 60
+SAMUS_CHARGE_PHASE_MARGIN_GAME_TICKS = 1
+SAMUS_CHARGE_SELECTOR_SHA256 = (
+    "23b8fc2828bc8866ba09bf0789f530f4ffbce8847fb38b576e9c5ef0634190df")
 
 FULL_COVERAGE_IDS = (
     626, 470, 469, 467, 490, 74, 363, 364, 372, 373, 374, 430, 439,
@@ -340,11 +377,14 @@ FULL_COVERAGE_IDS = (
     # stable. Gameplay-bank closure follows in the Samus fighter row rather
     # than hiding these two menu failures behind a silent fallback.
     513, 264,
-    # P2-3 Samus gameplay bank, excluding only the five representation classes
-    # named above (Charge0..7 is one class).  Appending preserves every previous
-    # pack ordinal and makes the roster addition complete by source inventory,
-    # rather than waiting for random CPU play to discover each miss.
+    # P2-3 Samus bounded gameplay bank. Charge Shot's held-hum sequencers are
+    # appended immediately after it as a separate DS-native lifetime class.
     *(fgm_id for fgm_id, _name in SAMUS_NON_CHARGE_AUDIO),
+    *(fgm_id for fgm_id, _name in SAMUS_CHARGE_AUDIO),
+    # Internal child spawned by every Charge0-6 UCD. This is intentionally a
+    # pack program id, not a public gmFGMVoiceID; the runtime starts it only as
+    # the child of 239..245 and never exposes it as a source-level play call.
+    SAMUS_CHARGE_AUX_PROGRAM_ID,
 )
 FULL_PROGRAM_AOT_IDS = frozenset((
     154, 40, 38, 37, 34, 32, 31,
@@ -397,6 +437,11 @@ FULL_PROGRAM_AOT_IDS = frozenset((
     # changes, wavetable loops used inside finite notes, deterministic
     # articulation modulation, and forked voices before producing DS IMA.
     *(fgm_id for fgm_id, _name in SAMUS_NON_CHARGE_AUDIO),
+    # Charge0-6 are root-only reachable-prefix AOTs; fork 673 is rendered into
+    # its own private handle so BattleShip's independent pause/stop ownership is
+    # preserved. All still use this source-program renderer.
+    *(fgm_id for fgm_id, _name in SAMUS_CHARGE_AUDIO),
+    SAMUS_CHARGE_AUX_PROGRAM_ID,
     18, 365,
     # 153 AltitudeWarn -- the cue the owner picked out BY NAME as "a new SFX I
     # don't recognise". Articulation 150 sweeps pitch 550 -> 2390 cents inside
@@ -5523,7 +5568,12 @@ def validate_ucd(root_program: list[list], program: list[list],
     expected_notes = [["note", *values] for values in expected_notes]
     if notes != expected_notes:
         raise ValueError(f"FGM {selector['id']} note program changed: {notes}")
-    if not program or program[-1] != ["stop_voice"]:
+    if selector.get("aot_root_program_lifetime"):
+        if (not program or program[-1] != ["jump_loop"] or
+                not any(row[0] == "mark_loop" for row in program)):
+            raise ValueError(
+                f"FGM {selector['id']} lost its lifetime-bounded UCD loop")
+    elif not program or program[-1] != ["stop_voice"]:
         raise ValueError(f"FGM {selector['id']} no longer ends in stop_voice")
 
 
@@ -7595,7 +7645,7 @@ def build_fgm218_feasibility(repo_root: Path, action_audit: dict,
     if not (
             duration_ticks == 27 and
             max_live_voices == 9 and
-            handle_capacity == 8 and
+            handle_capacity >= max_live_voices and
             effective_fx_mix == 25 and
             dry_samples == 4968 and
             dry_ima_bytes == 2488 and
@@ -7618,7 +7668,8 @@ def build_fgm218_feasibility(repo_root: Path, action_audit: dict,
         "source_max_live_voices": max_live_voices,
         "ds_handle_capacity_source": header_path.as_posix(),
         "ds_handle_capacity": handle_capacity,
-        "overlap_handle_shortfall": max_live_voices - handle_capacity,
+        "overlap_handle_shortfall": max(
+            0, max_live_voices - handle_capacity),
         "source_articulation_fx": articulation_fx,
         "source_inherited_voice_fx": voice_fx,
         "source_effective_fx_mix": effective_fx_mix,
@@ -7944,6 +7995,212 @@ def build_samus_non_charge_selectors(
     return selectors
 
 
+def build_samus_charge_selectors(
+        repo_root: Path, ucd: dict, articulations: dict, modulators: dict,
+        ctl_by_offset: dict, instrument: dict, source_tbl: bytes,
+        audio_codec, sine_table: list[int]) -> dict:
+    """Compile the gameplay-reachable Samus charge hums plus their child voice."""
+    # This is the ownership proof that makes the finite AOT prefixes exact.
+    # Keep both Samus and copied-Samus Kirby pinned because both call the same
+    # wpSamusChargeShotMakeWeapon() charge-audio table.
+    source_contracts = (
+        (repo_root / "decomp/BattleShip-main/decomp/src/ft/ftchar/ftsamus/ftsamus.h",
+         "FTSAMUS_CHARGE_MAX", SAMUS_CHARGE_MAX_LEVEL),
+        (repo_root / "decomp/BattleShip-main/decomp/src/ft/ftchar/ftsamus/ftsamus.h",
+         "FTSAMUS_CHARGE_INT", SAMUS_CHARGE_GAME_TICKS_PER_LEVEL),
+        (repo_root / "decomp/BattleShip-main/decomp/src/ft/ftchar/ftkirby/ftkirby.h",
+         "FTKIRBY_COPYSAMUS_CHARGE_MAX", SAMUS_CHARGE_MAX_LEVEL),
+        (repo_root / "decomp/BattleShip-main/decomp/src/ft/ftchar/ftkirby/ftkirby.h",
+         "FTKIRBY_COPYSAMUS_CHARGE_INT", SAMUS_CHARGE_GAME_TICKS_PER_LEVEL),
+        (repo_root / "decomp/BattleShip-main/decomp/include/macros.h",
+         "UPDATE_INTERVAL", SAMUS_CHARGE_GAME_HZ),
+    )
+    for path, macro, expected in source_contracts:
+        source = path.read_text(encoding="utf-8")
+        match = re.search(rf"#define\s+{re.escape(macro)}\s+\(?\s*([0-9]+)", source)
+        if match is None or int(match.group(1)) != expected:
+            raise ValueError(f"Samus charge gameplay contract changed: {macro}")
+    for path, decrement, increment, exit_call in (
+        (repo_root / "decomp/BattleShip-main/decomp/src/ft/ftchar/ftsamus/ftsamusspecialn.c",
+         "fp->status_vars.samus.specialn.charge_int--;",
+         "fp->passive_vars.samus.charge_level++;",
+         "ftCommonWaitSetStatus(fighter_gobj);"),
+        (repo_root / "decomp/BattleShip-main/decomp/src/ft/ftchar/ftkirby/ftkirbycopysamusspecialn.c",
+         "fp->status_vars.kirby.copysamus_specialn.charge_int--;",
+         "fp->passive_vars.kirby.copysamus_charge_level++;",
+         "ftCommonWaitSetStatus(fighter_gobj);"),
+    ):
+        source = path.read_text(encoding="utf-8")
+        if decrement not in source or increment not in source or exit_call not in source:
+            raise ValueError(f"Samus charge update/exit contract changed: {path.name}")
+
+    selectors = []
+    lifetime_rows = []
+    for charge_level, (fgm_id, name) in enumerate(SAMUS_CHARGE_AUDIO):
+        program = ucd["entries"][fgm_id]["program"]
+        articulation_id = first_program_arg(program, "set_articulation")
+        art_program = articulations["entries"][articulation_id]["program"]
+        sound_id = first_program_arg(art_program, "trigger")
+        sound = ctl_by_offset[instrument["soundArray_offs"][sound_id]]
+        wave = ctl_by_offset[sound["wavetable_off"]]
+        loop = ctl_by_offset[wave["loop_off"]] if wave["loop_off"] else None
+        notes = tuple(tuple(int(value) for value in row[1:])
+                      for row in program if row[0] == "note")
+        volumes = [int(row[1]) for row in program if row[0] == "set_volume"]
+        pitches = [int(row[1]) for row in art_program if row[0] == "pitch"]
+        root_forks = tuple(int(row[1]) for row in program
+                           if row[0] == "fork_voice")
+        pause_values = tuple(int(row[1]) for row in program
+                             if row[0] == "set_unk1F")
+        if root_forks != (SAMUS_CHARGE_AUX_PROGRAM_ID,) or pause_values != (226,):
+            raise ValueError(f"FGM {fgm_id} charge parent/fork pause contract changed")
+
+        ucd_tick = 0
+        loop_mark_tick = None
+        first_jump_tick = None
+        for row in program:
+            if row[0] == "mark_loop" and loop_mark_tick is None:
+                loop_mark_tick = ucd_tick
+            elif row[0] == "jump_loop" and first_jump_tick is None:
+                first_jump_tick = ucd_tick
+            elif row[0] == "note":
+                ucd_tick += int(row[3])
+        if loop_mark_tick is None or first_jump_tick is None:
+            raise ValueError(f"FGM {fgm_id} lost its source UCD loop")
+
+        game_ticks = ((SAMUS_CHARGE_MAX_LEVEL - charge_level) *
+                      SAMUS_CHARGE_GAME_TICKS_PER_LEVEL)
+        bounded_game_ticks = game_ticks + SAMUS_CHARGE_PHASE_MARGIN_GAME_TICKS
+        numerator = bounded_game_ticks * 1000000
+        denominator = SAMUS_CHARGE_GAME_HZ * FGM_TIMER_MICROSECONDS
+        reachable_fgm_ticks = (numerator + denominator - 1) // denominator
+        if reachable_fgm_ticks >= first_jump_tick:
+            raise ValueError(
+                f"FGM {fgm_id} gameplay lifetime reaches source jump_loop: "
+                f"{reachable_fgm_ticks} >= {first_jump_tick}")
+
+        full_root, root_metadata = render_fgm_program_voice_aot(
+            fgm_id, ucd, articulations, modulators, instrument, ctl_by_offset,
+            source_tbl, audio_codec, sine_table)
+        reachable_samples = reachable_fgm_ticks * PUBLIC_EXCITED_RAMP_SAMPLES
+        if reachable_samples <= 0 or reachable_samples >= len(full_root):
+            raise ValueError(f"FGM {fgm_id} reachable AOT extent is not a prefix")
+        selector = {
+            "id": fgm_id,
+            "name": name,
+            "kind": "samus_charge",
+            "articulation": articulation_id,
+            "sound": sound_id,
+            "notes": notes,
+            "duration_ticks": reachable_fgm_ticks,
+            "ucd_volume": volumes[0],
+            "articulation_pitch_cents": pitches[0] if pitches else 0,
+            "loop": loop is not None,
+            "wave_base": wave["base"],
+            "wave_length": wave["length"],
+            "loop_start": loop["start"] if loop else 0,
+            "loop_end": loop["end"] if loop else 0,
+            "expected_retained_samples": reachable_samples,
+            "root_fork_programs": root_forks,
+            "runtime_auxiliary_fork_programs": root_forks,
+            "root_program_sha256": json_sha256(program),
+            "render_program_sha256": json_sha256(program),
+            "articulation_program_sha256": json_sha256(art_program),
+            "aot_root_program_lifetime": True,
+            "aot_full_program": True,
+            "pause_with_game": True,
+            "source_gameplay_charge_level": charge_level,
+            "source_gameplay_max_ticks": game_ticks,
+            "source_gameplay_phase_margin_ticks": SAMUS_CHARGE_PHASE_MARGIN_GAME_TICKS,
+            "source_reachable_fgm_ticks": reachable_fgm_ticks,
+            "source_ucd_loop_mark_tick": loop_mark_tick,
+            "source_ucd_first_jump_tick": first_jump_tick,
+            "source_root_first_pass_ticks": root_metadata["duration_ticks"],
+            "fidelity_debt": (),
+        }
+        selectors.append(selector)
+        lifetime_rows.append({
+            "id": fgm_id,
+            "charge_level": charge_level,
+            "game_ticks": game_ticks,
+            "phase_margin_game_ticks": SAMUS_CHARGE_PHASE_MARGIN_GAME_TICKS,
+            "reachable_fgm_ticks": reachable_fgm_ticks,
+            "loop_mark_tick": loop_mark_tick,
+            "first_jump_tick": first_jump_tick,
+            "reachable_samples": reachable_samples,
+        })
+
+    # D9 fork 673 inherits the parent object and then runs this child UCD. Its
+    # own D3 values are all non-pauseable, so it must be a separate DS handle.
+    aux_id = SAMUS_CHARGE_AUX_PROGRAM_ID
+    aux_program = ucd["entries"][aux_id]["program"]
+    aux_articulation = first_program_arg(aux_program, "set_articulation")
+    aux_art_program = articulations["entries"][aux_articulation]["program"]
+    aux_sound_id = first_program_arg(aux_art_program, "trigger")
+    aux_sound = ctl_by_offset[instrument["soundArray_offs"][aux_sound_id]]
+    aux_wave = ctl_by_offset[aux_sound["wavetable_off"]]
+    aux_loop = ctl_by_offset[aux_wave["loop_off"]] if aux_wave["loop_off"] else None
+    aux_notes = tuple(tuple(int(value) for value in row[1:])
+                      for row in aux_program if row[0] == "note")
+    aux_volumes = [int(row[1]) for row in aux_program if row[0] == "set_volume"]
+    aux_pitches = [int(row[1]) for row in aux_art_program if row[0] == "pitch"]
+    aux_pause_values = tuple(int(row[1]) for row in aux_program
+                             if row[0] == "set_unk1F")
+    aux_rendered, _aux_meta = render_fgm_program_voice_aot(
+        aux_id, ucd, articulations, modulators, instrument, ctl_by_offset,
+        source_tbl, audio_codec, sine_table)
+    if any(value & 0x80 for value in aux_pause_values):
+        raise ValueError("Samus charge fork 673 unexpectedly became pauseable")
+    aux_selector = {
+        "id": aux_id,
+        "name": "nSYAudioInternalSamusChargeFork673",
+        "kind": "internal_fork",
+        "articulation": aux_articulation,
+        "sound": aux_sound_id,
+        "notes": aux_notes,
+        "duration_ticks": sum(note[2] for note in aux_notes),
+        "ucd_volume": aux_volumes[0],
+        "articulation_pitch_cents": aux_pitches[0] if aux_pitches else 0,
+        "loop": aux_loop is not None,
+        "wave_base": aux_wave["base"],
+        "wave_length": aux_wave["length"],
+        "loop_start": aux_loop["start"] if aux_loop else 0,
+        "loop_end": aux_loop["end"] if aux_loop else 0,
+        "expected_retained_samples": len(aux_rendered),
+        "root_fork_programs": (),
+        "root_program_sha256": json_sha256(aux_program),
+        "render_program_sha256": json_sha256(aux_program),
+        "articulation_program_sha256": json_sha256(aux_art_program),
+        "aot_full_program": True,
+        "internal_only": True,
+        "fidelity_debt": (),
+    }
+
+    # Charge7 exists in the source attribute table but neither Samus nor copied
+    # Samus can enter a held-charge loop at level 7: Start sets is_release when
+    # level == MAX, so it goes directly to End/launch. Pin the UCD identity so
+    # this intentional non-entry cannot silently turn into a reachable gap.
+    unreachable_program = ucd["entries"][SAMUS_CHARGE_UNREACHABLE_FULL_ID]["program"]
+    unreachable = {
+        "id": SAMUS_CHARGE_UNREACHABLE_FULL_ID,
+        "name": "nSYAudioFGMSamusSpecialNCharge7",
+        "reason": "source_start_releases_full_charge_without_entering_loop",
+        "root_program_sha256": json_sha256(unreachable_program),
+        "root_fork_programs": [int(row[1]) for row in unreachable_program
+                               if row[0] == "fork_voice"],
+    }
+    audit = {
+        "selectors": selectors + [aux_selector],
+        "lifetime_proof": lifetime_rows,
+        "unreachable_full_charge": unreachable,
+    }
+    digest = json_sha256(audit)
+    if digest != SAMUS_CHARGE_SELECTOR_SHA256:
+        raise ValueError(f"Samus Charge selector audit changed: {digest}")
+    audit["sha256"] = digest
+    return audit
+
+
 def build_pack(repo_root: Path) -> tuple[bytes, dict]:
     tools_dir = repo_root / "decomp/BattleShip-main/decomp/tools"
     extract_fgm = load_module(tools_dir / "extract_fgm.py", "extract_fgm")
@@ -8072,6 +8329,14 @@ def build_pack(repo_root: Path) -> tuple[bytes, dict]:
         fgm_id = int(selector["id"])
         if fgm_id in declared_selectors:
             raise ValueError(f"Samus FGM {fgm_id} is already declared")
+        declared_selectors[fgm_id] = selector
+    samus_charge_audit = build_samus_charge_selectors(
+        repo_root, ucd, articulations, modulators, ctl_by_offset, instrument,
+        source_raw["B1_sounds2_tbl"], audio_codec, sine_table)
+    for selector in samus_charge_audit["selectors"]:
+        fgm_id = int(selector["id"])
+        if fgm_id in declared_selectors:
+            raise ValueError(f"Samus Charge FGM/program {fgm_id} is already declared")
         declared_selectors[fgm_id] = selector
     attack_cue_by_id = {int(cue["id"]): cue for cue in ATTACK_CUE_AUDIT}
     runtime_selected = []
@@ -8279,6 +8544,55 @@ def build_pack(repo_root: Path) -> tuple[bytes, dict]:
                 "trim_one_sample_ceiling": 1,
             }
             old_loop_ima = b""
+        elif selector.get("aot_root_program_lifetime"):
+            full_root_pcm, root_oracle = render_fgm_program_voice_aot(
+                render_program_id, ucd, articulations, modulators, instrument,
+                ctl_by_offset, source_raw["B1_sounds2_tbl"], audio_codec,
+                sine_table)
+            reachable_samples = int(selector["expected_retained_samples"])
+            if (reachable_samples <= 0 or
+                    reachable_samples >= len(full_root_pcm)):
+                raise ValueError(
+                    f"FGM {selector['id']} lifetime AOT extent changed: "
+                    f"{reachable_samples}/{len(full_root_pcm)}")
+            runtime_pcm = full_root_pcm[:reachable_samples]
+            acoustic_oracle = {
+                "aot_strategy": "source_root_gameplay_reachable_prefix",
+                "aot_runtime_automation": False,
+                "aot_output_frequency_hz": FGM_OUTPUT_RATE,
+                "aot_output_samples": len(runtime_pcm),
+                "aot_rendered_pcm_sha256": ima_pcm_sha256(runtime_pcm),
+                "source_root_first_pass_ticks": root_oracle["duration_ticks"],
+                "source_root_first_pass_samples": len(full_root_pcm),
+                "source_root_first_pass_pcm_sha256": ima_pcm_sha256(full_root_pcm),
+                "source_reachable_fgm_ticks": selector["source_reachable_fgm_ticks"],
+                "source_ucd_loop_mark_tick": selector["source_ucd_loop_mark_tick"],
+                "source_ucd_first_jump_tick": selector["source_ucd_first_jump_tick"],
+                "source_gameplay_max_ticks": selector["source_gameplay_max_ticks"],
+                "source_gameplay_phase_margin_ticks":
+                    selector["source_gameplay_phase_margin_ticks"],
+                "voice_program_ids": [render_program_id],
+                "runtime_auxiliary_fork_programs": list(
+                    selector["runtime_auxiliary_fork_programs"]),
+                "source_custom_fx_dry_only": root_oracle["requires_custom_fx"],
+            }
+            frequency = FGM_OUTPUT_RATE
+            loop_strategy = "source_program_gameplay_reachable_prefix_aot"
+            flags = 0
+            loop_point_words = 0
+            packed_envelope = []
+            volume = 127
+            trim = {
+                "trim_strategy": "source_gameplay_lifetime_before_ucd_jump_loop",
+                "trim_source_samples_removed": len(full_root_pcm) - len(runtime_pcm),
+                "trim_applied": True,
+                "trim_retained_source_prefix_pcm_sha256": ima_pcm_sha256(runtime_pcm),
+                "trim_retained_prefix_exact": True,
+                "trim_proven_reachable_samples": len(runtime_pcm),
+                "trim_one_sample_ceiling": 0,
+                "source_root_duration_ticks": root_oracle["duration_ticks"],
+            }
+            old_loop_ima = b""
         elif selector.get("aot_full_program"):
             root_duration_ticks = selector["duration_ticks"]
             # P2-1e-1: render_program_id, not selector["id"] -- 121 MarioDash's
@@ -8398,6 +8712,8 @@ def build_pack(repo_root: Path) -> tuple[bytes, dict]:
             packed_envelope = envelope[1:]
             volume = envelope[0]["ds_volume"]
             old_loop_ima = b""
+        if selector.get("pause_with_game"):
+            flags |= 2
         if "hardware_loop" in selector:
             # A looped entry cannot spend its first sample on the IMA header:
             # the header is outside PNT, so a sample parked there would play
@@ -8470,7 +8786,7 @@ def build_pack(repo_root: Path) -> tuple[bytes, dict]:
                 "decoded_silent_tail_peak": tail_peak,
                 "decoded_silent_tail_rms": round(tail_rms, 6),
                 "old_hardware_loop_negative_rejected": (
-                    old_loop_ima != ima and flags == 0 and
+                    old_loop_ima != ima and (flags & 1) == 0 and
                     loop_point_words == 0),
             })
             acoustic_oracle["decoded_clipping_not_regressed"] = (
@@ -8513,6 +8829,8 @@ def build_pack(repo_root: Path) -> tuple[bytes, dict]:
             "ucd_program": ucd_program,
             "root_fork_programs": list(selector.get(
                 "root_fork_programs", ())),
+            "runtime_auxiliary_fork_programs": list(selector.get(
+                "runtime_auxiliary_fork_programs", ())),
             "omitted_fork_programs": ([] if selector.get("aot_full_program")
                                       else list(selector.get(
                                           "omitted_fork_programs", ()))),
@@ -8535,7 +8853,8 @@ def build_pack(repo_root: Path) -> tuple[bytes, dict]:
             "source_loop_end": selector["loop_end"],
             "source_loop_infinite": source_loop_infinite,
             "ds_loop_strategy": loop_strategy,
-            "ds_loop_flag": flags,
+            "ds_loop_flag": flags & 1,
+            "ds_pause_with_game": (flags & 2) != 0,
             "ds_loop_point_words": loop_point_words,
             "ds_loop_length_words": (
                 (len(ima) // 4) - loop_point_words),
@@ -8717,10 +9036,10 @@ def build_pack(repo_root: Path) -> tuple[bytes, dict]:
         "unique_sample_bytes": len(sample_body),
         "non_loop_sample_sha256": sha256(b"".join(
             record["ima"] for record in records
-            if record["flags"] == 0)),
+            if (record["flags"] & 1) == 0)),
         "non_loop_envelope_sha256": sha256(b"".join(
             PACK_ENVELOPE_POINT.pack(point["tick"], point["ds_volume"], 0)
-            for record in records if record["flags"] == 0
+            for record in records if (record["flags"] & 1) == 0
             for point in record["envelope"])),
         "strict_hit_contact_status": "full_source_program_aot",
         "runtime_excluded_hit_ids": [entry["id"]
@@ -8728,6 +9047,7 @@ def build_pack(repo_root: Path) -> tuple[bytes, dict]:
         "excluded_hit_cues": excluded_hit_cues,
         "hit_contact_feasibility_experiment": id34_feasibility,
         "source_custom_fx": source_custom_fx_audit(repo_root),
+        "samus_charge_audit": samus_charge_audit,
         "known_runtime_fidelity_debt": [
             "Entries carrying articulation or UCD automation debt retain "
             "their source wavetable and bounded initial DS state, but their "
