@@ -401,6 +401,38 @@ and zero hard allocator/object/AObj failures. ROM SHA-256
 artifacts are `2026-08-28_p2-3f27-fourcpu-{buckets,coverage,memory}.json` and
 the matching rows CSV.
 
+### Complete DamageFly family — 2026-08-28
+
+The last four unvisited directional tumble states are now closed with a
+separate controller-only proof arm, `NDS_P2_SAMUS_DAMAGEFLY_TOUR`. The source
+rule is exact: `ftMainSearchHitFighter` scans Samus's `damage_colls[]` in array
+order and stores the first colliding hurtbox's `placement` as `damage_index`.
+`ftcommondamage.c` maps level-3 placement **0/1/2** to
+DamageFlyLw/N/Hi, then overrides the result to DamageFlyTop for launch angles
+strictly between 70 and 110 degrees, or to DamageFlyRoll at >=100% when the
+source `syUtilsRandFloat() < 0.5` branch succeeds.
+
+The proof follows those laws rather than writing their outputs. For Hi, Fox
+performs a real C-button jump and starts N-air only after natural jump physics
+has put him above Samus, so the first source hurtbox intersected is placement-2
+head instead of the earlier placement-1 torso. Neutral F-tilt naturally reaches
+placement 1 for N. Down-smash reaches placement-0 leg geometry for Lw. Up-smash
+supplies the source 80-degree Top override. Roll repeats a real non-vertical
+F-tilt from the 100% precondition until BattleShip's own 50% branch fires. The
+permanent verifier statically rejects status/motion assignment, direct damage
+injection, Damage status setters, and any proof-side RNG call.
+
+Two consecutive runs report the identical cache-coherent terminal:
+`SAMUS_DAMAGEFLY_TOUR=5,6,15,1,0x1f,0xf,0x120a,5,1,3,1,109,0,8,1,10,0x7ff,0,0`.
+That is all five family states (`0x1f`), all four source attacker paths (`0xf`),
+Hi/N/Lw placements **2/1/0**, five real hits, one source Roll attempt, three
+361-degree hits (head N-air, N F-tilt, Roll F-tilt), one 80-degree Top hit,
+Roll selected at 109% after source hit damage, zero mismatches, prerequisite
+`NAT_MOVESET=0x7ff`, zero stalls and zero pose-track overflow. Proof ROM SHA-256
+is `D97E71A7E823AF4E8D76758534337EC2BA2E6EB6DD1C1B43D4870815061C871B`;
+artifacts are `2026-08-28_p2-3f28-samus-damagefly-tour.txt` and the independent
+repeat `2026-08-28_p2-3f28-samus-damagefly-tour-repeat.txt`.
+
 ## Acceptance
 
 - [x] Move inventory sweep vs `ftsamus`/`ftdata` data: 206 motion descriptors,
@@ -430,5 +462,6 @@ the matching rows CSV.
 - [x] Exhaustive ordinary attack/grab/throw tour: 23/23 scenarios, all 24
       source attack/throw status bits (`0xffffff`), Catch chain `0x7`, zero
       stalls; shared compact-pose ownership is source-joint exact.
-- [ ] DamageFlyHi/Lw/N/Roll directional variants; CPU determinism replay;
-      owner feel pass.
+- [x] Complete DamageFly family: Hi/N/Lw/Top/Roll through real source attacks,
+      exact placement 2/1/0 selection and BattleShip-owned Top/Roll overrides.
+- [ ] CPU determinism replay; owner feel pass.

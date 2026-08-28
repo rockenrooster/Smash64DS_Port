@@ -4356,6 +4356,32 @@ enum {
 #define NDS_SAMUS_TUMBLE_TOUR_TIMEOUT 1200u
 #endif
 
+#if NDS_P2_SAMUS_DAMAGEFLY_TOUR
+enum {
+    nNDSSamusDamageFlyTourHi = 0,
+    nNDSSamusDamageFlyTourN,
+    nNDSSamusDamageFlyTourLw,
+    nNDSSamusDamageFlyTourTop,
+    nNDSSamusDamageFlyTourRoll,
+    nNDSSamusDamageFlyTourDone
+};
+
+enum {
+    nNDSSamusDamageFlyTourStepPrepare = 0,
+    nNDSSamusDamageFlyTourStepRearm,
+    nNDSSamusDamageFlyTourStepDrive,
+    nNDSSamusDamageFlyTourStepDamageFly,
+    nNDSSamusDamageFlyTourStepDamageFall,
+    nNDSSamusDamageFlyTourStepLanding,
+    nNDSSamusDamageFlyTourStepRecover
+};
+
+#define NDS_SAMUS_DAMAGEFLY_TOUR_MASK_ALL 0x0000001fu
+#define NDS_SAMUS_DAMAGEFLY_TOUR_TIMEOUT 1200u
+#define NDS_SAMUS_DAMAGEFLY_TOUR_ROLL_ATTEMPTS_MAX 32u
+#define NDS_SAMUS_DAMAGEFLY_TOUR_MISMATCH_MAX 12u
+#endif
+
 #if NDS_P2_SAMUS_ATTACK_TOUR
 enum {
     nNDSSamusAttackTourJab = 0,
@@ -4491,6 +4517,16 @@ static u32 sNdsSamusTumbleTourActionSeen;
 static u32 sNdsSamusTumbleTourDownWaitObserved;
 static s32 sNdsSamusTumbleTourFloorLine;
 static u32 sNdsSamusTumbleTourActive;
+#endif
+#if NDS_P2_SAMUS_DAMAGEFLY_TOUR
+static u32 sNdsSamusDamageFlyTourScenario;
+static u32 sNdsSamusDamageFlyTourStep;
+static u32 sNdsSamusDamageFlyTourFrames;
+static u32 sNdsSamusDamageFlyTourActive;
+static u32 sNdsSamusDamageFlyTourAttackPressed;
+static u32 sNdsSamusDamageFlyTourHitRecorded;
+static u32 sNdsSamusDamageFlyTourScenarioAccepted;
+static s32 sNdsSamusDamageFlyTourFloorLine;
 #endif
 #if NDS_P2_SAMUS_ATTACK_TOUR
 static u32 sNdsSamusAttackTourScenario;
@@ -5787,6 +5823,33 @@ void ndsFighterMarioFoxNaturalMotionPrepare(void)
     gNdsSamusTumbleTourHitCount = 0u;
     gNdsSamusTumbleTourStageCount = 0u;
     gNdsSamusTumbleTourDone = 0u;
+#endif
+#if NDS_P2_SAMUS_DAMAGEFLY_TOUR
+    sNdsSamusDamageFlyTourScenario = nNDSSamusDamageFlyTourHi;
+    sNdsSamusDamageFlyTourStep = nNDSSamusDamageFlyTourStepPrepare;
+    sNdsSamusDamageFlyTourFrames = 0u;
+    sNdsSamusDamageFlyTourActive = 0u;
+    sNdsSamusDamageFlyTourAttackPressed = 0u;
+    sNdsSamusDamageFlyTourHitRecorded = 0u;
+    sNdsSamusDamageFlyTourScenarioAccepted = 0u;
+    sNdsSamusDamageFlyTourFloorLine = -1;
+    gNdsSamusDamageFlyTourMask = 0u;
+    gNdsSamusDamageFlyTourScenario = nNDSSamusDamageFlyTourHi;
+    gNdsSamusDamageFlyTourStep = nNDSSamusDamageFlyTourStepPrepare;
+    gNdsSamusDamageFlyTourFrames = 0u;
+    gNdsSamusDamageFlyTourStatus = 0u;
+    gNdsSamusDamageFlyTourMotion = 0u;
+    gNdsSamusDamageFlyTourAttackerMask = 0u;
+    gNdsSamusDamageFlyTourPlacementPacked = 0u;
+    gNdsSamusDamageFlyTourHitCount = 0u;
+    gNdsSamusDamageFlyTourRollAttempts = 0u;
+    gNdsSamusDamageFlyTourSakuraiHitCount = 0u;
+    gNdsSamusDamageFlyTourTopAngle80Count = 0u;
+    gNdsSamusDamageFlyTourRollPercent = 0u;
+    gNdsSamusDamageFlyTourMismatchCount = 0u;
+    gNdsSamusDamageFlyTourStageCount = 0u;
+    gNdsSamusDamageFlyTourTerminalCount = 0u;
+    gNdsSamusDamageFlyTourDone = 0u;
 #endif
 #if NDS_P2_SAMUS_ATTACK_TOUR
     sNdsSamusAttackTourScenario = nNDSSamusAttackTourJab;
@@ -7273,6 +7336,452 @@ static sb32 ndsSamusTumbleTourApplyInput(FTStruct *fp[2], u16 button[2],
         default:
             break;
         }
+    }
+    return TRUE;
+}
+#endif
+
+#if NDS_P2_SAMUS_DAMAGEFLY_TOUR
+extern void osWritebackDCacheAll(void);
+
+__attribute__((noinline, used))
+void ndsSamusDamageFlyTourProofStop(void)
+{
+    __asm__ volatile ("" ::: "memory");
+}
+
+static void ndsSamusDamageFlyTourProofTerminal(void)
+{
+    gNdsSamusDamageFlyTourTerminalCount++;
+    osWritebackDCacheAll();
+    ndsSamusDamageFlyTourProofStop();
+}
+
+static s32 ndsSamusDamageFlyTourExpectedStatus(void)
+{
+    switch (sNdsSamusDamageFlyTourScenario)
+    {
+    case nNDSSamusDamageFlyTourHi: return nFTCommonStatusDamageFlyHi;
+    case nNDSSamusDamageFlyTourN: return nFTCommonStatusDamageFlyN;
+    case nNDSSamusDamageFlyTourLw: return nFTCommonStatusDamageFlyLw;
+    case nNDSSamusDamageFlyTourTop: return nFTCommonStatusDamageFlyTop;
+    case nNDSSamusDamageFlyTourRoll: return nFTCommonStatusDamageFlyRoll;
+    default: return -1;
+    }
+}
+
+static s32 ndsSamusDamageFlyTourExpectedPlacement(void)
+{
+    switch (sNdsSamusDamageFlyTourScenario)
+    {
+    /* `dFTCommonDamageStatus*IDs[3][damage_index]` is Lw/N/Hi for source
+     * hurtbox placements 0/1/2 respectively. */
+    case nNDSSamusDamageFlyTourHi: return 2;
+    case nNDSSamusDamageFlyTourN: return 1;
+    case nNDSSamusDamageFlyTourLw: return 0;
+    default: return -1;
+    }
+}
+
+static void ndsSamusDamageFlyTourPlaceGround(FTStruct *fp, f32 x,
+                                              f32 floor_y, u16 floor_flags)
+{
+    DObj *root = fp->joints[nFTPartsJointTopN];
+
+    root->translate.vec.f.x = x;
+    root->translate.vec.f.y = floor_y - fp->coll_data.map_coll.bottom;
+    root->translate.vec.f.z = 0.0F;
+    fp->coll_data.p_translate = &root->translate.vec.f;
+    fp->coll_data.p_lr = &fp->lr;
+    fp->coll_data.p_map_coll = &fp->coll_data.map_coll;
+    fp->coll_data.pos_prev = root->translate.vec.f;
+    fp->coll_data.floor_line_id = sNdsSamusDamageFlyTourFloorLine;
+    fp->coll_data.floor_flags = floor_flags;
+    fp->coll_data.mask_curr = MAP_FLAG_FLOOR;
+    fp->coll_data.mask_stat = MAP_FLAG_FLOOR;
+    fp->coll_data.cliff_id = -1;
+    fp->coll_data.ignore_line_id = -1;
+    fp->physics.vel_ground.x = 0.0F;
+    fp->vel_ground.x = 0.0F;
+}
+
+static sb32 ndsSamusDamageFlyTourPrepareHit(FTStruct *fp[2])
+{
+    FTStruct *samus = fp[0];
+    FTStruct *fox = fp[1];
+    Vec3f edge;
+    u16 flags;
+
+    if ((samus == NULL) || (fox == NULL) ||
+        (samus->fkind != nFTKindSamus) || (fox->fkind != nFTKindFox) ||
+        (samus->status_id != nFTCommonStatusWait) ||
+        (fox->status_id != nFTCommonStatusWait) ||
+        (samus->ga != nMPKineticsGround) || (fox->ga != nMPKineticsGround) ||
+        (samus->joints[nFTPartsJointTopN] == NULL) ||
+        (fox->joints[nFTPartsJointTopN] == NULL))
+    {
+        return FALSE;
+    }
+    sNdsSamusDamageFlyTourFloorLine = 3;
+    mpCollisionGetFloorEdgeR(sNdsSamusDamageFlyTourFloorLine, &edge);
+    flags = mpCollisionGetVertexFlagsLineID(sNdsSamusDamageFlyTourFloorLine);
+    if ((flags & MAP_VERTEX_COLL_CLIFF) == 0u)
+    {
+        return FALSE;
+    }
+
+    /* Proof-only preconditions. The hit itself is an ordinary controller-fed
+     * Fox attack. At 80%, all three 361-degree forward-tilt variants clear the
+     * source level-3 hitstun threshold while remaining below FlyRoll's 100%
+     * gate. The Roll scenario alone starts at 100% and retries real hits until
+     * BattleShip's own 0.5 RNG branch selects it. */
+    fox->lr = +1;
+    samus->lr = -1;
+    samus->percent_damage =
+        (sNdsSamusDamageFlyTourScenario == nNDSSamusDamageFlyTourRoll) ?
+        FTCOMMON_DAMAGE_FIGHTER_FLYROLL_DAMAGE_MIN : 80;
+    ndsSamusDamageFlyTourPlaceGround(fox, -20.0F, edge.y, flags);
+    ndsSamusDamageFlyTourPlaceGround(samus, +20.0F, edge.y, flags);
+    sNdsSamusDamageFlyTourFrames = 0u;
+    sNdsSamusDamageFlyTourAttackPressed = 0u;
+    sNdsSamusDamageFlyTourHitRecorded = 0u;
+    sNdsSamusDamageFlyTourScenarioAccepted = 0u;
+    sNdsSamusDamageFlyTourStep = nNDSSamusDamageFlyTourStepRearm;
+    gNdsSamusDamageFlyTourStageCount++;
+    return TRUE;
+}
+
+static sb32 ndsSamusDamageFlyTourStageLanding(FTStruct *samus)
+{
+    DObj *root;
+    Vec3f edge;
+
+    if ((samus == NULL) || (samus->status_id != nFTCommonStatusDamageFall) ||
+        (samus->ga != nMPKineticsAir))
+    {
+        return FALSE;
+    }
+    root = samus->joints[nFTPartsJointTopN];
+    if (root == NULL)
+    {
+        return FALSE;
+    }
+    mpCollisionGetFloorEdgeR(sNdsSamusDamageFlyTourFloorLine, &edge);
+    root->translate.vec.f.x = 0.0F;
+    root->translate.vec.f.y = edge.y - samus->coll_data.map_coll.bottom + 2.0F;
+    root->translate.vec.f.z = 0.0F;
+    samus->coll_data.p_translate = &root->translate.vec.f;
+    samus->coll_data.p_lr = &samus->lr;
+    samus->coll_data.pos_prev = root->translate.vec.f;
+    samus->coll_data.floor_line_id = -1;
+    samus->coll_data.mask_curr = 0u;
+    samus->coll_data.mask_stat = 0u;
+    samus->coll_data.cliff_id = -1;
+    samus->coll_data.ignore_line_id = -1;
+    samus->coll_data.update_tic = gMPCollisionUpdateTic;
+    samus->physics.vel_air.x = 0.0F;
+    samus->physics.vel_air.y = -4.0F;
+    samus->physics.vel_air.z = 0.0F;
+    samus->vel_air = samus->physics.vel_air;
+    samus->physics.vel_damage_air.x = 0.0F;
+    samus->physics.vel_damage_air.y = 0.0F;
+    samus->physics.vel_damage_ground = 0.0F;
+    sNdsSamusDamageFlyTourFrames = 0u;
+    sNdsSamusDamageFlyTourStep = nNDSSamusDamageFlyTourStepLanding;
+    gNdsSamusDamageFlyTourStageCount++;
+    return TRUE;
+}
+
+static void ndsSamusDamageFlyTourRecord(FTStruct *samus, FTStruct *fox)
+{
+    u32 shift;
+    s32 expected_status;
+    s32 expected_placement;
+
+    if ((samus == NULL) || (fox == NULL))
+    {
+        return;
+    }
+    gNdsSamusDamageFlyTourStatus = (u32)samus->status_id;
+    gNdsSamusDamageFlyTourMotion = (u32)samus->motion_id;
+    switch (fox->status_id)
+    {
+    case nFTCommonStatusAttackAirN:
+        gNdsSamusDamageFlyTourAttackerMask |= 1u << 0;
+        break;
+    case nFTCommonStatusAttackS3:
+        gNdsSamusDamageFlyTourAttackerMask |= 1u << 1;
+        break;
+    case nFTCommonStatusAttackLw4:
+        gNdsSamusDamageFlyTourAttackerMask |= 1u << 2;
+        break;
+    case nFTCommonStatusAttackHi4:
+        gNdsSamusDamageFlyTourAttackerMask |= 1u << 3;
+        break;
+    default:
+        break;
+    }
+    if ((sNdsSamusDamageFlyTourHitRecorded != 0u) ||
+        (samus->status_id < nFTCommonStatusDamageFlyHi) ||
+        (samus->status_id > nFTCommonStatusDamageFlyRoll))
+    {
+        return;
+    }
+    sNdsSamusDamageFlyTourHitRecorded = 1u;
+    gNdsSamusDamageFlyTourHitCount++;
+    gNdsSamusDamageFlyTourMask |=
+        1u << (samus->status_id - nFTCommonStatusDamageFlyHi);
+    shift = sNdsSamusDamageFlyTourScenario * 3u;
+    gNdsSamusDamageFlyTourPlacementPacked &= ~(7u << shift);
+    gNdsSamusDamageFlyTourPlacementPacked |=
+        ((u32)samus->damage_index & 7u) << shift;
+    if (samus->damage_angle == 361)
+    {
+        gNdsSamusDamageFlyTourSakuraiHitCount++;
+    }
+    if (samus->damage_angle == 80)
+    {
+        gNdsSamusDamageFlyTourTopAngle80Count++;
+    }
+    if (sNdsSamusDamageFlyTourScenario == nNDSSamusDamageFlyTourRoll)
+    {
+        gNdsSamusDamageFlyTourRollAttempts++;
+        gNdsSamusDamageFlyTourRollPercent = (u32)samus->percent_damage;
+    }
+    expected_status = ndsSamusDamageFlyTourExpectedStatus();
+    expected_placement = ndsSamusDamageFlyTourExpectedPlacement();
+    if ((samus->status_id == expected_status) &&
+        ((expected_placement < 0) || (samus->damage_index == expected_placement)))
+    {
+        sNdsSamusDamageFlyTourScenarioAccepted = 1u;
+    }
+    else if (sNdsSamusDamageFlyTourScenario != nNDSSamusDamageFlyTourRoll)
+    {
+        gNdsSamusDamageFlyTourMismatchCount++;
+    }
+}
+
+static sb32 ndsSamusDamageFlyTourAdvance(FTStruct *fp[2])
+{
+    FTStruct *samus = fp[0];
+    FTStruct *fox = fp[1];
+
+    sNdsSamusDamageFlyTourActive = 1u;
+    if (gNdsSamusDamageFlyTourDone != 0u)
+    {
+        return TRUE;
+    }
+    if ((samus == NULL) || (fox == NULL) ||
+        (samus->fkind != nFTKindSamus) || (fox->fkind != nFTKindFox))
+    {
+        return FALSE;
+    }
+    ndsSamusDamageFlyTourRecord(samus, fox);
+    gNdsSamusDamageFlyTourScenario = sNdsSamusDamageFlyTourScenario;
+    gNdsSamusDamageFlyTourStep = sNdsSamusDamageFlyTourStep;
+    gNdsSamusDamageFlyTourFrames = ++sNdsSamusDamageFlyTourFrames;
+    if ((sNdsSamusDamageFlyTourFrames > NDS_SAMUS_DAMAGEFLY_TOUR_TIMEOUT) ||
+        (gNdsSamusDamageFlyTourRollAttempts >
+             NDS_SAMUS_DAMAGEFLY_TOUR_ROLL_ATTEMPTS_MAX) ||
+        (gNdsSamusDamageFlyTourMismatchCount >
+             NDS_SAMUS_DAMAGEFLY_TOUR_MISMATCH_MAX))
+    {
+        gNdsFighterNaturalCombatStallCount++;
+        gNdsSamusDamageFlyTourDone = 2u;
+        ndsSamusDamageFlyTourProofTerminal();
+        return TRUE;
+    }
+
+    switch (sNdsSamusDamageFlyTourStep)
+    {
+    case nNDSSamusDamageFlyTourStepPrepare:
+        (void)ndsSamusDamageFlyTourPrepareHit(fp);
+        break;
+    case nNDSSamusDamageFlyTourStepRearm:
+        if (sNdsSamusDamageFlyTourFrames >= 1u)
+        {
+            sNdsSamusDamageFlyTourFrames = 0u;
+            sNdsSamusDamageFlyTourStep = nNDSSamusDamageFlyTourStepDrive;
+        }
+        break;
+    case nNDSSamusDamageFlyTourStepDrive:
+        if (sNdsSamusDamageFlyTourHitRecorded != 0u)
+        {
+            sNdsSamusDamageFlyTourFrames = 0u;
+            sNdsSamusDamageFlyTourStep = nNDSSamusDamageFlyTourStepDamageFly;
+        }
+        else if ((sNdsSamusDamageFlyTourAttackPressed != 0u) &&
+                 (fox->status_id == nFTCommonStatusWait) &&
+                 (samus->status_id == nFTCommonStatusWait))
+        {
+            /* A clean whiff is not a claimed hit. Re-stage and let the source
+             * attack/collision path try again without manufacturing damage. */
+            sNdsSamusDamageFlyTourFrames = 0u;
+            sNdsSamusDamageFlyTourStep = nNDSSamusDamageFlyTourStepPrepare;
+        }
+        break;
+    case nNDSSamusDamageFlyTourStepDamageFly:
+        if (samus->status_id == nFTCommonStatusDamageFall)
+        {
+            sNdsSamusDamageFlyTourFrames = 0u;
+            sNdsSamusDamageFlyTourStep = nNDSSamusDamageFlyTourStepDamageFall;
+        }
+        else if ((samus->status_id == nFTCommonStatusDownBounceD) ||
+                 (samus->status_id == nFTCommonStatusDownBounceU) ||
+                 (samus->status_id == nFTCommonStatusDownWaitD) ||
+                 (samus->status_id == nFTCommonStatusDownWaitU) ||
+                 (samus->status_id == nFTCommonStatusDownStandD) ||
+                 (samus->status_id == nFTCommonStatusDownStandU) ||
+                 (samus->status_id == nFTCommonStatusPassive) ||
+                 (samus->status_id == nFTCommonStatusPassiveStandF) ||
+                 (samus->status_id == nFTCommonStatusPassiveStandB))
+        {
+            /* A low-angle grounded tumble can enter DamageFall and consume its
+             * floor map callback inside one gcRunAll, before this once-per-frame
+             * proof sampler observes DamageFall itself. Those are all source
+             * descendants of the already-qualified DamageFly hit; join the
+             * existing controller-driven get-up lane rather than demanding a
+             * sampling artifact from BattleShip's transient state. */
+            sNdsSamusDamageFlyTourFrames = 0u;
+            sNdsSamusDamageFlyTourStep = nNDSSamusDamageFlyTourStepLanding;
+        }
+        else if ((samus->status_id == nFTCommonStatusWait) &&
+                 (samus->ga == nMPKineticsGround))
+        {
+            /* The same transient DamageFall path can fully settle to Wait in a
+             * single fast-logic update. The claimed state/placement was already
+             * recorded before entering this recovery-only step. */
+            sNdsSamusDamageFlyTourFrames = 0u;
+            sNdsSamusDamageFlyTourStep = nNDSSamusDamageFlyTourStepRecover;
+        }
+        break;
+    case nNDSSamusDamageFlyTourStepDamageFall:
+        if (sNdsSamusDamageFlyTourFrames >= 1u)
+        {
+            (void)ndsSamusDamageFlyTourStageLanding(samus);
+        }
+        break;
+    case nNDSSamusDamageFlyTourStepLanding:
+        if ((samus->status_id == nFTCommonStatusPassive) ||
+            (samus->status_id == nFTCommonStatusPassiveStandF) ||
+            (samus->status_id == nFTCommonStatusPassiveStandB) ||
+            (samus->status_id == nFTCommonStatusDownStandD) ||
+            (samus->status_id == nFTCommonStatusDownStandU) ||
+            (samus->status_id == nFTCommonStatusWait))
+        {
+            sNdsSamusDamageFlyTourFrames = 0u;
+            sNdsSamusDamageFlyTourStep = nNDSSamusDamageFlyTourStepRecover;
+        }
+        break;
+    case nNDSSamusDamageFlyTourStepRecover:
+        if ((samus->status_id == nFTCommonStatusWait) &&
+            (fox->status_id == nFTCommonStatusWait) &&
+            (samus->ga == nMPKineticsGround) && (fox->ga == nMPKineticsGround))
+        {
+            if (sNdsSamusDamageFlyTourScenarioAccepted != 0u)
+            {
+                sNdsSamusDamageFlyTourScenario++;
+            }
+            sNdsSamusDamageFlyTourFrames = 0u;
+            sNdsSamusDamageFlyTourAttackPressed = 0u;
+            sNdsSamusDamageFlyTourHitRecorded = 0u;
+            sNdsSamusDamageFlyTourScenarioAccepted = 0u;
+            if (sNdsSamusDamageFlyTourScenario >= nNDSSamusDamageFlyTourDone)
+            {
+                gNdsSamusDamageFlyTourScenario = nNDSSamusDamageFlyTourDone;
+                gNdsSamusDamageFlyTourDone = 1u;
+                ndsSamusDamageFlyTourProofTerminal();
+                return TRUE;
+            }
+            sNdsSamusDamageFlyTourStep = nNDSSamusDamageFlyTourStepPrepare;
+        }
+        break;
+    default:
+        break;
+    }
+    return FALSE;
+}
+
+static sb32 ndsSamusDamageFlyTourApplyInput(FTStruct *fp[2], u16 button[2],
+                                             s8 stick_x[2], s8 stick_y[2])
+{
+    FTStruct *samus = fp[0];
+    FTStruct *fox = fp[1];
+
+    if ((sNdsSamusDamageFlyTourActive == 0u) ||
+        (gNdsSamusDamageFlyTourDone != 0u) ||
+        (samus == NULL) || (fox == NULL) ||
+        (samus->fkind != nFTKindSamus) || (fox->fkind != nFTKindFox))
+    {
+        return FALSE;
+    }
+    if (sNdsSamusDamageFlyTourStep == nNDSSamusDamageFlyTourStepDrive)
+    {
+        if (sNdsSamusDamageFlyTourScenario == nNDSSamusDamageFlyTourHi)
+        {
+            if ((sNdsSamusDamageFlyTourAttackPressed == 0u) &&
+                (fox->status_id == nFTCommonStatusWait))
+            {
+                /* A source C-button jump is the clean way to reach Samus's
+                 * placement-2 head hurtbox without intersecting the earlier
+                 * placement-1 torso entries. Do not move either fighter after
+                 * the jump starts: the source jump physics owns the approach. */
+                button[1] = U_CBUTTONS;
+                sNdsSamusDamageFlyTourAttackPressed = 1u;
+            }
+            else if ((sNdsSamusDamageFlyTourAttackPressed == 1u) &&
+                     ((fox->status_id == nFTCommonStatusJumpF) ||
+                      (fox->status_id == nFTCommonStatusJumpB) ||
+                      (fox->status_id == nFTCommonStatusFall) ||
+                      (fox->status_id == nFTCommonStatusFallAerial)) &&
+                     (fox->joints[nFTPartsJointTopN] != NULL) &&
+                     (samus->joints[nFTPartsJointTopN] != NULL) &&
+                     ((fox->joints[nFTPartsJointTopN]->translate.vec.f.y -
+                       samus->joints[nFTPartsJointTopN]->translate.vec.f.y) >=
+                      300.0F))
+            {
+                /* Fox N-air is a real 361-degree level-3 hit at the staged
+                 * percent. Starting it above Samus makes the first intersected
+                 * source damage-collision entry the head instead of torso. */
+                button[1] = A_BUTTON;
+                sNdsSamusDamageFlyTourAttackPressed = 2u;
+            }
+        }
+        else if ((sNdsSamusDamageFlyTourAttackPressed == 0u) &&
+                 (fox->status_id == nFTCommonStatusWait))
+        {
+            button[1] = A_BUTTON;
+            switch (sNdsSamusDamageFlyTourScenario)
+            {
+            case nNDSSamusDamageFlyTourN:
+            case nNDSSamusDamageFlyTourRoll:
+                stick_x[1] = 40;
+                break;
+            case nNDSSamusDamageFlyTourLw:
+                /* The source down-smash is the grounded attack whose foot
+                 * hitboxes naturally reach Samus's placement-0 leg chain. */
+                stick_y[1] = -80;
+                break;
+            case nNDSSamusDamageFlyTourTop:
+                stick_y[1] = 80;
+                break;
+            default:
+                break;
+            }
+            sNdsSamusDamageFlyTourAttackPressed = 1u;
+        }
+    }
+    else if (sNdsSamusDamageFlyTourStep == nNDSSamusDamageFlyTourStepDamageFall)
+    {
+        /* Populate the source Z-history one update before the staged floor
+         * crossing. BattleShip still owns Passive selection. */
+        button[0] = Z_TRIG;
+    }
+    else if ((sNdsSamusDamageFlyTourStep == nNDSSamusDamageFlyTourStepLanding) &&
+             ((samus->status_id == nFTCommonStatusDownWaitD) ||
+              (samus->status_id == nFTCommonStatusDownWaitU)))
+    {
+        button[0] = Z_TRIG;
     }
     return TRUE;
 }
@@ -8839,6 +9348,22 @@ static void ndsFighterNaturalCombatAdvancePhase(FTStruct *fp[2])
                 }
             }
 #endif
+#if NDS_P2_SAMUS_DAMAGEFLY_TOUR
+            if (gNdsSamusDamageFlyTourDone == 0u)
+            {
+                if (ndsSamusDamageFlyTourAdvance(fp) == FALSE)
+                {
+                    break;
+                }
+                if ((gNdsSamusDamageFlyTourMask &
+                     NDS_SAMUS_DAMAGEFLY_TOUR_MASK_ALL) !=
+                    NDS_SAMUS_DAMAGEFLY_TOUR_MASK_ALL)
+                {
+                    gNdsFighterNaturalCombatStallCount++;
+                    break;
+                }
+            }
+#endif
 #if NDS_P2_SAMUS_ATTACK_TOUR
             if (gNdsSamusAttackTourDone == 0u)
             {
@@ -9296,6 +9821,17 @@ static void ndsFighterNaturalCombatApplyInput(FTStruct *fp[2])
 
 #if NDS_P2_SAMUS_TUMBLE_TOUR
     if (ndsSamusTumbleTourApplyInput(fp, button, stick, stick_y) != FALSE)
+    {
+        for (i = 0u; i < 2u; i++)
+        {
+            ndsControllerPlaybackSetPad(i, button[i], stick[i], stick_y[i]);
+        }
+        return;
+    }
+#endif
+
+#if NDS_P2_SAMUS_DAMAGEFLY_TOUR
+    if (ndsSamusDamageFlyTourApplyInput(fp, button, stick, stick_y) != FALSE)
     {
         for (i = 0u; i < 2u; i++)
         {

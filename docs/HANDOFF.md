@@ -1,17 +1,16 @@
 # Handoff
 
-Current: 2026-08-28 — **P2-3f27 CLOSED.** Samus's ordinary attack/grab/throw
-inventory is GREEN: 23/23 scenarios, all 24 attack/throw status bits
-(`0xffffff`), Catch/CatchPull/CatchWait `0x7`, `NAT_MOVESET=0x7ff`, stalls 0,
-pose overflow 0. The shared compact pose owner now preserves BattleShip's
-per-joint playback semantics, including Samus grapple joint 36; its oracle is
-43,146 transform comparisons / 0 mismatches and standing four-kind stress has
-BindFull 0 with 207,044 B heap low-water. CSS now ships source name/emblem gate
-art for every landed fighter, and the shell verifier treats source-random
-PlayersVS content as bounded rather than falsely requiring byte-flat visits.
-Fresh shell evidence: CSS 830,048/830,048 B, minimum arena free 222,916 B.
-Durable evidence/details are on `P2_EXECUTION_BOARD.md` and `p2/fighters/samus.md`.
-**Next:** DamageFlyHi/Lw/N/Roll, CPU determinism replay, then owner feel.
+Current: 2026-08-28 — **P2-3f28 CLOSED.** Samus's source-reachable gameplay
+state inventory is now complete through the remaining DamageFly family. A
+controller-only proof reaches **DamageFlyHi/N/Lw/Top/Roll = `0x1f`** from real
+Fox N-air / F-tilt / down-smash / up-smash hits. BattleShip's first-hit hurtbox
+search supplies exact Hi/N/Lw placements **2/1/0**, its 80-degree rule supplies
+Top, and its own >=100% / 50% RNG branch supplies Roll; the proof contains no
+RNG call, damage injection, or status setter. Two consecutive runs are
+byte-identical at `SAMUS_DAMAGEFLY_TOUR=5,6,15,1,0x1f,0xf,0x120a,5,1,3,1,109,0,8,1,10,0x7ff,0,0`.
+Proof ROM SHA-256 `D97E71A7E823AF4E8D76758534337EC2BA2E6EB6DD1C1B43D4870815061C871B`.
+Durable details are on `P2_EXECUTION_BOARD.md` and `p2/fighters/samus.md`.
+**Next:** Samus CPU determinism replay, then owner-feel acceptance.
 Published `smash64ds.nds`: **20,256,768 B**, SHA-256
 `850688D674C66FDB111E72F2B6C5FF30F6AE3E83B518BA25BFF3585FDC017361`.
 

@@ -176,6 +176,25 @@ volatile u32 gNdsSamusTumbleTourHitCount;
 volatile u32 gNdsSamusTumbleTourStageCount;
 volatile u32 gNdsSamusTumbleTourDone;
 #endif
+#if NDS_P2_SAMUS_DAMAGEFLY_TOUR
+volatile u32 gNdsSamusDamageFlyTourMask;
+volatile u32 gNdsSamusDamageFlyTourScenario;
+volatile u32 gNdsSamusDamageFlyTourStep;
+volatile u32 gNdsSamusDamageFlyTourFrames;
+volatile u32 gNdsSamusDamageFlyTourStatus;
+volatile u32 gNdsSamusDamageFlyTourMotion;
+volatile u32 gNdsSamusDamageFlyTourAttackerMask;
+volatile u32 gNdsSamusDamageFlyTourPlacementPacked;
+volatile u32 gNdsSamusDamageFlyTourHitCount;
+volatile u32 gNdsSamusDamageFlyTourRollAttempts;
+volatile u32 gNdsSamusDamageFlyTourSakuraiHitCount;
+volatile u32 gNdsSamusDamageFlyTourTopAngle80Count;
+volatile u32 gNdsSamusDamageFlyTourRollPercent;
+volatile u32 gNdsSamusDamageFlyTourMismatchCount;
+volatile u32 gNdsSamusDamageFlyTourStageCount;
+volatile u32 gNdsSamusDamageFlyTourTerminalCount;
+volatile u32 gNdsSamusDamageFlyTourDone;
+#endif
 #if NDS_P2_SAMUS_ATTACK_TOUR
 volatile u32 gNdsSamusAttackTourMask;
 volatile u32 gNdsSamusAttackTourScenario;
