@@ -49,6 +49,22 @@ static s32 ndsFighterAnimAuditKindIndex(const FTStruct *fp)
     {
         return 1;
     }
+    if (fp->fkind == nFTKindDonkey)
+    {
+        return 2;
+    }
+    if (fp->fkind == nFTKindSamus)
+    {
+        return 3;
+    }
+    if (fp->fkind == nFTKindLuigi)
+    {
+        return 4;
+    }
+    if (fp->fkind == nFTKindCaptain)
+    {
+        return 5;
+    }
     return -1;
 }
 

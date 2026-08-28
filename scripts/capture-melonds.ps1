@@ -32,8 +32,10 @@ param(
     # Full rationale on the parameter in capture-cut-g-exact-frames.ps1.
     [ValidateRange(0,3600)][int]$ExactTimeRemain = 0,
     [ValidateRange(-1,1)][int]$FoxCpuMode = -1,
-    [ValidateSet('','Fox','Mario','Natural')][string]$FighterAnimAudit = '',
-    [ValidateRange(0,218)][int]$FighterAnimStartMotion = 0,
+    [ValidateSet('','Fox','Mario','Donkey','Samus','Luigi','Captain','Natural')]
+    [string]$FighterAnimAudit = '',
+    [ValidateRange(0,220)][int]$FighterAnimStartMotion = 0,
+    [switch]$FighterAnimDataOnly,
     # BUGS.md #10. gmCameraGetAdjustAtAngle adds these two source globals into
     # the camera pitch and yaw, and nothing rewrites them after camera init, so
     # writing them mid-match orbits the real camera with no ROM change. This is
@@ -578,7 +580,8 @@ try {
             -EmulatorProcessId $emulator.Id `
             -WindowHandle ([long]$emulator.MainWindowHandle) `
             -OutputDirectory $Output `
-            -StartMotion $FighterAnimStartMotion
+            -StartMotion $FighterAnimStartMotion `
+            -DataOnly:$FighterAnimDataOnly
     } elseif ($exactFrameCaptureEnabled) {
         # Establish geometry once while emulation is running. Moving or
         # foregrounding the window after an exact frame pause can capture a Qt

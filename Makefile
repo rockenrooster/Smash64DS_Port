@@ -2419,6 +2419,18 @@ override NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE := 1
 override NDS_TASK36_HW_COMPOSE := 2
 override NDS_R2_FIGHTER_HW_MTX := 1
 override NDS_R2_FIGHTER_GX_COMPOSE := 1
+# Task 40's cycler is profile-1-only by design: its large diagnostic arrays and
+# markers must never enter the profile-0 shipping image. The historical coarse
+# profile target predates the current native-owner renderer and no longer forms
+# a coherent build (GX compose + profile instrumentation violates the current
+# soft-light contract). Reuse this bounded, non-performance gameplay target for
+# the audit instead. Keep the accepted split-matrix path, but let the CPU own the
+# hierarchy compose while profile-1 instrumentation is present; the audit is
+# proving animation acquisition/playback, not renderer timing or GX equivalence.
+ifneq ($(NDS_FIGHTER_ANIM_AUDIT),0)
+override NDS_RENDERER_PROFILE_LEVEL := 1
+override NDS_R2_FIGHTER_GX_COMPOSE := 0
+endif
 override NDS_R2_STAGE_VALIDATE_STRIDE := 8
 override NDS_R2_FIGHTER_HW_LIGHT := 1
 override NDS_R2_FIGHTER_SHUFFLE_FOLD := 1
@@ -3175,8 +3187,8 @@ ifneq ($(NDS_FIGHTER_ANIM_AUDIT),0)
 ifneq ($(NDS_RENDERER_PROFILE_LEVEL),1)
 $(error NDS_FIGHTER_ANIM_AUDIT requires NDS_RENDERER_PROFILE_LEVEL=1)
 endif
-ifneq ($(filter -1 0 1,$(NDS_FIGHTER_ANIM_CYCLER_KIND)),$(NDS_FIGHTER_ANIM_CYCLER_KIND))
-$(error NDS_FIGHTER_ANIM_CYCLER_KIND must be -1, 0 (Mario), or 1 (Fox))
+ifneq ($(filter -1 0 1 2 3 4 7,$(NDS_FIGHTER_ANIM_CYCLER_KIND)),$(NDS_FIGHTER_ANIM_CYCLER_KIND))
+$(error NDS_FIGHTER_ANIM_CYCLER_KIND must be -1 or a landed fighter: 0 Mario, 1 Fox, 2 Donkey, 3 Samus, 4 Luigi, 7 Captain)
 endif
 endif
 # Task 49 GX differ hooks the HW-triangle GX command funnel

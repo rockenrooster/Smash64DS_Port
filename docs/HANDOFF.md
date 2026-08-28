@@ -1,24 +1,21 @@
 # Handoff
 
-Current: 2026-08-27 — **P2-3f23 CLOSED: Samus's controller-driven common
-combat segment is green, and Captain/Samus now use the same native GX hierarchy
-path as the earlier owners.** With Samus as P0, the existing mode-163 natural
-driver reaches `NAT_MOVESET=0x7ff` through controller input only: S3/Hi3/Lw3,
-S4, aerial/landing, Catch/CatchWait, Throw/Thrown/recovery and throw damage
-21->33, alongside Wait/Walk/Dash/Run/RunBrake/Turn, live hit/damage/hitlag and
-guard. BattleShip remains the state owner; notably `ftcommonthrow.c` itself
-attaches Samus's grapple-beam effect during Throw. This pass found a real DS
-integration omission: Captain/Samus hierarchy/binding/cross-slot tables were
-generated but the runtime dispatchers stopped at Donkey. Slots 4/5 are wired
-now and the host checker pins all three lookup surfaces. Samus changes from GX
-capture/local/decline **0/0/2** to **32/49/0**, still emits exactly **322**
-High triangles, native production is 1/0 and generic fallback is zero. The
-bounded final fighter capture is exactly **63 runs / 628 triangles = Samus 322
-+ Fox 306**. Artifact: `2026-08-27_p2-3f23-samus-common-moveset-gxfix3.log`.
-P2-3f22 remains the budget/stress/native-owner close. Samus still owes the
-exhaustive attack-variant plus ledge/tumble portion of the scripted tour, CPU
-determinism replay and owner-feel acceptance. P2-2's native-stage rejection
-performance lead remains separate debt.
+Current: 2026-08-27 — **P2-3f24 CLOSED: Samus's complete source animation
+table now has runtime loader closure before the remaining state tour.** The
+profile-1 Task-40 audit is generalized from Mario/Fox to all six landed fighters
+with source-pinned row counts (204/219/221/206/204/214 for Mario/Fox/Donkey/
+Samus/Luigi/Captain) and a data-only mode that walks the real `ftMainSetStatus`
+and relocation path without screenshot cost. Samus proves **201/201 non-null
+motions resolved + 5 source-null**, with zero stale-heap load fallback,
+external-fixup, figatree-invalid, unsafe or timeout failures. Motions 72..87,
+the complete CliffCatch→CliffEscapeSlow2 bank, are 16/16 resolved; damage-fly,
+down and tech/stun assets resolve too. The audit remains profile-1-only; on the
+bounded non-performance target its flag alone switches profile 1 + CPU hierarchy
+compose, so normal profile-0 builds retain their existing renderer bundle.
+Artifact: `2026-08-27_p2-3f24-samus-anim-audit-closure-audit.csv`. This is asset
+runtime proof, **not** a claim that cliff/tumble states were naturally visited.
+P2-3f23 remains the controller-driven common-combat close. Samus still owes the
+exhaustive attack-variant + ledge/tumble tour, CPU determinism and owner feel.
 
 ## State
 

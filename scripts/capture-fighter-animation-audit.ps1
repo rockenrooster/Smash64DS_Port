@@ -1,7 +1,8 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory=$true)]
-    [ValidateSet('Fox','Mario','Natural')][string]$AuditMode,
+    [ValidateSet('Fox','Mario','Donkey','Samus','Luigi','Captain','Natural')]
+    [string]$AuditMode,
     [string]$Gdb = '',
     [string]$Elf = '',
     [ValidateRange(1,65535)][int]$GdbPort = 4333,
@@ -9,7 +10,8 @@ param(
     [long]$WindowHandle = 0,
     [string]$OutputDirectory = '',
     [ValidateRange(30,3600)][int]$TimeoutSeconds = 1200,
-    [ValidateRange(0,218)][int]$StartMotion = 0,
+    [ValidateRange(0,220)][int]$StartMotion = 0,
+    [switch]$DataOnly,
     [switch]$ValidateOnly
 )
 
@@ -57,18 +59,33 @@ function Get-FighterMotionRows([string]$Fighter) {
             SourceNull = $sourceNull
         })
     }
-    $expected = if ($Fighter -eq 'Mario') { 204 } else { 219 }
+    $expected = @{
+        Mario = 204
+        Fox = 219
+        Donkey = 221
+        Samus = 206
+        Luigi = 204
+        Captain = 214
+    }[$Fighter]
+    Assert-Condition ($null -ne $expected) "No source motion-count contract for $Fighter."
     Assert-Condition ($rows.Count -eq $expected) `
         "$Fighter motion parser found $($rows.Count), expected $expected."
     return $rows.ToArray()
 }
 
-$motionRows = @{
-    Mario = @(Get-FighterMotionRows 'Mario')
-    Fox = @(Get-FighterMotionRows 'Fox')
+$auditKinds = @('Mario','Fox','Donkey','Samus','Luigi','Captain')
+$auditKindIndex = @{}
+$motionRows = @{}
+for ($i = 0; $i -lt $auditKinds.Count; $i++) {
+    $name = $auditKinds[$i]
+    $auditKindIndex[$name] = $i
+    $motionRows[$name] = @(Get-FighterMotionRows $name)
 }
+$auditMotionCapacity = 221
+$auditTotalSlots = $auditKinds.Count * $auditMotionCapacity
 if ($ValidateOnly) {
-    "Fighter animation audit parser passed: Mario=204 Fox=219."
+    "Fighter animation audit parser passed: " +
+        (($auditKinds | ForEach-Object { "$_=$($motionRows[$_].Count)" }) -join ' ')
     return
 }
 
@@ -142,7 +159,7 @@ $commands = @(
 if ($StartMotion -ne 0) {
     $commands += "set variable sNdsFighterAnimAuditMotion = $StartMotion"
 }
-if ($AuditMode -ne 'Natural') {
+if (($AuditMode -ne 'Natural') -and (-not $DataOnly)) {
     $readyGdb = Convert-GdbPath $ready
     $goGdb = Convert-GdbPath $go
     $commands += @(
@@ -158,13 +175,19 @@ if ($AuditMode -ne 'Natural') {
         'commands',
         'silent'
     )
+} elseif ($AuditMode -ne 'Natural') {
+    $commands += @(
+        'tbreak ndsFighterAnimAuditCompleteMarker',
+        'commands',
+        'silent'
+    )
 } else {
     $commands += @('tbreak mnVSResultsStartScene', 'continue')
 }
 foreach ($name in $arrays) {
     $binGdb = Convert-GdbPath $bins[$name]
     $symbol = "gNdsFighterAnimAudit$name"
-    $commands += "dump binary memory $binGdb &$symbol`[0`]`[0`] (&$symbol`[0`]`[0`] + 438)"
+    $commands += "dump binary memory $binGdb &$symbol`[0`]`[0`] (&$symbol`[0`]`[0`] + $auditTotalSlots)"
 }
 $commands += (Get-GdbShellWait $complete $completeGo)
 if ($AuditMode -ne 'Natural') { $commands += @('end','continue') }
@@ -251,9 +274,10 @@ function New-ContactSheet([object[]]$Rows) {
 
 function Read-U16Array([string]$Path) {
     [byte[]]$bytes = [IO.File]::ReadAllBytes($Path)
-    Assert-Condition ($bytes.Length -eq 876) `
-        "Audit array $Path has $($bytes.Length) bytes, expected 876."
-    $values = [uint16[]]::new(438)
+    $expectedBytes = $auditTotalSlots * 2
+    Assert-Condition ($bytes.Length -eq $expectedBytes) `
+        "Audit array $Path has $($bytes.Length) bytes, expected $expectedBytes."
+    $values = [uint16[]]::new($auditTotalSlots)
     for ($i = 0; $i -lt $values.Length; $i++) {
         $values[$i] = [BitConverter]::ToUInt16($bytes, $i * 2)
     }
@@ -299,11 +323,11 @@ try {
             throw 'GDB or melonDS exited before the animation audit completed.'
         }
         if ((Get-Date) -ge $deadline) { throw 'Animation audit timed out.' }
-        if (($AuditMode -ne 'Natural') -and
+        if (($AuditMode -ne 'Natural') -and (-not $DataOnly) -and
             ((Get-Date) -ge $progressDeadline)) {
             throw 'Animation audit made no capture progress for 30 seconds.'
         }
-        if (($AuditMode -ne 'Natural') -and
+        if (($AuditMode -ne 'Natural') -and (-not $DataOnly) -and
             (Test-Path -LiteralPath $ready -PathType Leaf) -and
             ((Get-Item -LiteralPath $ready).Length -ge 4)) {
             [byte[]]$marker = [IO.File]::ReadAllBytes($ready)
@@ -336,17 +360,49 @@ try {
     $gdbText = ((Get-Content $gdbOut,$gdbErr -Raw -ErrorAction SilentlyContinue) -join "`n")
     Assert-Condition ($gdbProcess.ExitCode -eq 0) `
         "Animation audit GDB failed with exit $($gdbProcess.ExitCode).`n$gdbText"
-    if ($AuditMode -ne 'Natural') {
+    if (($AuditMode -ne 'Natural') -and (-not $DataOnly)) {
         Assert-Condition ($captured.Count -eq $expectedCaptures) `
             "$fighter captured $($captured.Count)/$expectedCaptures non-null motions from $StartMotion."
         New-ContactSheet @($captureRows | Sort-Object Motion)
     }
     $data = @{}
     foreach ($name in $arrays) { $data[$name] = Read-U16Array $bins[$name] }
-    $csvRows = foreach ($kind in 0,1) {
-        $kindName = @('Mario','Fox')[$kind]
+    if ($AuditMode -ne 'Natural') {
+        $kind = $auditKindIndex[$fighter]
+        $resolvedNonNull = 0
+        $sourceNull = 0
+        foreach ($row in $selectedRows) {
+            $offset = ($kind * $auditMotionCapacity) + $row.Motion
+            $flags = [int]$data.Flags[$offset]
+            Assert-Condition ([int]$data.Requested[$offset] -gt 0) `
+                "$fighter motion $($row.Motion) ($($row.Symbol)) was never requested by the audit cycler."
+            if ($row.SourceNull) {
+                $sourceNull++
+                Assert-Condition (($flags -band 0x0001) -ne 0) `
+                    "$fighter source-null motion $($row.Motion) was not recorded as source-null."
+                continue
+            }
+            Assert-Condition ([int]$data.Resolved[$offset] -gt 0) `
+                "$fighter motion $($row.Motion) ($($row.Symbol)) did not resolve through the fighter animation loader."
+            Assert-Condition ([int]$data.Fallback[$offset] -eq 0) `
+                "$fighter motion $($row.Motion) ($($row.Symbol)) silently fell back to stale fighter-heap animation data."
+            # These four bits are correctness failures. Duration END/LOOP and
+            # the old expected-duration checker are kept as diagnostics below;
+            # Task 40 already established that several expected-length rows are
+            # provisional and they must not be conflated with loader integrity.
+            Assert-Condition (($flags -band 0x001e) -eq 0) `
+                ("$fighter motion $($row.Motion) ($($row.Symbol)) hit a loader/" +
+                 "reloc/figatree safety flag: 0x{0:X4}." -f $flags)
+            $resolvedNonNull++
+        }
+        Write-Output ("Task 40 $fighter loader closure: " +
+            "$resolvedNonNull/$($selectedRows.Count - $sourceNull) non-null resolved, " +
+            "$sourceNull source-null, zero fallback/extern/figatree/unsafe failures.")
+    }
+    $csvRows = foreach ($kindName in $auditKinds) {
+        $kind = $auditKindIndex[$kindName]
         foreach ($row in $motionRows[$kindName]) {
-            $offset = ($kind * 219) + $row.Motion
+            $offset = ($kind * $auditMotionCapacity) + $row.Motion
             $flags = $data.Flags[$offset]
             [pscustomobject]@{
                 fighter = $kindName
@@ -365,7 +421,7 @@ try {
     $leaf = Split-Path -Leaf $outputPath
     $csvPath = Join-Path $root "artifacts\performance\$leaf-audit.csv"
     $csvRows | Export-Csv -LiteralPath $csvPath -NoTypeInformation
-    Write-Output "Task 40 $AuditMode audit complete: data=$csvPath captures=$($captureRows.Count)."
+    Write-Output "Task 40 $AuditMode audit complete: data=$csvPath captures=$($captureRows.Count) dataOnly=$([int]$DataOnly.IsPresent)."
 } finally {
     Set-Content -LiteralPath $go,$completeGo -Value go -ErrorAction SilentlyContinue
     if ($null -ne $gdbProcess) {

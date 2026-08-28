@@ -246,6 +246,30 @@ This is deliberately **not** the whole P2-3 every-state claim. The production
 gate still needs an exhaustive runtime pass over the full attack variants and
 the ledge/tumble families, then CPU-vs-CPU determinism and owner feel.
 
+### Full runtime animation-loader closure — 2026-08-27
+
+The structural inventory is now backed by a runtime loader sweep. Task 40's
+profile-1 fighter-animation audit was generalized from Mario/Fox to every landed
+fighter using the exact BattleShip `ftdata.c` counts: Mario 204, Fox 219, Donkey
+221, Samus 206, Luigi 204 and Captain 214. This also fixes the old 219-row audit
+capacity, which was already too small for Donkey. A new data-only mode keeps the
+same `ftMainSetStatus` / relocation acquisition path but omits screenshot
+handshakes, and the checker now fails closed on unrequested/unresolved non-null
+motions, stale-heap fallback, external fixup, invalid figatree or unsafe data.
+
+`artifacts/performance/2026-08-27_p2-3f24-samus-anim-audit-closure-audit.csv`
+visits all **206** Samus descriptors: **201/201 non-null requested and resolved,
+5 source-null, zero fallback/external-fixup/figatree-invalid/unsafe/timeout**.
+The complete ledge animation bank (motions 72..87, CliffCatch through
+CliffEscapeSlow2) resolves 16/16, and the DamageFly/down/tech/stun rows resolve
+through the same source-ID loader. The historical Task-40 expected-duration
+estimator still has documented provisional mismatches; those flags are retained
+as diagnostics and are not used here as an equivalence verdict.
+
+This closes a prerequisite, not the state-tour checkbox: the next proof still
+has to enter the ledge/tumble and remaining attack variants through gameplay
+transitions rather than cycling animation descriptors directly.
+
 ## Acceptance
 
 - [x] Move inventory sweep vs `ftsamus`/`ftdata` data: 206 motion descriptors,
@@ -264,5 +288,7 @@ the ledge/tumble families, then CPU-vs-CPU determinism and owner feel.
 - [x] Native-owner budget + one-minute six-kind stress measurement banked.
 - [x] Controller-driven common movement/combat/grab/throw segment reaches
       `NAT_MOVESET=0x7ff` with source-owned transitions and no native GX fallback.
+- [x] Full runtime animation-loader closure: 201/201 non-null Samus motions
+      resolve with zero silent fallback or loader-safety failures.
 - [ ] Exhaustive attack-variant + ledge/tumble scripted tour; CPU determinism
       replay; owner feel pass.
