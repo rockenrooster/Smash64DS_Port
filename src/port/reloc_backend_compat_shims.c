@@ -2780,11 +2780,17 @@ void NDS_R2_ITCM_PACK2_CODE ftParamUpdateAnimKeys(GObj *fighter_gobj)
             ((fp->is_have_translate_scale != FALSE) && (fp->attr != NULL))
                 ? fp->attr->translate_scales
                 : NULL;
-        /* P2-2p6: a figatree-bound fighter animates through the pose engine
+        /* P2-2p6: a figatree-bound hierarchy animates through the pose engine
          * (parse + play over compact tracks, body joints at 30 Hz under
-         * NDS_FT_POSE_HOLD). The MObj material animations below are the
-         * source's and still run per joint; only the joint parse/play is
-         * owned. The event32 (`is_anim_joint`) statuses keep the generic path. */
+         * NDS_FT_POSE_HOLD). Ownership is PER JOINT, not per fighter:
+         * lbCommonAddFighterPartsFigatree attaches by the TopN hierarchy walk,
+         * while BattleShip ftParamUpdateAnimKeys (ftparam.c:380/406) plays the
+         * complete indexed fp->joints[] table. Samus makes that distinction
+         * gameplay-visible: Catch's grapple joint 36 is outside the 23-DObj
+         * attach hierarchy but remains a live indexed joint whose existing
+         * animation must be played by the generic source path. The MObj
+         * material animations below remain source-owned for every joint. The
+         * event32 (`is_anim_joint`) statuses keep the generic path wholesale. */
         const sb32 pose_owned =
             ((NDS_FT_POSE != 0) && (!fp->anim_desc.flags.is_anim_joint)) ?
                 ndsFtPoseUpdate(fighter_gobj, fp, translate_scales) : FALSE;
@@ -2802,7 +2808,8 @@ void NDS_R2_ITCM_PACK2_CODE ftParamUpdateAnimKeys(GObj *fighter_gobj)
                 }
                 continue;
             }
-            if (pose_owned != FALSE)
+            if ((pose_owned != FALSE) &&
+                (ndsFtPoseOwnsJoint(fighter_gobj, (u32)i) != FALSE))
             {
                 if (translate_scales != NULL)
                 {
@@ -2917,16 +2924,24 @@ void NDS_R2_ITCM_PACK2_CODE ftParamUpdateAnimKeys(GObj *fighter_gobj)
                 ? fp->attr->translate_scales
                 : NULL;
 
-        /* P2-2p6: the engine re-applies its own tracks (ft/ftparam.c:430). */
-        if ((NDS_FT_POSE != 0) && (!fp->anim_desc.flags.is_anim_joint) &&
-            (ndsFtPoseReapply(fighter_gobj, fp, translate_scales) != FALSE))
-        {
-            return;
-        }
+        /* P2-2p6: re-apply compact tracks for the hierarchy, then preserve
+         * BattleShip's indexed-joint loop for anything outside that bind. */
+        const sb32 pose_reapplied =
+            ((NDS_FT_POSE != 0) && (!fp->anim_desc.flags.is_anim_joint)) ?
+                ndsFtPoseReapply(fighter_gobj, fp, translate_scales) : FALSE;
         for (i = 0; i < joint_limit; i++, p_joint++)
         {
             joint = *p_joint;
             if (joint == NULL)
+            {
+                if (translate_scales != NULL)
+                {
+                    translate_scales++;
+                }
+                continue;
+            }
+            if ((pose_reapplied != FALSE) &&
+                (ndsFtPoseOwnsJoint(fighter_gobj, (u32)i) != FALSE))
             {
                 if (translate_scales != NULL)
                 {

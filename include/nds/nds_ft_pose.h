@@ -70,9 +70,16 @@
  * gNdsFtPoseTrackOverflow and animate through a scratch track, never crash. */
 #define NDS_FT_POSE_POOL 128u
 
-/* One joint track, 20 bytes. `length` is the Q12 phase; `aux` is the Q30
- * reciprocal (Cubic), the Q12 frame count (Step) or the Q16 rate_base
- * (Linear); the four s16 words are the figatree's own authored arguments,
+/* One joint track, 24 bytes. `length` is the Q12 phase. Keep the source
+ * AObj's `length_invert` and `rate_base` as SEPARATE words: Cubic/Step read
+ * `length_invert` (Q30 reciprocal / Q12 frame count), while Linear reads
+ * `rate_linear_q` (Q16). This distinction is source-visible when a command
+ * has no payload: ftAnimParseDObjFigatree deliberately leaves the untouched
+ * field at its prior value. Samus Catch joint 33 is one such case
+ * (SetValBlock TRAX|TRAZ with no payload), so aliasing the two fields makes
+ * the default Q30 reciprocal look like an enormous Q16 linear rate.
+ *
+ * The four s16 words are the figatree's own authored arguments,
  * shifted into Q12 at evaluation by the track class (rotation <<3, translate
  * <<10/<<7, scale <<0) -- except the two non-shift classes (scale rates, whose
  * 2^-13 frac rounds, and TraI, whose frac is not a power of two), which the
@@ -83,7 +90,8 @@
 typedef struct NdsFtPoseTrack
 {
     s32 length;
-    s32 aux;
+    s32 length_invert;
+    s32 rate_linear_q;
     s16 value_base;
     s16 value_target;
     s16 rate_base;
@@ -127,6 +135,8 @@ typedef struct NdsFtPose
     u32 body_evaluated;                 /* last update evaluated the body */
     u32 tick;                           /* updates since the bind */
     u32 pool_used;                      /* tracks handed out since the bind */
+    u32 joint_mask_lo;                  /* bound fp->joints IDs 0..31 */
+    u32 joint_mask_hi;                  /* bound fp->joints IDs 32..63 */
     s32 speed_q;                        /* this update's anim_speed, Q12 */
     s32 gobj_frame_q;                   /* the GObj anim_frame to publish */
     u32 gobj_frame_pending;             /* ... when a joint's clock wrote it */
@@ -167,6 +177,16 @@ extern volatile u32 gNdsFtPoseOracleFirstField;
 extern volatile u32 gNdsFtPoseOracleFirstWant;
 extern volatile u32 gNdsFtPoseOracleFirstGot;
 extern volatile u32 gNdsFtPoseOracleFirstFrame;
+/* Keep a second first-fault lane for pose fields 0..8.  The general oracle is
+ * intentionally bit-exact and therefore records -0.0 vs +0.0 clock fields;
+ * that useful strictness must not hide the first transform divergence when a
+ * gameplay collision depends on the pose. */
+extern volatile u32 gNdsFtPoseOraclePoseMismatches;
+extern volatile u32 gNdsFtPoseOracleFirstPoseJoint;
+extern volatile u32 gNdsFtPoseOracleFirstPoseField;
+extern volatile u32 gNdsFtPoseOracleFirstPoseWant;
+extern volatile u32 gNdsFtPoseOracleFirstPoseGot;
+extern volatile u32 gNdsFtPoseOracleFirstPoseFrame;
 
 /* Open an attach for the fighter owning `walk_root` (TopN->child): `count`
  * is the number of DObjs the caller's walk will visit. Returns TRUE when the
@@ -203,6 +223,13 @@ void ndsFtPoseRelease(GObj *gobj);
  * the generic path must run. `translate_scales` is ftParamUpdateAnimKeys'
  * own resolution of `fp->attr->translate_scales`, or NULL. */
 sb32 ndsFtPoseUpdate(GObj *gobj, FTStruct *fp, Vec3f *translate_scales);
+
+/* TRUE only for an indexed fighter joint that belongs to the current compact
+ * figatree bind. BattleShip ATTACHES by TopN hierarchy walk but PLAYS by the
+ * complete fp->joints[] table (ftparam.c:380/406). Hidden / alternate joints
+ * outside the hierarchy therefore remain generic-player owned even while the
+ * compact engine owns the hierarchy. */
+sb32 ndsFtPoseOwnsJoint(GObj *gobj, u32 joint_id);
 
 /* Re-apply the current pose without advancing (ftParamUpdateAnimKeys'
  * `motion_id == -2` arm, which the source plays with anim_wait forced to END).

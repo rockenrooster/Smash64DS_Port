@@ -2371,11 +2371,17 @@ CSS_EMBLEM_SYMBOL = ("llFTEmblemSpritesMarioSprite",
                      "llFTEmblemSpritesFoxSprite",
                      # mnPlayersVSMakeNameAndEmblem indexes Luigi (fkind 4)
                      # to the Mario-series emblem in the source table.
-                     "llFTEmblemSpritesMarioSprite")
+                     "llFTEmblemSpritesMarioSprite",
+                     "llFTEmblemSpritesDonkeySprite",
+                     "llFTEmblemSpritesFZeroSprite",
+                     "llFTEmblemSpritesMetroidSprite")
 CSS_NAME_SYMBOL = ("llMNPlayersCommonMarioTextSprite",
                    "llMNPlayersCommonFoxTextSprite",
-                   "llMNPlayersCommonLuigiTextSprite")
-CSS_FIGHTER_TOKEN = ("MARIO", "FOX", "LUIGI")
+                   "llMNPlayersCommonLuigiTextSprite",
+                   "llMNPlayersCommonDKTextSprite",
+                   "llMNPlayersCommonCaptainFalconTextSprite",
+                   "llMNPlayersCommonSamusTextSprite")
+CSS_FIGHTER_TOKEN = ("MARIO", "FOX", "LUIGI", "DONKEY", "CAPTAIN", "SAMUS")
 CSS_TINT_MAN = (0x1E, 0x1E, 0x1E)
 CSS_TINT_COM = (0x44, 0x44, 0x44)
 # (token suffix, gate LUT, doors shut, fighter index or None, emblem tint,

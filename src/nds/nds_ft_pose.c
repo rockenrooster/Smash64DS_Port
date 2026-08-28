@@ -28,6 +28,12 @@ NDS_FT_POSE_COUNTER(gNdsFtPoseOracleFirstField);
 NDS_FT_POSE_COUNTER(gNdsFtPoseOracleFirstWant);
 NDS_FT_POSE_COUNTER(gNdsFtPoseOracleFirstGot);
 NDS_FT_POSE_COUNTER(gNdsFtPoseOracleFirstFrame);
+NDS_FT_POSE_COUNTER(gNdsFtPoseOraclePoseMismatches);
+NDS_FT_POSE_COUNTER(gNdsFtPoseOracleFirstPoseJoint);
+NDS_FT_POSE_COUNTER(gNdsFtPoseOracleFirstPoseField);
+NDS_FT_POSE_COUNTER(gNdsFtPoseOracleFirstPoseWant);
+NDS_FT_POSE_COUNTER(gNdsFtPoseOracleFirstPoseGot);
+NDS_FT_POSE_COUNTER(gNdsFtPoseOracleFirstPoseFrame);
 
 #if NDS_FT_POSE
 
@@ -199,6 +205,8 @@ static NdsFtPose *ndsFtPoseOpen(GObj *gobj, u32 count)
             pose->attach_pending = 0u;
             pose->body_evaluated = 1u;
             pose->pool_used = 0u;
+            pose->joint_mask_lo = 0u;
+            pose->joint_mask_hi = 0u;
             gNdsFtPoseSlotClaims++;
             ndsFtPosePublishSlotOwnership();
             return pose;
@@ -243,6 +251,8 @@ static NdsFtPose *ndsFtPoseOpen(GObj *gobj, u32 count)
     pose->bound = 0u;
     pose->attach_pending = 0u;
     pose->body_evaluated = 1u;
+    pose->joint_mask_lo = 0u;
+    pose->joint_mask_hi = 0u;
 #if NDS_FT_POSE_ORACLE
     {
         /* The oracle's shadows: one DObj per entry plus the GObj whose
@@ -286,6 +296,8 @@ sb32 ndsFtPoseBindBegin(DObj *walk_root, u32 count)
     pose->bound = 0u;
     pose->entry_count = 0u;
     pose->pool_used = 0u;
+    pose->joint_mask_lo = 0u;
+    pose->joint_mask_hi = 0u;
     pose->tick = 0u;
 #if NDS_FT_POSE_ORACLE
     /* lbCommonAddFighterPartsFigatree has just written frame_begin into the
@@ -323,6 +335,17 @@ void ndsFtPoseBindEntry(u32 entry, DObj *dobj, AObjEvent16 *script,
     joint->joint_id = (parts != NULL) ? parts->joint_id : 0u;
     joint->body = ((parts == NULL) ||
                    (parts->joint_id >= nFTPartsJointCommonStart)) ? 1u : 0u;
+    if (parts != NULL)
+    {
+        if (parts->joint_id < 32u)
+        {
+            pose->joint_mask_lo |= 1u << parts->joint_id;
+        }
+        else if (parts->joint_id < 64u)
+        {
+            pose->joint_mask_hi |= 1u << (parts->joint_id - 32u);
+        }
+    }
     for (i = 0u; i < NDS_FT_POSE_TRACKS; i++)
     {
         joint->slot_of_track[i] = NDS_FT_POSE_NO_SLOT;
@@ -398,6 +421,8 @@ void ndsFtPoseRelease(GObj *gobj)
     pose->entry_count = 0u;
     pose->attach_pending = 0u;
     pose->pool_used = 0u;
+    pose->joint_mask_lo = 0u;
+    pose->joint_mask_hi = 0u;
     /* `gobj == NULL` is the NdsFtPose free-slot contract. Keep joints/pool and
      * oracle shadows resident so the next CSS rebuild reuses their arena. */
     pose->gobj = NULL;
@@ -455,7 +480,11 @@ static inline NdsFtPoseTrack *ndsFtPoseTrackFor(NdsFtPose *pose,
     t->shift_val = sNdsFtPoseShiftVal[i];
     t->shift_rate = sNdsFtPoseShiftRate[i];
     t->length = 0;
-    t->aux = 1 << NDS_R2_AQ_IF;
+    /* gcAddAObjForDObj (decomp sys/objman.c:1187): these are distinct source
+     * fields. A zero-payload command preserves whichever one it does not
+     * write, so they cannot share storage in the compact player. */
+    t->length_invert = 1 << NDS_R2_AQ_IF;
+    t->rate_linear_q = 0;
     t->value_base = 0;
     t->value_target = 0;
     t->rate_base = 0;
@@ -617,7 +646,7 @@ static void ndsFtPoseParse(NdsFtPose *pose, NdsFtPoseJoint *joint, DObj *dobj)
                 t->kind = NDS_R2_AQ_KIND_CUBIC;
                 if (payload_u != 0u)
                 {
-                    t->aux = ndsR2FtAnimRecipQ30(payload_u);
+                    t->length_invert = ndsR2FtAnimRecipQ30(payload_u);
                 }
                 t->length = len_new;
             }
@@ -651,14 +680,13 @@ static void ndsFtPoseParse(NdsFtPose *pose, NdsFtPoseJoint *joint, DObj *dobj)
                 if (payload_u != 0u)
                 {
                     /* Two Q12 integers divided, magnitude rounded to nearest,
-                     * into the Q16 rate -- battleship_ftanim.c's own arm. The
-                     * rate lives in `aux`: Linear never reads a reciprocal. */
+                     * into the Q16 rate -- battleship_ftanim.c's own arm. */
                     s32 d = (((s32)t->value_target << t->shift_val) -
                              ((s32)t->value_base << t->shift_val))
                             << (NDS_R2_AQ_RF - NDS_R2_AQ_VF);
                     u32 h = payload_u >> 1;
 
-                    t->aux = (d < 0) ?
+                    t->rate_linear_q = (d < 0) ?
                         -(s32)(((u32)(-d) + h) / payload_u) :
                         (s32)(((u32)d + h) / payload_u);
                 }
@@ -696,7 +724,7 @@ static void ndsFtPoseParse(NdsFtPose *pose, NdsFtPoseJoint *joint, DObj *dobj)
                 t->kind = NDS_R2_AQ_KIND_CUBIC;
                 if (payload_u != 0u)
                 {
-                    t->aux = ndsR2FtAnimRecipQ30(payload_u);
+                    t->length_invert = ndsR2FtAnimRecipQ30(payload_u);
                 }
                 t->length = len_new;
             }
@@ -755,7 +783,7 @@ static void ndsFtPoseParse(NdsFtPose *pose, NdsFtPoseJoint *joint, DObj *dobj)
                 t->value_target = NDS_FT_POSE_TARGET(0);
                 t->kind = NDS_R2_AQ_KIND_STEP;
                 /* Step's `length_invert` is a FRAME COUNT in length's scale. */
-                t->aux = (s32)payload_u << NDS_R2_AQ_LF;
+                t->length_invert = (s32)payload_u << NDS_R2_AQ_LF;
                 t->length = len_new;
                 t->rate_target = 0;
             }
@@ -887,9 +915,9 @@ ndsFtPosePlay(NdsFtPose *pose, NdsFtPoseJoint *joint, DObj *dobj,
             continue;
         }
         rb_q = (t->kind == NDS_R2_AQ_KIND_LINEAR) ?
-            t->aux : ((s32)t->rate_base << t->shift_rate);
+            t->rate_linear_q : ((s32)t->rate_base << t->shift_rate);
         value = ndsR2FixedToF32(
-            ndsR2AnimEvalQ(t->length, t->aux,
+            ndsR2AnimEvalQ(t->length, t->length_invert,
                            (s32)t->value_base << t->shift_val,
                            (s32)t->value_target << t->shift_val, rb_q,
                            (s32)t->rate_target << t->shift_rate,
@@ -950,6 +978,19 @@ static void ndsFtPoseOracleNote(u32 entry, u32 field, u32 want, u32 got,
         gNdsFtPoseOracleFirstGot = got;
         __builtin_memcpy((void *)&gNdsFtPoseOracleFirstFrame,
                          &gobj->anim_frame, sizeof(u32));
+    }
+    if (field <= 8u)
+    {
+        gNdsFtPoseOraclePoseMismatches++;
+        if (gNdsFtPoseOraclePoseMismatches == 1u)
+        {
+            gNdsFtPoseOracleFirstPoseJoint = entry;
+            gNdsFtPoseOracleFirstPoseField = field;
+            gNdsFtPoseOracleFirstPoseWant = want;
+            gNdsFtPoseOracleFirstPoseGot = got;
+            __builtin_memcpy((void *)&gNdsFtPoseOracleFirstPoseFrame,
+                             &gobj->anim_frame, sizeof(u32));
+        }
     }
 }
 
@@ -1161,6 +1202,12 @@ sb32 ndsFtPoseUpdate(GObj *gobj, FTStruct *fp, Vec3f *translate_scales)
     (void)gNdsFtPoseOracleFirstWant;
     (void)gNdsFtPoseOracleFirstGot;
     (void)gNdsFtPoseOracleFirstFrame;
+    (void)gNdsFtPoseOraclePoseMismatches;
+    (void)gNdsFtPoseOracleFirstPoseJoint;
+    (void)gNdsFtPoseOracleFirstPoseField;
+    (void)gNdsFtPoseOracleFirstPoseWant;
+    (void)gNdsFtPoseOracleFirstPoseGot;
+    (void)gNdsFtPoseOracleFirstPoseFrame;
     (void)gNdsFtPoseTrackOverflow;
     {
         u32 live = ndsR2AObjLiveCount();
@@ -1178,6 +1225,21 @@ sb32 ndsFtPoseUpdate(GObj *gobj, FTStruct *fp, Vec3f *translate_scales)
 #else
     return TRUE;
 #endif
+}
+
+sb32 ndsFtPoseOwnsJoint(GObj *gobj, u32 joint_id)
+{
+    NdsFtPose *pose = ndsFtPoseFind(gobj);
+
+    if ((pose == NULL) || (pose->bound == 0u) || (joint_id >= 64u))
+    {
+        return FALSE;
+    }
+    if (joint_id < 32u)
+    {
+        return ((pose->joint_mask_lo & (1u << joint_id)) != 0u) ? TRUE : FALSE;
+    }
+    return ((pose->joint_mask_hi & (1u << (joint_id - 32u))) != 0u) ? TRUE : FALSE;
 }
 
 sb32 ndsFtPoseReapply(GObj *gobj, FTStruct *fp, Vec3f *translate_scales)
@@ -1284,6 +1346,13 @@ sb32 ndsFtPoseUpdate(GObj *gobj, FTStruct *fp, Vec3f *translate_scales)
     (void)gobj;
     (void)fp;
     (void)translate_scales;
+    return FALSE;
+}
+
+sb32 ndsFtPoseOwnsJoint(GObj *gobj, u32 joint_id)
+{
+    (void)gobj;
+    (void)joint_id;
     return FALSE;
 }
 

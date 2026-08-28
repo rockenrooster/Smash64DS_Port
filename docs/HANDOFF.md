@@ -1,24 +1,19 @@
 # Handoff
 
-Current: 2026-08-28 — **P2-3f26 CLOSED: Samus's natural
-tumble/down/tech recovery tour is GREEN from real fighter hits.** BattleShip
-`ftcommondamage.c`, `ftcommondamagefall.c`, `ftcommonpassive*.c` and
-`ftcommondown*.c` own every claimed transition. Each of **11** scenarios begins
-with Fox's real controller-driven up-smash collision; Samus reaches the source
-DamageFly family and then `DamageFall` before the guest is allowed to establish
-the floor/orientation precondition. The proof does not assign `status_id` or
-`motion_id`, does not call `ftMainSetStatus`, and does not call the fighter-damage
-setter. From `DamageFall`, BattleShip selects neutral tech, tech forward/back or
-DownBounce; from DownWait, source interrupt code selects Stand/Forward/Back/
-Attack for both U/D prone orientations. Permanent read-only verifier result:
-**11/11 scenarios, 11 real hits, 22 guest precondition stages, recovery mask
-`0x1ffff`, DamageFly mask `0x8` (DamageFlyTop), prior `NAT_MOVESET=0x7ff`,
-stalls 0**. ROM SHA-256
-`B8D1D023B8C7EE0680EF34A2BE79F4BCF51E7E2C276F8D23BA36DA27EEBBC94C`;
-artifact `2026-08-28_p2-3f26-samus-tumble-recovery-tour.txt`; P2-3f25's ledge tour remains green underneath it. **Scope:** down/tech recovery is closed and a
-real tumble entry is proven, but the other DamageFly directional variants still
-belong to the remaining exhaustive attack/tumble inventory. Samus still owes
-those attack/tumble variants, CPU-vs-CPU determinism replay and owner feel.
+Current: 2026-08-28 — **P2-3f27 CLOSED.** Samus's ordinary attack/grab/throw
+inventory is GREEN: 23/23 scenarios, all 24 attack/throw status bits
+(`0xffffff`), Catch/CatchPull/CatchWait `0x7`, `NAT_MOVESET=0x7ff`, stalls 0,
+pose overflow 0. The shared compact pose owner now preserves BattleShip's
+per-joint playback semantics, including Samus grapple joint 36; its oracle is
+43,146 transform comparisons / 0 mismatches and standing four-kind stress has
+BindFull 0 with 207,044 B heap low-water. CSS now ships source name/emblem gate
+art for every landed fighter, and the shell verifier treats source-random
+PlayersVS content as bounded rather than falsely requiring byte-flat visits.
+Fresh shell evidence: CSS 830,048/830,048 B, minimum arena free 222,916 B.
+Durable evidence/details are on `P2_EXECUTION_BOARD.md` and `p2/fighters/samus.md`.
+**Next:** DamageFlyHi/Lw/N/Roll, CPU determinism replay, then owner feel.
+Published `smash64ds.nds`: **20,256,768 B**, SHA-256
+`850688D674C66FDB111E72F2B6C5FF30F6AE3E83B518BA25BFF3585FDC017361`.
 
 ## State
 

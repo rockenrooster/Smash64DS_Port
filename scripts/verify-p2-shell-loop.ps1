@@ -25,10 +25,21 @@ param(
     # The battle arena high-water is not exactly flat across laps and never was:
     # P2-1f measured 1,400 B of NON-MONOTONIC spread over three entries (the
     # minimum was the second), which is allocation order inside one scene and
-    # not a leak -- a leak is monotonic. Menu scenes are held to EXACT equality;
-    # only the battle carries a band, and the band is asserted rather than
-    # assumed. Monotonic growth fails regardless of this value.
+    # not a leak -- a leak is monotonic. Deterministic menu scenes are held to
+    # EXACT equality; match scenes carry this band. PlayersVS has its own band
+    # below because its source-random CPU proof can change fighter hierarchy.
+    # Monotonic growth fails regardless of either value.
     [ValidateRange(0,131072)][int]$BattleHighWaterSpreadMax = 8192,
+    # PlayersVS is a menu, but its source behavior is no longer byte-flat once
+    # more than the original Mario/Fox proof roster is admitted. The scripted
+    # player-kind toggle exercises BattleShip's NA -> CPU path, whose
+    # mnPlayersVSUpdatePlayerKind deliberately calls mnPlayersVSRandFighterKind
+    # when that slot has no fighter. Different unlocked fighters have different
+    # source DObj/MObj/XObj hierarchies, so two otherwise-identical CSS visits
+    # can legitimately reach different arena peaks. Keep a narrow, explicit
+    # band and the same monotonic-leak rejection used for match-owned content;
+    # deterministic menus remain byte-flat below.
+    [ValidateRange(0,131072)][int]$PlayersVSHighWaterSpreadMax = 8192,
     # docs/p2/P2-1-vs-shell.md work item 2: N loops leak nothing. 32 KiB of
     # arena still free at the worst scene exit of the run.
     [ValidateRange(0,1048576)][int]$MinArenaFreeFloor = 32768,
@@ -46,10 +57,11 @@ param(
 # drop, drop, player-kind toggle, CPU level), stage select (moves, refused
 # moves, both confirm paths), battle, results -- repeated $Loops times, closing
 # every lap through a REAL START on the Results screen. Per scene KIND it then
-# asserts the arena high-water is flat, the free floor holds, no scene request
-# was refused, no CPU abort was taken, the walk's input ring holds exactly one
-# entry per scripted step, and the scene ring is the lap pattern and nothing
-# else.
+# asserts deterministic-scene arena high-water is flat, source-variable scenes
+# stay inside their explicit bands without monotonic leak shape, the free floor
+# holds, no scene request was refused, no CPU abort was taken, the walk's input
+# ring holds exactly one entry per scripted step, and the scene ring is the lap
+# pattern and nothing else.
 #
 # WHY THE RESULTS START MATTERS ENOUGH TO BE THE ROW'S POINT. P2-1b's scene
 # walk closed its laps with a substitute scene-manager hop out of Results. That
@@ -93,12 +105,14 @@ $kindName = @{
 }
 # The lap, in scene-entry order, once the shell is looping.
 $lapPattern = @(16, 21, 22, 24)
-# THE TWO CLASSES OF SCENE, and the split is what makes "flat" mean something.
+# THE THREE CLASSES OF SCENE, and the split is what makes "flat" mean something.
 #
-# The five MENU scenes draw the same screen with the same content on every lap,
-# so their high-water is held to EXACT equality -- and measures exactly equal:
-# PlayersVS 126,704 and Maps 159,408, byte-identical over 21 entries of a
-# twenty-lap run.
+# Deterministic menu scenes draw the same content on every lap, so their
+# high-water is held to EXACT equality. PlayersVS used to measure byte-flat on
+# the small proof roster. With the production roster admitted, its
+# source-faithful NA -> CPU toggle calls
+# mnPlayersVSRandFighterKind and may construct a different fighter hierarchy on
+# each visit. That one menu therefore gets its own narrow band + leak-shape test.
 #
 # VSBattle and VSResults cannot be, because their content is the MATCH: a lap
 # that ties re-enters VSBattle for Sudden Death (`nds_scene_manager.c` names
@@ -108,7 +122,7 @@ $lapPattern = @(16, 21, 22, 24)
 # won. So they get a BAND plus a monotonic test -- a leak is monotonic; the
 # measured series is not, and it returns to its own base value for nine
 # consecutive laps after each excursion.
-$matchKinds = @(22, 24)
+$variableKinds = @(16, 22, 24)
 # nSCKindStartup declares the N64 overlay-derived arena rather than the
 # taskman's, so it is outside the registry and outside the arena invariant by
 # design (nds_scene_manager.c's own comment). It is the only expected
@@ -282,8 +296,18 @@ if (-not [string]::IsNullOrWhiteSpace($AnalyzeOnly)) {
     # AGENTS.md's Operating Model opens with, and the one with no -RunnerSlot --
     # die on this arm before the verifier ran, with a parameter-binding error
     # that reads nothing like a shell problem.
+    # A direct invocation normally leaves -MelonDS empty and expects the same
+    # repo-owned default executable every other verifier uses. The shared helper
+    # intentionally validates an explicit path and rejects an empty mandatory
+    # argument, so resolve that default here instead of making direct -NoBuild
+    # runs require a redundant command-line argument.
+    $selectedMelonDS = if ([string]::IsNullOrWhiteSpace($MelonDS)) {
+        '.\\emulators\\melonds\\melonDS.exe'
+    } else {
+        $MelonDS
+    }
     $context = Initialize-MelonDSVerifierContext `
-        -Root $root -MelonDS $MelonDS -RunnerSlot $RunnerSlot -NoBuild
+        -Root $root -MelonDS $selectedMelonDS -RunnerSlot $RunnerSlot -NoBuild
     $melon_dir = Split-Path -Parent $context.MelonDSPath
     $log_dir = Get-MelonDSVerifierLogDir -Root $root -RunnerSlot $RunnerSlot
     $stdout = Join-Path $log_dir 'melonds.p2-shell-loop.stdout.log'
@@ -384,9 +408,10 @@ if (-not [string]::IsNullOrWhiteSpace($AnalyzeOnly)) {
             'printf "LOOPBUDGET budget=%u\n", gNdsMenuShellWalkBudget',
             'end',
             # `sd`, `winm`/`winf` and `resb` are the MATCH-SCENE ATTRIBUTION.
-            # VSBattle and VSResults are the only two kinds whose high-water is
-            # not byte-flat across laps, and these say why rather than leaving
-            # a band unexplained: `sd` steps on the lap that tied (Sudden Death
+            # VSBattle and VSResults carry match attribution here. PlayersVS can
+            # also vary now, but for a different source-owned reason: its
+            # NA->CPU proof invokes mnPlayersVSRandFighterKind. `sd` steps on the
+            # lap that tied (Sudden Death
             # is a second entry into VSBattle), and the winner counters plus
             # the resident BGM bytes say which Results graph and which winner
             # track that lap built.
@@ -851,11 +876,12 @@ foreach ($kind in ($byKind.Keys | Sort-Object)) {
     $name = if ($kindName.ContainsKey($kind)) { $kindName[$kind] } else { "kind$kind" }
     Write-Output ("HIGHWATER {0,-10} kind={1,2} n={2,3} min={3} max={4} spread={5}" -f
         $name, $kind, $values.Count, $min, $max, ($max - $min))
-    if ($matchKinds -contains $kind) {
+    if ($variableKinds -contains $kind) {
         Write-Output ("HIGHWATER {0} series: {1}" -f $name, ($values -join ','))
-        Assert-Loop (($max - $min) -le $BattleHighWaterSpreadMax) (
+        $spreadMax = if ($kind -eq 16) { $PlayersVSHighWaterSpreadMax } else { $BattleHighWaterSpreadMax }
+        Assert-Loop (($max - $min) -le $spreadMax) (
             "HIGHWATER $name : spread $($max - $min) B over $($values.Count) " +
-            "entries exceeds $BattleHighWaterSpreadMax B.")
+            "entries exceeds $spreadMax B.")
         # A LEAK IS MONOTONIC, and the band above cannot see a slow one inside
         # it. STRICTLY RISING ON EVERY LAP is the leak shape; allocation order
         # inside one scene is not monotone.
@@ -955,6 +981,7 @@ if ($failures.Count -gt 0) {
 }
 Write-Output ''
 Write-Output (("P2 shell loop verifier passed: {0} laps, {1} scene entries, " +
-    "per-kind high-waters flat, free floor {2} B, zero faults.") -f
+    "deterministic-menu high-waters flat, variable-content high-waters bounded, " +
+    "free floor {2} B, zero faults.") -f
     $Loops, $entryKind.Count, $freeFloor)
 exit 0

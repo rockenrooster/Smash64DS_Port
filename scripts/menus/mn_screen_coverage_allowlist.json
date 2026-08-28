@@ -45,8 +45,8 @@
     {
       "screen": "css",
       "kind": "missing",
-      "key": "re:llMNPlayersCommon(CaptainFalcon|DK|Jigglypuff|Kirby|Link|Ness|Pikachu|Samus|Yoshi)TextSprite",
-      "reason": "The fighter-name art for the nine fighters P2-3 has not produced yet. No slot can hold them, so nothing would draw them. Luigi's source name art ships in his gate states.",
+      "key": "re:llMNPlayersCommon(Jigglypuff|Kirby|Link|Ness|Pikachu|Yoshi)TextSprite",
+      "reason": "The fighter-name art for the six fighters P2-3 has not produced yet. No slot can hold them, so nothing would draw them. Every landed fighter's source name art ships in its gate states.",
       "ruling": "docs/P2_PLAN.md phase P2-3 (fighter production)",
       "status": "ruled"
     },
@@ -69,8 +69,8 @@
     {
       "screen": "css",
       "kind": "missing",
-      "key": "re:llFTEmblemSprites\\w+Sprite",
-      "reason": "The series emblem mnPlayersVSMakeNameAndEmblem draws beside a selected fighter's name (:613). Mario's and Fox's SHIP as source art since P2-1k, baked into the gate surface at the source's own (p*69+24, 143) with its own per-player-kind tint (0x1E human / 0x44 otherwise); the eight left here belong to fighters P2-3 owns, and no slot in this build can hold one, so nothing would draw them.",
+      "key": "re:llFTEmblemSprites(Kirby|Mother|PMonsters|Yoshi|Zelda)Sprite",
+      "reason": "The series emblem mnPlayersVSMakeNameAndEmblem draws beside a selected fighter's name (:613). Every landed fighter's source emblem ships baked into its gate surface at the source's own (p*69+24, 143) with the source per-player-kind tint (0x1E human / 0x44 otherwise); these five series belong only to fighters P2-3 has not produced yet.",
       "ruling": "P2-1k (board row) owner ruling (a): the CSS series emblems ship as source art. The residue is docs/P2_PLAN.md phase P2-3 (fighter production)",
       "status": "ruled"
     },

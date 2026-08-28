@@ -59,6 +59,9 @@ $required = @(
     'gNdsFtPoseOracleMismatches', 'gNdsFtPoseOracleFirstJoint',
     'gNdsFtPoseOracleFirstField', 'gNdsFtPoseOracleFirstWant',
     'gNdsFtPoseOracleFirstGot', 'gNdsFtPoseOracleFirstFrame',
+    'gNdsFtPoseOraclePoseMismatches', 'gNdsFtPoseOracleFirstPoseJoint',
+    'gNdsFtPoseOracleFirstPoseField', 'gNdsFtPoseOracleFirstPoseWant',
+    'gNdsFtPoseOracleFirstPoseGot', 'gNdsFtPoseOracleFirstPoseFrame',
     'gNdsObjAnimRunawayCount', 'gNdsR2CubicSaturations',
     'gNdsFtPoseTrackOverflow', 'gNdsFtPoseAObjLiveMax'
 )
@@ -86,7 +89,8 @@ try {
 
     $sample = @(
         'printf "POSEORACLE sample=%d binds=%u full=%u unbinds=%u updates=%u jointticks=%u jointevals=%u jointholds=%u trackevals=%u stepped=%u runaway=%u saturations=%u overflow=%u aobjlivemax=%u\n", $s, gNdsFtPoseBinds, gNdsFtPoseBindFull, gNdsFtPoseUnbinds, gNdsFtPoseUpdates, gNdsFtPoseJointTicks, gNdsFtPoseJointEvals, gNdsFtPoseJointHolds, gNdsFtPoseTrackEvals, gNdsFtPoseStepped, gNdsObjAnimRunawayCount, gNdsR2CubicSaturations, gNdsFtPoseTrackOverflow, gNdsFtPoseAObjLiveMax',
-        'printf "POSEORACLE compares=%u mismatches=%u first: joint=%u field=%u want=0x%08x got=0x%08x frame=0x%08x\n", gNdsFtPoseOracleCompares, gNdsFtPoseOracleMismatches, gNdsFtPoseOracleFirstJoint, gNdsFtPoseOracleFirstField, gNdsFtPoseOracleFirstWant, gNdsFtPoseOracleFirstGot, gNdsFtPoseOracleFirstFrame'
+        'printf "POSEORACLE compares=%u mismatches=%u first: joint=%u field=%u want=0x%08x got=0x%08x frame=0x%08x\n", gNdsFtPoseOracleCompares, gNdsFtPoseOracleMismatches, gNdsFtPoseOracleFirstJoint, gNdsFtPoseOracleFirstField, gNdsFtPoseOracleFirstWant, gNdsFtPoseOracleFirstGot, gNdsFtPoseOracleFirstFrame',
+        'printf "POSEORACLE pose_mismatches=%u first_pose: joint=%u field=%u want=0x%08x got=0x%08x frame=0x%08x\n", gNdsFtPoseOraclePoseMismatches, gNdsFtPoseOracleFirstPoseJoint, gNdsFtPoseOracleFirstPoseField, gNdsFtPoseOracleFirstPoseWant, gNdsFtPoseOracleFirstPoseGot, gNdsFtPoseOracleFirstPoseFrame'
     )
     $commands = [System.Collections.Generic.List[string]]::new()
     $commands.AddRange([string[]]@(

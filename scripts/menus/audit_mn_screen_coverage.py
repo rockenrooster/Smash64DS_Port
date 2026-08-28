@@ -54,7 +54,8 @@ OUR SIDE -- two sources, both machine-read, neither transcribed:
      `IMAGE_SOURCES` / `SURFACE_SOURCES` / fire-atlas tables are read directly.
      They map each kit token back to the source symbol(s) it was converted
      from, which is exactly the join key the source side produces.
-  2. THE SHELL.  `src/nds/nds_menu_shell.c` is scanned for
+  2. THE SHELL.  `src/nds/nds_menu_shell.c` is the translation-unit root.  It
+     and every local `.c` implementation fragment it includes are scanned for
      `NDS_MN_UI_KIT_IMAGE_*` / `NDS_MN_UI_KIT_SURFACE_*` references, each
      attributed to its enclosing function, and each function attributed to a
      screen by the file's own naming convention (`...Title...`, `...Mode...`,
@@ -74,12 +75,13 @@ OUR SIDE -- two sources, both machine-read, neither transcribed:
      blitted under (`kNdsMenuStoneSurfaces` serves two screens and names
      neither).
 
-Two runtime expansions are declared rather than inferred, because they are
-arithmetic on a token id: `ndsUiKitSetNumber` draws `DIGIT_0..DIGIT_9`;
+Runtime expansions are declared rather than inferred when they are arithmetic
+on a token id: `ndsUiKitSetNumber` draws `DIGIT_0..DIGIT_9`;
 `IMAGE_MODE_ICON_1P + i` / `IMAGE_LABEL_HMN + pkind` walk their own consecutive
-blocks; and the CSS team selector walks the twelve consecutive
-`SURFACE_CSS_TEAM_SELECT_*` rasters from `RED_0`.  See `TOKEN_FAMILIES` /
-`HELPER_TOKENS`.
+blocks; the CSS gate owner walks its generated [player][state] and
+[team][player][state] ranges; and the CSS team selector walks the twelve
+consecutive `SURFACE_CSS_TEAM_SELECT_*` rasters from `RED_0`.  See
+`TOKEN_FAMILIES` / `HELPER_TOKENS`.
 
 THE THREE DELTA CLASSES
   MISSING      the source draws it on this screen and we draw nothing from it
@@ -148,11 +150,31 @@ HELPER_TOKENS = {
 # reachable from that one reference.  Keyed by the block's FIRST token; the
 # prefix (IMAGE_/SURFACE_) is kept from the reference, so one declaration
 # serves both kinds.
+_CSS_GATE_FIGHTERS = ("MARIO", "FOX", "LUIGI", "DONKEY", "CAPTAIN", "SAMUS")
+_CSS_GATE_STATES = (("NA", "MAN", "COM") +
+                    tuple(f"MAN_{fighter}" for fighter in _CSS_GATE_FIGHTERS) +
+                    tuple(f"COM_{fighter}" for fighter in _CSS_GATE_FIGHTERS) +
+                    tuple(f"HOLD_{fighter}" for fighter in _CSS_GATE_FIGHTERS))
+
 TOKEN_FAMILIES = {
     "MODE_ICON_1P": ("MODE_ICON_1P", "MODE_ICON_VS", "MODE_ICON_OPTION",
                      "MODE_ICON_DATA"),
     "LABEL_HMN": ("LABEL_HMN", "LABEL_CP", "LABEL_NA"),
     "DIGIT_0": tuple(f"DIGIT_{d}" for d in range(10)),
+    # nds_menu_shell_css.c indexes these exact generated contiguous blocks.
+    # Its _Static_asserts pin player/team strides and the final HOLD_SAMUS id;
+    # declare the same arithmetic expansion here so deleting the old literal
+    # 4xN table does not make source-derived name/emblem art invisible to the
+    # coverage audit.
+    "CSS_GATE_0_NA": tuple(
+        f"CSS_GATE_{player}_{state}"
+        for player in range(4)
+        for state in _CSS_GATE_STATES),
+    "CSS_GATE_TEAM_RED_0_NA": tuple(
+        f"CSS_GATE_TEAM_{team}_{player}_{state}"
+        for team in ("RED", "BLUE", "GREEN")
+        for player in range(4)
+        for state in _CSS_GATE_STATES),
     # nds_menu_shell.c reaches the twelve team-selector rasters as
     # CSS_TEAM_SELECT_RED_0 + (team * NDS_CSS_TEAM_SELECT_STRIDE) + slot.
     # Contiguity in [team][player] order is compile-time proven there by the
@@ -524,7 +546,27 @@ class ShellInventory:
 
 
 def scan_shell(repo_root: Path) -> ShellInventory:
-    text = (repo_root / SHELL_PATH).read_text(errors="replace")
+    shell_path = repo_root / SHELL_PATH
+    seen: set[Path] = set()
+
+    def read_translation_unit(path: Path) -> str:
+        resolved = path.resolve()
+        if resolved in seen:
+            return ""
+        if not path.is_file():
+            raise AuditError(f"{path}: shell translation-unit include is missing")
+        seen.add(resolved)
+        source = path.read_text(errors="replace")
+        chunks = [source]
+        for match in re.finditer(
+                r'^\s*#include\s+"([^"\n]+\.c)"\s*$', source, re.MULTILINE):
+            chunks.append(read_translation_unit(path.parent / match.group(1)))
+        return "\n".join(chunks)
+
+    # Since 33ff8b4e476 the root is intentionally a small aggregator.  Read the
+    # same implementation surface the compiler sees; otherwise a source split
+    # silently makes every moved function/token look deleted to this gate.
+    text = read_translation_unit(shell_path)
     clean = blank_comments_and_literals(text)
     lines = clean.split("\n")
     functions = top_level_functions(clean)

@@ -157,6 +157,22 @@ if (($resultsCamera -notmatch
     throw 'Results fighter camera no longer uses its source default projection/CObj.'
 }
 $renderer = Get-Content -LiteralPath $rendererPath -Raw
+# nds_renderer.c is now a translation-unit aggregator.  Keep checking the
+# compiled renderer surface rather than the eight-line include list: append
+# every local .c fragment the aggregator names and fail closed if one vanished.
+$rendererDir = Split-Path -Parent $rendererPath
+$rendererIncludes = @([regex]::Matches(
+    $renderer, '(?m)^#include\s+"([^"]+\.c)"\s*$'))
+if ($rendererIncludes.Count -eq 0) {
+    throw 'nds_renderer.c has no implementation includes to inspect.'
+}
+foreach ($match in $rendererIncludes) {
+    $includePath = Join-Path $rendererDir $match.Groups[1].Value
+    if (-not (Test-Path -LiteralPath $includePath -PathType Leaf)) {
+        throw "Renderer translation-unit include is missing: $($match.Groups[1].Value)"
+    }
+    $renderer += "`n" + (Get-Content -LiteralPath $includePath -Raw)
+}
 if (-not $renderer.Contains('glColor((rgb)color);')) {
     throw 'Particle draw lost source prim-color modulation.'
 }

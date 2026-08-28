@@ -426,8 +426,9 @@ static u32 ndsMenuShellCssKindImage(u32 pkind)
  * 3,456 B P2-1j left free, and because folding them in keeps every state of a
  * slot exactly one overwriting blit.
  *
- * NINE STATES, and the third fighter state is the source's, not an invention:
- * the NAME and the CP LEVEL row occupy the SAME row (y 201), and
+ * THREE BASE STATES PLUS THREE STATES PER LANDED FIGHTER. The third fighter
+ * state is the source's, not an invention: the NAME and the CP LEVEL row
+ * occupy the SAME row (y 201), and
  * `mnPlayersVSUpdateHandicapLevel` opens by hiding the name (:2788) while
  * `mnPlayersVSHandicapLevelProcUpdate` destroys the level row the moment the
  * slot stops being a settled fighter (:2689). So a settled CPU shows CP LEVEL
@@ -436,62 +437,23 @@ static u32 ndsMenuShellCssKindImage(u32 pkind)
 #define NDS_CSS_GATE_NA 0u
 #define NDS_CSS_GATE_MAN 1u
 #define NDS_CSS_GATE_COM 2u
-#define NDS_CSS_GATE_MAN_F0 3u   /* + fighter index (Mario 0, Fox 1, Luigi 2) */
-#define NDS_CSS_GATE_COM_F0 6u
-#define NDS_CSS_GATE_HOLD_F0 9u
-#define NDS_CSS_GATE_STATES 12u
+#define NDS_CSS_GATE_FIGHTERS 6u
+#define NDS_CSS_GATE_MAN_F0 3u
+#define NDS_CSS_GATE_COM_F0 (NDS_CSS_GATE_MAN_F0 + NDS_CSS_GATE_FIGHTERS)
+#define NDS_CSS_GATE_HOLD_F0 (NDS_CSS_GATE_COM_F0 + NDS_CSS_GATE_FIGHTERS)
+#define NDS_CSS_GATE_STATES (NDS_CSS_GATE_HOLD_F0 + NDS_CSS_GATE_FIGHTERS)
 
-static const NdsUiKitSurfaceId
-kNdsCssGateSurface[NDS_CSS_SLOTS][NDS_CSS_GATE_STATES] = {
-    { NDS_MN_UI_KIT_SURFACE_CSS_GATE_0_NA,
-      NDS_MN_UI_KIT_SURFACE_CSS_GATE_0_MAN,
-      NDS_MN_UI_KIT_SURFACE_CSS_GATE_0_COM,
-      NDS_MN_UI_KIT_SURFACE_CSS_GATE_0_MAN_MARIO,
-      NDS_MN_UI_KIT_SURFACE_CSS_GATE_0_MAN_FOX,
-      NDS_MN_UI_KIT_SURFACE_CSS_GATE_0_MAN_LUIGI,
-      NDS_MN_UI_KIT_SURFACE_CSS_GATE_0_COM_MARIO,
-      NDS_MN_UI_KIT_SURFACE_CSS_GATE_0_COM_FOX,
-      NDS_MN_UI_KIT_SURFACE_CSS_GATE_0_COM_LUIGI,
-      NDS_MN_UI_KIT_SURFACE_CSS_GATE_0_HOLD_MARIO,
-      NDS_MN_UI_KIT_SURFACE_CSS_GATE_0_HOLD_FOX,
-      NDS_MN_UI_KIT_SURFACE_CSS_GATE_0_HOLD_LUIGI },
-    { NDS_MN_UI_KIT_SURFACE_CSS_GATE_1_NA,
-      NDS_MN_UI_KIT_SURFACE_CSS_GATE_1_MAN,
-      NDS_MN_UI_KIT_SURFACE_CSS_GATE_1_COM,
-      NDS_MN_UI_KIT_SURFACE_CSS_GATE_1_MAN_MARIO,
-      NDS_MN_UI_KIT_SURFACE_CSS_GATE_1_MAN_FOX,
-      NDS_MN_UI_KIT_SURFACE_CSS_GATE_1_MAN_LUIGI,
-      NDS_MN_UI_KIT_SURFACE_CSS_GATE_1_COM_MARIO,
-      NDS_MN_UI_KIT_SURFACE_CSS_GATE_1_COM_FOX,
-      NDS_MN_UI_KIT_SURFACE_CSS_GATE_1_COM_LUIGI,
-      NDS_MN_UI_KIT_SURFACE_CSS_GATE_1_HOLD_MARIO,
-      NDS_MN_UI_KIT_SURFACE_CSS_GATE_1_HOLD_FOX,
-      NDS_MN_UI_KIT_SURFACE_CSS_GATE_1_HOLD_LUIGI },
-    { NDS_MN_UI_KIT_SURFACE_CSS_GATE_2_NA,
-      NDS_MN_UI_KIT_SURFACE_CSS_GATE_2_MAN,
-      NDS_MN_UI_KIT_SURFACE_CSS_GATE_2_COM,
-      NDS_MN_UI_KIT_SURFACE_CSS_GATE_2_MAN_MARIO,
-      NDS_MN_UI_KIT_SURFACE_CSS_GATE_2_MAN_FOX,
-      NDS_MN_UI_KIT_SURFACE_CSS_GATE_2_MAN_LUIGI,
-      NDS_MN_UI_KIT_SURFACE_CSS_GATE_2_COM_MARIO,
-      NDS_MN_UI_KIT_SURFACE_CSS_GATE_2_COM_FOX,
-      NDS_MN_UI_KIT_SURFACE_CSS_GATE_2_COM_LUIGI,
-      NDS_MN_UI_KIT_SURFACE_CSS_GATE_2_HOLD_MARIO,
-      NDS_MN_UI_KIT_SURFACE_CSS_GATE_2_HOLD_FOX,
-      NDS_MN_UI_KIT_SURFACE_CSS_GATE_2_HOLD_LUIGI },
-    { NDS_MN_UI_KIT_SURFACE_CSS_GATE_3_NA,
-      NDS_MN_UI_KIT_SURFACE_CSS_GATE_3_MAN,
-      NDS_MN_UI_KIT_SURFACE_CSS_GATE_3_COM,
-      NDS_MN_UI_KIT_SURFACE_CSS_GATE_3_MAN_MARIO,
-      NDS_MN_UI_KIT_SURFACE_CSS_GATE_3_MAN_FOX,
-      NDS_MN_UI_KIT_SURFACE_CSS_GATE_3_MAN_LUIGI,
-      NDS_MN_UI_KIT_SURFACE_CSS_GATE_3_COM_MARIO,
-      NDS_MN_UI_KIT_SURFACE_CSS_GATE_3_COM_FOX,
-      NDS_MN_UI_KIT_SURFACE_CSS_GATE_3_COM_LUIGI,
-      NDS_MN_UI_KIT_SURFACE_CSS_GATE_3_HOLD_MARIO,
-      NDS_MN_UI_KIT_SURFACE_CSS_GATE_3_HOLD_FOX,
-      NDS_MN_UI_KIT_SURFACE_CSS_GATE_3_HOLD_LUIGI }
-};
+/* The bake emits FFA states in [player][state] order, just as its Team block
+ * is [team][player][state]. Keep both arithmetic: it scales with the landed
+ * roster and lets the generated enum itself prove contiguity instead of
+ * duplicating an ever-growing hand table here. */
+_Static_assert(NDS_MN_UI_KIT_SURFACE_CSS_GATE_1_NA ==
+                   NDS_MN_UI_KIT_SURFACE_CSS_GATE_0_NA + NDS_CSS_GATE_STATES,
+               "FFA gate surfaces must stay contiguous by player");
+_Static_assert(NDS_MN_UI_KIT_SURFACE_CSS_GATE_3_HOLD_SAMUS ==
+                   NDS_MN_UI_KIT_SURFACE_CSS_GATE_0_NA +
+                       (NDS_CSS_SLOTS * NDS_CSS_GATE_STATES) - 1u,
+               "FFA gate block must contain all landed fighter states");
 
 /* P2-2a: the generated Team-Battle panel variants are intentionally contiguous
  * in [team][player][state] order. BattleShip maps team ids Red/Blue/Green to
@@ -511,10 +473,10 @@ _Static_assert(NDS_MN_UI_KIT_SURFACE_CSS_GATE_TEAM_GREEN_0_NA ==
                    NDS_MN_UI_KIT_SURFACE_CSS_GATE_TEAM_RED_0_NA +
                        (2u * NDS_CSS_TEAM_GATE_STRIDE),
                "team gate surfaces must stay contiguous by team");
-_Static_assert(NDS_MN_UI_KIT_SURFACE_CSS_GATE_TEAM_GREEN_3_HOLD_LUIGI ==
+_Static_assert(NDS_MN_UI_KIT_SURFACE_CSS_GATE_TEAM_GREEN_3_HOLD_SAMUS ==
                    NDS_MN_UI_KIT_SURFACE_CSS_GATE_TEAM_RED_0_NA +
                        (NDS_CSS_TEAM_COUNT * NDS_CSS_TEAM_GATE_STRIDE) - 1u,
-               "team gate surface block must contain 3x4x12 variants");
+               "team gate surface block must contain every landed fighter state");
 
 #define NDS_CSS_TEAM_SELECT_STRIDE NDS_CSS_SLOTS
 _Static_assert(NDS_MN_UI_KIT_SURFACE_CSS_TEAM_SELECT_BLUE_0 ==
@@ -537,7 +499,8 @@ static NdsUiKitSurfaceId ndsMenuShellCssGateSurfaceForState(u32 slot, u32 state)
 
     if (sCssIsTeamBattle == FALSE)
     {
-        return kNdsCssGateSurface[slot][state];
+        return (NdsUiKitSurfaceId)(NDS_MN_UI_KIT_SURFACE_CSS_GATE_0_NA +
+                                   (slot * NDS_CSS_GATE_STATES) + state);
     }
     team = (u32)sCssTeam[slot];
     if (team >= NDS_CSS_TEAM_COUNT)
@@ -639,6 +602,24 @@ static u32 ndsMenuShellCssGateState(u32 slot)
     else if (fkind == (u32)nFTKindLuigi)
     {
         fighter = 2u;
+    }
+#endif
+#if NDS_P2_DONKEY
+    else if (fkind == (u32)nFTKindDonkey)
+    {
+        fighter = 3u;
+    }
+#endif
+#if NDS_P2_CAPTAIN
+    else if (fkind == (u32)nFTKindCaptain)
+    {
+        fighter = 4u;
+    }
+#endif
+#if NDS_P2_SAMUS
+    else if (fkind == (u32)nFTKindSamus)
+    {
+        fighter = 5u;
     }
 #endif
     else
@@ -2114,4 +2095,3 @@ static void ndsMenuShellPopulateCssScreen(void)
     ndsMenuShellCssShowReady(FALSE);
     ndsMenuShellCssMove();
 }
-

@@ -176,6 +176,33 @@ volatile u32 gNdsSamusTumbleTourHitCount;
 volatile u32 gNdsSamusTumbleTourStageCount;
 volatile u32 gNdsSamusTumbleTourDone;
 #endif
+#if NDS_P2_SAMUS_ATTACK_TOUR
+volatile u32 gNdsSamusAttackTourMask;
+volatile u32 gNdsSamusAttackTourScenario;
+volatile u32 gNdsSamusAttackTourStep;
+volatile u32 gNdsSamusAttackTourFrames;
+volatile u32 gNdsSamusAttackTourStatus;
+volatile u32 gNdsSamusAttackTourMotion;
+volatile u32 gNdsSamusAttackTourStageCount;
+volatile u32 gNdsSamusAttackTourTerminalCount;
+volatile u32 gNdsSamusAttackTourCatchAttr;
+volatile u32 gNdsSamusAttackTourGrabInputCount;
+volatile u32 gNdsSamusAttackTourCatchStatusMask;
+volatile u32 gNdsSamusAttackTourCatchFrames;
+volatile u32 gNdsSamusAttackTourCatchActiveFrames;
+volatile u32 gNdsSamusAttackTourCatchSearchFrames;
+volatile u32 gNdsSamusAttackTourCatchAttackMask;
+volatile u32 gNdsSamusAttackTourCatchAnimFrameMaxMilli;
+volatile u32 gNdsSamusAttackTourVictimGrabbableMask;
+volatile u32 gNdsSamusAttackTourVictimNormalMask;
+volatile u32 gNdsSamusAttackTourJoint36SeenCount;
+volatile u32 gNdsSamusAttackTourJoint36AttackMask;
+volatile s32 gNdsSamusAttackTourMinGrabDXMilli;
+volatile s32 gNdsSamusAttackTourGrab0XMilli;
+volatile s32 gNdsSamusAttackTourGrab1XMilli;
+volatile s32 gNdsSamusAttackTourFoxXMilli;
+volatile u32 gNdsSamusAttackTourDone;
+#endif
 volatile u32 gNdsFighterNaturalMovesetPhase;
 volatile u32 gNdsFighterNaturalMovesetPhaseFrames;
 volatile u32 gNdsFighterNaturalMovesetTiltS3Frames;

@@ -710,7 +710,23 @@ def parse_renderer_contract(repo_root: Path) -> dict[str, object]:
     path = repo_root / "src/nds/nds_renderer.c"
     if not path.is_file():
         raise falsify("src/nds/nds_renderer.c is absent")
-    source = path.read_text(encoding="utf-8")
+    # nds_renderer.c is the translation-unit aggregator. Since the 2026-08-27
+    # source split, the texture-key declaration and its exact-key/cache helpers
+    # live in the included implementation fragments rather than literally in
+    # the eight-line aggregator. Inspect the same source set the compiler sees
+    # instead of weakening any of the ABI/equality tokens below.
+    aggregator = path.read_text(encoding="utf-8")
+    included_sources = []
+    for relative in re.findall(r'^#include\s+"([^"\n]+\.c)"', aggregator,
+                               re.MULTILINE):
+        include_path = path.parent / relative
+        if not include_path.is_file():
+            raise falsify(
+                f"renderer translation-unit include is absent: {relative}")
+        included_sources.append(include_path.read_text(encoding="utf-8"))
+    if not included_sources:
+        raise falsify("nds_renderer.c has no implementation includes")
+    source = aggregator + "\n" + "\n".join(included_sources)
     match = re.search(
         r"typedef struct NDSRendererHardwareTextureKey\s*\{(.*?)\} "
         r"NDSRendererHardwareTextureKey;",

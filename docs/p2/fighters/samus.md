@@ -6,9 +6,10 @@ The source gameplay slice is now linked and the real shell can select Samus.
 This is **not** a completion claim: Charge Shot's source lifecycle,
 Bomb/bomb-jump, and the source-specific gameplay audio bank are now accepted,
 and the structural move inventory is now source-audited. The controller-driven
-common movement/combat/grab/throw segment and budget/stress gates are also
-accepted; exhaustive attack variants plus ledge/tumble, determinism replay and
-owner-feel acceptance still need closure.
+common movement/combat, exhaustive ordinary attack/grab/throw inventory,
+ledge/down/tech recovery and budget/stress gates are accepted; the remaining
+DamageFly directional variants, determinism replay and owner-feel acceptance
+still need closure.
 
 ## Role
 
@@ -340,6 +341,66 @@ This closes down/tech recovery and proves a real tumble entry. It does **not**
 claim DamageFlyHi/Lw/N/Roll have all been visited; those directional damage
 variants remain part of the outstanding exhaustive attack/tumble inventory.
 
+### Exhaustive ordinary attack/grab/throw tour — 2026-08-28
+
+The ordinary attack half of the every-state gate is now closed through source
+controller transitions rather than status cycling. The proof-only
+`NDS_P2_SAMUS_ATTACK_TOUR` arm covers **23 scenarios / 24 status bits**: Jab1/2,
+Dash Attack, all five S3 angles, Hi3/Lw3, all five S4 angles, Hi4/Lw4, all five
+aerials, Catch/CatchPull/CatchWait, and forward/back throw. The input driver
+never assigns `status_id`/`motion_id` and never calls `ftMainSetStatus`; the
+permanent verifier rejects those patterns before booting the ROM.
+
+BattleShip remains the authority. The common attack interrupt code selects the
+ground/aerial variants from controller stick/button history, `ftcommoncatch1.c`
+installs Catch from real Z+A input, `ftcommoncatch2.c` installs CatchPull only
+after the real catch collision finds Fox, and `ftcommonthrow.c` selects F/B
+throw and victim thrown-status dispatch. A tiny post-`ftMainSetStatus` observer
+is proof-only and read-only; it exists because CatchPull can begin and finish
+inside one `gcRunAll`, before the once-per-update sampler can see it.
+
+The tour exposed two shared compact-pose semantic bugs. First, the DS track had
+stored BattleShip `AObj.length_invert` and its linear rate in the same word.
+Those are distinct source fields and zero-payload commands intentionally leave
+the untouched one unchanged; Samus Catch contains such a command. The compact
+track is therefore 24 bytes now and preserves both fields independently.
+
+Second, and gameplay-critical, fighter pose ownership was too broad. BattleShip
+attaches a fighter figatree by walking the TopN hierarchy, but
+`ftParamUpdateAnimKeys` later plays the complete indexed `fp->joints[]` table.
+Samus's grapple joint **36** is a live indexed joint outside the compact Catch
+hierarchy. The old DS path saw the hierarchy as compact-owned and skipped
+generic animation for joint 36, so the grab collision never followed the source
+grapple pose. `NdsFtPose` now records exactly which source joint IDs were bound;
+only those joints skip generic playback. Omitted/alternate indexed joints keep
+BattleShip's AObj path. This is a shared engine fix and applies to every fighter.
+
+`artifacts/verification/2026-08-28_p2-3f27-samus-exhaustive-attack-throw-tour.txt`
+reports **23/23 scenarios**, full status mask **`0xffffff`**, exactly **23**
+scenario stages, Catch/CatchPull/CatchWait mask **`0x7`**, **70** sampled Catch
+frames, two active grapple collision slots (`0x3`) both attached to source
+joint 36, prerequisite **`NAT_MOVESET=0x7ff`**, and **0 stalls / 0 pose-track
+overflow**. The exact proof ROM SHA-256 is
+`D02B03D465326B110827CF484B94350205F6E3E7BFEB3665BFE78D76C8808CB4`.
+
+The compact-player shadow oracle independently reaches **43,146** comparisons
+with **zero transform mismatches**, zero runaway, saturation, overflow or
+BindFull. Its stricter all-field lane still records 297 animation-clock
+`-0.0`/`+0.0` bit mismatches; those are retained as exact diagnostics and no
+longer hide the transform verdict. Artifact:
+`artifacts/verification/2026-08-28_p2-3f27-samus-pose-oracle-final.txt`.
+
+Because the source-faithful track representation grew from 20 to 24 bytes, the
+standing four-kind stress was rebuilt rather than reusing P2-3f22's ledger.
+Samus/Fox/Captain/Donkey again draw all four slots (`0xF`) for the accepted
+one-minute window, clock **60->1**, with general-heap low-water **207,044 B**
+(**181,444 B above** the 25,600 B floor), pose binds/full **714/0**, graphics
+heap overflow/no-room **0/0**, native-plan build/hit/mismatch **630/6,661/0**,
+and zero hard allocator/object/AObj failures. ROM SHA-256
+`FA1F83F6AEC09BE65347A433EE9313B0676838DA2EEEE54E922D60E1EE105F3C`;
+artifacts are `2026-08-28_p2-3f27-fourcpu-{buckets,coverage,memory}.json` and
+the matching rows CSV.
+
 ## Acceptance
 
 - [x] Move inventory sweep vs `ftsamus`/`ftdata` data: 206 motion descriptors,
@@ -350,8 +411,9 @@ variants remain part of the outstanding exhaustive attack/tumble inventory.
       lifecycle matrix equivalent.
 - [x] Bomb-jump reproduces through real keyboard input -> DS controller path,
       with source Bomb creation and natural explosion lifecycle.
-- [x] CSS selectable with source portrait, live 3D selected preview, stock art,
-      source announcer/selected-pose audio, and rematch return path.
+- [x] CSS selectable with source portrait, source fighter-name + Metroid-series
+      emblem gate art, live 3D selected preview, stock art, source
+      announcer/selected-pose audio, and rematch return path.
 - [x] Full source-reachable Samus-specific gameplay audio bank closed; the
       source-unreachable held Charge7 program is explicitly audited, not
       approximated or packed as dead content.
@@ -365,5 +427,8 @@ variants remain part of the outstanding exhaustive attack/tumble inventory.
 - [x] Natural tumble/down/tech recovery tour: 11/11 real-hit scenarios cover
       DamageFall, tech F/N/B, DownBounce/DownWait and every U/D getup branch;
       recovery mask `0x1ffff`, zero stalls.
-- [ ] Exhaustive remaining attack variants + DamageFly directional variants;
-      CPU determinism replay; owner feel pass.
+- [x] Exhaustive ordinary attack/grab/throw tour: 23/23 scenarios, all 24
+      source attack/throw status bits (`0xffffff`), Catch chain `0x7`, zero
+      stalls; shared compact-pose ownership is source-joint exact.
+- [ ] DamageFlyHi/Lw/N/Roll directional variants; CPU determinism replay;
+      owner feel pass.

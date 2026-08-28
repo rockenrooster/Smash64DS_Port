@@ -121,6 +121,11 @@ void ftMainPlayAnimEventsAll(GObj *fighter_gobj)
 #endif
 }
 
+#if NDS_P2_SAMUS_ATTACK_TOUR
+void ndsSamusAttackTourRecordStatusTransition(GObj *fighter_gobj,
+                                               s32 status_id);
+#endif
+
 void ftMainSetStatus(GObj *fighter_gobj, s32 status_id,
                      f32 frame_begin, f32 anim_speed, u32 flags)
 {
@@ -131,6 +136,12 @@ void ftMainSetStatus(GObj *fighter_gobj, s32 status_id,
     }
     battleship_ftMainSetStatus(fighter_gobj, status_id, frame_begin,
                                anim_speed, flags);
+#if NDS_P2_SAMUS_ATTACK_TOUR
+    /* Read-only P2-3 acceptance observer. BattleShip has already selected and
+     * installed the status; this only records transient states that can begin
+     * and end inside one gcRunAll before the once-per-update sampler runs. */
+    ndsSamusAttackTourRecordStatusTransition(fighter_gobj, status_id);
+#endif
     /* BattleShip's status setter owns the dynamic hidden-part topology used by
      * grab/throw animations. It can allocate/eject/re-parent a DObj without
      * changing either the fighter root pointer or the taskman heap generation.
