@@ -305,6 +305,11 @@ P2_O2R_ASSETS = {
         0x0140,
         "67f9646c0a019704dcae5e3307df2cf8e4e7846339537a70a64f77d42284bbf5",
     ),
+    "link": (
+        Path("decomp/BattleShip-main/BattleShip_o2r/reloc_fighters_main/LinkModel"),
+        0x0144,
+        "93c9ee108c0e8f1680c35d8d11ec980891850cadcac5eed5bd731c43e85f163e",
+    ),
 }
 
 # These are the primary JointTree DObjDesc arrays in the exact hashed O2R
@@ -328,6 +333,8 @@ OWNER_JOINT_TREES = {
     "captain": (0x3be0, 27),
     # decomp dSamusModel_JointTree (320_SamusModel.c:1427)
     "samus": (0x3520, 34),
+    # decomp dLinkModel_JointTree (324_LinkModel.c:1159, US arm)
+    "link": (0x3ae8, 33),
 }
 
 # The SECOND JointTree array in each hashed O2R resource is the low-detail
@@ -349,6 +356,8 @@ OWNER_JOINT_TREES_LOW = {
     "captain": (0x7900, 27),
     # decomp dSamusModel_JointTree_0x69D0 (320_SamusModel.c:3109)
     "samus": (0x69d0, 34),
+    # decomp dLinkModel_JointTree_0x74B0 (324_LinkModel.c:2757, US arm)
+    "link": (0x74b0, 33),
 }
 
 # Canonical export hashes for the low-detail program, pinned from the same
@@ -417,6 +426,9 @@ OWNER_SETUP_PARTS = {
     # this deliberately skips descriptors 13..21, so the decoder must follow
     # BattleShip's bit-walk rather than assuming one selected prefix.
     "samus": (0xfff803ff, 0x00000000),
+    # dLinkMain_setup_parts (225_LinkMain.c:199). Link is another non-prefix
+    # owner: descriptors 13/14 and 31 are omitted by the source bit walk.
+    "link": (0xfff9fffe, 0x00000000),
 }
 
 # Slots 0..15 remain reserved for the camera seed and live GX hierarchy stack.
@@ -455,7 +467,26 @@ OWNER_CROSS_BINDING_SLOTS = {
     "captain": (),
     # Samus also has no cross-matrix run in either source detail level.
     "samus": (),
+    # Link HIGH uses three cross-matrix pairs. Keep the six logical binding IDs
+    # source-stable and assign only the physical GX stores this detail needs.
+    "link": (
+        (2, 16), (3, 17), (6, 18), (7, 19), (11, 20), (12, 21),
+    ),
 }
+
+# Every previously admitted owner uses the same cross-binding set in High and
+# Low. Link is the first source model where that is not true: its Low JointTree
+# retains only the 11/12 pair. Emit a smaller Low palette map instead of storing
+# four matrices that no Low-detail triangle can restore.
+OWNER_CROSS_BINDING_SLOTS_LOW = {
+    "link": ((11, 16), (12, 17)),
+}
+
+
+def owner_cross_binding_slots(owner_name: str, detail: str):
+    if detail == "low" and owner_name in OWNER_CROSS_BINDING_SLOTS_LOW:
+        return OWNER_CROSS_BINDING_SLOTS_LOW[owner_name]
+    return OWNER_CROSS_BINDING_SLOTS[owner_name]
 
 OWNER_PLAN_COUNTS = {
     "mario": (25, 14),
@@ -467,6 +498,8 @@ OWNER_PLAN_COUNTS = {
     "captain": (26, 17),
     # 23 source-selected parts + the synthetic TopN, 14 drawable roots.
     "samus": (24, 14),
+    # 29 source-selected parts + synthetic TopN, 19 drawable roots.
+    "link": (30, 19),
 }
 
 # camera seeds, hierarchy pushes, hierarchy pops, cross-binding stores, and
@@ -480,6 +513,7 @@ OWNER_GX_PLAN_COUNTS = {
     # OWNER_CROSS_BINDING_SLOTS above.
     "captain": (1, 6, 6, 0, 0),
     "samus": (1, 5, 5, 0, 0),
+    "link": (1, 8, 8, 6, 44),
 }
 
 # The low-detail program shares the high skeleton (same pushes/pops/stores);
@@ -493,6 +527,7 @@ DETAIL_GX_PLAN_COUNTS = {
         "donkey": (1, 6, 6, 10, 74),
         "captain": (1, 6, 6, 0, 0),
         "samus": (1, 5, 5, 0, 0),
+        "link": (1, 8, 8, 2, 6),
     },
 }
 
@@ -975,6 +1010,10 @@ P2_OWNER_MODEL_CENSUS = {
         "high": (48, 209, 30, 322, 26, 26, 14, 294, 966, 0, 56, 8, 0),
         "low": (48, 203, 23, 199, 23, 23, 14, 174, 597, 0, 56, 0, 0),
     },
+    "link": {
+        "high": (86, 353, 69, 338, 61, 52, 19, 420, 1014, 13, 52, 32, 44),
+        "low": (83, 351, 55, 217, 47, 47, 19, 335, 651, 1, 52, 32, 6),
+    },
 }
 
 # Admission order is the native-owner slot ABI after frozen Mario/Fox. Keep the
@@ -1061,7 +1100,7 @@ def build_p2_owner_model_inventory(
                 observed_cross_bindings.update(run_binding_sets[run_index])
         expected_cross_bindings = {
             binding for binding, _slot
-            in OWNER_CROSS_BINDING_SLOTS[owner_name]
+            in owner_cross_binding_slots(owner_name, detail)
         }
         if observed_cross_bindings != expected_cross_bindings:
             raise ValueError(
@@ -1120,7 +1159,7 @@ def build_p2_owner_model_inventory(
                 "bindings": sorted(observed_cross_bindings),
                 "physical_slots": [
                     [binding, slot]
-                    for binding, slot in OWNER_CROSS_BINDING_SLOTS[owner_name]
+                    for binding, slot in owner_cross_binding_slots(owner_name, detail)
                 ],
                 "stores": DETAIL_GX_PLAN_COUNTS[detail][owner_name][3],
                 "restores": restore_count,
@@ -1675,7 +1714,7 @@ def decode_joint_topology(
 
     cross_slots = [PACKED_GX_SLOT_CURRENT] * len(roots)
     physical_slots = set()
-    for binding, palette_slot in OWNER_CROSS_BINDING_SLOTS[owner_name]:
+    for binding, palette_slot in owner_cross_binding_slots(owner_name, detail):
         if binding >= len(roots):
             raise ValueError(
                 f"{owner_name} cross binding {binding} is out of range"
@@ -1694,7 +1733,7 @@ def decode_joint_topology(
         physical_slots.add(palette_slot)
         cross_slots[binding] = palette_slot
 
-    expected_store_count = OWNER_GX_PLAN_COUNTS[owner_name][3]
+    expected_store_count = DETAIL_GX_PLAN_COUNTS[detail][owner_name][3]
     if len(physical_slots) != expected_store_count:
         raise ValueError(
             f"{owner_name} GX store count {len(physical_slots)} != "
@@ -2072,7 +2111,7 @@ def build_direct_dense_tables(
     for owner_index, owner_name in enumerate(owner_names):
         expected = {
             binding
-            for binding, _ in OWNER_CROSS_BINDING_SLOTS[owner_name]
+            for binding, _ in owner_cross_binding_slots(owner_name, detail)
         }
         if observed_cross_bindings[owner_index] != expected:
             raise ValueError(

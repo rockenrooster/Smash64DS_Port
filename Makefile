@@ -665,6 +665,11 @@ NDS_P2_CAPTAIN ?= 0
 # the non-contiguous setup_parts mask; the generator mirrors BattleShip's
 # per-descriptor bit walk instead of requiring the older prefix-shaped masks.
 NDS_P2_SAMUS ?= 0
+# P2-3 fighter 5. Link remains opt-in until his source state machines, real
+# boomerang weapon, LinkBomb item client, native owner, CSS/audio surfaces and
+# runtime proofs are all admitted. The production manifest may know his files
+# before this flips in a shipping shell; that is intentional staging.
+NDS_P2_LINK ?= 0
 # P2-3f9. THE HEAVIEST ROSTER A PLAYER CAN REACH, MEASURED FROM THE SHELL.
 #
 # `NDS_P2_FOUR_CPU_ROSTER` above is a DIRECT-BATTLE arm: its target sets
@@ -4291,6 +4296,9 @@ endif
 ifeq ($(NDS_P2_SAMUS),1)
 NDS_P2_FIGHTER_RELOC_FILES += $(NDS_P2_SAMUS_FIGHTER_RELOC_FILES)
 endif
+ifeq ($(NDS_P2_LINK),1)
+NDS_P2_FIGHTER_RELOC_FILES += $(NDS_P2_LINK_FIGHTER_RELOC_FILES)
+endif
 
 NDS_EFFECT_RELOC_FILES := \
 	reloc_effects/EFCommonEffects1 \
@@ -4686,6 +4694,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_P2_DONKEY $(NDS_P2_DONKEY)'; \
 		echo '#define NDS_P2_CAPTAIN $(NDS_P2_CAPTAIN)'; \
 		echo '#define NDS_P2_SAMUS $(NDS_P2_SAMUS)'; \
+		echo '#define NDS_P2_LINK $(NDS_P2_LINK)'; \
 		echo '#define NDS_P2_SHELL_ARGMAX_ROSTER $(NDS_P2_SHELL_ARGMAX_ROSTER)'; \
 		echo '#define NDS_NATIVE_OWNER_IMAGE_CAPTAIN $(NDS_NATIVE_OWNER_IMAGE_CAPTAIN)'; \
 		echo '#define NDS_NATIVE_OWNER_IMAGE_SAMUS $(NDS_NATIVE_OWNER_IMAGE_SAMUS)'; \

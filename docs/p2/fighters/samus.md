@@ -1,15 +1,15 @@
 # Samus — P2-3 fighter 4
 
-Status: integration in progress · Reference: `decomp/BattleShip-main/decomp/src/ft/ftchar/ftsamus/`
+Status: automated gameplay acceptance complete; owner-feel pass pending · Reference: `decomp/BattleShip-main/decomp/src/ft/ftchar/ftsamus/`
 
 The source gameplay slice is now linked and the real shell can select Samus.
 This is **not** a completion claim: Charge Shot's source lifecycle,
 Bomb/bomb-jump, and the source-specific gameplay audio bank are now accepted,
 and the structural move inventory is now source-audited. The controller-driven
 common movement/combat, exhaustive ordinary attack/grab/throw inventory,
-ledge/down/tech recovery and budget/stress gates are accepted; the remaining
-DamageFly directional variants, determinism replay and owner-feel acceptance
-still need closure.
+ledge/down/tech recovery, complete DamageFly-family coverage, CPU determinism
+and budget/stress gates are accepted. Only the owner's subjective feel pass is
+still open.
 
 ## Role
 
@@ -464,4 +464,8 @@ repeat `2026-08-28_p2-3f28-samus-damagefly-tour-repeat.txt`.
       stalls; shared compact-pose ownership is source-joint exact.
 - [x] Complete DamageFly family: Hi/N/Lw/Top/Roll through real source attacks,
       exact placement 2/1/0 selection and BattleShip-owned Top/Roll overrides.
-- [ ] CPU determinism replay; owner feel pass.
+- [x] CPU determinism replay: two same-ROM natural level-3 CPU-vs-CPU matches
+      produced 472/472 identical complete-state samples over the same 4,712
+      source updates at stride 10, with zero overflow and byte-identical CPU
+      telemetry (`P2-3f29`, ROM `47B861DE…126D`).
+- [ ] Owner feel pass.

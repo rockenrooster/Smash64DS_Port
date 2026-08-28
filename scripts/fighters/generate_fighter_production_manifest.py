@@ -37,7 +37,9 @@ from typing import Iterable
 import generate_nds_native_owners as native_owner
 
 
-BOOTSTRAP_FIGHTERS = ("Mario", "Fox", "Luigi", "Donkey", "Captain", "Samus")
+BOOTSTRAP_FIGHTERS = (
+    "Mario", "Fox", "Luigi", "Donkey", "Captain", "Samus", "Link",
+)
 CORE_SLOT_NAMES = (
     "main",
     "mainmotion",
