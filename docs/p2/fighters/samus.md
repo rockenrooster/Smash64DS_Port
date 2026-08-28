@@ -5,7 +5,9 @@ Status: integration in progress · Reference: `decomp/BattleShip-main/decomp/src
 The source gameplay slice is now linked and the real shell can select Samus.
 This is **not** a completion claim: Charge Shot's source lifecycle,
 Bomb/bomb-jump, and the source-specific gameplay audio bank are now accepted,
-but the move inventory sweep and budget/stress acceptance still need closure.
+and the structural move inventory is now source-audited; the broader scripted
+every-state tour plus budget/stress/determinism/owner-feel acceptance still need
+closure.
 
 ## Role
 
@@ -144,9 +146,75 @@ beam/bomb SFX from source set, announcer clip.
   all expected entries are covered with zero exclusions. REGION_US audio-ID
   fixtures pass 295 constants and the runtime audio fixtures stay green.
 
+## Move inventory (swept 2026-08-27 against BattleShip)
+
+Samus's ordinary move set is data-driven by the same common fighter machinery
+as Mario/Fox; the Samus-specific executable state machine is the 11-entry
+special table above it. The production question is therefore not "did we write
+a second jab/tilt/smash implementation?" — doing that would fork the source
+behavior — but whether **all of Samus's source motion data and every
+Samus-specific callback owner reached the DS image without a compatibility stub
+silently taking over**.
+
+The source-derived fighter-production manifest answers the resource side:
+
+| Source inventory | Samus |
+|---|---:|
+| `dFTSamusMotionDescs` entries | **206** |
+| unique local animation resources | **150** |
+| item-hold/swing/throw motion files already staged for P2-5 | **19** |
+| Event32 motion files | **2** |
+| complete NitroFS fighter-resource closure | **158** unique files |
+| `dFTSamusSpecialStatusDescs` entries | **11** |
+
+`scripts/fighters/fighter_production_manifest.json` derives those files from
+BattleShip `ftdata.c`/reloc symbols rather than a hand list. All **150/150**
+local animation aliases resolve to source assets. The 158-file NitroFS set is
+unique and its source allocation total is **482,736 B**; the eight-resource
+core closure accounts for **171,136 B** of that source allocation footprint.
+`check-fighter-production-manifest.ps1` regenerates that manifest and its Make
+fragment/runtime header, so source-inventory drift is a build-check failure
+rather than a documentation mismatch.
+
+The linked Samus proof image independently settles the two tables that matter:
+
+- `dFTSamusMotionDescs` is **0x9a8 = 2,472 B = 206 × 12-byte
+  `FTMotionDesc`**, exactly the source `dFTSamusData` count `0xCE`.
+- `dFTSamusSpecialStatusDescs` is **0xdc = 220 B = 11 × 20-byte
+  `FTStatusDesc`**, i.e. BattleShip's full table, not the inactive 16-entry
+  compatibility table in the project header.
+- the image contains **53 strong `ftSamus*` / `wpSamus*` text symbols and zero
+  weak Samus owners**. The three fighter behavior TUs (`specialn`, `specialhi`,
+  `speciallw`) and both weapon TUs (Charge Shot/Bomb) are included directly
+  from `decomp/`; the only behavioral adapter in that fighter wrapper is the
+  already-documented deterministic third argument for BattleShip's malformed
+  two-argument Escape call.
+
+The common motion table covers the source mobility/defense/damage/down/tech/
+ledge/grab/throw families and the complete attack inventory. The Samus-specific
+attack scripts in `216_SamusMainMotion.c` are present for Jab1/Jab2, Dash
+Attack, all five forward-tilt angles, up/down tilt, all five forward-smash
+angles, up/down smash, all five aerials, forward/back throw, and the three
+special families. Their hitbox, FGM/voice and effect commands remain the
+BattleShip motion-program data consumed by the shared imported motion-event
+interpreter; there is no DS-side rewritten move table to drift from those
+values. Item actions are deliberately **staged but not claimed runtime-tested**
+here because items remain P2-5 scope.
+
+Runtime ownership for the Samus-specific branches is already covered by the
+focused owner proof: neutral-B start/loop/cancel/resume/release and projectile
+ownership, grounded/aerial down-B plus bomb-jump/explosion, and Screw Attack's
+source status/audio entry all execute through the strong source owners. This
+closes the structural **move inventory sweep** used by the fighter-unit docs;
+it does **not** claim the P2-3 plan's broader scripted every-state tour,
+determinism replay, budget/stress gate or owner-feel acceptance is complete.
+
 ## Acceptance
 
-- [ ] Move inventory sweep vs `ftsamus` data.
+- [x] Move inventory sweep vs `ftsamus`/`ftdata` data: 206 motion descriptors,
+      150 local animation resources, 158 unique NitroFS files and the complete
+      11-status Samus table are source-derived and present in the linked image;
+      all 53 linked Samus fighter/weapon owners are strong (2026-08-27).
 - [x] Charge store/cancel/resume/release and source-defined damage/death/rebirth
       lifecycle matrix equivalent.
 - [x] Bomb-jump reproduces through real keyboard input -> DS controller path,
