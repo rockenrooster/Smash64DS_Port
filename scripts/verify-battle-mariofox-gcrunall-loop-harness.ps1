@@ -1625,6 +1625,7 @@ try {
             @(
                 'set variable gNdsTask9StateHashArmed = 0',
                 'set variable gNdsTask9StateHashCount = 0',
+                'set variable gNdsTask9StateHashSourceUpdateCount = 0',
                 'set variable gNdsTask9StateHashOverflow = 0',
                 'set variable gNdsTask9StateHashArmed = 1'
             )
@@ -2350,6 +2351,7 @@ try {
                 $preBattleSetupCommands += @(
                     'set variable gNdsTask9StateHashArmed = 0',
                     'set variable gNdsTask9StateHashCount = 0',
+                    'set variable gNdsTask9StateHashSourceUpdateCount = 0',
                     'set variable gNdsTask9StateHashOverflow = 0',
                     'set variable gNdsTask9StateHashArmed = 1'
                 )

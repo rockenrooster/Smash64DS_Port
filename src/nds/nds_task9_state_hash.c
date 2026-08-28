@@ -74,6 +74,7 @@ typedef struct NDSTask9StateHashContext
 
 volatile u32 gNdsTask9StateHashArmed;
 volatile u32 gNdsTask9StateHashCount;
+volatile u32 gNdsTask9StateHashSourceUpdateCount;
 volatile u32 gNdsTask9StateHashOverflow;
 volatile NDSTask9StateHashRecord
     gNdsTask9StateHashes[NDS_TASK9_STATE_HASH_MAX_UPDATES];
@@ -537,8 +538,14 @@ void ndsTask9StateHashRecordUpdate(void)
     };
     u32 scalars[3];
     u32 index;
+    u32 source_update;
 
     if (gNdsTask9StateHashArmed == 0u)
+    {
+        return;
+    }
+    source_update = gNdsTask9StateHashSourceUpdateCount++;
+    if ((source_update % NDS_TASK9_STATE_HASH_STRIDE) != 0u)
     {
         return;
     }
@@ -555,7 +562,9 @@ void ndsTask9StateHashRecordUpdate(void)
     scalars[0] = (u32)syUtilsRandSeed();
     scalars[1] = (u32)((uintptr_t)gSYTaskmanGeneralHeap.ptr -
                        (uintptr_t)gSYTaskmanGeneralHeap.start);
-    scalars[2] = index;
+    /* Keep temporal identity in the hash even when a verification build uses
+     * a sampling stride. At stride 1 this is byte-for-byte the old value. */
+    scalars[2] = source_update;
     ndsTask9StateHashBytes(&ctx, NDS_TASK9_STATE_RECORD_SCALARS,
                            scalars, sizeof(scalars));
     ndsTask9StateHashBytes(&ctx, NDS_TASK9_STATE_RECORD_SCENE,

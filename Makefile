@@ -1955,6 +1955,11 @@ NDS_TASK9_STATE_HASH_SKIP_CONTROLLERS ?= 0
 # Lab-only: bitmask of NDSTask9StateRecordKind values the state hash includes.
 # Diagnostic for Task 37 region isolation only; a filtered hash is a weaker gate.
 NDS_TASK9_STATE_HASH_REGION_MASK ?= 0xFFFFFFFF
+# Verification-only cadence selector. 1 preserves the original Task 9 contract:
+# hash the complete active game state after every source update. Fighter-unit
+# determinism replays may raise this to sample that SAME complete state at a
+# fixed source-update cadence while still running the full one-minute match.
+NDS_TASK9_STATE_HASH_STRIDE ?= 1
 # Lab-only: snapshot raw FTStruct bytes for both fighters on updates N-1 and N,
 # so the Task 37 divergence names an offset instead of a 3,012-byte blob.
 # Costs ~12 KiB of BSS when enabled; observation only, never in a shipping build.
@@ -4629,6 +4634,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_TASK37_LAYOUT_PROBE_ITCM $(NDS_TASK37_LAYOUT_PROBE_ITCM)'; \
 		echo '#define NDS_TASK9_STATE_HASH_SKIP_CONTROLLERS $(NDS_TASK9_STATE_HASH_SKIP_CONTROLLERS)'; \
 		echo '#define NDS_TASK9_STATE_HASH_REGION_MASK $(NDS_TASK9_STATE_HASH_REGION_MASK)u'; \
+		echo '#define NDS_TASK9_STATE_HASH_STRIDE $(NDS_TASK9_STATE_HASH_STRIDE)u'; \
 		echo '#define NDS_TASK9_FTSTRUCT_SNAPSHOT $(NDS_TASK9_FTSTRUCT_SNAPSHOT)'; \
 		echo '#define NDS_TASK9_FTSTRUCT_SNAPSHOT_UPDATE $(NDS_TASK9_FTSTRUCT_SNAPSHOT_UPDATE)u'; \
 		echo '#define NDS_TASK37_PROFILE_START $(NDS_TASK37_PROFILE_START)u'; \
