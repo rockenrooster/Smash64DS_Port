@@ -270,6 +270,37 @@ This closes a prerequisite, not the state-tour checkbox: the next proof still
 has to enter the ledge/tumble and remaining attack variants through gameplay
 transitions rather than cycling animation descriptors directly.
 
+### Natural ledge-state tour — 2026-08-28
+
+The ledge half of that runtime-equivalence gate is now closed without status
+injection. BattleShip `ftcommoncliffcatchwait.c` is the behavioral authority:
+CliffWait A/B selects attack, Z selects escape, inward/upward stick selects
+climb, and damage below/at-or-above 100 selects the Quick/Slow family. The
+proof-only `NDS_P2_SAMUS_STATE_TOUR` driver does not assign `status_id` or
+`motion_id` and never calls `ftMainSetStatus`; `verify-p2-samus-state-tour.ps1`
+also rejects those patterns statically before launching the ROM.
+
+Each of six scenarios begins only after the established controller-driven
+common tour has reached `NAT_MOVESET=0x7ff`. From source Wait, ordinary right
+input runs Samus off Dream Land and the source map path selects Fall. Only then
+does guest code establish the cache-coherent geometry/damage/facing
+precondition for one descending right-cliff sweep. The normal DS map update and
+BattleShip collision path must select CliffCatch and CliffWait; controller input
+then selects Quick Attack/Escape/Climb or Slow Attack/Escape/Climb. The guest
+never primes the cliff/action status being claimed.
+
+`artifacts/verification/2026-08-28_p2-3f25-samus-natural-ledge-tour.txt` banks
+the permanent read-only-GDB proof: **6/6 scenarios**, exactly **12** guest
+precondition stages (two per scenario), full source-state mask **`0x1ffff`**,
+prerequisite **`NAT_MOVESET=0x7ff`**, and **0 stalls**. The mask covers Fall,
+CliffCatch, CliffWait, CliffQuick/CliffSlow and both stage-1/stage-2 states for
+all six attack/escape/climb families. The exact proof ROM SHA-256 is
+`A125C7E3DFD2C57E1B0F65D497994830C3F9E2274334748FBEBD1F228BE7ACB7`.
+
+This closes ledge visitation only. DamageFly/tumble, down/bounce/getup and
+Passive/tech visitation still need their own source-selected gameplay tour, and
+the remaining attack variants still need explicit runtime coverage.
+
 ## Acceptance
 
 - [x] Move inventory sweep vs `ftsamus`/`ftdata` data: 206 motion descriptors,
@@ -290,5 +321,7 @@ transitions rather than cycling animation descriptors directly.
       `NAT_MOVESET=0x7ff` with source-owned transitions and no native GX fallback.
 - [x] Full runtime animation-loader closure: 201/201 non-null Samus motions
       resolve with zero silent fallback or loader-safety failures.
-- [ ] Exhaustive attack-variant + ledge/tumble scripted tour; CPU determinism
-      replay; owner feel pass.
+- [x] Natural ledge-state tour: source-selected Fall/CliffCatch/CliffWait plus
+      all quick/slow attack, escape and climb stages; mask `0x1ffff`, zero stalls.
+- [ ] Exhaustive remaining attack variants + tumble/down/tech scripted tour;
+      CPU determinism replay; owner feel pass.

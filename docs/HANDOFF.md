@@ -1,21 +1,23 @@
 # Handoff
 
-Current: 2026-08-27 — **P2-3f24 CLOSED: Samus's complete source animation
-table now has runtime loader closure before the remaining state tour.** The
-profile-1 Task-40 audit is generalized from Mario/Fox to all six landed fighters
-with source-pinned row counts (204/219/221/206/204/214 for Mario/Fox/Donkey/
-Samus/Luigi/Captain) and a data-only mode that walks the real `ftMainSetStatus`
-and relocation path without screenshot cost. Samus proves **201/201 non-null
-motions resolved + 5 source-null**, with zero stale-heap load fallback,
-external-fixup, figatree-invalid, unsafe or timeout failures. Motions 72..87,
-the complete CliffCatch→CliffEscapeSlow2 bank, are 16/16 resolved; damage-fly,
-down and tech/stun assets resolve too. The audit remains profile-1-only; on the
-bounded non-performance target its flag alone switches profile 1 + CPU hierarchy
-compose, so normal profile-0 builds retain their existing renderer bundle.
-Artifact: `2026-08-27_p2-3f24-samus-anim-audit-closure-audit.csv`. This is asset
-runtime proof, **not** a claim that cliff/tumble states were naturally visited.
-P2-3f23 remains the controller-driven common-combat close. Samus still owes the
-exhaustive attack-variant + ledge/tumble tour, CPU determinism and owner feel.
+Current: 2026-08-28 — **P2-3f25 CLOSED: Samus's natural ledge-state tour is
+GREEN through BattleShip's real cliff transitions.** Source `ftcommoncliffcatchwait.c`
+owns the branch law: A/B selects attack, Z selects escape, inward/upward stick
+selects climb, and damage `<100` / `>=100` selects Quick / Slow. The proof-only
+guest driver starts only after the existing controller tour reaches
+`NAT_MOVESET=0x7ff`; it may establish cache-coherent geometry/damage/facing
+preconditions, but it never assigns `status_id`/`motion_id` or calls
+`ftMainSetStatus`. Samus first runs off Dream Land through the normal source
+ground-break into Fall, then the DS collision backend must accept the descending
+R-cliff sweep and BattleShip must select CliffCatch/CliffWait and all six
+quick/slow attack/escape/climb families. Permanent read-only verifier result:
+**6/6 scenarios, 12 guest precondition stages, mask `0x1ffff`, prior
+`NAT_MOVESET=0x7ff`, stalls 0**. ROM SHA-256
+`A125C7E3DFD2C57E1B0F65D497994830C3F9E2274334748FBEBD1F228BE7ACB7`;
+artifact `2026-08-28_p2-3f25-samus-natural-ledge-tour.txt`. P2-3f24's 201/201
+runtime animation-loader closure remains the prerequisite beneath this proof.
+Samus still owes exhaustive attack variants, the tumble/down/tech state tour,
+CPU-vs-CPU determinism replay and owner feel.
 
 ## State
 

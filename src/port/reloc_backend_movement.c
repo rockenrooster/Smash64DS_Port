@@ -4303,6 +4303,29 @@ enum {
 };
 #endif
 
+#if NDS_P2_SAMUS_STATE_TOUR
+enum {
+    nNDSSamusStateTourQuickAttack = 0,
+    nNDSSamusStateTourQuickEscape,
+    nNDSSamusStateTourQuickClimb,
+    nNDSSamusStateTourSlowAttack,
+    nNDSSamusStateTourSlowEscape,
+    nNDSSamusStateTourSlowClimb,
+    nNDSSamusStateTourDone
+};
+
+enum {
+    nNDSSamusStateTourStepPrepare = 0,
+    nNDSSamusStateTourStepRunOff,
+    nNDSSamusStateTourStepAwaitCliff,
+    nNDSSamusStateTourStepCliffWait,
+    nNDSSamusStateTourStepRecover
+};
+
+#define NDS_SAMUS_STATE_TOUR_LEDGE_MASK_ALL 0x0001ffffu
+#define NDS_SAMUS_STATE_TOUR_TIMEOUT 1800u
+#endif
+
 #if NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_HI || \
     NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_LW || \
     NDS_IMPORT_BATTLESHIP_FOX_SPECIAL_HI || NDS_P2_DONKEY
@@ -4380,6 +4403,15 @@ static u32 sNdsNaturalMovesetSettleFrames;
 static u32 sNdsNaturalMovesetDone;
 static u32 sNdsNaturalMovesetKORecoveryActive;
 static u32 sNdsNaturalMovesetKORecoveryPhase;
+#endif
+#if NDS_P2_SAMUS_STATE_TOUR
+static u32 sNdsSamusStateTourScenario;
+static u32 sNdsSamusStateTourStep;
+static u32 sNdsSamusStateTourFrames;
+static u32 sNdsSamusStateTourActionSeen;
+static s32 sNdsSamusStateTourFloorLine;
+static u32 sNdsSamusStateTourActive;
+static u32 sNdsSamusStateTourDone;
 #endif
 #if NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_HI || \
     NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_LW || \
@@ -5633,6 +5665,22 @@ void ndsFighterMarioFoxNaturalMotionPrepare(void)
     sNdsNaturalMovesetKORecoveryActive = 0u;
     sNdsNaturalMovesetKORecoveryPhase = nNDSNaturalMovesetPhaseIdle;
 #endif
+#if NDS_P2_SAMUS_STATE_TOUR
+    sNdsSamusStateTourScenario = nNDSSamusStateTourQuickAttack;
+    sNdsSamusStateTourStep = nNDSSamusStateTourStepPrepare;
+    sNdsSamusStateTourFrames = 0u;
+    sNdsSamusStateTourActionSeen = 0u;
+    sNdsSamusStateTourFloorLine = -1;
+    sNdsSamusStateTourActive = 0u;
+    sNdsSamusStateTourDone = 0u;
+    gNdsSamusStateTourMask = 0u;
+    gNdsSamusStateTourPhase = nNDSSamusStateTourQuickAttack;
+    gNdsSamusStateTourPhaseFrames = 0u;
+    gNdsSamusStateTourStatus = 0u;
+    gNdsSamusStateTourMotion = 0u;
+    gNdsSamusStateTourCliffID = (u32)-1;
+    gNdsSamusStateTourStageCount = 0u;
+#endif
 #if NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_HI || \
     NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_LW || \
     NDS_IMPORT_BATTLESHIP_FOX_SPECIAL_HI || NDS_P2_DONKEY
@@ -6344,6 +6392,299 @@ static sb32 ndsFighterNaturalMovesetAdvance(FTStruct *fp[2])
         break;
     }
     return FALSE;
+}
+#endif
+
+#if NDS_P2_SAMUS_STATE_TOUR
+static void ndsSamusStateTourRecord(FTStruct *samus)
+{
+    u32 bit = 0u;
+
+    if (samus == NULL)
+    {
+        return;
+    }
+    gNdsSamusStateTourStatus = (u32)samus->status_id;
+    gNdsSamusStateTourMotion = (u32)samus->motion_id;
+    gNdsSamusStateTourCliffID = (u32)samus->coll_data.cliff_id;
+    switch (samus->status_id)
+    {
+    case nFTCommonStatusFall: bit = 1u << 0; break;
+    case nFTCommonStatusCliffCatch: bit = 1u << 1; break;
+    case nFTCommonStatusCliffWait: bit = 1u << 2; break;
+    case nFTCommonStatusCliffQuick: bit = 1u << 3; break;
+    case nFTCommonStatusCliffAttackQuick1: bit = 1u << 4; break;
+    case nFTCommonStatusCliffAttackQuick2: bit = 1u << 5; break;
+    case nFTCommonStatusCliffEscapeQuick1: bit = 1u << 6; break;
+    case nFTCommonStatusCliffEscapeQuick2: bit = 1u << 7; break;
+    case nFTCommonStatusCliffClimbQuick1: bit = 1u << 8; break;
+    case nFTCommonStatusCliffClimbQuick2: bit = 1u << 9; break;
+    case nFTCommonStatusCliffSlow: bit = 1u << 10; break;
+    case nFTCommonStatusCliffAttackSlow1: bit = 1u << 11; break;
+    case nFTCommonStatusCliffAttackSlow2: bit = 1u << 12; break;
+    case nFTCommonStatusCliffEscapeSlow1: bit = 1u << 13; break;
+    case nFTCommonStatusCliffEscapeSlow2: bit = 1u << 14; break;
+    case nFTCommonStatusCliffClimbSlow1: bit = 1u << 15; break;
+    case nFTCommonStatusCliffClimbSlow2: bit = 1u << 16; break;
+    default: break;
+    }
+    gNdsSamusStateTourMask |= bit;
+}
+
+static sb32 ndsSamusStateTourExpectedAction2(s32 status_id)
+{
+    switch (sNdsSamusStateTourScenario)
+    {
+    case nNDSSamusStateTourQuickAttack:
+        return (status_id == nFTCommonStatusCliffAttackQuick2) ? TRUE : FALSE;
+    case nNDSSamusStateTourQuickEscape:
+        return (status_id == nFTCommonStatusCliffEscapeQuick2) ? TRUE : FALSE;
+    case nNDSSamusStateTourQuickClimb:
+        return (status_id == nFTCommonStatusCliffClimbQuick2) ? TRUE : FALSE;
+    case nNDSSamusStateTourSlowAttack:
+        return (status_id == nFTCommonStatusCliffAttackSlow2) ? TRUE : FALSE;
+    case nNDSSamusStateTourSlowEscape:
+        return (status_id == nFTCommonStatusCliffEscapeSlow2) ? TRUE : FALSE;
+    case nNDSSamusStateTourSlowClimb:
+        return (status_id == nFTCommonStatusCliffClimbSlow2) ? TRUE : FALSE;
+    default:
+        return FALSE;
+    }
+}
+
+static sb32 ndsSamusStateTourPrepareLedge(FTStruct *samus)
+{
+    DObj *root;
+    Vec3f edge;
+    u16 flags;
+
+    if ((samus == NULL) || (samus->fkind != nFTKindSamus) ||
+        (samus->status_id != nFTCommonStatusWait) ||
+        (samus->ga != nMPKineticsGround))
+    {
+        return FALSE;
+    }
+    root = samus->joints[nFTPartsJointTopN];
+    if (root == NULL)
+    {
+        return FALSE;
+    }
+
+    /* Dream Land's source main floor is line 3.  Stage only the scenario
+     * precondition while Samus is already in source Wait; the ordinary
+     * Wait/Walk/Run map callbacks must select Fall before any cliff sweep is
+     * staged.  No fighter status or motion is assigned here. */
+    sNdsSamusStateTourFloorLine = 3;
+    mpCollisionGetFloorEdgeR(sNdsSamusStateTourFloorLine, &edge);
+    flags = mpCollisionGetVertexFlagsLineID(sNdsSamusStateTourFloorLine);
+    if ((flags & MAP_VERTEX_COLL_CLIFF) == 0u)
+    {
+        return FALSE;
+    }
+
+    samus->percent_damage =
+        (sNdsSamusStateTourScenario >= nNDSSamusStateTourSlowAttack) ?
+        FTCOMMON_CLIFF_DAMAGE_HIGH : 0;
+    samus->lr = +1;
+    samus->cliffcatch_wait = 0;
+    samus->is_cliff_hold = FALSE;
+    samus->physics.vel_ground.x = 0.0F;
+    samus->vel_ground.x = 0.0F;
+    root->translate.vec.f.x = edge.x - 48.0F;
+    root->translate.vec.f.y = edge.y - samus->coll_data.map_coll.bottom;
+    root->translate.vec.f.z = 0.0F;
+    samus->coll_data.p_translate = &root->translate.vec.f;
+    samus->coll_data.p_lr = &samus->lr;
+    samus->coll_data.p_map_coll = &samus->coll_data.map_coll;
+    samus->coll_data.pos_prev = root->translate.vec.f;
+    samus->coll_data.floor_line_id = sNdsSamusStateTourFloorLine;
+    samus->coll_data.floor_flags = flags;
+    samus->coll_data.mask_curr = MAP_FLAG_FLOOR;
+    samus->coll_data.mask_stat = MAP_FLAG_FLOOR;
+    samus->coll_data.cliff_id = -1;
+    samus->coll_data.ignore_line_id = -1;
+    gNdsSamusStateTourStageCount++;
+    sNdsSamusStateTourFrames = 0u;
+    sNdsSamusStateTourStep = nNDSSamusStateTourStepRunOff;
+    return TRUE;
+}
+
+static sb32 ndsSamusStateTourStageCliffSweep(FTStruct *samus)
+{
+    DObj *root;
+    Vec3f edge;
+    Vec2f cliffcatch;
+    f32 sample_x;
+
+    if ((samus == NULL) || (samus->status_id != nFTCommonStatusFall) ||
+        (samus->ga != nMPKineticsAir))
+    {
+        return FALSE;
+    }
+    root = samus->joints[nFTPartsJointTopN];
+    if (root == NULL)
+    {
+        return FALSE;
+    }
+    mpCollisionGetFloorEdgeR(sNdsSamusStateTourFloorLine, &edge);
+    cliffcatch = samus->coll_data.cliffcatch_coll;
+    if (cliffcatch.x <= 0.0F)
+    {
+        cliffcatch.x = 64.0F;
+    }
+    if (cliffcatch.y == 0.0F)
+    {
+        cliffcatch.y = 64.0F;
+    }
+    sample_x = edge.x - 100.0F;
+
+    /* Source R-cliff test uses (root - cliffcatch) and requires lr == -1.
+     * These guest writes establish a descending sweep after source Fall has
+     * already been selected; BattleShip mpprocess still decides whether it is
+     * a cliff and ftCommonCliffCatchSetStatus still owns the transition. */
+    samus->lr = -1;
+    samus->cliffcatch_wait = 0;
+    samus->is_cliff_hold = FALSE;
+    samus->coll_data.cliffcatch_coll = cliffcatch;
+    samus->coll_data.p_translate = &root->translate.vec.f;
+    samus->coll_data.p_lr = &samus->lr;
+    samus->coll_data.pos_prev.x = sample_x + cliffcatch.x;
+    samus->coll_data.pos_prev.y = edge.y - cliffcatch.y + 2.0F;
+    samus->coll_data.pos_prev.z = 0.0F;
+    root->translate.vec.f.x = sample_x + cliffcatch.x;
+    /* mpCommonUpdateFighterCollisionData snapshots the current translate into
+     * pos_prev at the beginning of the next source map update.  Keep the live
+     * grab point ABOVE the floor here; ordinary Fall physics then advances it
+     * below the floor in that update, producing the source-required descending
+     * (+ -> -) cliff sweep.  Staging it below the floor made the real call
+     * observe -2 -> -7.9 and correctly reject the cliff. */
+    root->translate.vec.f.y = edge.y - cliffcatch.y + 2.0F;
+    root->translate.vec.f.z = 0.0F;
+    samus->physics.vel_air.x = 0.0F;
+    samus->physics.vel_air.y = -4.0F;
+    samus->physics.vel_air.z = 0.0F;
+    samus->vel_air = samus->physics.vel_air;
+    samus->coll_data.update_tic = gMPCollisionUpdateTic;
+    samus->coll_data.mask_curr = 0u;
+    samus->coll_data.mask_stat = 0u;
+    samus->coll_data.floor_line_id = -1;
+    samus->coll_data.cliff_id = -1;
+    samus->coll_data.ignore_line_id = -1;
+    gNdsSamusStateTourStageCount++;
+    sNdsSamusStateTourFrames = 0u;
+    sNdsSamusStateTourStep = nNDSSamusStateTourStepAwaitCliff;
+    return TRUE;
+}
+
+static sb32 ndsSamusStateTourAdvance(FTStruct *fp[2])
+{
+    FTStruct *samus = fp[0];
+
+    sNdsSamusStateTourActive = 1u;
+    if (sNdsSamusStateTourDone != 0u)
+    {
+        return TRUE;
+    }
+    if ((samus == NULL) || (samus->fkind != nFTKindSamus))
+    {
+        return FALSE;
+    }
+    ndsSamusStateTourRecord(samus);
+    gNdsSamusStateTourPhase = sNdsSamusStateTourScenario;
+    gNdsSamusStateTourPhaseFrames = ++sNdsSamusStateTourFrames;
+    if (sNdsSamusStateTourFrames > NDS_SAMUS_STATE_TOUR_TIMEOUT)
+    {
+        gNdsFighterNaturalCombatStallCount++;
+        return FALSE;
+    }
+
+    switch (sNdsSamusStateTourStep)
+    {
+    case nNDSSamusStateTourStepPrepare:
+        (void)ndsSamusStateTourPrepareLedge(samus);
+        break;
+    case nNDSSamusStateTourStepRunOff:
+        if (samus->status_id == nFTCommonStatusFall)
+        {
+            (void)ndsSamusStateTourStageCliffSweep(samus);
+        }
+        break;
+    case nNDSSamusStateTourStepAwaitCliff:
+        if (samus->status_id == nFTCommonStatusCliffWait)
+        {
+            sNdsSamusStateTourFrames = 0u;
+            sNdsSamusStateTourStep = nNDSSamusStateTourStepCliffWait;
+        }
+        break;
+    case nNDSSamusStateTourStepCliffWait:
+        if (ndsSamusStateTourExpectedAction2(samus->status_id) != FALSE)
+        {
+            sNdsSamusStateTourActionSeen = 1u;
+            sNdsSamusStateTourFrames = 0u;
+            sNdsSamusStateTourStep = nNDSSamusStateTourStepRecover;
+        }
+        break;
+    case nNDSSamusStateTourStepRecover:
+        if ((sNdsSamusStateTourActionSeen != 0u) &&
+            (samus->status_id == nFTCommonStatusWait) &&
+            (samus->ga == nMPKineticsGround))
+        {
+            sNdsSamusStateTourScenario++;
+            sNdsSamusStateTourActionSeen = 0u;
+            sNdsSamusStateTourFrames = 0u;
+            if (sNdsSamusStateTourScenario >= nNDSSamusStateTourDone)
+            {
+                sNdsSamusStateTourDone = 1u;
+                gNdsSamusStateTourPhase = nNDSSamusStateTourDone;
+                return TRUE;
+            }
+            sNdsSamusStateTourStep = nNDSSamusStateTourStepPrepare;
+        }
+        break;
+    default:
+        break;
+    }
+    return FALSE;
+}
+
+static sb32 ndsSamusStateTourApplyInput(FTStruct *fp[2], u16 button[2],
+                                        s8 stick_x[2], s8 stick_y[2])
+{
+    FTStruct *samus = fp[0];
+
+    if ((sNdsSamusStateTourActive == 0u) ||
+        (sNdsSamusStateTourDone != 0u) || (samus == NULL) ||
+        (samus->fkind != nFTKindSamus))
+    {
+        return FALSE;
+    }
+    if (sNdsSamusStateTourStep == nNDSSamusStateTourStepRunOff)
+    {
+        stick_x[0] = 80;
+    }
+    else if ((sNdsSamusStateTourStep == nNDSSamusStateTourStepCliffWait) &&
+             (samus->status_id == nFTCommonStatusCliffWait) &&
+             (samus->status_vars.common.cliffwait.is_allow_interrupt != FALSE))
+    {
+        switch (sNdsSamusStateTourScenario)
+        {
+        case nNDSSamusStateTourQuickAttack:
+        case nNDSSamusStateTourSlowAttack:
+            button[0] = A_BUTTON;
+            break;
+        case nNDSSamusStateTourQuickEscape:
+        case nNDSSamusStateTourSlowEscape:
+            button[0] = Z_TRIG;
+            break;
+        case nNDSSamusStateTourQuickClimb:
+        case nNDSSamusStateTourSlowClimb:
+            stick_y[0] = 80;
+            break;
+        default:
+            break;
+        }
+    }
+    return TRUE;
 }
 #endif
 
@@ -7335,6 +7676,22 @@ static void ndsFighterNaturalCombatAdvancePhase(FTStruct *fp[2])
                 }
             }
 #endif
+#if NDS_P2_SAMUS_STATE_TOUR
+            if (sNdsSamusStateTourDone == 0u)
+            {
+                if (ndsSamusStateTourAdvance(fp) == FALSE)
+                {
+                    break;
+                }
+                if ((gNdsSamusStateTourMask &
+                     NDS_SAMUS_STATE_TOUR_LEDGE_MASK_ALL) !=
+                    NDS_SAMUS_STATE_TOUR_LEDGE_MASK_ALL)
+                {
+                    gNdsFighterNaturalCombatStallCount++;
+                    break;
+                }
+            }
+#endif
 #if NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_HI || \
     NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_LW || \
     NDS_IMPORT_BATTLESHIP_FOX_SPECIAL_HI || NDS_P2_DONKEY
@@ -7755,6 +8112,17 @@ static void ndsFighterNaturalCombatApplyInput(FTStruct *fp[2])
 #if NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET
     if (ndsFighterNaturalMovesetApplyInput(fp, button, stick, stick_y) !=
         FALSE)
+    {
+        for (i = 0u; i < 2u; i++)
+        {
+            ndsControllerPlaybackSetPad(i, button[i], stick[i], stick_y[i]);
+        }
+        return;
+    }
+#endif
+
+#if NDS_P2_SAMUS_STATE_TOUR
+    if (ndsSamusStateTourApplyInput(fp, button, stick, stick_y) != FALSE)
     {
         for (i = 0u; i < 2u; i++)
         {

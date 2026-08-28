@@ -715,6 +715,23 @@ NDS_NATIVE_OWNER_IMAGE_SAMUS = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_
 # NDS_P2_LUIGI=1 NDS_P2_PROOF_FIGHTER0=4, and later fighters reuse this same
 # descriptor seam behind their own production flags.
 NDS_P2_PROOF_FIGHTER0 ?= -1
+# P2-3 Samus source-state tour.  This is a proof-only guest driver layered on
+# the existing mode-163 controller playback.  It may stage geometry/damage
+# preconditions in guest code so writes are ARM9-cache coherent, but it never
+# assigns fighter status/motion or calls a status setter: BattleShip collision
+# and common-state interrupts must select every accepted ledge/tumble state.
+NDS_P2_SAMUS_STATE_TOUR ?= 0
+ifneq ($(filter 0 1,$(NDS_P2_SAMUS_STATE_TOUR)),$(NDS_P2_SAMUS_STATE_TOUR))
+$(error NDS_P2_SAMUS_STATE_TOUR must be 0 or 1)
+endif
+ifeq ($(NDS_P2_SAMUS_STATE_TOUR),1)
+ifneq ($(NDS_P2_SAMUS),1)
+$(error NDS_P2_SAMUS_STATE_TOUR=1 requires NDS_P2_SAMUS=1)
+endif
+ifneq ($(NDS_P2_PROOF_FIGHTER0),3)
+$(error NDS_P2_SAMUS_STATE_TOUR=1 requires NDS_P2_PROOF_FIGHTER0=3)
+endif
+endif
 # THE FREEZE SOAK'S MATCH LENGTH IN MINUTES, and nothing else's. 0 = leave the
 # harness seeding alone, which is the canonical one-minute Time match; non-zero
 # overrides scene_harness.c's time_limit.
@@ -4613,6 +4630,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_NATIVE_OWNER_IMAGE_CAPTAIN $(NDS_NATIVE_OWNER_IMAGE_CAPTAIN)'; \
 		echo '#define NDS_NATIVE_OWNER_IMAGE_SAMUS $(NDS_NATIVE_OWNER_IMAGE_SAMUS)'; \
 		echo '#define NDS_P2_PROOF_FIGHTER0 $(NDS_P2_PROOF_FIGHTER0)'; \
+		echo '#define NDS_P2_SAMUS_STATE_TOUR $(NDS_P2_SAMUS_STATE_TOUR)'; \
 		echo '#define NDS_R2_SOAK_MATCH_MINUTES $(NDS_R2_SOAK_MATCH_MINUTES)'; \
 		echo '#define NDS_ANIM_JOINT_AUDIT $(NDS_ANIM_JOINT_AUDIT)'; \
 		echo '#define NDS_AOBJ_EVENT32_HASH_ORACLE $(NDS_AOBJ_EVENT32_HASH_ORACLE)'; \

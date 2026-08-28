@@ -1,0 +1,31 @@
+P2-3f25 Samus natural ledge-state tour
+Date: 2026-08-28
+Command: .\\scripts\\verify-p2-samus-state-tour.ps1 -NoBuild
+ROM: .\builds\build-p2-samus-state-tour-fast\smash64ds-battle-playable-fast-hwtri.nds
+ROM SHA256: A125C7E3DFD2C57E1B0F65D497994830C3F9E2274334748FBEBD1F228BE7ACB7
+
+Build contract:
+#define NDS_DEV_LIVE_INPUT_PREVIEW 0
+#define NDS_HARNESS_FAST_LOGIC 1
+#define NDS_P2_SAMUS 1
+#define NDS_P2_PROOF_FIGHTER0 3
+#define NDS_P2_SAMUS_STATE_TOUR 1
+#define NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET 1
+#define NDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE 1
+
+Verifier:
+P2-3 Samus natural ledge tour passed: scenarios=6/6 stages=12 mask=0x1ffff NAT_MOVESET=0x7ff stalls=0.
+SAMUS_LEDGE_TOUR=6,10,6,4,0,1,1,12,0x1ffff,10,4,3,0x7ff,0
+
+GDB read-only marker:
+0x02030f4e in ndsRelocP2FighterAnimAssetIDForToken (token=35686460) at D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_assets.c:1298
+1298	    return (u32)(uintptr_t)file_id;
+Temporary breakpoint 1 at 0x2070f44: file D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_scvsbattle.c, line 251.
+
+Temporary breakpoint 1, scVSBattleStartBattle () at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_scvsbattle.c:251
+251	    gNdsSCVSBattleOriginalFuncStartResult =
+Temporary breakpoint 2 at 0x2029600: file D:/Stuff/DevFolder/Smash64DS_Port/src/port/libultra_os.c, line 239.
+
+Temporary breakpoint 2, osStopThread (thread=thread@entry=0x0 <unref_80006B44>) at D:/Stuff/DevFolder/Smash64DS_Port/src/port/libultra_os.c:239
+239	    OSThread *current = ndsOsCurrentThread();
+SAMUS_LEDGE_TOUR=6,10,6,4,0,1,1,12,0x1ffff,10,4,3,0x7ff,0\n[Inferior 1 (Remote target) detached]

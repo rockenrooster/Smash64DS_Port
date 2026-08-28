@@ -4140,6 +4140,15 @@ extern volatile u32 gNdsFighterNaturalMovesetVictimStatus;
 extern volatile u32 gNdsFighterNaturalMovesetVictimMotion;
 extern volatile u32 gNdsFighterNaturalMovesetVictimGA;
 extern volatile s32 gNdsFighterNaturalMovesetVictimRootYMilli;
+#if NDS_P2_SAMUS_STATE_TOUR
+extern volatile u32 gNdsSamusStateTourMask;
+extern volatile u32 gNdsSamusStateTourPhase;
+extern volatile u32 gNdsSamusStateTourPhaseFrames;
+extern volatile u32 gNdsSamusStateTourStatus;
+extern volatile u32 gNdsSamusStateTourMotion;
+extern volatile u32 gNdsSamusStateTourCliffID;
+extern volatile u32 gNdsSamusStateTourStageCount;
+#endif
 extern volatile u32 gNdsFighterBattlePlayableResult;
 extern volatile u32 gNdsFighterBattlePlayableMask;
 extern volatile u32 gNdsFighterBattlePlayableVictimSlot;

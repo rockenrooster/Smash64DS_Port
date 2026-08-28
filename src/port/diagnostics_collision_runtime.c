@@ -155,6 +155,15 @@ volatile u32 gNdsFighterDonkeySpecialsLwEndFrames;
 volatile u32 gNdsFighterDonkeySpecialsLwWaitFrames;
 #endif
 volatile u32 gNdsFighterNaturalMovesetMask;
+#if NDS_P2_SAMUS_STATE_TOUR
+volatile u32 gNdsSamusStateTourMask;
+volatile u32 gNdsSamusStateTourPhase;
+volatile u32 gNdsSamusStateTourPhaseFrames;
+volatile u32 gNdsSamusStateTourStatus;
+volatile u32 gNdsSamusStateTourMotion;
+volatile u32 gNdsSamusStateTourCliffID;
+volatile u32 gNdsSamusStateTourStageCount;
+#endif
 volatile u32 gNdsFighterNaturalMovesetPhase;
 volatile u32 gNdsFighterNaturalMovesetPhaseFrames;
 volatile u32 gNdsFighterNaturalMovesetTiltS3Frames;
