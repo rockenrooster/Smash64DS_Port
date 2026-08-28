@@ -301,6 +301,45 @@ This closes ledge visitation only. DamageFly/tumble, down/bounce/getup and
 Passive/tech visitation still need their own source-selected gameplay tour, and
 the remaining attack variants still need explicit runtime coverage.
 
+### Natural tumble/down/tech recovery tour — 2026-08-28
+
+The recovery half of the tumble gate is now source-selected from a real hit.
+BattleShip `ftcommondamage.c` is the damage-state authority; `ftcommondamagefall.c`
+owns landing selection, `ftcommonpassive.c` / `ftcommonpassivestand.c` own the
+three tech branches, and `ftcommondownwaitbounce.c` plus the down-state helpers
+own prone recovery. The proof-only `NDS_P2_SAMUS_TUMBLE_TOUR` arm is mutually
+exclusive with the ledge tour and starts only after the established common
+controller tour reaches `NAT_MOVESET=0x7ff`.
+
+Every one of **11** scenarios first stages Samus and Fox on Dream Land, then
+uses ordinary Fox Up+A input. The real fighter attack collision must put Samus
+into a DamageFly-family source status; only after BattleShip advances that hit to
+`DamageFall` may guest code establish the descending floor/orientation
+precondition. No status/motion assignment, `ftMainSetStatus`, damage-status
+setter, or fighter-damage injection is permitted; the permanent verifier rejects
+those patterns before booting the ROM.
+
+The three tech scenarios use BattleShip's buffered-Z law to select Passive,
+PassiveStandF and PassiveStandB. The remaining eight scenarios intentionally
+arrive without a tech buffer, so BattleShip selects DownBounceD/U and then
+DownWaitD/U; controller input from DownWait selects Stand, Forward, Back or
+Attack for each prone orientation. One proof bug was source-ordering, not game
+behavior: DownBounce changes to DownWait at the end of `gcRunAll`, while the next
+controller frame is applied before the proof recorder runs. A one-update
+observation latch now lets the recorder see DownWait before issuing the same
+source getup input.
+
+`artifacts/verification/2026-08-28_p2-3f26-samus-tumble-recovery-tour.txt`
+banks the permanent read-only-GDB result: **11/11 scenarios**, **11** real Fox
+hits, exactly **22** guest precondition stages, full recovery mask
+**`0x1ffff`**, DamageFly entry mask **`0x8` = DamageFlyTop**, prerequisite
+**`NAT_MOVESET=0x7ff`**, and **0 stalls**. The exact proof ROM SHA-256 is
+`B8D1D023B8C7EE0680EF34A2BE79F4BCF51E7E2C276F8D23BA36DA27EEBBC94C`.
+
+This closes down/tech recovery and proves a real tumble entry. It does **not**
+claim DamageFlyHi/Lw/N/Roll have all been visited; those directional damage
+variants remain part of the outstanding exhaustive attack/tumble inventory.
+
 ## Acceptance
 
 - [x] Move inventory sweep vs `ftsamus`/`ftdata` data: 206 motion descriptors,
@@ -323,5 +362,8 @@ the remaining attack variants still need explicit runtime coverage.
       resolve with zero silent fallback or loader-safety failures.
 - [x] Natural ledge-state tour: source-selected Fall/CliffCatch/CliffWait plus
       all quick/slow attack, escape and climb stages; mask `0x1ffff`, zero stalls.
-- [ ] Exhaustive remaining attack variants + tumble/down/tech scripted tour;
+- [x] Natural tumble/down/tech recovery tour: 11/11 real-hit scenarios cover
+      DamageFall, tech F/N/B, DownBounce/DownWait and every U/D getup branch;
+      recovery mask `0x1ffff`, zero stalls.
+- [ ] Exhaustive remaining attack variants + DamageFly directional variants;
       CPU determinism replay; owner feel pass.

@@ -4149,6 +4149,18 @@ extern volatile u32 gNdsSamusStateTourMotion;
 extern volatile u32 gNdsSamusStateTourCliffID;
 extern volatile u32 gNdsSamusStateTourStageCount;
 #endif
+#if NDS_P2_SAMUS_TUMBLE_TOUR
+extern volatile u32 gNdsSamusTumbleTourMask;
+extern volatile u32 gNdsSamusTumbleTourDamageFlyMask;
+extern volatile u32 gNdsSamusTumbleTourScenario;
+extern volatile u32 gNdsSamusTumbleTourStep;
+extern volatile u32 gNdsSamusTumbleTourFrames;
+extern volatile u32 gNdsSamusTumbleTourStatus;
+extern volatile u32 gNdsSamusTumbleTourMotion;
+extern volatile u32 gNdsSamusTumbleTourHitCount;
+extern volatile u32 gNdsSamusTumbleTourStageCount;
+extern volatile u32 gNdsSamusTumbleTourDone;
+#endif
 extern volatile u32 gNdsFighterBattlePlayableResult;
 extern volatile u32 gNdsFighterBattlePlayableMask;
 extern volatile u32 gNdsFighterBattlePlayableVictimSlot;

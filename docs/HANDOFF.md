@@ -1,23 +1,24 @@
 # Handoff
 
-Current: 2026-08-28 — **P2-3f25 CLOSED: Samus's natural ledge-state tour is
-GREEN through BattleShip's real cliff transitions.** Source `ftcommoncliffcatchwait.c`
-owns the branch law: A/B selects attack, Z selects escape, inward/upward stick
-selects climb, and damage `<100` / `>=100` selects Quick / Slow. The proof-only
-guest driver starts only after the existing controller tour reaches
-`NAT_MOVESET=0x7ff`; it may establish cache-coherent geometry/damage/facing
-preconditions, but it never assigns `status_id`/`motion_id` or calls
-`ftMainSetStatus`. Samus first runs off Dream Land through the normal source
-ground-break into Fall, then the DS collision backend must accept the descending
-R-cliff sweep and BattleShip must select CliffCatch/CliffWait and all six
-quick/slow attack/escape/climb families. Permanent read-only verifier result:
-**6/6 scenarios, 12 guest precondition stages, mask `0x1ffff`, prior
-`NAT_MOVESET=0x7ff`, stalls 0**. ROM SHA-256
-`A125C7E3DFD2C57E1B0F65D497994830C3F9E2274334748FBEBD1F228BE7ACB7`;
-artifact `2026-08-28_p2-3f25-samus-natural-ledge-tour.txt`. P2-3f24's 201/201
-runtime animation-loader closure remains the prerequisite beneath this proof.
-Samus still owes exhaustive attack variants, the tumble/down/tech state tour,
-CPU-vs-CPU determinism replay and owner feel.
+Current: 2026-08-28 — **P2-3f26 CLOSED: Samus's natural
+tumble/down/tech recovery tour is GREEN from real fighter hits.** BattleShip
+`ftcommondamage.c`, `ftcommondamagefall.c`, `ftcommonpassive*.c` and
+`ftcommondown*.c` own every claimed transition. Each of **11** scenarios begins
+with Fox's real controller-driven up-smash collision; Samus reaches the source
+DamageFly family and then `DamageFall` before the guest is allowed to establish
+the floor/orientation precondition. The proof does not assign `status_id` or
+`motion_id`, does not call `ftMainSetStatus`, and does not call the fighter-damage
+setter. From `DamageFall`, BattleShip selects neutral tech, tech forward/back or
+DownBounce; from DownWait, source interrupt code selects Stand/Forward/Back/
+Attack for both U/D prone orientations. Permanent read-only verifier result:
+**11/11 scenarios, 11 real hits, 22 guest precondition stages, recovery mask
+`0x1ffff`, DamageFly mask `0x8` (DamageFlyTop), prior `NAT_MOVESET=0x7ff`,
+stalls 0**. ROM SHA-256
+`B8D1D023B8C7EE0680EF34A2BE79F4BCF51E7E2C276F8D23BA36DA27EEBBC94C`;
+artifact `2026-08-28_p2-3f26-samus-tumble-recovery-tour.txt`; P2-3f25's ledge tour remains green underneath it. **Scope:** down/tech recovery is closed and a
+real tumble entry is proven, but the other DamageFly directional variants still
+belong to the remaining exhaustive attack/tumble inventory. Samus still owes
+those attack/tumble variants, CPU-vs-CPU determinism replay and owner feel.
 
 ## State
 

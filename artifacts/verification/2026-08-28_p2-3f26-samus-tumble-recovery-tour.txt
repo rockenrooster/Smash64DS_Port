@@ -1,0 +1,28 @@
+P2-3f26 Samus natural tumble/down/tech recovery tour
+Date: 2026-08-28
+Command: .\\scripts\\verify-p2-samus-tumble-tour.ps1 -NoBuild
+ROM: .\builds\build-p2-samus-tumble-tour-fast\smash64ds-battle-playable-fast-hwtri.nds
+ROM SHA256: B8D1D023B8C7EE0680EF34A2BE79F4BCF51E7E2C276F8D23BA36DA27EEBBC94C
+
+Build contract:
+#define NDS_DEV_LIVE_INPUT_PREVIEW 0
+#define NDS_HARNESS_FAST_LOGIC 1
+#define NDS_P2_SAMUS 1
+#define NDS_P2_PROOF_FIGHTER0 3
+#define NDS_P2_SAMUS_STATE_TOUR 0
+#define NDS_P2_SAMUS_TUMBLE_TOUR 1
+#define NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET 1
+#define NDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE 1
+
+Verifier:
+P2-3 Samus tumble/down/tech recovery tour passed: scenarios=11/11 hits=11 stages=22 mask=0x1ffff fly=0x8 NAT_MOVESET=0x7ff stalls=0.
+SAMUS_TUMBLE_TOUR=11,6,140,1,0x1ffff,0x8,11,22,10,4,0x7ff,0
+
+GDB read-only marker:
+ndsRelocP2FindGeneratedAllocSize (rows=0x20d309c <sNdsP2BaseFighterAllocSizes>, count=<optimized out>, asset_id=602) at D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_assets.c:6794
+6794	        u32 mid = lo + ((hi - lo) >> 1);
+Temporary breakpoint 1 at 0x2029600: file D:/Stuff/DevFolder/Smash64DS_Port/src/port/libultra_os.c, line 239.
+
+Temporary breakpoint 1, osStopThread (thread=thread@entry=0x0 <unref_80006B44>) at D:/Stuff/DevFolder/Smash64DS_Port/src/port/libultra_os.c:239
+239	    OSThread *current = ndsOsCurrentThread();
+SAMUS_TUMBLE_TOUR=11,6,140,1,0x1ffff,0x8,11,22,10,4,0x7ff,0\n[Inferior 1 (Remote target) detached]

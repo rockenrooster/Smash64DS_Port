@@ -164,6 +164,18 @@ volatile u32 gNdsSamusStateTourMotion;
 volatile u32 gNdsSamusStateTourCliffID;
 volatile u32 gNdsSamusStateTourStageCount;
 #endif
+#if NDS_P2_SAMUS_TUMBLE_TOUR
+volatile u32 gNdsSamusTumbleTourMask;
+volatile u32 gNdsSamusTumbleTourDamageFlyMask;
+volatile u32 gNdsSamusTumbleTourScenario;
+volatile u32 gNdsSamusTumbleTourStep;
+volatile u32 gNdsSamusTumbleTourFrames;
+volatile u32 gNdsSamusTumbleTourStatus;
+volatile u32 gNdsSamusTumbleTourMotion;
+volatile u32 gNdsSamusTumbleTourHitCount;
+volatile u32 gNdsSamusTumbleTourStageCount;
+volatile u32 gNdsSamusTumbleTourDone;
+#endif
 volatile u32 gNdsFighterNaturalMovesetPhase;
 volatile u32 gNdsFighterNaturalMovesetPhaseFrames;
 volatile u32 gNdsFighterNaturalMovesetTiltS3Frames;

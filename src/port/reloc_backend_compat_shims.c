@@ -30,6 +30,9 @@ extern s32 ndsRelocPointerIsFighterAObj16(const void *ptr);
 #endif
 
 static sb32 ndsMPReadMapObj(s32 index, u16 *kind, s16 *x, s16 *y);
+#if NDS_P2_SAMUS_TUMBLE_TOUR
+static void ndsSamusTumbleTourPrepareDamageFallMap(FTStruct *fp);
+#endif
 
 static sb32 ndsBattlePlayableRuntimeEnabled(void)
 {
@@ -11593,6 +11596,9 @@ void ftCommonDamageFallProcInterrupt(GObj *fighter_gobj)
 void ftCommonDamageFallProcMap(GObj *fighter_gobj)
 {
 #if NDS_IMPORT_BATTLESHIP_FTMANAGER
+#if NDS_P2_SAMUS_TUMBLE_TOUR
+    ndsSamusTumbleTourPrepareDamageFallMap(ftGetStruct(fighter_gobj));
+#endif
     ndsBaseFTCommonDamageFallProcMap(fighter_gobj);
     return;
 #endif
