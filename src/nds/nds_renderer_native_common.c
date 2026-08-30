@@ -3539,6 +3539,26 @@ static inline u32 ndsRendererNativeLabSeamPolyFmt(u32 poly_fmt)
 }
 #endif
 
+/* Captain is the first production fighter whose source roots use
+ * G_AC_THRESHOLD. Keep the DS register writes out of the packed ITCM submit
+ * body: they occur only when a batch begins, not per emitted vertex, and the
+ * hot region has no spare capacity for libnds' inlined glEnable/glAlphaFunc
+ * sequence. Semantics are the same mapping used by the generic renderer. */
+static void __attribute__((noinline, cold, optimize("Os")))
+ndsRendererNativeApplyProductionAlphaTest(const NDSRendererStats *stats)
+{
+    if ((stats->othermode_l & NDS_RENDERER_ALPHA_COMPARE_MASK) ==
+        NDS_RENDERER_ALPHA_COMPARE_THRESHOLD)
+    {
+        glEnable(GL_ALPHA_TEST);
+        glAlphaFunc((stats->blend_color & 0xffu) >> 4);
+    }
+    else
+    {
+        glDisable(GL_ALPHA_TEST);
+    }
+}
+
 static inline void ndsRendererNativeBeginDirectBatch(
     const NDSRendererStats *stats,
     u32 textured,
@@ -3546,6 +3566,9 @@ static inline void ndsRendererNativeBeginDirectBatch(
     u32 poly_fmt,
     u32 matrix_generation)
 {
+    u32 alpha_key =
+        (stats->othermode_l & NDS_RENDERER_ALPHA_COMPARE_MASK) |
+        ((stats->blend_color & 0xffu) << 8);
 #if NDS_LAB_NO_CULL
     /* THE production owner's batch. Mode 8 and mode 9 both come here and never
      * reach the hierarchy batch, so this is the site the probe has to patch. */
@@ -3555,6 +3578,7 @@ static inline void ndsRendererNativeBeginDirectBatch(
         (sNdsRendererHardwareTriangleBatchTextured == textured) &&
         (sNdsRendererHardwareTriangleBatchTextureName == texture_name) &&
         (sNdsRendererHardwareTriangleBatchPolyFmt == poly_fmt) &&
+        (sNdsRendererHardwareTriangleBatchAlphaKey == alpha_key) &&
         (sNdsRendererHardwareTriangleBatchMatrixMode ==
          NDS_RENDERER_HW_MATRIX_MODE_RAW_COMPOSED) &&
         (sNdsRendererHardwareTriangleBatchMatrixGeneration ==
@@ -3570,7 +3594,7 @@ static inline void ndsRendererNativeBeginDirectBatch(
     {
         ndsRendererHardwareBindNoTexture(NULL);
     }
-    glDisable(GL_ALPHA_TEST);
+    ndsRendererNativeApplyProductionAlphaTest(stats);
     glDisable(GL_FOG);
     ndsRendererHardwareSetPolyFmt(poly_fmt);
     glBegin(GL_TRIANGLE);
@@ -3580,12 +3604,11 @@ static inline void ndsRendererNativeBeginDirectBatch(
     sNdsRendererHardwareTriangleBatchTextured = textured;
     sNdsRendererHardwareTriangleBatchTextureName = texture_name;
     sNdsRendererHardwareTriangleBatchPolyFmt = poly_fmt;
-    sNdsRendererHardwareTriangleBatchAlphaKey = 0u;
+    sNdsRendererHardwareTriangleBatchAlphaKey = alpha_key;
     sNdsRendererHardwareTriangleBatchFogKey = 0u;
     sNdsRendererHardwareTriangleBatchMatrixMode =
         NDS_RENDERER_HW_MATRIX_MODE_RAW_COMPOSED;
     sNdsRendererHardwareTriangleBatchMatrixGeneration = matrix_generation;
-    (void)stats;
 }
 
 /* GX-compose's owner-approved shipping arm once re-admitted this 152-byte
@@ -7155,6 +7178,7 @@ s32 ndsRendererFighterPacketPrecheck(
  * the packet captures -- every word a self-contained replay needs. Returns 1
  * on a hit, 0 when the caller must run the ordinary path. */
 static s32 __attribute__((noinline)) ndsFighterPacketTryReplay(
+    u32 owner_slot,
     u32 use_low_detail,
     u32 texture_memo_owner_key,
     u32 packet_key,
@@ -7173,6 +7197,20 @@ static s32 __attribute__((noinline)) ndsFighterPacketTryReplay(
 
     sNdsFighterPacketRecording = 0u;
     rec->packet = NULL;
+#if NDS_P2_CAPTAIN
+    /* Captain HIGH is the only generated Captain detail containing source
+     * G_SETOTHERMODE_L / G_AC_THRESHOLD plus G_SETBLENDCOLOR. Those DS alpha
+     * register writes are not FIFO commands, so HIGH must remain on the direct
+     * native path. BattleShip selects LOW for 3+ fighters, and the generated
+     * LOW program has zero 0xe2 / 0xf9 deltas, so packet replay is exact there. */
+    if ((owner_slot == 4u) && (use_low_detail == 0u))
+    {
+        gNdsFighterPacketDeclines++;
+        return 0;
+    }
+#else
+    (void)owner_slot;
+#endif
     if ((input_count == 0u) || (input_count > NDS_FIGHTER_PACKET_ROOT_MAX))
     {
         gNdsFighterPacketDeclines++;

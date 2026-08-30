@@ -93,7 +93,7 @@ ndsRendererExecuteNativeFighterOwnerProduction(
 #endif
 #if NDS_FIGHTER_PACKET_LIVE
     if (ndsFighterPacketTryReplay(
-            use_low_detail, texture_memo_owner_key, packet_key,
+            slot, use_low_detail, texture_memo_owner_key, packet_key,
             inputs, input_count, stats, out_hardware_started) != 0)
     {
 #if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
