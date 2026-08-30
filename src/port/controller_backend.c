@@ -49,6 +49,13 @@ static u16 ndsControllerMapButtons(u32 keys)
     if (keys & (KEY_X | KEY_Y)) buttons |= U_CBUTTONS;
     if (keys & KEY_L) buttons |= Z_TRIG;
     if (keys & KEY_R) buttons |= R_TRIG;
+    /* BattleShip's common Appeal interrupt is an N64 L-trigger tap
+     * (ftcommonappeal.c:38-48).  The DS battle map had no way to emit L at
+     * all, which made every fighter's source-authored taunt unreachable from
+     * real hardware input.  SELECT is otherwise unbound in the shipping
+     * battle controls, so expose it as the missing source button rather than
+     * adding a DS-only gameplay path. */
+    if (keys & KEY_SELECT) buttons |= L_TRIG;
     if (keys & KEY_START) buttons |= START_BUTTON;
     return buttons;
 }
@@ -77,9 +84,9 @@ int ndsControllerBackendSelfTest(void)
     OSContPad pad;
 
     ndsControllerMapPad(KEY_A | KEY_B | KEY_X | KEY_L | KEY_R |
-                        KEY_START | KEY_LEFT | KEY_UP, &pad);
+                        KEY_SELECT | KEY_START | KEY_LEFT | KEY_UP, &pad);
     if (pad.button != (A_BUTTON | B_BUTTON | U_CBUTTONS | Z_TRIG |
-                       R_TRIG | START_BUTTON)) return 1;
+                       R_TRIG | L_TRIG | START_BUTTON)) return 1;
     if (pad.stick_x != -80 || pad.stick_y != 80) return 2;
 
     ndsControllerMapPad(KEY_Y | KEY_RIGHT | KEY_DOWN, &pad);
