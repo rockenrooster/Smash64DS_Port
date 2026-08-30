@@ -825,6 +825,24 @@ static u32 sNdsGMColScriptsFighterDamageCommon[] = {
 };
 #endif
 
+/* BattleShip gmcolscripts.c:62-74. Donkey/Samus/Kirby install this when their
+ * stored neutral-special charge reaches max. The old compatibility table had
+ * no descriptor for id 6, so ftParamCheckSetColAnimID rejected the source
+ * request before either the sparkle or the persistent full-charge pulse could
+ * execute. Keep the source's infinite self-goto and 10/FALSE priority exactly. */
+static u32 sNdsGMColScriptsFighterCommonSpecialNCharge[] = {
+    NDS_GM_COL_COMMAND_EFFECT(0, nEFKindChargeSparkle, 0, 0, 0, 0, 0, 0, 0),
+    NDS_GM_COL_COMMAND_LOOP_BEGIN(2),
+    NDS_GM_COL_COMMAND_SET_COLOR1(0xFF, 0xFF, 0xFF, 0x30),
+    NDS_GM_COL_COMMAND_WAIT(1),
+    NDS_GM_COL_COMMAND_BLEND_COLOR1(4, 0xFF, 0xFF, 0xFF, 0x00),
+    NDS_GM_COL_COMMAND_WAIT(4),
+    NDS_GM_COL_COMMAND_CLEAR_COLOR_ALL(),
+    NDS_GM_COL_COMMAND_WAIT(1),
+    NDS_GM_COL_COMMAND_LOOP_END(),
+    NDS_GM_COL_COMMAND_GOTO(sNdsGMColScriptsFighterCommonSpecialNCharge)
+};
+
 static u32 sNdsGMColScriptsScreenFlashDeadExplode[] = {
     NDS_GM_COL_COMMAND_SET_COLOR1(0xFF, 0xFF, 0xFF, 0x00),
     NDS_GM_COL_COMMAND_BLEND_COLOR1(6, 0xFF, 0xFF, 0xFF, 0x6E),
@@ -964,6 +982,8 @@ GMColDesc dGMColScriptsDescs[nGMColAnimEnumCount] = {
         { sNdsGMColScriptsFighterDamageIceStrong, 100, FALSE },
     [nGMColAnimFighterDamageIceStart + 3] =
         { sNdsGMColScriptsFighterDamageIceFly, 100, FALSE },
+    [nGMColAnimFighterCommonSpecialNCharge] =
+        { sNdsGMColScriptsFighterCommonSpecialNCharge, 10, FALSE },
 #if NDS_TASK39_FX_FLASH
     [nGMColAnimFighterDamageCommon] =
         { sNdsGMColScriptsFighterDamageCommon, 100, FALSE },
@@ -1659,9 +1679,44 @@ sb32 ftParamCheckSetColAnimID(GMColAnim *colanim, s32 colanim_id, s32 length)
     return TRUE;
 }
 
+#if NDS_P2_DONKEY
+volatile u32 gNdsDonkeyChargePresentationOverrideCount;
+volatile s32 gNdsDonkeyChargePresentationRequestedID = -1;
+volatile s32 gNdsDonkeyChargePresentationAppliedID = -1;
+#endif
+
 sb32 ftParamCheckSetFighterColAnimID(GObj *fighter_gobj, s32 colanim_id,
                                      s32 unused)
 {
+    FTStruct *fp = (fighter_gobj != NULL) ? ftGetStruct(fighter_gobj) : NULL;
+
+    /* Owner-approved presentation delta (BUGS.md, 2026-08-29): use the
+     * source's own completed-neutral-special presentation while Donkey is
+     * charging, instead of the source-authored yellow charging flash.
+     *
+     * BattleShip 212_DonkeyMainMotion.c does NOT use the Donkey-named ColAnim
+     * here: both GiantPunch{Ground,Air}Loop scripts issue
+     * nGMColAnimFighterFoxSpecialHi (48). The source asset contains exactly two
+     * uses of ColAnim 48 for Donkey, both of them these Giant Punch loop
+     * scripts; restricting by Donkey kind is therefore exact while Fox's real
+     * SpecialHi remains source-identical. Only the presentation ID changes;
+     * charge timing, levels, cancel/release behavior, hit data and motion
+     * events stay BattleShip-authored. */
+    if ((fp != NULL) &&
+        ((fp->fkind == nFTKindDonkey) || (fp->fkind == nFTKindNDonkey) ||
+         (fp->fkind == nFTKindGDonkey)) &&
+        (colanim_id == nGMColAnimFighterFoxSpecialHi))
+    {
+#if NDS_P2_DONKEY
+        gNdsDonkeyChargePresentationOverrideCount++;
+        gNdsDonkeyChargePresentationRequestedID = colanim_id;
+#endif
+        colanim_id = nGMColAnimFighterCommonSpecialNCharge;
+#if NDS_P2_DONKEY
+        gNdsDonkeyChargePresentationAppliedID = colanim_id;
+#endif
+    }
+
     ndsTask39EffectCensusRecord(
         NDS_TASK39_EFFECT_FT_PARAM_CHECK_SET_FIGHTER_COL_ANIM_I_D,
         NDS_TASK39_EFFECT_ORIGINAL);
