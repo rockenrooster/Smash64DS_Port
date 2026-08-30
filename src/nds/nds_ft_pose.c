@@ -71,7 +71,6 @@ static NdsFtPose *sNdsFtPoseBinding;
 static NdsFtPoseTrack sNdsFtPoseScratchTrack;
 
 #define NDS_FT_POSE_KIND_NONE 0u
-#define NDS_FT_POSE_HIDDEN_SLACK 3u
 /* `dobj->anim_wait` while a joint is running under the engine. THE CLOCK LIVES
  * IN THE JOINT (`wait_q`/`frame_q`, Q12 integers); the DObj field only carries
  * the source's three sentinels for the code that tests them -- the guard's
@@ -230,7 +229,20 @@ static NdsFtPose *ndsFtPoseOpen(GObj *gobj, u32 count)
     {
         return NULL;
     }
-    capacity = count + NDS_FT_POSE_HIDDEN_SLACK;
+    /* BattleShip does not have an unbounded fighter hierarchy. Dynamic hidden
+     * parts are inserted into fp->joints[] and every hidden-part root id is
+     * therefore bounded by nFTPartsJointNumMax (37 in the source ABI). The old
+     * `count + 3` heuristic happened to fit the original Mario/Fox trees but is
+     * not the source contract: Samus Catch grows her live tree from 26 to 33
+     * entries through ftMainUpdateHiddenPartID, causing the compact DS pose
+     * engine to reject the SAME fighter and silently fall back to generic AObj.
+     *
+     * Reserve the source topology bound once per fighter instead. If a future
+     * imported fighter somehow walks more than the source joint table, retain
+     * that measured count rather than truncating it. This changes only DS pose
+     * backing capacity; BattleShip still owns which joints exist and when. */
+    capacity = (count < (u32)nFTPartsJointNumMax) ?
+        (u32)nFTPartsJointNumMax : count;
     /* Scene-lifetime, from the taskman general heap exactly where the AObj
      * nodes this replaces would have been carved; rewound with the scene. The
      * AObj pool (`NDS_R2_AOBJ_POOL_COUNT`) shrinks by the same measure. */
