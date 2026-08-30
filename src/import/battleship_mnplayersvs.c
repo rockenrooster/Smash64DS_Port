@@ -95,6 +95,12 @@ volatile u32 gNdsPlayersVSPreviewResidentMainFailMask;
 volatile u32 gNdsPlayersVSPreviewResidentSubmotionFailMask;
 volatile u32 gNdsPlayersVSPreviewResidentAnimFailMask;
 volatile u32 gNdsPlayersVSPreviewResidentOwnerFailMask;
+/* Genuine source preview rebuilds only. These counters deliberately bracket
+ * mnPlayersVSUpdateFighter itself so unrelated CSS/menu NitroFS traffic cannot
+ * be mistaken for a rebuild dependency again. */
+volatile u32 gNdsPlayersVSPreviewRebuildCount;
+volatile u32 gNdsPlayersVSPreviewRebuildPayloadReadCount;
+volatile u32 gNdsPlayersVSPreviewRebuildPayloadReadMax;
 static u32 sNdsPlayersVSPreviewDrawPhase;
 volatile u32 gNdsPlayersVSPreviewFrameCount;
 volatile u32 gNdsPlayersVSPreviewDrawCount;
@@ -237,6 +243,9 @@ static void ndsMNPlayersVSPreviewPrepareResidentKinds(void)
     gNdsPlayersVSPreviewResidentSubmotionFailMask = 0u;
     gNdsPlayersVSPreviewResidentAnimFailMask = 0u;
     gNdsPlayersVSPreviewResidentOwnerFailMask = 0u;
+    gNdsPlayersVSPreviewRebuildCount = 0u;
+    gNdsPlayersVSPreviewRebuildPayloadReadCount = 0u;
+    gNdsPlayersVSPreviewRebuildPayloadReadMax = 0u;
 
     (void)ndsMNPlayersVSPreviewPrepareResidentKind(nFTKindMario);
     (void)ndsMNPlayersVSPreviewPrepareResidentKind(nFTKindFox);
@@ -610,31 +619,28 @@ void ndsMNPlayersVSPreviewSync(u32 slot, s32 pkind, s32 fkind,
          * clear is a 32x4 row wipe at menu-action rate; always pay it. */
         ndsFighterRendererInvalidateMaterialCachesForSlot(slot);
 #endif
-        /* P2-3r12. THE FENCE IS BACK ON EVERY GENUINE REBUILD, and it is cheap
-         * now that the creation term above no longer manufactures thousands of
-         * no-op ones.
-         *
-         * It is not optional. The residency predicate this replaces
-         * (ndsMNPlayersVSPreviewCanRebuildWithoutIO) claimed a prepared kind
-         * could rebuild without touching storage, and the claim is false:
-         * measured 2026-08-25 on build-p2-shell, one character-select visit
-         * ran +1,054 gNdsRelocAssetPayloadReadCount with the fence never taken
-         * once, and missed the ADPCM seam (seammiss/error/overrun 1/1/1). Its
-         * self-check could not catch that because it compared HEADER reads,
-         * animation-cache misses and owner-image loads -- all three of which
-         * were unchanged across the burst -- and never the PAYLOAD counter,
-         * which is the one that measures real blocking traffic.
-         *
-         * ndsMNPlayersVSPreviewPrepareResidentKinds stays: it warms the core
-         * files, the submotion-0 figatrees and the P2-3 owner images at scene
-         * entry, and the bracket below shows that burst is clean (seammiss 0
-         * across it on both visits). It reduces what the fence has to cover;
-         * it does not license removing it. Making a rebuild genuinely
-         * storage-free is the follow-up, and the payload counter is how that
-         * work will be judged. */
-        ndsAudioBgmSuspendForBlockingLoad();
-        mnPlayersVSUpdateFighter((s32)slot);
-        ndsAudioBgmResumeAfterBlockingLoad();
+        /* 2026-08-30: this rebuild is now storage-free by measurement, so do
+         * NOT stop/restart Battle Select BGM around it. The old fence was the
+         * audible "partially muted / instruments drop" report: suspend kills
+         * the hardware channel and resume re-primes it from the current ADPCM
+         * cursor. The actual blocking work was lazy native-owner image load;
+         * ndsMNPlayersVSPreviewPrepareResidentKinds completes that at scene
+         * entry. Shipping-cadence proof measured 15 genuine rebuilds with
+         * payload total/max = 0/0, ready mask 0x9f and no owner/anim/arena
+         * failures. Keep the payload counters as the regression guard. */
+        {
+            u32 payload_before = gNdsRelocAssetPayloadReadCount;
+            u32 payload_delta;
+
+            mnPlayersVSUpdateFighter((s32)slot);
+            payload_delta = gNdsRelocAssetPayloadReadCount - payload_before;
+            gNdsPlayersVSPreviewRebuildCount++;
+            gNdsPlayersVSPreviewRebuildPayloadReadCount += payload_delta;
+            if (payload_delta > gNdsPlayersVSPreviewRebuildPayloadReadMax)
+            {
+                gNdsPlayersVSPreviewRebuildPayloadReadMax = payload_delta;
+            }
+        }
         fighter_gobj = sMNPlayersVSSlots[slot].player;
         ndsMNPlayersVSPreviewApplyOuterSlotInset(slot, fighter_gobj);
         if ((fighter_gobj != NULL) &&

@@ -337,6 +337,7 @@ try {
         # Maps delta proves whether the live CSS performed storage I/O.
         'printf "CSSIO %d hdr=%u payload=%u ownerload=%u ownerbytes=%u animhit=%u animmiss=%u warm=%u/%u arena=%u/%u reservefail=%u warmfail=%u reject=%u overflow=%u\n", $n, gNdsRelocAssetHeaderReadCount, gNdsRelocAssetPayloadReadCount, gNdsNativeOwnerImageLoadCount, gNdsNativeOwnerImageBytes, gNdsR2AnimCacheHits, gNdsR2AnimCacheMisses, gNdsR2AnimWarmLoaded, gNdsR2AnimWarmBytes, gNdsR2AnimCacheArenaReservedBytes, gNdsR2AnimCacheArenaUsedBytes, gNdsR2AnimCacheArenaReserveFailCount, gNdsR2AnimWarmFailed, gNdsR2AnimCacheRejects, gNdsR2AnimCacheArenaOverflows',
         'printf "CSSRES %d try=%08x ready=%08x main=%08x sub=%08x anim=%08x owner=%08x\n", $n, gNdsPlayersVSPreviewResidentPrepareMask, gNdsPlayersVSPreviewResidentReadyMask, gNdsPlayersVSPreviewResidentMainFailMask, gNdsPlayersVSPreviewResidentSubmotionFailMask, gNdsPlayersVSPreviewResidentAnimFailMask, gNdsPlayersVSPreviewResidentOwnerFailMask',
+        'printf "CSSREBUILDIO %d rebuild=%u payload=%u max=%u\n", $n, gNdsPlayersVSPreviewRebuildCount, gNdsPlayersVSPreviewRebuildPayloadReadCount, gNdsPlayersVSPreviewRebuildPayloadReadMax',
         # P2-2 packet replay owns one slot per source player. A CSS action that
         # rebuilds one preview should re-record that slot, not evict the other
         # three. Keep the full miss-word census here so a remaining warm-idle
