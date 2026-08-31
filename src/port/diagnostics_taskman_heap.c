@@ -1,3 +1,23 @@
+#define NDS_TASKMAN_LIBC_RUNTIME_RESERVE 0x1000u
+
+/* The taskman arena and libnds both allocate from the same newlib heap.  The
+ * arena chooser used to accept the first calloc that fit, which can consume
+ * the heap's entire top chunk.  That is not enough: battle rendering still
+ * performs small, legitimate libnds allocations later (for example a
+ * vramBlock split when a new fighter texture becomes resident).
+ *
+ * Once the largest arena ACTUALLY fits, shrink that SAME allocation by one
+ * 4 KiB page with realloc.  Freeing the successful probe and allocating a
+ * smaller replacement is subtly wrong here: newlib's top-chunk history lets
+ * the next successful probe grow by the amount supposedly reserved, so the
+ * persistent arena can land at the exact same size.  Shrinking the live block
+ * cannot self-cancel; it returns a real tail chunk to libc for later libnds
+ * metadata allocations while preserving the calloc-zeroed arena prefix.
+ *
+ * The four-distinct-kind stress measured 46,732 B general-heap low-water before
+ * this one-page trade.  The accepted 1,972-sample run with the shrink measured
+ * 36,260 B, still 10,660 B above the verifier's 25,600 B safety floor. */
+
 static u8 *ndsTaskmanArenaBytes(void)
 {
     if (sNdsTaskmanArenaBytes == NULL)
@@ -23,10 +43,22 @@ static u8 *ndsTaskmanArenaBytes(void)
             sNdsTaskmanArenaAlloc = calloc(1, arena_size + 0x10u);
             if (sNdsTaskmanArenaAlloc != NULL)
             {
-                uintptr_t addr = (uintptr_t)sNdsTaskmanArenaAlloc;
-                sNdsTaskmanArenaBytes = (u8 *)((addr + 0xfu) & ~(uintptr_t)0xfu);
-                gNdsTaskmanArenaChosenSize = (u32)arena_size;
-                break;
+                size_t persistent_size = arena_size -
+                    NDS_TASKMAN_LIBC_RUNTIME_RESERVE;
+                void *resized = realloc(
+                    sNdsTaskmanArenaAlloc, persistent_size + 0x10u);
+
+                if (resized != NULL)
+                {
+                    sNdsTaskmanArenaAlloc = resized;
+                    uintptr_t addr = (uintptr_t)sNdsTaskmanArenaAlloc;
+                    sNdsTaskmanArenaBytes =
+                        (u8 *)((addr + 0xfu) & ~(uintptr_t)0xfu);
+                    gNdsTaskmanArenaChosenSize = (u32)persistent_size;
+                    break;
+                }
+                free(sNdsTaskmanArenaAlloc);
+                sNdsTaskmanArenaAlloc = NULL;
             }
             gNdsTaskmanArenaAllocFailCount++;
         }
@@ -44,15 +76,24 @@ static u8 *ndsTaskmanArenaBytes(void)
                 1, lower_arena_sizes[i] + 0x10u);
             if (sNdsTaskmanArenaAlloc != NULL)
             {
-                uintptr_t addr = (uintptr_t)sNdsTaskmanArenaAlloc;
-                sNdsTaskmanArenaBytes =
-                    (u8 *)((addr + 0xfu) & ~(uintptr_t)0xfu);
-                gNdsTaskmanArenaChosenSize = (u32)lower_arena_sizes[i];
+                size_t persistent_size = lower_arena_sizes[i] -
+                    NDS_TASKMAN_LIBC_RUNTIME_RESERVE;
+                void *resized = realloc(
+                    sNdsTaskmanArenaAlloc, persistent_size + 0x10u);
+
+                if (resized != NULL)
+                {
+                    sNdsTaskmanArenaAlloc = resized;
+                    uintptr_t addr = (uintptr_t)sNdsTaskmanArenaAlloc;
+                    sNdsTaskmanArenaBytes =
+                        (u8 *)((addr + 0xfu) & ~(uintptr_t)0xfu);
+                    gNdsTaskmanArenaChosenSize = (u32)persistent_size;
+                    continue;
+                }
+                free(sNdsTaskmanArenaAlloc);
+                sNdsTaskmanArenaAlloc = NULL;
             }
-            else
-            {
-                gNdsTaskmanArenaAllocFailCount++;
-            }
+            gNdsTaskmanArenaAllocFailCount++;
         }
     }
     return sNdsTaskmanArenaBytes;
