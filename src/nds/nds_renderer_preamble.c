@@ -3363,7 +3363,13 @@ typedef struct NDSFighterPacketTexture
 } NDSFighterPacketTexture;
 
 #define NDS_FIGHTER_PACKET_SITE_MAX 64u
-#define NDS_FIGHTER_PACKET_TEXTURE_MAX 16u
+/* Four-distinct-kind Low-detail stress reaches more than 16 unique resident
+ * cache identities in one fighter packet. Falling off this array is correct
+ * but coarse: it reverts that packet to the global texture-generation fence,
+ * so unrelated cache churn forces an otherwise-identical GX stream to be
+ * re-recorded. 24 costs 64 B/packet (256 B total) and keeps residency proof
+ * per texture; the packet words and BattleShip draw semantics are unchanged. */
+#define NDS_FIGHTER_PACKET_TEXTURE_MAX 24u
 
 typedef struct NDSFighterPacket
 {
