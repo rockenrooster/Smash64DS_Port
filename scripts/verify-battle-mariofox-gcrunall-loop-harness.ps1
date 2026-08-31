@@ -2575,7 +2575,7 @@ try {
         $beforeDetach = $gdbCommands[0..($gdbCommands.Count - 3)]
         $afterDetach = $gdbCommands[($gdbCommands.Count - 2)..($gdbCommands.Count - 1)]
         $donkeySpecialsCommands = @(
-            'printf "DONKEY_SPECIALS=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsFighterDonkeySpecialsSlot, gNdsFighterDonkeySpecialsNChargePressFrames, gNdsFighterDonkeySpecialsNStartFrames, gNdsFighterDonkeySpecialsNLoopFrames, gNdsFighterDonkeySpecialsNStorePressFrames, gNdsFighterDonkeySpecialsNStoredChargeMax, gNdsFighterDonkeySpecialsNStoredWaitFrames, gNdsFighterDonkeySpecialsNResumePressFrames, gNdsFighterDonkeySpecialsNReleaseTapFrames, gNdsFighterDonkeySpecialsNEndFrames, gNdsFighterDonkeySpecialsNReleaseChargeMax, gNdsFighterDonkeySpecialsNPassiveResetFrames, gNdsFighterDonkeySpecialsNReleaseWaitFrames, gNdsFighterDonkeySpecialsHiPressFrames, gNdsFighterDonkeySpecialsHiFrames, gNdsFighterDonkeySpecialsHiGroundGAFrames, gNdsFighterDonkeySpecialsHiWaitFrames, gNdsFighterDonkeySpecialsLwPressFrames, gNdsFighterDonkeySpecialsLwStartFrames, gNdsFighterDonkeySpecialsLwLoopFrames, gNdsFighterDonkeySpecialsLwRepeatPressFrames, gNdsFighterDonkeySpecialsLwLoopFlagFrames, gNdsFighterDonkeySpecialsLwEndFrames, gNdsFighterDonkeySpecialsLwWaitFrames'
+            'printf "DONKEY_SPECIALS=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsFighterDonkeySpecialsSlot, gNdsFighterDonkeySpecialsNChargePressFrames, gNdsFighterDonkeySpecialsNStartFrames, gNdsFighterDonkeySpecialsNLoopFrames, gNdsFighterDonkeySpecialsNStorePressFrames, gNdsFighterDonkeySpecialsNStoredChargeMax, gNdsFighterDonkeySpecialsNStoredWaitFrames, gNdsFighterDonkeySpecialsNResumePressFrames, gNdsFighterDonkeySpecialsNReleaseTapFrames, gNdsFighterDonkeySpecialsNEndFrames, gNdsFighterDonkeySpecialsNReleaseChargeMax, gNdsFighterDonkeySpecialsNPassiveResetFrames, gNdsFighterDonkeySpecialsNReleaseWaitFrames, gNdsFighterDonkeySpecialsHiPressFrames, gNdsFighterDonkeySpecialsHiFrames, gNdsFighterDonkeySpecialsHiGroundGAFrames, gNdsFighterDonkeySpecialsHiWaitFrames, gNdsFighterDonkeySpecialsLwPressFrames, gNdsFighterDonkeySpecialsLwStartFrames, gNdsFighterDonkeySpecialsLwLoopFrames, gNdsFighterDonkeySpecialsLwRepeatPressFrames, gNdsFighterDonkeySpecialsLwLoopFlagFrames, gNdsFighterDonkeySpecialsLwEndFrames, gNdsFighterDonkeySpecialsLwWaitFrames, gNdsFighterEffectKindMask2'
         )
         $gdbCommands = @($beforeDetach + $donkeySpecialsCommands + $afterDetach)
     }
@@ -3147,7 +3147,7 @@ try {
     $projectile = [regex]::Match($gdbStdout, 'PROJECTILE=(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0)')
     $reflector = [regex]::Match($gdbStdout, 'REFLECTOR=(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(-?[0-9]+),([0-9]+),([0-9]+),([0-9]+),(-?[0-9]+),(-?[0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(-?[0-9]+),(-?[0-9]+),([0-9]+),([0-9]+)')
     $specials = [regex]::Match($gdbStdout, 'SPECIALS=(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(-?[0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(-?[0-9]+)')
-    $donkeySpecials = [regex]::Match($gdbStdout, 'DONKEY_SPECIALS=([0-9]+(?:,[0-9]+){23})')
+    $donkeySpecials = [regex]::Match($gdbStdout, 'DONKEY_SPECIALS=([0-9]+(?:,[0-9]+){24})')
     $audioAsset = [regex]::Match($gdbStdout, 'AUDIO_ASSET=(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $audioFgmKo = [regex]::Match($gdbStdout, 'AUDIO_FGM_KO=(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $audioFgmMissPairPattern = ((0..15 | ForEach-Object {
@@ -6915,13 +6915,16 @@ try {
         if ($P2ProofFighter0Kind -eq 2) {
             Assert-Condition $donkeySpecials.Success 'Donkey natural-specials marker missing.' $gdbStdout
             $dk = @($donkeySpecials.Groups[1].Value.Split(',') | ForEach-Object { [int64]$_ })
-            Assert-Condition ($dk.Count -eq 24 -and $dk[0] -eq 0) `
+            Assert-Condition ($dk.Count -eq 25 -and $dk[0] -eq 0) `
                 'Donkey natural-specials proof did not bind fighter slot 0.' $gdbStdout
             Assert-Condition ($dk[1] -gt 0 -and $dk[2] -gt 0 -and $dk[3] -gt 0 -and
-                $dk[4] -gt 0 -and $dk[5] -ge 2 -and $dk[6] -ge 10 -and
+                $dk[4] -gt 0 -and $dk[5] -ge 10 -and $dk[6] -ge 10 -and
                 $dk[7] -gt 0 -and $dk[8] -gt 0 -and $dk[9] -gt 0 -and
                 $dk[10] -ge 2 -and $dk[11] -gt 0 -and $dk[12] -ge 10) `
-                'Donkey Giant Punch did not prove source charge/store/resume/release/reset semantics.' `
+                'Donkey Giant Punch did not prove source store/release plus natural full-charge semantics.' `
+                $gdbStdout
+            Assert-Condition (($dk[24] -band 0x200) -ne 0) `
+                'Donkey full charge did not request source nEFKindChargeSparkle (effect kind 73).' `
                 $gdbStdout
             Assert-Condition ($dk[13] -gt 0 -and $dk[14] -gt 0 -and
                 $dk[15] -gt 0 -and $dk[16] -ge 10) `
@@ -6932,7 +6935,7 @@ try {
                 $dk[22] -gt 0 -and $dk[23] -ge 10) `
                 'Donkey Hand Slap did not prove source start/loop/repeat/end/settle semantics.' `
                 $gdbStdout
-            $specialsSummary += " dkN=$($dk[1])/$($dk[2])/$($dk[3]) store=$($dk[4]):$($dk[5])/$($dk[6]) release=$($dk[7])/$($dk[8])/$($dk[9]):$($dk[10]) reset=$($dk[11])/$($dk[12]) dkHi=$($dk[13])/$($dk[14]) ga=$($dk[15]) wait=$($dk[16]) dkLw=$($dk[17])/$($dk[18])/$($dk[19]) repeat=$($dk[20]) flag=$($dk[21]) end=$($dk[22]) wait=$($dk[23])"
+            $specialsSummary += " dkN=$($dk[1])/$($dk[2])/$($dk[3]) store=$($dk[4]):$($dk[5])/$($dk[6]) release=$($dk[7])/$($dk[8])/$($dk[9]):$($dk[10]) reset=$($dk[11])/$($dk[12]) fullFxMask2=0x$('{0:x}' -f $dk[24]) dkHi=$($dk[13])/$($dk[14]) ga=$($dk[15]) wait=$($dk[16]) dkLw=$($dk[17])/$($dk[18])/$($dk[19]) repeat=$($dk[20]) flag=$($dk[21]) end=$($dk[22]) wait=$($dk[23])"
         }
         $audioSummary = ''
         $audioBgmSummary = ''

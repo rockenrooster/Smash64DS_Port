@@ -612,11 +612,20 @@ static u32 sNdsFtrDrawMemoState;
 static u32 sNdsFtrDrawMemoHit;
 static u32 sNdsFtrDrawMemoKey[NDS_FTR_DRAW_MEMO_KEY_WORDS];
 
-/* ftMainSetStatus is the sole owner of BattleShip's fighter hidden-part DObj
- * topology changes. Invalidate at that write seam rather than rediscovering the
- * mutation by walking/hash-reading the whole tree every draw. The function is
- * intentionally public to the import wrapper; both renderer caches remain
- * private here and the later draw plan keys the generation bumped below. */
+/* Writer-side coherency for source mutations of DObj display state/topology.
+ * ftMainSetStatus is one writer (hidden-part replacement/re-parenting), but
+ * BattleShip's ftParamSet/Reset/HideModelPart* family is another: it changes
+ * joint->dl and FTParts.flags without changing the fighter root.  Both the
+ * display-contract memo and Cycle-99 draw plan cache those values/pointers, so
+ * either source mutation must advance the same generation rather than forcing
+ * a hot-path tree hash every draw. */
+void ndsFighterRendererInvalidateStatusCachesOnSetStatus(GObj *fighter_gobj);
+
+void ndsFighterRendererInvalidateDObjStateCaches(GObj *fighter_gobj)
+{
+    ndsFighterRendererInvalidateStatusCachesOnSetStatus(fighter_gobj);
+}
+
 void ndsFighterRendererInvalidateStatusCachesOnSetStatus(GObj *fighter_gobj)
 {
     FTStruct *fp;

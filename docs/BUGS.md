@@ -2,6 +2,11 @@
 AI Agent should mark fixed items with **FIXED** prefix or a 20 word summary if not fixed yet.
 These bugs should be fixed for P1 delivery:
 
+- **FIXED: Fox laser strobe is source-authored FoxSpecialHiStart/Hold ColAnim; preserved intentionally.**
+- **FIXED: DK yellow charge coloration is source-authored; restored continuous full-charge ChargeSparkle feedback.**
+- **FIXED: DK alternate attack hands now use live BattleShip model-part DL/MObj/flags mutation with renderer cache invalidation.**
+- **FIXED: Falcon model-part mutations now invalidate and rebuild cached renderer display contracts and draw plans.**
+
 - **REPRODUCED (fix parked) — MIRROR rosters crash; mixed Mario/Fox runs clean (2026-08-21).** Direct-battle
   proof-target sweep (TEMP `NDS_PROBE_FIGHTER1` slot-1 selector, one-minute Time match): Mario P1 + Mario CPU
   crashes with **SIGILL** in the stage-2 window; Fox P1 + Fox CPU crashes with SIGILL BEFORE frame ~1800

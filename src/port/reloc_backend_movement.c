@@ -4250,6 +4250,9 @@ void ndsFighterMarioFoxGCRunAllLoopRunVSBattleUpdate(void)
 #define NDS_FIGHTER_NATURAL_SPECIAL_SETTLE_FRAMES_REQUIRED 60u
 #if NDS_P2_DONKEY
 #define NDS_FIGHTER_DONKEY_GIANTPUNCH_STORE_CHARGE_REQUIRED 2u
+#define NDS_FIGHTER_DONKEY_GIANTPUNCH_FULL_CHARGE_REQUIRED 10u
+/* nEFKindChargeSparkle == 73, recorded in effect-kind mask lane 2 (64..95). */
+#define NDS_FIGHTER_DONKEY_CHARGE_SPARKLE_MASK2 (1u << (73u - 64u))
 #define NDS_FIGHTER_DONKEY_SPECIAL_SETTLE_FRAMES_REQUIRED 10u
 #endif
 
@@ -4439,7 +4442,9 @@ enum {
     nNDSNaturalSpecialsPhaseDonkeyNCharge,
     nNDSNaturalSpecialsPhaseDonkeyNRelease,
     nNDSNaturalSpecialsPhaseDonkeyHi,
-    nNDSNaturalSpecialsPhaseDonkeyLw
+    nNDSNaturalSpecialsPhaseDonkeyLw,
+    /* Appended so the established DK phase numbers above remain stable. */
+    nNDSNaturalSpecialsPhaseDonkeyNFullCharge
 #endif
 };
 #endif
@@ -8444,6 +8449,19 @@ static sb32 ndsFighterNaturalSpecialsStartNext(FTStruct *fp[2])
                     nNDSNaturalSpecialsPhaseDonkeyNRelease);
                 return FALSE;
             }
+            /* The owner-reported full-charge cue was outside the old proof:
+             * that tour intentionally stored at charge 2. Add a natural-input
+             * leg that lets BattleShip itself reach charge 10, auto-cancel to
+             * Wait, and execute the source CommonSpecialNCharge effect script. */
+            if ((gNdsFighterDonkeySpecialsNStoredChargeMax <
+                 NDS_FIGHTER_DONKEY_GIANTPUNCH_FULL_CHARGE_REQUIRED) ||
+                ((gNdsFighterEffectKindMask2 &
+                  NDS_FIGHTER_DONKEY_CHARGE_SPARKLE_MASK2) == 0u))
+            {
+                ndsFighterNaturalSpecialsSetPhase(
+                    nNDSNaturalSpecialsPhaseDonkeyNFullCharge);
+                return FALSE;
+            }
             if ((gNdsFighterDonkeySpecialsHiPressFrames == 0u) ||
                 (gNdsFighterDonkeySpecialsHiFrames == 0u) ||
                 (gNdsFighterDonkeySpecialsHiWaitFrames <
@@ -8912,6 +8930,16 @@ static sb32 ndsFighterNaturalSpecialsAdvance(FTStruct *fp[2])
             (gNdsFighterDonkeySpecialsNPassiveResetFrames > 0u) &&
             (gNdsFighterDonkeySpecialsNReleaseWaitFrames >=
              NDS_FIGHTER_DONKEY_SPECIAL_SETTLE_FRAMES_REQUIRED) &&
+            (ndsFighterNaturalSpecialsBothGroundWait(fp) != FALSE))
+        {
+            return ndsFighterNaturalSpecialsStartNext(fp);
+        }
+        break;
+    case nNDSNaturalSpecialsPhaseDonkeyNFullCharge:
+        if ((gNdsFighterDonkeySpecialsNStoredChargeMax >=
+             NDS_FIGHTER_DONKEY_GIANTPUNCH_FULL_CHARGE_REQUIRED) &&
+            ((gNdsFighterEffectKindMask2 &
+              NDS_FIGHTER_DONKEY_CHARGE_SPARKLE_MASK2) != 0u) &&
             (ndsFighterNaturalSpecialsBothGroundWait(fp) != FALSE))
         {
             return ndsFighterNaturalSpecialsStartNext(fp);
@@ -9719,6 +9747,18 @@ static sb32 ndsFighterNaturalSpecialsApplyInput(FTStruct *fp[2],
             button[donkey_slot] = B_BUTTON;
             sNdsNaturalSpecialsButtonPressed = 2u;
             gNdsFighterDonkeySpecialsNReleaseTapFrames++;
+        }
+        break;
+    case nNDSNaturalSpecialsPhaseDonkeyNFullCharge:
+        /* One B press starts the source loop. No further proof input is sent:
+         * ftDonkeySpecialNLoopProcUpdate must earn all ten charges itself and
+         * take its own full-charge cancel path. */
+        if ((sNdsNaturalSpecialsButtonPressed == 0u) &&
+            (ndsFighterNaturalSpecialsBothGroundWait(fp) != FALSE))
+        {
+            button[donkey_slot] = B_BUTTON;
+            sNdsNaturalSpecialsButtonPressed = 1u;
+            gNdsFighterDonkeySpecialsNChargePressFrames++;
         }
         break;
     case nNDSNaturalSpecialsPhaseDonkeyHi:

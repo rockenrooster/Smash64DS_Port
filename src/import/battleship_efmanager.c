@@ -2111,6 +2111,21 @@ LBParticle *efManagerSparkleWhiteScaleMakeEffect(Vec3f *pos, f32 scale)
 {
     return ndsBaseEFManagerSparkleWhiteScaleMakeEffect(pos, scale);
 }
+
+/* BattleShip ftparam.c:2059-2066 owns this tiny specialization at the fighter
+ * layer, but LBParticle is deliberately opaque outside the effect owner on DS.
+ * Keep the exact source result (scale 0.7, prim alpha 0xC0) here rather than
+ * leaking the particle layout into reloc_backend_compat_shims.c. */
+LBParticle *ndsEFManagerChargeSparkleMakeEffect(Vec3f *pos)
+{
+    LBParticle *pc = efManagerSparkleWhiteScaleMakeEffect(pos, 0.7F);
+
+    if (pc != NULL)
+    {
+        pc->primcolor.a = 0xC0;
+    }
+    return pc;
+}
 LBParticle *efManagerFlashMiddleMakeEffect(Vec3f *pos)
 {
     return ndsBaseEFManagerFlashMiddleMakeEffect(pos);

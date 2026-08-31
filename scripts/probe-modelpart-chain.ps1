@@ -21,11 +21,13 @@ param(
 # exactly this, and every link here is a pointer that may simply be NULL in the
 # port because its cross-file fixup never ran.
 #
-# NO REBUILD. Every expression is rooted at a global (sNdsFighterStructPool) or
-# at an ARM argument register captured at the function's FIRST instruction,
-# where the ABI guarantees r0/r1/r2 are the arguments. Reading the C local `fp`
-# is what this deliberately avoids: on this remote, stack locals read as zero
-# and have already shipped one false root cause.
+# NO REBUILD. Every expression is rooted at an ARM argument register captured
+# at the function's FIRST instruction, where the ABI guarantees r0/r1/r2 are
+# the arguments. `ftGetStruct` is exactly `(FTStruct *)gobj->user_data.p` in
+# BattleShip fighter.h, so use that stable public object ABI rather than the old
+# private `sNdsFighterStructPool` symbol (which current shipping links discard).
+# Reading the C local `fp` is what this deliberately avoids: on this remote,
+# optimized stack locals have already produced a false root cause.
 #
 # The convenience variable is $fst, NOT $fp: on ARM, `$fp` IS the frame-pointer
 # register, so `set $fp = ...` assigns r11 and fails with "Left operand of
@@ -72,7 +74,7 @@ $emulator = $null
 # the whole run silently.
 $required = @(
     'ftParamSetModelPartID',
-    'sNdsFighterStructPool',
+    'ndsFighterRendererInvalidateDObjStateCaches',
     'gNdsFighterMarioFoxRelocDependencyMask',
     'gNdsFighterModelPartOnCount',
     'sNdsRelocLoadedFiles',
@@ -106,6 +108,11 @@ try {
         ("target remote 127.0.0.1:{0}" -f $context.GdbPort),
 
         'set $hits = 0',
+        'set $donehits = 0',
+        'set $pending = 0',
+        'set $stop = 0',
+        'set $expected_dl = (void *)0',
+        'set $expected_flags = 0',
         'break *ftParamSetModelPartID',
         'commands',
         'silent',
@@ -113,13 +120,17 @@ try {
         'set $g = (GObj *)$r0',
         'set $joint = (int)$r1',
         'set $mpid = (int)$r2',
-        # Find the struct by identity against the pool, not by reading a local.
-        'set $fst = (FTStruct *)0',
-        'if sNdsFighterStructPool[0].fighter_gobj == $g',
-        'set $fst = &sNdsFighterStructPool[0]',
+        'set $fst = (FTStruct *)$g->user_data.p',
+        'set $slot = $joint - 4',
+        'set $current_mpid = -127',
+        'if ($fst != 0) && ($slot >= 0) && ($slot < 26)',
+        'set $current_mpid = $fst->modelpart_status[$slot].modelpart_id_curr',
         'end',
-        'if sNdsFighterStructPool[1].fighter_gobj == $g',
-        'set $fst = &sNdsFighterStructPool[1]',
+        'if $current_mpid != $mpid',
+        'set $pending = 1',
+        'set $pending_g = $g',
+        'set $pending_joint = $joint',
+        'set $pending_mpid = $mpid',
         'end',
         'printf "MPCHAIN hit=%d joint=%d id=%d gobj=%p fp=%p depmask=0x%x on=%u\n", $hits, $joint, $mpid, $g, $fst, gNdsFighterMarioFoxRelocDependencyMask, gNdsFighterModelPartOnCount',
         'if $fst != 0',
@@ -132,11 +143,12 @@ try {
         'printf "MPACC acc_joint=%d acc_dl=%p\n", $ap->joint_id, $ap->dl',
         'end',
         'if $mc != 0',
-        'set $slot = $joint - 4',
         'set $desc = $mc->modelparts_desc[$slot]',
         'printf "MPDESC slot=%d desc=%p\n", $slot, $desc',
         'if ($desc != 0) && ($mpid >= 0)',
         'set $part = &$desc->modelparts[$mpid][$fst->detail_curr - 1]',
+        'set $expected_dl = $part->dl',
+        'set $expected_flags = $part->flags',
         'printf "MPPART part=%p dl=%p mobjsubs=%p flags=0x%x\n", $part, $part->dl, $part->mobjsubs, $part->flags',
         'if $part->dl != 0',
         # Which loaded reloc file owns the dl. ndsRelocFindLoadedFileContaining
@@ -175,13 +187,34 @@ try {
         'end',
         'end',
         'end',
-        ('if $hits < ' + $Hits),
+        'continue',
+        'end',
+
+        # ftParamSetModelPartID calls this only after the live DObj/MObj mutation
+        # in the fixed path. Associate the immediately preceding writer call and
+        # prove the selected joint now carries the source part DL/flags before
+        # the renderer can rebuild its display-contract/draw-plan cache.
+        'break *ndsFighterRendererInvalidateDObjStateCaches',
+        'commands',
+        'silent',
+        'if $pending != 0',
+        'set $applied_fp = (FTStruct *)$pending_g->user_data.p',
+        'set $applied_joint = $applied_fp->joints[$pending_joint]',
+        'set $applied_parts = (FTParts *)$applied_joint->user_data.p',
+        'set $donehits = $donehits + 1',
+        'printf "MPAPPLIED hit=%d fkind=%d joint=%d id=%d dl=%p expect=%p flags=0x%x expectflags=0x%x statusid=%d\n", $donehits, $applied_fp->fkind, $pending_joint, $pending_mpid, $applied_joint->dl, $expected_dl, $applied_parts->flags, $expected_flags, $applied_fp->status_id',
+        'set $pending = 0',
+        ('if $donehits >= ' + $Hits),
+        'set $stop = 1',
+        'end',
+        'end',
+        'if $stop == 0',
         'continue',
         'end',
         'end',
 
         'continue',
-        'printf "MPCHAINDONE hits=%d\n", $hits',
+        'printf "MPCHAINDONE entries=%d applied=%d\n", $hits, $donehits',
         'detach',
         'quit'
     )

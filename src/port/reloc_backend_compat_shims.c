@@ -12,6 +12,7 @@
 #if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
 void ndsFighterRendererInvalidateMaterialCaches(void);
 void ndsFighterRendererInvalidateMaterialCachesForSlot(u32 slot);
+void ndsFighterRendererInvalidateDObjStateCaches(GObj *fighter_gobj);
 #endif
 
 /* Shield anim-joint install engagement + the lab dispatch audit; legends in
@@ -2247,18 +2248,127 @@ void ftParamSetHitStatusPartID(GObj *fighter_gobj, s32 joint_id,
     }
 }
 
-/* Pairs with ftParamSetModelPartID. ftMainSetStatus calls this on every status
- * change that does not carry FTSTATUS_PRESERVE_MODELPART, so without it Fox's
- * gun would latch on for the rest of the match after one Neutral-B. That is
- * exactly the failure BUGS.md #7 hit on the texture-part side (see
- * ftParamResetTexturePartAll below), so the two land together.
- *
- * State half only, mirroring ftparam.c:856. joint->dl is deliberately left
- * alone for the reason given on ftParamSetModelPartID. */
+/* BattleShip ftparam.c:748-818 / 831-910 resolve a model-part id into the live
+ * DObj, not merely into FTStruct bookkeeping. Keep that source operation in one
+ * helper so Set/Reset/Detail all rebuild the same DL, MObj chain and FTParts
+ * flags. The DS renderer observes the resulting source DObj state. */
+static sb32 ndsFTParamApplyModelPartCurrent(GObj *fighter_gobj, FTStruct *fp,
+                                            s32 slot)
+{
+    FTAttributes *attr;
+    FTCommonPartContainer *commonparts_container;
+    FTModelPartStatus *status;
+    FTModelPart *modelpart;
+    FTParts *parts;
+    DObj *joint;
+    MObjSub **mobjsubs;
+    AObjEvent32 **costume_matanim_joints;
+    s32 detail_index;
+    s32 detail_id;
+    s32 joint_id;
+
+    if ((fighter_gobj == NULL) || (fp == NULL) || (fp->attr == NULL) ||
+        (slot < 0) || ((u32)slot >= ARRAY_COUNT(fp->modelpart_status)))
+    {
+        return FALSE;
+    }
+    joint_id = slot + nFTPartsJointCommonStart;
+    if ((u32)joint_id >= ARRAY_COUNT(fp->joints))
+    {
+        return FALSE;
+    }
+    joint = fp->joints[joint_id];
+    if (joint == NULL)
+    {
+        return FALSE;
+    }
+
+    attr = fp->attr;
+    status = &fp->modelpart_status[slot];
+    commonparts_container = attr->commonparts_container;
+    parts = ftGetParts(joint);
+    gcRemoveMObjAll(joint);
+
+    if (status->modelpart_id_curr == -1)
+    {
+        joint->dl = NULL;
+        return TRUE;
+    }
+
+    detail_index = (s32)fp->detail_curr - nFTPartsDetailStart;
+    if ((detail_index < 0) || (detail_index > 1))
+    {
+        return FALSE;
+    }
+    if ((attr->modelparts_container != NULL) &&
+        (attr->modelparts_container->modelparts_desc[slot] != NULL))
+    {
+        modelpart = &attr->modelparts_container->modelparts_desc[slot]
+                         ->modelparts[status->modelpart_id_curr][detail_index];
+        joint->dl = modelpart->dl;
+        lbCommonAddMObjForFighterPartsDObj(
+            joint, modelpart->mobjsubs, modelpart->costume_matanim_joints,
+            modelpart->main_matanim_joints, fp->costume);
+        if (parts != NULL)
+        {
+            parts->flags = modelpart->flags;
+        }
+        return TRUE;
+    }
+
+    if (commonparts_container == NULL)
+    {
+        joint->dl = NULL;
+        return TRUE;
+    }
+    if ((fp->detail_curr == nFTPartsDetailHigh) ||
+        (commonparts_container->commonparts[1].dobjdesc[slot].dl == NULL))
+    {
+        detail_id = 0;
+    }
+    else
+    {
+        detail_id = 1;
+    }
+    joint->dl = commonparts_container->commonparts[detail_id].dobjdesc[slot].dl;
+    mobjsubs = (commonparts_container->commonparts[detail_id].p_mobjsubs != NULL)
+                   ? commonparts_container->commonparts[detail_id].p_mobjsubs[slot]
+                   : NULL;
+    costume_matanim_joints =
+        (commonparts_container->commonparts[detail_id].p_costume_matanim_joints !=
+         NULL)
+            ? commonparts_container->commonparts[detail_id]
+                  .p_costume_matanim_joints[slot]
+            : NULL;
+    lbCommonAddMObjForFighterPartsDObj(joint, mobjsubs, costume_matanim_joints,
+                                        NULL, fp->costume);
+    if (parts != NULL)
+    {
+        parts->flags = commonparts_container->commonparts[detail_id].flags;
+    }
+    return TRUE;
+}
+
+static void ndsFTParamInvalidateModelPartRenderer(GObj *fighter_gobj,
+                                                   FTStruct *fp)
+{
+#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+    ndsFighterRendererInvalidateDObjStateCaches(fighter_gobj);
+    if (fp != NULL)
+    {
+        ndsFighterRendererInvalidateMaterialCachesForSlot((u32)fp->player);
+    }
+#else
+    (void)fighter_gobj;
+    (void)fp;
+#endif
+}
+
 void ftParamResetModelPartAll(GObj *fighter_gobj)
 {
     FTStruct *fp = (fighter_gobj != NULL) ? ftGetStruct(fighter_gobj) : NULL;
     u32 i;
+    sb32 changed = FALSE;
 
     if (fp == NULL)
     {
@@ -2275,9 +2385,16 @@ void ftParamResetModelPartAll(GObj *fighter_gobj)
         if (status->modelpart_id_curr != status->modelpart_id_base)
         {
             status->modelpart_id_curr = status->modelpart_id_base;
-            fp->is_modelpart_modify = TRUE;
+            (void)ndsFTParamApplyModelPartCurrent(fighter_gobj, fp, (s32)i);
             gNdsFighterModelPartResetCount++;
+            changed = TRUE;
         }
+    }
+    /* Source clears this after all requested parts have been restored. */
+    fp->is_modelpart_modify = FALSE;
+    if (changed != FALSE)
+    {
+        ndsFTParamInvalidateModelPartRenderer(fighter_gobj, fp);
     }
 }
 
@@ -2384,15 +2501,35 @@ void ftParamResetTexturePartAll(GObj *fighter_gobj)
     fp->is_texturepart_modify = FALSE;
 }
 
-/* Stays a no-op ON PURPOSE, and the name is why it looks wrong. The source
- * (ftparam.c:995-1020) does not clear modelpart_id_curr: it removes and re-adds
- * each joint's MObj chain for the CURRENT part, which is costume/material work,
- * not hiding. There is no state change to mirror, and the DS fighter has no
- * source MObj chain to rebuild, so implementing something here would be
- * inventing behaviour rather than porting it. */
 void ftParamHideModelPartAll(GObj *fighter_gobj)
 {
-    (void)fighter_gobj;
+    FTStruct *fp = (fighter_gobj != NULL) ? ftGetStruct(fighter_gobj) : NULL;
+    u32 i;
+    sb32 changed = FALSE;
+
+    if (fp == NULL)
+    {
+        return;
+    }
+    /* BattleShip ftparam.c:913-939: hide means exactly -1 + no MObjs + no DL. */
+    for (i = 0u; i < ARRAY_COUNT(fp->modelpart_status); i++)
+    {
+        DObj *joint = fp->joints[i + nFTPartsJointCommonStart];
+
+        if ((joint == NULL) || (fp->modelpart_status[i].modelpart_id_curr == -1))
+        {
+            continue;
+        }
+        fp->modelpart_status[i].modelpart_id_curr = -1;
+        gcRemoveMObjAll(joint);
+        joint->dl = NULL;
+        changed = TRUE;
+    }
+    fp->is_modelpart_modify = TRUE;
+    if (changed != FALSE)
+    {
+        ndsFTParamInvalidateModelPartRenderer(fighter_gobj, fp);
+    }
 }
 
 void ftParamProcStopEffect(GObj *fighter_gobj)
@@ -3283,6 +3420,13 @@ void ftParamResetColAnim(GMColAnim *colanim)
 
 void ftParamResetStatUpdateColAnim(GObj *fighter_gobj)
 {
+    enum
+    {
+        /* Source-private constants: ftdonkey.h / ftsamus.h. Keep them local
+         * instead of importing character-private headers into this compat TU. */
+        NDS_COMPAT_DONKEY_CHARGE_MAX = 10,
+        NDS_COMPAT_SAMUS_CHARGE_MAX = 7
+    };
     FTStruct *fp = (fighter_gobj != NULL) ? ftGetStruct(fighter_gobj) : NULL;
 
     if (fp == NULL)
@@ -3290,10 +3434,12 @@ void ftParamResetStatUpdateColAnim(GObj *fighter_gobj)
         return;
     }
 
-    /* BattleShip ftparam.c:1247-1323, restricted only by the fighter roster
-     * this P2-2 build can actually create. The Donkey/Samus/Kirby/Ness charge
-     * branches are unreachable for Mario/Fox, while every common overlay below
-     * is live VS state and must be restored after an unlocked colanim ends. */
+    /* BattleShip ftparam.c:1247-1323. This was once intentionally trimmed to
+     * Mario/Fox when those were the only live fighters, but P2 now admits
+     * Donkey and Samus. Their full-charge indicator is restored *here* after a
+     * higher-priority unlocked ColAnim ends; the direct charge-max request can
+     * legitimately lose arbitration while the 60-priority charging flash is
+     * still active. Keep the source reset/reapply contract as the roster grows. */
     ftParamResetFighterColAnim(fighter_gobj);
 
     switch (ftParamGetBestHitStatusPart(fighter_gobj))
@@ -3305,6 +3451,28 @@ void ftParamResetStatUpdateColAnim(GObj *fighter_gobj)
     case nGMHitStatusIntangible:
         ftParamCheckSetFighterColAnimID(
             fighter_gobj, nGMColAnimFighterHitStatusIntangible, 0);
+        break;
+    }
+    switch (fp->fkind)
+    {
+    case nFTKindDonkey:
+    case nFTKindNDonkey:
+    case nFTKindGDonkey:
+        if (fp->passive_vars.donkey.charge_level ==
+            NDS_COMPAT_DONKEY_CHARGE_MAX)
+        {
+            ftParamCheckSetFighterColAnimID(
+                fighter_gobj, nGMColAnimFighterCommonSpecialNCharge, 0);
+        }
+        break;
+    case nFTKindSamus:
+    case nFTKindNSamus:
+        if (fp->passive_vars.samus.charge_level ==
+            NDS_COMPAT_SAMUS_CHARGE_MAX)
+        {
+            ftParamCheckSetFighterColAnimID(
+                fighter_gobj, nGMColAnimFighterCommonSpecialNCharge, 0);
+        }
         break;
     }
     if (fp->damage_heal != 0)
@@ -7769,14 +7937,10 @@ void func_ovl0_800C9A38(Mtx44f mtx, DObj *dobj)
  * nFTMotionEventSetModelPartID at ftmain.c:575 straight into this function.
  * Discarding the arguments here is why no gun appears.
  *
- * This owns the STATE half only, mirroring ftparam.c:768-785. It deliberately
- * does NOT write joint->dl the way the source does. The DS fighter body draws
- * from the baked Task 56 primitive stream and never reads dobj->dl, so the
- * assignment would buy nothing -- while dobj->dl IS read elsewhere
- * (ndsRendererScanDisplayList at reloc_backend_mp_collision.c:13273), so
- * writing it, and especially clearing it to NULL on hide, would reach
- * subsystems this row has no business touching. The draw half reads
- * modelpart_status and takes the DL from the container directly. */
+ * The old shim stopped at the state mirror. That was insufficient: the DS
+ * display contract captures the source DObj's live DL/flags and its draw-plan
+ * memo can persist across motion events. Restore the complete source mutation
+ * below and invalidate those DS caches at the same writer seam. */
 void ftParamSetModelPartID(GObj *fighter_gobj, s32 joint_id,
                            s32 modelpart_id)
 {
@@ -7799,22 +7963,41 @@ void ftParamSetModelPartID(GObj *fighter_gobj, s32 joint_id,
         return;
     }
     fp->modelpart_status[slot].modelpart_id_curr = (s8)modelpart_id;
+    (void)ndsFTParamApplyModelPartCurrent(fighter_gobj, fp, slot);
     fp->is_modelpart_modify = TRUE;
     gNdsFighterModelPartSetCount++;
     if (modelpart_id >= 0)
     {
         gNdsFighterModelPartOnCount++;
     }
+    ndsFTParamInvalidateModelPartRenderer(fighter_gobj, fp);
 }
 
 void ftParamSetModelPartDetailAll(GObj *fighter_gobj, u8 detail)
 {
     FTStruct *fp = (fighter_gobj != NULL) ? ftGetStruct(fighter_gobj) : NULL;
+    s32 i;
 
-    if (fp != NULL)
+    if ((fp == NULL) || (detail == fp->detail_curr))
     {
-        fp->detail_curr = detail;
+        return;
     }
+    fp->detail_curr = detail;
+    for (i = nFTPartsJointCommonStart; i < (s32)ARRAY_COUNT(fp->joints); i++)
+    {
+        if (fp->joints[i] != NULL)
+        {
+            s32 slot = i - nFTPartsJointCommonStart;
+            s32 modelpart_id = fp->modelpart_status[slot].modelpart_id_curr;
+
+            if (modelpart_id != -1)
+            {
+                fp->modelpart_status[slot].modelpart_id_curr = -1;
+                ftParamSetModelPartID(fighter_gobj, i, modelpart_id);
+            }
+        }
+    }
+    ftParamInitTexturePartAll(fighter_gobj);
 }
 
 sb32 ftCommonThrowCheckInterruptCatchWait(GObj *fighter_gobj)
@@ -9469,6 +9652,7 @@ extern __attribute__((weak)) LBParticle *
 efManagerSparkleWhiteMakeEffect(Vec3f *pos);
 extern __attribute__((weak)) LBParticle *
 efManagerSparkleWhiteScaleMakeEffect(Vec3f *pos, f32 scale);
+extern LBParticle *ndsEFManagerChargeSparkleMakeEffect(Vec3f *pos);
 extern __attribute__((weak)) LBParticle *
 efManagerFlashMiddleMakeEffect(Vec3f *pos);
 
@@ -9695,6 +9879,9 @@ static sb32 ndsFTParamMakeSourceEffect(s32 effect_id, s32 lr, Vec3f *pos,
     case nEFKindSparkleWhiteScale:
         *effect = efManagerSparkleWhiteScaleMakeEffect(pos, 1.0F);
         return TRUE;
+    case nEFKindChargeSparkle:
+        *effect = ndsEFManagerChargeSparkleMakeEffect(pos);
+        return TRUE;
     case nEFKindFuraSparkle:
         *effect = efManagerFuraSparkleMakeEffect(pos);
         return TRUE;
@@ -9802,6 +9989,7 @@ void *ftParamMakeEffect(GObj *fighter_gobj, s32 effect_id, s32 joint_id,
                         sb32 is_scale_pos, u32 arg7)
 {
     Vec3f pos;
+    Vec3f charge_effect_pos;
     GObj *effect_gobj = NULL;
 
     (void)arg7;
@@ -9845,6 +10033,41 @@ void *ftParamMakeEffect(GObj *fighter_gobj, s32 effect_id, s32 joint_id,
         gNdsFighterSpecialsMarioLwDustEffectCount++;
     }
 #endif
+    /* BattleShip ftparam.c:1812-1854 gives the common full-charge sparkle a
+     * fighter-specific hand joint and local X offset before the generic effect
+     * position resolver runs. The colanim script intentionally names joint 0;
+     * this override is the source contract that moves the sparkle to the hand. */
+    if ((effect_id == nEFKindChargeSparkle) && (fighter_gobj != NULL))
+    {
+        FTStruct *charge_fp = ftGetStruct(fighter_gobj);
+
+        if (charge_fp != NULL)
+        {
+            charge_effect_pos.y = 0.0F;
+            charge_effect_pos.z = 0.0F;
+            switch (charge_fp->fkind)
+            {
+            case nFTKindSamus:
+                joint_id = 16;
+                charge_effect_pos.x = 180.0F;
+                effect_pos = &charge_effect_pos;
+                break;
+            case nFTKindDonkey:
+            case nFTKindGDonkey:
+                joint_id = 16;
+                charge_effect_pos.x = 100.0F;
+                effect_pos = &charge_effect_pos;
+                break;
+            case nFTKindKirby:
+                joint_id = 16;
+                charge_effect_pos.x = 50.0F;
+                effect_pos = &charge_effect_pos;
+                break;
+            default:
+                break;
+            }
+        }
+    }
     ndsFTParamGetVisualPosition(fighter_gobj, joint_id, effect_pos,
                                 effect_scatter, is_scale_pos, &pos);
     /* The source's Flame override, ahead of BOTH dispatch arms. See
@@ -15550,7 +15773,23 @@ void ftBossCommonSetDefaultLineID(GObj *fighter_gobj)
 void ftParamSetModelPartDefaultID(GObj *fighter_gobj, s32 joint_id,
                                   s32 modelpart_id)
 {
-    ftParamSetModelPartID(fighter_gobj, joint_id, modelpart_id);
+    FTStruct *fp = (fighter_gobj != NULL) ? ftGetStruct(fighter_gobj) : NULL;
+    s32 slot;
+
+    if ((fp == NULL) || (joint_id < nFTPartsJointCommonStart) ||
+        ((u32)joint_id >= ARRAY_COUNT(fp->joints)))
+    {
+        return;
+    }
+    slot = joint_id - nFTPartsJointCommonStart;
+    if ((u32)slot >= ARRAY_COUNT(fp->modelpart_status))
+    {
+        return;
+    }
+    /* BattleShip ftparam.c:821-828 changes only the reset/default id. The live
+     * part remains untouched until the normal reset path consumes this value. */
+    fp->modelpart_status[slot].modelpart_id_base = (s8)modelpart_id;
+    fp->is_modelpart_modify = TRUE;
 }
 
 void ftParamLockPlayerControl(GObj *fighter_gobj)
