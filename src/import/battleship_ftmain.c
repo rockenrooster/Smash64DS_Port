@@ -36,6 +36,40 @@ sb32 ndsDiagnosticsHandleImportedFTMainSetStatusBefore(GObj *fighter_gobj,
                                                        f32 frame_begin,
                                                        f32 anim_speed,
                                                        u32 flags);
+volatile u32 gNdsFoxLaserColAnimSuppressCount;
+volatile u32 gNdsFoxLaserColAnimPassCount;
+
+/* BUGS.md owner override: BattleShip's Fox LASER / LASER AERIAL neutral-B
+ * scripts (208_FoxMainMotion.c:1442-1466) each issue
+ * SetColAnim(nGMColAnimFighterFoxSpecialHiStart, 0).  The constant's name is
+ * misleading: these events belong to nFTFoxStatusSpecialN/SpecialAirN, not to
+ * Fire Fox.  On DS that cosmetic flash presents as the reported laser strobe.
+ * Keep the source neutral-B timing, projectile flags, SFX, sparkle/dust events,
+ * and every other color animation intact; refuse only this exact event while a
+ * Fox/NFox is in the two source laser statuses.  ftmain.c advances the motion
+ * event unconditionally after this call, so suppression cannot stall or alter
+ * the source script. */
+static sb32 ndsFTMainCheckSetFighterColAnimID(GObj *fighter_gobj,
+                                              s32 colanim_id, s32 length)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+
+    if ((fp != NULL) &&
+        ((fp->fkind == nFTKindFox) || (fp->fkind == nFTKindNFox)) &&
+        ((fp->status_id == nFTFoxStatusSpecialN) ||
+         (fp->status_id == nFTFoxStatusSpecialAirN)) &&
+        (colanim_id == nGMColAnimFighterFoxSpecialHiStart))
+    {
+        gNdsFoxLaserColAnimSuppressCount++;
+        return FALSE;
+    }
+    if ((fp != NULL) &&
+        ((fp->fkind == nFTKindFox) || (fp->fkind == nFTKindNFox)))
+    {
+        gNdsFoxLaserColAnimPassCount++;
+    }
+    return ftParamCheckSetFighterColAnimID(fighter_gobj, colanim_id, length);
+}
 #if NDS_TASK108_SITR_CALLBACK_CENSUS
 void ndsTask108SitrRefreshCallbacks(GObj *fighter_gobj);
 #endif
@@ -74,6 +108,7 @@ void ndsTask108SitrRefreshCallbacks(GObj *fighter_gobj);
 #define ftMainRunUpdateColAnim battleship_ftMainRunUpdateColAnim
 #define ftMainPlayAnimEventsAll battleship_ftMainPlayAnimEventsAll
 #define ftMainSetStatus battleship_ftMainSetStatus
+#define ftParamCheckSetFighterColAnimID ndsFTMainCheckSetFighterColAnimID
 /* Cycle 92 SGCO split. The last three of the six per-fighter procs registered
  * at decomp ft/ftmanager.c:858-863; the other three are renamed above. Each has
  * exactly ONE call site -- that gcAddGObjProcess registration, in a different TU
@@ -109,6 +144,7 @@ void ndsTask108SitrRefreshCallbacks(GObj *fighter_gobj);
 #undef ftMainRunUpdateColAnim
 #undef ftMainPlayAnimEventsAll
 #undef ftMainSetStatus
+#undef ftParamCheckSetFighterColAnimID
 #undef ftMainProcUpdateInterrupt
 #undef ftMainProcPhysicsMapDefault
 #undef ftMainProcPhysicsMapCapture
