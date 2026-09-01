@@ -22894,3 +22894,14 @@ ROM, but stopped before generation/build because the existing read-only
 BattleShip reference's `decomp/src/sys/taskman.c` does not match its pinned
 patched hash. The reference tree was left untouched; the canonical public
 targets and registered Boundary profile completed successfully.
+
+## 2026-09-01 — Direct NitroROM fighter-animation acquisition
+
+The four-kind stress profile localized part of its late-frame tail to repeated
+stdio/FAT opens and reads of BattleShip O2R fighter-animation files. The DS
+loader now uses Calico's NitroROM file-id API to validate and read the exact
+same header and payload directly from the application ROM, then runs the
+unchanged byte-swap, relocation, AObj normalization and source animation path.
+Any direct resolution or read failure falls through to the established stdio
+loader. A same-binary dispatch control measured 9 direct reads, zero fallback,
+and a 22,208-tick WORK-H P95 reduction over frames 32..159.

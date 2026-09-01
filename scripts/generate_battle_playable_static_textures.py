@@ -64,22 +64,22 @@ DS_FORMAT_PAL16 = 3
 DS_FORMAT_RGBA = 8
 DS_PALETTE16_ENTRIES = 16
 
-EXPECTED_KEY_COUNT = 32
-EXPECTED_OUTPUT_COUNT = 31
+EXPECTED_KEY_COUNT = 35
+EXPECTED_OUTPUT_COUNT = 33
 # 136,192 / 132,096 until 2026-08-03, when repack_paletted put 22 of the 24
 # textures back into the DS's sixteen-colour format their N64 sources were
 # already in. Lossless -- EXPECTED_ORACLE_PIXELS is unchanged and the slow
 # oracle still compares the same canonical 16-bit image -- and it returns 74,496
 # bytes of texture VRAM. The two source-authored Whispy-eye frames add 1,024 B
 # of PAL16 texels and 2,048 oracle pixels without changing that representation.
-EXPECTED_RESIDENCY_BYTES = 67712
-EXPECTED_PAYLOAD_BYTES = 67382
-EXPECTED_ORACLE_PIXELS = 77056
+EXPECTED_RESIDENCY_BYTES = 72576
+EXPECTED_PAYLOAD_BYTES = 71220
+EXPECTED_ORACLE_PIXELS = 85760
 EXPECTED_PAYLOAD_SHA256 = (
-    "026069892c23cf90ddf153079c3995831b728b8f4377d02f01b44b8b446004e8"
+    "47a0a464d095df43fa470a001e65a9ef2b8d70591bdd0a03e9346c9436149415"
 )
 EXPECTED_METADATA_SHA256 = (
-    "6c0f220b3218e2ee5cf295709d31b815c07b7197421fa58b2afbe66bc10b8ea8"
+    "b3b70f058e7e8220bba48e893a26544ba1e34026dfefb242607177dda57413d5"
 )
 EXPECTED_INCLUDE_SHA256 = (
     # RE-PINNED 2026-08-05, and it is PURE PROVENANCE. The include stamps the
@@ -93,7 +93,7 @@ EXPECTED_INCLUDE_SHA256 = (
     # (65,024) are all UNCHANGED, which is the proof that the corpus itself did
     # not move -- those are the guards over the data, this one is over the
     # emitted text. Same byte count before and after: 29,807.
-    "5eeab033eef74adbbdfd998c3eef1136c94eb296f2788e9f853684635bf86d74"
+    "b11bd4bdcc898a8a5a25b8c5b821950404dd559419ff1b724000d1d023a23c16"
 )
 
 G_SETTIMG = 0xFD
@@ -780,6 +780,75 @@ def capture_record(
     )
 
 
+def build_runtime_qualified_water_support_record(
+    repo_root: Path, blocks: Sequence[dict[str, object]]
+) -> PreparedRecord:
+    """Build native stage run 41's exact clamped water-support card key."""
+    images = census.load_o2r(repo_root, census.O2R_INPUTS["stage_images"])
+    state = DisplayState(
+        tlut_image=census.PointerRef(images.file_id, 0x1858),
+        tlut_count=16,
+        texture_seen=True,
+        texture_on=True,
+        texture_tile=0,
+    )
+    state.tiles[0] = TileState(
+        set_seen=True,
+        size_seen=True,
+        format=FMT_CI,
+        size=SIZ_4B,
+        line=2,
+        tmem=0,
+        palette=0,
+        cmt=2,
+        maskt=5,
+        shiftt=0,
+        cms=2,
+        masks=5,
+        shifts=0,
+        uls=0,
+        ult=0,
+        lrs=0x2FC,
+        lrt=0x17C,
+        width=32,
+        height=96,
+    )
+    state.tiles[LOAD_TILE] = TileState(set_seen=True)
+    state.loads = [
+        LoadState(
+            image=census.PointerRef(images.file_id, 0x1880),
+            image_format=FMT_CI,
+            image_size=SIZ_16B,
+            image_width=1,
+            load_kind=LOAD_KIND_BLOCK,
+            load_tile=LOAD_TILE,
+            load_uls=0,
+            load_ult=0,
+            load_lrs=0xFF,
+            load_dxt=0x400,
+            load_texels=0x100,
+            load_tmem=0,
+        )
+    ]
+    record = capture_record(1 << 2, 0x18E0, state, images, blocks)
+    expected_key = (
+        0x1880, 2, 2, 1, 0x1858, 16, 1, 2,
+        0, 32, 96, 0, 0, 0, 2, 2,
+        5, 5, 0, 0, 7, 0, 0, 0xFF,
+        0x400, 0x100, 0, 0, 0x2FC, 0x17C, 2, 0x20B7,
+    ) + (0,) * 27
+    if record.key_words != expected_key:
+        raise falsify("water support run 41 key no longer matches native stage")
+    if record.output_sha256 != (
+        "d3d79a86ca205e2b5c79576d68ed2c75656f8b617c9056b0aba1eac3b2e74ab0"
+    ):
+        raise falsify(
+            "water support run 41 output changed: "
+            f"{record.output_sha256}"
+        )
+    return record
+
+
 def build_water_records(repo_root: Path) -> list[PreparedRecord]:
     """Build the two exact source-initial TEXEL0/TEXEL1 water keys."""
     source = water.load_source_corpus(repo_root)
@@ -1277,11 +1346,12 @@ def build_runtime_qualified_flower_records(
     """Build the two source-authored Dream Land flower textures.
 
     BattleShip declares the back and front flower owners over the same two CI4
-    images. Native runs 32 and 34 establish two distinct first-frame keys. The
-    0x0030 draw uses a 128x32 tile over the 64x32 source, while the 0x0460 draw
-    inherits the later 16x32 mouth-sized render tile but still loads the full
-    64x32 source block. Keeping both source states resident before GO lets both
-    flower owner groups preflight without a generic warm-up.
+    images. Native runs 32 and 34 establish three distinct first-frame keys. The
+    0x0030 draws at 128x32; the two 0x0460 owner states draw at 128x32 and
+    64x32. The old hand-qualified 16x32 state was never touched by the live
+    stage, while native run 34 requested the missing 64x32 key. Keeping all
+    three source-observed states resident before GO lets both flower owner
+    groups preflight without a generic warm-up.
     """
     actors = census.load_o2r(repo_root, census.O2R_INPUTS["stage_actors"])
     records: list[PreparedRecord] = []
@@ -1298,6 +1368,26 @@ def build_runtime_qualified_flower_records(
             "a978fd14ee3bf428d902af1afb8f2eea243556ae8d70d753ea55aeb3db958a4e",
         ),
         (
+            0x0030,
+            0x0008,
+            0x2EB0,
+            64,
+            4,
+            6,
+            0x3FC,
+            "785156b328cc4d2f5de17afaddfa9d682356848c5c1eb6be56a95f909c4b1a03",
+        ),
+        (
+            0x0030,
+            0x0008,
+            0x3028,
+            64,
+            4,
+            6,
+            0x0FC,
+            "785156b328cc4d2f5de17afaddfa9d682356848c5c1eb6be56a95f909c4b1a03",
+        ),
+        (
             0x0460,
             0x0438,
             0x29A8,
@@ -1311,11 +1401,11 @@ def build_runtime_qualified_flower_records(
             0x0460,
             0x0438,
             0x29A8,
-            16,
-            1,
+            64,
             4,
-            0x1FC,
-            "7869b6cf9075f373bd8a6af013cabb6f7325717315d09155bd189b0aed1bd3e6",
+            6,
+            0x2FC,
+            "1bfc9740c7a1f5d0110791534adb16f00712bfd7d996fb06e874e998f0dfb74b",
         ),
     )
     for (
@@ -1391,7 +1481,10 @@ def build_runtime_qualified_flower_records(
                 f"flower 0x{image_offset:04x} key no longer matches native stage"
             )
         if record.output_sha256 != output_sha:
-            raise falsify(f"flower 0x{image_offset:04x} output changed")
+            raise falsify(
+                f"flower 0x{image_offset:04x} output changed: "
+                f"{record.output_sha256} != {output_sha}"
+            )
         if (
             record.image != census.PointerRef(152, image_offset)
             or record.tlut_image != census.PointerRef(152, palette_offset)
@@ -2045,6 +2138,15 @@ def generate(repo_root: Path) -> GeneratedArtifacts:
             f"static owner mask 0x{owner_union:x} != 0x{expected_owner_union:x}"
         )
     records.extend(build_water_records(repo_root))
+    water_manifest = manifest["water"]
+    if not isinstance(water_manifest, dict):
+        raise falsify("source census lost water ownership")
+    water_blocks = water_manifest["source_blocks"]
+    if not isinstance(water_blocks, list):
+        raise falsify("source census lost water source blocks")
+    records.append(
+        build_runtime_qualified_water_support_record(repo_root, water_blocks)
+    )
     dynamic = manifest["dynamic_animated_owners"]
     if not isinstance(dynamic, dict):
         raise falsify("source census lost dynamic_animated_owners")

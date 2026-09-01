@@ -36,6 +36,11 @@ volatile u32 gNdsRelocAssetPayloadReadCount;
 volatile u32 gNdsRelocAssetOpenFailCount;
 volatile u32 gNdsRelocAssetFormatFailCount;
 volatile u32 gNdsRelocAssetShortReadCount;
+volatile u32 gNdsRelocAssetDirectReadCount;
+volatile u32 gNdsRelocAssetDirectFallbackCount;
+/* Same-binary performance control. Zero restores the established stdio/FAT
+ * loader without changing code placement. */
+__attribute__((used)) volatile u32 gNdsRelocAssetDirectDispatch = 1u;
 
 static const NDSRelocAssetEntry sNdsRelocAssets[] = {
     { 0, 0, "nitro:/reloc/reloc_menus/MNCommon" },
@@ -788,6 +793,100 @@ s32 ndsRelocAssetLoadDataAndExternIDs(u32 asset_id, void *dst,
  * the bytes left in dst are identical to the old memset-then-load order. On
  * every failure path reachable once the header is known, dst is left fully
  * zeroed -- which is what the animation caller's `fail:` memset did. */
+/* Calico's NitroRom API reads the application's FNT/FAT by file id and then
+ * dispatches one exact ROM range read. It bypasses the stdio/FAT path which
+ * otherwise reopens, walks and seeks a fighter clip during the frame that
+ * changes action. The bytes and O2R validation below are identical to
+ * ndsRelocAssetReadHeaderFromFile; any unavailable/direct-read failure falls
+ * through to that established loader. */
+static s32 ndsRelocAssetLoadIntoZeroedHeapDirect(
+    const NDSRelocAssetEntry *entry, void *dst, u32 align,
+    size_t *out_alloc_size, NDSRelocAssetHeader *out_header)
+{
+    NitroRom *rom;
+    NDSRelocAssetHeader header;
+    u8 head[NDS_O2R_RESOURCE_HEADER_SIZE + 16];
+    const char *path;
+    int nitro_id;
+    u32 extern_count;
+    u32 data_size_offset;
+    u32 data_offset;
+    u32 file_size;
+    size_t alloc_size;
+
+    if ((gNdsRelocAssetDirectDispatch == 0u) ||
+        (entry == NULL) || (entry->path == NULL) ||
+        (strncmp(entry->path, "nitro:/", 7u) != 0))
+    {
+        return FALSE;
+    }
+    rom = nitroromGetSelf();
+    if (rom == NULL)
+    {
+        return FALSE;
+    }
+    path = entry->path + 7u;
+    nitro_id = nitroromResolvePath(rom, NITROROM_ROOT_DIR, path);
+    if ((nitro_id < 0) || (nitro_id >= (s32)NITROROM_ROOT_DIR))
+    {
+        return FALSE;
+    }
+    file_size = nitroromGetFileSize(rom, (u16)nitro_id);
+    if ((file_size < sizeof(head)) ||
+        (nitroromReadFile(rom, (u16)nitro_id, 0u, head,
+                          sizeof(head)) == false) ||
+        (memcmp(&head[NDS_O2R_MAGIC_OFFSET], NDS_O2R_MAGIC, 4u) != 0))
+    {
+        return FALSE;
+    }
+    header.file_id = ndsReadLe32(&head[NDS_O2R_RESOURCE_HEADER_SIZE]);
+    header.reloc_intern_offset =
+        ndsReadLe16(&head[NDS_O2R_RESOURCE_HEADER_SIZE + 4]);
+    header.reloc_extern_offset =
+        ndsReadLe16(&head[NDS_O2R_RESOURCE_HEADER_SIZE + 6]);
+    extern_count = ndsReadLe32(&head[NDS_O2R_RESOURCE_HEADER_SIZE + 8]);
+    header.extern_file_ids_num = extern_count;
+    if ((header.file_id != entry->file_id) ||
+        (extern_count > ((0xffffffffu -
+                          (NDS_O2R_RESOURCE_HEADER_SIZE + 16u)) / 2u)))
+    {
+        return FALSE;
+    }
+    data_size_offset = NDS_O2R_RESOURCE_HEADER_SIZE + 12u +
+                       (extern_count * 2u);
+    data_offset = data_size_offset + 4u;
+    if ((data_offset > file_size) ||
+        (nitroromReadFile(rom, (u16)nitro_id, data_size_offset, head,
+                          sizeof(u32)) == false))
+    {
+        return FALSE;
+    }
+    header.data_size = ndsReadLe32(head);
+    if (header.data_size > (file_size - data_offset))
+    {
+        return FALSE;
+    }
+    alloc_size = ((size_t)header.data_size + (size_t)align - 1u) &
+                 ~((size_t)align - 1u);
+    memset(dst, 0, alloc_size);
+    if ((header.data_size != 0u) &&
+        (nitroromReadFile(rom, (u16)nitro_id, data_offset, dst,
+                          header.data_size) == false))
+    {
+        memset(dst, 0, alloc_size);
+        return FALSE;
+    }
+    if (out_alloc_size != NULL)
+    {
+        *out_alloc_size = alloc_size;
+    }
+    if (out_header != NULL)
+    {
+        *out_header = header;
+    }
+    return TRUE;
+}
+
 s32 ndsRelocAssetLoadIntoZeroedHeap(u32 asset_id, void *dst, u32 align,
                                     size_t *out_alloc_size,
                                     NDSRelocAssetHeader *out_header)
@@ -813,6 +912,17 @@ s32 ndsRelocAssetLoadIntoZeroedHeap(u32 asset_id, void *dst, u32 align,
         gNdsRelocAssetOpenFailCount++;
         return FALSE;
     }
+
+    if (ndsRelocAssetLoadIntoZeroedHeapDirect(entry, dst, align,
+                                               out_alloc_size,
+                                               out_header) != FALSE)
+    {
+        gNdsRelocAssetHeaderReadCount++;
+        gNdsRelocAssetPayloadReadCount++;
+        gNdsRelocAssetDirectReadCount++;
+        return TRUE;
+    }
+    gNdsRelocAssetDirectFallbackCount++;
 
     file = fopen(entry->path, "rb");
     if (file == NULL)

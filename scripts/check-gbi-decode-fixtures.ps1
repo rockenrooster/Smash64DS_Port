@@ -1854,7 +1854,7 @@ Assert-True ($renderer.Contains('NDS_RENDERER_HW_TEXTURE_CACHE_COUNT 114u') -and
 # 114 slots fit because the static corpus does not duplicate its ROM key in
 # RAM. These three pin the partition, ROM-backed comparison, and the re-measured
 # byte budget that refuses an unmeasured count bump.
-Assert-True ($renderer.Contains('NDS_RENDERER_HW_TEXTURE_STATIC_COUNT 32u') -and $renderer.Contains('sNdsRendererHardwareTextureKeyPool[NDS_RENDERER_HW_TEXTURE_DYNAMIC_COUNT]')) 'Texture cache lost the static/dynamic partition that makes a keyless entry addressable.'
+Assert-True ($renderer.Contains('NDS_RENDERER_HW_TEXTURE_STATIC_COUNT 35u') -and $renderer.Contains('sNdsRendererHardwareTextureKeyPool[NDS_RENDERER_HW_TEXTURE_DYNAMIC_COUNT]')) 'Texture cache lost the static/dynamic partition that makes a keyless entry addressable.'
 Assert-True ($renderer.Contains('sNdsRendererHardwareStaticKeyPointers') -and $renderer -match '(?s)ndsRendererHardwareEntryKeyEqual.*?record->key_words\[33\]') 'Static texture slots no longer compare their non-pointer words against the generated ROM record.'
 Assert-True ($renderer -match '(?s)_Static_assert\(sizeof\(sNdsRendererHardwareTextureCache\).*?sizeof\(sNdsRendererHardwareTextureKeyPool\).*?sizeof\(sNdsRendererHardwareStaticKeyPointers\).*?24768u') 'Texture cache storage lost the measured 24,768-byte ceiling for the 114-slot four-fighter working set.'
 Assert-True ($rendererHeader.Contains('NDSRendererImmutableCommandSpan immutable_command_span')) 'Renderer config cannot distinguish immutable source spans from dynamic task-heap lists.'

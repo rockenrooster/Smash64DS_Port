@@ -1960,7 +1960,7 @@ void ndsRendererBenchmarkSinkEndOwner(NDSRendererProfileOwner owner)
  * key pointer is needed. Re-measure with scripts/probe-p2-fourcpu-sparse.ps1
  * before changing this count; do not grow it from a theoretical roster sum. */
 #define NDS_RENDERER_HW_TEXTURE_CACHE_COUNT 114u
-#define NDS_RENDERER_HW_TEXTURE_STATIC_COUNT 32u
+#define NDS_RENDERER_HW_TEXTURE_STATIC_COUNT 35u
 #define NDS_RENDERER_HW_TEXTURE_DYNAMIC_COUNT \
     (NDS_RENDERER_HW_TEXTURE_CACHE_COUNT - NDS_RENDERER_HW_TEXTURE_STATIC_COUNT)
 #define NDS_RENDERER_HW_TEXTURE_LOOKUP_COUNT 128u
@@ -2674,6 +2674,10 @@ volatile u32 gNdsR2StageTextureMissHash;
 volatile u32 gNdsR2StageTextureMissArmed;
 volatile u32 gNdsR2StageTextureMissSourceFrameTried;
 volatile u32 gNdsR2StageTextureMissKeyWords[59u];
+volatile u32 gNdsR2StageTextureMissImageAsset;
+volatile u32 gNdsR2StageTextureMissImageOffset;
+volatile u32 gNdsR2StageTextureMissTlutAsset;
+volatile u32 gNdsR2StageTextureMissTlutOffset;
 #else
 #define NDS_R2_STAGE_REJECT_COUNT(reason) ((void)0)
 #endif

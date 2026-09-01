@@ -250,6 +250,12 @@ EXPECTED_ACTOR_ROOTS = {
 
 
 EXPECTED_CENSUS_SHA256 = (
+    # RE-PINNED 2026-09-01. Native stage run 41's already-censused water-support
+    # source and the second live flower state gained exact static renderer keys.
+    # Total cache capacity remains 114; the partition moves 32/82 -> 35/79, so
+    # the renderer contract's
+    # static count, dynamic key-pool bytes, and static pointer-word bytes move.
+    # No source block, BattleShip input, or water ownership changed.
     # RE-PINNED 2026-08-05. The previous value (829c895d…) was left stale by
     # fcf93d00 on 2026-08-04, which restructured the hardware texture key --
     # 56 of 59 words moved out of RAM into a generated ROM record -- and updated
@@ -279,7 +285,7 @@ EXPECTED_CENSUS_SHA256 = (
     # artifact; pinning a drifted corpus destroys the guard's whole value.
     #
     # WHEN YOU CHANGE THE KEY CONTRACT, RE-PIN IN THE SAME COMMIT.
-    "e352f75f3267cce23c42d8603d7343f97db7a05140246842fad0d346fd8af3f9"
+    "78bca9b6767dabea1ec20f4437e2b753be4584e1050fc5c3dc950d3f36fa09b1"
 )
 
 
@@ -745,7 +751,7 @@ def parse_renderer_contract(repo_root: Path) -> dict[str, object]:
         "_Static_assert(sizeof(NDSRendererHardwareTextureKey) == 236u",
         "return (memcmp(a, b, sizeof(*a)) == 0) ? TRUE : FALSE;",
         "#define NDS_RENDERER_HW_TEXTURE_CACHE_COUNT 114u",
-        "#define NDS_RENDERER_HW_TEXTURE_STATIC_COUNT 32u",
+        "#define NDS_RENDERER_HW_TEXTURE_STATIC_COUNT 35u",
         "u32 key_hash;",
     )
     for token in required_tokens:
@@ -761,11 +767,11 @@ def parse_renderer_contract(repo_root: Path) -> dict[str, object]:
         # the 24 static slots read 56 of their 59 words out of the generated ROM
         # record, keeping only the three runtime pointer words in RAM.
         "current_cache_entries": 114,
-        "static_cache_entries": 32,
+        "static_cache_entries": 35,
         "cache_entry_bytes_profile_lt2": 44,
         "cache_entry_bytes_profile_ge2": 40,
-        "dynamic_key_pool_bytes": 82 * 236,
-        "static_pointer_word_bytes": 32 * 12,
+        "dynamic_key_pool_bytes": 79 * 236,
+        "static_pointer_word_bytes": 35 * 12,
         "source_block_census_is_complete_key_census": False,
     }
 

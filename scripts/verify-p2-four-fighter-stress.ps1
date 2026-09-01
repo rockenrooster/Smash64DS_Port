@@ -112,6 +112,14 @@ $memoryGlobals = @(
     # every miss degrades to the on-demand load.
     'gNdsR2AnimCacheMisses',
     'gNdsR2AnimCacheRejects',
+    'gNdsR2AnimCacheHits',
+    'gNdsR2AnimCacheFills',
+    'gNdsR2AnimCacheBytes',
+    'gNdsR2AnimCacheArenaUsedBytes',
+    'gNdsR2AnimCacheRawRecycles',
+    'gNdsRelocAssetDirectDispatch',
+    'gNdsRelocAssetDirectReadCount',
+    'gNdsRelocAssetDirectFallbackCount',
     # These are part of the shipping tick-HUD target already. Do not enable
     # Task-68's fallback census here: that flag changes BSS/cache placement and
     # would make the gate measure a different binary. PlanBuild means the live
@@ -390,6 +398,14 @@ $memory = [PSCustomObject]@{
     ftPoseBindFull = $extra['gNdsFtPoseBindFull']
     animCacheMisses = $extra['gNdsR2AnimCacheMisses']
     animCacheRejects = $extra['gNdsR2AnimCacheRejects']
+    animCacheHits = $extra['gNdsR2AnimCacheHits']
+    animCacheFills = $extra['gNdsR2AnimCacheFills']
+    animCacheLiveBytes = $extra['gNdsR2AnimCacheBytes']
+    animCacheArenaUsedBytes = $extra['gNdsR2AnimCacheArenaUsedBytes']
+    animCacheRawRecycles = $extra['gNdsR2AnimCacheRawRecycles']
+    animDirectDispatch = $extra['gNdsRelocAssetDirectDispatch']
+    animDirectReads = $extra['gNdsRelocAssetDirectReadCount']
+    animDirectFallbacks = $extra['gNdsRelocAssetDirectFallbackCount']
     arenaChosenBytes = $extra['gNdsTaskmanArenaChosenSize']
     arenaSearchAllocationFailures = $extra['gNdsTaskmanArenaAllocFailCount']
     graphicsHeapCapacityBytes = $extra['gNdsTaskmanGraphicsHeapCapacity']
@@ -505,6 +521,28 @@ if ([uint64]$memory.generalHeapFreeMinBytes -lt $generalHeapFloor) {
     throw ("Four-fighter stress breached the general-heap safety floor: " +
         "$($memory.generalHeapFreeMinBytes) B < $generalHeapFloor B. " +
         "P2-2 may not trade source-correct four-fighter state for allocator risk.")
+}
+if (([uint64]$memory.animCacheHits -eq 0) -or
+    ([uint64]$memory.animCacheFills -eq 0) -or
+    ([uint64]$memory.animCacheRawRecycles -eq 0) -or
+    ([uint64]$memory.animCacheLiveBytes -gt
+        [uint64]$memory.animCacheArenaReservedBytes) -or
+    ([uint64]$memory.animCacheArenaUsedBytes -gt
+        [uint64]$memory.animCacheArenaReservedBytes)) {
+    throw ("Four-fighter raw animation cache did not prove bounded circular " +
+        "engagement: hits=$($memory.animCacheHits) " +
+        "fills=$($memory.animCacheFills) wraps=$($memory.animCacheRawRecycles) " +
+        "live=$($memory.animCacheLiveBytes) " +
+        "cursor=$($memory.animCacheArenaUsedBytes) " +
+        "reserved=$($memory.animCacheArenaReservedBytes).")
+}
+if (([uint64]$memory.animDirectDispatch -ne 1) -or
+    ([uint64]$memory.animDirectReads -eq 0) -or
+    ([uint64]$memory.animDirectFallbacks -ne 0)) {
+    throw ("Four-fighter direct NitroROM animation acquisition did not engage " +
+        "cleanly: dispatch=$($memory.animDirectDispatch) " +
+        "reads=$($memory.animDirectReads) " +
+        "fallbacks=$($memory.animDirectFallbacks).")
 }
 
 Write-Host ''

@@ -7598,3 +7598,23 @@ the matrix/camera float family at **14,810 tk/fr** — `syMatrixLookAtReflectF`
 `__aeabi_fdiv` alone at 10,084 tk/fr over 308,426 calls, the most expensive
 helper per call in the build by 3.2x. **Size those against per-frame call
 distribution, not mean self time** (slice 37).
+
+## 2026-09-01 — BUGS.md four-CPU native-route and animation-acquisition checkpoint
+
+The corrected four-kind arm now routes Dream Land entirely through its native
+stage owner after three source-key additions to the generated static texture
+corpus. Retained-Q20 fighter hierarchy math is frame-locked pixel-identical to
+the old float oracle on the measured DK crop. The accepted raw-animation ring
+keeps unrelated templates across a byte wrap: misses 333→274, SINT P95
+1,186,624→1,108,032, rejects 0, arena 1,540,096 B and heap low-water 28,068 B.
+
+The variable-size LRU experiment is rejected. Its O(n²) gap search could only
+reach presented frame 1,088 before the 3,600-second full-gate timeout, whereas
+the accepted ring completes the same gate. No LRU code remains.
+
+Calico's direct NitroROM range API now fail-opens to the old stdio loader while
+reading the exact same O2R header and payload. Same-binary frames 32..159:
+dispatch 0→1, direct reads 4→9, direct fallbacks 5→0, cache hits/misses 4/9 on
+both arms; WORK-H P95 2,127,296→2,105,088 and SINT max
+1,072,192→1,048,640. Evidence:
+`artifacts/performance/2026-09-01_bug-fourcpu-directrom-ab`.

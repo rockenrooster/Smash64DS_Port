@@ -99,6 +99,11 @@ s32 ndsRelocAssetLoadIntoZeroedHeap(u32 asset_id, void *dst, u32 align,
                                     NDSRelocAssetHeader *out_header);
 s32 ndsRelocGetLoadedAssetView(u32 asset_id, const void **out_data,
                                u32 *out_size);
+/* Resolve a live pointer through the authoritative loaded-file table. Used by
+ * route diagnostics and safe wherever a caller needs stable asset provenance
+ * instead of a taskman-heap address. */
+s32 ndsRelocGetLoadedPointerProvenance(const void *ptr, u32 *out_asset_id,
+                                       u32 *out_offset);
 s32 ndsRelocCopyMObjSubForAttachment(struct MObjSub *dst,
                                      const struct MObjSub *src);
 /* Recover the file returned by lbRelocGetForceExternHeapFile when pristine

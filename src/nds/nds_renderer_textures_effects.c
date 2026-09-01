@@ -10005,6 +10005,14 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
                 gNdsR2StageTextureMissSourceFrameTried = source_frame_tried;
                 memcpy((void *)gNdsR2StageTextureMissKeyWords,
                        &key, sizeof(key));
+                (void)ndsRelocGetLoadedPointerProvenance(
+                    (const void *)(uintptr_t)key.image,
+                    (u32 *)&gNdsR2StageTextureMissImageAsset,
+                    (u32 *)&gNdsR2StageTextureMissImageOffset);
+                (void)ndsRelocGetLoadedPointerProvenance(
+                    (const void *)(uintptr_t)key.tlut_image,
+                    (u32 *)&gNdsR2StageTextureMissTlutAsset,
+                    (u32 *)&gNdsR2StageTextureMissTlutOffset);
             }
         }
     }

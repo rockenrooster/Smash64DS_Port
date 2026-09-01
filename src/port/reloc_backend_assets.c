@@ -3032,6 +3032,27 @@ s32 ndsRelocPointerRangeInLoadedFiles(const void *ptr, size_t size)
                                                                   FALSE;
 }
 
+s32 ndsRelocGetLoadedPointerProvenance(const void *ptr, u32 *out_asset_id,
+                                       u32 *out_offset)
+{
+    NDSRelocLoadedFile *loaded;
+
+    if ((ptr == NULL) || (out_asset_id == NULL) || (out_offset == NULL))
+    {
+        return FALSE;
+    }
+    *out_asset_id = 0xffffffffu;
+    *out_offset = 0xffffffffu;
+    loaded = ndsRelocFindLoadedFileContaining(ptr, 1u);
+    if (loaded == NULL)
+    {
+        return FALSE;
+    }
+    *out_asset_id = loaded->asset_id;
+    *out_offset = (u32)((const u8 *)ptr - (const u8 *)loaded->data);
+    return TRUE;
+}
+
 static size_t ndsRelocStatusNodeDataSize(const LBFileNode *node)
 {
     NDSRelocLoadedFile *loaded;
@@ -8371,6 +8392,82 @@ static NDSR2AnimCacheEntry *ndsR2AnimCacheFind(u32 asset_id)
     return NULL;
 }
 
+static void ndsR2AnimCacheRemoveEntry(u32 index)
+{
+    if (index >= sNdsR2AnimCacheCount)
+    {
+        return;
+    }
+    if (gNdsR2AnimCacheBytes >= sNdsR2AnimCache[index].size)
+    {
+        gNdsR2AnimCacheBytes -= sNdsR2AnimCache[index].size;
+    }
+    else
+    {
+        gNdsR2AnimCacheBytes = 0u;
+    }
+    sNdsR2AnimCacheCount--;
+    if (index != sNdsR2AnimCacheCount)
+    {
+        sNdsR2AnimCache[index] =
+            sNdsR2AnimCache[sNdsR2AnimCacheCount];
+    }
+}
+
+static void ndsR2AnimCacheEvictRawRange(u32 offset, u32 size)
+{
+    const u8 *write_start = &sNdsR2AnimCacheArena[offset];
+    const u8 *write_end = write_start + size;
+    u32 i = 0u;
+
+    while (i < sNdsR2AnimCacheCount)
+    {
+        const u8 *entry_start = sNdsR2AnimCache[i].payload;
+        const u8 *entry_end = entry_start + sNdsR2AnimCache[i].size;
+
+        if ((write_start < entry_end) && (entry_start < write_end))
+        {
+            ndsR2AnimCacheRemoveEntry(i);
+        }
+        else
+        {
+            i++;
+        }
+    }
+}
+
+/* Raw templates are copied into each fighter's authoritative heap before any
+ * fixup or use, so the cache owns no live object pointers. Keep the arena as a
+ * variable-size circular log: wrapping evicts only byte ranges the incoming
+ * template overwrites instead of invalidating every unrelated clip at once. */
+static void *ndsR2AnimCacheRawRingAlloc(u32 size)
+{
+    u32 aligned;
+
+    if (ndsR2AnimCacheArenaEnsure() == FALSE)
+    {
+        return NULL;
+    }
+    if ((size == 0u) || (size > sNdsR2AnimCacheArenaBytes))
+    {
+        gNdsR2AnimCacheArenaOverflows++;
+        gNdsR2AnimCacheArenaOverflowLastSize = size;
+        gNdsR2AnimCacheArenaOverflowLastUsed = sNdsR2AnimCacheArenaUsed;
+        return NULL;
+    }
+    aligned = (sNdsR2AnimCacheArenaUsed + 15u) & ~15u;
+    if ((aligned > sNdsR2AnimCacheArenaBytes) ||
+        (size > (sNdsR2AnimCacheArenaBytes - aligned)))
+    {
+        aligned = 0u;
+        gNdsR2AnimCacheRawRecycles++;
+    }
+    ndsR2AnimCacheEvictRawRange(aligned, size);
+    sNdsR2AnimCacheArenaUsed = aligned + size;
+    gNdsR2AnimCacheArenaUsedBytes = sNdsR2AnimCacheArenaUsed;
+    return &sNdsR2AnimCacheArena[aligned];
+}
+
 /* Called with the payload already byte-swapped and not yet fixed up. */
 static void ndsR2AnimCacheStore(u32 asset_id, const void *data, u32 size,
                                 const NDSRelocAssetHeader *header)
@@ -8388,11 +8485,10 @@ static void ndsR2AnimCacheStore(u32 asset_id, const void *data, u32 size,
         if ((ndsR2AnimCacheArenaEnsure() != FALSE) &&
             (sNdsR2AnimCacheArenaRawOnly != FALSE))
         {
-            sNdsR2AnimCacheCount = 0u;
-            sNdsR2AnimCacheArenaUsed = 0u;
-            gNdsR2AnimCacheArenaUsedBytes = 0u;
-            gNdsR2AnimCacheBytes = 0u;
-            gNdsR2AnimCacheRawRecycles++;
+            /* A full metadata table can occur before the byte ring wraps when
+             * clips are tiny. Evict one template; payload ownership is still
+             * governed by the ring range and no live object points at it. */
+            ndsR2AnimCacheRemoveEntry(0u);
         }
         else
         {
@@ -8400,36 +8496,9 @@ static void ndsR2AnimCacheStore(u32 asset_id, const void *data, u32 size,
             return;
         }
     }
-    /* P2 four-kind residency: cached animation bytes are templates only. On a
-     * hit they are copied into the fighter's authoritative figatree_heap and
-     * all position-dependent fixups happen there; no BattleShip object keeps a
-     * pointer into this raw cache. Therefore a raw-only cache may recycle its
-     * template generation once it fills instead of permanently rejecting every
-     * later clip and streaming NitroFS for the rest of the match.
-     *
-     * Do this BEFORE ArenaAlloc so an ordinary generation rollover is not
-     * reported as an overflow. The resident-BattlePack topology is excluded:
-     * its low arena bytes are authoritative packed storage and its measured
-     * behind-pack cache already has a separate residency contract. */
-    if ((ndsR2AnimCacheArenaEnsure() != FALSE) &&
-        (sNdsR2AnimCacheArenaRawOnly != FALSE) &&
-        (sNdsR2AnimCacheCount != 0u))
-    {
-        u32 aligned = (sNdsR2AnimCacheArenaUsed + 15u) & ~15u;
-
-        if ((aligned > sNdsR2AnimCacheArenaBytes) ||
-            (size > (sNdsR2AnimCacheArenaBytes - aligned)))
-        {
-            /* The incoming heap copy is outside this arena, so clearing the
-             * template index before memcpy cannot invalidate `data`. */
-            sNdsR2AnimCacheCount = 0u;
-            sNdsR2AnimCacheArenaUsed = 0u;
-            gNdsR2AnimCacheArenaUsedBytes = 0u;
-            gNdsR2AnimCacheBytes = 0u;
-            gNdsR2AnimCacheRawRecycles++;
-        }
-    }
-    payload = ndsR2AnimCacheArenaAlloc(size);
+    payload = ((ndsR2AnimCacheArenaEnsure() != FALSE) &&
+               (sNdsR2AnimCacheArenaRawOnly != FALSE)) ?
+        ndsR2AnimCacheRawRingAlloc(size) : ndsR2AnimCacheArenaAlloc(size);
     if (payload == NULL)
     {
         ndsR2AnimNoteRejected(asset_id, size);

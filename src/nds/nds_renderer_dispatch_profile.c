@@ -879,6 +879,14 @@ void ndsRendererPublishStageRouteProbeDiagnostics(void)
                   sizeof(gNdsR2StageTextureMissSourceFrameTried));
     DC_FlushRange((const void *)&gNdsR2StageTextureMissKeyWords,
                   sizeof(gNdsR2StageTextureMissKeyWords));
+    DC_FlushRange((const void *)&gNdsR2StageTextureMissImageAsset,
+                  sizeof(gNdsR2StageTextureMissImageAsset));
+    DC_FlushRange((const void *)&gNdsR2StageTextureMissImageOffset,
+                  sizeof(gNdsR2StageTextureMissImageOffset));
+    DC_FlushRange((const void *)&gNdsR2StageTextureMissTlutAsset,
+                  sizeof(gNdsR2StageTextureMissTlutAsset));
+    DC_FlushRange((const void *)&gNdsR2StageTextureMissTlutOffset,
+                  sizeof(gNdsR2StageTextureMissTlutOffset));
     DC_FlushRange((const void *)&gNdsMiscWeaponDrawTicks,
                   sizeof(gNdsMiscWeaponDrawTicks));
     DC_FlushRange((const void *)&gNdsMiscEffectDrawTicks,

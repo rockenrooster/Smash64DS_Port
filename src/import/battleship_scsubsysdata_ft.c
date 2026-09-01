@@ -254,9 +254,65 @@ void *ndsBattleShipLoadCSSSelectedFigatree(const void *file_id, void *heap)
 
 sb32 ndsBattleShipIsCSSSelectedFigatreeJoint(const void *ptr)
 {
+    static uintptr_t selected_low;
+    static uintptr_t selected_high;
+    uintptr_t value;
     size_t i;
 
     if (ptr == NULL)
+    {
+        return FALSE;
+    }
+    if (selected_high == 0u)
+    {
+        uintptr_t low = (uintptr_t)-1;
+        uintptr_t high = 0u;
+
+#define NDS_CSS_SELECTED_ACCUM_BOUNDS(table)                             \
+        do                                                               \
+        {                                                                \
+            for (i = 0u; i < ARRAY_COUNT(table); i++)                   \
+            {                                                            \
+                uintptr_t candidate = (uintptr_t)(table)[i];             \
+                                                                         \
+                if ((candidate != 0u) && (candidate < low))              \
+                {                                                        \
+                    low = candidate;                                     \
+                }                                                        \
+                if (candidate > high)                                    \
+                {                                                        \
+                    high = candidate;                                    \
+                }                                                        \
+            }                                                            \
+        } while (0)
+
+        NDS_CSS_SELECTED_ACCUM_BOUNDS(dFTMarioAnimSelected_joints);
+        NDS_CSS_SELECTED_ACCUM_BOUNDS(dFTFoxAnimSelected_joints);
+#if NDS_P2_LUIGI
+        NDS_CSS_SELECTED_ACCUM_BOUNDS(dFTLuigiAnimSelected_joints);
+#endif
+#if NDS_P2_DONKEY
+        NDS_CSS_SELECTED_ACCUM_BOUNDS(dFTDonkeyAnimSelected_joints);
+#endif
+#if NDS_P2_CAPTAIN
+        NDS_CSS_SELECTED_ACCUM_BOUNDS(dFTCaptainAnimSelected_joints);
+#endif
+#if NDS_P2_SAMUS
+        NDS_CSS_SELECTED_ACCUM_BOUNDS(dFTSamusAnimSelected_joints);
+#endif
+#if NDS_P2_LINK
+        NDS_CSS_SELECTED_ACCUM_BOUNDS(dFTLinkAnimSelected_joints);
+#endif
+#undef NDS_CSS_SELECTED_ACCUM_BOUNDS
+        if (high == 0u)
+        {
+            return FALSE;
+        }
+        selected_low = low;
+        selected_high = high;
+    }
+    value = (uintptr_t)ptr;
+    if ((value < selected_low) || (value > selected_high))
     {
         return FALSE;
     }

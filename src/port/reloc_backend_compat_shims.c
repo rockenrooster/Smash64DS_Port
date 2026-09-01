@@ -2819,11 +2819,39 @@ ndsFTParamsInvalidateSubtree(DObj *root, sb32 reset_mode)
     }
 }
 
-void ftParamsUpdateFighterPartsTransform(DObj *joint)
+void __attribute__((noinline, optimize("Os")))
+ftParamsUpdateFighterPartsTransform(DObj *joint)
 {
+    GObj *fighter_gobj;
+    FTStruct *fp;
+    u32 joint_id;
+
     if (joint == NULL)
     {
         return;
+    }
+    fighter_gobj = joint->parent_gobj;
+    if ((fighter_gobj != NULL) &&
+        (ndsFtPoseBodyChangedThisTick(fighter_gobj) == FALSE))
+    {
+        /* The compact pose hold leaves body LOCAL transforms unchanged, but
+         * TopN/TransN/XRotN/YRotN still evaluate and therefore invalidate every
+         * descendant WORLD transform. Keep the body-local matrices the source
+         * collision path already materialised; reset the four changed locals
+         * directly, then run the existing flat world-cache clear without its
+         * per-body mode load/branch/write. */
+        fp = ftGetStruct(fighter_gobj);
+        if (fp != NULL)
+        {
+            for (joint_id = 0u;
+                 joint_id < (u32)nFTPartsJointCommonStart;
+                 joint_id++)
+            {
+                ndsFTParamsInvalidateRootParts(fp->joints[joint_id], TRUE);
+            }
+            ndsFTParamsInvalidateSubtree(joint, FALSE);
+            return;
+        }
     }
     ndsFTParamsInvalidateRootParts(joint, TRUE);
     ndsFTParamsInvalidateSubtree(joint, TRUE);

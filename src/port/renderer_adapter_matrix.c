@@ -4618,7 +4618,8 @@ static void ndsRendererAdapterSourceWorldFromLocal(
     }
 }
 
-static void ndsRendererAdapterSourceWorldMulLocal(
+static __attribute__((noinline, optimize("Os"), target("arm"))) void
+ndsRendererAdapterSourceWorldMulLocal(
     NDSRendererAdapterSourceWorld *out,
     const Mtx *local,
     const NDSRendererAdapterSourceWorld *parent)
