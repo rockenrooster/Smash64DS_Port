@@ -246,8 +246,14 @@ void ftCommonAppearSetStatus(GObj *fighter_gobj)
          * spawns both the entry wave and entry beam from LinkSpecial2. */
         status_id = (entry_id == 0) ? nFTLinkStatusAppearR :
                                       nFTLinkStatusAppearL;
+#if !NDS_P2_LINK_BOMB_TOUR
         efManagerLinkEntryWaveMakeEffect(&fp->entry_pos);
         efManagerLinkEntryBeamMakeEffect(&fp->entry_pos);
+#else
+        /* The item-lifecycle proof starts Link from Wait and owns no entry
+         * claim. Keep the two independent generic entry animations out of
+         * that proof; ordinary Link builds still spawn both source effects. */
+#endif
     }
 #endif
 #if NDS_P2_CAPTAIN

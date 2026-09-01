@@ -22931,3 +22931,19 @@ the bounded offset before the generic absolute-pointer/status-buffer search.
 Finalized O2R assets retain the old absolute-pointer behavior. This removes the
 late-frame status-buffer scan without changing BattleShip animation commands or
 their DS fixed-point player; the full natural gate stays green.
+
+## 2026-09-01 — LinkBomb as the first shared item-system fighter client
+
+Link's Down+B remains BattleShip-owned: `ftLinkSpecialLwSetStatus` calls
+`itLinkBombMakeItem`, the common item manager builds the source DObj/attributes,
+and `itMainSetFighterHold` attaches it to Link's light-item joint. A second
+ordinary Down+B reaches common `LightThrowF4`; the source fuse, critical ColAnim,
+attack-event rows and six-update explosion teardown remain unchanged. The DS
+adaptation is the shared item allocation/collision/render/status owner, not a
+fighter-local bomb object.
+
+The focused proof excludes Link's independent entry wave/beam after selecting
+his real Appear status. That exposed a separate DS hardware bug first: generated
+LZ10 entry textures were byte arrays with no alignment, so BIOS read a preceding
+word as the header and decoded beyond main RAM. The generator now emits 4-byte
+aligned arrays and round-trips every LZ10 stream before writing its generated C.

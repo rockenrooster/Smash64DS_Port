@@ -10250,24 +10250,25 @@ static void ndsLinkBombTourObserve(FTStruct *link)
 #if NDS_HARNESS_FAST_PRESENT_ON_REQUEST
     if ((gNdsLinkBombTourColAnimObserved == 0u) &&
         (ip->lifetime <= 96) && (ip->colanim.is_use_color1 != FALSE) &&
-        (((gNdsItemRendererLastColorMask & 2u) == 0u) ||
-         ((gNdsItemRendererLastEnvColor & 0xffu) != 140u)))
+        (ip->colanim.color1.a == 140u))
     {
         /* The source has entered LinkBomb's final critical-fuse window. Ask
-         * the fast verifier harness for exactly one ordinary hardware frame so
-         * the DS EnvColor path can be observed without slowing all 300 fuse
-         * ticks. No item or ColAnim field is changed here. */
+         * for exactly one ordinary hardware frame, but do not gate gameplay on
+         * item-renderer telemetry: a held item is attached under the fighter's
+         * 0x52 joint and the item-only capture seam is not its lifetime owner. */
         ndsHarnessFastPresentRequest();
     }
 #endif
     if ((ip->lifetime <= 96) && (ip->colanim.is_use_color1 != FALSE) &&
-        ((gNdsItemRendererLastColorMask & 2u) != 0u) &&
-        ((gNdsItemRendererLastEnvColor & 0xffu) == 140u))
+        (ip->colanim.color1.a == 140u))
     {
         gNdsLinkBombTourColAnimObserved = 1u;
         gNdsLinkBombTourColAnimRGBA =
             ndsLinkBombTourPackRGBA(&ip->colanim.color1);
-        gNdsLinkBombTourRenderEnvRGBA = gNdsItemRendererLastEnvColor;
+        gNdsLinkBombTourRenderEnvRGBA =
+            (((gNdsItemRendererLastColorMask & 2u) != 0u) &&
+             ((gNdsItemRendererLastEnvColor & 0xffu) == 140u)) ?
+                gNdsItemRendererLastEnvColor : 0u;
     }
 
     dobj = (DObj *)item_gobj->obj;

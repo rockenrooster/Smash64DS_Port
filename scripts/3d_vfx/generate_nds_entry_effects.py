@@ -611,7 +611,11 @@ class Compiler:
 
 
 def c_bytes(name: str, data: bytes, per_line: int = 16) -> list[str]:
-    out = [f"static const u8 {name}[{len(data)}] = {{"]
+    # svcLZ77UncompWram reads the four-byte LZ10 header as a word.  The linker
+    # otherwise packs these byte arrays back-to-back and may place one at an
+    # odd address, making BIOS decode the preceding bytes as the size field.
+    out = [f"static const u8 {name}[{len(data)}] "
+           "__attribute__((aligned(4))) = {"]
     for i in range(0, len(data), per_line):
         out.append("    " + ", ".join(f"0x{x:02x}u" for x in data[i:i + per_line]) + ",")
     out.append("};")
@@ -666,6 +670,41 @@ def lz10(data: bytes) -> bytes:
                 out.append(data[pos])
                 pos += 1
         out[flag_pos] = flags
+    return bytes(out)
+
+
+def unlz10(data: bytes) -> bytes:
+    if len(data) < 4 or data[0] != 0x10:
+        raise ValueError("invalid LZ10 header")
+    size = int.from_bytes(data[1:4], "little")
+    out = bytearray()
+    pos = 4
+    while len(out) < size:
+        if pos >= len(data):
+            raise ValueError("truncated LZ10 flag byte")
+        flags = data[pos]
+        pos += 1
+        for bit in range(8):
+            if len(out) >= size:
+                break
+            if flags & (0x80 >> bit):
+                if pos + 2 > len(data):
+                    raise ValueError("truncated LZ10 match")
+                token = (data[pos] << 8) | data[pos + 1]
+                pos += 2
+                length = (token >> 12) + 3
+                distance = (token & 0x0fff) + 1
+                if distance > len(out):
+                    raise ValueError("LZ10 match precedes output")
+                for _ in range(length):
+                    out.append(out[-distance])
+            else:
+                if pos >= len(data):
+                    raise ValueError("truncated LZ10 literal")
+                out.append(data[pos])
+                pos += 1
+    if len(out) != size:
+        raise ValueError("LZ10 token overruns decoded size")
     return bytes(out)
 
 
@@ -813,6 +852,8 @@ def emit(mario: Compiler, fox: Compiler, donkey: Compiler,
     texel_compression: list[int] = []
     for payload in texel_payloads:
         packed = lz10(payload)
+        if unlz10(packed) != payload:
+            raise ValueError("entry texture LZ10 round-trip mismatch")
         if len(packed) < len(payload):
             stored_texel_payloads.append(packed)
             texel_compression.append(1)

@@ -1,11 +1,14 @@
 #if NDS_HARNESS_FAST_PRESENT_ON_REQUEST
 static volatile u32 sNdsHarnessFastPresentRequested;
+volatile u32 gNdsHarnessFastPresentRequestCount;
+volatile u32 gNdsHarnessFastPresentConsumeCount;
 #endif
 
 void ndsHarnessFastPresentRequest(void)
 {
 #if NDS_HARNESS_FAST_PRESENT_ON_REQUEST
     sNdsHarnessFastPresentRequested = 1u;
+    gNdsHarnessFastPresentRequestCount++;
 #endif
 }
 
@@ -14,6 +17,8 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
     ndsPrepareTaskmanRun();
 #if NDS_HARNESS_FAST_PRESENT_ON_REQUEST
     sNdsHarnessFastPresentRequested = 0u;
+    gNdsHarnessFastPresentRequestCount = 0u;
+    gNdsHarnessFastPresentConsumeCount = 0u;
 #endif
 
 #if NDS_P2_MENU_SHELL
@@ -1130,6 +1135,7 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
                      * request is consumed once and the ordinary hardware owner
                      * performs the draw; gameplay state remains untouched. */
                     sNdsHarnessFastPresentRequested = 0u;
+                    gNdsHarnessFastPresentConsumeCount++;
                     ndsFighterMarioFoxStageGCDrawAllLoopSubmitHardwareFrame();
                 }
 #endif

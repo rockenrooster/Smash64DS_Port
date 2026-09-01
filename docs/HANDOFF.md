@@ -1,18 +1,18 @@
 # Handoff
 
 Current: 2026-08-28 — **P2-3f28 CLOSED.** Samus's source-reachable gameplay
-state inventory is now complete through the remaining DamageFly family. A
-controller-only proof reaches **DamageFlyHi/N/Lw/Top/Roll = `0x1f`** from real
-Fox N-air / F-tilt / down-smash / up-smash hits. BattleShip's first-hit hurtbox
-search supplies exact Hi/N/Lw placements **2/1/0**, its 80-degree rule supplies
-Top, and its own >=100% / 50% RNG branch supplies Roll; the proof contains no
-RNG call, damage injection, or status setter. Two consecutive runs are
-byte-identical at `SAMUS_DAMAGEFLY_TOUR=5,6,15,1,0x1f,0xf,0x120a,5,1,3,1,109,0,8,1,10,0x7ff,0,0`.
-Proof ROM SHA-256 `D97E71A7E823AF4E8D76758534337EC2BA2E6EB6DD1C1B43D4870815061C871B`.
-Durable details are on `P2_EXECUTION_BOARD.md` and `p2/fighters/samus.md`.
-**Next:** Link source behavior and article runtime; four-CPU performance is owner-parked.
-Published `smash64ds.nds`: **20,979,712 B**, SHA-256
-`83E8873B4739B34FE37477DC4E40A9A11372E4231711F46435E4475C8E4D5FCD`.
+P2-3f31 graduates LinkBomb through the shared item manager; no fighter-local bomb.
+Controller-only Down+B reaches source SpecialLw, hold, critical fuse and LightThrowF4.
+The throw occurs at lifetime 84 with nonzero velocity; source explosion is 5/300/361/fire.
+The four-row event script reaches row 1/multi 2 and destroys naturally at multi 6.
+Item kind 21, generic item draw, 0x52 attachment and fast presents 2/2 are green.
+Proof ROM SHA-256 `17A4643C9374FBF206063EF140F416CE4902FFE16F82171394286C4E2DDC8A7D`.
+Evidence: `artifacts/verification/2026-09-01_p2-3f31-link-bomb.txt`.
+Link stays opt-in; this proof excludes its independent generic entry wave/beam.
+Four-CPU performance is owner-parked; durable details are on the P2 board/link file.
+**Next:** fix/convert Link entry effects, then boomerang and Spin Attack acceptance.
+Published `smash64ds.nds`: **20,960,256 B**, SHA-256
+`6F00785A67CD5986BF6622C222F28F2D70BA7F19AE0E64EDA7CC6CAD23B358E1`.
 
 ## State
 

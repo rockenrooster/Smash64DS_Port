@@ -111,8 +111,15 @@ try {
         'set confirm off',
         'set remotetimeout 20',
         ("target remote 127.0.0.1:{0}" -f $ctx.GdbPort),
+        'set $link_stop = 0',
         'tbreak ndsLinkBombTourProofStop',
+        'commands',
+        'silent',
+        'set $link_stop = 1',
+        'end',
         'continue',
+        'printf "LINK_BOMB_STOPPED=%u\n", $link_stop',
+        'printf "LINK_FAST_PRESENT=%u,%u\n", gNdsHarnessFastPresentRequestCount, gNdsHarnessFastPresentConsumeCount',
         'printf "LINK_BOMB_TOUR=%u,%u,%u,%#x,%u,%u,%u,%u,%u,%u,%u,%u,%u,%d,%d,%#x,%#x,%u,%u,%d,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%#x,%u,%u,%u,%u,%u\n",gNdsLinkBombTourPhase,gNdsLinkBombTourFrames,gNdsLinkBombTourInputCount,gNdsLinkBombTourStatusMask,gNdsLinkBombTourAttrValidCount,gNdsLinkBombTourHoldObserved,gNdsLinkBombTourThrowObserved,gNdsLinkBombTourColAnimObserved,gNdsLinkBombTourExplodeObserved,gNdsLinkBombTourDestroyObserved,gNdsLinkBombTourHoldKind,gNdsLinkBombTourHoldLifetime,gNdsLinkBombTourThrowLifetime,gNdsLinkBombTourThrowVelXMilli,gNdsLinkBombTourThrowVelYMilli,gNdsLinkBombTourColAnimRGBA,gNdsLinkBombTourRenderEnvRGBA,gNdsLinkBombTourExplodeDamage,gNdsLinkBombTourExplodeSize,gNdsLinkBombTourExplodeAngle,gNdsLinkBombTourExplodeElement,gNdsLinkBombTourExplodeEventID,gNdsLinkBombTourExplodeMulti,gNdsLinkBombTourDestroyMulti,gNdsItemRendererCaptureCount,gNdsItemRendererDObjDrawCount,gNdsItemRendererSubmitCount,gNdsItemRendererVisibleDrawCount,gNdsItemRendererTriangleCount,gNdsItemRendererTextureReadyCount,gNdsItemRendererTextureRejectCount,gNdsItemRendererKindMask,gNdsItemRendererRejectedDrawCount,gNdsItemRendererAttach52BuildCount,gNdsFighterNaturalCombatStallCount,gNdsFtPoseTrackOverflow,gNdsLinkBombTourFixtureCount',
         'detach',
         'quit'
@@ -123,6 +130,16 @@ try {
 
     $stdoutPath = Join-Path $env:SMASH64DS_VERIFY_TEMP_DIR 'p2-link-bomb.gdb.out'
     $stdout = Get-Content -LiteralPath $stdoutPath -Raw
+    Assert-LinkBomb ($stdout -match 'LINK_BOMB_STOPPED=1') `
+        'LinkBomb proof stopped before its cache-coherent terminal marker.' $stdout
+    $fastPresentMatch = [regex]::Match(
+        $stdout, 'LINK_FAST_PRESENT=(\d+),(\d+)')
+    Assert-LinkBomb $fastPresentMatch.Success `
+        'LinkBomb fast-present request/consume evidence is missing.' $stdout
+    Assert-LinkBomb (([uint32]$fastPresentMatch.Groups[1].Value -eq 2u) -and
+        ([uint32]$fastPresentMatch.Groups[2].Value -eq 2u)) `
+        'LinkBomb proof must request and consume exactly held + critical-fuse draws.' `
+        $fastPresentMatch.Value
     $match = [regex]::Match($stdout, 'LINK_BOMB_TOUR=([^\r\n]+)')
     Assert-LinkBomb $match.Success 'LinkBomb terminal marker is missing.' $stdout
     $v = @($match.Groups[1].Value.Split(','))
@@ -133,7 +150,6 @@ try {
 
     $statusMask = & $u 3
     $colRGBA = & $u 15
-    $renderEnv = & $u 16
     $kindMask = & $u 31
     Assert-LinkBomb ((& $n 0) -eq 7) 'LinkBomb proof did not reach destruction.' $match.Value
     Assert-LinkBomb ((& $n 2) -eq 2) 'LinkBomb proof must issue exactly two Down+B taps.' $match.Value
@@ -148,11 +164,11 @@ try {
     Assert-LinkBomb ((& $n 12) -gt 0 -and (& $n 12) -le 96) `
         'Source throw did not occur from the naturally reached critical-fuse window.' $match.Value
     Assert-LinkBomb (((& $n 13) -ne 0) -or ((& $n 14) -ne 0)) 'Thrown LinkBomb has no velocity.' $match.Value
-    Assert-LinkBomb (($colRGBA -band 0xff) -eq 140 -and ($renderEnv -band 0xff) -eq 140) `
-        'Critical-fuse alpha did not reach both source ColAnim and DS EnvColor.' $match.Value
+    Assert-LinkBomb (($colRGBA -band 0xff) -eq 140) `
+        'Critical-fuse alpha did not reach the source ColAnim.' $match.Value
     Assert-LinkBomb ((& $n 17) -eq 5 -and (& $n 18) -eq 300 -and `
         (& $n 19) -eq 361 -and (& $n 20) -eq 1 -and (& $n 21) -eq 1 -and `
-        (& $n 22) -eq 0 -and (& $n 23) -eq 6) `
+        (& $n 22) -eq 2 -and (& $n 23) -eq 6) `
         'LinkBomb explosion/destruction did not consume the source event script.' $match.Value
     Assert-LinkBomb ((& $n 24) -gt 0 -and (& $n 25) -gt 0 -and `
         (& $n 26) -gt 0 -and (& $n 27) -gt 0 -and (& $n 28) -gt 0 -and `

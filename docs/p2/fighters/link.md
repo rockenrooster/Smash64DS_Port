@@ -1,6 +1,6 @@
 # Link — P2-3 fighter 5
 
-Status: source-derived production inventory staged; behavior/article runtime next · Reference: `decomp/BattleShip-main/decomp/src/ft/ftchar/ftlink/`
+Status: inventory staged; LinkBomb shared-item lifecycle green; entry/boomerang/spin and full acceptance next · Reference: `decomp/BattleShip-main/decomp/src/ft/ftchar/ftlink/`
 
 ## Role
 
@@ -65,9 +65,28 @@ O2R inputs as the landed fighters; no runtime-completion claim is implied yet.
   The DS port must therefore graduate the shared item seam for LinkBomb rather
   than implement a fighter-local bomb object.
 
+## LinkBomb runtime — 2026-09-01
+
+LinkBomb is now the first source-owned client of the shared DS item manager.
+The Link proof driver supplies controller input only; it cannot call a Link
+status setter, create an item, assign status/motion, or inject damage. The live
+path reaches Link `SpecialLw`, creates kind 21 through `itLinkBombMakeItem`,
+attaches it through `itMainSetFighterHold`, waits for source ColAnim 79's
+alpha-140 critical fuse, then a second Down+B reaches common `LightThrowF4`.
+The thrown bomb carries nonzero velocity at lifetime 84 and consumes its source
+attack-event rows before a six-update explosion teardown.
+
+The focused proof excludes Link's independent entry wave/beam after selecting
+his real Appear status, because those generic animations currently hang near
+their frame-32 lifetime and are not a LinkBomb dependency. Ordinary Link builds
+still spawn both source entry effects. The proof ROM is 16,449,536 bytes, SHA-256
+`17A4643C9374FBF206063EF140F416CE4902FFE16F82171394286C4E2DDC8A7D`;
+evidence is `artifacts/verification/2026-09-01_p2-3f31-link-bomb.txt`.
+
 ## Acceptance
 
 - [ ] Move inventory sweep vs `ftlink` data.
 - [ ] Boomerang out/return/catch matrix equivalent.
-- [ ] Bomb pull/throw/catch/fuse/self-damage equivalent via item seam.
+- [x] Bomb pull/hold/throw/fuse/explosion equivalent via the shared item seam.
+- [ ] Bomb catch/self-damage/KO-survival qualification.
 - [ ] Budgets + stress measurement banked; CSS live; owner feel pass.
