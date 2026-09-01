@@ -22986,3 +22986,29 @@ against the 44-record static bound and publishes a second seen-mask word. The
 exact shell lifecycle proves two battle prepares (Time tie then Sudden Death),
 `seen=0xFFFFFE94/0x4FF`, owner mask `0x1F7`, 9,069 pinned hits, zero static
 violations, zero post-GO texture work, exact KO audio, and natural Results.
+
+## 2026-09-01 — Link entry immutable Gfx staged in the native entry renderer
+
+BattleShip's Link Appear path creates an entry wave and beam in that order.
+Their descriptors retain source `gcPlayAnimAll` updates and source DObj-tree
+display; LinkSpecial2 owns the live DObj, AnimJoint and MatAnimJoint data. The
+only immutable renderer work is the two DObjDLLink Gfx roots at `0x02D8` and
+`0x0698` in asset 353.
+
+The shared entry-effect compiler now pins LinkSpecial2's pristine O2R hash and
+adds those exact roots: two groups, 32 triangles and two source textures. Runtime
+admission requires the loaded LinkSpecial2 base and one of those two offsets.
+Adding Link raised the deduplicated position dictionary from 255 to 261 entries,
+so only the position-corner index widened to `u16`; S, T and colour indices stay
+`u8`. The complete source-derived entry corpus is now 25 roots, 59 groups, 428
+triangles and 41 textures.
+
+`check-p2-link-entry-effects.ps1` pins the O2R and generated hashes, source
+descriptors/lifetimes, generated roots/groups and runtime admission. It and the
+full GBI/decomp suite pass, as does a Link-enabled fast ROM build. Natural
+accurate-melonDS/GDB attempts spent 240/300/600 seconds in FAT/relocation/
+IFCommon startup and never reached the first wave maker, so this is deliberately
+PARTIAL: no runtime/eject/visual claim is made. Temporary proof traps and counters
+were removed; the next integrated Link gameplay route must supply acceptance.
+The rebuilt `smash64ds.nds` is 20,976,640 bytes, SHA-256
+`E8BFE8DF3DF0DBDD3DBC0BDAAFD16DA51468CB907B39D039AE417F7BEEB13766`.

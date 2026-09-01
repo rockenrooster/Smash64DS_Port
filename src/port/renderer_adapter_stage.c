@@ -4672,6 +4672,22 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
         }
     }
 #endif
+#if NDS_P2_LINK
+    /* BattleShip's Link entry wave and beam each own a live animated DObj;
+     * their source AnimJoint/MatAnimJoint remain authoritative. Replace only
+     * the immutable LinkSpecial2 Gfx root submitted by each DObjDLLink. */
+    if ((candidate == FALSE) && (gFTDataLinkSpecial2 != NULL) &&
+        ((const u8 *)dl >= (const u8 *)gFTDataLinkSpecial2))
+    {
+        base = (const u8 *)gFTDataLinkSpecial2;
+        root_offset = (u32)((const u8 *)dl - base);
+        if ((root_offset == 0x02d8u) || (root_offset == 0x0698u))
+        {
+            owner_asset_id = 353u;
+            candidate = TRUE;
+        }
+    }
+#endif
 #if NDS_P2_CAPTAIN
     /* BattleShip dEFManagerCaptainEntryCarEffectDesc owns a live 13-node DObj
      * tree. Its 0x6200 main AnimJoint plus 0x6518/0x6598 child animations remain

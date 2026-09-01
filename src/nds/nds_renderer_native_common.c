@@ -4221,12 +4221,14 @@ static const NDSEntryEffectRoot *ndsRendererEntryEffectRoot(
                 (owner_asset_id == 355u) ? NDS_ENTRY_EFFECT_DONKEY_ROOT_FIRST :
                 (owner_asset_id == 349u) ? NDS_ENTRY_EFFECT_SAMUS_ROOT_FIRST :
                 (owner_asset_id == 350u) ? NDS_ENTRY_EFFECT_CAPTAIN_ROOT_FIRST :
+                (owner_asset_id == 353u) ? NDS_ENTRY_EFFECT_LINK_ROOT_FIRST :
                                            NDS_ENTRY_EFFECT_ROOT_COUNT;
     u32 last = (owner_asset_id == 356u) ? NDS_ENTRY_EFFECT_MARIO_ROOT_COUNT :
                (owner_asset_id == 161u) ? NDS_ENTRY_EFFECT_DONKEY_ROOT_FIRST :
                (owner_asset_id == 355u) ? NDS_ENTRY_EFFECT_SAMUS_ROOT_FIRST :
                (owner_asset_id == 349u) ? NDS_ENTRY_EFFECT_CAPTAIN_ROOT_FIRST :
-               (owner_asset_id == 350u) ? NDS_ENTRY_EFFECT_ROOT_COUNT : first;
+               (owner_asset_id == 350u) ? NDS_ENTRY_EFFECT_LINK_ROOT_FIRST :
+               (owner_asset_id == 353u) ? NDS_ENTRY_EFFECT_ROOT_COUNT : first;
     u32 i;
 
     for (i = first; i < last; i++)
@@ -4376,7 +4378,8 @@ s32 ndsRendererSubmitNativeEntryEffect(
         (root_index == NDS_ENTRY_EFFECT_FOX_ROOT_FIRST) ||
         (root_index == NDS_ENTRY_EFFECT_DONKEY_ROOT_FIRST) ||
         (root_index == NDS_ENTRY_EFFECT_SAMUS_ROOT_FIRST) ||
-        (root_index == NDS_ENTRY_EFFECT_CAPTAIN_ROOT_FIRST))
+        (root_index == NDS_ENTRY_EFFECT_CAPTAIN_ROOT_FIRST) ||
+        (root_index == NDS_ENTRY_EFFECT_LINK_ROOT_FIRST))
     {
         sNdsRendererEntryEffectModelviewValidMask = 0u;
     }

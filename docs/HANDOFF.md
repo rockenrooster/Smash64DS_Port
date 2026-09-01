@@ -1,18 +1,18 @@
 # Handoff
 
-Current: 2026-09-01 — **M4/DeadExplode pre-GO residency CLOSED.**
-Sudden Death's source DeadExplode used three IA8 G_CC_BLENDPE textures after GO.
-The first-fallback marker resolved EFCommonEffects2 offsets 0x4708/0x3F00/0x3AF8.
-All nine source player-colour variants are generated and uploaded before GO.
-The static schema now accepts IA8's correct no-TLUT provenance.
-Static residency is 44 keys / 42 outputs / 83,840 texture bytes.
-The cache remains 79 dynamic entries; static seen accounting spans low/high masks.
-Exact tie -> Sudden Death -> Results, shell-loop and realtime paths are green; M4 fence/violations zero.
-Falcon Punch/Kick remains owner-confirmed fixed under the narrowed 0x50-only order.
+Current: 2026-09-01 — **Link entry native packets staged; acceptance OPEN.**
+BattleShip keeps both live DObj/AnimJoint/MatAnimJoint trees and 120-tick lifetime.
+Only LinkSpecial2 immutable roots 0x02D8/0x0698 move to the shared native path.
+Source bake: 2 roots / 2 groups / 32 triangles / 2 textures; zero invented art.
+Whole entry corpus: 25 roots / 59 groups / 428 triangles / 41 textures.
+Position dictionary 255 -> 261 required one u8 -> u16 corner-index widening.
+Focused checker + GBI source/decode suite + Link-enabled build are green.
+Natural accurate-melonDS runs never cleared FAT/IFCommon startup in 600 s.
+No runtime/visual acceptance is claimed; temporary proof traps/counters were removed.
 Four-CPU work is owner-parked and excluded from this checkpoint's acceptance.
-**Next:** Link entry effects, then boomerang / Spin Attack acceptance.
-Published `smash64ds.nds`: **20,994,048 B**, SHA-256
-`59D1359ACCFB4DB5FF5F5262DA232B005ABAB7EBCEE193619BE4D344BF1D96E3`.
+**Next:** integrate entry acceptance with boomerang / Spin Attack gameplay work.
+Published `smash64ds.nds`: **20,976,640 B**, SHA-256
+`E8BFE8DF3DF0DBDD3DBC0BDAAFD16DA51468CB907B39D039AE417F7BEEB13766`.
 
 ## State
 
