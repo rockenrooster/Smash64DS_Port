@@ -22947,3 +22947,20 @@ his real Appear status. That exposed a separate DS hardware bug first: generated
 LZ10 entry textures were byte arrays with no alignment, so BIOS read a preceding
 word as the header and decoded beyond main RAM. The generator now emits 4-byte
 aligned arrays and round-trips every LZ10 stream before writing its generated C.
+
+## 2026-09-01 — Falcon joint-world effect composition
+
+Falcon Punch and Kick roots use BattleShip custom matrix kind `0x50`: a pure
+world translation to fighter joints 16 and 23, followed by an effect-local
+facing rotation. The DS row-vector adapter historically appended that rotation,
+forming `T * R` and rotating the world-space joint position around the stage
+origin. The adapter now prepends later XObjs only while a `0x50` world-joint
+translation is active; ordinary multi-XObj composition remains unchanged.
+
+The historical append control reproduces the displaced coordinates exactly.
+Natural left/ground and right/aerial proofs cover different world positions and
+consecutive animation frames with expected/local/world 20.12 translations
+identical and zero mismatches. A rejected global-prepend experiment crashed the
+realtime gate at update 424; the narrowed fix completes the one-minute match and
+isolates the remaining M4 post-GO texture-fence failure as separate. The owner
+confirmed Punch and Kick visually fixed in the rebuilt `smash64ds.nds`.

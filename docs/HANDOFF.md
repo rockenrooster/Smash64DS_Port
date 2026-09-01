@@ -1,18 +1,18 @@
 # Handoff
 
-Current: 2026-08-28 — **P2-3f28 CLOSED.** Samus's source-reachable gameplay
-P2-3f31 graduates LinkBomb through the shared item manager; no fighter-local bomb.
-Controller-only Down+B reaches source SpecialLw, hold, critical fuse and LightThrowF4.
-The throw occurs at lifetime 84 with nonzero velocity; source explosion is 5/300/361/fire.
-The four-row event script reaches row 1/multi 2 and destroys naturally at multi 6.
-Item kind 21, generic item draw, 0x52 attachment and fast presents 2/2 are green.
-Proof ROM SHA-256 `17A4643C9374FBF206063EF140F416CE4902FFE16F82171394286C4E2DDC8A7D`.
-Evidence: `artifacts/verification/2026-09-01_p2-3f31-link-bomb.txt`.
-Link stays opt-in; this proof excludes its independent generic entry wave/beam.
-Four-CPU performance is owner-parked; durable details are on the P2 board/link file.
-**Next:** fix/convert Link entry effects, then boomerang and Spin Attack acceptance.
+Current: 2026-09-01 — **Falcon Punch/Kick attachment FIXED; owner confirmed.**
+BattleShip effect roots apply joint translation kind `0x50`, then facing rotation.
+The old DS append order rotated joint16/23 world positions around the origin.
+The renderer now follows source G_MTX_MUL order by prepending each later XObj.
+Left/ground and right/aerial natural-input proofs cover two world positions.
+Both effects follow their joints across consecutive frames with exact 20.12 translation.
+Evidence: `artifacts/verification/2026-09-01_bug-falcon-effects-left-ground.txt`
+and `artifacts/verification/2026-09-01_bug-falcon-effects-right-air.txt`.
+LinkBomb's shared lifecycle proof remains green after the shared matrix correction.
+Four-CPU performance is owner-parked; its correctness path remains in Boundary.
+**Next:** clear Boundary's separate M4 post-GO fence regression, then Link entry effects.
 Published `smash64ds.nds`: **20,960,256 B**, SHA-256
-`6F00785A67CD5986BF6622C222F28F2D70BA7F19AE0E64EDA7CC6CAD23B358E1`.
+`E66D1319C1EBE215880AA3C6536A238F71F921DD9886015D843DDAF936501FAC`.
 
 ## State
 

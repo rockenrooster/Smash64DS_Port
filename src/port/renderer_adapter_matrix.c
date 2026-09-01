@@ -674,30 +674,6 @@ static void ndsRendererAdapterMtxIdentity20p12(
         out, 1 << NDS_RENDERER_ADAPTER_MTX_FRAC_BITS);
 }
 
-static void ndsRendererAdapterMulInto(NDSRendererMatrix20p12 *target,
-                                      const NDSRendererMatrix20p12 *incoming,
-                                      u32 *valid)
-{
-    if ((target == NULL) || (incoming == NULL) || (valid == NULL))
-    {
-        return;
-    }
-
-    if (*valid != 0u)
-    {
-        ndsRendererMtxMul20p12(target, incoming, target);
-    }
-    else
-    {
-        /* R2-03 E69. `*target = *incoming` is 64 bytes and GCC answers it with
-         * `bl memcpy`; this function is inlined into
-         * ndsRendererAdapterBuildDObjLocalMatrix, which E68b measured as 18.6%
-         * of the whole memset/memcpy class. Task 86's helper already exists. */
-        ndsRendererMatrixCopy20p12(target, incoming);
-        *valid = TRUE;
-    }
-}
-
 static void ndsRendererAdapterMulBefore(NDSRendererMatrix20p12 *target,
                                         const NDSRendererMatrix20p12 *incoming,
                                         u32 *valid)
@@ -717,6 +693,68 @@ static void ndsRendererAdapterMulBefore(NDSRendererMatrix20p12 *target,
         *valid = TRUE;
     }
 }
+
+#if NDS_TASK68_FALLBACK_CENSUS
+static DObj *sNdsAttachTranslationDObj;
+volatile u32 gNdsAttachTranslationSamples;
+volatile u32 gNdsAttachTranslationLocalMismatch;
+volatile u32 gNdsAttachTranslationWorldMismatch;
+volatile s32 gNdsAttachTranslationExpected[3];
+volatile s32 gNdsAttachTranslationLocal[3];
+volatile s32 gNdsAttachTranslationWorld[3];
+
+static void __attribute__((noinline, cold))
+ndsRendererAdapterRecordAttachTranslation(
+    DObj *dobj, const NDSRendererMatrix20p12 *matrix)
+{
+    u32 axis;
+
+    sNdsAttachTranslationDObj = dobj;
+    gNdsAttachTranslationSamples++;
+    for (axis = 0u; axis < 3u; axis++)
+    {
+        gNdsAttachTranslationExpected[axis] = matrix->m[3][axis];
+    }
+}
+
+static void __attribute__((noinline, cold)) ndsRendererAdapterRecordAttachLocal(
+    DObj *dobj, const NDSRendererMatrix20p12 *matrix)
+{
+    u32 axis;
+
+    if (dobj != sNdsAttachTranslationDObj)
+    {
+        return;
+    }
+    for (axis = 0u; axis < 3u; axis++)
+    {
+        gNdsAttachTranslationLocal[axis] = matrix->m[3][axis];
+        if (matrix->m[3][axis] != gNdsAttachTranslationExpected[axis])
+        {
+            gNdsAttachTranslationLocalMismatch++;
+        }
+    }
+}
+
+static void __attribute__((noinline, cold)) ndsRendererAdapterRecordAttachWorld(
+    DObj *dobj, const NDSRendererMatrix20p12 *matrix)
+{
+    u32 axis;
+
+    if (dobj != sNdsAttachTranslationDObj)
+    {
+        return;
+    }
+    for (axis = 0u; axis < 3u; axis++)
+    {
+        gNdsAttachTranslationWorld[axis] = matrix->m[3][axis];
+        if (matrix->m[3][axis] != gNdsAttachTranslationExpected[axis])
+        {
+            gNdsAttachTranslationWorldMismatch++;
+        }
+    }
+}
+#endif
 
 static void ndsRendererAdapterMtxFromN64(
     const Mtx *src, NDSRendererMatrix20p12 *dst)
@@ -2184,6 +2222,7 @@ ndsRendererAdapterBuildDObjLocalMatrix(
     NDSRendererMatrix20p12 incoming;
     u32 valid = FALSE;
     u32 has_mvp_recalc_rpy_0x47 = FALSE;
+    u32 preserve_joint_world_translation = FALSE;
     u32 i;
 
     if ((dobj == NULL) || (out == NULL))
@@ -2218,14 +2257,54 @@ ndsRendererAdapterBuildDObjLocalMatrix(
                     dobj, dobj->xobjs[i], out) != FALSE)
             {
                 valid = TRUE;
+                if (dobj->xobjs[i]->kind ==
+                    NDS_RENDERER_ADAPTER_JOINT_ATTACH_TRA_MTX_KIND)
+                {
+                    preserve_joint_world_translation = TRUE;
+                }
+#if NDS_TASK68_FALLBACK_CENSUS
+                if (dobj->xobjs[i]->kind ==
+                    NDS_RENDERER_ADAPTER_JOINT_ATTACH_TRA_MTX_KIND)
+                {
+                    ndsRendererAdapterRecordAttachTranslation(dobj, out);
+                }
+#endif
             }
         }
         else if (ndsRendererAdapterBuildDObjXObjMatrix(
                      dobj, dobj->xobjs[i], &incoming) != FALSE)
         {
-            ndsRendererAdapterMulInto(out, &incoming, &valid);
+#if NDS_TASK68_FALLBACK_CENSUS
+            if (dobj->xobjs[i]->kind ==
+                NDS_RENDERER_ADAPTER_JOINT_ATTACH_TRA_MTX_KIND)
+            {
+                ndsRendererAdapterRecordAttachTranslation(dobj, &incoming);
+            }
+#endif
+            if (preserve_joint_world_translation != FALSE)
+            {
+                /* Custom kind 0x50 is already a fighter joint's WORLD
+                 * translation. Later effect-local rotation/scale must happen
+                 * before that placement in the DS row-vector representation;
+                 * T * R rotates the joint position around the stage origin. */
+                ndsRendererAdapterMulBefore(out, &incoming, &valid);
+            }
+            else
+            {
+                /* Ordinary XObjs retain the established N64->DS composition. */
+                ndsRendererMtxMul20p12(out, &incoming, out);
+            }
+            if (dobj->xobjs[i]->kind ==
+                NDS_RENDERER_ADAPTER_JOINT_ATTACH_TRA_MTX_KIND)
+            {
+                preserve_joint_world_translation = TRUE;
+            }
         }
     }
+
+#if NDS_TASK68_FALLBACK_CENSUS
+    ndsRendererAdapterRecordAttachLocal(dobj, out);
+#endif
 
     if (valid == FALSE)
     {
@@ -2991,6 +3070,9 @@ static sb32 ndsRendererAdapterBuildDObjWorldMatrixUncached(
             FALSE)
         {
             ndsRendererMtxMulAffine20p12(&local, out, out);
+#if NDS_TASK68_FALLBACK_CENSUS
+            ndsRendererAdapterRecordAttachWorld(chain[i - 1u], out);
+#endif
         }
     }
     return TRUE;
@@ -3055,6 +3137,9 @@ static sb32 ndsRendererAdapterBuildDObjWorldMatrix(
         gNdsTask91MtxWorldEntryHit++;
 #endif
         ndsRendererMatrixCopy20p12(out, cached);
+#if NDS_TASK68_FALLBACK_CENSUS
+        ndsRendererAdapterRecordAttachWorld(dobj, out);
+#endif
         return TRUE;
     }
 #endif
@@ -3125,12 +3210,18 @@ static sb32 ndsRendererAdapterBuildDObjWorldMatrix(
              * the next presented frame so live fighter poses remain live. */
             ndsRendererAdapterStoreDObjWorldMatrix(chain[i - 1u], out);
 #endif
+#if NDS_TASK68_FALLBACK_CENSUS
+            ndsRendererAdapterRecordAttachWorld(chain[i - 1u], out);
+#endif
 #if NDS_TASK91_DRAW_PHASE_CENSUS
             gNdsTask91MtxWorldComposeTicks += cpuGetTiming() -
                 task91_local_mark;
 #endif
         }
     }
+#if NDS_TASK68_FALLBACK_CENSUS
+    ndsRendererAdapterRecordAttachWorld(dobj, out);
+#endif
     return TRUE;
 }
 
@@ -3264,6 +3355,9 @@ static sb32 ndsRendererAdapterBuildPersistentStageWorldMatrix(
     {
         ndsRendererMatrixCopy20p12(
             out, ndsRendererAdapterStageWorldEntryMatrix(entry));
+#if NDS_TASK68_FALLBACK_CENSUS
+        ndsRendererAdapterRecordAttachWorld(dobj, out);
+#endif
 #if NDS_R2_STAGE_VALIDATE_STRIDE
         if (entry->validated_frame != frame)
         {
@@ -3310,6 +3404,9 @@ static sb32 ndsRendererAdapterBuildPersistentStageWorldMatrix(
             ndsRendererMatrixCopy20p12(
                 &parent_world,
                 ndsRendererAdapterStageWorldEntryMatrix(entry));
+#if NDS_TASK68_FALLBACK_CENSUS
+            ndsRendererAdapterRecordAttachWorld(node, &parent_world);
+#endif
             parent_generation = entry->generation;
             continue;
         }
@@ -3360,6 +3457,9 @@ static sb32 ndsRendererAdapterBuildPersistentStageWorldMatrix(
         ndsRendererMatrixCopy20p12(
                 &parent_world,
                 ndsRendererAdapterStageWorldEntryMatrix(entry));
+#if NDS_TASK68_FALLBACK_CENSUS
+        ndsRendererAdapterRecordAttachWorld(node, &parent_world);
+#endif
         parent_generation = entry->generation;
     }
     *out = parent_world;

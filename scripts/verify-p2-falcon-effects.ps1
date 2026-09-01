@@ -4,6 +4,8 @@ param(
     [string]$Gdb = 'C:\devkitPro\devkitARM\bin\arm-none-eabi-gdb.exe',
     [int]$RunnerSlot = 7,
     [string]$Build = 'build-bugs-falcon-effects',
+    [ValidateSet(-1,1)][int]$Facing = -1,
+    [ValidateSet('Ground','Air')][string]$KickMode = 'Ground',
     [switch]$NoBuild,
     [ValidateRange(30,600)][int]$TimeoutSeconds = 240,
     [string]$Artifact = ''
@@ -58,7 +60,8 @@ $symbols = @(& $nm $elf | ForEach-Object { ($_ -split '\s+')[-1] })
 foreach ($symbol in @(
     'sControllerPlaybackPads', 'sControllerPlaybackConnectedMask',
     'sControllerPlaybackEnabled', 'ndsBattlePlayableFrameCompleteMarker',
-    'ftCaptainSpecialNSetStatus', 'ftCaptainSpecialLwSetStatus',
+    'ftCommonJumpSetStatus', 'ftCaptainSpecialNSetStatus',
+    'ftCaptainSpecialLwSetStatus', 'ftCaptainSpecialAirLwSetStatus',
     'efManagerCaptainFalconPunchMakeEffect', 'efManagerCaptainFalconKickMakeEffect',
     'ndsRendererAdapterSubmitStageDL',
     'gcDrawDObjDLHead1', 'gcDrawDObjTreeForGObj', 'gSCManagerBattleState',
@@ -106,6 +109,42 @@ if ([string]::IsNullOrWhiteSpace($Artifact)) {
 # stick Y=-80 reaches grounded Falcon Kick. The proof writes only controller
 # playback. It then observes the source makers, their source attachment joints
 # (Punch joint 16, Kick joint 23), and the actual source display callbacks.
+$facingCommands = @()
+if ($Facing -eq 1) {
+    $facingCommands = @(
+        # Move through the ordinary source Walk/Wait interrupts. Besides turning
+        # Falcon, this gives the second scenario a distinct world position.
+        ('set {{signed char}}0x{0:x8} = 80' -f ($pads + 2)),
+        ('tbreak *0x{0:x8} if $fst->lr == 1' -f $frameComplete),
+        'continue',
+        ('set {{signed char}}0x{0:x8} = 0' -f ($pads + 2)),
+        ('tbreak *0x{0:x8} if $fst->status_id == nFTCommonStatusWait' -f $frameComplete),
+        'continue'
+    )
+}
+$kickStartCommands = @()
+$kickStatusSymbol = 'ftCaptainSpecialLwSetStatus'
+if ($KickMode -eq 'Air') {
+    $kickStatusSymbol = 'ftCaptainSpecialAirLwSetStatus'
+    $kickStartCommands = @(
+        # U_CBUTTONS is the normal source jump input. Release once the source
+        # jump selector has consumed it, then request Down+B on the next frame.
+        ('set {{unsigned short}}0x{0:x8} = 0x0008' -f $pads),
+        'tbreak ftCommonJumpSetStatus',
+        'continue',
+        ('set {{unsigned int}}0x{0:x8} = 0' -f $pads),
+        'finish',
+        ('set {{unsigned short}}0x{0:x8} = 0x4000' -f $pads),
+        ('set {{signed char}}0x{0:x8} = -80' -f ($pads + 3))
+    )
+} else {
+    $kickStartCommands = @(
+        ('set {{unsigned short}}0x{0:x8} = 0x4000' -f $pads),
+        ('set {{signed char}}0x{0:x8} = 0' -f ($pads + 2)),
+        ('set {{signed char}}0x{0:x8} = -80' -f ($pads + 3))
+    )
+}
+
 $ctx = Initialize-MelonDSVerifierContext -Root $root -MelonDS $MelonDS `
     -RunnerSlot $RunnerSlot -NoBuild
 $state = $null
@@ -130,6 +169,8 @@ try {
         'set $falcon = gSCManagerBattleState->players[0].fighter_gobj',
         'set $fst = (FTStruct *)$falcon->user_data.p',
         'printf "FALCON_EFFECT_READY status=%d fkind=%d lr=%d\n", $fst->status_id, $fst->fkind, $fst->lr',
+        $facingCommands,
+        ('printf "FALCON_SCENARIO facing=%d kick={0} x=%f y=%f\n", $fst->lr, $fst->joints[0]->translate.vec.f.x, $fst->joints[0]->translate.vec.f.y' -f $KickMode),
 
         # Neutral B -> source Falcon Punch.
         ('set {{unsigned short}}0x{0:x8} = 0x4000' -f $pads),
@@ -144,10 +185,11 @@ try {
         'finish',
         'set $punch = (GObj *)$r0',
         'set $punchroot = ($punch != 0) ? (DObj *)$punch->obj : (DObj *)0',
-        'printf "FALCON_PUNCH_MADE effect=%p root=%p attach=%p expect=%p proc=%p expectproc=%p dl=%p\n", $punch, $punchroot, ($punchroot != 0) ? $punchroot->user_data.p : 0, $fst->joints[16], dEFManagerCaptainFalconPunchEffectDesc.proc_display, gcDrawDObjDLHead1, ($punchroot != 0) ? $punchroot->dl : 0',
+        'printf "FALCON_PUNCH_MADE effect=%p root=%p attach=%p expect=%p proc=%p expectproc=%p dl=%p ry=%f\n", $punch, $punchroot, ($punchroot != 0) ? $punchroot->user_data.p : 0, $fst->joints[16], dEFManagerCaptainFalconPunchEffectDesc.proc_display, gcDrawDObjDLHead1, ($punchroot != 0) ? $punchroot->dl : 0, ($punchroot != 0) ? $punchroot->rotate.vec.f.y : 0.0',
         'tbreak gcDrawDObjDLHead1 if $r0 == $punch',
         'continue',
-        'printf "FALCON_PUNCH_DRAW effect=%p status=%d\n", (GObj *)$r0, $fst->status_id',
+        'set $punchdrawroot = (DObj *)((GObj *)$r0)->obj',
+        'printf "FALCON_PUNCH_DRAW effect=%p status=%d ry=%f\n", (GObj *)$r0, $fst->status_id, $punchdrawroot->rotate.vec.f.y',
         'tbreak gmCollisionGetFighterPartsWorldPosition if $r0 == $fst->joints[16]',
         'continue',
         'finish',
@@ -161,16 +203,21 @@ try {
         'printf "FALCON_PUNCH_SUBMIT effect=%p dobj=%p dl=%p attach=%p expect=%p\n", $punch, (DObj *)$r0, $punchdl, ((DObj *)$r0)->user_data.p, $fst->joints[16]',
         'finish',
         'printf "FALCON_PUNCH_DL publish=%u blocker=%u commands=%u first=%#x unsupported=%#x hwtri=%u hwvtx=%u seed=%u mcmd=%u xform=%u cfg=%u mvt=%d,%d,%d\n", gNdsEffectDLPublishCount, gNdsEffectDLBlocker, gNdsEffectDLCommandCount, gNdsEffectDLFirstOpcode, gNdsEffectDLUnsupportedOpcode, gNdsEffectDLHwTriangleCount, gNdsEffectDLHwVertexCount, gNdsEffectDLMatrixSeed, gNdsEffectDLMatrixCmd, gNdsEffectDLXformVertexCount, gNdsEffectDLCfgMask, gNdsEffectDLCfgMvT[0], gNdsEffectDLCfgMvT[1], gNdsEffectDLCfgMvT[2]',
+        'printf "FALCON_PUNCH_ATTACH samples=%u lmis=%u wmis=%u expected=%d,%d,%d local=%d,%d,%d world=%d,%d,%d\n", gNdsAttachTranslationSamples, gNdsAttachTranslationLocalMismatch, gNdsAttachTranslationWorldMismatch, gNdsAttachTranslationExpected[0], gNdsAttachTranslationExpected[1], gNdsAttachTranslationExpected[2], gNdsAttachTranslationLocal[0], gNdsAttachTranslationLocal[1], gNdsAttachTranslationLocal[2], gNdsAttachTranslationWorld[0], gNdsAttachTranslationWorld[1], gNdsAttachTranslationWorld[2]',
+        'tbreak gcDrawDObjDLHead1 if $r0 == $punch',
+        'continue',
+        'tbreak ndsRendererAdapterSubmitStageDL if ((DObj *)$r0)->parent_gobj == $punch',
+        'continue',
+        'finish',
+        'printf "FALCON_PUNCH_ATTACH_NEXT samples=%u lmis=%u wmis=%u expected=%d,%d,%d local=%d,%d,%d world=%d,%d,%d\n", gNdsAttachTranslationSamples, gNdsAttachTranslationLocalMismatch, gNdsAttachTranslationWorldMismatch, gNdsAttachTranslationExpected[0], gNdsAttachTranslationExpected[1], gNdsAttachTranslationExpected[2], gNdsAttachTranslationLocal[0], gNdsAttachTranslationLocal[1], gNdsAttachTranslationLocal[2], gNdsAttachTranslationWorld[0], gNdsAttachTranslationWorld[1], gNdsAttachTranslationWorld[2]',
 
         # Wait for the source move to finish before asking for the next special.
         ('tbreak *0x{0:x8} if ($fst->status_id == nFTCommonStatusWait)' -f $frameComplete),
         'continue',
 
-        # Down+B -> source grounded Falcon Kick.
-        ('set {{unsigned short}}0x{0:x8} = 0x4000' -f $pads),
-        ('set {{signed char}}0x{0:x8} = 0' -f ($pads + 2)),
-        ('set {{signed char}}0x{0:x8} = -80' -f ($pads + 3)),
-        'tbreak ftCaptainSpecialLwSetStatus',
+        # Down+B -> source grounded or aerial Falcon Kick.
+        $kickStartCommands,
+        ("tbreak $kickStatusSymbol"),
         'continue',
         ('set {{unsigned short}}0x{0:x8} = 0' -f $pads),
         ('set {{signed char}}0x{0:x8} = 0' -f ($pads + 3)),
@@ -183,7 +230,9 @@ try {
         'printf "FALCON_KICK_MADE effect=%p root=%p attach=%p expect=%p x0=%#x proc=%p expectproc=%p ry=%f rz=%f\n", $kick, $kickroot, ($kickroot != 0) ? $kickroot->user_data.p : 0, $fst->joints[23], (($kickroot != 0) && ($kickroot->xobjs_num > 0)) ? $kickroot->xobjs[0]->kind : 0, dEFManagerCaptainFalconKickEffectDesc.proc_display, gcDrawDObjTreeForGObj, ($kickroot != 0) ? $kickroot->rotate.vec.f.y : 0.0, ($kickroot != 0) ? $kickroot->rotate.vec.f.z : 0.0',
         'tbreak gcDrawDObjTreeForGObj if $r0 == $kick',
         'continue',
-        'printf "FALCON_KICK_DRAW effect=%p status=%d attach=%p expect=%p\n", (GObj *)$r0, $fst->status_id, ((DObj *)((GObj *)$r0)->obj)->user_data.p, $fst->joints[23]',
+        'set $kickdrawroot = (DObj *)((GObj *)$r0)->obj',
+        'set $kickx0 = ($kickdrawroot->xobjs_num > 0) ? $kickdrawroot->xobjs[0]->kind : 0',
+        'printf "FALCON_KICK_DRAW effect=%p status=%d attach=%p expect=%p x0=%#x ry=%f rz=%f\n", (GObj *)$r0, $fst->status_id, $kickdrawroot->user_data.p, $fst->joints[23], $kickx0, $kickdrawroot->rotate.vec.f.y, $kickdrawroot->rotate.vec.f.z',
         'tbreak gmCollisionGetFighterPartsWorldPosition if $r0 == $fst->joints[23]',
         'continue',
         'finish',
@@ -197,6 +246,13 @@ try {
         'printf "FALCON_KICK_SUBMIT effect=%p dobj=%p dl=%p attach=%p expect=%p\n", $kick, (DObj *)$r0, $kickdl, ((DObj *)$r0)->user_data.p, $fst->joints[23]',
         'finish',
         'printf "FALCON_KICK_DL publish=%u blocker=%u commands=%u first=%#x unsupported=%#x hwtri=%u hwvtx=%u seed=%u mcmd=%u xform=%u cfg=%u mvt=%d,%d,%d\n", gNdsEffectDLPublishCount, gNdsEffectDLBlocker, gNdsEffectDLCommandCount, gNdsEffectDLFirstOpcode, gNdsEffectDLUnsupportedOpcode, gNdsEffectDLHwTriangleCount, gNdsEffectDLHwVertexCount, gNdsEffectDLMatrixSeed, gNdsEffectDLMatrixCmd, gNdsEffectDLXformVertexCount, gNdsEffectDLCfgMask, gNdsEffectDLCfgMvT[0], gNdsEffectDLCfgMvT[1], gNdsEffectDLCfgMvT[2]',
+        'printf "FALCON_KICK_ATTACH samples=%u lmis=%u wmis=%u expected=%d,%d,%d local=%d,%d,%d world=%d,%d,%d\n", gNdsAttachTranslationSamples, gNdsAttachTranslationLocalMismatch, gNdsAttachTranslationWorldMismatch, gNdsAttachTranslationExpected[0], gNdsAttachTranslationExpected[1], gNdsAttachTranslationExpected[2], gNdsAttachTranslationLocal[0], gNdsAttachTranslationLocal[1], gNdsAttachTranslationLocal[2], gNdsAttachTranslationWorld[0], gNdsAttachTranslationWorld[1], gNdsAttachTranslationWorld[2]',
+        'tbreak gcDrawDObjTreeForGObj if $r0 == $kick',
+        'continue',
+        'tbreak ndsRendererAdapterSubmitStageDL if ((DObj *)$r0)->parent_gobj == $kick',
+        'continue',
+        'finish',
+        'printf "FALCON_KICK_ATTACH_NEXT samples=%u lmis=%u wmis=%u expected=%d,%d,%d local=%d,%d,%d world=%d,%d,%d\n", gNdsAttachTranslationSamples, gNdsAttachTranslationLocalMismatch, gNdsAttachTranslationWorldMismatch, gNdsAttachTranslationExpected[0], gNdsAttachTranslationExpected[1], gNdsAttachTranslationExpected[2], gNdsAttachTranslationLocal[0], gNdsAttachTranslationLocal[1], gNdsAttachTranslationLocal[2], gNdsAttachTranslationWorld[0], gNdsAttachTranslationWorld[1], gNdsAttachTranslationWorld[2]',
         'detach',
         'quit'
     )
@@ -209,20 +265,30 @@ try {
     Set-Content -LiteralPath $Artifact -Value $stdout
 
     $ready = [regex]::Match($stdout, 'FALCON_EFFECT_READY status=(-?\d+) fkind=(\d+) lr=(-?\d+)')
+    $scenario = [regex]::Match($stdout, 'FALCON_SCENARIO facing=(-?\d+) kick=(Ground|Air) x=([-+0-9.eE]+) y=([-+0-9.eE]+)')
     $ptr = '(?:0x[0-9a-fA-F]+|\(nil\))'
-    $punchMade = [regex]::Match($stdout, "FALCON_PUNCH_MADE effect=(0x[0-9a-fA-F]+) root=($ptr) attach=($ptr) expect=(0x[0-9a-fA-F]+) proc=(0x[0-9a-fA-F]+) expectproc=(0x[0-9a-fA-F]+) dl=($ptr)")
-    $punchDraw = [regex]::Match($stdout, 'FALCON_PUNCH_DRAW effect=(0x[0-9a-fA-F]+) status=(-?\d+)')
+    $punchMade = [regex]::Match($stdout, "FALCON_PUNCH_MADE effect=(0x[0-9a-fA-F]+) root=($ptr) attach=($ptr) expect=(0x[0-9a-fA-F]+) proc=(0x[0-9a-fA-F]+) expectproc=(0x[0-9a-fA-F]+) dl=($ptr) ry=([-+0-9.eE]+)")
+    $punchDraw = [regex]::Match($stdout, 'FALCON_PUNCH_DRAW effect=(0x[0-9a-fA-F]+) status=(-?\d+) ry=([-+0-9.eE]+)')
     $punchPos = [regex]::Match($stdout, 'FALCON_PUNCH_POS_BITS x=(0x[0-9a-fA-F]+) y=(0x[0-9a-fA-F]+) z=(0x[0-9a-fA-F]+)')
     $punchSubmit = [regex]::Match($stdout, 'FALCON_PUNCH_SUBMIT effect=(0x[0-9a-fA-F]+) dobj=(0x[0-9a-fA-F]+) dl=(0x[0-9a-fA-F]+) attach=(0x[0-9a-fA-F]+) expect=(0x[0-9a-fA-F]+)')
     $punchDL = [regex]::Match($stdout, 'FALCON_PUNCH_DL publish=(\d+) blocker=(\d+) commands=(\d+) first=(0x[0-9a-fA-F]+) unsupported=(0x[0-9a-fA-F]+|0) hwtri=(\d+) hwvtx=(\d+) seed=(\d+) mcmd=(\d+) xform=(\d+) cfg=(\d+) mvt=(-?\d+),(-?\d+),(-?\d+)')
-    $kickMade = [regex]::Match($stdout, "FALCON_KICK_MADE effect=(0x[0-9a-fA-F]+) root=(0x[0-9a-fA-F]+) attach=($ptr) expect=(0x[0-9a-fA-F]+) x0=(0x[0-9a-fA-F]+) proc=(0x[0-9a-fA-F]+) expectproc=(0x[0-9a-fA-F]+) ry=([-+0-9.eE]+) rz=([-+0-9.eE]+)")
-    $kickDraw = [regex]::Match($stdout, 'FALCON_KICK_DRAW effect=(0x[0-9a-fA-F]+) status=(-?\d+) attach=(0x[0-9a-fA-F]+) expect=(0x[0-9a-fA-F]+)')
+    $kickMade = [regex]::Match($stdout, "FALCON_KICK_MADE effect=(0x[0-9a-fA-F]+) root=($ptr) attach=($ptr) expect=(0x[0-9a-fA-F]+) x0=(0x[0-9a-fA-F]+|0) proc=(0x[0-9a-fA-F]+) expectproc=(0x[0-9a-fA-F]+) ry=([-+0-9.eE]+) rz=([-+0-9.eE]+)")
+    $kickDraw = [regex]::Match($stdout, 'FALCON_KICK_DRAW effect=(0x[0-9a-fA-F]+) status=(-?\d+) attach=(0x[0-9a-fA-F]+) expect=(0x[0-9a-fA-F]+) x0=(0x[0-9a-fA-F]+) ry=([-+0-9.eE]+) rz=([-+0-9.eE]+)')
     $kickPos = [regex]::Match($stdout, 'FALCON_KICK_POS_BITS x=(0x[0-9a-fA-F]+) y=(0x[0-9a-fA-F]+) z=(0x[0-9a-fA-F]+)')
     $kickSubmit = [regex]::Match($stdout, "FALCON_KICK_SUBMIT effect=(0x[0-9a-fA-F]+) dobj=(0x[0-9a-fA-F]+) dl=(0x[0-9a-fA-F]+) attach=($ptr) expect=(0x[0-9a-fA-F]+)")
     $kickDL = [regex]::Match($stdout, 'FALCON_KICK_DL publish=(\d+) blocker=(\d+) commands=(\d+) first=(0x[0-9a-fA-F]+) unsupported=(0x[0-9a-fA-F]+|0) hwtri=(\d+) hwvtx=(\d+) seed=(\d+) mcmd=(\d+) xform=(\d+) cfg=(\d+) mvt=(-?\d+),(-?\d+),(-?\d+)')
+    $attachPattern = 'samples=(\d+) lmis=(\d+) wmis=(\d+) expected=(-?\d+),(-?\d+),(-?\d+) local=(-?\d+),(-?\d+),(-?\d+) world=(-?\d+),(-?\d+),(-?\d+)'
+    $punchAttach = [regex]::Match($stdout, 'FALCON_PUNCH_ATTACH ' + $attachPattern)
+    $punchAttachNext = [regex]::Match($stdout, 'FALCON_PUNCH_ATTACH_NEXT ' + $attachPattern)
+    $kickAttach = [regex]::Match($stdout, 'FALCON_KICK_ATTACH ' + $attachPattern)
+    $kickAttachNext = [regex]::Match($stdout, 'FALCON_KICK_ATTACH_NEXT ' + $attachPattern)
 
     Assert-FalconEffect ($ready.Success -and [int]$ready.Groups[2].Value -eq 7) `
         'Falcon effect proof never reached controller-owned source Wait.' $stdout
+    Assert-FalconEffect ($scenario.Success -and
+        [int]$scenario.Groups[1].Value -eq $Facing -and
+        $scenario.Groups[2].Value -eq $KickMode) `
+        'Falcon effect proof did not naturally reach the requested facing/Kick scenario.' $stdout
     Assert-FalconEffect ($punchMade.Success -and $punchDraw.Success -and $punchPos.Success -and $punchSubmit.Success -and $punchDL.Success) `
         'Natural Falcon Punch did not create and draw its source effect.' $stdout
     Assert-FalconEffect ($punchSubmit.Groups[4].Value -eq $punchSubmit.Groups[5].Value) `
@@ -231,6 +297,9 @@ try {
     $punchExpectProc = [Convert]::ToUInt32($punchMade.Groups[6].Value.Substring(2), 16) -band 0xFFFFFFFE
     Assert-FalconEffect ($punchProc -eq $punchExpectProc) `
         'Falcon Punch descriptor is not routed through the DS DLHead1 source-display seam.' $stdout
+    Assert-FalconEffect ([math]::Abs(
+        [double]$punchDraw.Groups[3].Value - (-$Facing * [math]::PI / 2.0)) -lt 0.002) `
+        'Falcon Punch source facing rotation diverged from BattleShip.' $stdout
     Assert-FalconEffect ([int]$punchDL.Groups[2].Value -eq 0 -and
         [Convert]::ToUInt32(($punchDL.Groups[5].Value -replace '^0x',''), 16) -eq 0 -and
         [int]$punchDL.Groups[6].Value -gt 0 -and
@@ -245,7 +314,7 @@ try {
         'Natural Falcon Kick did not create and draw its source effect.' $stdout
     Assert-FalconEffect ($kickDraw.Groups[3].Value -eq $kickDraw.Groups[4].Value) `
         'Falcon Kick source effect did not remain attached to BattleShip joint 23.' $stdout
-    Assert-FalconEffect ([Convert]::ToUInt32($kickMade.Groups[5].Value.Substring(2), 16) -eq 0x50) `
+    Assert-FalconEffect ([Convert]::ToUInt32($kickDraw.Groups[5].Value.Substring(2), 16) -eq 0x50) `
         'Falcon Kick root did not carry source matrix kind 0x50 (joint-position attachment).' $stdout
     # Kick is a source DObj TREE.  The root owns matrix kind 0x50 and joint23;
     # drawable children inherit that parent transform and therefore correctly
@@ -255,6 +324,11 @@ try {
     $kickExpectProc = [Convert]::ToUInt32($kickMade.Groups[7].Value.Substring(2), 16) -band 0xFFFFFFFE
     Assert-FalconEffect ($kickProc -eq $kickExpectProc) `
         'Falcon Kick descriptor did not use BattleShip tree display.' $stdout
+    $expectedKickZ = if ($KickMode -eq 'Air') { -$Facing * [math]::PI / 3.0 } else { 0.0 }
+    Assert-FalconEffect (([math]::Abs(
+        [double]$kickDraw.Groups[6].Value - ($Facing * [math]::PI / 2.0)) -lt 0.002) -and
+        ([math]::Abs([double]$kickDraw.Groups[7].Value - $expectedKickZ) -lt 0.002)) `
+        'Falcon Kick source grounded/aerial facing rotation diverged from BattleShip.' $stdout
     Assert-FalconEffect ([int]$kickDL.Groups[2].Value -eq 0 -and
         [Convert]::ToUInt32(($kickDL.Groups[5].Value -replace '^0x',''), 16) -eq 0 -and
         [int]$kickDL.Groups[6].Value -gt 0 -and
@@ -265,6 +339,27 @@ try {
           [math]::Abs([int64]$kickDL.Groups[13].Value) +
           [math]::Abs([int64]$kickDL.Groups[14].Value)) -gt 4096)) `
         'Falcon Kick source effect reached its display callback but emitted no accepted triangles.' $stdout
+
+    foreach ($attach in @($punchAttach, $punchAttachNext, $kickAttach, $kickAttachNext)) {
+        Assert-FalconEffect $attach.Success 'Falcon final attachment-matrix evidence is missing.' $stdout
+        $expected = @(4,5,6 | ForEach-Object { [int64]$attach.Groups[$_].Value })
+        $local = @(7,8,9 | ForEach-Object { [int64]$attach.Groups[$_].Value })
+        $world = @(10,11,12 | ForEach-Object { [int64]$attach.Groups[$_].Value })
+        Assert-FalconEffect ([uint32]$attach.Groups[1].Value -gt 0u) `
+            'Falcon matrix kind 0x50 was not sampled.' $stdout
+        Assert-FalconEffect (([uint32]$attach.Groups[2].Value -eq 0u) -and
+            ([uint32]$attach.Groups[3].Value -eq 0u) -and
+            (($expected -join ',') -eq ($local -join ',')) -and
+            (($expected -join ',') -eq ($world -join ','))) `
+            'Falcon joint translation changed after later source XObjs.' $stdout
+    }
+    $punchExpected = @(4,5,6 | ForEach-Object { $punchAttach.Groups[$_].Value }) -join ','
+    $punchExpectedNext = @(4,5,6 | ForEach-Object { $punchAttachNext.Groups[$_].Value }) -join ','
+    $kickExpected = @(4,5,6 | ForEach-Object { $kickAttach.Groups[$_].Value }) -join ','
+    $kickExpectedNext = @(4,5,6 | ForEach-Object { $kickAttachNext.Groups[$_].Value }) -join ','
+    Assert-FalconEffect (($punchExpected -ne $punchExpectedNext) -and
+        ($kickExpected -ne $kickExpectedNext)) `
+        'Falcon joint attachment did not follow animation across consecutive rendered frames.' $stdout
 
     foreach ($entry in @(@('Punch', $punchPos), @('Kick', $kickPos))) {
         $label = $entry[0]
