@@ -521,6 +521,8 @@ typedef struct NDSRelocLoadedFile {
     u8 external_fixups_applied;
     u8 format_fixups_applied;
     u8 fixups_applying;
+    u8 offsets_are_relative;
+    u8 reserved[3];
 } NDSRelocLoadedFile;
 
 typedef struct NDSRelocNormalizedMObjSub
@@ -694,6 +696,8 @@ typedef struct NDSOpeningActionPreviewCache {
 
 static NDSRelocLoadedFile sNdsRelocLoadedFiles[NDS_RELOC_LOADED_FILE_CAPACITY];
 static u32 sNdsRelocLoadedFileCount;
+static const void *sNdsRelocRelativeOffsetsMemoBase;
+static NDSRelocLoadedFile *sNdsRelocRelativeOffsetsMemo;
 static NDSRelocNormalizedMObjSub
     sNdsRelocNormalizedMObjSubs[NDS_RELOC_NORMALIZED_MOBJ_SUB_CAPACITY];
 static u32 sNdsRelocNormalizedMObjSubCount;
@@ -3210,6 +3214,7 @@ void *ndsRelocResolvePointerFromFileBase(const void *file_base,
     uintptr_t raw;
     uintptr_t align_mask;
     uintptr_t resolved;
+    NDSRelocLoadedFile *relative_loaded;
 
     if (ptr == NULL)
     {
@@ -3240,6 +3245,50 @@ void *ndsRelocResolvePointerFromFileBase(const void *file_base,
         return (void *)ptr;
     }
 #endif
+
+    /* BPS1 slot words are offsets by construction, exactly like BPA2, but the
+     * clip lives in the fighter's ordinary heap rather than one resident blob.
+     * The generic absolute-pointer probe is catastrophically wrong for this
+     * known format: every small offset misses all loaded ranges, then scans both
+     * status buffers before rebasing it. Marking the registered file lets one
+     * exact-base lookup answer offset-first and preserves the generic path for
+     * every ordinary finalized O2R file. */
+    relative_loaded = NULL;
+    if ((sNdsRelocRelativeOffsetsMemoBase == file_base) &&
+        (sNdsRelocRelativeOffsetsMemo != NULL) &&
+        (sNdsRelocRelativeOffsetsMemo->data == file_base) &&
+        (sNdsRelocRelativeOffsetsMemo->offsets_are_relative != FALSE))
+    {
+        relative_loaded = sNdsRelocRelativeOffsetsMemo;
+    }
+    else
+    {
+        relative_loaded = ndsRelocFindLoadedFileByData((void *)file_base);
+        if ((relative_loaded != NULL) &&
+            (relative_loaded->offsets_are_relative != FALSE))
+        {
+            sNdsRelocRelativeOffsetsMemo = relative_loaded;
+            sNdsRelocRelativeOffsetsMemoBase = file_base;
+        }
+    }
+    if ((relative_loaded != NULL) &&
+        (relative_loaded->offsets_are_relative != FALSE))
+    {
+        raw = (uintptr_t)ptr;
+        if ((raw <= relative_loaded->data_size) &&
+            (size <= (size_t)(relative_loaded->data_size - raw)))
+        {
+            gNdsRelocResolveOffsetCount++;
+            resolved = (uintptr_t)relative_loaded->data + raw;
+            if ((resolved & align_mask) != 0u)
+            {
+                gNdsRelocResolveMisalignCount++;
+                gNdsRelocResolveMisalignValue = (u32)resolved;
+                return NULL;
+            }
+            return (u8 *)relative_loaded->data + raw;
+        }
+    }
 
     /* THE PACK'S SLOT WORDS ARE OFFSETS BY CONSTRUCTION, SO ASK THAT QUESTION
      * FIRST -- measured, this ordering was 92.4% of the resident pack's whole
@@ -3365,6 +3414,13 @@ static NDSRelocLoadedFile *ndsRelocRegisterLoadedFileImpl(
     loaded->external_fixups_applied = FALSE;
     loaded->format_fixups_applied = FALSE;
     loaded->fixups_applying = FALSE;
+    loaded->offsets_are_relative = FALSE;
+    loaded->reserved[0] = loaded->reserved[1] = loaded->reserved[2] = 0u;
+    if (sNdsRelocRelativeOffsetsMemo == loaded)
+    {
+        sNdsRelocRelativeOffsetsMemo = NULL;
+        sNdsRelocRelativeOffsetsMemoBase = NULL;
+    }
 
     if (header->extern_file_ids_num > 0u)
     {
@@ -3406,6 +3462,20 @@ static NDSRelocLoadedFile *ndsRelocRegisterLoadedFile(
 {
     return ndsRelocRegisterLoadedFileImpl(asset_id, bit, data, header, NULL, 0u,
                                           FALSE);
+}
+
+static void ndsRelocMarkLoadedFileRelativeOffsets(NDSRelocLoadedFile *loaded)
+{
+    if (loaded == NULL)
+    {
+        return;
+    }
+    loaded->internal_fixups_applied = TRUE;
+    loaded->external_fixups_applied = TRUE;
+    loaded->format_fixups_applied = TRUE;
+    loaded->offsets_are_relative = TRUE;
+    sNdsRelocRelativeOffsetsMemo = loaded;
+    sNdsRelocRelativeOffsetsMemoBase = loaded->data;
 }
 
 static s32 ndsRelocApplyWordByteSwap(NDSRelocLoadedFile *loaded)
@@ -9280,6 +9350,7 @@ static void *ndsRelocForceLoadFighterAObj16File(u32 token, u32 asset_id,
                 {
                     goto fail;
                 }
+                ndsRelocMarkLoadedFileRelativeOffsets(loaded);
                 gNdsR2AnimCacheHits++;
                 ndsFighterManagerRecordExternToken(token, heap);
                 ndsRelocSetStatusBufferFile(token, heap);
@@ -9340,6 +9411,7 @@ static void *ndsRelocForceLoadFighterAObj16File(u32 token, u32 asset_id,
             {
                 goto fail;
             }
+            ndsRelocMarkLoadedFileRelativeOffsets(loaded);
             ndsFighterManagerRecordExternToken(token, heap);
             ndsRelocSetStatusBufferFile(token, heap);
             ndsRelocSetStatusBufferFile(asset_id, heap);

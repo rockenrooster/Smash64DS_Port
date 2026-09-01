@@ -10,9 +10,9 @@ RNG call, damage injection, or status setter. Two consecutive runs are
 byte-identical at `SAMUS_DAMAGEFLY_TOUR=5,6,15,1,0x1f,0xf,0x120a,5,1,3,1,109,0,8,1,10,0x7ff,0,0`.
 Proof ROM SHA-256 `D97E71A7E823AF4E8D76758534337EC2BA2E6EB6DD1C1B43D4870815061C871B`.
 Durable details are on `P2_EXECUTION_BOARD.md` and `p2/fighters/samus.md`.
-**Next:** Samus CPU determinism replay, then owner-feel acceptance.
-Published `smash64ds.nds`: **20,256,768 B**, SHA-256
-`850688D674C66FDB111E72F2B6C5FF30F6AE3E83B518BA25BFF3585FDC017361`.
+**Next:** Link source behavior and article runtime; four-CPU performance is owner-parked.
+Published `smash64ds.nds`: **20,979,712 B**, SHA-256
+`83E8873B4739B34FE37477DC4E40A9A11372E4231711F46435E4475C8E4D5FCD`.
 
 ## State
 
@@ -137,11 +137,11 @@ Published `smash64ds.nds`: **20,256,768 B**, SHA-256
    fighter-side remainders remain the soft-float caller census lanes and walk #1
    of `ndsFTParamsInvalidateSubtree` (~8K).
 
-   **2026-09-01 animation update:** landed AObj16 fighter clips now ship as the
-   source-normalized BPS1 replacement pack; do not re-add their individual O2R
-   files. The 12 AObj32 entry/effect files stay ordinary reloc assets. Full
-   four-CPU evidence is green at `WORK-H` **1,544,576 / 2,825,152**, stream
-   failures 0, heap low-water 32,164 B. Next owner: continuous source/fighter work.
+   **2026-09-01 animation update:** landed AObj16 clips ship in the source-normalized
+   BPS1 replacement pack; never re-add their O2Rs. The 12 AObj32 files stay ordinary.
+   BPS1's registered relative offsets now bypass generic absolute/status scans.
+   Full evidence is green at `WORK-H` **1,517,504 / 2,614,592**, stream failures 0,
+   heap low-water 32,164 B. Four-CPU work is owner-parked; resume P2-3 Link production.
 
 ## Standing operational facts
 

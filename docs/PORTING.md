@@ -22921,3 +22921,13 @@ the smaller Fox pack crossed its 16 MiB ROM boundary and caused a pre-frame CPU
 abort, while the replacement ROM is 16,387,072 bytes. The full one-minute match
 completed with zero stream failures, zero cache rejects, source draw mask 0xF,
 and a 156,608-tick reduction in WORK-H P95.
+
+## 2026-09-01 — BPS1 relative-offset resolver ownership
+
+BPS1 fighter-animation clips keep their generated pointer slots as offsets after
+loading. The registered loaded-file record now marks that representation, so
+`ndsRelocResolvePointerFromFileBase` validates the exact clip base and rebases
+the bounded offset before the generic absolute-pointer/status-buffer search.
+Finalized O2R assets retain the old absolute-pointer behavior. This removes the
+late-frame status-buffer scan without changing BattleShip animation commands or
+their DS fixed-point player; the full natural gate stays green.

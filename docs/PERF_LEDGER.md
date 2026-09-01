@@ -7637,3 +7637,19 @@ all hard failures zero. Against the accepted ring checkpoint, SINT P95 falls
 1,108,032→944,192 and WORK-H P95 2,981,760→2,825,152; WORK-H P50 rises
 1,513,856→1,544,576. Evidence:
 `artifacts/performance/2026-09-01_bug-fourcpu-ftanim-stream-full`.
+
+## 2026-09-01 — BPS1 relative-offset resolver fast path
+
+BPS1 slot words are generator-proven offsets within one bounded clip image, but
+the generic resolver first treated each small value as a possible absolute
+pointer. Every miss searched all loaded files and both status buffers before
+rebasing it. Loaded BPS1 clips now carry an explicit relative-offset format bit;
+the resolver validates one exact-base memo and rebases offset-first, while all
+ordinary finalized O2R files retain the absolute-pointer path.
+
+The full one-minute four-kind match remains green with stream reads/misses/
+failures 269/5/0, direct AObj32 reads/fallbacks 5/0 and zero hard failures.
+`WORK-H` P50/P95 changes from 1,544,576 / 2,825,152 to **1,517,504 /
+2,614,592** (−27,072 / −210,560), and SINT P95 falls to 610,240. The profile's
+20.18M-cycle `ndsRelocFindStatusNodeContaining` owner disappears. Evidence:
+`artifacts/performance/2026-09-01_bug-fourcpu-relative-fastpath-full`.

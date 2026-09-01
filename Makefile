@@ -5169,22 +5169,12 @@ ifeq ($(NDS_R2_FTANIM_STREAM),1)
 		$(NITROFS_DIR)/reloc/reloc_animations/FTSamusAnim* \
 		$(NITROFS_DIR)/reloc/reloc_animations/FTCaptainAnim* \
 		$(NITROFS_DIR)/animation/ftanim_stream_pack.bin
-	@mkdir -p $(NITROFS_DIR)/reloc/reloc_animations
-	@cp \
-		$(BATTLESHIP_O2R)/reloc_animations/FTMarioAnim134 \
-		$(BATTLESHIP_O2R)/reloc_animations/FTMarioAnim135 \
-		$(BATTLESHIP_O2R)/reloc_animations/FTFoxAnim135 \
-		$(BATTLESHIP_O2R)/reloc_animations/FTFoxAnim136 \
-		$(BATTLESHIP_O2R)/reloc_animations/FTDonkeyAnim132 \
-		$(BATTLESHIP_O2R)/reloc_animations/FTDonkeyAnim133 \
-		$(BATTLESHIP_O2R)/reloc_animations/FTSamusAnim137 \
-		$(BATTLESHIP_O2R)/reloc_animations/FTSamusAnim138 \
-		$(BATTLESHIP_O2R)/reloc_animations/FTCaptainAnim136 \
-		$(BATTLESHIP_O2R)/reloc_animations/FTCaptainAnim137 \
-		$(BATTLESHIP_O2R)/reloc_animations/FTCaptainAnim138 \
-		$(BATTLESHIP_O2R)/reloc_animations/FTCaptainAnim139 \
-		$(NITROFS_DIR)/reloc/reloc_animations/
 endif
+
+# The prune must finish before Make decides whether any retained reloc target
+# needs its normal copy recipe. This also prevents two concurrent cp processes
+# racing on the named AObj32 files in an incremental build.
+$(NDS_NITROFS_RELOC_FILES): | prune-streamed-ftanim
 
 $(OUTPUT).nds: prune-obsolete-audio prune-streamed-ftanim $(OUTPUT).elf $(NDS_NITROFS_RELOC_FILES) $(NDS_NITROFS_RELOCDATA_FILES) $(NDS_NITROFS_AUDIO_FILES) $(NDS_NITROFS_BATTLE_STATIC_TEXTURE_FILES) $(NDS_NITROFS_PARTICLE_FILES) $(NDS_NITROFS_EFFECT_FILES) $(NDS_NITROFS_FTANIM_FILES) $(NDS_NITROFS_BATTLEPACK_FILES) $(NDS_NITROFS_MN_UI_KIT_FILES) $(NDS_NITROFS_NATIVE_IMAGE_FILES) $(NDS_BANNER_ICON)
 $(OUTPUT).elf: $(OFILES) $(NDS_PRIVATE_CHECK_OFILES) \
