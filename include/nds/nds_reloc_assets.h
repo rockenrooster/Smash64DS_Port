@@ -97,6 +97,8 @@ void ndsRelocAssetStreamClose(NdsRelocAssetStream *stream);
 s32 ndsRelocAssetLoadIntoZeroedHeap(u32 asset_id, void *dst, u32 align,
                                     size_t *out_alloc_size,
                                     NDSRelocAssetHeader *out_header);
+s32 ndsRelocAssetLoadFighterStreamClip(u32 asset_id, void *dst,
+                                       u32 *out_size);
 s32 ndsRelocGetLoadedAssetView(u32 asset_id, const void **out_data,
                                u32 *out_size);
 /* Resolve a live pointer through the authoritative loaded-file table. Used by
@@ -114,6 +116,10 @@ void *ndsRelocResolveAuthoritativeForceFile(void *file);
 extern volatile u32 gNdsRelocAssetInitResult;
 extern volatile u32 gNdsRelocAssetHeaderReadCount;
 extern volatile u32 gNdsRelocAssetPayloadReadCount;
+extern volatile u32 gNdsRelocAssetFighterStreamDispatch;
+extern volatile u32 gNdsRelocAssetFighterStreamReads;
+extern volatile u32 gNdsRelocAssetFighterStreamMisses;
+extern volatile u32 gNdsRelocAssetFighterStreamFailures;
 extern volatile u32 gNdsRelocAssetOpenFailCount;
 extern volatile u32 gNdsRelocAssetFormatFailCount;
 extern volatile u32 gNdsRelocAssetShortReadCount;

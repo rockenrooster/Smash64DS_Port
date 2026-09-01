@@ -22905,3 +22905,19 @@ unchanged byte-swap, relocation, AObj normalization and source animation path.
 Any direct resolution or read failure falls through to the established stdio
 loader. A same-binary dispatch control measured 9 direct reads, zero fallback,
 and a 22,208-tick WORK-H P95 reduction over frames 32..159.
+
+## 2026-09-01 — Source-normalized fighter-animation stream replacement
+
+The landed fighters' AObj16 O2R files are now generated into one BPS1 NitroFS
+pack containing a compact, position-independent slot table and native command
+stream per clip. On a miss the DS reads one clip directly into BattleShip's
+existing figatree heap, registers that bounded range, and skips the O2R byte
+swap, threaded fixups and AObj16 normalization. The same compact image is safe
+to keep in the bounded raw-animation cache because all pointers remain offsets.
+
+The pack replaces 756 superseded O2R files; 12 AObj32 entry/effect files remain
+unchanged. This replacement is required on the four-CPU build: duplicating even
+the smaller Fox pack crossed its 16 MiB ROM boundary and caused a pre-frame CPU
+abort, while the replacement ROM is 16,387,072 bytes. The full one-minute match
+completed with zero stream failures, zero cache rejects, source draw mask 0xF,
+and a 156,608-tick reduction in WORK-H P95.

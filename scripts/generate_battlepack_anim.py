@@ -67,11 +67,20 @@ VERSION = 1
 
 # reloc_backend_assets.c:3059-3074 -- these four carry AObjEvent32 scripts and
 # are NOT part of an AObj16 pack. Named, never silently skipped.
-AOBJ32_IDS = {0x279, 0x27A, 0x309, 0x30A}
+AOBJ32_IDS = {
+    0x279, 0x27A, 0x309, 0x30A,  # Mario/Fox entry effects
+    0x3A4, 0x3A5,                # Donkey entry effects
+    0x442, 0x443,                # Samus entry effects
+    0x670, 0x671, 0x672, 0x673,  # Captain entry/Falcon Flyer effects
+}
 
 # nds_reloc_assets.c:138-141.
 MARIO_FIRST, MARIO_LAST = 0x1F3, 0x281
 FOX_FIRST, FOX_LAST = 0x282, 0x31F
+DONKEY_FIRST, DONKEY_LAST = 0x320, 0x3B8
+SAMUS_FIRST, SAMUS_LAST = 0x3B9, 0x44E
+LUIGI_FIRST, LUIGI_LAST = 0x44F, 0x45A
+CAPTAIN_FIRST, CAPTAIN_LAST = 0x5E8, 0x67F
 
 # The item-flavoured clips, PROVEN excludable from the linked battle ELF rather
 # than guessed from names: every function that can set an item status is a
@@ -79,8 +88,22 @@ FOX_FIRST, FOX_LAST = 0x282, 0x31F
 # (BATTLEPACK_ANIMATION.md section 11.2). Items are off for P1 by contract.
 ITEM_IDS = ([0x24C + i for i in range(18)] + [0x281] +
             [0x2DD + i for i in range(18)] + [0x31F])
-FIGHTER_RANGES = {"mario": range(MARIO_FIRST, MARIO_LAST + 1),
-                  "fox": range(FOX_FIRST, FOX_LAST + 1)}
+FIGHTER_RANGES = {
+    "mario": range(MARIO_FIRST, MARIO_LAST + 1),
+    "fox": range(FOX_FIRST, FOX_LAST + 1),
+    "donkey": range(DONKEY_FIRST, DONKEY_LAST + 1),
+    "samus": range(SAMUS_FIRST, SAMUS_LAST + 1),
+    "luigi": range(LUIGI_FIRST, LUIGI_LAST + 1),
+    "captain": range(CAPTAIN_FIRST, CAPTAIN_LAST + 1),
+}
+FIGHTER_PREFIXES = {
+    "mario": "FTMarioAnim",
+    "fox": "FTFoxAnim",
+    "donkey": "FTDonkeyAnim",
+    "samus": "FTSamusAnim",
+    "luigi": "FTLuigiAnim",
+    "captain": "FTCaptainAnim",
+}
 
 CLIP_DIR = struct.Struct("<HHII")     # asset_id, script_count, byte_off, bytes
 assert CLIP_DIR.size == 12
@@ -164,7 +187,7 @@ def read_clip(probe, path):
             "slot_stray": slot_stray}
 
 
-def build(bank: pathlib.Path, dedup=True, exclude=()):
+def build(bank: pathlib.Path, dedup=True, exclude=(), fighter=None):
     """`exclude` is a set of asset ids to leave OUT of the resident pack.
 
     It exists to price a *split* resident pack (`plan.md` §K1 phase 3's third
@@ -177,7 +200,10 @@ def build(bank: pathlib.Path, dedup=True, exclude=()):
     probe = _load("ftanim_reloc_probe")
     clips, skipped, seen = [], [], set()
     for path in sorted(bank.iterdir()):
-        if not path.name.startswith(("FTMarioAnim", "FTFoxAnim")):
+        if not path.name.startswith(tuple(FIGHTER_PREFIXES.values())):
+            continue
+        if ((fighter is not None) and
+                (not path.name.startswith(FIGHTER_PREFIXES[fighter]))):
             continue
         clip = read_clip(probe, path)
         if clip is None:
@@ -192,6 +218,7 @@ def build(bank: pathlib.Path, dedup=True, exclude=()):
                             "excluded (0x%x)" % clip["asset_id"]))
             continue
         clips.append(clip)
+    clips.sort(key=lambda c: c["asset_id"])
     missing = sorted(exclude - seen)
     if missing:
         raise SystemExit("--exclude-ids names %d id(s) absent from the bank: %s"
@@ -414,6 +441,158 @@ def verify_blob(bank: pathlib.Path, directory, blob):
     return mismatches, checked
 
 
+STREAM_MAGIC = b"BPS1"
+STREAM_VERSION = 1
+STREAM_HEADER = struct.Struct("<4sIIIIIII")
+STREAM_DIR = struct.Struct("<II")       # absolute file offset, clip bytes
+assert STREAM_HEADER.size == 32 and STREAM_DIR.size == 8
+
+
+def emit_stream_pack(directory):
+    """Every source-normalized clip as one independently readable ROM range.
+
+    Unlike BPA2 this pack is never resident. A miss reads exactly one compact
+    clip into the fighter's existing figatree heap, registers that heap as the
+    loaded-file range, and returns its slot table. Each slot word is a byte
+    offset from the clip base, so no byte swap, threaded relocation or AObj16
+    normalization remains at runtime. Scripts deduplicate only within a clip;
+    cross-clip sharing would turn one acquisition back into scattered reads.
+    """
+    ids = sorted(c["asset_id"] for c in directory)
+    if not ids:
+        raise SystemExit("stream pack has no clips")
+    first_id, last_id = ids[0], ids[-1]
+    dense_count = last_id - first_id + 1
+    dir_off = STREAM_HEADER.size
+    data_off = (dir_off + dense_count * STREAM_DIR.size + 15) & ~15
+    blob = bytearray(data_off)
+    dense = [(0, 0)] * dense_count
+    local_dedup_runs = local_dedup_bytes = 0
+    payload_bytes = 0
+    max_clip_bytes = 0
+
+    for clip in directory:
+        while (len(blob) & 15) != 0:
+            blob.append(0)
+        clip_off = len(blob)
+        table_bytes = len(clip["slot_entry"]) * 4
+        stream = bytearray()
+        pool = {}
+        run_offsets = []
+        for run in clip["runs"]:
+            key = bytes(run)
+            if key in pool:
+                run_offsets.append(pool[key])
+                local_dedup_runs += 1
+                local_dedup_bytes += len(run)
+                continue
+            while (len(stream) & 3) != 0:
+                stream.append(0)
+            offset = table_bytes + len(stream)
+            pool[key] = offset
+            run_offsets.append(offset)
+            stream += run
+
+        table = bytearray()
+        for index in clip["slot_entry"]:
+            table += struct.pack("<I", 0 if index is None else
+                                 run_offsets[index])
+        clip_blob = table + stream
+        clip_bytes = len(clip_blob)
+        if clip_bytes > clip["payload_bytes"]:
+            raise SystemExit(
+                "%s compact stream grew beyond its source heap: %d > %d" %
+                (clip["name"], clip_bytes, clip["payload_bytes"]))
+        blob += clip_blob
+        dense[clip["asset_id"] - first_id] = (clip_off, clip_bytes)
+        clip["stream_clip_off"] = clip_off
+        clip["stream_clip_bytes"] = clip_bytes
+        payload_bytes += clip_bytes
+        max_clip_bytes = max(max_clip_bytes, clip_bytes)
+
+    blob_bytes = len(blob)
+    header = STREAM_HEADER.pack(
+        STREAM_MAGIC, STREAM_VERSION, blob_bytes, len(directory), first_id,
+        last_id, dir_off, data_off)
+    blob[:STREAM_HEADER.size] = header
+    for i, row in enumerate(dense):
+        STREAM_DIR.pack_into(blob, dir_off + i * STREAM_DIR.size, *row)
+    stats = {
+        "stream_bytes": blob_bytes,
+        "stream_clips": len(directory),
+        "stream_first_id": first_id,
+        "stream_last_id": last_id,
+        "stream_dense_entries": dense_count,
+        "stream_directory_bytes": dense_count * STREAM_DIR.size,
+        "stream_payload_bytes": payload_bytes,
+        "stream_max_clip_bytes": max_clip_bytes,
+        "stream_local_dedup_runs": local_dedup_runs,
+        "stream_local_dedup_bytes": local_dedup_bytes,
+        "stream_sha256": hashlib.sha256(blob).hexdigest(),
+    }
+    return bytes(blob), stats
+
+
+def verify_stream_pack(bank: pathlib.Path, directory, blob):
+    """Decode every emitted slot at its final file offset against BattleShip."""
+    probe = _load("ftanim_reloc_probe")
+    mismatches = []
+    checked = {"clips": 0, "slots": 0, "linked": 0, "null": 0,
+               "commands": 0}
+    fields = STREAM_HEADER.unpack_from(blob, 0)
+    magic, version, blob_bytes, clip_count, first_id, last_id, dir_off, _ = fields
+    if ((magic != STREAM_MAGIC) or (version != STREAM_VERSION) or
+            (blob_bytes != len(blob)) or (clip_count != len(directory))):
+        return [("header", fields)], checked
+
+    for clip in directory:
+        row = dir_off + (clip["asset_id"] - first_id) * STREAM_DIR.size
+        clip_off, clip_bytes = STREAM_DIR.unpack_from(blob, row)
+        if ((clip["asset_id"] > last_id) or
+                (clip_off != clip["stream_clip_off"]) or
+                (clip_bytes != clip["stream_clip_bytes"]) or
+                (clip_off + clip_bytes > len(blob))):
+            mismatches.append((clip["name"], "directory", clip_off,
+                               clip_bytes))
+            continue
+        checked["clips"] += 1
+        for slot, index in enumerate(clip["slot_entry"]):
+            checked["slots"] += 1
+            word = struct.unpack_from("<I", blob,
+                                      clip_off + slot * 4)[0]
+            if index is None:
+                checked["null"] += 1
+                if word != 0:
+                    mismatches.append((clip["name"], slot,
+                                       "expected NULL", word))
+                continue
+            checked["linked"] += 1
+            if ((word & 3) != 0) or (word >= clip_bytes):
+                mismatches.append((clip["name"], slot, "bad offset", word))
+                continue
+            try:
+                cand = probe.decode_script(blob, clip_off + clip_bytes,
+                                           clip_off + word, native=True)
+            except ValueError as exc:
+                mismatches.append((clip["name"], slot, "undecodable",
+                                   str(exc)))
+                continue
+            source_run = clip["runs"][index]
+            try:
+                oracle = probe.decode_script(source_run, len(source_run), 0,
+                                             native=True)
+            except ValueError as exc:
+                mismatches.append((clip["name"], slot,
+                                   "source run undecodable", str(exc)))
+                continue
+            o = [_cmd_key(c, oracle[0]["pc"]) for c in oracle]
+            k = [_cmd_key(c, cand[0]["pc"]) for c in cand]
+            checked["commands"] += len(o)
+            if o != k:
+                mismatches.append((clip["name"], slot, "command stream", ""))
+    return mismatches, checked
+
+
 def verify(bank: pathlib.Path, directory, stream_pool, table):
     """Phase 4. Decode every clip OUT OF THE PACK and compare against the
     existing parser semantics, driven through slice 32's proven host model.
@@ -531,6 +710,9 @@ def main() -> int:
     ap.add_argument("--blob-out", type=pathlib.Path,
                     help="emit the resident BPA2 blob (per-slot figatree "
                          "tables, blob-relative byte offsets) to this path")
+    ap.add_argument("--stream-out", type=pathlib.Path,
+                    help="emit the direct-ROM BPS1 pack: one compact, "
+                         "source-normalized range per clip")
     ap.add_argument("--exclude-ids", default="",
                     help="comma-separated asset ids (0x… or decimal) to leave "
                          "out of the resident pack; priced by re-packing, not "
@@ -542,9 +724,7 @@ def main() -> int:
     if args.items_off:
         exclude |= set(ITEM_IDS)
     if args.fighter:
-        for name, span in FIGHTER_RANGES.items():
-            if name != args.fighter:
-                exclude |= set(span)
+        exclude &= set(FIGHTER_RANGES[args.fighter])
     exclude = frozenset(exclude)
 
     if not args.bank.is_dir():
@@ -552,8 +732,9 @@ def main() -> int:
         return 0
 
     blob, directory, pool, table, stats = build(args.bank,
-                                                dedup=not args.no_dedup,
-                                                exclude=exclude)
+                                                 dedup=not args.no_dedup,
+                                                 exclude=exclude,
+                                                 fighter=args.fighter)
     print("bank                    : %s" % stats["bank"])
     print("clips (AObj16)          : %d" % stats["clips"])
     print("scripts (entry points)  : %d" % stats["scripts"])
@@ -626,6 +807,36 @@ def main() -> int:
         args.blob_out.parent.mkdir(parents=True, exist_ok=True)
         args.blob_out.write_bytes(resident)
         print("wrote %s (%d bytes)" % (args.blob_out, len(resident)))
+
+    if args.stream_out:
+        stream_blob, sstats = emit_stream_pack(directory)
+        stats.update(sstats)
+        print("\nDIRECT-ROM STREAM PACK (BPS1)")
+        for key in ("stream_bytes", "stream_clips", "stream_dense_entries",
+                    "stream_directory_bytes", "stream_payload_bytes",
+                    "stream_max_clip_bytes", "stream_local_dedup_runs",
+                    "stream_local_dedup_bytes"):
+            print("  %-28s : %d" % (key, sstats[key]))
+        print("  %-28s : 0x%x .. 0x%x" %
+              ("asset id range", sstats["stream_first_id"],
+               sstats["stream_last_id"]))
+        print("  %-28s : %s" % ("sha256", sstats["stream_sha256"]))
+        bad, checked = verify_stream_pack(args.bank, directory, stream_blob)
+        print("  slots checked              : %d (%d linked, %d null), %d commands" %
+              (checked["slots"], checked["linked"], checked["null"],
+               checked["commands"]))
+        print("  STREAM MISMATCHES          : %d" % len(bad))
+        for row in bad[:8]:
+            print("     %s" % (row,))
+        stats["verify_stream"] = {"mismatches": len(bad), **checked}
+        if bad:
+            print("FAIL: direct-ROM stream pack differs from source clips.")
+            return 1
+        print("BATTLEPACK_STREAM_EQUIVALENCE=PASS  slot mismatch = 0")
+        args.stream_out.parent.mkdir(parents=True, exist_ok=True)
+        args.stream_out.write_bytes(stream_blob)
+        print("wrote %s (%d bytes)" %
+              (args.stream_out, len(stream_blob)))
 
     if args.out:
         args.out.parent.mkdir(parents=True, exist_ok=True)

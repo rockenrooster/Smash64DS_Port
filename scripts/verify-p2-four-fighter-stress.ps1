@@ -120,6 +120,10 @@ $memoryGlobals = @(
     'gNdsRelocAssetDirectDispatch',
     'gNdsRelocAssetDirectReadCount',
     'gNdsRelocAssetDirectFallbackCount',
+    'gNdsRelocAssetFighterStreamDispatch',
+    'gNdsRelocAssetFighterStreamReads',
+    'gNdsRelocAssetFighterStreamMisses',
+    'gNdsRelocAssetFighterStreamFailures',
     # These are part of the shipping tick-HUD target already. Do not enable
     # Task-68's fallback census here: that flag changes BSS/cache placement and
     # would make the gate measure a different binary. PlanBuild means the live
@@ -406,6 +410,10 @@ $memory = [PSCustomObject]@{
     animDirectDispatch = $extra['gNdsRelocAssetDirectDispatch']
     animDirectReads = $extra['gNdsRelocAssetDirectReadCount']
     animDirectFallbacks = $extra['gNdsRelocAssetDirectFallbackCount']
+    animStreamDispatch = $extra['gNdsRelocAssetFighterStreamDispatch']
+    animStreamReads = $extra['gNdsRelocAssetFighterStreamReads']
+    animStreamMisses = $extra['gNdsRelocAssetFighterStreamMisses']
+    animStreamFailures = $extra['gNdsRelocAssetFighterStreamFailures']
     arenaChosenBytes = $extra['gNdsTaskmanArenaChosenSize']
     arenaSearchAllocationFailures = $extra['gNdsTaskmanArenaAllocFailCount']
     graphicsHeapCapacityBytes = $extra['gNdsTaskmanGraphicsHeapCapacity']
@@ -543,6 +551,14 @@ if (([uint64]$memory.animDirectDispatch -ne 1) -or
         "cleanly: dispatch=$($memory.animDirectDispatch) " +
         "reads=$($memory.animDirectReads) " +
         "fallbacks=$($memory.animDirectFallbacks).")
+}
+if (([uint64]$memory.animStreamDispatch -ne 1) -or
+    ([uint64]$memory.animStreamReads -eq 0) -or
+    ([uint64]$memory.animStreamFailures -ne 0)) {
+    throw ("Four-fighter source-normalized animation stream did not engage " +
+        "cleanly: dispatch=$($memory.animStreamDispatch) " +
+        "reads=$($memory.animStreamReads) misses=$($memory.animStreamMisses) " +
+        "failures=$($memory.animStreamFailures).")
 }
 
 Write-Host ''

@@ -470,6 +470,11 @@ try {
         ('printf "ANIMDIRECT=%u,%u\n", ' +
          'gNdsRelocAssetDirectReadCount, ' +
          'gNdsRelocAssetDirectFallbackCount'),
+        ('printf "ANIMSTREAM=%u,%u,%u,%u\n", ' +
+         'gNdsRelocAssetFighterStreamDispatch, ' +
+         'gNdsRelocAssetFighterStreamReads, ' +
+         'gNdsRelocAssetFighterStreamMisses, ' +
+         'gNdsRelocAssetFighterStreamFailures'),
         ('printf "ENTRY_NATIVE=%u,%u,%u,%u,%u\n", ' +
          'gNdsEntryEffectNativeDrawCount, gNdsEntryEffectNativeFallbackCount, ' +
          'gNdsEntryEffectNativeTexturePrepareCount, ' +
@@ -687,7 +692,15 @@ try {
         -WindowStyle Hidden -PassThru
     if (-not $gdbProcess.WaitForExit($TimeoutSeconds * 1000)) {
         Stop-Process -Id $gdbProcess.Id -Force
-        throw "P2-2 sparse frame-32 probe exceeded ${TimeoutSeconds}s."
+        $partial = Get-Content $gdbOut -Raw -ErrorAction SilentlyContinue
+        if (-not [string]::IsNullOrWhiteSpace($partial)) {
+            $artifactDir = Split-Path -Parent $Artifact
+            if ($artifactDir) {
+                New-Item -ItemType Directory -Force -Path $artifactDir | Out-Null
+            }
+            Set-Content -LiteralPath $Artifact -Value $partial
+        }
+        throw "P2-2 sparse frame-32 probe exceeded ${TimeoutSeconds}s:`n$partial"
     }
     if ($gdbProcess.ExitCode -ne 0) {
         throw "P2-2 sparse GDB probe failed: $(Get-Content $gdbErr -Raw)"

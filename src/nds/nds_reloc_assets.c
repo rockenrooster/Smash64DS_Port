@@ -41,6 +41,10 @@ volatile u32 gNdsRelocAssetDirectFallbackCount;
 /* Same-binary performance control. Zero restores the established stdio/FAT
  * loader without changing code placement. */
 __attribute__((used)) volatile u32 gNdsRelocAssetDirectDispatch = 1u;
+__attribute__((used)) volatile u32 gNdsRelocAssetFighterStreamDispatch = 1u;
+volatile u32 gNdsRelocAssetFighterStreamReads;
+volatile u32 gNdsRelocAssetFighterStreamMisses;
+volatile u32 gNdsRelocAssetFighterStreamFailures;
 
 static const NDSRelocAssetEntry sNdsRelocAssets[] = {
     { 0, 0, "nitro:/reloc/reloc_menus/MNCommon" },
@@ -793,6 +797,161 @@ s32 ndsRelocAssetLoadDataAndExternIDs(u32 asset_id, void *dst,
  * the bytes left in dst are identical to the old memset-then-load order. On
  * every failure path reachable once the header is known, dst is left fully
  * zeroed -- which is what the animation caller's `fail:` memset did. */
+#ifndef NDS_R2_FTANIM_STREAM
+#define NDS_R2_FTANIM_STREAM 0
+#endif
+
+#if NDS_R2_FTANIM_STREAM
+#define NDS_FTANIM_STREAM_MAGIC 0x31535042u /* "BPS1", little endian */
+#define NDS_FTANIM_STREAM_VERSION 1u
+#define NDS_FTANIM_STREAM_PATH "zz_stream/ftanim_stream_pack.bin"
+
+typedef struct NDSFtAnimStreamHeader
+{
+    u32 magic;
+    u32 version;
+    u32 blob_bytes;
+    u32 clip_count;
+    u32 first_id;
+    u32 last_id;
+    u32 dir_off;
+    u32 data_off;
+} NDSFtAnimStreamHeader;
+
+typedef struct NDSFtAnimStreamEntry
+{
+    u32 offset;
+    u32 size;
+} NDSFtAnimStreamEntry;
+
+static NitroRom *sNdsFtAnimStreamRom;
+static NDSFtAnimStreamHeader sNdsFtAnimStreamHeader;
+static u16 sNdsFtAnimStreamFileId;
+static u8 sNdsFtAnimStreamState;
+
+static s32 ndsRelocAssetOpenFighterStream(void)
+{
+    NDSFtAnimStreamHeader *header = &sNdsFtAnimStreamHeader;
+    NitroRom *rom;
+    u32 file_size;
+    u32 dense_count;
+    int file_id;
+
+    if (sNdsFtAnimStreamState != 0u)
+    {
+        return (sNdsFtAnimStreamState == 1u) ? TRUE : FALSE;
+    }
+    rom = nitroromGetSelf();
+    if (rom == NULL)
+    {
+        goto fail;
+    }
+    file_id = nitroromResolvePath(rom, NITROROM_ROOT_DIR,
+                                  NDS_FTANIM_STREAM_PATH);
+    if ((file_id < 0) || (file_id >= (s32)NITROROM_ROOT_DIR))
+    {
+        goto fail;
+    }
+    file_size = nitroromGetFileSize(rom, (u16)file_id);
+    if ((file_size < sizeof(*header)) ||
+        (nitroromReadFile(rom, (u16)file_id, 0u, header,
+                          sizeof(*header)) == false))
+    {
+        goto fail;
+    }
+    if ((header->magic != NDS_FTANIM_STREAM_MAGIC) ||
+        (header->version != NDS_FTANIM_STREAM_VERSION) ||
+        (header->blob_bytes != file_size) ||
+        (header->first_id > header->last_id))
+    {
+        goto fail;
+    }
+    dense_count = header->last_id - header->first_id + 1u;
+    if ((header->clip_count > dense_count) ||
+        (header->dir_off < sizeof(*header)) ||
+        (dense_count > ((0xffffffffu - header->dir_off) /
+                        sizeof(NDSFtAnimStreamEntry))) ||
+        ((header->dir_off + dense_count * sizeof(NDSFtAnimStreamEntry)) >
+         header->data_off) ||
+        (header->data_off > file_size))
+    {
+        goto fail;
+    }
+    sNdsFtAnimStreamRom = rom;
+    sNdsFtAnimStreamFileId = (u16)file_id;
+    sNdsFtAnimStreamState = 1u;
+    return TRUE;
+
+fail:
+    sNdsFtAnimStreamState = 2u;
+    gNdsRelocAssetFighterStreamFailures++;
+    return FALSE;
+}
+#endif
+
+s32 ndsRelocAssetLoadFighterStreamClip(u32 asset_id, void *dst,
+                                       u32 *out_size)
+{
+    if (out_size != NULL)
+    {
+        *out_size = 0u;
+    }
+#if NDS_R2_FTANIM_STREAM
+    {
+        NDSFtAnimStreamEntry entry;
+        const NDSFtAnimStreamHeader *header = &sNdsFtAnimStreamHeader;
+        u32 row;
+
+        if ((gNdsRelocAssetFighterStreamDispatch == 0u) ||
+            (ndsRelocAssetOpenFighterStream() == FALSE) ||
+            (asset_id < header->first_id) || (asset_id > header->last_id))
+        {
+            gNdsRelocAssetFighterStreamMisses++;
+            return FALSE;
+        }
+        row = header->dir_off +
+              ((asset_id - header->first_id) *
+               sizeof(NDSFtAnimStreamEntry));
+        if (nitroromReadFile(sNdsFtAnimStreamRom,
+                             sNdsFtAnimStreamFileId, row, &entry,
+                             sizeof(entry)) == false)
+        {
+            gNdsRelocAssetFighterStreamFailures++;
+            return FALSE;
+        }
+        if ((entry.offset < header->data_off) || (entry.size == 0u) ||
+            (entry.offset > header->blob_bytes) ||
+            (entry.size > (header->blob_bytes - entry.offset)))
+        {
+            gNdsRelocAssetFighterStreamMisses++;
+            return FALSE;
+        }
+        if (out_size != NULL)
+        {
+            *out_size = entry.size;
+        }
+        if (dst == NULL)
+        {
+            return TRUE;
+        }
+        if (nitroromReadFile(sNdsFtAnimStreamRom,
+                             sNdsFtAnimStreamFileId, entry.offset, dst,
+                             entry.size) == false)
+        {
+            gNdsRelocAssetFighterStreamFailures++;
+            return FALSE;
+        }
+        gNdsRelocAssetFighterStreamReads++;
+        return TRUE;
+    }
+#else
+    (void)asset_id;
+    (void)dst;
+    gNdsRelocAssetFighterStreamMisses++;
+    return FALSE;
+#endif
+}
+
 /* Calico's NitroRom API reads the application's FNT/FAT by file id and then
  * dispatches one exact ROM range read. It bypasses the stdio/FAT path which
  * otherwise reopens, walks and seeks a fighter clip during the frame that

@@ -137,6 +137,12 @@ Published `smash64ds.nds`: **20,256,768 B**, SHA-256
    fighter-side remainders remain the soft-float caller census lanes and walk #1
    of `ndsFTParamsInvalidateSubtree` (~8K).
 
+   **2026-09-01 animation update:** landed AObj16 fighter clips now ship as the
+   source-normalized BPS1 replacement pack; do not re-add their individual O2R
+   files. The 12 AObj32 entry/effect files stay ordinary reloc assets. Full
+   four-CPU evidence is green at `WORK-H` **1,544,576 / 2,825,152**, stream
+   failures 0, heap low-water 32,164 B. Next owner: continuous source/fighter work.
+
 ## Standing operational facts
 
 - **Republish the free-play ROM after every fix batch** (owner, 2026-08-22): plain

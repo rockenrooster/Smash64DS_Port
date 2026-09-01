@@ -395,6 +395,10 @@ NDS_R2_AOBJ16_PREBAKE ?= 0
 # `artifacts/performance/2026-08-15_battlepack-pool/BATTLEPACK_POOL.md` is the
 # pool history; the 2026-08-15 stress battery is in ARENA_PRICE.md.
 NDS_R2_BATTLEPACK ?= 1
+# Source-normalized AObj16 clips remain in NitroFS and are read directly into
+# each fighter's existing figatree heap on a cache miss. Unlike the resident
+# BattlePack this spends no scene RAM and covers every landed fighter family.
+NDS_R2_FTANIM_STREAM ?= 1
 # The arm that isolates the pack from the cache it displaces. Phase 8 measured
 # the resident pack at 2.9x the gate and attributed all of it to the carve
 # DELETING the raw file cache (262,144 -> 4,096 B; Rejects 0 -> 126); the
@@ -2057,6 +2061,10 @@ ifneq ($(filter $(NDS_R2_BATTLEPACK_DISPATCH),0 1),)
 else
 $(error NDS_R2_BATTLEPACK_DISPATCH must be 0 or 1)
 endif
+ifneq ($(filter $(NDS_R2_FTANIM_STREAM),0 1),)
+else
+$(error NDS_R2_FTANIM_STREAM must be 0 or 1)
+endif
 ifneq ($(filter $(NDS_TASK55_STAGE_GEOM),0 1),)
 else
 $(error NDS_TASK55_STAGE_GEOM must be 0 or 1)
@@ -3496,6 +3504,14 @@ NDS_FTANIM_DENSE_ASSET := $(PROJECT_ROOT)/assets/animation/ftanim_dense_bank.bin
 NDS_FTANIM_DENSE_SOURCES := \
 	$(wildcard $(BATTLESHIP_O2R)/reloc_animations/FTMarioAnim*) \
 	$(wildcard $(BATTLESHIP_O2R)/reloc_animations/FTFoxAnim*)
+NDS_FTANIM_STREAM_ASSET := $(PROJECT_ROOT)/assets/animation/ftanim_stream_pack.bin
+NDS_FTANIM_STREAM_SOURCES := \
+	$(wildcard $(BATTLESHIP_O2R)/reloc_animations/FTMarioAnim*) \
+	$(wildcard $(BATTLESHIP_O2R)/reloc_animations/FTFoxAnim*) \
+	$(wildcard $(BATTLESHIP_O2R)/reloc_animations/FTDonkeyAnim*) \
+	$(wildcard $(BATTLESHIP_O2R)/reloc_animations/FTSamusAnim*) \
+	$(wildcard $(BATTLESHIP_O2R)/reloc_animations/FTLuigiAnim*) \
+	$(wildcard $(BATTLESHIP_O2R)/reloc_animations/FTCaptainAnim*)
 
 # Slice 1 phase 5's resident figatree pack. ONE fighter, because the taskman
 # arena holds 287,904 (Fox) or 271,728 (Mario) but not the ~559,632 both need.
@@ -4384,6 +4400,46 @@ ifeq ($(NDS_P2_LINK),1)
 NDS_P2_FIGHTER_RELOC_FILES += $(NDS_P2_LINK_FIGHTER_RELOC_FILES)
 endif
 
+# BPS1 replaces these AObj16 O2R payloads rather than duplicating them. Keeping
+# both crosses the four-CPU ROM's measured 16 MiB runner boundary; more
+# importantly, every retained source file would be dead ROM once the verified
+# compact clip is the authoritative acquisition path. AObj32 entry/effect files
+# remain on the ordinary reloc loader and are restored after the prefix filter.
+NDS_FTANIM_STREAM_REPLACED_RELOC_FILES :=
+ifeq ($(NDS_R2_FTANIM_STREAM),1)
+NDS_FTANIM_STREAM_PATTERNS := \
+	reloc_animations/FTMarioAnim% \
+	reloc_animations/FTFoxAnim% \
+	reloc_animations/FTLuigiAnim% \
+	reloc_animations/FTDonkeyAnim% \
+	reloc_animations/FTSamusAnim% \
+	reloc_animations/FTCaptainAnim%
+NDS_FTANIM_STREAM_AOBJ32_FILES := \
+	reloc_animations/FTMarioAnim134 \
+	reloc_animations/FTMarioAnim135 \
+	reloc_animations/FTFoxAnim135 \
+	reloc_animations/FTFoxAnim136 \
+	reloc_animations/FTDonkeyAnim132 \
+	reloc_animations/FTDonkeyAnim133 \
+	reloc_animations/FTSamusAnim137 \
+	reloc_animations/FTSamusAnim138 \
+	reloc_animations/FTCaptainAnim136 \
+	reloc_animations/FTCaptainAnim137 \
+	reloc_animations/FTCaptainAnim138 \
+	reloc_animations/FTCaptainAnim139
+NDS_MARIOFOX_FIGHTER_RELOC_FILES_FULL := $(NDS_MARIOFOX_FIGHTER_RELOC_FILES)
+NDS_P2_FIGHTER_RELOC_FILES_FULL := $(NDS_P2_FIGHTER_RELOC_FILES)
+NDS_FTANIM_STREAM_REPLACED_RELOC_FILES := $(filter \
+	$(NDS_FTANIM_STREAM_PATTERNS),$(NDS_MARIOFOX_FIGHTER_RELOC_FILES_FULL) \
+	$(NDS_P2_FIGHTER_RELOC_FILES_FULL))
+NDS_MARIOFOX_FIGHTER_RELOC_FILES := $(filter-out \
+	$(NDS_FTANIM_STREAM_PATTERNS),$(NDS_MARIOFOX_FIGHTER_RELOC_FILES_FULL)) \
+	$(filter $(NDS_FTANIM_STREAM_AOBJ32_FILES),$(NDS_MARIOFOX_FIGHTER_RELOC_FILES_FULL))
+NDS_P2_FIGHTER_RELOC_FILES := $(filter-out \
+	$(NDS_FTANIM_STREAM_PATTERNS),$(NDS_P2_FIGHTER_RELOC_FILES_FULL)) \
+	$(filter $(NDS_FTANIM_STREAM_AOBJ32_FILES),$(NDS_P2_FIGHTER_RELOC_FILES_FULL))
+endif
+
 NDS_EFFECT_RELOC_FILES := \
 	reloc_effects/EFCommonEffects1 \
 	reloc_effects/EFCommonEffects2 \
@@ -4518,6 +4574,9 @@ endif
 export NDS_NITROFS_FTANIM_FILES :=
 ifeq ($(NDS_R2_FTANIM_DENSE),1)
 NDS_NITROFS_FTANIM_FILES := $(NITROFS_DIR)/animation/ftanim_dense_bank.bin
+endif
+ifeq ($(NDS_R2_FTANIM_STREAM),1)
+NDS_NITROFS_FTANIM_FILES += $(NITROFS_DIR)/zz_stream/ftanim_stream_pack.bin
 endif
 
 # Slice 1 phase 5's resident figatree pack. Empty unless a reader is compiled
@@ -4751,6 +4810,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_R2_DELTA_PATH_ITCM $(NDS_R2_DELTA_PATH_ITCM)'; \
 		echo '#define NDS_R2_ANIM_CACHE $(NDS_R2_ANIM_CACHE)'; \
 		echo '#define NDS_R2_BATTLEPACK $(NDS_R2_BATTLEPACK)'; \
+		echo '#define NDS_R2_FTANIM_STREAM $(NDS_R2_FTANIM_STREAM)'; \
 		echo '#define NDS_R2_BATTLEPACK_KEEP_CACHE $(NDS_R2_BATTLEPACK_KEEP_CACHE)'; \
 		echo '#define NDS_R2_BATTLEPACK_DISPATCH $(NDS_R2_BATTLEPACK_DISPATCH)'; \
 		echo '#define NDS_R2_FTANIM_TRACK $(NDS_R2_FTANIM_TRACK)'; \
@@ -5053,6 +5113,18 @@ $(NITROFS_DIR)/animation/battlepack_fox.bin: $(NDS_BATTLEPACK_BLOB)
 	@mkdir -p $(dir $@)
 	@cp $< $@
 
+$(NDS_FTANIM_STREAM_ASSET): \
+		$(PROJECT_ROOT)/scripts/generate_battlepack_anim.py \
+		$(PROJECT_ROOT)/scripts/ftanim_reloc_probe.py \
+		$(NDS_FTANIM_STREAM_SOURCES)
+	@mkdir -p $(dir $@)
+	python "$(PROJECT_ROOT)/scripts/generate_battlepack_anim.py" \
+		--stream-out "$@"
+
+$(NITROFS_DIR)/zz_stream/ftanim_stream_pack.bin: $(NDS_FTANIM_STREAM_ASSET)
+	@mkdir -p $(dir $@)
+	@cp $< $@
+
 # The dense runtime's rows. `--verify` is deliberately NOT passed (it is the
 # 90-second three-layer corpus proof and belongs to a checker run, not to every
 # build), but LAYER D always runs inside `--emit-c` and the generator returns
@@ -5086,7 +5158,35 @@ $(NITROFS_DIR)/particles/grpupupu_whispy_native.ds.bin: $(NDS_WHISPY_NATIVE_ASSE
 prune-obsolete-audio:
 	@rm -f $(foreach file,$(NDS_AUDIO_OBSOLETE_DERIVED_FILES),$(NITROFS_DIR)/$(file))
 
-$(OUTPUT).nds: prune-obsolete-audio $(OUTPUT).elf $(NDS_NITROFS_RELOC_FILES) $(NDS_NITROFS_RELOCDATA_FILES) $(NDS_NITROFS_AUDIO_FILES) $(NDS_NITROFS_BATTLE_STATIC_TEXTURE_FILES) $(NDS_NITROFS_PARTICLE_FILES) $(NDS_NITROFS_EFFECT_FILES) $(NDS_NITROFS_FTANIM_FILES) $(NDS_NITROFS_BATTLEPACK_FILES) $(NDS_NITROFS_MN_UI_KIT_FILES) $(NDS_NITROFS_NATIVE_IMAGE_FILES) $(NDS_BANNER_ICON)
+.PHONY: prune-streamed-ftanim
+prune-streamed-ftanim:
+ifeq ($(NDS_R2_FTANIM_STREAM),1)
+	@rm -f \
+		$(NITROFS_DIR)/reloc/reloc_animations/FTMarioAnim* \
+		$(NITROFS_DIR)/reloc/reloc_animations/FTFoxAnim* \
+		$(NITROFS_DIR)/reloc/reloc_animations/FTLuigiAnim* \
+		$(NITROFS_DIR)/reloc/reloc_animations/FTDonkeyAnim* \
+		$(NITROFS_DIR)/reloc/reloc_animations/FTSamusAnim* \
+		$(NITROFS_DIR)/reloc/reloc_animations/FTCaptainAnim* \
+		$(NITROFS_DIR)/animation/ftanim_stream_pack.bin
+	@mkdir -p $(NITROFS_DIR)/reloc/reloc_animations
+	@cp \
+		$(BATTLESHIP_O2R)/reloc_animations/FTMarioAnim134 \
+		$(BATTLESHIP_O2R)/reloc_animations/FTMarioAnim135 \
+		$(BATTLESHIP_O2R)/reloc_animations/FTFoxAnim135 \
+		$(BATTLESHIP_O2R)/reloc_animations/FTFoxAnim136 \
+		$(BATTLESHIP_O2R)/reloc_animations/FTDonkeyAnim132 \
+		$(BATTLESHIP_O2R)/reloc_animations/FTDonkeyAnim133 \
+		$(BATTLESHIP_O2R)/reloc_animations/FTSamusAnim137 \
+		$(BATTLESHIP_O2R)/reloc_animations/FTSamusAnim138 \
+		$(BATTLESHIP_O2R)/reloc_animations/FTCaptainAnim136 \
+		$(BATTLESHIP_O2R)/reloc_animations/FTCaptainAnim137 \
+		$(BATTLESHIP_O2R)/reloc_animations/FTCaptainAnim138 \
+		$(BATTLESHIP_O2R)/reloc_animations/FTCaptainAnim139 \
+		$(NITROFS_DIR)/reloc/reloc_animations/
+endif
+
+$(OUTPUT).nds: prune-obsolete-audio prune-streamed-ftanim $(OUTPUT).elf $(NDS_NITROFS_RELOC_FILES) $(NDS_NITROFS_RELOCDATA_FILES) $(NDS_NITROFS_AUDIO_FILES) $(NDS_NITROFS_BATTLE_STATIC_TEXTURE_FILES) $(NDS_NITROFS_PARTICLE_FILES) $(NDS_NITROFS_EFFECT_FILES) $(NDS_NITROFS_FTANIM_FILES) $(NDS_NITROFS_BATTLEPACK_FILES) $(NDS_NITROFS_MN_UI_KIT_FILES) $(NDS_NITROFS_NATIVE_IMAGE_FILES) $(NDS_BANNER_ICON)
 $(OUTPUT).elf: $(OFILES) $(NDS_PRIVATE_CHECK_OFILES) \
 	$(NDS_HOT_TEXT_SPECS) $(NDS_HOT_TEXT_LINKER_SCRIPT) \
 	$(NDS_TASK32_DRAW_HOT_FRAGMENT) $(NDS_PARTICLE_BANKS_INC) \

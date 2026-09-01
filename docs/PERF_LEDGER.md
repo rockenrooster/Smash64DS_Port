@@ -7618,3 +7618,22 @@ dispatch 0→1, direct reads 4→9, direct fallbacks 5→0, cache hits/misses 4/
 both arms; WORK-H P95 2,127,296→2,105,088 and SINT max
 1,072,192→1,048,640. Evidence:
 `artifacts/performance/2026-09-01_bug-fourcpu-directrom-ab`.
+
+### Source-normalized stream replacement
+
+BPS1 replaces, rather than duplicates, the landed roster's 756 AObj16 O2R
+files. The generator's final-offset oracle covers 18,939 slots and 201,126
+commands with zero mismatches; all 12 AObj32 files stay on the original path.
+The duplicate-pack experiment is rejected because crossing 16 MiB changed this
+four-CPU runner's device-capacity boundary and aborted before frame 0. The
+replacement ROM is 16,387,072 bytes and boots from both fresh and reused build
+directories; its prune step leaves zero stale AObj16 files and restores every
+named AObj32 source file.
+
+The full match is green over 1,972 samples: stream reads/misses/failures
+269/5/0, direct AObj32 reads/fallbacks 5/0, cache hits/misses/rejects
+425/274/0, pose binds/full 694/0, heap low-water 32,164 B, draw mask 0xF and
+all hard failures zero. Against the accepted ring checkpoint, SINT P95 falls
+1,108,032→944,192 and WORK-H P95 2,981,760→2,825,152; WORK-H P50 rises
+1,513,856→1,544,576. Evidence:
+`artifacts/performance/2026-09-01_bug-fourcpu-ftanim-stream-full`.

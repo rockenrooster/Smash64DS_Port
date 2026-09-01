@@ -7701,6 +7701,10 @@ typedef struct NDSR2AnimCacheEntry {
     u32 aobj16_ready;
 } NDSR2AnimCacheEntry;
 
+#define NDS_R2_ANIM_CACHE_READY_RAW 0u
+#define NDS_R2_ANIM_CACHE_READY_PREBAKE 1u
+#define NDS_R2_ANIM_CACHE_READY_STREAM 2u
+
 #if NDS_R2_AOBJ16_PREBAKE
 static sb32 ndsR2AnimPrebakeAObj16(u32 asset_id, void *payload, u32 size,
                                    const NDSRelocAssetHeader *header);
@@ -8470,7 +8474,8 @@ static void *ndsR2AnimCacheRawRingAlloc(u32 size)
 
 /* Called with the payload already byte-swapped and not yet fixed up. */
 static void ndsR2AnimCacheStore(u32 asset_id, const void *data, u32 size,
-                                const NDSRelocAssetHeader *header)
+                                const NDSRelocAssetHeader *header,
+                                u32 ready_kind)
 {
     NDSR2AnimCacheEntry *entry;
     void *payload;
@@ -8515,13 +8520,21 @@ static void ndsR2AnimCacheStore(u32 asset_id, const void *data, u32 size,
      * reused across a scene rewind, so leaving this field alone would let a slot
      * keep a stale TRUE from a previous match's asset and skip a transform that
      * had never been applied to these bytes. */
+    if (ready_kind == NDS_R2_ANIM_CACHE_READY_STREAM)
+    {
+        entry->aobj16_ready = NDS_R2_ANIM_CACHE_READY_STREAM;
+    }
+    else
+    {
 #if NDS_R2_AOBJ16_PREBAKE
-    entry->aobj16_ready =
-        (ndsR2AnimPrebakeAObj16(asset_id, payload, size, header) != FALSE)
-            ? 1u : 0u;
+        entry->aobj16_ready =
+            (ndsR2AnimPrebakeAObj16(asset_id, payload, size, header) != FALSE)
+                ? NDS_R2_ANIM_CACHE_READY_PREBAKE :
+                  NDS_R2_ANIM_CACHE_READY_RAW;
 #else
-    entry->aobj16_ready = 0u;
+        entry->aobj16_ready = NDS_R2_ANIM_CACHE_READY_RAW;
 #endif
+    }
     gNdsR2AnimCacheFills++;
     gNdsR2AnimCacheBytes += size;
 }
@@ -8781,6 +8794,8 @@ static void ndsR2AnimWarmLoadOne(u32 asset_id)
     void *payload;
     u32 words;
     u32 w;
+    u32 stream_size = 0u;
+    sb32 stream_ready = FALSE;
 
     if (ndsR2AnimCacheFind(asset_id) != NULL)
     {
@@ -8798,20 +8813,31 @@ static void ndsR2AnimWarmLoadOne(u32 asset_id)
         gNdsR2AnimWarmFailed++;
         return;
     }
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
-    /* BattleShip's reloc table already knows every fighter-motion allocation
-     * size.  The generated P2 catalog carries that immutable answer AOT, so the
-     * warm path must not reopen NitroFS merely to rediscover the O2R header
-     * before ndsRelocAssetLoadIntoZeroedHeap opens the same file for its bytes.
-     * Unknown/non-fighter assets keep the old header-read fallback. */
-    alloc_size = ndsRelocP2GeneratedAllocSize(asset_id);
-    if (alloc_size == 0u)
+#if NDS_R2_FTANIM_STREAM
+    stream_ready = ndsRelocAssetLoadFighterStreamClip(asset_id, NULL,
+                                                       &stream_size);
+    if (stream_ready != FALSE)
     {
-        alloc_size = ndsRelocAssetAllocSize(asset_id);
+        alloc_size = stream_size;
     }
-#else
-    alloc_size = ndsRelocAssetAllocSize(asset_id);
 #endif
+    if (stream_ready == FALSE)
+    {
+#if NDS_IMPORT_BATTLESHIP_FTMANAGER
+        /* BattleShip's reloc table already knows every fighter-motion allocation
+         * size.  The generated P2 catalog carries that immutable answer AOT, so the
+         * warm path must not reopen NitroFS merely to rediscover the O2R header
+         * before ndsRelocAssetLoadIntoZeroedHeap opens the same file for its bytes.
+         * Unknown/non-fighter assets keep the old header-read fallback. */
+        alloc_size = ndsRelocP2GeneratedAllocSize(asset_id);
+        if (alloc_size == 0u)
+        {
+            alloc_size = ndsRelocAssetAllocSize(asset_id);
+        }
+#else
+        alloc_size = ndsRelocAssetAllocSize(asset_id);
+#endif
+    }
     if ((alloc_size == 0u) ||
         (sNdsR2AnimCacheCount >= NDS_R2_ANIM_CACHE_ENTRIES))
     {
@@ -8825,9 +8851,25 @@ static void ndsR2AnimWarmLoadOne(u32 asset_id)
         gNdsR2AnimWarmFailed++;
         return;
     }
-    if (ndsRelocAssetLoadIntoZeroedHeap(asset_id, payload,
-                                        NDS_RELOC_ALIGN_BYTES,
-                                        &loaded_size, &header) == FALSE)
+    if (stream_ready != FALSE)
+    {
+        if (ndsRelocAssetLoadFighterStreamClip(asset_id, payload,
+                                                &stream_size) == FALSE)
+        {
+            ndsR2AnimCacheArenaRelease(payload, (u32)alloc_size);
+            gNdsR2AnimWarmFailed++;
+            return;
+        }
+        memset(&header, 0, sizeof(header));
+        header.file_id = asset_id;
+        header.data_size = stream_size;
+        header.reloc_intern_offset = 0xffffu;
+        header.reloc_extern_offset = 0xffffu;
+        loaded_size = stream_size;
+    }
+    else if (ndsRelocAssetLoadIntoZeroedHeap(asset_id, payload,
+                                             NDS_RELOC_ALIGN_BYTES,
+                                             &loaded_size, &header) == FALSE)
     {
         /* Used to return here having already taken the buffer, so a failed warm
          * load permanently consumed arena for nothing. */
@@ -8835,16 +8877,19 @@ static void ndsR2AnimWarmLoadOne(u32 asset_id)
         gNdsR2AnimWarmFailed++;
         return;
     }
-    /* K0 line 3 again: the warm loader swaps the same payload the miss path
-     * would. It normally runs before GO, which is exactly why it is marked --
-     * a warm step that slipped past GO would otherwise be invisible. */
-    NDS_K0_MARK(gNdsK0AfterGoByteSwaps, asset_id);
-    words = (u32)(loaded_size / sizeof(u32));
-    for (w = 0u; w < words; w++)
+    if (stream_ready == FALSE)
     {
-        void *word = (u8 *)payload + (w * sizeof(u32));
+        /* K0 line 3 again: the warm loader swaps the same payload the miss path
+         * would. It normally runs before GO, which is exactly why it is marked --
+         * a warm step that slipped past GO would otherwise be invisible. */
+        NDS_K0_MARK(gNdsK0AfterGoByteSwaps, asset_id);
+        words = (u32)(loaded_size / sizeof(u32));
+        for (w = 0u; w < words; w++)
+        {
+            void *word = (u8 *)payload + (w * sizeof(u32));
 
-        ndsRelocWriteNative32(word, ndsRelocReadBe32(word));
+            ndsRelocWriteNative32(word, ndsRelocReadBe32(word));
+        }
     }
     {
         NDSR2AnimCacheEntry *entry = &sNdsR2AnimCache[sNdsR2AnimCacheCount++];
@@ -8853,16 +8898,25 @@ static void ndsR2AnimWarmLoadOne(u32 asset_id)
         entry->size = (u32)loaded_size;
         entry->payload = payload;
         entry->header = header;
+        if (stream_ready != FALSE)
+        {
+            entry->aobj16_ready = NDS_R2_ANIM_CACHE_READY_STREAM;
+        }
+        else
+        {
 #if NDS_R2_AOBJ16_PREBAKE
-        /* AFTER the word swap above and BEFORE anyone can copy this out: the
-         * transform's input is the swapped, pre-fixup image, which is exactly
-         * what the miss path snapshots too. */
-        entry->aobj16_ready =
-            (ndsR2AnimPrebakeAObj16(asset_id, payload, (u32)loaded_size,
-                                    &header) != FALSE) ? 1u : 0u;
+            /* AFTER the word swap above and BEFORE anyone can copy this out: the
+             * transform's input is the swapped, pre-fixup image, which is exactly
+             * what the miss path snapshots too. */
+            entry->aobj16_ready =
+                (ndsR2AnimPrebakeAObj16(asset_id, payload, (u32)loaded_size,
+                                        &header) != FALSE) ?
+                    NDS_R2_ANIM_CACHE_READY_PREBAKE :
+                    NDS_R2_ANIM_CACHE_READY_RAW;
 #else
-        entry->aobj16_ready = 0u;
+            entry->aobj16_ready = NDS_R2_ANIM_CACHE_READY_RAW;
 #endif
+        }
     }
     gNdsR2AnimWarmLoaded++;
     gNdsR2AnimWarmBytes += (u32)loaded_size;
@@ -9220,6 +9274,19 @@ static void *ndsRelocForceLoadFighterAObj16File(u32 token, u32 asset_id,
             asset_size = cached->size;
             header = cached->header;
             loaded = ndsRelocRegisterLoadedFile(asset_id, 0, heap, &header);
+            if (cached->aobj16_ready == NDS_R2_ANIM_CACHE_READY_STREAM)
+            {
+                if (loaded == NULL)
+                {
+                    goto fail;
+                }
+                gNdsR2AnimCacheHits++;
+                ndsFighterManagerRecordExternToken(token, heap);
+                ndsRelocSetStatusBufferFile(token, heap);
+                ndsRelocSetStatusBufferFile(asset_id, heap);
+                ndsRelocSetForceStatusBufferFile(token, heap);
+                return heap;
+            }
 #if NDS_R2_AOBJ16_PREBAKE
             /* R2-06 E13. The script region of this copy already carries the
              * transform, applied once at warm time against the arena base --
@@ -9227,7 +9294,9 @@ static void *ndsRelocForceLoadFighterAObj16File(u32 token, u32 asset_id,
              * write here. Claiming it is what removes the pass from the frame.
              * The flag is per entry: anything the prebake declined still runs
              * the pass below, unchanged. */
-            if ((loaded != NULL) && (cached->aobj16_ready != 0u))
+            if ((loaded != NULL) &&
+                (cached->aobj16_ready ==
+                 NDS_R2_ANIM_CACHE_READY_PREBAKE))
             {
                 loaded->format_fixups_applied = TRUE;
                 gNdsR2AObj16PrebakeSkips++;
@@ -9246,6 +9315,37 @@ static void *ndsRelocForceLoadFighterAObj16File(u32 token, u32 asset_id,
             return heap;
         }
         gNdsR2AnimCacheMisses++;
+    }
+#endif
+#if NDS_R2_FTANIM_STREAM
+    {
+        u32 stream_size = 0u;
+
+        ndsRelocPrepareFighterAnimHeapOverwrite(asset_id, heap);
+        if (ndsRelocAssetLoadFighterStreamClip(asset_id, heap,
+                                                &stream_size) != FALSE)
+        {
+            memset(&header, 0, sizeof(header));
+            header.file_id = asset_id;
+            header.data_size = stream_size;
+            header.reloc_intern_offset = 0xffffu;
+            header.reloc_extern_offset = 0xffffu;
+            asset_size = stream_size;
+#if NDS_R2_ANIM_CACHE
+            ndsR2AnimCacheStore(asset_id, heap, stream_size, &header,
+                                NDS_R2_ANIM_CACHE_READY_STREAM);
+#endif
+            loaded = ndsRelocRegisterLoadedFile(asset_id, 0, heap, &header);
+            if (loaded == NULL)
+            {
+                goto fail;
+            }
+            ndsFighterManagerRecordExternToken(token, heap);
+            ndsRelocSetStatusBufferFile(token, heap);
+            ndsRelocSetStatusBufferFile(asset_id, heap);
+            ndsRelocSetForceStatusBufferFile(token, heap);
+            return heap;
+        }
     }
 #endif
     /* One open for the size, the zero and the payload. Task 72 collapsed the
@@ -9273,7 +9373,8 @@ static void *ndsRelocForceLoadFighterAObj16File(u32 token, u32 asset_id,
 #if NDS_R2_ANIM_CACHE
     /* Snapshot here: swapped, not yet fixed up. One instruction later the
      * fixups make the image position-dependent and unusable as a template. */
-    ndsR2AnimCacheStore(asset_id, heap, (u32)asset_size, &header);
+    ndsR2AnimCacheStore(asset_id, heap, (u32)asset_size, &header,
+                        NDS_R2_ANIM_CACHE_READY_RAW);
 #endif
     if (ndsRelocFinalizeLoadedFile(loaded) == FALSE)
     {
